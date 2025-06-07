@@ -8,16 +8,16 @@ from opendata_transport.exceptions import (
     OpendataTransportError,
 )
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryError, ConfigEntryNotReady
-from homeassistant.helpers import (
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryError, ConfigEntryNotReady
+from menuai.helpers import (
     config_validation as cv,
     device_registry as dr,
     entity_registry as er,
 )
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     CONF_DESTINATION,
@@ -45,14 +45,14 @@ PLATFORMS: list[Platform] = [Platform.SENSOR]
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Swiss public transport component."""
-    setup_services(hass)
+    setup_services(menuai)
     return True
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: SwissPublicTransportConfigEntry
+    menuai: menuai, entry: SwissPublicTransportConfigEntry
 ) -> bool:
     """Set up Swiss public transport from a config entry."""
     config = entry.data
@@ -62,7 +62,7 @@ async def async_setup_entry(
 
     time_offset: dict[str, int] | None = config.get(CONF_TIME_OFFSET)
 
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
     opendata = OpendataTransport(
         start,
         destination,
@@ -97,24 +97,24 @@ async def async_setup_entry(
         ) from e
 
     coordinator = SwissPublicTransportDataUpdateCoordinator(
-        hass, entry, opendata, time_offset
+        menuai, entry, opendata, time_offset
     )
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, entry: SwissPublicTransportConfigEntry
+    menuai: menuai, entry: SwissPublicTransportConfigEntry
 ) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 async def async_migrate_entry(
-    hass: HomeAssistant, config_entry: SwissPublicTransportConfigEntry
+    menuai: menuai, config_entry: SwissPublicTransportConfigEntry
 ) -> bool:
     """Migrate config entry."""
     _LOGGER.debug("Migrating from version %s", config_entry.version)
@@ -126,8 +126,8 @@ async def async_migrate_entry(
     if config_entry.version == 1 and config_entry.minor_version == 1:
         # Remove wrongly registered devices and entries
         new_unique_id = unique_id_from_config(config_entry.data)
-        entity_registry = er.async_get(hass)
-        device_registry = dr.async_get(hass)
+        entity_registry = er.async_get(menuai)
+        device_registry = dr.async_get(menuai)
         device_entries = dr.async_entries_for_config_entry(
             device_registry, config_entry_id=config_entry.entry_id
         )
@@ -150,13 +150,13 @@ async def async_migrate_entry(
             )
 
         # Set a valid unique id for config entries
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             config_entry, unique_id=new_unique_id, minor_version=2
         )
 
     if config_entry.version < 3:
         # Via stations and time/offset settings now available, which are not backwards compatible if used, changes unique id
-        hass.config_entries.async_update_entry(config_entry, version=3, minor_version=1)
+        menuai.config_entries.async_update_entry(config_entry, version=3, minor_version=1)
 
     _LOGGER.debug(
         "Migration to version %s.%s successful",

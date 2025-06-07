@@ -2,7 +2,7 @@
 
 from typing import Any, cast
 
-from homeassistant.core import HomeAssistant, callback
+from menuai.core import menuai, callback
 
 from .const import DOMAIN
 from .device import ConfiguredDoorBird
@@ -15,10 +15,10 @@ def get_mac_address_from_door_station_info(door_station_info: dict[str, Any]) ->
 
 
 def get_door_station_by_token(
-    hass: HomeAssistant, token: str
+    menuai: menuai, token: str
 ) -> ConfiguredDoorBird | None:
     """Get door station by token."""
-    for entry in async_get_entries(hass):
+    for entry in async_get_entries(menuai):
         door_station = entry.runtime_data.door_station
         if door_station.token == token:
             return door_station
@@ -26,9 +26,9 @@ def get_door_station_by_token(
 
 
 @callback
-def async_get_entries(hass: HomeAssistant) -> list[DoorBirdConfigEntry]:
+def async_get_entries(menuai: menuai) -> list[DoorBirdConfigEntry]:
     """Get all the doorbird entries."""
-    entries = hass.config_entries.async_entries(
+    entries = menuai.config_entries.async_entries(
         DOMAIN, include_ignore=True, include_disabled=True
     )
     active_entries = [entry for entry in entries if hasattr(entry, "runtime_data")]

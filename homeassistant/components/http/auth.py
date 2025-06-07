@@ -16,18 +16,18 @@ import jwt
 from jwt import api_jws
 from yarl import URL
 
-from homeassistant.auth import jwt_wrapper
-from homeassistant.auth.const import GROUP_ID_READ_ONLY
-from homeassistant.auth.models import User
-from homeassistant.components import websocket_api
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.http import current_request
-from homeassistant.helpers.json import json_bytes
-from homeassistant.helpers.network import is_cloud_connection
-from homeassistant.helpers.storage import Store
-from homeassistant.util.network import is_local
+from menuai.auth import jwt_wrapper
+from menuai.auth.const import GROUP_ID_READ_ONLY
+from menuai.auth.models import User
+from menuai.components import websocket_api
+from menuai.core import menuai, callback
+from menuai.helpers.http import current_request
+from menuai.helpers.json import json_bytes
+from menuai.helpers.network import is_cloud_connection
+from menuai.helpers.storage import Store
+from menuai.util.network import is_local
 
-from .const import KEY_AUTHENTICATED, KEY_HASS_REFRESH_TOKEN_ID, KEY_HASS_USER
+from .const import KEY_AUTHENTICATED, KEY_menuai_REFRESH_TOKEN_ID, KEY_menuai_USER
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -38,12 +38,12 @@ SAFE_QUERY_PARAMS: Final = frozenset(("height", "width"))
 
 STORAGE_VERSION = 1
 STORAGE_KEY = "http.auth"
-CONTENT_USER_NAME = "Home Assistant Content"
+CONTENT_USER_NAME = "MenuAI Content"
 
 
 @callback
 def async_sign_path(
-    hass: HomeAssistant,
+    menuai: menuai,
     path: str,
     expiration: timedelta,
     *,
@@ -51,20 +51,20 @@ def async_sign_path(
     use_content_user: bool = False,
 ) -> str:
     """Sign a path for temporary access without auth header."""
-    if (secret := hass.data.get(DATA_SIGN_SECRET)) is None:
-        secret = hass.data[DATA_SIGN_SECRET] = secrets.token_hex()
+    if (secret := menuai.data.get(DATA_SIGN_SECRET)) is None:
+        secret = menuai.data[DATA_SIGN_SECRET] = secrets.token_hex()
 
     if refresh_token_id is None:
         if use_content_user:
-            refresh_token_id = hass.data[STORAGE_KEY]
+            refresh_token_id = menuai.data[STORAGE_KEY]
         elif connection := websocket_api.current_connection.get():
             refresh_token_id = connection.refresh_token_id
         elif (
             request := current_request.get()
-        ) and KEY_HASS_REFRESH_TOKEN_ID in request:
-            refresh_token_id = request[KEY_HASS_REFRESH_TOKEN_ID]
+        ) and KEY_menuai_REFRESH_TOKEN_ID in request:
+            refresh_token_id = request[KEY_menuai_REFRESH_TOKEN_ID]
         else:
-            refresh_token_id = hass.data[STORAGE_KEY]
+            refresh_token_id = menuai.data[STORAGE_KEY]
 
     url = URL(path)
     now_timestamp = int(time.time())
@@ -87,7 +87,7 @@ def async_sign_path(
 
 @callback
 def async_user_not_allowed_do_auth(
-    hass: HomeAssistant, user: User, request: Request | None = None
+    menuai: menuai, user: User, request: Request | None = None
 ) -> str | None:
     """Validate that user is not allowed to do auth things."""
     if not user.is_active:
@@ -103,7 +103,7 @@ def async_user_not_allowed_do_auth(
     if not request:
         return "No request available to validate local access"
 
-    if is_cloud_connection(hass):
+    if is_cloud_connection(menuai):
         return "User is local only"
 
     try:
@@ -118,29 +118,29 @@ def async_user_not_allowed_do_auth(
 
 
 async def async_setup_auth(
-    hass: HomeAssistant,
+    menuai: menuai,
     app: Application,
 ) -> None:
     """Create auth middleware for the app."""
-    store = Store[dict[str, Any]](hass, STORAGE_VERSION, STORAGE_KEY)
+    store = Store[dict[str, Any]](menuai, STORAGE_VERSION, STORAGE_KEY)
     if (data := await store.async_load()) is None:
         data = {}
 
     refresh_token = None
     if "content_user" in data:
-        user = await hass.auth.async_get_user(data["content_user"])
+        user = await menuai.auth.async_get_user(data["content_user"])
         if user and user.refresh_tokens:
             refresh_token = list(user.refresh_tokens.values())[0]
 
     if refresh_token is None:
-        user = await hass.auth.async_create_system_user(
+        user = await menuai.auth.async_create_system_user(
             CONTENT_USER_NAME, group_ids=[GROUP_ID_READ_ONLY]
         )
-        refresh_token = await hass.auth.async_create_refresh_token(user)
+        refresh_token = await menuai.auth.async_create_refresh_token(user)
         data["content_user"] = user.id
         await store.async_save(data)
 
-    hass.data[STORAGE_KEY] = refresh_token.id
+    menuai.data[STORAGE_KEY] = refresh_token.id
 
     @callback
     def async_validate_auth_header(request: Request) -> bool:
@@ -159,22 +159,22 @@ async def async_setup_auth(
         if auth_type != "Bearer":
             return False
 
-        refresh_token = hass.auth.async_validate_access_token(auth_val)
+        refresh_token = menuai.auth.async_validate_access_token(auth_val)
 
         if refresh_token is None:
             return False
 
-        if async_user_not_allowed_do_auth(hass, refresh_token.user, request):
+        if async_user_not_allowed_do_auth(menuai, refresh_token.user, request):
             return False
 
-        request[KEY_HASS_USER] = refresh_token.user
-        request[KEY_HASS_REFRESH_TOKEN_ID] = refresh_token.id
+        request[KEY_menuai_USER] = refresh_token.user
+        request[KEY_menuai_REFRESH_TOKEN_ID] = refresh_token.id
         return True
 
     @callback
     def async_validate_signed_request(request: Request) -> bool:
         """Validate a signed request."""
-        if (secret := hass.data.get(DATA_SIGN_SECRET)) is None:
+        if (secret := menuai.data.get(DATA_SIGN_SECRET)) is None:
             return False
 
         if (signature := request.query.get(SIGN_QUERY_PARAM)) is None:
@@ -198,13 +198,13 @@ async def async_setup_auth(
         if claims["params"] != params:
             return False
 
-        refresh_token = hass.auth.async_get_refresh_token(claims["iss"])
+        refresh_token = menuai.auth.async_get_refresh_token(claims["iss"])
 
         if refresh_token is None:
             return False
 
-        request[KEY_HASS_USER] = refresh_token.user
-        request[KEY_HASS_REFRESH_TOKEN_ID] = refresh_token.id
+        request[KEY_menuai_USER] = refresh_token.user
+        request[KEY_menuai_REFRESH_TOKEN_ID] = refresh_token.id
         return True
 
     @middleware

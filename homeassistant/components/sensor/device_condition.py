@@ -4,30 +4,30 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant.components.device_automation import (
+from menuai.components.device_automation import (
     InvalidDeviceAutomationConfig,
     async_get_entity_registry_entry_or_raise,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_ABOVE,
     CONF_BELOW,
     CONF_CONDITION,
     CONF_ENTITY_ID,
     CONF_TYPE,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import (
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import (
     condition,
     config_validation as cv,
     entity_registry as er,
 )
-from homeassistant.helpers.entity import (
+from menuai.helpers.entity import (
     get_capability,
     get_device_class,
     get_unit_of_measurement,
 )
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers.typing import ConfigType
 
 from . import ATTR_STATE_CLASS, DOMAIN, SensorDeviceClass
 
@@ -223,11 +223,11 @@ CONDITION_SCHEMA = vol.All(
 
 
 async def async_get_conditions(
-    hass: HomeAssistant, device_id: str
+    menuai: menuai, device_id: str
 ) -> list[dict[str, str]]:
     """List device conditions."""
     conditions: list[dict[str, str]] = []
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
     entries = [
         entry
         for entry in er.async_entries_for_device(entity_registry, device_id)
@@ -235,9 +235,9 @@ async def async_get_conditions(
     ]
 
     for entry in entries:
-        device_class = get_device_class(hass, entry.entity_id) or DEVICE_CLASS_NONE
-        state_class = get_capability(hass, entry.entity_id, ATTR_STATE_CLASS)
-        unit_of_measurement = get_unit_of_measurement(hass, entry.entity_id)
+        device_class = get_device_class(menuai, entry.entity_id) or DEVICE_CLASS_NONE
+        state_class = get_capability(menuai, entry.entity_id, ATTR_STATE_CLASS)
+        unit_of_measurement = get_unit_of_measurement(menuai, entry.entity_id)
 
         if not unit_of_measurement and not state_class:
             continue
@@ -262,7 +262,7 @@ async def async_get_conditions(
 
 @callback
 def async_condition_from_config(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> condition.ConditionCheckerType:
     """Evaluate state based on configuration."""
     numeric_state_config = {
@@ -276,20 +276,20 @@ def async_condition_from_config(
 
     numeric_state_config = cv.NUMERIC_STATE_CONDITION_SCHEMA(numeric_state_config)
     numeric_state_config = condition.numeric_state_validate_config(
-        hass, numeric_state_config
+        menuai, numeric_state_config
     )
     return condition.async_numeric_state_from_config(numeric_state_config)
 
 
 async def async_get_condition_capabilities(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> dict[str, vol.Schema]:
     """List condition capabilities."""
 
     try:
-        entry = async_get_entity_registry_entry_or_raise(hass, config[CONF_ENTITY_ID])
-        unit_of_measurement = get_unit_of_measurement(hass, entry.entity_id)
-    except HomeAssistantError:
+        entry = async_get_entity_registry_entry_or_raise(menuai, config[CONF_ENTITY_ID])
+        unit_of_measurement = get_unit_of_measurement(menuai, entry.entity_id)
+    except menuaiError:
         unit_of_measurement = None
 
     if not unit_of_measurement:

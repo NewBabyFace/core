@@ -10,16 +10,16 @@ import urllib.error
 import feedparser
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_URL
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.selector import (
+from menuai.const import CONF_URL
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.selector import (
     TextSelector,
     TextSelectorConfig,
     TextSelectorType,
@@ -30,9 +30,9 @@ from .const import CONF_MAX_ENTRIES, DEFAULT_MAX_ENTRIES, DOMAIN
 LOGGER = logging.getLogger(__name__)
 
 
-async def async_fetch_feed(hass: HomeAssistant, url: str) -> feedparser.FeedParserDict:
+async def async_fetch_feed(menuai: menuai, url: str) -> feedparser.FeedParserDict:
     """Fetch the feed."""
-    return await hass.async_add_executor_job(feedparser.parse, url)
+    return await menuai.async_add_executor_job(feedparser.parse, url)
 
 
 class FeedReaderConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -80,7 +80,7 @@ class FeedReaderConfigFlow(ConfigFlow, domain=DOMAIN):
 
         self._async_abort_entries_match({CONF_URL: user_input[CONF_URL]})
 
-        feed = await async_fetch_feed(self.hass, user_input[CONF_URL])
+        feed = await async_fetch_feed(self.menuai, user_input[CONF_URL])
 
         if feed.bozo:
             LOGGER.debug("feed bozo_exception: %s", feed.bozo_exception)
@@ -107,7 +107,7 @@ class FeedReaderConfigFlow(ConfigFlow, domain=DOMAIN):
                 step_id="reconfigure",
             )
 
-        feed = await async_fetch_feed(self.hass, user_input[CONF_URL])
+        feed = await async_fetch_feed(self.menuai, user_input[CONF_URL])
 
         if feed.bozo:
             LOGGER.debug("feed bozo_exception: %s", feed.bozo_exception)
@@ -119,7 +119,7 @@ class FeedReaderConfigFlow(ConfigFlow, domain=DOMAIN):
                     errors={"base": "url_error"},
                 )
 
-        self.hass.config_entries.async_update_entry(reconfigure_entry, data=user_input)
+        self.menuai.config_entries.async_update_entry(reconfigure_entry, data=user_input)
         return self.async_abort(reason="reconfigure_successful")
 
 

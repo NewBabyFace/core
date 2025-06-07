@@ -3,8 +3,8 @@
 from eternalegypt.eternalegypt import Modem
 import voluptuous as vol
 
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import config_validation as cv
 
 from .const import (
     ATTR_AUTOCONNECT,
@@ -45,7 +45,7 @@ CONNECT_LTE_SCHEMA = vol.Schema({vol.Optional(ATTR_HOST): cv.string})
 DISCONNECT_LTE_SCHEMA = vol.Schema({vol.Optional(ATTR_HOST): cv.string})
 
 
-async def async_setup_services(hass: HomeAssistant, modem: Modem) -> None:
+async def async_setup_services(menuai: menuai, modem: Modem) -> None:
     """Set up services for Netgear LTE integration."""
 
     async def service_handler(call: ServiceCall) -> None:
@@ -77,4 +77,4 @@ async def async_setup_services(hass: HomeAssistant, modem: Modem) -> None:
     }
 
     for service, schema in service_schemas.items():
-        hass.services.async_register(DOMAIN, service, service_handler, schema=schema)
+        menuai.services.async_register(DOMAIN, service, service_handler, schema=schema)

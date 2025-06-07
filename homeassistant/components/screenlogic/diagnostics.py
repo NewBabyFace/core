@@ -2,13 +2,13 @@
 
 from typing import Any
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .types import ScreenLogicConfigEntry
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, config_entry: ScreenLogicConfigEntry
+    menuai: menuai, config_entry: ScreenLogicConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     coordinator = config_entry.runtime_data

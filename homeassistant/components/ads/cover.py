@@ -7,7 +7,7 @@ from typing import Any
 import pyads
 import voluptuous as vol
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     ATTR_POSITION,
     DEVICE_CLASSES_SCHEMA,
     PLATFORM_SCHEMA as COVER_PLATFORM_SCHEMA,
@@ -15,11 +15,11 @@ from homeassistant.components.cover import (
     CoverEntity,
     CoverEntityFeature,
 )
-from homeassistant.const import CONF_DEVICE_CLASS, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_DEVICE_CLASS, CONF_NAME
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import CONF_ADS_VAR, DATA_ADS, STATE_KEY_STATE
 from .entity import AdsEntity
@@ -50,13 +50,13 @@ PLATFORM_SCHEMA = COVER_PLATFORM_SCHEMA.extend(
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the cover platform for ADS."""
-    ads_hub = hass.data[DATA_ADS]
+    ads_hub = menuai.data[DATA_ADS]
 
     ads_var_is_closed: str = config[CONF_ADS_VAR]
     ads_var_position: str | None = config.get(CONF_ADS_VAR_POSITION)
@@ -124,7 +124,7 @@ class AdsCover(AdsEntity, CoverEntity):
         if ads_var_pos_set is not None:
             self._attr_supported_features |= CoverEntityFeature.SET_POSITION
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register device notification."""
         if self._ads_var is not None:
             await self.async_initialize_device(self._ads_var, pyads.PLCTYPE_BOOL)

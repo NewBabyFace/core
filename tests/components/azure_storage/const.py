@@ -2,12 +2,12 @@
 
 from json import dumps
 
-from homeassistant.components.azure_storage.const import (
+from menuai.components.azure_storage.const import (
     CONF_ACCOUNT_NAME,
     CONF_CONTAINER_NAME,
     CONF_STORAGE_ACCOUNT_KEY,
 )
-from homeassistant.components.backup import AgentBackup
+from menuai.components.backup import AgentBackup
 
 USER_INPUT = {
     CONF_ACCOUNT_NAME: "account",
@@ -22,8 +22,8 @@ TEST_BACKUP = AgentBackup(
     database_included=True,
     extra_metadata={},
     folders=[],
-    homeassistant_included=True,
-    homeassistant_version="2024.12.0.dev0",
+    menuai_included=True,
+    menuai_version="2024.12.0.dev0",
     name="Core 2024.12.0.dev0",
     protected=False,
     size=34519040,

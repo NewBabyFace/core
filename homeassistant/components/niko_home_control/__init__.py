@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from nhc.controller import NHCController
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import entity_registry as er
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import entity_registry as er
 
 from .const import _LOGGER
 
@@ -18,7 +18,7 @@ type NikoHomeControlConfigEntry = ConfigEntry[NHCController]
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: NikoHomeControlConfigEntry
+    menuai: menuai, entry: NikoHomeControlConfigEntry
 ) -> bool:
     """Set Niko Home Control from a config entry."""
     controller = NHCController(entry.data[CONF_HOST])
@@ -28,12 +28,12 @@ async def async_setup_entry(
         raise ConfigEntryNotReady("cannot connect to controller.") from err
 
     entry.runtime_data = controller
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
 async def async_migrate_entry(
-    hass: HomeAssistant, config_entry: NikoHomeControlConfigEntry
+    menuai: menuai, config_entry: NikoHomeControlConfigEntry
 ) -> bool:
     """Migrate old entry."""
     _LOGGER.debug(
@@ -43,7 +43,7 @@ async def async_migrate_entry(
     )
 
     if config_entry.minor_version < 2:
-        registry = er.async_get(hass)
+        registry = er.async_get(menuai)
         entries = er.async_entries_for_config_entry(registry, config_entry.entry_id)
 
         for entry in entries:
@@ -54,7 +54,7 @@ async def async_migrate_entry(
                     entry.entity_id, new_unique_id=new_unique_id
                 )
 
-        hass.config_entries.async_update_entry(config_entry, minor_version=2)
+        menuai.config_entries.async_update_entry(config_entry, minor_version=2)
 
     _LOGGER.debug(
         "Migration to configuration version %s.%s successful",
@@ -65,7 +65,7 @@ async def async_migrate_entry(
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, entry: NikoHomeControlConfigEntry
+    menuai: menuai, entry: NikoHomeControlConfigEntry
 ) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

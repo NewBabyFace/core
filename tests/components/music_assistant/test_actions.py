@@ -6,36 +6,36 @@ from music_assistant_models.media_items import SearchResults
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.music_assistant.actions import (
+from menuai.components.music_assistant.actions import (
     SERVICE_GET_LIBRARY,
     SERVICE_SEARCH,
 )
-from homeassistant.components.music_assistant.const import (
+from menuai.components.music_assistant.const import (
     ATTR_CONFIG_ENTRY_ID,
     ATTR_FAVORITE,
     ATTR_MEDIA_TYPE,
     ATTR_SEARCH_NAME,
     DOMAIN,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .common import create_library_albums_from_fixture, setup_integration_from_fixtures
 
 
 async def test_search_action(
-    hass: HomeAssistant,
+    menuai: menuai,
     music_assistant_client: MagicMock,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test music assistant search action."""
-    entry = await setup_integration_from_fixtures(hass, music_assistant_client)
+    entry = await setup_integration_from_fixtures(menuai, music_assistant_client)
 
     music_assistant_client.music.search = AsyncMock(
         return_value=SearchResults(
             albums=create_library_albums_from_fixture(),
         )
     )
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         DOMAIN,
         SERVICE_SEARCH,
         {
@@ -61,14 +61,14 @@ async def test_search_action(
     ],
 )
 async def test_get_library_action(
-    hass: HomeAssistant,
+    menuai: menuai,
     music_assistant_client: MagicMock,
     media_type: str,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test music assistant get_library action."""
-    entry = await setup_integration_from_fixtures(hass, music_assistant_client)
-    response = await hass.services.async_call(
+    entry = await setup_integration_from_fixtures(menuai, music_assistant_client)
+    response = await menuai.services.async_call(
         DOMAIN,
         SERVICE_GET_LIBRARY,
         {

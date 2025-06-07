@@ -10,7 +10,7 @@
         }
       },
       "discovery_confirm": {
-        "description": "Do you want to add {name} ({host}) to Home Assistant?"
+        "description": "Do you want to add {name} ({host}) to MenuAI?"
       }
     },
     "abort": {

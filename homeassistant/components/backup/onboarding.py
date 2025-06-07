@@ -11,28 +11,28 @@ from aiohttp import web
 from aiohttp.web_exceptions import HTTPUnauthorized
 import voluptuous as vol
 
-from homeassistant.components.http import KEY_HASS
-from homeassistant.components.http.data_validator import RequestDataValidator
-from homeassistant.components.onboarding import (
+from menuai.components.http import KEY_menuai
+from menuai.components.http.data_validator import RequestDataValidator
+from menuai.components.onboarding import (
     BaseOnboardingView,
     NoAuthBaseOnboardingView,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.backup import async_get_manager as async_get_backup_manager
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.backup import async_get_manager as async_get_backup_manager
 
 from . import BackupManager, Folder, IncorrectPasswordError, http as backup_http
 
 if TYPE_CHECKING:
-    from homeassistant.components.onboarding import OnboardingStoreData
+    from menuai.components.onboarding import OnboardingStoreData
 
 
-async def async_setup_views(hass: HomeAssistant, data: OnboardingStoreData) -> None:
+async def async_setup_views(menuai: menuai, data: OnboardingStoreData) -> None:
     """Set up the backup views."""
 
-    hass.http.register_view(BackupInfoView(data))
-    hass.http.register_view(RestoreBackupView(data))
-    hass.http.register_view(UploadBackupView(data))
+    menuai.http.register_view(BackupInfoView(data))
+    menuai.http.register_view(RestoreBackupView(data))
+    menuai.http.register_view(UploadBackupView(data))
 
 
 def with_backup_manager[_ViewT: BaseOnboardingView, **_P](
@@ -41,7 +41,7 @@ def with_backup_manager[_ViewT: BaseOnboardingView, **_P](
         Coroutine[Any, Any, web.Response],
     ],
 ) -> Callable[Concatenate[_ViewT, web.Request, _P], Coroutine[Any, Any, web.Response]]:
-    """Home Assistant API decorator to check onboarding and inject manager."""
+    """MenuAI API decorator to check onboarding and inject manager."""
 
     @wraps(func)
     async def with_backup(
@@ -54,7 +54,7 @@ def with_backup_manager[_ViewT: BaseOnboardingView, **_P](
         if self._data["done"]:
             raise HTTPUnauthorized
 
-        manager = await async_get_backup_manager(request.app[KEY_HASS])
+        manager = await async_get_backup_manager(request.app[KEY_menuai])
         return await func(self, manager, request, *args, **kwargs)
 
     return with_backup
@@ -110,13 +110,13 @@ class RestoreBackupView(NoAuthBaseOnboardingView):
                 restore_addons=data.get("restore_addons"),
                 restore_database=data["restore_database"],
                 restore_folders=data.get("restore_folders"),
-                restore_homeassistant=True,
+                restore_menuai=True,
             )
         except IncorrectPasswordError:
             return self.json(
                 {"code": "incorrect_password"}, status_code=HTTPStatus.BAD_REQUEST
             )
-        except HomeAssistantError as err:
+        except menuaiError as err:
             return self.json(
                 {"code": "restore_failed", "message": str(err)},
                 status_code=HTTPStatus.BAD_REQUEST,

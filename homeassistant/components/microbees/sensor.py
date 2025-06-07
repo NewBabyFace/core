@@ -2,22 +2,22 @@
 
 from microBeesPy import Sensor
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONCENTRATION_PARTS_PER_MILLION,
     LIGHT_LUX,
     PERCENTAGE,
     UnitOfPower,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import MicroBeesUpdateCoordinator
@@ -63,12 +63,12 @@ SENSOR_TYPES = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Config entry."""
-    coordinator = hass.data[DOMAIN][entry.entry_id].coordinator
+    coordinator = menuai.data[DOMAIN][entry.entry_id].coordinator
 
     async_add_entities(
         MBSensor(coordinator, desc, bee_id, sensor.id)

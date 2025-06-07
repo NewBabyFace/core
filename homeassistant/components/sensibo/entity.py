@@ -8,9 +8,9 @@ from typing import TYPE_CHECKING, Any, Concatenate
 
 from pysensibo.model import MotionSensor, SensiboDevice
 
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, LOGGER, SENSIBO_ERRORS, TIMEOUT
 from .coordinator import SensiboDataUpdateCoordinator
@@ -30,7 +30,7 @@ def async_handle_api_call[_T: SensiboDeviceBaseEntity, **_P](
             async with asyncio.timeout(TIMEOUT):
                 res = await function(entity, *args, **kwargs)
         except SENSIBO_ERRORS as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="service_raised",
                 translation_placeholders={"error": str(err), "name": entity.name},
@@ -38,7 +38,7 @@ def async_handle_api_call[_T: SensiboDeviceBaseEntity, **_P](
 
         LOGGER.debug("Result %s for entity %s with arguments %s", res, entity, kwargs)
         if res is not True:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="service_result_not_true",
                 translation_placeholders={"name": entity.name},

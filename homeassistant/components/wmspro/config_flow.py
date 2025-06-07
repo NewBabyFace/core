@@ -10,11 +10,11 @@ import aiohttp
 import voluptuous as vol
 from wmspro.webcontrol import WebControlPro
 
-from homeassistant.config_entries import SOURCE_DHCP, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.config_entries import SOURCE_DHCP, ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
 
 from .const import DOMAIN, SUGGESTED_HOST
 
@@ -39,7 +39,7 @@ class WebControlProConfigFlow(ConfigFlow, domain=DOMAIN):
         unique_id = format_mac(discovery_info.macaddress)
         await self.async_set_unique_id(unique_id)
 
-        entry = self.hass.config_entries.async_entry_for_domain_unique_id(
+        entry = self.menuai.config_entries.async_entry_for_domain_unique_id(
             DOMAIN, unique_id
         )
         if entry:
@@ -52,12 +52,12 @@ class WebControlProConfigFlow(ConfigFlow, domain=DOMAIN):
                     updates={CONF_HOST: discovery_info.ip}
                 )
 
-        for entry in self.hass.config_entries.async_entries(DOMAIN):
+        for entry in self.menuai.config_entries.async_entries(DOMAIN):
             if not entry.unique_id and entry.data[CONF_HOST] in (
                 discovery_info.hostname,
                 discovery_info.ip,
             ):
-                self.hass.config_entries.async_update_entry(entry, unique_id=unique_id)
+                self.menuai.config_entries.async_update_entry(entry, unique_id=unique_id)
                 return self.async_abort(reason="already_configured")
 
         return await self.async_step_user()
@@ -70,7 +70,7 @@ class WebControlProConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             self._async_abort_entries_match(user_input)
             host = user_input[CONF_HOST]
-            session = async_get_clientsession(self.hass)
+            session = async_get_clientsession(self.menuai)
             hub = WebControlPro(host, session)
             try:
                 pong = await hub.ping()
@@ -85,7 +85,7 @@ class WebControlProConfigFlow(ConfigFlow, domain=DOMAIN):
                 else:
                     await hub.refresh()
                     rooms = set(hub.rooms.keys())
-                    for entry in self.hass.config_entries.async_loaded_entries(DOMAIN):
+                    for entry in self.menuai.config_entries.async_loaded_entries(DOMAIN):
                         if (
                             entry.runtime_data
                             and entry.runtime_data.rooms

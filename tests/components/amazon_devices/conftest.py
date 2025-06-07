@@ -7,8 +7,8 @@ from aioamazondevices.api import AmazonDevice
 from aioamazondevices.const import DEVICE_TYPE_TO_MODEL
 import pytest
 
-from homeassistant.components.amazon_devices.const import CONF_LOGIN_DATA, DOMAIN
-from homeassistant.const import CONF_COUNTRY, CONF_PASSWORD, CONF_USERNAME
+from menuai.components.amazon_devices.const import CONF_LOGIN_DATA, DOMAIN
+from menuai.const import CONF_COUNTRY, CONF_PASSWORD, CONF_USERNAME
 
 from .const import TEST_COUNTRY, TEST_PASSWORD, TEST_SERIAL_NUMBER, TEST_USERNAME
 
@@ -19,7 +19,7 @@ from tests.common import MockConfigEntry
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.amazon_devices.async_setup_entry",
+        "menuai.components.amazon_devices.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
         yield mock_setup_entry
@@ -30,11 +30,11 @@ def mock_amazon_devices_client() -> Generator[AsyncMock]:
     """Mock an Amazon Devices client."""
     with (
         patch(
-            "homeassistant.components.amazon_devices.coordinator.AmazonEchoApi",
+            "menuai.components.amazon_devices.coordinator.AmazonEchoApi",
             autospec=True,
         ) as mock_client,
         patch(
-            "homeassistant.components.amazon_devices.config_flow.AmazonEchoApi",
+            "menuai.components.amazon_devices.config_flow.AmazonEchoApi",
             new=mock_client,
         ),
     ):

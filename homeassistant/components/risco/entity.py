@@ -8,10 +8,10 @@ from pyrisco import RiscoCloud
 from pyrisco.cloud.zone import Zone as CloudZone
 from pyrisco.local.zone import Zone as LocalZone
 
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity import Entity
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from . import zone_update_signal
 from .const import DOMAIN
@@ -104,9 +104,9 @@ class RiscoLocalZoneEntity(Entity):
         )
         self._attr_extra_state_attributes = {"zone_id": zone_id}
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to updates."""
         signal = zone_update_signal(self._zone_id)
         self.async_on_remove(
-            async_dispatcher_connect(self.hass, signal, self.async_write_ha_state)
+            async_dispatcher_connect(self.menuai, signal, self.async_write_ha_state)
         )

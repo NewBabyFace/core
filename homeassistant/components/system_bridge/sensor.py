@@ -11,14 +11,14 @@ from systembridgemodels.modules.cpu import PerCPU
 from systembridgemodels.modules.displays import Display
 from systembridgemodels.modules.gpus import GPU
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_PORT,
     PERCENTAGE,
     REVOLUTIONS_PER_MINUTE,
@@ -28,10 +28,10 @@ from homeassistant.const import (
     UnitOfPower,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import UNDEFINED, StateType
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import UNDEFINED, StateType
+from menuai.util import dt as dt_util
 
 from .const import DOMAIN
 from .coordinator import SystemBridgeDataUpdateCoordinator
@@ -365,12 +365,12 @@ BATTERY_SENSOR_TYPES: tuple[SystemBridgeSensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up System Bridge sensor based on a config entry."""
-    coordinator: SystemBridgeDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: SystemBridgeDataUpdateCoordinator = menuai.data[DOMAIN][entry.entry_id]
 
     entities = [
         SystemBridgeSensor(coordinator, description, entry.data[CONF_PORT])

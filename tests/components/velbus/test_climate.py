@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_HVAC_MODE,
     ATTR_PRESET_MODE,
     DOMAIN as CLIMATE_DOMAIN,
@@ -17,10 +17,10 @@ from homeassistant.components.climate import (
     SERVICE_SET_PRESET_MODE,
     SERVICE_SET_TEMPERATURE,
 )
-from homeassistant.const import ATTR_ENTITY_ID, ATTR_TEMPERATURE, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_ENTITY_ID, ATTR_TEMPERATURE, Platform
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import entity_registry as er
 
 from . import init_integration
 
@@ -28,27 +28,27 @@ from tests.common import MockConfigEntry, snapshot_platform
 
 
 async def test_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test all entities."""
-    with patch("homeassistant.components.velbus.PLATFORMS", [Platform.CLIMATE]):
-        await init_integration(hass, config_entry)
+    with patch("menuai.components.velbus.PLATFORMS", [Platform.CLIMATE]):
+        await init_integration(menuai, config_entry)
 
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
 
 async def test_set_target_temperature(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_temperature: AsyncMock,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test the target temperature climate action."""
-    await init_integration(hass, config_entry)
+    await init_integration(menuai, config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_TEMPERATURE,
         {ATTR_ENTITY_ID: "climate.living_room_temperature", ATTR_TEMPERATURE: 29},
@@ -67,15 +67,15 @@ async def test_set_target_temperature(
     ],
 )
 async def test_set_preset_mode(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_temperature: AsyncMock,
     config_entry: MockConfigEntry,
     set_mode: str,
     expected_mode: str,
 ) -> None:
     """Test the preset mode climate action."""
-    await init_integration(hass, config_entry)
-    await hass.services.async_call(
+    await init_integration(menuai, config_entry)
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_PRESET_MODE,
         {ATTR_ENTITY_ID: "climate.living_room_temperature", ATTR_PRESET_MODE: set_mode},
@@ -92,14 +92,14 @@ async def test_set_preset_mode(
     ],
 )
 async def test_set_hvac_mode(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_temperature: AsyncMock,
     config_entry: MockConfigEntry,
     set_mode: str,
 ) -> None:
     """Test the hvac mode climate action."""
-    await init_integration(hass, config_entry)
-    await hass.services.async_call(
+    await init_integration(menuai, config_entry)
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {ATTR_ENTITY_ID: "climate.living_room_temperature", ATTR_HVAC_MODE: set_mode},
@@ -109,14 +109,14 @@ async def test_set_hvac_mode(
 
 
 async def test_set_hvac_mode_invalid(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_temperature: AsyncMock,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test the hvac mode climate action with an invalid mode."""
-    await init_integration(hass, config_entry)
+    await init_integration(menuai, config_entry)
     with pytest.raises(ServiceValidationError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             CLIMATE_DOMAIN,
             SERVICE_SET_HVAC_MODE,
             {ATTR_ENTITY_ID: "climate.living_room_temperature", ATTR_HVAC_MODE: "auto"},

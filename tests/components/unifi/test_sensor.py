@@ -12,12 +12,12 @@ from freezegun.api import FrozenDateTimeFactory, freeze_time
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     DOMAIN as SENSOR_DOMAIN,
     SCAN_INTERVAL,
     SensorDeviceClass,
 )
-from homeassistant.components.unifi.const import (
+from menuai.components.unifi.const import (
     CONF_ALLOW_BANDWIDTH_SENSORS,
     CONF_ALLOW_UPTIME_SENSORS,
     CONF_DETECTION_TIME,
@@ -26,18 +26,18 @@ from homeassistant.components.unifi.const import (
     DEFAULT_DETECTION_TIME,
     DEVICE_STATES,
 )
-from homeassistant.config_entries import RELOAD_AFTER_UPDATE_DELAY
-from homeassistant.const import (
+from menuai.config_entries import RELOAD_AFTER_UPDATE_DELAY
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
     EntityCategory,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_registry import RegistryEntryDisabler
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity_registry import RegistryEntryDisabler
+from menuai.util import dt as dt_util
 
 from .conftest import (
     ConfigEntryFactoryType,
@@ -435,15 +435,15 @@ PDU_OUTLETS_UPDATE_DATA = [
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 @pytest.mark.freeze_time("2021-01-01 01:01:00")
 async def test_entity_and_device_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     config_entry_factory,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Validate entity and device data."""
-    with patch("homeassistant.components.unifi.PLATFORMS", [Platform.SENSOR]):
+    with patch("menuai.components.unifi.PLATFORMS", [Platform.SENSOR]):
         config_entry = await config_entry_factory()
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
 
 @pytest.mark.parametrize(
@@ -451,9 +451,9 @@ async def test_entity_and_device_data(
     [{CONF_ALLOW_BANDWIDTH_SENSORS: True, CONF_ALLOW_UPTIME_SENSORS: True}],
 )
 @pytest.mark.usefixtures("config_entry_setup")
-async def test_no_clients(hass: HomeAssistant) -> None:
+async def test_no_clients(menuai: menuai) -> None:
     """Test the update_clients function when no clients are found."""
-    assert len(hass.states.async_entity_ids(SENSOR_DOMAIN)) == 0
+    assert len(menuai.states.async_entity_ids(SENSOR_DOMAIN)) == 0
 
 
 @pytest.mark.parametrize(
@@ -469,7 +469,7 @@ async def test_no_clients(hass: HomeAssistant) -> None:
 )
 @pytest.mark.parametrize("client_payload", [[WIRED_CLIENT, WIRELESS_CLIENT]])
 async def test_bandwidth_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_websocket_message: WebsocketMessageMock,
     config_entry_options: MappingProxyType[str, Any],
     config_entry_setup: MockConfigEntry,
@@ -482,10 +482,10 @@ async def test_bandwidth_sensors(
     wireless_client["tx_bytes-r"] = 7891000000
 
     mock_websocket_message(message=MessageKey.CLIENT, data=wireless_client)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("sensor.wireless_client_rx").state == "3456.0"
-    assert hass.states.get("sensor.wireless_client_tx").state == "7891.0"
+    assert menuai.states.get("sensor.wireless_client_rx").state == "3456.0"
+    assert menuai.states.get("sensor.wireless_client_tx").state == "7891.0"
 
     # Verify reset sensor after heartbeat expires
 
@@ -493,14 +493,14 @@ async def test_bandwidth_sensors(
     wireless_client["last_seen"] = dt_util.as_timestamp(new_time)
 
     mock_websocket_message(message=MessageKey.CLIENT, data=wireless_client)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     with freeze_time(new_time):
-        async_fire_time_changed(hass, new_time)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, new_time)
+        await menuai.async_block_till_done()
 
-    assert hass.states.get("sensor.wireless_client_rx").state == "3456.0"
-    assert hass.states.get("sensor.wireless_client_tx").state == "7891.0"
+    assert menuai.states.get("sensor.wireless_client_rx").state == "3456.0"
+    assert menuai.states.get("sensor.wireless_client_tx").state == "7891.0"
 
     new_time += timedelta(
         seconds=(
@@ -509,37 +509,37 @@ async def test_bandwidth_sensors(
         )
     )
     with freeze_time(new_time):
-        async_fire_time_changed(hass, new_time)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, new_time)
+        await menuai.async_block_till_done()
 
-    assert hass.states.get("sensor.wireless_client_rx").state == STATE_UNAVAILABLE
-    assert hass.states.get("sensor.wireless_client_tx").state == STATE_UNAVAILABLE
+    assert menuai.states.get("sensor.wireless_client_rx").state == STATE_UNAVAILABLE
+    assert menuai.states.get("sensor.wireless_client_tx").state == STATE_UNAVAILABLE
 
     # Disable option
     options = deepcopy(config_entry_options)
     options[CONF_ALLOW_BANDWIDTH_SENSORS] = False
-    hass.config_entries.async_update_entry(config_entry_setup, options=options)
-    await hass.async_block_till_done()
+    menuai.config_entries.async_update_entry(config_entry_setup, options=options)
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == 1
-    assert len(hass.states.async_entity_ids(SENSOR_DOMAIN)) == 0
-    assert hass.states.get("sensor.wireless_client_rx") is None
-    assert hass.states.get("sensor.wireless_client_tx") is None
-    assert hass.states.get("sensor.wired_client_rx") is None
-    assert hass.states.get("sensor.wired_client_tx") is None
+    assert len(menuai.states.async_all()) == 1
+    assert len(menuai.states.async_entity_ids(SENSOR_DOMAIN)) == 0
+    assert menuai.states.get("sensor.wireless_client_rx") is None
+    assert menuai.states.get("sensor.wireless_client_tx") is None
+    assert menuai.states.get("sensor.wired_client_rx") is None
+    assert menuai.states.get("sensor.wired_client_tx") is None
 
     # Enable option
     options = deepcopy(config_entry_options)
     options[CONF_ALLOW_BANDWIDTH_SENSORS] = True
-    hass.config_entries.async_update_entry(config_entry_setup, options=options)
-    await hass.async_block_till_done()
+    menuai.config_entries.async_update_entry(config_entry_setup, options=options)
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == 5
-    assert len(hass.states.async_entity_ids(SENSOR_DOMAIN)) == 4
-    assert hass.states.get("sensor.wireless_client_rx")
-    assert hass.states.get("sensor.wireless_client_tx")
-    assert hass.states.get("sensor.wired_client_rx")
-    assert hass.states.get("sensor.wired_client_tx")
+    assert len(menuai.states.async_all()) == 5
+    assert len(menuai.states.async_entity_ids(SENSOR_DOMAIN)) == 4
+    assert menuai.states.get("sensor.wireless_client_rx")
+    assert menuai.states.get("sensor.wireless_client_tx")
+    assert menuai.states.get("sensor.wired_client_rx")
+    assert menuai.states.get("sensor.wired_client_tx")
 
 
 @pytest.mark.parametrize(
@@ -550,42 +550,42 @@ async def test_bandwidth_sensors(
 @pytest.mark.usefixtures("config_entry_setup")
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_remove_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_websocket_message: WebsocketMessageMock,
     client_payload: list[dict[str, Any]],
 ) -> None:
     """Verify removing of clients work as expected."""
-    assert len(hass.states.async_entity_ids(SENSOR_DOMAIN)) == 6
-    assert hass.states.get("sensor.wired_client_rx")
-    assert hass.states.get("sensor.wired_client_tx")
-    assert hass.states.get("sensor.wired_client_uptime")
-    assert hass.states.get("sensor.wireless_client_rx")
-    assert hass.states.get("sensor.wireless_client_tx")
-    assert hass.states.get("sensor.wireless_client_uptime")
+    assert len(menuai.states.async_entity_ids(SENSOR_DOMAIN)) == 6
+    assert menuai.states.get("sensor.wired_client_rx")
+    assert menuai.states.get("sensor.wired_client_tx")
+    assert menuai.states.get("sensor.wired_client_uptime")
+    assert menuai.states.get("sensor.wireless_client_rx")
+    assert menuai.states.get("sensor.wireless_client_tx")
+    assert menuai.states.get("sensor.wireless_client_uptime")
 
     # Remove wired client
     mock_websocket_message(message=MessageKey.CLIENT_REMOVED, data=client_payload[0])
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_entity_ids(SENSOR_DOMAIN)) == 3
-    assert hass.states.get("sensor.wired_client_rx") is None
-    assert hass.states.get("sensor.wired_client_tx") is None
-    assert hass.states.get("sensor.wired_client_uptime") is None
-    assert hass.states.get("sensor.wireless_client_rx")
-    assert hass.states.get("sensor.wireless_client_tx")
-    assert hass.states.get("sensor.wireless_client_uptime")
+    assert len(menuai.states.async_entity_ids(SENSOR_DOMAIN)) == 3
+    assert menuai.states.get("sensor.wired_client_rx") is None
+    assert menuai.states.get("sensor.wired_client_tx") is None
+    assert menuai.states.get("sensor.wired_client_uptime") is None
+    assert menuai.states.get("sensor.wireless_client_rx")
+    assert menuai.states.get("sensor.wireless_client_tx")
+    assert menuai.states.get("sensor.wireless_client_uptime")
 
 
 @pytest.mark.parametrize("device_payload", [[DEVICE_1]])
 @pytest.mark.usefixtures("config_entry_setup")
 async def test_poe_port_switches(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_websocket_message: WebsocketMessageMock,
     mock_websocket_state: WebsocketStateManager,
 ) -> None:
     """Test the update_items function with some clients."""
-    assert len(hass.states.async_entity_ids(SENSOR_DOMAIN)) == 2
+    assert len(menuai.states.async_entity_ids(SENSOR_DOMAIN)) == 2
 
     ent_reg_entry = entity_registry.async_get("sensor.mock_name_port_1_poe_power")
     assert ent_reg_entry.disabled_by == RegistryEntryDisabler.INTEGRATION
@@ -594,16 +594,16 @@ async def test_poe_port_switches(
     entity_registry.async_update_entity(
         entity_id="sensor.mock_name_port_1_poe_power", disabled_by=None
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     async_fire_time_changed(
-        hass,
+        menuai,
         dt_util.utcnow() + timedelta(seconds=RELOAD_AFTER_UPDATE_DELAY + 1),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Validate state object
-    poe_sensor = hass.states.get("sensor.mock_name_port_1_poe_power")
+    poe_sensor = menuai.states.get("sensor.mock_name_port_1_poe_power")
     assert poe_sensor.state == "2.56"
     assert poe_sensor.attributes.get(ATTR_DEVICE_CLASS) == SensorDeviceClass.POWER
 
@@ -611,48 +611,48 @@ async def test_poe_port_switches(
     device_1 = deepcopy(DEVICE_1)
     device_1["port_table"][0]["poe_power"] = "5.12"
     mock_websocket_message(message=MessageKey.DEVICE, data=device_1)
-    await hass.async_block_till_done()
-    assert hass.states.get("sensor.mock_name_port_1_poe_power").state == "5.12"
+    await menuai.async_block_till_done()
+    assert menuai.states.get("sensor.mock_name_port_1_poe_power").state == "5.12"
 
     # PoE is disabled
     device_1 = deepcopy(DEVICE_1)
     device_1["port_table"][0]["poe_mode"] = "off"
     mock_websocket_message(message=MessageKey.DEVICE, data=device_1)
-    await hass.async_block_till_done()
-    assert hass.states.get("sensor.mock_name_port_1_poe_power").state == "0"
+    await menuai.async_block_till_done()
+    assert menuai.states.get("sensor.mock_name_port_1_poe_power").state == "0"
 
     # Availability signalling
 
     # Controller disconnects
     await mock_websocket_state.disconnect()
     assert (
-        hass.states.get("sensor.mock_name_port_1_poe_power").state == STATE_UNAVAILABLE
+        menuai.states.get("sensor.mock_name_port_1_poe_power").state == STATE_UNAVAILABLE
     )
 
     # Controller reconnects
     await mock_websocket_state.reconnect()
     assert (
-        hass.states.get("sensor.mock_name_port_1_poe_power").state != STATE_UNAVAILABLE
+        menuai.states.get("sensor.mock_name_port_1_poe_power").state != STATE_UNAVAILABLE
     )
 
     # Device gets disabled
     device_1["disabled"] = True
     mock_websocket_message(message=MessageKey.DEVICE, data=device_1)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert (
-        hass.states.get("sensor.mock_name_port_1_poe_power").state == STATE_UNAVAILABLE
+        menuai.states.get("sensor.mock_name_port_1_poe_power").state == STATE_UNAVAILABLE
     )
 
     # Device gets re-enabled
     device_1["disabled"] = False
     mock_websocket_message(message=MessageKey.DEVICE, data=device_1)
-    await hass.async_block_till_done()
-    assert hass.states.get("sensor.mock_name_port_1_poe_power")
+    await menuai.async_block_till_done()
+    assert menuai.states.get("sensor.mock_name_port_1_poe_power")
 
 
 @pytest.mark.parametrize("wlan_payload", [[WLAN]])
 async def test_wlan_client_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry_factory: ConfigEntryFactoryType,
     mock_websocket_message: WebsocketMessageMock,
     mock_websocket_state: WebsocketStateManager,
@@ -683,10 +683,10 @@ async def test_wlan_client_sensors(
     ]
     await config_entry_factory()
 
-    assert len(hass.states.async_entity_ids(SENSOR_DOMAIN)) == 1
+    assert len(menuai.states.async_entity_ids(SENSOR_DOMAIN)) == 1
 
     # Validate state object
-    assert hass.states.get("sensor.ssid_1").state == "1"
+    assert menuai.states.get("sensor.ssid_1").state == "1"
 
     # Verify state update - increasing number
     wireless_client_1 = client_payload[0]
@@ -695,15 +695,15 @@ async def test_wlan_client_sensors(
     wireless_client_2 = client_payload[1]
     wireless_client_2["essid"] = "SSID 1"
     mock_websocket_message(message=MessageKey.CLIENT, data=wireless_client_2)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    ssid_1 = hass.states.get("sensor.ssid_1")
+    ssid_1 = menuai.states.get("sensor.ssid_1")
     assert ssid_1.state == "1"
 
-    async_fire_time_changed(hass, dt_util.utcnow() + SCAN_INTERVAL)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + SCAN_INTERVAL)
+    await menuai.async_block_till_done()
 
-    ssid_1 = hass.states.get("sensor.ssid_1")
+    ssid_1 = menuai.states.get("sensor.ssid_1")
     assert ssid_1.state == "2"
 
     # Verify state update - decreasing number
@@ -711,10 +711,10 @@ async def test_wlan_client_sensors(
     wireless_client_1["essid"] = "SSID"
     mock_websocket_message(message=MessageKey.CLIENT, data=wireless_client_1)
 
-    async_fire_time_changed(hass, dt_util.utcnow() + SCAN_INTERVAL)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + SCAN_INTERVAL)
+    await menuai.async_block_till_done()
 
-    ssid_1 = hass.states.get("sensor.ssid_1")
+    ssid_1 = menuai.states.get("sensor.ssid_1")
     assert ssid_1.state == "1"
 
     # Verify state update - decreasing number
@@ -722,34 +722,34 @@ async def test_wlan_client_sensors(
     wireless_client_2["last_seen"] = 0
     mock_websocket_message(message=MessageKey.CLIENT, data=wireless_client_2)
 
-    async_fire_time_changed(hass, dt_util.utcnow() + SCAN_INTERVAL)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + SCAN_INTERVAL)
+    await menuai.async_block_till_done()
 
-    ssid_1 = hass.states.get("sensor.ssid_1")
+    ssid_1 = menuai.states.get("sensor.ssid_1")
     assert ssid_1.state == "0"
 
     # Availability signalling
 
     # Controller disconnects
     await mock_websocket_state.disconnect()
-    assert hass.states.get("sensor.ssid_1").state == STATE_UNAVAILABLE
+    assert menuai.states.get("sensor.ssid_1").state == STATE_UNAVAILABLE
 
     # Controller reconnects
     await mock_websocket_state.reconnect()
-    assert hass.states.get("sensor.ssid_1").state == "0"
+    assert menuai.states.get("sensor.ssid_1").state == "0"
 
     # WLAN gets disabled
     wlan_1 = deepcopy(WLAN)
     wlan_1["enabled"] = False
     mock_websocket_message(message=MessageKey.WLAN_CONF_UPDATED, data=wlan_1)
-    await hass.async_block_till_done()
-    assert hass.states.get("sensor.ssid_1").state == STATE_UNAVAILABLE
+    await menuai.async_block_till_done()
+    assert menuai.states.get("sensor.ssid_1").state == STATE_UNAVAILABLE
 
     # WLAN gets re-enabled
     wlan_1["enabled"] = True
     mock_websocket_message(message=MessageKey.WLAN_CONF_UPDATED, data=wlan_1)
-    await hass.async_block_till_done()
-    assert hass.states.get("sensor.ssid_1").state == "0"
+    await menuai.async_block_till_done()
+    assert menuai.states.get("sensor.ssid_1").state == "0"
 
 
 @pytest.mark.parametrize(
@@ -783,7 +783,7 @@ async def test_wlan_client_sensors(
 @pytest.mark.parametrize("device_payload", [[PDU_DEVICE_1]])
 @pytest.mark.usefixtures("config_entry_setup")
 async def test_outlet_power_readings(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_websocket_message: WebsocketMessageMock,
     device_payload: list[dict[str, Any]],
     entity_id: str,
@@ -792,19 +792,19 @@ async def test_outlet_power_readings(
     expected_update_value: str | None,
 ) -> None:
     """Test the outlet power reporting on PDU devices."""
-    assert len(hass.states.async_all()) == 13
-    assert len(hass.states.async_entity_ids(SENSOR_DOMAIN)) == 7
+    assert len(menuai.states.async_all()) == 13
+    assert len(menuai.states.async_entity_ids(SENSOR_DOMAIN)) == 7
 
-    assert hass.states.get(f"sensor.{entity_id}").state == expected_value
+    assert menuai.states.get(f"sensor.{entity_id}").state == expected_value
 
     if changed_data is not None:
         updated_device_data = deepcopy(device_payload[0])
         updated_device_data.update(changed_data)
 
         mock_websocket_message(message=MessageKey.DEVICE, data=updated_device_data)
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-        assert hass.states.get(f"sensor.{entity_id}").state == expected_update_value
+        assert menuai.states.get(f"sensor.{entity_id}").state == expected_update_value
 
 
 @pytest.mark.parametrize(
@@ -836,19 +836,19 @@ async def test_outlet_power_readings(
 )
 @pytest.mark.usefixtures("config_entry_setup")
 async def test_device_temperature(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_websocket_message: WebsocketMessageMock,
     device_payload: list[dict[str, Any]],
 ) -> None:
     """Verify that temperature sensors are working as expected."""
-    assert len(hass.states.async_entity_ids(SENSOR_DOMAIN)) == 3
-    assert hass.states.get("sensor.device_temperature").state == "30"
+    assert len(menuai.states.async_entity_ids(SENSOR_DOMAIN)) == 3
+    assert menuai.states.get("sensor.device_temperature").state == "30"
 
     # Verify new event change temperature
     device = device_payload[0]
     device["general_temperature"] = 60
     mock_websocket_message(message=MessageKey.DEVICE, data=device)
-    assert hass.states.get("sensor.device_temperature").state == "60"
+    assert menuai.states.get("sensor.device_temperature").state == "60"
 
 
 @pytest.mark.parametrize(
@@ -880,19 +880,19 @@ async def test_device_temperature(
 )
 @pytest.mark.usefixtures("config_entry_setup")
 async def test_device_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_websocket_message: WebsocketMessageMock,
     device_payload: list[dict[str, Any]],
 ) -> None:
     """Verify that state sensors are working as expected."""
-    assert len(hass.states.async_entity_ids(SENSOR_DOMAIN)) == 3
+    assert len(menuai.states.async_entity_ids(SENSOR_DOMAIN)) == 3
 
     device = device_payload[0]
     for i in list(map(int, DeviceState)):
         device["state"] = i
         mock_websocket_message(message=MessageKey.DEVICE, data=device)
-        assert hass.states.get("sensor.device_state").state == DEVICE_STATES.get(
+        assert menuai.states.get("sensor.device_state").state == DEVICE_STATES.get(
             i, STATE_UNKNOWN
         )
 
@@ -915,24 +915,24 @@ async def test_device_state(
 )
 @pytest.mark.usefixtures("config_entry_setup")
 async def test_device_system_stats(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_websocket_message: WebsocketMessageMock,
     device_payload: list[dict[str, Any]],
 ) -> None:
     """Verify that device stats sensors are working as expected."""
-    assert len(hass.states.async_all()) == 8
-    assert len(hass.states.async_entity_ids(SENSOR_DOMAIN)) == 4
+    assert len(menuai.states.async_all()) == 8
+    assert len(menuai.states.async_entity_ids(SENSOR_DOMAIN)) == 4
 
-    assert hass.states.get("sensor.device_cpu_utilization").state == "5.8"
-    assert hass.states.get("sensor.device_memory_utilization").state == "31.1"
+    assert menuai.states.get("sensor.device_cpu_utilization").state == "5.8"
+    assert menuai.states.get("sensor.device_memory_utilization").state == "31.1"
 
     # Verify new event change system-stats
     device = device_payload[0]
     device["system-stats"] = {"cpu": 7.7, "mem": 33.3, "uptime": 7316}
     mock_websocket_message(message=MessageKey.DEVICE, data=device)
 
-    assert hass.states.get("sensor.device_cpu_utilization").state == "7.7"
-    assert hass.states.get("sensor.device_memory_utilization").state == "33.3"
+    assert menuai.states.get("sensor.device_cpu_utilization").state == "7.7"
+    assert menuai.states.get("sensor.device_memory_utilization").state == "33.3"
 
 
 @pytest.mark.parametrize(
@@ -999,7 +999,7 @@ async def test_device_system_stats(
     ],
 )
 async def test_bandwidth_port_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     config_entry_setup: MockConfigEntry,
     config_entry_options: MappingProxyType[str, Any],
@@ -1007,8 +1007,8 @@ async def test_bandwidth_port_sensors(
     device_payload: list[dict[str, Any]],
 ) -> None:
     """Verify that port bandwidth sensors are working as expected."""
-    assert len(hass.states.async_all()) == 5
-    assert len(hass.states.async_entity_ids(SENSOR_DOMAIN)) == 2
+    assert len(menuai.states.async_all()) == 5
+    assert len(menuai.states.async_entity_ids(SENSOR_DOMAIN)) == 2
 
     p1rx_reg_entry = entity_registry.async_get("sensor.mock_name_port_1_rx")
     assert p1rx_reg_entry.disabled_by == RegistryEntryDisabler.INTEGRATION
@@ -1029,23 +1029,23 @@ async def test_bandwidth_port_sensors(
     entity_registry.async_update_entity(
         entity_id="sensor.mock_name_port_2_tx", disabled_by=None
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     async_fire_time_changed(
-        hass,
+        menuai,
         dt_util.utcnow() + timedelta(seconds=RELOAD_AFTER_UPDATE_DELAY + 1),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Validate state object
-    assert len(hass.states.async_all()) == 9
-    assert len(hass.states.async_entity_ids(SENSOR_DOMAIN)) == 6
+    assert len(menuai.states.async_all()) == 9
+    assert len(menuai.states.async_entity_ids(SENSOR_DOMAIN)) == 6
 
     # Verify sensor state
-    assert hass.states.get("sensor.mock_name_port_1_rx").state == "0.009208"
-    assert hass.states.get("sensor.mock_name_port_1_tx").state == "0.040888"
-    assert hass.states.get("sensor.mock_name_port_2_rx").state == "0.012288"
-    assert hass.states.get("sensor.mock_name_port_2_tx").state == "0.02892"
+    assert menuai.states.get("sensor.mock_name_port_1_rx").state == "0.009208"
+    assert menuai.states.get("sensor.mock_name_port_1_tx").state == "0.040888"
+    assert menuai.states.get("sensor.mock_name_port_2_rx").state == "0.012288"
+    assert menuai.states.get("sensor.mock_name_port_2_tx").state == "0.02892"
 
     # Verify state update
     device_1 = device_payload[0]
@@ -1053,26 +1053,26 @@ async def test_bandwidth_port_sensors(
     device_1["port_table"][0]["tx_bytes-r"] = 7891000000
 
     mock_websocket_message(message=MessageKey.DEVICE, data=device_1)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("sensor.mock_name_port_1_rx").state == "27648.0"
-    assert hass.states.get("sensor.mock_name_port_1_tx").state == "63128.0"
+    assert menuai.states.get("sensor.mock_name_port_1_rx").state == "27648.0"
+    assert menuai.states.get("sensor.mock_name_port_1_tx").state == "63128.0"
 
     # Disable option
     options = config_entry_options.copy()
     options[CONF_ALLOW_BANDWIDTH_SENSORS] = False
-    hass.config_entries.async_update_entry(config_entry_setup, options=options)
-    await hass.async_block_till_done()
+    menuai.config_entries.async_update_entry(config_entry_setup, options=options)
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == 5
-    assert len(hass.states.async_entity_ids(SENSOR_DOMAIN)) == 2
+    assert len(menuai.states.async_all()) == 5
+    assert len(menuai.states.async_entity_ids(SENSOR_DOMAIN)) == 2
 
-    assert hass.states.get("sensor.mock_name_uptime")
-    assert hass.states.get("sensor.mock_name_state")
-    assert hass.states.get("sensor.mock_name_port_1_rx") is None
-    assert hass.states.get("sensor.mock_name_port_1_tx") is None
-    assert hass.states.get("sensor.mock_name_port_2_rx") is None
-    assert hass.states.get("sensor.mock_name_port_2_tx") is None
+    assert menuai.states.get("sensor.mock_name_uptime")
+    assert menuai.states.get("sensor.mock_name_state")
+    assert menuai.states.get("sensor.mock_name_port_1_rx") is None
+    assert menuai.states.get("sensor.mock_name_port_1_tx") is None
+    assert menuai.states.get("sensor.mock_name_port_2_rx") is None
+    assert menuai.states.get("sensor.mock_name_port_2_tx") is None
 
 
 @pytest.mark.parametrize(
@@ -1099,7 +1099,7 @@ async def test_bandwidth_port_sensors(
     ],
 )
 async def test_device_client_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     config_entry_factory: ConfigEntryFactoryType,
     mock_websocket_message: WebsocketMessageMock,
@@ -1135,7 +1135,7 @@ async def test_device_client_sensors(
     ]
     await config_entry_factory()
 
-    assert len(hass.states.async_entity_ids(SENSOR_DOMAIN)) == 4
+    assert len(menuai.states.async_entity_ids(SENSOR_DOMAIN)) == 4
 
     ent_reg_entry = entity_registry.async_get("sensor.wired_device_clients")
     assert ent_reg_entry.disabled_by == RegistryEntryDisabler.INTEGRATION
@@ -1151,35 +1151,35 @@ async def test_device_client_sensors(
         entity_id="sensor.wireless_device_clients", disabled_by=None
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     async_fire_time_changed(
-        hass,
+        menuai,
         dt_util.utcnow() + timedelta(seconds=RELOAD_AFTER_UPDATE_DELAY + 1),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Validate state object
-    assert len(hass.states.async_all()) == 13
-    assert len(hass.states.async_entity_ids(SENSOR_DOMAIN)) == 6
+    assert len(menuai.states.async_all()) == 13
+    assert len(menuai.states.async_entity_ids(SENSOR_DOMAIN)) == 6
 
-    assert hass.states.get("sensor.wired_device_clients").state == "2"
-    assert hass.states.get("sensor.wireless_device_clients").state == "1"
+    assert menuai.states.get("sensor.wired_device_clients").state == "2"
+    assert menuai.states.get("sensor.wireless_device_clients").state == "1"
 
     # Verify state update - decreasing number
     wireless_client_1 = client_payload[2]
     wireless_client_1["last_seen"] = 0
     mock_websocket_message(message=MessageKey.CLIENT, data=wireless_client_1)
 
-    async_fire_time_changed(hass, dt_util.utcnow() + SCAN_INTERVAL)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + SCAN_INTERVAL)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("sensor.wired_device_clients").state == "2"
-    assert hass.states.get("sensor.wireless_device_clients").state == "0"
+    assert menuai.states.get("sensor.wired_device_clients").state == "2"
+    assert menuai.states.get("sensor.wireless_device_clients").state == "0"
 
 
 async def _test_uptime_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     mock_websocket_message: WebsocketMessageMock,
     config_entry_factory: ConfigEntryFactoryType,
@@ -1196,39 +1196,39 @@ async def _test_uptime_entity(
     freezer.move_to(datetime(2021, 1, 1, 1, 1, 0, tzinfo=dt_util.UTC))
     config_entry = await config_entry_factory()
 
-    assert hass.states.get(entity_id).state == "2021-01-01T01:00:00+00:00"
+    assert menuai.states.get(entity_id).state == "2021-01-01T01:00:00+00:00"
 
     # Verify normal new event doesn't change uptime
     # 4 minutes have passed
 
     payload["uptime"] = event_uptime
     now = datetime(2021, 1, 1, 1, 4, 0, tzinfo=dt_util.UTC)
-    with patch("homeassistant.util.dt.now", return_value=now):
+    with patch("menuai.util.dt.now", return_value=now):
         mock_websocket_message(message=message_key, data=payload)
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    assert hass.states.get(entity_id).state == "2021-01-01T01:00:00+00:00"
+    assert menuai.states.get(entity_id).state == "2021-01-01T01:00:00+00:00"
 
     # Verify small variation of uptime (<120 seconds) is ignored
     # 15 seconds variation after 8 minutes
 
     payload["uptime"] = small_variation_uptime
     now = datetime(2021, 1, 1, 1, 8, 15, tzinfo=dt_util.UTC)
-    with patch("homeassistant.util.dt.now", return_value=now):
+    with patch("menuai.util.dt.now", return_value=now):
         mock_websocket_message(message=message_key, data=payload)
 
-    assert hass.states.get(entity_id).state == "2021-01-01T01:00:00+00:00"
+    assert menuai.states.get(entity_id).state == "2021-01-01T01:00:00+00:00"
 
     # Verify new event change uptime
     # 1 month has passed
 
     payload["uptime"] = new_uptime
     now = datetime(2021, 2, 1, 1, 1, 0, tzinfo=dt_util.UTC)
-    with patch("homeassistant.util.dt.now", return_value=now):
+    with patch("menuai.util.dt.now", return_value=now):
         mock_websocket_message(message=message_key, data=payload)
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    assert hass.states.get(entity_id).state == "2021-02-01T01:00:00+00:00"
+    assert menuai.states.get(entity_id).state == "2021-02-01T01:00:00+00:00"
 
     return config_entry
 
@@ -1246,7 +1246,7 @@ async def _test_uptime_entity(
 )
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_client_uptime(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     config_entry_options: MappingProxyType[str, Any],
     config_entry_factory: ConfigEntryFactoryType,
@@ -1259,7 +1259,7 @@ async def test_client_uptime(
 ) -> None:
     """Verify that client uptime sensors are working as expected."""
     config_entry = await _test_uptime_entity(
-        hass,
+        menuai,
         freezer,
         mock_websocket_message,
         config_entry_factory,
@@ -1275,23 +1275,23 @@ async def test_client_uptime(
     # Disable option
     options = deepcopy(config_entry_options)
     options[CONF_ALLOW_UPTIME_SENSORS] = False
-    hass.config_entries.async_update_entry(config_entry, options=options)
-    await hass.async_block_till_done()
+    menuai.config_entries.async_update_entry(config_entry, options=options)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("sensor.wired_client_uptime") is None
+    assert menuai.states.get("sensor.wired_client_uptime") is None
 
     # Enable option
     options = deepcopy(config_entry_options)
     options[CONF_ALLOW_UPTIME_SENSORS] = True
-    hass.config_entries.async_update_entry(config_entry, options=options)
-    await hass.async_block_till_done()
+    menuai.config_entries.async_update_entry(config_entry, options=options)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("sensor.wired_client_uptime")
+    assert menuai.states.get("sensor.wired_client_uptime")
 
 
 @pytest.mark.parametrize("device_payload", [[DEVICE_1]])
 async def test_device_uptime(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     freezer: FrozenDateTimeFactory,
     config_entry_factory: ConfigEntryFactoryType,
@@ -1300,7 +1300,7 @@ async def test_device_uptime(
 ) -> None:
     """Verify that device uptime sensors are working as expected."""
     await _test_uptime_entity(
-        hass,
+        menuai,
         freezer,
         mock_websocket_message,
         config_entry_factory,
@@ -1388,7 +1388,7 @@ async def test_device_uptime(
 )
 @pytest.mark.usefixtures("config_entry_setup")
 async def test_wan_monitor_latency(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_websocket_message: WebsocketMessageMock,
     device_payload: list[dict[str, Any]],
@@ -1400,8 +1400,8 @@ async def test_wan_monitor_latency(
     """Verify that wan latency sensors are working as expected."""
     entity_id = f"sensor.mock_name_{monitor_id}_latency"
 
-    assert len(hass.states.async_all()) == 6
-    assert len(hass.states.async_entity_ids(SENSOR_DOMAIN)) == 2
+    assert len(menuai.states.async_all()) == 6
+    assert len(menuai.states.async_entity_ids(SENSOR_DOMAIN)) == 2
 
     latency_entry = entity_registry.async_get(entity_id)
     assert latency_entry.disabled_by == RegistryEntryDisabler.INTEGRATION
@@ -1409,19 +1409,19 @@ async def test_wan_monitor_latency(
     # Enable entity
     entity_registry.async_update_entity(entity_id=entity_id, disabled_by=None)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     async_fire_time_changed(
-        hass,
+        menuai,
         dt_util.utcnow() + timedelta(seconds=RELOAD_AFTER_UPDATE_DELAY + 1),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == 7
-    assert len(hass.states.async_entity_ids(SENSOR_DOMAIN)) == 3
+    assert len(menuai.states.async_all()) == 7
+    assert len(menuai.states.async_entity_ids(SENSOR_DOMAIN)) == 3
 
     # Verify sensor state
-    assert hass.states.get(entity_id).state == state
+    assert menuai.states.get(entity_id).state == state
 
     # Verify state update
     device = device_payload[0]
@@ -1431,7 +1431,7 @@ async def test_wan_monitor_latency(
 
     mock_websocket_message(message=MessageKey.DEVICE, data=device)
 
-    assert hass.states.get(entity_id).state == updated_state
+    assert menuai.states.get(entity_id).state == updated_state
 
 
 @pytest.mark.parametrize(
@@ -1483,13 +1483,13 @@ async def test_wan_monitor_latency(
 )
 @pytest.mark.usefixtures("config_entry_setup")
 async def test_wan_monitor_latency_with_no_entries(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Verify that wan latency sensors is not created if there is no data."""
 
-    assert len(hass.states.async_all()) == 6
-    assert len(hass.states.async_entity_ids(SENSOR_DOMAIN)) == 2
+    assert len(menuai.states.async_all()) == 6
+    assert len(menuai.states.async_entity_ids(SENSOR_DOMAIN)) == 2
 
     latency_entry = entity_registry.async_get("sensor.mock_name_google_wan_latency")
     assert latency_entry is None
@@ -1517,13 +1517,13 @@ async def test_wan_monitor_latency_with_no_entries(
 )
 @pytest.mark.usefixtures("config_entry_setup")
 async def test_wan_monitor_latency_with_no_uptime(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Verify that wan latency sensors is not created if there is no data."""
 
-    assert len(hass.states.async_all()) == 6
-    assert len(hass.states.async_entity_ids(SENSOR_DOMAIN)) == 2
+    assert len(menuai.states.async_all()) == 6
+    assert len(menuai.states.async_entity_ids(SENSOR_DOMAIN)) == 2
 
     latency_entry = entity_registry.async_get("sensor.mock_name_google_wan_latency")
     assert latency_entry is None
@@ -1569,7 +1569,7 @@ async def test_wan_monitor_latency_with_no_uptime(
 )
 @pytest.mark.usefixtures("config_entry_setup")
 async def test_device_temperatures(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_websocket_message,
     device_payload: list[dict[str, Any]],
@@ -1582,8 +1582,8 @@ async def test_device_temperatures(
 
     entity_id = f"sensor.device_{temperature_id}_temperature"
 
-    assert len(hass.states.async_all()) == 6
-    assert len(hass.states.async_entity_ids(SENSOR_DOMAIN)) == 2
+    assert len(menuai.states.async_all()) == 6
+    assert len(menuai.states.async_entity_ids(SENSOR_DOMAIN)) == 2
 
     temperature_entity = entity_registry.async_get(entity_id)
     assert temperature_entity.disabled_by == RegistryEntryDisabler.INTEGRATION
@@ -1591,19 +1591,19 @@ async def test_device_temperatures(
     # Enable entity
     entity_registry.async_update_entity(entity_id=entity_id, disabled_by=None)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     async_fire_time_changed(
-        hass,
+        menuai,
         dt_util.utcnow() + timedelta(seconds=RELOAD_AFTER_UPDATE_DELAY + 1),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == 7
-    assert len(hass.states.async_entity_ids(SENSOR_DOMAIN)) == 3
+    assert len(menuai.states.async_all()) == 7
+    assert len(menuai.states.async_entity_ids(SENSOR_DOMAIN)) == 3
 
     # Verify sensor state
-    assert hass.states.get(entity_id).state == state
+    assert menuai.states.get(entity_id).state == state
 
     # # Verify state update
     device = device_payload[0]
@@ -1611,7 +1611,7 @@ async def test_device_temperatures(
 
     mock_websocket_message(message=MessageKey.DEVICE, data=device)
 
-    assert hass.states.get(entity_id).state == updated_state
+    assert menuai.states.get(entity_id).state == updated_state
 
 
 @pytest.mark.parametrize(
@@ -1636,13 +1636,13 @@ async def test_device_temperatures(
 )
 @pytest.mark.usefixtures("config_entry_setup")
 async def test_device_with_no_temperature(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Verify that device temperature sensors is not created if there is no data."""
 
-    assert len(hass.states.async_all()) == 6
-    assert len(hass.states.async_entity_ids(SENSOR_DOMAIN)) == 2
+    assert len(menuai.states.async_all()) == 6
+    assert len(menuai.states.async_entity_ids(SENSOR_DOMAIN)) == 2
 
     temperature_entity = entity_registry.async_get(
         "sensor.device_device_cpu_temperature"
@@ -1676,13 +1676,13 @@ async def test_device_with_no_temperature(
 )
 @pytest.mark.usefixtures("config_entry_setup")
 async def test_device_with_no_matching_temperatures(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Verify that device temperature sensors is not created if there is no matching data."""
 
-    assert len(hass.states.async_all()) == 6
-    assert len(hass.states.async_entity_ids(SENSOR_DOMAIN)) == 2
+    assert len(menuai.states.async_all()) == 6
+    assert len(menuai.states.async_entity_ids(SENSOR_DOMAIN)) == 2
 
     temperature_entity = entity_registry.async_get(
         "sensor.device_device_cpu_temperature"
@@ -1735,14 +1735,14 @@ async def test_device_with_no_matching_temperatures(
 )
 @pytest.mark.usefixtures("config_entry_setup")
 async def test_device_uplink(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_websocket_message,
     device_payload: list[dict[str, Any]],
 ) -> None:
     """Verify that uplink sensors are working as expected."""
-    assert len(hass.states.async_entity_ids(SENSOR_DOMAIN)) == 5
-    assert hass.states.get("sensor.device_uplink_mac").state == "00:00:00:00:00:02"
+    assert len(menuai.states.async_entity_ids(SENSOR_DOMAIN)) == 5
+    assert menuai.states.get("sensor.device_uplink_mac").state == "00:00:00:00:00:02"
     assert (
         entity_registry.async_get("sensor.device_uplink_mac").entity_category
         is EntityCategory.DIAGNOSTIC
@@ -1752,4 +1752,4 @@ async def test_device_uplink(
     device = device_payload[0]
     device["uplink"]["uplink_mac"] = "00:00:00:00:00:03"
     mock_websocket_message(message=MessageKey.DEVICE, data=device)
-    assert hass.states.get("sensor.device_uplink_mac").state == "00:00:00:00:00:03"
+    assert menuai.states.get("sensor.device_uplink_mac").state == "00:00:00:00:00:03"

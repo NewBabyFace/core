@@ -26,9 +26,9 @@ And optional parameter 'type' has to set as 'link_user' if login flow used for
 link credential to exist user. Default 'type' is 'authorize'.
 
 {
-    "client_id": "https://hassbian.local:8123/",
+    "client_id": "https://menuaibian.local:8123/",
     "handler": ["local_provider", null],
-    "redirect_url": "https://hassbian.local:8123/",
+    "redirect_url": "https://menuaibian.local:8123/",
     "type': "authorize"
 }
 
@@ -78,27 +78,27 @@ from aiohttp import web
 import voluptuous as vol
 import voluptuous_serialize
 
-from homeassistant import data_entry_flow
-from homeassistant.auth import AuthManagerFlowManager, InvalidAuthError
-from homeassistant.auth.models import AuthFlowContext, AuthFlowResult, Credentials
-from homeassistant.components import onboarding
-from homeassistant.components.http import KEY_HASS
-from homeassistant.components.http.auth import async_user_not_allowed_do_auth
-from homeassistant.components.http.ban import (
+from menuai import data_entry_flow
+from menuai.auth import AuthManagerFlowManager, InvalidAuthError
+from menuai.auth.models import AuthFlowContext, AuthFlowResult, Credentials
+from menuai.components import onboarding
+from menuai.components.http import KEY_menuai
+from menuai.components.http.auth import async_user_not_allowed_do_auth
+from menuai.components.http.ban import (
     log_invalid_auth,
     process_success_login,
     process_wrong_login,
 )
-from homeassistant.components.http.data_validator import RequestDataValidator
-from homeassistant.components.http.view import HomeAssistantView
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.network import is_cloud_connection
-from homeassistant.util.network import is_local
+from menuai.components.http.data_validator import RequestDataValidator
+from menuai.components.http.view import menuaiView
+from menuai.core import menuai, callback
+from menuai.helpers.network import is_cloud_connection
+from menuai.util.network import is_local
 
 from . import indieauth
 
 if TYPE_CHECKING:
-    from homeassistant.auth.providers.trusted_networks import (
+    from menuai.auth.providers.trusted_networks import (
         TrustedNetworksAuthProvider,
     )
 
@@ -107,16 +107,16 @@ if TYPE_CHECKING:
 
 @callback
 def async_setup(
-    hass: HomeAssistant, store_result: Callable[[str, Credentials], str]
+    menuai: menuai, store_result: Callable[[str, Credentials], str]
 ) -> None:
     """Component to allow users to login."""
-    hass.http.register_view(WellKnownOAuthInfoView)
-    hass.http.register_view(AuthProvidersView)
-    hass.http.register_view(LoginFlowIndexView(hass.auth.login_flow, store_result))
-    hass.http.register_view(LoginFlowResourceView(hass.auth.login_flow, store_result))
+    menuai.http.register_view(WellKnownOAuthInfoView)
+    menuai.http.register_view(AuthProvidersView)
+    menuai.http.register_view(LoginFlowIndexView(menuai.auth.login_flow, store_result))
+    menuai.http.register_view(LoginFlowResourceView(menuai.auth.login_flow, store_result))
 
 
-class WellKnownOAuthInfoView(HomeAssistantView):
+class WellKnownOAuthInfoView(menuaiView):
     """View to host the OAuth2 information."""
 
     requires_auth = False
@@ -138,7 +138,7 @@ class WellKnownOAuthInfoView(HomeAssistantView):
         )
 
 
-class AuthProvidersView(HomeAssistantView):
+class AuthProvidersView(menuaiView):
     """View to get available auth providers."""
 
     url = "/auth/providers"
@@ -147,8 +147,8 @@ class AuthProvidersView(HomeAssistantView):
 
     async def get(self, request: web.Request) -> web.Response:
         """Get available auth providers."""
-        hass = request.app[KEY_HASS]
-        if not onboarding.async_is_user_onboarded(hass):
+        menuai = request.app[KEY_menuai]
+        if not onboarding.async_is_user_onboarded(menuai):
             return self.json_message(
                 message="Onboarding not finished",
                 status_code=HTTPStatus.BAD_REQUEST,
@@ -164,10 +164,10 @@ class AuthProvidersView(HomeAssistantView):
                 message_code="invalid_remote_ip",
             )
 
-        cloud_connection = is_cloud_connection(hass)
+        cloud_connection = is_cloud_connection(menuai)
 
         providers = []
-        for provider in hass.auth.auth_providers:
+        for provider in menuai.auth.auth_providers:
             if provider.type == "trusted_networks":
                 if cloud_connection:
                     # Skip quickly as trusted networks are not available on cloud
@@ -222,7 +222,7 @@ def _prepare_result_json(
     return data
 
 
-class LoginFlowBaseView(HomeAssistantView):
+class LoginFlowBaseView(menuaiView):
     """Base class for the login views."""
 
     requires_auth = False
@@ -258,10 +258,10 @@ class LoginFlowBaseView(HomeAssistantView):
                 await process_wrong_login(request)
             return self.json(_prepare_result_json(result))
 
-        hass = request.app[KEY_HASS]
+        menuai = request.app[KEY_menuai]
 
         if not await indieauth.verify_redirect_uri(
-            hass, client_id, result["context"]["redirect_uri"]
+            menuai, client_id, result["context"]["redirect_uri"]
         ):
             return self.json_message("Invalid redirect URI", HTTPStatus.FORBIDDEN)
 
@@ -271,10 +271,10 @@ class LoginFlowBaseView(HomeAssistantView):
         result_obj: Credentials = result.pop("result")
 
         # Result can be None if credential was never linked to a user before.
-        user = await hass.auth.async_get_user_by_credentials(result_obj)
+        user = await menuai.auth.async_get_user_by_credentials(result_obj)
 
         if user is not None and (
-            user_access_error := async_user_not_allowed_do_auth(hass, user)
+            user_access_error := async_user_not_allowed_do_auth(menuai, user)
         ):
             return self.json_message(
                 f"Login blocked: {user_access_error}", HTTPStatus.FORBIDDEN

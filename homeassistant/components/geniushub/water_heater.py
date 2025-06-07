@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from homeassistant.components.water_heater import (
+from menuai.components.water_heater import (
     WaterHeaterEntity,
     WaterHeaterEntityFeature,
 )
-from homeassistant.const import STATE_OFF
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import STATE_OFF
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import GeniusHubConfigEntry
 from .entity import GeniusHeatingZone
@@ -34,7 +34,7 @@ GH_HEATERS = ["hot water temperature"]
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: GeniusHubConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

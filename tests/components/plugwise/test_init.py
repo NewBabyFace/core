@@ -14,16 +14,16 @@ from plugwise.exceptions import (
 )
 import pytest
 
-from homeassistant.components.plugwise.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.components.plugwise.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from tests.common import MockConfigEntry, async_fire_time_changed
 
 HA_PLUGWISE_SMILE_ASYNC_UPDATE = (
-    "homeassistant.components.plugwise.coordinator.Smile.async_update"
+    "menuai.components.plugwise.coordinator.Smile.async_update"
 )
 HEATER_ID = "1cbf783bb11e4a7c8a6843dee3a86927"  # Opentherm device_id for migration
 PLUG_ID = "cd0ddb54ef694e11ac18ed1cbce5dbbd"  # VCR device_id for migration
@@ -64,20 +64,20 @@ TOM = {
 @pytest.mark.parametrize("chosen_env", ["anna_heatpump_heating"], indirect=True)
 @pytest.mark.parametrize("cooling_present", [True], indirect=True)
 async def test_load_unload_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_smile_anna: MagicMock,
 ) -> None:
     """Test the Plugwise configuration entry loading/unloading."""
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert mock_config_entry.state is ConfigEntryState.LOADED
     assert len(mock_smile_anna.connect.mock_calls) == 1
 
-    await hass.config_entries.async_unload(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert mock_config_entry.state is ConfigEntryState.NOT_LOADED
 
@@ -96,7 +96,7 @@ async def test_load_unload_config_entry(
     ],
 )
 async def test_gateway_config_entry_not_ready(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_smile_anna: MagicMock,
     side_effect: Exception,
@@ -105,9 +105,9 @@ async def test_gateway_config_entry_not_ready(
     """Test the Plugwise configuration entry not ready."""
     mock_smile_anna.async_update.side_effect = side_effect
 
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert len(mock_smile_anna.connect.mock_calls) == 1
     assert mock_config_entry.state is entry_state
@@ -118,15 +118,15 @@ async def test_gateway_config_entry_not_ready(
     "gateway_id", ["a455b61e52394b2db5081ce025a430f3"], indirect=True
 )
 async def test_device_in_dr(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_smile_p1: MagicMock,
     device_registry: dr.DeviceRegistry,
 ) -> None:
     """Test Gateway device registry data."""
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     device_entry = device_registry.async_get_device(
         identifiers={(DOMAIN, "a455b61e52394b2db5081ce025a430f3")}
@@ -158,7 +158,7 @@ async def test_device_in_dr(
     ],
 )
 async def test_migrate_unique_id_temperature(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_config_entry: MockConfigEntry,
     mock_smile_anna: MagicMock,
@@ -167,15 +167,15 @@ async def test_migrate_unique_id_temperature(
     new_unique_id: str,
 ) -> None:
     """Test migration of unique_id."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     entity: entity_registry.RegistryEntry = entity_registry.async_get_or_create(
         **entitydata,
         config_entry=mock_config_entry,
     )
     assert entity.unique_id == old_unique_id
-    assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     entity_migrated = entity_registry.async_get(entity.entity_id)
     assert entity_migrated
@@ -210,7 +210,7 @@ async def test_migrate_unique_id_temperature(
     ],
 )
 async def test_migrate_unique_id_relay(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_config_entry: MockConfigEntry,
     mock_smile_adam: MagicMock,
@@ -219,15 +219,15 @@ async def test_migrate_unique_id_relay(
     new_unique_id: str,
 ) -> None:
     """Test migration of unique_id."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     entity: er.RegistryEntry = entity_registry.async_get_or_create(
         **entitydata,
         config_entry=mock_config_entry,
     )
     assert entity.unique_id == old_unique_id
-    assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     entity_migrated = entity_registry.async_get(entity.entity_id)
     assert entity_migrated
@@ -237,7 +237,7 @@ async def test_migrate_unique_id_relay(
 @pytest.mark.parametrize("chosen_env", ["m_adam_heating"], indirect=True)
 @pytest.mark.parametrize("cooling_present", [True], indirect=True)
 async def test_update_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_smile_adam_heat_cool: MagicMock,
     device_registry: dr.DeviceRegistry,
@@ -247,9 +247,9 @@ async def test_update_device(
     """Test a clean-up of the device_registry."""
     data = mock_smile_adam_heat_cool.async_update.return_value
 
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert (
         len(
@@ -280,8 +280,8 @@ async def test_update_device(
     )
     with patch(HA_PLUGWISE_SMILE_ASYNC_UPDATE, return_value=data):
         freezer.tick(timedelta(minutes=1))
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done()
 
         assert (
             len(
@@ -311,8 +311,8 @@ async def test_update_device(
     data.pop("1772a4ea304041adb83f357b751341ff")
     with patch(HA_PLUGWISE_SMILE_ASYNC_UPDATE, return_value=data):
         freezer.tick(timedelta(minutes=1))
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done()
 
         assert (
             len(

@@ -1,7 +1,7 @@
 """Test Media Source model methods."""
 
-from homeassistant.components.media_player import MediaClass, MediaType
-from homeassistant.components.media_source import const, models
+from menuai.components.media_player import MediaClass, MediaType
+from menuai.components.media_source import const, models
 
 
 async def test_browse_media_as_dict() -> None:

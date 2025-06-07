@@ -9,30 +9,30 @@ from zwave_js_server.const import CommandClass
 from zwave_js_server.event import Event
 from zwave_js_server.model.node import Node
 
-from homeassistant.components import automation
-from homeassistant.components.device_automation import DeviceAutomationType
-from homeassistant.components.device_automation.exceptions import (
+from menuai.components import automation
+from menuai.components.device_automation import DeviceAutomationType
+from menuai.components.device_automation.exceptions import (
     InvalidDeviceAutomationConfig,
 )
-from homeassistant.components.zwave_js import DOMAIN, device_trigger
-from homeassistant.components.zwave_js.helpers import (
+from menuai.components.zwave_js import DOMAIN, device_trigger
+from menuai.components.zwave_js.helpers import (
     async_get_node_status_sensor_entity_id,
     get_device_id,
 )
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import (
+from menuai.core import menuai, ServiceCall
+from menuai.exceptions import menuaiError
+from menuai.helpers import (
     config_validation as cv,
     device_registry as dr,
     entity_registry as er,
 )
-from homeassistant.setup import async_setup_component
+from menuai.setup import async_setup_component
 
 from tests.common import async_get_device_automations
 
 
 async def test_no_controller_triggers(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry, client, integration
+    menuai: menuai, device_registry: dr.DeviceRegistry, client, integration
 ) -> None:
     """Test that we do not get triggers for the controller."""
     device = device_registry.async_get_device(
@@ -41,14 +41,14 @@ async def test_no_controller_triggers(
     assert device
     assert (
         await async_get_device_automations(
-            hass, DeviceAutomationType.TRIGGER, device.id
+            menuai, DeviceAutomationType.TRIGGER, device.id
         )
         == []
     )
 
 
 async def test_get_notification_notification_triggers(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     client,
     lock_schlage_be469,
@@ -68,13 +68,13 @@ async def test_get_notification_notification_triggers(
         "metadata": {},
     }
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device.id
+        menuai, DeviceAutomationType.TRIGGER, device.id
     )
     assert expected_trigger in triggers
 
 
 async def test_if_notification_notification_fires(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     client,
     lock_schlage_be469,
@@ -89,7 +89,7 @@ async def test_if_notification_notification_fires(
     assert device
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -161,7 +161,7 @@ async def test_if_notification_notification_fires(
         },
     )
     node.receive_event(event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 2
     assert (
         service_calls[0].data["some"]
@@ -174,7 +174,7 @@ async def test_if_notification_notification_fires(
 
 
 async def test_get_trigger_capabilities_notification_notification(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     client,
     lock_schlage_be469,
@@ -186,7 +186,7 @@ async def test_get_trigger_capabilities_notification_notification(
     )
     assert device
     capabilities = await device_trigger.async_get_trigger_capabilities(
-        hass,
+        menuai,
         {
             "platform": "device",
             "domain": DOMAIN,
@@ -210,7 +210,7 @@ async def test_get_trigger_capabilities_notification_notification(
 
 
 async def test_if_entry_control_notification_fires(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     client,
     lock_schlage_be469,
@@ -225,7 +225,7 @@ async def test_if_entry_control_notification_fires(
     assert device
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -296,7 +296,7 @@ async def test_if_entry_control_notification_fires(
         },
     )
     node.receive_event(event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 2
     assert (
         service_calls[0].data["some"]
@@ -309,7 +309,7 @@ async def test_if_entry_control_notification_fires(
 
 
 async def test_get_trigger_capabilities_entry_control_notification(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     client,
     lock_schlage_be469,
@@ -321,7 +321,7 @@ async def test_get_trigger_capabilities_entry_control_notification(
     )
     assert device
     capabilities = await device_trigger.async_get_trigger_capabilities(
-        hass,
+        menuai,
         {
             "platform": "device",
             "domain": DOMAIN,
@@ -343,7 +343,7 @@ async def test_get_trigger_capabilities_entry_control_notification(
 
 
 async def test_get_node_status_triggers(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     client,
@@ -356,11 +356,11 @@ async def test_get_node_status_triggers(
     )
     assert device
     entity_id = async_get_node_status_sensor_entity_id(
-        hass, device.id, entity_registry, device_registry
+        menuai, device.id, entity_registry, device_registry
     )
     entity = entity_registry.async_update_entity(entity_id, disabled_by=None)
-    await hass.config_entries.async_reload(integration.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_reload(integration.entry_id)
+    await menuai.async_block_till_done()
 
     expected_trigger = {
         "platform": "device",
@@ -371,13 +371,13 @@ async def test_get_node_status_triggers(
         "metadata": {"secondary": True},
     }
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device.id
+        menuai, DeviceAutomationType.TRIGGER, device.id
     )
     assert expected_trigger in triggers
 
 
 async def test_if_node_status_change_fires(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     client,
@@ -392,14 +392,14 @@ async def test_if_node_status_change_fires(
     )
     assert device
     entity_id = async_get_node_status_sensor_entity_id(
-        hass, device.id, entity_registry, device_registry
+        menuai, device.id, entity_registry, device_registry
     )
     entity = entity_registry.async_update_entity(entity_id, disabled_by=None)
-    await hass.config_entries.async_reload(integration.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_reload(integration.entry_id)
+    await menuai.async_block_till_done()
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -453,14 +453,14 @@ async def test_if_node_status_change_fires(
         "dead", data={"source": "node", "event": "dead", "nodeId": node.node_id}
     )
     node.receive_event(event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 2
     assert service_calls[0].data["some"] == "state.node_status - device - alive"
     assert service_calls[1].data["some"] == "state.node_status2 - device - alive"
 
 
 async def test_if_node_status_change_fires_legacy(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     client,
@@ -475,14 +475,14 @@ async def test_if_node_status_change_fires_legacy(
     )
     assert device
     entity_id = async_get_node_status_sensor_entity_id(
-        hass, device.id, entity_registry, device_registry
+        menuai, device.id, entity_registry, device_registry
     )
     entity_registry.async_update_entity(entity_id, disabled_by=None)
-    await hass.config_entries.async_reload(integration.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_reload(integration.entry_id)
+    await menuai.async_block_till_done()
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -536,14 +536,14 @@ async def test_if_node_status_change_fires_legacy(
         "dead", data={"source": "node", "event": "dead", "nodeId": node.node_id}
     )
     node.receive_event(event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 2
     assert service_calls[0].data["some"] == "state.node_status - device - alive"
     assert service_calls[1].data["some"] == "state.node_status2 - device - alive"
 
 
 async def test_get_trigger_capabilities_node_status(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     client,
@@ -556,14 +556,14 @@ async def test_get_trigger_capabilities_node_status(
     )
     assert device
     entity_id = async_get_node_status_sensor_entity_id(
-        hass, device.id, entity_registry, device_registry
+        menuai, device.id, entity_registry, device_registry
     )
     entity_registry.async_update_entity(entity_id, disabled_by=None)
-    await hass.config_entries.async_reload(integration.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_reload(integration.entry_id)
+    await menuai.async_block_till_done()
 
     capabilities = await device_trigger.async_get_trigger_capabilities(
-        hass,
+        menuai,
         {
             "platform": "device",
             "domain": DOMAIN,
@@ -604,7 +604,7 @@ async def test_get_trigger_capabilities_node_status(
 
 
 async def test_get_basic_value_notification_triggers(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     client,
     ge_in_wall_dimmer_switch,
@@ -628,13 +628,13 @@ async def test_get_basic_value_notification_triggers(
         "metadata": {},
     }
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device.id
+        menuai, DeviceAutomationType.TRIGGER, device.id
     )
     assert expected_trigger in triggers
 
 
 async def test_if_basic_value_notification_fires(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     client,
     ge_in_wall_dimmer_switch,
@@ -649,7 +649,7 @@ async def test_if_basic_value_notification_fires(
     assert device
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -735,7 +735,7 @@ async def test_if_basic_value_notification_fires(
         },
     )
     node.receive_event(event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 2
     assert (
         service_calls[0].data["some"]
@@ -748,7 +748,7 @@ async def test_if_basic_value_notification_fires(
 
 
 async def test_get_trigger_capabilities_basic_value_notification(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     client,
     ge_in_wall_dimmer_switch,
@@ -760,7 +760,7 @@ async def test_get_trigger_capabilities_basic_value_notification(
     )
     assert device
     capabilities = await device_trigger.async_get_trigger_capabilities(
-        hass,
+        menuai,
         {
             "platform": "device",
             "domain": DOMAIN,
@@ -789,7 +789,7 @@ async def test_get_trigger_capabilities_basic_value_notification(
 
 
 async def test_get_central_scene_value_notification_triggers(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     client,
     wallmote_central_scene,
@@ -813,13 +813,13 @@ async def test_get_central_scene_value_notification_triggers(
         "metadata": {},
     }
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device.id
+        menuai, DeviceAutomationType.TRIGGER, device.id
     )
     assert expected_trigger in triggers
 
 
 async def test_if_central_scene_value_notification_fires(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     client,
     wallmote_central_scene,
@@ -834,7 +834,7 @@ async def test_if_central_scene_value_notification_fires(
     assert device
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -926,7 +926,7 @@ async def test_if_central_scene_value_notification_fires(
         },
     )
     node.receive_event(event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 2
     assert (
         service_calls[0].data["some"]
@@ -939,7 +939,7 @@ async def test_if_central_scene_value_notification_fires(
 
 
 async def test_get_trigger_capabilities_central_scene_value_notification(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     client,
     wallmote_central_scene,
@@ -951,7 +951,7 @@ async def test_get_trigger_capabilities_central_scene_value_notification(
     )
     assert device
     capabilities = await device_trigger.async_get_trigger_capabilities(
-        hass,
+        menuai,
         {
             "platform": "device",
             "domain": DOMAIN,
@@ -979,7 +979,7 @@ async def test_get_trigger_capabilities_central_scene_value_notification(
 
 
 async def test_get_scene_activation_value_notification_triggers(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     client,
     hank_binary_switch,
@@ -1003,13 +1003,13 @@ async def test_get_scene_activation_value_notification_triggers(
         "metadata": {},
     }
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device.id
+        menuai, DeviceAutomationType.TRIGGER, device.id
     )
     assert expected_trigger in triggers
 
 
 async def test_if_scene_activation_value_notification_fires(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     client,
     hank_binary_switch,
@@ -1024,7 +1024,7 @@ async def test_if_scene_activation_value_notification_fires(
     assert device
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -1110,7 +1110,7 @@ async def test_if_scene_activation_value_notification_fires(
         },
     )
     node.receive_event(event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 2
     assert (
         service_calls[0].data["some"]
@@ -1123,7 +1123,7 @@ async def test_if_scene_activation_value_notification_fires(
 
 
 async def test_get_trigger_capabilities_scene_activation_value_notification(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     client,
     hank_binary_switch,
@@ -1135,7 +1135,7 @@ async def test_get_trigger_capabilities_scene_activation_value_notification(
     )
     assert device
     capabilities = await device_trigger.async_get_trigger_capabilities(
-        hass,
+        menuai,
         {
             "platform": "device",
             "domain": DOMAIN,
@@ -1164,7 +1164,7 @@ async def test_get_trigger_capabilities_scene_activation_value_notification(
 
 
 async def test_get_value_updated_value_triggers(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     client,
     lock_schlage_be469,
@@ -1183,13 +1183,13 @@ async def test_get_value_updated_value_triggers(
         "metadata": {},
     }
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device.id
+        menuai, DeviceAutomationType.TRIGGER, device.id
     )
     assert expected_trigger in triggers
 
 
 async def test_if_value_updated_value_fires(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     client,
     lock_schlage_be469,
@@ -1204,7 +1204,7 @@ async def test_if_value_updated_value_fires(
     assert device
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -1254,7 +1254,7 @@ async def test_if_value_updated_value_fires(
         },
     )
     node.receive_event(event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 0
 
     # Publish fake value update that should trigger
@@ -1276,7 +1276,7 @@ async def test_if_value_updated_value_fires(
         },
     )
     node.receive_event(event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
     assert (
         service_calls[0].data["some"]
@@ -1285,7 +1285,7 @@ async def test_if_value_updated_value_fires(
 
 
 async def test_value_updated_value_no_driver(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     client,
     lock_schlage_be469,
@@ -1302,7 +1302,7 @@ async def test_value_updated_value_no_driver(
     client.driver = None
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -1332,7 +1332,7 @@ async def test_value_updated_value_no_driver(
             ]
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     client.driver = driver
 
@@ -1355,12 +1355,12 @@ async def test_value_updated_value_no_driver(
         },
     )
     node.receive_event(event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 0
 
 
 async def test_get_trigger_capabilities_value_updated_value(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     client,
     lock_schlage_be469,
@@ -1372,7 +1372,7 @@ async def test_get_trigger_capabilities_value_updated_value(
     )
     assert device
     capabilities = await device_trigger.async_get_trigger_capabilities(
-        hass,
+        menuai,
         {
             "platform": "device",
             "domain": DOMAIN,
@@ -1414,7 +1414,7 @@ async def test_get_trigger_capabilities_value_updated_value(
 
 
 async def test_get_value_updated_config_parameter_triggers(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     client,
     lock_schlage_be469,
@@ -1438,13 +1438,13 @@ async def test_get_value_updated_config_parameter_triggers(
         "metadata": {},
     }
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device.id
+        menuai, DeviceAutomationType.TRIGGER, device.id
     )
     assert expected_trigger in triggers
 
 
 async def test_if_value_updated_config_parameter_fires(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     client,
     lock_schlage_be469,
@@ -1459,7 +1459,7 @@ async def test_if_value_updated_config_parameter_fires(
     assert device
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -1510,7 +1510,7 @@ async def test_if_value_updated_config_parameter_fires(
         },
     )
     node.receive_event(event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
     assert (
         service_calls[0].data["some"]
@@ -1519,7 +1519,7 @@ async def test_if_value_updated_config_parameter_fires(
 
 
 async def test_get_trigger_capabilities_value_updated_config_parameter_range(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     client,
     lock_schlage_be469,
@@ -1531,7 +1531,7 @@ async def test_get_trigger_capabilities_value_updated_config_parameter_range(
     )
     assert device
     capabilities = await device_trigger.async_get_trigger_capabilities(
-        hass,
+        menuai,
         {
             "platform": "device",
             "domain": DOMAIN,
@@ -1567,7 +1567,7 @@ async def test_get_trigger_capabilities_value_updated_config_parameter_range(
 
 
 async def test_get_trigger_capabilities_value_updated_config_parameter_enumerated(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     client,
     lock_schlage_be469,
@@ -1579,7 +1579,7 @@ async def test_get_trigger_capabilities_value_updated_config_parameter_enumerate
     )
     assert device
     capabilities = await device_trigger.async_get_trigger_capabilities(
-        hass,
+        menuai,
         {
             "platform": "device",
             "domain": DOMAIN,
@@ -1613,21 +1613,21 @@ async def test_get_trigger_capabilities_value_updated_config_parameter_enumerate
 
 
 async def test_failure_scenarios(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     client,
     hank_binary_switch,
     integration,
 ) -> None:
     """Test failure scenarios."""
-    with pytest.raises(HomeAssistantError):
+    with pytest.raises(menuaiError):
         await device_trigger.async_attach_trigger(
-            hass, {"type": "failed.test", "device_id": "invalid_device_id"}, None, {}
+            menuai, {"type": "failed.test", "device_id": "invalid_device_id"}, None, {}
         )
 
-    with pytest.raises(HomeAssistantError):
+    with pytest.raises(menuaiError):
         await device_trigger.async_attach_trigger(
-            hass,
+            menuai,
             {"type": "event.failed_type", "device_id": "invalid_device_id"},
             None,
             {},
@@ -1638,22 +1638,22 @@ async def test_failure_scenarios(
     )
     assert device
 
-    with pytest.raises(HomeAssistantError):
+    with pytest.raises(menuaiError):
         await device_trigger.async_attach_trigger(
-            hass, {"type": "failed.test", "device_id": device.id}, None, {}
+            menuai, {"type": "failed.test", "device_id": device.id}, None, {}
         )
 
-    with pytest.raises(HomeAssistantError):
+    with pytest.raises(menuaiError):
         await device_trigger.async_attach_trigger(
-            hass,
+            menuai,
             {"type": "event.failed_type", "device_id": device.id},
             None,
             {},
         )
 
-    with pytest.raises(HomeAssistantError):
+    with pytest.raises(menuaiError):
         await device_trigger.async_attach_trigger(
-            hass,
+            menuai,
             {"type": "state.failed_type", "device_id": device.id},
             None,
             {},
@@ -1661,23 +1661,23 @@ async def test_failure_scenarios(
 
     with (
         patch(
-            "homeassistant.components.zwave_js.device_trigger.async_get_node_from_device_id",
+            "menuai.components.zwave_js.device_trigger.async_get_node_from_device_id",
             return_value=None,
         ),
         patch(
-            "homeassistant.components.zwave_js.helpers.get_zwave_value_from_config",
+            "menuai.components.zwave_js.helpers.get_zwave_value_from_config",
             return_value=None,
         ),
     ):
         assert (
             await device_trigger.async_get_trigger_capabilities(
-                hass, {"type": "failed.test", "device_id": "invalid_device_id"}
+                menuai, {"type": "failed.test", "device_id": "invalid_device_id"}
             )
             == {}
         )
 
-    with pytest.raises(HomeAssistantError):
-        async_get_node_status_sensor_entity_id(hass, "invalid_device_id")
+    with pytest.raises(menuaiError):
+        async_get_node_status_sensor_entity_id(menuai, "invalid_device_id")
 
     INVALID_CONFIG = {
         "platform": "device",
@@ -1692,20 +1692,20 @@ async def test_failure_scenarios(
 
     # Test that invalid config raises exception
     with pytest.raises(InvalidDeviceAutomationConfig):
-        await device_trigger.async_validate_trigger_config(hass, INVALID_CONFIG)
+        await device_trigger.async_validate_trigger_config(menuai, INVALID_CONFIG)
 
     # Unload entry so we can verify that validation will pass on an invalid config
     # since we return early
-    await hass.config_entries.async_unload(integration.entry_id)
+    await menuai.config_entries.async_unload(integration.entry_id)
     assert (
-        await device_trigger.async_validate_trigger_config(hass, INVALID_CONFIG)
+        await device_trigger.async_validate_trigger_config(menuai, INVALID_CONFIG)
         == INVALID_CONFIG
     )
 
     # Test invalid device ID fails validation
     with pytest.raises(InvalidDeviceAutomationConfig):
         await device_trigger.async_validate_trigger_config(
-            hass,
+            menuai,
             {
                 "platform": "device",
                 "domain": DOMAIN,

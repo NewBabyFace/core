@@ -7,7 +7,7 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     ATTR_APP_ID,
     ATTR_APP_NAME,
     ATTR_INPUT_SOURCE,
@@ -48,7 +48,7 @@ from homeassistant.components.media_player import (
     MediaType,
     RepeatMode,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ASSUMED_STATE,
     ATTR_ENTITY_ID,
     ATTR_ENTITY_PICTURE,
@@ -58,7 +58,7 @@ from homeassistant.const import (
     CONF_STATE,
     CONF_STATE_TEMPLATE,
     CONF_UNIQUE_ID,
-    EVENT_HOMEASSISTANT_START,
+    EVENT_menuai_START,
     SERVICE_MEDIA_NEXT_TRACK,
     SERVICE_MEDIA_PAUSE,
     SERVICE_MEDIA_PLAY,
@@ -79,20 +79,20 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import Event, EventStateChangedData, HomeAssistant, callback
-from homeassistant.exceptions import TemplateError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.event import (
+from menuai.core import Event, EventStateChangedData, menuai, callback
+from menuai.exceptions import TemplateError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.event import (
     TrackTemplate,
     TrackTemplateResult,
     async_track_state_change_event,
     async_track_template_result,
 )
-from homeassistant.helpers.reload import async_setup_reload_service
-from homeassistant.helpers.service import async_call_from_config
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.helpers.reload import async_setup_reload_service
+from menuai.helpers.service import async_call_from_config
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 ATTR_ACTIVE_CHILD = "active_child"
 
@@ -138,15 +138,15 @@ PLATFORM_SCHEMA = MEDIA_PLAYER_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the universal media players."""
-    await async_setup_reload_service(hass, "universal", ["media_player"])
+    await async_setup_reload_service(menuai, "universal", ["media_player"])
 
-    player = UniversalMediaPlayer(hass, config)
+    player = UniversalMediaPlayer(menuai, config)
     async_add_entities([player])
 
 
@@ -157,11 +157,11 @@ class UniversalMediaPlayer(MediaPlayerEntity):
 
     def __init__(
         self,
-        hass,
+        menuai,
         config,
     ):
         """Initialize the Universal media device."""
-        self.hass = hass
+        self.menuai = menuai
         self._attr_name = config.get(CONF_NAME)
         self._children = config.get(CONF_CHILDREN)
         self._active_child_template = config.get(CONF_ACTIVE_CHILD_TEMPLATE)
@@ -180,7 +180,7 @@ class UniversalMediaPlayer(MediaPlayerEntity):
         self._attr_unique_id = config.get(CONF_UNIQUE_ID)
         self._browse_media_entity = config.get(CONF_BROWSE_MEDIA_ENTITY)
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to children and template state changes."""
 
         @callback
@@ -225,12 +225,12 @@ class UniversalMediaPlayer(MediaPlayerEntity):
 
         if track_templates:
             result = async_track_template_result(
-                self.hass,
+                self.menuai,
                 track_templates,
                 _async_on_template_update,
             )
-            self.hass.bus.async_listen_once(
-                EVENT_HOMEASSISTANT_START, callback(lambda _: result.async_refresh())
+            self.menuai.bus.async_listen_once(
+                EVENT_menuai_START, callback(lambda _: result.async_refresh())
             )
 
             self.async_on_remove(result.async_remove)
@@ -241,13 +241,13 @@ class UniversalMediaPlayer(MediaPlayerEntity):
 
         self.async_on_remove(
             async_track_state_change_event(
-                self.hass, list(set(depend)), _async_on_dependency_update
+                self.menuai, list(set(depend)), _async_on_dependency_update
             )
         )
 
     def _entity_lkp(self, entity_id, state_attr=None):
         """Look up an entity state."""
-        if (state_obj := self.hass.states.get(entity_id)) is None:
+        if (state_obj := self.menuai.states.get(entity_id)) is None:
             return None
 
         if state_attr:
@@ -277,7 +277,7 @@ class UniversalMediaPlayer(MediaPlayerEntity):
 
         if allow_override and service_name in self._cmds:
             await async_call_from_config(
-                self.hass,
+                self.menuai,
                 self._cmds[service_name],
                 variables=service_data,
                 blocking=True,
@@ -291,7 +291,7 @@ class UniversalMediaPlayer(MediaPlayerEntity):
 
         service_data[ATTR_ENTITY_ID] = active_child.entity_id
 
-        await self.hass.services.async_call(
+        await self.menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             service_name,
             service_data,
@@ -655,7 +655,7 @@ class UniversalMediaPlayer(MediaPlayerEntity):
         entity_id = self._browse_media_entity
         if not entity_id and self._child_state:
             entity_id = self._child_state.entity_id
-        component: EntityComponent[MediaPlayerEntity] = self.hass.data[
+        component: EntityComponent[MediaPlayerEntity] = self.menuai.data[
             MEDIA_PLAYER_DOMAIN
         ]
         if entity_id and (entity := component.get_entity(entity_id)):
@@ -666,11 +666,11 @@ class UniversalMediaPlayer(MediaPlayerEntity):
     def _async_update(self) -> None:
         """Update state in HA."""
         if self._active_child_template_result:
-            self._child_state = self.hass.states.get(self._active_child_template_result)
+            self._child_state = self.menuai.states.get(self._active_child_template_result)
             return
         self._child_state = None
         for child_name in self._children:
-            if (child_state := self.hass.states.get(child_name)) and (
+            if (child_state := self.menuai.states.get(child_name)) and (
                 child_state_order := STATES_ORDER_LOOKUP.get(child_state.state, 0)
             ) >= STATES_ORDER_IDLE:
                 if self._child_state:

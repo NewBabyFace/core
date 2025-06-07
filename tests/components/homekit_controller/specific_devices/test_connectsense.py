@@ -1,8 +1,8 @@
 """Make sure that ConnectSense Smart Outlet2 / In-Wall Outlet is enumerated properly."""
 
-from homeassistant.components.sensor import SensorStateClass
-from homeassistant.const import UnitOfElectricCurrent, UnitOfEnergy, UnitOfPower
-from homeassistant.core import HomeAssistant
+from menuai.components.sensor import SensorStateClass
+from menuai.const import UnitOfElectricCurrent, UnitOfEnergy, UnitOfPower
+from menuai.core import menuai
 
 from ..common import (
     HUB_TEST_ACCESSORY_ID,
@@ -14,13 +14,13 @@ from ..common import (
 )
 
 
-async def test_connectsense_setup(hass: HomeAssistant) -> None:
+async def test_connectsense_setup(menuai: menuai) -> None:
     """Test that the accessory can be correctly setup in HA."""
-    accessories = await setup_accessories_from_file(hass, "connectsense.json")
-    config_entry, pairing = await setup_test_accessories(hass, accessories)
+    accessories = await setup_accessories_from_file(menuai, "connectsense.json")
+    config_entry, pairing = await setup_test_accessories(menuai, accessories)
 
     await assert_devices_and_entities_created(
-        hass,
+        menuai,
         DeviceTestInfo(
             unique_id=HUB_TEST_ACCESSORY_ID,
             name="InWall Outlet-0394DE",
@@ -95,11 +95,11 @@ async def test_connectsense_setup(hass: HomeAssistant) -> None:
         ),
     )
 
-    await hass.config_entries.async_reload(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_reload(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     await assert_devices_and_entities_created(
-        hass,
+        menuai,
         DeviceTestInfo(
             unique_id=HUB_TEST_ACCESSORY_ID,
             name="InWall Outlet-0394DE",

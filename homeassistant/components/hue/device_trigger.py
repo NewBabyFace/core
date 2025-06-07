@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.components.device_automation import InvalidDeviceAutomationConfig
-from homeassistant.const import CONF_DEVICE_ID
-from homeassistant.core import CALLBACK_TYPE
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.typing import ConfigType
+from menuai.components.device_automation import InvalidDeviceAutomationConfig
+from menuai.const import CONF_DEVICE_ID
+from menuai.core import CALLBACK_TYPE
+from menuai.helpers import device_registry as dr
+from menuai.helpers.typing import ConfigType
 
 from .const import DOMAIN
 from .v1.device_trigger import (
@@ -23,23 +23,23 @@ from .v2.device_trigger import (
 )
 
 if TYPE_CHECKING:
-    from homeassistant.core import HomeAssistant
-    from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
+    from menuai.core import menuai
+    from menuai.helpers.trigger import TriggerActionType, TriggerInfo
 
     from .bridge import HueConfigEntry
 
 
 async def async_validate_trigger_config(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> ConfigType:
     """Validate config."""
-    entries: list[HueConfigEntry] = hass.config_entries.async_loaded_entries(DOMAIN)
+    entries: list[HueConfigEntry] = menuai.config_entries.async_loaded_entries(DOMAIN)
     if not entries:
         # happens at startup
         return config
     device_id = config[CONF_DEVICE_ID]
-    # lookup device in HASS DeviceRegistry
-    dev_reg: dr.DeviceRegistry = dr.async_get(hass)
+    # lookup device in menuai DeviceRegistry
+    dev_reg: dr.DeviceRegistry = dr.async_get(menuai)
     if (device_entry := dev_reg.async_get(device_id)) is None:
         raise InvalidDeviceAutomationConfig(f"Device ID {device_id} is not valid")
 
@@ -54,20 +54,20 @@ async def async_validate_trigger_config(
 
 
 async def async_attach_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     action: TriggerActionType,
     trigger_info: TriggerInfo,
 ) -> CALLBACK_TYPE:
     """Listen for state changes based on configuration."""
     device_id = config[CONF_DEVICE_ID]
-    # lookup device in HASS DeviceRegistry
-    dev_reg: dr.DeviceRegistry = dr.async_get(hass)
+    # lookup device in menuai DeviceRegistry
+    dev_reg: dr.DeviceRegistry = dr.async_get(menuai)
     if (device_entry := dev_reg.async_get(device_id)) is None:
         raise InvalidDeviceAutomationConfig(f"Device ID {device_id} is not valid")
 
     entry: HueConfigEntry
-    for entry in hass.config_entries.async_loaded_entries(DOMAIN):
+    for entry in menuai.config_entries.async_loaded_entries(DOMAIN):
         if entry.entry_id not in device_entry.config_entries:
             continue
         bridge = entry.runtime_data
@@ -84,14 +84,14 @@ async def async_attach_trigger(
 
 
 async def async_get_triggers(
-    hass: HomeAssistant, device_id: str
+    menuai: menuai, device_id: str
 ) -> list[dict[str, Any]]:
-    """Get device triggers for given (hass) device id."""
-    entries: list[HueConfigEntry] = hass.config_entries.async_loaded_entries(DOMAIN)
+    """Get device triggers for given (menuai) device id."""
+    entries: list[HueConfigEntry] = menuai.config_entries.async_loaded_entries(DOMAIN)
     if not entries:
         return []
-    # lookup device in HASS DeviceRegistry
-    dev_reg: dr.DeviceRegistry = dr.async_get(hass)
+    # lookup device in menuai DeviceRegistry
+    dev_reg: dr.DeviceRegistry = dr.async_get(menuai)
     if (device_entry := dev_reg.async_get(device_id)) is None:
         raise ValueError(f"Device ID {device_id} is not valid")
 

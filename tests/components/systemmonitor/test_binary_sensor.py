@@ -7,13 +7,13 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
-from homeassistant.components.systemmonitor.binary_sensor import get_cpu_icon
-from homeassistant.components.systemmonitor.const import DOMAIN
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
+from menuai.components.systemmonitor.binary_sensor import get_cpu_icon
+from menuai.components.systemmonitor.const import DOMAIN
+from menuai.config_entries import ConfigEntry
+from menuai.const import STATE_OFF, STATE_ON
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .conftest import MockProcess
 
@@ -22,7 +22,7 @@ from tests.common import MockConfigEntry, async_fire_time_changed
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_binary_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_psutil: Mock,
     mock_os: Mock,
     entity_registry: er.EntityRegistry,
@@ -44,11 +44,11 @@ async def test_binary_sensor(
             ],
         },
     )
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    process_binary_sensor = hass.states.get(
+    process_binary_sensor = menuai.states.get(
         "binary_sensor.system_monitor_process_python3"
     )
     assert process_binary_sensor is not None
@@ -57,14 +57,14 @@ async def test_binary_sensor(
         entity_registry, mock_config_entry.entry_id
     ):
         if entity.domain == BINARY_SENSOR_DOMAIN:
-            state = hass.states.get(entity.entity_id)
+            state = menuai.states.get(entity.entity_id)
             assert state.state == snapshot(name=f"{state.name} - state")
             assert state.attributes == snapshot(name=f"{state.name} - attributes")
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_binary_sensor_icon(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_psutil: Mock,
     mock_os: Mock,
     mock_config_entry: MockConfigEntry,
@@ -80,14 +80,14 @@ async def test_binary_sensor_icon(
 
 
 async def test_sensor_process_fails(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_added_config_entry: ConfigEntry,
     mock_psutil: Mock,
     freezer: FrozenDateTimeFactory,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test process not exist failure."""
-    process_sensor = hass.states.get("binary_sensor.system_monitor_process_python3")
+    process_sensor = menuai.states.get("binary_sensor.system_monitor_process_python3")
     assert process_sensor is not None
     assert process_sensor.state == STATE_ON
 
@@ -96,10 +96,10 @@ async def test_sensor_process_fails(
     mock_psutil.process_iter.return_value = [_process]
 
     freezer.tick(timedelta(minutes=1))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    process_sensor = hass.states.get("binary_sensor.system_monitor_process_python3")
+    process_sensor = menuai.states.get("binary_sensor.system_monitor_process_python3")
     assert process_sensor is not None
     assert process_sensor.state == STATE_OFF
 

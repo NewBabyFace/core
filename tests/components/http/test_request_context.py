@@ -5,7 +5,7 @@ from http import HTTPStatus
 
 from aiohttp import web
 
-from homeassistant.components.http.request_context import setup_request_context
+from menuai.components.http.request_context import setup_request_context
 
 from tests.typing import ClientSessionGenerator
 

@@ -4,23 +4,23 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant.components.device_automation import (
+from menuai.components.device_automation import (
     DEVICE_TRIGGER_BASE_SCHEMA,
     DeviceNotFound,
 )
-from homeassistant.components.homeassistant.triggers import event as event_trigger
-from homeassistant.const import (
+from menuai.components.menuai.triggers import event as event_trigger
+from menuai.const import (
     CONF_DEVICE_ID,
     CONF_DOMAIN,
     CONF_EVENT,
     CONF_PLATFORM,
     CONF_TYPE,
 )
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.issue_registry import IssueSeverity, async_create_issue
-from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import CALLBACK_TYPE, menuai
+from menuai.helpers import device_registry as dr
+from menuai.helpers.issue_registry import IssueSeverity, async_create_issue
+from menuai.helpers.trigger import TriggerActionType, TriggerInfo
+from menuai.helpers.typing import ConfigType
 
 from .const import DOMAIN, NANOLEAF_EVENT, TOUCH_GESTURE_TRIGGER_MAP, TOUCH_MODELS
 
@@ -36,10 +36,10 @@ TRIGGER_SCHEMA = DEVICE_TRIGGER_BASE_SCHEMA.extend(
 
 
 async def async_get_triggers(
-    hass: HomeAssistant, device_id: str
+    menuai: menuai, device_id: str
 ) -> list[dict[str, str]]:
     """List device triggers for Nanoleaf devices."""
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     device_entry = device_registry.async_get(device_id)
     if device_entry is None:
         raise DeviceNotFound(f"Device ID {device_id} is not valid")
@@ -57,14 +57,14 @@ async def async_get_triggers(
 
 
 async def async_attach_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     action: TriggerActionType,
     trigger_info: TriggerInfo,
 ) -> CALLBACK_TYPE:
     """Attach a trigger."""
     async_create_issue(
-        hass,
+        menuai,
         DOMAIN,
         "deprecated_device_trigger_nanoleaf",
         is_fixable=False,
@@ -83,5 +83,5 @@ async def async_attach_trigger(
         }
     )
     return await event_trigger.async_attach_trigger(
-        hass, event_config, action, trigger_info, platform_type="device"
+        menuai, event_config, action, trigger_info, platform_type="device"
     )

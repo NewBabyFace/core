@@ -8,7 +8,7 @@ from functools import partial
 import logging
 from typing import Any, Final
 
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_SUPPORTED_FEATURES,
     SERVICE_CLOSE_COVER,
@@ -18,8 +18,8 @@ from homeassistant.const import (
     SERVICE_SET_COVER_POSITION,
     SERVICE_SET_COVER_TILT_POSITION,
 )
-from homeassistant.core import Context, HomeAssistant, ServiceResponse, State
-from homeassistant.util.enum import try_parse_enum
+from menuai.core import Context, menuai, ServiceResponse, State
+from menuai.util.enum import try_parse_enum
 
 from . import (
     ATTR_CURRENT_POSITION,
@@ -166,7 +166,7 @@ async def _async_open_cover(
 
 
 async def _async_reproduce_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     state: State,
     *,
     context: Context | None = None,
@@ -174,7 +174,7 @@ async def _async_reproduce_state(
 ) -> None:
     """Reproduce a single state."""
     entity_id = state.entity_id
-    if (cur_state := hass.states.get(entity_id)) is None:
+    if (cur_state := menuai.states.get(entity_id)) is None:
         _LOGGER.warning("Unable to find entity %s", entity_id)
         return
 
@@ -209,7 +209,7 @@ async def _async_reproduce_state(
         features = _determine_features(current_attrs)
 
     service_call = partial(
-        hass.services.async_call,
+        menuai.services.async_call,
         DOMAIN,
         context=context,
         blocking=True,
@@ -235,7 +235,7 @@ async def _async_reproduce_state(
 
 
 async def async_reproduce_states(
-    hass: HomeAssistant,
+    menuai: menuai,
     states: Iterable[State],
     *,
     context: Context | None = None,
@@ -246,7 +246,7 @@ async def async_reproduce_states(
     await asyncio.gather(
         *(
             _async_reproduce_state(
-                hass, state, context=context, reproduce_options=reproduce_options
+                menuai, state, context=context, reproduce_options=reproduce_options
             )
             for state in states
         )

@@ -2,40 +2,40 @@
 
 import pytest
 
-from homeassistant.components import conversation
-from homeassistant.components.homeassistant.exposed_entities import async_expose_entity
-from homeassistant.components.weather import (
+from menuai.components import conversation
+from menuai.components.menuai.exposed_entities import async_expose_entity
+from menuai.components.weather import (
     DOMAIN,
     WeatherEntity,
     intent as weather_intent,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import intent
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.helpers import intent
+from menuai.setup import async_setup_component
 
 
-async def test_get_weather(hass: HomeAssistant) -> None:
+async def test_get_weather(menuai: menuai) -> None:
     """Test get weather for first entity and by name."""
-    assert await async_setup_component(hass, "homeassistant", {})
-    assert await async_setup_component(hass, "weather", {"weather": {}})
+    assert await async_setup_component(menuai, "menuai", {})
+    assert await async_setup_component(menuai, "weather", {"weather": {}})
 
     entity1 = WeatherEntity()
     entity1._attr_name = "Weather 1"
     entity1.entity_id = "weather.test_1"
-    async_expose_entity(hass, conversation.DOMAIN, entity1.entity_id, True)
+    async_expose_entity(menuai, conversation.DOMAIN, entity1.entity_id, True)
 
     entity2 = WeatherEntity()
     entity2._attr_name = "Weather 2"
     entity2.entity_id = "weather.test_2"
-    async_expose_entity(hass, conversation.DOMAIN, entity2.entity_id, True)
+    async_expose_entity(menuai, conversation.DOMAIN, entity2.entity_id, True)
 
-    await hass.data[DOMAIN].async_add_entities([entity1, entity2])
+    await menuai.data[DOMAIN].async_add_entities([entity1, entity2])
 
-    await weather_intent.async_setup_intents(hass)
+    await weather_intent.async_setup_intents(menuai)
 
     # First entity will be chosen
     response = await intent.async_handle(
-        hass, "test", weather_intent.INTENT_GET_WEATHER, {}
+        menuai, "test", weather_intent.INTENT_GET_WEATHER, {}
     )
     assert response.response_type == intent.IntentResponseType.QUERY_ANSWER
     assert len(response.matched_states) == 1
@@ -44,7 +44,7 @@ async def test_get_weather(hass: HomeAssistant) -> None:
 
     # Named entity will be chosen
     response = await intent.async_handle(
-        hass,
+        menuai,
         "test",
         weather_intent.INTENT_GET_WEATHER,
         {"name": {"value": "Weather 2"}},
@@ -56,12 +56,12 @@ async def test_get_weather(hass: HomeAssistant) -> None:
     assert state.entity_id == entity2.entity_id
 
     # Should fail if not exposed
-    async_expose_entity(hass, conversation.DOMAIN, entity1.entity_id, False)
-    async_expose_entity(hass, conversation.DOMAIN, entity2.entity_id, False)
+    async_expose_entity(menuai, conversation.DOMAIN, entity1.entity_id, False)
+    async_expose_entity(menuai, conversation.DOMAIN, entity2.entity_id, False)
     for name in (entity1.name, entity2.name):
         with pytest.raises(intent.MatchFailedError) as err:
             await intent.async_handle(
-                hass,
+                menuai,
                 "test",
                 weather_intent.INTENT_GET_WEATHER,
                 {"name": {"value": name}},
@@ -70,24 +70,24 @@ async def test_get_weather(hass: HomeAssistant) -> None:
         assert err.value.result.no_match_reason == intent.MatchFailedReason.ASSISTANT
 
 
-async def test_get_weather_wrong_name(hass: HomeAssistant) -> None:
+async def test_get_weather_wrong_name(menuai: menuai) -> None:
     """Test get weather with the wrong name."""
-    assert await async_setup_component(hass, "homeassistant", {})
-    assert await async_setup_component(hass, "weather", {"weather": {}})
+    assert await async_setup_component(menuai, "menuai", {})
+    assert await async_setup_component(menuai, "weather", {"weather": {}})
 
     entity1 = WeatherEntity()
     entity1._attr_name = "Weather 1"
     entity1.entity_id = "weather.test_1"
 
-    await hass.data[DOMAIN].async_add_entities([entity1])
+    await menuai.data[DOMAIN].async_add_entities([entity1])
 
-    await weather_intent.async_setup_intents(hass)
-    async_expose_entity(hass, conversation.DOMAIN, entity1.entity_id, True)
+    await weather_intent.async_setup_intents(menuai)
+    async_expose_entity(menuai, conversation.DOMAIN, entity1.entity_id, True)
 
     # Incorrect name
     with pytest.raises(intent.MatchFailedError) as err:
         await intent.async_handle(
-            hass,
+            menuai,
             "test",
             weather_intent.INTENT_GET_WEATHER,
             {"name": {"value": "not the right name"}},
@@ -98,7 +98,7 @@ async def test_get_weather_wrong_name(hass: HomeAssistant) -> None:
     # Empty name
     with pytest.raises(intent.InvalidSlotInfo):
         await intent.async_handle(
-            hass,
+            menuai,
             "test",
             weather_intent.INTENT_GET_WEATHER,
             {"name": {"value": ""}},
@@ -106,16 +106,16 @@ async def test_get_weather_wrong_name(hass: HomeAssistant) -> None:
         )
 
 
-async def test_get_weather_no_entities(hass: HomeAssistant) -> None:
+async def test_get_weather_no_entities(menuai: menuai) -> None:
     """Test get weather with no weather entities."""
-    assert await async_setup_component(hass, "homeassistant", {})
-    assert await async_setup_component(hass, "weather", {"weather": {}})
-    await weather_intent.async_setup_intents(hass)
+    assert await async_setup_component(menuai, "menuai", {})
+    assert await async_setup_component(menuai, "weather", {"weather": {}})
+    await weather_intent.async_setup_intents(menuai)
 
     # No weather entities
     with pytest.raises(intent.MatchFailedError) as err:
         await intent.async_handle(
-            hass,
+            menuai,
             "test",
             weather_intent.INTENT_GET_WEATHER,
             {},

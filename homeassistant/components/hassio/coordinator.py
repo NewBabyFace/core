@@ -1,4 +1,4 @@
-"""Data for Hass.io."""
+"""Data for menuai.io."""
 
 from __future__ import annotations
 
@@ -10,14 +10,14 @@ from typing import TYPE_CHECKING, Any
 from aiohasupervisor import SupervisorError, SupervisorNotFoundError
 from aiohasupervisor.models import StoreInfo
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_MANUFACTURER, ATTR_NAME
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.debounce import Debouncer
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.loader import bind_hass
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_MANUFACTURER, ATTR_NAME
+from menuai.core import CALLBACK_TYPE, menuai, callback
+from menuai.helpers import device_registry as dr
+from menuai.helpers.debounce import Debouncer
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.loader import bind_menuai
 
 from .const import (
     ATTR_AUTO_UPDATE,
@@ -49,12 +49,12 @@ from .const import (
     DATA_SUPERVISOR_INFO,
     DATA_SUPERVISOR_STATS,
     DOMAIN,
-    HASSIO_UPDATE_INTERVAL,
+    menuaiIO_UPDATE_INTERVAL,
     REQUEST_REFRESH_DELAY,
     SUPERVISOR_CONTAINER,
     SupervisorEntityModel,
 )
-from .handler import HassioAPIError, get_supervisor_client
+from .handler import menuaiioAPIError, get_supervisor_client
 
 if TYPE_CHECKING:
     from .issues import SupervisorIssues
@@ -63,123 +63,123 @@ _LOGGER = logging.getLogger(__name__)
 
 
 @callback
-@bind_hass
-def get_info(hass: HomeAssistant) -> dict[str, Any] | None:
+@bind_menuai
+def get_info(menuai: menuai) -> dict[str, Any] | None:
     """Return generic information from Supervisor.
 
     Async friendly.
     """
-    return hass.data.get(DATA_INFO)
+    return menuai.data.get(DATA_INFO)
 
 
 @callback
-@bind_hass
-def get_host_info(hass: HomeAssistant) -> dict[str, Any] | None:
+@bind_menuai
+def get_host_info(menuai: menuai) -> dict[str, Any] | None:
     """Return generic host information.
 
     Async friendly.
     """
-    return hass.data.get(DATA_HOST_INFO)
+    return menuai.data.get(DATA_HOST_INFO)
 
 
 @callback
-@bind_hass
-def get_store(hass: HomeAssistant) -> dict[str, Any] | None:
+@bind_menuai
+def get_store(menuai: menuai) -> dict[str, Any] | None:
     """Return store information.
 
     Async friendly.
     """
-    return hass.data.get(DATA_STORE)
+    return menuai.data.get(DATA_STORE)
 
 
 @callback
-@bind_hass
-def get_supervisor_info(hass: HomeAssistant) -> dict[str, Any] | None:
+@bind_menuai
+def get_supervisor_info(menuai: menuai) -> dict[str, Any] | None:
     """Return Supervisor information.
 
     Async friendly.
     """
-    return hass.data.get(DATA_SUPERVISOR_INFO)
+    return menuai.data.get(DATA_SUPERVISOR_INFO)
 
 
 @callback
-@bind_hass
-def get_network_info(hass: HomeAssistant) -> dict[str, Any] | None:
+@bind_menuai
+def get_network_info(menuai: menuai) -> dict[str, Any] | None:
     """Return Host Network information.
 
     Async friendly.
     """
-    return hass.data.get(DATA_NETWORK_INFO)
+    return menuai.data.get(DATA_NETWORK_INFO)
 
 
 @callback
-@bind_hass
-def get_addons_info(hass: HomeAssistant) -> dict[str, dict[str, Any]] | None:
+@bind_menuai
+def get_addons_info(menuai: menuai) -> dict[str, dict[str, Any]] | None:
     """Return Addons info.
 
     Async friendly.
     """
-    return hass.data.get(DATA_ADDONS_INFO)
+    return menuai.data.get(DATA_ADDONS_INFO)
 
 
 @callback
-@bind_hass
-def get_addons_stats(hass: HomeAssistant) -> dict[str, Any]:
+@bind_menuai
+def get_addons_stats(menuai: menuai) -> dict[str, Any]:
     """Return Addons stats.
 
     Async friendly.
     """
-    return hass.data.get(DATA_ADDONS_STATS) or {}
+    return menuai.data.get(DATA_ADDONS_STATS) or {}
 
 
 @callback
-@bind_hass
-def get_core_stats(hass: HomeAssistant) -> dict[str, Any]:
+@bind_menuai
+def get_core_stats(menuai: menuai) -> dict[str, Any]:
     """Return core stats.
 
     Async friendly.
     """
-    return hass.data.get(DATA_CORE_STATS) or {}
+    return menuai.data.get(DATA_CORE_STATS) or {}
 
 
 @callback
-@bind_hass
-def get_supervisor_stats(hass: HomeAssistant) -> dict[str, Any]:
+@bind_menuai
+def get_supervisor_stats(menuai: menuai) -> dict[str, Any]:
     """Return supervisor stats.
 
     Async friendly.
     """
-    return hass.data.get(DATA_SUPERVISOR_STATS) or {}
+    return menuai.data.get(DATA_SUPERVISOR_STATS) or {}
 
 
 @callback
-@bind_hass
-def get_os_info(hass: HomeAssistant) -> dict[str, Any] | None:
+@bind_menuai
+def get_os_info(menuai: menuai) -> dict[str, Any] | None:
     """Return OS information.
 
     Async friendly.
     """
-    return hass.data.get(DATA_OS_INFO)
+    return menuai.data.get(DATA_OS_INFO)
 
 
 @callback
-@bind_hass
-def get_core_info(hass: HomeAssistant) -> dict[str, Any] | None:
-    """Return Home Assistant Core information from Supervisor.
+@bind_menuai
+def get_core_info(menuai: menuai) -> dict[str, Any] | None:
+    """Return MenuAI Core information from Supervisor.
 
     Async friendly.
     """
-    return hass.data.get(DATA_CORE_INFO)
+    return menuai.data.get(DATA_CORE_INFO)
 
 
 @callback
-@bind_hass
-def get_issues_info(hass: HomeAssistant) -> SupervisorIssues | None:
+@bind_menuai
+def get_issues_info(menuai: menuai) -> SupervisorIssues | None:
     """Return Supervisor issues info.
 
     Async friendly.
     """
-    return hass.data.get(DATA_KEY_SUPERVISOR_ISSUES)
+    return menuai.data.get(DATA_KEY_SUPERVISOR_ISSUES)
 
 
 @callback
@@ -194,7 +194,7 @@ def async_register_addons_in_dev_reg(
             sw_version=addon[ATTR_VERSION],
             name=addon[ATTR_NAME],
             entry_type=dr.DeviceEntryType.SERVICE,
-            configuration_url=f"homeassistant://hassio/addon/{addon[ATTR_SLUG]}",
+            configuration_url=f"menuai://menuaiio/addon/{addon[ATTR_SLUG]}",
         )
         if manufacturer := addon.get(ATTR_REPOSITORY) or addon.get(ATTR_URL):
             params[ATTR_MANUFACTURER] = manufacturer
@@ -208,10 +208,10 @@ def async_register_os_in_dev_reg(
     """Register OS in the device registry."""
     params = DeviceInfo(
         identifiers={(DOMAIN, "OS")},
-        manufacturer="Home Assistant",
+        manufacturer="MenuAI",
         model=SupervisorEntityModel.OS,
         sw_version=os_dict[ATTR_VERSION],
-        name="Home Assistant Operating System",
+        name="MenuAI Operating System",
         entry_type=dr.DeviceEntryType.SERVICE,
     )
     dev_reg.async_get_or_create(config_entry_id=entry_id, **params)
@@ -225,9 +225,9 @@ def async_register_host_in_dev_reg(
     """Register host in the device registry."""
     params = DeviceInfo(
         identifiers={(DOMAIN, "host")},
-        manufacturer="Home Assistant",
+        manufacturer="MenuAI",
         model=SupervisorEntityModel.HOST,
-        name="Home Assistant Host",
+        name="MenuAI Host",
         entry_type=dr.DeviceEntryType.SERVICE,
     )
     dev_reg.async_get_or_create(config_entry_id=entry_id, **params)
@@ -242,10 +242,10 @@ def async_register_core_in_dev_reg(
     """Register OS in the device registry."""
     params = DeviceInfo(
         identifiers={(DOMAIN, "core")},
-        manufacturer="Home Assistant",
+        manufacturer="MenuAI",
         model=SupervisorEntityModel.CORE,
         sw_version=core_dict[ATTR_VERSION],
-        name="Home Assistant Core",
+        name="MenuAI Core",
         entry_type=dr.DeviceEntryType.SERVICE,
     )
     dev_reg.async_get_or_create(config_entry_id=entry_id, **params)
@@ -260,10 +260,10 @@ def async_register_supervisor_in_dev_reg(
     """Register OS in the device registry."""
     params = DeviceInfo(
         identifiers={(DOMAIN, "supervisor")},
-        manufacturer="Home Assistant",
+        manufacturer="MenuAI",
         model=SupervisorEntityModel.SUPERVIOSR,
         sw_version=supervisor_dict[ATTR_VERSION],
-        name="Home Assistant Supervisor",
+        name="MenuAI Supervisor",
         entry_type=dr.DeviceEntryType.SERVICE,
     )
     dev_reg.async_get_or_create(config_entry_id=entry_id, **params)
@@ -279,37 +279,37 @@ def async_remove_addons_from_dev_reg(
             dev_reg.async_remove_device(dev.id)
 
 
-class HassioDataUpdateCoordinator(DataUpdateCoordinator):
-    """Class to retrieve Hass.io status."""
+class menuaiioDataUpdateCoordinator(DataUpdateCoordinator):
+    """Class to retrieve menuai.io status."""
 
     config_entry: ConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: ConfigEntry, dev_reg: dr.DeviceRegistry
+        self, menuai: menuai, config_entry: ConfigEntry, dev_reg: dr.DeviceRegistry
     ) -> None:
         """Initialize coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
-            update_interval=HASSIO_UPDATE_INTERVAL,
+            update_interval=menuaiIO_UPDATE_INTERVAL,
             # We don't want an immediate refresh since we want to avoid
             # fetching the container stats right away and avoid hammering
             # the Supervisor API on startup
             request_refresh_debouncer=Debouncer(
-                hass, _LOGGER, cooldown=REQUEST_REFRESH_DELAY, immediate=False
+                menuai, _LOGGER, cooldown=REQUEST_REFRESH_DELAY, immediate=False
             ),
         )
-        self.hassio = hass.data[DATA_COMPONENT]
+        self.menuaiio = menuai.data[DATA_COMPONENT]
         self.data = {}
         self.entry_id = config_entry.entry_id
         self.dev_reg = dev_reg
-        self.is_hass_os = (get_info(self.hass) or {}).get("hassos") is not None
+        self.is_menuai_os = (get_info(self.menuai) or {}).get("menuaios") is not None
         self._container_updates: defaultdict[str, dict[str, set[str]]] = defaultdict(
             lambda: defaultdict(set)
         )
-        self.supervisor_client = get_supervisor_client(hass)
+        self.supervisor_client = get_supervisor_client(menuai)
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Update data via library."""
@@ -317,14 +317,14 @@ class HassioDataUpdateCoordinator(DataUpdateCoordinator):
 
         try:
             await self.force_data_refresh(is_first_update)
-        except HassioAPIError as err:
+        except menuaiioAPIError as err:
             raise UpdateFailed(f"Error on Supervisor API: {err}") from err
 
         new_data: dict[str, Any] = {}
-        supervisor_info = get_supervisor_info(self.hass) or {}
-        addons_info = get_addons_info(self.hass) or {}
-        addons_stats = get_addons_stats(self.hass)
-        store_data = get_store(self.hass)
+        supervisor_info = get_supervisor_info(self.menuai) or {}
+        addons_info = get_addons_info(self.menuai) or {}
+        addons_stats = get_addons_stats(self.menuai)
+        store_data = get_store(self.menuai)
 
         if store_data:
             repositories = {
@@ -347,18 +347,18 @@ class HassioDataUpdateCoordinator(DataUpdateCoordinator):
             }
             for addon in supervisor_info.get("addons", [])
         }
-        if self.is_hass_os:
-            new_data[DATA_KEY_OS] = get_os_info(self.hass)
+        if self.is_menuai_os:
+            new_data[DATA_KEY_OS] = get_os_info(self.menuai)
 
         new_data[DATA_KEY_CORE] = {
-            **(get_core_info(self.hass) or {}),
-            **get_core_stats(self.hass),
+            **(get_core_info(self.menuai) or {}),
+            **get_core_stats(self.menuai),
         }
         new_data[DATA_KEY_SUPERVISOR] = {
             **supervisor_info,
-            **get_supervisor_stats(self.hass),
+            **get_supervisor_stats(self.menuai),
         }
-        new_data[DATA_KEY_HOST] = get_host_info(self.hass) or {}
+        new_data[DATA_KEY_HOST] = get_host_info(self.menuai) or {}
 
         # If this is the initial refresh, register all addons and return the dict
         if is_first_update:
@@ -372,7 +372,7 @@ class HassioDataUpdateCoordinator(DataUpdateCoordinator):
                 self.entry_id, self.dev_reg, new_data[DATA_KEY_SUPERVISOR]
             )
             async_register_host_in_dev_reg(self.entry_id, self.dev_reg)
-            if self.is_hass_os:
+            if self.is_menuai_os:
                 async_register_os_in_dev_reg(
                     self.entry_id, self.dev_reg, new_data[DATA_KEY_OS]
                 )
@@ -388,10 +388,10 @@ class HassioDataUpdateCoordinator(DataUpdateCoordinator):
         if stale_addons := supervisor_addon_devices - set(new_data[DATA_KEY_ADDONS]):
             async_remove_addons_from_dev_reg(self.dev_reg, stale_addons)
 
-        if not self.is_hass_os and (
+        if not self.is_menuai_os and (
             dev := self.dev_reg.async_get_device(identifiers={(DOMAIN, "OS")})
         ):
-            # Remove the OS device if it exists and the installation is not hassos
+            # Remove the OS device if it exists and the installation is not menuaios
             self.dev_reg.async_remove_device(dev.id)
 
         # If there are new add-ons, we should reload the config entry so we can
@@ -400,8 +400,8 @@ class HassioDataUpdateCoordinator(DataUpdateCoordinator):
         if self.data and set(new_data[DATA_KEY_ADDONS]) - set(
             self.data[DATA_KEY_ADDONS]
         ):
-            self.hass.async_create_task(
-                self.hass.config_entries.async_reload(self.entry_id)
+            self.menuai.async_create_task(
+                self.menuai.config_entries.async_reload(self.entry_id)
             )
             return {}
 
@@ -418,18 +418,18 @@ class HassioDataUpdateCoordinator(DataUpdateCoordinator):
         """Force update of the addon info."""
         container_updates = self._container_updates
 
-        data = self.hass.data
-        hassio = self.hassio
+        data = self.menuai.data
+        menuaiio = self.menuaiio
         updates = {
-            DATA_INFO: hassio.get_info(),
-            DATA_CORE_INFO: hassio.get_core_info(),
-            DATA_SUPERVISOR_INFO: hassio.get_supervisor_info(),
-            DATA_OS_INFO: hassio.get_os_info(),
+            DATA_INFO: menuaiio.get_info(),
+            DATA_CORE_INFO: menuaiio.get_core_info(),
+            DATA_SUPERVISOR_INFO: menuaiio.get_supervisor_info(),
+            DATA_OS_INFO: menuaiio.get_os_info(),
         }
         if CONTAINER_STATS in container_updates[CORE_CONTAINER]:
-            updates[DATA_CORE_STATS] = hassio.get_core_stats()
+            updates[DATA_CORE_STATS] = menuaiio.get_core_stats()
         if CONTAINER_STATS in container_updates[SUPERVISOR_CONTAINER]:
-            updates[DATA_SUPERVISOR_STATS] = hassio.get_supervisor_stats()
+            updates[DATA_SUPERVISOR_STATS] = menuaiio.get_supervisor_stats()
 
         results = await asyncio.gather(*updates.values())
         for key, result in zip(updates, results, strict=False):
@@ -449,7 +449,7 @@ class HassioDataUpdateCoordinator(DataUpdateCoordinator):
         #
         # When entities are added they call async_enable_container_updates
         # to enable updates for the endpoints they need via
-        # async_added_to_hass. This ensures that we only update
+        # async_added_to_menuai. This ensures that we only update
         # the data for the endpoints that are needed to avoid unnecessary
         # API calls since otherwise we would fetch stats for all containers
         # and throw them away.
@@ -500,10 +500,10 @@ class HassioDataUpdateCoordinator(DataUpdateCoordinator):
         except SupervisorError as err:
             _LOGGER.warning("Could not fetch info for %s: %s", slug, err)
             return (slug, None)
-        # Translate to legacy hassio names for compatibility
+        # Translate to legacy menuaiio names for compatibility
         info_dict = info.to_dict()
-        info_dict["hassio_api"] = info_dict.pop("supervisor_api")
-        info_dict["hassio_role"] = info_dict.pop("supervisor_role")
+        info_dict["menuaiio_api"] = info_dict.pop("supervisor_api")
+        info_dict["menuaiio_role"] = info_dict.pop("supervisor_role")
         return (slug, info_dict)
 
     @callback

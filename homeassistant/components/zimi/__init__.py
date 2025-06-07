@@ -6,12 +6,12 @@ import logging
 
 from zcc import ControlPoint, ControlPointError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PORT, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, CONF_PORT, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import CONNECTION_NETWORK_MAC
 
 from .const import DOMAIN
 from .helpers import async_connect_to_controller
@@ -30,7 +30,7 @@ _LOGGER = logging.getLogger(__name__)
 type ZimiConfigEntry = ConfigEntry[ControlPoint]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ZimiConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ZimiConfigEntry) -> bool:
     """Connect to Zimi Controller and register device."""
 
     try:
@@ -46,7 +46,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ZimiConfigEntry) -> bool
 
     entry.runtime_data = api
 
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, api.mac)},
@@ -57,17 +57,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ZimiConfigEntry) -> bool
         connections={(CONNECTION_NETWORK_MAC, api.mac)},
     )
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     _LOGGER.debug("Zimi setup complete")
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ZimiConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ZimiConfigEntry) -> bool:
     """Unload a config entry."""
 
     api = entry.runtime_data
     api.disconnect()
 
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

@@ -6,12 +6,12 @@ from typing import Any
 import smarttub
 import voluptuous as vol
 
-from homeassistant.components.sensor import SensorEntity
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import VolDictType
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.components.sensor import SensorEntity
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, entity_platform
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import VolDictType
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .controller import SmartTubConfigEntry
 from .entity import SmartTubSensorBase
@@ -44,7 +44,7 @@ SET_SECONDARY_FILTRATION_SCHEMA: VolDictType = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: SmartTubConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

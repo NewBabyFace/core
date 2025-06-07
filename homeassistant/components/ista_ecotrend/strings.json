@@ -21,11 +21,11 @@
           "email": "Enter the email address associated with your ista EcoTrend account",
           "password": "Enter the password for your ista EcoTrend account"
         },
-        "description": "Connect your **ista EcoTrend** account to Home Assistant to access your monthly heating and water usage data."
+        "description": "Connect your **ista EcoTrend** account to MenuAI to access your monthly heating and water usage data."
       },
       "reauth_confirm": {
         "title": "[%key:common::config_flow::title::reauth%]",
-        "description": "Re-enter your password for `{email}` to reconnect your ista EcoTrend account to Home Assistant.",
+        "description": "Re-enter your password for `{email}` to reconnect your ista EcoTrend account to MenuAI.",
         "data": {
           "email": "[%key:common::config_flow::data::email%]",
           "password": "[%key:common::config_flow::data::password%]"

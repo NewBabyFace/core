@@ -2,7 +2,7 @@
 
 import pytest
 
-from homeassistant.components.update import UpdateEntityFeature
+from menuai.components.update import UpdateEntityFeature
 
 from .common import MockUpdateEntity
 

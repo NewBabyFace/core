@@ -6,15 +6,15 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components.cloud.const import DOMAIN
-from homeassistant.components.cloud.repairs import (
+from menuai.components.cloud.const import DOMAIN
+from menuai.components.cloud.repairs import (
     async_manage_legacy_subscription_issue,
 )
-from homeassistant.components.repairs import DOMAIN as REPAIRS_DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import issue_registry as ir
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.components.repairs import DOMAIN as REPAIRS_DOMAIN
+from menuai.core import menuai
+from menuai.helpers import issue_registry as ir
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from . import mock_cloud
 
@@ -24,15 +24,15 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_do_not_create_repair_issues_at_startup_if_not_logged_in(
-    hass: HomeAssistant,
+    menuai: menuai,
     issue_registry: ir.IssueRegistry,
 ) -> None:
     """Test that we create repair issue at startup if we are logged in."""
-    with patch("homeassistant.components.cloud.Cloud.is_logged_in", False):
-        await mock_cloud(hass)
+    with patch("menuai.components.cloud.Cloud.is_logged_in", False):
+        await mock_cloud(menuai)
 
-        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(hours=1))
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(hours=1))
+        await menuai.async_block_till_done()
 
     assert not issue_registry.async_get_issue(
         domain="cloud", issue_id="legacy_subscription"
@@ -41,7 +41,7 @@ async def test_do_not_create_repair_issues_at_startup_if_not_logged_in(
 
 @pytest.mark.usefixtures("mock_auth")
 async def test_create_repair_issues_at_startup_if_logged_in(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     issue_registry: ir.IssueRegistry,
 ) -> None:
@@ -51,11 +51,11 @@ async def test_create_repair_issues_at_startup_if_logged_in(
         json={"provider": "legacy"},
     )
 
-    with patch("homeassistant.components.cloud.Cloud.is_logged_in", True):
-        await mock_cloud(hass)
+    with patch("menuai.components.cloud.Cloud.is_logged_in", True):
+        await mock_cloud(menuai)
 
-        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(hours=1))
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(hours=1))
+        await menuai.async_block_till_done()
 
     assert issue_registry.async_get_issue(
         domain="cloud", issue_id="legacy_subscription"
@@ -63,16 +63,16 @@ async def test_create_repair_issues_at_startup_if_logged_in(
 
 
 async def test_legacy_subscription_delete_issue_if_no_longer_legacy(
-    hass: HomeAssistant,
+    menuai: menuai,
     issue_registry: ir.IssueRegistry,
 ) -> None:
     """Test that we delete the legacy subscription issue if no longer legacy."""
-    async_manage_legacy_subscription_issue(hass, {"provider": "legacy"})
+    async_manage_legacy_subscription_issue(menuai, {"provider": "legacy"})
     assert issue_registry.async_get_issue(
         domain="cloud", issue_id="legacy_subscription"
     )
 
-    async_manage_legacy_subscription_issue(hass, {})
+    async_manage_legacy_subscription_issue(menuai, {})
     assert not issue_registry.async_get_issue(
         domain="cloud", issue_id="legacy_subscription"
     )
@@ -80,9 +80,9 @@ async def test_legacy_subscription_delete_issue_if_no_longer_legacy(
 
 @pytest.mark.usefixtures("mock_auth")
 async def test_legacy_subscription_repair_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     issue_registry: ir.IssueRegistry,
 ) -> None:
     """Test desired flow of the fix flow for legacy subscription."""
@@ -95,18 +95,18 @@ async def test_legacy_subscription_repair_flow(
         json={"url": "https://paypal.com"},
     )
 
-    async_manage_legacy_subscription_issue(hass, {"provider": "legacy"})
+    async_manage_legacy_subscription_issue(menuai, {"provider": "legacy"})
     repair_issue = issue_registry.async_get_issue(
         domain="cloud", issue_id="legacy_subscription"
     )
     assert repair_issue
 
-    assert await async_setup_component(hass, REPAIRS_DOMAIN, {REPAIRS_DOMAIN: {}})
-    await mock_cloud(hass)
-    await hass.async_block_till_done()
-    await hass.async_start()
+    assert await async_setup_component(menuai, REPAIRS_DOMAIN, {REPAIRS_DOMAIN: {}})
+    await mock_cloud(menuai)
+    await menuai.async_block_till_done()
+    await menuai.async_start()
 
-    client = await hass_client()
+    client = await menuai_client()
 
     resp = await client.post(
         "/api/repairs/issues/fix",
@@ -165,8 +165,8 @@ async def test_legacy_subscription_repair_flow(
 
 @pytest.mark.usefixtures("mock_auth")
 async def test_legacy_subscription_repair_flow_timeout(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     issue_registry: ir.IssueRegistry,
 ) -> None:
@@ -176,18 +176,18 @@ async def test_legacy_subscription_repair_flow_timeout(
         status=403,
     )
 
-    async_manage_legacy_subscription_issue(hass, {"provider": "legacy"})
+    async_manage_legacy_subscription_issue(menuai, {"provider": "legacy"})
     repair_issue = issue_registry.async_get_issue(
         domain="cloud", issue_id="legacy_subscription"
     )
     assert repair_issue
 
-    assert await async_setup_component(hass, REPAIRS_DOMAIN, {REPAIRS_DOMAIN: {}})
-    await mock_cloud(hass)
-    await hass.async_block_till_done()
-    await hass.async_start()
+    assert await async_setup_component(menuai, REPAIRS_DOMAIN, {REPAIRS_DOMAIN: {}})
+    await mock_cloud(menuai)
+    await menuai.async_block_till_done()
+    await menuai.async_start()
 
-    client = await hass_client()
+    client = await menuai_client()
 
     resp = await client.post(
         "/api/repairs/issues/fix",
@@ -210,7 +210,7 @@ async def test_legacy_subscription_repair_flow_timeout(
         "preview": None,
     }
 
-    with patch("homeassistant.components.cloud.repairs.MAX_RETRIES", new=0):
+    with patch("menuai.components.cloud.repairs.MAX_RETRIES", new=0):
         resp = await client.post(f"/api/repairs/issues/fix/{flow_id}")
         assert resp.status == HTTPStatus.OK
         data = await resp.json()

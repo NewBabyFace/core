@@ -11,15 +11,15 @@ import requests_mock
 from requests_mock.adapter import _Matcher
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.metoffice.const import DEFAULT_SCAN_INTERVAL, DOMAIN
-from homeassistant.components.weather import (
+from menuai.components.metoffice.const import DEFAULT_SCAN_INTERVAL, DOMAIN
+from menuai.components.weather import (
     DOMAIN as WEATHER_DOMAIN,
     SERVICE_GET_FORECASTS,
 )
-from homeassistant.const import STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.util import utcnow
+from menuai.const import STATE_UNAVAILABLE
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.util import utcnow
 
 from .const import (
     DEVICE_KEY_KINGSLYNN,
@@ -37,18 +37,18 @@ from tests.typing import WebSocketGenerator
 def no_sensor():
     """Remove sensors."""
     with patch(
-        "homeassistant.components.metoffice.sensor.async_setup_entry", return_value=True
+        "menuai.components.metoffice.sensor.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
 
 @pytest.fixture
 async def wavertree_data(
-    hass: HomeAssistant, requests_mock: requests_mock.Mocker
+    menuai: menuai, requests_mock: requests_mock.Mocker
 ) -> dict[str, _Matcher]:
     """Mock data for the Wavertree location."""
     # all metoffice test data encapsulated in here
-    mock_json = json.loads(await async_load_fixture(hass, "metoffice.json", DOMAIN))
+    mock_json = json.loads(await async_load_fixture(menuai, "metoffice.json", DOMAIN))
     wavertree_hourly = json.dumps(mock_json["wavertree_hourly"])
     wavertree_daily = json.dumps(mock_json["wavertree_daily"])
 
@@ -68,7 +68,7 @@ async def wavertree_data(
 
 @pytest.mark.freeze_time(datetime.datetime(2024, 11, 23, 12, tzinfo=datetime.UTC))
 async def test_site_cannot_connect(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     requests_mock: requests_mock.Mocker,
 ) -> None:
@@ -87,22 +87,22 @@ async def test_site_cannot_connect(
         domain=DOMAIN,
         data=METOFFICE_CONFIG_WAVERTREE,
     )
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert len(device_registry.devices) == 0
 
-    assert hass.states.get("weather.met_office_wavertree") is None
+    assert menuai.states.get("weather.met_office_wavertree") is None
     for sensor in WAVERTREE_SENSOR_RESULTS.values():
         sensor_name = sensor[0]
-        sensor = hass.states.get(f"sensor.wavertree_{sensor_name}")
+        sensor = menuai.states.get(f"sensor.wavertree_{sensor_name}")
         assert sensor is None
 
 
 @pytest.mark.freeze_time(datetime.datetime(2024, 11, 23, 12, tzinfo=datetime.UTC))
 async def test_site_cannot_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     requests_mock: requests_mock.Mocker,
     wavertree_data,
 ) -> None:
@@ -112,11 +112,11 @@ async def test_site_cannot_update(
         domain=DOMAIN,
         data=METOFFICE_CONFIG_WAVERTREE,
     )
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    weather = hass.states.get("weather.met_office_wavertree")
+    weather = menuai.states.get("weather.met_office_wavertree")
     assert weather
 
     requests_mock.get(
@@ -129,10 +129,10 @@ async def test_site_cannot_update(
     )
 
     future_time = utcnow() + timedelta(minutes=40)
-    async_fire_time_changed(hass, future_time)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai, future_time)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    weather = hass.states.get("weather.met_office_wavertree")
+    weather = menuai.states.get("weather.met_office_wavertree")
     assert weather.state == STATE_UNAVAILABLE
 
     requests_mock.get(
@@ -145,16 +145,16 @@ async def test_site_cannot_update(
     )
 
     future_time = utcnow() + timedelta(minutes=40)
-    async_fire_time_changed(hass, future_time)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai, future_time)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    weather = hass.states.get("weather.met_office_wavertree")
+    weather = menuai.states.get("weather.met_office_wavertree")
     assert weather.state == STATE_UNAVAILABLE
 
 
 @pytest.mark.freeze_time(datetime.datetime(2024, 11, 23, 12, tzinfo=datetime.UTC))
 async def test_one_weather_site_running(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     requests_mock: requests_mock.Mocker,
     wavertree_data,
@@ -165,9 +165,9 @@ async def test_one_weather_site_running(
         domain=DOMAIN,
         data=METOFFICE_CONFIG_WAVERTREE,
     )
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert len(device_registry.devices) == 1
     device_wavertree = device_registry.async_get_device(
@@ -176,7 +176,7 @@ async def test_one_weather_site_running(
     assert device_wavertree.name == "Met Office Wavertree"
 
     # Wavertree daily weather platform expected results
-    weather = hass.states.get("weather.met_office_wavertree")
+    weather = menuai.states.get("weather.met_office_wavertree")
     assert weather
 
     assert weather.state == "rainy"
@@ -188,7 +188,7 @@ async def test_one_weather_site_running(
 
 @pytest.mark.freeze_time(datetime.datetime(2024, 11, 23, 12, tzinfo=datetime.UTC))
 async def test_two_weather_sites_running(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     requests_mock: requests_mock.Mocker,
     wavertree_data,
@@ -196,7 +196,7 @@ async def test_two_weather_sites_running(
     """Test we handle two different weather sites both running."""
 
     # all metoffice test data encapsulated in here
-    mock_json = json.loads(await async_load_fixture(hass, "metoffice.json", DOMAIN))
+    mock_json = json.loads(await async_load_fixture(menuai, "metoffice.json", DOMAIN))
     kingslynn_hourly = json.dumps(mock_json["kingslynn_hourly"])
     kingslynn_daily = json.dumps(mock_json["kingslynn_daily"])
 
@@ -204,9 +204,9 @@ async def test_two_weather_sites_running(
         domain=DOMAIN,
         data=METOFFICE_CONFIG_WAVERTREE,
     )
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     requests_mock.get(
         "https://data.hub.api.metoffice.gov.uk/sitespecific/v0/point/hourly",
@@ -221,9 +221,9 @@ async def test_two_weather_sites_running(
         domain=DOMAIN,
         data=METOFFICE_CONFIG_KINGSLYNN,
     )
-    entry2.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry2.entry_id)
-    await hass.async_block_till_done()
+    entry2.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry2.entry_id)
+    await menuai.async_block_till_done()
 
     assert len(device_registry.devices) == 2
     device_kingslynn = device_registry.async_get_device(
@@ -236,7 +236,7 @@ async def test_two_weather_sites_running(
     assert device_wavertree.name == "Met Office Wavertree"
 
     # Wavertree daily weather platform expected results
-    weather = hass.states.get("weather.met_office_wavertree")
+    weather = menuai.states.get("weather.met_office_wavertree")
     assert weather
 
     assert weather.state == "rainy"
@@ -247,7 +247,7 @@ async def test_two_weather_sites_running(
     assert weather.attributes.get("humidity") == 95
 
     # King's Lynn daily weather platform expected results
-    weather = hass.states.get("weather.met_office_king_s_lynn")
+    weather = menuai.states.get("weather.met_office_king_s_lynn")
     assert weather
 
     assert weather.state == "rainy"
@@ -260,7 +260,7 @@ async def test_two_weather_sites_running(
 
 @pytest.mark.freeze_time(datetime.datetime(2024, 11, 23, 12, tzinfo=datetime.UTC))
 async def test_new_config_entry(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, no_sensor, wavertree_data
+    menuai: menuai, entity_registry: er.EntityRegistry, no_sensor, wavertree_data
 ) -> None:
     """Test the expected entities are created."""
 
@@ -268,12 +268,12 @@ async def test_new_config_entry(
         domain=DOMAIN,
         data=METOFFICE_CONFIG_WAVERTREE,
     )
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_entity_ids(WEATHER_DOMAIN)) == 1
-    entry = hass.config_entries.async_entries()[0]
+    assert len(menuai.states.async_entity_ids(WEATHER_DOMAIN)) == 1
+    entry = menuai.config_entries.async_entries()[0]
     assert len(er.async_entries_for_config_entry(entity_registry, entry.entry_id)) == 1
 
 
@@ -283,7 +283,7 @@ async def test_new_config_entry(
     [SERVICE_GET_FORECASTS],
 )
 async def test_forecast_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     requests_mock: requests_mock.Mocker,
     snapshot: SnapshotAssertion,
@@ -296,15 +296,15 @@ async def test_forecast_service(
         domain=DOMAIN,
         data=METOFFICE_CONFIG_WAVERTREE,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
     assert wavertree_data["wavertree_daily_mock"].call_count == 1
     assert wavertree_data["wavertree_hourly_mock"].call_count == 1
 
     for forecast_type in ("daily", "hourly", "twice_daily"):
-        response = await hass.services.async_call(
+        response = await menuai.services.async_call(
             WEATHER_DOMAIN,
             service,
             {
@@ -318,11 +318,11 @@ async def test_forecast_service(
 
     # Trigger data refetch
     freezer.tick(DEFAULT_SCAN_INTERVAL + timedelta(seconds=1))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     for forecast_type in ("daily", "hourly", "twice_daily"):
-        response = await hass.services.async_call(
+        response = await menuai.services.async_call(
             WEATHER_DOMAIN,
             service,
             {
@@ -337,7 +337,7 @@ async def test_forecast_service(
 
 @pytest.mark.freeze_time(datetime.datetime(2024, 11, 23, 12, tzinfo=datetime.UTC))
 async def test_legacy_config_entry_is_removed(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, no_sensor, wavertree_data
+    menuai: menuai, entity_registry: er.EntityRegistry, no_sensor, wavertree_data
 ) -> None:
     """Test the expected entities are created."""
     # Pre-create the daily entity
@@ -352,36 +352,36 @@ async def test_legacy_config_entry_is_removed(
         domain=DOMAIN,
         data=METOFFICE_CONFIG_WAVERTREE,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_entity_ids("weather")) == 1
-    entry = hass.config_entries.async_entries()[0]
+    assert len(menuai.states.async_entity_ids("weather")) == 1
+    entry = menuai.config_entries.async_entries()[0]
     assert len(er.async_entries_for_config_entry(entity_registry, entry.entry_id)) == 1
 
 
 @pytest.mark.freeze_time(datetime.datetime(2024, 11, 23, 12, tzinfo=datetime.UTC))
 async def test_forecast_subscription(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     freezer: FrozenDateTimeFactory,
     snapshot: SnapshotAssertion,
     no_sensor,
     wavertree_data: dict[str, _Matcher],
 ) -> None:
     """Test multiple forecast."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     entry = MockConfigEntry(
         domain=DOMAIN,
         data=METOFFICE_CONFIG_WAVERTREE,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await client.send_json_auto_id(
         {
@@ -404,8 +404,8 @@ async def test_forecast_subscription(
     assert forecast1 == snapshot
 
     freezer.tick(DEFAULT_SCAN_INTERVAL + timedelta(seconds=1))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
     msg = await client.receive_json()
 
     assert msg["id"] == subscription_id
@@ -422,7 +422,7 @@ async def test_forecast_subscription(
         }
     )
     freezer.tick(timedelta(seconds=1))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
     msg = await client.receive_json()
     assert msg["success"]

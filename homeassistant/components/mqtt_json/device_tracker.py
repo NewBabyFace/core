@@ -7,22 +7,22 @@ import logging
 
 import voluptuous as vol
 
-from homeassistant.components import mqtt
-from homeassistant.components.device_tracker import (
+from menuai.components import mqtt
+from menuai.components.device_tracker import (
     PLATFORM_SCHEMA as DEVICE_TRACKER_PLATFORM_SCHEMA,
     AsyncSeeCallback,
 )
-from homeassistant.components.mqtt import CONF_QOS
-from homeassistant.const import (
+from menuai.components.mqtt import CONF_QOS
+from menuai.const import (
     ATTR_BATTERY_LEVEL,
     ATTR_GPS_ACCURACY,
     ATTR_LATITUDE,
     ATTR_LONGITUDE,
     CONF_DEVICES,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -42,7 +42,7 @@ PLATFORM_SCHEMA = DEVICE_TRACKER_PLATFORM_SCHEMA.extend(mqtt.config.SCHEMA_BASE)
 
 
 async def async_setup_scanner(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_see: AsyncSeeCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -51,7 +51,7 @@ async def async_setup_scanner(
     # Make sure MQTT integration is enabled and the client is available
     # We cannot count on dependencies as the device_tracker platform setup
     # also will be triggered when mqtt is loading the `device_tracker` platform
-    if not await mqtt.async_wait_for_mqtt_client(hass):
+    if not await mqtt.async_wait_for_mqtt_client(menuai):
         _LOGGER.error("MQTT integration is not available")
         return False
 
@@ -79,9 +79,9 @@ async def async_setup_scanner(
                 return
 
             kwargs = _parse_see_args(dev_id, data)
-            hass.async_create_task(async_see(**kwargs))
+            menuai.async_create_task(async_see(**kwargs))
 
-        await mqtt.async_subscribe(hass, topic, async_message_received, qos)
+        await mqtt.async_subscribe(menuai, topic, async_message_received, qos)
 
     return True
 

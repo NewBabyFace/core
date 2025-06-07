@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai, callback
+from menuai.helpers import entity_registry as er
 
 from .const import CONF_STATION_ID, DOMAIN, LOGGER
 from .coordinator import ZamgDataUpdateCoordinator
@@ -13,35 +13,35 @@ from .coordinator import ZamgDataUpdateCoordinator
 PLATFORMS = (Platform.SENSOR, Platform.WEATHER)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up Zamg from config entry."""
-    await _async_migrate_entries(hass, entry)
+    await _async_migrate_entries(menuai, entry)
 
-    coordinator = ZamgDataUpdateCoordinator(hass, entry=entry)
+    coordinator = ZamgDataUpdateCoordinator(menuai, entry=entry)
     station_id = entry.data[CONF_STATION_ID]
     coordinator.zamg.set_default_station(station_id)
     await coordinator.async_config_entry_first_refresh()
 
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
+    menuai.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
 
     # Set up all platforms for this device/entry.
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload ZAMG config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        hass.data[DOMAIN].pop(entry.entry_id)
+    if unload_ok := await menuai.config_entries.async_unload_platforms(entry, PLATFORMS):
+        menuai.data[DOMAIN].pop(entry.entry_id)
     return unload_ok
 
 
 async def _async_migrate_entries(
-    hass: HomeAssistant, config_entry: ConfigEntry
+    menuai: menuai, config_entry: ConfigEntry
 ) -> bool:
     """Migrate old entry."""
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
 
     @callback
     def update_unique_id(entry: er.RegistryEntry) -> dict[str, str] | None:
@@ -74,6 +74,6 @@ async def _async_migrate_entries(
             }
         return None
 
-    await er.async_migrate_entries(hass, config_entry.entry_id, update_unique_id)
+    await er.async_migrate_entries(menuai, config_entry.entry_id, update_unique_id)
 
     return True

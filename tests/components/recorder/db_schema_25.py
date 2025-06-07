@@ -27,17 +27,17 @@ from sqlalchemy.engine.row import Row
 from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.orm.session import Session
 
-from homeassistant.components.recorder.const import ALL_DOMAIN_EXCLUDE_ATTRS, JSON_DUMP
-from homeassistant.const import (
+from menuai.components.recorder.const import ALL_DOMAIN_EXCLUDE_ATTRS, JSON_DUMP
+from menuai.const import (
     MAX_LENGTH_EVENT_CONTEXT_ID,
     MAX_LENGTH_EVENT_EVENT_TYPE,
     MAX_LENGTH_EVENT_ORIGIN,
     MAX_LENGTH_STATE_ENTITY_ID,
     MAX_LENGTH_STATE_STATE,
 )
-from homeassistant.core import Context, Event, EventOrigin, State, split_entity_id
-from homeassistant.helpers.typing import UNDEFINED, UndefinedType
-from homeassistant.util import dt as dt_util
+from menuai.core import Context, Event, EventOrigin, State, split_entity_id
+from menuai.helpers.typing import UNDEFINED, UndefinedType
+from menuai.util import dt as dt_util
 
 # SQLAlchemy Schema
 Base = declarative_base()

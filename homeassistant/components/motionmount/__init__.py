@@ -6,11 +6,11 @@ import socket
 
 import motionmount
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PIN, CONF_PORT, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers.device_registry import format_mac
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, CONF_PIN, CONF_PORT, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers.device_registry import format_mac
 
 from .const import DOMAIN, EMPTY_MAC
 
@@ -24,7 +24,7 @@ PLATFORMS: list[Platform] = [
 ]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: MotionMountConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: MotionMountConfigEntry) -> bool:
     """Set up Vogel's MotionMount from a config entry."""
 
     host = entry.data[CONF_HOST]
@@ -69,16 +69,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: MotionMountConfigEntry) 
     # Store an API object for your platforms to access
     entry.runtime_data = mm
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, entry: MotionMountConfigEntry
+    menuai: menuai, entry: MotionMountConfigEntry
 ) -> bool:
     """Unload a config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+    if unload_ok := await menuai.config_entries.async_unload_platforms(entry, PLATFORMS):
         mm = entry.runtime_data
         await mm.disconnect()
 

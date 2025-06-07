@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_EFFECT,
     ATTR_RGB_COLOR,
@@ -14,8 +14,8 @@ from homeassistant.components.light import (
     LightEntity,
     LightEntityFeature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DEV_LED_PROFILE, DEV_PROFILE_RGB, DEV_PROFILE_RGBW
 from .coordinator import TwinklyConfigEntry, TwinklyCoordinator
@@ -25,7 +25,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: TwinklyConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

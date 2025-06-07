@@ -24,9 +24,9 @@ from evohomeasync2.const import (
 )
 from evohomeasync2.schemas.typedefs import EvoLocStatusResponseT, EvoTcsConfigResponseT
 
-from homeassistant.const import CONF_SCAN_INTERVAL
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.const import CONF_SCAN_INTERVAL
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 
 class EvoDataUpdateCoordinator(DataUpdateCoordinator):
@@ -38,7 +38,7 @@ class EvoDataUpdateCoordinator(DataUpdateCoordinator):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         logger: logging.Logger,
         client_v2: ec2.EvohomeClient,
         *,
@@ -50,7 +50,7 @@ class EvoDataUpdateCoordinator(DataUpdateCoordinator):
         """Class to manage fetching data."""
 
         super().__init__(
-            hass,
+            menuai,
             logger,
             config_entry=None,
             name=name,
@@ -144,7 +144,7 @@ class EvoDataUpdateCoordinator(DataUpdateCoordinator):
             return None
 
         if request_refresh:  # wait a moment for system to quiesce before updating state
-            await self.async_request_refresh()  # hass.async_create_task() won't help
+            await self.async_request_refresh()  # menuai.async_create_task() won't help
 
         return result
 

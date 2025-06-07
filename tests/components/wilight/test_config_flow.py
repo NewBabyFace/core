@@ -6,14 +6,14 @@ from unittest.mock import patch
 import pytest
 from pywilight.const import DOMAIN
 
-from homeassistant.components.wilight.config_flow import (
+from menuai.components.wilight.config_flow import (
     CONF_MODEL_NAME,
     CONF_SERIAL_NUMBER,
 )
-from homeassistant.config_entries import SOURCE_SSDP
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_SOURCE
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.config_entries import SOURCE_SSDP
+from menuai.const import CONF_HOST, CONF_NAME, CONF_SOURCE
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from . import (
     CONF_COMPONENTS,
@@ -51,11 +51,11 @@ def mock_dummy_get_components_from_model_wrong():
         yield components
 
 
-async def test_show_ssdp_form(hass: HomeAssistant) -> None:
+async def test_show_ssdp_form(menuai: menuai) -> None:
     """Test that the ssdp confirmation form is served."""
 
     discovery_info = dataclasses.replace(MOCK_SSDP_DISCOVERY_INFO_P_B)
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={CONF_SOURCE: SOURCE_SSDP}, data=discovery_info
     )
 
@@ -67,11 +67,11 @@ async def test_show_ssdp_form(hass: HomeAssistant) -> None:
     }
 
 
-async def test_ssdp_not_wilight_abort_1(hass: HomeAssistant) -> None:
+async def test_ssdp_not_wilight_abort_1(menuai: menuai) -> None:
     """Test that the ssdp aborts not_wilight."""
 
     discovery_info = dataclasses.replace(MOCK_SSDP_DISCOVERY_INFO_WRONG_MANUFACTURER)
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={CONF_SOURCE: SOURCE_SSDP}, data=discovery_info
     )
 
@@ -79,11 +79,11 @@ async def test_ssdp_not_wilight_abort_1(hass: HomeAssistant) -> None:
     assert result["reason"] == "not_wilight_device"
 
 
-async def test_ssdp_not_wilight_abort_2(hass: HomeAssistant) -> None:
+async def test_ssdp_not_wilight_abort_2(menuai: menuai) -> None:
     """Test that the ssdp aborts not_wilight."""
 
     discovery_info = dataclasses.replace(MOCK_SSDP_DISCOVERY_INFO_MISSING_MANUFACTURER)
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={CONF_SOURCE: SOURCE_SSDP}, data=discovery_info
     )
 
@@ -92,12 +92,12 @@ async def test_ssdp_not_wilight_abort_2(hass: HomeAssistant) -> None:
 
 
 async def test_ssdp_not_wilight_abort_3(
-    hass: HomeAssistant, dummy_get_components_from_model_clear
+    menuai: menuai, dummy_get_components_from_model_clear
 ) -> None:
     """Test that the ssdp aborts not_wilight."""
 
     discovery_info = dataclasses.replace(MOCK_SSDP_DISCOVERY_INFO_P_B)
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={CONF_SOURCE: SOURCE_SSDP}, data=discovery_info
     )
 
@@ -106,12 +106,12 @@ async def test_ssdp_not_wilight_abort_3(
 
 
 async def test_ssdp_not_supported_abort(
-    hass: HomeAssistant, dummy_get_components_from_model_wrong
+    menuai: menuai, dummy_get_components_from_model_wrong
 ) -> None:
     """Test that the ssdp aborts not_supported."""
 
     discovery_info = dataclasses.replace(MOCK_SSDP_DISCOVERY_INFO_P_B)
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={CONF_SOURCE: SOURCE_SSDP}, data=discovery_info
     )
 
@@ -119,7 +119,7 @@ async def test_ssdp_not_supported_abort(
     assert result["reason"] == "not_supported_device"
 
 
-async def test_ssdp_device_exists_abort(hass: HomeAssistant) -> None:
+async def test_ssdp_device_exists_abort(menuai: menuai) -> None:
     """Test abort SSDP flow if WiLight already configured."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -131,10 +131,10 @@ async def test_ssdp_device_exists_abort(hass: HomeAssistant) -> None:
         },
     )
 
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     discovery_info = dataclasses.replace(MOCK_SSDP_DISCOVERY_INFO_P_B)
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={CONF_SOURCE: SOURCE_SSDP},
         data=discovery_info,
@@ -144,11 +144,11 @@ async def test_ssdp_device_exists_abort(hass: HomeAssistant) -> None:
     assert result["reason"] == "already_configured"
 
 
-async def test_full_ssdp_flow_implementation(hass: HomeAssistant) -> None:
+async def test_full_ssdp_flow_implementation(menuai: menuai) -> None:
     """Test the full SSDP flow from start to finish."""
 
     discovery_info = dataclasses.replace(MOCK_SSDP_DISCOVERY_INFO_P_B)
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={CONF_SOURCE: SOURCE_SSDP}, data=discovery_info
     )
 
@@ -159,7 +159,7 @@ async def test_full_ssdp_flow_implementation(hass: HomeAssistant) -> None:
         "components": "light",
     }
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
 

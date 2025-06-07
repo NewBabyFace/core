@@ -9,15 +9,15 @@ import logging
 
 from pysmarty2 import Smarty
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
 )
-from homeassistant.const import REVOLUTIONS_PER_MINUTE, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import dt as dt_util
+from menuai.const import REVOLUTIONS_PER_MINUTE, UnitOfTemperature
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import dt as dt_util
 
 from .coordinator import SmartyConfigEntry, SmartyCoordinator
 from .entity import SmartyEntity
@@ -83,7 +83,7 @@ ENTITIES: tuple[SmartySensorDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: SmartyConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

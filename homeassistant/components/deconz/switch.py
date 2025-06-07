@@ -7,9 +7,9 @@ from typing import Any
 from pydeconz.models.event import EventType
 from pydeconz.models.light.light import Light
 
-from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN, SwitchEntity
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import DOMAIN as SWITCH_DOMAIN, SwitchEntity
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import DeconzConfigEntry
 from .const import POWER_PLUGS
@@ -17,7 +17,7 @@ from .entity import DeconzDevice
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: DeconzConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

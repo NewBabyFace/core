@@ -15,12 +15,12 @@ from bimmer_connected.models import (
 )
 from httpx import RequestError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_PASSWORD, CONF_REGION, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util.ssl import get_default_context
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_PASSWORD, CONF_REGION, CONF_USERNAME
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.util.ssl import get_default_context
 
 from .const import CONF_GCID, CONF_READ_ONLY, CONF_REFRESH_TOKEN, DOMAIN, SCAN_INTERVALS
 
@@ -36,13 +36,13 @@ class BMWDataUpdateCoordinator(DataUpdateCoordinator[None]):
     account: MyBMWAccount
     config_entry: BMWConfigEntry
 
-    def __init__(self, hass: HomeAssistant, *, config_entry: BMWConfigEntry) -> None:
+    def __init__(self, menuai: menuai, *, config_entry: BMWConfigEntry) -> None:
         """Initialize account-wide BMW data updater."""
         self.account = MyBMWAccount(
             config_entry.data[CONF_USERNAME],
             config_entry.data[CONF_PASSWORD],
             get_region_from_name(config_entry.data[CONF_REGION]),
-            observer_position=GPSPosition(hass.config.latitude, hass.config.longitude),
+            observer_position=GPSPosition(menuai.config.latitude, menuai.config.longitude),
             verify=get_default_context(),
         )
         self.read_only: bool = config_entry.options[CONF_READ_ONLY]
@@ -54,7 +54,7 @@ class BMWDataUpdateCoordinator(DataUpdateCoordinator[None]):
             )
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=f"{DOMAIN}-{config_entry.data[CONF_USERNAME]}",
@@ -110,4 +110,4 @@ class BMWDataUpdateCoordinator(DataUpdateCoordinator[None]):
         }
         if not refresh_token:
             data.pop(CONF_REFRESH_TOKEN)
-        self.hass.config_entries.async_update_entry(self.config_entry, data=data)
+        self.menuai.config_entries.async_update_entry(self.config_entry, data=data)

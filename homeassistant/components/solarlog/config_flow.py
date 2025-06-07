@@ -12,8 +12,8 @@ from solarlog_cli.solarlog_exceptions import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_PASSWORD
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_PASSWORD
 
 from .const import CONF_HAS_PWD, DEFAULT_HOST, DOMAIN
 

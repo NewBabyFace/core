@@ -10,7 +10,7 @@ from typing import Any, cast
 from kasa import Device, Module
 from kasa.smart.modules.temperaturecontrol import ThermostatState
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_TEMPERATURE,
     DOMAIN as CLIMATE_DOMAIN,
     ClimateEntity,
@@ -19,10 +19,10 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.const import PRECISION_TENTHS, UnitOfTemperature
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import PRECISION_TENTHS, UnitOfTemperature
+from menuai.core import menuai, callback
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import TPLinkConfigEntry, legacy_device_id
 from .const import DOMAIN, UNIT_MAPPING
@@ -69,7 +69,7 @@ CLIMATE_DESCRIPTIONS: tuple[TPLinkClimateEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: TPLinkConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -83,7 +83,7 @@ async def async_setup_entry(
 
     def _check_device() -> None:
         entities = CoordinatedTPLinkModuleEntity.entities_for_device_and_its_children(
-            hass=hass,
+            menuai=menuai,
             device=device,
             coordinator=parent_coordinator,
             entity_class=TPLinkClimateEntity,

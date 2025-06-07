@@ -15,16 +15,16 @@ from pyisy.constants import (
 from pyisy.helpers import EventListener
 from pyisy.nodes import Node, NodeChangedEvent
 
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     SwitchDeviceClass,
     SwitchEntity,
     SwitchEntityDescription,
 )
-from homeassistant.const import EntityCategory, Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import EntityCategory, Platform
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .entity import ISYAuxControlEntity, ISYNodeEntity, ISYProgramEntity
 from .models import IsyConfigEntry
@@ -40,7 +40,7 @@ class ISYSwitchEntityDescription(SwitchEntityDescription):
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: IsyConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -95,12 +95,12 @@ class ISYSwitchEntity(ISYNodeEntity, SwitchEntity):
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Send the turn off command to the ISY switch."""
         if not await self._node.turn_off():
-            raise HomeAssistantError(f"Unable to turn off switch {self._node.address}")
+            raise menuaiError(f"Unable to turn off switch {self._node.address}")
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Send the turn on command to the ISY switch."""
         if not await self._node.turn_on():
-            raise HomeAssistantError(f"Unable to turn on switch {self._node.address}")
+            raise menuaiError(f"Unable to turn on switch {self._node.address}")
 
     @property
     def icon(self) -> str | None:
@@ -123,14 +123,14 @@ class ISYSwitchProgramEntity(ISYProgramEntity, SwitchEntity):
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Send the turn on command to the ISY switch program."""
         if not await self._actions.run_then():
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Unable to run 'then' clause on program switch {self._actions.address}"
             )
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Send the turn off command to the ISY switch program."""
         if not await self._actions.run_else():
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Unable to run 'else' clause on program switch {self._actions.address}"
             )
 
@@ -157,8 +157,8 @@ class ISYEnableSwitchEntity(ISYAuxControlEntity, SwitchEntity):
         self._attr_name = description.name  # Override super
         self._change_handler: EventListener | None = None
 
-    # pylint: disable-next=hass-missing-super-call
-    async def async_added_to_hass(self) -> None:
+    # pylint: disable-next=menuai-missing-super-call
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to the node control change events."""
         self._change_handler = self._node.isy.nodes.status_events.subscribe(
             self.async_on_update,
@@ -187,9 +187,9 @@ class ISYEnableSwitchEntity(ISYAuxControlEntity, SwitchEntity):
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Send the turn off command to the ISY switch."""
         if not await self._node.disable():
-            raise HomeAssistantError(f"Unable to disable device {self._node.address}")
+            raise menuaiError(f"Unable to disable device {self._node.address}")
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Send the turn on command to the ISY switch."""
         if not await self._node.enable():
-            raise HomeAssistantError(f"Unable to enable device {self._node.address}")
+            raise menuaiError(f"Unable to enable device {self._node.address}")

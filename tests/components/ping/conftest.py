@@ -5,10 +5,10 @@ from unittest.mock import patch
 from icmplib import Host
 import pytest
 
-from homeassistant.components.device_tracker import CONF_CONSIDER_HOME
-from homeassistant.components.ping import CONF_PING_COUNT, DOMAIN
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
+from menuai.components.device_tracker import CONF_CONSIDER_HOME
+from menuai.components.ping import CONF_PING_COUNT, DOMAIN
+from menuai.const import CONF_HOST
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -18,10 +18,10 @@ def patch_setup(*args, **kwargs):
     """Patch setup methods."""
     with (
         patch(
-            "homeassistant.components.ping.async_setup_entry",
+            "menuai.components.ping.async_setup_entry",
             return_value=True,
         ),
-        patch("homeassistant.components.ping.async_setup", return_value=True),
+        patch("menuai.components.ping.async_setup", return_value=True),
     ):
         yield
 
@@ -32,14 +32,14 @@ async def patch_ping():
     mock = Host("10.10.10.10", 5, [10, 1, 2, 5, 6])
 
     with (
-        patch("homeassistant.components.ping.helpers.async_ping", return_value=mock),
-        patch("homeassistant.components.ping.async_ping", return_value=mock),
+        patch("menuai.components.ping.helpers.async_ping", return_value=mock),
+        patch("menuai.components.ping.async_ping", return_value=mock),
     ):
         yield mock
 
 
 @pytest.fixture(name="config_entry")
-async def mock_config_entry(hass: HomeAssistant) -> MockConfigEntry:
+async def mock_config_entry(menuai: menuai) -> MockConfigEntry:
     """Return a MockConfigEntry for testing."""
     return MockConfigEntry(
         domain=DOMAIN,
@@ -54,10 +54,10 @@ async def mock_config_entry(hass: HomeAssistant) -> MockConfigEntry:
 
 @pytest.fixture(name="setup_integration")
 async def mock_setup_integration(
-    hass: HomeAssistant, config_entry: MockConfigEntry, patch_ping
+    menuai: menuai, config_entry: MockConfigEntry, patch_ping
 ) -> None:
     """Fixture for setting up the component."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()

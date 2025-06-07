@@ -4,17 +4,17 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Final
 
-from homeassistant.components.assist_pipeline.select import (
+from menuai.components.assist_pipeline.select import (
     AssistPipelineSelect,
     VadSensitivitySelect,
 )
-from homeassistant.components.assist_pipeline.vad import VadSensitivity
-from homeassistant.components.select import SelectEntity, SelectEntityDescription
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import restore_state
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.assist_pipeline.vad import VadSensitivity
+from menuai.components.select import SelectEntity, SelectEntityDescription
+from menuai.config_entries import ConfigEntry
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers import restore_state
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .devices import SatelliteDevice
@@ -34,21 +34,21 @@ _DEFAULT_NOISE_SUPPRESSION_LEVEL: Final = "off"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Wyoming select entities."""
-    item: DomainDataItem = hass.data[DOMAIN][config_entry.entry_id]
+    item: DomainDataItem = menuai.data[DOMAIN][config_entry.entry_id]
 
     # Setup is only forwarded for satellites
     assert item.device is not None
 
     async_add_entities(
         [
-            WyomingSatellitePipelineSelect(hass, item.device),
+            WyomingSatellitePipelineSelect(menuai, item.device),
             WyomingSatelliteNoiseSuppressionLevelSelect(item.device),
-            WyomingSatelliteVadSensitivitySelect(hass, item.device),
+            WyomingSatelliteVadSensitivitySelect(menuai, item.device),
         ]
     )
 
@@ -56,12 +56,12 @@ async def async_setup_entry(
 class WyomingSatellitePipelineSelect(WyomingSatelliteEntity, AssistPipelineSelect):
     """Pipeline selector for Wyoming satellites."""
 
-    def __init__(self, hass: HomeAssistant, device: SatelliteDevice) -> None:
+    def __init__(self, menuai: menuai, device: SatelliteDevice) -> None:
         """Initialize a pipeline selector."""
         self.device = device
 
         WyomingSatelliteEntity.__init__(self, device)
-        AssistPipelineSelect.__init__(self, hass, DOMAIN, device.satellite_id)
+        AssistPipelineSelect.__init__(self, menuai, DOMAIN, device.satellite_id)
 
     async def async_select_option(self, option: str) -> None:
         """Select an option."""
@@ -83,9 +83,9 @@ class WyomingSatelliteNoiseSuppressionLevelSelect(
     _attr_current_option = _DEFAULT_NOISE_SUPPRESSION_LEVEL
     _attr_options = list(_NOISE_SUPPRESSION_LEVEL.keys())
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to Home Assistant."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to MenuAI."""
+        await super().async_added_to_menuai()
 
         state = await self.async_get_last_state()
         if state is not None and state.state in self.options:
@@ -103,12 +103,12 @@ class WyomingSatelliteVadSensitivitySelect(
 ):
     """VAD sensitivity selector for Wyoming satellites."""
 
-    def __init__(self, hass: HomeAssistant, device: SatelliteDevice) -> None:
+    def __init__(self, menuai: menuai, device: SatelliteDevice) -> None:
         """Initialize a VAD sensitivity selector."""
         self.device = device
 
         WyomingSatelliteEntity.__init__(self, device)
-        VadSensitivitySelect.__init__(self, hass, device.satellite_id)
+        VadSensitivitySelect.__init__(self, menuai, device.satellite_id)
 
     async def async_select_option(self, option: str) -> None:
         """Select an option."""

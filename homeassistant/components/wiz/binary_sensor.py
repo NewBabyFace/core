@@ -6,15 +6,15 @@ from collections.abc import Callable
 
 from pywizlight.bulb import PIR_SOURCE
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import Platform
+from menuai.core import menuai, callback
+from menuai.helpers import entity_registry as er
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import WizConfigEntry
 from .const import DOMAIN, SIGNAL_WIZ_PIR
@@ -25,14 +25,14 @@ OCCUPANCY_UNIQUE_ID = "{}_occupancy"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: WizConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the WiZ binary sensor platform."""
     mac = entry.runtime_data.bulb.mac
 
-    if er.async_get(hass).async_get_entity_id(
+    if er.async_get(menuai).async_get_entity_id(
         Platform.BINARY_SENSOR, DOMAIN, OCCUPANCY_UNIQUE_ID.format(mac)
     ):
         async_add_entities([WizOccupancyEntity(entry.runtime_data, entry.title)])
@@ -49,7 +49,7 @@ async def async_setup_entry(
         async_add_entities([WizOccupancyEntity(entry.runtime_data, entry.title)])
 
     cancel_dispatcher = async_dispatcher_connect(
-        hass, SIGNAL_WIZ_PIR.format(mac), _async_add_occupancy_sensor
+        menuai, SIGNAL_WIZ_PIR.format(mac), _async_add_occupancy_sensor
     )
 
     @callback

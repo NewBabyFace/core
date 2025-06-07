@@ -7,19 +7,19 @@ from pymodbus.client import ModbusTcpClient
 from pystiebeleltron.pystiebeleltron import StiebelEltronAPI
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import SOURCE_IMPORT, ConfigEntry
+from menuai.const import (
     CONF_HOST,
     CONF_NAME,
     CONF_PORT,
     DEVICE_DEFAULT_NAME,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import config_validation as cv, issue_registry as ir
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import config_validation as cv, issue_registry as ir
+from menuai.helpers.typing import ConfigType
 
 from .const import CONF_HUB, DEFAULT_HUB, DOMAIN
 
@@ -41,7 +41,7 @@ _LOGGER = logging.getLogger(__name__)
 _PLATFORMS: list[Platform] = [Platform.CLIMATE]
 
 
-async def _async_import(hass: HomeAssistant, config: ConfigType) -> None:
+async def _async_import(menuai: menuai, config: ConfigType) -> None:
     """Set up the STIEBEL ELTRON component."""
     hub_config: dict[str, Any] | None = None
     if MODBUS_DOMAIN in config:
@@ -51,7 +51,7 @@ async def _async_import(hass: HomeAssistant, config: ConfigType) -> None:
                 break
     if hub_config is None:
         ir.async_create_issue(
-            hass,
+            menuai,
             DOMAIN,
             "deprecated_yaml_import_issue_missing_hub",
             breaks_in_ha_version="2025.11.0",
@@ -65,7 +65,7 @@ async def _async_import(hass: HomeAssistant, config: ConfigType) -> None:
             },
         )
         return
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_IMPORT},
         data={
@@ -79,7 +79,7 @@ async def _async_import(hass: HomeAssistant, config: ConfigType) -> None:
         and result.get("reason") != "already_configured"
     ):
         ir.async_create_issue(
-            hass,
+            menuai,
             DOMAIN,
             f"deprecated_yaml_import_issue_{result['reason']}",
             breaks_in_ha_version="2025.11.0",
@@ -95,7 +95,7 @@ async def _async_import(hass: HomeAssistant, config: ConfigType) -> None:
         return
 
     ir.async_create_issue(
-        hass,
+        menuai,
         DOMAIN,
         "deprecated_yaml",
         breaks_in_ha_version="2025.9.0",
@@ -110,10 +110,10 @@ async def _async_import(hass: HomeAssistant, config: ConfigType) -> None:
     )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the STIEBEL ELTRON component."""
     if DOMAIN in config:
-        hass.async_create_task(_async_import(hass, config))
+        menuai.async_create_task(_async_import(menuai, config))
     return True
 
 
@@ -121,26 +121,26 @@ type StiebelEltronConfigEntry = ConfigEntry[StiebelEltronAPI]
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: StiebelEltronConfigEntry
+    menuai: menuai, entry: StiebelEltronConfigEntry
 ) -> bool:
     """Set up STIEBEL ELTRON from a config entry."""
     client = StiebelEltronAPI(
         ModbusTcpClient(entry.data[CONF_HOST], port=entry.data[CONF_PORT]), 1
     )
 
-    success = await hass.async_add_executor_job(client.update)
+    success = await menuai.async_add_executor_job(client.update)
     if not success:
         raise ConfigEntryNotReady("Could not connect to device")
 
     entry.runtime_data = client
 
-    await hass.config_entries.async_forward_entry_setups(entry, _PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, _PLATFORMS)
 
     return True
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, entry: StiebelEltronConfigEntry
+    menuai: menuai, entry: StiebelEltronConfigEntry
 ) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, _PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, _PLATFORMS)

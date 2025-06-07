@@ -4,16 +4,16 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from homeassistant.components.stiebel_eltron.const import CONF_HUB, DEFAULT_HUB, DOMAIN
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import issue_registry as ir
-from homeassistant.setup import async_setup_component
+from menuai.components.stiebel_eltron.const import CONF_HUB, DEFAULT_HUB, DOMAIN
+from menuai.const import CONF_HOST, CONF_NAME, CONF_PORT
+from menuai.core import menuai
+from menuai.helpers import issue_registry as ir
+from menuai.setup import async_setup_component
 
 
 @pytest.mark.usefixtures("mock_stiebel_eltron_client")
 async def test_async_setup_success(
-    hass: HomeAssistant,
+    menuai: menuai,
     issue_registry: ir.IssueRegistry,
 ) -> None:
     """Test successful async_setup."""
@@ -31,8 +31,8 @@ async def test_async_setup_success(
         ],
     }
 
-    assert await async_setup_component(hass, DOMAIN, config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, config)
+    await menuai.async_block_till_done()
 
     # Verify the issue is created
     issue = issue_registry.async_get_issue(DOMAIN, "deprecated_yaml")
@@ -43,12 +43,12 @@ async def test_async_setup_success(
 
 @pytest.mark.usefixtures("mock_stiebel_eltron_client")
 async def test_async_setup_already_configured(
-    hass: HomeAssistant,
+    menuai: menuai,
     issue_registry: ir.IssueRegistry,
     mock_config_entry,
 ) -> None:
     """Test we handle already configured."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     config = {
         DOMAIN: {
@@ -64,8 +64,8 @@ async def test_async_setup_already_configured(
         ],
     }
 
-    assert await async_setup_component(hass, DOMAIN, config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, config)
+    await menuai.async_block_till_done()
 
     # Verify the issue is created
     issue = issue_registry.async_get_issue(DOMAIN, "deprecated_yaml")
@@ -75,7 +75,7 @@ async def test_async_setup_already_configured(
 
 
 async def test_async_setup_with_non_existing_hub(
-    hass: HomeAssistant, issue_registry: ir.IssueRegistry
+    menuai: menuai, issue_registry: ir.IssueRegistry
 ) -> None:
     """Test async_setup with non-existing modbus hub."""
     config = {
@@ -85,8 +85,8 @@ async def test_async_setup_with_non_existing_hub(
         },
     }
 
-    assert await async_setup_component(hass, DOMAIN, config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, config)
+    await menuai.async_block_till_done()
 
     # Verify the issue is created
     issue = issue_registry.async_get_issue(
@@ -101,7 +101,7 @@ async def test_async_setup_with_non_existing_hub(
 
 
 async def test_async_setup_import_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     issue_registry: ir.IssueRegistry,
     mock_stiebel_eltron_client: AsyncMock,
 ) -> None:
@@ -123,8 +123,8 @@ async def test_async_setup_import_failure(
     # Simulate an import failure
     mock_stiebel_eltron_client.update.side_effect = Exception("Import failure")
 
-    assert await async_setup_component(hass, DOMAIN, config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, config)
+    await menuai.async_block_till_done()
 
     # Verify the issue is created
     issue = issue_registry.async_get_issue(
@@ -140,7 +140,7 @@ async def test_async_setup_import_failure(
 
 @pytest.mark.usefixtures("mock_modbus")
 async def test_async_setup_cannot_connect(
-    hass: HomeAssistant,
+    menuai: menuai,
     issue_registry: ir.IssueRegistry,
     mock_stiebel_eltron_client: AsyncMock,
 ) -> None:
@@ -162,8 +162,8 @@ async def test_async_setup_cannot_connect(
     # Simulate a cannot connect error
     mock_stiebel_eltron_client.update.return_value = False
 
-    assert await async_setup_component(hass, DOMAIN, config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, config)
+    await menuai.async_block_till_done()
 
     # Verify the issue is created
     issue = issue_registry.async_get_issue(

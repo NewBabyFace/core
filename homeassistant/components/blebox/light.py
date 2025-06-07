@@ -9,7 +9,7 @@ from typing import Any
 import blebox_uniapi.light
 from blebox_uniapi.light import BleboxColorMode
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_TEMP_KELVIN,
     ATTR_EFFECT,
@@ -20,9 +20,9 @@ from homeassistant.components.light import (
     LightEntity,
     LightEntityFeature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import color as color_util
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import color as color_util
 
 from . import BleBoxConfigEntry
 from .entity import BleBoxEntity
@@ -33,7 +33,7 @@ SCAN_INTERVAL = timedelta(seconds=5)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: BleBoxConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

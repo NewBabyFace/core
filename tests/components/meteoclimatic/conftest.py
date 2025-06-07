@@ -8,7 +8,7 @@ import pytest
 @pytest.fixture(autouse=True)
 def patch_requests():
     """Stub out services that makes requests."""
-    patch_client = patch("homeassistant.components.meteoclimatic.MeteoclimaticClient")
+    patch_client = patch("menuai.components.meteoclimatic.MeteoclimaticClient")
 
     with patch_client:
         yield

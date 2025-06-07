@@ -15,7 +15,7 @@ from typing import Any
 from awesomeversion import AwesomeVersion, AwesomeVersionStrategy
 from tqdm import tqdm
 
-import homeassistant.util.package as pkg_util
+import menuai.util.package as pkg_util
 from script.gen_requirements_all import (
     EXCLUDED_REQUIREMENTS_ALL,
     normalize_package_name,
@@ -88,7 +88,7 @@ FORBIDDEN_PACKAGE_EXCEPTIONS: dict[str, dict[str, set[str]]] = {
         # pyblackbird > pyserial-asyncio
         "pyblackbird": {"pyserial-asyncio"}
     },
-    "cloud": {"hass-nabucasa": {"async-timeout"}, "snitun": {"async-timeout"}},
+    "cloud": {"menuai-nabucasa": {"async-timeout"}, "snitun": {"async-timeout"}},
     "cmus": {
         # https://github.com/mtreinish/pycmus/issues/4
         # pycmus > pbr > setuptools
@@ -150,11 +150,11 @@ FORBIDDEN_PACKAGE_EXCEPTIONS: dict[str, dict[str, set[str]]] = {
         "here-transit": {"async-timeout"},
     },
     "hive": {
-        # https://github.com/Pyhass/Pyhiveapi/pull/88
+        # https://github.com/Pymenuai/Pyhiveapi/pull/88
         # pyhive-integration > unasync > setuptools
         "unasync": {"setuptools"}
     },
-    "homeassistant_hardware": {
+    "menuai_hardware": {
         # https://github.com/zigpy/zigpy/issues/1604
         # universal-silabs-flasher > zigpy > pyserial-asyncio
         "zigpy": {"pyserial-asyncio"},
@@ -323,15 +323,15 @@ PYTHON_VERSION_CHECK_EXCEPTIONS: dict[str, dict[str, set[str]]] = {
     # - dependencyX should be the name of the referenced dependency
     "bluetooth": {
         # https://github.com/hbldh/bleak/pull/1718 (not yet released)
-        "homeassistant": {"bleak"}
+        "menuai": {"bleak"}
     },
     "eq3btsmart": {
         # https://github.com/EuleMitKeule/eq3btsmart/releases/tag/2.0.0
-        "homeassistant": {"eq3btsmart"}
+        "menuai": {"eq3btsmart"}
     },
     "python_script": {
         # Security audits are needed for each Python version
-        "homeassistant": {"restrictedpython"}
+        "menuai": {"restrictedpython"}
     },
 }
 
@@ -543,7 +543,7 @@ def get_requirements(integration: Integration, packages: set[str]) -> set[str]:
         ):
             needs_python_version_check_exception = True
             integration.add_warning_or_error(
-                package in python_version_check_exceptions.get("homeassistant", set()),
+                package in python_version_check_exceptions.get("menuai", set()),
                 "requirements",
                 "Version restrictions for Python are too strict "
                 f"({requires_python}) in {package}",

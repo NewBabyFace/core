@@ -9,15 +9,15 @@ from aioairq import AirQ, InvalidAuth
 from aiohttp.client_exceptions import ClientConnectionError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_IP_ADDRESS, CONF_PASSWORD
-from homeassistant.core import callback
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.schema_config_entry_flow import (
+from menuai.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_IP_ADDRESS, CONF_PASSWORD
+from menuai.core import callback
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.schema_config_entry_flow import (
     SchemaFlowFormStep,
     SchemaOptionsFlowHandler,
 )
-from homeassistant.helpers.selector import BooleanSelector
+from menuai.helpers.selector import BooleanSelector
 
 from .const import CONF_CLIP_NEGATIVE, CONF_RETURN_AVERAGE, DOMAIN
 
@@ -57,7 +57,7 @@ class AirQConfigFlow(ConfigFlow, domain=DOMAIN):
 
         errors: dict[str, str] = {}
 
-        session = async_get_clientsession(self.hass)
+        session = async_get_clientsession(self.menuai)
         airq = AirQ(user_input[CONF_IP_ADDRESS], user_input[CONF_PASSWORD], session)
         try:
             await airq.validate()

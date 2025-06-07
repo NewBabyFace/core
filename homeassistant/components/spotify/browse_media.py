@@ -17,14 +17,14 @@ from spotifyaio import (
 from spotifyaio.models import Episode, ItemType, SimplifiedEpisode
 import yarl
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     BrowseError,
     BrowseMedia,
     MediaClass,
     MediaType,
 )
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
 
 from .const import DOMAIN, MEDIA_PLAYER_PREFIX, MEDIA_TYPE_SHOW, PLAYABLE_MEDIA_TYPES
 from .util import fetch_image_url
@@ -185,7 +185,7 @@ class UnknownMediaType(BrowseError):
 
 
 async def async_browse_media(
-    hass: HomeAssistant,
+    menuai: menuai,
     media_content_type: str | None,
     media_content_id: str | None,
     *,
@@ -197,7 +197,7 @@ async def async_browse_media(
 
     # Check if caller is requesting the root nodes
     if media_content_type is None and media_content_id is None:
-        config_entries = hass.config_entries.async_entries(
+        config_entries = menuai.config_entries.async_entries(
             DOMAIN, include_disabled=False, include_ignore=False
         )
         children = [
@@ -235,8 +235,8 @@ async def async_browse_media(
         # config entry ids can be upper or lower case. Yarl always returns host
         # names in lower case, so we need to look for the config entry in both
         or (
-            entry := hass.config_entries.async_get_entry(config_entry_id)
-            or hass.config_entries.async_get_entry(config_entry_id.upper())
+            entry := menuai.config_entries.async_get_entry(config_entry_id)
+            or menuai.config_entries.async_get_entry(config_entry_id.upper())
         )
         is None
         or entry.state is not ConfigEntryState.LOADED
@@ -246,7 +246,7 @@ async def async_browse_media(
     info = entry.runtime_data
 
     result = await async_browse_media_internal(
-        hass,
+        menuai,
         info.coordinator.client,
         media_content_type,
         media_content_id,
@@ -262,7 +262,7 @@ async def async_browse_media(
 
 
 async def async_browse_media_internal(
-    hass: HomeAssistant,
+    menuai: menuai,
     spotify: SpotifyClient,
     media_content_type: str | None,
     media_content_id: str | None,

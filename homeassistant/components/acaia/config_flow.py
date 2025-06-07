@@ -7,14 +7,14 @@ from aioacaia.exceptions import AcaiaDeviceNotFound, AcaiaError, AcaiaUnknownDev
 from aioacaia.helpers import is_new_scale
 import voluptuous as vol
 
-from homeassistant.components.bluetooth import (
+from menuai.components.bluetooth import (
     BluetoothServiceInfoBleak,
     async_discovered_service_info,
 )
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_ADDRESS, CONF_NAME
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.selector import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_ADDRESS, CONF_NAME
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.selector import (
     SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
@@ -65,7 +65,7 @@ class AcaiaConfigFlow(ConfigFlow, domain=DOMAIN):
                     },
                 )
 
-        for device in async_discovered_service_info(self.hass):
+        for device in async_discovered_service_info(self.menuai):
             self._discovered_devices[device.address] = device.name
 
         if not self._discovered_devices:

@@ -5,25 +5,25 @@ from unittest.mock import AsyncMock, patch
 from aiowatttime.errors import CoordinatesNotFoundError, InvalidCredentialsError
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.watttime.config_flow import (
+from menuai import config_entries
+from menuai.components.watttime.config_flow import (
     CONF_LOCATION_TYPE,
     LOCATION_TYPE_HOME,
 )
-from homeassistant.components.watttime.const import (
+from menuai.components.watttime.const import (
     CONF_BALANCING_AUTHORITY,
     CONF_BALANCING_AUTHORITY_ABBREV,
     DOMAIN,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_LATITUDE,
     CONF_LONGITUDE,
     CONF_PASSWORD,
     CONF_SHOW_ON_MAP,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
@@ -33,14 +33,14 @@ from tests.common import MockConfigEntry
     [(InvalidCredentialsError, "invalid_auth"), (Exception, "unknown")],
 )
 async def test_auth_errors(
-    hass: HomeAssistant, config_auth, config_location_type, exc, error
+    menuai: menuai, config_auth, config_location_type, exc, error
 ) -> None:
     """Test that issues with auth show the correct error."""
     with patch(
-        "homeassistant.components.watttime.config_flow.Client.async_login",
+        "menuai.components.watttime.config_flow.Client.async_login",
         side_effect=exc,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}, data=config_auth
         )
         assert result["type"] is FlowResultType.FORM
@@ -61,7 +61,7 @@ async def test_auth_errors(
     ],
 )
 async def test_coordinate_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_auth,
     config_coordinates,
     config_location_type,
@@ -69,13 +69,13 @@ async def test_coordinate_errors(
     setup_watttime,
 ) -> None:
     """Test that issues with coordinates show the correct error."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}, data=config_auth
     )
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input=config_location_type
     )
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input=config_coordinates
     )
     assert result["type"] is FlowResultType.FORM
@@ -86,30 +86,30 @@ async def test_coordinate_errors(
     "config_location_type", [{CONF_LOCATION_TYPE: LOCATION_TYPE_HOME}]
 )
 async def test_duplicate_error(
-    hass: HomeAssistant, config_auth, config_entry, config_location_type, setup_watttime
+    menuai: menuai, config_auth, config_entry, config_location_type, setup_watttime
 ) -> None:
     """Test that errors are shown when duplicate entries are added."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}, data=config_auth
     )
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input=config_location_type
     )
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
 
 
-async def test_options_flow(hass: HomeAssistant, config_entry) -> None:
+async def test_options_flow(menuai: menuai, config_entry) -> None:
     """Test config flow options."""
     with patch(
-        "homeassistant.components.watttime.async_setup_entry", return_value=True
+        "menuai.components.watttime.async_setup_entry", return_value=True
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        result = await hass.config_entries.options.async_init(config_entry.entry_id)
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        result = await menuai.config_entries.options.async_init(config_entry.entry_id)
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "init"
 
-        result = await hass.config_entries.options.async_configure(
+        result = await menuai.config_entries.options.async_configure(
             result["flow_id"], user_input={CONF_SHOW_ON_MAP: False}
         )
         assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -117,27 +117,27 @@ async def test_options_flow(hass: HomeAssistant, config_entry) -> None:
 
 
 async def test_show_form_coordinates(
-    hass: HomeAssistant, config_auth, config_location_type, setup_watttime
+    menuai: menuai, config_auth, config_location_type, setup_watttime
 ) -> None:
     """Test showing the form to input custom latitude/longitude."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input=config_auth
     )
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input=config_location_type
     )
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "coordinates"
     assert result["errors"] is None
 
 
-async def test_show_form_user(hass: HomeAssistant) -> None:
+async def test_show_form_user(menuai: menuai) -> None:
     """Test showing the form to select the authentication type."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -146,41 +146,41 @@ async def test_show_form_user(hass: HomeAssistant) -> None:
 
 
 async def test_step_reauth(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     setup_watttime,
 ) -> None:
     """Test a full reauth flow."""
-    result = await config_entry.start_reauth_flow(hass)
+    result = await config_entry.start_reauth_flow(menuai)
     with patch(
-        "homeassistant.components.watttime.async_setup_entry",
+        "menuai.components.watttime.async_setup_entry",
         return_value=True,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={CONF_PASSWORD: "password"},
         )
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"
-    assert len(hass.config_entries.async_entries()) == 1
+    assert len(menuai.config_entries.async_entries()) == 1
 
 
 async def test_step_user_coordinates(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_auth,
     config_location_type,
     config_coordinates,
     setup_watttime,
 ) -> None:
     """Test a full login flow (inputting custom coordinates)."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}, data=config_auth
     )
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input=config_location_type
     )
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input=config_coordinates
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -199,13 +199,13 @@ async def test_step_user_coordinates(
     "config_location_type", [{CONF_LOCATION_TYPE: LOCATION_TYPE_HOME}]
 )
 async def test_step_user_home(
-    hass: HomeAssistant, config_auth, config_location_type, setup_watttime
+    menuai: menuai, config_auth, config_location_type, setup_watttime
 ) -> None:
     """Test a full login flow (selecting the home location)."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}, data=config_auth
     )
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input=config_location_type
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY

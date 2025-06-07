@@ -10,17 +10,17 @@ from typing import Any, Final, cast
 import aiohttp
 from pymiele import MieleDevice
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ClimateEntity,
     ClimateEntityDescription,
     ClimateEntityFeature,
     HVACMode,
 )
-from homeassistant.const import ATTR_TEMPERATURE, PRECISION_WHOLE, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
+from menuai.const import ATTR_TEMPERATURE, PRECISION_WHOLE, UnitOfTemperature
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
 
 from .const import DEVICE_TYPE_TAGS, DISABLED_TEMP_ENTITIES, DOMAIN, MieleAppliance
 from .coordinator import MieleConfigEntry, MieleDataUpdateCoordinator
@@ -127,7 +127,7 @@ ZONE1_DEVICES = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MieleConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -241,7 +241,7 @@ class MieleClimate(MieleEntity, ClimateEntity):
                 self.entity_description.zone,
             )
         except aiohttp.ClientError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="set_state_error",
                 translation_placeholders={

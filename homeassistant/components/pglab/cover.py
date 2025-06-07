@@ -7,15 +7,15 @@ from typing import Any
 from pypglab.device import Device as PyPGLabDevice
 from pypglab.shutter import Shutter as PyPGLabShutter
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     CoverDeviceClass,
     CoverEntity,
     CoverEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .discovery import PGLabDiscovery
 from .entity import PGLabEntity
@@ -24,7 +24,7 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -41,7 +41,7 @@ async def async_setup_entry(
 
     # Register the callback to create the cover entity when discovered.
     pglab_discovery = config_entry.runtime_data
-    await pglab_discovery.register_platform(hass, Platform.COVER, async_discover)
+    await pglab_discovery.register_platform(menuai, Platform.COVER, async_discover)
 
 
 class PGLabCover(PGLabEntity, CoverEntity):

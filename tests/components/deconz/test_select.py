@@ -12,14 +12,14 @@ from pydeconz.models.sensor.presence import (
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.select import (
+from menuai.components.select import (
     ATTR_OPTION,
     DOMAIN as SELECT_DOMAIN,
     SERVICE_SELECT_OPTION,
 )
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .conftest import ConfigEntryFactoryType
 
@@ -161,7 +161,7 @@ TEST_DATA = [
 
 @pytest.mark.parametrize(("sensor_payload", "expected"), TEST_DATA)
 async def test_select(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     config_entry_factory: ConfigEntryFactoryType,
     mock_put_request: Callable[[str, str], AiohttpClientMocker],
@@ -169,14 +169,14 @@ async def test_select(
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test successful creation of button entities."""
-    with patch("homeassistant.components.deconz.PLATFORMS", [Platform.SELECT]):
+    with patch("menuai.components.deconz.PLATFORMS", [Platform.SELECT]):
         config_entry = await config_entry_factory()
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
     # Verify selecting option
     aioclient_mock = mock_put_request(expected["request"])
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SELECT_DOMAIN,
         SERVICE_SELECT_OPTION,
         {

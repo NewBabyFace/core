@@ -15,13 +15,13 @@ from google_photos_library_api.model import (
 )
 import pytest
 
-from homeassistant.components.application_credentials import (
+from menuai.components.application_credentials import (
     ClientCredential,
     async_import_client_credential,
 )
-from homeassistant.components.google_photos.const import DOMAIN, OAUTH2_SCOPES
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.google_photos.const import DOMAIN, OAUTH2_SCOPES
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import (
     MockConfigEntry,
@@ -92,11 +92,11 @@ def mock_config_entry(
 
 
 @pytest.fixture(autouse=True)
-async def setup_credentials(hass: HomeAssistant) -> None:
+async def setup_credentials(menuai: menuai) -> None:
     """Fixture to setup credentials."""
-    assert await async_setup_component(hass, "application_credentials", {})
+    assert await async_setup_component(menuai, "application_credentials", {})
     await async_import_client_credential(
-        hass,
+        menuai,
         DOMAIN,
         ClientCredential(CLIENT_ID, CLIENT_SECRET),
     )
@@ -122,7 +122,7 @@ def mock_api_error() -> Exception | None:
 
 @pytest.fixture(name="mock_api")
 async def mock_client_api(
-    hass: HomeAssistant,
+    menuai: menuai,
     fixture_name: str,
     user_identifier: str,
     api_error: Exception,
@@ -135,7 +135,7 @@ async def mock_client_api(
     )
 
     responses = (
-        await async_load_json_array_fixture(hass, fixture_name, DOMAIN)
+        await async_load_json_array_fixture(menuai, fixture_name, DOMAIN)
         if fixture_name
         else []
     )
@@ -167,7 +167,7 @@ async def mock_client_api(
 
     async def list_albums(*args: Any, **kwargs: Any) -> AsyncGenerator[ListAlbumResult]:
         album_list = await async_load_json_object_fixture(
-            hass, "list_albums.json", DOMAIN
+            menuai, "list_albums.json", DOMAIN
         )
         mock_list_album_result = Mock(ListAlbumResult)
         mock_list_album_result.albums = [
@@ -182,7 +182,7 @@ async def mock_client_api(
     # Mock a point lookup by reading contents of the album fixture above
     async def get_album(album_id: str, **kwargs: Any) -> Mock:
         album_list = await async_load_json_object_fixture(
-            hass, "list_albums.json", DOMAIN
+            menuai, "list_albums.json", DOMAIN
         )
         for album in album_list["albums"]:
             if album["id"] == album_id:
@@ -197,16 +197,16 @@ async def mock_client_api(
 
 @pytest.fixture(name="setup_integration")
 async def mock_setup_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_api: Mock,
 ) -> Callable[[], Awaitable[bool]]:
     """Fixture to set up the integration."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.google_photos.GooglePhotosLibraryApi",
+        "menuai.components.google_photos.GooglePhotosLibraryApi",
         return_value=mock_api,
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()

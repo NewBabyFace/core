@@ -8,10 +8,10 @@ from typing import NamedTuple
 
 import pyvera as pv
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant
-from homeassistant.helpers.event import call_later
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import CALLBACK_TYPE, menuai
+from menuai.helpers.event import call_later
 
 from .const import DOMAIN
 
@@ -36,26 +36,26 @@ def get_configured_platforms(controller_data: ControllerData) -> set[Platform]:
 
 
 def get_controller_data(
-    hass: HomeAssistant, config_entry: ConfigEntry
+    menuai: menuai, config_entry: ConfigEntry
 ) -> ControllerData:
-    """Get controller data from hass data."""
-    return hass.data[DOMAIN][config_entry.entry_id]
+    """Get controller data from menuai data."""
+    return menuai.data[DOMAIN][config_entry.entry_id]
 
 
 def set_controller_data(
-    hass: HomeAssistant, config_entry: ConfigEntry, data: ControllerData
+    menuai: menuai, config_entry: ConfigEntry, data: ControllerData
 ) -> None:
-    """Set controller data in hass data."""
-    hass.data[DOMAIN][config_entry.entry_id] = data
+    """Set controller data in menuai data."""
+    menuai.data[DOMAIN][config_entry.entry_id] = data
 
 
 class SubscriptionRegistry(pv.AbstractSubscriptionRegistry):
     """Manages polling for data from vera."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize the object."""
         super().__init__()
-        self._hass = hass
+        self._menuai = menuai
         self._cancel_poll: CALLBACK_TYPE | None = None
 
     def start(self) -> None:
@@ -70,7 +70,7 @@ class SubscriptionRegistry(pv.AbstractSubscriptionRegistry):
             self._cancel_poll = None
 
     def _schedule_poll(self, delay: float) -> None:
-        self._cancel_poll = call_later(self._hass, delay, self._run_poll_server)
+        self._cancel_poll = call_later(self._menuai, delay, self._run_poll_server)
 
     def _run_poll_server(self, now: datetime) -> None:
         delay = 1

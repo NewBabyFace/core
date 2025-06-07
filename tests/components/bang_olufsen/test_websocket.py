@@ -6,14 +6,14 @@ from unittest.mock import AsyncMock, Mock
 from mozart_api.models import SoftwareUpdateState
 import pytest
 
-from homeassistant.components.bang_olufsen.const import (
+from menuai.components.bang_olufsen.const import (
     BANG_OLUFSEN_WEBSOCKET_EVENT,
     CONNECTION_STATUS,
     DOMAIN,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceRegistry
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceRegistry
+from menuai.helpers.dispatcher import async_dispatcher_connect
 
 from .const import TEST_NAME
 
@@ -21,7 +21,7 @@ from tests.common import MockConfigEntry
 
 
 async def test_connection(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     integration: None,
     mock_mozart_client: AsyncMock,
@@ -37,21 +37,21 @@ async def test_connection(
     mock_connection_callback = Mock()
 
     async_dispatcher_connect(
-        hass,
+        menuai,
         f"{mock_config_entry.unique_id}_{CONNECTION_STATUS}",
         mock_connection_callback,
     )
 
     # Call the WebSocket connection status method
     connection_callback()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     mock_connection_callback.assert_called_once_with(True)
     assert f"Connected to the {TEST_NAME} notification channel" in caplog.text
 
 
 async def test_connection_lost(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     integration: None,
     mock_mozart_client: AsyncMock,
@@ -63,20 +63,20 @@ async def test_connection_lost(
     mock_connection_lost_callback = Mock()
 
     async_dispatcher_connect(
-        hass,
+        menuai,
         f"{mock_config_entry.unique_id}_{CONNECTION_STATUS}",
         mock_connection_lost_callback,
     )
 
     connection_lost_callback()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     mock_connection_lost_callback.assert_called_once_with(False)
     assert f"Lost connection to the {TEST_NAME}" in caplog.text
 
 
 async def test_on_software_update_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: DeviceRegistry,
     integration: None,
     mock_mozart_client: AsyncMock,
@@ -90,7 +90,7 @@ async def test_on_software_update_state(
     # Trigger the notification
     await software_update_state_callback(SoftwareUpdateState())
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert mock_config_entry.unique_id
     assert (
@@ -102,7 +102,7 @@ async def test_on_software_update_state(
 
 
 async def test_on_all_notifications_raw(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     device_registry: DeviceRegistry,
     integration: None,
@@ -142,11 +142,11 @@ async def test_on_all_notifications_raw(
     mock_event_callback = Mock()
 
     # Listen to BANG_OLUFSEN_WEBSOCKET_EVENT events
-    hass.bus.async_listen(BANG_OLUFSEN_WEBSOCKET_EVENT, mock_event_callback)
+    menuai.bus.async_listen(BANG_OLUFSEN_WEBSOCKET_EVENT, mock_event_callback)
 
     # Trigger the notification
     all_notifications_raw_callback(raw_notification)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert str(raw_notification_full) in caplog.text
 

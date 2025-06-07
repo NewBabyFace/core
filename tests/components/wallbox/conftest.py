@@ -2,15 +2,15 @@
 
 import pytest
 
-from homeassistant.components.wallbox.const import CONF_STATION, DOMAIN
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
+from menuai.components.wallbox.const import CONF_STATION, DOMAIN
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
 
 @pytest.fixture
-def entry(hass: HomeAssistant) -> MockConfigEntry:
+def entry(menuai: menuai) -> MockConfigEntry:
     """Return mock config entry."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -21,5 +21,5 @@ def entry(hass: HomeAssistant) -> MockConfigEntry:
         },
         entry_id="testEntry",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     return entry

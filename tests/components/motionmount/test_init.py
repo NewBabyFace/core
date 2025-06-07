@@ -2,25 +2,25 @@
 
 from unittest.mock import MagicMock
 
-from homeassistant.components.motionmount import DOMAIN
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import format_mac
+from menuai.components.motionmount import DOMAIN
+from menuai.config_entries import SOURCE_REAUTH, ConfigEntryState
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import format_mac
 
 from tests.common import MockConfigEntry
 
 
 async def test_setup_entry_with_mac(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mock_config_entry: MockConfigEntry,
     mock_motionmount: MagicMock,
 ) -> None:
     """Tests the state attributes."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
 
     assert mock_config_entry.state is ConfigEntryState.LOADED
 
@@ -33,17 +33,17 @@ async def test_setup_entry_with_mac(
 
 
 async def test_setup_entry_without_mac(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mock_config_entry: MockConfigEntry,
     mock_motionmount: MagicMock,
 ) -> None:
     """Tests the state attributes."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     mock_motionmount.mac = b"\x00\x00\x00\x00\x00\x00"
 
-    assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
 
     assert mock_config_entry.state is ConfigEntryState.LOADED
 
@@ -55,75 +55,75 @@ async def test_setup_entry_without_mac(
 
 
 async def test_setup_entry_failed_connect(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_motionmount: MagicMock,
 ) -> None:
     """Tests the state attributes."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     mock_motionmount.connect.side_effect = TimeoutError()
-    assert not await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    assert not await menuai.config_entries.async_setup(mock_config_entry.entry_id)
 
     assert mock_config_entry.state is ConfigEntryState.SETUP_RETRY
 
 
 async def test_setup_entry_wrong_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_motionmount: MagicMock,
 ) -> None:
     """Tests the state attributes."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     mock_motionmount.mac = b"\x00\x00\x00\x00\x00\x01"
-    assert not await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    assert not await menuai.config_entries.async_setup(mock_config_entry.entry_id)
 
     assert mock_config_entry.state is ConfigEntryState.SETUP_RETRY
 
 
 async def test_setup_entry_no_pin(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_motionmount: MagicMock,
 ) -> None:
     """Tests the state attributes."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     mock_motionmount.is_authenticated = False
-    assert not await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    assert not await menuai.config_entries.async_setup(mock_config_entry.entry_id)
 
     assert mock_config_entry.state is ConfigEntryState.SETUP_ERROR
-    assert any(mock_config_entry.async_get_active_flows(hass, sources={SOURCE_REAUTH}))
+    assert any(mock_config_entry.async_get_active_flows(menuai, sources={SOURCE_REAUTH}))
 
 
 async def test_setup_entry_wrong_pin(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry_with_pin: MockConfigEntry,
     mock_motionmount: MagicMock,
 ) -> None:
     """Tests the state attributes."""
-    mock_config_entry_with_pin.add_to_hass(hass)
+    mock_config_entry_with_pin.add_to_menuai(menuai)
 
     mock_motionmount.is_authenticated = False
-    assert not await hass.config_entries.async_setup(
+    assert not await menuai.config_entries.async_setup(
         mock_config_entry_with_pin.entry_id
     )
 
     assert mock_config_entry_with_pin.state is ConfigEntryState.SETUP_ERROR
     assert any(
-        mock_config_entry_with_pin.async_get_active_flows(hass, sources={SOURCE_REAUTH})
+        mock_config_entry_with_pin.async_get_active_flows(menuai, sources={SOURCE_REAUTH})
     )
 
 
 async def test_unload_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_motionmount: MagicMock,
 ) -> None:
     """Test entries are unloaded correctly."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    assert await hass.config_entries.async_unload(mock_config_entry.entry_id)
+    assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    assert await menuai.config_entries.async_unload(mock_config_entry.entry_id)
     assert mock_motionmount.disconnect.call_count == 1

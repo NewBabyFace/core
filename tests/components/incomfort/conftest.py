@@ -7,8 +7,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from incomfortclient import DisplayCode
 import pytest
 
-from homeassistant.components.incomfort.const import DOMAIN
-from homeassistant.core import HomeAssistant
+from menuai.components.incomfort.const import DOMAIN
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -62,7 +62,7 @@ MOCK_HEATER_STATUS_HEATING = {
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.incomfort.async_setup_entry",
+        "menuai.components.incomfort.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
         yield mock_setup_entry
@@ -82,7 +82,7 @@ def mock_entry_options() -> dict[str, Any] | None:
 
 @pytest.fixture
 def mock_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_entry_data: dict[str, Any],
     mock_entry_options: dict[str, Any],
 ) -> MockConfigEntry:
@@ -90,7 +90,7 @@ def mock_config_entry(
     entry = MockConfigEntry(
         domain=DOMAIN, data=mock_entry_data, options=mock_entry_options
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     return entry
 
 
@@ -173,7 +173,7 @@ def mock_incomfort(
             self.rooms = [MockRoom()]
 
     with patch(
-        "homeassistant.components.incomfort.coordinator.InComfortGateway", MagicMock()
+        "menuai.components.incomfort.coordinator.InComfortGateway", MagicMock()
     ) as patch_gateway:
         patch_gateway().heaters = AsyncMock()
         patch_gateway().heaters.return_value = [MockHeater()]

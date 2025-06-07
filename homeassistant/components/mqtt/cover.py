@@ -8,8 +8,8 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components import cover
-from homeassistant.components.cover import (
+from menuai.components import cover
+from menuai.components.cover import (
     ATTR_POSITION,
     ATTR_TILT_POSITION,
     DEVICE_CLASSES_SCHEMA,
@@ -17,8 +17,8 @@ from homeassistant.components.cover import (
     CoverEntityFeature,
     CoverState,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_DEVICE_CLASS,
     CONF_NAME,
     CONF_OPTIMISTIC,
@@ -28,13 +28,13 @@ from homeassistant.const import (
     STATE_OPEN,
     STATE_OPENING,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.service_info.mqtt import ReceivePayloadType
-from homeassistant.helpers.typing import ConfigType, VolSchemaType
-from homeassistant.util.json import JSON_DECODE_EXCEPTIONS, json_loads
-from homeassistant.util.percentage import (
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.service_info.mqtt import ReceivePayloadType
+from menuai.helpers.typing import ConfigType, VolSchemaType
+from menuai.util.json import JSON_DECODE_EXCEPTIONS, json_loads
+from menuai.util.percentage import (
     percentage_to_ranged_value,
     ranged_value_to_percentage,
 )
@@ -215,13 +215,13 @@ DISCOVERY_SCHEMA = vol.All(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up MQTT cover through YAML and through MQTT discovery."""
     async_setup_entity_entry_helper(
-        hass,
+        menuai,
         config_entry,
         MqttCover,
         cover.DOMAIN,
@@ -483,7 +483,7 @@ class MqttCover(MqttEntity, CoverEntity):
 
     async def _subscribe_topics(self) -> None:
         """(Re)Subscribe to topics."""
-        subscription.async_subscribe_topics_internal(self.hass, self._sub_state)
+        subscription.async_subscribe_topics_internal(self.menuai, self._sub_state)
 
     async def async_open_cover(self, **kwargs: Any) -> None:
         """Move the cover up.

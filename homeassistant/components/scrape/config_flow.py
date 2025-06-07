@@ -8,16 +8,16 @@ import uuid
 
 import voluptuous as vol
 
-from homeassistant.components.rest import create_rest_data_from_config
-from homeassistant.components.rest.data import DEFAULT_TIMEOUT
-from homeassistant.components.rest.schema import DEFAULT_METHOD, METHODS
-from homeassistant.components.sensor import (
+from menuai.components.rest import create_rest_data_from_config
+from menuai.components.rest.data import DEFAULT_TIMEOUT
+from menuai.components.rest.schema import DEFAULT_METHOD, METHODS
+from menuai.components.sensor import (
     CONF_STATE_CLASS,
     DOMAIN as SENSOR_DOMAIN,
     SensorDeviceClass,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_ATTRIBUTE,
     CONF_AUTHENTICATION,
     CONF_DEVICE_CLASS,
@@ -37,16 +37,16 @@ from homeassistant.const import (
     HTTP_DIGEST_AUTHENTICATION,
     UnitOfTemperature,
 )
-from homeassistant.core import async_get_hass
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.schema_config_entry_flow import (
+from menuai.core import async_get_menuai
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.schema_config_entry_flow import (
     SchemaCommonFlowHandler,
     SchemaConfigFlowHandler,
     SchemaFlowError,
     SchemaFlowFormStep,
     SchemaFlowMenuStep,
 )
-from homeassistant.helpers.selector import (
+from menuai.helpers.selector import (
     BooleanSelector,
     NumberSelector,
     NumberSelectorConfig,
@@ -60,7 +60,7 @@ from homeassistant.helpers.selector import (
     TextSelectorConfig,
     TextSelectorType,
 )
-from homeassistant.helpers.trigger_template_entity import CONF_AVAILABILITY
+from menuai.helpers.trigger_template_entity import CONF_AVAILABILITY
 
 from . import COMBINED_SCHEMA
 from .const import (
@@ -141,10 +141,10 @@ async def validate_rest_setup(
     handler: SchemaCommonFlowHandler, user_input: dict[str, Any]
 ) -> dict[str, Any]:
     """Validate rest setup."""
-    hass = async_get_hass()
+    menuai = async_get_menuai()
     rest_config: dict[str, Any] = COMBINED_SCHEMA(user_input)
     try:
-        rest = create_rest_data_from_config(hass, rest_config)
+        rest = create_rest_data_from_config(menuai, rest_config)
         await rest.async_update()
     except Exception as err:
         raise SchemaFlowError("resource_error") from err
@@ -237,7 +237,7 @@ async def validate_remove_sensor(
 
     # Standard behavior is to merge the result with the options.
     # In this case, we want to remove sub-items so we update the options directly.
-    entity_registry = er.async_get(handler.parent_handler.hass)
+    entity_registry = er.async_get(handler.parent_handler.menuai)
     sensors: list[dict[str, Any]] = []
     sensor: dict[str, Any]
     for index, sensor in enumerate(handler.options[SENSOR_DOMAIN]):

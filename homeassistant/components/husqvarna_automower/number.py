@@ -8,10 +8,10 @@ from typing import TYPE_CHECKING, Any
 from aioautomower.model import MowerAttributes, WorkArea
 from aioautomower.session import AutomowerSession
 
-from homeassistant.components.number import NumberEntity, NumberEntityDescription
-from homeassistant.const import PERCENTAGE, EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.number import NumberEntity, NumberEntityDescription
+from menuai.const import PERCENTAGE, EntityCategory
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import AutomowerConfigEntry
 from .coordinator import AutomowerDataUpdateCoordinator
@@ -105,7 +105,7 @@ WORK_AREA_NUMBER_TYPES: tuple[WorkAreaNumberEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: AutomowerConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

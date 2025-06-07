@@ -7,8 +7,8 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components.season.const import DOMAIN, TYPE_ASTRONOMICAL
-from homeassistant.const import CONF_TYPE
+from menuai.components.season.const import DOMAIN, TYPE_ASTRONOMICAL
+from menuai.const import CONF_TYPE
 
 from tests.common import MockConfigEntry
 
@@ -27,5 +27,5 @@ def mock_config_entry() -> MockConfigEntry:
 @pytest.fixture
 def mock_setup_entry() -> Generator[None]:
     """Mock setting up a config entry."""
-    with patch("homeassistant.components.season.async_setup_entry", return_value=True):
+    with patch("menuai.components.season.async_setup_entry", return_value=True):
         yield

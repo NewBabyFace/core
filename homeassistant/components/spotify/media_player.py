@@ -20,7 +20,7 @@ from spotifyaio import (
 )
 from yarl import URL
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     ATTR_MEDIA_ENQUEUE,
     BrowseMedia,
     MediaPlayerEnqueue,
@@ -30,9 +30,9 @@ from homeassistant.components.media_player import (
     MediaType,
     RepeatMode,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .browse_media import async_browse_media_internal
 from .const import MEDIA_PLAYER_PREFIX, PLAYABLE_MEDIA_TYPES
@@ -68,7 +68,7 @@ AFTER_REQUEST_SLEEP = 1
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: SpotifyConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -386,7 +386,7 @@ class SpotifyMediaPlayer(SpotifyEntity, MediaPlayerEntity):
         """Implement the websocket media browsing helper."""
 
         return await async_browse_media_internal(
-            self.hass,
+            self.menuai,
             self.coordinator.client,
             media_content_type,
             media_content_id,
@@ -399,9 +399,9 @@ class SpotifyMediaPlayer(SpotifyEntity, MediaPlayerEntity):
             return
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai."""
+        await super().async_added_to_menuai()
         self.async_on_remove(
             self.devices.async_add_listener(self._handle_devices_update)
         )

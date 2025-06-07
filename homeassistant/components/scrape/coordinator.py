@@ -7,10 +7,10 @@ import logging
 
 from bs4 import BeautifulSoup
 
-from homeassistant.components.rest import RestData
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.components.rest import RestData
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -20,14 +20,14 @@ class ScrapeCoordinator(DataUpdateCoordinator[BeautifulSoup]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry | None,
         rest: RestData,
         update_interval: timedelta,
     ) -> None:
         """Initialize Scrape coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name="Scrape Coordinator",
@@ -40,6 +40,6 @@ class ScrapeCoordinator(DataUpdateCoordinator[BeautifulSoup]):
         await self._rest.async_update()
         if (data := self._rest.data) is None:
             raise UpdateFailed("REST data is not available")
-        soup = await self.hass.async_add_executor_job(BeautifulSoup, data, "lxml")
+        soup = await self.menuai.async_add_executor_job(BeautifulSoup, data, "lxml")
         _LOGGER.debug("Raw beautiful soup: %s", soup)
         return soup

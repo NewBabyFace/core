@@ -1,14 +1,14 @@
 """Support for Watergate Valve."""
 
-from homeassistant.components.sensor import Any, HomeAssistant
-from homeassistant.components.valve import (
+from menuai.components.sensor import Any, menuai
+from menuai.components.valve import (
     ValveDeviceClass,
     ValveEntity,
     ValveEntityFeature,
     ValveState,
 )
-from homeassistant.core import callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import WatergateConfigEntry, WatergateDataCoordinator
 from .entity import WatergateEntity
@@ -18,7 +18,7 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: WatergateConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

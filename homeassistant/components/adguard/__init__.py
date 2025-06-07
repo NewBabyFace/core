@@ -7,8 +7,8 @@ from dataclasses import dataclass
 from adguardhome import AdGuardHome, AdGuardHomeConnectionError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_HOST,
     CONF_NAME,
     CONF_PASSWORD,
@@ -19,10 +19,10 @@ from homeassistant.const import (
     CONF_VERIFY_SSL,
     Platform,
 )
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.core import menuai, ServiceCall
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
     CONF_FORCE,
@@ -57,9 +57,9 @@ class AdGuardData:
     version: str
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: AdGuardConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: AdGuardConfigEntry) -> bool:
     """Set up AdGuard Home from a config entry."""
-    session = async_get_clientsession(hass, entry.data[CONF_VERIFY_SSL])
+    session = async_get_clientsession(menuai, entry.data[CONF_VERIFY_SSL])
     adguard = AdGuardHome(
         entry.data[CONF_HOST],
         port=entry.data[CONF_PORT],
@@ -77,7 +77,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: AdGuardConfigEntry) -> b
 
     entry.runtime_data = AdGuardData(adguard, version)
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     async def add_url(call: ServiceCall) -> None:
         """Service call to add a new filter subscription to AdGuard Home."""
@@ -101,34 +101,34 @@ async def async_setup_entry(hass: HomeAssistant, entry: AdGuardConfigEntry) -> b
         """Service call to refresh the filter subscriptions in AdGuard Home."""
         await adguard.filtering.refresh(allowlist=False, force=call.data[CONF_FORCE])
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_ADD_URL, add_url, schema=SERVICE_ADD_URL_SCHEMA
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_REMOVE_URL, remove_url, schema=SERVICE_URL_SCHEMA
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_ENABLE_URL, enable_url, schema=SERVICE_URL_SCHEMA
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_DISABLE_URL, disable_url, schema=SERVICE_URL_SCHEMA
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_REFRESH, refresh, schema=SERVICE_REFRESH_SCHEMA
     )
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: AdGuardConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: AdGuardConfigEntry) -> bool:
     """Unload AdGuard Home config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-    if not hass.config_entries.async_loaded_entries(DOMAIN):
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
+    if not menuai.config_entries.async_loaded_entries(DOMAIN):
         # This is the last loaded instance of AdGuard, deregister any services
-        hass.services.async_remove(DOMAIN, SERVICE_ADD_URL)
-        hass.services.async_remove(DOMAIN, SERVICE_REMOVE_URL)
-        hass.services.async_remove(DOMAIN, SERVICE_ENABLE_URL)
-        hass.services.async_remove(DOMAIN, SERVICE_DISABLE_URL)
-        hass.services.async_remove(DOMAIN, SERVICE_REFRESH)
+        menuai.services.async_remove(DOMAIN, SERVICE_ADD_URL)
+        menuai.services.async_remove(DOMAIN, SERVICE_REMOVE_URL)
+        menuai.services.async_remove(DOMAIN, SERVICE_ENABLE_URL)
+        menuai.services.async_remove(DOMAIN, SERVICE_DISABLE_URL)
+        menuai.services.async_remove(DOMAIN, SERVICE_REFRESH)
 
     return unload_ok

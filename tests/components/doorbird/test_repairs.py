@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from homeassistant.components.doorbird.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import issue_registry as ir
-from homeassistant.setup import async_setup_component
+from menuai.components.doorbird.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
+from menuai.helpers import issue_registry as ir
+from menuai.setup import async_setup_component
 
 from . import mock_not_found_exception
 from .conftest import DoorbirdMockerType
@@ -20,24 +20,24 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_change_schedule_fails(
-    hass: HomeAssistant,
+    menuai: menuai,
     doorbird_mocker: DoorbirdMockerType,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test a doorbird when change_schedule fails."""
-    assert await async_setup_component(hass, "repairs", {})
+    assert await async_setup_component(menuai, "repairs", {})
     doorbird_entry = await doorbird_mocker(
         favorites_side_effect=mock_not_found_exception()
     )
     assert doorbird_entry.entry.state is ConfigEntryState.SETUP_RETRY
-    issue_reg = ir.async_get(hass)
+    issue_reg = ir.async_get(menuai)
     assert len(issue_reg.issues) == 1
     issue = list(issue_reg.issues.values())[0]
     issue_id = issue.issue_id
     assert issue.domain == DOMAIN
 
-    await async_process_repairs_platforms(hass)
-    client = await hass_client()
+    await async_process_repairs_platforms(menuai)
+    client = await menuai_client()
 
     data = await start_repair_fix_flow(client, DOMAIN, issue_id)
 

@@ -7,10 +7,10 @@ from freezegun.api import freeze_time
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.config_entries import ConfigEntryState
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry, snapshot_platform
 
@@ -19,7 +19,7 @@ from tests.common import MockConfigEntry, snapshot_platform
 def event_only() -> Generator[None]:
     """Enable only the event platform."""
     with patch(
-        "homeassistant.components.bring.PLATFORMS",
+        "menuai.components.bring.PLATFORMS",
         [Platform.EVENT],
     ):
         yield
@@ -28,19 +28,19 @@ def event_only() -> Generator[None]:
 @pytest.mark.usefixtures("mock_bring_client")
 @freeze_time("2025-01-01T03:30:00.000Z")
 async def test_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     bring_config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Snapshot test states of event platform."""
 
-    bring_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(bring_config_entry.entry_id)
-    await hass.async_block_till_done()
+    bring_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(bring_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert bring_config_entry.state is ConfigEntryState.LOADED
 
     await snapshot_platform(
-        hass, entity_registry, snapshot, bring_config_entry.entry_id
+        menuai, entity_registry, snapshot, bring_config_entry.entry_id
     )

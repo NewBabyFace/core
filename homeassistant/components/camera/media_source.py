@@ -4,32 +4,32 @@ from __future__ import annotations
 
 import asyncio
 
-from homeassistant.components.media_player import BrowseError, MediaClass
-from homeassistant.components.media_source import (
+from menuai.components.media_player import BrowseError, MediaClass
+from menuai.components.media_source import (
     BrowseMediaSource,
     MediaSource,
     MediaSourceItem,
     PlayMedia,
     Unresolvable,
 )
-from homeassistant.components.stream import FORMAT_CONTENT_TYPE, HLS_PROVIDER
-from homeassistant.const import ATTR_FRIENDLY_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.components.stream import FORMAT_CONTENT_TYPE, HLS_PROVIDER
+from menuai.const import ATTR_FRIENDLY_NAME
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from . import Camera, _async_stream_endpoint_url
 from .const import DATA_COMPONENT, DOMAIN, StreamType
 
 
-async def async_get_media_source(hass: HomeAssistant) -> CameraMediaSource:
+async def async_get_media_source(menuai: menuai) -> CameraMediaSource:
     """Set up camera media source."""
-    return CameraMediaSource(hass)
+    return CameraMediaSource(menuai)
 
 
 def _media_source_for_camera(
-    hass: HomeAssistant, camera: Camera, content_type: str
+    menuai: menuai, camera: Camera, content_type: str
 ) -> BrowseMediaSource:
-    camera_state = hass.states.get(camera.entity_id)
+    camera_state = menuai.states.get(camera.entity_id)
     title = camera.name
     if camera_state:
         title = camera_state.attributes.get(ATTR_FRIENDLY_NAME, camera.name)
@@ -51,14 +51,14 @@ class CameraMediaSource(MediaSource):
 
     name: str = "Camera"
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize CameraMediaSource."""
         super().__init__(DOMAIN)
-        self.hass = hass
+        self.menuai = menuai
 
     async def async_resolve_media(self, item: MediaSourceItem) -> PlayMedia:
         """Resolve media to a url."""
-        component = self.hass.data[DATA_COMPONENT]
+        component = self.menuai.data[DATA_COMPONENT]
         camera = component.get_entity(item.identifier)
 
         if not camera:
@@ -69,12 +69,12 @@ class CameraMediaSource(MediaSource):
                 f"/api/camera_proxy_stream/{camera.entity_id}", camera.content_type
             )
 
-        if "stream" not in self.hass.config.components:
+        if "stream" not in self.menuai.config.components:
             raise Unresolvable("Stream integration not loaded")
 
         try:
-            url = await _async_stream_endpoint_url(self.hass, camera, HLS_PROVIDER)
-        except HomeAssistantError as err:
+            url = await _async_stream_endpoint_url(self.menuai, camera, HLS_PROVIDER)
+        except menuaiError as err:
             # Handle known error
             if StreamType.HLS not in stream_types:
                 raise Unresolvable(
@@ -92,12 +92,12 @@ class CameraMediaSource(MediaSource):
         if item.identifier:
             raise BrowseError("Unknown item")
 
-        can_stream_hls = "stream" in self.hass.config.components
+        can_stream_hls = "stream" in self.menuai.config.components
 
         async def _filter_browsable_camera(camera: Camera) -> BrowseMediaSource | None:
             stream_types = camera.camera_capabilities.frontend_stream_types
             if not stream_types:
-                return _media_source_for_camera(self.hass, camera, camera.content_type)
+                return _media_source_for_camera(self.menuai, camera, camera.content_type)
             if not can_stream_hls:
                 return None
 
@@ -107,9 +107,9 @@ class CameraMediaSource(MediaSource):
             ):
                 return None
 
-            return _media_source_for_camera(self.hass, camera, content_type)
+            return _media_source_for_camera(self.menuai, camera, content_type)
 
-        component = self.hass.data[DATA_COMPONENT]
+        component = self.menuai.data[DATA_COMPONENT]
         results = await asyncio.gather(
             *(_filter_browsable_camera(camera) for camera in component.entities),
             return_exceptions=True,

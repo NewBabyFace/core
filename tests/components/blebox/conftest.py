@@ -7,10 +7,10 @@ from unittest.mock import AsyncMock, PropertyMock, patch
 import blebox_uniapi
 import pytest
 
-from homeassistant.components.blebox.const import DOMAIN
-from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.blebox.const import DOMAIN
+from menuai.const import CONF_HOST, CONF_PORT
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry
 from tests.components.light.conftest import mock_light_profiles  # noqa: F401
@@ -68,7 +68,7 @@ def mock_config(ip_address="172.100.123.4"):
 
 @pytest.fixture(name="config")
 def config_fixture():
-    """Create hass config fixture."""
+    """Create menuai config fixture."""
     return {DOMAIN: {CONF_HOST: "172.100.123.4", CONF_PORT: 80}}
 
 
@@ -79,21 +79,21 @@ def feature_fixture(request: pytest.FixtureRequest) -> Any:
 
 
 async def async_setup_entities(
-    hass: HomeAssistant, entity_ids: list[str]
+    menuai: menuai, entity_ids: list[str]
 ) -> list[er.RegistryEntry]:
     """Return configured entries with the given entity ids."""
 
     config_entry = mock_config()
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
     return [entity_registry.async_get(entity_id) for entity_id in entity_ids]
 
 
-async def async_setup_entity(hass: HomeAssistant, entity_id: str) -> er.RegistryEntry:
+async def async_setup_entity(menuai: menuai, entity_id: str) -> er.RegistryEntry:
     """Return a configured entry with the given entity_id."""
 
-    return (await async_setup_entities(hass, [entity_id]))[0]
+    return (await async_setup_entities(menuai, [entity_id]))[0]

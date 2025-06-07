@@ -3,14 +3,14 @@
 from aioesphomeapi import APIClient, Event, EventInfo
 import pytest
 
-from homeassistant.components.event import EventDeviceClass
-from homeassistant.const import STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant
+from menuai.components.event import EventDeviceClass
+from menuai.const import STATE_UNAVAILABLE
+from menuai.core import menuai
 
 
 @pytest.mark.freeze_time("2024-04-24 00:00:00+00:00")
 async def test_generic_event_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_esphome_device,
 ) -> None:
@@ -33,25 +33,25 @@ async def test_generic_event_entity(
         user_service=user_service,
         states=states,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Test initial state
-    state = hass.states.get("event.test_myevent")
+    state = menuai.states.get("event.test_myevent")
     assert state is not None
     assert state.state == "2024-04-24T00:00:00.000+00:00"
     assert state.attributes["event_type"] == "type1"
 
     # Test device becomes unavailable
     await device.mock_disconnect(True)
-    await hass.async_block_till_done()
-    state = hass.states.get("event.test_myevent")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("event.test_myevent")
     assert state.state == STATE_UNAVAILABLE
 
     # Test device becomes available again
     await device.mock_connect()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Event entity should be available immediately without waiting for data
-    state = hass.states.get("event.test_myevent")
+    state = menuai.states.get("event.test_myevent")
     assert state.state == "2024-04-24T00:00:00.000+00:00"
     assert state.attributes["event_type"] == "type1"

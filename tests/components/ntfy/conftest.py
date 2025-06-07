@@ -7,9 +7,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from aiontfy import Account, AccountTokenResponse
 import pytest
 
-from homeassistant.components.ntfy.const import CONF_TOPIC, DOMAIN
-from homeassistant.config_entries import ConfigSubentryData
-from homeassistant.const import CONF_TOKEN, CONF_URL, CONF_USERNAME, CONF_VERIFY_SSL
+from menuai.components.ntfy.const import CONF_TOPIC, DOMAIN
+from menuai.config_entries import ConfigSubentryData
+from menuai.const import CONF_TOKEN, CONF_URL, CONF_USERNAME, CONF_VERIFY_SSL
 
 from tests.common import MockConfigEntry, load_fixture
 
@@ -18,7 +18,7 @@ from tests.common import MockConfigEntry, load_fixture
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.ntfy.async_setup_entry", return_value=True
+        "menuai.components.ntfy.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -28,8 +28,8 @@ def mock_aiontfy() -> Generator[AsyncMock]:
     """Mock aiontfy."""
 
     with (
-        patch("homeassistant.components.ntfy.Ntfy", autospec=True) as mock_client,
-        patch("homeassistant.components.ntfy.config_flow.Ntfy", new=mock_client),
+        patch("menuai.components.ntfy.Ntfy", autospec=True) as mock_client,
+        patch("menuai.components.ntfy.config_flow.Ntfy", new=mock_client),
     ):
         client = mock_client.return_value
 
@@ -48,7 +48,7 @@ def mock_random() -> Generator[MagicMock]:
     """Mock random."""
 
     with patch(
-        "homeassistant.components.ntfy.config_flow.random.choices",
+        "menuai.components.ntfy.config_flow.random.choices",
         return_value=["randomtopic"],
     ) as mock_client:
         yield mock_client

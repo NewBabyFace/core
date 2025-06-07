@@ -10,11 +10,11 @@ from eheimdigital.device import EheimDigitalDevice
 from eheimdigital.hub import EheimDigitalHub
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_USER, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST
-from homeassistant.helpers import selector
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.config_entries import SOURCE_USER, ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST
+from menuai.helpers import selector
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import DOMAIN, LOGGER
 
@@ -42,8 +42,8 @@ class EheimDigitalConfigFlow(ConfigFlow, domain=DOMAIN):
 
         hub = EheimDigitalHub(
             host=host,
-            session=async_get_clientsession(self.hass),
-            loop=self.hass.loop,
+            session=async_get_clientsession(self.menuai),
+            loop=self.menuai.loop,
             main_device_added_event=self.main_device_added_event,
         )
         try:
@@ -92,8 +92,8 @@ class EheimDigitalConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
         hub = EheimDigitalHub(
             host=user_input[CONF_HOST],
-            session=async_get_clientsession(self.hass),
-            loop=self.hass.loop,
+            session=async_get_clientsession(self.menuai),
+            loop=self.menuai.loop,
             main_device_added_event=self.main_device_added_event,
         )
 

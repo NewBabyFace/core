@@ -2,8 +2,8 @@
 
 from typing import Any
 
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import OmniLogicUpdateCoordinator
@@ -64,7 +64,7 @@ class OmniLogicEntity(CoordinatorEntity[OmniLogicUpdateCoordinator]):
 
     @property
     def unique_id(self) -> str:
-        """Return a unique, Home Assistant friendly identifier for this entity."""
+        """Return a unique, MenuAI friendly identifier for this entity."""
         return self._unique_id
 
     @property

@@ -7,17 +7,17 @@ import logging
 import pymsteams
 import voluptuous as vol
 
-from homeassistant.components.notify import (
+from menuai.components.notify import (
     ATTR_DATA,
     ATTR_TITLE,
     ATTR_TITLE_DEFAULT,
     PLATFORM_SCHEMA as NOTIFY_PLATFORM_SCHEMA,
     BaseNotificationService,
 )
-from homeassistant.const import CONF_URL
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_URL
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -27,7 +27,7 @@ PLATFORM_SCHEMA = NOTIFY_PLATFORM_SCHEMA.extend({vol.Required(CONF_URL): cv.url}
 
 
 def get_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> MSTeamsNotificationService | None:

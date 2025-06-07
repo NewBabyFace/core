@@ -6,32 +6,32 @@ from zwave_js_server.event import Event
 from zwave_js_server.exceptions import FailedZWaveCommand
 from zwave_js_server.model.node import Node
 
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     DOMAIN as SWITCH_DOMAIN,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
 )
-from homeassistant.components.zwave_js.helpers import ZwaveValueMatcher
-from homeassistant.const import STATE_OFF, STATE_ON, STATE_UNKNOWN, EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from menuai.components.zwave_js.helpers import ZwaveValueMatcher
+from menuai.const import STATE_OFF, STATE_ON, STATE_UNKNOWN, EntityCategory
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
 
 from .common import SWITCH_ENTITY, replace_value_of_zwave_value
 
 
 async def test_switch(
-    hass: HomeAssistant, hank_binary_switch, integration, client
+    menuai: menuai, hank_binary_switch, integration, client
 ) -> None:
     """Test the switch."""
-    state = hass.states.get(SWITCH_ENTITY)
+    state = menuai.states.get(SWITCH_ENTITY)
     node = hank_binary_switch
 
     assert state
     assert state.state == STATE_OFF
 
     # Test turning on
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch", "turn_on", {"entity_id": SWITCH_ENTITY}, blocking=True
     )
 
@@ -65,13 +65,13 @@ async def test_switch(
     )
     node.receive_event(event)
 
-    state = hass.states.get(SWITCH_ENTITY)
+    state = menuai.states.get(SWITCH_ENTITY)
     assert state.state == "on"
 
     client.async_send_command.reset_mock()
 
     # Test turning off
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch", "turn_off", {"entity_id": SWITCH_ENTITY}, blocking=True
     )
 
@@ -87,18 +87,18 @@ async def test_switch(
 
 
 async def test_barrier_signaling_switch(
-    hass: HomeAssistant, gdc_zw062, integration, client
+    menuai: menuai, gdc_zw062, integration, client
 ) -> None:
     """Test barrier signaling state switch."""
     node = gdc_zw062
     entity = "switch.aeon_labs_garage_door_controller_gen5_signaling_state_visual"
 
-    state = hass.states.get(entity)
+    state = menuai.states.get(entity)
     assert state
     assert state.state == "on"
 
     # Test turning off
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN, SERVICE_TURN_OFF, {"entity_id": entity}, blocking=True
     )
 
@@ -115,15 +115,15 @@ async def test_barrier_signaling_switch(
     }
 
     # state change is optimistic and writes state
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity)
+    state = menuai.states.get(entity)
     assert state.state == STATE_OFF
 
     client.async_send_command.reset_mock()
 
     # Test turning on
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN, SERVICE_TURN_ON, {"entity_id": entity}, blocking=True
     )
 
@@ -142,9 +142,9 @@ async def test_barrier_signaling_switch(
     }
 
     # state change is optimistic and writes state
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity)
+    state = menuai.states.get(entity)
     assert state.state == STATE_ON
 
     # Received a refresh off
@@ -169,7 +169,7 @@ async def test_barrier_signaling_switch(
     )
     node.receive_event(event)
 
-    state = hass.states.get(entity)
+    state = menuai.states.get(entity)
     assert state.state == STATE_OFF
 
     # Received a refresh off
@@ -194,12 +194,12 @@ async def test_barrier_signaling_switch(
     )
     node.receive_event(event)
 
-    state = hass.states.get(entity)
+    state = menuai.states.get(entity)
     assert state.state == STATE_ON
 
 
 async def test_switch_no_value(
-    hass: HomeAssistant, hank_binary_switch_state, integration, client
+    menuai: menuai, hank_binary_switch_state, integration, client
 ) -> None:
     """Test the switch where primary value value is None."""
     node_state = replace_value_of_zwave_value(
@@ -214,16 +214,16 @@ async def test_switch_no_value(
     )
     node = Node(client, node_state)
     client.driver.controller.emit("node added", {"node": node})
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(SWITCH_ENTITY)
+    state = menuai.states.get(SWITCH_ENTITY)
 
     assert state
     assert state.state == STATE_UNKNOWN
 
 
 async def test_config_parameter_switch(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     hank_binary_switch,
     integration,
@@ -243,17 +243,17 @@ async def test_config_parameter_switch(
     assert entity_entry.entity_category == EntityCategory.CONFIG
 
     # reload integration and check if entity is correctly there
-    await hass.config_entries.async_reload(integration.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_reload(integration.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(switch_entity_id)
+    state = menuai.states.get(switch_entity_id)
     assert state
     assert state.state == STATE_ON
 
     client.async_send_command.reset_mock()
 
     # Test turning on
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN, SERVICE_TURN_ON, {"entity_id": switch_entity_id}, blocking=True
     )
 
@@ -271,7 +271,7 @@ async def test_config_parameter_switch(
     client.async_send_command.reset_mock()
 
     # Test turning off
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN, SERVICE_TURN_OFF, {"entity_id": switch_entity_id}, blocking=True
     )
 
@@ -290,8 +290,8 @@ async def test_config_parameter_switch(
     client.async_send_command.side_effect = FailedZWaveCommand("test", 1, "test")
 
     # Test turning off error raises proper exception
-    with pytest.raises(HomeAssistantError) as err:
-        await hass.services.async_call(
+    with pytest.raises(menuaiError) as err:
+        await menuai.services.async_call(
             SWITCH_DOMAIN,
             SERVICE_TURN_OFF,
             {"entity_id": switch_entity_id},

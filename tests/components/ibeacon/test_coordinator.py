@@ -5,19 +5,19 @@ import time
 
 import pytest
 
-from homeassistant.components.bluetooth import (
+from menuai.components.bluetooth import (
     FALLBACK_MAXIMUM_STALE_ADVERTISEMENT_SECONDS,
 )
-from homeassistant.components.ibeacon.const import (
+from menuai.components.ibeacon.const import (
     ATTR_SOURCE,
     CONF_ALLOW_NAMELESS_UUIDS,
     DOMAIN,
     UPDATE_INTERVAL,
 )
-from homeassistant.const import STATE_HOME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.service_info.bluetooth import BluetoothServiceInfo
-from homeassistant.util import dt as dt_util
+from menuai.const import STATE_HOME
+from menuai.core import menuai
+from menuai.helpers.service_info.bluetooth import BluetoothServiceInfo
+from menuai.util import dt as dt_util
 
 from . import (
     BLUECHARM_BEACON_SERVICE_INFO,
@@ -44,21 +44,21 @@ def mock_bluetooth(enable_bluetooth: None) -> None:
     """Auto mock bluetooth."""
 
 
-async def test_many_groups_same_address_ignored(hass: HomeAssistant) -> None:
+async def test_many_groups_same_address_ignored(menuai: menuai) -> None:
     """Test the different uuid, major, minor from many addresses removes all associated entities."""
     entry = MockConfigEntry(
         domain=DOMAIN,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    inject_bluetooth_service_info(hass, BLUECHARM_BEACON_SERVICE_INFO)
-    await hass.async_block_till_done()
+    inject_bluetooth_service_info(menuai, BLUECHARM_BEACON_SERVICE_INFO)
+    await menuai.async_block_till_done()
 
     assert (
-        hass.states.get("sensor.bluecharm_177999_8105_estimated_distance") is not None
+        menuai.states.get("sensor.bluecharm_177999_8105_estimated_distance") is not None
     )
 
     for i in range(12):
@@ -73,53 +73,53 @@ async def test_many_groups_same_address_ignored(hass: HomeAssistant) -> None:
             service_uuids=[],
             source="local",
         )
-        inject_bluetooth_service_info(hass, service_info)
+        inject_bluetooth_service_info(menuai, service_info)
 
-    await hass.async_block_till_done()
-    assert hass.states.get("sensor.bluecharm_177999_8105_estimated_distance") is None
+    await menuai.async_block_till_done()
+    assert menuai.states.get("sensor.bluecharm_177999_8105_estimated_distance") is None
 
 
-async def test_ignore_not_ibeacons(hass: HomeAssistant) -> None:
+async def test_ignore_not_ibeacons(menuai: menuai) -> None:
     """Test we ignore non-ibeacon data."""
     entry = MockConfigEntry(
         domain=DOMAIN,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    before_entity_count = len(hass.states.async_entity_ids())
+    before_entity_count = len(menuai.states.async_entity_ids())
     inject_bluetooth_service_info(
-        hass,
+        menuai,
         replace(
             BLUECHARM_BEACON_SERVICE_INFO, manufacturer_data={76: b"\x02\x15invalid"}
         ),
     )
-    await hass.async_block_till_done()
-    assert len(hass.states.async_entity_ids()) == before_entity_count
+    await menuai.async_block_till_done()
+    assert len(menuai.states.async_entity_ids()) == before_entity_count
 
 
-async def test_ignore_no_name_but_create_if_set_later(hass: HomeAssistant) -> None:
+async def test_ignore_no_name_but_create_if_set_later(menuai: menuai) -> None:
     """Test we ignore devices with no name but create it if it set set later."""
     entry = MockConfigEntry(
         domain=DOMAIN,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    before_entity_count = len(hass.states.async_entity_ids())
+    before_entity_count = len(menuai.states.async_entity_ids())
     inject_bluetooth_service_info(
-        hass,
+        menuai,
         replace(BLUECHARM_BEACON_SERVICE_INFO, name=None),
     )
-    await hass.async_block_till_done()
-    assert len(hass.states.async_entity_ids()) == before_entity_count
+    await menuai.async_block_till_done()
+    assert len(menuai.states.async_entity_ids()) == before_entity_count
 
     inject_bluetooth_service_info(
-        hass,
+        menuai,
         replace(
             BLUECHARM_BEACON_SERVICE_INFO,
             service_data={
@@ -130,108 +130,108 @@ async def test_ignore_no_name_but_create_if_set_later(hass: HomeAssistant) -> No
             },
         ),
     )
-    await hass.async_block_till_done()
-    assert len(hass.states.async_entity_ids()) > before_entity_count
+    await menuai.async_block_till_done()
+    assert len(menuai.states.async_entity_ids()) > before_entity_count
 
 
-async def test_ignore_default_name(hass: HomeAssistant) -> None:
+async def test_ignore_default_name(menuai: menuai) -> None:
     """Test we ignore devices with default name."""
     entry = MockConfigEntry(
         domain=DOMAIN,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    before_entity_count = len(hass.states.async_entity_ids())
+    before_entity_count = len(menuai.states.async_entity_ids())
     inject_bluetooth_service_info(
-        hass,
+        menuai,
         replace(
             BLUECHARM_BEACON_SERVICE_INFO_DBUS,
             name=BLUECHARM_BEACON_SERVICE_INFO_DBUS.address,
         ),
     )
-    await hass.async_block_till_done()
-    assert len(hass.states.async_entity_ids()) == before_entity_count
+    await menuai.async_block_till_done()
+    assert len(menuai.states.async_entity_ids()) == before_entity_count
 
 
-async def test_default_name_allowlisted(hass: HomeAssistant) -> None:
+async def test_default_name_allowlisted(menuai: menuai) -> None:
     """Test we do NOT ignore beacons with default device name but allowlisted UUID."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         options={CONF_ALLOW_NAMELESS_UUIDS: ["426c7565-4368-6172-6d42-6561636f6e73"]},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    before_entity_count = len(hass.states.async_entity_ids())
+    before_entity_count = len(menuai.states.async_entity_ids())
     inject_bluetooth_service_info(
-        hass,
+        menuai,
         replace(
             BLUECHARM_BEACON_SERVICE_INFO_DBUS,
             name=BLUECHARM_BEACON_SERVICE_INFO_DBUS.address,
         ),
     )
-    await hass.async_block_till_done()
-    assert len(hass.states.async_entity_ids()) > before_entity_count
+    await menuai.async_block_till_done()
+    assert len(menuai.states.async_entity_ids()) > before_entity_count
 
 
-async def test_default_name_allowlisted_restore(hass: HomeAssistant) -> None:
+async def test_default_name_allowlisted_restore(menuai: menuai) -> None:
     """Test that ignored nameless iBeacons are restored when allowlist entry is added."""
     entry = MockConfigEntry(
         domain=DOMAIN,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    before_entity_count = len(hass.states.async_entity_ids())
+    before_entity_count = len(menuai.states.async_entity_ids())
     inject_bluetooth_service_info(
-        hass,
+        menuai,
         replace(
             BLUECHARM_BEACON_SERVICE_INFO_DBUS,
             name=BLUECHARM_BEACON_SERVICE_INFO_DBUS.address,
         ),
     )
-    await hass.async_block_till_done()
-    assert len(hass.states.async_entity_ids()) == before_entity_count
+    await menuai.async_block_till_done()
+    assert len(menuai.states.async_entity_ids()) == before_entity_count
 
-    result = await hass.config_entries.options.async_init(entry.entry_id)
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_init(entry.entry_id)
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={"new_uuid": "426c7565-4368-6172-6d42-6561636f6e73"},
     )
 
-    await hass.async_block_till_done()
-    assert len(hass.states.async_entity_ids()) > before_entity_count
+    await menuai.async_block_till_done()
+    assert len(menuai.states.async_entity_ids()) > before_entity_count
 
 
-async def test_default_name_allowlisted_restore_late(hass: HomeAssistant) -> None:
+async def test_default_name_allowlisted_restore_late(menuai: menuai) -> None:
     """Test that allowlisting an ignored but no longer advertised nameless iBeacon has no effect."""
     start_monotonic = time.monotonic()
 
     entry = MockConfigEntry(
         domain=DOMAIN,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    before_entity_count = len(hass.states.async_entity_ids())
+    before_entity_count = len(menuai.states.async_entity_ids())
     inject_bluetooth_service_info(
-        hass,
+        menuai,
         replace(
             BLUECHARM_BEACON_SERVICE_INFO_DBUS,
             name=BLUECHARM_BEACON_SERVICE_INFO_DBUS.address,
         ),
     )
-    await hass.async_block_till_done()
-    assert len(hass.states.async_entity_ids()) == before_entity_count
+    await menuai.async_block_till_done()
+    assert len(menuai.states.async_entity_ids()) == before_entity_count
 
     # Fastforward time until the device is no longer advertised
     monotonic_now = start_monotonic + FALLBACK_MAXIMUM_STALE_ADVERTISEMENT_SECONDS + 1
@@ -243,32 +243,32 @@ async def test_default_name_allowlisted_restore_late(hass: HomeAssistant) -> Non
         patch_all_discovered_devices([]),
     ):
         async_fire_time_changed(
-            hass,
+            menuai,
             dt_util.utcnow()
             + timedelta(seconds=FALLBACK_MAXIMUM_STALE_ADVERTISEMENT_SECONDS + 1),
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    result = await hass.config_entries.options.async_init(entry.entry_id)
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_init(entry.entry_id)
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={"new_uuid": "426c7565-4368-6172-6d42-6561636f6e73"},
     )
 
-    await hass.async_block_till_done()
-    assert len(hass.states.async_entity_ids()) == before_entity_count
+    await menuai.async_block_till_done()
+    assert len(menuai.states.async_entity_ids()) == before_entity_count
 
 
-async def test_rotating_major_minor_and_mac_with_name(hass: HomeAssistant) -> None:
+async def test_rotating_major_minor_and_mac_with_name(menuai: menuai) -> None:
     """Test the different uuid, major, minor from many addresses removes all associated entities."""
     entry = MockConfigEntry(
         domain=DOMAIN,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
-    before_entity_count = len(hass.states.async_entity_ids("device_tracker"))
+    assert await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
+    before_entity_count = len(menuai.states.async_entity_ids("device_tracker"))
 
     for i in range(100):
         service_info = BluetoothServiceInfo(
@@ -286,24 +286,24 @@ async def test_rotating_major_minor_and_mac_with_name(hass: HomeAssistant) -> No
             service_uuids=[],
             source="local",
         )
-        inject_bluetooth_service_info(hass, service_info)
-        await hass.async_block_till_done()
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+        inject_bluetooth_service_info(menuai, service_info)
+        await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_entity_ids("device_tracker")) == before_entity_count
+    assert len(menuai.states.async_entity_ids("device_tracker")) == before_entity_count
 
 
-async def test_rotating_major_minor_and_mac_no_name(hass: HomeAssistant) -> None:
+async def test_rotating_major_minor_and_mac_no_name(menuai: menuai) -> None:
     """Test no-name devices with different uuid, major, minor from many addresses removes all associated entities."""
     entry = MockConfigEntry(
         domain=DOMAIN,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
-    before_entity_count = len(hass.states.async_entity_ids("device_tracker"))
+    assert await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
+    before_entity_count = len(menuai.states.async_entity_ids("device_tracker"))
 
     for i in range(51):
         service_info = BluetoothServiceInfo(
@@ -321,71 +321,71 @@ async def test_rotating_major_minor_and_mac_no_name(hass: HomeAssistant) -> None
             service_uuids=[],
             source="local",
         )
-        inject_bluetooth_service_info(hass, service_info)
-        await hass.async_block_till_done()
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+        inject_bluetooth_service_info(menuai, service_info)
+        await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_entity_ids("device_tracker")) == before_entity_count
+    assert len(menuai.states.async_entity_ids("device_tracker")) == before_entity_count
 
 
 async def test_ignore_transient_devices_unless_we_see_them_a_few_times(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test we ignore transient devices unless we see them a few times."""
     entry = MockConfigEntry(
         domain=DOMAIN,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    before_entity_count = len(hass.states.async_entity_ids())
+    before_entity_count = len(menuai.states.async_entity_ids())
     inject_bluetooth_service_info(
-        hass,
+        menuai,
         TESLA_TRANSIENT,
     )
-    await hass.async_block_till_done()
-    assert len(hass.states.async_entity_ids()) == before_entity_count
+    await menuai.async_block_till_done()
+    assert len(menuai.states.async_entity_ids()) == before_entity_count
 
     with patch_all_discovered_devices([TESLA_TRANSIENT_BLE_DEVICE]):
         async_fire_time_changed(
-            hass,
+            menuai,
             dt_util.utcnow() + timedelta(seconds=UPDATE_INTERVAL.total_seconds() * 2),
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    assert len(hass.states.async_entity_ids()) == before_entity_count
+    assert len(menuai.states.async_entity_ids()) == before_entity_count
 
     for i in range(3, 17):
         with patch_all_discovered_devices([TESLA_TRANSIENT_BLE_DEVICE]):
             async_fire_time_changed(
-                hass,
+                menuai,
                 dt_util.utcnow()
                 + timedelta(seconds=UPDATE_INTERVAL.total_seconds() * 2 * i),
             )
-            await hass.async_block_till_done()
+            await menuai.async_block_till_done()
 
-    assert len(hass.states.async_entity_ids()) > before_entity_count
+    assert len(menuai.states.async_entity_ids()) > before_entity_count
 
-    assert hass.states.get("device_tracker.s6da7c9389bd5452cc_cccc").state == STATE_HOME
+    assert menuai.states.get("device_tracker.s6da7c9389bd5452cc_cccc").state == STATE_HOME
 
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)
 
-    await hass.async_block_till_done()
-    assert hass.states.get("device_tracker.s6da7c9389bd5452cc_cccc").state == STATE_HOME
+    await menuai.async_block_till_done()
+    assert menuai.states.get("device_tracker.s6da7c9389bd5452cc_cccc").state == STATE_HOME
 
 
-async def test_changing_source_attribute(hass: HomeAssistant) -> None:
+async def test_changing_source_attribute(menuai: menuai) -> None:
     """Test update of the source attribute."""
     entry = MockConfigEntry(
         domain=DOMAIN,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     now = time.monotonic()
     info = BLUECHARM_BEACON_SERVICE_INFO_2
@@ -403,37 +403,37 @@ async def test_changing_source_attribute(hass: HomeAssistant) -> None:
     )
 
     inject_advertisement_with_time_and_source_connectable(
-        hass,
+        menuai,
         device,
         advertisement_data,
         now,
         "local",
         True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    attributes = hass.states.get(
+    attributes = menuai.states.get(
         "sensor.bluecharm_177999_8105_estimated_distance"
     ).attributes
     assert attributes[ATTR_SOURCE] == "local"
 
     inject_advertisement_with_time_and_source_connectable(
-        hass,
+        menuai,
         device,
         advertisement_data,
         now,
         "proxy",
         True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     with patch_all_discovered_devices([BLUECHARM_BEACON_SERVICE_INFO_2]):
         async_fire_time_changed(
-            hass,
+            menuai,
             dt_util.utcnow() + timedelta(seconds=UPDATE_INTERVAL.total_seconds() * 2),
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    attributes = hass.states.get(
+    attributes = menuai.states.get(
         "sensor.bluecharm_177999_8105_estimated_distance"
     ).attributes
     assert attributes[ATTR_SOURCE] == "proxy"

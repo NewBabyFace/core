@@ -6,10 +6,10 @@ import logging
 
 from pyqvrpro.client import QVRResponseError
 
-from homeassistant.components.camera import Camera
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.camera import Camera
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import DOMAIN, SHORT_NAME
 
@@ -17,7 +17,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -26,11 +26,11 @@ def setup_platform(
     if discovery_info is None:
         return
 
-    client = hass.data[DOMAIN]["client"]
+    client = menuai.data[DOMAIN]["client"]
 
     entities = []
 
-    for channel in hass.data[DOMAIN]["channels"]:
+    for channel in menuai.data[DOMAIN]["channels"]:
         stream_source = get_stream_source(channel["guid"], client)
         entities.append(
             QVRProCamera(**channel, stream_source=stream_source, client=client)

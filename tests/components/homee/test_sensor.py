@@ -5,17 +5,17 @@ from unittest.mock import MagicMock, patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.homee.const import (
+from menuai.components.homee.const import (
     DOMAIN,
     OPEN_CLOSE_MAP,
     OPEN_CLOSE_MAP_REVERSED,
     WINDOW_MAP,
     WINDOW_MAP_REVERSED,
 )
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er, issue_registry as ir
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er, issue_registry as ir
 
 from . import async_update_attribute_value, build_mock_node, setup_integration
 from .conftest import HOMEE_ID
@@ -29,68 +29,68 @@ def enable_all_entities(entity_registry_enabled_by_default: None) -> None:
 
 
 async def setup_sensor(
-    hass: HomeAssistant, mock_homee: MagicMock, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_homee: MagicMock, mock_config_entry: MockConfigEntry
 ) -> None:
     """Setups the integration for sensor tests."""
     mock_homee.nodes = [build_mock_node("sensors.json")]
     mock_homee.get_node_by_id.return_value = mock_homee.nodes[0]
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
 
 async def test_up_down_values(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_homee: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test values for up/down sensor."""
-    await setup_sensor(hass, mock_homee, mock_config_entry)
+    await setup_sensor(menuai, mock_homee, mock_config_entry)
 
-    assert hass.states.get("sensor.test_multisensor_state").state == OPEN_CLOSE_MAP[0]
+    assert menuai.states.get("sensor.test_multisensor_state").state == OPEN_CLOSE_MAP[0]
 
     attribute = mock_homee.nodes[0].attributes[28]
     for i in range(1, 5):
-        await async_update_attribute_value(hass, attribute, i)
+        await async_update_attribute_value(menuai, attribute, i)
         assert (
-            hass.states.get("sensor.test_multisensor_state").state == OPEN_CLOSE_MAP[i]
+            menuai.states.get("sensor.test_multisensor_state").state == OPEN_CLOSE_MAP[i]
         )
 
     # Test reversed up/down sensor
     attribute.is_reversed = True
     for i in range(5):
-        await async_update_attribute_value(hass, attribute, i)
+        await async_update_attribute_value(menuai, attribute, i)
         assert (
-            hass.states.get("sensor.test_multisensor_state").state
+            menuai.states.get("sensor.test_multisensor_state").state
             == OPEN_CLOSE_MAP_REVERSED[i]
         )
 
 
 async def test_window_position(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_homee: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test values for window handle position."""
-    await setup_sensor(hass, mock_homee, mock_config_entry)
+    await setup_sensor(menuai, mock_homee, mock_config_entry)
 
     assert (
-        hass.states.get("sensor.test_multisensor_window_position").state
+        menuai.states.get("sensor.test_multisensor_window_position").state
         == WINDOW_MAP[0]
     )
 
     attribute = mock_homee.nodes[0].attributes[33]
     for i in range(1, 3):
-        await async_update_attribute_value(hass, attribute, i)
+        await async_update_attribute_value(menuai, attribute, i)
         assert (
-            hass.states.get("sensor.test_multisensor_window_position").state
+            menuai.states.get("sensor.test_multisensor_window_position").state
             == WINDOW_MAP[i]
         )
 
     # Test reversed window handle.
     attribute.is_reversed = True
     for i in range(3):
-        await async_update_attribute_value(hass, attribute, i)
+        await async_update_attribute_value(menuai, attribute, i)
         assert (
-            hass.states.get("sensor.test_multisensor_window_position").state
+            menuai.states.get("sensor.test_multisensor_window_position").state
             == WINDOW_MAP_REVERSED[i]
         )
 
@@ -103,7 +103,7 @@ async def test_window_position(
     ],
 )
 async def test_sensor_deprecation(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_homee: MagicMock,
     mock_config_entry: MockConfigEntry,
     issue_registry: ir.IssueRegistry,
@@ -124,9 +124,9 @@ async def test_sensor_deprecation(
     )
 
     with patch(
-        "homeassistant.components.homee.sensor.entity_used_in", return_value=True
+        "menuai.components.homee.sensor.entity_used_in", return_value=True
     ):
-        await setup_sensor(hass, mock_homee, mock_config_entry)
+        await setup_sensor(menuai, mock_homee, mock_config_entry)
 
     assert (entity_registry.async_get(f"sensor.{entity_id}") is None) is expected_entity
     assert (
@@ -139,7 +139,7 @@ async def test_sensor_deprecation(
 
 
 async def test_sensor_deprecation_unused_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_homee: MagicMock,
     mock_config_entry: MockConfigEntry,
     issue_registry: ir.IssueRegistry,
@@ -156,7 +156,7 @@ async def test_sensor_deprecation_unused_entity(
         disabled_by=None,
     )
 
-    await setup_sensor(hass, mock_homee, mock_config_entry)
+    await setup_sensor(menuai, mock_homee, mock_config_entry)
 
     assert entity_registry.async_get(f"sensor.{entity_id}") is not None
     assert (
@@ -169,7 +169,7 @@ async def test_sensor_deprecation_unused_entity(
 
 
 async def test_sensor_snapshot(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_homee: MagicMock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
@@ -178,7 +178,7 @@ async def test_sensor_snapshot(
     """Test the multisensor snapshot."""
     mock_homee.nodes = [build_mock_node("sensors.json")]
     mock_homee.get_node_by_id.return_value = mock_homee.nodes[0]
-    with patch("homeassistant.components.homee.PLATFORMS", [Platform.SENSOR]):
-        await setup_integration(hass, mock_config_entry)
+    with patch("menuai.components.homee.PLATFORMS", [Platform.SENSOR]):
+        await setup_integration(menuai, mock_config_entry)
 
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)

@@ -7,11 +7,11 @@ from html import escape
 from aiohttp import web
 import voluptuous as vol
 
-from homeassistant.components.http import HomeAssistantView
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.template import Template
-from homeassistant.helpers.typing import ConfigType
+from menuai.components.http import menuaiView
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.template import Template
+from menuai.helpers.typing import ConfigType
 
 CONTENT_TYPE_XML = "text/xml"
 DOMAIN = "rss_feed_template"
@@ -42,7 +42,7 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the RSS feed template component."""
     for feeduri, feedconfig in config[DOMAIN].items():
         url = f"/api/rss_template/{feeduri}"
@@ -51,12 +51,12 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
         items: list[dict[str, Template]] = feedconfig["items"]
         rss_view = RssView(url, requires_auth, feedconfig.get("title"), items)
-        hass.http.register_view(rss_view)
+        menuai.http.register_view(rss_view)
 
     return True
 
 
-class RssView(HomeAssistantView):
+class RssView(menuaiView):
     """Export states and other values as RSS."""
 
     name = "rss_template"
@@ -83,7 +83,7 @@ class RssView(HomeAssistantView):
         if self._title is not None:
             response += f"    <title>{escape(self._title.async_render(parse_result=False))}</title>\n"
         else:
-            response += "    <title>Home Assistant</title>\n"
+            response += "    <title>MenuAI</title>\n"
 
         response += "    <link>https://www.home-assistant.io/integrations/rss_feed_template/</link>\n"
         response += "    <description>Home automation feed</description>\n"

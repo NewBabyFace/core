@@ -5,11 +5,11 @@ from __future__ import annotations
 from aiohttp import ClientError, ClientResponseError
 from google_photos_library_api.api import GooglePhotosLibraryApi
 
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import config_entry_oauth2_flow, config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import config_entry_oauth2_flow, config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.typing import ConfigType
 
 from . import api
 from .const import DOMAIN
@@ -21,25 +21,25 @@ __all__ = ["DOMAIN"]
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up Google Photos integration."""
 
-    async_setup_services(hass)
+    async_setup_services(menuai)
 
     return True
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: GooglePhotosConfigEntry
+    menuai: menuai, entry: GooglePhotosConfigEntry
 ) -> bool:
     """Set up Google Photos from a config entry."""
     implementation = (
         await config_entry_oauth2_flow.async_get_config_entry_implementation(
-            hass, entry
+            menuai, entry
         )
     )
-    web_session = async_get_clientsession(hass)
-    oauth_session = config_entry_oauth2_flow.OAuth2Session(hass, entry, implementation)
+    web_session = async_get_clientsession(menuai)
+    oauth_session = config_entry_oauth2_flow.OAuth2Session(menuai, entry, implementation)
     auth = api.AsyncConfigEntryAuth(web_session, oauth_session)
     try:
         await auth.async_get_access_token()
@@ -52,7 +52,7 @@ async def async_setup_entry(
     except ClientError as err:
         raise ConfigEntryNotReady from err
     coordinator = GooglePhotosUpdateCoordinator(
-        hass, entry, GooglePhotosLibraryApi(auth)
+        menuai, entry, GooglePhotosLibraryApi(auth)
     )
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
@@ -61,7 +61,7 @@ async def async_setup_entry(
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, entry: GooglePhotosConfigEntry
+    menuai: menuai, entry: GooglePhotosConfigEntry
 ) -> bool:
     """Unload a config entry."""
     return True

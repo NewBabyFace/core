@@ -10,13 +10,13 @@ from airthings_ble import AirthingsBluetoothDeviceData, AirthingsDevice
 from bleak import BleakError
 import voluptuous as vol
 
-from homeassistant.components import bluetooth
-from homeassistant.components.bluetooth import (
+from menuai.components import bluetooth
+from menuai.components.bluetooth import (
     BluetoothServiceInfo,
     async_discovered_service_info,
 )
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_ADDRESS
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_ADDRESS
 
 from .const import DOMAIN, MFCT_ID
 
@@ -66,7 +66,7 @@ class AirthingsConfigFlow(ConfigFlow, domain=DOMAIN):
         self, discovery_info: BluetoothServiceInfo
     ) -> AirthingsDevice:
         ble_device = bluetooth.async_ble_device_from_address(
-            self.hass, discovery_info.address
+            self.menuai, discovery_info.address
         )
         if ble_device is None:
             _LOGGER.debug("no ble_device in _get_device_data")
@@ -146,7 +146,7 @@ class AirthingsConfigFlow(ConfigFlow, domain=DOMAIN):
             return self.async_create_entry(title=discovery.name, data={})
 
         current_addresses = self._async_current_ids(include_ignore=False)
-        for discovery_info in async_discovered_service_info(self.hass):
+        for discovery_info in async_discovered_service_info(self.menuai):
             address = discovery_info.address
             if address in current_addresses or address in self._discovered_devices:
                 continue

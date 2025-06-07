@@ -8,15 +8,15 @@ import krakenex
 from pykrakenapi.pykrakenapi import KrakenAPI
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_SCAN_INTERVAL
-from homeassistant.core import callback
-from homeassistant.helpers import config_validation as cv
+from menuai.const import CONF_SCAN_INTERVAL
+from menuai.core import callback
+from menuai.helpers import config_validation as cv
 
 from .const import CONF_TRACKED_ASSET_PAIRS, DEFAULT_SCAN_INTERVAL, DOMAIN
 from .utils import get_tradable_asset_pairs
@@ -61,7 +61,7 @@ class KrakenOptionsFlowHandler(OptionsFlow):
             return self.async_create_entry(title="", data=user_input)
 
         api = KrakenAPI(krakenex.API(), retry=0, crl_sleep=0)
-        tradable_asset_pairs = await self.hass.async_add_executor_job(
+        tradable_asset_pairs = await self.menuai.async_add_executor_job(
             get_tradable_asset_pairs, api
         )
         tradable_asset_pairs_for_multi_select = {v: v for v in tradable_asset_pairs}

@@ -6,28 +6,28 @@ import json
 from aiohttp.test_utils import TestClient
 import pytest
 
-from homeassistant.components import device_tracker
-from homeassistant.components.device_tracker import legacy
-from homeassistant.components.meraki.device_tracker import (
+from menuai.components import device_tracker
+from menuai.components.device_tracker import legacy
+from menuai.components.meraki.device_tracker import (
     CONF_SECRET,
     CONF_VALIDATOR,
     URL,
 )
-from homeassistant.const import CONF_PLATFORM
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.const import CONF_PLATFORM
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.typing import ClientSessionGenerator
 
 
 @pytest.fixture
 async def meraki_client(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
 ) -> TestClient:
     """Meraki mock client."""
     assert await async_setup_component(
-        hass,
+        menuai,
         device_tracker.DOMAIN,
         {
             device_tracker.DOMAIN: {
@@ -37,9 +37,9 @@ async def meraki_client(
             }
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    return await hass_client()
+    return await menuai_client()
 
 
 async def test_invalid_or_missing_data(
@@ -90,7 +90,7 @@ async def test_invalid_or_missing_data(
 
 
 async def test_data_will_be_saved(
-    mock_device_tracker_conf: list[legacy.Device], hass: HomeAssistant, meraki_client
+    mock_device_tracker_conf: list[legacy.Device], menuai: menuai, meraki_client
 ) -> None:
     """Test with valid data."""
     data = {
@@ -134,9 +134,9 @@ async def test_data_will_be_saved(
     }
     req = await meraki_client.post(URL, data=json.dumps(data))
     assert req.status == HTTPStatus.OK
-    await hass.async_block_till_done()
-    state_name = hass.states.get("device_tracker.00_26_ab_b8_a9_a4").state
+    await menuai.async_block_till_done()
+    state_name = menuai.states.get("device_tracker.00_26_ab_b8_a9_a4").state
     assert state_name == "home"
 
-    state_name = hass.states.get("device_tracker.00_26_ab_b8_a9_a5").state
+    state_name = menuai.states.get("device_tracker.00_26_ab_b8_a9_a5").state
     assert state_name == "home"

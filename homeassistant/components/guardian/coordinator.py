@@ -10,9 +10,9 @@ from typing import TYPE_CHECKING, Any, cast
 from aioguardian import Client
 from aioguardian.errors import GuardianError
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import LOGGER
 
@@ -31,7 +31,7 @@ class GuardianDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         *,
         entry: GuardianConfigEntry,
         client: Client,
@@ -42,7 +42,7 @@ class GuardianDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     ) -> None:
         """Initialize."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=entry,
             name=f"{valve_controller_uid}_{api_name}",
@@ -77,6 +77,6 @@ class GuardianDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         self.config_entry.async_on_unload(
             async_dispatcher_connect(
-                self.hass, self.signal_reboot_requested, async_reboot_requested
+                self.menuai, self.signal_reboot_requested, async_reboot_requested
             )
         )

@@ -5,17 +5,17 @@ from unittest.mock import call
 from aioesphomeapi import APIClient, SelectInfo, SelectState, VoiceAssistantFeature
 import pytest
 
-from homeassistant.components.assist_satellite import (
+from menuai.components.assist_satellite import (
     AssistSatelliteConfiguration,
     AssistSatelliteWakeWord,
 )
-from homeassistant.components.select import (
+from menuai.components.select import (
     ATTR_OPTION,
     DOMAIN as SELECT_DOMAIN,
     SERVICE_SELECT_OPTION,
 )
-from homeassistant.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant
+from menuai.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE
+from menuai.core import menuai
 
 from .common import get_satellite_entity
 from .conftest import MockESPHomeDeviceType, MockGenericDeviceEntryType
@@ -23,41 +23,41 @@ from .conftest import MockESPHomeDeviceType, MockGenericDeviceEntryType
 
 @pytest.mark.usefixtures("mock_voice_assistant_v1_entry")
 async def test_pipeline_selector(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test assist pipeline selector."""
 
-    state = hass.states.get("select.test_assistant")
+    state = menuai.states.get("select.test_assistant")
     assert state is not None
     assert state.state == "preferred"
 
 
 @pytest.mark.usefixtures("mock_voice_assistant_v1_entry")
 async def test_vad_sensitivity_select(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test VAD sensitivity select.
 
     Functionality is tested in assist_pipeline/test_select.py.
     This test is only to ensure it is set up.
     """
-    state = hass.states.get("select.test_finished_speaking_detection")
+    state = menuai.states.get("select.test_finished_speaking_detection")
     assert state is not None
     assert state.state == "default"
 
 
 @pytest.mark.usefixtures("mock_voice_assistant_v1_entry")
 async def test_wake_word_select(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test that wake word select is unavailable initially."""
-    state = hass.states.get("select.test_wake_word")
+    state = menuai.states.get("select.test_wake_word")
     assert state is not None
     assert state.state == STATE_UNAVAILABLE
 
 
 async def test_select_generic_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -79,11 +79,11 @@ async def test_select_generic_entity(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("select.test_myselect")
+    state = menuai.states.get("select.test_myselect")
     assert state is not None
     assert state.state == "a"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SELECT_DOMAIN,
         SERVICE_SELECT_OPTION,
         {ATTR_ENTITY_ID: "select.test_myselect", ATTR_OPTION: "b"},
@@ -93,7 +93,7 @@ async def test_select_generic_entity(
 
 
 async def test_wake_word_select_no_wake_words(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_esphome_device: MockESPHomeDeviceType,
 ) -> None:
@@ -112,20 +112,20 @@ async def test_wake_word_select_no_wake_words(
             | VoiceAssistantFeature.ANNOUNCE
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    satellite = get_satellite_entity(hass, mock_device.device_info.mac_address)
+    satellite = get_satellite_entity(menuai, mock_device.device_info.mac_address)
     assert satellite is not None
     assert not satellite.async_get_configuration().available_wake_words
 
     # Select should be unavailable
-    state = hass.states.get("select.test_wake_word")
+    state = menuai.states.get("select.test_wake_word")
     assert state is not None
     assert state.state == STATE_UNAVAILABLE
 
 
 async def test_wake_word_select_zero_max_wake_words(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_esphome_device: MockESPHomeDeviceType,
 ) -> None:
@@ -146,20 +146,20 @@ async def test_wake_word_select_zero_max_wake_words(
             | VoiceAssistantFeature.ANNOUNCE
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    satellite = get_satellite_entity(hass, mock_device.device_info.mac_address)
+    satellite = get_satellite_entity(menuai, mock_device.device_info.mac_address)
     assert satellite is not None
     assert satellite.async_get_configuration().max_active_wake_words == 0
 
     # Select should be unavailable
-    state = hass.states.get("select.test_wake_word")
+    state = menuai.states.get("select.test_wake_word")
     assert state is not None
     assert state.state == STATE_UNAVAILABLE
 
 
 async def test_wake_word_select_no_active_wake_words(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_esphome_device: MockESPHomeDeviceType,
 ) -> None:
@@ -181,13 +181,13 @@ async def test_wake_word_select_no_active_wake_words(
             | VoiceAssistantFeature.ANNOUNCE
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    satellite = get_satellite_entity(hass, mock_device.device_info.mac_address)
+    satellite = get_satellite_entity(menuai, mock_device.device_info.mac_address)
     assert satellite is not None
     assert not satellite.async_get_configuration().active_wake_words
 
     # First available wake word should be selected
-    state = hass.states.get("select.test_wake_word")
+    state = menuai.states.get("select.test_wake_word")
     assert state is not None
     assert state.state == "Okay Nabu"

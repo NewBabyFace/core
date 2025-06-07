@@ -8,18 +8,18 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.mealie import DOMAIN
-from homeassistant.components.todo import (
+from menuai.components.mealie import DOMAIN
+from menuai.components.todo import (
     ATTR_ITEM,
     ATTR_RENAME,
     ATTR_STATUS,
     DOMAIN as TODO_DOMAIN,
     TodoServices,
 )
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers import entity_registry as er
 
 from . import setup_integration
 
@@ -33,17 +33,17 @@ from tests.typing import WebSocketGenerator
 
 
 async def test_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
     mock_mealie_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test todo entities."""
-    with patch("homeassistant.components.mealie.PLATFORMS", [Platform.TODO]):
-        await setup_integration(hass, mock_config_entry)
+    with patch("menuai.components.mealie.PLATFORMS", [Platform.TODO]):
+        await setup_integration(menuai, mock_config_entry)
 
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
 
 @pytest.mark.parametrize(
@@ -59,7 +59,7 @@ async def test_entities(
     ],
 )
 async def test_todo_actions(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mealie_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     service: str,
@@ -67,9 +67,9 @@ async def test_todo_actions(
     method: str,
 ) -> None:
     """Test todo actions."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         service,
         data,
@@ -81,19 +81,19 @@ async def test_todo_actions(
 
 
 async def test_add_todo_list_item_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mealie_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test for failing to add a To-do Item."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     mock_mealie_client.add_shopping_item.side_effect = MealieError
 
     with pytest.raises(
-        HomeAssistantError, match="An error occurred adding an item to Supermarket"
+        menuaiError, match="An error occurred adding an item to Supermarket"
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             TODO_DOMAIN,
             TodoServices.ADD_ITEM,
             {ATTR_ITEM: "Soda"},
@@ -103,19 +103,19 @@ async def test_add_todo_list_item_error(
 
 
 async def test_update_todo_list_item_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mealie_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test for failing to update a To-do Item."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     mock_mealie_client.update_shopping_item.side_effect = MealieError
 
     with pytest.raises(
-        HomeAssistantError, match="An error occurred updating an item in Supermarket"
+        menuaiError, match="An error occurred updating an item in Supermarket"
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             TODO_DOMAIN,
             TodoServices.UPDATE_ITEM,
             {ATTR_ITEM: "aubergine", ATTR_RENAME: "Eggplant", ATTR_STATUS: "completed"},
@@ -125,17 +125,17 @@ async def test_update_todo_list_item_error(
 
 
 async def test_update_non_existent_item(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mealie_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test for updating a non-existent To-do Item."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     with pytest.raises(
         ServiceValidationError, match="Unable to find to-do list item: eggplant"
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             TODO_DOMAIN,
             TodoServices.UPDATE_ITEM,
             {ATTR_ITEM: "eggplant", ATTR_RENAME: "Aubergine", ATTR_STATUS: "completed"},
@@ -145,20 +145,20 @@ async def test_update_non_existent_item(
 
 
 async def test_delete_todo_list_item_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mealie_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test for failing to delete a To-do Item."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     mock_mealie_client.delete_shopping_item = AsyncMock()
     mock_mealie_client.delete_shopping_item.side_effect = MealieError
 
     with pytest.raises(
-        HomeAssistantError, match="An error occurred deleting an item in Supermarket"
+        menuaiError, match="An error occurred deleting an item in Supermarket"
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             TODO_DOMAIN,
             TodoServices.REMOVE_ITEM,
             {ATTR_ITEM: "aubergine"},
@@ -168,15 +168,15 @@ async def test_delete_todo_list_item_error(
 
 
 async def test_moving_todo_item(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mealie_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test for moving a To-do Item to place."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -250,15 +250,15 @@ async def test_moving_todo_item(
 
 
 async def test_not_moving_todo_item(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mealie_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test for moving a To-do Item to the same place."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -277,15 +277,15 @@ async def test_not_moving_todo_item(
 
 
 async def test_moving_todo_item_invalid_uid(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mealie_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test for moving a To-do Item to place with invalid UID."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -305,15 +305,15 @@ async def test_moving_todo_item_invalid_uid(
 
 
 async def test_moving_todo_item_invalid_previous_uid(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mealie_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test for moving a To-do Item to place with invalid previous UID."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -334,34 +334,34 @@ async def test_moving_todo_item_invalid_previous_uid(
 
 
 async def test_runtime_management(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mealie_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test for creating and deleting shopping lists."""
     response = ShoppingListsResponse.from_json(
-        await async_load_fixture(hass, "get_shopping_lists.json", DOMAIN)
+        await async_load_fixture(menuai, "get_shopping_lists.json", DOMAIN)
     ).items
     mock_mealie_client.get_shopping_lists.return_value = ShoppingListsResponse(
         items=[response[0]]
     )
-    await setup_integration(hass, mock_config_entry)
-    assert hass.states.get("todo.mealie_supermarket") is not None
-    assert hass.states.get("todo.mealie_special_groceries") is None
+    await setup_integration(menuai, mock_config_entry)
+    assert menuai.states.get("todo.mealie_supermarket") is not None
+    assert menuai.states.get("todo.mealie_special_groceries") is None
 
     mock_mealie_client.get_shopping_lists.return_value = ShoppingListsResponse(
         items=response[0:2]
     )
     freezer.tick(timedelta(minutes=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
-    assert hass.states.get("todo.mealie_special_groceries") is not None
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
+    assert menuai.states.get("todo.mealie_special_groceries") is not None
 
     mock_mealie_client.get_shopping_lists.return_value = ShoppingListsResponse(
         items=[response[0]]
     )
     freezer.tick(timedelta(minutes=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
-    assert hass.states.get("todo.mealie_special_groceries") is None
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
+    assert menuai.states.get("todo.mealie_special_groceries") is None

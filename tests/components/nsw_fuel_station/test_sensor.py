@@ -4,10 +4,10 @@ from unittest.mock import patch
 
 from nsw_fuel import FuelCheckError
 
-from homeassistant.components import sensor
-from homeassistant.components.nsw_fuel_station import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components import sensor
+from menuai.components.nsw_fuel_station import DOMAIN
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import assert_setup_component
 
@@ -74,19 +74,19 @@ MOCK_FUEL_PRICES_RESPONSE = MockGetFuelPricesResponse(
 
 
 @patch(
-    "homeassistant.components.nsw_fuel_station.FuelCheckClient.get_fuel_prices",
+    "menuai.components.nsw_fuel_station.FuelCheckClient.get_fuel_prices",
     return_value=MOCK_FUEL_PRICES_RESPONSE,
 )
-async def test_setup(get_fuel_prices, hass: HomeAssistant) -> None:
+async def test_setup(get_fuel_prices, menuai: menuai) -> None:
     """Test the setup with custom settings."""
     with assert_setup_component(1, sensor.DOMAIN):
         assert await async_setup_component(
-            hass, sensor.DOMAIN, {"sensor": VALID_CONFIG}
+            menuai, sensor.DOMAIN, {"sensor": VALID_CONFIG}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     for entity_id in VALID_CONFIG_EXPECTED_ENTITY_IDS:
-        state = hass.states.get(f"sensor.{entity_id}")
+        state = menuai.states.get(f"sensor.{entity_id}")
         assert state is not None
 
 
@@ -96,31 +96,31 @@ def raise_fuel_check_error():
 
 
 @patch(
-    "homeassistant.components.nsw_fuel_station.FuelCheckClient.get_fuel_prices",
+    "menuai.components.nsw_fuel_station.FuelCheckClient.get_fuel_prices",
     side_effect=raise_fuel_check_error,
 )
-async def test_setup_error(get_fuel_prices, hass: HomeAssistant) -> None:
+async def test_setup_error(get_fuel_prices, menuai: menuai) -> None:
     """Test the setup with client throwing error."""
     with assert_setup_component(1, sensor.DOMAIN):
         assert await async_setup_component(
-            hass, sensor.DOMAIN, {"sensor": VALID_CONFIG}
+            menuai, sensor.DOMAIN, {"sensor": VALID_CONFIG}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     for entity_id in VALID_CONFIG_EXPECTED_ENTITY_IDS:
-        state = hass.states.get(f"sensor.{entity_id}")
+        state = menuai.states.get(f"sensor.{entity_id}")
         assert state is None
 
 
 @patch(
-    "homeassistant.components.nsw_fuel_station.FuelCheckClient.get_fuel_prices",
+    "menuai.components.nsw_fuel_station.FuelCheckClient.get_fuel_prices",
     return_value=MOCK_FUEL_PRICES_RESPONSE,
 )
-async def test_setup_error_no_station(get_fuel_prices, hass: HomeAssistant) -> None:
+async def test_setup_error_no_station(get_fuel_prices, menuai: menuai) -> None:
     """Test the setup with specified station not existing."""
     with assert_setup_component(2, sensor.DOMAIN):
         assert await async_setup_component(
-            hass,
+            menuai,
             sensor.DOMAIN,
             {
                 "sensor": [
@@ -137,21 +137,21 @@ async def test_setup_error_no_station(get_fuel_prices, hass: HomeAssistant) -> N
                 ]
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    assert hass.states.get("sensor.my_fake_station_e10") is not None
-    assert hass.states.get("sensor.my_fake_station_p95") is None
+    assert menuai.states.get("sensor.my_fake_station_e10") is not None
+    assert menuai.states.get("sensor.my_fake_station_p95") is None
 
 
 @patch(
-    "homeassistant.components.nsw_fuel_station.FuelCheckClient.get_fuel_prices",
+    "menuai.components.nsw_fuel_station.FuelCheckClient.get_fuel_prices",
     return_value=MOCK_FUEL_PRICES_RESPONSE,
 )
-async def test_sensor_values(get_fuel_prices, hass: HomeAssistant) -> None:
+async def test_sensor_values(get_fuel_prices, menuai: menuai) -> None:
     """Test retrieval of sensor values."""
-    assert await async_setup_component(hass, DOMAIN, {})
-    assert await async_setup_component(hass, sensor.DOMAIN, {"sensor": VALID_CONFIG})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {})
+    assert await async_setup_component(menuai, sensor.DOMAIN, {"sensor": VALID_CONFIG})
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("sensor.my_fake_station_e10").state == "140.0"
-    assert hass.states.get("sensor.my_fake_station_p95").state == "150.0"
+    assert menuai.states.get("sensor.my_fake_station_e10").state == "140.0"
+    assert menuai.states.get("sensor.my_fake_station_p95").state == "150.0"

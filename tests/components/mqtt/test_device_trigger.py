@@ -7,14 +7,14 @@ from unittest.mock import patch
 import pytest
 from pytest_unordered import unordered
 
-from homeassistant.components import automation
-from homeassistant.components.device_automation import DeviceAutomationType
-from homeassistant.components.mqtt import _LOGGER, DOMAIN, debug_info
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.trigger import async_initialize_triggers
-from homeassistant.setup import async_setup_component
+from menuai.components import automation
+from menuai.components.device_automation import DeviceAutomationType
+from menuai.components.mqtt import _LOGGER, DOMAIN, debug_info
+from menuai.core import menuai, ServiceCall
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr
+from menuai.helpers.trigger import async_initialize_triggers
+from menuai.setup import async_setup_component
 
 from .common import help_test_unload_config_entry
 
@@ -31,7 +31,7 @@ def stub_blueprint_populate_autouse(stub_blueprint_populate: None) -> None:
     ("discovery_topic", "data"),
     [
         (
-            "homeassistant/device_automation/0AFFD2/bla/config",
+            "menuai/device_automation/0AFFD2/bla/config",
             '{ "automation_type":"trigger",'
             '  "device":{"identifiers":["0AFFD2"]},'
             '  "payload": "short_press",'
@@ -40,7 +40,7 @@ def stub_blueprint_populate_autouse(stub_blueprint_populate: None) -> None:
             '  "subtype": "button_1" }',
         ),
         (
-            "homeassistant/device/0AFFD2/config",
+            "menuai/device/0AFFD2/config",
             '{ "device":{"identifiers":["0AFFD2"]},'
             '  "o": {"name": "foobar"}, "cmps": '
             '{ "bla": {'
@@ -54,7 +54,7 @@ def stub_blueprint_populate_autouse(stub_blueprint_populate: None) -> None:
     ],
 )
 async def test_get_triggers(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     discovery_topic: str,
@@ -62,8 +62,8 @@ async def test_get_triggers(
 ) -> None:
     """Test we get the expected triggers from a discovered mqtt device."""
     await mqtt_mock_entry()
-    async_fire_mqtt_message(hass, discovery_topic, data)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, discovery_topic, data)
+    await menuai.async_block_till_done()
 
     device_entry = device_registry.async_get_device(identifiers={("mqtt", "0AFFD2")})
     expected_triggers: list[dict[str, Any]] = [
@@ -77,13 +77,13 @@ async def test_get_triggers(
         },
     ]
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device_entry.id
+        menuai, DeviceAutomationType.TRIGGER, device_entry.id
     )
     assert triggers == unordered(expected_triggers)
 
 
 async def test_get_unknown_triggers(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mqtt_mock_entry: MqttMockHAClientGenerator,
 ) -> None:
@@ -95,13 +95,13 @@ async def test_get_unknown_triggers(
         '  "state_topic": "foobar/sensor",'
         '  "unique_id": "unique" }'
     )
-    async_fire_mqtt_message(hass, "homeassistant/sensor/bla/config", data1)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/sensor/bla/config", data1)
+    await menuai.async_block_till_done()
 
     device_entry = device_registry.async_get_device(identifiers={("mqtt", "0AFFD2")})
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -124,13 +124,13 @@ async def test_get_unknown_triggers(
     )
 
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device_entry.id
+        menuai, DeviceAutomationType.TRIGGER, device_entry.id
     )
     assert triggers == []
 
 
 async def test_get_non_existing_triggers(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mqtt_mock_entry: MqttMockHAClientGenerator,
 ) -> None:
@@ -142,19 +142,19 @@ async def test_get_non_existing_triggers(
         '  "state_topic": "foobar/sensor",'
         '  "unique_id": "unique" }'
     )
-    async_fire_mqtt_message(hass, "homeassistant/sensor/bla/config", data1)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/sensor/bla/config", data1)
+    await menuai.async_block_till_done()
 
     device_entry = device_registry.async_get_device(identifiers={("mqtt", "0AFFD2")})
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device_entry.id
+        menuai, DeviceAutomationType.TRIGGER, device_entry.id
     )
     assert triggers == []
 
 
 @pytest.mark.no_fail_on_log_exception
 async def test_discover_bad_triggers(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mqtt_mock_entry: MqttMockHAClientGenerator,
 ) -> None:
@@ -169,8 +169,8 @@ async def test_discover_bad_triggers(
         '  "type": "button_short_press",'
         '  "subtype": "button_1" }'
     )
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla/config", data0)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla/config", data0)
+    await menuai.async_block_till_done()
     assert device_registry.async_get_device(identifiers={("mqtt", "0AFFD2")}) is None
 
     # Test sending correct data
@@ -182,8 +182,8 @@ async def test_discover_bad_triggers(
         '  "type": "button_short_press",'
         '  "subtype": "button_1" }'
     )
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla/config", data1)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla/config", data1)
+    await menuai.async_block_till_done()
 
     device_entry = device_registry.async_get_device(identifiers={("mqtt", "0AFFD2")})
     expected_triggers: list[dict[str, Any]] = [
@@ -197,13 +197,13 @@ async def test_discover_bad_triggers(
         },
     ]
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device_entry.id
+        menuai, DeviceAutomationType.TRIGGER, device_entry.id
     )
     assert triggers == unordered(expected_triggers)
 
 
 async def test_update_remove_triggers(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mqtt_mock_entry: MqttMockHAClientGenerator,
 ) -> None:
@@ -242,8 +242,8 @@ async def test_update_remove_triggers(
     config3["topic"] = "foobar/tag_scanned2"
     data3 = json.dumps(config3)
 
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla/config", data1)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla/config", data1)
+    await menuai.async_block_till_done()
 
     device_entry = device_registry.async_get_device(identifiers={("mqtt", "0AFFD2")})
     assert device_entry.name == "milk"
@@ -261,39 +261,39 @@ async def test_update_remove_triggers(
     expected_triggers2[0]["subtype"] = "button_2"
 
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device_entry.id
+        menuai, DeviceAutomationType.TRIGGER, device_entry.id
     )
     assert triggers == unordered(expected_triggers1)
     assert device_entry.name == "milk"
 
     # Update trigger topic
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla/config", data2)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla/config", data2)
+    await menuai.async_block_till_done()
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device_entry.id
+        menuai, DeviceAutomationType.TRIGGER, device_entry.id
     )
     assert triggers == unordered(expected_triggers1)
     device_entry = device_registry.async_get_device(identifiers={("mqtt", "0AFFD2")})
     assert device_entry.name == "beer"
 
     # Update trigger type / subtype
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla/config", data3)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla/config", data3)
+    await menuai.async_block_till_done()
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device_entry.id
+        menuai, DeviceAutomationType.TRIGGER, device_entry.id
     )
     assert triggers == unordered(expected_triggers2)
 
     # Remove trigger
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla/config", "")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla/config", "")
+    await menuai.async_block_till_done()
 
     device_entry = device_registry.async_get_device(identifiers={("mqtt", "0AFFD2")})
     assert device_entry is None
 
 
 async def test_if_fires_on_mqtt_message(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     service_calls: list[ServiceCall],
     mqtt_mock_entry: MqttMockHAClientGenerator,
@@ -316,13 +316,13 @@ async def test_if_fires_on_mqtt_message(
         '  "type": "button_long_press",'
         '  "subtype": "button_2" }'
     )
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla1/config", data1)
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla2/config", data2)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla1/config", data1)
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla2/config", data2)
+    await menuai.async_block_till_done()
     device_entry = device_registry.async_get_device(identifiers={("mqtt", "0AFFD2")})
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -359,20 +359,20 @@ async def test_if_fires_on_mqtt_message(
     )
 
     # Fake short press.
-    async_fire_mqtt_message(hass, "foobar/triggers/button1", "short_press")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "foobar/triggers/button1", "short_press")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
     assert service_calls[0].data["some"] == "short_press"
 
     # Fake long press.
-    async_fire_mqtt_message(hass, "foobar/triggers/button2", "long_press")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "foobar/triggers/button2", "long_press")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 2
     assert service_calls[1].data["some"] == "long_press"
 
 
 async def test_if_discovery_id_is_prefered(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     service_calls: list[ServiceCall],
     mqtt_mock_entry: MqttMockHAClientGenerator,
@@ -404,13 +404,13 @@ async def test_if_discovery_id_is_prefered(
         '  "type": "button_long_press",'
         '  "subtype": "button_2" }'
     )
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla1/config", data1)
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla2/config", data2)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla1/config", data1)
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla2/config", data2)
+    await menuai.async_block_till_done()
     device_entry = device_registry.async_get_device(identifiers={("mqtt", "0AFFD2")})
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -446,21 +446,21 @@ async def test_if_discovery_id_is_prefered(
     )
 
     # Fake short press, matching on type and subtype
-    async_fire_mqtt_message(hass, "foobar/triggers/button1", "short_press")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "foobar/triggers/button1", "short_press")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
     assert service_calls[0].data["some"] == "short_press"
 
     # Fake long press, matching on discovery_id
     service_calls.clear()
-    async_fire_mqtt_message(hass, "foobar/triggers/button1", "long_press")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "foobar/triggers/button1", "long_press")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
     assert service_calls[0].data["some"] == "long_press"
 
 
 async def test_non_unique_triggers(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     service_calls: list[ServiceCall],
     mqtt_mock_entry: MqttMockHAClientGenerator,
@@ -484,13 +484,13 @@ async def test_non_unique_triggers(
         '  "type": "press",'
         '  "subtype": "button" }'
     )
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla1/config", data1)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla1/config", data1)
+    await menuai.async_block_till_done()
     device_entry = device_registry.async_get_device(identifiers={("mqtt", "0AFFD2")})
     assert device_entry.name == "milk"
 
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla2/config", data2)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla2/config", data2)
+    await menuai.async_block_till_done()
     device_entry = device_registry.async_get_device(identifiers={("mqtt", "0AFFD2")})
     # The device entry was updated, but the trigger was not unique
     # and therefore it was not set up.
@@ -501,7 +501,7 @@ async def test_non_unique_triggers(
     )
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -537,34 +537,34 @@ async def test_non_unique_triggers(
 
     # Try to trigger first config.
     # and triggers both attached instances.
-    async_fire_mqtt_message(hass, "foobar/triggers/button1", "short_press")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "foobar/triggers/button1", "short_press")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 2
     all_calls = {service_calls[0].data["some"], service_calls[1].data["some"]}
     assert all_calls == {"press1", "press2"}
 
     # Trigger second config references to same trigger
     # and triggers both attached instances.
-    async_fire_mqtt_message(hass, "foobar/triggers/button2", "long_press")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "foobar/triggers/button2", "long_press")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 2
     all_calls = {service_calls[0].data["some"], service_calls[1].data["some"]}
     assert all_calls == {"press1", "press2"}
 
     # Removing the first trigger will clean up
     service_calls.clear()
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla1/config", "")
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla1/config", "")
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
     assert (
         "Device trigger ('device_automation', 'bla1') has been removed" in caplog.text
     )
-    async_fire_mqtt_message(hass, "foobar/triggers/button1", "short_press")
+    async_fire_mqtt_message(menuai, "foobar/triggers/button1", "short_press")
     assert len(service_calls) == 0
 
 
 async def test_if_fires_on_mqtt_message_template(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     service_calls: list[ServiceCall],
     mqtt_mock_entry: MqttMockHAClientGenerator,
@@ -589,13 +589,13 @@ async def test_if_fires_on_mqtt_message_template(
         '  "subtype": "button_2",'
         '  "value_template": "{{ value_json.button }}"}'
     )
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla1/config", data1)
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla2/config", data2)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla1/config", data1)
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla2/config", data2)
+    await menuai.async_block_till_done()
     device_entry = device_registry.async_get_device(identifiers={("mqtt", "0AFFD2")})
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -632,20 +632,20 @@ async def test_if_fires_on_mqtt_message_template(
     )
 
     # Fake short press.
-    async_fire_mqtt_message(hass, "foobar/triggers/button4", '{"button":"short_press"}')
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "foobar/triggers/button4", '{"button":"short_press"}')
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
     assert service_calls[0].data["some"] == "short_press"
 
     # Fake long press.
-    async_fire_mqtt_message(hass, "foobar/triggers/button4", '{"button":"long_press"}')
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "foobar/triggers/button4", '{"button":"long_press"}')
+    await menuai.async_block_till_done()
     assert len(service_calls) == 2
     assert service_calls[1].data["some"] == "long_press"
 
 
 async def test_if_fires_on_mqtt_message_late_discover(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     service_calls: list[ServiceCall],
     mqtt_mock_entry: MqttMockHAClientGenerator,
@@ -673,12 +673,12 @@ async def test_if_fires_on_mqtt_message_late_discover(
         '  "type": "button_long_press",'
         '  "subtype": "button_2" }'
     )
-    async_fire_mqtt_message(hass, "homeassistant/sensor/bla0/config", data0)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/sensor/bla0/config", data0)
+    await menuai.async_block_till_done()
     device_entry = device_registry.async_get_device(identifiers={("mqtt", "0AFFD2")})
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -714,25 +714,25 @@ async def test_if_fires_on_mqtt_message_late_discover(
         },
     )
 
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla1/config", data1)
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla2/config", data2)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla1/config", data1)
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla2/config", data2)
+    await menuai.async_block_till_done()
 
     # Fake short press.
-    async_fire_mqtt_message(hass, "foobar/triggers/button1", "short_press")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "foobar/triggers/button1", "short_press")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
     assert service_calls[0].data["some"] == "short_press"
 
     # Fake long press.
-    async_fire_mqtt_message(hass, "foobar/triggers/button2", "long_press")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "foobar/triggers/button2", "long_press")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 2
     assert service_calls[1].data["some"] == "long_press"
 
 
 async def test_if_fires_on_mqtt_message_after_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     service_calls: list[ServiceCall],
     mqtt_mock_entry: MqttMockHAClientGenerator,
@@ -761,13 +761,13 @@ async def test_if_fires_on_mqtt_message_after_update(
         '  "type": "button_short_press",'
         '  "subtype": "button_1" }'
     )
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla1/config", data1)
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla2/config", data2)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla1/config", data1)
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla2/config", data2)
+    await menuai.async_block_till_done()
     device_entry = device_registry.async_get_device(identifiers={("mqtt", "0AFFD2")})
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -788,49 +788,49 @@ async def test_if_fires_on_mqtt_message_after_update(
             ]
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Fake short press.
-    async_fire_mqtt_message(hass, "foobar/triggers/button1", "")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "foobar/triggers/button1", "")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
 
     # Update the trigger with existing type/subtype change
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla2/config", data1)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla2/config", data1)
+    await menuai.async_block_till_done()
     assert "Cannot update device trigger ('device_automation', 'bla2')" in caplog.text
 
     # Update the trigger with different topic
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla1/config", data3)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla1/config", data3)
+    await menuai.async_block_till_done()
 
     service_calls.clear()
-    async_fire_mqtt_message(hass, "foobar/triggers/button1", "")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "foobar/triggers/button1", "")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 0
 
     service_calls.clear()
-    async_fire_mqtt_message(hass, "foobar/triggers/buttonOne", "")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "foobar/triggers/buttonOne", "")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
 
     # Update the trigger with same topic
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla1/config", data3)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla1/config", data3)
+    await menuai.async_block_till_done()
 
     service_calls.clear()
-    async_fire_mqtt_message(hass, "foobar/triggers/button1", "")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "foobar/triggers/button1", "")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 0
 
     service_calls.clear()
-    async_fire_mqtt_message(hass, "foobar/triggers/buttonOne", "")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "foobar/triggers/buttonOne", "")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
 
 
 async def test_no_resubscribe_same_topic(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mqtt_mock_entry: MqttMockHAClientGenerator,
 ) -> None:
@@ -843,12 +843,12 @@ async def test_no_resubscribe_same_topic(
         '  "type": "button_short_press",'
         '  "subtype": "button_1" }'
     )
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla1/config", data1)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla1/config", data1)
+    await menuai.async_block_till_done()
     device_entry = device_registry.async_get_device(identifiers={("mqtt", "0AFFD2")})
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -871,13 +871,13 @@ async def test_no_resubscribe_same_topic(
     )
 
     call_count = mqtt_mock.async_subscribe.call_count
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla1/config", data1)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla1/config", data1)
+    await menuai.async_block_till_done()
     assert mqtt_mock.async_subscribe.call_count == call_count
 
 
 async def test_not_fires_on_mqtt_message_after_remove_by_mqtt(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     service_calls: list[ServiceCall],
     mqtt_mock_entry: MqttMockHAClientGenerator,
@@ -891,12 +891,12 @@ async def test_not_fires_on_mqtt_message_after_remove_by_mqtt(
         '  "type": "button_short_press",'
         '  "subtype": "button_1" }'
     )
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla1/config", data1)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla1/config", data1)
+    await menuai.async_block_till_done()
     device_entry = device_registry.async_get_device(identifiers={("mqtt", "0AFFD2")})
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -917,44 +917,44 @@ async def test_not_fires_on_mqtt_message_after_remove_by_mqtt(
             ]
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Fake short press.
-    async_fire_mqtt_message(hass, "foobar/triggers/button1", "short_press")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "foobar/triggers/button1", "short_press")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
 
     # Remove the trigger
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla1/config", "")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla1/config", "")
+    await menuai.async_block_till_done()
 
-    async_fire_mqtt_message(hass, "foobar/triggers/button1", "short_press")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "foobar/triggers/button1", "short_press")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
 
     # Rediscover the trigger
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla1/config", data1)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla1/config", data1)
+    await menuai.async_block_till_done()
 
-    async_fire_mqtt_message(hass, "foobar/triggers/button1", "short_press")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "foobar/triggers/button1", "short_press")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 2
 
 
 async def test_not_fires_on_mqtt_message_after_remove_from_registry(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     device_registry: dr.DeviceRegistry,
     service_calls: list[ServiceCall],
     mqtt_mock_entry: MqttMockHAClientGenerator,
 ) -> None:
     """Test triggers not firing after removal."""
-    assert await async_setup_component(hass, "config", {})
-    assert await async_setup_component(hass, "repairs", {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "config", {})
+    assert await async_setup_component(menuai, "repairs", {})
+    await menuai.async_block_till_done()
     await mqtt_mock_entry()
 
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     data1 = (
         '{ "automation_type":"trigger",'
@@ -963,12 +963,12 @@ async def test_not_fires_on_mqtt_message_after_remove_from_registry(
         '  "type": "button_short_press",'
         '  "subtype": "button_1" }'
     )
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla1/config", data1)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla1/config", data1)
+    await menuai.async_block_till_done()
     device_entry = device_registry.async_get_device(identifiers={("mqtt", "0AFFD2")})
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -991,25 +991,25 @@ async def test_not_fires_on_mqtt_message_after_remove_from_registry(
     )
 
     # Fake short press.
-    async_fire_mqtt_message(hass, "foobar/triggers/button1", "short_press")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "foobar/triggers/button1", "short_press")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
 
     # Remove MQTT from the device
-    mqtt_config_entry = hass.config_entries.async_entries(DOMAIN)[0]
+    mqtt_config_entry = menuai.config_entries.async_entries(DOMAIN)[0]
     response = await ws_client.remove_device(
         device_entry.id, mqtt_config_entry.entry_id
     )
     assert response["success"]
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    async_fire_mqtt_message(hass, "foobar/triggers/button1", "short_press")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "foobar/triggers/button1", "short_press")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
 
 
 async def test_attach_remove(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mqtt_mock_entry: MqttMockHAClientGenerator,
 ) -> None:
@@ -1023,8 +1023,8 @@ async def test_attach_remove(
         '  "type": "button_short_press",'
         '  "subtype": "button_1" }'
     )
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla1/config", data1)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla1/config", data1)
+    await menuai.async_block_till_done()
     device_entry = device_registry.async_get_device(identifiers={("mqtt", "0AFFD2")})
 
     callback_calls: list[dict[str, Any]] = []
@@ -1033,7 +1033,7 @@ async def test_attach_remove(
         callback_calls.append(trigger["trigger"]["payload"])
 
     remove = await async_initialize_triggers(
-        hass,
+        menuai,
         [
             {
                 "platform": "device",
@@ -1051,23 +1051,23 @@ async def test_attach_remove(
     )
 
     # Fake short press.
-    async_fire_mqtt_message(hass, "foobar/triggers/button1", "short_press")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "foobar/triggers/button1", "short_press")
+    await menuai.async_block_till_done()
     assert len(callback_calls) == 1
     assert callback_calls[0] == "short_press"
 
     # Remove the trigger
     remove()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Verify the triggers are no longer active
-    async_fire_mqtt_message(hass, "foobar/triggers/button1", "short_press")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "foobar/triggers/button1", "short_press")
+    await menuai.async_block_till_done()
     assert len(callback_calls) == 1
 
 
 async def test_attach_remove_late(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mqtt_mock_entry: MqttMockHAClientGenerator,
 ) -> None:
@@ -1086,8 +1086,8 @@ async def test_attach_remove_late(
         '  "type": "button_short_press",'
         '  "subtype": "button_1" }'
     )
-    async_fire_mqtt_message(hass, "homeassistant/sensor/bla0/config", data0)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/sensor/bla0/config", data0)
+    await menuai.async_block_till_done()
     device_entry = device_registry.async_get_device(identifiers={("mqtt", "0AFFD2")})
 
     callback_calls: list[dict[str, Any]] = []
@@ -1096,7 +1096,7 @@ async def test_attach_remove_late(
         callback_calls.append(trigger["trigger"]["payload"])
 
     remove = await async_initialize_triggers(
-        hass,
+        menuai,
         [
             {
                 "platform": "device",
@@ -1113,27 +1113,27 @@ async def test_attach_remove_late(
         _LOGGER.log,
     )
 
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla1/config", data1)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla1/config", data1)
+    await menuai.async_block_till_done()
 
     # Fake short press.
-    async_fire_mqtt_message(hass, "foobar/triggers/button1", "short_press")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "foobar/triggers/button1", "short_press")
+    await menuai.async_block_till_done()
     assert len(callback_calls) == 1
     assert callback_calls[0] == "short_press"
 
     # Remove the trigger
     remove()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Verify the triggers are no longer active
-    async_fire_mqtt_message(hass, "foobar/triggers/button1", "short_press")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "foobar/triggers/button1", "short_press")
+    await menuai.async_block_till_done()
     assert len(callback_calls) == 1
 
 
 async def test_attach_remove_late2(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mqtt_mock_entry: MqttMockHAClientGenerator,
 ) -> None:
@@ -1152,8 +1152,8 @@ async def test_attach_remove_late2(
         '  "type": "button_short_press",'
         '  "subtype": "button_1" }'
     )
-    async_fire_mqtt_message(hass, "homeassistant/sensor/bla0/config", data0)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/sensor/bla0/config", data0)
+    await menuai.async_block_till_done()
     device_entry = device_registry.async_get_device(identifiers={("mqtt", "0AFFD2")})
 
     callback_calls: list[dict[str, Any]] = []
@@ -1162,7 +1162,7 @@ async def test_attach_remove_late2(
         callback_calls.append(trigger["trigger"]["payload"])
 
     remove = await async_initialize_triggers(
-        hass,
+        menuai,
         [
             {
                 "platform": "device",
@@ -1181,23 +1181,23 @@ async def test_attach_remove_late2(
 
     # Remove the trigger
     remove()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla1/config", data1)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla1/config", data1)
+    await menuai.async_block_till_done()
 
     # Verify the triggers are no longer active
-    async_fire_mqtt_message(hass, "foobar/triggers/button1", "short_press")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "foobar/triggers/button1", "short_press")
+    await menuai.async_block_till_done()
     assert len(callback_calls) == 0
 
     # Try to remove the trigger twice
-    with pytest.raises(HomeAssistantError):
+    with pytest.raises(menuaiError):
         remove()
 
 
 async def test_entity_device_info_with_connection(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mqtt_mock_entry: MqttMockHAClientGenerator,
 ) -> None:
@@ -1221,8 +1221,8 @@ async def test_entity_device_info_with_connection(
             },
         }
     )
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla/config", data)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla/config", data)
+    await menuai.async_block_till_done()
 
     device = device_registry.async_get_device(
         connections={(dr.CONNECTION_NETWORK_MAC, "02:5b:26:a8:dc:12")}
@@ -1238,7 +1238,7 @@ async def test_entity_device_info_with_connection(
 
 
 async def test_entity_device_info_with_identifier(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mqtt_mock_entry: MqttMockHAClientGenerator,
 ) -> None:
@@ -1262,8 +1262,8 @@ async def test_entity_device_info_with_identifier(
             },
         }
     )
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla/config", data)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla/config", data)
+    await menuai.async_block_till_done()
 
     device = device_registry.async_get_device(identifiers={("mqtt", "helloworld")})
     assert device is not None
@@ -1277,7 +1277,7 @@ async def test_entity_device_info_with_identifier(
 
 
 async def test_entity_device_info_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mqtt_mock_entry: MqttMockHAClientGenerator,
 ) -> None:
@@ -1301,8 +1301,8 @@ async def test_entity_device_info_update(
     }
 
     data = json.dumps(config)
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla/config", data)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla/config", data)
+    await menuai.async_block_till_done()
 
     device = device_registry.async_get_device(identifiers={("mqtt", "helloworld")})
     assert device is not None
@@ -1310,8 +1310,8 @@ async def test_entity_device_info_update(
 
     config["device"]["name"] = "Milk"
     data = json.dumps(config)
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla/config", data)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla/config", data)
+    await menuai.async_block_till_done()
 
     device = device_registry.async_get_device(identifiers={("mqtt", "helloworld")})
     assert device is not None
@@ -1319,15 +1319,15 @@ async def test_entity_device_info_update(
 
 
 async def test_cleanup_trigger(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     device_registry: dr.DeviceRegistry,
     mqtt_mock_entry: MqttMockHAClientGenerator,
 ) -> None:
     """Test trigger discovery topic is cleaned when device is removed from registry."""
     mqtt_mock = await mqtt_mock_entry()
-    assert await async_setup_component(hass, "config", {})
-    ws_client = await hass_ws_client(hass)
+    assert await async_setup_component(menuai, "config", {})
+    ws_client = await menuai_ws_client(menuai)
 
     config = {
         "automation_type": "trigger",
@@ -1338,8 +1338,8 @@ async def test_cleanup_trigger(
     }
 
     data = json.dumps(config)
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla/config", data)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla/config", data)
+    await menuai.async_block_till_done()
 
     # Verify device registry entry is created
     device_entry = device_registry.async_get_device(
@@ -1348,18 +1348,18 @@ async def test_cleanup_trigger(
     assert device_entry is not None
 
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device_entry.id
+        menuai, DeviceAutomationType.TRIGGER, device_entry.id
     )
     assert triggers[0]["type"] == "foo"
 
     # Remove MQTT from the device
-    mqtt_config_entry = hass.config_entries.async_entries(DOMAIN)[0]
+    mqtt_config_entry = menuai.config_entries.async_entries(DOMAIN)[0]
     response = await ws_client.remove_device(
         device_entry.id, mqtt_config_entry.entry_id
     )
     assert response["success"]
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Verify device registry entry is cleared
     device_entry = device_registry.async_get_device(
@@ -1369,12 +1369,12 @@ async def test_cleanup_trigger(
 
     # Verify retained discovery topic has been cleared
     mqtt_mock.async_publish.assert_called_once_with(
-        "homeassistant/device_automation/bla/config", None, 0, True
+        "menuai/device_automation/bla/config", None, 0, True
     )
 
 
 async def test_cleanup_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mqtt_mock_entry: MqttMockHAClientGenerator,
 ) -> None:
@@ -1389,8 +1389,8 @@ async def test_cleanup_device(
     }
 
     data = json.dumps(config)
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla/config", data)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla/config", data)
+    await menuai.async_block_till_done()
 
     # Verify device registry entry is created
     device_entry = device_registry.async_get_device(
@@ -1399,12 +1399,12 @@ async def test_cleanup_device(
     assert device_entry is not None
 
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device_entry.id
+        menuai, DeviceAutomationType.TRIGGER, device_entry.id
     )
     assert triggers[0]["type"] == "foo"
 
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla/config", "")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla/config", "")
+    await menuai.async_block_till_done()
 
     # Verify device registry entry is cleared
     device_entry = device_registry.async_get_device(
@@ -1414,7 +1414,7 @@ async def test_cleanup_device(
 
 
 async def test_cleanup_device_several_triggers(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mqtt_mock_entry: MqttMockHAClientGenerator,
 ) -> None:
@@ -1438,10 +1438,10 @@ async def test_cleanup_device_several_triggers(
 
     data1 = json.dumps(config1)
     data2 = json.dumps(config2)
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla1/config", data1)
-    await hass.async_block_till_done()
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla2/config", data2)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla1/config", data1)
+    await menuai.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla2/config", data2)
+    await menuai.async_block_till_done()
 
     # Verify device registry entry is created
     device_entry = device_registry.async_get_device(
@@ -1450,14 +1450,14 @@ async def test_cleanup_device_several_triggers(
     assert device_entry is not None
 
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device_entry.id
+        menuai, DeviceAutomationType.TRIGGER, device_entry.id
     )
     assert len(triggers) == 2
     assert triggers[0]["type"] == "foo"
     assert triggers[1]["type"] == "foo2"
 
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla1/config", "")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla1/config", "")
+    await menuai.async_block_till_done()
 
     # Verify device registry entry is not cleared
     device_entry = device_registry.async_get_device(
@@ -1466,13 +1466,13 @@ async def test_cleanup_device_several_triggers(
     assert device_entry is not None
 
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device_entry.id
+        menuai, DeviceAutomationType.TRIGGER, device_entry.id
     )
     assert len(triggers) == 1
     assert triggers[0]["type"] == "foo2"
 
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla2/config", "")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla2/config", "")
+    await menuai.async_block_till_done()
 
     # Verify device registry entry is cleared
     device_entry = device_registry.async_get_device(
@@ -1482,7 +1482,7 @@ async def test_cleanup_device_several_triggers(
 
 
 async def test_cleanup_device_with_entity1(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mqtt_mock_entry: MqttMockHAClientGenerator,
 ) -> None:
@@ -1508,10 +1508,10 @@ async def test_cleanup_device_with_entity1(
 
     data1 = json.dumps(config1)
     data2 = json.dumps(config2)
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla1/config", data1)
-    await hass.async_block_till_done()
-    async_fire_mqtt_message(hass, "homeassistant/binary_sensor/bla2/config", data2)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla1/config", data1)
+    await menuai.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/binary_sensor/bla2/config", data2)
+    await menuai.async_block_till_done()
 
     # Verify device registry entry is created
     device_entry = device_registry.async_get_device(
@@ -1520,12 +1520,12 @@ async def test_cleanup_device_with_entity1(
     assert device_entry is not None
 
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device_entry.id
+        menuai, DeviceAutomationType.TRIGGER, device_entry.id
     )
     assert len(triggers) == 3  # 2 binary_sensor triggers + device trigger
 
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla1/config", "")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla1/config", "")
+    await menuai.async_block_till_done()
 
     # Verify device registry entry is not cleared
     device_entry = device_registry.async_get_device(
@@ -1534,12 +1534,12 @@ async def test_cleanup_device_with_entity1(
     assert device_entry is not None
 
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device_entry.id
+        menuai, DeviceAutomationType.TRIGGER, device_entry.id
     )
     assert len(triggers) == 2  # 2 binary_sensor triggers
 
-    async_fire_mqtt_message(hass, "homeassistant/binary_sensor/bla2/config", "")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/binary_sensor/bla2/config", "")
+    await menuai.async_block_till_done()
 
     # Verify device registry entry is cleared
     device_entry = device_registry.async_get_device(
@@ -1549,7 +1549,7 @@ async def test_cleanup_device_with_entity1(
 
 
 async def test_cleanup_device_with_entity2(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mqtt_mock_entry: MqttMockHAClientGenerator,
 ) -> None:
@@ -1575,10 +1575,10 @@ async def test_cleanup_device_with_entity2(
 
     data1 = json.dumps(config1)
     data2 = json.dumps(config2)
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla1/config", data1)
-    await hass.async_block_till_done()
-    async_fire_mqtt_message(hass, "homeassistant/binary_sensor/bla2/config", data2)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla1/config", data1)
+    await menuai.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/binary_sensor/bla2/config", data2)
+    await menuai.async_block_till_done()
 
     # Verify device registry entry is created
     device_entry = device_registry.async_get_device(
@@ -1587,12 +1587,12 @@ async def test_cleanup_device_with_entity2(
     assert device_entry is not None
 
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device_entry.id
+        menuai, DeviceAutomationType.TRIGGER, device_entry.id
     )
     assert len(triggers) == 3  # 2 binary_sensor triggers + device trigger
 
-    async_fire_mqtt_message(hass, "homeassistant/binary_sensor/bla2/config", "")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/binary_sensor/bla2/config", "")
+    await menuai.async_block_till_done()
 
     # Verify device registry entry is not cleared
     device_entry = device_registry.async_get_device(
@@ -1601,12 +1601,12 @@ async def test_cleanup_device_with_entity2(
     assert device_entry is not None
 
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device_entry.id
+        menuai, DeviceAutomationType.TRIGGER, device_entry.id
     )
     assert len(triggers) == 1  # device trigger
 
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla1/config", "")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla1/config", "")
+    await menuai.async_block_till_done()
 
     # Verify device registry entry is cleared
     device_entry = device_registry.async_get_device(
@@ -1616,7 +1616,7 @@ async def test_cleanup_device_with_entity2(
 
 
 async def test_trigger_debug_info(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mqtt_mock_entry: MqttMockHAClientGenerator,
 ) -> None:
@@ -1651,22 +1651,22 @@ async def test_trigger_debug_info(
         },
     }
     data = json.dumps(config1)
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla1/config", data)
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla1/config", data)
     data = json.dumps(config2)
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla2/config", data)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla2/config", data)
+    await menuai.async_block_till_done()
 
     device = device_registry.async_get_device(
         connections={(dr.CONNECTION_NETWORK_MAC, "02:5b:26:a8:dc:12")}
     )
     assert device is not None
 
-    debug_info_data = debug_info.info_for_device(hass, device.id)
+    debug_info_data = debug_info.info_for_device(menuai, device.id)
     assert len(debug_info_data["entities"]) == 0
     assert len(debug_info_data["triggers"]) == 2
     topic_map = {
-        "homeassistant/device_automation/bla1/config": config1,
-        "homeassistant/device_automation/bla2/config": config2,
+        "menuai/device_automation/bla1/config": config1,
+        "menuai/device_automation/bla2/config": config2,
     }
     assert (
         topic_map[debug_info_data["triggers"][0]["discovery_data"]["topic"]]
@@ -1681,24 +1681,24 @@ async def test_trigger_debug_info(
         == topic_map[debug_info_data["triggers"][1]["discovery_data"]["topic"]]
     )
 
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla1/config", "")
-    await hass.async_block_till_done()
-    debug_info_data = debug_info.info_for_device(hass, device.id)
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla1/config", "")
+    await menuai.async_block_till_done()
+    debug_info_data = debug_info.info_for_device(menuai, device.id)
     assert len(debug_info_data["entities"]) == 0
     assert len(debug_info_data["triggers"]) == 1
     assert (
         debug_info_data["triggers"][0]["discovery_data"]["topic"]
-        == "homeassistant/device_automation/bla2/config"
+        == "menuai/device_automation/bla2/config"
     )
     assert debug_info_data["triggers"][0]["discovery_data"]["payload"] == config2
 
 
-@patch("homeassistant.components.mqtt.client.DISCOVERY_COOLDOWN", 0.0)
-@patch("homeassistant.components.mqtt.client.INITIAL_SUBSCRIBE_COOLDOWN", 0.0)
-@patch("homeassistant.components.mqtt.client.SUBSCRIBE_COOLDOWN", 0.0)
-@patch("homeassistant.components.mqtt.client.UNSUBSCRIBE_COOLDOWN", 0.0)
+@patch("menuai.components.mqtt.client.DISCOVERY_COOLDOWN", 0.0)
+@patch("menuai.components.mqtt.client.INITIAL_SUBSCRIBE_COOLDOWN", 0.0)
+@patch("menuai.components.mqtt.client.SUBSCRIBE_COOLDOWN", 0.0)
+@patch("menuai.components.mqtt.client.UNSUBSCRIBE_COOLDOWN", 0.0)
 async def test_unload_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     service_calls: list[ServiceCall],
     device_registry: dr.DeviceRegistry,
@@ -1713,12 +1713,12 @@ async def test_unload_entry(
         '  "type": "button_short_press",'
         '  "subtype": "button_1" }'
     )
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla1/config", data1)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla1/config", data1)
+    await menuai.async_block_till_done()
     device_entry = device_registry.async_get_device(identifiers={("mqtt", "0AFFD2")})
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -1739,30 +1739,30 @@ async def test_unload_entry(
             ]
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Fake short press 1
-    async_fire_mqtt_message(hass, "foobar/triggers/button1", "short_press")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "foobar/triggers/button1", "short_press")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
 
-    await help_test_unload_config_entry(hass)
+    await help_test_unload_config_entry(menuai)
 
     # Rediscover message and fake short press 2 (non impact)
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla1/config", data1)
-    await hass.async_block_till_done()
-    async_fire_mqtt_message(hass, "foobar/triggers/button1", "short_press")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla1/config", data1)
+    await menuai.async_block_till_done()
+    async_fire_mqtt_message(menuai, "foobar/triggers/button1", "short_press")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
 
     # Start entry again
-    mqtt_entry = hass.config_entries.async_entries("mqtt")[0]
-    await hass.config_entries.async_setup(mqtt_entry.entry_id)
+    mqtt_entry = menuai.config_entries.async_entries("mqtt")[0]
+    await menuai.config_entries.async_setup(mqtt_entry.entry_id)
 
     # Rediscover and fake short press 3
-    async_fire_mqtt_message(hass, "homeassistant/device_automation/bla1/config", data1)
-    await hass.async_block_till_done()
-    async_fire_mqtt_message(hass, "foobar/triggers/button1", "short_press")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "menuai/device_automation/bla1/config", data1)
+    await menuai.async_block_till_done()
+    async_fire_mqtt_message(menuai, "foobar/triggers/button1", "short_press")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 2
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)

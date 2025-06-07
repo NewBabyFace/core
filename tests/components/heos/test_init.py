@@ -15,13 +15,13 @@ from pyheos import (
 )
 import pytest
 
-from homeassistant.components.heos.const import DOMAIN
-from homeassistant.components.media_player import DOMAIN as MEDIA_PLAYER_DOMAIN
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.components.heos.const import DOMAIN
+from menuai.components.media_player import DOMAIN as MEDIA_PLAYER_DOMAIN
+from menuai.config_entries import SOURCE_REAUTH, ConfigEntryState
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.setup import async_setup_component
 
 from . import MockHeos
 
@@ -30,15 +30,15 @@ from tests.typing import WebSocketGenerator
 
 
 async def test_async_setup_entry_loads_platforms(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     controller: MockHeos,
 ) -> None:
     """Test load connects to heos, retrieves players, and loads platforms."""
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
     assert config_entry.state is ConfigEntryState.LOADED
-    assert hass.states.get("media_player.test_player") is not None
+    assert menuai.states.get("media_player.test_player") is not None
     assert controller.connect.call_count == 1
     assert controller.get_players.call_count == 1
     assert controller.get_favorites.call_count == 1
@@ -47,14 +47,14 @@ async def test_async_setup_entry_loads_platforms(
 
 
 async def test_async_setup_entry_with_options_loads_platforms(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry_options: MockConfigEntry,
     controller: MockHeos,
     new_mock: Mock,
 ) -> None:
     """Test load connects to heos with options, retrieves players, and loads platforms."""
-    config_entry_options.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry_options.entry_id)
+    config_entry_options.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry_options.entry_id)
 
     # Assert options passed and methods called
     assert config_entry_options.state is ConfigEntryState.LOADED
@@ -71,12 +71,12 @@ async def test_async_setup_entry_with_options_loads_platforms(
 
 
 async def test_async_setup_entry_auth_failure_starts_reauth(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry_options: MockConfigEntry,
     controller: MockHeos,
 ) -> None:
     """Test load with auth failure starts reauth, loads platforms."""
-    config_entry_options.add_to_hass(hass)
+    config_entry_options.add_to_menuai(menuai)
 
     # Simulates what happens when the controller can't sign-in during connection
     async def connect_send_auth_failure() -> None:
@@ -87,7 +87,7 @@ async def test_async_setup_entry_auth_failure_starts_reauth(
 
     controller.connect.side_effect = connect_send_auth_failure
 
-    assert await hass.config_entries.async_setup(config_entry_options.entry_id)
+    assert await menuai.config_entries.async_setup(config_entry_options.entry_id)
 
     # Assert entry loaded and reauth flow started
     assert controller.connect.call_count == 1
@@ -95,20 +95,20 @@ async def test_async_setup_entry_auth_failure_starts_reauth(
     controller.disconnect.assert_not_called()
     assert config_entry_options.state is ConfigEntryState.LOADED
     assert any(
-        config_entry_options.async_get_active_flows(hass, sources={SOURCE_REAUTH})
+        config_entry_options.async_get_active_flows(menuai, sources={SOURCE_REAUTH})
     )
 
 
 async def test_async_setup_entry_not_signed_in_loads_platforms(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     controller: MockHeos,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test setup does not retrieve favorites when not logged in."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     controller.mock_set_signed_in_username(None)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
     assert controller.connect.call_count == 1
     assert controller.get_players.call_count == 1
     assert controller.get_favorites.call_count == 0
@@ -121,67 +121,67 @@ async def test_async_setup_entry_not_signed_in_loads_platforms(
 
 
 async def test_async_setup_entry_connect_failure(
-    hass: HomeAssistant, config_entry: MockConfigEntry, controller: MockHeos
+    menuai: menuai, config_entry: MockConfigEntry, controller: MockHeos
 ) -> None:
     """Connection failure raises ConfigEntryNotReady."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     controller.connect.side_effect = HeosError()
-    assert not await hass.config_entries.async_setup(config_entry.entry_id)
+    assert not await menuai.config_entries.async_setup(config_entry.entry_id)
     assert controller.connect.call_count == 1
     assert controller.disconnect.call_count == 1
     assert config_entry.state is ConfigEntryState.SETUP_RETRY
 
 
 async def test_async_setup_entry_player_failure(
-    hass: HomeAssistant, config_entry: MockConfigEntry, controller: MockHeos
+    menuai: menuai, config_entry: MockConfigEntry, controller: MockHeos
 ) -> None:
     """Failure to retrieve players raises ConfigEntryNotReady."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     controller.get_players.side_effect = HeosError()
-    assert not await hass.config_entries.async_setup(config_entry.entry_id)
+    assert not await menuai.config_entries.async_setup(config_entry.entry_id)
     assert controller.connect.call_count == 1
     assert controller.disconnect.call_count == 1
     assert config_entry.state is ConfigEntryState.SETUP_RETRY
 
 
 async def test_async_setup_entry_favorites_failure(
-    hass: HomeAssistant, config_entry: MockConfigEntry, controller: MockHeos
+    menuai: menuai, config_entry: MockConfigEntry, controller: MockHeos
 ) -> None:
     """Failure to retrieve favorites loads."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     controller.get_favorites.side_effect = HeosError()
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
     assert config_entry.state is ConfigEntryState.LOADED
 
 
 async def test_async_setup_entry_inputs_failure(
-    hass: HomeAssistant, config_entry: MockConfigEntry, controller: MockHeos
+    menuai: menuai, config_entry: MockConfigEntry, controller: MockHeos
 ) -> None:
     """Failure to retrieve inputs loads."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     controller.get_input_sources.side_effect = HeosError()
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
     assert config_entry.state is ConfigEntryState.LOADED
 
 
 async def test_unload_entry(
-    hass: HomeAssistant, config_entry: MockConfigEntry, controller: MockHeos
+    menuai: menuai, config_entry: MockConfigEntry, controller: MockHeos
 ) -> None:
     """Test entries are unloaded correctly."""
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    assert await hass.config_entries.async_unload(config_entry.entry_id)
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    assert await menuai.config_entries.async_unload(config_entry.entry_id)
     assert controller.disconnect.call_count == 1
 
 
 async def test_device_info(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test device information populates correctly."""
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
     device = device_registry.async_get_device({(DOMAIN, "1")})
     assert device is not None
     assert device.manufacturer == "HEOS"
@@ -196,12 +196,12 @@ async def test_device_info(
 
 
 async def test_device_id_migration(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test that legacy non-string device identifiers are migrated to strings."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     # Create a device with a legacy identifier
     device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
@@ -211,8 +211,8 @@ async def test_device_id_migration(
         config_entry_id=config_entry.entry_id,
         identifiers={("Other", 1)},  # type: ignore[arg-type]
     )
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done(wait_background_tasks=True)
     assert device_registry.async_get_device({("Other", 1)}) is not None  # type: ignore[arg-type]
     assert device_registry.async_get_device({(DOMAIN, 1)}) is None  # type: ignore[arg-type]
     assert device_registry.async_get_device({(DOMAIN, "1")}) is not None
@@ -220,12 +220,12 @@ async def test_device_id_migration(
 
 
 async def test_device_id_migration_both_present(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test that legacy non-string devices are removed when both devices present."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     # Create a device with a legacy identifier AND a new identifier
     device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
@@ -234,8 +234,8 @@ async def test_device_id_migration_both_present(
     device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id, identifiers={(DOMAIN, "1")}
     )
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done(wait_background_tasks=True)
     assert device_registry.async_get_device({(DOMAIN, 1)}) is None  # type: ignore[arg-type]
     assert device_registry.async_get_device({(DOMAIN, "1")}) is not None
 
@@ -246,37 +246,37 @@ async def test_device_id_migration_both_present(
     ids=("Present device", "Stale device"),
 )
 async def test_remove_config_entry_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     device_registry: dr.DeviceRegistry,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     player_id: str,
     expected_result: bool,
 ) -> None:
     """Test manually removing an stale device."""
-    assert await async_setup_component(hass, "config", {})
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    assert await async_setup_component(menuai, "config", {})
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
 
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id, identifiers={(DOMAIN, player_id)}
     )
 
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
     response = await ws_client.remove_device(device_entry.id, config_entry.entry_id)
     assert response["success"] == expected_result
 
 
 async def test_reconnected_new_entities_created(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     config_entry: MockConfigEntry,
     controller: MockHeos,
     player_factory: Callable[[int, str, str], HeosPlayer],
 ) -> None:
     """Test new entities are created for new players after reconnecting."""
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
 
     # Assert initial entity doesn't exist
     assert not entity_registry.async_get_entity_id(MEDIA_PLAYER_DOMAIN, DOMAIN, "3")
@@ -291,18 +291,18 @@ async def test_reconnected_new_entities_created(
     await controller.dispatcher.wait_send(
         SignalType.CONTROLLER_EVENT, const.EVENT_PLAYERS_CHANGED, update
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Assert new entity created
     assert entity_registry.async_get_entity_id(MEDIA_PLAYER_DOMAIN, DOMAIN, "3")
 
 
 async def test_reconnected_failover_updates_host(
-    hass: HomeAssistant, config_entry: MockConfigEntry, controller: MockHeos
+    menuai: menuai, config_entry: MockConfigEntry, controller: MockHeos
 ) -> None:
     """Test the config entry host is updated after failover."""
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
     assert config_entry.data[CONF_HOST] == "127.0.0.1"
 
     # Simulate reconnection
@@ -310,22 +310,22 @@ async def test_reconnected_failover_updates_host(
     await controller.dispatcher.wait_send(
         SignalType.HEOS_EVENT, SignalHeosEvent.CONNECTED
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Assert config entry host updated
     assert config_entry.data[CONF_HOST] == "127.0.0.2"
 
 
 async def test_players_changed_new_entities_created(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     config_entry: MockConfigEntry,
     controller: MockHeos,
     player_factory: Callable[[int, str, str], HeosPlayer],
 ) -> None:
     """Test new entities are created for new players on change event."""
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
 
     # Assert initial entity doesn't exist
     assert not entity_registry.async_get_entity_id(MEDIA_PLAYER_DOMAIN, DOMAIN, "3")
@@ -341,7 +341,7 @@ async def test_players_changed_new_entities_created(
         const.EVENT_PLAYERS_CHANGED,
         PlayerUpdateResult([3], [], {}),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Assert new entity created
     assert entity_registry.async_get_entity_id(MEDIA_PLAYER_DOMAIN, DOMAIN, "3")

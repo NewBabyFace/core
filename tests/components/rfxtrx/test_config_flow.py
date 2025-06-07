@@ -6,12 +6,12 @@ from unittest.mock import MagicMock, patch, sentinel
 from RFXtrx import RFXtrxTransportError
 import serial.tools.list_ports
 
-from homeassistant import config_entries
-from homeassistant.components.rfxtrx import DOMAIN, config_flow
-from homeassistant.const import STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai import config_entries
+from menuai.components.rfxtrx import DOMAIN, config_flow
+from menuai.const import STATE_UNKNOWN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from tests.common import MockConfigEntry
 
@@ -30,20 +30,20 @@ def com_port():
 
 
 async def start_options_flow(
-    hass: HomeAssistant, entry: MockConfigEntry
+    menuai: menuai, entry: MockConfigEntry
 ) -> config_entries.ConfigFlowResult:
     """Start the options flow with the entry under test."""
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    return await hass.config_entries.options.async_init(entry.entry_id)
+    return await menuai.config_entries.options.async_init(entry.entry_id)
 
 
-async def test_setup_network(transport_mock, hass: HomeAssistant) -> None:
+async def test_setup_network(transport_mock, menuai: menuai) -> None:
     """Test we can setup network."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -51,7 +51,7 @@ async def test_setup_network(transport_mock, hass: HomeAssistant) -> None:
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"type": "Network"},
     )
@@ -60,8 +60,8 @@ async def test_setup_network(transport_mock, hass: HomeAssistant) -> None:
     assert result["step_id"] == "setup_network"
     assert result["errors"] == {}
 
-    with patch("homeassistant.components.rfxtrx.async_setup_entry", return_value=True):
-        result = await hass.config_entries.flow.async_configure(
+    with patch("menuai.components.rfxtrx.async_setup_entry", return_value=True):
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], {"host": "10.10.0.1", "port": 1234}
         )
 
@@ -77,11 +77,11 @@ async def test_setup_network(transport_mock, hass: HomeAssistant) -> None:
 
 
 @patch("serial.tools.list_ports.comports", return_value=[com_port()])
-async def test_setup_serial(com_mock, transport_mock, hass: HomeAssistant) -> None:
+async def test_setup_serial(com_mock, transport_mock, menuai: menuai) -> None:
     """Test we can setup serial."""
     port = com_port()
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -89,7 +89,7 @@ async def test_setup_serial(com_mock, transport_mock, hass: HomeAssistant) -> No
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"type": "Serial"},
     )
@@ -98,8 +98,8 @@ async def test_setup_serial(com_mock, transport_mock, hass: HomeAssistant) -> No
     assert result["step_id"] == "setup_serial"
     assert result["errors"] == {}
 
-    with patch("homeassistant.components.rfxtrx.async_setup_entry", return_value=True):
-        result = await hass.config_entries.flow.async_configure(
+    with patch("menuai.components.rfxtrx.async_setup_entry", return_value=True):
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], {"device": port.device}
         )
 
@@ -116,10 +116,10 @@ async def test_setup_serial(com_mock, transport_mock, hass: HomeAssistant) -> No
 
 @patch("serial.tools.list_ports.comports", return_value=[com_port()])
 async def test_setup_serial_manual(
-    com_mock, transport_mock, hass: HomeAssistant
+    com_mock, transport_mock, menuai: menuai
 ) -> None:
     """Test we can setup serial with manual entry."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -127,7 +127,7 @@ async def test_setup_serial_manual(
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"type": "Serial"},
     )
@@ -136,7 +136,7 @@ async def test_setup_serial_manual(
     assert result["step_id"] == "setup_serial"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"device": "Enter Manually"}
     )
 
@@ -144,8 +144,8 @@ async def test_setup_serial_manual(
     assert result["step_id"] == "setup_serial_manual_path"
     assert result["errors"] == {}
 
-    with patch("homeassistant.components.rfxtrx.async_setup_entry", return_value=True):
-        result = await hass.config_entries.flow.async_configure(
+    with patch("menuai.components.rfxtrx.async_setup_entry", return_value=True):
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], {"device": "/dev/ttyUSB0"}
         )
 
@@ -160,10 +160,10 @@ async def test_setup_serial_manual(
     }
 
 
-async def test_setup_network_fail(transport_mock, hass: HomeAssistant) -> None:
+async def test_setup_network_fail(transport_mock, menuai: menuai) -> None:
     """Test we can setup network."""
     transport_mock.return_value.connect.side_effect = RFXtrxTransportError
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -171,7 +171,7 @@ async def test_setup_network_fail(transport_mock, hass: HomeAssistant) -> None:
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"type": "Network"},
     )
@@ -180,7 +180,7 @@ async def test_setup_network_fail(transport_mock, hass: HomeAssistant) -> None:
     assert result["step_id"] == "setup_network"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"host": "10.10.0.1", "port": 1234}
     )
 
@@ -190,12 +190,12 @@ async def test_setup_network_fail(transport_mock, hass: HomeAssistant) -> None:
 
 
 @patch("serial.tools.list_ports.comports", return_value=[com_port()])
-async def test_setup_serial_fail(com_mock, transport_mock, hass: HomeAssistant) -> None:
+async def test_setup_serial_fail(com_mock, transport_mock, menuai: menuai) -> None:
     """Test setup serial failed connection."""
     transport_mock.return_value.connect.side_effect = RFXtrxTransportError
     port = com_port()
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -203,7 +203,7 @@ async def test_setup_serial_fail(com_mock, transport_mock, hass: HomeAssistant) 
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"type": "Serial"},
     )
@@ -212,7 +212,7 @@ async def test_setup_serial_fail(com_mock, transport_mock, hass: HomeAssistant) 
     assert result["step_id"] == "setup_serial"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"device": port.device}
     )
 
@@ -223,11 +223,11 @@ async def test_setup_serial_fail(com_mock, transport_mock, hass: HomeAssistant) 
 
 @patch("serial.tools.list_ports.comports", return_value=[com_port()])
 async def test_setup_serial_manual_fail(
-    com_mock, transport_mock, hass: HomeAssistant
+    com_mock, transport_mock, menuai: menuai
 ) -> None:
     """Test setup serial failed connection."""
     transport_mock.return_value.connect.side_effect = RFXtrxTransportError
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -235,7 +235,7 @@ async def test_setup_serial_manual_fail(
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"type": "Serial"},
     )
@@ -244,7 +244,7 @@ async def test_setup_serial_manual_fail(
     assert result["step_id"] == "setup_serial"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"device": "Enter Manually"}
     )
 
@@ -252,7 +252,7 @@ async def test_setup_serial_manual_fail(
     assert result["step_id"] == "setup_serial_manual_path"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"device": "/dev/ttyUSB0"}
     )
 
@@ -261,7 +261,7 @@ async def test_setup_serial_manual_fail(
     assert result["errors"] == {"base": "cannot_connect"}
 
 
-async def test_options_global(hass: HomeAssistant) -> None:
+async def test_options_global(menuai: menuai) -> None:
     """Test if we can set global options."""
 
     entry = MockConfigEntry(
@@ -276,27 +276,27 @@ async def test_options_global(hass: HomeAssistant) -> None:
         },
         unique_id=DOMAIN,
     )
-    with patch("homeassistant.components.rfxtrx.async_setup_entry", return_value=True):
-        result = await start_options_flow(hass, entry)
+    with patch("menuai.components.rfxtrx.async_setup_entry", return_value=True):
+        result = await start_options_flow(menuai, entry)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "prompt_options"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={"automatic_add": True, "protocols": SOME_PROTOCOLS},
     )
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert entry.data["automatic_add"]
 
     assert not set(entry.data["protocols"]) ^ set(SOME_PROTOCOLS)
 
 
-async def test_no_protocols(hass: HomeAssistant) -> None:
+async def test_no_protocols(menuai: menuai) -> None:
     """Test we set protocols to None if none are selected."""
 
     entry = MockConfigEntry(
@@ -311,27 +311,27 @@ async def test_no_protocols(hass: HomeAssistant) -> None:
         },
         unique_id=DOMAIN,
     )
-    with patch("homeassistant.components.rfxtrx.async_setup_entry", return_value=True):
-        result = await start_options_flow(hass, entry)
+    with patch("menuai.components.rfxtrx.async_setup_entry", return_value=True):
+        result = await start_options_flow(menuai, entry)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "prompt_options"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={"automatic_add": False, "protocols": []},
     )
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert not entry.data["automatic_add"]
 
     assert entry.data["protocols"] is None
 
 
-async def test_options_add_device(hass: HomeAssistant) -> None:
+async def test_options_add_device(menuai: menuai) -> None:
     """Test we can add a device."""
 
     entry = MockConfigEntry(
@@ -345,13 +345,13 @@ async def test_options_add_device(hass: HomeAssistant) -> None:
         },
         unique_id=DOMAIN,
     )
-    result = await start_options_flow(hass, entry)
+    result = await start_options_flow(menuai, entry)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "prompt_options"
 
     # Try with invalid event code
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={"automatic_add": True, "event_code": "1234"},
     )
@@ -362,7 +362,7 @@ async def test_options_add_device(hass: HomeAssistant) -> None:
     assert result["errors"]["event_code"] == "invalid_event_code"
 
     # Try with valid event code
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "automatic_add": True,
@@ -373,26 +373,26 @@ async def test_options_add_device(hass: HomeAssistant) -> None:
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "set_device_options"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"], user_input={}
     )
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert entry.data["automatic_add"]
 
     assert entry.data["devices"]["0b1100cd0213c7f230010f71"]
     assert "delay_off" not in entry.data["devices"]["0b1100cd0213c7f230010f71"]
 
-    state = hass.states.get("binary_sensor.ac_213c7f2_48")
+    state = menuai.states.get("binary_sensor.ac_213c7f2_48")
     assert state
     assert state.state == STATE_UNKNOWN
     assert state.attributes.get("friendly_name") == "AC 213c7f2:48"
 
 
-async def test_options_add_duplicate_device(hass: HomeAssistant) -> None:
+async def test_options_add_duplicate_device(menuai: menuai) -> None:
     """Test we can add a device."""
 
     entry = MockConfigEntry(
@@ -407,14 +407,14 @@ async def test_options_add_duplicate_device(hass: HomeAssistant) -> None:
         },
         unique_id=DOMAIN,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await menuai.config_entries.options.async_init(entry.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "prompt_options"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "automatic_add": True,
@@ -429,7 +429,7 @@ async def test_options_add_duplicate_device(hass: HomeAssistant) -> None:
 
 
 async def test_options_replace_sensor_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
@@ -449,45 +449,45 @@ async def test_options_replace_sensor_device(
         },
         unique_id=DOMAIN,
     )
-    await start_options_flow(hass, entry)
+    await start_options_flow(menuai, entry)
 
-    state = hass.states.get(
+    state = menuai.states.get(
         "sensor.thgn122_123_thgn132_thgr122_228_238_268_f0_04_signal_strength"
     )
     assert state
-    state = hass.states.get(
+    state = menuai.states.get(
         "sensor.thgn122_123_thgn132_thgr122_228_238_268_f0_04_battery"
     )
     assert state
-    state = hass.states.get(
+    state = menuai.states.get(
         "sensor.thgn122_123_thgn132_thgr122_228_238_268_f0_04_humidity"
     )
     assert state
-    state = hass.states.get(
+    state = menuai.states.get(
         "sensor.thgn122_123_thgn132_thgr122_228_238_268_f0_04_humidity_status"
     )
     assert state
-    state = hass.states.get(
+    state = menuai.states.get(
         "sensor.thgn122_123_thgn132_thgr122_228_238_268_f0_04_temperature"
     )
     assert state
-    state = hass.states.get(
+    state = menuai.states.get(
         "sensor.thgn122_123_thgn132_thgr122_228_238_268_23_04_signal_strength"
     )
     assert state
-    state = hass.states.get(
+    state = menuai.states.get(
         "sensor.thgn122_123_thgn132_thgr122_228_238_268_23_04_battery"
     )
     assert state
-    state = hass.states.get(
+    state = menuai.states.get(
         "sensor.thgn122_123_thgn132_thgr122_228_238_268_23_04_humidity"
     )
     assert state
-    state = hass.states.get(
+    state = menuai.states.get(
         "sensor.thgn122_123_thgn132_thgr122_228_238_268_23_04_humidity_status"
     )
     assert state
-    state = hass.states.get(
+    state = menuai.states.get(
         "sensor.thgn122_123_thgn132_thgr122_228_238_268_23_04_temperature"
     )
     assert state
@@ -511,12 +511,12 @@ async def test_options_replace_sensor_device(
         None,
     )
 
-    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await menuai.config_entries.options.async_init(entry.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "prompt_options"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "automatic_add": False,
@@ -527,7 +527,7 @@ async def test_options_replace_sensor_device(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "set_device_options"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "replace_device": new_device,
@@ -536,7 +536,7 @@ async def test_options_replace_sensor_device(
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     entry = entity_registry.async_get(
         "sensor.thgn122_123_thgn132_thgr122_228_238_268_f0_04_signal_strength"
@@ -564,30 +564,30 @@ async def test_options_replace_sensor_device(
     assert entry
     assert entry.device_id == new_device
 
-    state = hass.states.get(
+    state = menuai.states.get(
         "sensor.thgn122_123_thgn132_thgr122_228_238_268_23_04_signal_strength"
     )
     assert not state
-    state = hass.states.get(
+    state = menuai.states.get(
         "sensor.thgn122_123_thgn132_thgr122_228_238_268_23_04_battery"
     )
     assert not state
-    state = hass.states.get(
+    state = menuai.states.get(
         "sensor.thgn122_123_thgn132_thgr122_228_238_268_23_04_humidity"
     )
     assert not state
-    state = hass.states.get(
+    state = menuai.states.get(
         "sensor.thgn122_123_thgn132_thgr122_228_238_268_23_04_humidity_status"
     )
     assert not state
-    state = hass.states.get(
+    state = menuai.states.get(
         "sensor.thgn122_123_thgn132_thgr122_228_238_268_23_04_temperature"
     )
     assert not state
 
 
 async def test_options_replace_control_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
@@ -611,19 +611,19 @@ async def test_options_replace_control_device(
         },
         unique_id=DOMAIN,
     )
-    await start_options_flow(hass, entry)
+    await start_options_flow(menuai, entry)
 
-    state = hass.states.get("binary_sensor.ac_118cdea_2")
+    state = menuai.states.get("binary_sensor.ac_118cdea_2")
     assert state
-    state = hass.states.get("sensor.ac_118cdea_2_signal_strength")
+    state = menuai.states.get("sensor.ac_118cdea_2_signal_strength")
     assert state
-    state = hass.states.get("switch.ac_118cdea_2")
+    state = menuai.states.get("switch.ac_118cdea_2")
     assert state
-    state = hass.states.get("binary_sensor.ac_1118cdea_2")
+    state = menuai.states.get("binary_sensor.ac_1118cdea_2")
     assert state
-    state = hass.states.get("sensor.ac_1118cdea_2_signal_strength")
+    state = menuai.states.get("sensor.ac_1118cdea_2_signal_strength")
     assert state
-    state = hass.states.get("switch.ac_1118cdea_2")
+    state = menuai.states.get("switch.ac_1118cdea_2")
     assert state
 
     device_entries = dr.async_entries_for_config_entry(device_registry, entry.entry_id)
@@ -645,12 +645,12 @@ async def test_options_replace_control_device(
         None,
     )
 
-    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await menuai.config_entries.options.async_init(entry.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "prompt_options"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "automatic_add": False,
@@ -661,7 +661,7 @@ async def test_options_replace_control_device(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "set_device_options"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "replace_device": new_device,
@@ -670,7 +670,7 @@ async def test_options_replace_control_device(
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     entry = entity_registry.async_get("binary_sensor.ac_118cdea_2")
     assert entry
@@ -682,16 +682,16 @@ async def test_options_replace_control_device(
     assert entry
     assert entry.device_id == new_device
 
-    state = hass.states.get("binary_sensor.ac_1118cdea_2")
+    state = menuai.states.get("binary_sensor.ac_1118cdea_2")
     assert not state
-    state = hass.states.get("sensor.ac_1118cdea_2_signal_strength")
+    state = menuai.states.get("sensor.ac_1118cdea_2_signal_strength")
     assert not state
-    state = hass.states.get("switch.ac_1118cdea_2")
+    state = menuai.states.get("switch.ac_1118cdea_2")
     assert not state
 
 
 async def test_options_add_and_configure_device(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Test we can add a device."""
 
@@ -706,12 +706,12 @@ async def test_options_add_and_configure_device(
         },
         unique_id=DOMAIN,
     )
-    result = await start_options_flow(hass, entry)
+    result = await start_options_flow(menuai, entry)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "prompt_options"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "automatic_add": True,
@@ -722,7 +722,7 @@ async def test_options_add_and_configure_device(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "set_device_options"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "data_bits": 4,
@@ -737,7 +737,7 @@ async def test_options_add_and_configure_device(
     assert result["errors"]["command_on"] == "invalid_input_2262_on"
     assert result["errors"]["command_off"] == "invalid_input_2262_off"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "data_bits": 4,
@@ -749,14 +749,14 @@ async def test_options_add_and_configure_device(
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert entry.data["automatic_add"]
 
     assert entry.data["devices"]["0913000022670e013970"]
     assert entry.data["devices"]["0913000022670e013970"]["off_delay"] == 9
 
-    state = hass.states.get("binary_sensor.pt2262_226700")
+    state = menuai.states.get("binary_sensor.pt2262_226700")
     assert state
     assert state.state == STATE_UNKNOWN
     assert state.attributes.get("friendly_name") == "PT2262 226700"
@@ -765,12 +765,12 @@ async def test_options_add_and_configure_device(
 
     assert device_entries[0].id
 
-    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await menuai.config_entries.options.async_init(entry.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "prompt_options"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "automatic_add": False,
@@ -781,7 +781,7 @@ async def test_options_add_and_configure_device(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "set_device_options"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "data_bits": 4,
@@ -792,14 +792,14 @@ async def test_options_add_and_configure_device(
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert entry.data["devices"]["0913000022670e013970"]
     assert "delay_off" not in entry.data["devices"]["0913000022670e013970"]
 
 
 async def test_options_configure_rfy_cover_device(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Test we can configure the venetion blind mode of an Rfy cover."""
 
@@ -814,12 +814,12 @@ async def test_options_configure_rfy_cover_device(
         },
         unique_id=DOMAIN,
     )
-    result = await start_options_flow(hass, entry)
+    result = await start_options_flow(menuai, entry)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "prompt_options"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "automatic_add": True,
@@ -830,14 +830,14 @@ async def test_options_configure_rfy_cover_device(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "set_device_options"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "venetian_blind_mode": "EU",
         },
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert (
         entry.data["devices"]["0C1a0000010203010000000000"]["venetian_blind_mode"]
@@ -851,12 +851,12 @@ async def test_options_configure_rfy_cover_device(
 
     assert device_entries[0].id
 
-    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await menuai.config_entries.options.async_init(entry.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "prompt_options"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "automatic_add": False,
@@ -867,7 +867,7 @@ async def test_options_configure_rfy_cover_device(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "set_device_options"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "venetian_blind_mode": "EU",
@@ -876,7 +876,7 @@ async def test_options_configure_rfy_cover_device(
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert (
         entry.data["devices"]["0C1a0000010203010000000000"]["venetian_blind_mode"]

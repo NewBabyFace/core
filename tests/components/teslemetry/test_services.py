@@ -4,8 +4,8 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components.teslemetry.const import DOMAIN
-from homeassistant.components.teslemetry.services import (
+from menuai.components.teslemetry.const import DOMAIN
+from menuai.components.teslemetry.services import (
     ATTR_DEPARTURE_TIME,
     ATTR_ENABLE,
     ATTR_END_OFF_PEAK_TIME,
@@ -24,10 +24,10 @@ from homeassistant.components.teslemetry.services import (
     SERVICE_TIME_OF_USE,
     SERVICE_VALET_MODE,
 )
-from homeassistant.const import CONF_DEVICE_ID, CONF_LATITUDE, CONF_LONGITUDE
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import entity_registry as er
+from menuai.const import CONF_DEVICE_ID, CONF_LATITUDE, CONF_LONGITUDE
+from menuai.core import menuai
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers import entity_registry as er
 
 from . import setup_platform
 from .const import COMMAND_ERROR, COMMAND_OK
@@ -37,12 +37,12 @@ lon = 153.3726526
 
 
 async def test_services(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Tests that the custom services are correct."""
 
-    await setup_platform(hass)
-    entity_registry = er.async_get(hass)
+    await setup_platform(menuai)
+    entity_registry = er.async_get(menuai)
 
     # Get a vehicle device ID
     vehicle_device = entity_registry.async_get("sensor.test_charging").device_id
@@ -54,7 +54,7 @@ async def test_services(
         "tesla_fleet_api.teslemetry.Vehicle.navigation_gps_request",
         return_value=COMMAND_OK,
     ) as navigation_gps_request:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_NAVIGATE_ATTR_GPS_REQUEST,
             {
@@ -69,7 +69,7 @@ async def test_services(
         "tesla_fleet_api.teslemetry.Vehicle.set_scheduled_charging",
         return_value=COMMAND_OK,
     ) as set_scheduled_charging:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SET_SCHEDULED_CHARGING,
             {
@@ -82,7 +82,7 @@ async def test_services(
         set_scheduled_charging.assert_called_once()
 
     with pytest.raises(ServiceValidationError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SET_SCHEDULED_CHARGING,
             {
@@ -96,7 +96,7 @@ async def test_services(
         "tesla_fleet_api.teslemetry.Vehicle.set_scheduled_departure",
         return_value=COMMAND_OK,
     ) as set_scheduled_departure:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SET_SCHEDULED_DEPARTURE,
             {
@@ -114,7 +114,7 @@ async def test_services(
         set_scheduled_departure.assert_called_once()
 
     with pytest.raises(ServiceValidationError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SET_SCHEDULED_DEPARTURE,
             {
@@ -126,7 +126,7 @@ async def test_services(
         )
 
     with pytest.raises(ServiceValidationError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SET_SCHEDULED_DEPARTURE,
             {
@@ -141,7 +141,7 @@ async def test_services(
         "tesla_fleet_api.teslemetry.Vehicle.set_valet_mode",
         return_value=COMMAND_OK,
     ) as set_valet_mode:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_VALET_MODE,
             {
@@ -157,7 +157,7 @@ async def test_services(
         "tesla_fleet_api.teslemetry.Vehicle.speed_limit_activate",
         return_value=COMMAND_OK,
     ) as speed_limit_activate:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SPEED_LIMIT,
             {
@@ -173,7 +173,7 @@ async def test_services(
         "tesla_fleet_api.teslemetry.Vehicle.speed_limit_deactivate",
         return_value=COMMAND_OK,
     ) as speed_limit_deactivate:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SPEED_LIMIT,
             {
@@ -189,7 +189,7 @@ async def test_services(
         "tesla_fleet_api.teslemetry.EnergySite.time_of_use_settings",
         return_value=COMMAND_OK,
     ) as set_time_of_use:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_TIME_OF_USE,
             {
@@ -205,9 +205,9 @@ async def test_services(
             "tesla_fleet_api.teslemetry.EnergySite.time_of_use_settings",
             return_value=COMMAND_ERROR,
         ) as set_time_of_use,
-        pytest.raises(HomeAssistantError),
+        pytest.raises(menuaiError),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_TIME_OF_USE,
             {
@@ -219,15 +219,15 @@ async def test_services(
 
 
 async def test_service_validation_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Tests that the custom services handle bad data."""
 
-    await setup_platform(hass)
+    await setup_platform(menuai)
 
     # Bad device ID
     with pytest.raises(ServiceValidationError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_NAVIGATE_ATTR_GPS_REQUEST,
             {

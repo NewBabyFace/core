@@ -7,14 +7,14 @@ from aiocomelit.const import CLIMATE, WATT
 from aiocomelit.exceptions import CannotAuthenticate, CannotConnect, CannotRetrieveData
 import pytest
 
-from homeassistant.components.climate import HVACMode
-from homeassistant.components.comelit.const import DOMAIN
-from homeassistant.components.humidifier import ATTR_HUMIDITY
-from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN, SERVICE_TURN_ON
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
-from homeassistant.const import ATTR_ENTITY_ID, ATTR_TEMPERATURE, STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.components.climate import HVACMode
+from menuai.components.comelit.const import DOMAIN
+from menuai.components.humidifier import ATTR_HUMIDITY
+from menuai.components.switch import DOMAIN as SWITCH_DOMAIN, SERVICE_TURN_ON
+from menuai.config_entries import SOURCE_REAUTH, ConfigEntryState
+from menuai.const import ATTR_ENTITY_ID, ATTR_TEMPERATURE, STATE_OFF, STATE_ON
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from . import setup_integration
 
@@ -27,23 +27,23 @@ ENTITY_ID_3 = "humidifier.climate0_humidifier"
 
 
 async def test_device_remove_stale(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_serial_bridge: AsyncMock,
     mock_serial_bridge_config_entry: MockConfigEntry,
 ) -> None:
     """Test removal of stale devices with no entities."""
 
-    await setup_integration(hass, mock_serial_bridge_config_entry)
+    await setup_integration(menuai, mock_serial_bridge_config_entry)
 
-    assert (state := hass.states.get(ENTITY_ID_1))
+    assert (state := menuai.states.get(ENTITY_ID_1))
     assert state.state == HVACMode.HEAT
     assert state.attributes[ATTR_TEMPERATURE] == 5.0
 
-    assert (state := hass.states.get(ENTITY_ID_2))
+    assert (state := menuai.states.get(ENTITY_ID_2))
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_HUMIDITY] == 50.0
 
-    assert (state := hass.states.get(ENTITY_ID_3))
+    assert (state := menuai.states.get(ENTITY_ID_3))
     assert state.state == STATE_ON
     assert state.attributes[ATTR_HUMIDITY] == 50.0
 
@@ -66,12 +66,12 @@ async def test_device_remove_stale(
         ),
     }
 
-    await hass.config_entries.async_reload(mock_serial_bridge_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_reload(mock_serial_bridge_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert (state := hass.states.get(ENTITY_ID_1)) is None
-    assert (state := hass.states.get(ENTITY_ID_2)) is None
-    assert (state := hass.states.get(ENTITY_ID_3)) is None
+    assert (state := menuai.states.get(ENTITY_ID_1)) is None
+    assert (state := menuai.states.get(ENTITY_ID_2)) is None
+    assert (state := menuai.states.get(ENTITY_ID_3)) is None
 
 
 @pytest.mark.parametrize(
@@ -82,7 +82,7 @@ async def test_device_remove_stale(
     ],
 )
 async def test_bridge_api_call_exceptions(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_serial_bridge: AsyncMock,
     mock_serial_bridge_config_entry: MockConfigEntry,
     side_effect: Exception,
@@ -91,16 +91,16 @@ async def test_bridge_api_call_exceptions(
 ) -> None:
     """Test bridge_api_call decorator for exceptions."""
 
-    await setup_integration(hass, mock_serial_bridge_config_entry)
+    await setup_integration(menuai, mock_serial_bridge_config_entry)
 
-    assert (state := hass.states.get(ENTITY_ID_0))
+    assert (state := menuai.states.get(ENTITY_ID_0))
     assert state.state == STATE_OFF
 
     mock_serial_bridge.set_device_status.side_effect = side_effect
 
     # Call API
-    with pytest.raises(HomeAssistantError) as exc_info:
-        await hass.services.async_call(
+    with pytest.raises(menuaiError) as exc_info:
+        await menuai.services.async_call(
             SWITCH_DOMAIN,
             SERVICE_TURN_ON,
             {ATTR_ENTITY_ID: ENTITY_ID_0},
@@ -113,21 +113,21 @@ async def test_bridge_api_call_exceptions(
 
 
 async def test_bridge_api_call_reauth(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_serial_bridge: AsyncMock,
     mock_serial_bridge_config_entry: MockConfigEntry,
 ) -> None:
     """Test bridge_api_call decorator for reauth."""
 
-    await setup_integration(hass, mock_serial_bridge_config_entry)
+    await setup_integration(menuai, mock_serial_bridge_config_entry)
 
-    assert (state := hass.states.get(ENTITY_ID_0))
+    assert (state := menuai.states.get(ENTITY_ID_0))
     assert state.state == STATE_OFF
 
     mock_serial_bridge.set_device_status.side_effect = CannotAuthenticate
 
     # Call API
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: ENTITY_ID_0},
@@ -136,7 +136,7 @@ async def test_bridge_api_call_reauth(
 
     assert mock_serial_bridge_config_entry.state is ConfigEntryState.LOADED
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
 
     flow = flows[0]

@@ -3,10 +3,10 @@
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.peblar.const import DOMAIN
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.components.peblar.const import DOMAIN
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from tests.common import MockConfigEntry, snapshot_platform
 
@@ -14,14 +14,14 @@ from tests.common import MockConfigEntry, snapshot_platform
 @pytest.mark.parametrize("init_integration", [Platform.UPDATE], indirect=True)
 @pytest.mark.usefixtures("init_integration")
 async def test_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test the update entities."""
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
     # Ensure all entities are correctly assigned to the Peblar EV charger
     device_entry = device_registry.async_get_device(

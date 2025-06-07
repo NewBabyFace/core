@@ -5,16 +5,16 @@ from unittest.mock import patch
 from pyps4_2ndscreen.errors import CredentialTimeout
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components import ps4
-from homeassistant.components.ps4.config_flow import LOCAL_UDP_PORT
-from homeassistant.components.ps4.const import (
+from menuai import config_entries
+from menuai.components import ps4
+from menuai.components.ps4.config_flow import LOCAL_UDP_PORT
+from menuai.components.ps4.const import (
     DEFAULT_ALIAS,
     DEFAULT_NAME,
     DEFAULT_REGION,
     DOMAIN,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_CODE,
     CONF_HOST,
     CONF_IP_ADDRESS,
@@ -22,9 +22,9 @@ from homeassistant.const import (
     CONF_REGION,
     CONF_TOKEN,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.util import location as location_util
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.util import location as location_util
 
 from tests.common import MockConfigEntry
 
@@ -83,7 +83,7 @@ MOCK_LOCATION = location_util.LocationInfo(
 def location_info_fixture():
     """Mock location info."""
     with patch(
-        "homeassistant.components.ps4."
+        "menuai.components.ps4."
         "config_flow.location_util.async_detect_location_info",
         return_value=MOCK_LOCATION,
     ):
@@ -94,17 +94,17 @@ def location_info_fixture():
 def ps4_setup_fixture():
     """Patch ps4 setup entry."""
     with patch(
-        "homeassistant.components.ps4.async_setup_entry",
+        "menuai.components.ps4.async_setup_entry",
         return_value=True,
     ):
         yield
 
 
-async def test_full_flow_implementation(hass: HomeAssistant) -> None:
+async def test_full_flow_implementation(menuai: menuai) -> None:
     """Test registering an implementation and flow works."""
     # User Step Started, results in Step Creds
     with patch("pyps4_2ndscreen.Helper.port_bind", return_value=None):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
     assert result["type"] is FlowResultType.FORM
@@ -112,7 +112,7 @@ async def test_full_flow_implementation(hass: HomeAssistant) -> None:
 
     # Step Creds results with form in Step Mode.
     with patch("pyps4_2ndscreen.Helper.get_creds", return_value=MOCK_CREDS):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={}
         )
     assert result["type"] is FlowResultType.FORM
@@ -122,7 +122,7 @@ async def test_full_flow_implementation(hass: HomeAssistant) -> None:
     with patch(
         "pyps4_2ndscreen.Helper.has_devices", return_value=[{"host-ip": MOCK_HOST}]
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input=MOCK_AUTO
         )
     assert result["type"] is FlowResultType.FORM
@@ -135,7 +135,7 @@ async def test_full_flow_implementation(hass: HomeAssistant) -> None:
             "pyps4_2ndscreen.Helper.has_devices", return_value=[{"host-ip": MOCK_HOST}]
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input=MOCK_CONFIG
         )
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -144,11 +144,11 @@ async def test_full_flow_implementation(hass: HomeAssistant) -> None:
     assert result["title"] == MOCK_TITLE
 
 
-async def test_multiple_flow_implementation(hass: HomeAssistant) -> None:
+async def test_multiple_flow_implementation(menuai: menuai) -> None:
     """Test multiple device flows."""
     # User Step Started, results in Step Creds
     with patch("pyps4_2ndscreen.Helper.port_bind", return_value=None):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
     assert result["type"] is FlowResultType.FORM
@@ -156,7 +156,7 @@ async def test_multiple_flow_implementation(hass: HomeAssistant) -> None:
 
     # Step Creds results with form in Step Mode.
     with patch("pyps4_2ndscreen.Helper.get_creds", return_value=MOCK_CREDS):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={}
         )
     assert result["type"] is FlowResultType.FORM
@@ -167,7 +167,7 @@ async def test_multiple_flow_implementation(hass: HomeAssistant) -> None:
         "pyps4_2ndscreen.Helper.has_devices",
         return_value=[{"host-ip": MOCK_HOST}, {"host-ip": MOCK_HOST_ADDITIONAL}],
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input=MOCK_AUTO
         )
     assert result["type"] is FlowResultType.FORM
@@ -181,7 +181,7 @@ async def test_multiple_flow_implementation(hass: HomeAssistant) -> None:
             return_value=[{"host-ip": MOCK_HOST}, {"host-ip": MOCK_HOST_ADDITIONAL}],
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input=MOCK_CONFIG
         )
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -190,7 +190,7 @@ async def test_multiple_flow_implementation(hass: HomeAssistant) -> None:
     assert result["title"] == MOCK_TITLE
 
     # Check if entry exists.
-    entries = hass.config_entries.async_entries()
+    entries = menuai.config_entries.async_entries()
     assert len(entries) == 1
     # Check if there is a device config in entry.
     entry_1 = entries[0]
@@ -206,7 +206,7 @@ async def test_multiple_flow_implementation(hass: HomeAssistant) -> None:
             return_value=[{"host-ip": MOCK_HOST}, {"host-ip": MOCK_HOST_ADDITIONAL}],
         ),
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
     assert result["type"] is FlowResultType.FORM
@@ -214,7 +214,7 @@ async def test_multiple_flow_implementation(hass: HomeAssistant) -> None:
 
     # Step Creds results with form in Step Mode.
     with patch("pyps4_2ndscreen.Helper.get_creds", return_value=MOCK_CREDS):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={}
         )
     assert result["type"] is FlowResultType.FORM
@@ -225,7 +225,7 @@ async def test_multiple_flow_implementation(hass: HomeAssistant) -> None:
         "pyps4_2ndscreen.Helper.has_devices",
         return_value=[{"host-ip": MOCK_HOST}, {"host-ip": MOCK_HOST_ADDITIONAL}],
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input=MOCK_AUTO
         )
     assert result["type"] is FlowResultType.FORM
@@ -239,7 +239,7 @@ async def test_multiple_flow_implementation(hass: HomeAssistant) -> None:
         ),
         patch("pyps4_2ndscreen.Helper.link", return_value=(True, True)),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input=MOCK_CONFIG_ADDITIONAL
         )
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -248,7 +248,7 @@ async def test_multiple_flow_implementation(hass: HomeAssistant) -> None:
     assert result["title"] == MOCK_TITLE
 
     # Check if there are 2 entries.
-    entries = hass.config_entries.async_entries()
+    entries = menuai.config_entries.async_entries()
     assert len(entries) == 2
     # Check if there is device config in the last entry.
     entry_2 = entries[-1]
@@ -258,11 +258,11 @@ async def test_multiple_flow_implementation(hass: HomeAssistant) -> None:
     assert entry_1 is not entry_2
 
 
-async def test_port_bind_abort(hass: HomeAssistant) -> None:
+async def test_port_bind_abort(menuai: menuai) -> None:
     """Test that flow aborted when cannot bind to ports 987, 997."""
     with patch("pyps4_2ndscreen.Helper.port_bind", return_value=MOCK_UDP_PORT):
         reason = "port_987_bind_error"
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
     assert result["type"] is FlowResultType.ABORT
@@ -270,26 +270,26 @@ async def test_port_bind_abort(hass: HomeAssistant) -> None:
 
     with patch("pyps4_2ndscreen.Helper.port_bind", return_value=MOCK_TCP_PORT):
         reason = "port_997_bind_error"
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == reason
 
 
-async def test_duplicate_abort(hass: HomeAssistant) -> None:
+async def test_duplicate_abort(menuai: menuai) -> None:
     """Test that Flow aborts when found devices already configured."""
-    MockConfigEntry(domain=ps4.DOMAIN, data=MOCK_DATA).add_to_hass(hass)
+    MockConfigEntry(domain=ps4.DOMAIN, data=MOCK_DATA).add_to_menuai(menuai)
 
     with patch("pyps4_2ndscreen.Helper.port_bind", return_value=None):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "creds"
 
     with patch("pyps4_2ndscreen.Helper.get_creds", return_value=MOCK_CREDS):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={}
         )
     assert result["type"] is FlowResultType.FORM
@@ -298,28 +298,28 @@ async def test_duplicate_abort(hass: HomeAssistant) -> None:
     with patch(
         "pyps4_2ndscreen.Helper.has_devices", return_value=[{"host-ip": MOCK_HOST}]
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input=MOCK_AUTO
         )
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
 
 
-async def test_additional_device(hass: HomeAssistant) -> None:
+async def test_additional_device(menuai: menuai) -> None:
     """Test that Flow can configure another device."""
     # Mock existing entry.
     entry = MockConfigEntry(domain=ps4.DOMAIN, data=MOCK_DATA)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with patch("pyps4_2ndscreen.Helper.port_bind", return_value=None):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "creds"
 
     with patch("pyps4_2ndscreen.Helper.get_creds", return_value=MOCK_CREDS):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={}
         )
     assert result["type"] is FlowResultType.FORM
@@ -329,12 +329,12 @@ async def test_additional_device(hass: HomeAssistant) -> None:
         "pyps4_2ndscreen.Helper.has_devices",
         return_value=[{"host-ip": MOCK_HOST}, {"host-ip": MOCK_HOST_ADDITIONAL}],
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input=MOCK_AUTO
         )
 
     with patch("pyps4_2ndscreen.Helper.link", return_value=(True, True)):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input=MOCK_CONFIG_ADDITIONAL
         )
 
@@ -344,10 +344,10 @@ async def test_additional_device(hass: HomeAssistant) -> None:
     assert result["title"] == MOCK_TITLE
 
 
-async def test_0_pin(hass: HomeAssistant) -> None:
+async def test_0_pin(menuai: menuai) -> None:
     """Test Pin with leading '0' is passed correctly."""
     with patch("pyps4_2ndscreen.Helper.get_creds", return_value=MOCK_CREDS):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": "creds"},
             data={},
@@ -360,12 +360,12 @@ async def test_0_pin(hass: HomeAssistant) -> None:
             "pyps4_2ndscreen.Helper.has_devices", return_value=[{"host-ip": MOCK_HOST}]
         ),
         patch(
-            "homeassistant.components.ps4."
+            "menuai.components.ps4."
             "config_flow.location_util.async_detect_location_info",
             return_value=MOCK_LOCATION,
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], MOCK_AUTO
         )
     assert result["type"] is FlowResultType.FORM
@@ -379,7 +379,7 @@ async def test_0_pin(hass: HomeAssistant) -> None:
             "pyps4_2ndscreen.Helper.has_devices", return_value=[{"host-ip": MOCK_HOST}]
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], mock_config
         )
     mock_call.assert_called_once_with(
@@ -387,24 +387,24 @@ async def test_0_pin(hass: HomeAssistant) -> None:
     )
 
 
-async def test_no_devices_found_abort(hass: HomeAssistant) -> None:
+async def test_no_devices_found_abort(menuai: menuai) -> None:
     """Test that failure to find devices aborts flow."""
     with patch("pyps4_2ndscreen.Helper.port_bind", return_value=None):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "creds"
 
     with patch("pyps4_2ndscreen.Helper.get_creds", return_value=MOCK_CREDS):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={}
         )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "mode"
 
     with patch("pyps4_2ndscreen.Helper.has_devices", return_value=[]):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input=MOCK_AUTO
         )
 
@@ -412,17 +412,17 @@ async def test_no_devices_found_abort(hass: HomeAssistant) -> None:
     assert result["reason"] == "no_devices_found"
 
 
-async def test_manual_mode(hass: HomeAssistant) -> None:
+async def test_manual_mode(menuai: menuai) -> None:
     """Test host specified in manual mode is passed to Step Link."""
     with patch("pyps4_2ndscreen.Helper.port_bind", return_value=None):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "creds"
 
     with patch("pyps4_2ndscreen.Helper.get_creds", return_value=MOCK_CREDS):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={}
         )
     assert result["type"] is FlowResultType.FORM
@@ -432,7 +432,7 @@ async def test_manual_mode(hass: HomeAssistant) -> None:
     with patch(
         "pyps4_2ndscreen.Helper.has_devices", return_value=[{"host-ip": MOCK_HOST}]
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input=MOCK_MANUAL
         )
 
@@ -440,17 +440,17 @@ async def test_manual_mode(hass: HomeAssistant) -> None:
     assert result["step_id"] == "link"
 
 
-async def test_credential_abort(hass: HomeAssistant) -> None:
+async def test_credential_abort(menuai: menuai) -> None:
     """Test that failure to get credentials aborts flow."""
     with patch("pyps4_2ndscreen.Helper.port_bind", return_value=None):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "creds"
 
     with patch("pyps4_2ndscreen.Helper.get_creds", return_value=None):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={}
         )
 
@@ -458,17 +458,17 @@ async def test_credential_abort(hass: HomeAssistant) -> None:
     assert result["reason"] == "credential_error"
 
 
-async def test_credential_timeout(hass: HomeAssistant) -> None:
+async def test_credential_timeout(menuai: menuai) -> None:
     """Test that Credential Timeout shows error."""
     with patch("pyps4_2ndscreen.Helper.port_bind", return_value=None):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "creds"
 
     with patch("pyps4_2ndscreen.Helper.get_creds", side_effect=CredentialTimeout):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={}
         )
 
@@ -477,17 +477,17 @@ async def test_credential_timeout(hass: HomeAssistant) -> None:
     assert result["errors"] == {"base": "credential_timeout"}
 
 
-async def test_wrong_pin_error(hass: HomeAssistant) -> None:
+async def test_wrong_pin_error(menuai: menuai) -> None:
     """Test that incorrect pin throws an error."""
     with patch("pyps4_2ndscreen.Helper.port_bind", return_value=None):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "creds"
 
     with patch("pyps4_2ndscreen.Helper.get_creds", return_value=MOCK_CREDS):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={}
         )
     assert result["type"] is FlowResultType.FORM
@@ -496,12 +496,12 @@ async def test_wrong_pin_error(hass: HomeAssistant) -> None:
     with patch(
         "pyps4_2ndscreen.Helper.has_devices", return_value=[{"host-ip": MOCK_HOST}]
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input=MOCK_AUTO
         )
 
     with patch("pyps4_2ndscreen.Helper.link", return_value=(True, False)):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input=MOCK_CONFIG
         )
     assert result["type"] is FlowResultType.FORM
@@ -509,17 +509,17 @@ async def test_wrong_pin_error(hass: HomeAssistant) -> None:
     assert result["errors"] == {"base": "login_failed"}
 
 
-async def test_device_connection_error(hass: HomeAssistant) -> None:
+async def test_device_connection_error(menuai: menuai) -> None:
     """Test that device not connected or on throws an error."""
     with patch("pyps4_2ndscreen.Helper.port_bind", return_value=None):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "creds"
 
     with patch("pyps4_2ndscreen.Helper.get_creds", return_value=MOCK_CREDS):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={}
         )
     assert result["type"] is FlowResultType.FORM
@@ -528,12 +528,12 @@ async def test_device_connection_error(hass: HomeAssistant) -> None:
     with patch(
         "pyps4_2ndscreen.Helper.has_devices", return_value=[{"host-ip": MOCK_HOST}]
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input=MOCK_AUTO
         )
 
     with patch("pyps4_2ndscreen.Helper.link", return_value=(False, True)):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input=MOCK_CONFIG
         )
     assert result["type"] is FlowResultType.FORM
@@ -541,23 +541,23 @@ async def test_device_connection_error(hass: HomeAssistant) -> None:
     assert result["errors"] == {"base": "cannot_connect"}
 
 
-async def test_manual_mode_no_ip_error(hass: HomeAssistant) -> None:
+async def test_manual_mode_no_ip_error(menuai: menuai) -> None:
     """Test no IP specified in manual mode throws an error."""
     with patch("pyps4_2ndscreen.Helper.port_bind", return_value=None):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "creds"
 
     with patch("pyps4_2ndscreen.Helper.get_creds", return_value=MOCK_CREDS):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={}
         )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "mode"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={"Config Mode": "Manual Entry"}
     )
 

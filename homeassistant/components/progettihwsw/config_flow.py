@@ -6,9 +6,9 @@ from typing import TYPE_CHECKING, Any
 from ProgettiHWSW.ProgettiHWSWAPI import ProgettiHWSWAPI
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from .const import DOMAIN
 
@@ -19,7 +19,7 @@ DATA_SCHEMA = vol.Schema(
 )
 
 
-async def validate_input(hass: HomeAssistant, data):
+async def validate_input(menuai: menuai, data):
     """Validate the user host input."""
 
     api_instance = ProgettiHWSWAPI(f"{data['host']}:{data['port']}")
@@ -86,7 +86,7 @@ class ProgettiHWSWConfigFlow(ConfigFlow, domain=DOMAIN):
             )
 
             try:
-                info = await validate_input(self.hass, user_input)
+                info = await validate_input(self.menuai, user_input)
             except CannotConnect:
                 errors["base"] = "cannot_connect"
             except Exception:
@@ -102,13 +102,13 @@ class ProgettiHWSWConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot identify host."""
 
 
-class WrongInfo(HomeAssistantError):
+class WrongInfo(menuaiError):
     """Error to indicate we cannot validate relay modes input."""
 
 
-class ExistingEntry(HomeAssistantError):
+class ExistingEntry(menuaiError):
     """Error to indicate we cannot validate relay modes input."""

@@ -1,7 +1,7 @@
 """Coordinator for fetching data from Google Photos API.
 
 This coordinator fetches the list of Google Photos albums that were created by
-Home Assistant, which for large libraries may take some time. The list of album
+MenuAI, which for large libraries may take some time. The list of album
 ids and titles is cached and this provides a method to refresh urls since they
 are short lived.
 """
@@ -15,9 +15,9 @@ from google_photos_library_api.api import GooglePhotosLibraryApi
 from google_photos_library_api.exceptions import GooglePhotosApiError
 from google_photos_library_api.model import Album, NewAlbum
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -37,13 +37,13 @@ class GooglePhotosUpdateCoordinator(DataUpdateCoordinator[dict[str, str]]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: GooglePhotosConfigEntry,
         client: GooglePhotosLibraryApi,
     ) -> None:
         """Initialize TaskUpdateCoordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name="Google Photos",

@@ -1,6 +1,6 @@
 """Test the permission utils."""
 
-from homeassistant.auth.permissions import util
+from menuai.auth.permissions import util
 
 
 def test_test_all() -> None:

@@ -18,11 +18,11 @@ import async_interrupt
 from propcache.api import cached_property
 import voluptuous as vol
 
-from homeassistant import exceptions
-from homeassistant.components import scene
-from homeassistant.components.device_automation import action as device_action
-from homeassistant.components.logger import LOGSEVERITY
-from homeassistant.const import (
+from menuai import exceptions
+from menuai.components import scene
+from menuai.components.device_automation import action as device_action
+from menuai.components.logger import LOGSEVERITY
+from menuai.const import (
     ATTR_AREA_ID,
     ATTR_DEVICE_ID,
     ATTR_ENTITY_ID,
@@ -66,24 +66,24 @@ from homeassistant.const import (
     CONF_WAIT_FOR_TRIGGER,
     CONF_WAIT_TEMPLATE,
     CONF_WHILE,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     SERVICE_TURN_ON,
 )
-from homeassistant.core import (
+from menuai.core import (
     Context,
     Event,
-    HassJob,
-    HomeAssistant,
+    menuaiJob,
+    menuai,
     ServiceResponse,
     State,
     SupportsResponse,
     callback,
 )
-from homeassistant.util import slugify
-from homeassistant.util.async_ import create_eager_task
-from homeassistant.util.dt import utcnow
-from homeassistant.util.hass_dict import HassKey
-from homeassistant.util.signal_type import SignalType, SignalTypeFormat
+from menuai.util import slugify
+from menuai.util.async_ import create_eager_task
+from menuai.util.dt import utcnow
+from menuai.util.menuai_dict import menuaiKey
+from menuai.util.signal_type import SignalType, SignalTypeFormat
 
 from . import condition, config_validation as cv, service, template
 from .condition import ConditionCheckerType, trace_condition_function
@@ -132,11 +132,11 @@ DEFAULT_MAX_EXCEEDED = "WARNING"
 ATTR_CUR = "current"
 ATTR_MAX = "max"
 
-DATA_SCRIPTS: HassKey[list[ScriptData]] = HassKey("helpers.script")
-DATA_SCRIPT_BREAKPOINTS: HassKey[dict[str, dict[str, set[str]]]] = HassKey(
+DATA_SCRIPTS: menuaiKey[list[ScriptData]] = menuaiKey("helpers.script")
+DATA_SCRIPT_BREAKPOINTS: menuaiKey[dict[str, dict[str, set[str]]]] = menuaiKey(
     "helpers.script_breakpoints"
 )
-DATA_NEW_SCRIPT_RUNS_NOT_ALLOWED: HassKey[None] = HassKey("helpers.script_not_allowed")
+DATA_NEW_SCRIPT_RUNS_NOT_ALLOWED: menuaiKey[None] = menuaiKey("helpers.script_not_allowed")
 RUN_ID_ANY = "*"
 NODE_ANY = "*"
 
@@ -185,7 +185,7 @@ def action_trace_append(variables: TemplateVarsType, path: str) -> TraceElement:
 
 @asynccontextmanager
 async def trace_action(
-    hass: HomeAssistant,
+    menuai: menuai,
     script_run: _ScriptRun,
     stop: asyncio.Future[None],
     variables: TemplateVarsType,
@@ -199,7 +199,7 @@ async def trace_action(
     if trace_id:
         key = trace_id[0]
         run_id = trace_id[1]
-        breakpoints = hass.data[DATA_SCRIPT_BREAKPOINTS]
+        breakpoints = menuai.data[DATA_SCRIPT_BREAKPOINTS]
         if key in breakpoints and (
             (
                 run_id in breakpoints[key]
@@ -217,10 +217,10 @@ async def trace_action(
             )
         ):
             async_dispatcher_send_internal(
-                hass, SCRIPT_BREAKPOINT_HIT, key, run_id, path
+                menuai, SCRIPT_BREAKPOINT_HIT, key, run_id, path
             )
 
-            done = hass.loop.create_future()
+            done = menuai.loop.create_future()
 
             @callback
             def async_continue_stop(
@@ -231,9 +231,9 @@ async def trace_action(
                 _set_result_unless_done(done)
 
             signal = SCRIPT_DEBUG_CONTINUE_STOP.format(key, run_id)
-            remove_signal1 = async_dispatcher_connect(hass, signal, async_continue_stop)
+            remove_signal1 = async_dispatcher_connect(menuai, signal, async_continue_stop)
             remove_signal2 = async_dispatcher_connect(
-                hass, SCRIPT_DEBUG_CONTINUE_ALL, async_continue_stop
+                menuai, SCRIPT_DEBUG_CONTINUE_ALL, async_continue_stop
             )
 
             await asyncio.wait([stop, done], return_when=asyncio.FIRST_COMPLETED)
@@ -295,16 +295,16 @@ REPEAT_TERMINATE_ITERATIONS = 10000
 
 
 async def async_validate_actions_config(
-    hass: HomeAssistant, actions: list[ConfigType]
+    menuai: menuai, actions: list[ConfigType]
 ) -> list[ConfigType]:
     """Validate a list of actions."""
     # No gather here because async_validate_action_config is unlikely
     # to suspend and the overhead of creating many tasks is not worth it
-    return [await async_validate_action_config(hass, action) for action in actions]
+    return [await async_validate_action_config(menuai, action) for action in actions]
 
 
 async def async_validate_action_config(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> ConfigType:
     """Validate config."""
     action_type = cv.determine_script_action(config)
@@ -313,65 +313,65 @@ async def async_validate_action_config(
         pass
 
     elif action_type == cv.SCRIPT_ACTION_DEVICE_AUTOMATION:
-        config = await device_action.async_validate_action_config(hass, config)
+        config = await device_action.async_validate_action_config(menuai, config)
 
     elif action_type == cv.SCRIPT_ACTION_CHECK_CONDITION:
-        config = await condition.async_validate_condition_config(hass, config)
+        config = await condition.async_validate_condition_config(menuai, config)
 
     elif action_type == cv.SCRIPT_ACTION_WAIT_FOR_TRIGGER:
         config[CONF_WAIT_FOR_TRIGGER] = await async_validate_trigger_config(
-            hass, config[CONF_WAIT_FOR_TRIGGER]
+            menuai, config[CONF_WAIT_FOR_TRIGGER]
         )
 
     elif action_type == cv.SCRIPT_ACTION_REPEAT:
         if CONF_UNTIL in config[CONF_REPEAT]:
             conditions = await condition.async_validate_conditions_config(
-                hass, config[CONF_REPEAT][CONF_UNTIL]
+                menuai, config[CONF_REPEAT][CONF_UNTIL]
             )
             config[CONF_REPEAT][CONF_UNTIL] = conditions
         if CONF_WHILE in config[CONF_REPEAT]:
             conditions = await condition.async_validate_conditions_config(
-                hass, config[CONF_REPEAT][CONF_WHILE]
+                menuai, config[CONF_REPEAT][CONF_WHILE]
             )
             config[CONF_REPEAT][CONF_WHILE] = conditions
         config[CONF_REPEAT][CONF_SEQUENCE] = await async_validate_actions_config(
-            hass, config[CONF_REPEAT][CONF_SEQUENCE]
+            menuai, config[CONF_REPEAT][CONF_SEQUENCE]
         )
 
     elif action_type == cv.SCRIPT_ACTION_CHOOSE:
         if CONF_DEFAULT in config:
             config[CONF_DEFAULT] = await async_validate_actions_config(
-                hass, config[CONF_DEFAULT]
+                menuai, config[CONF_DEFAULT]
             )
 
         for choose_conf in config[CONF_CHOOSE]:
             conditions = await condition.async_validate_conditions_config(
-                hass, choose_conf[CONF_CONDITIONS]
+                menuai, choose_conf[CONF_CONDITIONS]
             )
             choose_conf[CONF_CONDITIONS] = conditions
             choose_conf[CONF_SEQUENCE] = await async_validate_actions_config(
-                hass, choose_conf[CONF_SEQUENCE]
+                menuai, choose_conf[CONF_SEQUENCE]
             )
 
     elif action_type == cv.SCRIPT_ACTION_IF:
         config[CONF_IF] = await condition.async_validate_conditions_config(
-            hass, config[CONF_IF]
+            menuai, config[CONF_IF]
         )
-        config[CONF_THEN] = await async_validate_actions_config(hass, config[CONF_THEN])
+        config[CONF_THEN] = await async_validate_actions_config(menuai, config[CONF_THEN])
         if CONF_ELSE in config:
             config[CONF_ELSE] = await async_validate_actions_config(
-                hass, config[CONF_ELSE]
+                menuai, config[CONF_ELSE]
             )
 
     elif action_type == cv.SCRIPT_ACTION_PARALLEL:
         for parallel_conf in config[CONF_PARALLEL]:
             parallel_conf[CONF_SEQUENCE] = await async_validate_actions_config(
-                hass, parallel_conf[CONF_SEQUENCE]
+                menuai, parallel_conf[CONF_SEQUENCE]
             )
 
     elif action_type == cv.SCRIPT_ACTION_SEQUENCE:
         config[CONF_SEQUENCE] = await async_validate_actions_config(
-            hass, config[CONF_SEQUENCE]
+            menuai, config[CONF_SEQUENCE]
         )
 
     else:
@@ -408,20 +408,20 @@ class _ScriptRun:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         script: Script,
         variables: ScriptRunVariables,
         context: Context | None,
         log_exceptions: bool,
     ) -> None:
-        self._hass = hass
+        self._menuai = menuai
         self._script = script
         self._variables = variables
         self._context = context
         self._log_exceptions = log_exceptions
         self._step = -1
         self._started = False
-        self._stop = hass.loop.create_future()
+        self._stop = menuai.loop.create_future()
         self._stopped = asyncio.Event()
         self._conversation_response: str | None | UndefinedType = UNDEFINED
 
@@ -493,7 +493,7 @@ class _ScriptRun:
 
         with trace_path(str(self._step)):
             async with trace_action(
-                self._hass, self, self._stop, self._variables.non_parallel_scope
+                self._menuai, self, self._stop, self._variables.non_parallel_scope
             ) as trace_element:
                 if self._stop.done():
                     return
@@ -574,8 +574,8 @@ class _ScriptRun:
         ):
             raise exception
 
-        # Only Home Assistant errors can be ignored.
-        if not isinstance(exception, exceptions.HomeAssistantError):
+        # Only MenuAI errors can be ignored.
+        if not isinstance(exception, exceptions.menuaiError):
             raise exception
 
     def _log_exception(self, exception: Exception) -> None:
@@ -596,7 +596,7 @@ class _ScriptRun:
         elif isinstance(exception, exceptions.ServiceNotFound):
             error_desc = "Service not found"
 
-        elif isinstance(exception, exceptions.HomeAssistantError):
+        elif isinstance(exception, exceptions.menuaiError):
             error_desc = "Error"
 
         else:
@@ -634,7 +634,7 @@ class _ScriptRun:
             trace_set_result(enabled=False)
             return
         result = await self._async_run_long_action(
-            self._hass.async_create_task_internal(
+            self._menuai.async_create_task_internal(
                 script.async_run(
                     self._variables.enter_scope(parallel=parallel), self._context
                 ),
@@ -689,13 +689,13 @@ class _ScriptRun:
 
         @trace_condition_function
         def traced_test_conditions(
-            hass: HomeAssistant, variables: TemplateVarsType
+            menuai: menuai, variables: TemplateVarsType
         ) -> bool | None:
             try:
                 with trace_path(condition_path):
                     for idx, cond in enumerate(conditions):
                         with trace_path(str(idx)):
-                            if cond(hass, variables) is False:
+                            if cond(menuai, variables) is False:
                                 return False
             except exceptions.ConditionError as ex:
                 _LOGGER.warning("Error in '%s[%s]' evaluation: %s", name, idx, ex)
@@ -703,7 +703,7 @@ class _ScriptRun:
 
             return True
 
-        return traced_test_conditions(self._hass, self._variables)
+        return traced_test_conditions(self._menuai, self._variables)
 
     async def _async_step_choose(self) -> None:
         """Choose a sequence."""
@@ -736,7 +736,7 @@ class _ScriptRun:
             trace_element = trace_stack_top(trace_stack_cv)
             if trace_element:
                 trace_element.reuse_by_child = True
-            check = cond(self._hass, self._variables)
+            check = cond(self._menuai, self._variables)
         except exceptions.ConditionError as ex:
             _LOGGER.warning("Error in 'condition' evaluation:\n%s", ex)
             check = False
@@ -983,15 +983,15 @@ class _ScriptRun:
         self._step_log("call service")
 
         params = service.async_prepare_call_from_config(
-            self._hass, self._action, self._variables
+            self._menuai, self._action, self._variables
         )
 
         # Validate response data parameters. This check ignores services that do
         # not exist which will raise an appropriate error in the service call below.
         response_variable = self._action.get(CONF_RESPONSE_VARIABLE)
         return_response = response_variable is not None
-        if self._hass.services.has_service(params[CONF_DOMAIN], params[CONF_SERVICE]):
-            supports_response = self._hass.services.supports_response(
+        if self._menuai.services.has_service(params[CONF_DOMAIN], params[CONF_SERVICE]):
+            supports_response = self._menuai.services.supports_response(
                 params[CONF_DOMAIN], params[CONF_SERVICE]
             )
             if supports_response == SupportsResponse.ONLY and not return_response:
@@ -1010,8 +1010,8 @@ class _ScriptRun:
         ) or params[CONF_DOMAIN] in ("python_script", "script")
         trace_set_result(params=params, running_script=running_script)
         response_data = await self._async_run_long_action(
-            self._hass.async_create_task_internal(
-                self._hass.services.async_call(
+            self._menuai.async_create_task_internal(
+                self._menuai.services.async_call(
                     **params,
                     blocking=True,
                     context=self._context,
@@ -1027,7 +1027,7 @@ class _ScriptRun:
         """Perform the device automation specified in the action."""
         self._step_log("device automation")
         await device_action.async_call_action_from_config(
-            self._hass, self._action, dict(self._variables), self._context
+            self._menuai, self._action, dict(self._variables), self._context
         )
 
     async def _async_step_event(self) -> None:
@@ -1048,7 +1048,7 @@ class _ScriptRun:
                 )
 
         trace_set_result(event=self._action[CONF_EVENT], event_data=event_data)
-        self._hass.bus.async_fire_internal(
+        self._menuai.bus.async_fire_internal(
             self._action[CONF_EVENT], event_data, context=self._context
         )
 
@@ -1056,7 +1056,7 @@ class _ScriptRun:
         """Activate the scene specified in the action."""
         self._step_log("activate scene")
         trace_set_result(scene=self._action[CONF_SCENE])
-        await self._hass.services.async_call(
+        await self._menuai.services.async_call(
             scene.DOMAIN,
             SERVICE_TURN_ON,
             {ATTR_ENTITY_ID: self._action[CONF_SCENE]},
@@ -1105,8 +1105,8 @@ class _ScriptRun:
         timeout_future: asyncio.Future[None] | None = None
         futures: list[asyncio.Future[None]] = [self._stop]
         if timeout:
-            timeout_future = self._hass.loop.create_future()
-            timeout_handle = self._hass.loop.call_later(
+            timeout_future = self._menuai.loop.create_future()
+            timeout_handle = self._menuai.loop.call_later(
                 timeout, _set_result_unless_done, timeout_future
             )
             futures.append(timeout_future)
@@ -1190,7 +1190,7 @@ class _ScriptRun:
         """Set the remaining time variable for a wait step."""
         wait_var = self._variables["wait"]
         if timeout_handle:
-            wait_var["remaining"] = timeout_handle.when() - self._hass.loop.time()
+            wait_var["remaining"] = timeout_handle.when() - self._menuai.loop.time()
         else:
             wait_var["remaining"] = None
 
@@ -1219,7 +1219,7 @@ class _ScriptRun:
         futures, timeout_handle, timeout_future = self._async_futures_with_timeout(
             timeout
         )
-        done = self._hass.loop.create_future()
+        done = self._menuai.loop.create_future()
         futures.append(done)
 
         async def async_done(
@@ -1234,7 +1234,7 @@ class _ScriptRun:
             self._log(msg, level=level, **kwargs)
 
         remove_triggers = await async_initialize_triggers(
-            self._hass,
+            self._menuai,
             self._action[CONF_WAIT_FOR_TRIGGER],
             async_done,
             self._script.domain,
@@ -1262,7 +1262,7 @@ class _ScriptRun:
         wait_template = self._action[CONF_WAIT_TEMPLATE]
 
         # check if condition already okay
-        if condition.async_template(self._hass, wait_template, self._variables, False):
+        if condition.async_template(self._menuai, wait_template, self._variables, False):
             self._variables["wait"]["completed"] = True
             self._changed()
             return
@@ -1275,7 +1275,7 @@ class _ScriptRun:
         futures, timeout_handle, timeout_future = self._async_futures_with_timeout(
             timeout
         )
-        done = self._hass.loop.create_future()
+        done = self._menuai.loop.create_future()
         futures.append(done)
 
         @callback
@@ -1288,7 +1288,7 @@ class _ScriptRun:
             _set_result_unless_done(done)
 
         unsub = async_track_template(
-            self._hass, wait_template, async_script_wait, self._variables
+            self._menuai, wait_template, async_script_wait, self._variables
         )
         self._changed()
         await self._async_wait_with_optional_timeout(
@@ -1339,20 +1339,20 @@ class _QueuedScriptRun(_ScriptRun):
 
 
 @callback
-def _schedule_stop_scripts_after_shutdown(hass: HomeAssistant) -> None:
+def _schedule_stop_scripts_after_shutdown(menuai: menuai) -> None:
     """Stop running Script objects started after shutdown."""
     async_call_later(
-        hass, _SHUTDOWN_MAX_WAIT, partial(_async_stop_scripts_after_shutdown, hass)
+        menuai, _SHUTDOWN_MAX_WAIT, partial(_async_stop_scripts_after_shutdown, menuai)
     )
 
 
 async def _async_stop_scripts_after_shutdown(
-    hass: HomeAssistant, point_in_time: datetime
+    menuai: menuai, point_in_time: datetime
 ) -> None:
     """Stop running Script objects started after shutdown."""
-    hass.data[DATA_NEW_SCRIPT_RUNS_NOT_ALLOWED] = None
+    menuai.data[DATA_NEW_SCRIPT_RUNS_NOT_ALLOWED] = None
     running_scripts = [
-        script for script in hass.data[DATA_SCRIPTS] if script["instance"].is_running
+        script for script in menuai.data[DATA_SCRIPTS] if script["instance"].is_running
     ]
     if running_scripts:
         names = ", ".join([script["instance"].name for script in running_scripts])
@@ -1365,13 +1365,13 @@ async def _async_stop_scripts_after_shutdown(
         )
 
 
-async def _async_stop_scripts_at_shutdown(hass: HomeAssistant, event: Event) -> None:
+async def _async_stop_scripts_at_shutdown(menuai: menuai, event: Event) -> None:
     """Stop running Script objects started before shutdown."""
-    _schedule_stop_scripts_after_shutdown(hass)
+    _schedule_stop_scripts_after_shutdown(menuai)
 
     running_scripts = [
         script
-        for script in hass.data[DATA_SCRIPTS]
+        for script in menuai.data[DATA_SCRIPTS]
         if script["instance"].is_running and script["started_before_shutdown"]
     ]
     if running_scripts:
@@ -1431,7 +1431,7 @@ class Script:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         sequence: Sequence[dict[str, Any]],
         name: str,
         domain: str,
@@ -1452,20 +1452,20 @@ class Script:
 
         enabled attribute is only used for non-top-level scripts.
         """
-        if not (all_scripts := hass.data.get(DATA_SCRIPTS)):
-            all_scripts = hass.data[DATA_SCRIPTS] = []
-            hass.bus.async_listen_once(
-                EVENT_HOMEASSISTANT_STOP, partial(_async_stop_scripts_at_shutdown, hass)
+        if not (all_scripts := menuai.data.get(DATA_SCRIPTS)):
+            all_scripts = menuai.data[DATA_SCRIPTS] = []
+            menuai.bus.async_listen_once(
+                EVENT_menuai_STOP, partial(_async_stop_scripts_at_shutdown, menuai)
             )
         self.top_level = top_level
         if top_level:
             all_scripts.append(
-                {"instance": self, "started_before_shutdown": not hass.is_stopping}
+                {"instance": self, "started_before_shutdown": not menuai.is_stopping}
             )
-        if DATA_SCRIPT_BREAKPOINTS not in hass.data:
-            hass.data[DATA_SCRIPT_BREAKPOINTS] = {}
+        if DATA_SCRIPT_BREAKPOINTS not in menuai.data:
+            menuai.data[DATA_SCRIPT_BREAKPOINTS] = {}
 
-        self._hass = hass
+        self._menuai = menuai
         self.sequence = sequence
         self.name = name
         self.unique_id = f"{domain}.{name}-{id(self)}"
@@ -1474,7 +1474,7 @@ class Script:
         self.running_description = running_description or f"{domain} script"
         self._change_listener = change_listener
         self._change_listener_job = (
-            None if change_listener is None else HassJob(change_listener)
+            None if change_listener is None else menuaiJob(change_listener)
         )
 
         self.script_mode = script_mode
@@ -1510,7 +1510,7 @@ class Script:
             self._change_listener_job is None
             or change_listener != self._change_listener_job.target
         ):
-            self._change_listener_job = HassJob(change_listener)
+            self._change_listener_job = menuaiJob(change_listener)
 
     def _set_logger(self, logger: logging.Logger | None = None) -> None:
         if logger:
@@ -1538,7 +1538,7 @@ class Script:
 
     def _changed(self) -> None:
         if self._change_listener_job:
-            self._hass.async_run_hass_job(self._change_listener_job)
+            self._menuai.async_run_menuai_job(self._change_listener_job)
 
     @callback
     def _chain_change_listener(self, sub_script: Script) -> None:
@@ -1730,7 +1730,7 @@ class Script:
     ) -> None:
         """Run script."""
         asyncio.run_coroutine_threadsafe(
-            self.async_run(variables, context), self._hass.loop
+            self.async_run(variables, context), self._menuai.loop
         ).result()
 
     async def async_run(
@@ -1746,9 +1746,9 @@ class Script:
             )
             context = Context()
 
-        # Prevent spawning new script runs when Home Assistant is shutting down
-        if DATA_NEW_SCRIPT_RUNS_NOT_ALLOWED in self._hass.data:
-            self._log("Home Assistant is shutting down, starting script blocked")
+        # Prevent spawning new script runs when MenuAI is shutting down
+        if DATA_NEW_SCRIPT_RUNS_NOT_ALLOWED in self._menuai.data:
+            self._log("MenuAI is shutting down, starting script blocked")
             return None
 
         # Prevent spawning new script runs if not allowed by script mode
@@ -1774,7 +1774,7 @@ class Script:
             if self.variables:
                 try:
                     run_variables = self.variables.async_render(
-                        self._hass,
+                        self._menuai,
                         run_variables,
                     )
                 except exceptions.TemplateError as err:
@@ -1814,7 +1814,7 @@ class Script:
             cls = _ScriptRun
         else:
             cls = _QueuedScriptRun
-        run = cls(self._hass, self, variables, context, self._log_exceptions)
+        run = cls(self._menuai, self, variables, context, self._log_exceptions)
         has_existing_runs = bool(self._runs)
         self._runs.append(run)
         if self.script_mode == SCRIPT_MODE_RESTART and has_existing_runs:
@@ -1863,7 +1863,7 @@ class Script:
     async def _async_get_condition(self, config: ConfigType) -> ConditionCheckerType:
         config_cache_key = frozenset((k, str(v)) for k, v in config.items())
         if not (cond := self._config_cache.get(config_cache_key)):
-            cond = await condition.async_from_config(self._hass, config)
+            cond = await condition.async_from_config(self._menuai, config)
             self._config_cache[config_cache_key] = cond
         return cond
 
@@ -1871,7 +1871,7 @@ class Script:
         action = self.sequence[step]
         step_name = action.get(CONF_ALIAS, f"Repeat at step {step + 1}")
         sub_script = Script(
-            self._hass,
+            self._menuai,
             action[CONF_REPEAT][CONF_SEQUENCE],
             f"{self.name}: {step_name}",
             self.domain,
@@ -1901,7 +1901,7 @@ class Script:
             ]
             choice_name = choice.get(CONF_ALIAS, f"choice {idx}")
             sub_script = Script(
-                self._hass,
+                self._menuai,
                 choice[CONF_SEQUENCE],
                 f"{self.name}: {step_name}: {choice_name}",
                 self.domain,
@@ -1919,7 +1919,7 @@ class Script:
         default_script: Script | None
         if CONF_DEFAULT in action:
             default_script = Script(
-                self._hass,
+                self._menuai,
                 action[CONF_DEFAULT],
                 f"{self.name}: {step_name}: default",
                 self.domain,
@@ -1953,7 +1953,7 @@ class Script:
         ]
 
         then_script = Script(
-            self._hass,
+            self._menuai,
             action[CONF_THEN],
             f"{self.name}: {step_name}",
             self.domain,
@@ -1967,7 +1967,7 @@ class Script:
 
         if CONF_ELSE in action:
             else_script = Script(
-                self._hass,
+                self._menuai,
                 action[CONF_ELSE],
                 f"{self.name}: {step_name}",
                 self.domain,
@@ -2002,7 +2002,7 @@ class Script:
         for idx, parallel_script in enumerate(action[CONF_PARALLEL], start=1):
             parallel_name = parallel_script.get(CONF_ALIAS, f"parallel {idx}")
             parallel_script = Script(
-                self._hass,
+                self._menuai,
                 parallel_script[CONF_SEQUENCE],
                 f"{self.name}: {step_name}: {parallel_name}",
                 self.domain,
@@ -2032,7 +2032,7 @@ class Script:
         step_name = action.get(CONF_ALIAS, f"Sequence action at step {step + 1}")
 
         sequence_script = Script(
-            self._hass,
+            self._menuai,
             action[CONF_SEQUENCE],
             f"{self.name}: {step_name}",
             self.domain,
@@ -2069,29 +2069,29 @@ class Script:
 
 @callback
 def breakpoint_clear(
-    hass: HomeAssistant, key: str, run_id: str | None, node: str
+    menuai: menuai, key: str, run_id: str | None, node: str
 ) -> None:
     """Clear a breakpoint."""
     run_id = run_id or RUN_ID_ANY
-    breakpoints = hass.data[DATA_SCRIPT_BREAKPOINTS]
+    breakpoints = menuai.data[DATA_SCRIPT_BREAKPOINTS]
     if key not in breakpoints or run_id not in breakpoints[key]:
         return
     breakpoints[key][run_id].discard(node)
 
 
 @callback
-def breakpoint_clear_all(hass: HomeAssistant) -> None:
+def breakpoint_clear_all(menuai: menuai) -> None:
     """Clear all breakpoints."""
-    hass.data[DATA_SCRIPT_BREAKPOINTS] = {}
+    menuai.data[DATA_SCRIPT_BREAKPOINTS] = {}
 
 
 @callback
 def breakpoint_set(
-    hass: HomeAssistant, key: str, run_id: str | None, node: str
+    menuai: menuai, key: str, run_id: str | None, node: str
 ) -> None:
     """Set a breakpoint."""
     run_id = run_id or RUN_ID_ANY
-    breakpoints = hass.data[DATA_SCRIPT_BREAKPOINTS]
+    breakpoints = menuai.data[DATA_SCRIPT_BREAKPOINTS]
     if key not in breakpoints:
         breakpoints[key] = {}
     if run_id not in breakpoints[key]:
@@ -2100,9 +2100,9 @@ def breakpoint_set(
 
 
 @callback
-def breakpoint_list(hass: HomeAssistant) -> list[dict[str, Any]]:
+def breakpoint_list(menuai: menuai) -> list[dict[str, Any]]:
     """List breakpoints."""
-    breakpoints = hass.data[DATA_SCRIPT_BREAKPOINTS]
+    breakpoints = menuai.data[DATA_SCRIPT_BREAKPOINTS]
 
     return [
         {"key": key, "run_id": run_id, "node": node}
@@ -2113,27 +2113,27 @@ def breakpoint_list(hass: HomeAssistant) -> list[dict[str, Any]]:
 
 
 @callback
-def debug_continue(hass: HomeAssistant, key: str, run_id: str) -> None:
+def debug_continue(menuai: menuai, key: str, run_id: str) -> None:
     """Continue execution of a halted script."""
     # Clear any wildcard breakpoint
-    breakpoint_clear(hass, key, run_id, NODE_ANY)
+    breakpoint_clear(menuai, key, run_id, NODE_ANY)
 
     signal = SCRIPT_DEBUG_CONTINUE_STOP.format(key, run_id)
-    async_dispatcher_send_internal(hass, signal, "continue")
+    async_dispatcher_send_internal(menuai, signal, "continue")
 
 
 @callback
-def debug_step(hass: HomeAssistant, key: str, run_id: str) -> None:
+def debug_step(menuai: menuai, key: str, run_id: str) -> None:
     """Single step a halted script."""
     # Set a wildcard breakpoint
-    breakpoint_set(hass, key, run_id, NODE_ANY)
+    breakpoint_set(menuai, key, run_id, NODE_ANY)
 
     signal = SCRIPT_DEBUG_CONTINUE_STOP.format(key, run_id)
-    async_dispatcher_send_internal(hass, signal, "continue")
+    async_dispatcher_send_internal(menuai, signal, "continue")
 
 
 @callback
-def debug_stop(hass: HomeAssistant, key: str, run_id: str) -> None:
+def debug_stop(menuai: menuai, key: str, run_id: str) -> None:
     """Stop execution of a running or halted script."""
     signal = SCRIPT_DEBUG_CONTINUE_STOP.format(key, run_id)
-    async_dispatcher_send_internal(hass, signal, "stop")
+    async_dispatcher_send_internal(menuai, signal, "stop")

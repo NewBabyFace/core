@@ -19,33 +19,33 @@ from dsmr_parser.clients.rfxtrx_protocol import (
 from dsmr_parser.objects import DSMRObject, MbusDevice, Telegram
 import serial
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     DOMAIN as SENSOR_DOMAIN,
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_HOST,
     CONF_PORT,
     CONF_PROTOCOL,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     EntityCategory,
     UnitOfEnergy,
     UnitOfVolume,
 )
-from homeassistant.core import CoreState, Event, HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import (
+from menuai.core import CoreState, Event, menuai, callback
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import (
     async_dispatcher_connect,
     async_dispatcher_send,
 )
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
-from homeassistant.util import Throttle
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
+from menuai.util import Throttle
 
 from . import DsmrConfigEntry
 from .const import (
@@ -584,16 +584,16 @@ def device_class_and_uom(
 
 
 def rename_old_gas_to_mbus(
-    hass: HomeAssistant, entry: ConfigEntry, mbus_device_id: str
+    menuai: menuai, entry: ConfigEntry, mbus_device_id: str
 ) -> None:
     """Rename old gas sensor to mbus variant."""
-    dev_reg = dr.async_get(hass)
+    dev_reg = dr.async_get(menuai)
     for dev_id in (mbus_device_id, entry.entry_id):
         device_entry_v1 = dev_reg.async_get_device(identifiers={(DOMAIN, dev_id)})
         if device_entry_v1 is not None:
             device_id = device_entry_v1.id
 
-            ent_reg = er.async_get(hass)
+            ent_reg = er.async_get(menuai)
             entries = er.async_entries_for_device(ent_reg, device_id)
 
             for entity in entries:
@@ -643,7 +643,7 @@ def is_supported_description(
 
 
 def create_mbus_entities(
-    hass: HomeAssistant, telegram: Telegram, entry: ConfigEntry, dsmr_version: str
+    menuai: menuai, telegram: Telegram, entry: ConfigEntry, dsmr_version: str
 ) -> Generator[DSMREntity]:
     """Create MBUS Entities."""
     mbus_devices: list[MbusDevice] = getattr(telegram, "MBUS_DEVICES", [])
@@ -658,7 +658,7 @@ def create_mbus_entities(
 
         if identifier := getattr(device, "MBUS_EQUIPMENT_IDENTIFIER", None):
             serial_ = identifier.value
-            rename_old_gas_to_mbus(hass, entry, serial_)
+            rename_old_gas_to_mbus(menuai, entry, serial_)
         else:
             serial_ = ""
 
@@ -692,7 +692,7 @@ def get_dsmr_object(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: DsmrConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -710,7 +710,7 @@ async def async_setup_entry(
         add_entities_handler()
         add_entities_handler = None
 
-        entities.extend(create_mbus_entities(hass, telegram, entry, dsmr_version))
+        entities.extend(create_mbus_entities(menuai, telegram, entry, dsmr_version))
 
         entities.extend(
             [
@@ -731,7 +731,7 @@ async def async_setup_entry(
         async_add_entities(entities)
 
     add_entities_handler = async_dispatcher_connect(
-        hass, EVENT_FIRST_TELEGRAM.format(entry.entry_id), init_async_add_entities
+        menuai, EVENT_FIRST_TELEGRAM.format(entry.entry_id), init_async_add_entities
     )
     min_time_between_updates = timedelta(
         seconds=entry.options.get(CONF_TIME_BETWEEN_UPDATE, DEFAULT_TIME_BETWEEN_UPDATE)
@@ -750,7 +750,7 @@ async def async_setup_entry(
         if not initialized and telegram:
             initialized = True
             async_dispatcher_send(
-                hass, EVENT_FIRST_TELEGRAM.format(entry.entry_id), telegram
+                menuai, EVENT_FIRST_TELEGRAM.format(entry.entry_id), telegram
             )
 
     # Creates an asyncio.Protocol factory for reading DSMR telegrams from
@@ -767,7 +767,7 @@ async def async_setup_entry(
             entry.data[CONF_PORT],
             dsmr_version,
             update_entities_telegram,
-            loop=hass.loop,
+            loop=menuai.loop,
             keep_alive_interval=60,
         )
     else:
@@ -780,16 +780,16 @@ async def async_setup_entry(
             entry.data[CONF_PORT],
             dsmr_version,
             update_entities_telegram,
-            loop=hass.loop,
+            loop=menuai.loop,
         )
 
     async def connect_and_reconnect() -> None:
-        """Connect to DSMR and keep reconnecting until Home Assistant stops."""
+        """Connect to DSMR and keep reconnecting until MenuAI stops."""
         stop_listener = None
         transport = None
         protocol = None
 
-        while hass.state is CoreState.not_running or hass.is_running:
+        while menuai.state is CoreState.not_running or menuai.is_running:
             # Start DSMR asyncio.Protocol reader
 
             # Reflect connected state in devices state by setting an
@@ -797,7 +797,7 @@ async def async_setup_entry(
             update_entities_telegram({})
 
             try:
-                transport, protocol = await hass.loop.create_task(reader_factory())
+                transport, protocol = await menuai.loop.create_task(reader_factory())
 
                 if transport:
                     # Register listener to close transport on HA shutdown
@@ -808,15 +808,15 @@ async def async_setup_entry(
                             return
                         transport.close()  # noqa: B023
 
-                    stop_listener = hass.bus.async_listen_once(
-                        EVENT_HOMEASSISTANT_STOP, close_transport
+                    stop_listener = menuai.bus.async_listen_once(
+                        EVENT_menuai_STOP, close_transport
                     )
 
                     # Wait for reader to close
                     await protocol.wait_closed()
 
                     # Unexpected disconnect
-                    if hass.state is CoreState.not_running or hass.is_running:
+                    if menuai.state is CoreState.not_running or menuai.is_running:
                         stop_listener()
 
                 transport = None
@@ -848,7 +848,7 @@ async def async_setup_entry(
                 update_entities_telegram(None)
 
                 if stop_listener and (
-                    hass.state is CoreState.not_running or hass.is_running
+                    menuai.state is CoreState.not_running or menuai.is_running
                 ):
                     stop_listener()
 
@@ -860,7 +860,7 @@ async def async_setup_entry(
 
                 return
 
-    # Can't be hass.async_add_job because job runs forever
+    # Can't be menuai.async_add_job because job runs forever
     task = asyncio.create_task(connect_and_reconnect())
 
     @callback
@@ -871,7 +871,7 @@ async def async_setup_entry(
 
     # Make sure task is cancelled on shutdown (or tests complete)
     entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _async_stop)
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, _async_stop)
     )
 
     # Save the task to be able to cancel it when unloading
@@ -938,7 +938,7 @@ class DSMREntity(SensorEntity):
     def update_data(self, telegram: Telegram | None) -> None:
         """Update data."""
         self.telegram = telegram
-        if self.hass and (
+        if self.menuai and (
             telegram is None
             or get_dsmr_object(
                 telegram, self._mbus_id, self.entity_description.obis_reference

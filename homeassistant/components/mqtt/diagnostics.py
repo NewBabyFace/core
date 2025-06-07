@@ -4,18 +4,18 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components import device_tracker
-from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.components import device_tracker
+from menuai.components.diagnostics import async_redact_data
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_LATITUDE,
     ATTR_LONGITUDE,
     CONF_PASSWORD,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant, callback, split_entity_id
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.device_registry import DeviceEntry
+from menuai.core import menuai, callback, split_entity_id
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.device_registry import DeviceEntry
 
 from . import debug_info, is_connected
 
@@ -24,22 +24,22 @@ REDACT_STATE_DEVICE_TRACKER = {ATTR_LATITUDE, ATTR_LONGITUDE}
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: ConfigEntry
+    menuai: menuai, entry: ConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
-    return _async_get_diagnostics(hass, entry)
+    return _async_get_diagnostics(menuai, entry)
 
 
 async def async_get_device_diagnostics(
-    hass: HomeAssistant, entry: ConfigEntry, device: DeviceEntry
+    menuai: menuai, entry: ConfigEntry, device: DeviceEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a device entry."""
-    return _async_get_diagnostics(hass, entry, device)
+    return _async_get_diagnostics(menuai, entry, device)
 
 
 @callback
 def _async_get_diagnostics(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     device: DeviceEntry | None = None,
 ) -> dict[str, Any]:
@@ -50,34 +50,34 @@ def _async_get_diagnostics(
     }
 
     data = {
-        "connected": is_connected(hass),
+        "connected": is_connected(menuai),
         "mqtt_config": redacted_config,
     }
 
     if device:
-        data["device"] = _async_device_as_dict(hass, device)
-        data["mqtt_debug_info"] = debug_info.info_for_device(hass, device.id)
+        data["device"] = _async_device_as_dict(menuai, device)
+        data["mqtt_debug_info"] = debug_info.info_for_device(menuai, device.id)
     else:
-        device_registry = dr.async_get(hass)
+        device_registry = dr.async_get(menuai)
         data.update(
             devices=[
-                _async_device_as_dict(hass, device)
+                _async_device_as_dict(menuai, device)
                 for device in dr.async_entries_for_config_entry(
                     device_registry, entry.entry_id
                 )
             ],
-            mqtt_debug_info=debug_info.info_for_config_entry(hass),
+            mqtt_debug_info=debug_info.info_for_config_entry(menuai),
         )
 
     return data
 
 
 @callback
-def _async_device_as_dict(hass: HomeAssistant, device: DeviceEntry) -> dict[str, Any]:
+def _async_device_as_dict(menuai: menuai, device: DeviceEntry) -> dict[str, Any]:
     """Represent an MQTT device as a dictionary."""
 
-    # Gather information how this MQTT device is represented in Home Assistant
-    entity_registry = er.async_get(hass)
+    # Gather information how this MQTT device is represented in MenuAI
+    entity_registry = er.async_get(menuai)
     data: dict[str, Any] = {
         "id": device.id,
         "name": device.name,
@@ -94,7 +94,7 @@ def _async_device_as_dict(hass: HomeAssistant, device: DeviceEntry) -> dict[str,
     )
 
     def _state_dict(entity_entry: er.RegistryEntry) -> dict[str, Any] | None:
-        state = hass.states.get(entity_entry.entity_id)
+        state = menuai.states.get(entity_entry.entity_id)
         if not state:
             return None
 

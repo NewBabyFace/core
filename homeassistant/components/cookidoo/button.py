@@ -5,10 +5,10 @@ from dataclasses import dataclass
 
 from cookidoo_api import Cookidoo, CookidooException
 
-from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.button import ButtonEntity, ButtonEntityDescription
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import CookidooConfigEntry, CookidooDataUpdateCoordinator
@@ -33,7 +33,7 @@ TODO_CLEAR = CookidooButtonEntityDescription(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: CookidooConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -64,7 +64,7 @@ class CookidooButton(CookidooBaseEntity, ButtonEntity):
         try:
             await self.entity_description.press_fn(self.coordinator.cookidoo)
         except CookidooException as e:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="button_clear_todo_failed",
             ) from e

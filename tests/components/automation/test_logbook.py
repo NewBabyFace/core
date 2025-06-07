@@ -1,22 +1,22 @@
 """Test automation logbook."""
 
-from homeassistant.components import automation
-from homeassistant.core import Context, HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components import automation
+from menuai.core import Context, menuai
+from menuai.setup import async_setup_component
 
 from tests.components.logbook.common import MockRow, mock_humanify
 
 
-async def test_humanify_automation_trigger_event(hass: HomeAssistant) -> None:
+async def test_humanify_automation_trigger_event(menuai: menuai) -> None:
     """Test humanifying Shelly click event."""
-    hass.config.components.add("recorder")
-    assert await async_setup_component(hass, "automation", {})
-    assert await async_setup_component(hass, "logbook", {})
-    await hass.async_block_till_done()
+    menuai.config.components.add("recorder")
+    assert await async_setup_component(menuai, "automation", {})
+    assert await async_setup_component(menuai, "logbook", {})
+    await menuai.async_block_till_done()
     context = Context()
 
     event1, event2 = mock_humanify(
-        hass,
+        menuai,
         [
             MockRow(
                 automation.EVENT_AUTOMATION_TRIGGERED,

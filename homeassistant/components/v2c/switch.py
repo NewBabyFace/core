@@ -16,9 +16,9 @@ from pytrydan.models.trydan import (
     PauseState,
 )
 
-from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchEntity, SwitchEntityDescription
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import V2CConfigEntry, V2CUpdateCoordinator
 from .entity import V2CBaseEntity
@@ -77,7 +77,7 @@ TRYDAN_SWITCHES = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: V2CConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

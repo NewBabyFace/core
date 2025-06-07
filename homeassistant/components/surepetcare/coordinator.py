@@ -9,12 +9,12 @@ from surepy import Surepy, SurepyEntity
 from surepy.enums import EntityType, Location, LockState
 from surepy.exceptions import SurePetcareAuthenticationError, SurePetcareError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_PASSWORD, CONF_TOKEN, CONF_USERNAME
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_PASSWORD, CONF_TOKEN, CONF_USERNAME
+from menuai.core import menuai, ServiceCall
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
     ATTR_FLAP_ID,
@@ -35,14 +35,14 @@ class SurePetcareDataCoordinator(DataUpdateCoordinator[dict[int, SurepyEntity]])
 
     config_entry: ConfigEntry
 
-    def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
+    def __init__(self, menuai: menuai, entry: ConfigEntry) -> None:
         """Initialize the data handler."""
         self.surepy = Surepy(
             entry.data[CONF_USERNAME],
             entry.data[CONF_PASSWORD],
             auth_token=entry.data[CONF_TOKEN],
             api_timeout=SURE_API_TIMEOUT,
-            session=async_get_clientsession(hass),
+            session=async_get_clientsession(menuai),
         )
         self.lock_states_callbacks = {
             LockState.UNLOCKED.name.lower(): self.surepy.sac.unlock,
@@ -51,7 +51,7 @@ class SurePetcareDataCoordinator(DataUpdateCoordinator[dict[int, SurepyEntity]])
             LockState.LOCKED_ALL.name.lower(): self.surepy.sac.lock,
         }
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
             name=DOMAIN,

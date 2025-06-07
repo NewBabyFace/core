@@ -11,7 +11,7 @@ import bluetooth
 from bt_proximity import BluetoothRSSI
 import voluptuous as vol
 
-from homeassistant.components.device_tracker import (
+from menuai.components.device_tracker import (
     CONF_SCAN_INTERVAL,
     CONF_TRACK_NEW,
     DEFAULT_TRACK_NEW,
@@ -19,17 +19,17 @@ from homeassistant.components.device_tracker import (
     SCAN_INTERVAL,
     SourceType,
 )
-from homeassistant.components.device_tracker.legacy import (
+from menuai.components.device_tracker.legacy import (
     YAML_DEVICES,
     AsyncSeeCallback,
     Device,
     async_load_config,
 )
-from homeassistant.const import CONF_DEVICE_ID
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_DEVICE_ID
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import config_validation as cv
+from menuai.helpers.event import async_track_time_interval
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import (
     BT_PREFIX,
@@ -76,7 +76,7 @@ def discover_devices(device_id: int) -> list[tuple[str, str]]:
 
 
 async def see_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_see: AsyncSeeCallback,
     mac: str,
     device_name: str,
@@ -95,14 +95,14 @@ async def see_device(
     )
 
 
-async def get_tracking_devices(hass: HomeAssistant) -> tuple[set[str], set[str]]:
+async def get_tracking_devices(menuai: menuai) -> tuple[set[str], set[str]]:
     """Load all known devices.
 
     We just need the devices so set consider_home and home range to 0
     """
-    yaml_path: str = hass.config.path(YAML_DEVICES)
+    yaml_path: str = menuai.config.path(YAML_DEVICES)
 
-    devices = await async_load_config(yaml_path, hass, timedelta(0))
+    devices = await async_load_config(yaml_path, menuai, timedelta(0))
     bluetooth_devices = [device for device in devices if is_bluetooth_device(device)]
 
     devices_to_track: set[str] = {
@@ -126,7 +126,7 @@ def lookup_name(mac: str) -> str | None:
 
 
 async def async_setup_scanner(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_see: AsyncSeeCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -141,7 +141,7 @@ async def async_setup_scanner(
     track_new: bool = config.get(CONF_TRACK_NEW, DEFAULT_TRACK_NEW)
     _LOGGER.debug("Tracking new devices is set to %s", track_new)
 
-    devices_to_track, devices_to_not_track = await get_tracking_devices(hass)
+    devices_to_track, devices_to_not_track = await get_tracking_devices(menuai)
 
     if not devices_to_track and not track_new:
         _LOGGER.debug("No Bluetooth devices to track and not tracking new devices")
@@ -156,13 +156,13 @@ async def async_setup_scanner(
 
         try:
             if track_new:
-                devices = await hass.async_add_executor_job(discover_devices, device_id)
+                devices = await menuai.async_add_executor_job(discover_devices, device_id)
                 for mac, _device_name in devices:
                     if mac not in devices_to_track and mac not in devices_to_not_track:
                         devices_to_track.add(mac)
 
             for mac in devices_to_track:
-                friendly_name = await hass.async_add_executor_job(lookup_name, mac)
+                friendly_name = await menuai.async_add_executor_job(lookup_name, mac)
                 if friendly_name is None:
                     # Could not lookup device name
                     continue
@@ -170,12 +170,12 @@ async def async_setup_scanner(
                 rssi = None
                 if request_rssi:
                     client = BluetoothRSSI(mac)
-                    rssi = await hass.async_add_executor_job(client.request_rssi)
+                    rssi = await menuai.async_add_executor_job(client.request_rssi)
                     client.close()
 
                 tasks.append(
                     asyncio.create_task(
-                        see_device(hass, async_see, mac, friendly_name, rssi)
+                        see_device(menuai, async_see, mac, friendly_name, rssi)
                     )
                 )
 
@@ -205,9 +205,9 @@ async def async_setup_scanner(
         """Update bluetooth devices on demand."""
         await update_bluetooth()
 
-    hass.async_create_task(update_bluetooth())
-    async_track_time_interval(hass, update_bluetooth, interval)
+    menuai.async_create_task(update_bluetooth())
+    async_track_time_interval(menuai, update_bluetooth, interval)
 
-    hass.services.async_register(DOMAIN, SERVICE_UPDATE, handle_manual_update_bluetooth)
+    menuai.services.async_register(DOMAIN, SERVICE_UPDATE, handle_manual_update_bluetooth)
 
     return True

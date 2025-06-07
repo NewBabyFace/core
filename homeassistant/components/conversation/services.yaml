@@ -11,7 +11,7 @@ process:
       selector:
         text:
     agent_id:
-      example: homeassistant
+      example: menuai
       selector:
         conversation_agent:
     conversation_id:
@@ -26,6 +26,6 @@ reload:
       selector:
         text:
     agent_id:
-      example: homeassistant
+      example: menuai
       selector:
         conversation_agent:

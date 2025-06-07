@@ -3,10 +3,10 @@
 from typing import Any
 import uuid
 
-from homeassistant.components import person
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import ATTR_DEVICE_ID
-from homeassistant.helpers import entity_registry as er
+from menuai.components import person
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import ATTR_DEVICE_ID
+from menuai.helpers import entity_registry as er
 
 from .const import ATTR_APP_ID, ATTR_DEVICE_NAME, CONF_USER_ID, DOMAIN
 
@@ -41,7 +41,7 @@ class MobileAppFlowHandler(ConfigFlow, domain=DOMAIN):
             user_input[ATTR_DEVICE_ID] = str(uuid.uuid4()).replace("-", "")
 
         # Register device tracker entity and add to person registering app
-        entity_registry = er.async_get(self.hass)
+        entity_registry = er.async_get(self.menuai)
         devt_entry = entity_registry.async_get_or_create(
             "device_tracker",
             DOMAIN,
@@ -49,7 +49,7 @@ class MobileAppFlowHandler(ConfigFlow, domain=DOMAIN):
             suggested_object_id=user_input[ATTR_DEVICE_NAME],
         )
         await person.async_add_user_device_tracker(
-            self.hass, user_input[CONF_USER_ID], devt_entry.entity_id
+            self.menuai, user_input[CONF_USER_ID], devt_entry.entity_id
         )
 
         return self.async_create_entry(

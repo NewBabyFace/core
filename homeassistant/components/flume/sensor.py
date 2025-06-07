@@ -5,16 +5,16 @@ from typing import Any
 from pyflume import FlumeAuth, FlumeData
 from requests import Session
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import UnitOfVolume
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
+from menuai.const import UnitOfVolume
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
 
 from .const import (
     DEVICE_SCAN_INTERVAL,
@@ -106,7 +106,7 @@ def make_flume_datas(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: FlumeConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -122,7 +122,7 @@ async def async_setup_entry(
         if device[KEY_DEVICE_TYPE] == FLUME_TYPE_SENSOR
     ]
     flume_entity_list: list[FlumeSensor] = []
-    flume_datas = await hass.async_add_executor_job(
+    flume_datas = await menuai.async_add_executor_job(
         make_flume_datas, http_session, flume_auth, flume_devices
     )
 
@@ -132,7 +132,7 @@ async def async_setup_entry(
         flume_device = flume_datas[device_id]
 
         coordinator = FlumeDeviceDataUpdateCoordinator(
-            hass=hass, config_entry=config_entry, flume_device=flume_device
+            menuai=menuai, config_entry=config_entry, flume_device=flume_device
         )
 
         flume_entity_list.extend(

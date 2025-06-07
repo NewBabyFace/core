@@ -12,14 +12,14 @@ import voluptuous as vol
 from xknx.telegram import Telegram
 from xknxproject.exceptions import XknxProjectException
 
-from homeassistant.components import panel_custom, websocket_api
-from homeassistant.components.http import StaticPathConfig
-from homeassistant.const import CONF_ENTITY_ID, CONF_PLATFORM
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.typing import UNDEFINED
-from homeassistant.util.ulid import ulid_now
+from menuai.components import panel_custom, websocket_api
+from menuai.components.http import StaticPathConfig
+from menuai.const import CONF_ENTITY_ID, CONF_PLATFORM
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.typing import UNDEFINED
+from menuai.util.ulid import ulid_now
 
 from .const import DOMAIN, KNX_MODULE_KEY
 from .storage.config_store import ConfigStoreException
@@ -41,25 +41,25 @@ if TYPE_CHECKING:
 URL_BASE: Final = "/knx_static"
 
 
-async def register_panel(hass: HomeAssistant) -> None:
+async def register_panel(menuai: menuai) -> None:
     """Register the KNX Panel and Websocket API."""
-    websocket_api.async_register_command(hass, ws_info)
-    websocket_api.async_register_command(hass, ws_project_file_process)
-    websocket_api.async_register_command(hass, ws_project_file_remove)
-    websocket_api.async_register_command(hass, ws_group_monitor_info)
-    websocket_api.async_register_command(hass, ws_group_telegrams)
-    websocket_api.async_register_command(hass, ws_subscribe_telegram)
-    websocket_api.async_register_command(hass, ws_get_knx_project)
-    websocket_api.async_register_command(hass, ws_validate_entity)
-    websocket_api.async_register_command(hass, ws_create_entity)
-    websocket_api.async_register_command(hass, ws_update_entity)
-    websocket_api.async_register_command(hass, ws_delete_entity)
-    websocket_api.async_register_command(hass, ws_get_entity_config)
-    websocket_api.async_register_command(hass, ws_get_entity_entries)
-    websocket_api.async_register_command(hass, ws_create_device)
+    websocket_api.async_register_command(menuai, ws_info)
+    websocket_api.async_register_command(menuai, ws_project_file_process)
+    websocket_api.async_register_command(menuai, ws_project_file_remove)
+    websocket_api.async_register_command(menuai, ws_group_monitor_info)
+    websocket_api.async_register_command(menuai, ws_group_telegrams)
+    websocket_api.async_register_command(menuai, ws_subscribe_telegram)
+    websocket_api.async_register_command(menuai, ws_get_knx_project)
+    websocket_api.async_register_command(menuai, ws_validate_entity)
+    websocket_api.async_register_command(menuai, ws_create_entity)
+    websocket_api.async_register_command(menuai, ws_update_entity)
+    websocket_api.async_register_command(menuai, ws_delete_entity)
+    websocket_api.async_register_command(menuai, ws_get_entity_config)
+    websocket_api.async_register_command(menuai, ws_get_entity_entries)
+    websocket_api.async_register_command(menuai, ws_create_device)
 
-    if DOMAIN not in hass.data.get("frontend_panels", {}):
-        await hass.http.async_register_static_paths(
+    if DOMAIN not in menuai.data.get("frontend_panels", {}):
+        await menuai.http.async_register_static_paths(
             [
                 StaticPathConfig(
                     URL_BASE,
@@ -69,7 +69,7 @@ async def register_panel(hass: HomeAssistant) -> None:
             ]
         )
         await panel_custom.async_register_panel(
-            hass=hass,
+            menuai=menuai,
             frontend_url_path=DOMAIN,
             webcomponent_name=knx_panel.webcomponent_name,
             sidebar_title=DOMAIN.upper(),
@@ -81,10 +81,10 @@ async def register_panel(hass: HomeAssistant) -> None:
 
 
 type KnxWebSocketCommandHandler = Callable[
-    [HomeAssistant, KNXModule, websocket_api.ActiveConnection, dict[str, Any]], None
+    [menuai, KNXModule, websocket_api.ActiveConnection, dict[str, Any]], None
 ]
 type KnxAsyncWebSocketCommandHandler = Callable[
-    [HomeAssistant, KNXModule, websocket_api.ActiveConnection, dict[str, Any]],
+    [menuai, KNXModule, websocket_api.ActiveConnection, dict[str, Any]],
     Awaitable[None],
 ]
 
@@ -120,33 +120,33 @@ def provide_knx(
 
         @wraps(func)
         async def with_knx(
-            hass: HomeAssistant,
+            menuai: menuai,
             connection: websocket_api.ActiveConnection,
             msg: dict[str, Any],
         ) -> None:
             """Add KNX Module to call function."""
             try:
-                knx = hass.data[KNX_MODULE_KEY]
+                knx = menuai.data[KNX_MODULE_KEY]
             except KeyError:
                 _send_not_loaded_error(connection, msg["id"])
                 return
-            await func(hass, knx, connection, msg)
+            await func(menuai, knx, connection, msg)
 
     else:
 
         @wraps(func)
         def with_knx(
-            hass: HomeAssistant,
+            menuai: menuai,
             connection: websocket_api.ActiveConnection,
             msg: dict[str, Any],
         ) -> None:
             """Add KNX Module to call function."""
             try:
-                knx = hass.data[KNX_MODULE_KEY]
+                knx = menuai.data[KNX_MODULE_KEY]
             except KeyError:
                 _send_not_loaded_error(connection, msg["id"])
                 return
-            func(hass, knx, connection, msg)
+            func(menuai, knx, connection, msg)
 
     return with_knx
 
@@ -160,7 +160,7 @@ def provide_knx(
 @provide_knx
 @callback
 def ws_info(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXModule,
     connection: websocket_api.ActiveConnection,
     msg: dict,
@@ -195,7 +195,7 @@ def ws_info(
 @websocket_api.async_response
 @provide_knx
 async def ws_get_knx_project(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXModule,
     connection: websocket_api.ActiveConnection,
     msg: dict,
@@ -222,7 +222,7 @@ async def ws_get_knx_project(
 @websocket_api.async_response
 @provide_knx
 async def ws_project_file_process(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXModule,
     connection: websocket_api.ActiveConnection,
     msg: dict,
@@ -253,7 +253,7 @@ async def ws_project_file_process(
 @websocket_api.async_response
 @provide_knx
 async def ws_project_file_remove(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXModule,
     connection: websocket_api.ActiveConnection,
     msg: dict,
@@ -272,7 +272,7 @@ async def ws_project_file_remove(
 @provide_knx
 @callback
 def ws_group_monitor_info(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXModule,
     connection: websocket_api.ActiveConnection,
     msg: dict,
@@ -297,7 +297,7 @@ def ws_group_monitor_info(
 @provide_knx
 @callback
 def ws_group_telegrams(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXModule,
     connection: websocket_api.ActiveConnection,
     msg: dict,
@@ -317,7 +317,7 @@ def ws_group_telegrams(
 )
 @callback
 def ws_subscribe_telegram(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict,
 ) -> None:
@@ -332,7 +332,7 @@ def ws_subscribe_telegram(
         )
 
     connection.subscriptions[msg["id"]] = async_dispatcher_connect(
-        hass,
+        menuai,
         signal=SIGNAL_KNX_TELEGRAM,
         target=forward_telegram,
     )
@@ -348,7 +348,7 @@ def ws_subscribe_telegram(
 )
 @callback
 def ws_validate_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict,
 ) -> None:
@@ -373,7 +373,7 @@ def ws_validate_entity(
 @websocket_api.async_response
 @provide_knx
 async def ws_create_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXModule,
     connection: websocket_api.ActiveConnection,
     msg: dict,
@@ -410,7 +410,7 @@ async def ws_create_entity(
 @websocket_api.async_response
 @provide_knx
 async def ws_update_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXModule,
     connection: websocket_api.ActiveConnection,
     msg: dict,
@@ -447,7 +447,7 @@ async def ws_update_entity(
 @websocket_api.async_response
 @provide_knx
 async def ws_delete_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXModule,
     connection: websocket_api.ActiveConnection,
     msg: dict,
@@ -472,7 +472,7 @@ async def ws_delete_entity(
 @provide_knx
 @callback
 def ws_get_entity_entries(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXModule,
     connection: websocket_api.ActiveConnection,
     msg: dict,
@@ -494,7 +494,7 @@ def ws_get_entity_entries(
 @provide_knx
 @callback
 def ws_get_entity_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXModule,
     connection: websocket_api.ActiveConnection,
     msg: dict,
@@ -521,14 +521,14 @@ def ws_get_entity_config(
 @provide_knx
 @callback
 def ws_create_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXModule,
     connection: websocket_api.ActiveConnection,
     msg: dict,
 ) -> None:
     """Create a new KNX device."""
     identifier = f"knx_vdev_{ulid_now()}"
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     _device = device_registry.async_get_or_create(
         config_entry_id=knx.entry.entry_id,
         manufacturer="KNX",
@@ -538,6 +538,6 @@ def ws_create_device(
     device_registry.async_update_device(
         _device.id,
         area_id=msg.get("area_id") or UNDEFINED,
-        configuration_url=f"homeassistant://knx/entities/view?device_id={_device.id}",
+        configuration_url=f"menuai://knx/entities/view?device_id={_device.id}",
     )
     connection.send_result(msg["id"], _device.dict_repr)

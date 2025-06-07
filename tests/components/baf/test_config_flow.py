@@ -3,12 +3,12 @@
 from ipaddress import ip_address
 from unittest.mock import patch
 
-from homeassistant import config_entries
-from homeassistant.components.baf.const import DOMAIN
-from homeassistant.const import CONF_IP_ADDRESS
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai import config_entries
+from menuai.components.baf.const import DOMAIN
+from menuai.const import CONF_IP_ADDRESS
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from . import MOCK_NAME, MOCK_UUID, MockBAFDevice
 
@@ -21,13 +21,13 @@ def _patch_device_config_flow(side_effect=None):
     def _create_mock_baf(*args, **kwargs):
         return MockBAFDevice(side_effect)
 
-    return patch("homeassistant.components.baf.config_flow.Device", _create_mock_baf)
+    return patch("menuai.components.baf.config_flow.Device", _create_mock_baf)
 
 
-async def test_form_user(hass: HomeAssistant) -> None:
+async def test_form_user(menuai: menuai) -> None:
     """Test we get the user form."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -36,15 +36,15 @@ async def test_form_user(hass: HomeAssistant) -> None:
     with (
         _patch_device_config_flow(),
         patch(
-            "homeassistant.components.baf.async_setup_entry",
+            "menuai.components.baf.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_IP_ADDRESS: "127.0.0.1"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == MOCK_NAME
@@ -52,14 +52,14 @@ async def test_form_user(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_form_cannot_connect(hass: HomeAssistant) -> None:
+async def test_form_cannot_connect(menuai: menuai) -> None:
     """Test we handle cannot connect error."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     with _patch_device_config_flow(TimeoutError):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_IP_ADDRESS: "127.0.0.1"},
         )
@@ -68,14 +68,14 @@ async def test_form_cannot_connect(hass: HomeAssistant) -> None:
     assert result2["errors"] == {CONF_IP_ADDRESS: "cannot_connect"}
 
 
-async def test_form_unknown_exception(hass: HomeAssistant) -> None:
+async def test_form_unknown_exception(menuai: menuai) -> None:
     """Test we handle unknown exceptions."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     with _patch_device_config_flow(Exception):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_IP_ADDRESS: "127.0.0.1"},
         )
@@ -84,10 +84,10 @@ async def test_form_unknown_exception(hass: HomeAssistant) -> None:
     assert result2["errors"] == {"base": "unknown"}
 
 
-async def test_zeroconf_discovery(hass: HomeAssistant) -> None:
+async def test_zeroconf_discovery(menuai: menuai) -> None:
     """Test we can setup from zeroconf discovery."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -104,14 +104,14 @@ async def test_zeroconf_discovery(hass: HomeAssistant) -> None:
     assert result["errors"] is None
 
     with patch(
-        "homeassistant.components.baf.async_setup_entry",
+        "menuai.components.baf.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "My Fan"
@@ -119,13 +119,13 @@ async def test_zeroconf_discovery(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_zeroconf_updates_existing_ip(hass: HomeAssistant) -> None:
+async def test_zeroconf_updates_existing_ip(menuai: menuai) -> None:
     """Test we can setup from zeroconf discovery."""
     entry = MockConfigEntry(
         domain=DOMAIN, data={CONF_IP_ADDRESS: "127.0.0.2"}, unique_id=MOCK_UUID
     )
-    entry.add_to_hass(hass)
-    result = await hass.config_entries.flow.async_init(
+    entry.add_to_menuai(menuai)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -143,9 +143,9 @@ async def test_zeroconf_updates_existing_ip(hass: HomeAssistant) -> None:
     assert entry.data[CONF_IP_ADDRESS] == "127.0.0.1"
 
 
-async def test_zeroconf_rejects_ipv6(hass: HomeAssistant) -> None:
+async def test_zeroconf_rejects_ipv6(menuai: menuai) -> None:
     """Test zeroconf discovery rejects ipv6."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -162,9 +162,9 @@ async def test_zeroconf_rejects_ipv6(hass: HomeAssistant) -> None:
     assert result["reason"] == "ipv6_not_supported"
 
 
-async def test_user_flow_is_not_blocked_by_discovery(hass: HomeAssistant) -> None:
+async def test_user_flow_is_not_blocked_by_discovery(menuai: menuai) -> None:
     """Test we can setup from the user flow when there is also a discovery."""
-    discovery_result = await hass.config_entries.flow.async_init(
+    discovery_result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -179,7 +179,7 @@ async def test_user_flow_is_not_blocked_by_discovery(hass: HomeAssistant) -> Non
     )
     assert discovery_result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -188,15 +188,15 @@ async def test_user_flow_is_not_blocked_by_discovery(hass: HomeAssistant) -> Non
     with (
         _patch_device_config_flow(),
         patch(
-            "homeassistant.components.baf.async_setup_entry",
+            "menuai.components.baf.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_IP_ADDRESS: "127.0.0.1"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == MOCK_NAME

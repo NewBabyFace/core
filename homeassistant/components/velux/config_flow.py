@@ -5,11 +5,11 @@ from typing import Any
 from pyvlx import PyVLX, PyVLXException
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntryState, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_MAC, CONF_NAME, CONF_PASSWORD
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.config_entries import ConfigEntryState, ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_MAC, CONF_NAME, CONF_PASSWORD
+from menuai.helpers import config_validation as cv
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
 
 from .const import DOMAIN, LOGGER
 
@@ -86,13 +86,13 @@ class VeluxConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
         # Abort if config_entry already exists without unigue_id configured.
-        for entry in self.hass.config_entries.async_entries(DOMAIN):
+        for entry in self.menuai.config_entries.async_entries(DOMAIN):
             if (
                 entry.data[CONF_HOST] == self.discovery_data[CONF_HOST]
                 and entry.unique_id is None
                 and entry.state is ConfigEntryState.LOADED
             ):
-                self.hass.config_entries.async_update_entry(
+                self.menuai.config_entries.async_update_entry(
                     entry=entry,
                     unique_id=self.discovery_data[CONF_NAME],
                     data={**entry.data, **self.discovery_data},

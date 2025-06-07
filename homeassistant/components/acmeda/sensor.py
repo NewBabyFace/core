@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
-from homeassistant.const import PERCENTAGE
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.sensor import SensorDeviceClass, SensorEntity
+from menuai.const import PERCENTAGE
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import AcmedaConfigEntry
 from .const import ACMEDA_HUB_UPDATE
@@ -15,7 +15,7 @@ from .helpers import async_add_acmeda_entities
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: AcmedaConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -27,12 +27,12 @@ async def async_setup_entry(
     @callback
     def async_add_acmeda_sensors() -> None:
         async_add_acmeda_entities(
-            hass, AcmedaBattery, config_entry, current, async_add_entities
+            menuai, AcmedaBattery, config_entry, current, async_add_entities
         )
 
     hub.cleanup_callbacks.append(
         async_dispatcher_connect(
-            hass,
+            menuai,
             ACMEDA_HUB_UPDATE.format(config_entry.entry_id),
             async_add_acmeda_sensors,
         )

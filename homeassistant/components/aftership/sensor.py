@@ -7,15 +7,15 @@ from typing import Any, Final
 
 from pyaftership import AfterShip, AfterShipException
 
-from homeassistant.components.sensor import SensorEntity
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.dispatcher import (
+from menuai.components.sensor import SensorEntity
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import config_validation as cv
+from menuai.helpers.dispatcher import (
     async_dispatcher_connect,
     async_dispatcher_send,
 )
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import Throttle
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import Throttle
 
 from . import AfterShipConfigEntry
 from .const import (
@@ -40,7 +40,7 @@ PLATFORM_SCHEMA: Final = cv.removed(DOMAIN, raise_if_present=False)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: AfterShipConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -50,15 +50,15 @@ async def async_setup_entry(
     async_add_entities([AfterShipSensor(aftership, config_entry.title)], True)
 
     async def handle_add_tracking(call: ServiceCall) -> None:
-        """Call when a user adds a new Aftership tracking from Home Assistant."""
+        """Call when a user adds a new Aftership tracking from MenuAI."""
         await aftership.trackings.add(
             tracking_number=call.data[CONF_TRACKING_NUMBER],
             title=call.data.get(CONF_TITLE),
             slug=call.data.get(CONF_SLUG),
         )
-        async_dispatcher_send(hass, UPDATE_TOPIC)
+        async_dispatcher_send(menuai, UPDATE_TOPIC)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_ADD_TRACKING,
         handle_add_tracking,
@@ -66,14 +66,14 @@ async def async_setup_entry(
     )
 
     async def handle_remove_tracking(call: ServiceCall) -> None:
-        """Call when a user removes an Aftership tracking from Home Assistant."""
+        """Call when a user removes an Aftership tracking from MenuAI."""
         await aftership.trackings.remove(
             tracking_number=call.data[CONF_TRACKING_NUMBER],
             slug=call.data[CONF_SLUG],
         )
-        async_dispatcher_send(hass, UPDATE_TOPIC)
+        async_dispatcher_send(menuai, UPDATE_TOPIC)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_REMOVE_TRACKING,
         handle_remove_tracking,
@@ -105,10 +105,10 @@ class AfterShipSensor(SensorEntity):
         """Return attributes for the sensor."""
         return self._attributes
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
         self.async_on_remove(
-            async_dispatcher_connect(self.hass, UPDATE_TOPIC, self._force_update)
+            async_dispatcher_connect(self.menuai, UPDATE_TOPIC, self._force_update)
         )
 
     async def _force_update(self) -> None:

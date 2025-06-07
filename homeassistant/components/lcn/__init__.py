@@ -16,8 +16,8 @@ from pypck.connection import (
 )
 from pypck.lcn_defs import LcnEvent
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_DEVICE_ID,
     CONF_DOMAIN,
     CONF_ENTITIES,
@@ -28,14 +28,14 @@ from homeassistant.const import (
     CONF_USERNAME,
     Platform,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import (
+from menuai.core import menuai, callback
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import (
     config_validation as cv,
     device_registry as dr,
     entity_registry as er,
 )
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     ADD_ENTITIES_CALLBACKS,
@@ -67,19 +67,19 @@ _LOGGER = logging.getLogger(__name__)
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the LCN component."""
-    hass.data.setdefault(DOMAIN, {})
+    menuai.data.setdefault(DOMAIN, {})
 
-    async_setup_services(hass)
-    await register_panel_and_ws_api(hass)
+    async_setup_services(menuai)
+    await register_panel_and_ws_api(menuai)
 
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, config_entry: ConfigEntry) -> bool:
     """Set up a connection to PCHK host from a config entry."""
-    if config_entry.entry_id in hass.data[DOMAIN]:
+    if config_entry.entry_id in menuai.data[DOMAIN]:
         return False
 
     settings = {
@@ -114,30 +114,30 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         ) from ex
 
     _LOGGER.debug('LCN connected to "%s"', config_entry.title)
-    hass.data[DOMAIN][config_entry.entry_id] = {
+    menuai.data[DOMAIN][config_entry.entry_id] = {
         CONNECTION: lcn_connection,
         DEVICE_CONNECTIONS: {},
         ADD_ENTITIES_CALLBACKS: {},
     }
 
     # Update config_entry with LCN device serials
-    await async_update_config_entry(hass, config_entry)
+    await async_update_config_entry(menuai, config_entry)
 
     # register/update devices for host, modules and groups in device registry
-    register_lcn_host_device(hass, config_entry)
-    register_lcn_address_devices(hass, config_entry)
+    register_lcn_host_device(menuai, config_entry)
+    register_lcn_address_devices(menuai, config_entry)
 
     # clean up orphaned devices
-    purge_device_registry(hass, config_entry.entry_id, {**config_entry.data})
+    purge_device_registry(menuai, config_entry.entry_id, {**config_entry.data})
 
     # forward config_entry to components
-    await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 
     # register for LCN bus messages
-    device_registry = dr.async_get(hass)
-    event_received = partial(async_host_event_received, hass, config_entry)
+    device_registry = dr.async_get(menuai)
+    event_received = partial(async_host_event_received, menuai, config_entry)
     input_received = partial(
-        async_host_input_received, hass, config_entry, device_registry
+        async_host_input_received, menuai, config_entry, device_registry
     )
 
     lcn_connection.register_for_events(event_received)
@@ -146,7 +146,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     return True
 
 
-async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+async def async_migrate_entry(menuai: menuai, config_entry: ConfigEntry) -> bool:
     """Migrate old entry."""
     _LOGGER.debug(
         "Migrating configuration from version %s.%s",
@@ -180,9 +180,9 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
                 entity[CONF_DOMAIN_DATA].setdefault(CONF_TARGET_VALUE_LOCKED, -1)
 
         # migrate climate and scene unique ids
-        await async_migrate_entities(hass, config_entry)
+        await async_migrate_entities(menuai, config_entry)
 
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         config_entry, data=new_data, minor_version=1, version=3
     )
 
@@ -195,7 +195,7 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
 
 
 async def async_migrate_entities(
-    hass: HomeAssistant, config_entry: ConfigEntry
+    menuai: menuai, config_entry: ConfigEntry
 ) -> None:
     """Migrate entity registry."""
 
@@ -214,50 +214,50 @@ async def async_migrate_entities(
                 return {"new_unique_id": entity_entry.unique_id.replace(".", "")}
         return None
 
-    await er.async_migrate_entries(hass, config_entry.entry_id, update_unique_id)
+    await er.async_migrate_entries(menuai, config_entry.entry_id, update_unique_id)
 
 
-async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, config_entry: ConfigEntry) -> bool:
     """Close connection to PCHK host represented by config_entry."""
     # forward unloading to platforms
-    unload_ok = await hass.config_entries.async_unload_platforms(
+    unload_ok = await menuai.config_entries.async_unload_platforms(
         config_entry, PLATFORMS
     )
 
-    if unload_ok and config_entry.entry_id in hass.data[DOMAIN]:
-        host = hass.data[DOMAIN].pop(config_entry.entry_id)
+    if unload_ok and config_entry.entry_id in menuai.data[DOMAIN]:
+        host = menuai.data[DOMAIN].pop(config_entry.entry_id)
         await host[CONNECTION].async_close()
 
     return unload_ok
 
 
 def async_host_event_received(
-    hass: HomeAssistant, config_entry: ConfigEntry, event: pypck.lcn_defs.LcnEvent
+    menuai: menuai, config_entry: ConfigEntry, event: pypck.lcn_defs.LcnEvent
 ) -> None:
     """Process received event from LCN."""
-    lcn_connection = hass.data[DOMAIN][config_entry.entry_id][CONNECTION]
+    lcn_connection = menuai.data[DOMAIN][config_entry.entry_id][CONNECTION]
 
     async def reload_config_entry() -> None:
         """Close connection and schedule config entry for reload."""
         await lcn_connection.async_close()
-        hass.config_entries.async_schedule_reload(config_entry.entry_id)
+        menuai.config_entries.async_schedule_reload(config_entry.entry_id)
 
     if event in (
         LcnEvent.CONNECTION_LOST,
         LcnEvent.PING_TIMEOUT,
     ):
         _LOGGER.info('The connection to host "%s" has been lost', config_entry.title)
-        hass.async_create_task(reload_config_entry())
+        menuai.async_create_task(reload_config_entry())
     elif event == LcnEvent.BUS_DISCONNECTED:
         _LOGGER.info(
             'The connection to the LCN bus via host "%s" has been disconnected',
             config_entry.title,
         )
-        hass.async_create_task(reload_config_entry())
+        menuai.async_create_task(reload_config_entry())
 
 
 def async_host_input_received(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     device_registry: dr.DeviceRegistry,
     inp: pypck.inputs.Input,
@@ -266,7 +266,7 @@ def async_host_input_received(
     if not isinstance(inp, pypck.inputs.ModInput):
         return
 
-    lcn_connection = hass.data[DOMAIN][config_entry.entry_id][CONNECTION]
+    lcn_connection = menuai.data[DOMAIN][config_entry.entry_id][CONNECTION]
     logical_address = lcn_connection.physical_to_logical(inp.physical_source_addr)
     address = (
         logical_address.seg_id,
@@ -277,13 +277,13 @@ def async_host_input_received(
     device = device_registry.async_get_device(identifiers=identifiers)
 
     if isinstance(inp, pypck.inputs.ModStatusAccessControl):
-        _async_fire_access_control_event(hass, device, address, inp)
+        _async_fire_access_control_event(menuai, device, address, inp)
     elif isinstance(inp, pypck.inputs.ModSendKeysHost):
-        _async_fire_send_keys_event(hass, device, address, inp)
+        _async_fire_send_keys_event(menuai, device, address, inp)
 
 
 def _async_fire_access_control_event(
-    hass: HomeAssistant,
+    menuai: menuai,
     device: dr.DeviceEntry | None,
     address: AddressType,
     inp: InputType,
@@ -304,11 +304,11 @@ def _async_fire_access_control_event(
         )
 
     event_name = f"lcn_{inp.periphery.value.lower()}"
-    hass.bus.async_fire(event_name, event_data)
+    menuai.bus.async_fire(event_name, event_data)
 
 
 def _async_fire_send_keys_event(
-    hass: HomeAssistant,
+    menuai: menuai,
     device: dr.DeviceEntry | None,
     address: AddressType,
     inp: InputType,
@@ -331,4 +331,4 @@ def _async_fire_send_keys_event(
             if device is not None:
                 event_data.update({CONF_DEVICE_ID: device.id})
 
-            hass.bus.async_fire("lcn_send_keys", event_data)
+            menuai.bus.async_fire("lcn_send_keys", event_data)

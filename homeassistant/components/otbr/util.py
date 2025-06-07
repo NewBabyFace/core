@@ -15,15 +15,15 @@ from python_otbr_api import PENDING_DATASET_DELAY_TIMER, tlv_parser
 from python_otbr_api.pskc import compute_pskc
 from python_otbr_api.tlv_parser import MeshcopTLVType
 
-from homeassistant.components.homeassistant_hardware.silabs_multiprotocol_addon import (
+from menuai.components.menuai_hardware.silabs_multiprotocol_addon import (
     MultiprotocolAddonManager,
     get_multiprotocol_addon_manager,
     is_multiprotocol_url,
 )
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import issue_registry as ir
+from menuai.config_entries import SOURCE_USER
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import issue_registry as ir
 
 from .const import DOMAIN
 
@@ -46,7 +46,7 @@ INSECURE_PASSPHRASES = (
 )
 
 
-class GetBorderAgentIdNotSupported(HomeAssistantError):
+class GetBorderAgentIdNotSupported(menuaiError):
     """Raised from python_otbr_api.GetBorderAgentIdNotSupportedError."""
 
 
@@ -71,7 +71,7 @@ def _handle_otbr_error[**_P, _R](
         try:
             return await func(self, *args, **kwargs)
         except (python_otbr_api.OTBRError, aiohttp.ClientError, TimeoutError) as exc:
-            raise HomeAssistantError("Failed to call OTBR API") from exc
+            raise menuaiError("Failed to call OTBR API") from exc
 
     return _func
 
@@ -85,7 +85,7 @@ class OTBRData:
     entry_id: str
 
     @_handle_otbr_error
-    async def factory_reset(self, hass: HomeAssistant) -> None:
+    async def factory_reset(self, menuai: menuai) -> None:
         """Reset the router."""
         try:
             await self.api.factory_reset()
@@ -95,8 +95,8 @@ class OTBRData:
             )
             await self.delete_active_dataset()
         await update_unique_id(
-            hass,
-            hass.config_entries.async_get_entry(self.entry_id),
+            menuai,
+            menuai.config_entries.async_get_entry(self.entry_id),
             await self.get_border_agent_id(),
         )
 
@@ -163,31 +163,31 @@ class OTBRData:
         return await self.api.get_coprocessor_version()
 
 
-async def get_allowed_channel(hass: HomeAssistant, otbr_url: str) -> int | None:
+async def get_allowed_channel(menuai: menuai, otbr_url: str) -> int | None:
     """Return the allowed channel, or None if there's no restriction."""
     if not is_multiprotocol_url(otbr_url):
         # The OTBR is not sharing the radio, no restriction
         return None
 
     multipan_manager: MultiprotocolAddonManager = await get_multiprotocol_addon_manager(
-        hass
+        menuai
     )
     return multipan_manager.async_get_channel()
 
 
 async def _warn_on_channel_collision(
-    hass: HomeAssistant, otbrdata: OTBRData, dataset_tlvs: bytes
+    menuai: menuai, otbrdata: OTBRData, dataset_tlvs: bytes
 ) -> None:
     """Warn user if OTBR and ZHA attempt to use different channels."""
 
     def delete_issue() -> None:
         ir.async_delete_issue(
-            hass,
+            menuai,
             DOMAIN,
             f"otbr_zha_channel_collision_{otbrdata.entry_id}",
         )
 
-    if (allowed_channel := await get_allowed_channel(hass, otbrdata.url)) is None:
+    if (allowed_channel := await get_allowed_channel(menuai, otbrdata.url)) is None:
         delete_issue()
         return
 
@@ -203,7 +203,7 @@ async def _warn_on_channel_collision(
         return
 
     ir.async_create_issue(
-        hass,
+        menuai,
         DOMAIN,
         f"otbr_zha_channel_collision_{otbrdata.entry_id}",
         is_fixable=False,
@@ -218,7 +218,7 @@ async def _warn_on_channel_collision(
 
 
 def _warn_on_default_network_settings(
-    hass: HomeAssistant, otbrdata: OTBRData, dataset_tlvs: bytes
+    menuai: menuai, otbrdata: OTBRData, dataset_tlvs: bytes
 ) -> None:
     """Warn user if insecure default network settings are used."""
     dataset = tlv_parser.parse_tlv(dataset_tlvs.hex())
@@ -244,7 +244,7 @@ def _warn_on_default_network_settings(
 
     if insecure:
         ir.async_create_issue(
-            hass,
+            menuai,
             DOMAIN,
             f"insecure_thread_network_{otbrdata.entry_id}",
             is_fixable=False,
@@ -254,22 +254,22 @@ def _warn_on_default_network_settings(
         )
     else:
         ir.async_delete_issue(
-            hass,
+            menuai,
             DOMAIN,
             f"insecure_thread_network_{otbrdata.entry_id}",
         )
 
 
 async def update_issues(
-    hass: HomeAssistant, otbrdata: OTBRData, dataset_tlvs: bytes
+    menuai: menuai, otbrdata: OTBRData, dataset_tlvs: bytes
 ) -> None:
     """Raise or clear repair issues related to network settings."""
-    await _warn_on_channel_collision(hass, otbrdata, dataset_tlvs)
-    _warn_on_default_network_settings(hass, otbrdata, dataset_tlvs)
+    await _warn_on_channel_collision(menuai, otbrdata, dataset_tlvs)
+    _warn_on_default_network_settings(menuai, otbrdata, dataset_tlvs)
 
 
 async def update_unique_id(
-    hass: HomeAssistant, entry: OTBRConfigEntry | None, border_agent_id: bytes
+    menuai: menuai, entry: OTBRConfigEntry | None, border_agent_id: bytes
 ) -> None:
     """Update the config entry's unique_id if not matching."""
     border_agent_id_hex = border_agent_id.hex()
@@ -280,4 +280,4 @@ async def update_unique_id(
             entry.unique_id,
             border_agent_id_hex,
         )
-        hass.config_entries.async_update_entry(entry, unique_id=border_agent_id_hex)
+        menuai.config_entries.async_update_entry(entry, unique_id=border_agent_id_hex)

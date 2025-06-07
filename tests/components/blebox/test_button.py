@@ -6,8 +6,8 @@ from unittest.mock import PropertyMock
 import blebox_uniapi
 import pytest
 
-from homeassistant.const import ATTR_ICON
-from homeassistant.core import HomeAssistant
+from menuai.const import ATTR_ICON
+from menuai.core import menuai
 
 from .conftest import async_setup_entity, mock_feature
 
@@ -42,14 +42,14 @@ def tv_lift_box_fixture(caplog: pytest.LogCaptureFixture):
 
 
 async def test_tvliftbox_init(
-    tvliftbox, hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    tvliftbox, menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test tvLiftBox initialisation."""
     caplog.set_level(logging.ERROR)
 
     _, entity_id = tvliftbox
-    entry = await async_setup_entity(hass, entity_id)
-    state = hass.states.get(entity_id)
+    entry = await async_setup_entity(menuai, entity_id)
+    state = menuai.states.get(entity_id)
 
     assert entry.unique_id == "BleBox-tvLiftBox-4a3fdaad90aa-open_or_stop"
 
@@ -58,14 +58,14 @@ async def test_tvliftbox_init(
 
 @pytest.mark.parametrize("input", query_icon_matching)
 async def test_get_icon(
-    input, tvliftbox, hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    input, tvliftbox, menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test if proper icon is returned."""
     caplog.set_level(logging.ERROR)
 
     feature_mock, entity_id = tvliftbox
     feature_mock.query_string = input[0]
-    _ = await async_setup_entity(hass, entity_id)
-    state = hass.states.get(entity_id)
+    _ = await async_setup_entity(menuai, entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state.attributes[ATTR_ICON] == input[1]

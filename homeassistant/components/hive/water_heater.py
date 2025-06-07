@@ -5,15 +5,15 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.water_heater import (
+from menuai.components.water_heater import (
     STATE_ECO,
     WaterHeaterEntity,
     WaterHeaterEntityFeature,
 )
-from homeassistant.const import STATE_OFF, STATE_ON, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import STATE_OFF, STATE_ON, UnitOfTemperature
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, entity_platform
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import HiveConfigEntry, refresh_system
 from .const import (
@@ -27,13 +27,13 @@ from .entity import HiveEntity
 HOTWATER_NAME = "Hot Water"
 PARALLEL_UPDATES = 0
 SCAN_INTERVAL = timedelta(seconds=15)
-HIVE_TO_HASS_STATE = {
+HIVE_TO_menuai_STATE = {
     "SCHEDULE": STATE_ECO,
     "ON": STATE_ON,
     "OFF": STATE_OFF,
 }
 
-HASS_TO_HIVE_STATE = {
+menuai_TO_HIVE_STATE = {
     STATE_ECO: "SCHEDULE",
     STATE_ON: "MANUAL",
     STATE_OFF: "OFF",
@@ -43,7 +43,7 @@ SUPPORT_WATER_HEATER = [STATE_ECO, STATE_ON, STATE_OFF]
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: HiveConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -92,7 +92,7 @@ class HiveWaterHeater(HiveEntity, WaterHeaterEntity):
     @refresh_system
     async def async_set_operation_mode(self, operation_mode: str) -> None:
         """Set operation mode."""
-        new_mode = HASS_TO_HIVE_STATE[operation_mode]
+        new_mode = menuai_TO_HIVE_STATE[operation_mode]
         await self.hive.hotwater.setMode(self.device, new_mode)
 
     @refresh_system
@@ -109,6 +109,6 @@ class HiveWaterHeater(HiveEntity, WaterHeaterEntity):
         self.device = await self.hive.hotwater.getWaterHeater(self.device)
         self._attr_available = self.device["deviceData"].get("online")
         if self._attr_available:
-            self._attr_current_operation = HIVE_TO_HASS_STATE[
+            self._attr_current_operation = HIVE_TO_menuai_STATE[
                 self.device["status"]["current_operation"]
             ]

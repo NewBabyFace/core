@@ -11,15 +11,15 @@ import aiohttp
 import nextcord
 from nextcord.abc import Messageable
 
-from homeassistant.components.notify import (
+from menuai.components.notify import (
     ATTR_DATA,
     ATTR_TARGET,
     BaseNotificationService,
 )
-from homeassistant.const import CONF_API_TOKEN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_API_TOKEN
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -41,27 +41,27 @@ MAX_ALLOWED_DOWNLOAD_SIZE_BYTES = 8000000
 
 
 async def async_get_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> DiscordNotificationService | None:
     """Get the Discord notification service."""
     if discovery_info is None:
         return None
-    return DiscordNotificationService(hass, discovery_info[CONF_API_TOKEN])
+    return DiscordNotificationService(menuai, discovery_info[CONF_API_TOKEN])
 
 
 class DiscordNotificationService(BaseNotificationService):
     """Implement the notification service for Discord."""
 
-    def __init__(self, hass: HomeAssistant, token: str) -> None:
+    def __init__(self, menuai: menuai, token: str) -> None:
         """Initialize the service."""
         self.token = token
-        self.hass = hass
+        self.menuai = menuai
 
     def file_exists(self, filename: str) -> bool:
         """Check if a file exists on disk and is in authorized path."""
-        if not self.hass.config.is_allowed_path(filename):
+        if not self.menuai.config.is_allowed_path(filename):
             _LOGGER.warning("Path not allowed: %s", filename)
             return False
         if not os.path.isfile(filename):
@@ -73,11 +73,11 @@ class DiscordNotificationService(BaseNotificationService):
         self, url: str, verify_ssl: bool, max_file_size: int
     ) -> bytearray | None:
         """Retrieve file bytes from URL."""
-        if not self.hass.config.is_allowed_external_url(url):
+        if not self.menuai.config.is_allowed_external_url(url):
             _LOGGER.error("URL not allowed: %s", url)
             return None
 
-        session = async_get_clientsession(self.hass)
+        session = async_get_clientsession(self.menuai)
 
         async with session.get(
             url,
@@ -155,7 +155,7 @@ class DiscordNotificationService(BaseNotificationService):
 
         if ATTR_IMAGES in data:
             for image in data.get(ATTR_IMAGES, []):
-                image_exists = await self.hass.async_add_executor_job(
+                image_exists = await self.menuai.async_add_executor_job(
                     self.file_exists, image
                 )
 

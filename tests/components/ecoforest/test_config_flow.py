@@ -5,20 +5,20 @@ from unittest.mock import AsyncMock, patch
 from pyecoforest.exceptions import EcoforestAuthenticationRequired
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.ecoforest.const import DOMAIN
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.ecoforest.const import DOMAIN
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 pytestmark = pytest.mark.usefixtures("mock_setup_entry")
 
 
 async def test_form(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock, mock_device, config
+    menuai: menuai, mock_setup_entry: AsyncMock, mock_device, config
 ) -> None:
     """Test we get the form."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -28,11 +28,11 @@ async def test_form(
         "pyecoforest.api.EcoforestApi.get",
         return_value=mock_device,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             config,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert "result" in result
@@ -47,10 +47,10 @@ async def test_form(
 
 
 async def test_form_device_already_configured(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock, config_entry, mock_device, config
+    menuai: menuai, mock_setup_entry: AsyncMock, config_entry, mock_device, config
 ) -> None:
     """Test device already exists."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -60,11 +60,11 @@ async def test_form_device_already_configured(
         "pyecoforest.api.EcoforestApi.get",
         return_value=mock_device,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             config,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
@@ -84,10 +84,10 @@ async def test_form_device_already_configured(
     ],
 )
 async def test_flow_fails(
-    hass: HomeAssistant, error: Exception, message: str, mock_device, config
+    menuai: menuai, error: Exception, message: str, mock_device, config
 ) -> None:
     """Test we handle failed flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -95,7 +95,7 @@ async def test_flow_fails(
         "pyecoforest.api.EcoforestApi.get",
         side_effect=error,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             config,
         )
@@ -107,10 +107,10 @@ async def test_flow_fails(
         "pyecoforest.api.EcoforestApi.get",
         return_value=mock_device,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             config,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY

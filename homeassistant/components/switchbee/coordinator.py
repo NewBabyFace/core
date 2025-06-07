@@ -10,10 +10,10 @@ from switchbee.api import CentralUnitPolling, CentralUnitWsRPC
 from switchbee.api.central_unit import SwitchBeeError
 from switchbee.device import DeviceType, SwitchBeeBaseDevice
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN, SCAN_INTERVAL_SEC
 
@@ -27,7 +27,7 @@ class SwitchBeeCoordinator(DataUpdateCoordinator[Mapping[int, SwitchBeeBaseDevic
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         swb_api: CentralUnitPolling | CentralUnitWsRPC,
     ) -> None:
@@ -41,7 +41,7 @@ class SwitchBeeCoordinator(DataUpdateCoordinator[Mapping[int, SwitchBeeBaseDevic
             else format_mac(self.api.mac)
         )
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,

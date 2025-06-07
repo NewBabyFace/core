@@ -6,7 +6,7 @@ import asyncio
 from collections.abc import Iterable
 from typing import Any
 
-from homeassistant.components.remote import (
+from menuai.components.remote import (
     ATTR_ACTIVITY,
     ATTR_DELAY_SECS,
     ATTR_HOLD_SECS,
@@ -17,8 +17,8 @@ from homeassistant.components.remote import (
     RemoteEntity,
     RemoteEntityFeature,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import AndroidTVRemoteConfigEntry
 from .const import CONF_APP_NAME
@@ -28,7 +28,7 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: AndroidTVRemoteConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -56,9 +56,9 @@ class AndroidTVRemoteEntity(AndroidTVRemoteBaseEntity, RemoteEntity):
         self._update_current_app(current_app)
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         self._attr_activity_list = [
             app.get(CONF_APP_NAME, "") for app in self._apps.values()
@@ -66,9 +66,9 @@ class AndroidTVRemoteEntity(AndroidTVRemoteBaseEntity, RemoteEntity):
         self._update_current_app(self._api.current_app)
         self._api.add_current_app_updated_callback(self._current_app_updated)
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Remove callbacks."""
-        await super().async_will_remove_from_hass()
+        await super().async_will_remove_from_menuai()
 
         self._api.remove_current_app_updated_callback(self._current_app_updated)
 

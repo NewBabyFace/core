@@ -6,7 +6,7 @@ from collections.abc import Callable, Iterator
 from itertools import groupby
 from typing import Any
 
-from homeassistant.core import State
+from menuai.core import State
 
 
 def find_state_attributes(states: list[State], key: str) -> Iterator[Any]:

@@ -6,11 +6,11 @@ import logging
 
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
-from homeassistant.const import CONF_API_KEY, CONF_NAME, Platform
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv, device_registry as dr
-from homeassistant.helpers.typing import ConfigType
+from menuai.config_entries import SOURCE_IMPORT, ConfigEntry
+from menuai.const import CONF_API_KEY, CONF_NAME, Platform
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import config_validation as cv, device_registry as dr
+from menuai.helpers.typing import ConfigType
 
 from .const import (  # noqa: F401
     CONF_ALIASES,
@@ -98,16 +98,16 @@ CONFIG_SCHEMA = vol.Schema(
 type GoogleConfigEntry = ConfigEntry[GoogleConfig]
 
 
-async def async_setup(hass: HomeAssistant, yaml_config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, yaml_config: ConfigType) -> bool:
     """Activate Google Actions component."""
     if DOMAIN not in yaml_config:
         return True
 
-    hass.data[DOMAIN] = {}
-    hass.data[DOMAIN][DATA_CONFIG] = yaml_config[DOMAIN]
+    menuai.data[DOMAIN] = {}
+    menuai.data[DOMAIN][DATA_CONFIG] = yaml_config[DOMAIN]
 
-    hass.async_create_task(
-        hass.config_entries.flow.async_init(
+    menuai.async_create_task(
+        menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": SOURCE_IMPORT},
             data={CONF_PROJECT_ID: yaml_config[DOMAIN][CONF_PROJECT_ID]},
@@ -117,20 +117,20 @@ async def async_setup(hass: HomeAssistant, yaml_config: ConfigType) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: GoogleConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: GoogleConfigEntry) -> bool:
     """Set up from a config entry."""
 
-    config: ConfigType = {**hass.data[DOMAIN][DATA_CONFIG]}
+    config: ConfigType = {**menuai.data[DOMAIN][DATA_CONFIG]}
 
     if entry.source == SOURCE_IMPORT:
         # if project was changed, remove entry a new will be setup
         if config[CONF_PROJECT_ID] != entry.data[CONF_PROJECT_ID]:
-            hass.async_create_task(hass.config_entries.async_remove(entry.entry_id))
+            menuai.async_create_task(menuai.config_entries.async_remove(entry.entry_id))
             return False
 
     config.update(entry.data)
 
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, config[CONF_PROJECT_ID])},
@@ -140,12 +140,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: GoogleConfigEntry) -> bo
         entry_type=dr.DeviceEntryType.SERVICE,
     )
 
-    google_config = GoogleConfig(hass, config)
+    google_config = GoogleConfig(menuai, config)
     await google_config.async_initialize()
 
     entry.runtime_data = google_config
 
-    hass.http.register_view(GoogleAssistantView(google_config))
+    menuai.http.register_view(GoogleAssistantView(google_config))
 
     if google_config.should_report_state:
         google_config.async_enable_report_state()
@@ -165,10 +165,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: GoogleConfigEntry) -> bo
 
     # Register service only if key is provided
     if CONF_SERVICE_ACCOUNT in config:
-        hass.services.async_register(
+        menuai.services.async_register(
             DOMAIN, SERVICE_REQUEST_SYNC, request_sync_service_handler
         )
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True

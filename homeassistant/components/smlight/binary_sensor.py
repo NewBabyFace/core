@@ -9,14 +9,14 @@ from pysmlight import Sensors
 from pysmlight.const import Events as SmEvents
 from pysmlight.sse import MessageEvent
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import EntityCategory
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import SCAN_INTERNET_INTERVAL
 from .coordinator import SmConfigEntry, SmDataUpdateCoordinator
@@ -55,7 +55,7 @@ SENSORS = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: SmConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -112,9 +112,9 @@ class SmInternetSensorEntity(SmEntity, BinarySensorEntity):
         super().__init__(coordinator)
         self._attr_unique_id = f"{coordinator.unique_id}_{self._attr_translation_key}"
 
-    async def async_added_to_hass(self) -> None:
-        """Run when entity about to be added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Run when entity about to be added to menuai."""
+        await super().async_added_to_menuai()
         self.async_on_remove(
             self.coordinator.client.sse.register_callback(
                 SmEvents.EVENT_INET_STATE, self.internet_callback

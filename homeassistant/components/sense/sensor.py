@@ -5,19 +5,19 @@ from datetime import datetime
 from sense_energy import ASyncSenseable, Scale
 from sense_energy.sense_api import SenseDevice
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     PERCENTAGE,
     UnitOfElectricPotential,
     UnitOfEnergy,
     UnitOfPower,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import SenseConfigEntry
 from .const import (
@@ -64,7 +64,7 @@ TREND_SENSOR_VARIANTS = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: SenseConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

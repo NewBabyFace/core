@@ -7,10 +7,10 @@ from typing import Any
 
 from triggercmd import client, ha
 
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchEntity
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import TriggercmdConfigEntry
 from .const import DOMAIN
@@ -19,7 +19,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: TriggercmdConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -80,7 +80,7 @@ class TRIGGERcmdSwitch(SwitchEntity):
                 "computer": self._switch.computer_id,
                 "trigger": self._switch.trigger_id,
                 "params": params,
-                "sender": "Home Assistant",
+                "sender": "MenuAI",
             },
         )
         _LOGGER.debug("TRIGGERcmd trigger response: %s", r.json())

@@ -7,17 +7,17 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, time, tzinfo
 import math
 
-from homeassistant.components.time import TimeEntity, TimeEntityDescription
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.time import TimeEntity, TimeEntityDescription
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import StarlinkConfigEntry, StarlinkData, StarlinkUpdateCoordinator
 from .entity import StarlinkEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: StarlinkConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -69,7 +69,7 @@ def _utc_minutes_to_time(utc_minutes: int, timezone: tzinfo) -> time:
             hour=hour, minute=minute, second=0, microsecond=0
         )
     except ValueError as exc:
-        raise HomeAssistantError from exc
+        raise menuaiError from exc
     return utc.astimezone(timezone).time()
 
 
@@ -79,7 +79,7 @@ def _time_to_utc_minutes(t: time, timezone: tzinfo) -> int:
             hour=t.hour, minute=t.minute, second=0, microsecond=0
         )
     except ValueError as exc:
-        raise HomeAssistantError from exc
+        raise menuaiError from exc
     utc_time = zoned_time.astimezone(UTC).time()
     return (utc_time.hour * 60) + utc_time.minute
 

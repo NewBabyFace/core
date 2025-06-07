@@ -4,9 +4,9 @@ from unittest.mock import patch
 
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import init_component
 
@@ -14,10 +14,10 @@ from tests.common import snapshot_platform
 
 
 async def test_sensors(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, snapshot: SnapshotAssertion
+    menuai: menuai, entity_registry: er.EntityRegistry, snapshot: SnapshotAssertion
 ) -> None:
     """Test the sensor classes for youless."""
-    with patch("homeassistant.components.youless.PLATFORMS", [Platform.SENSOR]):
-        entry = await init_component(hass)
+    with patch("menuai.components.youless.PLATFORMS", [Platform.SENSOR]):
+        entry = await init_component(menuai)
 
-    await snapshot_platform(hass, entity_registry, snapshot, entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, entry.entry_id)

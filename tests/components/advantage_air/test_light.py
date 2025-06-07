@@ -2,33 +2,33 @@
 
 from unittest.mock import AsyncMock
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     DOMAIN as LIGHT_DOMAIN,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
 )
-from homeassistant.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import add_mock_config
 
 
 async def test_light(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_get: AsyncMock,
     mock_update: AsyncMock,
 ) -> None:
     """Test light setup."""
 
-    await add_mock_config(hass)
+    await add_mock_config(menuai)
 
     # Test Light Entity
     entity_id = "light.light_a"
     light_id = "100"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_OFF
 
@@ -36,7 +36,7 @@ async def test_light(
     assert entry
     assert entry.unique_id == f"uniqueid-{light_id}"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: [entity_id]},
@@ -46,7 +46,7 @@ async def test_light(
     mock_update.assert_called_once()
     mock_update.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: [entity_id]},
@@ -63,7 +63,7 @@ async def test_light(
     assert entry
     assert entry.unique_id == f"uniqueid-{light_id}"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: [entity_id]},
@@ -72,7 +72,7 @@ async def test_light(
     mock_update.assert_called_once()
     mock_update.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: [entity_id], ATTR_BRIGHTNESS: 128},
@@ -82,19 +82,19 @@ async def test_light(
 
 
 async def test_things_light(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_get: AsyncMock,
     mock_update: AsyncMock,
 ) -> None:
     """Test things lights."""
 
-    await add_mock_config(hass)
+    await add_mock_config(menuai)
 
     # Test Switch Entity
     entity_id = "light.thing_light_dimmable"
     light_id = "204"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_ON
 
@@ -102,7 +102,7 @@ async def test_things_light(
     assert entry
     assert entry.unique_id == f"uniqueid-{light_id}"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: [entity_id]},
@@ -111,7 +111,7 @@ async def test_things_light(
     mock_update.assert_called_once()
     mock_update.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: [entity_id], ATTR_BRIGHTNESS: 128},

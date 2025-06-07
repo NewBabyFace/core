@@ -10,10 +10,10 @@ from sensoterra.customerapi import (
 )
 from sensoterra.probe import Probe, Sensor
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryError
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryError
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import LOGGER, SCAN_INTERVAL_MINUTES
 
@@ -26,11 +26,11 @@ class SensoterraCoordinator(DataUpdateCoordinator[list[Probe]]):
     config_entry: SensoterraConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: SensoterraConfigEntry, api: CustomerApi
+        self, menuai: menuai, config_entry: SensoterraConfigEntry, api: CustomerApi
     ) -> None:
         """Initialize Sensoterra coordinator."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name="Sensoterra probe",

@@ -4,17 +4,17 @@ import pytest
 from requests.exceptions import RequestException
 import requests_mock
 
-from homeassistant.components.qbittorrent.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import (
+from menuai.components.qbittorrent.const import DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.const import (
     CONF_PASSWORD,
     CONF_SOURCE,
     CONF_URL,
     CONF_USERNAME,
     CONF_VERIFY_SSL,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
@@ -34,10 +34,10 @@ YAML_IMPORT = {
 }
 
 
-async def test_flow_user(hass: HomeAssistant, mock_api: requests_mock.Mocker) -> None:
+async def test_flow_user(menuai: menuai, mock_api: requests_mock.Mocker) -> None:
     """Test the user flow."""
     # Open flow as USER with no input
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={CONF_SOURCE: SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -49,10 +49,10 @@ async def test_flow_user(hass: HomeAssistant, mock_api: requests_mock.Mocker) ->
             f"{USER_INPUT[CONF_URL]}/api/v2/app/preferences",
             exc=RequestException,
         )
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], USER_INPUT
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
     assert result["errors"] == {"base": "cannot_connect"}
@@ -64,10 +64,10 @@ async def test_flow_user(hass: HomeAssistant, mock_api: requests_mock.Mocker) ->
             f"{USER_INPUT[CONF_URL]}/api/v2/auth/login",
             text="Wrong username/password",
         )
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], USER_INPUT
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
     assert result["errors"] == {"base": "invalid_auth"}
@@ -79,10 +79,10 @@ async def test_flow_user(hass: HomeAssistant, mock_api: requests_mock.Mocker) ->
             f"{USER_INPUT[CONF_URL]}/api/v2/auth/login",
             text="Ok.",
         )
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], USER_INPUT
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     assert result["type"] == FlowResultType.CREATE_ENTRY
 
     assert result["data"] == {
@@ -93,20 +93,20 @@ async def test_flow_user(hass: HomeAssistant, mock_api: requests_mock.Mocker) ->
     }
 
 
-async def test_flow_user_already_configured(hass: HomeAssistant) -> None:
+async def test_flow_user_already_configured(menuai: menuai) -> None:
     """Test user initialized flow with duplicate server."""
     entry = MockConfigEntry(domain=DOMAIN, data=USER_INPUT)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     # Open flow as USER with no input
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={CONF_SOURCE: SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
     # Test flow with duplicate config
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], USER_INPUT
     )
     assert result["type"] is FlowResultType.ABORT

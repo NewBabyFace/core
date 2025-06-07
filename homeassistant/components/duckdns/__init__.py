@@ -10,20 +10,20 @@ from typing import Any, cast
 from aiohttp import ClientSession
 import voluptuous as vol
 
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_DOMAIN
-from homeassistant.core import (
+from menuai.const import CONF_ACCESS_TOKEN, CONF_DOMAIN
+from menuai.core import (
     CALLBACK_TYPE,
-    HassJob,
-    HomeAssistant,
+    menuaiJob,
+    menuai,
     ServiceCall,
     callback,
 )
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.event import async_call_later
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.loader import bind_hass
-from homeassistant.util import dt as dt_util
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.event import async_call_later
+from menuai.helpers.typing import ConfigType
+from menuai.loader import bind_menuai
+from menuai.util import dt as dt_util
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -52,11 +52,11 @@ CONFIG_SCHEMA = vol.Schema(
 SERVICE_TXT_SCHEMA = vol.Schema({vol.Required(ATTR_TXT): vol.Any(None, cv.string)})
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Initialize the DuckDNS component."""
     domain: str = config[DOMAIN][CONF_DOMAIN]
     token: str = config[DOMAIN][CONF_ACCESS_TOKEN]
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
 
     async def update_domain_interval(_now: datetime) -> bool:
         """Update the DuckDNS entry."""
@@ -69,13 +69,13 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         timedelta(minutes=15),
         timedelta(minutes=30),
     )
-    async_track_time_interval_backoff(hass, update_domain_interval, intervals)
+    async_track_time_interval_backoff(menuai, update_domain_interval, intervals)
 
     async def update_domain_service(call: ServiceCall) -> None:
         """Update the DuckDNS entry."""
         await _update_duckdns(session, domain, token, txt=call.data[ATTR_TXT])
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_SET_TXT, update_domain_service, schema=SERVICE_TXT_SCHEMA
     )
 
@@ -118,9 +118,9 @@ async def _update_duckdns(
 
 
 @callback
-@bind_hass
+@bind_menuai
 def async_track_time_interval_backoff(
-    hass: HomeAssistant,
+    menuai: menuai,
     action: Callable[[datetime], Coroutine[Any, Any, bool]],
     intervals: Sequence[timedelta],
 ) -> CALLBACK_TYPE:
@@ -138,11 +138,11 @@ def async_track_time_interval_backoff(
         finally:
             delay = intervals[failed] if failed < len(intervals) else intervals[-1]
             remove = async_call_later(
-                hass, delay.total_seconds(), interval_listener_job
+                menuai, delay.total_seconds(), interval_listener_job
             )
 
-    interval_listener_job = HassJob(interval_listener, cancel_on_shutdown=True)
-    hass.async_run_hass_job(interval_listener_job, dt_util.utcnow())
+    interval_listener_job = menuaiJob(interval_listener, cancel_on_shutdown=True)
+    menuai.async_run_menuai_job(interval_listener_job, dt_util.utcnow())
 
     def remove_listener() -> None:
         """Remove interval listener."""

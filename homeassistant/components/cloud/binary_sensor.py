@@ -1,21 +1,21 @@
-"""Support for Home Assistant Cloud binary sensors."""
+"""Support for MenuAI Cloud binary sensors."""
 
 from __future__ import annotations
 
 import asyncio
 from typing import Any
 
-from hass_nabucasa import Cloud
+from menuai_nabucasa import Cloud
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .client import CloudClient
 from .const import DATA_CLOUD, DISPATCHER_REMOTE_UPDATE
@@ -24,12 +24,12 @@ WAIT_UNTIL_CHANGE = 3
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Set up the Home Assistant Cloud binary sensors."""
-    cloud = hass.data[DATA_CLOUD]
+    """Set up the MenuAI Cloud binary sensors."""
+    cloud = menuai.data[DATA_CLOUD]
     async_add_entities([CloudRemoteBinary(cloud)])
 
 
@@ -56,7 +56,7 @@ class CloudRemoteBinary(BinarySensorEntity):
         """Return True if entity is available."""
         return self.cloud.remote.certificate is not None
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register update dispatcher."""
 
         async def async_state_update(data: Any) -> None:
@@ -66,6 +66,6 @@ class CloudRemoteBinary(BinarySensorEntity):
 
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, DISPATCHER_REMOTE_UPDATE, async_state_update
+                self.menuai, DISPATCHER_REMOTE_UPDATE, async_state_update
             )
         )

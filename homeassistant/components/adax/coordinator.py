@@ -6,11 +6,11 @@ from typing import Any, cast
 from adax import Adax
 from adax_local import Adax as AdaxLocal
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_IP_ADDRESS, CONF_PASSWORD, CONF_TOKEN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_IP_ADDRESS, CONF_PASSWORD, CONF_TOKEN
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import ACCOUNT_ID, SCAN_INTERVAL
 
@@ -23,10 +23,10 @@ type AdaxConfigEntry = ConfigEntry[AdaxCloudCoordinator | AdaxLocalCoordinator]
 class AdaxCloudCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
     """Coordinator for updating data to and from Adax (cloud)."""
 
-    def __init__(self, hass: HomeAssistant, entry: AdaxConfigEntry) -> None:
+    def __init__(self, menuai: menuai, entry: AdaxConfigEntry) -> None:
         """Initialize the Adax coordinator used for Cloud mode."""
         super().__init__(
-            hass,
+            menuai,
             config_entry=entry,
             logger=_LOGGER,
             name="AdaxCloud",
@@ -36,7 +36,7 @@ class AdaxCloudCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
         self.adax_data_handler = Adax(
             entry.data[ACCOUNT_ID],
             entry.data[CONF_PASSWORD],
-            websession=async_get_clientsession(hass),
+            websession=async_get_clientsession(menuai),
         )
 
     async def _async_update_data(self) -> dict[str, dict[str, Any]]:
@@ -71,10 +71,10 @@ class AdaxCloudCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
 class AdaxLocalCoordinator(DataUpdateCoordinator[dict[str, Any] | None]):
     """Coordinator for updating data to and from Adax (local)."""
 
-    def __init__(self, hass: HomeAssistant, entry: AdaxConfigEntry) -> None:
+    def __init__(self, menuai: menuai, entry: AdaxConfigEntry) -> None:
         """Initialize the Adax coordinator used for Local mode."""
         super().__init__(
-            hass,
+            menuai,
             config_entry=entry,
             logger=_LOGGER,
             name="AdaxLocal",
@@ -84,7 +84,7 @@ class AdaxLocalCoordinator(DataUpdateCoordinator[dict[str, Any] | None]):
         self.adax_data_handler = AdaxLocal(
             entry.data[CONF_IP_ADDRESS],
             entry.data[CONF_TOKEN],
-            websession=async_get_clientsession(hass, verify_ssl=False),
+            websession=async_get_clientsession(menuai, verify_ssl=False),
         )
 
     async def _async_update_data(self) -> dict[str, Any]:

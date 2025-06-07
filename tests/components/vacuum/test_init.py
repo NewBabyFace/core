@@ -8,8 +8,8 @@ from typing import Any
 
 import pytest
 
-from homeassistant.components import vacuum
-from homeassistant.components.vacuum import (
+from menuai.components import vacuum
+from menuai.components.vacuum import (
     DOMAIN,
     SERVICE_CLEAN_SPOT,
     SERVICE_LOCATE,
@@ -23,7 +23,7 @@ from homeassistant.components.vacuum import (
     VacuumActivity,
     VacuumEntityFeature,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from . import MockVacuum, help_async_setup_entry_init, help_async_unload_entry
 from .common import async_start
@@ -102,7 +102,7 @@ def test_deprecated_constants_for_state(
     ],
 )
 async def test_state_services(
-    hass: HomeAssistant, config_flow_fixture: None, service: str, expected_state: str
+    menuai: menuai, config_flow_fixture: None, service: str, expected_state: str
 ) -> None:
     """Test get vacuum service that affect state."""
     mock_vacuum = MockVacuum(
@@ -110,54 +110,54 @@ async def test_state_services(
         entity_id="vacuum.testing",
     )
     config_entry = MockConfigEntry(domain="test")
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     mock_integration(
-        hass,
+        menuai,
         MockModule(
             "test",
             async_setup_entry=help_async_setup_entry_init,
             async_unload_entry=help_async_unload_entry,
         ),
     )
-    setup_test_component_platform(hass, DOMAIN, [mock_vacuum], from_config_entry=True)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    setup_test_component_platform(menuai, DOMAIN, [mock_vacuum], from_config_entry=True)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         service,
         {"entity_id": mock_vacuum.entity_id},
         blocking=True,
     )
-    activity = hass.states.get(mock_vacuum.entity_id)
+    activity = menuai.states.get(mock_vacuum.entity_id)
 
     assert activity.state == expected_state
 
 
-async def test_fan_speed(hass: HomeAssistant, config_flow_fixture: None) -> None:
+async def test_fan_speed(menuai: menuai, config_flow_fixture: None) -> None:
     """Test set vacuum fan speed."""
     mock_vacuum = MockVacuum(
         name="Testing",
         entity_id="vacuum.testing",
     )
     config_entry = MockConfigEntry(domain="test")
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     mock_integration(
-        hass,
+        menuai,
         MockModule(
             "test",
             async_setup_entry=help_async_setup_entry_init,
             async_unload_entry=help_async_unload_entry,
         ),
     )
-    setup_test_component_platform(hass, DOMAIN, [mock_vacuum], from_config_entry=True)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    setup_test_component_platform(menuai, DOMAIN, [mock_vacuum], from_config_entry=True)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
 
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_FAN_SPEED,
         {"entity_id": mock_vacuum.entity_id, "fan_speed": "high"},
@@ -167,7 +167,7 @@ async def test_fan_speed(hass: HomeAssistant, config_flow_fixture: None) -> None
     assert mock_vacuum.fan_speed == "high"
 
 
-async def test_locate(hass: HomeAssistant, config_flow_fixture: None) -> None:
+async def test_locate(menuai: menuai, config_flow_fixture: None) -> None:
     """Test vacuum locate."""
 
     calls = []
@@ -187,20 +187,20 @@ async def test_locate(hass: HomeAssistant, config_flow_fixture: None) -> None:
         name="Testing", entity_id="vacuum.testing", calls=calls
     )
     config_entry = MockConfigEntry(domain="test")
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     mock_integration(
-        hass,
+        menuai,
         MockModule(
             "test",
             async_setup_entry=help_async_setup_entry_init,
             async_unload_entry=help_async_unload_entry,
         ),
     )
-    setup_test_component_platform(hass, DOMAIN, [mock_vacuum], from_config_entry=True)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    setup_test_component_platform(menuai, DOMAIN, [mock_vacuum], from_config_entry=True)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_LOCATE,
         {"entity_id": mock_vacuum.entity_id},
@@ -210,7 +210,7 @@ async def test_locate(hass: HomeAssistant, config_flow_fixture: None) -> None:
     assert "locate" in calls
 
 
-async def test_send_command(hass: HomeAssistant, config_flow_fixture: None) -> None:
+async def test_send_command(menuai: menuai, config_flow_fixture: None) -> None:
     """Test Vacuum send command."""
 
     strings = []
@@ -236,20 +236,20 @@ async def test_send_command(hass: HomeAssistant, config_flow_fixture: None) -> N
         name="Testing", entity_id="vacuum.testing", strings=strings
     )
     config_entry = MockConfigEntry(domain="test")
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     mock_integration(
-        hass,
+        menuai,
         MockModule(
             "test",
             async_setup_entry=help_async_setup_entry_init,
             async_unload_entry=help_async_unload_entry,
         ),
     )
-    setup_test_component_platform(hass, DOMAIN, [mock_vacuum], from_config_entry=True)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    setup_test_component_platform(menuai, DOMAIN, [mock_vacuum], from_config_entry=True)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SEND_COMMAND,
         {
@@ -263,7 +263,7 @@ async def test_send_command(hass: HomeAssistant, config_flow_fixture: None) -> N
     assert "test" in strings
 
 
-async def test_supported_features_compat(hass: HomeAssistant) -> None:
+async def test_supported_features_compat(menuai: menuai) -> None:
     """Test StateVacuumEntity using deprecated feature constants features."""
 
     features = (
@@ -279,8 +279,8 @@ async def test_supported_features_compat(hass: HomeAssistant) -> None:
         _attr_fan_speed_list = ["silent", "normal", "pet hair"]
 
     entity = _LegacyConstantsStateVacuum()
-    entity.hass = hass
-    entity.platform = MockEntityPlatform(hass)
+    entity.menuai = menuai
+    entity.platform = MockEntityPlatform(menuai)
     assert isinstance(entity.supported_features, int)
     assert entity.supported_features == int(features)
     assert entity.supported_features_compat is (
@@ -302,12 +302,12 @@ async def test_supported_features_compat(hass: HomeAssistant) -> None:
 
 
 async def test_vacuum_not_log_deprecated_state_warning(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_vacuum_entity: MockVacuum,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test correctly using activity doesn't log issue or raise repair."""
-    state = hass.states.get(mock_vacuum_entity.entity_id)
+    state = menuai.states.get(mock_vacuum_entity.entity_id)
     assert state is not None
     assert (
         "should implement the 'activity' property and return its state using the VacuumActivity enum"
@@ -317,7 +317,7 @@ async def test_vacuum_not_log_deprecated_state_warning(
 
 @pytest.mark.usefixtures("mock_as_custom_component")
 async def test_vacuum_log_deprecated_state_warning_using_state_prop(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_flow_fixture: None,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -336,10 +336,10 @@ async def test_vacuum_log_deprecated_state_warning_using_state_prop(
         entity_id="vacuum.test",
     )
     config_entry = MockConfigEntry(domain="test")
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     mock_integration(
-        hass,
+        menuai,
         MockModule(
             "test",
             async_setup_entry=help_async_setup_entry_init,
@@ -347,10 +347,10 @@ async def test_vacuum_log_deprecated_state_warning_using_state_prop(
         ),
         built_in=False,
     )
-    setup_test_component_platform(hass, DOMAIN, [entity], from_config_entry=True)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    setup_test_component_platform(menuai, DOMAIN, [entity], from_config_entry=True)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
 
-    state = hass.states.get(entity.entity_id)
+    state = menuai.states.get(entity.entity_id)
     assert state is not None
 
     assert (
@@ -361,7 +361,7 @@ async def test_vacuum_log_deprecated_state_warning_using_state_prop(
 
 @pytest.mark.usefixtures("mock_as_custom_component")
 async def test_vacuum_log_deprecated_state_warning_using_attr_state_attr(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_flow_fixture: None,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -379,10 +379,10 @@ async def test_vacuum_log_deprecated_state_warning_using_attr_state_attr(
         entity_id="vacuum.test",
     )
     config_entry = MockConfigEntry(domain="test")
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     mock_integration(
-        hass,
+        menuai,
         MockModule(
             "test",
             async_setup_entry=help_async_setup_entry_init,
@@ -390,10 +390,10 @@ async def test_vacuum_log_deprecated_state_warning_using_attr_state_attr(
         ),
         built_in=False,
     )
-    setup_test_component_platform(hass, DOMAIN, [entity], from_config_entry=True)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    setup_test_component_platform(menuai, DOMAIN, [entity], from_config_entry=True)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
 
-    state = hass.states.get(entity.entity_id)
+    state = menuai.states.get(entity.entity_id)
     assert state is not None
 
     assert (
@@ -401,14 +401,14 @@ async def test_vacuum_log_deprecated_state_warning_using_attr_state_attr(
         not in caplog.text
     )
 
-    await async_start(hass, entity.entity_id)
+    await async_start(menuai, entity.entity_id)
 
     assert (
         "should implement the 'activity' property and return its state using the VacuumActivity enum"
         in caplog.text
     )
     caplog.clear()
-    await async_start(hass, entity.entity_id)
+    await async_start(menuai, entity.entity_id)
     # Test we only log once
     assert (
         "should implement the 'activity' property and return its state using the VacuumActivity enum"
@@ -418,7 +418,7 @@ async def test_vacuum_log_deprecated_state_warning_using_attr_state_attr(
 
 @pytest.mark.usefixtures("mock_as_custom_component")
 async def test_vacuum_deprecated_state_does_not_break_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_flow_fixture: None,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -443,10 +443,10 @@ async def test_vacuum_deprecated_state_does_not_break_state(
         entity_id="vacuum.test",
     )
     config_entry = MockConfigEntry(domain="test")
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     mock_integration(
-        hass,
+        menuai,
         MockModule(
             "test",
             async_setup_entry=help_async_setup_entry_init,
@@ -454,14 +454,14 @@ async def test_vacuum_deprecated_state_does_not_break_state(
         ),
         built_in=False,
     )
-    setup_test_component_platform(hass, DOMAIN, [entity], from_config_entry=True)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    setup_test_component_platform(menuai, DOMAIN, [entity], from_config_entry=True)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
 
-    state = hass.states.get(entity.entity_id)
+    state = menuai.states.get(entity.entity_id)
     assert state is not None
     assert state.state == "docked"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_START,
         {
@@ -469,8 +469,8 @@ async def test_vacuum_deprecated_state_does_not_break_state(
         },
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity.entity_id)
+    state = menuai.states.get(entity.entity_id)
     assert state is not None
     assert state.state == "cleaning"

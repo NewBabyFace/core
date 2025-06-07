@@ -15,8 +15,8 @@ from onvif import ONVIFCamera
 from onvif.exceptions import ONVIFError
 from zeep.exceptions import Fault, TransportError, XMLParseError, XMLSyntaxError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_HOST,
     CONF_NAME,
     CONF_PASSWORD,
@@ -24,8 +24,8 @@ from homeassistant.const import (
     CONF_USERNAME,
     Platform,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai, callback
+from menuai.util import dt as dt_util
 
 from .const import (
     ABSOLUTE_MOVE,
@@ -51,9 +51,9 @@ class ONVIFDevice:
     device: ONVIFCamera
     events: EventManager
 
-    def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: ConfigEntry) -> None:
         """Initialize the device."""
-        self.hass: HomeAssistant = hass
+        self.menuai: menuai = menuai
         self.config_entry: ConfigEntry = config_entry
         self._original_options = dict(config_entry.options)
         self.available: bool = True
@@ -68,11 +68,11 @@ class ONVIFDevice:
         self._dt_diff_seconds: float = 0
 
     async def _async_update_listener(
-        self, hass: HomeAssistant, entry: ConfigEntry
+        self, menuai: menuai, entry: ConfigEntry
     ) -> None:
         """Handle options update."""
         if self._original_options != entry.options:
-            hass.async_create_task(hass.config_entries.async_reload(entry.entry_id))
+            menuai.async_create_task(menuai.config_entries.async_reload(entry.entry_id))
 
     @property
     def name(self) -> str:
@@ -102,7 +102,7 @@ class ONVIFDevice:
     async def async_setup(self) -> None:
         """Set up the device."""
         self.device = get_device(
-            self.hass,
+            self.menuai,
             host=self.config_entry.data[CONF_HOST],
             port=self.config_entry.data[CONF_PORT],
             username=self.config_entry.data[CONF_USERNAME],
@@ -120,7 +120,7 @@ class ONVIFDevice:
 
         # Create event manager
         assert self.config_entry.unique_id
-        self.events = EventManager(self.hass, self.device, self.config_entry, self.name)
+        self.events = EventManager(self.menuai, self.device, self.config_entry, self.name)
 
         # Fetch basic device info and capabilities
         self.info = await self.async_get_device_info()
@@ -165,7 +165,7 @@ class ONVIFDevice:
         # Bind the listener to the ONVIFDevice instance since
         # async_update_listener only creates a weak reference to the listener
         # and we need to make sure it doesn't get garbage collected since only
-        # the ONVIFDevice instance is stored in hass.data
+        # the ONVIFDevice instance is stored in menuai.data
         self.config_entry.async_on_unload(
             self.config_entry.add_update_listener(self._async_update_listener)
         )
@@ -674,7 +674,7 @@ class ONVIFDevice:
 
 
 def get_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     host: str,
     port: int,
     username: str | None,

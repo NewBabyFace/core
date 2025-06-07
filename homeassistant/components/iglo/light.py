@@ -8,7 +8,7 @@ from iglo import Lamp
 from iglo.lamp import MODE_WHITE
 import voluptuous as vol
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_TEMP_KELVIN,
     ATTR_EFFECT,
@@ -18,12 +18,12 @@ from homeassistant.components.light import (
     LightEntity,
     LightEntityFeature,
 )
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import color as color_util
+from menuai.const import CONF_HOST, CONF_NAME, CONF_PORT
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import color as color_util
 
 DEFAULT_NAME = "iGlo Light"
 DEFAULT_PORT = 8080
@@ -38,7 +38,7 @@ PLATFORM_SCHEMA = LIGHT_PLATFORM_SCHEMA.extend(
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -78,7 +78,7 @@ class IGloLamp(LightEntity):
         if self._lamp.state()["mode"] == MODE_WHITE:
             return ColorMode.COLOR_TEMP
         # The iglo library reports MODE_WHITE when an effect is active, this is not
-        # supported by Home Assistant, just report ColorMode.HS
+        # supported by MenuAI, just report ColorMode.HS
         return ColorMode.HS
 
     @property

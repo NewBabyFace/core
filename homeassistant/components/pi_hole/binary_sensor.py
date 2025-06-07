@@ -8,14 +8,14 @@ from typing import Any
 
 from hole import Hole
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.const import CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.const import CONF_NAME
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from . import PiHoleConfigEntry
 from .entity import PiHoleEntity
@@ -39,7 +39,7 @@ BINARY_SENSOR_TYPES: tuple[PiHoleBinarySensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: PiHoleConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

@@ -9,15 +9,15 @@ from wyoming.asr import Transcript
 from wyoming.handle import Handled, NotHandled
 from wyoming.intent import Entity, Intent, NotRecognized
 
-from homeassistant.components import conversation
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import Context, HomeAssistant
-from homeassistant.helpers import intent
+from menuai.components import conversation
+from menuai.config_entries import ConfigEntry
+from menuai.core import Context, menuai
+from menuai.helpers import intent
 
 from . import MockAsyncTcpClient
 
 
-async def test_intent(hass: HomeAssistant, init_wyoming_intent: ConfigEntry) -> None:
+async def test_intent(menuai: menuai, init_wyoming_intent: ConfigEntry) -> None:
     """Test when an intent is recognized."""
     agent_id = "conversation.test_intent"
 
@@ -38,18 +38,18 @@ async def test_intent(hass: HomeAssistant, init_wyoming_intent: ConfigEntry) -> 
             assert intent_obj.slots.get("entity", {}).get("value") == "value"
             return intent_obj.create_response()
 
-    intent.async_register(hass, TestIntentHandler())
+    intent.async_register(menuai, TestIntentHandler())
 
     with patch(
-        "homeassistant.components.wyoming.conversation.AsyncTcpClient",
+        "menuai.components.wyoming.conversation.AsyncTcpClient",
         MockAsyncTcpClient([test_intent.event()]),
     ):
         result = await conversation.async_converse(
-            hass=hass,
+            menuai=menuai,
             text="test text",
             conversation_id=conversation_id,
             context=Context(),
-            language=hass.config.language,
+            language=menuai.config.language,
             agent_id=agent_id,
         )
 
@@ -60,7 +60,7 @@ async def test_intent(hass: HomeAssistant, init_wyoming_intent: ConfigEntry) -> 
 
 
 async def test_intent_handle_error(
-    hass: HomeAssistant, init_wyoming_intent: ConfigEntry
+    menuai: menuai, init_wyoming_intent: ConfigEntry
 ) -> None:
     """Test error during handling when an intent is recognized."""
     agent_id = "conversation.test_intent"
@@ -76,18 +76,18 @@ async def test_intent_handle_error(
             """Handle the intent."""
             raise intent.IntentError
 
-    intent.async_register(hass, TestIntentHandler())
+    intent.async_register(menuai, TestIntentHandler())
 
     with patch(
-        "homeassistant.components.wyoming.conversation.AsyncTcpClient",
+        "menuai.components.wyoming.conversation.AsyncTcpClient",
         MockAsyncTcpClient([test_intent.event()]),
     ):
         result = await conversation.async_converse(
-            hass=hass,
+            menuai=menuai,
             text="test text",
             conversation_id=None,
             context=Context(),
-            language=hass.config.language,
+            language=menuai.config.language,
             agent_id=agent_id,
         )
 
@@ -96,21 +96,21 @@ async def test_intent_handle_error(
 
 
 async def test_not_recognized(
-    hass: HomeAssistant, init_wyoming_intent: ConfigEntry
+    menuai: menuai, init_wyoming_intent: ConfigEntry
 ) -> None:
     """Test when an intent is not recognized."""
     agent_id = "conversation.test_intent"
 
     with patch(
-        "homeassistant.components.wyoming.conversation.AsyncTcpClient",
+        "menuai.components.wyoming.conversation.AsyncTcpClient",
         MockAsyncTcpClient([NotRecognized(text="failure").event()]),
     ):
         result = await conversation.async_converse(
-            hass=hass,
+            menuai=menuai,
             text="test text",
             conversation_id=None,
             context=Context(),
-            language=hass.config.language,
+            language=menuai.config.language,
             agent_id=agent_id,
         )
 
@@ -120,22 +120,22 @@ async def test_not_recognized(
     assert result.response.speech.get("plain", {}).get("speech") == "failure"
 
 
-async def test_handle(hass: HomeAssistant, init_wyoming_handle: ConfigEntry) -> None:
+async def test_handle(menuai: menuai, init_wyoming_handle: ConfigEntry) -> None:
     """Test when an intent is handled."""
     agent_id = "conversation.test_handle"
 
     conversation_id = "conversation-1234"
 
     with patch(
-        "homeassistant.components.wyoming.conversation.AsyncTcpClient",
+        "menuai.components.wyoming.conversation.AsyncTcpClient",
         MockAsyncTcpClient([Handled(text="success").event()]),
     ):
         result = await conversation.async_converse(
-            hass=hass,
+            menuai=menuai,
             text="test text",
             conversation_id=conversation_id,
             context=Context(),
-            language=hass.config.language,
+            language=menuai.config.language,
             agent_id=agent_id,
         )
 
@@ -146,21 +146,21 @@ async def test_handle(hass: HomeAssistant, init_wyoming_handle: ConfigEntry) -> 
 
 
 async def test_not_handled(
-    hass: HomeAssistant, init_wyoming_handle: ConfigEntry
+    menuai: menuai, init_wyoming_handle: ConfigEntry
 ) -> None:
     """Test when an intent is not handled."""
     agent_id = "conversation.test_handle"
 
     with patch(
-        "homeassistant.components.wyoming.conversation.AsyncTcpClient",
+        "menuai.components.wyoming.conversation.AsyncTcpClient",
         MockAsyncTcpClient([NotHandled(text="failure").event()]),
     ):
         result = await conversation.async_converse(
-            hass=hass,
+            menuai=menuai,
             text="test text",
             conversation_id=None,
             context=Context(),
-            language=hass.config.language,
+            language=menuai.config.language,
             agent_id=agent_id,
         )
 
@@ -171,21 +171,21 @@ async def test_not_handled(
 
 
 async def test_connection_lost(
-    hass: HomeAssistant, init_wyoming_handle: ConfigEntry, snapshot: SnapshotAssertion
+    menuai: menuai, init_wyoming_handle: ConfigEntry, snapshot: SnapshotAssertion
 ) -> None:
     """Test connection to client is lost."""
     agent_id = "conversation.test_handle"
 
     with patch(
-        "homeassistant.components.wyoming.conversation.AsyncTcpClient",
+        "menuai.components.wyoming.conversation.AsyncTcpClient",
         MockAsyncTcpClient([None]),
     ):
         result = await conversation.async_converse(
-            hass=hass,
+            menuai=menuai,
             text="test text",
             conversation_id=None,
             context=Context(),
-            language=hass.config.language,
+            language=menuai.config.language,
             agent_id=agent_id,
         )
 
@@ -196,7 +196,7 @@ async def test_connection_lost(
 
 
 async def test_oserror(
-    hass: HomeAssistant, init_wyoming_handle: ConfigEntry, snapshot: SnapshotAssertion
+    menuai: menuai, init_wyoming_handle: ConfigEntry, snapshot: SnapshotAssertion
 ) -> None:
     """Test connection error."""
     agent_id = "conversation.test_handle"
@@ -205,16 +205,16 @@ async def test_oserror(
 
     with (
         patch(
-            "homeassistant.components.wyoming.conversation.AsyncTcpClient", mock_client
+            "menuai.components.wyoming.conversation.AsyncTcpClient", mock_client
         ),
         patch.object(mock_client, "read_event", side_effect=OSError("Boom!")),
     ):
         result = await conversation.async_converse(
-            hass=hass,
+            menuai=menuai,
             text="test text",
             conversation_id=None,
             context=Context(),
-            language=hass.config.language,
+            language=menuai.config.language,
             agent_id=agent_id,
         )
 

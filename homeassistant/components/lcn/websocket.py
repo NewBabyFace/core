@@ -9,19 +9,19 @@ from typing import TYPE_CHECKING, Any, Final
 import lcn_frontend as lcn_panel
 import voluptuous as vol
 
-from homeassistant.components import panel_custom, websocket_api
-from homeassistant.components.http import StaticPathConfig
-from homeassistant.components.websocket_api import AsyncWebSocketCommandHandler
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.components import panel_custom, websocket_api
+from menuai.components.http import StaticPathConfig
+from menuai.components.websocket_api import AsyncWebSocketCommandHandler
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_ADDRESS,
     CONF_DEVICES,
     CONF_DOMAIN,
     CONF_ENTITIES,
     CONF_NAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import (
+from menuai.core import menuai
+from menuai.helpers import (
     config_validation as cv,
     device_registry as dr,
     entity_registry as er,
@@ -59,27 +59,27 @@ from .schemas import (
 )
 
 if TYPE_CHECKING:
-    from homeassistant.components.websocket_api import ActiveConnection
+    from menuai.components.websocket_api import ActiveConnection
 
 type AsyncLcnWebSocketCommandHandler = Callable[
-    [HomeAssistant, ActiveConnection, dict[str, Any], ConfigEntry], Awaitable[None]
+    [menuai, ActiveConnection, dict[str, Any], ConfigEntry], Awaitable[None]
 ]
 
 URL_BASE: Final = "/lcn_static"
 
 
-async def register_panel_and_ws_api(hass: HomeAssistant) -> None:
+async def register_panel_and_ws_api(menuai: menuai) -> None:
     """Register the LCN Panel and Websocket API."""
-    websocket_api.async_register_command(hass, websocket_get_device_configs)
-    websocket_api.async_register_command(hass, websocket_get_entity_configs)
-    websocket_api.async_register_command(hass, websocket_scan_devices)
-    websocket_api.async_register_command(hass, websocket_add_device)
-    websocket_api.async_register_command(hass, websocket_delete_device)
-    websocket_api.async_register_command(hass, websocket_add_entity)
-    websocket_api.async_register_command(hass, websocket_delete_entity)
+    websocket_api.async_register_command(menuai, websocket_get_device_configs)
+    websocket_api.async_register_command(menuai, websocket_get_entity_configs)
+    websocket_api.async_register_command(menuai, websocket_scan_devices)
+    websocket_api.async_register_command(menuai, websocket_add_device)
+    websocket_api.async_register_command(menuai, websocket_delete_device)
+    websocket_api.async_register_command(menuai, websocket_add_entity)
+    websocket_api.async_register_command(menuai, websocket_delete_entity)
 
-    if DOMAIN not in hass.data.get("frontend_panels", {}):
-        await hass.http.async_register_static_paths(
+    if DOMAIN not in menuai.data.get("frontend_panels", {}):
+        await menuai.http.async_register_static_paths(
             [
                 StaticPathConfig(
                     URL_BASE,
@@ -89,7 +89,7 @@ async def register_panel_and_ws_api(hass: HomeAssistant) -> None:
             ]
         )
         await panel_custom.async_register_panel(
-            hass=hass,
+            menuai=menuai,
             frontend_url_path=DOMAIN,
             webcomponent_name=lcn_panel.webcomponent_name,
             config_panel_domain=DOMAIN,
@@ -106,13 +106,13 @@ def get_config_entry(
 
     @wraps(func)
     async def get_entry(
-        hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict
+        menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict
     ) -> None:
         """Get config_entry."""
-        if not (config_entry := hass.config_entries.async_get_entry(msg["entry_id"])):
+        if not (config_entry := menuai.config_entries.async_get_entry(msg["entry_id"])):
             connection.send_result(msg["id"], False)
         else:
-            await func(hass, connection, msg, config_entry)
+            await func(menuai, connection, msg, config_entry)
 
     return get_entry
 
@@ -124,7 +124,7 @@ def get_config_entry(
 @websocket_api.async_response
 @get_config_entry
 async def websocket_get_device_configs(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict,
     config_entry: ConfigEntry,
@@ -144,7 +144,7 @@ async def websocket_get_device_configs(
 @websocket_api.async_response
 @get_config_entry
 async def websocket_get_entity_configs(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict,
     config_entry: ConfigEntry,
@@ -162,7 +162,7 @@ async def websocket_get_entity_configs(
     result_entity_configs = [
         {**entity_config, CONF_NAME: entity.name or entity.original_name}
         for entity_config in entity_configs[:]
-        if (entity := get_entity_entry(hass, entity_config, config_entry)) is not None
+        if (entity := get_entity_entry(menuai, entity_config, config_entry)) is not None
     ]
 
     connection.send_result(msg["id"], result_entity_configs)
@@ -175,23 +175,23 @@ async def websocket_get_entity_configs(
 @websocket_api.async_response
 @get_config_entry
 async def websocket_scan_devices(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict,
     config_entry: ConfigEntry,
 ) -> None:
     """Scan for new devices."""
-    host_connection = hass.data[DOMAIN][config_entry.entry_id][CONNECTION]
+    host_connection = menuai.data[DOMAIN][config_entry.entry_id][CONNECTION]
     await host_connection.scan_modules()
 
     for device_connection in host_connection.address_conns.values():
         if not device_connection.is_group:
             await async_create_or_update_device_in_config_entry(
-                hass, device_connection, config_entry
+                menuai, device_connection, config_entry
             )
 
     # create/update devices in device registry
-    register_lcn_address_devices(hass, config_entry)
+    register_lcn_address_devices(menuai, config_entry)
 
     connection.send_result(msg["id"], config_entry.data[CONF_DEVICES])
 
@@ -207,7 +207,7 @@ async def websocket_scan_devices(
 @websocket_api.async_response
 @get_config_entry
 async def websocket_add_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict,
     config_entry: ConfigEntry,
@@ -228,16 +228,16 @@ async def websocket_add_device(
     }
 
     # update device info from LCN
-    device_connection = get_device_connection(hass, msg[CONF_ADDRESS], config_entry)
+    device_connection = get_device_connection(menuai, msg[CONF_ADDRESS], config_entry)
     await async_update_device_config(device_connection, device_config)
 
     # add device_config to config_entry
     device_configs = [*config_entry.data[CONF_DEVICES], device_config]
     data = {**config_entry.data, CONF_DEVICES: device_configs}
-    hass.config_entries.async_update_entry(config_entry, data=data)
+    menuai.config_entries.async_update_entry(config_entry, data=data)
 
     # create/update devices in device registry
-    register_lcn_address_devices(hass, config_entry)
+    register_lcn_address_devices(menuai, config_entry)
 
     connection.send_result(msg["id"], True)
 
@@ -253,7 +253,7 @@ async def websocket_add_device(
 @websocket_api.async_response
 @get_config_entry
 async def websocket_delete_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict,
     config_entry: ConfigEntry,
@@ -261,7 +261,7 @@ async def websocket_delete_device(
     """Delete a device."""
     device_config = get_device_config(msg[CONF_ADDRESS], config_entry)
 
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     identifiers = {
         (DOMAIN, generate_unique_id(config_entry.entry_id, msg[CONF_ADDRESS]))
     }
@@ -276,18 +276,18 @@ async def websocket_delete_device(
         dc for dc in config_entry.data[CONF_DEVICES] if dc != device_config
     ]
     data = {**config_entry.data, CONF_DEVICES: device_configs}
-    hass.config_entries.async_update_entry(config_entry, data=data)
+    menuai.config_entries.async_update_entry(config_entry, data=data)
 
     # remove all child devices (and entities) from config_entry data
     for entity_config in data[CONF_ENTITIES][:]:
         if tuple(entity_config[CONF_ADDRESS]) == msg[CONF_ADDRESS]:
             data[CONF_ENTITIES].remove(entity_config)
 
-    hass.config_entries.async_update_entry(config_entry, data=data)
+    menuai.config_entries.async_update_entry(config_entry, data=data)
 
     # cleanup registries
-    purge_entity_registry(hass, config_entry.entry_id, data)
-    purge_device_registry(hass, config_entry.entry_id, data)
+    purge_entity_registry(menuai, config_entry.entry_id, data)
+    purge_device_registry(menuai, config_entry.entry_id, data)
 
     # return the device config, not all devices !!!
     connection.send_result(msg["id"])
@@ -315,7 +315,7 @@ async def websocket_delete_device(
 @websocket_api.async_response
 @get_config_entry
 async def websocket_add_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict,
     config_entry: ConfigEntry,
@@ -334,7 +334,7 @@ async def websocket_add_entity(
         resource,
     )
 
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
     if entity_registry.async_get_entity_id(msg[CONF_DOMAIN], DOMAIN, unique_id):
         connection.send_result(msg["id"], False)
         return
@@ -347,7 +347,7 @@ async def websocket_add_entity(
     }
 
     # Create new entity and add to corresponding component
-    add_entities = hass.data[DOMAIN][msg["entry_id"]][ADD_ENTITIES_CALLBACKS][
+    add_entities = menuai.data[DOMAIN][msg["entry_id"]][ADD_ENTITIES_CALLBACKS][
         msg[CONF_DOMAIN]
     ]
     add_entities([entity_config])
@@ -357,7 +357,7 @@ async def websocket_add_entity(
     data = {**config_entry.data, CONF_ENTITIES: entity_configs}
 
     # schedule config_entry for save
-    hass.config_entries.async_update_entry(config_entry, data=data)
+    menuai.config_entries.async_update_entry(config_entry, data=data)
 
     connection.send_result(msg["id"], True)
 
@@ -383,7 +383,7 @@ async def websocket_add_entity(
 @websocket_api.async_response
 @get_config_entry
 async def websocket_delete_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict,
     config_entry: ConfigEntry,
@@ -414,17 +414,17 @@ async def websocket_delete_entity(
     ]
     data = {**config_entry.data, CONF_ENTITIES: entity_configs}
 
-    hass.config_entries.async_update_entry(config_entry, data=data)
+    menuai.config_entries.async_update_entry(config_entry, data=data)
 
     # cleanup registries
-    purge_entity_registry(hass, config_entry.entry_id, data)
-    purge_device_registry(hass, config_entry.entry_id, data)
+    purge_entity_registry(menuai, config_entry.entry_id, data)
+    purge_device_registry(menuai, config_entry.entry_id, data)
 
     connection.send_result(msg["id"])
 
 
 async def async_create_or_update_device_in_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_connection: DeviceConnectionType,
     config_entry: ConfigEntry,
 ) -> None:
@@ -451,14 +451,14 @@ async def async_create_or_update_device_in_config_entry(
     data = {**config_entry.data, CONF_DEVICES: [*device_configs, device_config]}
 
     await async_update_device_config(device_connection, device_config)
-    hass.config_entries.async_update_entry(config_entry, data=data)
+    menuai.config_entries.async_update_entry(config_entry, data=data)
 
 
 def get_entity_entry(
-    hass: HomeAssistant, entity_config: dict, config_entry: ConfigEntry
+    menuai: menuai, entity_config: dict, config_entry: ConfigEntry
 ) -> er.RegistryEntry | None:
     """Get entity RegistryEntry from entity_config."""
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
     domain_name = entity_config[CONF_DOMAIN]
     domain_data = entity_config[CONF_DOMAIN_DATA]
     resource = get_resource(domain_name, domain_data).lower()

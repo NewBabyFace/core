@@ -9,18 +9,18 @@ from typing import Any
 from aioimaplib import AioImapException
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
-from homeassistant.const import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
+from menuai.const import (
     CONF_NAME,
     CONF_PASSWORD,
     CONF_PORT,
     CONF_USERNAME,
     CONF_VERIFY_SSL,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.data_entry_flow import AbortFlow
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.selector import (
+from menuai.core import menuai, callback
+from menuai.data_entry_flow import AbortFlow
+from menuai.helpers import config_validation as cv
+from menuai.helpers.selector import (
     BooleanSelector,
     SelectSelector,
     SelectSelectorConfig,
@@ -28,7 +28,7 @@ from homeassistant.helpers.selector import (
     TemplateSelector,
     TemplateSelectorConfig,
 )
-from homeassistant.util.ssl import SSLCipherList
+from menuai.util.ssl import SSLCipherList
 
 from . import ImapConfigEntry
 from .const import (
@@ -109,7 +109,7 @@ OPTIONS_SCHEMA_ADVANCED = {
 
 
 async def validate_input(
-    hass: HomeAssistant, user_input: dict[str, Any]
+    menuai: menuai, user_input: dict[str, Any]
 ) -> dict[str, str]:
     """Validate user input."""
     errors = {}
@@ -166,7 +166,7 @@ class IMAPConfigFlow(ConfigFlow, domain=DOMAIN):
             }
         )
 
-        if not (errors := await validate_input(self.hass, user_input)):
+        if not (errors := await validate_input(self.menuai, user_input)):
             title = user_input[CONF_USERNAME]
 
             return self.async_create_entry(title=title, data=user_input)
@@ -188,7 +188,7 @@ class IMAPConfigFlow(ConfigFlow, domain=DOMAIN):
         reauth_entry = self._get_reauth_entry()
         if user_input is not None:
             user_input = {**reauth_entry.data, **user_input}
-            if not (errors := await validate_input(self.hass, user_input)):
+            if not (errors := await validate_input(self.menuai, user_input)):
                 return self.async_update_reload_and_abort(reauth_entry, data=user_input)
 
         return self.async_show_form(
@@ -239,13 +239,13 @@ class ImapOptionsFlow(OptionsFlow):
                 errors = {"base": err.reason}
             else:
                 entry_data.update(user_input)
-                errors = await validate_input(self.hass, entry_data)
+                errors = await validate_input(self.menuai, entry_data)
                 if not errors:
-                    self.hass.config_entries.async_update_entry(
+                    self.menuai.config_entries.async_update_entry(
                         self.config_entry, data=entry_data
                     )
-                    self.hass.async_create_task(
-                        self.hass.config_entries.async_reload(
+                    self.menuai.async_create_task(
+                        self.menuai.config_entries.async_reload(
                             self.config_entry.entry_id
                         )
                     )

@@ -8,29 +8,29 @@ from astroid import nodes
 from pylint.checkers import BaseChecker
 from pylint.lint import PyLinter
 
-_MODULE_REGEX: re.Pattern[str] = re.compile(r"^homeassistant\.components\.\w+(\.\w+)?$")
+_MODULE_REGEX: re.Pattern[str] = re.compile(r"^menuai\.components\.\w+(\.\w+)?$")
 
 
 def _get_module_platform(module_name: str) -> str | None:
     """Return the platform for the module name."""
     if not (module_match := _MODULE_REGEX.match(module_name)):
-        # Ensure `homeassistant.components.<component>`
-        # Or `homeassistant.components.<component>.<platform>`
+        # Ensure `menuai.components.<component>`
+        # Or `menuai.components.<component>.<platform>`
         return None
 
     platform = module_match.groups()[0]
     return platform.lstrip(".") if platform else "__init__"
 
 
-class HassInheritanceChecker(BaseChecker):
+class menuaiInheritanceChecker(BaseChecker):
     """Checker for invalid inheritance."""
 
-    name = "hass_inheritance"
+    name = "menuai_inheritance"
     priority = -1
     msgs = {
         "W7411": (
             "Invalid inheritance: %s",
-            "hass-invalid-inheritance",
+            "menuai-invalid-inheritance",
             "Used when a class has inheritance has issues",
         ),
     }
@@ -56,7 +56,7 @@ class HassInheritanceChecker(BaseChecker):
             and "RestoreSensor" not in ancestors
         ):
             self.add_message(
-                "hass-invalid-inheritance",
+                "menuai-invalid-inheritance",
                 node=node,
                 args="SensorEntity and RestoreEntity should not be combined, please use RestoreSensor",
             )
@@ -66,7 +66,7 @@ class HassInheritanceChecker(BaseChecker):
             and "RestoreNumber" not in ancestors
         ):
             self.add_message(
-                "hass-invalid-inheritance",
+                "menuai-invalid-inheritance",
                 node=node,
                 args="NumberEntity and RestoreEntity should not be combined, please use RestoreNumber",
             )
@@ -74,4 +74,4 @@ class HassInheritanceChecker(BaseChecker):
 
 def register(linter: PyLinter) -> None:
     """Register the checker."""
-    linter.register_checker(HassInheritanceChecker(linter))
+    linter.register_checker(menuaiInheritanceChecker(linter))

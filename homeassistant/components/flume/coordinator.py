@@ -9,9 +9,9 @@ import pyflume
 from pyflume import FlumeAuth, FlumeData, FlumeDeviceList
 from requests import Session
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
     _LOGGER,
@@ -42,13 +42,13 @@ class FlumeDeviceDataUpdateCoordinator(DataUpdateCoordinator[None]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: FlumeConfigEntry,
         flume_device: FlumeData,
     ) -> None:
         """Initialize the Coordinator."""
         super().__init__(
-            hass,
+            menuai,
             config_entry=config_entry,
             name=DOMAIN,
             logger=_LOGGER,
@@ -60,7 +60,7 @@ class FlumeDeviceDataUpdateCoordinator(DataUpdateCoordinator[None]):
     async def _async_update_data(self) -> None:
         """Get the latest data from the Flume."""
         try:
-            await self.hass.async_add_executor_job(self.flume_device.update_force)
+            await self.menuai.async_add_executor_job(self.flume_device.update_force)
         except Exception as ex:
             raise UpdateFailed(f"Error communicating with flume API: {ex}") from ex
         _LOGGER.debug(
@@ -77,13 +77,13 @@ class FlumeDeviceConnectionUpdateCoordinator(DataUpdateCoordinator[None]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: FlumeConfigEntry,
         flume_devices: FlumeDeviceList,
     ) -> None:
         """Initialize the Coordinator."""
         super().__init__(
-            hass,
+            menuai,
             config_entry=config_entry,
             name=DOMAIN,
             logger=_LOGGER,
@@ -104,7 +104,7 @@ class FlumeDeviceConnectionUpdateCoordinator(DataUpdateCoordinator[None]):
     async def _async_update_data(self) -> None:
         """Update the device list."""
         try:
-            await self.hass.async_add_executor_job(self._update_connectivity)
+            await self.menuai.async_add_executor_job(self._update_connectivity)
         except Exception as ex:
             raise UpdateFailed(f"Error communicating with flume API: {ex}") from ex
 
@@ -115,11 +115,11 @@ class FlumeNotificationDataUpdateCoordinator(DataUpdateCoordinator[None]):
     config_entry: FlumeConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: FlumeConfigEntry, auth: FlumeAuth
+        self, menuai: menuai, config_entry: FlumeConfigEntry, auth: FlumeAuth
     ) -> None:
         """Initialize the Coordinator."""
         super().__init__(
-            hass,
+            menuai,
             config_entry=config_entry,
             name=DOMAIN,
             logger=_LOGGER,
@@ -158,6 +158,6 @@ class FlumeNotificationDataUpdateCoordinator(DataUpdateCoordinator[None]):
         """Update data."""
         _LOGGER.debug("Updating Flume Notification")
         try:
-            await self.hass.async_add_executor_job(self._update_lists)
+            await self.menuai.async_add_executor_job(self._update_lists)
         except Exception as ex:
             raise UpdateFailed(f"Error communicating with flume API: {ex}") from ex

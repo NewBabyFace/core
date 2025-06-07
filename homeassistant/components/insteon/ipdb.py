@@ -47,7 +47,7 @@ from pyinsteon.device_types.ipdb import (
     X10OnOffSensor,
 )
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 DEVICE_PLATFORM: dict[Device, dict[Platform, Iterable[int]]] = {
     AccessControl_Morningstar: {Platform.LOCK: [1]},

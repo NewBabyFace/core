@@ -4,15 +4,15 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     PLATFORM_SCHEMA as SWITCH_PLATFORM_SCHEMA,
     SwitchEntity,
 )
-from homeassistant.const import CONF_DEVICES, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_DEVICES, CONF_NAME
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import (
     CONF_ALIASES,
@@ -69,7 +69,7 @@ def devices_from_config(domain_config):
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,

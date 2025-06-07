@@ -5,11 +5,11 @@ from __future__ import annotations
 from datetime import timedelta
 import logging
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_ADDRESS, CONF_TYPE
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_ADDRESS, CONF_TYPE
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import (
     MinecraftServer,
@@ -35,13 +35,13 @@ class MinecraftServerCoordinator(DataUpdateCoordinator[MinecraftServerData]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: MinecraftServerConfigEntry,
     ) -> None:
         """Initialize coordinator instance."""
 
         super().__init__(
-            hass=hass,
+            menuai=menuai,
             name=config_entry.title,
             config_entry=config_entry,
             logger=_LOGGER,
@@ -53,7 +53,7 @@ class MinecraftServerCoordinator(DataUpdateCoordinator[MinecraftServerData]):
 
         # Create API instance.
         self._api = MinecraftServer(
-            self.hass,
+            self.menuai,
             self.config_entry.data.get(CONF_TYPE, MinecraftServerType.JAVA_EDITION),
             self.config_entry.data[CONF_ADDRESS],
         )

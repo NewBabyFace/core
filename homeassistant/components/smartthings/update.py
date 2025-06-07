@@ -7,13 +7,13 @@ from typing import Any
 from awesomeversion import AwesomeVersion
 from pysmartthings import Attribute, Capability, Command
 
-from homeassistant.components.update import (
+from menuai.components.update import (
     UpdateDeviceClass,
     UpdateEntity,
     UpdateEntityFeature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import SmartThingsConfigEntry
 from .const import MAIN
@@ -21,7 +21,7 @@ from .entity import SmartThingsEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: SmartThingsConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

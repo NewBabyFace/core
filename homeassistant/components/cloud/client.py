@@ -11,27 +11,27 @@ from pathlib import Path
 from typing import Any, Literal
 
 import aiohttp
-from hass_nabucasa.client import CloudClient as Interface, RemoteActivationNotAllowed
+from menuai_nabucasa.client import CloudClient as Interface, RemoteActivationNotAllowed
 from webrtc_models import RTCIceServer
 
-from homeassistant.components import google_assistant, persistent_notification, webhook
-from homeassistant.components.alexa import (
+from menuai.components import google_assistant, persistent_notification, webhook
+from menuai.components.alexa import (
     errors as alexa_errors,
     smart_home as alexa_smart_home,
 )
-from homeassistant.components.camera.webrtc import async_register_ice_servers
-from homeassistant.components.google_assistant import smart_home as ga
-from homeassistant.const import __version__ as HA_VERSION
-from homeassistant.core import Context, HassJob, HomeAssistant, callback
-from homeassistant.helpers.aiohttp_client import SERVER_SOFTWARE
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.event import async_call_later
-from homeassistant.helpers.issue_registry import (
+from menuai.components.camera.webrtc import async_register_ice_servers
+from menuai.components.google_assistant import smart_home as ga
+from menuai.const import __version__ as HA_VERSION
+from menuai.core import Context, menuaiJob, menuai, callback
+from menuai.helpers.aiohttp_client import SERVER_SOFTWARE
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.event import async_call_later
+from menuai.helpers.issue_registry import (
     IssueSeverity,
     async_create_issue,
     async_delete_issue,
 )
-from homeassistant.util.aiohttp import MockRequest, serialize_response
+from menuai.util.aiohttp import MockRequest, serialize_response
 
 from . import alexa_config, google_config
 from .const import DISPATCHER_REMOTE_UPDATE, DOMAIN, PREF_ENABLE_CLOUD_ICE_SERVERS
@@ -48,18 +48,18 @@ VALID_REPAIR_TRANSLATION_KEYS = {
 
 
 class CloudClient(Interface):
-    """Interface class for Home Assistant Cloud."""
+    """Interface class for MenuAI Cloud."""
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         prefs: CloudPreferences,
         websession: aiohttp.ClientSession,
         alexa_user_config: dict[str, Any],
         google_user_config: dict[str, Any],
     ) -> None:
         """Initialize client interface to Cloud."""
-        self._hass = hass
+        self._menuai = menuai
         self._prefs = prefs
         self._websession = websession
         self.google_user_config = google_user_config
@@ -74,7 +74,7 @@ class CloudClient(Interface):
     @property
     def base_path(self) -> Path:
         """Return path to base dir."""
-        return Path(self._hass.config.config_dir)
+        return Path(self._menuai.config.config_dir)
 
     @property
     def prefs(self) -> CloudPreferences:
@@ -84,7 +84,7 @@ class CloudClient(Interface):
     @property
     def loop(self) -> asyncio.AbstractEventLoop:
         """Return client loop."""
-        return self._hass.loop
+        return self._menuai.loop
 
     @property
     def websession(self) -> aiohttp.ClientSession:
@@ -94,7 +94,7 @@ class CloudClient(Interface):
     @property
     def aiohttp_runner(self) -> aiohttp.web.AppRunner | None:
         """Return client webinterface aiohttp application."""
-        return self._hass.http.runner
+        return self._menuai.http.runner
 
     @property
     def cloudhooks(self) -> dict[str, dict[str, str | bool]]:
@@ -128,7 +128,7 @@ class CloudClient(Interface):
                 cloud_user = await self._prefs.get_cloud_user()
 
                 alexa_conf = alexa_config.CloudAlexaConfig(
-                    self._hass,
+                    self._menuai,
                     self.alexa_user_config,
                     cloud_user,
                     self._prefs,
@@ -149,7 +149,7 @@ class CloudClient(Interface):
                 cloud_user = await self._prefs.get_cloud_user()
 
                 google_conf = google_config.CloudGoogleConfig(
-                    self._hass,
+                    self._menuai,
                     self.google_user_config,
                     cloud_user,
                     self._prefs,
@@ -171,7 +171,7 @@ class CloudClient(Interface):
             try:
                 await aconf.async_enable_proactive_mode()
             except aiohttp.ClientError as err:  # If no internet available yet
-                if self._hass.is_running:
+                if self._menuai.is_running:
                     logging.getLogger(__package__).warning(
                         (
                             "Unable to activate Alexa Report State: %s. Retrying in 30"
@@ -179,11 +179,11 @@ class CloudClient(Interface):
                         ),
                         err,
                     )
-                async_call_later(self._hass, 30, enable_alexa_job)
+                async_call_later(self._menuai, 30, enable_alexa_job)
             except (alexa_errors.NoTokenAvailable, alexa_errors.RequireRelink):
                 pass
 
-        enable_alexa_job = HassJob(enable_alexa, cancel_on_shutdown=True)
+        enable_alexa_job = menuaiJob(enable_alexa, cancel_on_shutdown=True)
 
         async def enable_google(_: datetime) -> None:
             """Enable Google."""
@@ -206,7 +206,7 @@ class CloudClient(Interface):
                 def get_ice_servers() -> list[RTCIceServer]:
                     return ice_servers
 
-                return async_register_ice_servers(self._hass, get_ice_servers)
+                return async_register_ice_servers(self._menuai, get_ice_servers)
 
             async def async_register_cloud_ice_servers_listener(
                 prefs: CloudPreferences,
@@ -284,13 +284,13 @@ class CloudClient(Interface):
     @callback
     def user_message(self, identifier: str, title: str, message: str) -> None:
         """Create a message for user to UI."""
-        persistent_notification.async_create(self._hass, message, title, identifier)
+        persistent_notification.async_create(self._menuai, message, title, identifier)
 
     @callback
     def dispatcher_message(self, identifier: str, data: Any = None) -> None:
         """Match cloud notification to dispatcher."""
         if identifier.startswith("remote_"):
-            async_dispatcher_send(self._hass, DISPATCHER_REMOTE_UPDATE, data)
+            async_dispatcher_send(self._menuai, DISPATCHER_REMOTE_UPDATE, data)
 
     async def async_cloud_connect_update(self, connect: bool) -> None:
         """Process cloud remote message to client."""
@@ -312,7 +312,7 @@ class CloudClient(Interface):
             },
             "version": HA_VERSION,
             "instance_id": self.prefs.instance_id,
-            "name": self._hass.config.location_name,
+            "name": self._menuai.config.location_name,
         }
 
     async def async_alexa_message(self, payload: dict[Any, Any]) -> dict[Any, Any]:
@@ -320,7 +320,7 @@ class CloudClient(Interface):
         cloud_user = await self._prefs.get_cloud_user()
         aconfig = await self.get_alexa_config()
         return await alexa_smart_home.async_handle_message(
-            self._hass,
+            self._menuai,
             aconfig,
             payload,
             context=Context(user_id=cloud_user),
@@ -342,7 +342,7 @@ class CloudClient(Interface):
             )
 
         return await ga.async_handle_message(  # type: ignore[no-any-return, no-untyped-call]
-            self._hass,
+            self._menuai,
             gconf,
             gconf.agent_user_id,
             gconf.cloud_user,
@@ -372,7 +372,7 @@ class CloudClient(Interface):
         )
 
         response = await webhook.async_handle_webhook(
-            self._hass, found["webhook_id"], request
+            self._menuai, found["webhook_id"], request
         )
 
         response_dict = serialize_response(response)
@@ -412,7 +412,7 @@ class CloudClient(Interface):
             )
             return
         async_create_issue(
-            hass=self._hass,
+            menuai=self._menuai,
             domain=DOMAIN,
             issue_id=identifier,
             translation_key=translation_key,
@@ -423,4 +423,4 @@ class CloudClient(Interface):
 
     async def async_delete_repair_issue(self, identifier: str) -> None:
         """Delete a repair issue."""
-        async_delete_issue(hass=self._hass, domain=DOMAIN, issue_id=identifier)
+        async_delete_issue(menuai=self._menuai, domain=DOMAIN, issue_id=identifier)

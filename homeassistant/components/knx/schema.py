@@ -12,24 +12,24 @@ from xknx.dpt import DPTBase, DPTNumeric
 from xknx.dpt.dpt_20 import HVACControllerMode, HVACOperationMode
 from xknx.exceptions import ConversionError, CouldNotParseTelegram
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     DEVICE_CLASSES_SCHEMA as BINARY_SENSOR_DEVICE_CLASSES_SCHEMA,
 )
-from homeassistant.components.climate import FAN_OFF, HVACMode
-from homeassistant.components.cover import (
+from menuai.components.climate import FAN_OFF, HVACMode
+from menuai.components.cover import (
     DEVICE_CLASSES_SCHEMA as COVER_DEVICE_CLASSES_SCHEMA,
 )
-from homeassistant.components.number import NumberMode
-from homeassistant.components.sensor import (
+from menuai.components.number import NumberMode
+from menuai.components.sensor import (
     CONF_STATE_CLASS,
     DEVICE_CLASSES_SCHEMA as SENSOR_DEVICE_CLASSES_SCHEMA,
     STATE_CLASSES_SCHEMA,
 )
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     DEVICE_CLASSES_SCHEMA as SWITCH_DEVICE_CLASSES_SCHEMA,
 )
-from homeassistant.components.text import TextMode
-from homeassistant.const import (
+from menuai.components.text import TextMode
+from menuai.const import (
     CONF_DEVICE_CLASS,
     CONF_ENTITY_CATEGORY,
     CONF_ENTITY_ID,
@@ -41,8 +41,8 @@ from homeassistant.const import (
     CONF_VALUE_TEMPLATE,
     Platform,
 )
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity import ENTITY_CATEGORIES_SCHEMA
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity import ENTITY_CATEGORIES_SCHEMA
 
 from .const import (
     CONF_CONTEXT_TIMEOUT,
@@ -84,7 +84,7 @@ def number_limit_sub_validator(entity_config: OrderedDict) -> OrderedDict:
 
     if dpt_class is None:
         raise vol.Invalid(f"'type: {value_type}' is not a valid numeric sensor type.")
-    # Infinity is not supported by Home Assistant frontend so user defined
+    # Infinity is not supported by MenuAI frontend so user defined
     # config is required if if xknx DPTNumeric subclass defines it as limit.
     if min_config is None and dpt_class.value_min == float("-inf"):
         raise vol.Invalid(f"'min' key required for value type '{value_type}'")

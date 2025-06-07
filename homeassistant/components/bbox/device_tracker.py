@@ -9,16 +9,16 @@ import logging
 import pybbox
 import voluptuous as vol
 
-from homeassistant.components.device_tracker import (
+from menuai.components.device_tracker import (
     DOMAIN as DEVICE_TRACKER_DOMAIN,
     PLATFORM_SCHEMA as DEVICE_TRACKER_PLATFORM_SCHEMA,
     DeviceScanner,
 )
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util import Throttle, dt as dt_util
+from menuai.const import CONF_HOST
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType
+from menuai.util import Throttle, dt as dt_util
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ PLATFORM_SCHEMA = DEVICE_TRACKER_PLATFORM_SCHEMA.extend(
 )
 
 
-def get_scanner(hass: HomeAssistant, config: ConfigType) -> BboxDeviceScanner | None:
+def get_scanner(menuai: menuai, config: ConfigType) -> BboxDeviceScanner | None:
     """Validate the configuration and return a Bbox scanner."""
     scanner = BboxDeviceScanner(config[DEVICE_TRACKER_DOMAIN])
 

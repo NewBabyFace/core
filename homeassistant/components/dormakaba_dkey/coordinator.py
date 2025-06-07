@@ -8,10 +8,10 @@ import logging
 from py_dormakaba_dkey import DKEYLock
 from py_dormakaba_dkey.errors import DKEY_EXCEPTIONS, NotAssociated
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import UPDATE_SECONDS
 
@@ -25,13 +25,13 @@ class DormakabaDkeyCoordinator(DataUpdateCoordinator[None]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entry: DormakabaDkeyConfigEntry,
         lock: DKEYLock,
     ) -> None:
         """Initialize the coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
             name=lock.name,

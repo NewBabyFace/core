@@ -7,12 +7,12 @@ from typing import Any
 
 import RFXtrx as rfxtrxmod
 
-from homeassistant.components.light import ATTR_BRIGHTNESS, ColorMode, LightEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import STATE_ON
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.light import ATTR_BRIGHTNESS, ColorMode, LightEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import STATE_ON
+from menuai.core import menuai, callback
+from menuai.helpers.entity import Entity
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import DeviceTuple, async_setup_platform_entry
 from .const import COMMAND_OFF_LIST, COMMAND_ON_LIST
@@ -30,7 +30,7 @@ def supported(event: rfxtrxmod.RFXtrxEvent) -> bool:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -51,7 +51,7 @@ async def async_setup_entry(
         ]
 
     await async_setup_platform_entry(
-        hass, config_entry, async_add_entities, supported, _constructor
+        menuai, config_entry, async_add_entities, supported, _constructor
     )
 
 
@@ -63,9 +63,9 @@ class RfxtrxLight(RfxtrxCommandEntity, LightEntity):
     _attr_brightness: int = 0
     _device: rfxtrxmod.LightingDevice
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Restore RFXtrx device state (ON/OFF)."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         if self._event is None:
             old_state = await self.async_get_last_state()

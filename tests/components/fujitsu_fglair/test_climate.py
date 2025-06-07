@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_FAN_MODE,
     ATTR_HVAC_MODE,
     ATTR_SWING_MODE,
@@ -20,14 +20,14 @@ from homeassistant.components.climate import (
     SWING_BOTH,
     HVACMode,
 )
-from homeassistant.components.fujitsu_fglair.climate import (
+from menuai.components.fujitsu_fglair.climate import (
     HA_TO_FUJI_FAN,
     HA_TO_FUJI_HVAC,
     HA_TO_FUJI_SWING,
 )
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import entity_id
 
@@ -41,7 +41,7 @@ def platforms() -> list[str]:
 
 
 async def test_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
     mock_ayla_api: AsyncMock,
@@ -51,11 +51,11 @@ async def test_entities(
     """Test that coordinator returns the data we expect after the first refresh."""
     assert await integration_setup()
 
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
 
 async def test_set_attributes(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
     mock_ayla_api: AsyncMock,
@@ -66,7 +66,7 @@ async def test_set_attributes(
     """Test that setting the attributes calls the correct functions on the device."""
     assert await integration_setup()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         service_data={ATTR_HVAC_MODE: HVACMode.COOL},
@@ -77,7 +77,7 @@ async def test_set_attributes(
         HA_TO_FUJI_HVAC[HVACMode.COOL]
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_FAN_MODE,
         service_data={ATTR_FAN_MODE: FAN_AUTO},
@@ -88,7 +88,7 @@ async def test_set_attributes(
         HA_TO_FUJI_FAN[FAN_AUTO]
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_SWING_MODE,
         service_data={ATTR_SWING_MODE: SWING_BOTH},
@@ -99,7 +99,7 @@ async def test_set_attributes(
         HA_TO_FUJI_SWING[SWING_BOTH]
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_TEMPERATURE,
         service_data={ATTR_TEMPERATURE: 23.0},

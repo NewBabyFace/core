@@ -17,12 +17,12 @@ from nettigo_air_monitor import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import DOMAIN
 
@@ -42,9 +42,9 @@ AUTH_SCHEMA = vol.Schema(
 )
 
 
-async def async_get_config(hass: HomeAssistant, host: str) -> NamConfig:
+async def async_get_config(menuai: menuai, host: str) -> NamConfig:
     """Get device MAC address and auth_enabled property."""
-    websession = async_get_clientsession(hass)
+    websession = async_get_clientsession(menuai)
 
     options = ConnectionOptions(host)
     nam = await NettigoAirMonitor.create(websession, options)
@@ -55,10 +55,10 @@ async def async_get_config(hass: HomeAssistant, host: str) -> NamConfig:
 
 
 async def async_check_credentials(
-    hass: HomeAssistant, host: str, data: dict[str, Any]
+    menuai: menuai, host: str, data: dict[str, Any]
 ) -> None:
     """Check if credentials are valid."""
-    websession = async_get_clientsession(hass)
+    websession = async_get_clientsession(menuai)
 
     options = ConnectionOptions(host, data.get(CONF_USERNAME), data.get(CONF_PASSWORD))
 
@@ -85,7 +85,7 @@ class NAMFlowHandler(ConfigFlow, domain=DOMAIN):
             self.host = user_input[CONF_HOST]
 
             try:
-                config = await async_get_config(self.hass, self.host)
+                config = await async_get_config(self.menuai, self.host)
             except (ApiError, ClientConnectorError, TimeoutError):
                 errors["base"] = "cannot_connect"
             except CannotGetMacError:
@@ -119,7 +119,7 @@ class NAMFlowHandler(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             try:
-                await async_check_credentials(self.hass, self.host, user_input)
+                await async_check_credentials(self.menuai, self.host, user_input)
             except AuthFailedError:
                 errors["base"] = "invalid_auth"
             except (ApiError, ClientConnectorError, TimeoutError):
@@ -148,7 +148,7 @@ class NAMFlowHandler(ConfigFlow, domain=DOMAIN):
         self._async_abort_entries_match({CONF_HOST: self.host})
 
         try:
-            self._config = await async_get_config(self.hass, self.host)
+            self._config = await async_get_config(self.menuai, self.host)
         except (ApiError, ClientConnectorError, TimeoutError):
             return self.async_abort(reason="cannot_connect")
         except CannotGetMacError:
@@ -198,7 +198,7 @@ class NAMFlowHandler(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             try:
-                await async_check_credentials(self.hass, self.host, user_input)
+                await async_check_credentials(self.menuai, self.host, user_input)
             except (
                 ApiError,
                 AuthFailedError,
@@ -228,7 +228,7 @@ class NAMFlowHandler(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             try:
-                config = await async_get_config(self.hass, user_input[CONF_HOST])
+                config = await async_get_config(self.menuai, user_input[CONF_HOST])
             except (ApiError, ClientConnectorError, TimeoutError):
                 errors["base"] = "cannot_connect"
             else:

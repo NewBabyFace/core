@@ -2,7 +2,7 @@
 
 import logging
 
-from homeassistant.helpers import frame
+from menuai.helpers import frame
 
 
 def call_get_integration_logger(fallback_name: str) -> logging.Logger:

@@ -11,12 +11,12 @@ rules:
   common-modules:
     status: done
     comment: |
-      - 2 states writes in async_added_to_hass() required for platforms that redefine _handle_coordinator_update()
+      - 2 states writes in async_added_to_menuai() required for platforms that redefine _handle_coordinator_update()
   config-flow-test-coverage:
     status: todo
     comment: |
       - test_show_form doesn't really add anything
-      - Patch bimmer_connected imports with homeassistant.components.bmw_connected_drive.bimmer_connected imports
+      - Patch bimmer_connected imports with menuai.components.bmw_connected_drive.bimmer_connected imports
       + Ensure that configs flows end in CREATE_ENTRY or ABORT
       - Parameterize test_authentication_error, test_api_error and test_connection_error
       + test_full_user_flow_implementation doesn't assert unique id of created entry

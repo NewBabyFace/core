@@ -9,11 +9,11 @@ from aiohttp.web import Request
 import voluptuous as vol
 from voluptuous.humanize import humanize_error
 
-from homeassistant.components.http.ban import process_success_login, process_wrong_login
-from homeassistant.const import __version__
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant
-from homeassistant.helpers.json import json_bytes
-from homeassistant.util.json import JsonValueType
+from menuai.components.http.ban import process_success_login, process_wrong_login
+from menuai.const import __version__
+from menuai.core import CALLBACK_TYPE, menuai
+from menuai.helpers.json import json_bytes
+from menuai.util.json import JsonValueType
 
 from .connection import ActiveConnection
 from .error import Disconnect
@@ -52,14 +52,14 @@ class AuthPhase:
     def __init__(
         self,
         logger: WebSocketAdapter,
-        hass: HomeAssistant,
+        menuai: menuai,
         send_message: Callable[[bytes | str | dict[str, Any]], None],
         cancel_ws: CALLBACK_TYPE,
         request: Request,
         send_bytes_text: Callable[[bytes], Coroutine[Any, Any, None]],
     ) -> None:
         """Initialize the authenticated connection."""
-        self._hass = hass
+        self._menuai = menuai
         # send_message will send a message to the client via the queue.
         self._send_message = send_message
         self._cancel_ws = cancel_ws
@@ -81,17 +81,17 @@ class AuthPhase:
             raise Disconnect from err
 
         if (access_token := valid_msg.get("access_token")) and (
-            refresh_token := self._hass.auth.async_validate_access_token(access_token)
+            refresh_token := self._menuai.auth.async_validate_access_token(access_token)
         ):
             conn = ActiveConnection(
                 self._logger,
-                self._hass,
+                self._menuai,
                 self._send_message,
                 refresh_token.user,
                 refresh_token,
             )
             conn.subscriptions["auth"] = (
-                self._hass.auth.async_register_revoke_token_callback(
+                self._menuai.auth.async_register_revoke_token_callback(
                     refresh_token.id, self._cancel_ws
                 )
             )

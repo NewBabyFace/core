@@ -5,18 +5,18 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     DOMAIN as SENSOR_DOMAIN,
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import CONF_HOST, UnitOfEnergy, UnitOfPower
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.const import CONF_HOST, UnitOfEnergy, UnitOfPower
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import (
@@ -62,7 +62,7 @@ SENSORS: tuple[PureEnergieSensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: PureEnergieConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

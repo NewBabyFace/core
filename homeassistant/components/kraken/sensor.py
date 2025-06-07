@@ -6,18 +6,18 @@ from collections.abc import Callable
 from dataclasses import dataclass
 import logging
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import (
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
 )
@@ -137,7 +137,7 @@ SENSOR_TYPES: tuple[KrakenSensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -149,7 +149,7 @@ async def async_setup_entry(
             entities.extend(
                 [
                     KrakenSensor(
-                        hass.data[DOMAIN],
+                        menuai.data[DOMAIN],
                         tracked_asset_pair,
                         description,
                     )
@@ -161,9 +161,9 @@ async def async_setup_entry(
     _async_add_kraken_sensors(config_entry.options[CONF_TRACKED_ASSET_PAIRS])
 
     @callback
-    def async_update_sensors(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+    def async_update_sensors(menuai: menuai, config_entry: ConfigEntry) -> None:
         """Add or remove sensors for configured tracked asset pairs."""
-        dev_reg = dr.async_get(hass)
+        dev_reg = dr.async_get(menuai)
 
         existing_devices = {
             device.name: device.id
@@ -189,7 +189,7 @@ async def async_setup_entry(
 
     config_entry.async_on_unload(
         async_dispatcher_connect(
-            hass,
+            menuai,
             DISPATCH_CONFIG_UPDATED,
             async_update_sensors,
         )
@@ -241,9 +241,9 @@ class KrakenSensor(
             name=self._device_name,
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self._update_internal_state()
 
     def _handle_coordinator_update(self) -> None:

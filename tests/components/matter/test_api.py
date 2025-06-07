@@ -13,28 +13,28 @@ from matter_server.common.helpers.util import dataclass_to_dict
 from matter_server.common.models import CommissioningParameters
 import pytest
 
-from homeassistant.components.matter.api import (
+from menuai.components.matter.api import (
     DEVICE_ID,
     ERROR_NODE_NOT_FOUND,
     ID,
     TYPE,
 )
-from homeassistant.components.matter.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.components.matter.const import DOMAIN
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 from tests.common import MockConfigEntry
 from tests.typing import WebSocketGenerator
 
 
 async def test_commission(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     matter_client: MagicMock,
     integration: MockConfigEntry,
 ) -> None:
     """Test the commission command."""
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     await ws_client.send_json(
         {
@@ -64,13 +64,13 @@ async def test_commission(
 
 
 async def test_commission_on_network(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     matter_client: MagicMock,
     integration: MockConfigEntry,
 ) -> None:
     """Test the commission on network command."""
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     await ws_client.send_json(
         {
@@ -100,13 +100,13 @@ async def test_commission_on_network(
 
 
 async def test_set_thread_dataset(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     matter_client: MagicMock,
     integration: MockConfigEntry,
 ) -> None:
     """Test the set thread dataset command."""
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     await ws_client.send_json(
         {
@@ -140,13 +140,13 @@ async def test_set_thread_dataset(
 
 
 async def test_set_wifi_credentials(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     matter_client: MagicMock,
     integration: MockConfigEntry,
 ) -> None:
     """Test the set WiFi credentials command."""
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     await ws_client.send_json(
         {
@@ -191,8 +191,8 @@ async def test_set_wifi_credentials(
 # setup (mock) integration with a random node fixture
 @pytest.mark.parametrize("node_fixture", ["onoff_light"])
 async def test_node_diagnostics(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     device_registry: dr.DeviceRegistry,
     matter_client: MagicMock,
 ) -> None:
@@ -220,7 +220,7 @@ async def test_node_diagnostics(
     matter_client.node_diagnostics = AsyncMock(return_value=mock_diagnostics)
 
     # issue command on the ws api
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
     await ws_client.send_json(
         {
             ID: 1,
@@ -260,8 +260,8 @@ async def test_node_diagnostics(
 # setup (mock) integration with a random node fixture
 @pytest.mark.parametrize("node_fixture", ["onoff_light"])
 async def test_ping_node(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     device_registry: dr.DeviceRegistry,
     matter_client: MagicMock,
 ) -> None:
@@ -279,7 +279,7 @@ async def test_ping_node(
     matter_client.ping_node = AsyncMock(return_value=ping_result)
 
     # issue command on the ws api
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
     await ws_client.send_json(
         {
             ID: 1,
@@ -315,8 +315,8 @@ async def test_ping_node(
 # setup (mock) integration with a random node fixture
 @pytest.mark.parametrize("node_fixture", ["onoff_light"])
 async def test_open_commissioning_window(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     device_registry: dr.DeviceRegistry,
     matter_client: MagicMock,
 ) -> None:
@@ -340,7 +340,7 @@ async def test_open_commissioning_window(
     )
 
     # issue command on the ws api
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
     await ws_client.send_json(
         {
             ID: 1,
@@ -376,8 +376,8 @@ async def test_open_commissioning_window(
 # setup (mock) integration with a random node fixture
 @pytest.mark.parametrize("node_fixture", ["onoff_light"])
 async def test_remove_matter_fabric(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     device_registry: dr.DeviceRegistry,
     matter_client: MagicMock,
 ) -> None:
@@ -391,7 +391,7 @@ async def test_remove_matter_fabric(
     assert entry is not None
 
     # issue command on the ws api
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
     await ws_client.send_json(
         {
             ID: 1,
@@ -427,8 +427,8 @@ async def test_remove_matter_fabric(
 # setup (mock) integration with a random node fixture
 @pytest.mark.parametrize("node_fixture", ["onoff_light"])
 async def test_interview_node(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     device_registry: dr.DeviceRegistry,
     matter_client: MagicMock,
 ) -> None:
@@ -441,7 +441,7 @@ async def test_interview_node(
     )
     assert entry is not None
     # issue command on the ws api
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
     await ws_client.send_json(
         {ID: 1, TYPE: "matter/interview_node", DEVICE_ID: entry.id}
     )

@@ -14,15 +14,15 @@ from yalexs.lock import LockDetail, LockDoorStatus
 from yalexs.manager.const import ACTIVITY_UPDATE_INTERVAL
 from yalexs.util import update_lock_detail_from_activity
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.event import async_call_later
+from menuai.const import EntityCategory
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.event import async_call_later
 
 from . import YaleConfigEntry, YaleData
 from .entity import YaleDescriptionEntity
@@ -90,7 +90,7 @@ SENSOR_TYPES_DOORBELL: tuple[YaleDoorbellBinarySensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: YaleConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -171,7 +171,7 @@ class YaleDoorbellBinarySensor(YaleDescriptionEntity, BinarySensorEntity):
         if not self.is_on:
             return
         self._check_for_off_update_listener = async_call_later(
-            self.hass, TIME_TO_RECHECK_DETECTION, self._async_scheduled_update
+            self.menuai, TIME_TO_RECHECK_DETECTION, self._async_scheduled_update
         )
 
     def _cancel_any_pending_updates(self) -> None:
@@ -182,7 +182,7 @@ class YaleDoorbellBinarySensor(YaleDescriptionEntity, BinarySensorEntity):
         self._check_for_off_update_listener()
         self._check_for_off_update_listener = None
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """When removing cancel any scheduled updates."""
         self._cancel_any_pending_updates()
-        await super().async_will_remove_from_hass()
+        await super().async_will_remove_from_menuai()

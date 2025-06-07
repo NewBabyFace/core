@@ -8,23 +8,23 @@ import logging
 from aioimaplib import IMAP4_SSL, AioImapException, Response
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry, ConfigEntryState
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP, Platform
-from homeassistant.core import (
-    HomeAssistant,
+from menuai.config_entries import ConfigEntry, ConfigEntryState
+from menuai.const import EVENT_menuai_STOP, Platform
+from menuai.core import (
+    menuai,
     ServiceCall,
     ServiceResponse,
     SupportsResponse,
     callback,
 )
-from homeassistant.exceptions import (
+from menuai.exceptions import (
     ConfigEntryAuthFailed,
     ConfigEntryError,
     ConfigEntryNotReady,
     ServiceValidationError,
 )
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType
 
 from .const import CONF_ENABLE_PUSH, DOMAIN
 from .coordinator import (
@@ -68,9 +68,9 @@ SERVICE_FETCH_TEXT_SCHEMA = _SERVICE_UID_SCHEMA
 type ImapConfigEntry = ConfigEntry[ImapDataUpdateCoordinator]
 
 
-async def async_get_imap_client(hass: HomeAssistant, entry_id: str) -> IMAP4_SSL:
+async def async_get_imap_client(menuai: menuai, entry_id: str) -> IMAP4_SSL:
     """Get IMAP client and connect."""
-    if (entry := hass.config_entries.async_get_entry(entry_id)) is None or (
+    if (entry := menuai.config_entries.async_get_entry(entry_id)) is None or (
         entry.state is not ConfigEntryState.LOADED
     ):
         raise ServiceValidationError(
@@ -108,7 +108,7 @@ def raise_on_error(response: Response, translation_key: str) -> None:
         )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up imap services."""
 
     async def async_seen(call: ServiceCall) -> None:
@@ -120,7 +120,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             uid,
             entry_id,
         )
-        client = await async_get_imap_client(hass, entry_id)
+        client = await async_get_imap_client(menuai, entry_id)
         try:
             response = await client.store(uid, "+FLAGS (\\Seen)")
         except (TimeoutError, AioImapException) as exc:
@@ -132,7 +132,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         raise_on_error(response, "seen_failed")
         await client.close()
 
-    hass.services.async_register(DOMAIN, "seen", async_seen, SERVICE_SEEN_SCHEMA)
+    menuai.services.async_register(DOMAIN, "seen", async_seen, SERVICE_SEEN_SCHEMA)
 
     async def async_move(call: ServiceCall) -> None:
         """Process move email service call."""
@@ -147,7 +147,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             seen,
             entry_id,
         )
-        client = await async_get_imap_client(hass, entry_id)
+        client = await async_get_imap_client(menuai, entry_id)
         try:
             if seen:
                 response = await client.store(uid, "+FLAGS (\\Seen)")
@@ -168,7 +168,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             ) from exc
         await client.close()
 
-    hass.services.async_register(DOMAIN, "move", async_move, SERVICE_MOVE_SCHEMA)
+    menuai.services.async_register(DOMAIN, "move", async_move, SERVICE_MOVE_SCHEMA)
 
     async def async_delete(call: ServiceCall) -> None:
         """Process deleting email service call."""
@@ -179,7 +179,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             uid,
             entry_id,
         )
-        client = await async_get_imap_client(hass, entry_id)
+        client = await async_get_imap_client(menuai, entry_id)
         try:
             response = await client.store(uid, "+FLAGS (\\Deleted)")
             raise_on_error(response, "delete_failed")
@@ -195,7 +195,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             ) from exc
         await client.close()
 
-    hass.services.async_register(DOMAIN, "delete", async_delete, SERVICE_DELETE_SCHEMA)
+    menuai.services.async_register(DOMAIN, "delete", async_delete, SERVICE_DELETE_SCHEMA)
 
     async def async_fetch(call: ServiceCall) -> ServiceResponse:
         """Process fetch email service and return content."""
@@ -206,7 +206,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             uid,
             entry_id,
         )
-        client = await async_get_imap_client(hass, entry_id)
+        client = await async_get_imap_client(menuai, entry_id)
         try:
             response = await client.fetch(uid, "BODY.PEEK[]")
         except (TimeoutError, AioImapException) as exc:
@@ -225,7 +225,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             "uid": uid,
         }
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         "fetch",
         async_fetch,
@@ -236,7 +236,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ImapConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ImapConfigEntry) -> bool:
     """Set up imap from a config entry."""
     try:
         imap_client: IMAP4_SSL = await connect_to_server(dict(entry.data))
@@ -256,23 +256,23 @@ async def async_setup_entry(hass: HomeAssistant, entry: ImapConfigEntry) -> bool
     else:
         coordinator_class = ImapPollingDataUpdateCoordinator
 
-    coordinator: ImapDataUpdateCoordinator = coordinator_class(hass, imap_client, entry)
+    coordinator: ImapDataUpdateCoordinator = coordinator_class(menuai, imap_client, entry)
     await coordinator.async_config_entry_first_refresh()
 
     entry.runtime_data = coordinator
 
     entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, coordinator.shutdown)
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, coordinator.shutdown)
     )
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ImapConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ImapConfigEntry) -> bool:
     """Unload a config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+    if unload_ok := await menuai.config_entries.async_unload_platforms(entry, PLATFORMS):
         coordinator = entry.runtime_data
         await coordinator.shutdown()
     return unload_ok

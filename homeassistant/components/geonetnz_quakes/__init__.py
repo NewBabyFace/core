@@ -6,21 +6,21 @@ import logging
 from aio_geojson_geonetnz_quakes import GeonetnzQuakesFeedManager
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import SOURCE_IMPORT, ConfigEntry
+from menuai.const import (
     CONF_LATITUDE,
     CONF_LONGITUDE,
     CONF_RADIUS,
     CONF_SCAN_INTERVAL,
     UnitOfLength,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import aiohttp_client, config_validation as cv
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util.unit_conversion import DistanceConverter
-from homeassistant.util.unit_system import US_CUSTOMARY_SYSTEM
+from menuai.core import menuai, callback
+from menuai.helpers import aiohttp_client, config_validation as cv
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.event import async_track_time_interval
+from menuai.helpers.typing import ConfigType
+from menuai.util.unit_conversion import DistanceConverter
+from menuai.util.unit_system import US_CUSTOMARY_SYSTEM
 
 from .const import (
     CONF_MINIMUM_MAGNITUDE,
@@ -61,19 +61,19 @@ CONFIG_SCHEMA = vol.Schema(
 type GeonetnzQuakesConfigEntry = ConfigEntry[GeonetnzQuakesFeedEntityManager]
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the GeoNet NZ Quakes component."""
     if DOMAIN not in config:
         return True
 
     conf = config[DOMAIN]
-    latitude = conf.get(CONF_LATITUDE, hass.config.latitude)
-    longitude = conf.get(CONF_LONGITUDE, hass.config.longitude)
+    latitude = conf.get(CONF_LATITUDE, menuai.config.latitude)
+    longitude = conf.get(CONF_LONGITUDE, menuai.config.longitude)
     mmi = conf[CONF_MMI]
     scan_interval = conf[CONF_SCAN_INTERVAL]
 
-    hass.async_create_task(
-        hass.config_entries.flow.async_init(
+    menuai.async_create_task(
+        menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": SOURCE_IMPORT},
             data={
@@ -91,16 +91,16 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, config_entry: GeonetnzQuakesConfigEntry
+    menuai: menuai, config_entry: GeonetnzQuakesConfigEntry
 ) -> bool:
     """Set up the GeoNet NZ Quakes component as config entry."""
     radius = config_entry.data[CONF_RADIUS]
-    if hass.config.units is US_CUSTOMARY_SYSTEM:
+    if menuai.config.units is US_CUSTOMARY_SYSTEM:
         radius = DistanceConverter.convert(
             radius, UnitOfLength.MILES, UnitOfLength.KILOMETERS
         )
     # Create feed entity manager for all platforms.
-    manager = GeonetnzQuakesFeedEntityManager(hass, config_entry, radius)
+    manager = GeonetnzQuakesFeedEntityManager(menuai, config_entry, radius)
     config_entry.runtime_data = manager
     _LOGGER.debug("Feed entity manager added for %s", config_entry.entry_id)
     await manager.async_init()
@@ -108,25 +108,25 @@ async def async_setup_entry(
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, entry: GeonetnzQuakesConfigEntry
+    menuai: menuai, entry: GeonetnzQuakesConfigEntry
 ) -> bool:
     """Unload an GeoNet NZ Quakes component config entry."""
     await entry.runtime_data.async_stop()
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 class GeonetnzQuakesFeedEntityManager:
     """Feed Entity Manager for GeoNet NZ Quakes feed."""
 
-    def __init__(self, hass, config_entry, radius_in_km):
+    def __init__(self, menuai, config_entry, radius_in_km):
         """Initialize the Feed Entity Manager."""
-        self._hass = hass
+        self._menuai = menuai
         self._config_entry = config_entry
         coordinates = (
             config_entry.data[CONF_LATITUDE],
             config_entry.data[CONF_LONGITUDE],
         )
-        websession = aiohttp_client.async_get_clientsession(hass)
+        websession = aiohttp_client.async_get_clientsession(menuai)
         self._feed_manager = GeonetnzQuakesFeedManager(
             websession,
             self._generate_entity,
@@ -148,7 +148,7 @@ class GeonetnzQuakesFeedEntityManager:
     async def async_init(self):
         """Schedule initial and regular updates based on configured time interval."""
 
-        await self._hass.config_entries.async_forward_entry_setups(
+        await self._menuai.config_entries.async_forward_entry_setups(
             self._config_entry, PLATFORMS
         )
 
@@ -158,7 +158,7 @@ class GeonetnzQuakesFeedEntityManager:
 
         # Trigger updates at regular intervals.
         self._track_time_remove_callback = async_track_time_interval(
-            self._hass, update, self._scan_interval
+            self._menuai, update, self._scan_interval
         )
 
         _LOGGER.debug("Feed entity manager initialized")
@@ -193,7 +193,7 @@ class GeonetnzQuakesFeedEntityManager:
     async def _generate_entity(self, external_id):
         """Generate new entity."""
         async_dispatcher_send(
-            self._hass,
+            self._menuai,
             self.async_event_new_entity(),
             self,
             self._config_entry.unique_id,
@@ -202,16 +202,16 @@ class GeonetnzQuakesFeedEntityManager:
 
     async def _update_entity(self, external_id):
         """Update entity."""
-        async_dispatcher_send(self._hass, f"geonetnz_quakes_update_{external_id}")
+        async_dispatcher_send(self._menuai, f"geonetnz_quakes_update_{external_id}")
 
     async def _remove_entity(self, external_id):
         """Remove entity."""
-        async_dispatcher_send(self._hass, f"geonetnz_quakes_delete_{external_id}")
+        async_dispatcher_send(self._menuai, f"geonetnz_quakes_delete_{external_id}")
 
     async def _status_update(self, status_info):
         """Propagate status update."""
         _LOGGER.debug("Status update received: %s", status_info)
         self._status_info = status_info
         async_dispatcher_send(
-            self._hass, f"geonetnz_quakes_status_{self._config_entry_id}"
+            self._menuai, f"geonetnz_quakes_status_{self._config_entry_id}"
         )

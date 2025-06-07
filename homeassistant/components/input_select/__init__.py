@@ -7,7 +7,7 @@ from typing import Any, Self, cast
 
 import voluptuous as vol
 
-from homeassistant.components.select import (
+from menuai.components.select import (
     ATTR_CYCLE,
     ATTR_OPTION,
     ATTR_OPTIONS,
@@ -18,21 +18,21 @@ from homeassistant.components.select import (
     SERVICE_SELECT_PREVIOUS,
     SelectEntity,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_EDITABLE,
     CONF_ICON,
     CONF_ID,
     CONF_NAME,
     SERVICE_RELOAD,
 )
-from homeassistant.core import HomeAssistant, ServiceCall, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import collection, config_validation as cv
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.restore_state import RestoreEntity
-import homeassistant.helpers.service
-from homeassistant.helpers.storage import Store
-from homeassistant.helpers.typing import ConfigType, VolDictType
+from menuai.core import menuai, ServiceCall, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import collection, config_validation as cv
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.restore_state import RestoreEntity
+import menuai.helpers.service
+from menuai.helpers.storage import Store
+from menuai.helpers.typing import ConfigType, VolDictType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -51,7 +51,7 @@ def _unique(options: Any) -> Any:
     try:
         return vol.Unique()(options)
     except vol.Invalid as exc:
-        raise HomeAssistantError("Duplicate options are not allowed") from exc
+        raise menuaiError("Duplicate options are not allowed") from exc
 
 
 STORAGE_FIELDS: VolDictType = {
@@ -131,9 +131,9 @@ class InputSelectStore(Store):
         return old_data
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up an input select."""
-    component = EntityComponent[InputSelect](_LOGGER, DOMAIN, hass)
+    component = EntityComponent[InputSelect](_LOGGER, DOMAIN, menuai)
 
     id_manager = collection.IDManager()
 
@@ -141,17 +141,17 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         logging.getLogger(f"{__name__}.yaml_collection"), id_manager
     )
     collection.sync_entity_lifecycle(
-        hass, DOMAIN, DOMAIN, component, yaml_collection, InputSelect
+        menuai, DOMAIN, DOMAIN, component, yaml_collection, InputSelect
     )
 
     storage_collection = InputSelectStorageCollection(
         InputSelectStore(
-            hass, STORAGE_VERSION, STORAGE_KEY, minor_version=STORAGE_VERSION_MINOR
+            menuai, STORAGE_VERSION, STORAGE_KEY, minor_version=STORAGE_VERSION_MINOR
         ),
         id_manager,
     )
     collection.sync_entity_lifecycle(
-        hass, DOMAIN, DOMAIN, component, storage_collection, InputSelect
+        menuai, DOMAIN, DOMAIN, component, storage_collection, InputSelect
     )
 
     await yaml_collection.async_load(
@@ -161,7 +161,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     collection.DictStorageCollectionWebsocket(
         storage_collection, DOMAIN, DOMAIN, STORAGE_FIELDS, STORAGE_FIELDS
-    ).async_setup(hass)
+    ).async_setup(menuai)
 
     async def reload_service_handler(service_call: ServiceCall) -> None:
         """Reload yaml entities."""
@@ -172,8 +172,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             [{CONF_ID: id_, **cfg} for id_, cfg in conf.get(DOMAIN, {}).items()]
         )
 
-    homeassistant.helpers.service.async_register_admin_service(
-        hass,
+    menuai.helpers.service.async_register_admin_service(
+        menuai,
         DOMAIN,
         SERVICE_RELOAD,
         reload_service_handler,
@@ -245,7 +245,7 @@ class InputSelectStorageCollection(collection.DictStorageCollection):
         return {CONF_ID: item[CONF_ID]} | update_data
 
 
-# pylint: disable-next=hass-enforce-class-module
+# pylint: disable-next=menuai-enforce-class-module
 class InputSelect(collection.CollectionEntity, SelectEntity, RestoreEntity):
     """Representation of a select input."""
 
@@ -280,9 +280,9 @@ class InputSelect(collection.CollectionEntity, SelectEntity, RestoreEntity):
         input_select.editable = False
         return input_select
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Run when entity about to be added."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         if self.current_option is not None:
             return
 
@@ -300,7 +300,7 @@ class InputSelect(collection.CollectionEntity, SelectEntity, RestoreEntity):
     async def async_select_option(self, option: str) -> None:
         """Select new option."""
         if option not in self.options:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Invalid option: {option} (possible options: {', '.join(self.options)})"
             )
         self._attr_current_option = option
@@ -310,7 +310,7 @@ class InputSelect(collection.CollectionEntity, SelectEntity, RestoreEntity):
         """Set options."""
         unique_options = list(dict.fromkeys(options))
         if len(unique_options) != len(options):
-            raise HomeAssistantError(f"Duplicated options: {options}")
+            raise menuaiError(f"Duplicated options: {options}")
 
         self._attr_options = options
 

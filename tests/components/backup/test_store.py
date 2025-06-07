@@ -7,8 +7,8 @@ from unittest.mock import patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.backup.const import DOMAIN
-from homeassistant.core import HomeAssistant
+from menuai.components.backup.const import DOMAIN
+from menuai.core import menuai
 
 from .common import setup_backup_integration
 
@@ -18,7 +18,7 @@ from tests.typing import WebSocketGenerator
 @pytest.fixture(autouse=True)
 def mock_delay_save() -> Generator[None]:
     """Mock the delay save constant."""
-    with patch("homeassistant.components.backup.store.STORE_DELAY_SAVE", 0):
+    with patch("menuai.components.backup.store.STORE_DELAY_SAVE", 0):
         yield
 
 
@@ -305,22 +305,22 @@ def mock_delay_save() -> Generator[None]:
     ],
 )
 async def test_store_migration(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
+    menuai_ws_client: WebSocketGenerator,
     snapshot: SnapshotAssertion,
     store_data: dict[str, Any],
 ) -> None:
     """Test migrating the backup store."""
-    hass_storage[DOMAIN] = store_data
-    await setup_backup_integration(hass)
-    await hass.async_block_till_done()
+    menuai_storage[DOMAIN] = store_data
+    await setup_backup_integration(menuai)
+    await menuai.async_block_till_done()
 
     # Check migrated data
-    assert hass_storage[DOMAIN] == snapshot
+    assert menuai_storage[DOMAIN] == snapshot
 
     # Update settings, then check saved data
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json_auto_id(
         {
             "type": "backup/config/update",
@@ -329,5 +329,5 @@ async def test_store_migration(
     )
     result = await client.receive_json()
     assert result["success"]
-    await hass.async_block_till_done()
-    assert hass_storage[DOMAIN] == snapshot
+    await menuai.async_block_till_done()
+    assert menuai_storage[DOMAIN] == snapshot

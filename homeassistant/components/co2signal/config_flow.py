@@ -13,16 +13,16 @@ from aioelectricitymaps import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
-from homeassistant.const import (
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
+from menuai.const import (
     CONF_API_KEY,
     CONF_COUNTRY_CODE,
     CONF_LATITUDE,
     CONF_LONGITUDE,
 )
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.selector import (
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.selector import (
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
@@ -151,11 +151,11 @@ class ElectricityMapsConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if data:
-            session = async_get_clientsession(self.hass)
+            session = async_get_clientsession(self.menuai)
             em = ElectricityMaps(token=data[CONF_API_KEY], session=session)
 
             try:
-                await fetch_latest_carbon_intensity(self.hass, em, data)
+                await fetch_latest_carbon_intensity(self.menuai, em, data)
             except ElectricityMapsInvalidTokenError:
                 errors["base"] = "invalid_auth"
             except ElectricityMapsNoDataError:

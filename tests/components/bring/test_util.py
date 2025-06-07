@@ -3,9 +3,9 @@
 from bring_api import BringItemsResponse, BringListResponse, BringUserSettingsResponse
 import pytest
 
-from homeassistant.components.bring.const import DOMAIN
-from homeassistant.components.bring.coordinator import BringData
-from homeassistant.components.bring.util import list_language, sum_attributes
+from menuai.components.bring.const import DOMAIN
+from menuai.components.bring.coordinator import BringData
+from menuai.components.bring.util import list_language, sum_attributes
 
 from tests.common import load_fixture
 

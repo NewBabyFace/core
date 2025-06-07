@@ -6,7 +6,7 @@ from datetime import timedelta
 import logging
 from typing import Final
 
-from homeassistant.components.media_player import MediaPlayerEntityFeature
+from menuai.components.media_player import MediaPlayerEntityFeature
 
 DOMAIN: Final = "fully_kiosk"
 

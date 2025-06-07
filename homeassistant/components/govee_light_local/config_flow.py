@@ -8,9 +8,9 @@ import logging
 
 from govee_local_api import GoveeController
 
-from homeassistant.components import network
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_entry_flow
+from menuai.components import network
+from menuai.core import menuai
+from menuai.helpers import config_entry_flow
 
 from .const import (
     CONF_LISTENING_PORT_DEFAULT,
@@ -23,13 +23,13 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 
-async def _async_has_devices(hass: HomeAssistant) -> bool:
+async def _async_has_devices(menuai: menuai) -> bool:
     """Return if there are devices that can be discovered."""
 
-    adapter = await network.async_get_source_ip(hass, network.PUBLIC_TARGET_IP)
+    adapter = await network.async_get_source_ip(menuai, network.PUBLIC_TARGET_IP)
 
     controller: GoveeController = GoveeController(
-        loop=hass.loop,
+        loop=menuai.loop,
         logger=_LOGGER,
         listening_address=adapter,
         broadcast_address=CONF_MULTICAST_ADDRESS_DEFAULT,

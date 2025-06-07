@@ -4,8 +4,8 @@ import logging
 
 import pytest
 
-from homeassistant.components.knx import CONF_EVENT, CONF_TYPE, KNX_ADDRESS
-from homeassistant.core import HomeAssistant
+from menuai.components.knx import CONF_EVENT, CONF_TYPE, KNX_ADDRESS
+from menuai.core import menuai
 
 from .conftest import KNXTestKit
 
@@ -13,7 +13,7 @@ from tests.common import async_capture_events
 
 
 async def test_knx_event(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     knx: KNXTestKit,
 ) -> None:
@@ -28,7 +28,7 @@ async def test_knx_event(
     test_address_c_1 = "2/6/4"
     test_address_c_2 = "2/6/5"
     test_address_d = "5/4/3"
-    events = async_capture_events(hass, "knx_event")
+    events = async_capture_events(menuai, "knx_event")
 
     async def test_event_data(address, payload, value=None):
         assert len(events) == 1

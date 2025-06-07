@@ -6,17 +6,17 @@ import logging
 import dweepy
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     ATTR_FRIENDLY_NAME,
     CONF_NAME,
     CONF_WHITELIST,
     EVENT_STATE_CHANGED,
     STATE_UNKNOWN,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, state as state_helper
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util import Throttle
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, state as state_helper
+from menuai.helpers.typing import ConfigType
+from menuai.util import Throttle
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Dweet.io component."""
     conf = config[DOMAIN]
     name = conf.get(CONF_NAME)
@@ -65,7 +65,7 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
         send_data(name, json_body)
 
-    hass.bus.listen(EVENT_STATE_CHANGED, dweet_event_listener)
+    menuai.bus.listen(EVENT_STATE_CHANGED, dweet_event_listener)
 
     return True
 

@@ -7,16 +7,16 @@ from typing import Any
 
 from pyinsteon import async_connect
 
-from homeassistant.components import usb
-from homeassistant.config_entries import (
+from menuai.components import usb
+from menuai.config_entries import (
     DEFAULT_DISCOVERY_UNIQUE_ID,
     ConfigFlow,
     ConfigFlowResult,
 )
-from homeassistant.const import CONF_DEVICE, CONF_HOST, CONF_NAME
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
-from homeassistant.helpers.service_info.usb import UsbServiceInfo
+from menuai.const import CONF_DEVICE, CONF_HOST, CONF_NAME
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.helpers.service_info.usb import UsbServiceInfo
 
 from .const import CONF_HUB_VERSION, DOMAIN
 from .schemas import build_hub_schema, build_plm_manual_schema, build_plm_schema
@@ -76,7 +76,7 @@ class InsteonFlowHandler(ConfigFlow, domain=DOMAIN):
                 return self.async_create_entry(title="", data=user_input)
             errors["base"] = "cannot_connect"
         schema_defaults = user_input if user_input is not None else {}
-        ports = await async_get_usb_ports(self.hass)
+        ports = await async_get_usb_ports(self.menuai)
         if not ports:
             return await self.async_step_plm_manually()
         ports[PLM_MANUAL] = "Enter manually"

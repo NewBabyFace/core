@@ -6,14 +6,14 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components import scene
-from homeassistant.components.scene import Scene
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_NAME, CONF_PAYLOAD_ON
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import ConfigType
+from menuai.components import scene
+from menuai.components.scene import Scene
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_NAME, CONF_PAYLOAD_ON
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import ConfigType
 
 from .config import MQTT_BASE_SCHEMA
 from .const import CONF_COMMAND_TOPIC, CONF_RETAIN
@@ -41,13 +41,13 @@ DISCOVERY_SCHEMA = PLATFORM_SCHEMA_MODERN.extend({}, extra=vol.REMOVE_EXTRA)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up MQTT scene through YAML and through MQTT discovery."""
     async_setup_entity_entry_helper(
-        hass,
+        menuai,
         config_entry,
         MqttScene,
         scene.DOMAIN,

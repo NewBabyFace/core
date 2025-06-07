@@ -3,11 +3,11 @@
 import logging
 from typing import Any
 
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import (
@@ -20,7 +20,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: FireServiceConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -117,11 +117,11 @@ class ResponseSwitch(SwitchEntity):
         await self._client.async_set_response(value)
         self.client_update()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register update callback."""
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"{DOMAIN}_{self._entry_id}_update",
                 self.client_update,
             )

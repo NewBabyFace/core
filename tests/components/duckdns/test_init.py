@@ -5,11 +5,11 @@ import logging
 
 import pytest
 
-from homeassistant.components import duckdns
-from homeassistant.components.duckdns import async_track_time_interval_backoff
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
-from homeassistant.util.dt import utcnow
+from menuai.components import duckdns
+from menuai.components.duckdns import async_track_time_interval_backoff
+from menuai.core import menuai
+from menuai.setup import async_setup_component
+from menuai.util.dt import utcnow
 
 from tests.common import async_fire_time_changed
 from tests.test_util.aiohttp import AiohttpClientMocker
@@ -20,19 +20,19 @@ _LOGGER = logging.getLogger(__name__)
 INTERVAL = duckdns.INTERVAL
 
 
-async def async_set_txt(hass: HomeAssistant, txt: str | None) -> None:
+async def async_set_txt(menuai: menuai, txt: str | None) -> None:
     """Set the txt record. Pass in None to remove it.
 
     This is a legacy helper method. Do not use it for new tests.
     """
-    await hass.services.async_call(
+    await menuai.services.async_call(
         duckdns.DOMAIN, duckdns.SERVICE_SET_TXT, {duckdns.ATTR_TXT: txt}, blocking=True
     )
 
 
 @pytest.fixture
 async def setup_duckdns(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Fixture that sets up DuckDNS."""
     aioclient_mock.get(
@@ -40,32 +40,32 @@ async def setup_duckdns(
     )
 
     await async_setup_component(
-        hass, duckdns.DOMAIN, {"duckdns": {"domain": DOMAIN, "access_token": TOKEN}}
+        menuai, duckdns.DOMAIN, {"duckdns": {"domain": DOMAIN, "access_token": TOKEN}}
     )
 
 
-async def test_setup(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker) -> None:
+async def test_setup(menuai: menuai, aioclient_mock: AiohttpClientMocker) -> None:
     """Test setup works if update passes."""
     aioclient_mock.get(
         duckdns.UPDATE_URL, params={"domains": DOMAIN, "token": TOKEN}, text="OK"
     )
 
     result = await async_setup_component(
-        hass, duckdns.DOMAIN, {"duckdns": {"domain": DOMAIN, "access_token": TOKEN}}
+        menuai, duckdns.DOMAIN, {"duckdns": {"domain": DOMAIN, "access_token": TOKEN}}
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result
     assert aioclient_mock.call_count == 1
 
-    async_fire_time_changed(hass, utcnow() + timedelta(minutes=5))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + timedelta(minutes=5))
+    await menuai.async_block_till_done()
     assert aioclient_mock.call_count == 2
 
 
 async def test_setup_backoff(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test setup fails if first update fails."""
     aioclient_mock.get(
@@ -73,10 +73,10 @@ async def test_setup_backoff(
     )
 
     result = await async_setup_component(
-        hass, duckdns.DOMAIN, {"duckdns": {"domain": DOMAIN, "access_token": TOKEN}}
+        menuai, duckdns.DOMAIN, {"duckdns": {"domain": DOMAIN, "access_token": TOKEN}}
     )
     assert result
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert aioclient_mock.call_count == 1
 
     # Copy of the DuckDNS intervals from duckdns/__init__.py
@@ -88,19 +88,19 @@ async def test_setup_backoff(
         timedelta(minutes=30),
     )
     tme = utcnow()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     _LOGGER.debug("Backoff")
     for idx in range(1, len(intervals)):
         tme += intervals[idx]
-        async_fire_time_changed(hass, tme)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, tme)
+        await menuai.async_block_till_done()
 
         assert aioclient_mock.call_count == idx + 1
 
 
 async def test_service_set_txt(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker, setup_duckdns
+    menuai: menuai, aioclient_mock: AiohttpClientMocker, setup_duckdns
 ) -> None:
     """Test set txt service call."""
     # Empty the fixture mock requests
@@ -113,12 +113,12 @@ async def test_service_set_txt(
     )
 
     assert aioclient_mock.call_count == 0
-    await async_set_txt(hass, "some-txt")
+    await async_set_txt(menuai, "some-txt")
     assert aioclient_mock.call_count == 1
 
 
 async def test_service_clear_txt(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker, setup_duckdns
+    menuai: menuai, aioclient_mock: AiohttpClientMocker, setup_duckdns
 ) -> None:
     """Test clear txt service call."""
     # Empty the fixture mock requests
@@ -131,11 +131,11 @@ async def test_service_clear_txt(
     )
 
     assert aioclient_mock.call_count == 0
-    await async_set_txt(hass, None)
+    await async_set_txt(menuai, None)
     assert aioclient_mock.call_count == 1
 
 
-async def test_async_track_time_interval_backoff(hass: HomeAssistant) -> None:
+async def test_async_track_time_interval_backoff(menuai: menuai) -> None:
     """Test setup fails if first update fails."""
     ret_val = False
     call_count = 0
@@ -158,24 +158,24 @@ async def test_async_track_time_interval_backoff(hass: HomeAssistant) -> None:
         INTERVAL * 12,
     )
 
-    async_track_time_interval_backoff(hass, _return, intervals)
-    await hass.async_block_till_done()
+    async_track_time_interval_backoff(menuai, _return, intervals)
+    await menuai.async_block_till_done()
 
     assert call_count == 1
 
     _LOGGER.debug("Backoff")
     for idx in range(1, len(intervals)):
         tme += intervals[idx]
-        async_fire_time_changed(hass, tme + timedelta(seconds=0.1))
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, tme + timedelta(seconds=0.1))
+        await menuai.async_block_till_done()
 
         assert call_count == idx + 1
 
     _LOGGER.debug("Max backoff reached - intervals[-1]")
     for _idx in range(1, 10):
         tme += intervals[-1]
-        async_fire_time_changed(hass, tme + timedelta(seconds=0.1))
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, tme + timedelta(seconds=0.1))
+        await menuai.async_block_till_done()
 
         assert call_count == idx + 1 + _idx
 
@@ -183,14 +183,14 @@ async def test_async_track_time_interval_backoff(hass: HomeAssistant) -> None:
     call_count = 0
     ret_val = True
     tme += intervals[-1]
-    async_fire_time_changed(hass, tme + timedelta(seconds=0.1))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, tme + timedelta(seconds=0.1))
+    await menuai.async_block_till_done()
     assert call_count == 1
 
     _LOGGER.debug("No backoff - intervals[0]")
     for _idx in range(2, 10):
         tme += intervals[0]
-        async_fire_time_changed(hass, tme + timedelta(seconds=0.1))
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, tme + timedelta(seconds=0.1))
+        await menuai.async_block_till_done()
 
         assert call_count == _idx

@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant.components.device_automation import (
+from menuai.components.device_automation import (
     async_get_entity_registry_entry_or_raise,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_CONDITION,
     CONF_DEVICE_ID,
     CONF_DOMAIN,
@@ -15,16 +15,16 @@ from homeassistant.const import (
     CONF_FOR,
     CONF_TYPE,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import (
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import (
     condition,
     config_validation as cv,
     entity_registry as er,
 )
-from homeassistant.helpers.config_validation import DEVICE_CONDITION_BASE_SCHEMA
-from homeassistant.helpers.entity import get_capability
-from homeassistant.helpers.typing import ConfigType, TemplateVarsType
+from menuai.helpers.config_validation import DEVICE_CONDITION_BASE_SCHEMA
+from menuai.helpers.entity import get_capability
+from menuai.helpers.typing import ConfigType, TemplateVarsType
 
 from .const import ATTR_OPTIONS, CONF_OPTION, DOMAIN
 
@@ -43,10 +43,10 @@ CONDITION_SCHEMA = DEVICE_CONDITION_BASE_SCHEMA.extend(
 
 
 async def async_get_conditions(
-    hass: HomeAssistant, device_id: str
+    menuai: menuai, device_id: str
 ) -> list[dict[str, str]]:
     """List device conditions for Select devices."""
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     return [
         {
             CONF_CONDITION: "device",
@@ -62,32 +62,32 @@ async def async_get_conditions(
 
 @callback
 def async_condition_from_config(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> condition.ConditionCheckerType:
     """Create a function to test a device condition."""
 
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     entity_id = er.async_resolve_entity_id(registry, config[CONF_ENTITY_ID])
 
     @callback
-    def test_is_state(hass: HomeAssistant, variables: TemplateVarsType) -> bool:
+    def test_is_state(menuai: menuai, variables: TemplateVarsType) -> bool:
         """Test if an entity is a certain state."""
         return condition.state(
-            hass, entity_id, config[CONF_OPTION], config.get(CONF_FOR)
+            menuai, entity_id, config[CONF_OPTION], config.get(CONF_FOR)
         )
 
     return test_is_state
 
 
 async def async_get_condition_capabilities(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> dict[str, vol.Schema]:
     """List condition capabilities."""
 
     try:
-        entry = async_get_entity_registry_entry_or_raise(hass, config[CONF_ENTITY_ID])
-        options = get_capability(hass, entry.entity_id, ATTR_OPTIONS) or []
-    except HomeAssistantError:
+        entry = async_get_entity_registry_entry_or_raise(menuai, config[CONF_ENTITY_ID])
+        options = get_capability(menuai, entry.entity_id, ATTR_OPTIONS) or []
+    except menuaiError:
         options = []
 
     return {

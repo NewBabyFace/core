@@ -2,7 +2,7 @@
 
 from itertools import product
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 PLATFORMS = [
     Platform.BINARY_SENSOR,

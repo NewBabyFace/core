@@ -6,16 +6,16 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import setup_mysensors_platform
 from .const import MYSENSORS_DISCOVERY, DiscoveryInfo
@@ -68,7 +68,7 @@ SENSORS: dict[str, MySensorsBinarySensorDescription] = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -78,7 +78,7 @@ async def async_setup_entry(
     def async_discover(discovery_info: DiscoveryInfo) -> None:
         """Discover and add a MySensors binary_sensor."""
         setup_mysensors_platform(
-            hass,
+            menuai,
             Platform.BINARY_SENSOR,
             discovery_info,
             MySensorsBinarySensor,
@@ -87,7 +87,7 @@ async def async_setup_entry(
 
     config_entry.async_on_unload(
         async_dispatcher_connect(
-            hass,
+            menuai,
             MYSENSORS_DISCOVERY.format(config_entry.entry_id, Platform.BINARY_SENSOR),
             async_discover,
         ),

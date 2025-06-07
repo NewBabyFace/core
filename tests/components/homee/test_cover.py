@@ -6,15 +6,15 @@ import pytest
 from websockets import frames
 from websockets.exceptions import ConnectionClosed
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     ATTR_POSITION,
     ATTR_TILT_POSITION,
     DOMAIN as COVER_DOMAIN,
     CoverEntityFeature,
     CoverState,
 )
-from homeassistant.components.homee.const import DOMAIN
-from homeassistant.const import (
+from menuai.components.homee.const import DOMAIN
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_CLOSE_COVER,
     SERVICE_CLOSE_COVER_TILT,
@@ -24,8 +24,8 @@ from homeassistant.const import (
     SERVICE_SET_COVER_TILT_POSITION,
     SERVICE_STOP_COVER,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from . import build_mock_node, setup_integration
 
@@ -33,28 +33,28 @@ from tests.common import MockConfigEntry
 
 
 async def test_open_close_stop_cover(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_homee: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test opening the cover."""
     mock_homee.nodes = [build_mock_node("cover_with_position_slats.json")]
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_OPEN_COVER,
         {ATTR_ENTITY_ID: "cover.test_cover"},
         blocking=True,
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_CLOSE_COVER,
         {ATTR_ENTITY_ID: "cover.test_cover"},
         blocking=True,
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_STOP_COVER,
         {ATTR_ENTITY_ID: "cover.test_cover"},
@@ -67,29 +67,29 @@ async def test_open_close_stop_cover(
 
 
 async def test_set_cover_position(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_homee: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test setting the cover position."""
     mock_homee.nodes = [build_mock_node("cover_with_position_slats.json")]
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     # Slats have a range of -45 to 90.
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_SET_COVER_POSITION,
         {ATTR_ENTITY_ID: "cover.test_slats", ATTR_POSITION: 100},
         blocking=True,
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_SET_COVER_POSITION,
         {ATTR_ENTITY_ID: "cover.test_slats", ATTR_POSITION: 0},
         blocking=True,
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_SET_COVER_POSITION,
         {ATTR_ENTITY_ID: "cover.test_slats", ATTR_POSITION: 50},
@@ -103,29 +103,29 @@ async def test_set_cover_position(
 
 
 async def test_close_open_slats(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_homee: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test closing and opening slats."""
     mock_homee.nodes = [build_mock_node("cover_with_slats_position.json")]
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    attributes = hass.states.get("cover.test_slats").attributes
+    attributes = menuai.states.get("cover.test_slats").attributes
     assert attributes.get("supported_features") == (
         CoverEntityFeature.OPEN_TILT
         | CoverEntityFeature.CLOSE_TILT
         | CoverEntityFeature.SET_TILT_POSITION
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_CLOSE_COVER_TILT,
         {ATTR_ENTITY_ID: "cover.test_slats"},
         blocking=True,
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_OPEN_COVER_TILT,
         {ATTR_ENTITY_ID: "cover.test_slats"},
@@ -138,29 +138,29 @@ async def test_close_open_slats(
 
 
 async def test_set_slat_position(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_homee: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test setting slats position."""
     mock_homee.nodes = [build_mock_node("cover_with_slats_position.json")]
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     # Slats have a range of -45 to 90 on this device.
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_SET_COVER_TILT_POSITION,
         {ATTR_ENTITY_ID: "cover.test_slats", ATTR_TILT_POSITION: 100},
         blocking=True,
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_SET_COVER_TILT_POSITION,
         {ATTR_ENTITY_ID: "cover.test_slats", ATTR_TILT_POSITION: 0},
         blocking=True,
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_SET_COVER_TILT_POSITION,
         {ATTR_ENTITY_ID: "cover.test_slats", ATTR_TILT_POSITION: 50},
@@ -174,7 +174,7 @@ async def test_set_slat_position(
 
 
 async def test_cover_positions(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_homee: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
@@ -184,11 +184,11 @@ async def test_cover_positions(
     mock_homee.nodes = [build_mock_node("cover_with_position_slats.json")]
     cover = mock_homee.nodes[0]
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    assert hass.states.get("cover.test_cover").state == CoverState.OPEN
+    assert menuai.states.get("cover.test_cover").state == CoverState.OPEN
 
-    attributes = hass.states.get("cover.test_cover").attributes
+    attributes = menuai.states.get("cover.test_cover").attributes
     assert attributes.get("supported_features") == (
         CoverEntityFeature.OPEN
         | CoverEntityFeature.CLOSE
@@ -203,21 +203,21 @@ async def test_cover_positions(
     cover.attributes[1].current_value = 100
     cover.attributes[2].current_value = 90
     cover.add_on_changed_listener.call_args_list[0][0][0](cover)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    attributes = hass.states.get("cover.test_cover").attributes
+    attributes = menuai.states.get("cover.test_cover").attributes
     assert attributes.get("current_position") == 0
     assert attributes.get("current_tilt_position") == 0
-    assert hass.states.get("cover.test_cover").state == CoverState.CLOSED
+    assert menuai.states.get("cover.test_cover").state == CoverState.CLOSED
 
     cover.attributes[0].current_value = 3
     cover.attributes[1].current_value = 75
     cover.attributes[2].current_value = 56
     cover.add_on_changed_listener.call_args_list[0][0][0](cover)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("cover.test_cover").state == CoverState.OPENING
-    attributes = hass.states.get("cover.test_cover").attributes
+    assert menuai.states.get("cover.test_cover").state == CoverState.OPENING
+    attributes = menuai.states.get("cover.test_cover").attributes
     assert attributes.get("current_position") == 25
     assert attributes.get("current_tilt_position") == 25
 
@@ -225,16 +225,16 @@ async def test_cover_positions(
     cover.attributes[1].current_value = 25
     cover.attributes[2].current_value = -11
     cover.add_on_changed_listener.call_args_list[0][0][0](cover)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("cover.test_cover").state == CoverState.CLOSING
-    attributes = hass.states.get("cover.test_cover").attributes
+    assert menuai.states.get("cover.test_cover").state == CoverState.CLOSING
+    attributes = menuai.states.get("cover.test_cover").attributes
     assert attributes.get("current_position") == 75
     assert attributes.get("current_tilt_position") == 74
 
 
 async def test_reversed_cover(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_homee: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
@@ -242,40 +242,40 @@ async def test_reversed_cover(
     mock_homee.nodes = [build_mock_node("cover_without_position.json")]
     cover = mock_homee.nodes[0]
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     cover.attributes[0].is_reversed = True
     cover.add_on_changed_listener.call_args_list[0][0][0](cover)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    attributes = hass.states.get("cover.test_cover").attributes
+    attributes = menuai.states.get("cover.test_cover").attributes
     assert attributes.get("supported_features") == (
         CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE | CoverEntityFeature.STOP
     )
-    assert hass.states.get("cover.test_cover").state == CoverState.OPEN
+    assert menuai.states.get("cover.test_cover").state == CoverState.OPEN
 
     cover.attributes[0].current_value = 0
     cover.add_on_changed_listener.call_args_list[0][0][0](cover)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("cover.test_cover").state == CoverState.CLOSED
+    assert menuai.states.get("cover.test_cover").state == CoverState.CLOSED
 
 
 async def test_send_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_homee: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test failed set_value command."""
     mock_homee.nodes = [build_mock_node("cover_without_position.json")]
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     mock_homee.set_value.side_effect = ConnectionClosed(
         rcvd=frames.Close(1002, "Protocol Error"), sent=None
     )
-    with pytest.raises(HomeAssistantError) as exc_info:
-        await hass.services.async_call(
+    with pytest.raises(menuaiError) as exc_info:
+        await menuai.services.async_call(
             COVER_DOMAIN,
             SERVICE_OPEN_COVER,
             {ATTR_ENTITY_ID: "cover.test_cover"},

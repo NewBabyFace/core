@@ -4,19 +4,19 @@ from __future__ import annotations
 
 from elmax_api.model.panel import PanelStatus
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import ElmaxConfigEntry
 from .entity import ElmaxEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ElmaxConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

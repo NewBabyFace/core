@@ -4,9 +4,9 @@ import asyncio
 from contextlib import suppress
 import logging
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_entry_flow
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from menuai.core import menuai, callback
+from menuai.helpers import config_entry_flow
+from menuai.helpers.dispatcher import async_dispatcher_connect
 
 from .const import (
     DISPATCH_CONTROLLER_DISCOVERED,
@@ -19,7 +19,7 @@ from .discovery import async_start_discovery_service, async_stop_discovery_servi
 _LOGGER = logging.getLogger(__name__)
 
 
-async def _async_has_devices(hass: HomeAssistant) -> bool:
+async def _async_has_devices(menuai: menuai) -> bool:
     controller_ready = asyncio.Event()
 
     @callback
@@ -27,10 +27,10 @@ async def _async_has_devices(hass: HomeAssistant) -> bool:
         controller_ready.set()
 
     remove_handler = async_dispatcher_connect(
-        hass, DISPATCH_CONTROLLER_DISCOVERED, dispatch_discovered
+        menuai, DISPATCH_CONTROLLER_DISCOVERED, dispatch_discovered
     )
 
-    discovery_service = await async_start_discovery_service(hass)
+    discovery_service = await async_start_discovery_service(menuai)
 
     with suppress(TimeoutError):
         async with asyncio.timeout(TIMEOUT_DISCOVERY):
@@ -39,7 +39,7 @@ async def _async_has_devices(hass: HomeAssistant) -> bool:
     remove_handler()
 
     if not discovery_service.controllers:
-        await async_stop_discovery_service(hass)
+        await async_stop_discovery_service(menuai)
         _LOGGER.debug("No controllers found")
         return False
 

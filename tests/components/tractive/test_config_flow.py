@@ -4,10 +4,10 @@ from unittest.mock import patch
 
 import aiotractive
 
-from homeassistant import config_entries
-from homeassistant.components.tractive.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.tractive.const import DOMAIN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
@@ -17,10 +17,10 @@ USER_INPUT = {
 }
 
 
-async def test_form(hass: HomeAssistant) -> None:
+async def test_form(menuai: menuai) -> None:
     """Test we get the form."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -29,15 +29,15 @@ async def test_form(hass: HomeAssistant) -> None:
     with (
         patch("aiotractive.api.API.user_id", return_value="user_id"),
         patch(
-            "homeassistant.components.tractive.async_setup_entry",
+            "menuai.components.tractive.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             USER_INPUT,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "test-email@example.com"
@@ -45,9 +45,9 @@ async def test_form(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_form_invalid_auth(hass: HomeAssistant) -> None:
+async def test_form_invalid_auth(menuai: menuai) -> None:
     """Test we handle invalid auth."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -55,7 +55,7 @@ async def test_form_invalid_auth(hass: HomeAssistant) -> None:
         "aiotractive.api.API.user_id",
         side_effect=aiotractive.exceptions.UnauthorizedError,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             USER_INPUT,
         )
@@ -64,9 +64,9 @@ async def test_form_invalid_auth(hass: HomeAssistant) -> None:
     assert result2["errors"] == {"base": "invalid_auth"}
 
 
-async def test_form_unknown_error(hass: HomeAssistant) -> None:
+async def test_form_unknown_error(menuai: menuai) -> None:
     """Test we handle invalid auth."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -74,7 +74,7 @@ async def test_form_unknown_error(hass: HomeAssistant) -> None:
         "aiotractive.api.API.user_id",
         side_effect=Exception,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             USER_INPUT,
         )
@@ -83,17 +83,17 @@ async def test_form_unknown_error(hass: HomeAssistant) -> None:
     assert result2["errors"] == {"base": "unknown"}
 
 
-async def test_flow_entry_already_exists(hass: HomeAssistant) -> None:
+async def test_flow_entry_already_exists(menuai: menuai) -> None:
     """Test user input for config_entry that already exists."""
     first_entry = MockConfigEntry(
         domain="tractive",
         data=USER_INPUT,
         unique_id="USERID",
     )
-    first_entry.add_to_hass(hass)
+    first_entry.add_to_menuai(menuai)
 
     with patch("aiotractive.api.API.user_id", return_value="USERID"):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}, data=USER_INPUT
         )
 
@@ -101,16 +101,16 @@ async def test_flow_entry_already_exists(hass: HomeAssistant) -> None:
     assert result["reason"] == "already_configured"
 
 
-async def test_reauthentication(hass: HomeAssistant) -> None:
+async def test_reauthentication(menuai: menuai) -> None:
     """Test Tractive reauthentication."""
     old_entry = MockConfigEntry(
         domain="tractive",
         data=USER_INPUT,
         unique_id="USERID",
     )
-    old_entry.add_to_hass(hass)
+    old_entry.add_to_menuai(menuai)
 
-    result = await old_entry.start_reauth_flow(hass)
+    result = await old_entry.start_reauth_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
@@ -119,31 +119,31 @@ async def test_reauthentication(hass: HomeAssistant) -> None:
     with (
         patch("aiotractive.api.API.user_id", return_value="USERID"),
         patch(
-            "homeassistant.components.tractive.async_setup_entry",
+            "menuai.components.tractive.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             USER_INPUT,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.ABORT
     assert result2["reason"] == "reauth_successful"
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_reauthentication_failure(hass: HomeAssistant) -> None:
+async def test_reauthentication_failure(menuai: menuai) -> None:
     """Test Tractive reauthentication failure."""
     old_entry = MockConfigEntry(
         domain="tractive",
         data=USER_INPUT,
         unique_id="USERID",
     )
-    old_entry.add_to_hass(hass)
+    old_entry.add_to_menuai(menuai)
 
-    result = await old_entry.start_reauth_flow(hass)
+    result = await old_entry.start_reauth_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
@@ -153,27 +153,27 @@ async def test_reauthentication_failure(hass: HomeAssistant) -> None:
         "aiotractive.api.API.user_id",
         side_effect=aiotractive.exceptions.UnauthorizedError,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             USER_INPUT,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["step_id"] == "reauth_confirm"
     assert result["type"] is FlowResultType.FORM
     assert result2["errors"]["base"] == "invalid_auth"
 
 
-async def test_reauthentication_unknown_failure(hass: HomeAssistant) -> None:
+async def test_reauthentication_unknown_failure(menuai: menuai) -> None:
     """Test Tractive reauthentication failure."""
     old_entry = MockConfigEntry(
         domain="tractive",
         data=USER_INPUT,
         unique_id="USERID",
     )
-    old_entry.add_to_hass(hass)
+    old_entry.add_to_menuai(menuai)
 
-    result = await old_entry.start_reauth_flow(hass)
+    result = await old_entry.start_reauth_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
@@ -183,38 +183,38 @@ async def test_reauthentication_unknown_failure(hass: HomeAssistant) -> None:
         "aiotractive.api.API.user_id",
         side_effect=Exception,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             USER_INPUT,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["step_id"] == "reauth_confirm"
     assert result["type"] is FlowResultType.FORM
     assert result2["errors"]["base"] == "unknown"
 
 
-async def test_reauthentication_failure_no_existing_entry(hass: HomeAssistant) -> None:
+async def test_reauthentication_failure_no_existing_entry(menuai: menuai) -> None:
     """Test Tractive reauthentication with no existing entry."""
     old_entry = MockConfigEntry(
         domain="tractive",
         data=USER_INPUT,
         unique_id="USERID",
     )
-    old_entry.add_to_hass(hass)
+    old_entry.add_to_menuai(menuai)
 
-    result = await old_entry.start_reauth_flow(hass)
+    result = await old_entry.start_reauth_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
     assert result["step_id"] == "reauth_confirm"
 
     with patch("aiotractive.api.API.user_id", return_value="USERID_DIFFERENT"):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             USER_INPUT,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.ABORT
     assert result2["reason"] == "reauth_failed_existing"

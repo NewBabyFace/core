@@ -7,14 +7,14 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.number import (
+from menuai.components.number import (
     ATTR_VALUE,
     DOMAIN as NUMBER_DOMAIN,
     SERVICE_SET_VALUE,
 )
-from homeassistant.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import setup_integration
 
@@ -24,15 +24,15 @@ SCAN_INTERVAL = datetime.timedelta(seconds=30)
 
 
 async def test_number(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_apsystems: AsyncMock,
     mock_config_entry: MockConfigEntry,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test number command."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
     entity_id = "number.mock_title_max_output"
-    await hass.services.async_call(
+    await menuai.services.async_call(
         NUMBER_DOMAIN,
         SERVICE_SET_VALUE,
         service_data={ATTR_VALUE: 50.1},
@@ -42,31 +42,31 @@ async def test_number(
     mock_apsystems.set_max_power.assert_called_once_with(50)
     mock_apsystems.get_max_power.return_value = 50
     freezer.tick(SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
-    state = hass.states.get(entity_id)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(entity_id)
     assert state.state == "50"
     mock_apsystems.get_max_power.side_effect = TimeoutError()
-    await hass.services.async_call(
+    await menuai.services.async_call(
         NUMBER_DOMAIN,
         SERVICE_SET_VALUE,
         service_data={ATTR_VALUE: 50.1},
         target={ATTR_ENTITY_ID: entity_id},
         blocking=True,
     )
-    await hass.async_block_till_done()
-    state = hass.states.get(entity_id)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_UNAVAILABLE
 
 
 @pytest.mark.usefixtures("mock_apsystems")
-@patch("homeassistant.components.apsystems.PLATFORMS", [Platform.NUMBER])
+@patch("menuai.components.apsystems.PLATFORMS", [Platform.NUMBER])
 async def test_all_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test all entities."""
-    await setup_integration(hass, mock_config_entry)
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await setup_integration(menuai, mock_config_entry)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)

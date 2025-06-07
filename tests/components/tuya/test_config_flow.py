@@ -7,10 +7,10 @@ from unittest.mock import MagicMock
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.tuya.const import CONF_APP_TYPE, CONF_USER_CODE, DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.tuya.const import CONF_APP_TYPE, CONF_USER_CODE, DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
@@ -19,11 +19,11 @@ pytestmark = pytest.mark.usefixtures("mock_setup_entry")
 
 @pytest.mark.usefixtures("mock_tuya_login_control")
 async def test_user_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test the full happy path user flow from start to finish."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
@@ -31,7 +31,7 @@ async def test_user_flow(
     assert result.get("type") is FlowResultType.FORM
     assert result.get("step_id") == "user"
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_USER_CODE: "12345"},
     )
@@ -39,7 +39,7 @@ async def test_user_flow(
     assert result2.get("type") is FlowResultType.FORM
     assert result2.get("step_id") == "scan"
 
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={},
     )
@@ -49,11 +49,11 @@ async def test_user_flow(
 
 
 async def test_user_flow_failed_qr_code(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_tuya_login_control: MagicMock,
 ) -> None:
     """Test an error occurring while retrieving the QR code."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
@@ -64,7 +64,7 @@ async def test_user_flow_failed_qr_code(
     # Something went wrong getting the QR code (like an invalid user code)
     mock_tuya_login_control.qr_code.return_value["success"] = False
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_USER_CODE: "12345"},
     )
@@ -75,13 +75,13 @@ async def test_user_flow_failed_qr_code(
     # This time it worked out
     mock_tuya_login_control.qr_code.return_value["success"] = True
 
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_USER_CODE: "12345"},
     )
     assert result3.get("step_id") == "scan"
 
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={},
     )
@@ -90,11 +90,11 @@ async def test_user_flow_failed_qr_code(
 
 
 async def test_user_flow_failed_scan(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_tuya_login_control: MagicMock,
 ) -> None:
     """Test an error occurring while verifying login."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
@@ -102,7 +102,7 @@ async def test_user_flow_failed_scan(
     assert result.get("type") is FlowResultType.FORM
     assert result.get("step_id") == "user"
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_USER_CODE: "12345"},
     )
@@ -117,7 +117,7 @@ async def test_user_flow_failed_scan(
         {"msg": "oops", "code": 42},
     )
 
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={},
     )
@@ -128,7 +128,7 @@ async def test_user_flow_failed_scan(
     # This time it worked out
     mock_tuya_login_control.login_result.return_value = good_values
 
-    result4 = await hass.config_entries.flow.async_configure(
+    result4 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={},
     )
@@ -138,19 +138,19 @@ async def test_user_flow_failed_scan(
 
 @pytest.mark.usefixtures("mock_tuya_login_control")
 async def test_reauth_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test the reauthentication configuration flow."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await mock_config_entry.start_reauth_flow(hass)
+    result = await mock_config_entry.start_reauth_flow(menuai)
 
     assert result.get("type") is FlowResultType.FORM
     assert result.get("step_id") == "scan"
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={},
     )
@@ -163,7 +163,7 @@ async def test_reauth_flow(
 
 @pytest.mark.usefixtures("mock_tuya_login_control")
 async def test_reauth_flow_migration(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_old_config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
 ) -> None:
@@ -171,18 +171,18 @@ async def test_reauth_flow_migration(
 
     This flow tests the migration from an old config entry.
     """
-    mock_old_config_entry.add_to_hass(hass)
+    mock_old_config_entry.add_to_menuai(menuai)
 
     # Ensure old data is there, new data is missing
     assert CONF_APP_TYPE in mock_old_config_entry.data
     assert CONF_USER_CODE not in mock_old_config_entry.data
 
-    result = await mock_old_config_entry.start_reauth_flow(hass)
+    result = await mock_old_config_entry.start_reauth_flow(menuai)
 
     assert result.get("type") is FlowResultType.FORM
     assert result.get("step_id") == "reauth_user_code"
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_USER_CODE: "12345"},
     )
@@ -190,7 +190,7 @@ async def test_reauth_flow_migration(
     assert result2.get("type") is FlowResultType.FORM
     assert result2.get("step_id") == "scan"
 
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={},
     )
@@ -206,19 +206,19 @@ async def test_reauth_flow_migration(
 
 
 async def test_reauth_flow_failed_qr_code(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_tuya_login_control: MagicMock,
     mock_old_config_entry: MockConfigEntry,
 ) -> None:
     """Test an error occurring while retrieving the QR code."""
-    mock_old_config_entry.add_to_hass(hass)
+    mock_old_config_entry.add_to_menuai(menuai)
 
-    result = await mock_old_config_entry.start_reauth_flow(hass)
+    result = await mock_old_config_entry.start_reauth_flow(menuai)
 
     # Something went wrong getting the QR code (like an invalid user code)
     mock_tuya_login_control.qr_code.return_value["success"] = False
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_USER_CODE: "12345"},
     )
@@ -229,13 +229,13 @@ async def test_reauth_flow_failed_qr_code(
     # This time it worked out
     mock_tuya_login_control.qr_code.return_value["success"] = True
 
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_USER_CODE: "12345"},
     )
     assert result3.get("step_id") == "scan"
 
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={},
     )

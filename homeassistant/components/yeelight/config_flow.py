@@ -11,22 +11,22 @@ import yeelight
 from yeelight.aio import AsyncBulb
 from yeelight.main import get_known_models
 
-from homeassistant.components import onboarding
-from homeassistant.config_entries import (
+from menuai.components import onboarding
+from menuai.config_entries import (
     ConfigEntry,
     ConfigEntryState,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_DEVICE, CONF_HOST, CONF_ID, CONF_MODEL, CONF_NAME
-from homeassistant.core import callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
-from homeassistant.helpers.service_info.ssdp import SsdpServiceInfo
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
-from homeassistant.helpers.typing import VolDictType
+from menuai.const import CONF_DEVICE, CONF_HOST, CONF_ID, CONF_MODEL, CONF_NAME
+from menuai.core import callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.helpers.service_info.ssdp import SsdpServiceInfo
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.helpers.typing import VolDictType
 
 from .const import (
     CONF_DETECTED_MODEL,
@@ -110,7 +110,7 @@ class YeelightConfigFlow(ConfigFlow, domain=DOMAIN):
                 continue
             reload = entry.state == ConfigEntryState.SETUP_RETRY
             if entry.data.get(CONF_HOST) != self._discovered_ip:
-                self.hass.config_entries.async_update_entry(
+                self.menuai.config_entries.async_update_entry(
                     entry, data={**entry.data, CONF_HOST: self._discovered_ip}
                 )
                 reload = entry.state in (
@@ -118,13 +118,13 @@ class YeelightConfigFlow(ConfigFlow, domain=DOMAIN):
                     ConfigEntryState.LOADED,
                 )
             if reload:
-                self.hass.config_entries.async_schedule_reload(entry.entry_id)
+                self.menuai.config_entries.async_schedule_reload(entry.entry_id)
             return self.async_abort(reason="already_configured")
         return await self._async_handle_discovery()
 
     async def _async_handle_discovery(self) -> ConfigFlowResult:
         """Handle any discovery."""
-        if self.hass.config_entries.flow.async_has_matching_flow(self):
+        if self.menuai.config_entries.flow.async_has_matching_flow(self):
             return self.async_abort(reason="already_in_progress")
         self._async_abort_entries_match({CONF_HOST: self._discovered_ip})
 
@@ -151,7 +151,7 @@ class YeelightConfigFlow(ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Confirm discovery."""
-        if user_input is not None or not onboarding.async_is_onboarded(self.hass):
+        if user_input is not None or not onboarding.async_is_onboarded(self.menuai):
             return self.async_create_entry(
                 title=async_format_model_id(self._discovered_model, self.unique_id),
                 data={
@@ -231,7 +231,7 @@ class YeelightConfigFlow(ConfigFlow, domain=DOMAIN):
             if entry.data[CONF_ID]
         }
         devices_name = {}
-        scanner = YeelightScanner.async_get(self.hass)
+        scanner = YeelightScanner.async_get(self.menuai)
         devices = await scanner.async_discover()
         # Run 3 times as packets can get lost
         for capabilities in devices:
@@ -275,7 +275,7 @@ class YeelightConfigFlow(ConfigFlow, domain=DOMAIN):
         """Set up with options."""
         self._async_abort_entries_match({CONF_HOST: host})
 
-        scanner = YeelightScanner.async_get(self.hass)
+        scanner = YeelightScanner.async_get(self.menuai)
         capabilities = await scanner.async_get_capabilities(host)
         if capabilities is None:  # timeout
             _LOGGER.debug("Failed to get capabilities from %s: timeout", host)
@@ -347,5 +347,5 @@ class OptionsFlowHandler(OptionsFlow):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""

@@ -6,24 +6,24 @@ from typing import Any
 
 from tuya_sharing import Manager, SharingScene
 
-from homeassistant.components.scene import Scene
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.scene import Scene
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import TuyaConfigEntry
 from .const import DOMAIN
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: TuyaConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Tuya scenes."""
-    hass_data = entry.runtime_data
-    scenes = await hass.async_add_executor_job(hass_data.manager.query_scenes)
-    async_add_entities(TuyaSceneEntity(hass_data.manager, scene) for scene in scenes)
+    menuai_data = entry.runtime_data
+    scenes = await menuai.async_add_executor_job(menuai_data.manager.query_scenes)
+    async_add_entities(TuyaSceneEntity(menuai_data.manager, scene) for scene in scenes)
 
 
 class TuyaSceneEntity(Scene):

@@ -11,17 +11,17 @@ from typing import TYPE_CHECKING, Any
 import httpx
 import voluptuous as vol
 
-from homeassistant.components import image
-from homeassistant.components.image import DEFAULT_CONTENT_TYPE, ImageEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_NAME
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.httpx_client import get_async_client
-from homeassistant.helpers.service_info.mqtt import ReceivePayloadType
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType, VolSchemaType
-from homeassistant.util import dt as dt_util
+from menuai.components import image
+from menuai.components.image import DEFAULT_CONTENT_TYPE, ImageEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_NAME
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.httpx_client import get_async_client
+from menuai.helpers.service_info.mqtt import ReceivePayloadType
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType, VolSchemaType
+from menuai.util import dt as dt_util
 
 from . import subscription
 from .config import MQTT_BASE_SCHEMA
@@ -80,13 +80,13 @@ DISCOVERY_SCHEMA = vol.All(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up MQTT image through YAML and through MQTT discovery."""
     async_setup_entity_entry_helper(
-        hass,
+        menuai,
         config_entry,
         MqttImage,
         image.DOMAIN,
@@ -108,15 +108,15 @@ class MqttImage(MqttEntity, ImageEntity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config: ConfigType,
         config_entry: ConfigEntry,
         discovery_data: DiscoveryInfoType | None,
     ) -> None:
         """Initialize the MQTT Image."""
-        self._client = get_async_client(hass)
-        ImageEntity.__init__(self, hass)
-        MqttEntity.__init__(self, hass, config, config_entry, discovery_data)
+        self._client = get_async_client(menuai)
+        ImageEntity.__init__(self, menuai)
+        MqttEntity.__init__(self, menuai, config, config_entry, discovery_data)
 
     @staticmethod
     def config_schema() -> VolSchemaType:
@@ -160,7 +160,7 @@ class MqttImage(MqttEntity, ImageEntity):
             )
             self._last_image = None
         self._attr_image_last_updated = dt_util.utcnow()
-        self.hass.data[DATA_MQTT].state_write_requests.write_state_request(self)
+        self.menuai.data[DATA_MQTT].state_write_requests.write_state_request(self)
 
     @callback
     def _image_from_url_request_received(self, msg: ReceiveMessage) -> None:
@@ -179,7 +179,7 @@ class MqttImage(MqttEntity, ImageEntity):
             )
         self._attr_image_last_updated = dt_util.utcnow()
         self._cached_image = None
-        self.hass.data[DATA_MQTT].state_write_requests.write_state_request(self)
+        self.menuai.data[DATA_MQTT].state_write_requests.write_state_request(self)
 
     @callback
     def _prepare_subscribe_topics(self) -> None:
@@ -193,7 +193,7 @@ class MqttImage(MqttEntity, ImageEntity):
 
     async def _subscribe_topics(self) -> None:
         """(Re)Subscribe to topics."""
-        subscription.async_subscribe_topics_internal(self.hass, self._sub_state)
+        subscription.async_subscribe_topics_internal(self.menuai, self._sub_state)
 
     async def async_image(self) -> bytes | None:
         """Return bytes of image."""

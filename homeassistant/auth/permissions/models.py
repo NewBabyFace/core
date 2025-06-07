@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 import attr
 
 if TYPE_CHECKING:
-    from homeassistant.helpers import device_registry as dr, entity_registry as er
+    from menuai.helpers import device_registry as dr, entity_registry as er
 
 
 @attr.s(slots=True)

@@ -10,16 +10,16 @@ import time
 import aiohttp
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
     SensorEntity,
 )
-from homeassistant.const import UnitOfTime
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import UnitOfTime
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -65,7 +65,7 @@ PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -78,10 +78,10 @@ async def async_setup_platform(
     async_add_entities([ViaggiaTrenoSensor(train_id, station_id, name)])
 
 
-async def async_http_request(hass, uri):
+async def async_http_request(menuai, uri):
     """Perform actual request."""
     try:
-        session = async_get_clientsession(hass)
+        session = async_get_clientsession(menuai)
         async with asyncio.timeout(REQUEST_TIMEOUT):
             req = await session.get(uri)
         if req.status != HTTPStatus.OK:
@@ -168,7 +168,7 @@ class ViaggiaTrenoSensor(SensorEntity):
     async def async_update(self) -> None:
         """Update state."""
         uri = self.uri
-        res = await async_http_request(self.hass, uri)
+        res = await async_http_request(self.menuai, uri)
         if res.get("error", ""):
             if res["error"] == 204:
                 self._state = NO_INFORMATION_STRING

@@ -7,16 +7,16 @@ from typing import Any
 from pylamarzocco.const import FirmwareType, UpdateStatus
 from pylamarzocco.exceptions import RequestNotSuccessful
 
-from homeassistant.components.update import (
+from menuai.components.update import (
     UpdateDeviceClass,
     UpdateEntity,
     UpdateEntityDescription,
     UpdateEntityFeature,
 )
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import LaMarzoccoConfigEntry
@@ -55,7 +55,7 @@ ENTITIES: tuple[LaMarzoccoUpdateEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: LaMarzoccoConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -134,7 +134,7 @@ class LaMarzoccoUpdateEntity(LaMarzoccoEntity, UpdateEntity):
                 counter += 1
 
         except (TimeoutError, RequestNotSuccessful) as exc:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="update_failed",
                 translation_placeholders={

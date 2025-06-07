@@ -5,7 +5,7 @@ from __future__ import annotations
 from pycoolmasternet_async import SWING_MODES
 import pytest
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_CURRENT_TEMPERATURE,
     ATTR_FAN_MODE,
     ATTR_FAN_MODES,
@@ -23,9 +23,9 @@ from homeassistant.components.climate import (
     ClimateEntityFeature,
     HVACMode,
 )
-from homeassistant.components.coolmaster.climate import FAN_MODES
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.components.coolmaster.climate import FAN_MODES
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_FRIENDLY_NAME,
     ATTR_SUPPORTED_FEATURES,
@@ -33,40 +33,40 @@ from homeassistant.const import (
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 
 async def test_climate_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
 ) -> None:
     """Test the Coolmaster climate state."""
-    assert hass.states.get("climate.l1_100").state == HVACMode.OFF
-    assert hass.states.get("climate.l1_101").state == HVACMode.HEAT
+    assert menuai.states.get("climate.l1_100").state == HVACMode.OFF
+    assert menuai.states.get("climate.l1_101").state == HVACMode.HEAT
 
 
 async def test_climate_friendly_name(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
 ) -> None:
     """Test the Coolmaster climate friendly name."""
-    assert hass.states.get("climate.l1_100").attributes[ATTR_FRIENDLY_NAME] == "L1.100"
-    assert hass.states.get("climate.l1_101").attributes[ATTR_FRIENDLY_NAME] == "L1.101"
+    assert menuai.states.get("climate.l1_100").attributes[ATTR_FRIENDLY_NAME] == "L1.100"
+    assert menuai.states.get("climate.l1_101").attributes[ATTR_FRIENDLY_NAME] == "L1.101"
 
 
 async def test_climate_supported_features(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
 ) -> None:
     """Test the Coolmaster climate supported features."""
-    assert hass.states.get("climate.l1_100").attributes[ATTR_SUPPORTED_FEATURES] == (
+    assert menuai.states.get("climate.l1_100").attributes[ATTR_SUPPORTED_FEATURES] == (
         ClimateEntityFeature.TARGET_TEMPERATURE
         | ClimateEntityFeature.FAN_MODE
         | ClimateEntityFeature.TURN_OFF
         | ClimateEntityFeature.TURN_ON
     )
-    assert hass.states.get("climate.l1_101").attributes[ATTR_SUPPORTED_FEATURES] == (
+    assert menuai.states.get("climate.l1_101").attributes[ATTR_SUPPORTED_FEATURES] == (
         ClimateEntityFeature.TARGET_TEMPERATURE
         | ClimateEntityFeature.FAN_MODE
         | ClimateEntityFeature.SWING_MODE
@@ -76,85 +76,85 @@ async def test_climate_supported_features(
 
 
 async def test_climate_temperature(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
 ) -> None:
     """Test the Coolmaster climate current temperature."""
-    assert hass.states.get("climate.l1_100").attributes[ATTR_CURRENT_TEMPERATURE] == 25
-    assert hass.states.get("climate.l1_101").attributes[ATTR_CURRENT_TEMPERATURE] == 10
+    assert menuai.states.get("climate.l1_100").attributes[ATTR_CURRENT_TEMPERATURE] == 25
+    assert menuai.states.get("climate.l1_101").attributes[ATTR_CURRENT_TEMPERATURE] == 10
 
 
 async def test_climate_thermostat(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
 ) -> None:
     """Test the Coolmaster climate thermostat."""
-    assert hass.states.get("climate.l1_100").attributes[ATTR_TEMPERATURE] == 20
-    assert hass.states.get("climate.l1_101").attributes[ATTR_TEMPERATURE] == 20
+    assert menuai.states.get("climate.l1_100").attributes[ATTR_TEMPERATURE] == 20
+    assert menuai.states.get("climate.l1_101").attributes[ATTR_TEMPERATURE] == 20
 
 
 async def test_climate_hvac_modes(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
 ) -> None:
     """Test the Coolmaster climate hvac modes."""
-    assert hass.states.get("climate.l1_100").attributes[ATTR_HVAC_MODES] == [
+    assert menuai.states.get("climate.l1_100").attributes[ATTR_HVAC_MODES] == [
         HVACMode.OFF,
         HVACMode.COOL,
         HVACMode.HEAT,
     ]
     assert (
-        hass.states.get("climate.l1_101").attributes[ATTR_HVAC_MODES]
-        == hass.states.get("climate.l1_100").attributes[ATTR_HVAC_MODES]
+        menuai.states.get("climate.l1_101").attributes[ATTR_HVAC_MODES]
+        == menuai.states.get("climate.l1_100").attributes[ATTR_HVAC_MODES]
     )
 
 
 async def test_climate_fan_mode(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
 ) -> None:
     """Test the Coolmaster climate fan mode."""
-    assert hass.states.get("climate.l1_100").attributes[ATTR_FAN_MODE] == FAN_LOW
-    assert hass.states.get("climate.l1_101").attributes[ATTR_FAN_MODE] == FAN_HIGH
+    assert menuai.states.get("climate.l1_100").attributes[ATTR_FAN_MODE] == FAN_LOW
+    assert menuai.states.get("climate.l1_101").attributes[ATTR_FAN_MODE] == FAN_HIGH
 
 
 async def test_climate_fan_modes(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
 ) -> None:
     """Test the Coolmaster climate fan modes."""
-    assert hass.states.get("climate.l1_100").attributes[ATTR_FAN_MODES] == FAN_MODES
+    assert menuai.states.get("climate.l1_100").attributes[ATTR_FAN_MODES] == FAN_MODES
     assert (
-        hass.states.get("climate.l1_101").attributes[ATTR_FAN_MODES]
-        == hass.states.get("climate.l1_100").attributes[ATTR_FAN_MODES]
+        menuai.states.get("climate.l1_101").attributes[ATTR_FAN_MODES]
+        == menuai.states.get("climate.l1_100").attributes[ATTR_FAN_MODES]
     )
 
 
 async def test_climate_swing_mode(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
 ) -> None:
     """Test the Coolmaster climate swing mode."""
-    assert ATTR_SWING_MODE not in hass.states.get("climate.l1_100").attributes
-    assert hass.states.get("climate.l1_101").attributes[ATTR_SWING_MODE] == "horizontal"
+    assert ATTR_SWING_MODE not in menuai.states.get("climate.l1_100").attributes
+    assert menuai.states.get("climate.l1_101").attributes[ATTR_SWING_MODE] == "horizontal"
 
 
 async def test_climate_swing_modes(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
 ) -> None:
     """Test the Coolmaster climate swing modes."""
-    assert ATTR_SWING_MODES not in hass.states.get("climate.l1_100").attributes
-    assert hass.states.get("climate.l1_101").attributes[ATTR_SWING_MODES] == SWING_MODES
+    assert ATTR_SWING_MODES not in menuai.states.get("climate.l1_100").attributes
+    assert menuai.states.get("climate.l1_101").attributes[ATTR_SWING_MODES] == SWING_MODES
 
 
 async def test_set_temperature(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
 ) -> None:
     """Test the Coolmaster climate set temperature."""
-    assert hass.states.get("climate.l1_100").attributes[ATTR_TEMPERATURE] == 20
-    await hass.services.async_call(
+    assert menuai.states.get("climate.l1_100").attributes[ATTR_TEMPERATURE] == 20
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_TEMPERATURE,
         {
@@ -163,17 +163,17 @@ async def test_set_temperature(
         },
         blocking=True,
     )
-    await hass.async_block_till_done()
-    assert hass.states.get("climate.l1_100").attributes[ATTR_TEMPERATURE] == 30
+    await menuai.async_block_till_done()
+    assert menuai.states.get("climate.l1_100").attributes[ATTR_TEMPERATURE] == 30
 
 
 async def test_set_fan_mode(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
 ) -> None:
     """Test the Coolmaster climate set fan mode."""
-    assert hass.states.get("climate.l1_100").attributes[ATTR_FAN_MODE] == FAN_LOW
-    await hass.services.async_call(
+    assert menuai.states.get("climate.l1_100").attributes[ATTR_FAN_MODE] == FAN_LOW
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_FAN_MODE,
         {
@@ -182,17 +182,17 @@ async def test_set_fan_mode(
         },
         blocking=True,
     )
-    await hass.async_block_till_done()
-    assert hass.states.get("climate.l1_100").attributes[ATTR_FAN_MODE] == FAN_HIGH
+    await menuai.async_block_till_done()
+    assert menuai.states.get("climate.l1_100").attributes[ATTR_FAN_MODE] == FAN_HIGH
 
 
 async def test_set_swing_mode(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
 ) -> None:
     """Test the Coolmaster climate set swing mode."""
-    assert hass.states.get("climate.l1_101").attributes[ATTR_SWING_MODE] == "horizontal"
-    await hass.services.async_call(
+    assert menuai.states.get("climate.l1_101").attributes[ATTR_SWING_MODE] == "horizontal"
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_SWING_MODE,
         {
@@ -201,17 +201,17 @@ async def test_set_swing_mode(
         },
         blocking=True,
     )
-    await hass.async_block_till_done()
-    assert hass.states.get("climate.l1_101").attributes[ATTR_SWING_MODE] == "vertical"
+    await menuai.async_block_till_done()
+    assert menuai.states.get("climate.l1_101").attributes[ATTR_SWING_MODE] == "vertical"
 
 
 async def test_set_swing_mode_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
 ) -> None:
     """Test the Coolmaster climate set swing mode with error."""
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             CLIMATE_DOMAIN,
             SERVICE_SET_SWING_MODE,
             {
@@ -223,12 +223,12 @@ async def test_set_swing_mode_error(
 
 
 async def test_set_hvac_mode(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
 ) -> None:
     """Test the Coolmaster climate set hvac mode."""
-    assert hass.states.get("climate.l1_100").state == HVACMode.OFF
-    await hass.services.async_call(
+    assert menuai.states.get("climate.l1_100").state == HVACMode.OFF
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {
@@ -237,17 +237,17 @@ async def test_set_hvac_mode(
         },
         blocking=True,
     )
-    await hass.async_block_till_done()
-    assert hass.states.get("climate.l1_100").state == HVACMode.HEAT
+    await menuai.async_block_till_done()
+    assert menuai.states.get("climate.l1_100").state == HVACMode.HEAT
 
 
 async def test_set_hvac_mode_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
 ) -> None:
     """Test the Coolmaster climate set hvac mode to off."""
-    assert hass.states.get("climate.l1_101").state == HVACMode.HEAT
-    await hass.services.async_call(
+    assert menuai.states.get("climate.l1_101").state == HVACMode.HEAT
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {
@@ -256,17 +256,17 @@ async def test_set_hvac_mode_off(
         },
         blocking=True,
     )
-    await hass.async_block_till_done()
-    assert hass.states.get("climate.l1_101").state == HVACMode.OFF
+    await menuai.async_block_till_done()
+    assert menuai.states.get("climate.l1_101").state == HVACMode.OFF
 
 
 async def test_turn_on(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
 ) -> None:
     """Test the Coolmaster climate turn on."""
-    assert hass.states.get("climate.l1_100").state == HVACMode.OFF
-    await hass.services.async_call(
+    assert menuai.states.get("climate.l1_100").state == HVACMode.OFF
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -274,17 +274,17 @@ async def test_turn_on(
         },
         blocking=True,
     )
-    await hass.async_block_till_done()
-    assert hass.states.get("climate.l1_100").state == HVACMode.COOL
+    await menuai.async_block_till_done()
+    assert menuai.states.get("climate.l1_100").state == HVACMode.COOL
 
 
 async def test_turn_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
 ) -> None:
     """Test the Coolmaster climate turn off."""
-    assert hass.states.get("climate.l1_101").state == HVACMode.HEAT
-    await hass.services.async_call(
+    assert menuai.states.get("climate.l1_101").state == HVACMode.HEAT
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_TURN_OFF,
         {
@@ -292,5 +292,5 @@ async def test_turn_off(
         },
         blocking=True,
     )
-    await hass.async_block_till_done()
-    assert hass.states.get("climate.l1_101").state == HVACMode.OFF
+    await menuai.async_block_till_done()
+    assert menuai.states.get("climate.l1_101").state == HVACMode.OFF

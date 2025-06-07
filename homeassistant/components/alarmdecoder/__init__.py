@@ -9,17 +9,17 @@ from adext import AdExt
 from alarmdecoder.devices import SerialDevice, SocketDevice
 from alarmdecoder.util import NoDeviceError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_HOST,
     CONF_PORT,
     CONF_PROTOCOL,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.dispatcher import dispatcher_send
-from homeassistant.helpers.event import async_call_later
+from menuai.core import menuai
+from menuai.helpers.dispatcher import dispatcher_send
+from menuai.helpers.event import async_call_later
 
 from .const import (
     CONF_DEVICE_BAUD,
@@ -55,7 +55,7 @@ class AlarmDecoderData:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: AlarmDecoderConfigEntry
+    menuai: menuai, entry: AlarmDecoderConfigEntry
 ) -> bool:
     """Set up AlarmDecoder config flow."""
     undo_listener = entry.add_update_listener(_update_listener)
@@ -74,10 +74,10 @@ async def async_setup_entry(
     async def open_connection(now=None):
         """Open a connection to AlarmDecoder."""
         try:
-            await hass.async_add_executor_job(controller.open, baud)
+            await menuai.async_add_executor_job(controller.open, baud)
         except NoDeviceError:
             _LOGGER.debug("Failed to connect. Retrying in 5 seconds")
-            async_call_later(hass, timedelta(seconds=5), open_connection)
+            async_call_later(menuai, timedelta(seconds=5), open_connection)
             return
         _LOGGER.debug("Established a connection with the alarmdecoder")
         entry.runtime_data.restart = True
@@ -88,27 +88,27 @@ async def async_setup_entry(
             return
         entry.runtime_data.restart = False
         _LOGGER.warning("AlarmDecoder unexpectedly lost connection")
-        hass.add_job(open_connection)
+        menuai.add_job(open_connection)
 
     def handle_message(sender, message):
         """Handle message from AlarmDecoder."""
-        dispatcher_send(hass, SIGNAL_PANEL_MESSAGE, message)
+        dispatcher_send(menuai, SIGNAL_PANEL_MESSAGE, message)
 
     def handle_rfx_message(sender, message):
         """Handle RFX message from AlarmDecoder."""
-        dispatcher_send(hass, SIGNAL_RFX_MESSAGE, message)
+        dispatcher_send(menuai, SIGNAL_RFX_MESSAGE, message)
 
     def zone_fault_callback(sender, zone):
         """Handle zone fault from AlarmDecoder."""
-        dispatcher_send(hass, SIGNAL_ZONE_FAULT, zone)
+        dispatcher_send(menuai, SIGNAL_ZONE_FAULT, zone)
 
     def zone_restore_callback(sender, zone):
         """Handle zone restore from AlarmDecoder."""
-        dispatcher_send(hass, SIGNAL_ZONE_RESTORE, zone)
+        dispatcher_send(menuai, SIGNAL_ZONE_RESTORE, zone)
 
     def handle_rel_message(sender, message):
         """Handle relay or zone expander message from AlarmDecoder."""
-        dispatcher_send(hass, SIGNAL_REL_MESSAGE, message)
+        dispatcher_send(menuai, SIGNAL_REL_MESSAGE, message)
 
     baud = ad_connection.get(CONF_DEVICE_BAUD)
     if protocol == PROTOCOL_SOCKET:
@@ -126,8 +126,8 @@ async def async_setup_entry(
     controller.on_close += handle_closed_connection
     controller.on_expander_message += handle_rel_message
 
-    remove_stop_listener = hass.bus.async_listen_once(
-        EVENT_HOMEASSISTANT_STOP, stop_alarmdecoder
+    remove_stop_listener = menuai.bus.async_listen_once(
+        EVENT_menuai_STOP, stop_alarmdecoder
     )
 
     entry.runtime_data = AlarmDecoderData(
@@ -138,31 +138,31 @@ async def async_setup_entry(
 
     await controller.is_init()
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, entry: AlarmDecoderConfigEntry
+    menuai: menuai, entry: AlarmDecoderConfigEntry
 ) -> bool:
     """Unload a AlarmDecoder entry."""
     data = entry.runtime_data
     data.restart = False
 
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
     if not unload_ok:
         return False
 
     data.remove_update_listener()
     data.remove_stop_listener()
-    await hass.async_add_executor_job(data.client.close)
+    await menuai.async_add_executor_job(data.client.close)
 
     return True
 
 
-async def _update_listener(hass: HomeAssistant, entry: AlarmDecoderConfigEntry) -> None:
+async def _update_listener(menuai: menuai, entry: AlarmDecoderConfigEntry) -> None:
     """Handle options update."""
     _LOGGER.debug("AlarmDecoder options updated: %s", entry.as_dict()["options"])
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)

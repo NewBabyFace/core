@@ -7,10 +7,10 @@ from schluter.api import Api
 from schluter.authenticator import AuthenticationState, Authenticator
 import voluptuous as vol
 
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, discovery
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import CONF_PASSWORD, CONF_USERNAME, Platform
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, discovery
+from menuai.helpers.typing import ConfigType
 
 from .const import DOMAIN
 
@@ -33,7 +33,7 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Schluter component."""
     _LOGGER.debug("Starting setup of schluter")
 
@@ -45,7 +45,7 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
         api,
         conf.get(CONF_USERNAME),
         conf.get(CONF_PASSWORD),
-        session_id_cache_file=hass.config.path(SCHLUTER_CONFIG_FILE),
+        session_id_cache_file=menuai.config.path(SCHLUTER_CONFIG_FILE),
     )
 
     authentication = None
@@ -58,11 +58,11 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
     state = authentication.state
 
     if state == AuthenticationState.AUTHENTICATED:
-        hass.data[DOMAIN] = {
+        menuai.data[DOMAIN] = {
             DATA_SCHLUTER_API: api,
             DATA_SCHLUTER_SESSION: authentication.session_id,
         }
-        discovery.load_platform(hass, Platform.CLIMATE, DOMAIN, {}, config)
+        discovery.load_platform(menuai, Platform.CLIMATE, DOMAIN, {}, config)
         return True
     if state == AuthenticationState.BAD_PASSWORD:
         _LOGGER.error("Invalid password provided")

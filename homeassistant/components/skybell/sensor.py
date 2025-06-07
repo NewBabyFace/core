@@ -9,16 +9,16 @@ from datetime import datetime
 from aioskybell import SkybellDevice
 from aioskybell.helpers import const as CONST
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
+from menuai.config_entries import ConfigEntry
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
 
 from .entity import DOMAIN, SkybellEntity
 
@@ -88,14 +88,14 @@ SENSOR_TYPES: tuple[SkybellSensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Skybell sensor."""
     async_add_entities(
         SkybellSensor(coordinator, description)
-        for coordinator in hass.data[DOMAIN][entry.entry_id]
+        for coordinator in menuai.data[DOMAIN][entry.entry_id]
         for description in SENSOR_TYPES
         if coordinator.device.owner or description.key not in CONST.ATTR_OWNER_STATS
     )

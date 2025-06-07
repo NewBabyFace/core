@@ -6,7 +6,7 @@ import logging
 import struct
 from typing import Any, cast
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     FAN_AUTO,
     FAN_DIFFUSE,
     FAN_FOCUS,
@@ -27,7 +27,7 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_TEMPERATURE,
     CONF_ADDRESS,
     CONF_NAME,
@@ -37,10 +37,10 @@ from homeassistant.const import (
     STATE_UNKNOWN,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.restore_state import RestoreEntity
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import get_hub
 from .const import (
@@ -121,7 +121,7 @@ HVACMODE_TO_TARG_TEMP_REG_INDEX_ARRAY = {
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -129,8 +129,8 @@ async def async_setup_platform(
     """Read configuration and create Modbus climate."""
     if discovery_info is None or not (climates := discovery_info[CONF_CLIMATES]):
         return
-    hub = get_hub(hass, discovery_info[CONF_NAME])
-    async_add_entities(ModbusThermostat(hass, hub, config) for config in climates)
+    hub = get_hub(menuai, discovery_info[CONF_NAME])
+    async_add_entities(ModbusThermostat(menuai, hub, config) for config in climates)
 
 
 class ModbusThermostat(BaseStructPlatform, RestoreEntity, ClimateEntity):
@@ -144,12 +144,12 @@ class ModbusThermostat(BaseStructPlatform, RestoreEntity, ClimateEntity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         hub: ModbusHub,
         config: dict[str, Any],
     ) -> None:
         """Initialize the modbus thermostat."""
-        super().__init__(hass, hub, config)
+        super().__init__(menuai, hub, config)
         self._target_temperature_register = config[CONF_TARGET_TEMP]
         self._target_temperature_write_registers = config[
             CONF_TARGET_TEMP_WRITE_REGISTERS
@@ -303,9 +303,9 @@ class ModbusThermostat(BaseStructPlatform, RestoreEntity, ClimateEntity):
         else:
             self._hvac_onoff_coil = None
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
-        await self.async_base_added_to_hass()
+        await self.async_base_added_to_menuai()
         state = await self.async_get_last_state()
         if state and state.attributes.get(ATTR_TEMPERATURE):
             self._attr_target_temperature = float(state.attributes[ATTR_TEMPERATURE])

@@ -2,28 +2,28 @@
 
 import pytest
 
-from homeassistant.core import HomeAssistant, State
-from homeassistant.helpers.state import async_reproduce_state
+from menuai.core import menuai, State
+from menuai.helpers.state import async_reproduce_state
 
 from tests.common import async_mock_service
 
 
 async def test_reproducing_states(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test reproducing Counter states."""
-    hass.states.async_set("counter.entity", "5", {})
-    hass.states.async_set(
+    menuai.states.async_set("counter.entity", "5", {})
+    menuai.states.async_set(
         "counter.entity_attr",
         "8",
         {"minimum": 5, "maximum": 15, "step": 3},
     )
 
-    configure_calls = async_mock_service(hass, "counter", "set_value")
+    configure_calls = async_mock_service(menuai, "counter", "set_value")
 
     # These calls should do nothing as entities already in desired state
     await async_reproduce_state(
-        hass,
+        menuai,
         [
             State("counter.entity", "5"),
             State(
@@ -37,14 +37,14 @@ async def test_reproducing_states(
     assert len(configure_calls) == 0
 
     # Test invalid state is handled
-    await async_reproduce_state(hass, [State("counter.entity", "not_supported")])
+    await async_reproduce_state(menuai, [State("counter.entity", "not_supported")])
 
     assert "not_supported" in caplog.text
     assert len(configure_calls) == 0
 
     # Make sure correct services are called
     await async_reproduce_state(
-        hass,
+        menuai,
         [
             State("counter.entity", "2"),
             State(

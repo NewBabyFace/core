@@ -11,11 +11,11 @@ from wled import (
     WLEDReleases,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, callback
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, EVENT_menuai_STOP
+from menuai.core import CALLBACK_TYPE, Event, menuai, callback
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
     CONF_KEEP_MAIN_LIGHT,
@@ -35,7 +35,7 @@ class WLEDDataUpdateCoordinator(DataUpdateCoordinator[WLEDDevice]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         *,
         entry: ConfigEntry,
     ) -> None:
@@ -43,11 +43,11 @@ class WLEDDataUpdateCoordinator(DataUpdateCoordinator[WLEDDevice]):
         self.keep_main_light = entry.options.get(
             CONF_KEEP_MAIN_LIGHT, DEFAULT_KEEP_MAIN_LIGHT
         )
-        self.wled = WLED(entry.data[CONF_HOST], session=async_get_clientsession(hass))
+        self.wled = WLED(entry.data[CONF_HOST], session=async_get_clientsession(menuai))
         self.unsub: CALLBACK_TYPE | None = None
 
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=entry,
             name=DOMAIN,
@@ -97,14 +97,14 @@ class WLEDDataUpdateCoordinator(DataUpdateCoordinator[WLEDDevice]):
             self.unsub = None
             await self.wled.disconnect()
 
-        # Clean disconnect WebSocket on Home Assistant shutdown
-        self.unsub = self.hass.bus.async_listen_once(
-            EVENT_HOMEASSISTANT_STOP, close_websocket
+        # Clean disconnect WebSocket on MenuAI shutdown
+        self.unsub = self.menuai.bus.async_listen_once(
+            EVENT_menuai_STOP, close_websocket
         )
 
         # Start listening
         self.config_entry.async_create_background_task(
-            self.hass, listen(), "wled-listen"
+            self.menuai, listen(), "wled-listen"
         )
 
     async def _async_update_data(self) -> WLEDDevice:
@@ -128,11 +128,11 @@ class WLEDDataUpdateCoordinator(DataUpdateCoordinator[WLEDDevice]):
 class WLEDReleasesDataUpdateCoordinator(DataUpdateCoordinator[Releases]):
     """Class to manage fetching WLED releases."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize global WLED releases updater."""
-        self.wled = WLEDReleases(session=async_get_clientsession(hass))
+        self.wled = WLEDReleases(session=async_get_clientsession(menuai))
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=None,
             name=DOMAIN,

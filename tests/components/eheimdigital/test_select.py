@@ -6,14 +6,14 @@ from eheimdigital.types import FilterMode
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.select import (
+from menuai.components.select import (
     ATTR_OPTION,
     DOMAIN as SELECT_DOMAIN,
     SERVICE_SELECT_OPTION,
 )
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .conftest import init_integration
 
@@ -22,31 +22,31 @@ from tests.common import MockConfigEntry, snapshot_platform
 
 @pytest.mark.usefixtures("classic_vario_mock")
 async def test_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     eheimdigital_hub_mock: MagicMock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test select platform setup."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     with (
-        patch("homeassistant.components.eheimdigital.PLATFORMS", [Platform.SELECT]),
+        patch("menuai.components.eheimdigital.PLATFORMS", [Platform.SELECT]),
         patch(
-            "homeassistant.components.eheimdigital.coordinator.asyncio.Event",
+            "menuai.components.eheimdigital.coordinator.asyncio.Event",
             new=AsyncMock,
         ),
     ):
-        await hass.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.config_entries.async_setup(mock_config_entry.entry_id)
 
     for device in eheimdigital_hub_mock.return_value.devices:
         await eheimdigital_hub_mock.call_args.kwargs["device_found_callback"](
             device, eheimdigital_hub_mock.return_value.devices[device].device_type
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
 
 @pytest.mark.usefixtures("classic_vario_mock")
@@ -67,7 +67,7 @@ async def test_setup(
     ],
 )
 async def test_set_value(
-    hass: HomeAssistant,
+    menuai: menuai,
     eheimdigital_hub_mock: MagicMock,
     mock_config_entry: MockConfigEntry,
     device_name: str,
@@ -76,16 +76,16 @@ async def test_set_value(
 ) -> None:
     """Test setting a value."""
     device: MagicMock = request.getfixturevalue(device_name)
-    await init_integration(hass, mock_config_entry)
+    await init_integration(menuai, mock_config_entry)
 
     await eheimdigital_hub_mock.call_args.kwargs["device_found_callback"](
         device.mac_address, device.device_type
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     for item in entity_list:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SELECT_DOMAIN,
             SERVICE_SELECT_OPTION,
             {ATTR_ENTITY_ID: item[0], ATTR_OPTION: item[1]},
@@ -114,7 +114,7 @@ async def test_set_value(
     ],
 )
 async def test_state_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     eheimdigital_hub_mock: MagicMock,
     mock_config_entry: MockConfigEntry,
     device_name: str,
@@ -123,16 +123,16 @@ async def test_state_update(
 ) -> None:
     """Test state updates."""
     device: MagicMock = request.getfixturevalue(device_name)
-    await init_integration(hass, mock_config_entry)
+    await init_integration(menuai, mock_config_entry)
 
     await eheimdigital_hub_mock.call_args.kwargs["device_found_callback"](
         device.mac_address, device.device_type
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     for item in entity_list:
         getattr(device, item[1])[item[2]] = item[3]
         await eheimdigital_hub_mock.call_args.kwargs["receive_callback"]()
-        assert (state := hass.states.get(item[0]))
+        assert (state := menuai.states.get(item[0]))
         assert state.state == item[4]

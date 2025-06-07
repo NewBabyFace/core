@@ -8,12 +8,12 @@ from aiopurpleair import API
 from aiopurpleair.errors import InvalidApiKeyError, PurpleAirError
 from aiopurpleair.models.sensors import GetSensorsResponse
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_API_KEY
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers import aiohttp_client
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_API_KEY
+from menuai.core import menuai, callback
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers import aiohttp_client
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import CONF_SENSOR_INDICES, LOGGER
 
@@ -54,15 +54,15 @@ class PurpleAirDataUpdateCoordinator(DataUpdateCoordinator[GetSensorsResponse]):
 
     config_entry: PurpleAirConfigEntry
 
-    def __init__(self, hass: HomeAssistant, entry: PurpleAirConfigEntry) -> None:
+    def __init__(self, menuai: menuai, entry: PurpleAirConfigEntry) -> None:
         """Initialize."""
         self._api = API(
             entry.data[CONF_API_KEY],
-            session=aiohttp_client.async_get_clientsession(hass),
+            session=aiohttp_client.async_get_clientsession(menuai),
         )
 
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=entry,
             name=entry.title,

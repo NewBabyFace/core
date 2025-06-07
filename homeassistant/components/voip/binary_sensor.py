@@ -4,14 +4,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import issue_registry as ir
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers import issue_registry as ir
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .devices import VoIPDevice
@@ -22,12 +22,12 @@ if TYPE_CHECKING:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up VoIP binary sensor entities."""
-    domain_data: DomainData = hass.data[DOMAIN]
+    domain_data: DomainData = menuai.data[DOMAIN]
 
     @callback
     def async_add_device(device: VoIPDevice) -> None:
@@ -49,19 +49,19 @@ class VoIPCallInProgress(VoIPEntity, BinarySensorEntity):
     )
     _attr_is_on = False
 
-    async def async_added_to_hass(self) -> None:
-        """Call when entity about to be added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Call when entity about to be added to menuai."""
+        await super().async_added_to_menuai()
 
         self.async_on_remove(
             self.voip_device.async_listen_update(self._is_active_changed)
         )
 
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         if TYPE_CHECKING:
             assert self.registry_entry is not None
         ir.async_create_issue(
-            self.hass,
+            self.menuai,
             DOMAIN,
             f"assist_in_progress_deprecated_{self.registry_entry.id}",
             breaks_in_ha_version="2025.4",
@@ -78,13 +78,13 @@ class VoIPCallInProgress(VoIPEntity, BinarySensorEntity):
             },
         )
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Remove issue."""
-        await super().async_will_remove_from_hass()
+        await super().async_will_remove_from_menuai()
         if TYPE_CHECKING:
             assert self.registry_entry is not None
         ir.async_delete_issue(
-            self.hass,
+            self.menuai,
             DOMAIN,
             f"assist_in_progress_deprecated_{self.registry_entry.id}",
         )

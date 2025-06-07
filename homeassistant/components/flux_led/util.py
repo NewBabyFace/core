@@ -5,17 +5,17 @@ from __future__ import annotations
 from flux_led.aio import AIOWifiLedBulb
 from flux_led.const import COLOR_MODE_DIM as FLUX_COLOR_MODE_DIM, MultiColorEffects
 
-from homeassistant.components.light import ColorMode
-from homeassistant.util.color import color_hsv_to_RGB, color_RGB_to_hsv
+from menuai.components.light import ColorMode
+from menuai.util.color import color_hsv_to_RGB, color_RGB_to_hsv
 
-from .const import FLUX_COLOR_MODE_TO_HASS, MIN_RGB_BRIGHTNESS
+from .const import FLUX_COLOR_MODE_TO_menuai, MIN_RGB_BRIGHTNESS
 
 
-def _hass_color_modes(device: AIOWifiLedBulb) -> set[str]:
+def _menuai_color_modes(device: AIOWifiLedBulb) -> set[str]:
     color_modes = device.color_modes
     if not color_modes:
         return {ColorMode.ONOFF}
-    return {_flux_color_mode_to_hass(mode, color_modes) for mode in color_modes}
+    return {_flux_color_mode_to_menuai(mode, color_modes) for mode in color_modes}
 
 
 def format_as_flux_mac(mac: str | None) -> str | None:
@@ -39,21 +39,21 @@ def mac_matches_by_one(formatted_mac_1: str, formatted_mac_2: str) -> bool:
     return abs(mac_int_1 - mac_int_2) < 2
 
 
-def _flux_color_mode_to_hass(
+def _flux_color_mode_to_menuai(
     flux_color_mode: str | None, flux_color_modes: set[str]
 ) -> ColorMode:
-    """Map the flux color mode to Home Assistant color mode."""
+    """Map the flux color mode to MenuAI color mode."""
     if flux_color_mode is None:
         return ColorMode.ONOFF
     if flux_color_mode == FLUX_COLOR_MODE_DIM:
         if len(flux_color_modes) > 1:
             return ColorMode.WHITE
         return ColorMode.BRIGHTNESS
-    return FLUX_COLOR_MODE_TO_HASS.get(flux_color_mode, ColorMode.ONOFF)
+    return FLUX_COLOR_MODE_TO_menuai.get(flux_color_mode, ColorMode.ONOFF)
 
 
 def _effect_brightness(brightness: int) -> int:
-    """Convert hass brightness to effect brightness."""
+    """Convert menuai brightness to effect brightness."""
     return round(brightness / 255 * 100)
 
 

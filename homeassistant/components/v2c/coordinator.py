@@ -8,10 +8,10 @@ import logging
 from pytrydan import Trydan, TrydanData
 from pytrydan.exceptions import TrydanError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 SCAN_INTERVAL = timedelta(seconds=5)
 
@@ -26,12 +26,12 @@ class V2CUpdateCoordinator(DataUpdateCoordinator[TrydanData]):
     config_entry: V2CConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: V2CConfigEntry, evse: Trydan
+        self, menuai: menuai, config_entry: V2CConfigEntry, evse: Trydan
     ) -> None:
         """Initialize DataUpdateCoordinator for a v2c evse."""
         self.evse = evse
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=f"EVSE {config_entry.data[CONF_HOST]}",

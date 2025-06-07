@@ -9,17 +9,17 @@ from haffmpeg.camera import CameraMjpeg
 from haffmpeg.tools import IMAGE_JPEG
 import voluptuous as vol
 
-from homeassistant.components.camera import (
+from menuai.components.camera import (
     PLATFORM_SCHEMA as CAMERA_PLATFORM_SCHEMA,
     Camera,
     CameraEntityFeature,
 )
-from homeassistant.const import CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_aiohttp_proxy_stream
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_NAME
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_aiohttp_proxy_stream
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import (
     CONF_EXTRA_ARGUMENTS,
@@ -42,13 +42,13 @@ PLATFORM_SCHEMA = CAMERA_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up a FFmpeg camera."""
-    async_add_entities([FFmpegCamera(hass, config)])
+    async_add_entities([FFmpegCamera(menuai, config)])
 
 
 class FFmpegCamera(Camera):
@@ -56,11 +56,11 @@ class FFmpegCamera(Camera):
 
     _attr_supported_features = CameraEntityFeature.STREAM
 
-    def __init__(self, hass: HomeAssistant, config: dict[str, Any]) -> None:
+    def __init__(self, menuai: menuai, config: dict[str, Any]) -> None:
         """Initialize a FFmpeg camera."""
         super().__init__()
 
-        self._manager: FFmpegManager = hass.data[DATA_FFMPEG]
+        self._manager: FFmpegManager = menuai.data[DATA_FFMPEG]
         self._name: str = config[CONF_NAME]
         self._input: str = config[CONF_INPUT]
         self._extra_arguments: str = config[CONF_EXTRA_ARGUMENTS]
@@ -74,7 +74,7 @@ class FFmpegCamera(Camera):
     ) -> bytes | None:
         """Return a still image response from the camera."""
         return await async_get_image(
-            self.hass,
+            self.menuai,
             self._input,
             output_format=IMAGE_JPEG,
             extra_cmd=self._extra_arguments,
@@ -91,7 +91,7 @@ class FFmpegCamera(Camera):
         try:
             stream_reader = await stream.get_reader()
             return await async_aiohttp_proxy_stream(
-                self.hass,
+                self.menuai,
                 request,
                 stream_reader,
                 self._manager.ffmpeg_stream_content_type,

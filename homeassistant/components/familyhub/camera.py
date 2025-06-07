@@ -5,16 +5,16 @@ from __future__ import annotations
 from pyfamilyhublocal import FamilyHubCam
 import voluptuous as vol
 
-from homeassistant.components.camera import (
+from menuai.components.camera import (
     PLATFORM_SCHEMA as CAMERA_PLATFORM_SCHEMA,
     Camera,
 )
-from homeassistant.const import CONF_IP_ADDRESS, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_IP_ADDRESS, CONF_NAME
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 DEFAULT_NAME = "FamilyHub Camera"
 
@@ -27,7 +27,7 @@ PLATFORM_SCHEMA = CAMERA_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -37,8 +37,8 @@ async def async_setup_platform(
     address = config.get(CONF_IP_ADDRESS)
     name = config.get(CONF_NAME)
 
-    session = async_get_clientsession(hass)
-    family_hub_cam = FamilyHubCam(address, hass.loop, session)
+    session = async_get_clientsession(menuai)
+    family_hub_cam = FamilyHubCam(address, menuai.loop, session)
 
     async_add_entities([FamilyHubCamera(name, family_hub_cam)], True)
 

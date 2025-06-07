@@ -6,11 +6,11 @@ from geocachingapi.exceptions import GeocachingApiError, GeocachingInvalidSettin
 from geocachingapi.geocachingapi import GeocachingApi
 from geocachingapi.models import GeocachingStatus
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.config_entry_oauth2_flow import OAuth2Session
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.config_entry_oauth2_flow import OAuth2Session
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN, ENVIRONMENT, LOGGER, UPDATE_INTERVAL
 
@@ -24,7 +24,7 @@ class GeocachingDataUpdateCoordinator(DataUpdateCoordinator[GeocachingStatus]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         *,
         entry: GeocachingConfigEntry,
         session: OAuth2Session,
@@ -38,7 +38,7 @@ class GeocachingDataUpdateCoordinator(DataUpdateCoordinator[GeocachingStatus]):
             LOGGER.debug(str(token))
             return str(token)
 
-        client_session = async_get_clientsession(hass)
+        client_session = async_get_clientsession(menuai)
 
         self.geocaching = GeocachingApi(
             environment=ENVIRONMENT,
@@ -48,7 +48,7 @@ class GeocachingDataUpdateCoordinator(DataUpdateCoordinator[GeocachingStatus]):
         )
 
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=entry,
             name=DOMAIN,

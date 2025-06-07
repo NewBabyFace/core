@@ -6,16 +6,16 @@ from unittest.mock import patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.kitchen_sink import DOMAIN
-from homeassistant.components.switch import (
+from menuai.components.kitchen_sink import DOMAIN
+from menuai.components.switch import (
     DOMAIN as SWITCH_DOMAIN,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
 )
-from homeassistant.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON, Platform
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.setup import async_setup_component
 
 SWITCH_ENTITY_IDS = ["switch.outlet_1", "switch.outlet_2"]
 
@@ -24,28 +24,28 @@ SWITCH_ENTITY_IDS = ["switch.outlet_1", "switch.outlet_2"]
 def switch_only() -> Generator[None]:
     """Enable only the switch platform."""
     with patch(
-        "homeassistant.components.kitchen_sink.COMPONENTS_WITH_DEMO_PLATFORM",
+        "menuai.components.kitchen_sink.COMPONENTS_WITH_DEMO_PLATFORM",
         [Platform.SWITCH],
     ):
         yield
 
 
 @pytest.fixture(autouse=True)
-async def setup_comp(hass: HomeAssistant, switch_only: None) -> None:
+async def setup_comp(menuai: menuai, switch_only: None) -> None:
     """Set up demo component."""
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {}})
+    await menuai.async_block_till_done()
 
 
 async def test_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test switch state."""
     for entity_id in SWITCH_ENTITY_IDS:
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state == snapshot
         entity_entry = entity_registry.async_get(entity_id)
         assert entity_entry == snapshot
@@ -56,48 +56,48 @@ async def test_state(
 
 
 @pytest.mark.parametrize("switch_entity_id", SWITCH_ENTITY_IDS)
-async def test_turn_on(hass: HomeAssistant, switch_entity_id: str) -> None:
+async def test_turn_on(menuai: menuai, switch_entity_id: str) -> None:
     """Test switch turn on method."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: switch_entity_id},
         blocking=True,
     )
 
-    state = hass.states.get(switch_entity_id)
+    state = menuai.states.get(switch_entity_id)
     assert state.state == STATE_OFF
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: switch_entity_id},
         blocking=True,
     )
 
-    state = hass.states.get(switch_entity_id)
+    state = menuai.states.get(switch_entity_id)
     assert state.state == STATE_ON
 
 
 @pytest.mark.parametrize("switch_entity_id", SWITCH_ENTITY_IDS)
-async def test_turn_off(hass: HomeAssistant, switch_entity_id: str) -> None:
+async def test_turn_off(menuai: menuai, switch_entity_id: str) -> None:
     """Test switch turn off method."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: switch_entity_id},
         blocking=True,
     )
 
-    state = hass.states.get(switch_entity_id)
+    state = menuai.states.get(switch_entity_id)
     assert state.state == STATE_ON
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: switch_entity_id},
         blocking=True,
     )
 
-    state = hass.states.get(switch_entity_id)
+    state = menuai.states.get(switch_entity_id)
     assert state.state == STATE_OFF

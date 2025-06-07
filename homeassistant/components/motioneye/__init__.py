@@ -35,28 +35,28 @@ from motioneye_client.const import (
     KEY_WEB_HOOK_STORAGE_URL,
 )
 
-from homeassistant.components.camera import DOMAIN as CAMERA_DOMAIN
-from homeassistant.components.media_source import URI_SCHEME
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
-from homeassistant.components.webhook import (
+from menuai.components.camera import DOMAIN as CAMERA_DOMAIN
+from menuai.components.media_source import URI_SCHEME
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.components.switch import DOMAIN as SWITCH_DOMAIN
+from menuai.components.webhook import (
     async_generate_id,
     async_generate_path,
     async_register as webhook_register,
     async_unregister as webhook_unregister,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_DEVICE_ID, ATTR_NAME, CONF_URL, CONF_WEBHOOK_ID
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.dispatcher import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_DEVICE_ID, ATTR_NAME, CONF_URL, CONF_WEBHOOK_ID
+from menuai.core import menuai, callback
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import device_registry as dr
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.dispatcher import (
     async_dispatcher_connect,
     async_dispatcher_send,
 )
-from homeassistant.helpers.network import NoURLAvailableError, get_url
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.helpers.network import NoURLAvailableError, get_url
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
     ATTR_EVENT_TYPE,
@@ -136,7 +136,7 @@ def is_acceptable_camera(camera: dict[str, Any] | None) -> bool:
 
 @callback
 def listen_for_new_cameras(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     add_func: Callable,
 ) -> None:
@@ -144,7 +144,7 @@ def listen_for_new_cameras(
 
     entry.async_on_unload(
         async_dispatcher_connect(
-            hass,
+            menuai,
             SIGNAL_CAMERA_ADD.format(entry.entry_id),
             add_func,
         )
@@ -153,14 +153,14 @@ def listen_for_new_cameras(
 
 @callback
 def async_generate_motioneye_webhook(
-    hass: HomeAssistant, webhook_id: str
+    menuai: menuai, webhook_id: str
 ) -> str | None:
     """Generate the full local URL for a webhook_id."""
     try:
-        return f"{get_url(hass, allow_cloud=False)}{async_generate_path(webhook_id)}"
+        return f"{get_url(menuai, allow_cloud=False)}{async_generate_path(webhook_id)}"
     except NoURLAvailableError:
         _LOGGER.warning(
-            "Unable to get Home Assistant URL. Have you set the internal and/or "
+            "Unable to get MenuAI URL. Have you set the internal and/or "
             "external URLs in Settings -> System -> Network?"
         )
         return None
@@ -168,7 +168,7 @@ def async_generate_motioneye_webhook(
 
 @callback
 def _add_camera(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     client: MotionEyeClient,
     entry: ConfigEntry,
@@ -176,7 +176,7 @@ def _add_camera(
     camera: dict[str, Any],
     device_identifier: tuple[str, str],
 ) -> None:
-    """Add a motionEye camera to hass."""
+    """Add a motionEye camera to menuai."""
 
     def _is_recognized_web_hook(url: str) -> bool:
         """Determine whether this integration set a web hook."""
@@ -239,7 +239,7 @@ def _add_camera(
         name=camera[KEY_NAME],
     )
     if entry.options.get(CONF_WEBHOOK_SET, DEFAULT_WEBHOOK_SET):
-        url = async_generate_motioneye_webhook(hass, entry.data[CONF_WEBHOOK_ID])
+        url = async_generate_motioneye_webhook(menuai, entry.data[CONF_WEBHOOK_ID])
 
         if url:
             set_motion_event = _set_webhook(
@@ -268,23 +268,23 @@ def _add_camera(
                 camera,
             )
             if set_motion_event or set_storage_event:
-                hass.async_create_task(client.async_set_camera(camera_id, camera))
+                menuai.async_create_task(client.async_set_camera(camera_id, camera))
 
     async_dispatcher_send(
-        hass,
+        menuai,
         SIGNAL_CAMERA_ADD.format(entry.entry_id),
         camera,
     )
 
 
-async def _async_entry_updated(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+async def _async_entry_updated(menuai: menuai, config_entry: ConfigEntry) -> None:
     """Handle entry updates."""
-    await hass.config_entries.async_reload(config_entry.entry_id)
+    await menuai.config_entries.async_reload(config_entry.entry_id)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up motionEye from a config entry."""
-    hass.data.setdefault(DOMAIN, {})
+    menuai.data.setdefault(DOMAIN, {})
 
     client = create_motioneye_client(
         entry.data[CONF_URL],
@@ -292,7 +292,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         admin_password=entry.data.get(CONF_ADMIN_PASSWORD),
         surveillance_username=entry.data.get(CONF_SURVEILLANCE_USERNAME),
         surveillance_password=entry.data.get(CONF_SURVEILLANCE_PASSWORD),
-        session=async_get_clientsession(hass),
+        session=async_get_clientsession(menuai),
     )
 
     try:
@@ -306,11 +306,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Ensure every loaded entry has a registered webhook id.
     if CONF_WEBHOOK_ID not in entry.data:
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry, data={**entry.data, CONF_WEBHOOK_ID: async_generate_id()}
         )
     webhook_register(
-        hass, DOMAIN, "motionEye", entry.data[CONF_WEBHOOK_ID], handle_webhook
+        menuai, DOMAIN, "motionEye", entry.data[CONF_WEBHOOK_ID], handle_webhook
     )
 
     async def async_update_data() -> dict[str, Any] | None:
@@ -320,20 +320,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             raise UpdateFailed("Error communicating with API") from exc
 
     coordinator = DataUpdateCoordinator(
-        hass,
+        menuai,
         _LOGGER,
         config_entry=entry,
         name=DOMAIN,
         update_method=async_update_data,
         update_interval=DEFAULT_SCAN_INTERVAL,
     )
-    hass.data[DOMAIN][entry.entry_id] = {
+    menuai.data[DOMAIN][entry.entry_id] = {
         CONF_CLIENT: client,
         CONF_COORDINATOR: coordinator,
     }
 
     current_cameras: set[tuple[str, str]] = set()
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
 
     @callback
     def _async_process_motioneye_cameras() -> None:
@@ -355,7 +355,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 continue
             current_cameras.add(device_identifier)
             _add_camera(
-                hass,
+                menuai,
                 device_registry,
                 client,
                 entry,
@@ -376,7 +376,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             else:
                 device_registry.async_remove_device(device_entry.id)
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     entry.async_on_unload(
         coordinator.async_add_listener(_async_process_motioneye_cameras)
@@ -387,20 +387,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    webhook_unregister(hass, entry.data[CONF_WEBHOOK_ID])
+    webhook_unregister(menuai, entry.data[CONF_WEBHOOK_ID])
 
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        config_data = hass.data[DOMAIN].pop(entry.entry_id)
+        config_data = menuai.data[DOMAIN].pop(entry.entry_id)
         await config_data[CONF_CLIENT].async_client_close()
 
     return unload_ok
 
 
 async def handle_webhook(
-    hass: HomeAssistant, webhook_id: str, request: Request
+    menuai: menuai, webhook_id: str, request: Request
 ) -> Response | None:
     """Handle webhook callback."""
 
@@ -420,7 +420,7 @@ async def handle_webhook(
             )
 
     event_type = data[ATTR_EVENT_TYPE]
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     device_id = data[ATTR_DEVICE_ID]
 
     if not (device := device_registry.async_get(device_id)):
@@ -437,14 +437,14 @@ async def handle_webhook(
         else:
             data.update(
                 _get_media_event_data(
-                    hass,
+                    menuai,
                     device,
                     data[KEY_WEB_HOOK_CS_FILE_PATH],
                     event_file_type,
                 )
             )
 
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         f"{DOMAIN}.{event_type}",
         {
             ATTR_DEVICE_ID: device.id,
@@ -457,16 +457,16 @@ async def handle_webhook(
 
 
 def _get_media_event_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     device: dr.DeviceEntry,
     event_file_path: str,
     event_file_type: int,
 ) -> dict[str, str]:
     config_entry_id = next(iter(device.config_entries), None)
-    if not config_entry_id or config_entry_id not in hass.data[DOMAIN]:
+    if not config_entry_id or config_entry_id not in menuai.data[DOMAIN]:
         return {}
 
-    config_entry_data = hass.data[DOMAIN][config_entry_id]
+    config_entry_data = menuai.data[DOMAIN][config_entry_id]
     client = config_entry_data[CONF_CLIENT]
     coordinator = config_entry_data[CONF_COORDINATOR]
 

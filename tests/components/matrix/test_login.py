@@ -3,8 +3,8 @@
 from pydantic.dataclasses import dataclass
 import pytest
 
-from homeassistant.components.matrix import MatrixBot
-from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
+from menuai.components.matrix import MatrixBot
+from menuai.exceptions import ConfigEntryAuthFailed, menuaiError
 
 from .conftest import TEST_DEVICE_ID, TEST_MXID, TEST_PASSWORD, TEST_TOKEN
 
@@ -107,7 +107,7 @@ async def test_get_auth_tokens(matrix_bot: MatrixBot, mock_load_json) -> None:
     loaded_tokens = await matrix_bot._get_auth_tokens()
     assert loaded_tokens == {TEST_MXID: TEST_TOKEN}
 
-    # Test miscellaneous error from hass.
-    mock_load_json.side_effect = HomeAssistantError()
+    # Test miscellaneous error from menuai.
+    mock_load_json.side_effect = menuaiError()
     loaded_tokens = await matrix_bot._get_auth_tokens()
     assert loaded_tokens == {}

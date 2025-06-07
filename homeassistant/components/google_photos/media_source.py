@@ -10,15 +10,15 @@ from typing import Self, cast
 from google_photos_library_api.exceptions import GooglePhotosApiError
 from google_photos_library_api.model import Album, MediaItem
 
-from homeassistant.components.media_player import MediaClass, MediaType
-from homeassistant.components.media_source import (
+from menuai.components.media_player import MediaClass, MediaType
+from menuai.components.media_source import (
     BrowseError,
     BrowseMediaSource,
     MediaSource,
     MediaSourceItem,
     PlayMedia,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .const import DOMAIN, READ_SCOPE
 from .coordinator import GooglePhotosConfigEntry
@@ -96,9 +96,9 @@ class PhotosIdentifier:
         return cls(config_entry_id, PhotosIdentifierType.PHOTO, media_id)
 
 
-async def async_get_media_source(hass: HomeAssistant) -> MediaSource:
+async def async_get_media_source(menuai: menuai) -> MediaSource:
     """Set up Google Photos media source."""
-    return GooglePhotosMediaSource(hass)
+    return GooglePhotosMediaSource(menuai)
 
 
 class GooglePhotosMediaSource(MediaSource):
@@ -106,10 +106,10 @@ class GooglePhotosMediaSource(MediaSource):
 
     name = "Google Photos"
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize Google Photos source."""
         super().__init__(DOMAIN)
-        self.hass = hass
+        self.menuai = menuai
 
     async def async_resolve_media(self, item: MediaSourceItem) -> PlayMedia:
         """Resolve media identifier to a url.
@@ -214,7 +214,7 @@ class GooglePhotosMediaSource(MediaSource):
     def _async_config_entries(self) -> list[GooglePhotosConfigEntry]:
         """Return all config entries that support photo library reads."""
         entries = []
-        for entry in self.hass.config_entries.async_loaded_entries(DOMAIN):
+        for entry in self.menuai.config_entries.async_loaded_entries(DOMAIN):
             scopes = entry.data["token"]["scope"].split(" ")
             if READ_SCOPE in scopes:
                 entries.append(entry)
@@ -222,7 +222,7 @@ class GooglePhotosMediaSource(MediaSource):
 
     def _async_config_entry(self, config_entry_id: str) -> GooglePhotosConfigEntry:
         """Return a config entry with the specified id."""
-        entry = self.hass.config_entries.async_entry_for_domain_unique_id(
+        entry = self.menuai.config_entries.async_entry_for_domain_unique_id(
             DOMAIN, config_entry_id
         )
         if not entry:

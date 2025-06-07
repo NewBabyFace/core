@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from motionblinds.motion_blinds import LimitStatus, MotionBlind
 
-from homeassistant.components.button import ButtonEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.button import ButtonEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN, KEY_COORDINATOR, KEY_GATEWAY
 from .coordinator import DataUpdateCoordinatorMotionBlinds
@@ -16,14 +16,14 @@ from .entity import MotionCoordinatorEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Perform the setup for Motionblinds."""
     entities: list[ButtonEntity] = []
-    motion_gateway = hass.data[DOMAIN][config_entry.entry_id][KEY_GATEWAY]
-    coordinator = hass.data[DOMAIN][config_entry.entry_id][KEY_COORDINATOR]
+    motion_gateway = menuai.data[DOMAIN][config_entry.entry_id][KEY_GATEWAY]
+    coordinator = menuai.data[DOMAIN][config_entry.entry_id][KEY_COORDINATOR]
 
     for blind in motion_gateway.device_list.values():
         if blind.limit_status in (
@@ -54,7 +54,7 @@ class MotionGoFavoriteButton(MotionCoordinatorEntity, ButtonEntity):
     async def async_press(self) -> None:
         """Execute the button action."""
         async with self._api_lock:
-            await self.hass.async_add_executor_job(self._blind.Go_favorite_position)
+            await self.menuai.async_add_executor_job(self._blind.Go_favorite_position)
         await self.async_request_position_till_stop()
 
 
@@ -74,4 +74,4 @@ class MotionSetFavoriteButton(MotionCoordinatorEntity, ButtonEntity):
     async def async_press(self) -> None:
         """Execute the button action."""
         async with self._api_lock:
-            await self.hass.async_add_executor_job(self._blind.Set_favorite_position)
+            await self.menuai.async_add_executor_job(self._blind.Set_favorite_position)

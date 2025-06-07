@@ -7,12 +7,12 @@ from aiohttp import ClientConnectionError, ClientResponseError
 from aiohttp.client import RequestInfo
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.tessie import PLATFORMS
-from homeassistant.components.tessie.const import DOMAIN, TessieStatus
-from homeassistant.const import CONF_ACCESS_TOKEN, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.typing import UNDEFINED, UndefinedType
+from menuai.components.tessie import PLATFORMS
+from menuai.components.tessie.const import DOMAIN, TessieStatus
+from menuai.const import CONF_ACCESS_TOKEN, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.helpers.typing import UNDEFINED, UndefinedType
 
 from tests.common import MockConfigEntry, load_json_object_fixture
 
@@ -68,7 +68,7 @@ NO_SCOPES = ["user_data", "offline_access", "openid"]
 
 
 async def setup_platform(
-    hass: HomeAssistant, platforms: list[Platform] | UndefinedType = UNDEFINED
+    menuai: menuai, platforms: list[Platform] | UndefinedType = UNDEFINED
 ) -> MockConfigEntry:
     """Set up the Tessie platform."""
 
@@ -76,20 +76,20 @@ async def setup_platform(
         domain=DOMAIN,
         data=TEST_CONFIG,
     )
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.tessie.PLATFORMS",
+        "menuai.components.tessie.PLATFORMS",
         PLATFORMS if platforms is UNDEFINED else platforms,
     ):
-        await hass.config_entries.async_setup(mock_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(mock_entry.entry_id)
+        await menuai.async_block_till_done()
 
     return mock_entry
 
 
 def assert_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry_id: str,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
@@ -100,5 +100,5 @@ def assert_entities(
     assert entity_entries
     for entity_entry in entity_entries:
         assert entity_entry == snapshot(name=f"{entity_entry.entity_id}-entry")
-        assert (state := hass.states.get(entity_entry.entity_id))
+        assert (state := menuai.states.get(entity_entry.entity_id))
         assert state == snapshot(name=f"{entity_entry.entity_id}-state")

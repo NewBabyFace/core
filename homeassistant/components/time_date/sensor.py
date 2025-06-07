@@ -9,22 +9,22 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     ENTITY_ID_FORMAT,
     PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
     SensorEntity,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_DISPLAY_OPTIONS, EVENT_CORE_CONFIG_UPDATE
-from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_DISPLAY_OPTIONS, EVENT_CORE_CONFIG_UPDATE
+from menuai.core import CALLBACK_TYPE, Event, menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     AddEntitiesCallback,
 )
-from homeassistant.helpers.event import async_track_point_in_utc_time
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import dt as dt_util
+from menuai.helpers.event import async_track_point_in_utc_time
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import dt as dt_util
 
 from .const import OPTION_TYPES
 
@@ -43,14 +43,14 @@ PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the Time and Date sensor."""
-    if hass.config.time_zone is None:
-        _LOGGER.error("Timezone is not set in Home Assistant configuration")  # type: ignore[unreachable]
+    if menuai.config.time_zone is None:
+        _LOGGER.error("Timezone is not set in MenuAI configuration")  # type: ignore[unreachable]
         return
 
     async_add_entities(
@@ -59,7 +59,7 @@ async def async_setup_platform(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -115,7 +115,7 @@ class TimeDateSensor(SensorEntity):
             now = dt_util.utcnow()
             self._update_internal_state(now)
             self.unsub = async_track_point_in_utc_time(
-                self.hass, point_in_time_listener, self.get_next_interval(now)
+                self.menuai, point_in_time_listener, self.get_next_interval(now)
             )
             calculated_state = self._async_calculate_state()
             preview_callback(calculated_state.state, calculated_state.attributes)
@@ -130,7 +130,7 @@ class TimeDateSensor(SensorEntity):
         point_in_time_listener(None)
         return async_stop_preview
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Set up first update."""
 
         async def async_update_config(event: Event) -> None:
@@ -139,11 +139,11 @@ class TimeDateSensor(SensorEntity):
             self.async_write_ha_state()
 
         self.async_on_remove(
-            self.hass.bus.async_listen(EVENT_CORE_CONFIG_UPDATE, async_update_config)
+            self.menuai.bus.async_listen(EVENT_CORE_CONFIG_UPDATE, async_update_config)
         )
         self._update_state_and_setup_listener()
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Cancel next update."""
         if self.unsub:
             self.unsub()
@@ -192,7 +192,7 @@ class TimeDateSensor(SensorEntity):
         now = dt_util.utcnow()
         self._update_internal_state(now)
         self.unsub = async_track_point_in_utc_time(
-            self.hass, self.point_in_time_listener, self.get_next_interval(now)
+            self.menuai, self.point_in_time_listener, self.get_next_interval(now)
         )
 
     @callback

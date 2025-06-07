@@ -5,11 +5,11 @@ from __future__ import annotations
 from datetime import timedelta
 from typing import Any
 
-from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
-from homeassistant.const import PERCENTAGE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import dt as dt_util
+from menuai.components.sensor import SensorDeviceClass, SensorEntity
+from menuai.const import PERCENTAGE
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import dt as dt_util
 
 from . import GeniusHubConfigEntry
 from .entity import GeniusDevice, GeniusEntity
@@ -24,7 +24,7 @@ GH_LEVEL_MAPPING = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: GeniusHubConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

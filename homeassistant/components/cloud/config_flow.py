@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
 
 from .const import DOMAIN
 
@@ -18,4 +18,4 @@ class CloudConfigFlow(ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle the system step."""
-        return self.async_create_entry(title="Home Assistant Cloud", data={})
+        return self.async_create_entry(title="MenuAI Cloud", data={})

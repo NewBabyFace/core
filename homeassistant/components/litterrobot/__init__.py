@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import itertools
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceEntry
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceEntry
 
 from .const import DOMAIN
 from .coordinator import LitterRobotConfigEntry, LitterRobotDataUpdateCoordinator
@@ -23,25 +23,25 @@ PLATFORMS = [
 ]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: LitterRobotConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: LitterRobotConfigEntry) -> bool:
     """Set up Litter-Robot from a config entry."""
-    coordinator = LitterRobotDataUpdateCoordinator(hass, entry)
+    coordinator = LitterRobotDataUpdateCoordinator(menuai, entry)
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, entry: LitterRobotConfigEntry
+    menuai: menuai, entry: LitterRobotConfigEntry
 ) -> bool:
     """Unload a config entry."""
     await entry.runtime_data.account.disconnect()
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 async def async_remove_config_entry_device(
-    hass: HomeAssistant, entry: LitterRobotConfigEntry, device_entry: DeviceEntry
+    menuai: menuai, entry: LitterRobotConfigEntry, device_entry: DeviceEntry
 ) -> bool:
     """Remove a config entry from a device."""
     return not any(

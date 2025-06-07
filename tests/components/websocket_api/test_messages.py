@@ -2,19 +2,19 @@
 
 import pytest
 
-from homeassistant.components.websocket_api.messages import (
+from menuai.components.websocket_api.messages import (
     _partial_cached_event_message as lru_event_cache,
     _state_diff_event,
     cached_event_message,
     message_to_json_bytes,
 )
-from homeassistant.const import EVENT_STATE_CHANGED
-from homeassistant.core import Context, Event, HomeAssistant, State, callback
+from menuai.const import EVENT_STATE_CHANGED
+from menuai.core import Context, Event, menuai, State, callback
 
 from tests.common import async_capture_events
 
 
-async def test_cached_event_message(hass: HomeAssistant) -> None:
+async def test_cached_event_message(menuai: menuai) -> None:
     """Test that we cache event messages."""
 
     events = []
@@ -23,11 +23,11 @@ async def test_cached_event_message(hass: HomeAssistant) -> None:
     def _event_listener(event):
         events.append(event)
 
-    hass.bus.async_listen(EVENT_STATE_CHANGED, _event_listener)
+    menuai.bus.async_listen(EVENT_STATE_CHANGED, _event_listener)
 
-    hass.states.async_set("light.window", "on")
-    hass.states.async_set("light.window", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.window", "on")
+    menuai.states.async_set("light.window", "off")
+    await menuai.async_block_till_done()
 
     assert len(events) == 2
     lru_event_cache.cache_clear()
@@ -52,7 +52,7 @@ async def test_cached_event_message(hass: HomeAssistant) -> None:
     assert cache_info.currsize == 2
 
 
-async def test_cached_event_message_with_different_idens(hass: HomeAssistant) -> None:
+async def test_cached_event_message_with_different_idens(menuai: menuai) -> None:
     """Test that we cache event messages when the subscrition idens differ."""
 
     events = []
@@ -61,10 +61,10 @@ async def test_cached_event_message_with_different_idens(hass: HomeAssistant) ->
     def _event_listener(event):
         events.append(event)
 
-    hass.bus.async_listen(EVENT_STATE_CHANGED, _event_listener)
+    menuai.bus.async_listen(EVENT_STATE_CHANGED, _event_listener)
 
-    hass.states.async_set("light.window", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.window", "on")
+    await menuai.async_block_till_done()
 
     assert len(events) == 1
 
@@ -83,13 +83,13 @@ async def test_cached_event_message_with_different_idens(hass: HomeAssistant) ->
     assert cache_info.currsize == 1
 
 
-async def test_state_diff_event(hass: HomeAssistant) -> None:
+async def test_state_diff_event(menuai: menuai) -> None:
     """Test building state_diff_message."""
-    state_change_events = async_capture_events(hass, EVENT_STATE_CHANGED)
+    state_change_events = async_capture_events(menuai, EVENT_STATE_CHANGED)
     context = Context(user_id="user-id", parent_id="parent-id", id="id")
-    hass.states.async_set("light.window", "on", context=context)
-    hass.states.async_set("light.window", "off", context=context)
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.window", "on", context=context)
+    menuai.states.async_set("light.window", "off", context=context)
+    await menuai.async_block_till_done()
 
     last_state_event: Event = state_change_events[-1]
     new_state: State = last_state_event.data["new_state"]
@@ -100,12 +100,12 @@ async def test_state_diff_event(hass: HomeAssistant) -> None:
         }
     }
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "light.window",
         "red",
         context=Context(user_id="user-id", parent_id="new-parent-id", id="id"),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     last_state_event: Event = state_change_events[-1]
     new_state: State = last_state_event.data["new_state"]
     message = _state_diff_event(last_state_event)
@@ -122,14 +122,14 @@ async def test_state_diff_event(hass: HomeAssistant) -> None:
         }
     }
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "light.window",
         "green",
         context=Context(
             user_id="new-user-id", parent_id="another-new-parent-id", id="id"
         ),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     last_state_event: Event = state_change_events[-1]
     new_state: State = last_state_event.data["new_state"]
     message = _state_diff_event(last_state_event)
@@ -149,14 +149,14 @@ async def test_state_diff_event(hass: HomeAssistant) -> None:
         }
     }
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "light.window",
         "blue",
         context=Context(
             user_id="another-new-user-id", parent_id="another-new-parent-id", id="id"
         ),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     last_state_event: Event = state_change_events[-1]
     new_state: State = last_state_event.data["new_state"]
     message = _state_diff_event(last_state_event)
@@ -173,7 +173,7 @@ async def test_state_diff_event(hass: HomeAssistant) -> None:
         }
     }
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "light.window",
         "yellow",
         context=Context(
@@ -182,7 +182,7 @@ async def test_state_diff_event(hass: HomeAssistant) -> None:
             id="id-new",
         ),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     last_state_event: Event = state_change_events[-1]
     new_state: State = last_state_event.data["new_state"]
     message = _state_diff_event(last_state_event)
@@ -200,10 +200,10 @@ async def test_state_diff_event(hass: HomeAssistant) -> None:
     }
 
     new_context = Context()
-    hass.states.async_set(
+    menuai.states.async_set(
         "light.window", "purple", {"new": "attr"}, context=new_context
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     last_state_event: Event = state_change_events[-1]
     new_state: State = last_state_event.data["new_state"]
     message = _state_diff_event(last_state_event)
@@ -221,8 +221,8 @@ async def test_state_diff_event(hass: HomeAssistant) -> None:
         }
     }
 
-    hass.states.async_set("light.window", "green", {}, context=new_context)
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.window", "green", {}, context=new_context)
+    await menuai.async_block_till_done()
     last_state_event: Event = state_change_events[-1]
     new_state: State = last_state_event.data["new_state"]
     message = _state_diff_event(last_state_event)
@@ -236,13 +236,13 @@ async def test_state_diff_event(hass: HomeAssistant) -> None:
         }
     }
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "light.window",
         "green",
         {"list_attr": ["a", "b", "c", "d"], "list_attr_2": ["a", "b"]},
         context=new_context,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     last_state_event: Event = state_change_events[-1]
     new_state: State = last_state_event.data["new_state"]
     message = _state_diff_event(last_state_event)
@@ -258,13 +258,13 @@ async def test_state_diff_event(hass: HomeAssistant) -> None:
         }
     }
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "light.window",
         "green",
         {"list_attr": ["a", "b", "c", "e"]},
         context=new_context,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     last_state_event: Event = state_change_events[-1]
     new_state: State = last_state_event.data["new_state"]
     message = _state_diff_event(last_state_event)

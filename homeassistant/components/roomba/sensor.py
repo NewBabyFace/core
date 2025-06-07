@@ -5,17 +5,17 @@ from dataclasses import dataclass
 
 from roombapy import Roomba
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfArea, UnitOfTime
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
+from menuai.config_entries import ConfigEntry
+from menuai.const import PERCENTAGE, EntityCategory, UnitOfArea, UnitOfTime
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
 
 from .const import DOMAIN
 from .entity import IRobotEntity
@@ -123,12 +123,12 @@ SENSORS: list[RoombaSensorEntityDescription] = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the iRobot Roomba vacuum cleaner."""
-    domain_data: RoombaData = hass.data[DOMAIN][config_entry.entry_id]
+    domain_data: RoombaData = menuai.data[DOMAIN][config_entry.entry_id]
     roomba = domain_data.roomba
     blid = domain_data.blid
 

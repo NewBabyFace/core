@@ -5,60 +5,60 @@ from __future__ import annotations
 from ipaddress import ip_address
 from unittest.mock import MagicMock, patch
 
-from homeassistant import config_entries
-from homeassistant.components.media_player import DOMAIN as MP_DOMAIN
-from homeassistant.components.sonos.const import DATA_SONOS_DISCOVERY_MANAGER, DOMAIN
-from homeassistant.const import CONF_HOSTS
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.ssdp import ATTR_UPNP_UDN, SsdpServiceInfo
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
-from homeassistant.setup import async_setup_component
+from menuai import config_entries
+from menuai.components.media_player import DOMAIN as MP_DOMAIN
+from menuai.components.sonos.const import DATA_SONOS_DISCOVERY_MANAGER, DOMAIN
+from menuai.const import CONF_HOSTS
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.ssdp import ATTR_UPNP_UDN, SsdpServiceInfo
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.setup import async_setup_component
 
 
 async def test_user_form(
-    hass: HomeAssistant, zeroconf_payload: ZeroconfServiceInfo
+    menuai: menuai, zeroconf_payload: ZeroconfServiceInfo
 ) -> None:
     """Test we get the user initiated form."""
 
     # Ensure config flow will fail if no devices discovered yet
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.FORM
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "no_devices_found"
 
     # Initiate a discovery to allow config entry creation
-    await hass.config_entries.flow.async_init(
+    await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=zeroconf_payload,
     )
 
     # Ensure config flow succeeds after discovery
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] is None
     with (
         patch(
-            "homeassistant.components.sonos.async_setup",
+            "menuai.components.sonos.async_setup",
             return_value=True,
         ) as mock_setup,
         patch(
-            "homeassistant.components.sonos.async_setup_entry",
+            "menuai.components.sonos.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "Sonos"
@@ -67,17 +67,17 @@ async def test_user_form(
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_user_form_already_created(hass: HomeAssistant) -> None:
+async def test_user_form_already_created(menuai: menuai) -> None:
     """Ensure we abort a flow if the entry is already created from config."""
     config = {DOMAIN: {MP_DOMAIN: {CONF_HOSTS: "192.168.4.2"}}}
     with patch(
-        "homeassistant.components.sonos.async_setup_entry",
+        "menuai.components.sonos.async_setup_entry",
         return_value=True,
     ):
-        await async_setup_component(hass, DOMAIN, config)
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, DOMAIN, config)
+        await menuai.async_block_till_done()
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.ABORT
@@ -85,12 +85,12 @@ async def test_user_form_already_created(hass: HomeAssistant) -> None:
 
 
 async def test_zeroconf_form(
-    hass: HomeAssistant, zeroconf_payload: ZeroconfServiceInfo
+    menuai: menuai, zeroconf_payload: ZeroconfServiceInfo
 ) -> None:
     """Test we pass Zeroconf discoveries to the manager."""
 
-    mock_manager = hass.data[DATA_SONOS_DISCOVERY_MANAGER] = MagicMock()
-    result = await hass.config_entries.flow.async_init(
+    mock_manager = menuai.data[DATA_SONOS_DISCOVERY_MANAGER] = MagicMock()
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=zeroconf_payload,
@@ -100,19 +100,19 @@ async def test_zeroconf_form(
 
     with (
         patch(
-            "homeassistant.components.sonos.async_setup",
+            "menuai.components.sonos.async_setup",
             return_value=True,
         ) as mock_setup,
         patch(
-            "homeassistant.components.sonos.async_setup_entry",
+            "menuai.components.sonos.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "Sonos"
@@ -124,12 +124,12 @@ async def test_zeroconf_form(
 
 
 async def test_zeroconf_form_not_ipv4(
-    hass: HomeAssistant, zeroconf_payload: ZeroconfServiceInfo
+    menuai: menuai, zeroconf_payload: ZeroconfServiceInfo
 ) -> None:
     """Test we pass Zeroconf discoveries to the manager."""
-    mock_manager = hass.data[DATA_SONOS_DISCOVERY_MANAGER] = MagicMock()
+    mock_manager = menuai.data[DATA_SONOS_DISCOVERY_MANAGER] = MagicMock()
     zeroconf_payload.ip_address = ip_address("2001:db8:3333:4444:5555:6666:7777:8888")
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=zeroconf_payload,
@@ -139,10 +139,10 @@ async def test_zeroconf_form_not_ipv4(
     assert mock_manager.call_count == 0
 
 
-async def test_ssdp_discovery(hass: HomeAssistant, soco) -> None:
+async def test_ssdp_discovery(menuai: menuai, soco) -> None:
     """Test that SSDP discoveries create a config flow."""
 
-    await hass.config_entries.flow.async_init(
+    await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_SSDP},
         data=SsdpServiceInfo(
@@ -155,25 +155,25 @@ async def test_ssdp_discovery(hass: HomeAssistant, soco) -> None:
         ),
     )
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
     flow = flows[0]
 
     with (
         patch(
-            "homeassistant.components.sonos.async_setup",
+            "menuai.components.sonos.async_setup",
             return_value=True,
         ) as mock_setup,
         patch(
-            "homeassistant.components.sonos.async_setup_entry",
+            "menuai.components.sonos.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             flow["flow_id"],
             {},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "Sonos"
@@ -183,11 +183,11 @@ async def test_ssdp_discovery(hass: HomeAssistant, soco) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_zeroconf_sonos_v1(hass: HomeAssistant) -> None:
+async def test_zeroconf_sonos_v1(menuai: menuai) -> None:
     """Test we pass sonos devices to the discovery manager with v1 firmware devices."""
 
-    mock_manager = hass.data[DATA_SONOS_DISCOVERY_MANAGER] = MagicMock()
-    result = await hass.config_entries.flow.async_init(
+    mock_manager = menuai.data[DATA_SONOS_DISCOVERY_MANAGER] = MagicMock()
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -214,19 +214,19 @@ async def test_zeroconf_sonos_v1(hass: HomeAssistant) -> None:
 
     with (
         patch(
-            "homeassistant.components.sonos.async_setup",
+            "menuai.components.sonos.async_setup",
             return_value=True,
         ) as mock_setup,
         patch(
-            "homeassistant.components.sonos.async_setup_entry",
+            "menuai.components.sonos.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "Sonos"
@@ -238,14 +238,14 @@ async def test_zeroconf_sonos_v1(hass: HomeAssistant) -> None:
 
 
 async def test_zeroconf_form_not_sonos(
-    hass: HomeAssistant, zeroconf_payload: ZeroconfServiceInfo
+    menuai: menuai, zeroconf_payload: ZeroconfServiceInfo
 ) -> None:
     """Test we abort on non-sonos devices."""
-    mock_manager = hass.data[DATA_SONOS_DISCOVERY_MANAGER] = MagicMock()
+    mock_manager = menuai.data[DATA_SONOS_DISCOVERY_MANAGER] = MagicMock()
 
     zeroconf_payload.hostname = "not-aaa"
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=zeroconf_payload,

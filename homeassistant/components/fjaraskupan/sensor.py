@@ -4,25 +4,25 @@ from __future__ import annotations
 
 from fjaraskupan import Device
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorStateClass,
 )
-from homeassistant.const import SIGNAL_STRENGTH_DECIBELS_MILLIWATT, EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.const import SIGNAL_STRENGTH_DECIBELS_MILLIWATT, EntityCategory
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from . import async_setup_entry_platform
 from .coordinator import FjaraskupanConfigEntry, FjaraskupanCoordinator
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: FjaraskupanConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -31,7 +31,7 @@ async def async_setup_entry(
     def _constructor(coordinator: FjaraskupanCoordinator) -> list[Entity]:
         return [RssiSensor(coordinator, coordinator.device, coordinator.device_info)]
 
-    async_setup_entry_platform(hass, config_entry, async_add_entities, _constructor)
+    async_setup_entry_platform(menuai, config_entry, async_add_entities, _constructor)
 
 
 class RssiSensor(CoordinatorEntity[FjaraskupanCoordinator], SensorEntity):

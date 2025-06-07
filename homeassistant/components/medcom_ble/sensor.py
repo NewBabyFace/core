@@ -6,16 +6,16 @@ import logging
 
 from medcom_ble import MedcomBleDevice
 
-from homeassistant import config_entries
-from homeassistant.components.sensor import (
+from menuai import config_entries
+from menuai.components.sensor import (
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import CONNECTION_BLUETOOTH, DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import (
+from menuai.core import menuai
+from menuai.helpers.device_registry import CONNECTION_BLUETOOTH, DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
 )
@@ -35,13 +35,13 @@ SENSORS_MAPPING_TEMPLATE: dict[str, SensorEntityDescription] = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: config_entries.ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Medcom BLE radiation monitor sensors."""
 
-    coordinator: DataUpdateCoordinator[MedcomBleDevice] = hass.data[DOMAIN][
+    coordinator: DataUpdateCoordinator[MedcomBleDevice] = menuai.data[DOMAIN][
         entry.entry_id
     ]
 

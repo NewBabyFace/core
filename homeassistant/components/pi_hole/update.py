@@ -7,11 +7,11 @@ from dataclasses import dataclass
 
 from hole import Hole
 
-from homeassistant.components.update import UpdateEntity, UpdateEntityDescription
-from homeassistant.const import CONF_NAME, EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.components.update import UpdateEntity, UpdateEntityDescription
+from menuai.const import CONF_NAME, EntityCategory
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from . import PiHoleConfigEntry
 from .entity import PiHoleEntity
@@ -63,7 +63,7 @@ UPDATE_ENTITY_TYPES: tuple[PiHoleUpdateEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: PiHoleConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

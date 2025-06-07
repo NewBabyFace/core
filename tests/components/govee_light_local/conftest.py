@@ -8,7 +8,7 @@ from govee_local_api import GoveeLightCapabilities, GoveeLightFeatures
 from govee_local_api.light_capabilities import COMMON_FEATURES, SCENE_CODES
 import pytest
 
-from homeassistant.components.govee_light_local.coordinator import GoveeController
+from menuai.components.govee_light_local.coordinator import GoveeController
 
 
 @pytest.fixture(name="mock_govee_api")
@@ -26,11 +26,11 @@ def fixture_mock_govee_api() -> Generator[AsyncMock]:
 
     with (
         patch(
-            "homeassistant.components.govee_light_local.coordinator.GoveeController",
+            "menuai.components.govee_light_local.coordinator.GoveeController",
             return_value=mock_api,
         ) as mock_controller,
         patch(
-            "homeassistant.components.govee_light_local.config_flow.GoveeController",
+            "menuai.components.govee_light_local.config_flow.GoveeController",
             return_value=mock_api,
         ),
     ):
@@ -41,7 +41,7 @@ def fixture_mock_govee_api() -> Generator[AsyncMock]:
 def fixture_mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.govee_light_local.async_setup_entry",
+        "menuai.components.govee_light_local.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
         yield mock_setup_entry

@@ -15,8 +15,8 @@ from pyiskra.exceptions import (
 from pyiskra.helper import BasicInfo
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import (
     CONF_ADDRESS,
     CONF_HOST,
     CONF_PASSWORD,
@@ -24,8 +24,8 @@ from homeassistant.const import (
     CONF_PROTOCOL,
     CONF_USERNAME,
 )
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.selector import (
+from menuai.exceptions import menuaiError
+from menuai.helpers.selector import (
     NumberSelector,
     NumberSelectorConfig,
     NumberSelectorMode,
@@ -245,9 +245,9 @@ class IskraConfigFlowFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""
 
 
-class UnknownException(HomeAssistantError):
+class UnknownException(menuaiError):
     """Error to indicate an unknown exception occurred."""

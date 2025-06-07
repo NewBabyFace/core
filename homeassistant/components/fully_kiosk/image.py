@@ -8,11 +8,11 @@ from typing import Any
 
 from fullykiosk import FullyKiosk, FullyKioskError
 
-from homeassistant.components.image import ImageEntity, ImageEntityDescription
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import dt as dt_util
+from menuai.components.image import ImageEntity, ImageEntityDescription
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import dt as dt_util
 
 from . import FullyKioskConfigEntry
 from .coordinator import FullyKioskDataUpdateCoordinator
@@ -36,7 +36,7 @@ IMAGES: tuple[FullyImageEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: FullyKioskConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -60,7 +60,7 @@ class FullyImageEntity(FullyKioskEntity, ImageEntity):
     ) -> None:
         """Initialize the entity."""
         FullyKioskEntity.__init__(self, coordinator)
-        ImageEntity.__init__(self, coordinator.hass)
+        ImageEntity.__init__(self, coordinator.menuai)
         self.entity_description = description
         self._attr_unique_id = f"{coordinator.data['deviceID']}-{description.key}"
 
@@ -69,7 +69,7 @@ class FullyImageEntity(FullyKioskEntity, ImageEntity):
         try:
             image_bytes = await self.entity_description.image_fn(self.coordinator.fully)
         except FullyKioskError as err:
-            raise HomeAssistantError(err) from err
+            raise menuaiError(err) from err
         else:
             self._attr_image_last_updated = dt_util.utcnow()
             return image_bytes

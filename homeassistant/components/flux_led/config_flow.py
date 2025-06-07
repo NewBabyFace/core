@@ -16,20 +16,20 @@ from flux_led.const import (
 from flux_led.scanner import FluxLEDDiscovery
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_IGNORE,
     ConfigEntryState,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_DEVICE, CONF_HOST
-from homeassistant.core import callback
-from homeassistant.data_entry_flow import AbortFlow
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
-from homeassistant.helpers.typing import DiscoveryInfoType
+from menuai.const import CONF_DEVICE, CONF_HOST
+from menuai.core import callback
+from menuai.data_entry_flow import AbortFlow
+from menuai.helpers import device_registry as dr
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.helpers.typing import DiscoveryInfoType
 
 from . import async_wifi_bulb_for_host
 from .const import (
@@ -131,7 +131,7 @@ class FluxLedConfigFlow(ConfigFlow, domain=DOMAIN):
                 raise AbortFlow("already_configured")
             if (
                 async_update_entry_from_discovery(
-                    self.hass, entry, device, None, allow_update_mac
+                    self.menuai, entry, device, None, allow_update_mac
                 )
                 and entry.state
                 not in (
@@ -139,10 +139,10 @@ class FluxLedConfigFlow(ConfigFlow, domain=DOMAIN):
                     ConfigEntryState.NOT_LOADED,
                 )
             ) or entry.state == ConfigEntryState.SETUP_RETRY:
-                self.hass.config_entries.async_schedule_reload(entry.entry_id)
+                self.menuai.config_entries.async_schedule_reload(entry.entry_id)
             else:
                 async_dispatcher_send(
-                    self.hass,
+                    self.menuai,
                     FLUX_LED_DISCOVERY_SIGNAL.format(entry_id=entry.entry_id),
                 )
             raise AbortFlow("already_configured")
@@ -154,7 +154,7 @@ class FluxLedConfigFlow(ConfigFlow, domain=DOMAIN):
         await self._async_set_discovered_mac(device, self._allow_update_mac)
         host = device[ATTR_IPADDR]
         self.host = host
-        if self.hass.config_entries.flow.async_has_matching_flow(self):
+        if self.menuai.config_entries.flow.async_has_matching_flow(self):
             return self.async_abort(reason="already_in_progress")
         if not device[ATTR_MODEL_DESCRIPTION]:
             mac_address = device[ATTR_ID]
@@ -263,7 +263,7 @@ class FluxLedConfigFlow(ConfigFlow, domain=DOMAIN):
             for entry in self._async_current_entries(include_ignore=False)
         }
         discovered_devices = await async_discover_devices(
-            self.hass, DISCOVER_SCAN_TIMEOUT
+            self.menuai, DISCOVER_SCAN_TIMEOUT
         )
         self._discovered_devices = {}
         for device in discovered_devices:
@@ -289,7 +289,7 @@ class FluxLedConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> FluxLEDDiscovery:
         """Try to connect."""
         self._async_abort_entries_match({CONF_HOST: host})
-        if (device := await async_discover_device(self.hass, host)) and device[
+        if (device := await async_discover_device(self.menuai, host)) and device[
             ATTR_MODEL_DESCRIPTION
         ]:
             # Older models do not return enough information

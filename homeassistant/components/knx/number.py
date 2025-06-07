@@ -7,9 +7,9 @@ from typing import cast
 from xknx import XKNX
 from xknx.devices import NumericValue
 
-from homeassistant import config_entries
-from homeassistant.components.number import RestoreNumber
-from homeassistant.const import (
+from menuai import config_entries
+from menuai.components.number import RestoreNumber
+from menuai.const import (
     CONF_ENTITY_CATEGORY,
     CONF_MODE,
     CONF_NAME,
@@ -18,9 +18,9 @@ from homeassistant.const import (
     STATE_UNKNOWN,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import ConfigType
 
 from . import KNXModule
 from .const import CONF_RESPOND_TO_READ, CONF_STATE_ADDRESS, KNX_ADDRESS, KNX_MODULE_KEY
@@ -29,12 +29,12 @@ from .schema import NumberSchema
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: config_entries.ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up number(s) for KNX platform."""
-    knx_module = hass.data[KNX_MODULE_KEY]
+    knx_module = menuai.data[KNX_MODULE_KEY]
     config: list[ConfigType] = knx_module.config_yaml[Platform.NUMBER]
 
     async_add_entities(KNXNumber(knx_module, entity_config) for entity_config in config)
@@ -81,9 +81,9 @@ class KNXNumber(KnxYamlEntity, RestoreNumber):
         self._attr_native_unit_of_measurement = self._device.unit_of_measurement()
         self._device.sensor_value.value = max(0, self._attr_native_min_value)
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Restore last state."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         if (
             not self._device.sensor_value.readable
             and (last_state := await self.async_get_last_state())

@@ -20,13 +20,13 @@ from synology_dsm.exceptions import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_DISKS,
     CONF_HOST,
     CONF_MAC,
@@ -37,24 +37,24 @@ from homeassistant.const import (
     CONF_USERNAME,
     CONF_VERIFY_SSL,
 )
-from homeassistant.core import callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.selector import (
+from menuai.core import callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.selector import (
     SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
 )
-from homeassistant.helpers.service_info.ssdp import (
+from menuai.helpers.service_info.ssdp import (
     ATTR_UPNP_FRIENDLY_NAME,
     ATTR_UPNP_SERIAL,
     SsdpServiceInfo,
 )
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
-from homeassistant.helpers.typing import DiscoveryInfoType, VolDictType
-from homeassistant.util import slugify
-from homeassistant.util.network import is_ip_address as is_ip
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.helpers.typing import DiscoveryInfoType, VolDictType
+from menuai.util import slugify
+from menuai.util.network import is_ip_address as is_ip
 
 from .const import (
     CONF_BACKUP_PATH,
@@ -194,7 +194,7 @@ class SynologyDSMFlowHandler(ConfigFlow, domain=DOMAIN):
             else:
                 port = DEFAULT_PORT
 
-        session = async_get_clientsession(self.hass, verify_ssl)
+        session = async_get_clientsession(self.menuai, verify_ssl)
         api = SynologyDSM(
             session, host, port, username, password, use_ssl, timeout=DEFAULT_TIMEOUT
         )
@@ -326,7 +326,7 @@ class SynologyDSMFlowHandler(ConfigFlow, domain=DOMAIN):
                 host,
                 existing_entry.unique_id,
             )
-            self.hass.config_entries.async_update_entry(
+            self.menuai.config_entries.async_update_entry(
                 existing_entry,
                 data={**existing_entry.data, CONF_HOST: host},
             )
@@ -420,7 +420,7 @@ class SynologyDSMFlowHandler(ConfigFlow, domain=DOMAIN):
                         ),
                         vol.Required(
                             CONF_BACKUP_PATH,
-                            default=f"{DEFAULT_BACKUP_PATH}_{slugify(self.hass.config.location_name)}",
+                            default=f"{DEFAULT_BACKUP_PATH}_{slugify(self.menuai.config.location_name)}",
                         ): str,
                     }
                 ),
@@ -517,5 +517,5 @@ async def _login_and_fetch_syno_info(api: SynologyDSM, otp_code: str | None) -> 
     return api.information.serial
 
 
-class InvalidData(HomeAssistantError):
+class InvalidData(menuaiError):
     """Error to indicate we get invalid data from the nas."""

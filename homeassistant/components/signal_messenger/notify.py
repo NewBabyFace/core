@@ -9,14 +9,14 @@ from pysignalclirestapi import SignalCliRestApi, SignalCliRestApiError
 import requests
 import voluptuous as vol
 
-from homeassistant.components.notify import (
+from menuai.components.notify import (
     ATTR_DATA,
     PLATFORM_SCHEMA as NOTIFY_PLATFORM_SCHEMA,
     BaseNotificationService,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -67,7 +67,7 @@ PLATFORM_SCHEMA = NOTIFY_PLATFORM_SCHEMA.extend(
 
 
 def get_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> SignalNotificationService:
@@ -79,7 +79,7 @@ def get_service(
 
     signal_cli_rest_api = SignalCliRestApi(signal_cli_rest_api_url, sender_nr)
 
-    return SignalNotificationService(hass, recp_nrs, signal_cli_rest_api)
+    return SignalNotificationService(menuai, recp_nrs, signal_cli_rest_api)
 
 
 class SignalNotificationService(BaseNotificationService):
@@ -87,13 +87,13 @@ class SignalNotificationService(BaseNotificationService):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         recp_nrs: list[str],
         signal_cli_rest_api: SignalCliRestApi,
     ) -> None:
         """Initialize the service."""
 
-        self._hass = hass
+        self._menuai = menuai
         self._recp_nrs = recp_nrs
         self._signal_cli_rest_api = signal_cli_rest_api
 
@@ -112,7 +112,7 @@ class SignalNotificationService(BaseNotificationService):
 
         filenames = self.get_filenames(data)
         attachments_as_bytes = self.get_attachments_as_bytes(
-            data, CONF_MAX_ALLOWED_DOWNLOAD_SIZE_BYTES, self._hass
+            data, CONF_MAX_ALLOWED_DOWNLOAD_SIZE_BYTES, self._menuai
         )
         try:
             self._signal_cli_rest_api.send_message(
@@ -139,7 +139,7 @@ class SignalNotificationService(BaseNotificationService):
     def get_attachments_as_bytes(
         data: Any,
         attachment_size_limit: int,
-        hass: HomeAssistant,
+        menuai: menuai,
     ) -> list[bytearray] | None:
         """Retrieve attachments from URLs defined in data."""
         try:
@@ -152,7 +152,7 @@ class SignalNotificationService(BaseNotificationService):
 
         for url in urls:
             try:
-                if not hass.config.is_allowed_external_url(url):
+                if not menuai.config.is_allowed_external_url(url):
                     _LOGGER.error("URL '%s' not in allow list", url)
                     continue
 

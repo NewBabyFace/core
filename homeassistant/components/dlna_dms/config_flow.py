@@ -10,11 +10,11 @@ from urllib.parse import urlparse
 from async_upnp_client.profiles.dlna import DmsDevice
 import voluptuous as vol
 
-from homeassistant.components import ssdp
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_DEVICE_ID, CONF_HOST, CONF_URL
-from homeassistant.data_entry_flow import AbortFlow
-from homeassistant.helpers.service_info.ssdp import (
+from menuai.components import ssdp
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_DEVICE_ID, CONF_HOST, CONF_URL
+from menuai.data_entry_flow import AbortFlow
+from menuai.helpers.service_info.ssdp import (
     ATTR_UPNP_FRIENDLY_NAME,
     ATTR_UPNP_SERVICE_LIST,
     SsdpServiceInfo,
@@ -135,7 +135,7 @@ class DlnaDmsFlowHandler(ConfigFlow, domain=DOMAIN):
         data = {
             CONF_URL: self._location,
             CONF_DEVICE_ID: self._usn,
-            CONF_SOURCE_ID: generate_source_id(self.hass, self._name),
+            CONF_SOURCE_ID: generate_source_id(self.menuai, self._name),
         }
         return self.async_create_entry(title=self._name, data=data)
 
@@ -178,7 +178,7 @@ class DlnaDmsFlowHandler(ConfigFlow, domain=DOMAIN):
         discoveries: list[SsdpServiceInfo] = []
         for udn_st in DmsDevice.DEVICE_TYPES:
             st_discoveries = await ssdp.async_get_discovery_info_by_st(
-                self.hass, udn_st
+                self.menuai, udn_st
             )
             discoveries.extend(st_discoveries)
 

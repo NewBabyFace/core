@@ -4,32 +4,32 @@ from __future__ import annotations
 
 from datetime import timedelta
 
-from homeassistant.components import vacuum
-from homeassistant.components.recorder import Recorder
-from homeassistant.components.recorder.history import get_significant_states
-from homeassistant.components.vacuum import ATTR_FAN_SPEED_LIST
-from homeassistant.const import ATTR_FRIENDLY_NAME
-from homeassistant.core import HomeAssistant, split_entity_id
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.components import vacuum
+from menuai.components.recorder import Recorder
+from menuai.components.recorder.history import get_significant_states
+from menuai.components.vacuum import ATTR_FAN_SPEED_LIST
+from menuai.const import ATTR_FRIENDLY_NAME
+from menuai.core import menuai, split_entity_id
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from tests.common import async_fire_time_changed
 from tests.components.recorder.common import async_wait_recording_done
 
 
-async def test_exclude_attributes(recorder_mock: Recorder, hass: HomeAssistant) -> None:
+async def test_exclude_attributes(recorder_mock: Recorder, menuai: menuai) -> None:
     """Test vacuum registered attributes to be excluded."""
     now = dt_util.utcnow()
     await async_setup_component(
-        hass, vacuum.DOMAIN, {vacuum.DOMAIN: {"platform": "demo"}}
+        menuai, vacuum.DOMAIN, {vacuum.DOMAIN: {"platform": "demo"}}
     )
-    await hass.async_block_till_done()
-    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=5))
-    await hass.async_block_till_done()
-    await async_wait_recording_done(hass)
+    await menuai.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(minutes=5))
+    await menuai.async_block_till_done()
+    await async_wait_recording_done(menuai)
 
-    states = await hass.async_add_executor_job(
-        get_significant_states, hass, now, None, hass.states.async_entity_ids()
+    states = await menuai.async_add_executor_job(
+        get_significant_states, menuai, now, None, menuai.states.async_entity_ids()
     )
     assert len(states) >= 1
     for state in (

@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from homeassistant.helpers.service_info.bluetooth import BluetoothServiceInfo
+from menuai.helpers.service_info.bluetooth import BluetoothServiceInfo
 
 from tests.components.bluetooth import generate_ble_device
 

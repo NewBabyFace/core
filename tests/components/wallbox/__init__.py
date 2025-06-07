@@ -5,7 +5,7 @@ from http import HTTPStatus
 import requests
 import requests_mock
 
-from homeassistant.components.wallbox.const import (
+from menuai.components.wallbox.const import (
     CHARGER_ADDED_ENERGY_KEY,
     CHARGER_ADDED_RANGE_KEY,
     CHARGER_CHARGING_POWER_KEY,
@@ -30,7 +30,7 @@ from homeassistant.components.wallbox.const import (
     CHARGER_SOFTWARE_KEY,
     CHARGER_STATUS_ID_KEY,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .const import ERROR, REFRESH_TOKEN_TTL, STATUS, TTL, USER_ID
 
@@ -193,7 +193,7 @@ authorisation_response_unauthorised = {
 }
 
 
-async def setup_integration(hass: HomeAssistant, entry: MockConfigEntry) -> None:
+async def setup_integration(menuai: menuai, entry: MockConfigEntry) -> None:
     """Test wallbox sensor class setup."""
     with requests_mock.Mocker() as mock_request:
         mock_request.get(
@@ -212,12 +212,12 @@ async def setup_integration(hass: HomeAssistant, entry: MockConfigEntry) -> None
             status_code=HTTPStatus.OK,
         )
 
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
 
 async def setup_integration_select(
-    hass: HomeAssistant, entry: MockConfigEntry, response
+    menuai: menuai, entry: MockConfigEntry, response
 ) -> None:
     """Test wallbox sensor class setup."""
     with requests_mock.Mocker() as mock_request:
@@ -237,11 +237,11 @@ async def setup_integration_select(
             status_code=HTTPStatus.OK,
         )
 
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
 
-async def setup_integration_bidir(hass: HomeAssistant, entry: MockConfigEntry) -> None:
+async def setup_integration_bidir(menuai: menuai, entry: MockConfigEntry) -> None:
     """Test wallbox sensor class setup."""
     with requests_mock.Mocker() as mock_request:
         mock_request.get(
@@ -260,12 +260,12 @@ async def setup_integration_bidir(hass: HomeAssistant, entry: MockConfigEntry) -
             status_code=HTTPStatus.OK,
         )
 
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
 
 async def setup_integration_connection_error(
-    hass: HomeAssistant, entry: MockConfigEntry
+    menuai: menuai, entry: MockConfigEntry
 ) -> None:
     """Test wallbox sensor class setup with a connection error."""
     with requests_mock.Mocker() as mock_request:
@@ -285,12 +285,12 @@ async def setup_integration_connection_error(
             status_code=HTTPStatus.FORBIDDEN,
         )
 
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
 
 async def setup_integration_read_only(
-    hass: HomeAssistant, entry: MockConfigEntry
+    menuai: menuai, entry: MockConfigEntry
 ) -> None:
     """Test wallbox sensor class setup for read only."""
 
@@ -311,12 +311,12 @@ async def setup_integration_read_only(
             status_code=HTTPStatus.FORBIDDEN,
         )
 
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
 
 async def setup_integration_platform_not_ready(
-    hass: HomeAssistant, entry: MockConfigEntry
+    menuai: menuai, entry: MockConfigEntry
 ) -> None:
     """Test wallbox sensor class setup for read only."""
 
@@ -337,5 +337,5 @@ async def setup_integration_platform_not_ready(
             status_code=HTTPStatus.NOT_FOUND,
         )
 
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()

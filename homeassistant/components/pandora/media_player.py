@@ -12,25 +12,25 @@ from typing import cast
 
 import pexpect
 
-from homeassistant import util
-from homeassistant.components.media_player import (
+from menuai import util
+from menuai.components.media_player import (
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
     MediaType,
 )
-from homeassistant.const import (
-    EVENT_HOMEASSISTANT_STOP,
+from menuai.const import (
+    EVENT_menuai_STOP,
     SERVICE_MEDIA_NEXT_TRACK,
     SERVICE_MEDIA_PLAY,
     SERVICE_MEDIA_PLAY_PAUSE,
     SERVICE_VOLUME_DOWN,
     SERVICE_VOLUME_UP,
 )
-from homeassistant.core import DOMAIN as HOMEASSISTANT_DOMAIN, Event, HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.issue_registry import IssueSeverity, create_issue
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import DOMAIN as menuai_DOMAIN, Event, menuai
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.issue_registry import IssueSeverity, create_issue
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import DOMAIN
 
@@ -50,15 +50,15 @@ STATION_PATTERN = re.compile(r'Station\s"(.+?)"', re.MULTILINE)
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the Pandora media player platform."""
     create_issue(
-        hass,
-        HOMEASSISTANT_DOMAIN,
+        menuai,
+        menuai_DOMAIN,
         f"deprecated_system_packages_yaml_integration_{DOMAIN}",
         breaks_in_ha_version="2025.12.0",
         is_fixable=False,
@@ -80,7 +80,7 @@ def setup_platform(
     def _stop_pianobar(_event: Event) -> None:
         pandora.turn_off()
 
-    hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, _stop_pianobar)
+    menuai.bus.listen_once(EVENT_menuai_STOP, _stop_pianobar)
     add_entities([pandora])
 
 

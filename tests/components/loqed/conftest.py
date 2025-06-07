@@ -8,20 +8,20 @@ from unittest.mock import AsyncMock, Mock, patch
 from loqedAPI import loqed
 import pytest
 
-from homeassistant.components.loqed import DOMAIN
-from homeassistant.components.loqed.const import CONF_CLOUDHOOK_URL
-from homeassistant.const import CONF_API_TOKEN, CONF_NAME, CONF_WEBHOOK_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.loqed import DOMAIN
+from menuai.components.loqed.const import CONF_CLOUDHOOK_URL
+from menuai.const import CONF_API_TOKEN, CONF_NAME, CONF_WEBHOOK_ID
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry, async_load_fixture
 
 
 @pytest.fixture(name="config_entry")
-async def config_entry_fixture(hass: HomeAssistant) -> MockConfigEntry:
+async def config_entry_fixture(menuai: menuai) -> MockConfigEntry:
     """Mock config entry."""
 
-    config = await async_load_fixture(hass, "integration_config.json", DOMAIN)
+    config = await async_load_fixture(menuai, "integration_config.json", DOMAIN)
     json_config = json.loads(config)
     return MockConfigEntry(
         version=1,
@@ -41,12 +41,12 @@ async def config_entry_fixture(hass: HomeAssistant) -> MockConfigEntry:
 
 
 @pytest.fixture(name="cloud_config_entry")
-async def cloud_config_entry_fixture(hass: HomeAssistant) -> MockConfigEntry:
+async def cloud_config_entry_fixture(menuai: menuai) -> MockConfigEntry:
     """Mock config entry."""
 
-    config = await async_load_fixture(hass, "integration_config.json", DOMAIN)
+    config = await async_load_fixture(menuai, "integration_config.json", DOMAIN)
     webhooks_fixture = json.loads(
-        await async_load_fixture(hass, "get_all_webhooks.json", DOMAIN)
+        await async_load_fixture(menuai, "get_all_webhooks.json", DOMAIN)
     )
     json_config = json.loads(config)
     return MockConfigEntry(
@@ -68,10 +68,10 @@ async def cloud_config_entry_fixture(hass: HomeAssistant) -> MockConfigEntry:
 
 
 @pytest.fixture(name="lock")
-async def lock_fixture(hass: HomeAssistant) -> loqed.Lock:
+async def lock_fixture(menuai: menuai) -> loqed.Lock:
     """Set up a mock implementation of a Lock."""
     webhooks_fixture = json.loads(
-        await async_load_fixture(hass, "get_all_webhooks.json", DOMAIN)
+        await async_load_fixture(menuai, "get_all_webhooks.json", DOMAIN)
     )
 
     mock_lock = Mock(spec=loqed.Lock, id="Foo", last_key_id=2)
@@ -84,13 +84,13 @@ async def lock_fixture(hass: HomeAssistant) -> loqed.Lock:
 
 @pytest.fixture(name="integration")
 async def integration_fixture(
-    hass: HomeAssistant, config_entry: MockConfigEntry, lock: loqed.Lock
+    menuai: menuai, config_entry: MockConfigEntry, lock: loqed.Lock
 ) -> AsyncGenerator[MockConfigEntry]:
     """Set up the loqed integration with a config entry."""
     config: dict[str, Any] = {DOMAIN: {CONF_API_TOKEN: ""}}
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    lock_status = json.loads(await async_load_fixture(hass, "status_ok.json", DOMAIN))
+    lock_status = json.loads(await async_load_fixture(menuai, "status_ok.json", DOMAIN))
 
     with (
         patch("loqedAPI.loqed.LoqedAPI.async_get_lock", return_value=lock),
@@ -98,6 +98,6 @@ async def integration_fixture(
             "loqedAPI.loqed.LoqedAPI.async_get_lock_details", return_value=lock_status
         ),
     ):
-        await async_setup_component(hass, DOMAIN, config)
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, DOMAIN, config)
+        await menuai.async_block_till_done()
         yield config_entry

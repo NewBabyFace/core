@@ -8,14 +8,14 @@ from pysmlight.const import Settings
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     DOMAIN as SWITCH_DOMAIN,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
 )
-from homeassistant.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .conftest import setup_integration
 
@@ -36,26 +36,26 @@ def platforms() -> list[Platform]:
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_switch_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test setup of SMLIGHT switches."""
-    entry = await setup_integration(hass, mock_config_entry)
+    entry = await setup_integration(menuai, mock_config_entry)
 
-    await snapshot_platform(hass, entity_registry, snapshot, entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, entry.entry_id)
 
 
 async def test_disabled_by_default_switch(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test vpn enabled switch is disabled by default ."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
     for entity in ("vpn_enabled", "auto_zigbee_update"):
-        assert not hass.states.get(f"switch.mock_title_{entity}")
+        assert not menuai.states.get(f"switch.mock_title_{entity}")
 
         assert (entry := entity_registry.async_get(f"switch.mock_title_{entity}"))
         assert entry.disabled
@@ -73,22 +73,22 @@ async def test_disabled_by_default_switch(
     ],
 )
 async def test_switches(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity: str,
     mock_config_entry: MockConfigEntry,
     mock_smlight_client: MagicMock,
     setting: Settings,
 ) -> None:
     """Test the SMLIGHT switches."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     _page, _toggle = setting.value
 
     entity_id = f"switch.mock_title_{entity}"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state is not None
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: entity_id},
@@ -109,14 +109,14 @@ async def test_switches(
 
     async def _call_event_function(state: bool = True):
         event_function(SettingsEvent(page=_page, origin="ha", setting={_toggle: state}))
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     await _call_event_function(state=True)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_ON
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: entity_id},
@@ -128,5 +128,5 @@ async def test_switches(
 
     await _call_event_function(state=False)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_OFF

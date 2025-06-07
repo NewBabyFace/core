@@ -16,8 +16,8 @@ from habiticalib import (
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.habitica.const import DOMAIN
-from homeassistant.components.todo import (
+from menuai.components.habitica.const import DOMAIN
+from menuai.components.todo import (
     ATTR_DESCRIPTION,
     ATTR_DUE_DATE,
     ATTR_ITEM,
@@ -26,11 +26,11 @@ from homeassistant.components.todo import (
     DOMAIN as TODO_DOMAIN,
     TodoServices,
 )
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import entity_registry as er
+from menuai.config_entries import ConfigEntryState
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers import entity_registry as er
 
 from .conftest import ERROR_NOT_FOUND, ERROR_TOO_MANY_REQUESTS
 
@@ -47,7 +47,7 @@ from tests.typing import WebSocketGenerator
 def todo_only() -> Generator[None]:
     """Enable only the todo platform."""
     with patch(
-        "homeassistant.components.habitica.PLATFORMS",
+        "menuai.components.habitica.PLATFORMS",
         [Platform.TODO],
     ):
         yield
@@ -55,20 +55,20 @@ def todo_only() -> Generator[None]:
 
 @pytest.mark.usefixtures("habitica")
 async def test_todos(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test todo platform."""
 
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
 
 @pytest.mark.parametrize(
@@ -80,20 +80,20 @@ async def test_todos(
 )
 @pytest.mark.usefixtures("habitica")
 async def test_todo_items(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
     entity_id: str,
 ) -> None:
     """Test items on todo lists."""
 
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
-    result = await hass.services.async_call(
+    result = await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.GET_ITEMS,
         {},
@@ -115,7 +115,7 @@ async def test_todo_items(
     ids=["todo", "daily"],
 )
 async def test_complete_todo_item(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
     snapshot: SnapshotAssertion,
@@ -124,13 +124,13 @@ async def test_complete_todo_item(
 ) -> None:
     """Test completing an item on the todo list."""
 
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.UPDATE_ITEM,
         {ATTR_ITEM: uid, ATTR_STATUS: "completed"},
@@ -141,7 +141,7 @@ async def test_complete_todo_item(
     habitica.update_score.assert_awaited_once_with(UUID(uid), Direction.UP)
 
     # Test notification for item drop
-    notifications = async_get_persistent_notifications(hass)
+    notifications = async_get_persistent_notifications(menuai)
     assert len(notifications) == 1
     _id, *_ = notifications
     assert snapshot == (notifications[_id]["title"], notifications[_id]["message"])
@@ -156,7 +156,7 @@ async def test_complete_todo_item(
     ids=["todo", "daily"],
 )
 async def test_uncomplete_todo_item(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
     entity_id: str,
@@ -164,13 +164,13 @@ async def test_uncomplete_todo_item(
 ) -> None:
     """Test uncompleting an item on the todo list."""
 
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.UPDATE_ITEM,
         {ATTR_ITEM: uid, ATTR_STATUS: "needs_action"},
@@ -200,12 +200,12 @@ async def test_uncomplete_todo_item(
         (
             ERROR_TOO_MANY_REQUESTS,
             "Rate limit exceeded, try again in 5 seconds",
-            HomeAssistantError,
+            menuaiError,
         ),
     ],
 )
 async def test_complete_todo_item_exception(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
     uid: str,
@@ -216,9 +216,9 @@ async def test_complete_todo_item_exception(
 ) -> None:
     """Test exception when completing/uncompleting an item on the todo list."""
 
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
@@ -227,7 +227,7 @@ async def test_complete_todo_item_exception(
         expected_exception=expected_exception,
         match=exc_msg,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             TODO_DOMAIN,
             TodoServices.UPDATE_ITEM,
             {ATTR_ITEM: uid, ATTR_STATUS: status},
@@ -309,7 +309,7 @@ async def test_complete_todo_item_exception(
     ids=["todo", "todo remove date", "todo remove notes", "daily"],
 )
 async def test_update_todo_item(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
     entity_id: str,
@@ -318,13 +318,13 @@ async def test_update_todo_item(
 ) -> None:
     """Test update details of an item on the todo list."""
 
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.UPDATE_ITEM,
         service_data,
@@ -346,12 +346,12 @@ async def test_update_todo_item(
         (
             ERROR_TOO_MANY_REQUESTS,
             "Rate limit exceeded, try again in 5 seconds",
-            HomeAssistantError,
+            menuaiError,
         ),
     ],
 )
 async def test_update_todo_item_exception(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
     exception: Exception,
@@ -360,15 +360,15 @@ async def test_update_todo_item_exception(
 ) -> None:
     """Test exception when update item on the todo list."""
     uid = "88de7cd9-af2b-49ce-9afd-bf941d87336b"
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
     habitica.update_task.side_effect = exception
     with pytest.raises(expected_exception=expected_exception, match=exc_msg):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             TODO_DOMAIN,
             TodoServices.UPDATE_ITEM,
             {
@@ -383,19 +383,19 @@ async def test_update_todo_item_exception(
 
 
 async def test_add_todo_item(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
 ) -> None:
     """Test add a todo item to the todo list."""
 
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.ADD_ITEM,
         {
@@ -428,12 +428,12 @@ async def test_add_todo_item(
         (
             ERROR_TOO_MANY_REQUESTS,
             "Rate limit exceeded, try again in 5 seconds",
-            HomeAssistantError,
+            menuaiError,
         ),
     ],
 )
 async def test_add_todo_item_exception(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
     exception: Exception,
@@ -442,9 +442,9 @@ async def test_add_todo_item_exception(
 ) -> None:
     """Test exception when adding a todo item to the todo list."""
 
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
@@ -454,7 +454,7 @@ async def test_add_todo_item_exception(
         # match="Unable to create new to-do `test-summary` for Habitica, please try again",
         match=exc_msg,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             TODO_DOMAIN,
             TodoServices.ADD_ITEM,
             {
@@ -468,20 +468,20 @@ async def test_add_todo_item_exception(
 
 
 async def test_delete_todo_item(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
 ) -> None:
     """Test deleting a todo item from the todo list."""
 
     uid = "2f6fcabc-f670-4ec3-ba65-817e8deea490"
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.REMOVE_ITEM,
         {ATTR_ITEM: uid},
@@ -503,12 +503,12 @@ async def test_delete_todo_item(
         (
             ERROR_TOO_MANY_REQUESTS,
             "Rate limit exceeded, try again in 5 seconds",
-            HomeAssistantError,
+            menuaiError,
         ),
     ],
 )
 async def test_delete_todo_item_exception(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
     exception: Exception,
@@ -518,9 +518,9 @@ async def test_delete_todo_item_exception(
     """Test exception when deleting a todo item from the todo list."""
 
     uid = "2f6fcabc-f670-4ec3-ba65-817e8deea490"
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
@@ -530,7 +530,7 @@ async def test_delete_todo_item_exception(
         expected_exception=expected_exception,
         match=exc_msg,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             TODO_DOMAIN,
             TodoServices.REMOVE_ITEM,
             {ATTR_ITEM: uid},
@@ -540,18 +540,18 @@ async def test_delete_todo_item_exception(
 
 
 async def test_delete_completed_todo_items(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
 ) -> None:
     """Test deleting completed todo items from the todo list."""
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.REMOVE_COMPLETED_ITEMS,
         {},
@@ -573,12 +573,12 @@ async def test_delete_completed_todo_items(
         (
             ERROR_TOO_MANY_REQUESTS,
             "Rate limit exceeded, try again in 5 seconds",
-            HomeAssistantError,
+            menuaiError,
         ),
     ],
 )
 async def test_delete_completed_todo_items_exception(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
     exception: Exception,
@@ -586,9 +586,9 @@ async def test_delete_completed_todo_items_exception(
     expected_exception: Exception,
 ) -> None:
     """Test exception when deleting completed todo items from the todo list."""
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
@@ -597,7 +597,7 @@ async def test_delete_completed_todo_items_exception(
         expected_exception=expected_exception,
         match=exc_msg,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             TODO_DOMAIN,
             TodoServices.REMOVE_COMPLETED_ITEMS,
             {},
@@ -629,10 +629,10 @@ async def test_delete_completed_todo_items_exception(
     ids=["todo", "daily"],
 )
 async def test_move_todo_item(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     entity_id: str,
     uid: str,
     second_pos: str,
@@ -642,16 +642,16 @@ async def test_move_todo_item(
 ) -> None:
     """Test move todo items."""
     reorder_response = HabiticaTaskOrderResponse.from_json(
-        await async_load_fixture(hass, fixture, DOMAIN)
+        await async_load_fixture(menuai, fixture, DOMAIN)
     )
     habitica.reorder_task.return_value = reorder_response
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     # move up to second position
     data = {
         "id": id,
@@ -716,24 +716,24 @@ async def test_move_todo_item(
     ],
 )
 async def test_move_todo_item_exception(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     exception: Exception,
     exc_msg: str,
 ) -> None:
     """Test exception when moving todo item."""
 
     uid = "1aa3137e-ef72-4d1f-91ee-41933602f438"
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
     habitica.reorder_task.side_effect = exception
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
 
     data = {
         "id": id,
@@ -777,7 +777,7 @@ async def test_move_todo_item_exception(
 )
 @pytest.mark.usefixtures("set_tz")
 async def test_next_due_date(
-    hass: HomeAssistant,
+    menuai: menuai,
     fixture: str,
     calculated_due_date: str | None,
     config_entry: MockConfigEntry,
@@ -789,18 +789,18 @@ async def test_next_due_date(
 
     habitica.get_tasks.side_effect = [
         HabiticaTasksResponse.from_json(
-            await async_load_fixture(hass, fixture, DOMAIN)
+            await async_load_fixture(menuai, fixture, DOMAIN)
         ),
         HabiticaTasksResponse.from_dict({"success": True, "data": []}),
     ]
 
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
-    result = await hass.services.async_call(
+    result = await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.GET_ITEMS,
         {},

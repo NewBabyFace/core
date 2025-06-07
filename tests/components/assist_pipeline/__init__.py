@@ -3,7 +3,7 @@
 from dataclasses import asdict
 from unittest.mock import ANY
 
-from homeassistant.components import assist_pipeline
+from menuai.components import assist_pipeline
 
 MANY_LANGUAGES = [
     "ar",

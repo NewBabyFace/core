@@ -40,7 +40,7 @@ EVENT_CAMERA_MOTION = "camera_motion"
 EVENT_CAMERA_PERSON = "camera_person"
 EVENT_CAMERA_SOUND = "camera_sound"
 
-# Mapping of supported device traits to home assistant event types.  Devices
+# Mapping of supported device traits to MenuAI event types.  Devices
 # that support these traits will generate Pub/Sub event messages in
 # the EVENT_NAME_MAP
 DEVICE_TRAIT_TRIGGER_MAP = {
@@ -51,7 +51,7 @@ DEVICE_TRAIT_TRIGGER_MAP = {
 }
 
 
-# Mapping of incoming SDM Pub/Sub event message types to the home assistant
+# Mapping of incoming SDM Pub/Sub event message types to the MenuAI
 # event type to fire.
 EVENT_NAME_MAP = {
     DoorbellChimeEvent.NAME.value: EVENT_DOORBELL_CHIME,

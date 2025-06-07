@@ -8,7 +8,7 @@ from typing import Any
 from thinqconnect import DeviceType
 from thinqconnect.integration import ExtendedProperty
 
-from homeassistant.components.water_heater import (
+from menuai.components.water_heater import (
     ATTR_OPERATION_MODE,
     STATE_ECO,
     STATE_HEAT_PUMP,
@@ -18,9 +18,9 @@ from homeassistant.components.water_heater import (
     WaterHeaterEntityDescription,
     WaterHeaterEntityFeature,
 )
-from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import ATTR_TEMPERATURE, UnitOfTemperature
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import ThinqConfigEntry
 from .coordinator import DeviceDataUpdateCoordinator
@@ -50,7 +50,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ThinqConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

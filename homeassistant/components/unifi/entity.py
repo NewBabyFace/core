@@ -17,15 +17,15 @@ from aiounifi.interfaces.api_handlers import (
 from aiounifi.models.api import ApiItemT
 from aiounifi.models.event import Event, EventKey
 
-from homeassistant.core import callback
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.device_registry import (
+from menuai.core import callback
+from menuai.helpers import entity_registry as er
+from menuai.helpers.device_registry import (
     CONNECTION_NETWORK_MAC,
     DeviceEntryType,
     DeviceInfo,
 )
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import Entity, EntityDescription
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity import Entity, EntityDescription
 
 from .const import ATTR_MANUFACTURER, DOMAIN
 
@@ -159,7 +159,7 @@ class UnifiEntity(Entity, Generic[HandlerT, ApiItemT]):
         self._attr_name = description.name_fn(obj)
         self.async_initiate_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
         description = self.entity_description
         handler = description.api_handler_fn(self.api)
@@ -184,7 +184,7 @@ class UnifiEntity(Entity, Generic[HandlerT, ApiItemT]):
         # State change from hub or websocket
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 self.hub.signal_reachable,
                 self.async_signal_reachable_callback,
             )
@@ -193,7 +193,7 @@ class UnifiEntity(Entity, Generic[HandlerT, ApiItemT]):
         # Config entry options updated
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 self.hub.signal_options_update,
                 self.async_signal_options_updated,
             )
@@ -212,12 +212,12 @@ class UnifiEntity(Entity, Generic[HandlerT, ApiItemT]):
     def async_signalling_callback(self, event: ItemEvent, obj_id: str) -> None:
         """Update the entity state."""
         if event is ItemEvent.DELETED and obj_id == self._obj_id:
-            self.hass.async_create_task(self.remove_item({obj_id}))
+            self.menuai.async_create_task(self.remove_item({obj_id}))
             return
 
         description = self.entity_description
         if not description.supported_fn(self.hub, self._obj_id):
-            self.hass.async_create_task(self.remove_item({self._obj_id}))
+            self.menuai.async_create_task(self.remove_item({self._obj_id}))
             return
 
         self._attr_available = description.available_fn(self.hub, self._obj_id)
@@ -240,7 +240,7 @@ class UnifiEntity(Entity, Generic[HandlerT, ApiItemT]):
             return
         self._removed = True
         if self.registry_entry:
-            er.async_get(self.hass).async_remove(self.entity_id)
+            er.async_get(self.menuai).async_remove(self.entity_id)
         else:
             await self.async_remove(force_remove=True)
 

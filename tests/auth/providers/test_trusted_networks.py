@@ -3,34 +3,34 @@
 from ipaddress import ip_address, ip_network
 from unittest.mock import Mock, patch
 
-from hass_nabucasa import remote
+from menuai_nabucasa import remote
 import pytest
 import voluptuous as vol
 
-from homeassistant import auth
-from homeassistant.auth import auth_store
-from homeassistant.auth.providers import trusted_networks as tn_auth
-from homeassistant.components.http import CONF_TRUSTED_PROXIES, CONF_USE_X_FORWARDED_FOR
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.setup import async_setup_component
+from menuai import auth
+from menuai.auth import auth_store
+from menuai.auth.providers import trusted_networks as tn_auth
+from menuai.components.http import CONF_TRUSTED_PROXIES, CONF_USE_X_FORWARDED_FOR
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.setup import async_setup_component
 
 
 @pytest.fixture
-async def store(hass: HomeAssistant) -> auth_store.AuthStore:
+async def store(menuai: menuai) -> auth_store.AuthStore:
     """Mock store."""
-    store = auth_store.AuthStore(hass)
+    store = auth_store.AuthStore(menuai)
     await store.async_load()
     return store
 
 
 @pytest.fixture
 def provider(
-    hass: HomeAssistant, store: auth_store.AuthStore
+    menuai: menuai, store: auth_store.AuthStore
 ) -> tn_auth.TrustedNetworksAuthProvider:
     """Mock provider."""
     return tn_auth.TrustedNetworksAuthProvider(
-        hass,
+        menuai,
         store,
         tn_auth.CONFIG_SCHEMA(
             {
@@ -48,11 +48,11 @@ def provider(
 
 @pytest.fixture
 def provider_with_user(
-    hass: HomeAssistant, store: auth_store.AuthStore
+    menuai: menuai, store: auth_store.AuthStore
 ) -> tn_auth.TrustedNetworksAuthProvider:
     """Mock provider with trusted users config."""
     return tn_auth.TrustedNetworksAuthProvider(
-        hass,
+        menuai,
         store,
         tn_auth.CONFIG_SCHEMA(
             {
@@ -76,11 +76,11 @@ def provider_with_user(
 
 @pytest.fixture
 def provider_bypass_login(
-    hass: HomeAssistant, store: auth_store.AuthStore
+    menuai: menuai, store: auth_store.AuthStore
 ) -> tn_auth.TrustedNetworksAuthProvider:
     """Mock provider with allow_bypass_login config."""
     return tn_auth.TrustedNetworksAuthProvider(
-        hass,
+        menuai,
         store,
         tn_auth.CONFIG_SCHEMA(
             {
@@ -99,23 +99,23 @@ def provider_bypass_login(
 
 @pytest.fixture
 def manager(
-    hass: HomeAssistant,
+    menuai: menuai,
     store: auth_store.AuthStore,
     provider: tn_auth.TrustedNetworksAuthProvider,
 ) -> auth.AuthManager:
     """Mock manager."""
-    return auth.AuthManager(hass, store, {(provider.type, provider.id): provider}, {})
+    return auth.AuthManager(menuai, store, {(provider.type, provider.id): provider}, {})
 
 
 @pytest.fixture
 def manager_with_user(
-    hass: HomeAssistant,
+    menuai: menuai,
     store: auth_store.AuthStore,
     provider_with_user: tn_auth.TrustedNetworksAuthProvider,
 ) -> auth.AuthManager:
     """Mock manager with trusted user."""
     return auth.AuthManager(
-        hass,
+        menuai,
         store,
         {(provider_with_user.type, provider_with_user.id): provider_with_user},
         {},
@@ -124,13 +124,13 @@ def manager_with_user(
 
 @pytest.fixture
 def manager_bypass_login(
-    hass: HomeAssistant,
+    menuai: menuai,
     store: auth_store.AuthStore,
     provider_bypass_login: tn_auth.TrustedNetworksAuthProvider,
 ) -> auth.AuthManager:
     """Mock manager with allow bypass login."""
     return auth.AuthManager(
-        hass,
+        menuai,
         store,
         {(provider_bypass_login.type, provider_bypass_login.id): provider_bypass_login},
         {},
@@ -198,12 +198,12 @@ async def test_validate_access(provider: tn_auth.TrustedNetworksAuthProvider) ->
 
 
 async def test_validate_access_proxy(
-    hass: HomeAssistant, provider: tn_auth.TrustedNetworksAuthProvider
+    menuai: menuai, provider: tn_auth.TrustedNetworksAuthProvider
 ) -> None:
     """Test validate access from trusted networks are blocked from proxy."""
 
     await async_setup_component(
-        hass,
+        menuai,
         "http",
         {
             "http": {
@@ -223,11 +223,11 @@ async def test_validate_access_proxy(
 
 
 async def test_validate_access_cloud(
-    hass: HomeAssistant, provider: tn_auth.TrustedNetworksAuthProvider
+    menuai: menuai, provider: tn_auth.TrustedNetworksAuthProvider
 ) -> None:
     """Test validate access from trusted networks are blocked from cloud."""
     await async_setup_component(
-        hass,
+        menuai,
         "http",
         {
             "http": {
@@ -236,7 +236,7 @@ async def test_validate_access_cloud(
             }
         },
     )
-    hass.config.components.add("cloud")
+    menuai.config.components.add("cloud")
 
     provider.async_validate_access(ip_address("192.168.128.2"))
 

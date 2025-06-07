@@ -6,11 +6,11 @@ from aiohttp import ClientError
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.climate import DOMAIN as CLIMATE_DOMAIN
-from homeassistant.const import ATTR_ENTITY_ID, ATTR_TEMPERATURE
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from menuai.components.climate import DOMAIN as CLIMATE_DOMAIN
+from menuai.const import ATTR_ENTITY_ID, ATTR_TEMPERATURE
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry, snapshot_platform
 
@@ -31,7 +31,7 @@ SERVICE_SET_TEMPERATURE = "set_temperature"
 
 
 async def test_climate_states(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_miele_client: MagicMock,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
@@ -39,12 +39,12 @@ async def test_climate_states(
 ) -> None:
     """Test climate entity state."""
 
-    await snapshot_platform(hass, entity_registry, snapshot, setup_platform.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, setup_platform.entry_id)
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_climate_states_api_push(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_miele_client: MagicMock,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
@@ -53,17 +53,17 @@ async def test_climate_states_api_push(
 ) -> None:
     """Test climate state when the API pushes data via SSE."""
 
-    await snapshot_platform(hass, entity_registry, snapshot, setup_platform.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, setup_platform.entry_id)
 
 
 async def test_set_target(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_miele_client: MagicMock,
     setup_platform: MockConfigEntry,
 ) -> None:
     """Test the climate can be turned on/off."""
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TEST_PLATFORM,
         SERVICE_SET_TEMPERATURE,
         {ATTR_ENTITY_ID: ENTITY_ID, ATTR_TEMPERATURE: -17},
@@ -75,7 +75,7 @@ async def test_set_target(
 
 
 async def test_api_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_miele_client: MagicMock,
     setup_platform: MockConfigEntry,
 ) -> None:
@@ -83,9 +83,9 @@ async def test_api_failure(
     mock_miele_client.set_target_temperature.side_effect = ClientError
 
     with pytest.raises(
-        HomeAssistantError, match=f"Failed to set state for {ENTITY_ID}"
+        menuaiError, match=f"Failed to set state for {ENTITY_ID}"
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             TEST_PLATFORM,
             SERVICE_SET_TEMPERATURE,
             {ATTR_ENTITY_ID: ENTITY_ID, ATTR_TEMPERATURE: -17},

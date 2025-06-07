@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from functools import lru_cache
 
-from homeassistant.util import dt as dt_util, slugify
+from menuai.util import dt as dt_util, slugify
 
 from .registry import BaseRegistryItems
 

@@ -4,9 +4,9 @@ import logging
 
 import switchbot
 
-from homeassistant.components import bluetooth
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.components import bluetooth
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_ADDRESS,
     CONF_MAC,
     CONF_NAME,
@@ -14,9 +14,9 @@ from homeassistant.const import (
     CONF_SENSOR_TYPE,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import device_registry as dr
 
 from .const import (
     CONF_ENCRYPTION_KEY,
@@ -26,7 +26,7 @@ from .const import (
     DEFAULT_RETRY_COUNT,
     DOMAIN,
     ENCRYPTED_MODELS,
-    HASS_SENSOR_TYPE_TO_SWITCHBOT_MODEL,
+    menuai_SENSOR_TYPE_TO_SWITCHBOT_MODEL,
     SupportedModels,
 )
 from .coordinator import SwitchbotConfigEntry, SwitchbotDataUpdateCoordinator
@@ -123,7 +123,7 @@ CLASS_BY_DEVICE = {
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: SwitchbotConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: SwitchbotConfigEntry) -> bool:
     """Set up Switchbot from a config entry."""
     assert entry.unique_id is not None
     if CONF_ADDRESS not in entry.data and CONF_MAC in entry.data:
@@ -132,19 +132,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: SwitchbotConfigEntry) ->
         mac = entry.data[CONF_MAC]
         if "-" not in mac:
             mac = dr.format_mac(mac)
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry,
             data={**entry.data, CONF_ADDRESS: mac},
         )
 
     if not entry.options:
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry,
             options={CONF_RETRY_COUNT: DEFAULT_RETRY_COUNT},
         )
 
     sensor_type: str = entry.data[CONF_SENSOR_TYPE]
-    switchbot_model = HASS_SENSOR_TYPE_TO_SWITCHBOT_MODEL[sensor_type]
+    switchbot_model = menuai_SENSOR_TYPE_TO_SWITCHBOT_MODEL[sensor_type]
     # connectable means we can make connections to the device
     connectable = switchbot_model in CONNECTABLE_SUPPORTED_MODEL_TYPES
     address: str = entry.data[CONF_ADDRESS]
@@ -152,7 +152,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: SwitchbotConfigEntry) ->
     await switchbot.close_stale_connections_by_address(address)
 
     ble_device = bluetooth.async_ble_device_from_address(
-        hass, address.upper(), connectable
+        menuai, address.upper(), connectable
     )
     if not ble_device:
         raise ConfigEntryNotReady(
@@ -185,7 +185,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: SwitchbotConfigEntry) ->
         )
 
     coordinator = entry.runtime_data = SwitchbotDataUpdateCoordinator(
-        hass,
+        menuai,
         _LOGGER,
         ble_device,
         device,
@@ -203,21 +203,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: SwitchbotConfigEntry) ->
         )
 
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
-    await hass.config_entries.async_forward_entry_setups(
+    await menuai.config_entries.async_forward_entry_setups(
         entry, PLATFORMS_BY_TYPE[sensor_type]
     )
 
     return True
 
 
-async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def _async_update_listener(menuai: menuai, entry: ConfigEntry) -> None:
     """Handle options update."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     sensor_type = entry.data[CONF_SENSOR_TYPE]
-    return await hass.config_entries.async_unload_platforms(
+    return await menuai.config_entries.async_unload_platforms(
         entry, PLATFORMS_BY_TYPE[sensor_type]
     )

@@ -6,20 +6,20 @@ from typing import Any
 
 from elgato import ElgatoError
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_TEMP_KELVIN,
     ATTR_HS_COLOR,
     ColorMode,
     LightEntity,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import (
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     async_get_current_platform,
 )
-from homeassistant.util import color as color_util
+from menuai.util import color as color_util
 
 from .const import SERVICE_IDENTIFY
 from .coordinator import ElgatoConfigEntry, ElgatoDataUpdateCoordinator
@@ -29,7 +29,7 @@ PARALLEL_UPDATES = 1
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ElgatoConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -110,7 +110,7 @@ class ElgatoLight(ElgatoEntity, LightEntity):
         try:
             await self.coordinator.client.light(on=False)
         except ElgatoError as error:
-            raise HomeAssistantError(
+            raise menuaiError(
                 "An error occurred while updating the Elgato Light"
             ) from error
         finally:
@@ -157,7 +157,7 @@ class ElgatoLight(ElgatoEntity, LightEntity):
                 temperature=temperature,
             )
         except ElgatoError as error:
-            raise HomeAssistantError(
+            raise menuaiError(
                 "An error occurred while updating the Elgato Light"
             ) from error
         finally:
@@ -168,6 +168,6 @@ class ElgatoLight(ElgatoEntity, LightEntity):
         try:
             await self.coordinator.client.identify()
         except ElgatoError as error:
-            raise HomeAssistantError(
+            raise menuaiError(
                 "An error occurred while identifying the Elgato Light"
             ) from error

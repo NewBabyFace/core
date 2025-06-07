@@ -1,9 +1,9 @@
 """Tests Starlink integration init/unload."""
 
-from homeassistant.components.starlink.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_IP_ADDRESS
-from homeassistant.core import HomeAssistant
+from menuai.components.starlink.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.const import CONF_IP_ADDRESS
+from menuai.core import menuai
 
 from .patchers import (
     HISTORY_STATS_SUCCESS_PATCHER,
@@ -15,7 +15,7 @@ from .patchers import (
 from tests.common import MockConfigEntry
 
 
-async def test_successful_entry(hass: HomeAssistant) -> None:
+async def test_successful_entry(menuai: menuai) -> None:
     """Test configuring Starlink."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -28,17 +28,17 @@ async def test_successful_entry(hass: HomeAssistant) -> None:
         SLEEP_DATA_SUCCESS_PATCHER,
         HISTORY_STATS_SUCCESS_PATCHER,
     ):
-        entry.add_to_hass(hass)
+        entry.add_to_menuai(menuai)
 
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
         assert entry.runtime_data
         assert entry.runtime_data.data
         assert entry.state is ConfigEntryState.LOADED
 
 
-async def test_unload_entry(hass: HomeAssistant) -> None:
+async def test_unload_entry(menuai: menuai) -> None:
     """Test removing Starlink."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -51,12 +51,12 @@ async def test_unload_entry(hass: HomeAssistant) -> None:
         SLEEP_DATA_SUCCESS_PATCHER,
         HISTORY_STATS_SUCCESS_PATCHER,
     ):
-        entry.add_to_hass(hass)
+        entry.add_to_menuai(menuai)
 
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
-        assert await hass.config_entries.async_unload(entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_unload(entry.entry_id)
+        await menuai.async_block_till_done()
 
         assert entry.state is ConfigEntryState.NOT_LOADED

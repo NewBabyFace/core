@@ -5,13 +5,13 @@ from __future__ import annotations
 from datetime import datetime
 import logging
 
-from homeassistant.components.calendar import CalendarEntity, CalendarEvent
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.util import dt as dt_util
+from menuai.components.calendar import CalendarEntity, CalendarEvent
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
+from menuai.util import dt as dt_util
 
 from .coordinator import RainbirdScheduleUpdateCoordinator
 from .types import RainbirdConfigEntry
@@ -20,7 +20,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: RainbirdConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -86,12 +86,12 @@ class RainBirdCalendarEntity(
         )
 
     async def async_get_events(
-        self, hass: HomeAssistant, start_date: datetime, end_date: datetime
+        self, menuai: menuai, start_date: datetime, end_date: datetime
     ) -> list[CalendarEvent]:
         """Get all events in a specific time frame."""
         schedule = self.coordinator.data
         if not schedule:
-            raise HomeAssistantError(
+            raise menuaiError(
                 "Unable to get events: No data from controller yet"
             )
         cursor = schedule.timeline_tz(start_date.tzinfo).overlapping(
@@ -108,15 +108,15 @@ class RainBirdCalendarEntity(
             for program_event in cursor
         ]
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai."""
+        await super().async_added_to_menuai()
 
         # We do not ask for an update with async_add_entities()
         # because it will update disabled entities. This is started as a
         # task to let it sync in the background without blocking startup
         self.coordinator.config_entry.async_create_background_task(
-            self.hass,
+            self.menuai,
             self.coordinator.async_request_refresh(),
             "rainbird.calendar-refresh",
         )

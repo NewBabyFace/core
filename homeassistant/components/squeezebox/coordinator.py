@@ -11,10 +11,10 @@ from typing import TYPE_CHECKING, Any
 from pysqueezebox import Player, Server
 from pysqueezebox.player import Alarm
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 if TYPE_CHECKING:
     from . import SqueezeboxConfigEntry
@@ -36,11 +36,11 @@ class LMSStatusDataUpdateCoordinator(DataUpdateCoordinator):
     config_entry: SqueezeboxConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: SqueezeboxConfigEntry, lms: Server
+        self, menuai: menuai, config_entry: SqueezeboxConfigEntry, lms: Server
     ) -> None:
         """Initialize my coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=lms.name,
@@ -84,14 +84,14 @@ class SqueezeBoxPlayerUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: SqueezeboxConfigEntry,
         player: Player,
         server_uuid: str,
     ) -> None:
         """Initialize the coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=player.name,
@@ -117,7 +117,7 @@ class SqueezeBoxPlayerUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
                 # start listening for restored players
                 self._remove_dispatcher = async_dispatcher_connect(
-                    self.hass, SIGNAL_PLAYER_REDISCOVERED, self.rediscovered
+                    self.menuai, SIGNAL_PLAYER_REDISCOVERED, self.rediscovered
                 )
 
         alarm_dict: dict[str, Alarm] = (

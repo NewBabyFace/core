@@ -10,13 +10,13 @@ from zwave_js_server.const import TARGET_VALUE_PROPERTY
 from zwave_js_server.model.driver import Driver
 from zwave_js_server.model.value import Value
 
-from homeassistant.components.number import DOMAIN as NUMBER_DOMAIN, NumberEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.number import DOMAIN as NUMBER_DOMAIN, NumberEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import EntityCategory
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import ATTR_RESERVED_VALUES, DATA_CLIENT, DOMAIN
 from .discovery import ZwaveDiscoveryInfo
@@ -26,7 +26,7 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -51,7 +51,7 @@ async def async_setup_entry(
 
     config_entry.async_on_unload(
         async_dispatcher_connect(
-            hass,
+            menuai,
             f"{DOMAIN}_{config_entry.entry_id}_add_{NUMBER_DOMAIN}",
             async_add_number,
         )
@@ -104,7 +104,7 @@ class ZwaveNumberEntity(ZWaveBaseEntity, NumberEntity):
     async def async_set_native_value(self, value: float) -> None:
         """Set new value."""
         if (target_value := self._target_value) is None:
-            raise HomeAssistantError("Missing target value on device.")
+            raise menuaiError("Missing target value on device.")
         await self._async_set_value(target_value, value)
 
 

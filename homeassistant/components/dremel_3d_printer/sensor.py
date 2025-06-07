@@ -8,24 +8,24 @@ from datetime import datetime, timedelta
 
 from dremel3dpy import Dremel3DPrinter
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     PERCENTAGE,
     EntityCategory,
     UnitOfInformation,
     UnitOfTemperature,
     UnitOfTime,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
-from homeassistant.util.dt import utcnow
-from homeassistant.util.variance import ignore_variance
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
+from menuai.util.dt import utcnow
+from menuai.util.variance import ignore_variance
 
 from .const import ATTR_EXTRUDER, ATTR_PLATFORM
 from .coordinator import DremelConfigEntry
@@ -233,7 +233,7 @@ SENSOR_TYPES: tuple[Dremel3DPrinterSensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: DremelConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

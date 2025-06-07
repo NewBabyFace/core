@@ -2,10 +2,10 @@
 
 import logging
 
-from homeassistant.components.binary_sensor import BinarySensorEntity
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.binary_sensor import BinarySensorEntity
+from menuai.core import menuai
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import AlarmDecoderConfigEntry
 from .const import (
@@ -38,7 +38,7 @@ ATTR_RF_LOOP1 = "rf_loop1"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: AlarmDecoderConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -103,27 +103,27 @@ class AlarmDecoderBinarySensor(AlarmDecoderEntity, BinarySensorEntity):
             CONF_ZONE_NUMBER: self._zone_number,
         }
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
         self.async_on_remove(
-            async_dispatcher_connect(self.hass, SIGNAL_ZONE_FAULT, self._fault_callback)
+            async_dispatcher_connect(self.menuai, SIGNAL_ZONE_FAULT, self._fault_callback)
         )
 
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, SIGNAL_ZONE_RESTORE, self._restore_callback
+                self.menuai, SIGNAL_ZONE_RESTORE, self._restore_callback
             )
         )
 
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, SIGNAL_RFX_MESSAGE, self._rfx_message_callback
+                self.menuai, SIGNAL_RFX_MESSAGE, self._rfx_message_callback
             )
         )
 
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, SIGNAL_REL_MESSAGE, self._rel_message_callback
+                self.menuai, SIGNAL_REL_MESSAGE, self._rel_message_callback
             )
         )
 

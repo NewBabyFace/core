@@ -9,18 +9,18 @@ from typing import cast
 from mill import Heater, Mill
 from mill_local import Mill as MillLocal
 
-from homeassistant.components.recorder import get_instance
-from homeassistant.components.recorder.models import StatisticData, StatisticMetaData
-from homeassistant.components.recorder.statistics import (
+from menuai.components.recorder import get_instance
+from menuai.components.recorder.models import StatisticData, StatisticMetaData
+from menuai.components.recorder.statistics import (
     async_add_external_statistics,
     get_last_statistics,
     statistics_during_period,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import UnitOfEnergy
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-from homeassistant.util import dt as dt_util, slugify
+from menuai.config_entries import ConfigEntry
+from menuai.const import UnitOfEnergy
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.util import dt as dt_util, slugify
 
 from .const import DOMAIN
 
@@ -36,7 +36,7 @@ class MillDataUpdateCoordinator(DataUpdateCoordinator):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         mill_data_connection: Mill | MillLocal,
         update_interval: timedelta,
@@ -45,7 +45,7 @@ class MillDataUpdateCoordinator(DataUpdateCoordinator):
         self.mill_data_connection = mill_data_connection
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -59,7 +59,7 @@ class MillHistoricDataUpdateCoordinator(DataUpdateCoordinator):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         *,
         mill_data_connection: Mill,
     ) -> None:
@@ -67,7 +67,7 @@ class MillHistoricDataUpdateCoordinator(DataUpdateCoordinator):
         self.mill_data_connection = mill_data_connection
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             name="MillHistoricDataUpdateCoordinator",
         )
@@ -79,14 +79,14 @@ class MillHistoricDataUpdateCoordinator(DataUpdateCoordinator):
             timedelta(hours=1) + now.replace(minute=1, second=0) - now
         )
 
-        recoder_instance = get_instance(self.hass)
+        recoder_instance = get_instance(self.menuai)
         for dev_id, heater in self.mill_data_connection.devices.items():
             if not isinstance(heater, Heater):
                 continue
             statistic_id = f"{DOMAIN}:energy_{slugify(dev_id)}"
 
             last_stats = await recoder_instance.async_add_executor_job(
-                get_last_statistics, self.hass, 1, statistic_id, True, set()
+                get_last_statistics, self.menuai, 1, statistic_id, True, set()
             )
             if not last_stats or not last_stats.get(statistic_id):
                 hourly_data = (
@@ -116,7 +116,7 @@ class MillHistoricDataUpdateCoordinator(DataUpdateCoordinator):
                 start_time = next(iter(hourly_data))
                 stats = await recoder_instance.async_add_executor_job(
                     statistics_during_period,
-                    self.hass,
+                    self.menuai,
                     start_time,
                     None,
                     {statistic_id},
@@ -152,4 +152,4 @@ class MillHistoricDataUpdateCoordinator(DataUpdateCoordinator):
                 statistic_id=statistic_id,
                 unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
             )
-            async_add_external_statistics(self.hass, metadata, statistics)
+            async_add_external_statistics(self.menuai, metadata, statistics)

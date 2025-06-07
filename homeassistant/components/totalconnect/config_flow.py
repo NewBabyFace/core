@@ -9,15 +9,15 @@ from total_connect_client.client import TotalConnectClient
 from total_connect_client.exceptions import AuthenticationError
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_LOCATION, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import callback
-from homeassistant.helpers.typing import VolDictType
+from menuai.const import CONF_LOCATION, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import callback
+from menuai.helpers.typing import VolDictType
 
 from .const import AUTO_BYPASS, CODE_REQUIRED, CONF_USERCODES, DOMAIN
 
@@ -52,7 +52,7 @@ class TotalConnectConfigFlow(ConfigFlow, domain=DOMAIN):
             self._abort_if_unique_id_configured()
 
             try:
-                client = await self.hass.async_add_executor_job(
+                client = await self.menuai.async_add_executor_job(
                     TotalConnectClient, username, password, None
                 )
             except AuthenticationError:
@@ -80,7 +80,7 @@ class TotalConnectConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             for location_id in self.usercodes:
                 if self.usercodes[location_id] is None:
-                    valid = await self.hass.async_add_executor_job(
+                    valid = await self.menuai.async_add_executor_job(
                         self.client.locations[location_id].set_usercode,
                         user_input[CONF_USERCODES],
                     )
@@ -106,7 +106,7 @@ class TotalConnectConfigFlow(ConfigFlow, domain=DOMAIN):
                 )
         else:
             # Force the loading of locations using I/O
-            number_locations = await self.hass.async_add_executor_job(
+            number_locations = await self.menuai.async_add_executor_job(
                 self.client.get_number_locations,
             )
             if number_locations < 1:
@@ -157,7 +157,7 @@ class TotalConnectConfigFlow(ConfigFlow, domain=DOMAIN):
             )
 
         try:
-            await self.hass.async_add_executor_job(
+            await self.menuai.async_add_executor_job(
                 TotalConnectClient,
                 self.username,
                 user_input[CONF_PASSWORD],
@@ -179,10 +179,10 @@ class TotalConnectConfigFlow(ConfigFlow, domain=DOMAIN):
             CONF_PASSWORD: user_input[CONF_PASSWORD],
             CONF_USERCODES: self.usercodes,
         }
-        self.hass.config_entries.async_update_entry(existing_entry, data=new_entry)
+        self.menuai.config_entries.async_update_entry(existing_entry, data=new_entry)
 
-        self.hass.async_create_task(
-            self.hass.config_entries.async_reload(existing_entry.entry_id)
+        self.menuai.async_create_task(
+            self.menuai.config_entries.async_reload(existing_entry.entry_id)
         )
 
         return self.async_abort(reason="reauth_successful")

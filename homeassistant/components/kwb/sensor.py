@@ -5,22 +5,22 @@ from __future__ import annotations
 from pykwb import kwb
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
     SensorEntity,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_DEVICE,
     CONF_HOST,
     CONF_NAME,
     CONF_PORT,
     CONF_TYPE,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 DEFAULT_RAW = False
 DEFAULT_NAME = "KWB"
@@ -53,7 +53,7 @@ PLATFORM_SCHEMA = vol.Schema(vol.Any(SERIAL_SCHEMA, ETHERNET_SCHEMA))
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -75,7 +75,7 @@ def setup_platform(
 
     easyfire.run_thread()
 
-    hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, lambda event: easyfire.stop_thread())
+    menuai.bus.listen_once(EVENT_menuai_STOP, lambda event: easyfire.stop_thread())
 
     add_entities(
         KWBSensor(easyfire, sensor, client_name)

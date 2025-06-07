@@ -10,11 +10,11 @@ from pyschlage import Lock, Schlage
 from pyschlage.exceptions import Error as SchlageError, NotAuthorizedError
 from pyschlage.log import LockLog
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers import device_registry as dr
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN, LOGGER, UPDATE_INTERVAL
 
@@ -44,14 +44,14 @@ class SchlageDataUpdateCoordinator(DataUpdateCoordinator[SchlageData]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: SchlageConfigEntry,
         username: str,
         api: Schlage,
     ) -> None:
         """Initialize the class."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name=f"{DOMAIN} ({username})",
@@ -65,7 +65,7 @@ class SchlageDataUpdateCoordinator(DataUpdateCoordinator[SchlageData]):
     async def _async_update_data(self) -> SchlageData:
         """Fetch the latest data from the Schlage API."""
         try:
-            locks = await self.hass.async_add_executor_job(self.api.locks)
+            locks = await self.menuai.async_add_executor_job(self.api.locks)
         except NotAuthorizedError as ex:
             raise ConfigEntryAuthFailed from ex
         except SchlageError as ex:
@@ -74,7 +74,7 @@ class SchlageDataUpdateCoordinator(DataUpdateCoordinator[SchlageData]):
             ) from ex
         lock_data = await asyncio.gather(
             *(
-                self.hass.async_add_executor_job(self._get_lock_data, lock)
+                self.menuai.async_add_executor_job(self._get_lock_data, lock)
                 for lock in locks
             )
         )
@@ -99,7 +99,7 @@ class SchlageDataUpdateCoordinator(DataUpdateCoordinator[SchlageData]):
     @callback
     def _add_remove_locks(self) -> None:
         """Add newly discovered locks and remove nonexistent locks."""
-        device_registry = dr.async_get(self.hass)
+        device_registry = dr.async_get(self.menuai)
         devices = dr.async_entries_for_config_entry(
             device_registry, self.config_entry.entry_id
         )

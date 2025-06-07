@@ -10,10 +10,10 @@ from syrupy.assertion import SnapshotAssertion
 from tplink_omada_client.definitions import DeviceStatus, DeviceStatusCategory
 from tplink_omada_client.devices import OmadaGatewayPortStatus, OmadaListDevice
 
-from homeassistant.components.tplink_omada.const import DOMAIN
-from homeassistant.components.tplink_omada.coordinator import POLL_DEVICES
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.tplink_omada.const import DOMAIN
+from menuai.components.tplink_omada.coordinator import POLL_DEVICES
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from tests.common import (
     MockConfigEntry,
@@ -27,39 +27,39 @@ POLL_INTERVAL = timedelta(seconds=POLL_DEVICES)
 
 @pytest.fixture
 async def init_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_omada_client: MagicMock,
 ) -> MockConfigEntry:
     """Set up the TP-Link Omada integration for testing."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    with patch("homeassistant.components.tplink_omada.PLATFORMS", ["sensor"]):
-        assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+    with patch("menuai.components.tplink_omada.PLATFORMS", ["sensor"]):
+        assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     return mock_config_entry
 
 
 async def test_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     init_integration: MockConfigEntry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test the creation of the TP-Link Omada sensor entities."""
-    await snapshot_platform(hass, entity_registry, snapshot, init_integration.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, init_integration.entry_id)
 
 
 async def test_device_specific_status(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_integration: MockConfigEntry,
     mock_omada_site_client: MagicMock,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test a connection status is reported from known detailed status."""
     entity_id = "sensor.test_poe_switch_device_status"
-    entity = hass.states.get(entity_id)
+    entity = menuai.states.get(entity_id)
     assert entity is not None
     assert entity.state == "connected"
 
@@ -70,22 +70,22 @@ async def test_device_specific_status(
     )
 
     freezer.tick(POLL_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    entity = hass.states.get(entity_id)
+    entity = menuai.states.get(entity_id)
     assert entity.state == "adopt_failed"
 
 
 async def test_device_category_status(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_integration: MockConfigEntry,
     mock_omada_site_client: MagicMock,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test a connection status is reported, with fallback to status category."""
     entity_id = "sensor.test_poe_switch_device_status"
-    entity = hass.states.get(entity_id)
+    entity = menuai.states.get(entity_id)
     assert entity is not None
     assert entity.state == "connected"
 
@@ -96,10 +96,10 @@ async def test_device_category_status(
     )
 
     freezer.tick(POLL_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    entity = hass.states.get(entity_id)
+    entity = menuai.states.get(entity_id)
     assert entity.state == "pending"
 
 

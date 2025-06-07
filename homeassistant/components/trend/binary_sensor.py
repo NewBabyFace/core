@@ -11,15 +11,15 @@ from typing import Any
 import numpy as np
 import voluptuous as vol
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     DEVICE_CLASSES_SCHEMA,
     ENTITY_ID_FORMAT,
     PLATFORM_SCHEMA as BINARY_SENSOR_PLATFORM_SCHEMA,
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_FRIENDLY_NAME,
     CONF_ATTRIBUTE,
@@ -31,19 +31,19 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import Event, EventStateChangedData, HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv, device_registry as dr
-from homeassistant.helpers.device import async_device_info_to_link_from_entity
-from homeassistant.helpers.entity import generate_entity_id
-from homeassistant.helpers.entity_platform import (
+from menuai.core import Event, EventStateChangedData, menuai, callback
+from menuai.helpers import config_validation as cv, device_registry as dr
+from menuai.helpers.device import async_device_info_to_link_from_entity
+from menuai.helpers.entity import generate_entity_id
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     AddEntitiesCallback,
 )
-from homeassistant.helpers.event import async_track_state_change_event
-from homeassistant.helpers.reload import async_setup_reload_service
-from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util.dt import utcnow
+from menuai.helpers.event import async_track_state_change_event
+from menuai.helpers.reload import async_setup_reload_service
+from menuai.helpers.restore_state import RestoreEntity
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util.dt import utcnow
 
 from . import PLATFORMS
 from .const import (
@@ -100,13 +100,13 @@ PLATFORM_SCHEMA = BINARY_SENSOR_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the trend sensors."""
-    await async_setup_reload_service(hass, DOMAIN, PLATFORMS)
+    await async_setup_reload_service(menuai, DOMAIN, PLATFORMS)
 
     entities = []
     for sensor_name, sensor_config in config[CONF_SENSORS].items():
@@ -122,7 +122,7 @@ async def async_setup_platform(
                 max_samples=sensor_config[CONF_MAX_SAMPLES],
                 device_class=sensor_config.get(CONF_DEVICE_CLASS),
                 sensor_entity_id=generate_entity_id(
-                    ENTITY_ID_FORMAT, sensor_name, hass=hass
+                    ENTITY_ID_FORMAT, sensor_name, menuai=menuai
                 ),
             )
         )
@@ -131,14 +131,14 @@ async def async_setup_platform(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up trend sensor from config entry."""
 
     device_info = async_device_info_to_link_from_entity(
-        hass,
+        menuai,
         entry.options[CONF_ENTITY_ID],
     )
 
@@ -214,8 +214,8 @@ class SensorTrend(BinarySensorEntity, RestoreEntity):
             ATTR_SAMPLE_DURATION: self._sample_duration,
         }
 
-    async def async_added_to_hass(self) -> None:
-        """Complete device setup after being added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Complete device setup after being added to menuai."""
 
         @callback
         def trend_sensor_state_listener(
@@ -243,7 +243,7 @@ class SensorTrend(BinarySensorEntity, RestoreEntity):
 
         self.async_on_remove(
             async_track_state_change_event(
-                self.hass, [self._entity_id], trend_sensor_state_listener
+                self.menuai, [self._entity_id], trend_sensor_state_listener
             )
         )
 
@@ -265,7 +265,7 @@ class SensorTrend(BinarySensorEntity, RestoreEntity):
             return
 
         # Calculate gradient of linear trend
-        await self.hass.async_add_executor_job(self._calculate_gradient)
+        await self.menuai.async_add_executor_job(self._calculate_gradient)
 
         # Update state
         self._attr_is_on = (

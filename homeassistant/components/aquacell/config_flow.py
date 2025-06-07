@@ -10,9 +10,9 @@ from aioaquacell import ApiException, AquacellApi, AuthenticationFailed
 from aioaquacell.const import SUPPORTED_BRANDS, Brand
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_EMAIL, CONF_PASSWORD
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
     CONF_BRAND,
@@ -50,7 +50,7 @@ class AquaCellConfigFlow(ConfigFlow, domain=DOMAIN):
             )
             self._abort_if_unique_id_configured()
 
-            session = async_get_clientsession(self.hass)
+            session = async_get_clientsession(self.menuai)
             api = AquacellApi(session, user_input[CONF_BRAND])
             try:
                 refresh_token = await api.authenticate(

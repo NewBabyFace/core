@@ -14,22 +14,22 @@ from gcal_sync.model import DateOrDatetime, Event
 import voluptuous as vol
 import yaml
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_DEVICE_ID,
     CONF_ENTITIES,
     CONF_NAME,
     CONF_OFFSET,
     Platform,
 )
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import (
+from menuai.core import menuai, ServiceCall
+from menuai.exceptions import (
     ConfigEntryAuthFailed,
     ConfigEntryNotReady,
-    HomeAssistantError,
+    menuaiError,
 )
-from homeassistant.helpers import config_entry_oauth2_flow, config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.entity import generate_entity_id
+from menuai.helpers import config_entry_oauth2_flow, config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.entity import generate_entity_id
 
 from .api import ApiAuthImpl, get_feature_access
 from .const import (
@@ -136,22 +136,22 @@ ADD_EVENT_SERVICE_SCHEMA = vol.All(
 )
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: GoogleConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: GoogleConfigEntry) -> bool:
     """Set up Google from a config entry."""
     # Validate google_calendars.yaml (if present) as soon as possible to return
     # helpful error messages.
     try:
-        await hass.async_add_executor_job(load_config, hass.config.path(YAML_DEVICES))
+        await menuai.async_add_executor_job(load_config, menuai.config.path(YAML_DEVICES))
     except vol.Invalid as err:
         _LOGGER.error("Configuration error in %s: %s", YAML_DEVICES, str(err))
         return False
 
     implementation = (
         await config_entry_oauth2_flow.async_get_config_entry_implementation(
-            hass, entry
+            menuai, entry
         )
     )
-    session = config_entry_oauth2_flow.OAuth2Session(hass, entry, implementation)
+    session = config_entry_oauth2_flow.OAuth2Session(menuai, entry, implementation)
     # Force a token refresh to fix a bug where tokens were persisted with
     # expires_in (relative time delta) and expires_at (absolute time) swapped.
     # A google session token typically only lasts a few days between refresh.
@@ -173,11 +173,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: GoogleConfigEntry) -> bo
             "Required scopes are not available, reauth required"
         )
     calendar_service = GoogleCalendarService(
-        ApiAuthImpl(async_get_clientsession(hass), session)
+        ApiAuthImpl(async_get_clientsession(menuai), session)
     )
     entry.runtime_data = GoogleRuntimeData(
         service=calendar_service,
-        store=LocalCalendarStore(hass, entry.entry_id),
+        store=LocalCalendarStore(menuai, entry.entry_id),
     )
 
     if entry.unique_id is None:
@@ -188,13 +188,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: GoogleConfigEntry) -> bo
         except ApiException as err:
             raise ConfigEntryNotReady from err
 
-        hass.config_entries.async_update_entry(entry, unique_id=primary_calendar.id)
+        menuai.config_entries.async_update_entry(entry, unique_id=primary_calendar.id)
 
     # Only expose the add event service if we have the correct permissions
     if get_feature_access(entry) is FeatureAccess.read_write:
-        await async_setup_add_event_service(hass, calendar_service)
+        await async_setup_add_event_service(menuai, calendar_service)
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
 
@@ -208,25 +208,25 @@ def async_entry_has_scopes(entry: GoogleConfigEntry) -> bool:
     return access.scope in token_scopes
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: GoogleConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: GoogleConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
-async def async_reload_entry(hass: HomeAssistant, entry: GoogleConfigEntry) -> None:
+async def async_reload_entry(menuai: menuai, entry: GoogleConfigEntry) -> None:
     """Reload config entry if the access options change."""
     if not async_entry_has_scopes(entry):
-        await hass.config_entries.async_reload(entry.entry_id)
+        await menuai.config_entries.async_reload(entry.entry_id)
 
 
-async def async_remove_entry(hass: HomeAssistant, entry: GoogleConfigEntry) -> None:
+async def async_remove_entry(menuai: menuai, entry: GoogleConfigEntry) -> None:
     """Handle removal of a local storage."""
-    store = LocalCalendarStore(hass, entry.entry_id)
+    store = LocalCalendarStore(menuai, entry.entry_id)
     await store.async_remove()
 
 
 async def async_setup_add_event_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     calendar_service: GoogleCalendarService,
 ) -> None:
     """Add the service to add events."""
@@ -235,7 +235,7 @@ async def async_setup_add_event_service(
         """Add a new event to calendar."""
         _LOGGER.warning(
             "The Google Calendar add_event service has been deprecated, and "
-            "will be removed in a future Home Assistant release. Please move "
+            "will be removed in a future MenuAI release. Please move "
             "calls to the create_event service"
         )
 
@@ -269,9 +269,9 @@ async def async_setup_add_event_service(
             start_dt = call.data[EVENT_START_DATETIME]
             end_dt = call.data[EVENT_END_DATETIME]
             start = DateOrDatetime(
-                date_time=start_dt, timezone=str(hass.config.time_zone)
+                date_time=start_dt, timezone=str(menuai.config.time_zone)
             )
-            end = DateOrDatetime(date_time=end_dt, timezone=str(hass.config.time_zone))
+            end = DateOrDatetime(date_time=end_dt, timezone=str(menuai.config.time_zone))
 
         if start is None or end is None:
             raise ValueError(
@@ -291,15 +291,15 @@ async def async_setup_add_event_service(
                 event,
             )
         except ApiException as err:
-            raise HomeAssistantError(str(err)) from err
+            raise menuaiError(str(err)) from err
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_ADD_EVENT, _add_event, schema=ADD_EVENT_SERVICE_SCHEMA
     )
 
 
 def get_calendar_info(
-    hass: HomeAssistant, calendar: Mapping[str, Any]
+    menuai: menuai, calendar: Mapping[str, Any]
 ) -> dict[str, Any]:
     """Convert data from Google into DEVICE_SCHEMA."""
     calendar_info: dict[str, Any] = DEVICE_SCHEMA(
@@ -309,7 +309,7 @@ def get_calendar_info(
                 {
                     CONF_NAME: calendar["summary"],
                     CONF_DEVICE_ID: generate_entity_id(
-                        "{}", calendar["summary"], hass=hass
+                        "{}", calendar["summary"], menuai=menuai
                     ),
                 }
             ],

@@ -10,23 +10,23 @@ import aiohttp
 import pyevilgenius
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import aiohttp_client
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import aiohttp_client
 
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
 
-async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
+async def validate_input(menuai: menuai, data: dict[str, Any]) -> dict[str, Any]:
     """Validate the user input allows us to connect.
 
     Data has the keys from STEP_USER_DATA_SCHEMA with values provided by the user.
     """
     hub = pyevilgenius.EvilGeniusDevice(
-        data["host"], aiohttp_client.async_get_clientsession(hass)
+        data["host"], aiohttp_client.async_get_clientsession(menuai)
     )
 
     try:
@@ -62,7 +62,7 @@ class EvilGeniusLabsConfigFlow(ConfigFlow, domain=DOMAIN):
         errors = {}
 
         try:
-            info = await validate_input(self.hass, user_input)
+            info = await validate_input(self.menuai, user_input)
         except TimeoutError:
             errors["base"] = "timeout"
         except CannotConnect:
@@ -85,5 +85,5 @@ class EvilGeniusLabsConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""

@@ -1,4 +1,4 @@
-"""API for Google Drive bound to Home Assistant OAuth."""
+"""API for Google Drive bound to MenuAI OAuth."""
 
 from __future__ import annotations
 
@@ -11,15 +11,15 @@ from aiohttp import ClientSession, ClientTimeout, StreamReader
 from aiohttp.client_exceptions import ClientError, ClientResponseError
 from google_drive_api.api import AbstractAuth, GoogleDriveApi
 
-from homeassistant.components.backup import AgentBackup, suggested_filename
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_ACCESS_TOKEN
-from homeassistant.exceptions import (
+from menuai.components.backup import AgentBackup, suggested_filename
+from menuai.config_entries import ConfigEntryState
+from menuai.const import CONF_ACCESS_TOKEN
+from menuai.exceptions import (
     ConfigEntryAuthFailed,
     ConfigEntryNotReady,
-    HomeAssistantError,
+    menuaiError,
 )
-from homeassistant.helpers import config_entry_oauth2_flow
+from menuai.helpers import config_entry_oauth2_flow
 
 _UPLOAD_AND_DOWNLOAD_TIMEOUT = 12 * 3600
 
@@ -54,9 +54,9 @@ class AsyncConfigEntryAuth(AbstractAuth):
                 raise ConfigEntryNotReady from ex
             if hasattr(ex, "status") and ex.status == 400:
                 self._oauth_session.config_entry.async_start_reauth(
-                    self._oauth_session.hass
+                    self._oauth_session.menuai
                 )
-            raise HomeAssistantError(ex) from ex
+            raise menuaiError(ex) from ex
         return str(self._oauth_session.token[CONF_ACCESS_TOKEN])
 
 
@@ -95,7 +95,7 @@ class DriveClient:
         return str(res["user"]["emailAddress"])
 
     async def async_create_ha_root_folder_if_not_exists(self) -> tuple[str, str]:
-        """Create Home Assistant folder if it doesn't exist."""
+        """Create MenuAI folder if it doesn't exist."""
         fields = "id,name"
         query = " and ".join(
             [
@@ -112,7 +112,7 @@ class DriveClient:
             return str(file["id"]), str(file["name"])
 
         file_metadata = {
-            "name": "Home Assistant",
+            "name": "MenuAI",
             "mimeType": "application/vnd.google-apps.folder",
             "properties": {
                 "home_assistant": "root",

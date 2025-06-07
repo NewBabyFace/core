@@ -5,16 +5,16 @@ from typing import Any
 
 from broadlink.exceptions import BroadlinkException
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_TEMP_KELVIN,
     ATTR_HS_COLOR,
     ColorMode,
     LightEntity,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .entity import BroadlinkEntity
@@ -27,12 +27,12 @@ BROADLINK_COLOR_MODE_SCENES = 2
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Broadlink light."""
-    device = hass.data[DOMAIN].devices[config_entry.entry_id]
+    device = menuai.data[DOMAIN].devices[config_entry.entry_id]
     lights = []
 
     if device.api.type in {"LB1", "LB2"}:

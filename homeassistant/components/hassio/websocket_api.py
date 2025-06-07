@@ -1,4 +1,4 @@
-"""Websocekt API handlers for the hassio integration."""
+"""Websocekt API handlers for the menuaiio integration."""
 
 import logging
 from numbers import Number
@@ -7,19 +7,19 @@ from typing import Any, cast
 
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.components.websocket_api import ActiveConnection
-from homeassistant.const import ATTR_NAME
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import Unauthorized
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.dispatcher import (
+from menuai.components import websocket_api
+from menuai.components.websocket_api import ActiveConnection
+from menuai.const import ATTR_NAME
+from menuai.core import menuai, callback
+from menuai.exceptions import Unauthorized
+from menuai.helpers import config_validation as cv
+from menuai.helpers.dispatcher import (
     async_dispatcher_connect,
     async_dispatcher_send,
 )
 
-from . import HassioAPIError
-from .config import HassioUpdateParametersDict
+from . import menuaiioAPIError
+from .config import menuaiioUpdateParametersDict
 from .const import (
     ATTR_DATA,
     ATTR_ENDPOINT,
@@ -60,22 +60,22 @@ _LOGGER: logging.Logger = logging.getLogger(__package__)
 
 
 @callback
-def async_load_websocket_api(hass: HomeAssistant) -> None:
+def async_load_websocket_api(menuai: menuai) -> None:
     """Set up the websocket API."""
-    websocket_api.async_register_command(hass, websocket_supervisor_event)
-    websocket_api.async_register_command(hass, websocket_supervisor_api)
-    websocket_api.async_register_command(hass, websocket_subscribe)
-    websocket_api.async_register_command(hass, websocket_update_addon)
-    websocket_api.async_register_command(hass, websocket_update_core)
-    websocket_api.async_register_command(hass, websocket_update_config_info)
-    websocket_api.async_register_command(hass, websocket_update_config_update)
+    websocket_api.async_register_command(menuai, websocket_supervisor_event)
+    websocket_api.async_register_command(menuai, websocket_supervisor_api)
+    websocket_api.async_register_command(menuai, websocket_subscribe)
+    websocket_api.async_register_command(menuai, websocket_update_addon)
+    websocket_api.async_register_command(menuai, websocket_update_core)
+    websocket_api.async_register_command(menuai, websocket_update_config_info)
+    websocket_api.async_register_command(menuai, websocket_update_config_update)
 
 
 @callback
 @websocket_api.require_admin
 @websocket_api.websocket_command({vol.Required(WS_TYPE): WS_TYPE_SUBSCRIBE})
 def websocket_subscribe(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Subscribe to supervisor events."""
 
@@ -85,7 +85,7 @@ def websocket_subscribe(
         connection.send_message(websocket_api.event_message(msg[WS_ID], data))
 
     connection.subscriptions[msg[WS_ID]] = async_dispatcher_connect(
-        hass, EVENT_SUPERVISOR_EVENT, forward_messages
+        menuai, EVENT_SUPERVISOR_EVENT, forward_messages
     )
     connection.send_message(websocket_api.result_message(msg[WS_ID]))
 
@@ -98,11 +98,11 @@ def websocket_subscribe(
     }
 )
 def websocket_supervisor_event(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Publish events from the Supervisor."""
     connection.send_result(msg[WS_ID])
-    async_dispatcher_send(hass, EVENT_SUPERVISOR_EVENT, msg[ATTR_DATA])
+    async_dispatcher_send(menuai, EVENT_SUPERVISOR_EVENT, msg[ATTR_DATA])
 
 
 @websocket_api.websocket_command(
@@ -116,14 +116,14 @@ def websocket_supervisor_event(
 )
 @websocket_api.async_response
 async def websocket_supervisor_api(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Websocket handler to call Supervisor API."""
     if not connection.user.is_admin and not WS_NO_ADMIN_ENDPOINTS.match(
         msg[ATTR_ENDPOINT]
     ):
         raise Unauthorized
-    supervisor = hass.data[DATA_COMPONENT]
+    supervisor = menuai.data[DATA_COMPONENT]
 
     command = msg[ATTR_ENDPOINT]
     payload = msg.get(ATTR_DATA, {})
@@ -141,7 +141,7 @@ async def websocket_supervisor_api(
             payload=payload,
             source="core.websocket_api",
         )
-    except HassioAPIError as err:
+    except menuaiioAPIError as err:
         _LOGGER.error("Failed to to call %s - %s", msg[ATTR_ENDPOINT], err)
         connection.send_error(
             msg[WS_ID], code=websocket_api.ERR_UNKNOWN_ERROR, message=str(err)
@@ -153,55 +153,55 @@ async def websocket_supervisor_api(
 @websocket_api.require_admin
 @websocket_api.websocket_command(
     {
-        vol.Required(WS_TYPE): "hassio/update/addon",
+        vol.Required(WS_TYPE): "menuaiio/update/addon",
         vol.Required("addon"): str,
         vol.Required("backup"): bool,
     }
 )
 @websocket_api.async_response
 async def websocket_update_addon(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Websocket handler to update an addon."""
     addon_name: str | None = None
     addon_version: str | None = None
-    addons: list = (get_supervisor_info(hass) or {}).get("addons", [])
+    addons: list = (get_supervisor_info(menuai) or {}).get("addons", [])
     for addon in addons:
         if addon[ATTR_SLUG] == msg["addon"]:
             addon_name = addon[ATTR_NAME]
             addon_version = addon[ATTR_VERSION]
             break
-    await update_addon(hass, msg["addon"], msg["backup"], addon_name, addon_version)
+    await update_addon(menuai, msg["addon"], msg["backup"], addon_name, addon_version)
     connection.send_result(msg[WS_ID])
 
 
 @websocket_api.require_admin
 @websocket_api.websocket_command(
     {
-        vol.Required(WS_TYPE): "hassio/update/core",
+        vol.Required(WS_TYPE): "menuaiio/update/core",
         vol.Required("backup"): bool,
     }
 )
 @websocket_api.async_response
 async def websocket_update_core(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
-    """Websocket handler to update Home Assistant Core."""
-    await update_core(hass, None, msg["backup"])
+    """Websocket handler to update MenuAI Core."""
+    await update_core(menuai, None, msg["backup"])
     connection.send_result(msg[WS_ID])
 
 
 @callback
 @websocket_api.require_admin
-@websocket_api.websocket_command({vol.Required("type"): "hassio/update/config/info"})
+@websocket_api.websocket_command({vol.Required("type"): "menuaiio/update/config/info"})
 def websocket_update_config_info(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Send the stored backup config."""
     connection.send_result(
-        msg["id"], hass.data[DATA_CONFIG_STORE].data.update_config.to_dict()
+        msg["id"], menuai.data[DATA_CONFIG_STORE].data.update_config.to_dict()
     )
 
 
@@ -209,14 +209,14 @@ def websocket_update_config_info(
 @websocket_api.require_admin
 @websocket_api.websocket_command(
     {
-        vol.Required("type"): "hassio/update/config/update",
+        vol.Required("type"): "menuaiio/update/config/update",
         vol.Optional("add_on_backup_before_update"): bool,
         vol.Optional("add_on_backup_retain_copies"): vol.All(int, vol.Range(min=1)),
         vol.Optional("core_backup_before_update"): bool,
     }
 )
 def websocket_update_config_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
@@ -224,7 +224,7 @@ def websocket_update_config_update(
     changes = dict(msg)
     changes.pop("id")
     changes.pop("type")
-    hass.data[DATA_CONFIG_STORE].update(
-        update_config=cast(HassioUpdateParametersDict, changes)
+    menuai.data[DATA_CONFIG_STORE].update(
+        update_config=cast(menuaiioUpdateParametersDict, changes)
     )
     connection.send_result(msg["id"])

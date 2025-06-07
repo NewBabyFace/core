@@ -11,7 +11,7 @@ from aioshelly.const import RPC_GENERATIONS
 from aioshelly.exceptions import DeviceConnectionError, InvalidAuthError, RpcCallError
 from awesomeversion import AwesomeVersion, AwesomeVersionStrategy
 
-from homeassistant.components.update import (
+from menuai.components.update import (
     ATTR_INSTALLED_VERSION,
     ATTR_LATEST_VERSION,
     UpdateDeviceClass,
@@ -19,11 +19,11 @@ from homeassistant.components.update import (
     UpdateEntityDescription,
     UpdateEntityFeature,
 )
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.restore_state import RestoreEntity
+from menuai.const import EntityCategory
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.restore_state import RestoreEntity
 
 from .const import (
     CONF_SLEEP_PERIOD,
@@ -111,7 +111,7 @@ RPC_UPDATES: Final = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ShellyConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -119,7 +119,7 @@ async def async_setup_entry(
     if get_device_entry_gen(config_entry) in RPC_GENERATIONS:
         if config_entry.data[CONF_SLEEP_PERIOD]:
             async_setup_entry_rpc(
-                hass,
+                menuai,
                 config_entry,
                 async_add_entities,
                 RPC_UPDATES,
@@ -127,13 +127,13 @@ async def async_setup_entry(
             )
         else:
             async_setup_entry_rpc(
-                hass, config_entry, async_add_entities, RPC_UPDATES, RpcUpdateEntity
+                menuai, config_entry, async_add_entities, RPC_UPDATES, RpcUpdateEntity
             )
         return
 
     if not config_entry.data[CONF_SLEEP_PERIOD]:
         async_setup_entry_rest(
-            hass,
+            menuai,
             config_entry,
             async_add_entities,
             REST_UPDATES,
@@ -207,7 +207,7 @@ class RestUpdateEntity(ShellyRestAttributeEntity, UpdateEntity):
         try:
             result = await self.coordinator.device.trigger_ota_update(beta=beta)
         except DeviceConnectionError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="ota_update_connection_error",
                 translation_placeholders={"device": self.coordinator.name},
@@ -257,9 +257,9 @@ class RpcUpdateEntity(ShellyRpcAttributeEntity, UpdateEntity):
             coordinator.device.gen, coordinator.model, description.beta
         )
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai."""
+        await super().async_added_to_menuai()
         self.async_on_remove(
             self.coordinator.async_subscribe_ota_events(self._ota_progress_callback)
         )
@@ -323,13 +323,13 @@ class RpcUpdateEntity(ShellyRpcAttributeEntity, UpdateEntity):
         try:
             await self.coordinator.device.trigger_ota_update(beta=beta)
         except DeviceConnectionError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="ota_update_connection_error",
                 translation_placeholders={"device": self.coordinator.name},
             ) from err
         except RpcCallError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="ota_update_rpc_error",
                 translation_placeholders={
@@ -352,9 +352,9 @@ class RpcSleepingUpdateEntity(
 
     entity_description: RpcUpdateDescription
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self.last_state = await self.async_get_last_state()
 
     @property

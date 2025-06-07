@@ -2,18 +2,18 @@
 
 from unittest.mock import patch
 
-from homeassistant.components.system_bridge.config_flow import SystemBridgeConfigFlow
-from homeassistant.components.system_bridge.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_API_KEY, CONF_HOST, CONF_PORT, CONF_TOKEN
-from homeassistant.core import HomeAssistant
+from menuai.components.system_bridge.config_flow import SystemBridgeConfigFlow
+from menuai.components.system_bridge.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.const import CONF_API_KEY, CONF_HOST, CONF_PORT, CONF_TOKEN
+from menuai.core import menuai
 
 from . import FIXTURE_USER_INPUT, FIXTURE_UUID
 
 from tests.common import MockConfigEntry
 
 
-async def test_migration_minor_1_to_2(hass: HomeAssistant) -> None:
+async def test_migration_minor_1_to_2(menuai: menuai) -> None:
     """Test migration."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -28,12 +28,12 @@ async def test_migration_minor_1_to_2(hass: HomeAssistant) -> None:
     )
 
     with patch(
-        "homeassistant.components.system_bridge.async_setup_entry",
+        "menuai.components.system_bridge.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        config_entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        config_entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
         assert len(mock_setup_entry.mock_calls) == 1
 
@@ -49,7 +49,7 @@ async def test_migration_minor_1_to_2(hass: HomeAssistant) -> None:
     assert config_entry.state is ConfigEntryState.LOADED
 
 
-async def test_migration_minor_future_version(hass: HomeAssistant) -> None:
+async def test_migration_minor_future_version(menuai: menuai) -> None:
     """Test migration."""
     config_entry_data = {
         CONF_API_KEY: FIXTURE_USER_INPUT[CONF_TOKEN],
@@ -68,12 +68,12 @@ async def test_migration_minor_future_version(hass: HomeAssistant) -> None:
     )
 
     with patch(
-        "homeassistant.components.system_bridge.async_setup_entry",
+        "menuai.components.system_bridge.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        config_entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        config_entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
         assert len(mock_setup_entry.mock_calls) == 1
 
@@ -83,7 +83,7 @@ async def test_migration_minor_future_version(hass: HomeAssistant) -> None:
     assert config_entry.state is ConfigEntryState.LOADED
 
 
-async def test_setup_timeout(hass: HomeAssistant) -> None:
+async def test_setup_timeout(menuai: menuai) -> None:
     """Test setup with timeout error."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -97,15 +97,15 @@ async def test_setup_timeout(hass: HomeAssistant) -> None:
         "systembridgeconnector.version.Version.check_supported",
         side_effect=TimeoutError,
     ):
-        config_entry.add_to_hass(hass)
-        result = await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        config_entry.add_to_menuai(menuai)
+        result = await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
         assert result is False
         assert config_entry.state is ConfigEntryState.SETUP_RETRY
 
 
-async def test_coordinator_get_data_timeout(hass: HomeAssistant) -> None:
+async def test_coordinator_get_data_timeout(menuai: menuai) -> None:
     """Test coordinator handling timeout during get_data."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -121,13 +121,13 @@ async def test_coordinator_get_data_timeout(hass: HomeAssistant) -> None:
             return_value=True,
         ),
         patch(
-            "homeassistant.components.system_bridge.coordinator.SystemBridgeDataUpdateCoordinator.async_get_data",
+            "menuai.components.system_bridge.coordinator.SystemBridgeDataUpdateCoordinator.async_get_data",
             side_effect=TimeoutError,
         ),
     ):
-        config_entry.add_to_hass(hass)
-        result = await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        config_entry.add_to_menuai(menuai)
+        result = await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
         assert result is False
         assert config_entry.state is ConfigEntryState.SETUP_RETRY

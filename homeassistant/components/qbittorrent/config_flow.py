@@ -8,8 +8,8 @@ from typing import Any
 from qbittorrentapi import APIConnectionError, Forbidden403Error, LoginFailed
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_PASSWORD, CONF_URL, CONF_USERNAME, CONF_VERIFY_SSL
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_PASSWORD, CONF_URL, CONF_USERNAME, CONF_VERIFY_SSL
 
 from .const import DEFAULT_NAME, DEFAULT_URL, DOMAIN
 from .helpers import setup_client
@@ -38,7 +38,7 @@ class QbittorrentConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             self._async_abort_entries_match({CONF_URL: user_input[CONF_URL]})
             try:
-                await self.hass.async_add_executor_job(
+                await self.menuai.async_add_executor_job(
                     setup_client,
                     user_input[CONF_URL],
                     user_input[CONF_USERNAME],

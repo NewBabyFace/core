@@ -9,11 +9,11 @@ from uiprotect.data import Bootstrap, Camera, ModelType
 from uiprotect.data.types import FirmwareReleaseChannel
 import voluptuous as vol
 
-from homeassistant import data_entry_flow
-from homeassistant.components.repairs import ConfirmRepairFlow, RepairsFlow
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import issue_registry as ir
+from menuai import data_entry_flow
+from menuai.components.repairs import ConfirmRepairFlow, RepairsFlow
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers import issue_registry as ir
 
 from .const import CONF_ALLOW_EA
 from .data import UFPConfigEntry, async_get_data_for_entry_id
@@ -35,7 +35,7 @@ class ProtectRepair(RepairsFlow):
 
     @callback
     def _async_get_placeholders(self) -> dict[str, str]:
-        issue_registry = ir.async_get(self.hass)
+        issue_registry = ir.async_get(self.menuai)
         description_placeholders = {}
         if issue := issue_registry.async_get_issue(self.handler, self.issue_id):
             description_placeholders = issue.translation_placeholders or {}
@@ -70,7 +70,7 @@ class EAConfirmRepair(ProtectRepair):
         nvr = await self._api.get_nvr()
         if nvr.release_channel != FirmwareReleaseChannel.RELEASE:
             return await self.async_step_confirm()
-        await self.hass.config_entries.async_reload(self._entry.entry_id)
+        await self.menuai.config_entries.async_reload(self._entry.entry_id)
         return self.async_create_entry(data={})
 
     async def async_step_confirm(
@@ -80,7 +80,7 @@ class EAConfirmRepair(ProtectRepair):
         if user_input is not None:
             options = dict(self._entry.options)
             options[CONF_ALLOW_EA] = True
-            self.hass.config_entries.async_update_entry(self._entry, options=options)
+            self.menuai.config_entries.async_update_entry(self._entry, options=options)
             return self.async_create_entry(data={})
 
         placeholders = self._async_get_placeholders()
@@ -114,7 +114,7 @@ class CloudAccountRepair(ProtectRepair):
                 description_placeholders=placeholders,
             )
 
-        self._entry.async_start_reauth(self.hass)
+        self._entry.async_start_reauth(self.menuai)
         return self.async_create_entry(data={})
 
 
@@ -201,7 +201,7 @@ class RTSPRepair(ProtectRepair):
 
         updated_camera = await self._api.get_camera(self._camera_id)
         if any(c.is_rtsp_enabled for c in updated_camera.channels):
-            await self.hass.config_entries.async_reload(self._entry.entry_id)
+            await self.menuai.config_entries.async_reload(self._entry.entry_id)
             return self.async_create_entry(data={})
         return await self.async_step_confirm()
 
@@ -222,16 +222,16 @@ class RTSPRepair(ProtectRepair):
 
 @callback
 def _async_get_or_create_api_client(
-    hass: HomeAssistant, entry: ConfigEntry
+    menuai: menuai, entry: ConfigEntry
 ) -> ProtectApiClient:
     """Get or create an API client."""
-    if data := async_get_data_for_entry_id(hass, entry.entry_id):
+    if data := async_get_data_for_entry_id(menuai, entry.entry_id):
         return data.api
-    return async_create_api_client(hass, entry)
+    return async_create_api_client(menuai, entry)
 
 
 async def async_create_fix_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     issue_id: str,
     data: dict[str, str | int | float | None] | None,
 ) -> RepairsFlow:
@@ -239,9 +239,9 @@ async def async_create_fix_flow(
     if (
         data is not None
         and "entry_id" in data
-        and (entry := hass.config_entries.async_get_entry(cast(str, data["entry_id"])))
+        and (entry := menuai.config_entries.async_get_entry(cast(str, data["entry_id"])))
     ):
-        api = _async_get_or_create_api_client(hass, entry)
+        api = _async_get_or_create_api_client(menuai, entry)
         if issue_id == "ea_channel_warning":
             return EAConfirmRepair(api=api, entry=entry)
         if issue_id == "cloud_user":

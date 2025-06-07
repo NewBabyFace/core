@@ -8,9 +8,9 @@ from typing import Any
 from ccm15 import CCM15Device
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.helpers import config_validation as cv
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_PORT
+from menuai.helpers import config_validation as cv
 
 from .const import DEFAULT_TIMEOUT, DOMAIN
 

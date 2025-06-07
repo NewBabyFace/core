@@ -6,15 +6,15 @@ from unittest.mock import MagicMock, patch
 from freezegun.api import FrozenDateTimeFactory
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
-from homeassistant.const import (
+from menuai.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
+from menuai.const import (
     ATTR_ENTITY_ID,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import setup_integration
 
@@ -28,7 +28,7 @@ BUTTONS = (
 
 
 async def test_buttons(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
     mock_scale: MagicMock,
@@ -36,22 +36,22 @@ async def test_buttons(
 ) -> None:
     """Test the acaia buttons."""
 
-    with patch("homeassistant.components.acaia.PLATFORMS", [Platform.BUTTON]):
-        await setup_integration(hass, mock_config_entry)
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    with patch("menuai.components.acaia.PLATFORMS", [Platform.BUTTON]):
+        await setup_integration(menuai, mock_config_entry)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
 
 async def test_button_presses(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_scale: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test the acaia button presses."""
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     for button in BUTTONS:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             BUTTON_DOMAIN,
             SERVICE_PRESS,
             {
@@ -65,26 +65,26 @@ async def test_button_presses(
 
 
 async def test_buttons_unavailable_on_disconnected_scale(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_scale: MagicMock,
     mock_config_entry: MockConfigEntry,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test the acaia buttons are unavailable when the scale is disconnected."""
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     for button in BUTTONS:
-        state = hass.states.get(f"button.lunar_ddeeff_{button}")
+        state = menuai.states.get(f"button.lunar_ddeeff_{button}")
         assert state
         assert state.state == STATE_UNKNOWN
 
     mock_scale.connected = False
     freezer.tick(timedelta(minutes=10))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     for button in BUTTONS:
-        state = hass.states.get(f"button.lunar_ddeeff_{button}")
+        state = menuai.states.get(f"button.lunar_ddeeff_{button}")
         assert state
         assert state.state == STATE_UNAVAILABLE

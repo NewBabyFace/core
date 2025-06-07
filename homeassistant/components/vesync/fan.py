@@ -8,17 +8,17 @@ from typing import Any
 
 from pyvesync.vesyncbasedevice import VeSyncBaseDevice
 
-from homeassistant.components.fan import FanEntity, FanEntityFeature
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util.percentage import (
+from menuai.components.fan import FanEntity, FanEntityFeature
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util.percentage import (
     percentage_to_ranged_value,
     ranged_value_to_percentage,
 )
-from homeassistant.util.scaling import int_states_in_range
+from menuai.util.scaling import int_states_in_range
 
 from .common import is_fan
 from .const import (
@@ -55,13 +55,13 @@ SPEED_RANGE = {  # off is not included
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the VeSync fan platform."""
 
-    coordinator = hass.data[DOMAIN][VS_COORDINATOR]
+    coordinator = menuai.data[DOMAIN][VS_COORDINATOR]
 
     @callback
     def discover(devices):
@@ -69,10 +69,10 @@ async def async_setup_entry(
         _setup_entities(devices, async_add_entities, coordinator)
 
     config_entry.async_on_unload(
-        async_dispatcher_connect(hass, VS_DISCOVERY.format(VS_DEVICES), discover)
+        async_dispatcher_connect(menuai, VS_DISCOVERY.format(VS_DEVICES), discover)
     )
 
-    _setup_entities(hass.data[DOMAIN][VS_DEVICES], async_add_entities, coordinator)
+    _setup_entities(menuai.data[DOMAIN][VS_DEVICES], async_add_entities, coordinator)
 
 
 @callback
@@ -169,15 +169,15 @@ class VeSyncFanHA(VeSyncBaseEntity, FanEntity):
         if percentage == 0:
             success = self.device.turn_off()
             if not success:
-                raise HomeAssistantError("An error occurred while turning off.")
+                raise menuaiError("An error occurred while turning off.")
         elif not self.device.is_on:
             success = self.device.turn_on()
             if not success:
-                raise HomeAssistantError("An error occurred while turning on.")
+                raise menuaiError("An error occurred while turning on.")
 
         success = self.device.manual_mode()
         if not success:
-            raise HomeAssistantError("An error occurred while manual mode.")
+            raise menuaiError("An error occurred while manual mode.")
         success = self.device.change_fan_speed(
             math.ceil(
                 percentage_to_ranged_value(
@@ -186,7 +186,7 @@ class VeSyncFanHA(VeSyncBaseEntity, FanEntity):
             )
         )
         if not success:
-            raise HomeAssistantError("An error occurred while changing fan speed.")
+            raise menuaiError("An error occurred while changing fan speed.")
         self.schedule_update_ha_state()
 
     def set_preset_mode(self, preset_mode: str) -> None:
@@ -213,7 +213,7 @@ class VeSyncFanHA(VeSyncBaseEntity, FanEntity):
         elif preset_mode == VS_FAN_MODE_NORMAL:
             success = self.device.normal_mode()
         if not success:
-            raise HomeAssistantError("An error occurred while setting preset mode.")
+            raise menuaiError("An error occurred while setting preset mode.")
 
         self.schedule_update_ha_state()
 
@@ -235,5 +235,5 @@ class VeSyncFanHA(VeSyncBaseEntity, FanEntity):
         """Turn the device off."""
         success = self.device.turn_off()
         if not success:
-            raise HomeAssistantError("An error occurred while turning off.")
+            raise menuaiError("An error occurred while turning off.")
         self.schedule_update_ha_state()

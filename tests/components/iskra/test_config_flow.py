@@ -8,9 +8,9 @@ from pyiskra.exceptions import (
 )
 import pytest
 
-from homeassistant.components.iskra import DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import (
+from menuai.components.iskra import DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.const import (
     CONF_ADDRESS,
     CONF_HOST,
     CONF_PASSWORD,
@@ -18,8 +18,8 @@ from homeassistant.const import (
     CONF_PROTOCOL,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from .const import (
     HOST,
@@ -36,10 +36,10 @@ from tests.common import MockConfigEntry
 
 
 # Test step_user with Rest API protocol
-async def test_user_rest_no_auth(hass: HomeAssistant, mock_pyiskra_rest) -> None:
+async def test_user_rest_no_auth(menuai: menuai, mock_pyiskra_rest) -> None:
     """Test the user flow with Rest API protocol."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
@@ -49,7 +49,7 @@ async def test_user_rest_no_auth(hass: HomeAssistant, mock_pyiskra_rest) -> None
     assert result["step_id"] == "user"
 
     # Test no authentication required
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_HOST: HOST, CONF_PROTOCOL: "rest_api"},
     )
@@ -61,11 +61,11 @@ async def test_user_rest_no_auth(hass: HomeAssistant, mock_pyiskra_rest) -> None
     assert result["data"] == {CONF_HOST: HOST, CONF_PROTOCOL: "rest_api"}
 
 
-async def test_user_rest_auth(hass: HomeAssistant, mock_pyiskra_rest) -> None:
+async def test_user_rest_auth(menuai: menuai, mock_pyiskra_rest) -> None:
     """Test the user flow with Rest API protocol and authentication required."""
     mock_pyiskra_rest.side_effect = NotAuthorised
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
@@ -75,7 +75,7 @@ async def test_user_rest_auth(hass: HomeAssistant, mock_pyiskra_rest) -> None:
     assert result["step_id"] == "user"
 
     # Test if prompted to enter username and password if not authorised
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_HOST: HOST, CONF_PROTOCOL: "rest_api"},
     )
@@ -83,7 +83,7 @@ async def test_user_rest_auth(hass: HomeAssistant, mock_pyiskra_rest) -> None:
     assert result["step_id"] == "authentication"
 
     # Test failed authentication
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_USERNAME: USERNAME, CONF_PASSWORD: PASSWORD},
     )
@@ -94,7 +94,7 @@ async def test_user_rest_auth(hass: HomeAssistant, mock_pyiskra_rest) -> None:
     # Test successful authentication
     mock_pyiskra_rest.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_USERNAME: USERNAME, CONF_PASSWORD: PASSWORD},
     )
@@ -111,10 +111,10 @@ async def test_user_rest_auth(hass: HomeAssistant, mock_pyiskra_rest) -> None:
     }
 
 
-async def test_user_modbus(hass: HomeAssistant, mock_pyiskra_modbus) -> None:
+async def test_user_modbus(menuai: menuai, mock_pyiskra_modbus) -> None:
     """Test the user flow with Modbus TCP protocol."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
@@ -123,7 +123,7 @@ async def test_user_modbus(hass: HomeAssistant, mock_pyiskra_modbus) -> None:
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_HOST: HOST, CONF_PROTOCOL: "modbus_tcp"},
     )
@@ -132,7 +132,7 @@ async def test_user_modbus(hass: HomeAssistant, mock_pyiskra_modbus) -> None:
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "modbus_tcp"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_PORT: MODBUS_PORT,
@@ -153,12 +153,12 @@ async def test_user_modbus(hass: HomeAssistant, mock_pyiskra_modbus) -> None:
 
 
 async def test_modbus_abort_if_already_setup(
-    hass: HomeAssistant, mock_pyiskra_modbus
+    menuai: menuai, mock_pyiskra_modbus
 ) -> None:
     """Test we abort if Iskra is already setup."""
 
-    MockConfigEntry(domain=DOMAIN, unique_id=SERIAL).add_to_hass(hass)
-    result = await hass.config_entries.flow.async_init(
+    MockConfigEntry(domain=DOMAIN, unique_id=SERIAL).add_to_menuai(menuai)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={CONF_HOST: HOST, CONF_PROTOCOL: "modbus_tcp"},
@@ -166,7 +166,7 @@ async def test_modbus_abort_if_already_setup(
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "modbus_tcp"
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_PORT: MODBUS_PORT,
@@ -179,12 +179,12 @@ async def test_modbus_abort_if_already_setup(
 
 
 async def test_rest_api_abort_if_already_setup(
-    hass: HomeAssistant, mock_pyiskra_rest
+    menuai: menuai, mock_pyiskra_rest
 ) -> None:
     """Test we abort if Iskra is already setup."""
 
-    MockConfigEntry(domain=DOMAIN, unique_id=SERIAL).add_to_hass(hass)
-    result = await hass.config_entries.flow.async_init(
+    MockConfigEntry(domain=DOMAIN, unique_id=SERIAL).add_to_menuai(menuai)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={CONF_HOST: HOST, CONF_PROTOCOL: "rest_api"},
@@ -204,7 +204,7 @@ async def test_rest_api_abort_if_already_setup(
     ],
 )
 async def test_modbus_device_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_pyiskra_modbus,
     s_effect,
     reason,
@@ -212,7 +212,7 @@ async def test_modbus_device_error(
     """Test device error with Modbus TCP protocol."""
     mock_pyiskra_modbus.side_effect = s_effect
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={CONF_HOST: HOST, CONF_PROTOCOL: "modbus_tcp"},
@@ -220,7 +220,7 @@ async def test_modbus_device_error(
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "modbus_tcp"
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_PORT: MODBUS_PORT,
@@ -236,7 +236,7 @@ async def test_modbus_device_error(
     # Remove side effect
     mock_pyiskra_modbus.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_PORT: MODBUS_PORT,
@@ -266,7 +266,7 @@ async def test_modbus_device_error(
     ],
 )
 async def test_rest_device_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_pyiskra_rest,
     s_effect,
     reason,
@@ -274,7 +274,7 @@ async def test_rest_device_error(
     """Test device error with Modbus TCP protocol."""
     mock_pyiskra_rest.side_effect = s_effect
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={CONF_HOST: HOST, CONF_PROTOCOL: "rest_api"},
@@ -288,7 +288,7 @@ async def test_rest_device_error(
     # Remove side effect
     mock_pyiskra_rest.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_HOST: HOST, CONF_PROTOCOL: "rest_api"},
     )

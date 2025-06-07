@@ -11,8 +11,8 @@ from async_upnp_client.exceptions import UpnpCommunicationError
 from async_upnp_client.profiles.igd import IgdDevice
 import pytest
 
-from homeassistant.components import ssdp
-from homeassistant.components.upnp.const import (
+from menuai.components import ssdp
+from menuai.components.upnp.const import (
     CONFIG_ENTRY_FORCE_POLL,
     CONFIG_ENTRY_LOCATION,
     CONFIG_ENTRY_MAC_ADDRESS,
@@ -21,8 +21,8 @@ from homeassistant.components.upnp.const import (
     CONFIG_ENTRY_UDN,
     DOMAIN,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.service_info.ssdp import ATTR_UPNP_UDN, SsdpServiceInfo
+from menuai.core import menuai
+from menuai.helpers.service_info.ssdp import ATTR_UPNP_UDN, SsdpServiceInfo
 
 from .conftest import (
     TEST_DISCOVERY,
@@ -38,7 +38,7 @@ from tests.common import MockConfigEntry
 
 @pytest.mark.usefixtures("ssdp_instant_discovery", "mock_mac_address_from_host")
 async def test_async_setup_entry_default(
-    hass: HomeAssistant, mock_igd_device: IgdDevice
+    menuai: menuai, mock_igd_device: IgdDevice
 ) -> None:
     """Test async_setup_entry."""
     entry = MockConfigEntry(
@@ -57,14 +57,14 @@ async def test_async_setup_entry_default(
     )
 
     # Load config_entry.
-    entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(entry.entry_id) is True
+    entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(entry.entry_id) is True
 
     mock_igd_device.async_subscribe_services.assert_called()
 
 
 @pytest.mark.usefixtures("ssdp_instant_discovery", "mock_no_mac_address_from_host")
-async def test_async_setup_entry_default_no_mac_address(hass: HomeAssistant) -> None:
+async def test_async_setup_entry_default_no_mac_address(menuai: menuai) -> None:
     """Test async_setup_entry."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -82,8 +82,8 @@ async def test_async_setup_entry_default_no_mac_address(hass: HomeAssistant) -> 
     )
 
     # Load config_entry.
-    entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(entry.entry_id) is True
+    entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(entry.entry_id) is True
 
 
 @pytest.mark.usefixtures(
@@ -91,7 +91,7 @@ async def test_async_setup_entry_default_no_mac_address(hass: HomeAssistant) -> 
     "mock_mac_address_from_host",
 )
 async def test_async_setup_entry_multi_location(
-    hass: HomeAssistant, mock_async_create_device: AsyncMock
+    menuai: menuai, mock_async_create_device: AsyncMock
 ) -> None:
     """Test async_setup_entry for a device both seen via IPv4 and IPv6.
 
@@ -113,8 +113,8 @@ async def test_async_setup_entry_multi_location(
     )
 
     # Load config_entry.
-    entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(entry.entry_id) is True
+    entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(entry.entry_id) is True
 
     # Ensure that the IPv4 location is used.
     mock_async_create_device.assert_called_once_with(TEST_LOCATION)
@@ -122,7 +122,7 @@ async def test_async_setup_entry_multi_location(
 
 @pytest.mark.usefixtures("mock_mac_address_from_host")
 async def test_async_setup_udn_mismatch(
-    hass: HomeAssistant, mock_async_create_device: AsyncMock
+    menuai: menuai, mock_async_create_device: AsyncMock
 ) -> None:
     """Test async_setup_entry for a device which reports a different UDN from SSDP-discovery and device description."""
     test_discovery = copy.deepcopy(TEST_DISCOVERY)
@@ -145,7 +145,7 @@ async def test_async_setup_udn_mismatch(
 
     # Set up device discovery callback.
     async def register_callback(
-        hass: HomeAssistant,
+        menuai: menuai,
         callback: Callable[
             [SsdpServiceInfo, ssdp.SsdpChange], Coroutine[Any, Any, None] | None
         ],
@@ -157,17 +157,17 @@ async def test_async_setup_udn_mismatch(
 
     with (
         patch(
-            "homeassistant.components.ssdp.async_register_callback",
+            "menuai.components.ssdp.async_register_callback",
             side_effect=register_callback,
         ),
         patch(
-            "homeassistant.components.ssdp.async_get_discovery_info_by_st",
+            "menuai.components.ssdp.async_get_discovery_info_by_st",
             return_value=[test_discovery],
         ),
     ):
         # Load config_entry.
-        entry.add_to_hass(hass)
-        assert await hass.config_entries.async_setup(entry.entry_id) is True
+        entry.add_to_menuai(menuai)
+        assert await menuai.config_entries.async_setup(entry.entry_id) is True
 
     # Ensure that the IPv4 location is used.
     mock_async_create_device.assert_called_once_with(TEST_LOCATION)
@@ -179,7 +179,7 @@ async def test_async_setup_udn_mismatch(
     "mock_mac_address_from_host",
 )
 async def test_async_setup_entry_force_poll(
-    hass: HomeAssistant, mock_igd_device: IgdDevice
+    menuai: menuai, mock_igd_device: IgdDevice
 ) -> None:
     """Test async_setup_entry with forced polling."""
     entry = MockConfigEntry(
@@ -198,8 +198,8 @@ async def test_async_setup_entry_force_poll(
     )
 
     # Load config_entry.
-    entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(entry.entry_id) is True
+    entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(entry.entry_id) is True
 
     mock_igd_device.async_subscribe_services.assert_not_called()
 
@@ -215,7 +215,7 @@ async def test_async_setup_entry_force_poll(
     "mock_mac_address_from_host",
 )
 async def test_async_setup_entry_force_poll_subscribe_error(
-    hass: HomeAssistant, mock_igd_device: IgdDevice
+    menuai: menuai, mock_igd_device: IgdDevice
 ) -> None:
     """Test async_setup_entry where subscribing fails."""
     entry = MockConfigEntry(
@@ -239,8 +239,8 @@ async def test_async_setup_entry_force_poll_subscribe_error(
     mock_igd_device.async_unsubscribe_services.side_effect = UpnpCommunicationError
 
     # Load config_entry, should still be able to load, falling back to polling/the old functionality.
-    entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(entry.entry_id) is True
+    entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(entry.entry_id) is True
 
     # Ensure that the device is forced to poll.
     mock_igd_device.async_get_traffic_and_status_data.assert_called_with(

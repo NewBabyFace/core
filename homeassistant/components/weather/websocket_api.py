@@ -6,10 +6,10 @@ from typing import Any, Literal
 
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.util.json import JsonValueType
+from menuai.components import websocket_api
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.util.json import JsonValueType
 
 from .const import DATA_COMPONENT, DOMAIN, VALID_UNITS, WeatherEntityFeature
 
@@ -21,10 +21,10 @@ FORECAST_TYPE_TO_FLAG = {
 
 
 @callback
-def async_setup(hass: HomeAssistant) -> None:
+def async_setup(menuai: menuai) -> None:
     """Set up the weather websocket API."""
-    websocket_api.async_register_command(hass, ws_convertible_units)
-    websocket_api.async_register_command(hass, ws_subscribe_forecast)
+    websocket_api.async_register_command(menuai, ws_convertible_units)
+    websocket_api.async_register_command(menuai, ws_subscribe_forecast)
 
 
 @callback
@@ -34,7 +34,7 @@ def async_setup(hass: HomeAssistant) -> None:
     }
 )
 def ws_convertible_units(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Return supported units for a device class."""
     sorted_units = {
@@ -52,13 +52,13 @@ def ws_convertible_units(
 )
 @websocket_api.async_response
 async def ws_subscribe_forecast(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Subscribe to weather forecasts."""
     entity_id: str = msg["entity_id"]
     forecast_type: Literal["daily", "hourly", "twice_daily"] = msg["forecast_type"]
 
-    if not (entity := hass.data[DATA_COMPONENT].get_entity(msg["entity_id"])):
+    if not (entity := menuai.data[DATA_COMPONENT].get_entity(msg["entity_id"])):
         connection.send_error(
             msg["id"],
             "invalid_entity_id",

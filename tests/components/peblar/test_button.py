@@ -6,13 +6,13 @@ from peblar import PeblarAuthenticationError, PeblarConnectionError, PeblarError
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
-from homeassistant.components.peblar.const import DOMAIN
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
+from menuai.components.peblar.const import DOMAIN
+from menuai.config_entries import SOURCE_REAUTH, ConfigEntryState
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from tests.common import MockConfigEntry, snapshot_platform
 
@@ -25,14 +25,14 @@ pytestmark = [
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test the button entities."""
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
     # Ensure all entities are correctly assigned to the Peblar EV charger
     device_entry = device_registry.async_get_device(
@@ -55,7 +55,7 @@ async def test_entities(
 )
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_buttons(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_peblar: MagicMock,
     mock_config_entry: MockConfigEntry,
     entity_id: str,
@@ -65,7 +65,7 @@ async def test_buttons(
     mocked_method = getattr(mock_peblar, method)
 
     # Test normal happy path button press
-    await hass.services.async_call(
+    await menuai.services.async_call(
         BUTTON_DOMAIN,
         SERVICE_PRESS,
         {ATTR_ENTITY_ID: entity_id},
@@ -78,13 +78,13 @@ async def test_buttons(
     # Test connection error handling
     mocked_method.side_effect = PeblarConnectionError("Could not connect")
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match=(
             r"An error occurred while communicating "
             r"with the Peblar EV charger: Could not connect"
         ),
     ) as excinfo:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             BUTTON_DOMAIN,
             SERVICE_PRESS,
             {ATTR_ENTITY_ID: entity_id},
@@ -98,13 +98,13 @@ async def test_buttons(
     # Test unknown error handling
     mocked_method.side_effect = PeblarError("Unknown error")
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match=(
             r"An unknown error occurred while communicating "
             r"with the Peblar EV charger: Unknown error"
         ),
     ) as excinfo:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             BUTTON_DOMAIN,
             SERVICE_PRESS,
             {ATTR_ENTITY_ID: entity_id},
@@ -119,13 +119,13 @@ async def test_buttons(
     mocked_method.side_effect = PeblarAuthenticationError("Authentication error")
     mock_peblar.login.side_effect = PeblarAuthenticationError("Authentication error")
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match=(
             r"An authentication failure occurred while communicating "
             r"with the Peblar EV charger"
         ),
     ) as excinfo:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             BUTTON_DOMAIN,
             SERVICE_PRESS,
             {ATTR_ENTITY_ID: entity_id},
@@ -138,10 +138,10 @@ async def test_buttons(
 
     # Ensure the device is reloaded on authentication error and triggers
     # a reauthentication flow.
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert mock_config_entry.state is ConfigEntryState.SETUP_ERROR
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
 
     flow = flows[0]

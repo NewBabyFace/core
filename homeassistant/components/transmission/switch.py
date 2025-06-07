@@ -4,11 +4,11 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.components.switch import SwitchEntity, SwitchEntityDescription
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import TransmissionConfigEntry, TransmissionDataUpdateCoordinator
@@ -42,7 +42,7 @@ SWITCH_TYPES: tuple[TransmissionSwitchEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: TransmissionConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -87,14 +87,14 @@ class TransmissionSwitch(
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the device on."""
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             self.entity_description.on_func, self.coordinator
         )
         await self.coordinator.async_request_refresh()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the device off."""
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             self.entity_description.off_func, self.coordinator
         )
         await self.coordinator.async_request_refresh()

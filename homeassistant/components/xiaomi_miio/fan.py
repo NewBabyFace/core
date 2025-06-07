@@ -30,13 +30,13 @@ from miio.integrations.fan.zhimi.zhimi_miot import (
 )
 import voluptuous as vol
 
-from homeassistant.components.fan import FanEntity, FanEntityFeature
-from homeassistant.const import ATTR_ENTITY_ID, CONF_DEVICE, CONF_MODEL
-from homeassistant.core import HomeAssistant, ServiceCall, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-from homeassistant.util.percentage import (
+from menuai.components.fan import FanEntity, FanEntityFeature
+from menuai.const import ATTR_ENTITY_ID, CONF_DEVICE, CONF_MODEL
+from menuai.core import menuai, ServiceCall, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.util.percentage import (
     percentage_to_ranged_value,
     ranged_value_to_percentage,
 )
@@ -202,7 +202,7 @@ FAN_DIRECTIONS_MAP = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: XiaomiMiioConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -213,7 +213,7 @@ async def async_setup_entry(
     if config_entry.data[CONF_FLOW_TYPE] != CONF_DEVICE:
         return
 
-    hass.data.setdefault(DATA_KEY, {})
+    menuai.data.setdefault(DATA_KEY, {})
 
     model = config_entry.data[CONF_MODEL]
     unique_id = config_entry.unique_id
@@ -255,7 +255,7 @@ async def async_setup_entry(
     else:
         return
 
-    hass.data[DATA_KEY][unique_id] = entity
+    menuai.data[DATA_KEY][unique_id] = entity
 
     entities.append(entity)
 
@@ -268,11 +268,11 @@ async def async_setup_entry(
         if entity_ids := service.data.get(ATTR_ENTITY_ID):
             filtered_entities = [
                 entity
-                for entity in hass.data[DATA_KEY].values()
+                for entity in menuai.data[DATA_KEY].values()
                 if entity.entity_id in entity_ids
             ]
         else:
-            filtered_entities = hass.data[DATA_KEY].values()
+            filtered_entities = menuai.data[DATA_KEY].values()
 
         update_tasks = []
 
@@ -288,7 +288,7 @@ async def async_setup_entry(
 
     for air_purifier_service, method in SERVICE_TO_METHOD.items():
         schema = method.schema or AIRPURIFIER_SERVICE_SCHEMA
-        hass.services.async_register(
+        menuai.services.async_register(
             DOMAIN, air_purifier_service, async_service_handler, schema=schema
         )
 

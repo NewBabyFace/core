@@ -15,25 +15,25 @@ from switchbot import (
 )
 import voluptuous as vol
 
-from homeassistant.components.bluetooth import (
+from menuai.components.bluetooth import (
     BluetoothServiceInfoBleak,
     async_discovered_service_info,
 )
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_ADDRESS,
     CONF_PASSWORD,
     CONF_SENSOR_TYPE,
     CONF_USERNAME,
 )
-from homeassistant.core import callback
-from homeassistant.data_entry_flow import AbortFlow
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.core import callback
+from menuai.data_entry_flow import AbortFlow
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
     CONF_ENCRYPTION_KEY,
@@ -184,7 +184,7 @@ class SwitchbotConfigFlow(ConfigFlow, domain=DOMAIN):
             cls = ENCRYPTED_SWITCHBOT_MODEL_TO_CLASS[model]
             try:
                 key_details = await cls.async_retrieve_encryption_key(
-                    async_get_clientsession(self.hass),
+                    async_get_clientsession(self.menuai),
                     self._discovered_adv.address,
                     user_input[CONF_USERNAME],
                     user_input[CONF_PASSWORD],
@@ -274,7 +274,7 @@ class SwitchbotConfigFlow(ConfigFlow, domain=DOMAIN):
     def _async_discover_devices(self) -> None:
         current_addresses = self._async_current_ids(include_ignore=False)
         for connectable in (True, False):
-            for discovery_info in async_discovered_service_info(self.hass, connectable):
+            for discovery_info in async_discovered_service_info(self.menuai, connectable):
                 address = discovery_info.address
                 if (
                     format_unique_id(address) in current_addresses

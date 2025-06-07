@@ -9,10 +9,10 @@ import xml.etree.ElementTree as ET
 
 from env_canada import ECAirQuality, ECRadar, ECWeather, ECWeatherUpdateFailed, ec_exc
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN
 
@@ -38,7 +38,7 @@ class ECDataUpdateCoordinator[DataT: ECDataType](DataUpdateCoordinator[DataT]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entry: ECConfigEntry,
         ec_data: DataT,
         name: str,
@@ -46,7 +46,7 @@ class ECDataUpdateCoordinator[DataT: ECDataType](DataUpdateCoordinator[DataT]):
     ) -> None:
         """Initialize global EC data updater."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
             name=f"{DOMAIN} {name}",

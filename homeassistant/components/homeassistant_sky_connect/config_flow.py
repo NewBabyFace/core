@@ -1,28 +1,28 @@
-"""Config flow for the Home Assistant SkyConnect integration."""
+"""Config flow for the MenuAI SkyConnect integration."""
 
 from __future__ import annotations
 
 import logging
 from typing import TYPE_CHECKING, Any, Protocol
 
-from homeassistant.components import usb
-from homeassistant.components.homeassistant_hardware import (
+from menuai.components import usb
+from menuai.components.menuai_hardware import (
     firmware_config_flow,
     silabs_multiprotocol_addon,
 )
-from homeassistant.components.homeassistant_hardware.util import (
+from menuai.components.menuai_hardware.util import (
     ApplicationType,
     FirmwareInfo,
 )
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigEntryBaseFlow,
     ConfigFlowContext,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.core import callback
-from homeassistant.helpers.service_info.usb import UsbServiceInfo
+from menuai.core import callback
+from menuai.helpers.service_info.usb import UsbServiceInfo
 
 from .const import (
     DESCRIPTION,
@@ -57,7 +57,7 @@ else:
 
 
 class SkyConnectTranslationMixin(ConfigEntryBaseFlow, TranslationPlaceholderProtocol):
-    """Translation placeholder mixin for Home Assistant SkyConnect."""
+    """Translation placeholder mixin for MenuAI SkyConnect."""
 
     context: ConfigFlowContext
 
@@ -73,12 +73,12 @@ class SkyConnectTranslationMixin(ConfigEntryBaseFlow, TranslationPlaceholderProt
         return placeholders
 
 
-class HomeAssistantSkyConnectConfigFlow(
+class menuaiSkyConnectConfigFlow(
     SkyConnectTranslationMixin,
     firmware_config_flow.BaseFirmwareConfigFlow,
     domain=DOMAIN,
 ):
-    """Handle a config flow for Home Assistant SkyConnect."""
+    """Handle a config flow for MenuAI SkyConnect."""
 
     VERSION = 1
     MINOR_VERSION = 4
@@ -99,9 +99,9 @@ class HomeAssistantSkyConnectConfigFlow(
         firmware_type = ApplicationType(config_entry.data[FIRMWARE])
 
         if firmware_type is ApplicationType.CPC:
-            return HomeAssistantSkyConnectMultiPanOptionsFlowHandler(config_entry)
+            return menuaiSkyConnectMultiPanOptionsFlowHandler(config_entry)
 
-        return HomeAssistantSkyConnectOptionsFlowHandler(config_entry)
+        return menuaiSkyConnectOptionsFlowHandler(config_entry)
 
     async def async_step_usb(self, discovery_info: UsbServiceInfo) -> ConfigFlowResult:
         """Handle usb discovery."""
@@ -116,7 +116,7 @@ class HomeAssistantSkyConnectConfigFlow(
         if await self.async_set_unique_id(unique_id):
             self._abort_if_unique_id_configured(updates={DEVICE: device})
 
-        discovery_info.device = await self.hass.async_add_executor_job(
+        discovery_info.device = await self.menuai.async_add_executor_job(
             usb.get_serial_by_id, discovery_info.device
         )
 
@@ -153,10 +153,10 @@ class HomeAssistantSkyConnectConfigFlow(
         )
 
 
-class HomeAssistantSkyConnectMultiPanOptionsFlowHandler(
+class menuaiSkyConnectMultiPanOptionsFlowHandler(
     silabs_multiprotocol_addon.OptionsFlowHandler
 ):
-    """Multi-PAN options flow for Home Assistant SkyConnect."""
+    """Multi-PAN options flow for MenuAI SkyConnect."""
 
     async def _async_serial_port_settings(
         self,
@@ -193,7 +193,7 @@ class HomeAssistantSkyConnectMultiPanOptionsFlowHandler(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Finish flashing and update the config entry."""
-        self.hass.config_entries.async_update_entry(
+        self.menuai.config_entries.async_update_entry(
             entry=self.config_entry,
             data={
                 **self.config_entry.data,
@@ -206,7 +206,7 @@ class HomeAssistantSkyConnectMultiPanOptionsFlowHandler(
         return await super().async_step_flashing_complete(user_input)
 
 
-class HomeAssistantSkyConnectOptionsFlowHandler(
+class menuaiSkyConnectOptionsFlowHandler(
     SkyConnectTranslationMixin, firmware_config_flow.BaseFirmwareOptionsFlow
 ):
     """Zigbee and Thread options flow handlers."""
@@ -237,7 +237,7 @@ class HomeAssistantSkyConnectOptionsFlowHandler(
         """Create the config entry."""
         assert self._probed_firmware_info is not None
 
-        self.hass.config_entries.async_update_entry(
+        self.menuai.config_entries.async_update_entry(
             entry=self.config_entry,
             data={
                 **self.config_entry.data,

@@ -10,10 +10,10 @@ import pyiss
 import requests
 from requests.exceptions import HTTPError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN
 
@@ -38,20 +38,20 @@ def update(iss: pyiss.ISS) -> IssData:
     )
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up this integration using UI."""
-    hass.data.setdefault(DOMAIN, {})
+    menuai.data.setdefault(DOMAIN, {})
 
     iss = pyiss.ISS()
 
     async def async_update() -> IssData:
         try:
-            return await hass.async_add_executor_job(update, iss)
+            return await menuai.async_add_executor_job(update, iss)
         except (HTTPError, requests.exceptions.ConnectionError) as ex:
             raise UpdateFailed("Unable to retrieve data") from ex
 
     coordinator = DataUpdateCoordinator(
-        hass,
+        menuai,
         _LOGGER,
         config_entry=entry,
         name=DOMAIN,
@@ -61,22 +61,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await coordinator.async_config_entry_first_refresh()
 
-    hass.data[DOMAIN] = coordinator
+    menuai.data[DOMAIN] = coordinator
 
     entry.async_on_unload(entry.add_update_listener(update_listener))
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Handle removal of an entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        del hass.data[DOMAIN]
+    if unload_ok := await menuai.config_entries.async_unload_platforms(entry, PLATFORMS):
+        del menuai.data[DOMAIN]
     return unload_ok
 
 
-async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def update_listener(menuai: menuai, entry: ConfigEntry) -> None:
     """Handle options update."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)

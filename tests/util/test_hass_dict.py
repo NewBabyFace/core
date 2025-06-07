@@ -1,17 +1,17 @@
-"""Test HassDict and custom HassKey types."""
+"""Test menuaiDict and custom menuaiKey types."""
 
-from homeassistant.util.hass_dict import HassDict, HassEntryKey, HassKey
+from menuai.util.menuai_dict import menuaiDict, menuaiEntryKey, menuaiKey
 
 
 def test_key_comparison() -> None:
     """Test key comparison with itself and string keys."""
 
     str_key = "custom-key"
-    key = HassKey[int](str_key)
-    other_key = HassKey[str]("other-key")
+    key = menuaiKey[int](str_key)
+    other_key = menuaiKey[str]("other-key")
 
-    entry_key = HassEntryKey[int](str_key)
-    other_entry_key = HassEntryKey[str]("other-key")
+    entry_key = menuaiEntryKey[int](str_key)
+    other_entry_key = menuaiEntryKey[str]("other-key")
 
     assert key == str_key
     assert key != other_key
@@ -21,20 +21,20 @@ def test_key_comparison() -> None:
     assert entry_key != other_entry_key
     assert entry_key != 2
 
-    # Only compare name attribute, HassKey(<name>) == HassEntryKey(<name>)
+    # Only compare name attribute, menuaiKey(<name>) == menuaiEntryKey(<name>)
     assert key == entry_key
 
 
-def test_hass_dict_access() -> None:
-    """Test keys with the same name all access the same value in HassDict."""
+def test_menuai_dict_access() -> None:
+    """Test keys with the same name all access the same value in menuaiDict."""
 
-    data = HassDict()
+    data = menuaiDict()
     str_key = "custom-key"
-    key = HassKey[int](str_key)
-    other_key = HassKey[str]("other-key")
+    key = menuaiKey[int](str_key)
+    other_key = menuaiKey[str]("other-key")
 
-    entry_key = HassEntryKey[int](str_key)
-    other_entry_key = HassEntryKey[str]("other-key")
+    entry_key = menuaiEntryKey[int](str_key)
+    other_entry_key = menuaiEntryKey[str]("other-key")
 
     data[str_key] = True
     assert data.get(key) is True

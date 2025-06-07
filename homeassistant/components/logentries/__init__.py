@@ -6,10 +6,10 @@ import logging
 import requests
 import voluptuous as vol
 
-from homeassistant.const import CONF_TOKEN, EVENT_STATE_CHANGED
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, state as state_helper
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import CONF_TOKEN, EVENT_STATE_CHANGED
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, state as state_helper
+from menuai.helpers.typing import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Logentries component."""
     conf = config[DOMAIN]
     token = conf.get(CONF_TOKEN)
@@ -51,6 +51,6 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
         except requests.exceptions.RequestException:
             _LOGGER.exception("Error sending to Logentries")
 
-    hass.bus.listen(EVENT_STATE_CHANGED, logentries_event_listener)
+    menuai.bus.listen(EVENT_STATE_CHANGED, logentries_event_listener)
 
     return True

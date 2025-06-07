@@ -7,18 +7,18 @@ from datetime import timedelta
 from panacotta import PanasonicBD
 import voluptuous as vol
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     PLATFORM_SCHEMA as MEDIA_PLAYER_PLATFORM_SCHEMA,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
 )
-from homeassistant.const import CONF_HOST, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util.dt import utcnow
+from menuai.const import CONF_HOST, CONF_NAME
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util.dt import utcnow
 
 DEFAULT_NAME = "Panasonic Blu-Ray"
 
@@ -34,7 +34,7 @@ PLATFORM_SCHEMA = MEDIA_PLAYER_PLATFORM_SCHEMA.extend(
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -42,7 +42,7 @@ def setup_platform(
     """Set up the Panasonic Blu-ray platform."""
     conf = discovery_info if discovery_info else config
 
-    # Register configured device with Home Assistant.
+    # Register configured device with MenuAI.
     add_entities([PanasonicBluRay(conf[CONF_HOST], conf[CONF_NAME])])
 
 

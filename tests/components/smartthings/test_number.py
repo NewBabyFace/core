@@ -7,15 +7,15 @@ from pysmartthings.models import HealthStatus
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.number import (
+from menuai.components.number import (
     ATTR_VALUE,
     DOMAIN as NUMBER_DOMAIN,
     SERVICE_SET_VALUE,
 )
-from homeassistant.components.smartthings import MAIN
-from homeassistant.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.smartthings import MAIN
+from menuai.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import (
     setup_integration,
@@ -28,28 +28,28 @@ from tests.common import MockConfigEntry
 
 
 async def test_all_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test all entities."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    snapshot_smartthings_entities(hass, entity_registry, snapshot, Platform.NUMBER)
+    snapshot_smartthings_entities(menuai, entity_registry, snapshot, Platform.NUMBER)
 
 
 @pytest.mark.parametrize("device_fixture", ["da_wm_wm_000001"])
 async def test_set_value(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test setting a value."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         NUMBER_DOMAIN,
         SERVICE_SET_VALUE,
         {ATTR_ENTITY_ID: "number.washer_rinse_cycles", ATTR_VALUE: 3},
@@ -66,17 +66,17 @@ async def test_set_value(
 
 @pytest.mark.parametrize("device_fixture", ["da_wm_wm_000001"])
 async def test_state_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test state update."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    assert hass.states.get("number.washer_rinse_cycles").state == "2"
+    assert menuai.states.get("number.washer_rinse_cycles").state == "2"
 
     await trigger_update(
-        hass,
+        menuai,
         devices,
         "f984b91d-f250-9d42-3436-33f09a422a47",
         Capability.CUSTOM_WASHER_RINSE_CYCLES,
@@ -84,39 +84,39 @@ async def test_state_update(
         "3",
     )
 
-    assert hass.states.get("number.washer_rinse_cycles").state == "3"
+    assert menuai.states.get("number.washer_rinse_cycles").state == "3"
 
 
 @pytest.mark.parametrize("device_fixture", ["da_wm_wm_000001"])
 async def test_availability(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test availability."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    assert hass.states.get("number.washer_rinse_cycles").state == "2"
-
-    await trigger_health_update(
-        hass, devices, "f984b91d-f250-9d42-3436-33f09a422a47", HealthStatus.OFFLINE
-    )
-
-    assert hass.states.get("number.washer_rinse_cycles").state == STATE_UNAVAILABLE
+    assert menuai.states.get("number.washer_rinse_cycles").state == "2"
 
     await trigger_health_update(
-        hass, devices, "f984b91d-f250-9d42-3436-33f09a422a47", HealthStatus.ONLINE
+        menuai, devices, "f984b91d-f250-9d42-3436-33f09a422a47", HealthStatus.OFFLINE
     )
 
-    assert hass.states.get("number.washer_rinse_cycles").state == "2"
+    assert menuai.states.get("number.washer_rinse_cycles").state == STATE_UNAVAILABLE
+
+    await trigger_health_update(
+        menuai, devices, "f984b91d-f250-9d42-3436-33f09a422a47", HealthStatus.ONLINE
+    )
+
+    assert menuai.states.get("number.washer_rinse_cycles").state == "2"
 
 
 @pytest.mark.parametrize("device_fixture", ["da_wm_wm_000001"])
 async def test_availability_at_start(
-    hass: HomeAssistant,
+    menuai: menuai,
     unavailable_device: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test unavailable at boot."""
-    await setup_integration(hass, mock_config_entry)
-    assert hass.states.get("number.washer_rinse_cycles").state == STATE_UNAVAILABLE
+    await setup_integration(menuai, mock_config_entry)
+    assert menuai.states.get("number.washer_rinse_cycles").state == STATE_UNAVAILABLE

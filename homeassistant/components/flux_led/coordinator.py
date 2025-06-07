@@ -8,10 +8,10 @@ from typing import Final
 
 from flux_led.aio import AIOWifiLedBulb
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.debounce import Debouncer
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.debounce import Debouncer
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import FLUX_LED_EXCEPTIONS
 
@@ -29,14 +29,14 @@ class FluxLedUpdateCoordinator(DataUpdateCoordinator[None]):
     config_entry: FluxLedConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, device: AIOWifiLedBulb, entry: FluxLedConfigEntry
+        self, menuai: menuai, device: AIOWifiLedBulb, entry: FluxLedConfigEntry
     ) -> None:
         """Initialize DataUpdateCoordinator to gather data for specific device."""
         self.device = device
         self.title = entry.title
         self.force_next_update = False
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
             name=self.device.ipaddr,
@@ -44,7 +44,7 @@ class FluxLedUpdateCoordinator(DataUpdateCoordinator[None]):
             # We don't want an immediate refresh since the device
             # takes a moment to reflect the state change
             request_refresh_debouncer=Debouncer(
-                hass, _LOGGER, cooldown=REQUEST_REFRESH_DELAY, immediate=False
+                menuai, _LOGGER, cooldown=REQUEST_REFRESH_DELAY, immediate=False
             ),
             always_update=False,
         )

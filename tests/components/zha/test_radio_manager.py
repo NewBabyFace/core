@@ -11,12 +11,12 @@ import zigpy.config
 from zigpy.config import CONF_DEVICE_PATH
 import zigpy.types
 
-from homeassistant.components.zha import radio_manager
-from homeassistant.components.zha.const import DOMAIN
-from homeassistant.components.zha.radio_manager import ProbeResult, ZhaRadioManager
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.service_info.usb import UsbServiceInfo
+from menuai.components.zha import radio_manager
+from menuai.components.zha.const import DOMAIN
+from menuai.components.zha.radio_manager import ProbeResult, ZhaRadioManager
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
+from menuai.helpers.service_info.usb import UsbServiceInfo
 
 from tests.common import MockConfigEntry
 
@@ -26,14 +26,14 @@ PROBE_FUNCTION_PATH = "zigbee.application.ControllerApplication.probe"
 @pytest.fixture(autouse=True)
 def disable_platform_only():
     """Disable platforms to speed up tests."""
-    with patch("homeassistant.components.zha.PLATFORMS", []):
+    with patch("menuai.components.zha.PLATFORMS", []):
         yield
 
 
 @pytest.fixture(autouse=True)
 def reduce_reconnect_timeout():
     """Reduces reconnect timeout to speed up tests."""
-    with patch("homeassistant.components.zha.radio_manager.RETRY_DELAY_S", 0.0001):
+    with patch("menuai.components.zha.radio_manager.RETRY_DELAY_S", 0.0001):
         yield
 
 
@@ -98,15 +98,15 @@ def mock_connect_zigpy_app() -> Generator[MagicMock]:
     )
 
     with patch(
-        "homeassistant.components.zha.radio_manager.ZhaRadioManager.connect_zigpy_app",
+        "menuai.components.zha.radio_manager.ZhaRadioManager.connect_zigpy_app",
         return_value=mock_connect_app,
     ):
         yield mock_connect_app
 
 
-@patch("homeassistant.components.zha.async_setup_entry", AsyncMock(return_value=True))
+@patch("menuai.components.zha.async_setup_entry", AsyncMock(return_value=True))
 async def test_migrate_matching_port(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_connect_zigpy_app,
 ) -> None:
     """Test automatic migration."""
@@ -118,7 +118,7 @@ async def test_migrate_matching_port(
         title="Test",
         version=3,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     migration_data = {
         "new_discovery_info": {
@@ -143,7 +143,7 @@ async def test_migrate_matching_port(
         },
     }
 
-    migration_helper = radio_manager.ZhaMultiPANMigrationHelper(hass, config_entry)
+    migration_helper = radio_manager.ZhaMultiPANMigrationHelper(menuai, config_entry)
     assert await migration_helper.async_initiate_migration(migration_data)
 
     # Check the ZHA config entry data is updated
@@ -161,12 +161,12 @@ async def test_migrate_matching_port(
 
 
 @patch(
-    "homeassistant.components.zha.radio_manager.ZhaRadioManager.detect_radio_type",
+    "menuai.components.zha.radio_manager.ZhaRadioManager.detect_radio_type",
     mock_detect_radio_type(),
 )
-@patch("homeassistant.components.zha.async_setup_entry", AsyncMock(return_value=True))
+@patch("menuai.components.zha.async_setup_entry", AsyncMock(return_value=True))
 async def test_migrate_matching_port_usb(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_connect_zigpy_app,
 ) -> None:
     """Test automatic migration."""
@@ -178,7 +178,7 @@ async def test_migrate_matching_port_usb(
         title="Test",
         version=3,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     migration_data = {
         "new_discovery_info": {
@@ -195,7 +195,7 @@ async def test_migrate_matching_port_usb(
         },
     }
 
-    migration_helper = radio_manager.ZhaMultiPANMigrationHelper(hass, config_entry)
+    migration_helper = radio_manager.ZhaMultiPANMigrationHelper(menuai, config_entry)
     assert await migration_helper.async_initiate_migration(migration_data)
 
     # Check the ZHA config entry data is updated
@@ -213,7 +213,7 @@ async def test_migrate_matching_port_usb(
 
 
 async def test_migrate_matching_port_config_entry_not_loaded(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_connect_zigpy_app,
 ) -> None:
     """Test automatic migration."""
@@ -224,8 +224,8 @@ async def test_migrate_matching_port_config_entry_not_loaded(
         options={},
         title="Test",
     )
-    config_entry.add_to_hass(hass)
-    config_entry.mock_state(hass, ConfigEntryState.SETUP_IN_PROGRESS)
+    config_entry.add_to_menuai(menuai)
+    config_entry.mock_state(menuai, ConfigEntryState.SETUP_IN_PROGRESS)
 
     migration_data = {
         "new_discovery_info": {
@@ -250,7 +250,7 @@ async def test_migrate_matching_port_config_entry_not_loaded(
         },
     }
 
-    migration_helper = radio_manager.ZhaMultiPANMigrationHelper(hass, config_entry)
+    migration_helper = radio_manager.ZhaMultiPANMigrationHelper(menuai, config_entry)
     assert await migration_helper.async_initiate_migration(migration_data)
 
     # Check the ZHA config entry data is updated
@@ -268,12 +268,12 @@ async def test_migrate_matching_port_config_entry_not_loaded(
 
 
 @patch(
-    "homeassistant.components.zha.radio_manager.ZhaRadioManager.async_restore_backup_step_1",
+    "menuai.components.zha.radio_manager.ZhaRadioManager.async_restore_backup_step_1",
     side_effect=OSError,
 )
 async def test_migrate_matching_port_retry(
     mock_restore_backup_step_1,
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_connect_zigpy_app,
 ) -> None:
     """Test automatic migration."""
@@ -284,8 +284,8 @@ async def test_migrate_matching_port_retry(
         options={},
         title="Test",
     )
-    config_entry.add_to_hass(hass)
-    config_entry.mock_state(hass, ConfigEntryState.SETUP_IN_PROGRESS)
+    config_entry.add_to_menuai(menuai)
+    config_entry.mock_state(menuai, ConfigEntryState.SETUP_IN_PROGRESS)
 
     migration_data = {
         "new_discovery_info": {
@@ -310,7 +310,7 @@ async def test_migrate_matching_port_retry(
         },
     }
 
-    migration_helper = radio_manager.ZhaMultiPANMigrationHelper(hass, config_entry)
+    migration_helper = radio_manager.ZhaMultiPANMigrationHelper(menuai, config_entry)
     assert await migration_helper.async_initiate_migration(migration_data)
 
     # Check the ZHA config entry data is updated
@@ -330,7 +330,7 @@ async def test_migrate_matching_port_retry(
 
 
 async def test_migrate_non_matching_port(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_connect_zigpy_app,
 ) -> None:
     """Test automatic migration."""
@@ -341,7 +341,7 @@ async def test_migrate_non_matching_port(
         options={},
         title="Test",
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     migration_data = {
         "new_discovery_info": {
@@ -366,7 +366,7 @@ async def test_migrate_non_matching_port(
         },
     }
 
-    migration_helper = radio_manager.ZhaMultiPANMigrationHelper(hass, config_entry)
+    migration_helper = radio_manager.ZhaMultiPANMigrationHelper(menuai, config_entry)
     assert not await migration_helper.async_initiate_migration(migration_data)
 
     # Check the ZHA config entry data is not updated
@@ -378,7 +378,7 @@ async def test_migrate_non_matching_port(
 
 
 async def test_migrate_initiate_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_connect_zigpy_app,
 ) -> None:
     """Test retries with failure."""
@@ -389,8 +389,8 @@ async def test_migrate_initiate_failure(
         options={},
         title="Test",
     )
-    config_entry.add_to_hass(hass)
-    config_entry.mock_state(hass, ConfigEntryState.SETUP_IN_PROGRESS)
+    config_entry.add_to_menuai(menuai)
+    config_entry.mock_state(menuai, ConfigEntryState.SETUP_IN_PROGRESS)
 
     migration_data = {
         "new_discovery_info": {
@@ -418,7 +418,7 @@ async def test_migrate_initiate_failure(
     mock_load_info = AsyncMock(side_effect=OSError())
     mock_connect_zigpy_app.__aenter__.return_value.load_network_info = mock_load_info
 
-    migration_helper = radio_manager.ZhaMultiPANMigrationHelper(hass, config_entry)
+    migration_helper = radio_manager.ZhaMultiPANMigrationHelper(menuai, config_entry)
 
     with pytest.raises(OSError):
         await migration_helper.async_initiate_migration(migration_data)
@@ -427,10 +427,10 @@ async def test_migrate_initiate_failure(
 
 
 @pytest.fixture(name="radio_manager")
-def zha_radio_manager(hass: HomeAssistant) -> ZhaRadioManager:
+def zha_radio_manager(menuai: menuai) -> ZhaRadioManager:
     """Fixture for an instance of `ZhaRadioManager`."""
     radio_manager = ZhaRadioManager()
-    radio_manager.hass = hass
+    radio_manager.menuai = menuai
     radio_manager.device_path = "/dev/ttyZigbee"
     return radio_manager
 
@@ -458,9 +458,9 @@ async def test_detect_radio_type_failure_wrong_firmware(
 ) -> None:
     """Test radio type detection, wrong firmware."""
     with (
-        patch("homeassistant.components.zha.radio_manager.AUTOPROBE_RADIOS", ()),
+        patch("menuai.components.zha.radio_manager.AUTOPROBE_RADIOS", ()),
         patch(
-            "homeassistant.components.zha.radio_manager.repairs.wrong_silabs_firmware.warn_on_wrong_silabs_firmware",
+            "menuai.components.zha.radio_manager.repairs.wrong_silabs_firmware.warn_on_wrong_silabs_firmware",
             return_value=True,
         ),
     ):
@@ -476,9 +476,9 @@ async def test_detect_radio_type_failure_no_detect(
 ) -> None:
     """Test radio type detection, no firmware detected."""
     with (
-        patch("homeassistant.components.zha.radio_manager.AUTOPROBE_RADIOS", ()),
+        patch("menuai.components.zha.radio_manager.AUTOPROBE_RADIOS", ()),
         patch(
-            "homeassistant.components.zha.radio_manager.repairs.wrong_silabs_firmware.warn_on_wrong_silabs_firmware",
+            "menuai.components.zha.radio_manager.repairs.wrong_silabs_firmware.warn_on_wrong_silabs_firmware",
             return_value=False,
         ),
     ):

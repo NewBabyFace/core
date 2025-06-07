@@ -10,8 +10,8 @@ import aiohttp
 from eagle100 import Eagle as Eagle100Reader
 from requests.exceptions import ConnectionError as ConnectError, HTTPError, Timeout
 
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import aiohttp_client
+from menuai.exceptions import menuaiError
+from menuai.helpers import aiohttp_client
 
 from .const import TYPE_EAGLE_100, TYPE_EAGLE_200
 
@@ -20,7 +20,7 @@ _LOGGER = logging.getLogger(__name__)
 UPDATE_100_ERRORS = (ConnectError, HTTPError, Timeout)
 
 
-class RainforestError(HomeAssistantError):
+class RainforestError(menuaiError):
     """Base error."""
 
 
@@ -32,11 +32,11 @@ class InvalidAuth(RainforestError):
     """Error to indicate bad auth."""
 
 
-async def async_get_type(hass, cloud_id, install_code, host):
+async def async_get_type(menuai, cloud_id, install_code, host):
     """Try API call 'get_network_info' to see if target device is Eagle-100 or Eagle-200."""
     # For EAGLE-200, fetch the hardware address of the meter too.
     hub = aioeagle.EagleHub(
-        aiohttp_client.async_get_clientsession(hass), cloud_id, install_code, host=host
+        aiohttp_client.async_get_clientsession(menuai), cloud_id, install_code, host=host
     )
 
     try:
@@ -59,7 +59,7 @@ async def async_get_type(hass, cloud_id, install_code, host):
     reader = Eagle100Reader(cloud_id, install_code, host)
 
     try:
-        response = await hass.async_add_executor_job(reader.get_network_info)
+        response = await menuai.async_add_executor_job(reader.get_network_info)
     except ValueError as err:
         # This could be invalid auth because it doesn't check 401 and tries to read JSON.
         raise InvalidAuth from err

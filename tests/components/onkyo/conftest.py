@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components.onkyo.const import DOMAIN
+from menuai.components.onkyo.const import DOMAIN
 
 from . import create_connection
 
@@ -13,7 +13,7 @@ from tests.common import MockConfigEntry
 
 @pytest.fixture(name="config_entry")
 def mock_config_entry() -> MockConfigEntry:
-    """Create Onkyo entry in Home Assistant."""
+    """Create Onkyo entry in MenuAI."""
     return MockConfigEntry(
         domain=DOMAIN,
         title="Onkyo",
@@ -25,7 +25,7 @@ def mock_config_entry() -> MockConfigEntry:
 def patch_timeouts():
     """Patch timeouts to avoid tests waiting."""
     with patch.multiple(
-        "homeassistant.components.onkyo.receiver",
+        "menuai.components.onkyo.receiver",
         DEVICE_INTERVIEW_TIMEOUT=0,
         DEVICE_DISCOVERY_TIMEOUT=0,
     ):
@@ -40,7 +40,7 @@ async def default_mock_discovery():
         await discovery_callback(create_connection(1))
 
     with patch(
-        "homeassistant.components.onkyo.receiver.pyeiscp.Connection.discover",
+        "menuai.components.onkyo.receiver.pyeiscp.Connection.discover",
         new=mock_discover,
     ):
         yield
@@ -54,7 +54,7 @@ async def stub_mock_discovery():
         pass
 
     with patch(
-        "homeassistant.components.onkyo.receiver.pyeiscp.Connection.discover",
+        "menuai.components.onkyo.receiver.pyeiscp.Connection.discover",
         new=mock_discover,
     ):
         yield
@@ -68,7 +68,7 @@ async def empty_mock_discovery():
         await discovery_callback(None)
 
     with patch(
-        "homeassistant.components.onkyo.receiver.pyeiscp.Connection.discover",
+        "menuai.components.onkyo.receiver.pyeiscp.Connection.discover",
         new=mock_discover,
     ):
         yield

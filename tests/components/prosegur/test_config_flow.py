@@ -4,19 +4,19 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.prosegur.config_flow import CannotConnect, InvalidAuth
-from homeassistant.components.prosegur.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.prosegur.config_flow import CannotConnect, InvalidAuth
+from menuai.components.prosegur.const import DOMAIN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
 
-async def test_form(hass: HomeAssistant, mock_list_contracts) -> None:
+async def test_form(menuai: menuai, mock_list_contracts) -> None:
     """Test we get the form."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -24,15 +24,15 @@ async def test_form(hass: HomeAssistant, mock_list_contracts) -> None:
 
     with (
         patch(
-            "homeassistant.components.prosegur.config_flow.Installation.list",
+            "menuai.components.prosegur.config_flow.Installation.list",
             return_value=mock_list_contracts,
         ) as mock_retrieve,
         patch(
-            "homeassistant.components.prosegur.async_setup_entry",
+            "menuai.components.prosegur.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "username": "test-username",
@@ -40,13 +40,13 @@ async def test_form(hass: HomeAssistant, mock_list_contracts) -> None:
                 "country": "PT",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {"contract": "123"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.CREATE_ENTRY
     assert result3["title"] == "Contract 123"
@@ -61,9 +61,9 @@ async def test_form(hass: HomeAssistant, mock_list_contracts) -> None:
     assert len(mock_retrieve.mock_calls) == 1
 
 
-async def test_form_invalid_auth(hass: HomeAssistant) -> None:
+async def test_form_invalid_auth(menuai: menuai) -> None:
     """Test we handle invalid auth."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -71,7 +71,7 @@ async def test_form_invalid_auth(hass: HomeAssistant) -> None:
         "pyprosegur.installation.Installation.list",
         side_effect=ConnectionRefusedError,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "username": "test-username",
@@ -84,17 +84,17 @@ async def test_form_invalid_auth(hass: HomeAssistant) -> None:
     assert result2["errors"] == {"base": "invalid_auth"}
 
 
-async def test_form_cannot_connect(hass: HomeAssistant) -> None:
+async def test_form_cannot_connect(menuai: menuai) -> None:
     """Test we handle cannot connect error."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     with patch(
-        "homeassistant.components.prosegur.config_flow.Installation.list",
+        "menuai.components.prosegur.config_flow.Installation.list",
         side_effect=ConnectionError,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "username": "test-username",
@@ -107,9 +107,9 @@ async def test_form_cannot_connect(hass: HomeAssistant) -> None:
     assert result2["errors"] == {"base": "cannot_connect"}
 
 
-async def test_form_unknown_exception(hass: HomeAssistant) -> None:
+async def test_form_unknown_exception(menuai: menuai) -> None:
     """Test we handle unknown exceptions."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -117,7 +117,7 @@ async def test_form_unknown_exception(hass: HomeAssistant) -> None:
         "pyprosegur.installation.Installation",
         side_effect=ValueError,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "username": "test-username",
@@ -130,7 +130,7 @@ async def test_form_unknown_exception(hass: HomeAssistant) -> None:
     assert result2["errors"] == {"base": "unknown"}
 
 
-async def test_reauth_flow(hass: HomeAssistant, mock_list_contracts) -> None:
+async def test_reauth_flow(menuai: menuai, mock_list_contracts) -> None:
     """Test a reauthentication flow."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -141,31 +141,31 @@ async def test_reauth_flow(hass: HomeAssistant, mock_list_contracts) -> None:
             "country": "PT",
         },
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await entry.start_reauth_flow(hass)
+    result = await entry.start_reauth_flow(menuai)
     assert result["step_id"] == "reauth_confirm"
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
     with (
         patch(
-            "homeassistant.components.prosegur.config_flow.Installation.list",
+            "menuai.components.prosegur.config_flow.Installation.list",
             return_value=mock_list_contracts,
         ) as mock_installation,
         patch(
-            "homeassistant.components.prosegur.async_setup_entry",
+            "menuai.components.prosegur.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "username": "test-username",
                 "password": "new_password",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.ABORT
     assert result2["reason"] == "reauth_successful"
@@ -187,7 +187,7 @@ async def test_reauth_flow(hass: HomeAssistant, mock_list_contracts) -> None:
         (Exception, "unknown"),
     ],
 )
-async def test_reauth_flow_error(hass: HomeAssistant, exception, base_error) -> None:
+async def test_reauth_flow_error(menuai: menuai, exception, base_error) -> None:
     """Test a reauthentication flow with errors."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -198,22 +198,22 @@ async def test_reauth_flow_error(hass: HomeAssistant, exception, base_error) -> 
             "country": "PT",
         },
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await entry.start_reauth_flow(hass)
+    result = await entry.start_reauth_flow(menuai)
 
     with patch(
-        "homeassistant.components.prosegur.config_flow.Installation.list",
+        "menuai.components.prosegur.config_flow.Installation.list",
         side_effect=exception,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "username": "test-username",
                 "password": "new_password",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["errors"]["base"] == base_error

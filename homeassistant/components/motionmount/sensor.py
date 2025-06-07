@@ -5,10 +5,10 @@ from typing import Final
 import motionmount
 from motionmount import MotionMountSystemError
 
-from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.sensor import SensorDeviceClass, SensorEntity
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import MotionMountConfigEntry
 from .entity import MotionMountEntity
@@ -25,7 +25,7 @@ ERROR_MESSAGES: Final = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: MotionMountConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

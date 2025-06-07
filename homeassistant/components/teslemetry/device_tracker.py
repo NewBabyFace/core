@@ -9,14 +9,14 @@ from tesla_fleet_api.const import Scope
 from teslemetry_stream import TeslemetryStreamVehicle
 from teslemetry_stream.const import TeslaLocation
 
-from homeassistant.components.device_tracker.config_entry import (
+from menuai.components.device_tracker.config_entry import (
     TrackerEntity,
     TrackerEntityDescription,
 )
-from homeassistant.const import STATE_HOME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.restore_state import RestoreEntity
+from menuai.const import STATE_HOME
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.restore_state import RestoreEntity
 
 from . import TeslemetryConfigEntry
 from .entity import TeslemetryVehiclePollingEntity, TeslemetryVehicleStreamEntity
@@ -73,7 +73,7 @@ DESCRIPTIONS: tuple[TeslemetryDeviceTrackerEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: TeslemetryConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -154,9 +154,9 @@ class TeslemetryStreamingDeviceTrackerEntity(
         self.entity_description = description
         super().__init__(vehicle, description.key)
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         if (state := await self.async_get_last_state()) is not None:
             self._attr_latitude = state.attributes.get("latitude")
             self._attr_longitude = state.attributes.get("longitude")

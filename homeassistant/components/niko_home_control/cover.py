@@ -6,16 +6,16 @@ from typing import Any
 
 from nhc.cover import NHCCover
 
-from homeassistant.components.cover import CoverEntity, CoverEntityFeature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.cover import CoverEntity, CoverEntityFeature
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import NikoHomeControlConfigEntry
 from .entity import NikoHomeControlEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: NikoHomeControlConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

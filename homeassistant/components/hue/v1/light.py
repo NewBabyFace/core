@@ -10,7 +10,7 @@ import random
 
 import aiohue
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_TEMP_KELVIN,
     ATTR_EFFECT,
@@ -28,17 +28,17 @@ from homeassistant.components.light import (
     LightEntityFeature,
     filter_supported_color_modes,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import PlatformNotReady
-from homeassistant.helpers.debounce import Debouncer
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import (
+from menuai.core import menuai, callback
+from menuai.exceptions import PlatformNotReady
+from menuai.helpers.debounce import Debouncer
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
     UpdateFailed,
 )
-from homeassistant.util import color as color_util
+from menuai.util import color as color_util
 
 from ..bridge import HueConfigEntry
 from ..const import (
@@ -98,7 +98,7 @@ GAMUT_TYPE_UNAVAILABLE = "None"
 GROUP_MIN_API_VERSION = (1, 13, 0)
 
 
-async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
+async def async_setup_platform(menuai, config, async_add_entities, discovery_info=None):
     """Old way of setting up Hue lights.
 
     Can only be called when a user accidentally mentions hue platform in their
@@ -141,7 +141,7 @@ def create_light(item_class, coordinator, bridge, is_group, rooms, api, item_id)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: HueConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -158,13 +158,13 @@ async def async_setup_entry(
         LOGGER.warning("Please update your Hue bridge to support groups")
 
     light_coordinator = DataUpdateCoordinator(
-        hass,
+        menuai,
         LOGGER,
         name="light",
         update_method=partial(async_safe_fetch, bridge, bridge.api.lights.update),
         update_interval=SCAN_INTERVAL,
         request_refresh_debouncer=Debouncer(
-            bridge.hass, LOGGER, cooldown=REQUEST_REFRESH_DELAY, immediate=True
+            bridge.menuai, LOGGER, cooldown=REQUEST_REFRESH_DELAY, immediate=True
         ),
     )
 
@@ -192,13 +192,13 @@ async def async_setup_entry(
         return
 
     group_coordinator = DataUpdateCoordinator(
-        hass,
+        menuai,
         LOGGER,
         name="group",
         update_method=partial(async_safe_fetch, bridge, bridge.api.groups.update),
         update_interval=SCAN_INTERVAL,
         request_refresh_debouncer=Debouncer(
-            bridge.hass, LOGGER, cooldown=REQUEST_REFRESH_DELAY, immediate=True
+            bridge.menuai, LOGGER, cooldown=REQUEST_REFRESH_DELAY, immediate=True
         ),
     )
 
@@ -293,7 +293,7 @@ def async_update_items(
         current[item_id] = create_item(api, item_id)
         new_items.append(current[item_id])
 
-    bridge.hass.async_create_task(remove_devices(bridge, api, current))
+    bridge.menuai.async_create_task(remove_devices(bridge, api, current))
 
     if new_items:
         # This is currently used to setup the listener to update rooms
@@ -302,17 +302,17 @@ def async_update_items(
         async_add_entities(new_items)
 
 
-def hue_brightness_to_hass(value):
-    """Convert hue brightness 1..254 to hass format 0..255."""
+def hue_brightness_to_menuai(value):
+    """Convert hue brightness 1..254 to menuai format 0..255."""
     return min(255, round((value / 254) * 255))
 
 
-def hass_to_hue_brightness(value):
-    """Convert hass brightness 0..255 to hue 1..254 scale."""
+def menuai_to_hue_brightness(value):
+    """Convert menuai brightness 0..255 to hue 1..254 scale."""
     return max(1, round((value / 255) * 254))
 
 
-# pylint: disable-next=hass-enforce-class-module
+# pylint: disable-next=menuai-enforce-class-module
 class HueLight(CoordinatorEntity, LightEntity):
     """Representation of a Hue light."""
 
@@ -405,7 +405,7 @@ class HueLight(CoordinatorEntity, LightEntity):
         if bri is None:
             return bri
 
-        return hue_brightness_to_hass(bri)
+        return hue_brightness_to_menuai(bri)
 
     @property
     def color_mode(self) -> str:
@@ -559,7 +559,7 @@ class HueLight(CoordinatorEntity, LightEntity):
             command["ct"] = color_util.color_temperature_kelvin_to_mired(temp_k)
 
         if ATTR_BRIGHTNESS in kwargs:
-            command["bri"] = hass_to_hue_brightness(kwargs[ATTR_BRIGHTNESS])
+            command["bri"] = menuai_to_hue_brightness(kwargs[ATTR_BRIGHTNESS])
 
         flash = kwargs.get(ATTR_FLASH)
 

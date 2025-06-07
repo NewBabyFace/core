@@ -2,14 +2,14 @@
 
 from unittest.mock import MagicMock
 
-from homeassistant.components.diagnostics import REDACTED
-from homeassistant.components.fully_kiosk.const import DOMAIN
-from homeassistant.components.fully_kiosk.diagnostics import (
+from menuai.components.diagnostics import REDACTED
+from menuai.components.fully_kiosk.const import DOMAIN
+from menuai.components.fully_kiosk.diagnostics import (
     DEVICE_INFO_TO_REDACT,
     SETTINGS_TO_REDACT,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 from tests.common import MockConfigEntry
 from tests.components.diagnostics import get_diagnostics_for_device
@@ -17,9 +17,9 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_diagnostics(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     mock_fully_kiosk: MagicMock,
     init_integration: MockConfigEntry,
 ) -> None:
@@ -27,7 +27,7 @@ async def test_diagnostics(
     device = device_registry.async_get_device(identifiers={(DOMAIN, "abcdef-123456")})
 
     diagnostics = await get_diagnostics_for_device(
-        hass, hass_client, init_integration, device
+        menuai, menuai_client, init_integration, device
     )
 
     assert diagnostics

@@ -9,20 +9,20 @@ import logging
 
 from brother import BrotherSensors
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     DOMAIN as PLATFORM,
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import PERCENTAGE, EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.const import PERCENTAGE, EntityCategory
+from menuai.core import menuai, callback
+from menuai.helpers import entity_registry as er
+from menuai.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import BrotherConfigEntry, BrotherDataUpdateCoordinator
@@ -301,7 +301,7 @@ SENSOR_TYPES: tuple[BrotherSensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: BrotherConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -309,7 +309,7 @@ async def async_setup_entry(
     coordinator = entry.runtime_data
     # Due to the change of the attribute name of one sensor, it is necessary to migrate
     # the unique_id to the new one.
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
     old_unique_id = f"{coordinator.brother.serial.lower()}_b/w_counter"
     if entity_id := entity_registry.async_get_entity_id(
         PLATFORM, DOMAIN, old_unique_id

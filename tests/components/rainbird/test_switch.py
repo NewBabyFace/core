@@ -4,12 +4,12 @@ from http import HTTPStatus
 
 import pytest
 
-from homeassistant.components.rainbird import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from menuai.components.rainbird import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
 
 from .conftest import (
     ACK_ECHO,
@@ -40,10 +40,10 @@ def platforms() -> list[str]:
 
 @pytest.fixture(autouse=True)
 async def setup_config_entry(
-    hass: HomeAssistant, config_entry: MockConfigEntry
+    menuai: menuai, config_entry: MockConfigEntry
 ) -> list[Platform]:
     """Fixture to setup the config entry."""
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
     assert config_entry.state is ConfigEntryState.LOADED
 
 
@@ -52,11 +52,11 @@ async def setup_config_entry(
     [EMPTY_STATIONS_RESPONSE],
 )
 async def test_no_zones(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test case where listing stations returns no stations."""
 
-    zone = hass.states.get("switch.rain_bird_sprinkler_1")
+    zone = menuai.states.get("switch.rain_bird_sprinkler_1")
     assert zone is None
 
 
@@ -65,12 +65,12 @@ async def test_no_zones(
     [ZONE_5_ON_RESPONSE],
 )
 async def test_zones(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test switch platform with fake data that creates 7 zones with one enabled."""
 
-    zone = hass.states.get("switch.rain_bird_sprinkler_1")
+    zone = menuai.states.get("switch.rain_bird_sprinkler_1")
     assert zone is not None
     assert zone.state == "off"
     assert zone.attributes == {
@@ -78,7 +78,7 @@ async def test_zones(
         "zone": 1,
     }
 
-    zone = hass.states.get("switch.rain_bird_sprinkler_2")
+    zone = menuai.states.get("switch.rain_bird_sprinkler_2")
     assert zone is not None
     assert zone.state == "off"
     assert zone.attributes == {
@@ -86,27 +86,27 @@ async def test_zones(
         "zone": 2,
     }
 
-    zone = hass.states.get("switch.rain_bird_sprinkler_3")
+    zone = menuai.states.get("switch.rain_bird_sprinkler_3")
     assert zone is not None
     assert zone.state == "off"
 
-    zone = hass.states.get("switch.rain_bird_sprinkler_4")
+    zone = menuai.states.get("switch.rain_bird_sprinkler_4")
     assert zone is not None
     assert zone.state == "off"
 
-    zone = hass.states.get("switch.rain_bird_sprinkler_5")
+    zone = menuai.states.get("switch.rain_bird_sprinkler_5")
     assert zone is not None
     assert zone.state == "on"
 
-    zone = hass.states.get("switch.rain_bird_sprinkler_6")
+    zone = menuai.states.get("switch.rain_bird_sprinkler_6")
     assert zone is not None
     assert zone.state == "off"
 
-    zone = hass.states.get("switch.rain_bird_sprinkler_7")
+    zone = menuai.states.get("switch.rain_bird_sprinkler_7")
     assert zone is not None
     assert zone.state == "off"
 
-    assert not hass.states.get("switch.rain_bird_sprinkler_8")
+    assert not menuai.states.get("switch.rain_bird_sprinkler_8")
 
     # Verify unique id for one of the switches
     entity_entry = entity_registry.async_get("switch.rain_bird_sprinkler_3")
@@ -114,7 +114,7 @@ async def test_zones(
 
 
 async def test_switch_on(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     responses: list[AiohttpClientMockResponse],
 ) -> None:
@@ -122,7 +122,7 @@ async def test_switch_on(
 
     # Initially all zones are off. Pick zone3 as an arbitrary to assert
     # state, then update below as a switch.
-    zone = hass.states.get("switch.rain_bird_sprinkler_3")
+    zone = menuai.states.get("switch.rain_bird_sprinkler_3")
     assert zone is not None
     assert zone.state == "off"
 
@@ -136,11 +136,11 @@ async def test_switch_on(
             mock_response(RAIN_DELAY_OFF),
         ]
     )
-    await switch_common.async_turn_on(hass, "switch.rain_bird_sprinkler_3")
-    await hass.async_block_till_done()
+    await switch_common.async_turn_on(menuai, "switch.rain_bird_sprinkler_3")
+    await menuai.async_block_till_done()
 
     # Verify switch state is updated
-    zone = hass.states.get("switch.rain_bird_sprinkler_3")
+    zone = menuai.states.get("switch.rain_bird_sprinkler_3")
     assert zone is not None
     assert zone.state == "on"
 
@@ -153,7 +153,7 @@ async def test_switch_on(
     ],
 )
 async def test_switch_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     responses: list[AiohttpClientMockResponse],
     start_state: str,
@@ -161,7 +161,7 @@ async def test_switch_off(
     """Test turning off irrigation switch."""
 
     # Initially the test zone is on
-    zone = hass.states.get("switch.rain_bird_sprinkler_3")
+    zone = menuai.states.get("switch.rain_bird_sprinkler_3")
     assert zone is not None
     assert zone.state == start_state
 
@@ -174,24 +174,24 @@ async def test_switch_off(
             mock_response(RAIN_DELAY_OFF),
         ]
     )
-    await switch_common.async_turn_off(hass, "switch.rain_bird_sprinkler_3")
-    await hass.async_block_till_done()
+    await switch_common.async_turn_off(menuai, "switch.rain_bird_sprinkler_3")
+    await menuai.async_block_till_done()
 
     # Verify switch state is updated
-    zone = hass.states.get("switch.rain_bird_sprinkler_3")
+    zone = menuai.states.get("switch.rain_bird_sprinkler_3")
     assert zone is not None
     assert zone.state == "off"
 
 
 async def test_irrigation_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     responses: list[AiohttpClientMockResponse],
     api_responses: list[str],
 ) -> None:
     """Test calling the irrigation service."""
 
-    zone = hass.states.get("switch.rain_bird_sprinkler_3")
+    zone = menuai.states.get("switch.rain_bird_sprinkler_3")
     assert zone is not None
     assert zone.state == "off"
 
@@ -206,14 +206,14 @@ async def test_irrigation_service(
         ]
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         "start_irrigation",
         {ATTR_ENTITY_ID: "switch.rain_bird_sprinkler_3", "duration": 30},
         blocking=True,
     )
 
-    zone = hass.states.get("switch.rain_bird_sprinkler_3")
+    zone = menuai.states.get("switch.rain_bird_sprinkler_3")
     assert zone is not None
     assert zone.state == "on"
 
@@ -237,16 +237,16 @@ async def test_irrigation_service(
     ],
 )
 async def test_yaml_imported_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     responses: list[AiohttpClientMockResponse],
 ) -> None:
     """Test a config entry that was previously imported from yaml."""
 
-    assert hass.states.get("switch.garden_sprinkler")
-    assert not hass.states.get("switch.rain_bird_sprinkler_1")
-    assert hass.states.get("switch.back_yard")
-    assert not hass.states.get("switch.rain_bird_sprinkler_2")
-    assert hass.states.get("switch.rain_bird_sprinkler_3")
+    assert menuai.states.get("switch.garden_sprinkler")
+    assert not menuai.states.get("switch.rain_bird_sprinkler_1")
+    assert menuai.states.get("switch.back_yard")
+    assert not menuai.states.get("switch.rain_bird_sprinkler_2")
+    assert menuai.states.get("switch.rain_bird_sprinkler_3")
 
 
 @pytest.mark.parametrize(
@@ -257,7 +257,7 @@ async def test_yaml_imported_config(
     ],
 )
 async def test_switch_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     responses: list[AiohttpClientMockResponse],
     status: HTTPStatus,
@@ -268,13 +268,13 @@ async def test_switch_error(
     aioclient_mock.mock_calls.clear()
     responses.append(mock_response_error(status=status))
 
-    with pytest.raises(HomeAssistantError, match=expected_msg):
-        await switch_common.async_turn_on(hass, "switch.rain_bird_sprinkler_3")
+    with pytest.raises(menuaiError, match=expected_msg):
+        await switch_common.async_turn_on(menuai, "switch.rain_bird_sprinkler_3")
 
     responses.append(mock_response_error(status=status))
 
-    with pytest.raises(HomeAssistantError, match=expected_msg):
-        await switch_common.async_turn_off(hass, "switch.rain_bird_sprinkler_3")
+    with pytest.raises(menuaiError, match=expected_msg):
+        await switch_common.async_turn_off(menuai, "switch.rain_bird_sprinkler_3")
 
 
 @pytest.mark.parametrize(
@@ -284,7 +284,7 @@ async def test_switch_error(
     ],
 )
 async def test_no_unique_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     responses: list[AiohttpClientMockResponse],
     entity_registry: er.EntityRegistry,
@@ -295,10 +295,10 @@ async def test_no_unique_id(
     # Failure to migrate config entry to a unique id
     responses.insert(0, mock_response_error(HTTPStatus.SERVICE_UNAVAILABLE))
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
     assert config_entry.state is ConfigEntryState.LOADED
 
-    zone = hass.states.get("switch.rain_bird_sprinkler_3")
+    zone = menuai.states.get("switch.rain_bird_sprinkler_3")
     assert zone is not None
     assert zone.attributes.get("friendly_name") == "Rain Bird Sprinkler 3"
     assert zone.state == "off"

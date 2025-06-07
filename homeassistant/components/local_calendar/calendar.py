@@ -15,7 +15,7 @@ from ical.store import EventStore, EventStoreError
 from ical.types import Range, Recur
 import voluptuous as vol
 
-from homeassistant.components.calendar import (
+from menuai.components.calendar import (
     EVENT_END,
     EVENT_RRULE,
     EVENT_START,
@@ -23,18 +23,18 @@ from homeassistant.components.calendar import (
     CalendarEntityFeature,
     CalendarEvent,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import dt as dt_util
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import dt as dt_util
 
 from .const import CONF_CALENDAR_NAME, DOMAIN
 from .store import LocalCalendarStore
 
 _LOGGER = logging.getLogger(__name__)
 
-PRODID = "-//homeassistant.io//local_calendar 1.0//EN"
+PRODID = "-//menuai.io//local_calendar 1.0//EN"
 
 # The calendar on disk is only changed when this entity is updated, so there
 # is no need to poll for changes. The calendar enttiy base class will handle
@@ -43,14 +43,14 @@ SCAN_INTERVAL = timedelta(days=1)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the local calendar platform."""
-    store = hass.data[DOMAIN][config_entry.entry_id]
+    store = menuai.data[DOMAIN][config_entry.entry_id]
     ics = await store.async_load()
-    calendar: Calendar = await hass.async_add_executor_job(
+    calendar: Calendar = await menuai.async_add_executor_job(
         IcsCalendarStream.calendar_from_ics, ics
     )
     calendar.prodid = PRODID
@@ -91,7 +91,7 @@ class LocalCalendarEntity(CalendarEntity):
         return self._event
 
     async def async_get_events(
-        self, hass: HomeAssistant, start_date: datetime, end_date: datetime
+        self, menuai: menuai, start_date: datetime, end_date: datetime
     ) -> list[CalendarEvent]:
         """Get all events in a specific time frame."""
 
@@ -102,7 +102,7 @@ class LocalCalendarEntity(CalendarEntity):
             )
             return [_get_calendar_event(event) for event in events]
 
-        return await self.hass.async_add_executor_job(events_in_range)
+        return await self.menuai.async_add_executor_job(events_in_range)
 
     async def async_update(self) -> None:
         """Update entity state with the next upcoming event."""
@@ -114,7 +114,7 @@ class LocalCalendarEntity(CalendarEntity):
                 return _get_calendar_event(event)
             return None
 
-        self._event = await self.hass.async_add_executor_job(next_event)
+        self._event = await self.menuai.async_add_executor_job(next_event)
 
     async def _async_store(self) -> None:
         """Persist the calendar to disk."""
@@ -126,7 +126,7 @@ class LocalCalendarEntity(CalendarEntity):
         event = _parse_event(kwargs)
         async with self._calendar_lock:
             event_store = EventStore(self._calendar)
-            await self.hass.async_add_executor_job(event_store.add, event)
+            await self.menuai.async_add_executor_job(event_store.add, event)
             await self._async_store()
         await self.async_update_ha_state(force_refresh=True)
 
@@ -148,7 +148,7 @@ class LocalCalendarEntity(CalendarEntity):
                     recurrence_range=range_value,
                 )
             except EventStoreError as err:
-                raise HomeAssistantError(f"Error while deleting event: {err}") from err
+                raise menuaiError(f"Error while deleting event: {err}") from err
             await self._async_store()
         await self.async_update_ha_state(force_refresh=True)
 
@@ -177,15 +177,15 @@ class LocalCalendarEntity(CalendarEntity):
                 )
 
             try:
-                await self.hass.async_add_executor_job(apply_edit)
+                await self.menuai.async_add_executor_job(apply_edit)
             except EventStoreError as err:
-                raise HomeAssistantError(f"Error while updating event: {err}") from err
+                raise menuaiError(f"Error while updating event: {err}") from err
             await self._async_store()
         await self.async_update_ha_state(force_refresh=True)
 
 
 def _parse_event(event: dict[str, Any]) -> Event:
-    """Parse an ical event from a home assistant event dictionary."""
+    """Parse an ical event from a MenuAI event dictionary."""
     if rrule := event.get(EVENT_RRULE):
         event[EVENT_RRULE] = Recur.from_rrule(rrule)
 

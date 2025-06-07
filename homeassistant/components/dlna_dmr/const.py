@@ -8,7 +8,7 @@ from typing import Final
 
 from async_upnp_client.profiles.dlna import PlayMode as _PlayMode
 
-from homeassistant.components.media_player import MediaType, RepeatMode
+from menuai.components.media_player import MediaType, RepeatMode
 
 LOGGER = logging.getLogger(__package__)
 

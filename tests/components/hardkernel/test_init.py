@@ -2,19 +2,19 @@
 
 from unittest.mock import patch
 
-from homeassistant.components.hardkernel.const import DOMAIN
-from homeassistant.components.hassio import DOMAIN as HASSIO_DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.hardkernel.const import DOMAIN
+from menuai.components.menuaiio import DOMAIN as menuaiIO_DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry, MockModule, mock_integration
 
 
-async def test_setup_entry(hass: HomeAssistant) -> None:
+async def test_setup_entry(menuai: menuai) -> None:
     """Test setup of a config entry."""
-    mock_integration(hass, MockModule("hassio"))
-    await async_setup_component(hass, HASSIO_DOMAIN, {})
+    mock_integration(menuai, MockModule("menuaiio"))
+    await async_setup_component(menuai, menuaiIO_DOMAIN, {})
 
     # Setup the config entry
     config_entry = MockConfigEntry(
@@ -23,19 +23,19 @@ async def test_setup_entry(hass: HomeAssistant) -> None:
         options={},
         title="Hardkernel",
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     with patch(
-        "homeassistant.components.hardkernel.get_os_info",
+        "menuai.components.hardkernel.get_os_info",
         return_value={"board": "odroid-n2"},
     ) as mock_get_os_info:
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     assert len(mock_get_os_info.mock_calls) == 1
 
 
-async def test_setup_entry_no_hassio(hass: HomeAssistant) -> None:
-    """Test setup of a config entry without hassio."""
+async def test_setup_entry_no_menuaiio(menuai: menuai) -> None:
+    """Test setup of a config entry without menuaiio."""
     # Setup the config entry
     config_entry = MockConfigEntry(
         data={},
@@ -43,21 +43,21 @@ async def test_setup_entry_no_hassio(hass: HomeAssistant) -> None:
         options={},
         title="Hardkernel",
     )
-    config_entry.add_to_hass(hass)
-    assert len(hass.config_entries.async_entries()) == 1
+    config_entry.add_to_menuai(menuai)
+    assert len(menuai.config_entries.async_entries()) == 1
 
-    with patch("homeassistant.components.hardkernel.get_os_info") as mock_get_os_info:
-        assert not await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+    with patch("menuai.components.hardkernel.get_os_info") as mock_get_os_info:
+        assert not await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     assert len(mock_get_os_info.mock_calls) == 0
-    assert len(hass.config_entries.async_entries()) == 0
+    assert len(menuai.config_entries.async_entries()) == 0
 
 
-async def test_setup_entry_wrong_board(hass: HomeAssistant) -> None:
+async def test_setup_entry_wrong_board(menuai: menuai) -> None:
     """Test setup of a config entry with wrong board type."""
-    mock_integration(hass, MockModule("hassio"))
-    await async_setup_component(hass, HASSIO_DOMAIN, {})
+    mock_integration(menuai, MockModule("menuaiio"))
+    await async_setup_component(menuai, menuaiIO_DOMAIN, {})
 
     # Setup the config entry
     config_entry = MockConfigEntry(
@@ -66,24 +66,24 @@ async def test_setup_entry_wrong_board(hass: HomeAssistant) -> None:
         options={},
         title="Hardkernel",
     )
-    config_entry.add_to_hass(hass)
-    assert len(hass.config_entries.async_entries()) == 1
+    config_entry.add_to_menuai(menuai)
+    assert len(menuai.config_entries.async_entries()) == 1
 
     with patch(
-        "homeassistant.components.hardkernel.get_os_info",
+        "menuai.components.hardkernel.get_os_info",
         return_value={"board": "generic-x86-64"},
     ) as mock_get_os_info:
-        assert not await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert not await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     assert len(mock_get_os_info.mock_calls) == 1
-    assert len(hass.config_entries.async_entries()) == 0
+    assert len(menuai.config_entries.async_entries()) == 0
 
 
-async def test_setup_entry_wait_hassio(hass: HomeAssistant) -> None:
-    """Test setup of a config entry when hassio has not fetched os_info."""
-    mock_integration(hass, MockModule("hassio"))
-    await async_setup_component(hass, HASSIO_DOMAIN, {})
+async def test_setup_entry_wait_menuaiio(menuai: menuai) -> None:
+    """Test setup of a config entry when menuaiio has not fetched os_info."""
+    mock_integration(menuai, MockModule("menuaiio"))
+    await async_setup_component(menuai, menuaiIO_DOMAIN, {})
 
     # Setup the config entry
     config_entry = MockConfigEntry(
@@ -92,13 +92,13 @@ async def test_setup_entry_wait_hassio(hass: HomeAssistant) -> None:
         options={},
         title="Hardkernel",
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     with patch(
-        "homeassistant.components.hardkernel.get_os_info",
+        "menuai.components.hardkernel.get_os_info",
         return_value=None,
     ) as mock_get_os_info:
-        assert not await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert not await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     assert len(mock_get_os_info.mock_calls) == 1
     assert config_entry.state is ConfigEntryState.SETUP_RETRY

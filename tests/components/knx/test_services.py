@@ -5,11 +5,11 @@ from unittest.mock import patch
 import pytest
 from xknx.telegram.apci import GroupValueResponse, GroupValueWrite
 
-from homeassistant.components.knx import async_unload_entry as knx_async_unload_entry
-from homeassistant.components.knx.const import DOMAIN
-from homeassistant.const import STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.components.knx import async_unload_entry as knx_async_unload_entry
+from menuai.components.knx.const import DOMAIN
+from menuai.const import STATE_OFF, STATE_ON
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from .conftest import KNXTestKit
 
@@ -105,7 +105,7 @@ from tests.common import async_capture_events
     ],
 )
 async def test_send(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXTestKit,
     service_payload,
     expected_telegrams,
@@ -114,7 +114,7 @@ async def test_send(
     """Test `knx.send` service."""
     await knx.setup_integration()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "knx",
         "send",
         service_payload,
@@ -126,16 +126,16 @@ async def test_send(
         await knx.assert_telegram(group_address, payload, expected_apci)
 
 
-async def test_read(hass: HomeAssistant, knx: KNXTestKit) -> None:
+async def test_read(menuai: menuai, knx: KNXTestKit) -> None:
     """Test `knx.read` service."""
     await knx.setup_integration()
 
     # send read telegram
-    await hass.services.async_call("knx", "read", {"address": "1/1/1"}, blocking=True)
+    await menuai.services.async_call("knx", "read", {"address": "1/1/1"}, blocking=True)
     await knx.assert_read("1/1/1")
 
     # send multiple read telegrams
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "knx",
         "read",
         {"address": ["1/1/1", "2/2/2", "3/3/3"]},
@@ -146,9 +146,9 @@ async def test_read(hass: HomeAssistant, knx: KNXTestKit) -> None:
     await knx.assert_read("3/3/3")
 
 
-async def test_event_register(hass: HomeAssistant, knx: KNXTestKit) -> None:
+async def test_event_register(menuai: menuai, knx: KNXTestKit) -> None:
     """Test `knx.event_register` service."""
-    events = async_capture_events(hass, "knx_event")
+    events = async_capture_events(menuai, "knx_event")
     test_address = "1/2/3"
 
     await knx.setup_integration()
@@ -158,7 +158,7 @@ async def test_event_register(hass: HomeAssistant, knx: KNXTestKit) -> None:
     assert len(events) == 0
 
     # register event with `type`
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "knx",
         "event_register",
         {"address": test_address, "type": "2byte_unsigned"},
@@ -171,7 +171,7 @@ async def test_event_register(hass: HomeAssistant, knx: KNXTestKit) -> None:
     assert typed_event.data["value"] == 1234
 
     # remove event registration - no event added
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "knx",
         "event_register",
         {"address": test_address, "remove": True},
@@ -181,7 +181,7 @@ async def test_event_register(hass: HomeAssistant, knx: KNXTestKit) -> None:
     assert len(events) == 0
 
     # register event without `type`
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "knx", "event_register", {"address": test_address}, blocking=True
     )
     await knx.receive_write(test_address, True)
@@ -195,7 +195,7 @@ async def test_event_register(hass: HomeAssistant, knx: KNXTestKit) -> None:
     assert untyped_event_1.data["value"] is None
 
 
-async def test_exposure_register(hass: HomeAssistant, knx: KNXTestKit) -> None:
+async def test_exposure_register(menuai: menuai, knx: KNXTestKit) -> None:
     """Test `knx.exposure_register` service."""
     test_address = "1/2/3"
     test_entity = "fake.entity"
@@ -204,34 +204,34 @@ async def test_exposure_register(hass: HomeAssistant, knx: KNXTestKit) -> None:
     await knx.setup_integration()
 
     # no exposure registered
-    hass.states.async_set(test_entity, STATE_ON, {})
-    await hass.async_block_till_done()
+    menuai.states.async_set(test_entity, STATE_ON, {})
+    await menuai.async_block_till_done()
     await knx.assert_no_telegram()
 
     # register exposure
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "knx",
         "exposure_register",
         {"address": test_address, "entity_id": test_entity, "type": "binary"},
         blocking=True,
     )
-    hass.states.async_set(test_entity, STATE_OFF, {})
-    await hass.async_block_till_done()
+    menuai.states.async_set(test_entity, STATE_OFF, {})
+    await menuai.async_block_till_done()
     await knx.assert_write(test_address, False)
 
     # register exposure
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "knx",
         "exposure_register",
         {"address": test_address, "remove": True},
         blocking=True,
     )
-    hass.states.async_set(test_entity, STATE_ON, {})
-    await hass.async_block_till_done()
+    menuai.states.async_set(test_entity, STATE_ON, {})
+    await menuai.async_block_till_done()
     await knx.assert_no_telegram()
 
     # register exposure for attribute with default
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "knx",
         "exposure_register",
         {
@@ -244,25 +244,25 @@ async def test_exposure_register(hass: HomeAssistant, knx: KNXTestKit) -> None:
         blocking=True,
     )
     # no attribute on first change wouldn't work because no attribute change since last test
-    hass.states.async_set(test_entity, STATE_ON, {test_attribute: 30})
-    await hass.async_block_till_done()
+    menuai.states.async_set(test_entity, STATE_ON, {test_attribute: 30})
+    await menuai.async_block_till_done()
     await knx.assert_write(test_address, (30,))
-    hass.states.async_set(test_entity, STATE_OFF, {})
-    await hass.async_block_till_done()
+    menuai.states.async_set(test_entity, STATE_OFF, {})
+    await menuai.async_block_till_done()
     await knx.assert_write(test_address, (0,))
     # don't send same value sequentially
-    hass.states.async_set(test_entity, STATE_ON, {test_attribute: 25})
-    hass.states.async_set(test_entity, STATE_ON, {test_attribute: 25})
-    hass.states.async_set(test_entity, STATE_ON, {test_attribute: 25, "unrelated": 2})
-    hass.states.async_set(test_entity, STATE_OFF, {test_attribute: 25})
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    menuai.states.async_set(test_entity, STATE_ON, {test_attribute: 25})
+    menuai.states.async_set(test_entity, STATE_ON, {test_attribute: 25})
+    menuai.states.async_set(test_entity, STATE_ON, {test_attribute: 25, "unrelated": 2})
+    menuai.states.async_set(test_entity, STATE_OFF, {test_attribute: 25})
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
     await knx.assert_telegram_count(1)
     await knx.assert_write(test_address, (25,))
 
 
 async def test_reload_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXTestKit,
 ) -> None:
     """Test reload service."""
@@ -270,12 +270,12 @@ async def test_reload_service(
 
     with (
         patch(
-            "homeassistant.components.knx.async_unload_entry",
+            "menuai.components.knx.async_unload_entry",
             wraps=knx_async_unload_entry,
         ) as mock_unload_entry,
-        patch("homeassistant.components.knx.async_setup_entry") as mock_setup_entry,
+        patch("menuai.components.knx.async_setup_entry") as mock_setup_entry,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "knx",
             "reload",
             blocking=True,
@@ -284,13 +284,13 @@ async def test_reload_service(
         mock_setup_entry.assert_called_once()
 
 
-async def test_service_setup_failed(hass: HomeAssistant, knx: KNXTestKit) -> None:
+async def test_service_setup_failed(menuai: menuai, knx: KNXTestKit) -> None:
     """Test service setup failed."""
     await knx.setup_integration()
-    await hass.config_entries.async_unload(knx.mock_config_entry.entry_id)
+    await menuai.config_entries.async_unload(knx.mock_config_entry.entry_id)
 
-    with pytest.raises(HomeAssistantError) as exc_info:
-        await hass.services.async_call(
+    with pytest.raises(menuaiError) as exc_info:
+        await menuai.services.async_call(
             "knx",
             "send",
             {"address": "1/2/3", "payload": True, "response": False},

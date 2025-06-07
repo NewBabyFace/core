@@ -14,23 +14,23 @@ from androidtvremote2 import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_REAUTH,
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_HOST, CONF_MAC, CONF_NAME
-from homeassistant.core import callback
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.selector import (
+from menuai.const import CONF_HOST, CONF_MAC, CONF_NAME
+from menuai.core import callback
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.selector import (
     SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
 )
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import CONF_APP_ICON, CONF_APP_NAME, CONF_APPS, CONF_ENABLE_IME, DOMAIN
 from .helpers import create_api, get_enable_ime
@@ -71,7 +71,7 @@ class AndroidTVRemoteConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
         if user_input is not None:
             self.host = user_input[CONF_HOST]
-            api = create_api(self.hass, self.host, enable_ime=False)
+            api = create_api(self.menuai, self.host, enable_ime=False)
             try:
                 await api.async_generate_cert_if_missing()
                 self.name, self.mac = await api.async_get_name_and_mac()
@@ -90,7 +90,7 @@ class AndroidTVRemoteConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def _async_start_pair(self) -> ConfigFlowResult:
         """Start pairing with the Android TV. Navigate to the pair flow to enter the PIN shown on screen."""
-        self.api = create_api(self.hass, self.host, enable_ime=False)
+        self.api = create_api(self.menuai, self.host, enable_ime=False)
         await self.api.async_generate_cert_if_missing()
         await self.api.async_start_pairing()
         return await self.async_step_pair()
@@ -105,7 +105,7 @@ class AndroidTVRemoteConfigFlow(ConfigFlow, domain=DOMAIN):
                 pin = user_input["pin"]
                 await self.api.async_finish_pairing(pin)
                 if self.source == SOURCE_REAUTH:
-                    await self.hass.config_entries.async_reload(
+                    await self.menuai.config_entries.async_reload(
                         self._get_reauth_entry().entry_id
                     )
                     return self.async_abort(reason="reauth_successful")

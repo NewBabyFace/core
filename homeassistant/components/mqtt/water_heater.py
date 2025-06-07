@@ -7,8 +7,8 @@ from typing import TYPE_CHECKING, Any
 
 import voluptuous as vol
 
-from homeassistant.components import water_heater
-from homeassistant.components.water_heater import (
+from menuai.components import water_heater
+from menuai.components.water_heater import (
     ATTR_OPERATION_MODE,
     DEFAULT_MIN_TEMP,
     STATE_ECO,
@@ -20,8 +20,8 @@ from homeassistant.components.water_heater import (
     WaterHeaterEntity,
     WaterHeaterEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_NAME,
     CONF_OPTIMISTIC,
     CONF_PAYLOAD_OFF,
@@ -34,12 +34,12 @@ from homeassistant.const import (
     STATE_OFF,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.template import Template
-from homeassistant.helpers.typing import ConfigType, VolSchemaType
-from homeassistant.util.unit_conversion import TemperatureConverter
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.template import Template
+from menuai.helpers.typing import ConfigType, VolSchemaType
+from menuai.util.unit_conversion import TemperatureConverter
 
 from .climate import MqttTemperatureControlEntity
 from .config import DEFAULT_RETAIN, MQTT_BASE_SCHEMA
@@ -164,13 +164,13 @@ DISCOVERY_SCHEMA = vol.All(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up MQTT water heater device through YAML and through MQTT discovery."""
     async_setup_entity_entry_helper(
-        hass,
+        menuai,
         config_entry,
         MqttWaterHeater,
         water_heater.DOMAIN,
@@ -198,7 +198,7 @@ class MqttWaterHeater(MqttTemperatureControlEntity, WaterHeaterEntity):
         """(Re)Setup the entity."""
         self._attr_operation_list = config[CONF_MODE_LIST]
         self._attr_temperature_unit = config.get(
-            CONF_TEMPERATURE_UNIT, self.hass.config.units.temperature_unit
+            CONF_TEMPERATURE_UNIT, self.menuai.config.units.temperature_unit
         )
         if (min_temp := config.get(CONF_TEMP_MIN)) is not None:
             self._attr_min_temp = min_temp

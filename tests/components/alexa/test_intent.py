@@ -6,11 +6,11 @@ import json
 from aiohttp.test_utils import TestClient
 import pytest
 
-from homeassistant.components import alexa
-from homeassistant.components.alexa import intent
-from homeassistant.const import CONTENT_TYPE_JSON
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.setup import async_setup_component
+from menuai.components import alexa
+from menuai.components.alexa import intent
+from menuai.const import CONTENT_TYPE_JSON
+from menuai.core import menuai, callback
+from menuai.setup import async_setup_component
 
 from tests.typing import ClientSessionGenerator
 
@@ -30,28 +30,28 @@ NPR_NEWS_MP3_URL = "https://pd.npr.org/anon.npr-mp3/npr/news/newscast.mp3"
 
 @pytest.fixture
 async def alexa_client(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
 ) -> TestClient:
-    """Initialize a Home Assistant server for testing this module."""
+    """Initialize a MenuAI server for testing this module."""
 
     @callback
     def mock_service(call):
         calls.append(call)
 
-    hass.services.async_register("test", "alexa", mock_service)
+    menuai.services.async_register("test", "alexa", mock_service)
 
     assert await async_setup_component(
-        hass,
+        menuai,
         alexa.DOMAIN,
         {
             # Key is here to verify we allow other keys in config too
-            "homeassistant": {},
+            "menuai": {},
             "alexa": {},
         },
     )
     assert await async_setup_component(
-        hass,
+        menuai,
         "intent_script",
         {
             "intent_script": {
@@ -126,7 +126,7 @@ async def alexa_client(
             }
         },
     )
-    return await hass_client()
+    return await menuai_client()
 
 
 def _intent_req(client, data=None):
@@ -216,7 +216,7 @@ async def test_intent_launch_request_not_configured(alexa_client) -> None:
     assert req.status == HTTPStatus.OK
     data = await req.json()
     text = data.get("response", {}).get("outputSpeech", {}).get("text")
-    assert text == "This intent is not yet configured within Home Assistant."
+    assert text == "This intent is not yet configured within MenuAI."
 
 
 async def test_intent_request_with_slots(alexa_client) -> None:
@@ -502,7 +502,7 @@ async def test_intent_request_with_slots_but_no_value(alexa_client) -> None:
     assert text == "You told us your sign is ."
 
 
-async def test_intent_request_without_slots(hass: HomeAssistant, alexa_client) -> None:
+async def test_intent_request_without_slots(menuai: menuai, alexa_client) -> None:
     """Test a request without slots."""
     data = {
         "version": "1.0",
@@ -533,8 +533,8 @@ async def test_intent_request_without_slots(hass: HomeAssistant, alexa_client) -
 
     assert text == "Anne Therese is at unknown and Paulus is at unknown"
 
-    hass.states.async_set("device_tracker.paulus", "home")
-    hass.states.async_set("device_tracker.anne_therese", "home")
+    menuai.states.async_set("device_tracker.paulus", "home")
+    menuai.states.async_set("device_tracker.anne_therese", "home")
 
     req = await _intent_req(alexa_client, data)
     assert req.status == HTTPStatus.OK
@@ -611,7 +611,7 @@ async def test_intent_session_ended_request(alexa_client) -> None:
     data = await req.json()
     assert (
         data["response"]["outputSpeech"]["text"]
-        == "This intent is not yet configured within Home Assistant."
+        == "This intent is not yet configured within MenuAI."
     )
 
 

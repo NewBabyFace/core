@@ -14,9 +14,9 @@ from unittest.mock import AsyncMock, Mock, patch
 from google.oauth2.credentials import Credentials
 import pytest
 
-from homeassistant.components.nest.const import API_URL, OAUTH2_TOKEN, SDM_SCOPES
-from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
+from menuai.components.nest.const import API_URL, OAUTH2_TOKEN, SDM_SCOPES
+from menuai.core import menuai
+from menuai.util import dt as dt_util
 
 from .common import CLIENT_ID, CLIENT_SECRET, PROJECT_ID, PlatformSetup
 from .conftest import FAKE_REFRESH_TOKEN, FAKE_TOKEN
@@ -40,7 +40,7 @@ def subscriber() -> Mock | None:
     ids=["expires-in-future"],
 )
 async def test_auth(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     setup_platform: PlatformSetup,
     token_expiration_time: float,

@@ -5,8 +5,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity
 
 from . import EcobeeData
 from .const import DOMAIN, ECOBEE_MODEL_TO_NAME, MANUFACTURER

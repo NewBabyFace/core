@@ -4,11 +4,11 @@ from unittest.mock import call, patch
 
 import pytest
 
-from homeassistant.components import notify
-from homeassistant.components.google_assistant_sdk import DOMAIN
-from homeassistant.components.google_assistant_sdk.const import SUPPORTED_LANGUAGE_CODES
-from homeassistant.components.google_assistant_sdk.notify import broadcast_commands
-from homeassistant.core import HomeAssistant
+from menuai.components import notify
+from menuai.components.google_assistant_sdk import DOMAIN
+from menuai.components.google_assistant_sdk.const import SUPPORTED_LANGUAGE_CODES
+from menuai.components.google_assistant_sdk.notify import broadcast_commands
+from menuai.core import menuai
 
 from .conftest import ComponentSetup, ExpectedCredentials
 
@@ -24,7 +24,7 @@ from .conftest import ComponentSetup, ExpectedCredentials
     ids=["english", "spanish", "korean", "japanese"],
 )
 async def test_broadcast_no_targets(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: ComponentSetup,
     language_code: str,
     message: str,
@@ -33,20 +33,20 @@ async def test_broadcast_no_targets(
     """Test broadcast to all."""
     await setup_integration()
 
-    entry = hass.config_entries.async_entries(DOMAIN)[0]
-    hass.config_entries.async_update_entry(
+    entry = menuai.config_entries.async_entries(DOMAIN)[0]
+    menuai.config_entries.async_update_entry(
         entry, options={"language_code": language_code}
     )
 
     with patch(
-        "homeassistant.components.google_assistant_sdk.helpers.TextAssistant"
+        "menuai.components.google_assistant_sdk.helpers.TextAssistant"
     ) as mock_text_assistant:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             notify.DOMAIN,
             DOMAIN,
             {notify.ATTR_MESSAGE: message},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     mock_text_assistant.assert_called_once_with(
         ExpectedCredentials(), language_code, audio_out=False
     )
@@ -80,7 +80,7 @@ async def test_broadcast_no_targets(
     ids=["english", "spanish", "korean", "japanese"],
 )
 async def test_broadcast_one_target(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: ComponentSetup,
     language_code: str,
     message: str,
@@ -90,26 +90,26 @@ async def test_broadcast_one_target(
     """Test broadcast to one target."""
     await setup_integration()
 
-    entry = hass.config_entries.async_entries(DOMAIN)[0]
-    hass.config_entries.async_update_entry(
+    entry = menuai.config_entries.async_entries(DOMAIN)[0]
+    menuai.config_entries.async_update_entry(
         entry, options={"language_code": language_code}
     )
 
     with patch(
-        "homeassistant.components.google_assistant_sdk.helpers.TextAssistant.assist",
+        "menuai.components.google_assistant_sdk.helpers.TextAssistant.assist",
         return_value=("text_response", None, b""),
     ) as mock_assist_call:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             notify.DOMAIN,
             DOMAIN,
             {notify.ATTR_MESSAGE: message, notify.ATTR_TARGET: [target]},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     mock_assist_call.assert_called_once_with(expected_command)
 
 
 async def test_broadcast_two_targets(
-    hass: HomeAssistant, setup_integration: ComponentSetup
+    menuai: menuai, setup_integration: ComponentSetup
 ) -> None:
     """Test broadcast to two targets."""
     await setup_integration()
@@ -120,41 +120,41 @@ async def test_broadcast_two_targets(
     expected_command1 = "broadcast to basement time for dinner"
     expected_command2 = "broadcast to master bedroom time for dinner"
     with patch(
-        "homeassistant.components.google_assistant_sdk.helpers.TextAssistant.assist",
+        "menuai.components.google_assistant_sdk.helpers.TextAssistant.assist",
         return_value=("text_response", None, b""),
     ) as mock_assist_call:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             notify.DOMAIN,
             DOMAIN,
             {notify.ATTR_MESSAGE: message, notify.ATTR_TARGET: [target1, target2]},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     mock_assist_call.assert_has_calls(
         [call(expected_command1), call(expected_command2)]
     )
 
 
 async def test_broadcast_empty_message(
-    hass: HomeAssistant, setup_integration: ComponentSetup
+    menuai: menuai, setup_integration: ComponentSetup
 ) -> None:
     """Test broadcast empty message."""
     await setup_integration()
 
     with patch(
-        "homeassistant.components.google_assistant_sdk.helpers.TextAssistant.assist",
+        "menuai.components.google_assistant_sdk.helpers.TextAssistant.assist",
         return_value=("text_response", None, b""),
     ) as mock_assist_call:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             notify.DOMAIN,
             DOMAIN,
             {notify.ATTR_MESSAGE: ""},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     mock_assist_call.assert_not_called()
 
 
 def test_broadcast_language_mapping(
-    hass: HomeAssistant, setup_integration: ComponentSetup
+    menuai: menuai, setup_integration: ComponentSetup
 ) -> None:
     """Test all supported languages have a mapped broadcast command."""
     for language_code in SUPPORTED_LANGUAGE_CODES:

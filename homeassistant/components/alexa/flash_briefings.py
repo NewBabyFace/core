@@ -7,12 +7,12 @@ import uuid
 
 from aiohttp.web_response import StreamResponse
 
-from homeassistant.components import http
-from homeassistant.const import CONF_PASSWORD
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import template
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util import dt as dt_util
+from menuai.components import http
+from menuai.const import CONF_PASSWORD
+from menuai.core import menuai, callback
+from menuai.helpers import template
+from menuai.helpers.typing import ConfigType
+from menuai.util import dt as dt_util
 
 from .const import (
     API_PASSWORD,
@@ -36,26 +36,26 @@ FLASH_BRIEFINGS_API_ENDPOINT = "/api/alexa/flash_briefings/{briefing_id}"
 
 
 @callback
-def async_setup(hass: HomeAssistant, flash_briefing_config: ConfigType) -> None:
+def async_setup(menuai: menuai, flash_briefing_config: ConfigType) -> None:
     """Activate Alexa component."""
-    hass.http.register_view(AlexaFlashBriefingView(hass, flash_briefing_config))
+    menuai.http.register_view(AlexaFlashBriefingView(menuai, flash_briefing_config))
 
 
-class AlexaFlashBriefingView(http.HomeAssistantView):
+class AlexaFlashBriefingView(http.menuaiView):
     """Handle Alexa Flash Briefing skill requests."""
 
     url = FLASH_BRIEFINGS_API_ENDPOINT
     requires_auth = False
     name = "api:alexa:flash_briefings"
 
-    def __init__(self, hass: HomeAssistant, flash_briefings: ConfigType) -> None:
+    def __init__(self, menuai: menuai, flash_briefings: ConfigType) -> None:
         """Initialize Alexa view."""
         super().__init__()
         self.flash_briefings = flash_briefings
 
     @callback
     def get(
-        self, request: http.HomeAssistantRequest, briefing_id: str
+        self, request: http.menuaiRequest, briefing_id: str
     ) -> StreamResponse | tuple[bytes, HTTPStatus]:
         """Handle Alexa Flash Briefing request."""
         _LOGGER.debug("Received Alexa flash briefing request for: %s", briefing_id)

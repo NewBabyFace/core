@@ -8,7 +8,7 @@ from pyipma.rcm import RCM
 from pyipma.uv import UV
 from pyipma.warnings import Warning
 
-from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE, CONF_MODE, CONF_NAME
+from menuai.const import CONF_LATITUDE, CONF_LONGITUDE, CONF_MODE, CONF_NAME
 
 ENTRY_CONFIG = {
     CONF_NAME: "Home Town",

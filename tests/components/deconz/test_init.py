@@ -6,10 +6,10 @@ from unittest.mock import patch
 import pydeconz
 import pytest
 
-from homeassistant.components.deconz.const import CONF_MASTER_GATEWAY, DOMAIN
-from homeassistant.components.deconz.errors import AuthenticationRequired
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
+from menuai.components.deconz.const import CONF_MASTER_GATEWAY, DOMAIN
+from menuai.components.deconz.errors import AuthenticationRequired
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
 
 from .conftest import ConfigEntryFactoryType
 
@@ -34,32 +34,32 @@ async def test_setup_entry(config_entry_setup: MockConfigEntry) -> None:
     ],
 )
 async def test_get_deconz_api_fails(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     side_effect: Exception,
     state: ConfigEntryState,
 ) -> None:
     """Failed setup."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     with patch(
-        "homeassistant.components.deconz.hub.api.DeconzSession.refresh_state",
+        "menuai.components.deconz.hub.api.DeconzSession.refresh_state",
         side_effect=side_effect,
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
     assert config_entry.state is state
 
 
 async def test_setup_entry_fails_trigger_reauth_flow(
-    hass: HomeAssistant, config_entry_factory: ConfigEntryFactoryType
+    menuai: menuai, config_entry_factory: ConfigEntryFactoryType
 ) -> None:
     """Failed authentication trigger a reauthentication flow."""
     with (
         patch(
-            "homeassistant.components.deconz.get_deconz_api",
+            "menuai.components.deconz.get_deconz_api",
             side_effect=AuthenticationRequired,
         ),
-        patch.object(hass.config_entries.flow, "async_init") as mock_flow_init,
+        patch.object(menuai.config_entries.flow, "async_init") as mock_flow_init,
     ):
         config_entry = await config_entry_factory()
         mock_flow_init.assert_called_once()
@@ -67,7 +67,7 @@ async def test_setup_entry_fails_trigger_reauth_flow(
 
 
 async def test_setup_entry_multiple_gateways(
-    hass: HomeAssistant, config_entry_factory: ConfigEntryFactoryType
+    menuai: menuai, config_entry_factory: ConfigEntryFactoryType
 ) -> None:
     """Test setup entry is successful with multiple gateways."""
     config_entry = await config_entry_factory()
@@ -87,16 +87,16 @@ async def test_setup_entry_multiple_gateways(
 
 
 async def test_unload_entry(
-    hass: HomeAssistant, config_entry_setup: MockConfigEntry
+    menuai: menuai, config_entry_setup: MockConfigEntry
 ) -> None:
     """Test being able to unload an entry."""
     assert config_entry_setup.state is ConfigEntryState.LOADED
-    assert await hass.config_entries.async_unload(config_entry_setup.entry_id)
+    assert await menuai.config_entries.async_unload(config_entry_setup.entry_id)
     assert config_entry_setup.state is ConfigEntryState.NOT_LOADED
 
 
 async def test_unload_entry_multiple_gateways(
-    hass: HomeAssistant, config_entry_factory: ConfigEntryFactoryType
+    menuai: menuai, config_entry_factory: ConfigEntryFactoryType
 ) -> None:
     """Test being able to unload an entry and master gateway gets moved."""
     config_entry = await config_entry_factory()
@@ -112,13 +112,13 @@ async def test_unload_entry_multiple_gateways(
     assert config_entry.state is ConfigEntryState.LOADED
     assert config_entry2.state is ConfigEntryState.LOADED
 
-    assert await hass.config_entries.async_unload(config_entry.entry_id)
+    assert await menuai.config_entries.async_unload(config_entry.entry_id)
     assert config_entry.state is ConfigEntryState.NOT_LOADED
     assert config_entry2.options[CONF_MASTER_GATEWAY] is True
 
 
 async def test_unload_entry_multiple_gateways_parallel(
-    hass: HomeAssistant, config_entry_factory: ConfigEntryFactoryType
+    menuai: menuai, config_entry_factory: ConfigEntryFactoryType
 ) -> None:
     """Test race condition when unloading multiple config entries in parallel."""
     config_entry = await config_entry_factory()
@@ -135,8 +135,8 @@ async def test_unload_entry_multiple_gateways_parallel(
     assert config_entry2.state is ConfigEntryState.LOADED
 
     await asyncio.gather(
-        hass.config_entries.async_unload(config_entry.entry_id),
-        hass.config_entries.async_unload(config_entry2.entry_id),
+        menuai.config_entries.async_unload(config_entry.entry_id),
+        menuai.config_entries.async_unload(config_entry2.entry_id),
     )
 
     assert config_entry.state is ConfigEntryState.NOT_LOADED

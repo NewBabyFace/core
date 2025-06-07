@@ -5,9 +5,9 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.util.dt import utcnow
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.util.dt import utcnow
 
 from .conftest import get_states_response_for_uid
 
@@ -35,7 +35,7 @@ from tests.common import MockConfigEntry, async_fire_time_changed
     ],
 )
 async def test_sensor_get_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     init_integration: MockConfigEntry,
     entity_id: str,
@@ -44,7 +44,7 @@ async def test_sensor_get_state(
 ) -> None:
     """Test states of the sensor."""
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.attributes.get("friendly_name") == name
 
@@ -62,13 +62,13 @@ async def test_sensor_get_state(
     elif states_response[0]["type"] == "humiditySensor":
         states_response[0]["state"]["currentRelativeHumidity"] = "1"
     with patch(
-        "homeassistant.components.freedompro.coordinator.get_states",
+        "menuai.components.freedompro.coordinator.get_states",
         return_value=states_response,
     ):
-        async_fire_time_changed(hass, utcnow() + timedelta(hours=2))
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, utcnow() + timedelta(hours=2))
+        await menuai.async_block_till_done()
 
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert state.attributes.get("friendly_name") == name
 

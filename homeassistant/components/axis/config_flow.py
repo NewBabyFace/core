@@ -9,7 +9,7 @@ from urllib.parse import urlsplit
 
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_IGNORE,
     SOURCE_REAUTH,
     SOURCE_RECONFIGURE,
@@ -18,7 +18,7 @@ from homeassistant.config_entries import (
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_MAC,
     CONF_MODEL,
@@ -28,18 +28,18 @@ from homeassistant.const import (
     CONF_PROTOCOL,
     CONF_USERNAME,
 )
-from homeassistant.core import callback
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
-from homeassistant.helpers.service_info.ssdp import (
+from menuai.core import callback
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.helpers.service_info.ssdp import (
     ATTR_UPNP_FRIENDLY_NAME,
     ATTR_UPNP_PRESENTATION_URL,
     ATTR_UPNP_SERIAL,
     SsdpServiceInfo,
 )
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
-from homeassistant.helpers.typing import VolDictType
-from homeassistant.util.network import is_link_local
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.helpers.typing import VolDictType
+from menuai.util.network import is_link_local
 
 from . import AxisConfigEntry
 from .const import (
@@ -87,7 +87,7 @@ class AxisFlowHandler(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             try:
-                api = await get_axis_api(self.hass, user_input)
+                api = await get_axis_api(self.menuai, user_input)
 
             except AuthenticationRequired:
                 errors["base"] = "invalid_auth"
@@ -146,7 +146,7 @@ class AxisFlowHandler(ConfigFlow, domain=DOMAIN):
         model = self.config[CONF_MODEL]
         same_model = [
             entry.data[CONF_NAME]
-            for entry in self.hass.config_entries.async_entries(DOMAIN)
+            for entry in self.menuai.config_entries.async_entries(DOMAIN)
             if entry.source != SOURCE_IGNORE and entry.data[CONF_MODEL] == model
         ]
 

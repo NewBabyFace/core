@@ -15,21 +15,21 @@ from subarulink import (
 from subarulink.const import COUNTRY_CAN, COUNTRY_USA
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_COUNTRY,
     CONF_DEVICE_ID,
     CONF_PASSWORD,
     CONF_PIN,
     CONF_USERNAME,
 )
-from homeassistant.core import callback
-from homeassistant.helpers import aiohttp_client, config_validation as cv
+from menuai.core import callback
+from menuai.helpers import aiohttp_client, config_validation as cv
 
 from .const import CONF_UPDATE_ENABLED, DOMAIN
 
@@ -113,12 +113,12 @@ class SubaruConfigFlow(ConfigFlow, domain=DOMAIN):
 
         data: contains values provided by the user.
         """
-        websession = aiohttp_client.async_get_clientsession(self.hass)
+        websession = aiohttp_client.async_get_clientsession(self.menuai)
         now = datetime.now()
         if not data.get(CONF_DEVICE_ID):
             data[CONF_DEVICE_ID] = int(now.timestamp())
         date = now.strftime("%Y-%m-%d")
-        device_name = "Home Assistant: Added " + date
+        device_name = "MenuAI: Added " + date
 
         self.controller = SubaruAPI(
             websession,

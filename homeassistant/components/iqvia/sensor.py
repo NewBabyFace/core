@@ -7,14 +7,14 @@ from typing import Any, NamedTuple, cast
 
 import numpy as np
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import ATTR_STATE
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import ATTR_STATE
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
     TYPE_ALLERGY_FORECAST,
@@ -126,7 +126,7 @@ INDEX_SENSOR_DESCRIPTIONS = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: IqviaConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

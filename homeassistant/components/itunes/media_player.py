@@ -7,18 +7,18 @@ from typing import Any
 import requests
 import voluptuous as vol
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     PLATFORM_SCHEMA as MEDIA_PLAYER_PLATFORM_SCHEMA,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
     MediaType,
 )
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT, CONF_SSL
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_HOST, CONF_NAME, CONF_PORT, CONF_SSL
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 DEFAULT_NAME = "iTunes"
 DEFAULT_PORT = 8181
@@ -162,7 +162,7 @@ class Itunes:
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,

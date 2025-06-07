@@ -6,9 +6,9 @@ from pylamarzocco.const import ModelName
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import async_init_integration
 
@@ -18,7 +18,7 @@ pytestmark = pytest.mark.usefixtures("mock_websocket_terminated")
 
 
 async def test_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_lamarzocco: MagicMock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
@@ -26,9 +26,9 @@ async def test_sensors(
 ) -> None:
     """Test the La Marzocco sensors."""
 
-    with patch("homeassistant.components.lamarzocco.PLATFORMS", [Platform.SENSOR]):
-        await async_init_integration(hass, mock_config_entry)
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    with patch("menuai.components.lamarzocco.PLATFORMS", [Platform.SENSOR]):
+        await async_init_integration(menuai, mock_config_entry)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
 
 @pytest.mark.parametrize(
@@ -36,7 +36,7 @@ async def test_sensors(
     [ModelName.GS3_AV, ModelName.GS3_MP, ModelName.LINEA_MINI, ModelName.LINEA_MICRA],
 )
 async def test_steam_ready_entity_for_all_machines(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_lamarzocco: MagicMock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
@@ -44,9 +44,9 @@ async def test_steam_ready_entity_for_all_machines(
     """Test the La Marzocco steam ready sensor for all machines."""
 
     serial_number = mock_lamarzocco.serial_number
-    await async_init_integration(hass, mock_config_entry)
+    await async_init_integration(menuai, mock_config_entry)
 
-    state = hass.states.get(f"sensor.{serial_number}_steam_boiler_ready_time")
+    state = menuai.states.get(f"sensor.{serial_number}_steam_boiler_ready_time")
 
     assert state
 

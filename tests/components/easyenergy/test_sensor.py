@@ -5,14 +5,14 @@ from unittest.mock import MagicMock
 from easyenergy import EasyEnergyNoDataError
 import pytest
 
-from homeassistant.components.easyenergy.const import DOMAIN
-from homeassistant.components.homeassistant import SERVICE_UPDATE_ENTITY
-from homeassistant.components.sensor import (
+from menuai.components.easyenergy.const import DOMAIN
+from menuai.components.menuai import SERVICE_UPDATE_ENTITY
+from menuai.components.sensor import (
     ATTR_STATE_CLASS,
     SensorDeviceClass,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     ATTR_ENTITY_ID,
     ATTR_FRIENDLY_NAME,
@@ -23,16 +23,16 @@ from homeassistant.const import (
     UnitOfEnergy,
     UnitOfVolume,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 
 
 @pytest.mark.freeze_time("2023-01-19 15:00:00")
 async def test_energy_usage_today(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
     init_integration: MockConfigEntry,
@@ -41,7 +41,7 @@ async def test_energy_usage_today(
     entry_id = init_integration.entry_id
 
     # Current usage energy price sensor
-    state = hass.states.get("sensor.easyenergy_today_energy_usage_current_hour_price")
+    state = menuai.states.get("sensor.easyenergy_today_energy_usage_current_hour_price")
     entry = entity_registry.async_get(
         "sensor.easyenergy_today_energy_usage_current_hour_price"
     )
@@ -62,7 +62,7 @@ async def test_energy_usage_today(
     assert ATTR_ICON not in state.attributes
 
     # Average usage energy price sensor
-    state = hass.states.get("sensor.easyenergy_today_energy_usage_average_price")
+    state = menuai.states.get("sensor.easyenergy_today_energy_usage_average_price")
     entry = entity_registry.async_get(
         "sensor.easyenergy_today_energy_usage_average_price"
     )
@@ -82,7 +82,7 @@ async def test_energy_usage_today(
     assert ATTR_ICON not in state.attributes
 
     # Highest usage energy price sensor
-    state = hass.states.get("sensor.easyenergy_today_energy_usage_max_price")
+    state = menuai.states.get("sensor.easyenergy_today_energy_usage_max_price")
     entry = entity_registry.async_get("sensor.easyenergy_today_energy_usage_max_price")
     assert entry
     assert state
@@ -100,7 +100,7 @@ async def test_energy_usage_today(
     assert ATTR_ICON not in state.attributes
 
     # Highest usage price time sensor
-    state = hass.states.get("sensor.easyenergy_today_energy_usage_highest_price_time")
+    state = menuai.states.get("sensor.easyenergy_today_energy_usage_highest_price_time")
     entry = entity_registry.async_get(
         "sensor.easyenergy_today_energy_usage_highest_price_time"
     )
@@ -126,7 +126,7 @@ async def test_energy_usage_today(
     assert not device_entry.sw_version
 
     # Usage hours priced equal or lower sensor
-    state = hass.states.get(
+    state = menuai.states.get(
         "sensor.easyenergy_today_energy_usage_hours_priced_equal_or_lower"
     )
     entry = entity_registry.async_get(
@@ -147,7 +147,7 @@ async def test_energy_usage_today(
 
 @pytest.mark.freeze_time("2023-01-19 15:00:00")
 async def test_energy_return_today(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
     init_integration: MockConfigEntry,
@@ -156,7 +156,7 @@ async def test_energy_return_today(
     entry_id = init_integration.entry_id
 
     # Current return energy price sensor
-    state = hass.states.get("sensor.easyenergy_today_energy_return_current_hour_price")
+    state = menuai.states.get("sensor.easyenergy_today_energy_return_current_hour_price")
     entry = entity_registry.async_get(
         "sensor.easyenergy_today_energy_return_current_hour_price"
     )
@@ -177,7 +177,7 @@ async def test_energy_return_today(
     assert ATTR_ICON not in state.attributes
 
     # Average return energy price sensor
-    state = hass.states.get("sensor.easyenergy_today_energy_return_average_price")
+    state = menuai.states.get("sensor.easyenergy_today_energy_return_average_price")
     entry = entity_registry.async_get(
         "sensor.easyenergy_today_energy_return_average_price"
     )
@@ -197,7 +197,7 @@ async def test_energy_return_today(
     assert ATTR_ICON not in state.attributes
 
     # Highest return energy price sensor
-    state = hass.states.get("sensor.easyenergy_today_energy_return_max_price")
+    state = menuai.states.get("sensor.easyenergy_today_energy_return_max_price")
     entry = entity_registry.async_get("sensor.easyenergy_today_energy_return_max_price")
     assert entry
     assert state
@@ -215,7 +215,7 @@ async def test_energy_return_today(
     assert ATTR_ICON not in state.attributes
 
     # Highest return price time sensor
-    state = hass.states.get("sensor.easyenergy_today_energy_return_highest_price_time")
+    state = menuai.states.get("sensor.easyenergy_today_energy_return_highest_price_time")
     entry = entity_registry.async_get(
         "sensor.easyenergy_today_energy_return_highest_price_time"
     )
@@ -241,7 +241,7 @@ async def test_energy_return_today(
     assert not device_entry.sw_version
 
     # Return hours priced equal or higher sensor
-    state = hass.states.get(
+    state = menuai.states.get(
         "sensor.easyenergy_today_energy_return_hours_priced_equal_or_higher"
     )
     entry = entity_registry.async_get(
@@ -263,7 +263,7 @@ async def test_energy_return_today(
 
 @pytest.mark.freeze_time("2023-01-19 10:00:00")
 async def test_gas_today(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
     init_integration: MockConfigEntry,
@@ -272,7 +272,7 @@ async def test_gas_today(
     entry_id = init_integration.entry_id
 
     # Current gas price sensor
-    state = hass.states.get("sensor.easyenergy_today_gas_current_hour_price")
+    state = menuai.states.get("sensor.easyenergy_today_gas_current_hour_price")
     entry = entity_registry.async_get("sensor.easyenergy_today_gas_current_hour_price")
     assert entry
     assert state
@@ -300,21 +300,21 @@ async def test_gas_today(
 
 @pytest.mark.freeze_time("2023-01-19 15:00:00")
 async def test_no_gas_today(
-    hass: HomeAssistant, mock_easyenergy: MagicMock, init_integration: MockConfigEntry
+    menuai: menuai, mock_easyenergy: MagicMock, init_integration: MockConfigEntry
 ) -> None:
     """Test the easyEnergy - No gas data available."""
-    await async_setup_component(hass, "homeassistant", {})
+    await async_setup_component(menuai, "menuai", {})
 
     mock_easyenergy.gas_prices.side_effect = EasyEnergyNoDataError
 
-    await hass.services.async_call(
-        "homeassistant",
+    await menuai.services.async_call(
+        "menuai",
         SERVICE_UPDATE_ENTITY,
         {ATTR_ENTITY_ID: "sensor.easyenergy_today_gas_current_hour_price"},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.easyenergy_today_gas_current_hour_price")
+    state = menuai.states.get("sensor.easyenergy_today_gas_current_hour_price")
     assert state
     assert state.state == STATE_UNKNOWN

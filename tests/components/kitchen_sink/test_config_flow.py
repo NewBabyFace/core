@@ -5,11 +5,11 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant import config_entries, setup
-from homeassistant.components.kitchen_sink import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.setup import async_setup_component
+from menuai import config_entries, setup
+from menuai.components.kitchen_sink import DOMAIN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 
@@ -18,30 +18,30 @@ from tests.common import MockConfigEntry
 def no_platforms() -> Generator[None]:
     """Don't enable any platforms."""
     with patch(
-        "homeassistant.components.kitchen_sink.COMPONENTS_WITH_DEMO_PLATFORM",
+        "menuai.components.kitchen_sink.COMPONENTS_WITH_DEMO_PLATFORM",
         [],
     ):
         yield
 
 
-async def test_import(hass: HomeAssistant) -> None:
+async def test_import(menuai: menuai) -> None:
     """Test that we can import a config entry."""
-    with patch("homeassistant.components.kitchen_sink.async_setup_entry"):
-        assert await setup.async_setup_component(hass, DOMAIN, {DOMAIN: {}})
-        await hass.async_block_till_done()
+    with patch("menuai.components.kitchen_sink.async_setup_entry"):
+        assert await setup.async_setup_component(menuai, DOMAIN, {DOMAIN: {}})
+        await menuai.async_block_till_done()
 
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
-    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
+    entry = menuai.config_entries.async_entries(DOMAIN)[0]
     assert entry.data == {}
 
 
-async def test_import_once(hass: HomeAssistant) -> None:
+async def test_import_once(menuai: menuai) -> None:
     """Test that we don't create multiple config entries."""
     with patch(
-        "homeassistant.components.kitchen_sink.async_setup_entry",
+        "menuai.components.kitchen_sink.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_IMPORT},
             data={},
@@ -54,9 +54,9 @@ async def test_import_once(hass: HomeAssistant) -> None:
 
     # Test importing again doesn't create a 2nd entry
     with patch(
-        "homeassistant.components.kitchen_sink.async_setup_entry"
+        "menuai.components.kitchen_sink.async_setup_entry"
     ) as mock_setup_entry:
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_IMPORT},
             data={},
@@ -66,33 +66,33 @@ async def test_import_once(hass: HomeAssistant) -> None:
     mock_setup_entry.assert_not_called()
 
 
-async def test_reauth(hass: HomeAssistant) -> None:
+async def test_reauth(menuai: menuai) -> None:
     """Test reauth works."""
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {}})
+    await menuai.async_block_till_done()
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
     assert flows[0]["handler"] == DOMAIN
     assert flows[0]["step_id"] == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(flows[0]["flow_id"], {})
-    await hass.async_block_till_done()
+    result = await menuai.config_entries.flow.async_configure(flows[0]["flow_id"], {})
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"
 
 
 @pytest.mark.usefixtures("no_platforms")
-async def test_options_flow(hass: HomeAssistant) -> None:
+async def test_options_flow(menuai: menuai) -> None:
     """Test config flow options."""
     config_entry = MockConfigEntry(domain=DOMAIN)
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "options_1"
 
@@ -105,33 +105,33 @@ async def test_options_flow(hass: HomeAssistant) -> None:
     assert section_schema_markers[1] == "int"
     assert section_schema_markers[1].description == {"suggested_value": 10}
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={"section_1": {"bool": True, "int": 15}},
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert config_entry.options == {"section_1": {"bool": True, "int": 15}}
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
 @pytest.mark.usefixtures("no_platforms")
-async def test_subentry_flow(hass: HomeAssistant) -> None:
+async def test_subentry_flow(menuai: menuai) -> None:
     """Test config flow options."""
     config_entry = MockConfigEntry(domain=DOMAIN)
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    result = await hass.config_entries.subentries.async_init(
+    result = await menuai.config_entries.subentries.async_init(
         (config_entry.entry_id, "entity"),
         context={"source": config_entries.SOURCE_USER},
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "add_sensor"
 
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         user_input={"name": "Sensor 1", "state": 15},
     )
@@ -147,11 +147,11 @@ async def test_subentry_flow(hass: HomeAssistant) -> None:
         )
     }
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
 @pytest.mark.usefixtures("no_platforms")
-async def test_subentry_reconfigure_flow(hass: HomeAssistant) -> None:
+async def test_subentry_reconfigure_flow(menuai: menuai) -> None:
     """Test config flow options."""
     subentry_id = "mock_id"
     config_entry = MockConfigEntry(
@@ -166,18 +166,18 @@ async def test_subentry_reconfigure_flow(hass: HomeAssistant) -> None:
             )
         ],
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     result = await config_entry.start_subentry_reconfigure_flow(
-        hass, "entity", subentry_id
+        menuai, "entity", subentry_id
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reconfigure_sensor"
 
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         user_input={"name": "Renamed sensor 1", "state": 5},
     )
@@ -194,4 +194,4 @@ async def test_subentry_reconfigure_flow(hass: HomeAssistant) -> None:
         )
     }
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()

@@ -10,12 +10,12 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 import voluptuous as vol
 
-from homeassistant.components import conversation, ollama
-from homeassistant.components.conversation import trace
-from homeassistant.const import ATTR_SUPPORTED_FEATURES, CONF_LLM_HASS_API, MATCH_ALL
-from homeassistant.core import Context, HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import intent, llm
+from menuai.components import conversation, ollama
+from menuai.components.conversation import trace
+from menuai.const import ATTR_SUPPORTED_FEATURES, CONF_LLM_menuai_API, MATCH_ALL
+from menuai.core import Context, menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import intent, llm
 
 from tests.common import MockConfigEntry
 
@@ -23,7 +23,7 @@ from tests.common import MockConfigEntry
 @pytest.fixture(autouse=True)
 def mock_ulid_tools():
     """Mock generated ULIDs for tool calls."""
-    with patch("homeassistant.helpers.llm.ulid_now", return_value="mock-tool-call"):
+    with patch("menuai.helpers.llm.ulid_now", return_value="mock-tool-call"):
         yield
 
 
@@ -37,7 +37,7 @@ async def stream_generator(response: dict | list[dict]) -> AsyncGenerator[dict]:
 
 @pytest.mark.parametrize("agent_id", [None, "conversation.mock_title"])
 async def test_chat(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_init_component,
     agent_id: str,
@@ -48,7 +48,7 @@ async def test_chat(
         agent_id = mock_config_entry.entry_id
 
     entry = MockConfigEntry()
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with patch(
         "ollama.AsyncClient.chat",
@@ -57,7 +57,7 @@ async def test_chat(
         ),
     ) as mock_chat:
         result = await conversation.async_converse(
-            hass,
+            menuai,
             "test message",
             None,
             Context(),
@@ -94,14 +94,14 @@ async def test_chat(
 
 
 async def test_chat_stream(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_init_component,
 ) -> None:
     """Test chat messages are assembled across streamed responses."""
 
     entry = MockConfigEntry()
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with patch(
         "ollama.AsyncClient.chat",
@@ -117,7 +117,7 @@ async def test_chat_stream(
         ),
     ) as mock_chat:
         result = await conversation.async_converse(
-            hass,
+            menuai,
             "test message",
             None,
             Context(),
@@ -141,7 +141,7 @@ async def test_chat_stream(
 
 
 async def test_template_variables(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_config_entry: MockConfigEntry
 ) -> None:
     """Test that template variables work."""
     context = Context(user_id="12345")
@@ -149,7 +149,7 @@ async def test_template_variables(
     mock_user.id = "12345"
     mock_user.name = "Test User"
 
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         mock_config_entry,
         options={
             "prompt": (
@@ -166,12 +166,12 @@ async def test_template_variables(
                 {"message": {"role": "assistant", "content": "test response"}}
             ),
         ) as mock_chat,
-        patch("homeassistant.auth.AuthManager.async_get_user", return_value=mock_user),
+        patch("menuai.auth.AuthManager.async_get_user", return_value=mock_user),
     ):
-        await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
         result = await conversation.async_converse(
-            hass, "hello", None, context, agent_id=mock_config_entry.entry_id
+            menuai, "hello", None, context, agent_id=mock_config_entry.entry_id
         )
 
     assert result.response.response_type == intent.IntentResponseType.ACTION_DONE, (
@@ -204,10 +204,10 @@ async def test_template_variables(
         ),
     ],
 )
-@patch("homeassistant.components.ollama.conversation.llm.AssistAPI._async_get_tools")
+@patch("menuai.components.ollama.conversation.llm.AssistAPI._async_get_tools")
 async def test_function_call(
     mock_get_tools,
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry_with_assist: MockConfigEntry,
     mock_init_component,
     tool_args: dict[str, Any],
@@ -261,7 +261,7 @@ async def test_function_call(
         side_effect=completion_result,
     ) as mock_chat:
         result = await conversation.async_converse(
-            hass,
+            menuai,
             "Please call the test function",
             None,
             context,
@@ -275,7 +275,7 @@ async def test_function_call(
         == "I have successfully called the function"
     )
     mock_tool.async_call.assert_awaited_once_with(
-        hass,
+        menuai,
         llm.ToolInput(
             id="mock-tool-call",
             tool_name="test_tool",
@@ -292,10 +292,10 @@ async def test_function_call(
     )
 
 
-@patch("homeassistant.components.ollama.conversation.llm.AssistAPI._async_get_tools")
+@patch("menuai.components.ollama.conversation.llm.AssistAPI._async_get_tools")
 async def test_function_exception(
     mock_get_tools,
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry_with_assist: MockConfigEntry,
     mock_init_component,
 ) -> None:
@@ -309,7 +309,7 @@ async def test_function_exception(
     mock_tool.parameters = vol.Schema(
         {vol.Optional("param1", description="Test parameters"): str}
     )
-    mock_tool.async_call.side_effect = HomeAssistantError("Test tool exception")
+    mock_tool.async_call.side_effect = menuaiError("Test tool exception")
 
     mock_get_tools.return_value = [mock_tool]
 
@@ -346,7 +346,7 @@ async def test_function_exception(
         side_effect=completion_result,
     ) as mock_chat:
         result = await conversation.async_converse(
-            hass,
+            menuai,
             "Please call the test function",
             None,
             context,
@@ -360,7 +360,7 @@ async def test_function_exception(
         == "There was an error calling the function"
     )
     mock_tool.async_call.assert_awaited_once_with(
-        hass,
+        menuai,
         llm.ToolInput(
             id="mock-tool-call",
             tool_name="test_tool",
@@ -377,24 +377,24 @@ async def test_function_exception(
     )
 
 
-async def test_unknown_hass_api(
-    hass: HomeAssistant,
+async def test_unknown_menuai_api(
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
     mock_init_component,
 ) -> None:
     """Test when we reference an API that no longer exists."""
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         mock_config_entry,
         options={
             **mock_config_entry.options,
-            CONF_LLM_HASS_API: "non-existing",
+            CONF_LLM_menuai_API: "non-existing",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     result = await conversation.async_converse(
-        hass,
+        menuai,
         "hello",
         "1234",
         Context(),
@@ -405,7 +405,7 @@ async def test_unknown_hass_api(
 
 
 async def test_message_history_trimming(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_init_component,
     freezer: FrozenDateTimeFactory,
@@ -427,7 +427,7 @@ async def test_message_history_trimming(
         # mock_init_component sets "max_history" to 2
         for i in range(5):
             result = await conversation.async_converse(
-                hass,
+                menuai,
                 f"message {i + 1}",
                 conversation_id="1234",
                 context=Context(),
@@ -507,7 +507,7 @@ async def test_message_history_trimming(
 
 
 async def test_message_history_unlimited(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry, mock_init_component
+    menuai: menuai, mock_config_entry: MockConfigEntry, mock_init_component
 ) -> None:
     """Test that message history is not trimmed when max_history = 0."""
     conversation_id = "1234"
@@ -520,12 +520,12 @@ async def test_message_history_unlimited(
     with (
         patch("ollama.AsyncClient.chat", side_effect=stream) as mock_chat,
     ):
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             mock_config_entry, options={ollama.CONF_MAX_HISTORY: 0}
         )
         for i in range(100):
             result = await conversation.async_converse(
-                hass,
+                menuai,
                 f"message {i + 1}",
                 conversation_id=conversation_id,
                 context=Context(),
@@ -545,7 +545,7 @@ async def test_message_history_unlimited(
 
 
 async def test_error_handling(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry, mock_init_component
+    menuai: menuai, mock_config_entry: MockConfigEntry, mock_init_component
 ) -> None:
     """Test error handling during converse."""
     with patch(
@@ -554,7 +554,7 @@ async def test_error_handling(
         side_effect=ResponseError("test error"),
     ):
         result = await conversation.async_converse(
-            hass, "hello", None, Context(), agent_id=mock_config_entry.entry_id
+            menuai, "hello", None, Context(), agent_id=mock_config_entry.entry_id
         )
 
     assert result.response.response_type == intent.IntentResponseType.ERROR, result
@@ -562,10 +562,10 @@ async def test_error_handling(
 
 
 async def test_template_error(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_config_entry: MockConfigEntry
 ) -> None:
     """Test that template error handling works."""
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         mock_config_entry,
         options={
             "prompt": "talk like a {% if True %}smarthome{% else %}pirate please.",
@@ -574,10 +574,10 @@ async def test_template_error(
     with patch(
         "ollama.AsyncClient.list",
     ):
-        await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
         result = await conversation.async_converse(
-            hass, "hello", None, Context(), agent_id=mock_config_entry.entry_id
+            menuai, "hello", None, Context(), agent_id=mock_config_entry.entry_id
         )
 
     assert result.response.response_type == intent.IntentResponseType.ERROR, result
@@ -585,33 +585,33 @@ async def test_template_error(
 
 
 async def test_conversation_agent(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_init_component,
 ) -> None:
     """Test OllamaConversationEntity."""
-    agent = conversation.get_agent_manager(hass).async_get_agent(
+    agent = conversation.get_agent_manager(menuai).async_get_agent(
         mock_config_entry.entry_id
     )
     assert agent.supported_languages == MATCH_ALL
 
-    state = hass.states.get("conversation.mock_title")
+    state = menuai.states.get("conversation.mock_title")
     assert state
     assert state.attributes[ATTR_SUPPORTED_FEATURES] == 0
 
 
 async def test_conversation_agent_with_assist(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry_with_assist: MockConfigEntry,
     mock_init_component,
 ) -> None:
     """Test OllamaConversationEntity."""
-    agent = conversation.get_agent_manager(hass).async_get_agent(
+    agent = conversation.get_agent_manager(menuai).async_get_agent(
         mock_config_entry_with_assist.entry_id
     )
     assert agent.supported_languages == MATCH_ALL
 
-    state = hass.states.get("conversation.mock_title")
+    state = menuai.states.get("conversation.mock_title")
     assert state
     assert (
         state.attributes[ATTR_SUPPORTED_FEATURES]
@@ -627,7 +627,7 @@ async def test_conversation_agent_with_assist(
     ],
 )
 async def test_options(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_init_component,
     expected_options: dict[str, Any],
@@ -640,7 +640,7 @@ async def test_options(
         ),
     ) as mock_chat:
         await conversation.async_converse(
-            hass,
+            menuai,
             "test message",
             None,
             Context(),
@@ -658,7 +658,7 @@ async def test_options(
     ids=["no_think", "think"],
 )
 async def test_reasoning_filter(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_init_component,
     think: bool,
@@ -667,9 +667,9 @@ async def test_reasoning_filter(
 
     agent_id = mock_config_entry.entry_id
     entry = MockConfigEntry()
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         mock_config_entry,
         options={
             ollama.CONF_THINK: think,
@@ -683,7 +683,7 @@ async def test_reasoning_filter(
         ),
     ) as mock_chat:
         await conversation.async_converse(
-            hass,
+            menuai,
             "test message",
             None,
             Context(),

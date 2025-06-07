@@ -10,10 +10,10 @@ from deebot_client.capabilities import (
 from deebot_client.commands import StationAction
 from deebot_client.events import LifeSpan
 
-from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.button import ButtonEntity, ButtonEntityDescription
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import EcovacsConfigEntry
 from .const import SUPPORTED_LIFESPANS
@@ -79,7 +79,7 @@ LIFESPAN_ENTITY_DESCRIPTIONS = tuple(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: EcovacsConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

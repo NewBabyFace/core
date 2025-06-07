@@ -9,8 +9,8 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.climate import HVACMode
-from homeassistant.const import (
+from menuai.components.climate import HVACMode
+from menuai.const import (
     CONF_ADDRESS,
     CONF_COUNT,
     CONF_HOST,
@@ -21,8 +21,8 @@ from homeassistant.const import (
     CONF_TIMEOUT,
     CONF_TYPE,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.issue_registry import IssueSeverity, async_create_issue
+from menuai.core import menuai
+from menuai.helpers.issue_registry import IssueSeverity, async_create_issue
 
 from .const import (
     CONF_DATA_TYPE,
@@ -106,11 +106,11 @@ DEFAULT_STRUCT_FORMAT = {
 
 
 def modbus_create_issue(
-    hass: HomeAssistant, key: str, subs: list[str], err: str
+    menuai: menuai, key: str, subs: list[str], err: str
 ) -> None:
     """Create issue modbus style."""
     async_create_issue(
-        hass,
+        menuai,
         DOMAIN,
         key,
         is_fixable=False,
@@ -275,7 +275,7 @@ def register_int_list_validator(value: Any) -> Any:
 
 
 def validate_modbus(
-    hass: HomeAssistant,
+    menuai: menuai,
     hosts: set[str],
     hub_names: set[str],
     hub: dict,
@@ -293,7 +293,7 @@ def validate_modbus(
         )
         hub_name_inx += 1
         modbus_create_issue(
-            hass,
+            menuai,
             "missing_modbus_name",
             [
                 "name",
@@ -305,7 +305,7 @@ def validate_modbus(
     name = hub[CONF_NAME]
     if host in hosts or name in hub_names:
         modbus_create_issue(
-            hass,
+            menuai,
             "duplicate_modbus_entry",
             [
                 host,
@@ -321,7 +321,7 @@ def validate_modbus(
 
 
 def validate_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     hub_name: str,
     component: str,
     entity: dict,
@@ -335,14 +335,14 @@ def validate_entity(
     if 0 < scan_interval < 5:
         err = (
             f"{hub_name} {name} scan_interval is lower than 5 seconds, "
-            "which may cause Home Assistant stability issues"
+            "which may cause MenuAI stability issues"
         )
         _LOGGER.warning(err)
     entity[CONF_SCAN_INTERVAL] = scan_interval
     minimum_scan_interval = min(scan_interval, minimum_scan_interval)
     if name in ent_names:
         modbus_create_issue(
-            hass,
+            menuai,
             "duplicate_entity_name",
             [
                 f"{hub_name}/{name}",
@@ -356,7 +356,7 @@ def validate_entity(
     return True
 
 
-def check_config(hass: HomeAssistant, config: dict) -> dict:
+def check_config(menuai: menuai, config: dict) -> dict:
     """Do final config check."""
     hosts: set[str] = set()
     hub_names: set[str] = set()
@@ -368,7 +368,7 @@ def check_config(hass: HomeAssistant, config: dict) -> dict:
     hub_inx = 0
     while hub_inx < len(config):
         hub = config[hub_inx]
-        if not validate_modbus(hass, hosts, hub_names, hub, hub_name_inx):
+        if not validate_modbus(menuai, hosts, hub_names, hub, hub_name_inx):
             del config[hub_inx]
             continue
         minimum_scan_interval = 9999
@@ -381,7 +381,7 @@ def check_config(hass: HomeAssistant, config: dict) -> dict:
             entities = hub[conf_key]
             while entity_inx < len(entities):
                 if not validate_entity(
-                    hass,
+                    menuai,
                     hub[CONF_NAME],
                     component,
                     entities[entity_inx],
@@ -394,7 +394,7 @@ def check_config(hass: HomeAssistant, config: dict) -> dict:
                     entity_inx += 1
         if no_entities:
             modbus_create_issue(
-                hass,
+                menuai,
                 "no_entities",
                 [
                     hub[CONF_NAME],

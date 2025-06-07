@@ -6,7 +6,7 @@ from typing import Any
 from pyhap.const import CATEGORY_HUMIDIFIER
 from pyhap.util import callback as pyhap_callback
 
-from homeassistant.components.humidifier import (
+from menuai.components.humidifier import (
     ATTR_CURRENT_HUMIDITY,
     ATTR_HUMIDITY,
     ATTR_MAX_HUMIDITY,
@@ -17,7 +17,7 @@ from homeassistant.components.humidifier import (
     SERVICE_SET_HUMIDITY,
     HumidifierDeviceClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     ATTR_ENTITY_ID,
     PERCENTAGE,
@@ -25,14 +25,14 @@ from homeassistant.const import (
     SERVICE_TURN_ON,
     STATE_ON,
 )
-from homeassistant.core import (
+from menuai.core import (
     Event,
     EventStateChangedData,
-    HassJobType,
+    menuaiJobType,
     State,
     callback,
 )
-from homeassistant.helpers.event import async_track_state_change_event
+from menuai.helpers.event import async_track_state_change_event
 
 from .accessories import TYPES, HomeAccessory
 from .const import (
@@ -54,12 +54,12 @@ _LOGGER = logging.getLogger(__name__)
 HC_HUMIDIFIER = 1
 HC_DEHUMIDIFIER = 2
 
-HC_HASS_TO_HOMEKIT_DEVICE_CLASS = {
+HC_menuai_TO_HOMEKIT_DEVICE_CLASS = {
     HumidifierDeviceClass.HUMIDIFIER: HC_HUMIDIFIER,
     HumidifierDeviceClass.DEHUMIDIFIER: HC_DEHUMIDIFIER,
 }
 
-HC_HASS_TO_HOMEKIT_DEVICE_CLASS_NAME = {
+HC_menuai_TO_HOMEKIT_DEVICE_CLASS_NAME = {
     HumidifierDeviceClass.HUMIDIFIER: "Humidifier",
     HumidifierDeviceClass.DEHUMIDIFIER: "Dehumidifier",
 }
@@ -107,13 +107,13 @@ class HumidifierDehumidifier(HomeAccessory):
         )
 
         self.chars: list[str] = []
-        states = self.hass.states
+        states = self.menuai.states
         state = states.get(self.entity_id)
         assert state
         device_class = state.attributes.get(
             ATTR_DEVICE_CLASS, HumidifierDeviceClass.HUMIDIFIER
         )
-        self._hk_device_class = HC_HASS_TO_HOMEKIT_DEVICE_CLASS[device_class]
+        self._hk_device_class = HC_menuai_TO_HOMEKIT_DEVICE_CLASS[device_class]
 
         self._target_humidity_char_name = HC_DEVICE_CLASS_TO_TARGET_CHAR[
             self._hk_device_class
@@ -141,7 +141,7 @@ class HumidifierDehumidifier(HomeAccessory):
                     PROP_MAX_VALUE: self._hk_device_class,
                 },
                 valid_values={
-                    HC_HASS_TO_HOMEKIT_DEVICE_CLASS_NAME[
+                    HC_menuai_TO_HOMEKIT_DEVICE_CLASS_NAME[
                         device_class
                     ]: self._hk_device_class
                 },
@@ -182,15 +182,15 @@ class HumidifierDehumidifier(HomeAccessory):
     def run(self) -> None:
         """Handle accessory driver started event.
 
-        Run inside the Home Assistant event loop.
+        Run inside the MenuAI event loop.
         """
         if self.linked_humidity_sensor:
             self._subscriptions.append(
                 async_track_state_change_event(
-                    self.hass,
+                    self.menuai,
                     [self.linked_humidity_sensor],
                     self.async_update_current_humidity_event,
-                    job_type=HassJobType.Callback,
+                    job_type=menuaiJobType.Callback,
                 )
             )
 
@@ -260,7 +260,7 @@ class HumidifierDehumidifier(HomeAccessory):
             )
 
         if self._target_humidity_char_name in char_values:
-            state = self.hass.states.get(self.entity_id)
+            state = self.menuai.states.get(self.entity_id)
             assert state
             min_humidity, max_humidity = self.get_humidity_range(state)
             humidity = round(char_values[self._target_humidity_char_name])

@@ -7,15 +7,15 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_API_KEY, CONF_LATITUDE, CONF_LONGITUDE, CONF_NAME
-from homeassistant.core import callback
-from homeassistant.helpers import config_validation as cv
+from menuai.const import CONF_API_KEY, CONF_LATITUDE, CONF_LONGITUDE, CONF_NAME
+from menuai.core import callback
+from menuai.helpers import config_validation as cv
 
 from .const import (
     CONF_AZIMUTH,
@@ -66,13 +66,13 @@ class ForecastSolarFlowHandler(ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema(
                 {
                     vol.Required(
-                        CONF_NAME, default=self.hass.config.location_name
+                        CONF_NAME, default=self.menuai.config.location_name
                     ): str,
                     vol.Required(
-                        CONF_LATITUDE, default=self.hass.config.latitude
+                        CONF_LATITUDE, default=self.menuai.config.latitude
                     ): cv.latitude,
                     vol.Required(
-                        CONF_LONGITUDE, default=self.hass.config.longitude
+                        CONF_LONGITUDE, default=self.menuai.config.longitude
                     ): cv.longitude,
                     vol.Required(CONF_DECLINATION, default=25): vol.All(
                         vol.Coerce(int), vol.Range(min=0, max=90)

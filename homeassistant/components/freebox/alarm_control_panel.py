@@ -2,13 +2,13 @@
 
 from typing import Any
 
-from homeassistant.components.alarm_control_panel import (
+from menuai.components.alarm_control_panel import (
     AlarmControlPanelEntity,
     AlarmControlPanelEntityFeature,
     AlarmControlPanelState,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import FreeboxHomeCategory
 from .entity import FreeboxHomeEntity
@@ -27,7 +27,7 @@ FREEBOX_TO_STATUS = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: FreeboxConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -36,7 +36,7 @@ async def async_setup_entry(
 
     async_add_entities(
         (
-            FreeboxAlarm(hass, router, node)
+            FreeboxAlarm(menuai, router, node)
             for node in router.home_devices.values()
             if node["category"] == FreeboxHomeCategory.ALARM
         ),
@@ -50,10 +50,10 @@ class FreeboxAlarm(FreeboxHomeEntity, AlarmControlPanelEntity):
     _attr_code_arm_required = False
 
     def __init__(
-        self, hass: HomeAssistant, router: FreeboxRouter, node: dict[str, Any]
+        self, menuai: menuai, router: FreeboxRouter, node: dict[str, Any]
     ) -> None:
         """Initialize an alarm."""
-        super().__init__(hass, router, node)
+        super().__init__(menuai, router, node)
 
         # Commands
         self._command_trigger = self.get_command_id(

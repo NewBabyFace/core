@@ -39,17 +39,17 @@ from aiounifi.models.traffic_route import TrafficRoute, TrafficRouteSaveRequest
 from aiounifi.models.traffic_rule import TrafficRule, TrafficRuleEnableRequest
 from aiounifi.models.wlan import Wlan, WlanEnableRequest
 
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     DOMAIN as SWITCH_DOMAIN,
     SwitchDeviceClass,
     SwitchEntity,
     SwitchEntityDescription,
 )
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import EntityCategory
+from menuai.core import menuai, callback
+from menuai.helpers import entity_registry as er
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import UnifiConfigEntry
 from .const import ATTR_MANUFACTURER, DOMAIN
@@ -355,13 +355,13 @@ ENTITY_DESCRIPTIONS: tuple[UnifiSwitchEntityDescription, ...] = (
 
 
 @callback
-def async_update_unique_id(hass: HomeAssistant, config_entry: UnifiConfigEntry) -> None:
+def async_update_unique_id(menuai: menuai, config_entry: UnifiConfigEntry) -> None:
     """Normalize switch unique ID to have a prefix rather than midfix.
 
     Introduced with release 2023.12.
     """
     hub = config_entry.runtime_data
-    ent_reg = er.async_get(hass)
+    ent_reg = er.async_get(menuai)
 
     @callback
     def update_unique_id(obj_id: str, type_name: str) -> None:
@@ -383,12 +383,12 @@ def async_update_unique_id(hass: HomeAssistant, config_entry: UnifiConfigEntry) 
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: UnifiConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up switches for UniFi Network integration."""
-    async_update_unique_id(hass, config_entry)
+    async_update_unique_id(menuai, config_entry)
     config_entry.runtime_data.entity_loader.register_platform(
         async_add_entities,
         UnifiSwitchEntity,
@@ -447,9 +447,9 @@ class UnifiSwitchEntity(UnifiEntity[HandlerT, ApiItemT], SwitchEntity):
         self._attr_available = description.available_fn(self.hub, self._obj_id)
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         if self.entity_description.custom_subscribe is not None:
             self.async_on_remove(

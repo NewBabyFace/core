@@ -8,9 +8,9 @@ import aiohttp
 import tibber
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_ACCESS_TOKEN
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_ACCESS_TOKEN
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN
 
@@ -38,7 +38,7 @@ class TibberConfigFlow(ConfigFlow, domain=DOMAIN):
 
             tibber_connection = tibber.Tibber(
                 access_token=access_token,
-                websession=async_get_clientsession(self.hass),
+                websession=async_get_clientsession(self.menuai),
             )
 
             errors = {}

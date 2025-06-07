@@ -5,8 +5,8 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from typing import Any
 
-from homeassistant.components.sensor import ATTR_STATE_CLASS
-from homeassistant.const import (
+from menuai.components.sensor import ATTR_STATE_CLASS
+from menuai.const import (
     ATTR_DEVICE_ID,
     ATTR_DOMAIN,
     ATTR_ENTITY_ID,
@@ -14,48 +14,48 @@ from homeassistant.const import (
     EVENT_LOGBOOK_ENTRY,
     EVENT_STATE_CHANGED,
 )
-from homeassistant.core import (
+from menuai.core import (
     CALLBACK_TYPE,
     Event,
     EventStateChangedData,
-    HomeAssistant,
+    menuai,
     State,
     callback,
     is_callback,
     split_entity_id,
 )
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.event import async_track_state_change_event
-from homeassistant.util.event_type import EventType
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.event import async_track_state_change_event
+from menuai.util.event_type import EventType
 
 from .const import ALWAYS_CONTINUOUS_DOMAINS, AUTOMATION_EVENTS, BUILT_IN_EVENTS, DOMAIN
 from .models import LogbookConfig
 
 
-def async_filter_entities(hass: HomeAssistant, entity_ids: list[str]) -> list[str]:
+def async_filter_entities(menuai: menuai, entity_ids: list[str]) -> list[str]:
     """Filter out any entities that logbook will not produce results for."""
-    ent_reg = er.async_get(hass)
+    ent_reg = er.async_get(menuai)
     return [
         entity_id
         for entity_id in entity_ids
         if split_entity_id(entity_id)[0] not in ALWAYS_CONTINUOUS_DOMAINS
-        and not is_sensor_continuous(hass, ent_reg, entity_id)
+        and not is_sensor_continuous(menuai, ent_reg, entity_id)
     ]
 
 
 @callback
 def _async_config_entries_for_ids(
-    hass: HomeAssistant, entity_ids: list[str] | None, device_ids: list[str] | None
+    menuai: menuai, entity_ids: list[str] | None, device_ids: list[str] | None
 ) -> set[str]:
     """Find the config entry ids for a set of entities or devices."""
     config_entry_ids: set[str] = set()
     if entity_ids:
-        eng_reg = er.async_get(hass)
+        eng_reg = er.async_get(menuai)
         for entity_id in entity_ids:
             if (entry := eng_reg.async_get(entity_id)) and entry.config_entry_id:
                 config_entry_ids.add(entry.config_entry_id)
     if device_ids:
-        dev_reg = dr.async_get(hass)
+        dev_reg = dr.async_get(menuai)
         for device_id in device_ids:
             if (device := dev_reg.async_get(device_id)) and device.config_entries:
                 config_entry_ids |= device.config_entries
@@ -63,17 +63,17 @@ def _async_config_entries_for_ids(
 
 
 def async_determine_event_types(
-    hass: HomeAssistant, entity_ids: list[str] | None, device_ids: list[str] | None
+    menuai: menuai, entity_ids: list[str] | None, device_ids: list[str] | None
 ) -> tuple[EventType[Any] | str, ...]:
     """Reduce the event types based on the entity ids and device ids."""
-    logbook_config: LogbookConfig = hass.data[DOMAIN]
+    logbook_config: LogbookConfig = menuai.data[DOMAIN]
     external_events = logbook_config.external_events
     if not entity_ids and not device_ids:
         return (*BUILT_IN_EVENTS, *external_events)
 
     interested_domains: set[str] = set()
-    for entry_id in _async_config_entries_for_ids(hass, entity_ids, device_ids):
-        if entry := hass.config_entries.async_get_entry(entry_id):
+    for entry_id in _async_config_entries_for_ids(menuai, entity_ids, device_ids):
+        if entry := menuai.config_entries.async_get_entry(entry_id):
             interested_domains.add(entry.domain)
 
     #
@@ -158,7 +158,7 @@ def event_forwarder_filtered(
 
 @callback
 def async_subscribe_events(
-    hass: HomeAssistant,
+    menuai: menuai,
     subscriptions: list[CALLBACK_TYPE],
     target: Callable[[Event[Any]], None],
     event_types: tuple[EventType[Any] | str, ...],
@@ -176,7 +176,7 @@ def async_subscribe_events(
         target, entities_filter, entity_ids, device_ids
     )
     subscriptions.extend(
-        hass.bus.async_listen(event_type, event_forwarder) for event_type in event_types
+        menuai.bus.async_listen(event_type, event_forwarder) for event_type in event_types
     )
 
     if device_ids and not entity_ids:
@@ -200,14 +200,14 @@ def async_subscribe_events(
     if entity_ids:
         subscriptions.append(
             async_track_state_change_event(
-                hass, entity_ids, _forward_state_events_filtered
+                menuai, entity_ids, _forward_state_events_filtered
             )
         )
         return
 
     # We want the firehose
     subscriptions.append(
-        hass.bus.async_listen(
+        menuai.bus.async_listen(
             EVENT_STATE_CHANGED,
             _forward_state_events_filtered,
         )
@@ -215,7 +215,7 @@ def async_subscribe_events(
 
 
 def is_sensor_continuous(
-    hass: HomeAssistant, ent_reg: er.EntityRegistry, entity_id: str
+    menuai: menuai, ent_reg: er.EntityRegistry, entity_id: str
 ) -> bool:
     """Determine if a sensor is continuous.
 
@@ -232,7 +232,7 @@ def is_sensor_continuous(
     # If it is in the state machine we can quick check if it
     # has a unit_of_measurement or state_class, and filter if
     # it does
-    if (state := hass.states.get(entity_id)) and (attributes := state.attributes):
+    if (state := menuai.states.get(entity_id)) and (attributes := state.attributes):
         return ATTR_UNIT_OF_MEASUREMENT in attributes or ATTR_STATE_CLASS in attributes
     # If its not in the state machine, we need to check
     # the entity registry to see if its a sensor

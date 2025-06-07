@@ -6,7 +6,7 @@ from typing import Any
 from freezegun import freeze_time
 import pytest
 
-from homeassistant.components.event import (
+from menuai.components.event import (
     ATTR_EVENT_TYPE,
     ATTR_EVENT_TYPES,
     DOMAIN,
@@ -14,13 +14,13 @@ from homeassistant.components.event import (
     EventEntity,
     EventEntityDescription,
 )
-from homeassistant.config_entries import ConfigEntry, ConfigFlow
-from homeassistant.const import CONF_PLATFORM, STATE_UNKNOWN, Platform
-from homeassistant.core import HomeAssistant, State
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.restore_state import STORAGE_KEY as RESTORE_STATE_KEY
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.config_entries import ConfigEntry, ConfigFlow
+from menuai.const import CONF_PLATFORM, STATE_UNKNOWN, Platform
+from menuai.core import menuai, State
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.restore_state import STORAGE_KEY as RESTORE_STATE_KEY
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from .const import TEST_DOMAIN
 
@@ -97,10 +97,10 @@ async def test_event() -> None:
 
 
 @pytest.mark.usefixtures("enable_custom_integrations", "mock_event_platform")
-async def test_restore_state(hass: HomeAssistant) -> None:
+async def test_restore_state(menuai: menuai) -> None:
     """Test we restore state integration."""
     mock_restore_cache_with_extra_data(
-        hass,
+        menuai,
         (
             (
                 State(
@@ -128,10 +128,10 @@ async def test_restore_state(hass: HomeAssistant) -> None:
         ),
     )
 
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("event.doorbell")
+    state = menuai.states.get("event.doorbell")
     assert state
     assert state.state == "2021-01-01T23:59:59.123+00:00"
     assert state.attributes[ATTR_EVENT_TYPES] == ["short_press", "long_press"]
@@ -140,10 +140,10 @@ async def test_restore_state(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("enable_custom_integrations", "mock_event_platform")
-async def test_invalid_extra_restore_state(hass: HomeAssistant) -> None:
+async def test_invalid_extra_restore_state(menuai: menuai) -> None:
     """Test we restore state integration."""
     mock_restore_cache_with_extra_data(
-        hass,
+        menuai,
         (
             (
                 State(
@@ -160,10 +160,10 @@ async def test_invalid_extra_restore_state(hass: HomeAssistant) -> None:
         ),
     )
 
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("event.doorbell")
+    state = menuai.states.get("event.doorbell")
     assert state
     assert state.state == STATE_UNKNOWN
     assert state.attributes[ATTR_EVENT_TYPES] == ["short_press", "long_press"]
@@ -172,10 +172,10 @@ async def test_invalid_extra_restore_state(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("enable_custom_integrations", "mock_event_platform")
-async def test_no_extra_restore_state(hass: HomeAssistant) -> None:
+async def test_no_extra_restore_state(menuai: menuai) -> None:
     """Test we restore state integration."""
     mock_restore_cache(
-        hass,
+        menuai,
         (
             State(
                 "event.doorbell",
@@ -192,10 +192,10 @@ async def test_no_extra_restore_state(hass: HomeAssistant) -> None:
         ),
     )
 
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("event.doorbell")
+    state = menuai.states.get("event.doorbell")
     assert state
     assert state.state == STATE_UNKNOWN
     assert state.attributes[ATTR_EVENT_TYPES] == ["short_press", "long_press"]
@@ -204,12 +204,12 @@ async def test_no_extra_restore_state(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("enable_custom_integrations", "mock_event_platform")
-async def test_saving_state(hass: HomeAssistant, hass_storage: dict[str, Any]) -> None:
+async def test_saving_state(menuai: menuai, menuai_storage: dict[str, Any]) -> None:
     """Test we restore state integration."""
     restore_data = {"last_event_type": "double_press", "last_event_attributes": None}
 
     mock_restore_cache_with_extra_data(
-        hass,
+        menuai,
         (
             (
                 State(
@@ -221,15 +221,15 @@ async def test_saving_state(hass: HomeAssistant, hass_storage: dict[str, Any]) -
         ),
     )
 
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
+    await menuai.async_block_till_done()
 
-    await async_mock_restore_state_shutdown_restart(hass)
+    await async_mock_restore_state_shutdown_restart(menuai)
 
-    assert len(hass_storage[RESTORE_STATE_KEY]["data"]) == 1
-    state = hass_storage[RESTORE_STATE_KEY]["data"][0]["state"]
+    assert len(menuai_storage[RESTORE_STATE_KEY]["data"]) == 1
+    state = menuai_storage[RESTORE_STATE_KEY]["data"][0]["state"]
     assert state["entity_id"] == "event.doorbell"
-    extra_data = hass_storage[RESTORE_STATE_KEY]["data"][0]["extra_data"]
+    extra_data = menuai_storage[RESTORE_STATE_KEY]["data"][0]["extra_data"]
     assert extra_data == restore_data
 
 
@@ -238,30 +238,30 @@ class MockFlow(ConfigFlow):
 
 
 @pytest.fixture
-def config_flow_fixture(hass: HomeAssistant) -> Generator[None]:
+def config_flow_fixture(menuai: menuai) -> Generator[None]:
     """Mock config flow."""
-    mock_platform(hass, f"{TEST_DOMAIN}.config_flow")
+    mock_platform(menuai, f"{TEST_DOMAIN}.config_flow")
 
     with mock_config_flow(TEST_DOMAIN, MockFlow):
         yield
 
 
 @pytest.mark.usefixtures("config_flow_fixture")
-async def test_name(hass: HomeAssistant) -> None:
+async def test_name(menuai: menuai) -> None:
     """Test event name."""
 
     async def async_setup_entry_init(
-        hass: HomeAssistant, config_entry: ConfigEntry
+        menuai: menuai, config_entry: ConfigEntry
     ) -> bool:
         """Set up test config entry."""
-        await hass.config_entries.async_forward_entry_setups(
+        await menuai.config_entries.async_forward_entry_setups(
             config_entry, [Platform.EVENT]
         )
         return True
 
-    mock_platform(hass, f"{TEST_DOMAIN}.config_flow")
+    mock_platform(menuai, f"{TEST_DOMAIN}.config_flow")
     mock_integration(
-        hass,
+        menuai,
         MockModule(
             TEST_DOMAIN,
             async_setup_entry=async_setup_entry_init,
@@ -297,7 +297,7 @@ async def test_name(hass: HomeAssistant) -> None:
     )
 
     async def async_setup_entry_platform(
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         async_add_entities: AddConfigEntryEntitiesCallback,
     ) -> None:
@@ -305,21 +305,21 @@ async def test_name(hass: HomeAssistant) -> None:
         async_add_entities([entity1, entity2, entity3, entity4])
 
     mock_platform(
-        hass,
+        menuai,
         f"{TEST_DOMAIN}.{DOMAIN}",
         MockPlatform(async_setup_entry=async_setup_entry_platform),
     )
 
     config_entry = MockConfigEntry(domain=TEST_DOMAIN)
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity1.entity_id)
+    state = menuai.states.get(entity1.entity_id)
     assert state
     assert state.attributes == {"event_types": ["ding"], "event_type": None}
 
-    state = hass.states.get(entity2.entity_id)
+    state = menuai.states.get(entity2.entity_id)
     assert state
     assert state.attributes == {
         "event_types": ["ding"],
@@ -327,7 +327,7 @@ async def test_name(hass: HomeAssistant) -> None:
         "device_class": "doorbell",
     }
 
-    state = hass.states.get(entity3.entity_id)
+    state = menuai.states.get(entity3.entity_id)
     assert state
     assert state.attributes == {
         "event_types": ["ding"],
@@ -336,7 +336,7 @@ async def test_name(hass: HomeAssistant) -> None:
         "friendly_name": "Doorbell",
     }
 
-    state = hass.states.get(entity4.entity_id)
+    state = menuai.states.get(entity4.entity_id)
     assert state
     assert state.attributes == {
         "event_types": ["ding"],

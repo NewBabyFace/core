@@ -8,10 +8,10 @@ import csv
 from pathlib import Path
 import sys
 
-from homeassistant.const import __version__ as current_version
-from homeassistant.util.json import load_json
+from menuai.const import __version__ as current_version
+from menuai.util.json import load_json
 
-COMPONENTS_DIR = Path("homeassistant/components")
+COMPONENTS_DIR = Path("menuai/components")
 
 
 def generate_quality_scale_summary() -> list[str, int]:

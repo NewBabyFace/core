@@ -2,8 +2,8 @@
 
 from unittest.mock import MagicMock, patch
 
-from homeassistant.components.kira import sensor as kira
-from homeassistant.core import HomeAssistant
+from menuai.components.kira import sensor as kira
+from menuai.core import menuai
 
 from tests.common import MockEntityPlatform
 
@@ -19,24 +19,24 @@ def add_entities(devices):
     DEVICES.extend(devices)
 
 
-@patch("homeassistant.components.kira.sensor.KiraReceiver.schedule_update_ha_state")
+@patch("menuai.components.kira.sensor.KiraReceiver.schedule_update_ha_state")
 def test_kira_sensor_callback(
-    mock_schedule_update_ha_state, hass: HomeAssistant
+    mock_schedule_update_ha_state, menuai: menuai
 ) -> None:
     """Ensure Kira sensor properly updates its attributes from callback."""
     mock_kira = MagicMock()
-    hass.data[kira.DOMAIN] = {kira.CONF_SENSOR: {}}
-    hass.data[kira.DOMAIN][kira.CONF_SENSOR]["kira"] = mock_kira
+    menuai.data[kira.DOMAIN] = {kira.CONF_SENSOR: {}}
+    menuai.data[kira.DOMAIN][kira.CONF_SENSOR]["kira"] = mock_kira
 
-    kira.setup_platform(hass, TEST_CONFIG, add_entities, DISCOVERY_INFO)
+    kira.setup_platform(menuai, TEST_CONFIG, add_entities, DISCOVERY_INFO)
     assert len(DEVICES) == 1
     sensor = DEVICES[0]
-    sensor.hass = hass
-    sensor.platform = MockEntityPlatform(hass)
+    sensor.menuai = menuai
+    sensor.platform = MockEntityPlatform(menuai)
 
     assert sensor.name == "kira"
 
-    sensor.hass = hass
+    sensor.menuai = menuai
 
     codeName = "FAKE_CODE"
     deviceName = "FAKE_DEVICE"

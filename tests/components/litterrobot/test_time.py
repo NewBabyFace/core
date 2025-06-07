@@ -8,9 +8,9 @@ from unittest.mock import MagicMock
 from pylitterbot import LitterRobot3
 import pytest
 
-from homeassistant.components.time import DOMAIN as PLATFORM_DOMAIN
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
+from menuai.components.time import DOMAIN as PLATFORM_DOMAIN
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
 
 from .conftest import setup_integration
 
@@ -19,17 +19,17 @@ SLEEP_START_TIME_ENTITY_ID = "time.test_sleep_mode_start_time"
 
 @pytest.mark.freeze_time(datetime(2023, 7, 1, 12))
 async def test_sleep_mode_start_time(
-    hass: HomeAssistant, mock_account: MagicMock
+    menuai: menuai, mock_account: MagicMock
 ) -> None:
     """Tests the sleep mode start time."""
-    await setup_integration(hass, mock_account, PLATFORM_DOMAIN)
+    await setup_integration(menuai, mock_account, PLATFORM_DOMAIN)
 
-    entity = hass.states.get(SLEEP_START_TIME_ENTITY_ID)
+    entity = menuai.states.get(SLEEP_START_TIME_ENTITY_ID)
     assert entity
     assert entity.state == "17:16:00"
 
     robot: LitterRobot3 = mock_account.robots[0]
-    await hass.services.async_call(
+    await menuai.services.async_call(
         PLATFORM_DOMAIN,
         "set_value",
         {ATTR_ENTITY_ID: SLEEP_START_TIME_ENTITY_ID, "time": time(23, 0)},

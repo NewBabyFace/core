@@ -8,10 +8,10 @@ from aiobafi6 import Device, Service
 from aiobafi6.discovery import PORT
 from aiobafi6.exceptions import DeviceUUIDMismatchError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_IP_ADDRESS, Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryNotReady
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_IP_ADDRESS, Platform
+from menuai.core import menuai, callback
+from menuai.exceptions import ConfigEntryNotReady
 
 from .const import QUERY_INTERVAL, RUN_TIMEOUT
 
@@ -29,7 +29,7 @@ PLATFORMS: list[Platform] = [
 ]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: BAFConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: BAFConfigEntry) -> bool:
     """Set up Big Ass Fans from a config entry."""
     ip_address = entry.data[CONF_IP_ADDRESS]
 
@@ -54,11 +54,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: BAFConfigEntry) -> bool:
 
     entry.runtime_data = device
     entry.async_on_unload(_async_cancel_run)
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: BAFConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: BAFConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

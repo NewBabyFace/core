@@ -16,9 +16,9 @@ from pyicloud.exceptions import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.helpers.storage import Store
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.helpers.storage import Store
 
 from .const import (
     CONF_GPS_ACCURACY_THRESHOLD,
@@ -115,11 +115,11 @@ class IcloudFlowHandler(ConfigFlow, domain=DOMAIN):
             self._abort_if_unique_id_configured()
 
         try:
-            self.api = await self.hass.async_add_executor_job(
+            self.api = await self.menuai.async_add_executor_job(
                 PyiCloudService,
                 self._username,
                 self._password,
-                Store(self.hass, STORAGE_VERSION, STORAGE_KEY).path,
+                Store(self.menuai, STORAGE_VERSION, STORAGE_KEY).path,
                 True,
                 None,
                 self._with_family,
@@ -137,7 +137,7 @@ class IcloudFlowHandler(ConfigFlow, domain=DOMAIN):
             return await self.async_step_trusted_device()
 
         try:
-            devices = await self.hass.async_add_executor_job(
+            devices = await self.menuai.async_add_executor_job(
                 getattr, self.api, "devices"
             )
             if not devices:
@@ -160,8 +160,8 @@ class IcloudFlowHandler(ConfigFlow, domain=DOMAIN):
             return self.async_create_entry(title=self._username, data=data)
 
         entry = await self.async_set_unique_id(self.unique_id)
-        self.hass.config_entries.async_update_entry(entry, data=data)
-        await self.hass.config_entries.async_reload(entry.entry_id)
+        self.menuai.config_entries.async_update_entry(entry, data=data)
+        await self.menuai.config_entries.async_reload(entry.entry_id)
         return self.async_abort(reason="reauth_successful")
 
     async def async_step_user(
@@ -170,10 +170,10 @@ class IcloudFlowHandler(ConfigFlow, domain=DOMAIN):
         """Handle a flow initiated by the user."""
         errors: dict[str, str] = {}
 
-        icloud_dir = Store[Any](self.hass, STORAGE_VERSION, STORAGE_KEY)
+        icloud_dir = Store[Any](self.menuai, STORAGE_VERSION, STORAGE_KEY)
 
         if not os.path.exists(icloud_dir.path):
-            await self.hass.async_add_executor_job(os.makedirs, icloud_dir.path)
+            await self.menuai.async_add_executor_job(os.makedirs, icloud_dir.path)
 
         if user_input is None:
             return self._show_setup_form(user_input, errors)
@@ -211,7 +211,7 @@ class IcloudFlowHandler(ConfigFlow, domain=DOMAIN):
 
         if TYPE_CHECKING:
             assert self.api is not None
-        trusted_devices = await self.hass.async_add_executor_job(
+        trusted_devices = await self.menuai.async_add_executor_job(
             getattr, self.api, "trusted_devices"
         )
         trusted_devices_for_form = {}
@@ -227,7 +227,7 @@ class IcloudFlowHandler(ConfigFlow, domain=DOMAIN):
 
         self._trusted_device = trusted_devices[int(user_input[CONF_TRUSTED_DEVICE])]
 
-        if not await self.hass.async_add_executor_job(
+        if not await self.menuai.async_add_executor_job(
             self.api.send_verification_code, self._trusted_device
         ):
             _LOGGER.error("Failed to send verification code")
@@ -276,11 +276,11 @@ class IcloudFlowHandler(ConfigFlow, domain=DOMAIN):
 
         try:
             if self.api.requires_2fa:
-                if not await self.hass.async_add_executor_job(
+                if not await self.menuai.async_add_executor_job(
                     self.api.validate_2fa_code, self._verification_code
                 ):
                     raise PyiCloudException("The code you entered is not valid.")  # noqa: TRY301
-            elif not await self.hass.async_add_executor_job(
+            elif not await self.menuai.async_add_executor_job(
                 self.api.validate_verification_code,
                 self._trusted_device,
                 self._verification_code,
@@ -295,11 +295,11 @@ class IcloudFlowHandler(ConfigFlow, domain=DOMAIN):
 
             if self.api.requires_2fa:
                 try:
-                    self.api = await self.hass.async_add_executor_job(
+                    self.api = await self.menuai.async_add_executor_job(
                         PyiCloudService,
                         self._username,
                         self._password,
-                        Store(self.hass, STORAGE_VERSION, STORAGE_KEY).path,
+                        Store(self.menuai, STORAGE_VERSION, STORAGE_KEY).path,
                         True,
                         None,
                         self._with_family,

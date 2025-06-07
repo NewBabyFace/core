@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from homeassistant.components.tuya.const import CONF_APP_TYPE, CONF_USER_CODE, DOMAIN
+from menuai.components.tuya.const import CONF_APP_TYPE, CONF_USER_CODE, DOMAIN
 
 from tests.common import MockConfigEntry
 
@@ -37,7 +37,7 @@ def mock_config_entry() -> MockConfigEntry:
 @pytest.fixture
 def mock_setup_entry() -> Generator[None]:
     """Mock setting up a config entry."""
-    with patch("homeassistant.components.tuya.async_setup_entry", return_value=True):
+    with patch("menuai.components.tuya.async_setup_entry", return_value=True):
         yield
 
 
@@ -45,7 +45,7 @@ def mock_setup_entry() -> Generator[None]:
 def mock_tuya_login_control() -> Generator[MagicMock]:
     """Return a mocked Tuya login control."""
     with patch(
-        "homeassistant.components.tuya.config_flow.LoginControl", autospec=True
+        "menuai.components.tuya.config_flow.LoginControl", autospec=True
     ) as login_control_mock:
         login_control = login_control_mock.return_value
         login_control.qr_code.return_value = {

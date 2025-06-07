@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     ATTR_APP_NAME,
     ATTR_INPUT_SOURCE,
     ATTR_INPUT_SOURCE_LIST,
@@ -13,8 +13,8 @@ from homeassistant.components.media_player import (
     ATTR_MEDIA_VOLUME_LEVEL,
     ATTR_MEDIA_VOLUME_MUTED,
 )
-from homeassistant.const import STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant
+from menuai.const import STATE_OFF, STATE_ON
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -27,14 +27,14 @@ from tests.common import MockConfigEntry
     ],
 )
 async def test_zones_loaded(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_integration: MockConfigEntry,
     entity_id: str,
     entity_name: str,
 ) -> None:
     """Test zones are loaded."""
 
-    states = hass.states.get(entity_id)
+    states = menuai.states.get(entity_id)
 
     assert states
     assert states.state == STATE_OFF
@@ -42,7 +42,7 @@ async def test_zones_loaded(
 
 
 async def test_update_states_zone1(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_integration: MockConfigEntry,
     mock_anthemav: AsyncMock,
     update_callback: Callable[[str], None],
@@ -59,9 +59,9 @@ async def test_update_states_zone1(
     mock_anthemav.protocol.input_list = ["TEST INPUT", "INPUT 2"]
 
     update_callback("command")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    states = hass.states.get("media_player.anthem_av")
+    states = menuai.states.get("media_player.anthem_av")
     assert states
     assert states.state == STATE_ON
     assert states.attributes[ATTR_MEDIA_VOLUME_LEVEL] == 42

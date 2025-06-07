@@ -5,11 +5,11 @@ from unittest.mock import AsyncMock
 from pyHomee import HomeeAuthFailedException, HomeeConnectionFailedException
 import pytest
 
-from homeassistant.components.homee.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.homee.const import DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from .conftest import HOMEE_ID, HOMEE_IP, HOMEE_NAME, NEW_HOMEE_IP, TESTPASS, TESTUSER
 
@@ -18,10 +18,10 @@ from tests.common import MockConfigEntry
 
 @pytest.mark.usefixtures("mock_homee", "mock_config_entry", "mock_setup_entry")
 async def test_config_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test the complete config flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
@@ -29,7 +29,7 @@ async def test_config_flow(
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_HOST: HOMEE_IP,
@@ -67,20 +67,20 @@ async def test_config_flow(
     ],
 )
 async def test_config_flow_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_homee: AsyncMock,
     side_eff: Exception,
     error: dict[str, str],
 ) -> None:
     """Test the config flow fails as expected."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] == FlowResultType.FORM
     flow_id = result["flow_id"]
 
     mock_homee.get_access_token.side_effect = side_eff
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         flow_id,
         user_input={
             CONF_HOST: HOMEE_IP,
@@ -94,7 +94,7 @@ async def test_config_flow_errors(
 
     mock_homee.get_access_token.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         flow_id,
         user_input={
             CONF_HOST: HOMEE_IP,
@@ -108,19 +108,19 @@ async def test_config_flow_errors(
 
 @pytest.mark.usefixtures("mock_homee")
 async def test_flow_already_configured(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test config flow aborts when already configured."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_HOST: HOMEE_IP,
@@ -134,21 +134,21 @@ async def test_flow_already_configured(
 
 @pytest.mark.usefixtures("mock_setup_entry")
 async def test_reconfigure_success(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_homee: AsyncMock,
 ) -> None:
     """Test the reconfigure flow."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
     mock_config_entry.runtime_data = mock_homee
-    result = await mock_config_entry.start_reconfigure_flow(hass)
+    result = await mock_config_entry.start_reconfigure_flow(menuai)
 
     assert result["step_id"] == "reconfigure"
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
     assert result["handler"] == DOMAIN
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_HOST: NEW_HOMEE_IP,
@@ -182,22 +182,22 @@ async def test_reconfigure_success(
     ],
 )
 async def test_reconfigure_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_homee: AsyncMock,
     side_eff: Exception,
     error: dict[str, str],
 ) -> None:
     """Test reconfigure flow errors."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
     mock_config_entry.runtime_data = mock_homee
-    result = await mock_config_entry.start_reconfigure_flow(hass)
+    result = await mock_config_entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reconfigure"
 
     mock_homee.get_access_token.side_effect = side_eff
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_HOST: NEW_HOMEE_IP,
@@ -211,7 +211,7 @@ async def test_reconfigure_errors(
     assert mock_config_entry.data[CONF_HOST] == HOMEE_IP
 
     mock_homee.get_access_token.side_effect = None
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_HOST: NEW_HOMEE_IP,
@@ -228,20 +228,20 @@ async def test_reconfigure_errors(
 
 
 async def test_reconfigure_wrong_uid(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_homee: AsyncMock,
 ) -> None:
     """Test reconfigure flow with wrong UID."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
     mock_homee.settings.uid = "wrong_uid"
     mock_config_entry.runtime_data = mock_homee
-    result = await mock_config_entry.start_reconfigure_flow(hass)
+    result = await mock_config_entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reconfigure"
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_HOST: NEW_HOMEE_IP,

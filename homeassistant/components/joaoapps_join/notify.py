@@ -7,17 +7,17 @@ import logging
 from pyjoin import get_devices, send_notification
 import voluptuous as vol
 
-from homeassistant.components.notify import (
+from menuai.components.notify import (
     ATTR_DATA,
     ATTR_TITLE,
     ATTR_TITLE_DEFAULT,
     PLATFORM_SCHEMA as NOTIFY_PLATFORM_SCHEMA,
     BaseNotificationService,
 )
-from homeassistant.const import CONF_API_KEY, CONF_DEVICE_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_API_KEY, CONF_DEVICE_ID
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ PLATFORM_SCHEMA = NOTIFY_PLATFORM_SCHEMA.extend(
 
 
 def get_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> JoinNotificationService | None:

@@ -7,12 +7,12 @@ from datetime import timedelta
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.components.recorder.history import get_significant_states
-from homeassistant.components.schedule.const import ATTR_NEXT_EVENT, DOMAIN
-from homeassistant.const import ATTR_EDITABLE, ATTR_FRIENDLY_NAME, ATTR_ICON
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.components.recorder.history import get_significant_states
+from menuai.components.schedule.const import ATTR_NEXT_EVENT, DOMAIN
+from menuai.const import ATTR_EDITABLE, ATTR_FRIENDLY_NAME, ATTR_ICON
+from menuai.core import menuai
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from tests.common import async_fire_time_changed
 from tests.components.recorder.common import async_wait_recording_done
@@ -20,13 +20,13 @@ from tests.components.recorder.common import async_wait_recording_done
 
 @pytest.mark.usefixtures("recorder_mock", "enable_custom_integrations")
 async def test_exclude_attributes(
-    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+    menuai: menuai, freezer: FrozenDateTimeFactory
 ) -> None:
     """Test attributes to be excluded."""
     freezer.move_to("2024-08-02 06:30:00-07:00")  # Before Friday event
     now = dt_util.utcnow()
     assert await async_setup_component(
-        hass,
+        menuai,
         DOMAIN,
         {
             DOMAIN: {
@@ -49,7 +49,7 @@ async def test_exclude_attributes(
         },
     )
 
-    state = hass.states.get("schedule.test")
+    state = menuai.states.get("schedule.test")
     assert state
     assert state.attributes[ATTR_EDITABLE] is False
     assert state.attributes[ATTR_FRIENDLY_NAME]
@@ -58,28 +58,28 @@ async def test_exclude_attributes(
 
     # Move to during Friday event
     freezer.move_to("2024-08-02 07:30:00-07:00")
-    async_fire_time_changed(hass, fire_all=True)
-    await hass.async_block_till_done()
-    state = hass.states.get("schedule.test")
+    async_fire_time_changed(menuai, fire_all=True)
+    await menuai.async_block_till_done()
+    state = menuai.states.get("schedule.test")
     assert "entry" not in state.attributes
     assert state.attributes["party_level"] == "epic"
 
     # Move to during Sunday event
     freezer.move_to("2024-08-04 11:30:00-07:00")
-    async_fire_time_changed(hass, fire_all=True)
-    await hass.async_block_till_done()
-    state = hass.states.get("schedule.test")
+    async_fire_time_changed(menuai, fire_all=True)
+    await menuai.async_block_till_done()
+    state = menuai.states.get("schedule.test")
     assert "party_level" not in state.attributes
     assert state.attributes["entry"] == "VIPs only"
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     freezer.tick(timedelta(minutes=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
-    await async_wait_recording_done(hass)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
+    await async_wait_recording_done(menuai)
 
-    states = await hass.async_add_executor_job(
-        get_significant_states, hass, now, None, hass.states.async_entity_ids()
+    states = await menuai.async_add_executor_job(
+        get_significant_states, menuai, now, None, menuai.states.async_entity_ids()
     )
     assert len(states) >= 1
     for entity_states in states.values():

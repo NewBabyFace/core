@@ -5,9 +5,9 @@ from dataclasses import dataclass
 
 from ohme import OhmeApiClient
 
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import EntityDescription
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import EntityDescription
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import OhmeBaseCoordinator

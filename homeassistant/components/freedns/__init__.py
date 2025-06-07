@@ -7,12 +7,12 @@ import logging
 import aiohttp
 import voluptuous as vol
 
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_SCAN_INTERVAL, CONF_URL
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import CONF_ACCESS_TOKEN, CONF_SCAN_INTERVAL, CONF_URL
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.event import async_track_time_interval
+from menuai.helpers.typing import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -39,32 +39,32 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Initialize the FreeDNS component."""
     conf = config[DOMAIN]
     url = conf.get(CONF_URL)
     auth_token = conf.get(CONF_ACCESS_TOKEN)
     update_interval = conf[CONF_SCAN_INTERVAL]
 
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
 
-    result = await _update_freedns(hass, session, url, auth_token)
+    result = await _update_freedns(menuai, session, url, auth_token)
 
     if result is False:
         return False
 
     async def update_domain_callback(now: datetime) -> None:
         """Update the FreeDNS entry."""
-        await _update_freedns(hass, session, url, auth_token)
+        await _update_freedns(menuai, session, url, auth_token)
 
     async_track_time_interval(
-        hass, update_domain_callback, update_interval, cancel_on_shutdown=True
+        menuai, update_domain_callback, update_interval, cancel_on_shutdown=True
     )
 
     return True
 
 
-async def _update_freedns(hass, session, url, auth_token):
+async def _update_freedns(menuai, session, url, auth_token):
     """Update FreeDNS."""
     params = None
 

@@ -1,6 +1,6 @@
 """Constants for the Renault component."""
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 DOMAIN = "renault"
 

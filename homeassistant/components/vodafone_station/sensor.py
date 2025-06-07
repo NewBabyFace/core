@@ -7,15 +7,15 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Final
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
 )
-from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfDataRate
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.const import PERCENTAGE, EntityCategory, UnitOfDataRate
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import _LOGGER, LINE_TYPES
 from .coordinator import VodafoneConfigEntry, VodafoneStationRouter
@@ -167,7 +167,7 @@ SENSOR_TYPES: Final = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: VodafoneConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

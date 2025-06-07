@@ -7,26 +7,26 @@ from typing import TYPE_CHECKING, cast
 
 from elvia import Elvia, error as ElviaError
 
-from homeassistant.components.recorder.models import (
+from menuai.components.recorder.models import (
     StatisticData,
     StatisticMeanType,
     StatisticMetaData,
 )
-from homeassistant.components.recorder.statistics import (
+from menuai.components.recorder.statistics import (
     async_add_external_statistics,
     get_last_statistics,
     statistics_during_period,
 )
-from homeassistant.components.recorder.util import get_instance
-from homeassistant.const import UnitOfEnergy
-from homeassistant.util import dt as dt_util
+from menuai.components.recorder.util import get_instance
+from menuai.const import UnitOfEnergy
+from menuai.util import dt as dt_util
 
 from .const import DOMAIN, LOGGER
 
 if TYPE_CHECKING:
     from elvia.types.meter_value_types import MeterValueTimeSeries
 
-    from homeassistant.core import HomeAssistant
+    from menuai.core import menuai
 
 
 class ElviaImporter:
@@ -34,12 +34,12 @@ class ElviaImporter:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         api_token: str,
         metering_point_id: str,
     ) -> None:
         """Initialize."""
-        self.hass = hass
+        self.menuai = menuai
         self.client = Elvia(meter_value_token=api_token).meter_value()
         self.metering_point_id = metering_point_id
 
@@ -63,9 +63,9 @@ class ElviaImporter:
         """Import meter values."""
         statistics: list[StatisticData] = []
         statistic_id = f"{DOMAIN}:{self.metering_point_id}_consumption"
-        last_stats = await get_instance(self.hass).async_add_executor_job(
+        last_stats = await get_instance(self.menuai).async_add_executor_job(
             get_last_statistics,
-            self.hass,
+            self.menuai,
             1,
             statistic_id,
             True,
@@ -114,9 +114,9 @@ class ElviaImporter:
             ):
                 return
 
-            curr_stat = await get_instance(self.hass).async_add_executor_job(
+            curr_stat = await get_instance(self.menuai).async_add_executor_job(
                 statistics_during_period,
-                self.hass,
+                self.menuai,
                 from_time - timedelta(hours=1),
                 None,
                 {statistic_id},
@@ -146,7 +146,7 @@ class ElviaImporter:
             )
 
         async_add_external_statistics(
-            hass=self.hass,
+            menuai=self.menuai,
             metadata=StatisticMetaData(
                 mean_type=StatisticMeanType.NONE,
                 has_sum=True,

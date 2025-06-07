@@ -8,10 +8,10 @@ from typing import Any
 
 import lupupy.constants as CONST
 
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import DOMAIN
 from .entity import LupusecBaseSensor
@@ -20,18 +20,18 @@ SCAN_INTERVAL = timedelta(seconds=2)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Lupusec switch devices."""
 
-    data = hass.data[DOMAIN][config_entry.entry_id]
+    data = menuai.data[DOMAIN][config_entry.entry_id]
 
     device_types = CONST.TYPE_SWITCH
 
     partial_func = partial(data.get_devices, generic_type=device_types)
-    devices = await hass.async_add_executor_job(partial_func)
+    devices = await menuai.async_add_executor_job(partial_func)
 
     async_add_entities(
         LupusecSwitch(device, config_entry.entry_id) for device in devices

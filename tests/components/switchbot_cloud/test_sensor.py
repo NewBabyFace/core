@@ -5,10 +5,10 @@ from unittest.mock import patch
 from switchbot_api import Device
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.switchbot_cloud.const import DOMAIN
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.switchbot_cloud.const import DOMAIN
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import configure_integration
 
@@ -16,7 +16,7 @@ from tests.common import async_load_json_object_fixture, snapshot_platform
 
 
 async def test_meter(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
     mock_list_devices,
@@ -34,17 +34,17 @@ async def test_meter(
         ),
     ]
     mock_get_status.return_value = await async_load_json_object_fixture(
-        hass, "meter_status.json", DOMAIN
+        menuai, "meter_status.json", DOMAIN
     )
 
-    with patch("homeassistant.components.switchbot_cloud.PLATFORMS", [Platform.SENSOR]):
-        entry = await configure_integration(hass)
+    with patch("menuai.components.switchbot_cloud.PLATFORMS", [Platform.SENSOR]):
+        entry = await configure_integration(menuai)
 
-    await snapshot_platform(hass, entity_registry, snapshot, entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, entry.entry_id)
 
 
 async def test_meter_no_coordinator_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
     mock_list_devices,
@@ -63,7 +63,7 @@ async def test_meter_no_coordinator_data(
 
     mock_get_status.return_value = None
 
-    with patch("homeassistant.components.switchbot_cloud.PLATFORMS", [Platform.SENSOR]):
-        entry = await configure_integration(hass)
+    with patch("menuai.components.switchbot_cloud.PLATFORMS", [Platform.SENSOR]):
+        entry = await configure_integration(menuai)
 
-    await snapshot_platform(hass, entity_registry, snapshot, entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, entry.entry_id)

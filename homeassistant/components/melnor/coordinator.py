@@ -5,9 +5,9 @@ import logging
 
 from melnor_bluetooth.device import Device
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -19,11 +19,11 @@ class MelnorDataUpdateCoordinator(DataUpdateCoordinator[Device]):
     _device: Device
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: ConfigEntry, device: Device
+        self, menuai: menuai, config_entry: ConfigEntry, device: Device
     ) -> None:
         """Initialize my coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name="Melnor Bluetooth",

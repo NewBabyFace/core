@@ -5,17 +5,17 @@ import logging
 import ebusdpy
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_MONITORED_CONDITIONS,
     CONF_NAME,
     CONF_PORT,
     Platform,
 )
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.discovery import load_platform
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import config_validation as cv
+from menuai.helpers.discovery import load_platform
+from menuai.helpers.typing import ConfigType
 
 from .const import DOMAIN, SENSOR_TYPES
 
@@ -56,7 +56,7 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the eBusd component."""
     _LOGGER.debug("Integration setup started")
     conf = config[DOMAIN]
@@ -69,15 +69,15 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
         ebusdpy.init(server_address)
     except (TimeoutError, OSError):
         return False
-    hass.data[DOMAIN] = EbusdData(server_address, circuit)
+    menuai.data[DOMAIN] = EbusdData(server_address, circuit)
     sensor_config = {
         CONF_MONITORED_CONDITIONS: monitored_conditions,
         "client_name": name,
         "sensor_types": SENSOR_TYPES[circuit],
     }
-    load_platform(hass, Platform.SENSOR, DOMAIN, sensor_config, config)
+    load_platform(menuai, Platform.SENSOR, DOMAIN, sensor_config, config)
 
-    hass.services.register(DOMAIN, SERVICE_EBUSD_WRITE, hass.data[DOMAIN].write)
+    menuai.services.register(DOMAIN, SERVICE_EBUSD_WRITE, menuai.data[DOMAIN].write)
 
     _LOGGER.debug("Ebusd integration setup completed")
     return True

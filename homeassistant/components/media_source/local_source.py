@@ -12,11 +12,11 @@ from aiohttp import web
 from aiohttp.web_request import FileField
 import voluptuous as vol
 
-from homeassistant.components import http, websocket_api
-from homeassistant.components.http import require_admin
-from homeassistant.components.media_player import BrowseError, MediaClass
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.util import raise_if_invalid_filename, raise_if_invalid_path
+from menuai.components import http, websocket_api
+from menuai.components.http import require_admin
+from menuai.components.media_player import BrowseError, MediaClass
+from menuai.core import menuai, callback
+from menuai.util import raise_if_invalid_filename, raise_if_invalid_path
 
 from .const import DOMAIN, MEDIA_CLASS_MAP, MEDIA_MIME_TYPES
 from .error import Unresolvable
@@ -27,13 +27,13 @@ LOGGER = logging.getLogger(__name__)
 
 
 @callback
-def async_setup(hass: HomeAssistant) -> None:
+def async_setup(menuai: menuai) -> None:
     """Set up local media source."""
-    source = LocalSource(hass)
-    hass.data[DOMAIN][DOMAIN] = source
-    hass.http.register_view(LocalMediaView(hass, source))
-    hass.http.register_view(UploadMediaView(hass, source))
-    websocket_api.async_register_command(hass, websocket_remove_media)
+    source = LocalSource(menuai)
+    menuai.data[DOMAIN][DOMAIN] = source
+    menuai.http.register_view(LocalMediaView(menuai, source))
+    menuai.http.register_view(UploadMediaView(menuai, source))
+    websocket_api.async_register_command(menuai, websocket_remove_media)
 
 
 class LocalSource(MediaSource):
@@ -41,15 +41,15 @@ class LocalSource(MediaSource):
 
     name: str = "My media"
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize local source."""
         super().__init__(DOMAIN)
-        self.hass = hass
+        self.menuai = menuai
 
     @callback
     def async_full_path(self, source_dir_id: str, location: str) -> Path:
         """Return full path."""
-        base_path = self.hass.config.media_dirs[source_dir_id]
+        base_path = self.menuai.config.media_dirs[source_dir_id]
         full_path = Path(base_path, location)
         full_path.relative_to(base_path)
         return full_path
@@ -61,7 +61,7 @@ class LocalSource(MediaSource):
             raise Unresolvable("Unknown domain.")
 
         source_dir_id, _, location = item.identifier.partition("/")
-        if source_dir_id not in self.hass.config.media_dirs:
+        if source_dir_id not in self.menuai.config.media_dirs:
             raise Unresolvable("Unknown source directory.")
 
         try:
@@ -93,7 +93,7 @@ class LocalSource(MediaSource):
         else:
             source_dir_id, location = None, ""
 
-        return await self.hass.async_add_executor_job(
+        return await self.menuai.async_add_executor_job(
             self._browse_media, source_dir_id, location
         )
 
@@ -103,8 +103,8 @@ class LocalSource(MediaSource):
         """Browse media."""
 
         # If only one media dir is configured, use that as the local media root
-        if source_dir_id is None and len(self.hass.config.media_dirs) == 1:
-            source_dir_id = list(self.hass.config.media_dirs)[0]
+        if source_dir_id is None and len(self.menuai.config.media_dirs) == 1:
+            source_dir_id = list(self.menuai.config.media_dirs)[0]
 
         # Multiple folder, root is requested
         if source_dir_id is None:
@@ -124,12 +124,12 @@ class LocalSource(MediaSource):
 
             base.children = [
                 self._browse_media(source_dir_id, "")
-                for source_dir_id in self.hass.config.media_dirs
+                for source_dir_id in self.menuai.config.media_dirs
             ]
 
             return base
 
-        full_path = Path(self.hass.config.media_dirs[source_dir_id], location)
+        full_path = Path(self.menuai.config.media_dirs[source_dir_id], location)
 
         if not full_path.exists():
             if location == "":
@@ -171,7 +171,7 @@ class LocalSource(MediaSource):
 
         media = BrowseMediaSource(
             domain=DOMAIN,
-            identifier=f"{source_dir_id}/{path.relative_to(self.hass.config.media_dirs[source_dir_id])}",
+            identifier=f"{source_dir_id}/{path.relative_to(self.menuai.config.media_dirs[source_dir_id])}",
             media_class=media_class,
             media_content_type=mime_type or "",
             title=title,
@@ -196,7 +196,7 @@ class LocalSource(MediaSource):
         return media
 
 
-class LocalMediaView(http.HomeAssistantView):
+class LocalMediaView(http.menuaiView):
     """Local Media Finder View.
 
     Returns media files in config/media.
@@ -205,9 +205,9 @@ class LocalMediaView(http.HomeAssistantView):
     url = "/media/{source_dir_id}/{location:.*}"
     name = "media"
 
-    def __init__(self, hass: HomeAssistant, source: LocalSource) -> None:
+    def __init__(self, menuai: menuai, source: LocalSource) -> None:
         """Initialize the media view."""
-        self.hass = hass
+        self.menuai = menuai
         self.source = source
 
     async def get(
@@ -219,13 +219,13 @@ class LocalMediaView(http.HomeAssistantView):
         except ValueError as err:
             raise web.HTTPBadRequest from err
 
-        if source_dir_id not in self.hass.config.media_dirs:
+        if source_dir_id not in self.menuai.config.media_dirs:
             raise web.HTTPNotFound
 
         media_path = self.source.async_full_path(source_dir_id, location)
 
         # Check that the file exists
-        if not self.hass.async_add_executor_job(media_path.is_file):
+        if not self.menuai.async_add_executor_job(media_path.is_file):
             raise web.HTTPNotFound
 
         # Check that it's a media file
@@ -236,15 +236,15 @@ class LocalMediaView(http.HomeAssistantView):
         return web.FileResponse(media_path)
 
 
-class UploadMediaView(http.HomeAssistantView):
+class UploadMediaView(http.menuaiView):
     """View to upload images."""
 
     url = "/api/media_source/local_source/upload"
     name = "api:media_source:local_source:upload"
 
-    def __init__(self, hass: HomeAssistant, source: LocalSource) -> None:
+    def __init__(self, menuai: menuai, source: LocalSource) -> None:
         """Initialize the media view."""
-        self.hass = hass
+        self.menuai = menuai
         self.source = source
         self.schema = vol.Schema(
             {
@@ -266,7 +266,7 @@ class UploadMediaView(http.HomeAssistantView):
             raise web.HTTPBadRequest from err
 
         try:
-            item = MediaSourceItem.from_uri(self.hass, data["media_content_id"], None)
+            item = MediaSourceItem.from_uri(self.menuai, data["media_content_id"], None)
         except ValueError as err:
             LOGGER.error("Received invalid upload data: %s", err)
             raise web.HTTPBadRequest from err
@@ -290,7 +290,7 @@ class UploadMediaView(http.HomeAssistantView):
             raise web.HTTPBadRequest from err
 
         try:
-            await self.hass.async_add_executor_job(
+            await self.menuai.async_add_executor_job(
                 self._move_file,
                 self.source.async_full_path(source_dir_id, location),
                 uploaded_file,
@@ -326,16 +326,16 @@ class UploadMediaView(http.HomeAssistantView):
 @websocket_api.require_admin
 @websocket_api.async_response
 async def websocket_remove_media(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Remove media."""
     try:
-        item = MediaSourceItem.from_uri(hass, msg["media_content_id"], None)
+        item = MediaSourceItem.from_uri(menuai, msg["media_content_id"], None)
     except ValueError as err:
         connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, str(err))
         return
 
-    source: LocalSource = hass.data[DOMAIN][DOMAIN]
+    source: LocalSource = menuai.data[DOMAIN][DOMAIN]
 
     try:
         source_dir_id, location = source.async_parse_identifier(item)
@@ -356,7 +356,7 @@ async def websocket_remove_media(
         return None
 
     try:
-        error = await hass.async_add_executor_job(_do_delete)
+        error = await menuai.async_add_executor_job(_do_delete)
     except OSError as err:
         error = (websocket_api.ERR_UNKNOWN_ERROR, str(err))
 

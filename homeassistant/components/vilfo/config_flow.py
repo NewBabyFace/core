@@ -10,11 +10,11 @@ from vilfo.exceptions import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_HOST, CONF_ID, CONF_MAC
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.util.network import is_host_valid
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_ACCESS_TOKEN, CONF_HOST, CONF_ID, CONF_MAC
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.util.network import is_host_valid
 
 from .const import DOMAIN, ROUTER_DEFAULT_HOST
 
@@ -66,7 +66,7 @@ def _try_connect_and_fetch_basic_info(host, token):
     return result
 
 
-async def validate_input(hass: HomeAssistant, data):
+async def validate_input(menuai: menuai, data):
     """Validate the user input allows us to connect.
 
     Data has the keys from DATA_SCHEMA with values provided by the user.
@@ -78,7 +78,7 @@ async def validate_input(hass: HomeAssistant, data):
 
     config = {}
 
-    result = await hass.async_add_executor_job(
+    result = await menuai.async_add_executor_job(
         _try_connect_and_fetch_basic_info, data[CONF_HOST], data[CONF_ACCESS_TOKEN]
     )
 
@@ -107,7 +107,7 @@ class DomainConfigFlow(ConfigFlow, domain=DOMAIN):
         errors = {}
         if user_input is not None:
             try:
-                info = await validate_input(self.hass, user_input)
+                info = await validate_input(self.menuai, user_input)
             except InvalidHost:
                 errors["base"] = "invalid_host"
             except CannotConnect:
@@ -128,13 +128,13 @@ class DomainConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(menuaiError):
     """Error to indicate there is invalid auth."""
 
 
-class InvalidHost(HomeAssistantError):
+class InvalidHost(menuaiError):
     """Error to indicate that hostname/IP address is invalid."""

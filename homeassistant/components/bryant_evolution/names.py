@@ -1,6 +1,6 @@
 """Functions to generate names for devices and entities."""
 
-from homeassistant.config_entries import ConfigEntry
+from menuai.config_entries import ConfigEntry
 
 
 def sam_device_uid(entry: ConfigEntry) -> str:

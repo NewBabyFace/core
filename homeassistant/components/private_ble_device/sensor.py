@@ -7,22 +7,22 @@ from dataclasses import dataclass
 
 from bluetooth_data_tools import calculate_distance_meters
 
-from homeassistant.components import bluetooth
-from homeassistant.components.sensor import (
+from menuai.components import bluetooth
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
     EntityCategory,
     UnitOfLength,
     UnitOfTime,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .entity import BasePrivateDeviceEntity
 
@@ -32,7 +32,7 @@ class PrivateDeviceSensorEntityDescription(SensorEntityDescription):
     """Describes sensor entity."""
 
     value_fn: Callable[
-        [HomeAssistant, bluetooth.BluetoothServiceInfoBleak], str | int | float | None
+        [menuai, bluetooth.BluetoothServiceInfoBleak], str | int | float | None
     ]
 
 
@@ -76,12 +76,12 @@ SENSOR_DESCRIPTIONS = (
         entity_registry_enabled_default=False,
         entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=(
-            lambda hass, service_info: (
+            lambda menuai, service_info: (
                 bluetooth.async_get_learned_advertising_interval(
-                    hass, service_info.address
+                    menuai, service_info.address
                 )
                 or bluetooth.async_get_fallback_availability_interval(
-                    hass, service_info.address
+                    menuai, service_info.address
                 )
                 or bluetooth.FALLBACK_MAXIMUM_STALE_ADVERTISEMENT_SECONDS
             )
@@ -92,7 +92,7 @@ SENSOR_DESCRIPTIONS = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -141,4 +141,4 @@ class PrivateBLEDeviceSensor(BasePrivateDeviceEntity, SensorEntity):
     def native_value(self) -> str | int | float | None:
         """Return the state of the sensor."""
         assert self._last_info
-        return self.entity_description.value_fn(self.hass, self._last_info)
+        return self.entity_description.value_fn(self.menuai, self._last_info)

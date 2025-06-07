@@ -14,14 +14,14 @@ from cookidoo_api import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_RECONFIGURE,
     SOURCE_USER,
     ConfigFlow,
     ConfigFlowResult,
 )
-from homeassistant.const import CONF_COUNTRY, CONF_EMAIL, CONF_LANGUAGE, CONF_PASSWORD
-from homeassistant.helpers.selector import (
+from menuai.const import CONF_COUNTRY, CONF_EMAIL, CONF_LANGUAGE, CONF_PASSWORD
+from menuai.helpers.selector import (
     CountrySelector,
     CountrySelectorConfig,
     LanguageSelector,
@@ -223,7 +223,7 @@ class CookidooConfigFlow(ConfigFlow, domain=DOMAIN):
                 await get_localization_options(country=data_input[CONF_COUNTRY].lower())
             )[0].language  # Pick any language to test login
 
-        cookidoo = await cookidoo_from_config_data(self.hass, data_input)
+        cookidoo = await cookidoo_from_config_data(self.menuai, data_input)
         try:
             auth_data = await cookidoo.login()
             self.user_uuid = auth_data.sub

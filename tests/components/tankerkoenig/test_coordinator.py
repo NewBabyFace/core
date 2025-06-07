@@ -13,19 +13,19 @@ from aiotankerkoenig.exceptions import (
 )
 import pytest
 
-from homeassistant.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.components.tankerkoenig.const import (
+from menuai.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.components.tankerkoenig.const import (
     CONF_STATIONS,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
 )
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import ATTR_ID, CONF_SHOW_ON_MAP, STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.config_entries import ConfigEntryState
+from menuai.const import ATTR_ID, CONF_SHOW_ON_MAP, STATE_UNAVAILABLE
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from .const import CONFIG_DATA
 
@@ -34,35 +34,35 @@ from tests.common import MockConfigEntry, async_fire_time_changed
 
 @pytest.mark.usefixtures("setup_integration")
 async def test_rate_limit(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     tankerkoenig: AsyncMock,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test detection of API rate limit."""
     assert config_entry.state is ConfigEntryState.LOADED
-    state = hass.states.get("binary_sensor.station_somewhere_street_1_status")
+    state = menuai.states.get("binary_sensor.station_somewhere_street_1_status")
     assert state
     assert state.state == "on"
 
     tankerkoenig.prices.side_effect = TankerkoenigRateLimitError
     async_fire_time_changed(
-        hass, dt_util.utcnow() + timedelta(minutes=DEFAULT_SCAN_INTERVAL)
+        menuai, dt_util.utcnow() + timedelta(minutes=DEFAULT_SCAN_INTERVAL)
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert (
         "API rate limit reached, consider to increase polling interval" in caplog.text
     )
-    state = hass.states.get("binary_sensor.station_somewhere_street_1_status")
+    state = menuai.states.get("binary_sensor.station_somewhere_street_1_status")
     assert state
     assert state.state == STATE_UNAVAILABLE
 
     tankerkoenig.prices.side_effect = None
     async_fire_time_changed(
-        hass, dt_util.utcnow() + timedelta(minutes=DEFAULT_SCAN_INTERVAL * 2)
+        menuai, dt_util.utcnow() + timedelta(minutes=DEFAULT_SCAN_INTERVAL * 2)
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("binary_sensor.station_somewhere_street_1_status")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("binary_sensor.station_somewhere_street_1_status")
     assert state
     assert state.state == "on"
 
@@ -84,7 +84,7 @@ async def test_rate_limit(
 )
 @pytest.mark.usefixtures("setup_integration")
 async def test_update_exception_logging(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     tankerkoenig: AsyncMock,
     caplog: pytest.LogCaptureFixture,
@@ -94,11 +94,11 @@ async def test_update_exception_logging(
     """Test log messages about exceptions during update."""
     tankerkoenig.prices.side_effect = exception
     async_fire_time_changed(
-        hass, dt_util.utcnow() + timedelta(minutes=DEFAULT_SCAN_INTERVAL)
+        menuai, dt_util.utcnow() + timedelta(minutes=DEFAULT_SCAN_INTERVAL)
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert expected_log in caplog.text
-    state = hass.states.get("binary_sensor.station_somewhere_street_1_status")
+    state = menuai.states.get("binary_sensor.station_somewhere_street_1_status")
     assert state
     assert state.state == STATE_UNAVAILABLE
 
@@ -115,7 +115,7 @@ async def test_update_exception_logging(
     ],
 )
 async def test_setup_exception_logging(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     tankerkoenig: AsyncMock,
     caplog: pytest.LogCaptureFixture,
@@ -123,17 +123,17 @@ async def test_setup_exception_logging(
     expected_log: str,
 ) -> None:
     """Test log messages about exceptions during setup."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     tankerkoenig.station_details.side_effect = exception
 
-    assert await async_setup_component(hass, DOMAIN, {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {})
+    await menuai.async_block_till_done()
 
     assert expected_log in caplog.text
 
 
 async def test_automatic_registry_cleanup(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     tankerkoenig: AsyncMock,
     device_registry: dr.DeviceRegistry,
@@ -141,9 +141,9 @@ async def test_automatic_registry_cleanup(
 ) -> None:
     """Test automatic registry cleanup for obsolete entity and devices entries."""
     # setup normal
-    config_entry.add_to_hass(hass)
-    assert await async_setup_component(hass, DOMAIN, {})
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await async_setup_component(menuai, DOMAIN, {})
+    await menuai.async_block_till_done()
 
     assert (
         len(er.async_entries_for_config_entry(entity_registry, config_entry.entry_id))
@@ -185,8 +185,8 @@ async def test_automatic_registry_cleanup(
     )
 
     # reload config entry to trigger automatic cleanup
-    await hass.config_entries.async_reload(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_reload(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert (
         len(er.async_entries_for_config_entry(entity_registry, config_entry.entry_id))
@@ -199,7 +199,7 @@ async def test_automatic_registry_cleanup(
 
 
 async def test_many_stations_warning(
-    hass: HomeAssistant, tankerkoenig: AsyncMock, caplog: pytest.LogCaptureFixture
+    menuai: menuai, tankerkoenig: AsyncMock, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test the warning about morethan 10 selected stations."""
     mock_config = MockConfigEntry(
@@ -226,8 +226,8 @@ async def test_many_stations_warning(
         options={CONF_SHOW_ON_MAP: True},
         unique_id="51.0_13.0",
     )
-    mock_config.add_to_hass(hass)
-    assert await async_setup_component(hass, DOMAIN, {})
-    await hass.async_block_till_done()
+    mock_config.add_to_menuai(menuai)
+    assert await async_setup_component(menuai, DOMAIN, {})
+    await menuai.async_block_till_done()
 
     assert "Found more than 10 stations to check" in caplog.text

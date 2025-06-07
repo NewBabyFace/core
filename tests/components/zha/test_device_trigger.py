@@ -9,16 +9,16 @@ from zigpy.device import Device as ZigpyDevice
 import zigpy.profiles.zha
 import zigpy.types
 
-from homeassistant.components import automation
-from homeassistant.components.device_automation import DeviceAutomationType
-from homeassistant.components.device_automation.exceptions import (
+from menuai.components import automation
+from menuai.components.device_automation import DeviceAutomationType
+from menuai.components.device_automation.exceptions import (
     InvalidDeviceAutomationConfig,
 )
-from homeassistant.components.zha.helpers import get_zha_gateway
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import device_registry as dr
-from homeassistant.setup import async_setup_component
+from menuai.components.zha.helpers import get_zha_gateway
+from menuai.const import Platform
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import device_registry as dr
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry, async_get_device_automations
 
@@ -45,7 +45,7 @@ LONG_RELEASE = "remote_button_long_release"
 @pytest.fixture(autouse=True)
 def sensor_platforms_only():
     """Only set up the sensor platform and required base platforms to speed up tests."""
-    with patch("homeassistant.components.zha.PLATFORMS", (Platform.SENSOR,)):
+    with patch("menuai.components.zha.PLATFORMS", (Platform.SENSOR,)):
         yield
 
 
@@ -57,14 +57,14 @@ def _same_lists(list_a, list_b):
 
 
 async def test_triggers(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     setup_zha,
 ) -> None:
     """Test ZHA device triggers."""
 
     await setup_zha()
-    gateway = get_zha_gateway(hass)
+    gateway = get_zha_gateway(menuai)
 
     zigpy_device = ZigpyDevice(
         application=gateway.application_controller,
@@ -81,14 +81,14 @@ async def test_triggers(
 
     zha_device = gateway.get_or_create_device(zigpy_device)
     await gateway.async_device_initialized(zha_device.device)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     reg_device = device_registry.async_get_device(
         identifiers={("zha", str(zha_device.ieee))}
     )
 
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, reg_device.id
+        menuai, DeviceAutomationType.TRIGGER, reg_device.id
     )
 
     expected_triggers = [
@@ -145,11 +145,11 @@ async def test_triggers(
 
 
 async def test_no_triggers(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry, setup_zha
+    menuai: menuai, device_registry: dr.DeviceRegistry, setup_zha
 ) -> None:
     """Test ZHA device with no triggers."""
     await setup_zha()
-    gateway = get_zha_gateway(hass)
+    gateway = get_zha_gateway(menuai)
 
     zigpy_device = ZigpyDevice(
         application=gateway.application_controller,
@@ -160,14 +160,14 @@ async def test_no_triggers(
 
     zha_device = gateway.get_or_create_device(zigpy_device)
     await gateway.async_device_initialized(zha_device.device)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     reg_device = device_registry.async_get_device(
         identifiers={("zha", str(zha_device.ieee))}
     )
 
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, reg_device.id
+        menuai, DeviceAutomationType.TRIGGER, reg_device.id
     )
     assert triggers == [
         {
@@ -182,7 +182,7 @@ async def test_no_triggers(
 
 
 async def test_if_fires_on_event(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     service_calls: list[ServiceCall],
     setup_zha,
@@ -190,7 +190,7 @@ async def test_if_fires_on_event(
     """Test for remote triggers firing."""
 
     await setup_zha()
-    gateway = get_zha_gateway(hass)
+    gateway = get_zha_gateway(menuai)
 
     zigpy_device = ZigpyDevice(
         application=gateway.application_controller,
@@ -211,14 +211,14 @@ async def test_if_fires_on_event(
 
     zha_device = gateway.get_or_create_device(zigpy_device)
     await gateway.async_device_initialized(zha_device.device)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     reg_device = device_registry.async_get_device(
         identifiers={("zha", str(zha_device.ieee))}
     )
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -239,7 +239,7 @@ async def test_if_fires_on_event(
         },
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     zha_device.emit_zha_event(
         {
@@ -251,14 +251,14 @@ async def test_if_fires_on_event(
             "params": {},
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(service_calls) == 1
     assert service_calls[0].data["message"] == "service called"
 
 
 async def test_device_offline_fires(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     service_calls: list[ServiceCall],
     setup_zha,
@@ -266,7 +266,7 @@ async def test_device_offline_fires(
     """Test for device offline triggers firing."""
 
     await setup_zha()
-    gateway = get_zha_gateway(hass)
+    gateway = get_zha_gateway(menuai)
 
     zigpy_device = ZigpyDevice(
         application=gateway.application_controller,
@@ -276,14 +276,14 @@ async def test_device_offline_fires(
 
     zha_device = gateway.get_or_create_device(zigpy_device)
     await gateway.async_device_initialized(zha_device.device)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     reg_device = device_registry.async_get_device(
         identifiers={("zha", str(zha_device.ieee))}
     )
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -307,14 +307,14 @@ async def test_device_offline_fires(
     assert zha_device.available is True
     zha_device.available = False
     zha_device.emit_zha_event({"device_event_type": "device_offline"})
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(service_calls) == 1
     assert service_calls[0].data["message"] == "service called"
 
 
 async def test_exception_no_triggers(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     caplog: pytest.LogCaptureFixture,
     setup_zha,
@@ -322,7 +322,7 @@ async def test_exception_no_triggers(
     """Test for exception when validating device triggers."""
 
     await setup_zha()
-    gateway = get_zha_gateway(hass)
+    gateway = get_zha_gateway(menuai)
 
     zigpy_device = ZigpyDevice(
         application=gateway.application_controller,
@@ -332,14 +332,14 @@ async def test_exception_no_triggers(
 
     zha_device = gateway.get_or_create_device(zigpy_device)
     await gateway.async_device_initialized(zha_device.device)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     reg_device = device_registry.async_get_device(
         identifiers={("zha", str(zha_device.ieee))}
     )
 
     await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -359,7 +359,7 @@ async def test_exception_no_triggers(
             ]
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert (
         "Unnamed automation failed to setup triggers and has been disabled: "
         "device does not have trigger ('junk', 'junk')" in caplog.text
@@ -367,7 +367,7 @@ async def test_exception_no_triggers(
 
 
 async def test_exception_bad_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     caplog: pytest.LogCaptureFixture,
     setup_zha,
@@ -375,7 +375,7 @@ async def test_exception_bad_trigger(
     """Test for exception when validating device triggers."""
 
     await setup_zha()
-    gateway = get_zha_gateway(hass)
+    gateway = get_zha_gateway(menuai)
 
     zigpy_device = ZigpyDevice(
         application=gateway.application_controller,
@@ -392,14 +392,14 @@ async def test_exception_bad_trigger(
 
     zha_device = gateway.get_or_create_device(zigpy_device)
     await gateway.async_device_initialized(zha_device.device)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     reg_device = device_registry.async_get_device(
         identifiers={("zha", str(zha_device.ieee))}
     )
 
     await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -419,7 +419,7 @@ async def test_exception_bad_trigger(
             ]
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert (
         "Unnamed automation failed to setup triggers and has been disabled: "
         "device does not have trigger ('junk', 'junk')" in caplog.text
@@ -427,7 +427,7 @@ async def test_exception_bad_trigger(
 
 
 async def test_validate_trigger_config_missing_info(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     config_entry: MockConfigEntry,
     caplog: pytest.LogCaptureFixture,
@@ -436,7 +436,7 @@ async def test_validate_trigger_config_missing_info(
     """Test device triggers referring to a missing device."""
 
     await setup_zha()
-    gateway = get_zha_gateway(hass)
+    gateway = get_zha_gateway(menuai)
 
     zigpy_device = ZigpyDevice(
         application=gateway.application_controller,
@@ -453,18 +453,18 @@ async def test_validate_trigger_config_missing_info(
 
     zha_device = gateway.get_or_create_device(zigpy_device)
     await gateway.async_device_initialized(zha_device.device)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     # After we unload the config entry, trigger info was not cached on startup, nor can
     # it be pulled from the current device, making it impossible to validate triggers
-    await hass.config_entries.async_unload(config_entry.entry_id)
+    await menuai.config_entries.async_unload(config_entry.entry_id)
 
     reg_device = device_registry.async_get_device(
         identifiers={("zha", str(zha_device.ieee))}
     )
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -489,12 +489,12 @@ async def test_validate_trigger_config_missing_info(
 
     with pytest.raises(InvalidDeviceAutomationConfig):
         await async_get_device_automations(
-            hass, DeviceAutomationType.TRIGGER, reg_device.id
+            menuai, DeviceAutomationType.TRIGGER, reg_device.id
         )
 
 
 async def test_validate_trigger_config_unloaded_bad_info(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     config_entry: MockConfigEntry,
     caplog: pytest.LogCaptureFixture,
@@ -504,7 +504,7 @@ async def test_validate_trigger_config_unloaded_bad_info(
     """Test device triggers referring to a missing device."""
 
     await setup_zha()
-    gateway = get_zha_gateway(hass)
+    gateway = get_zha_gateway(menuai)
 
     zigpy_device = ZigpyDevice(
         application=gateway.application_controller,
@@ -522,24 +522,24 @@ async def test_validate_trigger_config_unloaded_bad_info(
     zigpy_app_controller.devices[zigpy_device.ieee] = zigpy_device
     zha_device = gateway.get_or_create_device(zigpy_device)
     await gateway.async_device_initialized(zha_device.device)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     # After we unload the config entry, trigger info was not cached on startup, nor can
     # it be pulled from the current device, making it impossible to validate triggers
-    await hass.config_entries.async_unload(config_entry.entry_id)
+    await menuai.config_entries.async_unload(config_entry.entry_id)
 
     # Reload ZHA to persist the device info in the cache
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    await hass.config_entries.async_unload(config_entry.entry_id)
+    await menuai.config_entries.async_unload(config_entry.entry_id)
 
     reg_device = device_registry.async_get_device(
         identifiers={("zha", str(zha_device.ieee))}
     )
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [

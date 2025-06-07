@@ -9,12 +9,12 @@ import logging
 import aiohttp
 import voluptuous as vol
 
-from homeassistant.components.camera import Camera
-from homeassistant.const import CONF_COUNTRY_CODE, CONF_LATITUDE, CONF_LONGITUDE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import dt as dt_util
+from menuai.components.camera import Camera
+from menuai.const import CONF_COUNTRY_CODE, CONF_LATITUDE, CONF_LONGITUDE
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import dt as dt_util
 
 from . import BuienRadarConfigEntry
 from .const import CONF_DELTA, DEFAULT_COUNTRY, DEFAULT_DELTA, DEFAULT_DIMENSION
@@ -29,7 +29,7 @@ SUPPORTED_COUNTRY_CODES = ["NL", "BE"]
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: BuienRadarConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -43,8 +43,8 @@ async def async_setup_entry(
 
     delta = options.get(CONF_DELTA, config.get(CONF_DELTA, DEFAULT_DELTA))
 
-    latitude = config.get(CONF_LATITUDE, hass.config.latitude)
-    longitude = config.get(CONF_LONGITUDE, hass.config.longitude)
+    latitude = config.get(CONF_LATITUDE, menuai.config.latitude)
+    longitude = config.get(CONF_LONGITUDE, menuai.config.longitude)
 
     async_add_entities([BuienradarCam(latitude, longitude, delta, country)])
 
@@ -104,7 +104,7 @@ class BuienradarCam(Camera):
 
     async def __retrieve_radar_image(self) -> bool:
         """Retrieve new radar image and return whether this succeeded."""
-        session = async_get_clientsession(self.hass)
+        session = async_get_clientsession(self.menuai)
 
         url = (
             f"https://api.buienradar.nl/image/1.0/RadarMap{self._country}"
@@ -144,7 +144,7 @@ class BuienradarCam(Camera):
 
         Uses asyncio conditions to make sure only one task enters the critical
         section at the same time. Otherwise, two http requests would start
-        when two tabs with Home Assistant are open.
+        when two tabs with MenuAI are open.
 
         The condition is entered in two sections because otherwise the lock
         would be held while doing the http request.

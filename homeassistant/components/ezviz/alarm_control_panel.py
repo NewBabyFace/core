@@ -9,16 +9,16 @@ import logging
 from pyezvizapi import PyEzvizError
 from pyezvizapi.constants import DefenseModeType
 
-from homeassistant.components.alarm_control_panel import (
+from menuai.components.alarm_control_panel import (
     AlarmControlPanelEntity,
     AlarmControlPanelEntityDescription,
     AlarmControlPanelEntityFeature,
     AlarmControlPanelState,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN, MANUFACTURER
 from .coordinator import EzvizConfigEntry, EzvizDataUpdateCoordinator
@@ -48,7 +48,7 @@ ALARM_TYPE = EzvizAlarmControlPanelEntityDescription(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: EzvizConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -93,8 +93,8 @@ class EzvizAlarm(AlarmControlPanelEntity):
         self.coordinator = coordinator
         self._attr_alarm_state = None
 
-    async def async_added_to_hass(self) -> None:
-        """Entity added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Entity added to menuai."""
         self.async_schedule_update_ha_state(True)
 
     def alarm_disarm(self, code: str | None = None) -> None:
@@ -106,7 +106,7 @@ class EzvizAlarm(AlarmControlPanelEntity):
                 self._attr_alarm_state = AlarmControlPanelState.DISARMED
 
         except PyEzvizError as err:
-            raise HomeAssistantError("Cannot disarm EZVIZ alarm") from err
+            raise menuaiError("Cannot disarm EZVIZ alarm") from err
 
     def alarm_arm_away(self, code: str | None = None) -> None:
         """Send arm away command."""
@@ -117,7 +117,7 @@ class EzvizAlarm(AlarmControlPanelEntity):
                 self._attr_alarm_state = AlarmControlPanelState.ARMED_AWAY
 
         except PyEzvizError as err:
-            raise HomeAssistantError("Cannot arm EZVIZ alarm") from err
+            raise menuaiError("Cannot arm EZVIZ alarm") from err
 
     def alarm_arm_home(self, code: str | None = None) -> None:
         """Send arm home command."""
@@ -128,7 +128,7 @@ class EzvizAlarm(AlarmControlPanelEntity):
                 self._attr_alarm_state = AlarmControlPanelState.ARMED_HOME
 
         except PyEzvizError as err:
-            raise HomeAssistantError("Cannot arm EZVIZ alarm") from err
+            raise menuaiError("Cannot arm EZVIZ alarm") from err
 
     def update(self) -> None:
         """Fetch data from EZVIZ."""
@@ -145,6 +145,6 @@ class EzvizAlarm(AlarmControlPanelEntity):
             ]
 
         except PyEzvizError as error:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Could not fetch EZVIZ alarm status: {error}"
             ) from error

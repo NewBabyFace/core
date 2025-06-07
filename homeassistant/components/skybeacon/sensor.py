@@ -11,23 +11,23 @@ from pygatt.backends import Characteristic, GATTToolBackend
 from pygatt.exceptions import BLEError, NotConnectedError, NotificationTimeout
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
     SensorDeviceClass,
     SensorEntity,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_MAC,
     CONF_NAME,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     PERCENTAGE,
     STATE_UNKNOWN,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -53,7 +53,7 @@ PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -63,7 +63,7 @@ def setup_platform(
     mac = config.get(CONF_MAC)
     _LOGGER.debug("Setting up")
 
-    mon = Monitor(hass, mac, name)
+    mon = Monitor(menuai, mac, name)
     add_entities([SkybeaconTemp(name, mon)])
     add_entities([SkybeaconHumid(name, mon)])
 
@@ -72,7 +72,7 @@ def setup_platform(
         _LOGGER.debug("Stopping monitor for %s", name)
         mon.terminate()
 
-    hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, monitor_stop)
+    menuai.bus.listen_once(EVENT_menuai_STOP, monitor_stop)
     mon.start()
 
 
@@ -132,11 +132,11 @@ class SkybeaconTemp(SensorEntity):
 class Monitor(threading.Thread, SensorEntity):
     """Connection handling."""
 
-    def __init__(self, hass, mac, name):
+    def __init__(self, menuai, mac, name):
         """Construct interface object."""
         threading.Thread.__init__(self)
         self.daemon = False
-        self.hass = hass
+        self.menuai = menuai
         self.mac = mac
         self.name = name
         self.data = {"temp": STATE_UNKNOWN, "humid": STATE_UNKNOWN}

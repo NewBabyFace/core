@@ -9,14 +9,14 @@ from unittest.mock import MagicMock, patch
 import pytest
 from twentemilieu import WasteType
 
-from homeassistant.components.twentemilieu.const import (
+from menuai.components.twentemilieu.const import (
     CONF_HOUSE_LETTER,
     CONF_HOUSE_NUMBER,
     CONF_POST_CODE,
     DOMAIN,
 )
-from homeassistant.const import CONF_ID
-from homeassistant.core import HomeAssistant
+from menuai.const import CONF_ID
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -41,7 +41,7 @@ def mock_config_entry() -> MockConfigEntry:
 def mock_setup_entry() -> Generator[None]:
     """Mock setting up a config entry."""
     with patch(
-        "homeassistant.components.twentemilieu.async_setup_entry", return_value=True
+        "menuai.components.twentemilieu.async_setup_entry", return_value=True
     ):
         yield
 
@@ -51,11 +51,11 @@ def mock_twentemilieu() -> Generator[MagicMock]:
     """Return a mocked Twente Milieu client."""
     with (
         patch(
-            "homeassistant.components.twentemilieu.coordinator.TwenteMilieu",
+            "menuai.components.twentemilieu.coordinator.TwenteMilieu",
             autospec=True,
         ) as twentemilieu_mock,
         patch(
-            "homeassistant.components.twentemilieu.config_flow.TwenteMilieu",
+            "menuai.components.twentemilieu.config_flow.TwenteMilieu",
             new=twentemilieu_mock,
         ),
     ):
@@ -73,14 +73,14 @@ def mock_twentemilieu() -> Generator[MagicMock]:
 
 @pytest.fixture
 async def init_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_twentemilieu: MagicMock,
 ) -> MockConfigEntry:
     """Set up the TwenteMilieu integration for testing."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     return mock_config_entry

@@ -9,7 +9,7 @@ from typing import Any, Concatenate
 from pizone import Controller, Zone
 import voluptuous as vol
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     FAN_AUTO,
     FAN_HIGH,
     FAN_LOW,
@@ -21,21 +21,21 @@ from homeassistant.components.climate import (
     ClimateEntityFeature,
     HVACMode,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_TEMPERATURE,
     CONF_EXCLUDE,
     PRECISION_HALVES,
     PRECISION_TENTHS,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_platform
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.temperature import display_temp as show_temp
-from homeassistant.helpers.typing import ConfigType, VolDictType
+from menuai.core import menuai, callback
+from menuai.helpers import entity_platform
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.temperature import display_temp as show_temp
+from menuai.helpers.typing import ConfigType, VolDictType
 
 from .const import (
     DATA_CONFIG,
@@ -73,17 +73,17 @@ IZONE_SERVICE_AIRFLOW_SCHEMA: VolDictType = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Initialize an IZone Controller."""
-    disco = hass.data[DATA_DISCOVERY_SERVICE]
+    disco = menuai.data[DATA_DISCOVERY_SERVICE]
 
     @callback
     def init_controller(ctrl: Controller):
         """Register the controller device and the containing zones."""
-        conf: ConfigType | None = hass.data.get(DATA_CONFIG)
+        conf: ConfigType | None = menuai.data.get(DATA_CONFIG)
 
         # Filter out any entities excluded in the config file
         if conf and ctrl.device_uid in conf[CONF_EXCLUDE]:
@@ -101,7 +101,7 @@ async def async_setup_entry(
 
     # connect to register any further components
     config.async_on_unload(
-        async_dispatcher_connect(hass, DISPATCH_CONTROLLER_DISCOVERED, init_controller)
+        async_dispatcher_connect(menuai, DISPATCH_CONTROLLER_DISCOVERED, init_controller)
     )
 
     platform = entity_platform.async_get_current_platform()
@@ -191,8 +191,8 @@ class ControllerDevice(ClimateEntity):
         for zone in controller.zones:
             self.zones[zone] = ZoneDevice(self, zone)
 
-    async def async_added_to_hass(self) -> None:
-        """Call on adding to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Call on adding to menuai."""
 
         # Register for connect/disconnect/update events
         @callback
@@ -204,7 +204,7 @@ class ControllerDevice(ClimateEntity):
 
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, DISPATCH_CONTROLLER_DISCONNECTED, controller_disconnected
+                self.menuai, DISPATCH_CONTROLLER_DISCONNECTED, controller_disconnected
             )
         )
 
@@ -217,7 +217,7 @@ class ControllerDevice(ClimateEntity):
 
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, DISPATCH_CONTROLLER_RECONNECTED, controller_reconnected
+                self.menuai, DISPATCH_CONTROLLER_RECONNECTED, controller_reconnected
             )
         )
 
@@ -232,7 +232,7 @@ class ControllerDevice(ClimateEntity):
 
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, DISPATCH_CONTROLLER_UPDATE, controller_update
+                self.menuai, DISPATCH_CONTROLLER_UPDATE, controller_update
             )
         )
 
@@ -257,7 +257,7 @@ class ControllerDevice(ClimateEntity):
         self._attr_available = available
         self.async_write_ha_state()
         for zone in self.zones.values():
-            if zone.hass is not None:
+            if zone.menuai is not None:
                 zone.async_schedule_update_ha_state()
 
     @property
@@ -265,13 +265,13 @@ class ControllerDevice(ClimateEntity):
         """Return the optional state attributes."""
         return {
             "supply_temperature": show_temp(
-                self.hass,
+                self.menuai,
                 self.supply_temperature,
                 self.temperature_unit,
                 self.precision,
             ),
             "temp_setpoint": show_temp(
-                self.hass,
+                self.menuai,
                 self._controller.temp_setpoint,
                 self.temperature_unit,
                 PRECISION_HALVES,
@@ -282,7 +282,7 @@ class ControllerDevice(ClimateEntity):
             # target temp & setting it as the feature is turned off for zone control,
             # report target temp as extra state attribute
             "control_zone_setpoint": show_temp(
-                self.hass,
+                self.menuai,
                 self.control_zone_setpoint,
                 self.temperature_unit,
                 PRECISION_HALVES,
@@ -475,8 +475,8 @@ class ZoneDevice(ClimateEntity):
             via_device=(IZONE, controller.unique_id),
         )
 
-    async def async_added_to_hass(self) -> None:
-        """Call on adding to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Call on adding to menuai."""
 
         @callback
         def controller_update(ctrl: Controller) -> None:
@@ -489,7 +489,7 @@ class ZoneDevice(ClimateEntity):
 
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, DISPATCH_CONTROLLER_UPDATE, controller_update
+                self.menuai, DISPATCH_CONTROLLER_UPDATE, controller_update
             )
         )
 
@@ -503,7 +503,7 @@ class ZoneDevice(ClimateEntity):
             self.async_write_ha_state()
 
         self.async_on_remove(
-            async_dispatcher_connect(self.hass, DISPATCH_ZONE_UPDATE, zone_update)
+            async_dispatcher_connect(self.menuai, DISPATCH_ZONE_UPDATE, zone_update)
         )
 
     @property

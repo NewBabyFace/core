@@ -6,14 +6,14 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from homeassistant.components import tts
-from homeassistant.components.media_player import (
+from menuai.components import tts
+from menuai.components.media_player import (
     ATTR_MEDIA_CONTENT_ID,
     DOMAIN as DOMAIN_MP,
     SERVICE_PLAY_MEDIA,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import assert_setup_component, async_mock_service
 from tests.components.tts.common import retrieve_media
@@ -33,34 +33,34 @@ def mock_tts_cache_dir_autouse(mock_tts_cache_dir: Path) -> None:
     """Mock the TTS cache dir with empty dir."""
 
 
-async def test_setup_component(hass: HomeAssistant) -> None:
+async def test_setup_component(menuai: menuai) -> None:
     """Test setup component."""
     config = {tts.DOMAIN: {"platform": "yandextts", "api_key": "1234567xx"}}
 
     with assert_setup_component(1, tts.DOMAIN):
-        await async_setup_component(hass, tts.DOMAIN, config)
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, tts.DOMAIN, config)
+        await menuai.async_block_till_done()
 
 
-async def test_setup_component_without_api_key(hass: HomeAssistant) -> None:
+async def test_setup_component_without_api_key(menuai: menuai) -> None:
     """Test setup component without api key."""
     config = {tts.DOMAIN: {"platform": "yandextts"}}
 
     with assert_setup_component(0, tts.DOMAIN):
-        await async_setup_component(hass, tts.DOMAIN, config)
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, tts.DOMAIN, config)
+        await menuai.async_block_till_done()
 
 
 async def test_service_say(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test service call say."""
-    calls = async_mock_service(hass, DOMAIN_MP, SERVICE_PLAY_MEDIA)
+    calls = async_mock_service(menuai, DOMAIN_MP, SERVICE_PLAY_MEDIA)
 
     url_param = {
-        "text": "HomeAssistant",
+        "text": "menuai",
         "lang": "en-US",
         "key": "1234567xx",
         "speaker": "zahar",
@@ -73,18 +73,18 @@ async def test_service_say(
     config = {tts.DOMAIN: {"platform": "yandextts", "api_key": "1234567xx"}}
 
     with assert_setup_component(1, tts.DOMAIN):
-        await async_setup_component(hass, tts.DOMAIN, config)
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, tts.DOMAIN, config)
+        await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         tts.DOMAIN,
         "yandextts_say",
-        {"entity_id": "media_player.something", tts.ATTR_MESSAGE: "HomeAssistant"},
+        {"entity_id": "media_player.something", tts.ATTR_MESSAGE: "menuai"},
         blocking=True,
     )
     assert len(calls) == 1
     assert (
-        await retrieve_media(hass, hass_client, calls[0].data[ATTR_MEDIA_CONTENT_ID])
+        await retrieve_media(menuai, menuai_client, calls[0].data[ATTR_MEDIA_CONTENT_ID])
         == HTTPStatus.OK
     )
 
@@ -92,15 +92,15 @@ async def test_service_say(
 
 
 async def test_service_say_russian_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test service call say."""
-    calls = async_mock_service(hass, DOMAIN_MP, SERVICE_PLAY_MEDIA)
+    calls = async_mock_service(menuai, DOMAIN_MP, SERVICE_PLAY_MEDIA)
 
     url_param = {
-        "text": "HomeAssistant",
+        "text": "menuai",
         "lang": "ru-RU",
         "key": "1234567xx",
         "speaker": "zahar",
@@ -119,19 +119,19 @@ async def test_service_say_russian_config(
     }
 
     with assert_setup_component(1, tts.DOMAIN):
-        await async_setup_component(hass, tts.DOMAIN, config)
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, tts.DOMAIN, config)
+        await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         tts.DOMAIN,
         "yandextts_say",
-        {"entity_id": "media_player.something", tts.ATTR_MESSAGE: "HomeAssistant"},
+        {"entity_id": "media_player.something", tts.ATTR_MESSAGE: "menuai"},
         blocking=True,
     )
 
     assert len(calls) == 1
     assert (
-        await retrieve_media(hass, hass_client, calls[0].data[ATTR_MEDIA_CONTENT_ID])
+        await retrieve_media(menuai, menuai_client, calls[0].data[ATTR_MEDIA_CONTENT_ID])
         == HTTPStatus.OK
     )
 
@@ -139,15 +139,15 @@ async def test_service_say_russian_config(
 
 
 async def test_service_say_russian_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test service call say."""
-    calls = async_mock_service(hass, DOMAIN_MP, SERVICE_PLAY_MEDIA)
+    calls = async_mock_service(menuai, DOMAIN_MP, SERVICE_PLAY_MEDIA)
 
     url_param = {
-        "text": "HomeAssistant",
+        "text": "menuai",
         "lang": "ru-RU",
         "key": "1234567xx",
         "speaker": "zahar",
@@ -160,22 +160,22 @@ async def test_service_say_russian_service(
     config = {tts.DOMAIN: {"platform": "yandextts", "api_key": "1234567xx"}}
 
     with assert_setup_component(1, tts.DOMAIN):
-        await async_setup_component(hass, tts.DOMAIN, config)
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, tts.DOMAIN, config)
+        await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         tts.DOMAIN,
         "yandextts_say",
         {
             "entity_id": "media_player.something",
-            tts.ATTR_MESSAGE: "HomeAssistant",
+            tts.ATTR_MESSAGE: "menuai",
             tts.ATTR_LANGUAGE: "ru-RU",
         },
         blocking=True,
     )
     assert len(calls) == 1
     assert (
-        await retrieve_media(hass, hass_client, calls[0].data[ATTR_MEDIA_CONTENT_ID])
+        await retrieve_media(menuai, menuai_client, calls[0].data[ATTR_MEDIA_CONTENT_ID])
         == HTTPStatus.OK
     )
 
@@ -183,15 +183,15 @@ async def test_service_say_russian_service(
 
 
 async def test_service_say_timeout(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test service call say."""
-    calls = async_mock_service(hass, DOMAIN_MP, SERVICE_PLAY_MEDIA)
+    calls = async_mock_service(menuai, DOMAIN_MP, SERVICE_PLAY_MEDIA)
 
     url_param = {
-        "text": "HomeAssistant",
+        "text": "menuai",
         "lang": "en-US",
         "key": "1234567xx",
         "speaker": "zahar",
@@ -209,20 +209,20 @@ async def test_service_say_timeout(
     config = {tts.DOMAIN: {"platform": "yandextts", "api_key": "1234567xx"}}
 
     with assert_setup_component(1, tts.DOMAIN):
-        await async_setup_component(hass, tts.DOMAIN, config)
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, tts.DOMAIN, config)
+        await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         tts.DOMAIN,
         "yandextts_say",
-        {"entity_id": "media_player.something", tts.ATTR_MESSAGE: "HomeAssistant"},
+        {"entity_id": "media_player.something", tts.ATTR_MESSAGE: "menuai"},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(calls) == 1
     assert (
-        await retrieve_media(hass, hass_client, calls[0].data[ATTR_MEDIA_CONTENT_ID])
+        await retrieve_media(menuai, menuai_client, calls[0].data[ATTR_MEDIA_CONTENT_ID])
         == HTTPStatus.INTERNAL_SERVER_ERROR
     )
 
@@ -230,15 +230,15 @@ async def test_service_say_timeout(
 
 
 async def test_service_say_http_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test service call say."""
-    calls = async_mock_service(hass, DOMAIN_MP, SERVICE_PLAY_MEDIA)
+    calls = async_mock_service(menuai, DOMAIN_MP, SERVICE_PLAY_MEDIA)
 
     url_param = {
-        "text": "HomeAssistant",
+        "text": "menuai",
         "lang": "en-US",
         "key": "1234567xx",
         "speaker": "zahar",
@@ -256,33 +256,33 @@ async def test_service_say_http_error(
     config = {tts.DOMAIN: {"platform": "yandextts", "api_key": "1234567xx"}}
 
     with assert_setup_component(1, tts.DOMAIN):
-        await async_setup_component(hass, tts.DOMAIN, config)
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, tts.DOMAIN, config)
+        await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         tts.DOMAIN,
         "yandextts_say",
-        {"entity_id": "media_player.something", tts.ATTR_MESSAGE: "HomeAssistant"},
+        {"entity_id": "media_player.something", tts.ATTR_MESSAGE: "menuai"},
         blocking=True,
     )
 
     assert len(calls) == 1
     assert (
-        await retrieve_media(hass, hass_client, calls[0].data[ATTR_MEDIA_CONTENT_ID])
+        await retrieve_media(menuai, menuai_client, calls[0].data[ATTR_MEDIA_CONTENT_ID])
         == HTTPStatus.INTERNAL_SERVER_ERROR
     )
 
 
 async def test_service_say_specified_speaker(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test service call say."""
-    calls = async_mock_service(hass, DOMAIN_MP, SERVICE_PLAY_MEDIA)
+    calls = async_mock_service(menuai, DOMAIN_MP, SERVICE_PLAY_MEDIA)
 
     url_param = {
-        "text": "HomeAssistant",
+        "text": "menuai",
         "lang": "en-US",
         "key": "1234567xx",
         "speaker": "alyss",
@@ -301,18 +301,18 @@ async def test_service_say_specified_speaker(
     }
 
     with assert_setup_component(1, tts.DOMAIN):
-        await async_setup_component(hass, tts.DOMAIN, config)
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, tts.DOMAIN, config)
+        await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         tts.DOMAIN,
         "yandextts_say",
-        {"entity_id": "media_player.something", tts.ATTR_MESSAGE: "HomeAssistant"},
+        {"entity_id": "media_player.something", tts.ATTR_MESSAGE: "menuai"},
         blocking=True,
     )
     assert len(calls) == 1
     assert (
-        await retrieve_media(hass, hass_client, calls[0].data[ATTR_MEDIA_CONTENT_ID])
+        await retrieve_media(menuai, menuai_client, calls[0].data[ATTR_MEDIA_CONTENT_ID])
         == HTTPStatus.OK
     )
 
@@ -320,15 +320,15 @@ async def test_service_say_specified_speaker(
 
 
 async def test_service_say_specified_emotion(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test service call say."""
-    calls = async_mock_service(hass, DOMAIN_MP, SERVICE_PLAY_MEDIA)
+    calls = async_mock_service(menuai, DOMAIN_MP, SERVICE_PLAY_MEDIA)
 
     url_param = {
-        "text": "HomeAssistant",
+        "text": "menuai",
         "lang": "en-US",
         "key": "1234567xx",
         "speaker": "zahar",
@@ -347,18 +347,18 @@ async def test_service_say_specified_emotion(
     }
 
     with assert_setup_component(1, tts.DOMAIN):
-        await async_setup_component(hass, tts.DOMAIN, config)
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, tts.DOMAIN, config)
+        await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         tts.DOMAIN,
         "yandextts_say",
-        {"entity_id": "media_player.something", tts.ATTR_MESSAGE: "HomeAssistant"},
+        {"entity_id": "media_player.something", tts.ATTR_MESSAGE: "menuai"},
         blocking=True,
     )
     assert len(calls) == 1
     assert (
-        await retrieve_media(hass, hass_client, calls[0].data[ATTR_MEDIA_CONTENT_ID])
+        await retrieve_media(menuai, menuai_client, calls[0].data[ATTR_MEDIA_CONTENT_ID])
         == HTTPStatus.OK
     )
 
@@ -366,15 +366,15 @@ async def test_service_say_specified_emotion(
 
 
 async def test_service_say_specified_low_speed(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test service call say."""
-    calls = async_mock_service(hass, DOMAIN_MP, SERVICE_PLAY_MEDIA)
+    calls = async_mock_service(menuai, DOMAIN_MP, SERVICE_PLAY_MEDIA)
 
     url_param = {
-        "text": "HomeAssistant",
+        "text": "menuai",
         "lang": "en-US",
         "key": "1234567xx",
         "speaker": "zahar",
@@ -389,18 +389,18 @@ async def test_service_say_specified_low_speed(
     }
 
     with assert_setup_component(1, tts.DOMAIN):
-        await async_setup_component(hass, tts.DOMAIN, config)
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, tts.DOMAIN, config)
+        await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         tts.DOMAIN,
         "yandextts_say",
-        {"entity_id": "media_player.something", tts.ATTR_MESSAGE: "HomeAssistant"},
+        {"entity_id": "media_player.something", tts.ATTR_MESSAGE: "menuai"},
         blocking=True,
     )
     assert len(calls) == 1
     assert (
-        await retrieve_media(hass, hass_client, calls[0].data[ATTR_MEDIA_CONTENT_ID])
+        await retrieve_media(menuai, menuai_client, calls[0].data[ATTR_MEDIA_CONTENT_ID])
         == HTTPStatus.OK
     )
 
@@ -408,15 +408,15 @@ async def test_service_say_specified_low_speed(
 
 
 async def test_service_say_specified_speed(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test service call say."""
-    calls = async_mock_service(hass, DOMAIN_MP, SERVICE_PLAY_MEDIA)
+    calls = async_mock_service(menuai, DOMAIN_MP, SERVICE_PLAY_MEDIA)
 
     url_param = {
-        "text": "HomeAssistant",
+        "text": "menuai",
         "lang": "en-US",
         "key": "1234567xx",
         "speaker": "zahar",
@@ -429,18 +429,18 @@ async def test_service_say_specified_speed(
     config = {tts.DOMAIN: {"platform": "yandextts", "api_key": "1234567xx", "speed": 2}}
 
     with assert_setup_component(1, tts.DOMAIN):
-        await async_setup_component(hass, tts.DOMAIN, config)
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, tts.DOMAIN, config)
+        await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         tts.DOMAIN,
         "yandextts_say",
-        {"entity_id": "media_player.something", tts.ATTR_MESSAGE: "HomeAssistant"},
+        {"entity_id": "media_player.something", tts.ATTR_MESSAGE: "menuai"},
         blocking=True,
     )
     assert len(calls) == 1
     assert (
-        await retrieve_media(hass, hass_client, calls[0].data[ATTR_MEDIA_CONTENT_ID])
+        await retrieve_media(menuai, menuai_client, calls[0].data[ATTR_MEDIA_CONTENT_ID])
         == HTTPStatus.OK
     )
 
@@ -448,15 +448,15 @@ async def test_service_say_specified_speed(
 
 
 async def test_service_say_specified_options(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test service call say with options."""
-    calls = async_mock_service(hass, DOMAIN_MP, SERVICE_PLAY_MEDIA)
+    calls = async_mock_service(menuai, DOMAIN_MP, SERVICE_PLAY_MEDIA)
 
     url_param = {
-        "text": "HomeAssistant",
+        "text": "menuai",
         "lang": "en-US",
         "key": "1234567xx",
         "speaker": "zahar",
@@ -468,22 +468,22 @@ async def test_service_say_specified_options(
     config = {tts.DOMAIN: {"platform": "yandextts", "api_key": "1234567xx"}}
 
     with assert_setup_component(1, tts.DOMAIN):
-        await async_setup_component(hass, tts.DOMAIN, config)
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, tts.DOMAIN, config)
+        await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         tts.DOMAIN,
         "yandextts_say",
         {
             "entity_id": "media_player.something",
-            tts.ATTR_MESSAGE: "HomeAssistant",
+            tts.ATTR_MESSAGE: "menuai",
             "options": {"emotion": "evil", "speed": 2},
         },
         blocking=True,
     )
     assert len(calls) == 1
     assert (
-        await retrieve_media(hass, hass_client, calls[0].data[ATTR_MEDIA_CONTENT_ID])
+        await retrieve_media(menuai, menuai_client, calls[0].data[ATTR_MEDIA_CONTENT_ID])
         == HTTPStatus.OK
     )
 

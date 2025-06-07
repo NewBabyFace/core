@@ -5,7 +5,7 @@ from unittest.mock import patch
 from syrupy.assertion import SnapshotAssertion
 from syrupy.filters import props
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .common import (
     init_mock_coinbase,
@@ -19,8 +19,8 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_entry_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test we handle a and redact a diagnostics request."""
@@ -36,9 +36,9 @@ async def test_entry_diagnostics(
             return_value=mock_get_exchange_rates(),
         ),
     ):
-        config_entry = await init_mock_coinbase(hass)
-        await hass.async_block_till_done()
+        config_entry = await init_mock_coinbase(menuai)
+        await menuai.async_block_till_done()
 
-        result = await get_diagnostics_for_config_entry(hass, hass_client, config_entry)
+        result = await get_diagnostics_for_config_entry(menuai, menuai_client, config_entry)
 
         assert result == snapshot(exclude=props("created_at", "modified_at"))

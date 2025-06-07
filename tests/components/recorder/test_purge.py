@@ -12,9 +12,9 @@ from sqlalchemy.exc import DatabaseError, OperationalError
 from sqlalchemy.orm.session import Session
 from voluptuous.error import MultipleInvalid
 
-from homeassistant.components.recorder import DOMAIN, Recorder
-from homeassistant.components.recorder.const import SupportedDialect
-from homeassistant.components.recorder.db_schema import (
+from menuai.components.recorder import DOMAIN, Recorder
+from menuai.components.recorder.const import SupportedDialect
+from menuai.components.recorder.db_schema import (
     Events,
     EventTypes,
     RecorderRuns,
@@ -24,18 +24,18 @@ from homeassistant.components.recorder.db_schema import (
     StatisticsRuns,
     StatisticsShortTerm,
 )
-from homeassistant.components.recorder.history import get_significant_states
-from homeassistant.components.recorder.purge import purge_old_data
-from homeassistant.components.recorder.queries import select_event_type_ids
-from homeassistant.components.recorder.services import (
+from menuai.components.recorder.history import get_significant_states
+from menuai.components.recorder.purge import purge_old_data
+from menuai.components.recorder.queries import select_event_type_ids
+from menuai.components.recorder.services import (
     SERVICE_PURGE,
     SERVICE_PURGE_ENTITIES,
 )
-from homeassistant.components.recorder.tasks import PurgeTask
-from homeassistant.components.recorder.util import session_scope
-from homeassistant.const import EVENT_STATE_CHANGED, EVENT_THEMES_UPDATED, STATE_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
+from menuai.components.recorder.tasks import PurgeTask
+from menuai.components.recorder.util import session_scope
+from menuai.const import EVENT_STATE_CHANGED, EVENT_THEMES_UPDATED, STATE_ON
+from menuai.core import menuai
+from menuai.util import dt as dt_util
 
 from .common import (
     async_recorder_block_till_done,
@@ -58,7 +58,7 @@ TEST_EVENT_TYPES = (
 
 
 @pytest.fixture
-async def mock_recorder_before_hass(
+async def mock_recorder_before_menuai(
     async_test_recorder: RecorderInstanceContextManager,
 ) -> None:
     """Set up recorder."""
@@ -68,7 +68,7 @@ async def mock_recorder_before_hass(
 def mock_use_sqlite(request: pytest.FixtureRequest) -> Generator[None]:
     """Pytest fixture to switch purge method."""
     with patch(
-        "homeassistant.components.recorder.core.Recorder.dialect_name",
+        "menuai.components.recorder.core.Recorder.dialect_name",
         return_value=SupportedDialect.SQLITE
         if request.param
         else SupportedDialect.MYSQL,
@@ -76,17 +76,17 @@ def mock_use_sqlite(request: pytest.FixtureRequest) -> Generator[None]:
         yield
 
 
-async def test_purge_big_database(hass: HomeAssistant, recorder_mock: Recorder) -> None:
+async def test_purge_big_database(menuai: menuai, recorder_mock: Recorder) -> None:
     """Test deleting 2/3 old states from a big database."""
     for _ in range(12):
-        await _add_test_states(hass, wait_recording_done=False)
-    await async_wait_recording_done(hass)
+        await _add_test_states(menuai, wait_recording_done=False)
+    await async_wait_recording_done(menuai)
 
     with (
         patch.object(recorder_mock, "max_bind_vars", 72),
         patch.object(recorder_mock.database_engine, "max_bind_vars", 72),
     ):
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             states = session.query(States)
             state_attributes = session.query(StateAttributes)
             assert states.count() == 72
@@ -103,22 +103,22 @@ async def test_purge_big_database(hass: HomeAssistant, recorder_mock: Recorder) 
         )
         assert not finished
 
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             states = session.query(States)
             state_attributes = session.query(StateAttributes)
             assert states.count() == 24
             assert state_attributes.count() == 1
 
 
-async def test_purge_old_states(hass: HomeAssistant, recorder_mock: Recorder) -> None:
+async def test_purge_old_states(menuai: menuai, recorder_mock: Recorder) -> None:
     """Test deleting old states."""
     assert recorder_mock.states_manager.oldest_ts is None
     oldest_ts = recorder_mock.states_manager.oldest_ts
 
-    await _add_test_states(hass)
+    await _add_test_states(menuai)
 
     # make sure we start with 6 states
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         states = session.query(States)
         state_attributes = session.query(StateAttributes)
 
@@ -150,7 +150,7 @@ async def test_purge_old_states(hass: HomeAssistant, recorder_mock: Recorder) ->
     # states_manager.oldest_ts is not updated until after the purge is complete
     assert recorder_mock.states_manager.oldest_ts == oldest_ts
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         states = session.query(States)
         state_attributes = session.query(StateAttributes)
         assert states.count() == 2
@@ -158,7 +158,7 @@ async def test_purge_old_states(hass: HomeAssistant, recorder_mock: Recorder) ->
 
     assert "test.recorder2" in recorder_mock.states_manager._last_committed_id
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         states_after_purge = list(session.query(States))
         # Since these states are deleted in batches, we can't guarantee the order
         # but we can look them up by state
@@ -174,7 +174,7 @@ async def test_purge_old_states(hass: HomeAssistant, recorder_mock: Recorder) ->
     # states_manager.oldest_ts should now be updated
     assert recorder_mock.states_manager.oldest_ts != oldest_ts
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         states = session.query(States)
         state_attributes = session.query(StateAttributes)
         assert states.count() == 2
@@ -199,17 +199,17 @@ async def test_purge_old_states(hass: HomeAssistant, recorder_mock: Recorder) ->
     # states_manager.oldest_ts is not updated until after the purge is complete
     assert recorder_mock.states_manager.oldest_ts == oldest_ts
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         assert states.count() == 0
         assert state_attributes.count() == 0
 
     assert "test.recorder2" not in recorder_mock.states_manager._last_committed_id
 
     # Add some more states
-    await _add_test_states(hass)
+    await _add_test_states(menuai)
 
     # make sure we start with 6 states
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         states = session.query(States)
         assert states.count() == 6
         assert states[0].old_state_id is None
@@ -226,64 +226,64 @@ async def test_purge_old_states(hass: HomeAssistant, recorder_mock: Recorder) ->
 @pytest.mark.skip_on_db_engine(["mysql", "postgresql"])
 @pytest.mark.usefixtures("recorder_mock", "skip_by_db_engine")
 async def test_purge_old_states_encouters_database_corruption(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test database image image is malformed while deleting old states.
 
     This test is specific for SQLite, wiping the database on error only happens
     with SQLite.
     """
-    await _add_test_states(hass)
-    await async_wait_recording_done(hass)
+    await _add_test_states(menuai)
+    await async_wait_recording_done(menuai)
 
     sqlite3_exception = DatabaseError("statement", {}, [])
     sqlite3_exception.__cause__ = sqlite3.DatabaseError("not a database")
 
     with (
         patch(
-            "homeassistant.components.recorder.core.move_away_broken_database"
+            "menuai.components.recorder.core.move_away_broken_database"
         ) as move_away,
         patch(
-            "homeassistant.components.recorder.purge.purge_old_data",
+            "menuai.components.recorder.purge.purge_old_data",
             side_effect=sqlite3_exception,
         ),
     ):
-        await hass.services.async_call(DOMAIN, SERVICE_PURGE, {"keep_days": 0})
-        await hass.async_block_till_done()
-        await async_wait_recording_done(hass)
+        await menuai.services.async_call(DOMAIN, SERVICE_PURGE, {"keep_days": 0})
+        await menuai.async_block_till_done()
+        await async_wait_recording_done(menuai)
 
     assert move_away.called
 
     # Ensure the whole database was reset due to the database error
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         states_after_purge = session.query(States)
         assert states_after_purge.count() == 0
 
 
 async def test_purge_old_states_encounters_temporary_mysql_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     recorder_mock: Recorder,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test retry on specific mysql operational errors."""
-    await _add_test_states(hass)
-    await async_wait_recording_done(hass)
+    await _add_test_states(menuai)
+    await async_wait_recording_done(menuai)
 
     mysql_exception = OperationalError("statement", {}, [])
     mysql_exception.orig = Exception(1205, "retryable")
 
     with (
-        patch("homeassistant.components.recorder.util.time.sleep") as sleep_mock,
+        patch("menuai.components.recorder.util.time.sleep") as sleep_mock,
         patch(
-            "homeassistant.components.recorder.purge._purge_old_recorder_runs",
+            "menuai.components.recorder.purge._purge_old_recorder_runs",
             side_effect=[mysql_exception, None],
         ),
         patch.object(recorder_mock.engine.dialect, "name", "mysql"),
     ):
-        await hass.services.async_call(DOMAIN, SERVICE_PURGE, {"keep_days": 0})
-        await hass.async_block_till_done()
-        await async_wait_recording_done(hass)
-        await async_wait_recording_done(hass)
+        await menuai.services.async_call(DOMAIN, SERVICE_PURGE, {"keep_days": 0})
+        await menuai.async_block_till_done()
+        await async_wait_recording_done(menuai)
+        await async_wait_recording_done(menuai)
 
     assert "retrying" in caplog.text
     assert sleep_mock.called
@@ -291,33 +291,33 @@ async def test_purge_old_states_encounters_temporary_mysql_error(
 
 @pytest.mark.usefixtures("recorder_mock")
 async def test_purge_old_states_encounters_operational_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test error on operational errors that are not mysql does not retry."""
-    await _add_test_states(hass)
-    await async_wait_recording_done(hass)
+    await _add_test_states(menuai)
+    await async_wait_recording_done(menuai)
 
     exception = OperationalError("statement", {}, [])
 
     with patch(
-        "homeassistant.components.recorder.purge._purge_old_recorder_runs",
+        "menuai.components.recorder.purge._purge_old_recorder_runs",
         side_effect=exception,
     ):
-        await hass.services.async_call(DOMAIN, SERVICE_PURGE, {"keep_days": 0})
-        await hass.async_block_till_done()
-        await async_wait_recording_done(hass)
-        await async_wait_recording_done(hass)
+        await menuai.services.async_call(DOMAIN, SERVICE_PURGE, {"keep_days": 0})
+        await menuai.async_block_till_done()
+        await async_wait_recording_done(menuai)
+        await async_wait_recording_done(menuai)
 
     assert "retrying" not in caplog.text
     assert "Error executing purge" in caplog.text
 
 
-async def test_purge_old_events(hass: HomeAssistant, recorder_mock: Recorder) -> None:
+async def test_purge_old_events(menuai: menuai, recorder_mock: Recorder) -> None:
     """Test deleting old events."""
-    await _add_test_events(hass)
+    await _add_test_events(menuai)
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         events = session.query(Events).filter(
             Events.event_type_id.in_(select_event_type_ids(TEST_EVENT_TYPES))
         )
@@ -335,7 +335,7 @@ async def test_purge_old_events(hass: HomeAssistant, recorder_mock: Recorder) ->
     )
     assert not finished
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         events = session.query(Events).filter(
             Events.event_type_id.in_(select_event_type_ids(TEST_EVENT_TYPES))
         )
@@ -352,7 +352,7 @@ async def test_purge_old_events(hass: HomeAssistant, recorder_mock: Recorder) ->
     )
     assert finished
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         events = session.query(Events).filter(
             Events.event_type_id.in_(select_event_type_ids(TEST_EVENT_TYPES))
         )
@@ -360,13 +360,13 @@ async def test_purge_old_events(hass: HomeAssistant, recorder_mock: Recorder) ->
 
 
 async def test_purge_old_recorder_runs(
-    hass: HomeAssistant, recorder_mock: Recorder
+    menuai: menuai, recorder_mock: Recorder
 ) -> None:
     """Test deleting old recorder runs keeps current run."""
-    await _add_test_recorder_runs(hass)
+    await _add_test_recorder_runs(menuai)
 
     # make sure we start with 7 recorder runs
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         recorder_runs = session.query(RecorderRuns)
         assert recorder_runs.count() == 7
         # Make sure we have a run that is not closed
@@ -393,7 +393,7 @@ async def test_purge_old_recorder_runs(
     )
     assert finished
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         recorder_runs = session.query(RecorderRuns)
         assert recorder_runs.count() == 3
         # Make sure we did not purge the unclosed run
@@ -401,13 +401,13 @@ async def test_purge_old_recorder_runs(
 
 
 async def test_purge_old_statistics_runs(
-    hass: HomeAssistant, recorder_mock: Recorder
+    menuai: menuai, recorder_mock: Recorder
 ) -> None:
     """Test deleting old statistics runs keeps the latest run."""
-    await _add_test_statistics_runs(hass)
+    await _add_test_statistics_runs(menuai)
 
     # make sure we start with 7 statistics runs
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         statistics_runs = session.query(StatisticsRuns)
         assert statistics_runs.count() == 7
 
@@ -420,7 +420,7 @@ async def test_purge_old_statistics_runs(
     finished = purge_old_data(recorder_mock, purge_before, repack=False)
     assert finished
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         statistics_runs = session.query(StatisticsRuns)
         assert statistics_runs.count() == 1
 
@@ -428,7 +428,7 @@ async def test_purge_old_statistics_runs(
 @pytest.mark.parametrize("use_sqlite", [True, False], indirect=True)
 @pytest.mark.usefixtures("recorder_mock")
 async def test_purge_method(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     use_sqlite: bool,
 ) -> None:
@@ -446,16 +446,16 @@ async def test_purge_method(
         assert run1.start == run2.start
 
     service_data = {"keep_days": 4}
-    await _add_test_events(hass)
-    await _add_test_states(hass)
-    await _add_test_statistics(hass)
-    await _add_test_recorder_runs(hass)
-    await _add_test_statistics_runs(hass)
-    await hass.async_block_till_done()
-    await async_wait_recording_done(hass)
+    await _add_test_events(menuai)
+    await _add_test_states(menuai)
+    await _add_test_statistics(menuai)
+    await _add_test_recorder_runs(menuai)
+    await _add_test_statistics_runs(menuai)
+    await menuai.async_block_till_done()
+    await async_wait_recording_done(menuai)
 
     # make sure we start with 6 states
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         states = session.query(States)
         assert states.count() == 6
 
@@ -480,17 +480,17 @@ async def test_purge_method(
         for itm in statistic_runs_before_purge:
             session.expunge(itm)
 
-    await hass.async_block_till_done()
-    await async_wait_purge_done(hass)
+    await menuai.async_block_till_done()
+    await async_wait_purge_done(menuai)
 
     # run purge method - no service data, use defaults
-    await hass.services.async_call("recorder", "purge")
-    await hass.async_block_till_done()
+    await menuai.services.async_call("recorder", "purge")
+    await menuai.async_block_till_done()
 
     # Small wait for recorder thread
-    await async_wait_purge_done(hass)
+    await async_wait_purge_done(menuai)
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         states = session.query(States)
         events = session.query(Events).filter(
             Events.event_type_id.in_(select_event_type_ids(TEST_EVENT_TYPES))
@@ -503,13 +503,13 @@ async def test_purge_method(
         assert statistics.count() == 4
 
     # run purge method - correct service data
-    await hass.services.async_call("recorder", "purge", service_data=service_data)
-    await hass.async_block_till_done()
+    await menuai.services.async_call("recorder", "purge", service_data=service_data)
+    await menuai.async_block_till_done()
 
     # Small wait for recorder thread
-    await async_wait_purge_done(hass)
+    await async_wait_purge_done(menuai)
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         states = session.query(States)
         events = session.query(Events).filter(
             Events.event_type_id.in_(select_event_type_ids(TEST_EVENT_TYPES))
@@ -539,9 +539,9 @@ async def test_purge_method(
 
     # run purge method - correct service data, with repack
     service_data["repack"] = True
-    await hass.services.async_call("recorder", "purge", service_data=service_data)
-    await hass.async_block_till_done()
-    await async_wait_purge_done(hass)
+    await menuai.services.async_call("recorder", "purge", service_data=service_data)
+    await menuai.async_block_till_done()
+    await async_wait_purge_done(menuai)
     assert (
         "Vacuuming SQL DB to free space" in caplog.text
         or "Optimizing SQL DB to free space" in caplog.text
@@ -550,14 +550,14 @@ async def test_purge_method(
 
 @pytest.mark.parametrize("use_sqlite", [True, False], indirect=True)
 async def test_purge_edge_case(
-    hass: HomeAssistant,
+    menuai: menuai,
     recorder_mock: Recorder,
     use_sqlite: bool,
 ) -> None:
     """Test states and events are purged even if they occurred shortly before purge_before."""
 
-    async def _add_db_entries(hass: HomeAssistant, timestamp: datetime) -> None:
-        with session_scope(hass=hass) as session:
+    async def _add_db_entries(menuai: menuai, timestamp: datetime) -> None:
+        with session_scope(menuai=menuai) as session:
             session.add(
                 Events(
                     event_id=1001,
@@ -588,13 +588,13 @@ async def test_purge_edge_case(
             convert_pending_events_to_event_types(recorder_mock, session)
             convert_pending_states_to_meta(recorder_mock, session)
 
-    await async_wait_purge_done(hass)
+    await async_wait_purge_done(menuai)
 
     service_data = {"keep_days": 2}
     timestamp = dt_util.utcnow() - timedelta(days=2, minutes=1)
 
-    await _add_db_entries(hass, timestamp)
-    with session_scope(hass=hass) as session:
+    await _add_db_entries(menuai, timestamp)
+    with session_scope(menuai=menuai) as session:
         states = session.query(States)
         assert states.count() == 1
 
@@ -606,13 +606,13 @@ async def test_purge_edge_case(
         )
         assert events.count() == 1
 
-    await hass.services.async_call(DOMAIN, SERVICE_PURGE, service_data)
-    await hass.async_block_till_done()
+    await menuai.services.async_call(DOMAIN, SERVICE_PURGE, service_data)
+    await menuai.async_block_till_done()
 
-    await async_recorder_block_till_done(hass)
-    await async_wait_purge_done(hass)
+    await async_recorder_block_till_done(menuai)
+    await async_wait_purge_done(menuai)
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         states = session.query(States)
         assert states.count() == 0
         events = session.query(Events).filter(
@@ -621,14 +621,14 @@ async def test_purge_edge_case(
         assert events.count() == 0
 
 
-async def test_purge_cutoff_date(hass: HomeAssistant, recorder_mock: Recorder) -> None:
+async def test_purge_cutoff_date(menuai: menuai, recorder_mock: Recorder) -> None:
     """Test states and events are purged only if they occurred before "now() - keep_days"."""
 
-    async def _add_db_entries(hass: HomeAssistant, cutoff: datetime, rows: int) -> None:
+    async def _add_db_entries(menuai: menuai, cutoff: datetime, rows: int) -> None:
         timestamp_keep = cutoff
         timestamp_purge = cutoff - timedelta(microseconds=1)
 
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             session.add(
                 Events(
                     event_id=1000,
@@ -687,16 +687,16 @@ async def test_purge_cutoff_date(hass: HomeAssistant, recorder_mock: Recorder) -
             convert_pending_events_to_event_types(recorder_mock, session)
             convert_pending_states_to_meta(recorder_mock, session)
 
-    await async_wait_purge_done(hass)
+    await async_wait_purge_done(menuai)
 
     service_data = {"keep_days": 2}
 
     # Force multiple purge batches to be run
     rows = 999
     cutoff = dt_util.utcnow() - timedelta(days=service_data["keep_days"])
-    await _add_db_entries(hass, cutoff, rows)
+    await _add_db_entries(menuai, cutoff, rows)
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         states = session.query(States)
         state_attributes = session.query(StateAttributes)
         assert states.filter(States.state == "purge").count() == rows - 1
@@ -723,11 +723,11 @@ async def test_purge_cutoff_date(hass: HomeAssistant, recorder_mock: Recorder) -
         )
 
     recorder_mock.queue_task(PurgeTask(cutoff, repack=False, apply_filter=False))
-    await hass.async_block_till_done()
-    await async_recorder_block_till_done(hass)
-    await async_wait_purge_done(hass)
+    await menuai.async_block_till_done()
+    await async_recorder_block_till_done(menuai)
+    await async_wait_purge_done(menuai)
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         states = session.query(States)
         state_attributes = session.query(StateAttributes)
         session.query(Events)
@@ -766,10 +766,10 @@ async def test_purge_cutoff_date(hass: HomeAssistant, recorder_mock: Recorder) -
     recorder_mock.queue_task(
         PurgeTask(dt_util.utcnow(), repack=False, apply_filter=False)
     )
-    await async_recorder_block_till_done(hass)
-    await async_wait_purge_done(hass)
+    await async_recorder_block_till_done(menuai)
+    await async_wait_purge_done(menuai)
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         states = session.query(States)
         state_attributes = session.query(StateAttributes)
         assert states.count() == 0
@@ -779,10 +779,10 @@ async def test_purge_cutoff_date(hass: HomeAssistant, recorder_mock: Recorder) -
     recorder_mock.queue_task(
         PurgeTask(dt_util.utcnow(), repack=False, apply_filter=False)
     )
-    await async_recorder_block_till_done(hass)
-    await async_wait_purge_done(hass)
+    await async_recorder_block_till_done(menuai)
+    await async_wait_purge_done(menuai)
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         states = session.query(States)
         state_attributes = session.query(StateAttributes)
         assert states.count() == 0
@@ -794,15 +794,15 @@ async def test_purge_cutoff_date(hass: HomeAssistant, recorder_mock: Recorder) -
     "recorder_config", [{"exclude": {"entities": ["sensor.excluded"]}}]
 )
 async def test_purge_filtered_states(
-    hass: HomeAssistant,
+    menuai: menuai,
     recorder_mock: Recorder,
     use_sqlite: bool,
 ) -> None:
     """Test filtered states are purged."""
     assert recorder_mock.entity_filter("sensor.excluded") is False
 
-    def _add_db_entries(hass: HomeAssistant) -> None:
-        with session_scope(hass=hass) as session:
+    def _add_db_entries(menuai: menuai) -> None:
+        with session_scope(menuai=menuai) as session:
             # Add states and state_changed events that should be purged
             for days in range(1, 4):
                 timestamp = dt_util.utcnow() - timedelta(days=days)
@@ -886,9 +886,9 @@ async def test_purge_filtered_states(
             convert_pending_events_to_event_types(recorder_mock, session)
 
     service_data = {"keep_days": 10}
-    _add_db_entries(hass)
+    _add_db_entries(menuai)
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         states = session.query(States)
         assert states.count() == 74
         events_keep = session.query(Events).filter(
@@ -897,13 +897,13 @@ async def test_purge_filtered_states(
         assert events_keep.count() == 1
 
     # Normal purge doesn't remove excluded entities
-    await hass.services.async_call(DOMAIN, SERVICE_PURGE, service_data)
-    await hass.async_block_till_done()
+    await menuai.services.async_call(DOMAIN, SERVICE_PURGE, service_data)
+    await menuai.async_block_till_done()
 
-    await async_recorder_block_till_done(hass)
-    await async_wait_purge_done(hass)
+    await async_recorder_block_till_done(menuai)
+    await async_wait_purge_done(menuai)
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         states = session.query(States)
         assert states.count() == 74
         events_keep = session.query(Events).filter(
@@ -913,16 +913,16 @@ async def test_purge_filtered_states(
 
     # Test with 'apply_filter' = True
     service_data["apply_filter"] = True
-    await hass.services.async_call(DOMAIN, SERVICE_PURGE, service_data)
-    await hass.async_block_till_done()
+    await menuai.services.async_call(DOMAIN, SERVICE_PURGE, service_data)
+    await menuai.async_block_till_done()
 
-    await async_recorder_block_till_done(hass)
-    await async_wait_purge_done(hass)
+    await async_recorder_block_till_done(menuai)
+    await async_wait_purge_done(menuai)
 
-    await async_recorder_block_till_done(hass)
-    await async_wait_purge_done(hass)
+    await async_recorder_block_till_done(menuai)
+    await async_wait_purge_done(menuai)
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         states = session.query(States)
         assert states.count() == 13
         events_keep = session.query(Events).filter(
@@ -961,11 +961,11 @@ async def test_purge_filtered_states(
         assert session.query(StateAttributes).count() == 11
 
     # Do it again to make sure nothing changes
-    await hass.services.async_call(DOMAIN, SERVICE_PURGE, service_data)
-    await async_recorder_block_till_done(hass)
-    await async_wait_purge_done(hass)
+    await menuai.services.async_call(DOMAIN, SERVICE_PURGE, service_data)
+    await async_recorder_block_till_done(menuai)
+    await async_wait_purge_done(menuai)
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         final_keep_state = session.query(States).filter(States.state_id == 74).first()
         assert final_keep_state.old_state_id == 62  # should have been kept
         assert final_keep_state.attributes_id == 71
@@ -973,11 +973,11 @@ async def test_purge_filtered_states(
         assert session.query(StateAttributes).count() == 11
 
     service_data = {"keep_days": 0}
-    await hass.services.async_call(DOMAIN, SERVICE_PURGE, service_data)
-    await async_recorder_block_till_done(hass)
-    await async_wait_purge_done(hass)
+    await menuai.services.async_call(DOMAIN, SERVICE_PURGE, service_data)
+    await async_recorder_block_till_done(menuai)
+    await async_wait_purge_done(menuai)
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         remaining = list(session.query(States))
         for state in remaining:
             assert state.event_id is None
@@ -989,15 +989,15 @@ async def test_purge_filtered_states(
     "recorder_config", [{"exclude": {"entities": ["sensor.excluded"]}}]
 )
 async def test_purge_filtered_states_multiple_rounds(
-    hass: HomeAssistant,
+    menuai: menuai,
     recorder_mock: Recorder,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test filtered states are purged when there are multiple rounds to purge."""
     assert recorder_mock.entity_filter("sensor.excluded") is False
 
-    def _add_db_entries(hass: HomeAssistant) -> None:
-        with session_scope(hass=hass) as session:
+    def _add_db_entries(menuai: menuai) -> None:
+        with session_scope(menuai=menuai) as session:
             # Add states and state_changed events that should be purged
             for days in range(1, 4):
                 timestamp = dt_util.utcnow() - timedelta(days=days)
@@ -1081,9 +1081,9 @@ async def test_purge_filtered_states_multiple_rounds(
             convert_pending_events_to_event_types(recorder_mock, session)
 
     service_data = {"keep_days": 10, "apply_filter": True}
-    _add_db_entries(hass)
+    _add_db_entries(menuai)
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         states = session.query(States)
         assert states.count() == 74
         events_keep = session.query(Events).filter(
@@ -1091,17 +1091,17 @@ async def test_purge_filtered_states_multiple_rounds(
         )
         assert events_keep.count() == 1
 
-    await hass.services.async_call(DOMAIN, SERVICE_PURGE, service_data, blocking=True)
+    await menuai.services.async_call(DOMAIN, SERVICE_PURGE, service_data, blocking=True)
 
     for _ in range(2):
         # Make sure the second round of purging runs
-        await async_recorder_block_till_done(hass)
-        await async_wait_purge_done(hass)
+        await async_recorder_block_till_done(menuai)
+        await async_wait_purge_done(menuai)
 
     assert "Cleanup filtered data hasn't fully completed yet" in caplog.text
     caplog.clear()
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         states = session.query(States)
         assert states.count() == 13
         events_keep = session.query(Events).filter(
@@ -1129,11 +1129,11 @@ async def test_purge_filtered_states_multiple_rounds(
         assert session.query(StateAttributes).count() == 11
 
     # Do it again to make sure nothing changes
-    await hass.services.async_call(DOMAIN, SERVICE_PURGE, service_data)
-    await async_recorder_block_till_done(hass)
-    await async_wait_purge_done(hass)
+    await menuai.services.async_call(DOMAIN, SERVICE_PURGE, service_data)
+    await async_recorder_block_till_done(menuai)
+    await async_wait_purge_done(menuai)
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         final_keep_state = session.query(States).filter(States.state_id == 74).first()
         assert final_keep_state.old_state_id == 62  # should have been kept
         assert final_keep_state.attributes_id == 71
@@ -1142,8 +1142,8 @@ async def test_purge_filtered_states_multiple_rounds(
 
     for _ in range(2):
         # Make sure the second round of purging runs
-        await async_recorder_block_till_done(hass)
-        await async_wait_purge_done(hass)
+        await async_recorder_block_till_done(menuai)
+        await async_wait_purge_done(menuai)
 
     assert "Cleanup filtered data hasn't fully completed yet" not in caplog.text
 
@@ -1153,15 +1153,15 @@ async def test_purge_filtered_states_multiple_rounds(
     "recorder_config", [{"exclude": {"entities": ["sensor.excluded"]}}]
 )
 async def test_purge_filtered_states_to_empty(
-    hass: HomeAssistant,
+    menuai: menuai,
     recorder_mock: Recorder,
     use_sqlite: bool,
 ) -> None:
     """Test filtered states are purged all the way to an empty db."""
     assert recorder_mock.entity_filter("sensor.excluded") is False
 
-    def _add_db_entries(hass: HomeAssistant) -> None:
-        with session_scope(hass=hass) as session:
+    def _add_db_entries(menuai: menuai) -> None:
+        with session_scope(menuai=menuai) as session:
             # Add states and state_changed events that should be purged
             for days in range(1, 4):
                 timestamp = dt_util.utcnow() - timedelta(days=days)
@@ -1176,9 +1176,9 @@ async def test_purge_filtered_states_to_empty(
             convert_pending_states_to_meta(recorder_mock, session)
 
     service_data = {"keep_days": 10}
-    _add_db_entries(hass)
+    _add_db_entries(menuai)
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         states = session.query(States)
         state_attributes = session.query(StateAttributes)
         assert states.count() == 60
@@ -1186,11 +1186,11 @@ async def test_purge_filtered_states_to_empty(
 
     # Test with 'apply_filter' = True
     service_data["apply_filter"] = True
-    await hass.services.async_call(DOMAIN, SERVICE_PURGE, service_data)
-    await async_recorder_block_till_done(hass)
-    await async_wait_purge_done(hass)
+    await menuai.services.async_call(DOMAIN, SERVICE_PURGE, service_data)
+    await async_recorder_block_till_done(menuai)
+    await async_wait_purge_done(menuai)
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         states = session.query(States)
         state_attributes = session.query(StateAttributes)
         assert states.count() == 0
@@ -1198,9 +1198,9 @@ async def test_purge_filtered_states_to_empty(
 
     # Do it again to make sure nothing changes
     # Why do we do this? Should we check the end result?
-    await hass.services.async_call(DOMAIN, SERVICE_PURGE, service_data)
-    await async_recorder_block_till_done(hass)
-    await async_wait_purge_done(hass)
+    await menuai.services.async_call(DOMAIN, SERVICE_PURGE, service_data)
+    await async_recorder_block_till_done(menuai)
+    await async_wait_purge_done(menuai)
 
 
 @pytest.mark.parametrize("use_sqlite", [True, False], indirect=True)
@@ -1208,15 +1208,15 @@ async def test_purge_filtered_states_to_empty(
     "recorder_config", [{"exclude": {"entities": ["sensor.old_format"]}}]
 )
 async def test_purge_without_state_attributes_filtered_states_to_empty(
-    hass: HomeAssistant,
+    menuai: menuai,
     recorder_mock: Recorder,
     use_sqlite: bool,
 ) -> None:
     """Test filtered legacy states without state attributes are purged all the way to an empty db."""
     assert recorder_mock.entity_filter("sensor.old_format") is False
 
-    def _add_db_entries(hass: HomeAssistant) -> None:
-        with session_scope(hass=hass) as session:
+    def _add_db_entries(menuai: menuai) -> None:
+        with session_scope(menuai=menuai) as session:
             # Add states and state_changed events that should be purged
             # in the legacy format
             timestamp = dt_util.utcnow() - timedelta(days=5)
@@ -1254,9 +1254,9 @@ async def test_purge_without_state_attributes_filtered_states_to_empty(
             convert_pending_events_to_event_types(recorder_mock, session)
 
     service_data = {"keep_days": 10}
-    _add_db_entries(hass)
+    _add_db_entries(menuai)
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         states = session.query(States)
         state_attributes = session.query(StateAttributes)
         assert states.count() == 1
@@ -1264,11 +1264,11 @@ async def test_purge_without_state_attributes_filtered_states_to_empty(
 
     # Test with 'apply_filter' = True
     service_data["apply_filter"] = True
-    await hass.services.async_call(DOMAIN, SERVICE_PURGE, service_data)
-    await async_recorder_block_till_done(hass)
-    await async_wait_purge_done(hass)
+    await menuai.services.async_call(DOMAIN, SERVICE_PURGE, service_data)
+    await async_recorder_block_till_done(menuai)
+    await async_wait_purge_done(menuai)
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         states = session.query(States)
         state_attributes = session.query(StateAttributes)
         assert states.count() == 0
@@ -1276,22 +1276,22 @@ async def test_purge_without_state_attributes_filtered_states_to_empty(
 
     # Do it again to make sure nothing changes
     # Why do we do this? Should we check the end result?
-    await hass.services.async_call(DOMAIN, SERVICE_PURGE, service_data)
-    await async_recorder_block_till_done(hass)
-    await async_wait_purge_done(hass)
+    await menuai.services.async_call(DOMAIN, SERVICE_PURGE, service_data)
+    await async_recorder_block_till_done(menuai)
+    await async_wait_purge_done(menuai)
 
 
 @pytest.mark.parametrize(
     "recorder_config", [{"exclude": {"event_types": ["EVENT_PURGE"]}}]
 )
 async def test_purge_filtered_events(
-    hass: HomeAssistant, recorder_mock: Recorder
+    menuai: menuai, recorder_mock: Recorder
 ) -> None:
     """Test filtered events are purged."""
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    def _add_db_entries(hass: HomeAssistant) -> None:
-        with session_scope(hass=hass) as session:
+    def _add_db_entries(menuai: menuai) -> None:
+        with session_scope(menuai=menuai) as session:
             # Add events that should be purged
             for days in range(1, 4):
                 timestamp = dt_util.utcnow() - timedelta(days=days)
@@ -1320,10 +1320,10 @@ async def test_purge_filtered_events(
             convert_pending_states_to_meta(recorder_mock, session)
 
     service_data = {"keep_days": 10}
-    await recorder_mock.async_add_executor_job(_add_db_entries, hass)
-    await async_wait_recording_done(hass)
+    await recorder_mock.async_add_executor_job(_add_db_entries, menuai)
+    await async_wait_recording_done(menuai)
 
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         events_purge = session.query(Events).filter(
             Events.event_type_id.in_(select_event_type_ids(("EVENT_PURGE",)))
         )
@@ -1332,13 +1332,13 @@ async def test_purge_filtered_events(
         assert states.count() == 10
 
     # Normal purge doesn't remove excluded events
-    await hass.services.async_call(DOMAIN, SERVICE_PURGE, service_data)
-    await hass.async_block_till_done()
+    await menuai.services.async_call(DOMAIN, SERVICE_PURGE, service_data)
+    await menuai.async_block_till_done()
 
-    await async_recorder_block_till_done(hass)
-    await async_wait_purge_done(hass)
+    await async_recorder_block_till_done(menuai)
+    await async_wait_purge_done(menuai)
 
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         events_purge = session.query(Events).filter(
             Events.event_type_id.in_(select_event_type_ids(("EVENT_PURGE",)))
         )
@@ -1348,16 +1348,16 @@ async def test_purge_filtered_events(
 
     # Test with 'apply_filter' = True
     service_data["apply_filter"] = True
-    await hass.services.async_call(DOMAIN, SERVICE_PURGE, service_data)
-    await hass.async_block_till_done()
+    await menuai.services.async_call(DOMAIN, SERVICE_PURGE, service_data)
+    await menuai.async_block_till_done()
 
-    await async_recorder_block_till_done(hass)
-    await async_wait_purge_done(hass)
+    await async_recorder_block_till_done(menuai)
+    await async_wait_purge_done(menuai)
 
-    await async_recorder_block_till_done(hass)
-    await async_wait_purge_done(hass)
+    await async_recorder_block_till_done(menuai)
+    await async_wait_purge_done(menuai)
 
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         events_purge = session.query(Events).filter(
             Events.event_type_id.in_(select_event_type_ids(("EVENT_PURGE",)))
         )
@@ -1378,7 +1378,7 @@ async def test_purge_filtered_events(
     ],
 )
 async def test_purge_filtered_events_state_changed(
-    hass: HomeAssistant, recorder_mock: Recorder
+    menuai: menuai, recorder_mock: Recorder
 ) -> None:
     """Test filtered state_changed events are purged. This should also remove all states."""
     # Assert entity_id is NOT excluded
@@ -1387,8 +1387,8 @@ async def test_purge_filtered_events_state_changed(
     assert recorder_mock.entity_filter("sensor.keep") is True
     assert "excluded_event" in recorder_mock.exclude_event_types
 
-    def _add_db_entries(hass: HomeAssistant) -> None:
-        with session_scope(hass=hass) as session:
+    def _add_db_entries(menuai: menuai) -> None:
+        with session_scope(menuai=menuai) as session:
             # Add states and state_changed events that should be purged
             for days in range(1, 4):
                 timestamp = dt_util.utcnow() - timedelta(days=days)
@@ -1462,9 +1462,9 @@ async def test_purge_filtered_events_state_changed(
             convert_pending_states_to_meta(recorder_mock, session)
 
     service_data = {"keep_days": 10, "apply_filter": True}
-    _add_db_entries(hass)
+    _add_db_entries(menuai)
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         events_keep = session.query(Events).filter(
             Events.event_type_id.in_(select_event_type_ids(("EVENT_KEEP",)))
         )
@@ -1477,14 +1477,14 @@ async def test_purge_filtered_events_state_changed(
         assert events_purge.count() == 1
         assert states.count() == 64
 
-    await hass.services.async_call(DOMAIN, SERVICE_PURGE, service_data)
-    await hass.async_block_till_done()
+    await menuai.services.async_call(DOMAIN, SERVICE_PURGE, service_data)
+    await menuai.async_block_till_done()
 
     for _ in range(4):
-        await async_recorder_block_till_done(hass)
-        await async_wait_purge_done(hass)
+        await async_recorder_block_till_done(menuai)
+        await async_wait_purge_done(menuai)
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         events_keep = session.query(Events).filter(
             Events.event_type_id.in_(select_event_type_ids(("EVENT_KEEP",)))
         )
@@ -1511,11 +1511,11 @@ async def test_purge_filtered_events_state_changed(
         )  # should have been kept
 
 
-async def test_purge_entities(hass: HomeAssistant, recorder_mock: Recorder) -> None:
+async def test_purge_entities(menuai: menuai, recorder_mock: Recorder) -> None:
     """Test purging of specific entities."""
 
     async def _purge_entities(
-        hass: HomeAssistant, entity_ids: str, domains: str, entity_globs: str
+        menuai: menuai, entity_ids: str, domains: str, entity_globs: str
     ) -> None:
         service_data = {
             "entity_id": entity_ids,
@@ -1523,14 +1523,14 @@ async def test_purge_entities(hass: HomeAssistant, recorder_mock: Recorder) -> N
             "entity_globs": entity_globs,
         }
 
-        await hass.services.async_call(DOMAIN, SERVICE_PURGE_ENTITIES, service_data)
-        await hass.async_block_till_done()
+        await menuai.services.async_call(DOMAIN, SERVICE_PURGE_ENTITIES, service_data)
+        await menuai.async_block_till_done()
 
-        await async_recorder_block_till_done(hass)
-        await async_wait_purge_done(hass)
+        await async_recorder_block_till_done(menuai)
+        await async_wait_purge_done(menuai)
 
-    def _add_purge_records(hass: HomeAssistant) -> None:
-        with session_scope(hass=hass) as session:
+    def _add_purge_records(menuai: menuai) -> None:
+        with session_scope(menuai=menuai) as session:
             # Add states and state_changed events that should be purged
             for days in range(1, 4):
                 timestamp = dt_util.utcnow() - timedelta(days=days)
@@ -1563,8 +1563,8 @@ async def test_purge_entities(hass: HomeAssistant, recorder_mock: Recorder) -> N
             convert_pending_states_to_meta(recorder_mock, session)
             convert_pending_events_to_event_types(recorder_mock, session)
 
-    def _add_keep_records(hass: HomeAssistant) -> None:
-        with session_scope(hass=hass) as session:
+    def _add_keep_records(menuai: menuai) -> None:
+        with session_scope(menuai=menuai) as session:
             # Add states and state_changed events that should be kept
             timestamp = dt_util.utcnow() - timedelta(days=2)
             for event_id in range(200, 210):
@@ -1578,17 +1578,17 @@ async def test_purge_entities(hass: HomeAssistant, recorder_mock: Recorder) -> N
             convert_pending_states_to_meta(recorder_mock, session)
             convert_pending_events_to_event_types(recorder_mock, session)
 
-    _add_purge_records(hass)
-    _add_keep_records(hass)
+    _add_purge_records(menuai)
+    _add_keep_records(menuai)
 
     # Confirm standard service call
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         states = session.query(States)
         assert states.count() == 190
 
-    await _purge_entities(hass, "sensor.purge_entity", "purge_domain", "*purge_glob")
+    await _purge_entities(menuai, "sensor.purge_entity", "purge_domain", "*purge_glob")
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         states = session.query(States)
         assert states.count() == 10
 
@@ -1599,28 +1599,28 @@ async def test_purge_entities(hass: HomeAssistant, recorder_mock: Recorder) -> N
         )
         assert states_sensor_kept.count() == 10
 
-    _add_purge_records(hass)
+    _add_purge_records(menuai)
 
     # Confirm each parameter purges only the associated records
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         states = session.query(States)
         assert states.count() == 190
 
-    await _purge_entities(hass, "sensor.purge_entity", [], [])
+    await _purge_entities(menuai, "sensor.purge_entity", [], [])
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         states = session.query(States)
         assert states.count() == 130
 
-    await _purge_entities(hass, [], "purge_domain", [])
+    await _purge_entities(menuai, [], "purge_domain", [])
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         states = session.query(States)
         assert states.count() == 70
 
-    await _purge_entities(hass, [], [], "*purge_glob")
+    await _purge_entities(menuai, [], [], "*purge_glob")
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         states = session.query(States)
         assert states.count() == 10
 
@@ -1643,17 +1643,17 @@ async def test_purge_entities(hass: HomeAssistant, recorder_mock: Recorder) -> N
         )
         assert states_meta_remain.count() == 0
 
-    _add_purge_records(hass)
+    _add_purge_records(menuai)
 
     # Confirm calling service without arguments is invalid
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         states = session.query(States)
         assert states.count() == 190
 
     with pytest.raises(MultipleInvalid):
-        await _purge_entities(hass, [], [], [])
+        await _purge_entities(menuai, [], [], [])
 
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         states = session.query(States)
         assert states.count() == 190
 
@@ -1661,7 +1661,7 @@ async def test_purge_entities(hass: HomeAssistant, recorder_mock: Recorder) -> N
         assert states_meta_remain.count() == 4
 
 
-async def _add_test_states(hass: HomeAssistant, wait_recording_done: bool = True):
+async def _add_test_states(menuai: menuai, wait_recording_done: bool = True):
     """Add multiple states to the db for testing."""
     utcnow = dt_util.utcnow()
     five_days_ago = utcnow - timedelta(days=5)
@@ -1670,10 +1670,10 @@ async def _add_test_states(hass: HomeAssistant, wait_recording_done: bool = True
 
     async def set_state(entity_id, state, **kwargs):
         """Set the state."""
-        hass.states.async_set(entity_id, state, **kwargs)
+        menuai.states.async_set(entity_id, state, **kwargs)
         if wait_recording_done:
-            await hass.async_block_till_done()
-            await async_wait_recording_done(hass)
+            await menuai.async_block_till_done()
+            await async_wait_recording_done(menuai)
 
     with freeze_time() as freezer:
         for event_id in range(6):
@@ -1694,7 +1694,7 @@ async def _add_test_states(hass: HomeAssistant, wait_recording_done: bool = True
             await set_state("test.recorder2", state, attributes=attributes)
 
 
-async def _add_test_events(hass: HomeAssistant, iterations: int = 1):
+async def _add_test_events(menuai: menuai, iterations: int = 1):
     """Add a few events for testing."""
     utcnow = dt_util.utcnow()
     five_days_ago = utcnow - timedelta(days=5)
@@ -1703,7 +1703,7 @@ async def _add_test_events(hass: HomeAssistant, iterations: int = 1):
     # Make sure recording is done before freezing time
     # because the time freeze can affect the recorder
     # thread as well can cause the test to fail
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
     with freeze_time() as freezer:
         for _ in range(iterations):
@@ -1718,21 +1718,21 @@ async def _add_test_events(hass: HomeAssistant, iterations: int = 1):
                     timestamp = utcnow
                     event_type = "EVENT_TEST"
                 freezer.move_to(timestamp)
-                hass.bus.async_fire(event_type, event_data)
+                menuai.bus.async_fire(event_type, event_data)
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
 
-async def _add_test_statistics(hass: HomeAssistant):
+async def _add_test_statistics(menuai: menuai):
     """Add multiple statistics to the db for testing."""
     utcnow = dt_util.utcnow()
     five_days_ago = utcnow - timedelta(days=5)
     eleven_days_ago = utcnow - timedelta(days=11)
 
-    await hass.async_block_till_done()
-    await async_wait_recording_done(hass)
+    await menuai.async_block_till_done()
+    await async_wait_recording_done(menuai)
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         for event_id in range(6):
             if event_id < 2:
                 timestamp = eleven_days_ago
@@ -1752,16 +1752,16 @@ async def _add_test_statistics(hass: HomeAssistant):
             )
 
 
-async def _add_test_recorder_runs(hass: HomeAssistant):
+async def _add_test_recorder_runs(menuai: menuai):
     """Add a few recorder_runs for testing."""
     utcnow = dt_util.utcnow()
     five_days_ago = utcnow - timedelta(days=5)
     eleven_days_ago = utcnow - timedelta(days=11)
 
-    await hass.async_block_till_done()
-    await async_wait_recording_done(hass)
+    await menuai.async_block_till_done()
+    await async_wait_recording_done(menuai)
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         for rec_id in range(6):
             if rec_id < 2:
                 timestamp = eleven_days_ago
@@ -1779,16 +1779,16 @@ async def _add_test_recorder_runs(hass: HomeAssistant):
             )
 
 
-async def _add_test_statistics_runs(hass: HomeAssistant):
+async def _add_test_statistics_runs(menuai: menuai):
     """Add a few recorder_runs for testing."""
     utcnow = dt_util.utcnow()
     five_days_ago = utcnow - timedelta(days=5)
     eleven_days_ago = utcnow - timedelta(days=11)
 
-    await hass.async_block_till_done()
-    await async_wait_recording_done(hass)
+    await menuai.async_block_till_done()
+    await async_wait_recording_done(menuai)
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         for rec_id in range(6):
             if rec_id < 2:
                 timestamp = eleven_days_ago
@@ -1854,7 +1854,7 @@ def _add_state_with_state_attributes(
 
 @pytest.mark.timeout(30)
 async def test_purge_many_old_events(
-    hass: HomeAssistant, recorder_mock: Recorder
+    menuai: menuai, recorder_mock: Recorder
 ) -> None:
     """Test deleting old events."""
     old_events_count = 5
@@ -1863,9 +1863,9 @@ async def test_purge_many_old_events(
         patch.object(recorder_mock, "max_bind_vars", old_events_count),
         patch.object(recorder_mock.database_engine, "max_bind_vars", old_events_count),
     ):
-        await _add_test_events(hass, old_events_count)
+        await _add_test_events(menuai, old_events_count)
 
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             events = session.query(Events).filter(
                 Events.event_type_id.in_(select_event_type_ids(TEST_EVENT_TYPES))
             )
@@ -1883,7 +1883,7 @@ async def test_purge_many_old_events(
         )
         assert not finished
 
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             events = session.query(Events).filter(
                 Events.event_type_id.in_(select_event_type_ids(TEST_EVENT_TYPES))
             )
@@ -1899,7 +1899,7 @@ async def test_purge_many_old_events(
         )
         assert finished
 
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             events = session.query(Events).filter(
                 Events.event_type_id.in_(select_event_type_ids(TEST_EVENT_TYPES))
             )
@@ -1915,7 +1915,7 @@ async def test_purge_many_old_events(
         )
         assert finished
 
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             events = session.query(Events).filter(
                 Events.event_type_id.in_(select_event_type_ids(TEST_EVENT_TYPES))
             )
@@ -1923,7 +1923,7 @@ async def test_purge_many_old_events(
 
 
 async def test_purge_old_events_purges_the_event_type_ids(
-    hass: HomeAssistant, recorder_mock: Recorder
+    menuai: menuai, recorder_mock: Recorder
 ) -> None:
     """Test deleting old events purges event type ids."""
     utcnow = dt_util.utcnow()
@@ -1931,11 +1931,11 @@ async def test_purge_old_events_purges_the_event_type_ids(
     eleven_days_ago = utcnow - timedelta(days=11)
     far_past = utcnow - timedelta(days=1000)
 
-    await hass.async_block_till_done()
-    await async_wait_recording_done(hass)
+    await menuai.async_block_till_done()
+    await async_wait_recording_done(menuai)
 
     def _insert_events():
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             event_type_test_auto_purge = EventTypes(event_type="EVENT_TEST_AUTOPURGE")
             event_type_test_purge = EventTypes(event_type="EVENT_TEST_PURGE")
             event_type_test = EventTypes(event_type="EVENT_TEST")
@@ -1980,7 +1980,7 @@ async def test_purge_old_events_purges_the_event_type_ids(
 
     event_type_to_id = await recorder_mock.async_add_executor_job(_insert_events)
     test_event_type_ids = event_type_to_id.values()
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         events = session.query(Events).where(
             Events.event_type_id.in_(test_event_type_ids)
         )
@@ -1999,7 +1999,7 @@ async def test_purge_old_events_purges_the_event_type_ids(
     )
     assert finished
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         events = session.query(Events).where(
             Events.event_type_id.in_(test_event_type_ids)
         )
@@ -2021,7 +2021,7 @@ async def test_purge_old_events_purges_the_event_type_ids(
     )
     assert finished
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         events = session.query(Events).where(
             Events.event_type_id.in_(test_event_type_ids)
         )
@@ -2039,7 +2039,7 @@ async def test_purge_old_events_purges_the_event_type_ids(
     )
     assert finished
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         events = session.query(Events).where(
             Events.event_type_id.in_(test_event_type_ids)
         )
@@ -2051,7 +2051,7 @@ async def test_purge_old_events_purges_the_event_type_ids(
 
 
 async def test_purge_old_states_purges_the_state_metadata_ids(
-    hass: HomeAssistant, recorder_mock: Recorder
+    menuai: menuai, recorder_mock: Recorder
 ) -> None:
     """Test deleting old states purges state metadata_ids."""
     assert recorder_mock.states_meta_manager.active is True
@@ -2061,11 +2061,11 @@ async def test_purge_old_states_purges_the_state_metadata_ids(
     eleven_days_ago = utcnow - timedelta(days=11)
     far_past = utcnow - timedelta(days=1000)
 
-    await hass.async_block_till_done()
-    await async_wait_recording_done(hass)
+    await menuai.async_block_till_done()
+    await async_wait_recording_done(menuai)
 
     def _insert_states():
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             states_meta_sensor_one = StatesMeta(entity_id="sensor.one")
             states_meta_sensor_two = StatesMeta(entity_id="sensor.two")
             states_meta_sensor_three = StatesMeta(entity_id="sensor.three")
@@ -2108,7 +2108,7 @@ async def test_purge_old_states_purges_the_state_metadata_ids(
         _insert_states
     )
     test_metadata_ids = entity_id_to_metadata_id.values()
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         states = session.query(States).where(States.metadata_id.in_(test_metadata_ids))
         states_meta = session.query(StatesMeta).where(
             StatesMeta.metadata_id.in_(test_metadata_ids)
@@ -2125,7 +2125,7 @@ async def test_purge_old_states_purges_the_state_metadata_ids(
     )
     assert finished
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         states = session.query(States).where(States.metadata_id.in_(test_metadata_ids))
         states_meta = session.query(StatesMeta).where(
             StatesMeta.metadata_id.in_(test_metadata_ids)
@@ -2145,7 +2145,7 @@ async def test_purge_old_states_purges_the_state_metadata_ids(
     )
     assert finished
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         states = session.query(States).where(States.metadata_id.in_(test_metadata_ids))
         states_meta = session.query(StatesMeta).where(
             StatesMeta.metadata_id.in_(test_metadata_ids)
@@ -2161,7 +2161,7 @@ async def test_purge_old_states_purges_the_state_metadata_ids(
     )
     assert finished
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         states = session.query(States).where(States.metadata_id.in_(test_metadata_ids))
         states_meta = session.query(StatesMeta).where(
             StatesMeta.metadata_id.in_(test_metadata_ids)
@@ -2171,33 +2171,33 @@ async def test_purge_old_states_purges_the_state_metadata_ids(
 
 
 async def test_purge_entities_keep_days(
-    hass: HomeAssistant, recorder_mock: Recorder
+    menuai: menuai, recorder_mock: Recorder
 ) -> None:
     """Test purging states with an entity filter and keep_days."""
-    await hass.async_block_till_done()
-    await async_wait_recording_done(hass)
+    await menuai.async_block_till_done()
+    await async_wait_recording_done(menuai)
     start = dt_util.utcnow()
     two_days_ago = start - timedelta(days=2)
     one_week_ago = start - timedelta(days=7)
     one_month_ago = start - timedelta(days=30)
     with freeze_time(one_week_ago):
-        hass.states.async_set("sensor.keep", "initial")
-        hass.states.async_set("sensor.purge", "initial")
+        menuai.states.async_set("sensor.keep", "initial")
+        menuai.states.async_set("sensor.purge", "initial")
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
     with freeze_time(two_days_ago):
-        hass.states.async_set("sensor.purge", "two_days_ago")
+        menuai.states.async_set("sensor.purge", "two_days_ago")
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    hass.states.async_set("sensor.purge", "now")
-    hass.states.async_set("sensor.keep", "now")
-    await async_recorder_block_till_done(hass)
+    menuai.states.async_set("sensor.purge", "now")
+    menuai.states.async_set("sensor.keep", "now")
+    await async_recorder_block_till_done(menuai)
 
     states = await recorder_mock.async_add_executor_job(
         get_significant_states,
-        hass,
+        menuai,
         one_month_ago,
         None,
         ["sensor.keep", "sensor.purge"],
@@ -2205,7 +2205,7 @@ async def test_purge_entities_keep_days(
     assert len(states["sensor.keep"]) == 2
     assert len(states["sensor.purge"]) == 3
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_PURGE_ENTITIES,
         {
@@ -2213,12 +2213,12 @@ async def test_purge_entities_keep_days(
             "keep_days": 1,
         },
     )
-    await async_recorder_block_till_done(hass)
-    await async_wait_purge_done(hass)
+    await async_recorder_block_till_done(menuai)
+    await async_wait_purge_done(menuai)
 
     states = await recorder_mock.async_add_executor_job(
         get_significant_states,
-        hass,
+        menuai,
         one_month_ago,
         None,
         ["sensor.keep", "sensor.purge"],
@@ -2226,19 +2226,19 @@ async def test_purge_entities_keep_days(
     assert len(states["sensor.keep"]) == 2
     assert len(states["sensor.purge"]) == 1
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_PURGE_ENTITIES,
         {
             "entity_id": "sensor.purge",
         },
     )
-    await async_recorder_block_till_done(hass)
-    await async_wait_purge_done(hass)
+    await async_recorder_block_till_done(menuai)
+    await async_wait_purge_done(menuai)
 
     states = await recorder_mock.async_add_executor_job(
         get_significant_states,
-        hass,
+        menuai,
         one_month_ago,
         None,
         ["sensor.keep", "sensor.purge"],

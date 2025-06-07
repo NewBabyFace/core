@@ -4,7 +4,7 @@ from http import HTTPStatus
 
 import pytest
 
-from homeassistant.const import CONTENT_TYPE_JSON
+from menuai.const import CONTENT_TYPE_JSON
 
 from tests.common import load_fixture
 from tests.test_util.aiohttp import AiohttpClientMocker

@@ -6,8 +6,8 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
-from homeassistant.core import callback
+from menuai.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
+from menuai.core import callback
 
 from .const import (
     CONF_SERVER_ID,

@@ -12,10 +12,10 @@ from nibe.exceptions import (
 )
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.nibe_heatpump import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.nibe_heatpump import DOMAIN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 MOCK_FLOW_NIBEGW_USERDATA = {
     "model": "F1155",
@@ -37,15 +37,15 @@ pytestmark = pytest.mark.usefixtures("mock_setup_entry")
 
 
 async def _get_connection_form(
-    hass: HomeAssistant, connection_type: str
+    menuai: menuai, connection_type: str
 ) -> config_entries.ConfigFlowResult:
     """Test we get the form."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.MENU
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": connection_type}
     )
 
@@ -55,17 +55,17 @@ async def _get_connection_form(
 
 
 async def test_nibegw_form(
-    hass: HomeAssistant, coils: dict[int, Any], mock_setup_entry: Mock
+    menuai: menuai, coils: dict[int, Any], mock_setup_entry: Mock
 ) -> None:
     """Test we get the form."""
-    result = await _get_connection_form(hass, "nibegw")
+    result = await _get_connection_form(menuai, "nibegw")
 
     coils[48852] = 1
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"], MOCK_FLOW_NIBEGW_USERDATA
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "F1155 at 127.0.0.1"
@@ -82,17 +82,17 @@ async def test_nibegw_form(
 
 
 async def test_modbus_form(
-    hass: HomeAssistant, coils: dict[int, Any], mock_setup_entry: Mock
+    menuai: menuai, coils: dict[int, Any], mock_setup_entry: Mock
 ) -> None:
     """Test we get the form."""
-    result = await _get_connection_form(hass, "modbus")
+    result = await _get_connection_form(menuai, "modbus")
 
     coils[40022] = 1
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"], MOCK_FLOW_MODBUS_USERDATA
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "S1155 at 127.0.0.1"
@@ -106,13 +106,13 @@ async def test_modbus_form(
 
 
 async def test_modbus_invalid_url(
-    hass: HomeAssistant, mock_connection_construct: Mock
+    menuai: menuai, mock_connection_construct: Mock
 ) -> None:
     """Test we handle invalid auth."""
-    result = await _get_connection_form(hass, "modbus")
+    result = await _get_connection_form(menuai, "modbus")
 
     mock_connection_construct.side_effect = ValueError()
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {**MOCK_FLOW_MODBUS_USERDATA, "modbus_url": "invalid://url"}
     )
 
@@ -120,14 +120,14 @@ async def test_modbus_invalid_url(
     assert result2["errors"] == {"modbus_url": "url"}
 
 
-async def test_nibegw_address_inuse(hass: HomeAssistant, mock_connection: Mock) -> None:
+async def test_nibegw_address_inuse(menuai: menuai, mock_connection: Mock) -> None:
     """Test we handle invalid auth."""
-    result = await _get_connection_form(hass, "nibegw")
+    result = await _get_connection_form(menuai, "nibegw")
 
     mock_connection.start = AsyncMock()
     mock_connection.start.side_effect = AddressInUseException()
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"], MOCK_FLOW_NIBEGW_USERDATA
     )
 
@@ -136,7 +136,7 @@ async def test_nibegw_address_inuse(hass: HomeAssistant, mock_connection: Mock) 
 
     mock_connection.start.side_effect = Exception()
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"], MOCK_FLOW_NIBEGW_USERDATA
     )
 
@@ -152,14 +152,14 @@ async def test_nibegw_address_inuse(hass: HomeAssistant, mock_connection: Mock) 
     ],
 )
 async def test_read_timeout(
-    hass: HomeAssistant, mock_connection: Mock, connection_type: str, data: dict
+    menuai: menuai, mock_connection: Mock, connection_type: str, data: dict
 ) -> None:
     """Test we handle cannot connect error."""
-    result = await _get_connection_form(hass, connection_type)
+    result = await _get_connection_form(menuai, connection_type)
 
     mock_connection.verify_connectivity.side_effect = ReadException()
 
-    result2 = await hass.config_entries.flow.async_configure(result["flow_id"], data)
+    result2 = await menuai.config_entries.flow.async_configure(result["flow_id"], data)
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["errors"] == {"base": "read"}
@@ -173,14 +173,14 @@ async def test_read_timeout(
     ],
 )
 async def test_write_timeout(
-    hass: HomeAssistant, mock_connection: Mock, connection_type: str, data: dict
+    menuai: menuai, mock_connection: Mock, connection_type: str, data: dict
 ) -> None:
     """Test we handle cannot connect error."""
-    result = await _get_connection_form(hass, connection_type)
+    result = await _get_connection_form(menuai, connection_type)
 
     mock_connection.verify_connectivity.side_effect = WriteException()
 
-    result2 = await hass.config_entries.flow.async_configure(result["flow_id"], data)
+    result2 = await menuai.config_entries.flow.async_configure(result["flow_id"], data)
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["errors"] == {"base": "write"}
@@ -194,14 +194,14 @@ async def test_write_timeout(
     ],
 )
 async def test_unexpected_exception(
-    hass: HomeAssistant, mock_connection: Mock, connection_type: str, data: dict
+    menuai: menuai, mock_connection: Mock, connection_type: str, data: dict
 ) -> None:
     """Test we handle cannot connect error."""
-    result = await _get_connection_form(hass, connection_type)
+    result = await _get_connection_form(menuai, connection_type)
 
     mock_connection.verify_connectivity.side_effect = Exception()
 
-    result2 = await hass.config_entries.flow.async_configure(result["flow_id"], data)
+    result2 = await menuai.config_entries.flow.async_configure(result["flow_id"], data)
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["errors"] == {"base": "unknown"}
@@ -215,14 +215,14 @@ async def test_unexpected_exception(
     ],
 )
 async def test_nibegw_invalid_host(
-    hass: HomeAssistant, mock_connection: Mock, connection_type: str, data: dict
+    menuai: menuai, mock_connection: Mock, connection_type: str, data: dict
 ) -> None:
     """Test we handle cannot connect error."""
-    result = await _get_connection_form(hass, connection_type)
+    result = await _get_connection_form(menuai, connection_type)
 
     mock_connection.verify_connectivity.side_effect = ReadSendException()
 
-    result2 = await hass.config_entries.flow.async_configure(result["flow_id"], data)
+    result2 = await menuai.config_entries.flow.async_configure(result["flow_id"], data)
 
     assert result2["type"] is FlowResultType.FORM
     if connection_type == "nibegw":
@@ -239,14 +239,14 @@ async def test_nibegw_invalid_host(
     ],
 )
 async def test_model_missing_coil(
-    hass: HomeAssistant, mock_connection: Mock, connection_type: str, data: dict
+    menuai: menuai, mock_connection: Mock, connection_type: str, data: dict
 ) -> None:
     """Test we handle cannot connect error."""
-    result = await _get_connection_form(hass, connection_type)
+    result = await _get_connection_form(menuai, connection_type)
 
     mock_connection.verify_connectivity.side_effect = CoilNotFoundException()
 
-    result2 = await hass.config_entries.flow.async_configure(result["flow_id"], data)
+    result2 = await menuai.config_entries.flow.async_configure(result["flow_id"], data)
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["errors"] == {"base": "model"}

@@ -7,14 +7,14 @@ from unittest.mock import ANY, patch
 from freezegun import freeze_time
 import pytest
 
-from homeassistant.components import history
-from homeassistant.components.history import websocket_api
-from homeassistant.components.recorder import Recorder
-from homeassistant.const import EVENT_HOMEASSISTANT_FINAL_WRITE, STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.event import async_track_state_change_event
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.components import history
+from menuai.components.history import websocket_api
+from menuai.components.recorder import Recorder
+from menuai.const import EVENT_menuai_FINAL_WRITE, STATE_OFF, STATE_ON
+from menuai.core import menuai, callback
+from menuai.helpers.event import async_track_state_change_event
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from tests.common import async_fire_time_changed
 from tests.components.recorder.common import (
@@ -29,39 +29,39 @@ def listeners_without_writes(listeners: dict[str, int]) -> dict[str, int]:
     return {
         key: value
         for key, value in listeners.items()
-        if key != EVENT_HOMEASSISTANT_FINAL_WRITE
+        if key != EVENT_menuai_FINAL_WRITE
     }
 
 
-@pytest.mark.usefixtures("hass_history")
+@pytest.mark.usefixtures("menuai_history")
 def test_setup() -> None:
     """Test setup method of history."""
     # Verification occurs in the fixture
 
 
 async def test_history_during_period(
-    hass: HomeAssistant, recorder_mock: Recorder, hass_ws_client: WebSocketGenerator
+    menuai: menuai, recorder_mock: Recorder, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test history_during_period."""
     now = dt_util.utcnow()
 
-    await async_setup_component(hass, "history", {})
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.test", "on", attributes={"any": "attr"})
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.test", "off", attributes={"any": "attr"})
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.test", "off", attributes={"any": "changed"})
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.test", "off", attributes={"any": "again"})
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.test", "on", attributes={"any": "attr"})
-    await async_wait_recording_done(hass)
+    await async_setup_component(menuai, "history", {})
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.test", "on", attributes={"any": "attr"})
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.test", "off", attributes={"any": "attr"})
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.test", "off", attributes={"any": "changed"})
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.test", "off", attributes={"any": "again"})
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.test", "on", attributes={"any": "attr"})
+    await async_wait_recording_done(menuai)
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -174,28 +174,28 @@ async def test_history_during_period(
 
 
 async def test_history_during_period_impossible_conditions(
-    hass: HomeAssistant, recorder_mock: Recorder, hass_ws_client: WebSocketGenerator
+    menuai: menuai, recorder_mock: Recorder, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test history_during_period returns when condition cannot be true."""
-    await async_setup_component(hass, "history", {})
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.test", "on", attributes={"any": "attr"})
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.test", "off", attributes={"any": "attr"})
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.test", "off", attributes={"any": "changed"})
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.test", "off", attributes={"any": "again"})
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.test", "on", attributes={"any": "attr"})
-    await async_wait_recording_done(hass)
+    await async_setup_component(menuai, "history", {})
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.test", "on", attributes={"any": "attr"})
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.test", "off", attributes={"any": "attr"})
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.test", "off", attributes={"any": "changed"})
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.test", "off", attributes={"any": "again"})
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.test", "on", attributes={"any": "attr"})
+    await async_wait_recording_done(menuai)
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
     after = dt_util.utcnow()
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -236,32 +236,32 @@ async def test_history_during_period_impossible_conditions(
     "time_zone", ["UTC", "Europe/Berlin", "America/Chicago", "US/Hawaii"]
 )
 async def test_history_during_period_significant_domain(
-    hass: HomeAssistant,
+    menuai: menuai,
     recorder_mock: Recorder,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     time_zone,
 ) -> None:
     """Test history_during_period with climate domain."""
-    await hass.config.async_set_time_zone(time_zone)
+    await menuai.config.async_set_time_zone(time_zone)
     now = dt_util.utcnow()
 
-    await async_setup_component(hass, "history", {})
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("climate.test", "on", attributes={"temperature": "1"})
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("climate.test", "off", attributes={"temperature": "2"})
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("climate.test", "off", attributes={"temperature": "3"})
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("climate.test", "off", attributes={"temperature": "4"})
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("climate.test", "on", attributes={"temperature": "5"})
-    await async_wait_recording_done(hass)
+    await async_setup_component(menuai, "history", {})
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("climate.test", "on", attributes={"temperature": "1"})
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("climate.test", "off", attributes={"temperature": "2"})
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("climate.test", "off", attributes={"temperature": "3"})
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("climate.test", "off", attributes={"temperature": "4"})
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("climate.test", "on", attributes={"temperature": "5"})
+    await async_wait_recording_done(menuai)
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -404,16 +404,16 @@ async def test_history_during_period_significant_domain(
 
 
 async def test_history_during_period_bad_start_time(
-    hass: HomeAssistant, recorder_mock: Recorder, hass_ws_client: WebSocketGenerator
+    menuai: menuai, recorder_mock: Recorder, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test history_during_period bad state time."""
     await async_setup_component(
-        hass,
+        menuai,
         "history",
         {"history": {}},
     )
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -428,18 +428,18 @@ async def test_history_during_period_bad_start_time(
 
 
 async def test_history_during_period_bad_end_time(
-    hass: HomeAssistant, recorder_mock: Recorder, hass_ws_client: WebSocketGenerator
+    menuai: menuai, recorder_mock: Recorder, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test history_during_period bad end time."""
     now = dt_util.utcnow()
 
     await async_setup_component(
-        hass,
+        menuai,
         "history",
         {"history": {}},
     )
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -455,44 +455,44 @@ async def test_history_during_period_bad_end_time(
 
 
 async def test_history_stream_historical_only(
-    hass: HomeAssistant, recorder_mock: Recorder, hass_ws_client: WebSocketGenerator
+    menuai: menuai, recorder_mock: Recorder, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test history stream."""
     now = dt_util.utcnow()
     await async_setup_component(
-        hass,
+        menuai,
         "history",
         {},
     )
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.one", "on", attributes={"any": "attr"})
-    sensor_one_last_updated_timestamp = hass.states.get(
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.one", "on", attributes={"any": "attr"})
+    sensor_one_last_updated_timestamp = menuai.states.get(
         "sensor.one"
     ).last_updated_timestamp
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.two", "off", attributes={"any": "attr"})
-    sensor_two_last_updated_timestamp = hass.states.get(
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.two", "off", attributes={"any": "attr"})
+    sensor_two_last_updated_timestamp = menuai.states.get(
         "sensor.two"
     ).last_updated_timestamp
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.three", "off", attributes={"any": "changed"})
-    sensor_three_last_updated_timestamp = hass.states.get(
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.three", "off", attributes={"any": "changed"})
+    sensor_three_last_updated_timestamp = menuai.states.get(
         "sensor.three"
     ).last_updated_timestamp
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.four", "off", attributes={"any": "again"})
-    sensor_four_last_updated_timestamp = hass.states.get(
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.four", "off", attributes={"any": "again"})
+    sensor_four_last_updated_timestamp = menuai.states.get(
         "sensor.four"
     ).last_updated_timestamp
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("switch.excluded", "off", attributes={"any": "again"})
-    await async_wait_recording_done(hass)
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("switch.excluded", "off", attributes={"any": "again"})
+    await async_wait_recording_done(menuai)
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
     end_time = dt_util.utcnow()
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -544,28 +544,28 @@ async def test_history_stream_historical_only(
 
 
 async def test_history_stream_significant_domain_historical_only(
-    hass: HomeAssistant, recorder_mock: Recorder, hass_ws_client: WebSocketGenerator
+    menuai: menuai, recorder_mock: Recorder, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test the stream with climate domain with historical states only."""
     now = dt_util.utcnow()
 
-    await async_setup_component(hass, "history", {})
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("climate.test", "on", attributes={"temperature": "1"})
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("climate.test", "off", attributes={"temperature": "2"})
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("climate.test", "off", attributes={"temperature": "3"})
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("climate.test", "off", attributes={"temperature": "4"})
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("climate.test", "on", attributes={"temperature": "5"})
-    await async_wait_recording_done(hass)
+    await async_setup_component(menuai, "history", {})
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("climate.test", "on", attributes={"temperature": "1"})
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("climate.test", "off", attributes={"temperature": "2"})
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("climate.test", "off", attributes={"temperature": "3"})
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("climate.test", "off", attributes={"temperature": "4"})
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("climate.test", "on", attributes={"temperature": "5"})
+    await async_wait_recording_done(menuai)
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -745,16 +745,16 @@ async def test_history_stream_significant_domain_historical_only(
 
 
 async def test_history_stream_bad_start_time(
-    hass: HomeAssistant, recorder_mock: Recorder, hass_ws_client: WebSocketGenerator
+    menuai: menuai, recorder_mock: Recorder, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test history stream bad state time."""
     await async_setup_component(
-        hass,
+        menuai,
         "history",
         {"history": {}},
     )
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -769,19 +769,19 @@ async def test_history_stream_bad_start_time(
 
 
 async def test_history_stream_end_time_before_start_time(
-    hass: HomeAssistant, recorder_mock: Recorder, hass_ws_client: WebSocketGenerator
+    menuai: menuai, recorder_mock: Recorder, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test history stream with an end_time before the start_time."""
     end_time = dt_util.utcnow() - timedelta(seconds=2)
     start_time = dt_util.utcnow() - timedelta(seconds=1)
 
     await async_setup_component(
-        hass,
+        menuai,
         "history",
         {"history": {}},
     )
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -797,18 +797,18 @@ async def test_history_stream_end_time_before_start_time(
 
 
 async def test_history_stream_bad_end_time(
-    hass: HomeAssistant, recorder_mock: Recorder, hass_ws_client: WebSocketGenerator
+    menuai: menuai, recorder_mock: Recorder, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test history stream bad end time."""
     now = dt_util.utcnow()
 
     await async_setup_component(
-        hass,
+        menuai,
         "history",
         {"history": {}},
     )
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -824,33 +824,33 @@ async def test_history_stream_bad_end_time(
 
 
 async def test_history_stream_live_no_attributes_minimal_response(
-    hass: HomeAssistant, recorder_mock: Recorder, hass_ws_client: WebSocketGenerator
+    menuai: menuai, recorder_mock: Recorder, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test history stream with history and live data and no_attributes and minimal_response."""
     now = dt_util.utcnow()
     await async_setup_component(
-        hass,
+        menuai,
         "history",
         {},
     )
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.one", "on", attributes={"any": "attr"})
-    sensor_one_last_updated_timestamp = hass.states.get(
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.one", "on", attributes={"any": "attr"})
+    sensor_one_last_updated_timestamp = menuai.states.get(
         "sensor.one"
     ).last_updated_timestamp
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.two", "off", attributes={"any": "attr"})
-    sensor_two_last_updated_timestamp = hass.states.get(
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.two", "off", attributes={"any": "attr"})
+    sensor_two_last_updated_timestamp = menuai.states.get(
         "sensor.two"
     ).last_updated_timestamp
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("switch.excluded", "off", attributes={"any": "again"})
-    await async_wait_recording_done(hass)
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("switch.excluded", "off", attributes={"any": "again"})
+    await async_wait_recording_done(menuai)
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -888,15 +888,15 @@ async def test_history_stream_live_no_attributes_minimal_response(
         "type": "event",
     }
 
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.one", "one", attributes={"any": "attr"})
-    hass.states.async_set("sensor.two", "two", attributes={"any": "attr"})
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.one", "one", attributes={"any": "attr"})
+    menuai.states.async_set("sensor.two", "two", attributes={"any": "attr"})
+    await async_recorder_block_till_done(menuai)
 
-    sensor_one_last_updated_timestamp = hass.states.get(
+    sensor_one_last_updated_timestamp = menuai.states.get(
         "sensor.one"
     ).last_updated_timestamp
-    sensor_two_last_updated_timestamp = hass.states.get(
+    sensor_two_last_updated_timestamp = menuai.states.get(
         "sensor.two"
     ).last_updated_timestamp
     response = await client.receive_json()
@@ -917,33 +917,33 @@ async def test_history_stream_live_no_attributes_minimal_response(
 
 
 async def test_history_stream_live(
-    hass: HomeAssistant, recorder_mock: Recorder, hass_ws_client: WebSocketGenerator
+    menuai: menuai, recorder_mock: Recorder, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test history stream with history and live data."""
     now = dt_util.utcnow()
     await async_setup_component(
-        hass,
+        menuai,
         "history",
         {},
     )
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.one", "on", attributes={"any": "attr"})
-    sensor_one_last_updated_timestamp = hass.states.get(
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.one", "on", attributes={"any": "attr"})
+    sensor_one_last_updated_timestamp = menuai.states.get(
         "sensor.one"
     ).last_updated_timestamp
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.two", "off", attributes={"any": "attr"})
-    sensor_two_last_updated_timestamp = hass.states.get(
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.two", "off", attributes={"any": "attr"})
+    sensor_two_last_updated_timestamp = menuai.states.get(
         "sensor.two"
     ).last_updated_timestamp
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("switch.excluded", "off", attributes={"any": "again"})
-    await async_wait_recording_done(hass)
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("switch.excluded", "off", attributes={"any": "again"})
+    await async_wait_recording_done(menuai)
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -989,18 +989,18 @@ async def test_history_stream_live(
         "type": "event",
     }
 
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.one", "on", attributes={"diff": "attr"})
-    hass.states.async_set("sensor.two", "two", attributes={"any": "attr"})
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.one", "on", attributes={"diff": "attr"})
+    menuai.states.async_set("sensor.two", "two", attributes={"any": "attr"})
+    await async_recorder_block_till_done(menuai)
 
-    sensor_one_last_updated_timestamp = hass.states.get(
+    sensor_one_last_updated_timestamp = menuai.states.get(
         "sensor.one"
     ).last_updated_timestamp
-    sensor_one_last_changed_timestamp = hass.states.get(
+    sensor_one_last_changed_timestamp = menuai.states.get(
         "sensor.one"
     ).last_changed_timestamp
-    sensor_two_last_updated_timestamp = hass.states.get(
+    sensor_two_last_updated_timestamp = menuai.states.get(
         "sensor.two"
     ).last_updated_timestamp
     response = await client.receive_json()
@@ -1030,33 +1030,33 @@ async def test_history_stream_live(
 
 
 async def test_history_stream_live_minimal_response(
-    hass: HomeAssistant, recorder_mock: Recorder, hass_ws_client: WebSocketGenerator
+    menuai: menuai, recorder_mock: Recorder, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test history stream with history and live data and minimal_response."""
     now = dt_util.utcnow()
     await async_setup_component(
-        hass,
+        menuai,
         "history",
         {},
     )
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.one", "on", attributes={"any": "attr"})
-    sensor_one_last_updated_timestamp = hass.states.get(
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.one", "on", attributes={"any": "attr"})
+    sensor_one_last_updated_timestamp = menuai.states.get(
         "sensor.one"
     ).last_updated_timestamp
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.two", "off", attributes={"any": "attr"})
-    sensor_two_last_updated_timestamp = hass.states.get(
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.two", "off", attributes={"any": "attr"})
+    sensor_two_last_updated_timestamp = menuai.states.get(
         "sensor.two"
     ).last_updated_timestamp
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("switch.excluded", "off", attributes={"any": "again"})
-    await async_wait_recording_done(hass)
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("switch.excluded", "off", attributes={"any": "again"})
+    await async_wait_recording_done(menuai)
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -1102,19 +1102,19 @@ async def test_history_stream_live_minimal_response(
         "type": "event",
     }
 
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.one", "on", attributes={"diff": "attr"})
-    hass.states.async_set("sensor.two", "two", attributes={"any": "attr"})
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.one", "on", attributes={"diff": "attr"})
+    menuai.states.async_set("sensor.two", "two", attributes={"any": "attr"})
     # Only sensor.two has changed
-    sensor_one_last_updated_timestamp = hass.states.get(
+    sensor_one_last_updated_timestamp = menuai.states.get(
         "sensor.one"
     ).last_updated_timestamp
-    sensor_two_last_updated_timestamp = hass.states.get(
+    sensor_two_last_updated_timestamp = menuai.states.get(
         "sensor.two"
     ).last_updated_timestamp
-    hass.states.async_remove("sensor.one")
-    hass.states.async_remove("sensor.two")
-    await async_recorder_block_till_done(hass)
+    menuai.states.async_remove("sensor.one")
+    menuai.states.async_remove("sensor.two")
+    await async_recorder_block_till_done(menuai)
 
     response = await client.receive_json()
     assert response == {
@@ -1135,33 +1135,33 @@ async def test_history_stream_live_minimal_response(
 
 
 async def test_history_stream_live_no_attributes(
-    hass: HomeAssistant, recorder_mock: Recorder, hass_ws_client: WebSocketGenerator
+    menuai: menuai, recorder_mock: Recorder, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test history stream with history and live data and no_attributes."""
     now = dt_util.utcnow()
     await async_setup_component(
-        hass,
+        menuai,
         "history",
         {},
     )
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.one", "on", attributes={"any": "attr"})
-    sensor_one_last_updated_timestamp = hass.states.get(
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.one", "on", attributes={"any": "attr"})
+    sensor_one_last_updated_timestamp = menuai.states.get(
         "sensor.one"
     ).last_updated_timestamp
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.two", "off", attributes={"any": "attr"})
-    sensor_two_last_updated_timestamp = hass.states.get(
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.two", "off", attributes={"any": "attr"})
+    sensor_two_last_updated_timestamp = menuai.states.get(
         "sensor.two"
     ).last_updated_timestamp
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("switch.excluded", "off", attributes={"any": "again"})
-    await async_wait_recording_done(hass)
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("switch.excluded", "off", attributes={"any": "again"})
+    await async_wait_recording_done(menuai)
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -1207,15 +1207,15 @@ async def test_history_stream_live_no_attributes(
         "type": "event",
     }
 
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.one", "one", attributes={"diff": "attr"})
-    hass.states.async_set("sensor.two", "two", attributes={"diff": "attr"})
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.one", "one", attributes={"diff": "attr"})
+    menuai.states.async_set("sensor.two", "two", attributes={"diff": "attr"})
+    await async_recorder_block_till_done(menuai)
 
-    sensor_one_last_updated_timestamp = hass.states.get(
+    sensor_one_last_updated_timestamp = menuai.states.get(
         "sensor.one"
     ).last_updated_timestamp
-    sensor_two_last_updated_timestamp = hass.states.get(
+    sensor_two_last_updated_timestamp = menuai.states.get(
         "sensor.two"
     ).last_updated_timestamp
     response = await client.receive_json()
@@ -1236,34 +1236,34 @@ async def test_history_stream_live_no_attributes(
 
 
 async def test_history_stream_live_no_attributes_minimal_response_specific_entities(
-    hass: HomeAssistant, recorder_mock: Recorder, hass_ws_client: WebSocketGenerator
+    menuai: menuai, recorder_mock: Recorder, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test history stream with history and live data and no_attributes and minimal_response with specific entities."""
     now = dt_util.utcnow()
     wanted_entities = ["sensor.two", "sensor.four", "sensor.one"]
     await async_setup_component(
-        hass,
+        menuai,
         "history",
         {history.DOMAIN: {}},
     )
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.one", "on", attributes={"any": "attr"})
-    sensor_one_last_updated_timestamp = hass.states.get(
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.one", "on", attributes={"any": "attr"})
+    sensor_one_last_updated_timestamp = menuai.states.get(
         "sensor.one"
     ).last_updated_timestamp
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.two", "off", attributes={"any": "attr"})
-    sensor_two_last_updated_timestamp = hass.states.get(
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.two", "off", attributes={"any": "attr"})
+    sensor_two_last_updated_timestamp = menuai.states.get(
         "sensor.two"
     ).last_updated_timestamp
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("switch.excluded", "off", attributes={"any": "again"})
-    await async_wait_recording_done(hass)
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("switch.excluded", "off", attributes={"any": "again"})
+    await async_wait_recording_done(menuai)
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -1301,15 +1301,15 @@ async def test_history_stream_live_no_attributes_minimal_response_specific_entit
         "type": "event",
     }
 
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.one", "one", attributes={"any": "attr"})
-    hass.states.async_set("sensor.two", "two", attributes={"any": "attr"})
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.one", "one", attributes={"any": "attr"})
+    menuai.states.async_set("sensor.two", "two", attributes={"any": "attr"})
+    await async_recorder_block_till_done(menuai)
 
-    sensor_one_last_updated_timestamp = hass.states.get(
+    sensor_one_last_updated_timestamp = menuai.states.get(
         "sensor.one"
     ).last_updated_timestamp
-    sensor_two_last_updated_timestamp = hass.states.get(
+    sensor_two_last_updated_timestamp = menuai.states.get(
         "sensor.two"
     ).last_updated_timestamp
     response = await client.receive_json()
@@ -1330,37 +1330,37 @@ async def test_history_stream_live_no_attributes_minimal_response_specific_entit
 
 
 async def test_history_stream_live_with_future_end_time(
-    hass: HomeAssistant, recorder_mock: Recorder, hass_ws_client: WebSocketGenerator
+    menuai: menuai, recorder_mock: Recorder, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test history stream with history and live data with future end time."""
     now = dt_util.utcnow()
     wanted_entities = ["sensor.two", "sensor.four", "sensor.one"]
     await async_setup_component(
-        hass,
+        menuai,
         "history",
         {history.DOMAIN: {}},
     )
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.one", "on", attributes={"any": "attr"})
-    sensor_one_last_updated_timestamp = hass.states.get(
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.one", "on", attributes={"any": "attr"})
+    sensor_one_last_updated_timestamp = menuai.states.get(
         "sensor.one"
     ).last_updated_timestamp
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.two", "off", attributes={"any": "attr"})
-    sensor_two_last_updated_timestamp = hass.states.get(
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.two", "off", attributes={"any": "attr"})
+    sensor_two_last_updated_timestamp = menuai.states.get(
         "sensor.two"
     ).last_updated_timestamp
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("switch.excluded", "off", attributes={"any": "again"})
-    await async_wait_recording_done(hass)
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("switch.excluded", "off", attributes={"any": "again"})
+    await async_wait_recording_done(menuai)
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
     future = now + timedelta(seconds=10)
 
-    client = await hass_ws_client()
-    init_listeners = hass.bus.async_listeners()
+    client = await menuai_ws_client()
+    init_listeners = menuai.bus.async_listeners()
     await client.send_json(
         {
             "id": 1,
@@ -1399,15 +1399,15 @@ async def test_history_stream_live_with_future_end_time(
         "type": "event",
     }
 
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.one", "one", attributes={"any": "attr"})
-    hass.states.async_set("sensor.two", "two", attributes={"any": "attr"})
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.one", "one", attributes={"any": "attr"})
+    menuai.states.async_set("sensor.two", "two", attributes={"any": "attr"})
+    await async_recorder_block_till_done(menuai)
 
-    sensor_one_last_updated_timestamp = hass.states.get(
+    sensor_one_last_updated_timestamp = menuai.states.get(
         "sensor.one"
     ).last_updated_timestamp
-    sensor_two_last_updated_timestamp = hass.states.get(
+    sensor_two_last_updated_timestamp = menuai.states.get(
         "sensor.two"
     ).last_updated_timestamp
     response = await client.receive_json()
@@ -1426,39 +1426,39 @@ async def test_history_stream_live_with_future_end_time(
         "type": "event",
     }
 
-    async_fire_time_changed(hass, future + timedelta(seconds=1))
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.two", "future", attributes={"any": "attr"})
+    async_fire_time_changed(menuai, future + timedelta(seconds=1))
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.two", "future", attributes={"any": "attr"})
     # Check our listener got unsubscribed
-    await async_wait_recording_done(hass)
-    await async_recorder_block_till_done(hass)
+    await async_wait_recording_done(menuai)
+    await async_recorder_block_till_done(menuai)
     assert listeners_without_writes(
-        hass.bus.async_listeners()
+        menuai.bus.async_listeners()
     ) == listeners_without_writes(init_listeners)
 
 
 @pytest.mark.parametrize("include_start_time_state", [True, False])
 async def test_history_stream_before_history_starts(
-    hass: HomeAssistant,
+    menuai: menuai,
     recorder_mock: Recorder,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     include_start_time_state,
 ) -> None:
     """Test history stream before we have history."""
     await async_setup_component(
-        hass,
+        menuai,
         "history",
         {},
     )
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.one", "on", attributes={"any": "attr"})
-    await async_recorder_block_till_done(hass)
-    await async_wait_recording_done(hass)
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.one", "on", attributes={"any": "attr"})
+    await async_recorder_block_till_done(menuai)
+    await async_wait_recording_done(menuai)
     far_past = dt_util.utcnow() - timedelta(days=1000)
     far_past_end = far_past + timedelta(seconds=10)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -1490,26 +1490,26 @@ async def test_history_stream_before_history_starts(
 
 
 async def test_history_stream_for_entity_with_no_possible_changes(
-    hass: HomeAssistant, recorder_mock: Recorder, hass_ws_client: WebSocketGenerator
+    menuai: menuai, recorder_mock: Recorder, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test history stream for future with no possible changes where end time is less than or equal to now."""
     await async_setup_component(
-        hass,
+        menuai,
         "history",
         {},
     )
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.one", "on", attributes={"any": "attr"})
-    await async_recorder_block_till_done(hass)
-    await async_wait_recording_done(hass)
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.one", "on", attributes={"any": "attr"})
+    await async_recorder_block_till_done(menuai)
+    await async_wait_recording_done(menuai)
 
-    last_updated = hass.states.get("sensor.one").last_updated
+    last_updated = menuai.states.get("sensor.one").last_updated
     start_time = last_updated + timedelta(seconds=10)
     end_time = start_time + timedelta(seconds=10)
 
     with freeze_time(end_time):
-        client = await hass_ws_client()
+        client = await menuai_ws_client()
         await client.send_json(
             {
                 "id": 1,
@@ -1541,36 +1541,36 @@ async def test_history_stream_for_entity_with_no_possible_changes(
 
 
 async def test_overflow_queue(
-    hass: HomeAssistant, recorder_mock: Recorder, hass_ws_client: WebSocketGenerator
+    menuai: menuai, recorder_mock: Recorder, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test overflowing the history stream queue."""
     now = dt_util.utcnow()
     wanted_entities = ["sensor.two", "sensor.four", "sensor.one"]
     with patch.object(websocket_api, "MAX_PENDING_HISTORY_STATES", 5):
         await async_setup_component(
-            hass,
+            menuai,
             "history",
             {history.DOMAIN: {}},
         )
-        await async_setup_component(hass, "sensor", {})
-        await async_recorder_block_till_done(hass)
-        hass.states.async_set("sensor.one", "on", attributes={"any": "attr"})
-        sensor_one_last_updated_timestamp = hass.states.get(
+        await async_setup_component(menuai, "sensor", {})
+        await async_recorder_block_till_done(menuai)
+        menuai.states.async_set("sensor.one", "on", attributes={"any": "attr"})
+        sensor_one_last_updated_timestamp = menuai.states.get(
             "sensor.one"
         ).last_updated_timestamp
-        await async_recorder_block_till_done(hass)
-        hass.states.async_set("sensor.two", "off", attributes={"any": "attr"})
-        sensor_two_last_updated_timestamp = hass.states.get(
+        await async_recorder_block_till_done(menuai)
+        menuai.states.async_set("sensor.two", "off", attributes={"any": "attr"})
+        sensor_two_last_updated_timestamp = menuai.states.get(
             "sensor.two"
         ).last_updated_timestamp
-        await async_recorder_block_till_done(hass)
-        hass.states.async_set("switch.excluded", "off", attributes={"any": "again"})
-        await async_wait_recording_done(hass)
+        await async_recorder_block_till_done(menuai)
+        menuai.states.async_set("switch.excluded", "off", attributes={"any": "again"})
+        await async_wait_recording_done(menuai)
 
-        await async_wait_recording_done(hass)
+        await async_wait_recording_done(menuai)
 
-        client = await hass_ws_client()
-        init_listeners = hass.bus.async_listeners()
+        client = await menuai_ws_client()
+        init_listeners = menuai.bus.async_listeners()
 
         await client.send_json(
             {
@@ -1615,43 +1615,43 @@ async def test_overflow_queue(
             "type": "event",
         }
 
-        await async_recorder_block_till_done(hass)
+        await async_recorder_block_till_done(menuai)
         # Overflow the queue
         for val in range(10):
-            hass.states.async_set("sensor.one", str(val), attributes={"any": "attr"})
-            hass.states.async_set("sensor.two", str(val), attributes={"any": "attr"})
-        await async_recorder_block_till_done(hass)
+            menuai.states.async_set("sensor.one", str(val), attributes={"any": "attr"})
+            menuai.states.async_set("sensor.two", str(val), attributes={"any": "attr"})
+        await async_recorder_block_till_done(menuai)
 
     assert listeners_without_writes(
-        hass.bus.async_listeners()
+        menuai.bus.async_listeners()
     ) == listeners_without_writes(init_listeners)
 
 
 async def test_history_during_period_for_invalid_entity_ids(
-    hass: HomeAssistant, recorder_mock: Recorder, hass_ws_client: WebSocketGenerator
+    menuai: menuai, recorder_mock: Recorder, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test history_during_period for valid and invalid entity ids."""
     now = dt_util.utcnow()
 
-    await async_setup_component(hass, "history", {})
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.one", "on", attributes={"any": "attr"})
-    sensor_one_last_updated_timestamp = hass.states.get(
+    await async_setup_component(menuai, "history", {})
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.one", "on", attributes={"any": "attr"})
+    sensor_one_last_updated_timestamp = menuai.states.get(
         "sensor.one"
     ).last_updated_timestamp
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.two", "off", attributes={"any": "attr"})
-    sensor_two_last_updated_timestamp = hass.states.get(
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.two", "off", attributes={"any": "attr"})
+    sensor_two_last_updated_timestamp = menuai.states.get(
         "sensor.two"
     ).last_updated_timestamp
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.three", "off", attributes={"any": "again"})
-    await async_recorder_block_till_done(hass)
-    await async_wait_recording_done(hass)
-    await async_wait_recording_done(hass)
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.three", "off", attributes={"any": "again"})
+    await async_recorder_block_till_done(menuai)
+    await async_wait_recording_done(menuai)
+    await async_wait_recording_done(menuai)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
 
     await client.send_json(
         {
@@ -1787,36 +1787,36 @@ async def test_history_during_period_for_invalid_entity_ids(
 
 
 async def test_history_stream_for_invalid_entity_ids(
-    hass: HomeAssistant, recorder_mock: Recorder, hass_ws_client: WebSocketGenerator
+    menuai: menuai, recorder_mock: Recorder, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test history stream for invalid and valid entity ids."""
 
     now = dt_util.utcnow()
     await async_setup_component(
-        hass,
+        menuai,
         "history",
         {history.DOMAIN: {}},
     )
 
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.one", "on", attributes={"any": "attr"})
-    sensor_one_last_updated_timestamp = hass.states.get(
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.one", "on", attributes={"any": "attr"})
+    sensor_one_last_updated_timestamp = menuai.states.get(
         "sensor.one"
     ).last_updated_timestamp
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.two", "off", attributes={"any": "attr"})
-    sensor_two_last_updated_timestamp = hass.states.get(
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.two", "off", attributes={"any": "attr"})
+    sensor_two_last_updated_timestamp = menuai.states.get(
         "sensor.two"
     ).last_updated_timestamp
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.three", "off", attributes={"any": "again"})
-    await async_recorder_block_till_done(hass)
-    await async_wait_recording_done(hass)
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.three", "off", attributes={"any": "again"})
+    await async_recorder_block_till_done(menuai)
+    await async_wait_recording_done(menuai)
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
 
     await client.send_json(
         {
@@ -1965,55 +1965,55 @@ async def test_history_stream_for_invalid_entity_ids(
 
 
 async def test_history_stream_historical_only_with_start_time_state_past(
-    hass: HomeAssistant, recorder_mock: Recorder, hass_ws_client: WebSocketGenerator
+    menuai: menuai, recorder_mock: Recorder, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test history stream."""
     await async_setup_component(
-        hass,
+        menuai,
         "history",
         {},
     )
-    await async_setup_component(hass, "sensor", {})
+    await async_setup_component(menuai, "sensor", {})
 
-    hass.states.async_set("sensor.one", "first", attributes={"any": "attr"})
-    await async_recorder_block_till_done(hass)
+    menuai.states.async_set("sensor.one", "first", attributes={"any": "attr"})
+    await async_recorder_block_till_done(menuai)
 
     await asyncio.sleep(0.00002)
     now = dt_util.utcnow()
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.one", "second", attributes={"any": "attr"})
-    sensor_one_last_updated_second_timestamp = hass.states.get(
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.one", "second", attributes={"any": "attr"})
+    sensor_one_last_updated_second_timestamp = menuai.states.get(
         "sensor.one"
     ).last_updated_timestamp
 
     await asyncio.sleep(0.00001)
-    hass.states.async_set("sensor.one", "third", attributes={"any": "attr"})
-    sensor_one_last_updated_third_timestamp = hass.states.get(
+    menuai.states.async_set("sensor.one", "third", attributes={"any": "attr"})
+    sensor_one_last_updated_third_timestamp = menuai.states.get(
         "sensor.one"
     ).last_updated_timestamp
 
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.two", "off", attributes={"any": "attr"})
-    sensor_two_last_updated_timestamp = hass.states.get(
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.two", "off", attributes={"any": "attr"})
+    sensor_two_last_updated_timestamp = menuai.states.get(
         "sensor.two"
     ).last_updated_timestamp
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.three", "off", attributes={"any": "changed"})
-    sensor_three_last_updated_timestamp = hass.states.get(
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.three", "off", attributes={"any": "changed"})
+    sensor_three_last_updated_timestamp = menuai.states.get(
         "sensor.three"
     ).last_updated_timestamp
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.four", "off", attributes={"any": "again"})
-    sensor_four_last_updated_timestamp = hass.states.get(
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.four", "off", attributes={"any": "again"})
+    sensor_four_last_updated_timestamp = menuai.states.get(
         "sensor.four"
     ).last_updated_timestamp
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("switch.excluded", "off", attributes={"any": "again"})
-    await async_wait_recording_done(hass)
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("switch.excluded", "off", attributes={"any": "again"})
+    await async_wait_recording_done(menuai)
 
     end_time = dt_util.utcnow()
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -2076,16 +2076,16 @@ async def test_history_stream_historical_only_with_start_time_state_past(
 
 
 async def test_history_stream_live_chained_events(
-    hass: HomeAssistant, recorder_mock: Recorder, hass_ws_client: WebSocketGenerator
+    menuai: menuai, recorder_mock: Recorder, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test history stream with history with a chained event."""
     now = dt_util.utcnow()
-    await async_setup_component(hass, "history", {})
+    await async_setup_component(menuai, "history", {})
 
-    await async_wait_recording_done(hass)
-    hass.states.async_set("binary_sensor.is_light", STATE_OFF)
+    await async_wait_recording_done(menuai)
+    menuai.states.async_set("binary_sensor.is_light", STATE_OFF)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -2123,15 +2123,15 @@ async def test_history_stream_live_chained_events(
         "type": "event",
     }
 
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
 
     @callback
     def auto_off_listener(event):
-        hass.states.async_set("binary_sensor.is_light", STATE_OFF)
+        menuai.states.async_set("binary_sensor.is_light", STATE_OFF)
 
-    async_track_state_change_event(hass, ["binary_sensor.is_light"], auto_off_listener)
+    async_track_state_change_event(menuai, ["binary_sensor.is_light"], auto_off_listener)
 
-    hass.states.async_set("binary_sensor.is_light", STATE_ON)
+    menuai.states.async_set("binary_sensor.is_light", STATE_ON)
 
     response = await client.receive_json()
     assert response == {

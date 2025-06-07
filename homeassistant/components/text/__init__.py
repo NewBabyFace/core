@@ -12,15 +12,15 @@ from typing import Any, final
 from propcache.api import cached_property
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import MAX_LENGTH_STATE_STATE
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity import Entity, EntityDescription
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.restore_state import ExtraStoredData, RestoreEntity
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util.hass_dict import HassKey
+from menuai.config_entries import ConfigEntry
+from menuai.const import MAX_LENGTH_STATE_STATE
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity import Entity, EntityDescription
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.restore_state import ExtraStoredData, RestoreEntity
+from menuai.helpers.typing import ConfigType
+from menuai.util.menuai_dict import menuaiKey
 
 from .const import (
     ATTR_MAX,
@@ -34,7 +34,7 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
-DATA_COMPONENT: HassKey[EntityComponent[TextEntity]] = HassKey(DOMAIN)
+DATA_COMPONENT: menuaiKey[EntityComponent[TextEntity]] = menuaiKey(DOMAIN)
 ENTITY_ID_FORMAT = DOMAIN + ".{}"
 PLATFORM_SCHEMA = cv.PLATFORM_SCHEMA
 PLATFORM_SCHEMA_BASE = cv.PLATFORM_SCHEMA_BASE
@@ -46,10 +46,10 @@ MIN_TIME_BETWEEN_SCANS = timedelta(seconds=10)
 __all__ = ["DOMAIN", "TextEntity", "TextEntityDescription", "TextMode"]
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up Text entities."""
-    component = hass.data[DATA_COMPONENT] = EntityComponent[TextEntity](
-        _LOGGER, DOMAIN, hass, SCAN_INTERVAL
+    component = menuai.data[DATA_COMPONENT] = EntityComponent[TextEntity](
+        _LOGGER, DOMAIN, menuai, SCAN_INTERVAL
     )
     await component.async_setup(config)
 
@@ -81,14 +81,14 @@ async def _async_set_value(entity: TextEntity, service_call: ServiceCall) -> Non
     await entity.async_set_value(value)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up a config entry."""
-    return await hass.data[DATA_COMPONENT].async_setup_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_setup_entry(entry)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.data[DATA_COMPONENT].async_unload_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_unload_entry(entry)
 
 
 class TextMode(StrEnum):
@@ -235,7 +235,7 @@ class TextEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_set_value(self, value: str) -> None:
         """Change the value."""
-        await self.hass.async_add_executor_job(self.set_value, value)
+        await self.menuai.async_add_executor_job(self.set_value, value)
 
 
 @dataclass

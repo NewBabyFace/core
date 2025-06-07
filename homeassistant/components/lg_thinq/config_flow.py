@@ -10,11 +10,11 @@ from thinqconnect import ThinQApi, ThinQAPIErrorCodes, ThinQAPIException
 from thinqconnect.country import Country
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_COUNTRY
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.selector import CountrySelector, CountrySelectorConfig
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_ACCESS_TOKEN, CONF_COUNTRY
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.selector import CountrySelector, CountrySelectorConfig
 
 from .const import (
     CLIENT_PREFIX,
@@ -44,7 +44,7 @@ class ThinQFlowHandler(ConfigFlow, domain=DOMAIN):
 
     def _get_default_country_code(self) -> str:
         """Get the default country code based on config."""
-        country = self.hass.config.country
+        country = self.menuai.config.country
         if country is not None and country in SUPPORTED_COUNTRIES:
             return country
 
@@ -58,7 +58,7 @@ class ThinQFlowHandler(ConfigFlow, domain=DOMAIN):
 
         # To verify PAT, create an api to retrieve the device list.
         await ThinQApi(
-            session=async_get_clientsession(self.hass),
+            session=async_get_clientsession(self.menuai),
             access_token=access_token,
             country_code=country_code,
             client_id=connect_client_id,

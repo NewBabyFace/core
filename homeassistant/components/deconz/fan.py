@@ -7,14 +7,14 @@ from typing import Any
 from pydeconz.models.event import EventType
 from pydeconz.models.light.light import Light, LightFanSpeed
 
-from homeassistant.components.fan import (
+from menuai.components.fan import (
     DOMAIN as FAN_DOMAIN,
     FanEntity,
     FanEntityFeature,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util.percentage import (
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util.percentage import (
     ordered_list_item_to_percentage,
     percentage_to_ordered_list_item,
 )
@@ -32,7 +32,7 @@ ORDERED_NAMED_FAN_SPEEDS: list[LightFanSpeed] = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: DeconzConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

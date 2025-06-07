@@ -23,15 +23,15 @@ from aiohomekit.model import Accessories, Accessory, Transport
 from aiohomekit.model.characteristics import Characteristic, CharacteristicsTypes
 from aiohomekit.model.services import Service, ServicesTypes
 
-from homeassistant.components.thread import async_get_preferred_dataset
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_VIA_DEVICE, EVENT_HOMEASSISTANT_STARTED
-from homeassistant.core import CALLBACK_TYPE, CoreState, Event, HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.debounce import Debouncer
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.event import async_call_later, async_track_time_interval
+from menuai.components.thread import async_get_preferred_dataset
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_VIA_DEVICE, EVENT_menuai_STARTED
+from menuai.core import CALLBACK_TYPE, CoreState, Event, menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.debounce import Debouncer
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.event import async_call_later, async_track_time_interval
 
 from .config_flow import normalize_hkid
 from .const import (
@@ -78,20 +78,20 @@ class HKDevice:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         pairing_data: MappingProxyType[str, Any],
     ) -> None:
         """Initialise a generic HomeKit device."""
 
-        self.hass = hass
+        self.menuai = menuai
         self.config_entry = config_entry
 
         # We copy pairing_data because homekit_python may mutate it, but we
         # don't want to mutate a dict owned by a config entry.
         self.pairing_data = pairing_data.copy()
 
-        connection: Controller = hass.data[CONTROLLER]
+        connection: Controller = menuai.data[CONTROLLER]
 
         self.pairing = connection.load_pairing(self.unique_id, self.pairing_data)
 
@@ -141,7 +141,7 @@ class HKDevice:
         self.watchable_characteristics: set[tuple[int, int]] = set()
 
         self._debounced_update = Debouncer(
-            hass,
+            menuai,
             _LOGGER,
             cooldown=DEBOUNCE_COOLDOWN,
             immediate=False,
@@ -188,7 +188,7 @@ class HKDevice:
         # Try to subscribe to the characteristics all at once
         if not self._subscribe_timer:
             self._subscribe_timer = async_call_later(
-                self.hass,
+                self.menuai,
                 SUBSCRIBE_COOLDOWN,
                 self._async_subscribe,
             )
@@ -208,7 +208,7 @@ class HKDevice:
             subscribes = self._pending_subscribes.copy()
             self._pending_subscribes.clear()
             self.config_entry.async_create_task(
-                self.hass,
+                self.menuai,
                 self.pairing.subscribe(subscribes),
                 name=f"hkc subscriptions {self.unique_id}",
                 eager_start=True,
@@ -257,7 +257,7 @@ class HKDevice:
             )
 
     async def async_setup(self) -> None:
-        """Prepare to use a paired HomeKit device in Home Assistant."""
+        """Prepare to use a paired HomeKit device in MenuAI."""
         pairing = self.pairing
         transport = pairing.transport
         entry = self.config_entry
@@ -267,12 +267,12 @@ class HKDevice:
         # async_process_entity_map will no values to poll yet
         # since entities are added via dispatching and then
         # they add the chars they are concerned about in
-        # async_added_to_hass which is too late.
+        # async_added_to_menuai which is too late.
         #
         # Ideally we would know which entities we are about to add
         # so we only poll those chars but that is not possible
         # yet.
-        attempts = None if self.hass.state is CoreState.running else 1
+        attempts = None if self.menuai.state is CoreState.running else 1
         if (
             transport == Transport.BLE
             and pairing.accessories
@@ -285,8 +285,8 @@ class HKDevice:
             # previously we force an update after startup
             # is complete.
             entry.async_on_unload(
-                self.hass.bus.async_listen(
-                    EVENT_HOMEASSISTANT_STARTED,
+                self.menuai.bus.async_listen(
+                    EVENT_menuai_STARTED,
                     self._async_populate_ble_accessory_state,
                 )
             )
@@ -320,7 +320,7 @@ class HKDevice:
             # notifications and we cannot treat a disconnect as unavailability.
             entry.async_on_unload(
                 async_track_time_interval(
-                    self.hass,
+                    self.menuai,
                     self.async_update_available_state,
                     timedelta(seconds=BLE_AVAILABILITY_CHECK_INTERVAL),
                     name=f"HomeKit Device {self.unique_id} BLE availability check poll",
@@ -339,7 +339,7 @@ class HKDevice:
         # in the log about concurrent polling.
         self.config_entry.async_on_unload(
             async_track_time_interval(
-                self.hass,
+                self.menuai,
                 self._async_schedule_update,
                 self.pairing.poll_interval,
                 name=f"HomeKit Device {self.unique_id} availability check poll",
@@ -350,14 +350,14 @@ class HKDevice:
     def _async_schedule_update(self, now: datetime) -> None:
         """Schedule an update."""
         self.config_entry.async_create_background_task(
-            self.hass,
+            self.menuai,
             self._debounced_update.async_call(),
             name=f"hkc {self.unique_id} alive poll",
             eager_start=True,
         )
 
     async def async_add_new_entities(self) -> None:
-        """Add new entities to Home Assistant."""
+        """Add new entities to MenuAI."""
         await self.async_load_platforms()
         self.add_entities()
 
@@ -417,7 +417,7 @@ class HKDevice:
             "Migrating device registry entries for pairing %s", self.unique_id
         )
 
-        device_registry = dr.async_get(self.hass)
+        device_registry = dr.async_get(self.menuai)
 
         for accessory in self.entity_map.accessories:
             identifiers = {
@@ -479,7 +479,7 @@ class HKDevice:
             old_unique_id,
             platform,
         )
-        entity_registry = er.async_get(self.hass)
+        entity_registry = er.async_get(self.menuai)
         # async_get_entity_id wants the "homekit_controller" domain
         # in the platform field and the actual platform in the domain
         # field for historical reasons since everything used to be
@@ -527,7 +527,7 @@ class HKDevice:
             self.unique_id,
         )
 
-        device_registry = dr.async_get(self.hass)
+        device_registry = dr.async_get(self.menuai)
         for accessory in self.entity_map.accessories:
             identifiers = {
                 (
@@ -554,7 +554,7 @@ class HKDevice:
             self.unique_id,
         )
 
-        reg = er.async_get(self.hass)
+        reg = er.async_get(self.menuai)
 
         # For the current config entry only, visit all registry entity entries
         # Build a set of (unique_id, aid, sid, iid)
@@ -608,7 +608,7 @@ class HKDevice:
                 self.config_entry.unique_id,
                 unique_id,
             )
-            self.hass.config_entries.async_update_entry(
+            self.menuai.config_entries.async_update_entry(
                 self.config_entry, unique_id=unique_id
             )
 
@@ -620,7 +620,7 @@ class HKDevice:
         might not have any entities attached to it. Secondly there are stateless
         entities like doorbells and remote controls.
         """
-        device_registry = dr.async_get(self.hass)
+        device_registry = dr.async_get(self.menuai)
 
         devices = {}
 
@@ -705,20 +705,20 @@ class HKDevice:
         self.async_create_devices()
 
         # Load any triggers for this config entry
-        await async_setup_triggers_for_entry(self.hass, self.config_entry)
+        await async_setup_triggers_for_entry(self.menuai, self.config_entry)
 
     async def async_unload(self) -> None:
-        """Stop interacting with device and prepare for removal from hass."""
+        """Stop interacting with device and prepare for removal from menuai."""
         await self.pairing.shutdown()
 
-        await self.hass.config_entries.async_unload_platforms(
+        await self.menuai.config_entries.async_unload_platforms(
             self.config_entry, self.platforms
         )
 
     def process_config_changed(self, config_num: int) -> None:
         """Handle a config change notification from the pairing."""
         self.config_entry.async_create_task(
-            self.hass, self.async_update_new_accessories_state(), eager_start=True
+            self.menuai, self.async_update_new_accessories_state(), eager_start=True
         )
 
     async def async_update_new_accessories_state(self) -> None:
@@ -821,7 +821,7 @@ class HKDevice:
         if not (to_load := platforms - self.platforms):
             return
         self.platforms.update(to_load)
-        await self.hass.config_entries.async_forward_entry_setups(
+        await self.menuai.config_entries.async_forward_entry_setups(
             self.config_entry, platforms
         )
 
@@ -978,7 +978,7 @@ class HKDevice:
     async def put_characteristics(
         self, characteristics: Iterable[tuple[int, int, Any]]
     ) -> None:
-        """Control a HomeKit device state from Home Assistant."""
+        """Control a HomeKit device state from MenuAI."""
         await self.pairing.put_characteristics(characteristics)
 
     @property
@@ -997,20 +997,20 @@ class HKDevice:
     async def async_thread_provision(self) -> None:
         """Migrate a HomeKit pairing to CoAP (Thread)."""
         if self.pairing.controller.transport_type == TransportType.COAP:
-            raise HomeAssistantError("Already connected to a thread network")
+            raise menuaiError("Already connected to a thread network")
 
-        if not (dataset := await async_get_preferred_dataset(self.hass)):
-            raise HomeAssistantError("No thread network credentials available")
+        if not (dataset := await async_get_preferred_dataset(self.menuai)):
+            raise menuaiError("No thread network credentials available")
 
         await self.pairing.thread_provision(dataset)
 
         try:
             discovery = (
-                await self.hass.data[CONTROLLER]
+                await self.menuai.data[CONTROLLER]
                 .transports[TransportType.COAP]
                 .async_find(self.unique_id, timeout=30)
             )
-            self.hass.config_entries.async_update_entry(
+            self.menuai.config_entries.async_update_entry(
                 self.config_entry,
                 data={
                     **self.config_entry.data,
@@ -1029,10 +1029,10 @@ class HKDevice:
                 "%s: Failed to appear on local network as a Thread device, reverting to BLE",
                 self.unique_id,
             )
-            raise HomeAssistantError("Could not migrate device to Thread") from exc
+            raise menuaiError("Could not migrate device to Thread") from exc
 
         finally:
-            await self.hass.config_entries.async_reload(self.config_entry.entry_id)
+            await self.menuai.config_entries.async_reload(self.config_entry.entry_id)
 
     @property
     def unique_id(self) -> str:

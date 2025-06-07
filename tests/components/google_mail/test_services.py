@@ -6,23 +6,23 @@ from aiohttp.client_exceptions import ClientResponseError
 from google.auth.exceptions import RefreshError
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.google_mail import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai import config_entries
+from menuai.components.google_mail import DOMAIN
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from .conftest import BUILD, SENSOR, TOKEN, ComponentSetup
 
 
 async def test_set_vacation(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: ComponentSetup,
 ) -> None:
     """Test service call set vacation."""
     await setup_integration()
 
     with patch(BUILD) as mock_client:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             "set_vacation",
             {
@@ -41,7 +41,7 @@ async def test_set_vacation(
     assert len(mock_client.mock_calls) == 5
 
     with patch(BUILD) as mock_client:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             "set_vacation",
             {
@@ -68,15 +68,15 @@ async def test_set_vacation(
     ],
 )
 async def test_reauth_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: ComponentSetup,
     side_effect,
 ) -> None:
     """Test reauth is triggered after a refresh error during service call."""
     await setup_integration()
 
-    with patch(TOKEN, side_effect=side_effect), pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with patch(TOKEN, side_effect=side_effect), pytest.raises(menuaiError):
+        await menuai.services.async_call(
             DOMAIN,
             "set_vacation",
             {
@@ -93,10 +93,10 @@ async def test_reauth_trigger(
             blocking=True,
         )
 
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
 
     assert len(flows) == 1
     flow = flows[0]

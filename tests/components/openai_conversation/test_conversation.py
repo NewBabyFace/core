@@ -38,9 +38,9 @@ from openai.types.responses.response import IncompleteDetails
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components import conversation
-from homeassistant.components.homeassistant.exposed_entities import async_expose_entity
-from homeassistant.components.openai_conversation.const import (
+from menuai.components import conversation
+from menuai.components.menuai.exposed_entities import async_expose_entity
+from menuai.components.openai_conversation.const import (
     CONF_WEB_SEARCH,
     CONF_WEB_SEARCH_CITY,
     CONF_WEB_SEARCH_CONTEXT_SIZE,
@@ -49,10 +49,10 @@ from homeassistant.components.openai_conversation.const import (
     CONF_WEB_SEARCH_TIMEZONE,
     CONF_WEB_SEARCH_USER_LOCATION,
 )
-from homeassistant.const import CONF_LLM_HASS_API
-from homeassistant.core import Context, HomeAssistant
-from homeassistant.helpers import intent
-from homeassistant.setup import async_setup_component
+from menuai.const import CONF_LLM_menuai_API
+from menuai.core import Context, menuai
+from menuai.helpers import intent
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 from tests.components.conversation import (
@@ -148,25 +148,25 @@ def mock_create_stream() -> Generator[AsyncMock]:
 
 
 async def test_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_init_component,
 ) -> None:
     """Test entity properties."""
-    state = hass.states.get("conversation.openai")
+    state = menuai.states.get("conversation.openai")
     assert state
     assert state.attributes["supported_features"] == 0
 
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         mock_config_entry,
         options={
             **mock_config_entry.options,
-            CONF_LLM_HASS_API: "assist",
+            CONF_LLM_menuai_API: "assist",
         },
     )
-    await hass.config_entries.async_reload(mock_config_entry.entry_id)
+    await menuai.config_entries.async_reload(mock_config_entry.entry_id)
 
-    state = hass.states.get("conversation.openai")
+    state = menuai.states.get("conversation.openai")
     assert state
     assert (
         state.attributes["supported_features"]
@@ -196,7 +196,7 @@ async def test_entity(
     ],
 )
 async def test_error_handling(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_init_component,
     exception,
@@ -209,7 +209,7 @@ async def test_error_handling(
         side_effect=exception,
     ):
         result = await conversation.async_converse(
-            hass, "hello", None, Context(), agent_id=mock_config_entry.entry_id
+            menuai, "hello", None, Context(), agent_id=mock_config_entry.entry_id
         )
 
     assert result.response.response_type == intent.IntentResponseType.ERROR, result
@@ -234,7 +234,7 @@ async def test_error_handling(
     ],
 )
 async def test_incomplete_response(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry_with_assist: MockConfigEntry,
     mock_init_component,
     mock_create_stream: AsyncMock,
@@ -257,7 +257,7 @@ async def test_incomplete_response(
     ]
 
     result = await conversation.async_converse(
-        hass,
+        menuai,
         "Please tell me a big story",
         "mock-conversation-id",
         Context(),
@@ -281,7 +281,7 @@ async def test_incomplete_response(
     ]
 
     result = await conversation.async_converse(
-        hass,
+        menuai,
         "please tell me a big story",
         "mock-conversation-id",
         Context(),
@@ -309,7 +309,7 @@ async def test_incomplete_response(
     ],
 )
 async def test_failed_response(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry_with_assist: MockConfigEntry,
     mock_init_component,
     mock_create_stream: AsyncMock,
@@ -320,7 +320,7 @@ async def test_failed_response(
     mock_create_stream.return_value = [(error,)]
 
     result = await conversation.async_converse(
-        hass,
+        menuai,
         "next natural number please",
         "mock-conversation-id",
         Context(),
@@ -332,12 +332,12 @@ async def test_failed_response(
 
 
 async def test_conversation_agent(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_init_component,
 ) -> None:
     """Test OpenAIAgent."""
-    agent = conversation.get_agent_manager(hass).async_get_agent(
+    agent = conversation.get_agent_manager(menuai).async_get_agent(
         mock_config_entry.entry_id
     )
     assert agent.supported_languages == "*"
@@ -538,7 +538,7 @@ def create_web_search_item(id: str, output_index: int) -> list[ResponseStreamEve
 
 
 async def test_function_call(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry_with_assist: MockConfigEntry,
     mock_init_component,
     mock_create_stream: AsyncMock,
@@ -579,7 +579,7 @@ async def test_function_call(
     )
 
     result = await conversation.async_converse(
-        hass,
+        menuai,
         "Please call the test function",
         mock_chat_log.conversation_id,
         Context(),
@@ -597,7 +597,7 @@ async def test_function_call(
 
 
 async def test_function_call_without_reasoning(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry_with_assist: MockConfigEntry,
     mock_init_component,
     mock_create_stream: AsyncMock,
@@ -626,7 +626,7 @@ async def test_function_call_without_reasoning(
     )
 
     result = await conversation.async_converse(
-        hass,
+        menuai,
         "Please call the test function",
         mock_chat_log.conversation_id,
         Context(),
@@ -670,7 +670,7 @@ async def test_function_call_without_reasoning(
     ],
 )
 async def test_function_call_invalid(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry_with_assist: MockConfigEntry,
     mock_init_component,
     mock_create_stream: AsyncMock,
@@ -682,7 +682,7 @@ async def test_function_call_invalid(
 
     with pytest.raises(ValueError):
         await conversation.async_converse(
-            hass,
+            menuai,
             "Please call the test function",
             "mock-conversation-id",
             Context(),
@@ -691,7 +691,7 @@ async def test_function_call_invalid(
 
 
 async def test_assist_api_tools_conversion(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry_with_assist: MockConfigEntry,
     mock_init_component,
     mock_create_stream,
@@ -711,16 +711,16 @@ async def test_assist_api_tools_conversion(
         "vacuum",
         "weather",
     ):
-        assert await async_setup_component(hass, component, {})
-        hass.states.async_set(f"{component}.test", "on")
-        async_expose_entity(hass, "conversation", f"{component}.test", True)
+        assert await async_setup_component(menuai, component, {})
+        menuai.states.async_set(f"{component}.test", "on")
+        async_expose_entity(menuai, "conversation", f"{component}.test", True)
 
     mock_create_stream.return_value = [
         create_message_item(id="msg_A", text="Cool", output_index=0)
     ]
 
     await conversation.async_converse(
-        hass, "hello", None, Context(), agent_id="conversation.openai"
+        menuai, "hello", None, Context(), agent_id="conversation.openai"
     )
 
     tools = mock_create_stream.mock_calls[0][2]["tools"]
@@ -728,14 +728,14 @@ async def test_assist_api_tools_conversion(
 
 
 async def test_web_search(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_init_component,
     mock_create_stream,
     mock_chat_log: MockChatLog,  # noqa: F811
 ) -> None:
     """Test web_search_tool."""
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         mock_config_entry,
         options={
             **mock_config_entry.options,
@@ -748,9 +748,9 @@ async def test_web_search(
             CONF_WEB_SEARCH_TIMEZONE: "America/Los_Angeles",
         },
     )
-    await hass.config_entries.async_reload(mock_config_entry.entry_id)
+    await menuai.config_entries.async_reload(mock_config_entry.entry_id)
 
-    message = "Home Assistant now supports ChatGPT Search in Assist"
+    message = "MenuAI now supports ChatGPT Search in Assist"
     mock_create_stream.return_value = [
         # Initial conversation
         (
@@ -760,7 +760,7 @@ async def test_web_search(
     ]
 
     result = await conversation.async_converse(
-        hass,
+        menuai,
         "What's on the latest news?",
         mock_chat_log.conversation_id,
         Context(),

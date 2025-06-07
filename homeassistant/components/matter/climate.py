@@ -9,7 +9,7 @@ from chip.clusters import Objects as clusters
 from matter_server.client.models import device_types
 from matter_server.common.helpers.util import create_attribute_path_from_attribute
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_HVAC_MODE,
     ATTR_TARGET_TEMP_HIGH,
     ATTR_TARGET_TEMP_LOW,
@@ -21,10 +21,10 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_TEMPERATURE, Platform, UnitOfTemperature
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_TEMPERATURE, Platform, UnitOfTemperature
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .entity import MatterEntity
 from .helpers import get_matter
@@ -172,12 +172,12 @@ class ThermostatRunningState(IntEnum):
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Matter climate platform from Config Entry."""
-    matter = get_matter(hass)
+    matter = get_matter(menuai)
     matter.register_platform_handler(Platform.CLIMATE, async_add_entities)
 
 

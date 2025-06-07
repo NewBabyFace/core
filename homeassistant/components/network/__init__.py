@@ -6,12 +6,12 @@ from ipaddress import IPv4Address, IPv6Address, ip_interface
 import logging
 from pathlib import Path
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv, issue_registry as ir
-from homeassistant.helpers.typing import UNDEFINED, ConfigType, UndefinedType
-from homeassistant.loader import bind_hass
-from homeassistant.util import package
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv, issue_registry as ir
+from menuai.helpers.typing import UNDEFINED, ConfigType, UndefinedType
+from menuai.loader import bind_menuai
+from menuai.util import package
 
 from . import util
 from .const import (
@@ -42,25 +42,25 @@ def _check_docker_without_host_networking() -> bool:
     return False
 
 
-@bind_hass
-async def async_get_adapters(hass: HomeAssistant) -> list[Adapter]:
+@bind_menuai
+async def async_get_adapters(menuai: menuai) -> list[Adapter]:
     """Get the network adapter configuration."""
-    network: Network = await async_get_network(hass)
+    network: Network = await async_get_network(menuai)
     return network.adapters
 
 
 @callback
-def async_get_loaded_adapters(hass: HomeAssistant) -> list[Adapter]:
+def async_get_loaded_adapters(menuai: menuai) -> list[Adapter]:
     """Get the network adapter configuration."""
-    return async_get_loaded_network(hass).adapters
+    return async_get_loaded_network(menuai).adapters
 
 
-@bind_hass
+@bind_menuai
 async def async_get_source_ip(
-    hass: HomeAssistant, target_ip: str | UndefinedType = UNDEFINED
+    menuai: menuai, target_ip: str | UndefinedType = UNDEFINED
 ) -> str:
     """Get the source ip for a target ip."""
-    adapters = await async_get_adapters(hass)
+    adapters = await async_get_adapters(menuai)
     all_ipv4s = []
     for adapter in adapters:
         if adapter["enabled"] and (ipv4s := adapter["ipv4"]):
@@ -81,7 +81,7 @@ async def async_get_source_ip(
             " address detection may be inaccurate"
         )
         if source_ip is None:
-            raise HomeAssistantError(
+            raise menuaiError(
                 "Could not determine source ip because the system does not have any"
                 " enabled IPv4 addresses and creating a socket failed"
             )
@@ -90,12 +90,12 @@ async def async_get_source_ip(
     return source_ip if source_ip in all_ipv4s else all_ipv4s[0]
 
 
-@bind_hass
+@bind_menuai
 async def async_get_enabled_source_ips(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> list[IPv4Address | IPv6Address]:
     """Build the list of enabled source ips."""
-    return async_get_enabled_source_ips_from_adapters(await async_get_adapters(hass))
+    return async_get_enabled_source_ips_from_adapters(await async_get_adapters(menuai))
 
 
 @callback
@@ -128,11 +128,11 @@ def async_only_default_interface_enabled(adapters: list[Adapter]) -> bool:
     )
 
 
-@bind_hass
-async def async_get_ipv4_broadcast_addresses(hass: HomeAssistant) -> set[IPv4Address]:
+@bind_menuai
+async def async_get_ipv4_broadcast_addresses(menuai: menuai) -> set[IPv4Address]:
     """Return a set of broadcast addresses."""
     broadcast_addresses: set[IPv4Address] = {IPv4Address(IPV4_BROADCAST_ADDR)}
-    adapters = await async_get_adapters(hass)
+    adapters = await async_get_adapters(menuai)
     if async_only_default_interface_enabled(adapters):
         return broadcast_addresses
     for adapter in adapters:
@@ -148,12 +148,12 @@ async def async_get_ipv4_broadcast_addresses(hass: HomeAssistant) -> set[IPv4Add
     return broadcast_addresses
 
 
-async def async_get_announce_addresses(hass: HomeAssistant) -> list[str]:
+async def async_get_announce_addresses(menuai: menuai) -> list[str]:
     """Return a list of IP addresses to announce/use via zeroconf/ssdp/etc.
 
     The default ip address is always returned first if available.
     """
-    adapters = await async_get_adapters(hass)
+    adapters = await async_get_adapters(menuai)
     addresses: list[str] = []
     default_ip: str | None = None
     for adapter in adapters:
@@ -165,27 +165,27 @@ async def async_get_announce_addresses(hass: HomeAssistant) -> list[str]:
     # Puts the default IPv4 address first in the list to preserve compatibility,
     # because some mDNS implementations ignores anything but the first announced
     # address.
-    if default_ip := await async_get_source_ip(hass, target_ip=MDNS_TARGET_IP):
+    if default_ip := await async_get_source_ip(menuai, target_ip=MDNS_TARGET_IP):
         if default_ip in addresses:
             addresses.remove(default_ip)
         return [default_ip, *addresses]
     return list(addresses)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
-    """Set up network for Home Assistant."""
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
+    """Set up network for MenuAI."""
     # Avoid circular issue: http->network->websocket_api->http
     from .websocket import (  # pylint: disable=import-outside-toplevel
         async_register_websocket_commands,
     )
 
-    await async_get_network(hass)
+    await async_get_network(menuai)
 
-    if not await hass.async_add_executor_job(_check_docker_without_host_networking):
+    if not await menuai.async_add_executor_job(_check_docker_without_host_networking):
         docs_url = "https://docs.docker.com/network/network-tutorial-host/"
         install_url = "https://www.home-assistant.io/installation/linux#install-home-assistant-container"
         ir.async_create_issue(
-            hass,
+            menuai,
             DOMAIN,
             "docker_host_network",
             is_fixable=False,
@@ -195,5 +195,5 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             translation_placeholders={"docs_url": docs_url, "install_url": install_url},
         )
 
-    async_register_websocket_commands(hass)
+    async_register_websocket_commands(menuai)
     return True

@@ -6,11 +6,11 @@ from aiocomelit import CannotAuthenticate, CannotConnect
 from aiocomelit.const import BRIDGE, VEDO
 import pytest
 
-from homeassistant.components.comelit.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_HOST, CONF_PIN, CONF_PORT, CONF_TYPE
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.comelit.const import DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_HOST, CONF_PIN, CONF_PORT, CONF_TYPE
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from .const import (
     BRIDGE_HOST,
@@ -26,19 +26,19 @@ from tests.common import MockConfigEntry
 
 
 async def test_flow_serial_bridge(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_serial_bridge: AsyncMock,
     mock_serial_bridge_config_entry: MockConfigEntry,
 ) -> None:
     """Test starting a flow by user."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_HOST: BRIDGE_HOST,
@@ -54,23 +54,23 @@ async def test_flow_serial_bridge(
         CONF_TYPE: BRIDGE,
     }
     assert not result["result"].unique_id
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
 async def test_flow_vedo(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_vedo: AsyncMock,
     mock_vedo_config_entry: MockConfigEntry,
 ) -> None:
     """Test starting a flow by user."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_HOST: VEDO_HOST,
@@ -87,7 +87,7 @@ async def test_flow_vedo(
         CONF_TYPE: VEDO,
     }
     assert not result["result"].unique_id
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
 @pytest.mark.parametrize(
@@ -99,7 +99,7 @@ async def test_flow_vedo(
     ],
 )
 async def test_exception_connection(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_vedo: AsyncMock,
     mock_vedo_config_entry: MockConfigEntry,
     side_effect,
@@ -107,7 +107,7 @@ async def test_exception_connection(
 ) -> None:
     """Test starting a flow by user with a connection error."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result.get("type") is FlowResultType.FORM
@@ -115,7 +115,7 @@ async def test_exception_connection(
 
     mock_vedo.login.side_effect = side_effect
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_HOST: VEDO_HOST,
@@ -131,7 +131,7 @@ async def test_exception_connection(
 
     mock_vedo.login.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_HOST: VEDO_HOST,
@@ -152,18 +152,18 @@ async def test_exception_connection(
 
 
 async def test_reauth_successful(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_vedo: AsyncMock,
     mock_vedo_config_entry: MockConfigEntry,
 ) -> None:
     """Test starting a reauthentication flow."""
 
-    mock_vedo_config_entry.add_to_hass(hass)
-    result = await mock_vedo_config_entry.start_reauth_flow(hass)
+    mock_vedo_config_entry.add_to_menuai(menuai)
+    result = await mock_vedo_config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_PIN: FAKE_PIN,
@@ -183,20 +183,20 @@ async def test_reauth_successful(
     ],
 )
 async def test_reauth_not_successful(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_vedo: AsyncMock,
     mock_vedo_config_entry: MockConfigEntry,
     side_effect: Exception,
     error: str,
 ) -> None:
     """Test starting a reauthentication flow but no connection found."""
-    mock_vedo_config_entry.add_to_hass(hass)
-    result = await mock_vedo_config_entry.start_reauth_flow(hass)
+    mock_vedo_config_entry.add_to_menuai(menuai)
+    result = await mock_vedo_config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
     mock_vedo.login.side_effect = side_effect
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_PIN: FAKE_PIN,
@@ -209,7 +209,7 @@ async def test_reauth_not_successful(
 
     mock_vedo.login.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_PIN: VEDO_PIN,
@@ -222,13 +222,13 @@ async def test_reauth_not_successful(
 
 
 async def test_reconfigure_successful(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_serial_bridge: AsyncMock,
     mock_serial_bridge_config_entry: MockConfigEntry,
 ) -> None:
     """Test that the host can be reconfigured."""
-    mock_serial_bridge_config_entry.add_to_hass(hass)
-    result = await mock_serial_bridge_config_entry.start_reconfigure_flow(hass)
+    mock_serial_bridge_config_entry.add_to_menuai(menuai)
+    result = await mock_serial_bridge_config_entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reconfigure"
@@ -238,7 +238,7 @@ async def test_reconfigure_successful(
 
     new_host = "new_bridge_host"
 
-    reconfigure_result = await hass.config_entries.flow.async_configure(
+    reconfigure_result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_HOST: new_host,
@@ -263,22 +263,22 @@ async def test_reconfigure_successful(
     ],
 )
 async def test_reconfigure_fails(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_serial_bridge: AsyncMock,
     mock_serial_bridge_config_entry: MockConfigEntry,
     side_effect: Exception,
     error: str,
 ) -> None:
     """Test that the host can be reconfigured."""
-    mock_serial_bridge_config_entry.add_to_hass(hass)
-    result = await mock_serial_bridge_config_entry.start_reconfigure_flow(hass)
+    mock_serial_bridge_config_entry.add_to_menuai(menuai)
+    result = await mock_serial_bridge_config_entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reconfigure"
 
     mock_serial_bridge.login.side_effect = side_effect
 
-    reconfigure_result = await hass.config_entries.flow.async_configure(
+    reconfigure_result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_HOST: "192.168.100.60",
@@ -293,7 +293,7 @@ async def test_reconfigure_fails(
 
     mock_serial_bridge.login.side_effect = None
 
-    reconfigure_result = await hass.config_entries.flow.async_configure(
+    reconfigure_result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_HOST: "192.168.100.61",

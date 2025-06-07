@@ -5,11 +5,11 @@ from unittest.mock import AsyncMock
 from aiomealie import About, MealieAuthenticationError, MealieConnectionError
 import pytest
 
-from homeassistant.components.mealie.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_API_TOKEN, CONF_HOST, CONF_VERIFY_SSL
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.mealie.const import DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_API_TOKEN, CONF_HOST, CONF_VERIFY_SSL
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from . import setup_integration
 
@@ -17,19 +17,19 @@ from tests.common import MockConfigEntry
 
 
 async def test_full_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mealie_client: AsyncMock,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test full flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: "demo.mealie.io", CONF_API_TOKEN: "token"},
     )
@@ -52,7 +52,7 @@ async def test_full_flow(
     ],
 )
 async def test_flow_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mealie_client: AsyncMock,
     mock_setup_entry: AsyncMock,
     exception: Exception,
@@ -61,14 +61,14 @@ async def test_flow_errors(
     """Test flow errors."""
     mock_mealie_client.get_user_info.side_effect = exception
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: "demo.mealie.io", CONF_API_TOKEN: "token"},
     )
@@ -78,7 +78,7 @@ async def test_flow_errors(
 
     mock_mealie_client.get_user_info.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: "demo.mealie.io", CONF_API_TOKEN: "token"},
     )
@@ -86,23 +86,23 @@ async def test_flow_errors(
 
 
 async def test_ingress_host(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mealie_client: AsyncMock,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test disallow ingress host."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
-            CONF_HOST: "http://homeassistant/hassio/ingress/db21ed7f_mealie",
+            CONF_HOST: "http://menuai/menuaiio/ingress/db21ed7f_mealie",
             CONF_API_TOKEN: "token",
         },
     )
@@ -112,9 +112,9 @@ async def test_ingress_host(
 
     mock_mealie_client.get_user_info.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
-        {CONF_HOST: "http://homeassistant:9001", CONF_API_TOKEN: "token"},
+        {CONF_HOST: "http://menuai:9001", CONF_API_TOKEN: "token"},
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
 
@@ -128,7 +128,7 @@ async def test_ingress_host(
     ],
 )
 async def test_flow_version_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mealie_client: AsyncMock,
     mock_setup_entry: AsyncMock,
     version,
@@ -136,14 +136,14 @@ async def test_flow_version_error(
     """Test flow version error."""
     mock_mealie_client.get_about.return_value = About(version=version)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: "demo.mealie.io", CONF_API_TOKEN: "token"},
     )
@@ -153,22 +153,22 @@ async def test_flow_version_error(
 
 
 async def test_duplicate(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mealie_client: AsyncMock,
     mock_setup_entry: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test duplicate flow."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: "demo.mealie.io", CONF_API_TOKEN: "token"},
     )
@@ -178,19 +178,19 @@ async def test_duplicate(
 
 
 async def test_reauth_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mealie_client: AsyncMock,
     mock_setup_entry: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test reauth flow."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    result = await mock_config_entry.start_reauth_flow(hass)
+    result = await mock_config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_API_TOKEN: "token2"},
     )
@@ -201,21 +201,21 @@ async def test_reauth_flow(
 
 
 async def test_reauth_flow_wrong_account(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mealie_client: AsyncMock,
     mock_setup_entry: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test reauth flow with wrong account."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    result = await mock_config_entry.start_reauth_flow(hass)
+    result = await mock_config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
     mock_mealie_client.get_user_info.return_value.user_id = "wrong_user_id"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_API_TOKEN: "token2"},
     )
@@ -233,7 +233,7 @@ async def test_reauth_flow_wrong_account(
     ],
 )
 async def test_reauth_flow_exceptions(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mealie_client: AsyncMock,
     mock_setup_entry: AsyncMock,
     mock_config_entry: MockConfigEntry,
@@ -241,14 +241,14 @@ async def test_reauth_flow_exceptions(
     error: str,
 ) -> None:
     """Test reauth flow errors."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
     mock_mealie_client.get_user_info.side_effect = exception
 
-    result = await mock_config_entry.start_reauth_flow(hass)
+    result = await mock_config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_API_TOKEN: "token"},
     )
@@ -259,7 +259,7 @@ async def test_reauth_flow_exceptions(
 
     mock_mealie_client.get_user_info.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_API_TOKEN: "token"},
     )
@@ -268,19 +268,19 @@ async def test_reauth_flow_exceptions(
 
 
 async def test_reconfigure_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mealie_client: AsyncMock,
     mock_setup_entry: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test reconfigure flow."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    result = await mock_config_entry.start_reconfigure_flow(hass)
+    result = await mock_config_entry.start_reconfigure_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_HOST: "http://test:9090",
@@ -297,21 +297,21 @@ async def test_reconfigure_flow(
 
 
 async def test_reconfigure_flow_wrong_account(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mealie_client: AsyncMock,
     mock_setup_entry: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test reconfigure flow with wrong account."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    result = await mock_config_entry.start_reconfigure_flow(hass)
+    result = await mock_config_entry.start_reconfigure_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reconfigure"
 
     mock_mealie_client.get_user_info.return_value.user_id = "wrong_user_id"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: "http://test:9090", CONF_API_TOKEN: "token2"},
     )
@@ -329,7 +329,7 @@ async def test_reconfigure_flow_wrong_account(
     ],
 )
 async def test_reconfigure_flow_exceptions(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mealie_client: AsyncMock,
     mock_setup_entry: AsyncMock,
     mock_config_entry: MockConfigEntry,
@@ -337,14 +337,14 @@ async def test_reconfigure_flow_exceptions(
     error: str,
 ) -> None:
     """Test reconfigure flow errors."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
     mock_mealie_client.get_user_info.side_effect = exception
 
-    result = await mock_config_entry.start_reconfigure_flow(hass)
+    result = await mock_config_entry.start_reconfigure_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reconfigure"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: "http://test:9090", CONF_API_TOKEN: "token"},
     )
@@ -355,7 +355,7 @@ async def test_reconfigure_flow_exceptions(
 
     mock_mealie_client.get_user_info.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: "http://test:9090", CONF_API_TOKEN: "token"},
     )

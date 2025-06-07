@@ -4,7 +4,7 @@ create_task:
   fields:
     name:
       required: true
-      example: "do this ^today #from_hass"
+      example: "do this ^today #from_menuai"
       selector:
         text:
     id:

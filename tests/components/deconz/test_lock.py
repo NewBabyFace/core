@@ -4,14 +4,14 @@ from collections.abc import Callable
 
 import pytest
 
-from homeassistant.components.lock import (
+from menuai.components.lock import (
     DOMAIN as LOCK_DOMAIN,
     SERVICE_LOCK,
     SERVICE_UNLOCK,
     LockState,
 )
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
 
 from .conftest import WebsocketDataType
 
@@ -38,16 +38,16 @@ from tests.test_util.aiohttp import AiohttpClientMocker
 )
 @pytest.mark.usefixtures("config_entry_setup")
 async def test_lock_from_light(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_put_request: Callable[[str, str], AiohttpClientMocker],
     light_ws_data: WebsocketDataType,
 ) -> None:
     """Test that all supported lock entities based on lights are created."""
-    assert len(hass.states.async_all()) == 1
-    assert hass.states.get("lock.door_lock").state == LockState.UNLOCKED
+    assert len(menuai.states.async_all()) == 1
+    assert menuai.states.get("lock.door_lock").state == LockState.UNLOCKED
 
     await light_ws_data({"state": {"on": True}})
-    assert hass.states.get("lock.door_lock").state == LockState.LOCKED
+    assert menuai.states.get("lock.door_lock").state == LockState.LOCKED
 
     # Verify service calls
 
@@ -55,7 +55,7 @@ async def test_lock_from_light(
 
     # Service lock door
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LOCK_DOMAIN,
         SERVICE_LOCK,
         {ATTR_ENTITY_ID: "lock.door_lock"},
@@ -65,7 +65,7 @@ async def test_lock_from_light(
 
     # Service unlock door
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LOCK_DOMAIN,
         SERVICE_UNLOCK,
         {ATTR_ENTITY_ID: "lock.door_lock"},
@@ -102,16 +102,16 @@ async def test_lock_from_light(
 )
 @pytest.mark.usefixtures("config_entry_setup")
 async def test_lock_from_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_put_request: Callable[[str, str], AiohttpClientMocker],
     sensor_ws_data: WebsocketDataType,
 ) -> None:
     """Test that all supported lock entities based on sensors are created."""
-    assert len(hass.states.async_all()) == 2
-    assert hass.states.get("lock.door_lock").state == LockState.UNLOCKED
+    assert len(menuai.states.async_all()) == 2
+    assert menuai.states.get("lock.door_lock").state == LockState.UNLOCKED
 
     await sensor_ws_data({"state": {"lockstate": "locked"}})
-    assert hass.states.get("lock.door_lock").state == LockState.LOCKED
+    assert menuai.states.get("lock.door_lock").state == LockState.LOCKED
 
     # Verify service calls
 
@@ -119,7 +119,7 @@ async def test_lock_from_sensor(
 
     # Service lock door
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LOCK_DOMAIN,
         SERVICE_LOCK,
         {ATTR_ENTITY_ID: "lock.door_lock"},
@@ -129,7 +129,7 @@ async def test_lock_from_sensor(
 
     # Service unlock door
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LOCK_DOMAIN,
         SERVICE_UNLOCK,
         {ATTR_ENTITY_ID: "lock.door_lock"},

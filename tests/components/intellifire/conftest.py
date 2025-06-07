@@ -11,7 +11,7 @@ from intellifire4py.model import (
 )
 import pytest
 
-from homeassistant.components.intellifire.const import (
+from menuai.components.intellifire.const import (
     API_MODE_CLOUD,
     API_MODE_LOCAL,
     CONF_AUTH_COOKIE,
@@ -22,7 +22,7 @@ from homeassistant.components.intellifire.const import (
     CONF_WEB_CLIENT_ID,
     DOMAIN,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_API_KEY,
     CONF_HOST,
     CONF_IP_ADDRESS,
@@ -37,7 +37,7 @@ from tests.common import MockConfigEntry, load_json_object_fixture
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Mock setting up a config entry."""
     with patch(
-        "homeassistant.components.intellifire.async_setup_entry", return_value=True
+        "menuai.components.intellifire.async_setup_entry", return_value=True
     ) as mock_setup:
         yield mock_setup
 
@@ -48,7 +48,7 @@ def mock_fireplace_finder_none() -> Generator[MagicMock]:
     mock_found_fireplaces = Mock()
     mock_found_fireplaces.ips = []
     with patch(
-        "homeassistant.components.intellifire.config_flow.UDPFireplaceFinder.search_fireplace"
+        "menuai.components.intellifire.config_flow.UDPFireplaceFinder.search_fireplace"
     ):
         yield mock_found_fireplaces
 
@@ -139,11 +139,11 @@ def mock_cloud_interface() -> Generator[AsyncMock]:
 
     with (
         patch(
-            "homeassistant.components.intellifire.IntelliFireCloudInterface",
+            "menuai.components.intellifire.IntelliFireCloudInterface",
             autospec=True,
         ) as mock_client,
         patch(
-            "homeassistant.components.intellifire.config_flow.IntelliFireCloudInterface",
+            "menuai.components.intellifire.config_flow.IntelliFireCloudInterface",
             new=mock_client,
         ),
         patch(
@@ -171,7 +171,7 @@ def mock_local_interface() -> Generator[AsyncMock]:
         **load_json_object_fixture("intellifire/local_poll.json")
     )
     with patch(
-        "homeassistant.components.intellifire.config_flow.IntelliFireAPILocal",
+        "menuai.components.intellifire.config_flow.IntelliFireAPILocal",
         autospec=True,
     ) as mock_client:
         mock_client = mock_client.return_value
@@ -191,7 +191,7 @@ def mock_fp(mock_common_data_local) -> Generator[AsyncMock]:
     assert local_poll_data.connection_quality == 988451
 
     with patch(
-        "homeassistant.components.intellifire.UnifiedFireplace"
+        "menuai.components.intellifire.UnifiedFireplace"
     ) as mock_unified_fireplace:
         # Create an instance of the mock
         mock_instance = mock_unified_fireplace.return_value
@@ -241,7 +241,7 @@ def mock_fp(mock_common_data_local) -> Generator[AsyncMock]:
 
         # Patch class methods
         with patch(
-            "homeassistant.components.intellifire.UnifiedFireplace.build_fireplace_from_common",
+            "menuai.components.intellifire.UnifiedFireplace.build_fireplace_from_common",
             new_callable=AsyncMock,
             return_value=mock_instance,
         ):

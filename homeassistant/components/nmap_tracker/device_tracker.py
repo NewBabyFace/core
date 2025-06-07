@@ -5,11 +5,11 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from homeassistant.components.device_tracker import ScannerEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.device_tracker import ScannerEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import NmapDevice, NmapDeviceScanner, short_hostname, signal_device_update
 from .const import DOMAIN
@@ -18,12 +18,12 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up device tracker for Nmap Tracker component."""
-    nmap_tracker = hass.data[DOMAIN][entry.entry_id]
+    nmap_tracker = menuai.data[DOMAIN][entry.entry_id]
 
     @callback
     def device_new(mac_address):
@@ -36,11 +36,11 @@ async def async_setup_entry(
         async_add_entities([NmapTrackerEntity(nmap_tracker, mac_address, False)])
 
     entry.async_on_unload(
-        async_dispatcher_connect(hass, nmap_tracker.signal_device_new, device_new)
+        async_dispatcher_connect(menuai, nmap_tracker.signal_device_new, device_new)
     )
     entry.async_on_unload(
         async_dispatcher_connect(
-            hass, nmap_tracker.signal_device_missing, device_missing
+            menuai, nmap_tracker.signal_device_missing, device_missing
         )
     )
 
@@ -118,11 +118,11 @@ class NmapTrackerEntity(ScannerEntity):
         self.async_process_update(online)
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register state update callback."""
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 signal_device_update(self._mac_address),
                 self.async_on_demand_update,
             )

@@ -8,12 +8,12 @@ from typing import Any
 
 from discovery30303 import AIODiscovery30303, Device30303
 
-from homeassistant import config_entries
-from homeassistant.components import network
-from homeassistant.const import CONF_MODEL, CONF_NAME
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr, discovery_flow
-from homeassistant.util.network import is_ip_address
+from menuai import config_entries
+from menuai.components import network
+from menuai.const import CONF_MODEL, CONF_NAME
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr, discovery_flow
+from menuai.util.network import is_ip_address
 
 from .const import DISCOVER_SCAN_TIMEOUT, DISCOVERY, DOMAIN
 
@@ -34,7 +34,7 @@ def async_is_steamist_device(device: Device30303) -> bool:
 
 @callback
 def async_update_entry_from_discovery(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: config_entries.ConfigEntry,
     device: Device30303,
 ) -> bool:
@@ -50,12 +50,12 @@ def async_update_entry_from_discovery(
     if data_updates:
         updates["data"] = {**entry.data, **data_updates}
     if updates:
-        return hass.config_entries.async_update_entry(entry, **updates)
+        return menuai.config_entries.async_update_entry(entry, **updates)
     return False
 
 
 async def async_discover_devices(
-    hass: HomeAssistant, timeout: int, address: str | None = None
+    menuai: menuai, timeout: int, address: str | None = None
 ) -> list[Device30303]:
     """Discover devices."""
     if address:
@@ -64,7 +64,7 @@ async def async_discover_devices(
         targets = [
             str(broadcast_address)
             for broadcast_address in await network.async_get_ipv4_broadcast_addresses(
-                hass
+                menuai
             )
         ]
 
@@ -104,29 +104,29 @@ def async_find_discovery_by_ip(
     return None
 
 
-async def async_discover_device(hass: HomeAssistant, host: str) -> Device30303 | None:
+async def async_discover_device(menuai: menuai, host: str) -> Device30303 | None:
     """Direct discovery to a single ip instead of broadcast."""
     return async_find_discovery_by_ip(
-        await async_discover_devices(hass, DISCOVER_SCAN_TIMEOUT, host), host
+        await async_discover_devices(menuai, DISCOVER_SCAN_TIMEOUT, host), host
     )
 
 
 @callback
-def async_get_discovery(hass: HomeAssistant, host: str) -> Device30303 | None:
+def async_get_discovery(menuai: menuai, host: str) -> Device30303 | None:
     """Check if a device was already discovered via a broadcast discovery."""
-    discoveries: list[Device30303] = hass.data[DOMAIN][DISCOVERY]
+    discoveries: list[Device30303] = menuai.data[DOMAIN][DISCOVERY]
     return async_find_discovery_by_ip(discoveries, host)
 
 
 @callback
 def async_trigger_discovery(
-    hass: HomeAssistant,
+    menuai: menuai,
     discovered_devices: list[Device30303],
 ) -> None:
     """Trigger config flows for discovered devices."""
     for device in discovered_devices:
         discovery_flow.async_create_flow(
-            hass,
+            menuai,
             DOMAIN,
             context={"source": config_entries.SOURCE_INTEGRATION_DISCOVERY},
             data={

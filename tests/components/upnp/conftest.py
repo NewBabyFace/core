@@ -15,8 +15,8 @@ from async_upnp_client.client import UpnpDevice
 from async_upnp_client.profiles.igd import IgdDevice, IgdState
 import pytest
 
-from homeassistant.components import ssdp
-from homeassistant.components.upnp.const import (
+from menuai.components import ssdp
+from menuai.components.upnp.const import (
     CONFIG_ENTRY_LOCATION,
     CONFIG_ENTRY_MAC_ADDRESS,
     CONFIG_ENTRY_ORIGINAL_UDN,
@@ -24,8 +24,8 @@ from homeassistant.components.upnp.const import (
     CONFIG_ENTRY_UDN,
     DOMAIN,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.service_info.ssdp import (
+from menuai.core import menuai
+from menuai.helpers.service_info.ssdp import (
     ATTR_UPNP_DEVICE_TYPE,
     ATTR_UPNP_FRIENDLY_NAME,
     ATTR_UPNP_MANUFACTURER,
@@ -74,7 +74,7 @@ TEST_DISCOVERY = SsdpServiceInfo(
 def mock_async_create_device():
     """Mock async_upnp_client create device."""
     with patch(
-        "homeassistant.components.upnp.device.UpnpFactory.async_create_device"
+        "menuai.components.upnp.device.UpnpFactory.async_create_device"
     ) as mock_create:
         yield mock_create
 
@@ -118,15 +118,15 @@ def mock_igd_device(mock_async_create_device) -> IgdDevice:
 
     with (
         patch(
-            "homeassistant.components.upnp.device.async_get_local_ip",
+            "menuai.components.upnp.device.async_get_local_ip",
             return_value=(socket.AF_INET, "127.0.0.1"),
         ),
         patch(
-            "homeassistant.components.upnp.device.IgdDevice.__new__",
+            "menuai.components.upnp.device.IgdDevice.__new__",
             return_value=mock_igd_device,
         ),
         patch(
-            "homeassistant.components.upnp.device.AiohttpNotifyServer.__new__",
+            "menuai.components.upnp.device.AiohttpNotifyServer.__new__",
             return_value=mock_notify_server,
         ),
     ):
@@ -137,7 +137,7 @@ def mock_igd_device(mock_async_create_device) -> IgdDevice:
 def mock_mac_address_from_host():
     """Get mac address."""
     with patch(
-        "homeassistant.components.upnp.device.get_mac_address",
+        "menuai.components.upnp.device.get_mac_address",
         return_value=TEST_MAC_ADDRESS,
     ):
         yield
@@ -147,7 +147,7 @@ def mock_mac_address_from_host():
 def mock_no_mac_address_from_host():
     """Get no mac address."""
     with patch(
-        "homeassistant.components.upnp.device.get_mac_address",
+        "menuai.components.upnp.device.get_mac_address",
         return_value=None,
     ):
         yield
@@ -157,7 +157,7 @@ def mock_no_mac_address_from_host():
 def mock_setup_entry():
     """Mock async_setup_entry."""
     with patch(
-        "homeassistant.components.upnp.async_setup_entry",
+        "menuai.components.upnp.async_setup_entry",
         return_value=AsyncMock(True),
     ) as mock_setup:
         yield mock_setup
@@ -167,14 +167,14 @@ def mock_setup_entry():
 def silent_ssdp_scanner() -> Generator[None]:
     """Start SSDP component and get Scanner, prevent actual SSDP traffic."""
     with (
-        patch("homeassistant.components.ssdp.Scanner._async_start_ssdp_listeners"),
-        patch("homeassistant.components.ssdp.Scanner._async_stop_ssdp_listeners"),
-        patch("homeassistant.components.ssdp.Scanner.async_scan"),
+        patch("menuai.components.ssdp.Scanner._async_start_ssdp_listeners"),
+        patch("menuai.components.ssdp.Scanner._async_stop_ssdp_listeners"),
+        patch("menuai.components.ssdp.Scanner.async_scan"),
         patch(
-            "homeassistant.components.ssdp.Server._async_start_upnp_servers",
+            "menuai.components.ssdp.Server._async_start_upnp_servers",
         ),
         patch(
-            "homeassistant.components.ssdp.Server._async_stop_upnp_servers",
+            "menuai.components.ssdp.Server._async_stop_upnp_servers",
         ),
     ):
         yield
@@ -186,7 +186,7 @@ async def ssdp_instant_discovery():
 
     # Set up device discovery callback.
     async def register_callback(
-        hass: HomeAssistant,
+        menuai: menuai,
         callback: Callable[
             [SsdpServiceInfo, ssdp.SsdpChange], Coroutine[Any, Any, None] | None
         ],
@@ -198,11 +198,11 @@ async def ssdp_instant_discovery():
 
     with (
         patch(
-            "homeassistant.components.ssdp.async_register_callback",
+            "menuai.components.ssdp.async_register_callback",
             side_effect=register_callback,
         ) as mock_register,
         patch(
-            "homeassistant.components.ssdp.async_get_discovery_info_by_st",
+            "menuai.components.ssdp.async_get_discovery_info_by_st",
             return_value=[TEST_DISCOVERY],
         ) as mock_get_info,
     ):
@@ -219,7 +219,7 @@ async def ssdp_instant_discovery_multi_location():
 
     # Set up device discovery callback.
     async def register_callback(
-        hass: HomeAssistant,
+        menuai: menuai,
         callback: Callable[
             [SsdpServiceInfo, ssdp.SsdpChange], Coroutine[Any, Any, None] | None
         ],
@@ -231,11 +231,11 @@ async def ssdp_instant_discovery_multi_location():
 
     with (
         patch(
-            "homeassistant.components.ssdp.async_register_callback",
+            "menuai.components.ssdp.async_register_callback",
             side_effect=register_callback,
         ) as mock_register,
         patch(
-            "homeassistant.components.ssdp.async_get_discovery_info_by_st",
+            "menuai.components.ssdp.async_get_discovery_info_by_st",
             return_value=[test_discovery],
         ) as mock_get_info,
     ):
@@ -248,7 +248,7 @@ async def ssdp_no_discovery():
 
     # Set up device discovery callback.
     async def register_callback(
-        hass: HomeAssistant,
+        menuai: menuai,
         callback: Callable[
             [SsdpServiceInfo, ssdp.SsdpChange], Coroutine[Any, Any, None] | None
         ],
@@ -259,11 +259,11 @@ async def ssdp_no_discovery():
 
     with (
         patch(
-            "homeassistant.components.ssdp.async_register_callback",
+            "menuai.components.ssdp.async_register_callback",
             side_effect=register_callback,
         ) as mock_register,
         patch(
-            "homeassistant.components.ssdp.async_get_discovery_info_by_st",
+            "menuai.components.ssdp.async_get_discovery_info_by_st",
             return_value=[],
         ) as mock_get_info,
     ):
@@ -272,7 +272,7 @@ async def ssdp_no_discovery():
 
 @pytest.fixture
 async def mock_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     ssdp_instant_discovery,
     mock_igd_device: IgdDevice,
     mock_mac_address_from_host,
@@ -294,9 +294,9 @@ async def mock_config_entry(
     entry.igd_device = mock_igd_device
 
     # Load config_entry.
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     return entry

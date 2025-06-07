@@ -5,11 +5,11 @@ from typing import cast
 from aiohttp import ClientError
 from myuplink import DevicePoint
 
-from homeassistant.components.select import SelectEntity
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.select import SelectEntity
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import MyUplinkConfigEntry, MyUplinkDataCoordinator
@@ -18,7 +18,7 @@ from .helpers import find_matching_platform, skip_entity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MyUplinkConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -86,7 +86,7 @@ class MyUplinkSelect(MyUplinkEntity, SelectEntity):
                 self.device_id, data={self.point_id: str(self.options_rev[option])}
             )
         except ClientError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="set_select_error",
                 translation_placeholders={

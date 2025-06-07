@@ -6,10 +6,10 @@ import logging
 from pydroid_ipcam import PyDroidIPCam
 from pydroid_ipcam.exceptions import PyDroidIPCamException
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN
 
@@ -25,15 +25,15 @@ class AndroidIPCamDataUpdateCoordinator(DataUpdateCoordinator[None]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: AndroidIPCamConfigEntry,
         cam: PyDroidIPCam,
     ) -> None:
         """Initialize the Android IP Webcam."""
-        self.hass = hass
+        self.menuai = menuai
         self.cam = cam
         super().__init__(
-            self.hass,
+            self.menuai,
             _LOGGER,
             config_entry=config_entry,
             name=f"{DOMAIN} {config_entry.data[CONF_HOST]}",

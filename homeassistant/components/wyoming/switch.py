@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import STATE_ON, EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import restore_state
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchEntity, SwitchEntityDescription
+from menuai.config_entries import ConfigEntry
+from menuai.const import STATE_ON, EntityCategory
+from menuai.core import menuai
+from menuai.helpers import restore_state
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .entity import WyomingSatelliteEntity
@@ -19,12 +19,12 @@ if TYPE_CHECKING:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up VoIP switch entities."""
-    item: DomainDataItem = hass.data[DOMAIN][config_entry.entry_id]
+    item: DomainDataItem = menuai.data[DOMAIN][config_entry.entry_id]
 
     # Setup is only forwarded for satellites
     assert item.device is not None
@@ -43,9 +43,9 @@ class WyomingSatelliteMuteSwitch(
         entity_category=EntityCategory.CONFIG,
     )
 
-    async def async_added_to_hass(self) -> None:
-        """Call when entity about to be added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Call when entity about to be added to menuai."""
+        await super().async_added_to_menuai()
 
         state = await self.async_get_last_state()
 

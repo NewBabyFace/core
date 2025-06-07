@@ -6,7 +6,7 @@ from datetime import datetime
 
 from sqlalchemy.orm.session import Session
 
-from homeassistant.util import dt as dt_util
+from menuai.util import dt as dt_util
 
 from ..db_schema import RecorderRuns
 

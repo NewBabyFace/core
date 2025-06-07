@@ -7,13 +7,13 @@ from typing import TYPE_CHECKING, Any
 
 import voluptuous as vol
 
-from homeassistant.components.lock import (
+from menuai.components.lock import (
     PLATFORM_SCHEMA as LOCK_PLATFORM_SCHEMA,
     LockEntity,
     LockEntityFeature,
     LockState,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_CODE,
     CONF_NAME,
     CONF_OPTIMISTIC,
@@ -21,11 +21,11 @@ from homeassistant.const import (
     CONF_UNIQUE_ID,
     CONF_VALUE_TEMPLATE,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ServiceValidationError, TemplateError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai, callback
+from menuai.exceptions import ServiceValidationError, TemplateError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import CONF_PICTURE, DOMAIN
 from .entity import AbstractTemplateEntity
@@ -88,7 +88,7 @@ PLATFORM_SCHEMA = LOCK_PLATFORM_SCHEMA.extend(
 @callback
 def _async_create_template_tracking_entities(
     async_add_entities: AddEntitiesCallback,
-    hass: HomeAssistant,
+    menuai: menuai,
     definitions: list[dict],
     unique_id_prefix: str | None,
 ) -> None:
@@ -103,7 +103,7 @@ def _async_create_template_tracking_entities(
 
         fans.append(
             TemplateLock(
-                hass,
+                menuai,
                 entity_conf,
                 unique_id,
             )
@@ -113,7 +113,7 @@ def _async_create_template_tracking_entities(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -122,15 +122,15 @@ async def async_setup_platform(
     if discovery_info is None:
         _async_create_template_tracking_entities(
             async_add_entities,
-            hass,
-            [rewrite_common_legacy_to_modern_conf(hass, config, LEGACY_FIELDS)],
+            menuai,
+            [rewrite_common_legacy_to_modern_conf(menuai, config, LEGACY_FIELDS)],
             None,
         )
         return
 
     _async_create_template_tracking_entities(
         async_add_entities,
-        hass,
+        menuai,
         discovery_info["entities"],
         discovery_info["unique_id"],
     )
@@ -308,13 +308,13 @@ class TemplateLock(TemplateEntity, AbstractTemplateLock):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config: dict[str, Any],
         unique_id: str | None,
     ) -> None:
         """Initialize the lock."""
         TemplateEntity.__init__(
-            self, hass, config=config, fallback_name=DEFAULT_NAME, unique_id=unique_id
+            self, menuai, config=config, fallback_name=DEFAULT_NAME, unique_id=unique_id
         )
         AbstractTemplateLock.__init__(self, config)
         name = self._attr_name

@@ -6,11 +6,11 @@ from freezegun.api import FrozenDateTimeFactory
 from pysmlight import Info, Radio
 import pytest
 
-from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
-from homeassistant.components.smlight.const import DOMAIN, SCAN_INTERVAL
-from homeassistant.const import ATTR_ENTITY_ID, STATE_UNKNOWN, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
+from menuai.components.smlight.const import DOMAIN, SCAN_INTERVAL
+from menuai.const import ATTR_ENTITY_ID, STATE_UNKNOWN, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .conftest import setup_integration
 
@@ -41,7 +41,7 @@ MOCK_ROUTER = Info(MAC="AA:BB:CC:DD:EE:FF", radios=[Radio(zb_type=1)])
 )
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_buttons(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_id: str,
     entity_registry: er.EntityRegistry,
     method: str,
@@ -51,9 +51,9 @@ async def test_buttons(
     """Test creation of button entities."""
     mock_smlight_client.get_info.side_effect = None
     mock_smlight_client.get_info.return_value = MOCK_ROUTER
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    state = hass.states.get(f"button.mock_title_{entity_id}")
+    state = menuai.states.get(f"button.mock_title_{entity_id}")
     assert state is not None
     assert state.state == STATE_UNKNOWN
 
@@ -63,7 +63,7 @@ async def test_buttons(
 
     mock_method = getattr(mock_smlight_client.cmds, method)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         BUTTON_DOMAIN,
         SERVICE_PRESS,
         {ATTR_ENTITY_ID: f"button.mock_title_{entity_id}"},
@@ -76,7 +76,7 @@ async def test_buttons(
 
 @pytest.mark.parametrize("entity_id", ["zigbee_flash_mode", "reconnect_zigbee_router"])
 async def test_disabled_by_default_buttons(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_id: str,
     entity_registry: er.EntityRegistry,
     mock_config_entry: MockConfigEntry,
@@ -85,9 +85,9 @@ async def test_disabled_by_default_buttons(
     """Test the disabled by default buttons."""
     mock_smlight_client.get_info.side_effect = None
     mock_smlight_client.get_info.return_value = MOCK_ROUTER
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    assert not hass.states.get(f"button.mock_{entity_id}")
+    assert not menuai.states.get(f"button.mock_{entity_id}")
 
     assert (entry := entity_registry.async_get(f"button.mock_title_{entity_id}"))
     assert entry.disabled
@@ -96,7 +96,7 @@ async def test_disabled_by_default_buttons(
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_zigbee2_router_button(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_config_entry: MockConfigEntry,
     mock_smlight_client: MagicMock,
@@ -104,11 +104,11 @@ async def test_zigbee2_router_button(
     """Test creation of second radio router button (if available)."""
     mock_smlight_client.get_info.side_effect = None
     mock_smlight_client.get_info.return_value = Info.from_dict(
-        await async_load_json_object_fixture(hass, "info-MR1.json", DOMAIN)
+        await async_load_json_object_fixture(menuai, "info-MR1.json", DOMAIN)
     )
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    state = hass.states.get("button.mock_title_reconnect_zigbee_router")
+    state = menuai.states.get("button.mock_title_reconnect_zigbee_router")
     assert state is not None
     assert state.state == STATE_UNKNOWN
 
@@ -118,7 +118,7 @@ async def test_zigbee2_router_button(
 
 
 async def test_remove_router_reconnect(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     freezer: FrozenDateTimeFactory,
     mock_config_entry: MockConfigEntry,
@@ -128,7 +128,7 @@ async def test_remove_router_reconnect(
     save_mock = mock_smlight_client.get_info.side_effect
     mock_smlight_client.get_info.side_effect = None
     mock_smlight_client.get_info.return_value = MOCK_ROUTER
-    mock_config_entry = await setup_integration(hass, mock_config_entry)
+    mock_config_entry = await setup_integration(menuai, mock_config_entry)
 
     entities = er.async_entries_for_config_entry(
         entity_registry, mock_config_entry.entry_id
@@ -139,9 +139,9 @@ async def test_remove_router_reconnect(
     mock_smlight_client.get_info.side_effect = save_mock
 
     freezer.tick(SCAN_INTERVAL)
-    async_fire_time_changed(hass)
+    async_fire_time_changed(menuai)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     entity = entity_registry.async_get("button.mock_title_reconnect_zigbee_router")
     assert entity is None

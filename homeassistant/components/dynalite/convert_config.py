@@ -7,7 +7,7 @@ from typing import Any
 
 from dynalite_devices_lib import const as dyn_const
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_DEFAULT,
     CONF_HOST,
     CONF_NAME,

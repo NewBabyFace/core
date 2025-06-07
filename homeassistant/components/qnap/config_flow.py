@@ -9,8 +9,8 @@ from qnapstats import QNAPStats
 from requests.exceptions import ConnectTimeout
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
@@ -18,7 +18,7 @@ from homeassistant.const import (
     CONF_USERNAME,
     CONF_VERIFY_SSL,
 )
-from homeassistant.helpers import config_validation as cv
+from menuai.helpers import config_validation as cv
 
 from .const import (
     DEFAULT_PORT,
@@ -65,7 +65,7 @@ class QnapConfigFlow(ConfigFlow, domain=DOMAIN):
                 timeout=DEFAULT_TIMEOUT,
             )
             try:
-                stats = await self.hass.async_add_executor_job(api.get_system_stats)
+                stats = await self.menuai.async_add_executor_job(api.get_system_stats)
             except ConnectTimeout:
                 errors["base"] = "cannot_connect"
             except TypeError:

@@ -23,9 +23,9 @@ _LOGGER = logging.getLogger(__name__)
 class ConnectXiaomiGateway:
     """Class to async connect to a Xiaomi Gateway."""
 
-    def __init__(self, hass, config_entry):
+    def __init__(self, menuai, config_entry):
         """Initialize the entity."""
-        self._hass = hass
+        self._menuai = menuai
         self._config_entry = config_entry
         self._gateway_device = None
         self._gateway_info = None
@@ -57,7 +57,7 @@ class ConnectXiaomiGateway:
         self._cloud_password = self._config_entry.data.get(CONF_CLOUD_PASSWORD)
         self._cloud_country = self._config_entry.data.get(CONF_CLOUD_COUNTRY)
 
-        await self._hass.async_add_executor_job(self.connect_gateway)
+        await self._menuai.async_add_executor_job(self.connect_gateway)
 
         _LOGGER.debug(
             "%s %s %s detected",

@@ -8,14 +8,14 @@ from typing import Any
 
 from pysensibo.model import SensiboDevice
 
-from homeassistant.components.number import (
+from menuai.components.number import (
     NumberDeviceClass,
     NumberEntity,
     NumberEntityDescription,
 )
-from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import PERCENTAGE, EntityCategory, UnitOfTemperature
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import SensiboConfigEntry
 from .coordinator import SensiboDataUpdateCoordinator
@@ -63,7 +63,7 @@ DEVICE_NUMBER_TYPES = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: SensiboConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

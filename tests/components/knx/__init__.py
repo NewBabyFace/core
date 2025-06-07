@@ -3,6 +3,6 @@
 from collections.abc import Callable, Coroutine
 from typing import Any
 
-from homeassistant.helpers import entity_registry as er
+from menuai.helpers import entity_registry as er
 
 type KnxEntityGenerator = Callable[..., Coroutine[Any, Any, er.RegistryEntry]]

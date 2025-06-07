@@ -11,8 +11,8 @@ import aiohttp
 from async_upnp_client.client import UpnpError
 import voluptuous as vol
 
-from homeassistant.components import media_source
-from homeassistant.components.media_player import (
+from menuai.components import media_source
+from menuai.components.media_player import (
     BrowseMedia,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
@@ -20,11 +20,11 @@ from homeassistant.components.media_player import (
     MediaType,
     async_process_play_media_url,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, entity_platform
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import ATTR_PIN_INDEX, DOMAIN, SERVICE_INVOKE_PIN
 
@@ -38,7 +38,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -46,9 +46,9 @@ async def async_setup_entry(
 
     _LOGGER.debug("Setting up config entry: %s", config_entry.unique_id)
 
-    device = hass.data[DOMAIN][config_entry.entry_id]
+    device = menuai.data[DOMAIN][config_entry.entry_id]
 
-    entity = OpenhomeDevice(hass, device)
+    entity = OpenhomeDevice(menuai, device)
 
     async_add_entities([entity])
 
@@ -100,9 +100,9 @@ class OpenhomeDevice(MediaPlayerEntity):
     _attr_state = MediaPlayerState.PLAYING
     _attr_available = True
 
-    def __init__(self, hass, device):
+    def __init__(self, menuai, device):
         """Initialise the Openhome device."""
-        self.hass = hass
+        self.menuai = menuai
         self._device = device
         self._attr_unique_id = device.uuid()
         self._source_index = {}
@@ -201,7 +201,7 @@ class OpenhomeDevice(MediaPlayerEntity):
         if media_source.is_media_source_id(media_id):
             media_type = MediaType.MUSIC
             play_item = await media_source.async_resolve_media(
-                self.hass, media_id, self.entity_id
+                self.menuai, media_id, self.entity_id
             )
             media_id = play_item.url
 
@@ -213,9 +213,9 @@ class OpenhomeDevice(MediaPlayerEntity):
             )
             return
 
-        media_id = async_process_play_media_url(self.hass, media_id)
+        media_id = async_process_play_media_url(self.menuai, media_id)
 
-        track_details = {"title": "Home Assistant", "uri": media_id}
+        track_details = {"title": "MenuAI", "uri": media_id}
         await self._device.play_media(track_details)
 
     @catch_request_errors()
@@ -286,7 +286,7 @@ class OpenhomeDevice(MediaPlayerEntity):
     ) -> BrowseMedia:
         """Implement the websocket media browsing helper."""
         return await media_source.async_browse_media(
-            self.hass,
+            self.menuai,
             media_content_id,
             content_filter=lambda item: item.media_content_type.startswith("audio/"),
         )

@@ -4,10 +4,10 @@ from typing import Any
 
 import pytest
 
-from homeassistant import setup
-from homeassistant.components import lock, template
-from homeassistant.components.lock import LockEntityFeature, LockState
-from homeassistant.const import (
+from menuai import setup
+from menuai.components import lock, template
+from menuai.components.lock import LockEntityFeature, LockState
+from menuai.const import (
     ATTR_CODE,
     ATTR_ENTITY_ID,
     STATE_OFF,
@@ -15,9 +15,9 @@ from homeassistant.const import (
     STATE_OPEN,
     STATE_UNAVAILABLE,
 )
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import entity_registry as er
+from menuai.setup import async_setup_component
 
 from .conftest import ConfigurationStyle
 
@@ -79,57 +79,57 @@ OPTIMISTIC_CODED_LOCK_CONFIG = {
 
 
 async def async_setup_legacy_format(
-    hass: HomeAssistant, count: int, lock_config: dict[str, Any]
+    menuai: menuai, count: int, lock_config: dict[str, Any]
 ) -> None:
     """Do setup of lock integration via legacy format."""
     config = {"lock": {"platform": "template", "name": TEST_OBJECT_ID, **lock_config}}
 
     with assert_setup_component(count, lock.DOMAIN):
         assert await async_setup_component(
-            hass,
+            menuai,
             lock.DOMAIN,
             config,
         )
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
 
 async def async_setup_modern_format(
-    hass: HomeAssistant, count: int, lock_config: dict[str, Any]
+    menuai: menuai, count: int, lock_config: dict[str, Any]
 ) -> None:
     """Do setup of lock integration via modern format."""
     config = {"template": {"lock": {"name": TEST_OBJECT_ID, **lock_config}}}
 
     with assert_setup_component(count, template.DOMAIN):
         assert await async_setup_component(
-            hass,
+            menuai,
             template.DOMAIN,
             config,
         )
 
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
 
 @pytest.fixture
 async def setup_lock(
-    hass: HomeAssistant,
+    menuai: menuai,
     count: int,
     style: ConfigurationStyle,
     lock_config: dict[str, Any],
 ) -> None:
     """Do setup of lock integration."""
     if style == ConfigurationStyle.LEGACY:
-        await async_setup_legacy_format(hass, count, lock_config)
+        await async_setup_legacy_format(menuai, count, lock_config)
     elif style == ConfigurationStyle.MODERN:
-        await async_setup_modern_format(hass, count, lock_config)
+        await async_setup_modern_format(menuai, count, lock_config)
 
 
 @pytest.fixture
 async def setup_base_lock(
-    hass: HomeAssistant,
+    menuai: menuai,
     count: int,
     style: ConfigurationStyle,
     state_template: str,
@@ -138,13 +138,13 @@ async def setup_base_lock(
     """Do setup of cover integration using a state template."""
     if style == ConfigurationStyle.LEGACY:
         await async_setup_legacy_format(
-            hass,
+            menuai,
             count,
             {"value_template": state_template, **extra_config},
         )
     elif style == ConfigurationStyle.MODERN:
         await async_setup_modern_format(
-            hass,
+            menuai,
             count,
             {"state": state_template, **extra_config},
         )
@@ -152,7 +152,7 @@ async def setup_base_lock(
 
 @pytest.fixture
 async def setup_state_lock(
-    hass: HomeAssistant,
+    menuai: menuai,
     count: int,
     style: ConfigurationStyle,
     state_template: str,
@@ -160,7 +160,7 @@ async def setup_state_lock(
     """Do setup of cover integration using a state template."""
     if style == ConfigurationStyle.LEGACY:
         await async_setup_legacy_format(
-            hass,
+            menuai,
             count,
             {
                 **OPTIMISTIC_LOCK,
@@ -169,7 +169,7 @@ async def setup_state_lock(
         )
     elif style == ConfigurationStyle.MODERN:
         await async_setup_modern_format(
-            hass,
+            menuai,
             count,
             {
                 **OPTIMISTIC_LOCK,
@@ -180,7 +180,7 @@ async def setup_state_lock(
 
 @pytest.fixture
 async def setup_state_lock_with_extra_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     count: int,
     style: ConfigurationStyle,
     state_template: str,
@@ -189,13 +189,13 @@ async def setup_state_lock_with_extra_config(
     """Do setup of cover integration using a state template."""
     if style == ConfigurationStyle.LEGACY:
         await async_setup_legacy_format(
-            hass,
+            menuai,
             count,
             {**OPTIMISTIC_LOCK, "value_template": state_template, **extra_config},
         )
     elif style == ConfigurationStyle.MODERN:
         await async_setup_modern_format(
-            hass,
+            menuai,
             count,
             {**OPTIMISTIC_LOCK, "state": state_template, **extra_config},
         )
@@ -203,7 +203,7 @@ async def setup_state_lock_with_extra_config(
 
 @pytest.fixture
 async def setup_state_lock_with_attribute(
-    hass: HomeAssistant,
+    menuai: menuai,
     count: int,
     style: ConfigurationStyle,
     state_template: str,
@@ -214,7 +214,7 @@ async def setup_state_lock_with_attribute(
     extra = {attribute: attribute_template} if attribute else {}
     if style == ConfigurationStyle.LEGACY:
         await async_setup_legacy_format(
-            hass,
+            menuai,
             count,
             {
                 **OPTIMISTIC_LOCK,
@@ -224,7 +224,7 @@ async def setup_state_lock_with_attribute(
         )
     elif style == ConfigurationStyle.MODERN:
         await async_setup_modern_format(
-            hass,
+            menuai,
             count,
             {**OPTIMISTIC_LOCK, "state": state_template, **extra},
         )
@@ -237,24 +237,24 @@ async def setup_state_lock_with_attribute(
     "style", [ConfigurationStyle.LEGACY, ConfigurationStyle.MODERN]
 )
 @pytest.mark.usefixtures("setup_state_lock")
-async def test_template_state(hass: HomeAssistant) -> None:
+async def test_template_state(menuai: menuai) -> None:
     """Test template."""
-    hass.states.async_set(TEST_STATE_ENTITY_ID, STATE_ON)
-    await hass.async_block_till_done()
+    menuai.states.async_set(TEST_STATE_ENTITY_ID, STATE_ON)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("lock.test_template_lock")
+    state = menuai.states.get("lock.test_template_lock")
     assert state.state == LockState.LOCKED
 
-    hass.states.async_set(TEST_STATE_ENTITY_ID, STATE_OFF)
-    await hass.async_block_till_done()
+    menuai.states.async_set(TEST_STATE_ENTITY_ID, STATE_OFF)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("lock.test_template_lock")
+    state = menuai.states.get("lock.test_template_lock")
     assert state.state == LockState.UNLOCKED
 
-    hass.states.async_set(TEST_STATE_ENTITY_ID, STATE_OPEN)
-    await hass.async_block_till_done()
+    menuai.states.async_set(TEST_STATE_ENTITY_ID, STATE_OPEN)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("lock.test_template_lock")
+    state = menuai.states.get("lock.test_template_lock")
     assert state.state == LockState.OPEN
 
 
@@ -267,27 +267,27 @@ async def test_template_state(hass: HomeAssistant) -> None:
 )
 @pytest.mark.usefixtures("setup_state_lock_with_extra_config")
 async def test_open_lock_optimistic(
-    hass: HomeAssistant, calls: list[ServiceCall]
+    menuai: menuai, calls: list[ServiceCall]
 ) -> None:
     """Test optimistic open."""
-    hass.states.async_set(TEST_STATE_ENTITY_ID, STATE_ON)
-    await hass.async_block_till_done()
+    menuai.states.async_set(TEST_STATE_ENTITY_ID, STATE_ON)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == LockState.LOCKED
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         lock.DOMAIN,
         lock.SERVICE_OPEN,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(calls) == 1
     assert calls[0].data["action"] == "open"
     assert calls[0].data["caller"] == TEST_ENTITY_ID
 
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == LockState.OPEN
 
 
@@ -296,9 +296,9 @@ async def test_open_lock_optimistic(
     "style", [ConfigurationStyle.LEGACY, ConfigurationStyle.MODERN]
 )
 @pytest.mark.usefixtures("setup_state_lock")
-async def test_template_state_boolean_on(hass: HomeAssistant) -> None:
+async def test_template_state_boolean_on(menuai: menuai) -> None:
     """Test the setting of the state with boolean on."""
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == LockState.LOCKED
 
 
@@ -307,9 +307,9 @@ async def test_template_state_boolean_on(hass: HomeAssistant) -> None:
     "style", [ConfigurationStyle.LEGACY, ConfigurationStyle.MODERN]
 )
 @pytest.mark.usefixtures("setup_state_lock")
-async def test_template_state_boolean_off(hass: HomeAssistant) -> None:
+async def test_template_state_boolean_off(menuai: menuai) -> None:
     """Test the setting of the state with off."""
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == LockState.UNLOCKED
 
 
@@ -333,9 +333,9 @@ async def test_template_state_boolean_off(hass: HomeAssistant) -> None:
     ],
 )
 @pytest.mark.usefixtures("setup_base_lock")
-async def test_template_syntax_error(hass: HomeAssistant) -> None:
+async def test_template_syntax_error(menuai: menuai) -> None:
     """Test templating syntax errors don't create entities."""
-    assert hass.states.async_all("lock") == []
+    assert menuai.states.async_all("lock") == []
 
 
 @pytest.mark.parametrize(("count", "state_template"), [(0, "{{ 1==1 }}")])
@@ -348,9 +348,9 @@ async def test_template_syntax_error(hass: HomeAssistant) -> None:
     ],
 )
 @pytest.mark.usefixtures("setup_state_lock_with_attribute")
-async def test_template_code_template_syntax_error(hass: HomeAssistant) -> None:
+async def test_template_code_template_syntax_error(menuai: menuai) -> None:
     """Test templating code_format syntax errors don't create entities."""
-    assert hass.states.async_all("lock") == []
+    assert menuai.states.async_all("lock") == []
 
 
 @pytest.mark.parametrize(("count", "state_template"), [(1, "{{ 1 + 1 }}")])
@@ -358,14 +358,14 @@ async def test_template_code_template_syntax_error(hass: HomeAssistant) -> None:
     "style", [ConfigurationStyle.LEGACY, ConfigurationStyle.MODERN]
 )
 @pytest.mark.usefixtures("setup_state_lock")
-async def test_template_static(hass: HomeAssistant) -> None:
+async def test_template_static(menuai: menuai) -> None:
     """Test that we allow static templates."""
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == LockState.UNLOCKED
 
-    hass.states.async_set(TEST_ENTITY_ID, LockState.LOCKED)
-    await hass.async_block_till_done()
-    state = hass.states.get(TEST_ENTITY_ID)
+    menuai.states.async_set(TEST_ENTITY_ID, LockState.LOCKED)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == LockState.LOCKED
 
 
@@ -382,9 +382,9 @@ async def test_template_static(hass: HomeAssistant) -> None:
     ],
 )
 @pytest.mark.usefixtures("setup_state_lock")
-async def test_state_template(hass: HomeAssistant, expected: str) -> None:
+async def test_state_template(menuai: menuai, expected: str) -> None:
     """Test state and value_template template."""
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == expected
 
 
@@ -400,15 +400,15 @@ async def test_state_template(hass: HomeAssistant, expected: str) -> None:
     ],
 )
 @pytest.mark.usefixtures("setup_state_lock_with_attribute")
-async def test_picture_template(hass: HomeAssistant) -> None:
+async def test_picture_template(menuai: menuai) -> None:
     """Test entity_picture template."""
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes.get("entity_picture") in ("", None)
 
-    hass.states.async_set(TEST_STATE_ENTITY_ID, STATE_ON)
-    await hass.async_block_till_done()
+    menuai.states.async_set(TEST_STATE_ENTITY_ID, STATE_ON)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes["entity_picture"] == "/local/switch.png"
 
 
@@ -424,15 +424,15 @@ async def test_picture_template(hass: HomeAssistant) -> None:
     ],
 )
 @pytest.mark.usefixtures("setup_state_lock_with_attribute")
-async def test_icon_template(hass: HomeAssistant) -> None:
+async def test_icon_template(menuai: menuai) -> None:
     """Test entity_picture template."""
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes.get("icon") in ("", None)
 
-    hass.states.async_set(TEST_STATE_ENTITY_ID, STATE_ON)
-    await hass.async_block_till_done()
+    menuai.states.async_set(TEST_STATE_ENTITY_ID, STATE_ON)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes["icon"] == "mdi:eye"
 
 
@@ -443,20 +443,20 @@ async def test_icon_template(hass: HomeAssistant) -> None:
     "style", [ConfigurationStyle.LEGACY, ConfigurationStyle.MODERN]
 )
 @pytest.mark.usefixtures("setup_state_lock")
-async def test_lock_action(hass: HomeAssistant, calls: list[ServiceCall]) -> None:
+async def test_lock_action(menuai: menuai, calls: list[ServiceCall]) -> None:
     """Test lock action."""
-    hass.states.async_set(TEST_STATE_ENTITY_ID, STATE_OFF)
-    await hass.async_block_till_done()
+    menuai.states.async_set(TEST_STATE_ENTITY_ID, STATE_OFF)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == LockState.UNLOCKED
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         lock.DOMAIN,
         lock.SERVICE_LOCK,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(calls) == 1
     assert calls[0].data["action"] == "lock"
@@ -470,20 +470,20 @@ async def test_lock_action(hass: HomeAssistant, calls: list[ServiceCall]) -> Non
     "style", [ConfigurationStyle.LEGACY, ConfigurationStyle.MODERN]
 )
 @pytest.mark.usefixtures("setup_state_lock")
-async def test_unlock_action(hass: HomeAssistant, calls: list[ServiceCall]) -> None:
+async def test_unlock_action(menuai: menuai, calls: list[ServiceCall]) -> None:
     """Test unlock action."""
-    hass.states.async_set(TEST_STATE_ENTITY_ID, STATE_ON)
-    await hass.async_block_till_done()
+    menuai.states.async_set(TEST_STATE_ENTITY_ID, STATE_ON)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == LockState.LOCKED
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         lock.DOMAIN,
         lock.SERVICE_UNLOCK,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(calls) == 1
     assert calls[0].data["action"] == "unlock"
@@ -498,20 +498,20 @@ async def test_unlock_action(hass: HomeAssistant, calls: list[ServiceCall]) -> N
     "style", [ConfigurationStyle.LEGACY, ConfigurationStyle.MODERN]
 )
 @pytest.mark.usefixtures("setup_state_lock_with_extra_config")
-async def test_open_action(hass: HomeAssistant, calls: list[ServiceCall]) -> None:
+async def test_open_action(menuai: menuai, calls: list[ServiceCall]) -> None:
     """Test open action."""
-    hass.states.async_set(TEST_STATE_ENTITY_ID, STATE_ON)
-    await hass.async_block_till_done()
+    menuai.states.async_set(TEST_STATE_ENTITY_ID, STATE_ON)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == LockState.LOCKED
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         lock.DOMAIN,
         lock.SERVICE_OPEN,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(calls) == 1
     assert calls[0].data["action"] == "open"
@@ -537,21 +537,21 @@ async def test_open_action(hass: HomeAssistant, calls: list[ServiceCall]) -> Non
 )
 @pytest.mark.usefixtures("setup_state_lock_with_attribute")
 async def test_lock_action_with_code(
-    hass: HomeAssistant, calls: list[ServiceCall]
+    menuai: menuai, calls: list[ServiceCall]
 ) -> None:
     """Test lock action with defined code format and supplied lock code."""
-    hass.states.async_set(TEST_STATE_ENTITY_ID, STATE_OFF)
-    await hass.async_block_till_done()
+    menuai.states.async_set(TEST_STATE_ENTITY_ID, STATE_OFF)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == LockState.UNLOCKED
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         lock.DOMAIN,
         lock.SERVICE_LOCK,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID, ATTR_CODE: "LOCK_CODE"},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(calls) == 1
     assert calls[0].data["action"] == "lock"
@@ -578,22 +578,22 @@ async def test_lock_action_with_code(
 )
 @pytest.mark.usefixtures("setup_state_lock_with_attribute")
 async def test_unlock_action_with_code(
-    hass: HomeAssistant, calls: list[ServiceCall]
+    menuai: menuai, calls: list[ServiceCall]
 ) -> None:
     """Test unlock action with code format and supplied unlock code."""
-    await setup.async_setup_component(hass, "switch", {})
-    hass.states.async_set(TEST_STATE_ENTITY_ID, STATE_ON)
-    await hass.async_block_till_done()
+    await setup.async_setup_component(menuai, "switch", {})
+    menuai.states.async_set(TEST_STATE_ENTITY_ID, STATE_ON)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == LockState.LOCKED
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         lock.DOMAIN,
         lock.SERVICE_UNLOCK,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID, ATTR_CODE: "UNLOCK_CODE"},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(calls) == 1
     assert calls[0].data["action"] == "unlock"
@@ -627,20 +627,20 @@ async def test_unlock_action_with_code(
 )
 @pytest.mark.usefixtures("setup_state_lock_with_attribute")
 async def test_lock_actions_fail_with_invalid_code(
-    hass: HomeAssistant, calls: list[ServiceCall], test_action
+    menuai: menuai, calls: list[ServiceCall], test_action
 ) -> None:
     """Test invalid lock codes."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         lock.DOMAIN,
         test_action,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID, ATTR_CODE: "non-number-value"},
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         lock.DOMAIN,
         test_action,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(calls) == 0
 
@@ -664,20 +664,20 @@ async def test_lock_actions_fail_with_invalid_code(
 )
 @pytest.mark.usefixtures("setup_state_lock_with_attribute")
 async def test_lock_actions_dont_execute_with_code_template_rendering_error(
-    hass: HomeAssistant, calls: list[ServiceCall]
+    menuai: menuai, calls: list[ServiceCall]
 ) -> None:
     """Test lock code format rendering fails block lock/unlock actions."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         lock.DOMAIN,
         lock.SERVICE_LOCK,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID},
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         lock.DOMAIN,
         lock.SERVICE_UNLOCK,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID, ATTR_CODE: "any-value"},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(calls) == 0
 
@@ -702,21 +702,21 @@ async def test_lock_actions_dont_execute_with_code_template_rendering_error(
 @pytest.mark.parametrize("action", [lock.SERVICE_LOCK, lock.SERVICE_UNLOCK])
 @pytest.mark.usefixtures("setup_state_lock_with_attribute")
 async def test_actions_with_none_as_codeformat_ignores_code(
-    hass: HomeAssistant, action, calls: list[ServiceCall]
+    menuai: menuai, action, calls: list[ServiceCall]
 ) -> None:
     """Test lock actions with supplied lock code."""
-    hass.states.async_set(TEST_STATE_ENTITY_ID, STATE_OFF)
-    await hass.async_block_till_done()
+    menuai.states.async_set(TEST_STATE_ENTITY_ID, STATE_OFF)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == LockState.UNLOCKED
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         lock.DOMAIN,
         action,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID, ATTR_CODE: "any code"},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(calls) == 1
     assert calls[0].data["action"] == action
@@ -744,31 +744,31 @@ async def test_actions_with_none_as_codeformat_ignores_code(
 @pytest.mark.parametrize("action", [lock.SERVICE_LOCK, lock.SERVICE_UNLOCK])
 @pytest.mark.usefixtures("setup_state_lock_with_attribute")
 async def test_actions_with_invalid_regexp_as_codeformat_never_execute(
-    hass: HomeAssistant, action, calls: list[ServiceCall]
+    menuai: menuai, action, calls: list[ServiceCall]
 ) -> None:
     """Test lock actions don't execute with invalid regexp."""
-    hass.states.async_set(TEST_STATE_ENTITY_ID, STATE_OFF)
-    await hass.async_block_till_done()
+    menuai.states.async_set(TEST_STATE_ENTITY_ID, STATE_OFF)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == LockState.UNLOCKED
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         lock.DOMAIN,
         action,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID, ATTR_CODE: "1"},
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         lock.DOMAIN,
         action,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID, ATTR_CODE: "x"},
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         lock.DOMAIN,
         action,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(calls) == 0
 
@@ -783,12 +783,12 @@ async def test_actions_with_invalid_regexp_as_codeformat_never_execute(
     "test_state", [LockState.UNLOCKING, LockState.LOCKING, LockState.JAMMED]
 )
 @pytest.mark.usefixtures("setup_state_lock")
-async def test_lock_state(hass: HomeAssistant, test_state) -> None:
+async def test_lock_state(menuai: menuai, test_state) -> None:
     """Test value template."""
-    hass.states.async_set("input_select.test_state", test_state)
-    await hass.async_block_till_done()
+    menuai.states.async_set("input_select.test_state", test_state)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == test_state
 
 
@@ -810,21 +810,21 @@ async def test_lock_state(hass: HomeAssistant, test_state) -> None:
     ],
 )
 @pytest.mark.usefixtures("setup_state_lock_with_attribute")
-async def test_available_template_with_entities(hass: HomeAssistant) -> None:
+async def test_available_template_with_entities(menuai: menuai) -> None:
     """Test availability templates with values from other entities."""
     # When template returns true..
-    hass.states.async_set("availability_state.state", STATE_ON)
-    await hass.async_block_till_done()
+    menuai.states.async_set("availability_state.state", STATE_ON)
+    await menuai.async_block_till_done()
 
     # Device State should not be unavailable
-    assert hass.states.get(TEST_ENTITY_ID).state != STATE_UNAVAILABLE
+    assert menuai.states.get(TEST_ENTITY_ID).state != STATE_UNAVAILABLE
 
     # When Availability template returns false
-    hass.states.async_set("availability_state.state", STATE_OFF)
-    await hass.async_block_till_done()
+    menuai.states.async_set("availability_state.state", STATE_OFF)
+    await menuai.async_block_till_done()
 
     # device state should be unavailable
-    assert hass.states.get(TEST_ENTITY_ID).state == STATE_UNAVAILABLE
+    assert menuai.states.get(TEST_ENTITY_ID).state == STATE_UNAVAILABLE
 
 
 @pytest.mark.parametrize(
@@ -846,10 +846,10 @@ async def test_available_template_with_entities(hass: HomeAssistant) -> None:
 )
 @pytest.mark.usefixtures("setup_state_lock_with_attribute")
 async def test_invalid_availability_template_keeps_component_available(
-    hass: HomeAssistant, caplog_setup_text
+    menuai: menuai, caplog_setup_text
 ) -> None:
     """Test that an invalid availability keeps the device available."""
-    assert hass.states.get(TEST_ENTITY_ID).state != STATE_UNAVAILABLE
+    assert menuai.states.get(TEST_ENTITY_ID).state != STATE_UNAVAILABLE
     assert ("UndefinedError: 'x' is undefined") in caplog_setup_text
 
 
@@ -868,10 +868,10 @@ async def test_invalid_availability_template_keeps_component_available(
     ],
 )
 @pytest.mark.usefixtures("start_ha")
-async def test_legacy_unique_id(hass: HomeAssistant) -> None:
+async def test_legacy_unique_id(menuai: menuai) -> None:
     """Test unique_id option only creates one lock per id."""
     await setup.async_setup_component(
-        hass,
+        menuai,
         lock.DOMAIN,
         {
             "lock": {
@@ -883,14 +883,14 @@ async def test_legacy_unique_id(hass: HomeAssistant) -> None:
         },
     )
 
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all("lock")) == 1
+    assert len(menuai.states.async_all("lock")) == 1
 
 
-async def test_modern_unique_id(hass: HomeAssistant) -> None:
+async def test_modern_unique_id(menuai: menuai) -> None:
     """Test unique_id option only creates one cover per id."""
     config = {
         "template": {
@@ -913,25 +913,25 @@ async def test_modern_unique_id(hass: HomeAssistant) -> None:
 
     with assert_setup_component(1, template.DOMAIN):
         assert await async_setup_component(
-            hass,
+            menuai,
             template.DOMAIN,
             config,
         )
 
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == 1
+    assert len(menuai.states.async_all()) == 1
 
 
 async def test_nested_unique_id(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test a template unique_id propagates to lock unique_ids."""
     with assert_setup_component(1, template.DOMAIN):
         assert await async_setup_component(
-            hass,
+            menuai,
             template.DOMAIN,
             {
                 "template": {
@@ -954,11 +954,11 @@ async def test_nested_unique_id(
             },
         )
 
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all("lock")) == 2
+    assert len(menuai.states.async_all("lock")) == 2
 
     entry = entity_registry.async_get("lock.test_a")
     assert entry
@@ -969,11 +969,11 @@ async def test_nested_unique_id(
     assert entry.unique_id == "x-b"
 
 
-async def test_emtpy_action_config(hass: HomeAssistant) -> None:
+async def test_emtpy_action_config(menuai: menuai) -> None:
     """Test configuration with empty script."""
     with assert_setup_component(1, lock.DOMAIN):
         assert await setup.async_setup_component(
-            hass,
+            menuai,
             lock.DOMAIN,
             {
                 lock.DOMAIN: {
@@ -988,29 +988,29 @@ async def test_emtpy_action_config(hass: HomeAssistant) -> None:
             },
         )
 
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("lock.test_template_lock")
+    state = menuai.states.get("lock.test_template_lock")
     assert state.attributes["supported_features"] == LockEntityFeature.OPEN
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         lock.DOMAIN,
         lock.SERVICE_UNLOCK,
         {ATTR_ENTITY_ID: "lock.test_template_lock"},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("lock.test_template_lock")
+    state = menuai.states.get("lock.test_template_lock")
     assert state.state == LockState.UNLOCKED
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         lock.DOMAIN,
         lock.SERVICE_LOCK,
         {ATTR_ENTITY_ID: "lock.test_template_lock"},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("lock.test_template_lock")
+    state = menuai.states.get("lock.test_template_lock")
     assert state.state == LockState.LOCKED

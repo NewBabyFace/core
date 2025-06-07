@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from homeassistant.components.fully_kiosk.const import (
+from menuai.components.fully_kiosk.const import (
     ATTR_APPLICATION,
     ATTR_KEY,
     ATTR_URL,
@@ -14,16 +14,16 @@ from homeassistant.components.fully_kiosk.const import (
     SERVICE_SET_CONFIG,
     SERVICE_START_APPLICATION,
 )
-from homeassistant.const import ATTR_DEVICE_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr
+from menuai.const import ATTR_DEVICE_ID
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr
 
 from tests.common import MockConfigEntry
 
 
 async def test_services(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mock_fully_kiosk: MagicMock,
     init_integration: MockConfigEntry,
@@ -36,7 +36,7 @@ async def test_services(
     assert device_entry
 
     url = "https://example.com"
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_LOAD_URL,
         {ATTR_DEVICE_ID: [device_entry.id], ATTR_URL: url},
@@ -46,7 +46,7 @@ async def test_services(
     mock_fully_kiosk.loadUrl.assert_called_once_with(url)
 
     app = "de.ozerov.fully"
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_START_APPLICATION,
         {ATTR_DEVICE_ID: [device_entry.id], ATTR_APPLICATION: app},
@@ -58,7 +58,7 @@ async def test_services(
     key = "test_key"
     value = "test_value"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_CONFIG,
         {
@@ -74,7 +74,7 @@ async def test_services(
     key = "test_key"
     value = 1234
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_CONFIG,
         {
@@ -89,7 +89,7 @@ async def test_services(
 
     key = "test_key"
     value = "true"
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_CONFIG,
         {
@@ -104,7 +104,7 @@ async def test_services(
 
     key = "test_key"
     value = True
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_CONFIG,
         {
@@ -119,13 +119,13 @@ async def test_services(
 
 
 async def test_service_unloaded_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mock_fully_kiosk: MagicMock,
     init_integration: MockConfigEntry,
 ) -> None:
     """Test service not called when config entry unloaded."""
-    await hass.config_entries.async_unload(init_integration.entry_id)
+    await menuai.config_entries.async_unload(init_integration.entry_id)
 
     device_entry = device_registry.async_get_device(
         identifiers={(DOMAIN, "abcdef-123456")}
@@ -133,8 +133,8 @@ async def test_service_unloaded_entry(
 
     assert device_entry
 
-    with pytest.raises(HomeAssistantError) as excinfo:
-        await hass.services.async_call(
+    with pytest.raises(menuaiError) as excinfo:
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_LOAD_URL,
             {ATTR_DEVICE_ID: [device_entry.id], ATTR_URL: "https://nabucasa.com"},
@@ -143,8 +143,8 @@ async def test_service_unloaded_entry(
     assert "Test device is not loaded" in str(excinfo)
     mock_fully_kiosk.loadUrl.assert_not_called()
 
-    with pytest.raises(HomeAssistantError) as excinfo:
-        await hass.services.async_call(
+    with pytest.raises(menuaiError) as excinfo:
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_START_APPLICATION,
             {ATTR_DEVICE_ID: [device_entry.id], ATTR_APPLICATION: "de.ozerov.fully"},
@@ -155,13 +155,13 @@ async def test_service_unloaded_entry(
 
 
 async def test_service_bad_device_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_fully_kiosk: MagicMock,
     init_integration: MockConfigEntry,
 ) -> None:
     """Test Fully Kiosk Browser service invocation with bad device id."""
-    with pytest.raises(HomeAssistantError) as excinfo:
-        await hass.services.async_call(
+    with pytest.raises(menuaiError) as excinfo:
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_LOAD_URL,
             {ATTR_DEVICE_ID: ["bad-device_id"], ATTR_URL: "https://example.com"},
@@ -172,7 +172,7 @@ async def test_service_bad_device_id(
 
 
 async def test_service_called_with_non_fkb_target_devices(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mock_fully_kiosk: MagicMock,
     init_integration: MockConfigEntry,
@@ -183,7 +183,7 @@ async def test_service_called_with_non_fkb_target_devices(
     other_mock_config_entry = MockConfigEntry(
         title="Not Fully Kiosk", domain=other_domain, entry_id=other_config_id
     )
-    other_mock_config_entry.add_to_hass(hass)
+    other_mock_config_entry.add_to_menuai(menuai)
 
     device_entry = device_registry.async_get_or_create(
         config_entry_id=other_config_id,
@@ -192,8 +192,8 @@ async def test_service_called_with_non_fkb_target_devices(
         },
     )
 
-    with pytest.raises(HomeAssistantError) as excinfo:
-        await hass.services.async_call(
+    with pytest.raises(menuaiError) as excinfo:
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_LOAD_URL,
             {

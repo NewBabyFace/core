@@ -6,7 +6,7 @@ from typing import Any, cast
 
 from led_ble import LEDBLE
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_EFFECT,
     ATTR_RGB_COLOR,
@@ -15,12 +15,12 @@ from homeassistant.components.light import (
     LightEntity,
     LightEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import (
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
 )
@@ -30,12 +30,12 @@ from .models import LEDBLEData
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the light platform for LEDBLE."""
-    data: LEDBLEData = hass.data[DOMAIN][entry.entry_id]
+    data: LEDBLEData = menuai.data[DOMAIN][entry.entry_id]
     async_add_entities([LEDBLEEntity(data.coordinator, data.device, entry.title)])
 
 
@@ -109,9 +109,9 @@ class LEDBLEEntity(CoordinatorEntity[DataUpdateCoordinator[None]], LightEntity):
         self._async_update_attrs()
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
         self.async_on_remove(
             self._device.register_callback(self._handle_coordinator_update)
         )
-        return await super().async_added_to_hass()
+        return await super().async_added_to_menuai()

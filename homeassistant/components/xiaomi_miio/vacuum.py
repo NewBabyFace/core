@@ -9,17 +9,17 @@ from typing import Any
 from miio import DeviceException
 import voluptuous as vol
 
-from homeassistant.components.vacuum import (
+from menuai.components.vacuum import (
     StateVacuumEntity,
     VacuumActivity,
     VacuumEntityFeature,
 )
-from homeassistant.const import CONF_DEVICE
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-from homeassistant.util.dt import as_utc
+from menuai.const import CONF_DEVICE
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv, entity_platform
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.util.dt import as_utc
 
 from . import VacuumCoordinatorData
 from .const import (
@@ -74,7 +74,7 @@ STATE_CODE_TO_STATE = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: XiaomiMiioConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -194,9 +194,9 @@ class MiroboVacuum(
         | VacuumEntityFeature.START
     )
 
-    async def async_added_to_hass(self) -> None:
-        """Run when entity is about to be added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Run when entity is about to be added to menuai."""
+        await super().async_added_to_menuai()
         self._handle_coordinator_update()
 
     @property
@@ -260,7 +260,7 @@ class MiroboVacuum(
     async def _try_command(self, mask_error, func, *args, **kwargs):
         """Call a vacuum command handling error messages."""
         try:
-            await self.hass.async_add_executor_job(partial(func, *args, **kwargs))
+            await self.menuai.async_add_executor_job(partial(func, *args, **kwargs))
             await self.coordinator.async_refresh()
         except DeviceException as exc:
             _LOGGER.error(mask_error, exc)
@@ -407,7 +407,7 @@ class MiroboVacuum(
             _zone.append(repeats)
         _LOGGER.debug("Zone with repeats: %s", zone)
         try:
-            await self.hass.async_add_executor_job(
+            await self.menuai.async_add_executor_job(
                 self._device.zoned_clean,  # type: ignore[attr-defined]
                 zone,
             )

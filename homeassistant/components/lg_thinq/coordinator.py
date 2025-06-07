@@ -9,9 +9,9 @@ from typing import TYPE_CHECKING, Any
 from thinqconnect import ThinQAPIException
 from thinqconnect.integration import HABridge
 
-from homeassistant.const import EVENT_CORE_CONFIG_UPDATE
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.const import EVENT_CORE_CONFIG_UPDATE
+from menuai.core import Event, menuai, callback
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 if TYPE_CHECKING:
     from . import ThinqConfigEntry
@@ -27,11 +27,11 @@ class DeviceDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     config_entry: ThinqConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: ThinqConfigEntry, ha_bridge: HABridge
+        self, menuai: menuai, config_entry: ThinqConfigEntry, ha_bridge: HABridge
     ) -> None:
         """Initialize data coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=f"{DOMAIN}_{ha_bridge.device.device_id}",
@@ -64,7 +64,7 @@ class DeviceDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # Add a callback to handle core config update.
         self.unit_system: str | None = None
         self.config_entry.async_on_unload(
-            self.hass.bus.async_listen(
+            self.menuai.bus.async_listen(
                 event_type=EVENT_CORE_CONFIG_UPDATE,
                 listener=self._handle_update_config,
                 event_filter=self.async_config_update_filter,
@@ -89,7 +89,7 @@ class DeviceDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def _update_preferred_temperature_unit(self) -> None:
         """Update preferred temperature unit."""
         self.api.set_preferred_temperature_unit(
-            REVERSE_DEVICE_UNIT_TO_HA.get(self.hass.config.units.temperature_unit)
+            REVERSE_DEVICE_UNIT_TO_HA.get(self.menuai.config.units.temperature_unit)
         )
 
     async def _async_update_data(self) -> dict[str, Any]:
@@ -117,10 +117,10 @@ class DeviceDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
 
 async def async_setup_device_coordinator(
-    hass: HomeAssistant, config_entry: ThinqConfigEntry, ha_bridge: HABridge
+    menuai: menuai, config_entry: ThinqConfigEntry, ha_bridge: HABridge
 ) -> DeviceDataUpdateCoordinator:
     """Create DeviceDataUpdateCoordinator and device_api per device."""
-    coordinator = DeviceDataUpdateCoordinator(hass, config_entry, ha_bridge)
+    coordinator = DeviceDataUpdateCoordinator(menuai, config_entry, ha_bridge)
     await coordinator.async_refresh()
 
     _LOGGER.debug(

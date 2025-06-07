@@ -6,7 +6,7 @@ from typing import Any, cast
 
 from pywemo import Bridge, BridgeLight, Dimmer
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_TEMP_KELVIN,
     ATTR_HS_COLOR,
@@ -17,11 +17,11 @@ from homeassistant.components.light import (
     LightEntity,
     LightEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import CONNECTION_ZIGBEE, DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import color as color_util
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import CONNECTION_ZIGBEE, DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import color as color_util
 
 from . import async_wemo_dispatcher_connect
 from .const import DOMAIN
@@ -33,7 +33,7 @@ WEMO_OFF = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -42,16 +42,16 @@ async def async_setup_entry(
     async def _discovered_wemo(coordinator: DeviceCoordinator) -> None:
         """Handle a discovered Wemo device."""
         if isinstance(coordinator.wemo, Bridge):
-            async_setup_bridge(hass, config_entry, async_add_entities, coordinator)
+            async_setup_bridge(menuai, config_entry, async_add_entities, coordinator)
         else:
             async_add_entities([WemoDimmer(coordinator)])
 
-    await async_wemo_dispatcher_connect(hass, _discovered_wemo)
+    await async_wemo_dispatcher_connect(menuai, _discovered_wemo)
 
 
 @callback
 def async_setup_bridge(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
     coordinator: DeviceCoordinator,

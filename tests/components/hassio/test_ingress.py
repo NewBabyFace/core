@@ -1,4 +1,4 @@
-"""The tests for the hassio component."""
+"""The tests for the menuaiio component."""
 
 from http import HTTPStatus
 from unittest.mock import MagicMock, patch
@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 from aiohttp.hdrs import X_FORWARDED_FOR, X_FORWARDED_HOST, X_FORWARDED_PROTO
 import pytest
 
-from homeassistant.components.hassio.const import X_AUTH_TOKEN
+from menuai.components.menuaiio.const import X_AUTH_TOKEN
 
 from tests.test_util.aiohttp import AiohttpClientMocker
 
@@ -22,7 +22,7 @@ from tests.test_util.aiohttp import AiohttpClientMocker
     ],
 )
 async def test_ingress_request_get(
-    hassio_noauth_client, build_type, aioclient_mock: AiohttpClientMocker
+    menuaiio_noauth_client, build_type, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test no auth needed for ."""
     aioclient_mock.get(
@@ -30,8 +30,8 @@ async def test_ingress_request_get(
         text="test",
     )
 
-    resp = await hassio_noauth_client.get(
-        f"/api/hassio_ingress/{build_type[0]}/{build_type[1]}",
+    resp = await menuaiio_noauth_client.get(
+        f"/api/menuaiio_ingress/{build_type[0]}/{build_type[1]}",
         headers={"X-Test-Header": "beer"},
     )
 
@@ -43,10 +43,10 @@ async def test_ingress_request_get(
     # Check we forwarded command
     assert len(aioclient_mock.mock_calls) == 1
     assert X_AUTH_TOKEN not in aioclient_mock.mock_calls[-1][3]
-    assert aioclient_mock.mock_calls[-1][3]["X-Hass-Source"] == "core.ingress"
+    assert aioclient_mock.mock_calls[-1][3]["X-menuai-Source"] == "core.ingress"
     assert (
         aioclient_mock.mock_calls[-1][3]["X-Ingress-Path"]
-        == f"/api/hassio_ingress/{build_type[0]}"
+        == f"/api/menuaiio_ingress/{build_type[0]}"
     )
     assert aioclient_mock.mock_calls[-1][3]["X-Test-Header"] == "beer"
     assert aioclient_mock.mock_calls[-1][3][X_FORWARDED_FOR]
@@ -65,7 +65,7 @@ async def test_ingress_request_get(
     ],
 )
 async def test_ingress_request_post(
-    hassio_noauth_client, build_type, aioclient_mock: AiohttpClientMocker
+    menuaiio_noauth_client, build_type, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test no auth needed for ."""
     aioclient_mock.post(
@@ -73,8 +73,8 @@ async def test_ingress_request_post(
         text="test",
     )
 
-    resp = await hassio_noauth_client.post(
-        f"/api/hassio_ingress/{build_type[0]}/{build_type[1]}",
+    resp = await menuaiio_noauth_client.post(
+        f"/api/menuaiio_ingress/{build_type[0]}/{build_type[1]}",
         headers={"X-Test-Header": "beer"},
     )
 
@@ -86,10 +86,10 @@ async def test_ingress_request_post(
     # Check we forwarded command
     assert len(aioclient_mock.mock_calls) == 1
     assert X_AUTH_TOKEN not in aioclient_mock.mock_calls[-1][3]
-    assert aioclient_mock.mock_calls[-1][3]["X-Hass-Source"] == "core.ingress"
+    assert aioclient_mock.mock_calls[-1][3]["X-menuai-Source"] == "core.ingress"
     assert (
         aioclient_mock.mock_calls[-1][3]["X-Ingress-Path"]
-        == f"/api/hassio_ingress/{build_type[0]}"
+        == f"/api/menuaiio_ingress/{build_type[0]}"
     )
     assert aioclient_mock.mock_calls[-1][3]["X-Test-Header"] == "beer"
     assert aioclient_mock.mock_calls[-1][3][X_FORWARDED_FOR]
@@ -108,7 +108,7 @@ async def test_ingress_request_post(
     ],
 )
 async def test_ingress_request_put(
-    hassio_noauth_client, build_type, aioclient_mock: AiohttpClientMocker
+    menuaiio_noauth_client, build_type, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test no auth needed for ."""
     aioclient_mock.put(
@@ -116,8 +116,8 @@ async def test_ingress_request_put(
         text="test",
     )
 
-    resp = await hassio_noauth_client.put(
-        f"/api/hassio_ingress/{build_type[0]}/{build_type[1]}",
+    resp = await menuaiio_noauth_client.put(
+        f"/api/menuaiio_ingress/{build_type[0]}/{build_type[1]}",
         headers={"X-Test-Header": "beer"},
     )
 
@@ -129,10 +129,10 @@ async def test_ingress_request_put(
     # Check we forwarded command
     assert len(aioclient_mock.mock_calls) == 1
     assert X_AUTH_TOKEN not in aioclient_mock.mock_calls[-1][3]
-    assert aioclient_mock.mock_calls[-1][3]["X-Hass-Source"] == "core.ingress"
+    assert aioclient_mock.mock_calls[-1][3]["X-menuai-Source"] == "core.ingress"
     assert (
         aioclient_mock.mock_calls[-1][3]["X-Ingress-Path"]
-        == f"/api/hassio_ingress/{build_type[0]}"
+        == f"/api/menuaiio_ingress/{build_type[0]}"
     )
     assert aioclient_mock.mock_calls[-1][3]["X-Test-Header"] == "beer"
     assert aioclient_mock.mock_calls[-1][3][X_FORWARDED_FOR]
@@ -151,7 +151,7 @@ async def test_ingress_request_put(
     ],
 )
 async def test_ingress_request_delete(
-    hassio_noauth_client, build_type, aioclient_mock: AiohttpClientMocker
+    menuaiio_noauth_client, build_type, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test no auth needed for ."""
     aioclient_mock.delete(
@@ -159,8 +159,8 @@ async def test_ingress_request_delete(
         text="test",
     )
 
-    resp = await hassio_noauth_client.delete(
-        f"/api/hassio_ingress/{build_type[0]}/{build_type[1]}",
+    resp = await menuaiio_noauth_client.delete(
+        f"/api/menuaiio_ingress/{build_type[0]}/{build_type[1]}",
         headers={"X-Test-Header": "beer"},
     )
 
@@ -172,10 +172,10 @@ async def test_ingress_request_delete(
     # Check we forwarded command
     assert len(aioclient_mock.mock_calls) == 1
     assert X_AUTH_TOKEN not in aioclient_mock.mock_calls[-1][3]
-    assert aioclient_mock.mock_calls[-1][3]["X-Hass-Source"] == "core.ingress"
+    assert aioclient_mock.mock_calls[-1][3]["X-menuai-Source"] == "core.ingress"
     assert (
         aioclient_mock.mock_calls[-1][3]["X-Ingress-Path"]
-        == f"/api/hassio_ingress/{build_type[0]}"
+        == f"/api/menuaiio_ingress/{build_type[0]}"
     )
     assert aioclient_mock.mock_calls[-1][3]["X-Test-Header"] == "beer"
     assert aioclient_mock.mock_calls[-1][3][X_FORWARDED_FOR]
@@ -194,7 +194,7 @@ async def test_ingress_request_delete(
     ],
 )
 async def test_ingress_request_patch(
-    hassio_noauth_client, build_type, aioclient_mock: AiohttpClientMocker
+    menuaiio_noauth_client, build_type, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test no auth needed for ."""
     aioclient_mock.patch(
@@ -202,8 +202,8 @@ async def test_ingress_request_patch(
         text="test",
     )
 
-    resp = await hassio_noauth_client.patch(
-        f"/api/hassio_ingress/{build_type[0]}/{build_type[1]}",
+    resp = await menuaiio_noauth_client.patch(
+        f"/api/menuaiio_ingress/{build_type[0]}/{build_type[1]}",
         headers={"X-Test-Header": "beer"},
     )
 
@@ -215,10 +215,10 @@ async def test_ingress_request_patch(
     # Check we forwarded command
     assert len(aioclient_mock.mock_calls) == 1
     assert X_AUTH_TOKEN not in aioclient_mock.mock_calls[-1][3]
-    assert aioclient_mock.mock_calls[-1][3]["X-Hass-Source"] == "core.ingress"
+    assert aioclient_mock.mock_calls[-1][3]["X-menuai-Source"] == "core.ingress"
     assert (
         aioclient_mock.mock_calls[-1][3]["X-Ingress-Path"]
-        == f"/api/hassio_ingress/{build_type[0]}"
+        == f"/api/menuaiio_ingress/{build_type[0]}"
     )
     assert aioclient_mock.mock_calls[-1][3]["X-Test-Header"] == "beer"
     assert aioclient_mock.mock_calls[-1][3][X_FORWARDED_FOR]
@@ -237,7 +237,7 @@ async def test_ingress_request_patch(
     ],
 )
 async def test_ingress_request_options(
-    hassio_noauth_client, build_type, aioclient_mock: AiohttpClientMocker
+    menuaiio_noauth_client, build_type, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test no auth needed for ."""
     aioclient_mock.options(
@@ -245,8 +245,8 @@ async def test_ingress_request_options(
         text="test",
     )
 
-    resp = await hassio_noauth_client.options(
-        f"/api/hassio_ingress/{build_type[0]}/{build_type[1]}",
+    resp = await menuaiio_noauth_client.options(
+        f"/api/menuaiio_ingress/{build_type[0]}/{build_type[1]}",
         headers={"X-Test-Header": "beer"},
     )
 
@@ -258,10 +258,10 @@ async def test_ingress_request_options(
     # Check we forwarded command
     assert len(aioclient_mock.mock_calls) == 1
     assert X_AUTH_TOKEN not in aioclient_mock.mock_calls[-1][3]
-    assert aioclient_mock.mock_calls[-1][3]["X-Hass-Source"] == "core.ingress"
+    assert aioclient_mock.mock_calls[-1][3]["X-menuai-Source"] == "core.ingress"
     assert (
         aioclient_mock.mock_calls[-1][3]["X-Ingress-Path"]
-        == f"/api/hassio_ingress/{build_type[0]}"
+        == f"/api/menuaiio_ingress/{build_type[0]}"
     )
     assert aioclient_mock.mock_calls[-1][3]["X-Test-Header"] == "beer"
     assert aioclient_mock.mock_calls[-1][3][X_FORWARDED_FOR]
@@ -280,7 +280,7 @@ async def test_ingress_request_options(
     ],
 )
 async def test_ingress_request_head(
-    hassio_noauth_client, build_type, aioclient_mock: AiohttpClientMocker
+    menuaiio_noauth_client, build_type, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test no auth needed for ."""
     aioclient_mock.head(
@@ -288,8 +288,8 @@ async def test_ingress_request_head(
         text="test",
     )
 
-    resp = await hassio_noauth_client.head(
-        f"/api/hassio_ingress/{build_type[0]}/{build_type[1]}",
+    resp = await menuaiio_noauth_client.head(
+        f"/api/menuaiio_ingress/{build_type[0]}/{build_type[1]}",
         headers={"X-Test-Header": "beer"},
     )
 
@@ -301,10 +301,10 @@ async def test_ingress_request_head(
     # Check we forwarded command
     assert len(aioclient_mock.mock_calls) == 1
     assert X_AUTH_TOKEN not in aioclient_mock.mock_calls[-1][3]
-    assert aioclient_mock.mock_calls[-1][3]["X-Hass-Source"] == "core.ingress"
+    assert aioclient_mock.mock_calls[-1][3]["X-menuai-Source"] == "core.ingress"
     assert (
         aioclient_mock.mock_calls[-1][3]["X-Ingress-Path"]
-        == f"/api/hassio_ingress/{build_type[0]}"
+        == f"/api/menuaiio_ingress/{build_type[0]}"
     )
     assert aioclient_mock.mock_calls[-1][3]["X-Test-Header"] == "beer"
     assert aioclient_mock.mock_calls[-1][3][X_FORWARDED_FOR]
@@ -323,24 +323,24 @@ async def test_ingress_request_head(
     ],
 )
 async def test_ingress_websocket(
-    hassio_noauth_client, build_type, aioclient_mock: AiohttpClientMocker
+    menuaiio_noauth_client, build_type, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test no auth needed for ."""
     aioclient_mock.get(f"http://127.0.0.1/ingress/{build_type[0]}/{build_type[1]}")
 
     # Ignore error because we can setup a full IO infrastructure
-    await hassio_noauth_client.ws_connect(
-        f"/api/hassio_ingress/{build_type[0]}/{build_type[1]}",
+    await menuaiio_noauth_client.ws_connect(
+        f"/api/menuaiio_ingress/{build_type[0]}/{build_type[1]}",
         headers={"X-Test-Header": "beer"},
     )
 
     # Check we forwarded command
     assert len(aioclient_mock.mock_calls) == 1
     assert X_AUTH_TOKEN not in aioclient_mock.mock_calls[-1][3]
-    assert aioclient_mock.mock_calls[-1][3]["X-Hass-Source"] == "core.ingress"
+    assert aioclient_mock.mock_calls[-1][3]["X-menuai-Source"] == "core.ingress"
     assert (
         aioclient_mock.mock_calls[-1][3]["X-Ingress-Path"]
-        == f"/api/hassio_ingress/{build_type[0]}"
+        == f"/api/menuaiio_ingress/{build_type[0]}"
     )
     assert aioclient_mock.mock_calls[-1][3]["X-Test-Header"] == "beer"
     assert aioclient_mock.mock_calls[-1][3][X_FORWARDED_FOR]
@@ -349,7 +349,7 @@ async def test_ingress_websocket(
 
 
 async def test_ingress_missing_peername(
-    hassio_noauth_client,
+    menuaiio_noauth_client,
     aioclient_mock: AiohttpClientMocker,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -367,8 +367,8 @@ async def test_ingress_missing_peername(
         return_value=MagicMock(),
     ) as transport_mock:
         transport_mock.get_extra_info = get_extra_info
-        resp = await hassio_noauth_client.get(
-            "/api/hassio_ingress/lorem/ipsum",
+        resp = await menuaiio_noauth_client.get(
+            "/api/menuaiio_ingress/lorem/ipsum",
             headers={"X-Test-Header": "beer"},
         )
 
@@ -379,7 +379,7 @@ async def test_ingress_missing_peername(
 
 
 async def test_forwarding_paths_as_requested(
-    hassio_noauth_client, aioclient_mock: AiohttpClientMocker
+    menuaiio_noauth_client, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test incomnig URLs with double encoding go out as dobule encoded."""
     # This double encoded string should be forwarded double-encoded too.
@@ -388,8 +388,8 @@ async def test_forwarding_paths_as_requested(
         text="test",
     )
 
-    resp = await hassio_noauth_client.get(
-        "/api/hassio_ingress/mock-token/hello/%252e./world",
+    resp = await menuaiio_noauth_client.get(
+        "/api/menuaiio_ingress/mock-token/hello/%252e./world",
     )
     assert await resp.text() == "test"
 
@@ -405,7 +405,7 @@ async def test_forwarding_paths_as_requested(
     ],
 )
 async def test_ingress_request_get_compressed(
-    hassio_noauth_client, build_type, aioclient_mock: AiohttpClientMocker
+    menuaiio_noauth_client, build_type, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test ingress compressed."""
     body = "this_is_long_enough_to_be_compressed" * 100
@@ -415,8 +415,8 @@ async def test_ingress_request_get_compressed(
         headers={"Content-Length": len(body), "Content-Type": "text/plain"},
     )
 
-    resp = await hassio_noauth_client.get(
-        f"/api/hassio_ingress/{build_type[0]}/{build_type[1]}",
+    resp = await menuaiio_noauth_client.get(
+        f"/api/menuaiio_ingress/{build_type[0]}/{build_type[1]}",
         headers={"X-Test-Header": "beer", "Accept-Encoding": "gzip, deflate"},
     )
 
@@ -429,10 +429,10 @@ async def test_ingress_request_get_compressed(
     # Check we forwarded command
     assert len(aioclient_mock.mock_calls) == 1
     assert X_AUTH_TOKEN not in aioclient_mock.mock_calls[-1][3]
-    assert aioclient_mock.mock_calls[-1][3]["X-Hass-Source"] == "core.ingress"
+    assert aioclient_mock.mock_calls[-1][3]["X-menuai-Source"] == "core.ingress"
     assert (
         aioclient_mock.mock_calls[-1][3]["X-Ingress-Path"]
-        == f"/api/hassio_ingress/{build_type[0]}"
+        == f"/api/menuaiio_ingress/{build_type[0]}"
     )
     assert aioclient_mock.mock_calls[-1][3]["X-Test-Header"] == "beer"
     assert aioclient_mock.mock_calls[-1][3][X_FORWARDED_FOR]
@@ -451,7 +451,7 @@ async def test_ingress_request_get_compressed(
     ],
 )
 async def test_ingress_request_not_compressed(
-    hassio_noauth_client, content_type: str, aioclient_mock: AiohttpClientMocker
+    menuaiio_noauth_client, content_type: str, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test ingress does not compress images."""
     body = b"this_is_long_enough_to_be_compressed" * 100
@@ -461,8 +461,8 @@ async def test_ingress_request_not_compressed(
         headers={"Content-Length": len(body), "Content-Type": content_type},
     )
 
-    resp = await hassio_noauth_client.get(
-        "/api/hassio_ingress/core/x.any",
+    resp = await menuaiio_noauth_client.get(
+        "/api/menuaiio_ingress/core/x.any",
         headers={"X-Test-Header": "beer", "Accept-Encoding": "gzip, deflate"},
     )
 
@@ -473,7 +473,7 @@ async def test_ingress_request_not_compressed(
 
 
 async def test_ingress_request_with_charset_in_content_type(
-    hassio_noauth_client, aioclient_mock: AiohttpClientMocker
+    menuaiio_noauth_client, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test ingress passes content type."""
     body = b"this_is_long_enough_to_be_compressed" * 100
@@ -486,8 +486,8 @@ async def test_ingress_request_with_charset_in_content_type(
         },
     )
 
-    resp = await hassio_noauth_client.get(
-        "/api/hassio_ingress/core/x.any",
+    resp = await menuaiio_noauth_client.get(
+        "/api/menuaiio_ingress/core/x.any",
         headers={"X-Test-Header": "beer", "Accept-Encoding": "gzip, deflate"},
     )
 
@@ -507,7 +507,7 @@ async def test_ingress_request_with_charset_in_content_type(
     ],
 )
 async def test_ingress_request_compressed(
-    hassio_noauth_client, content_type: str, aioclient_mock: AiohttpClientMocker
+    menuaiio_noauth_client, content_type: str, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test ingress compresses text."""
     body = b"this_is_long_enough_to_be_compressed" * 100
@@ -517,8 +517,8 @@ async def test_ingress_request_compressed(
         headers={"Content-Length": len(body), "Content-Type": content_type},
     )
 
-    resp = await hassio_noauth_client.get(
-        "/api/hassio_ingress/core/x.any",
+    resp = await menuaiio_noauth_client.get(
+        "/api/menuaiio_ingress/core/x.any",
         headers={"X-Test-Header": "beer", "Accept-Encoding": "gzip, deflate"},
     )
 
@@ -539,7 +539,7 @@ async def test_ingress_request_compressed(
     ],
 )
 async def test_ingress_request_get_not_changed(
-    hassio_noauth_client, build_type, aioclient_mock: AiohttpClientMocker
+    menuaiio_noauth_client, build_type, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test ingress compressed and not modified."""
     aioclient_mock.get(
@@ -548,8 +548,8 @@ async def test_ingress_request_get_not_changed(
         status=HTTPStatus.NOT_MODIFIED,
     )
 
-    resp = await hassio_noauth_client.get(
-        f"/api/hassio_ingress/{build_type[0]}/{build_type[1]}",
+    resp = await menuaiio_noauth_client.get(
+        f"/api/menuaiio_ingress/{build_type[0]}/{build_type[1]}",
         headers={"X-Test-Header": "beer", "Accept-Encoding": "gzip, deflate"},
     )
 
@@ -562,10 +562,10 @@ async def test_ingress_request_get_not_changed(
     # Check we forwarded command
     assert len(aioclient_mock.mock_calls) == 1
     assert X_AUTH_TOKEN not in aioclient_mock.mock_calls[-1][3]
-    assert aioclient_mock.mock_calls[-1][3]["X-Hass-Source"] == "core.ingress"
+    assert aioclient_mock.mock_calls[-1][3]["X-menuai-Source"] == "core.ingress"
     assert (
         aioclient_mock.mock_calls[-1][3]["X-Ingress-Path"]
-        == f"/api/hassio_ingress/{build_type[0]}"
+        == f"/api/menuaiio_ingress/{build_type[0]}"
     )
     assert aioclient_mock.mock_calls[-1][3]["X-Test-Header"] == "beer"
     assert aioclient_mock.mock_calls[-1][3][X_FORWARDED_FOR]

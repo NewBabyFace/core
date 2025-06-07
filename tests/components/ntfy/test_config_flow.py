@@ -12,9 +12,9 @@ from aiontfy.exceptions import (
 )
 import pytest
 
-from homeassistant.components.ntfy.const import CONF_TOPIC, DOMAIN, SECTION_AUTH
-from homeassistant.config_entries import SOURCE_USER, ConfigSubentry
-from homeassistant.const import (
+from menuai.components.ntfy.const import CONF_TOPIC, DOMAIN, SECTION_AUTH
+from menuai.config_entries import SOURCE_USER, ConfigSubentry
+from menuai.const import (
     CONF_NAME,
     CONF_PASSWORD,
     CONF_TOKEN,
@@ -22,8 +22,8 @@ from homeassistant.const import (
     CONF_USERNAME,
     CONF_VERIFY_SSL,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
@@ -57,19 +57,19 @@ from tests.common import MockConfigEntry
 )
 @pytest.mark.usefixtures("mock_aiontfy")
 async def test_form(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     user_input: dict[str, Any],
     entry_data: dict[str, Any],
 ) -> None:
     """Test we get the form."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input,
     )
@@ -101,19 +101,19 @@ async def test_form(
     ],
 )
 async def test_form_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_aiontfy: AsyncMock,
     exception: Exception,
     error: str,
 ) -> None:
     """Test we handle invalid auth."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     mock_aiontfy.account.side_effect = exception
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_URL: "https://ntfy.sh",
@@ -126,7 +126,7 @@ async def test_form_errors(
     assert result["errors"] == {"base": error}
 
     mock_aiontfy.account.side_effect = None
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_URL: "https://ntfy.sh",
@@ -134,7 +134,7 @@ async def test_form_errors(
             SECTION_AUTH: {CONF_USERNAME: "username", CONF_PASSWORD: "password"},
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "ntfy.sh"
@@ -149,18 +149,18 @@ async def test_form_errors(
 
 @pytest.mark.usefixtures("mock_aiontfy")
 async def test_form_already_configured(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test we abort when entry is already configured."""
 
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_URL: "https://ntfy.sh",
@@ -174,18 +174,18 @@ async def test_form_already_configured(
 
 
 @pytest.mark.usefixtures("mock_aiontfy")
-async def test_add_topic_flow(hass: HomeAssistant) -> None:
+async def test_add_topic_flow(menuai: menuai) -> None:
     """Test add topic subentry flow."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
         data={CONF_URL: "https://ntfy.sh/", CONF_VERIFY_SSL: True, CONF_USERNAME: None},
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    result = await hass.config_entries.subentries.async_init(
+    result = await menuai.config_entries.subentries.async_init(
         (config_entry.entry_id, "topic"),
         context={"source": SOURCE_USER},
     )
@@ -194,7 +194,7 @@ async def test_add_topic_flow(hass: HomeAssistant) -> None:
     assert "add_topic" in result["menu_options"]
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         {"next_step_id": "add_topic"},
     )
@@ -202,7 +202,7 @@ async def test_add_topic_flow(hass: HomeAssistant) -> None:
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "add_topic"
 
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         user_input={CONF_TOPIC: "mytopic"},
     )
@@ -218,22 +218,22 @@ async def test_add_topic_flow(hass: HomeAssistant) -> None:
         )
     }
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
 @pytest.mark.usefixtures("mock_aiontfy")
-async def test_generated_topic(hass: HomeAssistant, mock_random: AsyncMock) -> None:
+async def test_generated_topic(menuai: menuai, mock_random: AsyncMock) -> None:
     """Test add topic subentry flow with generated topic name."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
         data={CONF_URL: "https://ntfy.sh/", CONF_VERIFY_SSL: True},
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    result = await hass.config_entries.subentries.async_init(
+    result = await menuai.config_entries.subentries.async_init(
         (config_entry.entry_id, "topic"),
         context={"source": SOURCE_USER},
     )
@@ -242,7 +242,7 @@ async def test_generated_topic(hass: HomeAssistant, mock_random: AsyncMock) -> N
     assert "generate_topic" in result["menu_options"]
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         {"next_step_id": "generate_topic"},
     )
@@ -250,14 +250,14 @@ async def test_generated_topic(hass: HomeAssistant, mock_random: AsyncMock) -> N
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "add_topic"
 
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         user_input={CONF_TOPIC: ""},
     )
 
     mock_random.assert_called_once()
 
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         user_input={CONF_TOPIC: "randomtopic", CONF_NAME: "mytopic"},
     )
@@ -276,18 +276,18 @@ async def test_generated_topic(hass: HomeAssistant, mock_random: AsyncMock) -> N
 
 
 @pytest.mark.usefixtures("mock_aiontfy")
-async def test_invalid_topic(hass: HomeAssistant, mock_random: AsyncMock) -> None:
+async def test_invalid_topic(menuai: menuai, mock_random: AsyncMock) -> None:
     """Test add topic subentry flow with invalid topic name."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
         data={CONF_URL: "https://ntfy.sh/", CONF_VERIFY_SSL: True},
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    result = await hass.config_entries.subentries.async_init(
+    result = await menuai.config_entries.subentries.async_init(
         (config_entry.entry_id, "topic"),
         context={"source": SOURCE_USER},
     )
@@ -296,7 +296,7 @@ async def test_invalid_topic(hass: HomeAssistant, mock_random: AsyncMock) -> Non
     assert "add_topic" in result["menu_options"]
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         {"next_step_id": "add_topic"},
     )
@@ -304,7 +304,7 @@ async def test_invalid_topic(hass: HomeAssistant, mock_random: AsyncMock) -> Non
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "add_topic"
 
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         user_input={CONF_TOPIC: "invalid,topic"},
     )
@@ -312,7 +312,7 @@ async def test_invalid_topic(hass: HomeAssistant, mock_random: AsyncMock) -> Non
     assert result["type"] == FlowResultType.FORM
     assert result["errors"] == {"base": "invalid_topic"}
 
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         user_input={CONF_TOPIC: "mytopic"},
     )
@@ -332,17 +332,17 @@ async def test_invalid_topic(hass: HomeAssistant, mock_random: AsyncMock) -> Non
 
 @pytest.mark.usefixtures("mock_aiontfy")
 async def test_topic_already_configured(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test we abort when entry is already configured."""
 
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    result = await hass.config_entries.subentries.async_init(
+    result = await menuai.config_entries.subentries.async_init(
         (config_entry.entry_id, "topic"),
         context={"source": SOURCE_USER},
     )
@@ -350,7 +350,7 @@ async def test_topic_already_configured(
     assert "add_topic" in result["menu_options"]
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         {"next_step_id": "add_topic"},
     )
@@ -358,7 +358,7 @@ async def test_topic_already_configured(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "add_topic"
 
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         user_input={CONF_TOPIC: "mytopic"},
     )
@@ -372,7 +372,7 @@ async def test_topic_already_configured(
 )
 @pytest.mark.usefixtures("mock_aiontfy")
 async def test_flow_reauth(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_aiontfy: AsyncMock,
     user_input: dict[str, Any],
 ) -> None:
@@ -389,23 +389,23 @@ async def test_flow_reauth(
     mock_aiontfy.generate_token.return_value = AccountTokenResponse(
         token="newtoken", last_access=datetime.now()
     )
-    config_entry.add_to_hass(hass)
-    result = await config_entry.start_reauth_flow(hass)
+    config_entry.add_to_menuai(menuai)
+    result = await config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input,
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"
     assert config_entry.data[CONF_TOKEN] == "newtoken"
 
-    assert len(hass.config_entries.async_entries()) == 1
+    assert len(menuai.config_entries.async_entries()) == 1
 
 
 @pytest.mark.parametrize(
@@ -429,7 +429,7 @@ async def test_flow_reauth(
     ],
 )
 async def test_form_reauth_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_aiontfy: AsyncMock,
     exception: Exception,
     error: str,
@@ -448,24 +448,24 @@ async def test_form_reauth_errors(
     mock_aiontfy.generate_token.return_value = AccountTokenResponse(
         token="newtoken", last_access=datetime.now()
     )
-    config_entry.add_to_hass(hass)
-    result = await config_entry.start_reauth_flow(hass)
+    config_entry.add_to_menuai(menuai)
+    result = await config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {CONF_PASSWORD: "password"}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": error}
 
     mock_aiontfy.account.side_effect = None
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {CONF_PASSWORD: "password"}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"
@@ -474,27 +474,27 @@ async def test_form_reauth_errors(
         CONF_USERNAME: "username",
         CONF_TOKEN: "newtoken",
     }
-    assert len(hass.config_entries.async_entries()) == 1
+    assert len(menuai.config_entries.async_entries()) == 1
 
 
 @pytest.mark.usefixtures("mock_aiontfy")
 async def test_flow_reauth_account_mismatch(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test reauth flow."""
 
-    config_entry.add_to_hass(hass)
-    result = await config_entry.start_reauth_flow(hass)
+    config_entry.add_to_menuai(menuai)
+    result = await config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_TOKEN: "newtoken"},
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "account_mismatch"

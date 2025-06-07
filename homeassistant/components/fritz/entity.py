@@ -8,10 +8,10 @@ from typing import Any
 
 from fritzconnection.lib.fritzstatus import FritzStatus
 
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import EntityDescription
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import EntityDescription
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DEFAULT_DEVICE_NAME, DOMAIN
 from .coordinator import AvmWrapper, FritzDevice
@@ -107,9 +107,9 @@ class FritzBoxBaseCoordinatorEntity(CoordinatorEntity[AvmWrapper]):
         self._device_name = device_name
         self._attr_unique_id = f"{avm_wrapper.unique_id}-{description.key}"
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai."""
+        await super().async_added_to_menuai()
         if self.entity_description.value_fn is not None:
             self.async_on_remove(
                 await self.coordinator.async_register_entity_updates(

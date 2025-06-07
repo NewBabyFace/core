@@ -7,7 +7,7 @@ import os
 
 from serial.tools.list_ports_common import ListPortInfo
 
-from homeassistant.components import usb
+from menuai.components import usb
 
 from .const import DONT_USE_USB, MANUAL_PATH, REFRESH_LIST
 

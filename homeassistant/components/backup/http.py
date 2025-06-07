@@ -12,11 +12,11 @@ from aiohttp.hdrs import CONTENT_DISPOSITION
 from aiohttp.web import FileResponse, Request, Response, StreamResponse
 from multidict import istr
 
-from homeassistant.components.http import KEY_HASS, HomeAssistantView, require_admin
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import frame
-from homeassistant.util import slugify
+from menuai.components.http import KEY_menuai, menuaiView, require_admin
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import frame
+from menuai.util import slugify
 
 from . import util
 from .agent import BackupAgent
@@ -26,13 +26,13 @@ from .models import AgentBackup, BackupNotFound
 
 
 @callback
-def async_register_http_views(hass: HomeAssistant) -> None:
+def async_register_http_views(menuai: menuai) -> None:
     """Register the http views."""
-    hass.http.register_view(DownloadBackupView)
-    hass.http.register_view(UploadBackupView)
+    menuai.http.register_view(DownloadBackupView)
+    menuai.http.register_view(UploadBackupView)
 
 
-class DownloadBackupView(HomeAssistantView):
+class DownloadBackupView(menuaiView):
     """Generate backup view."""
 
     url = "/api/backup/download/{backup_id}"
@@ -44,7 +44,7 @@ class DownloadBackupView(HomeAssistantView):
         backup_id: str,
     ) -> StreamResponse | FileResponse | Response:
         """Download a backup file."""
-        if not request["hass_user"].is_admin:
+        if not request["menuai_user"].is_admin:
             return Response(status=HTTPStatus.UNAUTHORIZED)
         try:
             agent_id = request.query.getone("agent_id")
@@ -55,8 +55,8 @@ class DownloadBackupView(HomeAssistantView):
         except KeyError:
             password = None
 
-        hass = request.app[KEY_HASS]
-        manager = hass.data[DATA_MANAGER]
+        menuai = request.app[KEY_menuai]
+        manager = menuai.data[DATA_MANAGER]
         if agent_id not in manager.backup_agents:
             return Response(status=HTTPStatus.BAD_REQUEST)
         agent = manager.backup_agents[agent_id]
@@ -85,7 +85,7 @@ class DownloadBackupView(HomeAssistantView):
                     request, headers, backup_id, agent_id, agent, manager
                 )
             return await self._send_backup_with_password(
-                hass,
+                menuai,
                 backup,
                 request,
                 headers,
@@ -123,7 +123,7 @@ class DownloadBackupView(HomeAssistantView):
 
     async def _send_backup_with_password(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         backup: AgentBackup,
         request: Request,
         headers: dict[istr, str],
@@ -138,20 +138,20 @@ class DownloadBackupView(HomeAssistantView):
             local_agent = manager.local_backup_agents[agent_id]
             path = local_agent.get_backup_path(backup_id)
             try:
-                reader = await hass.async_add_executor_job(open, path.as_posix(), "rb")
+                reader = await menuai.async_add_executor_job(open, path.as_posix(), "rb")
             except FileNotFoundError:
                 return Response(status=HTTPStatus.NOT_FOUND)
         else:
             stream = await agent.async_download_backup(backup_id)
-            reader = cast(IO[bytes], util.AsyncIteratorReader(hass, stream))
+            reader = cast(IO[bytes], util.AsyncIteratorReader(menuai, stream))
 
         worker_done_event = asyncio.Event()
 
         def on_done(error: Exception | None) -> None:
             """Call by the worker thread when it's done."""
-            hass.loop.call_soon_threadsafe(worker_done_event.set)
+            menuai.loop.call_soon_threadsafe(worker_done_event.set)
 
-        stream = util.AsyncIteratorWriter(hass)
+        stream = util.AsyncIteratorWriter(menuai)
         worker = threading.Thread(
             target=util.decrypt_backup,
             args=[backup, reader, stream, password, on_done, 0, []],
@@ -168,7 +168,7 @@ class DownloadBackupView(HomeAssistantView):
             await worker_done_event.wait()
 
 
-class UploadBackupView(HomeAssistantView):
+class UploadBackupView(menuaiView):
     """Upload backup view."""
 
     url = "/api/backup/upload"
@@ -185,7 +185,7 @@ class UploadBackupView(HomeAssistantView):
             agent_ids = request.query.getall("agent_id")
         except KeyError:
             return Response(status=HTTPStatus.BAD_REQUEST)
-        manager = request.app[KEY_HASS].data[DATA_MANAGER]
+        manager = request.app[KEY_menuai].data[DATA_MANAGER]
         reader = await request.multipart()
         contents = cast(BodyPartReader, await reader.next())
 
@@ -198,7 +198,7 @@ class UploadBackupView(HomeAssistantView):
                 body=f"Can't write backup file: {err}",
                 status=HTTPStatus.INTERNAL_SERVER_ERROR,
             )
-        except HomeAssistantError as err:
+        except menuaiError as err:
             return Response(
                 body=f"Can't upload backup file: {err}",
                 status=HTTPStatus.INTERNAL_SERVER_ERROR,

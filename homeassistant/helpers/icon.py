@@ -9,14 +9,14 @@ import logging
 import pathlib
 from typing import Any, cast
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.loader import Integration, async_get_integrations
-from homeassistant.util.hass_dict import HassKey
-from homeassistant.util.json import load_json_object
+from menuai.core import menuai, callback
+from menuai.loader import Integration, async_get_integrations
+from menuai.util.menuai_dict import menuaiKey
+from menuai.util.json import load_json_object
 
 from .translation import build_resources
 
-ICON_CACHE: HassKey[_IconsCache] = HassKey("icon_cache")
+ICON_CACHE: menuaiKey[_IconsCache] = menuaiKey("icon_cache")
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -54,7 +54,7 @@ def _load_icons_files(
 
 
 async def _async_get_component_icons(
-    hass: HomeAssistant,
+    menuai: menuai,
     components: set[str],
     integrations: dict[str, Integration],
 ) -> dict[str, Any]:
@@ -69,7 +69,7 @@ async def _async_get_component_icons(
     # Load files
     if files_to_load:
         icons.update(
-            await hass.async_add_executor_job(_load_icons_files, files_to_load)
+            await menuai.async_add_executor_job(_load_icons_files, files_to_load)
         )
 
     return icons
@@ -78,11 +78,11 @@ async def _async_get_component_icons(
 class _IconsCache:
     """Cache for icons."""
 
-    __slots__ = ("_cache", "_hass", "_loaded", "_lock")
+    __slots__ = ("_cache", "_menuai", "_loaded", "_lock")
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize the cache."""
-        self._hass = hass
+        self._menuai = menuai
         self._loaded: set[str] = set()
         self._cache: dict[str, dict[str, Any]] = {}
         self._lock = asyncio.Lock()
@@ -113,13 +113,13 @@ class _IconsCache:
         _LOGGER.debug("Cache miss for: %s", components)
 
         integrations: dict[str, Integration] = {}
-        ints_or_excs = await async_get_integrations(self._hass, components)
+        ints_or_excs = await async_get_integrations(self._menuai, components)
         for domain, int_or_exc in ints_or_excs.items():
             if isinstance(int_or_exc, Exception):
                 raise int_or_exc
             integrations[domain] = int_or_exc
 
-        icons = await _async_get_component_icons(self._hass, components, integrations)
+        icons = await _async_get_component_icons(self._menuai, components, integrations)
 
         self._build_category_cache(components, icons)
         self._loaded.update(components)
@@ -141,7 +141,7 @@ class _IconsCache:
 
 
 async def async_get_icons(
-    hass: HomeAssistant,
+    menuai: menuai,
     category: str,
     integrations: Iterable[str] | None = None,
 ) -> dict[str, Any]:
@@ -153,12 +153,12 @@ async def async_get_icons(
     if integrations:
         components = set(integrations)
     else:
-        components = hass.config.top_level_components
+        components = menuai.config.top_level_components
 
-    if ICON_CACHE in hass.data:
-        cache = hass.data[ICON_CACHE]
+    if ICON_CACHE in menuai.data:
+        cache = menuai.data[ICON_CACHE]
     else:
-        cache = hass.data[ICON_CACHE] = _IconsCache(hass)
+        cache = menuai.data[ICON_CACHE] = _IconsCache(menuai)
 
     return await cache.async_fetch(category, components)
 

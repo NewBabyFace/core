@@ -11,13 +11,13 @@ from typing import Any
 from propcache.api import cached_property
 from zha.mixins import LogMixin
 
-from homeassistant.const import ATTR_MANUFACTURER, ATTR_MODEL, ATTR_NAME, EntityCategory
-from homeassistant.core import State, callback
-from homeassistant.helpers.device_registry import CONNECTION_ZIGBEE, DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.typing import UNDEFINED, UndefinedType
+from menuai.const import ATTR_MANUFACTURER, ATTR_MODEL, ATTR_NAME, EntityCategory
+from menuai.core import State, callback
+from menuai.helpers.device_registry import CONNECTION_ZIGBEE, DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity import Entity
+from menuai.helpers.restore_state import RestoreEntity
+from menuai.helpers.typing import UNDEFINED, UndefinedType
 
 from .const import DOMAIN
 from .helpers import SIGNAL_REMOVE_ENTITIES, EntityData, convert_zha_error_to_ha_error
@@ -100,9 +100,9 @@ class ZHAEntity(LogMixin, RestoreEntity, Entity):
         self.debug("Handling event from entity: %s", event)
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
-        """Run when about to be added to hass."""
-        self.remove_future = self.hass.loop.create_future()
+    async def async_added_to_menuai(self) -> None:
+        """Run when about to be added to menuai."""
+        self.remove_future = self.menuai.loop.create_future()
         self._unsubs.append(
             self.entity_data.entity.on_all_events(self._handle_entity_events)
         )
@@ -114,7 +114,7 @@ class ZHAEntity(LogMixin, RestoreEntity, Entity):
         )
         self._unsubs.append(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 remove_signal,
                 partial(self.async_remove, force_remove=True),
             )
@@ -133,19 +133,19 @@ class ZHAEntity(LogMixin, RestoreEntity, Entity):
 
     @callback
     def restore_external_state_attributes(self, state: State) -> None:
-        """Restore ephemeral external state from Home Assistant back into ZHA."""
+        """Restore ephemeral external state from MenuAI back into ZHA."""
 
         # Some operations rely on extra state that is not maintained in the ZCL
         # attribute cache. Until ZHA is able to maintain its own persistent state (or
         # provides a more generic hook to utilize HA to do this), we directly restore
         # them.
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Disconnect entity object when removed."""
         for unsub in self._unsubs[:]:
             unsub()
             self._unsubs.remove(unsub)
-        await super().async_will_remove_from_hass()
+        await super().async_will_remove_from_menuai()
         self.remove_future.set_result(True)
 
     @convert_zha_error_to_ha_error

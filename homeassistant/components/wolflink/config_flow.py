@@ -8,8 +8,8 @@ from wolf_comm.models import Device
 from wolf_comm.token_auth import InvalidAuth
 from wolf_comm.wolf_client import WolfClient
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
 
 from .const import DEVICE_GATEWAY, DEVICE_ID, DEVICE_NAME, DOMAIN
 

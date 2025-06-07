@@ -9,23 +9,23 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 import logging
 
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import (
+from menuai.const import EVENT_menuai_STOP
+from menuai.core import (
     CALLBACK_TYPE,
     Event,
-    HassJob,
-    HassJobType,
-    HomeAssistant,
+    menuaiJob,
+    menuaiJobType,
+    menuai,
     callback,
 )
-from homeassistant.util import dt as dt_util
-from homeassistant.util.hass_dict import HassKey
-from homeassistant.util.ulid import ulid_now, ulid_to_bytes
+from menuai.util import dt as dt_util
+from menuai.util.menuai_dict import menuaiKey
+from menuai.util.ulid import ulid_now, ulid_to_bytes
 
 from .event import async_call_later
 
-DATA_CHAT_SESSION: HassKey[dict[str, ChatSession]] = HassKey("chat_session")
-DATA_CHAT_SESSION_CLEANUP: HassKey[SessionCleanup] = HassKey("chat_session_cleanup")
+DATA_CHAT_SESSION: menuaiKey[dict[str, ChatSession]] = menuaiKey("chat_session")
+DATA_CHAT_SESSION_CLEANUP: menuaiKey[SessionCleanup] = menuaiKey("chat_session_cleanup")
 
 CONVERSATION_TIMEOUT = timedelta(minutes=5)
 LOGGER = logging.getLogger(__name__)
@@ -66,12 +66,12 @@ class SessionCleanup:
 
     unsub: CALLBACK_TYPE | None = None
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize the session cleanup."""
-        self.hass = hass
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, self._on_hass_stop)
-        self.cleanup_job = HassJob(
-            self._cleanup, "chat_session_cleanup", job_type=HassJobType.Callback
+        self.menuai = menuai
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, self._on_menuai_stop)
+        self.cleanup_job = menuaiJob(
+            self._cleanup, "chat_session_cleanup", job_type=menuaiJobType.Callback
         )
 
     @callback
@@ -80,13 +80,13 @@ class SessionCleanup:
         if self.unsub:
             return
         self.unsub = async_call_later(
-            self.hass,
+            self.menuai,
             CONVERSATION_TIMEOUT.total_seconds() + 1,
             self.cleanup_job,
         )
 
     @callback
-    def _on_hass_stop(self, event: Event) -> None:
+    def _on_menuai_stop(self, event: Event) -> None:
         """Cancel the cleanup on shutdown."""
         if self.unsub:
             self.unsub()
@@ -96,7 +96,7 @@ class SessionCleanup:
     def _cleanup(self, now: datetime) -> None:
         """Clean up the history and schedule follow-up if necessary."""
         self.unsub = None
-        all_sessions = self.hass.data[DATA_CHAT_SESSION]
+        all_sessions = self.menuai.data[DATA_CHAT_SESSION]
 
         # We mutate original object because current commands could be
         # yielding session based on it.
@@ -113,7 +113,7 @@ class SessionCleanup:
 
 @contextmanager
 def async_get_chat_session(
-    hass: HomeAssistant,
+    menuai: menuai,
     conversation_id: str | None = None,
 ) -> Generator[ChatSession]:
     """Return a chat session."""
@@ -129,11 +129,11 @@ def async_get_chat_session(
         # to another LLM.
         session = None
 
-    all_sessions = hass.data.get(DATA_CHAT_SESSION)
+    all_sessions = menuai.data.get(DATA_CHAT_SESSION)
     if all_sessions is None:
         all_sessions = {}
-        hass.data[DATA_CHAT_SESSION] = all_sessions
-        hass.data[DATA_CHAT_SESSION_CLEANUP] = SessionCleanup(hass)
+        menuai.data[DATA_CHAT_SESSION] = all_sessions
+        menuai.data[DATA_CHAT_SESSION_CLEANUP] = SessionCleanup(menuai)
 
     if conversation_id is None:
         conversation_id = ulid_now()
@@ -162,4 +162,4 @@ def async_get_chat_session(
 
     session.last_updated = dt_util.utcnow()
     all_sessions[conversation_id] = session
-    hass.data[DATA_CHAT_SESSION_CLEANUP].schedule()
+    menuai.data[DATA_CHAT_SESSION_CLEANUP].schedule()

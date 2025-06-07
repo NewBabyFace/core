@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_FLASH,
     ATTR_TRANSITION,
@@ -13,14 +13,14 @@ from homeassistant.components.light import (
     FLASH_LONG,
     FLASH_SHORT,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import init_integration
 
@@ -29,27 +29,27 @@ from tests.common import MockConfigEntry, snapshot_platform
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test all entities."""
-    with patch("homeassistant.components.velbus.PLATFORMS", [Platform.LIGHT]):
-        await init_integration(hass, config_entry)
+    with patch("menuai.components.velbus.PLATFORMS", [Platform.LIGHT]):
+        await init_integration(menuai, config_entry)
 
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
 
 async def test_dimmer_actions(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_dimmer: AsyncMock,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test every supported dimmer action."""
-    await init_integration(hass, config_entry)
+    await init_integration(menuai, config_entry)
     # turn off
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: "light.dimmer_full_name_dimmer"},
@@ -57,7 +57,7 @@ async def test_dimmer_actions(
     )
     mock_dimmer.set_dimmer_state.assert_called_once_with(0, 0)
     # turn on without brightness == restore previous brightness
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.dimmer_full_name_dimmer", ATTR_TRANSITION: 1},
@@ -65,7 +65,7 @@ async def test_dimmer_actions(
     )
     mock_dimmer.restore_dimmer_state.assert_called_once_with(1)
     # turn on with brightness == 0
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -78,7 +78,7 @@ async def test_dimmer_actions(
     mock_dimmer.set_dimmer_state.assert_called_with(0, 1)
     assert mock_dimmer.set_dimmer_state.call_count == 2
     # turn on with brightness == 33
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.dimmer_full_name_dimmer", ATTR_BRIGHTNESS: 33},
@@ -90,14 +90,14 @@ async def test_dimmer_actions(
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_led_actions(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_button: AsyncMock,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test every supported button led action."""
-    await init_integration(hass, config_entry)
+    await init_integration(menuai, config_entry)
     # turn off
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: "light.bedroom_kid_1_led_buttonon"},
@@ -105,7 +105,7 @@ async def test_led_actions(
     )
     mock_button.set_led_state.assert_called_once_with("off")
     # turn on
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.bedroom_kid_1_led_buttonon"},
@@ -114,7 +114,7 @@ async def test_led_actions(
     mock_button.set_led_state.assert_called_with("on")
     assert mock_button.set_led_state.call_count == 2
     # turn on with FLASH_LONG
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.bedroom_kid_1_led_buttonon", ATTR_FLASH: FLASH_LONG},
@@ -123,7 +123,7 @@ async def test_led_actions(
     mock_button.set_led_state.assert_called_with("slow")
     assert mock_button.set_led_state.call_count == 3
     # turn on with FLASH_SHORT
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.bedroom_kid_1_led_buttonon", ATTR_FLASH: FLASH_SHORT},
@@ -132,7 +132,7 @@ async def test_led_actions(
     mock_button.set_led_state.assert_called_with("fast")
     assert mock_button.set_led_state.call_count == 4
     # turn on with UNKNOWN flash option
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.bedroom_kid_1_led_buttonon", ATTR_FLASH: FLASH_SHORT},

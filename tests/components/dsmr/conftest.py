@@ -33,11 +33,11 @@ def dsmr_connection_fixture() -> Generator[tuple[MagicMock, MagicMock, MagicMock
 
     with (
         patch(
-            "homeassistant.components.dsmr.sensor.create_dsmr_reader",
+            "menuai.components.dsmr.sensor.create_dsmr_reader",
             connection_factory,
         ),
         patch(
-            "homeassistant.components.dsmr.sensor.create_tcp_dsmr_reader",
+            "menuai.components.dsmr.sensor.create_tcp_dsmr_reader",
             connection_factory,
         ),
     ):
@@ -61,11 +61,11 @@ def rfxtrx_dsmr_connection_fixture() -> Generator[
 
     with (
         patch(
-            "homeassistant.components.dsmr.sensor.create_rfxtrx_dsmr_reader",
+            "menuai.components.dsmr.sensor.create_rfxtrx_dsmr_reader",
             connection_factory,
         ),
         patch(
-            "homeassistant.components.dsmr.sensor.create_rfxtrx_tcp_dsmr_reader",
+            "menuai.components.dsmr.sensor.create_rfxtrx_tcp_dsmr_reader",
             connection_factory,
         ),
     ):
@@ -150,11 +150,11 @@ def dsmr_connection_send_validate_fixture() -> Generator[
 
     with (
         patch(
-            "homeassistant.components.dsmr.config_flow.create_dsmr_reader",
+            "menuai.components.dsmr.config_flow.create_dsmr_reader",
             connection_factory,
         ),
         patch(
-            "homeassistant.components.dsmr.config_flow.create_tcp_dsmr_reader",
+            "menuai.components.dsmr.config_flow.create_tcp_dsmr_reader",
             connection_factory,
         ),
     ):
@@ -201,11 +201,11 @@ def rfxtrx_dsmr_connection_send_validate_fixture() -> Generator[
 
     with (
         patch(
-            "homeassistant.components.dsmr.config_flow.create_rfxtrx_dsmr_reader",
+            "menuai.components.dsmr.config_flow.create_rfxtrx_dsmr_reader",
             connection_factory,
         ),
         patch(
-            "homeassistant.components.dsmr.config_flow.create_rfxtrx_tcp_dsmr_reader",
+            "menuai.components.dsmr.config_flow.create_rfxtrx_tcp_dsmr_reader",
             connection_factory,
         ),
     ):

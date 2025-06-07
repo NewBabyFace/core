@@ -6,8 +6,8 @@ import pytest
 from zwave_js_server.const import CommandClass
 from zwave_js_server.event import Event
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
+from menuai.const import Platform
+from menuai.core import menuai
 
 from tests.common import async_capture_events
 
@@ -19,12 +19,12 @@ def platforms() -> list[str]:
 
 
 async def test_scenes(
-    hass: HomeAssistant, hank_binary_switch, integration, client
+    menuai: menuai, hank_binary_switch, integration, client
 ) -> None:
     """Test scene events."""
     # just pick a random node to fake the value notification events
     node = hank_binary_switch
-    events = async_capture_events(hass, "zwave_js_value_notification")
+    events = async_capture_events(menuai, "zwave_js_value_notification")
 
     # Publish fake Basic Set value notification
     event = Event(
@@ -54,7 +54,7 @@ async def test_scenes(
     )
     node.receive_event(event)
     # wait for the event
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(events) == 1
     assert events[0].data["home_id"] == client.driver.controller.home_id
     assert events[0].data["node_id"] == 32
@@ -93,7 +93,7 @@ async def test_scenes(
     )
     node.receive_event(event)
     # wait for the event
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(events) == 2
     assert events[1].data["command_class"] == 43
     assert events[1].data["command_class_name"] == "Scene Activation"
@@ -140,7 +140,7 @@ async def test_scenes(
     )
     node.receive_event(event)
     # wait for the event
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(events) == 3
     assert events[2].data["command_class"] == 91
     assert events[2].data["command_class_name"] == "Central Scene"
@@ -150,12 +150,12 @@ async def test_scenes(
 
 
 async def test_notifications(
-    hass: HomeAssistant, hank_binary_switch, integration, client
+    menuai: menuai, hank_binary_switch, integration, client
 ) -> None:
     """Test notification events."""
     # just pick a random node to fake the value notification events
     node = hank_binary_switch
-    events = async_capture_events(hass, "zwave_js_notification")
+    events = async_capture_events(menuai, "zwave_js_notification")
 
     # Publish fake Notification CC notification
     event = Event(
@@ -177,7 +177,7 @@ async def test_notifications(
     )
     node.receive_event(event)
     # wait for the event
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(events) == 1
     assert events[0].data["home_id"] == client.driver.controller.home_id
     assert events[0].data["node_id"] == 32
@@ -211,7 +211,7 @@ async def test_notifications(
 
     node.receive_event(event)
     # wait for the event
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(events) == 2
     assert events[1].data["home_id"] == client.driver.controller.home_id
     assert events[1].data["node_id"] == 32
@@ -239,7 +239,7 @@ async def test_notifications(
 
     node.receive_event(event)
     # wait for the event
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(events) == 3
     assert events[2].data["home_id"] == client.driver.controller.home_id
     assert events[2].data["node_id"] == 32
@@ -253,13 +253,13 @@ async def test_notifications(
 
 @pytest.mark.parametrize("platforms", [[Platform.SWITCH]])
 async def test_value_updated(
-    hass: HomeAssistant, vision_security_zl7432, integration, client
+    menuai: menuai, vision_security_zl7432, integration, client
 ) -> None:
     """Test value updated events."""
     node = vision_security_zl7432
     # Add states to the value we are updating to ensure the translation happens
     node.values["7-37-1-currentValue"].metadata.data["states"] = {"1": "on", "0": "off"}
-    events = async_capture_events(hass, "zwave_js_value_updated")
+    events = async_capture_events(menuai, "zwave_js_value_updated")
 
     event = Event(
         type="value updated",
@@ -281,7 +281,7 @@ async def test_value_updated(
 
     node.receive_event(event)
     # wait for the event
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(events) == 1
     assert events[0].data["home_id"] == client.driver.controller.home_id
     assert events[0].data["node_id"] == 7
@@ -316,18 +316,18 @@ async def test_value_updated(
 
     node.receive_event(event)
     # wait for the event
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     # We should only still have captured one event
     assert len(events) == 1
 
 
 async def test_power_level_notification(
-    hass: HomeAssistant, hank_binary_switch, integration, client
+    menuai: menuai, hank_binary_switch, integration, client
 ) -> None:
     """Test power level notification events."""
     # just pick a random node to fake the notification event
     node = hank_binary_switch
-    events = async_capture_events(hass, "zwave_js_notification")
+    events = async_capture_events(menuai, "zwave_js_notification")
 
     event = Event(
         type="notification",
@@ -347,7 +347,7 @@ async def test_power_level_notification(
         },
     )
     node.receive_event(event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(events) == 1
     assert events[0].data["command_class_name"] == "Powerlevel"
     assert events[0].data["command_class"] == 115
@@ -357,7 +357,7 @@ async def test_power_level_notification(
 
 
 async def test_unknown_notification(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     hank_binary_switch,
     integration,
@@ -375,7 +375,7 @@ async def test_unknown_notification(
 
     assert f"Unhandled notification type: {notification_obj}" in caplog.text
 
-    notification_events = async_capture_events(hass, "zwave_js_notification")
+    notification_events = async_capture_events(menuai, "zwave_js_notification")
 
     # Test a valid notification with an unsupported command class
     event = Event(

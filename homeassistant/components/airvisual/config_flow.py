@@ -16,13 +16,13 @@ from pyairvisual.cloud_api import (
 from pyairvisual.errors import AirVisualError
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_REAUTH,
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_API_KEY,
     CONF_COUNTRY,
     CONF_LATITUDE,
@@ -30,9 +30,9 @@ from homeassistant.const import (
     CONF_SHOW_ON_MAP,
     CONF_STATE,
 )
-from homeassistant.core import callback
-from homeassistant.helpers import aiohttp_client, config_validation as cv
-from homeassistant.helpers.schema_config_entry_flow import (
+from menuai.core import callback
+from menuai.helpers import aiohttp_client, config_validation as cv
+from menuai.helpers.schema_config_entry_flow import (
     SchemaFlowFormStep,
     SchemaOptionsFlowHandler,
 )
@@ -90,10 +90,10 @@ class AirVisualFlowHandler(ConfigFlow, domain=DOMAIN):
         return API_KEY_DATA_SCHEMA.extend(
             {
                 vol.Required(
-                    CONF_LATITUDE, default=self.hass.config.latitude
+                    CONF_LATITUDE, default=self.menuai.config.latitude
                 ): cv.latitude,
                 vol.Required(
-                    CONF_LONGITUDE, default=self.hass.config.longitude
+                    CONF_LONGITUDE, default=self.menuai.config.longitude
                 ): cv.longitude,
             }
         )
@@ -103,13 +103,13 @@ class AirVisualFlowHandler(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Validate a Cloud API key."""
         errors = {}
-        websession = aiohttp_client.async_get_clientsession(self.hass)
+        websession = aiohttp_client.async_get_clientsession(self.menuai)
         cloud_api = CloudAPI(user_input[CONF_API_KEY], session=websession)
 
         # If this is the first (and only the first) time we've seen this API key, check
         # that it's valid:
-        valid_keys = self.hass.data.setdefault("airvisual_checked_api_keys", set())
-        valid_keys_lock = self.hass.data.setdefault(
+        valid_keys = self.menuai.data.setdefault("airvisual_checked_api_keys", set())
+        valid_keys_lock = self.menuai.data.setdefault(
             "airvisual_checked_api_keys_lock", asyncio.Lock()
         )
 

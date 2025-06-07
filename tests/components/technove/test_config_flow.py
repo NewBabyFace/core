@@ -6,20 +6,20 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from technove import TechnoVEConnectionError
 
-from homeassistant.components.technove.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER, SOURCE_ZEROCONF
-from homeassistant.const import CONF_HOST, CONF_MAC, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.components.technove.const import DOMAIN
+from menuai.config_entries import SOURCE_USER, SOURCE_ZEROCONF
+from menuai.const import CONF_HOST, CONF_MAC, CONF_NAME
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from tests.common import MockConfigEntry
 
 
 @pytest.mark.usefixtures("mock_setup_entry", "mock_technove")
-async def test_full_user_flow_implementation(hass: HomeAssistant) -> None:
+async def test_full_user_flow_implementation(menuai: menuai) -> None:
     """Test the full manual user flow from start to finish."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
@@ -27,7 +27,7 @@ async def test_full_user_flow_implementation(hass: HomeAssistant) -> None:
     assert result.get("step_id") == "user"
     assert result.get("type") is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={CONF_HOST: "192.168.1.123"}
     )
 
@@ -41,13 +41,13 @@ async def test_full_user_flow_implementation(hass: HomeAssistant) -> None:
 
 @pytest.mark.usefixtures("mock_technove")
 async def test_user_device_exists_abort(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_technove: MagicMock,
 ) -> None:
     """Test we abort the config flow if TechnoVE station is already configured."""
-    mock_config_entry.add_to_hass(hass)
-    result = await hass.config_entries.flow.async_init(
+    mock_config_entry.add_to_menuai(menuai)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={CONF_HOST: "192.168.1.123"},
@@ -57,10 +57,10 @@ async def test_user_device_exists_abort(
     assert result.get("reason") == "already_configured"
 
 
-async def test_connection_error(hass: HomeAssistant, mock_technove: MagicMock) -> None:
+async def test_connection_error(menuai: menuai, mock_technove: MagicMock) -> None:
     """Test we show user form on TechnoVE connection error."""
     mock_technove.update.side_effect = TechnoVEConnectionError
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={CONF_HOST: "example.com"},
@@ -73,11 +73,11 @@ async def test_connection_error(hass: HomeAssistant, mock_technove: MagicMock) -
 
 @pytest.mark.usefixtures("mock_setup_entry", "mock_technove")
 async def test_full_user_flow_with_error(
-    hass: HomeAssistant, mock_technove: MagicMock
+    menuai: menuai, mock_technove: MagicMock
 ) -> None:
     """Test the full manual user flow from start to finish with some errors in the middle."""
     mock_technove.update.side_effect = TechnoVEConnectionError
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
@@ -85,7 +85,7 @@ async def test_full_user_flow_with_error(
     assert result.get("step_id") == "user"
     assert result.get("type") is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={CONF_HOST: "192.168.1.123"}
     )
 
@@ -94,7 +94,7 @@ async def test_full_user_flow_with_error(
     assert result.get("errors") == {"base": "cannot_connect"}
 
     mock_technove.update.side_effect = None
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={CONF_HOST: "192.168.1.123"}
     )
 
@@ -107,9 +107,9 @@ async def test_full_user_flow_with_error(
 
 
 @pytest.mark.usefixtures("mock_setup_entry", "mock_technove")
-async def test_full_zeroconf_flow_implementation(hass: HomeAssistant) -> None:
+async def test_full_zeroconf_flow_implementation(menuai: menuai) -> None:
     """Test the full manual user flow from start to finish."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -123,14 +123,14 @@ async def test_full_zeroconf_flow_implementation(hass: HomeAssistant) -> None:
         ),
     )
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
 
     assert result.get("description_placeholders") == {CONF_NAME: "TechnoVE Station"}
     assert result.get("step_id") == "zeroconf_confirm"
     assert result.get("type") is FlowResultType.FORM
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
 
@@ -145,12 +145,12 @@ async def test_full_zeroconf_flow_implementation(hass: HomeAssistant) -> None:
 
 @pytest.mark.usefixtures("mock_technove")
 async def test_zeroconf_during_onboarding(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_onboarding: MagicMock,
 ) -> None:
     """Test we create a config entry when discovered during onboarding."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -176,12 +176,12 @@ async def test_zeroconf_during_onboarding(
 
 
 async def test_zeroconf_connection_error(
-    hass: HomeAssistant, mock_technove: MagicMock
+    menuai: menuai, mock_technove: MagicMock
 ) -> None:
     """Test we abort zeroconf flow on TechnoVE connection error."""
     mock_technove.update.side_effect = TechnoVEConnectionError
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -201,11 +201,11 @@ async def test_zeroconf_connection_error(
 
 @pytest.mark.usefixtures("mock_technove")
 async def test_user_station_exists_abort(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_config_entry: MockConfigEntry
 ) -> None:
     """Test we abort zeroconf flow if TechnoVE station already configured."""
-    mock_config_entry.add_to_hass(hass)
-    result = await hass.config_entries.flow.async_init(
+    mock_config_entry.add_to_menuai(menuai)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={CONF_HOST: "192.168.1.123"},
@@ -217,12 +217,12 @@ async def test_user_station_exists_abort(
 
 @pytest.mark.usefixtures("mock_technove")
 async def test_zeroconf_without_mac_station_exists_abort(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test we abort zeroconf flow if TechnoVE station already configured."""
-    mock_config_entry.add_to_hass(hass)
-    result = await hass.config_entries.flow.async_init(
+    mock_config_entry.add_to_menuai(menuai)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -242,12 +242,12 @@ async def test_zeroconf_without_mac_station_exists_abort(
 
 @pytest.mark.usefixtures("mock_technove")
 async def test_zeroconf_with_mac_station_exists_abort(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry, mock_technove: MagicMock
+    menuai: menuai, mock_config_entry: MockConfigEntry, mock_technove: MagicMock
 ) -> None:
     """Test we abort zeroconf flow if TechnoVE station already configured."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(

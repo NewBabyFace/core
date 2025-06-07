@@ -2,10 +2,10 @@
 
 from typing import Any
 
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchEntity
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import SmappeeConfigEntry
 from .const import DOMAIN
@@ -14,7 +14,7 @@ SWITCH_PREFIX = "Switch"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: SmappeeConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

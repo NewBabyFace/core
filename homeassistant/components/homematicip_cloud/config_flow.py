@@ -6,7 +6,7 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
 
 from .const import _LOGGER, DOMAIN, HMIPC_AUTHTOKEN, HMIPC_HAPID, HMIPC_NAME, HMIPC_PIN
 from .hap import HomematicipAuth
@@ -40,7 +40,7 @@ class HomematicipCloudFlowHandler(ConfigFlow, domain=DOMAIN):
             await self.async_set_unique_id(user_input[HMIPC_HAPID])
             self._abort_if_unique_id_configured()
 
-            self.auth = HomematicipAuth(self.hass, user_input)
+            self.auth = HomematicipAuth(self.menuai, user_input)
             connected = await self.auth.async_setup()
             if connected:
                 _LOGGER.debug("Connection to HomematicIP Cloud established")

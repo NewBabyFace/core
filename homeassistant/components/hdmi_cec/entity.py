@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from homeassistant.helpers.entity import Entity
+from menuai.helpers.entity import Entity
 
 from .const import DOMAIN, EVENT_HDMI_CEC_UNAVAILABLE
 
@@ -57,10 +57,10 @@ class CecEntity(Entity):
         self._attr_available = False
         self.schedule_update_ha_state(False)
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register HDMI callbacks after initialization."""
         self._device.set_update_callback(self._update)
-        self.hass.bus.async_listen(
+        self.menuai.bus.async_listen(
             EVENT_HDMI_CEC_UNAVAILABLE, self._hdmi_cec_unavailable
         )
 

@@ -7,11 +7,11 @@ from datetime import timedelta
 import steam
 from steam.api import _interface_method as INTMethod
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_API_KEY
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_API_KEY
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import CONF_ACCOUNTS, DOMAIN, LOGGER
 
@@ -25,10 +25,10 @@ class SteamDataUpdateCoordinator(
 
     config_entry: SteamConfigEntry
 
-    def __init__(self, hass: HomeAssistant, config_entry: SteamConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: SteamConfigEntry) -> None:
         """Initialize the coordinator."""
         super().__init__(
-            hass=hass,
+            menuai=menuai,
             logger=LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -68,7 +68,7 @@ class SteamDataUpdateCoordinator(
     async def _async_update_data(self) -> dict[str, dict[str, str | int]]:
         """Send request to the executor."""
         try:
-            return await self.hass.async_add_executor_job(self._update)
+            return await self.menuai.async_add_executor_job(self._update)
 
         except (steam.api.HTTPError, steam.api.HTTPTimeoutError) as ex:
             if "401" in str(ex):

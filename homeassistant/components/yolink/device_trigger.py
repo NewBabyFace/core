@@ -7,13 +7,13 @@ from typing import Any
 import voluptuous as vol
 from yolink.const import ATTR_DEVICE_SMART_REMOTER, ATTR_DEVICE_SWITCH
 
-from homeassistant.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA
-from homeassistant.components.homeassistant.triggers import event as event_trigger
-from homeassistant.const import CONF_DEVICE_ID, CONF_DOMAIN, CONF_PLATFORM, CONF_TYPE
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
-from homeassistant.helpers.typing import ConfigType
+from menuai.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA
+from menuai.components.menuai.triggers import event as event_trigger
+from menuai.const import CONF_DEVICE_ID, CONF_DOMAIN, CONF_PLATFORM, CONF_TYPE
+from menuai.core import CALLBACK_TYPE, menuai
+from menuai.helpers import device_registry as dr
+from menuai.helpers.trigger import TriggerActionType, TriggerInfo
+from menuai.helpers.typing import ConfigType
 
 from . import DOMAIN, YOLINK_EVENT
 from .const import (
@@ -70,10 +70,10 @@ TRIGGER_MAPPINGS: dict[str, set[str]] = {
 
 
 async def async_get_triggers(
-    hass: HomeAssistant, device_id: str
+    menuai: menuai, device_id: str
 ) -> list[dict[str, Any]]:
     """List device triggers for YoLink devices."""
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     registry_device = device_registry.async_get(device_id)
     if not registry_device or registry_device.model not in [
         ATTR_DEVICE_SMART_REMOTER,
@@ -94,7 +94,7 @@ async def async_get_triggers(
 
 
 async def async_attach_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     action: TriggerActionType,
     trigger_info: TriggerInfo,
@@ -110,5 +110,5 @@ async def async_attach_trigger(
     }
     event_config = event_trigger.TRIGGER_SCHEMA(event_config)
     return await event_trigger.async_attach_trigger(
-        hass, event_config, action, trigger_info, platform_type="device"
+        menuai, event_config, action, trigger_info, platform_type="device"
     )

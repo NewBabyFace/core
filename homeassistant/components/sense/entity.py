@@ -3,8 +3,8 @@
 from sense_energy import ASyncSenseable
 from sense_energy.sense_api import SenseDevice
 
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import ATTRIBUTION, DOMAIN, MDI_ICONS
 from .coordinator import SenseCoordinator

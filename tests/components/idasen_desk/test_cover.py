@@ -6,34 +6,34 @@ from unittest.mock import AsyncMock, MagicMock
 from bleak.exc import BleakError
 import pytest
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     ATTR_CURRENT_POSITION,
     ATTR_POSITION,
     DOMAIN as COVER_DOMAIN,
     CoverState,
 )
-from homeassistant.const import (
+from menuai.const import (
     SERVICE_CLOSE_COVER,
     SERVICE_OPEN_COVER,
     SERVICE_SET_COVER_POSITION,
     SERVICE_STOP_COVER,
     STATE_UNAVAILABLE,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from . import init_integration
 
 
 async def test_cover_available(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_desk_api: MagicMock,
 ) -> None:
     """Test cover available property."""
     entity_id = "cover.test"
-    await init_integration(hass)
+    await init_integration(menuai)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == CoverState.OPEN
     assert state.attributes[ATTR_CURRENT_POSITION] == 60
@@ -42,7 +42,7 @@ async def test_cover_available(
     mock_desk_api.is_connected = False
     mock_desk_api.trigger_update_callback(None)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_UNAVAILABLE
 
@@ -58,7 +58,7 @@ async def test_cover_available(
     ],
 )
 async def test_cover_services(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_desk_api: MagicMock,
     service: str,
     service_data: dict[str, Any],
@@ -67,19 +67,19 @@ async def test_cover_services(
 ) -> None:
     """Test cover services."""
     entity_id = "cover.test"
-    await init_integration(hass)
-    state = hass.states.get(entity_id)
+    await init_integration(menuai)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == CoverState.OPEN
     assert state.attributes[ATTR_CURRENT_POSITION] == 60
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         service,
         {"entity_id": entity_id, **service_data},
         blocking=True,
     )
-    await hass.async_block_till_done()
-    state = hass.states.get(entity_id)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == expected_state
     assert state.attributes[ATTR_CURRENT_POSITION] == expected_position
@@ -95,7 +95,7 @@ async def test_cover_services(
     ],
 )
 async def test_cover_services_exception(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_desk_api: MagicMock,
     service: str,
     service_data: dict[str, Any],
@@ -103,14 +103,14 @@ async def test_cover_services_exception(
 ) -> None:
     """Test cover services exception handling."""
     entity_id = "cover.test"
-    await init_integration(hass)
+    await init_integration(menuai)
     fail_call = getattr(mock_desk_api, mock_method_name)
     fail_call.side_effect = BleakError()
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             COVER_DOMAIN,
             service,
             {"entity_id": entity_id, **service_data},
             blocking=True,
         )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()

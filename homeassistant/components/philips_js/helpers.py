@@ -1,6 +1,6 @@
 """Helpers for philips_js."""
 
-from homeassistant.const import CONF_DEVICE_ID, CONF_DOMAIN, CONF_PLATFORM, CONF_TYPE
+from menuai.const import CONF_DEVICE_ID, CONF_DOMAIN, CONF_PLATFORM, CONF_TYPE
 
 from .const import DOMAIN, TRIGGER_TYPE_TURN_ON
 

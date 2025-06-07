@@ -1,7 +1,7 @@
 """Describe logbook events."""
 
-from homeassistant.components.logbook import LOGBOOK_ENTRY_MESSAGE, LOGBOOK_ENTRY_NAME
-from homeassistant.core import callback
+from menuai.components.logbook import LOGBOOK_ENTRY_MESSAGE, LOGBOOK_ENTRY_NAME
+from menuai.core import callback
 
 from .const import DOMAIN, EVENT_COMMAND_RECEIVED, SOURCE_CLOUD
 
@@ -9,7 +9,7 @@ COMMON_COMMAND_PREFIX = "action.devices.commands."
 
 
 @callback
-def async_describe_events(hass, async_describe_event):
+def async_describe_events(menuai, async_describe_event):
     """Describe logbook events."""
 
     @callback

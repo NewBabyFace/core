@@ -11,17 +11,17 @@ from pyloadapi import CannotConnect, InvalidAuth, ParserError, PyLoadAPI
 import voluptuous as vol
 from yarl import URL
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import (
     CONF_NAME,
     CONF_PASSWORD,
     CONF_URL,
     CONF_USERNAME,
     CONF_VERIFY_SSL,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_create_clientsession
-from homeassistant.helpers.selector import (
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_create_clientsession
+from menuai.helpers.selector import (
     TextSelector,
     TextSelectorConfig,
     TextSelectorType,
@@ -73,11 +73,11 @@ REAUTH_SCHEMA = vol.Schema(
 )
 
 
-async def validate_input(hass: HomeAssistant, user_input: dict[str, Any]) -> None:
+async def validate_input(menuai: menuai, user_input: dict[str, Any]) -> None:
     """Validate the user input and try to connect to PyLoad."""
 
     session = async_create_clientsession(
-        hass,
+        menuai,
         user_input[CONF_VERIFY_SSL],
         cookie_jar=CookieJar(unsafe=True),
     )
@@ -106,7 +106,7 @@ class PyLoadConfigFlow(ConfigFlow, domain=DOMAIN):
             url = URL(user_input[CONF_URL]).human_repr()
             self._async_abort_entries_match({CONF_URL: url})
             try:
-                await validate_input(self.hass, user_input)
+                await validate_input(self.menuai, user_input)
             except (CannotConnect, ParserError):
                 errors["base"] = "cannot_connect"
             except InvalidAuth:
@@ -148,7 +148,7 @@ class PyLoadConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             try:
-                await validate_input(self.hass, {**reauth_entry.data, **user_input})
+                await validate_input(self.menuai, {**reauth_entry.data, **user_input})
             except (CannotConnect, ParserError):
                 errors["base"] = "cannot_connect"
             except InvalidAuth:
@@ -184,7 +184,7 @@ class PyLoadConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             try:
-                await validate_input(self.hass, user_input)
+                await validate_input(self.menuai, user_input)
             except (CannotConnect, ParserError):
                 errors["base"] = "cannot_connect"
             except InvalidAuth:

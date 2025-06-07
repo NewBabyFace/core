@@ -4,10 +4,10 @@ from datetime import timedelta
 
 from pyecobee import ECOBEE_API_KEY, ECOBEE_REFRESH_TOKEN, Ecobee, ExpiredTokenError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_API_KEY
-from homeassistant.core import HomeAssistant
-from homeassistant.util import Throttle
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_API_KEY
+from menuai.core import menuai
+from menuai.util import Throttle
 
 from .const import _LOGGER, CONF_REFRESH_TOKEN, PLATFORMS
 
@@ -16,12 +16,12 @@ MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=180)
 type EcobeeConfigEntry = ConfigEntry[EcobeeData]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: EcobeeConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: EcobeeConfigEntry) -> bool:
     """Set up ecobee via a config entry."""
     api_key = entry.data[CONF_API_KEY]
     refresh_token = entry.data[CONF_REFRESH_TOKEN]
 
-    runtime_data = EcobeeData(hass, entry, api_key=api_key, refresh_token=refresh_token)
+    runtime_data = EcobeeData(menuai, entry, api_key=api_key, refresh_token=refresh_token)
 
     if not await runtime_data.refresh():
         return False
@@ -34,7 +34,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: EcobeeConfigEntry) -> bo
 
     entry.runtime_data = runtime_data
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
@@ -46,10 +46,10 @@ class EcobeeData:
     """
 
     def __init__(
-        self, hass: HomeAssistant, entry: ConfigEntry, api_key: str, refresh_token: str
+        self, menuai: menuai, entry: ConfigEntry, api_key: str, refresh_token: str
     ) -> None:
         """Initialize the Ecobee data object."""
-        self._hass = hass
+        self._menuai = menuai
         self.entry = entry
         self.ecobee = Ecobee(
             config={ECOBEE_API_KEY: api_key, ECOBEE_REFRESH_TOKEN: refresh_token}
@@ -59,7 +59,7 @@ class EcobeeData:
     async def update(self):
         """Get the latest data from ecobee.com."""
         try:
-            await self._hass.async_add_executor_job(self.ecobee.update)
+            await self._menuai.async_add_executor_job(self.ecobee.update)
             _LOGGER.debug("Updating ecobee")
         except ExpiredTokenError:
             _LOGGER.debug("Refreshing expired ecobee tokens")
@@ -68,8 +68,8 @@ class EcobeeData:
     async def refresh(self) -> bool:
         """Refresh ecobee tokens and update config entry."""
         _LOGGER.debug("Refreshing ecobee tokens and updating config entry")
-        if await self._hass.async_add_executor_job(self.ecobee.refresh_tokens):
-            self._hass.config_entries.async_update_entry(
+        if await self._menuai.async_add_executor_job(self.ecobee.refresh_tokens):
+            self._menuai.config_entries.async_update_entry(
                 self.entry,
                 data={
                     CONF_API_KEY: self.ecobee.config[ECOBEE_API_KEY],
@@ -81,6 +81,6 @@ class EcobeeData:
         return False
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: EcobeeConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: EcobeeConfigEntry) -> bool:
     """Unload the config entry and platforms."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

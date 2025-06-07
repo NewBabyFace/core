@@ -8,9 +8,9 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components import file_upload
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components import file_upload
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.components.image_upload import TEST_IMAGE
 from tests.typing import ClientSessionGenerator
@@ -18,16 +18,16 @@ from tests.typing import ClientSessionGenerator
 
 @pytest.fixture
 async def uploaded_file_dir(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> Path:
     """Test uploading and using a file."""
-    assert await async_setup_component(hass, "file_upload", {})
-    client = await hass_client()
+    assert await async_setup_component(menuai, "file_upload", {})
+    client = await menuai_client()
 
     with (
         patch(
             # Patch temp dir name to avoid tests fail running in parallel
-            "homeassistant.components.file_upload.TEMP_DIR_NAME",
+            "menuai.components.file_upload.TEMP_DIR_NAME",
             file_upload.TEMP_DIR_NAME + f"-{getrandbits(10):03x}",
         ),
         TEST_IMAGE.open("rb") as fp,
@@ -37,15 +37,15 @@ async def uploaded_file_dir(
     assert res.status == 200
     response = await res.json()
 
-    file_dir = hass.data[file_upload.DOMAIN].file_dir(response["file_id"])
+    file_dir = menuai.data[file_upload.DOMAIN].file_dir(response["file_id"])
     assert file_dir.is_dir()
     return file_dir
 
 
-async def test_using_file(hass: HomeAssistant, uploaded_file_dir) -> None:
+async def test_using_file(menuai: menuai, uploaded_file_dir) -> None:
     """Test uploading and using a file."""
     # Test we can use it
-    with file_upload.process_uploaded_file(hass, uploaded_file_dir.name) as file_path:
+    with file_upload.process_uploaded_file(menuai, uploaded_file_dir.name) as file_path:
         assert file_path.is_file()
         assert file_path.parent == uploaded_file_dir
         assert file_path.read_bytes() == TEST_IMAGE.read_bytes()
@@ -55,10 +55,10 @@ async def test_using_file(hass: HomeAssistant, uploaded_file_dir) -> None:
 
 
 async def test_removing_file(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator, uploaded_file_dir
+    menuai: menuai, menuai_client: ClientSessionGenerator, uploaded_file_dir
 ) -> None:
     """Test uploading and using a file."""
-    client = await hass_client()
+    client = await menuai_client()
 
     response = await client.delete(
         "/api/file_upload", json={"file_id": uploaded_file_dir.name}
@@ -70,31 +70,31 @@ async def test_removing_file(
 
 
 async def test_removed_on_stop(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator, uploaded_file_dir
+    menuai: menuai, menuai_client: ClientSessionGenerator, uploaded_file_dir
 ) -> None:
     """Test uploading and using a file."""
-    await hass.async_stop()
+    await menuai.async_stop()
 
     # Test it's removed
     assert not uploaded_file_dir.exists()
 
 
 async def test_upload_large_file(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator, large_file_io
+    menuai: menuai, menuai_client: ClientSessionGenerator, large_file_io
 ) -> None:
     """Test uploading large file."""
-    assert await async_setup_component(hass, "file_upload", {})
-    client = await hass_client()
+    assert await async_setup_component(menuai, "file_upload", {})
+    client = await menuai_client()
 
     with (
         patch(
             # Patch temp dir name to avoid tests fail running in parallel
-            "homeassistant.components.file_upload.TEMP_DIR_NAME",
+            "menuai.components.file_upload.TEMP_DIR_NAME",
             file_upload.TEMP_DIR_NAME + f"-{getrandbits(10):03x}",
         ),
         patch(
             # Patch one megabyte to 50 bytes to prevent having to use big files in tests
-            "homeassistant.components.file_upload.ONE_MEGABYTE",
+            "menuai.components.file_upload.ONE_MEGABYTE",
             50,
         ),
     ):
@@ -103,26 +103,26 @@ async def test_upload_large_file(
     assert res.status == 200
     response = await res.json()
 
-    file_dir = hass.data[file_upload.DOMAIN].file_dir(response["file_id"])
+    file_dir = menuai.data[file_upload.DOMAIN].file_dir(response["file_id"])
     assert file_dir.is_dir()
 
     large_file_io.seek(0)
-    with file_upload.process_uploaded_file(hass, file_dir.name) as file_path:
+    with file_upload.process_uploaded_file(menuai, file_dir.name) as file_path:
         assert file_path.is_file()
         assert file_path.parent == file_dir
         assert file_path.read_bytes() == large_file_io.read().encode("utf-8")
 
 
 async def test_upload_with_wrong_key_fails(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator, large_file_io
+    menuai: menuai, menuai_client: ClientSessionGenerator, large_file_io
 ) -> None:
     """Test uploading fails."""
-    assert await async_setup_component(hass, "file_upload", {})
-    client = await hass_client()
+    assert await async_setup_component(menuai, "file_upload", {})
+    client = await menuai_client()
 
     with patch(
         # Patch temp dir name to avoid tests fail running in parallel
-        "homeassistant.components.file_upload.TEMP_DIR_NAME",
+        "menuai.components.file_upload.TEMP_DIR_NAME",
         file_upload.TEMP_DIR_NAME + f"-{getrandbits(10):03x}",
     ):
         res = await client.post("/api/file_upload", data={"wrong_key": large_file_io})
@@ -131,11 +131,11 @@ async def test_upload_with_wrong_key_fails(
 
 
 async def test_upload_large_file_fails(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator, large_file_io
+    menuai: menuai, menuai_client: ClientSessionGenerator, large_file_io
 ) -> None:
     """Test uploading large file."""
-    assert await async_setup_component(hass, "file_upload", {})
-    client = await hass_client()
+    assert await async_setup_component(menuai, "file_upload", {})
+    client = await menuai_client()
 
     @contextmanager
     def _mock_open(*args, **kwargs):
@@ -151,16 +151,16 @@ async def test_upload_large_file_fails(
     with (
         patch(
             # Patch temp dir name to avoid tests fail running in parallel
-            "homeassistant.components.file_upload.TEMP_DIR_NAME",
+            "menuai.components.file_upload.TEMP_DIR_NAME",
             file_upload.TEMP_DIR_NAME + f"-{getrandbits(10):03x}",
         ),
         patch(
             # Patch one megabyte to 50 bytes to prevent having to use big files in tests
-            "homeassistant.components.file_upload.ONE_MEGABYTE",
+            "menuai.components.file_upload.ONE_MEGABYTE",
             50,
         ),
         patch(
-            "homeassistant.components.file_upload.Path.open", return_value=_mock_open()
+            "menuai.components.file_upload.Path.open", return_value=_mock_open()
         ),
     ):
         res = await client.post("/api/file_upload", data={"file": large_file_io})

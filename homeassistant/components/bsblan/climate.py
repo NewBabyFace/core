@@ -6,7 +6,7 @@ from typing import Any
 
 from bsblan import BSBLANError
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_HVAC_MODE,
     ATTR_PRESET_MODE,
     PRESET_ECO,
@@ -15,12 +15,12 @@ from homeassistant.components.climate import (
     ClimateEntityFeature,
     HVACMode,
 )
-from homeassistant.const import ATTR_TEMPERATURE
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util.enum import try_parse_enum
+from menuai.const import ATTR_TEMPERATURE
+from menuai.core import menuai
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util.enum import try_parse_enum
 
 from . import BSBLanConfigEntry, BSBLanData
 from .const import ATTR_TARGET_TEMPERATURE, DOMAIN
@@ -41,7 +41,7 @@ PRESET_MODES = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: BSBLanConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -140,7 +140,7 @@ class BSBLANClimate(BSBLanEntity, ClimateEntity):
         try:
             await self.coordinator.client.thermostat(**data)
         except BSBLANError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 "An error occurred while updating the BSBLAN device",
                 translation_domain=DOMAIN,
                 translation_key="set_data_error",

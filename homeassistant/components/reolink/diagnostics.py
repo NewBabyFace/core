@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .util import ReolinkConfigEntry, ReolinkData
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, config_entry: ReolinkConfigEntry
+    menuai: menuai, config_entry: ReolinkConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     reolink_data: ReolinkData = config_entry.runtime_data

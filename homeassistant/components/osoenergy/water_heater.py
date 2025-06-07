@@ -7,7 +7,7 @@ from apyosoenergyapi import OSOEnergy
 from apyosoenergyapi.helper.const import OSOEnergyWaterHeaterData
 import voluptuous as vol
 
-from homeassistant.components.water_heater import (
+from menuai.components.water_heater import (
     STATE_ECO,
     STATE_ELECTRIC,
     STATE_HIGH_DEMAND,
@@ -15,13 +15,13 @@ from homeassistant.components.water_heater import (
     WaterHeaterEntity,
     WaterHeaterEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import UnitOfTemperature
-from homeassistant.core import HomeAssistant, ServiceResponse, SupportsResponse
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import dt as dt_util
-from homeassistant.util.json import JsonValueType
+from menuai.config_entries import ConfigEntry
+from menuai.const import UnitOfTemperature
+from menuai.core import menuai, ServiceResponse, SupportsResponse
+from menuai.helpers import config_validation as cv, entity_platform
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import dt as dt_util
+from menuai.util.json import JsonValueType
 
 from .const import DOMAIN
 from .entity import OSOEnergyEntity
@@ -49,12 +49,12 @@ SERVICE_TURN_ON = "turn_on"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up OSO Energy heater based on a config entry."""
-    osoenergy = hass.data[DOMAIN][entry.entry_id]
+    osoenergy = menuai.data[DOMAIN][entry.entry_id]
     devices = osoenergy.session.device_list.get("water_heater")
     if not devices:
         return

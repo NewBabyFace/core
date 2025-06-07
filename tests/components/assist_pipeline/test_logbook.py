@@ -1,25 +1,25 @@
 """The tests for assist_pipeline logbook."""
 
-from homeassistant.components import assist_pipeline, logbook
-from homeassistant.const import ATTR_DEVICE_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.setup import async_setup_component
+from menuai.components import assist_pipeline, logbook
+from menuai.const import ATTR_DEVICE_ID
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 from tests.components.logbook.common import MockRow, mock_humanify
 
 
 async def test_recording_event(
-    hass: HomeAssistant, init_components, device_registry: dr.DeviceRegistry
+    menuai: menuai, init_components, device_registry: dr.DeviceRegistry
 ) -> None:
     """Test recording event."""
-    hass.config.components.add("recorder")
-    assert await async_setup_component(hass, "logbook", {})
-    await hass.async_block_till_done()
+    menuai.config.components.add("recorder")
+    assert await async_setup_component(menuai, "logbook", {})
+    await menuai.async_block_till_done()
 
     entry = MockConfigEntry()
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     satellite_device = device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         connections=set(),
@@ -28,7 +28,7 @@ async def test_recording_event(
 
     device_registry.async_update_device(satellite_device.id, name="My Satellite")
     event = mock_humanify(
-        hass,
+        menuai,
         [
             MockRow(
                 assist_pipeline.EVENT_RECORDING,

@@ -15,17 +15,17 @@ from miio.integrations.humidifier.zhimi.airhumidifier_miot import (
     OperationMode as AirhumidifierMiotOperationMode,
 )
 
-from homeassistant.components.humidifier import (
+from menuai.components.humidifier import (
     ATTR_HUMIDITY,
     HumidifierDeviceClass,
     HumidifierEntity,
     HumidifierEntityFeature,
 )
-from homeassistant.const import ATTR_MODE, CONF_DEVICE, CONF_MODEL
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-from homeassistant.util.percentage import percentage_to_ranged_value
+from menuai.const import ATTR_MODE, CONF_DEVICE, CONF_MODEL
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.util.percentage import percentage_to_ranged_value
 
 from .const import (
     CONF_FLOW_TYPE,
@@ -68,7 +68,7 @@ AVAILABLE_MODES_OTHER = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: XiaomiMiioConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

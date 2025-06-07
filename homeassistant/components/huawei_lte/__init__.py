@@ -23,8 +23,8 @@ from huawei_lte_api.exceptions import (
 from requests.exceptions import Timeout
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_HW_VERSION,
     ATTR_MODEL,
     ATTR_SW_VERSION,
@@ -35,22 +35,22 @@ from homeassistant.const import (
     CONF_URL,
     CONF_USERNAME,
     CONF_VERIFY_SSL,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     Platform,
 )
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import (
+from menuai.core import menuai, ServiceCall
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import (
     config_validation as cv,
     device_registry as dr,
     discovery,
     entity_registry as er,
 )
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import dispatcher_send
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.service import async_register_admin_service
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import dispatcher_send
+from menuai.helpers.event import async_track_time_interval
+from menuai.helpers.service import async_register_admin_service
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     ADMIN_SERVICES,
@@ -107,7 +107,7 @@ PLATFORMS = [
 class Router:
     """Class for router state."""
 
-    hass: HomeAssistant
+    menuai: menuai
     config_entry: ConfigEntry
     connection: Connection
     url: str
@@ -266,7 +266,7 @@ class Router:
             ),
         )
 
-        dispatcher_send(self.hass, UPDATE_SIGNAL, self.config_entry.unique_id)
+        dispatcher_send(self.menuai, UPDATE_SIGNAL, self.config_entry.unique_id)
 
     def logout(self) -> None:
         """Log out router session."""
@@ -292,11 +292,11 @@ class Router:
 class HuaweiLteData(NamedTuple):
     """Shared state."""
 
-    hass_config: ConfigType
+    menuai_config: ConfigType
     routers: dict[str, Router]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up Huawei LTE component from config entry."""
     url = entry.data[CONF_URL]
 
@@ -318,25 +318,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         return connection
 
     try:
-        connection = await hass.async_add_executor_job(_connect)
+        connection = await menuai.async_add_executor_job(_connect)
     except LoginErrorInvalidCredentialsException as ex:
         raise ConfigEntryAuthFailed from ex
     except Timeout as ex:
         raise ConfigEntryNotReady from ex
 
     # Set up router
-    router = Router(hass, entry, connection, url)
+    router = Router(menuai, entry, connection, url)
 
     # Do initial data update
-    await hass.async_add_executor_job(router.update)
+    await menuai.async_add_executor_job(router.update)
 
     # Check that we found required information
     router_info = router.data.get(KEY_DEVICE_INFORMATION)
     if not entry.unique_id:
         # Transitional from < 2021.8: update None config entry and entity unique ids
         if router_info and (serial_number := router_info.get("SerialNumber")):
-            hass.config_entries.async_update_entry(entry, unique_id=serial_number)
-            ent_reg = er.async_get(hass)
+            menuai.config_entries.async_update_entry(entry, unique_id=serial_number)
+            ent_reg = er.async_get(menuai)
             for entity_entry in er.async_entries_for_config_entry(
                 ent_reg, entry.entry_id
             ):
@@ -348,7 +348,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     entity_entry.entity_id, new_unique_id=new_unique_id
                 )
         else:
-            await hass.async_add_executor_job(router.cleanup)
+            await menuai.async_add_executor_job(router.cleanup)
             msg = (
                 "Could not resolve serial number to use as unique id for router at %s"
                 ", setup failed"
@@ -363,7 +363,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             return False
 
     # Store reference to router
-    hass.data[DOMAIN].routers[entry.entry_id] = router
+    menuai.data[DOMAIN].routers[entry.entry_id] = router
 
     # Clear all subscriptions, enabled entities will push back theirs
     router.subscriptions.clear()
@@ -372,7 +372,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # authenticated and unauthenticated modes, or likely also when enabling/disabling
     # SSIDs in the router config.
     try:
-        wlan_settings = await hass.async_add_executor_job(
+        wlan_settings = await menuai.async_add_executor_job(
             router.client.wlan.multi_basic_settings
         )
     except Exception:  # noqa: BLE001
@@ -383,7 +383,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if macs and (not entry.data[CONF_MAC] or (router_info and wlan_settings)):
         new_data = dict(entry.data)
         new_data[CONF_MAC] = macs
-        hass.config_entries.async_update_entry(entry, data=new_data)
+        menuai.config_entries.async_update_entry(entry, data=new_data)
 
     # Set up device registry
     if router.device_identifiers or router.device_connections:
@@ -409,18 +409,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             device_info[ATTR_HW_VERSION] = hw_version
         if sw_version:
             device_info[ATTR_SW_VERSION] = sw_version
-        device_registry = dr.async_get(hass)
+        device_registry = dr.async_get(menuai)
         device_registry.async_get_or_create(
             config_entry_id=entry.entry_id,
             **device_info,
         )
 
     # Forward config entry setup to platforms
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     # Notify doesn't support config entry setup yet, load with discovery for now
     await discovery.async_load_platform(
-        hass,
+        menuai,
         Platform.NOTIFY,
         DOMAIN,
         {
@@ -428,7 +428,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             CONF_NAME: entry.options.get(CONF_NAME, DEFAULT_NOTIFY_SERVICE_NAME),
             CONF_RECIPIENT: entry.options.get(CONF_RECIPIENT),
         },
-        hass.data[DOMAIN].hass_config,
+        menuai.data[DOMAIN].menuai_config,
     )
 
     def _update_router(*_: Any) -> None:
@@ -440,35 +440,35 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Set up periodic update
     entry.async_on_unload(
-        async_track_time_interval(hass, _update_router, SCAN_INTERVAL)
+        async_track_time_interval(menuai, _update_router, SCAN_INTERVAL)
     )
 
     # Clean up at end
     entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, router.cleanup)
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, router.cleanup)
     )
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, config_entry: ConfigEntry) -> bool:
     """Unload config entry."""
 
     # Forward config entry unload to platforms
-    await hass.config_entries.async_unload_platforms(config_entry, PLATFORMS)
+    await menuai.config_entries.async_unload_platforms(config_entry, PLATFORMS)
 
     # Forget about the router and invoke its cleanup
-    router = hass.data[DOMAIN].routers.pop(config_entry.entry_id)
-    await hass.async_add_executor_job(router.cleanup)
+    router = menuai.data[DOMAIN].routers.pop(config_entry.entry_id)
+    await menuai.async_add_executor_job(router.cleanup)
 
     return True
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up Huawei LTE component."""
 
-    if DOMAIN not in hass.data:
-        hass.data[DOMAIN] = HuaweiLteData(hass_config=config, routers={})
+    if DOMAIN not in menuai.data:
+        menuai.data[DOMAIN] = HuaweiLteData(menuai_config=config, routers={})
 
     def service_handler(service: ServiceCall) -> None:
         """Apply a service.
@@ -476,7 +476,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         We key this using the router URL instead of its unique id / serial number,
         because the latter is not available anywhere in the UI.
         """
-        routers = hass.data[DOMAIN].routers
+        routers = menuai.data[DOMAIN].routers
         if url := service.data.get(CONF_URL):
             router = next(
                 (router for router in routers.values() if router.url == url), None
@@ -510,7 +510,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     for service in ADMIN_SERVICES:
         async_register_admin_service(
-            hass,
+            menuai,
             DOMAIN,
             service,
             service_handler,
@@ -520,19 +520,19 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+async def async_migrate_entry(menuai: menuai, config_entry: ConfigEntry) -> bool:
     """Migrate config entry to new version."""
     if config_entry.version == 1:
         options = dict(config_entry.options)
         recipient = options.get(CONF_RECIPIENT)
         if isinstance(recipient, str):
             options[CONF_RECIPIENT] = [x.strip() for x in recipient.split(",")]
-        hass.config_entries.async_update_entry(config_entry, options=options, version=2)
+        menuai.config_entries.async_update_entry(config_entry, options=options, version=2)
         _LOGGER.debug("Migrated config entry to version %d", config_entry.version)
     if config_entry.version == 2:
         data = dict(config_entry.data)
         data[CONF_MAC] = []
-        hass.config_entries.async_update_entry(config_entry, data=data, version=3)
+        menuai.config_entries.async_update_entry(config_entry, data=data, version=3)
         _LOGGER.debug("Migrated config entry to version %d", config_entry.version)
     # There can be no longer needed *_from_yaml data and options things left behind
     # from pre-2022.4ish; they can be removed while at it when/if we eventually bump and

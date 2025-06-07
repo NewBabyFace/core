@@ -7,23 +7,23 @@ import logging
 from huum.exceptions import Forbidden, NotAuthenticated
 from huum.huum import Huum
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN, PLATFORMS
 
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up Huum from a config entry."""
     username = entry.data[CONF_USERNAME]
     password = entry.data[CONF_PASSWORD]
 
-    huum = Huum(username, password, session=async_get_clientsession(hass))
+    huum = Huum(username, password, session=async_get_clientsession(menuai))
 
     try:
         await huum.status()
@@ -33,15 +33,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             "Could not log in to Huum with given credentials"
         ) from err
 
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = huum
+    menuai.data.setdefault(DOMAIN, {})[entry.entry_id] = huum
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        hass.data[DOMAIN].pop(entry.entry_id)
+    if unload_ok := await menuai.config_entries.async_unload_platforms(entry, PLATFORMS):
+        menuai.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok

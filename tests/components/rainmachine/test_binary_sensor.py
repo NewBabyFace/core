@@ -6,18 +6,18 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.rainmachine import DOMAIN
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.components.rainmachine import DOMAIN
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry, snapshot_platform
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_binary_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
     config: dict[str, Any],
@@ -26,11 +26,11 @@ async def test_binary_sensors(
 ) -> None:
     """Test binary sensors."""
     with (
-        patch("homeassistant.components.rainmachine.Client", return_value=client),
+        patch("menuai.components.rainmachine.Client", return_value=client),
         patch(
-            "homeassistant.components.rainmachine.PLATFORMS", [Platform.BINARY_SENSOR]
+            "menuai.components.rainmachine.PLATFORMS", [Platform.BINARY_SENSOR]
         ),
     ):
-        assert await async_setup_component(hass, DOMAIN, config)
-        await hass.async_block_till_done()
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+        assert await async_setup_component(menuai, DOMAIN, config)
+        await menuai.async_block_till_done()
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)

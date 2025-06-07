@@ -6,13 +6,13 @@ from datetime import timedelta
 
 from pypaperless.exceptions import PaperlessConnectionError
 
-from homeassistant.components.update import (
+from menuai.components.update import (
     UpdateDeviceClass,
     UpdateEntity,
     UpdateEntityDescription,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import LOGGER
 from .coordinator import PaperlessConfigEntry, PaperlessStatusCoordinator
@@ -26,7 +26,7 @@ SCAN_INTERVAL = timedelta(hours=24)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: PaperlessConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

@@ -9,34 +9,34 @@ from datetime import timedelta
 from logging import Logger, getLogger
 from typing import TYPE_CHECKING, Any, Protocol
 
-from homeassistant import config_entries
-from homeassistant.const import (
+from menuai import config_entries
+from menuai.const import (
     ATTR_RESTORED,
     DEVICE_DEFAULT_NAME,
-    EVENT_HOMEASSISTANT_STARTED,
+    EVENT_menuai_STARTED,
 )
-from homeassistant.core import (
+from menuai.core import (
     CALLBACK_TYPE,
-    DOMAIN as HOMEASSISTANT_DOMAIN,
+    DOMAIN as menuai_DOMAIN,
     CoreState,
-    HomeAssistant,
+    menuai,
     ServiceCall,
     SupportsResponse,
     callback,
     split_entity_id,
     valid_entity_id,
 )
-from homeassistant.exceptions import (
+from menuai.exceptions import (
     ConfigEntryAuthFailed,
     ConfigEntryError,
     ConfigEntryNotReady,
-    HomeAssistantError,
+    menuaiError,
     PlatformNotReady,
 )
-from homeassistant.generated import languages
-from homeassistant.setup import SetupPhases, async_start_setup
-from homeassistant.util.async_ import create_eager_task
-from homeassistant.util.hass_dict import HassKey
+from menuai.generated import languages
+from menuai.setup import SetupPhases, async_start_setup
+from menuai.util.async_ import create_eager_task
+from menuai.util.menuai_dict import menuaiKey
 
 from . import (
     device_registry as dev_reg,
@@ -59,12 +59,12 @@ SLOW_ADD_ENTITY_MAX_WAIT = 15  # Per Entity
 SLOW_ADD_MIN_TIMEOUT = 500
 
 PLATFORM_NOT_READY_RETRIES = 10
-DATA_ENTITY_PLATFORM: HassKey[dict[str, list[EntityPlatform]]] = HassKey(
+DATA_ENTITY_PLATFORM: menuaiKey[dict[str, list[EntityPlatform]]] = menuaiKey(
     "entity_platform"
 )
-DATA_DOMAIN_ENTITIES: HassKey[dict[str, dict[str, Entity]]] = HassKey("domain_entities")
-DATA_DOMAIN_PLATFORM_ENTITIES: HassKey[dict[tuple[str, str], dict[str, Entity]]] = (
-    HassKey("domain_platform_entities")
+DATA_DOMAIN_ENTITIES: menuaiKey[dict[str, dict[str, Entity]]] = menuaiKey("domain_entities")
+DATA_DOMAIN_PLATFORM_ENTITIES: menuaiKey[dict[tuple[str, str], dict[str, Entity]]] = (
+    menuaiKey("domain_platform_entities")
 )
 PLATFORM_NOT_READY_BASE_WAIT_TIME = 30  # seconds
 
@@ -101,7 +101,7 @@ class EntityPlatformModule(Protocol):
 
     async def async_setup_platform(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config: ConfigType,
         async_add_entities: AddEntitiesCallback,
         discovery_info: DiscoveryInfoType | None = None,
@@ -110,7 +110,7 @@ class EntityPlatformModule(Protocol):
 
     def setup_platform(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config: ConfigType,
         add_entities: AddEntitiesCallback,
         discovery_info: DiscoveryInfoType | None = None,
@@ -119,7 +119,7 @@ class EntityPlatformModule(Protocol):
 
     async def async_setup_entry(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entry: config_entries.ConfigEntry,
         async_add_entities: AddConfigEntryEntitiesCallback,
     ) -> None:
@@ -136,7 +136,7 @@ class EntityPlatform:
     def __init__(
         self,
         *,
-        hass: HomeAssistant,
+        menuai: menuai,
         logger: Logger,
         domain: str,
         platform_name: str,
@@ -145,7 +145,7 @@ class EntityPlatform:
         entity_namespace: str | None,
     ) -> None:
         """Initialize the entity platform."""
-        self.hass = hass
+        self.menuai = menuai
         self.logger = logger
         self.domain = domain
         self.platform_name = platform_name
@@ -182,7 +182,7 @@ class EntityPlatform:
         # with the child dict indexed by entity_id
         #
         # This is usually media_player, light, switch, etc.
-        self.domain_entities = hass.data.setdefault(
+        self.domain_entities = menuai.data.setdefault(
             DATA_DOMAIN_ENTITIES, {}
         ).setdefault(domain, {})
 
@@ -191,7 +191,7 @@ class EntityPlatform:
         #
         # This is usually media_player.yamaha, light.hue, switch.tplink, etc.
         key = (domain, platform_name)
-        self.domain_platform_entities = hass.data.setdefault(
+        self.domain_platform_entities = menuai.data.setdefault(
             DATA_DOMAIN_PLATFORM_ENTITIES, {}
         ).setdefault(key, {})
 
@@ -218,7 +218,7 @@ class EntityPlatform:
           to that number.
 
         The default value for parallel requests is decided based on the first
-        entity of the platform which is added to Home Assistant. It's 1 if the
+        entity of the platform which is added to MenuAI. It's 1 if the
         entity implements the update method, else it's 0.
         """
         if self.parallel_updates_created:
@@ -247,7 +247,7 @@ class EntityPlatform:
     ) -> None:
         """Set up the platform from a config file."""
         platform = self.platform
-        hass = self.hass
+        menuai = self.menuai
 
         if not hasattr(platform, "async_setup_platform") and not hasattr(
             platform, "setup_platform"
@@ -268,8 +268,8 @@ class EntityPlatform:
             platform_key = f"platform: {self.platform_name}"
             yaml_example = f"```yaml\n{self.domain}:\n  - {platform_key}\n```"
             async_create_issue(
-                self.hass,
-                HOMEASSISTANT_DOMAIN,
+                self.menuai,
+                menuai_DOMAIN,
                 f"platform_integration_no_support_{self.domain}_{self.platform_name}",
                 is_fixable=False,
                 issue_domain=self.platform_name,
@@ -293,25 +293,25 @@ class EntityPlatform:
             """Get task to set up platform."""
             if getattr(platform, "async_setup_platform", None):
                 return platform.async_setup_platform(  # type: ignore[union-attr]
-                    hass,
+                    menuai,
                     platform_config,
                     self._async_schedule_add_entities,
                     discovery_info,
                 )
 
-            # This should not be replaced with hass.async_add_job because
+            # This should not be replaced with menuai.async_add_job because
             # we don't want to track this task in case it blocks startup.
-            return hass.loop.run_in_executor(
+            return menuai.loop.run_in_executor(
                 None,
                 platform.setup_platform,  # type: ignore[union-attr]
-                hass,
+                menuai,
                 platform_config,
                 self._schedule_add_entities,
                 discovery_info,
             )
 
         with async_start_setup(
-            hass,
+            menuai,
             integration=self.platform_name,
             group=str(id(platform_config)),
             phase=SetupPhases.PLATFORM_SETUP,
@@ -320,7 +320,7 @@ class EntityPlatform:
 
     @callback
     def async_shutdown(self) -> None:
-        """Call when Home Assistant is stopping."""
+        """Call when MenuAI is stopping."""
         self.async_cancel_retry_setup()
         self.async_unsub_polling()
 
@@ -343,7 +343,7 @@ class EntityPlatform:
             config_entries.current_entry.set(config_entry)
 
             return platform.async_setup_entry(  # type: ignore[union-attr]
-                self.hass, config_entry, self._async_schedule_add_entities_for_entry
+                self.menuai, config_entry, self._async_schedule_add_entities_for_entry
             )
 
         return await self._async_setup_platform(async_create_setup_awaitable)
@@ -359,14 +359,14 @@ class EntityPlatform:
         """
         current_platform.set(self)
         logger = self.logger
-        hass = self.hass
+        menuai = self.menuai
         full_name = f"{self.platform_name}.{self.domain}"
 
         await self.async_load_translations()
 
         logger.info("Setting up %s", full_name)
-        warn_task = hass.loop.call_at(
-            hass.loop.time() + SLOW_SETUP_WARNING,
+        warn_task = menuai.loop.call_at(
+            menuai.loop.time() + SLOW_SETUP_WARNING,
             logger.warning,
             "Setup of %s platform %s is taking over %s seconds.",
             self.domain,
@@ -376,9 +376,9 @@ class EntityPlatform:
         try:
             awaitable = async_create_setup_awaitable()
             if asyncio.iscoroutine(awaitable):
-                awaitable = create_eager_task(awaitable, loop=hass.loop)
+                awaitable = create_eager_task(awaitable, loop=menuai.loop)
 
-            async with hass.timeout.async_timeout(SLOW_SETUP_MAX_WAIT, self.domain):
+            async with menuai.timeout.async_timeout(SLOW_SETUP_MAX_WAIT, self.domain):
                 await asyncio.shield(awaitable)
 
             # Block till all entities are done
@@ -413,13 +413,13 @@ class EntityPlatform:
                 self._async_cancel_retry_setup = None
                 await self._async_setup_platform(async_create_setup_awaitable, tries)
 
-            if hass.state is CoreState.running:
+            if menuai.state is CoreState.running:
                 self._async_cancel_retry_setup = async_call_later(
-                    hass, wait_time, setup_again
+                    menuai, wait_time, setup_again
                 )
             else:
-                self._async_cancel_retry_setup = hass.bus.async_listen_once(
-                    EVENT_HOMEASSISTANT_STARTED, setup_again
+                self._async_cancel_retry_setup = menuai.bus.async_listen_once(
+                    EVENT_menuai_STARTED, setup_again
                 )
             return False
         except TimeoutError:
@@ -451,7 +451,7 @@ class EntityPlatform:
             )
             return False
         else:
-            hass.config.components.add(full_name)
+            menuai.config.components.add(full_name)
             self._setup_complete = True
             return True
         finally:
@@ -463,7 +463,7 @@ class EntityPlatform:
         """Get translations for a language, category, and integration."""
         try:
             return await translation.async_get_translations(
-                self.hass, language, category, {integration}
+                self.menuai, language, category, {integration}
             )
         except Exception as err:  # noqa: BLE001
             _LOGGER.debug(
@@ -475,13 +475,13 @@ class EntityPlatform:
 
     async def async_load_translations(self) -> None:
         """Load translations."""
-        hass = self.hass
+        menuai = self.menuai
         object_id_language = (
-            hass.config.language
-            if hass.config.language in languages.NATIVE_ENTITY_IDS
+            menuai.config.language
+            if menuai.config.language in languages.NATIVE_ENTITY_IDS
             else languages.DEFAULT_LANGUAGE
         )
-        config_language = hass.config.language
+        config_language = menuai.config.language
         self.component_translations = await self._async_get_translations(
             config_language, "entity_component", self.domain
         )
@@ -511,7 +511,7 @@ class EntityPlatform:
         self, new_entities: Iterable[Entity], update_before_add: bool = False
     ) -> None:
         """Schedule adding entities for a single platform, synchronously."""
-        self.hass.loop.call_soon_threadsafe(
+        self.menuai.loop.call_soon_threadsafe(
             self._async_schedule_add_entities,
             list(new_entities),
             update_before_add,
@@ -528,7 +528,7 @@ class EntityPlatform:
         # handle empty list from component/platform
         if not entities:
             return
-        task = self.hass.async_create_task_internal(
+        task = self.menuai.async_create_task_internal(
             self.async_add_entities(entities, update_before_add=update_before_add),
             f"EntityPlatform async_add_entities {self.domain}.{self.platform_name}",
             eager_start=True,
@@ -554,7 +554,7 @@ class EntityPlatform:
         if not entities:
             return
         task = self.config_entry.async_create_task(
-            self.hass,
+            self.menuai,
             self.async_add_entities(
                 entities,
                 update_before_add=update_before_add,
@@ -580,7 +580,7 @@ class EntityPlatform:
 
         asyncio.run_coroutine_threadsafe(
             self.async_add_entities(list(new_entities), update_before_add),
-            self.hass.loop,
+            self.menuai.loop,
         ).result()
 
     async def _async_add_and_update_entities(
@@ -597,16 +597,16 @@ class EntityPlatform:
         event loop and will finish faster if we run them concurrently.
         """
         results: list[BaseException | None] | None = None
-        entity_registry = ent_reg.async_get(self.hass)
+        entity_registry = ent_reg.async_get(self.menuai)
         try:
-            async with self.hass.timeout.async_timeout(timeout, self.domain):
+            async with self.menuai.timeout.async_timeout(timeout, self.domain):
                 results = await asyncio.gather(
                     *(
                         create_eager_task(
                             self._async_add_entity(
                                 entity, True, entity_registry, config_subentry_id
                             ),
-                            loop=self.hass.loop,
+                            loop=self.menuai.loop,
                         )
                         for entity in entities
                     ),
@@ -649,9 +649,9 @@ class EntityPlatform:
         to the event loop so we can await the coros directly without
         scheduling them as tasks.
         """
-        entity_registry = ent_reg.async_get(self.hass)
+        entity_registry = ent_reg.async_get(self.menuai)
         try:
-            async with self.hass.timeout.async_timeout(timeout, self.domain):
+            async with self.menuai.timeout.async_timeout(timeout, self.domain):
                 for entity in entities:
                     try:
                         await self._async_add_entity(
@@ -690,7 +690,7 @@ class EntityPlatform:
             not self.config_entry
             or config_subentry_id not in self.config_entry.subentries
         ):
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Can't add entities to unknown subentry {config_subentry_id} of config "
                 f"entry {self.config_entry.entry_id if self.config_entry else None}"
             )
@@ -713,7 +713,7 @@ class EntityPlatform:
                 # Entity may have failed to add or called `add_to_platform_abort`
                 # so we check if the entity is in self.entities before
                 # checking `entity.should_poll` since `should_poll` may need to
-                # check `self.hass` which will be `None` if the entity did not add
+                # check `self.menuai` which will be `None` if the entity did not add
                 entity.entity_id
                 and entity.entity_id in self.entities
                 and entity.should_poll
@@ -722,7 +722,7 @@ class EntityPlatform:
         ):
             return
 
-        self._async_polling_timer = self.hass.loop.call_later(
+        self._async_polling_timer = self.menuai.loop.call_later(
             self.scan_interval_seconds,
             self._async_handle_interval_callback,
         )
@@ -730,19 +730,19 @@ class EntityPlatform:
     @callback
     def _async_handle_interval_callback(self) -> None:
         """Update all the entity states in a single platform."""
-        self._async_polling_timer = self.hass.loop.call_later(
+        self._async_polling_timer = self.menuai.loop.call_later(
             self.scan_interval_seconds,
             self._async_handle_interval_callback,
         )
         if self.config_entry:
             self.config_entry.async_create_background_task(
-                self.hass,
+                self.menuai,
                 self._async_update_entity_states(),
                 name=f"EntityPlatform poll {self.domain}.{self.platform_name}",
                 eager_start=True,
             )
         else:
-            self.hass.async_create_background_task(
+            self.menuai.async_create_background_task(
                 self._async_update_entity_states(),
                 name=f"EntityPlatform poll {self.domain}.{self.platform_name}",
                 eager_start=True,
@@ -756,8 +756,8 @@ class EntityPlatform:
         already_exists = entity_id in self.entities
         restored = False
 
-        if not already_exists and not self.hass.states.async_available(entity_id):
-            existing = self.hass.states.get(entity_id)
+        if not already_exists and not self.menuai.states.async_available(entity_id):
+            existing = self.menuai.states.get(entity_id)
             if existing is not None and ATTR_RESTORED in existing.attributes:
                 restored = True
             else:
@@ -776,7 +776,7 @@ class EntityPlatform:
             raise ValueError("Entity cannot be None")
 
         entity.add_to_platform_start(
-            self.hass,
+            self.menuai,
             self,
             self._get_parallel_updates_semaphore(hasattr(entity, "update")),
         )
@@ -827,7 +827,7 @@ class EntityPlatform:
 
             if self.config_entry and (device_info := entity.device_info):
                 try:
-                    device = dev_reg.async_get(self.hass).async_get_or_create(
+                    device = dev_reg.async_get(self.menuai).async_get_or_create(
                         config_entry_id=self.config_entry.entry_id,
                         config_subentry_id=config_subentry_id,
                         **device_info,
@@ -934,7 +934,7 @@ class EntityPlatform:
             # since it already made it in the registry
             if not valid_entity_id(entity.entity_id):
                 entity.add_to_platform_abort()
-                raise HomeAssistantError(f"Invalid entity ID: {entity.entity_id}")
+                raise menuaiError(f"Invalid entity ID: {entity.entity_id}")
 
         already_exists, restored = self._entity_id_already_exists(entity.entity_id)
 
@@ -966,7 +966,7 @@ class EntityPlatform:
             # loop below, another entity could be added
             # with the same id before `entity.add_to_platform_finish()`
             # has a chance to finish.
-            self.hass.states.async_reserve(entity.entity_id)
+            self.menuai.states.async_reserve(entity.entity_id)
 
         def remove_entity_cb() -> None:
             """Remove entity from entities dict."""
@@ -1013,7 +1013,7 @@ class EntityPlatform:
     @callback
     def async_prepare(self) -> None:
         """Register the entity platform in DATA_ENTITY_PLATFORM."""
-        self.hass.data.setdefault(DATA_ENTITY_PLATFORM, {}).setdefault(
+        self.menuai.data.setdefault(DATA_ENTITY_PLATFORM, {}).setdefault(
             self.platform_name, []
         ).append(self)
 
@@ -1023,7 +1023,7 @@ class EntityPlatform:
         Call before discarding the object.
         """
         await self.async_reset()
-        self.hass.data[DATA_ENTITY_PLATFORM][self.platform_name].remove(self)
+        self.menuai.data[DATA_ENTITY_PLATFORM][self.platform_name].remove(self)
 
     async def async_remove_entity(self, entity_id: str) -> None:
         """Remove entity id from platform."""
@@ -1045,7 +1045,7 @@ class EntityPlatform:
         This method must be run in the event loop.
         """
         return await service.async_extract_entities(
-            self.hass, self.entities.values(), service_call, expand_group
+            self.menuai, self.entities.values(), service_call, expand_group
         )
 
     @callback
@@ -1061,11 +1061,11 @@ class EntityPlatform:
 
         Services will automatically be shared by all platforms of the same domain.
         """
-        if self.hass.services.has_service(self.platform_name, name):
+        if self.menuai.services.has_service(self.platform_name, name):
             return
 
         service.async_register_entity_service(
-            self.hass,
+            self.menuai,
             self.platform_name,
             name,
             entities=self.domain_platform_entities,
@@ -1100,16 +1100,16 @@ class EntityPlatform:
                 # If we know we will update sequentially, we want to avoid scheduling
                 # the coroutines as tasks that will wait on the semaphore lock.
                 for entity in list(self.entities.values()):
-                    # If the entity is removed from hass during the previous
+                    # If the entity is removed from menuai during the previous
                     # entity being updated, we need to skip updating the
                     # entity.
-                    if entity.should_poll and entity.hass:
+                    if entity.should_poll and entity.menuai:
                         await entity.async_update_ha_state(True)
                 return
 
             if tasks := [
                 create_eager_task(
-                    entity.async_update_ha_state(True), loop=self.hass.loop
+                    entity.async_update_ha_state(True), loop=self.menuai.loop
                 )
                 for entity in self.entities.values()
                 if entity.should_poll
@@ -1153,13 +1153,13 @@ def async_get_current_platform() -> EntityPlatform:
 
 @callback
 def async_get_platforms(
-    hass: HomeAssistant, integration_name: str
+    menuai: menuai, integration_name: str
 ) -> list[EntityPlatform]:
     """Find existing platforms."""
     if (
-        DATA_ENTITY_PLATFORM not in hass.data
-        or integration_name not in hass.data[DATA_ENTITY_PLATFORM]
+        DATA_ENTITY_PLATFORM not in menuai.data
+        or integration_name not in menuai.data[DATA_ENTITY_PLATFORM]
     ):
         return []
 
-    return hass.data[DATA_ENTITY_PLATFORM][integration_name]
+    return menuai.data[DATA_ENTITY_PLATFORM][integration_name]

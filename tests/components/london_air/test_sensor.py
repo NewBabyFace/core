@@ -4,9 +4,9 @@ from http import HTTPStatus
 
 import requests_mock
 
-from homeassistant.components.london_air.sensor import CONF_LOCATIONS, URL
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.london_air.sensor import CONF_LOCATIONS, URL
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import async_load_fixture
 
@@ -14,18 +14,18 @@ VALID_CONFIG = {"sensor": {"platform": "london_air", CONF_LOCATIONS: ["Merton"]}
 
 
 async def test_valid_state(
-    hass: HomeAssistant, requests_mock: requests_mock.Mocker
+    menuai: menuai, requests_mock: requests_mock.Mocker
 ) -> None:
     """Test for operational london_air sensor with proper attributes."""
     requests_mock.get(
         URL,
-        text=await async_load_fixture(hass, "london_air.json", "london_air"),
+        text=await async_load_fixture(menuai, "london_air.json", "london_air"),
         status_code=HTTPStatus.OK,
     )
-    assert await async_setup_component(hass, "sensor", VALID_CONFIG)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", VALID_CONFIG)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.merton")
+    state = menuai.states.get("sensor.merton")
     assert state is not None
     assert state.state == "Low"
     assert state.attributes["icon"] == "mdi:cloud-outline"
@@ -51,14 +51,14 @@ async def test_valid_state(
 
 
 async def test_api_failure(
-    hass: HomeAssistant, requests_mock: requests_mock.Mocker
+    menuai: menuai, requests_mock: requests_mock.Mocker
 ) -> None:
     """Test for failure in the API."""
     requests_mock.get(URL, status_code=HTTPStatus.SERVICE_UNAVAILABLE)
-    assert await async_setup_component(hass, "sensor", VALID_CONFIG)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", VALID_CONFIG)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.merton")
+    state = menuai.states.get("sensor.merton")
     assert state is not None
     assert state.attributes["updated"] is None
     assert state.attributes["sites"] == 0

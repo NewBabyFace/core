@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import logging
 
-from homeassistant.components.select import SelectEntity
-from homeassistant.core import HassJob, HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.select import SelectEntity
+from menuai.core import menuaiJob, menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import ACTIVITY_POWER_OFF, DOMAIN
 from .data import HarmonyConfigEntry, HarmonyData
@@ -19,7 +19,7 @@ TRANSLATABLE_POWER_OFF = "power_off"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: HarmonyConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -59,14 +59,14 @@ class HarmonyActivitySelect(HarmonyEntity, SelectEntity):
             return
         await self._data.async_start_activity(option)
 
-    async def async_added_to_hass(self) -> None:
-        """Call when entity is added to hass."""
-        activity_update_job = HassJob(self._async_activity_update)
+    async def async_added_to_menuai(self) -> None:
+        """Call when entity is added to menuai."""
+        activity_update_job = menuaiJob(self._async_activity_update)
         self.async_on_remove(
             self._data.async_subscribe(
                 HarmonyCallback(
-                    connected=HassJob(self.async_got_connected),
-                    disconnected=HassJob(self.async_got_disconnected),
+                    connected=menuaiJob(self.async_got_connected),
+                    disconnected=menuaiJob(self.async_got_disconnected),
                     activity_starting=activity_update_job,
                     activity_started=activity_update_job,
                     config_updated=None,

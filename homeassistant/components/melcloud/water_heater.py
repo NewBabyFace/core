@@ -11,28 +11,28 @@ from pymelcloud.atw_device import (
 )
 from pymelcloud.device import PROPERTY_POWER
 
-from homeassistant.components.water_heater import (
+from menuai.components.water_heater import (
     DEFAULT_MAX_TEMP,
     DEFAULT_MIN_TEMP,
     WaterHeaterEntity,
     WaterHeaterEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import UnitOfTemperature
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import DOMAIN, MelCloudDevice
 from .const import ATTR_STATUS
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up MelCloud device climate based on config_entry."""
-    mel_devices = hass.data[DOMAIN][entry.entry_id]
+    mel_devices = menuai.data[DOMAIN][entry.entry_id]
     async_add_entities(
         [
             AtwWaterHeater(mel_device, mel_device.device)

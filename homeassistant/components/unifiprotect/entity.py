@@ -21,10 +21,10 @@ from uiprotect.data import (
     StateType,
 )
 
-from homeassistant.core import callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity, EntityDescription
+from menuai.core import callback
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity, EntityDescription
 
 from .const import (
     ATTR_EVENT_ID,
@@ -265,9 +265,9 @@ class BaseProtectEntity(Entity):
                 )
             self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai."""
+        await super().async_added_to_menuai()
         self.async_on_remove(
             self.data.async_subscribe(self.device.mac, self._async_updated_event)
         )

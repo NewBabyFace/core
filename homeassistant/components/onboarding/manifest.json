@@ -1,6 +1,6 @@
 {
   "domain": "onboarding",
-  "name": "Home Assistant Onboarding",
+  "name": "MenuAI Onboarding",
   "codeowners": ["@home-assistant/core"],
   "dependencies": ["auth", "http"],
   "documentation": "https://www.home-assistant.io/integrations/onboarding",

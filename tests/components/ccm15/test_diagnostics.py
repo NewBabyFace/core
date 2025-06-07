@@ -3,9 +3,9 @@
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.ccm15.const import DOMAIN
-from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.core import HomeAssistant
+from menuai.components.ccm15.const import DOMAIN
+from menuai.const import CONF_HOST, CONF_PORT
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 from tests.components.diagnostics import get_diagnostics_for_config_entry
@@ -14,8 +14,8 @@ from tests.typing import ClientSessionGenerator
 
 @pytest.mark.usefixtures("ccm15_device")
 async def test_entry_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test config entry diagnostics."""
@@ -27,11 +27,11 @@ async def test_entry_diagnostics(
             CONF_PORT: 80,
         },
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    result = await get_diagnostics_for_config_entry(hass, hass_client, entry)
+    result = await get_diagnostics_for_config_entry(menuai, menuai_client, entry)
 
     assert result == snapshot

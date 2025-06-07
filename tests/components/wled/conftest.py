@@ -7,9 +7,9 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from wled import Device as WLEDDevice, Releases
 
-from homeassistant.components.wled.const import DOMAIN
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
+from menuai.components.wled.const import DOMAIN
+from menuai.const import CONF_HOST
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry, load_json_object_fixture
 from tests.components.light.conftest import mock_light_profiles  # noqa: F401
@@ -29,16 +29,16 @@ def mock_config_entry() -> MockConfigEntry:
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Mock setting up a config entry."""
     with patch(
-        "homeassistant.components.wled.async_setup_entry", return_value=True
+        "menuai.components.wled.async_setup_entry", return_value=True
     ) as mock_setup:
         yield mock_setup
 
 
 @pytest.fixture
 def mock_onboarding() -> Generator[MagicMock]:
-    """Mock that Home Assistant is currently onboarding."""
+    """Mock that MenuAI is currently onboarding."""
     with patch(
-        "homeassistant.components.onboarding.async_is_onboarded",
+        "menuai.components.onboarding.async_is_onboarded",
         return_value=False,
     ) as mock_onboarding:
         yield mock_onboarding
@@ -54,7 +54,7 @@ def device_fixture() -> str:
 def mock_wled_releases() -> Generator[MagicMock]:
     """Return a mocked WLEDReleases client."""
     with patch(
-        "homeassistant.components.wled.coordinator.WLEDReleases", autospec=True
+        "menuai.components.wled.coordinator.WLEDReleases", autospec=True
     ) as wled_releases_mock:
         wled_releases = wled_releases_mock.return_value
         wled_releases.releases.return_value = Releases(
@@ -72,9 +72,9 @@ def mock_wled(
     """Return a mocked WLED client."""
     with (
         patch(
-            "homeassistant.components.wled.coordinator.WLED", autospec=True
+            "menuai.components.wled.coordinator.WLED", autospec=True
         ) as wled_mock,
-        patch("homeassistant.components.wled.config_flow.WLED", new=wled_mock),
+        patch("menuai.components.wled.config_flow.WLED", new=wled_mock),
     ):
         wled = wled_mock.return_value
         wled.update.return_value = WLEDDevice.from_dict(
@@ -88,16 +88,16 @@ def mock_wled(
 
 @pytest.fixture
 async def init_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     mock_config_entry: MockConfigEntry,
     mock_wled: MagicMock,
 ) -> MockConfigEntry:
     """Set up the WLED integration for testing."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Let some time pass so coordinators can be reliably triggered by bumping
     # time by SCAN_INTERVAL

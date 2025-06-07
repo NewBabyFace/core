@@ -6,10 +6,10 @@ from mastodon.Mastodon import MastodonAPIError
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.notify import DOMAIN as NOTIFY_DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from menuai.components.notify import DOMAIN as NOTIFY_DOMAIN
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
 
 from . import setup_integration
 
@@ -17,18 +17,18 @@ from tests.common import MockConfigEntry
 
 
 async def test_notify(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
     mock_mastodon_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test sending a message."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    assert hass.services.has_service(NOTIFY_DOMAIN, "trwnh_mastodon_social")
+    assert menuai.services.has_service(NOTIFY_DOMAIN, "trwnh_mastodon_social")
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         NOTIFY_DOMAIN,
         "trwnh_mastodon_social",
         {
@@ -42,19 +42,19 @@ async def test_notify(
 
 
 async def test_notify_failed(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mastodon_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test the notify raising an error."""
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     mock_mastodon_client.status_post.side_effect = MastodonAPIError
 
-    with pytest.raises(HomeAssistantError, match="Unable to send message"):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match="Unable to send message"):
+        await menuai.services.async_call(
             NOTIFY_DOMAIN,
             "trwnh_mastodon_social",
             {

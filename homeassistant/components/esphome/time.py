@@ -7,7 +7,7 @@ from functools import partial
 
 from aioesphomeapi import TimeInfo, TimeState
 
-from homeassistant.components.time import TimeEntity
+from menuai.components.time import TimeEntity
 
 from .entity import EsphomeEntity, esphome_state_property, platform_async_setup_entry
 

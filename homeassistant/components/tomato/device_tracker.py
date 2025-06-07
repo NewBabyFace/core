@@ -10,12 +10,12 @@ import re
 import requests
 import voluptuous as vol
 
-from homeassistant.components.device_tracker import (
+from menuai.components.device_tracker import (
     DOMAIN as DEVICE_TRACKER_DOMAIN,
     PLATFORM_SCHEMA as DEVICE_TRACKER_PLATFORM_SCHEMA,
     DeviceScanner,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
@@ -23,9 +23,9 @@ from homeassistant.const import (
     CONF_USERNAME,
     CONF_VERIFY_SSL,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType
 
 CONF_HTTP_ID = "http_id"
 
@@ -44,7 +44,7 @@ PLATFORM_SCHEMA = DEVICE_TRACKER_PLATFORM_SCHEMA.extend(
 )
 
 
-def get_scanner(hass: HomeAssistant, config: ConfigType) -> TomatoDeviceScanner:
+def get_scanner(menuai: menuai, config: ConfigType) -> TomatoDeviceScanner:
     """Validate the configuration and returns a Tomato scanner."""
     return TomatoDeviceScanner(config[DEVICE_TRACKER_DOMAIN])
 

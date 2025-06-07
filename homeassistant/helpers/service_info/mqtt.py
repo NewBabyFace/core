@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 
-from homeassistant.data_entry_flow import BaseServiceInfo
+from menuai.data_entry_flow import BaseServiceInfo
 
 type ReceivePayloadType = str | bytes | bytearray
 

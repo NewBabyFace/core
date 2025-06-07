@@ -7,14 +7,14 @@ from typing import Any
 from awesomeversion import AwesomeVersion
 from mysensors import BaseAsyncGateway
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     DEGREE,
     LIGHT_LUX,
     PERCENTAGE,
@@ -33,10 +33,10 @@ from homeassistant.const import (
     UnitOfTemperature,
     UnitOfVolume,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util.unit_system import METRIC_SYSTEM
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util.unit_system import METRIC_SYSTEM
 
 from . import setup_mysensors_platform
 from .const import (
@@ -209,7 +209,7 @@ SENSORS: dict[str, SensorEntityDescription] = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -218,7 +218,7 @@ async def async_setup_entry(
     async def async_discover(discovery_info: DiscoveryInfo) -> None:
         """Discover and add a MySensors sensor."""
         setup_mysensors_platform(
-            hass,
+            menuai,
             Platform.SENSOR,
             discovery_info,
             MySensorsSensor,
@@ -230,12 +230,12 @@ async def async_setup_entry(
         """Add battery sensor for each MySensors node."""
         gateway_id = discovery_info[ATTR_GATEWAY_ID]
         node_id = discovery_info[ATTR_NODE_ID]
-        gateway: BaseAsyncGateway = hass.data[DOMAIN][MYSENSORS_GATEWAYS][gateway_id]
+        gateway: BaseAsyncGateway = menuai.data[DOMAIN][MYSENSORS_GATEWAYS][gateway_id]
         async_add_entities([MyBatterySensor(gateway_id, gateway, node_id)])
 
     config_entry.async_on_unload(
         async_dispatcher_connect(
-            hass,
+            menuai,
             MYSENSORS_DISCOVERY.format(config_entry.entry_id, Platform.SENSOR),
             async_discover,
         ),
@@ -243,7 +243,7 @@ async def async_setup_entry(
 
     config_entry.async_on_unload(
         async_dispatcher_connect(
-            hass,
+            menuai,
             MYSENSORS_NODE_DISCOVERY,
             async_node_discover,
         ),
@@ -260,7 +260,7 @@ class MyBatterySensor(MySensorNodeEntity, SensorEntity):
 
     @property
     def unique_id(self) -> str:
-        """Return a unique ID for use in home assistant."""
+        """Return a unique ID for use in MenuAI."""
         return f"{self.gateway_id}-{self.node_id}-battery"
 
     @property
@@ -303,7 +303,7 @@ class MySensorsSensor(MySensorsChildEntity, SensorEntity):
             return custom_unit
 
         if set_req(self.value_type) == set_req.V_TEMP:
-            if self.hass.config.units is METRIC_SYSTEM:
+            if self.menuai.config.units is METRIC_SYSTEM:
                 return UnitOfTemperature.CELSIUS
             return UnitOfTemperature.FAHRENHEIT
 

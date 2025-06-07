@@ -8,9 +8,9 @@ import aiohttp
 from env_canada import ECWeather, ec_exc
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_LANGUAGE, CONF_LATITUDE, CONF_LONGITUDE
-from homeassistant.helpers import config_validation as cv
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_LANGUAGE, CONF_LATITUDE, CONF_LONGITUDE
+from menuai.helpers import config_validation as cv
 
 from .const import CONF_STATION, CONF_TITLE, DOMAIN
 
@@ -84,10 +84,10 @@ class EnvironmentCanadaConfigFlow(ConfigFlow, domain=DOMAIN):
             {
                 vol.Optional(CONF_STATION): str,
                 vol.Optional(
-                    CONF_LATITUDE, default=self.hass.config.latitude
+                    CONF_LATITUDE, default=self.menuai.config.latitude
                 ): cv.latitude,
                 vol.Optional(
-                    CONF_LONGITUDE, default=self.hass.config.longitude
+                    CONF_LONGITUDE, default=self.menuai.config.longitude
                 ): cv.longitude,
                 vol.Required(CONF_LANGUAGE, default="English"): vol.In(
                     ["English", "French"]

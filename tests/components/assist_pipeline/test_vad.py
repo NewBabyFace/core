@@ -2,7 +2,7 @@
 
 import itertools as it
 
-from homeassistant.components.assist_pipeline.vad import (
+from menuai.components.assist_pipeline.vad import (
     AudioBuffer,
     VoiceCommandSegmenter,
     chunk_samples,

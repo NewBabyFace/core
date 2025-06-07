@@ -3,14 +3,14 @@
 import pytest
 from pytest_unordered import unordered
 
-from homeassistant.components import automation
-from homeassistant.components.device_automation import DeviceAutomationType
-from homeassistant.components.lock import DOMAIN, LockEntityFeature
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.entity_registry import RegistryEntryHider
-from homeassistant.setup import async_setup_component
+from menuai.components import automation
+from menuai.components.device_automation import DeviceAutomationType
+from menuai.components.lock import DOMAIN, LockEntityFeature
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.entity_registry import RegistryEntryHider
+from menuai.setup import async_setup_component
 
 from tests.common import (
     MockConfigEntry,
@@ -34,7 +34,7 @@ def stub_blueprint_populate_autouse(stub_blueprint_populate: None) -> None:
     ],
 )
 async def test_get_actions(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     set_state,
@@ -44,7 +44,7 @@ async def test_get_actions(
 ) -> None:
     """Test we get the expected actions from a lock."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -57,7 +57,7 @@ async def test_get_actions(
         supported_features=features_reg,
     )
     if set_state:
-        hass.states.async_set(
+        menuai.states.async_set(
             f"{DOMAIN}.test_5678", "attributes", {"supported_features": features_state}
         )
     expected_actions = []
@@ -83,7 +83,7 @@ async def test_get_actions(
         for action in expected_action_types
     ]
     actions = await async_get_device_automations(
-        hass, DeviceAutomationType.ACTION, device_entry.id
+        menuai, DeviceAutomationType.ACTION, device_entry.id
     )
     assert actions == unordered(expected_actions)
 
@@ -98,7 +98,7 @@ async def test_get_actions(
     ],
 )
 async def test_get_actions_hidden_auxiliary(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     hidden_by,
@@ -106,7 +106,7 @@ async def test_get_actions_hidden_auxiliary(
 ) -> None:
     """Test we get the expected actions from a hidden or auxiliary entity."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -132,19 +132,19 @@ async def test_get_actions_hidden_auxiliary(
         for action in ("lock", "unlock")
     ]
     actions = await async_get_device_automations(
-        hass, DeviceAutomationType.ACTION, device_entry.id
+        menuai, DeviceAutomationType.ACTION, device_entry.id
     )
     assert actions == unordered(expected_actions)
 
 
 async def test_action(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test for lock actions."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -154,7 +154,7 @@ async def test_action(
     )
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -188,26 +188,26 @@ async def test_action(
             ]
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    lock_calls = async_mock_service(hass, "lock", "lock")
-    unlock_calls = async_mock_service(hass, "lock", "unlock")
-    open_calls = async_mock_service(hass, "lock", "open")
+    lock_calls = async_mock_service(menuai, "lock", "lock")
+    unlock_calls = async_mock_service(menuai, "lock", "unlock")
+    open_calls = async_mock_service(menuai, "lock", "open")
 
-    hass.bus.async_fire("test_event_lock")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event_lock")
+    await menuai.async_block_till_done()
     assert len(lock_calls) == 1
     assert len(unlock_calls) == 0
     assert len(open_calls) == 0
 
-    hass.bus.async_fire("test_event_unlock")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event_unlock")
+    await menuai.async_block_till_done()
     assert len(lock_calls) == 1
     assert len(unlock_calls) == 1
     assert len(open_calls) == 0
 
-    hass.bus.async_fire("test_event_open")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event_open")
+    await menuai.async_block_till_done()
     assert len(lock_calls) == 1
     assert len(unlock_calls) == 1
     assert len(open_calls) == 1
@@ -224,13 +224,13 @@ async def test_action(
 
 
 async def test_action_legacy(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test for lock actions."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -240,7 +240,7 @@ async def test_action_legacy(
     )
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -256,12 +256,12 @@ async def test_action_legacy(
             ]
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    lock_calls = async_mock_service(hass, "lock", "lock")
+    lock_calls = async_mock_service(menuai, "lock", "lock")
 
-    hass.bus.async_fire("test_event_lock")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event_lock")
+    await menuai.async_block_till_done()
     assert len(lock_calls) == 1
 
     assert lock_calls[0].domain == DOMAIN

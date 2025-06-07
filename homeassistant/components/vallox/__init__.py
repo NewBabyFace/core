@@ -9,10 +9,10 @@ from typing import NamedTuple
 from vallox_websocket_api import Profile, Vallox, ValloxApiException
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_NAME, Platform
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, CONF_NAME, Platform
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import config_validation as cv
 
 from .const import (
     DEFAULT_FAN_SPEED_AWAY,
@@ -104,47 +104,47 @@ SERVICE_TO_METHOD = {
 }
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up the client and boot the platforms."""
     host = entry.data[CONF_HOST]
     name = entry.data[CONF_NAME]
 
     client = Vallox(host)
 
-    coordinator = ValloxDataUpdateCoordinator(hass, entry, client)
+    coordinator = ValloxDataUpdateCoordinator(menuai, entry, client)
 
     await coordinator.async_config_entry_first_refresh()
 
     service_handler = ValloxServiceHandler(client, coordinator)
     for vallox_service, service_details in SERVICE_TO_METHOD.items():
-        hass.services.async_register(
+        menuai.services.async_register(
             DOMAIN,
             vallox_service,
             service_handler.async_handle,
             schema=service_details.schema,
         )
 
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
+    menuai.data.setdefault(DOMAIN, {})[entry.entry_id] = {
         "client": client,
         "coordinator": coordinator,
         "name": name,
     }
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        hass.data[DOMAIN].pop(entry.entry_id)
+    if unload_ok := await menuai.config_entries.async_unload_platforms(entry, PLATFORMS):
+        menuai.data[DOMAIN].pop(entry.entry_id)
 
-        if hass.data[DOMAIN]:
+        if menuai.data[DOMAIN]:
             return unload_ok
 
         for service in SERVICE_TO_METHOD:
-            hass.services.async_remove(DOMAIN, service)
+            menuai.services.async_remove(DOMAIN, service)
 
     return unload_ok
 

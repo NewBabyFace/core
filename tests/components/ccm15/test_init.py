@@ -2,16 +2,16 @@
 
 import pytest
 
-from homeassistant.components.ccm15.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.core import HomeAssistant
+from menuai.components.ccm15.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.const import CONF_HOST, CONF_PORT
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
 
 @pytest.mark.usefixtures("ccm15_device")
-async def test_load_unload(hass: HomeAssistant) -> None:
+async def test_load_unload(menuai: menuai) -> None:
     """Test options flow."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -21,14 +21,14 @@ async def test_load_unload(hass: HomeAssistant) -> None:
             CONF_PORT: 80,
         },
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.LOADED
 
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.NOT_LOADED

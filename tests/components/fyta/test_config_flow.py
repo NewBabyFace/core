@@ -9,12 +9,12 @@ from fyta_cli.fyta_exceptions import (
 )
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.fyta.const import CONF_EXPIRATION, DOMAIN
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai import config_entries
+from menuai.components.fyta.const import CONF_EXPIRATION, DOMAIN
+from menuai.const import CONF_ACCESS_TOKEN, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
 
 from .const import ACCESS_TOKEN, EXPIRATION, PASSWORD, USERNAME
 
@@ -22,11 +22,11 @@ from tests.common import MockConfigEntry
 
 
 async def user_step(
-    hass: HomeAssistant, flow_id: str, mock_setup_entry: AsyncMock
+    menuai: menuai, flow_id: str, mock_setup_entry: AsyncMock
 ) -> None:
     """Test user step (helper function)."""
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         flow_id, {CONF_USERNAME: USERNAME, CONF_PASSWORD: PASSWORD}
     )
 
@@ -42,17 +42,17 @@ async def user_step(
 
 
 async def test_user_flow(
-    hass: HomeAssistant, mock_fyta_connector: AsyncMock, mock_setup_entry: AsyncMock
+    menuai: menuai, mock_fyta_connector: AsyncMock, mock_setup_entry: AsyncMock
 ) -> None:
     """Test we get the form."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    await user_step(hass, result["flow_id"], mock_setup_entry)
+    await user_step(menuai, result["flow_id"], mock_setup_entry)
 
 
 @pytest.mark.parametrize(
@@ -65,7 +65,7 @@ async def test_user_flow(
     ],
 )
 async def test_form_exceptions(
-    hass: HomeAssistant,
+    menuai: menuai,
     exception: Exception,
     error: dict[str, str],
     mock_fyta_connector: AsyncMock,
@@ -73,17 +73,17 @@ async def test_form_exceptions(
 ) -> None:
     """Test we can handle Form exceptions."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     mock_fyta_connector.login.side_effect = exception
 
     # tests with connection error
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {CONF_USERNAME: USERNAME, CONF_PASSWORD: PASSWORD}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
@@ -92,10 +92,10 @@ async def test_form_exceptions(
     mock_fyta_connector.login.side_effect = None
 
     # tests with all information provided
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {CONF_USERNAME: USERNAME, CONF_PASSWORD: PASSWORD}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == USERNAME
@@ -108,7 +108,7 @@ async def test_form_exceptions(
 
 
 async def test_duplicate_entry(
-    hass: HomeAssistant, mock_fyta_connector: AsyncMock
+    menuai: menuai, mock_fyta_connector: AsyncMock
 ) -> None:
     """Test duplicate setup handling."""
     entry = MockConfigEntry(
@@ -116,9 +116,9 @@ async def test_duplicate_entry(
         title=USERNAME,
         data={CONF_USERNAME: USERNAME, CONF_PASSWORD: PASSWORD},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -126,11 +126,11 @@ async def test_duplicate_entry(
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_USERNAME: USERNAME, CONF_PASSWORD: PASSWORD},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
@@ -146,7 +146,7 @@ async def test_duplicate_entry(
     ],
 )
 async def test_reauth(
-    hass: HomeAssistant,
+    menuai: menuai,
     exception: Exception,
     error: dict[str, str],
     mock_fyta_connector: AsyncMock,
@@ -164,20 +164,20 @@ async def test_reauth(
             CONF_EXPIRATION: EXPIRATION,
         },
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await entry.start_reauth_flow(hass)
+    result = await entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
     mock_fyta_connector.login.side_effect = exception
 
     # tests with connection error
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_USERNAME: USERNAME, CONF_PASSWORD: PASSWORD},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
@@ -186,11 +186,11 @@ async def test_reauth(
     mock_fyta_connector.login.side_effect = None
 
     # tests with all information provided
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_USERNAME: "other_username", CONF_PASSWORD: "other_password"},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"
@@ -201,7 +201,7 @@ async def test_reauth(
 
 
 async def test_dhcp_discovery(
-    hass: HomeAssistant, mock_fyta_connector: AsyncMock, mock_setup_entry: AsyncMock
+    menuai: menuai, mock_fyta_connector: AsyncMock, mock_setup_entry: AsyncMock
 ) -> None:
     """Test DHCP discovery flow."""
 
@@ -211,7 +211,7 @@ async def test_dhcp_discovery(
         macaddress="aabbccddeeff",
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_DHCP},
         data=service_info,
@@ -221,4 +221,4 @@ async def test_dhcp_discovery(
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
-    await user_step(hass, result["flow_id"], mock_setup_entry)
+    await user_step(menuai, result["flow_id"], mock_setup_entry)

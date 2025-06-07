@@ -6,18 +6,18 @@ from typing import Any
 
 from eufylife_ble_client import MODEL_TO_NAME
 
-from homeassistant.components.bluetooth import async_address_present
-from homeassistant.components.sensor import (
+from menuai.components.bluetooth import async_address_present
+from menuai.components.sensor import (
     RestoreSensor,
     SensorDeviceClass,
     SensorEntity,
 )
-from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN, UnitOfMass
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util.unit_system import US_CUSTOMARY_SYSTEM
+from menuai.const import STATE_UNAVAILABLE, STATE_UNKNOWN, UnitOfMass
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util.unit_system import US_CUSTOMARY_SYSTEM
 
 from .models import EufyLifeConfigEntry, EufyLifeData
 
@@ -25,7 +25,7 @@ IGNORED_STATES = {STATE_UNAVAILABLE, STATE_UNKNOWN}
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: EufyLifeConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -62,7 +62,7 @@ class EufyLifeSensorEntity(SensorEntity):
         """Determine if the entity is available."""
         if self._data.client.advertisement_data_contains_state:
             # If the device only uses advertisement data, just check if the address is present.
-            return async_address_present(self.hass, self._data.address)
+            return async_address_present(self.menuai, self._data.address)
 
         # If the device needs an active connection, availability is based on whether it is connected.
         return self._data.client.is_connected
@@ -72,7 +72,7 @@ class EufyLifeSensorEntity(SensorEntity):
         """Handle state update."""
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callback."""
         self.async_on_remove(
             self._data.client.register_callback(self._handle_state_update)
@@ -101,7 +101,7 @@ class EufyLifeRealTimeWeightSensorEntity(EufyLifeSensorEntity):
     @property
     def suggested_unit_of_measurement(self) -> str | None:
         """Set the suggested unit based on the unit system."""
-        if self.hass.config.units is US_CUSTOMARY_SYSTEM:
+        if self.menuai.config.units is US_CUSTOMARY_SYSTEM:
             return UnitOfMass.POUNDS
 
         return UnitOfMass.KILOGRAMS
@@ -127,7 +127,7 @@ class EufyLifeWeightSensorEntity(RestoreSensor, EufyLifeSensorEntity):
     @property
     def suggested_unit_of_measurement(self) -> str | None:
         """Set the suggested unit based on the unit system."""
-        if self.hass.config.units is US_CUSTOMARY_SYSTEM:
+        if self.menuai.config.units is US_CUSTOMARY_SYSTEM:
             return UnitOfMass.POUNDS
 
         return UnitOfMass.KILOGRAMS
@@ -141,9 +141,9 @@ class EufyLifeWeightSensorEntity(RestoreSensor, EufyLifeSensorEntity):
 
         super()._handle_state_update(args)
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Restore state on startup."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         last_state = await self.async_get_last_state()
         last_sensor_data = await self.async_get_last_sensor_data()
@@ -179,9 +179,9 @@ class EufyLifeHeartRateSensorEntity(RestoreSensor, EufyLifeSensorEntity):
 
         super()._handle_state_update(args)
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Restore state on startup."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         last_state = await self.async_get_last_state()
         last_sensor_data = await self.async_get_last_sensor_data()

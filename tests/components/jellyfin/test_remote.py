@@ -2,7 +2,7 @@
 
 from unittest.mock import MagicMock
 
-from homeassistant.components.remote import (
+from menuai.components.remote import (
     ATTR_COMMAND,
     ATTR_DELAY_SECS,
     ATTR_HOLD_SECS,
@@ -10,15 +10,15 @@ from homeassistant.components.remote import (
     DOMAIN as R_DOMAIN,
     SERVICE_SEND_COMMAND,
 )
-from homeassistant.const import ATTR_ENTITY_ID, STATE_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.const import ATTR_ENTITY_ID, STATE_ON
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from tests.common import MockConfigEntry
 
 
 async def test_remote(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     init_integration: MockConfigEntry,
@@ -26,10 +26,10 @@ async def test_remote(
     mock_api: MagicMock,
 ) -> None:
     """Test the Jellyfin remote."""
-    state = hass.states.get("remote.jellyfin_device")
-    state2 = hass.states.get("remote.jellyfin_device_two")
-    state3 = hass.states.get("remote.jellyfin_device_three")
-    state4 = hass.states.get("remote.jellyfin_device_four")
+    state = menuai.states.get("remote.jellyfin_device")
+    state2 = menuai.states.get("remote.jellyfin_device_two")
+    state3 = menuai.states.get("remote.jellyfin_device_three")
+    state4 = menuai.states.get("remote.jellyfin_device_four")
 
     assert state
     assert state2
@@ -41,17 +41,17 @@ async def test_remote(
 
 
 async def test_services(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_integration: MockConfigEntry,
     mock_jellyfin: MagicMock,
     mock_api: MagicMock,
 ) -> None:
     """Test Jellyfin remote services."""
-    state = hass.states.get("remote.jellyfin_device")
+    state = menuai.states.get("remote.jellyfin_device")
     assert state
 
     command = "Select"
-    await hass.services.async_call(
+    await menuai.services.async_call(
         R_DOMAIN,
         SERVICE_SEND_COMMAND,
         {
@@ -70,7 +70,7 @@ async def test_services(
     )
 
     command = "MoveLeft"
-    await hass.services.async_call(
+    await menuai.services.async_call(
         R_DOMAIN,
         SERVICE_SEND_COMMAND,
         {

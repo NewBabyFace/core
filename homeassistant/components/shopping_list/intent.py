@@ -2,21 +2,21 @@
 
 from __future__ import annotations
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, intent
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, intent
 
 from . import DOMAIN, EVENT_SHOPPING_LIST_UPDATED, NoMatchingShoppingListItem
 
-INTENT_ADD_ITEM = "HassShoppingListAddItem"
-INTENT_COMPLETE_ITEM = "HassShoppingListCompleteItem"
-INTENT_LAST_ITEMS = "HassShoppingListLastItems"
+INTENT_ADD_ITEM = "menuaiShoppingListAddItem"
+INTENT_COMPLETE_ITEM = "menuaiShoppingListCompleteItem"
+INTENT_LAST_ITEMS = "menuaiShoppingListLastItems"
 
 
-async def async_setup_intents(hass: HomeAssistant) -> None:
+async def async_setup_intents(menuai: menuai) -> None:
     """Set up the Shopping List intents."""
-    intent.async_register(hass, AddItemIntent())
-    intent.async_register(hass, CompleteItemIntent())
-    intent.async_register(hass, ListTopItemsIntent())
+    intent.async_register(menuai, AddItemIntent())
+    intent.async_register(menuai, CompleteItemIntent())
+    intent.async_register(menuai, ListTopItemsIntent())
 
 
 class AddItemIntent(intent.IntentHandler):
@@ -31,10 +31,10 @@ class AddItemIntent(intent.IntentHandler):
         """Handle the intent."""
         slots = self.async_validate_slots(intent_obj.slots)
         item = slots["item"]["value"].strip()
-        await intent_obj.hass.data[DOMAIN].async_add(item)
+        await intent_obj.menuai.data[DOMAIN].async_add(item)
 
         response = intent_obj.create_response()
-        intent_obj.hass.bus.async_fire(EVENT_SHOPPING_LIST_UPDATED)
+        intent_obj.menuai.bus.async_fire(EVENT_SHOPPING_LIST_UPDATED)
         return response
 
 
@@ -52,11 +52,11 @@ class CompleteItemIntent(intent.IntentHandler):
         item = slots["item"]["value"].strip()
 
         try:
-            complete_items = await intent_obj.hass.data[DOMAIN].async_complete(item)
+            complete_items = await intent_obj.menuai.data[DOMAIN].async_complete(item)
         except NoMatchingShoppingListItem:
             complete_items = []
 
-        intent_obj.hass.bus.async_fire(EVENT_SHOPPING_LIST_UPDATED)
+        intent_obj.menuai.bus.async_fire(EVENT_SHOPPING_LIST_UPDATED)
 
         response = intent_obj.create_response()
         response.async_set_speech_slots({"completed_items": complete_items})
@@ -75,7 +75,7 @@ class ListTopItemsIntent(intent.IntentHandler):
 
     async def async_handle(self, intent_obj: intent.Intent) -> intent.IntentResponse:
         """Handle the intent."""
-        items = intent_obj.hass.data[DOMAIN].items[-5:]
+        items = intent_obj.menuai.data[DOMAIN].items[-5:]
         response: intent.IntentResponse = intent_obj.create_response()
 
         if not items:

@@ -3,10 +3,10 @@
 import pytest
 import requests_mock
 
-from homeassistant.components.lock import SERVICE_LOCK, SERVICE_UNLOCK
-from homeassistant.components.wallbox.const import CHARGER_LOCKED_UNLOCKED_KEY
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
+from menuai.components.lock import SERVICE_LOCK, SERVICE_UNLOCK
+from menuai.components.wallbox.const import CHARGER_LOCKED_UNLOCKED_KEY
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
 
 from . import (
     authorisation_response,
@@ -19,12 +19,12 @@ from .const import MOCK_LOCK_ENTITY_ID
 from tests.common import MockConfigEntry
 
 
-async def test_wallbox_lock_class(hass: HomeAssistant, entry: MockConfigEntry) -> None:
+async def test_wallbox_lock_class(menuai: menuai, entry: MockConfigEntry) -> None:
     """Test wallbox lock class."""
 
-    await setup_integration(hass, entry)
+    await setup_integration(menuai, entry)
 
-    state = hass.states.get(MOCK_LOCK_ENTITY_ID)
+    state = menuai.states.get(MOCK_LOCK_ENTITY_ID)
     assert state
     assert state.state == "unlocked"
 
@@ -40,7 +40,7 @@ async def test_wallbox_lock_class(hass: HomeAssistant, entry: MockConfigEntry) -
             status_code=200,
         )
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "lock",
             SERVICE_LOCK,
             {
@@ -49,7 +49,7 @@ async def test_wallbox_lock_class(hass: HomeAssistant, entry: MockConfigEntry) -
             blocking=True,
         )
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "lock",
             SERVICE_UNLOCK,
             {
@@ -60,11 +60,11 @@ async def test_wallbox_lock_class(hass: HomeAssistant, entry: MockConfigEntry) -
 
 
 async def test_wallbox_lock_class_connection_error(
-    hass: HomeAssistant, entry: MockConfigEntry
+    menuai: menuai, entry: MockConfigEntry
 ) -> None:
     """Test wallbox lock class connection error."""
 
-    await setup_integration(hass, entry)
+    await setup_integration(menuai, entry)
 
     with requests_mock.Mocker() as mock_request:
         mock_request.get(
@@ -79,7 +79,7 @@ async def test_wallbox_lock_class_connection_error(
         )
 
         with pytest.raises(ConnectionError):
-            await hass.services.async_call(
+            await menuai.services.async_call(
                 "lock",
                 SERVICE_LOCK,
                 {
@@ -88,7 +88,7 @@ async def test_wallbox_lock_class_connection_error(
                 blocking=True,
             )
         with pytest.raises(ConnectionError):
-            await hass.services.async_call(
+            await menuai.services.async_call(
                 "lock",
                 SERVICE_UNLOCK,
                 {
@@ -99,24 +99,24 @@ async def test_wallbox_lock_class_connection_error(
 
 
 async def test_wallbox_lock_class_authentication_error(
-    hass: HomeAssistant, entry: MockConfigEntry
+    menuai: menuai, entry: MockConfigEntry
 ) -> None:
     """Test wallbox lock not loaded on authentication error."""
 
-    await setup_integration_read_only(hass, entry)
+    await setup_integration_read_only(menuai, entry)
 
-    state = hass.states.get(MOCK_LOCK_ENTITY_ID)
+    state = menuai.states.get(MOCK_LOCK_ENTITY_ID)
 
     assert state is None
 
 
 async def test_wallbox_lock_class_platform_not_ready(
-    hass: HomeAssistant, entry: MockConfigEntry
+    menuai: menuai, entry: MockConfigEntry
 ) -> None:
     """Test wallbox lock not loaded on authentication error."""
 
-    await setup_integration_platform_not_ready(hass, entry)
+    await setup_integration_platform_not_ready(menuai, entry)
 
-    state = hass.states.get(MOCK_LOCK_ENTITY_ID)
+    state = menuai.states.get(MOCK_LOCK_ENTITY_ID)
 
     assert state is None

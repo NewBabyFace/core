@@ -2,14 +2,14 @@
 
 from homematicip.base.channel_event import ChannelEvent
 
-from homeassistant.const import STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
+from menuai.const import STATE_UNKNOWN
+from menuai.core import menuai
 
 from .helper import HomeFactory, get_and_check_entity_basics
 
 
 async def test_door_bell_event(
-    hass: HomeAssistant,
+    menuai: menuai,
     default_mock_hap_factory: HomeFactory,
 ) -> None:
     """Test of door bell event of HmIP-DSD-PCB."""
@@ -21,7 +21,7 @@ async def test_door_bell_event(
     )
 
     ha_state, hmip_device = get_and_check_entity_basics(
-        hass, mock_hap, entity_id, entity_name, device_model
+        menuai, mock_hap, entity_id, entity_name, device_model
     )
 
     ch = hmip_device.functionalChannels[1]
@@ -33,12 +33,12 @@ async def test_door_bell_event(
 
     ch.fire_channel_event(channel_event)
 
-    ha_state = hass.states.get(entity_id)
+    ha_state = menuai.states.get(entity_id)
     assert ha_state.state != STATE_UNKNOWN
 
 
 async def test_door_bell_event_wrong_event_type(
-    hass: HomeAssistant,
+    menuai: menuai,
     default_mock_hap_factory: HomeFactory,
 ) -> None:
     """Test of door bell event of HmIP-DSD-PCB."""
@@ -50,7 +50,7 @@ async def test_door_bell_event_wrong_event_type(
     )
 
     ha_state, hmip_device = get_and_check_entity_basics(
-        hass, mock_hap, entity_id, entity_name, device_model
+        menuai, mock_hap, entity_id, entity_name, device_model
     )
 
     ch = hmip_device.functionalChannels[1]
@@ -62,5 +62,5 @@ async def test_door_bell_event_wrong_event_type(
 
     ch.fire_channel_event(channel_event)
 
-    ha_state = hass.states.get(entity_id)
+    ha_state = menuai.states.get(entity_id)
     assert ha_state.state == STATE_UNKNOWN

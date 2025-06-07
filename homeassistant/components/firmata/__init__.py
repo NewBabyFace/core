@@ -5,8 +5,8 @@ import logging
 
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import SOURCE_IMPORT, ConfigEntry
+from menuai.const import (
     CONF_BINARY_SENSORS,
     CONF_LIGHTS,
     CONF_MAXIMUM,
@@ -15,11 +15,11 @@ from homeassistant.const import (
     CONF_PIN,
     CONF_SENSORS,
     CONF_SWITCHES,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, device_registry as dr
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, device_registry as dr
+from menuai.helpers.typing import ConfigType
 
 from .board import FirmataBoard
 from .const import (
@@ -125,32 +125,32 @@ CONFIG_SCHEMA = vol.Schema(
 type FirmataConfigEntry = ConfigEntry[FirmataBoard]
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Firmata domain."""
     # Delete specific entries that no longer exist in the config
-    if hass.config_entries.async_entries(DOMAIN):
-        for entry in hass.config_entries.async_entries(DOMAIN):
+    if menuai.config_entries.async_entries(DOMAIN):
+        for entry in menuai.config_entries.async_entries(DOMAIN):
             remove = True
             for board in config[DOMAIN]:
                 if entry.data[CONF_SERIAL_PORT] == board[CONF_SERIAL_PORT]:
                     remove = False
                     break
             if remove:
-                await hass.config_entries.async_remove(entry.entry_id)
+                await menuai.config_entries.async_remove(entry.entry_id)
 
     # Setup new entries and update old entries
     for board in config[DOMAIN]:
         firmata_config = copy(board)
         existing_entry = False
-        for entry in hass.config_entries.async_entries(DOMAIN):
+        for entry in menuai.config_entries.async_entries(DOMAIN):
             if board[CONF_SERIAL_PORT] == entry.data[CONF_SERIAL_PORT]:
                 existing_entry = True
                 firmata_config[CONF_NAME] = entry.data[CONF_NAME]
-                hass.config_entries.async_update_entry(entry, data=firmata_config)
+                menuai.config_entries.async_update_entry(entry, data=firmata_config)
                 break
         if not existing_entry:
-            hass.async_create_task(
-                hass.config_entries.flow.async_init(
+            menuai.async_create_task(
+                menuai.config_entries.flow.async_init(
                     DOMAIN,
                     context={"source": SOURCE_IMPORT},
                     data=firmata_config,
@@ -161,7 +161,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, config_entry: FirmataConfigEntry
+    menuai: menuai, config_entry: FirmataConfigEntry
 ) -> bool:
     """Set up a Firmata board for a config entry."""
     _LOGGER.debug(
@@ -179,14 +179,14 @@ async def async_setup_entry(
     config_entry.runtime_data = board
 
     async def handle_shutdown(event) -> None:
-        """Handle shutdown of board when Home Assistant shuts down."""
+        """Handle shutdown of board when MenuAI shuts down."""
         await board.async_reset()
 
     config_entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, handle_shutdown)
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, handle_shutdown)
     )
 
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections=set(),
@@ -196,7 +196,7 @@ async def async_setup_entry(
         sw_version=board.firmware_version,
     )
 
-    await hass.config_entries.async_forward_entry_setups(
+    await menuai.config_entries.async_forward_entry_setups(
         config_entry,
         [
             platform
@@ -208,7 +208,7 @@ async def async_setup_entry(
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, config_entry: FirmataConfigEntry
+    menuai: menuai, config_entry: FirmataConfigEntry
 ) -> bool:
     """Shutdown and close a Firmata board for a config entry."""
     _LOGGER.debug("Closing Firmata board %s", config_entry.data[CONF_NAME])
@@ -219,7 +219,7 @@ async def async_unload_entry(
         if conf in config_entry.data
     ]:
         results.append(
-            await hass.config_entries.async_unload_platforms(config_entry, platforms)
+            await menuai.config_entries.async_unload_platforms(config_entry, platforms)
         )
     results.append(await config_entry.runtime_data.async_reset())
 

@@ -4,7 +4,7 @@ from typing import Any
 
 import pytest
 
-from homeassistant.components.epic_games_store.helper import (
+from menuai.components.epic_games_store.helper import (
     format_game_data,
     get_game_url,
     is_free_game,

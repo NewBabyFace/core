@@ -9,11 +9,11 @@ from typing import Any
 import pyaprilaire.client
 from pyaprilaire.const import MODELS, Attribute, FunctionalDomain
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.update_coordinator import BaseDataUpdateCoordinatorProtocol
+from menuai.config_entries import ConfigEntry
+from menuai.core import CALLBACK_TYPE, menuai, callback
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.update_coordinator import BaseDataUpdateCoordinatorProtocol
 
 from .const import DOMAIN
 
@@ -31,14 +31,14 @@ class AprilaireCoordinator(BaseDataUpdateCoordinatorProtocol):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         unique_id: str | None,
         host: str,
         port: int,
     ) -> None:
         """Initialize the coordinator."""
 
-        self.hass = hass
+        self.menuai = menuai
         self.unique_id = unique_id
         self.data: dict[str, Any] = {}
 
@@ -93,7 +93,7 @@ class AprilaireCoordinator(BaseDataUpdateCoordinatorProtocol):
             and new_device_info is not None
             and old_device_info != new_device_info
         ):
-            device_registry = dr.async_get(self.hass)
+            device_registry = dr.async_get(self.menuai)
 
             device = device_registry.async_get_device(old_device_info["identifiers"])
 

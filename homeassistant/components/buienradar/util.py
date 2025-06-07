@@ -28,11 +28,11 @@ from buienradar.constants import (
 )
 from buienradar.urls import JSON_FEED_URL, json_precipitation_forecast_url
 
-from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.event import async_track_point_in_utc_time
-from homeassistant.util import dt as dt_util
+from menuai.const import CONF_LATITUDE, CONF_LONGITUDE
+from menuai.core import CALLBACK_TYPE, menuai, callback
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.event import async_track_point_in_utc_time
+from menuai.util import dt as dt_util
 
 from .const import DEFAULT_TIMEOUT, SCHEDULE_NOK, SCHEDULE_OK
 
@@ -61,11 +61,11 @@ class BrData:
     load_error_count: int = WARN_THRESHOLD
     rain_error_count: int = WARN_THRESHOLD
 
-    def __init__(self, hass: HomeAssistant, coordinates, timeframe, devices) -> None:
+    def __init__(self, menuai: menuai, coordinates, timeframe, devices) -> None:
         """Initialize the data object."""
         self.devices = devices
         self.data: dict[str, Any] | None = {}
-        self.hass = hass
+        self.menuai = menuai
         self.coordinates = coordinates
         self.timeframe = timeframe
         self.unsub_schedule_update: CALLBACK_TYPE | None = None
@@ -85,7 +85,7 @@ class BrData:
         _LOGGER.debug("Scheduling next update in %s minutes", minute)
         nxt = dt_util.utcnow() + timedelta(minutes=minute)
         self.unsub_schedule_update = async_track_point_in_utc_time(
-            self.hass, self.async_update, nxt
+            self.menuai, self.async_update, nxt
         )
 
     async def get_data(self, url):
@@ -94,7 +94,7 @@ class BrData:
         result = {SUCCESS: False, MESSAGE: None}
         resp = None
         try:
-            websession = async_get_clientsession(self.hass)
+            websession = async_get_clientsession(self.menuai)
             async with websession.get(
                 url, timeout=aiohttp.ClientTimeout(total=DEFAULT_TIMEOUT)
             ) as resp:

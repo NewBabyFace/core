@@ -1,7 +1,7 @@
 """Entity classes for the Steam integration."""
 
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DEFAULT_NAME, DOMAIN
 from .coordinator import SteamDataUpdateCoordinator

@@ -10,13 +10,13 @@ import aiohttp
 from loqedAPI import cloud_loqed, loqed
 import voluptuous as vol
 
-from homeassistant.components import webhook
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_API_TOKEN, CONF_NAME, CONF_WEBHOOK_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.components import webhook
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_API_TOKEN, CONF_NAME, CONF_WEBHOOK_ID
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import DOMAIN
 
@@ -31,13 +31,13 @@ class LoqedConfigFlow(ConfigFlow, domain=DOMAIN):
     _host: str | None = None
 
     async def validate_input(
-        self, hass: HomeAssistant, data: dict[str, Any]
+        self, menuai: menuai, data: dict[str, Any]
     ) -> dict[str, Any]:
         """Validate the user input allows us to connect."""
 
         # 1. Checking loqed-connection
         try:
-            session = async_get_clientsession(hass)
+            session = async_get_clientsession(menuai)
             cloud_api_client = cloud_loqed.CloudAPIClient(
                 session,
                 data[CONF_API_TOKEN],
@@ -88,7 +88,7 @@ class LoqedConfigFlow(ConfigFlow, domain=DOMAIN):
         host = discovery_info.host
         self._host = host
 
-        session = async_get_clientsession(self.hass)
+        session = async_get_clientsession(self.menuai)
         apiclient = loqed.APIClient(session, f"http://{host}")
         api = loqed.LoqedAPI(apiclient)
         lock_data = await api.async_get_lock_details()
@@ -130,7 +130,7 @@ class LoqedConfigFlow(ConfigFlow, domain=DOMAIN):
         errors = {}
 
         try:
-            info = await self.validate_input(self.hass, user_input)
+            info = await self.validate_input(self.menuai, user_input)
         except CannotConnect:
             errors["base"] = "cannot_connect"
         except InvalidAuth:
@@ -161,9 +161,9 @@ class LoqedConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(menuaiError):
     """Error to indicate there is invalid auth."""

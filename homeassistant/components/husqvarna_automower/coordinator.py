@@ -16,11 +16,11 @@ from aioautomower.exceptions import (
 from aioautomower.model import MowerDictionary
 from aioautomower.session import AutomowerSession
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN
 
@@ -39,13 +39,13 @@ class AutomowerDataUpdateCoordinator(DataUpdateCoordinator[MowerDictionary]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: AutomowerConfigEntry,
         api: AutomowerSession,
     ) -> None:
         """Initialize data updater."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -93,7 +93,7 @@ class AutomowerDataUpdateCoordinator(DataUpdateCoordinator[MowerDictionary]):
 
     async def client_listen(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entry: AutomowerConfigEntry,
         automower_client: AutomowerSession,
     ) -> None:
@@ -113,12 +113,12 @@ class AutomowerDataUpdateCoordinator(DataUpdateCoordinator[MowerDictionary]):
                 "Failed to listen to websocket. Trying to reconnect: %s",
                 err,
             )
-        if not hass.is_stopping:
+        if not menuai.is_stopping:
             await asyncio.sleep(self.reconnect_time)
             self.reconnect_time = min(self.reconnect_time * 2, MAX_WS_RECONNECT_TIME)
             entry.async_create_background_task(
-                hass,
-                self.client_listen(hass, entry, automower_client),
+                menuai,
+                self.client_listen(menuai, entry, automower_client),
                 "reconnect_task",
             )
 
@@ -148,7 +148,7 @@ class AutomowerDataUpdateCoordinator(DataUpdateCoordinator[MowerDictionary]):
 
     def _remove_device(self, removed_devices: set[str]) -> None:
         """Remove device from the registry."""
-        device_registry = dr.async_get(self.hass)
+        device_registry = dr.async_get(self.menuai)
         for mower_id in removed_devices:
             if device := device_registry.async_get_device(
                 identifiers={(DOMAIN, str(mower_id))}
@@ -198,7 +198,7 @@ class AutomowerDataUpdateCoordinator(DataUpdateCoordinator[MowerDictionary]):
             for zone_callback in self.new_zones_callbacks:
                 zone_callback(mower_id, set(zones))
 
-        entity_registry = er.async_get(self.hass)
+        entity_registry = er.async_get(self.menuai)
         for mower_id, zones in removed_zones.items():
             for entity_entry in er.async_entries_for_config_entry(
                 entity_registry, self.config_entry.entry_id
@@ -243,7 +243,7 @@ class AutomowerDataUpdateCoordinator(DataUpdateCoordinator[MowerDictionary]):
             for area_callback in self.new_areas_callbacks:
                 area_callback(mower_id, set(areas))
 
-        entity_registry = er.async_get(self.hass)
+        entity_registry = er.async_get(self.menuai)
         for mower_id, areas in removed_areas.items():
             for entity_entry in er.async_entries_for_config_entry(
                 entity_registry, self.config_entry.entry_id

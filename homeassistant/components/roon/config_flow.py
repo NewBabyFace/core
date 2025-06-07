@@ -7,11 +7,11 @@ from typing import Any
 from roonapi import RoonApi, RoonDiscovery
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_API_KEY, CONF_HOST, CONF_PORT
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_API_KEY, CONF_HOST, CONF_PORT
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
 
 from .const import (
     AUTHENTICATE_TIMEOUT,
@@ -37,9 +37,9 @@ TIMEOUT = 120
 class RoonHub:
     """Interact with roon during config flow."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialise the RoonHub."""
-        self._hass = hass
+        self._menuai = menuai
 
     async def discover(self) -> list[tuple[str, int]]:
         """Try and discover roon servers."""
@@ -50,7 +50,7 @@ class RoonHub:
             return servers
 
         discovery = RoonDiscovery(None)
-        servers = await self._hass.async_add_executor_job(
+        servers = await self._menuai.async_add_executor_job(
             get_discovered_servers, discovery
         )
         _LOGGER.debug("Servers = %s", servers)
@@ -89,22 +89,22 @@ class RoonHub:
 
             await asyncio.sleep(AUTHENTICATE_TIMEOUT)
 
-        await self._hass.async_add_executor_job(stop_apis, apis)
+        await self._menuai.async_add_executor_job(stop_apis, apis)
 
         return (token, core_id, core_name)
 
 
-async def discover(hass: HomeAssistant) -> list[tuple[str, int]]:
-    """Connect and authenticate home assistant."""
+async def discover(menuai: menuai) -> list[tuple[str, int]]:
+    """Connect and authenticate MenuAI."""
 
-    hub = RoonHub(hass)
+    hub = RoonHub(menuai)
     return await hub.discover()
 
 
-async def authenticate(hass: HomeAssistant, host, port, servers):
-    """Connect and authenticate home assistant."""
+async def authenticate(menuai: menuai, host, port, servers):
+    """Connect and authenticate MenuAI."""
 
-    hub = RoonHub(hass)
+    hub = RoonHub(menuai)
     (token, core_id, core_name) = await hub.authenticate(host, port, servers)
     if token is None:
         raise InvalidAuth
@@ -134,7 +134,7 @@ class RoonConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Get roon core details via discovery."""
 
-        self._servers = await discover(self.hass)
+        self._servers = await discover(self.menuai)
 
         # We discovered one or more  roon - so skip to authentication
         if self._servers:
@@ -168,7 +168,7 @@ class RoonConfigFlow(ConfigFlow, domain=DOMAIN):
 
             try:
                 info = await authenticate(
-                    self.hass, self._host, self._port, self._servers
+                    self.menuai, self._host, self._port, self._servers
                 )
 
             except InvalidAuth:
@@ -182,5 +182,5 @@ class RoonConfigFlow(ConfigFlow, domain=DOMAIN):
         return self.async_show_form(step_id="link", errors=errors)
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(menuaiError):
     """Error to indicate there is invalid auth."""

@@ -8,10 +8,10 @@ from aioamazondevices.api import AmazonEchoApi
 from aioamazondevices.exceptions import CannotAuthenticate, CannotConnect
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_CODE, CONF_COUNTRY, CONF_PASSWORD, CONF_USERNAME
-import homeassistant.helpers.config_validation as cv
-from homeassistant.helpers.selector import CountrySelector
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_CODE, CONF_COUNTRY, CONF_PASSWORD, CONF_USERNAME
+import menuai.helpers.config_validation as cv
+from menuai.helpers.selector import CountrySelector
 
 from .const import CONF_LOGIN_DATA, DOMAIN
 
@@ -53,7 +53,7 @@ class AmazonDevicesConfigFlow(ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema(
                 {
                     vol.Required(
-                        CONF_COUNTRY, default=self.hass.config.country
+                        CONF_COUNTRY, default=self.menuai.config.country
                     ): CountrySelector(),
                     vol.Required(CONF_USERNAME): cv.string,
                     vol.Required(CONF_PASSWORD): cv.string,

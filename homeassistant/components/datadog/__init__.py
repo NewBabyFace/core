@@ -5,7 +5,7 @@ import logging
 from datadog import initialize, statsd
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_PORT,
     CONF_PREFIX,
@@ -13,16 +13,16 @@ from homeassistant.const import (
     EVENT_STATE_CHANGED,
     STATE_UNKNOWN,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, state as state_helper
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, state as state_helper
+from menuai.helpers.typing import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
 
 CONF_RATE = "rate"
 DEFAULT_HOST = "localhost"
 DEFAULT_PORT = 8125
-DEFAULT_PREFIX = "hass"
+DEFAULT_PREFIX = "menuai"
 DEFAULT_RATE = 1
 DOMAIN = "datadog"
 
@@ -43,7 +43,7 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Datadog component."""
 
     conf = config[DOMAIN]
@@ -60,7 +60,7 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
         message = event.data.get("message")
 
         statsd.event(
-            title="Home Assistant",
+            title="MenuAI",
             text=f"%%% \n **{name}** {message} \n %%%",
             tags=[
                 f"entity:{event.data.get('entity_id')}",
@@ -99,7 +99,7 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
         _LOGGER.debug("Sent metric %s: %s (tags: %s)", metric, value, tags)
 
-    hass.bus.listen(EVENT_LOGBOOK_ENTRY, logbook_entry_listener)
-    hass.bus.listen(EVENT_STATE_CHANGED, state_changed_listener)
+    menuai.bus.listen(EVENT_LOGBOOK_ENTRY, logbook_entry_listener)
+    menuai.bus.listen(EVENT_STATE_CHANGED, state_changed_listener)
 
     return True

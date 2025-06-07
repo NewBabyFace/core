@@ -7,9 +7,9 @@ from typing import Any
 from pytraccar import ApiClient, ServerModel, TraccarException
 import voluptuous as vol
 
-from homeassistant import config_entries
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import (
+from menuai import config_entries
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
@@ -17,13 +17,13 @@ from homeassistant.const import (
     CONF_USERNAME,
     CONF_VERIFY_SSL,
 )
-from homeassistant.core import callback
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.schema_config_entry_flow import (
+from menuai.core import callback
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.schema_config_entry_flow import (
     SchemaFlowFormStep,
     SchemaOptionsFlowHandler,
 )
-from homeassistant.helpers.selector import (
+from menuai.helpers.selector import (
     BooleanSelector,
     BooleanSelectorConfig,
     NumberSelector,
@@ -117,7 +117,7 @@ class TraccarServerConfigFlow(ConfigFlow, domain=DOMAIN):
     async def _get_server_info(self, user_input: dict[str, Any]) -> ServerModel:
         """Get server info."""
         client = ApiClient(
-            client_session=async_get_clientsession(self.hass),
+            client_session=async_get_clientsession(self.menuai),
             host=user_input[CONF_HOST],
             port=user_input[CONF_PORT],
             username=user_input[CONF_USERNAME],

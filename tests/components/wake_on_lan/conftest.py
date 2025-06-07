@@ -8,10 +8,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from homeassistant.components.wake_on_lan.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_BROADCAST_ADDRESS, CONF_BROADCAST_PORT, CONF_MAC
-from homeassistant.core import HomeAssistant
+from menuai.components.wake_on_lan.const import DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_BROADCAST_ADDRESS, CONF_BROADCAST_PORT, CONF_MAC
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -34,7 +34,7 @@ def subprocess_call_return_value() -> int | None:
 @pytest.fixture(autouse=True)
 def mock_subprocess_call(subprocess_call_return_value: int) -> Generator[MagicMock]:
     """Mock magic packet."""
-    with patch("homeassistant.components.wake_on_lan.switch.sp.call") as mock_sp:
+    with patch("menuai.components.wake_on_lan.switch.sp.call") as mock_sp:
         mock_sp.return_value = subprocess_call_return_value
         yield mock_sp
 
@@ -43,7 +43,7 @@ def mock_subprocess_call(subprocess_call_return_value: int) -> Generator[MagicMo
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Automatically path uuid generator."""
     with patch(
-        "homeassistant.components.wake_on_lan.async_setup_entry",
+        "menuai.components.wake_on_lan.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
         yield mock_setup_entry
@@ -65,9 +65,9 @@ async def get_config_to_integration_load() -> dict[str, Any]:
 
 @pytest.fixture(name="loaded_entry")
 async def load_integration(
-    hass: HomeAssistant, get_config: dict[str, Any]
+    menuai: menuai, get_config: dict[str, Any]
 ) -> MockConfigEntry:
-    """Set up the Statistics integration in Home Assistant."""
+    """Set up the Statistics integration in MenuAI."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
         title=f"Wake on LAN {DEFAULT_MAC}",
@@ -76,9 +76,9 @@ async def load_integration(
         entry_id="1",
     )
 
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     return config_entry

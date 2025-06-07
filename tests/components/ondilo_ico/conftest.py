@@ -6,8 +6,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from homeassistant.components.ondilo_ico.const import DOMAIN
-from homeassistant.util.json import JsonArrayType
+from menuai.components.ondilo_ico.const import DOMAIN
+from menuai.util.json import JsonArrayType
 
 from tests.common import (
     MockConfigEntry,
@@ -33,10 +33,10 @@ def mock_ondilo_client(
     ico_details2: dict[str, Any],
     last_measures: list[dict[str, Any]],
 ) -> Generator[MagicMock]:
-    """Mock a Homeassistant Ondilo client."""
+    """Mock a menuai Ondilo client."""
     with (
         patch(
-            "homeassistant.components.ondilo_ico.OndiloClient",
+            "menuai.components.ondilo_ico.OndiloClient",
             autospec=True,
         ) as mock_ondilo,
     ):

@@ -10,13 +10,13 @@ from eheimdigital.device import EheimDigitalDevice
 from eheimdigital.hub import EheimDigitalHub
 from eheimdigital.types import EheimDeviceType, EheimDigitalClientError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.entity_component import DEFAULT_SCAN_INTERVAL
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.entity_component import DEFAULT_SCAN_INTERVAL
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN, LOGGER
 
@@ -33,11 +33,11 @@ class EheimDigitalUpdateCoordinator(
     config_entry: EheimDigitalConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: EheimDigitalConfigEntry
+        self, menuai: menuai, config_entry: EheimDigitalConfigEntry
     ) -> None:
         """Initialize the EHEIM Digital data update coordinator."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -46,8 +46,8 @@ class EheimDigitalUpdateCoordinator(
         self.main_device_added_event = asyncio.Event()
         self.hub = EheimDigitalHub(
             host=self.config_entry.data[CONF_HOST],
-            session=async_get_clientsession(hass),
-            loop=hass.loop,
+            session=async_get_clientsession(menuai),
+            loop=menuai.loop,
             receive_callback=self._async_receive_callback,
             device_found_callback=self._async_device_found,
             main_device_added_event=self.main_device_added_event,

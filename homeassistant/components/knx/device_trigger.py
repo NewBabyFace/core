@@ -6,15 +6,15 @@ from typing import Any, Final
 
 import voluptuous as vol
 
-from homeassistant.components.device_automation import (
+from menuai.components.device_automation import (
     DEVICE_TRIGGER_BASE_SCHEMA,
     InvalidDeviceAutomationConfig,
 )
-from homeassistant.const import CONF_DEVICE_ID, CONF_DOMAIN, CONF_PLATFORM, CONF_TYPE
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant
-from homeassistant.helpers import selector
-from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import CONF_DEVICE_ID, CONF_DOMAIN, CONF_PLATFORM, CONF_TYPE
+from menuai.core import CALLBACK_TYPE, menuai
+from menuai.helpers import selector
+from menuai.helpers.trigger import TriggerActionType, TriggerInfo
+from menuai.helpers.typing import ConfigType
 
 from . import trigger
 from .const import DOMAIN, KNX_MODULE_KEY
@@ -41,12 +41,12 @@ TRIGGER_SCHEMA: Final = DEVICE_TRIGGER_BASE_SCHEMA.extend(
 
 
 async def async_get_triggers(
-    hass: HomeAssistant, device_id: str
+    menuai: menuai, device_id: str
 ) -> list[dict[str, Any]]:
     """List device triggers for KNX devices."""
     triggers = []
 
-    knx = hass.data[KNX_MODULE_KEY]
+    knx = menuai.data[KNX_MODULE_KEY]
     if knx.interface_device.device.id == device_id:
         # Add trigger for KNX telegrams to interface device
         triggers.append(
@@ -63,10 +63,10 @@ async def async_get_triggers(
 
 
 async def async_get_trigger_capabilities(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> dict[str, vol.Schema]:
     """List trigger capabilities."""
-    project = hass.data[KNX_MODULE_KEY].project
+    project = menuai.data[KNX_MODULE_KEY].project
     options = [
         selector.SelectOptionDict(value=ga.address, label=f"{ga.address} - {ga.name}")
         for ga in project.group_addresses.values()
@@ -103,7 +103,7 @@ async def async_get_trigger_capabilities(
 
 
 async def async_attach_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     action: TriggerActionType,
     trigger_info: TriggerInfo,
@@ -120,5 +120,5 @@ async def async_attach_trigger(
         raise InvalidDeviceAutomationConfig(f"{err}") from err
 
     return await trigger.async_attach_trigger(
-        hass, config=trigger_config, action=action, trigger_info=trigger_info
+        menuai, config=trigger_config, action=action, trigger_info=trigger_info
     )

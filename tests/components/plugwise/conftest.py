@@ -10,15 +10,15 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from packaging.version import Version
 import pytest
 
-from homeassistant.components.plugwise.const import DOMAIN
-from homeassistant.const import (
+from menuai.components.plugwise.const import DOMAIN
+from menuai.const import (
     CONF_HOST,
     CONF_MAC,
     CONF_PASSWORD,
     CONF_PORT,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry, load_fixture
 
@@ -95,7 +95,7 @@ def mock_config_entry() -> MockConfigEntry:
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Mock setting up a config entry."""
     with patch(
-        "homeassistant.components.plugwise.async_setup_entry", return_value=True
+        "menuai.components.plugwise.async_setup_entry", return_value=True
     ) as mock_setup:
         yield mock_setup
 
@@ -104,7 +104,7 @@ def mock_setup_entry() -> Generator[AsyncMock]:
 def mock_smile_config_flow() -> Generator[MagicMock]:
     """Return a mocked Smile client."""
     with patch(
-        "homeassistant.components.plugwise.config_flow.Smile",
+        "menuai.components.plugwise.config_flow.Smile",
         autospec=True,
     ) as smile_mock:
         smile = smile_mock.return_value
@@ -126,10 +126,10 @@ def mock_smile_adam() -> Generator[MagicMock]:
     data = _read_json(chosen_env, "data")
     with (
         patch(
-            "homeassistant.components.plugwise.coordinator.Smile", autospec=True
+            "menuai.components.plugwise.coordinator.Smile", autospec=True
         ) as smile_mock,
         patch(
-            "homeassistant.components.plugwise.config_flow.Smile",
+            "menuai.components.plugwise.config_flow.Smile",
             new=smile_mock,
         ),
     ):
@@ -158,7 +158,7 @@ def mock_smile_adam_heat_cool(
     """Create a special base Mock Adam type for testing with different datasets."""
     data = _read_json(chosen_env, "data")
     with patch(
-        "homeassistant.components.plugwise.coordinator.Smile", autospec=True
+        "menuai.components.plugwise.coordinator.Smile", autospec=True
     ) as smile_mock:
         smile = smile_mock.return_value
 
@@ -184,7 +184,7 @@ def mock_smile_adam_jip() -> Generator[MagicMock]:
     chosen_env = "m_adam_jip"
     data = _read_json(chosen_env, "data")
     with patch(
-        "homeassistant.components.plugwise.coordinator.Smile", autospec=True
+        "menuai.components.plugwise.coordinator.Smile", autospec=True
     ) as smile_mock:
         smile = smile_mock.return_value
 
@@ -209,7 +209,7 @@ def mock_smile_anna(chosen_env: str, cooling_present: bool) -> Generator[MagicMo
     """Create a Mock Anna type for testing."""
     data = _read_json(chosen_env, "data")
     with patch(
-        "homeassistant.components.plugwise.coordinator.Smile", autospec=True
+        "menuai.components.plugwise.coordinator.Smile", autospec=True
     ) as smile_mock:
         smile = smile_mock.return_value
 
@@ -234,7 +234,7 @@ def mock_smile_p1(chosen_env: str, gateway_id: str) -> Generator[MagicMock]:
     """Create a base Mock P1 type for testing with different datasets and gateway-ids."""
     data = _read_json(chosen_env, "data")
     with patch(
-        "homeassistant.components.plugwise.coordinator.Smile", autospec=True
+        "menuai.components.plugwise.coordinator.Smile", autospec=True
     ) as smile_mock:
         smile = smile_mock.return_value
 
@@ -259,7 +259,7 @@ def mock_smile_legacy_anna() -> Generator[MagicMock]:
     chosen_env = "legacy_anna"
     data = _read_json(chosen_env, "data")
     with patch(
-        "homeassistant.components.plugwise.coordinator.Smile", autospec=True
+        "menuai.components.plugwise.coordinator.Smile", autospec=True
     ) as smile_mock:
         smile = smile_mock.return_value
 
@@ -284,7 +284,7 @@ def mock_stretch() -> Generator[MagicMock]:
     chosen_env = "stretch_v31"
     data = _read_json(chosen_env, "data")
     with patch(
-        "homeassistant.components.plugwise.coordinator.Smile", autospec=True
+        "menuai.components.plugwise.coordinator.Smile", autospec=True
     ) as smile_mock:
         smile = smile_mock.return_value
 
@@ -305,12 +305,12 @@ def mock_stretch() -> Generator[MagicMock]:
 
 @pytest.fixture
 async def init_integration(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_config_entry: MockConfigEntry
 ) -> MockConfigEntry:
     """Set up the Plugwise integration for testing."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     return mock_config_entry

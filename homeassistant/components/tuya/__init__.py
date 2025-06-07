@@ -14,11 +14,11 @@ from tuya_sharing import (
 )
 from tuya_sharing.mq import SharingMQ, SharingMQConfig
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.dispatcher import dispatcher_send
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers import device_registry as dr
+from menuai.helpers.dispatcher import dispatcher_send
 
 from .const import (
     CONF_APP_TYPE,
@@ -37,11 +37,11 @@ from .const import (
 # Suppress logs from the library, it logs unneeded on error
 logging.getLogger("tuya_sharing").setLevel(logging.CRITICAL)
 
-type TuyaConfigEntry = ConfigEntry[HomeAssistantTuyaData]
+type TuyaConfigEntry = ConfigEntry[menuaiTuyaData]
 
 
-class HomeAssistantTuyaData(NamedTuple):
-    """Tuya data stored in the Home Assistant data object."""
+class menuaiTuyaData(NamedTuple):
+    """Tuya data stored in the MenuAI data object."""
 
     manager: Manager
     listener: SharingDeviceListener
@@ -115,12 +115,12 @@ class SharingMQCompat(SharingMQ):
         return mqttc
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: TuyaConfigEntry) -> bool:
-    """Async setup hass config entry."""
+async def async_setup_entry(menuai: menuai, entry: TuyaConfigEntry) -> bool:
+    """Async setup menuai config entry."""
     if CONF_APP_TYPE in entry.data:
         raise ConfigEntryAuthFailed("Authentication failed. Please re-authenticate.")
 
-    token_listener = TokenListener(hass, entry)
+    token_listener = TokenListener(menuai, entry)
     manager = ManagerCompat(
         TUYA_CLIENT_ID,
         entry.data[CONF_USER_CODE],
@@ -130,12 +130,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: TuyaConfigEntry) -> bool
         token_listener,
     )
 
-    listener = DeviceListener(hass, manager)
+    listener = DeviceListener(menuai, manager)
     manager.add_device_listener(listener)
 
     # Get all devices from Tuya
     try:
-        await hass.async_add_executor_job(manager.update_device_cache)
+        await menuai.async_add_executor_job(manager.update_device_cache)
     except Exception as exc:
         # While in general, we should avoid catching broad exceptions,
         # we have no other way of detecting this case.
@@ -145,13 +145,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: TuyaConfigEntry) -> bool
         raise
 
     # Connection is successful, store the manager & listener
-    entry.runtime_data = HomeAssistantTuyaData(manager=manager, listener=listener)
+    entry.runtime_data = menuaiTuyaData(manager=manager, listener=listener)
 
     # Cleanup device registry
-    await cleanup_device_registry(hass, manager)
+    await cleanup_device_registry(menuai, manager)
 
     # Register known device IDs
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     for device in manager.device_map.values():
         device_registry.async_get_or_create(
             config_entry_id=entry.entry_id,
@@ -162,16 +162,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: TuyaConfigEntry) -> bool
             model_id=device.product_id,
         )
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     # If the device does not register any entities, the device does not need to subscribe
     # So the subscription is here
-    await hass.async_add_executor_job(manager.refresh_mq)
+    await menuai.async_add_executor_job(manager.refresh_mq)
     return True
 
 
-async def cleanup_device_registry(hass: HomeAssistant, device_manager: Manager) -> None:
+async def cleanup_device_registry(menuai: menuai, device_manager: Manager) -> None:
     """Remove deleted device registry entry if there are no remaining entities."""
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     for dev_id, device_entry in list(device_registry.devices.items()):
         for item in device_entry.identifiers:
             if item[0] == DOMAIN and item[1] not in device_manager.device_map:
@@ -179,9 +179,9 @@ async def cleanup_device_registry(hass: HomeAssistant, device_manager: Manager) 
                 break
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: TuyaConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: TuyaConfigEntry) -> bool:
     """Unloading the Tuya platforms."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+    if unload_ok := await menuai.config_entries.async_unload_platforms(entry, PLATFORMS):
         tuya = entry.runtime_data
         if tuya.manager.mq is not None:
             tuya.manager.mq.stop()
@@ -189,7 +189,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: TuyaConfigEntry) -> boo
     return unload_ok
 
 
-async def async_remove_entry(hass: HomeAssistant, entry: TuyaConfigEntry) -> None:
+async def async_remove_entry(menuai: menuai, entry: TuyaConfigEntry) -> None:
     """Remove a config entry.
 
     This will revoke the credentials from Tuya.
@@ -201,7 +201,7 @@ async def async_remove_entry(hass: HomeAssistant, entry: TuyaConfigEntry) -> Non
         entry.data[CONF_ENDPOINT],
         entry.data[CONF_TOKEN_INFO],
     )
-    await hass.async_add_executor_job(manager.unload)
+    await menuai.async_add_executor_job(manager.unload)
 
 
 class DeviceListener(SharingDeviceListener):
@@ -209,11 +209,11 @@ class DeviceListener(SharingDeviceListener):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         manager: Manager,
     ) -> None:
         """Init DeviceListener."""
-        self.hass = hass
+        self.menuai = menuai
         self.manager = manager
 
     def update_device(
@@ -227,7 +227,7 @@ class DeviceListener(SharingDeviceListener):
             updated_status_properties,
         )
         dispatcher_send(
-            self.hass,
+            self.menuai,
             f"{TUYA_HA_SIGNAL_UPDATE_ENTITY}_{device.id}",
             updated_status_properties,
         )
@@ -235,19 +235,19 @@ class DeviceListener(SharingDeviceListener):
     def add_device(self, device: CustomerDevice) -> None:
         """Add device added listener."""
         # Ensure the device isn't present stale
-        self.hass.add_job(self.async_remove_device, device.id)
+        self.menuai.add_job(self.async_remove_device, device.id)
 
-        dispatcher_send(self.hass, TUYA_DISCOVERY_NEW, [device.id])
+        dispatcher_send(self.menuai, TUYA_DISCOVERY_NEW, [device.id])
 
     def remove_device(self, device_id: str) -> None:
         """Add device removed listener."""
-        self.hass.add_job(self.async_remove_device, device_id)
+        self.menuai.add_job(self.async_remove_device, device_id)
 
     @callback
     def async_remove_device(self, device_id: str) -> None:
-        """Remove device from Home Assistant."""
+        """Remove device from MenuAI."""
         LOGGER.debug("Remove device: %s", device_id)
-        device_registry = dr.async_get(self.hass)
+        device_registry = dr.async_get(self.menuai)
         device_entry = device_registry.async_get_device(
             identifiers={(DOMAIN, device_id)}
         )
@@ -260,11 +260,11 @@ class TokenListener(SharingTokenListener):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entry: TuyaConfigEntry,
     ) -> None:
         """Init TokenListener."""
-        self.hass = hass
+        self.menuai = menuai
         self.entry = entry
 
     def update_token(self, token_info: dict[str, Any]) -> None:
@@ -283,6 +283,6 @@ class TokenListener(SharingTokenListener):
         @callback
         def async_update_entry() -> None:
             """Update config entry."""
-            self.hass.config_entries.async_update_entry(self.entry, data=data)
+            self.menuai.config_entries.async_update_entry(self.entry, data=data)
 
-        self.hass.add_job(async_update_entry)
+        self.menuai.add_job(async_update_entry)

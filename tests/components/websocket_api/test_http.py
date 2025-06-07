@@ -8,16 +8,16 @@ from unittest.mock import patch
 from aiohttp import ServerDisconnectedError, WSMsgType, web
 import pytest
 
-from homeassistant.components.websocket_api import (
+from menuai.components.websocket_api import (
     async_register_command,
     const,
     http,
     websocket_command,
 )
-from homeassistant.components.websocket_api.connection import ActiveConnection
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.setup import async_setup_component
-from homeassistant.util.dt import utcnow
+from menuai.components.websocket_api.connection import ActiveConnection
+from menuai.core import menuai, callback
+from menuai.setup import async_setup_component
+from menuai.util.dt import utcnow
 
 from tests.common import async_call_logger_set_level, async_fire_time_changed
 from tests.typing import MockHAClientWebSocket, WebSocketGenerator
@@ -26,19 +26,19 @@ from tests.typing import MockHAClientWebSocket, WebSocketGenerator
 @pytest.fixture
 def mock_low_queue():
     """Mock a low queue."""
-    with patch("homeassistant.components.websocket_api.http.MAX_PENDING_MSG", 1):
+    with patch("menuai.components.websocket_api.http.MAX_PENDING_MSG", 1):
         yield
 
 
 @pytest.fixture
 def mock_low_peak():
     """Mock a low queue."""
-    with patch("homeassistant.components.websocket_api.http.PENDING_MSG_PEAK", 5):
+    with patch("menuai.components.websocket_api.http.PENDING_MSG_PEAK", 5):
         yield
 
 
 async def test_pending_msg_overflow(
-    hass: HomeAssistant, mock_low_queue, websocket_client: MockHAClientWebSocket
+    menuai: menuai, mock_low_queue, websocket_client: MockHAClientWebSocket
 ) -> None:
     """Test pending messages overflows."""
     for idx in range(10):
@@ -48,7 +48,7 @@ async def test_pending_msg_overflow(
 
 
 async def test_cleanup_on_cancellation(
-    hass: HomeAssistant, websocket_client: MockHAClientWebSocket
+    menuai: menuai, websocket_client: MockHAClientWebSocket
 ) -> None:
     """Test cleanup on cancellation."""
 
@@ -62,7 +62,7 @@ async def test_cleanup_on_cancellation(
         }
     )
     def fake_subscription(
-        hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+        menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
     ) -> None:
         nonlocal subscriptions
         msg_id: int = msg["id"]
@@ -70,7 +70,7 @@ async def test_cleanup_on_cancellation(
         connection.send_result(msg_id)
         subscriptions = connection.subscriptions
 
-    async_register_command(hass, fake_subscription)
+    async_register_command(menuai, fake_subscription)
 
     # Register a handler that raises on cancel
     @callback
@@ -80,7 +80,7 @@ async def test_cleanup_on_cancellation(
         }
     )
     def subscription_that_raises_on_cancel(
-        hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+        menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
     ) -> None:
         nonlocal subscriptions
         msg_id: int = msg["id"]
@@ -93,7 +93,7 @@ async def test_cleanup_on_cancellation(
         connection.send_result(msg_id)
         subscriptions = connection.subscriptions
 
-    async_register_command(hass, subscription_that_raises_on_cancel)
+    async_register_command(menuai, subscription_that_raises_on_cancel)
 
     # Register a handler that cancels in handler
     @callback
@@ -103,11 +103,11 @@ async def test_cleanup_on_cancellation(
         }
     )
     def cancel_in_handler(
-        hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+        menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
     ) -> None:
         raise asyncio.CancelledError
 
-    async_register_command(hass, cancel_in_handler)
+    async_register_command(menuai, cancel_in_handler)
 
     await websocket_client.send_json({"id": 1, "type": "ping"})
     msg = await websocket_client.receive_json()
@@ -129,14 +129,14 @@ async def test_cleanup_on_cancellation(
     assert msg["success"]
     assert len(subscriptions) == 3
     await websocket_client.send_json({"id": 4, "type": "cancel_in_handler"})
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     msg = await websocket_client.receive()
     assert msg.type == WSMsgType.close
     assert len(subscriptions) == 0
 
 
 async def test_delayed_response_handler(
-    hass: HomeAssistant,
+    menuai: menuai,
     websocket_client: MockHAClientWebSocket,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -152,7 +152,7 @@ async def test_delayed_response_handler(
         }
     )
     def async_late_responder(
-        hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+        menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
     ) -> None:
         msg_id: int = msg["id"]
         nonlocal subscriptions
@@ -164,9 +164,9 @@ async def test_delayed_response_handler(
             await asyncio.sleep(0.05)
             connection.send_event(msg_id, {"event": "any"})
 
-        hass.async_create_task(_async_late_send_message())
+        menuai.async_create_task(_async_late_send_message())
 
-    async_register_command(hass, async_late_responder)
+    async_register_command(menuai, async_late_responder)
 
     await websocket_client.send_json({"id": 1, "type": "ping"})
     msg = await websocket_client.receive_json()
@@ -179,7 +179,7 @@ async def test_delayed_response_handler(
     assert msg["type"] == "result"
     assert len(subscriptions) == 2
     assert await websocket_client.close()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(subscriptions) == 0
 
     assert "Tried to send message" in caplog.text
@@ -187,7 +187,7 @@ async def test_delayed_response_handler(
 
 
 async def test_ensure_disconnect_invalid_json(
-    hass: HomeAssistant,
+    menuai: menuai,
     websocket_client: MockHAClientWebSocket,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -203,7 +203,7 @@ async def test_ensure_disconnect_invalid_json(
 
 
 async def test_ensure_disconnect_invalid_binary(
-    hass: HomeAssistant,
+    menuai: menuai,
     websocket_client: MockHAClientWebSocket,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -219,9 +219,9 @@ async def test_ensure_disconnect_invalid_binary(
 
 
 async def test_pending_msg_peak(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_low_peak,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test pending msg overflow command."""
@@ -234,10 +234,10 @@ async def test_pending_msg_peak(
         return setup_instance
 
     with patch(
-        "homeassistant.components.websocket_api.http.WebSocketHandler",
+        "menuai.components.websocket_api.http.WebSocketHandler",
         instantiate_handler,
     ):
-        websocket_client = await hass_ws_client()
+        websocket_client = await menuai_ws_client()
 
     instance: http.WebSocketHandler = cast(http.WebSocketHandler, setup_instance)
 
@@ -246,7 +246,7 @@ async def test_pending_msg_peak(
         instance._send_message({"overload": "message"})
 
     async_fire_time_changed(
-        hass, utcnow() + timedelta(seconds=const.PENDING_MSG_PEAK_TIME + 1)
+        menuai, utcnow() + timedelta(seconds=const.PENDING_MSG_PEAK_TIME + 1)
     )
 
     msg = await websocket_client.receive()
@@ -257,9 +257,9 @@ async def test_pending_msg_peak(
 
 
 async def test_pending_msg_peak_recovery(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_low_peak,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test pending msg nears the peak but recovers."""
@@ -272,10 +272,10 @@ async def test_pending_msg_peak_recovery(
         return setup_instance
 
     with patch(
-        "homeassistant.components.websocket_api.http.WebSocketHandler",
+        "menuai.components.websocket_api.http.WebSocketHandler",
         instantiate_handler,
     ):
-        websocket_client = await hass_ws_client()
+        websocket_client = await menuai_ws_client()
 
     instance: http.WebSocketHandler = cast(http.WebSocketHandler, setup_instance)
 
@@ -301,9 +301,9 @@ async def test_pending_msg_peak_recovery(
 
 
 async def test_pending_msg_peak_but_does_not_overflow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_low_peak,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test pending msg hits the low peak but recovers and does not overflow."""
@@ -316,10 +316,10 @@ async def test_pending_msg_peak_but_does_not_overflow(
         return setup_instance
 
     with patch(
-        "homeassistant.components.websocket_api.http.WebSocketHandler",
+        "menuai.components.websocket_api.http.WebSocketHandler",
         instantiate_handler,
     ):
-        websocket_client = await hass_ws_client()
+        websocket_client = await menuai_ws_client()
 
     instance: http.WebSocketHandler = cast(http.WebSocketHandler, setup_instance)
 
@@ -337,7 +337,7 @@ async def test_pending_msg_peak_but_does_not_overflow(
     instance._send_message({})
 
     async_fire_time_changed(
-        hass, utcnow() + timedelta(seconds=const.PENDING_MSG_PEAK_TIME + 1)
+        menuai, utcnow() + timedelta(seconds=const.PENDING_MSG_PEAK_TIME + 1)
     )
 
     msg = await websocket_client.receive()
@@ -347,11 +347,11 @@ async def test_pending_msg_peak_but_does_not_overflow(
 
 
 async def test_non_json_message(
-    hass: HomeAssistant, websocket_client, caplog: pytest.LogCaptureFixture
+    menuai: menuai, websocket_client, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test trying to serialize non JSON objects."""
     bad_data = object()
-    hass.states.async_set("test_domain.entity", "testing", {"bad": bad_data})
+    menuai.states.async_set("test_domain.entity", "testing", {"bad": bad_data})
     await websocket_client.send_json({"id": 5, "type": "get_states"})
 
     msg = await websocket_client.receive_json()
@@ -365,48 +365,48 @@ async def test_non_json_message(
 
 
 async def test_prepare_fail_timeout(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test failing to prepare due to timeout."""
     with (
         patch(
-            "homeassistant.components.websocket_api.http.web.WebSocketResponse.prepare",
+            "menuai.components.websocket_api.http.web.WebSocketResponse.prepare",
             side_effect=(TimeoutError, web.WebSocketResponse.prepare),
         ),
         pytest.raises(ServerDisconnectedError),
     ):
-        await hass_ws_client(hass)
+        await menuai_ws_client(menuai)
 
     assert "Timeout preparing request" in caplog.text
 
 
 async def test_prepare_fail_connection_reset(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test failing to prepare due to connection reset."""
     with (
         patch(
-            "homeassistant.components.websocket_api.http.web.WebSocketResponse.prepare",
+            "menuai.components.websocket_api.http.web.WebSocketResponse.prepare",
             side_effect=(ConnectionResetError, web.WebSocketResponse.prepare),
         ),
         pytest.raises(ServerDisconnectedError),
     ):
-        await hass_ws_client(hass)
+        await menuai_ws_client(menuai)
 
     assert "Connection reset by peer while preparing WebSocket" in caplog.text
 
 
 async def test_enable_coalesce(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test enabling coalesce."""
-    websocket_client = await hass_ws_client(hass)
+    websocket_client = await menuai_ws_client(menuai)
 
     await websocket_client.send_json(
         {
@@ -453,7 +453,7 @@ async def test_enable_coalesce(
 
 
 async def test_binary_message(
-    hass: HomeAssistant, websocket_client, caplog: pytest.LogCaptureFixture
+    menuai: menuai, websocket_client, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test binary messages."""
     binary_payloads = {
@@ -469,13 +469,13 @@ async def test_binary_message(
         }
     )
     def get_binary_message_handler(
-        hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+        menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
     ):
         unsub = None
 
         @callback
         def binary_message_handler(
-            hass: HomeAssistant, connection: ActiveConnection, payload: bytes
+            menuai: menuai, connection: ActiveConnection, payload: bytes
         ):
             nonlocal unsub
             if msg["id"] == 103:
@@ -493,7 +493,7 @@ async def test_binary_message(
 
         connection.send_result(msg["id"], {"prefix": prefix})
 
-    async_register_command(hass, get_binary_message_handler)
+    async_register_command(menuai, get_binary_message_handler)
 
     # Register multiple binary handlers
     for i in range(101, 106):
@@ -527,14 +527,14 @@ async def test_binary_message(
 
 
 async def test_enable_disable_debug_logging(
-    hass: HomeAssistant,
+    menuai: menuai,
     websocket_client: MockHAClientWebSocket,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test enabling and disabling debug logging."""
-    assert await async_setup_component(hass, "logger", {"logger": {}})
+    assert await async_setup_component(menuai, "logger", {"logger": {}})
     async with async_call_logger_set_level(
-        "homeassistant.components.websocket_api", "DEBUG", hass=hass, caplog=caplog
+        "menuai.components.websocket_api", "DEBUG", menuai=menuai, caplog=caplog
     ):
         await websocket_client.send_json({"id": 1, "type": "ping"})
         msg = await websocket_client.receive_json()
@@ -542,7 +542,7 @@ async def test_enable_disable_debug_logging(
         assert msg["type"] == "pong"
         assert 'Sending b\'{"id":1,"type":"pong"}\'' in caplog.text
     async with async_call_logger_set_level(
-        "homeassistant.components.websocket_api", "WARNING", hass=hass, caplog=caplog
+        "menuai.components.websocket_api", "WARNING", menuai=menuai, caplog=caplog
     ):
         await websocket_client.send_json({"id": 2, "type": "ping"})
         msg = await websocket_client.receive_json()

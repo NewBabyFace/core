@@ -14,7 +14,7 @@ from buienradar.constants import (
     WINDSPEED,
 )
 
-from homeassistant.components.weather import (
+from menuai.components.weather import (
     ATTR_CONDITION_CLOUDY,
     ATTR_CONDITION_EXCEPTIONAL,
     ATTR_CONDITION_FOG,
@@ -41,7 +41,7 @@ from homeassistant.components.weather import (
     WeatherEntity,
     WeatherEntityFeature,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_LATITUDE,
     CONF_LONGITUDE,
     CONF_NAME,
@@ -52,8 +52,8 @@ from homeassistant.const import (
     UnitOfSpeed,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import BuienRadarConfigEntry
 from .const import DEFAULT_TIMEFRAME
@@ -94,18 +94,18 @@ CONDITION_MAP = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: BuienRadarConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the buienradar platform."""
     config = entry.data
 
-    latitude = config.get(CONF_LATITUDE, hass.config.latitude)
-    longitude = config.get(CONF_LONGITUDE, hass.config.longitude)
+    latitude = config.get(CONF_LATITUDE, menuai.config.latitude)
+    longitude = config.get(CONF_LONGITUDE, menuai.config.longitude)
 
     if None in (latitude, longitude):
-        _LOGGER.error("Latitude or longitude not set in Home Assistant config")
+        _LOGGER.error("Latitude or longitude not set in MenuAI config")
         return
 
     coordinates = {CONF_LATITUDE: float(latitude), CONF_LONGITUDE: float(longitude)}
@@ -115,7 +115,7 @@ async def async_setup_entry(
     entities = [BrWeather(config, coordinates)]
 
     # create weather data:
-    data = BrData(hass, coordinates, DEFAULT_TIMEFRAME, entities)
+    data = BrData(menuai, coordinates, DEFAULT_TIMEFRAME, entities)
     entry.runtime_data[Platform.WEATHER] = data
     await data.async_update()
 
@@ -161,12 +161,12 @@ class BrWeather(WeatherEntity):
         self._attr_native_wind_speed = data.wind_speed
         self._attr_wind_bearing = data.wind_bearing
 
-        if not self.hass:
+        if not self.menuai:
             return
         self.async_write_ha_state()
         assert self.platform.config_entry
         self.platform.config_entry.async_create_task(
-            self.hass, self.async_update_listeners(("daily",))
+            self.menuai, self.async_update_listeners(("daily",))
         )
 
     def _calc_condition(self, data: BrData):

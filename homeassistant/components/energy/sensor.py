@@ -9,29 +9,29 @@ from dataclasses import dataclass
 import logging
 from typing import Any, Final, Literal, cast
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     ATTR_LAST_RESET,
     ATTR_STATE_CLASS,
     SensorDeviceClass,
     SensorEntity,
     SensorStateClass,
 )
-from homeassistant.components.sensor.recorder import reset_detected
-from homeassistant.const import ATTR_UNIT_OF_MEASUREMENT, UnitOfEnergy, UnitOfVolume
-from homeassistant.core import (
-    HomeAssistant,
+from menuai.components.sensor.recorder import reset_detected
+from menuai.const import ATTR_UNIT_OF_MEASUREMENT, UnitOfEnergy, UnitOfVolume
+from menuai.core import (
+    menuai,
     State,
     callback,
     split_entity_id,
     valid_entity_id,
 )
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.event import async_track_state_change_event
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import dt as dt_util, unit_conversion
-from homeassistant.util.unit_system import METRIC_SYSTEM
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.event import async_track_state_change_event
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import dt as dt_util, unit_conversion
+from menuai.util.unit_system import METRIC_SYSTEM
 
 from .const import DOMAIN
 from .data import EnergyManager, async_get_manager
@@ -66,13 +66,13 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the energy sensors."""
-    sensor_manager = SensorManager(await async_get_manager(hass), async_add_entities)
+    sensor_manager = SensorManager(await async_get_manager(menuai), async_add_entities)
     await sensor_manager.async_start()
 
 
@@ -124,7 +124,7 @@ SOURCE_ADAPTERS: Final = (
 )
 
 
-class EntityNotFoundError(HomeAssistantError):
+class EntityNotFoundError(menuaiError):
     """When a referenced entity was not found."""
 
 
@@ -255,7 +255,7 @@ class EnergyCostSensor(SensorEntity):
         self._attr_state_class = SensorStateClass.TOTAL
         self._config = config
         self._last_energy_sensor_state: State | None = None
-        # add_finished is set when either of async_added_to_hass or add_to_platform_abort
+        # add_finished is set when either of async_added_to_menuai or add_to_platform_abort
         # is called
         self.add_finished: asyncio.Future[None] = (
             asyncio.get_running_loop().create_future()
@@ -282,12 +282,12 @@ class EnergyCostSensor(SensorEntity):
 
         elif self._adapter.source_type == "water":
             valid_units = VALID_VOLUME_UNITS_WATER
-            if self.hass.config.units is METRIC_SYSTEM:
+            if self.menuai.config.units is METRIC_SYSTEM:
                 default_price_unit = UnitOfVolume.CUBIC_METERS
             else:
                 default_price_unit = UnitOfVolume.GALLONS
 
-        energy_state = self.hass.states.get(
+        energy_state = self.menuai.states.get(
             cast(str, self._config[self._adapter.stat_energy_key])
         )
 
@@ -355,7 +355,7 @@ class EnergyCostSensor(SensorEntity):
         ) or (
             state_class == SensorStateClass.TOTAL_INCREASING
             and reset_detected(
-                self.hass,
+                self.menuai,
                 cast(str, self._config[self._adapter.stat_energy_key]),
                 energy,
                 float(self._last_energy_sensor_state.state),
@@ -395,7 +395,7 @@ class EnergyCostSensor(SensorEntity):
         if self._config["entity_energy_price"] is None:
             return cast(float, self._config["number_energy_price"]), default_unit
 
-        energy_price_state = self.hass.states.get(self._config["entity_energy_price"])
+        energy_price_state = self.menuai.states.get(self._config["entity_energy_price"])
         if energy_price_state is None:
             raise EntityNotFoundError
 
@@ -427,9 +427,9 @@ class EnergyCostSensor(SensorEntity):
 
         return converter(energy_price, energy_unit, energy_price_unit)
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
-        energy_state = self.hass.states.get(self._config[self._adapter.stat_energy_key])
+        energy_state = self.menuai.states.get(self._config[self._adapter.stat_energy_key])
         if energy_state:
             name = energy_state.name
         else:
@@ -441,14 +441,14 @@ class EnergyCostSensor(SensorEntity):
 
         self._update_cost()
 
-        # Store stat ID in hass.data so frontend can look it up
-        self.hass.data[DOMAIN]["cost_sensors"][
+        # Store stat ID in menuai.data so frontend can look it up
+        self.menuai.data[DOMAIN]["cost_sensors"][
             self._config[self._adapter.stat_energy_key]
         ] = self.entity_id
 
         self.async_on_remove(
             async_track_state_change_event(
-                self.hass,
+                self.menuai,
                 cast(str, self._config[self._adapter.stat_energy_key]),
                 self._async_state_changed_listener,
             )
@@ -467,12 +467,12 @@ class EnergyCostSensor(SensorEntity):
         _set_result_unless_done(self.add_finished)
         super().add_to_platform_abort()
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Handle removing from hass."""
-        self.hass.data[DOMAIN]["cost_sensors"].pop(
+    async def async_will_remove_from_menuai(self) -> None:
+        """Handle removing from menuai."""
+        self.menuai.data[DOMAIN]["cost_sensors"].pop(
             self._config[self._adapter.stat_energy_key]
         )
-        await super().async_will_remove_from_hass()
+        await super().async_will_remove_from_menuai()
 
     @callback
     def update_config(self, config: Mapping[str, Any]) -> None:
@@ -482,12 +482,12 @@ class EnergyCostSensor(SensorEntity):
     @property
     def native_unit_of_measurement(self) -> str | None:
         """Return the units of measurement."""
-        return self.hass.config.currency
+        return self.menuai.config.currency
 
     @property
     def unique_id(self) -> str | None:
         """Return the unique ID of the sensor."""
-        entity_registry = er.async_get(self.hass)
+        entity_registry = er.async_get(self.menuai)
         if registry_entry := entity_registry.async_get(
             self._config[self._adapter.stat_energy_key]
         ):

@@ -11,11 +11,11 @@ from aprslib import ConnectionError as AprsConnectionError, LoginError
 import geopy.distance
 import voluptuous as vol
 
-from homeassistant.components.device_tracker import (
+from menuai.components.device_tracker import (
     PLATFORM_SCHEMA as DEVICE_TRACKER_PLATFORM_SCHEMA,
     SeeCallback,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_GPS_ACCURACY,
     ATTR_LATITUDE,
     ATTR_LONGITUDE,
@@ -23,12 +23,12 @@ from homeassistant.const import (
     CONF_PASSWORD,
     CONF_TIMEOUT,
     CONF_USERNAME,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
 )
-from homeassistant.core import Event, HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import slugify
+from menuai.core import Event, menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import slugify
 
 DOMAIN = "aprs"
 
@@ -88,7 +88,7 @@ def gps_accuracy(gps: tuple[float, float], posambiguity: int) -> int:
 
 
 def setup_scanner(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     see: SeeCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -108,7 +108,7 @@ def setup_scanner(
         aprs_listener.stop()
 
     aprs_listener.start()
-    hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, aprs_disconnect)
+    menuai.bus.listen_once(EVENT_menuai_STOP, aprs_disconnect)
 
     if not aprs_listener.start_event.wait(timeout):
         _LOGGER.error("Timeout waiting for APRS to connect")

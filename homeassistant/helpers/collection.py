@@ -16,11 +16,11 @@ from typing import Any, TypedDict
 import voluptuous as vol
 from voluptuous.humanize import humanize_error
 
-from homeassistant.components import websocket_api
-from homeassistant.const import CONF_ID
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.util import slugify
+from menuai.components import websocket_api
+from menuai.const import CONF_ID
+from menuai.core import CALLBACK_TYPE, menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.util import slugify
 
 from . import entity_registry
 from .entity import Entity
@@ -67,7 +67,7 @@ type ChangeListener = Callable[
 type ChangeSetListener = Callable[[Iterable[CollectionChange]], Awaitable[None]]
 
 
-class CollectionError(HomeAssistantError):
+class CollectionError(menuaiError):
     """Base class for collection related errors."""
 
 
@@ -255,9 +255,9 @@ class StorageCollection[_ItemT, _StoreT: SerializedStorageCollection](
         return entity_class.from_storage(config)
 
     @property
-    def hass(self) -> HomeAssistant:
-        """Home Assistant object."""
-        return self.store.hass
+    def menuai(self) -> menuai:
+        """MenuAI object."""
+        return self.store.menuai
 
     async def _async_load_data(self) -> _StoreT | None:
         """Load the data."""
@@ -521,7 +521,7 @@ class _CollectionLifeCycle[_EntityT: Entity = Entity]:
 
 @callback
 def sync_entity_lifecycle[_EntityT: Entity = Entity](
-    hass: HomeAssistant,
+    menuai: menuai,
     domain: str,
     platform: str,
     entity_component: EntityComponent[_EntityT],
@@ -529,7 +529,7 @@ def sync_entity_lifecycle[_EntityT: Entity = Entity](
     entity_class: type[CollectionEntity],
 ) -> None:
     """Map a collection to an entity component."""
-    ent_reg = entity_registry.async_get(hass)
+    ent_reg = entity_registry.async_get(menuai)
     _CollectionLifeCycle(
         domain, platform, entity_component, collection, entity_class, ent_reg, {}
     ).async_setup()
@@ -564,10 +564,10 @@ class StorageCollectionWebsocket[_StorageCollectionT: StorageCollection]:
         return f"{self.model_name}_id"
 
     @callback
-    def async_setup(self, hass: HomeAssistant) -> None:
+    def async_setup(self, menuai: menuai) -> None:
         """Set up the websocket commands."""
         websocket_api.async_register_command(
-            hass,
+            menuai,
             f"{self.api_prefix}/list",
             self.ws_list_item,
             websocket_api.BASE_COMMAND_MESSAGE_SCHEMA.extend(
@@ -576,7 +576,7 @@ class StorageCollectionWebsocket[_StorageCollectionT: StorageCollection]:
         )
 
         websocket_api.async_register_command(
-            hass,
+            menuai,
             f"{self.api_prefix}/create",
             websocket_api.require_admin(
                 websocket_api.async_response(self.ws_create_item)
@@ -590,7 +590,7 @@ class StorageCollectionWebsocket[_StorageCollectionT: StorageCollection]:
         )
 
         websocket_api.async_register_command(
-            hass,
+            menuai,
             f"{self.api_prefix}/subscribe",
             self._ws_subscribe,
             websocket_api.BASE_COMMAND_MESSAGE_SCHEMA.extend(
@@ -599,7 +599,7 @@ class StorageCollectionWebsocket[_StorageCollectionT: StorageCollection]:
         )
 
         websocket_api.async_register_command(
-            hass,
+            menuai,
             f"{self.api_prefix}/update",
             websocket_api.require_admin(
                 websocket_api.async_response(self.ws_update_item)
@@ -614,7 +614,7 @@ class StorageCollectionWebsocket[_StorageCollectionT: StorageCollection]:
         )
 
         websocket_api.async_register_command(
-            hass,
+            menuai,
             f"{self.api_prefix}/delete",
             websocket_api.require_admin(
                 websocket_api.async_response(self.ws_delete_item)
@@ -629,13 +629,13 @@ class StorageCollectionWebsocket[_StorageCollectionT: StorageCollection]:
 
     @callback
     def ws_list_item(
-        self, hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict
+        self, menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict
     ) -> None:
         """List items."""
         connection.send_result(msg["id"], self.storage_collection.async_items())
 
     async def ws_create_item(
-        self, hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict
+        self, menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict
     ) -> None:
         """Create an item."""
         try:
@@ -655,7 +655,7 @@ class StorageCollectionWebsocket[_StorageCollectionT: StorageCollection]:
 
     @callback
     def _ws_subscribe(
-        self, hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict
+        self, menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict
     ) -> None:
         """Subscribe to collection updates."""
 
@@ -704,7 +704,7 @@ class StorageCollectionWebsocket[_StorageCollectionT: StorageCollection]:
         connection.send_message(websocket_api.event_message(msg["id"], json_msg))
 
     async def ws_update_item(
-        self, hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict
+        self, menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict
     ) -> None:
         """Update an item."""
         data = dict(msg)
@@ -731,7 +731,7 @@ class StorageCollectionWebsocket[_StorageCollectionT: StorageCollection]:
             connection.send_error(msg_id, websocket_api.ERR_INVALID_FORMAT, str(err))
 
     async def ws_delete_item(
-        self, hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict
+        self, menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict
     ) -> None:
         """Delete an item."""
         try:

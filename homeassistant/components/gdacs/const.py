@@ -4,7 +4,7 @@ from datetime import timedelta
 
 from aio_georss_gdacs.consts import EVENT_TYPE_MAP
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 DOMAIN = "gdacs"
 

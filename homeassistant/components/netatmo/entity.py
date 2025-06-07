@@ -9,11 +9,11 @@ from pyatmo import DeviceType, Home, Module, Room
 from pyatmo.modules.base_class import NetatmoBase, Place
 from pyatmo.modules.device_types import DEVICE_DESCRIPTION_MAP
 
-from homeassistant.const import ATTR_LATITUDE, ATTR_LONGITUDE
-from homeassistant.core import callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity
+from menuai.const import ATTR_LATITUDE, ATTR_LONGITUDE
+from menuai.core import callback
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity
 
 from .const import (
     CONF_URL_ENERGY,
@@ -38,7 +38,7 @@ class NetatmoBaseEntity(Entity):
         self._publishers: list[dict[str, Any]] = []
         self._attr_extra_state_attributes = {}
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Entity created."""
         for publisher in self._publishers:
             signal_name = publisher[SIGNAL_NAME]
@@ -75,9 +75,9 @@ class NetatmoBaseEntity(Entity):
 
         self.async_update_callback()
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Run when entity will be removed from hass."""
-        await super().async_will_remove_from_hass()
+    async def async_will_remove_from_menuai(self) -> None:
+        """Run when entity will be removed from menuai."""
+        await super().async_will_remove_from_menuai()
 
         for publisher in self._publishers:
             await self.data_handler.unsubscribe(
@@ -131,14 +131,14 @@ class NetatmoRoomEntity(NetatmoDeviceEntity):
             suggested_area=room.room.name,
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Entity created."""
-        await super().async_added_to_hass()
-        registry = dr.async_get(self.hass)
+        await super().async_added_to_menuai()
+        registry = dr.async_get(self.menuai)
         if device := registry.async_get_device(
             identifiers={(DOMAIN, self.device.entity_id)}
         ):
-            self.hass.data[DOMAIN][DATA_DEVICE_IDS][self.device.entity_id] = device.id
+            self.menuai.data[DOMAIN][DATA_DEVICE_IDS][self.device.entity_id] = device.id
 
     @property
     def device_type(self) -> DeviceType:

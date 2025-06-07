@@ -12,13 +12,13 @@ from fjaraskupan import (
     State,
 )
 
-from homeassistant.components.fan import FanEntity, FanEntityFeature
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.util.percentage import (
+from menuai.components.fan import FanEntity, FanEntityFeature
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
+from menuai.util.percentage import (
     ordered_list_item_to_percentage,
     percentage_to_ordered_list_item,
 )
@@ -44,12 +44,12 @@ PRESET_TO_COMMAND = {
 }
 
 
-class UnsupportedPreset(HomeAssistantError):
+class UnsupportedPreset(menuaiError):
     """The preset is unsupported."""
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: FjaraskupanConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -58,7 +58,7 @@ async def async_setup_entry(
     def _constructor(coordinator: FjaraskupanCoordinator):
         return [Fan(coordinator, coordinator.device_info)]
 
-    async_setup_entry_platform(hass, config_entry, async_add_entities, _constructor)
+    async_setup_entry_platform(menuai, config_entry, async_add_entities, _constructor)
 
 
 class Fan(CoordinatorEntity[FjaraskupanCoordinator], FanEntity):

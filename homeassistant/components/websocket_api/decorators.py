@@ -8,10 +8,10 @@ from typing import TYPE_CHECKING, Any
 
 import voluptuous as vol
 
-from homeassistant.const import HASSIO_USER_NAME
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import Unauthorized
-from homeassistant.helpers.typing import VolDictType
+from menuai.const import menuaiIO_USER_NAME
+from menuai.core import menuai, callback
+from menuai.exceptions import Unauthorized
+from menuai.helpers.typing import VolDictType
 
 from . import const, messages
 from .connection import ActiveConnection
@@ -19,13 +19,13 @@ from .connection import ActiveConnection
 
 async def _handle_async_response(
     func: const.AsyncWebSocketCommandHandler,
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Create a response and handle exception."""
     try:
-        await func(hass, connection, msg)
+        await func(menuai, connection, msg)
     except Exception as err:  # noqa: BLE001
         connection.async_handle_exception(msg, err)
 
@@ -39,13 +39,13 @@ def async_response(
     @callback
     @wraps(func)
     def schedule_handler(
-        hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+        menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
     ) -> None:
         """Schedule the handler."""
         # As the webserver is now started before the start
         # event we do not want to block for websocket responders
-        hass.async_create_background_task(
-            _handle_async_response(func, hass, connection, msg),
+        menuai.async_create_background_task(
+            _handle_async_response(func, menuai, connection, msg),
             task_name,
             eager_start=True,
         )
@@ -58,7 +58,7 @@ def require_admin(func: const.WebSocketCommandHandler) -> const.WebSocketCommand
 
     @wraps(func)
     def with_admin(
-        hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+        menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
     ) -> None:
         """Check admin and call function."""
         user = connection.user
@@ -66,7 +66,7 @@ def require_admin(func: const.WebSocketCommandHandler) -> const.WebSocketCommand
         if user is None or not user.is_admin:
             raise Unauthorized
 
-        func(hass, connection, msg)
+        func(menuai, connection, msg)
 
     return with_admin
 
@@ -89,7 +89,7 @@ def ws_require_user(
 
         @wraps(func)
         def check_current_user(
-            hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+            menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
         ) -> None:
             """Check current user."""
 
@@ -119,11 +119,11 @@ def ws_require_user(
                 output_error("only_inactive_user", "Not allowed as active user")
                 return None
 
-            if only_supervisor and connection.user.name != HASSIO_USER_NAME:
+            if only_supervisor and connection.user.name != menuaiIO_USER_NAME:
                 output_error("only_supervisor", "Only allowed as Supervisor")
                 return None
 
-            return func(hass, connection, msg)
+            return func(menuai, connection, msg)
 
         return check_current_user
 

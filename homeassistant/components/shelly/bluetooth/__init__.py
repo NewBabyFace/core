@@ -7,11 +7,11 @@ from typing import TYPE_CHECKING
 from aioshelly.ble import async_start_scanner, create_scanner
 from aioshelly.ble.const import BLE_SCAN_RESULT_EVENT, BLE_SCAN_RESULT_VERSION
 
-from homeassistant.components.bluetooth import (
+from menuai.components.bluetooth import (
     BluetoothScanningMode,
     async_register_scanner,
 )
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback as hass_callback
+from menuai.core import CALLBACK_TYPE, menuai, callback as menuai_callback
 
 from ..const import BLEScannerMode
 
@@ -25,7 +25,7 @@ BLE_SCANNER_MODE_TO_BLUETOOTH_SCANNING_MODE = {
 
 
 async def async_connect_scanner(
-    hass: HomeAssistant,
+    menuai: menuai,
     coordinator: ShellyRpcCoordinator,
     scanner_mode: BLEScannerMode,
     device_id: str,
@@ -42,7 +42,7 @@ async def async_connect_scanner(
     )
     unload_callbacks = [
         async_register_scanner(
-            hass,
+            menuai,
             scanner,
             source_domain=entry.domain,
             source_model=coordinator.model,
@@ -59,7 +59,7 @@ async def async_connect_scanner(
         data_version=BLE_SCAN_RESULT_VERSION,
     )
 
-    @hass_callback
+    @menuai_callback
     def _async_unload() -> None:
         for callback in unload_callbacks:
             callback()

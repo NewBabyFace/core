@@ -4,22 +4,22 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
-from homeassistant.components.device_tracker import (
+from menuai.components.device_tracker import (
     CONF_CONSIDER_HOME,
     DEFAULT_CONSIDER_HOME,
     ScannerEntity,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
+from menuai.util import dt as dt_util
 
 from .const import CONF_IMPORTED_BY
 from .coordinator import PingConfigEntry, PingUpdateCoordinator
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: PingConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

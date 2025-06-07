@@ -6,7 +6,7 @@ from typing import Any
 
 import pyvera as veraApi
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ENTITY_ID_FORMAT,
     FAN_AUTO,
     FAN_ON,
@@ -14,10 +14,10 @@ from homeassistant.components.climate import (
     ClimateEntityFeature,
     HVACMode,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_TEMPERATURE, Platform, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_TEMPERATURE, Platform, UnitOfTemperature
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .common import ControllerData, get_controller_data
 from .entity import VeraEntity
@@ -28,12 +28,12 @@ SUPPORT_HVAC = [HVACMode.COOL, HVACMode.HEAT, HVACMode.HEAT_COOL, HVACMode.OFF]
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the sensor config entry."""
-    controller_data = get_controller_data(hass, entry)
+    controller_data = get_controller_data(menuai, entry)
     async_add_entities(
         [
             VeraThermostat(device, controller_data)

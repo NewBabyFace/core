@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 import pywemo
 
-from homeassistant.util.hass_dict import HassKey
+from menuai.util.menuai_dict import menuaiKey
 
 from .const import DOMAIN
 
@@ -16,7 +16,7 @@ if TYPE_CHECKING:  # Avoid circular dependencies.
     from . import HostPortTuple, WemoDiscovery, WemoDispatcher
     from .coordinator import DeviceCoordinator
 
-DATA_WEMO: HassKey[WemoData] = HassKey(DOMAIN)
+DATA_WEMO: menuaiKey[WemoData] = menuaiKey(DOMAIN)
 
 
 @dataclass

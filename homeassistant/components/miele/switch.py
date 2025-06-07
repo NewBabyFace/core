@@ -10,11 +10,11 @@ from typing import Any, Final, cast
 import aiohttp
 from pymiele import MieleDevice
 
-from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
+from menuai.components.switch import SwitchEntity, SwitchEntityDescription
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
 
 from .const import (
     DOMAIN,
@@ -112,7 +112,7 @@ SWITCH_TYPES: Final[tuple[MieleSwitchDefinition, ...]] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MieleConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -166,7 +166,7 @@ class MieleSwitch(MieleEntity, SwitchEntity):
         try:
             await self.api.send_action(self._device_id, mode)
         except aiohttp.ClientError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="set_state_error",
                 translation_placeholders={
@@ -198,7 +198,7 @@ class MielePowerSwitch(MieleSwitch):
         try:
             await self.api.send_action(self._device_id, mode)
         except aiohttp.ClientError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="set_state_error",
                 translation_placeholders={

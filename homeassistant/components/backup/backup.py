@@ -8,8 +8,8 @@ from pathlib import Path
 from tarfile import TarError
 from typing import Any
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.hassio import is_hassio
+from menuai.core import menuai
+from menuai.helpers.menuaiio import is_menuaiio
 
 from .agent import BackupAgent, LocalBackupAgent
 from .const import DOMAIN, LOGGER
@@ -18,13 +18,13 @@ from .util import read_backup, suggested_filename
 
 
 async def async_get_backup_agents(
-    hass: HomeAssistant,
+    menuai: menuai,
     **kwargs: Any,
 ) -> list[BackupAgent]:
     """Return the local backup agent."""
-    if is_hassio(hass):
+    if is_menuaiio(menuai):
         return []
-    return [CoreLocalBackupAgent(hass)]
+    return [CoreLocalBackupAgent(menuai)]
 
 
 class CoreLocalBackupAgent(LocalBackupAgent):
@@ -34,17 +34,17 @@ class CoreLocalBackupAgent(LocalBackupAgent):
     name = "local"
     unique_id = "local"
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize the backup agent."""
         super().__init__()
-        self._hass = hass
-        self._backup_dir = Path(hass.config.path("backups"))
+        self._menuai = menuai
+        self._backup_dir = Path(menuai.config.path("backups"))
         self._backups: dict[str, tuple[AgentBackup, Path]] = {}
         self._loaded_backups = False
 
     async def _load_backups(self) -> None:
         """Load data of stored backup files."""
-        backups = await self._hass.async_add_executor_job(self._read_backups)
+        backups = await self._menuai.async_add_executor_job(self._read_backups)
         LOGGER.debug("Loaded %s local backups", len(backups))
         self._backups = backups
         self._loaded_backups = True
@@ -97,7 +97,7 @@ class CoreLocalBackupAgent(LocalBackupAgent):
             raise BackupNotFound(f"Backup {backup_id} not found")
 
         backup, backup_path = self._backups[backup_id]
-        if not await self._hass.async_add_executor_job(backup_path.exists):
+        if not await self._menuai.async_add_executor_job(backup_path.exists):
             LOGGER.debug(
                 (
                     "Removing tracked backup (%s) that does not exists on the expected"
@@ -131,6 +131,6 @@ class CoreLocalBackupAgent(LocalBackupAgent):
             await self._load_backups()
 
         backup_path = self.get_backup_path(backup_id)
-        await self._hass.async_add_executor_job(backup_path.unlink, True)
+        await self._menuai.async_add_executor_job(backup_path.unlink, True)
         LOGGER.debug("Deleted backup located at %s", backup_path)
         self._backups.pop(backup_id)

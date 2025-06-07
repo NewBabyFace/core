@@ -5,19 +5,19 @@ from unittest.mock import AsyncMock, patch
 from duotecno.exceptions import InvalidPassword
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.duotecno.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.duotecno.const import DOMAIN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
 pytestmark = pytest.mark.usefixtures("mock_setup_entry")
 
 
-async def test_form(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
+async def test_form(menuai: menuai, mock_setup_entry: AsyncMock) -> None:
     """Test we get the form."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -27,7 +27,7 @@ async def test_form(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
         "duotecno.controller.PyDuotecno.connect",
         return_value=None,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "host": "1.1.1.1",
@@ -35,7 +35,7 @@ async def test_form(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
                 "password": "test-password",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "1.1.1.1"
@@ -56,15 +56,15 @@ async def test_form(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
     ],
 )
 async def test_invalid(
-    hass: HomeAssistant, test_side_effect: Exception, test_error: str
+    menuai: menuai, test_side_effect: Exception, test_error: str
 ) -> None:
     """Test all side_effects on the controller.connect via parameters."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     with patch("duotecno.controller.PyDuotecno.connect", side_effect=test_side_effect):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "host": "1.1.1.1",
@@ -77,7 +77,7 @@ async def test_invalid(
     assert result2["errors"] == {"base": test_error}
 
     with patch("duotecno.controller.PyDuotecno.connect"):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "host": "1.1.1.1",
@@ -94,16 +94,16 @@ async def test_invalid(
     }
 
 
-async def test_already_setup(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
+async def test_already_setup(menuai: menuai, mock_setup_entry: AsyncMock) -> None:
     """Test duoteco flow - already setup."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         unique_id="duotecno_1234",
         data={},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 

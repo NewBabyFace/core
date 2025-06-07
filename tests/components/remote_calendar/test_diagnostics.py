@@ -7,7 +7,7 @@ import pytest
 import respx
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from . import setup_integration
 from .conftest import CALENDER_URL
@@ -20,8 +20,8 @@ from tests.typing import ClientSessionGenerator
 @respx.mock
 @pytest.mark.freeze_time(datetime.datetime(2023, 6, 5))
 async def test_entry_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     snapshot: SnapshotAssertion,
     config_entry: MockConfigEntry,
     ics_content: str,
@@ -33,7 +33,7 @@ async def test_entry_diagnostics(
             text=ics_content,
         )
     )
-    await setup_integration(hass, config_entry)
-    await hass.async_block_till_done()
-    result = await get_diagnostics_for_config_entry(hass, hass_client, config_entry)
+    await setup_integration(menuai, config_entry)
+    await menuai.async_block_till_done()
+    result = await get_diagnostics_for_config_entry(menuai, menuai_client, config_entry)
     assert result == snapshot

@@ -9,12 +9,12 @@ from typing import Any, Final
 from pyfronius import Fronius, FroniusError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
 
 from .const import DOMAIN, FroniusConfigEntryData
 
@@ -32,10 +32,10 @@ def create_title(info: FroniusConfigEntryData) -> str:
 
 
 async def validate_host(
-    hass: HomeAssistant, host: str
+    menuai: menuai, host: str
 ) -> tuple[str, FroniusConfigEntryData]:
     """Validate the user input allows us to connect."""
-    fronius = Fronius(async_get_clientsession(hass, verify_ssl=False), host)
+    fronius = Fronius(async_get_clientsession(menuai, verify_ssl=False), host)
 
     try:
         datalogger_info: dict[str, Any]
@@ -79,7 +79,7 @@ class FroniusConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             try:
-                unique_id, info = await validate_host(self.hass, user_input[CONF_HOST])
+                unique_id, info = await validate_host(self.menuai, user_input[CONF_HOST])
             except CannotConnect:
                 errors["base"] = "cannot_connect"
             except Exception:
@@ -111,7 +111,7 @@ class FroniusConfigFlow(ConfigFlow, domain=DOMAIN):
         # to respond to API requests (connection refused until then)
         await asyncio.sleep(DHCP_REQUEST_DELAY)
         try:
-            unique_id, self.info = await validate_host(self.hass, discovery_info.ip)
+            unique_id, self.info = await validate_host(self.menuai, discovery_info.ip)
         except CannotConnect:
             return self.async_abort(reason="invalid_host")
 
@@ -146,7 +146,7 @@ class FroniusConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             try:
-                unique_id, info = await validate_host(self.hass, user_input[CONF_HOST])
+                unique_id, info = await validate_host(self.menuai, user_input[CONF_HOST])
             except CannotConnect:
                 errors["base"] = "cannot_connect"
             except Exception:
@@ -167,5 +167,5 @@ class FroniusConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""

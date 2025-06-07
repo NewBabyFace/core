@@ -22,16 +22,16 @@ from hatasmota.mqtt import TasmotaMQTTClient
 from hatasmota.sensor import TasmotaBaseSensorConfig
 from hatasmota.utils import get_topic_command, get_topic_stat
 
-from homeassistant.components import sensor
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import (
+from menuai.components import sensor
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers import (
     device_registry as dr,
     entity_registry as er,
     issue_registry as ir,
 )
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.entity_registry import async_entries_for_device
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.entity_registry import async_entries_for_device
 
 from .const import DOMAIN, PLATFORMS
 
@@ -49,22 +49,22 @@ type SetupDeviceCallback = Callable[[TasmotaDeviceConfig, str], Awaitable[None]]
 
 
 def clear_discovery_hash(
-    hass: HomeAssistant, discovery_hash: DiscoveryHashType
+    menuai: menuai, discovery_hash: DiscoveryHashType
 ) -> None:
     """Clear entry in ALREADY_DISCOVERED list."""
-    if ALREADY_DISCOVERED not in hass.data:
+    if ALREADY_DISCOVERED not in menuai.data:
         # Discovery is shutting down
         return
-    del hass.data[ALREADY_DISCOVERED][discovery_hash]
+    del menuai.data[ALREADY_DISCOVERED][discovery_hash]
 
 
-def set_discovery_hash(hass: HomeAssistant, discovery_hash: DiscoveryHashType) -> None:
+def set_discovery_hash(menuai: menuai, discovery_hash: DiscoveryHashType) -> None:
     """Set entry in ALREADY_DISCOVERED list."""
-    hass.data[ALREADY_DISCOVERED][discovery_hash] = {}
+    menuai.data[ALREADY_DISCOVERED][discovery_hash] = {}
 
 
 def warn_if_topic_duplicated(
-    hass: HomeAssistant,
+    menuai: menuai,
     command_topic: str,
     own_mac: str | None,
     own_device_config: TasmotaDeviceConfig,
@@ -72,7 +72,7 @@ def warn_if_topic_duplicated(
     """Log and create repairs issue if several devices share the same topic."""
     duplicated = False
     offenders = []
-    for other_mac, other_config in hass.data[DISCOVERY_DATA].items():
+    for other_mac, other_config in menuai.data[DISCOVERY_DATA].items():
         if own_mac and other_mac == own_mac:
             continue
         if command_topic == get_topic_command(other_config):
@@ -94,7 +94,7 @@ def warn_if_topic_duplicated(
             ", ".join(offender_strings),
         )
         ir.async_create_issue(
-            hass,
+            menuai,
             DOMAIN,
             issue_id,
             data={
@@ -124,7 +124,7 @@ class DuplicatedTopicIssueData(TypedDict):
 
 
 async def async_start(  # noqa: C901
-    hass: HomeAssistant,
+    menuai: menuai,
     discovery_topic: str,
     config_entry: ConfigEntry,
     tasmota_mqtt: TasmotaMQTTClient,
@@ -140,7 +140,7 @@ async def async_start(  # noqa: C901
         """Handle adding or updating a discovered entity."""
         if not tasmota_entity_config:
             # Entity disabled, clean up entity registry
-            entity_registry = er.async_get(hass)
+            entity_registry = er.async_get(menuai)
             unique_id = unique_id_from_hash(discovery_hash)
             entity_id = entity_registry.async_get_entity_id(platform, DOMAIN, unique_id)
             if entity_id:
@@ -148,14 +148,14 @@ async def async_start(  # noqa: C901
                 entity_registry.async_remove(entity_id)
             return
 
-        if discovery_hash in hass.data[ALREADY_DISCOVERED]:
+        if discovery_hash in menuai.data[ALREADY_DISCOVERED]:
             _LOGGER.debug(
                 "Entity already added, sending update: %s %s",
                 platform,
                 discovery_hash,
             )
             async_dispatcher_send(
-                hass,
+                menuai,
                 TASMOTA_DISCOVERY_ENTITY_UPDATED.format(*discovery_hash),
                 tasmota_entity_config,
             )
@@ -172,10 +172,10 @@ async def async_start(  # noqa: C901
                 tasmota_entity.unique_id,
             )
 
-            hass.data[ALREADY_DISCOVERED][discovery_hash] = None
+            menuai.data[ALREADY_DISCOVERED][discovery_hash] = None
 
             async_dispatcher_send(
-                hass,
+                menuai,
                 TASMOTA_DISCOVERY_ENTITY_NEW.format(platform),
                 tasmota_entity,
                 discovery_hash,
@@ -184,7 +184,7 @@ async def async_start(  # noqa: C901
     async def async_device_discovered(payload: dict, mac: str) -> None:
         """Process the received message."""
 
-        if ALREADY_DISCOVERED not in hass.data:
+        if ALREADY_DISCOVERED not in menuai.data:
             # Discovery is shutting down
             return
 
@@ -192,7 +192,7 @@ async def async_start(  # noqa: C901
         tasmota_device_config = tasmota_get_device_config(payload)
         await setup_device(tasmota_device_config, mac)
 
-        hass.data[DISCOVERY_DATA][mac] = payload
+        menuai.data[DISCOVERY_DATA][mac] = payload
 
         add_entities = True
 
@@ -208,7 +208,7 @@ async def async_start(  # noqa: C901
                 tasmota_device_config[tasmota_const.CONF_IP],
             )
             ir.async_create_issue(
-                hass,
+                menuai,
                 DOMAIN,
                 issue_id,
                 data={"key": "topic_no_prefix"},
@@ -223,10 +223,10 @@ async def async_start(  # noqa: C901
             )
             add_entities = False
         else:
-            ir.async_delete_issue(hass, DOMAIN, issue_id)
+            ir.async_delete_issue(menuai, DOMAIN, issue_id)
 
         # Clear previous issues caused by duplicated topic
-        issue_reg = ir.async_get(hass)
+        issue_reg = ir.async_get(menuai)
         tasmota_issues = [
             issue for key, issue in issue_reg.issues.items() if key[0] == DOMAIN
         ]
@@ -242,16 +242,16 @@ async def async_start(  # noqa: C901
                     continue
                 if len(macs) > 2:
                     # This device is no longer duplicated, update the issue
-                    warn_if_topic_duplicated(hass, issue_data["topic"], None, {})
+                    warn_if_topic_duplicated(menuai, issue_data["topic"], None, {})
                     continue
-                ir.async_delete_issue(hass, DOMAIN, issue.issue_id)
+                ir.async_delete_issue(menuai, DOMAIN, issue.issue_id)
 
         if not payload:
             return
         assert isinstance(command_topic, str)
 
         # Warn and add issues if there are duplicated topics
-        if warn_if_topic_duplicated(hass, command_topic, mac, tasmota_device_config):
+        if warn_if_topic_duplicated(menuai, command_topic, mac, tasmota_device_config):
             add_entities = False
 
         if not add_entities:
@@ -267,24 +267,24 @@ async def async_start(  # noqa: C901
                 "trigger",
                 trigger_config.trigger_id,
             )
-            if discovery_hash in hass.data[ALREADY_DISCOVERED]:
+            if discovery_hash in menuai.data[ALREADY_DISCOVERED]:
                 _LOGGER.debug(
                     "Trigger already added, sending update: %s",
                     discovery_hash,
                 )
                 async_dispatcher_send(
-                    hass,
+                    menuai,
                     TASMOTA_DISCOVERY_ENTITY_UPDATED.format(*discovery_hash),
                     trigger_config,
                 )
             elif trigger_config.is_active:
                 _LOGGER.debug("Adding new trigger: %s", discovery_hash)
-                hass.data[ALREADY_DISCOVERED][discovery_hash] = None
+                menuai.data[ALREADY_DISCOVERED][discovery_hash] = None
 
                 tasmota_trigger = tasmota_get_trigger(trigger_config, tasmota_mqtt)
 
                 async_dispatcher_send(
-                    hass,
+                    menuai,
                     TASMOTA_DISCOVERY_ENTITY_NEW.format("device_automation"),
                     tasmota_trigger,
                     discovery_hash,
@@ -301,8 +301,8 @@ async def async_start(  # noqa: C901
         """Handle discovery of (additional) sensors."""
         platform = sensor.DOMAIN
 
-        device_registry = dr.async_get(hass)
-        entity_registry = er.async_get(hass)
+        device_registry = dr.async_get(menuai)
+        entity_registry = er.async_get(menuai)
         device = device_registry.async_get_device(
             connections={(dr.CONNECTION_NETWORK_MAC, mac)}
         )
@@ -328,18 +328,18 @@ async def async_start(  # noqa: C901
                 _LOGGER.debug("Removing entity: %s %s", platform, entity_id)
                 entity_registry.async_remove(entity_id)
 
-    hass.data[ALREADY_DISCOVERED] = {}
-    hass.data[DISCOVERY_DATA] = {}
+    menuai.data[ALREADY_DISCOVERED] = {}
+    menuai.data[DISCOVERY_DATA] = {}
 
     tasmota_discovery = TasmotaDiscovery(discovery_topic, tasmota_mqtt)
     await tasmota_discovery.start_discovery(
         async_device_discovered, async_sensors_discovered
     )
-    hass.data[TASMOTA_DISCOVERY_INSTANCE] = tasmota_discovery
+    menuai.data[TASMOTA_DISCOVERY_INSTANCE] = tasmota_discovery
 
 
-async def async_stop(hass: HomeAssistant) -> None:
+async def async_stop(menuai: menuai) -> None:
     """Stop Tasmota device discovery."""
-    hass.data.pop(ALREADY_DISCOVERED)
-    tasmota_discovery = hass.data.pop(TASMOTA_DISCOVERY_INSTANCE)
+    menuai.data.pop(ALREADY_DISCOVERED)
+    tasmota_discovery = menuai.data.pop(TASMOTA_DISCOVERY_INSTANCE)
     await tasmota_discovery.stop_discovery()

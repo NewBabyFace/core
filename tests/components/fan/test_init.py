@@ -2,7 +2,7 @@
 
 import pytest
 
-from homeassistant.components.fan import (
+from menuai.components.fan import (
     ATTR_PRESET_MODE,
     ATTR_PRESET_MODES,
     DOMAIN,
@@ -11,9 +11,9 @@ from homeassistant.components.fan import (
     FanEntityFeature,
     NotValidPresetModeError,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.setup import async_setup_component
 
 from .common import MockFan
 
@@ -51,10 +51,10 @@ def test_fanentity() -> None:
         fan.turn_off()
 
 
-async def test_async_fanentity(hass: HomeAssistant) -> None:
+async def test_async_fanentity(menuai: menuai) -> None:
     """Test async fan entity methods."""
     fan = BaseFan()
-    fan.hass = hass
+    fan.menuai = menuai
     assert fan.state == "off"
     assert fan.preset_modes is None
     assert fan.supported_features == 0
@@ -100,12 +100,12 @@ def test_fanentity_attributes(attribute_name, attribute_value) -> None:
 
 
 async def test_preset_mode_validation(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test preset mode validation."""
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     test_fan = MockFan(
         name="Support fan with preset_mode support",
@@ -113,15 +113,15 @@ async def test_preset_mode_validation(
         unique_id="unique_support_preset_mode",
         preset_modes=["auto", "eco"],
     )
-    setup_test_component_platform(hass, "fan", [test_fan])
+    setup_test_component_platform(menuai, "fan", [test_fan])
 
-    assert await async_setup_component(hass, "fan", {"fan": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "fan", {"fan": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("fan.support_fan_with_preset_mode_support")
+    state = menuai.states.get("fan.support_fan_with_preset_mode_support")
     assert state.attributes.get(ATTR_PRESET_MODES) == ["auto", "eco"]
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_PRESET_MODE,
         {
@@ -131,11 +131,11 @@ async def test_preset_mode_validation(
         blocking=True,
     )
 
-    state = hass.states.get("fan.support_fan_with_preset_mode_support")
+    state = menuai.states.get("fan.support_fan_with_preset_mode_support")
     assert state.attributes.get(ATTR_PRESET_MODE) == "eco"
 
     with pytest.raises(NotValidPresetModeError) as exc:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SET_PRESET_MODE,
             {

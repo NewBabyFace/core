@@ -8,19 +8,19 @@ from typing import TYPE_CHECKING, Any
 from pylgnetcast import LG_COMMAND, LgNetCastClient, LgNetCastError
 from requests import RequestException
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     MediaPlayerDeviceClass,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
     MediaType,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_HOST, CONF_MODEL, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.trigger import PluggableAction
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_ACCESS_TOKEN, CONF_HOST, CONF_MODEL, CONF_NAME
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.trigger import PluggableAction
 
 from .const import ATTR_MANUFACTURER, DOMAIN
 from .triggers.turn_on import async_get_turn_on_trigger
@@ -45,7 +45,7 @@ SUPPORT_LGTV = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -59,7 +59,7 @@ async def async_setup_entry(
 
     client = LgNetCastClient(host, access_token)
 
-    hass.data[DOMAIN][config_entry.entry_id] = client
+    menuai.data[DOMAIN][config_entry.entry_id] = client
 
     async_add_entities([LgTVDevice(client, name, model, unique_id=unique_id)])
 
@@ -92,9 +92,9 @@ class LgTVDevice(MediaPlayerEntity):
             model=model,
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Connect and subscribe to dispatcher signals and state updates."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         entry = self.registry_entry
 
@@ -103,7 +103,7 @@ class LgTVDevice(MediaPlayerEntity):
 
         self.async_on_remove(
             self._turn_on.async_register(
-                self.hass, async_get_turn_on_trigger(entry.device_id)
+                self.menuai, async_get_turn_on_trigger(entry.device_id)
             )
         )
 
@@ -220,7 +220,7 @@ class LgTVDevice(MediaPlayerEntity):
 
     async def async_turn_on(self) -> None:
         """Turn on the media player."""
-        await self._turn_on.async_run(self.hass, self._context)
+        await self._turn_on.async_run(self.menuai, self._context)
 
     def volume_up(self) -> None:
         """Volume up the media player."""

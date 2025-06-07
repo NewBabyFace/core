@@ -7,7 +7,7 @@ from typing import Any
 
 from pylutron import Lutron, LutronEntity, Output
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_FLASH,
     ATTR_TRANSITION,
@@ -15,9 +15,9 @@ from homeassistant.components.light import (
     LightEntity,
     LightEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import DOMAIN, LutronData
 from .const import CONF_DEFAULT_DIMMER_LEVEL, DEFAULT_DIMMER_LEVEL
@@ -25,7 +25,7 @@ from .entity import LutronDevice
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -34,7 +34,7 @@ async def async_setup_entry(
     Adds dimmers from the Main Repeater associated with the config_entry as
     light entities.
     """
-    entry_data: LutronData = hass.data[DOMAIN][config_entry.entry_id]
+    entry_data: LutronData = menuai.data[DOMAIN][config_entry.entry_id]
 
     async_add_entities(
         (
@@ -46,12 +46,12 @@ async def async_setup_entry(
 
 
 def to_lutron_level(level):
-    """Convert the given Home Assistant light level (0-255) to Lutron (0.0-100.0)."""
+    """Convert the given MenuAI light level (0-255) to Lutron (0.0-100.0)."""
     return float((level * 100) / 255)
 
 
-def to_hass_level(level):
-    """Convert the given Lutron (0.0-100.0) light level to Home Assistant (0-255)."""
+def to_menuai_level(level):
+    """Convert the given Lutron (0.0-100.0) light level to MenuAI (0-255)."""
     return int((level * 255) / 100)
 
 
@@ -115,7 +115,7 @@ class LutronLight(LutronDevice, LightEntity):
         """Update the state attributes."""
         level = self._lutron_device.last_level()
         self._attr_is_on = level > 0
-        hass_level = to_hass_level(level)
-        self._attr_brightness = hass_level
-        if self._prev_brightness is None or hass_level != 0:
-            self._prev_brightness = hass_level
+        menuai_level = to_menuai_level(level)
+        self._attr_brightness = menuai_level
+        if self._prev_brightness is None or menuai_level != 0:
+            self._prev_brightness = menuai_level

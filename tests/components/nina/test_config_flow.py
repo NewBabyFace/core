@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 from pynina import ApiError
 
-from homeassistant.components.nina.const import (
+from menuai.components.nina.const import (
     CONF_AREA_FILTER,
     CONF_HEADLINE_FILTER,
     CONF_MESSAGE_SLOTS,
@@ -22,10 +22,10 @@ from homeassistant.components.nina.const import (
     CONST_REGION_V_TO_Z,
     DOMAIN,
 )
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import entity_registry as er
+from menuai.config_entries import SOURCE_USER
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers import entity_registry as er
 
 from . import mocked_request_function
 
@@ -51,13 +51,13 @@ DUMMY_RESPONSE_WARNIGNS: dict[str, Any] = json.loads(
 )
 
 
-async def test_show_set_form(hass: HomeAssistant) -> None:
+async def test_show_set_form(menuai: menuai) -> None:
     """Test that the setup form is served."""
     with patch(
         "pynina.baseApi.BaseAPI._makeRequest",
         wraps=mocked_request_function,
     ):
-        result: dict[str, Any] = await hass.config_entries.flow.async_init(
+        result: dict[str, Any] = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": SOURCE_USER}
         )
 
@@ -65,13 +65,13 @@ async def test_show_set_form(hass: HomeAssistant) -> None:
         assert result["step_id"] == "user"
 
 
-async def test_step_user_connection_error(hass: HomeAssistant) -> None:
+async def test_step_user_connection_error(menuai: menuai) -> None:
     """Test starting a flow by user but no connection."""
     with patch(
         "pynina.baseApi.BaseAPI._makeRequest",
         side_effect=ApiError("Could not connect to Api"),
     ):
-        result: dict[str, Any] = await hass.config_entries.flow.async_init(
+        result: dict[str, Any] = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": SOURCE_USER}, data=deepcopy(DUMMY_DATA)
         )
 
@@ -79,22 +79,22 @@ async def test_step_user_connection_error(hass: HomeAssistant) -> None:
         assert result["errors"] == {"base": "cannot_connect"}
 
 
-async def test_step_user_unexpected_exception(hass: HomeAssistant) -> None:
+async def test_step_user_unexpected_exception(menuai: menuai) -> None:
     """Test starting a flow by user but with an unexpected exception."""
     with patch(
         "pynina.baseApi.BaseAPI._makeRequest",
         side_effect=Exception("DUMMY"),
     ):
-        result: dict[str, Any] = await hass.config_entries.flow.async_init(
+        result: dict[str, Any] = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": SOURCE_USER}, data=deepcopy(DUMMY_DATA)
         )
 
         assert result["type"] is FlowResultType.FORM
         assert result["errors"] == {"base": "unknown"}
-        hass.config_entries.flow.async_abort(result["flow_id"])
+        menuai.config_entries.flow.async_abort(result["flow_id"])
 
 
-async def test_step_user(hass: HomeAssistant) -> None:
+async def test_step_user(menuai: menuai) -> None:
     """Test starting a flow by user with valid values."""
     with (
         patch(
@@ -102,11 +102,11 @@ async def test_step_user(hass: HomeAssistant) -> None:
             wraps=mocked_request_function,
         ),
         patch(
-            "homeassistant.components.nina.async_setup_entry",
+            "menuai.components.nina.async_setup_entry",
             return_value=True,
         ),
     ):
-        result: dict[str, Any] = await hass.config_entries.flow.async_init(
+        result: dict[str, Any] = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": SOURCE_USER}, data=deepcopy(DUMMY_DATA)
         )
 
@@ -114,13 +114,13 @@ async def test_step_user(hass: HomeAssistant) -> None:
         assert result["title"] == "NINA"
 
 
-async def test_step_user_no_selection(hass: HomeAssistant) -> None:
+async def test_step_user_no_selection(menuai: menuai) -> None:
     """Test starting a flow by user with no selection."""
     with patch(
         "pynina.baseApi.BaseAPI._makeRequest",
         wraps=mocked_request_function,
     ):
-        result: dict[str, Any] = await hass.config_entries.flow.async_init(
+        result: dict[str, Any] = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": SOURCE_USER}, data={CONF_HEADLINE_FILTER: ""}
         )
 
@@ -129,17 +129,17 @@ async def test_step_user_no_selection(hass: HomeAssistant) -> None:
         assert result["errors"] == {"base": "no_selection"}
 
 
-async def test_step_user_already_configured(hass: HomeAssistant) -> None:
+async def test_step_user_already_configured(menuai: menuai) -> None:
     """Test starting a flow by user but it was already configured."""
     with patch(
         "pynina.baseApi.BaseAPI._makeRequest",
         wraps=mocked_request_function,
     ):
-        result: dict[str, Any] = await hass.config_entries.flow.async_init(
+        result: dict[str, Any] = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": SOURCE_USER}, data=deepcopy(DUMMY_DATA)
         )
 
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": SOURCE_USER}, data=deepcopy(DUMMY_DATA)
         )
 
@@ -147,7 +147,7 @@ async def test_step_user_already_configured(hass: HomeAssistant) -> None:
         assert result["reason"] == "single_instance_allowed"
 
 
-async def test_options_flow_init(hass: HomeAssistant) -> None:
+async def test_options_flow_init(menuai: menuai) -> None:
     """Test config flow options."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -160,24 +160,24 @@ async def test_options_flow_init(hass: HomeAssistant) -> None:
             CONF_REGIONS: {"095760000000": "Aach"},
         },
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with (
-        patch("homeassistant.components.nina.async_setup_entry", return_value=True),
+        patch("menuai.components.nina.async_setup_entry", return_value=True),
         patch(
             "pynina.baseApi.BaseAPI._makeRequest",
             wraps=mocked_request_function,
         ),
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
-        result = await hass.config_entries.options.async_init(config_entry.entry_id)
+        result = await menuai.config_entries.options.async_init(config_entry.entry_id)
 
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "init"
 
-        result = await hass.config_entries.options.async_configure(
+        result = await menuai.config_entries.options.async_configure(
             result["flow_id"],
             user_input={
                 CONST_REGION_A_TO_D: ["072350000000_1"],
@@ -208,31 +208,31 @@ async def test_options_flow_init(hass: HomeAssistant) -> None:
         }
 
 
-async def test_options_flow_with_no_selection(hass: HomeAssistant) -> None:
+async def test_options_flow_with_no_selection(menuai: menuai) -> None:
     """Test config flow options with no selection."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
         title="NINA",
         data=deepcopy(DUMMY_DATA),
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with (
-        patch("homeassistant.components.nina.async_setup_entry", return_value=True),
+        patch("menuai.components.nina.async_setup_entry", return_value=True),
         patch(
             "pynina.baseApi.BaseAPI._makeRequest",
             wraps=mocked_request_function,
         ),
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
-        result = await hass.config_entries.options.async_init(config_entry.entry_id)
+        result = await menuai.config_entries.options.async_init(config_entry.entry_id)
 
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "init"
 
-        result = await hass.config_entries.options.async_configure(
+        result = await menuai.config_entries.options.async_configure(
             result["flow_id"],
             user_input={
                 CONST_REGION_A_TO_D: [],
@@ -250,14 +250,14 @@ async def test_options_flow_with_no_selection(hass: HomeAssistant) -> None:
         assert result["errors"] == {"base": "no_selection"}
 
 
-async def test_options_flow_connection_error(hass: HomeAssistant) -> None:
+async def test_options_flow_connection_error(menuai: menuai) -> None:
     """Test config flow options but no connection."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
         title="NINA",
         data=deepcopy(DUMMY_DATA),
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with (
         patch(
@@ -265,27 +265,27 @@ async def test_options_flow_connection_error(hass: HomeAssistant) -> None:
             side_effect=ApiError("Could not connect to Api"),
         ),
         patch(
-            "homeassistant.components.nina.async_setup_entry",
+            "menuai.components.nina.async_setup_entry",
             return_value=True,
         ),
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
-        result = await hass.config_entries.options.async_init(config_entry.entry_id)
+        result = await menuai.config_entries.options.async_init(config_entry.entry_id)
 
         assert result["type"] is FlowResultType.FORM
         assert result["errors"] == {"base": "cannot_connect"}
 
 
-async def test_options_flow_unexpected_exception(hass: HomeAssistant) -> None:
+async def test_options_flow_unexpected_exception(menuai: menuai) -> None:
     """Test config flow options but with an unexpected exception."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
         title="NINA",
         data=deepcopy(DUMMY_DATA),
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with (
         patch(
@@ -293,22 +293,22 @@ async def test_options_flow_unexpected_exception(hass: HomeAssistant) -> None:
             side_effect=Exception("DUMMY"),
         ),
         patch(
-            "homeassistant.components.nina.async_setup_entry",
+            "menuai.components.nina.async_setup_entry",
             return_value=True,
         ),
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
-        result = await hass.config_entries.options.async_init(config_entry.entry_id)
+        result = await menuai.config_entries.options.async_init(config_entry.entry_id)
 
         assert result["type"] is FlowResultType.FORM
         assert result["errors"] == {"base": "unknown"}
-        hass.config_entries.options.async_abort(result["flow_id"])
+        menuai.config_entries.options.async_abort(result["flow_id"])
 
 
 async def test_options_flow_entity_removal(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test if old entities are removed."""
     config_entry = MockConfigEntry(
@@ -316,7 +316,7 @@ async def test_options_flow_entity_removal(
         title="NINA",
         data=deepcopy(DUMMY_DATA) | {CONF_REGIONS: {"095760000000": "Aach"}},
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with (
         patch(
@@ -324,15 +324,15 @@ async def test_options_flow_entity_removal(
             wraps=mocked_request_function,
         ),
         patch(
-            "homeassistant.components.nina._async_update_listener"
+            "menuai.components.nina._async_update_listener"
         ) as mock_update_listener,
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
-        result = await hass.config_entries.options.async_init(config_entry.entry_id)
+        result = await menuai.config_entries.options.async_init(config_entry.entry_id)
 
-        result = await hass.config_entries.options.async_configure(
+        result = await menuai.config_entries.options.async_configure(
             result["flow_id"],
             user_input={
                 CONF_MESSAGE_SLOTS: 2,

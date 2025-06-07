@@ -23,7 +23,7 @@ from evohomeasync2.schemas.const import (
 )
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_MODE,
     CONF_PASSWORD,
@@ -31,14 +31,14 @@ from homeassistant.const import (
     CONF_USERNAME,
     Platform,
 )
-from homeassistant.core import HomeAssistant, ServiceCall, callback
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.discovery import async_load_platform
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.service import verify_domain_control
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util.hass_dict import HassKey
+from menuai.core import menuai, ServiceCall, callback
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.discovery import async_load_platform
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.service import verify_domain_control
+from menuai.helpers.typing import ConfigType
+from menuai.util.menuai_dict import menuaiKey
 
 from .const import (
     ATTR_DURATION,
@@ -90,7 +90,7 @@ SET_ZONE_OVERRIDE_SCHEMA: Final = vol.Schema(
     }
 )
 
-EVOHOME_KEY: HassKey[EvoData] = HassKey(DOMAIN)
+EVOHOME_KEY: menuaiKey[EvoData] = menuaiKey(DOMAIN)
 
 
 @dataclass
@@ -102,17 +102,17 @@ class EvoData:
     tcs: ec2.ControlSystem
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Evohome integration."""
 
     token_manager = TokenManager(
-        hass,
+        menuai,
         config[DOMAIN][CONF_USERNAME],
         config[DOMAIN][CONF_PASSWORD],
-        async_get_clientsession(hass),
+        async_get_clientsession(menuai),
     )
     coordinator = EvoDataUpdateCoordinator(
-        hass,
+        menuai,
         _LOGGER,
         ec2.EvohomeClient(token_manager),
         name=f"{DOMAIN}_coordinator",
@@ -130,28 +130,28 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     assert coordinator.tcs is not None  # mypy
 
-    hass.data[EVOHOME_KEY] = EvoData(
+    menuai.data[EVOHOME_KEY] = EvoData(
         coordinator=coordinator,
         loc_idx=coordinator.loc_idx,
         tcs=coordinator.tcs,
     )
 
-    hass.async_create_task(
-        async_load_platform(hass, Platform.CLIMATE, DOMAIN, {}, config)
+    menuai.async_create_task(
+        async_load_platform(menuai, Platform.CLIMATE, DOMAIN, {}, config)
     )
     if coordinator.tcs.hotwater:
-        hass.async_create_task(
-            async_load_platform(hass, Platform.WATER_HEATER, DOMAIN, {}, config)
+        menuai.async_create_task(
+            async_load_platform(menuai, Platform.WATER_HEATER, DOMAIN, {}, config)
         )
 
-    setup_service_functions(hass, coordinator)
+    setup_service_functions(menuai, coordinator)
 
     return True
 
 
 @callback
 def setup_service_functions(
-    hass: HomeAssistant, coordinator: EvoDataUpdateCoordinator
+    menuai: menuai, coordinator: EvoDataUpdateCoordinator
 ) -> None:
     """Set up the service handlers for the system/zone operating modes.
 
@@ -162,12 +162,12 @@ def setup_service_functions(
     It appears that all TCC-compatible systems support the same three zones modes.
     """
 
-    @verify_domain_control(hass, DOMAIN)
+    @verify_domain_control(menuai, DOMAIN)
     async def force_refresh(call: ServiceCall) -> None:
         """Obtain the latest state data via the vendor's RESTful API."""
         await coordinator.async_refresh()
 
-    @verify_domain_control(hass, DOMAIN)
+    @verify_domain_control(menuai, DOMAIN)
     async def set_system_mode(call: ServiceCall) -> None:
         """Set the system mode."""
         assert coordinator.tcs is not None  # mypy
@@ -177,14 +177,14 @@ def setup_service_functions(
             "service": call.service,
             "data": call.data,
         }
-        async_dispatcher_send(hass, DOMAIN, payload)
+        async_dispatcher_send(menuai, DOMAIN, payload)
 
-    @verify_domain_control(hass, DOMAIN)
+    @verify_domain_control(menuai, DOMAIN)
     async def set_zone_override(call: ServiceCall) -> None:
         """Set the zone override (setpoint)."""
         entity_id = call.data[ATTR_ENTITY_ID]
 
-        registry = er.async_get(hass)
+        registry = er.async_get(menuai)
         registry_entry = registry.async_get(entity_id)
 
         if registry_entry is None or registry_entry.platform != DOMAIN:
@@ -199,11 +199,11 @@ def setup_service_functions(
             "data": call.data,
         }
 
-        async_dispatcher_send(hass, DOMAIN, payload)
+        async_dispatcher_send(menuai, DOMAIN, payload)
 
     assert coordinator.tcs is not None  # mypy
 
-    hass.services.async_register(DOMAIN, EvoService.REFRESH_SYSTEM, force_refresh)
+    menuai.services.async_register(DOMAIN, EvoService.REFRESH_SYSTEM, force_refresh)
 
     # Enumerate which operating modes are supported by this system
     modes = list(coordinator.tcs.allowed_system_modes)
@@ -214,7 +214,7 @@ def setup_service_functions(
         for m in modes
         if m[SZ_SYSTEM_MODE] == EvoSystemMode.AUTO_WITH_RESET
     ):
-        hass.services.async_register(DOMAIN, EvoService.RESET_SYSTEM, set_system_mode)
+        menuai.services.async_register(DOMAIN, EvoService.RESET_SYSTEM, set_system_mode)
 
     system_mode_schemas = []
     modes = [m for m in modes if m[SZ_SYSTEM_MODE] != EvoSystemMode.AUTO_WITH_RESET]
@@ -256,7 +256,7 @@ def setup_service_functions(
         system_mode_schemas.append(schema)
 
     if system_mode_schemas:
-        hass.services.async_register(
+        menuai.services.async_register(
             DOMAIN,
             EvoService.SET_SYSTEM_MODE,
             set_system_mode,
@@ -264,13 +264,13 @@ def setup_service_functions(
         )
 
     # The zone modes are consistent across all systems and use the same schema
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         EvoService.RESET_ZONE_OVERRIDE,
         set_zone_override,
         schema=RESET_ZONE_OVERRIDE_SCHEMA,
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         EvoService.SET_ZONE_OVERRIDE,
         set_zone_override,

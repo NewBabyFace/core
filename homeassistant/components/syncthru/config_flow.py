@@ -8,10 +8,10 @@ from pysyncthru import ConnectionMode, SyncThru, SyncThruAPINotSupported
 from url_normalize import url_normalize
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_NAME, CONF_URL
-from homeassistant.helpers import aiohttp_client
-from homeassistant.helpers.service_info.ssdp import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_NAME, CONF_URL
+from menuai.helpers import aiohttp_client
+from menuai.helpers.service_info.ssdp import (
     ATTR_UPNP_FRIENDLY_NAME,
     ATTR_UPNP_PRESENTATION_URL,
     ATTR_UPNP_UDN,
@@ -58,7 +58,7 @@ class SyncThruConfigFlow(ConfigFlow, domain=DOMAIN):
         ):
             # Update unique id of entry with the same URL
             if not existing_entry.unique_id:
-                self.hass.config_entries.async_update_entry(
+                self.menuai.config_entries.async_update_entry(
                     existing_entry, unique_id=discovery_info.upnp[ATTR_UPNP_UDN]
                 )
             return self.async_abort(reason="already_configured")
@@ -118,7 +118,7 @@ class SyncThruConfigFlow(ConfigFlow, domain=DOMAIN):
                 await self.async_set_unique_id(existing_entry.unique_id)
                 break
 
-        session = aiohttp_client.async_get_clientsession(self.hass)
+        session = aiohttp_client.async_get_clientsession(self.menuai)
         printer = SyncThru(
             user_input[CONF_URL], session, connection_mode=ConnectionMode.API
         )

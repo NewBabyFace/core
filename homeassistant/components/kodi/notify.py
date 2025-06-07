@@ -8,14 +8,14 @@ import aiohttp
 import jsonrpc_async
 import voluptuous as vol
 
-from homeassistant.components.notify import (
+from menuai.components.notify import (
     ATTR_DATA,
     ATTR_TITLE,
     ATTR_TITLE_DEFAULT,
     PLATFORM_SCHEMA as NOTIFY_PLATFORM_SCHEMA,
     BaseNotificationService,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ICON,
     CONF_HOST,
     CONF_PASSWORD,
@@ -23,10 +23,10 @@ from homeassistant.const import (
     CONF_PROXY_SSL,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -48,7 +48,7 @@ ATTR_DISPLAYTIME = "displaytime"
 
 
 async def async_get_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> KodiNotificationService:
@@ -76,17 +76,17 @@ async def async_get_service(
     else:
         auth = None
 
-    return KodiNotificationService(hass, url, auth)
+    return KodiNotificationService(menuai, url, auth)
 
 
 class KodiNotificationService(BaseNotificationService):
     """Implement the notification service for Kodi."""
 
-    def __init__(self, hass, url, auth=None):
+    def __init__(self, menuai, url, auth=None):
         """Initialize the service."""
         self._url = url
 
-        kwargs = {"timeout": DEFAULT_TIMEOUT, "session": async_get_clientsession(hass)}
+        kwargs = {"timeout": DEFAULT_TIMEOUT, "session": async_get_clientsession(menuai)}
 
         if auth is not None:
             kwargs["auth"] = auth

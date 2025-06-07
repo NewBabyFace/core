@@ -2,9 +2,9 @@
 
 from typing import Any
 
-from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.const import CONF_MAC, CONF_PIN
-from homeassistant.core import HomeAssistant
+from menuai.components.diagnostics import async_redact_data
+from menuai.const import CONF_MAC, CONF_PIN
+from menuai.core import menuai
 
 from .coordinator import BraviaTVConfigEntry
 
@@ -12,7 +12,7 @@ TO_REDACT = {CONF_MAC, CONF_PIN, "macAddr"}
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, config_entry: BraviaTVConfigEntry
+    menuai: menuai, config_entry: BraviaTVConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     coordinator = config_entry.runtime_data

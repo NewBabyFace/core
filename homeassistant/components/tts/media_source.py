@@ -7,8 +7,8 @@ from typing import TypedDict
 
 from yarl import URL
 
-from homeassistant.components.media_player import BrowseError, MediaClass
-from homeassistant.components.media_source import (
+from menuai.components.media_player import BrowseError, MediaClass
+from menuai.components.media_source import (
     BrowseMediaSource,
     MediaSource,
     MediaSourceItem,
@@ -16,8 +16,8 @@ from homeassistant.components.media_source import (
     Unresolvable,
     generate_media_source_id as ms_generate_media_source_id,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
 
 from .const import DATA_COMPONENT, DATA_TTS_MANAGER, DOMAIN, MEDIA_SOURCE_STREAM_PATH
 from .helper import get_engine_instance
@@ -25,14 +25,14 @@ from .helper import get_engine_instance
 URL_QUERY_TTS_OPTIONS = "tts_options"
 
 
-async def async_get_media_source(hass: HomeAssistant) -> TTSMediaSource:
+async def async_get_media_source(menuai: menuai) -> TTSMediaSource:
     """Set up tts media source."""
-    return TTSMediaSource(hass)
+    return TTSMediaSource(menuai)
 
 
 @callback
 def generate_media_source_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     message: str,
     engine: str | None = None,
     language: str | None = None,
@@ -42,14 +42,14 @@ def generate_media_source_id(
     """Generate a media source ID for text-to-speech."""
     from . import async_resolve_engine  # pylint: disable=import-outside-toplevel
 
-    if (engine := async_resolve_engine(hass, engine)) is None:
-        raise HomeAssistantError("Invalid TTS provider selected")
+    if (engine := async_resolve_engine(menuai, engine)) is None:
+        raise menuaiError("Invalid TTS provider selected")
 
-    engine_instance = get_engine_instance(hass, engine)
+    engine_instance = get_engine_instance(menuai, engine)
     # We raise above if the engine is not resolved, so engine_instance can't be None
     assert engine_instance is not None
 
-    hass.data[DATA_TTS_MANAGER].process_options(engine_instance, language, options)
+    menuai.data[DATA_TTS_MANAGER].process_options(engine_instance, language, options)
     params = {
         "message": message,
     }
@@ -127,14 +127,14 @@ class TTSMediaSource(MediaSource):
 
     name: str = "Text-to-speech"
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize TTSMediaSource."""
         super().__init__(DOMAIN)
-        self.hass = hass
+        self.menuai = menuai
 
     async def async_resolve_media(self, item: MediaSourceItem) -> PlayMedia:
         """Resolve media to a url."""
-        manager = self.hass.data[DATA_TTS_MANAGER]
+        manager = self.menuai.data[DATA_TTS_MANAGER]
         try:
             parsed = parse_media_source_id(item.identifier)
             if "stream" in parsed:
@@ -146,7 +146,7 @@ class TTSMediaSource(MediaSource):
                 stream.async_set_message(parsed["message"])
         except Unresolvable:
             raise
-        except HomeAssistantError as err:
+        except menuaiError as err:
             raise Unresolvable(str(err)) from err
 
         if stream is None:
@@ -167,14 +167,14 @@ class TTSMediaSource(MediaSource):
         children = sorted(
             [
                 self._engine_item(engine_id)
-                for engine_id, provider in self.hass.data[
+                for engine_id, provider in self.menuai.data[
                     DATA_TTS_MANAGER
                 ].providers.items()
                 if not provider.has_entity
             ]
             + [
                 self._engine_item(entity.entity_id)
-                for entity in self.hass.data[DATA_COMPONENT].entities
+                for entity in self.menuai.data[DATA_COMPONENT].entities
             ],
             key=lambda x: x.title,
         )
@@ -195,7 +195,7 @@ class TTSMediaSource(MediaSource):
         """Return provider item."""
         from . import TextToSpeechEntity  # pylint: disable=import-outside-toplevel
 
-        if (engine_instance := get_engine_instance(self.hass, engine)) is None:
+        if (engine_instance := get_engine_instance(self.menuai, engine)) is None:
             raise BrowseError("Unknown provider")
 
         if isinstance(engine_instance, TextToSpeechEntity):

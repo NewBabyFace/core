@@ -17,10 +17,10 @@ from ismartgate.common import (
     Wifi,
 )
 
-from homeassistant.components.gogogate2.const import DEVICE_TYPE_ISMARTGATE, DOMAIN
-from homeassistant.components.sensor import SensorDeviceClass
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import (
+from menuai.components.gogogate2.const import DEVICE_TYPE_ISMARTGATE, DOMAIN
+from menuai.components.sensor import SensorDeviceClass
+from menuai.config_entries import SOURCE_USER
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     ATTR_UNIT_OF_MEASUREMENT,
     CONF_DEVICE,
@@ -30,8 +30,8 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.util.dt import utcnow
+from menuai.core import menuai
+from menuai.util.dt import utcnow
 
 from tests.common import MockConfigEntry, async_fire_time_changed
 
@@ -162,8 +162,8 @@ def _mocked_ismartgate_sensor_response(battery_level: int, temperature: float):
     )
 
 
-@patch("homeassistant.components.gogogate2.common.GogoGate2Api")
-async def test_sensor_update(gogogate2api_mock, hass: HomeAssistant) -> None:
+@patch("menuai.components.gogogate2.common.GogoGate2Api")
+async def test_sensor_update(gogogate2api_mock, menuai: menuai) -> None:
     """Test data update."""
 
     bat_attributes = {
@@ -197,51 +197,51 @@ async def test_sensor_update(gogogate2api_mock, hass: HomeAssistant) -> None:
             CONF_PASSWORD: "password",
         },
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    assert hass.states.get("cover.door1") is None
-    assert hass.states.get("cover.door2") is None
-    assert hass.states.get("cover.door3") is None
-    assert hass.states.get("sensor.door1_battery") is None
-    assert hass.states.get("sensor.door2_battery") is None
-    assert hass.states.get("sensor.door3_battery") is None
-    assert hass.states.get("sensor.door1_temperature") is None
-    assert hass.states.get("sensor.door2_temperature") is None
-    assert hass.states.get("sensor.door3_temperature") is None
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
-    assert hass.states.get("cover.door1")
-    assert hass.states.get("cover.door2")
-    assert hass.states.get("cover.door3")
-    assert hass.states.get("sensor.door1_battery").state == "25"
-    assert dict(hass.states.get("sensor.door1_battery").attributes) == bat_attributes
-    assert hass.states.get("sensor.door2_battery") is None
-    assert hass.states.get("sensor.door2_battery") is None
-    assert hass.states.get("sensor.door1_temperature").state == "7.0"
+    assert menuai.states.get("cover.door1") is None
+    assert menuai.states.get("cover.door2") is None
+    assert menuai.states.get("cover.door3") is None
+    assert menuai.states.get("sensor.door1_battery") is None
+    assert menuai.states.get("sensor.door2_battery") is None
+    assert menuai.states.get("sensor.door3_battery") is None
+    assert menuai.states.get("sensor.door1_temperature") is None
+    assert menuai.states.get("sensor.door2_temperature") is None
+    assert menuai.states.get("sensor.door3_temperature") is None
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
+    assert menuai.states.get("cover.door1")
+    assert menuai.states.get("cover.door2")
+    assert menuai.states.get("cover.door3")
+    assert menuai.states.get("sensor.door1_battery").state == "25"
+    assert dict(menuai.states.get("sensor.door1_battery").attributes) == bat_attributes
+    assert menuai.states.get("sensor.door2_battery") is None
+    assert menuai.states.get("sensor.door2_battery") is None
+    assert menuai.states.get("sensor.door1_temperature").state == "7.0"
     assert (
-        dict(hass.states.get("sensor.door1_temperature").attributes) == temp_attributes
+        dict(menuai.states.get("sensor.door1_temperature").attributes) == temp_attributes
     )
-    assert hass.states.get("sensor.door2_temperature") is None
-    assert hass.states.get("sensor.door3_temperature") is None
+    assert menuai.states.get("sensor.door2_temperature") is None
+    assert menuai.states.get("sensor.door3_temperature") is None
 
     api.async_info.return_value = _mocked_gogogate_sensor_response(40, 10.0)
-    async_fire_time_changed(hass, utcnow() + timedelta(hours=2))
-    await hass.async_block_till_done()
-    assert hass.states.get("sensor.door1_battery").state == "40"
-    assert hass.states.get("sensor.door1_temperature").state == "10.0"
+    async_fire_time_changed(menuai, utcnow() + timedelta(hours=2))
+    await menuai.async_block_till_done()
+    assert menuai.states.get("sensor.door1_battery").state == "40"
+    assert menuai.states.get("sensor.door1_temperature").state == "10.0"
 
     api.async_info.return_value = _mocked_gogogate_sensor_response(None, None)
-    async_fire_time_changed(hass, utcnow() + timedelta(hours=2))
-    await hass.async_block_till_done()
-    assert hass.states.get("sensor.door1_battery").state == STATE_UNKNOWN
-    assert hass.states.get("sensor.door1_temperature").state == STATE_UNKNOWN
+    async_fire_time_changed(menuai, utcnow() + timedelta(hours=2))
+    await menuai.async_block_till_done()
+    assert menuai.states.get("sensor.door1_battery").state == STATE_UNKNOWN
+    assert menuai.states.get("sensor.door1_temperature").state == STATE_UNKNOWN
 
-    assert await hass.config_entries.async_unload(config_entry.entry_id)
-    assert not hass.states.async_entity_ids(DOMAIN)
+    assert await menuai.config_entries.async_unload(config_entry.entry_id)
+    assert not menuai.states.async_entity_ids(DOMAIN)
 
 
-@patch("homeassistant.components.gogogate2.common.ISmartGateApi")
-async def test_availability(ismartgateapi_mock, hass: HomeAssistant) -> None:
+@patch("menuai.components.gogogate2.common.ISmartGateApi")
+async def test_availability(ismartgateapi_mock, menuai: menuai) -> None:
     """Test availability."""
     bat_attributes = {
         "device_class": "battery",
@@ -275,51 +275,51 @@ async def test_availability(ismartgateapi_mock, hass: HomeAssistant) -> None:
             CONF_PASSWORD: "password",
         },
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    assert hass.states.get("cover.door1") is None
-    assert hass.states.get("cover.door2") is None
-    assert hass.states.get("cover.door3") is None
-    assert hass.states.get("sensor.door1_battery") is None
-    assert hass.states.get("sensor.door2_battery") is None
-    assert hass.states.get("sensor.door3_battery") is None
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
-    assert hass.states.get("cover.door1")
-    assert hass.states.get("cover.door2")
-    assert hass.states.get("cover.door3")
-    assert hass.states.get("sensor.door1_battery").state == "35"
-    assert hass.states.get("sensor.door2_battery") is None
-    assert hass.states.get("sensor.door3_battery") is None
-    assert hass.states.get("sensor.door1_temperature").state == "-4.0"
-    assert hass.states.get("sensor.door2_temperature") is None
-    assert hass.states.get("sensor.door3_temperature") is None
+    assert menuai.states.get("cover.door1") is None
+    assert menuai.states.get("cover.door2") is None
+    assert menuai.states.get("cover.door3") is None
+    assert menuai.states.get("sensor.door1_battery") is None
+    assert menuai.states.get("sensor.door2_battery") is None
+    assert menuai.states.get("sensor.door3_battery") is None
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
+    assert menuai.states.get("cover.door1")
+    assert menuai.states.get("cover.door2")
+    assert menuai.states.get("cover.door3")
+    assert menuai.states.get("sensor.door1_battery").state == "35"
+    assert menuai.states.get("sensor.door2_battery") is None
+    assert menuai.states.get("sensor.door3_battery") is None
+    assert menuai.states.get("sensor.door1_temperature").state == "-4.0"
+    assert menuai.states.get("sensor.door2_temperature") is None
+    assert menuai.states.get("sensor.door3_temperature") is None
     assert (
-        hass.states.get("sensor.door1_battery").attributes[ATTR_DEVICE_CLASS]
+        menuai.states.get("sensor.door1_battery").attributes[ATTR_DEVICE_CLASS]
         == SensorDeviceClass.BATTERY
     )
     assert (
-        hass.states.get("sensor.door1_temperature").attributes[ATTR_DEVICE_CLASS]
+        menuai.states.get("sensor.door1_temperature").attributes[ATTR_DEVICE_CLASS]
         == SensorDeviceClass.TEMPERATURE
     )
     assert (
-        hass.states.get("sensor.door1_temperature").attributes[ATTR_UNIT_OF_MEASUREMENT]
+        menuai.states.get("sensor.door1_temperature").attributes[ATTR_UNIT_OF_MEASUREMENT]
         == "°C"
     )
 
     api.async_info.side_effect = Exception("Error")
 
-    async_fire_time_changed(hass, utcnow() + timedelta(hours=2))
-    await hass.async_block_till_done()
-    assert hass.states.get("sensor.door1_battery").state == STATE_UNAVAILABLE
-    assert hass.states.get("sensor.door1_temperature").state == STATE_UNAVAILABLE
+    async_fire_time_changed(menuai, utcnow() + timedelta(hours=2))
+    await menuai.async_block_till_done()
+    assert menuai.states.get("sensor.door1_battery").state == STATE_UNAVAILABLE
+    assert menuai.states.get("sensor.door1_temperature").state == STATE_UNAVAILABLE
 
     api.async_info.side_effect = None
     api.async_info.return_value = sensor_response
-    async_fire_time_changed(hass, utcnow() + timedelta(hours=2))
-    await hass.async_block_till_done()
-    assert hass.states.get("sensor.door1_battery").state == "35"
-    assert dict(hass.states.get("sensor.door1_battery").attributes) == bat_attributes
+    async_fire_time_changed(menuai, utcnow() + timedelta(hours=2))
+    await menuai.async_block_till_done()
+    assert menuai.states.get("sensor.door1_battery").state == "35"
+    assert dict(menuai.states.get("sensor.door1_battery").attributes) == bat_attributes
     assert (
-        dict(hass.states.get("sensor.door1_temperature").attributes) == temp_attributes
+        dict(menuai.states.get("sensor.door1_temperature").attributes) == temp_attributes
     )

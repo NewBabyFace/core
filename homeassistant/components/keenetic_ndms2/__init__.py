@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import logging
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_SCAN_INTERVAL, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, CONF_SCAN_INTERVAL, Platform
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from .const import (
     CONF_CONSIDER_HOME,
@@ -28,39 +28,39 @@ PLATFORMS = [Platform.BINARY_SENSOR, Platform.DEVICE_TRACKER]
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up the component."""
-    hass.data.setdefault(DOMAIN, {})
-    async_add_defaults(hass, entry)
+    menuai.data.setdefault(DOMAIN, {})
+    async_add_defaults(menuai, entry)
 
-    router = KeeneticRouter(hass, entry)
+    router = KeeneticRouter(menuai, entry)
     await router.async_setup()
 
     undo_listener = entry.add_update_listener(update_listener)
 
-    hass.data[DOMAIN][entry.entry_id] = {
+    menuai.data[DOMAIN][entry.entry_id] = {
         ROUTER: router,
         UNDO_UPDATE_LISTENER: undo_listener,
     }
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, config_entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    hass.data[DOMAIN][config_entry.entry_id][UNDO_UPDATE_LISTENER]()
+    menuai.data[DOMAIN][config_entry.entry_id][UNDO_UPDATE_LISTENER]()
 
-    unload_ok = await hass.config_entries.async_unload_platforms(
+    unload_ok = await menuai.config_entries.async_unload_platforms(
         config_entry, PLATFORMS
     )
 
-    router: KeeneticRouter = hass.data[DOMAIN][config_entry.entry_id][ROUTER]
+    router: KeeneticRouter = menuai.data[DOMAIN][config_entry.entry_id][ROUTER]
 
     await router.async_teardown()
 
-    hass.data[DOMAIN].pop(config_entry.entry_id)
+    menuai.data[DOMAIN].pop(config_entry.entry_id)
 
     new_tracked_interfaces: set[str] = set(config_entry.options[CONF_INTERFACES])
 
@@ -68,8 +68,8 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
         _LOGGER.debug(
             "Cleaning device_tracker entities since some interfaces are now untracked:"
         )
-        ent_reg = er.async_get(hass)
-        dev_reg = dr.async_get(hass)
+        ent_reg = er.async_get(menuai)
+        dev_reg = dr.async_get(menuai)
         # We keep devices currently connected to new_tracked_interfaces
         keep_devices: set[str] = {
             mac
@@ -96,15 +96,15 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
     return unload_ok
 
 
-async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def update_listener(menuai: menuai, entry: ConfigEntry) -> None:
     """Handle options update."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)
 
 
-def async_add_defaults(hass: HomeAssistant, entry: ConfigEntry):
+def async_add_defaults(menuai: menuai, entry: ConfigEntry):
     """Populate default options."""
     host: str = entry.data[CONF_HOST]
-    imported_options: dict = hass.data[DOMAIN].get(f"imported_options_{host}", {})
+    imported_options: dict = menuai.data[DOMAIN].get(f"imported_options_{host}", {})
     options = {
         CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL,
         CONF_CONSIDER_HOME: DEFAULT_CONSIDER_HOME,
@@ -117,4 +117,4 @@ def async_add_defaults(hass: HomeAssistant, entry: ConfigEntry):
     }
 
     if options.keys() - entry.options.keys():
-        hass.config_entries.async_update_entry(entry, options=options)
+        menuai.config_entries.async_update_entry(entry, options=options)

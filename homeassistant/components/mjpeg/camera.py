@@ -11,9 +11,9 @@ from aiohttp import web
 import httpx
 from yarl import URL
 
-from homeassistant.components.camera import Camera
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.components.camera import Camera
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_AUTHENTICATION,
     CONF_PASSWORD,
     CONF_USERNAME,
@@ -21,14 +21,14 @@ from homeassistant.const import (
     HTTP_BASIC_AUTHENTICATION,
     HTTP_DIGEST_AUTHENTICATION,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import (
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import (
     async_aiohttp_proxy_web,
     async_get_clientsession,
 )
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.httpx_client import get_async_client
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.httpx_client import get_async_client
 
 from .const import CONF_MJPEG_URL, CONF_STILL_IMAGE_URL, DOMAIN, LOGGER
 
@@ -37,7 +37,7 @@ BUFFER_SIZE = 102400
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -141,7 +141,7 @@ class MjpegCamera(Camera):
         ):
             return await self._async_digest_or_fallback_camera_image()
 
-        websession = async_get_clientsession(self.hass, verify_ssl=self._verify_ssl)
+        websession = async_get_clientsession(self.menuai, verify_ssl=self._verify_ssl)
         try:
             async with asyncio.timeout(TIMEOUT):
                 response = await websession.get(self._still_image_url, auth=self._auth)
@@ -165,7 +165,7 @@ class MjpegCamera(Camera):
 
     async def _async_digest_or_fallback_camera_image(self) -> bytes | None:
         """Return a still image response from the camera using digest authentication."""
-        client = get_async_client(self.hass, verify_ssl=self._verify_ssl)
+        client = get_async_client(self.menuai, verify_ssl=self._verify_ssl)
         auth = self._get_httpx_auth()
         try:
             if self._still_image_url:
@@ -196,7 +196,7 @@ class MjpegCamera(Camera):
         self, request: web.Request
     ) -> web.StreamResponse | None:
         """Generate an HTTP MJPEG stream from the camera using digest authentication."""
-        async with get_async_client(self.hass, verify_ssl=self._verify_ssl).stream(
+        async with get_async_client(self.menuai, verify_ssl=self._verify_ssl).stream(
             "get", self._mjpeg_url, auth=self._get_httpx_auth(), timeout=TIMEOUT
         ) as stream:
             response = web.StreamResponse(headers=stream.headers)
@@ -204,7 +204,7 @@ class MjpegCamera(Camera):
             # Stream until we are done or client disconnects
             with suppress(TimeoutError, httpx.HTTPError):
                 async for chunk in stream.aiter_bytes(BUFFER_SIZE):
-                    if not self.hass.is_running:
+                    if not self.menuai.is_running:
                         break
                     async with asyncio.timeout(TIMEOUT):
                         await response.write(chunk)
@@ -219,7 +219,7 @@ class MjpegCamera(Camera):
             return await self._handle_async_mjpeg_digest_stream(request)
 
         # connect to stream
-        websession = async_get_clientsession(self.hass, verify_ssl=self._verify_ssl)
+        websession = async_get_clientsession(self.menuai, verify_ssl=self._verify_ssl)
         stream_coro = websession.get(self._mjpeg_url, auth=self._auth)
 
-        return await async_aiohttp_proxy_web(self.hass, request, stream_coro)
+        return await async_aiohttp_proxy_web(self.menuai, request, stream_coro)

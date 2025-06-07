@@ -12,11 +12,11 @@ from typing import Any, Self
 import httpcore  # noqa: F401
 import httpx
 
-from homeassistant.const import APPLICATION_NAME, EVENT_HOMEASSISTANT_CLOSE, __version__
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.loader import bind_hass
-from homeassistant.util.hass_dict import HassKey
-from homeassistant.util.ssl import (
+from menuai.const import APPLICATION_NAME, EVENT_menuai_CLOSE, __version__
+from menuai.core import Event, menuai, callback
+from menuai.loader import bind_menuai
+from menuai.util.menuai_dict import menuaiKey
+from menuai.util.ssl import (
     SSLCipherList,
     client_context,
     create_no_verify_ssl_context,
@@ -28,8 +28,8 @@ from .frame import warn_use
 # and we want to keep the connection open for a while so we
 # don't have to reconnect every time so we use 15s to match aiohttp.
 KEEP_ALIVE_TIMEOUT = 15
-DATA_ASYNC_CLIENT: HassKey[httpx.AsyncClient] = HassKey("httpx_async_client")
-DATA_ASYNC_CLIENT_NOVERIFY: HassKey[httpx.AsyncClient] = HassKey(
+DATA_ASYNC_CLIENT: menuaiKey[httpx.AsyncClient] = menuaiKey("httpx_async_client")
+DATA_ASYNC_CLIENT_NOVERIFY: menuaiKey[httpx.AsyncClient] = menuaiKey(
     "httpx_async_client_noverify"
 )
 DEFAULT_LIMITS = limits = httpx.Limits(keepalive_expiry=KEEP_ALIVE_TIMEOUT)
@@ -41,21 +41,21 @@ USER_AGENT = "User-Agent"
 
 
 @callback
-@bind_hass
-def get_async_client(hass: HomeAssistant, verify_ssl: bool = True) -> httpx.AsyncClient:
+@bind_menuai
+def get_async_client(menuai: menuai, verify_ssl: bool = True) -> httpx.AsyncClient:
     """Return default httpx AsyncClient.
 
     This method must be run in the event loop.
     """
     key = DATA_ASYNC_CLIENT if verify_ssl else DATA_ASYNC_CLIENT_NOVERIFY
 
-    if (client := hass.data.get(key)) is None:
-        client = hass.data[key] = create_async_httpx_client(hass, verify_ssl)
+    if (client := menuai.data.get(key)) is None:
+        client = menuai.data[key] = create_async_httpx_client(menuai, verify_ssl)
 
     return client
 
 
-class HassHttpXAsyncClient(httpx.AsyncClient):
+class menuaiHttpXAsyncClient(httpx.AsyncClient):
     """httpx AsyncClient that suppresses context management."""
 
     async def __aenter__(self) -> Self:
@@ -73,7 +73,7 @@ class HassHttpXAsyncClient(httpx.AsyncClient):
 
 @callback
 def create_async_httpx_client(
-    hass: HomeAssistant,
+    menuai: menuai,
     verify_ssl: bool = True,
     auto_cleanup: bool = True,
     ssl_cipher_list: SSLCipherList = SSLCipherList.PYTHON_DEFAULT,
@@ -82,7 +82,7 @@ def create_async_httpx_client(
     """Create a new httpx.AsyncClient with kwargs, i.e. for cookies.
 
     If auto_cleanup is False, the client will be
-    automatically closed on homeassistant_stop.
+    automatically closed on menuai_stop.
 
     This method must be run in the event loop.
     """
@@ -91,7 +91,7 @@ def create_async_httpx_client(
         if verify_ssl
         else create_no_verify_ssl_context(ssl_cipher_list)
     )
-    client = HassHttpXAsyncClient(
+    client = menuaiHttpXAsyncClient(
         verify=ssl_context,
         headers={USER_AGENT: SERVER_SOFTWARE},
         limits=DEFAULT_LIMITS,
@@ -101,22 +101,22 @@ def create_async_httpx_client(
     original_aclose = client.aclose
 
     client.aclose = warn_use(  # type: ignore[method-assign]
-        client.aclose, "closes the Home Assistant httpx client"
+        client.aclose, "closes the MenuAI httpx client"
     )
 
     if auto_cleanup:
-        _async_register_async_client_shutdown(hass, client, original_aclose)
+        _async_register_async_client_shutdown(menuai, client, original_aclose)
 
     return client
 
 
 @callback
 def _async_register_async_client_shutdown(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: httpx.AsyncClient,
     original_aclose: Callable[[], Coroutine[Any, Any, None]],
 ) -> None:
-    """Register httpx AsyncClient aclose on Home Assistant shutdown.
+    """Register httpx AsyncClient aclose on MenuAI shutdown.
 
     This method must be run in the event loop.
     """
@@ -125,4 +125,4 @@ def _async_register_async_client_shutdown(
         """Close httpx client."""
         await original_aclose()
 
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_CLOSE, _async_close_client)
+    menuai.bus.async_listen_once(EVENT_menuai_CLOSE, _async_close_client)

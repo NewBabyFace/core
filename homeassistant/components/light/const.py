@@ -6,18 +6,18 @@ from datetime import timedelta
 from enum import IntFlag, StrEnum
 from typing import TYPE_CHECKING
 
-from homeassistant.util.hass_dict import HassKey
+from menuai.util.menuai_dict import menuaiKey
 
 if TYPE_CHECKING:
-    from homeassistant.helpers.entity_component import EntityComponent
+    from menuai.helpers.entity_component import EntityComponent
 
     from . import LightEntity, Profiles
 
 DOMAIN = "light"
-DATA_COMPONENT: HassKey[EntityComponent[LightEntity]] = HassKey(DOMAIN)
+DATA_COMPONENT: menuaiKey[EntityComponent[LightEntity]] = menuaiKey(DOMAIN)
 SCAN_INTERVAL = timedelta(seconds=30)
 
-DATA_PROFILES: HassKey[Profiles] = HassKey(f"{DOMAIN}_profiles")
+DATA_PROFILES: menuaiKey[Profiles] = menuaiKey(f"{DOMAIN}_profiles")
 
 
 class LightEntityFeature(IntFlag):

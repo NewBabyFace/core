@@ -7,11 +7,11 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 from tesla_fleet_api.exceptions import NotOnWhitelistFault
 
-from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from menuai.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
 
 from . import assert_entities, setup_platform
 from .const import COMMAND_OK
@@ -21,17 +21,17 @@ from tests.common import MockConfigEntry
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_button(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     normal_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Tests that the button entities are correct."""
 
-    await setup_platform(hass, normal_config_entry, [Platform.BUTTON])
-    assert_entities(hass, normal_config_entry.entry_id, entity_registry, snapshot)
+    await setup_platform(menuai, normal_config_entry, [Platform.BUTTON])
+    assert_entities(menuai, normal_config_entry.entry_id, entity_registry, snapshot)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         BUTTON_DOMAIN,
         SERVICE_PRESS,
         {ATTR_ENTITY_ID: ["button.test_wake"]},
@@ -50,16 +50,16 @@ async def test_button(
     ],
 )
 async def test_press(
-    hass: HomeAssistant, normal_config_entry: MockConfigEntry, name: str, func: str
+    menuai: menuai, normal_config_entry: MockConfigEntry, name: str, func: str
 ) -> None:
     """Test pressing the API buttons."""
-    await setup_platform(hass, normal_config_entry, [Platform.BUTTON])
+    await setup_platform(menuai, normal_config_entry, [Platform.BUTTON])
 
     with patch(
         f"tesla_fleet_api.tesla.VehicleFleet.{func}",
         return_value=COMMAND_OK,
     ) as command:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             BUTTON_DOMAIN,
             SERVICE_PRESS,
             {ATTR_ENTITY_ID: [f"button.test_{name}"]},
@@ -69,7 +69,7 @@ async def test_press(
 
 
 async def test_press_signing_error(
-    hass: HomeAssistant, normal_config_entry: MockConfigEntry, mock_products: AsyncMock
+    menuai: menuai, normal_config_entry: MockConfigEntry, mock_products: AsyncMock
 ) -> None:
     """Test pressing a button with a signing error."""
     # Enable Signing
@@ -78,19 +78,19 @@ async def test_press_signing_error(
     mock_products.return_value = new_product
 
     with (
-        patch("homeassistant.components.tesla_fleet.TeslaFleetApi.get_private_key"),
+        patch("menuai.components.tesla_fleet.TeslaFleetApi.get_private_key"),
     ):
-        await setup_platform(hass, normal_config_entry, [Platform.BUTTON])
+        await setup_platform(menuai, normal_config_entry, [Platform.BUTTON])
 
     with (
-        patch("homeassistant.components.tesla_fleet.TeslaFleetApi.get_private_key"),
+        patch("menuai.components.tesla_fleet.TeslaFleetApi.get_private_key"),
         patch(
             "tesla_fleet_api.tesla.VehicleSigned.flash_lights",
             side_effect=NotOnWhitelistFault,
         ),
-        pytest.raises(HomeAssistantError) as error,
+        pytest.raises(menuaiError) as error,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             BUTTON_DOMAIN,
             SERVICE_PRESS,
             {ATTR_ENTITY_ID: ["button.test_flash_lights"]},

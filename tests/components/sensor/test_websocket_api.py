@@ -2,24 +2,24 @@
 
 from pytest_unordered import unordered
 
-from homeassistant.components.sensor.const import (
+from menuai.components.sensor.const import (
     DOMAIN,
     NON_NUMERIC_DEVICE_CLASSES,
     SensorDeviceClass,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.typing import WebSocketGenerator
 
 
 async def test_device_class_units(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test we can get supported units."""
-    assert await async_setup_component(hass, DOMAIN, {})
+    assert await async_setup_component(menuai, DOMAIN, {})
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     # Device class with units which sensor allows customizing & converting
     await client.send_json_auto_id(
@@ -82,14 +82,14 @@ async def test_device_class_units(
 
 
 async def test_numeric_device_classes(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test we can get numeric device classes."""
     numeric_device_classes = set(SensorDeviceClass) - NON_NUMERIC_DEVICE_CLASSES
 
-    assert await async_setup_component(hass, DOMAIN, {})
+    assert await async_setup_component(menuai, DOMAIN, {})
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     # Device class with units which sensor allows customizing & converting
     await client.send_json_auto_id({"type": "sensor/numeric_device_classes"})

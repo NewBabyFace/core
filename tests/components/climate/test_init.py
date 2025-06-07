@@ -9,13 +9,13 @@ from unittest.mock import MagicMock, Mock
 import pytest
 import voluptuous as vol
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     DOMAIN,
     SET_TEMPERATURE_SCHEMA,
     ClimateEntity,
     HVACMode,
 )
-from homeassistant.components.climate.const import (
+from menuai.components.climate.const import (
     ATTR_CURRENT_TEMPERATURE,
     ATTR_FAN_MODE,
     ATTR_HUMIDITY,
@@ -37,9 +37,9 @@ from homeassistant.components.climate.const import (
     SWING_HORIZONTAL_ON,
     ClimateEntityFeature,
 )
-from homeassistant.const import ATTR_TEMPERATURE, PRECISION_WHOLE, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
+from menuai.const import ATTR_TEMPERATURE, PRECISION_WHOLE, UnitOfTemperature
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
 
 from tests.common import (
     MockConfigEntry,
@@ -50,34 +50,34 @@ from tests.common import (
 
 
 async def test_set_temp_schema_no_req(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test the set temperature schema with missing required data."""
     domain = "climate"
     service = "test_set_temperature"
     schema = SET_TEMPERATURE_SCHEMA
-    calls = async_mock_service(hass, domain, service, schema)
+    calls = async_mock_service(menuai, domain, service, schema)
 
     data = {"hvac_mode": "off", "entity_id": ["climate.test_id"]}
     with pytest.raises(vol.Invalid):
-        await hass.services.async_call(domain, service, data)
-    await hass.async_block_till_done()
+        await menuai.services.async_call(domain, service, data)
+    await menuai.async_block_till_done()
 
     assert len(calls) == 0
 
 
 async def test_set_temp_schema(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test the set temperature schema with ok required data."""
     domain = "climate"
     service = "test_set_temperature"
     schema = SET_TEMPERATURE_SCHEMA
-    calls = async_mock_service(hass, domain, service, schema)
+    calls = async_mock_service(menuai, domain, service, schema)
 
     data = {"temperature": 20.0, "hvac_mode": "heat", "entity_id": ["climate.test_id"]}
-    await hass.services.async_call(domain, service, data)
-    await hass.async_block_till_done()
+    await menuai.services.async_call(domain, service, data)
+    await menuai.async_block_till_done()
 
     assert len(calls) == 1
     assert calls[-1].data == data
@@ -160,10 +160,10 @@ class MockClimateEntityTestMethods(MockClimateEntity):
         """Turn off."""
 
 
-async def test_sync_turn_on(hass: HomeAssistant) -> None:
+async def test_sync_turn_on(menuai: menuai) -> None:
     """Test if async turn_on calls sync turn_on."""
     climate = MockClimateEntityTestMethods()
-    climate.hass = hass
+    climate.menuai = menuai
 
     climate.turn_on = MagicMock()
     await climate.async_turn_on()
@@ -171,10 +171,10 @@ async def test_sync_turn_on(hass: HomeAssistant) -> None:
     assert climate.turn_on.called
 
 
-async def test_sync_turn_off(hass: HomeAssistant) -> None:
+async def test_sync_turn_off(menuai: menuai) -> None:
     """Test if async turn_off calls sync turn_off."""
     climate = MockClimateEntityTestMethods()
-    climate.hass = hass
+    climate.menuai = menuai
 
     climate.turn_off = MagicMock()
     await climate.async_turn_off()
@@ -196,7 +196,7 @@ def _create_tuples(enum: type[Enum], constant_prefix: str) -> list[tuple[Enum, s
 
 
 async def test_temperature_features_is_valid(
-    hass: HomeAssistant,
+    menuai: menuai,
     register_test_integration: MockConfigEntry,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -222,19 +222,19 @@ async def test_temperature_features_is_valid(
     )
 
     setup_test_component_platform(
-        hass,
+        menuai,
         DOMAIN,
         entities=[climate_temp_entity, climate_temp_range_entity],
         from_config_entry=True,
     )
-    await hass.config_entries.async_setup(register_test_integration.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(register_test_integration.entry_id)
+    await menuai.async_block_till_done()
 
     with pytest.raises(
         ServiceValidationError,
         match="Set temperature action was used with the target temperature parameter but the entity does not support it",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SET_TEMPERATURE,
             {
@@ -248,7 +248,7 @@ async def test_temperature_features_is_valid(
         ServiceValidationError,
         match="Set temperature action was used with the target temperature low/high parameter but the entity does not support it",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SET_TEMPERATURE,
             {
@@ -261,7 +261,7 @@ async def test_temperature_features_is_valid(
 
 
 async def test_mode_validation(
-    hass: HomeAssistant,
+    menuai: menuai,
     register_test_integration: MockConfigEntry,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -269,19 +269,19 @@ async def test_mode_validation(
     climate_entity = MockClimateEntity(name="test", entity_id="climate.test")
 
     setup_test_component_platform(
-        hass, DOMAIN, entities=[climate_entity], from_config_entry=True
+        menuai, DOMAIN, entities=[climate_entity], from_config_entry=True
     )
-    await hass.config_entries.async_setup(register_test_integration.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(register_test_integration.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("climate.test")
+    state = menuai.states.get("climate.test")
     assert state.state == "heat"
     assert state.attributes.get(ATTR_PRESET_MODE) == "home"
     assert state.attributes.get(ATTR_FAN_MODE) == "auto"
     assert state.attributes.get(ATTR_SWING_MODE) == "auto"
     assert state.attributes.get(ATTR_SWING_HORIZONTAL_MODE) == "on"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_PRESET_MODE,
         {
@@ -290,7 +290,7 @@ async def test_mode_validation(
         },
         blocking=True,
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_SWING_MODE,
         {
@@ -299,7 +299,7 @@ async def test_mode_validation(
         },
         blocking=True,
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_SWING_HORIZONTAL_MODE,
         {
@@ -308,7 +308,7 @@ async def test_mode_validation(
         },
         blocking=True,
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_FAN_MODE,
         {
@@ -317,13 +317,13 @@ async def test_mode_validation(
         },
         blocking=True,
     )
-    state = hass.states.get("climate.test")
+    state = menuai.states.get("climate.test")
     assert state.attributes.get(ATTR_PRESET_MODE) == "away"
     assert state.attributes.get(ATTR_FAN_MODE) == "off"
     assert state.attributes.get(ATTR_SWING_MODE) == "off"
     assert state.attributes.get(ATTR_SWING_HORIZONTAL_MODE) == "off"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {
@@ -344,7 +344,7 @@ async def test_mode_validation(
         ServiceValidationError,
         match="Preset mode invalid is not valid. Valid preset modes are: home, away",
     ) as exc:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SET_PRESET_MODE,
             {
@@ -363,7 +363,7 @@ async def test_mode_validation(
         ServiceValidationError,
         match="Swing mode invalid is not valid. Valid swing modes are: auto, off",
     ) as exc:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SET_SWING_MODE,
             {
@@ -382,7 +382,7 @@ async def test_mode_validation(
         ServiceValidationError,
         match="Horizontal swing mode invalid is not valid. Valid horizontal swing modes are: on, off",
     ) as exc:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SET_SWING_HORIZONTAL_MODE,
             {
@@ -401,7 +401,7 @@ async def test_mode_validation(
         ServiceValidationError,
         match="Fan mode invalid is not valid. Valid fan modes are: auto, off",
     ) as exc:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SET_FAN_MODE,
             {
@@ -417,7 +417,7 @@ async def test_mode_validation(
     assert exc.value.translation_key == "not_valid_fan_mode"
 
 
-async def test_turn_on_off_toggle(hass: HomeAssistant) -> None:
+async def test_turn_on_off_toggle(menuai: menuai) -> None:
     """Test turn_on/turn_off/toggle methods."""
 
     class MockClimateEntityTest(MockClimateEntity):
@@ -435,7 +435,7 @@ async def test_turn_on_off_toggle(hass: HomeAssistant) -> None:
             self._attr_hvac_mode = hvac_mode
 
     climate = MockClimateEntityTest()
-    climate.hass = hass
+    climate.menuai = menuai
 
     await climate.async_turn_on()
     assert climate.hvac_mode == HVACMode.HEAT
@@ -449,7 +449,7 @@ async def test_turn_on_off_toggle(hass: HomeAssistant) -> None:
     assert climate.hvac_mode == HVACMode.OFF
 
 
-async def test_sync_toggle(hass: HomeAssistant) -> None:
+async def test_sync_toggle(menuai: menuai) -> None:
     """Test if async toggle calls sync toggle."""
 
     class MockClimateEntityTest(MockClimateEntity):
@@ -485,7 +485,7 @@ async def test_sync_toggle(hass: HomeAssistant) -> None:
             """Toggle."""
 
     climate = MockClimateEntityTest()
-    climate.hass = hass
+    climate.menuai = menuai
 
     climate.toggle = Mock()
     await climate.async_toggle()
@@ -494,7 +494,7 @@ async def test_sync_toggle(hass: HomeAssistant) -> None:
 
 
 async def test_humidity_validation(
-    hass: HomeAssistant,
+    menuai: menuai,
     register_test_integration: MockConfigEntry,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -518,19 +518,19 @@ async def test_humidity_validation(
     )
 
     setup_test_component_platform(
-        hass, DOMAIN, entities=[test_climate], from_config_entry=True
+        menuai, DOMAIN, entities=[test_climate], from_config_entry=True
     )
-    await hass.config_entries.async_setup(register_test_integration.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(register_test_integration.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("climate.test")
+    state = menuai.states.get("climate.test")
     assert state.attributes.get(ATTR_HUMIDITY) == 50
 
     with pytest.raises(
         ServiceValidationError,
         match="Provided humidity 1 is not valid. Accepted range is 50 to 60",
     ) as exc:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SET_HUMIDITY,
             {
@@ -547,7 +547,7 @@ async def test_humidity_validation(
         ServiceValidationError,
         match="Provided humidity 70 is not valid. Accepted range is 50 to 60",
     ) as exc:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SET_HUMIDITY,
             {
@@ -559,7 +559,7 @@ async def test_humidity_validation(
 
 
 async def test_temperature_validation(
-    hass: HomeAssistant, register_test_integration: MockConfigEntry
+    menuai: menuai, register_test_integration: MockConfigEntry
 ) -> None:
     """Test validation for temperatures."""
 
@@ -592,12 +592,12 @@ async def test_temperature_validation(
     )
 
     setup_test_component_platform(
-        hass, DOMAIN, entities=[test_climate], from_config_entry=True
+        menuai, DOMAIN, entities=[test_climate], from_config_entry=True
     )
-    await hass.config_entries.async_setup(register_test_integration.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(register_test_integration.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("climate.test")
+    state = menuai.states.get("climate.test")
     assert state.attributes.get(ATTR_CURRENT_TEMPERATURE) is None
     assert state.attributes.get(ATTR_MIN_TEMP) == 7
     assert state.attributes.get(ATTR_MAX_TEMP) == 35
@@ -606,7 +606,7 @@ async def test_temperature_validation(
         ServiceValidationError,
         match="Provided temperature 40.0 is not valid. Accepted range is 7 to 35",
     ) as exc:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SET_TEMPERATURE,
             {
@@ -625,7 +625,7 @@ async def test_temperature_validation(
         ServiceValidationError,
         match="Provided temperature 0.0 is not valid. Accepted range is 7 to 35",
     ) as exc:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SET_TEMPERATURE,
             {
@@ -641,7 +641,7 @@ async def test_temperature_validation(
     )
     assert exc.value.translation_key == "temp_out_of_range"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_TEMPERATURE,
         {
@@ -652,13 +652,13 @@ async def test_temperature_validation(
         blocking=True,
     )
 
-    state = hass.states.get("climate.test")
+    state = menuai.states.get("climate.test")
     assert state.attributes.get(ATTR_TARGET_TEMP_LOW) == 10
     assert state.attributes.get(ATTR_TARGET_TEMP_HIGH) == 25
 
 
 async def test_target_temp_high_higher_than_low(
-    hass: HomeAssistant, register_test_integration: MockConfigEntry
+    menuai: menuai, register_test_integration: MockConfigEntry
 ) -> None:
     """Test that target high is higher than target low."""
 
@@ -689,12 +689,12 @@ async def test_target_temp_high_higher_than_low(
     )
 
     setup_test_component_platform(
-        hass, DOMAIN, entities=[test_climate], from_config_entry=True
+        menuai, DOMAIN, entities=[test_climate], from_config_entry=True
     )
-    await hass.config_entries.async_setup(register_test_integration.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(register_test_integration.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("climate.test")
+    state = menuai.states.get("climate.test")
     assert state.attributes.get(ATTR_CURRENT_TEMPERATURE) == 15
     assert state.attributes.get(ATTR_MIN_TEMP) == 7
     assert state.attributes.get(ATTR_MAX_TEMP) == 35
@@ -703,7 +703,7 @@ async def test_target_temp_high_higher_than_low(
         ServiceValidationError,
         match="Target temperature low can not be higher than Target temperature high",
     ) as exc:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SET_TEMPERATURE,
             {

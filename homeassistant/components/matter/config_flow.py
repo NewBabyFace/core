@@ -9,22 +9,22 @@ from matter_server.client import MatterClient
 from matter_server.client.exceptions import CannotConnect, InvalidServerVersion
 import voluptuous as vol
 
-from homeassistant.components.hassio import (
+from menuai.components.menuaiio import (
     AddonError,
     AddonInfo,
     AddonManager,
     AddonState,
 )
-from homeassistant.components.onboarding import async_is_onboarded
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_URL
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import AbortFlow
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import aiohttp_client
-from homeassistant.helpers.hassio import is_hassio
-from homeassistant.helpers.service_info.hassio import HassioServiceInfo
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.components.onboarding import async_is_onboarded
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_URL
+from menuai.core import menuai
+from menuai.data_entry_flow import AbortFlow
+from menuai.exceptions import menuaiError
+from menuai.helpers import aiohttp_client
+from menuai.helpers.menuaiio import is_menuaiio
+from menuai.helpers.service_info.menuaiio import menuaiioServiceInfo
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .addon import get_addon_manager
 from .const import (
@@ -48,9 +48,9 @@ def get_manual_schema(user_input: dict[str, Any]) -> vol.Schema:
     return vol.Schema({vol.Required(CONF_URL, default=default_url): str})
 
 
-async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> None:
+async def validate_input(menuai: menuai, data: dict[str, Any]) -> None:
     """Validate the user input allows us to connect."""
-    client = MatterClient(data[CONF_URL], aiohttp_client.async_get_clientsession(hass))
+    client = MatterClient(data[CONF_URL], aiohttp_client.async_get_clientsession(menuai))
     await client.connect()
 
 
@@ -79,7 +79,7 @@ class MatterConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Install Matter Server add-on."""
         if not self.install_task:
-            self.install_task = self.hass.async_create_task(self._async_install_addon())
+            self.install_task = self.menuai.async_create_task(self._async_install_addon())
 
         if not self._running_in_background and not self.install_task.done():
             return self.async_show_progress(
@@ -112,12 +112,12 @@ class MatterConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def _async_install_addon(self) -> None:
         """Install the Matter Server add-on."""
-        addon_manager: AddonManager = get_addon_manager(self.hass)
+        addon_manager: AddonManager = get_addon_manager(self.menuai)
         await addon_manager.async_schedule_install_addon()
 
     async def _async_get_addon_discovery_info(self) -> dict:
         """Return add-on discovery info."""
-        addon_manager: AddonManager = get_addon_manager(self.hass)
+        addon_manager: AddonManager = get_addon_manager(self.menuai)
         try:
             discovery_info_config = await addon_manager.async_get_addon_discovery_info()
         except AddonError as err:
@@ -131,7 +131,7 @@ class MatterConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Start Matter Server add-on."""
         if not self.start_task:
-            self.start_task = self.hass.async_create_task(self._async_start_addon())
+            self.start_task = self.menuai.async_create_task(self._async_start_addon())
         if not self._running_in_background and not self.start_task.done():
             return self.async_show_progress(
                 step_id="start_addon",
@@ -161,7 +161,7 @@ class MatterConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def _async_start_addon(self) -> None:
         """Start the Matter Server add-on."""
-        addon_manager: AddonManager = get_addon_manager(self.hass)
+        addon_manager: AddonManager = get_addon_manager(self.menuai)
 
         await addon_manager.async_schedule_start_addon()
         # Sleep some seconds to let the add-on start properly before connecting.
@@ -173,7 +173,7 @@ class MatterConfigFlow(ConfigFlow, domain=DOMAIN):
                     ws_address = self.ws_address = build_ws_address(
                         discovery_info["host"], discovery_info["port"]
                     )
-                await validate_input(self.hass, {CONF_URL: ws_address})
+                await validate_input(self.menuai, {CONF_URL: ws_address})
             except (AbortFlow, CannotConnect) as err:
                 LOGGER.debug(
                     "Add-on not ready yet, waiting %s seconds: %s",
@@ -187,7 +187,7 @@ class MatterConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def _async_get_addon_info(self) -> AddonInfo:
         """Return Matter Server add-on info."""
-        addon_manager: AddonManager = get_addon_manager(self.hass)
+        addon_manager: AddonManager = get_addon_manager(self.menuai)
         try:
             addon_info: AddonInfo = await addon_manager.async_get_addon_info()
         except AddonError as err:
@@ -200,7 +200,7 @@ class MatterConfigFlow(ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle the initial step."""
-        if is_hassio(self.hass):
+        if is_menuaiio(self.menuai):
             return await self.async_step_on_supervisor()
 
         return await self.async_step_manual()
@@ -217,7 +217,7 @@ class MatterConfigFlow(ConfigFlow, domain=DOMAIN):
         errors = {}
 
         try:
-            await validate_input(self.hass, user_input)
+            await validate_input(self.menuai, user_input)
         except CannotConnect:
             errors["base"] = "cannot_connect"
         except InvalidServerVersion:
@@ -238,7 +238,7 @@ class MatterConfigFlow(ConfigFlow, domain=DOMAIN):
         self, discovery_info: ZeroconfServiceInfo
     ) -> ConfigFlowResult:
         """Handle zeroconf discovery."""
-        if not async_is_onboarded(self.hass) and is_hassio(self.hass):
+        if not async_is_onboarded(self.menuai) and is_menuaiio(self.menuai):
             await self._async_handle_discovery_without_unique_id()
             self._running_in_background = True
             return await self.async_step_on_supervisor(
@@ -246,8 +246,8 @@ class MatterConfigFlow(ConfigFlow, domain=DOMAIN):
             )
         return await self._async_step_discovery_without_unique_id()
 
-    async def async_step_hassio(
-        self, discovery_info: HassioServiceInfo
+    async def async_step_menuaiio(
+        self, discovery_info: menuaiioServiceInfo
     ) -> ConfigFlowResult:
         """Receive configuration from add-on discovery info.
 
@@ -262,9 +262,9 @@ class MatterConfigFlow(ConfigFlow, domain=DOMAIN):
             discovery_info.config["host"], discovery_info.config["port"]
         )
 
-        return await self.async_step_hassio_confirm()
+        return await self.async_step_menuaiio_confirm()
 
-    async def async_step_hassio_confirm(
+    async def async_step_menuaiio_confirm(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Confirm the add-on discovery."""
@@ -273,7 +273,7 @@ class MatterConfigFlow(ConfigFlow, domain=DOMAIN):
                 user_input={CONF_USE_ADDON: True}
             )
 
-        return self.async_show_form(step_id="hassio_confirm")
+        return self.async_show_form(step_id="menuaiio_confirm")
 
     async def async_step_on_supervisor(
         self, user_input: dict[str, Any] | None = None
@@ -309,7 +309,7 @@ class MatterConfigFlow(ConfigFlow, domain=DOMAIN):
             )
             # Check that we can connect to the address.
             try:
-                await validate_input(self.hass, {CONF_URL: ws_address})
+                await validate_input(self.menuai, {CONF_URL: ws_address})
             except CannotConnect:
                 return self.async_abort(reason="cannot_connect")
 
@@ -321,7 +321,7 @@ class MatterConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if existing_config_entries := self._async_current_entries():
             config_entry = existing_config_entries[0]
-            self.hass.config_entries.async_update_entry(
+            self.menuai.config_entries.async_update_entry(
                 config_entry,
                 data={
                     **config_entry.data,
@@ -331,12 +331,12 @@ class MatterConfigFlow(ConfigFlow, domain=DOMAIN):
                 },
                 title=DEFAULT_TITLE,
             )
-            await self.hass.config_entries.async_reload(config_entry.entry_id)
+            await self.menuai.config_entries.async_reload(config_entry.entry_id)
             raise AbortFlow("reconfiguration_successful")
 
         # Abort any other flows that may be in progress
         for progress in self._async_in_progress():
-            self.hass.config_entries.flow.async_abort(progress["flow_id"])
+            self.menuai.config_entries.flow.async_abort(progress["flow_id"])
 
         return self.async_create_entry(
             title=DEFAULT_TITLE,
@@ -348,5 +348,5 @@ class MatterConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class FailedConnect(HomeAssistantError):
+class FailedConnect(menuaiError):
     """Failed to connect to the Matter Server."""

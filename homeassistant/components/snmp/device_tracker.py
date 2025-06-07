@@ -17,15 +17,15 @@ from pysnmp.hlapi.asyncio import (
 )
 import voluptuous as vol
 
-from homeassistant.components.device_tracker import (
+from menuai.components.device_tracker import (
     DOMAIN as DEVICE_TRACKER_DOMAIN,
     PLATFORM_SCHEMA as DEVICE_TRACKER_PLATFORM_SCHEMA,
     DeviceScanner,
 )
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import CONF_HOST
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     CONF_AUTH_KEY,
@@ -56,11 +56,11 @@ PLATFORM_SCHEMA = DEVICE_TRACKER_PLATFORM_SCHEMA.extend(
 
 
 async def async_get_scanner(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> SnmpScanner | None:
     """Validate the configuration and return an SNMP scanner."""
     scanner = SnmpScanner(config[DEVICE_TRACKER_DOMAIN])
-    await scanner.async_init(hass)
+    await scanner.async_init(menuai)
 
     return scanner if scanner.success_init else None
 
@@ -115,10 +115,10 @@ class SnmpScanner(DeviceScanner):
         self.last_results = []
         self.success_init = False
 
-    async def async_init(self, hass: HomeAssistant) -> None:
+    async def async_init(self, menuai: menuai) -> None:
         """Make a one-off read to check if the target device is reachable and readable."""
         self.request_args = await async_create_request_cmd_args(
-            hass, self._auth_data, self._target, self.baseoid
+            menuai, self._auth_data, self._target, self.baseoid
         )
         data = await self.async_get_snmp_data()
         self.success_init = data is not None

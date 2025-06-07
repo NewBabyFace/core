@@ -11,7 +11,7 @@ from urllib.parse import unquote
 
 from aiohttp.web import Application, HTTPBadRequest, Request, StreamResponse, middleware
 
-from homeassistant.core import callback
+from menuai.core import callback
 
 _LOGGER = logging.getLogger(__name__)
 

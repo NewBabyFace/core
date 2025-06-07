@@ -9,11 +9,11 @@ import logging
 from python_picnic_api2 import PicnicAPI
 from python_picnic_api2.session import PicnicAuthError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_ACCESS_TOKEN
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_ACCESS_TOKEN
+from menuai.core import menuai, callback
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import ADDRESS, CART_DATA, LAST_ORDER_DATA, NEXT_DELIVERY_DATA, SLOT_DATA
 
@@ -25,7 +25,7 @@ class PicnicUpdateCoordinator(DataUpdateCoordinator):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         picnic_api_client: PicnicAPI,
         config_entry: ConfigEntry,
     ) -> None:
@@ -35,7 +35,7 @@ class PicnicUpdateCoordinator(DataUpdateCoordinator):
 
         logger = logging.getLogger(__name__)
         super().__init__(
-            hass,
+            menuai,
             logger,
             config_entry=config_entry,
             name="Picnic coordinator",
@@ -48,7 +48,7 @@ class PicnicUpdateCoordinator(DataUpdateCoordinator):
             # Note: TimeoutError and aiohttp.ClientError are already
             # handled by the data update coordinator.
             async with asyncio.timeout(10):
-                data = await self.hass.async_add_executor_job(self.fetch_data)
+                data = await self.menuai.async_add_executor_job(self.fetch_data)
 
             # Update the auth token in the config entry if applicable
             self._update_auth_token()
@@ -161,4 +161,4 @@ class PicnicUpdateCoordinator(DataUpdateCoordinator):
             data = {**self.config_entry.data, CONF_ACCESS_TOKEN: updated_token}
 
             # Update the config entry
-            self.hass.config_entries.async_update_entry(self.config_entry, data=data)
+            self.menuai.config_entries.async_update_entry(self.config_entry, data=data)

@@ -7,11 +7,11 @@ from typing import Any
 
 from pywizlight.bulblibrary import BulbType
 
-from homeassistant.const import ATTR_HW_VERSION, ATTR_MODEL
-from homeassistant.core import callback
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
-from homeassistant.helpers.entity import Entity, ToggleEntity
-from homeassistant.helpers.update_coordinator import (
+from menuai.const import ATTR_HW_VERSION, ATTR_MODEL
+from menuai.core import callback
+from menuai.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
+from menuai.helpers.entity import Entity, ToggleEntity
+from menuai.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
 )

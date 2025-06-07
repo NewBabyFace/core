@@ -11,16 +11,16 @@ from bleak_retry_connector import BleakSlotManager
 from bluetooth_adapters import BluetoothAdapters
 from habluetooth import BaseHaRemoteScanner, BaseHaScanner, BluetoothManager
 
-from homeassistant import config_entries
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP, EVENT_LOGGING_CHANGED
-from homeassistant.core import (
+from menuai import config_entries
+from menuai.const import EVENT_menuai_STOP, EVENT_LOGGING_CHANGED
+from menuai.core import (
     CALLBACK_TYPE,
     Event,
-    HomeAssistant,
-    callback as hass_callback,
+    menuai,
+    callback as menuai_callback,
 )
-from homeassistant.helpers import discovery_flow
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers import discovery_flow
+from menuai.helpers.dispatcher import async_dispatcher_connect
 
 from .const import (
     CONF_SOURCE,
@@ -47,27 +47,27 @@ from .util import async_load_history_from_system
 _LOGGER = logging.getLogger(__name__)
 
 
-class HomeAssistantBluetoothManager(BluetoothManager):
-    """Manage Bluetooth for Home Assistant."""
+class menuaiBluetoothManager(BluetoothManager):
+    """Manage Bluetooth for MenuAI."""
 
     __slots__ = (
         "_callback_index",
         "_cancel_logging_listener",
         "_integration_matcher",
-        "hass",
+        "menuai",
         "storage",
     )
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         integration_matcher: IntegrationMatcher,
         bluetooth_adapters: BluetoothAdapters,
         storage: BluetoothStorage,
         slot_manager: BleakSlotManager,
     ) -> None:
         """Init bluetooth manager."""
-        self.hass = hass
+        self.menuai = menuai
         self.storage = storage
         self._integration_matcher = integration_matcher
         self._callback_index = BluetoothCallbackMatcherIndex()
@@ -75,7 +75,7 @@ class HomeAssistantBluetoothManager(BluetoothManager):
         super().__init__(bluetooth_adapters, slot_manager)
         self._async_logging_changed()
 
-    @hass_callback
+    @menuai_callback
     def _async_logging_changed(self, event: Event | None = None) -> None:
         """Handle logging change."""
         self._debug = _LOGGER.isEnabledFor(logging.DEBUG)
@@ -91,14 +91,14 @@ class HomeAssistantBluetoothManager(BluetoothManager):
         )
         for domain in self._integration_matcher.match_domains(service_info):
             discovery_flow.async_create_flow(
-                self.hass,
+                self.menuai,
                 domain,
                 {"source": config_entries.SOURCE_BLUETOOTH},
                 service_info,
                 discovery_key=discovery_key,
             )
 
-    @hass_callback
+    @menuai_callback
     def async_rediscover_address(self, address: str) -> None:
         """Trigger discovery of devices which have already been seen."""
         self._integration_matcher.async_clear_address(address)
@@ -135,7 +135,7 @@ class HomeAssistantBluetoothManager(BluetoothManager):
         )
         for domain in matched_domains:
             discovery_flow.async_create_flow(
-                self.hass,
+                self.menuai,
                 domain,
                 {"source": config_entries.SOURCE_BLUETOOTH},
                 service_info,
@@ -145,11 +145,11 @@ class HomeAssistantBluetoothManager(BluetoothManager):
     def _address_disappeared(self, address: str) -> None:
         """Dismiss all discoveries for the given address."""
         self._integration_matcher.async_clear_address(address)
-        for flow in self.hass.config_entries.flow.async_progress_by_init_data_type(
+        for flow in self.menuai.config_entries.flow.async_progress_by_init_data_type(
             BluetoothServiceInfoBleak,
             lambda service_info: bool(service_info.address == address),
         ):
-            self.hass.config_entries.flow.async_abort(flow["flow_id"])
+            self.menuai.config_entries.flow.async_abort(flow["flow_id"])
 
     async def async_setup(self) -> None:
         """Set up the bluetooth manager."""
@@ -157,10 +157,10 @@ class HomeAssistantBluetoothManager(BluetoothManager):
         self._all_history, self._connectable_history = async_load_history_from_system(
             self._bluetooth_adapters, self.storage
         )
-        self._cancel_logging_listener = self.hass.bus.async_listen(
+        self._cancel_logging_listener = self.menuai.bus.async_listen(
             EVENT_LOGGING_CHANGED, self._async_logging_changed
         )
-        self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, self.async_stop)
+        self.menuai.bus.async_listen_once(EVENT_menuai_STOP, self.async_stop)
         seen: set[str] = set()
         for address, service_info in itertools.chain(
             self._connectable_history.items(), self._all_history.items()
@@ -170,7 +170,7 @@ class HomeAssistantBluetoothManager(BluetoothManager):
             seen.add(address)
             self._async_trigger_matching_discovery(service_info)
         async_dispatcher_connect(
-            self.hass,
+            self.menuai,
             config_entries.signal_discovered_config_entry_removed(DOMAIN),
             self._handle_config_entry_removed,
         )
@@ -216,7 +216,7 @@ class HomeAssistantBluetoothManager(BluetoothManager):
 
         return _async_remove_callback
 
-    @hass_callback
+    @menuai_callback
     def async_stop(self, event: Event | None = None) -> None:
         """Stop the Bluetooth integration at shutdown."""
         _LOGGER.debug("Stopping bluetooth manager")
@@ -247,8 +247,8 @@ class HomeAssistantBluetoothManager(BluetoothManager):
         unregister()
         self._async_save_scanner_history(scanner)
 
-    @hass_callback
-    def async_register_hass_scanner(
+    @menuai_callback
+    def async_register_menuai_scanner(
         self,
         scanner: BaseHaScanner,
         connection_slots: int | None = None,
@@ -264,8 +264,8 @@ class HomeAssistantBluetoothManager(BluetoothManager):
             and source_domain
             and source_config_entry_id
         ):
-            self.hass.async_create_task(
-                self.hass.config_entries.flow.async_init(
+            self.menuai.async_create_task(
+                self.menuai.config_entries.flow.async_init(
                     DOMAIN,
                     context={"source": config_entries.SOURCE_INTEGRATION_DISCOVERY},
                     data={
@@ -292,19 +292,19 @@ class HomeAssistantBluetoothManager(BluetoothManager):
         unregister = super().async_register_scanner(scanner, connection_slots)
         return partial(self._async_unregister_scanner, scanner, unregister)
 
-    @hass_callback
+    @menuai_callback
     def async_remove_scanner(self, source: str) -> None:
         """Remove a scanner."""
         self.storage.async_remove_advertisement_history(source)
-        if entry := self.hass.config_entries.async_entry_for_domain_unique_id(
+        if entry := self.menuai.config_entries.async_entry_for_domain_unique_id(
             DOMAIN, source
         ):
-            self.hass.async_create_task(
-                self.hass.config_entries.async_remove(entry.entry_id),
+            self.menuai.async_create_task(
+                self.menuai.config_entries.async_remove(entry.entry_id),
                 f"Removing {source} Bluetooth config entry",
             )
 
-    @hass_callback
+    @menuai_callback
     def _handle_config_entry_removed(
         self,
         entry: config_entries.ConfigEntry,

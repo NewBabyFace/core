@@ -4,11 +4,11 @@ from dataclasses import dataclass
 
 from elgato import BatteryInfo, Elgato, ElgatoConnectionError, Info, Settings, State
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN, LOGGER, SCAN_INTERVAL
 
@@ -31,15 +31,15 @@ class ElgatoDataUpdateCoordinator(DataUpdateCoordinator[ElgatoData]):
     config_entry: ElgatoConfigEntry
     has_battery: bool | None = None
 
-    def __init__(self, hass: HomeAssistant, entry: ElgatoConfigEntry) -> None:
+    def __init__(self, menuai: menuai, entry: ElgatoConfigEntry) -> None:
         """Initialize the coordinator."""
         self.config_entry = entry
         self.client = Elgato(
             entry.data[CONF_HOST],
-            session=async_get_clientsession(hass),
+            session=async_get_clientsession(menuai),
         )
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=entry,
             name=f"{DOMAIN}_{entry.data[CONF_HOST]}",

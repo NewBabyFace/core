@@ -5,34 +5,34 @@ from typing import Any
 
 from aiohttp.test_utils import TestClient
 
-from homeassistant.components.repairs.issue_handler import (  # noqa: F401
+from menuai.components.repairs.issue_handler import (  # noqa: F401
     async_process_repairs_platforms,
 )
-from homeassistant.components.repairs.websocket_api import (
+from menuai.components.repairs.websocket_api import (
     RepairsFlowIndexView,
     RepairsFlowResourceView,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.typing import WebSocketGenerator
 
 
 async def get_repairs(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
 ):
     """Return the repairs list of issues."""
-    assert await async_setup_component(hass, "repairs", {})
+    assert await async_setup_component(menuai, "repairs", {})
 
-    client = await hass_ws_client(hass)
-    await hass.async_block_till_done()
+    client = await menuai_ws_client(menuai)
+    await menuai.async_block_till_done()
 
     await client.send_json({"id": 1, "type": "repairs/list_issues"})
     msg = await client.receive_json()
 
-    client = await hass_ws_client(hass)
-    await hass.async_block_till_done()
+    client = await menuai_ws_client(menuai)
+    await menuai.async_block_till_done()
 
     assert msg["id"] == 1
     assert msg["success"]

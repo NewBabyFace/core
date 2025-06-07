@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .coordinator import AutarcoConfigEntry, AutarcoDataUpdateCoordinator
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, config_entry: AutarcoConfigEntry
+    menuai: menuai, config_entry: AutarcoConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     autarco_data: list[AutarcoDataUpdateCoordinator] = config_entry.runtime_data

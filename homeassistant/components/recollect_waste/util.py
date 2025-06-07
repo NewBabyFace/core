@@ -2,9 +2,9 @@
 
 from aiorecollect.client import PickupType
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_FRIENDLY_NAME
-from homeassistant.core import callback
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_FRIENDLY_NAME
+from menuai.core import callback
 
 
 @callback

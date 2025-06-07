@@ -8,8 +8,8 @@ from typing import Any
 
 from requests import RequestException
 
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity
 
 from .const import DOMAIN
 from .utils import is_api_response_success
@@ -100,13 +100,13 @@ class SomaEntity(Entity):
     @soma_api_call
     async def get_shade_state_from_api(self) -> dict:
         """Return the shade state from the api."""
-        return await self.hass.async_add_executor_job(
+        return await self.menuai.async_add_executor_job(
             self.api.get_shade_state, self.device["mac"]
         )
 
     @soma_api_call
     async def get_battery_level_from_api(self) -> dict:
         """Return the battery level from the api."""
-        return await self.hass.async_add_executor_job(
+        return await self.menuai.async_add_executor_job(
             self.api.get_battery_level, self.device["mac"]
         )

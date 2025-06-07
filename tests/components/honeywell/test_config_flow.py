@@ -5,15 +5,15 @@ from unittest.mock import MagicMock, patch
 import aiosomecomfort
 import pytest
 
-from homeassistant.components.honeywell.const import (
+from menuai.components.honeywell.const import (
     CONF_COOL_AWAY_TEMPERATURE,
     CONF_HEAT_AWAY_TEMPERATURE,
     DOMAIN,
 )
-from homeassistant.config_entries import SOURCE_USER, ConfigEntryState
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.config_entries import SOURCE_USER, ConfigEntryState
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
@@ -25,9 +25,9 @@ FAKE_CONFIG = {
 }
 
 
-async def test_show_authenticate_form(hass: HomeAssistant) -> None:
+async def test_show_authenticate_form(menuai: menuai) -> None:
     """Test that the config form is shown."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
@@ -36,82 +36,82 @@ async def test_show_authenticate_form(hass: HomeAssistant) -> None:
     assert result["step_id"] == "user"
 
 
-async def test_connection_error(hass: HomeAssistant, client: MagicMock) -> None:
+async def test_connection_error(menuai: menuai, client: MagicMock) -> None:
     """Test that an error message is shown on connection fail."""
     client.login.side_effect = aiosomecomfort.device.ConnectionError
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}, data=FAKE_CONFIG
     )
     assert result["errors"] == {"base": "cannot_connect"}
 
 
-async def test_auth_error(hass: HomeAssistant, client: MagicMock) -> None:
+async def test_auth_error(menuai: menuai, client: MagicMock) -> None:
     """Test that an error message is shown on login fail."""
     client.login.side_effect = aiosomecomfort.device.AuthError
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}, data=FAKE_CONFIG
     )
     assert result["errors"] == {"base": "invalid_auth"}
 
 
-async def test_create_entry(hass: HomeAssistant) -> None:
+async def test_create_entry(menuai: menuai) -> None:
     """Test that the config entry is created."""
     with patch(
-        "homeassistant.components.honeywell.async_setup_entry",
+        "menuai.components.honeywell.async_setup_entry",
         return_value=True,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": SOURCE_USER}, data=FAKE_CONFIG
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"] == FAKE_CONFIG
 
 
 async def test_show_option_form(
-    hass: HomeAssistant, config_entry: MockConfigEntry
+    menuai: menuai, config_entry: MockConfigEntry
 ) -> None:
     """Test that the option form is shown."""
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
     with patch(
-        "homeassistant.components.honeywell.async_setup_entry",
+        "menuai.components.honeywell.async_setup_entry",
         return_value=True,
     ):
-        result = await hass.config_entries.options.async_init(config_entry.entry_id)
+        result = await menuai.config_entries.options.async_init(config_entry.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
 
 async def test_create_option_entry(
-    hass: HomeAssistant, config_entry: MockConfigEntry
+    menuai: menuai, config_entry: MockConfigEntry
 ) -> None:
     """Test that the config entry is created."""
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
     with patch(
-        "homeassistant.components.honeywell.async_setup_entry",
+        "menuai.components.honeywell.async_setup_entry",
         return_value=True,
     ):
-        options_form = await hass.config_entries.options.async_init(
+        options_form = await menuai.config_entries.options.async_init(
             config_entry.entry_id
         )
-        result = await hass.config_entries.options.async_configure(
+        result = await menuai.config_entries.options.async_configure(
             options_form["flow_id"],
             user_input={CONF_COOL_AWAY_TEMPERATURE: 1, CONF_HEAT_AWAY_TEMPERATURE: 2},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert config_entry.options == {
@@ -120,7 +120,7 @@ async def test_create_option_entry(
     }
 
 
-async def test_reauth_flow(hass: HomeAssistant) -> None:
+async def test_reauth_flow(menuai: menuai) -> None:
     """Test a successful reauth flow."""
 
     mock_entry = MockConfigEntry(
@@ -128,22 +128,22 @@ async def test_reauth_flow(hass: HomeAssistant) -> None:
         data={CONF_USERNAME: "test-username", CONF_PASSWORD: "test-password"},
         unique_id="test-username",
     )
-    mock_entry.add_to_hass(hass)
-    result = await mock_entry.start_reauth_flow(hass)
+    mock_entry.add_to_menuai(menuai)
+    result = await mock_entry.start_reauth_flow(menuai)
 
     assert result["step_id"] == "reauth_confirm"
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
     with patch(
-        "homeassistant.components.honeywell.async_setup_entry",
+        "menuai.components.honeywell.async_setup_entry",
         return_value=True,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_USERNAME: "new-username", CONF_PASSWORD: "new-password"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.ABORT
     assert result2["reason"] == "reauth_successful"
@@ -153,7 +153,7 @@ async def test_reauth_flow(hass: HomeAssistant) -> None:
     }
 
 
-async def test_reauth_flow_auth_error(hass: HomeAssistant, client: MagicMock) -> None:
+async def test_reauth_flow_auth_error(menuai: menuai, client: MagicMock) -> None:
     """Test an authorization error reauth flow."""
 
     mock_entry = MockConfigEntry(
@@ -161,9 +161,9 @@ async def test_reauth_flow_auth_error(hass: HomeAssistant, client: MagicMock) ->
         data={CONF_USERNAME: "test-username", CONF_PASSWORD: "test-password"},
         unique_id="test-username",
     )
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
-    result = await mock_entry.start_reauth_flow(hass)
+    result = await mock_entry.start_reauth_flow(menuai)
 
     assert result["step_id"] == "reauth_confirm"
     assert result["type"] is FlowResultType.FORM
@@ -171,14 +171,14 @@ async def test_reauth_flow_auth_error(hass: HomeAssistant, client: MagicMock) ->
 
     client.login.side_effect = aiosomecomfort.device.AuthError
     with patch(
-        "homeassistant.components.honeywell.async_setup_entry",
+        "menuai.components.honeywell.async_setup_entry",
         return_value=True,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_USERNAME: "new-username", CONF_PASSWORD: "new-password"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["errors"] == {"base": "invalid_auth"}
@@ -193,7 +193,7 @@ async def test_reauth_flow_auth_error(hass: HomeAssistant, client: MagicMock) ->
     ],
 )
 async def test_reauth_flow_connnection_error(
-    hass: HomeAssistant, client: MagicMock, error
+    menuai: menuai, client: MagicMock, error
 ) -> None:
     """Test a connection error reauth flow."""
 
@@ -202,19 +202,19 @@ async def test_reauth_flow_connnection_error(
         data={CONF_USERNAME: "test-username", CONF_PASSWORD: "test-password"},
         unique_id="test-username",
     )
-    mock_entry.add_to_hass(hass)
-    result = await mock_entry.start_reauth_flow(hass)
+    mock_entry.add_to_menuai(menuai)
+    result = await mock_entry.start_reauth_flow(menuai)
     assert result["step_id"] == "reauth_confirm"
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
     client.login.side_effect = error
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_USERNAME: "new-username", CONF_PASSWORD: "new-password"},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["errors"] == {"base": "cannot_connect"}

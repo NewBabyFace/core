@@ -6,14 +6,14 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from homeassistant.components import media_source
-from homeassistant.components.media_player import BrowseError
-from homeassistant.components.tts.media_source import (
+from menuai.components import media_source
+from menuai.components.media_player import BrowseError
+from menuai.components.tts.media_source import (
     generate_media_source_id,
     parse_media_source_id,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from .common import (
     DEFAULT_LANG,
@@ -41,9 +41,9 @@ class MSProvider(MockTTSProvider):
 
 
 @pytest.fixture(autouse=True)
-async def setup_media_source(hass: HomeAssistant) -> None:
+async def setup_media_source(menuai: menuai) -> None:
     """Set up media source."""
-    assert await async_setup_component(hass, "media_source", {})
+    assert await async_setup_component(menuai, "media_source", {})
 
 
 @pytest.mark.parametrize(
@@ -58,9 +58,9 @@ async def setup_media_source(hass: HomeAssistant) -> None:
     ],
     indirect=["setup"],
 )
-async def test_browsing(hass: HomeAssistant, setup: str) -> None:
+async def test_browsing(menuai: menuai, setup: str) -> None:
     """Test browsing TTS media source."""
-    item = await media_source.async_browse_media(hass, "media-source://tts")
+    item = await media_source.async_browse_media(menuai, "media-source://tts")
 
     assert item is not None
     assert item.title == "Text-to-speech"
@@ -70,7 +70,7 @@ async def test_browsing(hass: HomeAssistant, setup: str) -> None:
     assert item.can_expand is True
 
     item_child = await media_source.async_browse_media(
-        hass, item.children[0].media_content_id
+        menuai, item.children[0].media_content_id
     )
 
     assert item_child is not None
@@ -82,7 +82,7 @@ async def test_browsing(hass: HomeAssistant, setup: str) -> None:
     assert item_child.thumbnail == "https://brands.home-assistant.io/_/test/logo.png"
 
     item_child = await media_source.async_browse_media(
-        hass, item.children[0].media_content_id + "?message=bla"
+        menuai, item.children[0].media_content_id + "?message=bla"
     )
 
     assert item_child is not None
@@ -96,7 +96,7 @@ async def test_browsing(hass: HomeAssistant, setup: str) -> None:
     assert item_child.can_expand is True
 
     with pytest.raises(BrowseError):
-        await media_source.async_browse_media(hass, "media-source://tts/non-existing")
+        await media_source.async_browse_media(menuai, "media-source://tts/non-existing")
 
 
 @pytest.mark.parametrize(
@@ -107,28 +107,28 @@ async def test_browsing(hass: HomeAssistant, setup: str) -> None:
     ],
 )
 async def test_legacy_resolving(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     mock_provider: MSProvider,
     extra_options: str,
 ) -> None:
     """Test resolving legacy provider."""
-    await mock_setup(hass, mock_provider)
+    await mock_setup(menuai, mock_provider)
     mock_get_tts_audio = mock_provider.get_tts_audio
 
     mock_provider.has_entity = True
-    root = await media_source.async_browse_media(hass, "media-source://tts")
+    root = await media_source.async_browse_media(menuai, "media-source://tts")
     assert len(root.children) == 0
     mock_provider.has_entity = False
-    root = await media_source.async_browse_media(hass, "media-source://tts")
+    root = await media_source.async_browse_media(menuai, "media-source://tts")
     assert len(root.children) == 1
 
     mock_get_tts_audio.reset_mock()
     media_id = "media-source://tts/test?message=Hello%20World"
-    media = await media_source.async_resolve_media(hass, media_id, None)
+    media = await media_source.async_resolve_media(menuai, media_id, None)
     assert media.url.startswith("/api/tts_proxy/")
     assert media.mime_type == "audio/mpeg"
-    assert await retrieve_media(hass, hass_client, media_id) == HTTPStatus.OK
+    assert await retrieve_media(menuai, menuai_client, media_id) == HTTPStatus.OK
 
     assert len(mock_get_tts_audio.mock_calls) == 1
     message, language = mock_get_tts_audio.mock_calls[0][1]
@@ -141,10 +141,10 @@ async def test_legacy_resolving(
     media_id = (
         f"media-source://tts/test?message=Bye%20World&language=de_DE{extra_options}"
     )
-    media = await media_source.async_resolve_media(hass, media_id, None)
+    media = await media_source.async_resolve_media(menuai, media_id, None)
     assert media.url.startswith("/api/tts_proxy/")
     assert media.mime_type == "audio/mpeg"
-    assert await retrieve_media(hass, hass_client, media_id) == HTTPStatus.OK
+    assert await retrieve_media(menuai, menuai_client, media_id) == HTTPStatus.OK
 
     assert len(mock_get_tts_audio.mock_calls) == 1
     message, language = mock_get_tts_audio.mock_calls[0][1]
@@ -161,21 +161,21 @@ async def test_legacy_resolving(
     ],
 )
 async def test_resolving(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     mock_tts_entity: MSEntity,
     extra_options: str,
 ) -> None:
     """Test resolving entity."""
-    await mock_config_entry_setup(hass, mock_tts_entity)
+    await mock_config_entry_setup(menuai, mock_tts_entity)
     mock_get_tts_audio = mock_tts_entity.get_tts_audio
 
     mock_get_tts_audio.reset_mock()
     media_id = "media-source://tts/tts.test?message=Hello%20World"
-    media = await media_source.async_resolve_media(hass, media_id, None)
+    media = await media_source.async_resolve_media(menuai, media_id, None)
     assert media.url.startswith("/api/tts_proxy/")
     assert media.mime_type == "audio/mpeg"
-    assert await retrieve_media(hass, hass_client, media_id) == HTTPStatus.OK
+    assert await retrieve_media(menuai, menuai_client, media_id) == HTTPStatus.OK
 
     assert len(mock_get_tts_audio.mock_calls) == 1
     message, language = mock_get_tts_audio.mock_calls[0][1]
@@ -188,10 +188,10 @@ async def test_resolving(
     media_id = (
         f"media-source://tts/tts.test?message=Bye%20World&language=de_DE{extra_options}"
     )
-    media = await media_source.async_resolve_media(hass, media_id, None)
+    media = await media_source.async_resolve_media(menuai, media_id, None)
     assert media.url.startswith("/api/tts_proxy/")
     assert media.mime_type == "audio/mpeg"
-    assert await retrieve_media(hass, hass_client, media_id) == HTTPStatus.OK
+    assert await retrieve_media(menuai, menuai_client, media_id) == HTTPStatus.OK
 
     assert len(mock_get_tts_audio.mock_calls) == 1
     message, language = mock_get_tts_audio.mock_calls[0][1]
@@ -200,14 +200,14 @@ async def test_resolving(
     assert mock_get_tts_audio.mock_calls[0][2]["options"] == {"voice": "Paulus"}
 
     # Test with result stream
-    stream = MockResultStream(hass, "wav", b"")
-    media = await media_source.async_resolve_media(hass, stream.media_source_id, None)
+    stream = MockResultStream(menuai, "wav", b"")
+    media = await media_source.async_resolve_media(menuai, stream.media_source_id, None)
     assert media.url == stream.url
     assert media.mime_type == stream.content_type
 
     with pytest.raises(media_source.Unresolvable):
         await media_source.async_resolve_media(
-            hass, "media-source://tts/-stream-/not-a-valid-token", None
+            menuai, "media-source://tts/-stream-/not-a-valid-token", None
         )
 
 
@@ -223,18 +223,18 @@ async def test_resolving(
     ],
     indirect=["setup"],
 )
-async def test_resolving_errors(hass: HomeAssistant, setup: str, engine: str) -> None:
+async def test_resolving_errors(menuai: menuai, setup: str, engine: str) -> None:
     """Test resolving."""
     # No message added
     with pytest.raises(media_source.Unresolvable):
-        await media_source.async_resolve_media(hass, "media-source://tts/test", None)
+        await media_source.async_resolve_media(menuai, "media-source://tts/test", None)
 
     # Non-existing provider
     with pytest.raises(
         media_source.Unresolvable, match="Provider non-existing not found"
     ):
         await media_source.async_resolve_media(
-            hass, "media-source://tts/non-existing?message=bla", None
+            menuai, "media-source://tts/non-existing?message=bla", None
         )
 
     # Non-JSON tts options
@@ -243,7 +243,7 @@ async def test_resolving_errors(hass: HomeAssistant, setup: str, engine: str) ->
         match="Invalid TTS options: Expecting property name enclosed in double quotes",
     ):
         await media_source.async_resolve_media(
-            hass,
+            menuai,
             f"media-source://tts/{engine}?message=bla&tts_options=%7Binvalid json",
             None,
         )
@@ -254,7 +254,7 @@ async def test_resolving_errors(hass: HomeAssistant, setup: str, engine: str) ->
         match=re.escape("Invalid options found: ['non_existing_option']"),
     ):
         await media_source.async_resolve_media(
-            hass,
+            menuai,
             f"media-source://tts/{engine}?message=bla&tts_options=%7B%22non_existing_option%22%3A%22bla%22%7D",
             None,
         )
@@ -269,7 +269,7 @@ async def test_resolving_errors(hass: HomeAssistant, setup: str, engine: str) ->
     indirect=["setup"],
 )
 async def test_generate_media_source_id_and_parse_media_source_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup: str,
     result_engine: str,
 ) -> None:
@@ -281,7 +281,7 @@ async def test_generate_media_source_id_and_parse_media_source_id(
         "options": {"age": 5},
         "cache": True,
     }
-    media_source_id = generate_media_source_id(hass, **kwargs)
+    media_source_id = generate_media_source_id(menuai, **kwargs)
     assert parse_media_source_id(media_source_id) == {
         "message": "hello",
         "options": {
@@ -299,7 +299,7 @@ async def test_generate_media_source_id_and_parse_media_source_id(
         "options": {"age": [5, 6]},
         "cache": True,
     }
-    media_source_id = generate_media_source_id(hass, **kwargs)
+    media_source_id = generate_media_source_id(menuai, **kwargs)
     assert parse_media_source_id(media_source_id) == {
         "message": "hello",
         "options": {
@@ -317,7 +317,7 @@ async def test_generate_media_source_id_and_parse_media_source_id(
         "options": {"age": {"k1": [5, 6], "k2": "v2"}},
         "cache": True,
     }
-    media_source_id = generate_media_source_id(hass, **kwargs)
+    media_source_id = generate_media_source_id(menuai, **kwargs)
     assert parse_media_source_id(media_source_id) == {
         "message": "hello",
         "options": {

@@ -1,10 +1,10 @@
 """Test the weather websocket API."""
 
-from homeassistant.components.weather import Forecast, WeatherEntityFeature
-from homeassistant.components.weather.const import DOMAIN
-from homeassistant.const import UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.weather import Forecast, WeatherEntityFeature
+from menuai.components.weather.const import DOMAIN
+from menuai.const import UnitOfTemperature
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from . import MockWeatherTest, create_entity
 
@@ -12,12 +12,12 @@ from tests.typing import WebSocketGenerator
 
 
 async def test_device_class_units(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test we can get supported units."""
-    assert await async_setup_component(hass, DOMAIN, {})
+    assert await async_setup_component(menuai, DOMAIN, {})
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json(
         {
@@ -39,8 +39,8 @@ async def test_device_class_units(
 
 
 async def test_subscribe_forecast(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     config_flow_fixture: None,
 ) -> None:
     """Test multiple forecast."""
@@ -57,9 +57,9 @@ async def test_subscribe_forecast(
         "native_temperature_unit": UnitOfTemperature.CELSIUS,
         "supported_features": WeatherEntityFeature.FORECAST_DAILY,
     }
-    weather_entity = await create_entity(hass, MockWeatherMockForecast, None, **kwargs)
+    weather_entity = await create_entity(menuai, MockWeatherMockForecast, None, **kwargs)
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json_auto_id(
         {
@@ -105,14 +105,14 @@ async def test_subscribe_forecast(
 
 
 async def test_subscribe_forecast_unknown_entity(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test multiple forecast."""
 
-    assert await async_setup_component(hass, DOMAIN, {})
+    assert await async_setup_component(menuai, DOMAIN, {})
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json_auto_id(
         {
@@ -130,8 +130,8 @@ async def test_subscribe_forecast_unknown_entity(
 
 
 async def test_subscribe_forecast_unsupported(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     config_flow_fixture: None,
 ) -> None:
     """Test multiple forecast."""
@@ -143,8 +143,8 @@ async def test_subscribe_forecast_unsupported(
         "native_temperature": 38,
         "native_temperature_unit": UnitOfTemperature.CELSIUS,
     }
-    weather_entity = await create_entity(hass, MockWeatherMock, None, **kwargs)
-    client = await hass_ws_client(hass)
+    weather_entity = await create_entity(menuai, MockWeatherMock, None, **kwargs)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json_auto_id(
         {

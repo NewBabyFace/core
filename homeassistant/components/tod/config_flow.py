@@ -7,9 +7,9 @@ from typing import Any, cast
 
 import voluptuous as vol
 
-from homeassistant.const import CONF_NAME
-from homeassistant.helpers import selector
-from homeassistant.helpers.schema_config_entry_flow import (
+from menuai.const import CONF_NAME
+from menuai.helpers import selector
+from menuai.helpers.schema_config_entry_flow import (
     SchemaConfigFlowHandler,
     SchemaFlowFormStep,
 )

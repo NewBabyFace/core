@@ -12,10 +12,10 @@ from igloohome_api import (
     GetDeviceInfoResponse,
 )
 
-from homeassistant.components.lock import LockEntity, LockEntityFeature
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.lock import LockEntity, LockEntityFeature
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import IgloohomeConfigEntry
 from .entity import IgloohomeBaseEntity
@@ -26,7 +26,7 @@ SCAN_INTERVAL = timedelta(hours=1)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: IgloohomeConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -70,7 +70,7 @@ class IgloohomeLockEntity(IgloohomeBaseEntity, LockEntity):
                 self.api_device_info.deviceId, self.bridge_id, BRIDGE_JOB_LOCK
             )
         except (ApiException, ClientError) as err:
-            raise HomeAssistantError from err
+            raise menuaiError from err
 
     async def async_unlock(self, **kwargs):
         """Unlock this lock."""
@@ -79,7 +79,7 @@ class IgloohomeLockEntity(IgloohomeBaseEntity, LockEntity):
                 self.api_device_info.deviceId, self.bridge_id, BRIDGE_JOB_UNLOCK
             )
         except (ApiException, ClientError) as err:
-            raise HomeAssistantError from err
+            raise menuaiError from err
 
     async def async_open(self, **kwargs):
         """Open (unlatch) this lock."""
@@ -88,4 +88,4 @@ class IgloohomeLockEntity(IgloohomeBaseEntity, LockEntity):
                 self.api_device_info.deviceId, self.bridge_id, BRIDGE_JOB_UNLOCK
             )
         except (ApiException, ClientError) as err:
-            raise HomeAssistantError from err
+            raise menuaiError from err

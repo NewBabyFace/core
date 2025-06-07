@@ -7,15 +7,15 @@ from typing import Any
 
 from pystiebeleltron.pystiebeleltron import StiebelEltronAPI
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     PRESET_ECO,
     ClimateEntity,
     ClimateEntityFeature,
     HVACMode,
 )
-from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import ATTR_TEMPERATURE, UnitOfTemperature
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import StiebelEltronConfigEntry
 
@@ -30,7 +30,7 @@ PRESET_EMERGENCY = "emergency"
 SUPPORT_HVAC = [HVACMode.AUTO, HVACMode.HEAT, HVACMode.OFF]
 SUPPORT_PRESET = [PRESET_ECO, PRESET_DAY, PRESET_EMERGENCY, PRESET_SETBACK]
 
-# Mapping STIEBEL ELTRON states to homeassistant states/preset.
+# Mapping STIEBEL ELTRON states to menuai states/preset.
 STE_TO_HA_HVAC = {
     "AUTOMATIC": HVACMode.AUTO,
     "MANUAL MODE": HVACMode.HEAT,
@@ -58,7 +58,7 @@ HA_TO_STE_PRESET = {k: i for i, k in STE_TO_HA_PRESET.items()}
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: StiebelEltronConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

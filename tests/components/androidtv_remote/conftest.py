@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from homeassistant.components.androidtv_remote.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
+from menuai.components.androidtv_remote.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
 
 from tests.common import MockConfigEntry
 
@@ -15,7 +15,7 @@ from tests.common import MockConfigEntry
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Mock setting up a config entry."""
     with patch(
-        "homeassistant.components.androidtv_remote.async_setup_entry",
+        "menuai.components.androidtv_remote.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
         yield mock_setup_entry
@@ -25,7 +25,7 @@ def mock_setup_entry() -> Generator[AsyncMock]:
 def mock_unload_entry() -> Generator[AsyncMock]:
     """Mock unloading a config entry."""
     with patch(
-        "homeassistant.components.androidtv_remote.async_unload_entry",
+        "menuai.components.androidtv_remote.async_unload_entry",
         return_value=True,
     ) as mock_unload_entry:
         yield mock_unload_entry
@@ -35,7 +35,7 @@ def mock_unload_entry() -> Generator[AsyncMock]:
 def mock_api() -> Generator[MagicMock]:
     """Return a mocked AndroidTVRemote."""
     with patch(
-        "homeassistant.components.androidtv_remote.helpers.AndroidTVRemote",
+        "menuai.components.androidtv_remote.helpers.AndroidTVRemote",
     ) as mock_api_cl:
         mock_api = mock_api_cl.return_value
         mock_api.async_connect = AsyncMock(return_value=None)

@@ -11,10 +11,10 @@ from typing import Any, Concatenate
 import requests
 from wallbox import Wallbox
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, menuaiError
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
     CHARGER_CURRENCY_KEY,
@@ -105,9 +105,9 @@ def _validate(wallbox: Wallbox) -> None:
         raise ConnectionError from wallbox_connection_error
 
 
-async def async_validate_input(hass: HomeAssistant, wallbox: Wallbox) -> None:
+async def async_validate_input(menuai: menuai, wallbox: Wallbox) -> None:
     """Get new sensor data for Wallbox component."""
-    await hass.async_add_executor_job(_validate, wallbox)
+    await menuai.async_add_executor_job(_validate, wallbox)
 
 
 class WallboxCoordinator(DataUpdateCoordinator[dict[str, Any]]):
@@ -116,14 +116,14 @@ class WallboxCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     config_entry: ConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: ConfigEntry, wallbox: Wallbox
+        self, menuai: menuai, config_entry: ConfigEntry, wallbox: Wallbox
     ) -> None:
         """Initialize."""
         self._station = config_entry.data[CONF_STATION]
         self._wallbox = wallbox
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -183,7 +183,7 @@ class WallboxCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Get new sensor data for Wallbox component."""
-        return await self.hass.async_add_executor_job(self._get_data)
+        return await self.menuai.async_add_executor_job(self._get_data)
 
     @_require_authentication
     def _set_charging_current(self, charging_current: float) -> None:
@@ -197,7 +197,7 @@ class WallboxCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def async_set_charging_current(self, charging_current: float) -> None:
         """Set maximum charging current for Wallbox."""
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             self._set_charging_current, charging_current
         )
         await self.async_request_refresh()
@@ -214,7 +214,7 @@ class WallboxCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def async_set_icp_current(self, icp_current: float) -> None:
         """Set maximum icp current for Wallbox."""
-        await self.hass.async_add_executor_job(self._set_icp_current, icp_current)
+        await self.menuai.async_add_executor_job(self._set_icp_current, icp_current)
         await self.async_request_refresh()
 
     @_require_authentication
@@ -225,7 +225,7 @@ class WallboxCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def async_set_energy_cost(self, energy_cost: float) -> None:
         """Set energy cost for Wallbox."""
-        await self.hass.async_add_executor_job(self._set_energy_cost, energy_cost)
+        await self.menuai.async_add_executor_job(self._set_energy_cost, energy_cost)
         await self.async_request_refresh()
 
     @_require_authentication
@@ -243,7 +243,7 @@ class WallboxCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def async_set_lock_unlock(self, lock: bool) -> None:
         """Set wallbox to locked or unlocked."""
-        await self.hass.async_add_executor_job(self._set_lock_unlock, lock)
+        await self.menuai.async_add_executor_job(self._set_lock_unlock, lock)
         await self.async_request_refresh()
 
     @_require_authentication
@@ -257,7 +257,7 @@ class WallboxCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def async_pause_charger(self, pause: bool) -> None:
         """Set wallbox to pause or resume."""
-        await self.hass.async_add_executor_job(self._pause_charger, pause)
+        await self.menuai.async_add_executor_job(self._pause_charger, pause)
         await self.async_request_refresh()
 
     @_require_authentication
@@ -274,9 +274,9 @@ class WallboxCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     async def async_set_eco_smart(self, option: str) -> None:
         """Set wallbox solar charging mode."""
 
-        await self.hass.async_add_executor_job(self._set_eco_smart, option)
+        await self.menuai.async_add_executor_job(self._set_eco_smart, option)
         await self.async_request_refresh()
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(menuaiError):
     """Error to indicate there is invalid auth."""

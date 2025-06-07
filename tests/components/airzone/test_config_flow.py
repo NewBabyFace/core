@@ -11,15 +11,15 @@ from aioairzone.exceptions import (
     SystemOutOfRange,
 )
 
-from homeassistant import config_entries
-from homeassistant.components.airzone.config_flow import short_mac
-from homeassistant.components.airzone.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER, ConfigEntryState
-from homeassistant.const import CONF_HOST, CONF_ID, CONF_PORT
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai import config_entries
+from menuai.components.airzone.config_flow import short_mac
+from menuai.components.airzone.const import DOMAIN
+from menuai.config_entries import SOURCE_USER, ConfigEntryState
+from menuai.const import CONF_HOST, CONF_ID, CONF_PORT
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers import device_registry as dr
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
 
 from .util import (
     CONFIG,
@@ -44,36 +44,36 @@ TEST_IP = DHCP_SERVICE_INFO.ip
 TEST_PORT = 3000
 
 
-async def test_form(hass: HomeAssistant) -> None:
+async def test_form(menuai: menuai) -> None:
     """Test that the form is served with valid input."""
 
     with (
         patch(
-            "homeassistant.components.airzone.async_setup_entry",
+            "menuai.components.airzone.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
         patch(
-            "homeassistant.components.airzone.AirzoneLocalApi.get_dhw",
+            "menuai.components.airzone.AirzoneLocalApi.get_dhw",
             return_value=HVAC_DHW_MOCK,
         ),
         patch(
-            "homeassistant.components.airzone.AirzoneLocalApi.get_hvac",
+            "menuai.components.airzone.AirzoneLocalApi.get_hvac",
             return_value=HVAC_MOCK,
         ),
         patch(
-            "homeassistant.components.airzone.AirzoneLocalApi.get_hvac_systems",
+            "menuai.components.airzone.AirzoneLocalApi.get_hvac_systems",
             side_effect=SystemOutOfRange,
         ),
         patch(
-            "homeassistant.components.airzone.AirzoneLocalApi.get_version",
+            "menuai.components.airzone.AirzoneLocalApi.get_version",
             return_value=HVAC_VERSION_MOCK,
         ),
         patch(
-            "homeassistant.components.airzone.AirzoneLocalApi.get_webserver",
+            "menuai.components.airzone.AirzoneLocalApi.get_webserver",
             return_value=HVAC_WEBSERVER_MOCK,
         ),
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": SOURCE_USER}
         )
 
@@ -81,13 +81,13 @@ async def test_form(hass: HomeAssistant) -> None:
         assert result["step_id"] == "user"
         assert result["errors"] == {}
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], USER_INPUT
         )
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-        conf_entries = hass.config_entries.async_entries(DOMAIN)
+        conf_entries = menuai.config_entries.async_entries(DOMAIN)
         entry = conf_entries[0]
         assert entry.state is ConfigEntryState.LOADED
 
@@ -100,36 +100,36 @@ async def test_form(hass: HomeAssistant) -> None:
         assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_form_invalid_system_id(hass: HomeAssistant) -> None:
+async def test_form_invalid_system_id(menuai: menuai) -> None:
     """Test Invalid System ID 0."""
 
     with (
         patch(
-            "homeassistant.components.airzone.async_setup_entry",
+            "menuai.components.airzone.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
         patch(
-            "homeassistant.components.airzone.AirzoneLocalApi.get_dhw",
+            "menuai.components.airzone.AirzoneLocalApi.get_dhw",
             side_effect=HotWaterNotAvailable,
         ),
         patch(
-            "homeassistant.components.airzone.AirzoneLocalApi.get_hvac",
+            "menuai.components.airzone.AirzoneLocalApi.get_hvac",
             side_effect=InvalidSystem,
         ) as mock_hvac,
         patch(
-            "homeassistant.components.airzone.AirzoneLocalApi.get_hvac_systems",
+            "menuai.components.airzone.AirzoneLocalApi.get_hvac_systems",
             side_effect=SystemOutOfRange,
         ),
         patch(
-            "homeassistant.components.airzone.AirzoneLocalApi.get_version",
+            "menuai.components.airzone.AirzoneLocalApi.get_version",
             return_value=HVAC_VERSION_MOCK,
         ),
         patch(
-            "homeassistant.components.airzone.AirzoneLocalApi.get_webserver",
+            "menuai.components.airzone.AirzoneLocalApi.get_webserver",
             side_effect=InvalidMethod,
         ),
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": SOURCE_USER}, data=USER_INPUT
         )
 
@@ -140,15 +140,15 @@ async def test_form_invalid_system_id(hass: HomeAssistant) -> None:
         mock_hvac.return_value = HVAC_MOCK[API_SYSTEMS][0]
         mock_hvac.side_effect = None
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], CONFIG_ID1
         )
 
         assert result["type"] is FlowResultType.CREATE_ENTRY
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-        conf_entries = hass.config_entries.async_entries(DOMAIN)
+        conf_entries = menuai.config_entries.async_entries(DOMAIN)
         entry = conf_entries[0]
         assert entry.state is ConfigEntryState.LOADED
 
@@ -164,7 +164,7 @@ async def test_form_invalid_system_id(hass: HomeAssistant) -> None:
         mock_setup_entry.assert_called_once()
 
 
-async def test_form_duplicated_id(hass: HomeAssistant) -> None:
+async def test_form_duplicated_id(menuai: menuai) -> None:
     """Test setting up duplicated entry."""
 
     config_entry = MockConfigEntry(
@@ -173,9 +173,9 @@ async def test_form_duplicated_id(hass: HomeAssistant) -> None:
         domain=DOMAIN,
         unique_id="airzone_unique_id",
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}, data=USER_INPUT
     )
 
@@ -183,28 +183,28 @@ async def test_form_duplicated_id(hass: HomeAssistant) -> None:
     assert result["reason"] == "already_configured"
 
 
-async def test_connection_error(hass: HomeAssistant) -> None:
+async def test_connection_error(menuai: menuai) -> None:
     """Test connection to host error."""
 
     with patch(
-        "homeassistant.components.airzone.AirzoneLocalApi.validate",
+        "menuai.components.airzone.AirzoneLocalApi.validate",
         side_effect=AirzoneError,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": SOURCE_USER}, data=USER_INPUT
         )
 
         assert result["errors"] == {"base": "cannot_connect"}
 
 
-async def test_dhcp_flow(hass: HomeAssistant) -> None:
+async def test_dhcp_flow(menuai: menuai) -> None:
     """Test that DHCP discovery works."""
 
     with patch(
-        "homeassistant.components.airzone.AirzoneLocalApi.get_version",
+        "menuai.components.airzone.AirzoneLocalApi.get_version",
         return_value=HVAC_VERSION_MOCK,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             data=DHCP_SERVICE_INFO,
             context={"source": config_entries.SOURCE_DHCP},
@@ -215,31 +215,31 @@ async def test_dhcp_flow(hass: HomeAssistant) -> None:
 
     with (
         patch(
-            "homeassistant.components.airzone.async_setup_entry",
+            "menuai.components.airzone.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
         patch(
-            "homeassistant.components.airzone.AirzoneLocalApi.get_dhw",
+            "menuai.components.airzone.AirzoneLocalApi.get_dhw",
             return_value=HVAC_DHW_MOCK,
         ),
         patch(
-            "homeassistant.components.airzone.AirzoneLocalApi.get_hvac",
+            "menuai.components.airzone.AirzoneLocalApi.get_hvac",
             return_value=HVAC_MOCK,
         ),
         patch(
-            "homeassistant.components.airzone.AirzoneLocalApi.get_hvac_systems",
+            "menuai.components.airzone.AirzoneLocalApi.get_hvac_systems",
             side_effect=SystemOutOfRange,
         ),
         patch(
-            "homeassistant.components.airzone.AirzoneLocalApi.get_version",
+            "menuai.components.airzone.AirzoneLocalApi.get_version",
             return_value=HVAC_VERSION_MOCK,
         ),
         patch(
-            "homeassistant.components.airzone.AirzoneLocalApi.get_webserver",
+            "menuai.components.airzone.AirzoneLocalApi.get_webserver",
             return_value=HVAC_WEBSERVER_MOCK,
         ),
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_PORT: TEST_PORT,
@@ -255,14 +255,14 @@ async def test_dhcp_flow(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_dhcp_flow_error(hass: HomeAssistant) -> None:
+async def test_dhcp_flow_error(menuai: menuai) -> None:
     """Test that DHCP discovery fails."""
 
     with patch(
-        "homeassistant.components.airzone.AirzoneLocalApi.get_version",
+        "menuai.components.airzone.AirzoneLocalApi.get_version",
         side_effect=AirzoneError,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             data=DHCP_SERVICE_INFO,
             context={"source": config_entries.SOURCE_DHCP},
@@ -272,14 +272,14 @@ async def test_dhcp_flow_error(hass: HomeAssistant) -> None:
     assert result["reason"] == "cannot_connect"
 
 
-async def test_dhcp_connection_error(hass: HomeAssistant) -> None:
+async def test_dhcp_connection_error(menuai: menuai) -> None:
     """Test DHCP connection to host error."""
 
     with patch(
-        "homeassistant.components.airzone.AirzoneLocalApi.get_version",
+        "menuai.components.airzone.AirzoneLocalApi.get_version",
         return_value=HVAC_VERSION_MOCK,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             data=DHCP_SERVICE_INFO,
             context={"source": config_entries.SOURCE_DHCP},
@@ -289,10 +289,10 @@ async def test_dhcp_connection_error(hass: HomeAssistant) -> None:
     assert result["step_id"] == "discovered_connection"
 
     with patch(
-        "homeassistant.components.airzone.AirzoneLocalApi.validate",
+        "menuai.components.airzone.AirzoneLocalApi.validate",
         side_effect=AirzoneError,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_PORT: 3001,
@@ -303,40 +303,40 @@ async def test_dhcp_connection_error(hass: HomeAssistant) -> None:
 
     with (
         patch(
-            "homeassistant.components.airzone.async_setup_entry",
+            "menuai.components.airzone.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
         patch(
-            "homeassistant.components.airzone.AirzoneLocalApi.get_dhw",
+            "menuai.components.airzone.AirzoneLocalApi.get_dhw",
             return_value=HVAC_DHW_MOCK,
         ),
         patch(
-            "homeassistant.components.airzone.AirzoneLocalApi.get_hvac",
+            "menuai.components.airzone.AirzoneLocalApi.get_hvac",
             return_value=HVAC_MOCK,
         ),
         patch(
-            "homeassistant.components.airzone.AirzoneLocalApi.get_hvac_systems",
+            "menuai.components.airzone.AirzoneLocalApi.get_hvac_systems",
             side_effect=SystemOutOfRange,
         ),
         patch(
-            "homeassistant.components.airzone.AirzoneLocalApi.get_version",
+            "menuai.components.airzone.AirzoneLocalApi.get_version",
             return_value=HVAC_VERSION_MOCK,
         ),
         patch(
-            "homeassistant.components.airzone.AirzoneLocalApi.get_webserver",
+            "menuai.components.airzone.AirzoneLocalApi.get_webserver",
             return_value=HVAC_WEBSERVER_MOCK,
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_PORT: TEST_PORT,
             },
         )
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-        conf_entries = hass.config_entries.async_entries(DOMAIN)
+        conf_entries = menuai.config_entries.async_entries(DOMAIN)
         entry = conf_entries[0]
         assert entry.state is ConfigEntryState.LOADED
 
@@ -348,14 +348,14 @@ async def test_dhcp_connection_error(hass: HomeAssistant) -> None:
         mock_setup_entry.assert_called_once()
 
 
-async def test_dhcp_invalid_system_id(hass: HomeAssistant) -> None:
+async def test_dhcp_invalid_system_id(menuai: menuai) -> None:
     """Test Invalid System ID 0."""
 
     with patch(
-        "homeassistant.components.airzone.AirzoneLocalApi.get_version",
+        "menuai.components.airzone.AirzoneLocalApi.get_version",
         return_value=HVAC_VERSION_MOCK,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             data=DHCP_SERVICE_INFO,
             context={"source": config_entries.SOURCE_DHCP},
@@ -366,31 +366,31 @@ async def test_dhcp_invalid_system_id(hass: HomeAssistant) -> None:
 
     with (
         patch(
-            "homeassistant.components.airzone.async_setup_entry",
+            "menuai.components.airzone.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
         patch(
-            "homeassistant.components.airzone.AirzoneLocalApi.get_dhw",
+            "menuai.components.airzone.AirzoneLocalApi.get_dhw",
             side_effect=HotWaterNotAvailable,
         ),
         patch(
-            "homeassistant.components.airzone.AirzoneLocalApi.get_hvac",
+            "menuai.components.airzone.AirzoneLocalApi.get_hvac",
             side_effect=InvalidSystem,
         ) as mock_hvac,
         patch(
-            "homeassistant.components.airzone.AirzoneLocalApi.get_hvac_systems",
+            "menuai.components.airzone.AirzoneLocalApi.get_hvac_systems",
             side_effect=SystemOutOfRange,
         ),
         patch(
-            "homeassistant.components.airzone.AirzoneLocalApi.get_version",
+            "menuai.components.airzone.AirzoneLocalApi.get_version",
             return_value=HVAC_VERSION_MOCK,
         ),
         patch(
-            "homeassistant.components.airzone.AirzoneLocalApi.get_webserver",
+            "menuai.components.airzone.AirzoneLocalApi.get_webserver",
             side_effect=InvalidMethod,
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_PORT: TEST_PORT,
@@ -404,7 +404,7 @@ async def test_dhcp_invalid_system_id(hass: HomeAssistant) -> None:
         mock_hvac.return_value = HVAC_MOCK[API_SYSTEMS][0]
         mock_hvac.side_effect = None
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_PORT: TEST_PORT,
@@ -412,9 +412,9 @@ async def test_dhcp_invalid_system_id(hass: HomeAssistant) -> None:
             },
         )
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-        conf_entries = hass.config_entries.async_entries(DOMAIN)
+        conf_entries = menuai.config_entries.async_entries(DOMAIN)
         entry = conf_entries[0]
         assert entry.state is ConfigEntryState.LOADED
 

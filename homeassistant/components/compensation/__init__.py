@@ -6,8 +6,8 @@ from operator import itemgetter
 import numpy as np
 import voluptuous as vol
 
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.const import (
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.const import (
     CONF_ATTRIBUTE,
     CONF_MAXIMUM,
     CONF_MINIMUM,
@@ -15,10 +15,10 @@ from homeassistant.const import (
     CONF_UNIQUE_ID,
     CONF_UNIT_OF_MEASUREMENT,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.discovery import async_load_platform
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.discovery import async_load_platform
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     CONF_COMPENSATION,
@@ -77,9 +77,9 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Compensation sensor."""
-    hass.data[DATA_COMPENSATION] = {}
+    menuai.data[DATA_COMPENSATION] = {}
 
     for compensation, conf in config[DOMAIN].items():
         _LOGGER.debug("Setup %s.%s", DOMAIN, compensation)
@@ -120,11 +120,11 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             else:
                 data[CONF_MAXIMUM] = None
 
-            hass.data[DATA_COMPENSATION][compensation] = data
+            menuai.data[DATA_COMPENSATION][compensation] = data
 
-            hass.async_create_task(
+            menuai.async_create_task(
                 async_load_platform(
-                    hass,
+                    menuai,
                     SENSOR_DOMAIN,
                     DOMAIN,
                     {CONF_COMPENSATION: compensation},

@@ -9,7 +9,7 @@ from typing import cast
 
 import ifaddr
 
-from homeassistant.core import callback
+from menuai.core import callback
 
 from .const import MDNS_TARGET_IP
 from .models import Adapter, IPv4ConfiguredAddress, IPv6ConfiguredAddress

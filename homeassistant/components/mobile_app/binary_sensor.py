@@ -2,13 +2,13 @@
 
 from typing import Any
 
-from homeassistant.components.binary_sensor import BinarySensorEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_WEBHOOK_ID, STATE_ON
-from homeassistant.core import HomeAssistant, State, callback
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.binary_sensor import BinarySensorEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_WEBHOOK_ID, STATE_ON
+from menuai.core import menuai, State, callback
+from menuai.helpers import entity_registry as er
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
     ATTR_SENSOR_ATTRIBUTES,
@@ -26,7 +26,7 @@ from .entity import MobileAppEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -35,7 +35,7 @@ async def async_setup_entry(
 
     webhook_id = config_entry.data[CONF_WEBHOOK_ID]
 
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
     entries = er.async_entries_for_config_entry(entity_registry, config_entry.entry_id)
     for entry in entries:
         if entry.domain != ENTITY_TYPE or entry.disabled_by:
@@ -62,7 +62,7 @@ async def async_setup_entry(
         async_add_entities([MobileAppBinarySensor(data, config_entry)])
 
     async_dispatcher_connect(
-        hass,
+        menuai,
         f"{DOMAIN}_{ENTITY_TYPE}_register",
         handle_sensor_registration,
     )

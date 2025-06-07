@@ -4,24 +4,24 @@ import pytest
 from pytest_unordered import unordered
 import voluptuous_serialize
 
-from homeassistant.components import automation
-from homeassistant.components.climate import (
+from menuai.components import automation
+from menuai.components.climate import (
     DOMAIN,
     HVACAction,
     HVACMode,
     const,
     device_trigger,
 )
-from homeassistant.components.device_automation import DeviceAutomationType
-from homeassistant.const import EntityCategory, UnitOfTemperature
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import (
+from menuai.components.device_automation import DeviceAutomationType
+from menuai.const import EntityCategory, UnitOfTemperature
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import (
     config_validation as cv,
     device_registry as dr,
     entity_registry as er,
 )
-from homeassistant.helpers.entity_registry import RegistryEntryHider
-from homeassistant.setup import async_setup_component
+from menuai.helpers.entity_registry import RegistryEntryHider
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry, async_get_device_automations
 
@@ -32,13 +32,13 @@ def stub_blueprint_populate_autouse(stub_blueprint_populate: None) -> None:
 
 
 async def test_get_triggers(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test we get the expected triggers from a climate device."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -46,7 +46,7 @@ async def test_get_triggers(
     entity_entry = entity_registry.async_get_or_create(
         DOMAIN, "test", "5678", device_id=device_entry.id
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_entry.entity_id,
         HVACMode.COOL,
         {
@@ -71,7 +71,7 @@ async def test_get_triggers(
         )
     ]
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device_entry.id
+        menuai, DeviceAutomationType.TRIGGER, device_entry.id
     )
     assert triggers == unordered(expected_triggers)
 
@@ -86,7 +86,7 @@ async def test_get_triggers(
     ],
 )
 async def test_get_triggers_hidden_auxiliary(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     hidden_by,
@@ -94,7 +94,7 @@ async def test_get_triggers_hidden_auxiliary(
 ) -> None:
     """Test we get the expected triggers from a hidden or auxiliary entity."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -107,7 +107,7 @@ async def test_get_triggers_hidden_auxiliary(
         entity_category=entity_category,
         hidden_by=hidden_by,
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_entry.entity_id,
         HVACMode.COOL,
         {
@@ -132,20 +132,20 @@ async def test_get_triggers_hidden_auxiliary(
         )
     ]
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device_entry.id
+        menuai, DeviceAutomationType.TRIGGER, device_entry.id
     )
     assert triggers == unordered(expected_triggers)
 
 
 async def test_if_fires_on_state_change(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     service_calls: list[ServiceCall],
 ) -> None:
     """Test for turn_on and turn_off triggers firing."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -154,7 +154,7 @@ async def test_if_fires_on_state_change(
         DOMAIN, "test", "5678", device_id=device_entry.id
     )
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entry.entity_id,
         HVACMode.COOL,
         {
@@ -165,7 +165,7 @@ async def test_if_fires_on_state_change(
     )
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -216,7 +216,7 @@ async def test_if_fires_on_state_change(
     )
 
     # Fake that the HVAC mode is changing
-    hass.states.async_set(
+    menuai.states.async_set(
         entry.entity_id,
         HVACMode.AUTO,
         {
@@ -225,12 +225,12 @@ async def test_if_fires_on_state_change(
             const.ATTR_CURRENT_TEMPERATURE: 18,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
     assert service_calls[0].data["some"] == "hvac_mode_changed"
 
     # Fake that the temperature is changing
-    hass.states.async_set(
+    menuai.states.async_set(
         entry.entity_id,
         HVACMode.AUTO,
         {
@@ -239,12 +239,12 @@ async def test_if_fires_on_state_change(
             const.ATTR_CURRENT_TEMPERATURE: 23,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 2
     assert service_calls[1].data["some"] == "current_temperature_changed"
 
     # Fake that the humidity is changing
-    hass.states.async_set(
+    menuai.states.async_set(
         entry.entity_id,
         HVACMode.AUTO,
         {
@@ -253,20 +253,20 @@ async def test_if_fires_on_state_change(
             const.ATTR_CURRENT_TEMPERATURE: 23,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 3
     assert service_calls[2].data["some"] == "current_humidity_changed"
 
 
 async def test_if_fires_on_state_change_legacy(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     service_calls: list[ServiceCall],
 ) -> None:
     """Test for turn_on and turn_off triggers firing."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -275,7 +275,7 @@ async def test_if_fires_on_state_change_legacy(
         DOMAIN, "test", "5678", device_id=device_entry.id
     )
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entry.entity_id,
         HVACMode.COOL,
         {
@@ -286,7 +286,7 @@ async def test_if_fires_on_state_change_legacy(
     )
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -309,7 +309,7 @@ async def test_if_fires_on_state_change_legacy(
     )
 
     # Fake that the HVAC mode is changing
-    hass.states.async_set(
+    menuai.states.async_set(
         entry.entity_id,
         HVACMode.AUTO,
         {
@@ -318,15 +318,15 @@ async def test_if_fires_on_state_change_legacy(
             const.ATTR_CURRENT_TEMPERATURE: 18,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
     assert service_calls[0].data["some"] == "hvac_mode_changed"
 
 
-async def test_get_trigger_capabilities_hvac_mode(hass: HomeAssistant) -> None:
+async def test_get_trigger_capabilities_hvac_mode(menuai: menuai) -> None:
     """Test we get the expected capabilities from a climate trigger."""
     capabilities = await device_trigger.async_get_trigger_capabilities(
-        hass,
+        menuai,
         {
             "platform": "device",
             "domain": "climate",
@@ -366,11 +366,11 @@ async def test_get_trigger_capabilities_hvac_mode(hass: HomeAssistant) -> None:
     ],
 )
 async def test_get_trigger_capabilities_temp_humid(
-    hass: HomeAssistant, type, suffix
+    menuai: menuai, type, suffix
 ) -> None:
     """Test we get the expected capabilities from a climate trigger."""
     capabilities = await device_trigger.async_get_trigger_capabilities(
-        hass,
+        menuai,
         {
             "platform": "device",
             "domain": "climate",

@@ -2,22 +2,22 @@
 
 from __future__ import annotations
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import UnitOfElectricCurrent, UnitOfEnergy, UnitOfPower
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import UnitOfElectricCurrent, UnitOfEnergy, UnitOfPower
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import DOMAIN, KebaHandler
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -26,7 +26,7 @@ async def async_setup_platform(
     if discovery_info is None:
         return
 
-    keba = hass.data[DOMAIN]
+    keba = menuai.data[DOMAIN]
 
     sensors = [
         KebaSensor(
@@ -129,6 +129,6 @@ class KebaSensor(SensorEntity):
         """Schedule a state update."""
         self.async_schedule_update_ha_state(True)
 
-    async def async_added_to_hass(self) -> None:
-        """Add update callback after being added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Add update callback after being added to menuai."""
         self._keba.add_update_listener(self.update_callback)

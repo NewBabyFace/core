@@ -19,13 +19,13 @@ from nice_go import (
     NiceGOApi,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers import issue_registry as ir
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_EMAIL, CONF_PASSWORD
+from menuai.core import Event, menuai, callback
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers import issue_registry as ir
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
     CONF_REFRESH_TOKEN,
@@ -63,9 +63,9 @@ class NiceGOUpdateCoordinator(DataUpdateCoordinator[dict[str, NiceGODevice]]):
     config_entry: NiceGOConfigEntry
     organization_id: str
 
-    def __init__(self, hass: HomeAssistant, config_entry: NiceGOConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: NiceGOConfigEntry) -> None:
         """Initialize DataUpdateCoordinator for Nice G.O."""
-        super().__init__(hass, _LOGGER, config_entry=config_entry, name="Nice G.O.")
+        super().__init__(menuai, _LOGGER, config_entry=config_entry, name="Nice G.O.")
 
         self.refresh_token = self.config_entry.data[CONF_REFRESH_TOKEN]
         self.refresh_token_creation_time = self.config_entry.data[
@@ -78,12 +78,12 @@ class NiceGOUpdateCoordinator(DataUpdateCoordinator[dict[str, NiceGODevice]]):
         self._unsub_data: Callable[[], None] | None = None
         self._unsub_connection_lost: Callable[[], None] | None = None
         self.connected = False
-        self._hass_stopping: bool = hass.is_stopping
+        self._menuai_stopping: bool = menuai.is_stopping
 
     @callback
     def async_ha_stop(self, event: Event) -> None:
-        """Stop reconnecting if hass is stopping."""
-        self._hass_stopping = True
+        """Stop reconnecting if menuai is stopping."""
+        self._menuai_stopping = True
 
     async def _parse_barrier(
         self, device_type: str, barrier_state: BarrierState
@@ -94,7 +94,7 @@ class NiceGOUpdateCoordinator(DataUpdateCoordinator[dict[str, NiceGODevice]]):
         name = barrier_state.reported["displayName"]
         if barrier_state.reported["migrationStatus"] == "NOT_STARTED":
             ir.async_create_issue(
-                self.hass,
+                self.menuai,
                 DOMAIN,
                 f"firmware_update_required_{device_id}",
                 is_fixable=False,
@@ -104,7 +104,7 @@ class NiceGOUpdateCoordinator(DataUpdateCoordinator[dict[str, NiceGODevice]]):
             )
             return None
         ir.async_delete_issue(
-            self.hass, DOMAIN, f"firmware_update_required_{device_id}"
+            self.menuai, DOMAIN, f"firmware_update_required_{device_id}"
         )
         barrier_status_raw = [
             int(x) for x in barrier_state.reported["barrierStatus"].split(",")
@@ -156,7 +156,7 @@ class NiceGOUpdateCoordinator(DataUpdateCoordinator[dict[str, NiceGODevice]]):
                     await self.update_refresh_token()
                 else:
                     await self.api.authenticate_refresh(
-                        self.refresh_token, async_get_clientsession(self.hass)
+                        self.refresh_token, async_get_clientsession(self.menuai)
                     )
                 _LOGGER.debug("Authenticated with Nice G.O. API")
 
@@ -183,7 +183,7 @@ class NiceGOUpdateCoordinator(DataUpdateCoordinator[dict[str, NiceGODevice]]):
         _LOGGER.debug("Updating the refresh token with Nice G.O. API")
         try:
             refresh_token = await self.api.authenticate(
-                self.email, self.password, async_get_clientsession(self.hass)
+                self.email, self.password, async_get_clientsession(self.menuai)
             )
         except AuthFailedError as e:
             _LOGGER.exception("Authentication failed")
@@ -198,7 +198,7 @@ class NiceGOUpdateCoordinator(DataUpdateCoordinator[dict[str, NiceGODevice]]):
             CONF_REFRESH_TOKEN: refresh_token,
             CONF_REFRESH_TOKEN_CREATION_TIME: datetime.now().timestamp(),
         }
-        self.hass.config_entries.async_update_entry(self.config_entry, data=data)
+        self.menuai.config_entries.async_update_entry(self.config_entry, data=data)
 
     async def client_listen(self) -> None:
         """Listen to the websocket for updates."""
@@ -209,7 +209,7 @@ class NiceGOUpdateCoordinator(DataUpdateCoordinator[dict[str, NiceGODevice]]):
         )
 
         for _ in range(RECONNECT_ATTEMPTS):
-            if self._hass_stopping:
+            if self._menuai_stopping:
                 return
 
             try:

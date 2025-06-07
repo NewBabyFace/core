@@ -6,10 +6,10 @@ import logging
 import time
 
 from aiohttp import ClientConnectionError, ClientResponseError
-from hass_splunk import SplunkPayloadError, hass_splunk
+from menuai_splunk import SplunkPayloadError, menuai_splunk
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_NAME,
     CONF_PORT,
@@ -18,12 +18,12 @@ from homeassistant.const import (
     CONF_VERIFY_SSL,
     EVENT_STATE_CHANGED,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, state as state_helper
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.entityfilter import FILTER_SCHEMA
-from homeassistant.helpers.json import JSONEncoder
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, state as state_helper
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.entityfilter import FILTER_SCHEMA
+from menuai.helpers.json import JSONEncoder
+from menuai.helpers.typing import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ CONF_FILTER = "filter"
 DEFAULT_HOST = "localhost"
 DEFAULT_PORT = 8088
 DEFAULT_SSL = False
-DEFAULT_NAME = "HASS"
+DEFAULT_NAME = "menuai"
 
 CONFIG_SCHEMA = vol.Schema(
     {
@@ -53,7 +53,7 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Splunk component."""
     conf = config[DOMAIN]
     host = conf.get(CONF_HOST)
@@ -64,8 +64,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     name = conf.get(CONF_NAME)
     entity_filter = conf[CONF_FILTER]
 
-    event_collector = hass_splunk(
-        session=async_get_clientsession(hass),
+    event_collector = menuai_splunk(
+        session=async_get_clientsession(menuai),
         host=host,
         port=port,
         token=token,
@@ -124,6 +124,6 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         except ClientResponseError as err:
             _LOGGER.error(err.message)
 
-    hass.bus.async_listen(EVENT_STATE_CHANGED, splunk_event_listener)
+    menuai.bus.async_listen(EVENT_STATE_CHANGED, splunk_event_listener)
 
     return True

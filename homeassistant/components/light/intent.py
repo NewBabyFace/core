@@ -6,23 +6,23 @@ import logging
 
 import voluptuous as vol
 
-from homeassistant.const import SERVICE_TURN_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, intent
-from homeassistant.util import color as color_util
+from menuai.const import SERVICE_TURN_ON
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, intent
+from menuai.util import color as color_util
 
 from . import ATTR_BRIGHTNESS_PCT, ATTR_COLOR_TEMP_KELVIN, ATTR_RGB_COLOR
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-INTENT_SET = "HassLightSet"
+INTENT_SET = "menuaiLightSet"
 
 
-async def async_setup_intents(hass: HomeAssistant) -> None:
+async def async_setup_intents(menuai: menuai) -> None:
     """Set up the light intents."""
     intent.async_register(
-        hass,
+        menuai,
         intent.ServiceIntentHandler(
             INTENT_SET,
             DOMAIN,

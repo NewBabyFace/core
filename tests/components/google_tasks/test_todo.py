@@ -11,8 +11,8 @@ from httplib2 import Response
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.google_tasks.coordinator import UPDATE_INTERVAL
-from homeassistant.components.todo import (
+from menuai.components.google_tasks.coordinator import UPDATE_INTERVAL
+from menuai.components.todo import (
     ATTR_DESCRIPTION,
     ATTR_DUE_DATE,
     ATTR_ITEM,
@@ -21,9 +21,9 @@ from homeassistant.components.todo import (
     DOMAIN as TODO_DOMAIN,
     TodoServices,
 )
-from homeassistant.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE, Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from .conftest import (
     LIST_TASK_LIST_RESPONSE,
@@ -120,13 +120,13 @@ def platforms() -> list[str]:
 
 @pytest.fixture
 async def ws_get_items(
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> Callable[[], Awaitable[dict[str, str]]]:
     """Fixture to fetch items from the todo websocket."""
 
     async def get() -> list[dict[str, str]]:
         # Fetch items using To-do platform
-        client = await hass_ws_client()
+        client = await menuai_ws_client()
         await client.send_json_auto_id(
             {
                 "type": "todo/item/list",
@@ -236,19 +236,19 @@ def setup_http_response(mock_http_response: Mock) -> None:
     ],
 )
 async def test_get_items(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_credentials: None,
     integration_setup: Callable[[], Awaitable[bool]],
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     ws_get_items: Callable[[], Awaitable[dict[str, str]]],
     timezone: str,
 ) -> None:
     """Test getting todo list items."""
-    await hass.config.async_set_time_zone(timezone)
+    await menuai.config.async_set_time_zone(timezone)
 
     assert await integration_setup()
 
-    await hass_ws_client(hass)
+    await menuai_ws_client(menuai)
 
     items = await ws_get_items()
     assert items == [
@@ -267,7 +267,7 @@ async def test_get_items(
     ]
 
     # State reflect that one task needs action
-    state = hass.states.get("todo.my_tasks")
+    state = menuai.states.get("todo.my_tasks")
     assert state
     assert state.state == "1"
 
@@ -282,22 +282,22 @@ async def test_get_items(
     ],
 )
 async def test_empty_todo_list(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_credentials: None,
     integration_setup: Callable[[], Awaitable[bool]],
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     ws_get_items: Callable[[], Awaitable[dict[str, str]]],
 ) -> None:
     """Test getting todo list items."""
 
     assert await integration_setup()
 
-    await hass_ws_client(hass)
+    await menuai_ws_client(menuai)
 
     items = await ws_get_items()
     assert items == []
 
-    state = hass.states.get("todo.my_tasks")
+    state = menuai.states.get("todo.my_tasks")
     assert state
     assert state.state == "0"
 
@@ -314,7 +314,7 @@ async def test_empty_todo_list(
     ],
 )
 async def test_task_items_error_response(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_credentials: None,
     integration_setup: Callable[[], Awaitable[bool]],
     freezer: FrozenDateTimeFactory,
@@ -324,25 +324,25 @@ async def test_task_items_error_response(
     assert await integration_setup()
 
     # Test successful setup and first data fetch
-    state = hass.states.get("todo.my_tasks")
+    state = menuai.states.get("todo.my_tasks")
     assert state
     assert state.state == "1"
 
     # Next update fails
     freezer.tick(UPDATE_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get("todo.my_tasks")
+    state = menuai.states.get("todo.my_tasks")
     assert state
     assert state.state == STATE_UNAVAILABLE
 
     # Next update succeeds
     freezer.tick(UPDATE_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get("todo.my_tasks")
+    state = menuai.states.get("todo.my_tasks")
     assert state
     assert state.state == "1"
 
@@ -357,7 +357,7 @@ async def test_task_items_error_response(
     ids=["summary", "due", "description"],
 )
 async def test_create_todo_list_item(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_credentials: None,
     integration_setup: Callable[[], Awaitable[bool]],
     mock_http_response: Mock,
@@ -368,11 +368,11 @@ async def test_create_todo_list_item(
 
     assert await integration_setup()
 
-    state = hass.states.get("todo.my_tasks")
+    state = menuai.states.get("todo.my_tasks")
     assert state
     assert state.state == "0"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.ADD_ITEM,
         {ATTR_ITEM: "Soda", **item_data},
@@ -397,7 +397,7 @@ async def test_create_todo_list_item(
     ],
 )
 async def test_create_todo_list_item_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_credentials: None,
     integration_setup: Callable[[], Awaitable[bool]],
     mock_http_response: Mock,
@@ -407,12 +407,12 @@ async def test_create_todo_list_item_error(
 
     assert await integration_setup()
 
-    state = hass.states.get("todo.my_tasks")
+    state = menuai.states.get("todo.my_tasks")
     assert state
     assert state.state == "1"
 
-    with pytest.raises(HomeAssistantError, match="Invalid task ID"):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match="Invalid task ID"):
+        await menuai.services.async_call(
             TODO_DOMAIN,
             TodoServices.ADD_ITEM,
             {ATTR_ITEM: "Soda"},
@@ -423,7 +423,7 @@ async def test_create_todo_list_item_error(
 
 @pytest.mark.parametrize("api_responses", [UPDATE_API_RESPONSES])
 async def test_update_todo_list_item(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_credentials: None,
     integration_setup: Callable[[], Awaitable[bool]],
     mock_http_response: Any,
@@ -433,11 +433,11 @@ async def test_update_todo_list_item(
 
     assert await integration_setup()
 
-    state = hass.states.get("todo.my_tasks")
+    state = menuai.states.get("todo.my_tasks")
     assert state
     assert state.state == "1"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.UPDATE_ITEM,
         {ATTR_ITEM: "some-task-id", ATTR_RENAME: "Soda", ATTR_STATUS: "completed"},
@@ -454,7 +454,7 @@ async def test_update_todo_list_item(
 @pytest.mark.parametrize("timezone", ["America/Regina", "UTC", "Asia/Tokyo"])
 @pytest.mark.parametrize("api_responses", [UPDATE_API_RESPONSES])
 async def test_update_due_date(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_credentials: None,
     integration_setup: Callable[[], Awaitable[bool]],
     mock_http_response: Any,
@@ -462,15 +462,15 @@ async def test_update_due_date(
     timezone: str,
 ) -> None:
     """Test for updating the due date of a To-do item and timezone."""
-    await hass.config.async_set_time_zone(timezone)
+    await menuai.config.async_set_time_zone(timezone)
 
     assert await integration_setup()
 
-    state = hass.states.get("todo.my_tasks")
+    state = menuai.states.get("todo.my_tasks")
     assert state
     assert state.state == "1"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.UPDATE_ITEM,
         {ATTR_ITEM: "some-task-id", ATTR_DUE_DATE: "2024-12-5"},
@@ -495,7 +495,7 @@ async def test_update_due_date(
     ],
 )
 async def test_update_todo_list_item_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_credentials: None,
     integration_setup: Callable[[], Awaitable[bool]],
     mock_http_response: Any,
@@ -505,12 +505,12 @@ async def test_update_todo_list_item_error(
 
     assert await integration_setup()
 
-    state = hass.states.get("todo.my_tasks")
+    state = menuai.states.get("todo.my_tasks")
     assert state
     assert state.state == "1"
 
-    with pytest.raises(HomeAssistantError, match="Invalid task ID"):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match="Invalid task ID"):
+        await menuai.services.async_call(
             TODO_DOMAIN,
             TodoServices.UPDATE_ITEM,
             {ATTR_ITEM: "some-task-id", ATTR_RENAME: "Soda", ATTR_STATUS: "completed"},
@@ -539,7 +539,7 @@ async def test_update_todo_list_item_error(
     ),
 )
 async def test_partial_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_credentials: None,
     integration_setup: Callable[[], Awaitable[bool]],
     mock_http_response: Any,
@@ -550,11 +550,11 @@ async def test_partial_update(
 
     assert await integration_setup()
 
-    state = hass.states.get("todo.my_tasks")
+    state = menuai.states.get("todo.my_tasks")
     assert state
     assert state.state == "1"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.UPDATE_ITEM,
         {ATTR_ITEM: "some-task-id", **item_data},
@@ -570,7 +570,7 @@ async def test_partial_update(
 
 @pytest.mark.parametrize("api_responses", [UPDATE_API_RESPONSES])
 async def test_partial_update_status(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_credentials: None,
     integration_setup: Callable[[], Awaitable[bool]],
     mock_http_response: Any,
@@ -580,11 +580,11 @@ async def test_partial_update_status(
 
     assert await integration_setup()
 
-    state = hass.states.get("todo.my_tasks")
+    state = menuai.states.get("todo.my_tasks")
     assert state
     assert state.state == "1"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.UPDATE_ITEM,
         {ATTR_ITEM: "some-task-id", ATTR_STATUS: "needs_action"},
@@ -614,7 +614,7 @@ async def test_partial_update_status(
     ],
 )
 async def test_delete_todo_list_item(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_credentials: None,
     integration_setup: Callable[[], Awaitable[bool]],
     mock_http_response: Any,
@@ -624,11 +624,11 @@ async def test_delete_todo_list_item(
 
     assert await integration_setup()
 
-    state = hass.states.get("todo.my_tasks")
+    state = menuai.states.get("todo.my_tasks")
     assert state
     assert state.state == "3"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.REMOVE_ITEM,
         {ATTR_ITEM: ["some-task-id-1", "some-task-id-2", "some-task-id-3"]},
@@ -661,7 +661,7 @@ async def test_delete_todo_list_item(
     ],
 )
 async def test_delete_partial_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_credentials: None,
     integration_setup: Callable[[], Awaitable[bool]],
     mock_http_response: Any,
@@ -671,12 +671,12 @@ async def test_delete_partial_failure(
 
     assert await integration_setup()
 
-    state = hass.states.get("todo.my_tasks")
+    state = menuai.states.get("todo.my_tasks")
     assert state
     assert state.state == "3"
 
-    with pytest.raises(HomeAssistantError, match="Invalid task ID"):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match="Invalid task ID"):
+        await menuai.services.async_call(
             TODO_DOMAIN,
             TodoServices.REMOVE_ITEM,
             {ATTR_ITEM: ["some-task-id-1", "some-task-id-2", "some-task-id-3"]},
@@ -702,7 +702,7 @@ async def test_delete_partial_failure(
     ],
 )
 async def test_delete_invalid_json_response(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_credentials: None,
     integration_setup: Callable[[], Awaitable[bool]],
     mock_http_response: Any,
@@ -712,12 +712,12 @@ async def test_delete_invalid_json_response(
 
     assert await integration_setup()
 
-    state = hass.states.get("todo.my_tasks")
+    state = menuai.states.get("todo.my_tasks")
     assert state
     assert state.state == "3"
 
-    with pytest.raises(HomeAssistantError, match="unexpected response"):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match="unexpected response"):
+        await menuai.services.async_call(
             TODO_DOMAIN,
             TodoServices.REMOVE_ITEM,
             {ATTR_ITEM: ["some-task-id-1"]},
@@ -741,7 +741,7 @@ async def test_delete_invalid_json_response(
     ],
 )
 async def test_delete_server_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_credentials: None,
     integration_setup: Callable[[], Awaitable[bool]],
     mock_http_response: Any,
@@ -751,12 +751,12 @@ async def test_delete_server_error(
 
     assert await integration_setup()
 
-    state = hass.states.get("todo.my_tasks")
+    state = menuai.states.get("todo.my_tasks")
     assert state
     assert state.state == "3"
 
-    with pytest.raises(HomeAssistantError, match="responded with error"):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match="responded with error"):
+        await menuai.services.async_call(
             TODO_DOMAIN,
             TodoServices.REMOVE_ITEM,
             {ATTR_ITEM: ["some-task-id-1"]},
@@ -816,7 +816,7 @@ async def test_delete_server_error(
     ],
 )
 async def test_parent_child_ordering(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_credentials: None,
     integration_setup: Callable[[], Awaitable[bool]],
     ws_get_items: Callable[[], Awaitable[dict[str, str]]],
@@ -826,7 +826,7 @@ async def test_parent_child_ordering(
 
     assert await integration_setup()
 
-    state = hass.states.get("todo.my_tasks")
+    state = menuai.states.get("todo.my_tasks")
     assert state
     assert state.state == "4"
 
@@ -846,11 +846,11 @@ async def test_parent_child_ordering(
     ],
 )
 async def test_move_todo_item(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_credentials: None,
     integration_setup: Callable[[], Awaitable[bool]],
     ws_get_items: Callable[[], Awaitable[dict[str, str]]],
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     mock_http_response: Any,
     snapshot: SnapshotAssertion,
 ) -> None:
@@ -858,7 +858,7 @@ async def test_move_todo_item(
 
     assert await integration_setup()
 
-    state = hass.states.get(ENTITY_ID)
+    state = menuai.states.get(ENTITY_ID)
     assert state
     assert state.state == "3"
 
@@ -866,7 +866,7 @@ async def test_move_todo_item(
     assert items == snapshot
 
     # Move to second in the list
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     data = {
         "id": id,
         "type": "todo/item/move",
@@ -884,7 +884,7 @@ async def test_move_todo_item(
     assert call.args == snapshot
     assert call.kwargs.get("body") == snapshot
 
-    state = hass.states.get(ENTITY_ID)
+    state = menuai.states.get(ENTITY_ID)
     assert state
     assert state.state == "3"
 
@@ -914,17 +914,17 @@ async def test_move_todo_item(
     ],
 )
 async def test_susbcribe(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_credentials: None,
     integration_setup: Callable[[], Awaitable[bool]],
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test subscribing to item updates."""
 
     assert await integration_setup()
 
     # Subscribe and get the initial list
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json_auto_id(
         {
             "type": "todo/item/subscribe",
@@ -948,7 +948,7 @@ async def test_susbcribe(
     assert uid
 
     # Rename item
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.UPDATE_ITEM,
         {ATTR_ITEM: uid, ATTR_RENAME: "Milk"},

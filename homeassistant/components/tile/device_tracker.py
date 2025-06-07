@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import logging
 
-from homeassistant.components.device_tracker import TrackerEntity
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util.dt import as_utc
+from menuai.components.device_tracker import TrackerEntity
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util.dt import as_utc
 
 from .coordinator import TileConfigEntry, TileCoordinator
 from .entity import TileEntity
@@ -26,7 +26,7 @@ ATTR_VOIP_STATE = "voip_state"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: TileConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -85,7 +85,7 @@ class TileDeviceTracker(TileEntity, TrackerEntity):
                 timestamp_attr[1]
             )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self._update_from_latest_data()

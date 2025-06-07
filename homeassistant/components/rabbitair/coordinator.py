@@ -7,10 +7,10 @@ from typing import Any, cast
 
 from rabbitair import Client, State
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.debounce import Debouncer
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.debounce import Debouncer
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -20,14 +20,14 @@ class RabbitAirDebouncer(Debouncer[Coroutine[Any, Any, None]]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
     ) -> None:
         """Initialize debounce."""
         # We don't want an immediate refresh since the device needs some time
         # to apply the changes and reflect the updated state. Two seconds
         # should be sufficient, since the internal cycle of the device runs at
         # one-second intervals.
-        super().__init__(hass, _LOGGER, cooldown=2.0, immediate=False)
+        super().__init__(menuai, _LOGGER, cooldown=2.0, immediate=False)
 
     async def async_call(self) -> None:
         """Call the function."""
@@ -46,17 +46,17 @@ class RabbitAirDataUpdateCoordinator(DataUpdateCoordinator[State]):
     config_entry: ConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: ConfigEntry, device: Client
+        self, menuai: menuai, config_entry: ConfigEntry, device: Client
     ) -> None:
         """Initialize global data updater."""
         self.device = device
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name="rabbitair",
             update_interval=timedelta(seconds=10),
-            request_refresh_debouncer=RabbitAirDebouncer(hass),
+            request_refresh_debouncer=RabbitAirDebouncer(menuai),
         )
 
     async def _async_update_data(self) -> State:

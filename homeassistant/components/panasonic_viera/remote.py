@@ -5,12 +5,12 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Any
 
-from homeassistant.components.remote import RemoteEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_NAME, STATE_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.remote import RemoteEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_NAME, STATE_ON
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import Remote
 from .const import (
@@ -26,7 +26,7 @@ from .const import (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -34,7 +34,7 @@ async def async_setup_entry(
 
     config = config_entry.data
 
-    remote = hass.data[DOMAIN][config_entry.entry_id][ATTR_REMOTE]
+    remote = menuai.data[DOMAIN][config_entry.entry_id][ATTR_REMOTE]
     name = config[CONF_NAME]
     device_info = config[ATTR_DEVICE_INFO]
 

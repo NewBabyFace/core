@@ -10,19 +10,19 @@ from typing import Final
 from ovoenergy import OVOEnergy
 from ovoenergy.models import OVODailyUsage
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import UnitOfEnergy
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-from homeassistant.util import dt as dt_util
+from menuai.config_entries import ConfigEntry
+from menuai.const import UnitOfEnergy
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.util import dt as dt_util
 
 from .const import DATA_CLIENT, DATA_COORDINATOR, DOMAIN
 from .entity import OVOEnergyDeviceEntity
@@ -111,15 +111,15 @@ SENSOR_TYPES_GAS: tuple[OVOEnergySensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up OVO Energy sensor based on a config entry."""
-    coordinator: DataUpdateCoordinator[OVODailyUsage] = hass.data[DOMAIN][
+    coordinator: DataUpdateCoordinator[OVODailyUsage] = menuai.data[DOMAIN][
         entry.entry_id
     ][DATA_COORDINATOR]
-    client: OVOEnergy = hass.data[DOMAIN][entry.entry_id][DATA_CLIENT]
+    client: OVOEnergy = menuai.data[DOMAIN][entry.entry_id][DATA_CLIENT]
 
     entities = []
 

@@ -1,16 +1,16 @@
-"""The Rhasspy integration."""
+"""The Rmenuaipy integration."""
 
 from __future__ import annotations
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up Rhasspy from a config entry."""
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
+    """Set up Rmenuaipy from a config entry."""
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     return True

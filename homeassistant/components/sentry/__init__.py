@@ -11,17 +11,17 @@ from sentry_sdk.integrations.aiohttp import AioHttpIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration
 from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
-    EVENT_HOMEASSISTANT_STARTED,
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
+    EVENT_menuai_STARTED,
     __version__ as current_version,
 )
-from homeassistant.core import HomeAssistant, get_release_channel
-from homeassistant.helpers import entity_platform, instance_id
-from homeassistant.helpers.event import async_call_later
-from homeassistant.helpers.system_info import async_get_system_info
-from homeassistant.loader import Integration, async_get_custom_components
-from homeassistant.setup import SetupPhases, async_pause_setup
+from menuai.core import menuai, get_release_channel
+from menuai.helpers import entity_platform, instance_id
+from menuai.helpers.event import async_call_later
+from menuai.helpers.system_info import async_get_system_info
+from menuai.loader import Integration, async_get_custom_components
+from menuai.setup import SetupPhases, async_pause_setup
 
 from .const import (
     CONF_DSN,
@@ -42,7 +42,7 @@ from .const import (
 LOGGER_INFO_REGEX = re.compile(r"^(\w+)\.?(\w+)?\.?(\w+)?\.?(\w+)?(?:\..*)?$")
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up Sentry from a config entry."""
 
     # Migrate environment from config entry data to config entry options
@@ -54,7 +54,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         options = {**entry.options, CONF_ENVIRONMENT: entry.data[CONF_ENVIRONMENT]}
         data = entry.data.copy()
         data.pop(CONF_ENVIRONMENT)
-        hass.config_entries.async_update_entry(entry, data=data, options=options)
+        menuai.config_entries.async_update_entry(entry, data=data, options=options)
 
     # https://docs.sentry.io/platforms/python/logging/
     sentry_logging = LoggingIntegration(
@@ -66,9 +66,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Additional/extra data collection
     channel = get_release_channel()
-    huuid = await instance_id.async_get(hass)
-    system_info = await async_get_system_info(hass)
-    custom_components = await async_get_custom_components(hass)
+    huuid = await instance_id.async_get(menuai)
+    system_info = await async_get_system_info(menuai)
+    custom_components = await async_get_custom_components(menuai)
 
     tracing = {}
     if entry.options.get(CONF_TRACING):
@@ -78,7 +78,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             ),
         }
 
-    with async_pause_setup(hass, SetupPhases.WAIT_IMPORT_PACKAGES):
+    with async_pause_setup(menuai, SetupPhases.WAIT_IMPORT_PACKAGES):
         # sentry_sdk.init imports modules based on the selected integrations
         def _init_sdk():
             """Initialize the Sentry SDK."""
@@ -92,7 +92,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 ],
                 release=current_version,
                 before_send=lambda event, hint: process_before_send(
-                    hass,
+                    menuai,
                     entry.options,
                     channel,
                     huuid,
@@ -104,22 +104,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 **tracing,
             )
 
-        await hass.async_add_import_executor_job(_init_sdk)
+        await menuai.async_add_import_executor_job(_init_sdk)
 
     async def update_system_info(now):
         nonlocal system_info
-        system_info = await async_get_system_info(hass)
+        system_info = await async_get_system_info(menuai)
 
         # Update system info every hour
-        async_call_later(hass, 3600, update_system_info)
+        async_call_later(menuai, 3600, update_system_info)
 
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, update_system_info)
+    menuai.bus.async_listen_once(EVENT_menuai_STARTED, update_system_info)
 
     return True
 
 
 def process_before_send(
-    hass: HomeAssistant,
+    menuai: menuai,
     options: Mapping[str, Any],
     channel: str,
     huuid: str,
@@ -148,7 +148,7 @@ def process_before_send(
     # triggers security rules, hiding all data.
     integrations = [
         integration
-        for integration in hass.config.components
+        for integration in menuai.config.components
         if integration != "auth" and "." not in integration
     ]
 
@@ -163,8 +163,8 @@ def process_before_send(
         matches = LOGGER_INFO_REGEX.findall(event["logger"])
         if matches:
             group1, group2, group3, group4 = matches[0]
-            # Handle the "homeassistant." package differently
-            if group1 == "homeassistant" and group2 and group3:
+            # Handle the "menuai." package differently
+            if group1 == "menuai" and group2 and group3:
                 if group2 == "components":
                     # This logger is from a component
                     additional_tags["custom_component"] = "no"
@@ -175,7 +175,7 @@ def process_before_send(
                     # Not a component, could be helper, or something else.
                     additional_tags[group2] = group3
             else:
-                # Not the "homeassistant" package, this third-party
+                # Not the "menuai" package, this third-party
                 if not options.get(CONF_EVENT_THIRD_PARTY_PACKAGES):
                     return None
                 additional_tags["package"] = group1
@@ -196,10 +196,10 @@ def process_before_send(
     # Set user context to the installation UUID
     event.setdefault("user", {}).update({"id": huuid})
 
-    # Update event data with Home Assistant Context
+    # Update event data with MenuAI Context
     event.setdefault("contexts", {}).update(
         {
-            "Home Assistant": {
+            "MenuAI": {
                 "channel": channel,
                 "custom_components": "\n".join(sorted(custom_components)),
                 "integrations": "\n".join(sorted(integrations)),

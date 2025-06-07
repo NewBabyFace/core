@@ -7,11 +7,11 @@ from typing import Any
 
 from pywemo import CoffeeMaker, Insight, Maker, StandbyState, Switch
 
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import STATE_OFF, STATE_ON, STATE_STANDBY, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import STATE_OFF, STATE_ON, STATE_STANDBY, STATE_UNKNOWN
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import async_wemo_dispatcher_connect
 from .coordinator import DeviceCoordinator
@@ -34,7 +34,7 @@ MAKER_SWITCH_TOGGLE = "toggle"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     _config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -44,7 +44,7 @@ async def async_setup_entry(
         """Handle a discovered Wemo device."""
         async_add_entities([WemoSwitch(coordinator)])
 
-    await async_wemo_dispatcher_connect(hass, _discovered_wemo)
+    await async_wemo_dispatcher_connect(menuai, _discovered_wemo)
 
 
 class WemoSwitch(WemoBinaryStateEntity, SwitchEntity):

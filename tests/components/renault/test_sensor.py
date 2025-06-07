@@ -13,10 +13,10 @@ from renault_api.kamereon.exceptions import (
 )
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_ASSUMED_STATE, STATE_UNAVAILABLE, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_ASSUMED_STATE, STATE_UNAVAILABLE, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .conftest import _get_fixtures, patch_get_vehicle_data
 
@@ -28,37 +28,37 @@ pytestmark = pytest.mark.usefixtures("patch_renault_account", "patch_get_vehicle
 @pytest.fixture(autouse=True)
 def override_platforms() -> Generator[None]:
     """Override PLATFORMS."""
-    with patch("homeassistant.components.renault.PLATFORMS", [Platform.SENSOR]):
+    with patch("menuai.components.renault.PLATFORMS", [Platform.SENSOR]):
         yield
 
 
 @pytest.mark.usefixtures("fixtures_with_data", "entity_registry_enabled_by_default")
 async def test_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test for Renault sensors."""
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
 
 @pytest.mark.usefixtures("fixtures_with_no_data", "entity_registry_enabled_by_default")
 @pytest.mark.parametrize("vehicle_type", ["zoe_40"], indirect=True)
 async def test_sensor_empty(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test for Renault sensors with empty data from Renault."""
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
 
 @pytest.mark.usefixtures(
@@ -66,28 +66,28 @@ async def test_sensor_empty(
 )
 @pytest.mark.parametrize("vehicle_type", ["zoe_40"], indirect=True)
 async def test_sensor_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test for Renault sensors with temporary failure."""
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
 
 @pytest.mark.usefixtures("fixtures_with_access_denied_exception")
 @pytest.mark.parametrize("vehicle_type", ["zoe_40"], indirect=True)
 async def test_sensor_access_denied(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test for Renault sensors with access denied failure."""
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert len(entity_registry.entities) == 0
 
@@ -95,20 +95,20 @@ async def test_sensor_access_denied(
 @pytest.mark.usefixtures("fixtures_with_not_supported_exception")
 @pytest.mark.parametrize("vehicle_type", ["zoe_40"], indirect=True)
 async def test_sensor_not_supported(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test for Renault sensors with access denied failure."""
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert len(entity_registry.entities) == 0
 
 
 @pytest.mark.parametrize("vehicle_type", ["zoe_40"], indirect=True)
 async def test_sensor_throttling_during_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     vehicle_type: str,
     freezer: FrozenDateTimeFactory,
@@ -121,27 +121,27 @@ async def test_sensor_throttling_during_setup(
             get_data_mock.side_effect = QuotaLimitException(
                 "err.func.wired.overloaded", "You have reached your quota limit"
             )
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     # Initial state
     entity_id = "sensor.reg_zoe_40_battery"
-    assert hass.states.get(entity_id).state == STATE_UNAVAILABLE
+    assert menuai.states.get(entity_id).state == STATE_UNAVAILABLE
 
     # Test QuotaLimitException recovery, with new battery level
     for get_data_mock in patches.values():
         get_data_mock.side_effect = None
     patches["battery_status"].return_value.batteryLevel = 55
     freezer.tick(datetime.timedelta(minutes=20))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(entity_id).state == "55"
+    assert menuai.states.get(entity_id).state == "55"
 
 
 @pytest.mark.parametrize("vehicle_type", ["zoe_40"], indirect=True)
 async def test_sensor_throttling_after_init(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     vehicle_type: str,
     caplog: pytest.LogCaptureFixture,
@@ -152,13 +152,13 @@ async def test_sensor_throttling_after_init(
     with patch_get_vehicle_data() as patches:
         for key, get_data_mock in patches.items():
             get_data_mock.return_value = mock_fixtures[key]
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     # Initial state
     entity_id = "sensor.reg_zoe_40_battery"
-    assert hass.states.get(entity_id).state == "60"
-    assert not hass.states.get(entity_id).attributes.get(ATTR_ASSUMED_STATE)
+    assert menuai.states.get(entity_id).state == "60"
+    assert not menuai.states.get(entity_id).attributes.get(ATTR_ASSUMED_STATE)
     assert "Renault API throttled: scan skipped" not in caplog.text
 
     # Test QuotaLimitException state
@@ -168,11 +168,11 @@ async def test_sensor_throttling_after_init(
             "err.func.wired.overloaded", "You have reached your quota limit"
         )
     freezer.tick(datetime.timedelta(minutes=10))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(entity_id).state == "60"
-    assert hass.states.get(entity_id).attributes.get(ATTR_ASSUMED_STATE)
+    assert menuai.states.get(entity_id).state == "60"
+    assert menuai.states.get(entity_id).attributes.get(ATTR_ASSUMED_STATE)
     assert "Renault API throttled" in caplog.text
     assert "Renault hub currently throttled: scan skipped" in caplog.text
 
@@ -182,11 +182,11 @@ async def test_sensor_throttling_after_init(
         get_data_mock.side_effect = None
     patches["battery_status"].return_value.batteryLevel = 55
     freezer.tick(datetime.timedelta(minutes=20))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(entity_id).state == "55"
-    assert not hass.states.get(entity_id).attributes.get(ATTR_ASSUMED_STATE)
+    assert menuai.states.get(entity_id).state == "55"
+    assert not menuai.states.get(entity_id).attributes.get(ATTR_ASSUMED_STATE)
     assert "Renault API throttled" not in caplog.text
     assert "Renault hub currently throttled: scan skipped" not in caplog.text
 
@@ -204,7 +204,7 @@ async def test_sensor_throttling_after_init(
     indirect=["vehicle_type"],
 )
 async def test_dynamic_scan_interval(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     vehicle_count: int,
     scan_interval: int,
@@ -212,21 +212,21 @@ async def test_dynamic_scan_interval(
     fixtures_with_data: dict[str, AsyncMock],
 ) -> None:
     """Test scan interval."""
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert fixtures_with_data["cockpit"].call_count == vehicle_count
 
     # 2 seconds before the expected scan interval > not called
     freezer.tick(datetime.timedelta(seconds=scan_interval - 2))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
     assert fixtures_with_data["cockpit"].call_count == vehicle_count
 
     # 2 seconds after the expected scan interval > called
     freezer.tick(datetime.timedelta(seconds=4))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
     assert fixtures_with_data["cockpit"].call_count == vehicle_count * 2
 
 
@@ -243,7 +243,7 @@ async def test_dynamic_scan_interval(
     indirect=["vehicle_type"],
 )
 async def test_dynamic_scan_interval_failed_coordinator(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     vehicle_count: int,
     scan_interval: int,
@@ -260,18 +260,18 @@ async def test_dynamic_scan_interval_failed_coordinator(
         "Access is denied for this resource",
     )
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
     assert fixtures_with_data["cockpit"].call_count == vehicle_count
 
     # 2 seconds before the expected scan interval > not called
     freezer.tick(datetime.timedelta(seconds=scan_interval - 2))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
     assert fixtures_with_data["cockpit"].call_count == vehicle_count
 
     # 2 seconds after the expected scan interval > called
     freezer.tick(datetime.timedelta(seconds=4))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
     assert fixtures_with_data["cockpit"].call_count == vehicle_count * 2

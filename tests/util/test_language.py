@@ -1,11 +1,11 @@
-"""Test Home Assistant language util methods."""
+"""Test MenuAI language util methods."""
 
 from __future__ import annotations
 
 import pytest
 
-from homeassistant.const import MATCH_ALL
-from homeassistant.util import language
+from menuai.const import MATCH_ALL
+from menuai.util import language
 
 
 def test_match_all() -> None:

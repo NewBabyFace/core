@@ -9,8 +9,8 @@ from flipr_api import FliprAPIRestClient
 from requests.exceptions import HTTPError, Timeout
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_EMAIL, CONF_PASSWORD
 
 from .const import DOMAIN
 
@@ -42,7 +42,7 @@ class FliprConfigFlow(ConfigFlow, domain=DOMAIN):
             )
 
             try:
-                ids = await self.hass.async_add_executor_job(client.search_all_ids)
+                ids = await self.menuai.async_add_executor_job(client.search_all_ids)
             except HTTPError:
                 errors["base"] = "invalid_auth"
             except (Timeout, ConnectionError):

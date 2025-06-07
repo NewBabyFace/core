@@ -6,11 +6,11 @@ from aiohttp import ClientError
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.light import DOMAIN as LIGHT_DOMAIN
-from homeassistant.const import ATTR_ENTITY_ID, SERVICE_TURN_OFF, SERVICE_TURN_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from menuai.components.light import DOMAIN as LIGHT_DOMAIN
+from menuai.const import ATTR_ENTITY_ID, SERVICE_TURN_OFF, SERVICE_TURN_ON
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry, snapshot_platform
 
@@ -21,7 +21,7 @@ ENTITY_ID = "light.hood_light"
 
 
 async def test_light_states(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_miele_client: MagicMock,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
@@ -29,12 +29,12 @@ async def test_light_states(
 ) -> None:
     """Test light entity state."""
 
-    await snapshot_platform(hass, entity_registry, snapshot, setup_platform.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, setup_platform.entry_id)
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_light_states_api_push(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_miele_client: MagicMock,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
@@ -43,7 +43,7 @@ async def test_light_states_api_push(
 ) -> None:
     """Test light state when the API pushes data via SSE."""
 
-    await snapshot_platform(hass, entity_registry, snapshot, setup_platform.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, setup_platform.entry_id)
 
 
 @pytest.mark.parametrize(
@@ -54,7 +54,7 @@ async def test_light_states_api_push(
     ],
 )
 async def test_light_toggle(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_miele_client: MagicMock,
     setup_platform: MockConfigEntry,
     service: str,
@@ -62,7 +62,7 @@ async def test_light_toggle(
 ) -> None:
     """Test the light can be turned on/off."""
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TEST_PLATFORM, service, {ATTR_ENTITY_ID: ENTITY_ID}, blocking=True
     )
     mock_miele_client.send_action.assert_called_once_with(
@@ -78,7 +78,7 @@ async def test_light_toggle(
     ],
 )
 async def test_api_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_miele_client: MagicMock,
     setup_platform: MockConfigEntry,
     service: str,
@@ -87,9 +87,9 @@ async def test_api_failure(
     mock_miele_client.send_action.side_effect = ClientError
 
     with pytest.raises(
-        HomeAssistantError, match=f"Failed to set state for {ENTITY_ID}"
+        menuaiError, match=f"Failed to set state for {ENTITY_ID}"
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             TEST_PLATFORM, service, {ATTR_ENTITY_ID: ENTITY_ID}, blocking=True
         )
     mock_miele_client.send_action.assert_called_once()

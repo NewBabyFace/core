@@ -4,7 +4,7 @@ from uuid import UUID
 
 from bleak.backends.device import BLEDevice
 
-from homeassistant.components.bluetooth import MONOTONIC_TIME, BluetoothServiceInfoBleak
+from menuai.components.bluetooth import MONOTONIC_TIME, BluetoothServiceInfoBleak
 
 
 def _make_bluetooth_service_info(

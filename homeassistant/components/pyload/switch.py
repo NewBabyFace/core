@@ -9,14 +9,14 @@ from typing import Any
 
 from pyloadapi import CannotConnect, InvalidAuth, PyLoadAPI
 
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     SwitchDeviceClass,
     SwitchEntity,
     SwitchEntityDescription,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import PyLoadConfigEntry, PyLoadData
@@ -65,7 +65,7 @@ SENSOR_DESCRIPTIONS: tuple[PyLoadSwitchEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: PyLoadConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

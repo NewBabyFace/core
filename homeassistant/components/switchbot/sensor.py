@@ -4,14 +4,14 @@ from __future__ import annotations
 
 from switchbot.const.air_purifier import AirQualityLevel
 
-from homeassistant.components.bluetooth import async_last_service_info
-from homeassistant.components.sensor import (
+from menuai.components.bluetooth import async_last_service_info
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONCENTRATION_PARTS_PER_MILLION,
     LIGHT_LUX,
     PERCENTAGE,
@@ -23,8 +23,8 @@ from homeassistant.const import (
     UnitOfPower,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import SwitchbotConfigEntry, SwitchbotDataUpdateCoordinator
 from .entity import SwitchbotEntity
@@ -121,7 +121,7 @@ SENSOR_TYPES: dict[str, SensorEntityDescription] = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: SwitchbotConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -167,7 +167,7 @@ class SwitchbotRSSISensor(SwitchBotSensor):
         # of the nearest scanner since that is the RSSI that matters for controlling
         # the device.
         if service_info := async_last_service_info(
-            self.hass, self._address, self.coordinator.connectable
+            self.menuai, self._address, self.coordinator.connectable
         ):
             return service_info.rssi
         return None

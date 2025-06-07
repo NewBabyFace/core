@@ -16,9 +16,9 @@ from habluetooth import (
 from home_assistant_bluetooth import BluetoothServiceInfoBleak
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.json import json_bytes
+from menuai.components import websocket_api
+from menuai.core import menuai, callback
+from menuai.helpers.json import json_bytes
 
 from .api import _get_manager, async_register_callback
 from .const import DOMAIN
@@ -28,11 +28,11 @@ from .util import InvalidConfigEntryID, InvalidSource, config_entry_id_to_source
 
 
 @callback
-def async_setup(hass: HomeAssistant) -> None:
+def async_setup(menuai: menuai) -> None:
     """Set up the bluetooth websocket API."""
-    websocket_api.async_register_command(hass, ws_subscribe_advertisements)
-    websocket_api.async_register_command(hass, ws_subscribe_connection_allocations)
-    websocket_api.async_register_command(hass, ws_subscribe_scanner_details)
+    websocket_api.async_register_command(menuai, ws_subscribe_advertisements)
+    websocket_api.async_register_command(menuai, ws_subscribe_connection_allocations)
+    websocket_api.async_register_command(menuai, ws_subscribe_scanner_details)
 
 
 @lru_cache(maxsize=1024)
@@ -65,13 +65,13 @@ class _AdvertisementSubscription:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         connection: websocket_api.ActiveConnection,
         ws_msg_id: int,
         match_dict: BluetoothCallbackMatcher,
     ) -> None:
         """Initialize the subscription data."""
-        self.hass = hass
+        self.menuai = menuai
         self.match_dict = match_dict
         self.pending_service_infos: list[BluetoothServiceInfoBleak] = []
         self.ws_msg_id = ws_msg_id
@@ -97,13 +97,13 @@ class _AdvertisementSubscription:
         """Start the subscription."""
         connection = self.connection
         cancel_adv_callback = async_register_callback(
-            self.hass,
+            self.menuai,
             self._async_on_advertisement,
             self.match_dict,
             BluetoothScanningMode.PASSIVE,
         )
         cancel_disappeared_callback = _get_manager(
-            self.hass
+            self.menuai
         ).async_register_disappeared_callback(self._async_removed)
         connection.subscriptions[self.ws_msg_id] = partial(
             self._async_unsubscribe, (cancel_adv_callback, cancel_disappeared_callback)
@@ -152,11 +152,11 @@ class _AdvertisementSubscription:
 )
 @websocket_api.async_response
 async def ws_subscribe_advertisements(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle subscribe advertisements websocket command."""
     _AdvertisementSubscription(
-        hass, connection, msg["id"], BluetoothCallbackMatcher(connectable=False)
+        menuai, connection, msg["id"], BluetoothCallbackMatcher(connectable=False)
     ).async_start()
 
 
@@ -169,14 +169,14 @@ async def ws_subscribe_advertisements(
 )
 @websocket_api.async_response
 async def ws_subscribe_connection_allocations(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle subscribe advertisements websocket command."""
     ws_msg_id = msg["id"]
     source: str | None = None
     if config_entry_id := msg.get("config_entry_id"):
         try:
-            source = config_entry_id_to_source(hass, config_entry_id)
+            source = config_entry_id_to_source(menuai, config_entry_id)
         except InvalidConfigEntryID as err:
             connection.send_error(ws_msg_id, "invalid_config_entry_id", str(err))
             return
@@ -189,7 +189,7 @@ async def ws_subscribe_connection_allocations(
             json_bytes(websocket_api.event_message(ws_msg_id, [allocations]))
         )
 
-    manager = _get_manager(hass)
+    manager = _get_manager(menuai)
     connection.subscriptions[ws_msg_id] = manager.async_register_allocation_callback(
         _async_allocations_changed, source
     )
@@ -209,14 +209,14 @@ async def ws_subscribe_connection_allocations(
 )
 @websocket_api.async_response
 async def ws_subscribe_scanner_details(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle subscribe scanner details websocket command."""
     ws_msg_id = msg["id"]
     source: str | None = None
     if config_entry_id := msg.get("config_entry_id"):
         if (
-            not (entry := hass.config_entries.async_get_entry(config_entry_id))
+            not (entry := menuai.config_entries.async_get_entry(config_entry_id))
             or entry.domain != DOMAIN
         ):
             connection.send_error(
@@ -238,7 +238,7 @@ async def ws_subscribe_scanner_details(
         event_type = "add" if registration.event == added_event else "remove"
         _async_event_message({event_type: [registration.scanner.details]})
 
-    manager = _get_manager(hass)
+    manager = _get_manager(menuai)
     connection.subscriptions[ws_msg_id] = (
         manager.async_register_scanner_registration_callback(
             _async_registration_changed, source

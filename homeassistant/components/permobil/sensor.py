@@ -23,16 +23,16 @@ from mypermobil import (
     USAGE_DISTANCE,
 )
 
-from homeassistant import config_entries
-from homeassistant.components.sensor import (
+from menuai import config_entries
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import PERCENTAGE, UnitOfEnergy, UnitOfLength, UnitOfTime
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import PERCENTAGE, UnitOfEnergy, UnitOfLength, UnitOfTime
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import BATTERY_ASSUMED_VOLTAGE, DOMAIN, KM, MILES
 from .coordinator import MyPermobilCoordinator
@@ -173,13 +173,13 @@ DISTANCE_UNITS: dict[Any, UnitOfLength] = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: config_entries.ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Create sensors from a config entry created in the integrations UI."""
 
-    coordinator: MyPermobilCoordinator = hass.data[DOMAIN][config_entry.entry_id]
+    coordinator: MyPermobilCoordinator = menuai.data[DOMAIN][config_entry.entry_id]
 
     async_add_entities(
         PermobilSensor(coordinator=coordinator, description=description)

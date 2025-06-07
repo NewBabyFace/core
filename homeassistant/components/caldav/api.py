@@ -2,11 +2,11 @@
 
 import caldav
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 
 async def async_get_calendars(
-    hass: HomeAssistant, client: caldav.DAVClient, component: str
+    menuai: menuai, client: caldav.DAVClient, component: str
 ) -> list[caldav.Calendar]:
     """Get all calendars that support the specified component."""
 
@@ -17,7 +17,7 @@ async def async_get_calendars(
             if component in calendar.get_supported_components()
         ]
 
-    return await hass.async_add_executor_job(_get_calendars)
+    return await menuai.async_add_executor_job(_get_calendars)
 
 
 def get_attr_value(obj: caldav.CalendarObjectResource, attribute: str) -> str | None:

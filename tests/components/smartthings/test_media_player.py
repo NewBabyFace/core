@@ -7,7 +7,7 @@ from pysmartthings.models import HealthStatus
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     ATTR_INPUT_SOURCE,
     ATTR_MEDIA_REPEAT,
     ATTR_MEDIA_SHUFFLE,
@@ -17,8 +17,8 @@ from homeassistant.components.media_player import (
     SERVICE_SELECT_SOURCE,
     RepeatMode,
 )
-from homeassistant.components.smartthings.const import MAIN
-from homeassistant.const import (
+from menuai.components.smartthings.const import MAIN
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_MEDIA_NEXT_TRACK,
     SERVICE_MEDIA_PAUSE,
@@ -38,8 +38,8 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import (
     setup_integration,
@@ -52,17 +52,17 @@ from tests.common import MockConfigEntry
 
 
 async def test_all_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test all entities."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     snapshot_smartthings_entities(
-        hass, entity_registry, snapshot, Platform.MEDIA_PLAYER
+        menuai, entity_registry, snapshot, Platform.MEDIA_PLAYER
     )
 
 
@@ -75,16 +75,16 @@ async def test_all_entities(
     ],
 )
 async def test_turn_on_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
     action: str,
     command: Command,
 ) -> None:
     """Test media player turn on and off command."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         action,
         {ATTR_ENTITY_ID: "media_player.soundbar"},
@@ -104,16 +104,16 @@ async def test_turn_on_off(
     ],
 )
 async def test_mute_unmute(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
     muted: bool,
     argument: str,
 ) -> None:
     """Test media player mute and unmute command."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_VOLUME_MUTE,
         {ATTR_ENTITY_ID: "media_player.soundbar", ATTR_MEDIA_VOLUME_MUTED: muted},
@@ -130,14 +130,14 @@ async def test_mute_unmute(
 
 @pytest.mark.parametrize("device_fixture", ["hw_q80r_soundbar"])
 async def test_set_volume_level(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test media player set volume level command."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_VOLUME_SET,
         {ATTR_ENTITY_ID: "media_player.soundbar", ATTR_MEDIA_VOLUME_LEVEL: 0.31},
@@ -154,14 +154,14 @@ async def test_set_volume_level(
 
 @pytest.mark.parametrize("device_fixture", ["hw_q80r_soundbar"])
 async def test_volume_up(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test media player increase volume level command."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_VOLUME_UP,
         {ATTR_ENTITY_ID: "media_player.soundbar"},
@@ -177,14 +177,14 @@ async def test_volume_up(
 
 @pytest.mark.parametrize("device_fixture", ["hw_q80r_soundbar"])
 async def test_volume_down(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test media player decrease volume level command."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_VOLUME_DOWN,
         {ATTR_ENTITY_ID: "media_player.soundbar"},
@@ -200,14 +200,14 @@ async def test_volume_down(
 
 @pytest.mark.parametrize("device_fixture", ["hw_q80r_soundbar"])
 async def test_media_play(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test media player play command."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_MEDIA_PLAY,
         {ATTR_ENTITY_ID: "media_player.soundbar"},
@@ -223,14 +223,14 @@ async def test_media_play(
 
 @pytest.mark.parametrize("device_fixture", ["hw_q80r_soundbar"])
 async def test_media_pause(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test media player pause command."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_MEDIA_PAUSE,
         {ATTR_ENTITY_ID: "media_player.soundbar"},
@@ -246,14 +246,14 @@ async def test_media_pause(
 
 @pytest.mark.parametrize("device_fixture", ["hw_q80r_soundbar"])
 async def test_media_stop(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test media player stop command."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_MEDIA_STOP,
         {ATTR_ENTITY_ID: "media_player.soundbar"},
@@ -269,7 +269,7 @@ async def test_media_stop(
 
 @pytest.mark.parametrize("device_fixture", ["hw_q80r_soundbar"])
 async def test_media_previous_track(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
@@ -277,9 +277,9 @@ async def test_media_previous_track(
     devices.get_device_status.return_value[MAIN][Capability.MEDIA_PLAYBACK] = {
         Attribute.SUPPORTED_PLAYBACK_COMMANDS: Status(["rewind"])
     }
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_MEDIA_PREVIOUS_TRACK,
         {ATTR_ENTITY_ID: "media_player.soundbar"},
@@ -295,7 +295,7 @@ async def test_media_previous_track(
 
 @pytest.mark.parametrize("device_fixture", ["hw_q80r_soundbar"])
 async def test_media_next_track(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
@@ -303,9 +303,9 @@ async def test_media_next_track(
     devices.get_device_status.return_value[MAIN][Capability.MEDIA_PLAYBACK] = {
         Attribute.SUPPORTED_PLAYBACK_COMMANDS: Status(["fastForward"])
     }
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_MEDIA_NEXT_TRACK,
         {ATTR_ENTITY_ID: "media_player.soundbar"},
@@ -321,14 +321,14 @@ async def test_media_next_track(
 
 @pytest.mark.parametrize("device_fixture", ["hw_q80r_soundbar"])
 async def test_select_source(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test media player stop command."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_SELECT_SOURCE,
         {ATTR_ENTITY_ID: "media_player.soundbar", ATTR_INPUT_SOURCE: "digital"},
@@ -352,7 +352,7 @@ async def test_select_source(
     ],
 )
 async def test_media_shuffle_on_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
     shuffle: bool,
@@ -362,9 +362,9 @@ async def test_media_shuffle_on_off(
     devices.get_device_status.return_value[MAIN][Capability.MEDIA_PLAYBACK_SHUFFLE] = {
         Attribute.PLAYBACK_SHUFFLE: Status(True)
     }
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_SHUFFLE_SET,
         {ATTR_ENTITY_ID: "media_player.soundbar", ATTR_MEDIA_SHUFFLE: shuffle},
@@ -389,7 +389,7 @@ async def test_media_shuffle_on_off(
     ],
 )
 async def test_media_repeat_mode(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
     repeat: RepeatMode,
@@ -399,9 +399,9 @@ async def test_media_repeat_mode(
     devices.get_device_status.return_value[MAIN][Capability.MEDIA_PLAYBACK_REPEAT] = {
         Attribute.REPEAT_MODE: Status("one")
     }
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_REPEAT_SET,
         {ATTR_ENTITY_ID: "media_player.soundbar", ATTR_MEDIA_REPEAT: repeat},
@@ -418,17 +418,17 @@ async def test_media_repeat_mode(
 
 @pytest.mark.parametrize("device_fixture", ["hw_q80r_soundbar"])
 async def test_state_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test state update."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    assert hass.states.get("media_player.soundbar").state == STATE_PLAYING
+    assert menuai.states.get("media_player.soundbar").state == STATE_PLAYING
 
     await trigger_update(
-        hass,
+        menuai,
         devices,
         "afcf3b91-0000-1111-2222-ddff2a0a6577",
         Capability.SWITCH,
@@ -436,39 +436,39 @@ async def test_state_update(
         "off",
     )
 
-    assert hass.states.get("media_player.soundbar").state == STATE_OFF
+    assert menuai.states.get("media_player.soundbar").state == STATE_OFF
 
 
 @pytest.mark.parametrize("device_fixture", ["hw_q80r_soundbar"])
 async def test_availability(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test availability."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    assert hass.states.get("media_player.soundbar").state == STATE_PLAYING
-
-    await trigger_health_update(
-        hass, devices, "afcf3b91-0000-1111-2222-ddff2a0a6577", HealthStatus.OFFLINE
-    )
-
-    assert hass.states.get("media_player.soundbar").state == STATE_UNAVAILABLE
+    assert menuai.states.get("media_player.soundbar").state == STATE_PLAYING
 
     await trigger_health_update(
-        hass, devices, "afcf3b91-0000-1111-2222-ddff2a0a6577", HealthStatus.ONLINE
+        menuai, devices, "afcf3b91-0000-1111-2222-ddff2a0a6577", HealthStatus.OFFLINE
     )
 
-    assert hass.states.get("media_player.soundbar").state == STATE_PLAYING
+    assert menuai.states.get("media_player.soundbar").state == STATE_UNAVAILABLE
+
+    await trigger_health_update(
+        menuai, devices, "afcf3b91-0000-1111-2222-ddff2a0a6577", HealthStatus.ONLINE
+    )
+
+    assert menuai.states.get("media_player.soundbar").state == STATE_PLAYING
 
 
 @pytest.mark.parametrize("device_fixture", ["hw_q80r_soundbar"])
 async def test_availability_at_start(
-    hass: HomeAssistant,
+    menuai: menuai,
     unavailable_device: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test unavailable at boot."""
-    await setup_integration(hass, mock_config_entry)
-    assert hass.states.get("media_player.soundbar").state == STATE_UNAVAILABLE
+    await setup_integration(menuai, mock_config_entry)
+    assert menuai.states.get("media_player.soundbar").state == STATE_UNAVAILABLE

@@ -5,8 +5,8 @@ from typing import Any
 
 from pymata_express.pymata_express_serial import serial
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_NAME
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_NAME
 
 from .board import get_board
 from .const import CONF_SERIAL_PORT, DOMAIN

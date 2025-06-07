@@ -456,7 +456,7 @@
     dict({
       'data': dict({
         'code': 'cloud-auth-failed',
-        'message': 'Home Assistant Cloud authentication failed',
+        'message': 'MenuAI Cloud authentication failed',
       }),
       'type': <PipelineEventType.ERROR: 'error'>,
     }),

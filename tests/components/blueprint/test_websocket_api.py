@@ -7,9 +7,9 @@ from unittest.mock import Mock, patch
 import pytest
 import yaml
 
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
-from homeassistant.util.yaml import UndefinedSubstitution, parse_yaml
+from menuai.core import menuai
+from menuai.setup import async_setup_component
+from menuai.util.yaml import UndefinedSubstitution, parse_yaml
 
 from tests.test_util.aiohttp import AiohttpClientMocker
 from tests.typing import WebSocketGenerator
@@ -29,23 +29,23 @@ def script_config() -> dict[str, Any]:
 
 @pytest.fixture(autouse=True)
 async def setup_bp(
-    hass: HomeAssistant,
+    menuai: menuai,
     automation_config: dict[str, Any],
     script_config: dict[str, Any],
 ) -> None:
     """Fixture to set up the blueprint component."""
-    assert await async_setup_component(hass, "blueprint", {})
+    assert await async_setup_component(menuai, "blueprint", {})
 
     # Trigger registration of automation and script blueprints
-    await async_setup_component(hass, "automation", automation_config)
-    await async_setup_component(hass, "script", script_config)
+    await async_setup_component(menuai, "automation", automation_config)
+    await async_setup_component(menuai, "script", script_config)
 
 
 async def test_list_blueprints(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test listing blueprints."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json_auto_id({"type": "blueprint/list", "domain": "automation"})
 
     msg = await client.receive_json()
@@ -86,10 +86,10 @@ async def test_list_blueprints(
 
 
 async def test_list_blueprints_non_existing_domain(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test listing blueprints."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json_auto_id({"type": "blueprint/list", "domain": "not_existing"})
 
     msg = await client.receive_json()
@@ -100,13 +100,13 @@ async def test_list_blueprints_non_existing_domain(
 
 
 async def test_import_blueprint(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test importing blueprints."""
     raw_data = Path(
-        hass.config.path("blueprints/automation/test_event_service.yaml")
+        menuai.config.path("blueprints/automation/test_event_service.yaml")
     ).read_text(encoding="utf8")
 
     aioclient_mock.get(
@@ -114,7 +114,7 @@ async def test_import_blueprint(
         text=raw_data,
     )
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json_auto_id(
         {
             "type": "blueprint/import",
@@ -147,13 +147,13 @@ async def test_import_blueprint(
 
 @pytest.mark.usefixtures("setup_bp")
 async def test_import_blueprint_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test importing blueprints."""
     raw_data = Path(
-        hass.config.path("blueprints/automation/in_folder/in_folder_blueprint.yaml")
+        menuai.config.path("blueprints/automation/in_folder/in_folder_blueprint.yaml")
     ).read_text(encoding="utf8")
 
     aioclient_mock.get(
@@ -161,7 +161,7 @@ async def test_import_blueprint_update(
         text=raw_data,
     )
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json_auto_id(
         {
             "type": "blueprint/import",
@@ -189,16 +189,16 @@ async def test_import_blueprint_update(
 
 
 async def test_save_blueprint(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test saving blueprints."""
     raw_data = Path(
-        hass.config.path("blueprints/automation/test_event_service.yaml")
+        menuai.config.path("blueprints/automation/test_event_service.yaml")
     ).read_text(encoding="utf8")
 
     with patch("pathlib.Path.write_text") as write_mock:
-        client = await hass_ws_client(hass)
+        client = await menuai_ws_client(menuai)
         await client.send_json_auto_id(
             {
                 "type": "blueprint/save",
@@ -240,12 +240,12 @@ async def test_save_blueprint(
 
 
 async def test_save_existing_file(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test saving blueprints."""
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json_auto_id(
         {
             "type": "blueprint/save",
@@ -263,12 +263,12 @@ async def test_save_existing_file(
 
 
 async def test_save_existing_file_override(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test saving blueprints."""
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     with patch("pathlib.Path.write_text") as write_mock:
         await client.send_json_auto_id(
             {
@@ -296,12 +296,12 @@ async def test_save_existing_file_override(
 
 
 async def test_save_file_error(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test saving blueprints with OS error."""
     with patch("pathlib.Path.write_text", side_effect=OSError):
-        client = await hass_ws_client(hass)
+        client = await menuai_ws_client(menuai)
         await client.send_json_auto_id(
             {
                 "type": "blueprint/save",
@@ -318,12 +318,12 @@ async def test_save_file_error(
 
 
 async def test_save_invalid_blueprint(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test saving invalid blueprints."""
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json_auto_id(
         {
             "type": "blueprint/save",
@@ -344,13 +344,13 @@ async def test_save_invalid_blueprint(
 
 
 async def test_delete_blueprint(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test deleting blueprints."""
 
     with patch("pathlib.Path.unlink", return_value=Mock()) as unlink_mock:
-        client = await hass_ws_client(hass)
+        client = await menuai_ws_client(menuai)
         await client.send_json_auto_id(
             {
                 "type": "blueprint/delete",
@@ -366,12 +366,12 @@ async def test_delete_blueprint(
 
 
 async def test_delete_non_exist_file_blueprint(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test deleting non existing blueprints."""
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json_auto_id(
         {
             "type": "blueprint/delete",
@@ -403,13 +403,13 @@ async def test_delete_non_exist_file_blueprint(
     ],
 )
 async def test_delete_blueprint_in_use_by_automation(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test deleting a blueprint which is in use."""
 
     with patch("pathlib.Path.unlink", return_value=Mock()) as unlink_mock:
-        client = await hass_ws_client(hass)
+        client = await menuai_ws_client(menuai)
         await client.send_json_auto_id(
             {
                 "type": "blueprint/delete",
@@ -446,13 +446,13 @@ async def test_delete_blueprint_in_use_by_automation(
     ],
 )
 async def test_delete_blueprint_in_use_by_script(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test deleting a blueprint which is in use."""
 
     with patch("pathlib.Path.unlink", return_value=Mock()) as unlink_mock:
-        client = await hass_ws_client(hass)
+        client = await menuai_ws_client(menuai)
         await client.send_json(
             {
                 "id": 9,
@@ -473,10 +473,10 @@ async def test_delete_blueprint_in_use_by_script(
 
 
 async def test_substituting_blueprint_inputs(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test substituting blueprint inputs."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json_auto_id(
         {
             "type": "blueprint/substitute",
@@ -506,10 +506,10 @@ async def test_substituting_blueprint_inputs(
 
 
 async def test_substituting_blueprint_inputs_unknown_domain(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test substituting blueprint inputs."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json_auto_id(
         {
             "type": "blueprint/substitute",
@@ -533,10 +533,10 @@ async def test_substituting_blueprint_inputs_unknown_domain(
 
 
 async def test_substituting_blueprint_inputs_incomplete_input(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test substituting blueprint inputs."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json_auto_id(
         {
             "type": "blueprint/substitute",
@@ -559,12 +559,12 @@ async def test_substituting_blueprint_inputs_incomplete_input(
 
 
 async def test_substituting_blueprint_inputs_incomplete_input_2(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test substituting blueprint inputs."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     with patch(
-        "homeassistant.components.blueprint.models.BlueprintInputs.async_substitute",
+        "menuai.components.blueprint.models.BlueprintInputs.async_substitute",
         side_effect=UndefinedSubstitution("blah"),
     ):
         await client.send_json_auto_id(

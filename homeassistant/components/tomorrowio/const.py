@@ -6,7 +6,7 @@ import logging
 
 from pytomorrowio.const import DAILY, HOURLY, NOWCAST, WeatherCode
 
-from homeassistant.components.weather import (
+from menuai.components.weather import (
     ATTR_CONDITION_CLEAR_NIGHT,
     ATTR_CONDITION_CLOUDY,
     ATTR_CONDITION_FOG,

@@ -6,24 +6,24 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from homeassistant.components.watttime.config_flow import (
+from menuai.components.watttime.config_flow import (
     CONF_LOCATION_TYPE,
     LOCATION_TYPE_COORDINATES,
 )
-from homeassistant.components.watttime.const import (
+from menuai.components.watttime.const import (
     CONF_BALANCING_AUTHORITY,
     CONF_BALANCING_AUTHORITY_ABBREV,
     DOMAIN,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_LATITUDE,
     CONF_LONGITUDE,
     CONF_PASSWORD,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
-from homeassistant.util.json import JsonObjectType
+from menuai.core import menuai
+from menuai.setup import async_setup_component
+from menuai.util.json import JsonObjectType
 
 from tests.common import MockConfigEntry, load_json_object_fixture
 
@@ -69,7 +69,7 @@ def config_location_type_fixture() -> dict[str, Any]:
 
 @pytest.fixture(name="config_entry")
 def config_entry_fixture(
-    hass: HomeAssistant, config_auth: dict[str, Any], config_coordinates: dict[str, Any]
+    menuai: menuai, config_auth: dict[str, Any], config_coordinates: dict[str, Any]
 ) -> MockConfigEntry:
     """Define a config entry fixture."""
     entry = MockConfigEntry(
@@ -84,7 +84,7 @@ def config_entry_fixture(
             CONF_BALANCING_AUTHORITY_ABBREV: "PJM_NJ",
         },
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     return entry
 
 
@@ -108,7 +108,7 @@ def get_grid_region_fixture(data_grid_region: JsonObjectType) -> AsyncMock:
 
 @pytest.fixture(name="setup_watttime")
 async def setup_watttime_fixture(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: Mock,
     config_auth: dict[str, Any],
     config_coordinates: dict[str, Any],
@@ -116,16 +116,16 @@ async def setup_watttime_fixture(
     """Define a fixture to set up WattTime."""
     with (
         patch(
-            "homeassistant.components.watttime.Client.async_login", return_value=client
+            "menuai.components.watttime.Client.async_login", return_value=client
         ),
         patch(
-            "homeassistant.components.watttime.config_flow.Client.async_login",
+            "menuai.components.watttime.config_flow.Client.async_login",
             return_value=client,
         ),
-        patch("homeassistant.components.watttime.PLATFORMS", []),
+        patch("menuai.components.watttime.PLATFORMS", []),
     ):
         assert await async_setup_component(
-            hass, DOMAIN, {**config_auth, **config_coordinates}
+            menuai, DOMAIN, {**config_auth, **config_coordinates}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         yield

@@ -4,15 +4,15 @@ from __future__ import annotations
 
 import logging
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
 )
-from homeassistant.const import PERCENTAGE, UnitOfSoundPressure, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
+from menuai.const import PERCENTAGE, UnitOfSoundPressure, UnitOfTemperature
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
 
 from . import PointConfigEntry
 from .coordinator import PointDataUpdateCoordinator
@@ -44,7 +44,7 @@ SENSOR_TYPES: tuple[SensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: PointConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -69,7 +69,7 @@ async def async_setup_entry(
 
 
 class MinutPointSensor(MinutPointEntity, SensorEntity):
-    """The platform class required by Home Assistant."""
+    """The platform class required by MenuAI."""
 
     def __init__(
         self,

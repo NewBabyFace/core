@@ -14,15 +14,15 @@ from pyinsteon.groups import (
     TEST_SENSOR,
 )
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import SIGNAL_ADD_ENTITIES
 from .entity import InsteonEntity
@@ -44,7 +44,7 @@ SENSOR_TYPES = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -54,7 +54,7 @@ async def async_setup_entry(
     def async_add_insteon_binary_sensor_entities(discovery_info=None):
         """Add the Insteon entities for the platform."""
         async_add_insteon_entities(
-            hass,
+            menuai,
             Platform.BINARY_SENSOR,
             InsteonBinarySensorEntity,
             async_add_entities,
@@ -62,9 +62,9 @@ async def async_setup_entry(
         )
 
     signal = f"{SIGNAL_ADD_ENTITIES}_{Platform.BINARY_SENSOR}"
-    async_dispatcher_connect(hass, signal, async_add_insteon_binary_sensor_entities)
+    async_dispatcher_connect(menuai, signal, async_add_insteon_binary_sensor_entities)
     async_add_insteon_devices(
-        hass,
+        menuai,
         Platform.BINARY_SENSOR,
         InsteonBinarySensorEntity,
         async_add_entities,

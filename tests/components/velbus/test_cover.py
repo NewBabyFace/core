@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.cover import ATTR_POSITION, DOMAIN as COVER_DOMAIN
-from homeassistant.const import (
+from menuai.components.cover import ATTR_POSITION, DOMAIN as COVER_DOMAIN
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_CLOSE_COVER,
     SERVICE_OPEN_COVER,
@@ -14,8 +14,8 @@ from homeassistant.const import (
     SERVICE_STOP_COVER,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import init_integration
 
@@ -23,16 +23,16 @@ from tests.common import MockConfigEntry, snapshot_platform
 
 
 async def test_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test all entities."""
-    with patch("homeassistant.components.velbus.PLATFORMS", [Platform.COVER]):
-        await init_integration(hass, config_entry)
+    with patch("menuai.components.velbus.PLATFORMS", [Platform.COVER]):
+        await init_integration(menuai, config_entry)
 
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
 
 @pytest.mark.parametrize(
@@ -43,29 +43,29 @@ async def test_entities(
     ],
 )
 async def test_actions(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     entity_id: str,
     entity_num: int,
 ) -> None:
     """Test the cover actions."""
-    await init_integration(hass, config_entry)
+    await init_integration(menuai, config_entry)
     entity = config_entry.runtime_data.controller.get_all_cover()[entity_num]
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_CLOSE_COVER,
         {ATTR_ENTITY_ID: entity_id},
         blocking=True,
     )
     entity.close.assert_called_once()
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_OPEN_COVER,
         {ATTR_ENTITY_ID: entity_id},
         blocking=True,
     )
     entity.open.assert_called_once()
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_STOP_COVER,
         {ATTR_ENTITY_ID: entity_id},
@@ -75,13 +75,13 @@ async def test_actions(
 
 
 async def test_position(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_cover: AsyncMock,
 ) -> None:
     """Test the set_postion over action."""
-    await init_integration(hass, config_entry)
-    await hass.services.async_call(
+    await init_integration(menuai, config_entry)
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_SET_COVER_POSITION,
         {ATTR_ENTITY_ID: "cover.basement_covername", ATTR_POSITION: 25},

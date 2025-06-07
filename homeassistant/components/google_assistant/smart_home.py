@@ -7,10 +7,10 @@ import logging
 import pprint
 from typing import Any
 
-from homeassistant.const import ATTR_ENTITY_ID, __version__
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import instance_id
-from homeassistant.util.decorator import Registry
+from menuai.const import ATTR_ENTITY_ID, __version__
+from menuai.core import menuai
+from menuai.helpers import instance_id
+from menuai.util.decorator import Registry
 
 from .const import (
     ERR_DEVICE_OFFLINE,
@@ -29,7 +29,7 @@ EXECUTE_LIMIT = 2  # Wait 2 seconds for execute to finish
 HANDLERS: Registry[
     str,
     Callable[
-        [HomeAssistant, RequestData, dict[str, Any]],
+        [menuai, RequestData, dict[str, Any]],
         Coroutine[Any, Any, dict[str, Any] | None],
     ],
 ] = Registry()
@@ -37,7 +37,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_handle_message(
-    hass, config, agent_user_id, local_user_id, message, source
+    menuai, config, agent_user_id, local_user_id, message, source
 ):
     """Handle incoming API messages."""
     if _LOGGER.isEnabledFor(logging.DEBUG):
@@ -50,7 +50,7 @@ async def async_handle_message(
         config, local_user_id, source, message["requestId"], message.get("devices")
     )
 
-    response = await _process(hass, data, message)
+    response = await _process(menuai, data, message)
     if _LOGGER.isEnabledFor(logging.DEBUG):
         if response:
             _LOGGER.debug(
@@ -70,7 +70,7 @@ async def async_handle_message(
     return response
 
 
-async def _process(hass, data, message):
+async def _process(menuai, data, message):
     """Process a message."""
     inputs: list = message.get("inputs")
 
@@ -87,7 +87,7 @@ async def _process(hass, data, message):
         }
 
     try:
-        result = await handler(hass, data, inputs[0].get("payload"))
+        result = await handler(menuai, data, inputs[0].get("payload"))
     except SmartHomeError as err:
         return {"requestId": data.request_id, "payload": {"errorCode": err.code}}
     except Exception:
@@ -103,10 +103,10 @@ async def _process(hass, data, message):
     return {"requestId": data.request_id, "payload": result}
 
 
-async def async_devices_sync_response(hass, config, agent_user_id):
+async def async_devices_sync_response(menuai, config, agent_user_id):
     """Generate the device serialization."""
-    entities = async_get_entities(hass, config)
-    instance_uuid = await instance_id.async_get(hass)
+    entities = async_get_entities(menuai, config)
+    instance_uuid = await instance_id.async_get(menuai)
     devices = []
 
     for entity in entities:
@@ -123,13 +123,13 @@ async def async_devices_sync_response(hass, config, agent_user_id):
 
 @HANDLERS.register("action.devices.SYNC")
 async def async_devices_sync(
-    hass: HomeAssistant, data: RequestData, payload: dict[str, Any]
+    menuai: menuai, data: RequestData, payload: dict[str, Any]
 ) -> dict[str, Any]:
     """Handle action.devices.SYNC request.
 
     https://developers.google.com/assistant/smarthome/develop/process-intents#SYNC
     """
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_SYNC_RECEIVED,
         {"request_id": data.request_id, "source": data.source},
         context=data.context,
@@ -138,13 +138,13 @@ async def async_devices_sync(
     agent_user_id = data.config.get_agent_user_id_from_context(data.context)
     await data.config.async_connect_agent_user(agent_user_id)
 
-    devices = await async_devices_sync_response(hass, data.config, agent_user_id)
+    devices = await async_devices_sync_response(menuai, data.config, agent_user_id)
     return create_sync_response(agent_user_id, devices)
 
 
 @HANDLERS.register("action.devices.QUERY")
 async def async_devices_query(
-    hass: HomeAssistant, data: RequestData, payload: dict[str, Any]
+    menuai: menuai, data: RequestData, payload: dict[str, Any]
 ) -> dict[str, Any]:
     """Handle action.devices.QUERY request.
 
@@ -152,7 +152,7 @@ async def async_devices_query(
     """
     payload_devices = payload.get("devices", [])
 
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_QUERY_RECEIVED,
         {
             "request_id": data.request_id,
@@ -162,21 +162,21 @@ async def async_devices_query(
         context=data.context,
     )
 
-    return await async_devices_query_response(hass, data.config, payload_devices)
+    return await async_devices_query_response(menuai, data.config, payload_devices)
 
 
-async def async_devices_query_response(hass, config, payload_devices):
+async def async_devices_query_response(menuai, config, payload_devices):
     """Generate the device serialization."""
     devices = {}
     for device in payload_devices:
         devid = device["id"]
 
-        if not (state := hass.states.get(devid)):
+        if not (state := menuai.states.get(devid)):
             # If we can't find a state, the device is offline
             devices[devid] = {"online": False}
             continue
 
-        entity = GoogleEntity(hass, config, state)
+        entity = GoogleEntity(menuai, config, state)
         try:
             devices[devid] = entity.query_serialize()
         except Exception:
@@ -206,7 +206,7 @@ async def _entity_execute(entity, data, executions):
 
 @HANDLERS.register("action.devices.EXECUTE")
 async def handle_devices_execute(
-    hass: HomeAssistant, data: RequestData, payload: dict[str, Any]
+    menuai: menuai, data: RequestData, payload: dict[str, Any]
 ) -> dict[str, Any]:
     """Handle action.devices.EXECUTE request.
 
@@ -217,7 +217,7 @@ async def handle_devices_execute(
     results: dict[str, dict[str, Any]] = {}
 
     for command in payload["commands"]:
-        hass.bus.async_fire(
+        menuai.bus.async_fire(
             EVENT_COMMAND_RECEIVED,
             {
                 "request_id": data.request_id,
@@ -239,7 +239,7 @@ async def handle_devices_execute(
                 executions[entity_id].append(execution)
                 continue
 
-            if (state := hass.states.get(entity_id)) is None:
+            if (state := menuai.states.get(entity_id)) is None:
                 results[entity_id] = {
                     "ids": [entity_id],
                     "status": "ERROR",
@@ -247,7 +247,7 @@ async def handle_devices_execute(
                 }
                 continue
 
-            entities[entity_id] = GoogleEntity(hass, data.config, state)
+            entities[entity_id] = GoogleEntity(menuai, data.config, state)
             executions[entity_id] = [execution]
 
     try:
@@ -293,7 +293,7 @@ async def handle_devices_execute(
 
 @HANDLERS.register("action.devices.DISCONNECT")
 async def async_devices_disconnect(
-    hass: HomeAssistant, data: RequestData, payload: dict[str, Any]
+    menuai: menuai, data: RequestData, payload: dict[str, Any]
 ) -> None:
     """Handle action.devices.DISCONNECT request.
 
@@ -305,7 +305,7 @@ async def async_devices_disconnect(
 
 @HANDLERS.register("action.devices.IDENTIFY")
 async def async_devices_identify(
-    hass: HomeAssistant, data: RequestData, payload: dict[str, Any]
+    menuai: menuai, data: RequestData, payload: dict[str, Any]
 ) -> dict[str, Any]:
     """Handle action.devices.IDENTIFY request.
 
@@ -318,8 +318,8 @@ async def async_devices_identify(
             "isProxy": True,
             "deviceInfo": {
                 "hwVersion": "UNKNOWN_HW_VERSION",
-                "manufacturer": "Home Assistant",
-                "model": "Home Assistant",
+                "manufacturer": "MenuAI",
+                "model": "MenuAI",
                 "swVersion": __version__,
             },
         }
@@ -328,7 +328,7 @@ async def async_devices_identify(
 
 @HANDLERS.register("action.devices.REACHABLE_DEVICES")
 async def async_devices_reachable(
-    hass: HomeAssistant, data: RequestData, payload: dict[str, Any]
+    menuai: menuai, data: RequestData, payload: dict[str, Any]
 ) -> dict[str, Any]:
     """Handle action.devices.REACHABLE_DEVICES request.
 
@@ -339,7 +339,7 @@ async def async_devices_reachable(
     return {
         "devices": [
             entity.reachable_device_serialize()
-            for entity in async_get_entities(hass, data.config)
+            for entity in async_get_entities(menuai, data.config)
             if entity.entity_id in google_ids and entity.should_expose_local()
         ]
     }
@@ -347,7 +347,7 @@ async def async_devices_reachable(
 
 @HANDLERS.register("action.devices.PROXY_SELECTED")
 async def async_devices_proxy_selected(
-    hass: HomeAssistant, data: RequestData, payload: dict[str, Any]
+    menuai: menuai, data: RequestData, payload: dict[str, Any]
 ) -> dict[str, Any]:
     """Handle action.devices.PROXY_SELECTED request.
 

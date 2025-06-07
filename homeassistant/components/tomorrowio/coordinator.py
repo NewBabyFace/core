@@ -16,15 +16,15 @@ from pytomorrowio.exceptions import (
     UnknownException,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_API_KEY,
     CONF_LATITUDE,
     CONF_LOCATION,
     CONF_LONGITUDE,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.core import menuai, callback
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
     CONF_TIMESTEP,
@@ -73,12 +73,12 @@ from .const import (
 
 @callback
 def async_get_entries_by_api_key(
-    hass: HomeAssistant, api_key: str, exclude_entry: ConfigEntry | None = None
+    menuai: menuai, api_key: str, exclude_entry: ConfigEntry | None = None
 ) -> list[ConfigEntry]:
     """Get all entries for a given API key."""
     return [
         entry
-        for entry in hass.config_entries.async_entries(DOMAIN)
+        for entry in menuai.config_entries.async_entries(DOMAIN)
         if entry.data[CONF_API_KEY] == api_key
         and (exclude_entry is None or exclude_entry != entry)
     ]
@@ -86,14 +86,14 @@ def async_get_entries_by_api_key(
 
 @callback
 def async_set_update_interval(
-    hass: HomeAssistant, api: TomorrowioV4, exclude_entry: ConfigEntry | None = None
+    menuai: menuai, api: TomorrowioV4, exclude_entry: ConfigEntry | None = None
 ) -> timedelta:
     """Calculate update_interval."""
     # We check how many Tomorrow.io configured instances are using the same API key and
     # calculate interval to not exceed allowed numbers of requests. Divide 90% of
     # max_requests by the number of API calls because we want a buffer in the
     # number of API calls left at the end of the day.
-    entries = async_get_entries_by_api_key(hass, api.api_key, exclude_entry)
+    entries = async_get_entries_by_api_key(menuai, api.api_key, exclude_entry)
     minutes = ceil(
         (24 * 60 * len(entries) * api.num_api_requests)
         / (api.max_requests_per_day * 0.9)
@@ -119,7 +119,7 @@ class TomorrowioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     config_entry: ConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: ConfigEntry, api: TomorrowioV4
+        self, menuai: menuai, config_entry: ConfigEntry, api: TomorrowioV4
     ) -> None:
         """Initialize."""
         self._api = api
@@ -128,7 +128,7 @@ class TomorrowioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._coordinator_ready: asyncio.Event | None = None
 
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name=f"{DOMAIN}_{self._api.api_key_masked}",
@@ -152,7 +152,7 @@ class TomorrowioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 self._api.api_key_masked,
             )
             self._coordinator_ready = asyncio.Event()
-            for entry_ in async_get_entries_by_api_key(self.hass, self._api.api_key):
+            for entry_ in async_get_entries_by_api_key(self.menuai, self._api.api_key):
                 self.add_entry_to_location_dict(entry_)
             LOGGER.debug(
                 "Loaded %s entries, initiating first refresh",
@@ -179,7 +179,7 @@ class TomorrowioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self.add_entry_to_location_dict(entry)
             await self.async_refresh()
 
-        self.update_interval = async_set_update_interval(self.hass, self._api)
+        self.update_interval = async_set_update_interval(self.menuai, self._api)
         self._async_unsub_refresh()
         if self._listeners:
             self._schedule_refresh()
@@ -191,7 +191,7 @@ class TomorrowioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         config entries tied to it anymore.
         """
         self.entry_id_to_location_dict.pop(entry.entry_id)
-        self.update_interval = async_set_update_interval(self.hass, self._api, entry)
+        self.update_interval = async_set_update_interval(self.menuai, self._api, entry)
         return not self.entry_id_to_location_dict
 
     async def _async_update_data(self) -> dict[str, Any]:
@@ -211,7 +211,7 @@ class TomorrowioDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         for entry_id, location in self.entry_id_to_location_dict.items():
             if entry_id in data:
                 continue
-            entry = self.hass.config_entries.async_get_entry(entry_id)
+            entry = self.menuai.config_entries.async_get_entry(entry_id)
             assert entry
             try:
                 data[entry_id] = await self._api.realtime_and_all_forecasts(

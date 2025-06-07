@@ -1,16 +1,16 @@
-"""Coordinator for the Home Assistant alerts integration."""
+"""Coordinator for the MenuAI alerts integration."""
 
 import dataclasses
 import logging
 
 from awesomeversion import AwesomeVersion, AwesomeVersionStrategy
 
-from homeassistant.components.hassio import get_supervisor_info
-from homeassistant.const import __version__
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.hassio import is_hassio
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.components.menuaiio import get_supervisor_info
+from menuai.const import __version__
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.menuaiio import is_menuaiio
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN, REQUEST_TIMEOUT, UPDATE_INTERVAL
 
@@ -35,10 +35,10 @@ class IntegrationAlert:
 class AlertUpdateCoordinator(DataUpdateCoordinator[dict[str, IntegrationAlert]]):
     """Data fetcher for HA Alerts."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize the data updater."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=None,
             name=DOMAIN,
@@ -48,10 +48,10 @@ class AlertUpdateCoordinator(DataUpdateCoordinator[dict[str, IntegrationAlert]])
             __version__,
             ensure_strategy=AwesomeVersionStrategy.CALVER,
         )
-        self.supervisor = is_hassio(self.hass)
+        self.supervisor = is_menuaiio(self.menuai)
 
     async def _async_update_data(self) -> dict[str, IntegrationAlert]:
-        response = await async_get_clientsession(self.hass).get(
+        response = await async_get_clientsession(self.menuai).get(
             "https://alerts.home-assistant.io/alerts.json",
             timeout=REQUEST_TIMEOUT,
         )
@@ -63,22 +63,22 @@ class AlertUpdateCoordinator(DataUpdateCoordinator[dict[str, IntegrationAlert]])
             if "integrations" not in alert:
                 continue
 
-            if "homeassistant" in alert:
-                if "affected_from_version" in alert["homeassistant"]:
+            if "menuai" in alert:
+                if "affected_from_version" in alert["menuai"]:
                     affected_from_version = AwesomeVersion(
-                        alert["homeassistant"]["affected_from_version"],
+                        alert["menuai"]["affected_from_version"],
                     )
                     if self.ha_version < affected_from_version:
                         continue
-                if "resolved_in_version" in alert["homeassistant"]:
+                if "resolved_in_version" in alert["menuai"]:
                     resolved_in_version = AwesomeVersion(
-                        alert["homeassistant"]["resolved_in_version"],
+                        alert["menuai"]["resolved_in_version"],
                     )
                     if self.ha_version >= resolved_in_version:
                         continue
 
             if self.supervisor and "supervisor" in alert:
-                if (supervisor_info := get_supervisor_info(self.hass)) is None:
+                if (supervisor_info := get_supervisor_info(self.menuai)) is None:
                     continue
 
                 if "affected_from_version" in alert["supervisor"]:
@@ -98,7 +98,7 @@ class AlertUpdateCoordinator(DataUpdateCoordinator[dict[str, IntegrationAlert]])
                 if "package" not in integration:
                     continue
 
-                if integration["package"] not in self.hass.config.components:
+                if integration["package"] not in self.menuai.config.components:
                     continue
 
                 integration_alert = IntegrationAlert(

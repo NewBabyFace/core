@@ -11,10 +11,10 @@ from tesla_fleet_api.const import EnergyExportMode, EnergyOperationMode, Scope, 
 from tesla_fleet_api.teslemetry import Vehicle
 from teslemetry_stream import TeslemetryStreamVehicle
 
-from homeassistant.components.select import SelectEntity, SelectEntityDescription
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.restore_state import RestoreEntity
+from menuai.components.select import SelectEntity, SelectEntityDescription
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.restore_state import RestoreEntity
 
 from . import TeslemetryConfigEntry
 from .entity import (
@@ -168,7 +168,7 @@ VEHICLE_DESCRIPTIONS: tuple[TeslemetrySelectEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: TeslemetryConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -266,9 +266,9 @@ class TeslemetryStreamingSelectEntity(
         self._attr_current_option = None
         super().__init__(data, description.key)
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         # Restore state
         if (state := await self.async_get_last_state()) is not None:

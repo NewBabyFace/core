@@ -2,8 +2,8 @@
 
 from unittest.mock import AsyncMock, patch
 
-from homeassistant.components.intellifire import CONF_USER_ID
-from homeassistant.components.intellifire.const import (
+from menuai.components.intellifire import CONF_USER_ID
+from menuai.components.intellifire.const import (
     API_MODE_CLOUD,
     API_MODE_LOCAL,
     CONF_AUTH_COOKIE,
@@ -13,25 +13,25 @@ from homeassistant.components.intellifire.const import (
     CONF_WEB_CLIENT_ID,
     DOMAIN,
 )
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntryState
+from menuai.const import (
     CONF_API_KEY,
     CONF_HOST,
     CONF_IP_ADDRESS,
     CONF_PASSWORD,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
 
 async def test_minor_migration(
-    hass: HomeAssistant, mock_config_entry_old, mock_apis_single_fp
+    menuai: menuai, mock_config_entry_old, mock_apis_single_fp
 ) -> None:
     """With the new library we are going to end up rewriting the config entries."""
-    mock_config_entry_old.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry_old.entry_id)
+    mock_config_entry_old.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry_old.entry_id)
 
     assert mock_config_entry_old.data == {
         "ip_address": "192.168.2.108",
@@ -46,7 +46,7 @@ async def test_minor_migration(
     }
 
 
-async def test_minor_migration_error(hass: HomeAssistant, mock_apis_single_fp) -> None:
+async def test_minor_migration_error(menuai: menuai, mock_apis_single_fp) -> None:
     """Test the case where we completely fail to initialize."""
     mock_config_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -61,13 +61,13 @@ async def test_minor_migration_error(hass: HomeAssistant, mock_apis_single_fp) -
         },
     )
 
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
     assert mock_config_entry.state is ConfigEntryState.MIGRATION_ERROR
 
 
-async def test_init_with_no_username(hass: HomeAssistant, mock_apis_single_fp) -> None:
+async def test_init_with_no_username(menuai: menuai, mock_apis_single_fp) -> None:
     """Test the case where we completely fail to initialize."""
     mock_config_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -86,26 +86,26 @@ async def test_init_with_no_username(hass: HomeAssistant, mock_apis_single_fp) -
         unique_id="3FB284769E4736F30C8973A7ED358123",
     )
 
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
     assert mock_config_entry.state is ConfigEntryState.SETUP_ERROR
 
 
 async def test_connectivity_bad(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry_current,
     mock_apis_single_fp,
 ) -> None:
     """Test a timeout error on the setup flow."""
 
     with patch(
-        "homeassistant.components.intellifire.UnifiedFireplace.build_fireplace_from_common",
+        "menuai.components.intellifire.UnifiedFireplace.build_fireplace_from_common",
         new_callable=AsyncMock,
         side_effect=TimeoutError,
     ):
-        mock_config_entry_current.add_to_hass(hass)
-        await hass.config_entries.async_setup(mock_config_entry_current.entry_id)
+        mock_config_entry_current.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(mock_config_entry_current.entry_id)
 
-        await hass.async_block_till_done()
-        assert len(hass.states.async_all()) == 0
+        await menuai.async_block_till_done()
+        assert len(menuai.states.async_all()) == 0

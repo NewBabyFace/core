@@ -7,10 +7,10 @@ import datetime
 import logging
 import math
 
-from homeassistant.components.recorder import get_instance, history
-from homeassistant.core import Event, EventStateChangedData, HomeAssistant, State
-from homeassistant.helpers.template import Template
-from homeassistant.util import dt as dt_util
+from menuai.components.recorder import get_instance, history
+from menuai.core import Event, EventStateChangedData, menuai, State
+from menuai.helpers.template import Template
+from menuai.util import dt as dt_util
 
 from .helpers import async_calculate_period, floored_timestamp
 
@@ -41,7 +41,7 @@ class HistoryStats:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entity_id: str,
         entity_states: list[str],
         start: Template | None,
@@ -49,7 +49,7 @@ class HistoryStats:
         duration: datetime.timedelta | None,
     ) -> None:
         """Init the history stats manager."""
-        self.hass = hass
+        self.menuai = menuai
         self.entity_id = entity_id
         self._period = (MIN_TIME_UTC, MIN_TIME_UTC)
         self._state: HistoryStatsState = HistoryStatsState(None, None, self._period)
@@ -182,7 +182,7 @@ class HistoryStats:
         """Update history data for the current period from the database."""
         self._query_count += 1
         try:
-            instance = get_instance(self.hass)
+            instance = get_instance(self.menuai)
             states = await instance.async_add_executor_job(
                 self._state_changes_during_period,
                 current_period_start_timestamp,
@@ -202,7 +202,7 @@ class HistoryStats:
         start = dt_util.utc_from_timestamp(start_ts)
         end = dt_util.utc_from_timestamp(end_ts)
         return history.state_changes_during_period(
-            self.hass,
+            self.menuai,
             start,
             end,
             self.entity_id,

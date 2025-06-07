@@ -5,8 +5,8 @@ from __future__ import annotations
 from ovoenergy import OVOEnergy
 from ovoenergy.models import OVODailyUsage
 
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.update_coordinator import (
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
 )

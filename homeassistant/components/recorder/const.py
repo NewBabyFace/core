@@ -5,14 +5,14 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ATTRIBUTION,
     ATTR_RESTORED,
     ATTR_SUPPORTED_FEATURES,
     EVENT_RECORDER_5MIN_STATISTICS_GENERATED,  # noqa: F401
     EVENT_RECORDER_HOURLY_STATISTICS_GENERATED,  # noqa: F401
 )
-from homeassistant.helpers.json import JSON_DUMP  # noqa: F401
+from menuai.helpers.json import JSON_DUMP  # noqa: F401
 
 if TYPE_CHECKING:
     from .core import Recorder  # noqa: F401

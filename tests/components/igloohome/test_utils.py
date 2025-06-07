@@ -1,6 +1,6 @@
 """Test functions in utils module."""
 
-from homeassistant.components.igloohome.utils import get_linked_bridge
+from menuai.components.igloohome.utils import get_linked_bridge
 
 from .conftest import (
     GET_DEVICE_INFO_RESPONSE_BRIDGE_LINKED_LOCK,

@@ -6,27 +6,27 @@ from aiohttp import ClientError
 from imgw_pib.exceptions import ApiError
 import pytest
 
-from homeassistant.components.imgw_pib.const import CONF_STATION_ID, DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.imgw_pib.const import CONF_STATION_ID, DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 
 async def test_create_entry(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock, mock_imgw_pib_client: AsyncMock
+    menuai: menuai, mock_setup_entry: AsyncMock, mock_imgw_pib_client: AsyncMock
 ) -> None:
     """Test that the user step works."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_STATION_ID: "123"},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "River Name (Station Name)"
@@ -37,11 +37,11 @@ async def test_create_entry(
 
 @pytest.mark.parametrize("exc", [ApiError("API Error"), ClientError, TimeoutError])
 async def test_form_no_station_list(
-    hass: HomeAssistant, exc: Exception, mock_imgw_pib_client: AsyncMock
+    menuai: menuai, exc: Exception, mock_imgw_pib_client: AsyncMock
 ) -> None:
     """Test aborting the flow when we cannot get the list of hydrological stations."""
     mock_imgw_pib_client.update_hydrological_stations.side_effect = exc
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.ABORT
@@ -58,36 +58,36 @@ async def test_form_no_station_list(
     ],
 )
 async def test_form_with_exceptions(
-    hass: HomeAssistant,
+    menuai: menuai,
     exc: Exception,
     base_error: str,
     mock_setup_entry: AsyncMock,
     mock_imgw_pib_client: AsyncMock,
 ) -> None:
     """Test we get the form."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
     mock_imgw_pib_client.get_hydrological_data.side_effect = exc
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_STATION_ID: "123"},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": base_error}
 
     mock_imgw_pib_client.get_hydrological_data.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_STATION_ID: "123"},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "River Name (Station Name)"

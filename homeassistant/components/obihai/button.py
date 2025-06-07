@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
-from homeassistant.components.button import (
+from menuai.components.button import (
     ButtonDeviceClass,
     ButtonEntity,
     ButtonEntityDescription,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_platform
+from menuai.config_entries import ConfigEntry
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_platform
 
 from .connectivity import ObihaiConnection
 from .const import DOMAIN, OBIHAI
@@ -25,13 +25,13 @@ BUTTON_DESCRIPTION = ButtonEntityDescription(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: entity_platform.AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Obihai sensor entries."""
 
-    requester: ObihaiConnection = hass.data[DOMAIN][entry.entry_id]
+    requester: ObihaiConnection = menuai.data[DOMAIN][entry.entry_id]
 
     buttons = [ObihaiButton(requester)]
     async_add_entities(buttons, update_before_add=True)
@@ -52,4 +52,4 @@ class ObihaiButton(ButtonEntity):
         """Press button."""
 
         if not self._pyobihai.call_reboot():
-            raise HomeAssistantError("Reboot failed!")
+            raise menuaiError("Reboot failed!")

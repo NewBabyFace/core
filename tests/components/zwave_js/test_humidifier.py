@@ -5,7 +5,7 @@ from zwave_js_server.const import CommandClass
 from zwave_js_server.const.command_class.humidity_control import HumidityControlMode
 from zwave_js_server.event import Event
 
-from homeassistant.components.humidifier import (
+from menuai.components.humidifier import (
     ATTR_HUMIDITY,
     ATTR_MAX_HUMIDITY,
     ATTR_MIN_HUMIDITY,
@@ -15,7 +15,7 @@ from homeassistant.components.humidifier import (
     SERVICE_SET_HUMIDITY,
     HumidifierDeviceClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     ATTR_ENTITY_ID,
     SERVICE_TURN_OFF,
@@ -25,7 +25,7 @@ from homeassistant.const import (
     STATE_UNKNOWN,
     Platform,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .common import DEHUMIDIFIER_ADC_T3000_ENTITY, HUMIDIFIER_ADC_T3000_ENTITY
 
@@ -37,12 +37,12 @@ def platforms() -> list[str]:
 
 
 async def test_humidifier(
-    hass: HomeAssistant, client, climate_adc_t3000, integration
+    menuai: menuai, client, climate_adc_t3000, integration
 ) -> None:
     """Test a humidity control command class entity."""
 
     node = climate_adc_t3000
-    state = hass.states.get(HUMIDIFIER_ADC_T3000_ENTITY)
+    state = menuai.states.get(HUMIDIFIER_ADC_T3000_ENTITY)
 
     assert state
     assert state.state == STATE_ON
@@ -54,7 +54,7 @@ async def test_humidifier(
     client.async_send_command.reset_mock()
 
     # Test setting humidity
-    await hass.services.async_call(
+    await menuai.services.async_call(
         HUMIDIFIER_DOMAIN,
         SERVICE_SET_HUMIDITY,
         {
@@ -98,7 +98,7 @@ async def test_humidifier(
     )
     node.receive_event(event)
 
-    state = hass.states.get(HUMIDIFIER_ADC_T3000_ENTITY)
+    state = menuai.states.get(HUMIDIFIER_ADC_T3000_ENTITY)
     assert state.state == STATE_OFF
 
     client.async_send_command.reset_mock()
@@ -123,7 +123,7 @@ async def test_humidifier(
     )
     node.receive_event(event)
 
-    state = hass.states.get(HUMIDIFIER_ADC_T3000_ENTITY)
+    state = menuai.states.get(HUMIDIFIER_ADC_T3000_ENTITY)
     assert state.state == STATE_ON
 
     client.async_send_command.reset_mock()
@@ -148,7 +148,7 @@ async def test_humidifier(
     )
     node.receive_event(event)
 
-    state = hass.states.get(HUMIDIFIER_ADC_T3000_ENTITY)
+    state = menuai.states.get(HUMIDIFIER_ADC_T3000_ENTITY)
     assert state.state == STATE_OFF
 
     client.async_send_command.reset_mock()
@@ -173,7 +173,7 @@ async def test_humidifier(
     )
     node.receive_event(event)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         HUMIDIFIER_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: HUMIDIFIER_ADC_T3000_ENTITY},
@@ -213,7 +213,7 @@ async def test_humidifier(
     )
     node.receive_event(event)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         HUMIDIFIER_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: HUMIDIFIER_ADC_T3000_ENTITY},
@@ -253,7 +253,7 @@ async def test_humidifier(
     )
     node.receive_event(event)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         HUMIDIFIER_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: HUMIDIFIER_ADC_T3000_ENTITY},
@@ -284,7 +284,7 @@ async def test_humidifier(
     )
     node.receive_event(event)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         HUMIDIFIER_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: HUMIDIFIER_ADC_T3000_ENTITY},
@@ -315,7 +315,7 @@ async def test_humidifier(
     )
     node.receive_event(event)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         HUMIDIFIER_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: HUMIDIFIER_ADC_T3000_ENTITY},
@@ -346,7 +346,7 @@ async def test_humidifier(
     )
     node.receive_event(event)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         HUMIDIFIER_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: HUMIDIFIER_ADC_T3000_ENTITY},
@@ -377,7 +377,7 @@ async def test_humidifier(
     )
     node.receive_event(event)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         HUMIDIFIER_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: HUMIDIFIER_ADC_T3000_ENTITY},
@@ -417,7 +417,7 @@ async def test_humidifier(
     )
     node.receive_event(event)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         HUMIDIFIER_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: HUMIDIFIER_ADC_T3000_ENTITY},
@@ -437,12 +437,12 @@ async def test_humidifier(
 
 
 async def test_dehumidifier_missing_setpoint(
-    hass: HomeAssistant, client, climate_adc_t3000_missing_setpoint, integration
+    menuai: menuai, client, climate_adc_t3000_missing_setpoint, integration
 ) -> None:
     """Test a humidity control command class entity."""
 
     entity_id = "humidifier.adc_t3000_missing_setpoint_dehumidifier"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert ATTR_HUMIDITY not in state.attributes
@@ -452,7 +452,7 @@ async def test_dehumidifier_missing_setpoint(
     client.async_send_command.reset_mock()
 
     # Test setting humidity
-    await hass.services.async_call(
+    await menuai.services.async_call(
         HUMIDIFIER_DOMAIN,
         SERVICE_SET_HUMIDITY,
         {
@@ -468,7 +468,7 @@ async def test_dehumidifier_missing_setpoint(
 
 
 async def test_humidifier_missing_mode(
-    hass: HomeAssistant, client, climate_adc_t3000_missing_mode, integration
+    menuai: menuai, client, climate_adc_t3000_missing_mode, integration
 ) -> None:
     """Test a humidity control command class entity."""
 
@@ -476,11 +476,11 @@ async def test_humidifier_missing_mode(
 
     # Test that de-humidifer entity does not exist but humidifier entity does
     entity_id = "humidifier.adc_t3000_missing_mode_dehumidifier"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert not state
 
     entity_id = "humidifier.adc_t3000_missing_mode_humidifier"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
 
     client.async_send_command.reset_mock()
@@ -505,7 +505,7 @@ async def test_humidifier_missing_mode(
     )
     node.receive_event(event)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         HUMIDIFIER_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: entity_id},
@@ -527,12 +527,12 @@ async def test_humidifier_missing_mode(
 
 
 async def test_dehumidifier(
-    hass: HomeAssistant, client, climate_adc_t3000, integration
+    menuai: menuai, client, climate_adc_t3000, integration
 ) -> None:
     """Test a humidity control command class entity."""
 
     node = climate_adc_t3000
-    state = hass.states.get(DEHUMIDIFIER_ADC_T3000_ENTITY)
+    state = menuai.states.get(DEHUMIDIFIER_ADC_T3000_ENTITY)
 
     assert state
     assert state.state == STATE_ON
@@ -544,7 +544,7 @@ async def test_dehumidifier(
     client.async_send_command.reset_mock()
 
     # Test setting humidity
-    await hass.services.async_call(
+    await menuai.services.async_call(
         HUMIDIFIER_DOMAIN,
         SERVICE_SET_HUMIDITY,
         {
@@ -588,7 +588,7 @@ async def test_dehumidifier(
     )
     node.receive_event(event)
 
-    state = hass.states.get(DEHUMIDIFIER_ADC_T3000_ENTITY)
+    state = menuai.states.get(DEHUMIDIFIER_ADC_T3000_ENTITY)
     assert state.state == STATE_OFF
 
     client.async_send_command.reset_mock()
@@ -613,7 +613,7 @@ async def test_dehumidifier(
     )
     node.receive_event(event)
 
-    state = hass.states.get(DEHUMIDIFIER_ADC_T3000_ENTITY)
+    state = menuai.states.get(DEHUMIDIFIER_ADC_T3000_ENTITY)
     assert state.state == STATE_ON
 
     client.async_send_command.reset_mock()
@@ -638,7 +638,7 @@ async def test_dehumidifier(
     )
     node.receive_event(event)
 
-    state = hass.states.get(DEHUMIDIFIER_ADC_T3000_ENTITY)
+    state = menuai.states.get(DEHUMIDIFIER_ADC_T3000_ENTITY)
     assert state.state == STATE_OFF
 
     client.async_send_command.reset_mock()
@@ -663,7 +663,7 @@ async def test_dehumidifier(
     )
     node.receive_event(event)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         HUMIDIFIER_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: DEHUMIDIFIER_ADC_T3000_ENTITY},
@@ -703,7 +703,7 @@ async def test_dehumidifier(
     )
     node.receive_event(event)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         HUMIDIFIER_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: DEHUMIDIFIER_ADC_T3000_ENTITY},
@@ -743,7 +743,7 @@ async def test_dehumidifier(
     )
     node.receive_event(event)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         HUMIDIFIER_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: DEHUMIDIFIER_ADC_T3000_ENTITY},
@@ -774,7 +774,7 @@ async def test_dehumidifier(
     )
     node.receive_event(event)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         HUMIDIFIER_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: DEHUMIDIFIER_ADC_T3000_ENTITY},
@@ -805,7 +805,7 @@ async def test_dehumidifier(
     )
     node.receive_event(event)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         HUMIDIFIER_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: DEHUMIDIFIER_ADC_T3000_ENTITY},
@@ -836,7 +836,7 @@ async def test_dehumidifier(
     )
     node.receive_event(event)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         HUMIDIFIER_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: DEHUMIDIFIER_ADC_T3000_ENTITY},
@@ -867,7 +867,7 @@ async def test_dehumidifier(
     )
     node.receive_event(event)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         HUMIDIFIER_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: DEHUMIDIFIER_ADC_T3000_ENTITY},
@@ -907,7 +907,7 @@ async def test_dehumidifier(
     )
     node.receive_event(event)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         HUMIDIFIER_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: DEHUMIDIFIER_ADC_T3000_ENTITY},
@@ -945,14 +945,14 @@ async def test_dehumidifier(
     )
     node.receive_event(event)
 
-    state = hass.states.get(HUMIDIFIER_ADC_T3000_ENTITY)
+    state = menuai.states.get(HUMIDIFIER_ADC_T3000_ENTITY)
 
     assert state
     assert state.state == STATE_UNKNOWN
 
     client.async_send_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         HUMIDIFIER_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: HUMIDIFIER_ADC_T3000_ENTITY},

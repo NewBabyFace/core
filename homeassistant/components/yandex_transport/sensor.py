@@ -9,23 +9,23 @@ from typing import Any
 from aioymaps import CaptchaError, NoSessionError, YandexMapsRequester
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
     SensorDeviceClass,
     SensorEntity,
 )
-from homeassistant.const import CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_create_clientsession
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import dt as dt_util
+from menuai.const import CONF_NAME
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_create_clientsession
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import dt as dt_util
 
 _LOGGER = logging.getLogger(__name__)
 
 STOP_NAME = "stop_name"
-USER_AGENT = "Home Assistant"
+USER_AGENT = "MenuAI"
 
 CONF_STOP_ID = "stop_id"
 CONF_ROUTE = "routes"
@@ -45,7 +45,7 @@ PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -55,7 +55,7 @@ async def async_setup_platform(
     name = config[CONF_NAME]
     routes = config[CONF_ROUTE]
 
-    client_session = async_create_clientsession(hass, requote_redirect_url=False)
+    client_session = async_create_clientsession(menuai, requote_redirect_url=False)
     ymaps = YandexMapsRequester(user_agent=USER_AGENT, client_session=client_session)
     try:
         await ymaps.set_new_session()

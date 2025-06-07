@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from asyncarve import ArveCustomer, ArveDevices, ArveSensPro, ArveSensProData
 import pytest
 
-from homeassistant.components.arve.const import DOMAIN
-from homeassistant.core import HomeAssistant
+from menuai.components.arve.const import DOMAIN
+from menuai.core import menuai
 
 from . import USER_INPUT
 
@@ -18,13 +18,13 @@ from tests.common import MockConfigEntry
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.arve.async_setup_entry", return_value=True
+        "menuai.components.arve.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
 
 @pytest.fixture
-def mock_config_entry(hass: HomeAssistant, mock_arve: MagicMock) -> MockConfigEntry:
+def mock_config_entry(menuai: menuai, mock_arve: MagicMock) -> MockConfigEntry:
     """Return the default mocked config entry."""
     return MockConfigEntry(
         title="Arve", domain=DOMAIN, data=USER_INPUT, unique_id=mock_arve.customer_id
@@ -37,9 +37,9 @@ def mock_arve():
 
     with (
         patch(
-            "homeassistant.components.arve.coordinator.Arve", autospec=True
+            "menuai.components.arve.coordinator.Arve", autospec=True
         ) as arve_mock,
-        patch("homeassistant.components.arve.config_flow.Arve", new=arve_mock),
+        patch("menuai.components.arve.config_flow.Arve", new=arve_mock),
     ):
         arve = arve_mock.return_value
         arve.customer_id = 12345

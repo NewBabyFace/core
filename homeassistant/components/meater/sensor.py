@@ -8,22 +8,22 @@ from datetime import datetime, timedelta
 
 from meater.MeaterApi import MeaterProbe
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import UnitOfTemperature
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import UnitOfTemperature
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
 )
-from homeassistant.util import dt as dt_util
+from menuai.util import dt as dt_util
 
 from .const import DOMAIN
 
@@ -136,12 +136,12 @@ SENSOR_TYPES = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the entry."""
-    coordinator: DataUpdateCoordinator[dict[str, MeaterProbe]] = hass.data[DOMAIN][
+    coordinator: DataUpdateCoordinator[dict[str, MeaterProbe]] = menuai.data[DOMAIN][
         entry.entry_id
     ]["coordinator"]
 
@@ -153,7 +153,7 @@ async def async_setup_entry(
 
         devices = coordinator.data
         entities = []
-        known_probes: set = hass.data[DOMAIN]["known_probes"]
+        known_probes: set = menuai.data[DOMAIN]["known_probes"]
 
         # Add entities for temperature probes which we've not yet seen
         for device_id in devices:

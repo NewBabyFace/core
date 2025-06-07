@@ -4,22 +4,22 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components.hassio import DOMAIN as HASSIO_DOMAIN
-from homeassistant.components.raspberry_pi.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.menuaiio import DOMAIN as menuaiIO_DOMAIN
+from menuai.components.raspberry_pi.const import DOMAIN
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry, MockModule, mock_integration
 from tests.typing import WebSocketGenerator
 
 
 async def test_hardware_info(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test we can get the board info."""
-    mock_integration(hass, MockModule("hassio"))
-    await async_setup_component(hass, HASSIO_DOMAIN, {})
-    await hass.async_block_till_done()
+    mock_integration(menuai, MockModule("menuaiio"))
+    await async_setup_component(menuai, menuaiIO_DOMAIN, {})
+    await menuai.async_block_till_done()
 
     # Setup the config entry
     config_entry = MockConfigEntry(
@@ -28,18 +28,18 @@ async def test_hardware_info(
         options={},
         title="Raspberry Pi",
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     with patch(
-        "homeassistant.components.raspberry_pi.get_os_info",
+        "menuai.components.raspberry_pi.get_os_info",
         return_value={"board": "rpi"},
     ):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     with patch(
-        "homeassistant.components.raspberry_pi.hardware.get_os_info",
+        "menuai.components.raspberry_pi.hardware.get_os_info",
         return_value={"board": "rpi"},
     ):
         await client.send_json({"id": 1, "type": "hardware/info"})
@@ -51,7 +51,7 @@ async def test_hardware_info(
         "hardware": [
             {
                 "board": {
-                    "hassio_board_id": "rpi",
+                    "menuaiio_board_id": "rpi",
                     "manufacturer": "raspberry_pi",
                     "model": "1",
                     "revision": None,
@@ -67,12 +67,12 @@ async def test_hardware_info(
 
 @pytest.mark.parametrize("os_info", [None, {"board": None}, {"board": "other"}])
 async def test_hardware_info_fail(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, os_info
+    menuai: menuai, menuai_ws_client: WebSocketGenerator, os_info
 ) -> None:
     """Test async_info raises if os_info is not as expected."""
-    mock_integration(hass, MockModule("hassio"))
-    await async_setup_component(hass, HASSIO_DOMAIN, {})
-    await hass.async_block_till_done()
+    mock_integration(menuai, MockModule("menuaiio"))
+    await async_setup_component(menuai, menuaiIO_DOMAIN, {})
+    await menuai.async_block_till_done()
 
     # Setup the config entry
     config_entry = MockConfigEntry(
@@ -81,18 +81,18 @@ async def test_hardware_info_fail(
         options={},
         title="Raspberry Pi",
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     with patch(
-        "homeassistant.components.raspberry_pi.get_os_info",
+        "menuai.components.raspberry_pi.get_os_info",
         return_value={"board": "rpi"},
     ):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     with patch(
-        "homeassistant.components.raspberry_pi.hardware.get_os_info",
+        "menuai.components.raspberry_pi.hardware.get_os_info",
         return_value=os_info,
     ):
         await client.send_json({"id": 1, "type": "hardware/info"})

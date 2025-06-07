@@ -7,15 +7,15 @@ from dataclasses import dataclass
 
 from python_snoo.containers import SnooData, SnooStates
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     EntityCategory,
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     StateType,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import SnooConfigEntry
 from .entity import SnooDescriptionEntity
@@ -47,7 +47,7 @@ SENSOR_DESCRIPTIONS: list[SnooSensorEntityDescription] = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: SnooConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

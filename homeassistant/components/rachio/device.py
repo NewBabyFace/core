@@ -1,4 +1,4 @@
-"""Adapter to wrap the rachiopy api for home assistant."""
+"""Adapter to wrap the rachiopy api for MenuAI."""
 
 from __future__ import annotations
 
@@ -9,11 +9,11 @@ from typing import Any
 from rachiopy import Rachio
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import config_validation as cv
+from menuai.config_entries import ConfigEntry
+from menuai.const import EVENT_menuai_STOP
+from menuai.core import menuai, ServiceCall
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import config_validation as cv
 
 from .const import (
     DOMAIN,
@@ -73,9 +73,9 @@ class RachioPerson:
         self._controllers: list[RachioIro] = []
         self._base_stations: list[RachioBaseStation] = []
 
-    async def async_setup(self, hass: HomeAssistant) -> None:
+    async def async_setup(self, menuai: menuai) -> None:
         """Create rachio devices and services."""
-        await hass.async_add_executor_job(self._setup, hass)
+        await menuai.async_add_executor_job(self._setup, menuai)
         can_pause = False
         for rachio_iro in self._controllers:
             # Generation 1 controllers don't support pause or resume
@@ -111,7 +111,7 @@ class RachioPerson:
         if not all_controllers:
             return
 
-        hass.services.async_register(
+        menuai.services.async_register(
             DOMAIN,
             SERVICE_STOP_WATERING,
             stop_water,
@@ -121,21 +121,21 @@ class RachioPerson:
         if not can_pause:
             return
 
-        hass.services.async_register(
+        menuai.services.async_register(
             DOMAIN,
             SERVICE_PAUSE_WATERING,
             pause_water,
             schema=PAUSE_SERVICE_SCHEMA,
         )
 
-        hass.services.async_register(
+        menuai.services.async_register(
             DOMAIN,
             SERVICE_RESUME_WATERING,
             resume_water,
             schema=RESUME_SERVICE_SCHEMA,
         )
 
-    def _setup(self, hass: HomeAssistant) -> None:
+    def _setup(self, menuai: menuai) -> None:
         """Rachio device setup."""
         rachio = self.rachio
 
@@ -182,7 +182,7 @@ class RachioPerson:
                     )
                 continue
 
-            rachio_iro = RachioIro(hass, rachio, controller, webhooks)
+            rachio_iro = RachioIro(menuai, rachio, controller, webhooks)
             rachio_iro.setup()
             self._controllers.append(rachio_iro)
 
@@ -192,9 +192,9 @@ class RachioPerson:
                 rachio,
                 base,
                 RachioUpdateCoordinator(
-                    hass, rachio, self.config_entry, base, base_count
+                    menuai, rachio, self.config_entry, base, base_count
                 ),
-                RachioScheduleUpdateCoordinator(hass, rachio, self.config_entry, base),
+                RachioScheduleUpdateCoordinator(menuai, rachio, self.config_entry, base),
             )
             for base in base_stations
         )
@@ -226,13 +226,13 @@ class RachioIro:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         rachio: Rachio,
         data: dict[str, Any],
         webhooks: list[dict[str, Any]],
     ) -> None:
         """Initialize a Rachio device."""
-        self.hass = hass
+        self.menuai = menuai
         self.rachio = rachio
         self._id = data[KEY_ID]
         self.name = data[KEY_NAME]
@@ -289,7 +289,7 @@ class RachioIro:
         )
         # Save ID for deletion at shutdown
         current_webhook_id = new_webhook[1][KEY_ID]
-        self.hass.bus.listen(EVENT_HOMEASSISTANT_STOP, _deinit_webhooks)
+        self.menuai.bus.listen(EVENT_menuai_STOP, _deinit_webhooks)
 
     def __str__(self) -> str:
         """Display the controller as a string."""

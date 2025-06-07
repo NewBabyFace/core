@@ -12,11 +12,11 @@ from aiohttp import client_exceptions
 from aiohue import HueBridgeV1, HueBridgeV2, LinkButtonNotPressed, Unauthorized
 from aiohue.errors import AiohueException, BridgeBusy
 
-from homeassistant import core
-from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
-from homeassistant.const import CONF_API_KEY, CONF_API_VERSION, CONF_HOST, Platform
-from homeassistant.exceptions import ConfigEntryNotReady, HomeAssistantError
-from homeassistant.helpers import aiohttp_client
+from menuai import core
+from menuai.config_entries import SOURCE_IMPORT, ConfigEntry
+from menuai.const import CONF_API_KEY, CONF_API_VERSION, CONF_HOST, Platform
+from menuai.exceptions import ConfigEntryNotReady, menuaiError
+from menuai.helpers import aiohttp_client
 
 from .const import DOMAIN
 from .v1.sensor_base import SensorManager
@@ -42,10 +42,10 @@ type HueConfigEntry = ConfigEntry[HueBridge]
 class HueBridge:
     """Manages a single Hue bridge."""
 
-    def __init__(self, hass: core.HomeAssistant, config_entry: HueConfigEntry) -> None:
+    def __init__(self, menuai: core.menuai, config_entry: HueConfigEntry) -> None:
         """Initialize the system."""
         self.config_entry = config_entry
-        self.hass = hass
+        self.menuai = menuai
         self.authorized = False
         # Jobs to be executed when API is reset.
         self.reset_jobs: list[core.CALLBACK_TYPE] = []
@@ -55,11 +55,11 @@ class HueBridge:
         app_key: str = self.config_entry.data[CONF_API_KEY]
         if self.api_version == 1:
             self.api = HueBridgeV1(
-                self.host, app_key, aiohttp_client.async_get_clientsession(hass)
+                self.host, app_key, aiohttp_client.async_get_clientsession(menuai)
             )
         else:
             self.api = HueBridgeV2(self.host, app_key)
-        # store (this) bridge object in hass data
+        # store (this) bridge object in menuai data
         self.config_entry.runtime_data = self
 
     @property
@@ -84,7 +84,7 @@ class HueBridge:
             # We are going to fail the config entry setup and initiate a new
             # linking procedure. When linking succeeds, it will remove the
             # old config entry.
-            create_config_flow(self.hass, self.host)
+            create_config_flow(self.menuai, self.host)
             return False
         except (
             TimeoutError,
@@ -107,7 +107,7 @@ class HueBridge:
         if self.api_version == 1:
             if self.api.sensors is not None:
                 self.sensor_manager = SensorManager(self)
-            await self.hass.config_entries.async_forward_entry_setups(
+            await self.menuai.config_entries.async_forward_entry_setups(
                 self.config_entry, PLATFORMS_v1
             )
 
@@ -115,7 +115,7 @@ class HueBridge:
         else:
             await async_setup_devices(self)
             await async_setup_hue_events(self)
-            await self.hass.config_entries.async_forward_entry_setups(
+            await self.menuai.config_entries.async_forward_entry_setups(
                 self.config_entry, PLATFORMS_v2
             )
 
@@ -136,9 +136,9 @@ class HueBridge:
                 # log only
                 self.logger.debug(msg)
                 return None
-            raise HomeAssistantError(msg) from err
+            raise menuaiError(msg) from err
         except aiohttp.ClientError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Request failed due connection error: {err}"
             ) from err
 
@@ -160,7 +160,7 @@ class HueBridge:
             self.reset_jobs.pop()()
 
         # Unload platforms
-        unload_success = await self.hass.config_entries.async_unload_platforms(
+        unload_success = await self.menuai.config_entries.async_unload_platforms(
             self.config_entry, PLATFORMS_v1 if self.api_version == 1 else PLATFORMS_v2
         )
 
@@ -178,18 +178,18 @@ class HueBridge:
             "Unable to authorize to bridge %s, setup the linking again", self.host
         )
         self.authorized = False
-        create_config_flow(self.hass, self.host)
+        create_config_flow(self.menuai, self.host)
 
 
-async def _update_listener(hass: core.HomeAssistant, entry: HueConfigEntry) -> None:
+async def _update_listener(menuai: core.menuai, entry: HueConfigEntry) -> None:
     """Handle ConfigEntry options update."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)
 
 
-def create_config_flow(hass: core.HomeAssistant, host: str) -> None:
+def create_config_flow(menuai: core.menuai, host: str) -> None:
     """Start a config flow."""
-    hass.async_create_task(
-        hass.config_entries.flow.async_init(
+    menuai.async_create_task(
+        menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": SOURCE_IMPORT},
             data={"host": host},

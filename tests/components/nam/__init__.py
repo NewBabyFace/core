@@ -2,8 +2,8 @@
 
 from unittest.mock import AsyncMock, Mock, patch
 
-from homeassistant.components.nam.const import DOMAIN
-from homeassistant.core import HomeAssistant
+from menuai.components.nam.const import DOMAIN
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry, async_load_json_object_fixture
 
@@ -14,9 +14,9 @@ INCOMPLETE_NAM_DATA = {
 
 
 async def init_integration(
-    hass: HomeAssistant, co2_sensor: bool = True
+    menuai: menuai, co2_sensor: bool = True
 ) -> MockConfigEntry:
-    """Set up the Nettigo Air Monitor integration in Home Assistant."""
+    """Set up the Nettigo Air Monitor integration in MenuAI."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         title="10.10.2.3",
@@ -24,7 +24,7 @@ async def init_integration(
         data={"host": "10.10.2.3"},
     )
 
-    nam_data = await async_load_json_object_fixture(hass, "nam_data.json", DOMAIN)
+    nam_data = await async_load_json_object_fixture(menuai, "nam_data.json", DOMAIN)
 
     if not co2_sensor:
         # Remove conc_co2_ppm value
@@ -33,14 +33,14 @@ async def init_integration(
     update_response = Mock(json=AsyncMock(return_value=nam_data))
 
     with (
-        patch("homeassistant.components.nam.NettigoAirMonitor.initialize"),
+        patch("menuai.components.nam.NettigoAirMonitor.initialize"),
         patch(
-            "homeassistant.components.nam.NettigoAirMonitor._async_http_request",
+            "menuai.components.nam.NettigoAirMonitor._async_http_request",
             return_value=update_response,
         ),
     ):
-        entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     return entry

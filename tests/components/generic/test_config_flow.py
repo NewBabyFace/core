@@ -14,9 +14,9 @@ import httpx
 import pytest
 import respx
 
-from homeassistant.components.camera import async_get_image
-from homeassistant.components.generic.config_flow import slug
-from homeassistant.components.generic.const import (
+from menuai.components.camera import async_get_image
+from menuai.components.generic.config_flow import slug
+from menuai.components.generic.const import (
     CONF_CONFIRMED_OK,
     CONF_CONTENT_TYPE,
     CONF_FRAMERATE,
@@ -25,12 +25,12 @@ from homeassistant.components.generic.const import (
     CONF_STREAM_SOURCE,
     DOMAIN,
 )
-from homeassistant.components.stream import (
+from menuai.components.stream import (
     CONF_RTSP_TRANSPORT,
     CONF_USE_WALLCLOCK_AS_TIMESTAMPS,
 )
-from homeassistant.config_entries import ConfigFlowResult
-from homeassistant.const import (
+from menuai.config_entries import ConfigFlowResult
+from menuai.const import (
     CONF_AUTHENTICATION,
     CONF_NAME,
     CONF_PASSWORD,
@@ -38,10 +38,10 @@ from homeassistant.const import (
     CONF_VERIFY_SSL,
     HTTP_BASIC_AUTHENTICATION,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry
 from tests.typing import ClientSessionGenerator, WebSocketGenerator
@@ -70,17 +70,17 @@ TESTDATA_YAML = {
 @respx.mock
 @pytest.mark.usefixtures("fakeimg_png")
 async def test_form(
-    hass: HomeAssistant,
+    menuai: menuai,
     fakeimgbytes_png: bytes,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     user_flow: ConfigFlowResult,
     mock_create_stream: _patch[MagicMock],
     mock_setup_entry: _patch[MagicMock],
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test the form with a normal set of settings."""
 
-    result1 = await hass.config_entries.flow.async_configure(
+    result1 = await menuai.config_entries.flow.async_configure(
         user_flow["flow_id"],
         TESTDATA,
     )
@@ -88,7 +88,7 @@ async def test_form(
     assert result1["step_id"] == "user_confirm"
 
     # HA should now be serving a WS connection for a preview stream.
-    ws_client = await hass_ws_client()
+    ws_client = await menuai_ws_client()
     flow_id = user_flow["flow_id"]
     await ws_client.send_json_auto_id(
         {
@@ -98,14 +98,14 @@ async def test_form(
     )
     json = await ws_client.receive_json()
 
-    client = await hass_client()
+    client = await menuai_client()
     still_preview_url = json["event"]["attributes"]["still_url"]
     # Check the preview image works.
     resp = await client.get(still_preview_url)
     assert resp.status == HTTPStatus.OK
     assert await resp.read() == fakeimgbytes_png
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result1["flow_id"],
         user_input={CONF_CONFIRMED_OK: True},
     )
@@ -130,21 +130,21 @@ async def test_form(
 @respx.mock
 @pytest.mark.usefixtures("fakeimg_png")
 async def test_form_only_stillimage(
-    hass: HomeAssistant,
+    menuai: menuai,
     user_flow: ConfigFlowResult,
     mock_setup_entry: _patch[MagicMock],
 ) -> None:
     """Test we complete ok if the user wants still images only."""
     data = TESTDATA.copy()
     data.pop(CONF_STREAM_SOURCE)
-    result1 = await hass.config_entries.flow.async_configure(
+    result1 = await menuai.config_entries.flow.async_configure(
         user_flow["flow_id"],
         data,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result1["type"] is FlowResultType.FORM
     assert result1["step_id"] == "user_confirm"
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result1["flow_id"],
         user_input={CONF_CONFIRMED_OK: True},
     )
@@ -166,18 +166,18 @@ async def test_form_only_stillimage(
 @respx.mock
 @pytest.mark.usefixtures("fakeimg_png")
 async def test_form_reject_preview(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_create_stream: _patch[MagicMock],
     user_flow: ConfigFlowResult,
 ) -> None:
     """Test we go back to the config screen if the user rejects the preview."""
-    result1 = await hass.config_entries.flow.async_configure(
+    result1 = await menuai.config_entries.flow.async_configure(
         user_flow["flow_id"],
         TESTDATA,
     )
     assert result1["type"] is FlowResultType.FORM
     assert result1["step_id"] == "user_confirm"
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result1["flow_id"],
         user_input={CONF_CONFIRMED_OK: False},
     )
@@ -188,20 +188,20 @@ async def test_form_reject_preview(
 @respx.mock
 @pytest.mark.usefixtures("fakeimg_png")
 async def test_form_still_preview_cam_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_create_stream: _patch[MagicMock],
     user_flow: ConfigFlowResult,
-    hass_client: ClientSessionGenerator,
-    hass_ws_client: WebSocketGenerator,
+    menuai_client: ClientSessionGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test camera errors are triggered during preview."""
     with (
         patch(
-            "homeassistant.components.generic.camera.GenericCamera.is_on",
+            "menuai.components.generic.camera.GenericCamera.is_on",
             new_callable=PropertyMock(return_value=False),
         ),
     ):
-        result1 = await hass.config_entries.flow.async_configure(
+        result1 = await menuai.config_entries.flow.async_configure(
             user_flow["flow_id"],
             TESTDATA,
         )
@@ -209,7 +209,7 @@ async def test_form_still_preview_cam_off(
         assert result1["step_id"] == "user_confirm"
 
         # HA should now be serving a WS connection for a preview stream.
-        ws_client = await hass_ws_client()
+        ws_client = await menuai_ws_client()
         flow_id = user_flow["flow_id"]
         await ws_client.send_json_auto_id(
             {
@@ -219,10 +219,10 @@ async def test_form_still_preview_cam_off(
         )
         json = await ws_client.receive_json()
 
-        client = await hass_client()
+        client = await menuai_client()
         still_preview_url = json["event"]["attributes"]["still_url"]
         # Try to view the image, should be unavailable.
-        client = await hass_client()
+        client = await menuai_client()
         resp = await client.get(still_preview_url)
     assert resp.status == HTTPStatus.SERVICE_UNAVAILABLE
 
@@ -230,31 +230,31 @@ async def test_form_still_preview_cam_off(
 @respx.mock
 @pytest.mark.usefixtures("fakeimg_gif")
 async def test_form_only_stillimage_gif(
-    hass: HomeAssistant,
+    menuai: menuai,
     user_flow: ConfigFlowResult,
     mock_setup_entry: _patch[MagicMock],
 ) -> None:
     """Test we complete ok if the user wants a gif."""
     data = TESTDATA.copy()
     data.pop(CONF_STREAM_SOURCE)
-    result1 = await hass.config_entries.flow.async_configure(
+    result1 = await menuai.config_entries.flow.async_configure(
         user_flow["flow_id"],
         data,
     )
     assert result1["type"] is FlowResultType.FORM
     assert result1["step_id"] == "user_confirm"
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result1["flow_id"],
         user_input={CONF_CONFIRMED_OK: True},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["options"][CONF_CONTENT_TYPE] == "image/gif"
 
 
 @respx.mock
 async def test_form_only_svg_whitespace(
-    hass: HomeAssistant,
+    menuai: menuai,
     fakeimgbytes_svg: bytes,
     user_flow: ConfigFlowResult,
     mock_setup_entry: _patch[MagicMock],
@@ -264,17 +264,17 @@ async def test_form_only_svg_whitespace(
     respx.get("http://127.0.0.1/testurl/1").respond(stream=fakeimgbytes_wspace_svg)
     data = TESTDATA.copy()
     data.pop(CONF_STREAM_SOURCE)
-    result1 = await hass.config_entries.flow.async_configure(
+    result1 = await menuai.config_entries.flow.async_configure(
         user_flow["flow_id"],
         data,
     )
     assert result1["type"] is FlowResultType.FORM
     assert result1["step_id"] == "user_confirm"
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result1["flow_id"],
         user_input={CONF_CONFIRMED_OK: True},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result2["type"] is FlowResultType.CREATE_ENTRY
 
 
@@ -290,25 +290,25 @@ async def test_form_only_svg_whitespace(
     ],
 )
 async def test_form_only_still_sample(
-    hass: HomeAssistant, user_flow: ConfigFlowResult, image_file, mock_setup_entry
+    menuai: menuai, user_flow: ConfigFlowResult, image_file, mock_setup_entry
 ) -> None:
     """Test various sample images #69037."""
     image_path = os.path.join(os.path.dirname(__file__), image_file)
-    image_bytes = await hass.async_add_executor_job(Path(image_path).read_bytes)
+    image_bytes = await menuai.async_add_executor_job(Path(image_path).read_bytes)
     respx.get("http://127.0.0.1/testurl/1").respond(stream=image_bytes)
     data = TESTDATA.copy()
     data.pop(CONF_STREAM_SOURCE)
-    result1 = await hass.config_entries.flow.async_configure(
+    result1 = await menuai.config_entries.flow.async_configure(
         user_flow["flow_id"],
         data,
     )
     assert result1["type"] is FlowResultType.FORM
     assert result1["step_id"] == "user_confirm"
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result1["flow_id"],
         user_input={CONF_CONFIRMED_OK: True},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result2["type"] is FlowResultType.CREATE_ENTRY
 
 
@@ -350,7 +350,7 @@ async def test_form_only_still_sample(
     ],
 )
 async def test_form_still_template(
-    hass: HomeAssistant,
+    menuai: menuai,
     user_flow: ConfigFlowResult,
     fakeimgbytes_png: bytes,
     mock_setup_entry: Generator[AsyncMock],
@@ -367,11 +367,11 @@ async def test_form_still_template(
     data = TESTDATA.copy()
     data.pop(CONF_STREAM_SOURCE)
     data[CONF_STILL_IMAGE_URL] = template
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         user_flow["flow_id"],
         data,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result2["step_id"] == expected_result
     assert result2.get("errors") == expected_errors
 
@@ -379,7 +379,7 @@ async def test_form_still_template(
 @respx.mock
 @pytest.mark.usefixtures("fakeimg_png")
 async def test_form_rtsp_mode(
-    hass: HomeAssistant,
+    menuai: menuai,
     user_flow: ConfigFlowResult,
     mock_create_stream: _patch[MagicMock],
     mock_setup_entry: _patch[MagicMock],
@@ -388,10 +388,10 @@ async def test_form_rtsp_mode(
     data = TESTDATA.copy()
     data[CONF_RTSP_TRANSPORT] = "tcp"
     data[CONF_STREAM_SOURCE] = "rtsp://127.0.0.1/testurl/2"
-    result1 = await hass.config_entries.flow.async_configure(user_flow["flow_id"], data)
+    result1 = await menuai.config_entries.flow.async_configure(user_flow["flow_id"], data)
     assert result1["type"] is FlowResultType.FORM
     assert result1["step_id"] == "user_confirm"
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result1["flow_id"],
         user_input={CONF_CONFIRMED_OK: True},
     )
@@ -411,7 +411,7 @@ async def test_form_rtsp_mode(
 
 
 async def test_form_only_stream(
-    hass: HomeAssistant,
+    menuai: menuai,
     fakeimgbytes_jpg: bytes,
     user_flow: ConfigFlowResult,
     mock_create_stream: _patch[MagicMock],
@@ -420,13 +420,13 @@ async def test_form_only_stream(
     data = TESTDATA.copy()
     data.pop(CONF_STILL_IMAGE_URL)
     data[CONF_STREAM_SOURCE] = "rtsp://user:pass@127.0.0.1/testurl/2"
-    result1 = await hass.config_entries.flow.async_configure(
+    result1 = await menuai.config_entries.flow.async_configure(
         user_flow["flow_id"],
         data,
     )
 
     assert result1["type"] is FlowResultType.FORM
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result1["flow_id"],
         user_input={CONF_CONFIRMED_OK: True},
     )
@@ -443,18 +443,18 @@ async def test_form_only_stream(
     }
 
     with patch(
-        "homeassistant.components.camera._async_get_stream_image",
+        "menuai.components.camera._async_get_stream_image",
         return_value=fakeimgbytes_jpg,
     ):
-        image_obj = await async_get_image(hass, "camera.127_0_0_1")
+        image_obj = await async_get_image(menuai, "camera.127_0_0_1")
         assert image_obj.content == fakeimgbytes_jpg
 
 
 async def test_form_still_and_stream_not_provided(
-    hass: HomeAssistant, user_flow: ConfigFlowResult
+    menuai: menuai, user_flow: ConfigFlowResult
 ) -> None:
     """Test we show a suitable error if neither still or stream URL are provided."""
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         user_flow["flow_id"],
         {
             CONF_AUTHENTICATION: HTTP_BASIC_AUTHENTICATION,
@@ -500,13 +500,13 @@ async def test_form_still_and_stream_not_provided(
 async def test_form_image_http_exceptions(
     side_effect,
     expected_message,
-    hass: HomeAssistant,
+    menuai: menuai,
     user_flow: ConfigFlowResult,
     mock_create_stream: _patch[MagicMock],
 ) -> None:
     """Test we handle image http exceptions."""
     respx.get("http://127.0.0.1/testurl/1").side_effect = [side_effect]
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         user_flow["flow_id"],
         TESTDATA,
     )
@@ -517,13 +517,13 @@ async def test_form_image_http_exceptions(
 
 @respx.mock
 async def test_form_stream_invalidimage(
-    hass: HomeAssistant,
+    menuai: menuai,
     user_flow: ConfigFlowResult,
     mock_create_stream: _patch[MagicMock],
 ) -> None:
     """Test we handle invalid image when a stream is specified."""
     respx.get("http://127.0.0.1/testurl/1").respond(stream=b"invalid")
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         user_flow["flow_id"],
         TESTDATA,
     )
@@ -534,13 +534,13 @@ async def test_form_stream_invalidimage(
 
 @respx.mock
 async def test_form_stream_invalidimage2(
-    hass: HomeAssistant,
+    menuai: menuai,
     user_flow: ConfigFlowResult,
     mock_create_stream: _patch[MagicMock],
 ) -> None:
     """Test we handle invalid image when a stream is specified."""
     respx.get("http://127.0.0.1/testurl/1").respond(content=None)
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         user_flow["flow_id"],
         TESTDATA,
     )
@@ -551,13 +551,13 @@ async def test_form_stream_invalidimage2(
 
 @respx.mock
 async def test_form_stream_invalidimage3(
-    hass: HomeAssistant,
+    menuai: menuai,
     user_flow: ConfigFlowResult,
     mock_create_stream: _patch[MagicMock],
 ) -> None:
     """Test we handle invalid image when a stream is specified."""
     respx.get("http://127.0.0.1/testurl/1").respond(content=bytes([0xFF]))
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         user_flow["flow_id"],
         TESTDATA,
     )
@@ -569,19 +569,19 @@ async def test_form_stream_invalidimage3(
 @respx.mock
 @pytest.mark.usefixtures("fakeimg_png")
 async def test_form_stream_timeout(
-    hass: HomeAssistant,
+    menuai: menuai,
     user_flow: ConfigFlowResult,
     mock_create_stream: _patch[MagicMock],
 ) -> None:
     """Test we handle invalid auth."""
     mock_create_stream.return_value.start = AsyncMock()
     mock_create_stream.return_value.stop = AsyncMock()
-    mock_create_stream.return_value.hass = hass
+    mock_create_stream.return_value.menuai = menuai
     mock_create_stream.return_value.add_provider.return_value.part_recv = AsyncMock()
     mock_create_stream.return_value.add_provider.return_value.part_recv.return_value = (
         False
     )
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         user_flow["flow_id"],
         TESTDATA,
     )
@@ -590,56 +590,56 @@ async def test_form_stream_timeout(
 
 
 @respx.mock
-async def test_form_stream_not_set_up(hass: HomeAssistant, user_flow) -> None:
+async def test_form_stream_not_set_up(menuai: menuai, user_flow) -> None:
     """Test we handle if stream has not been set up."""
     TESTDATA_ONLY_STREAM = TESTDATA.copy()
     TESTDATA_ONLY_STREAM.pop(CONF_STILL_IMAGE_URL)
 
     with patch(
-        "homeassistant.components.generic.config_flow.create_stream",
-        side_effect=HomeAssistantError("Stream integration is not set up."),
+        "menuai.components.generic.config_flow.create_stream",
+        side_effect=menuaiError("Stream integration is not set up."),
     ):
-        result1 = await hass.config_entries.flow.async_configure(
+        result1 = await menuai.config_entries.flow.async_configure(
             user_flow["flow_id"],
             TESTDATA_ONLY_STREAM,
         )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result1["type"] is FlowResultType.FORM
     assert result1["errors"] == {"stream_source": "stream_not_set_up"}
 
 
 @respx.mock
-async def test_form_stream_other_error(hass: HomeAssistant, user_flow) -> None:
+async def test_form_stream_other_error(menuai: menuai, user_flow) -> None:
     """Test the unknown error for streams."""
     TESTDATA_ONLY_STREAM = TESTDATA.copy()
     TESTDATA_ONLY_STREAM.pop(CONF_STILL_IMAGE_URL)
 
     with (
         patch(
-            "homeassistant.components.generic.config_flow.create_stream",
-            side_effect=HomeAssistantError("Some other error."),
+            "menuai.components.generic.config_flow.create_stream",
+            side_effect=menuaiError("Some other error."),
         ),
-        pytest.raises(HomeAssistantError),
+        pytest.raises(menuaiError),
     ):
-        await hass.config_entries.flow.async_configure(
+        await menuai.config_entries.flow.async_configure(
             user_flow["flow_id"],
             TESTDATA_ONLY_STREAM,
         )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
 @respx.mock
 @pytest.mark.usefixtures("fakeimg_png")
 async def test_form_stream_permission_error(
-    hass: HomeAssistant, user_flow: ConfigFlowResult
+    menuai: menuai, user_flow: ConfigFlowResult
 ) -> None:
     """Test we handle permission error."""
     with patch(
-        "homeassistant.components.generic.config_flow.create_stream",
+        "menuai.components.generic.config_flow.create_stream",
         side_effect=PermissionError(),
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             user_flow["flow_id"],
             TESTDATA,
         )
@@ -650,14 +650,14 @@ async def test_form_stream_permission_error(
 @respx.mock
 @pytest.mark.usefixtures("fakeimg_png")
 async def test_form_no_route_to_host(
-    hass: HomeAssistant, user_flow: ConfigFlowResult
+    menuai: menuai, user_flow: ConfigFlowResult
 ) -> None:
     """Test we handle no route to host."""
     with patch(
-        "homeassistant.components.generic.config_flow.create_stream",
+        "menuai.components.generic.config_flow.create_stream",
         side_effect=OSError(errno.EHOSTUNREACH, "No route to host"),
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             user_flow["flow_id"],
             TESTDATA,
         )
@@ -668,14 +668,14 @@ async def test_form_no_route_to_host(
 @respx.mock
 @pytest.mark.usefixtures("fakeimg_png")
 async def test_form_stream_io_error(
-    hass: HomeAssistant, user_flow: ConfigFlowResult
+    menuai: menuai, user_flow: ConfigFlowResult
 ) -> None:
     """Test we handle an io error when setting up stream."""
     with patch(
-        "homeassistant.components.generic.config_flow.create_stream",
+        "menuai.components.generic.config_flow.create_stream",
         side_effect=OSError(errno.EIO, "Input/output error"),
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             user_flow["flow_id"],
             TESTDATA,
         )
@@ -685,16 +685,16 @@ async def test_form_stream_io_error(
 
 @respx.mock
 @pytest.mark.usefixtures("fakeimg_png")
-async def test_form_oserror(hass: HomeAssistant, user_flow: ConfigFlowResult) -> None:
+async def test_form_oserror(menuai: menuai, user_flow: ConfigFlowResult) -> None:
     """Test we handle OS error when setting up stream."""
     with (
         patch(
-            "homeassistant.components.generic.config_flow.create_stream",
+            "menuai.components.generic.config_flow.create_stream",
             side_effect=OSError("Some other OSError"),
         ),
         pytest.raises(OSError),
     ):
-        await hass.config_entries.flow.async_configure(
+        await menuai.config_entries.flow.async_configure(
             user_flow["flow_id"],
             TESTDATA,
         )
@@ -703,37 +703,37 @@ async def test_form_oserror(hass: HomeAssistant, user_flow: ConfigFlowResult) ->
 @respx.mock
 @pytest.mark.usefixtures("fakeimg_png")
 async def test_options_template_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_create_stream: _patch[MagicMock],
     config_entry: MockConfigEntry,
 ) -> None:
     """Test the options flow with a template error."""
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
     # try updating the still image url
     data = TESTDATA.copy()
     data[CONF_STILL_IMAGE_URL] = "http://127.0.0.1/testurl/2"
-    result2 = await hass.config_entries.options.async_configure(
+    result2 = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input=data,
     )
     assert result2["type"] is FlowResultType.FORM
     assert result2["step_id"] == "user_confirm"
 
-    result2a = await hass.config_entries.options.async_configure(
+    result2a = await menuai.config_entries.options.async_configure(
         result2["flow_id"], user_input={CONF_CONFIRMED_OK: True}
     )
     assert result2a["type"] is FlowResultType.CREATE_ENTRY
 
-    result3 = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result3 = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result3["type"] is FlowResultType.FORM
     assert result3["step_id"] == "init"
 
     # verify that an invalid template reports the correct UI error.
     data[CONF_STILL_IMAGE_URL] = "http://127.0.0.1/testurl/{{1/0}}"
-    result4 = await hass.config_entries.options.async_configure(
+    result4 = await menuai.config_entries.options.async_configure(
         result3["flow_id"],
         user_input=data,
     )
@@ -743,7 +743,7 @@ async def test_options_template_error(
     # verify that an invalid template reports the correct UI error.
     data[CONF_STILL_IMAGE_URL] = "http://127.0.0.1/testurl/1"
     data[CONF_STREAM_SOURCE] = "http://127.0.0.2/testurl/{{1/0}}"
-    result5 = await hass.config_entries.options.async_configure(
+    result5 = await menuai.config_entries.options.async_configure(
         result4["flow_id"],
         user_input=data,
     )
@@ -754,7 +754,7 @@ async def test_options_template_error(
     # verify that an relative stream url is rejected.
     data[CONF_STILL_IMAGE_URL] = "http://127.0.0.1/testurl/1"
     data[CONF_STREAM_SOURCE] = "relative/stream.mjpeg"
-    result6 = await hass.config_entries.options.async_configure(
+    result6 = await menuai.config_entries.options.async_configure(
         result5["flow_id"],
         user_input=data,
     )
@@ -764,7 +764,7 @@ async def test_options_template_error(
     # verify that an malformed stream url is rejected.
     data[CONF_STILL_IMAGE_URL] = "http://127.0.0.1/testurl/1"
     data[CONF_STREAM_SOURCE] = "http://example.com:45:56"
-    result7 = await hass.config_entries.options.async_configure(
+    result7 = await menuai.config_entries.options.async_configure(
         result6["flow_id"],
         user_input=data,
     )
@@ -772,16 +772,16 @@ async def test_options_template_error(
     assert result7["errors"] == {"stream_source": "malformed_url"}
 
 
-async def test_slug(hass: HomeAssistant, caplog: pytest.LogCaptureFixture) -> None:
+async def test_slug(menuai: menuai, caplog: pytest.LogCaptureFixture) -> None:
     """Test that the slug function generates an error in case of invalid template.
 
     Other paths in the slug function are already tested by other tests.
     """
-    result = slug(hass, "http://127.0.0.2/testurl/{{1/0}}")
+    result = slug(menuai, "http://127.0.0.2/testurl/{{1/0}}")
     assert result is None
     assert "Syntax error in" in caplog.text
 
-    result = slug(hass, "http://example.com:999999999999/stream")
+    result = slug(menuai, "http://example.com:999999999999/stream")
     assert result is None
     assert "Syntax error in" in caplog.text
 
@@ -789,7 +789,7 @@ async def test_slug(hass: HomeAssistant, caplog: pytest.LogCaptureFixture) -> No
 @respx.mock
 @pytest.mark.usefixtures("fakeimg_png")
 async def test_options_only_stream(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: _patch[MagicMock],
     mock_create_stream: _patch[MagicMock],
 ) -> None:
@@ -803,22 +803,22 @@ async def test_options_only_stream(
         data={},
         options=data,
     )
-    mock_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_entry.entry_id)
+    mock_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_entry.entry_id)
 
-    result = await hass.config_entries.options.async_init(mock_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(mock_entry.entry_id)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
     # try updating the config options
-    result2 = await hass.config_entries.options.async_configure(
+    result2 = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input=data,
     )
     assert result2["type"] is FlowResultType.FORM
     assert result2["step_id"] == "user_confirm"
 
-    result3 = await hass.config_entries.options.async_configure(
+    result3 = await menuai.config_entries.options.async_configure(
         result2["flow_id"], user_input={CONF_CONFIRMED_OK: True}
     )
     assert result3["type"] is FlowResultType.CREATE_ENTRY
@@ -826,7 +826,7 @@ async def test_options_only_stream(
 
 
 async def test_options_still_and_stream_not_provided(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: _patch[MagicMock],
 ) -> None:
     """Test we show a suitable error if neither still or stream URL are provided."""
@@ -838,16 +838,16 @@ async def test_options_still_and_stream_not_provided(
         data={},
         options=data,
     )
-    mock_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_entry.entry_id)
+    mock_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_entry.entry_id)
 
-    result = await hass.config_entries.options.async_init(mock_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(mock_entry.entry_id)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
     data.pop(CONF_STILL_IMAGE_URL)
     data.pop(CONF_STREAM_SOURCE)
-    result2 = await hass.config_entries.options.async_configure(
+    result2 = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input=data,
     )
@@ -858,16 +858,16 @@ async def test_options_still_and_stream_not_provided(
 @respx.mock
 @pytest.mark.usefixtures("fakeimg_png")
 async def test_options_permission_error(
-    hass: HomeAssistant, config_entry: MockConfigEntry
+    menuai: menuai, config_entry: MockConfigEntry
 ) -> None:
     """Test we handle a PermissionError and pass the message through."""
 
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     with patch(
-        "homeassistant.components.generic.config_flow.create_stream",
+        "menuai.components.generic.config_flow.create_stream",
         side_effect=PermissionError("Some message"),
     ):
-        result2 = await hass.config_entries.options.async_configure(
+        result2 = await menuai.config_entries.options.async_configure(
             result["flow_id"],
             TESTDATA,
         )
@@ -876,7 +876,7 @@ async def test_options_permission_error(
 
 
 async def test_migrate_existing_ids(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test that existing ids are migrated for issue #70568."""
 
@@ -889,7 +889,7 @@ async def test_migrate_existing_ids(
         domain=DOMAIN, unique_id=old_unique_id, options=test_data, title="My Title"
     )
     new_unique_id = mock_entry.entry_id
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
     entity_entry = entity_registry.async_get_or_create(
         "camera",
@@ -901,8 +901,8 @@ async def test_migrate_existing_ids(
     assert entity_entry.entity_id == entity_id
     assert entity_entry.unique_id == old_unique_id
 
-    await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_entry.entry_id)
+    await menuai.async_block_till_done()
 
     entity_entry = entity_registry.async_get(entity_id)
     assert entity_entry.unique_id == new_unique_id
@@ -911,28 +911,28 @@ async def test_migrate_existing_ids(
 @respx.mock
 @pytest.mark.usefixtures("fakeimg_png")
 async def test_options_use_wallclock_as_timestamps(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_create_stream: _patch[MagicMock],
-    hass_client: ClientSessionGenerator,
-    hass_ws_client: WebSocketGenerator,
+    menuai_client: ClientSessionGenerator,
+    menuai_ws_client: WebSocketGenerator,
     fakeimgbytes_png: bytes,
     config_entry: MockConfigEntry,
     mock_setup_entry: _patch[MagicMock],
 ) -> None:
     """Test the use_wallclock_as_timestamps option flow."""
 
-    result = await hass.config_entries.options.async_init(
+    result = await menuai.config_entries.options.async_init(
         config_entry.entry_id, context={"show_advanced_options": True}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
-    result2 = await hass.config_entries.options.async_configure(
+    result2 = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={CONF_USE_WALLCLOCK_AS_TIMESTAMPS: True, **TESTDATA},
     )
     assert result2["type"] is FlowResultType.FORM
 
-    ws_client = await hass_ws_client()
+    ws_client = await menuai_ws_client()
     flow_id = result2["flow_id"]
     await ws_client.send_json_auto_id(
         {
@@ -943,7 +943,7 @@ async def test_options_use_wallclock_as_timestamps(
     )
     json = await ws_client.receive_json()
 
-    client = await hass_client()
+    client = await menuai_client()
     still_preview_url = json["event"]["attributes"]["still_url"]
     # Check the preview image works.
     resp = await client.get(still_preview_url)
@@ -951,18 +951,18 @@ async def test_options_use_wallclock_as_timestamps(
     assert await resp.read() == fakeimgbytes_png
 
     # Test what happens if user rejects the preview
-    result3 = await hass.config_entries.options.async_configure(
+    result3 = await menuai.config_entries.options.async_configure(
         result2["flow_id"], user_input={CONF_CONFIRMED_OK: False}
     )
     assert result3["type"] is FlowResultType.FORM
     assert result3["step_id"] == "init"
-    result4 = await hass.config_entries.options.async_configure(
+    result4 = await menuai.config_entries.options.async_configure(
         result3["flow_id"],
         user_input={CONF_USE_WALLCLOCK_AS_TIMESTAMPS: True, **TESTDATA},
     )
     assert result4["type"] is FlowResultType.FORM
     assert result4["step_id"] == "user_confirm"
-    result5 = await hass.config_entries.options.async_configure(
+    result5 = await menuai.config_entries.options.async_configure(
         result4["flow_id"],
         user_input={CONF_CONFIRMED_OK: True},
     )

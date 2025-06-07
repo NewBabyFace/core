@@ -3,32 +3,32 @@
 import asyncio
 from typing import Any
 
-from homeassistant.components import system_health
-from homeassistant.const import CONF_MODE
-from homeassistant.core import HomeAssistant, callback
+from menuai.components import system_health
+from menuai.const import CONF_MODE
+from menuai.core import menuai, callback
 
 from .const import LOVELACE_DATA, MODE_AUTO, MODE_STORAGE, MODE_YAML
 
 
 @callback
 def async_register(
-    hass: HomeAssistant, register: system_health.SystemHealthRegistration
+    menuai: menuai, register: system_health.SystemHealthRegistration
 ) -> None:
     """Register system health callbacks."""
     register.async_register_info(system_health_info, "/config/lovelace")
 
 
-async def system_health_info(hass: HomeAssistant) -> dict[str, Any]:
+async def system_health_info(menuai: menuai) -> dict[str, Any]:
     """Get info for the info page."""
     health_info: dict[str, Any] = {
-        "dashboards": len(hass.data[LOVELACE_DATA].dashboards)
+        "dashboards": len(menuai.data[LOVELACE_DATA].dashboards)
     }
-    health_info.update(await hass.data[LOVELACE_DATA].resources.async_get_info())
+    health_info.update(await menuai.data[LOVELACE_DATA].resources.async_get_info())
 
     dashboards_info = await asyncio.gather(
         *(
-            hass.data[LOVELACE_DATA].dashboards[dashboard].async_get_info()
-            for dashboard in hass.data[LOVELACE_DATA].dashboards
+            menuai.data[LOVELACE_DATA].dashboards[dashboard].async_get_info()
+            for dashboard in menuai.data[LOVELACE_DATA].dashboards
         )
     )
 
@@ -42,7 +42,7 @@ async def system_health_info(hass: HomeAssistant) -> dict[str, Any]:
             else:
                 health_info[key] = dashboard[key]
 
-    if hass.data[LOVELACE_DATA].mode == MODE_YAML:
+    if menuai.data[LOVELACE_DATA].mode == MODE_YAML:
         health_info[CONF_MODE] = MODE_YAML
     elif MODE_STORAGE in modes:
         health_info[CONF_MODE] = MODE_STORAGE

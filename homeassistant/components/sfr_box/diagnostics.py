@@ -5,9 +5,9 @@ from __future__ import annotations
 import dataclasses
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from menuai.components.diagnostics import async_redact_data
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
 
 from .const import DOMAIN
 from .models import DomainData
@@ -25,10 +25,10 @@ def _async_redact_data(obj: DataclassInstance | None) -> dict[str, Any] | None:
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: ConfigEntry
+    menuai: menuai, entry: ConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
-    data: DomainData = hass.data[DOMAIN][entry.entry_id]
+    data: DomainData = menuai.data[DOMAIN][entry.entry_id]
 
     return {
         "entry": {

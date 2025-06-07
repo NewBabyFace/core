@@ -4,17 +4,17 @@ from __future__ import annotations
 
 from typing import NamedTuple
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
 )
-from homeassistant.const import UnitOfLength
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.const import UnitOfLength
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
     ATTR_DIR_OF_TRAVEL,
@@ -80,7 +80,7 @@ def _device_info(coordinator: ProximityDataUpdateCoordinator) -> DeviceInfo:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ProximityConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -95,7 +95,7 @@ async def async_setup_entry(
 
     tracked_entity_descriptors: list[TrackedEntityDescriptor] = []
 
-    entity_reg = er.async_get(hass)
+    entity_reg = er.async_get(menuai)
     for tracked_entity_id in coordinator.tracked_entities:
         tracked_entity_object_id = tracked_entity_id.split(".")[-1]
         if (entity_entry := entity_reg.async_get(tracked_entity_id)) is not None:
@@ -181,9 +181,9 @@ class ProximityTrackedEntitySensor(
             "tracked_entity": tracked_entity_descriptor.name
         }
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register entity mapping."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self.coordinator.async_add_entity_mapping(
             self.tracked_entity_id, self.entity_id
         )

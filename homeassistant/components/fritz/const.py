@@ -14,7 +14,7 @@ from fritzconnection.core.exceptions import (
     FritzServiceError,
 )
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 
 class MeshRoles(StrEnum):

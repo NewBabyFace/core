@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 _LOGGER = logging.getLogger(__name__)
 

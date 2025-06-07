@@ -7,8 +7,8 @@ import pytest
 from simplefin4py import FinancialData
 from simplefin4py.exceptions import SimpleFinInvalidClaimTokenError
 
-from homeassistant.components.simplefin import CONF_ACCESS_URL
-from homeassistant.components.simplefin.const import DOMAIN
+from menuai.components.simplefin import CONF_ACCESS_URL
+from menuai.components.simplefin.const import DOMAIN
 
 from tests.common import MockConfigEntry, load_fixture
 
@@ -19,7 +19,7 @@ MOCK_ACCESS_URL = "https://i:am@yomama.house.com"
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Mock setting up a config entry."""
     with patch(
-        "homeassistant.components.simplefin.async_setup_entry", return_value=True
+        "menuai.components.simplefin.async_setup_entry", return_value=True
     ) as mock_setup:
         yield mock_setup
 
@@ -38,7 +38,7 @@ async def mock_config_entry() -> MockConfigEntry:
 def mock_claim_setup_token() -> str:
     """Fixture to mock the claim_setup_token method of SimpleFin."""
     with patch(
-        "homeassistant.components.simplefin.config_flow.SimpleFin.claim_setup_token",
+        "menuai.components.simplefin.config_flow.SimpleFin.claim_setup_token",
     ) as mock_claim_setup_token:
         mock_claim_setup_token.return_value = "https://i:am@yomama.comma"
         yield
@@ -49,7 +49,7 @@ def mock_decode_claim_token_invalid_then_good() -> str:
     """Fixture to mock the decode_claim_token method of SimpleFin."""
     return_values = [SimpleFinInvalidClaimTokenError, "valid_return_value"]
     with patch(
-        "homeassistant.components.simplefin.config_flow.SimpleFin.decode_claim_token",
+        "menuai.components.simplefin.config_flow.SimpleFin.decode_claim_token",
         new_callable=lambda: MagicMock(side_effect=return_values),
     ):
         yield
@@ -61,11 +61,11 @@ def mock_simplefin_client() -> Generator[AsyncMock]:
 
     with (
         patch(
-            "homeassistant.components.simplefin.SimpleFin",
+            "menuai.components.simplefin.SimpleFin",
             autospec=True,
         ) as mock_client,
         patch(
-            "homeassistant.components.simplefin.config_flow.SimpleFin",
+            "menuai.components.simplefin.config_flow.SimpleFin",
             new=mock_client,
         ),
     ):

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
-from homeassistant.helpers.entity import Entity
+from menuai.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
+from menuai.helpers.entity import Entity
 
 from .const import DOMAIN
 from .coordinator import FloDeviceDataUpdateCoordinator
@@ -49,6 +49,6 @@ class FloEntity(Entity):
         """Update Flo entity."""
         await self._device.async_request_refresh()
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai."""
         self.async_on_remove(self._device.async_add_listener(self.async_write_ha_state))

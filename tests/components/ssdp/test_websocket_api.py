@@ -3,7 +3,7 @@
 import asyncio
 from unittest.mock import ANY, AsyncMock, Mock, patch
 
-from homeassistant.core import EVENT_HOMEASSISTANT_STARTED, HomeAssistant
+from menuai.core import EVENT_menuai_STARTED, menuai
 
 from . import _ssdp_headers, init_ssdp_component
 
@@ -12,15 +12,15 @@ from tests.typing import WebSocketGenerator
 
 
 @patch(
-    "homeassistant.components.ssdp.async_get_ssdp",
+    "menuai.components.ssdp.async_get_ssdp",
     return_value={"mock-domain": [{"deviceType": "Paulus"}]},
 )
 async def test_subscribe_discovery(
     mock_get_ssdp: Mock,
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     mock_flow_init: AsyncMock,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test ssdp subscribe_discovery."""
     aioclient_mock.get(
@@ -34,9 +34,9 @@ async def test_subscribe_discovery(
 </root>
     """,
     )
-    ssdp_listener = await init_ssdp_component(hass)
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-    await hass.async_block_till_done()
+    ssdp_listener = await init_ssdp_component(menuai)
+    menuai.bus.async_fire(EVENT_menuai_STARTED)
+    await menuai.async_block_till_done()
 
     mock_ssdp_search_response = _ssdp_headers(
         {
@@ -47,9 +47,9 @@ async def test_subscribe_discovery(
         }
     )
     ssdp_listener._on_search(mock_ssdp_search_response)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -87,7 +87,7 @@ async def test_subscribe_discovery(
                 "friendlyName": "Bedroom TV",
             },
             "name": "Bedroom TV",
-            "x_homeassistant_matching_domains": [],
+            "x_menuai_matching_domains": [],
         }
     ]
 
@@ -101,7 +101,7 @@ async def test_subscribe_discovery(
         }
     )
     ssdp_listener._on_alive(mock_ssdp_advertisement)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     async with asyncio.timeout(1):
         response = await client.receive_json()
@@ -131,13 +131,13 @@ async def test_subscribe_discovery(
                 "friendlyName": "Bedroom TV",
             },
             "name": "Bedroom TV",
-            "x_homeassistant_matching_domains": ["mock-domain"],
+            "x_menuai_matching_domains": ["mock-domain"],
         }
     ]
 
     mock_ssdp_advertisement["nts"] = "ssdp:byebye"
     ssdp_listener._on_byebye(mock_ssdp_advertisement)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     async with asyncio.timeout(1):
         response = await client.receive_json()

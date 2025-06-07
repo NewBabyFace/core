@@ -2,7 +2,7 @@
 
 from datetime import timedelta
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 DOMAIN = "brunt"
 ATTR_REQUEST_POSITION = "request_position"

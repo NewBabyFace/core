@@ -8,14 +8,14 @@ from dataclasses import dataclass
 from enocean.utils import combine_hex
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
     RestoreSensor,
     SensorDeviceClass,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_DEVICE_CLASS,
     CONF_ID,
     CONF_NAME,
@@ -25,10 +25,10 @@ from homeassistant.const import (
     UnitOfPower,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .entity import EnOceanEntity
 
@@ -101,7 +101,7 @@ PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -156,10 +156,10 @@ class EnOceanSensor(EnOceanEntity, RestoreSensor):
         self._attr_name = f"{description.name} {dev_name}"
         self._attr_unique_id = description.unique_id(dev_id)
 
-    async def async_added_to_hass(self) -> None:
-        """Call when entity about to be added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Call when entity about to be added to menuai."""
         # If not None, we got an initial value.
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         if self._attr_native_value is not None:
             return
 

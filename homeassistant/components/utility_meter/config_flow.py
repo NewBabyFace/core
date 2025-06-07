@@ -7,10 +7,10 @@ from typing import Any, cast
 
 import voluptuous as vol
 
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.const import CONF_NAME
-from homeassistant.helpers import selector
-from homeassistant.helpers.schema_config_entry_flow import (
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.const import CONF_NAME
+from menuai.helpers import selector
+from menuai.helpers.schema_config_entry_flow import (
     SchemaCommonFlowHandler,
     SchemaConfigFlowHandler,
     SchemaFlowError,

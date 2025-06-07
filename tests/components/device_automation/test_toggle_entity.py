@@ -4,12 +4,12 @@ from datetime import timedelta
 
 import pytest
 
-from homeassistant.components import automation
-from homeassistant.const import STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.components import automation
+from menuai.const import STATE_OFF, STATE_ON
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from tests.common import MockConfigEntry, async_fire_time_changed
 
@@ -20,7 +20,7 @@ def stub_blueprint_populate_autouse(stub_blueprint_populate: None) -> None:
 
 
 async def test_if_fires_on_state_change(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     service_calls: list[ServiceCall],
@@ -31,7 +31,7 @@ async def test_if_fires_on_state_change(
     tested by each integration too.
     """
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -40,10 +40,10 @@ async def test_if_fires_on_state_change(
         "switch", "test", "5678", device_id=device_entry.id
     )
 
-    hass.states.async_set(entry.entity_id, STATE_ON)
+    menuai.states.async_set(entry.entity_id, STATE_ON)
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -113,20 +113,20 @@ async def test_if_fires_on_state_change(
             ]
         },
     )
-    await hass.async_block_till_done()
-    assert hass.states.get(entry.entity_id).state == STATE_ON
+    await menuai.async_block_till_done()
+    assert menuai.states.get(entry.entity_id).state == STATE_ON
     assert len(service_calls) == 0
 
-    hass.states.async_set(entry.entity_id, STATE_OFF)
-    await hass.async_block_till_done()
+    menuai.states.async_set(entry.entity_id, STATE_OFF)
+    await menuai.async_block_till_done()
     assert len(service_calls) == 2
     assert {service_calls[0].data["some"], service_calls[1].data["some"]} == {
         f"turn_off device - {entry.entity_id} - on - off - None",
         f"turn_on_or_off device - {entry.entity_id} - on - off - None",
     }
 
-    hass.states.async_set(entry.entity_id, STATE_ON)
-    await hass.async_block_till_done()
+    menuai.states.async_set(entry.entity_id, STATE_ON)
+    await menuai.async_block_till_done()
     assert len(service_calls) == 4
     assert {service_calls[2].data["some"], service_calls[3].data["some"]} == {
         f"turn_on device - {entry.entity_id} - off - on - None",
@@ -136,7 +136,7 @@ async def test_if_fires_on_state_change(
 
 @pytest.mark.parametrize("trigger", ["turned_off", "changed_states"])
 async def test_if_fires_on_state_change_with_for(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     service_calls: list[ServiceCall],
@@ -144,7 +144,7 @@ async def test_if_fires_on_state_change_with_for(
 ) -> None:
     """Test for triggers firing with delay."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -153,10 +153,10 @@ async def test_if_fires_on_state_change_with_for(
         "switch", "test", "5678", device_id=device_entry.id
     )
 
-    hass.states.async_set(entry.entity_id, STATE_ON)
+    menuai.states.async_set(entry.entity_id, STATE_ON)
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -185,17 +185,17 @@ async def test_if_fires_on_state_change_with_for(
             ]
         },
     )
-    await hass.async_block_till_done()
-    assert hass.states.get(entry.entity_id).state == STATE_ON
+    await menuai.async_block_till_done()
+    assert menuai.states.get(entry.entity_id).state == STATE_ON
     assert len(service_calls) == 0
 
-    hass.states.async_set(entry.entity_id, STATE_OFF)
-    await hass.async_block_till_done()
+    menuai.states.async_set(entry.entity_id, STATE_OFF)
+    await menuai.async_block_till_done()
     assert len(service_calls) == 0
-    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=10))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(seconds=10))
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert (
         service_calls[0].data["some"]
         == f"turn_off device - {entry.entity_id} - on - off - 0:00:05"

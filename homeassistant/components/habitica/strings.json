@@ -95,10 +95,10 @@
           "password": "[%key:common::config_flow::data::password%]"
         },
         "data_description": {
-          "username": "Email or username (case-sensitive) to connect Home Assistant to your Habitica account",
-          "password": "Password for the account to connect Home Assistant to Habitica"
+          "username": "Email or username (case-sensitive) to connect MenuAI to your Habitica account",
+          "password": "Password for the account to connect MenuAI to Habitica"
         },
-        "description": "Enter your login details to start using Habitica with Home Assistant\n\n[Forgot your password?]({forgot_password})"
+        "description": "Enter your login details to start using Habitica with MenuAI\n\n[Forgot your password?]({forgot_password})"
       },
       "advanced": {
         "title": "[%key:component::habitica::config::step::user::menu_options::advanced%]",
@@ -122,7 +122,7 @@
         "sections": {
           "reauth_login": {
             "name": "Re-authorize via login",
-            "description": "Enter your login details below to re-authorize the Home Assistant integration with Habitica",
+            "description": "Enter your login details below to re-authorize the MenuAI integration with Habitica",
             "data": {
               "username": "[%key:component::habitica::config::step::login::data::username%]",
               "password": "[%key:common::config_flow::data::password%]"
@@ -497,10 +497,10 @@
       "message": "Unable to cast skill, your character does not have the skill or spell {skill}."
     },
     "entry_not_found": {
-      "message": "The selected character is not configured in Home Assistant."
+      "message": "The selected character is not configured in MenuAI."
     },
     "entry_not_loaded": {
-      "message": "The selected character is currently not loaded or disabled in Home Assistant."
+      "message": "The selected character is currently not loaded or disabled in MenuAI."
     },
     "task_not_found": {
       "message": "Unable to complete action, could not find the task {task}"
@@ -533,7 +533,7 @@
   "issues": {
     "deprecated_entity": {
       "title": "The Habitica {name} entity is deprecated",
-      "description": "The Habitica entity `{entity}` is deprecated and will be removed in a future release.\nPlease update your automations and scripts, disable `{entity}` and reload the integration/restart Home Assistant to fix this issue."
+      "description": "The Habitica entity `{entity}` is deprecated and will be removed in a future release.\nPlease update your automations and scripts, disable `{entity}` and reload the integration/restart MenuAI to fix this issue."
     }
   },
   "services": {

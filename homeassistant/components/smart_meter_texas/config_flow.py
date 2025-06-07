@@ -11,12 +11,12 @@ from smart_meter_texas.exceptions import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import aiohttp_client
-from homeassistant.util.ssl import get_default_context
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import aiohttp_client
+from menuai.util.ssl import get_default_context
 
 from .const import DOMAIN
 
@@ -27,13 +27,13 @@ DATA_SCHEMA = vol.Schema(
 )
 
 
-async def validate_input(hass: HomeAssistant, data):
+async def validate_input(menuai: menuai, data):
     """Validate the user input allows us to connect.
 
     Data has the keys from DATA_SCHEMA with values provided by the user.
     """
     ssl_context = get_default_context()
-    client_session = aiohttp_client.async_get_clientsession(hass)
+    client_session = aiohttp_client.async_get_clientsession(menuai)
     account = Account(data["username"], data["password"])
     client = Client(client_session, account, ssl_context)
 
@@ -61,7 +61,7 @@ class SMTConfigFlow(ConfigFlow, domain=DOMAIN):
         errors = {}
         if user_input is not None:
             try:
-                info = await validate_input(self.hass, user_input)
+                info = await validate_input(self.menuai, user_input)
             except CannotConnect:
                 errors["base"] = "cannot_connect"
             except InvalidAuth:
@@ -82,9 +82,9 @@ class SMTConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(menuaiError):
     """Error to indicate there is invalid auth."""

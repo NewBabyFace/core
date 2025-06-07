@@ -6,17 +6,17 @@ from dataclasses import dataclass
 from onedrive_personal_sdk.const import DriveState
 from onedrive_personal_sdk.models.items import DriveQuota
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
 )
-from homeassistant.const import EntityCategory, UnitOfInformation
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.const import EntityCategory, UnitOfInformation
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import OneDriveConfigEntry, OneDriveUpdateCoordinator
@@ -71,7 +71,7 @@ DRIVE_STATE_ENTITIES: tuple[OneDriveSensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: OneDriveConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

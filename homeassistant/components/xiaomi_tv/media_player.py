@@ -7,17 +7,17 @@ import logging
 import pymitv
 import voluptuous as vol
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     PLATFORM_SCHEMA as MEDIA_PLAYER_PLATFORM_SCHEMA,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
 )
-from homeassistant.const import CONF_HOST, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_HOST, CONF_NAME
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 DEFAULT_NAME = "Xiaomi TV"
 
@@ -33,7 +33,7 @@ PLATFORM_SCHEMA = MEDIA_PLAYER_PLATFORM_SCHEMA.extend(
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -49,7 +49,7 @@ def setup_platform(
         if not pymitv.Discover().check_ip(host):
             _LOGGER.error("Could not find Xiaomi TV with specified IP: %s", host)
         else:
-            # Register TV with Home Assistant.
+            # Register TV with MenuAI.
             add_entities([XiaomiTV(host, name)])
     else:
         # Otherwise, discover TVs on network.
@@ -57,7 +57,7 @@ def setup_platform(
 
 
 class XiaomiTV(MediaPlayerEntity):
-    """Represent the Xiaomi TV for Home Assistant."""
+    """Represent the Xiaomi TV for MenuAI."""
 
     _attr_assumed_state = True
     _attr_supported_features = (

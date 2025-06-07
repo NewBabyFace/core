@@ -6,22 +6,22 @@ from typing import Any
 
 from attr import asdict
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from .const import ADDONS_COORDINATOR
-from .coordinator import HassioDataUpdateCoordinator
+from .coordinator import menuaiioDataUpdateCoordinator
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
-    coordinator: HassioDataUpdateCoordinator = hass.data[ADDONS_COORDINATOR]
-    device_registry = dr.async_get(hass)
-    entity_registry = er.async_get(hass)
+    coordinator: menuaiioDataUpdateCoordinator = menuai.data[ADDONS_COORDINATOR]
+    device_registry = dr.async_get(menuai)
+    entity_registry = er.async_get(menuai)
 
     devices = []
 
@@ -40,7 +40,7 @@ async def async_get_config_entry_diagnostics(
 
         for entity_entry in registry_entities:
             state_dict = None
-            if state := hass.states.get(entity_entry.entity_id):
+            if state := menuai.states.get(entity_entry.entity_id):
                 state_dict = dict(state.as_dict())
                 state_dict.pop("context", None)
 

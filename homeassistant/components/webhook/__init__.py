@@ -1,4 +1,4 @@
-"""Webhooks for Home Assistant."""
+"""Webhooks for MenuAI."""
 
 from __future__ import annotations
 
@@ -14,15 +14,15 @@ from aiohttp.hdrs import METH_GET, METH_HEAD, METH_POST, METH_PUT
 from aiohttp.web import Request, Response
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.components.http import KEY_HASS, HomeAssistantView
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.network import get_url, is_cloud_connection
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.loader import bind_hass
-from homeassistant.util import network as network_util
-from homeassistant.util.aiohttp import MockRequest, MockStreamReader, serialize_response
+from menuai.components import websocket_api
+from menuai.components.http import KEY_menuai, menuaiView
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.network import get_url, is_cloud_connection
+from menuai.helpers.typing import ConfigType
+from menuai.loader import bind_menuai
+from menuai.util import network as network_util
+from menuai.util.aiohttp import MockRequest, MockStreamReader, serialize_response
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -36,19 +36,19 @@ CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)
 
 
 @callback
-@bind_hass
+@bind_menuai
 def async_register(
-    hass: HomeAssistant,
+    menuai: menuai,
     domain: str,
     name: str,
     webhook_id: str,
-    handler: Callable[[HomeAssistant, str, Request], Awaitable[Response | None]],
+    handler: Callable[[menuai, str, Request], Awaitable[Response | None]],
     *,
     local_only: bool | None = False,
     allowed_methods: Iterable[str] | None = None,
 ) -> None:
     """Register a webhook."""
-    handlers = hass.data.setdefault(DOMAIN, {})
+    handlers = menuai.data.setdefault(DOMAIN, {})
 
     if webhook_id in handlers:
         raise ValueError("Handler is already defined!")
@@ -72,10 +72,10 @@ def async_register(
 
 
 @callback
-@bind_hass
-def async_unregister(hass: HomeAssistant, webhook_id: str) -> None:
+@bind_menuai
+def async_unregister(menuai: menuai, webhook_id: str) -> None:
     """Remove a webhook."""
-    handlers = hass.data.setdefault(DOMAIN, {})
+    handlers = menuai.data.setdefault(DOMAIN, {})
     handlers.pop(webhook_id, None)
 
 
@@ -86,9 +86,9 @@ def async_generate_id() -> str:
 
 
 @callback
-@bind_hass
+@bind_menuai
 def async_generate_url(
-    hass: HomeAssistant,
+    menuai: menuai,
     webhook_id: str,
     allow_internal: bool = True,
     allow_external: bool = True,
@@ -99,7 +99,7 @@ def async_generate_url(
     return (
         f"{
             get_url(
-                hass,
+                menuai,
                 allow_internal=allow_internal,
                 allow_external=allow_external,
                 allow_cloud=False,
@@ -117,12 +117,12 @@ def async_generate_path(webhook_id: str) -> str:
     return URL_WEBHOOK_PATH.format(webhook_id=webhook_id)
 
 
-@bind_hass
+@bind_menuai
 async def async_handle_webhook(
-    hass: HomeAssistant, webhook_id: str, request: Request | MockRequest
+    menuai: menuai, webhook_id: str, request: Request | MockRequest
 ) -> Response:
     """Handle a webhook."""
-    handlers: dict[str, dict[str, Any]] = hass.data.setdefault(DOMAIN, {})
+    handlers: dict[str, dict[str, Any]] = menuai.data.setdefault(DOMAIN, {})
 
     content_stream: StreamReader | MockStreamReader
     if isinstance(request, MockRequest):
@@ -162,7 +162,7 @@ async def async_handle_webhook(
         return Response(status=HTTPStatus.METHOD_NOT_ALLOWED)
 
     if webhook["local_only"] in (True, None) and not isinstance(request, MockRequest):
-        is_local = not is_cloud_connection(hass)
+        is_local = not is_cloud_connection(menuai)
         if is_local:
             if TYPE_CHECKING:
                 assert isinstance(request, Request)
@@ -191,7 +191,7 @@ async def async_handle_webhook(
                 )
 
     try:
-        response: Response | None = await webhook["handler"](hass, webhook_id, request)
+        response: Response | None = await webhook["handler"](menuai, webhook_id, request)
         if response is None:
             response = Response(status=HTTPStatus.OK)
     except Exception:
@@ -200,15 +200,15 @@ async def async_handle_webhook(
     return response
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Initialize the webhook component."""
-    hass.http.register_view(WebhookView)
-    websocket_api.async_register_command(hass, websocket_list)
-    websocket_api.async_register_command(hass, websocket_handle)
+    menuai.http.register_view(WebhookView)
+    websocket_api.async_register_command(menuai, websocket_list)
+    websocket_api.async_register_command(menuai, websocket_handle)
     return True
 
 
-class WebhookView(HomeAssistantView):
+class WebhookView(menuaiView):
     """Handle incoming webhook requests."""
 
     url = URL_WEBHOOK_PATH
@@ -219,8 +219,8 @@ class WebhookView(HomeAssistantView):
     async def _handle(self, request: Request, webhook_id: str) -> Response:
         """Handle webhook call."""
         _LOGGER.debug("Handling webhook %s payload for %s", request.method, webhook_id)
-        hass = request.app[KEY_HASS]
-        return await async_handle_webhook(hass, webhook_id, request)
+        menuai = request.app[KEY_menuai]
+        return await async_handle_webhook(menuai, webhook_id, request)
 
     get = _handle
     head = _handle
@@ -235,12 +235,12 @@ class WebhookView(HomeAssistantView):
 )
 @callback
 def websocket_list(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Return a list of webhooks."""
-    handlers = hass.data.setdefault(DOMAIN, {})
+    handlers = menuai.data.setdefault(DOMAIN, {})
     result = [
         {
             "webhook_id": webhook_id,
@@ -267,7 +267,7 @@ def websocket_list(
 )
 @websocket_api.async_response
 async def websocket_handle(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
@@ -280,7 +280,7 @@ async def websocket_handle(
         mock_source=f"{DOMAIN}/ws",
     )
 
-    response = await async_handle_webhook(hass, msg["webhook_id"], request)
+    response = await async_handle_webhook(menuai, msg["webhook_id"], request)
 
     response_dict = serialize_response(response)
     body = response_dict.get("body")

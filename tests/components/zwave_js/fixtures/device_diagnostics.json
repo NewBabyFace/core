@@ -1,9 +1,9 @@
 {
   "home_assistant": {
-    "installation_type": "Home Assistant OS",
+    "installation_type": "MenuAI OS",
     "version": "2023.10.5",
     "dev": false,
-    "hassio": true,
+    "menuaiio": true,
     "virtualenv": false,
     "python_version": "3.11.5",
     "docker": true,
@@ -12,9 +12,9 @@
     "os_name": "Linux",
     "os_version": "6.1.56",
     "supervisor": "2023.10.1",
-    "host_os": "Home Assistant OS 11.0",
+    "host_os": "MenuAI OS 11.0",
     "docker_version": "24.0.6",
-    "chassis": "embedded",
+    "cmenuaiis": "embedded",
     "run_as_root": true
   },
   "custom_components": {

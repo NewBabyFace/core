@@ -5,10 +5,10 @@ from __future__ import annotations
 from pypalazzetti.exceptions import CommunicationError, ValidationError
 from pypalazzetti.fan import FanType
 
-from homeassistant.components.number import NumberDeviceClass, NumberEntity
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.number import NumberDeviceClass, NumberEntity
+from menuai.core import menuai
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import PalazzettiConfigEntry, PalazzettiDataUpdateCoordinator
@@ -16,7 +16,7 @@ from .entity import PalazzettiEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: PalazzettiConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -62,7 +62,7 @@ class PalazzettiCombustionPowerEntity(PalazzettiEntity, NumberEntity):
         try:
             await self.coordinator.client.set_power_mode(int(value))
         except CommunicationError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN, translation_key="cannot_connect"
             ) from err
         except ValidationError as err:
@@ -107,7 +107,7 @@ class PalazzettiFanEntity(PalazzettiEntity, NumberEntity):
         try:
             await self.coordinator.client.set_fan_speed(int(value), self.fan)
         except CommunicationError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN, translation_key="cannot_connect"
             ) from err
         except ValidationError as err:

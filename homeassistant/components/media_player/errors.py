@@ -1,9 +1,9 @@
 """Errors for the Media Player component."""
 
-from homeassistant.exceptions import HomeAssistantError
+from menuai.exceptions import menuaiError
 
 
-class MediaPlayerException(HomeAssistantError):
+class MediaPlayerException(menuaiError):
     """Base class for Media Player exceptions."""
 
 

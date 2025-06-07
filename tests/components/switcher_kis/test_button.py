@@ -6,11 +6,11 @@ from aioswitcher.api.messages import SwitcherBaseResponse
 from aioswitcher.device import DeviceState, ThermostatSwing
 import pytest
 
-from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
-from homeassistant.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.util import slugify
+from menuai.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
+from menuai.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.util import slugify
 
 from . import init_integration
 from .consts import DUMMY_THERMOSTAT_DEVICE as DEVICE
@@ -31,21 +31,21 @@ SWING_OFF_EID = BASE_ENTITY_ID + "_vertical_swing_off"
 )
 @pytest.mark.parametrize("mock_bridge", [[DEVICE]], indirect=True)
 async def test_assume_button(
-    hass: HomeAssistant, entity, state, mock_bridge, mock_api
+    menuai: menuai, entity, state, mock_bridge, mock_api
 ) -> None:
     """Test assume on/off button."""
-    await init_integration(hass)
+    await init_integration(menuai)
     assert mock_bridge
 
-    assert hass.states.get(ASSUME_ON_EID) is not None
-    assert hass.states.get(ASSUME_OFF_EID) is not None
-    assert hass.states.get(SWING_ON_EID) is None
-    assert hass.states.get(SWING_OFF_EID) is None
+    assert menuai.states.get(ASSUME_ON_EID) is not None
+    assert menuai.states.get(ASSUME_OFF_EID) is not None
+    assert menuai.states.get(SWING_ON_EID) is None
+    assert menuai.states.get(SWING_OFF_EID) is None
 
     with patch(
-        "homeassistant.components.switcher_kis.entity.SwitcherApi.control_breeze_device",
+        "menuai.components.switcher_kis.entity.SwitcherApi.control_breeze_device",
     ) as mock_control_device:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             BUTTON_DOMAIN,
             SERVICE_PRESS,
             {ATTR_ENTITY_ID: entity},
@@ -64,7 +64,7 @@ async def test_assume_button(
 )
 @pytest.mark.parametrize("mock_bridge", [[DEVICE]], indirect=True)
 async def test_swing_button(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity,
     swing,
     mock_bridge,
@@ -73,16 +73,16 @@ async def test_swing_button(
 ) -> None:
     """Test vertical swing on/off button."""
     monkeypatch.setattr(DEVICE, "remote_id", "ELEC7022")
-    await init_integration(hass)
+    await init_integration(menuai)
     assert mock_bridge
 
-    assert hass.states.get(SWING_ON_EID) is not None
-    assert hass.states.get(SWING_OFF_EID) is not None
+    assert menuai.states.get(SWING_ON_EID) is not None
+    assert menuai.states.get(SWING_OFF_EID) is not None
 
     with patch(
-        "homeassistant.components.switcher_kis.entity.SwitcherApi.control_breeze_device",
+        "menuai.components.switcher_kis.entity.SwitcherApi.control_breeze_device",
     ) as mock_control_device:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             BUTTON_DOMAIN,
             SERVICE_PRESS,
             {ATTR_ENTITY_ID: entity},
@@ -94,21 +94,21 @@ async def test_swing_button(
 
 @pytest.mark.parametrize("mock_bridge", [[DEVICE]], indirect=True)
 async def test_control_device_fail(
-    hass: HomeAssistant, mock_bridge, mock_api, monkeypatch: pytest.MonkeyPatch
+    menuai: menuai, mock_bridge, mock_api, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test control device fail."""
-    await init_integration(hass)
+    await init_integration(menuai)
     assert mock_bridge
 
-    assert hass.states.get(ASSUME_ON_EID) is not None
+    assert menuai.states.get(ASSUME_ON_EID) is not None
 
     # Test exception during set hvac mode
     with patch(
-        "homeassistant.components.switcher_kis.entity.SwitcherApi.control_breeze_device",
+        "menuai.components.switcher_kis.entity.SwitcherApi.control_breeze_device",
         side_effect=RuntimeError("fake error"),
     ) as mock_control_device:
-        with pytest.raises(HomeAssistantError):
-            await hass.services.async_call(
+        with pytest.raises(menuaiError):
+            await menuai.services.async_call(
                 BUTTON_DOMAIN,
                 SERVICE_PRESS,
                 {ATTR_ENTITY_ID: ASSUME_ON_EID},
@@ -120,22 +120,22 @@ async def test_control_device_fail(
             ANY, state=DeviceState.ON, update_state=True
         )
 
-        state = hass.states.get(ASSUME_ON_EID)
+        state = menuai.states.get(ASSUME_ON_EID)
         assert state.state == STATE_UNAVAILABLE
 
     # Make device available again
     mock_bridge.mock_callbacks([DEVICE])
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(ASSUME_ON_EID) is not None
+    assert menuai.states.get(ASSUME_ON_EID) is not None
 
     # Test error response during turn on
     with patch(
-        "homeassistant.components.switcher_kis.entity.SwitcherApi.control_breeze_device",
+        "menuai.components.switcher_kis.entity.SwitcherApi.control_breeze_device",
         return_value=SwitcherBaseResponse(None),
     ) as mock_control_device:
-        with pytest.raises(HomeAssistantError):
-            await hass.services.async_call(
+        with pytest.raises(menuaiError):
+            await menuai.services.async_call(
                 BUTTON_DOMAIN,
                 SERVICE_PRESS,
                 {ATTR_ENTITY_ID: ASSUME_ON_EID},
@@ -147,5 +147,5 @@ async def test_control_device_fail(
             ANY, state=DeviceState.ON, update_state=True
         )
 
-        state = hass.states.get(ASSUME_ON_EID)
+        state = menuai.states.get(ASSUME_ON_EID)
         assert state.state == STATE_UNAVAILABLE

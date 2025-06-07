@@ -15,14 +15,14 @@ from pytomorrowio.const import (
     UVDescription,
 )
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
     CONCENTRATION_PARTS_PER_MILLION,
     CONF_API_KEY,
@@ -33,10 +33,10 @@ from homeassistant.const import (
     UnitOfSpeed,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util.unit_conversion import DistanceConverter, SpeedConverter
-from homeassistant.util.unit_system import US_CUSTOMARY_SYSTEM
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util.unit_conversion import DistanceConverter, SpeedConverter
+from menuai.util.unit_system import US_CUSTOMARY_SYSTEM
 
 from .const import (
     DOMAIN,
@@ -326,14 +326,14 @@ SENSOR_TYPES = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up a config entry."""
-    coordinator = hass.data[DOMAIN][config_entry.data[CONF_API_KEY]]
+    coordinator = menuai.data[DOMAIN][config_entry.data[CONF_API_KEY]]
     entities = [
-        TomorrowioSensorEntity(hass, config_entry, coordinator, 4, description)
+        TomorrowioSensorEntity(menuai, config_entry, coordinator, 4, description)
         for description in SENSOR_TYPES
     ]
     async_add_entities(entities)
@@ -357,7 +357,7 @@ class BaseTomorrowioSensorEntity(TomorrowioEntity, SensorEntity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         coordinator: TomorrowioDataUpdateCoordinator,
         api_version: int,
@@ -369,7 +369,7 @@ class BaseTomorrowioSensorEntity(TomorrowioEntity, SensorEntity):
         self._attr_unique_id = f"{self._config_entry.unique_id}_{description.key}"
         if self.entity_description.native_unit_of_measurement is None:
             self._attr_native_unit_of_measurement = description.unit_metric
-            if hass.config.units is US_CUSTOMARY_SYSTEM:
+            if menuai.config.units is US_CUSTOMARY_SYSTEM:
                 self._attr_native_unit_of_measurement = description.unit_imperial
 
     @property
@@ -398,7 +398,7 @@ class BaseTomorrowioSensorEntity(TomorrowioEntity, SensorEntity):
             desc.imperial_conversion
             and desc.unit_imperial is not None
             and desc.unit_imperial != desc.unit_metric
-            and self.hass.config.units is US_CUSTOMARY_SYSTEM
+            and self.menuai.config.units is US_CUSTOMARY_SYSTEM
         ):
             return handle_conversion(state, desc.imperial_conversion)
 

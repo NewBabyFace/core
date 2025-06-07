@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from homeassistant.core import HomeAssistant, callback
+from menuai.core import menuai, callback
 
 from .const import DOMAIN
 from .hub import DeconzHub
@@ -21,11 +21,11 @@ def serial_from_unique_id(unique_id: str | None) -> str | None:
 
 
 @callback
-def get_master_hub(hass: HomeAssistant) -> DeconzHub:
+def get_master_hub(menuai: menuai) -> DeconzHub:
     """Return the gateway which is marked as master."""
     entry: DeconzConfigEntry
     hub: DeconzHub
-    for entry in hass.config_entries.async_loaded_entries(DOMAIN):
+    for entry in menuai.config_entries.async_loaded_entries(DOMAIN):
         if (hub := entry.runtime_data).master:
             return hub
     raise ValueError

@@ -3,24 +3,24 @@
 from datetime import timedelta
 from unittest.mock import patch
 
-from homeassistant.components.canary.const import DOMAIN, MANUFACTURER
-from homeassistant.components.canary.sensor import (
+from menuai.components.canary.const import DOMAIN, MANUFACTURER
+from menuai.components.canary.sensor import (
     ATTR_AIR_QUALITY,
     STATE_AIR_QUALITY_ABNORMAL,
     STATE_AIR_QUALITY_NORMAL,
     STATE_AIR_QUALITY_VERY_ABNORMAL,
 )
-from homeassistant.components.sensor import SensorDeviceClass
-from homeassistant.const import (
+from menuai.components.sensor import SensorDeviceClass
+from menuai.const import (
     ATTR_UNIT_OF_MEASUREMENT,
     PERCENTAGE,
     SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.entity_component import async_update_entity
-from homeassistant.util.dt import utcnow
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.entity_component import async_update_entity
+from menuai.util.dt import utcnow
 
 from . import init_integration, mock_device, mock_location, mock_reading
 
@@ -28,7 +28,7 @@ from tests.common import async_fire_time_changed
 
 
 async def test_sensors_pro(
-    hass: HomeAssistant,
+    menuai: menuai,
     canary,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
@@ -47,8 +47,8 @@ async def test_sensors_pro(
         mock_reading("air_quality", "0.59"),
     ]
 
-    with patch("homeassistant.components.canary.PLATFORMS", ["sensor"]):
-        await init_integration(hass)
+    with patch("menuai.components.canary.PLATFORMS", ["sensor"]):
+        await init_integration(menuai)
 
     sensors = {
         "home_dining_room_temperature": (
@@ -81,7 +81,7 @@ async def test_sensors_pro(
         assert entity_entry.unique_id == data[0]
         assert entity_entry.original_icon == data[4]
 
-        state = hass.states.get(f"sensor.{sensor_id}")
+        state = menuai.states.get(f"sensor.{sensor_id}")
         assert state
         assert state.attributes.get(ATTR_UNIT_OF_MEASUREMENT) == data[2]
         assert state.state == data[1]
@@ -93,7 +93,7 @@ async def test_sensors_pro(
     assert device.model == "Canary Pro"
 
 
-async def test_sensors_attributes_pro(hass: HomeAssistant, canary) -> None:
+async def test_sensors_attributes_pro(menuai: menuai, canary) -> None:
     """Test the creation and values of the sensors attributes for Canary Pro."""
 
     online_device_at_home = mock_device(20, "Dining Room", True, "Canary Pro")
@@ -109,11 +109,11 @@ async def test_sensors_attributes_pro(hass: HomeAssistant, canary) -> None:
         mock_reading("air_quality", "0.59"),
     ]
 
-    with patch("homeassistant.components.canary.PLATFORMS", ["sensor"]):
-        await init_integration(hass)
+    with patch("menuai.components.canary.PLATFORMS", ["sensor"]):
+        await init_integration(menuai)
 
     entity_id = "sensor.home_dining_room_air_quality"
-    state1 = hass.states.get(entity_id)
+    state1 = menuai.states.get(entity_id)
     assert state1
     assert state1.state == "0.59"
     assert state1.attributes[ATTR_AIR_QUALITY] == STATE_AIR_QUALITY_ABNORMAL
@@ -125,11 +125,11 @@ async def test_sensors_attributes_pro(hass: HomeAssistant, canary) -> None:
     ]
 
     future = utcnow() + timedelta(seconds=30)
-    async_fire_time_changed(hass, future)
-    await async_update_entity(hass, entity_id)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, future)
+    await async_update_entity(menuai, entity_id)
+    await menuai.async_block_till_done()
 
-    state2 = hass.states.get(entity_id)
+    state2 = menuai.states.get(entity_id)
     assert state2
     assert state2.state == "0.4"
     assert state2.attributes[ATTR_AIR_QUALITY] == STATE_AIR_QUALITY_VERY_ABNORMAL
@@ -141,18 +141,18 @@ async def test_sensors_attributes_pro(hass: HomeAssistant, canary) -> None:
     ]
 
     future += timedelta(seconds=30)
-    async_fire_time_changed(hass, future)
-    await async_update_entity(hass, entity_id)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, future)
+    await async_update_entity(menuai, entity_id)
+    await menuai.async_block_till_done()
 
-    state3 = hass.states.get(entity_id)
+    state3 = menuai.states.get(entity_id)
     assert state3
     assert state3.state == "1.0"
     assert state3.attributes[ATTR_AIR_QUALITY] == STATE_AIR_QUALITY_NORMAL
 
 
 async def test_sensors_flex(
-    hass: HomeAssistant,
+    menuai: menuai,
     canary,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
@@ -170,8 +170,8 @@ async def test_sensors_flex(
         mock_reading("wifi", "-57"),
     ]
 
-    with patch("homeassistant.components.canary.PLATFORMS", ["sensor"]):
-        await init_integration(hass)
+    with patch("menuai.components.canary.PLATFORMS", ["sensor"]):
+        await init_integration(menuai)
 
     sensors = {
         "home_dining_room_battery": (
@@ -197,7 +197,7 @@ async def test_sensors_flex(
         assert entity_entry.unique_id == data[0]
         assert entity_entry.original_icon == data[4]
 
-        state = hass.states.get(f"sensor.{sensor_id}")
+        state = menuai.states.get(f"sensor.{sensor_id}")
         assert state
         assert state.attributes.get(ATTR_UNIT_OF_MEASUREMENT) == data[2]
         assert state.state == data[1]

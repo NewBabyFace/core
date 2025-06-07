@@ -3,15 +3,15 @@
 import pytest
 import requests_mock
 
-from homeassistant.components.update import (
+from menuai.components.update import (
     DOMAIN as UPDATE_DOMAIN,
     SCAN_INTERVAL as UPDATER_SCAN_INTERVAL,
     SERVICE_INSTALL,
 )
-from homeassistant.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.util import dt as dt_util
+from menuai.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.util import dt as dt_util
 
 from tests.common import MockConfigEntry, async_fire_time_changed
 from tests.typing import WebSocketGenerator
@@ -20,9 +20,9 @@ UPDATE_ENTITY = "update.plex_server_1_update"
 
 
 async def test_plex_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: MockConfigEntry,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     mock_plex_server,
     requests_mock: requests_mock.Mocker,
     empty_payload: str,
@@ -30,9 +30,9 @@ async def test_plex_update(
     update_check_new_not_updatable: str,
 ) -> None:
     """Test Plex update entity."""
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
-    assert hass.states.get(UPDATE_ENTITY).state == STATE_OFF
+    assert menuai.states.get(UPDATE_ENTITY).state == STATE_OFF
     await ws_client.send_json(
         {
             "id": 1,
@@ -47,21 +47,21 @@ async def test_plex_update(
 
     # Failed updates
     requests_mock.get("/updater/status", status_code=500)
-    async_fire_time_changed(hass, dt_util.utcnow() + UPDATER_SCAN_INTERVAL)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + UPDATER_SCAN_INTERVAL)
+    await menuai.async_block_till_done()
 
     requests_mock.get("/updater/status", text=empty_payload)
-    async_fire_time_changed(hass, dt_util.utcnow() + UPDATER_SCAN_INTERVAL)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + UPDATER_SCAN_INTERVAL)
+    await menuai.async_block_till_done()
 
     # New release (not updatable)
     requests_mock.get("/updater/status", text=update_check_new_not_updatable)
-    async_fire_time_changed(hass, dt_util.utcnow() + UPDATER_SCAN_INTERVAL)
-    await hass.async_block_till_done()
-    assert hass.states.get(UPDATE_ENTITY).state == STATE_ON
+    async_fire_time_changed(menuai, dt_util.utcnow() + UPDATER_SCAN_INTERVAL)
+    await menuai.async_block_till_done()
+    assert menuai.states.get(UPDATE_ENTITY).state == STATE_ON
 
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             UPDATE_DOMAIN,
             SERVICE_INSTALL,
             {
@@ -73,12 +73,12 @@ async def test_plex_update(
 
     # New release (updatable)
     requests_mock.get("/updater/status", text=update_check_new)
-    await hass.config_entries.async_reload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_reload(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(UPDATE_ENTITY).state == STATE_ON
+    assert menuai.states.get(UPDATE_ENTITY).state == STATE_ON
 
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
     await ws_client.send_json(
         {
             "id": 1,
@@ -90,7 +90,7 @@ async def test_plex_update(
     assert result["result"] == "* Summary of\n* release notes"
 
     # Successful upgrade request
-    await hass.services.async_call(
+    await menuai.services.async_call(
         UPDATE_DOMAIN,
         SERVICE_INSTALL,
         {
@@ -102,8 +102,8 @@ async def test_plex_update(
 
     # Failed upgrade request
     requests_mock.put("/updater/apply", status_code=500)
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             UPDATE_DOMAIN,
             SERVICE_INSTALL,
             {

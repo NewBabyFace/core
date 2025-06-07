@@ -16,13 +16,13 @@ from PyViCare.PyViCareUtils import (
 )
 import requests
 
-from homeassistant.components.water_heater import (
+from menuai.components.water_heater import (
     WaterHeaterEntity,
     WaterHeaterEntityFeature,
 )
-from homeassistant.const import ATTR_TEMPERATURE, PRECISION_TENTHS, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import ATTR_TEMPERATURE, PRECISION_TENTHS, UnitOfTemperature
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .entity import ViCareEntity
 from .types import ViCareConfigEntry, ViCareDevice
@@ -78,13 +78,13 @@ def _build_entities(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ViCareConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the ViCare water heater platform."""
     async_add_entities(
-        await hass.async_add_executor_job(
+        await menuai.async_add_executor_job(
             _build_entities,
             config_entry.runtime_data.devices,
         )

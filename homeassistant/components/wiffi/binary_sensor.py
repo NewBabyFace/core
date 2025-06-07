@@ -1,17 +1,17 @@
 """Binary sensor platform support for wiffi devices."""
 
-from homeassistant.components.binary_sensor import BinarySensorEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.binary_sensor import BinarySensorEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import CREATE_ENTITY_SIGNAL
 from .entity import WiffiEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -31,7 +31,7 @@ async def async_setup_entry(
 
         async_add_entities(entities)
 
-    async_dispatcher_connect(hass, CREATE_ENTITY_SIGNAL, _create_entity)
+    async_dispatcher_connect(menuai, CREATE_ENTITY_SIGNAL, _create_entity)
 
 
 class BoolEntity(WiffiEntity, BinarySensorEntity):

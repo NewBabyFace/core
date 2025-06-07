@@ -4,31 +4,31 @@ from unittest.mock import AsyncMock
 
 from intellifire4py.exceptions import LoginError
 
-from homeassistant import config_entries
-from homeassistant.components.intellifire.const import CONF_SERIAL, DOMAIN
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai import config_entries
+from menuai.components.intellifire.const import CONF_SERIAL, DOMAIN
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
 
 from tests.common import MockConfigEntry
 
 
 async def test_standard_config_with_single_fireplace(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_apis_single_fp,
 ) -> None:
     """Test standard flow with a user who has only a single fireplace."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] == FlowResultType.FORM
     assert result["errors"] == {}
     assert result["step_id"] == "cloud_api"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_USERNAME: "donJulio", CONF_PASSWORD: "Tequila0FD00m"},
     )
@@ -47,23 +47,23 @@ async def test_standard_config_with_single_fireplace(
 
 
 async def test_standard_config_with_pre_configured_fireplace(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_config_entry_current,
     mock_apis_single_fp,
 ) -> None:
     """What if we try to configure an already configured fireplace."""
     # Configure an existing entry
-    mock_config_entry_current.add_to_hass(hass)
+    mock_config_entry_current.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] == FlowResultType.FORM
     assert result["errors"] == {}
     assert result["step_id"] == "cloud_api"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_USERNAME: "donJulio", CONF_PASSWORD: "Tequila0FD00m"},
     )
@@ -74,7 +74,7 @@ async def test_standard_config_with_pre_configured_fireplace(
 
 
 async def test_standard_config_with_single_fireplace_and_bad_credentials(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_apis_single_fp,
 ) -> None:
@@ -83,14 +83,14 @@ async def test_standard_config_with_single_fireplace_and_bad_credentials(
     # Set login error
     mock_cloud_interface.login_with_credentials.side_effect = LoginError
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
     assert result["step_id"] == "cloud_api"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_USERNAME: "donJulio", CONF_PASSWORD: "Tequila0FD00m"},
     )
@@ -101,7 +101,7 @@ async def test_standard_config_with_single_fireplace_and_bad_credentials(
     assert result["type"] == FlowResultType.FORM
     assert result["errors"] == {"base": "api_error"}
     assert result["step_id"] == "cloud_api"
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_USERNAME: "donJulio", CONF_PASSWORD: "Tequila0FD00m"},
     )
@@ -120,26 +120,26 @@ async def test_standard_config_with_single_fireplace_and_bad_credentials(
 
 
 async def test_standard_config_with_multiple_fireplace(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_apis_multifp,
 ) -> None:
     """Test multi-fireplace user who must be very rich."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] == FlowResultType.FORM
     assert result["errors"] == {}
     assert result["step_id"] == "cloud_api"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_USERNAME: "donJulio", CONF_PASSWORD: "Tequila0FD00m"},
     )
     # When we have multiple fireplaces we get to pick a serial
     assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "pick_cloud_device"
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_SERIAL: "4GC295860E5837G40D9974B7FD459234"},
     )
@@ -157,13 +157,13 @@ async def test_standard_config_with_multiple_fireplace(
 
 
 async def test_dhcp_discovery_intellifire_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_apis_multifp,
 ) -> None:
     """Test successful DHCP Discovery."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_DHCP},
         data=DhcpServiceInfo(
@@ -175,7 +175,7 @@ async def test_dhcp_discovery_intellifire_device(
     assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "cloud_api"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_USERNAME: "donJulio", CONF_PASSWORD: "Tequila0FD00m"},
     )
@@ -183,7 +183,7 @@ async def test_dhcp_discovery_intellifire_device(
 
 
 async def test_dhcp_discovery_non_intellifire_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_apis_multifp,
 ) -> None:
@@ -193,7 +193,7 @@ async def test_dhcp_discovery_non_intellifire_device(
     mock_local_interface, mock_cloud_interface, mock_fp = mock_apis_multifp
     mock_local_interface.poll.side_effect = ConnectionError
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_DHCP},
         data=DhcpServiceInfo(
@@ -208,19 +208,19 @@ async def test_dhcp_discovery_non_intellifire_device(
 
 
 async def test_reauth_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry_current: MockConfigEntry,
     mock_apis_single_fp,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test reauth."""
 
-    mock_config_entry_current.add_to_hass(hass)
-    result = await mock_config_entry_current.start_reauth_flow(hass)
+    mock_config_entry_current.add_to_menuai(menuai)
+    result = await mock_config_entry_current.start_reauth_flow(menuai)
     assert result["type"] == FlowResultType.FORM
     result["step_id"] = "cloud_api"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_USERNAME: "donJulio", CONF_PASSWORD: "Tequila0FD00m"},
     )

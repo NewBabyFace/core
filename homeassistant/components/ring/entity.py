@@ -13,16 +13,16 @@ from ring_doorbell import (
     RingTimeout,
 )
 
-from homeassistant.components.automation import automations_with_entity
-from homeassistant.components.script import scripts_with_entity
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import EntityDescription
-from homeassistant.helpers.issue_registry import IssueSeverity, async_create_issue
-from homeassistant.helpers.update_coordinator import (
+from menuai.components.automation import automations_with_entity
+from menuai.components.script import scripts_with_entity
+from menuai.const import Platform
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import EntityDescription
+from menuai.helpers.issue_registry import IssueSeverity, async_create_issue
+from menuai.helpers.update_coordinator import (
     BaseCoordinatorEntity,
     CoordinatorEntity,
 )
@@ -58,19 +58,19 @@ class RingEntityDescription(EntityDescription):
 def exception_wrap[_RingBaseEntityT: RingBaseEntity[Any, Any], **_P, _R](
     async_func: Callable[Concatenate[_RingBaseEntityT, _P], Coroutine[Any, Any, _R]],
 ) -> Callable[Concatenate[_RingBaseEntityT, _P], Coroutine[Any, Any, _R]]:
-    """Define a wrapper to catch exceptions and raise HomeAssistant errors."""
+    """Define a wrapper to catch exceptions and raise menuai errors."""
 
     async def _wrap(self: _RingBaseEntityT, *args: _P.args, **kwargs: _P.kwargs) -> _R:
         try:
             return await async_func(self, *args, **kwargs)
         except AuthenticationError as err:
-            self.coordinator.config_entry.async_start_reauth(self.hass)
-            raise HomeAssistantError(
+            self.coordinator.config_entry.async_start_reauth(self.menuai)
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="api_authentication",
             ) from err
         except RingTimeout as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="api_timeout",
             ) from err
@@ -78,7 +78,7 @@ def exception_wrap[_RingBaseEntityT: RingBaseEntity[Any, Any], **_P, _R](
             _LOGGER.debug(
                 "Error calling %s in platform %s: ", async_func.__name__, self.platform
             )
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="api_error",
             ) from err
@@ -100,7 +100,7 @@ def refresh_after[_RingEntityT: RingEntity[Any], **_P](
 
 
 def async_check_create_deprecated(
-    hass: HomeAssistant,
+    menuai: menuai,
     platform: Platform,
     unique_id: str,
     entity_description: RingEntityDescription,
@@ -115,7 +115,7 @@ def async_check_create_deprecated(
     if not entity_description.deprecated_info:
         return True
 
-    ent_reg = er.async_get(hass)
+    ent_reg = er.async_get(menuai)
     entity_id = ent_reg.async_get_entity_id(
         platform,
         DOMAIN,
@@ -133,13 +133,13 @@ def async_check_create_deprecated(
         return False
 
     # Check for issues that need to be created
-    entity_automations = automations_with_entity(hass, entity_id)
-    entity_scripts = scripts_with_entity(hass, entity_id)
+    entity_automations = automations_with_entity(menuai, entity_id)
+    entity_scripts = scripts_with_entity(menuai, entity_id)
     if entity_automations or entity_scripts:
         deprecated_info = entity_description.deprecated_info
     for item in entity_automations + entity_scripts:
         async_create_issue(
-            hass,
+            menuai,
             DOMAIN,
             f"deprecated_entity_{entity_id}_{item}",
             breaks_in_ha_version=deprecated_info.breaks_in_ha_version,

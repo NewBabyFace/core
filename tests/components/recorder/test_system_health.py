@@ -4,10 +4,10 @@ from unittest.mock import ANY, Mock, patch
 
 import pytest
 
-from homeassistant.components.recorder import Recorder, get_instance
-from homeassistant.components.recorder.const import SupportedDialect
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.recorder import Recorder, get_instance
+from menuai.components.recorder.const import SupportedDialect
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from .common import async_wait_recording_done
 
@@ -18,17 +18,17 @@ from tests.typing import RecorderInstanceGenerator
 @pytest.mark.skip_on_db_engine(["mysql", "postgresql"])
 @pytest.mark.usefixtures("skip_by_db_engine")
 async def test_recorder_system_health(
-    recorder_mock: Recorder, hass: HomeAssistant, recorder_db_url: str
+    recorder_mock: Recorder, menuai: menuai, recorder_db_url: str
 ) -> None:
     """Test recorder system health.
 
     This test is specific for SQLite.
     """
 
-    assert await async_setup_component(hass, "system_health", {})
-    await async_wait_recording_done(hass)
-    info = await get_system_health_info(hass, "recorder")
-    instance = get_instance(hass)
+    assert await async_setup_component(menuai, "system_health", {})
+    await async_wait_recording_done(menuai)
+    info = await get_system_health_info(menuai, "recorder")
+    instance = get_instance(menuai)
     assert info == {
         "current_recorder_run": instance.recorder_runs_manager.current.start,
         "oldest_recorder_run": instance.recorder_runs_manager.first.start,
@@ -43,21 +43,21 @@ async def test_recorder_system_health(
 )
 async def test_recorder_system_health_alternate_dbms(
     recorder_mock: Recorder,
-    hass: HomeAssistant,
+    menuai: menuai,
     db_engine: SupportedDialect,
     recorder_dialect_name: None,
 ) -> None:
     """Test recorder system health."""
-    assert await async_setup_component(hass, "system_health", {})
-    await async_wait_recording_done(hass)
+    assert await async_setup_component(menuai, "system_health", {})
+    await async_wait_recording_done(menuai)
     with (
         patch(
             "sqlalchemy.orm.session.Session.execute",
             return_value=Mock(scalar=Mock(return_value=("1048576"))),
         ),
     ):
-        info = await get_system_health_info(hass, "recorder")
-    instance = get_instance(hass)
+        info = await get_system_health_info(menuai, "recorder")
+    instance = get_instance(menuai)
     assert info == {
         "current_recorder_run": instance.recorder_runs_manager.current.start,
         "oldest_recorder_run": instance.recorder_runs_manager.first.start,
@@ -72,27 +72,27 @@ async def test_recorder_system_health_alternate_dbms(
 )
 async def test_recorder_system_health_db_url_missing_host(
     recorder_mock: Recorder,
-    hass: HomeAssistant,
+    menuai: menuai,
     db_engine: SupportedDialect,
     recorder_dialect_name: None,
 ) -> None:
     """Test recorder system health with a db_url without a hostname."""
-    assert await async_setup_component(hass, "system_health", {})
-    await async_wait_recording_done(hass)
+    assert await async_setup_component(menuai, "system_health", {})
+    await async_wait_recording_done(menuai)
 
-    instance = get_instance(hass)
+    instance = get_instance(menuai)
     with (
         patch.object(
             instance,
             "db_url",
-            "postgresql://homeassistant:blabla@/home_assistant?host=/config/socket",
+            "postgresql://menuai:blabla@/home_assistant?host=/config/socket",
         ),
         patch(
             "sqlalchemy.orm.session.Session.execute",
             return_value=Mock(scalar=Mock(return_value=("1048576"))),
         ),
     ):
-        info = await get_system_health_info(hass, "recorder")
+        info = await get_system_health_info(menuai, "recorder")
     assert info == {
         "current_recorder_run": instance.recorder_runs_manager.current.start,
         "oldest_recorder_run": instance.recorder_runs_manager.first.start,
@@ -106,7 +106,7 @@ async def test_recorder_system_health_db_url_missing_host(
 @pytest.mark.usefixtures("skip_by_db_engine")
 async def test_recorder_system_health_crashed_recorder_runs_table(
     async_setup_recorder_instance: RecorderInstanceGenerator,
-    hass: HomeAssistant,
+    menuai: menuai,
     recorder_db_url: str,
 ) -> None:
     """Test recorder system health with crashed recorder runs table.
@@ -115,12 +115,12 @@ async def test_recorder_system_health_crashed_recorder_runs_table(
     """
 
     with patch(
-        "homeassistant.components.recorder.table_managers.recorder_runs.RecorderRunsManager.load_from_db"
+        "menuai.components.recorder.table_managers.recorder_runs.RecorderRunsManager.load_from_db"
     ):
-        assert await async_setup_component(hass, "system_health", {})
-        instance = await async_setup_recorder_instance(hass)
-        await async_wait_recording_done(hass)
-    info = await get_system_health_info(hass, "recorder")
+        assert await async_setup_component(menuai, "system_health", {})
+        instance = await async_setup_recorder_instance(menuai)
+        await async_wait_recording_done(menuai)
+    info = await get_system_health_info(menuai, "recorder")
     assert info == {
         "current_recorder_run": instance.recorder_runs_manager.current.start,
         "oldest_recorder_run": instance.recorder_runs_manager.current.start,

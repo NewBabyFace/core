@@ -22,11 +22,11 @@ from iottycloud.verbs import (
 )
 import pytest
 
-from homeassistant import setup
-from homeassistant.components.iotty.const import DOMAIN
-from homeassistant.const import CONF_HOST, CONF_MAC, CONF_PORT
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_entry_oauth2_flow
+from menuai import setup
+from menuai.components.iotty.const import DOMAIN
+from menuai.const import CONF_HOST, CONF_MAC, CONF_PORT
+from menuai.core import menuai
+from menuai.helpers import config_entry_oauth2_flow
 
 from tests.common import MockConfigEntry
 from tests.test_util.aiohttp import AiohttpClientMocker, mock_aiohttp_client
@@ -93,11 +93,11 @@ test_ou_one_added = [
 
 
 @pytest.fixture
-async def local_oauth_impl(hass: HomeAssistant):
+async def local_oauth_impl(menuai: menuai):
     """Local implementation."""
-    assert await setup.async_setup_component(hass, "auth", {})
+    assert await setup.async_setup_component(menuai, "auth", {})
     return config_entry_oauth2_flow.LocalOAuth2Implementation(
-        hass, DOMAIN, "client_id", "client_secret", "authorize_url", "https://token.url"
+        menuai, DOMAIN, "client_id", "client_secret", "authorize_url", "https://token.url"
     )
 
 
@@ -115,7 +115,7 @@ def mock_aioclient() -> Generator[AiohttpClientMocker]:
 
 
 @pytest.fixture
-def mock_config_entry(hass: HomeAssistant) -> MockConfigEntry:
+def mock_config_entry(menuai: menuai) -> MockConfigEntry:
     """Return the default mocked config entry."""
     return MockConfigEntry(
         title="IOTTY00001",
@@ -142,7 +142,7 @@ def mock_config_entry(hass: HomeAssistant) -> MockConfigEntry:
 def mock_config_entries_async_forward_entry_setup() -> Generator[AsyncMock]:
     """Mock async_forward_entry_setup."""
     with patch(
-        "homeassistant.config_entries.ConfigEntries.async_forward_entry_setups"
+        "menuai.config_entries.ConfigEntries.async_forward_entry_setups"
     ) as mock_fn:
         yield mock_fn
 
@@ -151,7 +151,7 @@ def mock_config_entries_async_forward_entry_setup() -> Generator[AsyncMock]:
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Mock setting up a config entry."""
     with patch(
-        "homeassistant.components.iotty.async_setup_entry", return_value=True
+        "menuai.components.iotty.async_setup_entry", return_value=True
     ) as mock_setup:
         yield mock_setup
 
@@ -160,7 +160,7 @@ def mock_setup_entry() -> Generator[AsyncMock]:
 def mock_iotty() -> Generator[MagicMock]:
     """Mock IottyProxy."""
     with patch(
-        "homeassistant.components.iotty.api.IottyProxy", autospec=True
+        "menuai.components.iotty.api.IottyProxy", autospec=True
     ) as iotty_mock:
         yield iotty_mock
 
@@ -169,7 +169,7 @@ def mock_iotty() -> Generator[MagicMock]:
 def mock_coordinator() -> Generator[MagicMock]:
     """Mock IottyDataUpdateCoordinator."""
     with patch(
-        "homeassistant.components.iotty.IottyDataUpdateCoordinator",
+        "menuai.components.iotty.IottyDataUpdateCoordinator",
         autospec=True,
     ) as coordinator_mock:
         yield coordinator_mock

@@ -4,10 +4,10 @@ from unittest.mock import call
 
 import pytest
 
-from homeassistant.components.rfxtrx import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import STATE_UNKNOWN
-from homeassistant.core import HomeAssistant, State
+from menuai.components.rfxtrx import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.const import STATE_UNKNOWN
+from menuai.core import menuai, State
 
 from .conftest import create_rfx_test_cfg
 
@@ -17,33 +17,33 @@ EVENT_RFY_ENABLE_SUN_AUTO = "0C1a0000030101011300000003"
 EVENT_RFY_DISABLE_SUN_AUTO = "0C1a0000030101011400000003"
 
 
-async def test_one_switch(hass: HomeAssistant, rfxtrx) -> None:
+async def test_one_switch(menuai: menuai, rfxtrx) -> None:
     """Test with 1 switch."""
     entry_data = create_rfx_test_cfg(devices={"0b1100cd0213c7f210010f51": {}})
     mock_entry = MockConfigEntry(domain="rfxtrx", unique_id=DOMAIN, data=entry_data)
 
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("switch.ac_213c7f2_16")
+    state = menuai.states.get("switch.ac_213c7f2_16")
     assert state
     assert state.state == STATE_UNKNOWN
     assert state.attributes.get("friendly_name") == "AC 213c7f2:16"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch", "turn_on", {"entity_id": "switch.ac_213c7f2_16"}, blocking=True
     )
 
-    state = hass.states.get("switch.ac_213c7f2_16")
+    state = menuai.states.get("switch.ac_213c7f2_16")
     assert state.state == "on"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch", "turn_off", {"entity_id": "switch.ac_213c7f2_16"}, blocking=True
     )
 
-    state = hass.states.get("switch.ac_213c7f2_16")
+    state = menuai.states.get("switch.ac_213c7f2_16")
     assert state.state == "off"
 
     assert rfxtrx.transport.send.mock_calls == [
@@ -52,7 +52,7 @@ async def test_one_switch(hass: HomeAssistant, rfxtrx) -> None:
     ]
 
 
-async def test_one_pt2262_switch(hass: HomeAssistant, rfxtrx) -> None:
+async def test_one_pt2262_switch(menuai: menuai, rfxtrx) -> None:
     """Test with 1 PT2262 switch."""
     entry_data = create_rfx_test_cfg(
         devices={
@@ -65,28 +65,28 @@ async def test_one_pt2262_switch(hass: HomeAssistant, rfxtrx) -> None:
     )
     mock_entry = MockConfigEntry(domain="rfxtrx", unique_id=DOMAIN, data=entry_data)
 
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("switch.pt2262_226700")
+    state = menuai.states.get("switch.pt2262_226700")
     assert state
     assert state.state == STATE_UNKNOWN
     assert state.attributes.get("friendly_name") == "PT2262 226700"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch", "turn_on", {"entity_id": "switch.pt2262_226700"}, blocking=True
     )
 
-    state = hass.states.get("switch.pt2262_226700")
+    state = menuai.states.get("switch.pt2262_226700")
     assert state.state == "on"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch", "turn_off", {"entity_id": "switch.pt2262_226700"}, blocking=True
     )
 
-    state = hass.states.get("switch.pt2262_226700")
+    state = menuai.states.get("switch.pt2262_226700")
     assert state.state == "off"
 
     assert rfxtrx.transport.send.mock_calls == [
@@ -96,25 +96,25 @@ async def test_one_pt2262_switch(hass: HomeAssistant, rfxtrx) -> None:
 
 
 @pytest.mark.parametrize("state", ["on", "off"])
-async def test_state_restore(hass: HomeAssistant, rfxtrx, state) -> None:
+async def test_state_restore(menuai: menuai, rfxtrx, state) -> None:
     """State restoration."""
 
     entity_id = "switch.ac_213c7f2_16"
 
-    mock_restore_cache(hass, [State(entity_id, state)])
+    mock_restore_cache(menuai, [State(entity_id, state)])
 
     entry_data = create_rfx_test_cfg(devices={"0b1100cd0213c7f210010f51": {}})
     mock_entry = MockConfigEntry(domain="rfxtrx", unique_id=DOMAIN, data=entry_data)
 
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(entity_id).state == state
+    assert menuai.states.get(entity_id).state == state
 
 
-async def test_several_switches(hass: HomeAssistant, rfxtrx) -> None:
+async def test_several_switches(menuai: menuai, rfxtrx) -> None:
     """Test with 3 switches."""
     entry_data = create_rfx_test_cfg(
         devices={
@@ -125,28 +125,28 @@ async def test_several_switches(hass: HomeAssistant, rfxtrx) -> None:
     )
     mock_entry = MockConfigEntry(domain="rfxtrx", unique_id=DOMAIN, data=entry_data)
 
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("switch.ac_213c7f2_48")
+    state = menuai.states.get("switch.ac_213c7f2_48")
     assert state
     assert state.state == STATE_UNKNOWN
     assert state.attributes.get("friendly_name") == "AC 213c7f2:48"
 
-    state = hass.states.get("switch.ac_118cdea_2")
+    state = menuai.states.get("switch.ac_118cdea_2")
     assert state
     assert state.state == STATE_UNKNOWN
     assert state.attributes.get("friendly_name") == "AC 118cdea:2"
 
-    state = hass.states.get("switch.ac_1118cdea_2")
+    state = menuai.states.get("switch.ac_1118cdea_2")
     assert state
     assert state.state == STATE_UNKNOWN
     assert state.attributes.get("friendly_name") == "AC 1118cdea:2"
 
 
-async def test_switch_events(hass: HomeAssistant, rfxtrx) -> None:
+async def test_switch_events(menuai: menuai, rfxtrx) -> None:
     """Event test with 2 switches."""
     entry_data = create_rfx_test_cfg(
         devices={
@@ -156,53 +156,53 @@ async def test_switch_events(hass: HomeAssistant, rfxtrx) -> None:
     )
     mock_entry = MockConfigEntry(domain="rfxtrx", unique_id=DOMAIN, data=entry_data)
 
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("switch.ac_213c7f2_16")
+    state = menuai.states.get("switch.ac_213c7f2_16")
     assert state
     assert state.state == STATE_UNKNOWN
     assert state.attributes.get("friendly_name") == "AC 213c7f2:16"
 
-    state = hass.states.get("switch.ac_213c7f2_5")
+    state = menuai.states.get("switch.ac_213c7f2_5")
     assert state
     assert state.state == STATE_UNKNOWN
     assert state.attributes.get("friendly_name") == "AC 213c7f2:5"
 
     # "16: On"
     await rfxtrx.signal("0b1100100213c7f210010f70")
-    assert hass.states.get("switch.ac_213c7f2_5").state == STATE_UNKNOWN
-    assert hass.states.get("switch.ac_213c7f2_16").state == "on"
+    assert menuai.states.get("switch.ac_213c7f2_5").state == STATE_UNKNOWN
+    assert menuai.states.get("switch.ac_213c7f2_16").state == "on"
 
     # "16: Off"
     await rfxtrx.signal("0b1100100213c7f210000f70")
-    assert hass.states.get("switch.ac_213c7f2_5").state == STATE_UNKNOWN
-    assert hass.states.get("switch.ac_213c7f2_16").state == "off"
+    assert menuai.states.get("switch.ac_213c7f2_5").state == STATE_UNKNOWN
+    assert menuai.states.get("switch.ac_213c7f2_16").state == "off"
 
     # "5: On"
     await rfxtrx.signal("0b1100100213c7f205010f70")
-    assert hass.states.get("switch.ac_213c7f2_5").state == "on"
-    assert hass.states.get("switch.ac_213c7f2_16").state == "off"
+    assert menuai.states.get("switch.ac_213c7f2_5").state == "on"
+    assert menuai.states.get("switch.ac_213c7f2_16").state == "off"
 
     # "5: Off"
     await rfxtrx.signal("0b1100100213c7f205000f70")
-    assert hass.states.get("switch.ac_213c7f2_5").state == "off"
-    assert hass.states.get("switch.ac_213c7f2_16").state == "off"
+    assert menuai.states.get("switch.ac_213c7f2_5").state == "off"
+    assert menuai.states.get("switch.ac_213c7f2_16").state == "off"
 
     # "16: Group on"
     await rfxtrx.signal("0b1100100213c7f210040f70")
-    assert hass.states.get("switch.ac_213c7f2_5").state == "on"
-    assert hass.states.get("switch.ac_213c7f2_16").state == "on"
+    assert menuai.states.get("switch.ac_213c7f2_5").state == "on"
+    assert menuai.states.get("switch.ac_213c7f2_16").state == "on"
 
     # "16: Group off"
     await rfxtrx.signal("0b1100100213c7f210030f70")
-    assert hass.states.get("switch.ac_213c7f2_5").state == "off"
-    assert hass.states.get("switch.ac_213c7f2_16").state == "off"
+    assert menuai.states.get("switch.ac_213c7f2_5").state == "off"
+    assert menuai.states.get("switch.ac_213c7f2_16").state == "off"
 
 
-async def test_pt2262_switch_events(hass: HomeAssistant, rfxtrx) -> None:
+async def test_pt2262_switch_events(menuai: menuai, rfxtrx) -> None:
     """Test with 1 PT2262 switch."""
     entry_data = create_rfx_test_cfg(
         devices={
@@ -215,74 +215,74 @@ async def test_pt2262_switch_events(hass: HomeAssistant, rfxtrx) -> None:
     )
     mock_entry = MockConfigEntry(domain="rfxtrx", unique_id=DOMAIN, data=entry_data)
 
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("switch.pt2262_226700")
+    state = menuai.states.get("switch.pt2262_226700")
     assert state
     assert state.state == STATE_UNKNOWN
     assert state.attributes.get("friendly_name") == "PT2262 226700"
 
     # "Command: 0xE"
     await rfxtrx.signal("0913000022670e013970")
-    assert hass.states.get("switch.pt2262_226700").state == "on"
+    assert menuai.states.get("switch.pt2262_226700").state == "on"
 
     # "Command: 0x0"
     await rfxtrx.signal("09130000226700013970")
-    assert hass.states.get("switch.pt2262_226700").state == "on"
+    assert menuai.states.get("switch.pt2262_226700").state == "on"
 
     # "Command: 0x7"
     await rfxtrx.signal("09130000226707013d70")
-    assert hass.states.get("switch.pt2262_226700").state == "off"
+    assert menuai.states.get("switch.pt2262_226700").state == "off"
 
     # "Command: 0x1"
     await rfxtrx.signal("09130000226701013d70")
-    assert hass.states.get("switch.pt2262_226700").state == "off"
+    assert menuai.states.get("switch.pt2262_226700").state == "off"
 
 
-async def test_discover_switch(hass: HomeAssistant, rfxtrx_automatic) -> None:
+async def test_discover_switch(menuai: menuai, rfxtrx_automatic) -> None:
     """Test with discovery of switches."""
     rfxtrx = rfxtrx_automatic
 
     await rfxtrx.signal("0b1100100118cdea02010f70")
-    state = hass.states.get("switch.ac_118cdea_2")
+    state = menuai.states.get("switch.ac_118cdea_2")
     assert state
     assert state.state == "on"
 
     await rfxtrx.signal("0b1100100118cdeb02010f70")
-    state = hass.states.get("switch.ac_118cdeb_2")
+    state = menuai.states.get("switch.ac_118cdeb_2")
     assert state
     assert state.state == "on"
 
 
-async def test_discover_rfy_sun_switch(hass: HomeAssistant, rfxtrx_automatic) -> None:
+async def test_discover_rfy_sun_switch(menuai: menuai, rfxtrx_automatic) -> None:
     """Test with discovery of switches."""
     rfxtrx = rfxtrx_automatic
 
     await rfxtrx.signal(EVENT_RFY_DISABLE_SUN_AUTO)
-    state = hass.states.get("switch.rfy_030101_1")
+    state = menuai.states.get("switch.rfy_030101_1")
     assert state
     assert state.state == "off"
 
     await rfxtrx.signal(EVENT_RFY_ENABLE_SUN_AUTO)
-    state = hass.states.get("switch.rfy_030101_1")
+    state = menuai.states.get("switch.rfy_030101_1")
     assert state
     assert state.state == "on"
 
 
-async def test_unknown_event_code(hass: HomeAssistant, rfxtrx) -> None:
+async def test_unknown_event_code(menuai: menuai, rfxtrx) -> None:
     """Test with 3 switches."""
     entry_data = create_rfx_test_cfg(devices={"1234567890": {}})
     mock_entry = MockConfigEntry(domain="rfxtrx", unique_id=DOMAIN, data=entry_data)
 
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    conf_entries = hass.config_entries.async_entries(DOMAIN)
+    conf_entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(conf_entries) == 1
 
     entry = conf_entries[0]

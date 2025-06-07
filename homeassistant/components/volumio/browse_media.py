@@ -2,7 +2,7 @@
 
 import json
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     BrowseError,
     BrowseMedia,
     MediaClass,

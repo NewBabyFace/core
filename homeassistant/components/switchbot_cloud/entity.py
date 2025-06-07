@@ -4,9 +4,9 @@ from typing import Any
 
 from switchbot_api import Commands, Device, Remote, SwitchBotAPI
 
-from homeassistant.core import callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.core import callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import SwitchBotCoordinator
@@ -63,7 +63,7 @@ class SwitchBotCloudEntity(CoordinatorEntity[SwitchBotCoordinator]):
     def _set_attributes(self) -> None:
         """Set attributes from coordinator data."""
 
-    async def async_added_to_hass(self) -> None:
-        """Run when entity is about to be added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Run when entity is about to be added to menuai."""
+        await super().async_added_to_menuai()
         self._set_attributes()

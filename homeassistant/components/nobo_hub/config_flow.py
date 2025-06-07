@@ -8,15 +8,15 @@ from typing import TYPE_CHECKING, Any
 from pynobo import nobo
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_IP_ADDRESS
-from homeassistant.core import callback
-from homeassistant.exceptions import HomeAssistantError
+from menuai.const import CONF_IP_ADDRESS
+from menuai.core import callback
+from menuai.exceptions import menuaiError
 
 from .const import (
     CONF_AUTO_DISCOVERED,
@@ -178,7 +178,7 @@ class NoboHubConfigFlow(ConfigFlow, domain=DOMAIN):
         return OptionsFlowHandler()
 
 
-class NoboHubConnectError(HomeAssistantError):
+class NoboHubConnectError(menuaiError):
     """Error with connecting to Nobø Ecohub."""
 
     def __init__(self, msg) -> None:

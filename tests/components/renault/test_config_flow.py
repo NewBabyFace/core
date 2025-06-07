@@ -8,16 +8,16 @@ from renault_api.gigya.exceptions import InvalidCredentialsException
 from renault_api.kamereon import schemas
 from renault_api.renault_account import RenaultAccount
 
-from homeassistant import config_entries
-from homeassistant.components.renault.const import (
+from menuai import config_entries
+from menuai.components.renault.const import (
     CONF_KAMEREON_ACCOUNT_ID,
     CONF_LOCALE,
     DOMAIN,
 )
-from homeassistant.const import CONF_NAME, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import aiohttp_client
+from menuai.const import CONF_NAME, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers import aiohttp_client
 
 from tests.common import MockConfigEntry, async_load_fixture, get_schema_suggested_value
 
@@ -36,13 +36,13 @@ pytestmark = pytest.mark.usefixtures("mock_setup_entry")
     ],
 )
 async def test_config_flow_single_account(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     exception: Exception | type[Exception],
     error: str,
 ) -> None:
     """Test we get the form."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -54,7 +54,7 @@ async def test_config_flow_single_account(
         "renault_api.renault_session.RenaultSession.login",
         side_effect=exception,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={
                 CONF_LOCALE: "fr_FR",
@@ -76,7 +76,7 @@ async def test_config_flow_single_account(
     type(renault_account).account_id = PropertyMock(return_value="account_id_1")
     renault_account.get_vehicles.return_value = (
         schemas.KamereonVehiclesResponseSchema.loads(
-            await async_load_fixture(hass, "vehicle_zoe_40.json", DOMAIN)
+            await async_load_fixture(menuai, "vehicle_zoe_40.json", DOMAIN)
         )
     )
 
@@ -91,7 +91,7 @@ async def test_config_flow_single_account(
             return_value=[renault_account],
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={
                 CONF_LOCALE: "fr_FR",
@@ -112,10 +112,10 @@ async def test_config_flow_single_account(
 
 
 async def test_config_flow_no_account(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock
+    menuai: menuai, mock_setup_entry: AsyncMock
 ) -> None:
     """Test we get the form."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -129,7 +129,7 @@ async def test_config_flow_no_account(
             return_value=[],
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={
                 CONF_LOCALE: "fr_FR",
@@ -145,10 +145,10 @@ async def test_config_flow_no_account(
 
 
 async def test_config_flow_multiple_accounts(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock
+    menuai: menuai, mock_setup_entry: AsyncMock
 ) -> None:
     """Test what happens if multiple Kamereon accounts are available."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -156,11 +156,11 @@ async def test_config_flow_multiple_accounts(
 
     renault_account_1 = RenaultAccount(
         "account_id_1",
-        websession=aiohttp_client.async_get_clientsession(hass),
+        websession=aiohttp_client.async_get_clientsession(menuai),
     )
     renault_account_2 = RenaultAccount(
         "account_id_2",
-        websession=aiohttp_client.async_get_clientsession(hass),
+        websession=aiohttp_client.async_get_clientsession(menuai),
     )
 
     # Multiple accounts
@@ -172,7 +172,7 @@ async def test_config_flow_multiple_accounts(
         ),
         patch("renault_api.renault_account.RenaultAccount.get_vehicles"),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={
                 CONF_LOCALE: "fr_FR",
@@ -185,7 +185,7 @@ async def test_config_flow_multiple_accounts(
     assert result["step_id"] == "kamereon"
 
     # Account selected
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_KAMEREON_ACCOUNT_ID: "account_id_2"},
     )
@@ -202,12 +202,12 @@ async def test_config_flow_multiple_accounts(
 
 @pytest.mark.usefixtures("config_entry")
 async def test_config_flow_duplicate(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock
+    menuai: menuai, mock_setup_entry: AsyncMock
 ) -> None:
     """Test abort if unique_id configured."""
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -215,7 +215,7 @@ async def test_config_flow_duplicate(
 
     renault_account = RenaultAccount(
         "account_id_1",
-        websession=aiohttp_client.async_get_clientsession(hass),
+        websession=aiohttp_client.async_get_clientsession(menuai),
     )
     with (
         patch("renault_api.renault_session.RenaultSession.login"),
@@ -225,7 +225,7 @@ async def test_config_flow_duplicate(
         ),
         patch("renault_api.renault_account.RenaultAccount.get_vehicles"),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={
                 CONF_LOCALE: "fr_FR",
@@ -236,16 +236,16 @@ async def test_config_flow_duplicate(
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(mock_setup_entry.mock_calls) == 0
 
 
-async def test_reauth(hass: HomeAssistant, config_entry: MockConfigEntry) -> None:
+async def test_reauth(menuai: menuai, config_entry: MockConfigEntry) -> None:
     """Test the start of the config flow."""
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
 
-    result = await config_entry.start_reauth_flow(hass)
+    result = await config_entry.start_reauth_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["description_placeholders"] == {
@@ -259,7 +259,7 @@ async def test_reauth(hass: HomeAssistant, config_entry: MockConfigEntry) -> Non
         "renault_api.renault_session.RenaultSession.login",
         side_effect=InvalidCredentialsException(403042, "invalid loginID or password"),
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={CONF_PASSWORD: "any"},
         )
@@ -273,7 +273,7 @@ async def test_reauth(hass: HomeAssistant, config_entry: MockConfigEntry) -> Non
 
     # Valid credentials
     with patch("renault_api.renault_session.RenaultSession.login"):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={CONF_PASSWORD: "any"},
         )
@@ -286,12 +286,12 @@ async def test_reauth(hass: HomeAssistant, config_entry: MockConfigEntry) -> Non
 
 
 async def test_reconfigure(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test reconfigure works."""
-    result = await config_entry.start_reconfigure_flow(hass)
+    result = await config_entry.start_reconfigure_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
     assert not result["errors"]
@@ -305,7 +305,7 @@ async def test_reconfigure(
     type(renault_account).account_id = PropertyMock(return_value="account_id_1")
     renault_account.get_vehicles.return_value = (
         schemas.KamereonVehiclesResponseSchema.loads(
-            await async_load_fixture(hass, "vehicle_zoe_40.json", DOMAIN)
+            await async_load_fixture(menuai, "vehicle_zoe_40.json", DOMAIN)
         )
     )
 
@@ -320,7 +320,7 @@ async def test_reconfigure(
             return_value=[renault_account],
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={
                 CONF_LOCALE: "fr_FR",
@@ -341,12 +341,12 @@ async def test_reconfigure(
 
 
 async def test_reconfigure_mismatch(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test reconfigure fails on account ID mismatch."""
-    result = await config_entry.start_reconfigure_flow(hass)
+    result = await config_entry.start_reconfigure_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
     assert not result["errors"]
@@ -360,7 +360,7 @@ async def test_reconfigure_mismatch(
     type(renault_account).account_id = PropertyMock(return_value="account_id_other")
     renault_account.get_vehicles.return_value = (
         schemas.KamereonVehiclesResponseSchema.loads(
-            await async_load_fixture(hass, "vehicle_zoe_40.json", DOMAIN)
+            await async_load_fixture(menuai, "vehicle_zoe_40.json", DOMAIN)
         )
     )
 
@@ -375,7 +375,7 @@ async def test_reconfigure_mismatch(
             return_value=[renault_account],
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={
                 CONF_LOCALE: "fr_FR",

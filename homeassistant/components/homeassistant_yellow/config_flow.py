@@ -1,4 +1,4 @@
-"""Config flow for the Home Assistant Yellow integration."""
+"""Config flow for the MenuAI Yellow integration."""
 
 from __future__ import annotations
 
@@ -10,32 +10,32 @@ from typing import Any, final
 import aiohttp
 import voluptuous as vol
 
-from homeassistant.components.hassio import (
-    HassioAPIError,
+from menuai.components.menuaiio import (
+    menuaiioAPIError,
     async_get_yellow_settings,
     async_set_yellow_settings,
     get_supervisor_client,
 )
-from homeassistant.components.homeassistant_hardware.firmware_config_flow import (
+from menuai.components.menuai_hardware.firmware_config_flow import (
     BaseFirmwareConfigFlow,
     BaseFirmwareOptionsFlow,
 )
-from homeassistant.components.homeassistant_hardware.silabs_multiprotocol_addon import (
+from menuai.components.menuai_hardware.silabs_multiprotocol_addon import (
     OptionsFlowHandler as MultiprotocolOptionsFlowHandler,
     SerialPortSettings as MultiprotocolSerialPortSettings,
 )
-from homeassistant.components.homeassistant_hardware.util import (
+from menuai.components.menuai_hardware.util import (
     ApplicationType,
     FirmwareInfo,
 )
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_HARDWARE,
     ConfigEntry,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.core import HomeAssistant, async_get_hass, callback
-from homeassistant.helpers import discovery_flow, selector
+from menuai.core import menuai, async_get_menuai, callback
+from menuai.helpers import discovery_flow, selector
 
 from .const import (
     DOMAIN,
@@ -58,8 +58,8 @@ STEP_HW_SETTINGS_SCHEMA = vol.Schema(
 )
 
 
-class HomeAssistantYellowConfigFlow(BaseFirmwareConfigFlow, domain=DOMAIN):
-    """Handle a config flow for Home Assistant Yellow."""
+class menuaiYellowConfigFlow(BaseFirmwareConfigFlow, domain=DOMAIN):
+    """Handle a config flow for MenuAI Yellow."""
 
     VERSION = 1
     MINOR_VERSION = 4
@@ -77,12 +77,12 @@ class HomeAssistantYellowConfigFlow(BaseFirmwareConfigFlow, domain=DOMAIN):
     ) -> OptionsFlow:
         """Return the options flow."""
         firmware_type = ApplicationType(config_entry.data[FIRMWARE])
-        hass = async_get_hass()
+        menuai = async_get_menuai()
 
         if firmware_type is ApplicationType.CPC:
-            return HomeAssistantYellowMultiPanOptionsFlowHandler(hass, config_entry)
+            return menuaiYellowMultiPanOptionsFlowHandler(menuai, config_entry)
 
-        return HomeAssistantYellowOptionsFlowHandler(hass, config_entry)
+        return menuaiYellowOptionsFlowHandler(menuai, config_entry)
 
     async def async_step_system(
         self, data: dict[str, Any] | None = None
@@ -97,7 +97,7 @@ class HomeAssistantYellowConfigFlow(BaseFirmwareConfigFlow, domain=DOMAIN):
             and self._probed_firmware_info.firmware_type is ApplicationType.EZSP
         ):
             discovery_flow.async_create_flow(
-                self.hass,
+                self.menuai,
                 ZHA_DOMAIN,
                 context={"source": SOURCE_HARDWARE},
                 data=ZHA_HW_DISCOVERY_DATA,
@@ -125,15 +125,15 @@ class HomeAssistantYellowConfigFlow(BaseFirmwareConfigFlow, domain=DOMAIN):
         )
 
 
-class BaseHomeAssistantYellowOptionsFlow(OptionsFlow, ABC):
-    """Base Home Assistant Yellow options flow shared between firmware and multi-PAN."""
+class BasemenuaiYellowOptionsFlow(OptionsFlow, ABC):
+    """Base MenuAI Yellow options flow shared between firmware and multi-PAN."""
 
     _hw_settings: dict[str, bool] | None = None
 
-    def __init__(self, hass: HomeAssistant, *args: Any, **kwargs: Any) -> None:
+    def __init__(self, menuai: menuai, *args: Any, **kwargs: Any) -> None:
         """Instantiate options flow."""
         super().__init__(*args, **kwargs)
-        self._supervisor_client = get_supervisor_client(hass)
+        self._supervisor_client = get_supervisor_client(menuai)
 
     @abstractmethod
     async def async_step_main_menu(self, _: None = None) -> ConfigFlowResult:
@@ -163,8 +163,8 @@ class BaseHomeAssistantYellowOptionsFlow(OptionsFlow, ABC):
                 return self.async_create_entry(data={})
             try:
                 async with asyncio.timeout(10):
-                    await async_set_yellow_settings(self.hass, user_input)
-            except (aiohttp.ClientError, TimeoutError, HassioAPIError) as err:
+                    await async_set_yellow_settings(self.menuai, user_input)
+            except (aiohttp.ClientError, TimeoutError, menuaiioAPIError) as err:
                 _LOGGER.warning("Failed to write hardware settings", exc_info=err)
                 return self.async_abort(reason="write_hw_settings_error")
             return await self.async_step_reboot_menu()
@@ -172,9 +172,9 @@ class BaseHomeAssistantYellowOptionsFlow(OptionsFlow, ABC):
         try:
             async with asyncio.timeout(10):
                 self._hw_settings: dict[str, bool] = await async_get_yellow_settings(
-                    self.hass
+                    self.menuai
                 )
-        except (aiohttp.ClientError, TimeoutError, HassioAPIError) as err:
+        except (aiohttp.ClientError, TimeoutError, menuaiioAPIError) as err:
             _LOGGER.warning("Failed to read hardware settings", exc_info=err)
             return self.async_abort(reason="read_hw_settings_error")
 
@@ -210,10 +210,10 @@ class BaseHomeAssistantYellowOptionsFlow(OptionsFlow, ABC):
         return self.async_create_entry(data={})
 
 
-class HomeAssistantYellowMultiPanOptionsFlowHandler(
-    BaseHomeAssistantYellowOptionsFlow, MultiprotocolOptionsFlowHandler
+class menuaiYellowMultiPanOptionsFlowHandler(
+    BasemenuaiYellowOptionsFlow, MultiprotocolOptionsFlowHandler
 ):
-    """Handle a multi-PAN options flow for Home Assistant Yellow."""
+    """Handle a multi-PAN options flow for MenuAI Yellow."""
 
     async def async_step_main_menu(self, _: None = None) -> ConfigFlowResult:
         """Show the main menu."""
@@ -263,7 +263,7 @@ class HomeAssistantYellowMultiPanOptionsFlowHandler(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Finish flashing and update the config entry."""
-        self.hass.config_entries.async_update_entry(
+        self.menuai.config_entries.async_update_entry(
             entry=self.config_entry,
             data={
                 **self.config_entry.data,
@@ -274,14 +274,14 @@ class HomeAssistantYellowMultiPanOptionsFlowHandler(
         return await super().async_step_flashing_complete(user_input)
 
 
-class HomeAssistantYellowOptionsFlowHandler(
-    BaseHomeAssistantYellowOptionsFlow, BaseFirmwareOptionsFlow
+class menuaiYellowOptionsFlowHandler(
+    BasemenuaiYellowOptionsFlow, BaseFirmwareOptionsFlow
 ):
-    """Handle a firmware options flow for Home Assistant Yellow."""
+    """Handle a firmware options flow for MenuAI Yellow."""
 
-    def __init__(self, hass: HomeAssistant, *args: Any, **kwargs: Any) -> None:
+    def __init__(self, menuai: menuai, *args: Any, **kwargs: Any) -> None:
         """Instantiate options flow."""
-        super().__init__(hass, *args, **kwargs)
+        super().__init__(menuai, *args, **kwargs)
 
         self._hardware_name = BOARD_NAME
         self._device = RADIO_DEVICE
@@ -317,7 +317,7 @@ class HomeAssistantYellowOptionsFlowHandler(
         """Create the config entry."""
         assert self._probed_firmware_info is not None
 
-        self.hass.config_entries.async_update_entry(
+        self.menuai.config_entries.async_update_entry(
             entry=self.config_entry,
             data={
                 **self.config_entry.data,

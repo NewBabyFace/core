@@ -10,7 +10,7 @@ from typing import Any
 from pytfiac import Tfiac
 import voluptuous as vol
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     FAN_AUTO,
     FAN_HIGH,
     FAN_LOW,
@@ -24,11 +24,11 @@ from homeassistant.components.climate import (
     ClimateEntityFeature,
     HVACMode,
 )
-from homeassistant.const import ATTR_TEMPERATURE, CONF_HOST, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import ATTR_TEMPERATURE, CONF_HOST, UnitOfTemperature
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 SCAN_INTERVAL = timedelta(seconds=60)
 
@@ -56,7 +56,7 @@ ON_MODE = "is_on"
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,

@@ -1,6 +1,6 @@
 """Constants for world clock component."""
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 DOMAIN = "worldclock"
 PLATFORMS = [Platform.SENSOR]

@@ -17,26 +17,26 @@ import httpx
 from propcache.api import cached_property
 import voluptuous as vol
 
-from homeassistant.components.http import KEY_AUTHENTICATED, KEY_HASS, HomeAssistantView
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONTENT_TYPE_MULTIPART, EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import (
+from menuai.components.http import KEY_AUTHENTICATED, KEY_menuai, menuaiView
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONTENT_TYPE_MULTIPART, EVENT_menuai_STOP
+from menuai.core import (
     Event,
     EventStateChangedData,
-    HomeAssistant,
+    menuai,
     ServiceCall,
     callback,
 )
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity import Entity, EntityDescription
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.event import (
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity import Entity, EntityDescription
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.event import (
     async_track_state_change_event,
     async_track_time_interval,
 )
-from homeassistant.helpers.httpx_client import get_async_client
-from homeassistant.helpers.typing import (
+from menuai.helpers.httpx_client import get_async_client
+from menuai.helpers.typing import (
     UNDEFINED,
     ConfigType,
     UndefinedType,
@@ -83,7 +83,7 @@ class Image:
     content: bytes
 
 
-class ImageContentTypeError(HomeAssistantError):
+class ImageContentTypeError(menuaiError):
     """Error with the content type while loading an image."""
 
 
@@ -102,17 +102,17 @@ async def _async_get_image(image_entity: ImageEntity, timeout: int) -> Image:
                 content_type = valid_image_content_type(image_entity.content_type)
                 return Image(content_type, image_bytes)
 
-    raise HomeAssistantError("Unable to get image")
+    raise menuaiError("Unable to get image")
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the image component."""
-    component = hass.data[DATA_COMPONENT] = EntityComponent[ImageEntity](
-        _LOGGER, DOMAIN, hass, SCAN_INTERVAL
+    component = menuai.data[DATA_COMPONENT] = EntityComponent[ImageEntity](
+        _LOGGER, DOMAIN, menuai, SCAN_INTERVAL
     )
 
-    hass.http.register_view(ImageView(component))
-    hass.http.register_view(ImageStreamView(component))
+    menuai.http.register_view(ImageView(component))
+    menuai.http.register_view(ImageStreamView(component))
 
     await component.async_setup(config)
 
@@ -124,7 +124,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             entity.async_write_ha_state()
 
     unsub = async_track_time_interval(
-        hass, update_tokens, TOKEN_CHANGE_INTERVAL, name="Image update tokens"
+        menuai, update_tokens, TOKEN_CHANGE_INTERVAL, name="Image update tokens"
     )
 
     @callback
@@ -132,7 +132,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         """Unsubscribe track time interval timer."""
         unsub()
 
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, unsub_track_time_interval)
+    menuai.bus.async_listen_once(EVENT_menuai_STOP, unsub_track_time_interval)
 
     component.async_register_entity_service(
         SERVICE_SNAPSHOT, IMAGE_SERVICE_SNAPSHOT, async_handle_snapshot_service
@@ -141,14 +141,14 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up a config entry."""
-    return await hass.data[DATA_COMPONENT].async_setup_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_setup_entry(entry)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.data[DATA_COMPONENT].async_unload_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_unload_entry(entry)
 
 
 CACHED_PROPERTIES_WITH_ATTR_ = {
@@ -173,9 +173,9 @@ class ImageEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
     _attr_state: None = None  # State is determined by last_updated
     _cached_image: Image | None = None
 
-    def __init__(self, hass: HomeAssistant, verify_ssl: bool = False) -> None:
+    def __init__(self, menuai: menuai, verify_ssl: bool = False) -> None:
         """Initialize an image entity."""
-        self._client = get_async_client(hass, verify_ssl=verify_ssl)
+        self._client = get_async_client(menuai, verify_ssl=verify_ssl)
         self.access_tokens: collections.deque = collections.deque([], 2)
         self.async_update_token()
 
@@ -255,7 +255,7 @@ class ImageEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
             self._cached_image = image
             self._attr_content_type = image.content_type
             return image.content
-        return await self.hass.async_add_executor_job(self.image)
+        return await self.menuai.async_add_executor_job(self.image)
 
     @property
     @final
@@ -277,7 +277,7 @@ class ImageEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
         self.access_tokens.append(hex(_RND.getrandbits(256))[2:])
 
 
-class ImageView(HomeAssistantView):
+class ImageView(menuaiView):
     """View to serve an image."""
 
     name = "api:image:image"
@@ -314,7 +314,7 @@ class ImageView(HomeAssistantView):
         """Serve image."""
         try:
             image = await _async_get_image(image_entity, IMAGE_TIMEOUT)
-        except (HomeAssistantError, ValueError) as ex:
+        except (menuaiError, ValueError) as ex:
             raise web.HTTPInternalServerError from ex
 
         return web.Response(body=image.content, content_type=image.content_type)
@@ -366,10 +366,10 @@ async def async_get_still_stream(
         timed_out = True
         event.set()
 
-    hass = request.app[KEY_HASS]
-    loop = hass.loop
+    menuai = request.app[KEY_menuai]
+    loop = menuai.loop
     remove = async_track_state_change_event(
-        hass,
+        menuai,
         image_entity.entity_id,
         _async_image_state_update,
     )
@@ -409,12 +409,12 @@ async def async_handle_snapshot_service(
     image: ImageEntity, service_call: ServiceCall
 ) -> None:
     """Handle snapshot services calls."""
-    hass = image.hass
+    menuai = image.menuai
     snapshot_file: str = service_call.data[ATTR_FILENAME]
 
     # check if we allow to access to that file
-    if not hass.config.is_allowed_path(snapshot_file):
-        raise HomeAssistantError(
+    if not menuai.config.is_allowed_path(snapshot_file):
+        raise menuaiError(
             f"Cannot write `{snapshot_file}`, no access to path; `allowlist_external_dirs` may need to be adjusted in `configuration.yaml`"
         )
 
@@ -431,6 +431,6 @@ async def async_handle_snapshot_service(
             img_file.write(image_data)
 
     try:
-        await hass.async_add_executor_job(_write_image, snapshot_file, image_data)
+        await menuai.async_add_executor_job(_write_image, snapshot_file, image_data)
     except OSError as err:
-        raise HomeAssistantError("Can't write image to file") from err
+        raise menuaiError("Can't write image to file") from err

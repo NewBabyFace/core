@@ -5,27 +5,27 @@ from unittest.mock import MagicMock, patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .conftest import MOCK_HEATER_STATUS
 
 from tests.common import snapshot_platform
 
 
-@patch("homeassistant.components.incomfort.PLATFORMS", [Platform.WATER_HEATER])
+@patch("menuai.components.incomfort.PLATFORMS", [Platform.WATER_HEATER])
 async def test_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_incomfort: MagicMock,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
     mock_config_entry: ConfigEntry,
 ) -> None:
     """Test the incomfort entities are set up correctly."""
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
 
 @pytest.mark.parametrize(
@@ -47,9 +47,9 @@ async def test_setup_platform(
         "tapping_and_heater_temp_not_available_unknown",
     ],
 )
-@patch("homeassistant.components.incomfort.PLATFORMS", [Platform.WATER_HEATER])
+@patch("menuai.components.incomfort.PLATFORMS", [Platform.WATER_HEATER])
 async def test_current_temperature_cases(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_incomfort: MagicMock,
     entity_registry: er.EntityRegistry,
     mock_config_entry: ConfigEntry,
@@ -64,6 +64,6 @@ async def test_current_temperature_cases(
     It is based on the operating mode as the boiler can heat tap water or
     the house.
     """
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    assert (state := hass.states.get("water_heater.boiler")) is not None
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    assert (state := menuai.states.get("water_heater.boiler")) is not None
     assert state.attributes.get("current_temperature") == current_temperature

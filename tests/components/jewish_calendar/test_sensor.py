@@ -7,23 +7,23 @@ from hdate.holidays import HolidayDatabase
 from hdate.parasha import Parasha
 import pytest
 
-from homeassistant.components.jewish_calendar.const import DOMAIN
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.const import CONF_PLATFORM
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.components.jewish_calendar.const import DOMAIN
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.const import CONF_PLATFORM
+from menuai.core import menuai
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from tests.common import MockConfigEntry
 
 
 @pytest.mark.parametrize("language", ["en", "he"])
-async def test_min_config(hass: HomeAssistant, config_entry: MockConfigEntry) -> None:
+async def test_min_config(menuai: menuai, config_entry: MockConfigEntry) -> None:
     """Test minimum jewish calendar configuration."""
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
-    assert hass.states.get("sensor.jewish_calendar_date") is not None
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
+    assert menuai.states.get("sensor.jewish_calendar_date") is not None
 
 
 TEST_PARAMS = [
@@ -158,14 +158,14 @@ TEST_PARAMS = [
 )
 @pytest.mark.usefixtures("entity_registry_enabled_by_default", "setup_at_time")
 async def test_jewish_calendar_sensor(
-    hass: HomeAssistant, results: dict[str, Any], sensor: str
+    menuai: menuai, results: dict[str, Any], sensor: str
 ) -> None:
     """Test Jewish calendar sensor output."""
     result = results["state"]
     if isinstance(result, dt):
         result = dt_util.as_utc(result).isoformat()
 
-    sensor_object = hass.states.get(f"sensor.jewish_calendar_{sensor}")
+    sensor_object = menuai.states.get(f"sensor.jewish_calendar_{sensor}")
     assert sensor_object.state == result
 
     if attrs := results.get("attr"):
@@ -490,7 +490,7 @@ SHABBAT_PARAMS = [
 )
 @pytest.mark.usefixtures("entity_registry_enabled_by_default", "setup_at_time")
 async def test_shabbat_times_sensor(
-    hass: HomeAssistant, results: dict[str, Any], language: str
+    menuai: menuai, results: dict[str, Any], language: str
 ) -> None:
     """Test sensor output for upcoming shabbat/yomtov times."""
     for sensor_type, result_value in results.items():
@@ -502,7 +502,7 @@ async def test_shabbat_times_sensor(
         if isinstance(result_value, dt):
             result_value = dt_util.as_utc(result_value).isoformat()
 
-        assert hass.states.get(f"sensor.jewish_calendar_{sensor_type}").state == str(
+        assert menuai.states.get(f"sensor.jewish_calendar_{sensor_type}").state == str(
             result_value
         ), f"Value for {sensor_type}"
 
@@ -520,9 +520,9 @@ async def test_shabbat_times_sensor(
     indirect=True,
 )
 @pytest.mark.usefixtures("entity_registry_enabled_by_default", "setup_at_time")
-async def test_omer_sensor(hass: HomeAssistant, results: str) -> None:
+async def test_omer_sensor(menuai: menuai, results: str) -> None:
     """Test Omer Count sensor output."""
-    assert hass.states.get("sensor.jewish_calendar_day_of_the_omer").state == results
+    assert menuai.states.get("sensor.jewish_calendar_day_of_the_omer").state == results
 
 
 @pytest.mark.parametrize(
@@ -537,20 +537,20 @@ async def test_omer_sensor(hass: HomeAssistant, results: str) -> None:
     indirect=True,
 )
 @pytest.mark.usefixtures("entity_registry_enabled_by_default", "setup_at_time")
-async def test_dafyomi_sensor(hass: HomeAssistant, results: str) -> None:
+async def test_dafyomi_sensor(menuai: menuai, results: str) -> None:
     """Test Daf Yomi sensor output."""
-    assert hass.states.get("sensor.jewish_calendar_daf_yomi").state == results
+    assert menuai.states.get("sensor.jewish_calendar_daf_yomi").state == results
 
 
 async def test_no_discovery_info(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test setup without discovery info."""
-    assert SENSOR_DOMAIN not in hass.config.components
+    assert SENSOR_DOMAIN not in menuai.config.components
     assert await async_setup_component(
-        hass,
+        menuai,
         SENSOR_DOMAIN,
         {SENSOR_DOMAIN: {CONF_PLATFORM: DOMAIN}},
     )
-    await hass.async_block_till_done()
-    assert SENSOR_DOMAIN in hass.config.components
+    await menuai.async_block_till_done()
+    assert SENSOR_DOMAIN in menuai.config.components

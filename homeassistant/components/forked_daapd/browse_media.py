@@ -7,13 +7,13 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import quote, unquote
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     BrowseError,
     BrowseMedia,
     MediaClass,
     MediaType,
 )
-from homeassistant.helpers.network import is_internal_request
+from menuai.helpers.network import is_internal_request
 
 from .const import CAN_PLAY_TYPE, URI_SCHEMA
 
@@ -230,7 +230,7 @@ def create_browse_media_response(
     children: list[BrowseMedia] | None = None,
 ) -> BrowseMedia:
     """Convert the results into a browse media response."""
-    internal_request = is_internal_request(master.hass)
+    internal_request = is_internal_request(master.menuai)
     if not children:  # Directory searches will pass in subdirectories as children
         children = []
     for item in result:

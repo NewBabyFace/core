@@ -7,12 +7,12 @@ from typing import TYPE_CHECKING
 
 from kaleidescape import const as kaleidescape_const
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
 )
-from homeassistant.util.dt import utcnow
+from menuai.util.dt import utcnow
 
 from .const import DOMAIN
 from .entity import KaleidescapeEntity
@@ -20,9 +20,9 @@ from .entity import KaleidescapeEntity
 if TYPE_CHECKING:
     from datetime import datetime
 
-    from homeassistant.config_entries import ConfigEntry
-    from homeassistant.core import HomeAssistant
-    from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+    from menuai.config_entries import ConfigEntry
+    from menuai.core import menuai
+    from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 
 KALEIDESCAPE_PLAYING_STATES = [
@@ -38,12 +38,12 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the platform from a config entry."""
-    entities = [KaleidescapeMediaPlayer(hass.data[DOMAIN][entry.entry_id])]
+    entities = [KaleidescapeMediaPlayer(menuai.data[DOMAIN][entry.entry_id])]
     async_add_entities(entities)
 
 

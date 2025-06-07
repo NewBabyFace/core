@@ -6,17 +6,17 @@ from typing import Any
 
 import tibber
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
 
 from .const import DOMAIN
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, config_entry: ConfigEntry
+    menuai: menuai, config_entry: ConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
-    tibber_connection: tibber.Tibber = hass.data[DOMAIN]
+    tibber_connection: tibber.Tibber = menuai.data[DOMAIN]
 
     return {
         "homes": [

@@ -1,15 +1,15 @@
 """Support for the HKO service."""
 
-from homeassistant.components.weather import (
+from menuai.components.weather import (
     Forecast,
     WeatherEntity,
     WeatherEntityFeature,
 )
-from homeassistant.const import UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.const import UnitOfTemperature
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
     API_CONDITION,
@@ -25,7 +25,7 @@ from .coordinator import HKOConfigEntry, HKOUpdateCoordinator
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: HKOConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

@@ -7,10 +7,10 @@ from typing import Any
 from pdunehd import DuneHDPlayer
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.util.network import is_host_valid
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST
+from menuai.exceptions import menuaiError
+from menuai.util.network import is_host_valid
 
 from .const import DOMAIN
 
@@ -23,7 +23,7 @@ class DuneHDConfigFlow(ConfigFlow, domain=DOMAIN):
     async def init_device(self, host: str) -> None:
         """Initialize Dune HD player."""
         player = DuneHDPlayer(host)
-        state = await self.hass.async_add_executor_job(player.update_state)
+        state = await self.menuai.async_add_executor_job(player.update_state)
         if not state:
             raise CannotConnect
 
@@ -64,9 +64,9 @@ class DuneHDConfigFlow(ConfigFlow, domain=DOMAIN):
         return host in existing_hosts
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""
 
 
-class AlreadyConfigured(HomeAssistantError):
+class AlreadyConfigured(menuaiError):
     """Error to indicate device is already configured."""

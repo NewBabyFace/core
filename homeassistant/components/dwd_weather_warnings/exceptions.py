@@ -1,7 +1,7 @@
 """Exceptions for the dwd_weather_warnings integration."""
 
-from homeassistant.exceptions import HomeAssistantError
+from menuai.exceptions import menuaiError
 
 
-class EntityNotFoundError(HomeAssistantError):
+class EntityNotFoundError(menuaiError):
     """When a referenced entity was not found."""

@@ -10,8 +10,8 @@ from typing import cast
 
 from aiohttp import web
 
-from homeassistant import core
-from homeassistant.components.http import HomeAssistantView
+from menuai import core
+from menuai.components.http import menuaiView
 
 from .config import Config
 from .const import HUE_SERIAL_NUMBER, HUE_UUID
@@ -22,7 +22,7 @@ BROADCAST_PORT = 1900
 BROADCAST_ADDR = "239.255.255.250"
 
 
-class DescriptionXmlView(HomeAssistantView):
+class DescriptionXmlView(menuaiView):
     """Handles requests for the description.xml file."""
 
     url = "/description.xml"
@@ -45,7 +45,7 @@ class DescriptionXmlView(HomeAssistantView):
 <URLBase>http://{self.config.advertise_ip}:{self.config.advertise_port}/</URLBase>
 <device>
 <deviceType>urn:schemas-upnp-org:device:Basic:1</deviceType>
-<friendlyName>Home Assistant Bridge ({self.config.advertise_ip})</friendlyName>
+<friendlyName>MenuAI Bridge ({self.config.advertise_ip})</friendlyName>
 <manufacturer>Royal Philips Electronics</manufacturer>
 <manufacturerURL>http://www.philips.com</manufacturerURL>
 <modelDescription>Philips hue Personal Wireless Lighting</modelDescription>

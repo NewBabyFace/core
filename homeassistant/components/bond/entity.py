@@ -9,7 +9,7 @@ import logging
 
 from aiohttp import ClientError
 
-from homeassistant.const import (
+from menuai.const import (
     ATTR_HW_VERSION,
     ATTR_MODEL,
     ATTR_NAME,
@@ -17,10 +17,10 @@ from homeassistant.const import (
     ATTR_SW_VERSION,
     ATTR_VIA_DEVICE,
 )
-from homeassistant.core import CALLBACK_TYPE, HassJob, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.event import async_call_later
+from menuai.core import CALLBACK_TYPE, menuaiJob, callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity
+from menuai.helpers.event import async_call_later
 
 from .const import DOMAIN
 from .models import BondData
@@ -70,7 +70,7 @@ class BondEntity(Entity):
         self._attr_assumed_state = self._hub.is_bridge and not self._device.trust_state
         self._apply_state()
         self._bpup_polling_fallback: CALLBACK_TYPE | None = None
-        self._async_update_if_bpup_not_alive_job = HassJob(
+        self._async_update_if_bpup_not_alive_job = menuaiJob(
             self._async_update_if_bpup_not_alive
         )
 
@@ -115,7 +115,7 @@ class BondEntity(Entity):
     def _async_update_if_bpup_not_alive(self, now: datetime) -> None:
         """Fetch via the API if BPUP is not alive."""
         self._async_schedule_bpup_alive_or_poll()
-        if self.hass.is_stopping or (
+        if self.menuai.is_stopping or (
             self._bpup_subs.alive and self._initialized and self.available
         ):
             return
@@ -126,7 +126,7 @@ class BondEntity(Entity):
                 _FALLBACK_SCAN_INTERVAL,
             )
             return
-        self.hass.async_create_background_task(
+        self.menuai.async_create_background_task(
             self._async_update(), f"{DOMAIN} {self.name} update", eager_start=True
         )
 
@@ -176,9 +176,9 @@ class BondEntity(Entity):
         self._async_state_callback(json_msg["b"])
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to BPUP and start polling."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self._bpup_subs.subscribe(self._device_id, self._async_bpup_callback)
         self._async_schedule_bpup_alive_or_poll()
 
@@ -187,14 +187,14 @@ class BondEntity(Entity):
         """Schedule the BPUP alive or poll."""
         alive = self._bpup_subs.alive
         self._bpup_polling_fallback = async_call_later(
-            self.hass,
+            self.menuai,
             _BPUP_ALIVE_SCAN_INTERVAL if alive else _FALLBACK_SCAN_INTERVAL,
             self._async_update_if_bpup_not_alive_job,
         )
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Unsubscribe from BPUP data on remove."""
-        await super().async_will_remove_from_hass()
+        await super().async_will_remove_from_menuai()
         self._bpup_subs.unsubscribe(self._device_id, self._async_bpup_callback)
         if self._bpup_polling_fallback:
             self._bpup_polling_fallback()

@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from homeassistant.const import ATTR_CONNECTIONS
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity
-from homeassistant.util import dt as dt_util
+from menuai.const import ATTR_CONNECTIONS
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity
+from menuai.util import dt as dt_util
 
 from . import roomba_reported_state
 from .const import DOMAIN
@@ -80,7 +80,7 @@ class IRobotEntity(Entity):
             return None
         return dt_util.utc_from_timestamp(ts)
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callback function."""
         self.vacuum.register_on_message_callback(self.on_message)
 

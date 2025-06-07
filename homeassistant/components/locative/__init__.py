@@ -8,9 +8,9 @@ import logging
 from aiohttp import web
 import voluptuous as vol
 
-from homeassistant.components import webhook
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.components import webhook
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_ID,
     ATTR_LATITUDE,
     ATTR_LONGITUDE,
@@ -18,9 +18,9 @@ from homeassistant.const import (
     STATE_NOT_HOME,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_entry_flow, config_validation as cv
-from homeassistant.helpers.dispatcher import async_dispatcher_send
+from menuai.core import menuai
+from menuai.helpers import config_entry_flow, config_validation as cv
+from menuai.helpers.dispatcher import async_dispatcher_send
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -61,7 +61,7 @@ WEBHOOK_SCHEMA = vol.All(
 
 
 async def handle_webhook(
-    hass: HomeAssistant, webhook_id: str, request: web.Request
+    menuai: menuai, webhook_id: str, request: web.Request
 ) -> web.Response:
     """Handle incoming webhook from Locative."""
     try:
@@ -77,16 +77,16 @@ async def handle_webhook(
     gps_location = (data[ATTR_LATITUDE], data[ATTR_LONGITUDE])
 
     if direction == "enter":
-        async_dispatcher_send(hass, TRACKER_UPDATE, device, gps_location, location_name)
+        async_dispatcher_send(menuai, TRACKER_UPDATE, device, gps_location, location_name)
         return web.Response(text=f"Setting location to {location_name}")
 
     if direction == "exit":
-        current_state = hass.states.get(f"{Platform.DEVICE_TRACKER}.{device}")
+        current_state = menuai.states.get(f"{Platform.DEVICE_TRACKER}.{device}")
 
         if current_state is None or current_state.state == location_name:
             location_name = STATE_NOT_HOME
             async_dispatcher_send(
-                hass, TRACKER_UPDATE, device, gps_location, location_name
+                menuai, TRACKER_UPDATE, device, gps_location, location_name
             )
             return web.Response(text="Setting location to not home")
 
@@ -110,23 +110,23 @@ async def handle_webhook(
     )
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Configure based on config entry."""
-    if DOMAIN not in hass.data:
-        hass.data[DOMAIN] = {"devices": set(), "unsub_device_tracker": {}}
+    if DOMAIN not in menuai.data:
+        menuai.data[DOMAIN] = {"devices": set(), "unsub_device_tracker": {}}
     webhook.async_register(
-        hass, DOMAIN, "Locative", entry.data[CONF_WEBHOOK_ID], handle_webhook
+        menuai, DOMAIN, "Locative", entry.data[CONF_WEBHOOK_ID], handle_webhook
     )
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    webhook.async_unregister(hass, entry.data[CONF_WEBHOOK_ID])
-    hass.data[DOMAIN]["unsub_device_tracker"].pop(entry.entry_id)()
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    webhook.async_unregister(menuai, entry.data[CONF_WEBHOOK_ID])
+    menuai.data[DOMAIN]["unsub_device_tracker"].pop(entry.entry_id)()
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 async_remove_entry = config_entry_flow.webhook_async_remove_entry

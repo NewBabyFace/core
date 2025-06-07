@@ -7,22 +7,22 @@ from collections.abc import Coroutine, Mapping
 from functools import partial
 from typing import Any, Protocol, cast
 
-from homeassistant.config import config_per_platform
-from homeassistant.const import CONF_DESCRIPTION, CONF_NAME
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, ServiceCall, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import discovery
-from homeassistant.helpers.service import async_set_service_schema
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.loader import async_get_integration, bind_hass
-from homeassistant.setup import (
+from menuai.config import config_per_platform
+from menuai.const import CONF_DESCRIPTION, CONF_NAME
+from menuai.core import CALLBACK_TYPE, menuai, ServiceCall, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import discovery
+from menuai.helpers.service import async_set_service_schema
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.loader import async_get_integration, bind_menuai
+from menuai.setup import (
     SetupPhases,
     async_prepare_setup_platform,
     async_start_setup,
 )
-from homeassistant.util import slugify
-from homeassistant.util.hass_dict import HassKey
-from homeassistant.util.yaml import load_yaml_dict
+from menuai.util import slugify
+from menuai.util.menuai_dict import menuaiKey
+from menuai.util.yaml import load_yaml_dict
 
 from .const import (
     ATTR_DATA,
@@ -36,10 +36,10 @@ from .const import (
 )
 
 CONF_FIELDS = "fields"
-NOTIFY_SERVICES: HassKey[dict[str, list[BaseNotificationService]]] = HassKey(
+NOTIFY_SERVICES: menuaiKey[dict[str, list[BaseNotificationService]]] = menuaiKey(
     f"{DOMAIN}_services"
 )
-NOTIFY_DISCOVERY_DISPATCHER: HassKey[CALLBACK_TYPE | None] = HassKey(
+NOTIFY_DISCOVERY_DISPATCHER: menuaiKey[CALLBACK_TYPE | None] = menuaiKey(
     f"{DOMAIN}_discovery_dispatcher"
 )
 
@@ -49,7 +49,7 @@ class LegacyNotifyPlatform(Protocol):
 
     async def async_get_service(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config: ConfigType,
         discovery_info: DiscoveryInfoType | None = ...,
     ) -> BaseNotificationService | None:
@@ -57,7 +57,7 @@ class LegacyNotifyPlatform(Protocol):
 
     def get_service(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config: ConfigType,
         discovery_info: DiscoveryInfoType | None = ...,
     ) -> BaseNotificationService | None:
@@ -66,11 +66,11 @@ class LegacyNotifyPlatform(Protocol):
 
 @callback
 def async_setup_legacy(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> list[Coroutine[Any, Any, None]]:
     """Set up legacy notify services."""
-    hass.data.setdefault(NOTIFY_SERVICES, {})
-    hass.data.setdefault(NOTIFY_DISCOVERY_DISPATCHER, None)
+    menuai.data.setdefault(NOTIFY_SERVICES, {})
+    menuai.data.setdefault(NOTIFY_DISCOVERY_DISPATCHER, None)
 
     async def async_setup_platform(
         integration_name: str,
@@ -83,7 +83,7 @@ def async_setup_legacy(
 
         platform = cast(
             LegacyNotifyPlatform | None,
-            await async_prepare_setup_platform(hass, config, DOMAIN, integration_name),
+            await async_prepare_setup_platform(menuai, config, DOMAIN, integration_name),
         )
 
         if platform is None:
@@ -93,7 +93,7 @@ def async_setup_legacy(
         full_name = f"{DOMAIN}.{integration_name}"
         LOGGER.info("Setting up %s", full_name)
         with async_start_setup(
-            hass,
+            menuai,
             integration=integration_name,
             group=str(id(p_config)),
             phase=SetupPhases.PLATFORM_SETUP,
@@ -102,14 +102,14 @@ def async_setup_legacy(
             try:
                 if hasattr(platform, "async_get_service"):
                     notify_service = await platform.async_get_service(
-                        hass, p_config, discovery_info
+                        menuai, p_config, discovery_info
                     )
                 elif hasattr(platform, "get_service"):
-                    notify_service = await hass.async_add_executor_job(
-                        platform.get_service, hass, p_config, discovery_info
+                    notify_service = await menuai.async_add_executor_job(
+                        platform.get_service, menuai, p_config, discovery_info
                     )
                 else:
-                    raise HomeAssistantError("Invalid notify platform.")  # noqa: TRY301
+                    raise menuaiError("Invalid notify platform.")  # noqa: TRY301
 
                 if notify_service is None:
                     # Platforms can decide not to create a service based
@@ -133,14 +133,14 @@ def async_setup_legacy(
             service_name = slugify(conf_name or SERVICE_NOTIFY)
 
             await notify_service.async_setup(
-                hass, service_name, target_service_name_prefix
+                menuai, service_name, target_service_name_prefix
             )
             await notify_service.async_register_services()
 
-            hass.data[NOTIFY_SERVICES].setdefault(integration_name, []).append(
+            menuai.data[NOTIFY_SERVICES].setdefault(integration_name, []).append(
                 notify_service
             )
-            hass.config.components.add(f"{integration_name}.{DOMAIN}")
+            menuai.config.components.add(f"{integration_name}.{DOMAIN}")
 
     async def async_platform_discovered(
         platform: str, info: DiscoveryInfoType | None
@@ -148,8 +148,8 @@ def async_setup_legacy(
         """Handle for discovered platform."""
         await async_setup_platform(platform, discovery_info=info)
 
-    hass.data[NOTIFY_DISCOVERY_DISPATCHER] = discovery.async_listen_platform(
-        hass, DOMAIN, async_platform_discovered
+    menuai.data[NOTIFY_DISCOVERY_DISPATCHER] = discovery.async_listen_platform(
+        menuai, DOMAIN, async_platform_discovered
     )
 
     return [
@@ -159,47 +159,47 @@ def async_setup_legacy(
     ]
 
 
-@bind_hass
-async def async_reload(hass: HomeAssistant, integration_name: str) -> None:
+@bind_menuai
+async def async_reload(menuai: menuai, integration_name: str) -> None:
     """Register notify services for an integration."""
-    if not _async_integration_has_notify_services(hass, integration_name):
+    if not _async_integration_has_notify_services(menuai, integration_name):
         return
 
     tasks = [
         notify_service.async_register_services()
-        for notify_service in hass.data[NOTIFY_SERVICES][integration_name]
+        for notify_service in menuai.data[NOTIFY_SERVICES][integration_name]
     ]
 
     await asyncio.gather(*tasks)
 
 
-@bind_hass
-async def async_reset_platform(hass: HomeAssistant, integration_name: str) -> None:
+@bind_menuai
+async def async_reset_platform(menuai: menuai, integration_name: str) -> None:
     """Unregister notify services for an integration."""
-    notify_discovery_dispatcher = hass.data.get(NOTIFY_DISCOVERY_DISPATCHER)
+    notify_discovery_dispatcher = menuai.data.get(NOTIFY_DISCOVERY_DISPATCHER)
     if notify_discovery_dispatcher:
         notify_discovery_dispatcher()
-        hass.data[NOTIFY_DISCOVERY_DISPATCHER] = None
-    if not _async_integration_has_notify_services(hass, integration_name):
+        menuai.data[NOTIFY_DISCOVERY_DISPATCHER] = None
+    if not _async_integration_has_notify_services(menuai, integration_name):
         return
 
     tasks = [
         notify_service.async_unregister_services()
-        for notify_service in hass.data[NOTIFY_SERVICES][integration_name]
+        for notify_service in menuai.data[NOTIFY_SERVICES][integration_name]
     ]
 
     await asyncio.gather(*tasks)
 
-    del hass.data[NOTIFY_SERVICES][integration_name]
+    del menuai.data[NOTIFY_SERVICES][integration_name]
 
 
 def _async_integration_has_notify_services(
-    hass: HomeAssistant, integration_name: str
+    menuai: menuai, integration_name: str
 ) -> bool:
     """Determine if an integration has notify services registered."""
     if (
-        NOTIFY_SERVICES not in hass.data
-        or integration_name not in hass.data[NOTIFY_SERVICES]
+        NOTIFY_SERVICES not in menuai.data
+        or integration_name not in menuai.data[NOTIFY_SERVICES]
     ):
         return False
 
@@ -211,7 +211,7 @@ class BaseNotificationService:
 
     # While not purely typed, it makes typehinting more useful for us
     # and removes the need for constant None checks or asserts.
-    hass: HomeAssistant = None  # type: ignore[assignment]
+    menuai: menuai = None  # type: ignore[assignment]
 
     # Name => target
     registered_targets: dict[str, Any]
@@ -233,7 +233,7 @@ class BaseNotificationService:
 
         kwargs can contain ATTR_TITLE to specify a title.
         """
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             partial(self.send_message, message, **kwargs)
         )
 
@@ -257,21 +257,21 @@ class BaseNotificationService:
 
     async def async_setup(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         service_name: str,
         target_service_name_prefix: str,
     ) -> None:
         """Store the data for the notify service."""
         # pylint: disable=attribute-defined-outside-init
-        self.hass = hass
+        self.menuai = menuai
         self._service_name = service_name
         self._target_service_name_prefix = target_service_name_prefix
         self.registered_targets = {}
 
         # Load service descriptions from notify/services.yaml
-        integration = await async_get_integration(hass, DOMAIN)
+        integration = await async_get_integration(menuai, DOMAIN)
         services_yaml = integration.file_path / "services.yaml"
-        self.services_dict = await hass.async_add_executor_job(
+        self.services_dict = await menuai.async_add_executor_job(
             load_yaml_dict, str(services_yaml)
         )
 
@@ -290,7 +290,7 @@ class BaseNotificationService:
                 ):
                     continue
                 self.registered_targets[target_name] = target
-                self.hass.services.async_register(
+                self.menuai.services.async_register(
                     DOMAIN,
                     target_name,
                     self._async_notify_message_service,
@@ -305,19 +305,19 @@ class BaseNotificationService:
                     ),
                     CONF_FIELDS: self.services_dict[SERVICE_NOTIFY][CONF_FIELDS],
                 }
-                async_set_service_schema(self.hass, DOMAIN, target_name, service_desc)
+                async_set_service_schema(self.menuai, DOMAIN, target_name, service_desc)
 
             for stale_target_name in stale_targets:
                 del self.registered_targets[stale_target_name]
-                self.hass.services.async_remove(
+                self.menuai.services.async_remove(
                     DOMAIN,
                     stale_target_name,
                 )
 
-        if self.hass.services.has_service(DOMAIN, self._service_name):
+        if self.menuai.services.has_service(DOMAIN, self._service_name):
             return
 
-        self.hass.services.async_register(
+        self.menuai.services.async_register(
             DOMAIN,
             self._service_name,
             self._async_notify_message_service,
@@ -332,7 +332,7 @@ class BaseNotificationService:
             ),
             CONF_FIELDS: self.services_dict[SERVICE_NOTIFY][CONF_FIELDS],
         }
-        async_set_service_schema(self.hass, DOMAIN, self._service_name, service_desc)
+        async_set_service_schema(self.menuai, DOMAIN, self._service_name, service_desc)
 
     async def async_unregister_services(self) -> None:
         """Unregister the notify services."""
@@ -340,15 +340,15 @@ class BaseNotificationService:
             remove_targets = set(self.registered_targets)
             for remove_target_name in remove_targets:
                 del self.registered_targets[remove_target_name]
-                self.hass.services.async_remove(
+                self.menuai.services.async_remove(
                     DOMAIN,
                     remove_target_name,
                 )
 
-        if not self.hass.services.has_service(DOMAIN, self._service_name):
+        if not self.menuai.services.has_service(DOMAIN, self._service_name):
             return
 
-        self.hass.services.async_remove(
+        self.menuai.services.async_remove(
             DOMAIN,
             self._service_name,
         )

@@ -5,27 +5,27 @@ from urllib.parse import urlparse
 
 from aiohttp.test_utils import TestClient
 
-from homeassistant.components.webhook import async_generate_url
-from homeassistant.core import HomeAssistant
+from menuai.components.webhook import async_generate_url
+from menuai.core import menuai
 
 from .const import WEBHOOK_ID
 
 from tests.common import MockConfigEntry
 
 
-async def setup_integration(hass: HomeAssistant, config_entry: MockConfigEntry) -> None:
+async def setup_integration(menuai: menuai, config_entry: MockConfigEntry) -> None:
     """Fixture for setting up the component."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
 
 async def call_webhook(
-    hass: HomeAssistant, data: dict[str, Any], client: TestClient
+    menuai: menuai, data: dict[str, Any], client: TestClient
 ) -> None:
     """Call the webhook."""
-    webhook_url = async_generate_url(hass, WEBHOOK_ID)
+    webhook_url = async_generate_url(menuai, WEBHOOK_ID)
 
     resp = await client.post(
         urlparse(webhook_url).path,
@@ -33,7 +33,7 @@ async def call_webhook(
     )
 
     # Wait for remaining tasks to complete.
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     data = await resp.json()
     resp.close()

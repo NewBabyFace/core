@@ -5,15 +5,15 @@ from unittest.mock import patch
 
 from total_connect_client import ArmingState, ResultCode, ZoneStatus, ZoneType
 
-from homeassistant.components.totalconnect.const import (
+from menuai.components.totalconnect.const import (
     AUTO_BYPASS,
     CODE_REQUIRED,
     CONF_USERCODES,
     DOMAIN,
 )
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 
@@ -395,21 +395,21 @@ RESPONSE_GET_ZONE_DETAILS_SUCCESS = {
 }
 
 TOTALCONNECT_REQUEST = (
-    "homeassistant.components.totalconnect.TotalConnectClient.request"
+    "menuai.components.totalconnect.TotalConnectClient.request"
 )
 TOTALCONNECT_GET_CONFIG = (
-    "homeassistant.components.totalconnect.TotalConnectClient._get_configuration"
+    "menuai.components.totalconnect.TotalConnectClient._get_configuration"
 )
 TOTALCONNECT_REQUEST_TOKEN = (
-    "homeassistant.components.totalconnect.TotalConnectClient._request_token"
+    "menuai.components.totalconnect.TotalConnectClient._request_token"
 )
 
 
 async def setup_platform(
-    hass: HomeAssistant, platform: Any, code_required: bool = False
+    menuai: menuai, platform: Any, code_required: bool = False
 ) -> MockConfigEntry:
     """Set up the TotalConnect platform."""
-    # first set up a config entry and add it to hass
+    # first set up a config entry and add it to menuai
     if code_required:
         mock_entry = MockConfigEntry(
             domain=DOMAIN, data=CONFIG_DATA, options=OPTIONS_DATA_CODE_REQUIRED
@@ -418,7 +418,7 @@ async def setup_platform(
         mock_entry = MockConfigEntry(
             domain=DOMAIN, data=CONFIG_DATA, options=OPTIONS_DATA
         )
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
     responses = [
         RESPONSE_SESSION_DETAILS,
@@ -429,7 +429,7 @@ async def setup_platform(
     ]
 
     with (
-        patch("homeassistant.components.totalconnect.PLATFORMS", [platform]),
+        patch("menuai.components.totalconnect.PLATFORMS", [platform]),
         patch(
             TOTALCONNECT_REQUEST,
             side_effect=responses,
@@ -437,18 +437,18 @@ async def setup_platform(
         patch(TOTALCONNECT_GET_CONFIG, side_effect=None),
         patch(TOTALCONNECT_REQUEST_TOKEN, side_effect=None),
     ):
-        assert await async_setup_component(hass, DOMAIN, {})
+        assert await async_setup_component(menuai, DOMAIN, {})
         assert mock_request.call_count == 5
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     return mock_entry
 
 
-async def init_integration(hass: HomeAssistant) -> MockConfigEntry:
+async def init_integration(menuai: menuai) -> MockConfigEntry:
     """Set up the TotalConnect integration."""
-    # first set up a config entry and add it to hass
+    # first set up a config entry and add it to menuai
     mock_entry = MockConfigEntry(domain=DOMAIN, data=CONFIG_DATA, options=OPTIONS_DATA)
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
     responses = [
         RESPONSE_SESSION_DETAILS,
@@ -466,8 +466,8 @@ async def init_integration(hass: HomeAssistant) -> MockConfigEntry:
         patch(TOTALCONNECT_GET_CONFIG, side_effect=None),
         patch(TOTALCONNECT_REQUEST_TOKEN, side_effect=None),
     ):
-        await hass.config_entries.async_setup(mock_entry.entry_id)
+        await menuai.config_entries.async_setup(mock_entry.entry_id)
         assert mock_request.call_count == 5
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     return mock_entry

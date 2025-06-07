@@ -13,11 +13,11 @@ from aioopenexchangerates import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_API_KEY, CONF_BASE
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import AbortFlow
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_API_KEY, CONF_BASE
+from menuai.core import menuai
+from menuai.data_entry_flow import AbortFlow
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import CLIENT_TIMEOUT, DEFAULT_BASE, DOMAIN, LOGGER
 
@@ -36,9 +36,9 @@ def get_data_schema(
     )
 
 
-async def validate_input(hass: HomeAssistant, data: dict[str, str]) -> dict[str, str]:
+async def validate_input(menuai: menuai, data: dict[str, str]) -> dict[str, str]:
     """Validate the user input allows us to connect."""
-    client = Client(data[CONF_API_KEY], async_get_clientsession(hass))
+    client = Client(data[CONF_API_KEY], async_get_clientsession(menuai))
 
     async with asyncio.timeout(CLIENT_TIMEOUT):
         await client.get_latest(base=data[CONF_BASE])
@@ -76,7 +76,7 @@ class OpenExchangeRatesConfigFlow(ConfigFlow, domain=DOMAIN):
         errors = {}
 
         try:
-            info = await validate_input(self.hass, user_input)
+            info = await validate_input(self.menuai, user_input)
         except OpenExchangeRatesAuthError:
             errors["base"] = "invalid_auth"
         except OpenExchangeRatesClientError:
@@ -117,7 +117,7 @@ class OpenExchangeRatesConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_get_currencies(self) -> dict[str, str]:
         """Get the available currencies."""
         if not self.currencies:
-            client = Client("dummy-api-key", async_get_clientsession(self.hass))
+            client = Client("dummy-api-key", async_get_clientsession(self.menuai))
             try:
                 async with asyncio.timeout(CLIENT_TIMEOUT):
                     self.currencies = await client.get_currencies()

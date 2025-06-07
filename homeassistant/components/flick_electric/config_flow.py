@@ -12,16 +12,16 @@ from pyflick.const import DEFAULT_CLIENT_ID, DEFAULT_CLIENT_SECRET
 from pyflick.types import APIException, AuthException, CustomerAccount
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
-from homeassistant.const import (
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
+from menuai.const import (
     CONF_CLIENT_ID,
     CONF_CLIENT_SECRET,
     CONF_PASSWORD,
     CONF_USERNAME,
 )
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import aiohttp_client
-from homeassistant.helpers.selector import (
+from menuai.exceptions import menuaiError
+from menuai.helpers import aiohttp_client
+from menuai.helpers.selector import (
     SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
@@ -54,7 +54,7 @@ class FlickConfigFlow(ConfigFlow, domain=DOMAIN):
         self.auth = SimpleFlickAuth(
             username=user_input[CONF_USERNAME],
             password=user_input[CONF_PASSWORD],
-            websession=aiohttp_client.async_get_clientsession(self.hass),
+            websession=aiohttp_client.async_get_clientsession(self.menuai),
             client_id=user_input.get(CONF_CLIENT_ID, DEFAULT_CLIENT_ID),
             client_secret=user_input.get(CONF_CLIENT_SECRET, DEFAULT_CLIENT_SECRET),
         )
@@ -172,7 +172,7 @@ class FlickConfigFlow(ConfigFlow, domain=DOMAIN):
         if self.source == SOURCE_REAUTH:
             # Migration completed
             if self._get_reauth_entry().version == 1:
-                self.hass.config_entries.async_update_entry(
+                self.menuai.config_entries.async_update_entry(
                     self._get_reauth_entry(),
                     unique_id=self.unique_id,
                     data=self.data,
@@ -202,9 +202,9 @@ class FlickConfigFlow(ConfigFlow, domain=DOMAIN):
         return self._get_account(account_id)["main_consumer"][CONF_SUPPLY_NODE_REF]
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(menuaiError):
     """Error to indicate there is invalid auth."""

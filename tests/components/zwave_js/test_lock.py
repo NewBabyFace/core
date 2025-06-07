@@ -11,32 +11,32 @@ from zwave_js_server.event import Event
 from zwave_js_server.exceptions import FailedZWaveCommand
 from zwave_js_server.model.node import Node, NodeStatus
 
-from homeassistant.components.lock import (
+from menuai.components.lock import (
     DOMAIN as LOCK_DOMAIN,
     SERVICE_LOCK,
     SERVICE_UNLOCK,
     LockState,
 )
-from homeassistant.components.zwave_js.const import (
+from menuai.components.zwave_js.const import (
     ATTR_LOCK_TIMEOUT,
     ATTR_OPERATION_TYPE,
     DOMAIN,
 )
-from homeassistant.components.zwave_js.helpers import ZwaveValueMatcher
-from homeassistant.components.zwave_js.lock import (
+from menuai.components.zwave_js.helpers import ZwaveValueMatcher
+from menuai.components.zwave_js.lock import (
     SERVICE_CLEAR_LOCK_USERCODE,
     SERVICE_SET_LOCK_CONFIGURATION,
     SERVICE_SET_LOCK_USERCODE,
 )
-from homeassistant.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE, STATE_UNKNOWN
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from .common import SCHLAGE_BE469_LOCK_ENTITY, replace_value_of_zwave_value
 
 
 async def test_door_lock(
-    hass: HomeAssistant,
+    menuai: menuai,
     client,
     lock_schlage_be469,
     integration,
@@ -44,13 +44,13 @@ async def test_door_lock(
 ) -> None:
     """Test a lock entity with door lock command class."""
     node = lock_schlage_be469
-    state = hass.states.get(SCHLAGE_BE469_LOCK_ENTITY)
+    state = menuai.states.get(SCHLAGE_BE469_LOCK_ENTITY)
 
     assert state
     assert state.state == LockState.UNLOCKED
 
     # Test locking
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LOCK_DOMAIN,
         SERVICE_LOCK,
         {ATTR_ENTITY_ID: SCHLAGE_BE469_LOCK_ENTITY},
@@ -90,14 +90,14 @@ async def test_door_lock(
     )
     node.receive_event(event)
 
-    state = hass.states.get(SCHLAGE_BE469_LOCK_ENTITY)
+    state = menuai.states.get(SCHLAGE_BE469_LOCK_ENTITY)
     assert state
     assert state.state == LockState.LOCKED
 
     client.async_send_command.reset_mock()
 
     # Test unlocking
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LOCK_DOMAIN,
         SERVICE_UNLOCK,
         {ATTR_ENTITY_ID: SCHLAGE_BE469_LOCK_ENTITY},
@@ -118,7 +118,7 @@ async def test_door_lock(
     client.async_send_command.reset_mock()
 
     # Test set usercode service
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_LOCK_USERCODE,
         {
@@ -144,7 +144,7 @@ async def test_door_lock(
     client.async_send_command.reset_mock()
 
     # Test clear usercode
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_CLEAR_LOCK_USERCODE,
         {ATTR_ENTITY_ID: SCHLAGE_BE469_LOCK_ENTITY, ATTR_CODE_SLOT: 1},
@@ -170,7 +170,7 @@ async def test_door_lock(
         "response": {"status": 1, "remainingDuration": "default"}
     }
     caplog.clear()
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_LOCK_CONFIGURATION,
         {
@@ -215,7 +215,7 @@ async def test_door_lock(
     )
     node.receive_event(event)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_LOCK_CONFIGURATION,
         {
@@ -259,8 +259,8 @@ async def test_door_lock(
 
     client.async_send_command.side_effect = FailedZWaveCommand("test", 1, "test")
     # Test set usercode service error handling
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SET_LOCK_USERCODE,
             {
@@ -272,8 +272,8 @@ async def test_door_lock(
         )
 
     # Test clear usercode service error handling
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_CLEAR_LOCK_USERCODE,
             {ATTR_ENTITY_ID: SCHLAGE_BE469_LOCK_ENTITY, ATTR_CODE_SLOT: 1},
@@ -293,20 +293,20 @@ async def test_door_lock(
     node.receive_event(event)
 
     assert node.status == NodeStatus.DEAD
-    state = hass.states.get(SCHLAGE_BE469_LOCK_ENTITY)
+    state = menuai.states.get(SCHLAGE_BE469_LOCK_ENTITY)
     assert state
     assert state.state == STATE_UNAVAILABLE
 
 
 async def test_only_one_lock(
-    hass: HomeAssistant, client, lock_home_connect_620, integration
+    menuai: menuai, client, lock_home_connect_620, integration
 ) -> None:
     """Test node with both Door Lock and Lock CC values only gets one lock entity."""
-    assert len(hass.states.async_entity_ids("lock")) == 1
+    assert len(menuai.states.async_entity_ids("lock")) == 1
 
 
 async def test_door_lock_no_value(
-    hass: HomeAssistant, client, lock_schlage_be469_state, integration
+    menuai: menuai, client, lock_schlage_be469_state, integration
 ) -> None:
     """Test a lock entity with door lock command class that has no value for mode."""
     node_state = replace_value_of_zwave_value(
@@ -321,7 +321,7 @@ async def test_door_lock_no_value(
     )
     node = Node(client, node_state)
     client.driver.controller.emit("node added", {"node": node})
-    await hass.async_block_till_done()
-    state = hass.states.get(SCHLAGE_BE469_LOCK_ENTITY)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(SCHLAGE_BE469_LOCK_ENTITY)
     assert state
     assert state.state == STATE_UNKNOWN

@@ -6,9 +6,9 @@ from typing import Any
 
 from pyprosegur.installation import Installation
 
-from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from menuai.components.diagnostics import async_redact_data
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
 
 from .const import CONF_CONTRACT, DOMAIN
 
@@ -16,15 +16,15 @@ TO_REDACT = {"description", "latitude", "longitude", "contractId", "address"}
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: ConfigEntry
+    menuai: menuai, entry: ConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
 
     installation = await Installation.retrieve(
-        hass.data[DOMAIN][entry.entry_id], entry.data[CONF_CONTRACT]
+        menuai.data[DOMAIN][entry.entry_id], entry.data[CONF_CONTRACT]
     )
 
-    activity = await installation.activity(hass.data[DOMAIN][entry.entry_id])
+    activity = await installation.activity(menuai.data[DOMAIN][entry.entry_id])
 
     return {
         "installation": async_redact_data(installation.data, TO_REDACT),

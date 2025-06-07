@@ -6,18 +6,18 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from homeassistant.components.cloud import CloudNotAvailable
-from homeassistant.components.mobile_app.const import (
+from menuai.components.cloud import CloudNotAvailable
+from menuai.components.mobile_app.const import (
     ATTR_DEVICE_NAME,
     CONF_CLOUDHOOK_URL,
     CONF_USER_ID,
     DATA_DELETED_IDS,
     DOMAIN,
 )
-from homeassistant.config_entries import ConfigEntry, ConfigEntryState
-from homeassistant.const import ATTR_DEVICE_ID, CONF_WEBHOOK_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.config_entries import ConfigEntry, ConfigEntryState
+from menuai.const import ATTR_DEVICE_ID, CONF_WEBHOOK_ID
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from .const import CALL_SERVICE, REGISTER_CLEARTEXT
 
@@ -30,18 +30,18 @@ from tests.common import (
 
 
 @pytest.mark.usefixtures("create_registrations")
-async def test_unload_unloads(hass: HomeAssistant, webhook_client) -> None:
+async def test_unload_unloads(menuai: menuai, webhook_client) -> None:
     """Test we clean up when we unload."""
     # Second config entry is the one without encryption
-    config_entry = hass.config_entries.async_entries("mobile_app")[1]
+    config_entry = menuai.config_entries.async_entries("mobile_app")[1]
     webhook_id = config_entry.data["webhook_id"]
-    calls = async_mock_service(hass, "test", "mobile_app")
+    calls = async_mock_service(menuai, "test", "mobile_app")
 
     # Test it works
     await webhook_client.post(f"/api/webhook/{webhook_id}", json=CALL_SERVICE)
     assert len(calls) == 1
 
-    await hass.config_entries.async_unload(config_entry.entry_id)
+    await menuai.config_entries.async_unload(config_entry.entry_id)
 
     # Test it no longer works
     await webhook_client.post(f"/api/webhook/{webhook_id}", json=CALL_SERVICE)
@@ -50,22 +50,22 @@ async def test_unload_unloads(hass: HomeAssistant, webhook_client) -> None:
 
 @pytest.mark.usefixtures("create_registrations")
 async def test_remove_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test we clean up when we remove entry."""
-    for config_entry in hass.config_entries.async_entries("mobile_app"):
-        await hass.config_entries.async_remove(config_entry.entry_id)
-        assert config_entry.data["webhook_id"] in hass.data[DOMAIN][DATA_DELETED_IDS]
+    for config_entry in menuai.config_entries.async_entries("mobile_app"):
+        await menuai.config_entries.async_remove(config_entry.entry_id)
+        assert config_entry.data["webhook_id"] in menuai.data[DOMAIN][DATA_DELETED_IDS]
 
     assert len(device_registry.devices) == 0
     assert len(entity_registry.entities) == 0
 
 
 async def _test_create_cloud_hook(
-    hass: HomeAssistant,
-    hass_admin_user: MockUser,
+    menuai: menuai,
+    menuai_admin_user: MockUser,
     additional_config: dict[str, Any],
     async_active_subscription_return_value: bool,
     additional_steps: Callable[[ConfigEntry, Mock, str], Awaitable[None]],
@@ -76,31 +76,31 @@ async def _test_create_cloud_hook(
             CONF_WEBHOOK_ID: "test-webhook-id",
             ATTR_DEVICE_NAME: "Test",
             ATTR_DEVICE_ID: "Test",
-            CONF_USER_ID: hass_admin_user.id,
+            CONF_USER_ID: menuai_admin_user.id,
             **additional_config,
         },
         domain=DOMAIN,
         title="Test",
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with (
         patch(
-            "homeassistant.components.cloud.async_active_subscription",
+            "menuai.components.cloud.async_active_subscription",
             return_value=async_active_subscription_return_value,
         ),
-        patch("homeassistant.components.cloud.async_is_logged_in", return_value=True),
-        patch("homeassistant.components.cloud.async_is_connected", return_value=True),
+        patch("menuai.components.cloud.async_is_logged_in", return_value=True),
+        patch("menuai.components.cloud.async_is_connected", return_value=True),
         patch(
-            "homeassistant.components.cloud.async_get_or_create_cloudhook",
+            "menuai.components.cloud.async_get_or_create_cloudhook",
             autospec=True,
         ) as mock_async_get_or_create_cloudhook,
     ):
         cloud_hook = "https://hook-url"
         mock_async_get_or_create_cloudhook.return_value = cloud_hook
 
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
         assert config_entry.state is ConfigEntryState.LOADED
         await additional_steps(
             config_entry, mock_async_get_or_create_cloudhook, cloud_hook
@@ -108,8 +108,8 @@ async def _test_create_cloud_hook(
 
 
 async def test_create_cloud_hook_on_setup(
-    hass: HomeAssistant,
-    hass_admin_user: MockUser,
+    menuai: menuai,
+    menuai_admin_user: MockUser,
 ) -> None:
     """Test creating a cloud hook during setup."""
 
@@ -118,16 +118,16 @@ async def test_create_cloud_hook_on_setup(
     ) -> None:
         assert config_entry.data[CONF_CLOUDHOOK_URL] == cloud_hook
         mock_create_cloudhook.assert_called_once_with(
-            hass, config_entry.data[CONF_WEBHOOK_ID]
+            menuai, config_entry.data[CONF_WEBHOOK_ID]
         )
 
-    await _test_create_cloud_hook(hass, hass_admin_user, {}, True, additional_steps)
+    await _test_create_cloud_hook(menuai, menuai_admin_user, {}, True, additional_steps)
 
 
 @pytest.mark.parametrize("exception", [CloudNotAvailable, ValueError])
 async def test_remove_cloudhook(
-    hass: HomeAssistant,
-    hass_admin_user: MockUser,
+    menuai: menuai,
+    menuai_admin_user: MockUser,
     caplog: pytest.LogCaptureFixture,
     exception: Exception,
 ) -> None:
@@ -139,20 +139,20 @@ async def test_remove_cloudhook(
         webhook_id = config_entry.data[CONF_WEBHOOK_ID]
         assert config_entry.data[CONF_CLOUDHOOK_URL] == cloud_hook
         with patch(
-            "homeassistant.components.cloud.async_delete_cloudhook",
+            "menuai.components.cloud.async_delete_cloudhook",
             side_effect=exception,
         ) as delete_cloudhook:
-            await hass.config_entries.async_remove(config_entry.entry_id)
-            await hass.async_block_till_done()
-            delete_cloudhook.assert_called_once_with(hass, webhook_id)
+            await menuai.config_entries.async_remove(config_entry.entry_id)
+            await menuai.async_block_till_done()
+            delete_cloudhook.assert_called_once_with(menuai, webhook_id)
             assert str(exception) not in caplog.text
 
-    await _test_create_cloud_hook(hass, hass_admin_user, {}, True, additional_steps)
+    await _test_create_cloud_hook(menuai, menuai_admin_user, {}, True, additional_steps)
 
 
 async def test_create_cloud_hook_aleady_exists(
-    hass: HomeAssistant,
-    hass_admin_user: MockUser,
+    menuai: menuai,
+    menuai_admin_user: MockUser,
 ) -> None:
     """Test creating a cloud hook is not called, when a cloud hook already exists."""
     cloud_hook = "https://hook-url-already-exists"
@@ -164,13 +164,13 @@ async def test_create_cloud_hook_aleady_exists(
         mock_create_cloudhook.assert_not_called()
 
     await _test_create_cloud_hook(
-        hass, hass_admin_user, {CONF_CLOUDHOOK_URL: cloud_hook}, True, additional_steps
+        menuai, menuai_admin_user, {CONF_CLOUDHOOK_URL: cloud_hook}, True, additional_steps
     )
 
 
 async def test_create_cloud_hook_after_connection(
-    hass: HomeAssistant,
-    hass_admin_user: MockUser,
+    menuai: menuai,
+    menuai_admin_user: MockUser,
 ) -> None:
     """Test creating a cloud hook when connected to the cloud."""
 
@@ -180,14 +180,14 @@ async def test_create_cloud_hook_after_connection(
         assert CONF_CLOUDHOOK_URL not in config_entry.data
         mock_create_cloudhook.assert_not_called()
 
-        async_mock_cloud_connection_status(hass, True)
-        await hass.async_block_till_done()
+        async_mock_cloud_connection_status(menuai, True)
+        await menuai.async_block_till_done()
         assert config_entry.data[CONF_CLOUDHOOK_URL] == cloud_hook
         mock_create_cloudhook.assert_called_once_with(
-            hass, config_entry.data[CONF_WEBHOOK_ID]
+            menuai, config_entry.data[CONF_WEBHOOK_ID]
         )
 
-    await _test_create_cloud_hook(hass, hass_admin_user, {}, False, additional_steps)
+    await _test_create_cloud_hook(menuai, menuai_admin_user, {}, False, additional_steps)
 
 
 @pytest.mark.parametrize(
@@ -195,8 +195,8 @@ async def test_create_cloud_hook_after_connection(
     [(True, True), (False, False)],
 )
 async def test_delete_cloud_hook(
-    hass: HomeAssistant,
-    hass_admin_user: MockUser,
+    menuai: menuai,
+    menuai_admin_user: MockUser,
     cloud_logged_in: bool,
     should_cloudhook_exist: bool,
 ) -> None:
@@ -208,29 +208,29 @@ async def test_delete_cloud_hook(
             CONF_WEBHOOK_ID: "test-webhook-id",
             ATTR_DEVICE_NAME: "Test",
             ATTR_DEVICE_ID: "Test",
-            CONF_USER_ID: hass_admin_user.id,
+            CONF_USER_ID: menuai_admin_user.id,
             CONF_CLOUDHOOK_URL: "https://hook-url-already-exists",
         },
         domain=DOMAIN,
         title="Test",
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with (
         patch(
-            "homeassistant.components.cloud.async_is_logged_in",
+            "menuai.components.cloud.async_is_logged_in",
             return_value=cloud_logged_in,
         ),
     ):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
         assert config_entry.state is ConfigEntryState.LOADED
         assert (CONF_CLOUDHOOK_URL in config_entry.data) == should_cloudhook_exist
 
 
 async def test_remove_entry_on_user_remove(
-    hass: HomeAssistant,
-    hass_admin_user: MockUser,
+    menuai: menuai,
+    menuai_admin_user: MockUser,
 ) -> None:
     """Test removing related config entry, when a user gets removed from HA."""
 
@@ -240,23 +240,23 @@ async def test_remove_entry_on_user_remove(
             CONF_WEBHOOK_ID: "test-webhook-id",
             ATTR_DEVICE_NAME: "Test",
             ATTR_DEVICE_ID: "Test",
-            CONF_USER_ID: hass_admin_user.id,
+            CONF_USER_ID: menuai_admin_user.id,
             CONF_CLOUDHOOK_URL: "https://hook-url-already-exists",
         },
         domain=DOMAIN,
         title="Test",
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
     assert config_entry.state is ConfigEntryState.LOADED
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
 
-    await hass.auth.async_remove_user(hass_admin_user)
-    await hass.async_block_till_done()
+    await menuai.auth.async_remove_user(menuai_admin_user)
+    await menuai.async_block_till_done()
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 0

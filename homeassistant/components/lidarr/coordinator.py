@@ -11,10 +11,10 @@ from aiopyarr import LidarrAlbum, LidarrQueue, LidarrRootFolder, exceptions
 from aiopyarr.lidarr_client import LidarrClient
 from aiopyarr.models.host_configuration import PyArrHostConfiguration
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DEFAULT_MAX_RECORDS, DOMAIN, LOGGER
 
@@ -42,14 +42,14 @@ class LidarrDataUpdateCoordinator(DataUpdateCoordinator[T], Generic[T], ABC):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: LidarrConfigEntry,
         host_configuration: PyArrHostConfiguration,
         api_client: LidarrClient,
     ) -> None:
         """Initialize the coordinator."""
         super().__init__(
-            hass=hass,
+            menuai=menuai,
             logger=LOGGER,
             config_entry=config_entry,
             name=DOMAIN,

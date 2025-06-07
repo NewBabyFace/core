@@ -8,17 +8,17 @@ from hatasmota import const as tasmota_const, shutter as tasmota_shutter
 from hatasmota.entity import TasmotaEntity as HATasmotaEntity
 from hatasmota.models import DiscoveryHashType
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     ATTR_POSITION,
     ATTR_TILT_POSITION,
     DOMAIN as COVER_DOMAIN,
     CoverEntity,
     CoverEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DATA_REMOVE_DISCOVER_COMPONENT
 from .discovery import TASMOTA_DISCOVERY_ENTITY_NEW
@@ -26,7 +26,7 @@ from .entity import TasmotaAvailability, TasmotaDiscoveryUpdate
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -41,9 +41,9 @@ async def async_setup_entry(
             [TasmotaCover(tasmota_entity=tasmota_entity, discovery_hash=discovery_hash)]
         )
 
-    hass.data[DATA_REMOVE_DISCOVER_COMPONENT.format(COVER_DOMAIN)] = (
+    menuai.data[DATA_REMOVE_DISCOVER_COMPONENT.format(COVER_DOMAIN)] = (
         async_dispatcher_connect(
-            hass,
+            menuai,
             TASMOTA_DISCOVERY_ENTITY_NEW.format(COVER_DOMAIN),
             async_discover,
         )
@@ -83,10 +83,10 @@ class TasmotaCover(
                 | CoverEntityFeature.SET_TILT_POSITION
             )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to MQTT events."""
         self._tasmota_entity.set_on_state_callback(self.cover_state_updated)
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
     @callback
     def cover_state_updated(self, state: bool, **kwargs: Any) -> None:

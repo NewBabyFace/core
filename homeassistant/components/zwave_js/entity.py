@@ -14,13 +14,13 @@ from zwave_js_server.model.value import (
     get_value_id_str,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.typing import UNDEFINED
+from menuai.config_entries import ConfigEntry
+from menuai.core import callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity import Entity
+from menuai.helpers.typing import UNDEFINED
 
 from .const import DOMAIN, EVENT_VALUE_UPDATED, LOGGER
 from .discovery import ZwaveDiscoveryInfo
@@ -109,7 +109,7 @@ class ZWaveBaseEntity(Entity):
             self.entity_id,
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Call when entity is added."""
         # Add value_changed callbacks.
         self.async_on_remove(
@@ -120,7 +120,7 @@ class ZWaveBaseEntity(Entity):
         )
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 (
                     f"{DOMAIN}_"
                     f"{get_valueless_base_unique_id(self.driver, self.info.node)}_"
@@ -131,7 +131,7 @@ class ZWaveBaseEntity(Entity):
         )
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 (
                     f"{DOMAIN}_"
                     f"{get_valueless_base_unique_id(self.driver, self.info.node)}_"
@@ -148,7 +148,7 @@ class ZWaveBaseEntity(Entity):
 
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"{DOMAIN}_{self.unique_id}_poll_value",
                 self.async_poll_value,
             )
@@ -266,7 +266,7 @@ class ZWaveBaseEntity(Entity):
             value_id,
         )
 
-        self.hass.async_create_task(self.async_remove())
+        self.menuai.async_create_task(self.async_remove())
 
     @callback
     def get_zwave_value(
@@ -334,6 +334,6 @@ class ZWaveBaseEntity(Entity):
                 value, new_value, options=options, wait_for_result=wait_for_result
             )
         except BaseZwaveJSServerError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Unable to set value {value.value_id}: {err}"
             ) from err

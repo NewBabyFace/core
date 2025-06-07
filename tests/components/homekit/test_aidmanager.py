@@ -5,26 +5,26 @@ from unittest.mock import patch
 
 from fnv_hash_fast import fnv1a_32
 
-from homeassistant.components.homekit.aidmanager import (
+from menuai.components.homekit.aidmanager import (
     AccessoryAidStorage,
     get_aid_storage_filename_for_entry_id,
     get_system_unique_id,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.storage import STORAGE_DIR
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.storage import STORAGE_DIR
 
 from tests.common import MockConfigEntry
 
 
 async def test_aid_generation(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test generating aids."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -38,15 +38,15 @@ async def test_aid_generation(
     remote_ent = entity_registry.async_get_or_create(
         "remote", "device", "unique_id", device_id=device_entry.id
     )
-    hass.states.async_set(light_ent.entity_id, "on")
-    hass.states.async_set(light_ent2.entity_id, "on")
-    hass.states.async_set(remote_ent.entity_id, "on")
-    hass.states.async_set("remote.has_no_unique_id", "on")
+    menuai.states.async_set(light_ent.entity_id, "on")
+    menuai.states.async_set(light_ent2.entity_id, "on")
+    menuai.states.async_set(remote_ent.entity_id, "on")
+    menuai.states.async_set("remote.has_no_unique_id", "on")
 
     with patch(
-        "homeassistant.components.homekit.aidmanager.AccessoryAidStorage.async_schedule_save"
+        "menuai.components.homekit.aidmanager.AccessoryAidStorage.async_schedule_save"
     ):
-        aid_storage = AccessoryAidStorage(hass, config_entry)
+        aid_storage = AccessoryAidStorage(menuai, config_entry)
     await aid_storage.async_initialize()
 
     for _ in range(2):
@@ -92,22 +92,22 @@ async def test_aid_generation(
 
 
 async def test_no_aid_collision(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test generating aids."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
     )
 
     with patch(
-        "homeassistant.components.homekit.aidmanager.AccessoryAidStorage.async_schedule_save"
+        "menuai.components.homekit.aidmanager.AccessoryAidStorage.async_schedule_save"
     ):
-        aid_storage = AccessoryAidStorage(hass, config_entry)
+        aid_storage = AccessoryAidStorage(menuai, config_entry)
     await aid_storage.async_initialize()
 
     seen_aids = set()
@@ -116,21 +116,21 @@ async def test_no_aid_collision(
         ent = entity_registry.async_get_or_create(
             "light", "device", unique_id, device_id=device_entry.id
         )
-        hass.states.async_set(ent.entity_id, "on")
+        menuai.states.async_set(ent.entity_id, "on")
         aid = aid_storage.get_or_allocate_aid_for_entity_id(ent.entity_id)
         assert aid not in seen_aids
         seen_aids.add(aid)
 
 
 async def test_aid_generation_no_unique_ids_handles_collision(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test colliding aids is stable."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
-    aid_storage = AccessoryAidStorage(hass, config_entry)
+    config_entry.add_to_menuai(menuai)
+    aid_storage = AccessoryAidStorage(menuai, config_entry)
     await aid_storage.async_initialize()
 
     device_entry = device_registry.async_get_or_create(
@@ -143,7 +143,7 @@ async def test_aid_generation_no_unique_ids_handles_collision(
 
     for light_id in range(220):
         entity_id = f"light.light{light_id}"
-        hass.states.async_set(entity_id, "on")
+        menuai.states.async_set(entity_id, "on")
         expected_aid = fnv1a_32(entity_id.encode("utf-8"))
         aid = aid_storage.get_or_allocate_aid_for_entity_id(entity_id)
         if aid != expected_aid:
@@ -155,7 +155,7 @@ async def test_aid_generation_no_unique_ids_handles_collision(
     light_ent = entity_registry.async_get_or_create(
         "light", "device", "unique_id", device_id=device_entry.id
     )
-    hass.states.async_set(light_ent.entity_id, "on")
+    menuai.states.async_set(light_ent.entity_id, "on")
     aid_storage.get_or_allocate_aid_for_entity_id(light_ent.entity_id)
 
     assert not collisions
@@ -385,10 +385,10 @@ async def test_aid_generation_no_unique_ids_handles_collision(
     }
 
     await aid_storage.async_save()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     with patch("fnv_hash_fast.fnv1a_32", side_effect=Exception):
-        aid_storage = AccessoryAidStorage(hass, config_entry)
+        aid_storage = AccessoryAidStorage(menuai, config_entry)
     await aid_storage.async_initialize()
 
     assert aid_storage.allocations == {
@@ -616,30 +616,30 @@ async def test_aid_generation_no_unique_ids_handles_collision(
     }
 
     aidstore = get_aid_storage_filename_for_entry_id(config_entry.entry_id)
-    aid_storage_path = hass.config.path(STORAGE_DIR, aidstore)
-    if await hass.async_add_executor_job(os.path.exists, aid_storage_path):
-        await hass.async_add_executor_job(os.unlink, aid_storage_path)
+    aid_storage_path = menuai.config.path(STORAGE_DIR, aidstore)
+    if await menuai.async_add_executor_job(os.path.exists, aid_storage_path):
+        await menuai.async_add_executor_job(os.unlink, aid_storage_path)
 
 
 async def test_handle_unique_id_change(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test handling unique id changes."""
     light = entity_registry.async_get_or_create("light", "demo", "old_unique")
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     with patch(
-        "homeassistant.components.homekit.aidmanager.AccessoryAidStorage.async_schedule_save"
+        "menuai.components.homekit.aidmanager.AccessoryAidStorage.async_schedule_save"
     ):
-        aid_storage = AccessoryAidStorage(hass, config_entry)
+        aid_storage = AccessoryAidStorage(menuai, config_entry)
     await aid_storage.async_initialize()
 
     original_aid = aid_storage.get_or_allocate_aid_for_entity_id(light.entity_id)
     assert aid_storage.allocations == {"demo.light.old_unique": 4202023227}
 
     entity_registry.async_update_entity(light.entity_id, new_unique_id="new_unique")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     aid = aid_storage.get_or_allocate_aid_for_entity_id(light.entity_id)
     assert aid == original_aid

@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Final
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 ATTR_STATE_BATTERY_LOW: Final = "battery_low"
 ATTR_STATE_HOLIDAY_MODE: Final = "holiday_mode"

@@ -9,27 +9,27 @@ import logging
 from types import ModuleType
 from typing import Any
 
-from homeassistant import config as conf_util
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai import config as conf_util
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_ENTITY_NAMESPACE,
     CONF_SCAN_INTERVAL,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
 )
-from homeassistant.core import (
+from menuai.core import (
     Event,
-    HassJob,
-    HassJobType,
-    HomeAssistant,
+    menuaiJob,
+    menuaiJobType,
+    menuai,
     ServiceCall,
     ServiceResponse,
     SupportsResponse,
     callback,
 )
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.loader import async_get_integration, bind_hass
-from homeassistant.setup import async_prepare_setup_platform
-from homeassistant.util.hass_dict import HassKey
+from menuai.exceptions import menuaiError
+from menuai.loader import async_get_integration, bind_menuai
+from menuai.setup import async_prepare_setup_platform
+from menuai.util.menuai_dict import menuaiKey
 
 from . import (
     config_validation as cv,
@@ -43,14 +43,14 @@ from .entity_platform import EntityPlatform, async_calculate_suggested_object_id
 from .typing import ConfigType, DiscoveryInfoType, VolDictType, VolSchemaType
 
 DEFAULT_SCAN_INTERVAL = timedelta(seconds=15)
-DATA_INSTANCES: HassKey[dict[str, EntityComponent]] = HassKey("entity_components")
+DATA_INSTANCES: menuaiKey[dict[str, EntityComponent]] = menuaiKey("entity_components")
 
 
-@bind_hass
-async def async_update_entity(hass: HomeAssistant, entity_id: str) -> None:
+@bind_menuai
+async def async_update_entity(menuai: menuai, entity_id: str) -> None:
     """Trigger an update for an entity."""
     domain = entity_id.partition(".")[0]
-    entity_comp = hass.data.get(DATA_INSTANCES, {}).get(domain)
+    entity_comp = menuai.data.get(DATA_INSTANCES, {}).get(domain)
 
     if entity_comp is None:
         logging.getLogger(__name__).warning(
@@ -69,16 +69,16 @@ async def async_update_entity(hass: HomeAssistant, entity_id: str) -> None:
 
 @callback
 def async_get_entity_suggested_object_id(
-    hass: HomeAssistant, entity_id: str
+    menuai: menuai, entity_id: str
 ) -> str | None:
     """Get the suggested object id for an entity.
 
-    Raises HomeAssistantError if the entity is not in the registry or
+    Raises menuaiError if the entity is not in the registry or
     is not backed by an object.
     """
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
     if not (entity_entry := entity_registry.async_get(entity_id)):
-        raise HomeAssistantError(f"Entity {entity_id} is not in the registry.")
+        raise menuaiError(f"Entity {entity_id} is not in the registry.")
 
     domain = entity_id.partition(".")[0]
 
@@ -88,12 +88,12 @@ def async_get_entity_suggested_object_id(
     if entity_entry.suggested_object_id:
         return entity_entry.suggested_object_id
 
-    entity_comp = hass.data.get(DATA_INSTANCES, {}).get(domain)
+    entity_comp = menuai.data.get(DATA_INSTANCES, {}).get(domain)
     if not (entity_obj := entity_comp.get_entity(entity_id) if entity_comp else None):
-        raise HomeAssistantError(f"Entity {entity_id} has no object.")
+        raise menuaiError(f"Entity {entity_id} has no object.")
     device: dr.DeviceEntry | None = None
     if device_id := entity_entry.device_id:
-        device = dr.async_get(hass).async_get(device_id)
+        device = dr.async_get(menuai).async_get(device_id)
     return async_calculate_suggested_object_id(entity_obj, device)
 
 
@@ -114,12 +114,12 @@ class EntityComponent[_EntityT: entity.Entity = entity.Entity]:
         self,
         logger: logging.Logger,
         domain: str,
-        hass: HomeAssistant,
+        menuai: menuai,
         scan_interval: timedelta = DEFAULT_SCAN_INTERVAL,
     ) -> None:
         """Initialize an entity component."""
         self.logger = logger
-        self.hass = hass
+        self.menuai = menuai
         self.domain = domain
         self.scan_interval = scan_interval
 
@@ -132,7 +132,7 @@ class EntityComponent[_EntityT: entity.Entity = entity.Entity]:
         self.async_add_entities = domain_platform.async_add_entities
         self.add_entities = domain_platform.add_entities
         self._entities: dict[str, entity.Entity] = domain_platform.domain_entities
-        hass.data.setdefault(DATA_INSTANCES, {})[domain] = self  # type: ignore[assignment]
+        menuai.data.setdefault(DATA_INSTANCES, {})[domain] = self  # type: ignore[assignment]
 
     @property
     def entities(self) -> Iterable[_EntityT]:
@@ -149,19 +149,19 @@ class EntityComponent[_EntityT: entity.Entity = entity.Entity]:
         return self._entities.get(entity_id)  # type: ignore[return-value]
 
     def register_shutdown(self) -> None:
-        """Register shutdown on Home Assistant STOP event.
+        """Register shutdown on MenuAI STOP event.
 
         Note: this is only required if the integration never calls
         `setup` or `async_setup`.
         """
-        self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, self._async_shutdown)
+        self.menuai.bus.async_listen_once(EVENT_menuai_STOP, self._async_shutdown)
 
     def setup(self, config: ConfigType) -> None:
         """Set up a full entity component.
 
         This doesn't block the executor to protect from deadlocks.
         """
-        self.hass.create_task(
+        self.menuai.create_task(
             self.async_setup(config), f"EntityComponent setup {self.domain}"
         )
 
@@ -180,16 +180,16 @@ class EntityComponent[_EntityT: entity.Entity = entity.Entity]:
         # Look in config for Domain, Domain 2, Domain 3 etc and load them
         for p_type, p_config in conf_util.config_per_platform(config, self.domain):
             if p_type is not None:
-                self.hass.async_create_task_internal(
+                self.menuai.async_create_task_internal(
                     self.async_setup_platform(p_type, p_config),
                     f"EntityComponent setup platform {p_type} {self.domain}",
                     eager_start=True,
                 )
 
         # Generic discovery listener for loading platform dynamically
-        # Refer to: homeassistant.helpers.discovery.async_load_platform()
+        # Refer to: menuai.helpers.discovery.async_load_platform()
         discovery.async_listen_platform(
-            self.hass, self.domain, self._async_component_platform_discovered
+            self.menuai, self.domain, self._async_component_platform_discovered
         )
 
     async def _async_component_platform_discovered(
@@ -202,8 +202,8 @@ class EntityComponent[_EntityT: entity.Entity = entity.Entity]:
         """Set up a config entry."""
         platform_type = config_entry.domain
         platform = await async_prepare_setup_platform(
-            self.hass,
-            # In future PR we should make hass_config part of the constructor
+            self.menuai,
+            # In future PR we should make menuai_config part of the constructor
             # params.
             self.config or {},
             self.domain,
@@ -249,7 +249,7 @@ class EntityComponent[_EntityT: entity.Entity = entity.Entity]:
         This method must be run in the event loop.
         """
         return await service.async_extract_entities(
-            self.hass, self.entities, service_call, expand_group
+            self.menuai, self.entities, service_call, expand_group
         )
 
     @callback
@@ -265,8 +265,8 @@ class EntityComponent[_EntityT: entity.Entity = entity.Entity]:
         if isinstance(schema, dict):
             schema = cv.make_entity_service_schema(schema)
 
-        service_func: str | HassJob[..., Any]
-        service_func = func if isinstance(func, str) else HassJob(func)
+        service_func: str | menuaiJob[..., Any]
+        service_func = func if isinstance(func, str) else menuaiJob(func)
 
         async def handle_service(
             call: ServiceCall,
@@ -274,18 +274,18 @@ class EntityComponent[_EntityT: entity.Entity = entity.Entity]:
             """Handle the service."""
 
             result = await service.entity_service_call(
-                self.hass, self._entities, service_func, call, required_features
+                self.menuai, self._entities, service_func, call, required_features
             )
 
             if result:
                 if len(result) > 1:
-                    raise HomeAssistantError(
+                    raise menuaiError(
                         "Deprecated service call matched more than one entity"
                     )
                 return result.popitem()[1]
             return None
 
-        self.hass.services.async_register(
+        self.menuai.services.async_register(
             self.domain, name, handle_service, schema, supports_response
         )
 
@@ -300,12 +300,12 @@ class EntityComponent[_EntityT: entity.Entity = entity.Entity]:
     ) -> None:
         """Register an entity service."""
         service.async_register_entity_service(
-            self.hass,
+            self.menuai,
             self.domain,
             name,
             entities=self._entities,
             func=func,
-            job_type=HassJobType.Coroutinefunction,
+            job_type=menuaiJobType.Coroutinefunction,
             required_features=required_features,
             schema=schema,
             supports_response=supports_response,
@@ -322,7 +322,7 @@ class EntityComponent[_EntityT: entity.Entity = entity.Entity]:
             raise RuntimeError("async_setup needs to be called first")
 
         platform = await async_prepare_setup_platform(
-            self.hass, self.config, self.domain, platform_type
+            self.menuai, self.config, self.domain, platform_type
         )
 
         if platform is None:
@@ -382,15 +382,15 @@ class EntityComponent[_EntityT: entity.Entity = entity.Entity]:
         This method must be run in the event loop.
         """
         try:
-            conf = await conf_util.async_hass_config_yaml(self.hass)
-        except HomeAssistantError as err:
+            conf = await conf_util.async_menuai_config_yaml(self.menuai)
+        except menuaiError as err:
             self.logger.error(err)
             return None
 
-        integration = await async_get_integration(self.hass, self.domain)
+        integration = await async_get_integration(self.menuai, self.domain)
 
         processed_conf = await conf_util.async_process_component_and_handle_errors(
-            self.hass, conf, integration
+            self.menuai, conf, integration
         )
 
         if processed_conf is None:
@@ -414,7 +414,7 @@ class EntityComponent[_EntityT: entity.Entity = entity.Entity]:
             scan_interval = self.scan_interval
 
         entity_platform = EntityPlatform(
-            hass=self.hass,
+            menuai=self.menuai,
             logger=self.logger,
             domain=self.domain,
             platform_name=platform_type,
@@ -427,6 +427,6 @@ class EntityComponent[_EntityT: entity.Entity = entity.Entity]:
 
     @callback
     def _async_shutdown(self, event: Event) -> None:
-        """Call when Home Assistant is stopping."""
+        """Call when MenuAI is stopping."""
         for platform in self._platforms.values():
             platform.async_shutdown()

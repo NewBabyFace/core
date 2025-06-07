@@ -3,10 +3,10 @@
 from pypalazzetti.client import PalazzettiClient
 from pypalazzetti.exceptions import CommunicationError, ValidationError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN, LOGGER, SCAN_INTERVAL
 
@@ -21,12 +21,12 @@ class PalazzettiDataUpdateCoordinator(DataUpdateCoordinator[None]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: PalazzettiConfigEntry,
     ) -> None:
         """Initialize global Palazzetti data updater."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name=DOMAIN,

@@ -8,13 +8,13 @@ from aiohue.errors import LinkButtonNotPressed
 import pytest
 import voluptuous as vol
 
-from homeassistant import config_entries
-from homeassistant.components.hue import config_flow, const
-from homeassistant.components.hue.errors import CannotConnect
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.service_info.zeroconf import (
+from menuai import config_entries
+from menuai.components.hue import config_flow, const
+from menuai.components.hue.errors import CannotConnect
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers import device_registry as dr
+from menuai.helpers.service_info.zeroconf import (
     ATTR_PROPERTIES_ID,
     ZeroconfServiceInfo,
 )
@@ -26,7 +26,7 @@ from tests.test_util.aiohttp import AiohttpClientMocker, ClientError
 @pytest.fixture(name="hue_setup", autouse=True)
 def hue_setup_fixture():
     """Mock hue entry setup."""
-    with patch("homeassistant.components.hue.async_setup_entry", return_value=True):
+    with patch("menuai.components.hue.async_setup_entry", return_value=True):
         yield
 
 
@@ -56,22 +56,22 @@ def create_mock_api_discovery(aioclient_mock, bridges):
         )
 
 
-async def test_flow_works(hass: HomeAssistant) -> None:
+async def test_flow_works(menuai: menuai) -> None:
     """Test config flow ."""
     disc_bridge = get_discovered_bridge(supports_v2=True)
 
     with patch(
-        "homeassistant.components.hue.config_flow.discover_nupnp",
+        "menuai.components.hue.config_flow.discover_nupnp",
         return_value=[disc_bridge],
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             const.DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={"id": disc_bridge.id}
     )
 
@@ -80,13 +80,13 @@ async def test_flow_works(hass: HomeAssistant) -> None:
 
     flow = next(
         flow
-        for flow in hass.config_entries.flow.async_progress()
+        for flow in menuai.config_entries.flow.async_progress()
         if flow["flow_id"] == result["flow_id"]
     )
     assert flow["context"]["unique_id"] == "aabbccddeeff"
 
     with patch.object(config_flow, "create_app_key", return_value="123456789"):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={}
         )
 
@@ -99,26 +99,26 @@ async def test_flow_works(hass: HomeAssistant) -> None:
     }
 
 
-async def test_manual_flow_works(hass: HomeAssistant) -> None:
+async def test_manual_flow_works(menuai: menuai) -> None:
     """Test config flow discovers only already configured bridges."""
     disc_bridge = get_discovered_bridge(bridge_id="id-1234", host="2.2.2.2")
 
     MockConfigEntry(
         domain="hue", source=config_entries.SOURCE_IGNORE, unique_id="bla"
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.hue.config_flow.discover_nupnp",
+        "menuai.components.hue.config_flow.discover_nupnp",
         return_value=[disc_bridge],
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             const.DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={"id": "manual"}
     )
 
@@ -126,7 +126,7 @@ async def test_manual_flow_works(hass: HomeAssistant) -> None:
     assert result["step_id"] == "manual"
 
     with patch.object(config_flow, "discover_bridge", return_value=disc_bridge):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], {"host": "2.2.2.2"}
         )
 
@@ -135,9 +135,9 @@ async def test_manual_flow_works(hass: HomeAssistant) -> None:
 
     with (
         patch.object(config_flow, "create_app_key", return_value="123456789"),
-        patch("homeassistant.components.hue.async_unload_entry", return_value=True),
+        patch("menuai.components.hue.async_unload_entry", return_value=True),
     ):
-        result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == f"Hue Bridge {disc_bridge.id}"
@@ -146,30 +146,30 @@ async def test_manual_flow_works(hass: HomeAssistant) -> None:
         "api_key": "123456789",
         "api_version": 1,
     }
-    entries = hass.config_entries.async_entries("hue")
+    entries = menuai.config_entries.async_entries("hue")
     assert len(entries) == 2
     entry = entries[-1]
     assert entry.unique_id == "id-1234"
 
 
-async def test_manual_flow_bridge_exist(hass: HomeAssistant) -> None:
+async def test_manual_flow_bridge_exist(menuai: menuai) -> None:
     """Test config flow aborts on already configured bridges."""
     MockConfigEntry(
         domain="hue", unique_id="id-1234", data={"host": "2.2.2.2"}
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.hue.config_flow.discover_nupnp",
+        "menuai.components.hue.config_flow.discover_nupnp",
         return_value=[],
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             const.DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "manual"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"host": "2.2.2.2"}
     )
 
@@ -178,12 +178,12 @@ async def test_manual_flow_bridge_exist(hass: HomeAssistant) -> None:
 
 
 async def test_manual_flow_no_discovered_bridges(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test config flow discovers no bridges."""
     create_mock_api_discovery(aioclient_mock, [])
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -191,7 +191,7 @@ async def test_manual_flow_no_discovered_bridges(
 
 
 async def test_flow_all_discovered_bridges_exist(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test config flow discovers only already configured bridges."""
     mock_host = "1.2.3.4"
@@ -200,9 +200,9 @@ async def test_flow_all_discovered_bridges_exist(
 
     MockConfigEntry(
         domain="hue", unique_id=mock_id, data={"host": mock_host}
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -211,19 +211,19 @@ async def test_flow_all_discovered_bridges_exist(
 
 
 async def test_flow_bridges_discovered(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test config flow discovers two bridges."""
     # Add ignored config entry. Should still show up as option.
     MockConfigEntry(
         domain="hue", source=config_entries.SOURCE_IGNORE, unique_id="bla"
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
     create_mock_api_discovery(
         aioclient_mock, [("1.2.3.4", "bla"), ("5.6.7.8", "beer_v2")]
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -238,15 +238,15 @@ async def test_flow_bridges_discovered(
 
 
 async def test_flow_two_bridges_discovered_one_new(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test config flow discovers two bridges."""
     create_mock_api_discovery(aioclient_mock, [("1.2.3.4", "bla"), ("5.6.7.8", "beer")])
     MockConfigEntry(
         domain="hue", unique_id="bla", data={"host": "1.2.3.4"}
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -258,13 +258,13 @@ async def test_flow_two_bridges_discovered_one_new(
         assert not result["data_schema"]({"id": "bla"})
 
 
-async def test_flow_timeout_discovery(hass: HomeAssistant) -> None:
+async def test_flow_timeout_discovery(menuai: menuai) -> None:
     """Test config flow ."""
     with patch(
-        "homeassistant.components.hue.config_flow.discover_nupnp",
+        "menuai.components.hue.config_flow.discover_nupnp",
         side_effect=TimeoutError,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             const.DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
 
@@ -272,23 +272,23 @@ async def test_flow_timeout_discovery(hass: HomeAssistant) -> None:
     assert result["step_id"] == "manual"
 
 
-async def test_flow_link_unknown_error(hass: HomeAssistant) -> None:
+async def test_flow_link_unknown_error(menuai: menuai) -> None:
     """Test if a unknown error happened during the linking processes."""
     disc_bridge = get_discovered_bridge()
     with patch(
-        "homeassistant.components.hue.config_flow.discover_nupnp",
+        "menuai.components.hue.config_flow.discover_nupnp",
         return_value=[disc_bridge],
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             const.DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
 
     with patch.object(config_flow, "create_app_key", side_effect=Exception):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={"id": disc_bridge.id}
         )
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={}
         )
 
@@ -297,23 +297,23 @@ async def test_flow_link_unknown_error(hass: HomeAssistant) -> None:
     assert result["errors"] == {"base": "linking"}
 
 
-async def test_flow_link_button_not_pressed(hass: HomeAssistant) -> None:
+async def test_flow_link_button_not_pressed(menuai: menuai) -> None:
     """Test config flow ."""
     disc_bridge = get_discovered_bridge()
     with patch(
-        "homeassistant.components.hue.config_flow.discover_nupnp",
+        "menuai.components.hue.config_flow.discover_nupnp",
         return_value=[disc_bridge],
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             const.DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
 
     with patch.object(config_flow, "create_app_key", side_effect=LinkButtonNotPressed):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={"id": disc_bridge.id}
         )
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={}
         )
 
@@ -322,23 +322,23 @@ async def test_flow_link_button_not_pressed(hass: HomeAssistant) -> None:
     assert result["errors"] == {"base": "register_failed"}
 
 
-async def test_flow_link_cannot_connect(hass: HomeAssistant) -> None:
+async def test_flow_link_cannot_connect(menuai: menuai) -> None:
     """Test config flow ."""
     disc_bridge = get_discovered_bridge()
     with patch(
-        "homeassistant.components.hue.config_flow.discover_nupnp",
+        "menuai.components.hue.config_flow.discover_nupnp",
         return_value=[disc_bridge],
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             const.DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
 
     with patch.object(config_flow, "create_app_key", side_effect=CannotConnect):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={"id": disc_bridge.id}
         )
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={}
         )
 
@@ -347,11 +347,11 @@ async def test_flow_link_cannot_connect(hass: HomeAssistant) -> None:
 
 
 async def test_import_with_no_config(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test importing a host without an existing config file."""
     create_mock_api_discovery(aioclient_mock, [("0.0.0.0", "1234")])
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN,
         context={"source": config_entries.SOURCE_IMPORT},
         data={"host": "0.0.0.0"},
@@ -362,7 +362,7 @@ async def test_import_with_no_config(
 
 
 async def test_creating_entry_removes_entries_for_same_host_or_bridge(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test that we clean up entries for same host and bridge.
 
@@ -376,17 +376,17 @@ async def test_creating_entry_removes_entries_for_same_host_or_bridge(
         data={"host": "0.0.0.0", "api_key": "123456789"},
         unique_id="id-1234",
     )
-    orig_entry.add_to_hass(hass)
+    orig_entry.add_to_menuai(menuai)
 
     MockConfigEntry(
         domain="hue",
         data={"host": "1.2.3.4", "api_key": "123456789"},
         unique_id="id-5678",
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
-    assert len(hass.config_entries.async_entries("hue")) == 2
+    assert len(menuai.config_entries.async_entries("hue")) == 2
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "hue",
         data={"host": "2.2.2.2"},
         context={"source": config_entries.SOURCE_IMPORT},
@@ -397,12 +397,12 @@ async def test_creating_entry_removes_entries_for_same_host_or_bridge(
 
     with (
         patch(
-            "homeassistant.components.hue.config_flow.create_app_key",
+            "menuai.components.hue.config_flow.create_app_key",
             return_value="123456789",
         ),
-        patch("homeassistant.components.hue.async_unload_entry", return_value=True),
+        patch("menuai.components.hue.async_unload_entry", return_value=True),
     ):
-        result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "Hue Bridge id-1234"
@@ -411,7 +411,7 @@ async def test_creating_entry_removes_entries_for_same_host_or_bridge(
         "api_key": "123456789",
         "api_version": 1,
     }
-    entries = hass.config_entries.async_entries("hue")
+    entries = menuai.config_entries.async_entries("hue")
     assert len(entries) == 2
     new_entry = entries[-1]
     assert orig_entry.entry_id != new_entry.entry_id
@@ -419,12 +419,12 @@ async def test_creating_entry_removes_entries_for_same_host_or_bridge(
 
 
 async def test_bridge_homekit(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test a bridge being discovered via HomeKit."""
     create_mock_api_discovery(aioclient_mock, [("0.0.0.0", "bla")])
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN,
         context={"source": config_entries.SOURCE_HOMEKIT},
         data=ZeroconfServiceInfo(
@@ -443,19 +443,19 @@ async def test_bridge_homekit(
 
     flow = next(
         flow
-        for flow in hass.config_entries.flow.async_progress()
+        for flow in menuai.config_entries.flow.async_progress()
         if flow["flow_id"] == result["flow_id"]
     )
     assert flow["context"]["unique_id"] == config_entries.DEFAULT_DISCOVERY_UNIQUE_ID
 
 
-async def test_bridge_import_already_configured(hass: HomeAssistant) -> None:
+async def test_bridge_import_already_configured(menuai: menuai) -> None:
     """Test if a import flow aborts if host is already configured."""
     MockConfigEntry(
         domain="hue", unique_id="aabbccddeeff", data={"host": "0.0.0.0"}
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN,
         context={"source": config_entries.SOURCE_IMPORT},
         data={"host": "0.0.0.0", "properties": {"id": "aa:bb:cc:dd:ee:ff"}},
@@ -466,15 +466,15 @@ async def test_bridge_import_already_configured(hass: HomeAssistant) -> None:
 
 
 async def test_bridge_homekit_already_configured(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test if a HomeKit discovered bridge has already been configured."""
     create_mock_api_discovery(aioclient_mock, [("0.0.0.0", "aabbccddeeff")])
     MockConfigEntry(
         domain="hue", unique_id="aabbccddeeff", data={"host": "0.0.0.0"}
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN,
         context={"source": config_entries.SOURCE_HOMEKIT},
         data=ZeroconfServiceInfo(
@@ -492,16 +492,16 @@ async def test_bridge_homekit_already_configured(
     assert result["reason"] == "already_configured"
 
 
-async def test_options_flow_v1(hass: HomeAssistant) -> None:
+async def test_options_flow_v1(menuai: menuai) -> None:
     """Test options config flow for a V1 bridge."""
     entry = MockConfigEntry(
         domain="hue",
         unique_id="aabbccddeeff",
         data={"host": "0.0.0.0"},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await menuai.config_entries.options.async_init(entry.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
@@ -515,7 +515,7 @@ async def test_options_flow_v1(hass: HomeAssistant) -> None:
         == const.DEFAULT_ALLOW_UNREACHABLE
     )
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             const.CONF_ALLOW_HUE_GROUPS: True,
@@ -539,7 +539,7 @@ def _get_schema_default(schema, key_name):
 
 
 async def test_options_flow_v2(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
 ) -> None:
     """Test options config flow for a V2 bridge."""
@@ -548,21 +548,21 @@ async def test_options_flow_v2(
         unique_id="aabbccddeeff",
         data={"host": "0.0.0.0", "api_version": 2},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     mock_dev_id = "aabbccddee"
     device_registry.async_get_or_create(
         config_entry_id=entry.entry_id, identifiers={(const.DOMAIN, mock_dev_id)}
     )
 
-    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await menuai.config_entries.options.async_init(entry.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
     schema = result["data_schema"].schema
     assert _get_schema_default(schema, const.CONF_IGNORE_AVAILABILITY) == []
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={const.CONF_IGNORE_AVAILABILITY: [mock_dev_id]},
     )
@@ -574,11 +574,11 @@ async def test_options_flow_v2(
 
 
 async def test_bridge_zeroconf(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test a bridge being discovered."""
     create_mock_api_discovery(aioclient_mock, [("192.168.1.217", "ecb5fafffeabcabc")])
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -601,7 +601,7 @@ async def test_bridge_zeroconf(
 
 
 async def test_bridge_zeroconf_already_exists(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test a bridge being discovered by zeroconf already exists."""
     create_mock_api_discovery(
@@ -613,8 +613,8 @@ async def test_bridge_zeroconf_already_exists(
         data={"host": "0.0.0.0"},
         unique_id="ecb5faabcabc",
     )
-    entry.add_to_hass(hass)
-    result = await hass.config_entries.flow.async_init(
+    entry.add_to_menuai(menuai)
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -637,9 +637,9 @@ async def test_bridge_zeroconf_already_exists(
     assert entry.data["host"] == "192.168.1.217"
 
 
-async def test_bridge_zeroconf_ipv6(hass: HomeAssistant) -> None:
+async def test_bridge_zeroconf_ipv6(menuai: menuai) -> None:
     """Test a bridge being discovered by zeroconf and ipv6 address."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -662,7 +662,7 @@ async def test_bridge_zeroconf_ipv6(hass: HomeAssistant) -> None:
 
 
 async def test_bridge_connection_failed(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -670,13 +670,13 @@ async def test_bridge_connection_failed(
     create_mock_api_discovery(aioclient_mock, [])
 
     with patch(
-        "homeassistant.components.hue.config_flow.discover_bridge",
+        "menuai.components.hue.config_flow.discover_bridge",
         side_effect=ClientError,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             const.DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={"host": "blah"}
         )
 
@@ -687,7 +687,7 @@ async def test_bridge_connection_failed(
         assert result["reason"] == "cannot_connect"
 
         # test again with zeroconf discovered wrong bridge IP
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             const.DOMAIN,
             context={"source": config_entries.SOURCE_ZEROCONF},
             data=ZeroconfServiceInfo(
@@ -708,7 +708,7 @@ async def test_bridge_connection_failed(
         assert result["reason"] == "cannot_connect"
 
         # test again with homekit discovered wrong bridge IP
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             const.DOMAIN,
             context={"source": config_entries.SOURCE_HOMEKIT},
             data=ZeroconfServiceInfo(
@@ -725,7 +725,7 @@ async def test_bridge_connection_failed(
         assert result["reason"] == "cannot_connect"
 
         # repeat test with import flow
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             const.DOMAIN,
             context={"source": config_entries.SOURCE_IMPORT},
             data={"host": "blah"},

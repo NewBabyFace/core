@@ -9,21 +9,21 @@ from gassist_text import TextAssistant
 from google.oauth2.credentials import Credentials
 import voluptuous as vol
 
-from homeassistant.components import conversation
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_NAME, Platform
-from homeassistant.core import (
-    HomeAssistant,
+from menuai.components import conversation
+from menuai.const import CONF_ACCESS_TOKEN, CONF_NAME, Platform
+from menuai.core import (
+    menuai,
     ServiceCall,
     ServiceResponse,
     SupportsResponse,
 )
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import config_validation as cv, discovery, intent
-from homeassistant.helpers.config_entry_oauth2_flow import (
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import config_validation as cv, discovery, intent
+from menuai.helpers.config_entry_oauth2_flow import (
     OAuth2Session,
     async_get_config_entry_implementation,
 )
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers.typing import ConfigType
 
 from .const import CONF_LANGUAGE_CODE, DOMAIN, SUPPORTED_LANGUAGE_CODES
 from .helpers import (
@@ -50,11 +50,11 @@ SERVICE_SEND_TEXT_COMMAND_SCHEMA = vol.All(
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up Google Assistant SDK component."""
-    hass.async_create_task(
+    menuai.async_create_task(
         discovery.async_load_platform(
-            hass, Platform.NOTIFY, DOMAIN, {CONF_NAME: DOMAIN}, config
+            menuai, Platform.NOTIFY, DOMAIN, {CONF_NAME: DOMAIN}, config
         )
     )
 
@@ -62,11 +62,11 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: GoogleAssistantSDKConfigEntry
+    menuai: menuai, entry: GoogleAssistantSDKConfigEntry
 ) -> bool:
     """Set up Google Assistant SDK from a config entry."""
-    implementation = await async_get_config_entry_implementation(hass, entry)
-    session = OAuth2Session(hass, entry, implementation)
+    implementation = await async_get_config_entry_implementation(menuai, entry)
+    session = OAuth2Session(menuai, entry, implementation)
     try:
         await session.async_ensure_token_valid()
     except aiohttp.ClientResponseError as err:
@@ -78,34 +78,34 @@ async def async_setup_entry(
     except aiohttp.ClientError as err:
         raise ConfigEntryNotReady from err
 
-    mem_storage = InMemoryStorage(hass)
-    hass.http.register_view(GoogleAssistantSDKAudioView(mem_storage))
+    mem_storage = InMemoryStorage(menuai)
+    menuai.http.register_view(GoogleAssistantSDKAudioView(mem_storage))
 
-    await async_setup_service(hass)
+    await async_setup_service(menuai)
 
     entry.runtime_data = GoogleAssistantSDKRuntimeData(
         session=session, mem_storage=mem_storage
     )
-    agent = GoogleAssistantConversationAgent(hass, entry)
-    conversation.async_set_agent(hass, entry, agent)
+    agent = GoogleAssistantConversationAgent(menuai, entry)
+    conversation.async_set_agent(menuai, entry, agent)
 
     return True
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, entry: GoogleAssistantSDKConfigEntry
+    menuai: menuai, entry: GoogleAssistantSDKConfigEntry
 ) -> bool:
     """Unload a config entry."""
-    if not hass.config_entries.async_loaded_entries(DOMAIN):
-        for service_name in hass.services.async_services_for_domain(DOMAIN):
-            hass.services.async_remove(DOMAIN, service_name)
+    if not menuai.config_entries.async_loaded_entries(DOMAIN):
+        for service_name in menuai.services.async_services_for_domain(DOMAIN):
+            menuai.services.async_remove(DOMAIN, service_name)
 
-    conversation.async_unset_agent(hass, entry)
+    conversation.async_unset_agent(menuai, entry)
 
     return True
 
 
-async def async_setup_service(hass: HomeAssistant) -> None:
+async def async_setup_service(menuai: menuai) -> None:
     """Add the services for Google Assistant SDK."""
 
     async def send_text_command(call: ServiceCall) -> ServiceResponse:
@@ -115,7 +115,7 @@ async def async_setup_service(hass: HomeAssistant) -> None:
             SERVICE_SEND_TEXT_COMMAND_FIELD_MEDIA_PLAYER
         )
         command_response_list = await async_send_text_commands(
-            hass, commands, media_players
+            menuai, commands, media_players
         )
         if call.return_response:
             return {
@@ -126,7 +126,7 @@ async def async_setup_service(hass: HomeAssistant) -> None:
             }
         return None
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_SEND_TEXT_COMMAND,
         send_text_command,
@@ -139,10 +139,10 @@ class GoogleAssistantConversationAgent(conversation.AbstractConversationAgent):
     """Google Assistant SDK conversation agent."""
 
     def __init__(
-        self, hass: HomeAssistant, entry: GoogleAssistantSDKConfigEntry
+        self, menuai: menuai, entry: GoogleAssistantSDKConfigEntry
     ) -> None:
         """Initialize the agent."""
-        self.hass = hass
+        self.menuai = menuai
         self.entry = entry
         self.assistant: TextAssistant | None = None
         self.session: OAuth2Session | None = None
@@ -167,7 +167,7 @@ class GoogleAssistantConversationAgent(conversation.AbstractConversationAgent):
             self.assistant = None
 
         language = best_matching_language_code(
-            self.hass,
+            self.menuai,
             user_input.language,
             self.entry.options.get(CONF_LANGUAGE_CODE),
         )
@@ -177,7 +177,7 @@ class GoogleAssistantConversationAgent(conversation.AbstractConversationAgent):
             self.language = language
             self.assistant = TextAssistant(credentials, self.language)
 
-        resp = await self.hass.async_add_executor_job(
+        resp = await self.menuai.async_add_executor_job(
             self.assistant.assist, user_input.text
         )
         text_response = resp[0] or "<empty response>"

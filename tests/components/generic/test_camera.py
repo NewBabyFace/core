@@ -12,12 +12,12 @@ import httpx
 import pytest
 import respx
 
-from homeassistant.components.camera import (
+from menuai.components.camera import (
     DEFAULT_CONTENT_TYPE,
     async_get_mjpeg_stream,
     async_get_stream_source,
 )
-from homeassistant.components.generic.const import (
+from menuai.components.generic.const import (
     CONF_CONTENT_TYPE,
     CONF_FRAMERATE,
     CONF_LIMIT_REFETCH_TO_URL_CHANGE,
@@ -25,24 +25,24 @@ from homeassistant.components.generic.const import (
     CONF_STREAM_SOURCE,
     DOMAIN,
 )
-from homeassistant.components.stream import CONF_RTSP_TRANSPORT
-from homeassistant.components.websocket_api import TYPE_RESULT
-from homeassistant.const import (
+from menuai.components.stream import CONF_RTSP_TRANSPORT
+from menuai.components.websocket_api import TYPE_RESULT
+from menuai.const import (
     CONF_AUTHENTICATION,
     CONF_NAME,
     CONF_PASSWORD,
     CONF_USERNAME,
     CONF_VERIFY_SSL,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import Mock, MockConfigEntry
 from tests.typing import ClientSessionGenerator, WebSocketGenerator
 
 
 async def help_setup_mock_config_entry(
-    hass: HomeAssistant, options: dict[str, Any], unique_id: Any | None = None
+    menuai: menuai, options: dict[str, Any], unique_id: Any | None = None
 ) -> MockConfigEntry:
     """Help setting up a generic camera config entry."""
     entry_options = {
@@ -64,20 +64,20 @@ async def help_setup_mock_config_entry(
         options=entry_options,
         unique_id=unique_id,
     )
-    entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(entry.entry_id)
+    entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(entry.entry_id)
     return entry
 
 
 @respx.mock
 async def test_fetching_url(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     fakeimgbytes_png: bytes,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test that it fetches the given url."""
-    hass.states.async_set("sensor.temp", "http://example.com/0a")
+    menuai.states.async_set("sensor.temp", "http://example.com/0a")
     respx.get("http://example.com/0a").respond(stream=fakeimgbytes_png)
     respx.get("http://example.com/1a").respond(stream=fakeimgbytes_png)
 
@@ -90,9 +90,9 @@ async def test_fetching_url(
         "authentication": "basic",
         "framerate": 20,
     }
-    await help_setup_mock_config_entry(hass, options)
+    await help_setup_mock_config_entry(menuai, options)
 
-    client = await hass_client()
+    client = await menuai_client()
 
     resp = await client.get("/api/camera_proxy/camera.config_test")
 
@@ -108,7 +108,7 @@ async def test_fetching_url(
     assert respx.calls.call_count == 2
 
     # If the template renders to an invalid URL we return the last image from cache
-    hass.states.async_set("sensor.temp", "invalid url")
+    menuai.states.async_set("sensor.temp", "invalid url")
 
     # sleep another .1 seconds to make cached image expire
     await asyncio.sleep(0.1)
@@ -120,7 +120,7 @@ async def test_fetching_url(
     )
 
     # Restore a valid URL
-    hass.states.async_set("sensor.temp", "http://example.com/1a")
+    menuai.states.async_set("sensor.temp", "http://example.com/1a")
     await asyncio.sleep(0.1)
     resp = await client.get("/api/camera_proxy/camera.config_test")
     assert resp.status == HTTPStatus.OK
@@ -129,8 +129,8 @@ async def test_fetching_url(
 
 @respx.mock
 async def test_image_caching(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     freezer: FrozenDateTimeFactory,
     fakeimgbytes_png: bytes,
 ) -> None:
@@ -147,9 +147,9 @@ async def test_image_caching(
         "authentication": "basic",
         "framerate": framerate,
     }
-    await help_setup_mock_config_entry(hass, options)
+    await help_setup_mock_config_entry(menuai, options)
 
-    client = await hass_client()
+    client = await menuai_client()
 
     resp = await client.get("/api/camera_proxy/camera.config_test")
     assert resp.status == HTTPStatus.OK
@@ -197,7 +197,7 @@ async def test_image_caching(
 
 @respx.mock
 async def test_fetching_without_verify_ssl(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator, fakeimgbytes_png: bytes
+    menuai: menuai, menuai_client: ClientSessionGenerator, fakeimgbytes_png: bytes
 ) -> None:
     """Test that it fetches the given url when ssl verify is off."""
     respx.get("https://example.com").respond(stream=fakeimgbytes_png)
@@ -210,9 +210,9 @@ async def test_fetching_without_verify_ssl(
         "password": "pass",
         "verify_ssl": "false",
     }
-    await help_setup_mock_config_entry(hass, options)
+    await help_setup_mock_config_entry(menuai, options)
 
-    client = await hass_client()
+    client = await menuai_client()
 
     resp = await client.get("/api/camera_proxy/camera.config_test")
 
@@ -221,7 +221,7 @@ async def test_fetching_without_verify_ssl(
 
 @respx.mock
 async def test_fetching_url_with_verify_ssl(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator, fakeimgbytes_png: bytes
+    menuai: menuai, menuai_client: ClientSessionGenerator, fakeimgbytes_png: bytes
 ) -> None:
     """Test that it fetches the given url when ssl verify is explicitly on."""
     respx.get("https://example.com").respond(stream=fakeimgbytes_png)
@@ -234,9 +234,9 @@ async def test_fetching_url_with_verify_ssl(
         "password": "pass",
         "verify_ssl": True,
     }
-    await help_setup_mock_config_entry(hass, options)
+    await help_setup_mock_config_entry(menuai, options)
 
-    client = await hass_client()
+    client = await menuai_client()
 
     resp = await client.get("/api/camera_proxy/camera.config_test")
 
@@ -245,8 +245,8 @@ async def test_fetching_url_with_verify_ssl(
 
 @respx.mock
 async def test_limit_refetch(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     fakeimgbytes_png: bytes,
     fakeimgbytes_jpg: bytes,
 ) -> None:
@@ -257,7 +257,7 @@ async def test_limit_refetch(
     respx.get("http://example.com/15a").respond(stream=fakeimgbytes_jpg)
     respx.get("http://example.com/20a").respond(status_code=HTTPStatus.NOT_FOUND)
 
-    hass.states.async_set("sensor.temp", "0")
+    menuai.states.async_set("sensor.temp", "0")
 
     options = {
         "name": "config_test",
@@ -265,13 +265,13 @@ async def test_limit_refetch(
         "still_image_url": 'http://example.com/{{ states.sensor.temp.state + "a" }}',
         "limit_refetch_to_url_change": True,
     }
-    await help_setup_mock_config_entry(hass, options)
+    await help_setup_mock_config_entry(menuai, options)
 
-    client = await hass_client()
+    client = await menuai_client()
 
     resp = await client.get("/api/camera_proxy/camera.config_test")
 
-    hass.states.async_set("sensor.temp", "5")
+    menuai.states.async_set("sensor.temp", "5")
 
     with (
         pytest.raises(aiohttp.ServerTimeoutError),
@@ -284,7 +284,7 @@ async def test_limit_refetch(
     assert respx.calls.call_count == 1
     assert resp.status == HTTPStatus.OK
 
-    hass.states.async_set("sensor.temp", "10")
+    menuai.states.async_set("sensor.temp", "10")
 
     resp = await client.get("/api/camera_proxy/camera.config_test")
     assert respx.calls.call_count == 2
@@ -298,7 +298,7 @@ async def test_limit_refetch(
     body = await resp.read()
     assert body == fakeimgbytes_png
 
-    hass.states.async_set("sensor.temp", "15")
+    menuai.states.async_set("sensor.temp", "15")
 
     # Url change = fetch new image
     resp = await client.get("/api/camera_proxy/camera.config_test")
@@ -308,7 +308,7 @@ async def test_limit_refetch(
     assert body == fakeimgbytes_jpg
 
     # Cause a template render error
-    hass.states.async_remove("sensor.temp")
+    menuai.states.async_remove("sensor.temp")
     resp = await client.get("/api/camera_proxy/camera.config_test")
     assert respx.calls.call_count == 3
     assert resp.status == HTTPStatus.OK
@@ -318,16 +318,16 @@ async def test_limit_refetch(
 
 @respx.mock
 async def test_stream_source(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
+    menuai_ws_client: WebSocketGenerator,
     fakeimgbytes_png: bytes,
 ) -> None:
     """Test that the stream source is rendered."""
     respx.get("http://example.com").respond(stream=fakeimgbytes_png)
     respx.get("http://example.com/0a").respond(stream=fakeimgbytes_png)
 
-    hass.states.async_set("sensor.temp", "0")
+    menuai.states.async_set("sensor.temp", "0")
     mock_entry = MockConfigEntry(
         title="config_test",
         domain=DOMAIN,
@@ -344,21 +344,21 @@ async def test_stream_source(
             CONF_RTSP_TRANSPORT: "http",
         },
     )
-    mock_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_entry.entry_id)
-    assert await async_setup_component(hass, "stream", {})
-    await hass.async_block_till_done()
+    mock_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_entry.entry_id)
+    assert await async_setup_component(menuai, "stream", {})
+    await menuai.async_block_till_done()
 
-    hass.states.async_set("sensor.temp", "5")
-    stream_source = await async_get_stream_source(hass, "camera.config_test")
+    menuai.states.async_set("sensor.temp", "5")
+    stream_source = await async_get_stream_source(menuai, "camera.config_test")
     assert stream_source == "http://barney:betty@example.com/5a"
 
     with patch(
-        "homeassistant.components.camera.Stream.endpoint_url",
+        "menuai.components.camera.Stream.endpoint_url",
         return_value="http://home.assistant/playlist.m3u8",
     ) as mock_stream_url:
         # Request playlist through WebSocket
-        client = await hass_ws_client(hass)
+        client = await menuai_ws_client(menuai)
 
         await client.send_json(
             {"id": 1, "type": "camera/stream", "entity_id": "camera.config_test"}
@@ -375,9 +375,9 @@ async def test_stream_source(
 
 @respx.mock
 async def test_stream_source_error(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
+    menuai_ws_client: WebSocketGenerator,
     fakeimgbytes_png: bytes,
 ) -> None:
     """Test that the stream source has an error."""
@@ -391,16 +391,16 @@ async def test_stream_source_error(
         "stream_source": 'http://example.com/{{ states.sensor.temp.state + "a" }}',
         "limit_refetch_to_url_change": True,
     }
-    await help_setup_mock_config_entry(hass, options)
-    assert await async_setup_component(hass, "stream", {})
-    await hass.async_block_till_done()
+    await help_setup_mock_config_entry(menuai, options)
+    assert await async_setup_component(menuai, "stream", {})
+    await menuai.async_block_till_done()
 
     with patch(
-        "homeassistant.components.camera.Stream.endpoint_url",
+        "menuai.components.camera.Stream.endpoint_url",
         return_value="http://home.assistant/playlist.m3u8",
     ) as mock_stream_url:
         # Request playlist through WebSocket
-        client = await hass_ws_client(hass)
+        client = await menuai_ws_client(menuai)
 
         await client.send_json(
             {"id": 1, "type": "camera/stream", "entity_id": "camera.config_test"}
@@ -420,7 +420,7 @@ async def test_stream_source_error(
 
 @respx.mock
 async def test_setup_alternative_options(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, fakeimgbytes_png: bytes
+    menuai: menuai, menuai_ws_client: WebSocketGenerator, fakeimgbytes_png: bytes
 ) -> None:
     """Test that the stream source is setup with different config options."""
     respx.get("https://example.com").respond(stream=fakeimgbytes_png)
@@ -435,15 +435,15 @@ async def test_setup_alternative_options(
         "stream_source": "rtsp://example.com:554/rtsp/",
         "rtsp_transport": "udp",
     }
-    await help_setup_mock_config_entry(hass, options)
-    assert hass.states.get("camera.config_test")
+    await help_setup_mock_config_entry(menuai, options)
+    assert menuai.states.get("camera.config_test")
 
 
 @respx.mock
 async def test_no_stream_source(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
+    menuai_ws_client: WebSocketGenerator,
     fakeimgbytes_png: bytes,
 ) -> None:
     """Test a stream request without stream source option set."""
@@ -455,14 +455,14 @@ async def test_no_stream_source(
         "still_image_url": "https://example.com",
         "limit_refetch_to_url_change": True,
     }
-    await help_setup_mock_config_entry(hass, options)
+    await help_setup_mock_config_entry(menuai, options)
 
     with patch(
-        "homeassistant.components.camera.Stream.endpoint_url",
+        "menuai.components.camera.Stream.endpoint_url",
         return_value="http://home.assistant/playlist.m3u8",
     ) as mock_request_stream:
         # Request playlist through WebSocket
-        client = await hass_ws_client(hass)
+        client = await menuai_ws_client(menuai)
 
         await client.send_json(
             {"id": 3, "type": "camera/stream", "entity_id": "camera.config_test"}
@@ -482,8 +482,8 @@ async def test_no_stream_source(
 
 @respx.mock
 async def test_camera_content_type(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     fakeimgbytes_svg: bytes,
     fakeimgbytes_jpg: bytes,
 ) -> None:
@@ -510,10 +510,10 @@ async def test_camera_content_type(
         "framerate": 2,
         "verify_ssl": True,
     }
-    await help_setup_mock_config_entry(hass, cam_config_jpg, unique_id=12345)
-    await help_setup_mock_config_entry(hass, cam_config_svg, unique_id=54321)
+    await help_setup_mock_config_entry(menuai, cam_config_jpg, unique_id=12345)
+    await help_setup_mock_config_entry(menuai, cam_config_svg, unique_id=54321)
 
-    client = await hass_client()
+    client = await menuai_client()
 
     resp_1 = await client.get("/api/camera_proxy/camera.config_test_svg")
     assert respx.calls.call_count == 1
@@ -532,8 +532,8 @@ async def test_camera_content_type(
 
 @respx.mock
 async def test_timeout_cancelled(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     fakeimgbytes_png: bytes,
     fakeimgbytes_jpg: bytes,
 ) -> None:
@@ -549,9 +549,9 @@ async def test_timeout_cancelled(
         "password": "pass",
         "framerate": 20,
     }
-    await help_setup_mock_config_entry(hass, options)
+    await help_setup_mock_config_entry(menuai, options)
 
-    client = await hass_client()
+    client = await menuai_client()
 
     resp = await client.get("/api/camera_proxy/camera.config_test")
 
@@ -562,7 +562,7 @@ async def test_timeout_cancelled(
     respx.get("http://example.com").respond(stream=fakeimgbytes_jpg)
 
     with patch(
-        "homeassistant.components.generic.camera.GenericCamera.async_camera_image",
+        "menuai.components.generic.camera.GenericCamera.async_camera_image",
         side_effect=asyncio.CancelledError(),
     ):
         resp = await client.get("/api/camera_proxy/camera.config_test")
@@ -583,7 +583,7 @@ async def test_timeout_cancelled(
         assert await resp.read() == fakeimgbytes_png
 
 
-async def test_frame_interval_property(hass: HomeAssistant) -> None:
+async def test_frame_interval_property(menuai: menuai) -> None:
     """Test that the frame interval is calculated and returned correctly."""
 
     options = {
@@ -592,12 +592,12 @@ async def test_frame_interval_property(hass: HomeAssistant) -> None:
         "stream_source": "rtsp://example.com:554/rtsp/",
         "framerate": 5,
     }
-    await help_setup_mock_config_entry(hass, options)
+    await help_setup_mock_config_entry(menuai, options)
 
     request = Mock()
     with patch(
-        "homeassistant.components.camera.async_get_still_stream"
+        "menuai.components.camera.async_get_still_stream"
     ) as mock_get_stream:
-        await async_get_mjpeg_stream(hass, request, "camera.config_test")
+        await async_get_mjpeg_stream(menuai, request, "camera.config_test")
 
     assert mock_get_stream.call_args_list[0][0][3] == pytest.approx(0.2)

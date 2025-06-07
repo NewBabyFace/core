@@ -1,33 +1,33 @@
 """Zerproc lights integration."""
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai
 
 from .const import DATA_ADDRESSES, DATA_DISCOVERY_SUBSCRIPTION, DOMAIN
 
 PLATFORMS = [Platform.LIGHT]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up Zerproc from a config entry."""
-    if DOMAIN not in hass.data:
-        hass.data[DOMAIN] = {}
-    if DATA_ADDRESSES not in hass.data[DOMAIN]:
-        hass.data[DOMAIN][DATA_ADDRESSES] = set()
+    if DOMAIN not in menuai.data:
+        menuai.data[DOMAIN] = {}
+    if DATA_ADDRESSES not in menuai.data[DOMAIN]:
+        menuai.data[DOMAIN][DATA_ADDRESSES] = set()
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     # Stop discovery
-    unregister_discovery = hass.data[DOMAIN].pop(DATA_DISCOVERY_SUBSCRIPTION, None)
+    unregister_discovery = menuai.data[DOMAIN].pop(DATA_DISCOVERY_SUBSCRIPTION, None)
     if unregister_discovery:
         unregister_discovery()
 
-    hass.data.pop(DOMAIN, None)
+    menuai.data.pop(DOMAIN, None)
 
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

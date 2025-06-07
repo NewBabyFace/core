@@ -11,9 +11,9 @@ from pyecoforest.exceptions import (
     EcoforestConnectionError,
 )
 
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
 
 from .coordinator import EcoforestConfigEntry, EcoforestCoordinator
 
@@ -22,7 +22,7 @@ PLATFORMS: list[Platform] = [Platform.NUMBER, Platform.SENSOR, Platform.SWITCH]
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: EcoforestConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: EcoforestConfigEntry) -> bool:
     """Set up Ecoforest from a config entry."""
 
     host = entry.data[CONF_HOST]
@@ -39,17 +39,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: EcoforestConfigEntry) ->
         _LOGGER.error("Error communicating with device %s", host)
         raise ConfigEntryNotReady from err
 
-    coordinator = EcoforestCoordinator(hass, entry, api)
+    coordinator = EcoforestCoordinator(menuai, entry, api)
 
     await coordinator.async_config_entry_first_refresh()
 
     entry.runtime_data = coordinator
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: EcoforestConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: EcoforestConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

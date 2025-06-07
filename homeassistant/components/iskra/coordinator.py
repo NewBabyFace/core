@@ -11,9 +11,9 @@ from pyiskra.exceptions import (
     NotAuthorised,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN
 
@@ -28,13 +28,13 @@ class IskraDataUpdateCoordinator(DataUpdateCoordinator[None]):
     config_entry: IskraConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: IskraConfigEntry, device: Device
+        self, menuai: menuai, config_entry: IskraConfigEntry, device: Device
     ) -> None:
         """Initialize."""
         self.device = device
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,

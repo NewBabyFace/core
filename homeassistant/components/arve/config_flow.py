@@ -8,8 +8,8 @@ from typing import Any
 from asyncarve import Arve, ArveConnectionError, ArveCustomer
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_CLIENT_SECRET
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_ACCESS_TOKEN, CONF_CLIENT_SECRET
 
 from .const import DOMAIN
 

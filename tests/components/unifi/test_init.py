@@ -6,18 +6,18 @@ from unittest.mock import patch
 from aiounifi.models.message import MessageKey
 import pytest
 
-from homeassistant.components import unifi
-from homeassistant.components.unifi.const import (
+from menuai.components import unifi
+from menuai.components.unifi.const import (
     CONF_ALLOW_BANDWIDTH_SENSORS,
     CONF_ALLOW_UPTIME_SENSORS,
     CONF_TRACK_CLIENTS,
     CONF_TRACK_DEVICES,
 )
-from homeassistant.components.unifi.errors import AuthenticationRequired, CannotConnect
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.setup import async_setup_component
+from menuai.components.unifi.errors import AuthenticationRequired, CannotConnect
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.setup import async_setup_component
 
 from .conftest import (
     DEFAULT_CONFIG_ENTRY_ID,
@@ -30,11 +30,11 @@ from tests.typing import WebSocketGenerator
 
 
 async def test_setup_entry_fails_config_entry_not_ready(
-    hass: HomeAssistant, config_entry_factory: ConfigEntryFactoryType
+    menuai: menuai, config_entry_factory: ConfigEntryFactoryType
 ) -> None:
     """Failed authentication trigger a reauthentication flow."""
     with patch(
-        "homeassistant.components.unifi.get_unifi_api",
+        "menuai.components.unifi.get_unifi_api",
         side_effect=CannotConnect,
     ):
         config_entry = await config_entry_factory()
@@ -43,15 +43,15 @@ async def test_setup_entry_fails_config_entry_not_ready(
 
 
 async def test_setup_entry_fails_trigger_reauth_flow(
-    hass: HomeAssistant, config_entry_factory: ConfigEntryFactoryType
+    menuai: menuai, config_entry_factory: ConfigEntryFactoryType
 ) -> None:
     """Failed authentication trigger a reauthentication flow."""
     with (
         patch(
-            "homeassistant.components.unifi.get_unifi_api",
+            "menuai.components.unifi.get_unifi_api",
             side_effect=AuthenticationRequired,
         ),
-        patch.object(hass.config_entries.flow, "async_init") as mock_flow_init,
+        patch.object(menuai.config_entries.flow, "async_init") as mock_flow_init,
     ):
         config_entry = await config_entry_factory()
         mock_flow_init.assert_called_once()
@@ -79,12 +79,12 @@ async def test_setup_entry_fails_trigger_reauth_flow(
     ],
 )
 async def test_wireless_clients(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
     config_entry_factory: ConfigEntryFactoryType,
 ) -> None:
     """Verify wireless clients class."""
-    hass_storage[unifi.STORAGE_KEY] = {
+    menuai_storage[unifi.STORAGE_KEY] = {
         "version": unifi.STORAGE_VERSION,
         "data": {
             DEFAULT_CONFIG_ENTRY_ID: {
@@ -94,9 +94,9 @@ async def test_wireless_clients(
     }
 
     await config_entry_factory()
-    await flush_store(hass.data[unifi.UNIFI_WIRELESS_CLIENTS]._store)
+    await flush_store(menuai.data[unifi.UNIFI_WIRELESS_CLIENTS]._store)
 
-    assert sorted(hass_storage[unifi.STORAGE_KEY]["data"]["wireless_clients"]) == [
+    assert sorted(menuai_storage[unifi.STORAGE_KEY]["data"]["wireless_clients"]) == [
         "00:00:00:00:00:00",
         "00:00:00:00:00:01",
         "00:00:00:00:00:02",
@@ -164,19 +164,19 @@ async def test_wireless_clients(
     ],
 )
 async def test_remove_config_entry_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     config_entry_factory: ConfigEntryFactoryType,
     client_payload: list[dict[str, Any]],
     device_payload: list[dict[str, Any]],
     mock_websocket_message: WebsocketMessageMock,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Verify removing a device manually."""
     config_entry = await config_entry_factory()
 
-    assert await async_setup_component(hass, "config", {})
-    ws_client = await hass_ws_client(hass)
+    assert await async_setup_component(menuai, "config", {})
+    ws_client = await menuai_ws_client(menuai)
 
     # Try to remove an active client from UI: not allowed
     device_entry = device_registry.async_get_device(
@@ -200,7 +200,7 @@ async def test_remove_config_entry_device(
 
     # Remove a client from Unifi API
     mock_websocket_message(message=MessageKey.CLIENT_REMOVED, data=[client_payload[1]])
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Try to remove an inactive client from UI: allowed
     device_entry = device_registry.async_get_device(

@@ -1,9 +1,9 @@
 """The tests for the nexbus component."""
 
-from homeassistant.components.nextbus.const import CONF_AGENCY, CONF_ROUTE, DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_STOP
-from homeassistant.core import HomeAssistant
+from menuai.components.nextbus.const import CONF_AGENCY, CONF_ROUTE, DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.const import CONF_STOP
+from menuai.core import menuai
 
 from .const import VALID_AGENCY_TITLE, VALID_ROUTE_TITLE, VALID_STOP_TITLE
 
@@ -11,7 +11,7 @@ from tests.common import MockConfigEntry
 
 
 async def assert_setup_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: dict[str, dict[str, str]],
     expected_state=ConfigEntryState.LOADED,
     route_title: str = VALID_ROUTE_TITLE,
@@ -24,10 +24,10 @@ async def assert_setup_sensor(
         title=f"{VALID_AGENCY_TITLE} {route_title} {VALID_STOP_TITLE}",
         unique_id=unique_id,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is expected_state
 

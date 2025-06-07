@@ -6,9 +6,9 @@ from typing import Any
 from aiomealie import MealieAuthenticationError, MealieClient, MealieConnectionError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_API_TOKEN, CONF_HOST, CONF_VERIFY_SSL
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_API_TOKEN, CONF_HOST, CONF_VERIFY_SSL
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN, LOGGER, MIN_REQUIRED_MEALIE_VERSION
 from .utils import create_version
@@ -39,13 +39,13 @@ class MealieConfigFlow(ConfigFlow, domain=DOMAIN):
         """Check connection to the Mealie API."""
         assert self.host is not None
 
-        if "/hassio/ingress/" in self.host:
+        if "/menuaiio/ingress/" in self.host:
             return {"base": "ingress_url"}, None
 
         client = MealieClient(
             self.host,
             token=api_token,
-            session=async_get_clientsession(self.hass, verify_ssl=self.verify_ssl),
+            session=async_get_clientsession(self.menuai, verify_ssl=self.verify_ssl),
         )
         try:
             info = await client.get_user_info()

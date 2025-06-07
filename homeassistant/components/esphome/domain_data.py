@@ -6,8 +6,8 @@ from dataclasses import dataclass, field
 from functools import cache
 from typing import Self
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.json import JSONEncoder
+from menuai.core import menuai
+from menuai.helpers.json import JSONEncoder
 
 from .const import DOMAIN
 from .entry_data import ESPHomeConfigEntry, ESPHomeStorage, RuntimeEntryData
@@ -26,19 +26,19 @@ class DomainData:
         return entry.runtime_data
 
     def get_or_create_store(
-        self, hass: HomeAssistant, entry: ESPHomeConfigEntry
+        self, menuai: menuai, entry: ESPHomeConfigEntry
     ) -> ESPHomeStorage:
         """Get or create a Store instance for the given config entry."""
         return self._stores.setdefault(
             entry.entry_id,
             ESPHomeStorage(
-                hass, STORAGE_VERSION, f"esphome.{entry.entry_id}", encoder=JSONEncoder
+                menuai, STORAGE_VERSION, f"esphome.{entry.entry_id}", encoder=JSONEncoder
             ),
         )
 
     @classmethod
     @cache
-    def get(cls, hass: HomeAssistant) -> Self:
-        """Get the global DomainData instance stored in hass.data."""
-        ret = hass.data[DOMAIN] = cls()
+    def get(cls, menuai: menuai) -> Self:
+        """Get the global DomainData instance stored in menuai.data."""
+        ret = menuai.data[DOMAIN] = cls()
         return ret

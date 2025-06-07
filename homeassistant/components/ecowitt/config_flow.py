@@ -7,11 +7,11 @@ from typing import Any
 
 from yarl import URL
 
-from homeassistant.components import webhook
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_WEBHOOK_ID
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.network import get_url
+from menuai.components import webhook
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_WEBHOOK_ID
+from menuai.exceptions import menuaiError
+from menuai.helpers.network import get_url
 
 from .const import DOMAIN
 
@@ -32,7 +32,7 @@ class EcowittConfigFlow(ConfigFlow, domain=DOMAIN):
                 step_id="user",
             )
 
-        base_url = URL(get_url(self.hass))
+        base_url = URL(get_url(self.menuai))
         assert base_url.host
 
         return self.async_create_entry(
@@ -48,5 +48,5 @@ class EcowittConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class InvalidPort(HomeAssistantError):
+class InvalidPort(menuaiError):
     """Error to indicate there port is not usable."""

@@ -8,10 +8,10 @@ from typing import Any
 
 from ohme import ApiException, ChargerStatus, OhmeApiClient
 
-from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.button import ButtonEntity, ButtonEntityDescription
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import OhmeConfigEntry
@@ -39,7 +39,7 @@ BUTTON_DESCRIPTIONS = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: OhmeConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -63,7 +63,7 @@ class OhmeButton(OhmeEntity, ButtonEntity):
         try:
             await self.entity_description.press_fn(self.coordinator.client)
         except ApiException as e:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_key="api_failed", translation_domain=DOMAIN
             ) from e
         await self.coordinator.async_request_refresh()

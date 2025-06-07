@@ -6,12 +6,12 @@ from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from typing import Final, cast
 
-from homeassistant.components.stream import Orientation
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.storage import Store
-from homeassistant.helpers.typing import UNDEFINED, UndefinedType
+from menuai.components.stream import Orientation
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
+from menuai.helpers.storage import Store
+from menuai.helpers.typing import UNDEFINED, UndefinedType
 
 from .const import DOMAIN, PREF_ORIENTATION, PREF_PRELOAD_STREAM
 
@@ -32,13 +32,13 @@ class CameraPreferences:
 
     _preload_prefs: dict[str, dict[str, bool | Orientation]]
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize camera prefs."""
-        self._hass = hass
+        self._menuai = menuai
         # The orientation prefs are stored in in the entity registry options
         # The preload_stream prefs are stored in this Store
         self._store = Store[dict[str, dict[str, bool | Orientation]]](
-            hass, STORAGE_VERSION, STORAGE_KEY
+            menuai, STORAGE_VERSION, STORAGE_KEY
         )
         self._dynamic_stream_settings_by_entity_id: dict[
             str, DynamicStreamSettings
@@ -62,7 +62,7 @@ class CameraPreferences:
         orientation is stored in the Entity Registry
 
         Returns a dict with the preferences on success.
-        Raises HomeAssistantError on failure.
+        Raises menuaiError on failure.
         """
         dynamic_stream_settings = self._dynamic_stream_settings_by_entity_id.get(
             entity_id
@@ -74,12 +74,12 @@ class CameraPreferences:
             await self._store.async_save(self._preload_prefs)
 
         if orientation is not UNDEFINED:
-            if (registry := er.async_get(self._hass)).async_get(entity_id):
+            if (registry := er.async_get(self._menuai)).async_get(entity_id):
                 registry.async_update_entity_options(
                     entity_id, DOMAIN, {PREF_ORIENTATION: orientation}
                 )
             else:
-                raise HomeAssistantError(
+                raise menuaiError(
                     "Orientation is only supported on entities set up through config"
                     " flows"
                 )
@@ -95,7 +95,7 @@ class CameraPreferences:
             return settings
         # Get preload stream setting from prefs
         # Get orientation setting from entity registry
-        reg_entry = er.async_get(self._hass).async_get(entity_id)
+        reg_entry = er.async_get(self._menuai).async_get(entity_id)
         er_prefs: Mapping = reg_entry.options.get(DOMAIN, {}) if reg_entry else {}
         settings = DynamicStreamSettings(
             preload_stream=cast(

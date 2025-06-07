@@ -1,16 +1,16 @@
 """Test KNX number."""
 
-from homeassistant.components.knx.const import CONF_RESPOND_TO_READ, KNX_ADDRESS
-from homeassistant.components.knx.schema import TextSchema
-from homeassistant.const import CONF_NAME
-from homeassistant.core import HomeAssistant, State
+from menuai.components.knx.const import CONF_RESPOND_TO_READ, KNX_ADDRESS
+from menuai.components.knx.schema import TextSchema
+from menuai.const import CONF_NAME
+from menuai.core import menuai, State
 
 from .conftest import KNXTestKit
 
 from tests.common import mock_restore_cache
 
 
-async def test_text(hass: HomeAssistant, knx: KNXTestKit) -> None:
+async def test_text(menuai: menuai, knx: KNXTestKit) -> None:
     """Test KNX text."""
     test_address = "1/1/1"
     await knx.setup_integration(
@@ -22,7 +22,7 @@ async def test_text(hass: HomeAssistant, knx: KNXTestKit) -> None:
         }
     )
     # set value
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "text",
         "set_value",
         {"entity_id": "text.test", "value": "hello world"},
@@ -47,7 +47,7 @@ async def test_text(hass: HomeAssistant, knx: KNXTestKit) -> None:
             0x0,
         ),
     )
-    state = hass.states.get("text.test")
+    state = menuai.states.get("text.test")
     assert state.state == "hello world"
 
     # update from KNX
@@ -55,17 +55,17 @@ async def test_text(hass: HomeAssistant, knx: KNXTestKit) -> None:
         test_address,
         (0x68, 0x61, 0x6C, 0x6C, 0x6F, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0),
     )
-    state = hass.states.get("text.test")
+    state = menuai.states.get("text.test")
     assert state.state == "hallo"
 
 
-async def test_text_restore_and_respond(hass: HomeAssistant, knx: KNXTestKit) -> None:
+async def test_text_restore_and_respond(menuai: menuai, knx: KNXTestKit) -> None:
     """Test KNX text with passive_address, restoring state and respond_to_read."""
     test_address = "1/1/1"
     test_passive_address = "3/3/3"
 
     fake_state = State("text.test", "test test")
-    mock_restore_cache(hass, (fake_state,))
+    mock_restore_cache(menuai, (fake_state,))
 
     await knx.setup_integration(
         {
@@ -77,7 +77,7 @@ async def test_text_restore_and_respond(hass: HomeAssistant, knx: KNXTestKit) ->
         }
     )
     # restored state - doesn't send telegram
-    state = hass.states.get("text.test")
+    state = menuai.states.get("text.test")
     assert state.state == "test test"
     await knx.assert_telegram_count(0)
 
@@ -97,5 +97,5 @@ async def test_text_restore_and_respond(hass: HomeAssistant, knx: KNXTestKit) ->
         test_passive_address,
         (0x68, 0x61, 0x6C, 0x6C, 0x6F, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0),
     )
-    state = hass.states.get("text.test")
+    state = menuai.states.get("text.test")
     assert state.state == "hallo"

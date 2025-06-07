@@ -2,8 +2,8 @@
 
 import json
 
-from homeassistant.util import slugify
-from script.hassfest.manifest import SUPPORTED_IOT_CLASSES
+from menuai.util import slugify
+from script.menuaifest.manifest import SUPPORTED_IOT_CLASSES
 
 from .const import COMPONENT_DIR
 from .error import ExitApp
@@ -111,7 +111,7 @@ More info @ https://developers.home-assistant.io/docs/creating_integration_manif
         fields.update(
             {
                 "authentication": {
-                    "prompt": "Does Home Assistant need the user to authenticate to control the device/service? (yes/no)",
+                    "prompt": "Does MenuAI need the user to authenticate to control the device/service? (yes/no)",
                     "default": "yes",
                     **YES_NO,
                 },

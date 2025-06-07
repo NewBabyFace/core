@@ -18,23 +18,23 @@ from pyephember2.pyephember2 import (
 )
 import voluptuous as vol
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     PLATFORM_SCHEMA as CLIMATE_PLATFORM_SCHEMA,
     ClimateEntity,
     ClimateEntityFeature,
     HVACAction,
     HVACMode,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_TEMPERATURE,
     CONF_PASSWORD,
     CONF_USERNAME,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -57,7 +57,7 @@ HA_STATE_TO_EPH = {value: key for key, value in EPH_TO_HA_STATE.items()}
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -132,11 +132,11 @@ class EphEmberThermostat(ClimateEntity):
     def hvac_mode(self) -> HVACMode:
         """Return current operation ie. heat, cool, idle."""
         mode = zone_mode(self._zone)
-        return self.map_mode_eph_hass(mode)
+        return self.map_mode_eph_menuai(mode)
 
     def set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Set the operation mode."""
-        mode = self.map_mode_hass_eph(hvac_mode)
+        mode = self.map_mode_menuai_eph(hvac_mode)
         if mode is not None:
             self._ember.set_zone_mode(self._zone["zoneid"], mode)
         else:
@@ -181,11 +181,11 @@ class EphEmberThermostat(ClimateEntity):
         self._zone = self._ember.get_zone(self._zone["zoneid"])
 
     @staticmethod
-    def map_mode_hass_eph(operation_mode):
-        """Map from Home Assistant mode to eph mode."""
+    def map_mode_menuai_eph(operation_mode):
+        """Map from MenuAI mode to eph mode."""
         return getattr(ZoneMode, HA_STATE_TO_EPH.get(operation_mode), None)
 
     @staticmethod
-    def map_mode_eph_hass(operation_mode):
-        """Map from eph mode to Home Assistant mode."""
+    def map_mode_eph_menuai(operation_mode):
+        """Map from eph mode to MenuAI mode."""
         return EPH_TO_HA_STATE.get(operation_mode.name, HVACMode.HEAT_COOL)

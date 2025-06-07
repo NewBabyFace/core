@@ -23,13 +23,13 @@ from google.genai.types import (
 )
 from voluptuous_openapi import convert
 
-from homeassistant.components import assist_pipeline, conversation
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_LLM_HASS_API, MATCH_ALL
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr, intent, llm
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components import assist_pipeline, conversation
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_LLM_menuai_API, MATCH_ALL
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr, intent, llm
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
     CONF_CHAT_MODEL,
@@ -62,7 +62,7 @@ ERROR_GETTING_RESPONSE = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -254,7 +254,7 @@ async def _transform_stream(
                     if response.prompt_feedback
                     else "unknown"
                 )
-                raise HomeAssistantError(
+                raise menuaiError(
                     f"The message got blocked due to content violations, reason: {reason}"
                 )
 
@@ -269,7 +269,7 @@ async def _transform_stream(
                     "Error in Google Generative AI response: %s, see: https://ai.google.dev/api/generate-content#FinishReason",
                     candidate.finish_reason,
                 )
-                raise HomeAssistantError(
+                raise menuaiError(
                     f"{ERROR_GETTING_RESPONSE} Reason: {candidate.finish_reason}"
                 )
 
@@ -306,7 +306,7 @@ async def _transform_stream(
         else:
             message = type(err).__name__
         error = f"{ERROR_GETTING_RESPONSE}: {message}"
-        raise HomeAssistantError(error) from err
+        raise menuaiError(error) from err
 
 
 class GoogleGenerativeAIConversationEntity(
@@ -330,7 +330,7 @@ class GoogleGenerativeAIConversationEntity(
             model="Generative AI",
             entry_type=dr.DeviceEntryType.SERVICE,
         )
-        if self.entry.options.get(CONF_LLM_HASS_API):
+        if self.entry.options.get(CONF_LLM_menuai_API):
             self._attr_supported_features = (
                 conversation.ConversationEntityFeature.CONTROL
             )
@@ -340,28 +340,28 @@ class GoogleGenerativeAIConversationEntity(
         """Return a list of supported languages."""
         return MATCH_ALL
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to Home Assistant."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to MenuAI."""
+        await super().async_added_to_menuai()
         assist_pipeline.async_migrate_engine(
-            self.hass, "conversation", self.entry.entry_id, self.entity_id
+            self.menuai, "conversation", self.entry.entry_id, self.entity_id
         )
-        conversation.async_set_agent(self.hass, self.entry, self)
+        conversation.async_set_agent(self.menuai, self.entry, self)
         self.entry.async_on_unload(
             self.entry.add_update_listener(self._async_entry_update_listener)
         )
 
-    async def async_will_remove_from_hass(self) -> None:
-        """When entity will be removed from Home Assistant."""
-        conversation.async_unset_agent(self.hass, self.entry)
-        await super().async_will_remove_from_hass()
+    async def async_will_remove_from_menuai(self) -> None:
+        """When entity will be removed from MenuAI."""
+        conversation.async_unset_agent(self.menuai, self.entry)
+        await super().async_will_remove_from_menuai()
 
     def _fix_tool_name(self, tool_name: str) -> str:
         """Fix tool name if needed."""
-        # The Gemini 2.0+ tokenizer seemingly has a issue with the HassListAddItem tool
+        # The Gemini 2.0+ tokenizer seemingly has a issue with the menuaiListAddItem tool
         # name. This makes sure when it incorrectly changes the name, that we change it
         # back for HA to call.
-        return tool_name if tool_name != "HasListAddItem" else "HassListAddItem"
+        return tool_name if tool_name != "HasListAddItem" else "menuaiListAddItem"
 
     async def _async_handle_message(
         self,
@@ -375,7 +375,7 @@ class GoogleGenerativeAIConversationEntity(
             await chat_log.async_update_llm_data(
                 DOMAIN,
                 user_input,
-                options.get(CONF_LLM_HASS_API),
+                options.get(CONF_LLM_menuai_API),
                 options.get(CONF_PROMPT),
             )
         except conversation.ConverseError as err:
@@ -410,7 +410,7 @@ class GoogleGenerativeAIConversationEntity(
         if prompt_content.content:
             prompt = prompt_content.content
         else:
-            raise HomeAssistantError("Invalid prompt content")
+            raise menuaiError("Invalid prompt content")
 
         messages: list[Content] = []
 
@@ -513,7 +513,7 @@ class GoogleGenerativeAIConversationEntity(
             ) as err:
                 LOGGER.error("Error sending message: %s %s", type(err), err)
                 error = ERROR_GETTING_RESPONSE
-                raise HomeAssistantError(error) from err
+                raise menuaiError(error) from err
 
             chat_request = _create_google_tool_response_parts(
                 [
@@ -535,7 +535,7 @@ class GoogleGenerativeAIConversationEntity(
                 "Last content in chat log is not an AssistantContent: %s. This could be due to the model not returning a valid response",
                 chat_log.content[-1],
             )
-            raise HomeAssistantError(f"{ERROR_GETTING_RESPONSE}")
+            raise menuaiError(f"{ERROR_GETTING_RESPONSE}")
         response.async_set_speech(chat_log.content[-1].content or "")
         return conversation.ConversationResult(
             response=response,
@@ -544,8 +544,8 @@ class GoogleGenerativeAIConversationEntity(
         )
 
     async def _async_entry_update_listener(
-        self, hass: HomeAssistant, entry: ConfigEntry
+        self, menuai: menuai, entry: ConfigEntry
     ) -> None:
         """Handle options update."""
         # Reload as we update device info + entity name + supported features
-        await hass.config_entries.async_reload(entry.entry_id)
+        await menuai.config_entries.async_reload(entry.entry_id)

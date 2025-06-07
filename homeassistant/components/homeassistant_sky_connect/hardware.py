@@ -1,25 +1,25 @@
-"""The Home Assistant SkyConnect hardware platform."""
+"""The MenuAI SkyConnect hardware platform."""
 
 from __future__ import annotations
 
-from homeassistant.components.hardware.models import HardwareInfo, USBInfo
-from homeassistant.core import HomeAssistant, callback
+from menuai.components.hardware.models import HardwareInfo, USBInfo
+from menuai.core import menuai, callback
 
-from .config_flow import HomeAssistantSkyConnectConfigFlow
+from .config_flow import menuaiSkyConnectConfigFlow
 from .const import DOMAIN
 from .util import get_hardware_variant
 
 DOCUMENTATION_URL = "https://support.nabucasa.com/hc/en-us/categories/24734620813469-Home-Assistant-Connect-ZBT-1"
 EXPECTED_ENTRY_VERSION = (
-    HomeAssistantSkyConnectConfigFlow.VERSION,
-    HomeAssistantSkyConnectConfigFlow.MINOR_VERSION,
+    menuaiSkyConnectConfigFlow.VERSION,
+    menuaiSkyConnectConfigFlow.MINOR_VERSION,
 )
 
 
 @callback
-def async_info(hass: HomeAssistant) -> list[HardwareInfo]:
+def async_info(menuai: menuai) -> list[HardwareInfo]:
     """Return board info."""
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     return [
         HardwareInfo(
             board=None,

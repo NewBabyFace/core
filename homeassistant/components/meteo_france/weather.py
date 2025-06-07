@@ -5,7 +5,7 @@ import time
 
 from meteofrance_api.model.forecast import Forecast as MeteoFranceForecast
 
-from homeassistant.components.weather import (
+from menuai.components.weather import (
     ATTR_FORECAST_CONDITION,
     ATTR_FORECAST_HUMIDITY,
     ATTR_FORECAST_NATIVE_PRECIPITATION,
@@ -18,22 +18,22 @@ from homeassistant.components.weather import (
     WeatherEntity,
     WeatherEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_MODE,
     UnitOfPrecipitationDepth,
     UnitOfPressure,
     UnitOfSpeed,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import (
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
 )
-from homeassistant.util import dt as dt_util
+from menuai.util import dt as dt_util
 
 from .const import (
     ATTRIBUTION,
@@ -55,12 +55,12 @@ def format_condition(condition: str):
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Meteo-France weather platform."""
-    coordinator: DataUpdateCoordinator[MeteoFranceForecast] = hass.data[DOMAIN][
+    coordinator: DataUpdateCoordinator[MeteoFranceForecast] = menuai.data[DOMAIN][
         entry.entry_id
     ][COORDINATOR_FORECAST]
 
@@ -109,7 +109,7 @@ class MeteoFranceWeather(
         super()._handle_coordinator_update()
         assert self.platform.config_entry
         self.platform.config_entry.async_create_task(
-            self.hass, self.async_update_listeners(("daily", "hourly"))
+            self.menuai, self.async_update_listeners(("daily", "hourly"))
         )
 
     @property

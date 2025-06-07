@@ -4,9 +4,9 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components.nut.const import DOMAIN
-from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
-from homeassistant.const import (
+from menuai.components.nut.const import DOMAIN
+from menuai.components.sensor import SensorDeviceClass, SensorStateClass
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     ATTR_FRIENDLY_NAME,
     ATTR_UNIT_OF_MEASUREMENT,
@@ -19,8 +19,8 @@ from homeassistant.const import (
     UnitOfElectricCurrent,
     UnitOfElectricPotential,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er, translation
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er, translation
 
 from .util import (
     _get_mock_nutclient,
@@ -44,16 +44,16 @@ from tests.common import MockConfigEntry
     ],
 )
 async def test_ups_devices(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, model: str
+    menuai: menuai, entity_registry: er.EntityRegistry, model: str
 ) -> None:
     """Test creation of device sensors."""
 
-    config_entry = await async_init_integration(hass, model)
+    config_entry = await async_init_integration(menuai, model)
     entry = entity_registry.async_get("sensor.ups1_battery_charge")
     assert entry
     assert entry.unique_id == f"{config_entry.entry_id}_battery.charge"
 
-    state = hass.states.get("sensor.ups1_battery_charge")
+    state = menuai.states.get("sensor.ups1_battery_charge")
     assert state.state == "100"
 
     expected_attributes = {
@@ -79,16 +79,16 @@ async def test_ups_devices(
     ],
 )
 async def test_ups_devices_with_unique_ids(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, model: str, unique_id: str
+    menuai: menuai, entity_registry: er.EntityRegistry, model: str, unique_id: str
 ) -> None:
     """Test creation of device sensors with unique ids."""
 
-    await async_init_integration(hass, model)
+    await async_init_integration(menuai, model)
     entry = entity_registry.async_get("sensor.ups1_battery_charge")
     assert entry
     assert entry.unique_id == unique_id
 
-    state = hass.states.get("sensor.ups1_battery_charge")
+    state = menuai.states.get("sensor.ups1_battery_charge")
     assert state.state == "100"
 
     expected_attributes = {
@@ -113,17 +113,17 @@ async def test_ups_devices_with_unique_ids(
     ],
 )
 async def test_pdu_devices_with_unique_ids(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     model: str,
     unique_id_base: str,
 ) -> None:
     """Test creation of device sensors with unique ids."""
 
-    await async_init_integration(hass, model)
+    await async_init_integration(menuai, model)
 
     _test_sensor_and_attributes(
-        hass,
+        menuai,
         entity_registry,
         unique_id=f"{unique_id_base}_input.voltage",
         device_id="sensor.ups1_input_voltage",
@@ -137,7 +137,7 @@ async def test_pdu_devices_with_unique_ids(
     )
 
     _test_sensor_and_attributes(
-        hass,
+        menuai,
         entity_registry,
         unique_id=f"{unique_id_base}_ambient.humidity.status",
         device_id="sensor.ups1_ambient_humidity_status",
@@ -149,7 +149,7 @@ async def test_pdu_devices_with_unique_ids(
     )
 
     _test_sensor_and_attributes(
-        hass,
+        menuai,
         entity_registry,
         unique_id=f"{unique_id_base}_ambient.temperature.status",
         device_id="sensor.ups1_ambient_temperature_status",
@@ -161,58 +161,58 @@ async def test_pdu_devices_with_unique_ids(
     )
 
 
-async def test_state_sensors(hass: HomeAssistant) -> None:
+async def test_state_sensors(menuai: menuai) -> None:
     """Test creation of status display sensors."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         data={CONF_HOST: "mock", CONF_PORT: "mock"},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     mock_pynut = _get_mock_nutclient(
         list_ups={"ups1": "UPS 1"}, list_vars={"ups.status": "OL"}
     )
 
     with patch(
-        "homeassistant.components.nut.AIONUTClient",
+        "menuai.components.nut.AIONUTClient",
         return_value=mock_pynut,
     ):
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
-        state1 = hass.states.get("sensor.ups1_status")
-        state2 = hass.states.get("sensor.ups1_status_data")
+        state1 = menuai.states.get("sensor.ups1_status")
+        state2 = menuai.states.get("sensor.ups1_status_data")
         assert state1.state == "Online"
         assert state2.state == "OL"
 
 
-async def test_unknown_state_sensors(hass: HomeAssistant) -> None:
+async def test_unknown_state_sensors(menuai: menuai) -> None:
     """Test creation of unknown status display sensors."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         data={CONF_HOST: "mock", CONF_PORT: "mock"},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     mock_pynut = _get_mock_nutclient(
         list_ups={"ups1": "UPS 1"}, list_vars={"ups.status": "OQ"}
     )
 
     with patch(
-        "homeassistant.components.nut.AIONUTClient",
+        "menuai.components.nut.AIONUTClient",
         return_value=mock_pynut,
     ):
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
-        state1 = hass.states.get("sensor.ups1_status")
-        state2 = hass.states.get("sensor.ups1_status_data")
+        state1 = menuai.states.get("sensor.ups1_status")
+        state2 = menuai.states.get("sensor.ups1_status_data")
         assert state1.state == STATE_UNKNOWN
         assert state2.state == "OQ"
 
 
 async def test_stale_options(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test creation of sensors with stale options to remove."""
     config_entry = MockConfigEntry(
@@ -224,18 +224,18 @@ async def test_stale_options(
         },
         options={CONF_RESOURCES: ["battery.charge"]},
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     mock_pynut = _get_mock_nutclient(
         list_ups={"ups1": "UPS 1"}, list_vars={"battery.charge": "10"}
     )
 
     with patch(
-        "homeassistant.components.nut.AIONUTClient",
+        "menuai.components.nut.AIONUTClient",
         return_value=mock_pynut,
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
         entry = entity_registry.async_get("sensor.ups1_battery_charge")
         assert entry
@@ -243,35 +243,35 @@ async def test_stale_options(
         assert config_entry.data[CONF_RESOURCES] == ["battery.charge"]
         assert config_entry.options == {}
 
-        state = hass.states.get("sensor.ups1_battery_charge")
+        state = menuai.states.get("sensor.ups1_battery_charge")
         assert state.state == "10"
 
 
-async def test_state_ambient_translation(hass: HomeAssistant) -> None:
+async def test_state_ambient_translation(menuai: menuai) -> None:
     """Test translation of ambient state sensor."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         data={CONF_HOST: "mock", CONF_PORT: "mock"},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     mock_pynut = _get_mock_nutclient(
         list_ups={"ups1": "UPS 1"}, list_vars={"ambient.humidity.status": "good"}
     )
 
     with patch(
-        "homeassistant.components.nut.AIONUTClient",
+        "menuai.components.nut.AIONUTClient",
         return_value=mock_pynut,
     ):
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
         key = "ambient_humidity_status"
-        state = hass.states.get(f"sensor.ups1_{key}")
+        state = menuai.states.get(f"sensor.ups1_{key}")
         assert state.state == "good"
 
         result = translation.async_translate_state(
-            hass, state.state, Platform.SENSOR, DOMAIN, key, None
+            menuai, state.state, Platform.SENSOR, DOMAIN, key, None
         )
 
         assert result == "Good"
@@ -287,14 +287,14 @@ async def test_state_ambient_translation(hass: HomeAssistant) -> None:
     ],
 )
 async def test_pdu_devices_ambient_not_present(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     model: str,
     unique_id_base: str,
 ) -> None:
     """Test that ambient sensors not created."""
 
-    await async_init_integration(hass, model)
+    await async_init_integration(menuai, model)
 
     entry = entity_registry.async_get("sensor.ups1_ambient_humidity")
     assert not entry
@@ -319,17 +319,17 @@ async def test_pdu_devices_ambient_not_present(
     ],
 )
 async def test_pdu_dynamic_outlets(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     model: str,
     unique_id_base: str,
 ) -> None:
     """Test for dynamically created outlet sensors."""
 
-    await async_init_integration(hass, model)
+    await async_init_integration(menuai, model)
 
     _test_sensor_and_attributes(
-        hass,
+        menuai,
         entity_registry,
         unique_id=f"{unique_id_base}_outlet.1.current",
         device_id="sensor.ups1_outlet_a1_current",
@@ -342,7 +342,7 @@ async def test_pdu_dynamic_outlets(
     )
 
     _test_sensor_and_attributes(
-        hass,
+        menuai,
         entity_registry,
         unique_id=f"{unique_id_base}_outlet.24.current",
         device_id="sensor.ups1_outlet_a24_current",

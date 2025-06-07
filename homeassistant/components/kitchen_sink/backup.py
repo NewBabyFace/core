@@ -7,14 +7,14 @@ from collections.abc import AsyncIterator, Callable, Coroutine
 import logging
 from typing import Any
 
-from homeassistant.components.backup import (
+from menuai.components.backup import (
     AddonInfo,
     AgentBackup,
     BackupAgent,
     BackupNotFound,
     Folder,
 )
-from homeassistant.core import HomeAssistant, callback
+from menuai.core import menuai, callback
 
 from . import DATA_BACKUP_AGENT_LISTENERS, DOMAIN
 
@@ -22,10 +22,10 @@ LOGGER = logging.getLogger(__name__)
 
 
 async def async_get_backup_agents(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> list[BackupAgent]:
     """Register the backup agents."""
-    if not hass.config_entries.async_loaded_entries(DOMAIN):
+    if not menuai.config_entries.async_loaded_entries(DOMAIN):
         LOGGER.info("No config entry found or entry is not loaded")
         return []
     return [KitchenSinkBackupAgent("syncer")]
@@ -33,18 +33,18 @@ async def async_get_backup_agents(
 
 @callback
 def async_register_backup_agents_listener(
-    hass: HomeAssistant,
+    menuai: menuai,
     *,
     listener: Callable[[], None],
     **kwargs: Any,
 ) -> Callable[[], None]:
     """Register a listener to be called when agents are added or removed."""
-    hass.data.setdefault(DATA_BACKUP_AGENT_LISTENERS, []).append(listener)
+    menuai.data.setdefault(DATA_BACKUP_AGENT_LISTENERS, []).append(listener)
 
     @callback
     def remove_listener() -> None:
         """Remove the listener."""
-        hass.data[DATA_BACKUP_AGENT_LISTENERS].remove(listener)
+        menuai.data[DATA_BACKUP_AGENT_LISTENERS].remove(listener)
 
     return remove_listener
 
@@ -66,8 +66,8 @@ class KitchenSinkBackupAgent(BackupAgent):
                 date="1970-01-01T00:00:00Z",
                 extra_metadata={},
                 folders=[Folder.MEDIA, Folder.SHARE],
-                homeassistant_included=True,
-                homeassistant_version="2024.12.0",
+                menuai_included=True,
+                menuai_version="2024.12.0",
                 name="Kitchen sink syncer",
                 protected=False,
                 size=1234,

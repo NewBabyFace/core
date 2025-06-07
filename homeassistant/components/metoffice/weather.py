@@ -7,7 +7,7 @@ from typing import Any, cast
 
 from datapoint.Forecast import Forecast as ForecastData
 
-from homeassistant.components.weather import (
+from menuai.components.weather import (
     ATTR_FORECAST_CONDITION,
     ATTR_FORECAST_IS_DAYTIME,
     ATTR_FORECAST_NATIVE_APPARENT_TEMP,
@@ -25,17 +25,17 @@ from homeassistant.components.weather import (
     Forecast,
     WeatherEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     UnitOfLength,
     UnitOfPressure,
     UnitOfSpeed,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import TimestampDataUpdateCoordinator
+from menuai.core import menuai, callback
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import TimestampDataUpdateCoordinator
 
 from . import get_device_info
 from .const import (
@@ -56,29 +56,29 @@ from .helpers import get_attribute
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Met Office weather sensor platform."""
-    entity_registry = er.async_get(hass)
-    hass_data = hass.data[DOMAIN][entry.entry_id]
+    entity_registry = er.async_get(menuai)
+    menuai_data = menuai.data[DOMAIN][entry.entry_id]
 
     # Remove daily entity from legacy config entries
     if entity_id := entity_registry.async_get_entity_id(
         WEATHER_DOMAIN,
         DOMAIN,
-        f"{hass_data[METOFFICE_COORDINATES]}_daily",
+        f"{menuai_data[METOFFICE_COORDINATES]}_daily",
     ):
         entity_registry.async_remove(entity_id)
 
     async_add_entities(
         [
             MetOfficeWeather(
-                hass_data[METOFFICE_DAILY_COORDINATOR],
-                hass_data[METOFFICE_HOURLY_COORDINATOR],
-                hass_data[METOFFICE_TWICE_DAILY_COORDINATOR],
-                hass_data,
+                menuai_data[METOFFICE_DAILY_COORDINATOR],
+                menuai_data[METOFFICE_HOURLY_COORDINATOR],
+                menuai_data[METOFFICE_TWICE_DAILY_COORDINATOR],
+                menuai_data,
             )
         ],
         False,
@@ -180,7 +180,7 @@ class MetOfficeWeather(
         coordinator_daily: TimestampDataUpdateCoordinator[ForecastData],
         coordinator_hourly: TimestampDataUpdateCoordinator[ForecastData],
         coordinator_twice_daily: TimestampDataUpdateCoordinator[ForecastData],
-        hass_data: dict[str, Any],
+        menuai_data: dict[str, Any],
     ) -> None:
         """Initialise the platform with a data instance."""
         observation_coordinator = coordinator_hourly
@@ -192,9 +192,9 @@ class MetOfficeWeather(
         )
 
         self._attr_device_info = get_device_info(
-            coordinates=hass_data[METOFFICE_COORDINATES], name=hass_data[METOFFICE_NAME]
+            coordinates=menuai_data[METOFFICE_COORDINATES], name=menuai_data[METOFFICE_NAME]
         )
-        self._attr_unique_id = hass_data[METOFFICE_COORDINATES]
+        self._attr_unique_id = menuai_data[METOFFICE_COORDINATES]
 
     @property
     def condition(self) -> str | None:

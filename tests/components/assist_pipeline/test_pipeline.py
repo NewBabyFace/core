@@ -4,20 +4,20 @@ from collections.abc import AsyncGenerator, Generator
 from typing import Any
 from unittest.mock import ANY, AsyncMock, Mock, patch
 
-from hassil.recognize import Intent, IntentData, RecognizeResult
+from menuaiil.recognize import Intent, IntentData, RecognizeResult
 import pytest
 from syrupy.assertion import SnapshotAssertion
 import voluptuous as vol
 
-from homeassistant.components import (
+from menuai.components import (
     assist_pipeline,
     conversation,
     media_source,
     stt,
     tts,
 )
-from homeassistant.components.assist_pipeline.const import DOMAIN
-from homeassistant.components.assist_pipeline.pipeline import (
+from menuai.components.assist_pipeline.const import DOMAIN
+from menuai.components.assist_pipeline.pipeline import (
     STORAGE_KEY,
     STORAGE_VERSION,
     STORAGE_VERSION_MINOR,
@@ -32,10 +32,10 @@ from homeassistant.components.assist_pipeline.pipeline import (
     async_migrate_engine,
     async_update_pipeline,
 )
-from homeassistant.const import MATCH_ALL
-from homeassistant.core import Context, HomeAssistant
-from homeassistant.helpers import chat_session, intent, llm
-from homeassistant.setup import async_setup_component
+from menuai.const import MATCH_ALL
+from menuai.core import Context, menuai
+from menuai.helpers import chat_session, intent, llm
+from menuai.setup import async_setup_component
 
 from . import MANY_LANGUAGES, process_events
 from .conftest import (
@@ -53,15 +53,15 @@ from tests.typing import ClientSessionGenerator, WebSocketGenerator
 
 @pytest.fixture(autouse=True)
 async def delay_save_fixture() -> AsyncGenerator[None]:
-    """Load the homeassistant integration."""
-    with patch("homeassistant.helpers.collection.SAVE_DELAY", new=0):
+    """Load the menuai integration."""
+    with patch("menuai.helpers.collection.SAVE_DELAY", new=0):
         yield
 
 
 @pytest.fixture(autouse=True)
-async def load_homeassistant(hass: HomeAssistant) -> None:
-    """Load the homeassistant integration."""
-    assert await async_setup_component(hass, "homeassistant", {})
+async def load_menuai(menuai: menuai) -> None:
+    """Load the menuai integration."""
+    assert await async_setup_component(menuai, "menuai", {})
 
 
 @pytest.fixture
@@ -71,7 +71,7 @@ async def disable_tts_entity(mock_tts_entity: tts.TextToSpeechEntity) -> None:
 
 
 @pytest.mark.usefixtures("init_components")
-async def test_load_pipelines(hass: HomeAssistant) -> None:
+async def test_load_pipelines(menuai: menuai) -> None:
     """Make sure that we can load/save data correctly."""
 
     pipelines = [
@@ -116,7 +116,7 @@ async def test_load_pipelines(hass: HomeAssistant) -> None:
         },
     ]
 
-    pipeline_data: PipelineData = hass.data[DOMAIN]
+    pipeline_data: PipelineData = menuai.data[DOMAIN]
     store1 = pipeline_data.pipeline_store
     pipeline_ids = [
         (await store1.async_create_item(pipeline)).id for pipeline in pipelines
@@ -129,7 +129,7 @@ async def test_load_pipelines(hass: HomeAssistant) -> None:
 
     store2 = PipelineStorageCollection(
         PipelineStore(
-            hass, STORAGE_VERSION, STORAGE_KEY, minor_version=STORAGE_VERSION_MINOR
+            menuai, STORAGE_VERSION, STORAGE_KEY, minor_version=STORAGE_VERSION_MINOR
         )
     )
     await flush_store(store1.store)
@@ -146,7 +146,7 @@ async def test_load_pipelines(hass: HomeAssistant) -> None:
 def mock_chat_session_id() -> Generator[Mock]:
     """Mock the conversation ID of chat sessions."""
     with patch(
-        "homeassistant.helpers.chat_session.ulid_now", return_value="mock-ulid"
+        "menuai.helpers.chat_session.ulid_now", return_value="mock-ulid"
     ) as mock_ulid_now:
         yield mock_ulid_now
 
@@ -159,17 +159,17 @@ def mock_tts_token() -> Generator[None]:
 
 
 async def test_loading_pipelines_from_storage(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
+    menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
     """Test loading stored pipelines on start."""
     async_migrate_engine(
-        hass,
+        menuai,
         "conversation",
         conversation.OLD_HOME_ASSISTANT_AGENT,
         conversation.HOME_ASSISTANT_AGENT,
     )
     id_1 = "01GX8ZWBAQYWNB1XV3EXEZ75DY"
-    hass_storage[STORAGE_KEY] = {
+    menuai_storage[STORAGE_KEY] = {
         "version": STORAGE_VERSION,
         "minor_version": STORAGE_VERSION_MINOR,
         "key": "assist_pipeline.pipelines",
@@ -222,9 +222,9 @@ async def test_loading_pipelines_from_storage(
         },
     }
 
-    assert await async_setup_component(hass, "assist_pipeline", {})
+    assert await async_setup_component(menuai, "assist_pipeline", {})
 
-    pipeline_data: PipelineData = hass.data[DOMAIN]
+    pipeline_data: PipelineData = menuai.data[DOMAIN]
     store = pipeline_data.pipeline_store
     assert len(store.data) == 3
     assert store.async_get_preferred_item() == id_1
@@ -232,10 +232,10 @@ async def test_loading_pipelines_from_storage(
 
 
 async def test_migrate_pipeline_store(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
+    menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
     """Test loading stored pipelines from an older version."""
-    hass_storage[STORAGE_KEY] = {
+    menuai_storage[STORAGE_KEY] = {
         "version": 1,
         "minor_version": 1,
         "key": "assist_pipeline.pipelines",
@@ -282,9 +282,9 @@ async def test_migrate_pipeline_store(
         },
     }
 
-    assert await async_setup_component(hass, "assist_pipeline", {})
+    assert await async_setup_component(menuai, "assist_pipeline", {})
 
-    pipeline_data: PipelineData = hass.data[DOMAIN]
+    pipeline_data: PipelineData = menuai.data[DOMAIN]
     store = pipeline_data.pipeline_store
     assert len(store.data) == 3
     assert store.async_get_preferred_item() == "01GX8ZWBAQYWNB1XV3EXEZ75DY"
@@ -292,17 +292,17 @@ async def test_migrate_pipeline_store(
 
 @pytest.mark.usefixtures("init_supporting_components")
 @pytest.mark.usefixtures("disable_tts_entity")
-async def test_create_default_pipeline(hass: HomeAssistant) -> None:
+async def test_create_default_pipeline(menuai: menuai) -> None:
     """Test async_create_default_pipeline."""
-    assert await async_setup_component(hass, "assist_pipeline", {})
+    assert await async_setup_component(menuai, "assist_pipeline", {})
 
-    pipeline_data: PipelineData = hass.data[DOMAIN]
+    pipeline_data: PipelineData = menuai.data[DOMAIN]
     store = pipeline_data.pipeline_store
     assert len(store.data) == 1
 
     assert (
         await async_create_default_pipeline(
-            hass,
+            menuai,
             stt_engine_id="bla",
             tts_engine_id="bla",
             pipeline_name="Bla pipeline",
@@ -310,7 +310,7 @@ async def test_create_default_pipeline(hass: HomeAssistant) -> None:
         is None
     )
     assert await async_create_default_pipeline(
-        hass,
+        menuai,
         stt_engine_id="test",
         tts_engine_id="test",
         pipeline_name="Test pipeline",
@@ -330,38 +330,38 @@ async def test_create_default_pipeline(hass: HomeAssistant) -> None:
     )
 
 
-async def test_get_pipeline(hass: HomeAssistant) -> None:
+async def test_get_pipeline(menuai: menuai) -> None:
     """Test async_get_pipeline."""
-    assert await async_setup_component(hass, "assist_pipeline", {})
+    assert await async_setup_component(menuai, "assist_pipeline", {})
 
-    pipeline_data: PipelineData = hass.data[DOMAIN]
+    pipeline_data: PipelineData = menuai.data[DOMAIN]
     store = pipeline_data.pipeline_store
     assert len(store.data) == 1
 
     # Test we get the preferred pipeline if none is specified
-    pipeline = async_get_pipeline(hass, None)
+    pipeline = async_get_pipeline(menuai, None)
     assert pipeline.id == store.async_get_preferred_item()
 
     # Test getting a specific pipeline
-    assert pipeline is async_get_pipeline(hass, pipeline.id)
+    assert pipeline is async_get_pipeline(menuai, pipeline.id)
 
 
-async def test_get_pipelines(hass: HomeAssistant) -> None:
+async def test_get_pipelines(menuai: menuai) -> None:
     """Test async_get_pipelines."""
-    assert await async_setup_component(hass, "assist_pipeline", {})
+    assert await async_setup_component(menuai, "assist_pipeline", {})
 
-    pipeline_data: PipelineData = hass.data[DOMAIN]
+    pipeline_data: PipelineData = menuai.data[DOMAIN]
     store = pipeline_data.pipeline_store
     assert len(store.data) == 1
 
-    pipelines = async_get_pipelines(hass)
+    pipelines = async_get_pipelines(menuai)
     assert list(pipelines) == [
         Pipeline(
             conversation_engine="conversation.home_assistant",
             conversation_language="en",
             id=ANY,
             language="en",
-            name="Home Assistant",
+            name="MenuAI",
             stt_engine=None,
             stt_language=None,
             tts_engine=None,
@@ -386,29 +386,29 @@ async def test_get_pipelines(hass: HomeAssistant) -> None:
     ],
 )
 async def test_default_pipeline_no_stt_tts(
-    hass: HomeAssistant,
+    menuai: menuai,
     ha_language: str,
     ha_country: str | None,
     conv_language: str,
     pipeline_language: str,
 ) -> None:
     """Test async_get_pipeline."""
-    hass.config.country = ha_country
-    hass.config.language = ha_language
-    assert await async_setup_component(hass, "assist_pipeline", {})
+    menuai.config.country = ha_country
+    menuai.config.language = ha_language
+    assert await async_setup_component(menuai, "assist_pipeline", {})
 
-    pipeline_data: PipelineData = hass.data[DOMAIN]
+    pipeline_data: PipelineData = menuai.data[DOMAIN]
     store = pipeline_data.pipeline_store
     assert len(store.data) == 1
 
     # Check the default pipeline
-    pipeline = async_get_pipeline(hass, None)
+    pipeline = async_get_pipeline(menuai, None)
     assert pipeline == Pipeline(
         conversation_engine="conversation.home_assistant",
         conversation_language=conv_language,
         id=pipeline.id,
         language=pipeline_language,
-        name="Home Assistant",
+        name="MenuAI",
         stt_engine=None,
         stt_language=None,
         tts_engine=None,
@@ -441,7 +441,7 @@ async def test_default_pipeline_no_stt_tts(
 @pytest.mark.usefixtures("init_supporting_components")
 @pytest.mark.usefixtures("disable_tts_entity")
 async def test_default_pipeline(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_stt_provider_entity: MockSTTProviderEntity,
     mock_tts_provider: MockTTSProvider,
     ha_language: str,
@@ -452,27 +452,27 @@ async def test_default_pipeline(
     tts_language: str,
 ) -> None:
     """Test async_get_pipeline."""
-    hass.config.country = ha_country
-    hass.config.language = ha_language
+    menuai.config.country = ha_country
+    menuai.config.language = ha_language
 
     with (
         patch.object(mock_stt_provider_entity, "_supported_languages", MANY_LANGUAGES),
         patch.object(mock_tts_provider, "_supported_languages", MANY_LANGUAGES),
     ):
-        assert await async_setup_component(hass, "assist_pipeline", {})
+        assert await async_setup_component(menuai, "assist_pipeline", {})
 
-    pipeline_data: PipelineData = hass.data[DOMAIN]
+    pipeline_data: PipelineData = menuai.data[DOMAIN]
     store = pipeline_data.pipeline_store
     assert len(store.data) == 1
 
     # Check the default pipeline
-    pipeline = async_get_pipeline(hass, None)
+    pipeline = async_get_pipeline(menuai, None)
     assert pipeline == Pipeline(
         conversation_engine="conversation.home_assistant",
         conversation_language=conv_language,
         id=pipeline.id,
         language=pipeline_language,
-        name="Home Assistant",
+        name="MenuAI",
         stt_engine="stt.mock_stt",
         stt_language=stt_language,
         tts_engine="test",
@@ -486,24 +486,24 @@ async def test_default_pipeline(
 @pytest.mark.usefixtures("init_supporting_components")
 @pytest.mark.usefixtures("disable_tts_entity")
 async def test_default_pipeline_unsupported_stt_language(
-    hass: HomeAssistant, mock_stt_provider_entity: MockSTTProviderEntity
+    menuai: menuai, mock_stt_provider_entity: MockSTTProviderEntity
 ) -> None:
     """Test async_get_pipeline."""
     with patch.object(mock_stt_provider_entity, "_supported_languages", ["smurfish"]):
-        assert await async_setup_component(hass, "assist_pipeline", {})
+        assert await async_setup_component(menuai, "assist_pipeline", {})
 
-    pipeline_data: PipelineData = hass.data[DOMAIN]
+    pipeline_data: PipelineData = menuai.data[DOMAIN]
     store = pipeline_data.pipeline_store
     assert len(store.data) == 1
 
     # Check the default pipeline
-    pipeline = async_get_pipeline(hass, None)
+    pipeline = async_get_pipeline(menuai, None)
     assert pipeline == Pipeline(
         conversation_engine="conversation.home_assistant",
         conversation_language="en",
         id=pipeline.id,
         language="en",
-        name="Home Assistant",
+        name="MenuAI",
         stt_engine=None,
         stt_language=None,
         tts_engine="test",
@@ -517,24 +517,24 @@ async def test_default_pipeline_unsupported_stt_language(
 @pytest.mark.usefixtures("init_supporting_components")
 @pytest.mark.usefixtures("disable_tts_entity")
 async def test_default_pipeline_unsupported_tts_language(
-    hass: HomeAssistant, mock_tts_provider: MockTTSProvider
+    menuai: menuai, mock_tts_provider: MockTTSProvider
 ) -> None:
     """Test async_get_pipeline."""
     with patch.object(mock_tts_provider, "_supported_languages", ["smurfish"]):
-        assert await async_setup_component(hass, "assist_pipeline", {})
+        assert await async_setup_component(menuai, "assist_pipeline", {})
 
-    pipeline_data: PipelineData = hass.data[DOMAIN]
+    pipeline_data: PipelineData = menuai.data[DOMAIN]
     store = pipeline_data.pipeline_store
     assert len(store.data) == 1
 
     # Check the default pipeline
-    pipeline = async_get_pipeline(hass, None)
+    pipeline = async_get_pipeline(menuai, None)
     assert pipeline == Pipeline(
         conversation_engine="conversation.home_assistant",
         conversation_language="en",
         id=pipeline.id,
         language="en",
-        name="Home Assistant",
+        name="MenuAI",
         stt_engine="stt.mock_stt",
         stt_language="en-US",
         tts_engine=None,
@@ -546,12 +546,12 @@ async def test_default_pipeline_unsupported_tts_language(
 
 
 async def test_update_pipeline(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
+    menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
     """Test async_update_pipeline."""
-    assert await async_setup_component(hass, "assist_pipeline", {})
+    assert await async_setup_component(menuai, "assist_pipeline", {})
 
-    pipelines = async_get_pipelines(hass)
+    pipelines = async_get_pipelines(menuai)
     pipelines = list(pipelines)
     assert pipelines == [
         Pipeline(
@@ -559,7 +559,7 @@ async def test_update_pipeline(
             conversation_language="en",
             id=ANY,
             language="en",
-            name="Home Assistant",
+            name="MenuAI",
             stt_engine=None,
             stt_language=None,
             tts_engine=None,
@@ -572,12 +572,12 @@ async def test_update_pipeline(
 
     pipeline = pipelines[0]
     await async_update_pipeline(
-        hass,
+        menuai,
         pipeline,
-        conversation_engine="homeassistant_1",
+        conversation_engine="menuai_1",
         conversation_language="de",
         language="de",
-        name="Home Assistant 1",
+        name="MenuAI 1",
         stt_engine="stt.test_1",
         stt_language="de",
         tts_engine="test_1",
@@ -587,16 +587,16 @@ async def test_update_pipeline(
         wake_word_id="wake_word_id_1",
     )
 
-    pipelines = async_get_pipelines(hass)
+    pipelines = async_get_pipelines(menuai)
     pipelines = list(pipelines)
     pipeline = pipelines[0]
     assert pipelines == [
         Pipeline(
-            conversation_engine="homeassistant_1",
+            conversation_engine="menuai_1",
             conversation_language="de",
             id=pipeline.id,
             language="de",
-            name="Home Assistant 1",
+            name="MenuAI 1",
             stt_engine="stt.test_1",
             stt_language="de",
             tts_engine="test_1",
@@ -606,13 +606,13 @@ async def test_update_pipeline(
             wake_word_id="wake_word_id_1",
         )
     ]
-    assert len(hass_storage[STORAGE_KEY]["data"]["items"]) == 1
-    assert hass_storage[STORAGE_KEY]["data"]["items"][0] == {
-        "conversation_engine": "homeassistant_1",
+    assert len(menuai_storage[STORAGE_KEY]["data"]["items"]) == 1
+    assert menuai_storage[STORAGE_KEY]["data"]["items"][0] == {
+        "conversation_engine": "menuai_1",
         "conversation_language": "de",
         "id": pipeline.id,
         "language": "de",
-        "name": "Home Assistant 1",
+        "name": "MenuAI 1",
         "stt_engine": "stt.test_1",
         "stt_language": "de",
         "tts_engine": "test_1",
@@ -624,7 +624,7 @@ async def test_update_pipeline(
     }
 
     await async_update_pipeline(
-        hass,
+        menuai,
         pipeline,
         stt_engine="stt.test_2",
         stt_language="en",
@@ -632,15 +632,15 @@ async def test_update_pipeline(
         tts_language="en",
     )
 
-    pipelines = async_get_pipelines(hass)
+    pipelines = async_get_pipelines(menuai)
     pipelines = list(pipelines)
     assert pipelines == [
         Pipeline(
-            conversation_engine="homeassistant_1",
+            conversation_engine="menuai_1",
             conversation_language="de",
             id=pipeline.id,
             language="de",
-            name="Home Assistant 1",
+            name="MenuAI 1",
             stt_engine="stt.test_2",
             stt_language="en",
             tts_engine="test_2",
@@ -650,13 +650,13 @@ async def test_update_pipeline(
             wake_word_id="wake_word_id_1",
         )
     ]
-    assert len(hass_storage[STORAGE_KEY]["data"]["items"]) == 1
-    assert hass_storage[STORAGE_KEY]["data"]["items"][0] == {
-        "conversation_engine": "homeassistant_1",
+    assert len(menuai_storage[STORAGE_KEY]["data"]["items"]) == 1
+    assert menuai_storage[STORAGE_KEY]["data"]["items"][0] == {
+        "conversation_engine": "menuai_1",
         "conversation_language": "de",
         "id": pipeline.id,
         "language": "de",
-        "name": "Home Assistant 1",
+        "name": "MenuAI 1",
         "stt_engine": "stt.test_2",
         "stt_language": "en",
         "tts_engine": "test_2",
@@ -669,17 +669,17 @@ async def test_update_pipeline(
 
 
 @pytest.mark.usefixtures("init_supporting_components")
-async def test_migrate_after_load(hass: HomeAssistant) -> None:
+async def test_migrate_after_load(menuai: menuai) -> None:
     """Test migrating an engine after done loading."""
-    assert await async_setup_component(hass, "assist_pipeline", {})
+    assert await async_setup_component(menuai, "assist_pipeline", {})
 
-    pipeline_data: PipelineData = hass.data[DOMAIN]
+    pipeline_data: PipelineData = menuai.data[DOMAIN]
     store = pipeline_data.pipeline_store
     assert len(store.data) == 1
 
     assert (
         await async_create_default_pipeline(
-            hass,
+            menuai,
             stt_engine_id="bla",
             tts_engine_id="bla",
             pipeline_name="Bla pipeline",
@@ -687,19 +687,19 @@ async def test_migrate_after_load(hass: HomeAssistant) -> None:
         is None
     )
     pipeline = await async_create_default_pipeline(
-        hass,
+        menuai,
         stt_engine_id="test",
         tts_engine_id="test",
         pipeline_name="Test pipeline",
     )
     assert pipeline is not None
 
-    async_migrate_engine(hass, "stt", "test", "stt.test")
-    async_migrate_engine(hass, "tts", "test", "tts.test")
+    async_migrate_engine(menuai, "stt", "test", "stt.test")
+    async_migrate_engine(menuai, "tts", "test", "tts.test")
 
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    pipeline_updated = async_get_pipeline(hass, pipeline.id)
+    pipeline_updated = async_get_pipeline(menuai, pipeline.id)
 
     assert pipeline_updated.stt_engine == "stt.test"
     assert pipeline_updated.tts_engine == "tts.test"
@@ -743,7 +743,7 @@ def test_fallback_intent_filter() -> None:
 
 
 async def test_wake_word_detection_aborted(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_stt_provider: MockSTTProvider,
     mock_wake_word_provider_entity: MockWakeWordEntity,
     init_components,
@@ -764,7 +764,7 @@ async def test_wake_word_detection_aborted(
 
     pipeline_store = pipeline_data.pipeline_store
     pipeline_id = pipeline_store.async_get_preferred_item()
-    pipeline = assist_pipeline.pipeline.async_get_pipeline(hass, pipeline_id)
+    pipeline = assist_pipeline.pipeline.async_get_pipeline(menuai, pipeline_id)
 
     pipeline_input = assist_pipeline.pipeline.PipelineInput(
         session=mock_chat_session,
@@ -779,7 +779,7 @@ async def test_wake_word_detection_aborted(
         ),
         stt_stream=audio_data(),
         run=assist_pipeline.pipeline.PipelineRun(
-            hass,
+            menuai,
             context=Context(),
             pipeline=pipeline,
             start_stage=assist_pipeline.PipelineStage.WAKE_WORD,
@@ -805,15 +805,15 @@ async def test_wake_word_detection_aborted(
     assert process_events(events) == snapshot
 
 
-def test_pipeline_run_equality(hass: HomeAssistant, init_components) -> None:
+def test_pipeline_run_equality(menuai: menuai, init_components) -> None:
     """Test that pipeline run equality uses unique id."""
 
     def event_callback(event):
         pass
 
-    pipeline = assist_pipeline.pipeline.async_get_pipeline(hass)
+    pipeline = assist_pipeline.pipeline.async_get_pipeline(menuai)
     run_1 = assist_pipeline.pipeline.PipelineRun(
-        hass,
+        menuai,
         context=Context(),
         pipeline=pipeline,
         start_stage=assist_pipeline.PipelineStage.STT,
@@ -821,7 +821,7 @@ def test_pipeline_run_equality(hass: HomeAssistant, init_components) -> None:
         event_callback=event_callback,
     )
     run_2 = assist_pipeline.pipeline.PipelineRun(
-        hass,
+        menuai,
         context=Context(),
         pipeline=pipeline,
         start_stage=assist_pipeline.PipelineStage.STT,
@@ -835,8 +835,8 @@ def test_pipeline_run_equality(hass: HomeAssistant, init_components) -> None:
 
 
 async def test_tts_audio_output(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     mock_tts_entity: MockTTSProvider,
     init_components,
     pipeline_data: assist_pipeline.pipeline.PipelineData,
@@ -844,21 +844,21 @@ async def test_tts_audio_output(
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test using tts_audio_output with wav sets options correctly."""
-    client = await hass_client()
-    assert await async_setup_component(hass, media_source.DOMAIN, {})
+    client = await menuai_client()
+    assert await async_setup_component(menuai, media_source.DOMAIN, {})
 
     events: list[assist_pipeline.PipelineEvent] = []
 
     pipeline_store = pipeline_data.pipeline_store
     pipeline_id = pipeline_store.async_get_preferred_item()
-    pipeline = assist_pipeline.pipeline.async_get_pipeline(hass, pipeline_id)
+    pipeline = assist_pipeline.pipeline.async_get_pipeline(menuai, pipeline_id)
 
     pipeline_input = assist_pipeline.pipeline.PipelineInput(
         tts_input="This is a test.",
         session=mock_chat_session,
         device_id=None,
         run=assist_pipeline.pipeline.PipelineRun(
-            hass,
+            menuai,
             context=Context(),
             pipeline=pipeline,
             start_stage=assist_pipeline.PipelineStage.TTS,
@@ -898,29 +898,29 @@ async def test_tts_audio_output(
 
 
 async def test_tts_wav_preferred_format(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     mock_tts_entity: MockTTSEntity,
     init_components,
     mock_chat_session: chat_session.ChatSession,
     pipeline_data: assist_pipeline.pipeline.PipelineData,
 ) -> None:
     """Test that preferred format options are given to the TTS system if supported."""
-    client = await hass_client()
-    assert await async_setup_component(hass, media_source.DOMAIN, {})
+    client = await menuai_client()
+    assert await async_setup_component(menuai, media_source.DOMAIN, {})
 
     events: list[assist_pipeline.PipelineEvent] = []
 
     pipeline_store = pipeline_data.pipeline_store
     pipeline_id = pipeline_store.async_get_preferred_item()
-    pipeline = assist_pipeline.pipeline.async_get_pipeline(hass, pipeline_id)
+    pipeline = assist_pipeline.pipeline.async_get_pipeline(menuai, pipeline_id)
 
     pipeline_input = assist_pipeline.pipeline.PipelineInput(
         tts_input="This is a test.",
         session=mock_chat_session,
         device_id=None,
         run=assist_pipeline.pipeline.PipelineRun(
-            hass,
+            menuai,
             context=Context(),
             pipeline=pipeline,
             start_stage=assist_pipeline.PipelineStage.TTS,
@@ -965,29 +965,29 @@ async def test_tts_wav_preferred_format(
 
 
 async def test_tts_dict_preferred_format(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     mock_tts_entity: MockTTSEntity,
     init_components,
     mock_chat_session: chat_session.ChatSession,
     pipeline_data: assist_pipeline.pipeline.PipelineData,
 ) -> None:
     """Test that preferred format options are given to the TTS system if supported."""
-    client = await hass_client()
-    assert await async_setup_component(hass, media_source.DOMAIN, {})
+    client = await menuai_client()
+    assert await async_setup_component(menuai, media_source.DOMAIN, {})
 
     events: list[assist_pipeline.PipelineEvent] = []
 
     pipeline_store = pipeline_data.pipeline_store
     pipeline_id = pipeline_store.async_get_preferred_item()
-    pipeline = assist_pipeline.pipeline.async_get_pipeline(hass, pipeline_id)
+    pipeline = assist_pipeline.pipeline.async_get_pipeline(menuai, pipeline_id)
 
     pipeline_input = assist_pipeline.pipeline.PipelineInput(
         tts_input="This is a test.",
         session=mock_chat_session,
         device_id=None,
         run=assist_pipeline.pipeline.PipelineRun(
-            hass,
+            menuai,
             context=Context(),
             pipeline=pipeline,
             start_stage=assist_pipeline.PipelineStage.TTS,
@@ -1037,14 +1037,14 @@ async def test_tts_dict_preferred_format(
 
 
 async def test_sentence_trigger_overrides_conversation_agent(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_components,
     mock_chat_session: chat_session.ChatSession,
     pipeline_data: assist_pipeline.pipeline.PipelineData,
 ) -> None:
     """Test that sentence triggers are checked before a non-default conversation agent."""
     assert await async_setup_component(
-        hass,
+        menuai,
         "automation",
         {
             "automation": {
@@ -1065,13 +1065,13 @@ async def test_sentence_trigger_overrides_conversation_agent(
 
     pipeline_store = pipeline_data.pipeline_store
     pipeline_id = pipeline_store.async_get_preferred_item()
-    pipeline = assist_pipeline.pipeline.async_get_pipeline(hass, pipeline_id)
+    pipeline = assist_pipeline.pipeline.async_get_pipeline(menuai, pipeline_id)
 
     pipeline_input = assist_pipeline.pipeline.PipelineInput(
         intent_input="test trigger sentence",
         session=mock_chat_session,
         run=assist_pipeline.pipeline.PipelineRun(
-            hass,
+            menuai,
             context=Context(),
             pipeline=pipeline,
             start_stage=assist_pipeline.PipelineStage.INTENT,
@@ -1083,7 +1083,7 @@ async def test_sentence_trigger_overrides_conversation_agent(
 
     # Ensure prepare succeeds
     with patch(
-        "homeassistant.components.assist_pipeline.pipeline.conversation.async_get_agent_info",
+        "menuai.components.assist_pipeline.pipeline.conversation.async_get_agent_info",
         return_value=conversation.AgentInfo(
             id="test-agent",
             name="Test Agent",
@@ -1093,7 +1093,7 @@ async def test_sentence_trigger_overrides_conversation_agent(
         await pipeline_input.validate()
 
     with patch(
-        "homeassistant.components.assist_pipeline.pipeline.conversation.async_converse"
+        "menuai.components.assist_pipeline.pipeline.conversation.async_converse"
     ) as mock_async_converse:
         await pipeline_input.execute()
 
@@ -1119,7 +1119,7 @@ async def test_sentence_trigger_overrides_conversation_agent(
 
 
 async def test_prefer_local_intents(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_components,
     mock_chat_session: chat_session.ChatSession,
     pipeline_data: assist_pipeline.pipeline.PipelineData,
@@ -1139,22 +1139,22 @@ async def test_prefer_local_intents(
             return response
 
     handler = OrderBeerIntentHandler()
-    intent.async_register(hass, handler)
+    intent.async_register(menuai, handler)
 
     # Fake a test agent and prefer local intents
     pipeline_store = pipeline_data.pipeline_store
     pipeline_id = pipeline_store.async_get_preferred_item()
-    pipeline = assist_pipeline.pipeline.async_get_pipeline(hass, pipeline_id)
+    pipeline = assist_pipeline.pipeline.async_get_pipeline(menuai, pipeline_id)
     await assist_pipeline.pipeline.async_update_pipeline(
-        hass, pipeline, conversation_engine="test-agent", prefer_local_intents=True
+        menuai, pipeline, conversation_engine="test-agent", prefer_local_intents=True
     )
-    pipeline = assist_pipeline.pipeline.async_get_pipeline(hass, pipeline_id)
+    pipeline = assist_pipeline.pipeline.async_get_pipeline(menuai, pipeline_id)
 
     pipeline_input = assist_pipeline.pipeline.PipelineInput(
         intent_input="I'd like to order a stout please",
         session=mock_chat_session,
         run=assist_pipeline.pipeline.PipelineRun(
-            hass,
+            menuai,
             context=Context(),
             pipeline=pipeline,
             start_stage=assist_pipeline.PipelineStage.INTENT,
@@ -1165,7 +1165,7 @@ async def test_prefer_local_intents(
 
     # Ensure prepare succeeds
     with patch(
-        "homeassistant.components.assist_pipeline.pipeline.conversation.async_get_agent_info",
+        "menuai.components.assist_pipeline.pipeline.conversation.async_get_agent_info",
         return_value=conversation.AgentInfo(
             id="test-agent",
             name="Test Agent",
@@ -1175,7 +1175,7 @@ async def test_prefer_local_intents(
         await pipeline_input.validate()
 
     with patch(
-        "homeassistant.components.assist_pipeline.pipeline.conversation.async_converse"
+        "menuai.components.assist_pipeline.pipeline.conversation.async_converse"
     ) as mock_async_converse:
         await pipeline_input.execute()
 
@@ -1201,7 +1201,7 @@ async def test_prefer_local_intents(
 
 
 async def test_intent_continue_conversation(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_components,
     mock_chat_session: chat_session.ChatSession,
     pipeline_data: assist_pipeline.pipeline.PipelineData,
@@ -1212,17 +1212,17 @@ async def test_intent_continue_conversation(
     # Fake a test agent and prefer local intents
     pipeline_store = pipeline_data.pipeline_store
     pipeline_id = pipeline_store.async_get_preferred_item()
-    pipeline = assist_pipeline.pipeline.async_get_pipeline(hass, pipeline_id)
+    pipeline = assist_pipeline.pipeline.async_get_pipeline(menuai, pipeline_id)
     await assist_pipeline.pipeline.async_update_pipeline(
-        hass, pipeline, conversation_engine="test-agent"
+        menuai, pipeline, conversation_engine="test-agent"
     )
-    pipeline = assist_pipeline.pipeline.async_get_pipeline(hass, pipeline_id)
+    pipeline = assist_pipeline.pipeline.async_get_pipeline(menuai, pipeline_id)
 
     pipeline_input = assist_pipeline.pipeline.PipelineInput(
         intent_input="Set a timer",
         session=mock_chat_session,
         run=assist_pipeline.pipeline.PipelineRun(
-            hass,
+            menuai,
             context=Context(),
             pipeline=pipeline,
             start_stage=assist_pipeline.PipelineStage.INTENT,
@@ -1233,7 +1233,7 @@ async def test_intent_continue_conversation(
 
     # Ensure prepare succeeds
     with patch(
-        "homeassistant.components.assist_pipeline.pipeline.conversation.async_get_agent_info",
+        "menuai.components.assist_pipeline.pipeline.conversation.async_get_agent_info",
         return_value=conversation.AgentInfo(
             id="test-agent",
             name="Test Agent",
@@ -1246,7 +1246,7 @@ async def test_intent_continue_conversation(
     response.async_set_speech("For how long?")
 
     with patch(
-        "homeassistant.components.assist_pipeline.pipeline.conversation.async_converse",
+        "menuai.components.assist_pipeline.pipeline.conversation.async_converse",
         return_value=conversation.ConversationResult(
             response=response,
             conversation_id=mock_chat_session.conversation_id,
@@ -1270,11 +1270,11 @@ async def test_intent_continue_conversation(
 
     # Change conversation agent to default one and register sentence trigger that should not be called
     await assist_pipeline.pipeline.async_update_pipeline(
-        hass, pipeline, conversation_engine=None
+        menuai, pipeline, conversation_engine=None
     )
-    pipeline = assist_pipeline.pipeline.async_get_pipeline(hass, pipeline_id)
+    pipeline = assist_pipeline.pipeline.async_get_pipeline(menuai, pipeline_id)
     assert await async_setup_component(
-        hass,
+        menuai,
         "automation",
         {
             "automation": {
@@ -1296,7 +1296,7 @@ async def test_intent_continue_conversation(
         intent_input="Hello",
         session=mock_chat_session,
         run=assist_pipeline.pipeline.PipelineRun(
-            hass,
+            menuai,
             context=Context(),
             pipeline=pipeline,
             start_stage=assist_pipeline.PipelineStage.INTENT,
@@ -1307,7 +1307,7 @@ async def test_intent_continue_conversation(
 
     # Ensure prepare succeeds
     with patch(
-        "homeassistant.components.assist_pipeline.pipeline.conversation.async_get_agent_info",
+        "menuai.components.assist_pipeline.pipeline.conversation.async_get_agent_info",
         return_value=conversation.AgentInfo(
             id="test-agent",
             name="Test Agent",
@@ -1323,7 +1323,7 @@ async def test_intent_continue_conversation(
     response.async_set_speech("Timer set for 20 minutes")
 
     with patch(
-        "homeassistant.components.assist_pipeline.pipeline.conversation.async_converse",
+        "menuai.components.assist_pipeline.pipeline.conversation.async_converse",
         return_value=conversation.ConversationResult(
             response=response,
             conversation_id=mock_chat_session.conversation_id,
@@ -1348,21 +1348,21 @@ async def test_intent_continue_conversation(
 
 
 async def test_stt_language_used_instead_of_conversation_language(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     init_components,
     mock_chat_session: chat_session.ChatSession,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test that the STT language is used first when the conversation language is '*' (all languages)."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     events: list[assist_pipeline.PipelineEvent] = []
 
     await client.send_json_auto_id(
         {
             "type": "assist_pipeline/pipeline/create",
-            "conversation_engine": "homeassistant",
+            "conversation_engine": "menuai",
             "conversation_language": MATCH_ALL,
             "language": "en",
             "name": "test_name",
@@ -1378,13 +1378,13 @@ async def test_stt_language_used_instead_of_conversation_language(
     msg = await client.receive_json()
     assert msg["success"]
     pipeline_id = msg["result"]["id"]
-    pipeline = assist_pipeline.async_get_pipeline(hass, pipeline_id)
+    pipeline = assist_pipeline.async_get_pipeline(menuai, pipeline_id)
 
     pipeline_input = assist_pipeline.pipeline.PipelineInput(
         intent_input="test input",
         session=mock_chat_session,
         run=assist_pipeline.pipeline.PipelineRun(
-            hass,
+            menuai,
             context=Context(),
             pipeline=pipeline,
             start_stage=assist_pipeline.PipelineStage.INTENT,
@@ -1395,7 +1395,7 @@ async def test_stt_language_used_instead_of_conversation_language(
     await pipeline_input.validate()
 
     with patch(
-        "homeassistant.components.assist_pipeline.pipeline.conversation.async_converse",
+        "menuai.components.assist_pipeline.pipeline.conversation.async_converse",
         return_value=conversation.ConversationResult(
             intent.IntentResponse(pipeline.language)
         ),
@@ -1424,21 +1424,21 @@ async def test_stt_language_used_instead_of_conversation_language(
 
 
 async def test_tts_language_used_instead_of_conversation_language(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     init_components,
     mock_chat_session: chat_session.ChatSession,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test that the TTS language is used after STT when the conversation language is '*' (all languages)."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     events: list[assist_pipeline.PipelineEvent] = []
 
     await client.send_json_auto_id(
         {
             "type": "assist_pipeline/pipeline/create",
-            "conversation_engine": "homeassistant",
+            "conversation_engine": "menuai",
             "conversation_language": MATCH_ALL,
             "language": "en",
             "name": "test_name",
@@ -1454,13 +1454,13 @@ async def test_tts_language_used_instead_of_conversation_language(
     msg = await client.receive_json()
     assert msg["success"]
     pipeline_id = msg["result"]["id"]
-    pipeline = assist_pipeline.async_get_pipeline(hass, pipeline_id)
+    pipeline = assist_pipeline.async_get_pipeline(menuai, pipeline_id)
 
     pipeline_input = assist_pipeline.pipeline.PipelineInput(
         intent_input="test input",
         session=mock_chat_session,
         run=assist_pipeline.pipeline.PipelineRun(
-            hass,
+            menuai,
             context=Context(),
             pipeline=pipeline,
             start_stage=assist_pipeline.PipelineStage.INTENT,
@@ -1471,7 +1471,7 @@ async def test_tts_language_used_instead_of_conversation_language(
     await pipeline_input.validate()
 
     with patch(
-        "homeassistant.components.assist_pipeline.pipeline.conversation.async_converse",
+        "menuai.components.assist_pipeline.pipeline.conversation.async_converse",
         return_value=conversation.ConversationResult(
             intent.IntentResponse(pipeline.language)
         ),
@@ -1500,21 +1500,21 @@ async def test_tts_language_used_instead_of_conversation_language(
 
 
 async def test_pipeline_language_used_instead_of_conversation_language(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     init_components,
     mock_chat_session: chat_session.ChatSession,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test that the pipeline language is used last when the conversation language is '*' (all languages)."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     events: list[assist_pipeline.PipelineEvent] = []
 
     await client.send_json_auto_id(
         {
             "type": "assist_pipeline/pipeline/create",
-            "conversation_engine": "homeassistant",
+            "conversation_engine": "menuai",
             "conversation_language": MATCH_ALL,
             "language": "en",
             "name": "test_name",
@@ -1530,13 +1530,13 @@ async def test_pipeline_language_used_instead_of_conversation_language(
     msg = await client.receive_json()
     assert msg["success"]
     pipeline_id = msg["result"]["id"]
-    pipeline = assist_pipeline.async_get_pipeline(hass, pipeline_id)
+    pipeline = assist_pipeline.async_get_pipeline(menuai, pipeline_id)
 
     pipeline_input = assist_pipeline.pipeline.PipelineInput(
         intent_input="test input",
         session=mock_chat_session,
         run=assist_pipeline.pipeline.PipelineRun(
-            hass,
+            menuai,
             context=Context(),
             pipeline=pipeline,
             start_stage=assist_pipeline.PipelineStage.INTENT,
@@ -1547,7 +1547,7 @@ async def test_pipeline_language_used_instead_of_conversation_language(
     await pipeline_input.validate()
 
     with patch(
-        "homeassistant.components.assist_pipeline.pipeline.conversation.async_converse",
+        "menuai.components.assist_pipeline.pipeline.conversation.async_converse",
         return_value=conversation.ConversationResult(
             intent.IntentResponse(pipeline.language)
         ),
@@ -1660,8 +1660,8 @@ async def test_pipeline_language_used_instead_of_conversation_language(
     ],
 )
 async def test_chat_log_tts_streaming(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     init_components,
     mock_chat_session: chat_session.ChatSession,
     snapshot: SnapshotAssertion,
@@ -1683,17 +1683,17 @@ async def test_chat_log_tts_streaming(
 
     pipeline_store = pipeline_data.pipeline_store
     pipeline_id = pipeline_store.async_get_preferred_item()
-    pipeline = assist_pipeline.pipeline.async_get_pipeline(hass, pipeline_id)
+    pipeline = assist_pipeline.pipeline.async_get_pipeline(menuai, pipeline_id)
     await assist_pipeline.pipeline.async_update_pipeline(
-        hass, pipeline, conversation_engine="test-agent"
+        menuai, pipeline, conversation_engine="test-agent"
     )
-    pipeline = assist_pipeline.pipeline.async_get_pipeline(hass, pipeline_id)
+    pipeline = assist_pipeline.pipeline.async_get_pipeline(menuai, pipeline_id)
 
     pipeline_input = assist_pipeline.pipeline.PipelineInput(
         intent_input="Set a timer",
         session=mock_chat_session,
         run=assist_pipeline.pipeline.PipelineRun(
-            hass,
+            menuai,
             context=Context(),
             pipeline=pipeline,
             start_stage=assist_pipeline.PipelineStage.INTENT,
@@ -1732,7 +1732,7 @@ async def test_chat_log_tts_streaming(
     mock_tts_entity.async_supports_streaming_input = Mock(return_value=True)
 
     with patch(
-        "homeassistant.components.assist_pipeline.pipeline.conversation.async_get_agent_info",
+        "menuai.components.assist_pipeline.pipeline.conversation.async_get_agent_info",
         return_value=conversation.AgentInfo(
             id="test-agent",
             name="Test Agent",
@@ -1742,7 +1742,7 @@ async def test_chat_log_tts_streaming(
         await pipeline_input.validate()
 
     async def mock_converse(
-        hass: HomeAssistant,
+        menuai: menuai,
         text: str,
         conversation_id: str | None,
         context: Context,
@@ -1772,9 +1772,9 @@ async def test_chat_log_tts_streaming(
                         yield {"content": chunk}
 
         with (
-            chat_session.async_get_chat_session(hass, conversation_id) as session,
+            chat_session.async_get_chat_session(menuai, conversation_id) as session,
             conversation.async_get_chat_log(
-                hass,
+                menuai,
                 session,
                 conversation_input,
             ) as chat_log,
@@ -1782,7 +1782,7 @@ async def test_chat_log_tts_streaming(
             await chat_log.async_update_llm_data(
                 conversing_domain="test",
                 user_input=conversation_input,
-                user_llm_hass_api="assist",
+                user_llm_menuai_api="assist",
                 user_llm_prompt=None,
             )
             async for _content in chat_log.async_add_delta_content_stream(
@@ -1805,17 +1805,17 @@ async def test_chat_log_tts_streaming(
 
     with (
         patch(
-            "homeassistant.helpers.llm.AssistAPI._async_get_tools",
+            "menuai.helpers.llm.AssistAPI._async_get_tools",
             return_value=[mock_tool],
         ),
         patch(
-            "homeassistant.components.assist_pipeline.pipeline.conversation.async_converse",
+            "menuai.components.assist_pipeline.pipeline.conversation.async_converse",
             mock_converse,
         ),
     ):
         await pipeline_input.execute()
 
-    stream = tts.async_get_stream(hass, events[0].data["tts_output"]["token"])
+    stream = tts.async_get_stream(menuai, events[0].data["tts_output"]["token"])
     assert stream is not None
     tts_result = "".join(
         [chunk.decode() async for chunk in stream.async_stream_result()]

@@ -10,8 +10,8 @@ from pysmlight.sse import MessageEvent
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.smlight.const import DOMAIN, SCAN_FIRMWARE_INTERVAL
-from homeassistant.components.update import (
+from menuai.components.smlight.const import DOMAIN, SCAN_FIRMWARE_INTERVAL
+from menuai.components.update import (
     ATTR_IN_PROGRESS,
     ATTR_INSTALLED_VERSION,
     ATTR_LATEST_VERSION,
@@ -19,10 +19,10 @@ from homeassistant.components.update import (
     DOMAIN as PLATFORM,
     SERVICE_INSTALL,
 )
-from homeassistant.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON, Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
 
 from . import get_mock_event_function
 from .conftest import setup_integration
@@ -83,36 +83,36 @@ def platforms() -> list[Platform]:
 
 
 async def test_update_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test setup of SMLIGHT update entities."""
-    entry = await setup_integration(hass, mock_config_entry)
+    entry = await setup_integration(menuai, mock_config_entry)
 
-    await snapshot_platform(hass, entity_registry, snapshot, entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, entry.entry_id)
 
-    await hass.config_entries.async_unload(entry.entry_id)
+    await menuai.config_entries.async_unload(entry.entry_id)
 
 
-@patch("homeassistant.components.smlight.update.asyncio.sleep", return_value=None)
+@patch("menuai.components.smlight.update.asyncio.sleep", return_value=None)
 async def test_update_firmware(
     mock_sleep: MagicMock,
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     mock_config_entry: MockConfigEntry,
     mock_smlight_client: MagicMock,
 ) -> None:
     """Test firmware updates."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
     entity_id = "update.mock_title_core_firmware"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_ON
     assert state.attributes[ATTR_INSTALLED_VERSION] == "v2.3.6"
     assert state.attributes[ATTR_LATEST_VERSION] == "v2.7.5"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         PLATFORM,
         SERVICE_INSTALL,
         {ATTR_ENTITY_ID: entity_id},
@@ -124,7 +124,7 @@ async def test_update_firmware(
     event_function = get_mock_event_function(mock_smlight_client, SmEvents.ZB_FW_prgs)
 
     event_function(MOCK_FIRMWARE_PROGRESS)
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.attributes[ATTR_IN_PROGRESS] is True
     assert state.attributes[ATTR_UPDATE_PERCENTAGE] == 50
 
@@ -138,35 +138,35 @@ async def test_update_firmware(
     )
 
     freezer.tick(timedelta(seconds=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_INSTALLED_VERSION] == "v2.7.5"
     assert state.attributes[ATTR_LATEST_VERSION] == "v2.7.5"
 
 
 async def test_update_zigbee2_firmware(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     mock_config_entry: MockConfigEntry,
     mock_smlight_client: MagicMock,
 ) -> None:
     """Test update of zigbee2 firmware where available."""
     mock_info = Info.from_dict(
-        await async_load_json_object_fixture(hass, "info-MR1.json", DOMAIN)
+        await async_load_json_object_fixture(menuai, "info-MR1.json", DOMAIN)
     )
     mock_smlight_client.get_info.side_effect = None
     mock_smlight_client.get_info.return_value = mock_info
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
     entity_id = "update.mock_title_zigbee_firmware_2"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_ON
     assert state.attributes[ATTR_INSTALLED_VERSION] == "20240314"
     assert state.attributes[ATTR_LATEST_VERSION] == "20240716"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         PLATFORM,
         SERVICE_INSTALL,
         {ATTR_ENTITY_ID: entity_id},
@@ -182,17 +182,17 @@ async def test_update_zigbee2_firmware(
     mock_info.radios[1] = MOCK_RADIO
 
     freezer.tick(timedelta(seconds=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_INSTALLED_VERSION] == "20240716"
     assert state.attributes[ATTR_LATEST_VERSION] == "20240716"
 
 
 async def test_update_legacy_firmware_v2(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     mock_config_entry: MockConfigEntry,
     mock_smlight_client: MagicMock,
@@ -204,14 +204,14 @@ async def test_update_legacy_firmware_v2(
         legacy_api=1,
         MAC="AA:BB:CC:DD:EE:FF",
     )
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
     entity_id = "update.mock_title_core_firmware"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_ON
     assert state.attributes[ATTR_INSTALLED_VERSION] == "v2.0.18"
     assert state.attributes[ATTR_LATEST_VERSION] == "v2.7.5"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         PLATFORM,
         SERVICE_INSTALL,
         {ATTR_ENTITY_ID: entity_id},
@@ -230,29 +230,29 @@ async def test_update_legacy_firmware_v2(
     )
 
     freezer.tick(SCAN_FIRMWARE_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_INSTALLED_VERSION] == "v2.7.5"
     assert state.attributes[ATTR_LATEST_VERSION] == "v2.7.5"
 
 
 async def test_update_firmware_failed(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_smlight_client: MagicMock,
 ) -> None:
     """Test firmware updates."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
     entity_id = "update.mock_title_core_firmware"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_ON
     assert state.attributes[ATTR_INSTALLED_VERSION] == "v2.3.6"
     assert state.attributes[ATTR_LATEST_VERSION] == "v2.7.5"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         PLATFORM,
         SERVICE_INSTALL,
         {ATTR_ENTITY_ID: entity_id},
@@ -266,40 +266,40 @@ async def test_update_firmware_failed(
     async def _call_event_function(event: MessageEvent):
         event_function(event)
 
-    with pytest.raises(HomeAssistantError):
+    with pytest.raises(menuaiError):
         await _call_event_function(MOCK_FIRMWARE_FAIL)
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.attributes[ATTR_IN_PROGRESS] is False
     assert state.attributes[ATTR_UPDATE_PERCENTAGE] is None
 
 
-@patch("homeassistant.components.smlight.const.LOGGER.warning")
+@patch("menuai.components.smlight.const.LOGGER.warning")
 async def test_update_reboot_timeout(
     mock_warning: MagicMock,
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     mock_config_entry: MockConfigEntry,
     mock_smlight_client: MagicMock,
 ) -> None:
     """Test firmware updates."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
     entity_id = "update.mock_title_core_firmware"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_ON
     assert state.attributes[ATTR_INSTALLED_VERSION] == "v2.3.6"
     assert state.attributes[ATTR_LATEST_VERSION] == "v2.7.5"
 
     with (
         patch(
-            "homeassistant.components.smlight.update.asyncio.timeout",
+            "menuai.components.smlight.update.asyncio.timeout",
             side_effect=TimeoutError,
         ),
         patch(
-            "homeassistant.components.smlight.update.asyncio.sleep",
+            "menuai.components.smlight.update.asyncio.sleep",
             return_value=None,
         ),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             PLATFORM,
             SERVICE_INSTALL,
             {ATTR_ENTITY_ID: entity_id},
@@ -315,8 +315,8 @@ async def test_update_reboot_timeout(
         event_function(MOCK_FIRMWARE_DONE)
 
         freezer.tick(timedelta(seconds=5))
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done()
 
         mock_warning.assert_called_once()
 
@@ -330,23 +330,23 @@ async def test_update_reboot_timeout(
     ],
 )
 async def test_update_release_notes(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_id: str,
     freezer: FrozenDateTimeFactory,
     mock_config_entry: MockConfigEntry,
     mock_smlight_client: MagicMock,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test firmware release notes."""
     mock_smlight_client.get_info.side_effect = None
     mock_smlight_client.get_info.return_value = Info.from_dict(
-        await async_load_json_object_fixture(hass, "info-MR1.json", DOMAIN)
+        await async_load_json_object_fixture(menuai, "info-MR1.json", DOMAIN)
     )
-    await setup_integration(hass, mock_config_entry)
-    ws_client = await hass_ws_client(hass)
-    await hass.async_block_till_done()
+    await setup_integration(menuai, mock_config_entry)
+    ws_client = await menuai_ws_client(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_ON
 
@@ -362,10 +362,10 @@ async def test_update_release_notes(
 
 
 async def test_update_blank_release_notes(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_smlight_client: MagicMock,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test firmware missing release notes."""
 
@@ -373,11 +373,11 @@ async def test_update_blank_release_notes(
     mock_smlight_client.get_firmware_version.side_effect = None
     mock_smlight_client.get_firmware_version.return_value = MOCK_FIRMWARE_NOTES
 
-    await setup_integration(hass, mock_config_entry)
-    ws_client = await hass_ws_client(hass)
-    await hass.async_block_till_done()
+    await setup_integration(menuai, mock_config_entry)
+    ws_client = await menuai_ws_client(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_ON
 
@@ -389,5 +389,5 @@ async def test_update_blank_release_notes(
         }
     )
     result = await ws_client.receive_json()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["result"] is None

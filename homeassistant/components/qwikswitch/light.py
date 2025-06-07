@@ -2,17 +2,17 @@
 
 from __future__ import annotations
 
-from homeassistant.components.light import ColorMode, LightEntity
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.light import ColorMode, LightEntity
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import DOMAIN
 from .entity import QSToggleEntity
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     _: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -21,7 +21,7 @@ async def async_setup_platform(
     if discovery_info is None:
         return
 
-    qsusb = hass.data[DOMAIN]
+    qsusb = menuai.data[DOMAIN]
     devs = [QSLight(qsid, qsusb) for qsid in discovery_info[DOMAIN]]
     add_entities(devs)
 

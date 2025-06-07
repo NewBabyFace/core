@@ -4,19 +4,19 @@ from __future__ import annotations
 
 from boschshcpy import SHCDevice, SHCIntrusionSystem
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity
 
 from .const import DOMAIN
 
 
 async def async_remove_devices(
-    hass: HomeAssistant, entity: SHCBaseEntity, entry_id: str
+    menuai: menuai, entity: SHCBaseEntity, entry_id: str
 ) -> None:
     """Get item that is removed from session."""
-    dev_registry = dr.async_get(hass)
+    dev_registry = dr.async_get(menuai)
     device = dev_registry.async_get_device(identifiers={(DOMAIN, entity.device_id)})
     if device is not None:
         dev_registry.async_update_device(device.id, remove_config_entry_id=entry_id)
@@ -35,21 +35,21 @@ class SHCBaseEntity(Entity):
         self._device = device
         self._entry_id = entry_id
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to SHC events."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         def on_state_changed() -> None:
             if self._device.deleted:
-                self.hass.add_job(async_remove_devices(self.hass, self, self._entry_id))
+                self.menuai.add_job(async_remove_devices(self.menuai, self, self._entry_id))
             else:
                 self.schedule_update_ha_state()
 
         self._device.subscribe_callback(self.entity_id, on_state_changed)
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Unsubscribe from SHC events."""
-        await super().async_will_remove_from_hass()
+        await super().async_will_remove_from_menuai()
         self._device.unsubscribe_callback(self.entity_id)
 
     @property
@@ -78,9 +78,9 @@ class SHCEntity(SHCBaseEntity):
         )
         super().__init__(device=device, parent_id=parent_id, entry_id=entry_id)
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to SHC events."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         def on_state_changed() -> None:
             self.schedule_update_ha_state()
@@ -88,9 +88,9 @@ class SHCEntity(SHCBaseEntity):
         for service in self._device.device_services:
             service.subscribe_callback(self.entity_id, on_state_changed)
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Unsubscribe from SHC events."""
-        await super().async_will_remove_from_hass()
+        await super().async_will_remove_from_menuai()
         for service in self._device.device_services:
             service.unsubscribe_callback(self.entity_id)
 

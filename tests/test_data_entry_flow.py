@@ -8,10 +8,10 @@ from unittest.mock import Mock, patch
 import pytest
 import voluptuous as vol
 
-from homeassistant import config_entries, data_entry_flow
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.util.decorator import Registry
+from menuai import config_entries, data_entry_flow
+from menuai.core import Event, menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.util.decorator import Registry
 
 from .common import async_capture_events
 
@@ -365,7 +365,7 @@ async def test_discovery_init_flow(manager: MockFlowManager) -> None:
     assert entry["source"] == config_entries.SOURCE_DISCOVERY
 
 
-async def test_finish_callback_change_result_type(hass: HomeAssistant) -> None:
+async def test_finish_callback_change_result_type(menuai: menuai) -> None:
     """Test finish callback can change result type."""
 
     class TestFlow(data_entry_flow.FlowHandler):
@@ -394,7 +394,7 @@ async def test_finish_callback_change_result_type(hass: HomeAssistant) -> None:
                 result["result"] = result["data"]["count"]
             return result
 
-    manager = FlowManager(hass)
+    manager = FlowManager(menuai)
 
     result = await manager.async_init("test")
     assert result["type"] == data_entry_flow.FlowResultType.FORM
@@ -410,9 +410,9 @@ async def test_finish_callback_change_result_type(hass: HomeAssistant) -> None:
     assert result["result"] == 2
 
 
-async def test_external_step(hass: HomeAssistant, manager: MockFlowManager) -> None:
+async def test_external_step(menuai: menuai, manager: MockFlowManager) -> None:
     """Test external step logic."""
-    manager.hass = hass
+    manager.menuai = menuai
 
     @manager.mock_reg_handler("test")
     class TestFlow(data_entry_flow.FlowHandler):
@@ -432,7 +432,7 @@ async def test_external_step(hass: HomeAssistant, manager: MockFlowManager) -> N
             return self.async_create_entry(title=self.data["title"], data=self.data)
 
     events = async_capture_events(
-        hass, data_entry_flow.EVENT_DATA_ENTRY_FLOW_PROGRESSED
+        menuai, data_entry_flow.EVENT_DATA_ENTRY_FLOW_PROGRESSED
     )
 
     result = await manager.async_init("test")
@@ -442,11 +442,11 @@ async def test_external_step(hass: HomeAssistant, manager: MockFlowManager) -> N
     assert manager.async_get(result["flow_id"])["handler"] == "test"
 
     # Mimic external step
-    # Called by integrations: `hass.config_entries.flow.async_configure(…)`
+    # Called by integrations: `menuai.config_entries.flow.async_configure(…)`
     result = await manager.async_configure(result["flow_id"], {"title": "Hello"})
     assert result["type"] == data_entry_flow.FlowResultType.EXTERNAL_STEP_DONE
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(events) == 1
     assert events[0].data == {
         "handler": "test",
@@ -460,12 +460,12 @@ async def test_external_step(hass: HomeAssistant, manager: MockFlowManager) -> N
     assert result["title"] == "Hello"
 
 
-async def test_show_progress(hass: HomeAssistant, manager: MockFlowManager) -> None:
+async def test_show_progress(menuai: menuai, manager: MockFlowManager) -> None:
     """Test show progress logic."""
-    manager.hass = hass
+    manager.menuai = menuai
     events = []
     progress_update_events = async_capture_events(
-        hass, data_entry_flow.EVENT_DATA_ENTRY_FLOW_PROGRESS_UPDATE
+        menuai, data_entry_flow.EVENT_DATA_ENTRY_FLOW_PROGRESS_UPDATE
     )
     task_one_evt = asyncio.Event()
     task_two_evt = asyncio.Event()
@@ -496,7 +496,7 @@ async def test_show_progress(hass: HomeAssistant, manager: MockFlowManager) -> N
 
             uncompleted_task: asyncio.Task[None] | None = None
             if not self.task_one:
-                self.task_one = hass.async_create_task(long_running_job_one())
+                self.task_one = menuai.async_create_task(long_running_job_one())
 
             progress_action = None
             if not self.task_one.done():
@@ -505,7 +505,7 @@ async def test_show_progress(hass: HomeAssistant, manager: MockFlowManager) -> N
 
             if not uncompleted_task:
                 if not self.task_two:
-                    self.task_two = hass.async_create_task(long_running_job_two())
+                    self.task_two = menuai.async_create_task(long_running_job_two())
 
                 if not self.task_two.done():
                     progress_action = "task_two"
@@ -523,7 +523,7 @@ async def test_show_progress(hass: HomeAssistant, manager: MockFlowManager) -> N
         async def async_step_finish(self, user_input=None):
             return self.async_create_entry(title=self.data["title"], data=self.data)
 
-    hass.bus.async_listen(
+    menuai.bus.async_listen(
         data_entry_flow.EVENT_DATA_ENTRY_FLOW_PROGRESSED,
         capture_events,
     )
@@ -581,10 +581,10 @@ async def test_show_progress(hass: HomeAssistant, manager: MockFlowManager) -> N
 
 
 async def test_show_progress_error(
-    hass: HomeAssistant, manager: MockFlowManager
+    menuai: menuai, manager: MockFlowManager
 ) -> None:
     """Test show progress logic."""
-    manager.hass = hass
+    manager.menuai = menuai
     events = []
     event_received_evt = asyncio.Event()
 
@@ -605,7 +605,7 @@ async def test_show_progress_error(
                 raise TypeError
 
             if not self.progress_task:
-                self.progress_task = hass.async_create_task(long_running_task())
+                self.progress_task = menuai.async_create_task(long_running_task())
             if self.progress_task and self.progress_task.done():
                 if self.progress_task.exception():
                     return self.async_show_progress_done(next_step_id="error")
@@ -617,7 +617,7 @@ async def test_show_progress_error(
         async def async_step_error(self, user_input=None):
             return self.async_abort(reason="error")
 
-    hass.bus.async_listen(
+    menuai.bus.async_listen(
         data_entry_flow.EVENT_DATA_ENTRY_FLOW_PROGRESSED,
         capture_events,
     )
@@ -646,10 +646,10 @@ async def test_show_progress_error(
 
 
 async def test_show_progress_hidden_from_frontend(
-    hass: HomeAssistant, manager: MockFlowManager
+    menuai: menuai, manager: MockFlowManager
 ) -> None:
     """Test show progress done is not sent to frontend."""
-    manager.hass = hass
+    manager.menuai = menuai
     async_show_progress_done_called = False
     progress_task: asyncio.Task[None] | None = None
 
@@ -665,7 +665,7 @@ async def test_show_progress_hidden_from_frontend(
                 await asyncio.sleep(0)
 
             if not progress_task:
-                progress_task = hass.async_create_task(long_running_job())
+                progress_task = menuai.async_create_task(long_running_job())
             if progress_task.done():
                 nonlocal async_show_progress_done_called
                 async_show_progress_done_called = True
@@ -675,7 +675,7 @@ async def test_show_progress_hidden_from_frontend(
                 progress_action="task",
                 # Set to a task which never finishes to simulate flow manager has not
                 # yet called when frontend loads
-                progress_task=hass.async_create_task(asyncio.Event().wait()),
+                progress_task=menuai.async_create_task(asyncio.Event().wait()),
             )
 
         async def async_step_finish(self, user_input=None):
@@ -698,14 +698,14 @@ async def test_show_progress_hidden_from_frontend(
 
 
 async def test_show_progress_legacy(
-    hass: HomeAssistant, manager: MockFlowManager, caplog: pytest.LogCaptureFixture
+    menuai: menuai, manager: MockFlowManager, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test show progress logic.
 
     This tests the deprecated version where the config flow is responsible for
     resuming the flow.
     """
-    manager.hass = hass
+    manager.menuai = menuai
 
     @manager.mock_reg_handler("test")
     class TestFlow(data_entry_flow.FlowHandler):
@@ -738,7 +738,7 @@ async def test_show_progress_legacy(
             return self.async_create_entry(title=self.data["title"], data=self.data)
 
     events = async_capture_events(
-        hass, data_entry_flow.EVENT_DATA_ENTRY_FLOW_PROGRESSED
+        menuai, data_entry_flow.EVENT_DATA_ENTRY_FLOW_PROGRESSED
     )
 
     result = await manager.async_init("test")
@@ -749,12 +749,12 @@ async def test_show_progress_legacy(
     assert manager.async_get(result["flow_id"])["handler"] == "test"
 
     # Mimic task one done and moving to task two
-    # Called by integrations: `hass.config_entries.flow.async_configure(…)`
+    # Called by integrations: `menuai.config_entries.flow.async_configure(…)`
     result = await manager.async_configure(result["flow_id"], {"task_finished": 1})
     assert result["type"] == data_entry_flow.FlowResultType.SHOW_PROGRESS
     assert result["progress_action"] == "task_two"
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(events) == 1
     assert events[0].data == {
         "handler": "test",
@@ -768,7 +768,7 @@ async def test_show_progress_legacy(
     assert result["progress_action"] == "task_two"
 
     # Mimic task two done and continuing step
-    # Called by integrations: `hass.config_entries.flow.async_configure(…)`
+    # Called by integrations: `menuai.config_entries.flow.async_configure(…)`
     result = await manager.async_configure(
         result["flow_id"], {"task_finished": 2, "title": "Hello"}
     )
@@ -783,7 +783,7 @@ async def test_show_progress_legacy(
     assert result["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
     assert result["title"] == "Hello"
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(events) == 2  # 1 for task one and 1 for task two
     assert events[1].data == {
         "handler": "test",
@@ -794,16 +794,16 @@ async def test_show_progress_legacy(
     # Check for deprecation warning
     assert (
         "tests.test_data_entry_flow::TestFlow calls async_show_progress without passing"
-        " a progress task, this is not valid and will break in Home Assistant "
+        " a progress task, this is not valid and will break in MenuAI "
         "Core 2024.8."
     ) in caplog.text
 
 
 async def test_show_progress_fires_only_when_changed(
-    hass: HomeAssistant, manager: MockFlowManager
+    menuai: menuai, manager: MockFlowManager
 ) -> None:
     """Test show progress change logic."""
-    manager.hass = hass
+    manager.menuai = menuai
 
     @manager.mock_reg_handler("test")
     class TestFlow(data_entry_flow.FlowHandler):
@@ -825,7 +825,7 @@ async def test_show_progress_fires_only_when_changed(
             return self.async_create_entry(title=self.data["title"], data=self.data)
 
     events = async_capture_events(
-        hass, data_entry_flow.EVENT_DATA_ENTRY_FLOW_PROGRESSED
+        menuai, data_entry_flow.EVENT_DATA_ENTRY_FLOW_PROGRESSED
     )
 
     async def test_change(
@@ -836,7 +836,7 @@ async def test_show_progress_fires_only_when_changed(
         number_of_events,
         is_change,
     ) -> None:
-        # Called by integrations: `hass.config_entries.flow.async_configure(…)`
+        # Called by integrations: `menuai.config_entries.flow.async_configure(…)`
         result = await manager.async_configure(
             flow_id,
             {
@@ -853,7 +853,7 @@ async def test_show_progress_fires_only_when_changed(
             == description_placeholders_progress
         )
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         assert len(events) == number_of_events
         if is_change:
             assert events[number_of_events - 1].data == {
@@ -900,7 +900,7 @@ async def test_abort_flow_exception_step(manager: MockFlowManager) -> None:
     assert form["description_placeholders"] == {"placeholder": "yo"}
 
 
-async def test_abort_flow_exception_finish_flow(hass: HomeAssistant) -> None:
+async def test_abort_flow_exception_finish_flow(menuai: menuai) -> None:
     """Test that the AbortFlow exception works when finishing a flow."""
 
     class TestFlow(data_entry_flow.FlowHandler):
@@ -919,7 +919,7 @@ async def test_abort_flow_exception_finish_flow(hass: HomeAssistant) -> None:
             """Raise AbortFlow."""
             raise data_entry_flow.AbortFlow("mock-reason", {"placeholder": "yo"})
 
-    manager = FlowManager(hass)
+    manager = FlowManager(menuai)
 
     form = await manager.async_init("test")
     assert form["type"] == data_entry_flow.FlowResultType.ABORT
@@ -1031,12 +1031,12 @@ async def test_manager_abort_calls_async_flow_removed(manager: MockFlowManager) 
     [["target1", "target2"], {"target1": "Target 1", "target2": "Target 2"}],
 )
 async def test_show_menu(
-    hass: HomeAssistant,
+    menuai: menuai,
     manager: MockFlowManager,
     menu_options: list[str] | dict[str, str],
 ) -> None:
     """Test show menu."""
-    manager.hass = hass
+    manager.menuai = menuai
 
     @manager.mock_reg_handler("test")
     class TestFlow(data_entry_flow.FlowHandler):

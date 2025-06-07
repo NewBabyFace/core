@@ -9,11 +9,11 @@ from typing import TYPE_CHECKING, Any
 from miio import Device as MiioDevice, DeviceException
 from miio.gateway.devices import SubDevice
 
-from homeassistant.const import ATTR_CONNECTIONS, CONF_MAC, CONF_MODEL
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.update_coordinator import (
+from menuai.const import ATTR_CONNECTIONS, CONF_MAC, CONF_MODEL
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity
+from menuai.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
 )
@@ -104,7 +104,7 @@ class XiaomiCoordinatedMiioEntity[_T: DataUpdateCoordinator[Any]](
     async def _try_command(self, mask_error, func, *args, **kwargs):
         """Call a miio device command handling error messages."""
         try:
-            result = await self.hass.async_add_executor_job(
+            result = await self.menuai.async_add_executor_job(
                 partial(func, *args, **kwargs)
             )
         except DeviceException as exc:

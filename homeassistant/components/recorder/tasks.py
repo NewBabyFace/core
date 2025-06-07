@@ -11,9 +11,9 @@ import logging
 import threading
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.helpers.recorder import DATA_RECORDER
-from homeassistant.helpers.typing import UndefinedType
-from homeassistant.util.event_type import EventType
+from menuai.helpers.recorder import DATA_RECORDER
+from menuai.helpers.typing import UndefinedType
+from menuai.util.event_type import EventType
 
 from . import entity_registry, purge, statistics
 from .db_schema import Statistics, StatisticsShortTerm
@@ -305,10 +305,10 @@ class AddRecorderPlatformTask(RecorderTask):
 
     def run(self, instance: Recorder) -> None:
         """Handle the task."""
-        hass = instance.hass
+        menuai = instance.menuai
         domain = self.domain
         platform = self.platform
-        platforms: dict[str, Any] = hass.data[DATA_RECORDER].recorder_platforms
+        platforms: dict[str, Any] = menuai.data[DATA_RECORDER].recorder_platforms
         platforms[domain] = platform
 
 
@@ -323,7 +323,7 @@ class SynchronizeTask(RecorderTask):
         """Handle the task."""
         # Does not use a tracked task to avoid
         # blocking shutdown if the recorder is broken
-        instance.hass.loop.call_soon_threadsafe(self._set_result_if_not_done)
+        instance.menuai.loop.call_soon_threadsafe(self._set_result_if_not_done)
 
     def _set_result_if_not_done(self) -> None:
         """Set the result if not done."""

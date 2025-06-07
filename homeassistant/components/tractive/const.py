@@ -20,7 +20,7 @@ ATTR_POWER_SAVING = "power_saving"
 ATTR_SLEEP_LABEL = "sleep_label"
 ATTR_TRACKER_STATE = "tracker_state"
 
-# This client ID was issued by Tractive specifically for Home Assistant.
+# This client ID was issued by Tractive specifically for MenuAI.
 # Please do not use it anywhere else.
 CLIENT_ID = "625e5349c3c3b41c28a669f1"
 

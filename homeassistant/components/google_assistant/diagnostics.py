@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.diagnostics import REDACTED, async_redact_data
-from homeassistant.const import CONF_API_KEY
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.typing import ConfigType
+from menuai.components.diagnostics import REDACTED, async_redact_data
+from menuai.const import CONF_API_KEY
+from menuai.core import menuai
+from menuai.helpers.typing import ConfigType
 
 from . import GoogleConfigEntry
 from .const import CONF_SECURE_DEVICES_PIN, CONF_SERVICE_ACCOUNT, DATA_CONFIG, DOMAIN
@@ -28,14 +28,14 @@ TO_REDACT = [
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: GoogleConfigEntry
+    menuai: menuai, entry: GoogleConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostic information."""
     config = entry.runtime_data
-    yaml_config: ConfigType = hass.data[DOMAIN][DATA_CONFIG]
-    devices = await async_devices_sync_response(hass, config, REDACTED)
+    yaml_config: ConfigType = menuai.data[DOMAIN][DATA_CONFIG]
+    devices = await async_devices_sync_response(menuai, config, REDACTED)
     sync = create_sync_response(REDACTED, devices)
-    query = await async_devices_query_response(hass, config, devices)
+    query = await async_devices_query_response(menuai, config, devices)
 
     return {
         "config_entry": async_redact_data(entry.as_dict(), TO_REDACT),

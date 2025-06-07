@@ -12,7 +12,7 @@ from cookidoo_api import (
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.todo import (
+from menuai.components.todo import (
     ATTR_ITEM,
     ATTR_RENAME,
     ATTR_STATUS,
@@ -20,11 +20,11 @@ from homeassistant.components.todo import (
     TodoItemStatus,
     TodoServices,
 )
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from menuai.config_entries import ConfigEntryState
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
 
 from . import setup_integration
 
@@ -35,7 +35,7 @@ from tests.common import MockConfigEntry, snapshot_platform
 def todo_only() -> Generator[None]:
     """Enable only the todo platform."""
     with patch(
-        "homeassistant.components.cookidoo.PLATFORMS",
+        "menuai.components.cookidoo.PLATFORMS",
         [Platform.TODO],
     ):
         yield
@@ -43,35 +43,35 @@ def todo_only() -> Generator[None]:
 
 @pytest.mark.usefixtures("mock_cookidoo_client")
 async def test_todo(
-    hass: HomeAssistant,
+    menuai: menuai,
     cookidoo_config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Snapshot test states of todo platform."""
 
-    with patch("homeassistant.components.cookidoo.PLATFORMS", [Platform.TODO]):
-        await setup_integration(hass, cookidoo_config_entry)
+    with patch("menuai.components.cookidoo.PLATFORMS", [Platform.TODO]):
+        await setup_integration(menuai, cookidoo_config_entry)
 
     assert cookidoo_config_entry.state is ConfigEntryState.LOADED
 
     await snapshot_platform(
-        hass, entity_registry, snapshot, cookidoo_config_entry.entry_id
+        menuai, entity_registry, snapshot, cookidoo_config_entry.entry_id
     )
 
 
 async def test_update_ingredient(
-    hass: HomeAssistant,
+    menuai: menuai,
     cookidoo_config_entry: MockConfigEntry,
     mock_cookidoo_client: AsyncMock,
 ) -> None:
     """Test update ingredient item."""
 
-    await setup_integration(hass, cookidoo_config_entry)
+    await setup_integration(menuai, cookidoo_config_entry)
 
     assert cookidoo_config_entry.state is ConfigEntryState.LOADED
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.UPDATE_ITEM,
         service_data={
@@ -95,13 +95,13 @@ async def test_update_ingredient(
 
 
 async def test_update_ingredient_exception(
-    hass: HomeAssistant,
+    menuai: menuai,
     cookidoo_config_entry: MockConfigEntry,
     mock_cookidoo_client: AsyncMock,
 ) -> None:
     """Test update ingredient with exception."""
 
-    await setup_integration(hass, cookidoo_config_entry)
+    await setup_integration(menuai, cookidoo_config_entry)
 
     assert cookidoo_config_entry.state is ConfigEntryState.LOADED
 
@@ -109,9 +109,9 @@ async def test_update_ingredient_exception(
         CookidooRequestException
     )
     with pytest.raises(
-        HomeAssistantError, match="Failed to update Mehl in Cookidoo shopping list"
+        menuaiError, match="Failed to update Mehl in Cookidoo shopping list"
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             TODO_DOMAIN,
             TodoServices.UPDATE_ITEM,
             service_data={
@@ -124,17 +124,17 @@ async def test_update_ingredient_exception(
 
 
 async def test_add_additional_item(
-    hass: HomeAssistant,
+    menuai: menuai,
     cookidoo_config_entry: MockConfigEntry,
     mock_cookidoo_client: AsyncMock,
 ) -> None:
     """Test add additional item to list."""
 
-    await setup_integration(hass, cookidoo_config_entry)
+    await setup_integration(menuai, cookidoo_config_entry)
 
     assert cookidoo_config_entry.state is ConfigEntryState.LOADED
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.ADD_ITEM,
         service_data={ATTR_ITEM: "Äpfel"},
@@ -148,21 +148,21 @@ async def test_add_additional_item(
 
 
 async def test_add_additional_item_exception(
-    hass: HomeAssistant,
+    menuai: menuai,
     cookidoo_config_entry: MockConfigEntry,
     mock_cookidoo_client: AsyncMock,
 ) -> None:
     """Test add additional item to list with exception."""
 
-    await setup_integration(hass, cookidoo_config_entry)
+    await setup_integration(menuai, cookidoo_config_entry)
 
     assert cookidoo_config_entry.state is ConfigEntryState.LOADED
 
     mock_cookidoo_client.add_additional_items.side_effect = CookidooRequestException
     with pytest.raises(
-        HomeAssistantError, match="Failed to save Äpfel to Cookidoo shopping list"
+        menuaiError, match="Failed to save Äpfel to Cookidoo shopping list"
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             TODO_DOMAIN,
             TodoServices.ADD_ITEM,
             service_data={ATTR_ITEM: "Äpfel"},
@@ -172,17 +172,17 @@ async def test_add_additional_item_exception(
 
 
 async def test_update_additional_item(
-    hass: HomeAssistant,
+    menuai: menuai,
     cookidoo_config_entry: MockConfigEntry,
     mock_cookidoo_client: AsyncMock,
 ) -> None:
     """Test update additional item."""
 
-    await setup_integration(hass, cookidoo_config_entry)
+    await setup_integration(menuai, cookidoo_config_entry)
 
     assert cookidoo_config_entry.state is ConfigEntryState.LOADED
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.UPDATE_ITEM,
         service_data={
@@ -215,13 +215,13 @@ async def test_update_additional_item(
 
 
 async def test_update_additional_item_exception(
-    hass: HomeAssistant,
+    menuai: menuai,
     cookidoo_config_entry: MockConfigEntry,
     mock_cookidoo_client: AsyncMock,
 ) -> None:
     """Test update additional item with exception."""
 
-    await setup_integration(hass, cookidoo_config_entry)
+    await setup_integration(menuai, cookidoo_config_entry)
 
     assert cookidoo_config_entry.state is ConfigEntryState.LOADED
 
@@ -230,9 +230,9 @@ async def test_update_additional_item_exception(
     )
     mock_cookidoo_client.edit_additional_items.side_effect = CookidooRequestException
     with pytest.raises(
-        HomeAssistantError, match="Failed to update Peperoni in Cookidoo shopping list"
+        menuaiError, match="Failed to update Peperoni in Cookidoo shopping list"
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             TODO_DOMAIN,
             TodoServices.UPDATE_ITEM,
             service_data={
@@ -246,17 +246,17 @@ async def test_update_additional_item_exception(
 
 
 async def test_delete_additional_items(
-    hass: HomeAssistant,
+    menuai: menuai,
     cookidoo_config_entry: MockConfigEntry,
     mock_cookidoo_client: AsyncMock,
 ) -> None:
     """Test delete additional item."""
 
-    await setup_integration(hass, cookidoo_config_entry)
+    await setup_integration(menuai, cookidoo_config_entry)
 
     assert cookidoo_config_entry.state is ConfigEntryState.LOADED
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.REMOVE_ITEM,
         service_data={ATTR_ITEM: "unique_id_tomaten"},
@@ -270,21 +270,21 @@ async def test_delete_additional_items(
 
 
 async def test_delete_additional_items_exception(
-    hass: HomeAssistant,
+    menuai: menuai,
     cookidoo_config_entry: MockConfigEntry,
     mock_cookidoo_client: AsyncMock,
 ) -> None:
     """Test delete additional item."""
 
-    await setup_integration(hass, cookidoo_config_entry)
+    await setup_integration(menuai, cookidoo_config_entry)
 
     assert cookidoo_config_entry.state is ConfigEntryState.LOADED
     mock_cookidoo_client.remove_additional_items.side_effect = CookidooRequestException
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match=re.escape("Failed to delete 1 item(s) from Cookidoo shopping list"),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             TODO_DOMAIN,
             TodoServices.REMOVE_ITEM,
             service_data={ATTR_ITEM: "unique_id_tomaten"},

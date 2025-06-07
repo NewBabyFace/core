@@ -12,8 +12,8 @@ from typing import Any
 from bleak import BleakError
 from bluetooth_data_tools import monotonic_time_coarse
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.debounce import Debouncer
+from menuai.core import menuai, callback
+from menuai.helpers.debounce import Debouncer
 
 from . import BluetoothChange, BluetoothScanningMode, BluetoothServiceInfoBleak
 from .passive_update_processor import PassiveBluetoothProcessorCoordinator
@@ -56,7 +56,7 @@ class ActiveBluetoothProcessorCoordinator[_DataT](
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         logger: logging.Logger,
         *,
         address: str,
@@ -72,7 +72,7 @@ class ActiveBluetoothProcessorCoordinator[_DataT](
         connectable: bool = True,
     ) -> None:
         """Initialize the processor."""
-        super().__init__(hass, logger, address, mode, update_method, connectable)
+        super().__init__(menuai, logger, address, mode, update_method, connectable)
 
         self._needs_poll_method = needs_poll_method
         self._poll_method = poll_method
@@ -85,7 +85,7 @@ class ActiveBluetoothProcessorCoordinator[_DataT](
 
         if poll_debouncer is None:
             poll_debouncer = Debouncer(
-                hass,
+                menuai,
                 logger,
                 cooldown=POLL_DEFAULT_COOLDOWN,
                 immediate=POLL_DEFAULT_IMMEDIATE,
@@ -99,7 +99,7 @@ class ActiveBluetoothProcessorCoordinator[_DataT](
 
     def needs_poll(self, service_info: BluetoothServiceInfoBleak) -> bool:
         """Return true if time to try and poll."""
-        if self.hass.is_stopping:
+        if self.menuai.is_stopping:
             return False
         poll_age: float | None = None
         if self._last_poll:

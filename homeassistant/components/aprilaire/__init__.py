@@ -6,10 +6,10 @@ import logging
 
 from pyaprilaire.const import Attribute
 
-from homeassistant.const import CONF_HOST, CONF_PORT, EVENT_HOMEASSISTANT_STOP, Platform
-from homeassistant.core import Event, HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers.device_registry import format_mac
+from menuai.const import CONF_HOST, CONF_PORT, EVENT_menuai_STOP, Platform
+from menuai.core import Event, menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers.device_registry import format_mac
 
 from .coordinator import AprilaireConfigEntry, AprilaireCoordinator
 
@@ -23,13 +23,13 @@ PLATFORMS: list[Platform] = [
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: AprilaireConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: AprilaireConfigEntry) -> bool:
     """Set up a config entry for Aprilaire."""
 
     host = entry.data[CONF_HOST]
     port = entry.data[CONF_PORT]
 
-    coordinator = AprilaireCoordinator(hass, entry.unique_id, host, port)
+    coordinator = AprilaireCoordinator(menuai, entry.unique_id, host, port)
     await coordinator.start_listen()
 
     async def ready_callback(ready: bool) -> None:
@@ -42,13 +42,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: AprilaireConfigEntry) ->
             entry.runtime_data = coordinator
             entry.async_on_unload(coordinator.stop_listen)
 
-            await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+            await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
             async def _async_close(_: Event) -> None:
                 coordinator.stop_listen()
 
             entry.async_on_unload(
-                hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _async_close)
+                menuai.bus.async_listen_once(EVENT_menuai_STOP, _async_close)
             )
         else:
             _LOGGER.error("Failed to wait for ready")
@@ -62,6 +62,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: AprilaireConfigEntry) ->
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: AprilaireConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: AprilaireConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

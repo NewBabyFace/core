@@ -8,8 +8,8 @@ from propcache.api import cached_property
 from xknx import XKNX
 from xknx.devices.light import ColorTemperatureType, Light as XknxLight, XYYColor
 
-from homeassistant import config_entries
-from homeassistant.components.light import (
+from menuai import config_entries
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_TEMP_KELVIN,
     ATTR_HS_COLOR,
@@ -19,14 +19,14 @@ from homeassistant.components.light import (
     ColorMode,
     LightEntity,
 )
-from homeassistant.const import CONF_ENTITY_CATEGORY, CONF_NAME, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import (
+from menuai.const import CONF_ENTITY_CATEGORY, CONF_NAME, Platform
+from menuai.core import menuai
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     async_get_current_platform,
 )
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util import color as color_util
+from menuai.helpers.typing import ConfigType
+from menuai.util import color as color_util
 
 from . import KNXModule
 from .const import CONF_SYNC_STATE, DOMAIN, KNX_ADDRESS, KNX_MODULE_KEY, ColorTempModes
@@ -59,12 +59,12 @@ from .storage.entity_store_schema import LightColorMode
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: config_entries.ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up light(s) for KNX platform."""
-    knx_module = hass.data[KNX_MODULE_KEY]
+    knx_module = menuai.data[KNX_MODULE_KEY]
     platform = async_get_current_platform()
     knx_module.config_store.add_platform(
         platform=Platform.LIGHT,

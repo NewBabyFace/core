@@ -9,15 +9,15 @@ from typing import TYPE_CHECKING, Final, TypedDict
 from xknx.dpt.dpt_20 import HVACControllerMode
 from xknx.telegram import Telegram
 
-from homeassistant.components.climate import FAN_AUTO, FAN_OFF, HVACAction, HVACMode
-from homeassistant.const import Platform
-from homeassistant.util.hass_dict import HassKey
+from menuai.components.climate import FAN_AUTO, FAN_OFF, HVACAction, HVACMode
+from menuai.const import Platform
+from menuai.util.menuai_dict import menuaiKey
 
 if TYPE_CHECKING:
     from . import KNXModule
 
 DOMAIN: Final = "knx"
-KNX_MODULE_KEY: HassKey[KNXModule] = HassKey(DOMAIN)
+KNX_MODULE_KEY: menuaiKey[KNXModule] = menuaiKey(DOMAIN)
 
 # Address is used for configuration and services by the same functions so the key has to match
 KNX_ADDRESS: Final = "address"
@@ -75,8 +75,8 @@ CONF_RESPOND_TO_READ: Final = "respond_to_read"
 CONF_STATE_ADDRESS: Final = "state_address"
 CONF_SYNC_STATE: Final = "sync_state"
 
-# original hass yaml config
-DATA_HASS_CONFIG: Final = "knx_hass_config"
+# original menuai yaml config
+DATA_menuai_CONFIG: Final = "knx_menuai_config"
 
 ATTR_COUNTER: Final = "counter"
 ATTR_SOURCE: Final = "source"

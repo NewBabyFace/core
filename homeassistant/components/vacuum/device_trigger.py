@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA
-from homeassistant.components.homeassistant.triggers import state as state_trigger
-from homeassistant.const import (
+from menuai.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA
+from menuai.components.menuai.triggers import state as state_trigger
+from menuai.const import (
     CONF_DEVICE_ID,
     CONF_DOMAIN,
     CONF_ENTITY_ID,
@@ -14,10 +14,10 @@ from homeassistant.const import (
     CONF_PLATFORM,
     CONF_TYPE,
 )
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import CALLBACK_TYPE, menuai
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.trigger import TriggerActionType, TriggerInfo
+from menuai.helpers.typing import ConfigType
 
 from . import DOMAIN, VacuumActivity
 
@@ -33,10 +33,10 @@ TRIGGER_SCHEMA = DEVICE_TRIGGER_BASE_SCHEMA.extend(
 
 
 async def async_get_triggers(
-    hass: HomeAssistant, device_id: str
+    menuai: menuai, device_id: str
 ) -> list[dict[str, str]]:
     """List device triggers for Vacuum devices."""
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     triggers = []
 
     # Get all the integrations entities for this device
@@ -59,7 +59,7 @@ async def async_get_triggers(
 
 
 async def async_get_trigger_capabilities(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> dict[str, vol.Schema]:
     """List trigger capabilities."""
     return {
@@ -70,7 +70,7 @@ async def async_get_trigger_capabilities(
 
 
 async def async_attach_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     action: TriggerActionType,
     trigger_info: TriggerInfo,
@@ -88,7 +88,7 @@ async def async_attach_trigger(
     }
     if CONF_FOR in config:
         state_config[CONF_FOR] = config[CONF_FOR]
-    state_config = await state_trigger.async_validate_trigger_config(hass, state_config)
+    state_config = await state_trigger.async_validate_trigger_config(menuai, state_config)
     return await state_trigger.async_attach_trigger(
-        hass, state_config, action, trigger_info, platform_type="device"
+        menuai, state_config, action, trigger_info, platform_type="device"
     )

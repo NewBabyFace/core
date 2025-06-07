@@ -5,10 +5,10 @@ from typing import Any, Final
 from iometer import IOmeterClient, IOmeterConnectionError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import DOMAIN
 
@@ -30,7 +30,7 @@ class IOMeterConfigFlow(ConfigFlow, domain=DOMAIN):
         self._host = host = discovery_info.host
         self._async_abort_entries_match({CONF_HOST: host})
 
-        session = async_get_clientsession(self.hass)
+        session = async_get_clientsession(self.menuai)
         client = IOmeterClient(host=host, session=session)
         try:
             status = await client.get_current_status()
@@ -66,7 +66,7 @@ class IOMeterConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             self._host = user_input[CONF_HOST]
-            session = async_get_clientsession(self.hass)
+            session = async_get_clientsession(self.menuai)
             client = IOmeterClient(host=self._host, session=session)
             try:
                 status = await client.get_current_status()

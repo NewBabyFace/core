@@ -2,11 +2,11 @@
 
 import pytest
 
-from homeassistant.components.template import entity as abstract_entity
-from homeassistant.core import HomeAssistant
+from menuai.components.template import entity as abstract_entity
+from menuai.core import menuai
 
 
-async def test_template_entity_not_implemented(hass: HomeAssistant) -> None:
+async def test_template_entity_not_implemented(menuai: menuai) -> None:
     """Test abstract template entity raises not implemented error."""
 
     entity = abstract_entity.AbstractTemplateEntity(None)

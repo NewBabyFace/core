@@ -7,15 +7,15 @@ from typing import Any, Final
 from aiopvapi.helpers.constants import ATTR_NAME
 from aiopvapi.resources.shade import BaseShade
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import PERCENTAGE, SIGNAL_STRENGTH_DECIBELS, EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import PERCENTAGE, SIGNAL_STRENGTH_DECIBELS, EntityCategory
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import PowerviewShadeUpdateCoordinator
 from .entity import ShadeEntity
@@ -77,7 +77,7 @@ SENSORS: Final = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: PowerviewConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -136,9 +136,9 @@ class PowerViewSensor(ShadeEntity, SensorEntity):
         """Return the class of this entity."""
         return self.entity_description.device_class_fn(self._shade)
 
-    # pylint: disable-next=hass-missing-super-call
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
+    # pylint: disable-next=menuai-missing-super-call
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai."""
         self.async_on_remove(
             self.coordinator.async_add_listener(self._async_update_shade_from_group)
         )

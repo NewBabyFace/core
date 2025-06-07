@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
-from homeassistant.components import otbr
-from homeassistant.core import HomeAssistant
+from menuai.components import otbr
+from menuai.core import menuai
 
 from . import (
     CONFIG_ENTRY_DATA_MULTIPAN,
@@ -29,11 +29,11 @@ def enable_compute_pskc_fixture() -> Any:
 
 @pytest.fixture(name="compute_pskc", autouse=True)
 def compute_pskc_fixture(enable_compute_pskc: bool) -> Any:
-    """Patch homeassistant.components.otbr.util.compute_pskc."""
+    """Patch menuai.components.otbr.util.compute_pskc."""
     compute_pskc = otbr.util.compute_pskc if enable_compute_pskc else None
 
     with patch(
-        "homeassistant.components.otbr.util.compute_pskc", side_effect=compute_pskc
+        "menuai.components.otbr.util.compute_pskc", side_effect=compute_pskc
     ) as compute_pskc_mock:
         yield compute_pskc_mock
 
@@ -84,7 +84,7 @@ def get_coprocessor_version_fixture() -> Generator[AsyncMock]:
 
 @pytest.fixture(name="otbr_config_entry_multipan")
 async def otbr_config_entry_multipan_fixture(
-    hass: HomeAssistant,
+    menuai: menuai,
     get_active_dataset_tlvs: AsyncMock,
     get_border_agent_id: AsyncMock,
     get_extended_address: AsyncMock,
@@ -98,14 +98,14 @@ async def otbr_config_entry_multipan_fixture(
         title="Open Thread Border Router",
         unique_id=TEST_BORDER_AGENT_EXTENDED_ADDRESS.hex(),
     )
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
     return config_entry.entry_id
 
 
 @pytest.fixture(name="otbr_config_entry_thread")
 async def otbr_config_entry_thread_fixture(
-    hass: HomeAssistant,
+    menuai: menuai,
     get_active_dataset_tlvs: AsyncMock,
     get_border_agent_id: AsyncMock,
     get_extended_address: AsyncMock,
@@ -119,8 +119,8 @@ async def otbr_config_entry_thread_fixture(
         title="Open Thread Border Router",
         unique_id=TEST_BORDER_AGENT_EXTENDED_ADDRESS.hex(),
     )
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
 
 
 @pytest.fixture(autouse=True)
@@ -129,9 +129,9 @@ def use_mocked_zeroconf(mock_async_zeroconf: MagicMock) -> None:
 
 
 @pytest.fixture(name="multiprotocol_addon_manager_mock")
-def multiprotocol_addon_manager_mock_fixture(hass: HomeAssistant):
+def multiprotocol_addon_manager_mock_fixture(menuai: menuai):
     """Mock the Silicon Labs Multiprotocol add-on manager."""
     mock_manager = Mock()
     mock_manager.async_get_channel = Mock(return_value=None)
-    with patch.dict(hass.data, {"silabs_multiprotocol_addon_manager": mock_manager}):
+    with patch.dict(menuai.data, {"silabs_multiprotocol_addon_manager": mock_manager}):
         yield mock_manager

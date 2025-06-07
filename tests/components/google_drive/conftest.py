@@ -6,13 +6,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from homeassistant.components.application_credentials import (
+from menuai.components.application_credentials import (
     ClientCredential,
     async_import_client_credential,
 )
-from homeassistant.components.google_drive.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.google_drive.const import DOMAIN
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 
@@ -25,11 +25,11 @@ CONFIG_ENTRY_TITLE = "Google Drive entry title"
 
 
 @pytest.fixture(autouse=True)
-async def setup_credentials(hass: HomeAssistant) -> None:
+async def setup_credentials(menuai: menuai) -> None:
     """Fixture to setup credentials."""
-    assert await async_setup_component(hass, "application_credentials", {})
+    assert await async_setup_component(menuai, "application_credentials", {})
     await async_import_client_credential(
-        hass,
+        menuai,
         DOMAIN,
         ClientCredential(CLIENT_ID, CLIENT_SECRET),
     )
@@ -39,7 +39,7 @@ async def setup_credentials(hass: HomeAssistant) -> None:
 def mock_api() -> Generator[MagicMock]:
     """Return a mocked GoogleDriveApi."""
     with patch(
-        "homeassistant.components.google_drive.api.GoogleDriveApi"
+        "menuai.components.google_drive.api.GoogleDriveApi"
     ) as mock_api_cl:
         mock_api = mock_api_cl.return_value
         yield mock_api
@@ -49,7 +49,7 @@ def mock_api() -> Generator[MagicMock]:
 def mock_instance_id() -> Generator[AsyncMock]:
     """Mock instance_id."""
     with patch(
-        "homeassistant.components.google_drive.config_flow.instance_id.async_get",
+        "menuai.components.google_drive.config_flow.instance_id.async_get",
         return_value=HA_UUID,
     ):
         yield

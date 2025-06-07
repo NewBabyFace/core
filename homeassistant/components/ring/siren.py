@@ -13,16 +13,16 @@ from ring_doorbell import (
     RingStickUpCam,
 )
 
-from homeassistant.components.siren import (
+from menuai.components.siren import (
     ATTR_TONE,
     SirenEntity,
     SirenEntityDescription,
     SirenEntityFeature,
     SirenTurnOnServiceParameters,
 )
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import Platform
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import RingConfigEntry
 from .coordinator import RingDataCoordinator
@@ -83,7 +83,7 @@ SIRENS: tuple[RingSirenEntityDescription[Any], ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: RingConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -97,7 +97,7 @@ async def async_setup_entry(
         for description in SIRENS
         if description.exists_fn(device)
         and async_check_create_deprecated(
-            hass,
+            menuai,
             Platform.SIREN,
             description.unique_id_fn(device),
             description,

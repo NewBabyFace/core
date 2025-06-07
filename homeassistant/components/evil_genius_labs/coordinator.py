@@ -10,9 +10,9 @@ from typing import cast
 from aiohttp import ContentTypeError
 import pyevilgenius
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 UPDATE_INTERVAL = 10
 
@@ -30,14 +30,14 @@ class EvilGeniusUpdateCoordinator(DataUpdateCoordinator[dict]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entry: EvilGeniusConfigEntry,
         client: pyevilgenius.EvilGeniusDevice,
     ) -> None:
         """Initialize the data update coordinator."""
         self.client = client
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
             name=entry.title,

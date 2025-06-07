@@ -3,10 +3,10 @@
 from datetime import datetime, timedelta
 from typing import Any
 
-from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import Entity
-from homeassistant.util import dt as dt_util
+from menuai.const import ATTR_TEMPERATURE, UnitOfTemperature
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity import Entity
+from menuai.util import dt as dt_util
 
 from . import ATTR_DURATION, ATTR_ZONE_MODE, DOMAIN, SVC_SET_ZONE_OVERRIDE
 
@@ -31,9 +31,9 @@ class GeniusEntity(Entity):
         """Initialize the entity."""
         self._unique_id: str | None = None
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Set up a listener when this entity is added to HA."""
-        self.async_on_remove(async_dispatcher_connect(self.hass, DOMAIN, self._refresh))
+        self.async_on_remove(async_dispatcher_connect(self.menuai, DOMAIN, self._refresh))
 
     async def _refresh(self, payload: dict | None = None) -> None:
         """Process any signals."""

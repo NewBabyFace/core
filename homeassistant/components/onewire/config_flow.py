@@ -8,13 +8,13 @@ from typing import Any
 from pyownet import protocol
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
-from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv, device_registry as dr
-from homeassistant.helpers.device_registry import DeviceEntry
-from homeassistant.helpers.service_info.hassio import HassioServiceInfo
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
+from menuai.const import CONF_HOST, CONF_PORT
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv, device_registry as dr
+from menuai.helpers.device_registry import DeviceEntry
+from menuai.helpers.service_info.menuaiio import menuaiioServiceInfo
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import (
     DEFAULT_HOST,
@@ -38,11 +38,11 @@ DATA_SCHEMA = vol.Schema(
 
 
 async def validate_input(
-    hass: HomeAssistant, data: dict[str, Any], errors: dict[str, str]
+    menuai: menuai, data: dict[str, Any], errors: dict[str, str]
 ) -> None:
     """Validate the user input allows us to connect."""
     try:
-        await hass.async_add_executor_job(
+        await menuai.async_add_executor_job(
             protocol.proxy, data[CONF_HOST], data[CONF_PORT]
         )
     except protocol.ConnError:
@@ -65,7 +65,7 @@ class OneWireFlowHandler(ConfigFlow, domain=DOMAIN):
                 {CONF_HOST: user_input[CONF_HOST], CONF_PORT: user_input[CONF_PORT]}
             )
 
-            await validate_input(self.hass, user_input, errors)
+            await validate_input(self.menuai, user_input, errors)
             if not errors:
                 return self.async_create_entry(
                     title=user_input[CONF_HOST], data=user_input
@@ -88,7 +88,7 @@ class OneWireFlowHandler(ConfigFlow, domain=DOMAIN):
                 {CONF_HOST: user_input[CONF_HOST], CONF_PORT: user_input[CONF_PORT]}
             )
 
-            await validate_input(self.hass, user_input, errors)
+            await validate_input(self.menuai, user_input, errors)
             if not errors:
                 return self.async_update_reload_and_abort(
                     reconfigure_entry, data_updates=user_input
@@ -103,10 +103,10 @@ class OneWireFlowHandler(ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    async def async_step_hassio(
-        self, discovery_info: HassioServiceInfo
+    async def async_step_menuaiio(
+        self, discovery_info: menuaiioServiceInfo
     ) -> ConfigFlowResult:
-        """Handle hassio discovery."""
+        """Handle menuaiio discovery."""
         await self._async_handle_discovery_without_unique_id()
 
         self._discovery_data = {
@@ -139,7 +139,7 @@ class OneWireFlowHandler(ConfigFlow, domain=DOMAIN):
                 CONF_HOST: self._discovery_data[CONF_HOST],
                 CONF_PORT: self._discovery_data[CONF_PORT],
             }
-            await validate_input(self.hass, data, errors)
+            await validate_input(self.menuai, data, errors)
             if not errors:
                 return self.async_create_entry(
                     title=self._discovery_data["title"], data=data
@@ -186,7 +186,7 @@ class OnewireOptionsFlowHandler(OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Manage the options."""
-        device_registry = dr.async_get(self.hass)
+        device_registry = dr.async_get(self.menuai)
         self.configurable_devices = {
             self._get_device_friendly_name(device, device.name): device.name
             for device in dr.async_entries_for_config_entry(

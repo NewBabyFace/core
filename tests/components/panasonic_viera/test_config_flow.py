@@ -4,16 +4,16 @@ from unittest.mock import patch
 
 from panasonic_viera import SOAPError
 
-from homeassistant import config_entries
-from homeassistant.components.panasonic_viera.const import (
+from menuai import config_entries
+from menuai.components.panasonic_viera.const import (
     ATTR_DEVICE_INFO,
     DEFAULT_NAME,
     DOMAIN,
     ERROR_INVALID_PIN_CODE,
 )
-from homeassistant.const import CONF_PIN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.const import CONF_PIN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from .conftest import (
     MOCK_BASIC_DATA,
@@ -26,10 +26,10 @@ from .conftest import (
 from tests.common import MockConfigEntry
 
 
-async def test_flow_non_encrypted(hass: HomeAssistant) -> None:
+async def test_flow_non_encrypted(menuai: menuai) -> None:
     """Test flow without encryption."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -39,10 +39,10 @@ async def test_flow_non_encrypted(hass: HomeAssistant) -> None:
     mock_remote = get_mock_remote(encrypted=False)
 
     with patch(
-        "homeassistant.components.panasonic_viera.config_flow.RemoteControl",
+        "menuai.components.panasonic_viera.config_flow.RemoteControl",
         return_value=mock_remote,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {**MOCK_BASIC_DATA},
         )
@@ -52,10 +52,10 @@ async def test_flow_non_encrypted(hass: HomeAssistant) -> None:
     assert result["data"] == {**MOCK_CONFIG_DATA, ATTR_DEVICE_INFO: MOCK_DEVICE_INFO}
 
 
-async def test_flow_not_connected_error(hass: HomeAssistant) -> None:
+async def test_flow_not_connected_error(menuai: menuai) -> None:
     """Test flow with connection error."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -63,10 +63,10 @@ async def test_flow_not_connected_error(hass: HomeAssistant) -> None:
     assert result["step_id"] == "user"
 
     with patch(
-        "homeassistant.components.panasonic_viera.config_flow.RemoteControl",
+        "menuai.components.panasonic_viera.config_flow.RemoteControl",
         side_effect=TimeoutError,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {**MOCK_BASIC_DATA},
         )
@@ -76,10 +76,10 @@ async def test_flow_not_connected_error(hass: HomeAssistant) -> None:
     assert result["errors"] == {"base": "cannot_connect"}
 
 
-async def test_flow_unknown_abort(hass: HomeAssistant) -> None:
+async def test_flow_unknown_abort(menuai: menuai) -> None:
     """Test flow with unknown error abortion."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -87,10 +87,10 @@ async def test_flow_unknown_abort(hass: HomeAssistant) -> None:
     assert result["step_id"] == "user"
 
     with patch(
-        "homeassistant.components.panasonic_viera.config_flow.RemoteControl",
+        "menuai.components.panasonic_viera.config_flow.RemoteControl",
         side_effect=Exception,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {**MOCK_BASIC_DATA},
         )
@@ -100,11 +100,11 @@ async def test_flow_unknown_abort(hass: HomeAssistant) -> None:
 
 
 async def test_flow_encrypted_not_connected_pin_code_request(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test flow with encryption and PIN code request connection error abortion during pairing request step."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -114,10 +114,10 @@ async def test_flow_encrypted_not_connected_pin_code_request(
     mock_remote = get_mock_remote(encrypted=True, request_error=TimeoutError)
 
     with patch(
-        "homeassistant.components.panasonic_viera.config_flow.RemoteControl",
+        "menuai.components.panasonic_viera.config_flow.RemoteControl",
         return_value=mock_remote,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {**MOCK_BASIC_DATA},
         )
@@ -126,10 +126,10 @@ async def test_flow_encrypted_not_connected_pin_code_request(
     assert result["reason"] == "cannot_connect"
 
 
-async def test_flow_encrypted_unknown_pin_code_request(hass: HomeAssistant) -> None:
+async def test_flow_encrypted_unknown_pin_code_request(menuai: menuai) -> None:
     """Test flow with encryption and PIN code request unknown error abortion during pairing request step."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -139,10 +139,10 @@ async def test_flow_encrypted_unknown_pin_code_request(hass: HomeAssistant) -> N
     mock_remote = get_mock_remote(encrypted=True, request_error=Exception)
 
     with patch(
-        "homeassistant.components.panasonic_viera.config_flow.RemoteControl",
+        "menuai.components.panasonic_viera.config_flow.RemoteControl",
         return_value=mock_remote,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {**MOCK_BASIC_DATA},
         )
@@ -151,10 +151,10 @@ async def test_flow_encrypted_unknown_pin_code_request(hass: HomeAssistant) -> N
     assert result["reason"] == "unknown"
 
 
-async def test_flow_encrypted_valid_pin_code(hass: HomeAssistant) -> None:
+async def test_flow_encrypted_valid_pin_code(menuai: menuai) -> None:
     """Test flow with encryption and valid PIN code."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -168,10 +168,10 @@ async def test_flow_encrypted_valid_pin_code(hass: HomeAssistant) -> None:
     )
 
     with patch(
-        "homeassistant.components.panasonic_viera.config_flow.RemoteControl",
+        "menuai.components.panasonic_viera.config_flow.RemoteControl",
         return_value=mock_remote,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {**MOCK_BASIC_DATA},
         )
@@ -179,7 +179,7 @@ async def test_flow_encrypted_valid_pin_code(hass: HomeAssistant) -> None:
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "pairing"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_PIN: "1234"},
     )
@@ -193,10 +193,10 @@ async def test_flow_encrypted_valid_pin_code(hass: HomeAssistant) -> None:
     }
 
 
-async def test_flow_encrypted_invalid_pin_code_error(hass: HomeAssistant) -> None:
+async def test_flow_encrypted_invalid_pin_code_error(menuai: menuai) -> None:
     """Test flow with encryption and invalid PIN code error during pairing step."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -206,10 +206,10 @@ async def test_flow_encrypted_invalid_pin_code_error(hass: HomeAssistant) -> Non
     mock_remote = get_mock_remote(encrypted=True, authorize_error=SOAPError)
 
     with patch(
-        "homeassistant.components.panasonic_viera.config_flow.RemoteControl",
+        "menuai.components.panasonic_viera.config_flow.RemoteControl",
         return_value=mock_remote,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {**MOCK_BASIC_DATA},
         )
@@ -218,10 +218,10 @@ async def test_flow_encrypted_invalid_pin_code_error(hass: HomeAssistant) -> Non
     assert result["step_id"] == "pairing"
 
     with patch(
-        "homeassistant.components.panasonic_viera.config_flow.RemoteControl",
+        "menuai.components.panasonic_viera.config_flow.RemoteControl",
         return_value=mock_remote,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_PIN: "0000"},
         )
@@ -231,10 +231,10 @@ async def test_flow_encrypted_invalid_pin_code_error(hass: HomeAssistant) -> Non
     assert result["errors"] == {"base": ERROR_INVALID_PIN_CODE}
 
 
-async def test_flow_encrypted_not_connected_abort(hass: HomeAssistant) -> None:
+async def test_flow_encrypted_not_connected_abort(menuai: menuai) -> None:
     """Test flow with encryption and PIN code connection error abortion during pairing step."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -244,10 +244,10 @@ async def test_flow_encrypted_not_connected_abort(hass: HomeAssistant) -> None:
     mock_remote = get_mock_remote(encrypted=True, authorize_error=TimeoutError)
 
     with patch(
-        "homeassistant.components.panasonic_viera.config_flow.RemoteControl",
+        "menuai.components.panasonic_viera.config_flow.RemoteControl",
         return_value=mock_remote,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {**MOCK_BASIC_DATA},
         )
@@ -255,7 +255,7 @@ async def test_flow_encrypted_not_connected_abort(hass: HomeAssistant) -> None:
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "pairing"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_PIN: "0000"},
     )
@@ -264,10 +264,10 @@ async def test_flow_encrypted_not_connected_abort(hass: HomeAssistant) -> None:
     assert result["reason"] == "cannot_connect"
 
 
-async def test_flow_encrypted_unknown_abort(hass: HomeAssistant) -> None:
+async def test_flow_encrypted_unknown_abort(menuai: menuai) -> None:
     """Test flow with encryption and PIN code unknown error abortion during pairing step."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -277,10 +277,10 @@ async def test_flow_encrypted_unknown_abort(hass: HomeAssistant) -> None:
     mock_remote = get_mock_remote(encrypted=True, authorize_error=Exception)
 
     with patch(
-        "homeassistant.components.panasonic_viera.config_flow.RemoteControl",
+        "menuai.components.panasonic_viera.config_flow.RemoteControl",
         return_value=mock_remote,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {**MOCK_BASIC_DATA},
         )
@@ -288,7 +288,7 @@ async def test_flow_encrypted_unknown_abort(hass: HomeAssistant) -> None:
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "pairing"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_PIN: "0000"},
     )
@@ -297,16 +297,16 @@ async def test_flow_encrypted_unknown_abort(hass: HomeAssistant) -> None:
     assert result["reason"] == "unknown"
 
 
-async def test_flow_non_encrypted_already_configured_abort(hass: HomeAssistant) -> None:
+async def test_flow_non_encrypted_already_configured_abort(menuai: menuai) -> None:
     """Test flow without encryption and existing config entry abortion."""
 
     MockConfigEntry(
         domain=DOMAIN,
         unique_id="0.0.0.0",
         data=MOCK_CONFIG_DATA,
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USER},
         data={**MOCK_BASIC_DATA},
@@ -316,16 +316,16 @@ async def test_flow_non_encrypted_already_configured_abort(hass: HomeAssistant) 
     assert result["reason"] == "already_configured"
 
 
-async def test_flow_encrypted_already_configured_abort(hass: HomeAssistant) -> None:
+async def test_flow_encrypted_already_configured_abort(menuai: menuai) -> None:
     """Test flow with encryption and existing config entry abortion."""
 
     MockConfigEntry(
         domain=DOMAIN,
         unique_id="0.0.0.0",
         data={**MOCK_CONFIG_DATA, **MOCK_ENCRYPTION_DATA},
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USER},
         data={**MOCK_BASIC_DATA},
@@ -335,16 +335,16 @@ async def test_flow_encrypted_already_configured_abort(hass: HomeAssistant) -> N
     assert result["reason"] == "already_configured"
 
 
-async def test_imported_flow_non_encrypted(hass: HomeAssistant) -> None:
+async def test_imported_flow_non_encrypted(menuai: menuai) -> None:
     """Test imported flow without encryption."""
 
     mock_remote = get_mock_remote(encrypted=False)
 
     with patch(
-        "homeassistant.components.panasonic_viera.config_flow.RemoteControl",
+        "menuai.components.panasonic_viera.config_flow.RemoteControl",
         return_value=mock_remote,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_IMPORT},
             data={**MOCK_CONFIG_DATA},
@@ -355,7 +355,7 @@ async def test_imported_flow_non_encrypted(hass: HomeAssistant) -> None:
     assert result["data"] == {**MOCK_CONFIG_DATA, ATTR_DEVICE_INFO: MOCK_DEVICE_INFO}
 
 
-async def test_imported_flow_encrypted_valid_pin_code(hass: HomeAssistant) -> None:
+async def test_imported_flow_encrypted_valid_pin_code(menuai: menuai) -> None:
     """Test imported flow with encryption and valid PIN code."""
 
     mock_remote = get_mock_remote(
@@ -365,10 +365,10 @@ async def test_imported_flow_encrypted_valid_pin_code(hass: HomeAssistant) -> No
     )
 
     with patch(
-        "homeassistant.components.panasonic_viera.config_flow.RemoteControl",
+        "menuai.components.panasonic_viera.config_flow.RemoteControl",
         return_value=mock_remote,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_IMPORT},
             data={**MOCK_CONFIG_DATA},
@@ -377,7 +377,7 @@ async def test_imported_flow_encrypted_valid_pin_code(hass: HomeAssistant) -> No
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "pairing"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_PIN: "1234"},
     )
@@ -392,17 +392,17 @@ async def test_imported_flow_encrypted_valid_pin_code(hass: HomeAssistant) -> No
 
 
 async def test_imported_flow_encrypted_invalid_pin_code_error(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test imported flow with encryption and invalid PIN code error during pairing step."""
 
     mock_remote = get_mock_remote(encrypted=True, authorize_error=SOAPError)
 
     with patch(
-        "homeassistant.components.panasonic_viera.config_flow.RemoteControl",
+        "menuai.components.panasonic_viera.config_flow.RemoteControl",
         return_value=mock_remote,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_IMPORT},
             data={**MOCK_CONFIG_DATA},
@@ -412,10 +412,10 @@ async def test_imported_flow_encrypted_invalid_pin_code_error(
     assert result["step_id"] == "pairing"
 
     with patch(
-        "homeassistant.components.panasonic_viera.config_flow.RemoteControl",
+        "menuai.components.panasonic_viera.config_flow.RemoteControl",
         return_value=mock_remote,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_PIN: "0000"},
         )
@@ -425,16 +425,16 @@ async def test_imported_flow_encrypted_invalid_pin_code_error(
     assert result["errors"] == {"base": ERROR_INVALID_PIN_CODE}
 
 
-async def test_imported_flow_encrypted_not_connected_abort(hass: HomeAssistant) -> None:
+async def test_imported_flow_encrypted_not_connected_abort(menuai: menuai) -> None:
     """Test imported flow with encryption and PIN code connection error abortion during pairing step."""
 
     mock_remote = get_mock_remote(encrypted=True, authorize_error=TimeoutError)
 
     with patch(
-        "homeassistant.components.panasonic_viera.config_flow.RemoteControl",
+        "menuai.components.panasonic_viera.config_flow.RemoteControl",
         return_value=mock_remote,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_IMPORT},
             data={**MOCK_CONFIG_DATA},
@@ -443,7 +443,7 @@ async def test_imported_flow_encrypted_not_connected_abort(hass: HomeAssistant) 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "pairing"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_PIN: "0000"},
     )
@@ -452,16 +452,16 @@ async def test_imported_flow_encrypted_not_connected_abort(hass: HomeAssistant) 
     assert result["reason"] == "cannot_connect"
 
 
-async def test_imported_flow_encrypted_unknown_abort(hass: HomeAssistant) -> None:
+async def test_imported_flow_encrypted_unknown_abort(menuai: menuai) -> None:
     """Test imported flow with encryption and PIN code unknown error abortion during pairing step."""
 
     mock_remote = get_mock_remote(encrypted=True, authorize_error=Exception)
 
     with patch(
-        "homeassistant.components.panasonic_viera.config_flow.RemoteControl",
+        "menuai.components.panasonic_viera.config_flow.RemoteControl",
         return_value=mock_remote,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_IMPORT},
             data={**MOCK_CONFIG_DATA},
@@ -470,7 +470,7 @@ async def test_imported_flow_encrypted_unknown_abort(hass: HomeAssistant) -> Non
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "pairing"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_PIN: "0000"},
     )
@@ -479,14 +479,14 @@ async def test_imported_flow_encrypted_unknown_abort(hass: HomeAssistant) -> Non
     assert result["reason"] == "unknown"
 
 
-async def test_imported_flow_not_connected_error(hass: HomeAssistant) -> None:
+async def test_imported_flow_not_connected_error(menuai: menuai) -> None:
     """Test imported flow with connection error abortion."""
 
     with patch(
-        "homeassistant.components.panasonic_viera.config_flow.RemoteControl",
+        "menuai.components.panasonic_viera.config_flow.RemoteControl",
         side_effect=TimeoutError,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_IMPORT},
             data={**MOCK_CONFIG_DATA},
@@ -497,14 +497,14 @@ async def test_imported_flow_not_connected_error(hass: HomeAssistant) -> None:
     assert result["errors"] == {"base": "cannot_connect"}
 
 
-async def test_imported_flow_unknown_abort(hass: HomeAssistant) -> None:
+async def test_imported_flow_unknown_abort(menuai: menuai) -> None:
     """Test imported flow with unknown error abortion."""
 
     with patch(
-        "homeassistant.components.panasonic_viera.config_flow.RemoteControl",
+        "menuai.components.panasonic_viera.config_flow.RemoteControl",
         side_effect=Exception,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_IMPORT},
             data={**MOCK_CONFIG_DATA},
@@ -515,7 +515,7 @@ async def test_imported_flow_unknown_abort(hass: HomeAssistant) -> None:
 
 
 async def test_imported_flow_non_encrypted_already_configured_abort(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test imported flow without encryption and existing config entry abortion."""
 
@@ -523,9 +523,9 @@ async def test_imported_flow_non_encrypted_already_configured_abort(
         domain=DOMAIN,
         unique_id="0.0.0.0",
         data=MOCK_CONFIG_DATA,
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_IMPORT},
         data={**MOCK_BASIC_DATA},
@@ -536,7 +536,7 @@ async def test_imported_flow_non_encrypted_already_configured_abort(
 
 
 async def test_imported_flow_encrypted_already_configured_abort(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test imported flow with encryption and existing config entry abortion."""
 
@@ -544,9 +544,9 @@ async def test_imported_flow_encrypted_already_configured_abort(
         domain=DOMAIN,
         unique_id="0.0.0.0",
         data={**MOCK_CONFIG_DATA, **MOCK_ENCRYPTION_DATA},
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_IMPORT},
         data={**MOCK_BASIC_DATA},

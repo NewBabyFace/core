@@ -7,9 +7,9 @@ from typing import Generic, TypeVar
 from pylitterbot import Pet, Robot
 from pylitterbot.robot import EVENT_UPDATE
 
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import EntityDescription
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import EntityDescription
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import LitterRobotDataUpdateCoordinator
@@ -58,7 +58,7 @@ class LitterRobotEntity(
         self._attr_unique_id = f"{_id}-{description.key}"
         self._attr_device_info = get_device_info(robot)
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Set up a listener for the entity."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self.async_on_remove(self.robot.on(EVENT_UPDATE, self.async_write_ha_state))

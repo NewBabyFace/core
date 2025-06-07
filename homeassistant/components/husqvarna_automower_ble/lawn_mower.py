@@ -4,15 +4,15 @@ from __future__ import annotations
 
 from automower_ble.protocol import MowerActivity, MowerState
 
-from homeassistant.components import bluetooth
-from homeassistant.components.lawn_mower import (
+from menuai.components import bluetooth
+from menuai.components.lawn_mower import (
     LawnMowerActivity,
     LawnMowerEntity,
     LawnMowerEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import LOGGER
 from .coordinator import HusqvarnaCoordinator
@@ -20,7 +20,7 @@ from .entity import HusqvarnaAutomowerBleEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -105,7 +105,7 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
 
         if not self.coordinator.mower.is_connected():
             device = bluetooth.async_ble_device_from_address(
-                self.coordinator.hass, self.coordinator.address, connectable=True
+                self.coordinator.menuai, self.coordinator.address, connectable=True
             )
             if not await self.coordinator.mower.connect(device):
                 return
@@ -124,7 +124,7 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
 
         if not self.coordinator.mower.is_connected():
             device = bluetooth.async_ble_device_from_address(
-                self.coordinator.hass, self.coordinator.address, connectable=True
+                self.coordinator.menuai, self.coordinator.address, connectable=True
             )
             if not await self.coordinator.mower.connect(device):
                 return
@@ -141,7 +141,7 @@ class AutomowerLawnMower(HusqvarnaAutomowerBleEntity, LawnMowerEntity):
 
         if not self.coordinator.mower.is_connected():
             device = bluetooth.async_ble_device_from_address(
-                self.coordinator.hass, self.coordinator.address, connectable=True
+                self.coordinator.menuai, self.coordinator.address, connectable=True
             )
             if not await self.coordinator.mower.connect(device):
                 return

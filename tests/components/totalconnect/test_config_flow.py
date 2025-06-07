@@ -4,16 +4,16 @@ from unittest.mock import patch
 
 from total_connect_client.exceptions import AuthenticationError
 
-from homeassistant.components.totalconnect.const import (
+from menuai.components.totalconnect.const import (
     AUTO_BYPASS,
     CODE_REQUIRED,
     CONF_USERCODES,
     DOMAIN,
 )
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_PASSWORD
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_PASSWORD
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from .common import (
     CONFIG_DATA,
@@ -34,10 +34,10 @@ from .common import (
 from tests.common import MockConfigEntry
 
 
-async def test_user(hass: HomeAssistant) -> None:
+async def test_user(menuai: menuai) -> None:
     """Test user step."""
     # user starts with no data entered, so show the user form
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data=None,
@@ -47,7 +47,7 @@ async def test_user(hass: HomeAssistant) -> None:
     assert result["step_id"] == "user"
 
 
-async def test_user_show_locations(hass: HomeAssistant) -> None:
+async def test_user_show_locations(menuai: menuai) -> None:
     """Test user locations form."""
     # user/pass provided, so check if valid then ask for usercodes on locations form
     responses = [
@@ -67,10 +67,10 @@ async def test_user_show_locations(hass: HomeAssistant) -> None:
         patch(TOTALCONNECT_GET_CONFIG, side_effect=None),
         patch(TOTALCONNECT_REQUEST_TOKEN, side_effect=None),
         patch(
-            "homeassistant.components.totalconnect.async_setup_entry", return_value=True
+            "menuai.components.totalconnect.async_setup_entry", return_value=True
         ),
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": SOURCE_USER},
             data=CONFIG_DATA_NO_USERCODES,
@@ -83,7 +83,7 @@ async def test_user_show_locations(hass: HomeAssistant) -> None:
         assert mock_request.call_count == 4
 
         # user enters an invalid usercode
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={CONF_USERCODES: "bad"},
         )
@@ -93,7 +93,7 @@ async def test_user_show_locations(hass: HomeAssistant) -> None:
         assert mock_request.call_count == 5
 
         # user enters a valid usercode
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             user_input={CONF_USERCODES: "7890"},
         )
@@ -102,17 +102,17 @@ async def test_user_show_locations(hass: HomeAssistant) -> None:
         assert mock_request.call_count == 6
 
 
-async def test_abort_if_already_setup(hass: HomeAssistant) -> None:
+async def test_abort_if_already_setup(menuai: menuai) -> None:
     """Test abort if the account is already setup."""
     MockConfigEntry(
         domain=DOMAIN,
         data=CONFIG_DATA,
         unique_id=USERNAME,
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
     # Should fail, same USERNAME (flow)
-    with patch("homeassistant.components.totalconnect.config_flow.TotalConnectClient"):
-        result = await hass.config_entries.flow.async_init(
+    with patch("menuai.components.totalconnect.config_flow.TotalConnectClient"):
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": SOURCE_USER},
             data=CONFIG_DATA,
@@ -122,13 +122,13 @@ async def test_abort_if_already_setup(hass: HomeAssistant) -> None:
     assert result["reason"] == "already_configured"
 
 
-async def test_login_failed(hass: HomeAssistant) -> None:
+async def test_login_failed(menuai: menuai) -> None:
     """Test when we have errors during login."""
     with patch(
-        "homeassistant.components.totalconnect.config_flow.TotalConnectClient"
+        "menuai.components.totalconnect.config_flow.TotalConnectClient"
     ) as client_mock:
         client_mock.side_effect = AuthenticationError()
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": SOURCE_USER},
             data=CONFIG_DATA,
@@ -138,31 +138,31 @@ async def test_login_failed(hass: HomeAssistant) -> None:
     assert result["errors"] == {"base": "invalid_auth"}
 
 
-async def test_reauth(hass: HomeAssistant) -> None:
+async def test_reauth(menuai: menuai) -> None:
     """Test reauth."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         data=CONFIG_DATA,
         unique_id=USERNAME,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await entry.start_reauth_flow(hass)
+    result = await entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
     with (
         patch(
-            "homeassistant.components.totalconnect.config_flow.TotalConnectClient"
+            "menuai.components.totalconnect.config_flow.TotalConnectClient"
         ) as client_mock,
         patch(
-            "homeassistant.components.totalconnect.async_setup_entry", return_value=True
+            "menuai.components.totalconnect.async_setup_entry", return_value=True
         ),
     ):
         # first test with an invalid password
         client_mock.side_effect = AuthenticationError()
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={CONF_PASSWORD: "password"}
         )
         assert result["type"] is FlowResultType.FORM
@@ -172,17 +172,17 @@ async def test_reauth(hass: HomeAssistant) -> None:
         # now test with the password valid
         client_mock.side_effect = None
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={CONF_PASSWORD: "password"}
         )
         assert result["type"] is FlowResultType.ABORT
         assert result["reason"] == "reauth_successful"
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    assert len(hass.config_entries.async_entries()) == 1
+    assert len(menuai.config_entries.async_entries()) == 1
 
 
-async def test_no_locations(hass: HomeAssistant) -> None:
+async def test_no_locations(menuai: menuai) -> None:
     """Test with no user locations."""
     responses = [
         RESPONSE_SESSION_DETAILS,
@@ -199,40 +199,40 @@ async def test_no_locations(hass: HomeAssistant) -> None:
         patch(TOTALCONNECT_GET_CONFIG, side_effect=None),
         patch(TOTALCONNECT_REQUEST_TOKEN, side_effect=None),
         patch(
-            "homeassistant.components.totalconnect.async_setup_entry", return_value=True
+            "menuai.components.totalconnect.async_setup_entry", return_value=True
         ),
         patch(
-            "homeassistant.components.totalconnect.TotalConnectClient.get_number_locations",
+            "menuai.components.totalconnect.TotalConnectClient.get_number_locations",
             return_value=0,
         ),
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": SOURCE_USER},
             data=CONFIG_DATA_NO_USERCODES,
         )
         assert result["type"] is FlowResultType.ABORT
         assert result["reason"] == "no_locations"
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         assert mock_request.call_count == 1
 
 
-async def test_options_flow(hass: HomeAssistant) -> None:
+async def test_options_flow(menuai: menuai) -> None:
     """Test config flow options."""
-    config_entry = await init_integration(hass)
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    config_entry = await init_integration(menuai)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"], user_input={AUTO_BYPASS: True, CODE_REQUIRED: False}
     )
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert config_entry.options == {AUTO_BYPASS: True, CODE_REQUIRED: False}
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert await hass.config_entries.async_unload(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_unload(config_entry.entry_id)
+    await menuai.async_block_till_done()

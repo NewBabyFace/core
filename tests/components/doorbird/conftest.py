@@ -9,13 +9,13 @@ from unittest.mock import MagicMock, patch
 from doorbirdpy import DoorBird, DoorBirdScheduleEntry
 import pytest
 
-from homeassistant.components.doorbird.const import (
+from menuai.components.doorbird.const import (
     CONF_EVENTS,
     DEFAULT_DOORBELL_EVENT,
     DEFAULT_MOTION_EVENT,
     DOMAIN,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from . import VALID_CONFIG, get_mock_doorbird_api
 
@@ -75,11 +75,11 @@ def patch_doorbird_api_entry_points(api: MagicMock) -> Generator[DoorBird]:
     """Mock the DoorBirdAPI."""
     with (
         patch(
-            "homeassistant.components.doorbird.DoorBird",
+            "menuai.components.doorbird.DoorBird",
             return_value=api,
         ),
         patch(
-            "homeassistant.components.doorbird.config_flow.DoorBird",
+            "menuai.components.doorbird.config_flow.DoorBird",
             return_value=api,
         ),
     ):
@@ -88,7 +88,7 @@ def patch_doorbird_api_entry_points(api: MagicMock) -> Generator[DoorBird]:
 
 @pytest.fixture
 async def doorbird_mocker(
-    hass: HomeAssistant,
+    menuai: menuai,
     doorbird_info: dict[str, Any],
     doorbird_schedule: dict[str, Any],
     doorbird_favorites: dict[str, dict[str, Any]],
@@ -124,10 +124,10 @@ async def doorbird_mocker(
             favorites_side_effect=favorites_side_effect,
             change_schedule=change_schedule,
         )
-        entry.add_to_hass(hass)
+        entry.add_to_menuai(menuai)
         with patch_doorbird_api_entry_points(api):
-            await hass.config_entries.async_setup(entry.entry_id)
-            await hass.async_block_till_done()
+            await menuai.config_entries.async_setup(entry.entry_id)
+            await menuai.async_block_till_done()
         return MockDoorbirdEntry(entry=entry, api=api)
 
     return _async_mock

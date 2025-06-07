@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.storage import Store
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.storage import Store
+from menuai.helpers.typing import ConfigType
 
 from .account import IcloudAccount, IcloudConfigEntry
 from .const import (
@@ -25,15 +25,15 @@ from .services import async_setup_services
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up iCloud integration."""
 
-    async_setup_services(hass)
+    async_setup_services(menuai)
 
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: IcloudConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: IcloudConfigEntry) -> bool:
     """Set up an iCloud account from a config entry."""
 
     username = entry.data[CONF_USERNAME]
@@ -44,12 +44,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: IcloudConfigEntry) -> bo
 
     # For backwards compat
     if entry.unique_id is None:
-        hass.config_entries.async_update_entry(entry, unique_id=username)
+        menuai.config_entries.async_update_entry(entry, unique_id=username)
 
-    icloud_dir = Store[Any](hass, STORAGE_VERSION, STORAGE_KEY)
+    icloud_dir = Store[Any](menuai, STORAGE_VERSION, STORAGE_KEY)
 
     account = IcloudAccount(
-        hass,
+        menuai,
         username,
         password,
         icloud_dir,
@@ -58,15 +58,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: IcloudConfigEntry) -> bo
         gps_accuracy_threshold,
         entry,
     )
-    await hass.async_add_executor_job(account.setup)
+    await menuai.async_add_executor_job(account.setup)
 
     entry.runtime_data = account
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: IcloudConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: IcloudConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

@@ -6,14 +6,14 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from pytraccar import ApiClient, SubscriptionStatus
 
-from homeassistant.components.traccar_server.const import (
+from menuai.components.traccar_server.const import (
     CONF_CUSTOM_ATTRIBUTES,
     CONF_EVENTS,
     CONF_MAX_ACCURACY,
     CONF_SKIP_ACCURACY_FILTER_FOR,
     DOMAIN,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
@@ -34,11 +34,11 @@ def mock_traccar_api_client() -> Generator[AsyncMock]:
     """Mock a Traccar ApiClient client."""
     with (
         patch(
-            "homeassistant.components.traccar_server.ApiClient",
+            "menuai.components.traccar_server.ApiClient",
             autospec=True,
         ) as mock_client,
         patch(
-            "homeassistant.components.traccar_server.config_flow.ApiClient",
+            "menuai.components.traccar_server.config_flow.ApiClient",
             new=mock_client,
         ),
     ):

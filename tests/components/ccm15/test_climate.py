@@ -8,8 +8,8 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.ccm15.const import DOMAIN
-from homeassistant.components.climate import (
+from menuai.components.ccm15.const import DOMAIN
+from menuai.components.climate import (
     ATTR_FAN_MODE,
     ATTR_HVAC_MODE,
     ATTR_TEMPERATURE,
@@ -21,16 +21,16 @@ from homeassistant.components.climate import (
     SERVICE_TURN_ON,
     HVACMode,
 )
-from homeassistant.const import ATTR_ENTITY_ID, CONF_HOST, CONF_PORT, SERVICE_TURN_OFF
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_ENTITY_ID, CONF_HOST, CONF_PORT, SERVICE_TURN_OFF
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry, async_fire_time_changed
 
 
 @pytest.mark.usefixtures("ccm15_device")
 async def test_climate_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
     freezer: FrozenDateTimeFactory,
@@ -44,75 +44,75 @@ async def test_climate_state(
             CONF_PORT: 80,
         },
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert entity_registry.async_get("climate.midea_0") == snapshot
     assert entity_registry.async_get("climate.midea_1") == snapshot
 
-    assert hass.states.get("climate.midea_0") == snapshot
-    assert hass.states.get("climate.midea_1") == snapshot
+    assert menuai.states.get("climate.midea_0") == snapshot
+    assert menuai.states.get("climate.midea_1") == snapshot
 
     with patch(
-        "homeassistant.components.ccm15.coordinator.CCM15Device.async_set_state"
+        "menuai.components.ccm15.coordinator.CCM15Device.async_set_state"
     ) as mock_set_state:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             CLIMATE_DOMAIN,
             SERVICE_SET_FAN_MODE,
             {ATTR_ENTITY_ID: ["climate.midea_0"], ATTR_FAN_MODE: FAN_HIGH},
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         mock_set_state.assert_called_once()
 
     with patch(
-        "homeassistant.components.ccm15.coordinator.CCM15Device.async_set_state"
+        "menuai.components.ccm15.coordinator.CCM15Device.async_set_state"
     ) as mock_set_state:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             CLIMATE_DOMAIN,
             SERVICE_SET_HVAC_MODE,
             {ATTR_ENTITY_ID: ["climate.midea_0"], ATTR_HVAC_MODE: HVACMode.COOL},
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         mock_set_state.assert_called_once()
 
     with patch(
-        "homeassistant.components.ccm15.coordinator.CCM15Device.async_set_state"
+        "menuai.components.ccm15.coordinator.CCM15Device.async_set_state"
     ) as mock_set_state:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             CLIMATE_DOMAIN,
             SERVICE_SET_TEMPERATURE,
             {ATTR_ENTITY_ID: ["climate.midea_0"], ATTR_TEMPERATURE: 25},
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         mock_set_state.assert_called_once()
 
     with patch(
-        "homeassistant.components.ccm15.coordinator.CCM15Device.async_set_state"
+        "menuai.components.ccm15.coordinator.CCM15Device.async_set_state"
     ) as mock_set_state:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             CLIMATE_DOMAIN,
             SERVICE_TURN_ON,
             {ATTR_ENTITY_ID: ["climate.midea_0"]},
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         mock_set_state.assert_called_once()
 
     with patch(
-        "homeassistant.components.ccm15.coordinator.CCM15Device.async_set_state"
+        "menuai.components.ccm15.coordinator.CCM15Device.async_set_state"
     ) as mock_set_state:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             CLIMATE_DOMAIN,
             SERVICE_TURN_OFF,
             {ATTR_ENTITY_ID: ["climate.midea_0"]},
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         mock_set_state.assert_called_once()
 
     # Create an instance of the CCM15DeviceState class
@@ -122,11 +122,11 @@ async def test_climate_state(
         return_value=device_state,
     ):
         freezer.tick(timedelta(minutes=15))
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done()
 
     assert entity_registry.async_get("climate.midea_0") == snapshot
     assert entity_registry.async_get("climate.midea_1") == snapshot
 
-    assert hass.states.get("climate.midea_0") == snapshot
-    assert hass.states.get("climate.midea_1") == snapshot
+    assert menuai.states.get("climate.midea_0") == snapshot
+    assert menuai.states.get("climate.midea_1") == snapshot

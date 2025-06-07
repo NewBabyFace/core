@@ -12,9 +12,9 @@ from aiohttp import ClientError, ClientResponseError
 import pymelcloud
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_PASSWORD, CONF_TOKEN, CONF_USERNAME
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_PASSWORD, CONF_TOKEN, CONF_USERNAME
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN
 
@@ -48,11 +48,11 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
                     acquired_token = await pymelcloud.login(
                         username,
                         password,
-                        async_get_clientsession(self.hass),
+                        async_get_clientsession(self.menuai),
                     )
                 await pymelcloud.get_devices(
                     acquired_token,
-                    async_get_clientsession(self.hass),
+                    async_get_clientsession(self.menuai),
                 )
         except ClientResponseError as err:
             if err.status in (HTTPStatus.UNAUTHORIZED, HTTPStatus.FORBIDDEN):
@@ -116,7 +116,7 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
                 acquired_token = await pymelcloud.login(
                     user_input[CONF_USERNAME],
                     user_input[CONF_PASSWORD],
-                    async_get_clientsession(self.hass),
+                    async_get_clientsession(self.menuai),
                 )
         except (ClientResponseError, AttributeError) as err:
             if (
@@ -153,7 +153,7 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
                     acquired_token = await pymelcloud.login(
                         user_input[CONF_USERNAME],
                         user_input[CONF_PASSWORD],
-                        async_get_clientsession(self.hass),
+                        async_get_clientsession(self.menuai),
                     )
             except (ClientResponseError, AttributeError) as err:
                 if (

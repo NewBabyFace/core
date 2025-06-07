@@ -8,15 +8,15 @@ import re
 import telnetlib  # pylint: disable=deprecated-module
 import voluptuous as vol
 
-from homeassistant.components.device_tracker import (
+from menuai.components.device_tracker import (
     DOMAIN as DEVICE_TRACKER_DOMAIN,
     PLATFORM_SCHEMA as DEVICE_TRACKER_PLATFORM_SCHEMA,
     DeviceScanner,
 )
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ PLATFORM_SCHEMA = DEVICE_TRACKER_PLATFORM_SCHEMA.extend(
 )
 
 
-def get_scanner(hass: HomeAssistant, config: ConfigType) -> ThomsonDeviceScanner | None:
+def get_scanner(menuai: menuai, config: ConfigType) -> ThomsonDeviceScanner | None:
     """Validate the configuration and return a THOMSON scanner."""
     scanner = ThomsonDeviceScanner(config[DEVICE_TRACKER_DOMAIN])
 

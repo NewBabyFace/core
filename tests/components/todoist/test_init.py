@@ -5,31 +5,31 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from homeassistant.components.todoist.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
+from menuai.components.todoist.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
 
 async def test_load_unload(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: None,
     todoist_config_entry: MockConfigEntry | None,
 ) -> None:
     """Test loading and unloading of the config entry."""
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
 
     assert todoist_config_entry.state is ConfigEntryState.LOADED
 
-    assert await hass.config_entries.async_unload(todoist_config_entry.entry_id)
+    assert await menuai.config_entries.async_unload(todoist_config_entry.entry_id)
     assert todoist_config_entry.state is ConfigEntryState.NOT_LOADED
 
 
 @pytest.mark.parametrize("todoist_api_status", [HTTPStatus.INTERNAL_SERVER_ERROR])
 async def test_init_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: None,
     api: AsyncMock,
     todoist_config_entry: MockConfigEntry | None,

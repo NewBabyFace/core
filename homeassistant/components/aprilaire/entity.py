@@ -6,7 +6,7 @@ import logging
 
 from pyaprilaire.const import Attribute
 
-from homeassistant.helpers.update_coordinator import BaseCoordinatorEntity
+from menuai.helpers.update_coordinator import BaseCoordinatorEntity
 
 from .coordinator import AprilaireCoordinator
 

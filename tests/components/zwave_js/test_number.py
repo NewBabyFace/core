@@ -5,10 +5,10 @@ from unittest.mock import patch
 import pytest
 from zwave_js_server.event import Event
 
-from homeassistant.const import STATE_UNKNOWN, EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from menuai.const import STATE_UNKNOWN, EntityCategory
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry
 
@@ -17,17 +17,17 @@ VOLUME_NUMBER_ENTITY = "number.indoor_siren_6_default_volume_2"
 
 
 async def test_number(
-    hass: HomeAssistant, client, aeotec_radiator_thermostat, integration
+    menuai: menuai, client, aeotec_radiator_thermostat, integration
 ) -> None:
     """Test the number entity."""
     node = aeotec_radiator_thermostat
-    state = hass.states.get(NUMBER_ENTITY)
+    state = menuai.states.get(NUMBER_ENTITY)
 
     assert state
     assert state.state == "75.0"
 
     # Test turn on setting value
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "number",
         "set_value",
         {"entity_id": NUMBER_ENTITY, "value": 30},
@@ -67,7 +67,7 @@ async def test_number(
     )
     node.receive_event(event)
 
-    state = hass.states.get(NUMBER_ENTITY)
+    state = menuai.states.get(NUMBER_ENTITY)
     assert state.state == "99.0"
 
 
@@ -76,14 +76,14 @@ def mock_client_fixture():
     """Mock no target_value."""
 
     with patch(
-        "homeassistant.components.zwave_js.number.ZwaveNumberEntity.get_zwave_value",
+        "menuai.components.zwave_js.number.ZwaveNumberEntity.get_zwave_value",
         return_value=None,
     ):
         yield
 
 
 async def test_number_no_target_value(
-    hass: HomeAssistant,
+    menuai: menuai,
     client,
     no_target_value,
     aeotec_radiator_thermostat,
@@ -91,8 +91,8 @@ async def test_number_no_target_value(
 ) -> None:
     """Test the number entity with no target value."""
     # Test turn on setting value fails
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             "number",
             "set_value",
             {"entity_id": NUMBER_ENTITY, "value": 30},
@@ -101,7 +101,7 @@ async def test_number_no_target_value(
 
 
 async def test_number_writeable(
-    hass: HomeAssistant, client, aeotec_radiator_thermostat
+    menuai: menuai, client, aeotec_radiator_thermostat
 ) -> None:
     """Test the number entity where current value is writeable."""
     aeotec_radiator_thermostat.values["4-38-0-currentValue"].metadata.data[
@@ -111,12 +111,12 @@ async def test_number_writeable(
 
     # set up config entry
     entry = MockConfigEntry(domain="zwave_js", data={"url": "ws://test.org"})
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Test turn on setting value
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "number",
         "set_value",
         {"entity_id": NUMBER_ENTITY, "value": 30},
@@ -138,11 +138,11 @@ async def test_number_writeable(
 
 
 async def test_volume_number(
-    hass: HomeAssistant, client, aeotec_zw164_siren, integration
+    menuai: menuai, client, aeotec_zw164_siren, integration
 ) -> None:
     """Test the volume number entity."""
     node = aeotec_zw164_siren
-    state = hass.states.get(VOLUME_NUMBER_ENTITY)
+    state = menuai.states.get(VOLUME_NUMBER_ENTITY)
 
     assert state
     assert state.state == "1.0"
@@ -151,7 +151,7 @@ async def test_volume_number(
     assert state.attributes["min"] == 0
 
     # Test turn on setting value
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "number",
         "set_value",
         {"entity_id": VOLUME_NUMBER_ENTITY, "value": 0.3},
@@ -191,7 +191,7 @@ async def test_volume_number(
     )
     node.receive_event(event)
 
-    state = hass.states.get(VOLUME_NUMBER_ENTITY)
+    state = menuai.states.get(VOLUME_NUMBER_ENTITY)
     assert state.state == "0.3"
 
     # Test null value
@@ -214,12 +214,12 @@ async def test_volume_number(
     )
     node.receive_event(event)
 
-    state = hass.states.get(VOLUME_NUMBER_ENTITY)
+    state = menuai.states.get(VOLUME_NUMBER_ENTITY)
     assert state.state == STATE_UNKNOWN
 
 
 async def test_config_parameter_number(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     climate_adc_t3000,
     integration,
@@ -239,15 +239,15 @@ async def test_config_parameter_number(
         assert updated_entry.disabled is False
 
     # reload integration and check if entity is correctly there
-    await hass.config_entries.async_reload(integration.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_reload(integration.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(number_entity_id)
+    state = menuai.states.get(number_entity_id)
     assert state
     assert state.state == "30.0"
     assert "reserved_values" not in state.attributes
 
-    state = hass.states.get(number_with_states_entity_id)
+    state = menuai.states.get(number_with_states_entity_id)
     assert state
     assert state.state == "0.0"
     assert "reserved_values" in state.attributes

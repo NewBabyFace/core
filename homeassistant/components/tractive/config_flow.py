@@ -9,10 +9,10 @@ from typing import Any
 import aiotractive
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_EMAIL, CONF_PASSWORD
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from .const import DOMAIN
 
@@ -23,7 +23,7 @@ USER_DATA_SCHEMA = vol.Schema(
 )
 
 
-async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
+async def validate_input(menuai: menuai, data: dict[str, Any]) -> dict[str, Any]:
     """Validate the user input allows us to connect.
 
     Data has the keys from STEP_USER_DATA_SCHEMA with values provided by the user.
@@ -55,7 +55,7 @@ class TractiveConfigFlow(ConfigFlow, domain=DOMAIN):
         errors = {}
 
         try:
-            info = await validate_input(self.hass, user_input)
+            info = await validate_input(self.menuai, user_input)
         except InvalidAuth:
             errors["base"] = "invalid_auth"
         except Exception:
@@ -85,7 +85,7 @@ class TractiveConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             try:
-                info = await validate_input(self.hass, user_input)
+                info = await validate_input(self.menuai, user_input)
             except InvalidAuth:
                 errors["base"] = "invalid_auth"
             except Exception:
@@ -94,7 +94,7 @@ class TractiveConfigFlow(ConfigFlow, domain=DOMAIN):
             else:
                 existing_entry = await self.async_set_unique_id(info["user_id"])
                 if existing_entry:
-                    await self.hass.config_entries.async_reload(existing_entry.entry_id)
+                    await self.menuai.config_entries.async_reload(existing_entry.entry_id)
                     return self.async_abort(reason="reauth_successful")
                 return self.async_abort(reason="reauth_failed_existing")
 
@@ -105,5 +105,5 @@ class TractiveConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(menuaiError):
     """Error to indicate there is invalid auth."""

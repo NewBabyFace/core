@@ -17,15 +17,15 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant import config_entries
-from homeassistant.components import cloud
-from homeassistant.components.cloud import CloudNotAvailable
-from homeassistant.components.webhook import async_generate_url
-from homeassistant.components.withings.const import DOMAIN
-from homeassistant.const import CONF_WEBHOOK_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.util import dt as dt_util
+from menuai import config_entries
+from menuai.components import cloud
+from menuai.components.cloud import CloudNotAvailable
+from menuai.components.webhook import async_generate_url
+from menuai.components.withings.const import DOMAIN
+from menuai.const import CONF_WEBHOOK_ID
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.util import dt as dt_util
 
 from . import call_webhook, prepare_webhook_setup, setup_integration
 from .conftest import USER_ID, WEBHOOK_ID
@@ -40,15 +40,15 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_data_manager_webhook_subscription(
-    hass: HomeAssistant,
+    menuai: menuai,
     withings: AsyncMock,
     webhook_config_entry: MockConfigEntry,
 ) -> None:
     """Test data manager webhook subscriptions."""
-    await setup_integration(hass, webhook_config_entry)
-    await hass.async_block_till_done()
-    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=1))
-    await hass.async_block_till_done()
+    await setup_integration(menuai, webhook_config_entry)
+    await menuai.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(seconds=1))
+    await menuai.async_block_till_done()
 
     assert withings.subscribe_notification.call_count == 6
 
@@ -76,17 +76,17 @@ async def test_data_manager_webhook_subscription(
 
 
 async def test_webhook_subscription_polling_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     withings: AsyncMock,
     polling_config_entry: MockConfigEntry,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test webhook subscriptions not run when polling."""
-    await setup_integration(hass, polling_config_entry, False)
-    await hass.async_block_till_done()
+    await setup_integration(menuai, polling_config_entry, False)
+    await menuai.async_block_till_done()
     freezer.tick(timedelta(seconds=1))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     assert withings.revoke_notification_configurations.call_count == 0
     assert withings.subscribe_notification.call_count == 0
@@ -94,15 +94,15 @@ async def test_webhook_subscription_polling_config(
 
 
 async def test_head_request(
-    hass: HomeAssistant,
+    menuai: menuai,
     withings: AsyncMock,
     webhook_config_entry: MockConfigEntry,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai_client_no_auth: ClientSessionGenerator,
 ) -> None:
     """Test we handle head requests Withings sends."""
-    await setup_integration(hass, webhook_config_entry)
-    client = await hass_client_no_auth()
-    webhook_url = async_generate_url(hass, WEBHOOK_ID)
+    await setup_integration(menuai, webhook_config_entry)
+    client = await menuai_client_no_auth()
+    webhook_url = async_generate_url(menuai, WEBHOOK_ID)
 
     response = await client.request(
         method=METH_HEAD,
@@ -112,23 +112,23 @@ async def test_head_request(
 
 
 async def test_webhooks_request_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     withings: AsyncMock,
     webhook_config_entry: MockConfigEntry,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai_client_no_auth: ClientSessionGenerator,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test calling a webhook requests data."""
-    await setup_integration(hass, webhook_config_entry)
-    await prepare_webhook_setup(hass, freezer)
+    await setup_integration(menuai, webhook_config_entry)
+    await prepare_webhook_setup(menuai, freezer)
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
 
     assert withings.get_measurement_since.call_count == 0
     assert withings.get_measurement_in_period.call_count == 1
 
     await call_webhook(
-        hass,
+        menuai,
         WEBHOOK_ID,
         {"userid": USER_ID, "appli": NotificationCategory.WEIGHT},
         client,
@@ -145,21 +145,21 @@ async def test_webhooks_request_data(
     ],
 )
 async def test_triggering_reauth(
-    hass: HomeAssistant,
+    menuai: menuai,
     withings: AsyncMock,
     polling_config_entry: MockConfigEntry,
     error: Exception,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test triggering reauth."""
-    await setup_integration(hass, polling_config_entry, False)
+    await setup_integration(menuai, polling_config_entry, False)
 
     withings.get_measurement_since.side_effect = error
     freezer.tick(timedelta(minutes=10))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
 
     assert len(flows) == 1
     flow = flows[0]
@@ -193,15 +193,15 @@ async def test_triggering_reauth(
     ],
 )
 async def test_config_flow_upgrade(
-    hass: HomeAssistant, config_entry: MockConfigEntry
+    menuai: menuai, config_entry: MockConfigEntry
 ) -> None:
     """Test config flow upgrade."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    entry = hass.config_entries.async_get_entry(config_entry.entry_id)
+    entry = menuai.config_entries.async_get_entry(config_entry.entry_id)
 
     assert entry.unique_id == "123"
     assert entry.data["token"]["userid"] == 123
@@ -209,144 +209,144 @@ async def test_config_flow_upgrade(
 
 
 async def test_setup_with_cloudhook(
-    hass: HomeAssistant, cloudhook_config_entry: MockConfigEntry, withings: AsyncMock
+    menuai: menuai, cloudhook_config_entry: MockConfigEntry, withings: AsyncMock
 ) -> None:
     """Test if set up with active cloud subscription and cloud hook."""
 
-    await mock_cloud(hass)
-    await hass.async_block_till_done()
+    await mock_cloud(menuai)
+    await menuai.async_block_till_done()
 
     with (
-        patch("homeassistant.components.cloud.async_is_logged_in", return_value=True),
-        patch("homeassistant.components.cloud.async_is_connected", return_value=True),
+        patch("menuai.components.cloud.async_is_logged_in", return_value=True),
+        patch("menuai.components.cloud.async_is_connected", return_value=True),
         patch.object(cloud, "async_active_subscription", return_value=True),
         patch(
-            "homeassistant.components.cloud.async_create_cloudhook",
+            "menuai.components.cloud.async_create_cloudhook",
             return_value="https://hooks.nabu.casa/ABCD",
         ) as fake_create_cloudhook,
         patch(
-            "homeassistant.helpers.config_entry_oauth2_flow.async_get_config_entry_implementation",
+            "menuai.helpers.config_entry_oauth2_flow.async_get_config_entry_implementation",
         ),
         patch(
-            "homeassistant.components.cloud.async_delete_cloudhook"
+            "menuai.components.cloud.async_delete_cloudhook"
         ) as fake_delete_cloudhook,
-        patch("homeassistant.components.withings.webhook_generate_url"),
+        patch("menuai.components.withings.webhook_generate_url"),
     ):
-        await setup_integration(hass, cloudhook_config_entry)
+        await setup_integration(menuai, cloudhook_config_entry)
 
-        assert cloud.async_active_subscription(hass) is True
+        assert cloud.async_active_subscription(menuai) is True
 
         assert (
-            hass.config_entries.async_entries(DOMAIN)[0].data["cloudhook_url"]
+            menuai.config_entries.async_entries(DOMAIN)[0].data["cloudhook_url"]
             == "https://hooks.nabu.casa/ABCD"
         )
 
-        await hass.async_block_till_done()
-        assert hass.config_entries.async_entries(DOMAIN)
+        await menuai.async_block_till_done()
+        assert menuai.config_entries.async_entries(DOMAIN)
         fake_create_cloudhook.assert_not_called()
 
-        for config_entry in hass.config_entries.async_entries(DOMAIN):
-            await hass.config_entries.async_remove(config_entry.entry_id)
+        for config_entry in menuai.config_entries.async_entries(DOMAIN):
+            await menuai.config_entries.async_remove(config_entry.entry_id)
             fake_delete_cloudhook.assert_called_once()
 
-        await hass.async_block_till_done()
-        assert not hass.config_entries.async_entries(DOMAIN)
+        await menuai.async_block_till_done()
+        assert not menuai.config_entries.async_entries(DOMAIN)
 
 
 async def test_removing_entry_with_cloud_unavailable(
-    hass: HomeAssistant, cloudhook_config_entry: MockConfigEntry, withings: AsyncMock
+    menuai: menuai, cloudhook_config_entry: MockConfigEntry, withings: AsyncMock
 ) -> None:
     """Test handling cloud unavailable when deleting entry."""
 
-    await mock_cloud(hass)
-    await hass.async_block_till_done()
+    await mock_cloud(menuai)
+    await menuai.async_block_till_done()
 
     with (
-        patch("homeassistant.components.cloud.async_is_logged_in", return_value=True),
-        patch("homeassistant.components.cloud.async_is_connected", return_value=True),
+        patch("menuai.components.cloud.async_is_logged_in", return_value=True),
+        patch("menuai.components.cloud.async_is_connected", return_value=True),
         patch.object(cloud, "async_active_subscription", return_value=True),
         patch(
-            "homeassistant.components.cloud.async_create_cloudhook",
+            "menuai.components.cloud.async_create_cloudhook",
             return_value="https://hooks.nabu.casa/ABCD",
         ),
         patch(
-            "homeassistant.helpers.config_entry_oauth2_flow.async_get_config_entry_implementation",
+            "menuai.helpers.config_entry_oauth2_flow.async_get_config_entry_implementation",
         ),
         patch(
-            "homeassistant.components.cloud.async_delete_cloudhook",
+            "menuai.components.cloud.async_delete_cloudhook",
             side_effect=CloudNotAvailable(),
         ),
         patch(
-            "homeassistant.components.withings.webhook_generate_url",
+            "menuai.components.withings.webhook_generate_url",
         ),
     ):
-        await setup_integration(hass, cloudhook_config_entry)
+        await setup_integration(menuai, cloudhook_config_entry)
 
-        assert cloud.async_active_subscription(hass) is True
+        assert cloud.async_active_subscription(menuai) is True
 
-        await hass.async_block_till_done()
-        assert hass.config_entries.async_entries(DOMAIN)
+        await menuai.async_block_till_done()
+        assert menuai.config_entries.async_entries(DOMAIN)
 
-        for config_entry in hass.config_entries.async_entries(DOMAIN):
-            await hass.config_entries.async_remove(config_entry.entry_id)
+        for config_entry in menuai.config_entries.async_entries(DOMAIN):
+            await menuai.config_entries.async_remove(config_entry.entry_id)
 
-        await hass.async_block_till_done()
-        assert not hass.config_entries.async_entries(DOMAIN)
+        await menuai.async_block_till_done()
+        assert not menuai.config_entries.async_entries(DOMAIN)
 
 
 async def test_setup_with_cloud(
-    hass: HomeAssistant,
+    menuai: menuai,
     webhook_config_entry: MockConfigEntry,
     withings: AsyncMock,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test if set up with active cloud subscription."""
-    await mock_cloud(hass)
-    await hass.async_block_till_done()
+    await mock_cloud(menuai)
+    await menuai.async_block_till_done()
 
     with (
-        patch("homeassistant.components.cloud.async_is_logged_in", return_value=True),
+        patch("menuai.components.cloud.async_is_logged_in", return_value=True),
         patch.object(cloud, "async_is_connected", return_value=True),
         patch.object(cloud, "async_active_subscription", return_value=True),
         patch(
-            "homeassistant.components.cloud.async_create_cloudhook",
+            "menuai.components.cloud.async_create_cloudhook",
             return_value="https://hooks.nabu.casa/ABCD",
         ) as fake_create_cloudhook,
         patch(
-            "homeassistant.components.withings.async_get_config_entry_implementation",
+            "menuai.components.withings.async_get_config_entry_implementation",
         ),
         patch(
-            "homeassistant.components.cloud.async_delete_cloudhook"
+            "menuai.components.cloud.async_delete_cloudhook"
         ) as fake_delete_cloudhook,
-        patch("homeassistant.components.withings.webhook_generate_url"),
+        patch("menuai.components.withings.webhook_generate_url"),
     ):
-        await setup_integration(hass, webhook_config_entry)
-        await prepare_webhook_setup(hass, freezer)
+        await setup_integration(menuai, webhook_config_entry)
+        await prepare_webhook_setup(menuai, freezer)
 
-        assert cloud.async_active_subscription(hass) is True
-        assert cloud.async_is_connected(hass) is True
+        assert cloud.async_active_subscription(menuai) is True
+        assert cloud.async_is_connected(menuai) is True
         fake_create_cloudhook.assert_called_once()
         fake_delete_cloudhook.assert_called_once()
 
         assert (
-            hass.config_entries.async_entries("withings")[0].data["cloudhook_url"]
+            menuai.config_entries.async_entries("withings")[0].data["cloudhook_url"]
             == "https://hooks.nabu.casa/ABCD"
         )
 
-        await hass.async_block_till_done()
-        assert hass.config_entries.async_entries(DOMAIN)
+        await menuai.async_block_till_done()
+        assert menuai.config_entries.async_entries(DOMAIN)
 
-        for config_entry in hass.config_entries.async_entries("withings"):
-            await hass.config_entries.async_remove(config_entry.entry_id)
+        for config_entry in menuai.config_entries.async_entries("withings"):
+            await menuai.config_entries.async_remove(config_entry.entry_id)
             assert fake_delete_cloudhook.call_count == 2
 
-        await hass.async_block_till_done()
-        assert not hass.config_entries.async_entries(DOMAIN)
+        await menuai.async_block_till_done()
+        assert not menuai.config_entries.async_entries(DOMAIN)
 
 
 @pytest.mark.parametrize("url", ["http://example.com", "https://example.com:444"])
 async def test_setup_no_webhook(
-    hass: HomeAssistant,
+    menuai: menuai,
     webhook_config_entry: MockConfigEntry,
     withings: AsyncMock,
     caplog: pytest.LogCaptureFixture,
@@ -354,234 +354,234 @@ async def test_setup_no_webhook(
     url: str,
 ) -> None:
     """Test if set up with cloud link and without https."""
-    hass.config.components.add("cloud")
+    menuai.config.components.add("cloud")
     with (
         patch(
-            "homeassistant.helpers.network.get_url",
+            "menuai.helpers.network.get_url",
             return_value="http://example.nabu.casa",
         ),
         patch(
-            "homeassistant.helpers.config_entry_oauth2_flow.async_get_config_entry_implementation",
+            "menuai.helpers.config_entry_oauth2_flow.async_get_config_entry_implementation",
         ),
         patch(
-            "homeassistant.components.withings.webhook_generate_url"
+            "menuai.components.withings.webhook_generate_url"
         ) as mock_async_generate_url,
     ):
         mock_async_generate_url.return_value = url
-        await setup_integration(hass, webhook_config_entry)
-        await prepare_webhook_setup(hass, freezer)
+        await setup_integration(menuai, webhook_config_entry)
+        await prepare_webhook_setup(menuai, freezer)
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         mock_async_generate_url.assert_called_once()
 
     assert "https and port 443 is required to register the webhook" in caplog.text
 
 
 async def test_cloud_disconnect(
-    hass: HomeAssistant,
+    menuai: menuai,
     withings: AsyncMock,
     webhook_config_entry: MockConfigEntry,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai_client_no_auth: ClientSessionGenerator,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test disconnecting from the cloud."""
-    await mock_cloud(hass)
-    await hass.async_block_till_done()
+    await mock_cloud(menuai)
+    await menuai.async_block_till_done()
 
     with (
-        patch("homeassistant.components.cloud.async_is_logged_in", return_value=True),
+        patch("menuai.components.cloud.async_is_logged_in", return_value=True),
         patch.object(cloud, "async_is_connected", return_value=True),
         patch.object(cloud, "async_active_subscription", return_value=True),
         patch(
-            "homeassistant.components.cloud.async_create_cloudhook",
+            "menuai.components.cloud.async_create_cloudhook",
             return_value="https://hooks.nabu.casa/ABCD",
         ),
         patch(
-            "homeassistant.components.withings.async_get_config_entry_implementation",
+            "menuai.components.withings.async_get_config_entry_implementation",
         ),
         patch(
-            "homeassistant.components.cloud.async_delete_cloudhook",
+            "menuai.components.cloud.async_delete_cloudhook",
         ),
         patch(
-            "homeassistant.components.withings.webhook_generate_url",
+            "menuai.components.withings.webhook_generate_url",
         ),
     ):
-        await setup_integration(hass, webhook_config_entry)
-        await prepare_webhook_setup(hass, freezer)
+        await setup_integration(menuai, webhook_config_entry)
+        await prepare_webhook_setup(menuai, freezer)
 
-        assert cloud.async_active_subscription(hass) is True
-        assert cloud.async_is_connected(hass) is True
+        assert cloud.async_active_subscription(menuai) is True
+        assert cloud.async_is_connected(menuai) is True
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         withings.list_notification_configurations.return_value = []
 
         assert withings.subscribe_notification.call_count == 6
 
-        async_mock_cloud_connection_status(hass, False)
-        await hass.async_block_till_done()
+        async_mock_cloud_connection_status(menuai, False)
+        await menuai.async_block_till_done()
 
         assert withings.revoke_notification_configurations.call_count == 3
 
-        async_mock_cloud_connection_status(hass, True)
-        await hass.async_block_till_done()
+        async_mock_cloud_connection_status(menuai, True)
+        await menuai.async_block_till_done()
 
         assert withings.subscribe_notification.call_count == 12
 
 
 async def test_internet_disconnect(
-    hass: HomeAssistant,
+    menuai: menuai,
     withings: AsyncMock,
     webhook_config_entry: MockConfigEntry,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai_client_no_auth: ClientSessionGenerator,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test we can recover from internet disconnects."""
-    await mock_cloud(hass)
-    await hass.async_block_till_done()
+    await mock_cloud(menuai)
+    await menuai.async_block_till_done()
 
     with (
-        patch("homeassistant.components.cloud.async_is_logged_in", return_value=True),
+        patch("menuai.components.cloud.async_is_logged_in", return_value=True),
         patch.object(cloud, "async_is_connected", return_value=True),
         patch.object(cloud, "async_active_subscription", return_value=True),
         patch(
-            "homeassistant.components.cloud.async_create_cloudhook",
+            "menuai.components.cloud.async_create_cloudhook",
             return_value="https://hooks.nabu.casa/ABCD",
         ),
         patch(
-            "homeassistant.components.withings.async_get_config_entry_implementation",
+            "menuai.components.withings.async_get_config_entry_implementation",
         ),
         patch(
-            "homeassistant.components.cloud.async_delete_cloudhook",
+            "menuai.components.cloud.async_delete_cloudhook",
         ),
         patch(
-            "homeassistant.components.withings.webhook_generate_url",
+            "menuai.components.withings.webhook_generate_url",
         ),
     ):
-        await setup_integration(hass, webhook_config_entry)
-        await prepare_webhook_setup(hass, freezer)
+        await setup_integration(menuai, webhook_config_entry)
+        await prepare_webhook_setup(menuai, freezer)
 
-        assert cloud.async_active_subscription(hass) is True
-        assert cloud.async_is_connected(hass) is True
+        assert cloud.async_active_subscription(menuai) is True
+        assert cloud.async_is_connected(menuai) is True
         assert withings.revoke_notification_configurations.call_count == 3
         assert withings.subscribe_notification.call_count == 6
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         withings.list_notification_configurations.side_effect = ClientConnectionError
 
-        async_mock_cloud_connection_status(hass, False)
-        await hass.async_block_till_done()
+        async_mock_cloud_connection_status(menuai, False)
+        await menuai.async_block_till_done()
 
         assert withings.revoke_notification_configurations.call_count == 3
 
-        async_mock_cloud_connection_status(hass, True)
-        await hass.async_block_till_done()
+        async_mock_cloud_connection_status(menuai, True)
+        await menuai.async_block_till_done()
 
         assert withings.subscribe_notification.call_count == 12
 
 
 async def test_cloud_disconnect_retry(
-    hass: HomeAssistant,
+    menuai: menuai,
     withings: AsyncMock,
     webhook_config_entry: MockConfigEntry,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai_client_no_auth: ClientSessionGenerator,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test we retry to create webhook connection again after cloud disconnects."""
-    await mock_cloud(hass)
-    await hass.async_block_till_done()
+    await mock_cloud(menuai)
+    await menuai.async_block_till_done()
 
     with (
-        patch("homeassistant.components.cloud.async_is_logged_in", return_value=True),
+        patch("menuai.components.cloud.async_is_logged_in", return_value=True),
         patch.object(cloud, "async_is_connected", return_value=True),
         patch.object(
             cloud, "async_active_subscription", return_value=True
         ) as mock_async_active_subscription,
         patch(
-            "homeassistant.components.cloud.async_create_cloudhook",
+            "menuai.components.cloud.async_create_cloudhook",
             return_value="https://hooks.nabu.casa/ABCD",
         ),
         patch(
-            "homeassistant.components.withings.async_get_config_entry_implementation",
+            "menuai.components.withings.async_get_config_entry_implementation",
         ),
         patch(
-            "homeassistant.components.cloud.async_delete_cloudhook",
+            "menuai.components.cloud.async_delete_cloudhook",
         ),
         patch(
-            "homeassistant.components.withings.webhook_generate_url",
+            "menuai.components.withings.webhook_generate_url",
         ),
     ):
-        await setup_integration(hass, webhook_config_entry)
-        await prepare_webhook_setup(hass, freezer)
+        await setup_integration(menuai, webhook_config_entry)
+        await prepare_webhook_setup(menuai, freezer)
 
-        assert cloud.async_active_subscription(hass) is True
-        assert cloud.async_is_connected(hass) is True
+        assert cloud.async_active_subscription(menuai) is True
+        assert cloud.async_is_connected(menuai) is True
         assert mock_async_active_subscription.call_count == 3
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-        async_mock_cloud_connection_status(hass, False)
-        await hass.async_block_till_done()
+        async_mock_cloud_connection_status(menuai, False)
+        await menuai.async_block_till_done()
 
         assert mock_async_active_subscription.call_count == 3
 
         freezer.tick(timedelta(seconds=30))
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done()
 
         assert mock_async_active_subscription.call_count == 4
 
 
 async def test_internet_timeout_then_restore(
-    hass: HomeAssistant,
+    menuai: menuai,
     withings: AsyncMock,
     webhook_config_entry: MockConfigEntry,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai_client_no_auth: ClientSessionGenerator,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test we can recover from internet disconnects."""
-    await mock_cloud(hass)
-    await hass.async_block_till_done()
+    await mock_cloud(menuai)
+    await menuai.async_block_till_done()
 
     with (
-        patch("homeassistant.components.cloud.async_is_logged_in", return_value=True),
+        patch("menuai.components.cloud.async_is_logged_in", return_value=True),
         patch.object(cloud, "async_is_connected", return_value=True),
         patch.object(cloud, "async_active_subscription", return_value=True),
         patch(
-            "homeassistant.components.cloud.async_create_cloudhook",
+            "menuai.components.cloud.async_create_cloudhook",
             return_value="https://hooks.nabu.casa/ABCD",
         ),
         patch(
-            "homeassistant.components.withings.async_get_config_entry_implementation",
+            "menuai.components.withings.async_get_config_entry_implementation",
         ),
         patch(
-            "homeassistant.components.cloud.async_delete_cloudhook",
+            "menuai.components.cloud.async_delete_cloudhook",
         ),
         patch(
-            "homeassistant.components.withings.webhook_generate_url",
+            "menuai.components.withings.webhook_generate_url",
         ),
     ):
-        await setup_integration(hass, webhook_config_entry)
-        await prepare_webhook_setup(hass, freezer)
+        await setup_integration(menuai, webhook_config_entry)
+        await prepare_webhook_setup(menuai, freezer)
 
-        assert cloud.async_active_subscription(hass) is True
-        assert cloud.async_is_connected(hass) is True
+        assert cloud.async_active_subscription(menuai) is True
+        assert cloud.async_is_connected(menuai) is True
         assert withings.revoke_notification_configurations.call_count == 3
         assert withings.subscribe_notification.call_count == 6
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         withings.list_notification_configurations.side_effect = WithingsConnectionError
 
-        async_mock_cloud_connection_status(hass, False)
-        await hass.async_block_till_done()
+        async_mock_cloud_connection_status(menuai, False)
+        await menuai.async_block_till_done()
 
         assert withings.revoke_notification_configurations.call_count == 3
         withings.list_notification_configurations.side_effect = None
 
-        async_mock_cloud_connection_status(hass, True)
-        await hass.async_block_till_done()
+        async_mock_cloud_connection_status(menuai, True)
+        await menuai.async_block_till_done()
 
         assert withings.subscribe_notification.call_count == 12
 
@@ -602,24 +602,24 @@ async def test_internet_timeout_then_restore(
 )
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_webhook_post(
-    hass: HomeAssistant,
+    menuai: menuai,
     withings: AsyncMock,
     webhook_config_entry: MockConfigEntry,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai_client_no_auth: ClientSessionGenerator,
     body: dict[str, Any],
     expected_code: int,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test webhook callback."""
-    await setup_integration(hass, webhook_config_entry)
-    await prepare_webhook_setup(hass, freezer)
-    client = await hass_client_no_auth()
-    webhook_url = async_generate_url(hass, WEBHOOK_ID)
+    await setup_integration(menuai, webhook_config_entry)
+    await prepare_webhook_setup(menuai, freezer)
+    client = await menuai_client_no_auth()
+    webhook_url = async_generate_url(menuai, WEBHOOK_ID)
 
     resp = await client.post(urlparse(webhook_url).path, data=body)
 
     # Wait for remaining tasks to complete.
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     data = await resp.json()
     resp.close()
@@ -628,16 +628,16 @@ async def test_webhook_post(
 
 
 async def test_devices(
-    hass: HomeAssistant,
+    menuai: menuai,
     withings: AsyncMock,
     webhook_config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
     device_registry: dr.DeviceRegistry,
 ) -> None:
     """Test devices."""
-    await setup_integration(hass, webhook_config_entry)
+    await setup_integration(menuai, webhook_config_entry)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     for device_id in ("12345", "f998be4b9ccc9e136fd8cd8e8e344c31ec3b271d"):
         device = device_registry.async_get_device({(DOMAIN, device_id)})

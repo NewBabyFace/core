@@ -7,13 +7,13 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 import pytest
 from synology_dsm.api.file_station.models import SynoFileSharedFolder
 
-from homeassistant.components.repairs import DOMAIN as REPAIRS_DOMAIN
-from homeassistant.components.synology_dsm.const import (
+from menuai.components.repairs import DOMAIN as REPAIRS_DOMAIN
+from menuai.components.synology_dsm.const import (
     CONF_BACKUP_PATH,
     CONF_BACKUP_SHARE,
     DOMAIN,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_MAC,
     CONF_PASSWORD,
@@ -21,9 +21,9 @@ from homeassistant.const import (
     CONF_SSL,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import issue_registry as ir
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.helpers import issue_registry as ir
+from menuai.setup import async_setup_component
 
 from .common import mock_dsm_information
 from .consts import HOST, MACS, PASSWORD, PORT, USE_SSL, USERNAME
@@ -36,7 +36,7 @@ from tests.typing import ClientSessionGenerator, WebSocketGenerator
 @pytest.fixture
 def mock_dsm_with_filestation():
     """Mock a successful service with filestation support."""
-    with patch("homeassistant.components.synology_dsm.common.SynologyDSM") as dsm:
+    with patch("menuai.components.synology_dsm.common.SynologyDSM") as dsm:
         dsm.login = AsyncMock(return_value=True)
         dsm.update = AsyncMock(return_value=True)
 
@@ -68,16 +68,16 @@ def mock_dsm_with_filestation():
 
 @pytest.fixture
 async def setup_dsm_with_filestation(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_dsm_with_filestation: MagicMock,
 ):
     """Mock setup of synology dsm config entry."""
     with (
         patch(
-            "homeassistant.components.synology_dsm.common.SynologyDSM",
+            "menuai.components.synology_dsm.common.SynologyDSM",
             return_value=mock_dsm_with_filestation,
         ),
-        patch("homeassistant.components.synology_dsm.PLATFORMS", return_value=[]),
+        patch("menuai.components.synology_dsm.PLATFORMS", return_value=[]),
     ):
         entry = MockConfigEntry(
             domain=DOMAIN,
@@ -95,21 +95,21 @@ async def setup_dsm_with_filestation(
             },
             unique_id="my_serial",
         )
-        entry.add_to_hass(hass)
-        assert await hass.config_entries.async_setup(entry.entry_id)
-        assert await async_setup_component(hass, REPAIRS_DOMAIN, {})
-        await hass.async_block_till_done()
+        entry.add_to_menuai(menuai)
+        assert await menuai.config_entries.async_setup(entry.entry_id)
+        assert await async_setup_component(menuai, REPAIRS_DOMAIN, {})
+        await menuai.async_block_till_done()
 
         yield mock_dsm_with_filestation
 
 
 async def test_create_issue(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_dsm_with_filestation: MagicMock,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test the issue is created."""
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
     await ws_client.send_json({"id": 1, "type": "repairs/list_issues"})
     msg = await ws_client.receive_json()
 
@@ -123,14 +123,14 @@ async def test_create_issue(
 
 
 async def test_missing_backup_ignore(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_dsm_with_filestation: MagicMock,
-    hass_client: ClientSessionGenerator,
-    hass_ws_client: WebSocketGenerator,
+    menuai_client: ClientSessionGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test missing backup location setup issue is ignored by the user."""
-    ws_client = await hass_ws_client(hass)
-    client = await hass_client()
+    ws_client = await menuai_ws_client(menuai)
+    client = await menuai_client()
 
     # get repair issues
     await ws_client.send_json({"id": 1, "type": "repairs/list_issues"})
@@ -167,15 +167,15 @@ async def test_missing_backup_ignore(
 
 
 async def test_missing_backup_success(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_dsm_with_filestation: MagicMock,
-    hass_client: ClientSessionGenerator,
-    hass_ws_client: WebSocketGenerator,
+    menuai_client: ClientSessionGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test the missing backup location setup repair flow is fully processed by the user."""
-    ws_client = await hass_ws_client(hass)
-    client = await hass_client()
-    entries = hass.config_entries.async_entries(DOMAIN)
+    ws_client = await menuai_ws_client(menuai)
+    client = await menuai_client()
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     entry = entries[0]
     assert entry.options == {"backup_path": None, "backup_share": None}
@@ -219,14 +219,14 @@ async def test_missing_backup_success(
 
 
 async def test_missing_backup_no_shares(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_dsm_with_filestation: MagicMock,
-    hass_client: ClientSessionGenerator,
-    hass_ws_client: WebSocketGenerator,
+    menuai_client: ClientSessionGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test the missing backup location setup repair flow errors out."""
-    ws_client = await hass_ws_client(hass)
-    client = await hass_client()
+    ws_client = await menuai_ws_client(menuai)
+    client = await menuai_client()
 
     # get repair issues
     await ws_client.send_json({"id": 1, "type": "repairs/list_issues"})
@@ -260,14 +260,14 @@ async def test_missing_backup_no_shares(
     ["component.synology_dsm.issues.other_issue.title"],
 )
 async def test_other_fixable_issues(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_dsm_with_filestation: MagicMock,
-    hass_client: ClientSessionGenerator,
-    hass_ws_client: WebSocketGenerator,
+    menuai_client: ClientSessionGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test fixing another issue."""
-    ws_client = await hass_ws_client(hass)
-    client = await hass_client()
+    ws_client = await menuai_ws_client(menuai)
+    client = await menuai_client()
 
     await ws_client.send_json({"id": 1, "type": "repairs/list_issues"})
     msg = await ws_client.receive_json()
@@ -283,7 +283,7 @@ async def test_other_fixable_issues(
         "translation_key": "other_issue",
     }
     ir.async_create_issue(
-        hass,
+        menuai,
         issue["domain"],
         issue["issue_id"],
         is_fixable=issue["is_fixable"],
@@ -319,4 +319,4 @@ async def test_other_fixable_issues(
     data = await process_repair_fix_flow(client, flow_id)
 
     assert data["type"] == "create_entry"
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()

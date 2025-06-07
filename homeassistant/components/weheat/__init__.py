@@ -9,11 +9,11 @@ import aiohttp
 from weheat.abstractions.discovery import HeatPumpDiscovery
 from weheat.exceptions import UnauthorizedException
 
-from homeassistant.const import CONF_ACCESS_TOKEN, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.config_entry_oauth2_flow import (
+from menuai.const import CONF_ACCESS_TOKEN, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.config_entry_oauth2_flow import (
     OAuth2Session,
     async_get_config_entry_implementation,
 )
@@ -30,11 +30,11 @@ from .coordinator import (
 PLATFORMS: list[Platform] = [Platform.BINARY_SENSOR, Platform.SENSOR]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: WeheatConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: WeheatConfigEntry) -> bool:
     """Set up Weheat from a config entry."""
-    implementation = await async_get_config_entry_implementation(hass, entry)
+    implementation = await async_get_config_entry_implementation(menuai, entry)
 
-    session = OAuth2Session(hass, entry, implementation)
+    session = OAuth2Session(menuai, entry, implementation)
 
     try:
         await session.async_ensure_token_valid()
@@ -54,7 +54,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: WeheatConfigEntry) -> bo
     # fetch a list of the heat pumps the entry can access
     try:
         discovered_heat_pumps = await HeatPumpDiscovery.async_discover_active(
-            API_URL, token, async_get_clientsession(hass)
+            API_URL, token, async_get_clientsession(menuai)
         )
     except UnauthorizedException as error:
         raise ConfigEntryAuthFailed from error
@@ -67,10 +67,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: WeheatConfigEntry) -> bo
 
         new_heat_pump = HeatPumpInfo(pump_info)
         new_data_coordinator = WeheatDataUpdateCoordinator(
-            hass, entry, session, pump_info, nr_of_pumps
+            menuai, entry, session, pump_info, nr_of_pumps
         )
         new_energy_coordinator = WeheatEnergyUpdateCoordinator(
-            hass, entry, session, pump_info
+            menuai, entry, session, pump_info
         )
 
         entry.runtime_data.append(
@@ -92,11 +92,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: WeheatConfigEntry) -> bo
         ],
     )
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: WeheatConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: WeheatConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

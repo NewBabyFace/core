@@ -22,19 +22,19 @@ from pyisy.constants import (
 from pyisy.helpers import EventListener, NodeProperty
 from pyisy.nodes import Node, NodeChangedEvent
 
-from homeassistant.components.select import SelectEntity, SelectEntityDescription
-from homeassistant.const import (
+from menuai.components.select import SelectEntity, SelectEntityDescription
+from menuai.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
     EntityCategory,
     Platform,
     UnitOfTime,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.restore_state import RestoreEntity
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.restore_state import RestoreEntity
 
 from .const import _LOGGER, UOM_INDEX
 from .entity import ISYAuxControlEntity
@@ -53,7 +53,7 @@ BACKLIGHT_MEMORY_FILTER = {"memory": DEV_BL_ADDR, "cmd1": DEV_CMD_MEMORY_WRITE}
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: IsyConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -169,9 +169,9 @@ class ISYBacklightSelectEntity(ISYAuxControlEntity, SelectEntity, RestoreEntity)
         self._memory_change_handler: EventListener | None = None
         self._attr_current_option = None
 
-    async def async_added_to_hass(self) -> None:
-        """Load the last known state when added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Load the last known state when added to menuai."""
+        await super().async_added_to_menuai()
         if (
             last_state := await self.async_get_last_state()
         ) and last_state.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE):
@@ -204,7 +204,7 @@ class ISYBacklightSelectEntity(ISYAuxControlEntity, SelectEntity, RestoreEntity)
         if not await self._node.send_cmd(
             CMD_BACKLIGHT, val=BACKLIGHT_INDEX.index(option), uom=ISY_UOM_INDEX
         ):
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Could not set backlight to {option} for {self._node.address}"
             )
         self._attr_current_option = option

@@ -8,8 +8,8 @@ from typing import Any
 from pykodi import CannotConnectError, InvalidAuthError, Kodi, get_kodi_connection
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import (
     CONF_HOST,
     CONF_NAME,
     CONF_PASSWORD,
@@ -18,10 +18,10 @@ from homeassistant.const import (
     CONF_TIMEOUT,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import (
     CONF_WS_PORT,
@@ -35,7 +35,7 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 
-async def validate_http(hass: HomeAssistant, data):
+async def validate_http(menuai: menuai, data):
     """Validate the user input allows us to connect over HTTP."""
 
     host = data[CONF_HOST]
@@ -43,7 +43,7 @@ async def validate_http(hass: HomeAssistant, data):
     username = data.get(CONF_USERNAME)
     password = data.get(CONF_PASSWORD)
     ssl = data.get(CONF_SSL)
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
 
     _LOGGER.debug("Connecting to %s:%s over HTTP", host, port)
     khc = get_kodi_connection(
@@ -58,7 +58,7 @@ async def validate_http(hass: HomeAssistant, data):
         raise InvalidAuth from error
 
 
-async def validate_ws(hass: HomeAssistant, data):
+async def validate_ws(menuai: menuai, data):
     """Validate the user input allows us to connect over WS."""
     if not (ws_port := data.get(CONF_WS_PORT)):
         return
@@ -69,7 +69,7 @@ async def validate_ws(hass: HomeAssistant, data):
     password = data.get(CONF_PASSWORD)
     ssl = data.get(CONF_SSL)
 
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
 
     _LOGGER.debug("Connecting to %s:%s over WebSocket", host, ws_port)
     kwc = get_kodi_connection(
@@ -126,8 +126,8 @@ class KodiConfigFlow(ConfigFlow, domain=DOMAIN):
         self.context.update({"title_placeholders": {CONF_NAME: self._name}})
 
         try:
-            await validate_http(self.hass, self._get_data())
-            await validate_ws(self.hass, self._get_data())
+            await validate_http(self.menuai, self._get_data())
+            await validate_ws(self.menuai, self._get_data())
         except InvalidAuth:
             return await self.async_step_credentials()
         except WSCannotConnect:
@@ -165,8 +165,8 @@ class KodiConfigFlow(ConfigFlow, domain=DOMAIN):
             self._ssl = user_input[CONF_SSL]
 
             try:
-                await validate_http(self.hass, self._get_data())
-                await validate_ws(self.hass, self._get_data())
+                await validate_http(self.menuai, self._get_data())
+                await validate_ws(self.menuai, self._get_data())
             except InvalidAuth:
                 return await self.async_step_credentials()
             except WSCannotConnect:
@@ -192,8 +192,8 @@ class KodiConfigFlow(ConfigFlow, domain=DOMAIN):
             self._password = user_input.get(CONF_PASSWORD)
 
             try:
-                await validate_http(self.hass, self._get_data())
-                await validate_ws(self.hass, self._get_data())
+                await validate_http(self.menuai, self._get_data())
+                await validate_ws(self.menuai, self._get_data())
             except InvalidAuth:
                 errors["base"] = "invalid_auth"
             except WSCannotConnect:
@@ -222,7 +222,7 @@ class KodiConfigFlow(ConfigFlow, domain=DOMAIN):
                 self._ws_port = None
 
             try:
-                await validate_ws(self.hass, self._get_data())
+                await validate_ws(self.menuai, self._get_data())
             except WSCannotConnect:
                 errors["base"] = "cannot_connect"
             except Exception:
@@ -237,8 +237,8 @@ class KodiConfigFlow(ConfigFlow, domain=DOMAIN):
         """Handle import from YAML."""
         reason = None
         try:
-            await validate_http(self.hass, import_data)
-            await validate_ws(self.hass, import_data)
+            await validate_http(self.menuai, import_data)
+            await validate_ws(self.menuai, import_data)
         except InvalidAuth:
             _LOGGER.exception("Invalid Kodi credentials")
             reason = "invalid_auth"
@@ -326,13 +326,13 @@ class KodiConfigFlow(ConfigFlow, domain=DOMAIN):
         }
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(menuaiError):
     """Error to indicate there is invalid auth."""
 
 
-class WSCannotConnect(HomeAssistantError):
+class WSCannotConnect(menuaiError):
     """Error to indicate we cannot connect to websocket."""

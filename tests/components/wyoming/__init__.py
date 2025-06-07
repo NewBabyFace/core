@@ -21,9 +21,9 @@ from wyoming.info import (
     WakeProgram,
 )
 
-from homeassistant.components.wyoming import DOMAIN
-from homeassistant.components.wyoming.devices import SatelliteDevice
-from homeassistant.core import HomeAssistant
+from menuai.components.wyoming import DOMAIN
+from menuai.components.wyoming.devices import SatelliteDevice
+from menuai.core import menuai
 
 TEST_ATTR = Attribution(name="Test", url="http://www.test.com")
 STT_INFO = Info(
@@ -187,19 +187,19 @@ class MockAsyncTcpClient:
 
 
 async def reload_satellite(
-    hass: HomeAssistant, config_entry_id: str
+    menuai: menuai, config_entry_id: str
 ) -> SatelliteDevice:
     """Reload config entry with satellite info and returns new device."""
     with (
         patch(
-            "homeassistant.components.wyoming.data.load_wyoming_info",
+            "menuai.components.wyoming.data.load_wyoming_info",
             return_value=SATELLITE_INFO,
         ),
         patch(
-            "homeassistant.components.wyoming.assist_satellite.WyomingAssistSatellite.run"
+            "menuai.components.wyoming.assist_satellite.WyomingAssistSatellite.run"
         ) as _run_mock,
     ):
         # _run_mock: satellite task does not actually run
-        await hass.config_entries.async_reload(config_entry_id)
+        await menuai.config_entries.async_reload(config_entry_id)
 
-    return hass.data[DOMAIN][config_entry_id].device
+    return menuai.data[DOMAIN][config_entry_id].device

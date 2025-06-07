@@ -6,8 +6,8 @@ from kaleidescape import const as kaleidescape_const
 from kaleidescape.device import Movie
 import pytest
 
-from homeassistant.components.media_player import DOMAIN as MEDIA_PLAYER_DOMAIN
-from homeassistant.const import (
+from menuai.components.media_player import DOMAIN as MEDIA_PLAYER_DOMAIN
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_MEDIA_NEXT_TRACK,
     SERVICE_MEDIA_PAUSE,
@@ -21,8 +21,8 @@ from homeassistant.const import (
     STATE_PAUSED,
     STATE_PLAYING,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 from . import MOCK_SERIAL
 
@@ -31,26 +31,26 @@ FRIENDLY_NAME = f"Kaleidescape Device {MOCK_SERIAL}"
 
 
 @pytest.mark.usefixtures("mock_device", "mock_integration")
-async def test_entity(hass: HomeAssistant) -> None:
+async def test_entity(menuai: menuai) -> None:
     """Test entity attributes."""
-    entity = hass.states.get(ENTITY_ID)
+    entity = menuai.states.get(ENTITY_ID)
     assert entity is not None
     assert entity.state == STATE_OFF
     assert entity.attributes["friendly_name"] == FRIENDLY_NAME
 
 
 @pytest.mark.usefixtures("mock_integration")
-async def test_update_state(hass: HomeAssistant, mock_device: MagicMock) -> None:
+async def test_update_state(menuai: menuai, mock_device: MagicMock) -> None:
     """Tests dispatched signals update player."""
-    entity = hass.states.get(ENTITY_ID)
+    entity = menuai.states.get(ENTITY_ID)
     assert entity is not None
     assert entity.state == STATE_OFF
 
     # Device turns on
     mock_device.power.state = kaleidescape_const.DEVICE_POWER_STATE_ON
     mock_device.dispatcher.send(kaleidescape_const.DEVICE_POWER_STATE)
-    await hass.async_block_till_done()
-    entity = hass.states.get(ENTITY_ID)
+    await menuai.async_block_till_done()
+    entity = menuai.states.get(ENTITY_ID)
     assert entity is not None
     assert entity.state == STATE_IDLE
 
@@ -84,24 +84,24 @@ async def test_update_state(hass: HomeAssistant, mock_device: MagicMock) -> None
         chapter_location=1,
     )
     mock_device.dispatcher.send(kaleidescape_const.PLAY_STATUS)
-    await hass.async_block_till_done()
-    entity = hass.states.get(ENTITY_ID)
+    await menuai.async_block_till_done()
+    entity = menuai.states.get(ENTITY_ID)
     assert entity is not None
     assert entity.state == STATE_PLAYING
 
     # Devices pauses playing
     mock_device.movie.play_status = kaleidescape_const.PLAY_STATUS_PAUSED
     mock_device.dispatcher.send(kaleidescape_const.PLAY_STATUS)
-    await hass.async_block_till_done()
-    entity = hass.states.get(ENTITY_ID)
+    await menuai.async_block_till_done()
+    entity = menuai.states.get(ENTITY_ID)
     assert entity is not None
     assert entity.state == STATE_PAUSED
 
 
 @pytest.mark.usefixtures("mock_integration")
-async def test_services(hass: HomeAssistant, mock_device: MagicMock) -> None:
+async def test_services(menuai: menuai, mock_device: MagicMock) -> None:
     """Test service calls."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: ENTITY_ID},
@@ -109,7 +109,7 @@ async def test_services(hass: HomeAssistant, mock_device: MagicMock) -> None:
     )
     assert mock_device.leave_standby.call_count == 1
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: ENTITY_ID},
@@ -117,7 +117,7 @@ async def test_services(hass: HomeAssistant, mock_device: MagicMock) -> None:
     )
     assert mock_device.enter_standby.call_count == 1
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_MEDIA_PLAY,
         {ATTR_ENTITY_ID: ENTITY_ID},
@@ -125,7 +125,7 @@ async def test_services(hass: HomeAssistant, mock_device: MagicMock) -> None:
     )
     assert mock_device.play.call_count == 1
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_MEDIA_PAUSE,
         {ATTR_ENTITY_ID: ENTITY_ID},
@@ -133,7 +133,7 @@ async def test_services(hass: HomeAssistant, mock_device: MagicMock) -> None:
     )
     assert mock_device.pause.call_count == 1
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_MEDIA_STOP,
         {ATTR_ENTITY_ID: ENTITY_ID},
@@ -141,7 +141,7 @@ async def test_services(hass: HomeAssistant, mock_device: MagicMock) -> None:
     )
     assert mock_device.stop.call_count == 1
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_MEDIA_NEXT_TRACK,
         {ATTR_ENTITY_ID: ENTITY_ID},
@@ -149,7 +149,7 @@ async def test_services(hass: HomeAssistant, mock_device: MagicMock) -> None:
     )
     assert mock_device.next.call_count == 1
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_MEDIA_PREVIOUS_TRACK,
         {ATTR_ENTITY_ID: ENTITY_ID},

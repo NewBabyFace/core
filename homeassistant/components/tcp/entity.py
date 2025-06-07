@@ -8,7 +8,7 @@ import socket
 import ssl
 from typing import Final
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_NAME,
     CONF_PAYLOAD,
@@ -19,10 +19,10 @@ from homeassistant.const import (
     CONF_VALUE_TEMPLATE,
     CONF_VERIFY_SSL,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import TemplateError
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai
+from menuai.exceptions import TemplateError
+from menuai.helpers.entity import Entity
+from menuai.helpers.typing import ConfigType
 
 from .const import CONF_BUFFER_SIZE, CONF_VALUE_ON
 from .model import TcpSensorConfig
@@ -33,10 +33,10 @@ _LOGGER: Final = logging.getLogger(__name__)
 class TcpEntity(Entity):
     """Base entity class for TCP platform."""
 
-    def __init__(self, hass: HomeAssistant, config: ConfigType) -> None:
+    def __init__(self, menuai: menuai, config: ConfigType) -> None:
         """Set all the config values if they exist and get initial state."""
 
-        self._hass = hass
+        self._menuai = menuai
         self._config: TcpSensorConfig = {
             CONF_NAME: config[CONF_NAME],
             CONF_HOST: config[CONF_HOST],

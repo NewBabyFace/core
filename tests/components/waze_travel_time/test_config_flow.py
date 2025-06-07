@@ -2,9 +2,9 @@
 
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.waze_travel_time.config_flow import WazeConfigFlow
-from homeassistant.components.waze_travel_time.const import (
+from menuai import config_entries
+from menuai.components.waze_travel_time.config_flow import WazeConfigFlow
+from menuai.components.waze_travel_time.const import (
     CONF_AVOID_FERRIES,
     CONF_AVOID_SUBSCRIPTION_ROADS,
     CONF_AVOID_TOLL_ROADS,
@@ -20,9 +20,9 @@ from homeassistant.components.waze_travel_time.const import (
     DOMAIN,
     IMPERIAL_UNITS,
 )
-from homeassistant.const import CONF_NAME, CONF_REGION
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.const import CONF_NAME, CONF_REGION
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from .const import CONFIG_FLOW_USER_INPUT, MOCK_CONFIG
 
@@ -30,19 +30,19 @@ from tests.common import MockConfigEntry
 
 
 @pytest.mark.usefixtures("validate_config_entry")
-async def test_minimum_fields(hass: HomeAssistant) -> None:
+async def test_minimum_fields(menuai: menuai) -> None:
     """Test we get the form."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         CONFIG_FLOW_USER_INPUT,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == DEFAULT_NAME
@@ -55,7 +55,7 @@ async def test_minimum_fields(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("mock_update")
-async def test_reconfigure(hass: HomeAssistant) -> None:
+async def test_reconfigure(menuai: menuai) -> None:
     """Test reconfigure flow."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -63,15 +63,15 @@ async def test_reconfigure(hass: HomeAssistant) -> None:
         options=DEFAULT_OPTIONS,
         version=WazeConfigFlow.VERSION,
     )
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    reconfigure_result = await entry.start_reconfigure_flow(hass)
+    reconfigure_result = await entry.start_reconfigure_flow(menuai)
     assert reconfigure_result["type"] is FlowResultType.FORM
     assert reconfigure_result["step_id"] == "user"
 
-    user_step_result = await hass.config_entries.flow.async_configure(
+    user_step_result = await menuai.config_entries.flow.async_configure(
         reconfigure_result["flow_id"],
         {
             CONF_NAME: DEFAULT_NAME,
@@ -82,9 +82,9 @@ async def test_reconfigure(hass: HomeAssistant) -> None:
     )
     assert user_step_result["type"] is FlowResultType.ABORT
     assert user_step_result["reason"] == "reconfigure_successful"
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    entry = menuai.config_entries.async_entries(DOMAIN)[0]
     assert entry.data == {
         CONF_NAME: DEFAULT_NAME,
         CONF_ORIGIN: "location3",
@@ -93,7 +93,7 @@ async def test_reconfigure(hass: HomeAssistant) -> None:
     }
 
 
-async def test_options(hass: HomeAssistant) -> None:
+async def test_options(menuai: menuai) -> None:
     """Test options flow."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -101,16 +101,16 @@ async def test_options(hass: HomeAssistant) -> None:
         options=DEFAULT_OPTIONS,
         version=WazeConfigFlow.VERSION,
     )
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    result = await hass.config_entries.options.async_init(entry.entry_id, data=None)
+    result = await menuai.config_entries.options.async_init(entry.entry_id, data=None)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             CONF_AVOID_FERRIES: True,
@@ -149,49 +149,49 @@ async def test_options(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("validate_config_entry")
-async def test_dupe(hass: HomeAssistant) -> None:
+async def test_dupe(menuai: menuai) -> None:
     """Test setting up the same entry data twice is OK."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         CONFIG_FLOW_USER_INPUT,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         CONFIG_FLOW_USER_INPUT,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
 
 
 @pytest.mark.usefixtures("invalidate_config_entry")
 async def test_invalid_config_entry(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test we get the form."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         CONFIG_FLOW_USER_INPUT,
     )
@@ -203,7 +203,7 @@ async def test_invalid_config_entry(
 
 
 @pytest.mark.usefixtures("mock_update")
-async def test_reset_filters(hass: HomeAssistant) -> None:
+async def test_reset_filters(menuai: menuai) -> None:
     """Test resetting inclusive and exclusive filters to empty string."""
     options = {**DEFAULT_OPTIONS}
     options[CONF_INCL_FILTER] = ["test"]
@@ -215,15 +215,15 @@ async def test_reset_filters(hass: HomeAssistant) -> None:
         entry_id="test",
         version=WazeConfigFlow.VERSION,
     )
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    result = await hass.config_entries.options.async_init(
+    result = await menuai.config_entries.options.async_init(
         config_entry.entry_id, data=None
     )
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             CONF_AVOID_FERRIES: True,

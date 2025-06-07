@@ -8,10 +8,10 @@ from typing import Any
 
 from fullykiosk import FullyKiosk
 
-from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
-from homeassistant.const import EntityCategory
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchEntity, SwitchEntityDescription
+from menuai.const import EntityCategory
+from menuai.core import CALLBACK_TYPE, menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import FullyKioskConfigEntry
 from .coordinator import FullyKioskDataUpdateCoordinator
@@ -82,7 +82,7 @@ SWITCHES: tuple[FullySwitchEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: FullyKioskConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -111,9 +111,9 @@ class FullySwitchEntity(FullyKioskEntity, SwitchEntity):
         self._turned_on_subscription: CALLBACK_TYPE | None = None
         self._turned_off_subscription: CALLBACK_TYPE | None = None
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai."""
+        await super().async_added_to_menuai()
         description = self.entity_description
         self._turned_on_subscription = await self.mqtt_subscribe(
             description.mqtt_off_event, self._turn_off
@@ -122,9 +122,9 @@ class FullySwitchEntity(FullyKioskEntity, SwitchEntity):
             description.mqtt_on_event, self._turn_on
         )
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Close MQTT subscriptions when removed."""
-        await super().async_will_remove_from_hass()
+        await super().async_will_remove_from_menuai()
         if self._turned_off_subscription is not None:
             self._turned_off_subscription()
         if self._turned_on_subscription is not None:

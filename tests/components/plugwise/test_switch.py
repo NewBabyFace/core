@@ -5,9 +5,9 @@ from unittest.mock import MagicMock
 from plugwise.exceptions import PlugwiseException
 import pytest
 
-from homeassistant.components.plugwise.const import DOMAIN
-from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
-from homeassistant.const import (
+from menuai.components.plugwise.const import DOMAIN
+from menuai.components.switch import DOMAIN as SWITCH_DOMAIN
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_TOGGLE,
     SERVICE_TURN_OFF,
@@ -15,34 +15,34 @@ from homeassistant.const import (
     STATE_OFF,
     STATE_ON,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry
 
 
 async def test_adam_climate_switch_entities(
-    hass: HomeAssistant, mock_smile_adam: MagicMock, init_integration: MockConfigEntry
+    menuai: menuai, mock_smile_adam: MagicMock, init_integration: MockConfigEntry
 ) -> None:
     """Test creation of climate related switch entities."""
-    state = hass.states.get("switch.cv_pomp_relay")
+    state = menuai.states.get("switch.cv_pomp_relay")
     assert state
     assert state.state == STATE_ON
 
-    state = hass.states.get("switch.fibaro_hc2_relay")
+    state = menuai.states.get("switch.fibaro_hc2_relay")
     assert state
     assert state.state == STATE_ON
 
 
 async def test_adam_climate_switch_negative_testing(
-    hass: HomeAssistant, mock_smile_adam: MagicMock, init_integration: MockConfigEntry
+    menuai: menuai, mock_smile_adam: MagicMock, init_integration: MockConfigEntry
 ) -> None:
     """Test exceptions of climate related switch entities."""
     mock_smile_adam.set_switch_state.side_effect = PlugwiseException
 
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             SWITCH_DOMAIN,
             SERVICE_TURN_OFF,
             {ATTR_ENTITY_ID: "switch.cv_pomp_relay"},
@@ -54,8 +54,8 @@ async def test_adam_climate_switch_negative_testing(
         "78d1126fc4c743db81b61c20e88342a7", None, "relay", STATE_OFF
     )
 
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             SWITCH_DOMAIN,
             SERVICE_TURN_ON,
             {ATTR_ENTITY_ID: "switch.fibaro_hc2_relay"},
@@ -69,10 +69,10 @@ async def test_adam_climate_switch_negative_testing(
 
 
 async def test_adam_climate_switch_changes(
-    hass: HomeAssistant, mock_smile_adam: MagicMock, init_integration: MockConfigEntry
+    menuai: menuai, mock_smile_adam: MagicMock, init_integration: MockConfigEntry
 ) -> None:
     """Test changing of climate related switch entities."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: "switch.cv_pomp_relay"},
@@ -84,7 +84,7 @@ async def test_adam_climate_switch_changes(
         "78d1126fc4c743db81b61c20e88342a7", None, "relay", STATE_OFF
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TOGGLE,
         {ATTR_ENTITY_ID: "switch.fibaro_hc2_relay"},
@@ -96,7 +96,7 @@ async def test_adam_climate_switch_changes(
         "a28f588dc4a049a483fd03a30361ad3a", None, "relay", STATE_OFF
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "switch.fibaro_hc2_relay"},
@@ -110,23 +110,23 @@ async def test_adam_climate_switch_changes(
 
 
 async def test_stretch_switch_entities(
-    hass: HomeAssistant, mock_stretch: MagicMock, init_integration: MockConfigEntry
+    menuai: menuai, mock_stretch: MagicMock, init_integration: MockConfigEntry
 ) -> None:
     """Test creation of climate related switch entities."""
-    state = hass.states.get("switch.koelkast_92c4a_relay")
+    state = menuai.states.get("switch.koelkast_92c4a_relay")
     assert state
     assert state.state == STATE_ON
 
-    state = hass.states.get("switch.droger_52559_relay")
+    state = menuai.states.get("switch.droger_52559_relay")
     assert state
     assert state.state == STATE_ON
 
 
 async def test_stretch_switch_changes(
-    hass: HomeAssistant, mock_stretch: MagicMock, init_integration: MockConfigEntry
+    menuai: menuai, mock_stretch: MagicMock, init_integration: MockConfigEntry
 ) -> None:
     """Test changing of power related switch entities."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: "switch.koelkast_92c4a_relay"},
@@ -137,7 +137,7 @@ async def test_stretch_switch_changes(
         "e1c884e7dede431dadee09506ec4f859", None, "relay", STATE_OFF
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TOGGLE,
         {ATTR_ENTITY_ID: "switch.droger_52559_relay"},
@@ -148,7 +148,7 @@ async def test_stretch_switch_changes(
         "cfe95cf3de1948c0b8955125bf754614", None, "relay", STATE_OFF
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "switch.droger_52559_relay"},
@@ -161,13 +161,13 @@ async def test_stretch_switch_changes(
 
 
 async def test_unique_id_migration_plug_relay(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_smile_adam: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test unique ID migration of -plugs to -relay."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     # Entry to migrate
     entity_registry.async_get_or_create(
@@ -188,11 +188,11 @@ async def test_unique_id_migration_plug_relay(
         disabled_by=None,
     )
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("switch.playstation_smart_plug") is not None
-    assert hass.states.get("switch.ziggo_modem") is not None
+    assert menuai.states.get("switch.playstation_smart_plug") is not None
+    assert menuai.states.get("switch.ziggo_modem") is not None
 
     entity_entry = entity_registry.async_get("switch.playstation_smart_plug")
     assert entity_entry

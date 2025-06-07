@@ -13,11 +13,11 @@ from energyzero import (
     Gas,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util import dt as dt_util
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.util import dt as dt_util
 
 from .const import DOMAIN, LOGGER, SCAN_INTERVAL, THRESHOLD_HOUR
 
@@ -37,17 +37,17 @@ class EnergyZeroDataUpdateCoordinator(DataUpdateCoordinator[EnergyZeroData]):
 
     config_entry: ConfigEntry
 
-    def __init__(self, hass: HomeAssistant, entry: EnergyZeroConfigEntry) -> None:
+    def __init__(self, menuai: menuai, entry: EnergyZeroConfigEntry) -> None:
         """Initialize global EnergyZero data updater."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             name=DOMAIN,
             update_interval=SCAN_INTERVAL,
             config_entry=entry,
         )
 
-        self.energyzero = EnergyZero(session=async_get_clientsession(hass))
+        self.energyzero = EnergyZero(session=async_get_clientsession(menuai))
 
     async def _async_update_data(self) -> EnergyZeroData:
         """Fetch data from EnergyZero."""

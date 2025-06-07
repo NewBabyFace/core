@@ -7,9 +7,9 @@ from kaleidescape import Dispatcher
 from kaleidescape.device import Automation, Movie, Power, System
 import pytest
 
-from homeassistant.components.kaleidescape.const import DOMAIN
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
+from menuai.components.kaleidescape.const import DOMAIN
+from menuai.const import CONF_HOST
+from menuai.core import menuai
 
 from . import MOCK_HOST, MOCK_SERIAL
 
@@ -20,7 +20,7 @@ from tests.common import MockConfigEntry
 def fixture_mock_device() -> Generator[MagicMock]:
     """Return a mocked Kaleidescape device."""
     with patch(
-        "homeassistant.components.kaleidescape.KaleidescapeDevice", autospec=True
+        "menuai.components.kaleidescape.KaleidescapeDevice", autospec=True
     ) as mock:
         host = MOCK_HOST
 
@@ -63,12 +63,12 @@ def fixture_mock_config_entry() -> MockConfigEntry:
 
 @pytest.fixture(name="mock_integration")
 async def fixture_mock_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_device: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> MockConfigEntry:
     """Return a mock ConfigEntry setup for Kaleidescape integration."""
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
     return mock_config_entry

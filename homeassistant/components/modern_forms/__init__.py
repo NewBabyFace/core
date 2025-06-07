@@ -8,9 +8,9 @@ from typing import Any, Concatenate
 
 from aiomodernforms import ModernFormsConnectionError, ModernFormsError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai
 
 from .const import DOMAIN
 from .coordinator import ModernFormsDataUpdateCoordinator
@@ -26,31 +26,31 @@ PLATFORMS = [
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up a Modern Forms device from a config entry."""
 
     # Create Modern Forms instance for this entry
-    coordinator = ModernFormsDataUpdateCoordinator(hass, entry)
+    coordinator = ModernFormsDataUpdateCoordinator(menuai, entry)
     await coordinator.async_config_entry_first_refresh()
 
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.entry_id] = coordinator
+    menuai.data.setdefault(DOMAIN, {})
+    menuai.data[DOMAIN][entry.entry_id] = coordinator
 
     # Set up all platforms for this device/entry.
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload Modern Forms config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
     if unload_ok:
-        del hass.data[DOMAIN][entry.entry_id]
+        del menuai.data[DOMAIN][entry.entry_id]
 
-    if not hass.data[DOMAIN]:
-        del hass.data[DOMAIN]
+    if not menuai.data[DOMAIN]:
+        del menuai.data[DOMAIN]
 
     return unload_ok
 

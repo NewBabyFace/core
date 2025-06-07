@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from bimmer_connected.vehicle import MyBMWVehicle
 
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import BMWDataUpdateCoordinator
@@ -34,7 +34,7 @@ class BMWBaseEntity(CoordinatorEntity[BMWDataUpdateCoordinator]):
             serial_number=vehicle.vin,
         )
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai."""
+        await super().async_added_to_menuai()
         self._handle_coordinator_update()

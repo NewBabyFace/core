@@ -2,10 +2,10 @@
 
 from pyeconet.equipment import Equipment
 
-from homeassistant.core import callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import Entity
+from menuai.core import callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity import Entity
 
 from .const import DOMAIN, PUSH_UPDATE
 
@@ -21,11 +21,11 @@ class EcoNetEntity[_EquipmentT: Equipment = Equipment](Entity):
         self._attr_name = econet.device_name
         self._attr_unique_id = f"{econet.device_id}_{econet.device_name}"
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to device events."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self.async_on_remove(
-            async_dispatcher_connect(self.hass, PUSH_UPDATE, self.on_update_received)
+            async_dispatcher_connect(self.menuai, PUSH_UPDATE, self.on_update_received)
         )
 
     @callback

@@ -5,7 +5,7 @@ from unittest.mock import patch
 from yalexs.authenticator_common import ValidationResult
 from yalexs.manager.exceptions import CannotConnect, InvalidAuth, RequireValidation
 
-from homeassistant.components.august.const import (
+from menuai.components.august.const import (
     CONF_ACCESS_TOKEN_CACHE_FILE,
     CONF_BRAND,
     CONF_INSTALL_ID,
@@ -13,18 +13,18 @@ from homeassistant.components.august.const import (
     DOMAIN,
     VERIFICATION_CODE_KEY,
 )
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_PASSWORD, CONF_TIMEOUT, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_PASSWORD, CONF_TIMEOUT, CONF_USERNAME
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
 
-async def test_form(hass: HomeAssistant) -> None:
+async def test_form(menuai: menuai) -> None:
     """Test we get the form."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -32,15 +32,15 @@ async def test_form(hass: HomeAssistant) -> None:
 
     with (
         patch(
-            "homeassistant.components.august.config_flow.AugustGateway.async_authenticate",
+            "menuai.components.august.config_flow.AugustGateway.async_authenticate",
             return_value=True,
         ),
         patch(
-            "homeassistant.components.august.async_setup_entry",
+            "menuai.components.august.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_BRAND: "august",
@@ -49,7 +49,7 @@ async def test_form(hass: HomeAssistant) -> None:
                 CONF_PASSWORD: "test-password",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "my@email.tld"
@@ -63,17 +63,17 @@ async def test_form(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_form_invalid_auth(hass: HomeAssistant) -> None:
+async def test_form_invalid_auth(menuai: menuai) -> None:
     """Test we handle invalid auth."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
     with patch(
-        "homeassistant.components.august.config_flow.AugustGateway.async_authenticate",
+        "menuai.components.august.config_flow.AugustGateway.async_authenticate",
         side_effect=InvalidAuth,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_BRAND: "august",
@@ -87,17 +87,17 @@ async def test_form_invalid_auth(hass: HomeAssistant) -> None:
     assert result2["errors"] == {"base": "invalid_auth"}
 
 
-async def test_user_unexpected_exception(hass: HomeAssistant) -> None:
+async def test_user_unexpected_exception(menuai: menuai) -> None:
     """Test we handle an unexpected exception."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
     with patch(
-        "homeassistant.components.august.config_flow.AugustGateway.async_authenticate",
+        "menuai.components.august.config_flow.AugustGateway.async_authenticate",
         side_effect=ValueError("something exploded"),
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_BRAND: "august",
@@ -112,17 +112,17 @@ async def test_user_unexpected_exception(hass: HomeAssistant) -> None:
     assert result2["description_placeholders"] == {"error": "something exploded"}
 
 
-async def test_form_cannot_connect(hass: HomeAssistant) -> None:
+async def test_form_cannot_connect(menuai: menuai) -> None:
     """Test we handle cannot connect error."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
     with patch(
-        "homeassistant.components.august.config_flow.AugustGateway.async_authenticate",
+        "menuai.components.august.config_flow.AugustGateway.async_authenticate",
         side_effect=CannotConnect,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_LOGIN_METHOD: "email",
@@ -135,15 +135,15 @@ async def test_form_cannot_connect(hass: HomeAssistant) -> None:
     assert result2["errors"] == {"base": "cannot_connect"}
 
 
-async def test_form_needs_validate(hass: HomeAssistant) -> None:
+async def test_form_needs_validate(menuai: menuai) -> None:
     """Test we present validation when we need to validate."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
     with (
         patch(
-            "homeassistant.components.august.config_flow.AugustGateway.async_authenticate",
+            "menuai.components.august.config_flow.AugustGateway.async_authenticate",
             side_effect=RequireValidation,
         ),
         patch(
@@ -151,7 +151,7 @@ async def test_form_needs_validate(hass: HomeAssistant) -> None:
             return_value=True,
         ) as mock_send_verification_code,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_LOGIN_METHOD: "email",
@@ -168,7 +168,7 @@ async def test_form_needs_validate(hass: HomeAssistant) -> None:
     # Try with the WRONG verification code give us the form back again
     with (
         patch(
-            "homeassistant.components.august.config_flow.AugustGateway.async_authenticate",
+            "menuai.components.august.config_flow.AugustGateway.async_authenticate",
             side_effect=RequireValidation,
         ),
         patch(
@@ -180,7 +180,7 @@ async def test_form_needs_validate(hass: HomeAssistant) -> None:
             return_value=True,
         ) as mock_send_verification_code,
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {VERIFICATION_CODE_KEY: "incorrect"},
         )
@@ -196,7 +196,7 @@ async def test_form_needs_validate(hass: HomeAssistant) -> None:
     # Try with the CORRECT verification code and we setup
     with (
         patch(
-            "homeassistant.components.august.config_flow.AugustGateway.async_authenticate",
+            "menuai.components.august.config_flow.AugustGateway.async_authenticate",
             return_value=True,
         ),
         patch(
@@ -208,14 +208,14 @@ async def test_form_needs_validate(hass: HomeAssistant) -> None:
             return_value=True,
         ) as mock_send_verification_code,
         patch(
-            "homeassistant.components.august.async_setup_entry", return_value=True
+            "menuai.components.august.async_setup_entry", return_value=True
         ) as mock_setup_entry,
     ):
-        result4 = await hass.config_entries.flow.async_configure(
+        result4 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {VERIFICATION_CODE_KEY: "correct"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_send_verification_code.mock_calls) == 0
     assert len(mock_validate_verification_code.mock_calls) == 1
@@ -231,7 +231,7 @@ async def test_form_needs_validate(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_form_reauth(hass: HomeAssistant) -> None:
+async def test_form_reauth(menuai: menuai) -> None:
     """Test reauthenticate."""
 
     entry = MockConfigEntry(
@@ -246,36 +246,36 @@ async def test_form_reauth(hass: HomeAssistant) -> None:
         },
         unique_id="my@email.tld",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await entry.start_reauth_flow(hass)
+    result = await entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
     with (
         patch(
-            "homeassistant.components.august.config_flow.AugustGateway.async_authenticate",
+            "menuai.components.august.config_flow.AugustGateway.async_authenticate",
             return_value=True,
         ),
         patch(
-            "homeassistant.components.august.async_setup_entry",
+            "menuai.components.august.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_PASSWORD: "new-test-password",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.ABORT
     assert result2["reason"] == "reauth_successful"
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_form_reauth_with_2fa(hass: HomeAssistant) -> None:
+async def test_form_reauth_with_2fa(menuai: menuai) -> None:
     """Test reauthenticate with 2fa."""
 
     entry = MockConfigEntry(
@@ -290,15 +290,15 @@ async def test_form_reauth_with_2fa(hass: HomeAssistant) -> None:
         },
         unique_id="my@email.tld",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await entry.start_reauth_flow(hass)
+    result = await entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
     with (
         patch(
-            "homeassistant.components.august.config_flow.AugustGateway.async_authenticate",
+            "menuai.components.august.config_flow.AugustGateway.async_authenticate",
             side_effect=RequireValidation,
         ),
         patch(
@@ -306,13 +306,13 @@ async def test_form_reauth_with_2fa(hass: HomeAssistant) -> None:
             return_value=True,
         ) as mock_send_verification_code,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_PASSWORD: "new-test-password",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_send_verification_code.mock_calls) == 1
     assert result2["type"] is FlowResultType.FORM
@@ -322,7 +322,7 @@ async def test_form_reauth_with_2fa(hass: HomeAssistant) -> None:
     # Try with the CORRECT verification code and we setup
     with (
         patch(
-            "homeassistant.components.august.config_flow.AugustGateway.async_authenticate",
+            "menuai.components.august.config_flow.AugustGateway.async_authenticate",
             return_value=True,
         ),
         patch(
@@ -334,14 +334,14 @@ async def test_form_reauth_with_2fa(hass: HomeAssistant) -> None:
             return_value=True,
         ) as mock_send_verification_code,
         patch(
-            "homeassistant.components.august.async_setup_entry", return_value=True
+            "menuai.components.august.async_setup_entry", return_value=True
         ) as mock_setup_entry,
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {VERIFICATION_CODE_KEY: "correct"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_validate_verification_code.mock_calls) == 1
     assert len(mock_send_verification_code.mock_calls) == 0
@@ -350,7 +350,7 @@ async def test_form_reauth_with_2fa(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_switching_brands(hass: HomeAssistant) -> None:
+async def test_switching_brands(menuai: menuai) -> None:
     """Test brands can be switched by setting up again."""
 
     entry = MockConfigEntry(
@@ -365,8 +365,8 @@ async def test_switching_brands(hass: HomeAssistant) -> None:
         },
         unique_id="my@email.tld",
     )
-    entry.add_to_hass(hass)
-    result = await hass.config_entries.flow.async_init(
+    entry.add_to_menuai(menuai)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -374,15 +374,15 @@ async def test_switching_brands(hass: HomeAssistant) -> None:
 
     with (
         patch(
-            "homeassistant.components.august.config_flow.AugustGateway.async_authenticate",
+            "menuai.components.august.config_flow.AugustGateway.async_authenticate",
             return_value=True,
         ),
         patch(
-            "homeassistant.components.august.async_setup_entry",
+            "menuai.components.august.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_BRAND: "yale_access",
@@ -391,7 +391,7 @@ async def test_switching_brands(hass: HomeAssistant) -> None:
                 CONF_PASSWORD: "test-password",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.ABORT
     assert result2["reason"] == "reauth_successful"

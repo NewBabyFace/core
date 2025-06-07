@@ -6,16 +6,16 @@ from aiohttp.client_exceptions import ClientResponseError
 from arris_tg2492lg import ConnectBox, Device
 import voluptuous as vol
 
-from homeassistant.components.device_tracker import (
+from menuai.components.device_tracker import (
     DOMAIN as DEVICE_TRACKER_DOMAIN,
     PLATFORM_SCHEMA as DEVICE_TRACKER_PLATFORM_SCHEMA,
     DeviceScanner,
 )
-from homeassistant.const import CONF_HOST, CONF_PASSWORD
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import CONF_HOST, CONF_PASSWORD
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.typing import ConfigType
 
 DEFAULT_HOST = "192.168.178.1"
 
@@ -28,12 +28,12 @@ PLATFORM_SCHEMA = DEVICE_TRACKER_PLATFORM_SCHEMA.extend(
 
 
 async def async_get_scanner(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> ArrisDeviceScanner | None:
     """Return the Arris device scanner if successful."""
     conf = config[DEVICE_TRACKER_DOMAIN]
     url = f"http://{conf[CONF_HOST]}"
-    websession = async_get_clientsession(hass)
+    websession = async_get_clientsession(menuai)
     connect_box = ConnectBox(websession, url, conf[CONF_PASSWORD])
 
     try:

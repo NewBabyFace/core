@@ -16,12 +16,12 @@ from tplink_omada_client.devices import (
 )
 from tplink_omada_client.exceptions import InvalidDevice
 
-from homeassistant.components import switch
-from homeassistant.components.tplink_omada.coordinator import POLL_GATEWAY
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant, ServiceResponse
-from homeassistant.helpers import entity_registry as er
-from homeassistant.util.dt import utcnow
+from menuai.components import switch
+from menuai.components.tplink_omada.coordinator import POLL_GATEWAY
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai, ServiceResponse
+from menuai.helpers import entity_registry as er
+from menuai.util.dt import utcnow
 
 from tests.common import MockConfigEntry, async_fire_time_changed
 
@@ -30,7 +30,7 @@ POLL_INTERVAL = timedelta(seconds=POLL_GATEWAY + 10)
 
 
 async def test_poe_switches(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_omada_site_client: MagicMock,
     init_integration: MockConfigEntry,
     snapshot: SnapshotAssertion,
@@ -39,7 +39,7 @@ async def test_poe_switches(
     """Test PoE switch."""
     poe_switch_mac = "54-AF-97-00-00-01"
     await _test_poe_switch(
-        hass,
+        menuai,
         mock_omada_site_client,
         "switch.test_poe_switch_port_1_poe",
         poe_switch_mac,
@@ -49,7 +49,7 @@ async def test_poe_switches(
     )
 
     await _test_poe_switch(
-        hass,
+        menuai,
         mock_omada_site_client,
         "switch.test_poe_switch_port_2_renamed_port_poe",
         poe_switch_mac,
@@ -60,18 +60,18 @@ async def test_poe_switches(
 
 
 async def test_sfp_port_has_no_poe_switch(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_integration: MockConfigEntry,
 ) -> None:
     """Test PoE switch SFP ports have no PoE controls."""
-    entity = hass.states.get("switch.test_poe_switch_port_9_poe")
+    entity = menuai.states.get("switch.test_poe_switch_port_9_poe")
     assert entity is None
-    entity = hass.states.get("switch.test_poe_switch_port_8_poe")
+    entity = menuai.states.get("switch.test_poe_switch_port_8_poe")
     assert entity is not None
 
 
 async def test_gateway_connect_ipv4_switch(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_omada_site_client: MagicMock,
     init_integration: MockConfigEntry,
     snapshot: SnapshotAssertion,
@@ -80,7 +80,7 @@ async def test_gateway_connect_ipv4_switch(
     gateway_mac = "AA-BB-CC-DD-EE-FF"
 
     entity_id = "switch.test_router_port_4_internet_connected"
-    entity = hass.states.get(entity_id)
+    entity = menuai.states.get(entity_id)
     assert entity == snapshot
 
     test_gateway = await mock_omada_site_client.get_gateway(gateway_mac)
@@ -94,15 +94,15 @@ async def test_gateway_connect_ipv4_switch(
             )
         )
     )
-    await call_service(hass, "turn_off", entity_id)
+    await call_service(menuai, "turn_off", entity_id)
     mock_omada_site_client.set_gateway_wan_port_connect_state.assert_called_once_with(
         4, False, test_gateway, ipv6=False
     )
 
-    async_fire_time_changed(hass, utcnow() + UPDATE_INTERVAL)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + UPDATE_INTERVAL)
+    await menuai.async_block_till_done()
 
-    entity = hass.states.get(entity_id)
+    entity = menuai.states.get(entity_id)
     assert entity.state == "off"
 
     mock_omada_site_client.set_gateway_wan_port_connect_state.reset_mock()
@@ -111,20 +111,20 @@ async def test_gateway_connect_ipv4_switch(
             mock_omada_site_client, test_gateway, 3, "internetState", 1
         )
     )
-    await call_service(hass, "turn_on", entity_id)
+    await call_service(menuai, "turn_on", entity_id)
     mock_omada_site_client.set_gateway_wan_port_connect_state.assert_called_once_with(
         4, True, test_gateway, ipv6=False
     )
 
-    async_fire_time_changed(hass, utcnow() + UPDATE_INTERVAL)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + UPDATE_INTERVAL)
+    await menuai.async_block_till_done()
 
-    entity = hass.states.get(entity_id)
+    entity = menuai.states.get(entity_id)
     assert entity.state == "on"
 
 
 async def test_gateway_port_poe_switch(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_omada_site_client: MagicMock,
     init_integration: MockConfigEntry,
     snapshot: SnapshotAssertion,
@@ -133,7 +133,7 @@ async def test_gateway_port_poe_switch(
     gateway_mac = "AA-BB-CC-DD-EE-FF"
 
     entity_id = "switch.test_router_port_5_poe"
-    entity = hass.states.get(entity_id)
+    entity = menuai.states.get(entity_id)
     assert entity == snapshot
 
     test_gateway = await mock_omada_site_client.get_gateway(gateway_mac)
@@ -143,35 +143,35 @@ async def test_gateway_port_poe_switch(
     mock_omada_site_client.set_gateway_port_settings = AsyncMock(
         return_value=(OmadaGatewayPortConfig(port_config.raw_data, poe_enabled=False))
     )
-    await call_service(hass, "turn_off", entity_id)
+    await call_service(menuai, "turn_off", entity_id)
     _assert_gateway_poe_set(mock_omada_site_client, test_gateway, False)
 
-    async_fire_time_changed(hass, utcnow() + UPDATE_INTERVAL)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + UPDATE_INTERVAL)
+    await menuai.async_block_till_done()
 
-    entity = hass.states.get(entity_id)
+    entity = menuai.states.get(entity_id)
     assert entity.state == "off"
 
     mock_omada_site_client.set_gateway_port_settings.reset_mock()
     mock_omada_site_client.set_gateway_port_settings.return_value = port_config
-    await call_service(hass, "turn_on", entity_id)
+    await call_service(menuai, "turn_on", entity_id)
     _assert_gateway_poe_set(mock_omada_site_client, test_gateway, True)
 
-    async_fire_time_changed(hass, utcnow() + UPDATE_INTERVAL)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + UPDATE_INTERVAL)
+    await menuai.async_block_till_done()
 
-    entity = hass.states.get(entity_id)
+    entity = menuai.states.get(entity_id)
     assert entity.state == "on"
 
 
 async def test_gateway_wan_port_has_no_poe_switch(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_integration: MockConfigEntry,
 ) -> None:
     """Test PoE switch SFP ports have no PoE controls."""
-    entity = hass.states.get("switch.test_router_port_1_poe")
+    entity = menuai.states.get("switch.test_router_port_1_poe")
     assert entity is None
-    entity = hass.states.get("switch.test_router_port_9_poe")
+    entity = menuai.states.get("switch.test_router_port_9_poe")
     assert entity is not None
 
 
@@ -188,29 +188,29 @@ def _assert_gateway_poe_set(mock_omada_site_client, test_gateway, poe_enabled: b
 
 
 async def test_gateway_api_fail_disables_switch_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_omada_site_client: MagicMock,
     init_integration: MockConfigEntry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test gateway connected switches."""
     entity_id = "switch.test_router_port_4_internet_connected"
-    entity = hass.states.get(entity_id)
+    entity = menuai.states.get(entity_id)
     assert entity == snapshot
     assert entity.state == "on"
 
     mock_omada_site_client.get_gateway.reset_mock()
     mock_omada_site_client.get_gateway.side_effect = InvalidDevice("Expected error")
 
-    async_fire_time_changed(hass, utcnow() + POLL_INTERVAL)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + POLL_INTERVAL)
+    await menuai.async_block_till_done()
 
-    entity = hass.states.get(entity_id)
+    entity = menuai.states.get(entity_id)
     assert entity.state == "unavailable"
 
 
 async def test_gateway_port_change_disables_switch_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_omada_site_client: MagicMock,
     init_integration: MockConfigEntry,
     snapshot: SnapshotAssertion,
@@ -221,7 +221,7 @@ async def test_gateway_port_change_disables_switch_entities(
     test_gateway = await mock_omada_site_client.get_gateway(gateway_mac)
 
     entity_id = "switch.test_router_port_4_internet_connected"
-    entity = hass.states.get(entity_id)
+    entity = menuai.states.get(entity_id)
     assert entity == snapshot
     assert entity.state == "on"
 
@@ -229,15 +229,15 @@ async def test_gateway_port_change_disables_switch_entities(
     # Set Port 4 to LAN mode
     _get_updated_gateway_port_status(mock_omada_site_client, test_gateway, 3, "mode", 1)
 
-    async_fire_time_changed(hass, utcnow() + POLL_INTERVAL)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + POLL_INTERVAL)
+    await menuai.async_block_till_done()
 
-    entity = hass.states.get(entity_id)
+    entity = menuai.states.get(entity_id)
     assert entity.state == "unavailable"
 
 
 async def _test_poe_switch(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_omada_site_client: MagicMock,
     entity_id: str,
     network_switch_mac: str,
@@ -258,7 +258,7 @@ async def _test_poe_switch(
         assert overrides
         assert overrides.enable_poe == poe_enabled
 
-    entity = hass.states.get(entity_id)
+    entity = menuai.states.get(entity_id)
     assert entity == snapshot
     entry = entity_registry.async_get(entity_id)
     assert entry == snapshot
@@ -267,7 +267,7 @@ async def _test_poe_switch(
         return_value=await _update_port_details(mock_omada_site_client, port_num, False)
     )
 
-    await call_service(hass, "turn_off", entity_id)
+    await call_service(menuai, "turn_off", entity_id)
     mock_omada_site_client.update_switch_port.assert_called_once()
     (
         device,
@@ -280,16 +280,16 @@ async def _test_poe_switch(
         False,
         **mock_omada_site_client.update_switch_port.call_args.kwargs,
     )
-    async_fire_time_changed(hass, utcnow() + UPDATE_INTERVAL)
-    await hass.async_block_till_done()
-    entity = hass.states.get(entity_id)
+    async_fire_time_changed(menuai, utcnow() + UPDATE_INTERVAL)
+    await menuai.async_block_till_done()
+    entity = menuai.states.get(entity_id)
     assert entity.state == "off"
 
     mock_omada_site_client.update_switch_port.reset_mock()
     mock_omada_site_client.update_switch_port.return_value = await _update_port_details(
         mock_omada_site_client, port_num, True
     )
-    await call_service(hass, "turn_on", entity_id)
+    await call_service(menuai, "turn_on", entity_id)
     mock_omada_site_client.update_switch_port.assert_called_once()
     device, switch_port = mock_omada_site_client.update_switch_port.call_args.args
     assert_update_switch_port(
@@ -298,9 +298,9 @@ async def _test_poe_switch(
         True,
         **mock_omada_site_client.update_switch_port.call_args.kwargs,
     )
-    async_fire_time_changed(hass, utcnow() + UPDATE_INTERVAL)
-    await hass.async_block_till_done()
-    entity = hass.states.get(entity_id)
+    async_fire_time_changed(menuai, utcnow() + UPDATE_INTERVAL)
+    await menuai.async_block_till_done()
+    entity = menuai.states.get(entity_id)
     assert entity.state == "on"
 
 
@@ -336,8 +336,8 @@ def _get_updated_gateway_port_status(
     return OmadaGatewayPortStatus(gateway_data["portStats"][port])
 
 
-def call_service(hass: HomeAssistant, service: str, entity_id: str) -> ServiceResponse:
+def call_service(menuai: menuai, service: str, entity_id: str) -> ServiceResponse:
     """Call any service on entity."""
-    return hass.services.async_call(
+    return menuai.services.async_call(
         switch.DOMAIN, service, {ATTR_ENTITY_ID: entity_id}, blocking=True
     )

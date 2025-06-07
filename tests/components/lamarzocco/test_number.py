@@ -13,15 +13,15 @@ from pylamarzocco.exceptions import RequestNotSuccessful
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.number import (
+from menuai.components.number import (
     ATTR_VALUE,
     DOMAIN as NUMBER_DOMAIN,
     SERVICE_SET_VALUE,
 )
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from . import async_init_integration
 
@@ -46,7 +46,7 @@ from tests.common import MockConfigEntry
     ],
 )
 async def test_general_numbers(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_lamarzocco: MagicMock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
@@ -59,10 +59,10 @@ async def test_general_numbers(
 ) -> None:
     """Test the numbers available to all machines."""
 
-    await async_init_integration(hass, mock_config_entry)
+    await async_init_integration(menuai, mock_config_entry)
     serial_number = mock_lamarzocco.serial_number
 
-    state = hass.states.get(f"number.{serial_number}_{entity_name}")
+    state = menuai.states.get(f"number.{serial_number}_{entity_name}")
 
     assert state
     assert state == snapshot
@@ -76,7 +76,7 @@ async def test_general_numbers(
     assert device
 
     # service call
-    await hass.services.async_call(
+    await menuai.services.async_call(
         NUMBER_DOMAIN,
         SERVICE_SET_VALUE,
         {
@@ -92,7 +92,7 @@ async def test_general_numbers(
 
 @pytest.mark.parametrize("device_fixture", [ModelName.LINEA_MICRA])
 async def test_preinfusion(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_lamarzocco: MagicMock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
@@ -100,11 +100,11 @@ async def test_preinfusion(
 ) -> None:
     """Test preinfusion number."""
 
-    await async_init_integration(hass, mock_config_entry)
+    await async_init_integration(menuai, mock_config_entry)
     serial_number = mock_lamarzocco.serial_number
     entity_id = f"number.{serial_number}_preinfusion_time"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state == snapshot
@@ -115,7 +115,7 @@ async def test_preinfusion(
     assert entry == snapshot
 
     # service call
-    await hass.services.async_call(
+    await menuai.services.async_call(
         NUMBER_DOMAIN,
         SERVICE_SET_VALUE,
         {
@@ -133,7 +133,7 @@ async def test_preinfusion(
 
 @pytest.mark.parametrize("device_fixture", [ModelName.LINEA_MICRA])
 async def test_prebrew_on(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_lamarzocco: MagicMock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
@@ -145,11 +145,11 @@ async def test_prebrew_on(
         WidgetType.CM_PRE_BREWING
     ].mode = PreExtractionMode.PREBREWING
 
-    await async_init_integration(hass, mock_config_entry)
+    await async_init_integration(menuai, mock_config_entry)
     serial_number = mock_lamarzocco.serial_number
     entity_id = f"number.{serial_number}_prebrew_on_time"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state == snapshot
@@ -160,7 +160,7 @@ async def test_prebrew_on(
     assert entry == snapshot
 
     # service call
-    await hass.services.async_call(
+    await menuai.services.async_call(
         NUMBER_DOMAIN,
         SERVICE_SET_VALUE,
         {
@@ -180,7 +180,7 @@ async def test_prebrew_on(
 
 @pytest.mark.parametrize("device_fixture", [ModelName.LINEA_MICRA])
 async def test_prebrew_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_lamarzocco: MagicMock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
@@ -191,11 +191,11 @@ async def test_prebrew_off(
         WidgetType.CM_PRE_BREWING
     ].mode = PreExtractionMode.PREBREWING
 
-    await async_init_integration(hass, mock_config_entry)
+    await async_init_integration(menuai, mock_config_entry)
     serial_number = mock_lamarzocco.serial_number
     entity_id = f"number.{serial_number}_prebrew_off_time"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state == snapshot
@@ -206,7 +206,7 @@ async def test_prebrew_off(
     assert entry == snapshot
 
     # service call
-    await hass.services.async_call(
+    await menuai.services.async_call(
         NUMBER_DOMAIN,
         SERVICE_SET_VALUE,
         {
@@ -226,22 +226,22 @@ async def test_prebrew_off(
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_number_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_lamarzocco: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test number entities raise error on service call."""
-    await async_init_integration(hass, mock_config_entry)
+    await async_init_integration(menuai, mock_config_entry)
     serial_number = mock_lamarzocco.serial_number
 
-    state = hass.states.get(f"number.{serial_number}_coffee_target_temperature")
+    state = menuai.states.get(f"number.{serial_number}_coffee_target_temperature")
     assert state
 
     mock_lamarzocco.set_coffee_target_temperature.side_effect = RequestNotSuccessful(
         "Boom"
     )
-    with pytest.raises(HomeAssistantError) as exc_info:
-        await hass.services.async_call(
+    with pytest.raises(menuaiError) as exc_info:
+        await menuai.services.async_call(
             NUMBER_DOMAIN,
             SERVICE_SET_VALUE,
             {

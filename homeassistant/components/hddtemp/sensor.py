@@ -10,23 +10,23 @@ from typing import Any
 from telnetlib import Telnet  # pylint: disable=deprecated-module
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
     SensorDeviceClass,
     SensorEntity,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_DISKS,
     CONF_HOST,
     CONF_NAME,
     CONF_PORT,
     UnitOfTemperature,
 )
-from homeassistant.core import DOMAIN as HOMEASSISTANT_DOMAIN, HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.issue_registry import IssueSeverity, create_issue
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import DOMAIN as menuai_DOMAIN, menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.issue_registry import IssueSeverity, create_issue
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import DOMAIN
 
@@ -53,15 +53,15 @@ PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the HDDTemp sensor."""
     create_issue(
-        hass,
-        HOMEASSISTANT_DOMAIN,
+        menuai,
+        menuai_DOMAIN,
         f"deprecated_system_packages_yaml_integration_{DOMAIN}",
         breaks_in_ha_version="2025.12.0",
         is_fixable=False,

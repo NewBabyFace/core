@@ -15,7 +15,7 @@ from aiohomekit.model.characteristics import (
 )
 from aiohomekit.model.services import ServicesTypes
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     DOMAIN as CLIMATE_DOMAIN,
     SERVICE_SET_FAN_MODE,
     SERVICE_SET_HUMIDITY,
@@ -25,8 +25,8 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .common import setup_test_component
 
@@ -84,11 +84,11 @@ def create_thermostat_service_min_max(accessory: Accessory) -> None:
 
 
 async def test_climate_respect_supported_op_modes_1(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that climate respects minValue/maxValue hints."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_thermostat_service_min_max
+        menuai, get_next_aid(), create_thermostat_service_min_max
     )
     state = await helper.poll_and_get_state()
     assert state.attributes["hvac_modes"] == ["off", "heat"]
@@ -103,23 +103,23 @@ def create_thermostat_service_valid_vals(accessory: Accessory) -> None:
 
 
 async def test_climate_respect_supported_op_modes_2(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that climate respects validValue hints."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_thermostat_service_valid_vals
+        menuai, get_next_aid(), create_thermostat_service_valid_vals
     )
     state = await helper.poll_and_get_state()
     assert state.attributes["hvac_modes"] == ["off", "heat", "cool"]
 
 
 async def test_climate_change_thermostat_state(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can turn a HomeKit thermostat on and off again."""
-    helper = await setup_test_component(hass, get_next_aid(), create_thermostat_service)
+    helper = await setup_test_component(menuai, get_next_aid(), create_thermostat_service)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {"entity_id": "climate.testdevice", "hvac_mode": HVACMode.HEAT},
@@ -132,7 +132,7 @@ async def test_climate_change_thermostat_state(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {"entity_id": "climate.testdevice", "hvac_mode": HVACMode.COOL},
@@ -145,7 +145,7 @@ async def test_climate_change_thermostat_state(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {"entity_id": "climate.testdevice", "hvac_mode": HVACMode.HEAT_COOL},
@@ -158,7 +158,7 @@ async def test_climate_change_thermostat_state(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {"entity_id": "climate.testdevice", "hvac_mode": HVACMode.OFF},
@@ -171,7 +171,7 @@ async def test_climate_change_thermostat_state(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_FAN_MODE,
         {"entity_id": "climate.testdevice", "fan_mode": "on"},
@@ -184,7 +184,7 @@ async def test_climate_change_thermostat_state(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_FAN_MODE,
         {"entity_id": "climate.testdevice", "fan_mode": "auto"},
@@ -199,12 +199,12 @@ async def test_climate_change_thermostat_state(
 
 
 async def test_climate_check_min_max_values_per_mode(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we we get the appropriate min/max values for each mode."""
-    helper = await setup_test_component(hass, get_next_aid(), create_thermostat_service)
+    helper = await setup_test_component(menuai, get_next_aid(), create_thermostat_service)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {"entity_id": "climate.testdevice", "hvac_mode": HVACMode.HEAT},
@@ -214,7 +214,7 @@ async def test_climate_check_min_max_values_per_mode(
     assert climate_state.attributes["min_temp"] == 7
     assert climate_state.attributes["max_temp"] == 35
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {"entity_id": "climate.testdevice", "hvac_mode": HVACMode.COOL},
@@ -224,7 +224,7 @@ async def test_climate_check_min_max_values_per_mode(
     assert climate_state.attributes["min_temp"] == 7
     assert climate_state.attributes["max_temp"] == 35
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {"entity_id": "climate.testdevice", "hvac_mode": HVACMode.HEAT_COOL},
@@ -236,12 +236,12 @@ async def test_climate_check_min_max_values_per_mode(
 
 
 async def test_climate_change_thermostat_temperature(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can turn a HomeKit thermostat on and off again."""
-    helper = await setup_test_component(hass, get_next_aid(), create_thermostat_service)
+    helper = await setup_test_component(menuai, get_next_aid(), create_thermostat_service)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_TEMPERATURE,
         {"entity_id": "climate.testdevice", "temperature": 21},
@@ -254,7 +254,7 @@ async def test_climate_change_thermostat_temperature(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_TEMPERATURE,
         {"entity_id": "climate.testdevice", "temperature": 25},
@@ -269,19 +269,19 @@ async def test_climate_change_thermostat_temperature(
 
 
 async def test_climate_change_thermostat_temperature_range(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can set separate heat and cool setpoints in heat_cool mode."""
-    helper = await setup_test_component(hass, get_next_aid(), create_thermostat_service)
+    helper = await setup_test_component(menuai, get_next_aid(), create_thermostat_service)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {"entity_id": "climate.testdevice", "hvac_mode": HVACMode.HEAT_COOL},
         blocking=True,
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_TEMPERATURE,
         {
@@ -304,19 +304,19 @@ async def test_climate_change_thermostat_temperature_range(
 
 
 async def test_climate_change_thermostat_temperature_range_iphone(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can set all three set points at once (iPhone heat_cool mode support)."""
-    helper = await setup_test_component(hass, get_next_aid(), create_thermostat_service)
+    helper = await setup_test_component(menuai, get_next_aid(), create_thermostat_service)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {"entity_id": "climate.testdevice", "hvac_mode": HVACMode.HEAT_COOL},
         blocking=True,
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_TEMPERATURE,
         {
@@ -339,19 +339,19 @@ async def test_climate_change_thermostat_temperature_range_iphone(
 
 
 async def test_climate_cannot_set_thermostat_temp_range_in_wrong_mode(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we cannot set range values when not in heat_cool mode."""
-    helper = await setup_test_component(hass, get_next_aid(), create_thermostat_service)
+    helper = await setup_test_component(menuai, get_next_aid(), create_thermostat_service)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {"entity_id": "climate.testdevice", "hvac_mode": HVACMode.HEAT},
         blocking=True,
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_TEMPERATURE,
         {
@@ -398,14 +398,14 @@ def create_thermostat_single_set_point_auto(accessory: Accessory) -> None:
 
 
 async def test_climate_check_min_max_values_per_mode_sspa_device(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test appropriate min/max values for each mode on sspa devices."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_thermostat_single_set_point_auto
+        menuai, get_next_aid(), create_thermostat_single_set_point_auto
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {"entity_id": "climate.testdevice", "hvac_mode": HVACMode.HEAT},
@@ -415,7 +415,7 @@ async def test_climate_check_min_max_values_per_mode_sspa_device(
     assert climate_state.attributes["min_temp"] == 7
     assert climate_state.attributes["max_temp"] == 35
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {"entity_id": "climate.testdevice", "hvac_mode": HVACMode.COOL},
@@ -425,7 +425,7 @@ async def test_climate_check_min_max_values_per_mode_sspa_device(
     assert climate_state.attributes["min_temp"] == 7
     assert climate_state.attributes["max_temp"] == 35
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {"entity_id": "climate.testdevice", "hvac_mode": HVACMode.HEAT_COOL},
@@ -437,21 +437,21 @@ async def test_climate_check_min_max_values_per_mode_sspa_device(
 
 
 async def test_climate_set_thermostat_temp_on_sspa_device(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test setting temperature in different modes on device with single set point in auto."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_thermostat_single_set_point_auto
+        menuai, get_next_aid(), create_thermostat_single_set_point_auto
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {"entity_id": "climate.testdevice", "hvac_mode": HVACMode.HEAT},
         blocking=True,
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_TEMPERATURE,
         {"entity_id": "climate.testdevice", "temperature": 21},
@@ -464,7 +464,7 @@ async def test_climate_set_thermostat_temp_on_sspa_device(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {"entity_id": "climate.testdevice", "hvac_mode": HVACMode.HEAT_COOL},
@@ -477,7 +477,7 @@ async def test_climate_set_thermostat_temp_on_sspa_device(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_TEMPERATURE,
         {
@@ -495,14 +495,14 @@ async def test_climate_set_thermostat_temp_on_sspa_device(
 
 
 async def test_climate_set_mode_via_temp(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test setting temperature and mode at same tims."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_thermostat_single_set_point_auto
+        menuai, get_next_aid(), create_thermostat_single_set_point_auto
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_TEMPERATURE,
         {
@@ -520,7 +520,7 @@ async def test_climate_set_mode_via_temp(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_TEMPERATURE,
         {
@@ -540,12 +540,12 @@ async def test_climate_set_mode_via_temp(
 
 
 async def test_climate_change_thermostat_humidity(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can turn a HomeKit thermostat on and off again."""
-    helper = await setup_test_component(hass, get_next_aid(), create_thermostat_service)
+    helper = await setup_test_component(menuai, get_next_aid(), create_thermostat_service)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HUMIDITY,
         {"entity_id": "climate.testdevice", "humidity": 50},
@@ -558,7 +558,7 @@ async def test_climate_change_thermostat_humidity(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HUMIDITY,
         {"entity_id": "climate.testdevice", "humidity": 45},
@@ -573,10 +573,10 @@ async def test_climate_change_thermostat_humidity(
 
 
 async def test_climate_read_thermostat_state(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can read the state of a HomeKit thermostat accessory."""
-    helper = await setup_test_component(hass, get_next_aid(), create_thermostat_service)
+    helper = await setup_test_component(menuai, get_next_aid(), create_thermostat_service)
 
     # Simulate that heating is on
     await helper.async_update(
@@ -632,10 +632,10 @@ async def test_climate_read_thermostat_state(
 
 
 async def test_hvac_mode_vs_hvac_action(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Check that we haven't conflated hvac_mode and hvac_action."""
-    helper = await setup_test_component(hass, get_next_aid(), create_thermostat_service)
+    helper = await setup_test_component(menuai, get_next_aid(), create_thermostat_service)
 
     # Simulate that current temperature is above target temp
     # Heating might be on, but hvac_action currently 'off'
@@ -699,10 +699,10 @@ async def test_hvac_mode_vs_hvac_action(
 
 
 async def test_hvac_mode_vs_hvac_action_current_mode_wrong(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Check that we cope with buggy HEATING_COOLING_CURRENT."""
-    helper = await setup_test_component(hass, get_next_aid(), create_thermostat_service)
+    helper = await setup_test_component(menuai, get_next_aid(), create_thermostat_service)
 
     await helper.async_update(
         ServicesTypes.THERMOSTAT,
@@ -765,11 +765,11 @@ def create_heater_cooler_service_min_max(accessory: Accessory) -> None:
 
 
 async def test_heater_cooler_respect_supported_op_modes_1(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that climate respects minValue/maxValue hints."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_heater_cooler_service_min_max
+        menuai, get_next_aid(), create_heater_cooler_service_min_max
     )
     state = await helper.poll_and_get_state()
     assert state.attributes["hvac_modes"] == ["heat", "cool", "off"]
@@ -784,25 +784,25 @@ def create_theater_cooler_service_valid_vals(accessory: Accessory) -> None:
 
 
 async def test_heater_cooler_respect_supported_op_modes_2(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that climate respects validValue hints."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_theater_cooler_service_valid_vals
+        menuai, get_next_aid(), create_theater_cooler_service_valid_vals
     )
     state = await helper.poll_and_get_state()
     assert state.attributes["hvac_modes"] == ["heat", "cool", "off"]
 
 
 async def test_heater_cooler_change_thermostat_state(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can change the operational mode."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_heater_cooler_service
+        menuai, get_next_aid(), create_heater_cooler_service
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {"entity_id": "climate.testdevice", "hvac_mode": HVACMode.HEAT},
@@ -815,7 +815,7 @@ async def test_heater_cooler_change_thermostat_state(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {"entity_id": "climate.testdevice", "hvac_mode": HVACMode.COOL},
@@ -828,7 +828,7 @@ async def test_heater_cooler_change_thermostat_state(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {"entity_id": "climate.testdevice", "hvac_mode": HVACMode.HEAT_COOL},
@@ -841,7 +841,7 @@ async def test_heater_cooler_change_thermostat_state(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {"entity_id": "climate.testdevice", "hvac_mode": HVACMode.OFF},
@@ -856,17 +856,17 @@ async def test_heater_cooler_change_thermostat_state(
 
 
 async def test_can_turn_on_after_off(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we always force device from inactive to active when setting mode.
 
     This is a regression test for #81863.
     """
     helper = await setup_test_component(
-        hass, get_next_aid(), create_heater_cooler_service
+        menuai, get_next_aid(), create_heater_cooler_service
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {"entity_id": "climate.testdevice", "hvac_mode": HVACMode.OFF},
@@ -879,7 +879,7 @@ async def test_can_turn_on_after_off(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {"entity_id": "climate.testdevice", "hvac_mode": HVACMode.HEAT},
@@ -895,20 +895,20 @@ async def test_can_turn_on_after_off(
 
 
 async def test_heater_cooler_change_thermostat_temperature(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can change the target temperature."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_heater_cooler_service
+        menuai, get_next_aid(), create_heater_cooler_service
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {"entity_id": "climate.testdevice", "hvac_mode": HVACMode.HEAT},
         blocking=True,
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_TEMPERATURE,
         {"entity_id": "climate.testdevice", "temperature": 20},
@@ -921,13 +921,13 @@ async def test_heater_cooler_change_thermostat_temperature(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {"entity_id": "climate.testdevice", "hvac_mode": HVACMode.COOL},
         blocking=True,
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_TEMPERATURE,
         {"entity_id": "climate.testdevice", "temperature": 26},
@@ -942,20 +942,20 @@ async def test_heater_cooler_change_thermostat_temperature(
 
 
 async def test_heater_cooler_change_fan_speed(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can change the target fan speed."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_heater_cooler_service
+        menuai, get_next_aid(), create_heater_cooler_service
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {"entity_id": "climate.testdevice", "hvac_mode": HVACMode.COOL},
         blocking=True,
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_FAN_MODE,
         {"entity_id": "climate.testdevice", "fan_mode": "low"},
@@ -967,7 +967,7 @@ async def test_heater_cooler_change_fan_speed(
             CharacteristicsTypes.ROTATION_SPEED: 33,
         },
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_FAN_MODE,
         {"entity_id": "climate.testdevice", "fan_mode": "medium"},
@@ -979,7 +979,7 @@ async def test_heater_cooler_change_fan_speed(
             CharacteristicsTypes.ROTATION_SPEED: 66,
         },
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_FAN_MODE,
         {"entity_id": "climate.testdevice", "fan_mode": "high"},
@@ -994,11 +994,11 @@ async def test_heater_cooler_change_fan_speed(
 
 
 async def test_heater_cooler_read_fan_speed(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can read the state of a HomeKit thermostat accessory."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_heater_cooler_service
+        menuai, get_next_aid(), create_heater_cooler_service
     )
 
     # Simulate that fan speed is off
@@ -1047,11 +1047,11 @@ async def test_heater_cooler_read_fan_speed(
 
 
 async def test_heater_cooler_read_thermostat_state(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can read the state of a HomeKit thermostat accessory."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_heater_cooler_service
+        menuai, get_next_aid(), create_heater_cooler_service
     )
 
     # Simulate that heating is on
@@ -1105,11 +1105,11 @@ async def test_heater_cooler_read_thermostat_state(
 
 
 async def test_heater_cooler_hvac_mode_vs_hvac_action(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Check that we haven't conflated hvac_mode and hvac_action."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_heater_cooler_service
+        menuai, get_next_aid(), create_heater_cooler_service
     )
 
     # Simulate that current temperature is above target temp
@@ -1148,14 +1148,14 @@ async def test_heater_cooler_hvac_mode_vs_hvac_action(
 
 
 async def test_heater_cooler_change_swing_mode(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can change the swing mode."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_heater_cooler_service
+        menuai, get_next_aid(), create_heater_cooler_service
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_SWING_MODE,
         {"entity_id": "climate.testdevice", "swing_mode": "vertical"},
@@ -1168,7 +1168,7 @@ async def test_heater_cooler_change_swing_mode(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_SWING_MODE,
         {"entity_id": "climate.testdevice", "swing_mode": "off"},
@@ -1183,11 +1183,11 @@ async def test_heater_cooler_change_swing_mode(
 
 
 async def test_heater_cooler_turn_off(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that both hvac_action and hvac_mode return "off" when turned off."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_heater_cooler_service
+        menuai, get_next_aid(), create_heater_cooler_service
     )
 
     # Simulate that the device is turned off but CURRENT_HEATER_COOLER_STATE still returns HEATING/COOLING
@@ -1206,7 +1206,7 @@ async def test_heater_cooler_turn_off(
 
 
 async def test_migrate_unique_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     get_next_aid: Callable[[], int],
 ) -> None:
@@ -1217,7 +1217,7 @@ async def test_migrate_unique_id(
         "homekit_controller",
         f"homekit-00:00:00:00:00:00-{aid}-8",
     )
-    await setup_test_component(hass, aid, create_heater_cooler_service)
+    await setup_test_component(menuai, aid, create_heater_cooler_service)
     assert (
         entity_registry.async_get(climate_entry.entity_id).unique_id
         == f"00:00:00:00:00:00_{aid}_8"

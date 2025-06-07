@@ -9,11 +9,11 @@ from aiohttp import ClientError
 from auroranoaa import AuroraForecast
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE
-from homeassistant.core import callback
-from homeassistant.helpers import aiohttp_client, config_validation as cv
-from homeassistant.helpers.schema_config_entry_flow import (
+from menuai.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_LATITUDE, CONF_LONGITUDE
+from menuai.core import callback
+from menuai.helpers import aiohttp_client, config_validation as cv
+from menuai.helpers.schema_config_entry_flow import (
     SchemaFlowFormStep,
     SchemaOptionsFlowHandler,
 )
@@ -57,7 +57,7 @@ class AuroraConfigFlow(ConfigFlow, domain=DOMAIN):
             longitude = user_input[CONF_LONGITUDE]
             latitude = user_input[CONF_LATITUDE]
 
-            session = aiohttp_client.async_get_clientsession(self.hass)
+            session = aiohttp_client.async_get_clientsession(self.menuai)
             api = AuroraForecast(session=session)
 
             try:
@@ -86,8 +86,8 @@ class AuroraConfigFlow(ConfigFlow, domain=DOMAIN):
                     }
                 ),
                 {
-                    CONF_LONGITUDE: self.hass.config.longitude,
-                    CONF_LATITUDE: self.hass.config.latitude,
+                    CONF_LONGITUDE: self.menuai.config.longitude,
+                    CONF_LATITUDE: self.menuai.config.latitude,
                 },
             ),
             errors=errors,

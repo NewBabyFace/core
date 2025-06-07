@@ -7,13 +7,13 @@ from typing import Generic
 from deebot_client.capabilities import CapabilityEvent
 from deebot_client.events.water_info import MopAttachedEvent
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import EcovacsConfigEntry
 from .entity import EcovacsCapabilityEntityDescription, EcovacsDescriptionEntity, EventT
@@ -43,7 +43,7 @@ ENTITY_DESCRIPTIONS: tuple[EcovacsBinarySensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: EcovacsConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -63,9 +63,9 @@ class EcovacsBinarySensor(
 
     entity_description: EcovacsBinarySensorEntityDescription
 
-    async def async_added_to_hass(self) -> None:
-        """Set up the event listeners now that hass is ready."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Set up the event listeners now that menuai is ready."""
+        await super().async_added_to_menuai()
 
         async def on_event(event: EventT) -> None:
             self._attr_is_on = self.entity_description.value_fn(event)

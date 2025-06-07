@@ -4,14 +4,14 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from homeassistant.components.number import (
+from menuai.components.number import (
     ATTR_VALUE,
     DOMAIN as NUMBER_DOMAIN,
     SERVICE_SET_VALUE,
 )
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
 
 from tests.common import MockConfigEntry
 
@@ -19,10 +19,10 @@ from tests.common import MockConfigEntry
 @pytest.mark.parametrize("chosen_env", ["anna_heatpump_heating"], indirect=True)
 @pytest.mark.parametrize("cooling_present", [True], indirect=True)
 async def test_anna_number_entities(
-    hass: HomeAssistant, mock_smile_anna: MagicMock, init_integration: MockConfigEntry
+    menuai: menuai, mock_smile_anna: MagicMock, init_integration: MockConfigEntry
 ) -> None:
     """Test creation of a number."""
-    state = hass.states.get("number.opentherm_maximum_boiler_temperature_setpoint")
+    state = menuai.states.get("number.opentherm_maximum_boiler_temperature_setpoint")
     assert state
     assert float(state.state) == 60.0
 
@@ -30,10 +30,10 @@ async def test_anna_number_entities(
 @pytest.mark.parametrize("chosen_env", ["anna_heatpump_heating"], indirect=True)
 @pytest.mark.parametrize("cooling_present", [True], indirect=True)
 async def test_anna_max_boiler_temp_change(
-    hass: HomeAssistant, mock_smile_anna: MagicMock, init_integration: MockConfigEntry
+    menuai: menuai, mock_smile_anna: MagicMock, init_integration: MockConfigEntry
 ) -> None:
     """Test changing of number entities."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         NUMBER_DOMAIN,
         SERVICE_SET_VALUE,
         {
@@ -52,16 +52,16 @@ async def test_anna_max_boiler_temp_change(
 @pytest.mark.parametrize("chosen_env", ["m_adam_heating"], indirect=True)
 @pytest.mark.parametrize("cooling_present", [False], indirect=True)
 async def test_adam_dhw_setpoint_change(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_smile_adam_heat_cool: MagicMock,
     init_integration: MockConfigEntry,
 ) -> None:
     """Test changing of number entities."""
-    state = hass.states.get("number.opentherm_domestic_hot_water_setpoint")
+    state = menuai.states.get("number.opentherm_domestic_hot_water_setpoint")
     assert state
     assert float(state.state) == 60.0
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         NUMBER_DOMAIN,
         SERVICE_SET_VALUE,
         {
@@ -78,10 +78,10 @@ async def test_adam_dhw_setpoint_change(
 
 
 async def test_adam_temperature_offset(
-    hass: HomeAssistant, mock_smile_adam: MagicMock, init_integration: MockConfigEntry
+    menuai: menuai, mock_smile_adam: MagicMock, init_integration: MockConfigEntry
 ) -> None:
     """Test creation of the temperature_offset number."""
-    state = hass.states.get("number.zone_thermostat_jessie_temperature_offset")
+    state = menuai.states.get("number.zone_thermostat_jessie_temperature_offset")
     assert state
     assert float(state.state) == 0.0
     assert state.attributes.get("min") == -2.0
@@ -90,10 +90,10 @@ async def test_adam_temperature_offset(
 
 
 async def test_adam_temperature_offset_change(
-    hass: HomeAssistant, mock_smile_adam: MagicMock, init_integration: MockConfigEntry
+    menuai: menuai, mock_smile_adam: MagicMock, init_integration: MockConfigEntry
 ) -> None:
     """Test changing of the temperature_offset number."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         NUMBER_DOMAIN,
         SERVICE_SET_VALUE,
         {
@@ -110,11 +110,11 @@ async def test_adam_temperature_offset_change(
 
 
 async def test_adam_temperature_offset_out_of_bounds_change(
-    hass: HomeAssistant, mock_smile_adam: MagicMock, init_integration: MockConfigEntry
+    menuai: menuai, mock_smile_adam: MagicMock, init_integration: MockConfigEntry
 ) -> None:
     """Test changing of the temperature_offset number beyond limits."""
     with pytest.raises(ServiceValidationError, match="valid range"):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             NUMBER_DOMAIN,
             SERVICE_SET_VALUE,
             {

@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import format_mac
+from menuai.components.diagnostics import async_redact_data
+from menuai.core import menuai
+from menuai.helpers.device_registry import format_mac
 
 from . import TPLinkConfigEntry
 
@@ -44,7 +44,7 @@ TO_REDACT = {
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: TPLinkConfigEntry
+    menuai: menuai, entry: TPLinkConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     data = entry.runtime_data

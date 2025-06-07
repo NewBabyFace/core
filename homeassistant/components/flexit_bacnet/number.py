@@ -7,16 +7,16 @@ from dataclasses import dataclass
 from flexit_bacnet import FlexitBACnet
 from flexit_bacnet.bacnet import DecodingError
 
-from homeassistant.components.number import (
+from menuai.components.number import (
     NumberDeviceClass,
     NumberEntity,
     NumberEntityDescription,
     NumberMode,
 )
-from homeassistant.const import PERCENTAGE, UnitOfTime
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import PERCENTAGE, UnitOfTime
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import FlexitConfigEntry, FlexitCoordinator
@@ -194,7 +194,7 @@ NUMBERS: tuple[FlexitNumberEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: FlexitConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -250,7 +250,7 @@ class FlexitNumber(FlexitEntity, NumberEntity):
         try:
             await set_native_value_fn(int(value))
         except (asyncio.exceptions.TimeoutError, ConnectionError, DecodingError) as exc:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="set_value_error",
                 translation_placeholders={

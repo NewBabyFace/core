@@ -2,13 +2,13 @@
 
 from pyaehw4a1.aehw4a1 import AehW4a1
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_entry_flow
+from menuai.core import menuai
+from menuai.helpers import config_entry_flow
 
 from .const import DOMAIN
 
 
-async def _async_has_devices(hass: HomeAssistant) -> bool:
+async def _async_has_devices(menuai: menuai) -> bool:
     """Return if there are devices that can be discovered."""
     aehw4a1_ip_addresses = await AehW4a1().discovery()
     return len(aehw4a1_ip_addresses) > 0

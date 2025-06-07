@@ -2,28 +2,28 @@
 
 from unittest.mock import MagicMock
 
-from homeassistant.components.season.const import DOMAIN, TYPE_ASTRONOMICAL
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_TYPE
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.season.const import DOMAIN, TYPE_ASTRONOMICAL
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_TYPE
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
 
 async def test_full_user_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: MagicMock,
 ) -> None:
     """Test the full user configuration flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
     assert result.get("type") is FlowResultType.FORM
     assert result.get("step_id") == "user"
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_TYPE: TYPE_ASTRONOMICAL},
     )
@@ -34,13 +34,13 @@ async def test_full_user_flow(
 
 
 async def test_single_instance_allowed(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test we abort if already setup."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}, data={CONF_TYPE: TYPE_ASTRONOMICAL}
     )
 

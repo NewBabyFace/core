@@ -9,21 +9,21 @@ import uuid
 
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.const import CONF_ID, CONF_NAME
-from homeassistant.core import Context, HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import (
+from menuai.components import websocket_api
+from menuai.const import CONF_ID, CONF_NAME
+from menuai.core import Context, menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import (
     collection,
     config_validation as cv,
     entity_registry as er,
 )
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.storage import Store
-from homeassistant.helpers.typing import ConfigType, VolDictType
-from homeassistant.util import dt as dt_util, slugify
-from homeassistant.util.hass_dict import HassKey
+from menuai.helpers.entity import Entity
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.storage import Store
+from menuai.helpers.typing import ConfigType, VolDictType
+from menuai.util import dt as dt_util, slugify
+from menuai.util.menuai_dict import menuaiKey
 
 from .const import DEFAULT_NAME, DEVICE_ID, DOMAIN, EVENT_TAG_SCANNED, LOGGER, TAG_ID
 
@@ -35,7 +35,7 @@ STORAGE_KEY = DOMAIN
 STORAGE_VERSION = 1
 STORAGE_VERSION_MINOR = 3
 
-TAG_DATA: HassKey[TagStorageCollection] = HassKey(DOMAIN)
+TAG_DATA: menuaiKey[TagStorageCollection] = menuaiKey(DOMAIN)
 
 CREATE_FIELDS: VolDictType = {
     vol.Optional(TAG_ID): cv.string,
@@ -55,7 +55,7 @@ UPDATE_FIELDS: VolDictType = {
 CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)
 
 
-class TagIDExistsError(HomeAssistantError):
+class TagIDExistsError(menuaiError):
     """Raised when an item is not found."""
 
     def __init__(self, item_id: str) -> None:
@@ -103,7 +103,7 @@ class TagStore(Store[collection.SerializedStorageCollection]):
         """Migrate to the new version."""
         data = old_data
         if old_major_version == 1 and old_minor_version < 2:
-            entity_registry = er.async_get(self.hass)
+            entity_registry = er.async_get(self.menuai)
             # Version 1.2 moves name to entity registry
             for tag in data["items"]:
                 # Copy name in tag store to the entity registry
@@ -134,7 +134,7 @@ class TagStorageCollection(collection.DictStorageCollection):
     ) -> None:
         """Initialize the storage collection."""
         super().__init__(store, id_manager)
-        self.entity_registry = er.async_get(self.hass)
+        self.entity_registry = er.async_get(self.menuai)
 
     async def _process_create_data(self, data: dict) -> dict:
         """Validate the config is valid."""
@@ -199,11 +199,11 @@ class TagDictStorageCollectionWebsocket(
         super().__init__(
             storage_collection, api_prefix, model_name, create_schema, update_schema
         )
-        self.entity_registry = er.async_get(storage_collection.hass)
+        self.entity_registry = er.async_get(storage_collection.menuai)
 
     @callback
     def ws_list_item(
-        self, hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict
+        self, menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict
     ) -> None:
         """List items specifically for tag.
 
@@ -225,22 +225,22 @@ class TagDictStorageCollectionWebsocket(
         connection.send_result(msg["id"], tag_items)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Tag component."""
-    component = EntityComponent[TagEntity](LOGGER, DOMAIN, hass)
+    component = EntityComponent[TagEntity](LOGGER, DOMAIN, menuai)
     id_manager = TagIDManager()
-    hass.data[TAG_DATA] = storage_collection = TagStorageCollection(
+    menuai.data[TAG_DATA] = storage_collection = TagStorageCollection(
         TagStore(
-            hass, STORAGE_VERSION, STORAGE_KEY, minor_version=STORAGE_VERSION_MINOR
+            menuai, STORAGE_VERSION, STORAGE_KEY, minor_version=STORAGE_VERSION_MINOR
         ),
         id_manager,
     )
     await storage_collection.async_load()
     TagDictStorageCollectionWebsocket(
         storage_collection, DOMAIN, DOMAIN, CREATE_FIELDS, UPDATE_FIELDS
-    ).async_setup(hass)
+    ).async_setup(menuai)
 
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
     entity_update_handlers: dict[str, Callable[[str | None, str | None], None]] = {}
 
     async def tag_change_listener(
@@ -318,17 +318,17 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 
 async def async_scan_tag(
-    hass: HomeAssistant,
+    menuai: menuai,
     tag_id: str,
     device_id: str | None,
     context: Context | None = None,
 ) -> None:
     """Handle when a tag is scanned."""
-    if DOMAIN not in hass.config.components:
-        raise HomeAssistantError("tag component has not been set up.")
+    if DOMAIN not in menuai.config.components:
+        raise menuaiError("tag component has not been set up.")
 
-    storage_collection = hass.data[TAG_DATA]
-    entity_registry = er.async_get(hass)
+    storage_collection = menuai.data[TAG_DATA]
+    entity_registry = er.async_get(menuai)
     entity_id = entity_registry.async_get_entity_id(DOMAIN, DOMAIN, tag_id)
 
     # Get name from entity registry, default value None if not present
@@ -336,7 +336,7 @@ async def async_scan_tag(
     if entity_id and (entity := entity_registry.async_get(entity_id)):
         tag_name = entity.name or entity.original_name
 
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_TAG_SCANNED,
         {TAG_ID: tag_id, CONF_NAME: tag_name, DEVICE_ID: device_id},
         context=context,
@@ -415,12 +415,12 @@ class TagEntity(Entity):
         """Return the state attributes of the sun."""
         return {TAG_ID: self._tag_id, LAST_SCANNED_BY_DEVICE_ID: self._last_device_id}
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self._entity_update_handlers[self._tag_id] = self.async_handle_event
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Handle entity being removed."""
-        await super().async_will_remove_from_hass()
+        await super().async_will_remove_from_menuai()
         del self._entity_update_handlers[self._tag_id]

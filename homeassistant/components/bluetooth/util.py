@@ -13,18 +13,18 @@ from bluetooth_adapters import (
 from bluetooth_data_tools import monotonic_time_coarse
 from habluetooth import get_manager
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
 
 from .models import BluetoothServiceInfoBleak
 from .storage import BluetoothStorage
 
 
-class InvalidConfigEntryID(HomeAssistantError):
+class InvalidConfigEntryID(menuaiError):
     """Invalid config entry id."""
 
 
-class InvalidSource(HomeAssistantError):
+class InvalidSource(menuaiError):
     """Invalid source."""
 
 
@@ -105,9 +105,9 @@ def adapter_title(adapter: str, details: AdapterDetails) -> str:
     return f"{manufacturer} {model} ({unique_name})"
 
 
-def config_entry_id_to_source(hass: HomeAssistant, config_entry_id: str) -> str:
+def config_entry_id_to_source(menuai: menuai, config_entry_id: str) -> str:
     """Convert a config entry id to a source."""
-    if not (entry := hass.config_entries.async_get_entry(config_entry_id)):
+    if not (entry := menuai.config_entries.async_get_entry(config_entry_id)):
         raise InvalidConfigEntryID(f"Config entry {config_entry_id} not found")
     source = entry.unique_id
     assert source is not None

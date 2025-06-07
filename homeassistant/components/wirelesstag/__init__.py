@@ -7,12 +7,12 @@ import voluptuous as vol
 from wirelesstagpy import WirelessTags
 from wirelesstagpy.exceptions import WirelessTagsException
 
-from homeassistant.components import persistent_notification
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.dispatcher import dispatcher_send
-from homeassistant.helpers.typing import ConfigType
+from menuai.components import persistent_notification
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.dispatcher import dispatcher_send
+from menuai.helpers.typing import ConfigType
 
 from .const import DOMAIN, SIGNAL_BINARY_EVENT_UPDATE, SIGNAL_TAG_UPDATE
 
@@ -39,9 +39,9 @@ CONFIG_SCHEMA = vol.Schema(
 class WirelessTagPlatform:
     """Principal object to manage all registered in HA tags."""
 
-    def __init__(self, hass, api):
+    def __init__(self, menuai, api):
         """Designated initializer for wirelesstags platform."""
-        self.hass = hass
+        self.menuai = menuai
         self.api = api
         self.tags = {}
         self._local_base_url = None
@@ -77,7 +77,7 @@ class WirelessTagPlatform:
                     mac = tag.tag_manager_mac
                     _LOGGER.debug("Push notification for tag update arrived: %s", tag)
                     dispatcher_send(
-                        self.hass, SIGNAL_TAG_UPDATE.format(tag_id, mac), tag
+                        self.menuai, SIGNAL_TAG_UPDATE.format(tag_id, mac), tag
                     )
                     if uuid in event_spec:
                         events = event_spec[uuid]
@@ -86,7 +86,7 @@ class WirelessTagPlatform:
                                 "Push notification for binary event arrived: %s", event
                             )
                             dispatcher_send(
-                                self.hass,
+                                self.menuai,
                                 SIGNAL_BINARY_EVENT_UPDATE.format(
                                     tag_id, event.type, mac
                                 ),
@@ -102,7 +102,7 @@ class WirelessTagPlatform:
         self.api.start_monitoring(push_callback)
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Wireless Sensor Tag component."""
     conf = config[DOMAIN]
     username = conf.get(CONF_USERNAME)
@@ -111,15 +111,15 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
     try:
         wirelesstags = WirelessTags(username=username, password=password)
 
-        platform = WirelessTagPlatform(hass, wirelesstags)
+        platform = WirelessTagPlatform(menuai, wirelesstags)
         platform.load_tags()
         platform.start_monitoring()
-        hass.data[DOMAIN] = platform
+        menuai.data[DOMAIN] = platform
     except (ConnectTimeout, HTTPError, WirelessTagsException) as ex:
         _LOGGER.error("Unable to connect to wirelesstag.net service: %s", str(ex))
         persistent_notification.create(
-            hass,
-            f"Error: {ex}<br />Please restart hass after fixing this.",
+            menuai,
+            f"Error: {ex}<br />Please restart menuai after fixing this.",
             title=NOTIFICATION_TITLE,
             notification_id=NOTIFICATION_ID,
         )

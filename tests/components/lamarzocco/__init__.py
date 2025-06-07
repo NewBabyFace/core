@@ -2,9 +2,9 @@
 
 from pylamarzocco.const import ModelName
 
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.service_info.bluetooth import BluetoothServiceInfo
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.helpers.service_info.bluetooth import BluetoothServiceInfo
 
 from tests.common import MockConfigEntry
 
@@ -29,12 +29,12 @@ WAKE_UP_SLEEP_ENTRY_IDS = ["Os2OswX", "aXFz5bJ"]
 
 
 async def async_init_integration(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_config_entry: MockConfigEntry
 ) -> None:
     """Set up the La Marzocco integration for testing."""
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
 
 def get_bluetooth_service_info(model: ModelName, serial: str) -> BluetoothServiceInfo:

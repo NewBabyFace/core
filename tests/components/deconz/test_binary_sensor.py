@@ -7,16 +7,16 @@ from unittest.mock import patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.deconz.const import (
+from menuai.components.deconz.const import (
     CONF_ALLOW_CLIP_SENSOR,
     CONF_ALLOW_NEW_DEVICES,
     CONF_MASTER_GATEWAY,
     DOMAIN,
 )
-from homeassistant.components.deconz.services import SERVICE_DEVICE_REFRESH
-from homeassistant.const import STATE_OFF, STATE_ON, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.deconz.services import SERVICE_DEVICE_REFRESH
+from menuai.const import STATE_OFF, STATE_ON, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .conftest import ConfigEntryFactoryType, WebsocketDataType
 
@@ -327,7 +327,7 @@ TEST_DATA = [
 @pytest.mark.parametrize("config_entry_options", [{CONF_ALLOW_CLIP_SENSOR: True}])
 @pytest.mark.parametrize(("sensor_payload", "expected"), TEST_DATA)
 async def test_binary_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     config_entry_factory: ConfigEntryFactoryType,
     sensor_ws_data: WebsocketDataType,
@@ -335,14 +335,14 @@ async def test_binary_sensors(
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test successful creation of binary sensor entities."""
-    with patch("homeassistant.components.deconz.PLATFORMS", [Platform.BINARY_SENSOR]):
+    with patch("menuai.components.deconz.PLATFORMS", [Platform.BINARY_SENSOR]):
         config_entry = await config_entry_factory()
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
     # Change state
 
     await sensor_ws_data({"state": expected["websocket_event"]})
-    assert hass.states.get(expected["entity_id"]).state == expected["next_state"]
+    assert menuai.states.get(expected["entity_id"]).state == expected["next_state"]
 
 
 @pytest.mark.parametrize(
@@ -359,9 +359,9 @@ async def test_binary_sensors(
 )
 @pytest.mark.parametrize("config_entry_options", [{CONF_ALLOW_CLIP_SENSOR: False}])
 @pytest.mark.usefixtures("config_entry_setup")
-async def test_not_allow_clip_sensor(hass: HomeAssistant) -> None:
+async def test_not_allow_clip_sensor(menuai: menuai) -> None:
     """Test that CLIP sensors are not allowed."""
-    assert len(hass.states.async_all()) == 0
+    assert len(menuai.states.async_all()) == 0
 
 
 @pytest.mark.parametrize(
@@ -398,45 +398,45 @@ async def test_not_allow_clip_sensor(hass: HomeAssistant) -> None:
 )
 @pytest.mark.parametrize("config_entry_options", [{CONF_ALLOW_CLIP_SENSOR: True}])
 async def test_allow_clip_sensor(
-    hass: HomeAssistant, config_entry_setup: MockConfigEntry
+    menuai: menuai, config_entry_setup: MockConfigEntry
 ) -> None:
     """Test that CLIP sensors can be allowed."""
 
-    assert len(hass.states.async_all()) == 3
-    assert hass.states.get("binary_sensor.presence_sensor").state == STATE_OFF
-    assert hass.states.get("binary_sensor.clip_presence_sensor").state == STATE_OFF
-    assert hass.states.get("binary_sensor.clip_flag_boot_time").state == STATE_ON
+    assert len(menuai.states.async_all()) == 3
+    assert menuai.states.get("binary_sensor.presence_sensor").state == STATE_OFF
+    assert menuai.states.get("binary_sensor.clip_presence_sensor").state == STATE_OFF
+    assert menuai.states.get("binary_sensor.clip_flag_boot_time").state == STATE_ON
 
     # Disallow clip sensors
 
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         config_entry_setup, options={CONF_ALLOW_CLIP_SENSOR: False}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == 1
-    assert not hass.states.get("binary_sensor.clip_presence_sensor")
-    assert not hass.states.get("binary_sensor.clip_flag_boot_time")
+    assert len(menuai.states.async_all()) == 1
+    assert not menuai.states.get("binary_sensor.clip_presence_sensor")
+    assert not menuai.states.get("binary_sensor.clip_flag_boot_time")
 
     # Allow clip sensors
 
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         config_entry_setup, options={CONF_ALLOW_CLIP_SENSOR: True}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == 3
-    assert hass.states.get("binary_sensor.clip_presence_sensor").state == STATE_OFF
-    assert hass.states.get("binary_sensor.clip_flag_boot_time").state == STATE_ON
+    assert len(menuai.states.async_all()) == 3
+    assert menuai.states.get("binary_sensor.clip_presence_sensor").state == STATE_OFF
+    assert menuai.states.get("binary_sensor.clip_flag_boot_time").state == STATE_ON
 
 
 @pytest.mark.usefixtures("config_entry_setup")
 async def test_add_new_binary_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     sensor_ws_data: WebsocketDataType,
 ) -> None:
     """Test that adding a new binary sensor works."""
-    assert len(hass.states.async_all()) == 0
+    assert len(menuai.states.async_all()) == 0
 
     event_added_sensor = {
         "e": "added",
@@ -450,15 +450,15 @@ async def test_add_new_binary_sensor(
         },
     }
     await sensor_ws_data(event_added_sensor)
-    assert len(hass.states.async_all()) == 1
-    assert hass.states.get("binary_sensor.presence_sensor").state == STATE_OFF
+    assert len(menuai.states.async_all()) == 1
+    assert menuai.states.get("binary_sensor.presence_sensor").state == STATE_OFF
 
 
 @pytest.mark.parametrize(
     "config_entry_options", [{CONF_MASTER_GATEWAY: True, CONF_ALLOW_NEW_DEVICES: False}]
 )
 async def test_add_new_binary_sensor_ignored_load_entities_on_service_call(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     config_entry_setup: MockConfigEntry,
     deconz_payload: dict[str, Any],
@@ -474,11 +474,11 @@ async def test_add_new_binary_sensor_ignored_load_entities_on_service_call(
         "uniqueid": "00:00:00:00:00:00:00:00-00",
     }
 
-    assert len(hass.states.async_all()) == 0
+    assert len(menuai.states.async_all()) == 0
 
     await sensor_ws_data({"e": "added", "sensor": sensor})
-    assert len(hass.states.async_all()) == 0
-    assert not hass.states.get("binary_sensor.presence_sensor")
+    assert len(menuai.states.async_all()) == 0
+    assert not menuai.states.get("binary_sensor.presence_sensor")
 
     assert (
         len(
@@ -492,18 +492,18 @@ async def test_add_new_binary_sensor_ignored_load_entities_on_service_call(
     deconz_payload["sensors"]["0"] = sensor
     mock_requests()
 
-    await hass.services.async_call(DOMAIN, SERVICE_DEVICE_REFRESH)
-    await hass.async_block_till_done()
+    await menuai.services.async_call(DOMAIN, SERVICE_DEVICE_REFRESH)
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == 1
-    assert hass.states.get("binary_sensor.presence_sensor")
+    assert len(menuai.states.async_all()) == 1
+    assert menuai.states.get("binary_sensor.presence_sensor")
 
 
 @pytest.mark.parametrize(
     "config_entry_options", [{CONF_MASTER_GATEWAY: True, CONF_ALLOW_NEW_DEVICES: False}]
 )
 async def test_add_new_binary_sensor_ignored_load_entities_on_options_change(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     config_entry_setup: MockConfigEntry,
     deconz_payload: dict[str, Any],
@@ -519,11 +519,11 @@ async def test_add_new_binary_sensor_ignored_load_entities_on_options_change(
         "uniqueid": "00:00:00:00:00:00:00:00-00",
     }
 
-    assert len(hass.states.async_all()) == 0
+    assert len(menuai.states.async_all()) == 0
 
     await sensor_ws_data({"e": "added", "sensor": sensor})
-    assert len(hass.states.async_all()) == 0
-    assert not hass.states.get("binary_sensor.presence_sensor")
+    assert len(menuai.states.async_all()) == 0
+    assert not menuai.states.get("binary_sensor.presence_sensor")
 
     assert (
         len(
@@ -537,10 +537,10 @@ async def test_add_new_binary_sensor_ignored_load_entities_on_options_change(
     deconz_payload["sensors"]["0"] = sensor
     mock_requests()
 
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         config_entry_setup, options={CONF_ALLOW_NEW_DEVICES: True}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == 1
-    assert hass.states.get("binary_sensor.presence_sensor")
+    assert len(menuai.states.async_all()) == 1
+    assert menuai.states.get("binary_sensor.presence_sensor")

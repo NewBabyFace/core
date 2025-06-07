@@ -14,13 +14,13 @@ from motioneye_client.const import (
     KEY_VIDEO_STREAMING,
 )
 
-from homeassistant.components.motioneye import get_motioneye_device_identifier
-from homeassistant.components.motioneye.const import DEFAULT_SCAN_INTERVAL
-from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
-from homeassistant.config_entries import RELOAD_AFTER_UPDATE_DELAY
-from homeassistant.const import ATTR_ENTITY_ID, SERVICE_TURN_OFF, SERVICE_TURN_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.components.motioneye import get_motioneye_device_identifier
+from menuai.components.motioneye.const import DEFAULT_SCAN_INTERVAL
+from menuai.components.switch import DOMAIN as SWITCH_DOMAIN
+from menuai.config_entries import RELOAD_AFTER_UPDATE_DELAY
+from menuai.const import ATTR_ENTITY_ID, SERVICE_TURN_OFF, SERVICE_TURN_ON
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from . import (
     TEST_CAMERA,
@@ -36,14 +36,14 @@ from tests.common import async_fire_time_changed
 
 
 async def test_switch_turn_on_off(
-    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+    menuai: menuai, freezer: FrozenDateTimeFactory
 ) -> None:
     """Test turning the switch on and off."""
     client = create_mock_motioneye_client()
-    await setup_mock_motioneye_config_entry(hass, client=client)
+    await setup_mock_motioneye_config_entry(menuai, client=client)
 
     # Verify switch is on.
-    entity_state = hass.states.get(TEST_SWITCH_MOTION_DETECTION_ENTITY_ID)
+    entity_state = menuai.states.get(TEST_SWITCH_MOTION_DETECTION_ENTITY_ID)
     assert entity_state
     assert entity_state.state == "on"
 
@@ -56,7 +56,7 @@ async def test_switch_turn_on_off(
     client.async_get_cameras = AsyncMock(return_value={"cameras": [expected_camera]})
 
     # Turn switch off.
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: TEST_SWITCH_MOTION_DETECTION_ENTITY_ID},
@@ -64,14 +64,14 @@ async def test_switch_turn_on_off(
     )
 
     freezer.tick(DEFAULT_SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     # Verify correct parameters are passed to the library.
     assert client.async_set_camera.call_args == call(TEST_CAMERA_ID, expected_camera)
 
     # Verify the switch turns off.
-    entity_state = hass.states.get(TEST_SWITCH_MOTION_DETECTION_ENTITY_ID)
+    entity_state = menuai.states.get(TEST_SWITCH_MOTION_DETECTION_ENTITY_ID)
     assert entity_state
     assert entity_state.state == "off"
 
@@ -79,7 +79,7 @@ async def test_switch_turn_on_off(
     client.async_get_cameras = AsyncMock(return_value={"cameras": [TEST_CAMERA]})
 
     # Turn switch on.
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: TEST_SWITCH_MOTION_DETECTION_ENTITY_ID},
@@ -90,24 +90,24 @@ async def test_switch_turn_on_off(
     assert client.async_set_camera.call_args == call(TEST_CAMERA_ID, TEST_CAMERA)
 
     freezer.tick(DEFAULT_SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     # Verify the switch turns on.
-    entity_state = hass.states.get(TEST_SWITCH_MOTION_DETECTION_ENTITY_ID)
+    entity_state = menuai.states.get(TEST_SWITCH_MOTION_DETECTION_ENTITY_ID)
     assert entity_state
     assert entity_state.state == "on"
 
 
 async def test_switch_state_update_from_coordinator(
-    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+    menuai: menuai, freezer: FrozenDateTimeFactory
 ) -> None:
     """Test that coordinator data impacts state."""
     client = create_mock_motioneye_client()
-    await setup_mock_motioneye_config_entry(hass, client=client)
+    await setup_mock_motioneye_config_entry(menuai, client=client)
 
     # Verify switch is on.
-    entity_state = hass.states.get(TEST_SWITCH_MOTION_DETECTION_ENTITY_ID)
+    entity_state = menuai.states.get(TEST_SWITCH_MOTION_DETECTION_ENTITY_ID)
     assert entity_state
     assert entity_state.state == "on"
 
@@ -116,19 +116,19 @@ async def test_switch_state_update_from_coordinator(
     client.async_get_cameras = AsyncMock(return_value=updated_cameras)
 
     freezer.tick(DEFAULT_SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     # Verify the switch turns off.
-    entity_state = hass.states.get(TEST_SWITCH_MOTION_DETECTION_ENTITY_ID)
+    entity_state = menuai.states.get(TEST_SWITCH_MOTION_DETECTION_ENTITY_ID)
     assert entity_state
     assert entity_state.state == "off"
 
 
-async def test_switch_has_correct_entities(hass: HomeAssistant) -> None:
+async def test_switch_has_correct_entities(menuai: menuai) -> None:
     """Test that the correct switch entities are created."""
     client = create_mock_motioneye_client()
-    await setup_mock_motioneye_config_entry(hass, client=client)
+    await setup_mock_motioneye_config_entry(menuai, client=client)
 
     enabled_switch_keys = [
         KEY_MOTION_DETECTION,
@@ -143,23 +143,23 @@ async def test_switch_has_correct_entities(hass: HomeAssistant) -> None:
 
     for switch_key in enabled_switch_keys:
         entity_id = f"{TEST_SWITCH_ENTITY_ID_BASE}_{switch_key}"
-        entity_state = hass.states.get(entity_id)
+        entity_state = menuai.states.get(entity_id)
         assert entity_state, f"Couldn't find entity: {entity_id}"
 
     for switch_key in disabled_switch_keys:
         entity_id = f"{TEST_SWITCH_ENTITY_ID_BASE}_{switch_key}"
-        entity_state = hass.states.get(entity_id)
+        entity_state = menuai.states.get(entity_id)
         assert not entity_state
 
 
 async def test_disabled_switches_can_be_enabled(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Verify disabled switches can be enabled."""
     client = create_mock_motioneye_client()
-    await setup_mock_motioneye_config_entry(hass, client=client)
+    await setup_mock_motioneye_config_entry(menuai, client=client)
 
     disabled_switch_keys = [
         KEY_TEXT_OVERLAY,
@@ -172,34 +172,34 @@ async def test_disabled_switches_can_be_enabled(
         assert entry
         assert entry.disabled
         assert entry.disabled_by is er.RegistryEntryDisabler.INTEGRATION
-        entity_state = hass.states.get(entity_id)
+        entity_state = menuai.states.get(entity_id)
         assert not entity_state
 
         with patch(
-            "homeassistant.components.motioneye.MotionEyeClient",
+            "menuai.components.motioneye.MotionEyeClient",
             return_value=client,
         ):
             updated_entry = entity_registry.async_update_entity(
                 entity_id, disabled_by=None
             )
             assert not updated_entry.disabled
-            await hass.async_block_till_done()
+            await menuai.async_block_till_done()
 
             freezer.tick(timedelta(seconds=RELOAD_AFTER_UPDATE_DELAY + 1))
-            async_fire_time_changed(hass)
-            await hass.async_block_till_done()
+            async_fire_time_changed(menuai)
+            await menuai.async_block_till_done()
 
-        entity_state = hass.states.get(entity_id)
+        entity_state = menuai.states.get(entity_id)
         assert entity_state
 
 
 async def test_switch_device_info(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Verify device information includes expected details."""
-    config_entry = await setup_mock_motioneye_config_entry(hass)
+    config_entry = await setup_mock_motioneye_config_entry(menuai)
 
     device_identifer = get_motioneye_device_identifier(
         config_entry.entry_id, TEST_CAMERA_ID

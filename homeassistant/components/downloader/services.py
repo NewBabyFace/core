@@ -10,10 +10,10 @@ import threading
 import requests
 import voluptuous as vol
 
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.service import async_register_admin_service
-from homeassistant.util import raise_if_invalid_filename, raise_if_invalid_path
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import config_validation as cv
+from menuai.helpers.service import async_register_admin_service
+from menuai.util import raise_if_invalid_filename, raise_if_invalid_path
 
 from .const import (
     _LOGGER,
@@ -32,7 +32,7 @@ from .const import (
 def download_file(service: ServiceCall) -> None:
     """Start thread to download file specified in the URL."""
 
-    entry = service.hass.config_entries.async_loaded_entries(DOMAIN)[0]
+    entry = service.menuai.config_entries.async_loaded_entries(DOMAIN)[0]
     download_path = entry.data[CONF_DOWNLOAD_DIR]
 
     def do_download() -> None:
@@ -58,7 +58,7 @@ def download_file(service: ServiceCall) -> None:
                 _LOGGER.warning(
                     "Downloading '%s' failed, status_code=%d", url, req.status_code
                 )
-                service.hass.bus.fire(
+                service.menuai.bus.fire(
                     f"{DOMAIN}_{DOWNLOAD_FAILED_EVENT}",
                     {"url": url, "filename": filename},
                 )
@@ -112,14 +112,14 @@ def download_file(service: ServiceCall) -> None:
                         fil.write(chunk)
 
                 _LOGGER.debug("Downloading of %s done", url)
-                service.hass.bus.fire(
+                service.menuai.bus.fire(
                     f"{DOMAIN}_{DOWNLOAD_COMPLETED_EVENT}",
                     {"url": url, "filename": filename},
                 )
 
         except requests.exceptions.ConnectionError:
             _LOGGER.exception("ConnectionError occurred for %s", url)
-            service.hass.bus.fire(
+            service.menuai.bus.fire(
                 f"{DOMAIN}_{DOWNLOAD_FAILED_EVENT}",
                 {"url": url, "filename": filename},
             )
@@ -129,7 +129,7 @@ def download_file(service: ServiceCall) -> None:
                 os.remove(final_path)
         except ValueError:
             _LOGGER.exception("Invalid value")
-            service.hass.bus.fire(
+            service.menuai.bus.fire(
                 f"{DOMAIN}_{DOWNLOAD_FAILED_EVENT}",
                 {"url": url, "filename": filename},
             )
@@ -141,10 +141,10 @@ def download_file(service: ServiceCall) -> None:
     threading.Thread(target=do_download).start()
 
 
-def async_setup_services(hass: HomeAssistant) -> None:
+def async_setup_services(menuai: menuai) -> None:
     """Register the services for the downloader component."""
     async_register_admin_service(
-        hass,
+        menuai,
         DOMAIN,
         SERVICE_DOWNLOAD_FILE,
         download_file,

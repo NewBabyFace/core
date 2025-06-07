@@ -6,7 +6,7 @@ from eheimdigital.classic_led_ctrl import EheimDigitalClassicLEDControl
 from eheimdigital.device import EheimDigitalDevice
 from eheimdigital.types import LightMode
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_EFFECT,
     EFFECT_OFF,
@@ -14,9 +14,9 @@ from homeassistant.components.light import (
     LightEntity,
     LightEntityFeature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util.color import brightness_to_value, value_to_brightness
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util.color import brightness_to_value, value_to_brightness
 
 from .const import EFFECT_DAYCL_MODE, EFFECT_TO_LIGHT_MODE
 from .coordinator import EheimDigitalConfigEntry, EheimDigitalUpdateCoordinator
@@ -29,7 +29,7 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: EheimDigitalConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

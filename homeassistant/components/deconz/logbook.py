@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from homeassistant.components.logbook import LOGBOOK_ENTRY_MESSAGE, LOGBOOK_ENTRY_NAME
-from homeassistant.const import ATTR_DEVICE_ID, CONF_EVENT, CONF_ID
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
+from menuai.components.logbook import LOGBOOK_ENTRY_MESSAGE, LOGBOOK_ENTRY_NAME
+from menuai.const import ATTR_DEVICE_ID, CONF_EVENT, CONF_ID
+from menuai.core import Event, menuai, callback
+from menuai.helpers import device_registry as dr
 
 from .const import CONF_GESTURE, DOMAIN
 from .deconz_event import CONF_DECONZ_ALARM_EVENT, CONF_DECONZ_EVENT
@@ -130,17 +130,17 @@ def _get_device_event_description(
 
 @callback
 def async_describe_events(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_describe_event: Callable[[str, str, Callable[[Event], dict[str, str]]], None],
 ) -> None:
     """Describe logbook events."""
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
 
     @callback
     def async_describe_deconz_alarm_event(event: Event) -> dict[str, str]:
         """Describe deCONZ logbook alarm event."""
         if device := device_registry.devices.get(event.data[ATTR_DEVICE_ID]):
-            deconz_alarm_event = _get_deconz_event_from_device(hass, device)
+            deconz_alarm_event = _get_deconz_event_from_device(menuai, device)
             name = deconz_alarm_event.device.name
         else:
             name = event.data[CONF_ID]
@@ -156,7 +156,7 @@ def async_describe_events(
     def async_describe_deconz_event(event: Event) -> dict[str, str]:
         """Describe deCONZ logbook event."""
         if device := device_registry.devices.get(event.data[ATTR_DEVICE_ID]):
-            deconz_event = _get_deconz_event_from_device(hass, device)
+            deconz_event = _get_deconz_event_from_device(menuai, device)
             name = deconz_event.device.name
         else:
             deconz_event = None

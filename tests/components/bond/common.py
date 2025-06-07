@@ -10,11 +10,11 @@ from unittest.mock import MagicMock, patch
 from aiohttp.client_exceptions import ClientResponseError
 from bond_async import DeviceType
 
-from homeassistant import core
-from homeassistant.components.bond.const import DOMAIN
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_HOST, STATE_UNAVAILABLE
-from homeassistant.setup import async_setup_component
-from homeassistant.util import utcnow
+from menuai import core
+from menuai.components.bond.const import DOMAIN
+from menuai.const import CONF_ACCESS_TOKEN, CONF_HOST, STATE_UNAVAILABLE
+from menuai.setup import async_setup_component
+from menuai.util import utcnow
 
 from tests.common import MockConfigEntry, async_fire_time_changed
 
@@ -33,11 +33,11 @@ def patch_setup_entry(domain: str, *, enabled: bool = True):
     if not enabled:
         return nullcontext()
 
-    return patch(f"homeassistant.components.bond.{domain}.async_setup_entry")
+    return patch(f"menuai.components.bond.{domain}.async_setup_entry")
 
 
 async def setup_bond_entity(
-    hass: core.HomeAssistant,
+    menuai: core.menuai,
     config_entry: MockConfigEntry,
     *,
     patch_version=False,
@@ -47,7 +47,7 @@ async def setup_bond_entity(
     patch_token=False,
 ):
     """Set up Bond entity."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with (
         patch_start_bpup(),
@@ -60,11 +60,11 @@ async def setup_bond_entity(
         patch_setup_entry("light", enabled=patch_platforms),
         patch_setup_entry("switch", enabled=patch_platforms),
     ):
-        return await hass.config_entries.async_setup(config_entry.entry_id)
+        return await menuai.config_entries.async_setup(config_entry.entry_id)
 
 
 async def setup_platform(
-    hass: core.HomeAssistant,
+    menuai: core.menuai,
     platform: str,
     discovered_device: dict[str, Any],
     *,
@@ -80,10 +80,10 @@ async def setup_platform(
         domain=DOMAIN,
         data={CONF_HOST: "some host", CONF_ACCESS_TOKEN: "test-token"},
     )
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
     with (
-        patch("homeassistant.components.bond.PLATFORMS", [platform]),
+        patch("menuai.components.bond.PLATFORMS", [platform]),
         patch_bond_version(return_value=bond_version),
         patch_bond_bridge(return_value=bridge),
         patch_bond_token(return_value=token),
@@ -93,8 +93,8 @@ async def setup_platform(
         patch_bond_device_properties(return_value=props),
         patch_bond_device_state(return_value=state),
     ):
-        assert await async_setup_component(hass, DOMAIN, {})
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, {})
+        await menuai.async_block_till_done()
 
     return mock_entry
 
@@ -115,7 +115,7 @@ def patch_bond_version(
         }
 
     return patch(
-        "homeassistant.components.bond.Bond.version",
+        "menuai.components.bond.Bond.version",
         return_value=return_value,
         side_effect=side_effect,
     )
@@ -136,7 +136,7 @@ def patch_bond_bridge(
         }
 
     return patch(
-        "homeassistant.components.bond.Bond.bridge",
+        "menuai.components.bond.Bond.bridge",
         return_value=return_value,
         side_effect=side_effect,
     )
@@ -153,7 +153,7 @@ def patch_bond_token(
         return_value = {"locked": 1}
 
     return patch(
-        "homeassistant.components.bond.Bond.token",
+        "menuai.components.bond.Bond.token",
         return_value=return_value,
         side_effect=side_effect,
     )
@@ -168,7 +168,7 @@ def patch_bond_device_ids(enabled: bool = True, return_value=None, side_effect=N
         return_value = []
 
     return patch(
-        "homeassistant.components.bond.Bond.devices",
+        "menuai.components.bond.Bond.devices",
         return_value=return_value,
         side_effect=side_effect,
     )
@@ -177,7 +177,7 @@ def patch_bond_device_ids(enabled: bool = True, return_value=None, side_effect=N
 def patch_bond_device(return_value=None):
     """Patch Bond API device endpoint."""
     return patch(
-        "homeassistant.components.bond.Bond.device",
+        "menuai.components.bond.Bond.device",
         return_value=return_value,
     )
 
@@ -185,20 +185,20 @@ def patch_bond_device(return_value=None):
 def patch_start_bpup():
     """Patch start_bpup."""
     return patch(
-        "homeassistant.components.bond.start_bpup",
+        "menuai.components.bond.start_bpup",
         return_value=MagicMock(),
     )
 
 
 def patch_bond_action():
     """Patch Bond API action endpoint."""
-    return patch("homeassistant.components.bond.Bond.action")
+    return patch("menuai.components.bond.Bond.action")
 
 
 def patch_bond_action_returns_clientresponseerror():
     """Patch Bond API action endpoint to throw ClientResponseError."""
     return patch(
-        "homeassistant.components.bond.Bond.action",
+        "menuai.components.bond.Bond.action",
         side_effect=ClientResponseError(
             request_info=None, history=None, status=405, message="Method Not Allowed"
         ),
@@ -211,7 +211,7 @@ def patch_bond_device_properties(return_value=None):
         return_value = {}
 
     return patch(
-        "homeassistant.components.bond.Bond.device_properties",
+        "menuai.components.bond.Bond.device_properties",
         return_value=return_value,
     )
 
@@ -222,29 +222,29 @@ def patch_bond_device_state(return_value=None, side_effect=None):
         return_value = {}
 
     return patch(
-        "homeassistant.components.bond.Bond.device_state",
+        "menuai.components.bond.Bond.device_state",
         return_value=return_value,
         side_effect=side_effect,
     )
 
 
 async def help_test_entity_available(
-    hass: core.HomeAssistant, domain: str, device: dict[str, Any], entity_id: str
+    menuai: core.menuai, domain: str, device: dict[str, Any], entity_id: str
 ):
     """Run common test to verify available property."""
-    await setup_platform(hass, domain, device)
+    await setup_platform(menuai, domain, device)
 
-    assert hass.states.get(entity_id).state != STATE_UNAVAILABLE
+    assert menuai.states.get(entity_id).state != STATE_UNAVAILABLE
 
     with patch_bond_device_state(side_effect=TimeoutError()):
-        async_fire_time_changed(hass, utcnow() + timedelta(seconds=30))
-        await hass.async_block_till_done()
-    assert hass.states.get(entity_id).state == STATE_UNAVAILABLE
+        async_fire_time_changed(menuai, utcnow() + timedelta(seconds=30))
+        await menuai.async_block_till_done()
+    assert menuai.states.get(entity_id).state == STATE_UNAVAILABLE
 
     with patch_bond_device_state(return_value={}):
-        async_fire_time_changed(hass, utcnow() + timedelta(seconds=30))
-        await hass.async_block_till_done()
-    assert hass.states.get(entity_id).state != STATE_UNAVAILABLE
+        async_fire_time_changed(menuai, utcnow() + timedelta(seconds=30))
+        await menuai.async_block_till_done()
+    assert menuai.states.get(entity_id).state != STATE_UNAVAILABLE
 
 
 def ceiling_fan(name: str):

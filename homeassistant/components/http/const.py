@@ -2,9 +2,9 @@
 
 from typing import Final
 
-from homeassistant.helpers.http import KEY_AUTHENTICATED, KEY_HASS  # noqa: F401
+from menuai.helpers.http import KEY_AUTHENTICATED, KEY_menuai  # noqa: F401
 
 DOMAIN: Final = "http"
 
-KEY_HASS_USER: Final = "hass_user"
-KEY_HASS_REFRESH_TOKEN_ID: Final = "hass_refresh_token_id"
+KEY_menuai_USER: Final = "menuai_user"
+KEY_menuai_REFRESH_TOKEN_ID: Final = "menuai_refresh_token_id"

@@ -2,11 +2,11 @@
 
 import pytest
 
-from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
-from homeassistant.components.nut.const import INTEGRATION_SUPPORTED_COMMANDS
-from homeassistant.const import ATTR_ENTITY_ID, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
+from menuai.components.nut.const import INTEGRATION_SUPPORTED_COMMANDS
+from menuai.const import ATTR_ENTITY_ID, STATE_UNKNOWN
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .util import async_init_integration
 
@@ -24,7 +24,7 @@ from .util import async_init_integration
     ],
 )
 async def test_buttons_ups(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, model: str
+    menuai: menuai, entity_registry: er.EntityRegistry, model: str
 ) -> None:
     """Tests that there are no standard buttons."""
 
@@ -34,12 +34,12 @@ async def test_buttons_ups(
     }
 
     await async_init_integration(
-        hass,
+        menuai,
         model,
         list_commands_return_value=list_commands_return_value,
     )
 
-    button = hass.states.get("button.ups1_power_cycle_outlet_1")
+    button = menuai.states.get("button.ups1_power_cycle_outlet_1")
     assert not button
 
 
@@ -53,7 +53,7 @@ async def test_buttons_ups(
     ],
 )
 async def test_buttons_pdu_dynamic_outlets(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     model: str,
     unique_id_base: str,
@@ -70,7 +70,7 @@ async def test_buttons_pdu_dynamic_outlets(
         list_commands_return_value[command] = command
 
     await async_init_integration(
-        hass,
+        menuai,
         model,
         list_commands_return_value=list_commands_return_value,
     )
@@ -80,23 +80,23 @@ async def test_buttons_pdu_dynamic_outlets(
     assert entry
     assert entry.unique_id == f"{unique_id_base}outlet.1.load.cycle"
 
-    button = hass.states.get(entity_id)
+    button = menuai.states.get(entity_id)
     assert button
     assert button.state == STATE_UNKNOWN
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         BUTTON_DOMAIN,
         SERVICE_PRESS,
         {ATTR_ENTITY_ID: entity_id},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    button = hass.states.get(entity_id)
+    button = menuai.states.get(entity_id)
     assert button.state != STATE_UNKNOWN
 
-    button = hass.states.get("button.ups1_power_cycle_outlet_25")
+    button = menuai.states.get("button.ups1_power_cycle_outlet_25")
     assert not button
 
-    button = hass.states.get("button.ups1_power_cycle_outlet_a25")
+    button = menuai.states.get("button.ups1_power_cycle_outlet_a25")
     assert not button

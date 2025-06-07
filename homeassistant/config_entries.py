@@ -1,4 +1,4 @@
-"""Manage config entries in Home Assistant."""
+"""Manage config entries in MenuAI."""
 
 from __future__ import annotations
 
@@ -32,18 +32,18 @@ import voluptuous as vol
 from . import data_entry_flow, loader
 from .const import (
     CONF_NAME,
-    EVENT_HOMEASSISTANT_STARTED,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STARTED,
+    EVENT_menuai_STOP,
     Platform,
 )
 from .core import (
     CALLBACK_TYPE,
-    DOMAIN as HOMEASSISTANT_DOMAIN,
+    DOMAIN as menuai_DOMAIN,
     CoreState,
     Event,
-    HassJob,
-    HassJobType,
-    HomeAssistant,
+    menuaiJob,
+    menuaiJobType,
+    menuai,
     callback,
 )
 from .data_entry_flow import FLOW_NOT_COMPLETE_STEPS, FlowContext, FlowResult
@@ -51,7 +51,7 @@ from .exceptions import (
     ConfigEntryAuthFailed,
     ConfigEntryError,
     ConfigEntryNotReady,
-    HomeAssistantError,
+    menuaiError,
 )
 from .helpers import (
     device_registry as dr,
@@ -88,7 +88,7 @@ from .util.enum import try_parse_enum
 if TYPE_CHECKING:
     from .components.bluetooth import BluetoothServiceInfoBleak
     from .helpers.service_info.dhcp import DhcpServiceInfo
-    from .helpers.service_info.hassio import HassioServiceInfo
+    from .helpers.service_info.menuaiio import menuaiioServiceInfo
     from .helpers.service_info.mqtt import MqttServiceInfo
     from .helpers.service_info.ssdp import SsdpServiceInfo
     from .helpers.service_info.usb import UsbServiceInfo
@@ -101,7 +101,7 @@ SOURCE_BLUETOOTH = "bluetooth"
 SOURCE_DHCP = "dhcp"
 SOURCE_DISCOVERY = "discovery"
 SOURCE_HARDWARE = "hardware"
-SOURCE_HASSIO = "hassio"
+SOURCE_menuaiIO = "menuaiio"
 SOURCE_HOMEKIT = "homekit"
 SOURCE_IMPORT = "import"
 SOURCE_INTEGRATION_DISCOVERY = "integration_discovery"
@@ -182,7 +182,7 @@ DISCOVERY_SOURCES = {
     SOURCE_DHCP,
     SOURCE_DISCOVERY,
     SOURCE_HARDWARE,
-    SOURCE_HASSIO,
+    SOURCE_menuaiIO,
     SOURCE_HOMEKIT,
     SOURCE_IMPORT,
     SOURCE_INTEGRATION_DISCOVERY,
@@ -244,7 +244,7 @@ CONN_CLASS_ASSUMED = "assumed"
 CONN_CLASS_UNKNOWN = "unknown"
 
 
-class ConfigError(HomeAssistantError):
+class ConfigError(menuaiError):
     """Error while configuring an account."""
 
 
@@ -261,7 +261,7 @@ class OperationNotAllowed(ConfigError):
 
 
 type UpdateListenerType = Callable[
-    [HomeAssistant, ConfigEntry], Coroutine[Any, Any, None]
+    [menuai, ConfigEntry], Coroutine[Any, Any, None]
 ]
 
 STATE_KEYS = {
@@ -647,7 +647,7 @@ class ConfigEntry[_DataT = Any]:
 
     async def async_setup(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         *,
         integration: loader.Integration | None = None,
     ) -> None:
@@ -657,18 +657,18 @@ class ConfigEntry[_DataT = Any]:
 
         current_entry.set(self)
         try:
-            await self.__async_setup_with_context(hass, integration)
+            await self.__async_setup_with_context(menuai, integration)
         finally:
             current_entry.set(None)
 
     async def __async_setup_with_context(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         integration: loader.Integration | None,
     ) -> None:
         """Set up an entry, with current_entry set."""
         if integration is None and not (integration := self._integration_for_domain):
-            integration = await loader.async_get_integration(hass, self.domain)
+            integration = await loader.async_get_integration(menuai, self.domain)
             self._integration_for_domain = integration
 
         # Only store setup result as state if it was not forwarded.
@@ -688,13 +688,13 @@ class ConfigEntry[_DataT = Any]:
                     f" {self.entry_id} cannot be set up because it does not hold "
                     "the setup lock"
                 )
-            self._async_set_state(hass, ConfigEntryState.SETUP_IN_PROGRESS, None)
+            self._async_set_state(menuai, ConfigEntryState.SETUP_IN_PROGRESS, None)
 
         if self.supports_unload is None:
-            self.supports_unload = await support_entry_unload(hass, self.domain)
+            self.supports_unload = await support_entry_unload(menuai, self.domain)
         if self.supports_remove_device is None:
             self.supports_remove_device = await support_remove_from_device(
-                hass, self.domain
+                menuai, self.domain
             )
         try:
             component = await integration.async_get_component()
@@ -707,7 +707,7 @@ class ConfigEntry[_DataT = Any]:
             )
             if domain_is_integration:
                 self._async_set_state(
-                    hass, ConfigEntryState.SETUP_ERROR, "Import error"
+                    menuai, ConfigEntryState.SETUP_ERROR, "Import error"
                 )
             return
 
@@ -725,13 +725,13 @@ class ConfigEntry[_DataT = Any]:
                     err,
                 )
                 self._async_set_state(
-                    hass, ConfigEntryState.SETUP_ERROR, "Import error"
+                    menuai, ConfigEntryState.SETUP_ERROR, "Import error"
                 )
                 return
 
             # Perform migration
-            if not await self.async_migrate(hass):
-                self._async_set_state(hass, ConfigEntryState.MIGRATION_ERROR, None)
+            if not await self.async_migrate(menuai):
+                self._async_set_state(menuai, ConfigEntryState.MIGRATION_ERROR, None)
                 return
 
             setup_phase = SetupPhases.CONFIG_ENTRY_SETUP
@@ -744,9 +744,9 @@ class ConfigEntry[_DataT = Any]:
 
         try:
             with async_start_setup(
-                hass, integration=self.domain, group=self.entry_id, phase=setup_phase
+                menuai, integration=self.domain, group=self.entry_id, phase=setup_phase
             ):
-                result = await component.async_setup_entry(hass, self)
+                result = await component.async_setup_entry(menuai, self)
 
             if not isinstance(result, bool):
                 _LOGGER.error(  # type: ignore[unreachable]
@@ -763,7 +763,7 @@ class ConfigEntry[_DataT = Any]:
                 self.domain,
                 error_reason,
             )
-            await self._async_process_on_unload(hass)
+            await self._async_process_on_unload(menuai)
             result = False
         except ConfigEntryAuthFailed as exc:
             message = str(exc)
@@ -780,15 +780,15 @@ class ConfigEntry[_DataT = Any]:
                 self.domain,
                 auth_message,
             )
-            await self._async_process_on_unload(hass)
-            self.async_start_reauth(hass)
+            await self._async_process_on_unload(menuai)
+            self.async_start_reauth(menuai)
             result = False
         except ConfigEntryNotReady as exc:
             message = str(exc)
             error_reason_translation_key = exc.translation_key
             error_reason_translation_placeholders = exc.translation_placeholders
             self._async_set_state(
-                hass,
+                menuai,
                 ConfigEntryState.SETUP_RETRY,
                 message or None,
                 error_reason_translation_key,
@@ -807,23 +807,23 @@ class ConfigEntry[_DataT = Any]:
                 wait_time,
             )
 
-            if hass.state is CoreState.running:
+            if menuai.state is CoreState.running:
                 self._async_cancel_retry_setup = async_call_later(
-                    hass,
+                    menuai,
                     wait_time,
-                    HassJob(
-                        functools.partial(self._async_setup_again, hass),
-                        job_type=HassJobType.Callback,
+                    menuaiJob(
+                        functools.partial(self._async_setup_again, menuai),
+                        job_type=menuaiJobType.Callback,
                         cancel_on_shutdown=True,
                     ),
                 )
             else:
-                self._async_cancel_retry_setup = hass.bus.async_listen(
-                    EVENT_HOMEASSISTANT_STARTED,
-                    functools.partial(self._async_setup_again, hass),
+                self._async_cancel_retry_setup = menuai.bus.async_listen(
+                    EVENT_menuai_STARTED,
+                    functools.partial(self._async_setup_again, menuai),
                 )
 
-            await self._async_process_on_unload(hass)
+            await self._async_process_on_unload(menuai)
             return
         # pylint: disable-next=broad-except
         except (asyncio.CancelledError, SystemExit, Exception):
@@ -848,10 +848,10 @@ class ConfigEntry[_DataT = Any]:
         self.async_cancel_retry_setup()
 
         if result:
-            self._async_set_state(hass, ConfigEntryState.LOADED, None)
+            self._async_set_state(menuai, ConfigEntryState.LOADED, None)
         else:
             self._async_set_state(
-                hass,
+                menuai,
                 ConfigEntryState.SETUP_ERROR,
                 error_reason,
                 error_reason_translation_key,
@@ -859,7 +859,7 @@ class ConfigEntry[_DataT = Any]:
             )
 
     @callback
-    def _async_setup_again(self, hass: HomeAssistant, *_: Any) -> None:
+    def _async_setup_again(self, menuai: menuai, *_: Any) -> None:
         """Schedule setup again.
 
         This method is a callback to ensure that _async_cancel_retry_setup
@@ -868,15 +868,15 @@ class ConfigEntry[_DataT = Any]:
         self._async_cancel_retry_setup = None
         # Check again when we fire in case shutdown
         # has started so we do not block shutdown
-        if not hass.is_stopping:
-            hass.async_create_background_task(
-                self.async_setup_locked(hass),
+        if not menuai.is_stopping:
+            menuai.async_create_background_task(
+                self.async_setup_locked(menuai),
                 f"config entry retry {self.domain} {self.title}",
                 eager_start=True,
             )
 
     async def async_setup_locked(
-        self, hass: HomeAssistant, integration: loader.Integration | None = None
+        self, menuai: menuai, integration: loader.Integration | None = None
     ) -> None:
         """Set up while holding the setup lock."""
         async with self.setup_lock:
@@ -891,11 +891,11 @@ class ConfigEntry[_DataT = Any]:
                     self.entry_id,
                 )
                 return
-            await self.async_setup(hass, integration=integration)
+            await self.async_setup(menuai, integration=integration)
 
     @callback
     def async_shutdown(self) -> None:
-        """Call when Home Assistant is stopping."""
+        """Call when MenuAI is stopping."""
         self.async_cancel_retry_setup()
 
     @callback
@@ -906,14 +906,14 @@ class ConfigEntry[_DataT = Any]:
             self._async_cancel_retry_setup = None
 
     async def async_unload(
-        self, hass: HomeAssistant, *, integration: loader.Integration | None = None
+        self, menuai: menuai, *, integration: loader.Integration | None = None
     ) -> bool:
         """Unload an entry.
 
         Returns if unload is possible and was successful.
         """
         if self.source == SOURCE_IGNORE:
-            self._async_set_state(hass, ConfigEntryState.NOT_LOADED, None)
+            self._async_set_state(menuai, ConfigEntryState.NOT_LOADED, None)
             return True
 
         if self.state == ConfigEntryState.NOT_LOADED:
@@ -921,13 +921,13 @@ class ConfigEntry[_DataT = Any]:
 
         if not integration and (integration := self._integration_for_domain) is None:
             try:
-                integration = await loader.async_get_integration(hass, self.domain)
+                integration = await loader.async_get_integration(menuai, self.domain)
             except loader.IntegrationNotFound:
                 # The integration was likely a custom_component
                 # that was uninstalled, or an integration
                 # that has been renamed without removing the config
                 # entry.
-                self._async_set_state(hass, ConfigEntryState.NOT_LOADED, None)
+                self._async_set_state(menuai, ConfigEntryState.NOT_LOADED, None)
                 return True
 
         component = await integration.async_get_component()
@@ -945,7 +945,7 @@ class ConfigEntry[_DataT = Any]:
 
             if self.state is not ConfigEntryState.LOADED:
                 self.async_cancel_retry_setup()
-                self._async_set_state(hass, ConfigEntryState.NOT_LOADED, None)
+                self._async_set_state(menuai, ConfigEntryState.NOT_LOADED, None)
                 return True
 
         supports_unload = hasattr(component, "async_unload_entry")
@@ -953,28 +953,28 @@ class ConfigEntry[_DataT = Any]:
         if not supports_unload:
             if domain_is_integration:
                 self._async_set_state(
-                    hass, ConfigEntryState.FAILED_UNLOAD, "Unload not supported"
+                    menuai, ConfigEntryState.FAILED_UNLOAD, "Unload not supported"
                 )
             return False
 
         if domain_is_integration:
-            self._async_set_state(hass, ConfigEntryState.UNLOAD_IN_PROGRESS, None)
+            self._async_set_state(menuai, ConfigEntryState.UNLOAD_IN_PROGRESS, None)
         try:
-            result = await component.async_unload_entry(hass, self)
+            result = await component.async_unload_entry(menuai, self)
 
             assert isinstance(result, bool)
 
             # Only do side effects if we unloaded the integration
             if domain_is_integration:
                 if result:
-                    await self._async_process_on_unload(hass)
+                    await self._async_process_on_unload(menuai)
                     if hasattr(self, "runtime_data"):
                         object.__delattr__(self, "runtime_data")
 
-                    self._async_set_state(hass, ConfigEntryState.NOT_LOADED, None)
+                    self._async_set_state(menuai, ConfigEntryState.NOT_LOADED, None)
                 else:
                     self._async_set_state(
-                        hass, ConfigEntryState.FAILED_UNLOAD, "Unload failed"
+                        menuai, ConfigEntryState.FAILED_UNLOAD, "Unload failed"
                     )
 
         except Exception as exc:
@@ -983,12 +983,12 @@ class ConfigEntry[_DataT = Any]:
             )
             if domain_is_integration:
                 self._async_set_state(
-                    hass, ConfigEntryState.FAILED_UNLOAD, str(exc) or "Unknown error"
+                    menuai, ConfigEntryState.FAILED_UNLOAD, str(exc) or "Unknown error"
                 )
             return False
         return result
 
-    async def async_remove(self, hass: HomeAssistant) -> None:
+    async def async_remove(self, menuai: menuai) -> None:
         """Invoke remove callback on component."""
         old_modified_at = self.modified_at
         object.__setattr__(self, "modified_at", utcnow())
@@ -1007,7 +1007,7 @@ class ConfigEntry[_DataT = Any]:
 
         if not (integration := self._integration_for_domain):
             try:
-                integration = await loader.async_get_integration(hass, self.domain)
+                integration = await loader.async_get_integration(menuai, self.domain)
             except loader.IntegrationNotFound:
                 # The integration was likely a custom_component
                 # that was uninstalled, or an integration
@@ -1019,7 +1019,7 @@ class ConfigEntry[_DataT = Any]:
         if not hasattr(component, "async_remove_entry"):
             return
         try:
-            await component.async_remove_entry(hass, self)
+            await component.async_remove_entry(menuai, self)
         except Exception:
             _LOGGER.exception(
                 "Error calling entry remove callback %s for %s",
@@ -1032,7 +1032,7 @@ class ConfigEntry[_DataT = Any]:
     @callback
     def _async_set_state(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         state: ConfigEntryState,
         reason: str | None,
         error_reason_translation_key: str | None = None,
@@ -1055,12 +1055,12 @@ class ConfigEntry[_DataT = Any]:
         # in storage and we do not want to clear the cache on every state change
         # since state changes are frequent.
         async_dispatcher_send_internal(
-            hass, SIGNAL_CONFIG_ENTRY_CHANGED, ConfigEntryChange.UPDATED, self
+            menuai, SIGNAL_CONFIG_ENTRY_CHANGED, ConfigEntryChange.UPDATED, self
         )
 
         self._async_process_on_state_change()
 
-    async def async_migrate(self, hass: HomeAssistant) -> bool:
+    async def async_migrate(self, menuai: menuai) -> bool:
         """Migrate an entry.
 
         Returns True if config entry is up-to-date or has been migrated.
@@ -1081,7 +1081,7 @@ class ConfigEntry[_DataT = Any]:
             return True
 
         if not (integration := self._integration_for_domain):
-            integration = await loader.async_get_integration(hass, self.domain)
+            integration = await loader.async_get_integration(menuai, self.domain)
         component = await integration.async_get_component()
         supports_migrate = hasattr(component, "async_migrate_entry")
         if not supports_migrate:
@@ -1095,14 +1095,14 @@ class ConfigEntry[_DataT = Any]:
             return False
 
         try:
-            result = await component.async_migrate_entry(hass, self)
+            result = await component.async_migrate_entry(menuai, self)
             if not isinstance(result, bool):
                 _LOGGER.error(  # type: ignore[unreachable]
                     "%s.async_migrate_entry did not return boolean", self.domain
                 )
                 return False
             if result:
-                hass.config_entries._async_schedule_save()  # noqa: SLF001
+                menuai.config_entries._async_schedule_save()  # noqa: SLF001
         except Exception:
             _LOGGER.exception(
                 "Error migrating entry %s for %s", self.title, self.domain
@@ -1148,12 +1148,12 @@ class ConfigEntry[_DataT = Any]:
             self._on_unload = []
         self._on_unload.append(func)
 
-    async def _async_process_on_unload(self, hass: HomeAssistant) -> None:
+    async def _async_process_on_unload(self, menuai: menuai) -> None:
         """Process the on_unload callbacks and wait for pending tasks."""
         if self._on_unload is not None:
             while self._on_unload:
                 if job := self._on_unload.pop()():
-                    self.async_create_task(hass, job, eager_start=True)
+                    self.async_create_task(menuai, job, eager_start=True)
 
         if not self._tasks and not self._background_tasks:
             return
@@ -1199,36 +1199,36 @@ class ConfigEntry[_DataT = Any]:
     @callback
     def async_start_reauth(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         context: ConfigFlowContext | None = None,
         data: dict[str, Any] | None = None,
     ) -> None:
         """Start a reauth flow."""
         # We will check this again in the task when we hold the lock,
         # but we also check it now to try to avoid creating the task.
-        if any(self.async_get_active_flows(hass, {SOURCE_RECONFIGURE, SOURCE_REAUTH})):
+        if any(self.async_get_active_flows(menuai, {SOURCE_RECONFIGURE, SOURCE_REAUTH})):
             # Reauth or Reconfigure flow already in progress for this entry
             return
-        hass.async_create_task(
-            self._async_init_reauth(hass, context, data),
+        menuai.async_create_task(
+            self._async_init_reauth(menuai, context, data),
             f"config entry reauth {self.title} {self.domain} {self.entry_id}",
             eager_start=True,
         )
 
     async def _async_init_reauth(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         context: ConfigFlowContext | None = None,
         data: dict[str, Any] | None = None,
     ) -> None:
         """Start a reauth flow."""
         async with self._reauth_lock:
             if any(
-                self.async_get_active_flows(hass, {SOURCE_RECONFIGURE, SOURCE_REAUTH})
+                self.async_get_active_flows(menuai, {SOURCE_RECONFIGURE, SOURCE_REAUTH})
             ):
                 # Reauth or Reconfigure flow already in progress for this entry
                 return
-            result = await hass.config_entries.flow.async_init(
+            result = await menuai.config_entries.flow.async_init(
                 self.domain,
                 context=ConfigFlowContext(
                     source=SOURCE_REAUTH,
@@ -1245,8 +1245,8 @@ class ConfigEntry[_DataT = Any]:
         # Create an issue, there's no need to hold the lock when doing that
         issue_id = f"config_entry_reauth_{self.domain}_{self.entry_id}"
         ir.async_create_issue(
-            hass,
-            HOMEASSISTANT_DOMAIN,
+            menuai,
+            menuai_DOMAIN,
             issue_id,
             data={"flow_id": result["flow_id"]},
             is_fixable=False,
@@ -1258,12 +1258,12 @@ class ConfigEntry[_DataT = Any]:
 
     @callback
     def async_get_active_flows(
-        self, hass: HomeAssistant, sources: set[str]
+        self, menuai: menuai, sources: set[str]
     ) -> Generator[ConfigFlowResult]:
         """Get any active flows of certain sources for this entry."""
         return (
             flow
-            for flow in hass.config_entries.flow.async_progress_by_handler(
+            for flow in menuai.config_entries.flow.async_progress_by_handler(
                 self.domain,
                 match_context={"entry_id": self.entry_id},
                 include_uninitialized=True,
@@ -1274,7 +1274,7 @@ class ConfigEntry[_DataT = Any]:
     @callback
     def async_create_task[_R](
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         target: Coroutine[Any, Any, _R],
         name: str | None = None,
         eager_start: bool = True,
@@ -1285,7 +1285,7 @@ class ConfigEntry[_DataT = Any]:
 
         target: target to call.
         """
-        task = hass.async_create_task_internal(
+        task = menuai.async_create_task_internal(
             target, f"{name} {self.title} {self.domain} {self.entry_id}", eager_start
         )
         if eager_start and task.done():
@@ -1298,7 +1298,7 @@ class ConfigEntry[_DataT = Any]:
     @callback
     def async_create_background_task[_R](
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         target: Coroutine[Any, Any, _R],
         name: str,
         eager_start: bool = True,
@@ -1315,7 +1315,7 @@ class ConfigEntry[_DataT = Any]:
 
         This method must be run in the event loop.
         """
-        task = hass.async_create_background_task(target, name, eager_start)
+        task = menuai.async_create_background_task(target, name, eager_start)
         if task.done():
             return task
         self._background_tasks.add(task)
@@ -1353,14 +1353,14 @@ class ConfigEntriesFlowManager(
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entries: ConfigEntries,
-        hass_config: ConfigType,
+        menuai_config: ConfigType,
     ) -> None:
         """Initialize the config entry flow manager."""
-        super().__init__(hass)
+        super().__init__(menuai)
         self.config_entries = config_entries
-        self._hass_config = hass_config
+        self._menuai_config = menuai_config
         self._pending_import_flows: defaultdict[
             str, dict[str, asyncio.Future[None]]
         ] = defaultdict(dict)
@@ -1368,7 +1368,7 @@ class ConfigEntriesFlowManager(
             defaultdict(set)
         )
         self._discovery_event_debouncer = Debouncer[None](
-            hass,
+            menuai,
             _LOGGER,
             cooldown=DISCOVERY_COOLDOWN,
             immediate=True,
@@ -1419,17 +1419,17 @@ class ConfigEntriesFlowManager(
                     and source != SOURCE_USER
                 )
             )
-            and await _support_single_config_entry_only(self.hass, handler)
+            and await _support_single_config_entry_only(self.menuai, handler)
         ):
             return ConfigFlowResult(
                 type=data_entry_flow.FlowResultType.ABORT,
                 flow_id=flow_id,
                 handler=handler,
                 reason="single_instance_allowed",
-                translation_domain=HOMEASSISTANT_DOMAIN,
+                translation_domain=menuai_DOMAIN,
             )
 
-        loop = self.hass.loop
+        loop = self.menuai.loop
 
         if source == SOURCE_IMPORT:
             self._pending_import_flows[handler][flow_id] = loop.create_future()
@@ -1441,7 +1441,7 @@ class ConfigEntriesFlowManager(
             async with interrupt(
                 cancel_init_future,
                 FlowCancelledError,
-                "Config entry initialize canceled: Home Assistant is shutting down",
+                "Config entry initialize canceled: MenuAI is shutting down",
             ):
                 flow, result = await self._async_init(flow_id, handler, context, data)
         except FlowCancelledError as ex:
@@ -1482,7 +1482,7 @@ class ConfigEntriesFlowManager(
         flow = await self.async_create_flow(handler, context=context, data=data)
         if not flow:
             raise data_entry_flow.UnknownFlow("Flow was not created")
-        flow.hass = self.hass
+        flow.menuai = self.menuai
         flow.handler = handler
         flow.flow_id = flow_id
         flow.context = context
@@ -1524,7 +1524,7 @@ class ConfigEntriesFlowManager(
             if (entry_id := flow.context.get("entry_id")) is not None:
                 # The config entry's domain is flow.handler
                 issue_id = f"config_entry_reauth_{flow.handler}_{entry_id}"
-                ir.async_delete_issue(self.hass, HOMEASSISTANT_DOMAIN, issue_id)
+                ir.async_delete_issue(self.menuai, menuai_DOMAIN, issue_id)
 
     async def async_finish_flow(
         self,
@@ -1586,7 +1586,7 @@ class ConfigEntriesFlowManager(
         # that only supports a single config entry, but already has an entry
         if (
             self.config_entries.async_has_entries(flow.handler, include_ignore=False)
-            and await _support_single_config_entry_only(self.hass, flow.handler)
+            and await _support_single_config_entry_only(self.menuai, flow.handler)
             and flow.context["source"] != SOURCE_IGNORE
         ):
             return ConfigFlowResult(
@@ -1594,7 +1594,7 @@ class ConfigEntriesFlowManager(
                 flow_id=flow.flow_id,
                 handler=flow.handler,
                 reason="single_instance_allowed",
-                translation_domain=HOMEASSISTANT_DOMAIN,
+                translation_domain=menuai_DOMAIN,
             )
 
         # Check if config entry exists with unique ID. Unload it.
@@ -1617,7 +1617,7 @@ class ConfigEntriesFlowManager(
             # when integration allows only one config entry
             if (
                 progress_flow_id != flow.flow_id
-                and await _support_single_config_entry_only(self.hass, flow.handler)
+                and await _support_single_config_entry_only(self.menuai, flow.handler)
             ):
                 self.async_abort(progress_flow_id)
 
@@ -1701,7 +1701,7 @@ class ConfigEntriesFlowManager(
         Handler key is the domain of the component that we want to set up.
         """
         handler = await _async_get_flow_handler(
-            self.hass, handler_key, self._hass_config
+            self.menuai, handler_key, self._menuai_config
         )
         if not context or "source" not in context:
             raise KeyError("Context not set or doesn't have a source set")
@@ -1715,7 +1715,7 @@ class ConfigEntriesFlowManager(
         """Fire discovery event."""
         # async_fire_internal is used here because this is only
         # called from the Debouncer so we know the usage is safe
-        self.hass.bus.async_fire_internal(EVENT_FLOW_DISCOVERED)
+        self.menuai.bus.async_fire_internal(EVENT_FLOW_DISCOVERED)
 
     @callback
     def async_has_matching_discovery_flow(
@@ -1778,10 +1778,10 @@ class ConfigEntryItems(UserDict[str, ConfigEntry]):
     - domain -> unique_id -> ConfigEntry
     """
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize the container."""
         super().__init__()
-        self._hass = hass
+        self._menuai = menuai
         self._domain_index: dict[str, list[ConfigEntry]] = {}
         self._domain_unique_id_index: dict[str, dict[str, list[ConfigEntry]]] = {}
 
@@ -1795,7 +1795,7 @@ class ConfigEntryItems(UserDict[str, ConfigEntry]):
         self.check_unique_id(entry)
         if entry_id in data:
             # This is likely a bug in a test that is adding the same entry twice.
-            # In the future, once we have fixed the tests, this will raise HomeAssistantError.
+            # In the future, once we have fixed the tests, this will raise menuaiError.
             _LOGGER.error("An entry with the id %s already exists", entry_id)
             self._unindex_entry(entry_id)
         data[entry_id] = entry
@@ -1817,7 +1817,7 @@ class ConfigEntryItems(UserDict[str, ConfigEntry]):
             # Checks for other non-string was added in HA Core 2024.10
             # In HA Core 2025.10, we should remove the error and instead fail
             report_issue = async_suggest_report_issue(
-                self._hass, integration_domain=entry.domain
+                self._menuai, integration_domain=entry.domain
             )
             _LOGGER.error(
                 (
@@ -1833,7 +1833,7 @@ class ConfigEntryItems(UserDict[str, ConfigEntry]):
         else:
             # Guard against integrations using unhashable unique_id
             # In HA Core 2024.11, the guard was changed from warning to failing
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"The entry unique id {unique_id} is not a string."
             )
 
@@ -1889,7 +1889,7 @@ class ConfigEntryItems(UserDict[str, ConfigEntry]):
         if unique_id is None:
             return None  # type: ignore[unreachable]
         if not isinstance(unique_id, Hashable):
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"The entry unique id {unique_id} is not a string."
             )
         entries = self._domain_unique_id_index.get(domain, {}).get(unique_id)
@@ -1901,10 +1901,10 @@ class ConfigEntryItems(UserDict[str, ConfigEntry]):
 class ConfigEntryStore(storage.Store[dict[str, list[dict[str, Any]]]]):
     """Class to help storing config entry data."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize storage class."""
         super().__init__(
-            hass,
+            menuai,
             STORAGE_VERSION,
             STORAGE_KEY,
             minor_version=STORAGE_VERSION_MINOR,
@@ -1965,19 +1965,19 @@ class ConfigEntryStore(storage.Store[dict[str, list[dict[str, Any]]]]):
 class ConfigEntries:
     """Manage the configuration entries.
 
-    An instance of this object is available via `hass.config_entries`.
+    An instance of this object is available via `menuai.config_entries`.
     """
 
-    def __init__(self, hass: HomeAssistant, hass_config: ConfigType) -> None:
+    def __init__(self, menuai: menuai, menuai_config: ConfigType) -> None:
         """Initialize the entry manager."""
-        self.hass = hass
-        self.flow = ConfigEntriesFlowManager(hass, self, hass_config)
-        self.options = OptionsFlowManager(hass)
-        self.subentries = ConfigSubentryFlowManager(hass)
-        self._hass_config = hass_config
-        self._entries = ConfigEntryItems(hass)
-        self._store = ConfigEntryStore(hass)
-        EntityRegistryDisabledHandler(hass).async_setup()
+        self.menuai = menuai
+        self.flow = ConfigEntriesFlowManager(menuai, self, menuai_config)
+        self.options = OptionsFlowManager(menuai)
+        self.subentries = ConfigSubentryFlowManager(menuai)
+        self._menuai_config = menuai_config
+        self._entries = ConfigEntryItems(menuai)
+        self._store = ConfigEntryStore(menuai)
+        EntityRegistryDisabledHandler(menuai).async_setup()
 
     @callback
     def async_domains(
@@ -2071,7 +2071,7 @@ class ConfigEntries:
     async def async_add(self, entry: ConfigEntry) -> None:
         """Add and setup an entry."""
         if entry.entry_id in self._entries.data:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"An entry with the id {entry.entry_id} already exists."
             )
 
@@ -2088,7 +2088,7 @@ class ConfigEntries:
 
         for discovery_domain in entry.discovery_keys:
             async_dispatcher_send_internal(
-                self.hass,
+                self.menuai,
                 signal_discovered_config_entry_removed(discovery_domain),
                 entry,
             )
@@ -2106,7 +2106,7 @@ class ConfigEntries:
                 unload_success = await self.async_unload(entry_id, _lock=False)
 
             del self._entries[entry.entry_id]
-            await entry.async_remove(self.hass)
+            await entry.async_remove(self.menuai)
 
             self.async_update_issues()
             self._async_schedule_save()
@@ -2118,8 +2118,8 @@ class ConfigEntries:
         """Clean up after an entry."""
         entry_id = entry.entry_id
 
-        dev_reg = dr.async_get(self.hass)
-        ent_reg = er.async_get(self.hass)
+        dev_reg = dr.async_get(self.menuai)
+        ent_reg = er.async_get(self.menuai)
 
         dev_reg.async_clear_config_entry(entry_id)
         ent_reg.async_clear_config_entry(entry_id)
@@ -2127,13 +2127,13 @@ class ConfigEntries:
         # If the configuration entry is removed during reauth, it should
         # abort any reauth flow that is active for the removed entry and
         # linked issues.
-        _abort_reauth_flows(self.hass, entry.domain, entry_id)
+        _abort_reauth_flows(self.menuai, entry.domain, entry_id)
 
         self._async_dispatch(ConfigEntryChange.REMOVED, entry)
 
     @callback
     def _async_shutdown(self, event: Event) -> None:
-        """Call when Home Assistant is stopping."""
+        """Call when MenuAI is stopping."""
         for entry in self._entries.values():
             entry.async_shutdown()
         self.flow.async_shutdown()
@@ -2142,13 +2142,13 @@ class ConfigEntries:
         """Initialize config entry config."""
         config = await self._store.async_load()
 
-        self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, self._async_shutdown)
+        self.menuai.bus.async_listen_once(EVENT_menuai_STOP, self._async_shutdown)
 
         if config is None:
-            self._entries = ConfigEntryItems(self.hass)
+            self._entries = ConfigEntryItems(self.menuai)
             return
 
-        entries: ConfigEntryItems = ConfigEntryItems(self.hass)
+        entries: ConfigEntryItems = ConfigEntryItems(self.menuai)
         for entry in config["entries"]:
             entry_id = entry["entry_id"]
 
@@ -2195,16 +2195,16 @@ class ConfigEntries:
             )
 
         # Setup Component if not set up yet
-        if entry.domain in self.hass.config.components:
+        if entry.domain in self.menuai.config.components:
             if _lock:
                 async with entry.setup_lock:
-                    await entry.async_setup(self.hass)
+                    await entry.async_setup(self.menuai)
             else:
-                await entry.async_setup(self.hass)
+                await entry.async_setup(self.menuai)
         else:
             # Setting up the component will set up all its config entries
             result = await async_setup_component(
-                self.hass, entry.domain, self._hass_config
+                self.menuai, entry.domain, self._menuai_config
             )
 
             if not result:
@@ -2227,16 +2227,16 @@ class ConfigEntries:
 
         if _lock:
             async with entry.setup_lock:
-                return await entry.async_unload(self.hass)
+                return await entry.async_unload(self.menuai)
 
-        return await entry.async_unload(self.hass)
+        return await entry.async_unload(self.menuai)
 
     @callback
     def async_schedule_reload(self, entry_id: str) -> None:
         """Schedule a config entry to be reloaded."""
         entry = self.async_get_known_entry(entry_id)
         entry.async_cancel_retry_setup()
-        self.hass.async_create_task(
+        self.menuai.async_create_task(
             self.async_reload(entry_id),
             f"config entry reload {entry.title} {entry.domain} {entry.entry_id}",
         )
@@ -2260,14 +2260,14 @@ class ConfigEntries:
         entry.async_cancel_retry_setup()
 
         # Abort any in-progress reauth flow and linked issues
-        _abort_reauth_flows(self.hass, entry.domain, entry_id)
+        _abort_reauth_flows(self.menuai, entry.domain, entry_id)
 
-        if entry.domain not in self.hass.config.components:
+        if entry.domain not in self.menuai.config.components:
             # If the component is not loaded, just load it as
             # the config entry will be loaded as well. We need
             # to do this before holding the lock to avoid a
             # deadlock.
-            await async_setup_component(self.hass, entry.domain, self._hass_config)
+            await async_setup_component(self.menuai, entry.domain, self._menuai_config)
             return entry.state is ConfigEntryState.LOADED
 
         async with entry.setup_lock:
@@ -2294,8 +2294,8 @@ class ConfigEntries:
         entry.disabled_by = disabled_by
         self._async_schedule_save()
 
-        dev_reg = dr.async_get(self.hass)
-        ent_reg = er.async_get(self.hass)
+        dev_reg = dr.async_get(self.menuai)
+        ent_reg = er.async_get(self.menuai)
 
         if not entry.disabled_by:
             # The config entry will no longer be disabled, enable devices and entities
@@ -2377,7 +2377,7 @@ class ConfigEntries:
         if entry.entry_id not in self._entries:
             raise UnknownEntry(entry.entry_id)
 
-        self.hass.verify_event_loop_thread("hass.config_entries.async_update_entry")
+        self.menuai.verify_event_loop_thread("menuai.config_entries.async_update_entry")
         changed = False
         _setter = object.__setattr__
 
@@ -2389,7 +2389,7 @@ class ConfigEntries:
                 is not None
             ):
                 report_issue = async_suggest_report_issue(
-                    self.hass, integration_domain=entry.domain
+                    self.menuai, integration_domain=entry.domain
                 )
                 _LOGGER.error(
                     (
@@ -2444,8 +2444,8 @@ class ConfigEntries:
     @callback
     def _async_save_and_notify(self, entry: ConfigEntry) -> None:
         for listener in entry.update_listeners:
-            self.hass.async_create_task(
-                listener(self.hass, entry),
+            self.menuai.async_create_task(
+                listener(self.menuai, entry),
                 f"config entry update listener {entry.title} {entry.domain} {entry.domain}",
             )
 
@@ -2474,8 +2474,8 @@ class ConfigEntries:
             raise UnknownSubEntry from err
 
         result = self._async_update_entry(entry, subentries=subentries)
-        dev_reg = dr.async_get(self.hass)
-        ent_reg = er.async_get(self.hass)
+        dev_reg = dr.async_get(self.menuai)
+        ent_reg = er.async_get(self.menuai)
 
         dev_reg.async_clear_config_subentry(entry.entry_id, subentry_id)
         ent_reg.async_clear_config_subentry(entry.entry_id, subentry_id)
@@ -2504,7 +2504,7 @@ class ConfigEntries:
         if subentry.subentry_id not in entry.subentries:
             raise UnknownSubEntry(subentry.subentry_id)
 
-        self.hass.verify_event_loop_thread("hass.config_entries.async_update_subentry")
+        self.menuai.verify_event_loop_thread("menuai.config_entries.async_update_subentry")
         changed = False
         _setter = object.__setattr__
 
@@ -2545,7 +2545,7 @@ class ConfigEntries:
     ) -> None:
         """Dispatch a config entry change."""
         async_dispatcher_send_internal(
-            self.hass, SIGNAL_CONFIG_ENTRY_CHANGED, change_type, entry
+            self.menuai, SIGNAL_CONFIG_ENTRY_CHANGED, change_type, entry
         )
 
     async def async_forward_entry_setups(
@@ -2562,9 +2562,9 @@ class ConfigEntries:
         it can load multiple platforms at once and does not require a separate
         import executor job for each platform.
         """
-        integration = await loader.async_get_integration(self.hass, entry.domain)
+        integration = await loader.async_get_integration(self.menuai, entry.domain)
         if not integration.platforms_are_loaded(platforms):
-            with async_pause_setup(self.hass, SetupPhases.WAIT_IMPORT_PLATFORMS):
+            with async_pause_setup(self.menuai, SetupPhases.WAIT_IMPORT_PLATFORMS):
                 await integration.async_get_platforms(platforms)
 
         if not entry.setup_lock.locked():
@@ -2597,7 +2597,7 @@ class ConfigEntries:
                         f"config entry forward setup {entry.title} "
                         f"{entry.domain} {entry.entry_id} {platform}"
                     ),
-                    loop=self.hass.loop,
+                    loop=self.menuai.loop,
                 )
                 for platform in platforms
             )
@@ -2611,10 +2611,10 @@ class ConfigEntries:
     ) -> bool:
         """Forward the setup of an entry to a different component."""
         # Setup Component if not set up yet
-        if domain not in self.hass.config.components:
-            with async_pause_setup(self.hass, SetupPhases.WAIT_BASE_PLATFORM_SETUP):
+        if domain not in self.menuai.config.components:
+            with async_pause_setup(self.menuai, SetupPhases.WAIT_BASE_PLATFORM_SETUP):
                 result = await async_setup_component(
-                    self.hass, domain, self._hass_config
+                    self.menuai, domain, self._menuai_config
                 )
 
             if not result:
@@ -2624,13 +2624,13 @@ class ConfigEntries:
             # If this is a late setup, we need to make sure the platform is loaded
             # so we do not end up waiting for when the EntityComponent calls
             # async_prepare_setup_platform
-            integration = await loader.async_get_integration(self.hass, entry.domain)
+            integration = await loader.async_get_integration(self.menuai, entry.domain)
             if not integration.platforms_are_loaded((domain,)):
-                with async_pause_setup(self.hass, SetupPhases.WAIT_IMPORT_PLATFORMS):
+                with async_pause_setup(self.menuai, SetupPhases.WAIT_IMPORT_PLATFORMS):
                     await integration.async_get_platform(domain)
 
-        integration = loader.async_get_loaded_integration(self.hass, domain)
-        await entry.async_setup(self.hass, integration=integration)
+        integration = loader.async_get_loaded_integration(self.menuai, domain)
+        await entry.async_setup(self.menuai, integration=integration)
         return True
 
     async def async_unload_platforms(
@@ -2646,7 +2646,7 @@ class ConfigEntries:
                             f"config entry forward unload {entry.title} "
                             f"{entry.domain} {entry.entry_id} {platform}"
                         ),
-                        loop=self.hass.loop,
+                        loop=self.menuai.loop,
                     )
                     for platform in platforms
                 )
@@ -2662,12 +2662,12 @@ class ConfigEntries:
         of directly calling this method.
         """
         # It was never loaded.
-        if domain not in self.hass.config.components:
+        if domain not in self.menuai.config.components:
             return True
 
-        integration = loader.async_get_loaded_integration(self.hass, domain)
+        integration = loader.async_get_loaded_integration(self.menuai, domain)
 
-        return await entry.async_unload(self.hass, integration=integration)
+        return await entry.async_unload(self.menuai, integration=integration)
 
     @callback
     def _async_schedule_save(self) -> None:
@@ -2688,22 +2688,22 @@ class ConfigEntries:
         This is primarily intended for existing config entries which are loaded at
         startup, awaiting this function will block until the component and all its
         config entries are loaded.
-        Config entries which are created after Home Assistant is started can't be waited
+        Config entries which are created after MenuAI is started can't be waited
         for, the function will just return if the config entry is loaded or not.
         """
-        if not await async_wait_component(self.hass, entry.domain):
+        if not await async_wait_component(self.menuai, entry.domain):
             return False
         return entry.state is ConfigEntryState.LOADED
 
     @callback
     def async_update_issues(self) -> None:
         """Update unique id collision issues."""
-        issue_registry = ir.async_get(self.hass)
+        issue_registry = ir.async_get(self.menuai)
         issues: set[str] = set()
 
         for issue in issue_registry.issues.values():
             if (
-                issue.domain != HOMEASSISTANT_DOMAIN
+                issue.domain != menuai_DOMAIN
                 or not (issue_data := issue.data)
                 or issue_data.get("issue_type") != ISSUE_UNIQUE_ID_COLLISION
             ):
@@ -2747,8 +2747,8 @@ class ConfigEntries:
                     )
 
                 ir.async_create_issue(
-                    self.hass,
-                    HOMEASSISTANT_DOMAIN,
+                    self.menuai,
+                    menuai_DOMAIN,
                     issue_id,
                     breaks_in_ha_version="2025.11.0",
                     data={
@@ -2765,7 +2765,7 @@ class ConfigEntries:
                 break  # Only create one issue per domain
 
         for issue_id in issues:
-            ir.async_delete_issue(self.hass, HOMEASSISTANT_DOMAIN, issue_id)
+            ir.async_delete_issue(self.menuai, menuai_DOMAIN, issue_id)
 
 
 @callback
@@ -2890,7 +2890,7 @@ class ConfigFlow(ConfigEntryBaseFlow):
             return
 
         if not (
-            entry := self.hass.config_entries.async_entry_for_domain_unique_id(
+            entry := self.menuai.config_entries.async_entry_for_domain_unique_id(
                 self.handler, self.unique_id
             )
         ):
@@ -2899,7 +2899,7 @@ class ConfigFlow(ConfigEntryBaseFlow):
         should_reload = False
         if (
             updates is not None
-            and self.hass.config_entries.async_update_entry(
+            and self.menuai.config_entries.async_update_entry(
                 entry, data={**entry.data, **updates}
             )
             and reload_on_update
@@ -2919,7 +2919,7 @@ class ConfigFlow(ConfigEntryBaseFlow):
         if entry.source == SOURCE_IGNORE and self.source == SOURCE_USER:
             return
         if should_reload:
-            self.hass.config_entries.async_schedule_reload(entry.entry_id)
+            self.menuai.config_entries.async_schedule_reload(entry.entry_id)
         raise data_entry_flow.AbortFlow(error, description_placeholders)
 
     async def async_set_unique_id(
@@ -2950,9 +2950,9 @@ class ConfigFlow(ConfigEntryBaseFlow):
                 include_uninitialized=True,
                 match_context={"unique_id": DEFAULT_DISCOVERY_UNIQUE_ID},
             ):
-                self.hass.config_entries.flow.async_abort(progress["flow_id"])
+                self.menuai.config_entries.flow.async_abort(progress["flow_id"])
 
-        return self.hass.config_entries.async_entry_for_domain_unique_id(
+        return self.menuai.config_entries.async_entry_for_domain_unique_id(
             self.handler, unique_id
         )
 
@@ -2972,7 +2972,7 @@ class ConfigFlow(ConfigEntryBaseFlow):
         If the flow is user initiated, filter out ignored entries,
         unless include_ignore is True.
         """
-        return self.hass.config_entries.async_entries(
+        return self.menuai.config_entries.async_entries(
             self.handler,
             include_ignore or (include_ignore is None and self.source != SOURCE_USER),
         )
@@ -2982,7 +2982,7 @@ class ConfigFlow(ConfigEntryBaseFlow):
         """Return current unique IDs."""
         return {
             entry.unique_id
-            for entry in self.hass.config_entries.async_entries(self.handler)
+            for entry in self.menuai.config_entries.async_entries(self.handler)
             if include_ignore or entry.source != SOURCE_IGNORE
         }
 
@@ -2995,7 +2995,7 @@ class ConfigFlow(ConfigEntryBaseFlow):
         """Return other in progress flows for current domain."""
         return [
             flw
-            for flw in self.hass.config_entries.flow.async_progress_by_handler(
+            for flw in self.menuai.config_entries.flow.async_progress_by_handler(
                 self.handler,
                 include_uninitialized=include_uninitialized,
                 match_context=match_context,
@@ -3079,10 +3079,10 @@ class ConfigFlow(ConfigEntryBaseFlow):
         """Handle a flow initialized by DHCP discovery."""
         return await self._async_step_discovery_without_unique_id()
 
-    async def async_step_hassio(
-        self, discovery_info: HassioServiceInfo
+    async def async_step_menuaiio(
+        self, discovery_info: menuaiioServiceInfo
     ) -> ConfigFlowResult:
-        """Handle a flow initialized by HASS IO discovery."""
+        """Handle a flow initialized by menuai IO discovery."""
         return await self._async_step_discovery_without_unique_id()
 
     async def async_step_integration_discovery(
@@ -3185,7 +3185,7 @@ class ConfigFlow(ConfigEntryBaseFlow):
             if data is not UNDEFINED:
                 raise ValueError("Cannot set both data and data_updates")
             data = entry.data | data_updates
-        result = self.hass.config_entries.async_update_entry(
+        result = self.menuai.config_entries.async_update_entry(
             entry=entry,
             unique_id=unique_id,
             title=title,
@@ -3193,7 +3193,7 @@ class ConfigFlow(ConfigEntryBaseFlow):
             options=options,
         )
         if reload_even_if_entry_is_unchanged or result:
-            self.hass.config_entries.async_schedule_reload(entry.entry_id)
+            self.menuai.config_entries.async_schedule_reload(entry.entry_id)
         if reason is UNDEFINED:
             reason = "reauth_successful"
             if self.source == SOURCE_RECONFIGURE:
@@ -3246,7 +3246,7 @@ class ConfigFlow(ConfigEntryBaseFlow):
     @callback
     def _get_reauth_entry(self) -> ConfigEntry:
         """Return the reauth config entry linked to the current context."""
-        return self.hass.config_entries.async_get_known_entry(self._reauth_entry_id)
+        return self.menuai.config_entries.async_get_known_entry(self._reauth_entry_id)
 
     @property
     def _reconfigure_entry_id(self) -> str:
@@ -3258,7 +3258,7 @@ class ConfigFlow(ConfigEntryBaseFlow):
     @callback
     def _get_reconfigure_entry(self) -> ConfigEntry:
         """Return the reconfigure config entry linked to the current context."""
-        return self.hass.config_entries.async_get_known_entry(
+        return self.menuai.config_entries.async_get_known_entry(
             self._reconfigure_entry_id
         )
 
@@ -3266,11 +3266,11 @@ class ConfigFlow(ConfigEntryBaseFlow):
 class _ConfigSubFlowManager:
     """Mixin class for flow managers which manage flows tied to a config entry."""
 
-    hass: HomeAssistant
+    menuai: menuai
 
     def _async_get_config_entry(self, config_entry_id: str) -> ConfigEntry:
         """Return config entry or raise if not found."""
-        return self.hass.config_entries.async_get_known_entry(config_entry_id)
+        return self.menuai.config_entries.async_get_known_entry(config_entry_id)
 
 
 class ConfigSubentryFlowManager(
@@ -3299,7 +3299,7 @@ class ConfigSubentryFlowManager(
 
         entry_id, subentry_type = handler_key
         entry = self._async_get_config_entry(entry_id)
-        handler = await _async_get_flow_handler(self.hass, entry.domain, {})
+        handler = await _async_get_flow_handler(self.menuai, entry.domain, {})
         subentry_types = handler.async_get_supported_subentry_types(entry)
         if subentry_type not in subentry_types:
             raise data_entry_flow.UnknownHandler(
@@ -3326,15 +3326,15 @@ class ConfigSubentryFlowManager(
             return result
 
         entry_id, subentry_type = flow.handler
-        entry = self.hass.config_entries.async_get_entry(entry_id)
+        entry = self.menuai.config_entries.async_get_entry(entry_id)
         if entry is None:
             raise UnknownEntry(entry_id)
 
         unique_id = result.get("unique_id")
         if unique_id is not None and not isinstance(unique_id, str):
-            raise HomeAssistantError("unique_id must be a string")
+            raise menuaiError("unique_id must be a string")
 
-        self.hass.config_entries.async_add_subentry(
+        self.menuai.config_entries.async_add_subentry(
             entry,
             ConfigSubentry(
                 data=MappingProxyType(result["data"]),
@@ -3406,7 +3406,7 @@ class ConfigSubentryFlow(
             if data is not UNDEFINED:
                 raise ValueError("Cannot set both data and data_updates")
             data = subentry.data | data_updates
-        self.hass.config_entries.async_update_subentry(
+        self.menuai.config_entries.async_update_subentry(
             entry=entry,
             subentry=subentry,
             unique_id=unique_id,
@@ -3423,7 +3423,7 @@ class ConfigSubentryFlow(
     @callback
     def _get_entry(self) -> ConfigEntry:
         """Return the config entry linked to the current context."""
-        return self.hass.config_entries.async_get_known_entry(self._entry_id)
+        return self.menuai.config_entries.async_get_known_entry(self._entry_id)
 
     @property
     def _reconfigure_subentry_id(self) -> str:
@@ -3435,7 +3435,7 @@ class ConfigSubentryFlow(
     @callback
     def _get_reconfigure_subentry(self) -> ConfigSubentry:
         """Return the reconfigure config subentry linked to the current context."""
-        entry = self.hass.config_entries.async_get_known_entry(self._entry_id)
+        entry = self.menuai.config_entries.async_get_known_entry(self._entry_id)
         subentry_id = self._reconfigure_subentry_id
         if subentry_id not in entry.subentries:
             raise UnknownSubEntry(subentry_id)
@@ -3462,7 +3462,7 @@ class OptionsFlowManager(
         The entry_id and the flow.handler is the same thing to map entry with flow.
         """
         entry = self._async_get_config_entry(handler_key)
-        handler = await _async_get_flow_handler(self.hass, entry.domain, {})
+        handler = await _async_get_flow_handler(self.menuai, entry.domain, {})
         return handler.async_get_options_flow(entry)
 
     async def async_finish_flow(
@@ -3482,10 +3482,10 @@ class OptionsFlowManager(
         if result["type"] != data_entry_flow.FlowResultType.CREATE_ENTRY:
             return result
 
-        entry = self.hass.config_entries.async_get_known_entry(flow.handler)
+        entry = self.menuai.config_entries.async_get_known_entry(flow.handler)
 
         if result["data"] is not None:
-            self.hass.config_entries.async_update_entry(entry, options=result["data"])
+            self.menuai.config_entries.async_update_entry(entry, options=result["data"])
 
         result["result"] = True
         return result
@@ -3495,10 +3495,10 @@ class OptionsFlowManager(
     ) -> None:
         """Set up preview for an option flow handler."""
         entry = self._async_get_config_entry(flow.handler)
-        await _load_integration(self.hass, entry.domain, {})
+        await _load_integration(self.menuai, entry.domain, {})
         if entry.domain not in self._preview:
             self._preview.add(entry.domain)
-            await flow.async_setup_preview(self.hass)
+            await flow.async_setup_preview(self.menuai)
 
 
 class OptionsFlow(ConfigEntryBaseFlow):
@@ -3520,7 +3520,7 @@ class OptionsFlow(ConfigEntryBaseFlow):
         _async_abort_entries_match(
             [
                 entry
-                for entry in self.hass.config_entries.async_entries(
+                for entry in self.menuai.config_entries.async_entries(
                     self.config_entry.domain
                 )
                 if entry is not self.config_entry and entry.source != SOURCE_IGNORE
@@ -3553,9 +3553,9 @@ class OptionsFlow(ConfigEntryBaseFlow):
         if hasattr(self, "_config_entry"):
             return self._config_entry
 
-        if self.hass is None:
+        if self.menuai is None:
             raise ValueError("The config entry is not available during initialisation")
-        return self.hass.config_entries.async_get_known_entry(self._config_entry_id)
+        return self.menuai.config_entries.async_get_known_entry(self._config_entry_id)
 
     @config_entry.setter
     def config_entry(self, value: ConfigEntry) -> None:
@@ -3597,9 +3597,9 @@ class OptionsFlowWithConfigEntry(OptionsFlow):
 class EntityRegistryDisabledHandler:
     """Handler when entities related to config entries updated disabled_by."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize the handler."""
-        self.hass = hass
+        self.menuai = menuai
         self.registry: er.EntityRegistry | None = None
         self.changed: set[str] = set()
         self._remove_call_later: Callable[[], None] | None = None
@@ -3607,7 +3607,7 @@ class EntityRegistryDisabledHandler:
     @callback
     def async_setup(self) -> None:
         """Set up the disable handler."""
-        self.hass.bus.async_listen(
+        self.menuai.bus.async_listen(
             er.EVENT_ENTITY_REGISTRY_UPDATED,
             self._handle_entry_updated,
             event_filter=_handle_entry_updated_filter,
@@ -3619,7 +3619,7 @@ class EntityRegistryDisabledHandler:
     ) -> None:
         """Handle entity registry entry update."""
         if self.registry is None:
-            self.registry = er.async_get(self.hass)
+            self.registry = er.async_get(self.menuai)
 
         entity_entry = self.registry.async_get(event.data["entity_id"])
 
@@ -3634,7 +3634,7 @@ class EntityRegistryDisabledHandler:
         ):
             return
 
-        config_entry = self.hass.config_entries.async_get_known_entry(
+        config_entry = self.menuai.config_entries.async_get_known_entry(
             entity_entry.config_entry_id
         )
 
@@ -3651,9 +3651,9 @@ class EntityRegistryDisabledHandler:
             self._remove_call_later()
 
         self._remove_call_later = async_call_later(
-            self.hass,
+            self.menuai,
             RELOAD_AFTER_UPDATE_DELAY,
-            HassJob(self._async_handle_reload, cancel_on_shutdown=True),
+            menuaiJob(self._async_handle_reload, cancel_on_shutdown=True),
         )
 
     @callback
@@ -3671,7 +3671,7 @@ class EntityRegistryDisabledHandler:
             ", ".join(to_reload),
         )
         for entry_id in to_reload:
-            self.hass.config_entries.async_schedule_reload(entry_id)
+            self.menuai.config_entries.async_schedule_reload(entry_id)
 
 
 @callback
@@ -3690,37 +3690,37 @@ def _handle_entry_updated_filter(
     )
 
 
-async def support_entry_unload(hass: HomeAssistant, domain: str) -> bool:
+async def support_entry_unload(menuai: menuai, domain: str) -> bool:
     """Test if a domain supports entry unloading."""
-    integration = await loader.async_get_integration(hass, domain)
+    integration = await loader.async_get_integration(menuai, domain)
     component = await integration.async_get_component()
     return hasattr(component, "async_unload_entry")
 
 
-async def support_remove_from_device(hass: HomeAssistant, domain: str) -> bool:
+async def support_remove_from_device(menuai: menuai, domain: str) -> bool:
     """Test if a domain supports being removed from a device."""
-    integration = await loader.async_get_integration(hass, domain)
+    integration = await loader.async_get_integration(menuai, domain)
     component = await integration.async_get_component()
     return hasattr(component, "async_remove_config_entry_device")
 
 
-async def _support_single_config_entry_only(hass: HomeAssistant, domain: str) -> bool:
+async def _support_single_config_entry_only(menuai: menuai, domain: str) -> bool:
     """Test if a domain supports only a single config entry."""
-    integration = await loader.async_get_integration(hass, domain)
+    integration = await loader.async_get_integration(menuai, domain)
     return integration.single_config_entry
 
 
 async def _load_integration(
-    hass: HomeAssistant, domain: str, hass_config: ConfigType
+    menuai: menuai, domain: str, menuai_config: ConfigType
 ) -> None:
     try:
-        integration = await loader.async_get_integration(hass, domain)
+        integration = await loader.async_get_integration(menuai, domain)
     except loader.IntegrationNotFound as err:
         _LOGGER.error("Cannot find integration %s", domain)
         raise data_entry_flow.UnknownHandler from err
 
     # Make sure requirements and dependencies of component are resolved
-    await async_process_deps_reqs(hass, hass_config, integration)
+    await async_process_deps_reqs(menuai, menuai_config, integration)
     try:
         await integration.async_get_platform("config_flow")
     except ImportError as err:
@@ -3733,17 +3733,17 @@ async def _load_integration(
 
 
 async def _async_get_flow_handler(
-    hass: HomeAssistant, domain: str, hass_config: ConfigType
+    menuai: menuai, domain: str, menuai_config: ConfigType
 ) -> type[ConfigFlow]:
     """Get a flow handler for specified domain."""
 
     # First check if there is a handler registered for the domain
-    if loader.is_component_module_loaded(hass, f"{domain}.config_flow") and (
+    if loader.is_component_module_loaded(menuai, f"{domain}.config_flow") and (
         handler := HANDLERS.get(domain)
     ):
         return handler
 
-    await _load_integration(hass, domain, hass_config)
+    await _load_integration(menuai, domain, menuai_config)
 
     if handler := HANDLERS.get(domain):
         return handler
@@ -3752,10 +3752,10 @@ async def _async_get_flow_handler(
 
 
 @callback
-def _abort_reauth_flows(hass: HomeAssistant, domain: str, entry_id: str) -> None:
+def _abort_reauth_flows(menuai: menuai, domain: str, entry_id: str) -> None:
     """Abort reauth flows for an entry."""
-    for progress_flow in hass.config_entries.flow.async_progress_by_handler(
+    for progress_flow in menuai.config_entries.flow.async_progress_by_handler(
         domain, match_context={"entry_id": entry_id, "source": SOURCE_REAUTH}
     ):
         if "flow_id" in progress_flow:
-            hass.config_entries.flow.async_abort(progress_flow["flow_id"])
+            menuai.config_entries.flow.async_abort(progress_flow["flow_id"])

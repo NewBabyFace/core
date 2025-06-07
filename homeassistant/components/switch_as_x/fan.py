@@ -4,27 +4,27 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.fan import (
+from menuai.components.fan import (
     DOMAIN as FAN_DOMAIN,
     FanEntity,
     FanEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_ENTITY_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_ENTITY_ID
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .entity import BaseToggleEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Initialize Fan Switch config entry."""
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     entity_id = er.async_validate_entity_id(
         registry, config_entry.options[CONF_ENTITY_ID]
     )
@@ -32,7 +32,7 @@ async def async_setup_entry(
     async_add_entities(
         [
             FanSwitch(
-                hass,
+                menuai,
                 config_entry.title,
                 FAN_DOMAIN,
                 entity_id,

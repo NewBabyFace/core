@@ -6,13 +6,13 @@ from unittest.mock import Mock, patch
 import requests_mock
 from yarl import URL
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     ATTR_MEDIA_CONTENT_ID,
     ATTR_MEDIA_CONTENT_TYPE,
 )
-from homeassistant.components.plex.const import CONF_SERVER_IDENTIFIER, PLEX_URI_SCHEME
-from homeassistant.components.websocket_api import ERR_UNKNOWN_ERROR, TYPE_RESULT
-from homeassistant.core import HomeAssistant
+from menuai.components.plex.const import CONF_SERVER_IDENTIFIER, PLEX_URI_SCHEME
+from menuai.components.websocket_api import ERR_UNKNOWN_ERROR, TYPE_RESULT
+from menuai.core import menuai
 
 from .const import DEFAULT_DATA
 
@@ -115,17 +115,17 @@ class MockPlexStation:
 
 
 async def test_browse_media(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     mock_plex_server,
     requests_mock: requests_mock.Mocker,
     hubs,
     hubs_music_library,
 ) -> None:
     """Test getting Plex clients from plex.tv."""
-    websocket_client = await hass_ws_client(hass)
+    websocket_client = await menuai_ws_client(menuai)
 
-    media_players = hass.states.async_entity_ids("media_player")
+    media_players = menuai.states.async_entity_ids("media_player")
     msg_id = 1
 
     # Browse base of Plex server

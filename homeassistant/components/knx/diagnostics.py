@@ -6,10 +6,10 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant import config as conf_util
-from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from menuai import config as conf_util
+from menuai.components.diagnostics import async_redact_data
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
 
 from . import CONFIG_SCHEMA
 from .const import (
@@ -30,11 +30,11 @@ TO_REDACT = {
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, config_entry: ConfigEntry
+    menuai: menuai, config_entry: ConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     diag: dict[str, Any] = {}
-    knx_module = hass.data[KNX_MODULE_KEY]
+    knx_module = menuai.data[KNX_MODULE_KEY]
     diag["xknx"] = {
         "version": knx_module.xknx.version,
         "current_address": str(knx_module.xknx.current_address),
@@ -47,7 +47,7 @@ async def async_get_config_entry_diagnostics(
     else:
         diag["project_info"] = None
 
-    raw_config = await conf_util.async_hass_config_yaml(hass)
+    raw_config = await conf_util.async_menuai_config_yaml(menuai)
     diag["configuration_yaml"] = raw_config.get(DOMAIN)
     try:
         CONFIG_SCHEMA(raw_config)

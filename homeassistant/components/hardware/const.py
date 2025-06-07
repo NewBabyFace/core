@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from homeassistant.util.hass_dict import HassKey
+from menuai.util.menuai_dict import menuaiKey
 
 if TYPE_CHECKING:
     from .models import HardwareData
 
 DOMAIN = "hardware"
 
-DATA_HARDWARE: HassKey[HardwareData] = HassKey(DOMAIN)
+DATA_HARDWARE: menuaiKey[HardwareData] = menuaiKey(DOMAIN)

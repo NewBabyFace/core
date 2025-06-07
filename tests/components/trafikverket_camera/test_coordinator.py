@@ -13,11 +13,11 @@ from pytrafikverket import (
     UnknownError,
 )
 
-from homeassistant.components.trafikverket_camera.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER, ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import UpdateFailed
+from menuai.components.trafikverket_camera.const import DOMAIN
+from menuai.config_entries import SOURCE_USER, ConfigEntryState
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.update_coordinator import UpdateFailed
 
 from . import ENTRY_CONFIG
 
@@ -26,7 +26,7 @@ from tests.test_util.aiohttp import AiohttpClientMocker
 
 
 async def test_coordinator(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     get_camera: CameraInfoModel,
 ) -> None:
@@ -44,17 +44,17 @@ async def test_coordinator(
         unique_id="trafikverket_camera-1234",
         title="Test Camera",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.trafikverket_camera.coordinator.TrafikverketCamera.async_get_camera",
+        "menuai.components.trafikverket_camera.coordinator.TrafikverketCamera.async_get_camera",
         return_value=get_camera,
     ) as mock_data:
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
         mock_data.assert_called_once()
-        state1 = hass.states.get("camera.test_camera")
+        state1 = menuai.states.get("camera.test_camera")
         assert state1.state == "idle"
 
 
@@ -84,7 +84,7 @@ async def test_coordinator(
     ],
 )
 async def test_coordinator_failed_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     get_camera: CameraInfoModel,
     sideeffect: str,
@@ -105,23 +105,23 @@ async def test_coordinator_failed_update(
         unique_id="trafikverket_camera-1234",
         title="Test Camera",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.trafikverket_camera.coordinator.TrafikverketCamera.async_get_camera",
+        "menuai.components.trafikverket_camera.coordinator.TrafikverketCamera.async_get_camera",
         side_effect=sideeffect,
     ) as mock_data:
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     mock_data.assert_called_once()
-    state = hass.states.get("camera.test_camera")
+    state = menuai.states.get("camera.test_camera")
     assert state is None
     assert entry.state == entry_state
 
 
 async def test_coordinator_failed_get_image(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     get_camera: CameraInfoModel,
 ) -> None:
@@ -139,16 +139,16 @@ async def test_coordinator_failed_get_image(
         unique_id="trafikverket_camera-1234",
         title="Test location",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.trafikverket_camera.coordinator.TrafikverketCamera.async_get_camera",
+        "menuai.components.trafikverket_camera.coordinator.TrafikverketCamera.async_get_camera",
         return_value=get_camera,
     ) as mock_data:
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     mock_data.assert_called_once()
-    state = hass.states.get("camera.test_camera")
+    state = menuai.states.get("camera.test_camera")
     assert state is None
     assert entry.state is ConfigEntryState.SETUP_RETRY

@@ -6,17 +6,17 @@ from unittest.mock import AsyncMock, patch
 from aioambient import OpenAPI
 import pytest
 
-from homeassistant.components.ambient_network.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER, ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.ambient_network.const import DOMAIN
+from menuai.config_entries import SOURCE_USER, ConfigEntry
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 pytestmark = pytest.mark.usefixtures("mock_setup_entry")
 
 
 @pytest.mark.parametrize("config_entry", ["AA:AA:AA:AA:AA:AA"], indirect=True)
 async def test_happy_path(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     open_api: OpenAPI,
     aioambient: AsyncMock,
@@ -25,7 +25,7 @@ async def test_happy_path(
 ) -> None:
     """Test the happy path."""
 
-    setup_result = await hass.config_entries.flow.async_init(
+    setup_result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert setup_result["type"] == FlowResultType.FORM
@@ -36,7 +36,7 @@ async def test_happy_path(
         "get_devices_by_location",
         AsyncMock(return_value=devices_by_location),
     ):
-        user_result = await hass.config_entries.flow.async_configure(
+        user_result = await menuai.config_entries.flow.async_configure(
             setup_result["flow_id"],
             {"location": {"latitude": 10.0, "longitude": 20.0, "radius": 1.0}},
         )
@@ -44,7 +44,7 @@ async def test_happy_path(
     assert user_result["type"] == FlowResultType.FORM
     assert user_result["step_id"] == "station"
 
-    stations_result = await hass.config_entries.flow.async_configure(
+    stations_result = await menuai.config_entries.flow.async_configure(
         user_result["flow_id"],
         {
             "station": "AA:AA:AA:AA:AA:AA",
@@ -58,13 +58,13 @@ async def test_happy_path(
 
 
 async def test_no_station_found(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioambient: AsyncMock,
     open_api: OpenAPI,
 ) -> None:
     """Test that we abort when we cannot find a station in the area."""
 
-    setup_result = await hass.config_entries.flow.async_init(
+    setup_result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert setup_result["type"] == FlowResultType.FORM
@@ -75,7 +75,7 @@ async def test_no_station_found(
         "get_devices_by_location",
         AsyncMock(return_value=[]),
     ):
-        user_result = await hass.config_entries.flow.async_configure(
+        user_result = await menuai.config_entries.flow.async_configure(
             setup_result["flow_id"],
             {"location": {"latitude": 10.0, "longitude": 20.0, "radius": 1.0}},
         )

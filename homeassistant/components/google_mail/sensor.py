@@ -6,13 +6,13 @@ from datetime import UTC, datetime, timedelta
 
 from googleapiclient.http import HttpRequest
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import GoogleMailConfigEntry
 from .entity import GoogleMailEntity
@@ -27,7 +27,7 @@ SENSOR_TYPE = SensorEntityDescription(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: GoogleMailConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -42,7 +42,7 @@ class GoogleMailSensor(GoogleMailEntity, SensorEntity):
         """Get the vacation data."""
         service = await self.auth.get_resource()
         settings: HttpRequest = service.users().settings().getVacation(userId="me")
-        data: dict = await self.hass.async_add_executor_job(settings.execute)
+        data: dict = await self.menuai.async_add_executor_job(settings.execute)
 
         if data["enableAutoReply"] and (end := data.get("endTime")):
             value = datetime.fromtimestamp(int(end) / 1000, tz=UTC)

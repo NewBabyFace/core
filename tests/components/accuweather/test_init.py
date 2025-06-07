@@ -5,16 +5,16 @@ from unittest.mock import AsyncMock
 from accuweather import ApiError
 from freezegun.api import FrozenDateTimeFactory
 
-from homeassistant.components.accuweather.const import (
+from menuai.components.accuweather.const import (
     DOMAIN,
     UPDATE_INTERVAL_DAILY_FORECAST,
     UPDATE_INTERVAL_OBSERVATION,
 )
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.const import STATE_UNAVAILABLE
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import init_integration
 
@@ -22,19 +22,19 @@ from tests.common import MockConfigEntry, async_fire_time_changed
 
 
 async def test_async_setup_entry(
-    hass: HomeAssistant, mock_accuweather_client: AsyncMock
+    menuai: menuai, mock_accuweather_client: AsyncMock
 ) -> None:
     """Test a successful setup entry."""
-    await init_integration(hass)
+    await init_integration(menuai)
 
-    state = hass.states.get("weather.home")
+    state = menuai.states.get("weather.home")
     assert state is not None
     assert state.state != STATE_UNAVAILABLE
     assert state.state == "sunny"
 
 
 async def test_config_not_ready(
-    hass: HomeAssistant, mock_accuweather_client: AsyncMock
+    menuai: menuai, mock_accuweather_client: AsyncMock
 ) -> None:
     """Test for setup failure if connection to AccuWeather is missing."""
     entry = MockConfigEntry(
@@ -53,34 +53,34 @@ async def test_config_not_ready(
         "API Error"
     )
 
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
     assert entry.state is ConfigEntryState.SETUP_RETRY
 
 
 async def test_unload_entry(
-    hass: HomeAssistant, mock_accuweather_client: AsyncMock
+    menuai: menuai, mock_accuweather_client: AsyncMock
 ) -> None:
     """Test successful unload of entry."""
-    entry = await init_integration(hass)
+    entry = await init_integration(menuai)
 
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
     assert entry.state is ConfigEntryState.LOADED
 
-    assert await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.NOT_LOADED
-    assert not hass.data.get(DOMAIN)
+    assert not menuai.data.get(DOMAIN)
 
 
 async def test_update_interval(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_accuweather_client: AsyncMock,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test correct update interval."""
-    entry = await init_integration(hass)
+    entry = await init_integration(menuai)
 
     assert entry.state is ConfigEntryState.LOADED
 
@@ -88,20 +88,20 @@ async def test_update_interval(
     assert mock_accuweather_client.async_get_daily_forecast.call_count == 1
 
     freezer.tick(UPDATE_INTERVAL_OBSERVATION)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     assert mock_accuweather_client.async_get_current_conditions.call_count == 2
 
     freezer.tick(UPDATE_INTERVAL_DAILY_FORECAST)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     assert mock_accuweather_client.async_get_daily_forecast.call_count == 2
 
 
 async def test_remove_ozone_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_accuweather_client: AsyncMock,
 ) -> None:
@@ -114,7 +114,7 @@ async def test_remove_ozone_sensors(
         disabled_by=None,
     )
 
-    await init_integration(hass)
+    await init_integration(menuai)
 
     entry = entity_registry.async_get("sensor.home_ozone_0d")
     assert entry is None

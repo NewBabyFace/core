@@ -11,11 +11,11 @@ from typing import Final
 from aiohttp import web
 from aiohttp.abc import AbstractStreamWriter, BaseRequest
 
-from homeassistant.components import ffmpeg
-from homeassistant.components.ffmpeg import FFmpegManager
-from homeassistant.components.http import HomeAssistantView
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.util.hass_dict import HassKey
+from menuai.components import ffmpeg
+from menuai.components.ffmpeg import FFmpegManager
+from menuai.components.http import menuaiView
+from menuai.core import menuai, callback
+from menuai.util.menuai_dict import menuaiKey
 
 from .const import DOMAIN
 
@@ -26,7 +26,7 @@ _MAX_CONVERSIONS_PER_DEVICE: Final[int] = 2
 
 @callback
 def async_create_proxy_url(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_id: str,
     media_url: str,
     media_format: str,
@@ -35,7 +35,7 @@ def async_create_proxy_url(
     width: int | None = None,
 ) -> str:
     """Create a use proxy URL that automatically converts the media."""
-    data = hass.data[DATA_FFMPEG_PROXY]
+    data = menuai.data[DATA_FFMPEG_PROXY]
     return data.async_create_proxy_url(
         device_id, media_url, media_format, rate, channels, width
     )
@@ -149,7 +149,7 @@ class FFmpegConvertResponse(web.StreamResponse):
 
         """
         super().__init__(status=200)
-        self.hass = manager.hass
+        self.menuai = manager.menuai
         self.manager = manager
         self.convert_info = convert_info
         self.device_id = device_id
@@ -200,8 +200,8 @@ class FFmpegConvertResponse(web.StreamResponse):
         # Only one conversion process per device is allowed
         self.convert_info.proc = proc
 
-        # Create background task which will be cancelled when home assistant shuts down
-        write_task = self.hass.async_create_background_task(
+        # Create background task which will be cancelled when MenuAI shuts down
+        write_task = self.menuai.async_create_background_task(
             self._write_ffmpeg_data(request, writer, proc), "ESPHome media proxy"
         )
         await write_task
@@ -215,14 +215,14 @@ class FFmpegConvertResponse(web.StreamResponse):
         assert proc.stdout is not None
         assert proc.stderr is not None
 
-        stderr_task = self.hass.async_create_background_task(
+        stderr_task = self.menuai.async_create_background_task(
             self._dump_ffmpeg_stderr(proc), "ESPHome media proxy dump stderr"
         )
 
         try:
             # Pull audio chunks from ffmpeg and pass them to the HTTP client
             while (
-                self.hass.is_running
+                self.menuai.is_running
                 and (request.transport is not None)
                 and (not request.transport.is_closing())
                 and (chunk := await proc.stdout.read(self.chunk_size))
@@ -260,11 +260,11 @@ class FFmpegConvertResponse(web.StreamResponse):
         assert proc.stdout is not None
         assert proc.stderr is not None
 
-        while self.hass.is_running and (chunk := await proc.stderr.readline()):
+        while self.menuai.is_running and (chunk := await proc.stderr.readline()):
             _LOGGER.debug("ffmpeg[%s] output: %s", proc.pid, chunk.decode().rstrip())
 
 
-class FFmpegProxyView(HomeAssistantView):
+class FFmpegProxyView(menuaiView):
     """FFmpeg web view to convert audio and stream back to client."""
 
     requires_auth = False
@@ -318,14 +318,14 @@ class FFmpegProxyView(HomeAssistantView):
         return resp
 
 
-DATA_FFMPEG_PROXY: HassKey[FFmpegProxyData] = HassKey(f"{DOMAIN}.ffmpeg_proxy")
+DATA_FFMPEG_PROXY: menuaiKey[FFmpegProxyData] = menuaiKey(f"{DOMAIN}.ffmpeg_proxy")
 
 
 @callback
-def async_setup(hass: HomeAssistant) -> None:
+def async_setup(menuai: menuai) -> None:
     """Set up the ffmpeg proxy."""
     proxy_data = FFmpegProxyData()
-    hass.data[DATA_FFMPEG_PROXY] = proxy_data
-    hass.http.register_view(
-        FFmpegProxyView(ffmpeg.get_ffmpeg_manager(hass), proxy_data)
+    menuai.data[DATA_FFMPEG_PROXY] = proxy_data
+    menuai.http.register_view(
+        FFmpegProxyView(ffmpeg.get_ffmpeg_manager(menuai), proxy_data)
     )

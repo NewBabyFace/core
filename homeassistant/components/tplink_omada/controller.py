@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from tplink_omada_client import OmadaSiteClient
 from tplink_omada_client.devices import OmadaSwitch
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 if TYPE_CHECKING:
     from . import OmadaConfigEntry
@@ -27,21 +27,21 @@ class OmadaSiteController:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: OmadaConfigEntry,
         omada_client: OmadaSiteClient,
     ) -> None:
         """Create the controller."""
-        self._hass = hass
+        self._menuai = menuai
         self._config_entry = config_entry
         self._omada_client = omada_client
 
         self._switch_port_coordinators: dict[str, OmadaSwitchPortCoordinator] = {}
         self._devices_coordinator = OmadaDevicesCoordinator(
-            hass, config_entry, omada_client
+            menuai, config_entry, omada_client
         )
         self._clients_coordinator = OmadaClientsCoordinator(
-            hass, config_entry, omada_client
+            menuai, config_entry, omada_client
         )
 
     async def initialize_first_refresh(self) -> None:
@@ -52,7 +52,7 @@ class OmadaSiteController:
         gateway = next((d for d in devices if d.type == "gateway"), None)
         if gateway:
             self._gateway_coordinator = OmadaGatewayCoordinator(
-                self._hass, self._config_entry, self._omada_client, gateway.mac
+                self._menuai, self._config_entry, self._omada_client, gateway.mac
             )
             await self._gateway_coordinator.async_config_entry_first_refresh()
 
@@ -69,7 +69,7 @@ class OmadaSiteController:
         """Get coordinator for network port information of a given switch."""
         if switch.mac not in self._switch_port_coordinators:
             self._switch_port_coordinators[switch.mac] = OmadaSwitchPortCoordinator(
-                self._hass, self._config_entry, self._omada_client, switch
+                self._menuai, self._config_entry, self._omada_client, switch
             )
 
         return self._switch_port_coordinators[switch.mac]

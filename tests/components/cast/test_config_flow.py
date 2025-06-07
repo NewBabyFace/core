@@ -4,20 +4,20 @@ from unittest.mock import ANY, patch
 
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components import cast
-from homeassistant.components.cast.home_assistant_cast import CAST_USER_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components import cast
+from menuai.components.cast.home_assistant_cast import CAST_USER_NAME
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry, get_schema_suggested_value
 
 
-async def test_creating_entry_sets_up_media_player(hass: HomeAssistant) -> None:
+async def test_creating_entry_sets_up_media_player(menuai: menuai) -> None:
     """Test setting up Cast loads the media player."""
     with (
         patch(
-            "homeassistant.components.cast.media_player.async_setup_entry",
+            "menuai.components.cast.media_player.async_setup_entry",
             return_value=True,
         ) as mock_setup,
         patch("pychromecast.discovery.discover_chromecasts", return_value=(True, None)),
@@ -25,17 +25,17 @@ async def test_creating_entry_sets_up_media_player(hass: HomeAssistant) -> None:
             "pychromecast.discovery.stop_discovery",
         ),
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             cast.DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
 
         # Confirmation form
         assert result["type"] is FlowResultType.FORM
 
-        result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
         assert result["type"] is FlowResultType.CREATE_ENTRY
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_setup.mock_calls) == 1
 
@@ -47,97 +47,97 @@ async def test_creating_entry_sets_up_media_player(hass: HomeAssistant) -> None:
         config_entries.SOURCE_ZEROCONF,
     ],
 )
-async def test_single_instance(hass: HomeAssistant, source) -> None:
+async def test_single_instance(menuai: menuai, source) -> None:
     """Test we only allow a single config flow."""
-    MockConfigEntry(domain="cast").add_to_hass(hass)
-    await hass.async_block_till_done()
+    MockConfigEntry(domain="cast").add_to_menuai(menuai)
+    await menuai.async_block_till_done()
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "cast", context={"source": source}
     )
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "single_instance_allowed"
 
 
-async def test_user_setup(hass: HomeAssistant) -> None:
+async def test_user_setup(menuai: menuai) -> None:
     """Test we can finish a config flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "cast", context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
-    users = await hass.auth.async_get_users()
+    users = await menuai.auth.async_get_users()
     assert next(user for user in users if user.name == CAST_USER_NAME)
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["result"].data == {
         "ignore_cec": [],
         "known_hosts": [],
         "uuid": [],
-        "user_id": users[0].id,  # Home Assistant cast user
+        "user_id": users[0].id,  # MenuAI cast user
     }
 
 
-async def test_user_setup_options(hass: HomeAssistant) -> None:
+async def test_user_setup_options(menuai: menuai) -> None:
     """Test we can finish a config flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "cast", context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"known_hosts": ["192.168.0.1", "", " ", "192.168.0.2 "]}
     )
 
-    users = await hass.auth.async_get_users()
+    users = await menuai.auth.async_get_users()
     assert next(user for user in users if user.name == CAST_USER_NAME)
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["result"].data == {
         "ignore_cec": [],
         "known_hosts": ["192.168.0.1", "192.168.0.2"],
         "uuid": [],
-        "user_id": users[0].id,  # Home Assistant cast user
+        "user_id": users[0].id,  # MenuAI cast user
     }
 
 
-async def test_zeroconf_setup(hass: HomeAssistant) -> None:
+async def test_zeroconf_setup(menuai: menuai) -> None:
     """Test we can finish a config flow through zeroconf."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "cast", context={"source": config_entries.SOURCE_ZEROCONF}
     )
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
-    users = await hass.auth.async_get_users()
+    users = await menuai.auth.async_get_users()
     assert next(user for user in users if user.name == CAST_USER_NAME)
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["result"].data == {
         "ignore_cec": [],
         "known_hosts": [],
         "uuid": [],
-        "user_id": users[0].id,  # Home Assistant cast user
+        "user_id": users[0].id,  # MenuAI cast user
     }
 
 
-async def test_zeroconf_setup_onboarding(hass: HomeAssistant) -> None:
+async def test_zeroconf_setup_onboarding(menuai: menuai) -> None:
     """Test we automatically finish a config flow through zeroconf during onboarding."""
     with patch(
-        "homeassistant.components.onboarding.async_is_onboarded", return_value=False
+        "menuai.components.onboarding.async_is_onboarded", return_value=False
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             "cast", context={"source": config_entries.SOURCE_ZEROCONF}
         )
 
-    users = await hass.auth.async_get_users()
+    users = await menuai.auth.async_get_users()
     assert next(user for user in users if user.name == CAST_USER_NAME)
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["result"].data == {
         "ignore_cec": [],
         "known_hosts": [],
         "uuid": [],
-        "user_id": users[0].id,  # Home Assistant cast user
+        "user_id": users[0].id,  # MenuAI cast user
     }
 
 
@@ -168,7 +168,7 @@ async def test_zeroconf_setup_onboarding(hass: HomeAssistant) -> None:
     ],
 )
 async def test_option_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     parameter: str,
     initial: list[str],
     suggested: str | list[str],
@@ -186,12 +186,12 @@ async def test_option_flow(
     }
     data[parameter] = initial
     config_entry = MockConfigEntry(domain="cast", data=data)
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Test ignore_cec and uuid options are hidden if advanced options are disabled
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "basic_options"
     data_schema = result["data_schema"].schema
@@ -200,7 +200,7 @@ async def test_option_flow(
 
     # Reconfigure known_hosts
     context = {"source": config_entries.SOURCE_USER, "show_advanced_options": True}
-    result = await hass.config_entries.options.async_init(
+    result = await menuai.config_entries.options.async_init(
         config_entry.entry_id, context=context
     )
     assert result["type"] is FlowResultType.FORM
@@ -216,7 +216,7 @@ async def test_option_flow(
     user_input_dict = {}
     if parameter in basic_parameters:
         user_input_dict[parameter] = user_input
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input=user_input_dict,
     )
@@ -241,7 +241,7 @@ async def test_option_flow(
     user_input_dict = {}
     if parameter in advanced_parameters:
         user_input_dict[parameter] = user_input
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input=user_input_dict,
     )
@@ -254,8 +254,8 @@ async def test_option_flow(
     assert config_entry.data[parameter] == updated
 
     # Clear known_hosts
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={},
     )
@@ -267,29 +267,29 @@ async def test_option_flow(
     assert dict(config_entry.data) == expected_data
 
 
-async def test_known_hosts(hass: HomeAssistant, castbrowser_mock) -> None:
+async def test_known_hosts(menuai: menuai, castbrowser_mock) -> None:
     """Test known hosts is passed to pychromecasts."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "cast", context={"source": config_entries.SOURCE_USER}
     )
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"known_hosts": ["192.168.0.1", "192.168.0.2"]}
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
-    await hass.async_block_till_done(wait_background_tasks=True)
-    config_entry = hass.config_entries.async_entries("cast")[0]
+    await menuai.async_block_till_done(wait_background_tasks=True)
+    config_entry = menuai.config_entries.async_entries("cast")[0]
 
     assert castbrowser_mock.return_value.start_discovery.call_count == 1
     castbrowser_mock.assert_called_once_with(ANY, ANY, ["192.168.0.1", "192.168.0.2"])
     castbrowser_mock.reset_mock()
 
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={"known_hosts": ["192.168.0.11", "192.168.0.12"]},
     )
 
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     castbrowser_mock.return_value.start_discovery.assert_not_called()
     castbrowser_mock.assert_not_called()

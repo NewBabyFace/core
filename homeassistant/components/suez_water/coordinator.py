@@ -6,25 +6,25 @@ import logging
 
 from pysuez import PySuezError, SuezClient, TelemetryMeasure
 
-from homeassistant.components.recorder import get_instance
-from homeassistant.components.recorder.models import StatisticData, StatisticMetaData
-from homeassistant.components.recorder.statistics import (
+from menuai.components.recorder import get_instance
+from menuai.components.recorder.models import StatisticData, StatisticMetaData
+from menuai.components.recorder.statistics import (
     StatisticMeanType,
     StatisticsRow,
     async_add_external_statistics,
     get_last_statistics,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_PASSWORD,
     CONF_USERNAME,
     CURRENCY_EURO,
     UnitOfVolume,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryError
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-import homeassistant.util.dt as dt_util
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryError
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+import menuai.util.dt as dt_util
 
 from .const import CONF_COUNTER_ID, DATA_REFRESH_INTERVAL, DOMAIN
 
@@ -61,10 +61,10 @@ class SuezWaterCoordinator(DataUpdateCoordinator[SuezWaterData]):
     _suez_client: SuezClient
     config_entry: SuezWaterConfigEntry
 
-    def __init__(self, hass: HomeAssistant, config_entry: SuezWaterConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: SuezWaterConfigEntry) -> None:
         """Initialize suez water coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             name=DOMAIN,
             update_interval=DATA_REFRESH_INTERVAL,
@@ -220,7 +220,7 @@ class SuezWaterCoordinator(DataUpdateCoordinator[SuezWaterData]):
             self._water_statistic_id,
         )
         async_add_external_statistics(
-            self.hass, consumption_metadata, consumption_statistics
+            self.menuai, consumption_metadata, consumption_statistics
         )
 
         if len(cost_statistics) > 0:
@@ -232,7 +232,7 @@ class SuezWaterCoordinator(DataUpdateCoordinator[SuezWaterData]):
             cost_metadata = self._get_statistics_metadata(
                 id=self._cost_statistic_id, name="Cost", unit=CURRENCY_EURO
             )
-            async_add_external_statistics(self.hass, cost_metadata, cost_statistics)
+            async_add_external_statistics(self.menuai, cost_metadata, cost_statistics)
 
         _LOGGER.debug("Updated statistics for %s", self._water_statistic_id)
 
@@ -252,7 +252,7 @@ class SuezWaterCoordinator(DataUpdateCoordinator[SuezWaterData]):
 
     async def _get_last_stat(self, id: str) -> StatisticsRow | None:
         """Find last registered statistics of given id."""
-        last_stat = await get_instance(self.hass).async_add_executor_job(
-            get_last_statistics, self.hass, 1, id, True, {"sum"}
+        last_stat = await get_instance(self.menuai).async_add_executor_job(
+            get_last_statistics, self.menuai, 1, id, True, {"sum"}
         )
         return last_stat[id][0] if last_stat else None

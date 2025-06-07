@@ -7,11 +7,11 @@ import logging
 from solax import InverterResponse, RealTimeAPI, real_time_api
 from solax.inverter import InverterError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_IP_ADDRESS, CONF_PASSWORD, CONF_PORT, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers.update_coordinator import UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_IP_ADDRESS, CONF_PASSWORD, CONF_PORT, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers.update_coordinator import UpdateFailed
 
 from .coordinator import SolaxDataUpdateCoordinator
 
@@ -33,7 +33,7 @@ type SolaxConfigEntry = ConfigEntry[SolaxData]
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: SolaxConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: SolaxConfigEntry) -> bool:
     """Set up the sensors from a ConfigEntry."""
 
     try:
@@ -52,7 +52,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: SolaxConfigEntry) -> boo
             raise UpdateFailed from err
 
     coordinator = SolaxDataUpdateCoordinator(
-        hass,
+        menuai,
         logger=_LOGGER,
         config_entry=entry,
         name=f"solax {entry.title}",
@@ -62,11 +62,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: SolaxConfigEntry) -> boo
     await coordinator.async_config_entry_first_refresh()
 
     entry.runtime_data = SolaxData(api=api, coordinator=coordinator)
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: SolaxConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: SolaxConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

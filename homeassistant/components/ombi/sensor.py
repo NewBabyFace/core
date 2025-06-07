@@ -7,10 +7,10 @@ import logging
 
 from pyombi import OmbiError
 
-from homeassistant.components.sensor import SensorEntity, SensorEntityDescription
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.sensor import SensorEntity, SensorEntityDescription
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import DOMAIN
 
@@ -54,7 +54,7 @@ SENSOR_TYPES: tuple[SensorEntityDescription, ...] = (
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -63,7 +63,7 @@ def setup_platform(
     if discovery_info is None:
         return
 
-    ombi = hass.data[DOMAIN]["instance"]
+    ombi = menuai.data[DOMAIN]["instance"]
 
     entities = [OmbiSensor(ombi, description) for description in SENSOR_TYPES]
 

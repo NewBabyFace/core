@@ -4,12 +4,12 @@ from abc import ABC, abstractmethod
 import logging
 from typing import Any, Final, TypedDict
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_PLATFORM, Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.storage import Store
-from homeassistant.util.ulid import ulid_now
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_PLATFORM, Platform
+from menuai.core import menuai, callback
+from menuai.helpers import entity_registry as er
+from menuai.helpers.storage import Store
+from menuai.util.ulid import ulid_now
 
 from ..const import DOMAIN
 from .const import CONF_DATA
@@ -50,13 +50,13 @@ class KNXConfigStore:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
     ) -> None:
         """Initialize config store."""
-        self.hass = hass
+        self.menuai = menuai
         self.config_entry = config_entry
-        self._store = Store[KNXConfigStoreModel](hass, STORAGE_VERSION, STORAGE_KEY)
+        self._store = Store[KNXConfigStoreModel](menuai, STORAGE_VERSION, STORAGE_KEY)
         self.data = KNXConfigStoreModel(entities={})
         self._platform_controllers: dict[Platform, PlatformControllerBase] = {}
 
@@ -86,13 +86,13 @@ class KNXConfigStore:
         self.data["entities"].setdefault(platform, {})[unique_id] = data
         await self._store.async_save(self.data)
 
-        entity_registry = er.async_get(self.hass)
+        entity_registry = er.async_get(self.menuai)
         return entity_registry.async_get_entity_id(platform, DOMAIN, unique_id)
 
     @callback
     def get_entity_config(self, entity_id: str) -> dict[str, Any]:
         """Return KNX entity configuration."""
-        entity_registry = er.async_get(self.hass)
+        entity_registry = er.async_get(self.menuai)
         if (entry := entity_registry.async_get(entity_id)) is None:
             raise ConfigStoreException(f"Entity not found: {entity_id}")
         try:
@@ -108,7 +108,7 @@ class KNXConfigStore:
     ) -> None:
         """Update an existing entity."""
         platform_controller = self._platform_controllers[platform]
-        entity_registry = er.async_get(self.hass)
+        entity_registry = er.async_get(self.menuai)
         if (entry := entity_registry.async_get(entity_id)) is None:
             raise ConfigStoreException(f"Entity not found: {entity_id}")
         unique_id = entry.unique_id
@@ -126,7 +126,7 @@ class KNXConfigStore:
 
     async def delete_entity(self, entity_id: str) -> None:
         """Delete an existing entity."""
-        entity_registry = er.async_get(self.hass)
+        entity_registry = er.async_get(self.menuai)
         if (entry := entity_registry.async_get(entity_id)) is None:
             raise ConfigStoreException(f"Entity not found: {entity_id}")
         try:
@@ -140,7 +140,7 @@ class KNXConfigStore:
 
     def get_entity_entries(self) -> list[er.RegistryEntry]:
         """Get entity_ids of all UI configured entities."""
-        entity_registry = er.async_get(self.hass)
+        entity_registry = er.async_get(self.menuai)
         unique_ids = {
             uid for platform in self.data["entities"].values() for uid in platform
         }

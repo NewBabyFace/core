@@ -9,8 +9,8 @@ from unittest.mock import MagicMock, Mock, patch
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.components import ffmpeg, tts
-from homeassistant.components.media_player import (
+from menuai.components import ffmpeg, tts
+from menuai.components.media_player import (
     ATTR_MEDIA_ANNOUNCE,
     ATTR_MEDIA_CONTENT_ID,
     ATTR_MEDIA_CONTENT_TYPE,
@@ -18,12 +18,12 @@ from homeassistant.components.media_player import (
     SERVICE_PLAY_MEDIA,
     MediaType,
 )
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import ATTR_ENTITY_ID, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.config_entries import ConfigEntryState
+from menuai.const import ATTR_ENTITY_ID, STATE_UNKNOWN
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from .common import (
     DEFAULT_LANG,
@@ -46,27 +46,27 @@ ORIG_WRITE_TAGS = tts.SpeechManager.write_tags
 
 
 async def test_config_entry_unload(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     mock_tts_entity: MockTTSEntity,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test we can unload config entry."""
     entity_id = f"{tts.DOMAIN}.{TEST_DOMAIN}"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state is None
 
-    config_entry = await mock_config_entry_setup(hass, mock_tts_entity)
+    config_entry = await mock_config_entry_setup(menuai, mock_tts_entity)
     assert config_entry.state is ConfigEntryState.LOADED
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state is not None
     assert state.state == STATE_UNKNOWN
 
-    calls = async_mock_service(hass, DOMAIN_MP, SERVICE_PLAY_MEDIA)
+    calls = async_mock_service(menuai, DOMAIN_MP, SERVICE_PLAY_MEDIA)
 
     now = dt_util.utcnow()
     freezer.move_to(now)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         tts.DOMAIN,
         "speak",
         {
@@ -79,30 +79,30 @@ async def test_config_entry_unload(
     assert len(calls) == 1
 
     assert (
-        await retrieve_media(hass, hass_client, calls[0].data[ATTR_MEDIA_CONTENT_ID])
+        await retrieve_media(menuai, menuai_client, calls[0].data[ATTR_MEDIA_CONTENT_ID])
         == HTTPStatus.OK
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state is not None
     assert state.state == now.isoformat()
 
-    await hass.config_entries.async_unload(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(config_entry.entry_id)
+    await menuai.async_block_till_done()
     assert config_entry.state is ConfigEntryState.NOT_LOADED
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state is None
 
 
 @pytest.mark.parametrize(
     "setup", ["mock_setup", "mock_config_entry_setup"], indirect=True
 )
-async def test_setup_component(hass: HomeAssistant, setup: str) -> None:
+async def test_setup_component(menuai: menuai, setup: str) -> None:
     """Set up a TTS platform with defaults."""
-    assert hass.services.has_service(tts.DOMAIN, "clear_cache")
-    assert f"test.{tts.DOMAIN}" in hass.config.components
+    assert menuai.services.has_service(tts.DOMAIN, "clear_cache")
+    assert f"test.{tts.DOMAIN}" in menuai.config.components
 
 
 @pytest.mark.parametrize("init_tts_cache_dir_side_effect", [OSError(2, "No access")])
@@ -110,11 +110,11 @@ async def test_setup_component(hass: HomeAssistant, setup: str) -> None:
     "setup", ["mock_setup", "mock_config_entry_setup"], indirect=True
 )
 async def test_setup_component_no_access_cache_folder(
-    hass: HomeAssistant, mock_tts_init_cache_dir: MagicMock, setup: str
+    menuai: menuai, mock_tts_init_cache_dir: MagicMock, setup: str
 ) -> None:
     """Set up a TTS platform with defaults."""
-    assert not hass.services.has_service(tts.DOMAIN, "test_say")
-    assert not hass.services.has_service(tts.DOMAIN, "clear_cache")
+    assert not menuai.services.has_service(tts.DOMAIN, "test_say")
+    assert not menuai.services.has_service(tts.DOMAIN, "clear_cache")
 
 
 @pytest.mark.parametrize(
@@ -143,7 +143,7 @@ async def test_setup_component_no_access_cache_folder(
     indirect=["setup"],
 )
 async def test_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_tts_cache_dir: Path,
     setup: str,
     tts_service: str,
@@ -151,9 +151,9 @@ async def test_service(
     expected_url_suffix: str,
 ) -> None:
     """Set up a TTS platform and call service."""
-    calls = async_mock_service(hass, DOMAIN_MP, SERVICE_PLAY_MEDIA)
+    calls = async_mock_service(menuai, DOMAIN_MP, SERVICE_PLAY_MEDIA)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         tts.DOMAIN,
         tts_service,
         service_data,
@@ -161,15 +161,15 @@ async def test_service(
     )
 
     with patch(
-        "homeassistant.components.tts.secrets.token_urlsafe", return_value="test_token"
+        "menuai.components.tts.secrets.token_urlsafe", return_value="test_token"
     ):
         assert len(calls) == 1
         assert calls[0].data[ATTR_MEDIA_ANNOUNCE] is True
         assert calls[0].data[ATTR_MEDIA_CONTENT_TYPE] == MediaType.MUSIC
         assert await get_media_source_url(
-            hass, calls[0].data[ATTR_MEDIA_CONTENT_ID]
+            menuai, calls[0].data[ATTR_MEDIA_CONTENT_ID]
         ) == ("/api/tts_proxy/test_token.mp3")
-        await hass.async_block_till_done(wait_background_tasks=True)
+        await menuai.async_block_till_done(wait_background_tasks=True)
         assert (
             mock_tts_cache_dir
             / f"42f18378fd4393d18c8dd11d03fa9563c1e54491_en-us_-_{expected_url_suffix}.mp3"
@@ -206,7 +206,7 @@ async def test_service(
     indirect=["setup"],
 )
 async def test_service_default_language(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_tts_cache_dir: Path,
     setup: str,
     tts_service: str,
@@ -214,9 +214,9 @@ async def test_service_default_language(
     expected_url_suffix: str,
 ) -> None:
     """Set up a TTS platform with default language and call service."""
-    calls = async_mock_service(hass, DOMAIN_MP, SERVICE_PLAY_MEDIA)
+    calls = async_mock_service(menuai, DOMAIN_MP, SERVICE_PLAY_MEDIA)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         tts.DOMAIN,
         tts_service,
         service_data,
@@ -226,12 +226,12 @@ async def test_service_default_language(
     assert calls[0].data[ATTR_MEDIA_CONTENT_TYPE] == MediaType.MUSIC
 
     with patch(
-        "homeassistant.components.tts.secrets.token_urlsafe", return_value="test_token"
+        "menuai.components.tts.secrets.token_urlsafe", return_value="test_token"
     ):
         assert await get_media_source_url(
-            hass, calls[0].data[ATTR_MEDIA_CONTENT_ID]
+            menuai, calls[0].data[ATTR_MEDIA_CONTENT_ID]
         ) == ("/api/tts_proxy/test_token.mp3")
-        await hass.async_block_till_done(wait_background_tasks=True)
+        await menuai.async_block_till_done(wait_background_tasks=True)
         assert (
             mock_tts_cache_dir
             / (
@@ -270,7 +270,7 @@ async def test_service_default_language(
     indirect=["setup"],
 )
 async def test_service_default_special_language(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_tts_cache_dir: Path,
     setup: str,
     tts_service: str,
@@ -278,9 +278,9 @@ async def test_service_default_special_language(
     expected_url_suffix: str,
 ) -> None:
     """Set up a TTS platform with default special language and call service."""
-    calls = async_mock_service(hass, DOMAIN_MP, SERVICE_PLAY_MEDIA)
+    calls = async_mock_service(menuai, DOMAIN_MP, SERVICE_PLAY_MEDIA)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         tts.DOMAIN,
         tts_service,
         service_data,
@@ -290,12 +290,12 @@ async def test_service_default_special_language(
     assert calls[0].data[ATTR_MEDIA_CONTENT_TYPE] == MediaType.MUSIC
 
     with patch(
-        "homeassistant.components.tts.secrets.token_urlsafe", return_value="test_token"
+        "menuai.components.tts.secrets.token_urlsafe", return_value="test_token"
     ):
         assert await get_media_source_url(
-            hass, calls[0].data[ATTR_MEDIA_CONTENT_ID]
+            menuai, calls[0].data[ATTR_MEDIA_CONTENT_ID]
         ) == ("/api/tts_proxy/test_token.mp3")
-        await hass.async_block_till_done(wait_background_tasks=True)
+        await menuai.async_block_till_done(wait_background_tasks=True)
         assert (
             mock_tts_cache_dir
             / f"42f18378fd4393d18c8dd11d03fa9563c1e54491_en-us_-_{expected_url_suffix}.mp3"
@@ -330,7 +330,7 @@ async def test_service_default_special_language(
     indirect=["setup"],
 )
 async def test_service_language(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_tts_cache_dir: Path,
     setup: str,
     tts_service: str,
@@ -338,9 +338,9 @@ async def test_service_language(
     expected_url_suffix: str,
 ) -> None:
     """Set up a TTS platform and call service with language."""
-    calls = async_mock_service(hass, DOMAIN_MP, SERVICE_PLAY_MEDIA)
+    calls = async_mock_service(menuai, DOMAIN_MP, SERVICE_PLAY_MEDIA)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         tts.DOMAIN,
         tts_service,
         service_data,
@@ -350,12 +350,12 @@ async def test_service_language(
     assert calls[0].data[ATTR_MEDIA_CONTENT_TYPE] == MediaType.MUSIC
 
     with patch(
-        "homeassistant.components.tts.secrets.token_urlsafe", return_value="test_token"
+        "menuai.components.tts.secrets.token_urlsafe", return_value="test_token"
     ):
         assert await get_media_source_url(
-            hass, calls[0].data[ATTR_MEDIA_CONTENT_ID]
+            menuai, calls[0].data[ATTR_MEDIA_CONTENT_ID]
         ) == ("/api/tts_proxy/test_token.mp3")
-        await hass.async_block_till_done(wait_background_tasks=True)
+        await menuai.async_block_till_done(wait_background_tasks=True)
         assert (
             mock_tts_cache_dir
             / f"42f18378fd4393d18c8dd11d03fa9563c1e54491_de-de_-_{expected_url_suffix}.mp3"
@@ -390,7 +390,7 @@ async def test_service_language(
     indirect=["setup"],
 )
 async def test_service_wrong_language(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_tts_cache_dir: Path,
     setup: str,
     tts_service: str,
@@ -398,10 +398,10 @@ async def test_service_wrong_language(
     expected_url_suffix: str,
 ) -> None:
     """Set up a TTS platform and call service."""
-    calls = async_mock_service(hass, DOMAIN_MP, SERVICE_PLAY_MEDIA)
+    calls = async_mock_service(menuai, DOMAIN_MP, SERVICE_PLAY_MEDIA)
 
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             tts.DOMAIN,
             tts_service,
             service_data,
@@ -444,7 +444,7 @@ async def test_service_wrong_language(
     indirect=["setup"],
 )
 async def test_service_options(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_tts_cache_dir: Path,
     setup: str,
     tts_service: str,
@@ -452,9 +452,9 @@ async def test_service_options(
     expected_url_suffix: str,
 ) -> None:
     """Set up a TTS platform and call service with options."""
-    calls = async_mock_service(hass, DOMAIN_MP, SERVICE_PLAY_MEDIA)
+    calls = async_mock_service(menuai, DOMAIN_MP, SERVICE_PLAY_MEDIA)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         tts.DOMAIN,
         tts_service,
         service_data,
@@ -466,12 +466,12 @@ async def test_service_options(
     assert calls[0].data[ATTR_MEDIA_CONTENT_TYPE] == MediaType.MUSIC
 
     with patch(
-        "homeassistant.components.tts.secrets.token_urlsafe", return_value="test_token"
+        "menuai.components.tts.secrets.token_urlsafe", return_value="test_token"
     ):
         assert await get_media_source_url(
-            hass, calls[0].data[ATTR_MEDIA_CONTENT_ID]
+            menuai, calls[0].data[ATTR_MEDIA_CONTENT_ID]
         ) == ("/api/tts_proxy/test_token.mp3")
-        await hass.async_block_till_done(wait_background_tasks=True)
+        await menuai.async_block_till_done(wait_background_tasks=True)
         assert (
             mock_tts_cache_dir
             / (
@@ -528,7 +528,7 @@ class MockEntityWithDefaults(MockTTSEntity):
     indirect=["setup"],
 )
 async def test_service_default_options(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_tts_cache_dir: Path,
     setup: str,
     tts_service: str,
@@ -536,9 +536,9 @@ async def test_service_default_options(
     expected_url_suffix: str,
 ) -> None:
     """Set up a TTS platform and call service with default options."""
-    calls = async_mock_service(hass, DOMAIN_MP, SERVICE_PLAY_MEDIA)
+    calls = async_mock_service(menuai, DOMAIN_MP, SERVICE_PLAY_MEDIA)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         tts.DOMAIN,
         tts_service,
         service_data,
@@ -550,12 +550,12 @@ async def test_service_default_options(
     assert calls[0].data[ATTR_MEDIA_CONTENT_TYPE] == MediaType.MUSIC
 
     with patch(
-        "homeassistant.components.tts.secrets.token_urlsafe", return_value="test_token"
+        "menuai.components.tts.secrets.token_urlsafe", return_value="test_token"
     ):
         assert await get_media_source_url(
-            hass, calls[0].data[ATTR_MEDIA_CONTENT_ID]
+            menuai, calls[0].data[ATTR_MEDIA_CONTENT_ID]
         ) == ("/api/tts_proxy/test_token.mp3")
-        await hass.async_block_till_done(wait_background_tasks=True)
+        await menuai.async_block_till_done(wait_background_tasks=True)
         assert (
             mock_tts_cache_dir
             / (
@@ -599,7 +599,7 @@ async def test_service_default_options(
     indirect=["setup"],
 )
 async def test_merge_default_service_options(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_tts_cache_dir: Path,
     setup: str,
     tts_service: str,
@@ -610,9 +610,9 @@ async def test_merge_default_service_options(
 
     This tests merging default and user provided options.
     """
-    calls = async_mock_service(hass, DOMAIN_MP, SERVICE_PLAY_MEDIA)
+    calls = async_mock_service(menuai, DOMAIN_MP, SERVICE_PLAY_MEDIA)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         tts.DOMAIN,
         tts_service,
         service_data,
@@ -624,12 +624,12 @@ async def test_merge_default_service_options(
     assert calls[0].data[ATTR_MEDIA_CONTENT_TYPE] == MediaType.MUSIC
 
     with patch(
-        "homeassistant.components.tts.secrets.token_urlsafe", return_value="test_token"
+        "menuai.components.tts.secrets.token_urlsafe", return_value="test_token"
     ):
         assert await get_media_source_url(
-            hass, calls[0].data[ATTR_MEDIA_CONTENT_ID]
+            menuai, calls[0].data[ATTR_MEDIA_CONTENT_ID]
         ) == ("/api/tts_proxy/test_token.mp3")
-        await hass.async_block_till_done(wait_background_tasks=True)
+        await menuai.async_block_till_done(wait_background_tasks=True)
         assert (
             mock_tts_cache_dir
             / (
@@ -669,7 +669,7 @@ async def test_merge_default_service_options(
     indirect=["setup"],
 )
 async def test_service_wrong_options(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_tts_cache_dir: Path,
     setup: str,
     tts_service: str,
@@ -677,10 +677,10 @@ async def test_service_wrong_options(
     expected_url_suffix: str,
 ) -> None:
     """Set up a TTS platform and call service with wrong options."""
-    calls = async_mock_service(hass, DOMAIN_MP, SERVICE_PLAY_MEDIA)
+    calls = async_mock_service(menuai, DOMAIN_MP, SERVICE_PLAY_MEDIA)
 
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             tts.DOMAIN,
             tts_service,
             service_data,
@@ -689,7 +689,7 @@ async def test_service_wrong_options(
     opt_hash = tts._hash_options({"speed": 1})
 
     assert len(calls) == 0
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert not (
         mock_tts_cache_dir
         / (
@@ -725,7 +725,7 @@ async def test_service_wrong_options(
     indirect=["setup"],
 )
 async def test_service_clear_cache(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_tts_cache_dir: Path,
     setup: str,
     tts_service: str,
@@ -733,9 +733,9 @@ async def test_service_clear_cache(
     expected_url_suffix: str,
 ) -> None:
     """Set up a TTS platform and call service clear cache."""
-    calls = async_mock_service(hass, DOMAIN_MP, SERVICE_PLAY_MEDIA)
+    calls = async_mock_service(menuai, DOMAIN_MP, SERVICE_PLAY_MEDIA)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         tts.DOMAIN,
         tts_service,
         service_data,
@@ -743,14 +743,14 @@ async def test_service_clear_cache(
     )
     # To make sure the file is persisted
     assert len(calls) == 1
-    await get_media_source_url(hass, calls[0].data[ATTR_MEDIA_CONTENT_ID])
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await get_media_source_url(menuai, calls[0].data[ATTR_MEDIA_CONTENT_ID])
+    await menuai.async_block_till_done(wait_background_tasks=True)
     assert (
         mock_tts_cache_dir
         / f"42f18378fd4393d18c8dd11d03fa9563c1e54491_en-us_-_{expected_url_suffix}.mp3"
     ).is_file()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         tts.DOMAIN, tts.SERVICE_CLEAR_CACHE, {}, blocking=True
     )
 
@@ -786,8 +786,8 @@ async def test_service_clear_cache(
     indirect=["setup"],
 )
 async def test_service_receive_voice(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     mock_tts_cache_dir: Path,
     setup: str,
     tts_service: str,
@@ -795,9 +795,9 @@ async def test_service_receive_voice(
     expected_url_suffix: str,
 ) -> None:
     """Set up a TTS platform and call service and receive voice."""
-    calls = async_mock_service(hass, DOMAIN_MP, SERVICE_PLAY_MEDIA)
+    calls = async_mock_service(menuai, DOMAIN_MP, SERVICE_PLAY_MEDIA)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         tts.DOMAIN,
         tts_service,
         service_data,
@@ -805,9 +805,9 @@ async def test_service_receive_voice(
     )
     assert len(calls) == 1
 
-    url = await get_media_source_url(hass, calls[0].data[ATTR_MEDIA_CONTENT_ID])
-    await hass.async_block_till_done()
-    client = await hass_client()
+    url = await get_media_source_url(menuai, calls[0].data[ATTR_MEDIA_CONTENT_ID])
+    await menuai.async_block_till_done()
+    client = await menuai_client()
     req = await client.get(url)
     tts_data = MOCK_DATA
     tts_data = tts.SpeechManager.write_tags(
@@ -822,7 +822,7 @@ async def test_service_receive_voice(
     assert await req.read() == tts_data
 
     extension, data = await tts.async_get_media_source_audio(
-        hass, calls[0].data[ATTR_MEDIA_CONTENT_ID]
+        menuai, calls[0].data[ATTR_MEDIA_CONTENT_ID]
     )
     assert extension == "mp3"
     assert tts_data == data
@@ -858,8 +858,8 @@ async def test_service_receive_voice(
     indirect=["setup"],
 )
 async def test_service_receive_voice_german(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     mock_tts_cache_dir: Path,
     setup: str,
     tts_service: str,
@@ -867,18 +867,18 @@ async def test_service_receive_voice_german(
     expected_url_suffix: str,
 ) -> None:
     """Set up a TTS platform and call service and receive voice."""
-    calls = async_mock_service(hass, DOMAIN_MP, SERVICE_PLAY_MEDIA)
+    calls = async_mock_service(menuai, DOMAIN_MP, SERVICE_PLAY_MEDIA)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         tts.DOMAIN,
         tts_service,
         service_data,
         blocking=True,
     )
     assert len(calls) == 1
-    url = await get_media_source_url(hass, calls[0].data[ATTR_MEDIA_CONTENT_ID])
-    await hass.async_block_till_done()
-    client = await hass_client()
+    url = await get_media_source_url(menuai, calls[0].data[ATTR_MEDIA_CONTENT_ID])
+    await menuai.async_block_till_done()
+    client = await menuai_client()
     req = await client.get(url)
     tts_data = MOCK_DATA
     tts_data = tts.SpeechManager.write_tags(
@@ -899,13 +899,13 @@ async def test_service_receive_voice_german(
     indirect=["setup"],
 )
 async def test_web_view_wrong_file(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     setup: str,
     expected_url_suffix: str,
 ) -> None:
     """Set up a TTS platform and receive wrong file from web."""
-    client = await hass_client()
+    client = await menuai_client()
 
     url = (
         "/api/tts_proxy/42f18378fd4393d18c8dd11d03fa9563c1e54491"
@@ -922,13 +922,13 @@ async def test_web_view_wrong_file(
     indirect=["setup"],
 )
 async def test_web_view_wrong_filename(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     setup: str,
     expected_url_suffix: str,
 ) -> None:
     """Set up a TTS platform and receive wrong filename from web."""
-    client = await hass_client()
+    client = await menuai_client()
 
     url = (
         "/api/tts_proxy/265944dsk32c1b2a621be5930510bb2cd"
@@ -967,7 +967,7 @@ async def test_web_view_wrong_filename(
     indirect=["setup"],
 )
 async def test_service_without_cache(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_tts_cache_dir: Path,
     setup: str,
     tts_service: str,
@@ -975,15 +975,15 @@ async def test_service_without_cache(
     expected_url_suffix: str,
 ) -> None:
     """Set up a TTS platform with cache and call service without cache."""
-    calls = async_mock_service(hass, DOMAIN_MP, SERVICE_PLAY_MEDIA)
+    calls = async_mock_service(menuai, DOMAIN_MP, SERVICE_PLAY_MEDIA)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         tts.DOMAIN,
         tts_service,
         service_data,
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(calls) == 1
     assert not (
         mock_tts_cache_dir
@@ -1015,22 +1015,22 @@ class MockEntityBoom(MockTTSEntity):
 
 @pytest.mark.parametrize("mock_provider", [MockProviderBoom(DEFAULT_LANG)])
 async def test_setup_legacy_cache_dir(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_tts_cache_dir: Path,
     mock_provider: MockTTSProvider,
 ) -> None:
     """Set up a TTS platform with cache and call service without cache."""
-    calls = async_mock_service(hass, DOMAIN_MP, SERVICE_PLAY_MEDIA)
+    calls = async_mock_service(menuai, DOMAIN_MP, SERVICE_PLAY_MEDIA)
 
     tts_data = MOCK_DATA
     cache_file = (
         mock_tts_cache_dir / "42f18378fd4393d18c8dd11d03fa9563c1e54491_en-us_-_test.mp3"
     )
 
-    await hass.async_add_executor_job(Path(cache_file).write_bytes, tts_data)
-    await mock_setup(hass, mock_provider)
+    await menuai.async_add_executor_job(Path(cache_file).write_bytes, tts_data)
+    await mock_setup(menuai, mock_provider)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         tts.DOMAIN,
         "test_say",
         {
@@ -1043,32 +1043,32 @@ async def test_setup_legacy_cache_dir(
     assert len(calls) == 1
 
     with patch(
-        "homeassistant.components.tts.secrets.token_urlsafe", return_value="test_token"
+        "menuai.components.tts.secrets.token_urlsafe", return_value="test_token"
     ):
         assert await get_media_source_url(
-            hass, calls[0].data[ATTR_MEDIA_CONTENT_ID]
+            menuai, calls[0].data[ATTR_MEDIA_CONTENT_ID]
         ) == ("/api/tts_proxy/test_token.mp3")
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
 
 @pytest.mark.parametrize("mock_tts_entity", [MockEntityBoom(DEFAULT_LANG)])
 async def test_setup_cache_dir(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_tts_cache_dir: Path,
     mock_tts_entity: MockTTSEntity,
 ) -> None:
     """Set up a TTS platform with cache and call service without cache."""
-    calls = async_mock_service(hass, DOMAIN_MP, SERVICE_PLAY_MEDIA)
+    calls = async_mock_service(menuai, DOMAIN_MP, SERVICE_PLAY_MEDIA)
 
     tts_data = MOCK_DATA
     cache_file = mock_tts_cache_dir / (
         "42f18378fd4393d18c8dd11d03fa9563c1e54491_en-us_-_tts.test.mp3"
     )
 
-    await hass.async_add_executor_job(Path(cache_file).write_bytes, tts_data)
-    await mock_config_entry_setup(hass, mock_tts_entity)
+    await menuai.async_add_executor_job(Path(cache_file).write_bytes, tts_data)
+    await mock_config_entry_setup(menuai, mock_tts_entity)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         tts.DOMAIN,
         "speak",
         {
@@ -1081,12 +1081,12 @@ async def test_setup_cache_dir(
 
     assert len(calls) == 1
     with patch(
-        "homeassistant.components.tts.secrets.token_urlsafe", return_value="test_token"
+        "menuai.components.tts.secrets.token_urlsafe", return_value="test_token"
     ):
         assert await get_media_source_url(
-            hass, calls[0].data[ATTR_MEDIA_CONTENT_ID]
+            menuai, calls[0].data[ATTR_MEDIA_CONTENT_ID]
         ) == ("/api/tts_proxy/test_token.mp3")
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
 
 class MockProviderEmpty(MockTTSProvider):
@@ -1137,16 +1137,16 @@ class MockEntityEmpty(MockTTSEntity):
     indirect=["setup"],
 )
 async def test_service_get_tts_error(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     setup: str,
     tts_service: str,
     service_data: dict[str, Any],
 ) -> None:
     """Set up a TTS platform with wrong get_tts_audio."""
-    calls = async_mock_service(hass, DOMAIN_MP, SERVICE_PLAY_MEDIA)
+    calls = async_mock_service(menuai, DOMAIN_MP, SERVICE_PLAY_MEDIA)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         tts.DOMAIN,
         tts_service,
         service_data,
@@ -1154,16 +1154,16 @@ async def test_service_get_tts_error(
     )
     assert len(calls) == 1
     assert (
-        await retrieve_media(hass, hass_client, calls[0].data[ATTR_MEDIA_CONTENT_ID])
+        await retrieve_media(menuai, menuai_client, calls[0].data[ATTR_MEDIA_CONTENT_ID])
         == HTTPStatus.INTERNAL_SERVER_ERROR
     )
 
 
 async def test_legacy_cannot_retrieve_without_token(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_provider: MockTTSProvider,
     mock_tts_cache_dir: Path,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Verify that a TTS cannot be retrieved by filename directly."""
     tts_data = MOCK_DATA
@@ -1171,10 +1171,10 @@ async def test_legacy_cannot_retrieve_without_token(
         mock_tts_cache_dir / "42f18378fd4393d18c8dd11d03fa9563c1e54491_en_-_test.mp3"
     )
 
-    await hass.async_add_executor_job(Path(cache_file).write_bytes, tts_data)
-    await mock_setup(hass, mock_provider)
+    await menuai.async_add_executor_job(Path(cache_file).write_bytes, tts_data)
+    await mock_setup(menuai, mock_provider)
 
-    client = await hass_client()
+    client = await menuai_client()
 
     url = "/api/tts_proxy/42f18378fd4393d18c8dd11d03fa9563c1e54491_en_-_test.mp3"
 
@@ -1183,10 +1183,10 @@ async def test_legacy_cannot_retrieve_without_token(
 
 
 async def test_cannot_retrieve_without_token(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_tts_entity: MockTTSEntity,
     mock_tts_cache_dir: Path,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Verify that a TTS cannot be retrieved by filename directly."""
     tts_data = MOCK_DATA
@@ -1194,10 +1194,10 @@ async def test_cannot_retrieve_without_token(
         "42f18378fd4393d18c8dd11d03fa9563c1e54491_en-us_-_tts.test.mp3"
     )
 
-    await hass.async_add_executor_job(Path(cache_file).write_bytes, tts_data)
-    await mock_config_entry_setup(hass, mock_tts_entity)
+    await menuai.async_add_executor_job(Path(cache_file).write_bytes, tts_data)
+    await mock_config_entry_setup(menuai, mock_tts_entity)
 
-    client = await hass_client()
+    client = await menuai_client()
 
     url = "/api/tts_proxy/42f18378fd4393d18c8dd11d03fa9563c1e54491_en-us_-_tts.test.mp3"
 
@@ -1215,13 +1215,13 @@ async def test_cannot_retrieve_without_token(
     indirect=["setup"],
 )
 async def test_web_get_url(
-    hass_client: ClientSessionGenerator, setup: str, data: dict[str, Any]
+    menuai_client: ClientSessionGenerator, setup: str, data: dict[str, Any]
 ) -> None:
     """Set up a TTS platform and receive file from web."""
-    client = await hass_client()
+    client = await menuai_client()
 
     with patch(
-        "homeassistant.components.tts.secrets.token_urlsafe", return_value="test_token"
+        "menuai.components.tts.secrets.token_urlsafe", return_value="test_token"
     ):
         url = "/api/tts_get_url"
         data |= {"message": "There is someone at the door."}
@@ -1247,13 +1247,13 @@ async def test_web_get_url(
     indirect=["setup"],
 )
 async def test_web_get_url_missing_data(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     setup: str,
     data: dict[str, Any],
 ) -> None:
     """Set up a TTS platform and receive wrong file from web."""
-    client = await hass_client()
+    client = await menuai_client()
     url = "/api/tts_get_url"
 
     req = await client.post(url, json=data)
@@ -1305,7 +1305,7 @@ async def test_tags_with_wave() -> None:
     ],
 )
 async def test_generate_media_source_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup: str,
     result_engine: str,
     engine: str | None,
@@ -1316,7 +1316,7 @@ async def test_generate_media_source_id(
 ) -> None:
     """Test generating a media source ID."""
     media_source_id = tts.generate_media_source_id(
-        hass, "msg", engine, language, options, cache
+        menuai, "msg", engine, language, options, cache
     )
 
     assert media_source_id.startswith("media-source://tts/")
@@ -1345,15 +1345,15 @@ async def test_generate_media_source_id(
     ],
 )
 async def test_generate_media_source_id_invalid_options(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup: str,
     engine: str | None,
     language: str | None,
     options: dict[str, Any] | None,
 ) -> None:
     """Test generating a media source ID."""
-    with pytest.raises(HomeAssistantError):
-        tts.generate_media_source_id(hass, "msg", engine, language, options, None)
+    with pytest.raises(menuaiError):
+        tts.generate_media_source_id(menuai, "msg", engine, language, options, None)
 
 
 @pytest.mark.parametrize(
@@ -1364,22 +1364,22 @@ async def test_generate_media_source_id_invalid_options(
     ],
     indirect=["setup"],
 )
-def test_resolve_engine(hass: HomeAssistant, setup: str, engine_id: str) -> None:
+def test_resolve_engine(menuai: menuai, setup: str, engine_id: str) -> None:
     """Test resolving engine."""
-    assert tts.async_resolve_engine(hass, None) == engine_id
-    assert tts.async_resolve_engine(hass, engine_id) == engine_id
-    assert tts.async_resolve_engine(hass, "non-existing") is None
+    assert tts.async_resolve_engine(menuai, None) == engine_id
+    assert tts.async_resolve_engine(menuai, engine_id) == engine_id
+    assert tts.async_resolve_engine(menuai, "non-existing") is None
 
     with (
-        patch.dict(hass.data[tts.DATA_TTS_MANAGER].providers, {}, clear=True),
-        patch.dict(hass.data[tts.DOMAIN]._platforms, {}, clear=True),
-        patch.dict(hass.data[tts.DOMAIN]._entities, {}, clear=True),
+        patch.dict(menuai.data[tts.DATA_TTS_MANAGER].providers, {}, clear=True),
+        patch.dict(menuai.data[tts.DOMAIN]._platforms, {}, clear=True),
+        patch.dict(menuai.data[tts.DOMAIN]._entities, {}, clear=True),
     ):
-        assert tts.async_resolve_engine(hass, None) is None
+        assert tts.async_resolve_engine(menuai, None) is None
 
 
 async def test_legacy_fetching_in_async(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test async fetching of data for a legacy provider."""
     tts_audio: asyncio.Future[bytes] = asyncio.Future()
@@ -1402,27 +1402,27 @@ async def test_legacy_fetching_in_async(
         ) -> tts.TtsAudioType:
             return ("mp3", await tts_audio)
 
-    await mock_setup(hass, ProviderWithAsyncFetching(DEFAULT_LANG))
+    await mock_setup(menuai, ProviderWithAsyncFetching(DEFAULT_LANG))
 
     # Test async_get_media_source_audio
     media_source_id = tts.generate_media_source_id(
-        hass,
+        menuai,
         "test message",
         "test",
         "en_US",
         cache=None,
     )
 
-    task = hass.async_create_task(
-        tts.async_get_media_source_audio(hass, media_source_id)
+    task = menuai.async_create_task(
+        tts.async_get_media_source_audio(menuai, media_source_id)
     )
-    task2 = hass.async_create_task(
-        tts.async_get_media_source_audio(hass, media_source_id)
+    task2 = menuai.async_create_task(
+        tts.async_get_media_source_audio(menuai, media_source_id)
     )
 
-    url = await get_media_source_url(hass, media_source_id)
-    client = await hass_client()
-    client_get_task = hass.async_create_task(client.get(url))
+    url = await get_media_source_url(menuai, media_source_id)
+    client = await menuai_client()
+    client_get_task = menuai.async_create_task(client.get(url))
 
     # Make sure that tasks are waiting for our future to resolve
     done, pending = await asyncio.wait((task, task2, client_get_task), timeout=0.1)
@@ -1440,23 +1440,23 @@ async def test_legacy_fetching_in_async(
 
     # Test error is not cached
     media_source_id = tts.generate_media_source_id(
-        hass, "test message 2", "test", "en_US", None, None
+        menuai, "test message 2", "test", "en_US", None, None
     )
     tts_audio = asyncio.Future()
-    tts_audio.set_exception(HomeAssistantError("test error"))
-    with pytest.raises(HomeAssistantError):
-        assert await tts.async_get_media_source_audio(hass, media_source_id)
+    tts_audio.set_exception(menuaiError("test error"))
+    with pytest.raises(menuaiError):
+        assert await tts.async_get_media_source_audio(menuai, media_source_id)
 
     tts_audio = asyncio.Future()
     tts_audio.set_result(b"test 2")
-    assert await tts.async_get_media_source_audio(hass, media_source_id) == (
+    assert await tts.async_get_media_source_audio(menuai, media_source_id) == (
         "mp3",
         b"test 2",
     )
 
 
 async def test_fetching_in_async(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test async fetching of data."""
     tts_audio: asyncio.Future[bytes] = asyncio.Future()
@@ -1469,27 +1469,27 @@ async def test_fetching_in_async(
         ) -> tts.TtsAudioType:
             return ("mp3", await tts_audio)
 
-    await mock_config_entry_setup(hass, EntityWithAsyncFetching(DEFAULT_LANG))
+    await mock_config_entry_setup(menuai, EntityWithAsyncFetching(DEFAULT_LANG))
 
     # Test async_get_media_source_audio
     media_source_id = tts.generate_media_source_id(
-        hass,
+        menuai,
         "test message",
         "tts.test",
         "en_US",
         cache=None,
     )
 
-    task = hass.async_create_task(
-        tts.async_get_media_source_audio(hass, media_source_id)
+    task = menuai.async_create_task(
+        tts.async_get_media_source_audio(menuai, media_source_id)
     )
-    task2 = hass.async_create_task(
-        tts.async_get_media_source_audio(hass, media_source_id)
+    task2 = menuai.async_create_task(
+        tts.async_get_media_source_audio(menuai, media_source_id)
     )
 
-    url = await get_media_source_url(hass, media_source_id)
-    client = await hass_client()
-    client_get_task = hass.async_create_task(client.get(url))
+    url = await get_media_source_url(menuai, media_source_id)
+    client = await menuai_client()
+    client_get_task = menuai.async_create_task(client.get(url))
 
     # Make sure that tasks are waiting for our future to resolve
     done, pending = await asyncio.wait((task, task2, client_get_task), timeout=0.1)
@@ -1507,16 +1507,16 @@ async def test_fetching_in_async(
 
     # Test error is not cached
     media_source_id = tts.generate_media_source_id(
-        hass, "test message 2", "tts.test", "en_US", None, None
+        menuai, "test message 2", "tts.test", "en_US", None, None
     )
     tts_audio = asyncio.Future()
-    tts_audio.set_exception(HomeAssistantError("test error"))
-    with pytest.raises(HomeAssistantError):
-        assert await tts.async_get_media_source_audio(hass, media_source_id)
+    tts_audio.set_exception(menuaiError("test error"))
+    with pytest.raises(menuaiError):
+        assert await tts.async_get_media_source_audio(menuai, media_source_id)
 
     tts_audio = asyncio.Future()
     tts_audio.set_result(b"test 2")
-    assert await tts.async_get_media_source_audio(hass, media_source_id) == (
+    assert await tts.async_get_media_source_audio(menuai, media_source_id) == (
         "mp3",
         b"test 2",
     )
@@ -1530,13 +1530,13 @@ async def test_fetching_in_async(
     indirect=["setup"],
 )
 async def test_ws_list_engines_filter_deprecated(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     setup: str,
     engine_id: str,
 ) -> None:
     """Test listing tts engines and supported languages."""
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
 
     await client.send_json_auto_id({"type": "tts/engine/list"})
 
@@ -1552,7 +1552,7 @@ async def test_ws_list_engines_filter_deprecated(
         ]
     }
 
-    hass.data[tts.DATA_TTS_MANAGER].providers[engine_id].has_entity = True
+    menuai.data[tts.DATA_TTS_MANAGER].providers[engine_id].has_entity = True
 
     await client.send_json_auto_id({"type": "tts/engine/list"})
 
@@ -1570,14 +1570,14 @@ async def test_ws_list_engines_filter_deprecated(
     indirect=["setup"],
 )
 async def test_ws_list_engines(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     setup: str,
     engine_id: str,
     extra_data: dict[str, str],
 ) -> None:
     """Test listing tts engines and supported languages."""
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
 
     await client.send_json_auto_id({"type": "tts/engine/list"})
 
@@ -1649,8 +1649,8 @@ async def test_ws_list_engines(
 
 
 async def test_ws_list_engines_deprecated(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     mock_tts_entity: MockTTSEntity,
 ) -> None:
     """Test listing tts engines.
@@ -1661,16 +1661,16 @@ async def test_ws_list_engines_deprecated(
 
     mock_provider = MockTTSProvider(DEFAULT_LANG)
     mock_provider_2 = MockTTSProvider(DEFAULT_LANG)
-    mock_integration(hass, MockModule(domain="test"))
-    mock_platform(hass, "test.tts", MockTTS(mock_provider))
-    mock_integration(hass, MockModule(domain="test_2"))
-    mock_platform(hass, "test_2.tts", MockTTS(mock_provider_2))
+    mock_integration(menuai, MockModule(domain="test"))
+    mock_platform(menuai, "test.tts", MockTTS(mock_provider))
+    mock_integration(menuai, MockModule(domain="test_2"))
+    mock_platform(menuai, "test_2.tts", MockTTS(mock_provider_2))
     await async_setup_component(
-        hass, "tts", {"tts": [{"platform": "test"}, {"platform": "test_2"}]}
+        menuai, "tts", {"tts": [{"platform": "test"}, {"platform": "test_2"}]}
     )
-    await mock_config_entry_setup(hass, mock_tts_entity)
+    await mock_config_entry_setup(menuai, mock_tts_entity)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
 
     await client.send_json_auto_id({"type": "tts/engine/list"})
 
@@ -1706,14 +1706,14 @@ async def test_ws_list_engines_deprecated(
     indirect=["setup"],
 )
 async def test_ws_get_engine(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     setup: str,
     engine_id: str,
     extra_data: dict[str, str],
 ) -> None:
     """Test getting an tts engine."""
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
 
     await client.send_json_auto_id({"type": "tts/engine/get", "engine_id": engine_id})
 
@@ -1734,10 +1734,10 @@ async def test_ws_get_engine(
     indirect=["setup"],
 )
 async def test_ws_get_engine_none_existing(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, setup: str, engine_id: str
+    menuai: menuai, menuai_ws_client: WebSocketGenerator, setup: str, engine_id: str
 ) -> None:
     """Test getting a non existing tts engine."""
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
 
     await client.send_json_auto_id({"type": "tts/engine/get", "engine_id": engine_id})
 
@@ -1755,10 +1755,10 @@ async def test_ws_get_engine_none_existing(
     indirect=["setup"],
 )
 async def test_ws_list_voices(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, setup: str, engine_id: str
+    menuai: menuai, menuai_ws_client: WebSocketGenerator, setup: str, engine_id: str
 ) -> None:
     """Test listing supported voices for a tts engine and language."""
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
 
     await client.send_json_auto_id(
         {
@@ -1805,9 +1805,9 @@ async def test_ws_list_voices(
     }
 
 
-async def test_async_convert_audio_error(hass: HomeAssistant) -> None:
+async def test_async_convert_audio_error(menuai: menuai) -> None:
     """Test that ffmpeg failing during audio conversion will raise an error."""
-    assert await async_setup_component(hass, ffmpeg.DOMAIN, {})
+    assert await async_setup_component(menuai, ffmpeg.DOMAIN, {})
 
     async def bad_data_gen():
         yield bytes(0)
@@ -1815,13 +1815,13 @@ async def test_async_convert_audio_error(hass: HomeAssistant) -> None:
     with pytest.raises(RuntimeError):
         # Simulate a bad WAV file
         async for _chunk in tts._async_convert_audio(
-            hass, "wav", bad_data_gen(), "mp3"
+            menuai, "wav", bad_data_gen(), "mp3"
         ):
             pass
 
 
 async def test_default_engine_prefer_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_tts_entity: MockTTSEntity,
     mock_provider: MockTTSProvider,
 ) -> None:
@@ -1832,15 +1832,15 @@ async def test_default_engine_prefer_entity(
     """
     mock_tts_entity._attr_name = "New test"
 
-    await mock_setup(hass, mock_provider)
-    await mock_config_entry_setup(hass, mock_tts_entity)
-    await hass.async_block_till_done()
+    await mock_setup(menuai, mock_provider)
+    await mock_config_entry_setup(menuai, mock_tts_entity)
+    await menuai.async_block_till_done()
 
-    entity_engine = tts.async_resolve_engine(hass, "tts.new_test")
+    entity_engine = tts.async_resolve_engine(menuai, "tts.new_test")
     assert entity_engine == "tts.new_test"
-    provider_engine = tts.async_resolve_engine(hass, "test")
+    provider_engine = tts.async_resolve_engine(menuai, "test")
     assert provider_engine == "test"
-    assert tts.async_default_engine(hass) == "tts.new_test"
+    assert tts.async_default_engine(menuai) == "tts.new_test"
 
 
 @pytest.mark.parametrize(
@@ -1853,7 +1853,7 @@ async def test_default_engine_prefer_entity(
     ],
 )
 async def test_default_engine_prefer_cloud_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_provider: MockTTSProvider,
     config_flow_test_domains: str,
 ) -> None:
@@ -1863,30 +1863,30 @@ async def test_default_engine_prefer_cloud_entity(
     and a legacy provider.
     The test asserts async_default_engine returns the entity from domain cloud.
     """
-    await mock_setup(hass, mock_provider)
+    await mock_setup(menuai, mock_provider)
     for domain in config_flow_test_domains:
         entity = MockTTSEntity(DEFAULT_LANG)
         entity._attr_name = f"{domain} TTS entity"
-        await mock_config_entry_setup(hass, entity, test_domain=domain)
-    await hass.async_block_till_done()
+        await mock_config_entry_setup(menuai, entity, test_domain=domain)
+    await menuai.async_block_till_done()
 
     for domain in config_flow_test_domains:
-        entity_engine = tts.async_resolve_engine(hass, f"tts.{domain}_tts_entity")
+        entity_engine = tts.async_resolve_engine(menuai, f"tts.{domain}_tts_entity")
         assert entity_engine == f"tts.{domain}_tts_entity"
-    provider_engine = tts.async_resolve_engine(hass, "test")
+    provider_engine = tts.async_resolve_engine(menuai, "test")
     assert provider_engine == "test"
-    assert tts.async_default_engine(hass) == "tts.cloud_tts_entity"
+    assert tts.async_default_engine(menuai) == "tts.cloud_tts_entity"
 
 
-async def test_stream(hass: HomeAssistant, mock_tts_entity: MockTTSEntity) -> None:
+async def test_stream(menuai: menuai, mock_tts_entity: MockTTSEntity) -> None:
     """Test creating streams."""
-    await mock_config_entry_setup(hass, mock_tts_entity)
+    await mock_config_entry_setup(menuai, mock_tts_entity)
 
-    stream = tts.async_create_stream(hass, mock_tts_entity.entity_id)
+    stream = tts.async_create_stream(menuai, mock_tts_entity.entity_id)
     assert stream.language == mock_tts_entity.default_language
     assert stream.options == (mock_tts_entity.default_options or {})
     assert stream.supports_streaming_input is False
-    assert tts.async_get_stream(hass, stream.token) is stream
+    assert tts.async_get_stream(menuai, stream.token) is stream
     stream.async_set_message("beer")
     result_data = b"".join([chunk async for chunk in stream.async_stream_result()])
     assert result_data == MOCK_DATA
@@ -1914,15 +1914,15 @@ async def test_stream(hass: HomeAssistant, mock_tts_entity: MockTTSEntity) -> No
         yield "ll"
         yield "o"
 
-    stream = tts.async_create_stream(hass, mock_tts_entity.entity_id)
+    stream = tts.async_create_stream(menuai, mock_tts_entity.entity_id)
     assert stream.supports_streaming_input is True
     stream.async_set_message_stream(stream_message())
     result_data = b"".join([chunk async for chunk in stream.async_stream_result()])
     assert result_data == b"hello"
 
     data = b"beer"
-    stream2 = MockResultStream(hass, "wav", data)
-    assert tts.async_get_stream(hass, stream2.token) is stream2
+    stream2 = MockResultStream(menuai, "wav", data)
+    assert tts.async_get_stream(menuai, stream2.token) is stream2
     assert stream2.extension == "wav"
     result_data = b"".join([chunk async for chunk in stream2.async_stream_result()])
     assert result_data == data

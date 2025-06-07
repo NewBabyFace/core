@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .coordinator import PhilipsTVDataUpdateCoordinator
 

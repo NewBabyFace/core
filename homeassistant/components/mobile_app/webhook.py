@@ -16,26 +16,26 @@ from nacl.exceptions import CryptoError
 from nacl.secret import SecretBox
 import voluptuous as vol
 
-from homeassistant.components import (
+from menuai.components import (
     camera,
     cloud,
     conversation,
-    notify as hass_notify,
+    notify as menuai_notify,
     tag,
 )
-from homeassistant.components.binary_sensor import BinarySensorDeviceClass
-from homeassistant.components.camera import CameraEntityFeature
-from homeassistant.components.device_tracker import (
+from menuai.components.binary_sensor import BinarySensorDeviceClass
+from menuai.components.camera import CameraEntityFeature
+from menuai.components.device_tracker import (
     ATTR_BATTERY,
     ATTR_GPS,
     ATTR_GPS_ACCURACY,
     ATTR_LOCATION_NAME,
 )
-from homeassistant.components.frontend import MANIFEST_JSON
-from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
-from homeassistant.components.zone import DOMAIN as ZONE_DOMAIN
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.components.frontend import MANIFEST_JSON
+from menuai.components.sensor import SensorDeviceClass, SensorStateClass
+from menuai.components.zone import DOMAIN as ZONE_DOMAIN
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_DEVICE_ID,
     ATTR_DOMAIN,
     ATTR_SERVICE,
@@ -46,16 +46,16 @@ from homeassistant.const import (
     CONF_WEBHOOK_ID,
     EntityCategory,
 )
-from homeassistant.core import EventOrigin, HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceNotFound, TemplateError
-from homeassistant.helpers import (
+from menuai.core import EventOrigin, menuai
+from menuai.exceptions import menuaiError, ServiceNotFound, TemplateError
+from menuai.helpers import (
     config_validation as cv,
     device_registry as dr,
     entity_registry as er,
     template,
 )
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.util.decorator import Registry
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.util.decorator import Registry
 
 from .const import (
     ATTR_ALTITUDE,
@@ -122,7 +122,7 @@ _LOGGER = logging.getLogger(__name__)
 DELAY_SAVE = 10
 
 WEBHOOK_COMMANDS: Registry[
-    str, Callable[[HomeAssistant, ConfigEntry, Any], Coroutine[Any, Any, Response]]
+    str, Callable[[menuai, ConfigEntry, Any], Coroutine[Any, Any, Response]]
 ] = Registry()
 
 SENSOR_TYPES = (ATTR_SENSOR_TYPE_BINARY_SENSOR, ATTR_SENSOR_TYPE_SENSOR)
@@ -163,7 +163,7 @@ def validate_schema(schema):
         """Wrap function so we validate schema."""
 
         @wraps(func)
-        async def validate_and_run(hass, config_entry, data):
+        async def validate_and_run(menuai, config_entry, data):
             """Validate input and call handler."""
             try:
                 data = schema(data)
@@ -172,7 +172,7 @@ def validate_schema(schema):
                 _LOGGER.error("Received invalid webhook payload: %s", err)
                 return empty_okay_response()
 
-            return await func(hass, config_entry, data)
+            return await func(menuai, config_entry, data)
 
         return validate_and_run
 
@@ -180,13 +180,13 @@ def validate_schema(schema):
 
 
 async def handle_webhook(
-    hass: HomeAssistant, webhook_id: str, request: Request
+    menuai: menuai, webhook_id: str, request: Request
 ) -> Response:
     """Handle webhook callback."""
-    if webhook_id in hass.data[DOMAIN][DATA_DELETED_IDS]:
+    if webhook_id in menuai.data[DOMAIN][DATA_DELETED_IDS]:
         return Response(status=410)
 
-    config_entry: ConfigEntry = hass.data[DOMAIN][DATA_CONFIG_ENTRIES][webhook_id]
+    config_entry: ConfigEntry = menuai.data[DOMAIN][DATA_CONFIG_ENTRIES][webhook_id]
 
     device_name: str = config_entry.data[ATTR_DEVICE_NAME]
 
@@ -225,7 +225,7 @@ async def handle_webhook(
             webhook_payload = decrypt_payload(config_entry.data[CONF_SECRET], enc_data)
             if ATTR_NO_LEGACY_ENCRYPTION not in config_entry.data:
                 data = {**config_entry.data, ATTR_NO_LEGACY_ENCRYPTION: True}
-                hass.config_entries.async_update_entry(config_entry, data=data)
+                menuai.config_entries.async_update_entry(config_entry, data=data)
         except CryptoError:
             if ATTR_NO_LEGACY_ENCRYPTION not in config_entry.data:
                 try:
@@ -263,7 +263,7 @@ async def handle_webhook(
 
     # Shield so we make sure we finish the webhook, even if sender hangs up.
     return await asyncio.shield(
-        WEBHOOK_COMMANDS[webhook_type](hass, config_entry, webhook_payload)
+        WEBHOOK_COMMANDS[webhook_type](menuai, config_entry, webhook_payload)
     )
 
 
@@ -276,11 +276,11 @@ async def handle_webhook(
     }
 )
 async def webhook_call_service(
-    hass: HomeAssistant, config_entry: ConfigEntry, data: dict[str, Any]
+    menuai: menuai, config_entry: ConfigEntry, data: dict[str, Any]
 ) -> Response:
     """Handle a call service webhook."""
     try:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             data[ATTR_DOMAIN],
             data[ATTR_SERVICE],
             data[ATTR_SERVICE_DATA],
@@ -309,11 +309,11 @@ async def webhook_call_service(
     }
 )
 async def webhook_fire_event(
-    hass: HomeAssistant, config_entry: ConfigEntry, data: dict[str, Any]
+    menuai: menuai, config_entry: ConfigEntry, data: dict[str, Any]
 ) -> Response:
     """Handle a fire event webhook."""
     event_type: str = data[ATTR_EVENT_TYPE]
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         event_type,
         data[ATTR_EVENT_DATA],
         EventOrigin.remote,
@@ -331,11 +331,11 @@ async def webhook_fire_event(
     }
 )
 async def webhook_conversation_process(
-    hass: HomeAssistant, config_entry: ConfigEntry, data: dict[str, Any]
+    menuai: menuai, config_entry: ConfigEntry, data: dict[str, Any]
 ) -> Response:
     """Handle a conversation process webhook."""
     result = await conversation.async_converse(
-        hass,
+        menuai,
         text=data["text"],
         language=data.get("language"),
         conversation_id=data.get("conversation_id"),
@@ -347,10 +347,10 @@ async def webhook_conversation_process(
 @WEBHOOK_COMMANDS.register("stream_camera")
 @validate_schema({vol.Required(ATTR_CAMERA_ENTITY_ID): cv.string})
 async def webhook_stream_camera(
-    hass: HomeAssistant, config_entry: ConfigEntry, data: dict[str, str]
+    menuai: menuai, config_entry: ConfigEntry, data: dict[str, str]
 ) -> Response:
     """Handle a request to HLS-stream a camera."""
-    if (camera_state := hass.states.get(data[ATTR_CAMERA_ENTITY_ID])) is None:
+    if (camera_state := menuai.states.get(data[ATTR_CAMERA_ENTITY_ID])) is None:
         return webhook_response(
             {"success": False},
             registration=config_entry.data,
@@ -364,9 +364,9 @@ async def webhook_stream_camera(
     if camera_state.attributes[ATTR_SUPPORTED_FEATURES] & CameraEntityFeature.STREAM:
         try:
             resp["hls_path"] = await camera.async_request_stream(
-                hass, camera_state.entity_id, "hls"
+                menuai, camera_state.entity_id, "hls"
             )
-        except HomeAssistantError:
+        except menuaiError:
             resp["hls_path"] = None
     else:
         resp["hls_path"] = None
@@ -375,9 +375,9 @@ async def webhook_stream_camera(
 
 
 @lru_cache
-def _cached_template(template_str: str, hass: HomeAssistant) -> template.Template:
+def _cached_template(template_str: str, menuai: menuai) -> template.Template:
     """Return a cached template."""
-    return template.Template(template_str, hass)
+    return template.Template(template_str, menuai)
 
 
 @WEBHOOK_COMMANDS.register("render_template")
@@ -390,13 +390,13 @@ def _cached_template(template_str: str, hass: HomeAssistant) -> template.Templat
     }
 )
 async def webhook_render_template(
-    hass: HomeAssistant, config_entry: ConfigEntry, data: dict[str, Any]
+    menuai: menuai, config_entry: ConfigEntry, data: dict[str, Any]
 ) -> Response:
     """Handle a render template webhook."""
     resp = {}
     for key, item in data.items():
         try:
-            tpl = _cached_template(item[ATTR_TEMPLATE], hass)
+            tpl = _cached_template(item[ATTR_TEMPLATE], menuai)
             resp[key] = tpl.async_render(item.get(ATTR_TEMPLATE_VARIABLES))
         except TemplateError as ex:
             resp[key] = {"error": str(ex)}
@@ -423,11 +423,11 @@ async def webhook_render_template(
     )
 )
 async def webhook_update_location(
-    hass: HomeAssistant, config_entry: ConfigEntry, data: dict[str, Any]
+    menuai: menuai, config_entry: ConfigEntry, data: dict[str, Any]
 ) -> Response:
     """Handle an update location webhook."""
     async_dispatcher_send(
-        hass, SIGNAL_LOCATION_UPDATE.format(config_entry.entry_id), data
+        menuai, SIGNAL_LOCATION_UPDATE.format(config_entry.entry_id), data
     )
     return empty_okay_response()
 
@@ -444,12 +444,12 @@ async def webhook_update_location(
     }
 )
 async def webhook_update_registration(
-    hass: HomeAssistant, config_entry: ConfigEntry, data: dict[str, Any]
+    menuai: menuai, config_entry: ConfigEntry, data: dict[str, Any]
 ) -> Response:
     """Handle an update registration webhook."""
     new_registration = {**config_entry.data, **data}
 
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
 
     device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
@@ -460,9 +460,9 @@ async def webhook_update_registration(
         sw_version=new_registration[ATTR_OS_VERSION],
     )
 
-    hass.config_entries.async_update_entry(config_entry, data=new_registration)
+    menuai.config_entries.async_update_entry(config_entry, data=new_registration)
 
-    await hass_notify.async_reload(hass, DOMAIN)
+    await menuai_notify.async_reload(menuai, DOMAIN)
 
     return webhook_response(
         safe_registration(new_registration),
@@ -472,7 +472,7 @@ async def webhook_update_registration(
 
 @WEBHOOK_COMMANDS.register("enable_encryption")
 async def webhook_enable_encryption(
-    hass: HomeAssistant, config_entry: ConfigEntry, data: Any
+    menuai: menuai, config_entry: ConfigEntry, data: Any
 ) -> Response:
     """Handle a encryption enable webhook."""
     if config_entry.data[ATTR_SUPPORTS_ENCRYPTION]:
@@ -492,7 +492,7 @@ async def webhook_enable_encryption(
         CONF_SECRET: secret,
     }
 
-    hass.config_entries.async_update_entry(config_entry, data=update_data)
+    menuai.config_entries.async_update_entry(config_entry, data=update_data)
 
     return json_response({"secret": secret})
 
@@ -550,7 +550,7 @@ def _extract_sensor_unique_id(webhook_id: str, unique_id: str) -> str:
     )
 )
 async def webhook_register_sensor(
-    hass: HomeAssistant, config_entry: ConfigEntry, data: dict[str, Any]
+    menuai: menuai, config_entry: ConfigEntry, data: dict[str, Any]
 ) -> Response:
     """Handle a register sensor webhook."""
     entity_type: str = data[ATTR_SENSOR_TYPE]
@@ -558,7 +558,7 @@ async def webhook_register_sensor(
     device_name: str = config_entry.data[ATTR_DEVICE_NAME]
 
     unique_store_key = _gen_unique_id(config_entry.data[CONF_WEBHOOK_ID], unique_id)
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
     existing_sensor = entity_registry.async_get_entity_id(
         entity_type, DOMAIN, unique_store_key
     )
@@ -601,7 +601,7 @@ async def webhook_register_sensor(
         if changes:
             entity_registry.async_update_entity(existing_sensor, **changes)
 
-        async_dispatcher_send(hass, f"{SIGNAL_SENSOR_UPDATE}-{unique_store_key}", data)
+        async_dispatcher_send(menuai, f"{SIGNAL_SENSOR_UPDATE}-{unique_store_key}", data)
     else:
         data[CONF_UNIQUE_ID] = unique_store_key
         data[CONF_NAME] = (
@@ -609,7 +609,7 @@ async def webhook_register_sensor(
         )
 
         register_signal = f"{DOMAIN}_{data[ATTR_SENSOR_TYPE]}_register"
-        async_dispatcher_send(hass, register_signal, data)
+        async_dispatcher_send(menuai, register_signal, data)
 
     return webhook_response(
         {"success": True},
@@ -637,12 +637,12 @@ async def webhook_register_sensor(
     )
 )
 async def webhook_update_sensor_states(
-    hass: HomeAssistant, config_entry: ConfigEntry, data: list[dict[str, Any]]
+    menuai: menuai, config_entry: ConfigEntry, data: list[dict[str, Any]]
 ) -> Response:
     """Handle an update sensor states webhook."""
     device_name: str = config_entry.data[ATTR_DEVICE_NAME]
     resp: dict[str, Any] = {}
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
 
     for sensor in data:
         entity_type: str = sensor[ATTR_SENSOR_TYPE]
@@ -686,7 +686,7 @@ async def webhook_update_sensor_states(
 
         sensor[CONF_WEBHOOK_ID] = config_entry.data[CONF_WEBHOOK_ID]
         async_dispatcher_send(
-            hass,
+            menuai,
             f"{SIGNAL_SENSOR_UPDATE}-{unique_store_key}",
             sensor,
         )
@@ -704,52 +704,52 @@ async def webhook_update_sensor_states(
 
 @WEBHOOK_COMMANDS.register("get_zones")
 async def webhook_get_zones(
-    hass: HomeAssistant, config_entry: ConfigEntry, data: Any
+    menuai: menuai, config_entry: ConfigEntry, data: Any
 ) -> Response:
     """Handle a get zones webhook."""
     zones = [
-        hass.states.get(entity_id)
-        for entity_id in sorted(hass.states.async_entity_ids(ZONE_DOMAIN))
+        menuai.states.get(entity_id)
+        for entity_id in sorted(menuai.states.async_entity_ids(ZONE_DOMAIN))
     ]
     return webhook_response(zones, registration=config_entry.data)
 
 
 @WEBHOOK_COMMANDS.register("get_config")
 async def webhook_get_config(
-    hass: HomeAssistant, config_entry: ConfigEntry, data: Any
+    menuai: menuai, config_entry: ConfigEntry, data: Any
 ) -> Response:
     """Handle a get config webhook."""
-    hass_config = hass.config.as_dict()
+    menuai_config = menuai.config.as_dict()
 
-    device: dr.DeviceEntry = hass.data[DOMAIN][DATA_DEVICES][
+    device: dr.DeviceEntry = menuai.data[DOMAIN][DATA_DEVICES][
         config_entry.data[CONF_WEBHOOK_ID]
     ]
 
     resp = {
-        "latitude": hass_config["latitude"],
-        "longitude": hass_config["longitude"],
-        "elevation": hass_config["elevation"],
-        "hass_device_id": device.id,
-        "unit_system": hass_config["unit_system"],
-        "location_name": hass_config["location_name"],
-        "time_zone": hass_config["time_zone"],
-        "components": hass_config["components"],
-        "version": hass_config["version"],
+        "latitude": menuai_config["latitude"],
+        "longitude": menuai_config["longitude"],
+        "elevation": menuai_config["elevation"],
+        "menuai_device_id": device.id,
+        "unit_system": menuai_config["unit_system"],
+        "location_name": menuai_config["location_name"],
+        "time_zone": menuai_config["time_zone"],
+        "components": menuai_config["components"],
+        "version": menuai_config["version"],
         "theme_color": MANIFEST_JSON["theme_color"],
     }
 
     if CONF_CLOUDHOOK_URL in config_entry.data:
         resp[CONF_CLOUDHOOK_URL] = config_entry.data[CONF_CLOUDHOOK_URL]
 
-    if cloud.async_active_subscription(hass):
+    if cloud.async_active_subscription(menuai):
         with suppress(cloud.CloudNotAvailable):
-            resp[CONF_REMOTE_UI_URL] = cloud.async_remote_ui_url(hass)
+            resp[CONF_REMOTE_UI_URL] = cloud.async_remote_ui_url(menuai)
 
     webhook_id = config_entry.data[CONF_WEBHOOK_ID]
 
     entities = {}
     for entry in er.async_entries_for_config_entry(
-        er.async_get(hass), config_entry.entry_id
+        er.async_get(menuai), config_entry.entry_id
     ):
         if entry.domain in ("binary_sensor", "sensor"):
             unique_id = _extract_sensor_unique_id(webhook_id, entry.unique_id)
@@ -766,13 +766,13 @@ async def webhook_get_config(
 @WEBHOOK_COMMANDS.register("scan_tag")
 @validate_schema({vol.Required("tag_id"): cv.string})
 async def webhook_scan_tag(
-    hass: HomeAssistant, config_entry: ConfigEntry, data: dict[str, str]
+    menuai: menuai, config_entry: ConfigEntry, data: dict[str, str]
 ) -> Response:
     """Handle a fire event webhook."""
     await tag.async_scan_tag(
-        hass,
+        menuai,
         data["tag_id"],
-        hass.data[DOMAIN][DATA_DEVICES][config_entry.data[CONF_WEBHOOK_ID]].id,
+        menuai.data[DOMAIN][DATA_DEVICES][config_entry.data[CONF_WEBHOOK_ID]].id,
         registration_context(config_entry.data),
     )
     return empty_okay_response()

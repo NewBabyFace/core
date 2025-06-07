@@ -5,11 +5,11 @@ import logging
 
 from pyplaato.plaato import Plaato, PlaatoDeviceType
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import aiohttp_client
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import aiohttp_client
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN
 
@@ -23,7 +23,7 @@ class PlaatoCoordinator(DataUpdateCoordinator):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         auth_token: str,
         device_type: PlaatoDeviceType,
@@ -31,12 +31,12 @@ class PlaatoCoordinator(DataUpdateCoordinator):
     ) -> None:
         """Initialize."""
         self.api = Plaato(auth_token=auth_token)
-        self.hass = hass
+        self.menuai = menuai
         self.device_type = device_type
         self.platforms: list[Platform] = []
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -46,6 +46,6 @@ class PlaatoCoordinator(DataUpdateCoordinator):
     async def _async_update_data(self):
         """Update data via library."""
         return await self.api.get_data(
-            session=aiohttp_client.async_get_clientsession(self.hass),
+            session=aiohttp_client.async_get_clientsession(self.menuai),
             device_type=self.device_type,
         )

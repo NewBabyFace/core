@@ -5,17 +5,17 @@ from __future__ import annotations
 from enum import Enum
 from typing import TYPE_CHECKING
 
-from homeassistant.util.hass_dict import HassKey
+from menuai.util.menuai_dict import menuaiKey
 
 if TYPE_CHECKING:
-    from homeassistant.helpers.entity_component import EntityComponent
+    from menuai.helpers.entity_component import EntityComponent
 
     from . import SpeechToTextEntity
     from .legacy import Provider
 
 DOMAIN = "stt"
-DATA_COMPONENT: HassKey[EntityComponent[SpeechToTextEntity]] = HassKey(DOMAIN)
-DATA_PROVIDERS: HassKey[dict[str, Provider]] = HassKey(f"{DOMAIN}_providers")
+DATA_COMPONENT: menuaiKey[EntityComponent[SpeechToTextEntity]] = menuaiKey(DOMAIN)
+DATA_PROVIDERS: menuaiKey[dict[str, Provider]] = menuaiKey(f"{DOMAIN}_providers")
 
 
 class AudioCodecs(str, Enum):

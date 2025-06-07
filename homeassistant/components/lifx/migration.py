@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from .const import _LOGGER, DOMAIN
 from .discovery import async_init_discovery_flow
@@ -12,7 +12,7 @@ from .discovery import async_init_discovery_flow
 
 @callback
 def async_migrate_legacy_entries(
-    hass: HomeAssistant,
+    menuai: menuai,
     discovered_hosts_by_serial: dict[str, str],
     existing_serials: set[str],
     legacy_entry: ConfigEntry,
@@ -24,7 +24,7 @@ def async_migrate_legacy_entries(
         existing_serials,
     )
 
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     for dev_entry in dr.async_entries_for_config_entry(
         device_registry, legacy_entry.entry_id
     ):
@@ -34,10 +34,10 @@ def async_migrate_legacy_entries(
                 and serial not in existing_serials
                 and (host := discovered_hosts_by_serial.get(serial))
             ):
-                async_init_discovery_flow(hass, host, serial)
+                async_init_discovery_flow(menuai, host, serial)
 
     remaining_devices = dr.async_entries_for_config_entry(
-        dr.async_get(hass), legacy_entry.entry_id
+        dr.async_get(menuai), legacy_entry.entry_id
     )
     _LOGGER.debug("The following devices remain: %s", remaining_devices)
     return len(remaining_devices)
@@ -45,11 +45,11 @@ def async_migrate_legacy_entries(
 
 @callback
 def async_migrate_entities_devices(
-    hass: HomeAssistant, legacy_entry_id: str, new_entry: ConfigEntry
+    menuai: menuai, legacy_entry_id: str, new_entry: ConfigEntry
 ) -> None:
     """Move entities and devices to the new config entry."""
     migrated_devices = []
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     for dev_entry in dr.async_entries_for_config_entry(
         device_registry, legacy_entry_id
     ):
@@ -67,7 +67,7 @@ def async_migrate_entities_devices(
                     remove_config_entry_id=legacy_entry_id,
                 )
 
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
     for reg_entity in er.async_entries_for_config_entry(
         entity_registry, legacy_entry_id
     ):

@@ -11,16 +11,16 @@ from bleak.backends.scanner import AdvertisementDataCallback
 from dbus_fast import InvalidMessageError
 import pytest
 
-from homeassistant.components import bluetooth
-from homeassistant.components.bluetooth.const import (
+from menuai.components import bluetooth
+from menuai.components.bluetooth.const import (
     SCANNER_WATCHDOG_INTERVAL,
     SCANNER_WATCHDOG_TIMEOUT,
 )
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import EVENT_HOMEASSISTANT_STARTED, EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.config_entries import ConfigEntryState
+from menuai.const import EVENT_menuai_STARTED, EVENT_menuai_STOP
+from menuai.core import menuai
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from . import (
     async_setup_with_one_adapter,
@@ -46,18 +46,18 @@ NEED_RESET_ERRORS = [
 
 @pytest.mark.usefixtures("enable_bluetooth", "macos_adapter")
 async def test_config_entry_can_be_reloaded_when_stop_raises(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test we can reload if stopping the scanner raises."""
-    entry = hass.config_entries.async_entries(bluetooth.DOMAIN)[0]
+    entry = menuai.config_entries.async_entries(bluetooth.DOMAIN)[0]
     assert entry.state is ConfigEntryState.LOADED
 
     with patch(
         "habluetooth.scanner.OriginalBleakScanner.stop",
         side_effect=BleakError,
     ):
-        await hass.config_entries.async_reload(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_reload(entry.entry_id)
+        await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.LOADED
     assert "Error stopping scanner" in caplog.text
@@ -65,7 +65,7 @@ async def test_config_entry_can_be_reloaded_when_stop_raises(
 
 @pytest.mark.usefixtures("one_adapter")
 async def test_dbus_socket_missing_in_container(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test we handle dbus being missing in the container."""
 
@@ -76,20 +76,20 @@ async def test_dbus_socket_missing_in_container(
             side_effect=FileNotFoundError,
         ),
     ):
-        await async_setup_with_one_adapter(hass)
+        await async_setup_with_one_adapter(menuai)
 
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-        await hass.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
+        await menuai.async_block_till_done()
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire(EVENT_menuai_STOP)
+    await menuai.async_block_till_done()
     assert "/run/dbus" in caplog.text
     assert "docker" in caplog.text
 
 
 @pytest.mark.usefixtures("one_adapter")
 async def test_dbus_socket_missing(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test we handle dbus being missing."""
 
@@ -100,20 +100,20 @@ async def test_dbus_socket_missing(
             side_effect=FileNotFoundError,
         ),
     ):
-        await async_setup_with_one_adapter(hass)
+        await async_setup_with_one_adapter(menuai)
 
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-        await hass.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
+        await menuai.async_block_till_done()
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire(EVENT_menuai_STOP)
+    await menuai.async_block_till_done()
     assert "DBus" in caplog.text
     assert "docker" not in caplog.text
 
 
 @pytest.mark.usefixtures("one_adapter")
 async def test_dbus_broken_pipe_in_container(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test we handle dbus broken pipe in the container."""
 
@@ -124,13 +124,13 @@ async def test_dbus_broken_pipe_in_container(
             side_effect=BrokenPipeError,
         ),
     ):
-        await async_setup_with_one_adapter(hass)
+        await async_setup_with_one_adapter(menuai)
 
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-        await hass.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
+        await menuai.async_block_till_done()
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire(EVENT_menuai_STOP)
+    await menuai.async_block_till_done()
     assert "dbus" in caplog.text
     assert "restarting" in caplog.text
     assert "container" in caplog.text
@@ -138,7 +138,7 @@ async def test_dbus_broken_pipe_in_container(
 
 @pytest.mark.usefixtures("one_adapter")
 async def test_dbus_broken_pipe(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test we handle dbus broken pipe."""
 
@@ -149,13 +149,13 @@ async def test_dbus_broken_pipe(
             side_effect=BrokenPipeError,
         ),
     ):
-        await async_setup_with_one_adapter(hass)
+        await async_setup_with_one_adapter(menuai)
 
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-        await hass.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
+        await menuai.async_block_till_done()
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire(EVENT_menuai_STOP)
+    await menuai.async_block_till_done()
     assert "DBus" in caplog.text
     assert "restarting" in caplog.text
     assert "container" not in caplog.text
@@ -163,7 +163,7 @@ async def test_dbus_broken_pipe(
 
 @pytest.mark.usefixtures("one_adapter")
 async def test_invalid_dbus_message(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test we handle invalid dbus message."""
 
@@ -171,19 +171,19 @@ async def test_invalid_dbus_message(
         "habluetooth.scanner.OriginalBleakScanner.start",
         side_effect=InvalidMessageError,
     ):
-        await async_setup_with_one_adapter(hass)
+        await async_setup_with_one_adapter(menuai)
 
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-        await hass.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
+        await menuai.async_block_till_done()
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire(EVENT_menuai_STOP)
+    await menuai.async_block_till_done()
     assert "dbus" in caplog.text
 
 
 @pytest.mark.parametrize("error", NEED_RESET_ERRORS)
 @pytest.mark.usefixtures("one_adapter")
-async def test_adapter_needs_reset_at_start(hass: HomeAssistant, error: str) -> None:
+async def test_adapter_needs_reset_at_start(menuai: menuai, error: str) -> None:
     """Test we cycle the adapter when it needs a restart."""
 
     with (
@@ -195,19 +195,19 @@ async def test_adapter_needs_reset_at_start(hass: HomeAssistant, error: str) -> 
             "habluetooth.util.recover_adapter", return_value=True
         ) as mock_recover_adapter,
     ):
-        await async_setup_with_one_adapter(hass)
+        await async_setup_with_one_adapter(menuai)
 
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-        await hass.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
+        await menuai.async_block_till_done()
 
     assert len(mock_recover_adapter.mock_calls) == 1
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire(EVENT_menuai_STOP)
+    await menuai.async_block_till_done()
 
 
 @pytest.mark.usefixtures("one_adapter")
-async def test_recovery_from_dbus_restart(hass: HomeAssistant) -> None:
+async def test_recovery_from_dbus_restart(menuai: menuai) -> None:
     """Test we can recover when DBus gets restarted out from under us."""
 
     called_start = 0
@@ -240,7 +240,7 @@ async def test_recovery_from_dbus_restart(hass: HomeAssistant) -> None:
         "habluetooth.scanner.OriginalBleakScanner",
         MockBleakScanner,
     ):
-        await async_setup_with_one_adapter(hass)
+        await async_setup_with_one_adapter(menuai)
 
         assert called_start == 1
 
@@ -251,8 +251,8 @@ async def test_recovery_from_dbus_restart(hass: HomeAssistant) -> None:
         with patch_bluetooth_time(
             start_time_monotonic + 10,
         ):
-            async_fire_time_changed(hass, dt_util.utcnow() + SCANNER_WATCHDOG_INTERVAL)
-            await hass.async_block_till_done()
+            async_fire_time_changed(menuai, dt_util.utcnow() + SCANNER_WATCHDOG_INTERVAL)
+            await menuai.async_block_till_done()
 
         assert called_start == 1
 
@@ -269,8 +269,8 @@ async def test_recovery_from_dbus_restart(hass: HomeAssistant) -> None:
         with patch_bluetooth_time(
             start_time_monotonic + 20,
         ):
-            async_fire_time_changed(hass, dt_util.utcnow() + SCANNER_WATCHDOG_INTERVAL)
-            await hass.async_block_till_done()
+            async_fire_time_changed(menuai, dt_util.utcnow() + SCANNER_WATCHDOG_INTERVAL)
+            await menuai.async_block_till_done()
 
         assert called_start == 1
 
@@ -279,16 +279,16 @@ async def test_recovery_from_dbus_restart(hass: HomeAssistant) -> None:
             start_time_monotonic + SCANNER_WATCHDOG_TIMEOUT + 20,
         ):
             async_fire_time_changed(
-                hass,
+                menuai,
                 dt_util.utcnow() + SCANNER_WATCHDOG_INTERVAL + timedelta(seconds=20),
             )
-            await hass.async_block_till_done()
+            await menuai.async_block_till_done()
 
         assert called_start == 2
 
 
 @pytest.mark.usefixtures("one_adapter")
-async def test_adapter_recovery(hass: HomeAssistant) -> None:
+async def test_adapter_recovery(menuai: menuai) -> None:
     """Test we can recover when the adapter stops responding."""
 
     called_start = 0
@@ -330,7 +330,7 @@ async def test_adapter_recovery(hass: HomeAssistant) -> None:
             return_value=scanner,
         ),
     ):
-        await async_setup_with_one_adapter(hass)
+        await async_setup_with_one_adapter(menuai)
 
         assert called_start == 1
 
@@ -340,8 +340,8 @@ async def test_adapter_recovery(hass: HomeAssistant) -> None:
         with patch_bluetooth_time(
             start_time_monotonic + 10,
         ):
-            async_fire_time_changed(hass, dt_util.utcnow() + SCANNER_WATCHDOG_INTERVAL)
-            await hass.async_block_till_done()
+            async_fire_time_changed(menuai, dt_util.utcnow() + SCANNER_WATCHDOG_INTERVAL)
+            await menuai.async_block_till_done()
 
         assert called_start == 1
 
@@ -349,8 +349,8 @@ async def test_adapter_recovery(hass: HomeAssistant) -> None:
         with patch_bluetooth_time(
             start_time_monotonic + 20,
         ):
-            async_fire_time_changed(hass, dt_util.utcnow() + SCANNER_WATCHDOG_INTERVAL)
-            await hass.async_block_till_done()
+            async_fire_time_changed(menuai, dt_util.utcnow() + SCANNER_WATCHDOG_INTERVAL)
+            await menuai.async_block_till_done()
 
         assert called_start == 1
 
@@ -365,15 +365,15 @@ async def test_adapter_recovery(hass: HomeAssistant) -> None:
                 "habluetooth.util.recover_adapter", return_value=True
             ) as mock_recover_adapter,
         ):
-            async_fire_time_changed(hass, dt_util.utcnow() + SCANNER_WATCHDOG_INTERVAL)
-            await hass.async_block_till_done()
+            async_fire_time_changed(menuai, dt_util.utcnow() + SCANNER_WATCHDOG_INTERVAL)
+            await menuai.async_block_till_done()
 
         assert len(mock_recover_adapter.mock_calls) == 1
         assert called_start == 2
 
 
 @pytest.mark.usefixtures("one_adapter")
-async def test_adapter_scanner_fails_to_start_first_time(hass: HomeAssistant) -> None:
+async def test_adapter_scanner_fails_to_start_first_time(menuai: menuai) -> None:
     """Test we can recover when the adapter stops responding and the first recovery fails."""
 
     called_start = 0
@@ -419,7 +419,7 @@ async def test_adapter_scanner_fails_to_start_first_time(hass: HomeAssistant) ->
             return_value=scanner,
         ),
     ):
-        await async_setup_with_one_adapter(hass)
+        await async_setup_with_one_adapter(menuai)
 
         assert called_start == 1
 
@@ -429,8 +429,8 @@ async def test_adapter_scanner_fails_to_start_first_time(hass: HomeAssistant) ->
         with patch_bluetooth_time(
             start_time_monotonic + 10,
         ):
-            async_fire_time_changed(hass, dt_util.utcnow() + SCANNER_WATCHDOG_INTERVAL)
-            await hass.async_block_till_done()
+            async_fire_time_changed(menuai, dt_util.utcnow() + SCANNER_WATCHDOG_INTERVAL)
+            await menuai.async_block_till_done()
 
         assert called_start == 1
 
@@ -438,8 +438,8 @@ async def test_adapter_scanner_fails_to_start_first_time(hass: HomeAssistant) ->
         with patch_bluetooth_time(
             start_time_monotonic + 20,
         ):
-            async_fire_time_changed(hass, dt_util.utcnow() + SCANNER_WATCHDOG_INTERVAL)
-            await hass.async_block_till_done()
+            async_fire_time_changed(menuai, dt_util.utcnow() + SCANNER_WATCHDOG_INTERVAL)
+            await menuai.async_block_till_done()
 
         assert called_start == 1
 
@@ -454,8 +454,8 @@ async def test_adapter_scanner_fails_to_start_first_time(hass: HomeAssistant) ->
                 "habluetooth.util.recover_adapter", return_value=True
             ) as mock_recover_adapter,
         ):
-            async_fire_time_changed(hass, dt_util.utcnow() + SCANNER_WATCHDOG_INTERVAL)
-            await hass.async_block_till_done()
+            async_fire_time_changed(menuai, dt_util.utcnow() + SCANNER_WATCHDOG_INTERVAL)
+            await menuai.async_block_till_done()
 
         assert len(mock_recover_adapter.mock_calls) == 1
         assert called_start == 4
@@ -473,8 +473,8 @@ async def test_adapter_scanner_fails_to_start_first_time(hass: HomeAssistant) ->
                 "habluetooth.util.recover_adapter", return_value=True
             ) as mock_recover_adapter,
         ):
-            async_fire_time_changed(hass, dt_util.utcnow() + SCANNER_WATCHDOG_INTERVAL)
-            await hass.async_block_till_done()
+            async_fire_time_changed(menuai, dt_util.utcnow() + SCANNER_WATCHDOG_INTERVAL)
+            await menuai.async_block_till_done()
 
         assert len(mock_recover_adapter.mock_calls) == 1
         assert called_start == 5
@@ -482,12 +482,12 @@ async def test_adapter_scanner_fails_to_start_first_time(hass: HomeAssistant) ->
 
 @pytest.mark.usefixtures("one_adapter")
 async def test_adapter_fails_to_start_and_takes_a_bit_to_init(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test we can recover the adapter at startup and we wait for Dbus to init."""
-    assert await async_setup_component(hass, "logger", {})
+    assert await async_setup_component(menuai, "logger", {})
     async with async_call_logger_set_level(
-        "homeassistant.components.bluetooth", "DEBUG", hass=hass, caplog=caplog
+        "menuai.components.bluetooth", "DEBUG", menuai=menuai, caplog=caplog
     ):
         called_start = 0
         called_stop = 0
@@ -541,7 +541,7 @@ async def test_adapter_fails_to_start_and_takes_a_bit_to_init(
                 "habluetooth.util.recover_adapter", return_value=True
             ) as mock_recover_adapter,
         ):
-            await async_setup_with_one_adapter(hass)
+            await async_setup_with_one_adapter(menuai)
 
             assert called_start == 4
 
@@ -551,7 +551,7 @@ async def test_adapter_fails_to_start_and_takes_a_bit_to_init(
 
 @pytest.mark.usefixtures("one_adapter")
 async def test_restart_takes_longer_than_watchdog_time(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test we do not try to recover the adapter again if the restart is still in progress."""
 
@@ -595,7 +595,7 @@ async def test_restart_takes_longer_than_watchdog_time(
         ),
         patch("habluetooth.util.recover_adapter", return_value=True),
     ):
-        await async_setup_with_one_adapter(hass)
+        await async_setup_with_one_adapter(menuai)
 
         assert called_start == 1
 
@@ -607,13 +607,13 @@ async def test_restart_takes_longer_than_watchdog_time(
                 + SCANNER_WATCHDOG_INTERVAL.total_seconds(),
             ):
                 async_fire_time_changed(
-                    hass, dt_util.utcnow() + SCANNER_WATCHDOG_INTERVAL
+                    menuai, dt_util.utcnow() + SCANNER_WATCHDOG_INTERVAL
                 )
                 await asyncio.sleep(0)
 
         # Now release the start event
         release_start_event.set()
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert "already restarting" in caplog.text
 
@@ -621,7 +621,7 @@ async def test_restart_takes_longer_than_watchdog_time(
 @pytest.mark.skipif("platform.system() != 'Darwin'")
 @pytest.mark.usefixtures("macos_adapter")
 async def test_setup_and_stop_macos(
-    hass: HomeAssistant, mock_bleak_scanner_start: MagicMock
+    menuai: menuai, mock_bleak_scanner_start: MagicMock
 ) -> None:
     """Test we enable use_bdaddr on MacOS."""
     entry = MockConfigEntry(
@@ -629,7 +629,7 @@ async def test_setup_and_stop_macos(
         data={},
         unique_id="00:00:00:00:00:00",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     init_kwargs = None
 
     class MockBleakScanner:
@@ -652,13 +652,13 @@ async def test_setup_and_stop_macos(
         MockBleakScanner,
     ):
         assert await async_setup_component(
-            hass, bluetooth.DOMAIN, {bluetooth.DOMAIN: {}}
+            menuai, bluetooth.DOMAIN, {bluetooth.DOMAIN: {}}
         )
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-        await hass.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
+        await menuai.async_block_till_done()
 
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
-        await hass.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STOP)
+        await menuai.async_block_till_done()
 
     assert init_kwargs == {
         "detection_callback": ANY,

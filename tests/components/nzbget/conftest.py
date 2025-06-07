@@ -11,7 +11,7 @@ from . import MOCK_HISTORY, MOCK_STATUS, MOCK_VERSION
 @pytest.fixture
 def nzbget_api() -> Generator[MagicMock]:
     """Mock NZBGetApi for easier testing."""
-    with patch("homeassistant.components.nzbget.coordinator.NZBGetAPI") as mock_api:
+    with patch("menuai.components.nzbget.coordinator.NZBGetAPI") as mock_api:
         instance = mock_api.return_value
 
         instance.history = MagicMock(return_value=list(MOCK_HISTORY))

@@ -7,7 +7,7 @@ from aiocomelit.const import AlarmAreaState, AlarmZoneState
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.components.alarm_control_panel import (
+from menuai.components.alarm_control_panel import (
     ATTR_CODE,
     DOMAIN as ALARM_DOMAIN,
     SERVICE_ALARM_ARM_AWAY,
@@ -16,9 +16,9 @@ from homeassistant.components.alarm_control_panel import (
     SERVICE_ALARM_DISARM,
     AlarmControlPanelState,
 )
-from homeassistant.components.comelit.const import SCAN_INTERVAL
-from homeassistant.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant
+from menuai.components.comelit.const import SCAN_INTERVAL
+from menuai.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE
+from menuai.core import menuai
 
 from . import setup_integration
 from .const import VEDO_PIN
@@ -40,7 +40,7 @@ ENTITY_ID = "alarm_control_panel.area0"
     ],
 )
 async def test_entity_availability(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     mock_vedo: AsyncMock,
     mock_vedo_config_entry: MockConfigEntry,
@@ -50,9 +50,9 @@ async def test_entity_availability(
 ) -> None:
     """Test all entities."""
 
-    await setup_integration(hass, mock_vedo_config_entry)
+    await setup_integration(menuai, mock_vedo_config_entry)
 
-    assert (state := hass.states.get(ENTITY_ID))
+    assert (state := menuai.states.get(ENTITY_ID))
     assert state.state == AlarmControlPanelState.DISARMED
 
     vedo_query = AlarmDataObject(
@@ -87,10 +87,10 @@ async def test_entity_availability(
     mock_vedo.get_all_areas_and_zones.return_value = vedo_query
 
     freezer.tick(SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    assert (state := hass.states.get(ENTITY_ID))
+    assert (state := menuai.states.get(ENTITY_ID))
     assert state.state == alarm_state
 
 
@@ -104,7 +104,7 @@ async def test_entity_availability(
     ],
 )
 async def test_arming_disarming(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_vedo: AsyncMock,
     mock_vedo_config_entry: MockConfigEntry,
     service: str,
@@ -112,12 +112,12 @@ async def test_arming_disarming(
 ) -> None:
     """Test arming and disarming."""
 
-    await setup_integration(hass, mock_vedo_config_entry)
+    await setup_integration(menuai, mock_vedo_config_entry)
 
-    assert (state := hass.states.get(ENTITY_ID))
+    assert (state := menuai.states.get(ENTITY_ID))
     assert state.state == AlarmControlPanelState.DISARMED
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         ALARM_DOMAIN,
         service,
         {ATTR_ENTITY_ID: ENTITY_ID, ATTR_CODE: VEDO_PIN},
@@ -126,23 +126,23 @@ async def test_arming_disarming(
 
     mock_vedo.set_zone_status.assert_called()
 
-    assert (state := hass.states.get(ENTITY_ID))
+    assert (state := menuai.states.get(ENTITY_ID))
     assert state.state == alarm_state
 
 
 async def test_wrong_code(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_vedo: AsyncMock,
     mock_vedo_config_entry: MockConfigEntry,
 ) -> None:
     """Test disarm service with wrong code."""
 
-    await setup_integration(hass, mock_vedo_config_entry)
+    await setup_integration(menuai, mock_vedo_config_entry)
 
-    assert (state := hass.states.get(ENTITY_ID))
+    assert (state := menuai.states.get(ENTITY_ID))
     assert state.state == AlarmControlPanelState.DISARMED
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         ALARM_DOMAIN,
         SERVICE_ALARM_DISARM,
         {ATTR_ENTITY_ID: ENTITY_ID, ATTR_CODE: 1111},
@@ -151,5 +151,5 @@ async def test_wrong_code(
 
     mock_vedo.set_zone_status.assert_not_called()
 
-    assert (state := hass.states.get(ENTITY_ID))
+    assert (state := menuai.states.get(ENTITY_ID))
     assert state.state == AlarmControlPanelState.DISARMED

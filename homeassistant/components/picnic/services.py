@@ -7,8 +7,8 @@ from typing import cast
 from python_picnic_api2 import PicnicAPI
 import voluptuous as vol
 
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import config_validation as cv
 
 from .const import (
     ATTR_AMOUNT,
@@ -26,14 +26,14 @@ class PicnicServiceException(Exception):
     """Exception for Picnic services."""
 
 
-def async_setup_services(hass: HomeAssistant) -> None:
+def async_setup_services(menuai: menuai) -> None:
     """Register services for the Picnic integration, if not registered yet."""
 
     async def async_add_product_service(call: ServiceCall):
-        api_client = await get_api_client(hass, call.data[ATTR_CONFIG_ENTRY_ID])
-        await handle_add_product(hass, api_client, call)
+        api_client = await get_api_client(menuai, call.data[ATTR_CONFIG_ENTRY_ID])
+        await handle_add_product(menuai, api_client, call)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_ADD_PRODUCT_TO_CART,
         async_add_product_service,
@@ -48,27 +48,27 @@ def async_setup_services(hass: HomeAssistant) -> None:
     )
 
 
-async def get_api_client(hass: HomeAssistant, config_entry_id: str) -> PicnicAPI:
+async def get_api_client(menuai: menuai, config_entry_id: str) -> PicnicAPI:
     """Get the right Picnic API client based on the device id, else get the default one."""
-    if config_entry_id not in hass.data[DOMAIN]:
+    if config_entry_id not in menuai.data[DOMAIN]:
         raise ValueError(f"Config entry with id {config_entry_id} not found!")
-    return hass.data[DOMAIN][config_entry_id][CONF_API]
+    return menuai.data[DOMAIN][config_entry_id][CONF_API]
 
 
 async def handle_add_product(
-    hass: HomeAssistant, api_client: PicnicAPI, call: ServiceCall
+    menuai: menuai, api_client: PicnicAPI, call: ServiceCall
 ) -> None:
     """Handle the call for the add_product service."""
     product_id = call.data.get(ATTR_PRODUCT_ID)
     if not product_id:
-        product_id = await hass.async_add_executor_job(
+        product_id = await menuai.async_add_executor_job(
             product_search, api_client, cast(str, call.data[ATTR_PRODUCT_NAME])
         )
 
     if not product_id:
         raise PicnicServiceException("No product found or no product ID given!")
 
-    await hass.async_add_executor_job(
+    await menuai.async_add_executor_job(
         api_client.add_product, product_id, call.data.get(ATTR_AMOUNT, 1)
     )
 

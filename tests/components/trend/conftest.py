@@ -5,8 +5,8 @@ from typing import Any
 
 import pytest
 
-from homeassistant.components.trend.const import DOMAIN
-from homeassistant.core import HomeAssistant
+from menuai.components.trend.const import DOMAIN
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -14,7 +14,7 @@ type ComponentSetup = Callable[[dict[str, Any]], Awaitable[None]]
 
 
 @pytest.fixture(name="config_entry")
-async def mock_config_entry(hass: HomeAssistant) -> MockConfigEntry:
+async def mock_config_entry(menuai: menuai) -> MockConfigEntry:
     """Return a MockConfigEntry for testing."""
     return MockConfigEntry(
         data={},
@@ -33,13 +33,13 @@ async def mock_config_entry(hass: HomeAssistant) -> MockConfigEntry:
 
 @pytest.fixture(name="setup_component")
 async def mock_setup_component(
-    hass: HomeAssistant, config_entry: MockConfigEntry
+    menuai: menuai, config_entry: MockConfigEntry
 ) -> ComponentSetup:
     """Set up the trend component."""
 
     async def _setup_func(component_params: dict[str, Any]) -> None:
-        config_entry.add_to_hass(hass)
-        hass.config_entries.async_update_entry(
+        config_entry.add_to_menuai(menuai)
+        menuai.config_entries.async_update_entry(
             config_entry,
             options={
                 **config_entry.options,
@@ -49,7 +49,7 @@ async def mock_setup_component(
             },
             title="test_trend_sensor",
         )
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     return _setup_func

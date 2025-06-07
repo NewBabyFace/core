@@ -7,18 +7,18 @@ import zoneinfo
 from freezegun import freeze_time
 import pytest
 
-from homeassistant.components.electric_kiwi.const import ATTRIBUTION
-from homeassistant.components.electric_kiwi.sensor import _check_and_move_time
-from homeassistant.components.sensor import (
+from menuai.components.electric_kiwi.const import ATTRIBUTION
+from menuai.components.electric_kiwi.sensor import _check_and_move_time
+from menuai.components.sensor import (
     ATTR_STATE_CLASS,
     SensorDeviceClass,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import ATTR_ATTRIBUTION, ATTR_DEVICE_CLASS
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_registry import EntityRegistry
-from homeassistant.util import dt as dt_util
+from menuai.config_entries import ConfigEntryState
+from menuai.const import ATTR_ATTRIBUTION, ATTR_DEVICE_CLASS
+from menuai.core import menuai
+from menuai.helpers.entity_registry import EntityRegistry
+from menuai.util import dt as dt_util
 
 from . import init_integration
 
@@ -45,7 +45,7 @@ def restore_timezone():
     ],
 )
 async def test_hop_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     electrickiwi_api: Mock,
     ek_auth: AsyncMock,
@@ -60,13 +60,13 @@ async def test_hop_sensors(
     sensor state should be set to today at 4pm or if now is past 4pm,
     then tomorrow at 4pm.
     """
-    await init_integration(hass, config_entry)
+    await init_integration(menuai, config_entry)
     assert config_entry.state is ConfigEntryState.LOADED
 
     entity = entity_registry.async_get(sensor)
     assert entity
 
-    state = hass.states.get(sensor)
+    state = menuai.states.get(sensor)
     assert state
 
     hop_data = await electrickiwi_api.get_hop()
@@ -104,7 +104,7 @@ async def test_hop_sensors(
     ],
 )
 async def test_account_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     electrickiwi_api: AsyncMock,
     ek_auth: AsyncMock,
@@ -116,13 +116,13 @@ async def test_account_sensors(
 ) -> None:
     """Test Account sensors for the Electric Kiwi integration."""
 
-    await init_integration(hass, config_entry)
+    await init_integration(menuai, config_entry)
     assert config_entry.state is ConfigEntryState.LOADED
 
     entity = entity_registry.async_get(sensor)
     assert entity
 
-    state = hass.states.get(sensor)
+    state = menuai.states.get(sensor)
     assert state
     assert state.state == sensor_state
     assert state.attributes.get(ATTR_ATTRIBUTION) == ATTRIBUTION

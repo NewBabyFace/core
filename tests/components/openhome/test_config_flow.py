@@ -1,11 +1,11 @@
 """Tests for the Openhome config flow module."""
 
-from homeassistant.components.openhome.const import DOMAIN
-from homeassistant.config_entries import SOURCE_SSDP
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_SOURCE
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.ssdp import (
+from menuai.components.openhome.const import DOMAIN
+from menuai.config_entries import SOURCE_SSDP
+from menuai.const import CONF_HOST, CONF_NAME, CONF_SOURCE
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.ssdp import (
     ATTR_UPNP_FRIENDLY_NAME,
     ATTR_UPNP_UDN,
     SsdpServiceInfo,
@@ -25,9 +25,9 @@ MOCK_DISCOVER = SsdpServiceInfo(
 )
 
 
-async def test_ssdp(hass: HomeAssistant) -> None:
+async def test_ssdp(menuai: menuai) -> None:
     """Test a ssdp import flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={CONF_SOURCE: SOURCE_SSDP},
         data=MOCK_DISCOVER,
@@ -37,12 +37,12 @@ async def test_ssdp(hass: HomeAssistant) -> None:
     assert result["step_id"] == "confirm"
     assert result["description_placeholders"] == {CONF_NAME: MOCK_FRIENDLY_NAME}
 
-    result2 = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result2 = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
     assert result2["title"] == MOCK_FRIENDLY_NAME
     assert result2["data"] == {CONF_HOST: MOCK_SSDP_LOCATION}
 
 
-async def test_device_exists(hass: HomeAssistant) -> None:
+async def test_device_exists(menuai: menuai) -> None:
     """Test a ssdp import where device already exists."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -50,9 +50,9 @@ async def test_device_exists(hass: HomeAssistant) -> None:
         title=MOCK_FRIENDLY_NAME,
         unique_id=MOCK_UDN,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={CONF_SOURCE: SOURCE_SSDP},
         data=MOCK_DISCOVER,
@@ -61,7 +61,7 @@ async def test_device_exists(hass: HomeAssistant) -> None:
     assert result["reason"] == "already_configured"
 
 
-async def test_missing_udn(hass: HomeAssistant) -> None:
+async def test_missing_udn(menuai: menuai) -> None:
     """Test a ssdp import where discovery is missing udn."""
     broken_discovery = SsdpServiceInfo(
         ssdp_usn="usn",
@@ -71,7 +71,7 @@ async def test_missing_udn(hass: HomeAssistant) -> None:
             ATTR_UPNP_FRIENDLY_NAME: MOCK_FRIENDLY_NAME,
         },
     )
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={CONF_SOURCE: SOURCE_SSDP},
         data=broken_discovery,
@@ -80,7 +80,7 @@ async def test_missing_udn(hass: HomeAssistant) -> None:
     assert result["reason"] == "incomplete_discovery"
 
 
-async def test_missing_ssdp_location(hass: HomeAssistant) -> None:
+async def test_missing_ssdp_location(menuai: menuai) -> None:
     """Test a ssdp import where discovery is missing udn."""
     broken_discovery = SsdpServiceInfo(
         ssdp_usn="usn",
@@ -88,7 +88,7 @@ async def test_missing_ssdp_location(hass: HomeAssistant) -> None:
         ssdp_location="",
         upnp={ATTR_UPNP_FRIENDLY_NAME: MOCK_FRIENDLY_NAME, ATTR_UPNP_UDN: MOCK_UDN},
     )
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={CONF_SOURCE: SOURCE_SSDP},
         data=broken_discovery,
@@ -97,7 +97,7 @@ async def test_missing_ssdp_location(hass: HomeAssistant) -> None:
     assert result["reason"] == "incomplete_discovery"
 
 
-async def test_host_updated(hass: HomeAssistant) -> None:
+async def test_host_updated(menuai: menuai) -> None:
     """Test a ssdp import flow where host changes."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -105,9 +105,9 @@ async def test_host_updated(hass: HomeAssistant) -> None:
         title=MOCK_FRIENDLY_NAME,
         unique_id=MOCK_UDN,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={CONF_SOURCE: SOURCE_SSDP},
         data=MOCK_DISCOVER,

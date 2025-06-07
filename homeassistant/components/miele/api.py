@@ -1,11 +1,11 @@
-"""API for Miele bound to Home Assistant OAuth."""
+"""API for Miele bound to MenuAI OAuth."""
 
 from typing import cast
 
 from aiohttp import ClientSession
 from pymiele import MIELE_API, AbstractAuth
 
-from homeassistant.helpers import config_entry_oauth2_flow
+from menuai.helpers import config_entry_oauth2_flow
 
 
 class AsyncConfigEntryAuth(AbstractAuth):

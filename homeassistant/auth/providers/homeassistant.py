@@ -1,4 +1,4 @@
-"""Home Assistant auth provider."""
+"""MenuAI auth provider."""
 
 from __future__ import annotations
 
@@ -11,23 +11,23 @@ from typing import Any, cast
 import bcrypt
 import voluptuous as vol
 
-from homeassistant.const import CONF_ID
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import issue_registry as ir
-from homeassistant.helpers.storage import Store
+from menuai.const import CONF_ID
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import issue_registry as ir
+from menuai.helpers.storage import Store
 
 from ..models import AuthFlowContext, AuthFlowResult, Credentials, UserMeta
 from . import AUTH_PROVIDER_SCHEMA, AUTH_PROVIDERS, AuthProvider, LoginFlow
 
 STORAGE_VERSION = 1
-STORAGE_KEY = "auth_provider.homeassistant"
+STORAGE_KEY = "auth_provider.menuai"
 
 
 def _disallow_id(conf: dict[str, Any]) -> dict[str, Any]:
     """Disallow ID in config."""
     if CONF_ID in conf:
-        raise vol.Invalid("ID is not allowed for the homeassistant auth provider.")
+        raise vol.Invalid("ID is not allowed for the menuai auth provider.")
 
     return conf
 
@@ -36,20 +36,20 @@ CONFIG_SCHEMA = vol.All(AUTH_PROVIDER_SCHEMA, _disallow_id)
 
 
 @callback
-def async_get_provider(hass: HomeAssistant) -> HassAuthProvider:
+def async_get_provider(menuai: menuai) -> menuaiAuthProvider:
     """Get the provider."""
-    for prv in hass.auth.auth_providers:
-        if prv.type == "homeassistant":
-            return cast(HassAuthProvider, prv)
+    for prv in menuai.auth.auth_providers:
+        if prv.type == "menuai":
+            return cast(menuaiAuthProvider, prv)
 
     raise RuntimeError("Provider not found")
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(menuaiError):
     """Raised when we encounter invalid authentication."""
 
 
-class InvalidUser(HomeAssistantError):
+class InvalidUser(menuaiError):
     """Raised when invalid user is specified.
 
     Will not be raised when validating authentication.
@@ -80,11 +80,11 @@ class InvalidUsername(InvalidUser):
 class Data:
     """Hold the user data."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize the user data store."""
-        self.hass = hass
+        self.menuai = menuai
         self._store = Store[dict[str, list[dict[str, str]]]](
-            hass, STORAGE_VERSION, STORAGE_KEY, private=True, atomic_writes=True
+            menuai, STORAGE_VERSION, STORAGE_KEY, private=True, atomic_writes=True
         )
         self._data: dict[str, list[dict[str, str]]] | None = None
         # Legacy mode will allow usernames to start/end with whitespace
@@ -122,7 +122,7 @@ class Data:
             if self.normalize_username(username, force_normalize=True) != username:
                 logging.getLogger(__name__).warning(
                     (
-                        "Home Assistant auth provider is running in legacy mode "
+                        "MenuAI auth provider is running in legacy mode "
                         "because we detected usernames that are normalized (lowercase and without spaces)."
                         " Please change the username: '%s'."
                     ),
@@ -133,22 +133,22 @@ class Data:
         if not_normalized_usernames:
             self.is_legacy = True
             ir.async_create_issue(
-                self.hass,
+                self.menuai,
                 "auth",
-                "homeassistant_provider_not_normalized_usernames",
+                "menuai_provider_not_normalized_usernames",
                 breaks_in_ha_version="2026.7.0",
                 is_fixable=False,
                 severity=ir.IssueSeverity.WARNING,
-                translation_key="homeassistant_provider_not_normalized_usernames",
+                translation_key="menuai_provider_not_normalized_usernames",
                 translation_placeholders={
                     "usernames": f'- "{'"\n- "'.join(sorted(not_normalized_usernames))}"'
                 },
-                learn_more_url="homeassistant://config/users",
+                learn_more_url="menuai://config/users",
             )
         else:
             self.is_legacy = False
             ir.async_delete_issue(
-                self.hass, "auth", "homeassistant_provider_not_normalized_usernames"
+                self.menuai, "auth", "menuai_provider_not_normalized_usernames"
             )
 
     @property
@@ -283,14 +283,14 @@ class Data:
             await self._store.async_save(self._data)
 
 
-@AUTH_PROVIDERS.register("homeassistant")
-class HassAuthProvider(AuthProvider):
-    """Auth provider based on a local storage of users in Home Assistant config dir."""
+@AUTH_PROVIDERS.register("menuai")
+class menuaiAuthProvider(AuthProvider):
+    """Auth provider based on a local storage of users in MenuAI config dir."""
 
-    DEFAULT_TITLE = "Home Assistant Local"
+    DEFAULT_TITLE = "MenuAI Local"
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        """Initialize an Home Assistant auth provider."""
+        """Initialize an MenuAI auth provider."""
         super().__init__(*args, **kwargs)
         self.data: Data | None = None
         self._init_lock = asyncio.Lock()
@@ -301,13 +301,13 @@ class HassAuthProvider(AuthProvider):
             if self.data is not None:
                 return
 
-            data = Data(self.hass)
+            data = Data(self.menuai)
             await data.async_load()
             self.data = data
 
-    async def async_login_flow(self, context: AuthFlowContext | None) -> HassLoginFlow:
+    async def async_login_flow(self, context: AuthFlowContext | None) -> menuaiLoginFlow:
         """Return a flow to login."""
-        return HassLoginFlow(self)
+        return menuaiLoginFlow(self)
 
     async def async_validate_login(self, username: str, password: str) -> None:
         """Validate a username and password."""
@@ -315,7 +315,7 @@ class HassAuthProvider(AuthProvider):
             await self.async_initialize()
             assert self.data is not None
 
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             self.data.validate_login, username, password
         )
 
@@ -325,7 +325,7 @@ class HassAuthProvider(AuthProvider):
             await self.async_initialize()
             assert self.data is not None
 
-        await self.hass.async_add_executor_job(self.data.add_auth, username, password)
+        await self.menuai.async_add_executor_job(self.data.add_auth, username, password)
         await self.data.async_save()
 
     async def async_remove_auth(self, username: str) -> None:
@@ -343,7 +343,7 @@ class HassAuthProvider(AuthProvider):
             await self.async_initialize()
             assert self.data is not None
 
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             self.data.change_password, username, new_password
         )
         await self.data.async_save()
@@ -357,7 +357,7 @@ class HassAuthProvider(AuthProvider):
             assert self.data is not None
 
         self.data.change_username(credential.data["username"], new_username)
-        self.hass.auth.async_update_user_credentials_data(
+        self.menuai.auth.async_update_user_credentials_data(
             credential, {**credential.data, "username": new_username}
         )
         await self.data.async_save()
@@ -400,7 +400,7 @@ class HassAuthProvider(AuthProvider):
             pass
 
 
-class HassLoginFlow(LoginFlow[HassAuthProvider]):
+class menuaiLoginFlow(LoginFlow[menuaiAuthProvider]):
     """Handler for the login flow."""
 
     async def async_step_init(

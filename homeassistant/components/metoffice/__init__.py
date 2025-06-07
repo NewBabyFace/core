@@ -9,18 +9,18 @@ import datapoint
 import datapoint.Forecast
 import datapoint.Manager
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_API_KEY,
     CONF_LATITUDE,
     CONF_LONGITUDE,
     CONF_NAME,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.update_coordinator import TimestampDataUpdateCoordinator
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.update_coordinator import TimestampDataUpdateCoordinator
 
 from .const import (
     DEFAULT_SCAN_INTERVAL,
@@ -38,7 +38,7 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORMS = [Platform.SENSOR, Platform.WEATHER]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up a Met Office entry."""
 
     latitude = entry.data[CONF_LATITUDE]
@@ -51,22 +51,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     connection = datapoint.Manager.Manager(api_key=api_key)
 
     async def async_update_hourly() -> datapoint.Forecast:
-        return await hass.async_add_executor_job(
+        return await menuai.async_add_executor_job(
             fetch_data, connection, latitude, longitude, "hourly"
         )
 
     async def async_update_daily() -> datapoint.Forecast:
-        return await hass.async_add_executor_job(
+        return await menuai.async_add_executor_job(
             fetch_data, connection, latitude, longitude, "daily"
         )
 
     async def async_update_twice_daily() -> datapoint.Forecast:
-        return await hass.async_add_executor_job(
+        return await menuai.async_add_executor_job(
             fetch_data, connection, latitude, longitude, "twice-daily"
         )
 
     metoffice_hourly_coordinator = TimestampDataUpdateCoordinator(
-        hass,
+        menuai,
         _LOGGER,
         config_entry=entry,
         name=f"MetOffice Hourly Coordinator for {site_name}",
@@ -75,7 +75,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     metoffice_daily_coordinator = TimestampDataUpdateCoordinator(
-        hass,
+        menuai,
         _LOGGER,
         config_entry=entry,
         name=f"MetOffice Daily Coordinator for {site_name}",
@@ -84,7 +84,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     metoffice_twice_daily_coordinator = TimestampDataUpdateCoordinator(
-        hass,
+        menuai,
         _LOGGER,
         config_entry=entry,
         name=f"MetOffice Twice Daily Coordinator for {site_name}",
@@ -92,8 +92,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         update_interval=DEFAULT_SCAN_INTERVAL,
     )
 
-    metoffice_hass_data = hass.data.setdefault(DOMAIN, {})
-    metoffice_hass_data[entry.entry_id] = {
+    metoffice_menuai_data = menuai.data.setdefault(DOMAIN, {})
+    metoffice_menuai_data[entry.entry_id] = {
         METOFFICE_HOURLY_COORDINATOR: metoffice_hourly_coordinator,
         METOFFICE_DAILY_COORDINATOR: metoffice_daily_coordinator,
         METOFFICE_TWICE_DAILY_COORDINATOR: metoffice_twice_daily_coordinator,
@@ -107,18 +107,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         metoffice_daily_coordinator.async_config_entry_first_refresh(),
     )
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id)
-        if not hass.data[DOMAIN]:
-            hass.data.pop(DOMAIN)
+        menuai.data[DOMAIN].pop(entry.entry_id)
+        if not menuai.data[DOMAIN]:
+            menuai.data.pop(DOMAIN)
     return unload_ok
 
 

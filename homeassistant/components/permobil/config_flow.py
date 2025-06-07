@@ -14,12 +14,12 @@ from mypermobil import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_CODE, CONF_EMAIL, CONF_REGION, CONF_TOKEN, CONF_TTL
-from homeassistant.core import HomeAssistant, async_get_hass
-from homeassistant.helpers import config_validation as cv, selector
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.selector import (
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_CODE, CONF_EMAIL, CONF_REGION, CONF_TOKEN, CONF_TTL
+from menuai.core import menuai, async_get_menuai
+from menuai.helpers import config_validation as cv, selector
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.selector import (
     TextSelector,
     TextSelectorConfig,
     TextSelectorType,
@@ -49,8 +49,8 @@ class PermobilConfigFlow(ConfigFlow, domain=DOMAIN):
 
     def __init__(self) -> None:
         """Initialize flow."""
-        hass: HomeAssistant = async_get_hass()
-        session = async_get_clientsession(hass)
+        menuai: menuai = async_get_menuai()
+        session = async_get_clientsession(menuai)
         self.p_api = MyPermobil(APPLICATION, session=session)
 
     async def async_step_user(

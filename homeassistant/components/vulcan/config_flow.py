@@ -18,9 +18,9 @@ from vulcan import (
 )
 from vulcan.model import Student
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_PIN, CONF_REGION, CONF_TOKEN
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_PIN, CONF_REGION, CONF_TOKEN
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from . import DOMAIN
 from .register import register
@@ -86,7 +86,7 @@ class VulcanFlowHandler(ConfigFlow, domain=DOMAIN):
             if not errors:
                 account = credentials["account"]
                 keystore = credentials["keystore"]
-                client = Vulcan(keystore, account, async_get_clientsession(self.hass))
+                client = Vulcan(keystore, account, async_get_clientsession(self.menuai))
                 students = await client.get_students()
 
                 if len(students) > 1:
@@ -152,18 +152,18 @@ class VulcanFlowHandler(ConfigFlow, domain=DOMAIN):
         """Allow user to select saved credentials."""
 
         credentials: dict[str, Any] = {}
-        for entry in self.hass.config_entries.async_entries(DOMAIN):
+        for entry in self.menuai.config_entries.async_entries(DOMAIN):
             credentials[entry.entry_id] = entry.data["account"]["UserName"]
 
         if user_input is not None:
-            existing_entry = self.hass.config_entries.async_get_entry(
+            existing_entry = self.menuai.config_entries.async_get_entry(
                 user_input["credentials"]
             )
             if TYPE_CHECKING:
                 assert existing_entry is not None
             keystore = Keystore.load(existing_entry.data["keystore"])
             account = Account.load(existing_entry.data["account"])
-            client = Vulcan(keystore, account, async_get_clientsession(self.hass))
+            client = Vulcan(keystore, account, async_get_clientsession(self.menuai))
             try:
                 students = await client.get_students()
             except UnauthorizedCertificateException:
@@ -211,7 +211,7 @@ class VulcanFlowHandler(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Flow initialized when user is adding next entry of that integration."""
 
-        existing_entries = self.hass.config_entries.async_entries(DOMAIN)
+        existing_entries = self.menuai.config_entries.async_entries(DOMAIN)
 
         errors: dict[str, str] = {}
 
@@ -222,7 +222,7 @@ class VulcanFlowHandler(ConfigFlow, domain=DOMAIN):
                 return await self.async_step_select_saved_credentials()
             keystore = Keystore.load(existing_entries[0].data["keystore"])
             account = Account.load(existing_entries[0].data["account"])
-            client = Vulcan(keystore, account, async_get_clientsession(self.hass))
+            client = Vulcan(keystore, account, async_get_clientsession(self.menuai))
             students = await client.get_students()
             existing_entry_ids = [
                 entry.data["student_id"] for entry in existing_entries
@@ -296,14 +296,14 @@ class VulcanFlowHandler(ConfigFlow, domain=DOMAIN):
             if not errors:
                 account = credentials["account"]
                 keystore = credentials["keystore"]
-                client = Vulcan(keystore, account, async_get_clientsession(self.hass))
+                client = Vulcan(keystore, account, async_get_clientsession(self.menuai))
                 students = await client.get_students()
-                existing_entries = self.hass.config_entries.async_entries(DOMAIN)
+                existing_entries = self.menuai.config_entries.async_entries(DOMAIN)
                 matching_entries = False
                 for student in students:
                     for entry in existing_entries:
                         if str(student.pupil.id) == str(entry.data["student_id"]):
-                            self.hass.config_entries.async_update_entry(
+                            self.menuai.config_entries.async_update_entry(
                                 entry,
                                 title=(
                                     f"{student.pupil.first_name} {student.pupil.last_name}"
@@ -314,7 +314,7 @@ class VulcanFlowHandler(ConfigFlow, domain=DOMAIN):
                                     "account": account.as_dict,
                                 },
                             )
-                            await self.hass.config_entries.async_reload(entry.entry_id)
+                            await self.menuai.config_entries.async_reload(entry.entry_id)
                             matching_entries = True
                 if not matching_entries:
                     return self.async_abort(reason="no_matching_entries")

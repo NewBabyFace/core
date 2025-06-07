@@ -5,10 +5,10 @@ import logging
 import statsd
 import voluptuous as vol
 
-from homeassistant.const import CONF_HOST, CONF_PORT, CONF_PREFIX, EVENT_STATE_CHANGED
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, state as state_helper
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import CONF_HOST, CONF_PORT, CONF_PREFIX, EVENT_STATE_CHANGED
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, state as state_helper
+from menuai.helpers.typing import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -18,7 +18,7 @@ CONF_VALUE_MAP = "value_mapping"
 
 DEFAULT_HOST = "localhost"
 DEFAULT_PORT = 8125
-DEFAULT_PREFIX = "hass"
+DEFAULT_PREFIX = "menuai"
 DEFAULT_RATE = 1
 DOMAIN = "statsd"
 
@@ -41,7 +41,7 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the StatsD component."""
 
     conf = config[DOMAIN]
@@ -88,6 +88,6 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
         # Increment the count
         statsd_client.incr(state.entity_id, rate=sample_rate)
 
-    hass.bus.listen(EVENT_STATE_CHANGED, statsd_event_listener)
+    menuai.bus.listen(EVENT_STATE_CHANGED, statsd_event_listener)
 
     return True

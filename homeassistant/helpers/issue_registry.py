@@ -10,18 +10,18 @@ from typing import Any, Literal, TypedDict, cast
 
 from awesomeversion import AwesomeVersion, AwesomeVersionStrategy
 
-from homeassistant.const import __version__ as ha_version
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.util import dt as dt_util
-from homeassistant.util.async_ import run_callback_threadsafe
-from homeassistant.util.event_type import EventType
-from homeassistant.util.hass_dict import HassKey
+from menuai.const import __version__ as ha_version
+from menuai.core import menuai, callback
+from menuai.util import dt as dt_util
+from menuai.util.async_ import run_callback_threadsafe
+from menuai.util.event_type import EventType
+from menuai.util.menuai_dict import menuaiKey
 
 from .registry import BaseRegistry
 from .singleton import singleton
 from .storage import Store
 
-DATA_REGISTRY: HassKey[IssueRegistry] = HassKey("issue_registry")
+DATA_REGISTRY: menuaiKey[IssueRegistry] = menuaiKey("issue_registry")
 EVENT_REPAIRS_ISSUE_REGISTRY_UPDATED: EventType[EventIssueRegistryUpdatedData] = (
     EventType("repairs_issue_registry_updated")
 )
@@ -109,12 +109,12 @@ class IssueRegistryStore(Store[dict[str, list[dict[str, Any]]]]):
 class IssueRegistry(BaseRegistry):
     """Class to hold a registry of issues."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize the issue registry."""
-        self.hass = hass
+        self.menuai = menuai
         self.issues: dict[tuple[str, str], IssueEntry] = {}
         self._store = IssueRegistryStore(
-            hass,
+            menuai,
             STORAGE_VERSION_MAJOR,
             STORAGE_KEY,
             atomic_writes=True,
@@ -143,7 +143,7 @@ class IssueRegistry(BaseRegistry):
         translation_placeholders: dict[str, str] | None = None,
     ) -> IssueEntry:
         """Get issue. Create if it doesn't exist."""
-        self.hass.verify_event_loop_thread("issue_registry.async_get_or_create")
+        self.menuai.verify_event_loop_thread("issue_registry.async_get_or_create")
         if (issue := self.async_get_issue(domain, issue_id)) is None:
             issue = IssueEntry(
                 active=True,
@@ -163,7 +163,7 @@ class IssueRegistry(BaseRegistry):
             )
             self.issues[(domain, issue_id)] = issue
             self.async_schedule_save()
-            self.hass.bus.async_fire_internal(
+            self.menuai.bus.async_fire_internal(
                 EVENT_REPAIRS_ISSUE_REGISTRY_UPDATED,
                 EventIssueRegistryUpdatedData(
                     action="create",
@@ -189,7 +189,7 @@ class IssueRegistry(BaseRegistry):
             if replacement != issue:
                 issue = self.issues[(domain, issue_id)] = replacement
                 self.async_schedule_save()
-                self.hass.bus.async_fire_internal(
+                self.menuai.bus.async_fire_internal(
                     EVENT_REPAIRS_ISSUE_REGISTRY_UPDATED,
                     EventIssueRegistryUpdatedData(
                         action="update",
@@ -203,12 +203,12 @@ class IssueRegistry(BaseRegistry):
     @callback
     def async_delete(self, domain: str, issue_id: str) -> None:
         """Delete issue."""
-        self.hass.verify_event_loop_thread("issue_registry.async_delete")
+        self.menuai.verify_event_loop_thread("issue_registry.async_delete")
         if self.issues.pop((domain, issue_id), None) is None:
             return
 
         self.async_schedule_save()
-        self.hass.bus.async_fire_internal(
+        self.menuai.bus.async_fire_internal(
             EVENT_REPAIRS_ISSUE_REGISTRY_UPDATED,
             EventIssueRegistryUpdatedData(
                 action="remove",
@@ -220,7 +220,7 @@ class IssueRegistry(BaseRegistry):
     @callback
     def async_ignore(self, domain: str, issue_id: str, ignore: bool) -> IssueEntry:
         """Ignore issue."""
-        self.hass.verify_event_loop_thread("issue_registry.async_ignore")
+        self.menuai.verify_event_loop_thread("issue_registry.async_ignore")
         old = self.issues[(domain, issue_id)]
         dismissed_version = ha_version if ignore else None
         if old.dismissed_version == dismissed_version:
@@ -232,7 +232,7 @@ class IssueRegistry(BaseRegistry):
         )
 
         self.async_schedule_save()
-        self.hass.bus.async_fire_internal(
+        self.menuai.bus.async_fire_internal(
             EVENT_REPAIRS_ISSUE_REGISTRY_UPDATED,
             EventIssueRegistryUpdatedData(
                 action="update",
@@ -309,14 +309,14 @@ class IssueRegistry(BaseRegistry):
 
 @callback
 @singleton(DATA_REGISTRY)
-def async_get(hass: HomeAssistant) -> IssueRegistry:
+def async_get(menuai: menuai) -> IssueRegistry:
     """Get issue registry."""
-    return IssueRegistry(hass)
+    return IssueRegistry(menuai)
 
 
-async def async_load(hass: HomeAssistant, *, read_only: bool = False) -> None:
+async def async_load(menuai: menuai, *, read_only: bool = False) -> None:
     """Load issue registry."""
-    ir = async_get(hass)
+    ir = async_get(menuai)
     if read_only:  # only used in for check config script
         ir.make_read_only()
     return await ir.async_load()
@@ -324,7 +324,7 @@ async def async_load(hass: HomeAssistant, *, read_only: bool = False) -> None:
 
 @callback
 def async_create_issue(
-    hass: HomeAssistant,
+    menuai: menuai,
     domain: str,
     issue_id: str,
     *,
@@ -346,7 +346,7 @@ def async_create_issue(
             ensure_strategy=AwesomeVersionStrategy.CALVER,
         )
 
-    issue_registry = async_get(hass)
+    issue_registry = async_get(menuai)
     issue_registry.async_get_or_create(
         domain,
         issue_id,
@@ -363,7 +363,7 @@ def async_create_issue(
 
 
 def create_issue(
-    hass: HomeAssistant,
+    menuai: menuai,
     domain: str,
     issue_id: str,
     *,
@@ -379,10 +379,10 @@ def create_issue(
 ) -> None:
     """Create an issue, or replace an existing one."""
     return run_callback_threadsafe(
-        hass.loop,
+        menuai.loop,
         ft.partial(
             async_create_issue,
-            hass,
+            menuai,
             domain,
             issue_id,
             breaks_in_ha_version=breaks_in_ha_version,
@@ -399,32 +399,32 @@ def create_issue(
 
 
 @callback
-def async_delete_issue(hass: HomeAssistant, domain: str, issue_id: str) -> None:
+def async_delete_issue(menuai: menuai, domain: str, issue_id: str) -> None:
     """Delete an issue.
 
     It is not an error to delete an issue that does not exist.
     """
-    issue_registry = async_get(hass)
+    issue_registry = async_get(menuai)
     issue_registry.async_delete(domain, issue_id)
 
 
-def delete_issue(hass: HomeAssistant, domain: str, issue_id: str) -> None:
+def delete_issue(menuai: menuai, domain: str, issue_id: str) -> None:
     """Delete an issue.
 
     It is not an error to delete an issue that does not exist.
     """
     return run_callback_threadsafe(
-        hass.loop, async_delete_issue, hass, domain, issue_id
+        menuai.loop, async_delete_issue, menuai, domain, issue_id
     ).result()
 
 
 @callback
 def async_ignore_issue(
-    hass: HomeAssistant, domain: str, issue_id: str, ignore: bool
+    menuai: menuai, domain: str, issue_id: str, ignore: bool
 ) -> None:
     """Ignore an issue.
 
     Will raise if the issue does not exist.
     """
-    issue_registry = async_get(hass)
+    issue_registry = async_get(menuai)
     issue_registry.async_ignore(domain, issue_id, ignore)

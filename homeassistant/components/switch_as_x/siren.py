@@ -2,27 +2,27 @@
 
 from __future__ import annotations
 
-from homeassistant.components.siren import (
+from menuai.components.siren import (
     DOMAIN as SIREN_DOMAIN,
     SirenEntity,
     SirenEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_ENTITY_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_ENTITY_ID
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .entity import BaseToggleEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Initialize Siren Switch config entry."""
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     entity_id = er.async_validate_entity_id(
         registry, config_entry.options[CONF_ENTITY_ID]
     )
@@ -30,7 +30,7 @@ async def async_setup_entry(
     async_add_entities(
         [
             SirenSwitch(
-                hass,
+                menuai,
                 config_entry.title,
                 SIREN_DOMAIN,
                 entity_id,

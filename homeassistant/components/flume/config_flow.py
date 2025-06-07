@@ -11,22 +11,22 @@ from pyflume import FlumeAuth, FlumeDeviceList
 from requests.exceptions import RequestException
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import (
     CONF_CLIENT_ID,
     CONF_CLIENT_SECRET,
     CONF_PASSWORD,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from .const import BASE_TOKEN_FILENAME, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
 # If flume ever implements a login page for oauth
-# we can use the oauth2 support built into Home Assistant.
+# we can use the oauth2 support built into MenuAI.
 #
 # Currently they only implement the token endpoint
 #
@@ -41,10 +41,10 @@ DATA_SCHEMA = vol.Schema(
 
 
 def _validate_input(
-    hass: HomeAssistant, data: dict[str, Any], clear_token_file: bool
+    menuai: menuai, data: dict[str, Any], clear_token_file: bool
 ) -> FlumeDeviceList:
     """Validate in the executor."""
-    flume_token_full_path = hass.config.path(
+    flume_token_full_path = menuai.config.path(
         f"{BASE_TOKEN_FILENAME}-{data[CONF_USERNAME]}"
     )
     if clear_token_file and os.path.exists(flume_token_full_path):
@@ -62,15 +62,15 @@ def _validate_input(
 
 
 async def validate_input(
-    hass: HomeAssistant, data: dict[str, Any], clear_token_file: bool = False
+    menuai: menuai, data: dict[str, Any], clear_token_file: bool = False
 ) -> dict[str, Any]:
     """Validate the user input allows us to connect.
 
     Data has the keys from DATA_SCHEMA with values provided by the user.
     """
     try:
-        flume_devices = await hass.async_add_executor_job(
-            _validate_input, hass, data, clear_token_file
+        flume_devices = await menuai.async_add_executor_job(
+            _validate_input, menuai, data, clear_token_file
         )
     except RequestException as err:
         raise CannotConnect from err
@@ -103,7 +103,7 @@ class FlumeConfigFlow(ConfigFlow, domain=DOMAIN):
             self._abort_if_unique_id_configured()
 
             try:
-                info = await validate_input(self.hass, user_input)
+                info = await validate_input(self.menuai, user_input)
                 return self.async_create_entry(title=info["title"], data=user_input)
             except CannotConnect:
                 errors["base"] = "cannot_connect"
@@ -131,16 +131,16 @@ class FlumeConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             new_data = {**existing_entry.data, CONF_PASSWORD: user_input[CONF_PASSWORD]}
             try:
-                await validate_input(self.hass, new_data, clear_token_file=True)
+                await validate_input(self.menuai, new_data, clear_token_file=True)
             except CannotConnect:
                 errors["base"] = "cannot_connect"
             except InvalidAuth:
                 errors[CONF_PASSWORD] = "invalid_auth"
             else:
-                self.hass.config_entries.async_update_entry(
+                self.menuai.config_entries.async_update_entry(
                     existing_entry, data=new_data
                 )
-                await self.hass.config_entries.async_reload(existing_entry.entry_id)
+                await self.menuai.config_entries.async_reload(existing_entry.entry_id)
                 return self.async_abort(reason="reauth_successful")
 
         return self.async_show_form(
@@ -157,9 +157,9 @@ class FlumeConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(menuaiError):
     """Error to indicate there is invalid auth."""

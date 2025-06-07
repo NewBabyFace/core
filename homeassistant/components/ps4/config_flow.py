@@ -8,8 +8,8 @@ from pyps4_2ndscreen.helpers import Helper
 from pyps4_2ndscreen.media_art import COUNTRIES
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import (
     CONF_CODE,
     CONF_HOST,
     CONF_IP_ADDRESS,
@@ -17,8 +17,8 @@ from homeassistant.const import (
     CONF_REGION,
     CONF_TOKEN,
 )
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.util import location as location_util
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.util import location as location_util
 
 from .const import (
     CONFIG_ENTRY_VERSION,
@@ -63,7 +63,7 @@ class PlayStation4FlowHandler(ConfigFlow, domain=DOMAIN):
         """Handle a user config flow."""
         # Check if able to bind to ports: UDP 987, TCP 997.
         ports = PORT_MSG.keys()
-        failed = await self.hass.async_add_executor_job(self.helper.port_bind, ports)
+        failed = await self.menuai.async_add_executor_job(self.helper.port_bind, ports)
         if failed in ports:
             reason = PORT_MSG[failed]
             return self.async_abort(reason=reason)
@@ -76,7 +76,7 @@ class PlayStation4FlowHandler(ConfigFlow, domain=DOMAIN):
         errors = {}
         if user_input is not None:
             try:
-                self.creds = await self.hass.async_add_executor_job(
+                self.creds = await self.menuai.async_add_executor_job(
                     self.helper.get_creds, DEFAULT_ALIAS
                 )
                 if self.creds is not None:
@@ -123,7 +123,7 @@ class PlayStation4FlowHandler(ConfigFlow, domain=DOMAIN):
         if user_input is None:
             # Search for device.
             # If LOCAL_UDP_PORT cannot be used, a random port will be selected.
-            devices = await self.hass.async_add_executor_job(
+            devices = await self.menuai.async_add_executor_job(
                 self.helper.has_devices, self.m_device, LOCAL_UDP_PORT
             )
 
@@ -162,7 +162,7 @@ class PlayStation4FlowHandler(ConfigFlow, domain=DOMAIN):
             self.pin = str(user_input[CONF_CODE]).zfill(PIN_LENGTH)
             self.host = user_input[CONF_IP_ADDRESS]
 
-            is_ready, is_login = await self.hass.async_add_executor_job(
+            is_ready, is_login = await self.menuai.async_add_executor_job(
                 self.helper.link,
                 self.host,
                 self.creds,
@@ -191,7 +191,7 @@ class PlayStation4FlowHandler(ConfigFlow, domain=DOMAIN):
         # Try to find region automatically.
         if not self.location:
             self.location = await location_util.async_detect_location_info(
-                async_get_clientsession(self.hass)
+                async_get_clientsession(self.menuai)
             )
         if self.location:
             country = COUNTRYCODE_NAMES.get(self.location.country_code)

@@ -6,10 +6,10 @@ from contextlib import contextmanager
 import sys
 
 # Patch recorder util session scope
-from homeassistant.helpers import recorder as recorder_helper
+from menuai.helpers import recorder as recorder_helper
 
-# Make sure homeassistant.components.recorder.util is not already imported
-assert "homeassistant.components.recorder.util" not in sys.modules
+# Make sure menuai.components.recorder.util is not already imported
+assert "menuai.components.recorder.util" not in sys.modules
 
 real_session_scope = recorder_helper.session_scope
 

@@ -10,16 +10,16 @@ from typing import Any
 from pyControl4.error_handling import C4Exception
 from pyControl4.light import C4Light
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_TRANSITION,
     ColorMode,
     LightEntity,
     LightEntityFeature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from . import Control4ConfigEntry, Control4RuntimeData, get_items_of_category
 from .const import CONTROL4_ENTITY_TYPE
@@ -34,7 +34,7 @@ CONTROL4_DIMMER_VARS = ["LIGHT_LEVEL", "Brightness Percent"]
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: Control4ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -46,7 +46,7 @@ async def async_setup_entry(
         """Fetch data from Control4 director for non-dimmer lights."""
         try:
             return await update_variables_for_config_entry(
-                hass, entry, {CONTROL4_NON_DIMMER_VAR}
+                menuai, entry, {CONTROL4_NON_DIMMER_VAR}
             )
         except C4Exception as err:
             raise UpdateFailed(f"Error communicating with API: {err}") from err
@@ -55,20 +55,20 @@ async def async_setup_entry(
         """Fetch data from Control4 director for dimmer lights."""
         try:
             return await update_variables_for_config_entry(
-                hass, entry, {*CONTROL4_DIMMER_VARS}
+                menuai, entry, {*CONTROL4_DIMMER_VARS}
             )
         except C4Exception as err:
             raise UpdateFailed(f"Error communicating with API: {err}") from err
 
     non_dimmer_coordinator = DataUpdateCoordinator[dict[int, dict[str, Any]]](
-        hass,
+        menuai,
         _LOGGER,
         name="light",
         update_method=async_update_data_non_dimmer,
         update_interval=timedelta(seconds=runtime_data.scan_interval),
     )
     dimmer_coordinator = DataUpdateCoordinator[dict[int, dict[str, Any]]](
-        hass,
+        menuai,
         _LOGGER,
         name="light",
         update_method=async_update_data_dimmer,
@@ -79,7 +79,7 @@ async def async_setup_entry(
     await non_dimmer_coordinator.async_refresh()
     await dimmer_coordinator.async_refresh()
 
-    items_of_category = await get_items_of_category(hass, entry, CONTROL4_CATEGORY)
+    items_of_category = await get_items_of_category(menuai, entry, CONTROL4_CATEGORY)
 
     entity_list = []
     for item in items_of_category:

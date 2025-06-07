@@ -7,7 +7,7 @@ from mcstatus.responses import BedrockStatusResponse, JavaStatusResponse
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .const import (
     TEST_BEDROCK_STATUS_RESPONSE,
@@ -29,8 +29,8 @@ from tests.typing import ClientSessionGenerator
     ],
 )
 async def test_config_entry_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     mock_config_entry: MockConfigEntry,
     server: JavaServer | BedrockServer,
     status_response: JavaStatusResponse | BedrockStatusResponse,
@@ -41,7 +41,7 @@ async def test_config_entry_diagnostics(
 
     # Use 'request' fixture to access 'mock_config_entry' fixture, as it cannot be used directly in 'parametrize'.
     mock_config_entry = request.getfixturevalue(mock_config_entry)
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     if server.__name__ == "JavaServer":
         lookup_function_name = "async_lookup"
@@ -59,11 +59,11 @@ async def test_config_entry_diagnostics(
             return_value=status_response,
         ),
     ):
-        assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     # Test diagnostics.
     assert (
-        await get_diagnostics_for_config_entry(hass, hass_client, mock_config_entry)
+        await get_diagnostics_for_config_entry(menuai, menuai_client, mock_config_entry)
         == snapshot
     )

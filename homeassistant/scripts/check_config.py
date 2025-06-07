@@ -15,17 +15,17 @@ from unittest.mock import patch
 from annotatedyaml import loader as yaml_loader
 from annotatedyaml.loader import Secrets
 
-from homeassistant import core, loader
-from homeassistant.config import get_default_config_dir
-from homeassistant.config_entries import ConfigEntries
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import (
+from menuai import core, loader
+from menuai.config import get_default_config_dir
+from menuai.config_entries import ConfigEntries
+from menuai.exceptions import menuaiError
+from menuai.helpers import (
     area_registry as ar,
     device_registry as dr,
     entity_registry as er,
     issue_registry as ir,
 )
-from homeassistant.helpers.check_config import async_check_ha_config_file
+from menuai.helpers.check_config import async_check_ha_config_file
 
 # mypy: allow-untyped-calls, allow-untyped-defs
 
@@ -34,7 +34,7 @@ REQUIREMENTS = ("colorlog==6.9.0",)
 _LOGGER = logging.getLogger(__name__)
 MOCKS: dict[str, tuple[str, Callable]] = {
     "load": ("annotatedyaml.loader.load_yaml", yaml_loader.load_yaml),
-    "load*": ("homeassistant.config.load_yaml_dict", yaml_loader.load_yaml_dict),
+    "load*": ("menuai.config.load_yaml_dict", yaml_loader.load_yaml_dict),
     "secrets": ("annotatedyaml.loader.secret_yaml", yaml_loader.secret_yaml),
 }
 
@@ -61,13 +61,13 @@ def color(the_color, *args, reset=None):
 
 def run(script_args: list) -> int:
     """Handle check config commandline script."""
-    parser = argparse.ArgumentParser(description="Check Home Assistant configuration.")
+    parser = argparse.ArgumentParser(description="Check MenuAI configuration.")
     parser.add_argument("--script", choices=["check_config"])
     parser.add_argument(
         "-c",
         "--config",
         default=get_default_config_dir(),
-        help="Directory that contains the Home Assistant configuration",
+        help="Directory that contains the MenuAI configuration",
     )
     parser.add_argument(
         "-i",
@@ -170,20 +170,20 @@ def run(script_args: list) -> int:
 
 
 def check(config_dir, secrets=False):
-    """Perform a check by mocking hass load functions."""
-    logging.getLogger("homeassistant.loader").setLevel(logging.CRITICAL)
+    """Perform a check by mocking menuai load functions."""
+    logging.getLogger("menuai.loader").setLevel(logging.CRITICAL)
     res: dict[str, Any] = {
         "yaml_files": OrderedDict(),  # yaml_files loaded
         "secrets": OrderedDict(),  # secret cache and secrets loaded
         "except": OrderedDict(),  # critical exceptions raised (with config)
         "warn": OrderedDict(),  # non critical exceptions raised (with config)
-        #'components' is a HomeAssistantConfig
+        #'components' is a menuaiConfig
         "secret_cache": {},
     }
 
     # pylint: disable-next=possibly-unused-variable
     def mock_load(filename, secrets=None):
-        """Mock hass.util.load_yaml to save config file names."""
+        """Mock menuai.util.load_yaml to save config file names."""
         res["yaml_files"][filename] = True
         return MOCKS["load"][1](filename, secrets)
 
@@ -192,7 +192,7 @@ def check(config_dir, secrets=False):
         """Mock _get_secrets."""
         try:
             val = MOCKS["secrets"][1](ldr, node)
-        except HomeAssistantError:
+        except menuaiError:
             val = None
         res["secrets"][node.value] = val
         return val
@@ -253,15 +253,15 @@ def check(config_dir, secrets=False):
 
 async def async_check_config(config_dir):
     """Check the HA config."""
-    hass = core.HomeAssistant(config_dir)
-    loader.async_setup(hass)
-    hass.config_entries = ConfigEntries(hass, {})
-    await ar.async_load(hass)
-    await dr.async_load(hass)
-    await er.async_load(hass)
-    await ir.async_load(hass, read_only=True)
-    components = await async_check_ha_config_file(hass)
-    await hass.async_stop(force=True)
+    menuai = core.menuai(config_dir)
+    loader.async_setup(menuai)
+    menuai.config_entries = ConfigEntries(menuai, {})
+    await ar.async_load(menuai)
+    await dr.async_load(menuai)
+    await er.async_load(menuai)
+    await ir.async_load(menuai, read_only=True)
+    components = await async_check_ha_config_file(menuai)
+    await menuai.async_stop(force=True)
     return components
 
 

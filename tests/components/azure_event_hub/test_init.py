@@ -7,13 +7,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from azure.eventhub.exceptions import EventHubError
 import pytest
 
-from homeassistant.components import azure_event_hub
-from homeassistant.components.azure_event_hub.const import CONF_SEND_INTERVAL, DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import STATE_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
-from homeassistant.util.dt import utcnow
+from menuai.components import azure_event_hub
+from menuai.components.azure_event_hub.const import CONF_SEND_INTERVAL, DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.const import STATE_ON
+from menuai.core import menuai
+from menuai.setup import async_setup_component
+from menuai.util.dt import utcnow
 
 from .conftest import FilterTest
 from .const import AZURE_EVENT_HUB_PATH, BASIC_OPTIONS, CS_CONFIG_FULL, SAS_CONFIG_FULL
@@ -23,7 +23,7 @@ from tests.common import MockConfigEntry, async_fire_time_changed
 _LOGGER = logging.getLogger(__name__)
 
 
-async def test_import(hass: HomeAssistant) -> None:
+async def test_import(menuai: menuai) -> None:
     """Test the popping of the filter and further import of the config."""
     config = {
         DOMAIN: {
@@ -40,10 +40,10 @@ async def test_import(hass: HomeAssistant) -> None:
         }
     }
     config[DOMAIN].update(CS_CONFIG_FULL)
-    assert await async_setup_component(hass, DOMAIN, config)
+    assert await async_setup_component(menuai, DOMAIN, config)
 
 
-async def test_filter_only_config(hass: HomeAssistant) -> None:
+async def test_filter_only_config(menuai: menuai) -> None:
     """Test the popping of the filter and further import of the config."""
     config = {
         DOMAIN: {
@@ -57,11 +57,11 @@ async def test_filter_only_config(hass: HomeAssistant) -> None:
             },
         }
     }
-    assert await async_setup_component(hass, DOMAIN, config)
+    assert await async_setup_component(menuai, DOMAIN, config)
 
 
 async def test_unload_entry(
-    hass: HomeAssistant, entry: MockConfigEntry, mock_create_batch: MagicMock
+    menuai: menuai, entry: MockConfigEntry, mock_create_batch: MagicMock
 ) -> None:
     """Test being able to unload an entry.
 
@@ -69,13 +69,13 @@ async def test_unload_entry(
     this verifies that the unload, calls async_stop, which calls async_send and
     shuts down the hub.
     """
-    assert await hass.config_entries.async_unload(entry.entry_id)
+    assert await menuai.config_entries.async_unload(entry.entry_id)
     mock_create_batch.add.assert_not_called()
     assert entry.state is ConfigEntryState.NOT_LOADED
 
 
 async def test_failed_test_connection(
-    hass: HomeAssistant, mock_get_eventhub_properties: AsyncMock
+    menuai: menuai, mock_get_eventhub_properties: AsyncMock
 ) -> None:
     """Test being able to unload an entry."""
     entry = MockConfigEntry(
@@ -84,14 +84,14 @@ async def test_failed_test_connection(
         title="test-instance",
         options=BASIC_OPTIONS,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     mock_get_eventhub_properties.side_effect = EventHubError("Test")
-    await hass.config_entries.async_setup(entry.entry_id)
+    await menuai.config_entries.async_setup(entry.entry_id)
     assert entry.state is ConfigEntryState.SETUP_RETRY
 
 
 async def test_send_batch_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry_with_one_event: MockConfigEntry,
     mock_send_batch: AsyncMock,
 ) -> None:
@@ -99,24 +99,24 @@ async def test_send_batch_error(
     mock_send_batch.reset_mock()
     mock_send_batch.side_effect = [EventHubError("Test"), None]
     async_fire_time_changed(
-        hass,
+        menuai,
         utcnow() + timedelta(seconds=entry_with_one_event.options[CONF_SEND_INTERVAL]),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     mock_send_batch.assert_called_once()
     mock_send_batch.reset_mock()
-    hass.states.async_set("sensor.test2", STATE_ON)
+    menuai.states.async_set("sensor.test2", STATE_ON)
     async_fire_time_changed(
-        hass,
+        menuai,
         utcnow() + timedelta(seconds=entry_with_one_event.options[CONF_SEND_INTERVAL]),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     mock_send_batch.assert_called_once()
     mock_send_batch.side_effect = None  # Reset to avoid error in teardown
 
 
 async def test_late_event(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry_with_one_event: MockConfigEntry,
     mock_create_batch: MagicMock,
 ) -> None:
@@ -126,26 +126,26 @@ async def test_late_event(
         return_value=utcnow() + timedelta(hours=1),
     ):
         async_fire_time_changed(
-            hass,
+            menuai,
             utcnow()
             + timedelta(seconds=entry_with_one_event.options[CONF_SEND_INTERVAL]),
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         mock_create_batch.add.assert_not_called()
 
 
 async def test_full_batch(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry_with_one_event: MockConfigEntry,
     mock_create_batch: MagicMock,
 ) -> None:
     """Test the full batch behaviour."""
     mock_create_batch.add.side_effect = [ValueError, None]
     async_fire_time_changed(
-        hass,
+        menuai,
         utcnow() + timedelta(seconds=entry_with_one_event.options[CONF_SEND_INTERVAL]),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert mock_create_batch.add.call_count == 2
 
 
@@ -218,7 +218,7 @@ async def test_full_batch(
     ids=["allowlist", "denylist", "filtered_allowlist", "filtered_denylist"],
 )
 async def test_filter(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: MockConfigEntry,
     tests: list[FilterTest],
     mock_create_batch: MagicMock,
@@ -229,10 +229,10 @@ async def test_filter(
     in the parametrize and added to the entry fixture.
     """
     for test in tests:
-        hass.states.async_set(test.entity_id, STATE_ON)
+        menuai.states.async_set(test.entity_id, STATE_ON)
         async_fire_time_changed(
-            hass, utcnow() + timedelta(seconds=entry.options[CONF_SEND_INTERVAL])
+            menuai, utcnow() + timedelta(seconds=entry.options[CONF_SEND_INTERVAL])
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         assert mock_create_batch.add.call_count == test.expected_count
         mock_create_batch.add.reset_mock()

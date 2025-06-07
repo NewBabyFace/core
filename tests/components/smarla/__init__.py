@@ -3,16 +3,16 @@
 from typing import Any
 from unittest.mock import AsyncMock
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
 
-async def setup_integration(hass: HomeAssistant, config_entry: MockConfigEntry) -> bool:
+async def setup_integration(menuai: menuai, config_entry: MockConfigEntry) -> bool:
     """Set up the component."""
-    config_entry.add_to_hass(hass)
-    if success := await hass.config_entries.async_setup(config_entry.entry_id):
-        await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    if success := await menuai.config_entries.async_setup(config_entry.entry_id):
+        await menuai.async_block_till_done()
     return success
 
 

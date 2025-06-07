@@ -11,14 +11,14 @@ from aioautomower.utils import mower_list_to_dictionary_dataclass
 from aiohttp import ClientWebSocketResponse
 import pytest
 
-from homeassistant.components.application_credentials import (
+from menuai.components.application_credentials import (
     ClientCredential,
     async_import_client_credential,
 )
-from homeassistant.components.husqvarna_automower.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.components.husqvarna_automower.const import DOMAIN
+from menuai.core import menuai
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from .const import CLIENT_ID, CLIENT_SECRET, USER_ID
 
@@ -44,7 +44,7 @@ def mock_scope() -> str:
 
 
 @pytest.fixture(name="mower_time_zone")
-async def mock_time_zone(hass: HomeAssistant) -> dict[str, MowerAttributes]:
+async def mock_time_zone(menuai: menuai) -> dict[str, MowerAttributes]:
     """Fixture to set correct scope for the token."""
     return await dt_util.async_get_time_zone("Europe/Berlin")
 
@@ -93,11 +93,11 @@ def mock_config_entry(jwt: str, expires_at: int, scope: str) -> MockConfigEntry:
 
 
 @pytest.fixture(autouse=True)
-async def setup_credentials(hass: HomeAssistant) -> None:
+async def setup_credentials(menuai: menuai) -> None:
     """Fixture to setup credentials."""
-    assert await async_setup_component(hass, "application_credentials", {})
+    assert await async_setup_component(menuai, "application_credentials", {})
     await async_import_client_credential(
-        hass,
+        menuai,
         DOMAIN,
         ClientCredential(
             CLIENT_ID,
@@ -120,7 +120,7 @@ def mock_automower_client(
         pytest.fail("Listen was not cancelled!")
 
     with patch(
-        "homeassistant.components.husqvarna_automower.AutomowerSession",
+        "menuai.components.husqvarna_automower.AutomowerSession",
         autospec=True,
         spec_set=True,
     ) as mock:

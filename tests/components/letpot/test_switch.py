@@ -6,15 +6,15 @@ from letpot.exceptions import LetPotConnectionException, LetPotException
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     SERVICE_TOGGLE,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
 )
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
 
 from . import setup_integration
 
@@ -22,7 +22,7 @@ from tests.common import MockConfigEntry, snapshot_platform
 
 
 async def test_all_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mock_client: MagicMock,
     mock_device_client: MagicMock,
@@ -30,10 +30,10 @@ async def test_all_entities(
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test switch entities."""
-    with patch("homeassistant.components.letpot.PLATFORMS", [Platform.SWITCH]):
-        await setup_integration(hass, mock_config_entry)
+    with patch("menuai.components.letpot.PLATFORMS", [Platform.SWITCH]):
+        await setup_integration(menuai, mock_config_entry)
 
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
 
 @pytest.mark.parametrize(
@@ -54,7 +54,7 @@ async def test_all_entities(
     ],
 )
 async def test_set_switch(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_client: MagicMock,
     mock_device_client: MagicMock,
@@ -62,9 +62,9 @@ async def test_set_switch(
     parameter_value: bool,
 ) -> None:
     """Test switch entity turned on/turned off/toggled."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch",
         service,
         blocking=True,
@@ -90,7 +90,7 @@ async def test_set_switch(
     ],
 )
 async def test_switch_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_client: MagicMock,
     mock_device_client: MagicMock,
@@ -99,13 +99,13 @@ async def test_switch_error(
     user_error: str,
 ) -> None:
     """Test switch entity exception handling."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     mock_device_client.set_power.side_effect = exception
 
-    assert hass.states.get("switch.garden_power") is not None
-    with pytest.raises(HomeAssistantError, match=user_error):
-        await hass.services.async_call(
+    assert menuai.states.get("switch.garden_power") is not None
+    with pytest.raises(menuaiError, match=user_error):
+        await menuai.services.async_call(
             "switch",
             service,
             blocking=True,

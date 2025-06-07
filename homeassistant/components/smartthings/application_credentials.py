@@ -6,14 +6,14 @@ from typing import cast
 
 from aiohttp import BasicAuth, ClientError
 
-from homeassistant.components.application_credentials import (
+from menuai.components.application_credentials import (
     AuthImplementation,
     AuthorizationServer,
     ClientCredential,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.config_entry_oauth2_flow import AbstractOAuth2Implementation
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.config_entry_oauth2_flow import AbstractOAuth2Implementation
 
 from .const import DOMAIN
 
@@ -21,11 +21,11 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_get_auth_implementation(
-    hass: HomeAssistant, auth_domain: str, credential: ClientCredential
+    menuai: menuai, auth_domain: str, credential: ClientCredential
 ) -> AbstractOAuth2Implementation:
     """Return auth implementation."""
     return SmartThingsOAuth2Implementation(
-        hass,
+        menuai,
         DOMAIN,
         credential,
         authorization_server=AuthorizationServer(
@@ -40,7 +40,7 @@ class SmartThingsOAuth2Implementation(AuthImplementation):
 
     async def _token_request(self, data: dict) -> dict:
         """Make a token request."""
-        session = async_get_clientsession(self.hass)
+        session = async_get_clientsession(self.menuai)
 
         resp = await session.post(
             self.token_url,

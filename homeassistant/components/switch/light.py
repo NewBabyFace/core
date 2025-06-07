@@ -6,12 +6,12 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     PLATFORM_SCHEMA as LIGHT_PLATFORM_SCHEMA,
     ColorMode,
     LightEntity,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     CONF_ENTITY_ID,
     CONF_NAME,
@@ -20,11 +20,11 @@ from homeassistant.const import (
     STATE_ON,
     STATE_UNAVAILABLE,
 )
-from homeassistant.core import Event, EventStateChangedData, HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.event import async_track_state_change_event
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import Event, EventStateChangedData, menuai, callback
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.event import async_track_state_change_event
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import DOMAIN
 
@@ -39,13 +39,13 @@ PLATFORM_SCHEMA = LIGHT_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Initialize Light Switch platform."""
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     wrapped_switch = registry.async_get(config[CONF_ENTITY_ID])
     unique_id = wrapped_switch.unique_id if wrapped_switch else None
 
@@ -75,7 +75,7 @@ class LightSwitch(LightEntity):
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Forward the turn_on command to the switch in this light switch."""
-        await self.hass.services.async_call(
+        await self.menuai.services.async_call(
             DOMAIN,
             SERVICE_TURN_ON,
             {ATTR_ENTITY_ID: self._switch_entity_id},
@@ -85,7 +85,7 @@ class LightSwitch(LightEntity):
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Forward the turn_off command to the switch in this light switch."""
-        await self.hass.services.async_call(
+        await self.menuai.services.async_call(
             DOMAIN,
             SERVICE_TURN_OFF,
             {ATTR_ENTITY_ID: self._switch_entity_id},
@@ -93,7 +93,7 @@ class LightSwitch(LightEntity):
             context=self._context,
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
 
         @callback
@@ -102,7 +102,7 @@ class LightSwitch(LightEntity):
         ) -> None:
             """Handle child updates."""
             if (
-                state := self.hass.states.get(self._switch_entity_id)
+                state := self.menuai.states.get(self._switch_entity_id)
             ) is None or state.state == STATE_UNAVAILABLE:
                 self._attr_available = False
                 return
@@ -112,7 +112,7 @@ class LightSwitch(LightEntity):
 
         self.async_on_remove(
             async_track_state_change_event(
-                self.hass, [self._switch_entity_id], async_state_changed_listener
+                self.menuai, [self._switch_entity_id], async_state_changed_listener
             )
         )
         # Call once on adding

@@ -1,4 +1,4 @@
-"""Map Matter Nodes and Attributes to Home Assistant entities."""
+"""Map Matter Nodes and Attributes to MenuAI entities."""
 
 from __future__ import annotations
 
@@ -7,8 +7,8 @@ from collections.abc import Generator
 from chip.clusters.ClusterObjects import ClusterAttributeDescriptor, NullValue
 from matter_server.client.models.node import MatterEndpoint
 
-from homeassistant.const import Platform
-from homeassistant.core import callback
+from menuai.const import Platform
+from menuai.core import callback
 
 from .binary_sensor import DISCOVERY_SCHEMAS as BINARY_SENSOR_SCHEMAS
 from .button import DISCOVERY_SCHEMAS as BUTTON_SCHEMAS

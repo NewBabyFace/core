@@ -8,11 +8,11 @@ from typing import Any, Generic, Self, cast
 from ring_doorbell import RingCapability, RingDoorBell, RingStickUpCam
 from ring_doorbell.const import DOORBELL_EXISTING_TYPE
 
-from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import dt as dt_util
+from menuai.components.switch import SwitchEntity, SwitchEntityDescription
+from menuai.const import Platform
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import dt as dt_util
 
 from . import RingConfigEntry
 from .coordinator import RingDataCoordinator
@@ -84,7 +84,7 @@ SWITCHES: Sequence[RingSwitchEntityDescription[Any]] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: RingConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -98,7 +98,7 @@ async def async_setup_entry(
         for device in ring_data.devices.all_devices
         if description.exists_fn(device)
         and async_check_create_deprecated(
-            hass,
+            menuai,
             Platform.SWITCH,
             description.unique_id_fn(description, device),
             description,
@@ -136,7 +136,7 @@ class RingSwitch(RingEntity[RingDeviceT], SwitchEntity):
 
     @refresh_after
     async def _async_set_switch(self, switch_on: bool) -> None:
-        """Update switch state, and causes Home Assistant to correctly update."""
+        """Update switch state, and causes MenuAI to correctly update."""
         if switch_on:
             await self.entity_description.turn_on_fn(self._device)
         else:

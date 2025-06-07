@@ -6,11 +6,11 @@ from unittest.mock import patch
 from bond_async import BPUPSubscriptions, DeviceType
 from bond_async.bpup import BPUP_ALIVE_TIMEOUT
 
-from homeassistant.components import fan
-from homeassistant.components.fan import DOMAIN as FAN_DOMAIN
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP, STATE_ON, STATE_UNAVAILABLE
-from homeassistant.core import CoreState, HomeAssistant
-from homeassistant.util import utcnow
+from menuai.components import fan
+from menuai.components.fan import DOMAIN as FAN_DOMAIN
+from menuai.const import EVENT_menuai_STOP, STATE_ON, STATE_UNAVAILABLE
+from menuai.core import CoreState, menuai
+from menuai.util import utcnow
 
 from .common import patch_bond_device_state, setup_platform
 
@@ -26,7 +26,7 @@ def ceiling_fan(name: str):
     }
 
 
-async def test_bpup_goes_offline_and_recovers_same_entity(hass: HomeAssistant) -> None:
+async def test_bpup_goes_offline_and_recovers_same_entity(menuai: menuai) -> None:
     """Test that push updates fail and we fallback to polling and then bpup recovers.
 
     The BPUP recovery is triggered by an update for the entity and
@@ -34,11 +34,11 @@ async def test_bpup_goes_offline_and_recovers_same_entity(hass: HomeAssistant) -
     """
     bpup_subs = BPUPSubscriptions()
     with patch(
-        "homeassistant.components.bond.BPUPSubscriptions",
+        "menuai.components.bond.BPUPSubscriptions",
         return_value=bpup_subs,
     ):
         await setup_platform(
-            hass, FAN_DOMAIN, ceiling_fan("name-1"), bond_device_id="test-device-id"
+            menuai, FAN_DOMAIN, ceiling_fan("name-1"), bond_device_id="test-device-id"
         )
 
     bpup_subs.notify(
@@ -48,8 +48,8 @@ async def test_bpup_goes_offline_and_recovers_same_entity(hass: HomeAssistant) -
             "b": {"power": 1, "speed": 3, "direction": 0},
         }
     )
-    await hass.async_block_till_done()
-    assert hass.states.get("fan.name_1").attributes[fan.ATTR_PERCENTAGE] == 100
+    await menuai.async_block_till_done()
+    assert menuai.states.get("fan.name_1").attributes[fan.ATTR_PERCENTAGE] == 100
 
     # Send a message for the wrong device to make sure its ignored
     # we should never get this callback
@@ -60,8 +60,8 @@ async def test_bpup_goes_offline_and_recovers_same_entity(hass: HomeAssistant) -
             "b": {"power": 1, "speed": 1, "direction": 0},
         }
     )
-    await hass.async_block_till_done()
-    assert hass.states.get("fan.name_1").attributes[fan.ATTR_PERCENTAGE] == 100
+    await menuai.async_block_till_done()
+    assert menuai.states.get("fan.name_1").attributes[fan.ATTR_PERCENTAGE] == 100
 
     # Test we ignore messages for the wrong topic
     bpup_subs.notify(
@@ -71,8 +71,8 @@ async def test_bpup_goes_offline_and_recovers_same_entity(hass: HomeAssistant) -
             "b": {"power": 1, "speed": 1, "direction": 0},
         }
     )
-    await hass.async_block_till_done()
-    assert hass.states.get("fan.name_1").attributes[fan.ATTR_PERCENTAGE] == 100
+    await menuai.async_block_till_done()
+    assert menuai.states.get("fan.name_1").attributes[fan.ATTR_PERCENTAGE] == 100
 
     bpup_subs.notify(
         {
@@ -81,15 +81,15 @@ async def test_bpup_goes_offline_and_recovers_same_entity(hass: HomeAssistant) -
             "b": {"power": 1, "speed": 1, "direction": 0},
         }
     )
-    await hass.async_block_till_done()
-    assert hass.states.get("fan.name_1").attributes[fan.ATTR_PERCENTAGE] == 33
+    await menuai.async_block_till_done()
+    assert menuai.states.get("fan.name_1").attributes[fan.ATTR_PERCENTAGE] == 33
 
     bpup_subs.last_message_time = -BPUP_ALIVE_TIMEOUT
     with patch_bond_device_state(side_effect=TimeoutError):
-        async_fire_time_changed(hass, utcnow() + timedelta(seconds=230))
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, utcnow() + timedelta(seconds=230))
+        await menuai.async_block_till_done()
 
-    assert hass.states.get("fan.name_1").state == STATE_UNAVAILABLE
+    assert menuai.states.get("fan.name_1").state == STATE_UNAVAILABLE
 
     # Ensure we do not poll to get the state
     # since bpup has recovered and we know we
@@ -102,15 +102,15 @@ async def test_bpup_goes_offline_and_recovers_same_entity(hass: HomeAssistant) -
                 "b": {"power": 1, "speed": 2, "direction": 0},
             }
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("fan.name_1")
+    state = menuai.states.get("fan.name_1")
     assert state.state == STATE_ON
     assert state.attributes[fan.ATTR_PERCENTAGE] == 66
 
 
 async def test_bpup_goes_offline_and_recovers_different_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test that push updates fail and we fallback to polling and then bpup recovers.
 
@@ -119,11 +119,11 @@ async def test_bpup_goes_offline_and_recovers_different_entity(
     """
     bpup_subs = BPUPSubscriptions()
     with patch(
-        "homeassistant.components.bond.BPUPSubscriptions",
+        "menuai.components.bond.BPUPSubscriptions",
         return_value=bpup_subs,
     ):
         await setup_platform(
-            hass, FAN_DOMAIN, ceiling_fan("name-1"), bond_device_id="test-device-id"
+            menuai, FAN_DOMAIN, ceiling_fan("name-1"), bond_device_id="test-device-id"
         )
 
     bpup_subs.notify(
@@ -133,8 +133,8 @@ async def test_bpup_goes_offline_and_recovers_different_entity(
             "b": {"power": 1, "speed": 3, "direction": 0},
         }
     )
-    await hass.async_block_till_done()
-    assert hass.states.get("fan.name_1").attributes[fan.ATTR_PERCENTAGE] == 100
+    await menuai.async_block_till_done()
+    assert menuai.states.get("fan.name_1").attributes[fan.ATTR_PERCENTAGE] == 100
 
     bpup_subs.notify(
         {
@@ -143,15 +143,15 @@ async def test_bpup_goes_offline_and_recovers_different_entity(
             "b": {"power": 1, "speed": 1, "direction": 0},
         }
     )
-    await hass.async_block_till_done()
-    assert hass.states.get("fan.name_1").attributes[fan.ATTR_PERCENTAGE] == 33
+    await menuai.async_block_till_done()
+    assert menuai.states.get("fan.name_1").attributes[fan.ATTR_PERCENTAGE] == 33
 
     bpup_subs.last_message_time = -BPUP_ALIVE_TIMEOUT
     with patch_bond_device_state(side_effect=TimeoutError):
-        async_fire_time_changed(hass, utcnow() + timedelta(seconds=230))
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, utcnow() + timedelta(seconds=230))
+        await menuai.async_block_till_done()
 
-    assert hass.states.get("fan.name_1").state == STATE_UNAVAILABLE
+    assert menuai.states.get("fan.name_1").state == STATE_UNAVAILABLE
 
     bpup_subs.notify(
         {
@@ -160,57 +160,57 @@ async def test_bpup_goes_offline_and_recovers_different_entity(
             "b": {"power": 1, "speed": 2, "direction": 0},
         }
     )
-    await hass.async_block_till_done()
-    assert hass.states.get("fan.name_1").state == STATE_UNAVAILABLE
+    await menuai.async_block_till_done()
+    assert menuai.states.get("fan.name_1").state == STATE_UNAVAILABLE
 
     with patch_bond_device_state(return_value={"power": 1, "speed": 1}):
-        async_fire_time_changed(hass, utcnow() + timedelta(seconds=430))
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, utcnow() + timedelta(seconds=430))
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("fan.name_1")
+    state = menuai.states.get("fan.name_1")
     assert state.state == STATE_ON
     assert state.attributes[fan.ATTR_PERCENTAGE] == 33
 
 
-async def test_polling_fails_and_recovers(hass: HomeAssistant) -> None:
+async def test_polling_fails_and_recovers(menuai: menuai) -> None:
     """Test that polling fails and we recover."""
     await setup_platform(
-        hass, FAN_DOMAIN, ceiling_fan("name-1"), bond_device_id="test-device-id"
+        menuai, FAN_DOMAIN, ceiling_fan("name-1"), bond_device_id="test-device-id"
     )
 
     with patch_bond_device_state(side_effect=TimeoutError):
-        async_fire_time_changed(hass, utcnow() + timedelta(seconds=230))
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, utcnow() + timedelta(seconds=230))
+        await menuai.async_block_till_done()
 
-    assert hass.states.get("fan.name_1").state == STATE_UNAVAILABLE
+    assert menuai.states.get("fan.name_1").state == STATE_UNAVAILABLE
 
     with patch_bond_device_state(return_value={"power": 1, "speed": 1}):
-        async_fire_time_changed(hass, utcnow() + timedelta(seconds=230))
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, utcnow() + timedelta(seconds=230))
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("fan.name_1")
+    state = menuai.states.get("fan.name_1")
     assert state.state == STATE_ON
     assert state.attributes[fan.ATTR_PERCENTAGE] == 33
 
 
-async def test_polling_stops_at_the_stop_event(hass: HomeAssistant) -> None:
+async def test_polling_stops_at_the_stop_event(menuai: menuai) -> None:
     """Test that polling stops at the stop event."""
     await setup_platform(
-        hass, FAN_DOMAIN, ceiling_fan("name-1"), bond_device_id="test-device-id"
+        menuai, FAN_DOMAIN, ceiling_fan("name-1"), bond_device_id="test-device-id"
     )
 
     with patch_bond_device_state(side_effect=TimeoutError):
-        async_fire_time_changed(hass, utcnow() + timedelta(seconds=230))
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, utcnow() + timedelta(seconds=230))
+        await menuai.async_block_till_done()
 
-    assert hass.states.get("fan.name_1").state == STATE_UNAVAILABLE
+    assert menuai.states.get("fan.name_1").state == STATE_UNAVAILABLE
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
-    hass.set_state(CoreState.stopping)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire(EVENT_menuai_STOP)
+    menuai.set_state(CoreState.stopping)
+    await menuai.async_block_till_done()
 
     with patch_bond_device_state(return_value={"power": 1, "speed": 1}):
-        async_fire_time_changed(hass, utcnow() + timedelta(seconds=230))
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, utcnow() + timedelta(seconds=230))
+        await menuai.async_block_till_done()
 
-    assert hass.states.get("fan.name_1").state == STATE_UNAVAILABLE
+    assert menuai.states.get("fan.name_1").state == STATE_UNAVAILABLE

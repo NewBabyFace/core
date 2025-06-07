@@ -13,11 +13,11 @@ from aiounifi.interfaces.wlans import Wlans
 from aiounifi.models.api import ApiItemT
 from aiounifi.models.wlan import Wlan
 
-from homeassistant.components.image import ImageEntity, ImageEntityDescription
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import dt as dt_util
+from menuai.components.image import ImageEntity, ImageEntityDescription
+from menuai.const import EntityCategory
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import dt as dt_util
 
 from . import UnifiConfigEntry
 from .entity import (
@@ -65,7 +65,7 @@ ENTITY_DESCRIPTIONS: tuple[UnifiImageEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: UnifiConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -92,7 +92,7 @@ class UnifiImageEntity(UnifiEntity[HandlerT, ApiItemT], ImageEntity):
     ) -> None:
         """Initiatlize UniFi Image entity."""
         super().__init__(obj_id, hub, description)
-        ImageEntity.__init__(self, hub.hass)
+        ImageEntity.__init__(self, hub.menuai)
 
     def image(self) -> bytes | None:
         """Return bytes of image."""

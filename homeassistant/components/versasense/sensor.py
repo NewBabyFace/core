@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import logging
 
-from homeassistant.components.sensor import SensorEntity
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.sensor import SensorEntity
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import DOMAIN
 from .const import (
@@ -23,7 +23,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -32,12 +32,12 @@ async def async_setup_platform(
     if discovery_info is None:
         return
 
-    consumer = hass.data[DOMAIN][KEY_CONSUMER]
+    consumer = menuai.data[DOMAIN][KEY_CONSUMER]
 
     sensor_list = []
 
     for entity_info in discovery_info.values():
-        peripheral = hass.data[DOMAIN][entity_info[KEY_PARENT_MAC]][
+        peripheral = menuai.data[DOMAIN][entity_info[KEY_PARENT_MAC]][
             entity_info[KEY_IDENTIFIER]
         ]
         parent_name = entity_info[KEY_PARENT_NAME]

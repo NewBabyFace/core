@@ -4,29 +4,29 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock
 
-from homeassistant import config_entries
-from homeassistant.components.systemmonitor.const import CONF_PROCESS, DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai import config_entries
+from menuai.components.systemmonitor.const import CONF_PROCESS, DOMAIN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from tests.common import MockConfigEntry
 
 
-async def test_form(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
+async def test_form(menuai: menuai, mock_setup_entry: AsyncMock) -> None:
     """Test we get the form."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["step_id"] == "user"
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["options"] == {}
@@ -35,7 +35,7 @@ async def test_form(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
 
 
 async def test_form_already_configured(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock
+    menuai: menuai, mock_setup_entry: AsyncMock
 ) -> None:
     """Test abort when already configured."""
     config_entry = MockConfigEntry(
@@ -43,9 +43,9 @@ async def test_form_already_configured(
         source=config_entries.SOURCE_USER,
         options={},
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -54,7 +54,7 @@ async def test_form_already_configured(
 
 
 async def test_add_and_remove_processes(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
@@ -66,22 +66,22 @@ async def test_add_and_remove_processes(
         options={},
         entry_id="1",
     )
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             CONF_PROCESS: ["systemd"],
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"] == {
@@ -91,18 +91,18 @@ async def test_add_and_remove_processes(
     }
 
     # Add another
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             CONF_PROCESS: ["systemd", "octave-cli"],
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"] == {
@@ -121,18 +121,18 @@ async def test_add_and_remove_processes(
     )
 
     # Remove one
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             CONF_PROCESS: ["systemd"],
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"] == {
@@ -142,18 +142,18 @@ async def test_add_and_remove_processes(
     }
 
     # Remove last
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             CONF_PROCESS: [],
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"] == {

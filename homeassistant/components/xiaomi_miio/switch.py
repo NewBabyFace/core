@@ -20,12 +20,12 @@ from miio.gateway.devices.switch import Switch
 from miio.powerstrip import PowerMode
 import voluptuous as vol
 
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     SwitchDeviceClass,
     SwitchEntity,
     SwitchEntityDescription,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_MODE,
     ATTR_TEMPERATURE,
@@ -35,10 +35,10 @@ from homeassistant.const import (
     CONF_TOKEN,
     EntityCategory,
 )
-from homeassistant.core import HomeAssistant, ServiceCall, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.core import menuai, ServiceCall, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
     CONF_FLOW_TYPE,
@@ -345,20 +345,20 @@ SWITCH_TYPES = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: XiaomiMiioConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the switch from a config entry."""
     model = config_entry.data[CONF_MODEL]
     if model in (*MODELS_HUMIDIFIER, *MODELS_FAN):
-        await async_setup_coordinated_entry(hass, config_entry, async_add_entities)
+        await async_setup_coordinated_entry(menuai, config_entry, async_add_entities)
     else:
-        await async_setup_other_entry(hass, config_entry, async_add_entities)
+        await async_setup_other_entry(menuai, config_entry, async_add_entities)
 
 
 async def async_setup_coordinated_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: XiaomiMiioConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -368,8 +368,8 @@ async def async_setup_coordinated_entry(
     device = config_entry.runtime_data.device
     coordinator = config_entry.runtime_data.device_coordinator
 
-    if DATA_KEY not in hass.data:
-        hass.data[DATA_KEY] = {}
+    if DATA_KEY not in menuai.data:
+        menuai.data[DATA_KEY] = {}
 
     device_features = 0
 
@@ -398,7 +398,7 @@ async def async_setup_coordinated_entry(
 
 
 async def async_setup_other_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: XiaomiMiioConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -433,8 +433,8 @@ async def async_setup_other_entry(
         and model == "lumi.acpartner.v3"
     ):
         device: SwitchEntity
-        if DATA_KEY not in hass.data:
-            hass.data[DATA_KEY] = {}
+        if DATA_KEY not in menuai.data:
+            menuai.data[DATA_KEY] = {}
 
         _LOGGER.debug("Initializing with host %s (token %s...)", host, token[:5])
 
@@ -452,12 +452,12 @@ async def async_setup_other_entry(
                     name, chuangmi_plug, config_entry, unique_id_ch, channel_usb
                 )
                 entities.append(device)
-                hass.data[DATA_KEY][host] = device
+                menuai.data[DATA_KEY][host] = device
         elif model in ["qmi.powerstrip.v1", "zimi.powerstrip.v2"]:
             power_strip = PowerStrip(host, token, model=model)
             device = XiaomiPowerStripSwitch(name, power_strip, config_entry, unique_id)
             entities.append(device)
-            hass.data[DATA_KEY][host] = device
+            menuai.data[DATA_KEY][host] = device
         elif model in [
             "chuangmi.plug.m1",
             "chuangmi.plug.m3",
@@ -470,14 +470,14 @@ async def async_setup_other_entry(
                 name, chuangmi_plug, config_entry, unique_id
             )
             entities.append(device)
-            hass.data[DATA_KEY][host] = device
+            menuai.data[DATA_KEY][host] = device
         elif model in ["lumi.acpartner.v3"]:
             ac_companion = AirConditioningCompanionV3(host, token)
             device = XiaomiAirConditioningCompanionSwitch(
                 name, ac_companion, config_entry, unique_id
             )
             entities.append(device)
-            hass.data[DATA_KEY][host] = device
+            menuai.data[DATA_KEY][host] = device
         else:
             _LOGGER.error(
                 (
@@ -499,11 +499,11 @@ async def async_setup_other_entry(
             if entity_ids := service.data.get(ATTR_ENTITY_ID):
                 devices = [
                     device
-                    for device in hass.data[DATA_KEY].values()
+                    for device in menuai.data[DATA_KEY].values()
                     if device.entity_id in entity_ids
                 ]
             else:
-                devices = hass.data[DATA_KEY].values()
+                devices = menuai.data[DATA_KEY].values()
 
             update_tasks = []
             for device in devices:
@@ -519,7 +519,7 @@ async def async_setup_other_entry(
 
         for plug_service, method in SERVICE_TO_METHOD.items():
             schema = method.schema or SERVICE_SCHEMA
-            hass.services.async_register(
+            menuai.services.async_register(
                 DOMAIN, plug_service, async_service_handler, schema=schema
             )
 
@@ -789,15 +789,15 @@ class XiaomiGatewaySwitch(XiaomiGatewayDevice, SwitchEntity):
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the switch on."""
-        await self.hass.async_add_executor_job(self._sub_device.on, self._channel)
+        await self.menuai.async_add_executor_job(self._sub_device.on, self._channel)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the switch off."""
-        await self.hass.async_add_executor_job(self._sub_device.off, self._channel)
+        await self.menuai.async_add_executor_job(self._sub_device.off, self._channel)
 
     async def async_toggle(self, **kwargs: Any) -> None:
         """Toggle the switch."""
-        await self.hass.async_add_executor_job(self._sub_device.toggle, self._channel)
+        await self.menuai.async_add_executor_job(self._sub_device.toggle, self._channel)
 
 
 class XiaomiPlugGenericSwitch(XiaomiMiioEntity, SwitchEntity):
@@ -826,7 +826,7 @@ class XiaomiPlugGenericSwitch(XiaomiMiioEntity, SwitchEntity):
     async def _try_command(self, mask_error, func, *args, **kwargs):
         """Call a plug command handling error messages."""
         try:
-            result = await self.hass.async_add_executor_job(
+            result = await self.menuai.async_add_executor_job(
                 partial(func, *args, **kwargs)
             )
         except DeviceException as exc:
@@ -870,7 +870,7 @@ class XiaomiPlugGenericSwitch(XiaomiMiioEntity, SwitchEntity):
             return
 
         try:
-            state = await self.hass.async_add_executor_job(self._device.status)
+            state = await self.menuai.async_add_executor_job(self._device.status)
             _LOGGER.debug("Got new state: %s", state)
 
             self._attr_available = True
@@ -951,7 +951,7 @@ class XiaomiPowerStripSwitch(XiaomiPlugGenericSwitch):
             return
 
         try:
-            state = await self.hass.async_add_executor_job(self._device.status)
+            state = await self.menuai.async_add_executor_job(self._device.status)
             _LOGGER.debug("Got new state: %s", state)
 
             self._attr_available = True
@@ -1058,7 +1058,7 @@ class ChuangMiPlugSwitch(XiaomiPlugGenericSwitch):
             return
 
         try:
-            state = await self.hass.async_add_executor_job(self._device.status)
+            state = await self.menuai.async_add_executor_job(self._device.status)
             _LOGGER.debug("Got new state: %s", state)
 
             self._attr_available = True
@@ -1130,7 +1130,7 @@ class XiaomiAirConditioningCompanionSwitch(XiaomiPlugGenericSwitch):
             return
 
         try:
-            state = await self.hass.async_add_executor_job(self._device.status)
+            state = await self.menuai.async_add_executor_job(self._device.status)
             _LOGGER.debug("Got new state: %s", state)
 
             self._attr_available = True

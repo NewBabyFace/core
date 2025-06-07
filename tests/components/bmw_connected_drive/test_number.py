@@ -8,10 +8,10 @@ import pytest
 import respx
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
 
 from . import (
     REMOTE_SERVICE_EXC_REASON,
@@ -26,7 +26,7 @@ from tests.common import snapshot_platform
 @pytest.mark.usefixtures("bmw_fixture")
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_entity_state_attrs(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
 ) -> None:
@@ -34,12 +34,12 @@ async def test_entity_state_attrs(
 
     # Setup component
     with patch(
-        "homeassistant.components.bmw_connected_drive.PLATFORMS",
+        "menuai.components.bmw_connected_drive.PLATFORMS",
         [Platform.NUMBER],
     ):
-        mock_config_entry = await setup_mocked_integration(hass)
+        mock_config_entry = await setup_mocked_integration(menuai)
 
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
 
 @pytest.mark.parametrize(
@@ -49,7 +49,7 @@ async def test_entity_state_attrs(
     ],
 )
 async def test_service_call_success(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_id: str,
     new_value: str,
     old_value: str,
@@ -59,12 +59,12 @@ async def test_service_call_success(
     """Test successful number change."""
 
     # Setup component
-    assert await setup_mocked_integration(hass)
-    hass.states.async_set(entity_id, old_value)
-    assert hass.states.get(entity_id).state == old_value
+    assert await setup_mocked_integration(menuai)
+    menuai.states.async_set(entity_id, old_value)
+    assert menuai.states.get(entity_id).state == old_value
 
     # Test
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "number",
         "set_value",
         service_data={"value": new_value},
@@ -72,7 +72,7 @@ async def test_service_call_success(
         target={"entity_id": entity_id},
     )
     check_remote_service_call(bmw_fixture, remote_service)
-    assert hass.states.get(entity_id).state == new_value
+    assert menuai.states.get(entity_id).state == new_value
 
 
 @pytest.mark.usefixtures("bmw_fixture")
@@ -83,29 +83,29 @@ async def test_service_call_success(
     ],
 )
 async def test_service_call_invalid_input(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_id: str,
     value: str,
 ) -> None:
     """Test not allowed values for number inputs."""
 
     # Setup component
-    assert await setup_mocked_integration(hass)
-    old_value = hass.states.get(entity_id).state
+    assert await setup_mocked_integration(menuai)
+    old_value = menuai.states.get(entity_id).state
 
     # Test
     with pytest.raises(
         ValueError,
         match="Target SoC must be an integer between 20 and 100 that is a multiple of 5.",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "number",
             "set_value",
             service_data={"value": value},
             blocking=True,
             target={"entity_id": entity_id},
         )
-    assert hass.states.get(entity_id).state == old_value
+    assert menuai.states.get(entity_id).state == old_value
 
 
 @pytest.mark.usefixtures("bmw_fixture")
@@ -114,12 +114,12 @@ async def test_service_call_invalid_input(
     [
         (
             MyBMWRemoteServiceError(REMOTE_SERVICE_EXC_REASON),
-            HomeAssistantError,
+            menuaiError,
             REMOTE_SERVICE_EXC_TRANSLATION,
         ),
         (
             MyBMWAPIError(REMOTE_SERVICE_EXC_REASON),
-            HomeAssistantError,
+            menuaiError,
             REMOTE_SERVICE_EXC_TRANSLATION,
         ),
         (
@@ -132,7 +132,7 @@ async def test_service_call_invalid_input(
     ],
 )
 async def test_service_call_fail(
-    hass: HomeAssistant,
+    menuai: menuai,
     raised: Exception,
     expected: Exception,
     exc_translation: str,
@@ -141,9 +141,9 @@ async def test_service_call_fail(
     """Test exception handling."""
 
     # Setup component
-    assert await setup_mocked_integration(hass)
+    assert await setup_mocked_integration(menuai)
     entity_id = "number.i4_edrive40_target_soc"
-    old_value = hass.states.get(entity_id).state
+    old_value = menuai.states.get(entity_id).state
 
     # Setup exception
     monkeypatch.setattr(
@@ -154,11 +154,11 @@ async def test_service_call_fail(
 
     # Test
     with pytest.raises(expected, match=exc_translation):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "number",
             "set_value",
             service_data={"value": "80"},
             blocking=True,
             target={"entity_id": entity_id},
         )
-    assert hass.states.get(entity_id).state == old_value
+    assert menuai.states.get(entity_id).state == old_value

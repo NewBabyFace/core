@@ -6,40 +6,40 @@ from unittest.mock import MagicMock, patch
 from fullykiosk import FullyKioskError
 import pytest
 
-from homeassistant.components.fully_kiosk.const import DOMAIN
-from homeassistant.components.fully_kiosk.entity import valid_global_mac_address
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import (
+from menuai.components.fully_kiosk.const import DOMAIN
+from menuai.components.fully_kiosk.entity import valid_global_mac_address
+from menuai.config_entries import ConfigEntryState
+from menuai.const import (
     CONF_HOST,
     CONF_MAC,
     CONF_PASSWORD,
     CONF_SSL,
     CONF_VERIFY_SSL,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from tests.common import MockConfigEntry, async_load_fixture
 
 
 async def test_load_unload_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_fully_kiosk: MagicMock,
 ) -> None:
     """Test the Fully Kiosk Browser configuration entry loading/unloading."""
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert mock_config_entry.state is ConfigEntryState.LOADED
     assert len(mock_fully_kiosk.getDeviceInfo.mock_calls) == 1
     assert len(mock_fully_kiosk.getSettings.mock_calls) == 1
 
-    await hass.config_entries.async_unload(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert not hass.data.get(DOMAIN)
+    assert not menuai.data.get(DOMAIN)
     assert mock_config_entry.state is ConfigEntryState.NOT_LOADED
 
 
@@ -48,7 +48,7 @@ async def test_load_unload_config_entry(
     [FullyKioskError("error", "status"), TimeoutError],
 )
 async def test_config_entry_not_ready(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_fully_kiosk: MagicMock,
     side_effect: Exception,
@@ -56,37 +56,37 @@ async def test_config_entry_not_ready(
     """Test the Fully Kiosk Browser configuration entry not ready."""
     mock_fully_kiosk.getDeviceInfo.side_effect = side_effect
 
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert mock_config_entry.state is ConfigEntryState.SETUP_RETRY
 
 
 async def _load_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     device_info_fixture: str,
 ) -> None:
     with patch(
-        "homeassistant.components.fully_kiosk.coordinator.FullyKiosk",
+        "menuai.components.fully_kiosk.coordinator.FullyKiosk",
         autospec=True,
     ) as client_mock:
         client = client_mock.return_value
         client.getDeviceInfo.return_value = json.loads(
-            await async_load_fixture(hass, device_info_fixture, DOMAIN)
+            await async_load_fixture(menuai, device_info_fixture, DOMAIN)
         )
         client.getSettings.return_value = json.loads(
-            await async_load_fixture(hass, "listsettings.json", DOMAIN)
+            await async_load_fixture(menuai, "listsettings.json", DOMAIN)
         )
 
-        config_entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        config_entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
 
 async def test_multiple_kiosk_with_empty_mac(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
 ) -> None:
@@ -103,7 +103,7 @@ async def test_multiple_kiosk_with_empty_mac(
         },
         unique_id="111111",
     )
-    await _load_config(hass, config_entry1, "deviceinfo_empty_mac1.json")
+    await _load_config(menuai, config_entry1, "deviceinfo_empty_mac1.json")
     assert len(device_registry.devices) == 1
 
     config_entry2 = MockConfigEntry(
@@ -118,13 +118,13 @@ async def test_multiple_kiosk_with_empty_mac(
         },
         unique_id="22222",
     )
-    await _load_config(hass, config_entry2, "deviceinfo_empty_mac2.json")
+    await _load_config(menuai, config_entry2, "deviceinfo_empty_mac2.json")
     assert len(device_registry.devices) == 2
 
-    state1 = hass.states.get("sensor.test_kiosk_1_battery")
+    state1 = menuai.states.get("sensor.test_kiosk_1_battery")
     assert state1
 
-    state2 = hass.states.get("sensor.test_kiosk_2_battery")
+    state2 = menuai.states.get("sensor.test_kiosk_2_battery")
     assert state2
 
     entry1 = entity_registry.async_get("sensor.test_kiosk_1_battery")

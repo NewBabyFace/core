@@ -6,11 +6,11 @@ from pyaprilaire.client import AprilaireClient
 from pyaprilaire.const import FunctionalDomain
 import pytest
 
-from homeassistant.components.aprilaire.config_flow import (
+from menuai.components.aprilaire.config_flow import (
     STEP_USER_DATA_SCHEMA,
     AprilaireConfigFlow,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 
 @pytest.fixture
@@ -67,7 +67,7 @@ async def test_config_flow_invalid_data(client: AprilaireClient) -> None:
     )
 
 
-async def test_config_flow_data(client: AprilaireClient, hass: HomeAssistant) -> None:
+async def test_config_flow_data(client: AprilaireClient, menuai: menuai) -> None:
     """Test the config flow with valid data."""
 
     client.data = {"mac_address": "1:2:3:4:5:6"}
@@ -78,7 +78,7 @@ async def test_config_flow_data(client: AprilaireClient, hass: HomeAssistant) ->
     create_entry_mock = Mock()
 
     config_flow = AprilaireConfigFlow()
-    config_flow.hass = hass
+    config_flow.menuai = menuai
     config_flow.async_show_form = show_form_mock
     config_flow.async_set_unique_id = set_unique_id_mock
     config_flow._abort_if_unique_id_configured = abort_if_unique_id_configured_mock

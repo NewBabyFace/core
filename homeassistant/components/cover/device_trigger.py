@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA
-from homeassistant.components.homeassistant.triggers import (
+from menuai.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA
+from menuai.components.menuai.triggers import (
     numeric_state as numeric_state_trigger,
     state as state_trigger,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_ABOVE,
     CONF_BELOW,
     CONF_DEVICE_ID,
@@ -20,11 +20,11 @@ from homeassistant.const import (
     CONF_TYPE,
     CONF_VALUE_TEMPLATE,
 )
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.entity import get_supported_features
-from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import CALLBACK_TYPE, menuai
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.entity import get_supported_features
+from menuai.helpers.trigger import TriggerActionType, TriggerInfo
+from menuai.helpers.typing import ConfigType
 
 from . import DOMAIN, CoverEntityFeature, CoverState
 
@@ -59,10 +59,10 @@ TRIGGER_SCHEMA = vol.Any(POSITION_TRIGGER_SCHEMA, STATE_TRIGGER_SCHEMA)
 
 
 async def async_get_triggers(
-    hass: HomeAssistant, device_id: str
+    menuai: menuai, device_id: str
 ) -> list[dict[str, str]]:
     """List device triggers for Cover devices."""
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     triggers = []
 
     # Get all the integrations entities for this device
@@ -70,7 +70,7 @@ async def async_get_triggers(
         if entry.domain != DOMAIN:
             continue
 
-        supported_features = get_supported_features(hass, entry.entity_id)
+        supported_features = get_supported_features(menuai, entry.entity_id)
         supports_open_close = supported_features & (
             CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE
         )
@@ -110,7 +110,7 @@ async def async_get_triggers(
 
 
 async def async_get_trigger_capabilities(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> dict[str, vol.Schema]:
     """List trigger capabilities."""
     if config[CONF_TYPE] not in POSITION_TRIGGER_TYPES:
@@ -135,7 +135,7 @@ async def async_get_trigger_capabilities(
 
 
 async def async_attach_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     action: TriggerActionType,
     trigger_info: TriggerInfo,
@@ -159,10 +159,10 @@ async def async_attach_trigger(
         if CONF_FOR in config:
             state_config[CONF_FOR] = config[CONF_FOR]
         state_config = await state_trigger.async_validate_trigger_config(
-            hass, state_config
+            menuai, state_config
         )
         return await state_trigger.async_attach_trigger(
-            hass, state_config, action, trigger_info, platform_type="device"
+            menuai, state_config, action, trigger_info, platform_type="device"
         )
 
     if config[CONF_TYPE] == "position":
@@ -181,8 +181,8 @@ async def async_attach_trigger(
         CONF_VALUE_TEMPLATE: value_template,
     }
     numeric_state_config = await numeric_state_trigger.async_validate_trigger_config(
-        hass, numeric_state_config
+        menuai, numeric_state_config
     )
     return await numeric_state_trigger.async_attach_trigger(
-        hass, numeric_state_config, action, trigger_info, platform_type="device"
+        menuai, numeric_state_config, action, trigger_info, platform_type="device"
     )

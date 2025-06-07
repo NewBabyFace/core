@@ -11,15 +11,15 @@ from pyvizio import VizioAsync, async_guess_device_type
 from pyvizio.const import APP_HOME
 import voluptuous as vol
 
-from homeassistant.components.media_player import MediaPlayerDeviceClass
-from homeassistant.config_entries import (
+from menuai.components.media_player import MediaPlayerDeviceClass
+from menuai.config_entries import (
     SOURCE_ZEROCONF,
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_ACCESS_TOKEN,
     CONF_DEVICE_CLASS,
     CONF_EXCLUDE,
@@ -28,11 +28,11 @@ from homeassistant.const import (
     CONF_NAME,
     CONF_PIN,
 )
-from homeassistant.core import callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
-from homeassistant.util.network import is_ip_address
+from menuai.core import callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.util.network import is_ip_address
 
 from .const import (
     CONF_APPS,
@@ -159,7 +159,7 @@ class VizioOptionsConfigFlow(OptionsFlow):
                             APP_HOME["name"],
                             *(
                                 app["name"]
-                                for app in self.hass.data[DOMAIN][CONF_APPS].data
+                                for app in self.menuai.data[DOMAIN][CONF_APPS].data
                             ),
                         ]
                     ),
@@ -213,7 +213,7 @@ class VizioConfigFlow(ConfigFlow, domain=DOMAIN):
                 unique_id = await VizioAsync.get_unique_id(
                     user_input[CONF_HOST],
                     user_input[CONF_DEVICE_CLASS],
-                    session=async_get_clientsession(self.hass, False),
+                    session=async_get_clientsession(self.menuai, False),
                 )
 
                 # Check if unique ID was found, set unique ID, and abort if a flow with
@@ -243,7 +243,7 @@ class VizioConfigFlow(ConfigFlow, domain=DOMAIN):
                         user_input[CONF_HOST],
                         user_input.get(CONF_ACCESS_TOKEN),
                         user_input[CONF_DEVICE_CLASS],
-                        session=async_get_clientsession(self.hass, False),
+                        session=async_get_clientsession(self.menuai, False),
                     ):
                         errors["base"] = "cannot_connect"
 
@@ -276,7 +276,7 @@ class VizioConfigFlow(ConfigFlow, domain=DOMAIN):
         unique_id = await VizioAsync.get_unique_id(
             host,
             device_class,
-            session=async_get_clientsession(self.hass, False),
+            session=async_get_clientsession(self.menuai, False),
         )
 
         if not unique_id:
@@ -314,7 +314,7 @@ class VizioConfigFlow(ConfigFlow, domain=DOMAIN):
                 self._data[CONF_NAME],
                 None,
                 self._data[CONF_DEVICE_CLASS],
-                session=async_get_clientsession(self.hass, False),
+                session=async_get_clientsession(self.menuai, False),
             )
             pair_data = await dev.start_pair()
 
@@ -337,7 +337,7 @@ class VizioConfigFlow(ConfigFlow, domain=DOMAIN):
                 self._data[CONF_NAME],
                 None,
                 self._data[CONF_DEVICE_CLASS],
-                session=async_get_clientsession(self.hass, False),
+                session=async_get_clientsession(self.menuai, False),
             )
             pair_data = await dev.pair(
                 self._ch_type, self._pairing_token, user_input[CONF_PIN]

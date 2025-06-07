@@ -2,14 +2,14 @@
 
 from microBeesPy import Sensor
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import MicroBeesUpdateCoordinator
@@ -36,12 +36,12 @@ BINARYSENSOR_TYPES = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the microBees binary sensor platform."""
-    coordinator: MicroBeesUpdateCoordinator = hass.data[DOMAIN][
+    coordinator: MicroBeesUpdateCoordinator = menuai.data[DOMAIN][
         entry.entry_id
     ].coordinator
     async_add_entities(

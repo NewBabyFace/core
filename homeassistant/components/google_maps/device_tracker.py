@@ -9,23 +9,23 @@ from locationsharinglib import Service
 from locationsharinglib.locationsharinglibexceptions import InvalidCookies
 import voluptuous as vol
 
-from homeassistant.components.device_tracker import (
+from menuai.components.device_tracker import (
     PLATFORM_SCHEMA as DEVICE_TRACKER_PLATFORM_SCHEMA,
     SeeCallback,
     SourceType,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_BATTERY_CHARGING,
     ATTR_BATTERY_LEVEL,
     ATTR_ID,
     CONF_SCAN_INTERVAL,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.event import track_time_interval
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import dt as dt_util, slugify
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.event import track_time_interval
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import dt as dt_util, slugify
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -49,13 +49,13 @@ PLATFORM_SCHEMA = DEVICE_TRACKER_PLATFORM_SCHEMA.extend(
 
 
 def setup_scanner(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     see: SeeCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> bool:
     """Set up the Google Maps Location sharing scanner."""
-    scanner = GoogleMapsScanner(hass, config, see)
+    scanner = GoogleMapsScanner(menuai, config, see)
     return scanner.success_init
 
 
@@ -63,7 +63,7 @@ class GoogleMapsScanner:
     """Representation of an Google Maps location sharing account."""
 
     def __init__(
-        self, hass: HomeAssistant, config: ConfigType, see: SeeCallback
+        self, menuai: menuai, config: ConfigType, see: SeeCallback
     ) -> None:
         """Initialize the scanner."""
         self.see = see
@@ -72,12 +72,12 @@ class GoogleMapsScanner:
         self.scan_interval = config.get(CONF_SCAN_INTERVAL) or timedelta(seconds=60)
         self._prev_seen: dict[str, str] = {}
 
-        credfile = f"{hass.config.path(CREDENTIALS_FILE)}.{slugify(self.username)}"
+        credfile = f"{menuai.config.path(CREDENTIALS_FILE)}.{slugify(self.username)}"
         try:
             self.service = Service(credfile, self.username)
             self._update_info()
 
-            track_time_interval(hass, self._update_info, self.scan_interval)
+            track_time_interval(menuai, self._update_info, self.scan_interval)
 
             self.success_init = True
 

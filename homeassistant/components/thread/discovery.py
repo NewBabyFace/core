@@ -17,8 +17,8 @@ from zeroconf import (
 )
 from zeroconf.asyncio import AsyncServiceInfo, AsyncZeroconf
 
-from homeassistant.components import zeroconf
-from homeassistant.core import HomeAssistant
+from menuai.components import zeroconf
+from menuai.core import menuai
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -28,8 +28,8 @@ KNOWN_BRANDS: dict[str | None, str] = {
     "Aqara": "aqara_gateway",
     "eero": "eero",
     "Google Inc.": "google",
-    "HomeAssistant": "homeassistant",
-    "Home Assistant": "homeassistant",
+    "menuai": "menuai",
+    "MenuAI": "menuai",
     "Nanoleaf": "nanoleaf",
     "OpenThread": "openthread",
     "Samsung": "samsung",
@@ -83,7 +83,7 @@ def async_discovery_data_from_service(
 
     unconfigured = None
     brand = KNOWN_BRANDS.get(vendor_name)
-    if brand == "homeassistant":
+    if brand == "menuai":
         # Attempt to detect incomplete configuration
         if (state_bitmap_b := service_properties.get(b"sb")) is not None:
             try:
@@ -153,14 +153,14 @@ class ThreadRouterDiscovery:
 
         def __init__(
             self,
-            hass: HomeAssistant,
+            menuai: menuai,
             aiozc: AsyncZeroconf,
             router_discovered: Callable,
             router_removed: Callable,
         ) -> None:
             """Initialize."""
             self._aiozc = aiozc
-            self._hass = hass
+            self._menuai = menuai
             self._known_routers: dict[str, tuple[str, ThreadRouterDiscoveryData]] = {}
             self._router_discovered = router_discovered
             self._router_removed = router_removed
@@ -168,7 +168,7 @@ class ThreadRouterDiscovery:
         def add_service(self, zc: Zeroconf, type_: str, name: str) -> None:
             """Handle service added."""
             _LOGGER.debug("add_service %s", name)
-            self._hass.async_create_task(self._add_update_service(type_, name))
+            self._menuai.async_create_task(self._add_update_service(type_, name))
 
         def remove_service(self, zc: Zeroconf, type_: str, name: str) -> None:
             """Handle service removed."""
@@ -181,7 +181,7 @@ class ThreadRouterDiscovery:
         def update_service(self, zc: Zeroconf, type_: str, name: str) -> None:
             """Handle service updated."""
             _LOGGER.debug("update_service %s", name)
-            self._hass.async_create_task(self._add_update_service(type_, name))
+            self._menuai.async_create_task(self._add_update_service(type_, name))
 
         async def _add_update_service(self, type_: str, name: str):
             """Add or update a service."""
@@ -227,12 +227,12 @@ class ThreadRouterDiscovery:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         router_discovered: Callable[[str, ThreadRouterDiscoveryData], None],
         router_removed: Callable[[str], None],
     ) -> None:
         """Initialize."""
-        self._hass = hass
+        self._menuai = menuai
         self._aiozc: AsyncZeroconf | None = None
         self._router_discovered = router_discovered
         self._router_removed = router_removed
@@ -242,9 +242,9 @@ class ThreadRouterDiscovery:
 
     async def async_start(self) -> None:
         """Start discovery."""
-        self._aiozc = aiozc = await zeroconf.async_get_async_instance(self._hass)
+        self._aiozc = aiozc = await zeroconf.async_get_async_instance(self._menuai)
         self._service_listener = self.ThreadServiceListener(
-            self._hass, aiozc, self._router_discovered, self._router_removed
+            self._menuai, aiozc, self._router_discovered, self._router_removed
         )
         await aiozc.async_add_service_listener(THREAD_TYPE, self._service_listener)
 

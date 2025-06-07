@@ -4,14 +4,14 @@ from unittest.mock import patch
 
 from pyuptimerobot import UptimeRobotAuthenticationException
 
-from homeassistant.components.binary_sensor import BinarySensorDeviceClass
-from homeassistant.components.uptimerobot.const import (
+from menuai.components.binary_sensor import BinarySensorDeviceClass
+from menuai.components.uptimerobot.const import (
     ATTRIBUTION,
     COORDINATOR_UPDATE_INTERVAL,
 )
-from homeassistant.const import STATE_ON, STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
+from menuai.const import STATE_ON, STATE_UNAVAILABLE
+from menuai.core import menuai
+from menuai.util import dt as dt_util
 
 from .common import (
     MOCK_UPTIMEROBOT_MONITOR,
@@ -22,11 +22,11 @@ from .common import (
 from tests.common import async_fire_time_changed
 
 
-async def test_presentation(hass: HomeAssistant) -> None:
+async def test_presentation(menuai: menuai) -> None:
     """Test the presenstation of UptimeRobot binary_sensors."""
-    await setup_uptimerobot_integration(hass)
+    await setup_uptimerobot_integration(menuai)
 
-    entity = hass.states.get(UPTIMEROBOT_BINARY_SENSOR_TEST_ENTITY)
+    entity = menuai.states.get(UPTIMEROBOT_BINARY_SENSOR_TEST_ENTITY)
 
     assert entity.state == STATE_ON
     assert entity.attributes["device_class"] == BinarySensorDeviceClass.CONNECTIVITY
@@ -34,19 +34,19 @@ async def test_presentation(hass: HomeAssistant) -> None:
     assert entity.attributes["target"] == MOCK_UPTIMEROBOT_MONITOR["url"]
 
 
-async def test_unavailable_on_update_failure(hass: HomeAssistant) -> None:
+async def test_unavailable_on_update_failure(menuai: menuai) -> None:
     """Test entity unavailable on update failure."""
-    await setup_uptimerobot_integration(hass)
+    await setup_uptimerobot_integration(menuai)
 
-    entity = hass.states.get(UPTIMEROBOT_BINARY_SENSOR_TEST_ENTITY)
+    entity = menuai.states.get(UPTIMEROBOT_BINARY_SENSOR_TEST_ENTITY)
     assert entity.state == STATE_ON
 
     with patch(
         "pyuptimerobot.UptimeRobot.async_get_monitors",
         side_effect=UptimeRobotAuthenticationException,
     ):
-        async_fire_time_changed(hass, dt_util.utcnow() + COORDINATOR_UPDATE_INTERVAL)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, dt_util.utcnow() + COORDINATOR_UPDATE_INTERVAL)
+        await menuai.async_block_till_done()
 
-    entity = hass.states.get(UPTIMEROBOT_BINARY_SENSOR_TEST_ENTITY)
+    entity = menuai.states.get(UPTIMEROBOT_BINARY_SENSOR_TEST_ENTITY)
     assert entity.state == STATE_UNAVAILABLE

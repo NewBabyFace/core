@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 DOMAIN = "nut"
 

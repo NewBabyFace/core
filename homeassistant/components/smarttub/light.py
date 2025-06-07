@@ -4,7 +4,7 @@ from typing import Any
 
 from smarttub import SpaLight
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_EFFECT,
     EFFECT_COLORLOOP,
@@ -12,9 +12,9 @@ from homeassistant.components.light import (
     LightEntity,
     LightEntityFeature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import ATTR_LIGHTS, DEFAULT_LIGHT_BRIGHTNESS, DEFAULT_LIGHT_EFFECT
 from .controller import SmartTubConfigEntry
@@ -23,7 +23,7 @@ from .helpers import get_spa_name
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: SmartTubConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -67,16 +67,16 @@ class SmartTubLight(SmartTubEntity, LightEntity):
         """Return the brightness of this light between 0..255."""
 
         # SmartTub intensity is 0..100
-        return self._smarttub_to_hass_brightness(self.light.intensity)
+        return self._smarttub_to_menuai_brightness(self.light.intensity)
 
     @staticmethod
-    def _smarttub_to_hass_brightness(intensity):
+    def _smarttub_to_menuai_brightness(intensity):
         if intensity in (0, 1):
             return 0
         return round(intensity * 255 / 100)
 
     @staticmethod
-    def _hass_to_smarttub_brightness(brightness):
+    def _menuai_to_smarttub_brightness(brightness):
         return round(brightness * 100 / 255)
 
     @property
@@ -121,7 +121,7 @@ class SmartTubLight(SmartTubEntity, LightEntity):
         """Turn the light on."""
 
         mode = self._effect_to_light_mode(kwargs.get(ATTR_EFFECT, DEFAULT_LIGHT_EFFECT))
-        intensity = self._hass_to_smarttub_brightness(
+        intensity = self._menuai_to_smarttub_brightness(
             kwargs.get(ATTR_BRIGHTNESS, DEFAULT_LIGHT_BRIGHTNESS)
         )
 

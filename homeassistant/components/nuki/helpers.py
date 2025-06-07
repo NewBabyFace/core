@@ -1,6 +1,6 @@
 """nuki integration helpers."""
 
-from homeassistant import exceptions
+from menuai import exceptions
 
 
 def parse_id(hardware_id):
@@ -8,13 +8,13 @@ def parse_id(hardware_id):
     return hex(hardware_id).split("x")[-1].upper()
 
 
-class CannotConnect(exceptions.HomeAssistantError):
+class CannotConnect(exceptions.menuaiError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAuth(exceptions.HomeAssistantError):
+class InvalidAuth(exceptions.menuaiError):
     """Error to indicate there is invalid auth."""
 
 
-class NukiWebhookException(exceptions.HomeAssistantError):
+class NukiWebhookException(exceptions.menuaiError):
     """Error to indicate there was an issue with the webhook."""

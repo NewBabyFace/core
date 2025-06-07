@@ -13,15 +13,15 @@ from freezegun import freeze_time
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.components import recorder
-from homeassistant.components.recorder import Recorder
-from homeassistant.components.recorder.db_schema import Statistics, StatisticsShortTerm
-from homeassistant.components.recorder.models import (
+from menuai.components import recorder
+from menuai.components.recorder import Recorder
+from menuai.components.recorder.db_schema import Statistics, StatisticsShortTerm
+from menuai.components.recorder.models import (
     StatisticData,
     StatisticMeanType,
     StatisticMetaData,
 )
-from homeassistant.components.recorder.statistics import (
+from menuai.components.recorder.statistics import (
     DEG_TO_RAD,
     RAD_TO_DEG,
     async_add_external_statistics,
@@ -31,15 +31,15 @@ from homeassistant.components.recorder.statistics import (
     get_short_term_statistics_run_cache,
     list_statistic_ids,
 )
-from homeassistant.components.recorder.util import session_scope
-from homeassistant.components.recorder.websocket_api import UNIT_SCHEMA
-from homeassistant.components.sensor import UNIT_CONVERTERS
-from homeassistant.const import DEGREE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import recorder as recorder_helper
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
-from homeassistant.util.unit_system import METRIC_SYSTEM, US_CUSTOMARY_SYSTEM
+from menuai.components.recorder.util import session_scope
+from menuai.components.recorder.websocket_api import UNIT_SCHEMA
+from menuai.components.sensor import UNIT_CONVERTERS
+from menuai.const import DEGREE
+from menuai.core import menuai
+from menuai.helpers import recorder as recorder_helper
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
+from menuai.util.unit_system import METRIC_SYSTEM, US_CUSTOMARY_SYSTEM
 
 from .common import (
     async_recorder_block_till_done,
@@ -61,7 +61,7 @@ from tests.typing import (
 
 
 @pytest.fixture
-async def mock_recorder_before_hass(
+async def mock_recorder_before_menuai(
     async_setup_recorder_instance: RecorderInstanceGenerator,
 ) -> None:
     """Set up recorder."""
@@ -179,26 +179,26 @@ def test_converters_align_with_sensor() -> None:
 
 
 async def test_statistics_during_period(
-    recorder_mock: Recorder, hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    recorder_mock: Recorder, menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test statistics_during_period."""
     now = get_start_time(dt_util.utcnow())
 
-    hass.config.units = US_CUSTOMARY_SYSTEM
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set(
+    menuai.config.units = US_CUSTOMARY_SYSTEM
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set(
         "sensor.test",
         10,
         attributes=POWER_SENSOR_KW_ATTRIBUTES,
         timestamp=now.timestamp(),
     )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    do_adhoc_statistics(hass, start=now)
-    await async_wait_recording_done(hass)
+    do_adhoc_statistics(menuai, start=now)
+    await async_wait_recording_done(menuai)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json_auto_id(
         {
             "type": "recorder/statistics_during_period",
@@ -261,15 +261,15 @@ async def test_statistics_during_period(
 @pytest.mark.usefixtures("recorder_mock")
 @pytest.mark.parametrize("offset", [0, 1, 2])
 async def test_statistic_during_period(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     offset: int,
 ) -> None:
     """Test statistic_during_period."""
     now = dt_util.utcnow()
 
-    await async_recorder_block_till_done(hass)
-    client = await hass_ws_client()
+    await async_recorder_block_till_done(menuai)
+    client = await menuai_ws_client()
 
     zero = now
     start = zero.replace(minute=offset * 5, second=0, microsecond=0) + timedelta(
@@ -326,21 +326,21 @@ async def test_statistic_during_period(
         "unit_of_measurement": "kWh",
     }
 
-    recorder.get_instance(hass).async_import_statistics(
+    recorder.get_instance(menuai).async_import_statistics(
         imported_metadata,
         imported_stats,
         Statistics,
     )
-    recorder.get_instance(hass).async_import_statistics(
+    recorder.get_instance(menuai).async_import_statistics(
         imported_metadata,
         imported_stats_5min,
         StatisticsShortTerm,
     )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    metadata = get_metadata(hass, statistic_ids={"sensor.test"})
+    metadata = get_metadata(menuai, statistic_ids={"sensor.test"})
     metadata_id = metadata["sensor.test"][0]
-    run_cache = get_short_term_statistics_run_cache(hass)
+    run_cache = get_short_term_statistics_run_cache(menuai)
     # Verify the import of the short term statistics
     # also updates the run cache
     assert run_cache.get_latest_ids({metadata_id}) is not None
@@ -640,7 +640,7 @@ async def test_statistic_during_period(
     }
 
     # Test we can automatically convert units
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test",
         None,
         attributes=ENERGY_SENSOR_WH_ATTRIBUTES,
@@ -661,9 +661,9 @@ async def test_statistic_during_period(
         "change": (imported_stats_5min[-1]["sum"] - imported_stats_5min[0]["sum"])
         * 1000,
     }
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         stats = get_latest_short_term_statistics_with_session(
-            hass,
+            menuai,
             session,
             {"sensor.test"},
             {"last_reset", "state", "sum"},
@@ -720,8 +720,8 @@ def _circular_mean_approx(
     ],
 )
 async def test_statistic_during_period_circular_mean(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     offset: int,
     step_size: float,
     tolerance: float,
@@ -729,8 +729,8 @@ async def test_statistic_during_period_circular_mean(
     """Test statistic_during_period."""
     now = dt_util.utcnow()
 
-    await async_recorder_block_till_done(hass)
-    client = await hass_ws_client()
+    await async_recorder_block_till_done(menuai)
+    client = await menuai_ws_client()
 
     zero = now
     start = zero.replace(minute=offset * 5, second=0, microsecond=0) + timedelta(
@@ -774,21 +774,21 @@ async def test_statistic_during_period_circular_mean(
         "unit_of_measurement": DEGREE,
     }
 
-    recorder.get_instance(hass).async_import_statistics(
+    recorder.get_instance(menuai).async_import_statistics(
         imported_metadata,
         imported_stats,
         Statistics,
     )
-    recorder.get_instance(hass).async_import_statistics(
+    recorder.get_instance(menuai).async_import_statistics(
         imported_metadata,
         imported_stats_5min,
         StatisticsShortTerm,
     )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    metadata = get_metadata(hass, statistic_ids={"sensor.test"})
+    metadata = get_metadata(menuai, statistic_ids={"sensor.test"})
     metadata_id = metadata["sensor.test"][0]
-    run_cache = get_short_term_statistics_run_cache(hass)
+    run_cache = get_short_term_statistics_run_cache(menuai)
     # Verify the import of the short term statistics
     # also updates the run cache
     assert run_cache.get_latest_ids({metadata_id}) is not None
@@ -1068,13 +1068,13 @@ async def test_statistic_during_period_circular_mean(
 
 @pytest.mark.freeze_time(datetime.datetime(2022, 10, 21, 7, 25, tzinfo=datetime.UTC))
 async def test_statistic_during_period_hole(
-    recorder_mock: Recorder, hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    recorder_mock: Recorder, menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test statistic_during_period when there are holes in the data."""
     now = dt_util.utcnow()
 
-    await async_recorder_block_till_done(hass)
-    client = await hass_ws_client()
+    await async_recorder_block_till_done(menuai)
+    client = await menuai_ws_client()
 
     zero = now
     start = zero.replace(minute=0, second=0, microsecond=0) + timedelta(hours=-18)
@@ -1099,12 +1099,12 @@ async def test_statistic_during_period_hole(
         "unit_of_measurement": "kWh",
     }
 
-    recorder.get_instance(hass).async_import_statistics(
+    recorder.get_instance(menuai).async_import_statistics(
         imported_metadata,
         imported_stats,
         Statistics,
     )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
     # This should include imported_stats[:]
     await client.send_json_auto_id(
@@ -1220,13 +1220,13 @@ async def test_statistic_during_period_hole(
 @pytest.mark.freeze_time(datetime.datetime(2022, 10, 21, 7, 25, tzinfo=datetime.UTC))
 @pytest.mark.usefixtures("recorder_mock")
 async def test_statistic_during_period_hole_circular_mean(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test statistic_during_period when there are holes in the data."""
     now = dt_util.utcnow()
 
-    await async_recorder_block_till_done(hass)
-    client = await hass_ws_client()
+    await async_recorder_block_till_done(menuai)
+    client = await menuai_ws_client()
 
     zero = now
     start = zero.replace(minute=0, second=0, microsecond=0) + timedelta(hours=-18)
@@ -1249,12 +1249,12 @@ async def test_statistic_during_period_hole_circular_mean(
         "unit_of_measurement": DEGREE,
     }
 
-    recorder.get_instance(hass).async_import_statistics(
+    recorder.get_instance(menuai).async_import_statistics(
         imported_metadata,
         imported_stats,
         Statistics,
     )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
     # This should include imported_stats[:]
     await client.send_json_auto_id(
@@ -1379,18 +1379,18 @@ async def test_statistic_during_period_hole_circular_mean(
 )
 async def test_statistic_during_period_partial_overlap(
     recorder_mock: Recorder,
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     freezer: FrozenDateTimeFactory,
     frozen_time: datetime.datetime,
 ) -> None:
     """Test statistic_during_period."""
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
 
     freezer.move_to(frozen_time)
     now = dt_util.utcnow()
 
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
 
     zero = now
     start = zero.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -1442,21 +1442,21 @@ async def test_statistic_during_period_partial_overlap(
         "unit_of_measurement": "kWh",
     }
 
-    recorder.get_instance(hass).async_import_statistics(
+    recorder.get_instance(menuai).async_import_statistics(
         imported_metadata,
         imported_stats_hours,
         Statistics,
     )
-    recorder.get_instance(hass).async_import_statistics(
+    recorder.get_instance(menuai).async_import_statistics(
         imported_metadata,
         imported_stats_5min,
         StatisticsShortTerm,
     )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    metadata = get_metadata(hass, statistic_ids={statId})
+    metadata = get_metadata(menuai, statistic_ids={statId})
     metadata_id = metadata[statId][0]
-    run_cache = get_short_term_statistics_run_cache(hass)
+    run_cache = get_short_term_statistics_run_cache(menuai)
     # Verify the import of the short term statistics
     # also updates the run cache
     assert run_cache.get_latest_ids({metadata_id}) is not None
@@ -1766,18 +1766,18 @@ async def test_statistic_during_period_partial_overlap(
 )
 async def test_statistic_during_period_calendar(
     recorder_mock: Recorder,
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     calendar_period,
     start_time,
     end_time,
 ) -> None:
     """Test statistic_during_period."""
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
 
     # Try requesting data for the current hour
     with patch(
-        "homeassistant.components.recorder.websocket_api.statistic_during_period",
+        "menuai.components.recorder.websocket_api.statistic_during_period",
         return_value={},
     ) as statistic_during_period:
         await client.send_json_auto_id(
@@ -1789,7 +1789,7 @@ async def test_statistic_during_period_calendar(
         )
         response = await client.receive_json()
         statistic_during_period.assert_called_once_with(
-            hass, ANY, ANY, "sensor.test", None, units=None
+            menuai, ANY, ANY, "sensor.test", None, units=None
         )
         assert statistic_during_period.call_args[0][1].isoformat() == start_time
         assert statistic_during_period.call_args[0][2].isoformat() == end_time
@@ -1822,8 +1822,8 @@ async def test_statistic_during_period_calendar(
 )
 async def test_statistics_during_period_unit_conversion(
     recorder_mock: Recorder,
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     attributes,
     state,
     value,
@@ -1833,17 +1833,17 @@ async def test_statistics_during_period_unit_conversion(
     """Test statistics_during_period."""
     now = get_start_time(dt_util.utcnow())
 
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set(
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set(
         "sensor.test", state, attributes=attributes, timestamp=now.timestamp()
     )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    do_adhoc_statistics(hass, start=now)
-    await async_wait_recording_done(hass)
+    do_adhoc_statistics(menuai, start=now)
+    await async_wait_recording_done(menuai)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
 
     # Query in state unit
     await client.send_json_auto_id(
@@ -1909,8 +1909,8 @@ async def test_statistics_during_period_unit_conversion(
 )
 async def test_sum_statistics_during_period_unit_conversion(
     recorder_mock: Recorder,
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     attributes,
     state,
     value,
@@ -1920,20 +1920,20 @@ async def test_sum_statistics_during_period_unit_conversion(
     """Test statistics_during_period."""
     now = get_start_time(dt_util.utcnow())
 
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set(
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set(
         "sensor.test", 0, attributes=attributes, timestamp=now.timestamp()
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test", state, attributes=attributes, timestamp=now.timestamp()
     )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    do_adhoc_statistics(hass, start=now)
-    await async_wait_recording_done(hass)
+    do_adhoc_statistics(menuai, start=now)
+    await async_wait_recording_done(menuai)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
 
     # Query in state unit
     await client.send_json_auto_id(
@@ -1999,17 +1999,17 @@ async def test_sum_statistics_during_period_unit_conversion(
 )
 async def test_statistics_during_period_invalid_unit_conversion(
     recorder_mock: Recorder,
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     custom_units,
 ) -> None:
     """Test statistics_during_period."""
     now = dt_util.utcnow()
 
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
 
     # Query in state unit
     await client.send_json_auto_id(
@@ -2040,31 +2040,31 @@ async def test_statistics_during_period_invalid_unit_conversion(
 
 
 async def test_statistics_during_period_in_the_past(
-    recorder_mock: Recorder, hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    recorder_mock: Recorder, menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test statistics_during_period in the past."""
-    await hass.config.async_set_time_zone("UTC")
+    await menuai.config.async_set_time_zone("UTC")
     now = get_start_time(dt_util.utcnow())
 
-    hass.config.units = US_CUSTOMARY_SYSTEM
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
+    menuai.config.units = US_CUSTOMARY_SYSTEM
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
 
     past = now - timedelta(days=3)
 
     with freeze_time(past):
-        hass.states.async_set("sensor.test", 10, attributes=POWER_SENSOR_KW_ATTRIBUTES)
-        await async_wait_recording_done(hass)
+        menuai.states.async_set("sensor.test", 10, attributes=POWER_SENSOR_KW_ATTRIBUTES)
+        await async_wait_recording_done(menuai)
 
-    sensor_state = hass.states.get("sensor.test")
+    sensor_state = menuai.states.get("sensor.test")
     assert sensor_state.last_updated == past
 
     stats_top_of_hour = past.replace(minute=0, second=0, microsecond=0)
     stats_start = past.replace(minute=55)
-    do_adhoc_statistics(hass, start=stats_start)
-    await async_wait_recording_done(hass)
+    do_adhoc_statistics(menuai, start=stats_start)
+    await async_wait_recording_done(menuai)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json_auto_id(
         {
             "type": "recorder/statistics_during_period",
@@ -2152,10 +2152,10 @@ async def test_statistics_during_period_in_the_past(
 
 
 async def test_statistics_during_period_bad_start_time(
-    recorder_mock: Recorder, hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    recorder_mock: Recorder, menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test statistics_during_period."""
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json_auto_id(
         {
             "type": "recorder/statistics_during_period",
@@ -2170,12 +2170,12 @@ async def test_statistics_during_period_bad_start_time(
 
 
 async def test_statistics_during_period_bad_end_time(
-    recorder_mock: Recorder, hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    recorder_mock: Recorder, menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test statistics_during_period."""
     now = dt_util.utcnow()
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json_auto_id(
         {
             "type": "recorder/statistics_during_period",
@@ -2191,12 +2191,12 @@ async def test_statistics_during_period_bad_end_time(
 
 
 async def test_statistics_during_period_no_statistic_ids(
-    recorder_mock: Recorder, hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    recorder_mock: Recorder, menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test statistics_during_period without passing statistic_ids."""
     now = dt_util.utcnow()
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json_auto_id(
         {
             "type": "recorder/statistics_during_period",
@@ -2211,12 +2211,12 @@ async def test_statistics_during_period_no_statistic_ids(
 
 
 async def test_statistics_during_period_empty_statistic_ids(
-    recorder_mock: Recorder, hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    recorder_mock: Recorder, menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test statistics_during_period with passing an empty list of statistic_ids."""
     now = dt_util.utcnow()
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json_auto_id(
         {
             "type": "recorder/statistics_during_period",
@@ -2292,8 +2292,8 @@ async def test_statistics_during_period_empty_statistic_ids(
 )
 async def test_list_statistic_ids(
     recorder_mock: Recorder,
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     units,
     attributes,
     display_unit,
@@ -2306,20 +2306,20 @@ async def test_list_statistic_ids(
     mean_type = StatisticMeanType.ARITHMETIC if has_mean else StatisticMeanType.NONE
     has_sum = not has_mean
 
-    hass.config.units = units
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
+    menuai.config.units = units
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json_auto_id({"type": "recorder/list_statistic_ids"})
     response = await client.receive_json()
     assert response["success"]
     assert response["result"] == []
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test", 10, attributes=attributes, timestamp=now.timestamp()
     )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
     await client.send_json_auto_id({"type": "recorder/list_statistic_ids"})
     response = await client.receive_json()
@@ -2338,11 +2338,11 @@ async def test_list_statistic_ids(
         }
     ]
 
-    do_adhoc_statistics(hass, start=now)
-    await async_recorder_block_till_done(hass)
+    do_adhoc_statistics(menuai, start=now)
+    await async_recorder_block_till_done(menuai)
     # Remove the state, statistics will now be fetched from the database
-    hass.states.async_remove("sensor.test")
-    await hass.async_block_till_done()
+    menuai.states.async_remove("sensor.test")
+    await menuai.async_block_till_done()
 
     await client.send_json_auto_id({"type": "recorder/list_statistic_ids"})
     response = await client.receive_json()
@@ -2470,8 +2470,8 @@ async def test_list_statistic_ids(
 )
 async def test_list_statistic_ids_unit_change(
     recorder_mock: Recorder,
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     attributes,
     attributes2,
     display_unit,
@@ -2484,22 +2484,22 @@ async def test_list_statistic_ids_unit_change(
     mean_type = StatisticMeanType.ARITHMETIC if has_mean else StatisticMeanType.NONE
     has_sum = not has_mean
 
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json_auto_id({"type": "recorder/list_statistic_ids"})
     response = await client.receive_json()
     assert response["success"]
     assert response["result"] == []
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test", 10, attributes=attributes, timestamp=now.timestamp()
     )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    do_adhoc_statistics(hass, start=now)
-    await async_recorder_block_till_done(hass)
+    do_adhoc_statistics(menuai, start=now)
+    await async_recorder_block_till_done(menuai)
 
     await client.send_json_auto_id({"type": "recorder/list_statistic_ids"})
     response = await client.receive_json()
@@ -2519,7 +2519,7 @@ async def test_list_statistic_ids_unit_change(
     ]
 
     # Change the state unit
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test", 10, attributes=attributes2, timestamp=now.timestamp()
     )
 
@@ -2542,7 +2542,7 @@ async def test_list_statistic_ids_unit_change(
 
 
 async def test_validate_statistics(
-    recorder_mock: Recorder, hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    recorder_mock: Recorder, menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test validate_statistics can be called."""
 
@@ -2553,16 +2553,16 @@ async def test_validate_statistics(
         assert response["result"] == expected_result
 
     # No statistics, no state - empty response
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await assert_validation_result(client, {})
 
 
 async def test_update_statistics_issues(
-    recorder_mock: Recorder, hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    recorder_mock: Recorder, menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test update_statistics_issues can be called."""
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json_auto_id({"type": "recorder/update_statistics_issues"})
     response = await client.receive_json()
     assert response["success"]
@@ -2570,7 +2570,7 @@ async def test_update_statistics_issues(
 
 
 async def test_clear_statistics(
-    recorder_mock: Recorder, hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    recorder_mock: Recorder, menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test removing statistics."""
     now = get_start_time(dt_util.utcnow())
@@ -2580,24 +2580,24 @@ async def test_clear_statistics(
     state = 10
     value = 10
 
-    hass.config.units = units
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set(
+    menuai.config.units = units
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set(
         "sensor.test1", state, attributes=attributes, timestamp=now.timestamp()
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test2", state * 2, attributes=attributes, timestamp=now.timestamp()
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test3", state * 3, attributes=attributes, timestamp=now.timestamp()
     )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    do_adhoc_statistics(hass, start=now)
-    await async_recorder_block_till_done(hass)
+    do_adhoc_statistics(menuai, start=now)
+    await async_recorder_block_till_done(menuai)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json_auto_id(
         {
             "type": "recorder/statistics_during_period",
@@ -2650,9 +2650,9 @@ async def test_clear_statistics(
     )
     response = await client.receive_json()
     assert response["success"]
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json_auto_id(
         {
             "type": "recorder/statistics_during_period",
@@ -2673,9 +2673,9 @@ async def test_clear_statistics(
     )
     response = await client.receive_json()
     assert response["success"]
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json_auto_id(
         {
             "type": "recorder/statistics_during_period",
@@ -2690,10 +2690,10 @@ async def test_clear_statistics(
 
 
 async def test_clear_statistics_time_out(
-    recorder_mock: Recorder, hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    recorder_mock: Recorder, menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test removing statistics with time-out error."""
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
 
     with (
         patch.object(recorder.tasks.ClearStatisticsTask, "run"),
@@ -2719,8 +2719,8 @@ async def test_clear_statistics_time_out(
 )
 async def test_update_statistics_metadata(
     recorder_mock: Recorder,
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     new_unit,
     new_unit_class,
     new_display_unit,
@@ -2732,18 +2732,18 @@ async def test_update_statistics_metadata(
     attributes = POWER_SENSOR_KW_ATTRIBUTES | {"device_class": None}
     state = 10
 
-    hass.config.units = units
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set(
+    menuai.config.units = units
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set(
         "sensor.test", state, attributes=attributes, timestamp=now.timestamp()
     )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    do_adhoc_statistics(hass, period="hourly", start=now)
-    await async_recorder_block_till_done(hass)
+    do_adhoc_statistics(menuai, period="hourly", start=now)
+    await async_recorder_block_till_done(menuai)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
 
     await client.send_json_auto_id({"type": "recorder/list_statistic_ids"})
     response = await client.receive_json()
@@ -2771,7 +2771,7 @@ async def test_update_statistics_metadata(
     )
     response = await client.receive_json()
     assert response["success"]
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
 
     await client.send_json_auto_id({"type": "recorder/list_statistic_ids"})
     response = await client.receive_json()
@@ -2816,10 +2816,10 @@ async def test_update_statistics_metadata(
 
 
 async def test_update_statistics_metadata_time_out(
-    recorder_mock: Recorder, hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    recorder_mock: Recorder, menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test update statistics metadata with time-out error."""
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
 
     with (
         patch.object(recorder.tasks.UpdateStatisticsMetadataTask, "run"),
@@ -2841,7 +2841,7 @@ async def test_update_statistics_metadata_time_out(
 
 
 async def test_change_statistics_unit(
-    recorder_mock: Recorder, hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    recorder_mock: Recorder, menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test change unit of recorded statistics."""
     now = get_start_time(dt_util.utcnow())
@@ -2850,18 +2850,18 @@ async def test_change_statistics_unit(
     attributes = POWER_SENSOR_KW_ATTRIBUTES | {"device_class": None}
     state = 10
 
-    hass.config.units = units
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set(
+    menuai.config.units = units
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set(
         "sensor.test", state, attributes=attributes, timestamp=now.timestamp()
     )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    do_adhoc_statistics(hass, period="hourly", start=now)
-    await async_recorder_block_till_done(hass)
+    do_adhoc_statistics(menuai, period="hourly", start=now)
+    await async_recorder_block_till_done(menuai)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
 
     await client.send_json_auto_id({"type": "recorder/list_statistic_ids"})
     response = await client.receive_json()
@@ -2913,7 +2913,7 @@ async def test_change_statistics_unit(
     )
     response = await client.receive_json()
     assert response["success"]
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
 
     await client.send_json_auto_id({"type": "recorder/list_statistic_ids"})
     response = await client.receive_json()
@@ -2967,7 +2967,7 @@ async def test_change_statistics_unit(
     )
     response = await client.receive_json()
     assert response["success"]
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
 
     await client.send_json_auto_id({"type": "recorder/list_statistic_ids"})
     response = await client.receive_json()
@@ -2989,8 +2989,8 @@ async def test_change_statistics_unit(
 
 async def test_change_statistics_unit_errors(
     recorder_mock: Recorder,
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test change unit of recorded statistics."""
@@ -3046,18 +3046,18 @@ async def test_change_statistics_unit_errors(
         assert response["success"]
         assert response["result"] == expected
 
-    hass.config.units = units
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set(
+    menuai.config.units = units
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set(
         "sensor.test", state, attributes=attributes, timestamp=now.timestamp()
     )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    do_adhoc_statistics(hass, period="hourly", start=now)
-    await async_recorder_block_till_done(hass)
+    do_adhoc_statistics(menuai, period="hourly", start=now)
+    await async_recorder_block_till_done(menuai)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
 
     await assert_statistic_ids(expected_statistic_ids)
     await assert_statistics(expected_statistics)
@@ -3075,7 +3075,7 @@ async def test_change_statistics_unit_errors(
     assert not response["success"]
     assert response["error"]["message"] == "Can't convert kW to dogs"
 
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
 
     await assert_statistic_ids(expected_statistic_ids)
     await assert_statistics(expected_statistics)
@@ -3092,7 +3092,7 @@ async def test_change_statistics_unit_errors(
     response = await client.receive_json()
     assert response["success"]
 
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
 
     assert "Could not change statistics unit for sensor.test" in caplog.text
     await assert_statistic_ids(expected_statistic_ids)
@@ -3100,13 +3100,13 @@ async def test_change_statistics_unit_errors(
 
 
 async def test_recorder_info(
-    recorder_mock: Recorder, hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    recorder_mock: Recorder, menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test getting recorder status."""
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
 
     # Ensure there are no queued events
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
     await client.send_json_auto_id({"type": "recorder/info"})
     response = await client.receive_json()
@@ -3127,24 +3127,24 @@ async def test_recorder_info(
     [
         ("sqlite:///{config_dir}/home-assistant_v2.db", True),
         ("sqlite:///{config_dir}/custom.db", False),
-        ("mysql://root:root_password@127.0.0.1:3316/homeassistant-test", False),
+        ("mysql://root:root_password@127.0.0.1:3316/menuai-test", False),
     ],
 )
 async def test_recorder_info_default_url(
     recorder_mock: Recorder,
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     db_url: str,
     db_in_default_location: bool,
 ) -> None:
     """Test getting recorder status."""
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
 
     # Ensure there are no queued events
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
     with patch.object(
-        recorder_mock, "db_url", db_url.format(config_dir=hass.config.config_dir)
+        recorder_mock, "db_url", db_url.format(config_dir=menuai.config.config_dir)
     ):
         await client.send_json_auto_id({"type": "recorder/info"})
         response = await client.receive_json()
@@ -3161,10 +3161,10 @@ async def test_recorder_info_default_url(
 
 
 async def test_recorder_info_no_recorder(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test getting recorder status when recorder is not present."""
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
 
     await client.send_json_auto_id({"type": "recorder/info"})
     response = await client.receive_json()
@@ -3173,23 +3173,23 @@ async def test_recorder_info_no_recorder(
 
 
 async def test_recorder_info_bad_recorder_config(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test getting recorder status when recorder is not started."""
     config = {recorder.CONF_DB_URL: "sqlite://no_file", recorder.CONF_DB_RETRY_WAIT: 0}
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
 
-    with patch("homeassistant.components.recorder.migration._migrate_schema"):
-        recorder_helper.async_initialize_recorder(hass)
+    with patch("menuai.components.recorder.migration._migrate_schema"):
+        recorder_helper.async_initialize_recorder(menuai)
         assert not await async_setup_component(
-            hass, recorder.DOMAIN, {recorder.DOMAIN: config}
+            menuai, recorder.DOMAIN, {recorder.DOMAIN: config}
         )
-        assert recorder.DOMAIN not in hass.config.components
-    await hass.async_block_till_done()
+        assert recorder.DOMAIN not in menuai.config.components
+    await menuai.async_block_till_done()
 
     # Wait for recorder to shut down
-    await hass.async_add_executor_job(recorder.get_instance(hass).join)
+    await menuai.async_add_executor_job(recorder.get_instance(menuai).join)
 
     await client.send_json_auto_id({"type": "recorder/info"})
     response = await client.receive_json()
@@ -3199,17 +3199,17 @@ async def test_recorder_info_bad_recorder_config(
 
 
 async def test_recorder_info_wait_database_connect(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     async_test_recorder: RecorderInstanceContextManager,
 ) -> None:
     """Test getting recorder info waits for recorder database connection."""
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
 
-    recorder_helper.async_initialize_recorder(hass)
+    recorder_helper.async_initialize_recorder(menuai)
     await client.send_json_auto_id({"type": "recorder/info"})
 
-    async with async_test_recorder(hass):
+    async with async_test_recorder(menuai):
         response = await client.receive_json()
         assert response["success"]
         assert response["result"] == {
@@ -3224,17 +3224,17 @@ async def test_recorder_info_wait_database_connect(
 
 
 async def test_recorder_info_migration_queue_exhausted(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     async_test_recorder: RecorderInstanceContextManager,
     instrument_migration: InstrumentedMigration,
 ) -> None:
     """Test getting recorder status when recorder queue is exhausted."""
-    assert recorder.util.async_migration_in_progress(hass) is False
+    assert recorder.util.async_migration_in_progress(menuai) is False
 
     with (
         patch(
-            "homeassistant.components.recorder.core.create_engine",
+            "menuai.components.recorder.core.create_engine",
             new=create_engine_test,
         ),
         patch.object(recorder.core, "MAX_QUEUE_BACKLOG_MIN_VALUE", 1),
@@ -3243,21 +3243,21 @@ async def test_recorder_info_migration_queue_exhausted(
         ),
     ):
         async with async_test_recorder(
-            hass, wait_recorder=False, wait_recorder_setup=False
+            menuai, wait_recorder=False, wait_recorder_setup=False
         ):
-            await hass.async_add_executor_job(
+            await menuai.async_add_executor_job(
                 instrument_migration.migration_started.wait
             )
-            assert recorder.util.async_migration_in_progress(hass) is True
-            await async_wait_recorder(hass)
-            hass.states.async_set("my.entity", "on", {})
-            await hass.async_block_till_done()
+            assert recorder.util.async_migration_in_progress(menuai) is True
+            await async_wait_recorder(menuai)
+            menuai.states.async_set("my.entity", "on", {})
+            await menuai.async_block_till_done()
 
             # Detect queue full
-            async_fire_time_changed(hass, dt_util.utcnow() + timedelta(hours=2))
-            await hass.async_block_till_done()
+            async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(hours=2))
+            await menuai.async_block_till_done()
 
-            client = await hass_ws_client()
+            client = await menuai_ws_client()
 
             # Check the status
             await client.send_json_auto_id({"type": "recorder/info"})
@@ -3269,7 +3269,7 @@ async def test_recorder_info_migration_queue_exhausted(
 
             # Let migration finish
             instrument_migration.migration_stall.set()
-            await async_wait_recording_done(hass)
+            await async_wait_recording_done(menuai)
 
             # Check the status after migration finished
             await client.send_json_auto_id({"type": "recorder/info"})
@@ -3281,12 +3281,12 @@ async def test_recorder_info_migration_queue_exhausted(
 
 
 async def test_backup_start_no_recorder(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
-    hass_supervisor_access_token: str,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
+    menuai_supervisor_access_token: str,
 ) -> None:
     """Test getting backup start when recorder is not present."""
-    client = await hass_ws_client(hass, hass_supervisor_access_token)
+    client = await menuai_ws_client(menuai, menuai_supervisor_access_token)
 
     await client.send_json_auto_id({"type": "backup/start"})
     response = await client.receive_json()
@@ -3315,8 +3315,8 @@ async def test_backup_start_no_recorder(
 )
 async def test_get_statistics_metadata(
     recorder_mock: Recorder,
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     units,
     attributes,
     unit,
@@ -3328,11 +3328,11 @@ async def test_get_statistics_metadata(
     mean_type = StatisticMeanType.ARITHMETIC if has_mean else StatisticMeanType.NONE
     has_sum = not has_mean
 
-    hass.config.units = units
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
+    menuai.config.units = units
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json_auto_id({"type": "recorder/get_statistics_metadata"})
     response = await client.receive_json()
     assert response["success"]
@@ -3378,9 +3378,9 @@ async def test_get_statistics_metadata(
     }
 
     async_add_external_statistics(
-        hass, external_energy_metadata_1, external_energy_statistics_1
+        menuai, external_energy_metadata_1, external_energy_statistics_1
     )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
     await client.send_json_auto_id(
         {
@@ -3404,15 +3404,15 @@ async def test_get_statistics_metadata(
         }
     ]
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test", 10, attributes=attributes, timestamp=now.timestamp()
     )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test2", 10, attributes=attributes, timestamp=now.timestamp()
     )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
     await client.send_json_auto_id(
         {
@@ -3436,11 +3436,11 @@ async def test_get_statistics_metadata(
         }
     ]
 
-    do_adhoc_statistics(hass, start=now)
-    await async_recorder_block_till_done(hass)
+    do_adhoc_statistics(menuai, start=now)
+    await async_recorder_block_till_done(menuai)
     # Remove the state, statistics will now be fetched from the database
-    hass.states.async_remove("sensor.test")
-    await hass.async_block_till_done()
+    menuai.states.async_remove("sensor.test")
+    await menuai.async_block_till_done()
 
     await client.send_json_auto_id(
         {
@@ -3474,14 +3474,14 @@ async def test_get_statistics_metadata(
 )
 async def test_import_statistics(
     recorder_mock: Recorder,
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     caplog: pytest.LogCaptureFixture,
     source,
     statistic_id,
 ) -> None:
     """Test importing statistics."""
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
 
     assert "Compiling statistics for" not in caplog.text
     assert "Statistics already compiled" not in caplog.text
@@ -3523,9 +3523,9 @@ async def test_import_statistics(
     assert response["success"]
     assert response["result"] is None
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
     stats = statistics_during_period(
-        hass, zero, period="hour", statistic_ids={statistic_id}
+        menuai, zero, period="hour", statistic_ids={statistic_id}
     )
     assert stats == {
         statistic_id: [
@@ -3545,7 +3545,7 @@ async def test_import_statistics(
             },
         ]
     }
-    statistic_ids = list_statistic_ids(hass)
+    statistic_ids = list_statistic_ids(menuai)
     assert statistic_ids == [
         {
             "display_unit_of_measurement": "kWh",
@@ -3559,7 +3559,7 @@ async def test_import_statistics(
             "unit_class": "energy",
         }
     ]
-    metadata = get_metadata(hass, statistic_ids={statistic_id})
+    metadata = get_metadata(menuai, statistic_ids={statistic_id})
     assert metadata == {
         statistic_id: (
             1,
@@ -3575,7 +3575,7 @@ async def test_import_statistics(
         )
     }
     last_stats = get_last_statistics(
-        hass,
+        menuai,
         1,
         statistic_id,
         True,
@@ -3612,9 +3612,9 @@ async def test_import_statistics(
     assert response["success"]
     assert response["result"] is None
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
     stats = statistics_during_period(
-        hass, zero, period="hour", statistic_ids={statistic_id}
+        menuai, zero, period="hour", statistic_ids={statistic_id}
     )
     assert stats == {
         statistic_id: [
@@ -3657,9 +3657,9 @@ async def test_import_statistics(
     assert response["success"]
     assert response["result"] is None
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
     stats = statistics_during_period(
-        hass, zero, period="hour", statistic_ids={statistic_id}
+        menuai, zero, period="hour", statistic_ids={statistic_id}
     )
     assert stats == {
         statistic_id: [
@@ -3690,14 +3690,14 @@ async def test_import_statistics(
 )
 async def test_adjust_sum_statistics_energy(
     recorder_mock: Recorder,
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     caplog: pytest.LogCaptureFixture,
     source,
     statistic_id,
 ) -> None:
     """Test adjusting statistics."""
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
 
     assert "Compiling statistics for" not in caplog.text
     assert "Statistics already compiled" not in caplog.text
@@ -3739,8 +3739,8 @@ async def test_adjust_sum_statistics_energy(
     assert response["success"]
     assert response["result"] is None
 
-    await async_wait_recording_done(hass)
-    stats = statistics_during_period(hass, zero, period="hour")
+    await async_wait_recording_done(menuai)
+    stats = statistics_during_period(menuai, zero, period="hour")
     assert stats == {
         statistic_id: [
             {
@@ -3765,7 +3765,7 @@ async def test_adjust_sum_statistics_energy(
             },
         ]
     }
-    statistic_ids = list_statistic_ids(hass)
+    statistic_ids = list_statistic_ids(menuai)
     assert statistic_ids == [
         {
             "display_unit_of_measurement": "kWh",
@@ -3779,7 +3779,7 @@ async def test_adjust_sum_statistics_energy(
             "unit_class": "energy",
         }
     ]
-    metadata = get_metadata(hass, statistic_ids={statistic_id})
+    metadata = get_metadata(menuai, statistic_ids={statistic_id})
     assert metadata == {
         statistic_id: (
             1,
@@ -3808,8 +3808,8 @@ async def test_adjust_sum_statistics_energy(
     response = await client.receive_json()
     assert response["success"]
 
-    await async_wait_recording_done(hass)
-    stats = statistics_during_period(hass, zero, period="hour")
+    await async_wait_recording_done(menuai)
+    stats = statistics_during_period(menuai, zero, period="hour")
     assert stats == {
         statistic_id: [
             {
@@ -3848,8 +3848,8 @@ async def test_adjust_sum_statistics_energy(
     response = await client.receive_json()
     assert response["success"]
 
-    await async_wait_recording_done(hass)
-    stats = statistics_during_period(hass, zero, period="hour")
+    await async_wait_recording_done(menuai)
+    stats = statistics_during_period(menuai, zero, period="hour")
     assert stats == {
         statistic_id: [
             {
@@ -3885,14 +3885,14 @@ async def test_adjust_sum_statistics_energy(
 )
 async def test_adjust_sum_statistics_gas(
     recorder_mock: Recorder,
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     caplog: pytest.LogCaptureFixture,
     source,
     statistic_id,
 ) -> None:
     """Test adjusting statistics."""
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
 
     assert "Compiling statistics for" not in caplog.text
     assert "Statistics already compiled" not in caplog.text
@@ -3934,8 +3934,8 @@ async def test_adjust_sum_statistics_gas(
     assert response["success"]
     assert response["result"] is None
 
-    await async_wait_recording_done(hass)
-    stats = statistics_during_period(hass, zero, period="hour")
+    await async_wait_recording_done(menuai)
+    stats = statistics_during_period(menuai, zero, period="hour")
     assert stats == {
         statistic_id: [
             {
@@ -3960,7 +3960,7 @@ async def test_adjust_sum_statistics_gas(
             },
         ]
     }
-    statistic_ids = list_statistic_ids(hass)
+    statistic_ids = list_statistic_ids(menuai)
     assert statistic_ids == [
         {
             "display_unit_of_measurement": "m³",
@@ -3974,7 +3974,7 @@ async def test_adjust_sum_statistics_gas(
             "unit_class": "volume",
         }
     ]
-    metadata = get_metadata(hass, statistic_ids={statistic_id})
+    metadata = get_metadata(menuai, statistic_ids={statistic_id})
     assert metadata == {
         statistic_id: (
             1,
@@ -4003,8 +4003,8 @@ async def test_adjust_sum_statistics_gas(
     response = await client.receive_json()
     assert response["success"]
 
-    await async_wait_recording_done(hass)
-    stats = statistics_during_period(hass, zero, period="hour")
+    await async_wait_recording_done(menuai)
+    stats = statistics_during_period(menuai, zero, period="hour")
     assert stats == {
         statistic_id: [
             {
@@ -4043,8 +4043,8 @@ async def test_adjust_sum_statistics_gas(
     response = await client.receive_json()
     assert response["success"]
 
-    await async_wait_recording_done(hass)
-    stats = statistics_during_period(hass, zero, period="hour")
+    await async_wait_recording_done(menuai)
+    stats = statistics_during_period(menuai, zero, period="hour")
     assert stats == {
         statistic_id: [
             {
@@ -4091,8 +4091,8 @@ async def test_adjust_sum_statistics_gas(
 )
 async def test_adjust_sum_statistics_errors(
     recorder_mock: Recorder,
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     caplog: pytest.LogCaptureFixture,
     state_unit,
     statistic_unit,
@@ -4104,7 +4104,7 @@ async def test_adjust_sum_statistics_errors(
     """Test incorrectly adjusting statistics."""
     statistic_id = "sensor.total_energy_import"
     source = "recorder"
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
 
     assert "Compiling statistics for" not in caplog.text
     assert "Statistics already compiled" not in caplog.text
@@ -4146,8 +4146,8 @@ async def test_adjust_sum_statistics_errors(
     assert response["success"]
     assert response["result"] is None
 
-    await async_wait_recording_done(hass)
-    stats = statistics_during_period(hass, zero, period="hour")
+    await async_wait_recording_done(menuai)
+    stats = statistics_during_period(menuai, zero, period="hour")
     assert stats == {
         statistic_id: [
             {
@@ -4173,7 +4173,7 @@ async def test_adjust_sum_statistics_errors(
         ]
     }
     previous_stats = stats
-    statistic_ids = list_statistic_ids(hass)
+    statistic_ids = list_statistic_ids(menuai)
     assert statistic_ids == [
         {
             "display_unit_of_measurement": state_unit,
@@ -4187,7 +4187,7 @@ async def test_adjust_sum_statistics_errors(
             "unit_class": unit_class,
         }
     ]
-    metadata = get_metadata(hass, statistic_ids={statistic_id})
+    metadata = get_metadata(menuai, statistic_ids={statistic_id})
     assert metadata == {
         statistic_id: (
             1,
@@ -4217,8 +4217,8 @@ async def test_adjust_sum_statistics_errors(
     assert not response["success"]
     assert response["error"]["code"] == "unknown_statistic_id"
 
-    await async_wait_recording_done(hass)
-    stats = statistics_during_period(hass, zero, period="hour")
+    await async_wait_recording_done(menuai)
+    stats = statistics_during_period(menuai, zero, period="hour")
     assert stats == previous_stats
 
     for unit in invalid_units:
@@ -4235,8 +4235,8 @@ async def test_adjust_sum_statistics_errors(
         assert not response["success"]
         assert response["error"]["code"] == "invalid_units"
 
-        await async_wait_recording_done(hass)
-        stats = statistics_during_period(hass, zero, period="hour")
+        await async_wait_recording_done(menuai)
+        stats = statistics_during_period(menuai, zero, period="hour")
         assert stats == previous_stats
 
     for unit in valid_units:
@@ -4252,20 +4252,20 @@ async def test_adjust_sum_statistics_errors(
         response = await client.receive_json()
         assert response["success"]
 
-        await async_wait_recording_done(hass)
-        stats = statistics_during_period(hass, zero, period="hour")
+        await async_wait_recording_done(menuai)
+        stats = statistics_during_period(menuai, zero, period="hour")
         assert stats != previous_stats
         previous_stats = stats
 
 
 async def test_import_statistics_with_last_reset(
     recorder_mock: Recorder,
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test importing external statistics with last_reset can be fetched via websocket api."""
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
 
     assert "Compiling statistics for" not in caplog.text
     assert "Statistics already compiled" not in caplog.text
@@ -4298,11 +4298,11 @@ async def test_import_statistics_with_last_reset(
     }
 
     async_add_external_statistics(
-        hass, external_metadata, (external_statistics1, external_statistics2)
+        menuai, external_metadata, (external_statistics1, external_statistics2)
     )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json_auto_id(
         {
             "type": "recorder/statistics_during_period",

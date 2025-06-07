@@ -8,7 +8,7 @@ import urllib
 
 from pyW215.pyW215 import SmartPlug
 
-from homeassistant.util import dt as dt_util
+from menuai.util import dt as dt_util
 
 _LOGGER = logging.getLogger(__name__)
 

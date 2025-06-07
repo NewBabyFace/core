@@ -7,13 +7,13 @@ from unittest.mock import MagicMock, patch
 from pysmhi import SmhiForecastException
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.smhi.const import DOMAIN
-from homeassistant.components.weather import DOMAIN as WEATHER_DOMAIN
-from homeassistant.const import CONF_LATITUDE, CONF_LOCATION, CONF_LONGITUDE
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai import config_entries
+from menuai.components.smhi.const import DOMAIN
+from menuai.components.weather import DOMAIN as WEATHER_DOMAIN
+from menuai.const import CONF_LATITUDE, CONF_LOCATION, CONF_LONGITUDE
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from tests.common import MockConfigEntry
 
@@ -21,25 +21,25 @@ pytestmark = pytest.mark.usefixtures("mock_setup_entry")
 
 
 async def test_form(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: MagicMock,
 ) -> None:
     """Test we get the form and create an entry."""
 
-    hass.config.latitude = 0.0
-    hass.config.longitude = 0.0
+    menuai.config.latitude = 0.0
+    menuai.config.longitude = 0.0
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
     with patch(
-        "homeassistant.components.smhi.async_setup_entry",
+        "menuai.components.smhi.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_LOCATION: {
@@ -61,10 +61,10 @@ async def test_form(
     assert len(mock_setup_entry.mock_calls) == 1
 
     # Check title is "Weather" when not home coordinates
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_LOCATION: {
@@ -85,17 +85,17 @@ async def test_form(
 
 
 async def test_form_invalid_coordinates(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: MagicMock,
 ) -> None:
     """Test we handle invalid coordinates."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     mock_client.async_get_daily_forecast.side_effect = SmhiForecastException
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_LOCATION: {
@@ -110,7 +110,7 @@ async def test_form_invalid_coordinates(
 
     # Continue flow with new coordinates
     mock_client.async_get_daily_forecast.side_effect = None
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_LOCATION: {
@@ -131,7 +131,7 @@ async def test_form_invalid_coordinates(
 
 
 async def test_form_unique_id_exist(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: MagicMock,
 ) -> None:
     """Test we handle unique id already exist."""
@@ -146,12 +146,12 @@ async def test_form_unique_id_exist(
             "name": "Weather",
         },
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_LOCATION: {
@@ -166,7 +166,7 @@ async def test_form_unique_id_exist(
 
 
 async def test_reconfigure_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: MagicMock,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
@@ -179,7 +179,7 @@ async def test_reconfigure_flow(
         data={"location": {"latitude": 57.2898, "longitude": 13.6304}},
         version=3,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     entity = entity_registry.async_get_or_create(
         WEATHER_DOMAIN, DOMAIN, "57.2898, 13.6304"
@@ -192,12 +192,12 @@ async def test_reconfigure_flow(
         name=entry.title,
     )
 
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
     assert result["type"] is FlowResultType.FORM
 
     mock_client.async_get_daily_forecast.side_effect = SmhiForecastException
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_LOCATION: {
@@ -212,7 +212,7 @@ async def test_reconfigure_flow(
 
     mock_client.async_get_daily_forecast.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_LOCATION: {
@@ -224,7 +224,7 @@ async def test_reconfigure_flow(
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reconfigure_successful"
-    entry = hass.config_entries.async_get_entry(entry.entry_id)
+    entry = menuai.config_entries.async_get_entry(entry.entry_id)
     assert entry.title == "Home"
     assert entry.unique_id == "58.2898-14.6304"
     assert entry.data == {

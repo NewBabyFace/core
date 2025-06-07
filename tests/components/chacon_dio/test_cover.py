@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock
 
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     ATTR_CURRENT_POSITION,
     ATTR_POSITION,
     DOMAIN as COVER_DOMAIN,
@@ -15,11 +15,11 @@ from homeassistant.components.cover import (
     SERVICE_STOP_COVER,
     CoverState,
 )
-from homeassistant.components.homeassistant import SERVICE_UPDATE_ENTITY
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import DOMAIN as HOMEASSISTANT_DOMAIN, HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.components.menuai import SERVICE_UPDATE_ENTITY
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import DOMAIN as menuai_DOMAIN, menuai
+from menuai.helpers import entity_registry as er
+from menuai.setup import async_setup_component
 
 from . import setup_integration
 
@@ -29,7 +29,7 @@ COVER_ENTITY_ID = "cover.shutter_mock_1"
 
 
 async def test_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_dio_chacon_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
@@ -37,19 +37,19 @@ async def test_entities(
 ) -> None:
     """Test the creation and values of the Chacon Dio covers."""
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
 
 async def test_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_dio_chacon_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test the creation and values of the Chacon Dio covers."""
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     mock_dio_chacon_client.get_status_details.return_value = {
         "L4HActuator_idmock1": {
@@ -60,22 +60,22 @@ async def test_update(
         }
     }
 
-    await async_setup_component(hass, HOMEASSISTANT_DOMAIN, {})
-    await hass.services.async_call(
-        HOMEASSISTANT_DOMAIN,
+    await async_setup_component(menuai, menuai_DOMAIN, {})
+    await menuai.services.async_call(
+        menuai_DOMAIN,
         SERVICE_UPDATE_ENTITY,
         {ATTR_ENTITY_ID: COVER_ENTITY_ID},
         blocking=True,
     )
 
-    state = hass.states.get(COVER_ENTITY_ID)
+    state = menuai.states.get(COVER_ENTITY_ID)
     assert state
     assert state.attributes.get(ATTR_CURRENT_POSITION) == 51
     assert state.state == CoverState.OPEN
 
 
 async def test_cover_actions(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_dio_chacon_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
@@ -83,58 +83,58 @@ async def test_cover_actions(
 ) -> None:
     """Test the creation and values of the Chacon Dio covers."""
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_CLOSE_COVER,
         {ATTR_ENTITY_ID: COVER_ENTITY_ID},
         blocking=True,
     )
-    await hass.async_block_till_done()
-    state = hass.states.get(COVER_ENTITY_ID)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(COVER_ENTITY_ID)
     assert state.state == CoverState.CLOSING
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_STOP_COVER,
         {ATTR_ENTITY_ID: COVER_ENTITY_ID},
         blocking=True,
     )
-    await hass.async_block_till_done()
-    state = hass.states.get(COVER_ENTITY_ID)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(COVER_ENTITY_ID)
     assert state.state == CoverState.OPEN
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_OPEN_COVER,
         {ATTR_ENTITY_ID: COVER_ENTITY_ID},
         blocking=True,
     )
-    await hass.async_block_till_done()
-    state = hass.states.get(COVER_ENTITY_ID)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(COVER_ENTITY_ID)
     assert state.state == CoverState.OPENING
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_SET_COVER_POSITION,
         {ATTR_POSITION: 25, ATTR_ENTITY_ID: COVER_ENTITY_ID},
         blocking=True,
     )
-    await hass.async_block_till_done()
-    state = hass.states.get(COVER_ENTITY_ID)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(COVER_ENTITY_ID)
     assert state.state == CoverState.OPENING
 
 
 async def test_cover_callbacks(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_dio_chacon_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test the callbacks on the Chacon Dio covers."""
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     # Server side callback tests
     # We find the callback method on the mock client
@@ -152,30 +152,30 @@ async def test_cover_callbacks(
                 "movement": movement,
             }
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     # And call it to effectively launch the callback as the server would do
     await _callback_device_state_function(79, "stop")
-    state = hass.states.get(COVER_ENTITY_ID)
+    state = menuai.states.get(COVER_ENTITY_ID)
     assert state
     assert state.attributes.get(ATTR_CURRENT_POSITION) == 79
     assert state.state == CoverState.OPEN
 
     await _callback_device_state_function(90, "up")
-    state = hass.states.get(COVER_ENTITY_ID)
+    state = menuai.states.get(COVER_ENTITY_ID)
     assert state
     assert state.attributes.get(ATTR_CURRENT_POSITION) == 90
     assert state.state == CoverState.OPENING
 
     await _callback_device_state_function(60, "down")
-    state = hass.states.get(COVER_ENTITY_ID)
+    state = menuai.states.get(COVER_ENTITY_ID)
     assert state
     assert state.attributes.get(ATTR_CURRENT_POSITION) == 60
     assert state.state == CoverState.CLOSING
 
 
 async def test_no_cover_found(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_dio_chacon_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
@@ -184,6 +184,6 @@ async def test_no_cover_found(
 
     mock_dio_chacon_client.search_all_devices.return_value = None
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    assert not hass.states.get(COVER_ENTITY_ID)
+    assert not menuai.states.get(COVER_ENTITY_ID)

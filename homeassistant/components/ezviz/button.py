@@ -10,10 +10,10 @@ from pyezvizapi import EzvizClient
 from pyezvizapi.constants import SupportExt
 from pyezvizapi.exceptions import HTTPError, PyEzvizError
 
-from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.button import ButtonEntity, ButtonEntityDescription
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import EzvizConfigEntry, EzvizDataUpdateCoordinator
 from .entity import EzvizEntity
@@ -66,7 +66,7 @@ BUTTON_ENTITIES = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: EzvizConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -113,6 +113,6 @@ class EzvizButtonEntity(EzvizEntity, ButtonEntity):
                 self.coordinator.ezviz_client, self._serial, "STOP"
             )
         except (HTTPError, PyEzvizError) as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Cannot perform PTZ action on {self.name}"
             ) from err

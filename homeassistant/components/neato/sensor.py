@@ -9,11 +9,11 @@ from typing import Any
 from pybotvac.exceptions import NeatoRobotException
 from pybotvac.robot import Robot
 
-from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import PERCENTAGE, EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.sensor import SensorDeviceClass, SensorEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import PERCENTAGE, EntityCategory
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import NEATO_LOGIN, NEATO_ROBOTS, SCAN_INTERVAL_MINUTES
 from .entity import NeatoEntity
@@ -27,13 +27,13 @@ BATTERY = "Battery"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Neato sensor using config entry."""
-    neato: NeatoHub = hass.data[NEATO_LOGIN]
-    dev = [NeatoSensor(neato, robot) for robot in hass.data[NEATO_ROBOTS]]
+    neato: NeatoHub = menuai.data[NEATO_LOGIN]
+    dev = [NeatoSensor(neato, robot) for robot in menuai.data[NEATO_ROBOTS]]
 
     if not dev:
         return

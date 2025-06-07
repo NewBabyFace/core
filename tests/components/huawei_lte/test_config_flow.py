@@ -12,9 +12,9 @@ from requests.exceptions import ConnectionError
 import requests_mock
 from requests_mock import ANY
 
-from homeassistant import config_entries
-from homeassistant.components.huawei_lte.const import CONF_UNAUTHENTICATED_MODE, DOMAIN
-from homeassistant.const import (
+from menuai import config_entries
+from menuai.components.huawei_lte.const import CONF_UNAUTHENTICATED_MODE, DOMAIN
+from menuai.const import (
     CONF_NAME,
     CONF_PASSWORD,
     CONF_RECIPIENT,
@@ -22,9 +22,9 @@ from homeassistant.const import (
     CONF_USERNAME,
     CONF_VERIFY_SSL,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.ssdp import (
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.ssdp import (
     ATTR_UPNP_DEVICE_TYPE,
     ATTR_UPNP_FRIENDLY_NAME,
     ATTR_UPNP_MANUFACTURER,
@@ -54,9 +54,9 @@ FIXTURE_USER_INPUT_OPTIONS = {
 }
 
 
-async def test_show_set_form(hass: HomeAssistant) -> None:
+async def test_show_set_form(menuai: menuai) -> None:
     """Test that the setup form is served."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}, data=None
     )
 
@@ -65,13 +65,13 @@ async def test_show_set_form(hass: HomeAssistant) -> None:
 
 
 async def test_urlize_plain_host(
-    hass: HomeAssistant, requests_mock: requests_mock.Mocker
+    menuai: menuai, requests_mock: requests_mock.Mocker
 ) -> None:
     """Test that plain host or IP gets converted to a URL."""
     requests_mock.request(ANY, ANY, exc=ConnectionError())
     host = "192.168.100.1"
     user_input = {**FIXTURE_USER_INPUT, CONF_URL: host}
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}, data=user_input
     )
 
@@ -81,7 +81,7 @@ async def test_urlize_plain_host(
 
 
 async def test_already_configured(
-    hass: HomeAssistant, requests_mock: requests_mock.Mocker, login_requests_mock
+    menuai: menuai, requests_mock: requests_mock.Mocker, login_requests_mock
 ) -> None:
     """Test we reject already configured devices."""
     MockConfigEntry(
@@ -89,7 +89,7 @@ async def test_already_configured(
         unique_id=FIXTURE_UNIQUE_ID,
         data=FIXTURE_USER_INPUT,
         title="Already configured",
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
     login_requests_mock.request(
         ANY,
@@ -102,7 +102,7 @@ async def test_already_configured(
         text=f"<response><SerialNumber>{FIXTURE_UNIQUE_ID}</SerialNumber></response>",
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USER},
         data=FIXTURE_USER_INPUT,
@@ -125,7 +125,7 @@ async def test_already_configured(
     ],
 )
 async def test_connection_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     requests_mock: requests_mock.Mocker,
     exception: Exception,
     errors: dict[str, str],
@@ -133,7 +133,7 @@ async def test_connection_errors(
 ) -> None:
     """Test we show user form on various errors."""
     requests_mock.request(ANY, ANY, exc=exception)
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USER},
         data=FIXTURE_USER_INPUT | data_patch,
@@ -217,7 +217,7 @@ def login_requests_mock(requests_mock: requests_mock.Mocker) -> requests_mock.Mo
     ],
 )
 async def test_login_error(
-    hass: HomeAssistant, login_requests_mock, request_outcome, fixture_override, errors
+    menuai: menuai, login_requests_mock, request_outcome, fixture_override, errors
 ) -> None:
     """Test we show user form with appropriate error on response failure."""
     login_requests_mock.request(
@@ -225,7 +225,7 @@ async def test_login_error(
         f"{FIXTURE_USER_INPUT[CONF_URL]}api/user/login",
         **request_outcome,
     )
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USER},
         data={**FIXTURE_USER_INPUT, **fixture_override},
@@ -237,7 +237,7 @@ async def test_login_error(
 
 
 @pytest.mark.parametrize("scheme", ["http", "https"])
-async def test_success(hass: HomeAssistant, login_requests_mock, scheme: str) -> None:
+async def test_success(menuai: menuai, login_requests_mock, scheme: str) -> None:
     """Test successful flow provides entry creation data."""
     user_input = {
         **FIXTURE_USER_INPUT,
@@ -252,15 +252,15 @@ async def test_success(hass: HomeAssistant, login_requests_mock, scheme: str) ->
         text="<response>OK</response>",
     )
     with (
-        patch("homeassistant.components.huawei_lte.async_setup"),
-        patch("homeassistant.components.huawei_lte.async_setup_entry"),
+        patch("menuai.components.huawei_lte.async_setup"),
+        patch("menuai.components.huawei_lte.async_setup_entry"),
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_USER},
             data=user_input,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"][CONF_URL] == user_input[CONF_URL]
@@ -320,7 +320,7 @@ async def test_success(hass: HomeAssistant, login_requests_mock, scheme: str) ->
     ],
 )
 async def test_ssdp(
-    hass: HomeAssistant,
+    menuai: menuai,
     login_requests_mock,
     requests_mock_request_kwargs,
     upnp_data,
@@ -330,7 +330,7 @@ async def test_ssdp(
     url = FIXTURE_USER_INPUT[CONF_URL][:-1]  # strip trailing slash for appending port
     context = {"source": config_entries.SOURCE_SSDP}
     login_requests_mock.request(**requests_mock_request_kwargs)
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context=context,
         data=SsdpServiceInfo(
@@ -380,7 +380,7 @@ async def test_ssdp(
     ],
 )
 async def test_reauth(
-    hass: HomeAssistant,
+    menuai: menuai,
     login_requests_mock,
     login_response_text,
     expected_result,
@@ -394,9 +394,9 @@ async def test_reauth(
         data=mock_entry_data,
         title="Reauth canary",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await entry.start_reauth_flow(hass)
+    result = await entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
     assert result["data_schema"] is not None
@@ -411,14 +411,14 @@ async def test_reauth(
         f"{FIXTURE_USER_INPUT[CONF_URL]}api/user/login",
         text=login_response_text,
     )
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_USERNAME: FIXTURE_USER_INPUT[CONF_USERNAME],
             CONF_PASSWORD: FIXTURE_USER_INPUT[CONF_PASSWORD],
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     for k, v in expected_result.items():
         assert result[k] == v  # type: ignore[literal-required] # expected is a subset
@@ -426,20 +426,20 @@ async def test_reauth(
         assert entry.data[k] == v
 
 
-async def test_options(hass: HomeAssistant) -> None:
+async def test_options(menuai: menuai) -> None:
     """Test options produce expected data."""
 
     config_entry = MockConfigEntry(
         domain=DOMAIN, data=FIXTURE_USER_INPUT, options=FIXTURE_USER_INPUT_OPTIONS
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
     recipient = "+15555550000"
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"], user_input={CONF_RECIPIENT: recipient}
     )
     assert result["data"][CONF_NAME] == DOMAIN

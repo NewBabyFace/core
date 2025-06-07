@@ -12,9 +12,9 @@ from deebot_client.events import AvailabilityEvent
 from deebot_client.events.base import Event
 from sucks import EventListener, VacBot
 
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity, EntityDescription
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity, EntityDescription
 
 from .const import DOMAIN
 
@@ -68,9 +68,9 @@ class EcovacsEntity(Entity, Generic[CapabilityEntity]):
 
         return info
 
-    async def async_added_to_hass(self) -> None:
-        """Set up the event listeners now that hass is ready."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Set up the event listeners now that menuai is ready."""
+        await super().async_added_to_menuai()
 
         if not self._always_available:
 
@@ -155,7 +155,7 @@ class EcovacsLegacyEntity(Entity):
         """Return True if the entity is available."""
         return super().available and self.state is not None
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Remove event listeners on entity remove."""
         for listener in self._event_listeners:
             listener.unsubscribe()

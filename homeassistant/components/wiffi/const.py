@@ -1,6 +1,6 @@
 """Constants for the wiffi component."""
 
-# Component domain, used to store component data in hass data.
+# Component domain, used to store component data in menuai data.
 DOMAIN = "wiffi"
 
 # Default port for TCP server

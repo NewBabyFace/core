@@ -8,7 +8,7 @@ import tempfile
 
 import voluptuous as vol
 
-from homeassistant.components.tts import (
+from menuai.components.tts import (
     CONF_LANG,
     PLATFORM_SCHEMA as TTS_PLATFORM_SCHEMA,
     Provider,
@@ -25,7 +25,7 @@ PLATFORM_SCHEMA = TTS_PLATFORM_SCHEMA.extend(
 )
 
 
-def get_engine(hass, config, discovery_info=None):
+def get_engine(menuai, config, discovery_info=None):
     """Set up Pico speech component."""
     if shutil.which("pico2wave") is None:
         _LOGGER.error("'pico2wave' was not found")

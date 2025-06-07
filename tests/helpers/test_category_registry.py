@@ -8,9 +8,9 @@ from typing import Any
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import category_registry as cr
-from homeassistant.util.dt import UTC
+from menuai.core import menuai
+from menuai.helpers import category_registry as cr
+from menuai.util.dt import UTC
 
 from tests.common import async_capture_events, flush_store
 
@@ -26,10 +26,10 @@ async def test_list_categories_for_scope(
 
 
 async def test_create_category(
-    hass: HomeAssistant, category_registry: cr.CategoryRegistry
+    menuai: menuai, category_registry: cr.CategoryRegistry
 ) -> None:
     """Make sure that we can create new categories."""
-    update_events = async_capture_events(hass, cr.EVENT_CATEGORY_REGISTRY_UPDATED)
+    update_events = async_capture_events(menuai, cr.EVENT_CATEGORY_REGISTRY_UPDATED)
     category = category_registry.async_create(
         scope="automation",
         name="Energy saving",
@@ -43,7 +43,7 @@ async def test_create_category(
     assert len(category_registry.categories) == 1
     assert len(category_registry.categories["automation"]) == 1
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(update_events) == 1
     assert update_events[0].data == {
@@ -54,10 +54,10 @@ async def test_create_category(
 
 
 async def test_create_category_with_name_already_in_use(
-    hass: HomeAssistant, category_registry: cr.CategoryRegistry
+    menuai: menuai, category_registry: cr.CategoryRegistry
 ) -> None:
     """Make sure that we can't create a category with the same name within a scope."""
-    update_events = async_capture_events(hass, cr.EVENT_CATEGORY_REGISTRY_UPDATED)
+    update_events = async_capture_events(menuai, cr.EVENT_CATEGORY_REGISTRY_UPDATED)
     category_registry.async_create(
         scope="automation",
         name="Energy saving",
@@ -74,17 +74,17 @@ async def test_create_category_with_name_already_in_use(
             icon="mdi:leaf",
         )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(category_registry.categories["automation"]) == 1
     assert len(update_events) == 1
 
 
 async def test_create_category_with_duplicate_name_in_other_scopes(
-    hass: HomeAssistant, category_registry: cr.CategoryRegistry
+    menuai: menuai, category_registry: cr.CategoryRegistry
 ) -> None:
     """Make we can create the same category in multiple scopes."""
-    update_events = async_capture_events(hass, cr.EVENT_CATEGORY_REGISTRY_UPDATED)
+    update_events = async_capture_events(menuai, cr.EVENT_CATEGORY_REGISTRY_UPDATED)
     category_registry.async_create(
         scope="automation",
         name="Energy saving",
@@ -96,7 +96,7 @@ async def test_create_category_with_duplicate_name_in_other_scopes(
         icon="mdi:leaf",
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(category_registry.categories["script"]) == 1
     assert len(category_registry.categories["automation"]) == 1
@@ -104,10 +104,10 @@ async def test_create_category_with_duplicate_name_in_other_scopes(
 
 
 async def test_delete_category(
-    hass: HomeAssistant, category_registry: cr.CategoryRegistry
+    menuai: menuai, category_registry: cr.CategoryRegistry
 ) -> None:
     """Make sure that we can delete a category."""
-    update_events = async_capture_events(hass, cr.EVENT_CATEGORY_REGISTRY_UPDATED)
+    update_events = async_capture_events(menuai, cr.EVENT_CATEGORY_REGISTRY_UPDATED)
     category = category_registry.async_create(
         scope="automation",
         name="Energy saving",
@@ -120,7 +120,7 @@ async def test_delete_category(
 
     assert not category_registry.categories["automation"]
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(update_events) == 2
     assert update_events[0].data == {
@@ -155,14 +155,14 @@ async def test_delete_non_existing_category(
 
 
 async def test_update_category(
-    hass: HomeAssistant,
+    menuai: menuai,
     category_registry: cr.CategoryRegistry,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Make sure that we can update categories."""
     created = datetime(2024, 2, 14, 12, 0, 0, tzinfo=UTC)
     freezer.move_to(created)
-    update_events = async_capture_events(hass, cr.EVENT_CATEGORY_REGISTRY_UPDATED)
+    update_events = async_capture_events(menuai, cr.EVENT_CATEGORY_REGISTRY_UPDATED)
     category = category_registry.async_create(
         scope="automation",
         name="Energy saving",
@@ -198,7 +198,7 @@ async def test_update_category(
 
     assert len(category_registry.categories["automation"]) == 1
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(update_events) == 2
     assert update_events[0].data == {
@@ -214,10 +214,10 @@ async def test_update_category(
 
 
 async def test_update_category_with_same_data(
-    hass: HomeAssistant, category_registry: cr.CategoryRegistry
+    menuai: menuai, category_registry: cr.CategoryRegistry
 ) -> None:
     """Make sure that we can reapply the same data to a category and it won't update."""
-    update_events = async_capture_events(hass, cr.EVENT_CATEGORY_REGISTRY_UPDATED)
+    update_events = async_capture_events(menuai, cr.EVENT_CATEGORY_REGISTRY_UPDATED)
     category = category_registry.async_create(
         scope="automation",
         name="Energy saving",
@@ -232,7 +232,7 @@ async def test_update_category_with_same_data(
     )
     assert category == updated_category
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # No update event
     assert len(update_events) == 1
@@ -296,7 +296,7 @@ async def test_update_category_with_name_already_in_use(
 
 
 async def test_load_categories(
-    hass: HomeAssistant, category_registry: cr.CategoryRegistry
+    menuai: menuai, category_registry: cr.CategoryRegistry
 ) -> None:
     """Make sure that we can load/save data correctly."""
     category1 = category_registry.async_create(
@@ -319,7 +319,7 @@ async def test_load_categories(
     assert len(category_registry.categories["automation"]) == 2
     assert len(category_registry.categories["zone"]) == 1
 
-    registry2 = cr.CategoryRegistry(hass)
+    registry2 = cr.CategoryRegistry(menuai)
     await flush_store(category_registry._store)
     await registry2.async_load()
 
@@ -358,12 +358,12 @@ async def test_load_categories(
 
 @pytest.mark.parametrize("load_registries", [False])
 async def test_loading_categories_from_storage(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
+    menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
     """Test loading stored categories on start."""
     date_1 = datetime(2024, 2, 14, 12, 0, 0)
     date_2 = datetime(2024, 2, 14, 12, 0, 0)
-    hass_storage[cr.STORAGE_KEY] = {
+    menuai_storage[cr.STORAGE_KEY] = {
         "version": cr.STORAGE_VERSION_MAJOR,
         "minor_version": cr.STORAGE_VERSION_MINOR,
         "data": {
@@ -397,8 +397,8 @@ async def test_loading_categories_from_storage(
         },
     }
 
-    await cr.async_load(hass)
-    category_registry = cr.async_get(hass)
+    await cr.async_load(menuai)
+    category_registry = cr.async_get(menuai)
 
     assert len(category_registry.categories) == 2
     assert len(category_registry.categories["automation"]) == 2
@@ -437,20 +437,20 @@ async def test_loading_categories_from_storage(
 
 
 async def test_async_create_thread_safety(
-    hass: HomeAssistant, category_registry: cr.CategoryRegistry
+    menuai: menuai, category_registry: cr.CategoryRegistry
 ) -> None:
     """Test async_create raises when called from wrong thread."""
     with pytest.raises(
         RuntimeError,
         match="Detected code that calls category_registry.async_create from a thread.",
     ):
-        await hass.async_add_executor_job(
+        await menuai.async_add_executor_job(
             partial(category_registry.async_create, name="any", scope="any")
         )
 
 
 async def test_async_delete_thread_safety(
-    hass: HomeAssistant, category_registry: cr.CategoryRegistry
+    menuai: menuai, category_registry: cr.CategoryRegistry
 ) -> None:
     """Test async_delete raises when called from wrong thread."""
     any_category = category_registry.async_create(name="any", scope="any")
@@ -459,7 +459,7 @@ async def test_async_delete_thread_safety(
         RuntimeError,
         match="Detected code that calls category_registry.async_delete from a thread.",
     ):
-        await hass.async_add_executor_job(
+        await menuai.async_add_executor_job(
             partial(
                 category_registry.async_delete,
                 scope="any",
@@ -469,7 +469,7 @@ async def test_async_delete_thread_safety(
 
 
 async def test_async_update_thread_safety(
-    hass: HomeAssistant, category_registry: cr.CategoryRegistry
+    menuai: menuai, category_registry: cr.CategoryRegistry
 ) -> None:
     """Test async_update raises when called from wrong thread."""
     any_category = category_registry.async_create(name="any", scope="any")
@@ -478,7 +478,7 @@ async def test_async_update_thread_safety(
         RuntimeError,
         match="Detected code that calls category_registry.async_update from a thread.",
     ):
-        await hass.async_add_executor_job(
+        await menuai.async_add_executor_job(
             partial(
                 category_registry.async_update,
                 scope="any",
@@ -490,10 +490,10 @@ async def test_async_update_thread_safety(
 
 @pytest.mark.parametrize("load_registries", [False])
 async def test_migration_from_1_1(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
+    menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
     """Test migration from version 1.1."""
-    hass_storage[cr.STORAGE_KEY] = {
+    menuai_storage[cr.STORAGE_KEY] = {
         "version": 1,
         "data": {
             "categories": {
@@ -520,8 +520,8 @@ async def test_migration_from_1_1(
         },
     }
 
-    await cr.async_load(hass)
-    registry = cr.async_get(hass)
+    await cr.async_load(menuai)
+    registry = cr.async_get(menuai)
 
     # Test data was loaded
     assert len(registry.categories) == 2
@@ -532,7 +532,7 @@ async def test_migration_from_1_1(
 
     # Check we store migrated data
     await flush_store(registry._store)
-    assert hass_storage[cr.STORAGE_KEY] == {
+    assert menuai_storage[cr.STORAGE_KEY] == {
         "version": cr.STORAGE_VERSION_MAJOR,
         "minor_version": cr.STORAGE_VERSION_MINOR,
         "key": cr.STORAGE_KEY,

@@ -12,14 +12,14 @@ from axis.interfaces.applications.motion_guard import MotionGuardHandler
 from axis.interfaces.applications.vmd4 import Vmd4Handler
 from axis.models.event import Event, EventTopic
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.event import async_call_later
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.event import async_call_later
 
 from . import AxisConfigEntry
 from .entity import AxisEventDescription, AxisEventEntity
@@ -176,7 +176,7 @@ ENTITY_DESCRIPTIONS = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: AxisConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -220,7 +220,7 @@ class AxisBinarySensor(AxisEventEntity, BinarySensorEntity):
             return
 
         self.cancel_scheduled_update = async_call_later(
-            self.hass,
+            self.menuai,
             timedelta(seconds=self.hub.config.trigger_time),
             scheduled_update,
         )

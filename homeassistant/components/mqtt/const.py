@@ -4,8 +4,8 @@ import logging
 
 import jinja2
 
-from homeassistant.const import CONF_DISCOVERY, CONF_PAYLOAD, Platform
-from homeassistant.exceptions import TemplateError
+from menuai.const import CONF_DISCOVERY, CONF_PAYLOAD, Platform
+from menuai.exceptions import TemplateError
 
 ATTR_DISCOVERY_HASH = "discovery_hash"
 ATTR_DISCOVERY_PAYLOAD = "discovery_payload"
@@ -213,7 +213,7 @@ CONF_SUPPORT_URL = "support_url"
 
 DEFAULT_BRIGHTNESS = False
 DEFAULT_BRIGHTNESS_SCALE = 255
-DEFAULT_PREFIX = "homeassistant"
+DEFAULT_PREFIX = "menuai"
 DEFAULT_BIRTH_WILL_TOPIC = DEFAULT_PREFIX + "/status"
 DEFAULT_DISCOVERY = True
 DEFAULT_EFFECT = False

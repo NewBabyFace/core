@@ -5,12 +5,12 @@ from unittest.mock import AsyncMock
 from pysabnzbd import SabnzbdApiException
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.sabnzbd.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_API_KEY, CONF_URL
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.sabnzbd.const import DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_API_KEY, CONF_URL
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
@@ -22,19 +22,19 @@ VALID_CONFIG = {
 pytestmark = pytest.mark.usefixtures("mock_setup_entry")
 
 
-async def test_create_entry(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
+async def test_create_entry(menuai: menuai, mock_setup_entry: AsyncMock) -> None:
     """Test that the user step works."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         VALID_CONFIG,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "localhost"
@@ -45,11 +45,11 @@ async def test_create_entry(hass: HomeAssistant, mock_setup_entry: AsyncMock) ->
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_auth_error(hass: HomeAssistant, sabnzbd: AsyncMock) -> None:
+async def test_auth_error(menuai: menuai, sabnzbd: AsyncMock) -> None:
     """Test when the user step fails and if we can recover."""
     sabnzbd.check_available.side_effect = SabnzbdApiException("Some error")
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data=VALID_CONFIG,
@@ -60,11 +60,11 @@ async def test_auth_error(hass: HomeAssistant, sabnzbd: AsyncMock) -> None:
     # reset side effect and check if we can recover
     sabnzbd.check_available.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         VALID_CONFIG,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert "errors" not in result
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -76,15 +76,15 @@ async def test_auth_error(hass: HomeAssistant, sabnzbd: AsyncMock) -> None:
 
 
 async def test_reconfigure_successful(
-    hass: HomeAssistant, config_entry: MockConfigEntry
+    menuai: menuai, config_entry: MockConfigEntry
 ) -> None:
     """Test reconfiguring a SABnzbd entry."""
-    result = await config_entry.start_reconfigure_flow(hass)
+    result = await config_entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_URL: "http://10.10.10.10:8080", CONF_API_KEY: "new_key"},
     )
@@ -98,10 +98,10 @@ async def test_reconfigure_successful(
 
 
 async def test_reconfigure_error(
-    hass: HomeAssistant, config_entry: MockConfigEntry, sabnzbd: AsyncMock
+    menuai: menuai, config_entry: MockConfigEntry, sabnzbd: AsyncMock
 ) -> None:
     """Test reconfiguring a SABnzbd entry."""
-    result = await config_entry.start_reconfigure_flow(hass)
+    result = await config_entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
@@ -109,7 +109,7 @@ async def test_reconfigure_error(
     # set side effect and check if error is handled
     sabnzbd.check_available.side_effect = SabnzbdApiException("Some error")
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_URL: "http://10.10.10.10:8080", CONF_API_KEY: "new_key"},
     )
@@ -120,7 +120,7 @@ async def test_reconfigure_error(
     # reset side effect and check if we can recover
     sabnzbd.check_available.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_URL: "http://10.10.10.10:8080", CONF_API_KEY: "new_key"},
     )
@@ -135,16 +135,16 @@ async def test_reconfigure_error(
 
 
 async def test_abort_already_configured(
-    hass: HomeAssistant, config_entry: MockConfigEntry
+    menuai: menuai, config_entry: MockConfigEntry
 ) -> None:
     """Test that the flow aborts if SABnzbd instance is already configured."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         VALID_CONFIG,
     )
@@ -154,14 +154,14 @@ async def test_abort_already_configured(
 
 
 async def test_abort_reconfigure_successful(
-    hass: HomeAssistant, config_entry: MockConfigEntry
+    menuai: menuai, config_entry: MockConfigEntry
 ) -> None:
     """Test that the reconfigure flow aborts successfully if SABnzbd instance is already configured."""
-    result = await config_entry.start_reconfigure_flow(hass)
+    result = await config_entry.start_reconfigure_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         VALID_CONFIG,
     )

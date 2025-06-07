@@ -6,14 +6,14 @@ from typing import cast
 from aiohomeconnect.model import SettingKey
 from aiohomeconnect.model.error import HomeConnectError
 
-from homeassistant.components.automation import automations_with_entity
-from homeassistant.components.script import scripts_with_entity
-from homeassistant.components.time import TimeEntity, TimeEntityDescription
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.issue_registry import (
+from menuai.components.automation import automations_with_entity
+from menuai.components.script import scripts_with_entity
+from menuai.components.time import TimeEntity, TimeEntityDescription
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.issue_registry import (
     IssueSeverity,
     async_create_issue,
     async_delete_issue,
@@ -49,7 +49,7 @@ def _get_entities_for_appliance(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: HomeConnectConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -76,17 +76,17 @@ def time_to_seconds(t: time) -> int:
 class HomeConnectTimeEntity(HomeConnectEntity, TimeEntity):
     """Time setting class for Home Connect."""
 
-    async def async_added_to_hass(self) -> None:
-        """Call when entity is added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Call when entity is added to menuai."""
+        await super().async_added_to_menuai()
         if self.bsh_key is SettingKey.BSH_COMMON_ALARM_CLOCK:
-            automations = automations_with_entity(self.hass, self.entity_id)
-            scripts = scripts_with_entity(self.hass, self.entity_id)
+            automations = automations_with_entity(self.menuai, self.entity_id)
+            scripts = scripts_with_entity(self.menuai, self.entity_id)
             items = automations + scripts
             if not items:
                 return
 
-            entity_reg: er.EntityRegistry = er.async_get(self.hass)
+            entity_reg: er.EntityRegistry = er.async_get(self.menuai)
             entity_automations = [
                 automation_entity
                 for automation_id in automations
@@ -107,7 +107,7 @@ class HomeConnectTimeEntity(HomeConnectEntity, TimeEntity):
             ]
 
             async_create_issue(
-                self.hass,
+                self.menuai,
                 DOMAIN,
                 f"deprecated_time_alarm_clock_in_automations_scripts_{self.entity_id}",
                 breaks_in_ha_version="2025.10.0",
@@ -121,22 +121,22 @@ class HomeConnectTimeEntity(HomeConnectEntity, TimeEntity):
                 },
             )
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Call when entity will be removed from hass."""
+    async def async_will_remove_from_menuai(self) -> None:
+        """Call when entity will be removed from menuai."""
         if self.bsh_key is SettingKey.BSH_COMMON_ALARM_CLOCK:
             async_delete_issue(
-                self.hass,
+                self.menuai,
                 DOMAIN,
                 f"deprecated_time_alarm_clock_in_automations_scripts_{self.entity_id}",
             )
             async_delete_issue(
-                self.hass, DOMAIN, f"deprecated_time_alarm_clock_{self.entity_id}"
+                self.menuai, DOMAIN, f"deprecated_time_alarm_clock_{self.entity_id}"
             )
 
     async def async_set_value(self, value: time) -> None:
         """Set the native value of the entity."""
         async_create_issue(
-            self.hass,
+            self.menuai,
             DOMAIN,
             f"deprecated_time_alarm_clock_{self.entity_id}",
             breaks_in_ha_version="2025.10.0",
@@ -155,7 +155,7 @@ class HomeConnectTimeEntity(HomeConnectEntity, TimeEntity):
                 value=time_to_seconds(value),
             )
         except HomeConnectError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="set_setting_entity",
                 translation_placeholders={

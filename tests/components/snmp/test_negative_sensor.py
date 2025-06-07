@@ -5,10 +5,10 @@ from unittest.mock import patch
 from pysnmp.proto.rfc1902 import Integer32
 import pytest
 
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.setup import async_setup_component
 
 
 @pytest.fixture(autouse=True)
@@ -16,13 +16,13 @@ def hlapi_mock():
     """Mock out 3rd party API."""
     mock_data = Integer32(-13)
     with patch(
-        "homeassistant.components.snmp.sensor.getCmd",
+        "menuai.components.snmp.sensor.getCmd",
         return_value=(None, None, None, [[mock_data]]),
     ):
         yield
 
 
-async def test_basic_config(hass: HomeAssistant) -> None:
+async def test_basic_config(menuai: menuai) -> None:
     """Test basic entity configuration."""
 
     config = {
@@ -33,16 +33,16 @@ async def test_basic_config(hass: HomeAssistant) -> None:
         },
     }
 
-    assert await async_setup_component(hass, SENSOR_DOMAIN, config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, SENSOR_DOMAIN, config)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.snmp")
+    state = menuai.states.get("sensor.snmp")
     assert state.state == "-13"
     assert state.attributes == {"friendly_name": "SNMP"}
 
 
 async def test_entity_config(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test entity configuration."""
 
@@ -63,12 +63,12 @@ async def test_entity_config(
         },
     }
 
-    assert await async_setup_component(hass, SENSOR_DOMAIN, config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, SENSOR_DOMAIN, config)
+    await menuai.async_block_till_done()
 
     assert entity_registry.async_get("sensor.snmp_sensor").unique_id == "very_unique"
 
-    state = hass.states.get("sensor.snmp_sensor")
+    state = menuai.states.get("sensor.snmp_sensor")
     assert state.state == "-13"
     assert state.attributes == {
         "device_class": "temperature",

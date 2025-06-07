@@ -13,27 +13,27 @@ from aiopurpleair.endpoints.sensors import NearbySensorResult
 from aiopurpleair.errors import InvalidApiKeyError, PurpleAirError
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_API_KEY,
     CONF_LATITUDE,
     CONF_LONGITUDE,
     CONF_SHOW_ON_MAP,
 )
-from homeassistant.core import Event, EventStateChangedData, HomeAssistant, callback
-from homeassistant.helpers import (
+from menuai.core import Event, EventStateChangedData, menuai, callback
+from menuai.helpers import (
     aiohttp_client,
     config_validation as cv,
     device_registry as dr,
     entity_registry as er,
 )
-from homeassistant.helpers.event import async_track_state_change_event
-from homeassistant.helpers.selector import (
+from menuai.helpers.event import async_track_state_change_event
+from menuai.helpers.selector import (
     SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
@@ -57,22 +57,22 @@ API_KEY_SCHEMA = vol.Schema(
 
 
 @callback
-def async_get_api(hass: HomeAssistant, api_key: str) -> API:
+def async_get_api(menuai: menuai, api_key: str) -> API:
     """Get an aiopurpleair API object."""
-    session = aiohttp_client.async_get_clientsession(hass)
+    session = aiohttp_client.async_get_clientsession(menuai)
     return API(api_key, session=session)
 
 
 @callback
-def async_get_coordinates_schema(hass: HomeAssistant) -> vol.Schema:
+def async_get_coordinates_schema(menuai: menuai) -> vol.Schema:
     """Define a schema for searching for sensors near a coordinate pair."""
     return vol.Schema(
         {
             vol.Inclusive(
-                CONF_LATITUDE, "coords", default=hass.config.latitude
+                CONF_LATITUDE, "coords", default=menuai.config.latitude
             ): cv.latitude,
             vol.Inclusive(
-                CONF_LONGITUDE, "coords", default=hass.config.longitude
+                CONF_LONGITUDE, "coords", default=menuai.config.longitude
             ): cv.longitude,
             vol.Optional(CONF_DISTANCE, default=DEFAULT_DISTANCE): cv.positive_int,
         }
@@ -106,10 +106,10 @@ def async_get_nearby_sensors_schema(options: list[SelectOptionDict]) -> vol.Sche
 
 @callback
 def async_get_remove_sensor_options(
-    hass: HomeAssistant, config_entry: ConfigEntry
+    menuai: menuai, config_entry: ConfigEntry
 ) -> list[SelectOptionDict]:
     """Return a set of already-configured sensors as SelectOptionDict objects."""
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     return [
         SelectOptionDict(value=device_entry.id, label=cast(str, device_entry.name))
         for device_entry in device_registry.devices.get_devices_for_config_entry_id(
@@ -138,12 +138,12 @@ class ValidationResult:
     errors: dict[str, Any] = field(default_factory=dict)
 
 
-async def async_validate_api_key(hass: HomeAssistant, api_key: str) -> ValidationResult:
+async def async_validate_api_key(menuai: menuai, api_key: str) -> ValidationResult:
     """Validate an API key.
 
     This method returns a dictionary of errors (if appropriate).
     """
-    api = async_get_api(hass, api_key)
+    api = async_get_api(menuai, api_key)
     errors = {}
 
     try:
@@ -164,14 +164,14 @@ async def async_validate_api_key(hass: HomeAssistant, api_key: str) -> Validatio
 
 
 async def async_validate_coordinates(
-    hass: HomeAssistant,
+    menuai: menuai,
     api_key: str,
     latitude: float,
     longitude: float,
     distance: float,
 ) -> ValidationResult:
     """Validate coordinates."""
-    api = async_get_api(hass, api_key)
+    api = async_get_api(menuai, api_key)
     errors = {}
 
     try:
@@ -218,11 +218,11 @@ class PurpleAirConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is None:
             return self.async_show_form(
                 step_id="by_coordinates",
-                data_schema=async_get_coordinates_schema(self.hass),
+                data_schema=async_get_coordinates_schema(self.menuai),
             )
 
         validation = await async_validate_coordinates(
-            self.hass,
+            self.menuai,
             self._flow_data[CONF_API_KEY],
             user_input[CONF_LATITUDE],
             user_input[CONF_LONGITUDE],
@@ -231,7 +231,7 @@ class PurpleAirConfigFlow(ConfigFlow, domain=DOMAIN):
         if validation.errors:
             return self.async_show_form(
                 step_id="by_coordinates",
-                data_schema=async_get_coordinates_schema(self.hass),
+                data_schema=async_get_coordinates_schema(self.menuai),
                 errors=validation.errors,
             )
 
@@ -277,7 +277,7 @@ class PurpleAirConfigFlow(ConfigFlow, domain=DOMAIN):
 
         api_key = user_input[CONF_API_KEY]
 
-        validation = await async_validate_api_key(self.hass, api_key)
+        validation = await async_validate_api_key(self.menuai, api_key)
         if validation.errors:
             return self.async_show_form(
                 step_id="reauth_confirm",
@@ -300,7 +300,7 @@ class PurpleAirConfigFlow(ConfigFlow, domain=DOMAIN):
 
         self._async_abort_entries_match({CONF_API_KEY: api_key})
 
-        validation = await async_validate_api_key(self.hass, api_key)
+        validation = await async_validate_api_key(self.menuai, api_key)
         if validation.errors:
             return self.async_show_form(
                 step_id="user",
@@ -342,11 +342,11 @@ class PurpleAirOptionsFlowHandler(OptionsFlow):
         if user_input is None:
             return self.async_show_form(
                 step_id="add_sensor",
-                data_schema=async_get_coordinates_schema(self.hass),
+                data_schema=async_get_coordinates_schema(self.menuai),
             )
 
         validation = await async_validate_coordinates(
-            self.hass,
+            self.menuai,
             self.config_entry.data[CONF_API_KEY],
             user_input[CONF_LATITUDE],
             user_input[CONF_LONGITUDE],
@@ -356,7 +356,7 @@ class PurpleAirOptionsFlowHandler(OptionsFlow):
         if validation.errors:
             return self.async_show_form(
                 step_id="add_sensor",
-                data_schema=async_get_coordinates_schema(self.hass),
+                data_schema=async_get_coordinates_schema(self.menuai),
                 errors=validation.errors,
             )
 
@@ -403,12 +403,12 @@ class PurpleAirOptionsFlowHandler(OptionsFlow):
             return self.async_show_form(
                 step_id="remove_sensor",
                 data_schema=async_get_remove_sensor_schema(
-                    async_get_remove_sensor_options(self.hass, self.config_entry)
+                    async_get_remove_sensor_options(self.menuai, self.config_entry)
                 ),
             )
 
-        device_registry = dr.async_get(self.hass)
-        entity_registry = er.async_get(self.hass)
+        device_registry = dr.async_get(self.menuai)
+        entity_registry = er.async_get(self.menuai)
 
         device_id = user_input[CONF_SENSOR_DEVICE_ID]
         device_entry = cast(dr.DeviceEntry, device_registry.async_get(device_id))
@@ -426,7 +426,7 @@ class PurpleAirOptionsFlowHandler(OptionsFlow):
         ) -> None:
             """Listen and respond when all device entities are removed."""
             if all(
-                self.hass.states.get(entity_entry.entity_id) is None
+                self.menuai.states.get(entity_entry.entity_id) is None
                 for entity_entry in entity_entries
             ):
                 device_entities_removed_event.set()
@@ -434,7 +434,7 @@ class PurpleAirOptionsFlowHandler(OptionsFlow):
         # Track state changes for this device's entities and when they're removed,
         # finish the flow:
         cancel_state_track = async_track_state_change_event(
-            self.hass,
+            self.menuai,
             [entity_entry.entity_id for entity_entry in entity_entries],
             async_device_entity_state_changed,
         )

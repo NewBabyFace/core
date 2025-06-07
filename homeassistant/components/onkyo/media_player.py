@@ -8,15 +8,15 @@ from functools import cache
 import logging
 from typing import Any, Literal
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
     MediaType,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import OnkyoConfigEntry
 from .const import (
@@ -146,7 +146,7 @@ def _rev_listening_mode_lib_mappings(zone: str) -> dict[LibValue, ListeningMode]
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: OnkyoConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -154,7 +154,7 @@ async def async_setup_entry(
     data = entry.runtime_data
 
     receiver = data.receiver
-    all_entities = hass.data[DATA_MP_ENTITIES]
+    all_entities = menuai.data[DATA_MP_ENTITIES]
 
     entities: dict[str, OnkyoMediaPlayer] = {}
     all_entities[entry.entry_id] = entities
@@ -269,11 +269,11 @@ class OnkyoMediaPlayer(MediaPlayerEntity):
 
         self._attr_extra_state_attributes = {}
 
-    async def async_added_to_hass(self) -> None:
-        """Entity has been added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Entity has been added to menuai."""
         self.backfill_state()
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Cancel the query timer when the entity is removed."""
         if self._query_timer:
             self._query_timer.cancel()
@@ -547,6 +547,6 @@ class OnkyoMediaPlayer(MediaPlayerEntity):
                     self._query_receiver("video-information")
                 self._query_timer = None
 
-            self._query_timer = self.hass.loop.call_later(
+            self._query_timer = self.menuai.loop.call_later(
                 AUDIO_VIDEO_INFORMATION_UPDATE_WAIT_TIME, _query_av_info
             )

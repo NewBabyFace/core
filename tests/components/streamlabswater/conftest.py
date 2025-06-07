@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from streamlabswater.streamlabswater import StreamlabsClient
 
-from homeassistant.components.streamlabswater import DOMAIN
-from homeassistant.const import CONF_API_KEY
+from menuai.components.streamlabswater import DOMAIN
+from menuai.const import CONF_API_KEY
 
 from tests.common import MockConfigEntry, load_json_object_fixture
 
@@ -16,7 +16,7 @@ from tests.common import MockConfigEntry, load_json_object_fixture
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.streamlabswater.async_setup_entry", return_value=True
+        "menuai.components.streamlabswater.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -44,7 +44,7 @@ def mock_streamlabswater() -> Generator[AsyncMock]:
     mock.get_water_usage_summary.return_value = water_usage
 
     with patch(
-        "homeassistant.components.streamlabswater.StreamlabsClient",
+        "menuai.components.streamlabswater.StreamlabsClient",
         return_value=mock,
     ) as mock_client:
         yield mock_client

@@ -20,11 +20,11 @@ from pyoverkiz.exceptions import (
 )
 from pyoverkiz.models import Device, Event, Place
 
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util.decorator import Registry
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers import device_registry as dr
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.util.decorator import Registry
 
 if TYPE_CHECKING:
     from . import OverkizDataConfigEntry
@@ -44,7 +44,7 @@ class OverkizDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Device]]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: OverkizDataConfigEntry,
         logger: logging.Logger,
         *,
@@ -54,7 +54,7 @@ class OverkizDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Device]]):
     ) -> None:
         """Initialize global data updater."""
         super().__init__(
-            hass,
+            menuai,
             logger,
             config_entry=config_entry,
             name="device events",
@@ -165,8 +165,8 @@ async def on_device_created_updated(
     coordinator: OverkizDataUpdateCoordinator, event: Event
 ) -> None:
     """Handle device unavailable / disabled event."""
-    coordinator.hass.async_create_task(
-        coordinator.hass.config_entries.async_reload(coordinator.config_entry.entry_id)
+    coordinator.menuai.async_create_task(
+        coordinator.menuai.config_entries.async_reload(coordinator.config_entry.entry_id)
     )
 
 
@@ -192,7 +192,7 @@ async def on_device_removed(
         return
 
     base_device_url = event.device_url.split("#")[0]
-    registry = dr.async_get(coordinator.hass)
+    registry = dr.async_get(coordinator.menuai)
 
     if registered_device := registry.async_get_device(
         identifiers={(DOMAIN, base_device_url)}

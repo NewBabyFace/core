@@ -15,31 +15,31 @@ from xbox.webapi.api.provider.smartglass.models import (
     SmartglassConsoleList,
 )
 
-from homeassistant.components.remote import (
+from menuai.components.remote import (
     ATTR_DELAY_SECS,
     ATTR_NUM_REPEATS,
     DEFAULT_DELAY_SECS,
     RemoteEntity,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import ConsoleData, XboxUpdateCoordinator
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Xbox media_player from a config entry."""
-    client: XboxLiveClient = hass.data[DOMAIN][entry.entry_id]["client"]
-    consoles: SmartglassConsoleList = hass.data[DOMAIN][entry.entry_id]["consoles"]
-    coordinator: XboxUpdateCoordinator = hass.data[DOMAIN][entry.entry_id][
+    client: XboxLiveClient = menuai.data[DOMAIN][entry.entry_id]["client"]
+    consoles: SmartglassConsoleList = menuai.data[DOMAIN][entry.entry_id]["consoles"]
+    coordinator: XboxUpdateCoordinator = menuai.data[DOMAIN][entry.entry_id][
         "coordinator"
     ]
 

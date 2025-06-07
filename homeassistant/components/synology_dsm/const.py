@@ -16,11 +16,11 @@ from synology_dsm.exceptions import (
     SynologyDSMRequestException,
 )
 
-from homeassistant.const import Platform
-from homeassistant.util.hass_dict import HassKey
+from menuai.const import Platform
+from menuai.util.menuai_dict import menuaiKey
 
 DOMAIN = "synology_dsm"
-DATA_BACKUP_AGENT_LISTENERS: HassKey[list[Callable[[], None]]] = HassKey(
+DATA_BACKUP_AGENT_LISTENERS: menuaiKey[list[Callable[[], None]]] = menuaiKey(
     f"{DOMAIN}_backup_agent_listeners"
 )
 ATTRIBUTION = "Data provided by Synology"

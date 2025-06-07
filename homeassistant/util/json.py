@@ -8,7 +8,7 @@ from typing import Any
 
 import orjson
 
-from homeassistant.exceptions import HomeAssistantError
+from menuai.exceptions import menuaiError
 
 _SENTINEL = object()
 _LOGGER = logging.getLogger(__name__)
@@ -26,7 +26,7 @@ JSON_ENCODE_EXCEPTIONS = (TypeError, ValueError)
 JSON_DECODE_EXCEPTIONS = (orjson.JSONDecodeError,)
 
 
-class SerializationError(HomeAssistantError):
+class SerializationError(menuaiError):
     """Error serializing the data to JSON."""
 
 
@@ -76,10 +76,10 @@ def load_json(
         _LOGGER.debug("JSON file not found: %s", filename)
     except JSON_DECODE_EXCEPTIONS as error:
         _LOGGER.exception("Could not parse JSON content: %s", filename)
-        raise HomeAssistantError(f"Error while loading {filename}: {error}") from error
+        raise menuaiError(f"Error while loading {filename}: {error}") from error
     except OSError as error:
         _LOGGER.exception("JSON file reading failed: %s", filename)
-        raise HomeAssistantError(f"Error while loading {filename}: {error}") from error
+        raise menuaiError(f"Error while loading {filename}: {error}") from error
     return {} if default is _SENTINEL else default
 
 
@@ -100,7 +100,7 @@ def load_json_array(
     _LOGGER.exception(
         "Expected JSON to be parsed as a list got %s in: %s", {type(value)}, filename
     )
-    raise HomeAssistantError(f"Expected JSON to be parsed as a list got {type(value)}")
+    raise menuaiError(f"Expected JSON to be parsed as a list got {type(value)}")
 
 
 def load_json_object(
@@ -120,7 +120,7 @@ def load_json_object(
     _LOGGER.exception(
         "Expected JSON to be parsed as a dict got %s in: %s", {type(value)}, filename
     )
-    raise HomeAssistantError(f"Expected JSON to be parsed as a dict got {type(value)}")
+    raise menuaiError(f"Expected JSON to be parsed as a dict got {type(value)}")
 
 
 def format_unserializable_data(data: dict[str, Any]) -> str:

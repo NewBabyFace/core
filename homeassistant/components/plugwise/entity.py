@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from plugwise.constants import GwEntityData
 
-from homeassistant.const import ATTR_NAME, ATTR_VIA_DEVICE, CONF_HOST
-from homeassistant.helpers.device_registry import (
+from menuai.const import ATTR_NAME, ATTR_VIA_DEVICE, CONF_HOST
+from menuai.helpers.device_registry import (
     CONNECTION_NETWORK_MAC,
     CONNECTION_ZIGBEE,
     DeviceInfo,
 )
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import PlugwiseDataUpdateCoordinator

@@ -52,7 +52,7 @@
           "noise_psk": "Encryption key"
         },
         "data_description": {
-          "noise_psk": "The encryption key is used to encrypt the connection between Home Assistant and the ESPHome device. You can find this in the api: section of your ESPHome device YAML configuration."
+          "noise_psk": "The encryption key is used to encrypt the connection between MenuAI and the ESPHome device. You can find this in the api: section of your ESPHome device YAML configuration."
         },
         "description": "Please enter the encryption key for `{name}`. You can find it in the ESPHome Dashboard or in your ESPHome device YAML configuration."
       },
@@ -69,7 +69,7 @@
         "description": "The ESPHome device `{name}` disabled transport encryption. Please confirm that you want to remove the encryption key and allow unencrypted connections."
       },
       "discovery_confirm": {
-        "description": "Do you want to add the device `{name}` to Home Assistant?",
+        "description": "Do you want to add the device `{name}` to MenuAI?",
         "title": "Discovered ESPHome device"
       },
       "name_conflict": {
@@ -87,12 +87,12 @@
     "step": {
       "init": {
         "data": {
-          "allow_service_calls": "Allow the device to perform Home Assistant actions.",
+          "allow_service_calls": "Allow the device to perform MenuAI actions.",
           "subscribe_logs": "Subscribe to logs from the device."
         },
         "data_description": {
-          "allow_service_calls": "When enabled, ESPHome devices can perform Home Assistant actions, such as calling services or sending events. Only enable this if you trust the device.",
-          "subscribe_logs": "When enabled, the device will send logs to Home Assistant and you can view them in the logs panel."
+          "allow_service_calls": "When enabled, ESPHome devices can perform MenuAI actions, such as calling services or sending events. Only enable this if you trust the device.",
+          "subscribe_logs": "When enabled, the device will send logs to MenuAI and you can view them in the logs panel."
         }
       }
     }
@@ -157,8 +157,8 @@
       "description": "The API password for ESPHome is deprecated and the use of an API encryption key is recommended instead.\n\nRemove the API password and add an encryption key to your ESPHome device to resolve this issue."
     },
     "service_calls_not_allowed": {
-      "title": "{name} is not permitted to perform Home Assistant actions",
-      "description": "The ESPHome device attempted to perform a Home Assistant action, but this functionality is not enabled.\n\nIf you trust this device and want to allow it to perform Home Assistant action, you can enable this functionality in the options flow."
+      "title": "{name} is not permitted to perform MenuAI actions",
+      "description": "The ESPHome device attempted to perform a MenuAI action, but this functionality is not enabled.\n\nIf you trust this device and want to allow it to perform MenuAI action, you can enable this functionality in the options flow."
     },
     "device_conflict": {
       "title": "Device conflict for {name}",
@@ -166,7 +166,7 @@
         "step": {
           "init": {
             "title": "Device conflict for {name}",
-            "description": "**The device `{name}` (`{model}`) at `{ip}` has reported a MAC address change from `{stored_mac}` to `{mac}`.**\n\nIf you have multiple devices with the same name, please rename or remove the one with MAC address `{mac}` to avoid conflicts.\n\nIf this is a hardware replacement, please confirm that you would like to migrate the Home Assistant configuration to the new device with MAC address `{mac}`.",
+            "description": "**The device `{name}` (`{model}`) at `{ip}` has reported a MAC address change from `{stored_mac}` to `{mac}`.**\n\nIf you have multiple devices with the same name, please rename or remove the one with MAC address `{mac}` to avoid conflicts.\n\nIf this is a hardware replacement, please confirm that you would like to migrate the MenuAI configuration to the new device with MAC address `{mac}`.",
             "menu_options": {
               "migrate": "Migrate configuration to new device",
               "manual": "Remove or rename device"
@@ -174,7 +174,7 @@
           },
           "migrate": {
             "title": "Confirm device replacement for {name}",
-            "description": "Are you sure you want to migrate the Home Assistant configuration for `{name}` (`{model}`) at `{ip}` from `{stored_mac}` to `{mac}`?"
+            "description": "Are you sure you want to migrate the MenuAI configuration for `{name}` (`{model}`) at `{ip}` from `{stored_mac}` to `{mac}`?"
           },
           "manual": {
             "title": "Remove or rename device {name}",

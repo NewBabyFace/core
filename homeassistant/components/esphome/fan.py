@@ -8,14 +8,14 @@ from typing import Any
 
 from aioesphomeapi import EntityInfo, FanDirection, FanInfo, FanSpeed, FanState
 
-from homeassistant.components.fan import (
+from menuai.components.fan import (
     DIRECTION_FORWARD,
     DIRECTION_REVERSE,
     FanEntity,
     FanEntityFeature,
 )
-from homeassistant.core import callback
-from homeassistant.util.percentage import (
+from menuai.core import callback
+from menuai.util.percentage import (
     ordered_list_item_to_percentage,
     percentage_to_ordered_list_item,
     percentage_to_ranged_value,
@@ -96,7 +96,7 @@ class EsphomeFan(EsphomeEntity[FanInfo, FanState], FanEntity):
     async def async_set_direction(self, direction: str) -> None:
         """Set direction of the fan."""
         self._client.fan_command(
-            key=self._key, direction=_FAN_DIRECTIONS.from_hass(direction)
+            key=self._key, direction=_FAN_DIRECTIONS.from_menuai(direction)
         )
 
     @convert_api_error_ha_error

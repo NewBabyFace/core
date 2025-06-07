@@ -6,11 +6,11 @@ from typing import Any, cast
 from aiohomeconnect.model import OptionKey, SettingKey
 from aiohomeconnect.model.error import HomeConnectError
 
-from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import UNDEFINED, UndefinedType
+from menuai.components.switch import SwitchEntity, SwitchEntityDescription
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import UNDEFINED, UndefinedType
 
 from .common import setup_home_connect_entry
 from .const import BSH_POWER_OFF, BSH_POWER_ON, BSH_POWER_STANDBY, DOMAIN
@@ -168,7 +168,7 @@ def _get_option_entities_for_appliance(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: HomeConnectConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -194,7 +194,7 @@ class HomeConnectSwitch(HomeConnectEntity, SwitchEntity):
             )
         except HomeConnectError as err:
             self._attr_available = False
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="turn_on",
                 translation_placeholders={
@@ -214,7 +214,7 @@ class HomeConnectSwitch(HomeConnectEntity, SwitchEntity):
             )
         except HomeConnectError as err:
             self._attr_available = False
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="turn_off",
                 translation_placeholders={
@@ -244,7 +244,7 @@ class HomeConnectPowerSwitch(HomeConnectEntity, SwitchEntity):
             )
         except HomeConnectError as err:
             self._attr_is_on = False
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="power_on",
                 translation_placeholders={
@@ -258,7 +258,7 @@ class HomeConnectPowerSwitch(HomeConnectEntity, SwitchEntity):
         if self.power_off_state is UNDEFINED:
             await self.async_fetch_power_off_state()
             if self.power_off_state is UNDEFINED:
-                raise HomeAssistantError(
+                raise menuaiError(
                     translation_domain=DOMAIN,
                     translation_key="unable_to_retrieve_turn_off",
                     translation_placeholders={
@@ -267,7 +267,7 @@ class HomeConnectPowerSwitch(HomeConnectEntity, SwitchEntity):
                 )
 
         if self.power_off_state is None:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="turn_off_not_supported",
                 translation_placeholders={"appliance_name": self.appliance.info.name},
@@ -280,7 +280,7 @@ class HomeConnectPowerSwitch(HomeConnectEntity, SwitchEntity):
             )
         except HomeConnectError as err:
             self._attr_is_on = True
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="power_off",
                 translation_placeholders={

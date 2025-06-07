@@ -7,7 +7,7 @@ import logging
 
 from habluetooth import BluetoothScanningMode
 
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
+from menuai.core import CALLBACK_TYPE, menuai, callback
 
 from .api import (
     async_address_present,
@@ -27,14 +27,14 @@ class BasePassiveBluetoothCoordinator(ABC):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         logger: logging.Logger,
         address: str,
         mode: BluetoothScanningMode,
         connectable: bool,
     ) -> None:
         """Initialize the coordinator."""
-        self.hass = hass
+        self.menuai = menuai
         self.logger = logger
         self.address = address
         self.connectable = connectable
@@ -44,7 +44,7 @@ class BasePassiveBluetoothCoordinator(ABC):
         self._last_name = address
         # Subclasses are responsible for setting _available to True
         # when the abstractmethod _async_handle_bluetooth_event is called.
-        self._available = async_address_present(hass, address, connectable)
+        self._available = async_address_present(menuai, address, connectable)
 
     @callback
     def async_start(self) -> CALLBACK_TYPE:
@@ -65,7 +65,7 @@ class BasePassiveBluetoothCoordinator(ABC):
     def name(self) -> str:
         """Return last known name of the device."""
         if service_info := async_last_service_info(
-            self.hass, self.address, self.connectable
+            self.menuai, self.address, self.connectable
         ):
             return service_info.name
         return self._last_name
@@ -76,7 +76,7 @@ class BasePassiveBluetoothCoordinator(ABC):
         # If the device is unavailable it will not have a service
         # info and fall through below.
         if service_info := async_last_service_info(
-            self.hass, self.address, self.connectable
+            self.menuai, self.address, self.connectable
         ):
             return service_info.time
         # This is the time from the last advertisement that
@@ -88,7 +88,7 @@ class BasePassiveBluetoothCoordinator(ABC):
         """Start the callbacks."""
         self._on_stop.append(
             async_register_callback(
-                self.hass,
+                self.menuai,
                 self._async_handle_bluetooth_event,
                 BluetoothCallbackMatcher(
                     address=self.address, connectable=self.connectable
@@ -98,7 +98,7 @@ class BasePassiveBluetoothCoordinator(ABC):
         )
         self._on_stop.append(
             async_track_unavailable(
-                self.hass,
+                self.menuai,
                 self._async_handle_unavailable,
                 self.address,
                 self.connectable,

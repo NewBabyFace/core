@@ -29,7 +29,7 @@
     'type': 'result',
   })
 # ---
-# name: test_backup_end[with_hassio-hass_access_token]
+# name: test_backup_end[with_menuaiio-menuai_access_token]
   dict({
     'error': dict({
       'code': 'only_supervisor',
@@ -40,7 +40,7 @@
     'type': 'result',
   })
 # ---
-# name: test_backup_end[with_hassio-hass_supervisor_access_token]
+# name: test_backup_end[with_menuaiio-menuai_supervisor_access_token]
   dict({
     'id': 1,
     'result': None,
@@ -48,7 +48,7 @@
     'type': 'result',
   })
 # ---
-# name: test_backup_end[without_hassio-hass_access_token]
+# name: test_backup_end[without_menuaiio-menuai_access_token]
   dict({
     'error': dict({
       'code': 'unknown_command',
@@ -59,7 +59,7 @@
     'type': 'result',
   })
 # ---
-# name: test_backup_end[without_hassio-hass_supervisor_access_token]
+# name: test_backup_end[without_menuaiio-menuai_supervisor_access_token]
   dict({
     'error': dict({
       'code': 'unknown_command',
@@ -103,7 +103,7 @@
     'type': 'result',
   })
 # ---
-# name: test_backup_start[with_hassio-hass_access_token]
+# name: test_backup_start[with_menuaiio-menuai_access_token]
   dict({
     'error': dict({
       'code': 'only_supervisor',
@@ -114,7 +114,7 @@
     'type': 'result',
   })
 # ---
-# name: test_backup_start[with_hassio-hass_supervisor_access_token]
+# name: test_backup_start[with_menuaiio-menuai_supervisor_access_token]
   dict({
     'id': 1,
     'result': None,
@@ -122,7 +122,7 @@
     'type': 'result',
   })
 # ---
-# name: test_backup_start[without_hassio-hass_access_token]
+# name: test_backup_start[without_menuaiio-menuai_access_token]
   dict({
     'error': dict({
       'code': 'unknown_command',
@@ -133,7 +133,7 @@
     'type': 'result',
   })
 # ---
-# name: test_backup_start[without_hassio-hass_supervisor_access_token]
+# name: test_backup_start[without_menuaiio-menuai_supervisor_access_token]
   dict({
     'error': dict({
       'code': 'unknown_command',
@@ -262,7 +262,7 @@
     'type': 'result',
   })
 # ---
-# name: test_config_load_config_info[with_hassio-storage_data0]
+# name: test_config_load_config_info[with_menuaiio-storage_data0]
   dict({
     'id': 1,
     'result': dict({
@@ -300,7 +300,7 @@
     'type': 'result',
   })
 # ---
-# name: test_config_load_config_info[with_hassio-storage_data10]
+# name: test_config_load_config_info[with_menuaiio-storage_data10]
   dict({
     'id': 1,
     'result': dict({
@@ -355,7 +355,7 @@
     'type': 'result',
   })
 # ---
-# name: test_config_load_config_info[with_hassio-storage_data1]
+# name: test_config_load_config_info[with_menuaiio-storage_data1]
   dict({
     'id': 1,
     'result': dict({
@@ -405,7 +405,7 @@
     'type': 'result',
   })
 # ---
-# name: test_config_load_config_info[with_hassio-storage_data2]
+# name: test_config_load_config_info[with_menuaiio-storage_data2]
   dict({
     'id': 1,
     'result': dict({
@@ -444,7 +444,7 @@
     'type': 'result',
   })
 # ---
-# name: test_config_load_config_info[with_hassio-storage_data3]
+# name: test_config_load_config_info[with_menuaiio-storage_data3]
   dict({
     'id': 1,
     'result': dict({
@@ -483,7 +483,7 @@
     'type': 'result',
   })
 # ---
-# name: test_config_load_config_info[with_hassio-storage_data4]
+# name: test_config_load_config_info[with_menuaiio-storage_data4]
   dict({
     'id': 1,
     'result': dict({
@@ -523,7 +523,7 @@
     'type': 'result',
   })
 # ---
-# name: test_config_load_config_info[with_hassio-storage_data5]
+# name: test_config_load_config_info[with_menuaiio-storage_data5]
   dict({
     'id': 1,
     'result': dict({
@@ -562,7 +562,7 @@
     'type': 'result',
   })
 # ---
-# name: test_config_load_config_info[with_hassio-storage_data6]
+# name: test_config_load_config_info[with_menuaiio-storage_data6]
   dict({
     'id': 1,
     'result': dict({
@@ -603,7 +603,7 @@
     'type': 'result',
   })
 # ---
-# name: test_config_load_config_info[with_hassio-storage_data7]
+# name: test_config_load_config_info[with_menuaiio-storage_data7]
   dict({
     'id': 1,
     'result': dict({
@@ -652,7 +652,7 @@
     'type': 'result',
   })
 # ---
-# name: test_config_load_config_info[with_hassio-storage_data8]
+# name: test_config_load_config_info[with_menuaiio-storage_data8]
   dict({
     'id': 1,
     'result': dict({
@@ -662,8 +662,8 @@
         'automatic_backups_configured': True,
         'create_backup': dict({
           'agent_ids': list([
-            'hassio.local',
-            'hassio.share',
+            'menuaiio.local',
+            'menuaiio.share',
             'test-agent',
           ]),
           'include_addons': None,
@@ -693,7 +693,7 @@
     'type': 'result',
   })
 # ---
-# name: test_config_load_config_info[with_hassio-storage_data9]
+# name: test_config_load_config_info[with_menuaiio-storage_data9]
   dict({
     'id': 1,
     'result': dict({
@@ -703,7 +703,7 @@
         'automatic_backups_configured': True,
         'create_backup': dict({
           'agent_ids': list([
-            'hassio.local',
+            'menuaiio.local',
             'test-agent',
           ]),
           'include_addons': None,
@@ -733,7 +733,7 @@
     'type': 'result',
   })
 # ---
-# name: test_config_load_config_info[without_hassio-storage_data0]
+# name: test_config_load_config_info[without_menuaiio-storage_data0]
   dict({
     'id': 1,
     'result': dict({
@@ -771,7 +771,7 @@
     'type': 'result',
   })
 # ---
-# name: test_config_load_config_info[without_hassio-storage_data10]
+# name: test_config_load_config_info[without_menuaiio-storage_data10]
   dict({
     'id': 1,
     'result': dict({
@@ -826,7 +826,7 @@
     'type': 'result',
   })
 # ---
-# name: test_config_load_config_info[without_hassio-storage_data1]
+# name: test_config_load_config_info[without_menuaiio-storage_data1]
   dict({
     'id': 1,
     'result': dict({
@@ -872,7 +872,7 @@
     'type': 'result',
   })
 # ---
-# name: test_config_load_config_info[without_hassio-storage_data2]
+# name: test_config_load_config_info[without_menuaiio-storage_data2]
   dict({
     'id': 1,
     'result': dict({
@@ -911,7 +911,7 @@
     'type': 'result',
   })
 # ---
-# name: test_config_load_config_info[without_hassio-storage_data3]
+# name: test_config_load_config_info[without_menuaiio-storage_data3]
   dict({
     'id': 1,
     'result': dict({
@@ -950,7 +950,7 @@
     'type': 'result',
   })
 # ---
-# name: test_config_load_config_info[without_hassio-storage_data4]
+# name: test_config_load_config_info[without_menuaiio-storage_data4]
   dict({
     'id': 1,
     'result': dict({
@@ -990,7 +990,7 @@
     'type': 'result',
   })
 # ---
-# name: test_config_load_config_info[without_hassio-storage_data5]
+# name: test_config_load_config_info[without_menuaiio-storage_data5]
   dict({
     'id': 1,
     'result': dict({
@@ -1029,7 +1029,7 @@
     'type': 'result',
   })
 # ---
-# name: test_config_load_config_info[without_hassio-storage_data6]
+# name: test_config_load_config_info[without_menuaiio-storage_data6]
   dict({
     'id': 1,
     'result': dict({
@@ -1070,7 +1070,7 @@
     'type': 'result',
   })
 # ---
-# name: test_config_load_config_info[without_hassio-storage_data7]
+# name: test_config_load_config_info[without_menuaiio-storage_data7]
   dict({
     'id': 1,
     'result': dict({
@@ -1119,7 +1119,7 @@
     'type': 'result',
   })
 # ---
-# name: test_config_load_config_info[without_hassio-storage_data8]
+# name: test_config_load_config_info[without_menuaiio-storage_data8]
   dict({
     'id': 1,
     'result': dict({
@@ -1159,7 +1159,7 @@
     'type': 'result',
   })
 # ---
-# name: test_config_load_config_info[without_hassio-storage_data9]
+# name: test_config_load_config_info[without_menuaiio-storage_data9]
   dict({
     'id': 1,
     'result': dict({
@@ -4407,8 +4407,8 @@
             'media',
             'share',
           ]),
-          'homeassistant_included': True,
-          'homeassistant_version': '2024.12.0',
+          'menuai_included': True,
+          'menuai_version': '2024.12.0',
           'name': 'Test',
           'with_automatic_settings': True,
         }),
@@ -4492,8 +4492,8 @@
             'media',
             'share',
           ]),
-          'homeassistant_included': True,
-          'homeassistant_version': '2024.12.0',
+          'menuai_included': True,
+          'menuai_version': '2024.12.0',
           'name': 'Test',
           'with_automatic_settings': True,
         }),
@@ -4558,8 +4558,8 @@
             'media',
             'share',
           ]),
-          'homeassistant_included': True,
-          'homeassistant_version': '2024.12.0',
+          'menuai_included': True,
+          'menuai_version': '2024.12.0',
           'name': 'Test',
           'with_automatic_settings': True,
         }),
@@ -4608,8 +4608,8 @@
             'media',
             'share',
           ]),
-          'homeassistant_included': True,
-          'homeassistant_version': '2024.12.0',
+          'menuai_included': True,
+          'menuai_version': '2024.12.0',
           'name': 'Test 2',
           'with_automatic_settings': None,
         }),
@@ -4669,8 +4669,8 @@
             'media',
             'share',
           ]),
-          'homeassistant_included': True,
-          'homeassistant_version': '2024.12.0',
+          'menuai_included': True,
+          'menuai_version': '2024.12.0',
           'name': 'Test 2',
           'with_automatic_settings': None,
         }),
@@ -4728,8 +4728,8 @@
             'media',
             'share',
           ]),
-          'homeassistant_included': True,
-          'homeassistant_version': '2024.12.0',
+          'menuai_included': True,
+          'menuai_version': '2024.12.0',
           'name': 'Test',
           'with_automatic_settings': True,
         }),
@@ -4794,8 +4794,8 @@
             'media',
             'share',
           ]),
-          'homeassistant_included': True,
-          'homeassistant_version': '2024.12.0',
+          'menuai_included': True,
+          'menuai_version': '2024.12.0',
           'name': 'Test',
           'with_automatic_settings': True,
         }),
@@ -4861,8 +4861,8 @@
             'media',
             'share',
           ]),
-          'homeassistant_included': True,
-          'homeassistant_version': '2024.12.0',
+          'menuai_included': True,
+          'menuai_version': '2024.12.0',
           'name': 'Test',
           'with_automatic_settings': True,
         }),
@@ -4935,8 +4935,8 @@
             'media',
             'share',
           ]),
-          'homeassistant_included': True,
-          'homeassistant_version': '2024.12.0',
+          'menuai_included': True,
+          'menuai_version': '2024.12.0',
           'name': 'Test',
           'with_automatic_settings': True,
         }),
@@ -5001,8 +5001,8 @@
             'media',
             'share',
           ]),
-          'homeassistant_included': True,
-          'homeassistant_version': '2024.12.0',
+          'menuai_included': True,
+          'menuai_version': '2024.12.0',
           'name': 'Test',
           'with_automatic_settings': True,
         }),
@@ -5067,8 +5067,8 @@
             'media',
             'share',
           ]),
-          'homeassistant_included': True,
-          'homeassistant_version': '2024.12.0',
+          'menuai_included': True,
+          'menuai_version': '2024.12.0',
           'name': 'Test',
           'with_automatic_settings': True,
         }),
@@ -5134,8 +5134,8 @@
             'media',
             'share',
           ]),
-          'homeassistant_included': True,
-          'homeassistant_version': '2024.12.0',
+          'menuai_included': True,
+          'menuai_version': '2024.12.0',
           'name': 'Test',
           'with_automatic_settings': True,
         }),
@@ -5208,8 +5208,8 @@
             'media',
             'share',
           ]),
-          'homeassistant_included': True,
-          'homeassistant_version': '2024.12.0',
+          'menuai_included': True,
+          'menuai_version': '2024.12.0',
           'name': 'Test',
           'with_automatic_settings': True,
         }),
@@ -5274,8 +5274,8 @@
           'media',
           'share',
         ]),
-        'homeassistant_included': True,
-        'homeassistant_version': '2024.12.0',
+        'menuai_included': True,
+        'menuai_version': '2024.12.0',
         'name': 'Test',
         'with_automatic_settings': True,
       }),
@@ -5321,8 +5321,8 @@
           'media',
           'share',
         ]),
-        'homeassistant_included': True,
-        'homeassistant_version': '2024.12.0',
+        'menuai_included': True,
+        'menuai_version': '2024.12.0',
         'name': 'Test',
         'with_automatic_settings': True,
       }),
@@ -5384,8 +5384,8 @@
           'media',
           'share',
         ]),
-        'homeassistant_included': True,
-        'homeassistant_version': '2024.12.0',
+        'menuai_included': True,
+        'menuai_version': '2024.12.0',
         'name': 'Test',
         'with_automatic_settings': True,
       }),
@@ -5444,8 +5444,8 @@
           'media',
           'share',
         ]),
-        'homeassistant_included': True,
-        'homeassistant_version': '2024.12.0',
+        'menuai_included': True,
+        'menuai_version': '2024.12.0',
         'name': 'Test',
         'with_automatic_settings': True,
       }),
@@ -5492,8 +5492,8 @@
           'media',
           'share',
         ]),
-        'homeassistant_included': True,
-        'homeassistant_version': '2024.12.0',
+        'menuai_included': True,
+        'menuai_version': '2024.12.0',
         'name': 'Test',
         'with_automatic_settings': True,
       }),
@@ -5540,8 +5540,8 @@
           'media',
           'share',
         ]),
-        'homeassistant_included': True,
-        'homeassistant_version': '2024.12.0',
+        'menuai_included': True,
+        'menuai_version': '2024.12.0',
         'name': 'Test',
         'with_automatic_settings': True,
       }),
@@ -5813,8 +5813,8 @@
             'media',
             'share',
           ]),
-          'homeassistant_included': True,
-          'homeassistant_version': '2024.12.0',
+          'menuai_included': True,
+          'menuai_version': '2024.12.0',
           'name': 'Test',
           'with_automatic_settings': True,
         }),
@@ -5868,8 +5868,8 @@
             'media',
             'share',
           ]),
-          'homeassistant_included': True,
-          'homeassistant_version': '2024.12.0',
+          'menuai_included': True,
+          'menuai_version': '2024.12.0',
           'name': 'Test',
           'with_automatic_settings': True,
         }),
@@ -5927,8 +5927,8 @@
             'media',
             'share',
           ]),
-          'homeassistant_included': True,
-          'homeassistant_version': '2024.12.0',
+          'menuai_included': True,
+          'menuai_version': '2024.12.0',
           'name': 'Test',
           'with_automatic_settings': True,
         }),
@@ -5977,8 +5977,8 @@
             'media',
             'share',
           ]),
-          'homeassistant_included': True,
-          'homeassistant_version': '2024.12.0',
+          'menuai_included': True,
+          'menuai_version': '2024.12.0',
           'name': 'Test 2',
           'with_automatic_settings': None,
         }),
@@ -6013,8 +6013,8 @@
             'media',
             'share',
           ]),
-          'homeassistant_included': True,
-          'homeassistant_version': '2024.12.0',
+          'menuai_included': True,
+          'menuai_version': '2024.12.0',
           'name': 'Test',
           'with_automatic_settings': True,
         }),
@@ -6069,8 +6069,8 @@
             'media',
             'share',
           ]),
-          'homeassistant_included': True,
-          'homeassistant_version': '2024.12.0',
+          'menuai_included': True,
+          'menuai_version': '2024.12.0',
           'name': 'Test',
           'with_automatic_settings': True,
         }),
@@ -6125,8 +6125,8 @@
             'media',
             'share',
           ]),
-          'homeassistant_included': True,
-          'homeassistant_version': '2024.12.0',
+          'menuai_included': True,
+          'menuai_version': '2024.12.0',
           'name': 'Test',
           'with_automatic_settings': True,
         }),
@@ -6181,8 +6181,8 @@
             'media',
             'share',
           ]),
-          'homeassistant_included': True,
-          'homeassistant_version': '2024.12.0',
+          'menuai_included': True,
+          'menuai_version': '2024.12.0',
           'name': 'Test',
           'with_automatic_settings': True,
         }),

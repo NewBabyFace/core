@@ -9,13 +9,13 @@ import logging
 
 from pynws import NwsNoDataError, SimpleNWS, call_with_retry
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_API_KEY, CONF_LATITUDE, CONF_LONGITUDE, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import debounce
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.update_coordinator import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_API_KEY, CONF_LATITUDE, CONF_LONGITUDE, Platform
+from menuai.core import menuai
+from menuai.helpers import debounce
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.update_coordinator import (
     TimestampDataUpdateCoordinator,
     UpdateFailed,
 )
@@ -52,14 +52,14 @@ class NWSData:
     coordinator_forecast_hourly: TimestampDataUpdateCoordinator[None]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: NWSConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: NWSConfigEntry) -> bool:
     """Set up a National Weather Service entry."""
     latitude = entry.data[CONF_LATITUDE]
     longitude = entry.data[CONF_LONGITUDE]
     api_key = entry.data[CONF_API_KEY]
     station = entry.data[CONF_STATION]
 
-    client_session = async_get_clientsession(hass)
+    client_session = async_get_clientsession(menuai)
 
     # set_station only does IO when station is None
     nws_data = SimpleNWS(latitude, longitude, api_key, client_session)
@@ -101,30 +101,30 @@ async def async_setup_entry(hass: HomeAssistant, entry: NWSConfigEntry) -> bool:
 
         return update_forecast_hourly
 
-    coordinator_observation = NWSObservationDataUpdateCoordinator(hass, entry, nws_data)
+    coordinator_observation = NWSObservationDataUpdateCoordinator(menuai, entry, nws_data)
 
     # Don't use retries in setup
     coordinator_forecast = TimestampDataUpdateCoordinator(
-        hass,
+        menuai,
         _LOGGER,
         config_entry=entry,
         name=f"NWS forecast station {station}",
         update_method=async_setup_update_forecast(0, 0),
         update_interval=DEFAULT_SCAN_INTERVAL,
         request_refresh_debouncer=debounce.Debouncer(
-            hass, _LOGGER, cooldown=DEBOUNCE_TIME, immediate=True
+            menuai, _LOGGER, cooldown=DEBOUNCE_TIME, immediate=True
         ),
     )
 
     coordinator_forecast_hourly = TimestampDataUpdateCoordinator(
-        hass,
+        menuai,
         _LOGGER,
         config_entry=entry,
         name=f"NWS forecast hourly station {station}",
         update_method=async_setup_update_forecast_hourly(0, 0),
         update_interval=DEFAULT_SCAN_INTERVAL,
         request_refresh_debouncer=debounce.Debouncer(
-            hass, _LOGGER, cooldown=DEBOUNCE_TIME, immediate=True
+            menuai, _LOGGER, cooldown=DEBOUNCE_TIME, immediate=True
         ),
     )
     entry.runtime_data = NWSData(
@@ -147,14 +147,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: NWSConfigEntry) -> bool:
         RETRY_INTERVAL, RETRY_STOP
     )
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: NWSConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: NWSConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 def device_info(latitude: float, longitude: float) -> DeviceInfo:

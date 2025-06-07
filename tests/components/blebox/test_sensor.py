@@ -6,16 +6,16 @@ from unittest.mock import AsyncMock, PropertyMock
 import blebox_uniapi
 import pytest
 
-from homeassistant.components.sensor import SensorDeviceClass
-from homeassistant.const import (
+from menuai.components.sensor import SensorDeviceClass
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     ATTR_UNIT_OF_MEASUREMENT,
     CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
     STATE_UNKNOWN,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 from .conftest import async_setup_entity, mock_feature
 
@@ -58,15 +58,15 @@ def tempsensor_fixture():
 
 
 async def test_init(
-    tempsensor, hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    tempsensor, menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Test sensor default state."""
 
     _, entity_id = tempsensor
-    entry = await async_setup_entity(hass, entity_id)
+    entry = await async_setup_entity(menuai, entity_id)
     assert entry.unique_id == "BleBox-tempSensor-1afe34db9437-0.temperature"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.name == "tempSensor-0.temperature"
 
     assert state.attributes[ATTR_DEVICE_CLASS] == SensorDeviceClass.TEMPERATURE
@@ -82,7 +82,7 @@ async def test_init(
     assert device.sw_version == "1.23"
 
 
-async def test_update(tempsensor, hass: HomeAssistant) -> None:
+async def test_update(tempsensor, menuai: menuai) -> None:
     """Test sensor update."""
 
     feature_mock, entity_id = tempsensor
@@ -91,15 +91,15 @@ async def test_update(tempsensor, hass: HomeAssistant) -> None:
         feature_mock.native_value = 25.18
 
     feature_mock.async_update = AsyncMock(side_effect=initial_update)
-    await async_setup_entity(hass, entity_id)
+    await async_setup_entity(menuai, entity_id)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == UnitOfTemperature.CELSIUS
     assert state.state == "25.18"
 
 
 async def test_update_failure(
-    tempsensor, hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    tempsensor, menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test that update failures are logged."""
 
@@ -107,21 +107,21 @@ async def test_update_failure(
 
     feature_mock, entity_id = tempsensor
     feature_mock.async_update = AsyncMock(side_effect=blebox_uniapi.error.ClientError)
-    await async_setup_entity(hass, entity_id)
+    await async_setup_entity(menuai, entity_id)
 
     assert f"Updating '{feature_mock.full_name}' failed: " in caplog.text
 
 
 async def test_airsensor_init(
-    airsensor, hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    airsensor, menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Test airSensor default state."""
 
     _, entity_id = airsensor
-    entry = await async_setup_entity(hass, entity_id)
+    entry = await async_setup_entity(menuai, entity_id)
     assert entry.unique_id == "BleBox-airSensor-1afe34db9437-0.air"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.name == "airSensor-0.air"
 
     assert state.attributes[ATTR_DEVICE_CLASS] == SensorDeviceClass.PM1
@@ -136,7 +136,7 @@ async def test_airsensor_init(
     assert device.sw_version == "1.23"
 
 
-async def test_airsensor_update(airsensor, hass: HomeAssistant) -> None:
+async def test_airsensor_update(airsensor, menuai: menuai) -> None:
     """Test air quality sensor state after update."""
 
     feature_mock, entity_id = airsensor
@@ -145,9 +145,9 @@ async def test_airsensor_update(airsensor, hass: HomeAssistant) -> None:
         feature_mock.native_value = 49
 
     feature_mock.async_update = AsyncMock(side_effect=initial_update)
-    await async_setup_entity(hass, entity_id)
+    await async_setup_entity(menuai, entity_id)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert (
         state.attributes[ATTR_UNIT_OF_MEASUREMENT]
         == CONCENTRATION_MICROGRAMS_PER_CUBIC_METER

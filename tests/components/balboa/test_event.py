@@ -8,10 +8,10 @@ from unittest.mock import MagicMock, patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.event import ATTR_EVENT_TYPE
-from homeassistant.const import STATE_UNKNOWN, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.event import ATTR_EVENT_TYPE
+from menuai.const import STATE_UNKNOWN, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import init_integration
 
@@ -22,24 +22,24 @@ FAULT_DATE = "fault_date"
 
 
 async def test_events(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test spa events."""
-    with patch("homeassistant.components.balboa.PLATFORMS", [Platform.EVENT]):
-        entry = await init_integration(hass)
+    with patch("menuai.components.balboa.PLATFORMS", [Platform.EVENT]):
+        entry = await init_integration(menuai)
 
-    await snapshot_platform(hass, entity_registry, snapshot, entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, entry.entry_id)
 
 
-async def test_event(hass: HomeAssistant, client: MagicMock) -> None:
+async def test_event(menuai: menuai, client: MagicMock) -> None:
     """Test spa fault event."""
-    await init_integration(hass)
+    await init_integration(menuai)
 
     # check the state is unknown
-    state = hass.states.get(ENTITY_EVENT)
+    state = menuai.states.get(ENTITY_EVENT)
     assert state.state == STATE_UNKNOWN
 
     # set a fault
@@ -47,10 +47,10 @@ async def test_event(hass: HomeAssistant, client: MagicMock) -> None:
         fault_datetime=datetime(2025, 2, 15, 13, 0), message_code=16
     )
     client.emit("")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # check new state is what we expect
-    state = hass.states.get(ENTITY_EVENT)
+    state = menuai.states.get(ENTITY_EVENT)
     assert state.attributes[ATTR_EVENT_TYPE] == "low_flow"
     assert state.attributes[FAULT_DATE] == "2025-02-15T13:00:00"
     assert state.attributes["code"] == 16
@@ -58,10 +58,10 @@ async def test_event(hass: HomeAssistant, client: MagicMock) -> None:
     # set fault to None
     client.fault = None
     client.emit("")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # validate state remains unchanged
-    state = hass.states.get(ENTITY_EVENT)
+    state = menuai.states.get(ENTITY_EVENT)
     assert state.attributes[ATTR_EVENT_TYPE] == "low_flow"
     assert state.attributes[FAULT_DATE] == "2025-02-15T13:00:00"
     assert state.attributes["code"] == 16
@@ -73,10 +73,10 @@ async def test_event(hass: HomeAssistant, client: MagicMock) -> None:
     # validate a ValueError is raises
     with pytest.raises(ValueError):
         client.emit("")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # validate state remains unchanged
-    state = hass.states.get(ENTITY_EVENT)
+    state = menuai.states.get(ENTITY_EVENT)
     assert state.attributes[ATTR_EVENT_TYPE] == "low_flow"
     assert state.attributes[FAULT_DATE] == "2025-02-15T13:00:00"
     assert state.attributes["code"] == 16

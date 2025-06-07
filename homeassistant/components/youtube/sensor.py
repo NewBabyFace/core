@@ -6,16 +6,16 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_ICON
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_ICON
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
 
 from . import YouTubeDataUpdateCoordinator
 from .const import (
@@ -78,12 +78,12 @@ SENSOR_TYPES = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the YouTube sensor."""
-    coordinator: YouTubeDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id][
+    coordinator: YouTubeDataUpdateCoordinator = menuai.data[DOMAIN][entry.entry_id][
         COORDINATOR
     ]
     async_add_entities(

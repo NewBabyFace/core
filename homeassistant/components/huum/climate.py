@@ -10,17 +10,17 @@ from huum.exceptions import SafetyException
 from huum.huum import Huum
 from huum.schemas import HuumStatusResponse
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ClimateEntity,
     ClimateEntityFeature,
     HVACMode,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_TEMPERATURE, PRECISION_WHOLE, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_TEMPERATURE, PRECISION_WHOLE, UnitOfTemperature
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 
@@ -28,12 +28,12 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Huum sauna with config flow."""
-    huum_handler = hass.data.setdefault(DOMAIN, {})[entry.entry_id]
+    huum_handler = menuai.data.setdefault(DOMAIN, {})[entry.entry_id]
 
     async_add_entities([HuumDevice(huum_handler, entry.entry_id)], True)
 
@@ -130,4 +130,4 @@ class HuumDevice(ClimateEntity):
             await self._huum_handler.turn_on(temperature)
         except (ValueError, SafetyException) as err:
             _LOGGER.error(str(err))
-            raise HomeAssistantError(f"Unable to turn on sauna: {err}") from err
+            raise menuaiError(f"Unable to turn on sauna: {err}") from err

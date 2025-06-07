@@ -8,10 +8,10 @@ from unittest.mock import patch
 from nacl.encoding import Base64Encoder
 from nacl.secret import SecretBox
 
-from homeassistant.components.mobile_app.const import CONF_SECRET, DOMAIN
-from homeassistant.const import CONF_WEBHOOK_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.mobile_app.const import CONF_SECRET, DOMAIN
+from menuai.const import CONF_WEBHOOK_ID
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from .const import REGISTER, REGISTER_CLEARTEXT, RENDER_TEMPLATE
 
@@ -20,15 +20,15 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_registration(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator, hass_admin_user: MockUser
+    menuai: menuai, menuai_client: ClientSessionGenerator, menuai_admin_user: MockUser
 ) -> None:
     """Test that registrations happen."""
-    await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
+    await async_setup_component(menuai, DOMAIN, {DOMAIN: {}})
 
-    api_client = await hass_client()
+    api_client = await menuai_client()
 
     with patch(
-        "homeassistant.components.person.async_add_user_device_tracker",
+        "menuai.components.person.async_add_user_device_tracker",
         spec=True,
     ) as add_user_dev_track:
         resp = await api_client.post(
@@ -36,7 +36,7 @@ async def test_registration(
         )
 
     assert len(add_user_dev_track.mock_calls) == 1
-    assert add_user_dev_track.mock_calls[0][1][1] == hass_admin_user.id
+    assert add_user_dev_track.mock_calls[0][1][1] == menuai_admin_user.id
     assert add_user_dev_track.mock_calls[0][1][2] == "device_tracker.test_1"
 
     assert resp.status == HTTPStatus.CREATED
@@ -44,9 +44,9 @@ async def test_registration(
     assert CONF_WEBHOOK_ID in register_json
     assert CONF_SECRET in register_json
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
 
-    assert entries[0].unique_id == "io.homeassistant.mobile_app_test-mock-device-id"
+    assert entries[0].unique_id == "io.menuai.mobile_app_test-mock-device-id"
     assert entries[0].data["device_id"] == REGISTER_CLEARTEXT["device_id"]
     assert entries[0].data["app_data"] == REGISTER_CLEARTEXT["app_data"]
     assert entries[0].data["app_id"] == REGISTER_CLEARTEXT["app_id"]
@@ -64,12 +64,12 @@ async def test_registration(
 
 
 async def test_registration_encryption(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test that registrations happen."""
-    await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
+    await async_setup_component(menuai, DOMAIN, {DOMAIN: {}})
 
-    api_client = await hass_client()
+    api_client = await menuai_client()
 
     resp = await api_client.post("/api/mobile_app/registrations", json=REGISTER)
 
@@ -102,12 +102,12 @@ async def test_registration_encryption(
 
 
 async def test_registration_encryption_legacy(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test that registrations happen."""
-    await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
+    await async_setup_component(menuai, DOMAIN, {DOMAIN: {}})
 
-    api_client = await hass_client()
+    api_client = await menuai_client()
 
     resp = await api_client.post("/api/mobile_app/registrations", json=REGISTER)
 

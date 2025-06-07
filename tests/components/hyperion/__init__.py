@@ -8,12 +8,12 @@ from unittest.mock import AsyncMock, Mock, patch
 
 from hyperion import const
 
-from homeassistant.components.hyperion import get_hyperion_unique_id
-from homeassistant.components.hyperion.const import CONF_PRIORITY, DOMAIN
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.hyperion import get_hyperion_unique_id
+from menuai.components.hyperion.const import CONF_PRIORITY, DOMAIN
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, CONF_PORT
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry
 
@@ -121,7 +121,7 @@ def create_mock_client() -> Mock:
 
 
 def add_test_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     data: dict[str, Any] | None = None,
     options: dict[str, Any] | None = None,
 ) -> MockConfigEntry:
@@ -138,29 +138,29 @@ def add_test_config_entry(
         unique_id=TEST_SYSINFO_ID,
         options=options or TEST_CONFIG_ENTRY_OPTIONS,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     return config_entry
 
 
 async def setup_test_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry | None = None,
     hyperion_client: Mock | None = None,
     options: dict[str, Any] | None = None,
 ) -> ConfigEntry:
-    """Add a test Hyperion entity to hass."""
-    config_entry = config_entry or add_test_config_entry(hass, options=options)
+    """Add a test Hyperion entity to menuai."""
+    config_entry = config_entry or add_test_config_entry(menuai, options=options)
 
     hyperion_client = hyperion_client or create_mock_client()
     # pylint: disable-next=attribute-defined-outside-init
     hyperion_client.instances = [TEST_INSTANCE_1]
 
     with patch(
-        "homeassistant.components.hyperion.client.HyperionClient",
+        "menuai.components.hyperion.client.HyperionClient",
         return_value=hyperion_client,
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
     return config_entry
 
 
@@ -174,13 +174,13 @@ def call_registered_callback(
 
 
 def register_test_entity(
-    hass: HomeAssistant, domain: str, type_name: str, entity_id: str
+    menuai: menuai, domain: str, type_name: str, entity_id: str
 ) -> None:
     """Register a test entity."""
     unique_id = get_hyperion_unique_id(TEST_SYSINFO_ID, TEST_INSTANCE, type_name)
     entity_id = entity_id.split(".")[1]
 
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
     entity_registry.async_get_or_create(
         domain,
         DOMAIN,

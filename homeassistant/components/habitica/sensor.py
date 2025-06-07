@@ -18,24 +18,24 @@ from habiticalib import (
     ha,
 )
 
-from homeassistant.components.automation import automations_with_entity
-from homeassistant.components.script import scripts_with_entity
-from homeassistant.components.sensor import (
+from menuai.components.automation import automations_with_entity
+from menuai.components.script import scripts_with_entity
+from menuai.components.sensor import (
     DOMAIN as SENSOR_DOMAIN,
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.issue_registry import (
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.issue_registry import (
     IssueSeverity,
     async_create_issue,
     async_delete_issue,
 )
-from homeassistant.helpers.typing import StateType
-from homeassistant.util import dt as dt_util
+from menuai.helpers.typing import StateType
+from menuai.util import dt as dt_util
 
 from .const import ASSETS_URL, DOMAIN
 from .coordinator import HabiticaConfigEntry, HabiticaDataUpdateCoordinator
@@ -330,22 +330,22 @@ TASK_SENSOR_DESCRIPTION: tuple[HabiticaTaskSensorEntityDescription, ...] = (
 )
 
 
-def entity_used_in(hass: HomeAssistant, entity_id: str) -> list[str]:
+def entity_used_in(menuai: menuai, entity_id: str) -> list[str]:
     """Get list of related automations and scripts."""
-    used_in = automations_with_entity(hass, entity_id)
-    used_in += scripts_with_entity(hass, entity_id)
+    used_in = automations_with_entity(menuai, entity_id)
+    used_in += scripts_with_entity(menuai, entity_id)
     return used_in
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: HabiticaConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the habitica sensors."""
 
     coordinator = config_entry.runtime_data
-    ent_reg = er.async_get(hass)
+    ent_reg = er.async_get(menuai)
     entities: list[SensorEntity] = []
     description: SensorEntityDescription
 
@@ -365,15 +365,15 @@ async def async_setup_entry(
             if entity_entry and entity_entry.disabled:
                 ent_reg.async_remove(entity_id)
                 async_delete_issue(
-                    hass,
+                    menuai,
                     DOMAIN,
                     f"deprecated_entity_{description.key}",
                 )
             elif entity_entry:
                 entities.append(entity_cls(coordinator, description))
-                if entity_used_in(hass, entity_id):
+                if entity_used_in(menuai, entity_id):
                     async_create_issue(
-                        hass,
+                        menuai,
                         DOMAIN,
                         f"deprecated_entity_{description.key}",
                         breaks_in_ha_version="2025.8.0",

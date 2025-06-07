@@ -13,7 +13,7 @@ from typing import Any
 
 from jwt import DecodeError, PyJWS, PyJWT
 
-from homeassistant.util.json import json_loads
+from menuai.util.json import json_loads
 
 JWT_TOKEN_CACHE_SIZE = 16
 MAX_TOKEN_SIZE = 8192

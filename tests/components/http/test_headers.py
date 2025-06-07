@@ -5,7 +5,7 @@ from http import HTTPStatus
 from aiohttp import web
 from aiohttp.web_exceptions import HTTPUnauthorized
 
-from homeassistant.components.http.headers import setup_headers
+from menuai.components.http.headers import setup_headers
 
 from tests.typing import ClientSessionGenerator
 

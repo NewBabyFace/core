@@ -4,16 +4,16 @@ from typing import Any
 
 from microBeesPy import Actuator
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     CoverDeviceClass,
     CoverEntity,
     CoverEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.event import async_call_later
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.event import async_call_later
 
 from .const import DOMAIN
 from .coordinator import MicroBeesUpdateCoordinator
@@ -23,12 +23,12 @@ COVER_IDS = {47: "roller_shutter"}
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the microBees cover platform."""
-    coordinator: MicroBeesUpdateCoordinator = hass.data[DOMAIN][
+    coordinator: MicroBeesUpdateCoordinator = menuai.data[DOMAIN][
         entry.entry_id
     ].coordinator
 
@@ -94,11 +94,11 @@ class MBCover(MicroBeesEntity, CoverEntity):
         )
 
         if not sendCommand:
-            raise HomeAssistantError(f"Failed to open {self.name}")
+            raise menuaiError(f"Failed to open {self.name}")
 
         self._attr_is_opening = True
         async_call_later(
-            self.hass,
+            self.menuai,
             self.actuator_down.configuration.actuator_timing,
             self._reset_open_close,
         )
@@ -110,11 +110,11 @@ class MBCover(MicroBeesEntity, CoverEntity):
             self.actuator_down.configuration.actuator_timing * 1000,
         )
         if not sendCommand:
-            raise HomeAssistantError(f"Failed to close {self.name}")
+            raise menuaiError(f"Failed to close {self.name}")
 
         self._attr_is_closing = True
         async_call_later(
-            self.hass,
+            self.menuai,
             self.actuator_down.configuration.actuator_timing,
             self._reset_open_close,
         )

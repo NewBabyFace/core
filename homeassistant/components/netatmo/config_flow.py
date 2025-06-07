@@ -9,15 +9,15 @@ import uuid
 
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_REAUTH,
     ConfigEntry,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_SHOW_ON_MAP, CONF_UUID
-from homeassistant.core import callback
-from homeassistant.helpers import config_entry_oauth2_flow, config_validation as cv
+from menuai.const import CONF_SHOW_ON_MAP, CONF_UUID
+from menuai.core import callback
+from menuai.helpers import config_entry_oauth2_flow, config_validation as cv
 
 from .api import get_api_scopes
 from .const import (
@@ -89,8 +89,8 @@ class NetatmoFlowHandler(
         """Create an oauth config entry or update existing entry for reauth."""
         existing_entry = await self.async_set_unique_id(DOMAIN)
         if existing_entry:
-            self.hass.config_entries.async_update_entry(existing_entry, data=data)
-            await self.hass.config_entries.async_reload(existing_entry.entry_id)
+            self.menuai.config_entries.async_update_entry(existing_entry, data=data)
+            await self.menuai.config_entries.async_reload(existing_entry.entry_id)
             return self.async_abort(reason="reauth_successful")
 
         return await super().async_oauth_create_entry(data)
@@ -162,8 +162,8 @@ class NetatmoOptionsFlowHandler(OptionsFlow):
             user_input[CONF_NEW_AREA], {}
         )
 
-        default_longitude = self.hass.config.longitude
-        default_latitude = self.hass.config.latitude
+        default_longitude = self.menuai.config.longitude
+        default_latitude = self.menuai.config.latitude
         default_size = 0.04
 
         data_schema = vol.Schema(

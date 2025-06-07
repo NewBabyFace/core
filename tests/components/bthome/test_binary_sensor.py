@@ -6,18 +6,18 @@ import time
 
 import pytest
 
-from homeassistant.components.bluetooth import (
+from menuai.components.bluetooth import (
     FALLBACK_MAXIMUM_STALE_ADVERTISEMENT_SECONDS,
 )
-from homeassistant.components.bthome.const import DOMAIN
-from homeassistant.const import (
+from menuai.components.bthome.const import DOMAIN
+from menuai.const import (
     ATTR_FRIENDLY_NAME,
     STATE_OFF,
     STATE_ON,
     STATE_UNAVAILABLE,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.util import dt as dt_util
 
 from . import make_bthome_v1_adv, make_bthome_v2_adv
 
@@ -82,7 +82,7 @@ _LOGGER = logging.getLogger(__name__)
     ],
 )
 async def test_v1_binary_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mac_address,
     advertisement,
     bind_key,
@@ -94,27 +94,27 @@ async def test_v1_binary_sensors(
         unique_id=mac_address,
         data={"bindkey": bind_key},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == 0
+    assert len(menuai.states.async_all()) == 0
 
     inject_bluetooth_service_info(
-        hass,
+        menuai,
         advertisement,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == len(result)
+    assert len(menuai.states.async_all()) == len(result)
     for meas in result:
-        binary_sensor = hass.states.get(meas["binary_sensor_entity"])
+        binary_sensor = menuai.states.get(meas["binary_sensor_entity"])
         binary_sensor_attr = binary_sensor.attributes
         assert binary_sensor.state == meas["expected_state"]
         assert binary_sensor_attr[ATTR_FRIENDLY_NAME] == meas["friendly_name"]
-    assert await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
 
 @pytest.mark.parametrize(
@@ -168,7 +168,7 @@ async def test_v1_binary_sensors(
     ],
 )
 async def test_v2_binary_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mac_address,
     advertisement,
     bind_key,
@@ -180,30 +180,30 @@ async def test_v2_binary_sensors(
         unique_id=mac_address,
         data={"bindkey": bind_key},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == 0
+    assert len(menuai.states.async_all()) == 0
 
     inject_bluetooth_service_info(
-        hass,
+        menuai,
         advertisement,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == len(result)
+    assert len(menuai.states.async_all()) == len(result)
     for meas in result:
-        binary_sensor = hass.states.get(meas["binary_sensor_entity"])
+        binary_sensor = menuai.states.get(meas["binary_sensor_entity"])
         binary_sensor_attr = binary_sensor.attributes
         assert binary_sensor.state == meas["expected_state"]
         assert binary_sensor_attr[ATTR_FRIENDLY_NAME] == meas["friendly_name"]
-    assert await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
 
-async def test_unavailable(hass: HomeAssistant) -> None:
+async def test_unavailable(menuai: menuai) -> None:
     """Test normal device goes to unavailable after 60 minutes."""
     start_monotonic = time.monotonic()
 
@@ -212,25 +212,25 @@ async def test_unavailable(hass: HomeAssistant) -> None:
         unique_id="A4:C1:38:8D:18:B2",
         data={},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == 0
+    assert len(menuai.states.async_all()) == 0
 
     inject_bluetooth_service_info(
-        hass,
+        menuai,
         make_bthome_v2_adv(
             "A4:C1:38:8D:18:B2",
             b"\x40\x11\x01",
         ),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == 1
+    assert len(menuai.states.async_all()) == 1
 
-    opening_sensor = hass.states.get("binary_sensor.test_device_18b2_opening")
+    opening_sensor = menuai.states.get("binary_sensor.test_device_18b2_opening")
 
     assert opening_sensor.state == STATE_ON
 
@@ -239,22 +239,22 @@ async def test_unavailable(hass: HomeAssistant) -> None:
 
     with patch_bluetooth_time(monotonic_now), patch_all_discovered_devices([]):
         async_fire_time_changed(
-            hass,
+            menuai,
             dt_util.utcnow()
             + timedelta(seconds=FALLBACK_MAXIMUM_STALE_ADVERTISEMENT_SECONDS + 1),
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    opening_sensor = hass.states.get("binary_sensor.test_device_18b2_opening")
+    opening_sensor = menuai.states.get("binary_sensor.test_device_18b2_opening")
 
     # Normal devices should go to unavailable
     assert opening_sensor.state == STATE_UNAVAILABLE
 
-    assert await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
 
-async def test_sleepy_device(hass: HomeAssistant) -> None:
+async def test_sleepy_device(menuai: menuai) -> None:
     """Test sleepy device does not go to unavailable after 60 minutes."""
     start_monotonic = time.monotonic()
 
@@ -263,25 +263,25 @@ async def test_sleepy_device(hass: HomeAssistant) -> None:
         unique_id="A4:C1:38:8D:18:B2",
         data={},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == 0
+    assert len(menuai.states.async_all()) == 0
 
     inject_bluetooth_service_info(
-        hass,
+        menuai,
         make_bthome_v2_adv(
             "A4:C1:38:8D:18:B2",
             b"\x44\x11\x01",
         ),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == 1
+    assert len(menuai.states.async_all()) == 1
 
-    opening_sensor = hass.states.get("binary_sensor.test_device_18b2_opening")
+    opening_sensor = menuai.states.get("binary_sensor.test_device_18b2_opening")
 
     assert opening_sensor.state == STATE_ON
 
@@ -290,22 +290,22 @@ async def test_sleepy_device(hass: HomeAssistant) -> None:
 
     with patch_bluetooth_time(monotonic_now), patch_all_discovered_devices([]):
         async_fire_time_changed(
-            hass,
+            menuai,
             dt_util.utcnow()
             + timedelta(seconds=FALLBACK_MAXIMUM_STALE_ADVERTISEMENT_SECONDS + 1),
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    opening_sensor = hass.states.get("binary_sensor.test_device_18b2_opening")
+    opening_sensor = menuai.states.get("binary_sensor.test_device_18b2_opening")
 
     # Sleepy devices should keep their state over time
     assert opening_sensor.state == STATE_ON
 
-    assert await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
 
-async def test_sleepy_device_restores_state(hass: HomeAssistant) -> None:
+async def test_sleepy_device_restores_state(menuai: menuai) -> None:
     """Test sleepy device does not go to unavailable after 60 minutes."""
     start_monotonic = time.monotonic()
 
@@ -314,25 +314,25 @@ async def test_sleepy_device_restores_state(hass: HomeAssistant) -> None:
         unique_id="A4:C1:38:8D:18:B2",
         data={},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == 0
+    assert len(menuai.states.async_all()) == 0
 
     inject_bluetooth_service_info(
-        hass,
+        menuai,
         make_bthome_v2_adv(
             "A4:C1:38:8D:18:B2",
             b"\x44\x11\x01",
         ),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == 1
+    assert len(menuai.states.async_all()) == 1
 
-    opening_sensor = hass.states.get("binary_sensor.test_device_18b2_opening")
+    opening_sensor = menuai.states.get("binary_sensor.test_device_18b2_opening")
 
     assert opening_sensor.state == STATE_ON
 
@@ -341,24 +341,24 @@ async def test_sleepy_device_restores_state(hass: HomeAssistant) -> None:
 
     with patch_bluetooth_time(monotonic_now), patch_all_discovered_devices([]):
         async_fire_time_changed(
-            hass,
+            menuai,
             dt_util.utcnow()
             + timedelta(seconds=FALLBACK_MAXIMUM_STALE_ADVERTISEMENT_SECONDS + 1),
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    opening_sensor = hass.states.get("binary_sensor.test_device_18b2_opening")
+    opening_sensor = menuai.states.get("binary_sensor.test_device_18b2_opening")
 
     # Sleepy devices should keep their state over time
     assert opening_sensor.state == STATE_ON
 
-    assert await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    opening_sensor = hass.states.get("binary_sensor.test_device_18b2_opening")
+    opening_sensor = menuai.states.get("binary_sensor.test_device_18b2_opening")
 
     # Sleepy devices should keep their state on restore
     assert opening_sensor.state == STATE_ON

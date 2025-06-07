@@ -20,19 +20,19 @@ from google_nest_sdm.device import Device
 from google_nest_sdm.exceptions import ApiException
 from webrtc_models import RTCIceCandidateInit
 
-from homeassistant.components.camera import (
+from menuai.components.camera import (
     Camera,
     CameraEntityFeature,
     WebRTCAnswer,
     WebRTCClientConfiguration,
     WebRTCSendMessage,
 )
-from homeassistant.components.stream import CONF_EXTRA_PART_WAIT_TIME
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.event import async_track_point_in_utc_time
-from homeassistant.util.dt import utcnow
+from menuai.components.stream import CONF_EXTRA_PART_WAIT_TIME
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.event import async_track_point_in_utc_time
+from menuai.util.dt import utcnow
 
 from .device_info import NestDeviceInfo
 from .types import NestConfigEntry
@@ -51,7 +51,7 @@ BACKOFF_MULTIPLIER = 1.5
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: NestConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -81,12 +81,12 @@ class StreamRefresh:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         expires_at: datetime.datetime,
         refresh_cb: Callable[[], Awaitable[datetime.datetime | None]],
     ) -> None:
         """Initialize StreamRefresh."""
-        self._hass = hass
+        self._menuai = menuai
         self._unsub: Callable[[], None] | None = None
         self._min_refresh_interval = MIN_REFRESH_BACKOFF_INTERVAL
         self._refresh_cb = refresh_cb
@@ -125,7 +125,7 @@ class StreamRefresh:
         """Schedules an alarm to refresh any streams before expiration."""
         _LOGGER.debug("Scheduling stream refresh for %s", refresh_time)
         self._unsub = async_track_point_in_utc_time(
-            self._hass,
+            self._menuai,
             self._handle_refresh,
             refresh_time,
         )
@@ -151,7 +151,7 @@ class NestCameraBaseEntity(Camera, ABC):
         # The API "name" field is a unique device identifier.
         self._attr_unique_id = f"{self._device.name}-camera"
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Run when entity is added to register update signal handler."""
         self.async_on_remove(
             self._device.add_update_listener(self.async_write_ha_state)
@@ -196,9 +196,9 @@ class NestRTSPEntity(NestCameraBaseEntity):
                         await self._rtsp_live_stream_trait.generate_rtsp_stream()
                     )
                 except ApiException as err:
-                    raise HomeAssistantError(f"Nest API error: {err}") from err
+                    raise menuaiError(f"Nest API error: {err}") from err
                 refresh = StreamRefresh(
-                    self.hass,
+                    self.menuai,
                     self._rtsp_stream.expires_at,
                     self._async_refresh_stream,
                 )
@@ -228,9 +228,9 @@ class NestRTSPEntity(NestCameraBaseEntity):
             self.stream.update_source(self._rtsp_stream.rtsp_stream_url)
         return self._rtsp_stream.expires_at
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Invalidates the RTSP token when unloaded."""
-        await super().async_will_remove_from_hass()
+        await super().async_will_remove_from_menuai()
         if self._refresh_unsub is not None:
             self._refresh_unsub()
         if self._rtsp_stream:
@@ -265,7 +265,7 @@ class NestWebRTCEntity(NestCameraBaseEntity):
         self, width: int | None = None, height: int | None = None
     ) -> bytes | None:
         """Return a placeholder image for WebRTC cameras that don't support snapshots."""
-        return await self.hass.async_add_executor_job(self.placeholder_image)
+        return await self.menuai.async_add_executor_job(self.placeholder_image)
 
     @classmethod
     @functools.cache
@@ -281,14 +281,14 @@ class NestWebRTCEntity(NestCameraBaseEntity):
         try:
             stream = await trait.generate_web_rtc_stream(offer_sdp)
         except ApiException as err:
-            raise HomeAssistantError(f"Nest API error: {err}") from err
+            raise menuaiError(f"Nest API error: {err}") from err
         _LOGGER.debug(
             "Started WebRTC session %s, %s", session_id, stream.media_session_id
         )
         self._webrtc_sessions[session_id] = stream
         send_message(WebRTCAnswer(stream.answer_sdp))
         refresh = StreamRefresh(
-            self.hass,
+            self.menuai,
             stream.expires_at,
             functools.partial(self._async_refresh_stream, session_id),
         )
@@ -316,7 +316,7 @@ class NestWebRTCEntity(NestCameraBaseEntity):
                 except ApiException as err:
                     _LOGGER.debug("Error stopping stream: %s", err)
 
-            self.hass.async_create_task(stop_stream())
+            self.menuai.async_create_task(stop_stream())
         super().close_webrtc_session(session_id)
 
     @callback
@@ -324,8 +324,8 @@ class NestWebRTCEntity(NestCameraBaseEntity):
         """Return the WebRTC client configuration adjustable per integration."""
         return WebRTCClientConfiguration(data_channel="dataSendChannel")
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Invalidates the RTSP token when unloaded."""
-        await super().async_will_remove_from_hass()
+        await super().async_will_remove_from_menuai()
         for session_id in list(self._webrtc_sessions.keys()):
             self.close_webrtc_session(session_id)

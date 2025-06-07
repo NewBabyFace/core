@@ -7,9 +7,9 @@ from unittest.mock import AsyncMock, Mock
 
 from uiprotect.data import Camera, CloudAccount, ModelType, Version
 
-from homeassistant.components.unifiprotect.const import DOMAIN
-from homeassistant.config_entries import SOURCE_REAUTH
-from homeassistant.core import HomeAssistant
+from menuai.components.unifiprotect.const import DOMAIN
+from menuai.config_entries import SOURCE_REAUTH
+from menuai.core import menuai
 
 from .utils import MockUFPFixture, init_entry
 
@@ -22,10 +22,10 @@ from tests.typing import ClientSessionGenerator, WebSocketGenerator
 
 
 async def test_ea_warning_ignore(
-    hass: HomeAssistant,
+    menuai: menuai,
     ufp: MockUFPFixture,
-    hass_client: ClientSessionGenerator,
-    hass_ws_client: WebSocketGenerator,
+    menuai_client: ClientSessionGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test EA warning is created if using prerelease version of Protect."""
 
@@ -33,10 +33,10 @@ async def test_ea_warning_ignore(
     ufp.api.bootstrap.nvr.version = Version("1.21.0-beta.2")
     version = ufp.api.bootstrap.nvr.version
     assert version.is_prerelease
-    await init_entry(hass, ufp, [])
-    await async_process_repairs_platforms(hass)
-    ws_client = await hass_ws_client(hass)
-    client = await hass_client()
+    await init_entry(menuai, ufp, [])
+    await async_process_repairs_platforms(menuai)
+    ws_client = await menuai_ws_client(menuai)
+    client = await menuai_client()
 
     await ws_client.send_json({"id": 1, "type": "repairs/list_issues"})
     msg = await ws_client.receive_json()
@@ -73,10 +73,10 @@ async def test_ea_warning_ignore(
 
 
 async def test_ea_warning_fix(
-    hass: HomeAssistant,
+    menuai: menuai,
     ufp: MockUFPFixture,
-    hass_client: ClientSessionGenerator,
-    hass_ws_client: WebSocketGenerator,
+    menuai_client: ClientSessionGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test EA warning is created if using prerelease version of Protect."""
 
@@ -84,10 +84,10 @@ async def test_ea_warning_fix(
     ufp.api.bootstrap.nvr.version = Version("1.21.0-beta.2")
     version = ufp.api.bootstrap.nvr.version
     assert version.is_prerelease
-    await init_entry(hass, ufp, [])
-    await async_process_repairs_platforms(hass)
-    ws_client = await hass_ws_client(hass)
-    client = await hass_client()
+    await init_entry(menuai, ufp, [])
+    await async_process_repairs_platforms(menuai)
+    ws_client = await menuai_ws_client(menuai)
+    client = await menuai_client()
 
     await ws_client.send_json({"id": 1, "type": "repairs/list_issues"})
     msg = await ws_client.receive_json()
@@ -118,7 +118,7 @@ async def test_ea_warning_fix(
 
     ufp.api.bootstrap.nvr = new_nvr
     ufp.ws_msg(mock_msg)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     data = await process_repair_fix_flow(client, flow_id)
 
@@ -126,11 +126,11 @@ async def test_ea_warning_fix(
 
 
 async def test_cloud_user_fix(
-    hass: HomeAssistant,
+    menuai: menuai,
     ufp: MockUFPFixture,
     cloud_account: CloudAccount,
-    hass_client: ClientSessionGenerator,
-    hass_ws_client: WebSocketGenerator,
+    menuai_client: ClientSessionGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test EA warning is created if using prerelease version of Protect."""
 
@@ -138,10 +138,10 @@ async def test_cloud_user_fix(
     user = ufp.api.bootstrap.users[ufp.api.bootstrap.auth_user_id]
     user.cloud_account = cloud_account
     ufp.api.bootstrap.users[ufp.api.bootstrap.auth_user_id] = user
-    await init_entry(hass, ufp, [])
-    await async_process_repairs_platforms(hass)
-    ws_client = await hass_ws_client(hass)
-    client = await hass_client()
+    await init_entry(menuai, ufp, [])
+    await async_process_repairs_platforms(menuai)
+    ws_client = await menuai_ws_client(menuai)
+    client = await menuai_client()
 
     await ws_client.send_json({"id": 1, "type": "repairs/list_issues"})
     msg = await ws_client.receive_json()
@@ -162,16 +162,16 @@ async def test_cloud_user_fix(
     data = await process_repair_fix_flow(client, flow_id)
 
     assert data["type"] == "create_entry"
-    await hass.async_block_till_done()
-    assert any(ufp.entry.async_get_active_flows(hass, {SOURCE_REAUTH}))
+    await menuai.async_block_till_done()
+    assert any(ufp.entry.async_get_active_flows(menuai, {SOURCE_REAUTH}))
 
 
 async def test_rtsp_read_only_ignore(
-    hass: HomeAssistant,
+    menuai: menuai,
     ufp: MockUFPFixture,
     doorbell: Camera,
-    hass_client: ClientSessionGenerator,
-    hass_ws_client: WebSocketGenerator,
+    menuai_client: ClientSessionGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test RTSP disabled warning if camera is read-only and it is ignored."""
 
@@ -182,10 +182,10 @@ async def test_rtsp_read_only_ignore(
 
     ufp.api.get_camera = AsyncMock(return_value=doorbell)
 
-    await init_entry(hass, ufp, [doorbell])
-    await async_process_repairs_platforms(hass)
-    ws_client = await hass_ws_client(hass)
-    client = await hass_client()
+    await init_entry(menuai, ufp, [doorbell])
+    await async_process_repairs_platforms(menuai)
+    ws_client = await menuai_ws_client(menuai)
+    client = await menuai_client()
 
     issue_id = f"rtsp_disabled_{doorbell.id}"
 
@@ -216,11 +216,11 @@ async def test_rtsp_read_only_ignore(
 
 
 async def test_rtsp_read_only_fix(
-    hass: HomeAssistant,
+    menuai: menuai,
     ufp: MockUFPFixture,
     doorbell: Camera,
-    hass_client: ClientSessionGenerator,
-    hass_ws_client: WebSocketGenerator,
+    menuai_client: ClientSessionGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test RTSP disabled warning if camera is read-only and it is fixed."""
 
@@ -229,10 +229,10 @@ async def test_rtsp_read_only_fix(
     for user in ufp.api.bootstrap.users.values():
         user.all_permissions = []
 
-    await init_entry(hass, ufp, [doorbell])
-    await async_process_repairs_platforms(hass)
-    ws_client = await hass_ws_client(hass)
-    client = await hass_client()
+    await init_entry(menuai, ufp, [doorbell])
+    await async_process_repairs_platforms(menuai)
+    ws_client = await menuai_ws_client(menuai)
+    client = await menuai_client()
 
     new_doorbell = deepcopy(doorbell)
     new_doorbell.channels[1].is_rtsp_enabled = True
@@ -261,21 +261,21 @@ async def test_rtsp_read_only_fix(
 
 
 async def test_rtsp_writable_fix(
-    hass: HomeAssistant,
+    menuai: menuai,
     ufp: MockUFPFixture,
     doorbell: Camera,
-    hass_client: ClientSessionGenerator,
-    hass_ws_client: WebSocketGenerator,
+    menuai_client: ClientSessionGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test RTSP disabled warning if camera is writable and it is ignored."""
 
     for channel in doorbell.channels:
         channel.is_rtsp_enabled = False
 
-    await init_entry(hass, ufp, [doorbell])
-    await async_process_repairs_platforms(hass)
-    ws_client = await hass_ws_client(hass)
-    client = await hass_client()
+    await init_entry(menuai, ufp, [doorbell])
+    await async_process_repairs_platforms(menuai)
+    ws_client = await menuai_ws_client(menuai)
+    client = await menuai_client()
 
     new_doorbell = deepcopy(doorbell)
     new_doorbell.channels[0].is_rtsp_enabled = True
@@ -311,21 +311,21 @@ async def test_rtsp_writable_fix(
 
 
 async def test_rtsp_writable_fix_when_not_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     ufp: MockUFPFixture,
     doorbell: Camera,
-    hass_client: ClientSessionGenerator,
-    hass_ws_client: WebSocketGenerator,
+    menuai_client: ClientSessionGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test RTSP disabled warning if the integration is no longer set up."""
 
     for channel in doorbell.channels:
         channel.is_rtsp_enabled = False
 
-    await init_entry(hass, ufp, [doorbell])
-    await async_process_repairs_platforms(hass)
-    ws_client = await hass_ws_client(hass)
-    client = await hass_client()
+    await init_entry(menuai, ufp, [doorbell])
+    await async_process_repairs_platforms(menuai)
+    ws_client = await menuai_ws_client(menuai)
+    client = await menuai_client()
 
     new_doorbell = deepcopy(doorbell)
     new_doorbell.channels[0].is_rtsp_enabled = True
@@ -346,8 +346,8 @@ async def test_rtsp_writable_fix_when_not_setup(
 
     # Unload the integration to ensure the fix flow still works
     # if the integration is no longer set up
-    await hass.config_entries.async_unload(ufp.entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(ufp.entry.entry_id)
+    await menuai.async_block_till_done()
 
     data = await start_repair_fix_flow(client, DOMAIN, issue_id)
 
@@ -366,10 +366,10 @@ async def test_rtsp_writable_fix_when_not_setup(
 
 
 async def test_rtsp_no_fix_if_third_party(
-    hass: HomeAssistant,
+    menuai: menuai,
     ufp: MockUFPFixture,
     doorbell: Camera,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test no RTSP disabled warning if camera is third-party."""
 
@@ -381,9 +381,9 @@ async def test_rtsp_no_fix_if_third_party(
     ufp.api.get_camera = AsyncMock(return_value=doorbell)
     doorbell.is_third_party_camera = True
 
-    await init_entry(hass, ufp, [doorbell])
-    await async_process_repairs_platforms(hass)
-    ws_client = await hass_ws_client(hass)
+    await init_entry(menuai, ufp, [doorbell])
+    await async_process_repairs_platforms(menuai)
+    ws_client = await menuai_ws_client(menuai)
 
     await ws_client.send_json({"id": 1, "type": "repairs/list_issues"})
     msg = await ws_client.receive_json()

@@ -11,21 +11,21 @@ from matter_server.common.errors import UpdateCheckError, UpdateError
 from matter_server.common.models import MatterSoftwareVersion, UpdateSource
 import pytest
 
-from homeassistant.components.homeassistant import (
+from menuai.components.menuai import (
     DOMAIN as HA_DOMAIN,
     SERVICE_UPDATE_ENTITY,
 )
-from homeassistant.components.matter.update import SCAN_INTERVAL
-from homeassistant.components.update import (
+from menuai.components.matter.update import SCAN_INTERVAL
+from menuai.components.update import (
     ATTR_VERSION,
     DOMAIN as UPDATE_DOMAIN,
     SERVICE_INSTALL,
 )
-from homeassistant.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant, State
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.restore_state import STORAGE_KEY as RESTORE_STATE_KEY
-from homeassistant.setup import async_setup_component
+from menuai.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON
+from menuai.core import menuai, State
+from menuai.exceptions import menuaiError
+from menuai.helpers.restore_state import STORAGE_KEY as RESTORE_STATE_KEY
+from menuai.setup import async_setup_component
 
 from .common import (
     set_node_attribute,
@@ -80,13 +80,13 @@ async def update_node_fixture(matter_client: MagicMock) -> AsyncMock:
 
 @pytest.mark.parametrize("node_fixture", ["dimmable_light"])
 async def test_update_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     check_node_update: AsyncMock,
     matter_node: MatterNode,
 ) -> None:
     """Test update entity exists and update check got made."""
-    state = hass.states.get("update.mock_dimmable_light_firmware")
+    state = menuai.states.get("update.mock_dimmable_light_firmware")
     assert state
     assert state.state == STATE_OFF
 
@@ -95,18 +95,18 @@ async def test_update_entity(
 
 @pytest.mark.parametrize("node_fixture", ["dimmable_light"])
 async def test_update_check_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     check_node_update: AsyncMock,
     matter_node: MatterNode,
 ) -> None:
     """Test check device update through service call."""
-    state = hass.states.get("update.mock_dimmable_light_firmware")
+    state = menuai.states.get("update.mock_dimmable_light_firmware")
     assert state
     assert state.state == STATE_OFF
     assert state.attributes.get("installed_version") == "v1.0"
 
-    await async_setup_component(hass, HA_DOMAIN, {})
+    await async_setup_component(menuai, HA_DOMAIN, {})
 
     check_node_update.return_value = MatterSoftwareVersion(
         vid=65521,
@@ -120,7 +120,7 @@ async def test_update_check_service(
         update_source=UpdateSource.LOCAL,
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         HA_DOMAIN,
         SERVICE_UPDATE_ENTITY,
         {
@@ -131,7 +131,7 @@ async def test_update_check_service(
 
     assert matter_client.check_node_update.call_count == 2
 
-    state = hass.states.get("update.mock_dimmable_light_firmware")
+    state = menuai.states.get("update.mock_dimmable_light_firmware")
     assert state
     assert state.state == STATE_ON
     assert state.attributes.get("latest_version") == "v2.0"
@@ -143,14 +143,14 @@ async def test_update_check_service(
 
 @pytest.mark.parametrize("node_fixture", ["dimmable_light"])
 async def test_update_install(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     check_node_update: AsyncMock,
     matter_node: MatterNode,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test device update with Matter attribute changes influence progress."""
-    state = hass.states.get("update.mock_dimmable_light_firmware")
+    state = menuai.states.get("update.mock_dimmable_light_firmware")
     assert state
     assert state.state == STATE_OFF
     assert state.attributes.get("installed_version") == "v1.0"
@@ -168,12 +168,12 @@ async def test_update_install(
     )
 
     freezer.tick(SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     assert matter_client.check_node_update.call_count == 2
 
-    state = hass.states.get("update.mock_dimmable_light_firmware")
+    state = menuai.states.get("update.mock_dimmable_light_firmware")
     assert state
     assert state.state == STATE_ON
     assert state.attributes.get("latest_version") == "v2.0"
@@ -182,7 +182,7 @@ async def test_update_install(
         == "http://home-assistant.io/non-existing-product"
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         UPDATE_DOMAIN,
         SERVICE_INSTALL,
         {
@@ -197,9 +197,9 @@ async def test_update_install(
         clusters.OtaSoftwareUpdateRequestor.Attributes.UpdateState,
         clusters.OtaSoftwareUpdateRequestor.Enums.UpdateStateEnum.kDownloading,
     )
-    await trigger_subscription_callback(hass, matter_client)
+    await trigger_subscription_callback(menuai, matter_client)
 
-    state = hass.states.get("update.mock_dimmable_light_firmware")
+    state = menuai.states.get("update.mock_dimmable_light_firmware")
     assert state
     assert state.state == STATE_ON
     assert state.attributes["in_progress"] is True
@@ -211,9 +211,9 @@ async def test_update_install(
         clusters.OtaSoftwareUpdateRequestor.Attributes.UpdateStateProgress,
         50,
     )
-    await trigger_subscription_callback(hass, matter_client)
+    await trigger_subscription_callback(menuai, matter_client)
 
-    state = hass.states.get("update.mock_dimmable_light_firmware")
+    state = menuai.states.get("update.mock_dimmable_light_firmware")
     assert state
     assert state.state == STATE_ON
     assert state.attributes["in_progress"] is True
@@ -237,16 +237,16 @@ async def test_update_install(
         clusters.BasicInformation.Attributes.SoftwareVersionString,
         "v2.0",
     )
-    await trigger_subscription_callback(hass, matter_client)
+    await trigger_subscription_callback(menuai, matter_client)
 
-    state = hass.states.get("update.mock_dimmable_light_firmware")
+    state = menuai.states.get("update.mock_dimmable_light_firmware")
     assert state.state == STATE_OFF
     assert state.attributes.get("installed_version") == "v2.0"
 
 
 @pytest.mark.parametrize("node_fixture", ["dimmable_light"])
 async def test_update_install_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     check_node_update: AsyncMock,
     update_node: AsyncMock,
@@ -254,7 +254,7 @@ async def test_update_install_failure(
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test update entity service call errors."""
-    state = hass.states.get("update.mock_dimmable_light_firmware")
+    state = menuai.states.get("update.mock_dimmable_light_firmware")
     assert state
     assert state.state == STATE_OFF
     assert state.attributes.get("installed_version") == "v1.0"
@@ -272,12 +272,12 @@ async def test_update_install_failure(
     )
 
     freezer.tick(SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     assert matter_client.check_node_update.call_count == 2
 
-    state = hass.states.get("update.mock_dimmable_light_firmware")
+    state = menuai.states.get("update.mock_dimmable_light_firmware")
     assert state
     assert state.state == STATE_ON
     assert state.attributes.get("latest_version") == "v2.0"
@@ -288,8 +288,8 @@ async def test_update_install_failure(
 
     update_node.side_effect = UpdateCheckError("Error finding applicable update")
 
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             UPDATE_DOMAIN,
             SERVICE_INSTALL,
             {
@@ -301,8 +301,8 @@ async def test_update_install_failure(
 
     update_node.side_effect = UpdateError("Error updating node")
 
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             UPDATE_DOMAIN,
             SERVICE_INSTALL,
             {
@@ -315,15 +315,15 @@ async def test_update_install_failure(
 
 @pytest.mark.parametrize("node_fixture", ["dimmable_light"])
 async def test_update_state_save_and_restore(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
     matter_client: MagicMock,
     check_node_update: AsyncMock,
     matter_node: MatterNode,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test latest update information is retained across reload/restart."""
-    state = hass.states.get("update.mock_dimmable_light_firmware")
+    state = menuai.states.get("update.mock_dimmable_light_firmware")
     assert state
     assert state.state == STATE_OFF
     assert state.attributes.get("installed_version") == "v1.0"
@@ -331,22 +331,22 @@ async def test_update_state_save_and_restore(
     check_node_update.return_value = TEST_SOFTWARE_VERSION
 
     freezer.tick(SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     assert matter_client.check_node_update.call_count == 2
 
-    state = hass.states.get("update.mock_dimmable_light_firmware")
+    state = menuai.states.get("update.mock_dimmable_light_firmware")
     assert state
     assert state.state == STATE_ON
     assert state.attributes.get("latest_version") == "v2.0"
-    await hass.async_block_till_done()
-    await async_mock_restore_state_shutdown_restart(hass)
+    await menuai.async_block_till_done()
+    await async_mock_restore_state_shutdown_restart(menuai)
 
-    assert len(hass_storage[RESTORE_STATE_KEY]["data"]) == 1
-    state = hass_storage[RESTORE_STATE_KEY]["data"][0]["state"]
+    assert len(menuai_storage[RESTORE_STATE_KEY]["data"]) == 1
+    state = menuai_storage[RESTORE_STATE_KEY]["data"][0]["state"]
     assert state["entity_id"] == "update.mock_dimmable_light_firmware"
-    extra_data = hass_storage[RESTORE_STATE_KEY]["data"][0]["extra_data"]
+    extra_data = menuai_storage[RESTORE_STATE_KEY]["data"][0]["extra_data"]
 
     # Check that the extra data has the format we expect.
     assert extra_data == {
@@ -365,14 +365,14 @@ async def test_update_state_save_and_restore(
 
 
 async def test_update_state_restore(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     check_node_update: AsyncMock,
     update_node: AsyncMock,
 ) -> None:
     """Test latest update information extra data is restored."""
     mock_restore_cache_with_extra_data(
-        hass,
+        menuai,
         (
             (
                 State(
@@ -389,16 +389,16 @@ async def test_update_state_restore(
             ),
         ),
     )
-    await setup_integration_with_node_fixture(hass, "dimmable_light", matter_client)
+    await setup_integration_with_node_fixture(menuai, "dimmable_light", matter_client)
 
     assert check_node_update.call_count == 0
 
-    state = hass.states.get("update.mock_dimmable_light_firmware")
+    state = menuai.states.get("update.mock_dimmable_light_firmware")
     assert state
     assert state.state == STATE_ON
     assert state.attributes.get("latest_version") == "v2.0"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         UPDATE_DOMAIN,
         SERVICE_INSTALL,
         {

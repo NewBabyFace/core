@@ -1,10 +1,10 @@
 """Test config init."""
 
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 
-async def test_config_setup(hass: HomeAssistant) -> None:
-    """Test it sets up hassbian."""
-    await async_setup_component(hass, "config", {})
-    assert "config" in hass.config.components
+async def test_config_setup(menuai: menuai) -> None:
+    """Test it sets up menuaibian."""
+    await async_setup_component(menuai, "config", {})
+    assert "config" in menuai.config.components

@@ -7,15 +7,15 @@ from datetime import datetime
 import logging
 from typing import Any
 
-from homeassistant.components.update import (
+from menuai.components.update import (
     UpdateEntity,
     UpdateEntityDescription,
     UpdateEntityFeature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.event import async_call_later
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.event import async_call_later
 
 from . import SqueezeboxConfigEntry
 from .const import (
@@ -46,7 +46,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: SqueezeboxConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -156,12 +156,12 @@ class ServerStatusUpdatePlugins(ServerStatusUpdate):
         _LOGGER.debug("restart server result %s", result)
         if not result:
             self._cancel_update = async_call_later(
-                self.hass, POLL_AFTER_INSTALL, self._async_update_catchall
+                self.menuai, POLL_AFTER_INSTALL, self._async_update_catchall
             )
         else:
             self.restart_triggered = False
             self.async_write_ha_state()
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="update_restart_failed",
             )

@@ -14,14 +14,14 @@ from pytomorrowio.exceptions import (
 from pytomorrowio.pytomorrowio import TomorrowioV4
 import voluptuous as vol
 
-from homeassistant.components.zone import async_active_zone
-from homeassistant.config_entries import (
+from menuai.components.zone import async_active_zone
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_API_KEY,
     CONF_FRIENDLY_NAME,
     CONF_LATITUDE,
@@ -29,9 +29,9 @@ from homeassistant.const import (
     CONF_LONGITUDE,
     CONF_NAME,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.selector import LocationSelector, LocationSelectorConfig
+from menuai.core import menuai, callback
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.selector import LocationSelector, LocationSelectorConfig
 
 from .const import (
     CONF_TIMESTEP,
@@ -45,7 +45,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def _get_config_schema(
-    hass: HomeAssistant,
+    menuai: menuai,
     source: str | None,
     input_dict: dict[str, Any] | None = None,
 ) -> vol.Schema:
@@ -64,8 +64,8 @@ def _get_config_schema(
     default_location = input_dict.get(
         CONF_LOCATION,
         {
-            CONF_LATITUDE: hass.config.latitude,
-            CONF_LONGITUDE: hass.config.longitude,
+            CONF_LATITUDE: menuai.config.latitude,
+            CONF_LONGITUDE: menuai.config.longitude,
         },
     )
     return vol.Schema(
@@ -79,7 +79,7 @@ def _get_config_schema(
     )
 
 
-def _get_unique_id(hass: HomeAssistant, input_dict: dict[str, Any]):
+def _get_unique_id(menuai: menuai, input_dict: dict[str, Any]):
     """Return unique ID from config data."""
     return (
         f"{input_dict[CONF_API_KEY]}"
@@ -130,7 +130,7 @@ class TomorrowioConfigFlow(ConfigFlow, domain=DOMAIN):
         errors = {}
         if user_input is not None:
             await self.async_set_unique_id(
-                unique_id=_get_unique_id(self.hass, user_input)
+                unique_id=_get_unique_id(self.menuai, user_input)
             )
             self._abort_if_unique_id_configured()
 
@@ -140,7 +140,7 @@ class TomorrowioConfigFlow(ConfigFlow, domain=DOMAIN):
             if CONF_NAME not in user_input:
                 user_input[CONF_NAME] = DEFAULT_NAME
                 # Append zone name if it exists and we are using the default name
-                if zone_state := async_active_zone(self.hass, latitude, longitude):
+                if zone_state := async_active_zone(self.menuai, latitude, longitude):
                     zone_name = zone_state.attributes[CONF_FRIENDLY_NAME]
                     user_input[CONF_NAME] += f" - {zone_name}"
             try:
@@ -148,7 +148,7 @@ class TomorrowioConfigFlow(ConfigFlow, domain=DOMAIN):
                     user_input[CONF_API_KEY],
                     str(latitude),
                     str(longitude),
-                    session=async_get_clientsession(self.hass),
+                    session=async_get_clientsession(self.menuai),
                 ).realtime([TMRW_ATTR_TEMPERATURE])
             except CantConnectException:
                 errors["base"] = "cannot_connect"
@@ -170,6 +170,6 @@ class TomorrowioConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="user",
-            data_schema=_get_config_schema(self.hass, self.source, user_input),
+            data_schema=_get_config_schema(self.menuai, self.source, user_input),
             errors=errors,
         )

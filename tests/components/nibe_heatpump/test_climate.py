@@ -14,7 +14,7 @@ from nibe.heatpump import Model
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_HVAC_MODE,
     ATTR_TARGET_TEMP_HIGH,
     ATTR_TARGET_TEMP_LOW,
@@ -24,9 +24,9 @@ from homeassistant.components.climate import (
     SERVICE_SET_TEMPERATURE,
     HVACMode,
 )
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
 
 from . import MockConnection, async_add_model
 
@@ -34,7 +34,7 @@ from . import MockConnection, async_add_model
 @pytest.fixture(autouse=True)
 async def fixture_single_platform():
     """Only allow this platform to load."""
-    with patch("homeassistant.components.nibe_heatpump.PLATFORMS", [Platform.CLIMATE]):
+    with patch("menuai.components.nibe_heatpump.PLATFORMS", [Platform.CLIMATE]):
         yield
 
 
@@ -68,7 +68,7 @@ def _setup_climate_group(
 )
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_basic(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_connection: MockConnection,
     model: Model,
     climate_id: str,
@@ -79,31 +79,31 @@ async def test_basic(
     """Test setting of value."""
     climate, unit = _setup_climate_group(coils, model, climate_id)
 
-    await async_add_model(hass, model)
+    await async_add_model(menuai, model)
 
-    assert hass.states.get(entity_id) == snapshot(name="initial")
+    assert menuai.states.get(entity_id) == snapshot(name="initial")
 
     mock_connection.mock_coil_update(unit.prio, "COOLING")
-    assert hass.states.get(entity_id) == snapshot(name="cooling")
+    assert menuai.states.get(entity_id) == snapshot(name="cooling")
 
     mock_connection.mock_coil_update(unit.prio, "HEAT")
-    assert hass.states.get(entity_id) == snapshot(name="heating")
+    assert menuai.states.get(entity_id) == snapshot(name="heating")
 
     mock_connection.mock_coil_update(climate.mixing_valve_state, 30)
-    assert hass.states.get(entity_id) == snapshot(name="idle (mixing valve)")
+    assert menuai.states.get(entity_id) == snapshot(name="idle (mixing valve)")
 
     mock_connection.mock_coil_update(climate.mixing_valve_state, 20)
     mock_connection.mock_coil_update(unit.cooling_with_room_sensor, "OFF")
-    assert hass.states.get(entity_id) == snapshot(name="heating (only)")
+    assert menuai.states.get(entity_id) == snapshot(name="heating (only)")
 
     mock_connection.mock_coil_update(climate.use_room_sensor, "OFF")
-    assert hass.states.get(entity_id) == snapshot(name="heating (auto)")
+    assert menuai.states.get(entity_id) == snapshot(name="heating (auto)")
 
     mock_connection.mock_coil_update(unit.prio, None)
-    assert hass.states.get(entity_id) == snapshot(name="off (auto)")
+    assert menuai.states.get(entity_id) == snapshot(name="off (auto)")
 
     coils.clear()
-    assert hass.states.get(entity_id) == snapshot(name="unavailable")
+    assert menuai.states.get(entity_id) == snapshot(name="unavailable")
 
 
 @pytest.mark.parametrize(
@@ -115,7 +115,7 @@ async def test_basic(
 )
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_active_accessory(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_connection: MockConnection,
     model: Model,
     climate_id: str,
@@ -126,12 +126,12 @@ async def test_active_accessory(
     """Test climate groups that can be deactivated by configuration."""
     climate, unit = _setup_climate_group(coils, model, climate_id)
 
-    await async_add_model(hass, model)
+    await async_add_model(menuai, model)
 
-    assert hass.states.get(entity_id) == snapshot(name="initial")
+    assert menuai.states.get(entity_id) == snapshot(name="initial")
 
     mock_connection.mock_coil_update(climate.active_accessory, "OFF")
-    assert hass.states.get(entity_id) == snapshot(name="unavailable (not supported)")
+    assert menuai.states.get(entity_id) == snapshot(name="unavailable (not supported)")
 
 
 @pytest.mark.parametrize(
@@ -143,7 +143,7 @@ async def test_active_accessory(
 )
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_set_temperature_supported_cooling(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_connection: MockConnection,
     model: Model,
     climate_id: str,
@@ -154,7 +154,7 @@ async def test_set_temperature_supported_cooling(
     """Test setting temperature for models with cooling support."""
     climate, _ = _setup_climate_group(coils, model, climate_id)
 
-    await async_add_model(hass, model)
+    await async_add_model(menuai, model)
 
     coil_setpoint_heat = mock_connection.heatpump.get_coil_by_address(
         climate.setpoint_heat
@@ -163,7 +163,7 @@ async def test_set_temperature_supported_cooling(
         climate.setpoint_cool
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         PLATFORM_DOMAIN,
         SERVICE_SET_TEMPERATURE,
         {
@@ -173,14 +173,14 @@ async def test_set_temperature_supported_cooling(
         },
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert mock_connection.write_coil.mock_calls == [
         call(CoilData(coil_setpoint_heat, 22))
     ]
     mock_connection.write_coil.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         PLATFORM_DOMAIN,
         SERVICE_SET_TEMPERATURE,
         {
@@ -190,7 +190,7 @@ async def test_set_temperature_supported_cooling(
         },
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert mock_connection.write_coil.mock_calls == [
         call(CoilData(coil_setpoint_cool, 22))
@@ -198,7 +198,7 @@ async def test_set_temperature_supported_cooling(
     mock_connection.write_coil.reset_mock()
 
     with pytest.raises(ServiceValidationError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             PLATFORM_DOMAIN,
             SERVICE_SET_TEMPERATURE,
             {
@@ -208,7 +208,7 @@ async def test_set_temperature_supported_cooling(
             blocking=True,
         )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         PLATFORM_DOMAIN,
         SERVICE_SET_TEMPERATURE,
         {
@@ -218,7 +218,7 @@ async def test_set_temperature_supported_cooling(
         },
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert mock_connection.write_coil.mock_calls == [
         call(CoilData(coil_setpoint_heat, 22)),
@@ -236,7 +236,7 @@ async def test_set_temperature_supported_cooling(
 )
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_set_temperature_unsupported_cooling(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_connection: MockConnection,
     model: Model,
     climate_id: str,
@@ -247,14 +247,14 @@ async def test_set_temperature_unsupported_cooling(
     """Test setting temperature for models that do not support cooling."""
     climate, _ = _setup_climate_group(coils, model, climate_id)
 
-    await async_add_model(hass, model)
+    await async_add_model(menuai, model)
 
     coil_setpoint_heat = mock_connection.heatpump.get_coil_by_address(
         climate.setpoint_heat
     )
 
     # Set temperature to heat
-    await hass.services.async_call(
+    await menuai.services.async_call(
         PLATFORM_DOMAIN,
         SERVICE_SET_TEMPERATURE,
         {
@@ -264,14 +264,14 @@ async def test_set_temperature_unsupported_cooling(
         },
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert mock_connection.write_coil.mock_calls == [
         call(CoilData(coil_setpoint_heat, 22))
     ]
 
     # Attempt to set temperature to cool should raise ServiceValidationError
     with pytest.raises(ServiceValidationError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             PLATFORM_DOMAIN,
             SERVICE_SET_TEMPERATURE,
             {
@@ -302,7 +302,7 @@ async def test_set_temperature_unsupported_cooling(
 )
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_set_hvac_mode(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_connection: MockConnection,
     model: Model,
     climate_id: str,
@@ -315,7 +315,7 @@ async def test_set_hvac_mode(
     """Test setting a hvac mode."""
     climate, unit = _setup_climate_group(coils, model, climate_id)
 
-    await async_add_model(hass, model)
+    await async_add_model(menuai, model)
 
     coil_use_room_sensor = mock_connection.heatpump.get_coil_by_address(
         climate.use_room_sensor
@@ -324,7 +324,7 @@ async def test_set_hvac_mode(
         unit.cooling_with_room_sensor
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         PLATFORM_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {
@@ -333,7 +333,7 @@ async def test_set_hvac_mode(
         },
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert mock_connection.write_coil.mock_calls == [
         call(CoilData(coil_cooling_with_room_sensor, cooling_with_room_sensor)),
@@ -351,7 +351,7 @@ async def test_set_hvac_mode(
 )
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_set_invalid_hvac_mode(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_connection: MockConnection,
     model: Model,
     climate_id: str,
@@ -362,9 +362,9 @@ async def test_set_invalid_hvac_mode(
     """Test setting an invalid hvac mode."""
     _setup_climate_group(coils, model, climate_id)
 
-    await async_add_model(hass, model)
+    await async_add_model(menuai, model)
     with pytest.raises(ServiceValidationError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             PLATFORM_DOMAIN,
             SERVICE_SET_HVAC_MODE,
             {

@@ -10,16 +10,16 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant import setup
-from homeassistant.components.command_line import DOMAIN
-from homeassistant.components.notify import DOMAIN as NOTIFY_DOMAIN
-from homeassistant.core import HomeAssistant
+from menuai import setup
+from menuai.components.command_line import DOMAIN
+from menuai.components.notify import DOMAIN as NOTIFY_DOMAIN
+from menuai.core import menuai
 
 
-async def test_setup_platform_yaml(hass: HomeAssistant) -> None:
+async def test_setup_platform_yaml(menuai: menuai) -> None:
     """Test setting up the platform with platform yaml."""
     await setup.async_setup_component(
-        hass,
+        menuai,
         "notify",
         {
             "notify": {
@@ -30,8 +30,8 @@ async def test_setup_platform_yaml(hass: HomeAssistant) -> None:
             }
         },
     )
-    await hass.async_block_till_done()
-    assert len(hass.states.async_all()) == 0
+    await menuai.async_block_till_done()
+    assert len(menuai.states.async_all()) == 0
 
 
 @pytest.mark.parametrize(
@@ -50,16 +50,16 @@ async def test_setup_platform_yaml(hass: HomeAssistant) -> None:
     ],
 )
 async def test_setup_integration_yaml(
-    hass: HomeAssistant, load_yaml_integration: None
+    menuai: menuai, load_yaml_integration: None
 ) -> None:
     """Test sensor setup."""
-    assert hass.services.has_service(NOTIFY_DOMAIN, "test2")
+    assert menuai.services.has_service(NOTIFY_DOMAIN, "test2")
 
 
-async def test_bad_config(hass: HomeAssistant) -> None:
+async def test_bad_config(menuai: menuai) -> None:
     """Test set up the platform with bad/missing configuration."""
     assert await setup.async_setup_component(
-        hass,
+        menuai,
         NOTIFY_DOMAIN,
         {
             NOTIFY_DOMAIN: [
@@ -67,17 +67,17 @@ async def test_bad_config(hass: HomeAssistant) -> None:
             ]
         },
     )
-    await hass.async_block_till_done()
-    assert not hass.services.has_service(NOTIFY_DOMAIN, "test")
+    await menuai.async_block_till_done()
+    assert not menuai.services.has_service(NOTIFY_DOMAIN, "test")
 
 
-async def test_command_line_output(hass: HomeAssistant) -> None:
+async def test_command_line_output(menuai: menuai) -> None:
     """Test the command line output."""
     with tempfile.TemporaryDirectory() as tempdirname:
         filename = os.path.join(tempdirname, "message.txt")
         message = "one, two, testing, testing"
         await setup.async_setup_component(
-            hass,
+            menuai,
             DOMAIN,
             {
                 "command_line": [
@@ -90,23 +90,23 @@ async def test_command_line_output(hass: HomeAssistant) -> None:
                 ]
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-        assert hass.services.has_service(NOTIFY_DOMAIN, "test3")
+        assert menuai.services.has_service(NOTIFY_DOMAIN, "test3")
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             NOTIFY_DOMAIN, "test3", {"message": message}, blocking=True
         )
-        assert message == await hass.async_add_executor_job(Path(filename).read_text)
+        assert message == await menuai.async_add_executor_job(Path(filename).read_text)
 
 
 async def test_command_line_output_single_command(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test the command line output."""
 
     await setup.async_setup_component(
-        hass,
+        menuai,
         DOMAIN,
         {
             "command_line": [
@@ -119,25 +119,25 @@ async def test_command_line_output_single_command(
             ]
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.services.has_service(NOTIFY_DOMAIN, "test3")
+    assert menuai.services.has_service(NOTIFY_DOMAIN, "test3")
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         NOTIFY_DOMAIN, "test3", {"message": "test message"}, blocking=True
     )
     assert "Running command: echo, with message: test message" in caplog.text
 
 
-async def test_command_template(hass: HomeAssistant) -> None:
+async def test_command_template(menuai: menuai) -> None:
     """Test the command line output using template as command."""
 
     with tempfile.TemporaryDirectory() as tempdirname:
         filename = os.path.join(tempdirname, "message.txt")
         message = "one, two, testing, testing"
-        hass.states.async_set("sensor.test_state", filename)
+        menuai.states.async_set("sensor.test_state", filename)
         await setup.async_setup_component(
-            hass,
+            menuai,
             DOMAIN,
             {
                 "command_line": [
@@ -150,24 +150,24 @@ async def test_command_template(hass: HomeAssistant) -> None:
                 ]
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-        assert hass.services.has_service(NOTIFY_DOMAIN, "test3")
+        assert menuai.services.has_service(NOTIFY_DOMAIN, "test3")
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             NOTIFY_DOMAIN, "test3", {"message": message}, blocking=True
         )
-        assert message == await hass.async_add_executor_job(Path(filename).read_text)
+        assert message == await menuai.async_add_executor_job(Path(filename).read_text)
 
 
 async def test_command_incorrect_template(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test the command line output using template as command which isn't working."""
 
     message = "one, two, testing, testing"
     await setup.async_setup_component(
-        hass,
+        menuai,
         DOMAIN,
         {
             "command_line": [
@@ -180,11 +180,11 @@ async def test_command_incorrect_template(
             ]
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.services.has_service(NOTIFY_DOMAIN, "test3")
+    assert menuai.services.has_service(NOTIFY_DOMAIN, "test3")
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         NOTIFY_DOMAIN, "test3", {"message": message}, blocking=True
     )
 
@@ -210,11 +210,11 @@ async def test_command_incorrect_template(
     ],
 )
 async def test_error_for_none_zero_exit_code(
-    caplog: pytest.LogCaptureFixture, hass: HomeAssistant, load_yaml_integration: None
+    caplog: pytest.LogCaptureFixture, menuai: menuai, load_yaml_integration: None
 ) -> None:
     """Test if an error is logged for non zero exit codes."""
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         NOTIFY_DOMAIN, "test4", {"message": "error"}, blocking=True
     )
     assert "Command failed" in caplog.text
@@ -238,10 +238,10 @@ async def test_error_for_none_zero_exit_code(
     ],
 )
 async def test_timeout(
-    caplog: pytest.LogCaptureFixture, hass: HomeAssistant, load_yaml_integration: None
+    caplog: pytest.LogCaptureFixture, menuai: menuai, load_yaml_integration: None
 ) -> None:
     """Test blocking is not forever."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         NOTIFY_DOMAIN, "test5", {"message": "error"}, blocking=True
     )
     assert "Timeout" in caplog.text
@@ -263,12 +263,12 @@ async def test_timeout(
     ],
 )
 async def test_subprocess_exceptions(
-    caplog: pytest.LogCaptureFixture, hass: HomeAssistant, load_yaml_integration: None
+    caplog: pytest.LogCaptureFixture, menuai: menuai, load_yaml_integration: None
 ) -> None:
     """Test that notify subprocess exceptions are handled correctly."""
 
     with patch(
-        "homeassistant.components.command_line.notify.subprocess.Popen"
+        "menuai.components.command_line.notify.subprocess.Popen"
     ) as check_output:
         check_output.return_value.__enter__ = check_output
         check_output.return_value.communicate.side_effect = [
@@ -277,13 +277,13 @@ async def test_subprocess_exceptions(
             subprocess.SubprocessError(),
         ]
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             NOTIFY_DOMAIN, "test6", {"message": "error"}, blocking=True
         )
         assert check_output.call_count == 2
         assert "Timeout for command" in caplog.text
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             NOTIFY_DOMAIN, "test6", {"message": "error"}, blocking=True
         )
         assert check_output.call_count == 4

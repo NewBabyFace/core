@@ -4,7 +4,7 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 from syrupy.filters import props
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .const import API_DISCOVERY_BASIC_DEVICE_INFO
 
@@ -15,12 +15,12 @@ from tests.typing import ClientSessionGenerator
 
 @pytest.mark.parametrize("api_discovery_items", [API_DISCOVERY_BASIC_DEVICE_INFO])
 async def test_entry_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     config_entry_setup: MockConfigEntry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test config entry diagnostics."""
     assert await get_diagnostics_for_config_entry(
-        hass, hass_client, config_entry_setup
+        menuai, menuai_client, config_entry_setup
     ) == snapshot(exclude=props("created_at", "modified_at"))

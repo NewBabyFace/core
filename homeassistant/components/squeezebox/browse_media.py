@@ -8,16 +8,16 @@ from typing import Any
 
 from pysqueezebox import Player
 
-from homeassistant.components import media_source
-from homeassistant.components.media_player import (
+from menuai.components import media_source
+from menuai.components.media_player import (
     BrowseError,
     BrowseMedia,
     MediaClass,
     MediaPlayerEntity,
     MediaType,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.network import is_internal_request
+from menuai.core import menuai
+from menuai.helpers.network import is_internal_request
 
 from .const import DOMAIN, UNPLAYABLE_TYPES
 
@@ -245,7 +245,7 @@ async def build_item_response(
 ) -> BrowseMedia:
     """Create response payload for search described by payload."""
 
-    internal_request = is_internal_request(entity.hass)
+    internal_request = is_internal_request(entity.menuai)
 
     search_id = payload["search_id"]
     search_type = payload["search_type"]
@@ -356,7 +356,7 @@ async def build_item_response(
 
 
 async def library_payload(
-    hass: HomeAssistant,
+    menuai: menuai,
     player: Player,
     browse_media: BrowseData,
 ) -> BrowseMedia:
@@ -393,7 +393,7 @@ async def library_payload(
 
     with contextlib.suppress(media_source.BrowseError):
         browse = await media_source.async_browse_media(
-            hass, None, content_filter=media_source_content_filter
+            menuai, None, content_filter=media_source_content_filter
         )
         # If domain is None, it's overview of available sources
         if browse.domain is None:

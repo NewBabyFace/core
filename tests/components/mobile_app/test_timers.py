@@ -4,9 +4,9 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components.mobile_app import DATA_DEVICES, DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import intent as intent_helper
+from menuai.components.mobile_app import DATA_DEVICES, DOMAIN
+from menuai.core import menuai
+from menuai.helpers import intent as intent_helper
 
 
 @pytest.mark.parametrize(
@@ -23,14 +23,14 @@ from homeassistant.helpers import intent as intent_helper
     ],
 )
 async def test_timer_events(
-    hass: HomeAssistant, push_registration, intent_args: dict, message: str
+    menuai: menuai, push_registration, intent_args: dict, message: str
 ) -> None:
     """Test for timer events."""
     webhook_id = push_registration["webhook_id"]
-    device_id = hass.data[DOMAIN][DATA_DEVICES][webhook_id].id
+    device_id = menuai.data[DOMAIN][DATA_DEVICES][webhook_id].id
 
     await intent_helper.async_handle(
-        hass,
+        menuai,
         "test",
         intent_helper.INTENT_START_TIMER,
         {
@@ -41,10 +41,10 @@ async def test_timer_events(
     )
 
     with patch(
-        "homeassistant.components.mobile_app.notify.MobileAppNotificationService.async_send_message"
+        "menuai.components.mobile_app.notify.MobileAppNotificationService.async_send_message"
     ) as mock_send_message:
         await intent_helper.async_handle(
-            hass,
+            menuai,
             "test",
             intent_helper.INTENT_DECREASE_TIMER,
             {
@@ -52,7 +52,7 @@ async def test_timer_events(
             },
             device_id=device_id,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert mock_send_message.mock_calls[0][2] == {
         "target": [webhook_id],

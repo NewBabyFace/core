@@ -8,25 +8,25 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from homeassistant.components.device_tracker.legacy import YAML_DEVICES
-from homeassistant.components.homekit.accessories import HomeDriver
-from homeassistant.components.homekit.const import BRIDGE_NAME, EVENT_HOMEKIT_CHANGED
-from homeassistant.components.homekit.iidmanager import AccessoryIIDStorage
-from homeassistant.core import Event, HomeAssistant
+from menuai.components.device_tracker.legacy import YAML_DEVICES
+from menuai.components.homekit.accessories import HomeDriver
+from menuai.components.homekit.const import BRIDGE_NAME, EVENT_HOMEKIT_CHANGED
+from menuai.components.homekit.iidmanager import AccessoryIIDStorage
+from menuai.core import Event, menuai
 
 from tests.common import async_capture_events
 
 
 @pytest.fixture
-def iid_storage(hass: HomeAssistant) -> Generator[AccessoryIIDStorage]:
+def iid_storage(menuai: menuai) -> Generator[AccessoryIIDStorage]:
     """Mock the iid storage."""
     with patch.object(AccessoryIIDStorage, "_async_schedule_save"):
-        yield AccessoryIIDStorage(hass, "")
+        yield AccessoryIIDStorage(menuai, "")
 
 
 @pytest.fixture
 def run_driver(
-    hass: HomeAssistant, iid_storage: AccessoryIIDStorage
+    menuai: menuai, iid_storage: AccessoryIIDStorage
 ) -> Generator[HomeDriver]:
     """Return a custom AccessoryDriver instance for HomeKit accessory init.
 
@@ -43,7 +43,7 @@ def run_driver(
         ),
     ):
         yield HomeDriver(
-            hass,
+            menuai,
             pincode=b"123-45-678",
             entry_id="",
             entry_title="mock entry",
@@ -56,7 +56,7 @@ def run_driver(
 
 @pytest.fixture
 def hk_driver(
-    hass: HomeAssistant, iid_storage: AccessoryIIDStorage
+    menuai: menuai, iid_storage: AccessoryIIDStorage
 ) -> Generator[HomeDriver]:
     """Return a custom AccessoryDriver instance for HomeKit accessory init."""
     event_loop = asyncio.get_event_loop()
@@ -73,7 +73,7 @@ def hk_driver(
         ),
     ):
         yield HomeDriver(
-            hass,
+            menuai,
             pincode=b"123-45-678",
             entry_id="",
             entry_title="mock entry",
@@ -86,7 +86,7 @@ def hk_driver(
 
 @pytest.fixture
 def mock_hap(
-    hass: HomeAssistant,
+    menuai: menuai,
     iid_storage: AccessoryIIDStorage,
     mock_zeroconf: MagicMock,
 ) -> Generator[HomeDriver]:
@@ -111,7 +111,7 @@ def mock_hap(
         ),
     ):
         yield HomeDriver(
-            hass,
+            menuai,
             pincode=b"123-45-678",
             entry_id="",
             entry_title="mock entry",
@@ -123,14 +123,14 @@ def mock_hap(
 
 
 @pytest.fixture
-def events(hass: HomeAssistant) -> list[Event]:
+def events(menuai: menuai) -> list[Event]:
     """Yield caught homekit_changed events."""
-    return async_capture_events(hass, EVENT_HOMEKIT_CHANGED)
+    return async_capture_events(menuai, EVENT_HOMEKIT_CHANGED)
 
 
 @pytest.fixture
-def demo_cleanup(hass: HomeAssistant) -> Generator[None]:
+def demo_cleanup(menuai: menuai) -> Generator[None]:
     """Clean up device tracker demo file."""
     yield
     with suppress(FileNotFoundError):
-        os.remove(hass.config.path(YAML_DEVICES))
+        os.remove(menuai.config.path(YAML_DEVICES))

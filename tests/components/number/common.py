@@ -1,6 +1,6 @@
 """Common helper and classes for number entity tests."""
 
-from homeassistant.components.number import NumberEntity, RestoreNumber
+from menuai.components.number import NumberEntity, RestoreNumber
 
 from tests.common import MockEntity
 
@@ -41,9 +41,9 @@ class MockNumberEntity(MockEntity, NumberEntity):
 class MockRestoreNumber(MockNumberEntity, RestoreNumber):
     """Mock RestoreNumber class."""
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Restore native_*."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         if (last_number_data := await self.async_get_last_number_data()) is None:
             return
         self._values["native_max_value"] = last_number_data.native_max_value

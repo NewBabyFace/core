@@ -5,25 +5,25 @@ from typing import Any
 
 import pytest
 
-from homeassistant.components.sensor import SensorDeviceClass
-from homeassistant.const import ATTR_DEVICE_CLASS, STATE_UNAVAILABLE, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant, State
-from homeassistant.helpers import significant_change
+from menuai.components.sensor import SensorDeviceClass
+from menuai.const import ATTR_DEVICE_CLASS, STATE_UNAVAILABLE, STATE_UNKNOWN
+from menuai.core import menuai, State
+from menuai.helpers import significant_change
 
 
 @pytest.fixture(name="checker")
 async def checker_fixture(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> significant_change.SignificantlyChangedChecker:
     """Checker fixture."""
-    checker = await significant_change.create_checker(hass, "test")
+    checker = await significant_change.create_checker(menuai, "test")
 
     def async_check_significant_change(
-        _hass, old_state, _old_attrs, new_state, _new_attrs, **kwargs
+        _menuai, old_state, _old_attrs, new_state, _new_attrs, **kwargs
     ):
         return abs(float(old_state) - float(new_state)) > 4
 
-    hass.data[significant_change.DATA_FUNCTIONS]["test_domain"] = (
+    menuai.data[significant_change.DATA_FUNCTIONS]["test_domain"] = (
         async_check_significant_change
     )
     return checker
@@ -70,7 +70,7 @@ async def test_significant_change_extra(
     assert checker.async_is_significant_change(State(ent_id, "100", attrs), extra_arg=1)
 
     def extra_significant_check(
-        hass: HomeAssistant,
+        menuai: menuai,
         old_state: str,
         old_attrs: dict | MappingProxyType,
         old_extra_arg: Any,

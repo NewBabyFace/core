@@ -8,9 +8,9 @@ from typing import Any
 from gps3.agps3threaded import GPSD_PORT as DEFAULT_PORT, HOST as DEFAULT_HOST
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT
-from homeassistant.helpers import config_validation as cv
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_NAME, CONF_PORT
+from menuai.helpers import config_validation as cv
 
 from .const import DOMAIN
 
@@ -46,7 +46,7 @@ class GPSDConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             self._async_abort_entries_match(user_input)
 
-            connected = await self.hass.async_add_executor_job(
+            connected = await self.menuai.async_add_executor_job(
                 self.test_connection, user_input[CONF_HOST], user_input[CONF_PORT]
             )
 

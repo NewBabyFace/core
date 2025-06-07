@@ -8,14 +8,14 @@ from surepy.entities import SurepyEntity
 from surepy.entities.pet import Pet as SurepyPet
 from surepy.enums import EntityType, Location
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import EntityCategory
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import SurePetcareDataCoordinator
@@ -23,7 +23,7 @@ from .entity import SurePetcareEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -31,7 +31,7 @@ async def async_setup_entry(
 
     entities: list[SurePetcareBinarySensor] = []
 
-    coordinator: SurePetcareDataCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: SurePetcareDataCoordinator = menuai.data[DOMAIN][entry.entry_id]
 
     for surepy_entity in coordinator.data.values():
         # connectivity

@@ -7,14 +7,14 @@ import logging
 import aiohttp
 import voluptuous as vol
 
-from homeassistant.components.tts import (
+from menuai.components.tts import (
     CONF_LANG,
     PLATFORM_SCHEMA as TTS_PLATFORM_SCHEMA,
     Provider,
 )
-from homeassistant.const import CONF_API_KEY
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.const import CONF_API_KEY
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -159,17 +159,17 @@ PLATFORM_SCHEMA = TTS_PLATFORM_SCHEMA.extend(
 )
 
 
-async def async_get_engine(hass, config, discovery_info=None):
+async def async_get_engine(menuai, config, discovery_info=None):
     """Set up VoiceRSS TTS component."""
-    return VoiceRSSProvider(hass, config)
+    return VoiceRSSProvider(menuai, config)
 
 
 class VoiceRSSProvider(Provider):
     """The VoiceRSS speech API provider."""
 
-    def __init__(self, hass, conf):
+    def __init__(self, menuai, conf):
         """Init VoiceRSS TTS service."""
-        self.hass = hass
+        self.menuai = menuai
         self._extension = conf[CONF_CODEC]
         self._lang = conf[CONF_LANG]
         self.name = "VoiceRSS"
@@ -193,7 +193,7 @@ class VoiceRSSProvider(Provider):
 
     async def async_get_tts_audio(self, message, language, options):
         """Load TTS from VoiceRSS."""
-        websession = async_get_clientsession(self.hass)
+        websession = async_get_clientsession(self.menuai)
         form_data = self._form_data.copy()
 
         form_data["src"] = message

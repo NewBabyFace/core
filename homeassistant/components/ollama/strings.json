@@ -27,7 +27,7 @@
       "init": {
         "data": {
           "prompt": "Instructions",
-          "llm_hass_api": "[%key:common::config_flow::data::llm_hass_api%]",
+          "llm_menuai_api": "[%key:common::config_flow::data::llm_menuai_api%]",
           "max_history": "Max history messages",
           "num_ctx": "Context window size",
           "keep_alive": "Keep alive",

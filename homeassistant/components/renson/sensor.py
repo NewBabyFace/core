@@ -28,22 +28,22 @@ from renson_endura_delta.field_enum import (
 )
 from renson_endura_delta.renson import RensonVentilation
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONCENTRATION_PARTS_PER_MILLION,
     PERCENTAGE,
     UnitOfTemperature,
     UnitOfTime,
     UnitOfVolumeFlowRate,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import RensonData
 from .const import DOMAIN
@@ -270,13 +270,13 @@ class RensonSensor(RensonEntity, SensorEntity):
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Renson sensor platform."""
 
-    data: RensonData = hass.data[DOMAIN][config_entry.entry_id]
+    data: RensonData = menuai.data[DOMAIN][config_entry.entry_id]
 
     entities = [
         RensonSensor(description, data.api, data.coordinator) for description in SENSORS

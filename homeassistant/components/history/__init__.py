@@ -9,16 +9,16 @@ from typing import cast
 from aiohttp import web
 import voluptuous as vol
 
-from homeassistant.components import frontend
-from homeassistant.components.http import KEY_HASS, HomeAssistantView
-from homeassistant.components.recorder import get_instance, history
-from homeassistant.components.recorder.util import session_scope
-from homeassistant.const import CONF_EXCLUDE, CONF_INCLUDE
-from homeassistant.core import HomeAssistant, valid_entity_id
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entityfilter import INCLUDE_EXCLUDE_BASE_FILTER_SCHEMA
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util import dt as dt_util
+from menuai.components import frontend
+from menuai.components.http import KEY_menuai, menuaiView
+from menuai.components.recorder import get_instance, history
+from menuai.components.recorder.util import session_scope
+from menuai.const import CONF_EXCLUDE, CONF_INCLUDE
+from menuai.core import menuai, valid_entity_id
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entityfilter import INCLUDE_EXCLUDE_BASE_FILTER_SCHEMA
+from menuai.helpers.typing import ConfigType
+from menuai.util import dt as dt_util
 
 from . import websocket_api
 from .const import DOMAIN
@@ -43,15 +43,15 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the history hooks."""
-    hass.http.register_view(HistoryPeriodView())
-    frontend.async_register_built_in_panel(hass, "history", "history", "hass:chart-box")
-    websocket_api.async_setup(hass)
+    menuai.http.register_view(HistoryPeriodView())
+    frontend.async_register_built_in_panel(menuai, "history", "history", "menuai:chart-box")
+    websocket_api.async_setup(menuai)
     return True
 
 
-class HistoryPeriodView(HomeAssistantView):
+class HistoryPeriodView(menuaiView):
     """Handle history period requests."""
 
     url = "/api/history/period"
@@ -75,10 +75,10 @@ class HistoryPeriodView(HomeAssistantView):
                 "filter_entity_id is missing", HTTPStatus.BAD_REQUEST
             )
 
-        hass = request.app[KEY_HASS]
+        menuai = request.app[KEY_menuai]
 
         for entity_id in entity_ids:
-            if not hass.states.get(entity_id) and not valid_entity_id(entity_id):
+            if not menuai.states.get(entity_id) and not valid_entity_id(entity_id):
                 return self.json_message(
                     "Invalid filter_entity_id", HTTPStatus.BAD_REQUEST
                 )
@@ -110,12 +110,12 @@ class HistoryPeriodView(HomeAssistantView):
             # has_states_before will return True if there are states older than
             # end_time. If it's false, we know there are no states in the
             # database up until end_time.
-            (end_time and not has_states_before(hass, end_time))
+            (end_time and not has_states_before(menuai, end_time))
             or (
                 not include_start_time_state
                 and entity_ids
                 and not entities_may_have_state_changes_after(
-                    hass, entity_ids, start_time, no_attributes
+                    menuai, entity_ids, start_time, no_attributes
                 )
             )
         ):
@@ -123,9 +123,9 @@ class HistoryPeriodView(HomeAssistantView):
 
         return cast(
             web.Response,
-            await get_instance(hass).async_add_executor_job(
+            await get_instance(menuai).async_add_executor_job(
                 self._sorted_significant_states_json,
-                hass,
+                menuai,
                 start_time,
                 end_time,
                 entity_ids,
@@ -138,7 +138,7 @@ class HistoryPeriodView(HomeAssistantView):
 
     def _sorted_significant_states_json(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         start_time: dt,
         end_time: dt,
         entity_ids: list[str],
@@ -148,11 +148,11 @@ class HistoryPeriodView(HomeAssistantView):
         no_attributes: bool,
     ) -> web.Response:
         """Fetch significant stats from the database as json."""
-        with session_scope(hass=hass, read_only=True) as session:
+        with session_scope(menuai=menuai, read_only=True) as session:
             return self.json(
                 list(
                     history.get_significant_states_with_session(
-                        hass,
+                        menuai,
                         session,
                         start_time,
                         end_time,

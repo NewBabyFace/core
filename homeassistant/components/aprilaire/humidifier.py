@@ -8,15 +8,15 @@ from typing import Any, cast
 
 from pyaprilaire.const import Attribute
 
-from homeassistant.components.humidifier import (
+from menuai.components.humidifier import (
     HumidifierAction,
     HumidifierDeviceClass,
     HumidifierEntity,
     HumidifierEntityDescription,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
 
 from .coordinator import AprilaireConfigEntry, AprilaireCoordinator
 from .entity import BaseAprilaireEntity
@@ -38,7 +38,7 @@ DEHUMIDIFIER_ACTION_MAP: dict[StateType, HumidifierAction] = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: AprilaireConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

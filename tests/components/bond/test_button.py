@@ -2,11 +2,11 @@
 
 from bond_async import Action, DeviceType
 
-from homeassistant.components.bond.button import STEP_SIZE
-from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.bond.button import STEP_SIZE
+from menuai.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .common import patch_bond_action, patch_bond_device_state, setup_platform
 
@@ -67,12 +67,12 @@ def motorized_shade(name: str):
 
 
 async def test_entity_registry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Tests that the devices are registered in the entity registry."""
     await setup_platform(
-        hass,
+        menuai,
         BUTTON_DOMAIN,
         light_brightness_increase_decrease_only("name-1"),
         bond_version={"bondid": "test-hub-id"},
@@ -89,138 +89,138 @@ async def test_entity_registry(
     assert entity.unique_id == "test-hub-id_test-device-id_startdimmer"
 
 
-async def test_mutually_exclusive_actions(hass: HomeAssistant) -> None:
+async def test_mutually_exclusive_actions(menuai: menuai) -> None:
     """Tests we do not create the button when there is a mutually exclusive action."""
     await setup_platform(
-        hass,
+        menuai,
         BUTTON_DOMAIN,
         light("name-1"),
         bond_device_id="test-device-id",
     )
 
-    assert not hass.states.async_all("button")
+    assert not menuai.states.async_all("button")
 
 
-async def test_stop_not_created_no_other_buttons(hass: HomeAssistant) -> None:
+async def test_stop_not_created_no_other_buttons(menuai: menuai) -> None:
     """Tests we do not create the stop button when there are no other buttons."""
     await setup_platform(
-        hass,
+        menuai,
         BUTTON_DOMAIN,
         ceiling_fan("name-1"),
         bond_device_id="test-device-id",
     )
 
-    assert not hass.states.async_all("button")
+    assert not menuai.states.async_all("button")
 
 
-async def test_press_button_with_argument(hass: HomeAssistant) -> None:
+async def test_press_button_with_argument(menuai: menuai) -> None:
     """Tests we can press a button with an argument."""
     await setup_platform(
-        hass,
+        menuai,
         BUTTON_DOMAIN,
         fireplace_increase_decrease_only("name-1"),
         bond_device_id="test-device-id",
     )
 
-    assert hass.states.get("button.name_1_increase_flame")
-    assert hass.states.get("button.name_1_decrease_flame")
+    assert menuai.states.get("button.name_1_increase_flame")
+    assert menuai.states.get("button.name_1_decrease_flame")
 
     with patch_bond_action() as mock_action, patch_bond_device_state():
-        await hass.services.async_call(
+        await menuai.services.async_call(
             BUTTON_DOMAIN,
             SERVICE_PRESS,
             {ATTR_ENTITY_ID: "button.name_1_increase_flame"},
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     mock_action.assert_called_once_with(
         "test-device-id", Action(Action.INCREASE_FLAME, STEP_SIZE)
     )
 
     with patch_bond_action() as mock_action, patch_bond_device_state():
-        await hass.services.async_call(
+        await menuai.services.async_call(
             BUTTON_DOMAIN,
             SERVICE_PRESS,
             {ATTR_ENTITY_ID: "button.name_1_decrease_flame"},
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     mock_action.assert_called_once_with(
         "test-device-id", Action(Action.DECREASE_FLAME, STEP_SIZE)
     )
 
 
-async def test_press_button(hass: HomeAssistant) -> None:
+async def test_press_button(menuai: menuai) -> None:
     """Tests we can press a button."""
     await setup_platform(
-        hass,
+        menuai,
         BUTTON_DOMAIN,
         light_brightness_increase_decrease_only("name-1"),
         bond_device_id="test-device-id",
     )
 
-    assert hass.states.get("button.name_1_start_increasing_brightness")
-    assert hass.states.get("button.name_1_start_decreasing_brightness")
+    assert menuai.states.get("button.name_1_start_increasing_brightness")
+    assert menuai.states.get("button.name_1_start_decreasing_brightness")
 
     with patch_bond_action() as mock_action, patch_bond_device_state():
-        await hass.services.async_call(
+        await menuai.services.async_call(
             BUTTON_DOMAIN,
             SERVICE_PRESS,
             {ATTR_ENTITY_ID: "button.name_1_start_increasing_brightness"},
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     mock_action.assert_called_once_with(
         "test-device-id", Action(Action.START_INCREASING_BRIGHTNESS)
     )
 
     with patch_bond_action() as mock_action, patch_bond_device_state():
-        await hass.services.async_call(
+        await menuai.services.async_call(
             BUTTON_DOMAIN,
             SERVICE_PRESS,
             {ATTR_ENTITY_ID: "button.name_1_start_decreasing_brightness"},
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     mock_action.assert_called_once_with(
         "test-device-id", Action(Action.START_DECREASING_BRIGHTNESS)
     )
 
 
-async def test_motorized_shade_actions(hass: HomeAssistant) -> None:
+async def test_motorized_shade_actions(menuai: menuai) -> None:
     """Tests motorized shade open next and close next actions."""
     await setup_platform(
-        hass,
+        menuai,
         BUTTON_DOMAIN,
         motorized_shade("name-1"),
         bond_device_id="test-device-id",
     )
 
-    assert hass.states.get("button.name_1_open_next")
-    assert hass.states.get("button.name_1_close_next")
+    assert menuai.states.get("button.name_1_open_next")
+    assert menuai.states.get("button.name_1_close_next")
 
     with patch_bond_action() as mock_action, patch_bond_device_state():
-        await hass.services.async_call(
+        await menuai.services.async_call(
             BUTTON_DOMAIN,
             SERVICE_PRESS,
             {ATTR_ENTITY_ID: "button.name_1_open_next"},
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     mock_action.assert_called_once_with("test-device-id", Action(Action.OPEN_NEXT))
 
     with patch_bond_action() as mock_action, patch_bond_device_state():
-        await hass.services.async_call(
+        await menuai.services.async_call(
             BUTTON_DOMAIN,
             SERVICE_PRESS,
             {ATTR_ENTITY_ID: "button.name_1_close_next"},
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     mock_action.assert_called_once_with("test-device-id", Action(Action.CLOSE_NEXT))

@@ -5,10 +5,10 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from homeassistant.components.camera import Camera
-from homeassistant.const import ATTR_LOCATION
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.camera import Camera
+from menuai.const import ATTR_LOCATION
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import TVCameraConfigEntry
 from .const import ATTR_DESCRIPTION, ATTR_TYPE
@@ -19,7 +19,7 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: TVCameraConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

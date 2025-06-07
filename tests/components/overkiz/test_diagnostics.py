@@ -4,9 +4,9 @@ from unittest.mock import AsyncMock, patch
 
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.overkiz.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.components.overkiz.const import DOMAIN
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 from tests.common import MockConfigEntry, async_load_json_object_fixture
 from tests.components.diagnostics import (
@@ -17,14 +17,14 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     init_integration: MockConfigEntry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test diagnostics."""
     diagnostic_data = await async_load_json_object_fixture(
-        hass, "setup_tahoma_switch.json", DOMAIN
+        menuai, "setup_tahoma_switch.json", DOMAIN
     )
 
     with patch.multiple(
@@ -33,21 +33,21 @@ async def test_diagnostics(
         get_execution_history=AsyncMock(return_value=[]),
     ):
         assert (
-            await get_diagnostics_for_config_entry(hass, hass_client, init_integration)
+            await get_diagnostics_for_config_entry(menuai, menuai_client, init_integration)
             == snapshot
         )
 
 
 async def test_device_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     init_integration: MockConfigEntry,
     device_registry: dr.DeviceRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test device diagnostics."""
     diagnostic_data = await async_load_json_object_fixture(
-        hass, "setup_tahoma_switch.json", DOMAIN
+        menuai, "setup_tahoma_switch.json", DOMAIN
     )
 
     device = device_registry.async_get_device(
@@ -62,7 +62,7 @@ async def test_device_diagnostics(
     ):
         assert (
             await get_diagnostics_for_device(
-                hass, hass_client, init_integration, device
+                menuai, menuai_client, init_integration, device
             )
             == snapshot
         )

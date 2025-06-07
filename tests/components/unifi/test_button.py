@@ -9,19 +9,19 @@ from aiounifi.models.message import MessageKey
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN
-from homeassistant.components.unifi.const import CONF_SITE_ID
-from homeassistant.config_entries import RELOAD_AFTER_UPDATE_DELAY
-from homeassistant.const import (
+from menuai.components.button import DOMAIN as BUTTON_DOMAIN
+from menuai.components.unifi.const import CONF_SITE_ID
+from menuai.config_entries import RELOAD_AFTER_UPDATE_DELAY
+from menuai.const import (
     CONF_HOST,
     CONTENT_TYPE_JSON,
     STATE_UNAVAILABLE,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_registry import RegistryEntryDisabler
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity_registry import RegistryEntryDisabler
+from menuai.util import dt as dt_util
 
 from .conftest import (
     ConfigEntryFactoryType,
@@ -138,23 +138,23 @@ WLAN_REGENERATE_PASSWORD = [
 )
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_entity_and_device_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     config_entry_factory: ConfigEntryFactoryType,
     site_payload: dict[str, Any],
     snapshot: SnapshotAssertion,
 ) -> None:
     """Validate entity and device data with and without admin rights."""
-    with patch("homeassistant.components.unifi.PLATFORMS", [Platform.BUTTON]):
+    with patch("menuai.components.unifi.PLATFORMS", [Platform.BUTTON]):
         config_entry = await config_entry_factory()
     if site_payload[0]["role"] == "admin":
-        await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+        await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
     else:
-        assert len(hass.states.async_entity_ids(BUTTON_DOMAIN)) == 0
+        assert len(menuai.states.async_entity_ids(BUTTON_DOMAIN)) == 0
 
 
 async def _test_button_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     mock_websocket_state: WebsocketStateManager,
     config_entry: MockConfigEntry,
@@ -174,7 +174,7 @@ async def _test_button_entity(
         **request_data,
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         BUTTON_DOMAIN, "press", {"entity_id": entity_id}, blocking=True
     )
     assert aioclient_mock.call_count == 1
@@ -184,11 +184,11 @@ async def _test_button_entity(
 
     # Controller disconnects
     await mock_websocket_state.disconnect()
-    assert hass.states.get(entity_id).state == STATE_UNAVAILABLE
+    assert menuai.states.get(entity_id).state == STATE_UNAVAILABLE
 
     # Controller reconnects
     await mock_websocket_state.reconnect()
-    assert hass.states.get(entity_id).state != STATE_UNAVAILABLE
+    assert menuai.states.get(entity_id).state != STATE_UNAVAILABLE
 
 
 @pytest.mark.parametrize(
@@ -225,7 +225,7 @@ async def _test_button_entity(
     ],
 )
 async def test_device_button_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     config_entry_setup: MockConfigEntry,
     mock_websocket_state: WebsocketStateManager,
@@ -236,7 +236,7 @@ async def test_device_button_entities(
 ) -> None:
     """Test button entities based on device sources."""
     await _test_button_entity(
-        hass,
+        menuai,
         aioclient_mock,
         mock_websocket_state,
         config_entry_setup,
@@ -272,7 +272,7 @@ async def test_device_button_entities(
     ],
 )
 async def test_wlan_button_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     aioclient_mock: AiohttpClientMocker,
     config_entry_setup: MockConfigEntry,
@@ -284,7 +284,7 @@ async def test_wlan_button_entities(
     call: dict[str, str],
 ) -> None:
     """Test button entities based on WLAN sources."""
-    assert len(hass.states.async_entity_ids(BUTTON_DOMAIN)) == 0
+    assert len(menuai.states.async_entity_ids(BUTTON_DOMAIN)) == 0
 
     ent_reg_entry = entity_registry.async_get(entity_id)
     assert ent_reg_entry.disabled_by == RegistryEntryDisabler.INTEGRATION
@@ -292,13 +292,13 @@ async def test_wlan_button_entities(
     # Enable entity
     entity_registry.async_update_entity(entity_id=entity_id, disabled_by=None)
     async_fire_time_changed(
-        hass,
+        menuai,
         dt_util.utcnow() + timedelta(seconds=RELOAD_AFTER_UPDATE_DELAY + 1),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     await _test_button_entity(
-        hass,
+        menuai,
         aioclient_mock,
         mock_websocket_state,
         config_entry_setup,
@@ -313,28 +313,28 @@ async def test_wlan_button_entities(
 @pytest.mark.parametrize("device_payload", [DEVICE_POWER_CYCLE_POE])
 @pytest.mark.usefixtures("config_entry_setup")
 async def test_power_cycle_availability(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_websocket_message: WebsocketMessageMock,
     device_payload: dict[str, Any],
 ) -> None:
     """Verify that disabling PoE marks entity as unavailable."""
     entity_id = "button.switch_port_1_power_cycle"
 
-    assert hass.states.get(entity_id).state != STATE_UNAVAILABLE
+    assert menuai.states.get(entity_id).state != STATE_UNAVAILABLE
 
     # PoE disabled
 
     device_1 = deepcopy(device_payload[0])
     device_1["port_table"][0]["poe_enable"] = False
     mock_websocket_message(message=MessageKey.DEVICE, data=device_1)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(entity_id).state == STATE_UNAVAILABLE
+    assert menuai.states.get(entity_id).state == STATE_UNAVAILABLE
 
     # PoE enabled
     device_1 = deepcopy(device_payload[0])
     device_1["port_table"][0]["poe_enable"] = True
     mock_websocket_message(message=MessageKey.DEVICE, data=device_1)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(entity_id).state != STATE_UNAVAILABLE
+    assert menuai.states.get(entity_id).state != STATE_UNAVAILABLE

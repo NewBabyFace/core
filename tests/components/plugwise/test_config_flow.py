@@ -12,9 +12,9 @@ from plugwise.exceptions import (
 )
 import pytest
 
-from homeassistant.components.plugwise.const import DEFAULT_PORT, DOMAIN
-from homeassistant.config_entries import SOURCE_USER, SOURCE_ZEROCONF, ConfigFlowResult
-from homeassistant.const import (
+from menuai.components.plugwise.const import DEFAULT_PORT, DOMAIN
+from menuai.config_entries import SOURCE_USER, SOURCE_ZEROCONF, ConfigFlowResult
+from menuai.const import (
     CONF_HOST,
     CONF_NAME,
     CONF_PASSWORD,
@@ -22,9 +22,9 @@ from homeassistant.const import (
     CONF_SOURCE,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from tests.common import MockConfigEntry
 
@@ -96,26 +96,26 @@ TEST_DISCOVERY_ADAM = ZeroconfServiceInfo(
 
 
 async def test_form(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_smile_config_flow: MagicMock,
 ) -> None:
     """Test the full user configuration flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={CONF_SOURCE: SOURCE_USER}
     )
     assert result.get("type") is FlowResultType.FORM
     assert result.get("errors") == {}
     assert result.get("step_id") == "user"
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_HOST: TEST_HOST,
             CONF_PASSWORD: TEST_PASSWORD,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2.get("type") is FlowResultType.CREATE_ENTRY
     assert result2.get("title") == "Test Smile Name"
@@ -140,14 +140,14 @@ async def test_form(
     ],
 )
 async def test_zeroconf_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_smile_config_flow: MagicMock,
     discovery: ZeroconfServiceInfo,
     username: str,
 ) -> None:
     """Test config flow for smile devices."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={CONF_SOURCE: SOURCE_ZEROCONF},
         data=TEST_DISCOVERY,
@@ -157,11 +157,11 @@ async def test_zeroconf_flow(
     assert result.get("step_id") == "user"
     assert "flow_id" in result
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_PASSWORD: TEST_PASSWORD},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2.get("type") is FlowResultType.CREATE_ENTRY
     assert result2.get("title") == "Test Smile Name"
@@ -179,12 +179,12 @@ async def test_zeroconf_flow(
 
 
 async def test_zeroconf_flow_stretch(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_smile_config_flow: MagicMock,
 ) -> None:
     """Test config flow for stretch devices."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={CONF_SOURCE: SOURCE_ZEROCONF},
         data=TEST_DISCOVERY2,
@@ -194,11 +194,11 @@ async def test_zeroconf_flow_stretch(
     assert result.get("step_id") == "user"
     assert "flow_id" in result
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_PASSWORD: TEST_PASSWORD},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2.get("type") is FlowResultType.CREATE_ENTRY
     assert result2.get("title") == "Test Smile Name"
@@ -214,7 +214,7 @@ async def test_zeroconf_flow_stretch(
 
 
 async def test_zercoconf_discovery_update_configuration(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_smile_config_flow: MagicMock,
 ) -> None:
@@ -229,13 +229,13 @@ async def test_zercoconf_discovery_update_configuration(
         },
         unique_id=TEST_HOSTNAME,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     assert entry.data[CONF_HOST] == "0.0.0.0"
 
     # Test that an invalid discovery doesn't update the entry
     mock_smile_config_flow.connect.side_effect = ConnectionFailedError
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={CONF_SOURCE: SOURCE_ZEROCONF},
         data=TEST_DISCOVERY,
@@ -245,7 +245,7 @@ async def test_zercoconf_discovery_update_configuration(
     assert entry.data[CONF_HOST] == "0.0.0.0"
 
     mock_smile_config_flow.connect.side_effect = None
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={CONF_SOURCE: SOURCE_ZEROCONF},
         data=TEST_DISCOVERY,
@@ -268,14 +268,14 @@ async def test_zercoconf_discovery_update_configuration(
     ],
 )
 async def test_flow_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_smile_config_flow: MagicMock,
     side_effect: Exception,
     reason: str,
 ) -> None:
     """Test we handle each exception error."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={CONF_SOURCE: SOURCE_USER},
     )
@@ -286,7 +286,7 @@ async def test_flow_errors(
 
     mock_smile_config_flow.connect.side_effect = side_effect
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_HOST: TEST_HOST, CONF_PASSWORD: TEST_PASSWORD},
     )
@@ -299,7 +299,7 @@ async def test_flow_errors(
     assert len(mock_smile_config_flow.connect.mock_calls) == 1
 
     mock_smile_config_flow.connect.side_effect = None
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_HOST: TEST_HOST, CONF_PASSWORD: TEST_PASSWORD},
     )
@@ -318,7 +318,7 @@ async def test_flow_errors(
 
 
 async def test_user_abort_existing_anna(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_smile_config_flow: MagicMock,
 ) -> None:
@@ -333,27 +333,27 @@ async def test_user_abort_existing_anna(
         },
         unique_id=TEST_SMILE_HOST,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={CONF_SOURCE: SOURCE_USER}
     )
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_HOST: TEST_HOST,
             CONF_PASSWORD: TEST_PASSWORD,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2.get("type") is FlowResultType.ABORT
     assert result2.get("reason") == "already_configured"
 
 
 async def test_zeroconf_abort_existing_anna(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_smile_config_flow: MagicMock,
 ) -> None:
@@ -368,9 +368,9 @@ async def test_zeroconf_abort_existing_anna(
         },
         unique_id=TEST_HOSTNAME,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={CONF_SOURCE: SOURCE_ZEROCONF},
         data=TEST_DISCOVERY_ANNA,
@@ -381,12 +381,12 @@ async def test_zeroconf_abort_existing_anna(
 
 
 async def test_zeroconf_abort_anna_with_existing_config_entries(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_smile_adam: MagicMock,
     init_integration: MockConfigEntry,
 ) -> None:
     """Test we abort Anna discovery with existing config entries."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={CONF_SOURCE: SOURCE_ZEROCONF},
         data=TEST_DISCOVERY_ANNA,
@@ -395,9 +395,9 @@ async def test_zeroconf_abort_anna_with_existing_config_entries(
     assert result.get("reason") == "anna_with_adam"
 
 
-async def test_zeroconf_abort_anna_with_adam(hass: HomeAssistant) -> None:
+async def test_zeroconf_abort_anna_with_adam(menuai: menuai) -> None:
     """Test we abort Anna discovery when an Adam is also discovered."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={CONF_SOURCE: SOURCE_ZEROCONF},
         data=TEST_DISCOVERY_ANNA,
@@ -405,12 +405,12 @@ async def test_zeroconf_abort_anna_with_adam(hass: HomeAssistant) -> None:
     assert result.get("type") is FlowResultType.FORM
     assert result.get("step_id") == "user"
 
-    flows_in_progress = hass.config_entries.flow._handler_progress_index[DOMAIN]
+    flows_in_progress = menuai.config_entries.flow._handler_progress_index[DOMAIN]
     assert len(flows_in_progress) == 1
     assert list(flows_in_progress)[0].product == "smile_thermo"
 
     # Discover Adam, Anna should be aborted and no longer present
-    result2 = await hass.config_entries.flow.async_init(
+    result2 = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={CONF_SOURCE: SOURCE_ZEROCONF},
         data=TEST_DISCOVERY_ADAM,
@@ -419,12 +419,12 @@ async def test_zeroconf_abort_anna_with_adam(hass: HomeAssistant) -> None:
     assert result2.get("type") is FlowResultType.FORM
     assert result2.get("step_id") == "user"
 
-    flows_in_progress = hass.config_entries.flow._handler_progress_index[DOMAIN]
+    flows_in_progress = menuai.config_entries.flow._handler_progress_index[DOMAIN]
     assert len(flows_in_progress) == 1
     assert list(flows_in_progress)[0].product == "smile_open_therm"
 
     # Discover Anna again, Anna should be aborted directly
-    result3 = await hass.config_entries.flow.async_init(
+    result3 = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={CONF_SOURCE: SOURCE_ZEROCONF},
         data=TEST_DISCOVERY_ANNA,
@@ -433,37 +433,37 @@ async def test_zeroconf_abort_anna_with_adam(hass: HomeAssistant) -> None:
     assert result3.get("reason") == "anna_with_adam"
 
     # Adam should still be there
-    flows_in_progress = hass.config_entries.flow._handler_progress_index[DOMAIN]
+    flows_in_progress = menuai.config_entries.flow._handler_progress_index[DOMAIN]
     assert len(flows_in_progress) == 1
     assert list(flows_in_progress)[0].product == "smile_open_therm"
 
 
 async def _start_reconfigure_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     host_ip: str,
 ) -> ConfigFlowResult:
     """Initialize a reconfigure flow."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    reconfigure_result = await mock_config_entry.start_reconfigure_flow(hass)
+    reconfigure_result = await mock_config_entry.start_reconfigure_flow(menuai)
 
     assert reconfigure_result["type"] is FlowResultType.FORM
     assert reconfigure_result["step_id"] == "reconfigure"
 
-    return await hass.config_entries.flow.async_configure(
+    return await menuai.config_entries.flow.async_configure(
         reconfigure_result["flow_id"], {CONF_HOST: host_ip}
     )
 
 
 async def test_reconfigure_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_smile_adam: AsyncMock,
     mock_setup_entry: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test reconfigure flow."""
-    result = await _start_reconfigure_flow(hass, mock_config_entry, TEST_HOST)
+    result = await _start_reconfigure_flow(menuai, mock_config_entry, TEST_HOST)
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reconfigure_successful"
@@ -472,7 +472,7 @@ async def test_reconfigure_flow(
 
 
 async def test_reconfigure_flow_smile_mismatch(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_smile_adam: AsyncMock,
     mock_setup_entry: AsyncMock,
     mock_config_entry: MockConfigEntry,
@@ -480,7 +480,7 @@ async def test_reconfigure_flow_smile_mismatch(
     """Test reconfigure flow aborts on other Smile ID."""
     mock_smile_adam.smile_hostname = TEST_SMILE_HOST
 
-    result = await _start_reconfigure_flow(hass, mock_config_entry, TEST_HOST)
+    result = await _start_reconfigure_flow(menuai, mock_config_entry, TEST_HOST)
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "not_the_same_smile"
@@ -498,7 +498,7 @@ async def test_reconfigure_flow_smile_mismatch(
     ],
 )
 async def test_reconfigure_flow_connect_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_smile_adam: AsyncMock,
     mock_config_entry: MockConfigEntry,
     side_effect: Exception,
@@ -508,7 +508,7 @@ async def test_reconfigure_flow_connect_errors(
 
     mock_smile_adam.connect.side_effect = side_effect
 
-    result = await _start_reconfigure_flow(hass, mock_config_entry, TEST_HOST)
+    result = await _start_reconfigure_flow(menuai, mock_config_entry, TEST_HOST)
 
     assert result.get("type") is FlowResultType.FORM
     assert result.get("errors") == {"base": reason}
@@ -516,7 +516,7 @@ async def test_reconfigure_flow_connect_errors(
 
     mock_smile_adam.connect.side_effect = None
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {CONF_HOST: TEST_HOST}
     )
 

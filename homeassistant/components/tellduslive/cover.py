@@ -2,12 +2,12 @@
 
 from typing import Any
 
-from homeassistant.components import cover
-from homeassistant.components.cover import CoverEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components import cover
+from menuai.components.cover import CoverEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import TelldusLiveClient
 from .const import DOMAIN, TELLDUS_DISCOVERY_NEW
@@ -15,7 +15,7 @@ from .entity import TelldusLiveEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -23,11 +23,11 @@ async def async_setup_entry(
 
     async def async_discover_cover(device_id):
         """Discover and add a discovered sensor."""
-        client: TelldusLiveClient = hass.data[DOMAIN]
+        client: TelldusLiveClient = menuai.data[DOMAIN]
         async_add_entities([TelldusLiveCover(client, device_id)])
 
     async_dispatcher_connect(
-        hass,
+        menuai,
         TELLDUS_DISCOVERY_NEW.format(cover.DOMAIN, DOMAIN),
         async_discover_cover,
     )

@@ -1,15 +1,15 @@
 """The tests for the KMtronic component."""
 
-from homeassistant.components.kmtronic.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
+from menuai.components.kmtronic.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 from tests.test_util.aiohttp import AiohttpClientMocker
 
 
 async def test_unload_config_entry(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test entry unloading."""
 
@@ -21,25 +21,25 @@ async def test_unload_config_entry(
             "password": "admin",
         },
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     aioclient_mock.get(
         "http://1.1.1.1/status.xml",
         text="<response><relay0>0</relay0><relay1>0</relay1></response>",
     )
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
-    await hass.config_entries.async_unload(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.NOT_LOADED
 
 
 async def test_config_entry_not_ready(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Tests configuration entry not ready."""
 
@@ -56,8 +56,8 @@ async def test_config_entry_not_ready(
             "password": "bar",
         },
     )
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.SETUP_RETRY

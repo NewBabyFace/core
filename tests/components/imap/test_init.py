@@ -8,14 +8,14 @@ from unittest.mock import AsyncMock, MagicMock, call, patch
 from aioimaplib import AUTH, NONAUTH, SELECTED, AioImapException, Response
 import pytest
 
-from homeassistant.components.imap import DOMAIN
-from homeassistant.components.imap.const import CONF_CHARSET
-from homeassistant.components.imap.errors import InvalidAuth, InvalidFolder
-from homeassistant.components.sensor import SensorStateClass
-from homeassistant.const import STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.util.dt import utcnow
+from menuai.components.imap import DOMAIN
+from menuai.components.imap.const import CONF_CHARSET
+from menuai.components.imap.errors import InvalidAuth, InvalidFolder
+from menuai.components.sensor import SensorStateClass
+from menuai.const import STATE_UNAVAILABLE
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
+from menuai.util.dt import utcnow
 
 from .const import (
     BAD_RESPONSE,
@@ -59,7 +59,7 @@ from tests.common import MockConfigEntry, async_capture_events, async_fire_time_
 )
 @pytest.mark.parametrize("imap_has_capability", [True, False], ids=["push", "poll"])
 async def test_entry_startup_and_unload(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_imap_protocol: MagicMock,
     cipher_list: str | None,
     verify_ssl: bool | None,
@@ -75,10 +75,10 @@ async def test_entry_startup_and_unload(
         config["enable_push"] = enable_push
 
     config_entry = MockConfigEntry(domain=DOMAIN, data=config)
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
-    assert await hass.config_entries.async_unload(config_entry.entry_id)
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
+    assert await menuai.config_entries.async_unload(config_entry.entry_id)
 
 
 @pytest.mark.parametrize(
@@ -90,19 +90,19 @@ async def test_entry_startup_and_unload(
     ],
 )
 async def test_entry_startup_fails(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_imap_protocol: MagicMock,
     effect: Exception,
 ) -> None:
     """Test imap entry startup fails on invalid auth or folder."""
     config_entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG)
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.imap.connect_to_server",
+        "menuai.components.imap.connect_to_server",
         side_effect=effect,
     ):
-        assert await hass.config_entries.async_setup(config_entry.entry_id) is False
+        assert await menuai.config_entries.async_setup(config_entry.entry_id) is False
 
 
 @pytest.mark.parametrize("imap_search", [TEST_SEARCH_RESPONSE])
@@ -140,21 +140,21 @@ async def test_entry_startup_fails(
 @pytest.mark.parametrize("imap_has_capability", [True, False], ids=["push", "poll"])
 @pytest.mark.parametrize("charset", ["utf-8", "us-ascii"], ids=["utf-8", "us-ascii"])
 async def test_receiving_message_successfully(
-    hass: HomeAssistant, mock_imap_protocol: MagicMock, valid_date: bool, charset: str
+    menuai: menuai, mock_imap_protocol: MagicMock, valid_date: bool, charset: str
 ) -> None:
     """Test receiving a message successfully."""
-    event_called = async_capture_events(hass, "imap_content")
+    event_called = async_capture_events(menuai, "imap_content")
 
     config = MOCK_CONFIG.copy()
     config[CONF_CHARSET] = charset
     config_entry = MockConfigEntry(domain=DOMAIN, data=config)
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
     # Make sure we have had one update (when polling)
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=5))
-    await hass.async_block_till_done()
-    state = hass.states.get("sensor.imap_email_email_com_messages")
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=5))
+    await menuai.async_block_till_done()
+    state = menuai.states.get("sensor.imap_email_email_com_messages")
     # we should have received one message
     assert state is not None
     assert state.state == "1"
@@ -188,19 +188,19 @@ async def test_receiving_message_successfully(
 )
 @pytest.mark.parametrize("imap_has_capability", [True, False], ids=["push", "poll"])
 async def test_receiving_message_with_invalid_encoding(
-    hass: HomeAssistant, mock_imap_protocol: MagicMock
+    menuai: menuai, mock_imap_protocol: MagicMock
 ) -> None:
     """Test receiving a message successfully."""
-    event_called = async_capture_events(hass, "imap_content")
+    event_called = async_capture_events(menuai, "imap_content")
 
     config_entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG)
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
     # Make sure we have had one update (when polling)
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=5))
-    await hass.async_block_till_done()
-    state = hass.states.get("sensor.imap_email_email_com_messages")
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=5))
+    await menuai.async_block_till_done()
+    state = menuai.states.get("sensor.imap_email_email_com_messages")
     # we should have received one message
     assert state is not None
     assert state.state == "1"
@@ -223,19 +223,19 @@ async def test_receiving_message_with_invalid_encoding(
 @pytest.mark.parametrize("imap_fetch", [TEST_FETCH_RESPONSE_NO_SUBJECT_TO_FROM])
 @pytest.mark.parametrize("imap_has_capability", [True, False], ids=["push", "poll"])
 async def test_receiving_message_no_subject_to_from(
-    hass: HomeAssistant, mock_imap_protocol: MagicMock
+    menuai: menuai, mock_imap_protocol: MagicMock
 ) -> None:
     """Test receiving a message successfully without subject, to and from in body."""
-    event_called = async_capture_events(hass, "imap_content")
+    event_called = async_capture_events(menuai, "imap_content")
 
     config_entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG)
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
     # Make sure we have had one update (when polling)
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=5))
-    await hass.async_block_till_done()
-    state = hass.states.get("sensor.imap_email_email_com_messages")
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=5))
+    await menuai.async_block_till_done()
+    state = menuai.states.get("sensor.imap_email_email_com_messages")
     # we should have received one message
     assert state is not None
     assert state.state == "1"
@@ -263,15 +263,15 @@ async def test_receiving_message_no_subject_to_from(
     ("imap_login_state", "success"), [(AUTH, True), (NONAUTH, False)]
 )
 async def test_initial_authentication_error(
-    hass: HomeAssistant, mock_imap_protocol: MagicMock, success: bool
+    menuai: menuai, mock_imap_protocol: MagicMock, success: bool
 ) -> None:
     """Test authentication error when starting the entry."""
     config_entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG)
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id) == success
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id) == success
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.imap_email_email_com_messages")
+    state = menuai.states.get("sensor.imap_email_email_com_messages")
     assert (state is not None) == success
 
 
@@ -280,22 +280,22 @@ async def test_initial_authentication_error(
     ("imap_select_state", "success"), [(AUTH, False), (SELECTED, True)]
 )
 async def test_initial_invalid_folder_error(
-    hass: HomeAssistant, mock_imap_protocol: MagicMock, success: bool
+    menuai: menuai, mock_imap_protocol: MagicMock, success: bool
 ) -> None:
     """Test invalid folder error when starting the entry."""
     config_entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG)
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id) == success
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id) == success
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.imap_email_email_com_messages")
+    state = menuai.states.get("sensor.imap_email_email_com_messages")
     assert (state is not None) == success
 
 
-@patch("homeassistant.components.imap.coordinator.MAX_ERRORS", 1)
+@patch("menuai.components.imap.coordinator.MAX_ERRORS", 1)
 @pytest.mark.parametrize("imap_has_capability", [True, False], ids=["push", "poll"])
 async def test_late_authentication_retry(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     mock_imap_protocol: MagicMock,
 ) -> None:
@@ -307,12 +307,12 @@ async def test_late_authentication_retry(
     )
 
     config_entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG)
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
 
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=60))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=60))
+    await menuai.async_block_till_done()
 
     # Mock that the search fails, this will trigger
     # that the connection will be restarted
@@ -320,23 +320,23 @@ async def test_late_authentication_retry(
     mock_imap_protocol.search.return_value = Response(*BAD_RESPONSE)
     mock_imap_protocol.login.side_effect = Response(*BAD_RESPONSE)
 
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=60))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=60))
+    await menuai.async_block_till_done()
 
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=60))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=60))
+    await menuai.async_block_till_done()
     assert "Authentication failed, retrying" in caplog.text
 
     # we still should have an entity with an unavailable state
-    state = hass.states.get("sensor.imap_email_email_com_messages")
+    state = menuai.states.get("sensor.imap_email_email_com_messages")
     assert state is not None
     assert state.state == STATE_UNAVAILABLE
 
 
-@patch("homeassistant.components.imap.coordinator.MAX_ERRORS", 0)
+@patch("menuai.components.imap.coordinator.MAX_ERRORS", 0)
 @pytest.mark.parametrize("imap_has_capability", [True, False], ids=["push", "poll"])
 async def test_late_authentication_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     mock_imap_protocol: MagicMock,
 ) -> None:
@@ -348,12 +348,12 @@ async def test_late_authentication_error(
     )
 
     config_entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG)
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
 
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=60))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=60))
+    await menuai.async_block_till_done()
 
     # Mock that the search fails, this will trigger
     # that the connection will be restarted
@@ -361,22 +361,22 @@ async def test_late_authentication_error(
     mock_imap_protocol.search.return_value = Response(*BAD_RESPONSE)
     mock_imap_protocol.login.side_effect = Response(*BAD_RESPONSE)
 
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=60))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=60))
+    await menuai.async_block_till_done()
 
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=60))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=60))
+    await menuai.async_block_till_done()
     assert "Username or password incorrect, starting reauthentication" in caplog.text
 
     # we still should have an entity with an unavailable state
-    state = hass.states.get("sensor.imap_email_email_com_messages")
+    state = menuai.states.get("sensor.imap_email_email_com_messages")
     assert state is not None
     assert state.state == STATE_UNAVAILABLE
 
 
 @pytest.mark.parametrize("imap_has_capability", [True, False], ids=["push", "poll"])
 async def test_late_folder_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     mock_imap_protocol: MagicMock,
 ) -> None:
@@ -390,14 +390,14 @@ async def test_late_folder_error(
     )
 
     config_entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG)
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Make sure we have had at least one update (when polling)
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=60))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=60))
+    await menuai.async_block_till_done()
 
     # Mock that the search fails, this will trigger
     # that the connection will be restarted
@@ -406,14 +406,14 @@ async def test_late_folder_error(
     mock_imap_protocol.select.side_effect = Response(*BAD_RESPONSE)
 
     # Make sure we have had at least one update (when polling)
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=60))
-    await hass.async_block_till_done()
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=60))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=60))
+    await menuai.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=60))
+    await menuai.async_block_till_done()
     assert "Selected mailbox folder is invalid" in caplog.text
 
     # we still should have an entity with an unavailable state
-    state = hass.states.get("sensor.imap_email_email_com_messages")
+    state = menuai.states.get("sensor.imap_email_email_com_messages")
     assert state is not None
     assert state.state == STATE_UNAVAILABLE
 
@@ -428,21 +428,21 @@ async def test_late_folder_error(
     ids=["AioImapException", "TimeoutError"],
 )
 async def test_handle_cleanup_exception(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     mock_imap_protocol: MagicMock,
     imap_close: Exception,
 ) -> None:
     """Test handling an excepton during cleaning up."""
     config_entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG)
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
     # Make sure we have had one update (when polling)
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=5))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=5))
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.imap_email_email_com_messages")
+    state = menuai.states.get("sensor.imap_email_email_com_messages")
     # we should have an entity
     assert state is not None
     assert state.state == "0"
@@ -450,11 +450,11 @@ async def test_handle_cleanup_exception(
     # Fail cleaning up
     mock_imap_protocol.close.side_effect = imap_close
 
-    assert await hass.config_entries.async_unload(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_unload(config_entry.entry_id)
+    await menuai.async_block_till_done()
     assert "Error while cleaning up imap connection" in caplog.text
 
-    state = hass.states.get("sensor.imap_email_email_com_messages")
+    state = menuai.states.get("sensor.imap_email_email_com_messages")
 
     # we should have an entity with an unavailable state
     assert state is not None
@@ -471,7 +471,7 @@ async def test_handle_cleanup_exception(
     ids=["AioImapException", "TimeoutError"],
 )
 async def test_lost_connection_with_imap_push(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     mock_imap_protocol: MagicMock,
     imap_wait_server_push_exception: AioImapException | TimeoutError,
@@ -480,12 +480,12 @@ async def test_lost_connection_with_imap_push(
     # Mock an error in waiting for a pushed update
     mock_imap_protocol.wait_server_push.side_effect = imap_wait_server_push_exception
     config_entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG)
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
     assert "Lost imap.server.com (will attempt to reconnect after 10 s)" in caplog.text
 
-    state = hass.states.get("sensor.imap_email_email_com_messages")
+    state = menuai.states.get("sensor.imap_email_email_com_messages")
     # Our entity should keep its current state as this
     assert state is not None
     assert state.state == "0"
@@ -493,7 +493,7 @@ async def test_lost_connection_with_imap_push(
 
 @pytest.mark.parametrize("imap_has_capability", [True], ids=["push"])
 async def test_fetch_number_of_messages(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     mock_imap_protocol: MagicMock,
 ) -> None:
@@ -501,15 +501,15 @@ async def test_fetch_number_of_messages(
     # Mock an error in waiting for a pushed update
     mock_imap_protocol.search.return_value = Response(*BAD_RESPONSE)
     config_entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG)
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
     # Make sure we wait for the backoff time
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=30))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=30))
+    await menuai.async_block_till_done()
     assert "Invalid response for search" in caplog.text
 
-    state = hass.states.get("sensor.imap_email_email_com_messages")
+    state = menuai.states.get("sensor.imap_email_email_com_messages")
     # we should have an entity with an unavailable state
     assert state is not None
     assert state.state == STATE_UNAVAILABLE
@@ -528,7 +528,7 @@ async def test_fetch_number_of_messages(
 )
 @pytest.mark.parametrize("imap_has_capability", [True, False], ids=["push", "poll"])
 async def test_reset_last_message(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_imap_protocol: MagicMock,
     valid_date: bool,
     empty_search_reponse: tuple[str, list[bytes]],
@@ -553,16 +553,16 @@ async def test_reset_last_message(
     # Mock we wait till we push an update (needed for pushed coordinator)
     mock_imap_protocol.wait_server_push.side_effect = _sleep_till_event
 
-    event_called = async_capture_events(hass, "imap_content")
+    event_called = async_capture_events(menuai, "imap_content")
 
     config_entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG)
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
     # Make sure we have had one update (when polling)
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=5))
-    await hass.async_block_till_done()
-    state = hass.states.get("sensor.imap_email_email_com_messages")
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=5))
+    await menuai.async_block_till_done()
+    state = menuai.states.get("sensor.imap_email_email_com_messages")
     # We should have received one message
     assert state is not None
     assert state.state == "1"
@@ -586,14 +586,14 @@ async def test_reset_last_message(
     mock_imap_protocol.search.return_value = Response(*empty_search_reponse)
 
     # Make sure we have an update
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=30))
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=30))
 
     # Awake loop (needed for pushed coordinator)
     event.set()
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.imap_email_email_com_messages")
+    state = menuai.states.get("sensor.imap_email_email_com_messages")
     # We should have message
     assert state is not None
     assert state.state == "0"
@@ -603,19 +603,19 @@ async def test_reset_last_message(
     # Simulate an update where with the original message
     mock_imap_protocol.search.return_value = Response(*TEST_SEARCH_RESPONSE)
     # Make sure we have an update again with the same UID
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=30))
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=30))
 
     # Awake loop (needed for pushed coordinator)
     event.set()
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.imap_email_email_com_messages")
+    state = menuai.states.get("sensor.imap_email_email_com_messages")
     # We should have received one message
     assert state is not None
     assert state.state == "1"
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # One new event
     assert len(event_called) == 2
@@ -626,21 +626,21 @@ async def test_reset_last_message(
     "imap_fetch", [(TEST_FETCH_RESPONSE_TEXT_PLAIN)], ids=["plain"]
 )
 @pytest.mark.parametrize("imap_has_capability", [True, False], ids=["push", "poll"])
-@patch("homeassistant.components.imap.coordinator.MAX_EVENT_DATA_BYTES", 500)
+@patch("menuai.components.imap.coordinator.MAX_EVENT_DATA_BYTES", 500)
 async def test_event_skipped_message_too_large(
-    hass: HomeAssistant, mock_imap_protocol: MagicMock, caplog: pytest.LogCaptureFixture
+    menuai: menuai, mock_imap_protocol: MagicMock, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test skipping event when message is to large."""
-    event_called = async_capture_events(hass, "imap_content")
+    event_called = async_capture_events(menuai, "imap_content")
 
     config_entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG)
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
     # Make sure we have had one update (when polling)
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=5))
-    await hass.async_block_till_done()
-    state = hass.states.get("sensor.imap_email_email_com_messages")
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=5))
+    await menuai.async_block_till_done()
+    state = menuai.states.get("sensor.imap_email_email_com_messages")
     # We should have received one message
     assert state is not None
     assert state.state == "1"
@@ -654,23 +654,23 @@ async def test_event_skipped_message_too_large(
 )
 @pytest.mark.parametrize("imap_has_capability", [True, False], ids=["push", "poll"])
 async def test_message_is_truncated(
-    hass: HomeAssistant, mock_imap_protocol: MagicMock, caplog: pytest.LogCaptureFixture
+    menuai: menuai, mock_imap_protocol: MagicMock, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test truncating message text in event data."""
-    event_called = async_capture_events(hass, "imap_content")
+    event_called = async_capture_events(menuai, "imap_content")
 
     config = MOCK_CONFIG.copy()
 
     # Mock the max message size to test it is truncated
     config["max_message_size"] = 3
     config_entry = MockConfigEntry(domain=DOMAIN, data=config)
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
     # Make sure we have had one update (when polling)
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=5))
-    await hass.async_block_till_done()
-    state = hass.states.get("sensor.imap_email_email_com_messages")
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=5))
+    await menuai.async_block_till_done()
+    state = menuai.states.get("sensor.imap_email_email_com_messages")
     # We should have received one message
     assert state is not None
     assert state.state == "1"
@@ -687,25 +687,25 @@ async def test_message_is_truncated(
 @pytest.mark.parametrize("imap_has_capability", [True, False], ids=["push", "poll"])
 @pytest.mark.parametrize("event_message_data", [[], ["text"], ["text", "headers"]])
 async def test_message_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_imap_protocol: MagicMock,
     caplog: pytest.LogCaptureFixture,
     event_message_data: list,
 ) -> None:
     """Test with different message data."""
-    event_called = async_capture_events(hass, "imap_content")
+    event_called = async_capture_events(menuai, "imap_content")
 
     config = MOCK_CONFIG.copy()
     # Mock different message data
     config["event_message_data"] = event_message_data
     config_entry = MockConfigEntry(domain=DOMAIN, data=config)
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
     # Make sure we have had one update (when polling)
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=5))
-    await hass.async_block_till_done()
-    state = hass.states.get("sensor.imap_email_email_com_messages")
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=5))
+    await menuai.async_block_till_done()
+    state = menuai.states.get("sensor.imap_email_email_com_messages")
     # We should have received one message
     assert state is not None
     assert state.state == "1"
@@ -732,7 +732,7 @@ async def test_message_data(
     ids=["subject_test", "sender_filter", "body_filter", "template_error"],
 )
 async def test_custom_template(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_imap_protocol: MagicMock,
     caplog: pytest.LogCaptureFixture,
     custom_template: str,
@@ -740,18 +740,18 @@ async def test_custom_template(
     error: str | None,
 ) -> None:
     """Test the custom template event data."""
-    event_called = async_capture_events(hass, "imap_content")
+    event_called = async_capture_events(menuai, "imap_content")
 
     config = MOCK_CONFIG.copy()
     config["custom_event_data_template"] = custom_template
     config_entry = MockConfigEntry(domain=DOMAIN, data=config)
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
     # Make sure we have had one update (when polling)
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=5))
-    await hass.async_block_till_done()
-    state = hass.states.get("sensor.imap_email_email_com_messages")
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=5))
+    await menuai.async_block_till_done()
+    state = menuai.states.get("sensor.imap_email_email_com_messages")
     # we should have received one message
     assert state is not None
     assert state.state == "1"
@@ -785,24 +785,24 @@ async def test_custom_template(
     ids=["enforce_poll", "poll", "auto_push", "auto_poll"],
 )
 async def test_enforce_polling(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_imap_protocol: MagicMock,
     enable_push: bool,
     should_poll: True,
 ) -> None:
     """Test enforce polling."""
-    event_called = async_capture_events(hass, "imap_content")
+    event_called = async_capture_events(menuai, "imap_content")
     config = MOCK_CONFIG.copy()
     config["enable_push"] = enable_push
 
     config_entry = MockConfigEntry(domain=DOMAIN, data=config)
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
     # Make sure we have had one update (when polling)
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=5))
-    await hass.async_block_till_done()
-    state = hass.states.get("sensor.imap_email_email_com_messages")
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=5))
+    await menuai.async_block_till_done()
+    state = menuai.states.get("sensor.imap_email_email_com_messages")
     # we should have received one message
     assert state is not None
     assert state.state == "1"
@@ -830,19 +830,19 @@ async def test_enforce_polling(
     [(TEST_SEARCH_RESPONSE, TEST_FETCH_RESPONSE_TEXT_PLAIN)],
 )
 @pytest.mark.parametrize("imap_has_capability", [True, False], ids=["push", "poll"])
-async def test_services(hass: HomeAssistant, mock_imap_protocol: MagicMock) -> None:
+async def test_services(menuai: menuai, mock_imap_protocol: MagicMock) -> None:
     """Test receiving a message successfully."""
-    event_called = async_capture_events(hass, "imap_content")
+    event_called = async_capture_events(menuai, "imap_content")
 
     config = MOCK_CONFIG.copy()
     config_entry = MockConfigEntry(domain=DOMAIN, data=config)
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
     # Make sure we have had one update (when polling)
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=5))
-    await hass.async_block_till_done()
-    state = hass.states.get("sensor.imap_email_email_com_messages")
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=5))
+    await menuai.async_block_till_done()
+    state = menuai.states.get("sensor.imap_email_email_com_messages")
     # we should have received one message
     assert state is not None
     assert state.state == "1"
@@ -862,7 +862,7 @@ async def test_services(hass: HomeAssistant, mock_imap_protocol: MagicMock) -> N
 
     # Test seen service
     data = {"entry": config_entry.entry_id, "uid": "1"}
-    await hass.services.async_call(DOMAIN, "seen", data, blocking=True)
+    await menuai.services.async_call(DOMAIN, "seen", data, blocking=True)
     mock_imap_protocol.store.assert_called_with("1", "+FLAGS (\\Seen)")
     mock_imap_protocol.store.reset_mock()
 
@@ -873,7 +873,7 @@ async def test_services(hass: HomeAssistant, mock_imap_protocol: MagicMock) -> N
         "seen": True,
         "target_folder": "Trash",
     }
-    await hass.services.async_call(DOMAIN, "move", data, blocking=True)
+    await menuai.services.async_call(DOMAIN, "move", data, blocking=True)
     mock_imap_protocol.store.assert_has_calls(
         [call("1", "+FLAGS (\\Seen)"), call("1", "+FLAGS (\\Deleted)")]
     )
@@ -885,13 +885,13 @@ async def test_services(hass: HomeAssistant, mock_imap_protocol: MagicMock) -> N
 
     # Test delete service
     data = {"entry": config_entry.entry_id, "uid": "1"}
-    await hass.services.async_call(DOMAIN, "delete", data, blocking=True)
+    await menuai.services.async_call(DOMAIN, "delete", data, blocking=True)
     mock_imap_protocol.store.assert_called_with("1", "+FLAGS (\\Deleted)")
     mock_imap_protocol.protocol.expunge.assert_called_once()
 
     # Test fetch service
     data = {"entry": config_entry.entry_id, "uid": "1"}
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         DOMAIN, "fetch", data, blocking=True, return_response=True
     )
     mock_imap_protocol.fetch.assert_called_with("1", "BODY.PEEK[]")
@@ -903,7 +903,7 @@ async def test_services(hass: HomeAssistant, mock_imap_protocol: MagicMock) -> N
     # Test with invalid entry_id
     data = {"entry": "invalid", "uid": "1"}
     with pytest.raises(ServiceValidationError) as exc:
-        await hass.services.async_call(DOMAIN, "seen", data, blocking=True)
+        await menuai.services.async_call(DOMAIN, "seen", data, blocking=True)
     assert exc.value.translation_domain == DOMAIN
     assert exc.value.translation_key == "invalid_entry"
 
@@ -918,11 +918,11 @@ async def test_services(hass: HomeAssistant, mock_imap_protocol: MagicMock) -> N
     }
     for translation_key, attrs in exceptions.items():
         with patch(
-            "homeassistant.components.imap.connect_to_server", side_effect=attrs["exc"]
+            "menuai.components.imap.connect_to_server", side_effect=attrs["exc"]
         ):
             data = {"entry": config_entry.entry_id, "uid": "1"}
             with pytest.raises(ServiceValidationError) as exc:
-                await hass.services.async_call(DOMAIN, "seen", data, blocking=True)
+                await menuai.services.async_call(DOMAIN, "seen", data, blocking=True)
             assert exc.value.translation_domain == DOMAIN
             assert exc.value.translation_key == translation_key
             assert (
@@ -959,7 +959,7 @@ async def test_services(hass: HomeAssistant, mock_imap_protocol: MagicMock) -> N
                 side_effect=AioImapException("Bla"),
             ),
         ):
-            await hass.services.async_call(
+            await menuai.services.async_call(
                 DOMAIN, service, data, blocking=True, return_response=response
             )
         assert exc.value.translation_domain == DOMAIN
@@ -974,7 +974,7 @@ async def test_services(hass: HomeAssistant, mock_imap_protocol: MagicMock) -> N
                 return_value=Response("BAD", [b"Bla"]),
             ),
         ):
-            await hass.services.async_call(
+            await menuai.services.async_call(
                 DOMAIN, service, data, blocking=True, return_response=response
             )
         assert exc.value.translation_domain == DOMAIN

@@ -14,9 +14,9 @@ from plexauth import PlexAuth
 import requests.exceptions
 import voluptuous as vol
 
-from homeassistant.components.http import KEY_HASS, HomeAssistantView
-from homeassistant.components.media_player import DOMAIN as MP_DOMAIN
-from homeassistant.config_entries import (
+from menuai.components.http import KEY_menuai, menuaiView
+from menuai.components.media_player import DOMAIN as MP_DOMAIN
+from menuai.config_entries import (
     SOURCE_INTEGRATION_DISCOVERY,
     SOURCE_REAUTH,
     ConfigEntry,
@@ -24,7 +24,7 @@ from homeassistant.config_entries import (
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_CLIENT_ID,
     CONF_HOST,
     CONF_PORT,
@@ -34,9 +34,9 @@ from homeassistant.const import (
     CONF_URL,
     CONF_VERIFY_SSL,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv, discovery_flow, http
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv, discovery_flow, http
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
     AUTH_CALLBACK_NAME,
@@ -69,21 +69,21 @@ _LOGGER = logging.getLogger(__package__)
 
 
 @callback
-def configured_servers(hass: HomeAssistant) -> set[str]:
+def configured_servers(menuai: menuai) -> set[str]:
     """Return a set of the configured Plex servers."""
     return {
         entry.data[CONF_SERVER_IDENTIFIER]
-        for entry in hass.config_entries.async_entries(DOMAIN)
+        for entry in menuai.config_entries.async_entries(DOMAIN)
     }
 
 
-async def async_discover(hass: HomeAssistant) -> None:
+async def async_discover(menuai: menuai) -> None:
     """Scan for available Plex servers."""
     gdm = GDM()
-    await hass.async_add_executor_job(gdm.scan)
+    await menuai.async_add_executor_job(gdm.scan)
     for server_data in gdm.entries:
         discovery_flow.async_create_flow(
-            hass,
+            menuai,
             DOMAIN,
             context={CONF_SOURCE: SOURCE_INTEGRATION_DISCOVERY},
             data=server_data,
@@ -205,9 +205,9 @@ class PlexFlowHandler(ConfigFlow, domain=DOMAIN):
         errors = {}
         self.current_login = server_config
 
-        plex_server = PlexServer(self.hass, server_config)
+        plex_server = PlexServer(self.menuai, server_config)
         try:
-            await self.hass.async_add_executor_job(plex_server.connect)
+            await self.menuai.async_add_executor_job(plex_server.connect)
 
         except NoServersFound:
             _LOGGER.error("No servers linked to Plex account")
@@ -264,9 +264,9 @@ class PlexFlowHandler(ConfigFlow, domain=DOMAIN):
         if self.context[CONF_SOURCE] == SOURCE_REAUTH:
             if TYPE_CHECKING:
                 assert entry
-            self.hass.config_entries.async_update_entry(entry, data=data)
+            self.menuai.config_entries.async_update_entry(entry, data=data)
             _LOGGER.debug("Updated config entry for %s", plex_server.friendly_name)
-            await self.hass.config_entries.async_reload(entry.entry_id)
+            await self.menuai.config_entries.async_reload(entry.entry_id)
             return self.async_abort(reason="reauth_successful")
 
         self._abort_if_unique_id_configured()
@@ -284,7 +284,7 @@ class PlexFlowHandler(ConfigFlow, domain=DOMAIN):
             config[CONF_SERVER_IDENTIFIER] = user_input[CONF_SERVER_IDENTIFIER]
             return await self.async_step_server_validate(config)
 
-        configured = configured_servers(self.hass)
+        configured = configured_servers(self.menuai)
         available_servers = {
             server_id: f"{name} ({owner})" if owner else name
             for (name, server_id, owner) in self.available_servers
@@ -322,25 +322,25 @@ class PlexFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def _async_step_plex_website_auth(self) -> ConfigFlowResult:
         """Begin external auth flow on Plex website."""
-        self.hass.http.register_view(PlexAuthorizationCallbackView)
+        self.menuai.http.register_view(PlexAuthorizationCallbackView)
         if (req := http.current_request.get()) is None:
             raise RuntimeError("No current request in context")
-        if (hass_url := req.headers.get(HEADER_FRONTEND_BASE)) is None:
+        if (menuai_url := req.headers.get(HEADER_FRONTEND_BASE)) is None:
             raise RuntimeError("No header in request")
 
-        headers = {"Origin": hass_url}
+        headers = {"Origin": menuai_url}
         payload = {
             "X-Plex-Device-Name": X_PLEX_DEVICE_NAME,
             "X-Plex-Version": X_PLEX_VERSION,
             "X-Plex-Product": X_PLEX_PRODUCT,
-            "X-Plex-Device": self.hass.config.location_name,
+            "X-Plex-Device": self.menuai.config.location_name,
             "X-Plex-Platform": X_PLEX_PLATFORM,
             "X-Plex-Model": "Plex OAuth",
         }
-        session = async_get_clientsession(self.hass)
+        session = async_get_clientsession(self.menuai)
         self.plexauth = PlexAuth(payload, session, headers)
         await self.plexauth.initiate_auth()
-        forward_url = f"{hass_url}{AUTH_CALLBACK_PATH}?flow_id={self.flow_id}"
+        forward_url = f"{menuai_url}{AUTH_CALLBACK_PATH}?flow_id={self.flow_id}"
         auth_url = self.plexauth.auth_url(forward_url)
         return self.async_external_step(step_id="obtain_token", url=auth_url)
 
@@ -394,7 +394,7 @@ class PlexOptionsFlowHandler(OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Manage the Plex media_player options."""
-        plex_server = get_plex_server(self.hass, self.server_id)
+        plex_server = get_plex_server(self.menuai, self.server_id)
 
         if user_input is not None:
             self.options[MP_DOMAIN][CONF_USE_EPISODE_ART] = user_input[
@@ -460,7 +460,7 @@ class PlexOptionsFlowHandler(OptionsFlow):
         )
 
 
-class PlexAuthorizationCallbackView(HomeAssistantView):
+class PlexAuthorizationCallbackView(menuaiView):
     """Handle callback from external auth."""
 
     url = AUTH_CALLBACK_PATH
@@ -469,8 +469,8 @@ class PlexAuthorizationCallbackView(HomeAssistantView):
 
     async def get(self, request):
         """Receive authorization confirmation."""
-        hass = request.app[KEY_HASS]
-        await hass.config_entries.flow.async_configure(
+        menuai = request.app[KEY_menuai]
+        await menuai.config_entries.flow.async_configure(
             flow_id=request.query["flow_id"], user_input=None
         )
 

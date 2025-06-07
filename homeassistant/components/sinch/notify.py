@@ -14,17 +14,17 @@ from clx.xms.exceptions import (
 )
 import voluptuous as vol
 
-from homeassistant.components.notify import (
+from menuai.components.notify import (
     ATTR_DATA,
     ATTR_MESSAGE,
     ATTR_TARGET,
     PLATFORM_SCHEMA as NOTIFY_PLATFORM_SCHEMA,
     BaseNotificationService,
 )
-from homeassistant.const import CONF_API_KEY, CONF_SENDER
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_API_KEY, CONF_SENDER
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 DOMAIN = "sinch"
 
@@ -33,7 +33,7 @@ CONF_DEFAULT_RECIPIENTS = "default_recipients"
 
 ATTR_SENDER = CONF_SENDER
 
-DEFAULT_SENDER = "Home Assistant"
+DEFAULT_SENDER = "MenuAI"
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ PLATFORM_SCHEMA = NOTIFY_PLATFORM_SCHEMA.extend(
 
 
 def get_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> SinchNotificationService:

@@ -8,12 +8,12 @@ import voluptuous as vol
 from zwave_js_server.const import CommandClass
 from zwave_js_server.model.value import ConfigurationValue
 
-from homeassistant.components.device_automation import InvalidDeviceAutomationConfig
-from homeassistant.const import CONF_CONDITION, CONF_DEVICE_ID, CONF_DOMAIN, CONF_TYPE
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import condition, config_validation as cv
-from homeassistant.helpers.typing import ConfigType, TemplateVarsType
+from menuai.components.device_automation import InvalidDeviceAutomationConfig
+from menuai.const import CONF_CONDITION, CONF_DEVICE_ID, CONF_DOMAIN, CONF_TYPE
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import condition, config_validation as cv
+from menuai.helpers.typing import ConfigType, TemplateVarsType
 
 from .config_validation import VALUE_SCHEMA
 from .const import (
@@ -92,7 +92,7 @@ CONDITION_SCHEMA = vol.All(
 
 
 async def async_validate_condition_config(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> ConfigType:
     """Validate config."""
     config = CONDITION_SCHEMA(config)
@@ -101,7 +101,7 @@ async def async_validate_condition_config(
     # validate the value without knowing the state of the device
     try:
         bypass_dynamic_config_validation = async_bypass_dynamic_config_validation(
-            hass, config[CONF_DEVICE_ID]
+            menuai, config[CONF_DEVICE_ID]
         )
     except ValueError as err:
         raise InvalidDeviceAutomationConfig(
@@ -113,7 +113,7 @@ async def async_validate_condition_config(
 
     if config[CONF_TYPE] == VALUE_TYPE:
         try:
-            node = async_get_node_from_device_id(hass, config[CONF_DEVICE_ID])
+            node = async_get_node_from_device_id(menuai, config[CONF_DEVICE_ID])
             get_zwave_value_from_config(node, config)
         except vol.Invalid as err:
             raise InvalidDeviceAutomationConfig(err.msg) from err
@@ -122,7 +122,7 @@ async def async_validate_condition_config(
 
 
 async def async_get_conditions(
-    hass: HomeAssistant, device_id: str
+    menuai: menuai, device_id: str
 ) -> list[dict[str, str]]:
     """List device conditions for Z-Wave JS devices."""
     conditions: list[dict] = []
@@ -131,7 +131,7 @@ async def async_get_conditions(
         CONF_DEVICE_ID: device_id,
         CONF_DOMAIN: DOMAIN,
     }
-    node = async_get_node_from_device_id(hass, device_id)
+    node = async_get_node_from_device_id(menuai, device_id)
 
     if node.client.driver and node.client.driver.controller.own_node == node:
         return conditions
@@ -160,25 +160,25 @@ async def async_get_conditions(
 
 @callback
 def async_condition_from_config(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> condition.ConditionCheckerType:
     """Create a function to test a device condition."""
     condition_type = config[CONF_TYPE]
     device_id = config[CONF_DEVICE_ID]
 
     @callback
-    def test_node_status(hass: HomeAssistant, variables: TemplateVarsType) -> bool:
+    def test_node_status(menuai: menuai, variables: TemplateVarsType) -> bool:
         """Test if node status is a certain state."""
-        node = async_get_node_from_device_id(hass, device_id)
+        node = async_get_node_from_device_id(menuai, device_id)
         return bool(node.status.name.lower() == config[CONF_STATUS])
 
     if condition_type == NODE_STATUS_TYPE:
         return test_node_status
 
     @callback
-    def test_config_parameter(hass: HomeAssistant, variables: TemplateVarsType) -> bool:
+    def test_config_parameter(menuai: menuai, variables: TemplateVarsType) -> bool:
         """Test if config parameter is a certain state."""
-        node = async_get_node_from_device_id(hass, device_id)
+        node = async_get_node_from_device_id(menuai, device_id)
         config_value = cast(ConfigurationValue, node.values[config[CONF_VALUE_ID]])
         return bool(config_value.value == config[ATTR_VALUE])
 
@@ -186,24 +186,24 @@ def async_condition_from_config(
         return test_config_parameter
 
     @callback
-    def test_value(hass: HomeAssistant, variables: TemplateVarsType) -> bool:
+    def test_value(menuai: menuai, variables: TemplateVarsType) -> bool:
         """Test if value is a certain state."""
-        node = async_get_node_from_device_id(hass, device_id)
+        node = async_get_node_from_device_id(menuai, device_id)
         value = get_zwave_value_from_config(node, config)
         return bool(value.value == config[ATTR_VALUE])
 
     if condition_type == VALUE_TYPE:
         return test_value
 
-    raise HomeAssistantError(f"Unhandled condition type {condition_type}")
+    raise menuaiError(f"Unhandled condition type {condition_type}")
 
 
 async def async_get_condition_capabilities(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> dict[str, vol.Schema]:
     """List condition capabilities."""
     device_id = config[CONF_DEVICE_ID]
-    node = async_get_node_from_device_id(hass, device_id)
+    node = async_get_node_from_device_id(menuai, device_id)
 
     # Add additional fields to the automation trigger UI
     if config[CONF_TYPE] == CONFIG_PARAMETER_TYPE:

@@ -7,18 +7,18 @@ from typing import Any
 from pyisy.constants import COMMAND_FRIENDLY_NAME
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_ADDRESS,
     CONF_COMMAND,
     CONF_NAME,
     CONF_UNIT_OF_MEASUREMENT,
 )
-from homeassistant.core import HomeAssistant, ServiceCall, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.entity_platform import async_get_platforms
-from homeassistant.helpers.service import entity_service_call
-from homeassistant.helpers.typing import VolDictType
+from menuai.core import menuai, ServiceCall, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity import Entity
+from menuai.helpers.entity_platform import async_get_platforms
+from menuai.helpers.service import entity_service_call
+from menuai.helpers.typing import VolDictType
 
 from .const import _LOGGER, DOMAIN
 from .models import IsyConfigEntry
@@ -126,16 +126,16 @@ SERVICE_SEND_PROGRAM_COMMAND_SCHEMA = vol.All(
 )
 
 
-def async_get_entities(hass: HomeAssistant) -> dict[str, Entity]:
+def async_get_entities(menuai: menuai) -> dict[str, Entity]:
     """Get entities for a domain."""
     entities: dict[str, Entity] = {}
-    for platform in async_get_platforms(hass, DOMAIN):
+    for platform in async_get_platforms(menuai, DOMAIN):
         entities.update(platform.entities)
     return entities
 
 
 @callback
-def async_setup_services(hass: HomeAssistant) -> None:
+def async_setup_services(menuai: menuai) -> None:
     """Create and register services for the ISY integration."""
 
     async def async_send_program_command_service_handler(service: ServiceCall) -> None:
@@ -146,7 +146,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
         isy_name = service.data.get(CONF_ISY)
 
         config_entry: IsyConfigEntry
-        for config_entry in hass.config_entries.async_loaded_entries(DOMAIN):
+        for config_entry in menuai.config_entries.async_loaded_entries(DOMAIN):
             isy = config_entry.runtime_data.root
             if isy_name and isy_name != isy.conf["name"]:
                 continue
@@ -160,7 +160,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
                 return
         _LOGGER.error("Could not send program command; not found or enabled on the ISY")
 
-    hass.services.async_register(
+    menuai.services.async_register(
         domain=DOMAIN,
         service=SERVICE_SEND_PROGRAM_COMMAND,
         service_func=async_send_program_command_service_handler,
@@ -169,10 +169,10 @@ def async_setup_services(hass: HomeAssistant) -> None:
 
     async def _async_send_raw_node_command(call: ServiceCall) -> None:
         await entity_service_call(
-            hass, async_get_entities(hass), "async_send_raw_node_command", call
+            menuai, async_get_entities(menuai), "async_send_raw_node_command", call
         )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         domain=DOMAIN,
         service=SERVICE_SEND_RAW_NODE_COMMAND,
         schema=cv.make_entity_service_schema(SERVICE_SEND_RAW_NODE_COMMAND_SCHEMA),
@@ -181,10 +181,10 @@ def async_setup_services(hass: HomeAssistant) -> None:
 
     async def _async_send_node_command(call: ServiceCall) -> None:
         await entity_service_call(
-            hass, async_get_entities(hass), "async_send_node_command", call
+            menuai, async_get_entities(menuai), "async_send_node_command", call
         )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         domain=DOMAIN,
         service=SERVICE_SEND_NODE_COMMAND,
         schema=cv.make_entity_service_schema(SERVICE_SEND_NODE_COMMAND_SCHEMA),
@@ -193,10 +193,10 @@ def async_setup_services(hass: HomeAssistant) -> None:
 
     async def _async_get_zwave_parameter(call: ServiceCall) -> None:
         await entity_service_call(
-            hass, async_get_entities(hass), "async_get_zwave_parameter", call
+            menuai, async_get_entities(menuai), "async_get_zwave_parameter", call
         )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         domain=DOMAIN,
         service=SERVICE_GET_ZWAVE_PARAMETER,
         schema=cv.make_entity_service_schema(SERVICE_GET_ZWAVE_PARAMETER_SCHEMA),
@@ -205,10 +205,10 @@ def async_setup_services(hass: HomeAssistant) -> None:
 
     async def _async_set_zwave_parameter(call: ServiceCall) -> None:
         await entity_service_call(
-            hass, async_get_entities(hass), "async_set_zwave_parameter", call
+            menuai, async_get_entities(menuai), "async_set_zwave_parameter", call
         )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         domain=DOMAIN,
         service=SERVICE_SET_ZWAVE_PARAMETER,
         schema=cv.make_entity_service_schema(SERVICE_SET_ZWAVE_PARAMETER_SCHEMA),
@@ -217,10 +217,10 @@ def async_setup_services(hass: HomeAssistant) -> None:
 
     async def _async_rename_node(call: ServiceCall) -> None:
         await entity_service_call(
-            hass, async_get_entities(hass), "async_rename_node", call
+            menuai, async_get_entities(menuai), "async_rename_node", call
         )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         domain=DOMAIN,
         service=SERVICE_RENAME_NODE,
         schema=cv.make_entity_service_schema(SERVICE_RENAME_NODE_SCHEMA),

@@ -6,16 +6,16 @@ from aiohttp.test_utils import TestClient
 from defusedxml import ElementTree
 import pytest
 
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.typing import ClientSessionGenerator
 
 
 @pytest.fixture
 async def mock_http_client(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
 ) -> TestClient:
     """Set up test fixture."""
     config = {
@@ -32,8 +32,8 @@ async def mock_http_client(
         }
     }
 
-    await async_setup_component(hass, "rss_feed_template", config)
-    return await hass_client()
+    await async_setup_component(menuai, "rss_feed_template", config)
+    return await menuai_client()
 
 
 async def test_get_nonexistant_feed(mock_http_client) -> None:
@@ -42,11 +42,11 @@ async def test_get_nonexistant_feed(mock_http_client) -> None:
     assert resp.status == HTTPStatus.NOT_FOUND
 
 
-async def test_get_rss_feed(mock_http_client, hass: HomeAssistant) -> None:
+async def test_get_rss_feed(mock_http_client, menuai: menuai) -> None:
     """Test if we can retrieve the correct rss feed."""
-    hass.states.async_set("test.test1", "a_state_1")
-    hass.states.async_set("test.test2", "a_state_2")
-    hass.states.async_set("test.test3", "a_state_3")
+    menuai.states.async_set("test.test1", "a_state_1")
+    menuai.states.async_set("test.test2", "a_state_2")
+    menuai.states.async_set("test.test3", "a_state_3")
 
     resp = await mock_http_client.get("/api/rss_template/testfeed")
     assert resp.status == HTTPStatus.OK

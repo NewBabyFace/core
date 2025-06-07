@@ -17,15 +17,15 @@ from habiticalib import (
     TooManyRequestsError,
 )
 
-from homeassistant.components.button import (
+from menuai.components.button import (
     DOMAIN as BUTTON_DOMAIN,
     ButtonEntity,
     ButtonEntityDescription,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import ASSETS_URL, DOMAIN
 from .coordinator import (
@@ -278,7 +278,7 @@ CLASS_SKILLS: tuple[HabiticaButtonEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: HabiticaConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -293,7 +293,7 @@ async def async_setup_entry(
 
         nonlocal skills_added
         buttons = []
-        entity_registry = er.async_get(hass)
+        entity_registry = er.async_get(menuai)
 
         for description in CLASS_SKILLS:
             if (
@@ -335,7 +335,7 @@ class HabiticaButton(HabiticaBase, ButtonEntity):
         try:
             await self.entity_description.press_fn(self.coordinator)
         except TooManyRequestsError as e:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="setup_rate_limit_exception",
                 translation_placeholders={"retry_after": str(e.retry_after)},
@@ -346,13 +346,13 @@ class HabiticaButton(HabiticaBase, ButtonEntity):
                 translation_key="service_call_unallowed",
             ) from e
         except HabiticaException as e:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="service_call_exception",
                 translation_placeholders={"reason": e.error.message},
             ) from e
         except ClientError as e:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="service_call_exception",
                 translation_placeholders={"reason": str(e)},

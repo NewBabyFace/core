@@ -6,9 +6,9 @@ from typing import Any
 from freebox_api.exceptions import AuthorizationError, HttpRequestError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_PORT
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import DOMAIN
 from .router import get_api, get_hosts_list_if_supported
@@ -62,7 +62,7 @@ class FreeboxFlowHandler(ConfigFlow, domain=DOMAIN):
 
         errors = {}
 
-        fbx = await get_api(self.hass, self._data[CONF_HOST])
+        fbx = await get_api(self.menuai, self._data[CONF_HOST])
         try:
             # Open connection and check authentication
             await fbx.open(self._data[CONF_HOST], self._data[CONF_PORT])

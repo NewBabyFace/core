@@ -11,10 +11,10 @@ from gcal_sync.api import GoogleCalendarService
 from gcal_sync.exceptions import ApiException, ApiForbiddenException
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlowResult, OptionsFlow
-from homeassistant.core import callback
-from homeassistant.helpers import config_entry_oauth2_flow
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlowResult, OptionsFlow
+from menuai.core import callback
+from menuai.helpers import config_entry_oauth2_flow
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .api import (
     DEVICE_AUTH_CREDS,
@@ -54,9 +54,9 @@ class OAuth2FlowHandler(
     and may be limited/deprecated in the future similar to App/OOB Auth
     https://developers.googleblog.com/2022/02/making-oauth-flows-safer.html
 
-    Web Auth is the preferred method by Home Assistant and Google, and a benefit
+    Web Auth is the preferred method by MenuAI and Google, and a benefit
     is that the same credentials may be used across many Google integrations in
-    Home Assistant. Web Auth is now easier for user to setup using my.home-assistant.io
+    MenuAI. Web Auth is now easier for user to setup using my.home-assistant.io
     redirect urls.
 
     The Application Credentials integration does not currently record which type
@@ -123,7 +123,7 @@ class OAuth2FlowHandler(
                 calendar_access = FeatureAccess[reauth_options[CONF_CALENDAR_ACCESS]]
             try:
                 device_flow = await async_create_device_flow(
-                    self.hass,
+                    self.menuai,
                     self.flow_impl.client_id,
                     self.flow_impl.client_secret,
                     calendar_access,
@@ -141,7 +141,7 @@ class OAuth2FlowHandler(
             self._device_flow = device_flow
 
             exchange_finished_evt = asyncio.Event()
-            self._exchange_finished_task = self.hass.async_create_task(
+            self._exchange_finished_task = self.menuai.async_create_task(
                 exchange_finished_evt.wait()
             )
 
@@ -183,7 +183,7 @@ class OAuth2FlowHandler(
             )
         calendar_service = GoogleCalendarService(
             AccessTokenAuthImpl(
-                async_get_clientsession(self.hass), data["token"]["access_token"]
+                async_get_clientsession(self.menuai), data["token"]["access_token"]
             )
         )
         try:
@@ -204,7 +204,7 @@ class OAuth2FlowHandler(
             return self.async_abort(reason="cannot_connect")
         await self.async_set_unique_id(primary_calendar.id)
 
-        if found := self.hass.config_entries.async_entry_for_domain_unique_id(
+        if found := self.menuai.config_entries.async_entry_for_domain_unique_id(
             self.handler, primary_calendar.id
         ):
             _LOGGER.debug("Found existing '%s' entry: %s", primary_calendar.id, found)

@@ -17,8 +17,8 @@ from pyopenweathermap import (
 from pyopenweathermap.client.owm_abstract_client import OWMClient
 import pytest
 
-from homeassistant.components.openweathermap.const import DEFAULT_LANGUAGE, DOMAIN
-from homeassistant.const import (
+from menuai.components.openweathermap.const import DEFAULT_LANGUAGE, DOMAIN
+from menuai.const import (
     CONF_API_KEY,
     CONF_LANGUAGE,
     CONF_LATITUDE,
@@ -152,11 +152,11 @@ def owm_client_mock() -> Generator[AsyncMock]:
     client.validate_key.return_value = True
     with (
         patch(
-            "homeassistant.components.openweathermap.create_owm_client",
+            "menuai.components.openweathermap.create_owm_client",
             return_value=client,
         ),
         patch(
-            "homeassistant.components.openweathermap.utils.create_owm_client",
+            "menuai.components.openweathermap.utils.create_owm_client",
             return_value=client,
         ),
     ):

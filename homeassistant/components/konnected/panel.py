@@ -5,7 +5,7 @@ import logging
 
 import konnected
 
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_STATE,
     CONF_ACCESS_TOKEN,
@@ -23,11 +23,11 @@ from homeassistant.const import (
     CONF_TYPE,
     CONF_ZONE,
 )
-from homeassistant.core import callback
-from homeassistant.helpers import aiohttp_client, device_registry as dr
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.event import async_call_later
-from homeassistant.helpers.network import get_url
+from menuai.core import callback
+from menuai.helpers import aiohttp_client, device_registry as dr
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.event import async_call_later
+from menuai.helpers.network import get_url
 
 from .const import (
     CONF_ACTIVATION,
@@ -62,9 +62,9 @@ KONN_API_VERSIONS = {
 class AlarmPanel:
     """A representation of a Konnected alarm panel."""
 
-    def __init__(self, hass, config_entry):
+    def __init__(self, menuai, config_entry):
         """Initialize the Konnected device."""
-        self.hass = hass
+        self.menuai = menuai
         self.config_entry = config_entry
         self.config = config_entry.data
         self.options = config_entry.options or config_entry.data.get(
@@ -86,8 +86,8 @@ class AlarmPanel:
 
     @property
     def stored_configuration(self):
-        """Return the configuration stored in `hass.data` for this device."""
-        return self.hass.data[DOMAIN][CONF_DEVICES].get(self.device_id)
+        """Return the configuration stored in `menuai.data` for this device."""
+        return self.menuai.data[DOMAIN][CONF_DEVICES].get(self.device_id)
 
     @property
     def available(self):
@@ -117,7 +117,7 @@ class AlarmPanel:
             self.client = konnected.Client(
                 host=self.host,
                 port=str(self.port),
-                websession=aiohttp_client.async_get_clientsession(self.hass),
+                websession=aiohttp_client.async_get_clientsession(self.menuai),
             )
             self.status = await self.client.get_status()
             self.api_version = KONN_API_VERSIONS.get(
@@ -139,7 +139,7 @@ class AlarmPanel:
             # retry in a bit, never more than ~3 min
             self.connect_attempts += 1
             self.cancel_connect_retry = async_call_later(
-                self.hass, 2 ** min(self.connect_attempts, 5) * 5, self.async_connect
+                self.menuai, 2 ** min(self.connect_attempts, 5) * 5, self.async_connect
             )
             return
 
@@ -155,7 +155,7 @@ class AlarmPanel:
             self.port,
         )
 
-        device_registry = dr.async_get(self.hass)
+        device_registry = dr.async_get(self.menuai)
         device_registry.async_get_or_create(
             config_entry_id=self.config_entry.entry_id,
             connections={(dr.CONNECTION_NETWORK_MAC, self.status.get("mac"))},
@@ -194,7 +194,7 @@ class AlarmPanel:
         raise CannotConnect
 
     async def async_save_data(self):
-        """Save the device configuration to `hass.data`."""
+        """Save the device configuration to `menuai.data`."""
         binary_sensors = {}
         for entity in self.options.get(CONF_BINARY_SENSORS) or []:
             zone = entity[CONF_ZONE]
@@ -263,17 +263,17 @@ class AlarmPanel:
             "panel": self,
         }
 
-        if CONF_DEVICES not in self.hass.data[DOMAIN]:
-            self.hass.data[DOMAIN][CONF_DEVICES] = {}
+        if CONF_DEVICES not in self.menuai.data[DOMAIN]:
+            self.menuai.data[DOMAIN][CONF_DEVICES] = {}
 
         _LOGGER.debug(
-            "Storing data in hass.data[%s][%s][%s]: %s",
+            "Storing data in menuai.data[%s][%s][%s]: %s",
             DOMAIN,
             CONF_DEVICES,
             self.device_id,
             device_data,
         )
-        self.hass.data[DOMAIN][CONF_DEVICES][self.device_id] = device_data
+        self.menuai.data[DOMAIN][CONF_DEVICES][self.device_id] = device_data
 
     @callback
     def async_binary_sensor_configuration(self):
@@ -327,15 +327,15 @@ class AlarmPanel:
             if sensor_config.get(CONF_INVERSE):
                 state = not state
 
-            async_dispatcher_send(self.hass, f"konnected.{entity_id}.update", state)
+            async_dispatcher_send(self.menuai, f"konnected.{entity_id}.update", state)
 
     @callback
     def async_desired_settings_payload(self):
         """Return a dict representing the desired device configuration."""
-        # keeping self.hass.data check for backwards compatibility
+        # keeping self.menuai.data check for backwards compatibility
         # newly configured integrations store this in the config entry
         desired_api_host = self.options.get(CONF_API_HOST) or (
-            self.hass.data[DOMAIN].get(CONF_API_HOST) or get_url(self.hass)
+            self.menuai.data[DOMAIN].get(CONF_API_HOST) or get_url(self.menuai)
         )
         desired_api_endpoint = desired_api_host + ENDPOINT_ROOT
 
@@ -384,10 +384,10 @@ class AlarmPanel:
             await self.client.put_settings(**self.async_desired_settings_payload())
 
 
-async def get_status(hass, host, port):
+async def get_status(menuai, host, port):
     """Get the status of a Konnected Panel."""
     client = konnected.Client(
-        host, str(port), aiohttp_client.async_get_clientsession(hass)
+        host, str(port), aiohttp_client.async_get_clientsession(menuai)
     )
     try:
         return await client.get_status()

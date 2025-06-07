@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from azure.storage.blob import BlobProperties
 import pytest
 
-from homeassistant.components.azure_storage.const import DOMAIN
+from menuai.components.azure_storage.const import DOMAIN
 
 from .const import BACKUP_METADATA, USER_INPUT
 
@@ -17,7 +17,7 @@ from tests.common import MockConfigEntry
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Mock setting up a config entry."""
     with patch(
-        "homeassistant.components.azure_storage.async_setup_entry", return_value=True
+        "menuai.components.azure_storage.async_setup_entry", return_value=True
     ) as mock_setup:
         yield mock_setup
 
@@ -27,11 +27,11 @@ def mock_client() -> Generator[MagicMock]:
     """Mock the Azure Storage client."""
     with (
         patch(
-            "homeassistant.components.azure_storage.config_flow.ContainerClient",
+            "menuai.components.azure_storage.config_flow.ContainerClient",
             autospec=True,
         ) as container_client,
         patch(
-            "homeassistant.components.azure_storage.ContainerClient",
+            "menuai.components.azure_storage.ContainerClient",
             new=container_client,
         ),
     ):

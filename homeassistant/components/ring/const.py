@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import timedelta
 from typing import Final
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 ATTRIBUTION = "Data provided by Ring.com"
 

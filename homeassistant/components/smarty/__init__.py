@@ -1,7 +1,7 @@
 """Support to control a Salda Smarty XP/XV ventilation unit."""
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
+from menuai.const import Platform
+from menuai.core import menuai
 
 from .coordinator import SmartyConfigEntry, SmartyCoordinator
 
@@ -14,20 +14,20 @@ PLATFORMS = [
 ]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: SmartyConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: SmartyConfigEntry) -> bool:
     """Set up the Smarty environment from a config entry."""
 
-    coordinator = SmartyCoordinator(hass, entry)
+    coordinator = SmartyCoordinator(menuai, entry)
 
     await coordinator.async_config_entry_first_refresh()
 
     entry.runtime_data = coordinator
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: SmartyConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: SmartyConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

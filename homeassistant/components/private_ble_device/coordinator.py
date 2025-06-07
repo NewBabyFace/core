@@ -9,9 +9,9 @@ from typing import cast
 from bluetooth_data_tools import get_cipher_for_irk, resolve_private_address
 from cryptography.hazmat.primitives.ciphers import Cipher
 
-from homeassistant.components import bluetooth
-from homeassistant.components.bluetooth.match import BluetoothCallbackMatcher
-from homeassistant.core import HomeAssistant
+from menuai.components import bluetooth
+from menuai.components.bluetooth.match import BluetoothCallbackMatcher
+from menuai.core import menuai
 
 from .const import DOMAIN
 
@@ -22,7 +22,7 @@ type Cancellable = Callable[[], None]
 
 
 def async_last_service_info(
-    hass: HomeAssistant, irk: bytes
+    menuai: menuai, irk: bytes
 ) -> bluetooth.BluetoothServiceInfoBleak | None:
     """Find a BluetoothServiceInfoBleak for the irk.
 
@@ -36,7 +36,7 @@ def async_last_service_info(
     cur: bluetooth.BluetoothServiceInfoBleak | None = None
     cipher = get_cipher_for_irk(irk)
 
-    for service_info in bluetooth.async_discovered_service_info(hass, False):
+    for service_info in bluetooth.async_discovered_service_info(menuai, False):
         if resolve_private_address(cipher, service_info.address):
             if not cur or cur.time < service_info.time:
                 cur = service_info
@@ -53,9 +53,9 @@ class PrivateDevicesCoordinator:
     unnecessary hashing (AES) operations as much as possible.
     """
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize the manager."""
-        self.hass = hass
+        self.menuai = menuai
 
         self._irks: dict[bytes, Cipher] = {}
         self._unavailable_callbacks: dict[bytes, list[UnavailableCallback]] = {}
@@ -76,7 +76,7 @@ class PrivateDevicesCoordinator:
     def _async_ensure_started(self) -> None:
         if not self._listener_cancel:
             self._listener_cancel = bluetooth.async_register_callback(
-                self.hass,
+                self.menuai,
                 self._async_track_service_info,
                 BluetoothCallbackMatcher(connectable=False),
                 bluetooth.BluetoothScanningMode.ACTIVE,
@@ -104,13 +104,13 @@ class PrivateDevicesCoordinator:
     def _async_irk_resolved_to_mac(self, irk: bytes, mac: str) -> None:
         if previous_mac := self._irk_to_mac.get(irk):
             previous_interval = bluetooth.async_get_learned_advertising_interval(
-                self.hass, previous_mac
+                self.menuai, previous_mac
             ) or bluetooth.async_get_fallback_availability_interval(
-                self.hass, previous_mac
+                self.menuai, previous_mac
             )
             if previous_interval:
                 bluetooth.async_set_fallback_availability_interval(
-                    self.hass, mac, previous_interval
+                    self.menuai, mac, previous_interval
                 )
 
             self._mac_to_irk.pop(previous_mac, None)
@@ -127,7 +127,7 @@ class PrivateDevicesCoordinator:
 
         # Track available for new address
         self._unavailability_trackers[irk] = bluetooth.async_track_unavailable(
-            self.hass, self._async_track_unavailable, mac, False
+            self.menuai, self._async_track_unavailable, mac, False
         )
 
     def _async_track_service_info(
@@ -158,13 +158,13 @@ class PrivateDevicesCoordinator:
             self._ignored.pop(service_info.address, None)
 
         self._ignored[mac] = bluetooth.async_track_unavailable(
-            self.hass, _unignore, mac, False
+            self.menuai, _unignore, mac, False
         )
 
     def _async_maybe_learn_irk(self, irk: bytes) -> None:
         """Add irk to list of irks that we can use to resolve RPAs."""
         if irk not in self._irks:
-            if service_info := async_last_service_info(self.hass, irk):
+            if service_info := async_last_service_info(self.menuai, irk):
                 self._async_irk_resolved_to_mac(irk, service_info.address)
             self._irks[irk] = get_cipher_for_irk(irk)
 
@@ -232,16 +232,16 @@ class PrivateDevicesCoordinator:
         return _unsubscribe
 
 
-def async_get_coordinator(hass: HomeAssistant) -> PrivateDevicesCoordinator:
+def async_get_coordinator(menuai: menuai) -> PrivateDevicesCoordinator:
     """Create or return an existing PrivateDeviceManager.
 
-    There should only be one per HomeAssistant instance. Associating private
+    There should only be one per menuai instance. Associating private
     mac addresses with an IRK involves AES operations. We don't want to
     duplicate that work.
     """
-    if existing := hass.data.get(DOMAIN):
+    if existing := menuai.data.get(DOMAIN):
         return cast(PrivateDevicesCoordinator, existing)
 
-    pdm = hass.data[DOMAIN] = PrivateDevicesCoordinator(hass)
+    pdm = menuai.data[DOMAIN] = PrivateDevicesCoordinator(menuai)
 
     return pdm

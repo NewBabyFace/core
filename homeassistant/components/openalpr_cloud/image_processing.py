@@ -11,14 +11,14 @@ from typing import Any
 import aiohttp
 import voluptuous as vol
 
-from homeassistant.components.image_processing import (
+from menuai.components.image_processing import (
     ATTR_CONFIDENCE,
     CONF_CONFIDENCE,
     PLATFORM_SCHEMA as IMAGE_PROCESSING_PLATFORM_SCHEMA,
     ImageProcessingDeviceClass,
     ImageProcessingEntity,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     CONF_API_KEY,
     CONF_ENTITY_ID,
@@ -26,12 +26,12 @@ from homeassistant.const import (
     CONF_REGION,
     CONF_SOURCE,
 )
-from homeassistant.core import HomeAssistant, callback, split_entity_id
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util.async_ import run_callback_threadsafe
+from menuai.core import menuai, callback, split_entity_id
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util.async_ import run_callback_threadsafe
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -67,7 +67,7 @@ PLATFORM_SCHEMA = IMAGE_PROCESSING_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -121,7 +121,7 @@ class ImageProcessingAlprEntity(ImageProcessingEntity):
     def process_plates(self, plates: dict[str, float], vehicles: int) -> None:
         """Send event with new plates and store data."""
         run_callback_threadsafe(
-            self.hass.loop, self.async_process_plates, plates, vehicles
+            self.menuai.loop, self.async_process_plates, plates, vehicles
         ).result()
 
     @callback
@@ -141,7 +141,7 @@ class ImageProcessingAlprEntity(ImageProcessingEntity):
 
         # Send events
         for i_plate in new_plates:
-            self.hass.bus.async_fire(
+            self.menuai.bus.async_fire(
                 EVENT_FOUND_PLATE,
                 {
                     ATTR_PLATE: i_plate,
@@ -182,7 +182,7 @@ class OpenAlprCloudEntity(ImageProcessingAlprEntity):
 
         This method is a coroutine.
         """
-        websession = async_get_clientsession(self.hass)
+        websession = async_get_clientsession(self.menuai)
         params = self._params.copy()
 
         body = {"image_bytes": str(b64encode(image), "utf-8")}

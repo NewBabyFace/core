@@ -9,8 +9,8 @@ from aioazuredevops.client import DevOpsClient
 import aiohttp
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import CONF_ORG, CONF_PAT, CONF_PROJECT, DOMAIN
 
@@ -46,7 +46,7 @@ class AzureDevOpsFlowHandler(ConfigFlow, domain=DOMAIN):
         """Check the setup of the flow."""
         errors: dict[str, str] = {}
 
-        aiohttp_session = async_get_clientsession(self.hass)
+        aiohttp_session = async_get_clientsession(self.menuai)
         client = DevOpsClient(session=aiohttp_session)
 
         try:
@@ -105,7 +105,7 @@ class AzureDevOpsFlowHandler(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             errors = await self._check_setup()
             if errors is None:
-                self.hass.config_entries.async_update_entry(
+                self.menuai.config_entries.async_update_entry(
                     self._get_reauth_entry(),
                     data={
                         CONF_ORG: self._organization,

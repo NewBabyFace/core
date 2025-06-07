@@ -7,14 +7,14 @@ from unittest.mock import patch
 
 from PyTado.http import Http
 
-from homeassistant.components.tado import DOMAIN
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
+from menuai.components.tado import DOMAIN
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
 
-async def test_v1_migration(hass: HomeAssistant) -> None:
+async def test_v1_migration(menuai: menuai) -> None:
     """Test migration from v1 to v2 config entry."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -25,14 +25,14 @@ async def test_v1_migration(hass: HomeAssistant) -> None:
         unique_id="1",
         version=1,
     )
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
     assert entry.version == 2
     assert CONF_USERNAME not in entry.data
 
 
-async def test_refresh_token_threading_lock(hass: HomeAssistant) -> None:
+async def test_refresh_token_threading_lock(menuai: menuai) -> None:
     """Test that threading.Lock in Http._refresh_token serializes concurrent calls."""
 
     timestamps: list[tuple[str, float]] = []
@@ -54,8 +54,8 @@ async def test_refresh_token_threading_lock(hass: HomeAssistant) -> None:
 
         # Run two concurrent refresh token calls, should do the trick
         await asyncio.gather(
-            hass.async_add_executor_job(http_instance._refresh_token),
-            hass.async_add_executor_job(http_instance._refresh_token),
+            menuai.async_add_executor_job(http_instance._refresh_token),
+            menuai.async_add_executor_job(http_instance._refresh_token),
         )
 
     end1 = timestamps[1][1]

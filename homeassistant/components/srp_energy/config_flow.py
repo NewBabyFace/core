@@ -7,15 +7,15 @@ from typing import Any
 from srpenergy.client import SrpEnergyClient
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_ID, CONF_NAME, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_ID, CONF_NAME, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
 
 from .const import CONF_IS_TOU, DOMAIN, LOGGER
 
 
-async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
+async def validate_input(menuai: menuai, data: dict[str, Any]) -> dict[str, Any]:
     """Validate the user input allows us to connect.
 
     Data has the keys from DATA_SCHEMA with values provided by the user.
@@ -26,7 +26,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
         data[CONF_PASSWORD],
     )
 
-    is_valid = await hass.async_add_executor_job(srp_client.validate)
+    is_valid = await menuai.async_add_executor_job(srp_client.validate)
 
     LOGGER.debug("Is user input valid: %s", is_valid)
     if not is_valid:
@@ -49,7 +49,7 @@ class SRPEnergyConfigFlow(ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema(
                 {
                     vol.Required(
-                        CONF_NAME, default=self.hass.config.location_name
+                        CONF_NAME, default=self.menuai.config.location_name
                     ): str,
                     vol.Required(CONF_ID): str,
                     vol.Required(CONF_USERNAME): str,
@@ -70,7 +70,7 @@ class SRPEnergyConfigFlow(ConfigFlow, domain=DOMAIN):
             return self._show_form(errors)
 
         try:
-            await validate_input(self.hass, user_input)
+            await validate_input(self.menuai, user_input)
         except ValueError:
             # Thrown when the account id is malformed
             errors["base"] = "invalid_account"
@@ -88,5 +88,5 @@ class SRPEnergyConfigFlow(ConfigFlow, domain=DOMAIN):
         return self.async_create_entry(title=user_input[CONF_NAME], data=user_input)
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(menuaiError):
     """Error to indicate there is invalid auth."""

@@ -13,11 +13,11 @@ from PyViCare.PyViCareUtils import (
     PyViCareInvalidCredentialsError,
 )
 
-from homeassistant.components.climate import DOMAIN as DOMAIN_CLIMATE
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.storage import STORAGE_DIR
+from menuai.components.climate import DOMAIN as DOMAIN_CLIMATE
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.storage import STORAGE_DIR
 
 from .const import (
     DEFAULT_CACHE_DURATION,
@@ -32,28 +32,28 @@ from .utils import get_device, get_device_serial, login
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ViCareConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ViCareConfigEntry) -> bool:
     """Set up from config entry."""
     _LOGGER.debug("Setting up ViCare component")
     try:
-        entry.runtime_data = await hass.async_add_executor_job(
-            setup_vicare_api, hass, entry
+        entry.runtime_data = await menuai.async_add_executor_job(
+            setup_vicare_api, menuai, entry
         )
     except (PyViCareInvalidConfigurationError, PyViCareInvalidCredentialsError) as err:
         raise ConfigEntryAuthFailed("Authentication failed") from err
 
     for device in entry.runtime_data.devices:
         # Migration can be removed in 2025.4.0
-        await async_migrate_devices_and_entities(hass, entry, device)
+        await async_migrate_devices_and_entities(menuai, entry, device)
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-def setup_vicare_api(hass: HomeAssistant, entry: ViCareConfigEntry) -> PyViCare:
+def setup_vicare_api(menuai: menuai, entry: ViCareConfigEntry) -> PyViCare:
     """Set up PyVicare API."""
-    client = login(hass, entry.data)
+    client = login(menuai, entry.data)
 
     device_config_list = get_supported_devices(client.devices)
 
@@ -65,7 +65,7 @@ def setup_vicare_api(hass: HomeAssistant, entry: ViCareConfigEntry) -> PyViCare:
             number_of_devices,
             cache_duration,
         )
-        client = login(hass, entry.data, cache_duration)
+        client = login(menuai, entry.data, cache_duration)
         device_config_list = get_supported_devices(client.devices)
 
     for device in device_config_list:
@@ -80,28 +80,28 @@ def setup_vicare_api(hass: HomeAssistant, entry: ViCareConfigEntry) -> PyViCare:
     return ViCareData(client=client, devices=devices)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ViCareConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ViCareConfigEntry) -> bool:
     """Unload ViCare config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
     with suppress(FileNotFoundError):
-        await hass.async_add_executor_job(
-            os.remove, hass.config.path(STORAGE_DIR, VICARE_TOKEN_FILENAME)
+        await menuai.async_add_executor_job(
+            os.remove, menuai.config.path(STORAGE_DIR, VICARE_TOKEN_FILENAME)
         )
 
     return unload_ok
 
 
 async def async_migrate_devices_and_entities(
-    hass: HomeAssistant, entry: ViCareConfigEntry, device: ViCareDevice
+    menuai: menuai, entry: ViCareConfigEntry, device: ViCareDevice
 ) -> None:
     """Migrate old entry."""
-    device_registry = dr.async_get(hass)
-    entity_registry = er.async_get(hass)
+    device_registry = dr.async_get(menuai)
+    entity_registry = er.async_get(menuai)
 
     gateway_serial: str = device.config.getConfig().serial
     device_id = device.config.getId()
-    device_serial: str | None = await hass.async_add_executor_job(
+    device_serial: str | None = await menuai.async_add_executor_job(
         get_device_serial, device.api
     )
     device_model = device.config.getModel()

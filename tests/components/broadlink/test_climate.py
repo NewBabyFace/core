@@ -4,9 +4,9 @@ from typing import Any
 
 import pytest
 
-from homeassistant.components.broadlink.climate import SensorMode
-from homeassistant.components.broadlink.const import DOMAIN
-from homeassistant.components.climate import (
+from menuai.components.broadlink.climate import SensorMode
+from menuai.components.broadlink.const import DOMAIN
+from menuai.components.climate import (
     ATTR_TEMPERATURE,
     DOMAIN as CLIMATE_DOMAIN,
     SERVICE_SET_TEMPERATURE,
@@ -15,10 +15,10 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.entity_component import async_update_entity
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.entity_component import async_update_entity
 
 from . import get_device
 
@@ -85,14 +85,14 @@ async def test_climate(
     expected_current_temperature: int,
     expected_temperature: int,
     expected_hvac_action: HVACAction,
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test Broadlink climate."""
 
     device = get_device("Guest room")
-    mock_setup = await device.setup_entry(hass)
+    mock_setup = await device.setup_entry(menuai)
 
     device_entry = device_registry.async_get_device(
         identifiers={(DOMAIN, mock_setup.entry.unique_id)}
@@ -105,9 +105,9 @@ async def test_climate(
 
     mock_setup.api.get_full_status.return_value = api_return_value
 
-    await async_update_entity(hass, climate.entity_id)
+    await async_update_entity(menuai, climate.entity_id)
     assert mock_setup.api.get_full_status.call_count == 2
-    state = hass.states.get(climate.entity_id)
+    state = menuai.states.get(climate.entity_id)
     assert state.state == expected_state
     assert state.attributes["current_temperature"] == expected_current_temperature
     assert state.attributes["temperature"] == expected_temperature
@@ -115,14 +115,14 @@ async def test_climate(
 
 
 async def test_climate_set_temperature_turn_off_turn_on(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test Broadlink climate."""
 
     device = get_device("Guest room")
-    mock_setup = await device.setup_entry(hass)
+    mock_setup = await device.setup_entry(menuai)
 
     device_entry = device_registry.async_get_device(
         identifiers={(DOMAIN, mock_setup.entry.unique_id)}
@@ -133,7 +133,7 @@ async def test_climate_set_temperature_turn_off_turn_on(
 
     climate = climates[0]
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_TEMPERATURE,
         {
@@ -142,14 +142,14 @@ async def test_climate_set_temperature_turn_off_turn_on(
         },
         blocking=True,
     )
-    state = hass.states.get(climate.entity_id)
+    state = menuai.states.get(climate.entity_id)
 
     assert mock_setup.api.set_temp.call_count == 1
     assert mock_setup.api.set_power.call_count == 0
     assert mock_setup.api.set_mode.call_count == 0
     assert state.attributes["temperature"] == 24
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_TURN_OFF,
         {
@@ -157,14 +157,14 @@ async def test_climate_set_temperature_turn_off_turn_on(
         },
         blocking=True,
     )
-    state = hass.states.get(climate.entity_id)
+    state = menuai.states.get(climate.entity_id)
 
     assert mock_setup.api.set_temp.call_count == 1
     assert mock_setup.api.set_power.call_count == 1
     assert mock_setup.api.set_mode.call_count == 0
     assert state.state == HVACMode.OFF
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -172,7 +172,7 @@ async def test_climate_set_temperature_turn_off_turn_on(
         },
         blocking=True,
     )
-    state = hass.states.get(climate.entity_id)
+    state = menuai.states.get(climate.entity_id)
 
     assert mock_setup.api.set_temp.call_count == 1
     assert mock_setup.api.set_power.call_count == 2

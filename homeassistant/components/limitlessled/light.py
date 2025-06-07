@@ -17,7 +17,7 @@ from limitlessled.pipeline import Pipeline
 from limitlessled.presets import COLORLOOP
 import voluptuous as vol
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_TEMP_KELVIN,
     ATTR_EFFECT,
@@ -32,13 +32,13 @@ from homeassistant.components.light import (
     LightEntity,
     LightEntityFeature,
 )
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT, CONF_TYPE, STATE_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util.color import color_hs_to_RGB
+from menuai.const import CONF_HOST, CONF_NAME, CONF_PORT, CONF_TYPE, STATE_ON
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.restore_state import RestoreEntity
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util.color import color_hs_to_RGB
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -142,7 +142,7 @@ def rewrite_legacy(config: ConfigType) -> ConfigType:
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -255,9 +255,9 @@ class LimitlessLEDGroup(LightEntity, RestoreEntity):
         self.config = config
         self._attr_is_on = False
 
-    async def async_added_to_hass(self) -> None:
-        """Handle entity about to be added to hass event."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Handle entity about to be added to menuai event."""
+        await super().async_added_to_menuai()
         if last_state := await self.async_get_last_state():
             self._attr_is_on = last_state.state == STATE_ON
             self._attr_brightness = last_state.attributes.get("brightness")
@@ -355,18 +355,18 @@ class LimitlessLEDGroup(LightEntity, RestoreEntity):
                 self._attr_hs_color = WHITE
 
     def limitlessled_temperature(self) -> float:
-        """Convert Home Assistant color temperature units to percentage."""
+        """Convert MenuAI color temperature units to percentage."""
         width = self.max_color_temp_kelvin - self.min_color_temp_kelvin
         assert self.color_temp_kelvin is not None
         temperature = (self.color_temp_kelvin - self.min_color_temp_kelvin) / width
         return max(0, min(1, temperature))
 
     def limitlessled_brightness(self) -> float:
-        """Convert Home Assistant brightness units to percentage."""
+        """Convert MenuAI brightness units to percentage."""
         assert self.brightness is not None
         return self.brightness / 255
 
     def limitlessled_color(self) -> Color:
-        """Convert Home Assistant HS list to RGB Color tuple."""
+        """Convert MenuAI HS list to RGB Color tuple."""
         assert self.hs_color is not None
         return Color(*color_hs_to_RGB(*self.hs_color))

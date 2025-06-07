@@ -13,14 +13,14 @@ from plugwise.exceptions import (
     UnsupportedDeviceError,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_PORT, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryError
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.debounce import Debouncer
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_PORT, CONF_USERNAME
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryError
+from menuai.helpers import device_registry as dr
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.debounce import Debouncer
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DEFAULT_PORT, DEFAULT_USERNAME, DOMAIN, LOGGER
 
@@ -34,10 +34,10 @@ class PlugwiseDataUpdateCoordinator(DataUpdateCoordinator[dict[str, GwEntityData
 
     config_entry: PlugwiseConfigEntry
 
-    def __init__(self, hass: HomeAssistant, config_entry: PlugwiseConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: PlugwiseConfigEntry) -> None:
         """Initialize the coordinator."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -45,7 +45,7 @@ class PlugwiseDataUpdateCoordinator(DataUpdateCoordinator[dict[str, GwEntityData
             # Don't refresh immediately, give the device time to process
             # the change in state before we query it.
             request_refresh_debouncer=Debouncer(
-                hass,
+                menuai,
                 LOGGER,
                 cooldown=1.5,
                 immediate=False,
@@ -57,7 +57,7 @@ class PlugwiseDataUpdateCoordinator(DataUpdateCoordinator[dict[str, GwEntityData
             username=self.config_entry.data.get(CONF_USERNAME, DEFAULT_USERNAME),
             password=self.config_entry.data[CONF_PASSWORD],
             port=self.config_entry.data.get(CONF_PORT, DEFAULT_PORT),
-            websession=async_get_clientsession(hass, verify_ssl=False),
+            websession=async_get_clientsession(menuai, verify_ssl=False),
         )
         self._current_devices: set[str] = set()
         self.new_devices: set[str] = set()
@@ -114,7 +114,7 @@ class PlugwiseDataUpdateCoordinator(DataUpdateCoordinator[dict[str, GwEntityData
 
     def _async_remove_devices(self, data: dict[str, GwEntityData]) -> None:
         """Clean registries when removed devices found."""
-        device_reg = dr.async_get(self.hass)
+        device_reg = dr.async_get(self.menuai)
         device_list = dr.async_entries_for_config_entry(
             device_reg, self.config_entry.entry_id
         )

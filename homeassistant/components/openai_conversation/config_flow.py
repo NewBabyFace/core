@@ -12,23 +12,23 @@ import openai
 import voluptuous as vol
 from voluptuous_openapi import convert
 
-from homeassistant.components.zone import ENTITY_ID_HOME
-from homeassistant.config_entries import (
+from menuai.components.zone import ENTITY_ID_HOME
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_LATITUDE,
     ATTR_LONGITUDE,
     CONF_API_KEY,
-    CONF_LLM_HASS_API,
+    CONF_LLM_menuai_API,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import llm
-from homeassistant.helpers.httpx_client import get_async_client
-from homeassistant.helpers.selector import (
+from menuai.core import menuai
+from menuai.helpers import llm
+from menuai.helpers.httpx_client import get_async_client
+from menuai.helpers.selector import (
     NumberSelector,
     NumberSelectorConfig,
     SelectOptionDict,
@@ -37,7 +37,7 @@ from homeassistant.helpers.selector import (
     SelectSelectorMode,
     TemplateSelector,
 )
-from homeassistant.helpers.typing import VolDictType
+from menuai.helpers.typing import VolDictType
 
 from .const import (
     CONF_CHAT_MODEL,
@@ -77,20 +77,20 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
 
 RECOMMENDED_OPTIONS = {
     CONF_RECOMMENDED: True,
-    CONF_LLM_HASS_API: llm.LLM_API_ASSIST,
+    CONF_LLM_menuai_API: llm.LLM_API_ASSIST,
     CONF_PROMPT: llm.DEFAULT_INSTRUCTIONS_PROMPT,
 }
 
 
-async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> None:
+async def validate_input(menuai: menuai, data: dict[str, Any]) -> None:
     """Validate the user input allows us to connect.
 
     Data has the keys from STEP_USER_DATA_SCHEMA with values provided by the user.
     """
     client = openai.AsyncOpenAI(
-        api_key=data[CONF_API_KEY], http_client=get_async_client(hass)
+        api_key=data[CONF_API_KEY], http_client=get_async_client(menuai)
     )
-    await hass.async_add_executor_job(client.with_options(timeout=10.0).models.list)
+    await menuai.async_add_executor_job(client.with_options(timeout=10.0).models.list)
 
 
 class OpenAIConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -110,7 +110,7 @@ class OpenAIConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         try:
-            await validate_input(self.hass, user_input)
+            await validate_input(self.menuai, user_input)
         except openai.APIConnectionError:
             errors["base"] = "cannot_connect"
         except openai.AuthenticationError:
@@ -155,8 +155,8 @@ class OpenAIOptionsFlow(OptionsFlow):
 
         if user_input is not None:
             if user_input[CONF_RECOMMENDED] == self.last_rendered_recommended:
-                if not user_input.get(CONF_LLM_HASS_API):
-                    user_input.pop(CONF_LLM_HASS_API, None)
+                if not user_input.get(CONF_LLM_menuai_API):
+                    user_input.pop(CONF_LLM_menuai_API, None)
                 if user_input.get(CONF_CHAT_MODEL) in UNSUPPORTED_MODELS:
                     errors[CONF_CHAT_MODEL] = "model_not_supported"
 
@@ -180,10 +180,10 @@ class OpenAIOptionsFlow(OptionsFlow):
                     CONF_PROMPT: user_input.get(
                         CONF_PROMPT, llm.DEFAULT_INSTRUCTIONS_PROMPT
                     ),
-                    CONF_LLM_HASS_API: user_input.get(CONF_LLM_HASS_API),
+                    CONF_LLM_menuai_API: user_input.get(CONF_LLM_menuai_API),
                 }
 
-        schema = openai_config_option_schema(self.hass, options)
+        schema = openai_config_option_schema(self.menuai, options)
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema(schema),
@@ -193,11 +193,11 @@ class OpenAIOptionsFlow(OptionsFlow):
     async def get_location_data(self) -> dict[str, str]:
         """Get approximate location data of the user."""
         location_data: dict[str, str] = {}
-        zone_home = self.hass.states.get(ENTITY_ID_HOME)
+        zone_home = self.menuai.states.get(ENTITY_ID_HOME)
         if zone_home is not None:
             client = openai.AsyncOpenAI(
                 api_key=self.config_entry.data[CONF_API_KEY],
-                http_client=get_async_client(self.hass),
+                http_client=get_async_client(self.menuai),
             )
             location_schema = vol.Schema(
                 {
@@ -235,9 +235,9 @@ class OpenAIOptionsFlow(OptionsFlow):
             )
             location_data = location_schema(json.loads(response.output_text) or {})
 
-        if self.hass.config.country:
-            location_data[CONF_WEB_SEARCH_COUNTRY] = self.hass.config.country
-        location_data[CONF_WEB_SEARCH_TIMEZONE] = self.hass.config.time_zone
+        if self.menuai.config.country:
+            location_data[CONF_WEB_SEARCH_COUNTRY] = self.menuai.config.country
+        location_data[CONF_WEB_SEARCH_TIMEZONE] = self.menuai.config.time_zone
 
         _LOGGER.debug("Location data: %s", location_data)
 
@@ -245,18 +245,18 @@ class OpenAIOptionsFlow(OptionsFlow):
 
 
 def openai_config_option_schema(
-    hass: HomeAssistant,
+    menuai: menuai,
     options: Mapping[str, Any],
 ) -> VolDictType:
     """Return a schema for OpenAI completion options."""
-    hass_apis: list[SelectOptionDict] = [
+    menuai_apis: list[SelectOptionDict] = [
         SelectOptionDict(
             label=api.name,
             value=api.id,
         )
-        for api in llm.async_get_apis(hass)
+        for api in llm.async_get_apis(menuai)
     ]
-    if (suggested_llm_apis := options.get(CONF_LLM_HASS_API)) and isinstance(
+    if (suggested_llm_apis := options.get(CONF_LLM_menuai_API)) and isinstance(
         suggested_llm_apis, str
     ):
         suggested_llm_apis = [suggested_llm_apis]
@@ -270,9 +270,9 @@ def openai_config_option_schema(
             },
         ): TemplateSelector(),
         vol.Optional(
-            CONF_LLM_HASS_API,
+            CONF_LLM_menuai_API,
             description={"suggested_value": suggested_llm_apis},
-        ): SelectSelector(SelectSelectorConfig(options=hass_apis, multiple=True)),
+        ): SelectSelector(SelectSelectorConfig(options=menuai_apis, multiple=True)),
         vol.Required(
             CONF_RECOMMENDED, default=options.get(CONF_RECOMMENDED, False)
         ): bool,

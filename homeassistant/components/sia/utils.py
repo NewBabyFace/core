@@ -8,7 +8,7 @@ from typing import Any
 from pysiaalarm import SIAEvent
 from pysiaalarm.utils import MessageTypes
 
-from homeassistant.util.dt import utcnow
+from menuai.util.dt import utcnow
 
 from .const import (
     ATTR_CODE,

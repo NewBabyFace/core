@@ -7,8 +7,8 @@ from typing import Any
 from pyhap.accessory_driver import AccessoryDriver
 from pyhap.state import State
 
-from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.core import HomeAssistant
+from menuai.components.diagnostics import async_redact_data
+from menuai.core import menuai
 
 from .accessories import HomeAccessory, HomeBridge
 from .models import HomeKitConfigEntry
@@ -17,7 +17,7 @@ TO_REDACT = {"access_token", "entity_picture"}
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: HomeKitConfigEntry
+    menuai: menuai, entry: HomeKitConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     homekit = entry.runtime_data.homekit
@@ -37,9 +37,9 @@ async def async_get_config_entry_diagnostics(
     driver: AccessoryDriver = homekit.driver
     if driver.accessory:
         if isinstance(driver.accessory, HomeBridge):
-            data["bridge"] = _get_bridge_diagnostics(hass, driver.accessory)
+            data["bridge"] = _get_bridge_diagnostics(menuai, driver.accessory)
         else:
-            data["accessory"] = _get_accessory_diagnostics(hass, driver.accessory)
+            data["accessory"] = _get_accessory_diagnostics(menuai, driver.accessory)
     data.update(driver.get_accessories())
     state: State = driver.state
     data.update(
@@ -54,21 +54,21 @@ async def async_get_config_entry_diagnostics(
     return data
 
 
-def _get_bridge_diagnostics(hass: HomeAssistant, bridge: HomeBridge) -> dict[int, Any]:
+def _get_bridge_diagnostics(menuai: menuai, bridge: HomeBridge) -> dict[int, Any]:
     """Return diagnostics for a bridge."""
     return {
-        aid: _get_accessory_diagnostics(hass, accessory)
+        aid: _get_accessory_diagnostics(menuai, accessory)
         for aid, accessory in bridge.accessories.items()
     }
 
 
 def _get_accessory_diagnostics(
-    hass: HomeAssistant, accessory: HomeAccessory
+    menuai: menuai, accessory: HomeAccessory
 ) -> dict[str, Any]:
     """Return diagnostics for an accessory."""
     entity_state = None
     if accessory.entity_id:
-        entity_state = hass.states.get(accessory.entity_id)
+        entity_state = menuai.states.get(accessory.entity_id)
     data = {
         "aid": accessory.aid,
         "config": accessory.config,

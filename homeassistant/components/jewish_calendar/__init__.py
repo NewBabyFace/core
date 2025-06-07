@@ -7,7 +7,7 @@ import logging
 
 from hdate import Location
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_ELEVATION,
     CONF_LANGUAGE,
     CONF_LATITUDE,
@@ -15,9 +15,9 @@ from homeassistant.const import (
     CONF_TIME_ZONE,
     Platform,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     CONF_CANDLE_LIGHT_MINUTES,
@@ -37,15 +37,15 @@ PLATFORMS: list[Platform] = [Platform.BINARY_SENSOR, Platform.SENSOR]
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Jewish Calendar service."""
-    async_setup_services(hass)
+    async_setup_services(menuai)
 
     return True
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, config_entry: JewishCalendarConfigEntry
+    menuai: menuai, config_entry: JewishCalendarConfigEntry
 ) -> bool:
     """Set up a configuration entry for Jewish calendar."""
     language = config_entry.data.get(CONF_LANGUAGE, DEFAULT_LANGUAGE)
@@ -57,15 +57,15 @@ async def async_setup_entry(
         CONF_HAVDALAH_OFFSET_MINUTES, DEFAULT_HAVDALAH_OFFSET_MINUTES
     )
 
-    location = await hass.async_add_executor_job(
+    location = await menuai.async_add_executor_job(
         partial(
             Location,
-            name=hass.config.location_name,
+            name=menuai.config.location_name,
             diaspora=diaspora,
-            latitude=config_entry.data.get(CONF_LATITUDE, hass.config.latitude),
-            longitude=config_entry.data.get(CONF_LONGITUDE, hass.config.longitude),
-            altitude=config_entry.data.get(CONF_ELEVATION, hass.config.elevation),
-            timezone=config_entry.data.get(CONF_TIME_ZONE, hass.config.time_zone),
+            latitude=config_entry.data.get(CONF_LATITUDE, menuai.config.latitude),
+            longitude=config_entry.data.get(CONF_LONGITUDE, menuai.config.longitude),
+            altitude=config_entry.data.get(CONF_ELEVATION, menuai.config.elevation),
+            timezone=config_entry.data.get(CONF_TIME_ZONE, menuai.config.time_zone),
         )
     )
 
@@ -77,27 +77,27 @@ async def async_setup_entry(
         havdalah_offset,
     )
 
-    await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 
     async def update_listener(
-        hass: HomeAssistant, config_entry: JewishCalendarConfigEntry
+        menuai: menuai, config_entry: JewishCalendarConfigEntry
     ) -> None:
         # Trigger update of states for all platforms
-        await hass.config_entries.async_reload(config_entry.entry_id)
+        await menuai.config_entries.async_reload(config_entry.entry_id)
 
     config_entry.async_on_unload(config_entry.add_update_listener(update_listener))
     return True
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, config_entry: JewishCalendarConfigEntry
+    menuai: menuai, config_entry: JewishCalendarConfigEntry
 ) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(config_entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(config_entry, PLATFORMS)
 
 
 async def async_migrate_entry(
-    hass: HomeAssistant, config_entry: JewishCalendarConfigEntry
+    menuai: menuai, config_entry: JewishCalendarConfigEntry
 ) -> bool:
     """Migrate old entry."""
 
@@ -136,12 +136,12 @@ async def async_migrate_entry(
         return False
 
     if config_entry.version == 1:
-        await er.async_migrate_entries(hass, config_entry.entry_id, update_unique_id)
-        hass.config_entries.async_update_entry(config_entry, version=2)
+        await er.async_migrate_entries(menuai, config_entry.entry_id, update_unique_id)
+        menuai.config_entries.async_update_entry(config_entry, version=2)
 
     if config_entry.version == 2:
         new_data = {**config_entry.data}
         new_data[CONF_LANGUAGE] = config_entry.data[CONF_LANGUAGE][:2]
-        hass.config_entries.async_update_entry(config_entry, data=new_data, version=3)
+        menuai.config_entries.async_update_entry(config_entry, data=new_data, version=3)
 
     return True

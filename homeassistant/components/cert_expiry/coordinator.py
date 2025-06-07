@@ -5,9 +5,9 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 import logging
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DEFAULT_PORT
 from .errors import TemporaryFailure, ValidationFailure
@@ -25,7 +25,7 @@ class CertExpiryDataUpdateCoordinator(DataUpdateCoordinator[datetime | None]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: CertExpiryConfigEntry,
         host: str,
         port: int,
@@ -40,7 +40,7 @@ class CertExpiryDataUpdateCoordinator(DataUpdateCoordinator[datetime | None]):
         name = f"{self.host}{display_port}"
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=name,
@@ -51,7 +51,7 @@ class CertExpiryDataUpdateCoordinator(DataUpdateCoordinator[datetime | None]):
     async def _async_update_data(self) -> datetime | None:
         """Fetch certificate."""
         try:
-            timestamp = await get_cert_expiry_timestamp(self.hass, self.host, self.port)
+            timestamp = await get_cert_expiry_timestamp(self.menuai, self.host, self.port)
         except TemporaryFailure as err:
             raise UpdateFailed(err.args[0]) from err
         except ValidationFailure as err:

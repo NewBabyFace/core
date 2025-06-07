@@ -10,14 +10,14 @@ from yolink.client_request import ClientRequest
 from yolink.const import ATTR_DEVICE_SPEAKER_HUB
 from yolink.device import YoLinkDevice
 
-from homeassistant.components.number import (
+from menuai.components.number import (
     NumberEntity,
     NumberEntityDescription,
     NumberMode,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import YoLinkCoordinator
@@ -64,12 +64,12 @@ DEVICE_CONFIG_DESCRIPTIONS: tuple[YoLinkNumberTypeConfigEntityDescription, ...] 
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up device number type config option entity from a config entry."""
-    device_coordinators = hass.data[DOMAIN][config_entry.entry_id].device_coordinators
+    device_coordinators = menuai.data[DOMAIN][config_entry.entry_id].device_coordinators
     config_device_coordinators = [
         device_coordinator
         for device_coordinator in device_coordinators.values()

@@ -4,15 +4,15 @@ from datetime import datetime
 
 import pytest
 
-from homeassistant.components.here_travel_time.config_flow import DEFAULT_OPTIONS
-from homeassistant.components.here_travel_time.const import (
+from menuai.components.here_travel_time.config_flow import DEFAULT_OPTIONS
+from menuai.components.here_travel_time.const import (
     CONF_ARRIVAL_TIME,
     CONF_DEPARTURE_TIME,
     CONF_ROUTE_MODE,
     DOMAIN,
     ROUTE_MODE_FASTEST,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .const import DEFAULT_CONFIG
 
@@ -37,7 +37,7 @@ from tests.common import MockConfigEntry
         },
     ],
 )
-async def test_unload_entry(hass: HomeAssistant, options) -> None:
+async def test_unload_entry(menuai: menuai, options) -> None:
     """Test that unloading an entry works."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -45,8 +45,8 @@ async def test_unload_entry(hass: HomeAssistant, options) -> None:
         data=DEFAULT_CONFIG,
         options=options,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
-    assert await hass.config_entries.async_unload(entry.entry_id)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
+    assert await menuai.config_entries.async_unload(entry.entry_id)

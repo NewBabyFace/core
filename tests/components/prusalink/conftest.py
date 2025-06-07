@@ -6,14 +6,14 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components.prusalink import DOMAIN
-from homeassistant.core import HomeAssistant
+from menuai.components.prusalink import DOMAIN
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
 
 @pytest.fixture
-def mock_config_entry(hass: HomeAssistant) -> MockConfigEntry:
+def mock_config_entry(menuai: menuai) -> MockConfigEntry:
     """Mock a PrusaLink config entry."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -21,7 +21,7 @@ def mock_config_entry(hass: HomeAssistant) -> MockConfigEntry:
         version=1,
         minor_version=2,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     return entry
 
 

@@ -26,10 +26,10 @@ from uiprotect.data import (
     Viewer,
 )
 
-from homeassistant.components.select import SelectEntity, SelectEntityDescription
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.select import SelectEntity, SelectEntityDescription
+from menuai.const import EntityCategory
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import TYPE_EMPTY_VALUE
 from .data import ProtectData, ProtectDeviceType, UFPConfigEntry
@@ -334,7 +334,7 @@ _MODEL_DESCRIPTIONS: dict[ModelType, Sequence[ProtectEntityDescription]] = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: UFPConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -393,7 +393,7 @@ class ProtectSelects(ProtectDeviceEntity, SelectEntity):
             self._async_set_options(self.data, entity_description)
         if (unifi_value := entity_description.get_ufp_value(device)) is None:
             unifi_value = TYPE_EMPTY_VALUE
-        self._attr_current_option = self._unifi_to_hass_options.get(
+        self._attr_current_option = self._unifi_to_menuai_options.get(
             unifi_value, unifi_value
         )
 
@@ -409,8 +409,8 @@ class ProtectSelects(ProtectDeviceEntity, SelectEntity):
             options = description.ufp_options_fn(data.api)
 
         self._attr_options = [item["name"] for item in options]
-        self._hass_to_unifi_options = {item["name"]: item["id"] for item in options}
-        self._unifi_to_hass_options = {item["id"]: item["name"] for item in options}
+        self._menuai_to_unifi_options = {item["name"]: item["id"] for item in options}
+        self._unifi_to_menuai_options = {item["id"]: item["name"] for item in options}
 
     async def async_select_option(self, option: str) -> None:
         """Change the Select Entity Option."""
@@ -421,7 +421,7 @@ class ProtectSelects(ProtectDeviceEntity, SelectEntity):
             await self.entity_description.ufp_set_method_fn(self.device, option)
             return
 
-        unifi_value = self._hass_to_unifi_options[option]
+        unifi_value = self._menuai_to_unifi_options[option]
         if self.entity_description.ufp_enum_type is not None:
             unifi_value = self.entity_description.ufp_enum_type(unifi_value)
         await self.entity_description.ufp_set(self.device, unifi_value)

@@ -6,7 +6,7 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_HVAC_MODE,
     ATTR_TARGET_TEMP_HIGH,
     ATTR_TARGET_TEMP_LOW,
@@ -20,8 +20,8 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import SOURCE_IMPORT, ConfigEntry
+from menuai.const import (
     ATTR_TEMPERATURE,
     CONF_HOST,
     CONF_PASSWORD,
@@ -33,13 +33,13 @@ from homeassistant.const import (
     STATE_ON,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import (
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     AddEntitiesCallback,
 )
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import (
     _LOGGER,
@@ -69,12 +69,12 @@ PLATFORM_SCHEMA = CLIMATE_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Venstar thermostat."""
-    venstar_data_coordinator = hass.data[DOMAIN][config_entry.entry_id]
+    venstar_data_coordinator = menuai.data[DOMAIN][config_entry.entry_id]
     async_add_entities(
         [
             VenstarThermostat(
@@ -86,7 +86,7 @@ async def async_setup_entry(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -102,8 +102,8 @@ async def async_setup_platform(
         " has been migrated to a config entry and can be safely removed"
     )
     # No config entry exists and configuration.yaml config exists, trigger the import flow.
-    if not hass.config_entries.async_entries(DOMAIN):
-        await hass.config_entries.flow.async_init(
+    if not menuai.config_entries.async_entries(DOMAIN):
+        await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": SOURCE_IMPORT}, data=config
         )
 

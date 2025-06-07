@@ -7,10 +7,10 @@ import logging
 
 from imgw_pib import ApiError, HydrologicalData, ImgwPib
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN, UPDATE_INTERVAL
 
@@ -34,7 +34,7 @@ class ImgwPibDataUpdateCoordinator(DataUpdateCoordinator[HydrologicalData]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ImgwPibConfigEntry,
         imgwpib: ImgwPib,
         station_id: str,
@@ -51,7 +51,7 @@ class ImgwPibDataUpdateCoordinator(DataUpdateCoordinator[HydrologicalData]):
         )
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,

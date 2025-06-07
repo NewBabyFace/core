@@ -6,14 +6,14 @@ import logging
 from pizzapi import Address, Customer, Order
 import voluptuous as vol
 
-from homeassistant.components import http
-from homeassistant.core import HomeAssistant, ServiceCall, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util import Throttle
+from menuai.components import http
+from menuai.core import menuai, ServiceCall, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity import Entity
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.typing import ConfigType
+from menuai.util import Throttle
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -64,16 +64,16 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
-    """Set up is called when Home Assistant is loading our component."""
-    dominos = Dominos(hass, config)
+def setup(menuai: menuai, config: ConfigType) -> bool:
+    """Set up is called when MenuAI is loading our component."""
+    dominos = Dominos(menuai, config)
 
-    component = EntityComponent[DominosOrder](_LOGGER, DOMAIN, hass)
-    hass.data[DOMAIN] = {}
+    component = EntityComponent[DominosOrder](_LOGGER, DOMAIN, menuai)
+    menuai.data[DOMAIN] = {}
     entities: list[DominosOrder] = []
     conf = config[DOMAIN]
 
-    hass.services.register(
+    menuai.services.register(
         DOMAIN,
         "order",
         dominos.handle_order,
@@ -85,7 +85,7 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
     )
 
     if conf.get(ATTR_SHOW_MENU):
-        hass.http.register_view(DominosProductListView(dominos))
+        menuai.http.register_view(DominosProductListView(dominos))
 
     for order_info in conf.get(ATTR_ORDERS):
         order = DominosOrder(order_info, dominos)
@@ -100,11 +100,11 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
 class Dominos:
     """Main Dominos service."""
 
-    def __init__(self, hass, config):
+    def __init__(self, menuai, config):
         """Set up main service."""
         conf = config[DOMAIN]
 
-        self.hass = hass
+        self.menuai = menuai
         self.customer = Customer(
             conf.get(ATTR_FIRST_NAME),
             conf.get(ATTR_LAST_NAME),
@@ -127,7 +127,7 @@ class Dominos:
 
         target_orders = [
             order
-            for order in self.hass.data[DOMAIN]["entities"]
+            for order in self.menuai.data[DOMAIN]["entities"]
             if order.entity_id in entity_ids
         ]
 
@@ -166,7 +166,7 @@ class Dominos:
         return product_entries
 
 
-class DominosProductListView(http.HomeAssistantView):
+class DominosProductListView(http.menuaiView):
     """View to retrieve product list content."""
 
     url = "/api/dominos"
@@ -233,7 +233,7 @@ class DominosOrder(Entity):
     def order(self):
         """Create the order object."""
         if self.dominos.closest_store is None:
-            raise HomeAssistantError("No store available")
+            raise menuaiError("No store available")
 
         order = Order(
             self.dominos.closest_store,

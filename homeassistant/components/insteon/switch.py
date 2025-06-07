@@ -2,12 +2,12 @@
 
 from typing import Any
 
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import SIGNAL_ADD_ENTITIES
 from .entity import InsteonEntity
@@ -15,7 +15,7 @@ from .utils import async_add_insteon_devices, async_add_insteon_entities
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -25,7 +25,7 @@ async def async_setup_entry(
     def async_add_insteon_switch_entities(discovery_info=None):
         """Add the Insteon entities for the platform."""
         async_add_insteon_entities(
-            hass,
+            menuai,
             Platform.SWITCH,
             InsteonSwitchEntity,
             async_add_entities,
@@ -33,9 +33,9 @@ async def async_setup_entry(
         )
 
     signal = f"{SIGNAL_ADD_ENTITIES}_{Platform.SWITCH}"
-    async_dispatcher_connect(hass, signal, async_add_insteon_switch_entities)
+    async_dispatcher_connect(menuai, signal, async_add_insteon_switch_entities)
     async_add_insteon_devices(
-        hass,
+        menuai,
         Platform.SWITCH,
         InsteonSwitchEntity,
         async_add_entities,

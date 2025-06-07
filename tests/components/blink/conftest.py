@@ -6,8 +6,8 @@ from uuid import uuid4
 import blinkpy
 import pytest
 
-from homeassistant.components.blink.const import DOMAIN
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.components.blink.const import DOMAIN
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
 
 from tests.common import MockConfigEntry
 
@@ -62,7 +62,7 @@ def blink_api_fixture(camera) -> MagicMock:
     mock_blink_api.cameras = {camera.name: camera}
     mock_blink_api.request_homescreen = AsyncMock(return_value=True)
 
-    with patch("homeassistant.components.blink.Blink") as class_mock:
+    with patch("menuai.components.blink.Blink") as class_mock:
         class_mock.return_value = mock_blink_api
         yield mock_blink_api
 
@@ -74,7 +74,7 @@ def blink_auth_api_fixture() -> MagicMock:
     mock_blink_auth_api.check_key_required.return_value = False
     mock_blink_auth_api.send_auth_key = AsyncMock(return_value=True)
 
-    with patch("homeassistant.components.blink.Auth", autospec=True) as class_mock:
+    with patch("menuai.components.blink.Auth", autospec=True) as class_mock:
         class_mock.return_value = mock_blink_auth_api
         yield mock_blink_auth_api
 
@@ -87,7 +87,7 @@ def mock_config_fixture():
         data={
             CONF_USERNAME: "test_user",
             CONF_PASSWORD: "Password",
-            "device_id": "Home Assistant",
+            "device_id": "MenuAI",
             "uid": "BlinkCamera_e1233333e2-0909-09cd-777a-123456789012",
             "token": "A_token",
             "unique_id": "an_email@email.com",

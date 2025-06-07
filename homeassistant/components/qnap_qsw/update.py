@@ -11,16 +11,16 @@ from aioqsw.const import (
     QSD_VERSION,
 )
 
-from homeassistant.components.update import (
+from menuai.components.update import (
     UpdateDeviceClass,
     UpdateEntity,
     UpdateEntityDescription,
     UpdateEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import EntityCategory
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN, QSW_COORD_FW, QSW_UPDATE
 from .coordinator import QswFirmwareCoordinator
@@ -36,12 +36,12 @@ UPDATE_TYPES: Final[tuple[UpdateEntityDescription, ...]] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Add QNAP QSW updates from a config_entry."""
-    coordinator: QswFirmwareCoordinator = hass.data[DOMAIN][entry.entry_id][
+    coordinator: QswFirmwareCoordinator = menuai.data[DOMAIN][entry.entry_id][
         QSW_COORD_FW
     ]
     async_add_entities(

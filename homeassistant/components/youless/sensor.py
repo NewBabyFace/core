@@ -7,14 +7,14 @@ from dataclasses import dataclass
 
 from youless_api import YoulessAPI
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_DEVICE,
     UnitOfElectricCurrent,
     UnitOfElectricPotential,
@@ -22,9 +22,9 @@ from homeassistant.const import (
     UnitOfPower,
     UnitOfVolume,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
 
 from . import DOMAIN
 from .coordinator import YouLessCoordinator
@@ -302,12 +302,12 @@ SENSOR_TYPES: tuple[YouLessSensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Initialize the integration."""
-    coordinator: YouLessCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: YouLessCoordinator = menuai.data[DOMAIN][entry.entry_id]
     device = entry.data[CONF_DEVICE]
     if (device := entry.data[CONF_DEVICE]) is None:
         device = entry.entry_id

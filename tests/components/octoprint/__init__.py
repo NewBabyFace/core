@@ -12,11 +12,11 @@ from pyoctoprintapi import (
     TrackingSetting,
 )
 
-from homeassistant.components.octoprint import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.typing import UNDEFINED, UndefinedType
+from menuai.components.octoprint import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers.typing import UNDEFINED, UndefinedType
 
 from tests.common import MockConfigEntry
 
@@ -35,12 +35,12 @@ DEFAULT_PRINTER = {
 
 
 async def init_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     platform: Platform,
     printer: dict[str, Any] | UndefinedType | None = UNDEFINED,
     job: dict[str, Any] | None = None,
 ) -> None:
-    """Set up the octoprint integration in Home Assistant."""
+    """Set up the octoprint integration in MenuAI."""
     printer_info: OctoprintPrinterInfo | None = None
     if printer is UNDEFINED:
         printer = DEFAULT_PRINTER
@@ -49,7 +49,7 @@ async def init_integration(
     if job is None:
         job = DEFAULT_JOB
     with (
-        patch("homeassistant.components.octoprint.PLATFORMS", [platform]),
+        patch("menuai.components.octoprint.PLATFORMS", [platform]),
         patch("pyoctoprintapi.OctoprintClient.get_server_info", return_value={}),
         patch(
             "pyoctoprintapi.OctoprintClient.get_printer_info",
@@ -82,9 +82,9 @@ async def init_integration(
             },
             title="OctoPrint",
         )
-        config_entry.add_to_hass(hass)
+        config_entry.add_to_menuai(menuai)
 
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED

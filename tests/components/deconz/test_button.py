@@ -7,10 +7,10 @@ from unittest.mock import patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .conftest import ConfigEntryFactoryType
 
@@ -77,7 +77,7 @@ TEST_DATA = [
 
 @pytest.mark.parametrize(("deconz_payload", "expected"), TEST_DATA)
 async def test_button(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     aioclient_mock: AiohttpClientMocker,
     config_entry_factory: ConfigEntryFactoryType,
@@ -86,15 +86,15 @@ async def test_button(
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test successful creation of button entities."""
-    with patch("homeassistant.components.deconz.PLATFORMS", [Platform.BUTTON]):
+    with patch("menuai.components.deconz.PLATFORMS", [Platform.BUTTON]):
         config_entry = await config_entry_factory()
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
     # Verify button press
 
     aioclient_mock = mock_put_request(expected["request"])
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         BUTTON_DOMAIN,
         SERVICE_PRESS,
         {ATTR_ENTITY_ID: expected["entity_id"]},

@@ -5,7 +5,7 @@ from typing import Any
 from yalexs.const import DEFAULT_BRAND
 from yalexs.manager.gateway import Gateway
 
-from homeassistant.const import CONF_USERNAME
+from menuai.const import CONF_USERNAME
 
 from .const import (
     CONF_ACCESS_TOKEN_CACHE_FILE,

@@ -4,9 +4,9 @@ from typing import Any
 
 import pytest
 
-from homeassistant import setup
-from homeassistant.components.command_line.const import DOMAIN
-from homeassistant.core import HomeAssistant
+from menuai import setup
+from menuai.components.command_line.const import DOMAIN
+from menuai.core import menuai
 
 
 @pytest.fixture(name="get_config")
@@ -62,11 +62,11 @@ async def get_config_to_integration_load() -> dict[str, Any]:
 
 
 @pytest.fixture(name="load_yaml_integration")
-async def load_int(hass: HomeAssistant, get_config: dict[str, Any]) -> None:
-    """Set up the Command Line integration in Home Assistant."""
+async def load_int(menuai: menuai, get_config: dict[str, Any]) -> None:
+    """Set up the Command Line integration in MenuAI."""
     await setup.async_setup_component(
-        hass,
+        menuai,
         DOMAIN,
         get_config,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()

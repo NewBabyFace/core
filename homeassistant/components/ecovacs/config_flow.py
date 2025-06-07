@@ -16,12 +16,12 @@ from deebot_client.mqtt_client import MqttClient, create_mqtt_config
 from deebot_client.util import md5
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_COUNTRY, CONF_MODE, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import aiohttp_client, selector
-from homeassistant.helpers.typing import VolDictType
-from homeassistant.util.ssl import get_default_no_verify_context
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_COUNTRY, CONF_MODE, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.helpers import aiohttp_client, selector
+from menuai.helpers.typing import VolDictType
+from menuai.util.ssl import get_default_no_verify_context
 
 from .const import (
     CONF_OVERRIDE_MQTT_URL,
@@ -51,7 +51,7 @@ def _validate_url(
 
 
 async def _validate_input(
-    hass: HomeAssistant, user_input: dict[str, Any]
+    menuai: menuai, user_input: dict[str, Any]
 ) -> dict[str, str]:
     """Validate user input."""
     errors: dict[str, str] = {}
@@ -68,10 +68,10 @@ async def _validate_input(
     if errors:
         return errors
 
-    device_id = get_client_device_id(hass, rest_url is not None)
+    device_id = get_client_device_id(menuai, rest_url is not None)
     country = user_input[CONF_COUNTRY]
     rest_config = create_rest_config(
-        aiohttp_client.async_get_clientsession(hass),
+        aiohttp_client.async_get_clientsession(menuai),
         device_id=device_id,
         alpha_2_country=country,
         override_rest_url=rest_url,
@@ -101,7 +101,7 @@ async def _validate_input(
     if not user_input.get(CONF_VERIFY_MQTT_CERTIFICATE, True) and mqtt_url:
         ssl_context = get_default_no_verify_context()
 
-    mqtt_config = await hass.async_add_executor_job(
+    mqtt_config = await menuai.async_add_executor_job(
         partial(
             create_mqtt_config,
             device_id=device_id,
@@ -174,7 +174,7 @@ class EcovacsConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input:
             self._async_abort_entries_match({CONF_USERNAME: user_input[CONF_USERNAME]})
 
-            errors = await _validate_input(self.hass, user_input)
+            errors = await _validate_input(self.menuai, user_input)
 
             if not errors:
                 return self.async_create_entry(
@@ -206,7 +206,7 @@ class EcovacsConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if not user_input:
             user_input = {
-                CONF_COUNTRY: self.hass.config.country,
+                CONF_COUNTRY: self.menuai.config.country,
             }
 
         return self.async_show_form(

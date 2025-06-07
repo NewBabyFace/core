@@ -5,8 +5,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from homeassistant.components.sensor import SensorDeviceClass
-from homeassistant.const import (
+from menuai.components.sensor import SensorDeviceClass
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     ATTR_ICON,
     ATTR_UNIT_OF_MEASUREMENT,
@@ -17,28 +17,28 @@ from homeassistant.const import (
     UnitOfElectricCurrent,
     UnitOfInformation,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.util import dt as dt_util
 
 from tests.common import MockConfigEntry
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default", "mock_wled")
 async def test_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test the creation and values of the WLED sensors."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     test_time = datetime(2019, 11, 11, 9, 10, 32, tzinfo=dt_util.UTC)
-    with patch("homeassistant.components.wled.sensor.utcnow", return_value=test_time):
-        await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+    with patch("menuai.components.wled.sensor.utcnow", return_value=test_time):
+        await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
-    assert (state := hass.states.get("sensor.wled_rgb_light_estimated_current"))
+    assert (state := menuai.states.get("sensor.wled_rgb_light_estimated_current"))
     assert (
         state.attributes.get(ATTR_UNIT_OF_MEASUREMENT)
         == UnitOfElectricCurrent.MILLIAMPERE
@@ -52,7 +52,7 @@ async def test_sensors(
     assert entry.unique_id == "aabbccddeeff_estimated_current"
     assert entry.entity_category is EntityCategory.DIAGNOSTIC
 
-    assert (state := hass.states.get("sensor.wled_rgb_light_uptime"))
+    assert (state := menuai.states.get("sensor.wled_rgb_light_uptime"))
     assert state.attributes.get(ATTR_DEVICE_CLASS) == SensorDeviceClass.TIMESTAMP
     assert state.attributes.get(ATTR_UNIT_OF_MEASUREMENT) is None
     assert state.state == "2019-11-11T08:54:26+00:00"
@@ -61,7 +61,7 @@ async def test_sensors(
     assert entry.unique_id == "aabbccddeeff_uptime"
     assert entry.entity_category is EntityCategory.DIAGNOSTIC
 
-    assert (state := hass.states.get("sensor.wled_rgb_light_free_memory"))
+    assert (state := menuai.states.get("sensor.wled_rgb_light_free_memory"))
     assert state.attributes.get(ATTR_ICON) is None
     assert state.attributes.get(ATTR_UNIT_OF_MEASUREMENT) == UnitOfInformation.BYTES
     assert state.state == "198384"
@@ -71,7 +71,7 @@ async def test_sensors(
     assert entry.unique_id == "aabbccddeeff_free_heap"
     assert entry.entity_category is EntityCategory.DIAGNOSTIC
 
-    assert (state := hass.states.get("sensor.wled_rgb_light_wi_fi_signal"))
+    assert (state := menuai.states.get("sensor.wled_rgb_light_wi_fi_signal"))
     assert state.attributes.get(ATTR_ICON) is None
     assert state.attributes.get(ATTR_UNIT_OF_MEASUREMENT) == PERCENTAGE
     assert state.state == "100"
@@ -81,7 +81,7 @@ async def test_sensors(
     assert entry.unique_id == "aabbccddeeff_wifi_signal"
     assert entry.entity_category is EntityCategory.DIAGNOSTIC
 
-    assert (state := hass.states.get("sensor.wled_rgb_light_wi_fi_rssi"))
+    assert (state := menuai.states.get("sensor.wled_rgb_light_wi_fi_rssi"))
     assert state.attributes.get(ATTR_DEVICE_CLASS) == SensorDeviceClass.SIGNAL_STRENGTH
     assert (
         state.attributes.get(ATTR_UNIT_OF_MEASUREMENT)
@@ -93,7 +93,7 @@ async def test_sensors(
     assert entry.unique_id == "aabbccddeeff_wifi_rssi"
     assert entry.entity_category is EntityCategory.DIAGNOSTIC
 
-    assert (state := hass.states.get("sensor.wled_rgb_light_wi_fi_channel"))
+    assert (state := menuai.states.get("sensor.wled_rgb_light_wi_fi_channel"))
     assert state.attributes.get(ATTR_ICON) is None
     assert state.attributes.get(ATTR_UNIT_OF_MEASUREMENT) is None
     assert state.state == "11"
@@ -102,7 +102,7 @@ async def test_sensors(
     assert entry.unique_id == "aabbccddeeff_wifi_channel"
     assert entry.entity_category is EntityCategory.DIAGNOSTIC
 
-    assert (state := hass.states.get("sensor.wled_rgb_light_wi_fi_bssid"))
+    assert (state := menuai.states.get("sensor.wled_rgb_light_wi_fi_bssid"))
     assert state.attributes.get(ATTR_ICON) is None
     assert state.attributes.get(ATTR_UNIT_OF_MEASUREMENT) is None
     assert state.state == "AA:AA:AA:AA:AA:BB"
@@ -111,7 +111,7 @@ async def test_sensors(
     assert entry.unique_id == "aabbccddeeff_wifi_bssid"
     assert entry.entity_category is EntityCategory.DIAGNOSTIC
 
-    assert (state := hass.states.get("sensor.wled_rgb_light_ip"))
+    assert (state := menuai.states.get("sensor.wled_rgb_light_ip"))
     assert state.attributes.get(ATTR_ICON) is None
     assert state.attributes.get(ATTR_UNIT_OF_MEASUREMENT) is None
     assert state.state == "127.0.0.1"
@@ -134,10 +134,10 @@ async def test_sensors(
 )
 @pytest.mark.usefixtures("init_integration")
 async def test_disabled_by_default_sensors(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, entity_id: str
+    menuai: menuai, entity_registry: er.EntityRegistry, entity_id: str
 ) -> None:
     """Test the disabled by default WLED sensors."""
-    assert hass.states.get(entity_id) is None
+    assert menuai.states.get(entity_id) is None
 
     assert (entry := entity_registry.async_get(entity_id))
     assert entry.disabled
@@ -155,7 +155,7 @@ async def test_disabled_by_default_sensors(
 )
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_no_wifi_support(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_wled: MagicMock,
     key: str,
@@ -166,16 +166,16 @@ async def test_no_wifi_support(
     device.info.wifi = None
 
     # Setup
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert (state := hass.states.get(f"sensor.wled_rgb_light_wi_fi_{key}"))
+    assert (state := menuai.states.get(f"sensor.wled_rgb_light_wi_fi_{key}"))
     assert state.state == STATE_UNKNOWN
 
 
 async def test_no_current_measurement(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_wled: MagicMock,
 ) -> None:
@@ -183,9 +183,9 @@ async def test_no_current_measurement(
     device = mock_wled.update.return_value
     device.info.leds.max_power = 0
 
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("sensor.wled_rgb_light_max_current") is None
-    assert hass.states.get("sensor.wled_rgb_light_estimated_current") is None
+    assert menuai.states.get("sensor.wled_rgb_light_max_current") is None
+    assert menuai.states.get("sensor.wled_rgb_light_estimated_current") is None

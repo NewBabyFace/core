@@ -2,7 +2,7 @@
 
 import pytest
 
-from homeassistant.components.vacuum import (
+from menuai.components.vacuum import (
     ATTR_FAN_SPEED,
     SERVICE_PAUSE,
     SERVICE_RETURN_TO_BASE,
@@ -11,9 +11,9 @@ from homeassistant.components.vacuum import (
     SERVICE_STOP,
     VacuumActivity,
 )
-from homeassistant.const import SERVICE_TURN_OFF, SERVICE_TURN_ON, STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant, State
-from homeassistant.helpers.state import async_reproduce_state
+from menuai.const import SERVICE_TURN_OFF, SERVICE_TURN_ON, STATE_OFF, STATE_ON
+from menuai.core import menuai, State
+from menuai.helpers.state import async_reproduce_state
 
 from tests.common import async_mock_service
 
@@ -22,31 +22,31 @@ FAN_SPEED_HIGH = "high"
 
 
 async def test_reproducing_states(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test reproducing Vacuum states."""
-    hass.states.async_set("vacuum.entity_off", STATE_OFF, {})
-    hass.states.async_set("vacuum.entity_on", STATE_ON, {})
-    hass.states.async_set(
+    menuai.states.async_set("vacuum.entity_off", STATE_OFF, {})
+    menuai.states.async_set("vacuum.entity_on", STATE_ON, {})
+    menuai.states.async_set(
         "vacuum.entity_on_fan", STATE_ON, {ATTR_FAN_SPEED: FAN_SPEED_LOW}
     )
-    hass.states.async_set("vacuum.entity_cleaning", VacuumActivity.CLEANING, {})
-    hass.states.async_set("vacuum.entity_docked", VacuumActivity.DOCKED, {})
-    hass.states.async_set("vacuum.entity_idle", VacuumActivity.IDLE, {})
-    hass.states.async_set("vacuum.entity_returning", VacuumActivity.RETURNING, {})
-    hass.states.async_set("vacuum.entity_paused", VacuumActivity.PAUSED, {})
+    menuai.states.async_set("vacuum.entity_cleaning", VacuumActivity.CLEANING, {})
+    menuai.states.async_set("vacuum.entity_docked", VacuumActivity.DOCKED, {})
+    menuai.states.async_set("vacuum.entity_idle", VacuumActivity.IDLE, {})
+    menuai.states.async_set("vacuum.entity_returning", VacuumActivity.RETURNING, {})
+    menuai.states.async_set("vacuum.entity_paused", VacuumActivity.PAUSED, {})
 
-    turn_on_calls = async_mock_service(hass, "vacuum", SERVICE_TURN_ON)
-    turn_off_calls = async_mock_service(hass, "vacuum", SERVICE_TURN_OFF)
-    start_calls = async_mock_service(hass, "vacuum", SERVICE_START)
-    pause_calls = async_mock_service(hass, "vacuum", SERVICE_PAUSE)
-    stop_calls = async_mock_service(hass, "vacuum", SERVICE_STOP)
-    return_calls = async_mock_service(hass, "vacuum", SERVICE_RETURN_TO_BASE)
-    fan_speed_calls = async_mock_service(hass, "vacuum", SERVICE_SET_FAN_SPEED)
+    turn_on_calls = async_mock_service(menuai, "vacuum", SERVICE_TURN_ON)
+    turn_off_calls = async_mock_service(menuai, "vacuum", SERVICE_TURN_OFF)
+    start_calls = async_mock_service(menuai, "vacuum", SERVICE_START)
+    pause_calls = async_mock_service(menuai, "vacuum", SERVICE_PAUSE)
+    stop_calls = async_mock_service(menuai, "vacuum", SERVICE_STOP)
+    return_calls = async_mock_service(menuai, "vacuum", SERVICE_RETURN_TO_BASE)
+    fan_speed_calls = async_mock_service(menuai, "vacuum", SERVICE_SET_FAN_SPEED)
 
     # These calls should do nothing as entities already in desired state
     await async_reproduce_state(
-        hass,
+        menuai,
         [
             State("vacuum.entity_off", STATE_OFF),
             State("vacuum.entity_on", STATE_ON),
@@ -68,7 +68,7 @@ async def test_reproducing_states(
     assert len(fan_speed_calls) == 0
 
     # Test invalid state is handled
-    await async_reproduce_state(hass, [State("vacuum.entity_off", "not_supported")])
+    await async_reproduce_state(menuai, [State("vacuum.entity_off", "not_supported")])
 
     assert "not_supported" in caplog.text
     assert len(turn_on_calls) == 0
@@ -81,7 +81,7 @@ async def test_reproducing_states(
 
     # Make sure correct services are called
     await async_reproduce_state(
-        hass,
+        menuai,
         [
             State("vacuum.entity_off", STATE_ON),
             State("vacuum.entity_on", STATE_OFF),

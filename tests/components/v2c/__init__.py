@@ -1,15 +1,15 @@
 """Tests for the V2C integration."""
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
 
 async def init_integration(
-    hass: HomeAssistant, config_entry: MockConfigEntry
+    menuai: menuai, config_entry: MockConfigEntry
 ) -> MockConfigEntry:
-    """Set up the V2C integration in Home Assistant."""
-    config_entry.add_to_hass(hass)
+    """Set up the V2C integration in MenuAI."""
+    config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()

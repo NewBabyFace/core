@@ -8,14 +8,14 @@ from zigpy.profiles import zha
 from zigpy.zcl.clusters import general, security
 import zigpy.zcl.foundation as zcl_f
 
-from homeassistant.components import automation
-from homeassistant.components.device_automation import DeviceAutomationType
-from homeassistant.components.zha import DOMAIN
-from homeassistant.components.zha.helpers import get_zha_gateway
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.components import automation
+from menuai.components.device_automation import DeviceAutomationType
+from menuai.components.zha import DOMAIN
+from menuai.components.zha.helpers import get_zha_gateway
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.setup import async_setup_component
 
 from .conftest import SIG_EP_INPUT, SIG_EP_OUTPUT, SIG_EP_PROFILE, SIG_EP_TYPE
 
@@ -36,7 +36,7 @@ COMMAND_SINGLE = "single"
 def required_platforms_only():
     """Only set up the required platforms and required base platforms to speed up tests."""
     with patch(
-        "homeassistant.components.zha.PLATFORMS",
+        "menuai.components.zha.PLATFORMS",
         (
             Platform.BINARY_SENSOR,
             Platform.BUTTON,
@@ -53,7 +53,7 @@ def required_platforms_only():
 
 
 async def test_get_actions(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     setup_zha,
@@ -62,7 +62,7 @@ async def test_get_actions(
     """Test we get the expected actions from a ZHA device."""
 
     await setup_zha()
-    gateway = get_zha_gateway(hass)
+    gateway = get_zha_gateway(menuai)
 
     zigpy_device = zigpy_device_mock(
         {
@@ -81,7 +81,7 @@ async def test_get_actions(
 
     gateway.get_or_create_device(zigpy_device)
     await gateway.async_device_initialized(zigpy_device)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
     ieee_address = str(zigpy_device.ieee)
 
     reg_device = device_registry.async_get_device(identifiers={(DOMAIN, ieee_address)})
@@ -99,7 +99,7 @@ async def test_get_actions(
     )
 
     actions = await async_get_device_automations(
-        hass, DeviceAutomationType.ACTION, reg_device.id
+        menuai, DeviceAutomationType.ACTION, reg_device.id
     )
 
     expected_actions = [
@@ -140,14 +140,14 @@ async def test_get_actions(
 
 
 async def test_action(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     setup_zha,
     zigpy_device_mock,
 ) -> None:
     """Test for executing a ZHA device action."""
     await setup_zha()
-    gateway = get_zha_gateway(hass)
+    gateway = get_zha_gateway(menuai)
 
     zigpy_device = zigpy_device_mock(
         {
@@ -169,7 +169,7 @@ async def test_action(
 
     gateway.get_or_create_device(zigpy_device)
     await gateway.async_device_initialized(zigpy_device)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
     ieee_address = str(zigpy_device.ieee)
 
     reg_device = device_registry.async_get_device(identifiers={(DOMAIN, ieee_address)})
@@ -179,7 +179,7 @@ async def test_action(
         return_value=[0x00, zcl_f.Status.SUCCESS],
     ):
         assert await async_setup_component(
-            hass,
+            menuai,
             automation.DOMAIN,
             {
                 automation.DOMAIN: [
@@ -203,8 +203,8 @@ async def test_action(
             },
         )
 
-        await hass.async_block_till_done()
-        calls = async_mock_service(hass, DOMAIN, "warning_device_warn")
+        await menuai.async_block_till_done()
+        calls = async_mock_service(menuai, DOMAIN, "warning_device_warn")
 
         cluster_handler = (
             gateway.get_device(zigpy_device.ieee)
@@ -212,7 +212,7 @@ async def test_action(
             .client_cluster_handlers["1:0x0006_client"]
         )
         cluster_handler.zha_send_event(COMMAND_SINGLE, [])
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         assert len(calls) == 1
         assert calls[0].domain == DOMAIN
@@ -221,11 +221,11 @@ async def test_action(
 
 
 async def test_invalid_zha_event_type(
-    hass: HomeAssistant, setup_zha, zigpy_device_mock
+    menuai: menuai, setup_zha, zigpy_device_mock
 ) -> None:
     """Test that unexpected types are not passed to `zha_send_event`."""
     await setup_zha()
-    gateway = get_zha_gateway(hass)
+    gateway = get_zha_gateway(menuai)
 
     zigpy_device = zigpy_device_mock(
         {
@@ -247,7 +247,7 @@ async def test_invalid_zha_event_type(
 
     gateway.get_or_create_device(zigpy_device)
     await gateway.async_device_initialized(zigpy_device)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     cluster_handler = (
         gateway.get_device(zigpy_device.ieee)
@@ -261,11 +261,11 @@ async def test_invalid_zha_event_type(
 
 
 async def test_client_unique_id_suffix_stripped(
-    hass: HomeAssistant, setup_zha, zigpy_device_mock
+    menuai: menuai, setup_zha, zigpy_device_mock
 ) -> None:
     """Test that the `_CLIENT_` unique ID suffix is stripped."""
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -286,10 +286,10 @@ async def test_client_unique_id_suffix_stripped(
         },
     )
 
-    service_calls = async_mock_service(hass, DOMAIN, "test")
+    service_calls = async_mock_service(menuai, DOMAIN, "test")
 
     await setup_zha()
-    gateway = get_zha_gateway(hass)
+    gateway = get_zha_gateway(menuai)
 
     zigpy_device = zigpy_device_mock(
         {
@@ -320,5 +320,5 @@ async def test_client_unique_id_suffix_stripped(
         }
     )
 
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
     assert len(service_calls) == 1

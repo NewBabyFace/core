@@ -1,16 +1,16 @@
 """Tests for HomematicIP Cloud switch."""
 
-from homeassistant.components.homematicip_cloud.entity import (
+from menuai.components.homematicip_cloud.entity import (
     ATTR_GROUP_MEMBER_UNREACHABLE,
 )
-from homeassistant.const import STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant
+from menuai.const import STATE_OFF, STATE_ON
+from menuai.core import menuai
 
 from .helper import HomeFactory, async_manipulate_test_data, get_and_check_entity_basics
 
 
 async def test_hmip_switch(
-    hass: HomeAssistant, default_mock_hap_factory: HomeFactory
+    menuai: menuai, default_mock_hap_factory: HomeFactory
 ) -> None:
     """Test HomematicipSwitch."""
     entity_id = "switch.schrank"
@@ -21,35 +21,35 @@ async def test_hmip_switch(
     )
 
     ha_state, hmip_device = get_and_check_entity_basics(
-        hass, mock_hap, entity_id, entity_name, device_model
+        menuai, mock_hap, entity_id, entity_name, device_model
     )
 
     assert ha_state.state == STATE_ON
     service_call_counter = len(hmip_device.mock_calls)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch", "turn_off", {"entity_id": entity_id}, blocking=True
     )
     assert len(hmip_device.mock_calls) == service_call_counter + 1
     assert hmip_device.mock_calls[-1][0] == "turn_off_async"
     assert hmip_device.mock_calls[-1][1] == (1,)
-    await async_manipulate_test_data(hass, hmip_device, "on", False)
-    ha_state = hass.states.get(entity_id)
+    await async_manipulate_test_data(menuai, hmip_device, "on", False)
+    ha_state = menuai.states.get(entity_id)
     assert ha_state.state == STATE_OFF
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch", "turn_on", {"entity_id": entity_id}, blocking=True
     )
     assert len(hmip_device.mock_calls) == service_call_counter + 3
     assert hmip_device.mock_calls[-1][0] == "turn_on_async"
     assert hmip_device.mock_calls[-1][1] == (1,)
-    await async_manipulate_test_data(hass, hmip_device, "on", True)
-    ha_state = hass.states.get(entity_id)
+    await async_manipulate_test_data(menuai, hmip_device, "on", True)
+    ha_state = menuai.states.get(entity_id)
     assert ha_state.state == STATE_ON
 
 
 async def test_hmip_switch_input(
-    hass: HomeAssistant, default_mock_hap_factory: HomeFactory
+    menuai: menuai, default_mock_hap_factory: HomeFactory
 ) -> None:
     """Test HomematicipSwitch."""
     entity_id = "switch.wohnzimmer_beleuchtung"
@@ -60,35 +60,35 @@ async def test_hmip_switch_input(
     )
 
     ha_state, hmip_device = get_and_check_entity_basics(
-        hass, mock_hap, entity_id, entity_name, device_model
+        menuai, mock_hap, entity_id, entity_name, device_model
     )
 
     assert ha_state.state == STATE_ON
     service_call_counter = len(hmip_device.mock_calls)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch", "turn_off", {"entity_id": entity_id}, blocking=True
     )
     assert len(hmip_device.mock_calls) == service_call_counter + 1
     assert hmip_device.mock_calls[-1][0] == "turn_off_async"
     assert hmip_device.mock_calls[-1][1] == (1,)
-    await async_manipulate_test_data(hass, hmip_device, "on", False)
-    ha_state = hass.states.get(entity_id)
+    await async_manipulate_test_data(menuai, hmip_device, "on", False)
+    ha_state = menuai.states.get(entity_id)
     assert ha_state.state == STATE_OFF
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch", "turn_on", {"entity_id": entity_id}, blocking=True
     )
     assert len(hmip_device.mock_calls) == service_call_counter + 3
     assert hmip_device.mock_calls[-1][0] == "turn_on_async"
     assert hmip_device.mock_calls[-1][1] == (1,)
-    await async_manipulate_test_data(hass, hmip_device, "on", True)
-    ha_state = hass.states.get(entity_id)
+    await async_manipulate_test_data(menuai, hmip_device, "on", True)
+    ha_state = menuai.states.get(entity_id)
     assert ha_state.state == STATE_ON
 
 
 async def test_hmip_switch_measuring(
-    hass: HomeAssistant, default_mock_hap_factory: HomeFactory
+    menuai: menuai, default_mock_hap_factory: HomeFactory
 ) -> None:
     """Test HomematicipSwitchMeasuring."""
     entity_id = "switch.pc"
@@ -99,36 +99,36 @@ async def test_hmip_switch_measuring(
     )
 
     ha_state, hmip_device = get_and_check_entity_basics(
-        hass, mock_hap, entity_id, entity_name, device_model
+        menuai, mock_hap, entity_id, entity_name, device_model
     )
 
     assert ha_state.state == STATE_ON
     service_call_counter = len(hmip_device.mock_calls)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch", "turn_off", {"entity_id": entity_id}, blocking=True
     )
     assert len(hmip_device.mock_calls) == service_call_counter + 1
     assert hmip_device.mock_calls[-1][0] == "turn_off_async"
     assert hmip_device.mock_calls[-1][1] == (1,)
-    await async_manipulate_test_data(hass, hmip_device, "on", False)
-    ha_state = hass.states.get(entity_id)
+    await async_manipulate_test_data(menuai, hmip_device, "on", False)
+    ha_state = menuai.states.get(entity_id)
     assert ha_state.state == STATE_OFF
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch", "turn_on", {"entity_id": entity_id}, blocking=True
     )
     assert len(hmip_device.mock_calls) == service_call_counter + 3
     assert hmip_device.mock_calls[-1][0] == "turn_on_async"
     assert hmip_device.mock_calls[-1][1] == (1,)
-    await async_manipulate_test_data(hass, hmip_device, "on", True)
-    await async_manipulate_test_data(hass, hmip_device, "currentPowerConsumption", 50)
-    ha_state = hass.states.get(entity_id)
+    await async_manipulate_test_data(menuai, hmip_device, "on", True)
+    await async_manipulate_test_data(menuai, hmip_device, "currentPowerConsumption", 50)
+    ha_state = menuai.states.get(entity_id)
     assert ha_state.state == STATE_ON
 
 
 async def test_hmip_group_switch(
-    hass: HomeAssistant, default_mock_hap_factory: HomeFactory
+    menuai: menuai, default_mock_hap_factory: HomeFactory
 ) -> None:
     """Test HomematicipGroupSwitch."""
     entity_id = "switch.strom_group"
@@ -137,40 +137,40 @@ async def test_hmip_group_switch(
     mock_hap = await default_mock_hap_factory.async_get_mock_hap(test_groups=["Strom"])
 
     ha_state, hmip_device = get_and_check_entity_basics(
-        hass, mock_hap, entity_id, entity_name, device_model
+        menuai, mock_hap, entity_id, entity_name, device_model
     )
 
     assert ha_state.state == STATE_ON
     service_call_counter = len(hmip_device.mock_calls)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch", "turn_off", {"entity_id": entity_id}, blocking=True
     )
     assert len(hmip_device.mock_calls) == service_call_counter + 1
     assert hmip_device.mock_calls[-1][0] == "turn_off_async"
     assert hmip_device.mock_calls[-1][1] == ()
-    await async_manipulate_test_data(hass, hmip_device, "on", False)
-    ha_state = hass.states.get(entity_id)
+    await async_manipulate_test_data(menuai, hmip_device, "on", False)
+    ha_state = menuai.states.get(entity_id)
     assert ha_state.state == STATE_OFF
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch", "turn_on", {"entity_id": entity_id}, blocking=True
     )
     assert len(hmip_device.mock_calls) == service_call_counter + 3
     assert hmip_device.mock_calls[-1][0] == "turn_on_async"
     assert hmip_device.mock_calls[-1][1] == ()
-    await async_manipulate_test_data(hass, hmip_device, "on", True)
-    ha_state = hass.states.get(entity_id)
+    await async_manipulate_test_data(menuai, hmip_device, "on", True)
+    ha_state = menuai.states.get(entity_id)
     assert ha_state.state == STATE_ON
 
     assert not ha_state.attributes.get(ATTR_GROUP_MEMBER_UNREACHABLE)
-    await async_manipulate_test_data(hass, hmip_device, "unreach", True)
-    ha_state = hass.states.get(entity_id)
+    await async_manipulate_test_data(menuai, hmip_device, "unreach", True)
+    ha_state = menuai.states.get(entity_id)
     assert ha_state.attributes[ATTR_GROUP_MEMBER_UNREACHABLE]
 
 
 async def test_hmip_multi_switch(
-    hass: HomeAssistant, default_mock_hap_factory: HomeFactory
+    menuai: menuai, default_mock_hap_factory: HomeFactory
 ) -> None:
     """Test HomematicipMultiSwitch."""
     entity_id = "switch.jalousien_1_kizi_2_schlazi_channel1"
@@ -187,34 +187,34 @@ async def test_hmip_multi_switch(
     )
 
     ha_state, hmip_device = get_and_check_entity_basics(
-        hass, mock_hap, entity_id, entity_name, device_model
+        menuai, mock_hap, entity_id, entity_name, device_model
     )
 
     assert ha_state.state == STATE_OFF
     service_call_counter = len(hmip_device.mock_calls)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch", "turn_on", {"entity_id": entity_id}, blocking=True
     )
     assert len(hmip_device.mock_calls) == service_call_counter + 1
     assert hmip_device.mock_calls[-1][0] == "turn_on_async"
     assert hmip_device.mock_calls[-1][1] == (1,)
-    await async_manipulate_test_data(hass, hmip_device, "on", True)
-    ha_state = hass.states.get(entity_id)
+    await async_manipulate_test_data(menuai, hmip_device, "on", True)
+    ha_state = menuai.states.get(entity_id)
     assert ha_state.state == STATE_ON
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch", "turn_off", {"entity_id": entity_id}, blocking=True
     )
     assert len(hmip_device.mock_calls) == service_call_counter + 3
     assert hmip_device.mock_calls[-1][0] == "turn_off_async"
     assert hmip_device.mock_calls[-1][1] == (1,)
-    await async_manipulate_test_data(hass, hmip_device, "on", False)
-    ha_state = hass.states.get(entity_id)
+    await async_manipulate_test_data(menuai, hmip_device, "on", False)
+    ha_state = menuai.states.get(entity_id)
     assert ha_state.state == STATE_OFF
 
     ha_state, hmip_device = get_and_check_entity_basics(
-        hass,
+        menuai,
         mock_hap,
         "switch.schaltaktor_verteiler_channel3",
         "Schaltaktor Verteiler Channel3",
@@ -225,7 +225,7 @@ async def test_hmip_multi_switch(
 
 
 async def test_hmip_wired_multi_switch(
-    hass: HomeAssistant, default_mock_hap_factory: HomeFactory
+    menuai: menuai, default_mock_hap_factory: HomeFactory
 ) -> None:
     """Test HomematicipMultiSwitch."""
     entity_id = "switch.fernseher_wohnzimmer"
@@ -238,28 +238,28 @@ async def test_hmip_wired_multi_switch(
     )
 
     ha_state, hmip_device = get_and_check_entity_basics(
-        hass, mock_hap, entity_id, entity_name, device_model
+        menuai, mock_hap, entity_id, entity_name, device_model
     )
 
     assert ha_state.state == STATE_ON
     service_call_counter = len(hmip_device.mock_calls)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch", "turn_off", {"entity_id": entity_id}, blocking=True
     )
     assert len(hmip_device.mock_calls) == service_call_counter + 1
     assert hmip_device.mock_calls[-1][0] == "turn_off_async"
     assert hmip_device.mock_calls[-1][1] == (1,)
-    await async_manipulate_test_data(hass, hmip_device, "on", False)
-    ha_state = hass.states.get(entity_id)
+    await async_manipulate_test_data(menuai, hmip_device, "on", False)
+    ha_state = menuai.states.get(entity_id)
     assert ha_state.state == STATE_OFF
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch", "turn_on", {"entity_id": entity_id}, blocking=True
     )
     assert len(hmip_device.mock_calls) == service_call_counter + 3
     assert hmip_device.mock_calls[-1][0] == "turn_on_async"
     assert hmip_device.mock_calls[-1][1] == (1,)
-    await async_manipulate_test_data(hass, hmip_device, "on", True)
-    ha_state = hass.states.get(entity_id)
+    await async_manipulate_test_data(menuai, hmip_device, "on", True)
+    ha_state = menuai.states.get(entity_id)
     assert ha_state.state == STATE_ON

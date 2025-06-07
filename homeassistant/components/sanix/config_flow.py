@@ -7,8 +7,8 @@ from sanix import Sanix
 from sanix.exceptions import SanixException, SanixInvalidAuthException
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_TOKEN
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_TOKEN
 
 from .const import CONF_SERIAL_NUMBER, DOMAIN, MANUFACTURER
 
@@ -41,7 +41,7 @@ class SanixConfigFlow(ConfigFlow, domain=DOMAIN):
             sanix_api = Sanix(user_input[CONF_SERIAL_NUMBER], user_input[CONF_TOKEN])
 
             try:
-                await self.hass.async_add_executor_job(sanix_api.fetch_data)
+                await self.menuai.async_add_executor_job(sanix_api.fetch_data)
             except SanixInvalidAuthException:
                 errors["base"] = "invalid_auth"
             except SanixException:

@@ -4,16 +4,16 @@ from enum import StrEnum, unique
 
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_ENTITY_CATEGORY,
     CONF_ENTITY_ID,
     CONF_NAME,
     CONF_PLATFORM,
     Platform,
 )
-from homeassistant.helpers import config_validation as cv, selector
-from homeassistant.helpers.entity import ENTITY_CATEGORIES_SCHEMA
-from homeassistant.helpers.typing import VolDictType, VolSchemaType
+from menuai.helpers import config_validation as cv, selector
+from menuai.helpers.entity import ENTITY_CATEGORIES_SCHEMA
+from menuai.helpers.typing import VolDictType, VolSchemaType
 
 from ..const import (
     CONF_CONTEXT_TIMEOUT,

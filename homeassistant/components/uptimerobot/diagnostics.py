@@ -6,13 +6,13 @@ from typing import Any
 
 from pyuptimerobot import UptimeRobotException
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .coordinator import UptimeRobotConfigEntry
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: UptimeRobotConfigEntry,
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""

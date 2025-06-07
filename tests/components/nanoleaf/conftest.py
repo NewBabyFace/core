@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from homeassistant.components.nanoleaf import DOMAIN
-from homeassistant.const import CONF_HOST, CONF_TOKEN
+from menuai.components.nanoleaf import DOMAIN
+from menuai.const import CONF_HOST, CONF_TOKEN
 
 from tests.common import MockConfigEntry
 
@@ -27,7 +27,7 @@ def mock_config_entry() -> MockConfigEntry:
 async def mock_nanoleaf() -> AsyncGenerator[AsyncMock]:
     """Mock a Nanoleaf device."""
     with patch(
-        "homeassistant.components.nanoleaf.Nanoleaf", autospec=True
+        "menuai.components.nanoleaf.Nanoleaf", autospec=True
     ) as mock_nanoleaf:
         client = mock_nanoleaf.return_value
         client.model = "NO_TOUCH"

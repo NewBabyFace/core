@@ -6,16 +6,16 @@ from typing import Any, cast
 
 from aioswitcher.device import DeviceCategory, ShutterDirection, SwitcherShutter
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     ATTR_POSITION,
     CoverDeviceClass,
     CoverEntity,
     CoverEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import SIGNAL_DEVICE_ADD
 from .coordinator import SwitcherDataUpdateCoordinator
@@ -26,7 +26,7 @@ API_STOP = "stop_shutter"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -53,7 +53,7 @@ async def async_setup_entry(
         async_add_entities(entities)
 
     config_entry.async_on_unload(
-        async_dispatcher_connect(hass, SIGNAL_DEVICE_ADD, async_add_cover)
+        async_dispatcher_connect(menuai, SIGNAL_DEVICE_ADD, async_add_cover)
     )
 
 

@@ -11,10 +11,10 @@ from nextdns import ApiError, InvalidApiKeyError, NextDns
 from tenacity import RetryError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_API_KEY, CONF_PROFILE_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_API_KEY, CONF_PROFILE_NAME
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import CONF_PROFILE_ID, DOMAIN
 
@@ -23,9 +23,9 @@ AUTH_SCHEMA = vol.Schema({vol.Required(CONF_API_KEY): str})
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_init_nextdns(hass: HomeAssistant, api_key: str) -> NextDns:
+async def async_init_nextdns(menuai: menuai, api_key: str) -> NextDns:
     """Check if credentials are valid."""
-    websession = async_get_clientsession(hass)
+    websession = async_get_clientsession(menuai)
 
     return await NextDns.create(websession, api_key)
 
@@ -49,7 +49,7 @@ class NextDnsFlowHandler(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             self.api_key = user_input[CONF_API_KEY]
             try:
-                self.nextdns = await async_init_nextdns(self.hass, self.api_key)
+                self.nextdns = await async_init_nextdns(self.menuai, self.api_key)
             except InvalidApiKeyError:
                 errors["base"] = "invalid_api_key"
             except (ApiError, ClientConnectorError, RetryError, TimeoutError):
@@ -110,7 +110,7 @@ class NextDnsFlowHandler(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             try:
-                await async_init_nextdns(self.hass, user_input[CONF_API_KEY])
+                await async_init_nextdns(self.menuai, user_input[CONF_API_KEY])
             except InvalidApiKeyError:
                 errors["base"] = "invalid_api_key"
             except (ApiError, ClientConnectorError, RetryError, TimeoutError):

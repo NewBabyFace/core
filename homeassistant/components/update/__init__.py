@@ -12,17 +12,17 @@ from awesomeversion import AwesomeVersion, AwesomeVersionCompareException
 from propcache.api import cached_property
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_ENTITY_PICTURE, STATE_OFF, STATE_ON, EntityCategory
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity import ABCCachedProperties, EntityDescription
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util.hass_dict import HassKey
+from menuai.components import websocket_api
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_ENTITY_PICTURE, STATE_OFF, STATE_ON, EntityCategory
+from menuai.core import menuai, ServiceCall
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity import ABCCachedProperties, EntityDescription
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.restore_state import RestoreEntity
+from menuai.helpers.typing import ConfigType
+from menuai.util.menuai_dict import menuaiKey
 
 from .const import (
     ATTR_AUTO_UPDATE,
@@ -45,7 +45,7 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
-DATA_COMPONENT: HassKey[EntityComponent[UpdateEntity]] = HassKey(DOMAIN)
+DATA_COMPONENT: menuaiKey[EntityComponent[UpdateEntity]] = menuaiKey(DOMAIN)
 ENTITY_ID_FORMAT: Final = DOMAIN + ".{}"
 PLATFORM_SCHEMA = cv.PLATFORM_SCHEMA
 PLATFORM_SCHEMA_BASE = cv.PLATFORM_SCHEMA_BASE
@@ -81,10 +81,10 @@ __all__ = [
 # mypy: disallow-any-generics
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up Select entities."""
-    component = hass.data[DATA_COMPONENT] = EntityComponent[UpdateEntity](
-        _LOGGER, DOMAIN, hass, SCAN_INTERVAL
+    component = menuai.data[DATA_COMPONENT] = EntityComponent[UpdateEntity](
+        _LOGGER, DOMAIN, menuai, SCAN_INTERVAL
     )
     await component.async_setup(config)
 
@@ -109,19 +109,19 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         async_clear_skipped,
     )
 
-    websocket_api.async_register_command(hass, websocket_release_notes)
+    websocket_api.async_register_command(menuai, websocket_release_notes)
 
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up a config entry."""
-    return await hass.data[DATA_COMPONENT].async_setup_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_setup_entry(entry)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.data[DATA_COMPONENT].async_unload_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_unload_entry(entry)
 
 
 async def async_install(entity: UpdateEntity, service_call: ServiceCall) -> None:
@@ -131,14 +131,14 @@ async def async_install(entity: UpdateEntity, service_call: ServiceCall) -> None
         entity.installed_version == entity.latest_version
         or entity.latest_version is None
     ):
-        raise HomeAssistantError(f"No update available for {entity.entity_id}")
+        raise menuaiError(f"No update available for {entity.entity_id}")
 
     # If version is specified, but not supported by the entity.
     if (
         version is not None
         and UpdateEntityFeature.SPECIFIC_VERSION not in entity.supported_features
     ):
-        raise HomeAssistantError(
+        raise menuaiError(
             f"Installing a specific version is not supported for {entity.entity_id}"
         )
 
@@ -146,11 +146,11 @@ async def async_install(entity: UpdateEntity, service_call: ServiceCall) -> None
     if (
         backup := service_call.data[ATTR_BACKUP]
     ) and UpdateEntityFeature.BACKUP not in entity.supported_features:
-        raise HomeAssistantError(f"Backup is not supported for {entity.entity_id}")
+        raise menuaiError(f"Backup is not supported for {entity.entity_id}")
 
     # Update is already in progress.
     if entity.in_progress is not False:
-        raise HomeAssistantError(
+        raise menuaiError(
             f"Update installation already in progress for {entity.entity_id}"
         )
 
@@ -160,7 +160,7 @@ async def async_install(entity: UpdateEntity, service_call: ServiceCall) -> None
 async def async_skip(entity: UpdateEntity, service_call: ServiceCall) -> None:
     """Service call wrapper to validate the call."""
     if entity.auto_update:
-        raise HomeAssistantError(
+        raise menuaiError(
             f"Skipping update is not supported for {entity.entity_id}"
         )
     await entity.async_skip()
@@ -169,7 +169,7 @@ async def async_skip(entity: UpdateEntity, service_call: ServiceCall) -> None:
 async def async_clear_skipped(entity: UpdateEntity, service_call: ServiceCall) -> None:
     """Service call wrapper to validate the call."""
     if entity.auto_update:
-        raise HomeAssistantError(
+        raise menuaiError(
             f"Clearing skipped update is not supported for {entity.entity_id}"
         )
     await entity.async_clear_skipped()
@@ -351,9 +351,9 @@ class UpdateEntity(
     async def async_skip(self) -> None:
         """Skip the current offered version to update."""
         if (latest_version := self.latest_version) is None:
-            raise HomeAssistantError(f"Cannot skip an unknown version for {self.name}")
+            raise menuaiError(f"Cannot skip an unknown version for {self.name}")
         if self.installed_version == latest_version:
-            raise HomeAssistantError(f"No update available to skip for {self.name}")
+            raise menuaiError(f"No update available to skip for {self.name}")
         self.__skipped_version = latest_version
         self.async_write_ha_state()
 
@@ -374,7 +374,7 @@ class UpdateEntity(
         The backup parameter indicates a backup should be taken before
         installing the update.
         """
-        await self.hass.async_add_executor_job(self.install, version, backup)
+        await self.menuai.async_add_executor_job(self.install, version, backup)
 
     def install(self, version: str | None, backup: bool, **kwargs: Any) -> None:
         """Install an update.
@@ -393,7 +393,7 @@ class UpdateEntity(
         This is suitable for a long changelog that does not fit in the release_summary
         property. The returned string can contain markdown.
         """
-        return await self.hass.async_add_executor_job(self.release_notes)
+        return await self.menuai.async_add_executor_job(self.release_notes)
 
     def release_notes(self) -> str | None:
         """Return full release notes.
@@ -493,12 +493,12 @@ class UpdateEntity(
             self.__in_progress = False
             self.async_write_ha_state()
 
-    async def async_internal_added_to_hass(self) -> None:
-        """Call when the update entity is added to hass.
+    async def async_internal_added_to_menuai(self) -> None:
+        """Call when the update entity is added to menuai.
 
         It is used to restore the skipped version, if any.
         """
-        await super().async_internal_added_to_hass()
+        await super().async_internal_added_to_menuai()
         state = await self.async_get_last_state()
         if state is not None and state.attributes.get(ATTR_SKIPPED_VERSION) is not None:
             self.__skipped_version = state.attributes[ATTR_SKIPPED_VERSION]
@@ -513,12 +513,12 @@ class UpdateEntity(
 )
 @websocket_api.async_response
 async def websocket_release_notes(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.connection.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Get the full release notes for a entity."""
-    entity = hass.data[DATA_COMPONENT].get_entity(msg["entity_id"])
+    entity = menuai.data[DATA_COMPONENT].get_entity(msg["entity_id"])
 
     if entity is None:
         connection.send_error(

@@ -7,15 +7,15 @@ from dataclasses import dataclass
 
 from nextdns import ConnectionStatus
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.const import EntityCategory
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from . import NextDnsConfigEntry
 from .coordinator import NextDnsUpdateCoordinator
@@ -49,7 +49,7 @@ SENSORS = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: NextDnsConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

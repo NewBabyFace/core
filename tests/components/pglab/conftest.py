@@ -2,8 +2,8 @@
 
 import pytest
 
-from homeassistant.components.pglab.const import DISCOVERY_TOPIC, DOMAIN
-from homeassistant.core import HomeAssistant
+from menuai.components.pglab.const import DISCOVERY_TOPIC, DOMAIN
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry, mock_device_registry, mock_registry
 
@@ -11,21 +11,21 @@ CONF_DISCOVERY_PREFIX = "discovery_prefix"
 
 
 @pytest.fixture
-def device_reg(hass: HomeAssistant):
+def device_reg(menuai: menuai):
     """Return an empty, loaded, registry."""
-    return mock_device_registry(hass)
+    return mock_device_registry(menuai)
 
 
 @pytest.fixture
-def entity_reg(hass: HomeAssistant):
+def entity_reg(menuai: menuai):
     """Return an empty, loaded, registry."""
-    return mock_registry(hass)
+    return mock_registry(menuai)
 
 
 @pytest.fixture
-async def setup_pglab(hass: HomeAssistant):
+async def setup_pglab(menuai: menuai):
     """Set up PG LAB Electronics."""
-    hass.config.components.add("pglab")
+    menuai.config.components.add("pglab")
 
     entry = MockConfigEntry(
         data={CONF_DISCOVERY_PREFIX: DISCOVERY_TOPIC},
@@ -33,9 +33,9 @@ async def setup_pglab(hass: HomeAssistant):
         title="PG LAB Electronics",
     )
 
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert "pglab" in hass.config.components
+    assert "pglab" in menuai.config.components

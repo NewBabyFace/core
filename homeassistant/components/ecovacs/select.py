@@ -9,10 +9,10 @@ from deebot_client.device import Device
 from deebot_client.events import WorkModeEvent
 from deebot_client.events.water_info import WaterAmountEvent
 
-from homeassistant.components.select import SelectEntity, SelectEntityDescription
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.select import SelectEntity, SelectEntityDescription
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import EcovacsConfigEntry
 from .entity import EcovacsCapabilityEntityDescription, EcovacsDescriptionEntity, EventT
@@ -53,7 +53,7 @@ ENTITY_DESCRIPTIONS: tuple[EcovacsSelectEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: EcovacsConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -86,9 +86,9 @@ class EcovacsSelectEntity(
         super().__init__(device, capability, entity_description, **kwargs)
         self._attr_options = entity_description.options_fn(capability)
 
-    async def async_added_to_hass(self) -> None:
-        """Set up the event listeners now that hass is ready."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Set up the event listeners now that menuai is ready."""
+        await super().async_added_to_menuai()
 
         async def on_event(event: EventT) -> None:
             self._attr_current_option = self.entity_description.current_option_fn(event)

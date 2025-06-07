@@ -6,7 +6,7 @@ from typing import Any
 
 import radiotherm
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     FAN_AUTO,
     FAN_OFF,
     FAN_ON,
@@ -17,10 +17,10 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_TEMPERATURE, PRECISION_HALVES, UnitOfTemperature
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_TEMPERATURE, PRECISION_HALVES, UnitOfTemperature
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import DOMAIN
 from .coordinator import RadioThermUpdateCoordinator
@@ -40,9 +40,9 @@ OPERATION_LIST = [HVACMode.AUTO, HVACMode.COOL, HVACMode.HEAT, HVACMode.OFF]
 CT30_FAN_OPERATION_LIST = [FAN_ON, FAN_AUTO]
 CT80_FAN_OPERATION_LIST = [FAN_ON, STATE_CIRCULATE, FAN_AUTO]
 
-# Mappings from radiotherm json data codes to and from Home Assistant state
+# Mappings from radiotherm json data codes to and from MenuAI state
 # flags.  CODE is the thermostat integer code and these map to and
-# from Home Assistant state flags.
+# from MenuAI state flags.
 
 # Programmed temperature mode of the thermostat.
 CODE_TO_TEMP_MODE = {
@@ -91,12 +91,12 @@ def round_temp(temperature):
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up climate for a radiotherm device."""
-    coordinator: RadioThermUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: RadioThermUpdateCoordinator = menuai.data[DOMAIN][entry.entry_id]
     async_add_entities([RadioThermostat(coordinator)])
 
 
@@ -129,7 +129,7 @@ class RadioThermostat(RadioThermostatEntity, ClimateEntity):
         """Turn fan on/off."""
         if (code := FAN_MODE_TO_CODE.get(fan_mode)) is None:
             raise ValueError(f"{fan_mode} is not a valid fan mode")
-        await self.hass.async_add_executor_job(self._set_fan_mode, code)
+        await self.menuai.async_add_executor_job(self._set_fan_mode, code)
         self._attr_fan_mode = fan_mode
         self.async_write_ha_state()
         await self.coordinator.async_request_refresh()
@@ -173,7 +173,7 @@ class RadioThermostat(RadioThermostatEntity, ClimateEntity):
         """Set new target temperature."""
         if (temperature := kwargs.get(ATTR_TEMPERATURE)) is None:
             return
-        await self.hass.async_add_executor_job(self._set_temperature, temperature)
+        await self.menuai.async_add_executor_job(self._set_temperature, temperature)
         self._attr_target_temperature = temperature
         self.async_write_ha_state()
         await self.coordinator.async_request_refresh()
@@ -193,7 +193,7 @@ class RadioThermostat(RadioThermostatEntity, ClimateEntity):
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Set operation mode (auto, cool, heat, off)."""
-        await self.hass.async_add_executor_job(self._set_hvac_mode, hvac_mode)
+        await self.menuai.async_add_executor_job(self._set_hvac_mode, hvac_mode)
         self._attr_hvac_mode = hvac_mode
         self.async_write_ha_state()
         await self.coordinator.async_request_refresh()
@@ -212,7 +212,7 @@ class RadioThermostat(RadioThermostatEntity, ClimateEntity):
         """Set Preset mode (Home, Alternate, Away, Holiday)."""
         if preset_mode not in PRESET_MODES:
             raise ValueError(f"{preset_mode} is not a valid preset_mode")
-        await self.hass.async_add_executor_job(self._set_preset_mode, preset_mode)
+        await self.menuai.async_add_executor_job(self._set_preset_mode, preset_mode)
         self._attr_preset_mode = preset_mode
         self.async_write_ha_state()
         await self.coordinator.async_request_refresh()

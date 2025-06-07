@@ -5,18 +5,18 @@ import logging
 
 import voluptuous as vol
 
-from homeassistant.components import mqtt
-from homeassistant.components.mqtt import valid_publish_topic
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP, EVENT_STATE_CHANGED
-from homeassistant.core import Event, EventStateChangedData, HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entityfilter import (
+from menuai.components import mqtt
+from menuai.components.mqtt import valid_publish_topic
+from menuai.const import EVENT_menuai_STOP, EVENT_STATE_CHANGED
+from menuai.core import Event, EventStateChangedData, menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entityfilter import (
     INCLUDE_EXCLUDE_BASE_FILTER_SCHEMA,
     convert_include_exclude_filter,
 )
-from homeassistant.helpers.json import JSONEncoder
-from homeassistant.helpers.start import async_at_start
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers.json import JSONEncoder
+from menuai.helpers.start import async_at_start
+from menuai.helpers.typing import ConfigType
 
 CONF_BASE_TOPIC = "base_topic"
 CONF_PUBLISH_ATTRIBUTES = "publish_attributes"
@@ -40,10 +40,10 @@ CONFIG_SCHEMA = vol.Schema(
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the MQTT state feed."""
     # Make sure MQTT integration is enabled and the client is available
-    if not await mqtt.async_wait_for_mqtt_client(hass):
+    if not await mqtt.async_wait_for_mqtt_client(menuai):
         _LOGGER.error("MQTT integration is not available")
         return False
 
@@ -63,12 +63,12 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         payload = new_state.state
 
         mybase = f"{base_topic}{entity_id.replace('.', '/')}/"
-        await mqtt.async_publish(hass, f"{mybase}state", payload, 1, True)
+        await mqtt.async_publish(menuai, f"{mybase}state", payload, 1, True)
 
         if publish_timestamps:
             if new_state.last_updated:
                 await mqtt.async_publish(
-                    hass,
+                    menuai,
                     f"{mybase}last_updated",
                     new_state.last_updated.isoformat(),
                     1,
@@ -76,7 +76,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                 )
             if new_state.last_changed:
                 await mqtt.async_publish(
-                    hass,
+                    menuai,
                     f"{mybase}last_changed",
                     new_state.last_changed.isoformat(),
                     1,
@@ -86,10 +86,10 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         if publish_attributes:
             for key, val in new_state.attributes.items():
                 encoded_val = json.dumps(val, cls=JSONEncoder)
-                await mqtt.async_publish(hass, mybase + key, encoded_val, 1, True)
+                await mqtt.async_publish(menuai, mybase + key, encoded_val, 1, True)
 
     @callback
-    def _ha_started(hass: HomeAssistant) -> None:
+    def _ha_started(menuai: menuai) -> None:
         @callback
         def _event_filter(event_data: EventStateChangedData) -> bool:
             entity_id = event_data["entity_id"]
@@ -100,7 +100,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                 return False
             return True
 
-        callback_handler = hass.bus.async_listen(
+        callback_handler = menuai.bus.async_listen(
             EVENT_STATE_CHANGED, _state_publisher, _event_filter
         )
 
@@ -108,8 +108,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         def _ha_stopping(_: Event) -> None:
             callback_handler()
 
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _ha_stopping)
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, _ha_stopping)
 
-    async_at_start(hass, _ha_started)
+    async_at_start(menuai, _ha_started)
 
     return True

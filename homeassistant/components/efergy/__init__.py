@@ -4,23 +4,23 @@ from __future__ import annotations
 
 from pyefergy import Efergy, exceptions
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_API_KEY, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_API_KEY, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 PLATFORMS = [Platform.SENSOR]
 type EfergyConfigEntry = ConfigEntry[Efergy]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: EfergyConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: EfergyConfigEntry) -> bool:
     """Set up Efergy from a config entry."""
     api = Efergy(
         entry.data[CONF_API_KEY],
-        session=async_get_clientsession(hass),
-        utc_offset=hass.config.time_zone,
-        currency=hass.config.currency,
+        session=async_get_clientsession(menuai),
+        utc_offset=menuai.config.time_zone,
+        currency=menuai.config.currency,
     )
 
     try:
@@ -34,11 +34,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: EfergyConfigEntry) -> bo
 
     entry.runtime_data = api
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: EfergyConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: EfergyConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

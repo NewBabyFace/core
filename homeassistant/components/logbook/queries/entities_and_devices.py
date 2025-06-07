@@ -9,7 +9,7 @@ from sqlalchemy.sql.elements import ColumnElement
 from sqlalchemy.sql.lambdas import StatementLambdaElement
 from sqlalchemy.sql.selectable import CTE, CompoundSelect, Select
 
-from homeassistant.components.recorder.db_schema import (
+from menuai.components.recorder.db_schema import (
     EventData,
     Events,
     EventTypes,

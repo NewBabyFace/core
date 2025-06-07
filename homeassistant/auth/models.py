@@ -13,9 +13,9 @@ from attr import Attribute
 from attr.setters import validate
 from propcache.api import cached_property
 
-from homeassistant.const import __version__
-from homeassistant.data_entry_flow import FlowContext, FlowResult
-from homeassistant.util import dt as dt_util
+from menuai.const import __version__
+from menuai.data_entry_flow import FlowContext, FlowResult
+from menuai.util import dt as dt_util
 
 from . import permissions as perm_mdl
 from .const import GROUP_ID_ADMIN

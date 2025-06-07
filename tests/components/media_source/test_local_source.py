@@ -9,100 +9,100 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components import media_source, websocket_api
-from homeassistant.components.media_source import const
-from homeassistant.core import HomeAssistant
-from homeassistant.core_config import async_process_ha_core_config
-from homeassistant.setup import async_setup_component
+from menuai.components import media_source, websocket_api
+from menuai.components.media_source import const
+from menuai.core import menuai
+from menuai.core_config import async_process_ha_core_config
+from menuai.setup import async_setup_component
 
 from tests.common import MockUser
 from tests.typing import ClientSessionGenerator, WebSocketGenerator
 
 
 @pytest.fixture
-async def temp_dir(hass: HomeAssistant) -> AsyncGenerator[str]:
+async def temp_dir(menuai: menuai) -> AsyncGenerator[str]:
     """Return a temp dir."""
     with TemporaryDirectory() as tmpdirname:
         target_dir = Path(tmpdirname) / "another_subdir"
         target_dir.mkdir()
         await async_process_ha_core_config(
-            hass, {"media_dirs": {"test_dir": str(target_dir)}}
+            menuai, {"media_dirs": {"test_dir": str(target_dir)}}
         )
-        assert await async_setup_component(hass, const.DOMAIN, {})
+        assert await async_setup_component(menuai, const.DOMAIN, {})
 
         yield str(target_dir)
 
 
-async def test_async_browse_media(hass: HomeAssistant) -> None:
+async def test_async_browse_media(menuai: menuai) -> None:
     """Test browse media."""
-    local_media = hass.config.path("media")
+    local_media = menuai.config.path("media")
     await async_process_ha_core_config(
-        hass, {"media_dirs": {"local": local_media, "recordings": local_media}}
+        menuai, {"media_dirs": {"local": local_media, "recordings": local_media}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert await async_setup_component(hass, const.DOMAIN, {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, const.DOMAIN, {})
+    await menuai.async_block_till_done()
 
     # Test path not exists
     with pytest.raises(media_source.BrowseError) as excinfo:
         await media_source.async_browse_media(
-            hass, f"{const.URI_SCHEME}{const.DOMAIN}/local/test/not/exist"
+            menuai, f"{const.URI_SCHEME}{const.DOMAIN}/local/test/not/exist"
         )
     assert str(excinfo.value) == "Path does not exist."
 
     # Test browse file
     with pytest.raises(media_source.BrowseError) as excinfo:
         await media_source.async_browse_media(
-            hass, f"{const.URI_SCHEME}{const.DOMAIN}/local/test.mp3"
+            menuai, f"{const.URI_SCHEME}{const.DOMAIN}/local/test.mp3"
         )
     assert str(excinfo.value) == "Path is not a directory."
 
     # Test invalid base
     with pytest.raises(media_source.BrowseError) as excinfo:
         await media_source.async_browse_media(
-            hass, f"{const.URI_SCHEME}{const.DOMAIN}/invalid/base"
+            menuai, f"{const.URI_SCHEME}{const.DOMAIN}/invalid/base"
         )
     assert str(excinfo.value) == "Unknown source directory."
 
     # Test directory traversal
     with pytest.raises(media_source.BrowseError) as excinfo:
         await media_source.async_browse_media(
-            hass, f"{const.URI_SCHEME}{const.DOMAIN}/local/../configuration.yaml"
+            menuai, f"{const.URI_SCHEME}{const.DOMAIN}/local/../configuration.yaml"
         )
     assert str(excinfo.value) == "Invalid path."
 
     # Test successful listing
     media = await media_source.async_browse_media(
-        hass, f"{const.URI_SCHEME}{const.DOMAIN}"
+        menuai, f"{const.URI_SCHEME}{const.DOMAIN}"
     )
     assert media
 
     media = await media_source.async_browse_media(
-        hass, f"{const.URI_SCHEME}{const.DOMAIN}/local/."
+        menuai, f"{const.URI_SCHEME}{const.DOMAIN}/local/."
     )
     assert media
 
     media = await media_source.async_browse_media(
-        hass, f"{const.URI_SCHEME}{const.DOMAIN}/recordings/."
+        menuai, f"{const.URI_SCHEME}{const.DOMAIN}/recordings/."
     )
     assert media
 
 
 async def test_media_view(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test media view."""
-    local_media = hass.config.path("media")
+    local_media = menuai.config.path("media")
     await async_process_ha_core_config(
-        hass, {"media_dirs": {"local": local_media, "recordings": local_media}}
+        menuai, {"media_dirs": {"local": local_media, "recordings": local_media}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert await async_setup_component(hass, const.DOMAIN, {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, const.DOMAIN, {})
+    await menuai.async_block_till_done()
 
-    client = await hass_client()
+    client = await menuai_client()
 
     # Protects against non-existent files
     resp = await client.get("/media/local/invalid.txt")
@@ -131,16 +131,16 @@ async def test_media_view(
 
 
 async def test_upload_view(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     temp_dir: str,
     tmp_path: Path,
-    hass_admin_user: MockUser,
+    menuai_admin_user: MockUser,
 ) -> None:
     """Allow uploading media."""
     # We need a temp dir that's not under tempdir fixture
     extra_media_dir = tmp_path
-    hass.config.media_dirs["another_path"] = temp_dir
+    menuai.config.media_dirs["another_path"] = temp_dir
 
     img = (Path(__file__).parent.parent / "image_upload/logo.png").read_bytes()
 
@@ -149,7 +149,7 @@ async def test_upload_view(
         pic.name = name
         return pic
 
-    client = await hass_client()
+    client = await menuai_client()
 
     # Test normal upload
     res = await client.post(
@@ -232,7 +232,7 @@ async def test_upload_view(
     assert not (Path(temp_dir) / "../invalid-filename.png").is_file()
 
     # Remove admin access
-    hass_admin_user.groups = []
+    menuai_admin_user.groups = []
     res = await client.post(
         "/api/media_source/local_source/upload",
         data={
@@ -246,10 +246,10 @@ async def test_upload_view(
 
 
 async def test_remove_file(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     temp_dir: str,
-    hass_admin_user: MockUser,
+    menuai_admin_user: MockUser,
 ) -> None:
     """Allow uploading media."""
 
@@ -268,7 +268,7 @@ async def test_remove_file(
         to_delete_path.touch()
         return to_delete_path
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     to_delete = create_file()
 
     await client.send_json(
@@ -341,7 +341,7 @@ async def test_remove_file(
 
     # Test requires admin access
     to_delete_3 = create_file()
-    hass_admin_user.groups = []
+    menuai_admin_user.groups = []
 
     await client.send_json(
         {

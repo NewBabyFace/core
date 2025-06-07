@@ -5,15 +5,15 @@ from unittest.mock import MagicMock, patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.lock import (
+from menuai.components.lock import (
     DOMAIN as LOCK_DOMAIN,
     SERVICE_LOCK,
     SERVICE_UNLOCK,
     LockState,
 )
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import build_mock_node, setup_integration
 
@@ -21,12 +21,12 @@ from tests.common import MockConfigEntry, snapshot_platform
 
 
 async def setup_lock(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry, mock_homee: MagicMock
+    menuai: menuai, mock_config_entry: MockConfigEntry, mock_homee: MagicMock
 ) -> None:
     """Setups the integration lock tests."""
     mock_homee.nodes = [build_mock_node("lock.json")]
     mock_homee.get_node_by_id.return_value = mock_homee.nodes[0]
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
 
 @pytest.mark.parametrize(
@@ -37,16 +37,16 @@ async def setup_lock(
     ],
 )
 async def test_lock_services(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_homee: MagicMock,
     service: str,
     target_value: int,
 ) -> None:
     """Test lock services."""
-    await setup_lock(hass, mock_config_entry, mock_homee)
+    await setup_lock(menuai, mock_config_entry, mock_homee)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LOCK_DOMAIN,
         service,
         {ATTR_ENTITY_ID: "lock.test_lock"},
@@ -64,7 +64,7 @@ async def test_lock_services(
     ],
 )
 async def test_lock_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_homee: MagicMock,
     target_value: float,
@@ -77,9 +77,9 @@ async def test_lock_state(
     attribute = mock_homee.nodes[0].attributes[0]
     attribute.target_value = target_value
     attribute.current_value = current_value
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    assert hass.states.get("lock.test_lock").state == expected
+    assert menuai.states.get("lock.test_lock").state == expected
 
 
 @pytest.mark.parametrize(
@@ -92,7 +92,7 @@ async def test_lock_state(
     ],
 )
 async def test_lock_changed_by(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_homee: MagicMock,
     attr_changed_by: int,
@@ -106,20 +106,20 @@ async def test_lock_changed_by(
     attribute = mock_homee.nodes[0].attributes[0]
     attribute.changed_by = attr_changed_by
     attribute.changed_by_id = changed_by_id
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    assert hass.states.get("lock.test_lock").attributes["changed_by"] == expected
+    assert menuai.states.get("lock.test_lock").attributes["changed_by"] == expected
 
 
 async def test_lock_snapshot(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_homee: MagicMock,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test the lock snapshots."""
-    with patch("homeassistant.components.homee.PLATFORMS", [Platform.LOCK]):
-        await setup_lock(hass, mock_config_entry, mock_homee)
+    with patch("menuai.components.homee.PLATFORMS", [Platform.LOCK]):
+        await setup_lock(menuai, mock_config_entry, mock_homee)
 
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)

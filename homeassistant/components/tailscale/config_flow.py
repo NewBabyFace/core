@@ -8,19 +8,19 @@ from typing import Any
 from tailscale import Tailscale, TailscaleAuthenticationError, TailscaleError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_API_KEY
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_API_KEY
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import CONF_TAILNET, DOMAIN
 
 AUTHKEYS_URL = "https://login.tailscale.com/admin/settings/keys"
 
 
-async def validate_input(hass: HomeAssistant, *, tailnet: str, api_key: str) -> None:
+async def validate_input(menuai: menuai, *, tailnet: str, api_key: str) -> None:
     """Try using the give tailnet & api key against the Tailscale API."""
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
     tailscale = Tailscale(
         session=session,
         api_key=api_key,
@@ -43,7 +43,7 @@ class TailscaleFlowHandler(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             try:
                 await validate_input(
-                    self.hass,
+                    self.menuai,
                     tailnet=user_input[CONF_TAILNET],
                     api_key=user_input[CONF_API_KEY],
                 )
@@ -96,7 +96,7 @@ class TailscaleFlowHandler(ConfigFlow, domain=DOMAIN):
             reauth_entry = self._get_reauth_entry()
             try:
                 await validate_input(
-                    self.hass,
+                    self.menuai,
                     tailnet=reauth_entry.data[CONF_TAILNET],
                     api_key=user_input[CONF_API_KEY],
                 )

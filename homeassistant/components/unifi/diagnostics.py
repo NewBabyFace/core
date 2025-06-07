@@ -6,10 +6,10 @@ from collections.abc import Mapping
 from itertools import chain
 from typing import Any
 
-from homeassistant.components.diagnostics import REDACTED, async_redact_data
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import format_mac
+from menuai.components.diagnostics import REDACTED, async_redact_data
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import format_mac
 
 from . import UnifiConfigEntry
 
@@ -71,7 +71,7 @@ def async_replace_list_data(
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, config_entry: UnifiConfigEntry
+    menuai: menuai, config_entry: UnifiConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     hub = config_entry.runtime_data

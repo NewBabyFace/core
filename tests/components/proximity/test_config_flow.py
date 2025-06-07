@@ -4,16 +4,16 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components.proximity.const import (
+from menuai.components.proximity.const import (
     CONF_IGNORED_ZONES,
     CONF_TOLERANCE,
     CONF_TRACKED_ENTITIES,
     DOMAIN,
 )
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_ZONE
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_ZONE
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
@@ -50,34 +50,34 @@ from tests.common import MockConfigEntry
     ],
 )
 async def test_user_flow(
-    hass: HomeAssistant, user_input: dict, expected_result: dict
+    menuai: menuai, user_input: dict, expected_result: dict
 ) -> None:
     """Test starting a flow by user."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
     with patch(
-        "homeassistant.components.proximity.async_setup_entry", return_value=True
+        "menuai.components.proximity.async_setup_entry", return_value=True
     ) as mock_setup_entry:
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input=user_input,
         )
         assert result["type"] is FlowResultType.CREATE_ENTRY
         assert result["data"] == expected_result
 
-        zone = hass.states.get(user_input[CONF_ZONE])
+        zone = menuai.states.get(user_input[CONF_ZONE])
         assert result["title"] == zone.name
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert mock_setup_entry.called
 
 
-async def test_options_flow(hass: HomeAssistant) -> None:
+async def test_options_flow(menuai: menuai) -> None:
     """Test options flow."""
 
     mock_config = MockConfigEntry(
@@ -91,19 +91,19 @@ async def test_options_flow(hass: HomeAssistant) -> None:
         },
         unique_id=f"{DOMAIN}_home",
     )
-    mock_config.add_to_hass(hass)
+    mock_config.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.proximity.async_setup_entry", return_value=True
+        "menuai.components.proximity.async_setup_entry", return_value=True
     ) as mock_setup_entry:
-        await hass.config_entries.async_setup(mock_config.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(mock_config.entry_id)
+        await menuai.async_block_till_done()
         assert mock_setup_entry.called
 
-        result = await hass.config_entries.options.async_init(mock_config.entry_id)
+        result = await menuai.config_entries.options.async_init(mock_config.entry_id)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             CONF_TRACKED_ENTITIES: ["device_tracker.test2"],
@@ -120,7 +120,7 @@ async def test_options_flow(hass: HomeAssistant) -> None:
     }
 
 
-async def test_abort_duplicated_entry(hass: HomeAssistant) -> None:
+async def test_abort_duplicated_entry(menuai: menuai) -> None:
     """Test if we abort on duplicate user input data."""
     DATA = {
         CONF_ZONE: "zone.home",
@@ -134,25 +134,25 @@ async def test_abort_duplicated_entry(hass: HomeAssistant) -> None:
         data=DATA,
         unique_id=f"{DOMAIN}_home",
     )
-    mock_config.add_to_hass(hass)
+    mock_config.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     with patch(
-        "homeassistant.components.proximity.async_setup_entry", return_value=True
+        "menuai.components.proximity.async_setup_entry", return_value=True
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input=DATA,
         )
         assert result["type"] is FlowResultType.ABORT
         assert result["reason"] == "already_configured"
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
 
-async def test_avoid_duplicated_title(hass: HomeAssistant) -> None:
+async def test_avoid_duplicated_title(menuai: menuai) -> None:
     """Test if we avoid duplicate titles."""
     MockConfigEntry(
         domain=DOMAIN,
@@ -164,7 +164,7 @@ async def test_avoid_duplicated_title(hass: HomeAssistant) -> None:
             CONF_TOLERANCE: 10,
         },
         unique_id=f"{DOMAIN}_home",
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
     MockConfigEntry(
         domain=DOMAIN,
@@ -176,15 +176,15 @@ async def test_avoid_duplicated_title(hass: HomeAssistant) -> None:
             CONF_TOLERANCE: 10,
         },
         unique_id=f"{DOMAIN}_home_3",
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.proximity.async_setup_entry", return_value=True
+        "menuai.components.proximity.async_setup_entry", return_value=True
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": SOURCE_USER}
         )
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={
                 CONF_ZONE: "zone.home",
@@ -196,12 +196,12 @@ async def test_avoid_duplicated_title(hass: HomeAssistant) -> None:
         assert result["type"] is FlowResultType.CREATE_ENTRY
         assert result["title"] == "home 2"
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": SOURCE_USER}
         )
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={
                 CONF_ZONE: "zone.home",
@@ -213,4 +213,4 @@ async def test_avoid_duplicated_title(hass: HomeAssistant) -> None:
         assert result["type"] is FlowResultType.CREATE_ENTRY
         assert result["title"] == "home 4"
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()

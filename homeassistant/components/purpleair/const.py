@@ -3,7 +3,7 @@
 import logging
 from typing import Final
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 LOGGER: Final = logging.getLogger(__package__)
 PLATFORMS: Final = [Platform.SENSOR]

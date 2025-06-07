@@ -6,8 +6,8 @@ from typing import Any
 
 from pushbullet import Listener, PushBullet
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.dispatcher import dispatcher_send
+from menuai.core import menuai
+from menuai.helpers.dispatcher import dispatcher_send
 
 from .const import DATA_UPDATED
 
@@ -15,9 +15,9 @@ from .const import DATA_UPDATED
 class PushBulletNotificationProvider(Listener):  # type: ignore[misc]
     """Provider for an account, leading to one or more sensors."""
 
-    def __init__(self, hass: HomeAssistant, pushbullet: PushBullet) -> None:
+    def __init__(self, menuai: menuai, pushbullet: PushBullet) -> None:
         """Start to retrieve pushes from the given Pushbullet instance."""
-        self.hass = hass
+        self.menuai = menuai
         self.pushbullet = pushbullet
         self.data: dict[str, Any] = {}
         super().__init__(account=pushbullet, on_push=self.update_data)
@@ -31,4 +31,4 @@ class PushBulletNotificationProvider(Listener):  # type: ignore[misc]
         """
         if data["type"] == "push":
             self.data = data["push"]
-        dispatcher_send(self.hass, DATA_UPDATED)
+        dispatcher_send(self.menuai, DATA_UPDATED)

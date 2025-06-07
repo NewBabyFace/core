@@ -8,12 +8,12 @@ from typing import TYPE_CHECKING
 
 from kasa import Device
 
-from homeassistant.components.automation import automations_with_entity
-from homeassistant.components.light import DOMAIN as LIGHT_DOMAIN
-from homeassistant.components.script import scripts_with_entity
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.issue_registry import IssueSeverity, async_create_issue
+from menuai.components.automation import automations_with_entity
+from menuai.components.light import DOMAIN as LIGHT_DOMAIN
+from menuai.components.script import scripts_with_entity
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.helpers.issue_registry import IssueSeverity, async_create_issue
 
 from . import legacy_device_id
 from .const import DOMAIN
@@ -32,7 +32,7 @@ class DeprecatedInfo:
 
 
 def async_check_create_deprecated(
-    hass: HomeAssistant,
+    menuai: menuai,
     unique_id: str,
     entity_description: TPLinkEntityDescription,
 ) -> bool:
@@ -48,7 +48,7 @@ def async_check_create_deprecated(
     deprecated_info = entity_description.deprecated_info
     platform = deprecated_info.platform
 
-    ent_reg = er.async_get(hass)
+    ent_reg = er.async_get(menuai)
     entity_id = ent_reg.async_get_entity_id(
         platform,
         DOMAIN,
@@ -63,7 +63,7 @@ def async_check_create_deprecated(
 
 
 def async_process_deprecated(
-    hass: HomeAssistant,
+    menuai: menuai,
     platform_domain: str,
     entry_id: str,
     entities: Sequence[CoordinatedTPLinkEntity],
@@ -77,7 +77,7 @@ def async_process_deprecated(
     they are disabled by the user so the async_check_create_deprecated
     returned false.
     """
-    ent_reg = er.async_get(hass)
+    ent_reg = er.async_get(menuai)
     for entity in entities:
         if not (deprecated_info := entity.entity_description.deprecated_info):
             continue
@@ -90,12 +90,12 @@ def async_process_deprecated(
         )
         assert entity_id
         # Check for issues that need to be created
-        entity_automations = automations_with_entity(hass, entity_id)
-        entity_scripts = scripts_with_entity(hass, entity_id)
+        entity_automations = automations_with_entity(menuai, entity_id)
+        entity_scripts = scripts_with_entity(menuai, entity_id)
 
         for item in entity_automations + entity_scripts:
             async_create_issue(
-                hass,
+                menuai,
                 DOMAIN,
                 f"deprecated_entity_{entity_id}_{item}",
                 breaks_in_ha_version=deprecated_info.breaks_in_ha_version,

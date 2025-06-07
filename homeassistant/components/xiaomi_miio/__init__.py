@@ -35,11 +35,11 @@ from miio import (
 )
 from miio.gateway.gateway import GatewayException
 
-from homeassistant.const import CONF_DEVICE, CONF_HOST, CONF_MODEL, CONF_TOKEN, Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.const import CONF_DEVICE, CONF_HOST, CONF_MODEL, CONF_TOKEN, Platform
+from menuai.core import menuai, callback
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
     ATTR_AVAILABLE,
@@ -123,15 +123,15 @@ MODEL_TO_CLASS_MAP = {
 }
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: XiaomiMiioConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: XiaomiMiioConfigEntry) -> bool:
     """Set up the Xiaomi Miio components from a config entry."""
     if entry.data[CONF_FLOW_TYPE] == CONF_GATEWAY:
-        await async_setup_gateway_entry(hass, entry)
+        await async_setup_gateway_entry(menuai, entry)
         return True
 
     return bool(
         entry.data[CONF_FLOW_TYPE] != CONF_DEVICE
-        or await async_setup_device_entry(hass, entry)
+        or await async_setup_device_entry(menuai, entry)
     )
 
 
@@ -169,14 +169,14 @@ def get_platforms(config_entry):
     return []
 
 
-def _async_update_data_default(hass, device):
+def _async_update_data_default(menuai, device):
     async def update():
         """Fetch data from the device using async_add_executor_job."""
 
         async def _async_fetch_data():
             """Fetch data from the device."""
             async with asyncio.timeout(POLLING_TIMEOUT_SEC):
-                state = await hass.async_add_executor_job(device.status)
+                state = await menuai.async_add_executor_job(device.status)
                 _LOGGER.debug("Got new state: %s", state)
                 return state
 
@@ -217,7 +217,7 @@ class VacuumCoordinatorDataAttributes:
 
     These attributes can be used in methods like `getattr` when a generic solutions is
     needed.
-    See homeassistant.components.xiaomi_miio.device.XiaomiCoordinatedMiioEntity
+    See menuai.components.xiaomi_miio.device.XiaomiCoordinatedMiioEntity
     ._extract_value_from_attribute for
     an example.
     """
@@ -233,7 +233,7 @@ class VacuumCoordinatorDataAttributes:
 
 
 def _async_update_data_vacuum(
-    hass: HomeAssistant, device: RoborockVacuum
+    menuai: menuai, device: RoborockVacuum
 ) -> Callable[[], Coroutine[Any, Any, VacuumCoordinatorData]]:
     def update() -> VacuumCoordinatorData:
         timer = []
@@ -265,7 +265,7 @@ def _async_update_data_vacuum(
 
         async def execute_update() -> VacuumCoordinatorData:
             async with asyncio.timeout(POLLING_TIMEOUT_SEC):
-                state = await hass.async_add_executor_job(update)
+                state = await menuai.async_add_executor_job(update)
                 _LOGGER.debug("Got new vacuum state: %s", state)
                 return state
 
@@ -288,7 +288,7 @@ def _async_update_data_vacuum(
 
 
 async def async_create_miio_device_and_coordinator(
-    hass: HomeAssistant, entry: XiaomiMiioConfigEntry
+    menuai: menuai, entry: XiaomiMiioConfigEntry
 ) -> None:
     """Set up a data coordinator and one miio device to service multiple entities."""
     model: str = entry.data[CONF_MODEL]
@@ -369,7 +369,7 @@ async def async_create_miio_device_and_coordinator(
     if migrate:
         # Removing fan platform entity for humidifiers and migrate the name
         # to the config entry for migration
-        entity_registry = er.async_get(hass)
+        entity_registry = er.async_get(menuai)
         assert entry.unique_id
         entity_id = entity_registry.async_get_entity_id("fan", DOMAIN, entry.unique_id)
         if entity_id:
@@ -378,16 +378,16 @@ async def async_create_miio_device_and_coordinator(
             if (entity := entity_registry.async_get(entity_id)) and (
                 migrate_entity_name := entity.name
             ):
-                hass.config_entries.async_update_entry(entry, title=migrate_entity_name)
+                menuai.config_entries.async_update_entry(entry, title=migrate_entity_name)
             entity_registry.async_remove(entity_id)
 
     # Create update miio device and coordinator
     coordinator = coordinator_class(
-        hass,
+        menuai,
         _LOGGER,
         config_entry=entry,
         name=name,
-        update_method=update_method(hass, device),
+        update_method=update_method(menuai, device),
         # Polling interval. Will only be polled if there are subscribers.
         update_interval=UPDATE_INTERVAL,
     )
@@ -401,7 +401,7 @@ async def async_create_miio_device_and_coordinator(
 
 
 async def async_setup_gateway_entry(
-    hass: HomeAssistant, entry: XiaomiMiioConfigEntry
+    menuai: menuai, entry: XiaomiMiioConfigEntry
 ) -> None:
     """Set up the Xiaomi Gateway component from a config entry."""
     host = entry.data[CONF_HOST]
@@ -412,7 +412,7 @@ async def async_setup_gateway_entry(
     assert gateway_id
 
     # Connect to gateway
-    gateway = ConnectXiaomiGateway(hass, entry)
+    gateway = ConnectXiaomiGateway(menuai, entry)
     try:
         await gateway.async_connect_gateway(host, token)
     except AuthException as error:
@@ -421,7 +421,7 @@ async def async_setup_gateway_entry(
         raise ConfigEntryNotReady from error
     gateway_info = gateway.gateway_info
 
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, gateway_info.mac_address)},
@@ -439,7 +439,7 @@ async def async_setup_gateway_entry(
         async def async_update_data():
             """Fetch data from the subdevice."""
             try:
-                await hass.async_add_executor_job(sub_device.update)
+                await menuai.async_add_executor_job(sub_device.update)
             except GatewayException as ex:
                 _LOGGER.error("Got exception while fetching the state: %s", ex)
                 return {ATTR_AVAILABLE: False}
@@ -451,7 +451,7 @@ async def async_setup_gateway_entry(
     for sub_device in gateway.gateway_device.devices.values():
         # Create update coordinator
         coordinator_dict[sub_device.sid] = DataUpdateCoordinator(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
             name=name,
@@ -464,22 +464,22 @@ async def async_setup_gateway_entry(
         gateway=gateway.gateway_device, gateway_coordinators=coordinator_dict
     )
 
-    await hass.config_entries.async_forward_entry_setups(entry, GATEWAY_PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, GATEWAY_PLATFORMS)
 
     entry.async_on_unload(entry.add_update_listener(update_listener))
 
 
 async def async_setup_device_entry(
-    hass: HomeAssistant, entry: XiaomiMiioConfigEntry
+    menuai: menuai, entry: XiaomiMiioConfigEntry
 ) -> bool:
     """Set up the Xiaomi Miio device component from a config entry."""
     platforms = get_platforms(entry)
-    await async_create_miio_device_and_coordinator(hass, entry)
+    await async_create_miio_device_and_coordinator(menuai, entry)
 
     if not platforms:
         return False
 
-    await hass.config_entries.async_forward_entry_setups(entry, platforms)
+    await menuai.config_entries.async_forward_entry_setups(entry, platforms)
 
     entry.async_on_unload(entry.add_update_listener(update_listener))
 
@@ -487,16 +487,16 @@ async def async_setup_device_entry(
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, config_entry: XiaomiMiioConfigEntry
+    menuai: menuai, config_entry: XiaomiMiioConfigEntry
 ) -> bool:
     """Unload a config entry."""
     platforms = get_platforms(config_entry)
 
-    return await hass.config_entries.async_unload_platforms(config_entry, platforms)
+    return await menuai.config_entries.async_unload_platforms(config_entry, platforms)
 
 
 async def update_listener(
-    hass: HomeAssistant, config_entry: XiaomiMiioConfigEntry
+    menuai: menuai, config_entry: XiaomiMiioConfigEntry
 ) -> None:
     """Handle options update."""
-    await hass.config_entries.async_reload(config_entry.entry_id)
+    await menuai.config_entries.async_reload(config_entry.entry_id)

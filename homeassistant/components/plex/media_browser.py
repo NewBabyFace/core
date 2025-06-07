@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from yarl import URL
 
-from homeassistant.components.media_player import BrowseError, BrowseMedia, MediaClass
+from menuai.components.media_player import BrowseError, BrowseMedia, MediaClass
 
 from .const import DOMAIN, SERVERS
 from .errors import MediaNotFound
@@ -33,7 +33,7 @@ ITEM_TYPE_MEDIA_CLASS = {
 
 
 def browse_media(  # noqa: C901
-    hass, is_internal, media_content_type, media_content_id, *, platform=None
+    menuai, is_internal, media_content_type, media_content_id, *, platform=None
 ):
     """Implement the websocket media browsing helper."""
     server_id = None
@@ -43,7 +43,7 @@ def browse_media(  # noqa: C901
     if media_content_id:
         url = URL(media_content_id)
         server_id = url.host
-        plex_server = get_plex_server(hass, server_id)
+        plex_server = get_plex_server(menuai, server_id)
         if media_content_type == "hub":
             _, hub_location, hub_identifier = url.parts
         elif media_content_type in ["library", "server"] and len(url.parts) > 2:
@@ -52,7 +52,7 @@ def browse_media(  # noqa: C901
             media_content_id = url.name
 
     if media_content_type in ("plex_root", None):
-        return root_payload(hass, is_internal, platform=platform)
+        return root_payload(menuai, is_internal, platform=platform)
 
     def item_payload(item, short_name=False, extra_params=None):
         """Create response payload for a single media item."""
@@ -295,17 +295,17 @@ def generate_plex_uri(server_id, media_id, params=None):
     )
 
 
-def root_payload(hass, is_internal, platform=None):
+def root_payload(menuai, is_internal, platform=None):
     """Return root payload for Plex."""
     children = [
         browse_media(
-            hass,
+            menuai,
             is_internal,
             "server",
             generate_plex_uri(server_id, ""),
             platform=platform,
         )
-        for server_id in get_plex_data(hass)[SERVERS]
+        for server_id in get_plex_data(menuai)[SERVERS]
     ]
 
     if len(children) == 1:

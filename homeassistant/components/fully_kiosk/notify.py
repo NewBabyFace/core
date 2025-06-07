@@ -6,10 +6,10 @@ from dataclasses import dataclass
 
 from fullykiosk import FullyKioskError
 
-from homeassistant.components.notify import NotifyEntity, NotifyEntityDescription
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.notify import NotifyEntity, NotifyEntityDescription
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import FullyKioskConfigEntry
 from .coordinator import FullyKioskDataUpdateCoordinator
@@ -38,7 +38,7 @@ NOTIFIERS: tuple[FullyNotifyEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: FullyKioskConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -72,4 +72,4 @@ class FullyNotifyEntity(FullyKioskEntity, NotifyEntity):
                 self.entity_description.cmd, text=message
             )
         except FullyKioskError as err:
-            raise HomeAssistantError(err) from err
+            raise menuaiError(err) from err

@@ -6,10 +6,10 @@ from unittest.mock import AsyncMock, Mock
 
 from uiprotect.data.devices import Camera, Chime, Doorlock
 
-from homeassistant.components.unifiprotect.const import DEFAULT_ATTRIBUTION
-from homeassistant.const import ATTR_ATTRIBUTION, ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.unifiprotect.const import DEFAULT_ATTRIBUTION
+from menuai.const import ATTR_ATTRIBUTION, ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .utils import (
     MockUFPFixture,
@@ -22,28 +22,28 @@ from .utils import (
 
 
 async def test_button_chime_remove(
-    hass: HomeAssistant, ufp: MockUFPFixture, chime: Chime
+    menuai: menuai, ufp: MockUFPFixture, chime: Chime
 ) -> None:
     """Test removing and re-adding a light device."""
 
-    await init_entry(hass, ufp, [chime])
-    assert_entity_counts(hass, Platform.BUTTON, 4, 2)
-    await remove_entities(hass, ufp, [chime])
-    assert_entity_counts(hass, Platform.BUTTON, 0, 0)
-    await adopt_devices(hass, ufp, [chime])
-    assert_entity_counts(hass, Platform.BUTTON, 4, 2)
+    await init_entry(menuai, ufp, [chime])
+    assert_entity_counts(menuai, Platform.BUTTON, 4, 2)
+    await remove_entities(menuai, ufp, [chime])
+    assert_entity_counts(menuai, Platform.BUTTON, 0, 0)
+    await adopt_devices(menuai, ufp, [chime])
+    assert_entity_counts(menuai, Platform.BUTTON, 4, 2)
 
 
 async def test_reboot_button(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     ufp: MockUFPFixture,
     chime: Chime,
 ) -> None:
     """Test button entity."""
 
-    await init_entry(hass, ufp, [chime])
-    assert_entity_counts(hass, Platform.BUTTON, 4, 2)
+    await init_entry(menuai, ufp, [chime])
+    assert_entity_counts(menuai, Platform.BUTTON, 4, 2)
 
     ufp.api.reboot_device = AsyncMock()
 
@@ -55,27 +55,27 @@ async def test_reboot_button(
     assert entity.disabled
     assert entity.unique_id == unique_id
 
-    await enable_entity(hass, ufp.entry.entry_id, entity_id)
-    state = hass.states.get(entity_id)
+    await enable_entity(menuai, ufp.entry.entry_id, entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.attributes[ATTR_ATTRIBUTION] == DEFAULT_ATTRIBUTION
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "button", "press", {ATTR_ENTITY_ID: entity_id}, blocking=True
     )
     ufp.api.reboot_device.assert_called_once()
 
 
 async def test_chime_button(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     ufp: MockUFPFixture,
     chime: Chime,
 ) -> None:
     """Test button entity."""
 
-    await init_entry(hass, ufp, [chime])
-    assert_entity_counts(hass, Platform.BUTTON, 4, 2)
+    await init_entry(menuai, ufp, [chime])
+    assert_entity_counts(menuai, Platform.BUTTON, 4, 2)
 
     ufp.api.play_speaker = AsyncMock()
 
@@ -87,18 +87,18 @@ async def test_chime_button(
     assert not entity.disabled
     assert entity.unique_id == unique_id
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.attributes[ATTR_ATTRIBUTION] == DEFAULT_ATTRIBUTION
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "button", "press", {ATTR_ENTITY_ID: entity_id}, blocking=True
     )
     ufp.api.play_speaker.assert_called_once()
 
 
 async def test_adopt_button(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     ufp: MockUFPFixture,
     doorlock: Doorlock,
@@ -110,16 +110,16 @@ async def test_adopt_button(
     doorlock.is_adopted = False
     doorlock.can_adopt = True
 
-    await init_entry(hass, ufp, [])
+    await init_entry(menuai, ufp, [])
 
     mock_msg = Mock()
     mock_msg.changed_data = {}
     mock_msg.old_obj = None
     mock_msg.new_obj = doorlock
     ufp.ws_msg(mock_msg)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert_entity_counts(hass, Platform.BUTTON, 1, 1)
+    assert_entity_counts(menuai, Platform.BUTTON, 1, 1)
 
     ufp.api.adopt_device = AsyncMock()
 
@@ -131,18 +131,18 @@ async def test_adopt_button(
     assert not entity.disabled
     assert entity.unique_id == unique_id
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.attributes[ATTR_ATTRIBUTION] == DEFAULT_ATTRIBUTION
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "button", "press", {ATTR_ENTITY_ID: entity_id}, blocking=True
     )
     ufp.api.adopt_device.assert_called_once()
 
 
 async def test_adopt_button_removed(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     ufp: MockUFPFixture,
     doorlock: Doorlock,
@@ -156,12 +156,12 @@ async def test_adopt_button_removed(
     doorlock.is_adopted = False
     doorlock.can_adopt = True
 
-    await init_entry(hass, ufp, [doorlock])
-    assert_entity_counts(hass, Platform.BUTTON, 1, 1)
+    await init_entry(menuai, ufp, [doorlock])
+    assert_entity_counts(menuai, Platform.BUTTON, 1, 1)
     entity = entity_registry.async_get(entity_id)
     assert entity
 
-    await adopt_devices(hass, ufp, [doorlock], fully_adopt=True)
-    assert_entity_counts(hass, Platform.BUTTON, 2, 0)
+    await adopt_devices(menuai, ufp, [doorlock], fully_adopt=True)
+    assert_entity_counts(menuai, Platform.BUTTON, 2, 0)
     entity = entity_registry.async_get(entity_id)
     assert entity is None

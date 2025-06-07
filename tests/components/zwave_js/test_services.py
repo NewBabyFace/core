@@ -7,8 +7,8 @@ import voluptuous as vol
 from zwave_js_server.exceptions import FailedZWaveCommand
 from zwave_js_server.model.value import SetConfigParameterResult
 
-from homeassistant.components.group import Group
-from homeassistant.components.zwave_js.const import (
+from menuai.components.group import Group
+from menuai.components.zwave_js.const import (
     ATTR_BROADCAST,
     ATTR_COMMAND_CLASS,
     ATTR_CONFIG_PARAMETER,
@@ -37,16 +37,16 @@ from homeassistant.components.zwave_js.const import (
     SERVICE_SET_CONFIG_PARAMETER,
     SERVICE_SET_VALUE,
 )
-from homeassistant.components.zwave_js.helpers import get_device_id
-from homeassistant.const import ATTR_AREA_ID, ATTR_DEVICE_ID, ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import (
+from menuai.components.zwave_js.helpers import get_device_id
+from menuai.const import ATTR_AREA_ID, ATTR_DEVICE_ID, ATTR_ENTITY_ID
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import (
     area_registry as ar,
     device_registry as dr,
     entity_registry as er,
 )
-from homeassistant.setup import async_setup_component
+from menuai.setup import async_setup_component
 
 from .common import (
     AEON_SMART_SWITCH_LIGHT_ENTITY,
@@ -62,7 +62,7 @@ from tests.common import MockConfigEntry
 
 
 async def test_set_config_parameter(
-    hass: HomeAssistant,
+    menuai: menuai,
     area_registry: ar.AreaRegistry,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
@@ -76,7 +76,7 @@ async def test_set_config_parameter(
     entity_entry = entity_registry.async_get(AIR_TEMPERATURE_SENSOR)
 
     # Test setting config parameter by property and property_key
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_CONFIG_PARAMETER,
         {
@@ -103,7 +103,7 @@ async def test_set_config_parameter(
     client.async_send_command_no_wait.reset_mock()
 
     # Test setting config parameter value in hex
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_CONFIG_PARAMETER,
         {
@@ -130,7 +130,7 @@ async def test_set_config_parameter(
     client.async_send_command_no_wait.reset_mock()
 
     # Test setting parameter by property name
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_CONFIG_PARAMETER,
         {
@@ -156,7 +156,7 @@ async def test_set_config_parameter(
     client.async_send_command_no_wait.reset_mock()
 
     # Test setting parameter by property name and state label
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_CONFIG_PARAMETER,
         {
@@ -184,7 +184,7 @@ async def test_set_config_parameter(
     # Test using area ID
     area = area_registry.async_get_or_create("test")
     entity_registry.async_update_entity(entity_entry.entity_id, area_id=area.id)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_CONFIG_PARAMETER,
         {
@@ -210,7 +210,7 @@ async def test_set_config_parameter(
     client.async_send_command_no_wait.reset_mock()
 
     # Test setting parameter by property and bitmask
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_CONFIG_PARAMETER,
         {
@@ -237,7 +237,7 @@ async def test_set_config_parameter(
     client.async_send_command_no_wait.reset_mock()
 
     # Test setting parameter by value_size
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_CONFIG_PARAMETER,
         {
@@ -263,7 +263,7 @@ async def test_set_config_parameter(
     client.async_send_command_no_wait.reset_mock()
 
     # Test setting parameter when one node has endpoint and other doesn't
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_CONFIG_PARAMETER,
         {
@@ -292,9 +292,9 @@ async def test_set_config_parameter(
     client.async_send_command.reset_mock()
 
     # Test groups get expanded
-    assert await async_setup_component(hass, "group", {})
+    assert await async_setup_component(menuai, "group", {})
     await Group.async_create_group(
-        hass,
+        menuai,
         "test",
         created_by_service=False,
         entity_ids=[AIR_TEMPERATURE_SENSOR],
@@ -303,7 +303,7 @@ async def test_set_config_parameter(
         object_id=None,
         order=None,
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_CONFIG_PARAMETER,
         {
@@ -331,7 +331,7 @@ async def test_set_config_parameter(
 
     # Test that we can't include a bitmask value if parameter is a string
     with pytest.raises(vol.Invalid):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SET_CONFIG_PARAMETER,
             {
@@ -344,7 +344,7 @@ async def test_set_config_parameter(
         )
 
     non_zwave_js_config_entry = MockConfigEntry(entry_id="fake_entry_id")
-    non_zwave_js_config_entry.add_to_hass(hass)
+    non_zwave_js_config_entry.add_to_menuai(menuai)
     non_zwave_js_device = device_registry.async_get_or_create(
         config_entry_id=non_zwave_js_config_entry.entry_id,
         identifiers={("test", "test")},
@@ -363,8 +363,8 @@ async def test_set_config_parameter(
     )
 
     # Test unknown endpoint throws error when None are remaining
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SET_CONFIG_PARAMETER,
             {
@@ -380,7 +380,7 @@ async def test_set_config_parameter(
 
     # Test that we can't include bitmask and value size and value format
     with pytest.raises(vol.Invalid):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SET_CONFIG_PARAMETER,
             {
@@ -396,7 +396,7 @@ async def test_set_config_parameter(
 
     # Test that value size must be 1, 2, or 4 (not 3)
     with pytest.raises(vol.Invalid):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SET_CONFIG_PARAMETER,
             {
@@ -412,7 +412,7 @@ async def test_set_config_parameter(
 
     # Test that a Z-Wave JS device with an invalid node ID, non Z-Wave JS entity,
     # non Z-Wave JS device, invalid device_id, and invalid node_id gets filtered out.
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_CONFIG_PARAMETER,
         {
@@ -450,7 +450,7 @@ async def test_set_config_parameter(
     # Test that when a device is awake, we call async_send_command instead of
     # async_send_command_no_wait
     multisensor_6.handle_wake_up(None)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_CONFIG_PARAMETER,
         {
@@ -478,7 +478,7 @@ async def test_set_config_parameter(
 
     # Test setting config parameter with no valid nodes raises Exception
     with pytest.raises(vol.MultipleInvalid):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SET_CONFIG_PARAMETER,
             {
@@ -499,10 +499,10 @@ async def test_set_config_parameter(
 
     # Test accepted return
     with patch(
-        "homeassistant.components.zwave_js.services.Endpoint.async_set_raw_config_parameter_value",
+        "menuai.components.zwave_js.services.Endpoint.async_set_raw_config_parameter_value",
         return_value=cmd_result,
     ) as mock_set_raw_config_parameter_value:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SET_CONFIG_PARAMETER,
             {
@@ -530,10 +530,10 @@ async def test_set_config_parameter(
     # Test queued return
     cmd_result.status = "queued"
     with patch(
-        "homeassistant.components.zwave_js.services.Endpoint.async_set_raw_config_parameter_value",
+        "menuai.components.zwave_js.services.Endpoint.async_set_raw_config_parameter_value",
         return_value=cmd_result,
     ) as mock_set_raw_config_parameter_value:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SET_CONFIG_PARAMETER,
             {
@@ -560,7 +560,7 @@ async def test_set_config_parameter(
 
 
 async def test_set_config_parameter_gather(
-    hass: HomeAssistant,
+    menuai: menuai,
     client,
     multisensor_6,
     climate_radio_thermostat_ct100_plus_different_endpoints,
@@ -569,8 +569,8 @@ async def test_set_config_parameter_gather(
     """Test the set_config_parameter service gather functionality."""
     # Test setting config parameter by property and validate that the first node
     # which triggers an error doesn't prevent the second one to be called.
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SET_CONFIG_PARAMETER,
             {
@@ -600,7 +600,7 @@ async def test_set_config_parameter_gather(
 
 
 async def test_bulk_set_config_parameters(
-    hass: HomeAssistant,
+    menuai: menuai,
     area_registry: ar.AreaRegistry,
     device_registry: dr.DeviceRegistry,
     client,
@@ -614,7 +614,7 @@ async def test_bulk_set_config_parameters(
     assert device
 
     # Test setting config parameter by property and property_key
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_BULK_SET_PARTIAL_CONFIG_PARAMETERS,
         {
@@ -641,7 +641,7 @@ async def test_bulk_set_config_parameters(
     # Test using area ID
     area = area_registry.async_get_or_create("test")
     device_registry.async_update_device(device.id, area_id=area.id)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_BULK_SET_PARTIAL_CONFIG_PARAMETERS,
         {
@@ -665,7 +665,7 @@ async def test_bulk_set_config_parameters(
 
     client.async_send_command_no_wait.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_BULK_SET_PARTIAL_CONFIG_PARAMETERS,
         {
@@ -696,7 +696,7 @@ async def test_bulk_set_config_parameters(
     client.async_send_command_no_wait.reset_mock()
 
     # Test using hex values for config parameter values
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_BULK_SET_PARTIAL_CONFIG_PARAMETERS,
         {
@@ -726,7 +726,7 @@ async def test_bulk_set_config_parameters(
 
     client.async_send_command_no_wait.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_BULK_SET_PARTIAL_CONFIG_PARAMETERS,
         {
@@ -759,7 +759,7 @@ async def test_bulk_set_config_parameters(
     # Test that when a device is awake, we call async_send_command instead of
     # async_send_command_no_wait
     multisensor_6.handle_wake_up(None)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_BULK_SET_PARTIAL_CONFIG_PARAMETERS,
         {
@@ -790,9 +790,9 @@ async def test_bulk_set_config_parameters(
     client.async_send_command.reset_mock()
 
     # Test groups get expanded
-    assert await async_setup_component(hass, "group", {})
+    assert await async_setup_component(menuai, "group", {})
     await Group.async_create_group(
-        hass,
+        menuai,
         "test",
         created_by_service=False,
         entity_ids=[AIR_TEMPERATURE_SENSOR],
@@ -801,7 +801,7 @@ async def test_bulk_set_config_parameters(
         object_id=None,
         order=None,
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_BULK_SET_PARTIAL_CONFIG_PARAMETERS,
         {
@@ -833,7 +833,7 @@ async def test_bulk_set_config_parameters(
 
 
 async def test_bulk_set_config_parameters_gather(
-    hass: HomeAssistant,
+    menuai: menuai,
     client,
     multisensor_6,
     climate_radio_thermostat_ct100_plus_different_endpoints,
@@ -842,8 +842,8 @@ async def test_bulk_set_config_parameters_gather(
     """Test the bulk_set_partial_config_parameters service gather functionality."""
     # Test bulk setting config parameter by property and validate that the first node
     # which triggers an error doesn't prevent the second one to be called.
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_BULK_SET_PARTIAL_CONFIG_PARAMETERS,
             {
@@ -873,7 +873,7 @@ async def test_bulk_set_config_parameters_gather(
 
 
 async def test_refresh_value(
-    hass: HomeAssistant,
+    menuai: menuai,
     client,
     climate_radio_thermostat_ct100_plus_different_endpoints,
     integration,
@@ -881,13 +881,13 @@ async def test_refresh_value(
     """Test the refresh_value service."""
     # Test polling the primary value
     client.async_send_command.return_value = {"result": 2}
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_REFRESH_VALUE,
         {ATTR_ENTITY_ID: CLIMATE_RADIO_THERMOSTAT_ENTITY},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(client.async_send_command.call_args_list) == 1
     args = client.async_send_command.call_args[0][0]
     assert args["command"] == "node.poll_value"
@@ -902,7 +902,7 @@ async def test_refresh_value(
 
     # Test polling all watched values
     client.async_send_command.return_value = {"result": 2}
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_REFRESH_VALUE,
         {
@@ -911,14 +911,14 @@ async def test_refresh_value(
         },
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(client.async_send_command.call_args_list) == 8
 
     client.async_send_command.reset_mock()
 
     # Test polling all watched values using string for boolean
     client.async_send_command.return_value = {"result": 2}
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_REFRESH_VALUE,
         {
@@ -927,15 +927,15 @@ async def test_refresh_value(
         },
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(client.async_send_command.call_args_list) == 8
 
     client.async_send_command.reset_mock()
 
     # Test groups get expanded
-    assert await async_setup_component(hass, "group", {})
+    assert await async_setup_component(menuai, "group", {})
     await Group.async_create_group(
-        hass,
+        menuai,
         "test",
         created_by_service=False,
         entity_ids=[CLIMATE_RADIO_THERMOSTAT_ENTITY],
@@ -945,7 +945,7 @@ async def test_refresh_value(
         order=None,
     )
     client.async_send_command.return_value = {"result": 2}
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_REFRESH_VALUE,
         {
@@ -954,14 +954,14 @@ async def test_refresh_value(
         },
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(client.async_send_command.call_args_list) == 8
 
     client.async_send_command.reset_mock()
 
     # Test polling against an invalid entity raises MultipleInvalid
     with pytest.raises(vol.MultipleInvalid):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_REFRESH_VALUE,
             {ATTR_ENTITY_ID: "sensor.fake_entity_id"},
@@ -970,7 +970,7 @@ async def test_refresh_value(
 
 
 async def test_set_value(
-    hass: HomeAssistant,
+    menuai: menuai,
     area_registry: ar.AreaRegistry,
     device_registry: dr.DeviceRegistry,
     client,
@@ -983,7 +983,7 @@ async def test_set_value(
     )
     assert device
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_VALUE,
         {
@@ -1009,7 +1009,7 @@ async def test_set_value(
     client.async_send_command_no_wait.reset_mock()
 
     # Test bitmask as value and non bool as bool
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_VALUE,
         {
@@ -1038,7 +1038,7 @@ async def test_set_value(
     # Test using area ID
     area = area_registry.async_get_or_create("test")
     device_registry.async_update_device(device.id, area_id=area.id)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_VALUE,
         {
@@ -1065,9 +1065,9 @@ async def test_set_value(
     client.async_send_command.reset_mock()
 
     # Test groups get expanded
-    assert await async_setup_component(hass, "group", {})
+    assert await async_setup_component(menuai, "group", {})
     await Group.async_create_group(
-        hass,
+        menuai,
         "test",
         created_by_service=False,
         entity_ids=[CLIMATE_DANFOSS_LC13_ENTITY],
@@ -1076,7 +1076,7 @@ async def test_set_value(
         object_id=None,
         order=None,
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_VALUE,
         {
@@ -1107,8 +1107,8 @@ async def test_set_value(
         "result": {"status": 2, "message": "test"}
     }
 
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SET_VALUE,
             {
@@ -1137,7 +1137,7 @@ async def test_set_value(
 
     # Test missing device and entities keys
     with pytest.raises(vol.MultipleInvalid):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SET_VALUE,
             {
@@ -1151,12 +1151,12 @@ async def test_set_value(
 
 
 async def test_set_value_string(
-    hass: HomeAssistant, client, climate_danfoss_lc_13, lock_schlage_be469, integration
+    menuai: menuai, client, climate_danfoss_lc_13, lock_schlage_be469, integration
 ) -> None:
     """Test set_value service converts number to string when needed."""
 
     # Test that number gets converted to a string when needed
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_VALUE,
         {
@@ -1183,10 +1183,10 @@ async def test_set_value_string(
 
 
 async def test_set_value_options(
-    hass: HomeAssistant, client, aeon_smart_switch_6, integration
+    menuai: menuai, client, aeon_smart_switch_6, integration
 ) -> None:
     """Test set_value service with options."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_VALUE,
         {
@@ -1215,7 +1215,7 @@ async def test_set_value_options(
 
 
 async def test_set_value_gather(
-    hass: HomeAssistant,
+    menuai: menuai,
     client,
     multisensor_6,
     climate_radio_thermostat_ct100_plus_different_endpoints,
@@ -1224,8 +1224,8 @@ async def test_set_value_gather(
     """Test the set_value service gather functionality."""
     # Test setting value by property and validate that the first node
     # which triggers an error doesn't prevent the second one to be called.
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SET_VALUE,
             {
@@ -1258,7 +1258,7 @@ async def test_set_value_gather(
 
 
 async def test_multicast_set_value(
-    hass: HomeAssistant,
+    menuai: menuai,
     area_registry: ar.AreaRegistry,
     device_registry: dr.DeviceRegistry,
     client,
@@ -1268,7 +1268,7 @@ async def test_multicast_set_value(
 ) -> None:
     """Test multicast_set_value service."""
     # Test successful multicast call
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_MULTICAST_SET_VALUE,
         {
@@ -1301,7 +1301,7 @@ async def test_multicast_set_value(
     client.async_send_command.reset_mock()
 
     # Test successful multicast call with hex value
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_MULTICAST_SET_VALUE,
         {
@@ -1345,7 +1345,7 @@ async def test_multicast_set_value(
     area = area_registry.async_get_or_create("test")
     device_registry.async_update_device(device_eurotronic.id, area_id=area.id)
     device_registry.async_update_device(device_danfoss.id, area_id=area.id)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_MULTICAST_SET_VALUE,
         {
@@ -1375,9 +1375,9 @@ async def test_multicast_set_value(
     client.async_send_command.reset_mock()
 
     # Test groups get expanded for multicast call
-    assert await async_setup_component(hass, "group", {})
+    assert await async_setup_component(menuai, "group", {})
     await Group.async_create_group(
-        hass,
+        menuai,
         "test",
         created_by_service=False,
         entity_ids=[CLIMATE_DANFOSS_LC13_ENTITY, CLIMATE_EUROTRONICS_SPIRIT_Z_ENTITY],
@@ -1386,7 +1386,7 @@ async def test_multicast_set_value(
         object_id=None,
         order=None,
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_MULTICAST_SET_VALUE,
         {
@@ -1416,7 +1416,7 @@ async def test_multicast_set_value(
     client.async_send_command.reset_mock()
 
     # Test successful broadcast call
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_MULTICAST_SET_VALUE,
         {
@@ -1442,7 +1442,7 @@ async def test_multicast_set_value(
     client.async_send_command.reset_mock()
 
     # Test sending one node without broadcast uses the node.set_value command instead
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_MULTICAST_SET_VALUE,
         {
@@ -1463,7 +1463,7 @@ async def test_multicast_set_value(
 
     # Test no device, entity, or broadcast flag raises error
     with pytest.raises(vol.Invalid):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_MULTICAST_SET_VALUE,
             {
@@ -1480,8 +1480,8 @@ async def test_multicast_set_value(
         "result": {"status": 2, "message": "test"}
     }
 
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_MULTICAST_SET_VALUE,
             {
@@ -1501,8 +1501,8 @@ async def test_multicast_set_value(
 
     # Test that when we get an exception from the library we raise an exception
     client.async_send_command.side_effect = FailedZWaveCommand("test", 12, "test")
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_MULTICAST_SET_VALUE,
             {
@@ -1529,11 +1529,11 @@ async def test_multicast_set_value(
     with (
         pytest.raises(vol.MultipleInvalid),
         patch(
-            "homeassistant.components.zwave_js.helpers.async_get_node_from_device_id",
+            "menuai.components.zwave_js.helpers.async_get_node_from_device_id",
             side_effect=(climate_danfoss_lc_13, diff_network_node),
         ),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_MULTICAST_SET_VALUE,
             {
@@ -1552,9 +1552,9 @@ async def test_multicast_set_value(
     # Test that when there are multiple zwave_js config entries, service will fail
     # without devices or entities
     new_entry = MockConfigEntry(domain=DOMAIN)
-    new_entry.add_to_hass(hass)
+    new_entry.add_to_menuai(menuai)
     with pytest.raises(vol.Invalid):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_MULTICAST_SET_VALUE,
             {
@@ -1569,14 +1569,14 @@ async def test_multicast_set_value(
 
 
 async def test_multicast_set_value_options(
-    hass: HomeAssistant,
+    menuai: menuai,
     client,
     bulb_6_multi_color,
     light_color_null_values,
     integration,
 ) -> None:
     """Test multicast_set_value service with options."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_MULTICAST_SET_VALUE,
         {
@@ -1615,7 +1615,7 @@ async def test_multicast_set_value_options(
 
 
 async def test_multicast_set_value_string(
-    hass: HomeAssistant,
+    menuai: menuai,
     client,
     lock_id_lock_as_id150,
     lock_schlage_be469,
@@ -1625,7 +1625,7 @@ async def test_multicast_set_value_string(
     client.async_send_command.return_value = {"result": {"status": 255}}
 
     # Test that number gets converted to a string when needed
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_MULTICAST_SET_VALUE,
         {
@@ -1650,7 +1650,7 @@ async def test_multicast_set_value_string(
 
 
 async def test_ping(
-    hass: HomeAssistant,
+    menuai: menuai,
     area_registry: ar.AreaRegistry,
     device_registry: dr.DeviceRegistry,
     client,
@@ -1675,7 +1675,7 @@ async def test_ping(
     client.async_send_command.return_value = {"responded": True}
 
     # Test successful ping call
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_PING,
         {
@@ -1701,7 +1701,7 @@ async def test_ping(
     client.async_send_command.reset_mock()
 
     # Test successful ping call with devices
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_PING,
         {
@@ -1730,7 +1730,7 @@ async def test_ping(
     area = area_registry.async_get_or_create("test")
     device_registry.async_update_device(device_radio_thermostat.id, area_id=area.id)
     device_registry.async_update_device(device_danfoss.id, area_id=area.id)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_PING,
         {ATTR_AREA_ID: area.id},
@@ -1751,9 +1751,9 @@ async def test_ping(
     client.async_send_command.reset_mock()
 
     # Test groups get expanded for multicast call
-    assert await async_setup_component(hass, "group", {})
+    assert await async_setup_component(menuai, "group", {})
     await Group.async_create_group(
-        hass,
+        menuai,
         "test",
         created_by_service=False,
         entity_ids=[CLIMATE_DANFOSS_LC13_ENTITY, CLIMATE_RADIO_THERMOSTAT_ENTITY],
@@ -1762,7 +1762,7 @@ async def test_ping(
         object_id=None,
         order=None,
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_PING,
         {
@@ -1786,7 +1786,7 @@ async def test_ping(
 
     # Test no device or entity raises error
     with pytest.raises(vol.Invalid):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_PING,
             {},
@@ -1795,8 +1795,8 @@ async def test_ping(
 
     client.async_send_command.reset_mock()
     client.async_send_command.side_effect = FailedZWaveCommand("test", 1, "test")
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_PING,
             {
@@ -1807,7 +1807,7 @@ async def test_ping(
 
 
 async def test_invoke_cc_api(
-    hass: HomeAssistant,
+    menuai: menuai,
     area_registry: ar.AreaRegistry,
     device_registry: dr.DeviceRegistry,
     client,
@@ -1833,7 +1833,7 @@ async def test_invoke_cc_api(
     client.async_send_command.return_value = {"response": True}
     client.async_send_command_no_wait.return_value = {"response": True}
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_INVOKE_CC_API,
         {
@@ -1848,7 +1848,7 @@ async def test_invoke_cc_api(
         },
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(client.async_send_command.call_args_list) == 1
     args = client.async_send_command.call_args[0][0]
     assert args["command"] == "endpoint.invoke_cc_api"
@@ -1880,7 +1880,7 @@ async def test_invoke_cc_api(
     client.async_send_command.return_value = {"response": True}
     client.async_send_command_no_wait.return_value = {"response": True}
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_INVOKE_CC_API,
         {
@@ -1900,7 +1900,7 @@ async def test_invoke_cc_api(
         },
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(client.async_send_command.call_args_list) == 1
     args = client.async_send_command.call_args[0][0]
     assert args["command"] == "endpoint.invoke_cc_api"
@@ -1932,8 +1932,8 @@ async def test_invoke_cc_api(
         "test", 12, "test"
     )
 
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_INVOKE_CC_API,
             {
@@ -1974,7 +1974,7 @@ async def test_invoke_cc_api(
 
 
 async def test_refresh_notifications(
-    hass: HomeAssistant,
+    menuai: menuai,
     area_registry: ar.AreaRegistry,
     device_registry: dr.DeviceRegistry,
     client,
@@ -1999,7 +1999,7 @@ async def test_refresh_notifications(
     client.async_send_command.return_value = {"response": True}
     client.async_send_command_no_wait.return_value = {"response": True}
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_REFRESH_NOTIFICATIONS,
         {
@@ -2010,7 +2010,7 @@ async def test_refresh_notifications(
         },
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(client.async_send_command.call_args_list) == 1
     args = client.async_send_command.call_args[0][0]
     assert args["command"] == "endpoint.invoke_cc_api"
@@ -2039,8 +2039,8 @@ async def test_refresh_notifications(
         "test", 12, "test"
     )
 
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_REFRESH_NOTIFICATIONS,
             {

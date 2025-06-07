@@ -1,22 +1,22 @@
 """Application credentials platform for the Honeywell Lyric integration."""
 
-from homeassistant.components.application_credentials import (
+from menuai.components.application_credentials import (
     AuthorizationServer,
     ClientCredential,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_entry_oauth2_flow
+from menuai.core import menuai
+from menuai.helpers import config_entry_oauth2_flow
 
 from .api import LyricLocalOAuth2Implementation
 from .const import OAUTH2_AUTHORIZE, OAUTH2_TOKEN
 
 
 async def async_get_auth_implementation(
-    hass: HomeAssistant, auth_domain: str, credential: ClientCredential
+    menuai: menuai, auth_domain: str, credential: ClientCredential
 ) -> config_entry_oauth2_flow.AbstractOAuth2Implementation:
     """Return custom auth implementation."""
     return LyricLocalOAuth2Implementation(
-        hass,
+        menuai,
         auth_domain,
         credential,
         AuthorizationServer(

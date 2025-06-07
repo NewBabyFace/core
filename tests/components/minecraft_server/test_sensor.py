@@ -9,8 +9,8 @@ from mcstatus.responses import BedrockStatusResponse, JavaStatusResponse
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.const import STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant
+from menuai.const import STATE_UNAVAILABLE
+from menuai.core import menuai
 
 from .const import (
     TEST_BEDROCK_STATUS_RESPONSE,
@@ -81,7 +81,7 @@ BEDROCK_SENSOR_ENTITIES_DISABLED_BY_DEFAULT: list[str] = [
     ],
 )
 async def test_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: str,
     server: JavaServer | BedrockServer,
     lookup_function_name: str,
@@ -92,22 +92,22 @@ async def test_sensor(
 ) -> None:
     """Test sensor."""
     mock_config_entry = request.getfixturevalue(mock_config_entry)
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     with (
         patch(
-            f"homeassistant.components.minecraft_server.api.{server.__name__}.{lookup_function_name}",
+            f"menuai.components.minecraft_server.api.{server.__name__}.{lookup_function_name}",
             return_value=server(host=TEST_HOST, port=TEST_PORT),
         ),
         patch(
-            f"homeassistant.components.minecraft_server.api.{server.__name__}.async_status",
+            f"menuai.components.minecraft_server.api.{server.__name__}.async_status",
             return_value=status_response,
         ),
     ):
-        assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
         for entity_id in entity_ids:
-            assert hass.states.get(entity_id) == snapshot
+            assert menuai.states.get(entity_id) == snapshot
 
 
 @pytest.mark.parametrize(
@@ -136,7 +136,7 @@ async def test_sensor(
     ],
 )
 async def test_sensor_disabled_by_default(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: str,
     server: JavaServer | BedrockServer,
     lookup_function_name: str,
@@ -146,22 +146,22 @@ async def test_sensor_disabled_by_default(
 ) -> None:
     """Test sensor, which is disabled by default."""
     mock_config_entry = request.getfixturevalue(mock_config_entry)
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     with (
         patch(
-            f"homeassistant.components.minecraft_server.api.{server.__name__}.{lookup_function_name}",
+            f"menuai.components.minecraft_server.api.{server.__name__}.{lookup_function_name}",
             return_value=server(host=TEST_HOST, port=TEST_PORT),
         ),
         patch(
-            f"homeassistant.components.minecraft_server.api.{server.__name__}.async_status",
+            f"menuai.components.minecraft_server.api.{server.__name__}.async_status",
             return_value=status_response,
         ),
     ):
-        assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
         for entity_id in entity_ids:
-            assert not hass.states.get(entity_id)
+            assert not menuai.states.get(entity_id)
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
@@ -191,7 +191,7 @@ async def test_sensor_disabled_by_default(
     ],
 )
 async def test_sensor_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: str,
     server: JavaServer | BedrockServer,
     lookup_function_name: str,
@@ -203,25 +203,25 @@ async def test_sensor_update(
 ) -> None:
     """Test sensor update."""
     mock_config_entry = request.getfixturevalue(mock_config_entry)
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     with (
         patch(
-            f"homeassistant.components.minecraft_server.api.{server.__name__}.{lookup_function_name}",
+            f"menuai.components.minecraft_server.api.{server.__name__}.{lookup_function_name}",
             return_value=server(host=TEST_HOST, port=TEST_PORT),
         ),
         patch(
-            f"homeassistant.components.minecraft_server.api.{server.__name__}.async_status",
+            f"menuai.components.minecraft_server.api.{server.__name__}.async_status",
             return_value=status_response,
         ),
     ):
-        assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
         freezer.tick(timedelta(minutes=1))
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done()
         for entity_id in entity_ids:
-            assert hass.states.get(entity_id) == snapshot
+            assert menuai.states.get(entity_id) == snapshot
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
@@ -251,7 +251,7 @@ async def test_sensor_update(
     ],
 )
 async def test_sensor_update_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: str,
     server: JavaServer | BedrockServer,
     lookup_function_name: str,
@@ -262,27 +262,27 @@ async def test_sensor_update_failure(
 ) -> None:
     """Test failed sensor update."""
     mock_config_entry = request.getfixturevalue(mock_config_entry)
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     with (
         patch(
-            f"homeassistant.components.minecraft_server.api.{server.__name__}.{lookup_function_name}",
+            f"menuai.components.minecraft_server.api.{server.__name__}.{lookup_function_name}",
             return_value=server(host=TEST_HOST, port=TEST_PORT),
         ),
         patch(
-            f"homeassistant.components.minecraft_server.api.{server.__name__}.async_status",
+            f"menuai.components.minecraft_server.api.{server.__name__}.async_status",
             return_value=status_response,
         ),
     ):
-        assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     with patch(
-        f"homeassistant.components.minecraft_server.api.{server.__name__}.async_status",
+        f"menuai.components.minecraft_server.api.{server.__name__}.async_status",
         side_effect=OSError,
     ):
         freezer.tick(timedelta(minutes=1))
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done()
         for entity_id in entity_ids:
-            assert hass.states.get(entity_id).state == STATE_UNAVAILABLE
+            assert menuai.states.get(entity_id).state == STATE_UNAVAILABLE

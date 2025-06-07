@@ -13,10 +13,10 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 from syrupy.extensions.image import PNGImageSnapshotExtension
 
-from homeassistant.components.habitica.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
+from menuai.components.habitica.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.const import Platform
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry, async_fire_time_changed, async_load_fixture
 from tests.typing import ClientSessionGenerator
@@ -26,7 +26,7 @@ from tests.typing import ClientSessionGenerator
 def image_only() -> Generator[None]:
     """Enable only the image platform."""
     with patch(
-        "homeassistant.components.habitica.PLATFORMS",
+        "menuai.components.habitica.PLATFORMS",
         [Platform.IMAGE],
     ):
         yield
@@ -36,17 +36,17 @@ def image_only() -> Generator[None]:
     sys.platform != "linux", reason="linux only"
 )  # Pillow output on win/mac is different
 async def test_image_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     habitica: AsyncMock,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test image platform."""
     freezer.move_to("2024-09-20T22:00:00.000")
     with patch(
-        "homeassistant.components.habitica.coordinator.BytesIO",
+        "menuai.components.habitica.coordinator.BytesIO",
     ) as avatar:
         avatar.side_effect = [
             BytesIO(
@@ -57,13 +57,13 @@ async def test_image_platform(
             ),
         ]
 
-        config_entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        config_entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
         assert config_entry.state is ConfigEntryState.LOADED
 
-        assert (state := hass.states.get("image.test_user_avatar"))
+        assert (state := menuai.states.get("image.test_user_avatar"))
         assert state.state == "2024-09-20T22:00:00+00:00"
 
         access_token = state.attributes["access_token"]
@@ -72,7 +72,7 @@ async def test_image_platform(
             == f"/api/image_proxy/image.test_user_avatar?token={access_token}"
         )
 
-        client = await hass_client()
+        client = await menuai_client()
         resp = await client.get(state.attributes["entity_picture"])
         assert resp.status == HTTPStatus.OK
 
@@ -81,14 +81,14 @@ async def test_image_platform(
         )
 
         habitica.get_user.return_value = HabiticaUserResponse.from_json(
-            await async_load_fixture(hass, "rogue_fixture.json", DOMAIN)
+            await async_load_fixture(menuai, "rogue_fixture.json", DOMAIN)
         )
 
         freezer.tick(timedelta(seconds=60))
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done()
 
-        assert (state := hass.states.get("image.test_user_avatar"))
+        assert (state := menuai.states.get("image.test_user_avatar"))
         assert state.state == "2024-09-20T22:01:00+00:00"
 
         resp = await client.get(state.attributes["entity_picture"])

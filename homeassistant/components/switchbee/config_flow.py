@@ -9,13 +9,13 @@ from switchbee.api.central_unit import SwitchBeeError
 from switchbee.api.polling import CentralUnitPolling
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.device_registry import format_mac
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.device_registry import format_mac
 
 from .const import DOMAIN
 
@@ -30,10 +30,10 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
 )
 
 
-async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> str:
+async def validate_input(menuai: menuai, data: dict[str, Any]) -> str:
     """Validate the user input allows us to connect."""
 
-    websession = async_get_clientsession(hass, verify_ssl=False)
+    websession = async_get_clientsession(menuai, verify_ssl=False)
     api = CentralUnitPolling(
         data[CONF_HOST], data[CONF_USERNAME], data[CONF_PASSWORD], websession
     )
@@ -70,7 +70,7 @@ class SwitchBeeConfigFlow(ConfigFlow, domain=DOMAIN):
             )
 
         try:
-            unique_id = await validate_input(self.hass, user_input)
+            unique_id = await validate_input(self.menuai, user_input)
         except CannotConnect:
             errors["base"] = "cannot_connect"
         except InvalidAuth:
@@ -89,9 +89,9 @@ class SwitchBeeConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(menuaiError):
     """Error to indicate there is invalid auth."""

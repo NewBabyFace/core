@@ -14,15 +14,15 @@ from simplipy.util.auth import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_CODE, CONF_TOKEN, CONF_URL, CONF_USERNAME
-from homeassistant.core import callback
-from homeassistant.helpers import aiohttp_client, config_validation as cv
+from menuai.const import CONF_CODE, CONF_TOKEN, CONF_URL, CONF_USERNAME
+from menuai.core import callback
+from menuai.helpers import aiohttp_client, config_validation as cv
 
 from .const import DOMAIN, LOGGER
 
@@ -106,7 +106,7 @@ class SimpliSafeFlowHandler(ConfigFlow, domain=DOMAIN):
             )
 
         errors = {}
-        session = aiohttp_client.async_get_clientsession(self.hass)
+        session = aiohttp_client.async_get_clientsession(self.menuai)
         try:
             simplisafe = await API.async_from_auth(
                 auth_code,
@@ -137,11 +137,11 @@ class SimpliSafeFlowHandler(ConfigFlow, domain=DOMAIN):
                 # in with different credentials:
                 return self.async_abort(reason="wrong_account")
 
-            self.hass.config_entries.async_update_entry(
+            self.menuai.config_entries.async_update_entry(
                 existing_entry, unique_id=simplisafe_user_id, data=data
             )
-            self.hass.async_create_task(
-                self.hass.config_entries.async_reload(existing_entry.entry_id)
+            self.menuai.async_create_task(
+                self.menuai.config_entries.async_reload(existing_entry.entry_id)
             )
             return self.async_abort(reason="reauth_successful")
 

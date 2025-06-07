@@ -7,23 +7,23 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.button import DEVICE_CLASSES_SCHEMA, ButtonEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.components.button import DEVICE_CLASSES_SCHEMA, ButtonEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_DEVICE_CLASS,
     CONF_DEVICE_ID,
     CONF_NAME,
     CONF_UNIQUE_ID,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import PlatformNotReady
-from homeassistant.helpers import config_validation as cv, selector
-from homeassistant.helpers.device import async_device_info_to_link_from_device_id
-from homeassistant.helpers.entity_platform import (
+from menuai.core import menuai
+from menuai.exceptions import PlatformNotReady
+from menuai.helpers import config_validation as cv, selector
+from menuai.helpers.device import async_device_info_to_link_from_device_id
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     AddEntitiesCallback,
 )
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import CONF_PRESS, DOMAIN
 from .template_entity import (
@@ -61,7 +61,7 @@ CONFIG_BUTTON_SCHEMA = vol.Schema(
 
 
 async def _async_create_entities(
-    hass: HomeAssistant, definitions: list[dict[str, Any]], unique_id_prefix: str | None
+    menuai: menuai, definitions: list[dict[str, Any]], unique_id_prefix: str | None
 ) -> list[TemplateButtonEntity]:
     """Create the Template button."""
     entities = []
@@ -69,12 +69,12 @@ async def _async_create_entities(
         unique_id = definition.get(CONF_UNIQUE_ID)
         if unique_id and unique_id_prefix:
             unique_id = f"{unique_id_prefix}-{unique_id}"
-        entities.append(TemplateButtonEntity(hass, definition, unique_id))
+        entities.append(TemplateButtonEntity(menuai, definition, unique_id))
     return entities
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -87,13 +87,13 @@ async def async_setup_platform(
 
     async_add_entities(
         await _async_create_entities(
-            hass, discovery_info["entities"], discovery_info["unique_id"]
+            menuai, discovery_info["entities"], discovery_info["unique_id"]
         )
     )
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -102,7 +102,7 @@ async def async_setup_entry(
     _options.pop("template_type")
     validated_config = CONFIG_BUTTON_SCHEMA(_options)
     async_add_entities(
-        [TemplateButtonEntity(hass, validated_config, config_entry.entry_id)]
+        [TemplateButtonEntity(menuai, validated_config, config_entry.entry_id)]
     )
 
 
@@ -113,12 +113,12 @@ class TemplateButtonEntity(TemplateEntity, ButtonEntity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config,
         unique_id: str | None,
     ) -> None:
         """Initialize the button."""
-        super().__init__(hass, config=config, unique_id=unique_id)
+        super().__init__(menuai, config=config, unique_id=unique_id)
         assert self._attr_name is not None
         # Scripts can be an empty list, therefore we need to check for None
         if (action := config.get(CONF_PRESS)) is not None:
@@ -126,7 +126,7 @@ class TemplateButtonEntity(TemplateEntity, ButtonEntity):
         self._attr_device_class = config.get(CONF_DEVICE_CLASS)
         self._attr_state = None
         self._attr_device_info = async_device_info_to_link_from_device_id(
-            hass,
+            menuai,
             config.get(CONF_DEVICE_ID),
         )
 

@@ -5,13 +5,13 @@ from __future__ import annotations
 from datetime import date, datetime
 from decimal import Decimal
 
-from homeassistant.components.sensor import RestoreSensor, SensorDeviceClass
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
-from homeassistant.util.enum import try_parse_enum
+from menuai.components.sensor import RestoreSensor, SensorDeviceClass
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
+from menuai.util.enum import try_parse_enum
 
 from .const import DOMAIN
 from .device import ONVIFDevice
@@ -19,19 +19,19 @@ from .entity import ONVIFBaseEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up a ONVIF binary sensor."""
-    device: ONVIFDevice = hass.data[DOMAIN][config_entry.unique_id]
+    device: ONVIFDevice = menuai.data[DOMAIN][config_entry.unique_id]
 
     entities = {
         event.uid: ONVIFSensor(event.uid, device)
         for event in device.events.get_platform("sensor")
     }
 
-    ent_reg = er.async_get(hass)
+    ent_reg = er.async_get(menuai)
     for entry in er.async_entries_for_config_entry(ent_reg, config_entry.entry_id):
         if entry.domain == "sensor" and entry.unique_id not in entities:
             entities[entry.unique_id] = ONVIFSensor(entry.unique_id, device, entry)
@@ -94,7 +94,7 @@ class ONVIFSensor(ONVIFBaseEntity, RestoreSensor):
             return event.value
         return self._attr_native_value
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Connect to dispatcher listening for entity data notifications."""
         self.async_on_remove(
             self.device.events.async_add_listener(self.async_write_ha_state)

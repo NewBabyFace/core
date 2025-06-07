@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA
-from homeassistant.components.homeassistant.triggers import event
-from homeassistant.const import CONF_DEVICE_ID, CONF_DOMAIN, CONF_PLATFORM, CONF_TYPE
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant
-from homeassistant.helpers import config_validation as cv, device_registry as dr
-from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
-from homeassistant.helpers.typing import ConfigType
+from menuai.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA
+from menuai.components.menuai.triggers import event
+from menuai.const import CONF_DEVICE_ID, CONF_DOMAIN, CONF_PLATFORM, CONF_TYPE
+from menuai.core import CALLBACK_TYPE, menuai
+from menuai.helpers import config_validation as cv, device_registry as dr
+from menuai.helpers.trigger import TriggerActionType, TriggerInfo
+from menuai.helpers.typing import ConfigType
 
 from .const import DOMAIN, KEY_ACTIONS, SENDKEYS
 
@@ -50,10 +50,10 @@ TYPE_SCHEMAS = {
 
 
 async def async_get_triggers(
-    hass: HomeAssistant, device_id: str
+    menuai: menuai, device_id: str
 ) -> list[dict[str, str]]:
     """List device triggers for LCN devices."""
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     if (device := device_registry.async_get(device_id)) is None:
         return []
 
@@ -71,7 +71,7 @@ async def async_get_triggers(
 
 
 async def async_attach_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     action: TriggerActionType,
     trigger_info: TriggerInfo,
@@ -95,12 +95,12 @@ async def async_attach_trigger(
     )
 
     return await event.async_attach_trigger(
-        hass, event_config, action, trigger_info, platform_type="device"
+        menuai, event_config, action, trigger_info, platform_type="device"
     )
 
 
 async def async_get_trigger_capabilities(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> dict[str, vol.Schema]:
     """List trigger capabilities."""
     return TYPE_SCHEMAS.get(config[CONF_TYPE], {})

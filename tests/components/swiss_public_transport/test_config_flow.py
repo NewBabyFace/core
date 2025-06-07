@@ -8,8 +8,8 @@ from opendata_transport.exceptions import (
 )
 import pytest
 
-from homeassistant.components.swiss_public_transport import config_flow
-from homeassistant.components.swiss_public_transport.const import (
+from menuai.components.swiss_public_transport import config_flow
+from menuai.components.swiss_public_transport.const import (
     CONF_DESTINATION,
     CONF_START,
     CONF_TIME_FIXED,
@@ -19,9 +19,9 @@ from homeassistant.components.swiss_public_transport.const import (
     CONF_VIA,
     MAX_VIA,
 )
-from homeassistant.components.swiss_public_transport.helper import unique_id_from_config
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.swiss_public_transport.helper import unique_id_from_config
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
@@ -106,10 +106,10 @@ MOCK_ADVANCED_DATA_STEP_TIME_OFFSET = {
     ],
 )
 async def test_flow_user_init_data_success(
-    hass: HomeAssistant, user_input, time_mode_input, config_title
+    menuai: menuai, user_input, time_mode_input, config_title
 ) -> None:
     """Test success response."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         config_flow.DOMAIN, context={"source": "user"}
     )
 
@@ -119,11 +119,11 @@ async def test_flow_user_init_data_success(
     assert result["data_schema"] == config_flow.USER_DATA_SCHEMA
 
     with patch(
-        "homeassistant.components.swiss_public_transport.config_flow.OpendataTransport.async_get_data",
+        "menuai.components.swiss_public_transport.config_flow.OpendataTransport.async_get_data",
         autospec=True,
         return_value=True,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input=user_input,
         )
@@ -134,7 +134,7 @@ async def test_flow_user_init_data_success(
                 assert result["step_id"] == "time_fixed"
             if CONF_TIME_OFFSET in time_mode_input:
                 assert result["step_id"] == "time_offset"
-            result = await hass.config_entries.flow.async_configure(
+            result = await menuai.config_entries.flow.async_configure(
                 result["flow_id"],
                 user_input=time_mode_input,
             )
@@ -155,18 +155,18 @@ async def test_flow_user_init_data_success(
     ],
 )
 async def test_flow_user_init_data_error_and_recover_on_step_1(
-    hass: HomeAssistant, raise_error, text_error, user_input_error
+    menuai: menuai, raise_error, text_error, user_input_error
 ) -> None:
     """Test errors in user step."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         config_flow.DOMAIN, context={"source": "user"}
     )
     with patch(
-        "homeassistant.components.swiss_public_transport.config_flow.OpendataTransport.async_get_data",
+        "menuai.components.swiss_public_transport.config_flow.OpendataTransport.async_get_data",
         autospec=True,
         side_effect=raise_error,
     ) as mock_OpendataTransport:
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input=user_input_error,
         )
@@ -177,7 +177,7 @@ async def test_flow_user_init_data_error_and_recover_on_step_1(
         # Recover
         mock_OpendataTransport.side_effect = None
         mock_OpendataTransport.return_value = True
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input=MOCK_USER_DATA_STEP,
         )
@@ -201,10 +201,10 @@ async def test_flow_user_init_data_error_and_recover_on_step_1(
     ],
 )
 async def test_flow_user_init_data_error_and_recover_on_step_2(
-    hass: HomeAssistant, raise_error, text_error, user_input
+    menuai: menuai, raise_error, text_error, user_input
 ) -> None:
     """Test errors in time mode step."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         config_flow.DOMAIN, context={"source": "user"}
     )
 
@@ -214,11 +214,11 @@ async def test_flow_user_init_data_error_and_recover_on_step_2(
     assert result["data_schema"] == config_flow.USER_DATA_SCHEMA
 
     with patch(
-        "homeassistant.components.swiss_public_transport.config_flow.OpendataTransport.async_get_data",
+        "menuai.components.swiss_public_transport.config_flow.OpendataTransport.async_get_data",
         autospec=True,
         return_value=True,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input=MOCK_USER_DATA_STEP_TIME_FIXED,
         )
@@ -226,11 +226,11 @@ async def test_flow_user_init_data_error_and_recover_on_step_2(
         assert result["step_id"] == "time_fixed"
 
     with patch(
-        "homeassistant.components.swiss_public_transport.config_flow.OpendataTransport.async_get_data",
+        "menuai.components.swiss_public_transport.config_flow.OpendataTransport.async_get_data",
         autospec=True,
         side_effect=raise_error,
     ) as mock_OpendataTransport:
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input=user_input,
         )
@@ -241,7 +241,7 @@ async def test_flow_user_init_data_error_and_recover_on_step_2(
         # Recover
         mock_OpendataTransport.side_effect = None
         mock_OpendataTransport.return_value = True
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input=user_input,
         )
@@ -250,7 +250,7 @@ async def test_flow_user_init_data_error_and_recover_on_step_2(
         assert result["result"].title == "test_start test_destination at 18:03:00"
 
 
-async def test_flow_user_init_data_already_configured(hass: HomeAssistant) -> None:
+async def test_flow_user_init_data_already_configured(menuai: menuai) -> None:
     """Test we abort user data set when entry is already configured."""
 
     entry = MockConfigEntry(
@@ -258,18 +258,18 @@ async def test_flow_user_init_data_already_configured(hass: HomeAssistant) -> No
         data=MOCK_USER_DATA_STEP,
         unique_id=unique_id_from_config(MOCK_USER_DATA_STEP),
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.swiss_public_transport.config_flow.OpendataTransport.async_get_data",
+        "menuai.components.swiss_public_transport.config_flow.OpendataTransport.async_get_data",
         autospec=True,
         return_value=True,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             config_flow.DOMAIN, context={"source": "user"}
         )
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input=MOCK_USER_DATA_STEP,
         )

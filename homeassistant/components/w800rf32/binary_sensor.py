@@ -7,17 +7,17 @@ import logging
 import voluptuous as vol
 import W800rf32 as w800
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     DEVICE_CLASSES_SCHEMA,
     PLATFORM_SCHEMA as BINARY_SENSOR_PLATFORM_SCHEMA,
     BinarySensorEntity,
 )
-from homeassistant.const import CONF_DEVICE_CLASS, CONF_DEVICES, CONF_NAME
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv, event as evt
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_DEVICE_CLASS, CONF_DEVICES, CONF_NAME
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv, event as evt
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import W800RF32_DEVICE
 
@@ -44,7 +44,7 @@ PLATFORM_SCHEMA = BINARY_SENSOR_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -128,7 +128,7 @@ class W800rf32BinarySensor(BinarySensorEntity):
 
         if self.is_on and self._off_delay is not None and self._delay_listener is None:
             self._delay_listener = evt.async_call_later(
-                self.hass, self._off_delay, self._off_delay_listener
+                self.menuai, self._off_delay, self._off_delay_listener
             )
 
     def update_state(self, state):
@@ -136,6 +136,6 @@ class W800rf32BinarySensor(BinarySensorEntity):
         self._state = state
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register update callback."""
-        async_dispatcher_connect(self.hass, self._signal, self.binary_sensor_update)
+        async_dispatcher_connect(self.menuai, self._signal, self.binary_sensor_update)

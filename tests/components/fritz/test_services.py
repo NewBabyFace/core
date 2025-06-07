@@ -5,67 +5,67 @@ from unittest.mock import patch
 from fritzconnection.core.exceptions import FritzConnectionException, FritzServiceError
 import pytest
 
-from homeassistant.components.fritz.const import DOMAIN
-from homeassistant.components.fritz.services import SERVICE_SET_GUEST_WIFI_PW
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.setup import async_setup_component
+from menuai.components.fritz.const import DOMAIN
+from menuai.components.fritz.services import SERVICE_SET_GUEST_WIFI_PW
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.setup import async_setup_component
 
 from .const import MOCK_USER_DATA
 
 from tests.common import MockConfigEntry
 
 
-async def test_setup_services(hass: HomeAssistant) -> None:
+async def test_setup_services(menuai: menuai) -> None:
     """Test setup of Fritz!Tools services."""
-    assert await async_setup_component(hass, DOMAIN, {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {})
+    await menuai.async_block_till_done()
 
-    services = hass.services.async_services_for_domain(DOMAIN)
+    services = menuai.services.async_services_for_domain(DOMAIN)
     assert services
     assert SERVICE_SET_GUEST_WIFI_PW in services
 
 
 async def test_service_set_guest_wifi_password(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     caplog: pytest.LogCaptureFixture,
     fc_class_mock,
     fh_class_mock,
 ) -> None:
     """Test service set_guest_wifi_password."""
-    assert await async_setup_component(hass, DOMAIN, {})
+    assert await async_setup_component(menuai, DOMAIN, {})
     entry = MockConfigEntry(domain=DOMAIN, data=MOCK_USER_DATA)
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     device = device_registry.async_get_device(
         identifiers={(DOMAIN, "1C:ED:6F:12:34:11")}
     )
     assert device
     with patch(
-        "homeassistant.components.fritz.coordinator.AvmWrapper.async_trigger_set_guest_password"
+        "menuai.components.fritz.coordinator.AvmWrapper.async_trigger_set_guest_password"
     ) as mock_async_trigger_set_guest_password:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN, SERVICE_SET_GUEST_WIFI_PW, {"device_id": device.id}
         )
         assert mock_async_trigger_set_guest_password.called
 
 
 async def test_service_set_guest_wifi_password_unknown_parameter(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     caplog: pytest.LogCaptureFixture,
     fc_class_mock,
     fh_class_mock,
 ) -> None:
     """Test service set_guest_wifi_password with unknown parameter."""
-    assert await async_setup_component(hass, DOMAIN, {})
+    assert await async_setup_component(menuai, DOMAIN, {})
     entry = MockConfigEntry(domain=DOMAIN, data=MOCK_USER_DATA)
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     device = device_registry.async_get_device(
         identifiers={(DOMAIN, "1C:ED:6F:12:34:11")}
@@ -73,29 +73,29 @@ async def test_service_set_guest_wifi_password_unknown_parameter(
     assert device
 
     with patch(
-        "homeassistant.components.fritz.coordinator.AvmWrapper.async_trigger_set_guest_password",
+        "menuai.components.fritz.coordinator.AvmWrapper.async_trigger_set_guest_password",
         side_effect=FritzServiceError("boom"),
     ) as mock_async_trigger_set_guest_password:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN, SERVICE_SET_GUEST_WIFI_PW, {"device_id": device.id}
         )
         assert mock_async_trigger_set_guest_password.called
-        assert "HomeAssistantError: Action or parameter unknown" in caplog.text
+        assert "menuaiError: Action or parameter unknown" in caplog.text
 
 
 async def test_service_set_guest_wifi_password_service_not_supported(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     caplog: pytest.LogCaptureFixture,
     fc_class_mock,
     fh_class_mock,
 ) -> None:
     """Test service set_guest_wifi_password with connection error."""
-    assert await async_setup_component(hass, DOMAIN, {})
+    assert await async_setup_component(menuai, DOMAIN, {})
     entry = MockConfigEntry(domain=DOMAIN, data=MOCK_USER_DATA)
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     device = device_registry.async_get_device(
         identifiers={(DOMAIN, "1C:ED:6F:12:34:11")}
@@ -103,28 +103,28 @@ async def test_service_set_guest_wifi_password_service_not_supported(
     assert device
 
     with patch(
-        "homeassistant.components.fritz.coordinator.AvmWrapper.async_trigger_set_guest_password",
+        "menuai.components.fritz.coordinator.AvmWrapper.async_trigger_set_guest_password",
         side_effect=FritzConnectionException("boom"),
     ) as mock_async_trigger_set_guest_password:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN, SERVICE_SET_GUEST_WIFI_PW, {"device_id": device.id}
         )
         assert mock_async_trigger_set_guest_password.called
-        assert "HomeAssistantError: Action not supported" in caplog.text
+        assert "menuaiError: Action not supported" in caplog.text
 
 
 async def test_service_set_guest_wifi_password_unloaded(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test service set_guest_wifi_password."""
-    assert await async_setup_component(hass, DOMAIN, {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {})
+    await menuai.async_block_till_done()
 
     with patch(
-        "homeassistant.components.fritz.coordinator.AvmWrapper.async_trigger_set_guest_password"
+        "menuai.components.fritz.coordinator.AvmWrapper.async_trigger_set_guest_password"
     ) as mock_async_trigger_set_guest_password:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN, SERVICE_SET_GUEST_WIFI_PW, {"device_id": "12345678"}
         )
         assert not mock_async_trigger_set_guest_password.called

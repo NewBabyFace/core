@@ -13,10 +13,10 @@ from hatasmota.utils import (
 )
 import pytest
 
-from homeassistant.components import cover
-from homeassistant.components.tasmota.const import DEFAULT_PREFIX
-from homeassistant.const import ATTR_ASSUMED_STATE, STATE_UNKNOWN, Platform
-from homeassistant.core import HomeAssistant
+from menuai.components import cover
+from menuai.components.tasmota.const import DEFAULT_PREFIX
+from menuai.const import ATTR_ASSUMED_STATE, STATE_UNKNOWN, Platform
+from menuai.core import menuai
 
 from .test_common import (
     DEFAULT_CONFIG,
@@ -51,7 +51,7 @@ TILT_SUPPORT = (
 
 
 async def test_missing_relay(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient, setup_tasmota
+    menuai: menuai, mqtt_mock: MqttMockHAClient, setup_tasmota
 ) -> None:
     """Test no cover is discovered if relays are missing."""
 
@@ -67,7 +67,7 @@ async def test_missing_relay(
     ],
 )
 async def test_multiple_covers(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock: MqttMockHAClient,
     setup_tasmota,
     relay_config,
@@ -78,20 +78,20 @@ async def test_multiple_covers(
     config["rl"] = relay_config
     mac = config["mac"]
 
-    assert len(hass.states.async_all("cover")) == 0
+    assert len(menuai.states.async_all("cover")) == 0
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         f"{DEFAULT_PREFIX}/{mac}/config",
         json.dumps(config),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all("cover")) == num_covers
+    assert len(menuai.states.async_all("cover")) == num_covers
 
 
 async def test_tilt_support(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient, setup_tasmota
+    menuai: menuai, mqtt_mock: MqttMockHAClient, setup_tasmota
 ) -> None:
     """Test tilt support detection."""
     config = copy.deepcopy(DEFAULT_CONFIG)
@@ -105,29 +105,29 @@ async def test_tilt_support(
     mac = config["mac"]
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         f"{DEFAULT_PREFIX}/{mac}/config",
         json.dumps(config),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all("cover")) == 4
+    assert len(menuai.states.async_all("cover")) == 4
 
-    state = hass.states.get("cover.tasmota_cover_1")
+    state = menuai.states.get("cover.tasmota_cover_1")
     assert state.attributes["supported_features"] == COVER_SUPPORT
 
-    state = hass.states.get("cover.tasmota_cover_2")
+    state = menuai.states.get("cover.tasmota_cover_2")
     assert state.attributes["supported_features"] == COVER_SUPPORT | TILT_SUPPORT
 
-    state = hass.states.get("cover.tasmota_cover_3")
+    state = menuai.states.get("cover.tasmota_cover_3")
     assert state.attributes["supported_features"] == COVER_SUPPORT
 
-    state = hass.states.get("cover.tasmota_cover_4")
+    state = menuai.states.get("cover.tasmota_cover_4")
     assert state.attributes["supported_features"] == COVER_SUPPORT
 
 
 async def test_controlling_state_via_mqtt_tilt(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient, setup_tasmota
+    menuai: menuai, mqtt_mock: MqttMockHAClient, setup_tasmota
 ) -> None:
     """Test state update via MQTT."""
     config = copy.deepcopy(DEFAULT_CONFIG)
@@ -137,170 +137,170 @@ async def test_controlling_state_via_mqtt_tilt(
     mac = config["mac"]
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         f"{DEFAULT_PREFIX}/{mac}/config",
         json.dumps(config),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("cover.tasmota_cover_1")
+    state = menuai.states.get("cover.tasmota_cover_1")
     assert state.state == "unavailable"
     assert not state.attributes.get(ATTR_ASSUMED_STATE)
 
-    async_fire_mqtt_message(hass, "tasmota_49A3BC/tele/LWT", "Online")
-    await hass.async_block_till_done()
-    state = hass.states.get("cover.tasmota_cover_1")
+    async_fire_mqtt_message(menuai, "tasmota_49A3BC/tele/LWT", "Online")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("cover.tasmota_cover_1")
     assert state.state == STATE_UNKNOWN
     assert state.attributes["supported_features"] == COVER_SUPPORT | TILT_SUPPORT
     assert not state.attributes.get(ATTR_ASSUMED_STATE)
 
     # Periodic updates
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "tasmota_49A3BC/tele/SENSOR",
         '{"Shutter1":{"Position":54,"Direction":-1,"Tilt":-90}}',
     )
-    state = hass.states.get("cover.tasmota_cover_1")
+    state = menuai.states.get("cover.tasmota_cover_1")
     assert state.state == "closing"
     assert state.attributes["current_position"] == 54
     assert state.attributes["current_tilt_position"] == 0
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "tasmota_49A3BC/tele/SENSOR",
         '{"Shutter1":{"Position":100,"Direction":1,"Tilt":90}}',
     )
-    state = hass.states.get("cover.tasmota_cover_1")
+    state = menuai.states.get("cover.tasmota_cover_1")
     assert state.state == "opening"
     assert state.attributes["current_position"] == 100
     assert state.attributes["current_tilt_position"] == 100
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "tasmota_49A3BC/tele/SENSOR",
         '{"Shutter1":{"Position":0,"Direction":0,"Tilt":0}}',
     )
-    state = hass.states.get("cover.tasmota_cover_1")
+    state = menuai.states.get("cover.tasmota_cover_1")
     assert state.state == "closed"
     assert state.attributes["current_position"] == 0
     assert state.attributes["current_tilt_position"] == 50
 
     async_fire_mqtt_message(
-        hass, "tasmota_49A3BC/tele/SENSOR", '{"Shutter1":{"Position":1,"Direction":0}}'
+        menuai, "tasmota_49A3BC/tele/SENSOR", '{"Shutter1":{"Position":1,"Direction":0}}'
     )
-    state = hass.states.get("cover.tasmota_cover_1")
+    state = menuai.states.get("cover.tasmota_cover_1")
     assert state.state == "open"
     assert state.attributes["current_position"] == 1
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "tasmota_49A3BC/tele/SENSOR",
         '{"Shutter1":{"Position":100,"Direction":0}}',
     )
-    state = hass.states.get("cover.tasmota_cover_1")
+    state = menuai.states.get("cover.tasmota_cover_1")
     assert state.state == "open"
     assert state.attributes["current_position"] == 100
 
     # State poll response
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "tasmota_49A3BC/stat/STATUS10",
         '{"StatusSNS":{"Shutter1":{"Position":54,"Direction":-1,"Tilt":-90}}}',
     )
-    state = hass.states.get("cover.tasmota_cover_1")
+    state = menuai.states.get("cover.tasmota_cover_1")
     assert state.state == "closing"
     assert state.attributes["current_position"] == 54
     assert state.attributes["current_tilt_position"] == 0
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "tasmota_49A3BC/stat/STATUS10",
         '{"StatusSNS":{"Shutter1":{"Position":100,"Direction":1,"Tilt":90}}}',
     )
-    state = hass.states.get("cover.tasmota_cover_1")
+    state = menuai.states.get("cover.tasmota_cover_1")
     assert state.state == "opening"
     assert state.attributes["current_position"] == 100
     assert state.attributes["current_tilt_position"] == 100
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "tasmota_49A3BC/stat/STATUS10",
         '{"StatusSNS":{"Shutter1":{"Position":0,"Direction":0,"Tilt":0}}}',
     )
-    state = hass.states.get("cover.tasmota_cover_1")
+    state = menuai.states.get("cover.tasmota_cover_1")
     assert state.state == "closed"
     assert state.attributes["current_position"] == 0
     assert state.attributes["current_tilt_position"] == 50
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "tasmota_49A3BC/stat/STATUS10",
         '{"StatusSNS":{"Shutter1":{"Position":1,"Direction":0}}}',
     )
-    state = hass.states.get("cover.tasmota_cover_1")
+    state = menuai.states.get("cover.tasmota_cover_1")
     assert state.state == "open"
     assert state.attributes["current_position"] == 1
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "tasmota_49A3BC/stat/STATUS10",
         '{"StatusSNS":{"Shutter1":{"Position":100,"Direction":0}}}',
     )
-    state = hass.states.get("cover.tasmota_cover_1")
+    state = menuai.states.get("cover.tasmota_cover_1")
     assert state.state == "open"
     assert state.attributes["current_position"] == 100
 
     # Command response
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "tasmota_49A3BC/stat/RESULT",
         '{"Shutter1":{"Position":54,"Direction":-1,"Tilt":-90}}',
     )
-    state = hass.states.get("cover.tasmota_cover_1")
+    state = menuai.states.get("cover.tasmota_cover_1")
     assert state.state == "closing"
     assert state.attributes["current_position"] == 54
     assert state.attributes["current_tilt_position"] == 0
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "tasmota_49A3BC/stat/RESULT",
         '{"Shutter1":{"Position":100,"Direction":1,"Tilt":90}}',
     )
-    state = hass.states.get("cover.tasmota_cover_1")
+    state = menuai.states.get("cover.tasmota_cover_1")
     assert state.state == "opening"
     assert state.attributes["current_position"] == 100
     assert state.attributes["current_tilt_position"] == 100
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "tasmota_49A3BC/stat/RESULT",
         '{"Shutter1":{"Position":0,"Direction":0,"Tilt":0}}',
     )
-    state = hass.states.get("cover.tasmota_cover_1")
+    state = menuai.states.get("cover.tasmota_cover_1")
     assert state.state == "closed"
     assert state.attributes["current_position"] == 0
     assert state.attributes["current_tilt_position"] == 50
 
     async_fire_mqtt_message(
-        hass, "tasmota_49A3BC/stat/RESULT", '{"Shutter1":{"Position":1,"Direction":0}}'
+        menuai, "tasmota_49A3BC/stat/RESULT", '{"Shutter1":{"Position":1,"Direction":0}}'
     )
-    state = hass.states.get("cover.tasmota_cover_1")
+    state = menuai.states.get("cover.tasmota_cover_1")
     assert state.state == "open"
     assert state.attributes["current_position"] == 1
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "tasmota_49A3BC/stat/RESULT",
         '{"Shutter1":{"Position":100,"Direction":0}}',
     )
-    state = hass.states.get("cover.tasmota_cover_1")
+    state = menuai.states.get("cover.tasmota_cover_1")
     assert state.state == "open"
     assert state.attributes["current_position"] == 100
 
 
 @pytest.mark.parametrize("tilt", ["", ',"Tilt":0'])
 async def test_controlling_state_via_mqtt_inverted(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient, setup_tasmota, tilt
+    menuai: menuai, mqtt_mock: MqttMockHAClient, setup_tasmota, tilt
 ) -> None:
     """Test state update via MQTT."""
     config = copy.deepcopy(DEFAULT_CONFIG)
@@ -310,166 +310,166 @@ async def test_controlling_state_via_mqtt_inverted(
     mac = config["mac"]
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         f"{DEFAULT_PREFIX}/{mac}/config",
         json.dumps(config),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("cover.tasmota_cover_1")
+    state = menuai.states.get("cover.tasmota_cover_1")
     assert state.state == "unavailable"
     assert not state.attributes.get(ATTR_ASSUMED_STATE)
 
-    async_fire_mqtt_message(hass, "tasmota_49A3BC/tele/LWT", "Online")
-    await hass.async_block_till_done()
-    state = hass.states.get("cover.tasmota_cover_1")
+    async_fire_mqtt_message(menuai, "tasmota_49A3BC/tele/LWT", "Online")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("cover.tasmota_cover_1")
     assert state.state == STATE_UNKNOWN
     assert state.attributes["supported_features"] == COVER_SUPPORT
 
     # Periodic updates
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "tasmota_49A3BC/tele/SENSOR",
         '{"Shutter1":{"Position":54,"Direction":-1' + tilt + "}}",
     )
-    state = hass.states.get("cover.tasmota_cover_1")
+    state = menuai.states.get("cover.tasmota_cover_1")
     assert state.state == "opening"
     assert state.attributes["current_position"] == 46
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "tasmota_49A3BC/tele/SENSOR",
         '{"Shutter1":{"Position":100,"Direction":1' + tilt + "}}",
     )
-    state = hass.states.get("cover.tasmota_cover_1")
+    state = menuai.states.get("cover.tasmota_cover_1")
     assert state.state == "closing"
     assert state.attributes["current_position"] == 0
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "tasmota_49A3BC/tele/SENSOR",
         '{"Shutter1":{"Position":0,"Direction":0' + tilt + "}}",
     )
-    state = hass.states.get("cover.tasmota_cover_1")
+    state = menuai.states.get("cover.tasmota_cover_1")
     assert state.state == "open"
     assert state.attributes["current_position"] == 100
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "tasmota_49A3BC/tele/SENSOR",
         '{"Shutter1":{"Position":99,"Direction":0' + tilt + "}}",
     )
-    state = hass.states.get("cover.tasmota_cover_1")
+    state = menuai.states.get("cover.tasmota_cover_1")
     assert state.state == "open"
     assert state.attributes["current_position"] == 1
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "tasmota_49A3BC/tele/SENSOR",
         '{"Shutter1":{"Position":100,"Direction":0' + tilt + "}}",
     )
-    state = hass.states.get("cover.tasmota_cover_1")
+    state = menuai.states.get("cover.tasmota_cover_1")
     assert state.state == "closed"
     assert state.attributes["current_position"] == 0
 
     # State poll response
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "tasmota_49A3BC/stat/STATUS10",
         '{"StatusSNS":{"Shutter1":{"Position":54,"Direction":-1' + tilt + "}}}",
     )
-    state = hass.states.get("cover.tasmota_cover_1")
+    state = menuai.states.get("cover.tasmota_cover_1")
     assert state.state == "opening"
     assert state.attributes["current_position"] == 46
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "tasmota_49A3BC/stat/STATUS10",
         '{"StatusSNS":{"Shutter1":{"Position":100,"Direction":1' + tilt + "}}}",
     )
-    state = hass.states.get("cover.tasmota_cover_1")
+    state = menuai.states.get("cover.tasmota_cover_1")
     assert state.state == "closing"
     assert state.attributes["current_position"] == 0
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "tasmota_49A3BC/stat/STATUS10",
         '{"StatusSNS":{"Shutter1":{"Position":0,"Direction":0' + tilt + "}}}",
     )
-    state = hass.states.get("cover.tasmota_cover_1")
+    state = menuai.states.get("cover.tasmota_cover_1")
     assert state.state == "open"
     assert state.attributes["current_position"] == 100
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "tasmota_49A3BC/stat/STATUS10",
         '{"StatusSNS":{"Shutter1":{"Position":99,"Direction":0' + tilt + "}}}",
     )
-    state = hass.states.get("cover.tasmota_cover_1")
+    state = menuai.states.get("cover.tasmota_cover_1")
     assert state.state == "open"
     assert state.attributes["current_position"] == 1
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "tasmota_49A3BC/stat/STATUS10",
         '{"StatusSNS":{"Shutter1":{"Position":100,"Direction":0' + tilt + "}}}",
     )
-    state = hass.states.get("cover.tasmota_cover_1")
+    state = menuai.states.get("cover.tasmota_cover_1")
     assert state.state == "closed"
     assert state.attributes["current_position"] == 0
 
     # Command response
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "tasmota_49A3BC/stat/RESULT",
         '{"Shutter1":{"Position":54,"Direction":-1' + tilt + "}}",
     )
-    state = hass.states.get("cover.tasmota_cover_1")
+    state = menuai.states.get("cover.tasmota_cover_1")
     assert state.state == "opening"
     assert state.attributes["current_position"] == 46
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "tasmota_49A3BC/stat/RESULT",
         '{"Shutter1":{"Position":100,"Direction":1' + tilt + "}}",
     )
-    state = hass.states.get("cover.tasmota_cover_1")
+    state = menuai.states.get("cover.tasmota_cover_1")
     assert state.state == "closing"
     assert state.attributes["current_position"] == 0
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "tasmota_49A3BC/stat/RESULT",
         '{"Shutter1":{"Position":0,"Direction":0' + tilt + "}}",
     )
-    state = hass.states.get("cover.tasmota_cover_1")
+    state = menuai.states.get("cover.tasmota_cover_1")
     assert state.state == "open"
     assert state.attributes["current_position"] == 100
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "tasmota_49A3BC/stat/RESULT",
         '{"Shutter1":{"Position":1,"Direction":0' + tilt + "}}",
     )
-    state = hass.states.get("cover.tasmota_cover_1")
+    state = menuai.states.get("cover.tasmota_cover_1")
     assert state.state == "open"
     assert state.attributes["current_position"] == 99
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "tasmota_49A3BC/stat/RESULT",
         '{"Shutter1":{"Position":100,"Direction":0' + tilt + "}}",
     )
-    state = hass.states.get("cover.tasmota_cover_1")
+    state = menuai.states.get("cover.tasmota_cover_1")
     assert state.state == "closed"
     assert state.attributes["current_position"] == 0
 
 
 async def call_service(
-    hass: HomeAssistant, entity_id: str, service: str, **kwargs: Any
+    menuai: menuai, entity_id: str, service: str, **kwargs: Any
 ) -> None:
     """Call a fan service."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         cover.DOMAIN,
         service,
         {"entity_id": entity_id, **kwargs},
@@ -478,7 +478,7 @@ async def call_service(
 
 
 async def test_sending_mqtt_commands(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient, setup_tasmota
+    menuai: menuai, mqtt_mock: MqttMockHAClient, setup_tasmota
 ) -> None:
     """Test the sending MQTT commands."""
     config = copy.deepcopy(DEFAULT_CONFIG)
@@ -489,75 +489,75 @@ async def test_sending_mqtt_commands(
     mac = config["mac"]
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         f"{DEFAULT_PREFIX}/{mac}/config",
         json.dumps(config),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    async_fire_mqtt_message(hass, "tasmota_49A3BC/tele/LWT", "Online")
-    await hass.async_block_till_done()
-    state = hass.states.get("cover.test_cover_1")
+    async_fire_mqtt_message(menuai, "tasmota_49A3BC/tele/LWT", "Online")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("cover.test_cover_1")
     assert state.state == STATE_UNKNOWN
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
     mqtt_mock.async_publish.reset_mock()
 
     # Close the cover and verify MQTT message is sent
-    await call_service(hass, "cover.test_cover_1", "close_cover")
+    await call_service(menuai, "cover.test_cover_1", "close_cover")
     mqtt_mock.async_publish.assert_called_once_with(
         "tasmota_49A3BC/cmnd/ShutterClose1", "", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
 
     # Tasmota is not optimistic, the state should still be unknown
-    state = hass.states.get("cover.test_cover_1")
+    state = menuai.states.get("cover.test_cover_1")
     assert state.state == STATE_UNKNOWN
 
     # Open the cover and verify MQTT message is sent
-    await call_service(hass, "cover.test_cover_1", "open_cover")
+    await call_service(menuai, "cover.test_cover_1", "open_cover")
     mqtt_mock.async_publish.assert_called_once_with(
         "tasmota_49A3BC/cmnd/ShutterOpen1", "", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
 
     # Stop the cover and verify MQTT message is sent
-    await call_service(hass, "cover.test_cover_1", "stop_cover")
+    await call_service(menuai, "cover.test_cover_1", "stop_cover")
     mqtt_mock.async_publish.assert_called_once_with(
         "tasmota_49A3BC/cmnd/ShutterStop1", "", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
 
     # Set position and verify MQTT message is sent
-    await call_service(hass, "cover.test_cover_1", "set_cover_position", position=0)
+    await call_service(menuai, "cover.test_cover_1", "set_cover_position", position=0)
     mqtt_mock.async_publish.assert_called_once_with(
         "tasmota_49A3BC/cmnd/ShutterPosition1", "0", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
 
     # Set position and verify MQTT message is sent
-    await call_service(hass, "cover.test_cover_1", "set_cover_position", position=99)
+    await call_service(menuai, "cover.test_cover_1", "set_cover_position", position=99)
     mqtt_mock.async_publish.assert_called_once_with(
         "tasmota_49A3BC/cmnd/ShutterPosition1", "99", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
 
     # Close the cover tilt and verify MQTT message is sent
-    await call_service(hass, "cover.test_cover_1", "close_cover_tilt")
+    await call_service(menuai, "cover.test_cover_1", "close_cover_tilt")
     mqtt_mock.async_publish.assert_called_once_with(
         "tasmota_49A3BC/cmnd/ShutterTilt1", "CLOSE", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
 
     # Open the cover tilt and verify MQTT message is sent
-    await call_service(hass, "cover.test_cover_1", "open_cover_tilt")
+    await call_service(menuai, "cover.test_cover_1", "open_cover_tilt")
     mqtt_mock.async_publish.assert_called_once_with(
         "tasmota_49A3BC/cmnd/ShutterTilt1", "OPEN", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
 
     # Stop the cover tilt and verify MQTT message is sent
-    await call_service(hass, "cover.test_cover_1", "stop_cover_tilt")
+    await call_service(menuai, "cover.test_cover_1", "stop_cover_tilt")
     mqtt_mock.async_publish.assert_called_once_with(
         "tasmota_49A3BC/cmnd/ShutterStop1", "", 0, False
     )
@@ -565,7 +565,7 @@ async def test_sending_mqtt_commands(
 
     # Set tilt position and verify MQTT message is sent
     await call_service(
-        hass, "cover.test_cover_1", "set_cover_tilt_position", tilt_position=0
+        menuai, "cover.test_cover_1", "set_cover_tilt_position", tilt_position=0
     )
     mqtt_mock.async_publish.assert_called_once_with(
         "tasmota_49A3BC/cmnd/ShutterTilt1", "-90", 0, False
@@ -574,7 +574,7 @@ async def test_sending_mqtt_commands(
 
     # Set tilt position and verify MQTT message is sent
     await call_service(
-        hass, "cover.test_cover_1", "set_cover_tilt_position", tilt_position=100
+        menuai, "cover.test_cover_1", "set_cover_tilt_position", tilt_position=100
     )
     mqtt_mock.async_publish.assert_called_once_with(
         "tasmota_49A3BC/cmnd/ShutterTilt1", "90", 0, False
@@ -583,7 +583,7 @@ async def test_sending_mqtt_commands(
 
 
 async def test_sending_mqtt_commands_inverted(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient, setup_tasmota
+    menuai: menuai, mqtt_mock: MqttMockHAClient, setup_tasmota
 ) -> None:
     """Test the sending MQTT commands."""
     config = copy.deepcopy(DEFAULT_CONFIG)
@@ -594,54 +594,54 @@ async def test_sending_mqtt_commands_inverted(
     mac = config["mac"]
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         f"{DEFAULT_PREFIX}/{mac}/config",
         json.dumps(config),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    async_fire_mqtt_message(hass, "tasmota_49A3BC/tele/LWT", "Online")
-    await hass.async_block_till_done()
-    state = hass.states.get("cover.test_cover_1")
+    async_fire_mqtt_message(menuai, "tasmota_49A3BC/tele/LWT", "Online")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("cover.test_cover_1")
     assert state.state == STATE_UNKNOWN
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
     mqtt_mock.async_publish.reset_mock()
 
     # Close the cover and verify MQTT message is sent
-    await call_service(hass, "cover.test_cover_1", "close_cover")
+    await call_service(menuai, "cover.test_cover_1", "close_cover")
     mqtt_mock.async_publish.assert_called_once_with(
         "tasmota_49A3BC/cmnd/ShutterClose1", "", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
 
     # Tasmota is not optimistic, the state should still be unknown
-    state = hass.states.get("cover.test_cover_1")
+    state = menuai.states.get("cover.test_cover_1")
     assert state.state == STATE_UNKNOWN
 
     # Open the cover and verify MQTT message is sent
-    await call_service(hass, "cover.test_cover_1", "open_cover")
+    await call_service(menuai, "cover.test_cover_1", "open_cover")
     mqtt_mock.async_publish.assert_called_once_with(
         "tasmota_49A3BC/cmnd/ShutterOpen1", "", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
 
     # Stop the cover and verify MQTT message is sent
-    await call_service(hass, "cover.test_cover_1", "stop_cover")
+    await call_service(menuai, "cover.test_cover_1", "stop_cover")
     mqtt_mock.async_publish.assert_called_once_with(
         "tasmota_49A3BC/cmnd/ShutterStop1", "", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
 
     # Set position and verify MQTT message is sent
-    await call_service(hass, "cover.test_cover_1", "set_cover_position", position=0)
+    await call_service(menuai, "cover.test_cover_1", "set_cover_position", position=0)
     mqtt_mock.async_publish.assert_called_once_with(
         "tasmota_49A3BC/cmnd/ShutterPosition1", "100", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
 
     # Set position and verify MQTT message is sent
-    await call_service(hass, "cover.test_cover_1", "set_cover_position", position=99)
+    await call_service(menuai, "cover.test_cover_1", "set_cover_position", position=99)
     mqtt_mock.async_publish.assert_called_once_with(
         "tasmota_49A3BC/cmnd/ShutterPosition1", "1", 0, False
     )
@@ -649,7 +649,7 @@ async def test_sending_mqtt_commands_inverted(
 
 
 async def test_availability_when_connection_lost(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_client_mock: MqttMockPahoClient,
     mqtt_mock: MqttMockHAClient,
     setup_tasmota,
@@ -660,7 +660,7 @@ async def test_availability_when_connection_lost(
     config["rl"][0] = 3
     config["rl"][1] = 3
     await help_test_availability_when_connection_lost(
-        hass,
+        menuai,
         mqtt_client_mock,
         mqtt_mock,
         Platform.COVER,
@@ -670,7 +670,7 @@ async def test_availability_when_connection_lost(
 
 
 async def test_deep_sleep_availability_when_connection_lost(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_client_mock: MqttMockPahoClient,
     mqtt_mock: MqttMockHAClient,
     setup_tasmota,
@@ -681,7 +681,7 @@ async def test_deep_sleep_availability_when_connection_lost(
     config["rl"][0] = 3
     config["rl"][1] = 3
     await help_test_deep_sleep_availability_when_connection_lost(
-        hass,
+        menuai,
         mqtt_client_mock,
         mqtt_mock,
         Platform.COVER,
@@ -691,7 +691,7 @@ async def test_deep_sleep_availability_when_connection_lost(
 
 
 async def test_availability(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient, setup_tasmota
+    menuai: menuai, mqtt_mock: MqttMockHAClient, setup_tasmota
 ) -> None:
     """Test availability."""
     config = copy.deepcopy(DEFAULT_CONFIG)
@@ -699,12 +699,12 @@ async def test_availability(
     config["rl"][0] = 3
     config["rl"][1] = 3
     await help_test_availability(
-        hass, mqtt_mock, Platform.COVER, config, object_id="test_cover_1"
+        menuai, mqtt_mock, Platform.COVER, config, object_id="test_cover_1"
     )
 
 
 async def test_deep_sleep_availability(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient, setup_tasmota
+    menuai: menuai, mqtt_mock: MqttMockHAClient, setup_tasmota
 ) -> None:
     """Test availability."""
     config = copy.deepcopy(DEFAULT_CONFIG)
@@ -712,12 +712,12 @@ async def test_deep_sleep_availability(
     config["rl"][0] = 3
     config["rl"][1] = 3
     await help_test_deep_sleep_availability(
-        hass, mqtt_mock, Platform.COVER, config, object_id="test_cover_1"
+        menuai, mqtt_mock, Platform.COVER, config, object_id="test_cover_1"
     )
 
 
 async def test_availability_discovery_update(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient, setup_tasmota
+    menuai: menuai, mqtt_mock: MqttMockHAClient, setup_tasmota
 ) -> None:
     """Test availability discovery update."""
     config = copy.deepcopy(DEFAULT_CONFIG)
@@ -725,12 +725,12 @@ async def test_availability_discovery_update(
     config["rl"][0] = 3
     config["rl"][1] = 3
     await help_test_availability_discovery_update(
-        hass, mqtt_mock, Platform.COVER, config, object_id="test_cover_1"
+        menuai, mqtt_mock, Platform.COVER, config, object_id="test_cover_1"
     )
 
 
 async def test_availability_poll_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_client_mock: MqttMockPahoClient,
     mqtt_mock: MqttMockHAClient,
     setup_tasmota,
@@ -741,12 +741,12 @@ async def test_availability_poll_state(
     config["rl"][1] = 3
     poll_topic = "tasmota_49A3BC/cmnd/STATUS"
     await help_test_availability_poll_state(
-        hass, mqtt_client_mock, mqtt_mock, Platform.COVER, config, poll_topic, "10"
+        menuai, mqtt_client_mock, mqtt_mock, Platform.COVER, config, poll_topic, "10"
     )
 
 
 async def test_discovery_removal_cover(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock: MqttMockHAClient,
     caplog: pytest.LogCaptureFixture,
     setup_tasmota,
@@ -762,7 +762,7 @@ async def test_discovery_removal_cover(
     config2["rl"][1] = 0
 
     await help_test_discovery_removal(
-        hass,
+        menuai,
         mqtt_mock,
         caplog,
         Platform.COVER,
@@ -774,7 +774,7 @@ async def test_discovery_removal_cover(
 
 
 async def test_discovery_update_unchanged_cover(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock: MqttMockHAClient,
     caplog: pytest.LogCaptureFixture,
     setup_tasmota,
@@ -785,10 +785,10 @@ async def test_discovery_update_unchanged_cover(
     config["rl"][0] = 3
     config["rl"][1] = 3
     with patch(
-        "homeassistant.components.tasmota.cover.TasmotaCover.discovery_update"
+        "menuai.components.tasmota.cover.TasmotaCover.discovery_update"
     ) as discovery_update:
         await help_test_discovery_update_unchanged(
-            hass,
+            menuai,
             mqtt_mock,
             caplog,
             Platform.COVER,
@@ -800,7 +800,7 @@ async def test_discovery_update_unchanged_cover(
 
 
 async def test_discovery_device_remove(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient, setup_tasmota
+    menuai: menuai, mqtt_mock: MqttMockHAClient, setup_tasmota
 ) -> None:
     """Test device registry remove."""
     config = copy.deepcopy(DEFAULT_CONFIG)
@@ -809,12 +809,12 @@ async def test_discovery_device_remove(
     config["rl"][1] = 3
     unique_id = f"{DEFAULT_CONFIG['mac']}_cover_shutter_0"
     await help_test_discovery_device_remove(
-        hass, mqtt_mock, Platform.COVER, unique_id, config
+        menuai, mqtt_mock, Platform.COVER, unique_id, config
     )
 
 
 async def test_entity_id_update_subscriptions(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient, setup_tasmota
+    menuai: menuai, mqtt_mock: MqttMockHAClient, setup_tasmota
 ) -> None:
     """Test MQTT subscriptions are managed when entity_id is updated."""
     config = copy.deepcopy(DEFAULT_CONFIG)
@@ -828,12 +828,12 @@ async def test_entity_id_update_subscriptions(
         get_topic_tele_will(config),
     ]
     await help_test_entity_id_update_subscriptions(
-        hass, mqtt_mock, Platform.COVER, config, topics, object_id="test_cover_1"
+        menuai, mqtt_mock, Platform.COVER, config, topics, object_id="test_cover_1"
     )
 
 
 async def test_entity_id_update_discovery_update(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient, setup_tasmota
+    menuai: menuai, mqtt_mock: MqttMockHAClient, setup_tasmota
 ) -> None:
     """Test MQTT discovery update when entity_id is updated."""
     config = copy.deepcopy(DEFAULT_CONFIG)
@@ -841,5 +841,5 @@ async def test_entity_id_update_discovery_update(
     config["rl"][0] = 3
     config["rl"][1] = 3
     await help_test_entity_id_update_discovery_update(
-        hass, mqtt_mock, Platform.COVER, config, object_id="test_cover_1"
+        menuai, mqtt_mock, Platform.COVER, config, object_id="test_cover_1"
     )

@@ -10,16 +10,16 @@ from pyopenuv import Client
 from pyopenuv.errors import OpenUvError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
+from menuai.const import (
     CONF_API_KEY,
     CONF_ELEVATION,
     CONF_LATITUDE,
     CONF_LONGITUDE,
 )
-from homeassistant.core import callback
-from homeassistant.helpers import aiohttp_client, config_validation as cv
-from homeassistant.helpers.schema_config_entry_flow import (
+from menuai.core import callback
+from menuai.helpers import aiohttp_client, config_validation as cv
+from menuai.helpers.schema_config_entry_flow import (
     SchemaFlowFormStep,
     SchemaOptionsFlowHandler,
 )
@@ -85,13 +85,13 @@ class OpenUvFlowHandler(ConfigFlow, domain=DOMAIN):
             {
                 vol.Required(CONF_API_KEY): str,
                 vol.Inclusive(
-                    CONF_LATITUDE, "coords", default=self.hass.config.latitude
+                    CONF_LATITUDE, "coords", default=self.menuai.config.latitude
                 ): cv.latitude,
                 vol.Inclusive(
-                    CONF_LONGITUDE, "coords", default=self.hass.config.longitude
+                    CONF_LONGITUDE, "coords", default=self.menuai.config.longitude
                 ): cv.longitude,
                 vol.Optional(
-                    CONF_ELEVATION, default=self.hass.config.elevation
+                    CONF_ELEVATION, default=self.menuai.config.elevation
                 ): vol.Coerce(float),
             }
         )
@@ -100,7 +100,7 @@ class OpenUvFlowHandler(ConfigFlow, domain=DOMAIN):
         self, data: OpenUvData, error_step_id: str, error_schema: vol.Schema
     ) -> ConfigFlowResult:
         """Verify the credentials and create/re-auth the entry."""
-        websession = aiohttp_client.async_get_clientsession(self.hass)
+        websession = aiohttp_client.async_get_clientsession(self.menuai)
         client = Client(data.api_key, 0, 0, session=websession)
 
         try:
@@ -124,9 +124,9 @@ class OpenUvFlowHandler(ConfigFlow, domain=DOMAIN):
         }
 
         if existing_entry := await self.async_set_unique_id(data.unique_id):
-            self.hass.config_entries.async_update_entry(existing_entry, data=entry_data)
-            self.hass.async_create_task(
-                self.hass.config_entries.async_reload(existing_entry.entry_id)
+            self.menuai.config_entries.async_update_entry(existing_entry, data=entry_data)
+            self.menuai.async_create_task(
+                self.menuai.config_entries.async_reload(existing_entry.entry_id)
             )
             return self.async_abort(reason="reauth_successful")
         return self.async_create_entry(title=data.unique_id, data=entry_data)

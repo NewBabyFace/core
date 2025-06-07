@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock, PropertyMock
 import blebox_uniapi
 import pytest
 
-from homeassistant.components.switch import SwitchDeviceClass
-from homeassistant.const import (
+from menuai.components.switch import SwitchDeviceClass
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
@@ -15,8 +15,8 @@ from homeassistant.const import (
     STATE_ON,
     STATE_UNKNOWN,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 from .conftest import (
     async_setup_entities,
@@ -46,17 +46,17 @@ def switchbox_fixture():
 
 
 async def test_switchbox_init(
-    switchbox, hass: HomeAssistant, device_registry: dr.DeviceRegistry, config
+    switchbox, menuai: menuai, device_registry: dr.DeviceRegistry, config
 ) -> None:
     """Test switch default state."""
 
     feature_mock, entity_id = switchbox
 
     feature_mock.async_update = AsyncMock()
-    entry = await async_setup_entity(hass, entity_id)
+    entry = await async_setup_entity(menuai, entity_id)
     assert entry.unique_id == "BleBox-switchBox-1afe34e750b8-0.relay"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.name == "switchBox-0.relay"
 
     assert state.attributes[ATTR_DEVICE_CLASS] == SwitchDeviceClass.SWITCH
@@ -72,7 +72,7 @@ async def test_switchbox_init(
     assert device.sw_version == "1.23"
 
 
-async def test_switchbox_update_when_off(switchbox, hass: HomeAssistant) -> None:
+async def test_switchbox_update_when_off(switchbox, menuai: menuai) -> None:
     """Test switch updating when off."""
 
     feature_mock, entity_id = switchbox
@@ -81,13 +81,13 @@ async def test_switchbox_update_when_off(switchbox, hass: HomeAssistant) -> None
         feature_mock.is_on = False
 
     feature_mock.async_update = AsyncMock(side_effect=initial_update)
-    await async_setup_entity(hass, entity_id)
+    await async_setup_entity(menuai, entity_id)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_OFF
 
 
-async def test_switchbox_update_when_on(switchbox, hass: HomeAssistant) -> None:
+async def test_switchbox_update_when_on(switchbox, menuai: menuai) -> None:
     """Test switch updating when on."""
 
     feature_mock, entity_id = switchbox
@@ -96,13 +96,13 @@ async def test_switchbox_update_when_on(switchbox, hass: HomeAssistant) -> None:
         feature_mock.is_on = True
 
     feature_mock.async_update = AsyncMock(side_effect=initial_update)
-    await async_setup_entity(hass, entity_id)
+    await async_setup_entity(menuai, entity_id)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_ON
 
 
-async def test_switchbox_on(switchbox, hass: HomeAssistant) -> None:
+async def test_switchbox_on(switchbox, menuai: menuai) -> None:
     """Test turning switch on."""
 
     feature_mock, entity_id = switchbox
@@ -111,7 +111,7 @@ async def test_switchbox_on(switchbox, hass: HomeAssistant) -> None:
         feature_mock.is_on = False
 
     feature_mock.async_update = AsyncMock(side_effect=initial_update)
-    await async_setup_entity(hass, entity_id)
+    await async_setup_entity(menuai, entity_id)
     feature_mock.async_update = AsyncMock()
 
     def turn_on():
@@ -119,18 +119,18 @@ async def test_switchbox_on(switchbox, hass: HomeAssistant) -> None:
 
     feature_mock.async_turn_on = AsyncMock(side_effect=turn_on)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch",
         SERVICE_TURN_ON,
         {"entity_id": entity_id},
         blocking=True,
     )
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_ON
 
 
-async def test_switchbox_off(switchbox, hass: HomeAssistant) -> None:
+async def test_switchbox_off(switchbox, menuai: menuai) -> None:
     """Test turning switch off."""
 
     feature_mock, entity_id = switchbox
@@ -139,7 +139,7 @@ async def test_switchbox_off(switchbox, hass: HomeAssistant) -> None:
         feature_mock.is_on = True
 
     feature_mock.async_update = AsyncMock(side_effect=initial_update)
-    await async_setup_entity(hass, entity_id)
+    await async_setup_entity(menuai, entity_id)
     feature_mock.async_update = AsyncMock()
 
     def turn_off():
@@ -147,13 +147,13 @@ async def test_switchbox_off(switchbox, hass: HomeAssistant) -> None:
 
     feature_mock.async_turn_off = AsyncMock(side_effect=turn_off)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch",
         SERVICE_TURN_OFF,
         {"entity_id": entity_id},
         blocking=True,
     )
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_OFF
 
 
@@ -192,7 +192,7 @@ def switchbox_d_fixture():
 
 
 async def test_switchbox_d_init(
-    switchbox_d, hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    switchbox_d, menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Test switch default state."""
 
@@ -200,12 +200,12 @@ async def test_switchbox_d_init(
 
     feature_mocks[0].async_update = AsyncMock()
     feature_mocks[1].async_update = AsyncMock()
-    entries = await async_setup_entities(hass, entity_ids)
+    entries = await async_setup_entities(menuai, entity_ids)
 
     entry = entries[0]
     assert entry.unique_id == "BleBox-switchBoxD-1afe34e750b8-0.relay"
 
-    state = hass.states.get(entity_ids[0])
+    state = menuai.states.get(entity_ids[0])
     assert state.name == "switchBoxD-0.relay"
     assert state.attributes[ATTR_DEVICE_CLASS] == SwitchDeviceClass.SWITCH
     assert state.state == STATE_UNKNOWN
@@ -221,7 +221,7 @@ async def test_switchbox_d_init(
     entry = entries[1]
     assert entry.unique_id == "BleBox-switchBoxD-1afe34e750b8-1.relay"
 
-    state = hass.states.get(entity_ids[1])
+    state = menuai.states.get(entity_ids[1])
     assert state.name == "switchBoxD-1.relay"
     assert state.attributes[ATTR_DEVICE_CLASS] == SwitchDeviceClass.SWITCH
     assert state.state == STATE_UNKNOWN
@@ -235,7 +235,7 @@ async def test_switchbox_d_init(
     assert device.sw_version == "1.23"
 
 
-async def test_switchbox_d_update_when_off(switchbox_d, hass: HomeAssistant) -> None:
+async def test_switchbox_d_update_when_off(switchbox_d, menuai: menuai) -> None:
     """Test switch updating when off."""
 
     feature_mocks, entity_ids = switchbox_d
@@ -246,14 +246,14 @@ async def test_switchbox_d_update_when_off(switchbox_d, hass: HomeAssistant) -> 
 
     feature_mocks[0].async_update = AsyncMock(side_effect=initial_update0)
     feature_mocks[1].async_update = AsyncMock()
-    await async_setup_entities(hass, entity_ids)
+    await async_setup_entities(menuai, entity_ids)
 
-    assert hass.states.get(entity_ids[0]).state == STATE_OFF
-    assert hass.states.get(entity_ids[1]).state == STATE_OFF
+    assert menuai.states.get(entity_ids[0]).state == STATE_OFF
+    assert menuai.states.get(entity_ids[1]).state == STATE_OFF
 
 
 async def test_switchbox_d_update_when_second_off(
-    switchbox_d, hass: HomeAssistant
+    switchbox_d, menuai: menuai
 ) -> None:
     """Test switch updating when off."""
 
@@ -265,13 +265,13 @@ async def test_switchbox_d_update_when_second_off(
 
     feature_mocks[0].async_update = AsyncMock(side_effect=initial_update0)
     feature_mocks[1].async_update = AsyncMock()
-    await async_setup_entities(hass, entity_ids)
+    await async_setup_entities(menuai, entity_ids)
 
-    assert hass.states.get(entity_ids[0]).state == STATE_ON
-    assert hass.states.get(entity_ids[1]).state == STATE_OFF
+    assert menuai.states.get(entity_ids[0]).state == STATE_ON
+    assert menuai.states.get(entity_ids[1]).state == STATE_OFF
 
 
-async def test_switchbox_d_turn_first_on(switchbox_d, hass: HomeAssistant) -> None:
+async def test_switchbox_d_turn_first_on(switchbox_d, menuai: menuai) -> None:
     """Test turning switch on."""
 
     feature_mocks, entity_ids = switchbox_d
@@ -282,25 +282,25 @@ async def test_switchbox_d_turn_first_on(switchbox_d, hass: HomeAssistant) -> No
 
     feature_mocks[0].async_update = AsyncMock(side_effect=initial_update0)
     feature_mocks[1].async_update = AsyncMock()
-    await async_setup_entities(hass, entity_ids)
+    await async_setup_entities(menuai, entity_ids)
     feature_mocks[0].async_update = AsyncMock()
 
     def turn_on0():
         feature_mocks[0].is_on = True
 
     feature_mocks[0].async_turn_on = AsyncMock(side_effect=turn_on0)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch",
         SERVICE_TURN_ON,
         {"entity_id": entity_ids[0]},
         blocking=True,
     )
 
-    assert hass.states.get(entity_ids[0]).state == STATE_ON
-    assert hass.states.get(entity_ids[1]).state == STATE_OFF
+    assert menuai.states.get(entity_ids[0]).state == STATE_ON
+    assert menuai.states.get(entity_ids[1]).state == STATE_OFF
 
 
-async def test_switchbox_d_second_on(switchbox_d, hass: HomeAssistant) -> None:
+async def test_switchbox_d_second_on(switchbox_d, menuai: menuai) -> None:
     """Test turning switch on."""
 
     feature_mocks, entity_ids = switchbox_d
@@ -311,25 +311,25 @@ async def test_switchbox_d_second_on(switchbox_d, hass: HomeAssistant) -> None:
 
     feature_mocks[0].async_update = AsyncMock(side_effect=initial_update0)
     feature_mocks[1].async_update = AsyncMock()
-    await async_setup_entities(hass, entity_ids)
+    await async_setup_entities(menuai, entity_ids)
     feature_mocks[0].async_update = AsyncMock()
 
     def turn_on1():
         feature_mocks[1].is_on = True
 
     feature_mocks[1].async_turn_on = AsyncMock(side_effect=turn_on1)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch",
         SERVICE_TURN_ON,
         {"entity_id": entity_ids[1]},
         blocking=True,
     )
 
-    assert hass.states.get(entity_ids[0]).state == STATE_OFF
-    assert hass.states.get(entity_ids[1]).state == STATE_ON
+    assert menuai.states.get(entity_ids[0]).state == STATE_OFF
+    assert menuai.states.get(entity_ids[1]).state == STATE_ON
 
 
-async def test_switchbox_d_first_off(switchbox_d, hass: HomeAssistant) -> None:
+async def test_switchbox_d_first_off(switchbox_d, menuai: menuai) -> None:
     """Test turning switch on."""
 
     feature_mocks, entity_ids = switchbox_d
@@ -340,25 +340,25 @@ async def test_switchbox_d_first_off(switchbox_d, hass: HomeAssistant) -> None:
 
     feature_mocks[0].async_update = AsyncMock(side_effect=initial_update_any)
     feature_mocks[1].async_update = AsyncMock()
-    await async_setup_entities(hass, entity_ids)
+    await async_setup_entities(menuai, entity_ids)
     feature_mocks[0].async_update = AsyncMock()
 
     def turn_off0():
         feature_mocks[0].is_on = False
 
     feature_mocks[0].async_turn_off = AsyncMock(side_effect=turn_off0)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch",
         SERVICE_TURN_OFF,
         {"entity_id": entity_ids[0]},
         blocking=True,
     )
 
-    assert hass.states.get(entity_ids[0]).state == STATE_OFF
-    assert hass.states.get(entity_ids[1]).state == STATE_ON
+    assert menuai.states.get(entity_ids[0]).state == STATE_OFF
+    assert menuai.states.get(entity_ids[1]).state == STATE_ON
 
 
-async def test_switchbox_d_second_off(switchbox_d, hass: HomeAssistant) -> None:
+async def test_switchbox_d_second_off(switchbox_d, menuai: menuai) -> None:
     """Test turning switch on."""
 
     feature_mocks, entity_ids = switchbox_d
@@ -369,21 +369,21 @@ async def test_switchbox_d_second_off(switchbox_d, hass: HomeAssistant) -> None:
 
     feature_mocks[0].async_update = AsyncMock(side_effect=initial_update_any)
     feature_mocks[1].async_update = AsyncMock()
-    await async_setup_entities(hass, entity_ids)
+    await async_setup_entities(menuai, entity_ids)
     feature_mocks[0].async_update = AsyncMock()
 
     def turn_off1():
         feature_mocks[1].is_on = False
 
     feature_mocks[1].async_turn_off = AsyncMock(side_effect=turn_off1)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch",
         SERVICE_TURN_OFF,
         {"entity_id": entity_ids[1]},
         blocking=True,
     )
-    assert hass.states.get(entity_ids[0]).state == STATE_ON
-    assert hass.states.get(entity_ids[1]).state == STATE_OFF
+    assert menuai.states.get(entity_ids[0]).state == STATE_ON
+    assert menuai.states.get(entity_ids[1]).state == STATE_OFF
 
 
 ALL_SWITCH_FIXTURES = ["switchbox", "switchbox_d"]
@@ -391,7 +391,7 @@ ALL_SWITCH_FIXTURES = ["switchbox", "switchbox_d"]
 
 @pytest.mark.parametrize("feature", ALL_SWITCH_FIXTURES, indirect=["feature"])
 async def test_update_failure(
-    feature, hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    feature, menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test that update failures are logged."""
 
@@ -406,6 +406,6 @@ async def test_update_failure(
         entity_id = entity_id[0]
 
     feature_mock.async_update = AsyncMock(side_effect=blebox_uniapi.error.ClientError)
-    await async_setup_entity(hass, entity_id)
+    await async_setup_entity(menuai, entity_id)
 
     assert f"Updating '{feature_mock.full_name}' failed: " in caplog.text

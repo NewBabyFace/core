@@ -16,7 +16,7 @@ from aiosomecomfort import (
 )
 from aiosomecomfort.device import Device as SomeComfortDevice
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_TARGET_TEMP_HIGH,
     ATTR_TARGET_TEMP_LOW,
     DEFAULT_MAX_TEMP,
@@ -31,13 +31,13 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util.unit_conversion import TemperatureConverter
+from menuai.const import ATTR_TEMPERATURE, UnitOfTemperature
+from menuai.core import menuai
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util.unit_conversion import TemperatureConverter
 
 from . import HoneywellConfigEntry, HoneywellData
 from .const import (
@@ -96,7 +96,7 @@ SCAN_INTERVAL = datetime.timedelta(seconds=30)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: HoneywellConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -105,21 +105,21 @@ async def async_setup_entry(
     heat_away_temp = entry.options.get(CONF_HEAT_AWAY_TEMPERATURE)
 
     data = entry.runtime_data
-    _async_migrate_unique_id(hass, data.devices)
+    _async_migrate_unique_id(menuai, data.devices)
     async_add_entities(
         [
             HoneywellUSThermostat(data, device, cool_away_temp, heat_away_temp)
             for device in data.devices.values()
         ]
     )
-    remove_stale_devices(hass, entry, data.devices)
+    remove_stale_devices(menuai, entry, data.devices)
 
 
 def _async_migrate_unique_id(
-    hass: HomeAssistant, devices: dict[str, SomeComfortDevice]
+    menuai: menuai, devices: dict[str, SomeComfortDevice]
 ) -> None:
     """Migrate entities to string."""
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
     for device in devices.values():
         entity_id = entity_registry.async_get_entity_id(
             "climate", DOMAIN, device.deviceid
@@ -131,12 +131,12 @@ def _async_migrate_unique_id(
 
 
 def remove_stale_devices(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: HoneywellConfigEntry,
     devices: dict[str, SomeComfortDevice],
 ) -> None:
     """Remove stale devices from device registry."""
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     device_entries = dr.async_entries_for_config_entry(
         device_registry, config_entry.entry_id
     )
@@ -388,7 +388,7 @@ class HoneywellUSThermostat(ClimateEntity):
                     await self._device.set_setpoint_heat(temperature)
 
         except (AscConnectionError, UnexpectedResponse) as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="temp_failed",
             ) from err
@@ -412,7 +412,7 @@ class HoneywellUSThermostat(ClimateEntity):
                     await self._device.set_setpoint_heat(temperature)
 
             except (AscConnectionError, UnexpectedResponse) as err:
-                raise HomeAssistantError(
+                raise menuaiError(
                     translation_domain=DOMAIN,
                     translation_key="temp_failed",
                 ) from err
@@ -431,7 +431,7 @@ class HoneywellUSThermostat(ClimateEntity):
             await self._device.set_fan_mode(self._fan_mode_map[fan_mode])
 
         except SomeComfortError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="fan_mode_failed",
             ) from err
@@ -442,7 +442,7 @@ class HoneywellUSThermostat(ClimateEntity):
             await self._device.set_system_mode(self._hvac_mode_map[hvac_mode])
 
         except SomeComfortError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="sys_mode_failed",
             ) from err
@@ -466,7 +466,7 @@ class HoneywellUSThermostat(ClimateEntity):
                 await self._device.set_hold_heat(True, self._heat_away_temp)
 
         except (AscConnectionError, UnexpectedResponse) as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="away_mode_failed",
             ) from err
@@ -503,13 +503,13 @@ class HoneywellUSThermostat(ClimateEntity):
 
             except SomeComfortError as err:
                 _LOGGER.error("Couldn't set permanent hold")
-                raise HomeAssistantError(
+                raise menuaiError(
                     translation_domain=DOMAIN,
                     translation_key="set_hold_failed",
                 ) from err
         else:
             _LOGGER.error("Invalid system mode returned: %s", mode)
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="set_mode_failed",
                 translation_placeholders={"mode": mode},
@@ -525,7 +525,7 @@ class HoneywellUSThermostat(ClimateEntity):
 
         except SomeComfortError as err:
             _LOGGER.error("Can not stop hold mode")
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="stop_hold_failed",
             ) from err

@@ -1,4 +1,4 @@
-"""Constants used by Home Assistant components."""
+"""Constants used by MenuAI components."""
 
 from __future__ import annotations
 
@@ -15,14 +15,14 @@ from .helpers.deprecation import (
     dir_with_deprecated_constants,
 )
 from .util.event_type import EventType
-from .util.hass_dict import HassKey
+from .util.menuai_dict import menuaiKey
 from .util.signal_type import SignalType
 
 if TYPE_CHECKING:
     from .core import EventStateChangedData, EventStateReportedData
     from .helpers.typing import NoEventData
 
-APPLICATION_NAME: Final = "HomeAssistant"
+APPLICATION_NAME: Final = "menuai"
 MAJOR_VERSION: Final = 2025
 MINOR_VERSION: Final = 7
 PATCH_VERSION: Final = "0.dev0"
@@ -119,7 +119,7 @@ CONF_ACTIONS: Final = "actions"
 CONF_ADDRESS: Final = "address"
 CONF_AFTER: Final = "after"
 CONF_ALIAS: Final = "alias"
-CONF_LLM_HASS_API = "llm_hass_api"
+CONF_LLM_menuai_API = "llm_menuai_api"
 CONF_ALLOWLIST_EXTERNAL_URLS: Final = "allowlist_external_urls"
 CONF_API_KEY: Final = "api_key"
 CONF_API_TOKEN: Final = "api_token"
@@ -315,12 +315,12 @@ CONF_ZONE: Final = "zone"
 EVENT_CALL_SERVICE: Final = "call_service"
 EVENT_COMPONENT_LOADED: Final = "component_loaded"
 EVENT_CORE_CONFIG_UPDATE: Final = "core_config_updated"
-EVENT_HOMEASSISTANT_CLOSE: EventType[NoEventData] = EventType("homeassistant_close")
-EVENT_HOMEASSISTANT_START: EventType[NoEventData] = EventType("homeassistant_start")
-EVENT_HOMEASSISTANT_STARTED: EventType[NoEventData] = EventType("homeassistant_started")
-EVENT_HOMEASSISTANT_STOP: EventType[NoEventData] = EventType("homeassistant_stop")
-EVENT_HOMEASSISTANT_FINAL_WRITE: EventType[NoEventData] = EventType(
-    "homeassistant_final_write"
+EVENT_menuai_CLOSE: EventType[NoEventData] = EventType("menuai_close")
+EVENT_menuai_START: EventType[NoEventData] = EventType("menuai_start")
+EVENT_menuai_STARTED: EventType[NoEventData] = EventType("menuai_started")
+EVENT_menuai_STOP: EventType[NoEventData] = EventType("menuai_stop")
+EVENT_menuai_FINAL_WRITE: EventType[NoEventData] = EventType(
+    "menuai_final_write"
 )
 EVENT_LOGBOOK_ENTRY: Final = "logbook_entry"
 EVENT_LOGGING_CHANGED: Final = "logging_changed"
@@ -1122,21 +1122,21 @@ class EntityCategory(StrEnum):
 
 ENTITY_CATEGORIES: Final[list[str]] = [cls.value for cls in EntityCategory]
 
-# The ID of the Home Assistant Media Player Cast App
-CAST_APP_ID_HOMEASSISTANT_MEDIA: Final = "B45F4572"
-# The ID of the Home Assistant Lovelace Cast App
-CAST_APP_ID_HOMEASSISTANT_LOVELACE: Final = "A078F6B0"
+# The ID of the MenuAI Media Player Cast App
+CAST_APP_ID_menuai_MEDIA: Final = "B45F4572"
+# The ID of the MenuAI Lovelace Cast App
+CAST_APP_ID_menuai_LOVELACE: Final = "A078F6B0"
 
 # User used by Supervisor
-HASSIO_USER_NAME = "Supervisor"
+menuaiIO_USER_NAME = "Supervisor"
 
 SIGNAL_BOOTSTRAP_INTEGRATIONS: SignalType[dict[str, float]] = SignalType(
     "bootstrap_integrations"
 )
 
 
-# hass.data key for logging information.
-KEY_DATA_LOGGING: HassKey[str] = HassKey("logging")
+# menuai.data key for logging information.
+KEY_DATA_LOGGING: menuaiKey[str] = menuaiKey("logging")
 
 
 # Date/Time formats

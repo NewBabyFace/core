@@ -3,8 +3,8 @@
 from datetime import timedelta
 import logging
 
-from homeassistant.const import Platform
-from homeassistant.util import dt as dt_util
+from menuai.const import Platform
+from menuai.util import dt as dt_util
 
 DOMAIN = "zamg"
 

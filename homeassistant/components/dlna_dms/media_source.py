@@ -12,23 +12,23 @@ Media identifiers can look like:
 
 from __future__ import annotations
 
-from homeassistant.components.media_player import BrowseError, MediaClass, MediaType
-from homeassistant.components.media_source import (
+from menuai.components.media_player import BrowseError, MediaClass, MediaType
+from menuai.components.media_source import (
     BrowseMediaSource,
     MediaSource,
     MediaSourceItem,
     Unresolvable,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .const import DOMAIN, LOGGER, PATH_OBJECT_ID_FLAG, ROOT_OBJECT_ID, SOURCE_SEP
 from .dms import DidlPlayMedia, get_domain_data
 
 
-async def async_get_media_source(hass: HomeAssistant) -> DmsMediaSource:
+async def async_get_media_source(menuai: menuai) -> DmsMediaSource:
     """Set up DLNA DMS media source."""
     LOGGER.debug("Setting up DLNA media sources")
-    return DmsMediaSource(hass)
+    return DmsMediaSource(menuai)
 
 
 class DmsMediaSource(MediaSource):
@@ -36,15 +36,15 @@ class DmsMediaSource(MediaSource):
 
     name = "DLNA Servers"
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize DLNA source."""
         super().__init__(DOMAIN)
 
-        self.hass = hass
+        self.menuai = menuai
 
     async def async_resolve_media(self, item: MediaSourceItem) -> DidlPlayMedia:
         """Resolve a media item to a playable item."""
-        dms_data = get_domain_data(self.hass)
+        dms_data = get_domain_data(self.menuai)
         if not dms_data.sources:
             raise Unresolvable("No sources have been configured")
 
@@ -63,7 +63,7 @@ class DmsMediaSource(MediaSource):
 
     async def async_browse_media(self, item: MediaSourceItem) -> BrowseMediaSource:
         """Browse media."""
-        dms_data = get_domain_data(self.hass)
+        dms_data = get_domain_data(self.menuai)
         if not dms_data.sources:
             raise BrowseError("No sources have been configured")
 

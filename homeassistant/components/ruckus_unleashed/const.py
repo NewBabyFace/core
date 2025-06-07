@@ -1,6 +1,6 @@
 """Constants for the Ruckus integration."""
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 DOMAIN = "ruckus_unleashed"
 PLATFORMS = [Platform.DEVICE_TRACKER]

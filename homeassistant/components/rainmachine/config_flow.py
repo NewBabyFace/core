@@ -9,16 +9,16 @@ from regenmaschine.controller import Controller
 from regenmaschine.errors import RainMachineError
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_IP_ADDRESS, CONF_PASSWORD, CONF_PORT, CONF_SSL
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import aiohttp_client, config_validation as cv
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.const import CONF_IP_ADDRESS, CONF_PASSWORD, CONF_PORT, CONF_SSL
+from menuai.core import menuai, callback
+from menuai.helpers import aiohttp_client, config_validation as cv
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import (
     CONF_ALLOW_INACTIVE_ZONES_TO_RUN,
@@ -37,10 +37,10 @@ def get_client_controller(client: Client) -> Controller:
 
 
 async def async_get_controller(
-    hass: HomeAssistant, ip_address: str, password: str, port: int, ssl: bool
+    menuai: menuai, ip_address: str, password: str, port: int, ssl: bool
 ) -> Controller | None:
     """Auth and fetch the mac address from the controller."""
-    websession = aiohttp_client.async_get_clientsession(hass)
+    websession = aiohttp_client.async_get_clientsession(menuai)
     client = Client(session=websession)
     try:
         await client.load_local(ip_address, password, port=port, use_ssl=ssl)
@@ -88,7 +88,7 @@ class RainMachineFlowHandler(ConfigFlow, domain=DOMAIN):
         for entry in self._async_current_entries(include_ignore=False):
             # Try our existing credentials to check for ip change
             if controller := await async_get_controller(
-                self.hass,
+                self.menuai,
                 ip_address,
                 entry.data[CONF_PASSWORD],
                 entry.data[CONF_PORT],
@@ -129,7 +129,7 @@ class RainMachineFlowHandler(ConfigFlow, domain=DOMAIN):
                 {CONF_IP_ADDRESS: user_input[CONF_IP_ADDRESS]}
             )
             controller = await async_get_controller(
-                self.hass,
+                self.menuai,
                 user_input[CONF_IP_ADDRESS],
                 user_input[CONF_PASSWORD],
                 user_input[CONF_PORT],

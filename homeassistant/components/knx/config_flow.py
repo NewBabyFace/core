@@ -19,17 +19,17 @@ from xknx.io.self_description import request_description
 from xknx.io.util import validate_ip as xknx_validate_ip
 from xknx.secure.keyring import Keyring, XMLInterface
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigEntryBaseFlow,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.core import callback
-from homeassistant.helpers import selector
-from homeassistant.helpers.typing import UNDEFINED, VolDictType
+from menuai.const import CONF_HOST, CONF_PORT
+from menuai.core import callback
+from menuai.helpers import selector
+from menuai.helpers.typing import UNDEFINED, VolDictType
 
 from .const import (
     CONF_KNX_AUTOMATIC,
@@ -125,7 +125,7 @@ class KNXCommonFlow(ABC, ConfigEntryBaseFlow):
     def _xknx(self) -> XKNX:
         """Return XKNX instance."""
         if isinstance(self, OptionsFlow) and (
-            knx_module := self.hass.data.get(KNX_MODULE_KEY)
+            knx_module := self.menuai.data.get(KNX_MODULE_KEY)
         ):
             return knx_module.xknx
         return XKNX()
@@ -605,7 +605,7 @@ class KNXCommonFlow(ABC, ConfigEntryBaseFlow):
             password = user_input[CONF_KNX_KNXKEY_PASSWORD]
             try:
                 self._keyring = await save_uploaded_knxkeys_file(
-                    self.hass,
+                    self.menuai,
                     uploaded_file_id=user_input[CONF_KEYRING_FILE],
                     password=password,
                 )
@@ -883,7 +883,7 @@ class KNXOptionsFlow(KNXCommonFlow, OptionsFlow):
     def finish_flow(self) -> ConfigFlowResult:
         """Update the ConfigEntry and finish the flow."""
         new_data = DEFAULT_ENTRY_DATA | self.initial_data | self.new_entry_data
-        self.hass.config_entries.async_update_entry(
+        self.menuai.config_entries.async_update_entry(
             self.config_entry,
             data=new_data,
             title=self.new_title or UNDEFINED,

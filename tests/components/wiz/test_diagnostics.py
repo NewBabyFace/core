@@ -2,7 +2,7 @@
 
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from . import async_setup_integration
 
@@ -11,11 +11,11 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test generating diagnostics for a config entry."""
-    _, entry = await async_setup_integration(hass)
+    _, entry = await async_setup_integration(menuai)
 
-    assert await get_diagnostics_for_config_entry(hass, hass_client, entry) == snapshot
+    assert await get_diagnostics_for_config_entry(menuai, menuai_client, entry) == snapshot

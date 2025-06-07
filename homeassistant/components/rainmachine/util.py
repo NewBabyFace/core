@@ -7,9 +7,9 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers import entity_registry as er
 
 from .const import LOGGER
 
@@ -42,12 +42,12 @@ class EntityDomainReplacementStrategy:
 
 @callback
 def async_finish_entity_domain_replacements(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     entity_replacement_strategies: Iterable[EntityDomainReplacementStrategy],
 ) -> None:
     """Remove old entities and create a repairs issue with info on their replacement."""
-    ent_reg = er.async_get(hass)
+    ent_reg = er.async_get(menuai)
     for strategy in entity_replacement_strategies:
         try:
             [registry_entry] = [

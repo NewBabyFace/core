@@ -17,26 +17,26 @@ from demetriek import (
     Sound,
 )
 
-from homeassistant.components.notify import ATTR_DATA, BaseNotificationService
-from homeassistant.const import CONF_ICON
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util.enum import try_parse_enum
+from menuai.components.notify import ATTR_DATA, BaseNotificationService
+from menuai.const import CONF_ICON
+from menuai.core import menuai
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util.enum import try_parse_enum
 
 from .const import CONF_CYCLES, CONF_ICON_TYPE, CONF_PRIORITY, CONF_SOUND, DOMAIN
 from .coordinator import LaMetricDataUpdateCoordinator
 
 
 async def async_get_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> LaMetricNotificationService | None:
     """Get the LaMetric notification service."""
     if discovery_info is None:
         return None
-    coordinator: LaMetricDataUpdateCoordinator = hass.data[DOMAIN][
+    coordinator: LaMetricDataUpdateCoordinator = menuai.data[DOMAIN][
         discovery_info["entry_id"]
     ]
     return LaMetricNotificationService(coordinator.lametric)
@@ -81,4 +81,4 @@ class LaMetricNotificationService(BaseNotificationService):
         try:
             await self.lametric.notify(notification=notification)
         except LaMetricError as ex:
-            raise HomeAssistantError("Could not send LaMetric notification") from ex
+            raise menuaiError("Could not send LaMetric notification") from ex

@@ -7,20 +7,20 @@ from dataclasses import dataclass
 
 from aioguardian import Client
 
-from homeassistant.components.button import (
+from menuai.components.button import (
     ButtonDeviceClass,
     ButtonEntity,
     ButtonEntityDescription,
 )
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import GuardianConfigEntry, GuardianData
 from .const import API_SYSTEM_DIAGNOSTICS
 from .entity import ValveControllerEntity, ValveControllerEntityDescription
-from .util import convert_exceptions_to_homeassistant_error
+from .util import convert_exceptions_to_menuai_error
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -67,7 +67,7 @@ BUTTON_DESCRIPTIONS = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: GuardianConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -98,10 +98,10 @@ class GuardianButton(ValveControllerEntity, ButtonEntity):
 
         self._client = data.client
 
-    @convert_exceptions_to_homeassistant_error
+    @convert_exceptions_to_menuai_error
     async def async_press(self) -> None:
         """Send out a restart command."""
         async with self._client:
             await self.entity_description.push_action(self._client)
 
-        async_dispatcher_send(self.hass, self.coordinator.signal_reboot_requested)
+        async_dispatcher_send(self.menuai, self.coordinator.signal_reboot_requested)

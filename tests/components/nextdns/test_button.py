@@ -8,14 +8,14 @@ from nextdns import ApiError, InvalidApiKeyError
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
-from homeassistant.components.nextdns.const import DOMAIN
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
-from homeassistant.util import dt as dt_util
+from menuai.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
+from menuai.components.nextdns.const import DOMAIN
+from menuai.config_entries import SOURCE_REAUTH, ConfigEntryState
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
+from menuai.util import dt as dt_util
 
 from . import init_integration
 
@@ -23,35 +23,35 @@ from tests.common import snapshot_platform
 
 
 async def test_button(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, snapshot: SnapshotAssertion
+    menuai: menuai, entity_registry: er.EntityRegistry, snapshot: SnapshotAssertion
 ) -> None:
     """Test states of the button."""
-    with patch("homeassistant.components.nextdns.PLATFORMS", [Platform.BUTTON]):
-        entry = await init_integration(hass)
+    with patch("menuai.components.nextdns.PLATFORMS", [Platform.BUTTON]):
+        entry = await init_integration(menuai)
 
-    await snapshot_platform(hass, entity_registry, snapshot, entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, entry.entry_id)
 
 
-async def test_button_press(hass: HomeAssistant) -> None:
+async def test_button_press(menuai: menuai) -> None:
     """Test button press."""
-    await init_integration(hass)
+    await init_integration(menuai)
 
     now = dt_util.utcnow()
     with (
-        patch("homeassistant.components.nextdns.NextDns.clear_logs") as mock_clear_logs,
-        patch("homeassistant.core.dt_util.utcnow", return_value=now),
+        patch("menuai.components.nextdns.NextDns.clear_logs") as mock_clear_logs,
+        patch("menuai.core.dt_util.utcnow", return_value=now),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             BUTTON_DOMAIN,
             SERVICE_PRESS,
             {ATTR_ENTITY_ID: "button.fake_profile_clear_logs"},
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     mock_clear_logs.assert_called_once()
 
-    state = hass.states.get("button.fake_profile_clear_logs")
+    state = menuai.states.get("button.fake_profile_clear_logs")
     assert state
     assert state.state == now.isoformat()
 
@@ -65,18 +65,18 @@ async def test_button_press(hass: HomeAssistant) -> None:
         ClientError,
     ],
 )
-async def test_button_failure(hass: HomeAssistant, exc: Exception) -> None:
-    """Tests that the press action throws HomeAssistantError."""
-    await init_integration(hass)
+async def test_button_failure(menuai: menuai, exc: Exception) -> None:
+    """Tests that the press action throws menuaiError."""
+    await init_integration(menuai)
 
     with (
-        patch("homeassistant.components.nextdns.NextDns.clear_logs", side_effect=exc),
+        patch("menuai.components.nextdns.NextDns.clear_logs", side_effect=exc),
         pytest.raises(
-            HomeAssistantError,
+            menuaiError,
             match="An error occurred while calling the NextDNS API method for button.fake_profile_clear_logs",
         ),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             BUTTON_DOMAIN,
             SERVICE_PRESS,
             {ATTR_ENTITY_ID: "button.fake_profile_clear_logs"},
@@ -84,15 +84,15 @@ async def test_button_failure(hass: HomeAssistant, exc: Exception) -> None:
         )
 
 
-async def test_button_auth_error(hass: HomeAssistant) -> None:
+async def test_button_auth_error(menuai: menuai) -> None:
     """Tests that the press action starts re-auth flow."""
-    entry = await init_integration(hass)
+    entry = await init_integration(menuai)
 
     with patch(
-        "homeassistant.components.nextdns.NextDns.clear_logs",
+        "menuai.components.nextdns.NextDns.clear_logs",
         side_effect=InvalidApiKeyError,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             BUTTON_DOMAIN,
             SERVICE_PRESS,
             {ATTR_ENTITY_ID: "button.fake_profile_clear_logs"},
@@ -101,7 +101,7 @@ async def test_button_auth_error(hass: HomeAssistant) -> None:
 
     assert entry.state is ConfigEntryState.LOADED
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
 
     flow = flows[0]

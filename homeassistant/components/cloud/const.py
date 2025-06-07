@@ -5,21 +5,21 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.util.hass_dict import HassKey
-from homeassistant.util.signal_type import SignalType
+from menuai.util.menuai_dict import menuaiKey
+from menuai.util.signal_type import SignalType
 
 if TYPE_CHECKING:
-    from hass_nabucasa import Cloud
+    from menuai_nabucasa import Cloud
 
     from .client import CloudClient
     from .helpers import FixedSizeQueueLogHandler
 
 DOMAIN = "cloud"
-DATA_CLOUD: HassKey[Cloud[CloudClient]] = HassKey(DOMAIN)
-DATA_PLATFORMS_SETUP: HassKey[dict[str, asyncio.Event]] = HassKey(
+DATA_CLOUD: menuaiKey[Cloud[CloudClient]] = menuaiKey(DOMAIN)
+DATA_PLATFORMS_SETUP: menuaiKey[dict[str, asyncio.Event]] = menuaiKey(
     "cloud_platforms_setup"
 )
-DATA_CLOUD_LOG_HANDLER: HassKey[FixedSizeQueueLogHandler] = HassKey("cloud_log_handler")
+DATA_CLOUD_LOG_HANDLER: menuaiKey[FixedSizeQueueLogHandler] = menuaiKey("cloud_log_handler")
 EVENT_CLOUD_EVENT = "cloud_event"
 
 REQUEST_TIMEOUT = 10

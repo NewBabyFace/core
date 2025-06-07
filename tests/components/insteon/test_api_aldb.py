@@ -11,16 +11,16 @@ from pyinsteon.constants import ALDBStatus
 from pyinsteon.topics import ALDB_LINK_CHANGED, ALDB_STATUS_CHANGED
 import pytest
 
-from homeassistant.components import insteon
-from homeassistant.components.insteon.api import async_load_api
-from homeassistant.components.insteon.api.aldb import (
+from menuai.components import insteon
+from menuai.components.insteon.api import async_load_api
+from menuai.components.insteon.api.aldb import (
     ALDB_RECORD,
     DEVICE_ADDRESS,
     ID,
     TYPE,
 )
-from homeassistant.components.insteon.api.device import INSTEON_DEVICE_NOT_FOUND
-from homeassistant.core import HomeAssistant
+from menuai.components.insteon.api.device import INSTEON_DEVICE_NOT_FOUND
+from menuai.core import menuai
 
 from .mock_devices import MockDevices
 
@@ -35,13 +35,13 @@ def aldb_data_fixture():
 
 
 async def _setup(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, aldb_data: dict[str, Any]
+    menuai: menuai, menuai_ws_client: WebSocketGenerator, aldb_data: dict[str, Any]
 ) -> tuple[MockHAClientWebSocket, MockDevices]:
     """Set up tests."""
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
     devices = MockDevices()
     await devices.async_load()
-    async_load_api(hass)
+    async_load_api(menuai)
     devices.fill_aldb("33.33.33", aldb_data)
     return ws_client, devices
 
@@ -77,10 +77,10 @@ def _aldb_dict(mem_addr):
 # This tests needs to be adjusted to remove lingering tasks
 @pytest.mark.parametrize("expected_lingering_tasks", [True])
 async def test_get_aldb(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, aldb_data
+    menuai: menuai, menuai_ws_client: WebSocketGenerator, aldb_data
 ) -> None:
     """Test getting an Insteon device's All-Link Database."""
-    ws_client, devices = await _setup(hass, hass_ws_client, aldb_data)
+    ws_client, devices = await _setup(menuai, menuai_ws_client, aldb_data)
 
     with patch.object(insteon.api.aldb, "devices", devices):
         await ws_client.send_json(
@@ -95,10 +95,10 @@ async def test_get_aldb(
 # This tests needs to be adjusted to remove lingering tasks
 @pytest.mark.parametrize("expected_lingering_tasks", [True])
 async def test_change_aldb_record(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, aldb_data
+    menuai: menuai, menuai_ws_client: WebSocketGenerator, aldb_data
 ) -> None:
     """Test changing an Insteon device's All-Link Database record."""
-    ws_client, devices = await _setup(hass, hass_ws_client, aldb_data)
+    ws_client, devices = await _setup(menuai, menuai_ws_client, aldb_data)
     change_rec = _aldb_dict(4079)
 
     with patch.object(insteon.api.aldb, "devices", devices):
@@ -120,10 +120,10 @@ async def test_change_aldb_record(
 # This tests needs to be adjusted to remove lingering tasks
 @pytest.mark.parametrize("expected_lingering_tasks", [True])
 async def test_create_aldb_record(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, aldb_data
+    menuai: menuai, menuai_ws_client: WebSocketGenerator, aldb_data
 ) -> None:
     """Test creating a new Insteon All-Link Database record."""
-    ws_client, devices = await _setup(hass, hass_ws_client, aldb_data)
+    ws_client, devices = await _setup(menuai, menuai_ws_client, aldb_data)
     new_rec = _aldb_dict(4079)
 
     with patch.object(insteon.api.aldb, "devices", devices):
@@ -145,10 +145,10 @@ async def test_create_aldb_record(
 # This tests needs to be adjusted to remove lingering tasks
 @pytest.mark.parametrize("expected_lingering_tasks", [True])
 async def test_write_aldb(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, aldb_data
+    menuai: menuai, menuai_ws_client: WebSocketGenerator, aldb_data
 ) -> None:
     """Test writing an Insteon device's All-Link Database."""
-    ws_client, devices = await _setup(hass, hass_ws_client, aldb_data)
+    ws_client, devices = await _setup(menuai, menuai_ws_client, aldb_data)
 
     with patch.object(insteon.api.aldb, "devices", devices):
         await ws_client.send_json(
@@ -168,10 +168,10 @@ async def test_write_aldb(
 # This tests needs to be adjusted to remove lingering tasks
 @pytest.mark.parametrize("expected_lingering_tasks", [True])
 async def test_load_aldb(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, aldb_data
+    menuai: menuai, menuai_ws_client: WebSocketGenerator, aldb_data
 ) -> None:
     """Test loading an Insteon device's All-Link Database."""
-    ws_client, devices = await _setup(hass, hass_ws_client, aldb_data)
+    ws_client, devices = await _setup(menuai, menuai_ws_client, aldb_data)
 
     with patch.object(insteon.api.aldb, "devices", devices):
         await ws_client.send_json(
@@ -190,10 +190,10 @@ async def test_load_aldb(
 # This tests needs to be adjusted to remove lingering tasks
 @pytest.mark.parametrize("expected_lingering_tasks", [True])
 async def test_reset_aldb(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, aldb_data
+    menuai: menuai, menuai_ws_client: WebSocketGenerator, aldb_data
 ) -> None:
     """Test resetting an Insteon device's All-Link Database."""
-    ws_client, devices = await _setup(hass, hass_ws_client, aldb_data)
+    ws_client, devices = await _setup(menuai, menuai_ws_client, aldb_data)
     record = _aldb_dict(4079)
     devices["33.33.33"].aldb.modify(
         mem_addr=record["mem_addr"],
@@ -223,10 +223,10 @@ async def test_reset_aldb(
 # This tests needs to be adjusted to remove lingering tasks
 @pytest.mark.parametrize("expected_lingering_tasks", [True])
 async def test_default_links(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, aldb_data
+    menuai: menuai, menuai_ws_client: WebSocketGenerator, aldb_data
 ) -> None:
     """Test getting an Insteon device's All-Link Database."""
-    ws_client, devices = await _setup(hass, hass_ws_client, aldb_data)
+    ws_client, devices = await _setup(menuai, menuai_ws_client, aldb_data)
 
     with patch.object(insteon.api.aldb, "devices", devices):
         await ws_client.send_json(
@@ -246,10 +246,10 @@ async def test_default_links(
 # This tests needs to be adjusted to remove lingering tasks
 @pytest.mark.parametrize("expected_lingering_tasks", [True])
 async def test_notify_on_aldb_status(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, aldb_data
+    menuai: menuai, menuai_ws_client: WebSocketGenerator, aldb_data
 ) -> None:
     """Test getting an Insteon device's All-Link Database."""
-    ws_client, devices = await _setup(hass, hass_ws_client, aldb_data)
+    ws_client, devices = await _setup(menuai, menuai_ws_client, aldb_data)
 
     with patch.object(insteon.api.aldb, "devices", devices):
         await ws_client.send_json(
@@ -271,10 +271,10 @@ async def test_notify_on_aldb_status(
 # This tests needs to be adjusted to remove lingering tasks
 @pytest.mark.parametrize("expected_lingering_tasks", [True])
 async def test_notify_on_aldb_record_added(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, aldb_data
+    menuai: menuai, menuai_ws_client: WebSocketGenerator, aldb_data
 ) -> None:
     """Test getting an Insteon device's All-Link Database."""
-    ws_client, devices = await _setup(hass, hass_ws_client, aldb_data)
+    ws_client, devices = await _setup(menuai, menuai_ws_client, aldb_data)
 
     with patch.object(insteon.api.aldb, "devices", devices):
         await ws_client.send_json(
@@ -300,10 +300,10 @@ async def test_notify_on_aldb_record_added(
 # This tests needs to be adjusted to remove lingering tasks
 @pytest.mark.parametrize("expected_lingering_tasks", [True])
 async def test_bad_address(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, aldb_data
+    menuai: menuai, menuai_ws_client: WebSocketGenerator, aldb_data
 ) -> None:
     """Test for a bad Insteon address."""
-    ws_client, _ = await _setup(hass, hass_ws_client, aldb_data)
+    ws_client, _ = await _setup(menuai, menuai_ws_client, aldb_data)
     record = _aldb_dict(0)
 
     ws_id = 0
@@ -336,10 +336,10 @@ async def test_bad_address(
 
 
 async def test_notify_on_aldb_loading(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, aldb_data
+    menuai: menuai, menuai_ws_client: WebSocketGenerator, aldb_data
 ) -> None:
     """Test tracking changes to ALDB status across all devices."""
-    ws_client, devices = await _setup(hass, hass_ws_client, aldb_data)
+    ws_client, devices = await _setup(menuai, menuai_ws_client, aldb_data)
 
     with patch.object(insteon.api.aldb, "devices", devices):
         await ws_client.send_json_auto_id({TYPE: "insteon/aldb/notify_all"})

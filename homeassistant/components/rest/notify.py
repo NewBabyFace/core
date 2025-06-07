@@ -9,7 +9,7 @@ from typing import Any
 import httpx
 import voluptuous as vol
 
-from homeassistant.components.notify import (
+from menuai.components.notify import (
     ATTR_MESSAGE,
     ATTR_TARGET,
     ATTR_TITLE,
@@ -17,7 +17,7 @@ from homeassistant.components.notify import (
     PLATFORM_SCHEMA as NOTIFY_PLATFORM_SCHEMA,
     BaseNotificationService,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_AUTHENTICATION,
     CONF_HEADERS,
     CONF_METHOD,
@@ -30,11 +30,11 @@ from homeassistant.const import (
     HTTP_BASIC_AUTHENTICATION,
     HTTP_DIGEST_AUTHENTICATION,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.httpx_client import get_async_client
-from homeassistant.helpers.template import Template
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.httpx_client import get_async_client
+from menuai.helpers.template import Template
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 CONF_DATA = "data"
 CONF_DATA_TEMPLATE = "data_template"
@@ -74,7 +74,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_get_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> RestNotificationService:
@@ -100,7 +100,7 @@ async def async_get_service(
             auth = httpx.BasicAuth(username, password)
 
     return RestNotificationService(
-        hass,
+        menuai,
         resource,
         method,
         headers,
@@ -120,7 +120,7 @@ class RestNotificationService(BaseNotificationService):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         resource: str,
         method: str,
         headers: dict[str, str] | None,
@@ -135,7 +135,7 @@ class RestNotificationService(BaseNotificationService):
     ) -> None:
         """Initialize the service."""
         self._resource = resource
-        self._hass = hass
+        self._menuai = menuai
         self._method = method.upper()
         self._headers = headers
         self._params = params
@@ -179,7 +179,7 @@ class RestNotificationService(BaseNotificationService):
             if self._data_template:
                 data.update(_data_template_creator(self._data_template))
 
-        websession = get_async_client(self._hass, self._verify_ssl)
+        websession = get_async_client(self._menuai, self._verify_ssl)
         if self._method == "POST":
             response = await websession.post(
                 self._resource,

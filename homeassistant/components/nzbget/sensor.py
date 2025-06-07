@@ -5,17 +5,17 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 import logging
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_NAME, UnitOfDataRate, UnitOfInformation
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
-from homeassistant.util.dt import utcnow
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_NAME, UnitOfDataRate, UnitOfInformation
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
+from menuai.util.dt import utcnow
 
 from .const import DATA_COORDINATOR, DOMAIN
 from .coordinator import NZBGetDataUpdateCoordinator
@@ -91,12 +91,12 @@ SENSOR_TYPES: tuple[SensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up NZBGet sensor based on a config entry."""
-    coordinator: NZBGetDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id][
+    coordinator: NZBGetDataUpdateCoordinator = menuai.data[DOMAIN][entry.entry_id][
         DATA_COORDINATOR
     ]
     entities = [

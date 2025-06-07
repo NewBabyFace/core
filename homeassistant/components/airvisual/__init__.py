@@ -15,9 +15,9 @@ from pyairvisual.cloud_api import (
 )
 from pyairvisual.errors import AirVisualError
 
-from homeassistant.components import automation
-from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
-from homeassistant.const import (
+from menuai.components import automation
+from menuai.config_entries import SOURCE_IMPORT, ConfigEntry
+from menuai.const import (
     CONF_API_KEY,
     CONF_COUNTRY,
     CONF_IP_ADDRESS,
@@ -27,15 +27,15 @@ from homeassistant.const import (
     CONF_STATE,
     Platform,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers import (
+from menuai.core import menuai, callback
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers import (
     aiohttp_client,
     device_registry as dr,
     entity_registry as er,
 )
-from homeassistant.helpers.issue_registry import IssueSeverity, async_create_issue
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.helpers.issue_registry import IssueSeverity, async_create_issue
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
     CONF_CITY,
@@ -61,7 +61,7 @@ DEFAULT_ATTRIBUTION = "Data provided by AirVisual"
 
 @callback
 def async_get_cloud_api_update_interval(
-    hass: HomeAssistant, api_key: str, num_consumers: int
+    menuai: menuai, api_key: str, num_consumers: int
 ) -> timedelta:
     """Get a leveled scan interval for a particular cloud API key.
 
@@ -84,12 +84,12 @@ def async_get_cloud_api_update_interval(
 
 @callback
 def async_get_cloud_coordinators_by_api_key(
-    hass: HomeAssistant, api_key: str
+    menuai: menuai, api_key: str
 ) -> list[DataUpdateCoordinator]:
     """Get all DataUpdateCoordinator objects related to a particular API key."""
     return [
         entry.runtime_data
-        for entry in hass.config_entries.async_entries(DOMAIN)
+        for entry in menuai.config_entries.async_entries(DOMAIN)
         if entry.data.get(CONF_API_KEY) == api_key and hasattr(entry, "runtime_data")
     ]
 
@@ -112,16 +112,16 @@ def async_get_geography_id(geography_dict: Mapping[str, Any]) -> str:
 
 @callback
 def async_sync_geo_coordinator_update_intervals(
-    hass: HomeAssistant, api_key: str
+    menuai: menuai, api_key: str
 ) -> None:
     """Sync the update interval for geography-based data coordinators (by API key)."""
-    coordinators = async_get_cloud_coordinators_by_api_key(hass, api_key)
+    coordinators = async_get_cloud_coordinators_by_api_key(menuai, api_key)
 
     if not coordinators:
         return
 
     update_interval = async_get_cloud_api_update_interval(
-        hass, api_key, len(coordinators)
+        menuai, api_key, len(coordinators)
     )
 
     for coordinator in coordinators:
@@ -135,7 +135,7 @@ def async_sync_geo_coordinator_update_intervals(
 
 @callback
 def _standardize_geography_config_entry(
-    hass: HomeAssistant, entry: ConfigEntry
+    menuai: menuai, entry: ConfigEntry
 ) -> None:
     """Ensure that geography config entries have appropriate properties."""
     entry_updates = {}
@@ -165,19 +165,19 @@ def _standardize_geography_config_entry(
     if not entry_updates:
         return
 
-    hass.config_entries.async_update_entry(entry, **entry_updates)
+    menuai.config_entries.async_update_entry(entry, **entry_updates)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: AirVisualConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: AirVisualConfigEntry) -> bool:
     """Set up AirVisual as config entry."""
     if CONF_API_KEY not in entry.data:
         # If this is a migrated AirVisual Pro entry, there's no actual setup to do;
         # that will be handled by the `airvisual_pro` domain:
         return False
 
-    _standardize_geography_config_entry(hass, entry)
+    _standardize_geography_config_entry(menuai, entry)
 
-    websession = aiohttp_client.async_get_clientsession(hass)
+    websession = aiohttp_client.async_get_clientsession(menuai)
     cloud_api = CloudAPI(entry.data[CONF_API_KEY], session=websession)
 
     async def async_update_data() -> dict[str, Any]:
@@ -202,7 +202,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: AirVisualConfigEntry) ->
             raise UpdateFailed(f"Error while retrieving data: {err}") from err
 
     coordinator = DataUpdateCoordinator(
-        hass,
+        menuai,
         LOGGER,
         config_entry=entry,
         name=async_get_geography_id(entry.data),
@@ -220,14 +220,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: AirVisualConfigEntry) ->
     entry.runtime_data = coordinator
 
     # Reassess the interval between 2 server requests
-    async_sync_geo_coordinator_update_intervals(hass, entry.data[CONF_API_KEY])
+    async_sync_geo_coordinator_update_intervals(menuai, entry.data[CONF_API_KEY])
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_migrate_entry(hass: HomeAssistant, entry: AirVisualConfigEntry) -> bool:
+async def async_migrate_entry(menuai: menuai, entry: AirVisualConfigEntry) -> bool:
     """Migrate an old config entry."""
     version = entry.version
 
@@ -243,7 +243,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: AirVisualConfigEntry) 
         first_geography = geographies.pop(0)
         first_id = async_get_geography_id(first_geography)
 
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry,
             unique_id=first_id,
             title=f"Cloud API ({first_id})",
@@ -257,8 +257,8 @@ async def async_migrate_entry(hass: HomeAssistant, entry: AirVisualConfigEntry) 
                 source = "geography_by_coords"
             else:
                 source = "geography_by_name"
-            hass.async_create_task(
-                hass.config_entries.flow.async_init(
+            menuai.async_create_task(
+                menuai.config_entries.flow.async_init(
                     DOMAIN,
                     context={"source": SOURCE_IMPORT},
                     data={
@@ -274,8 +274,8 @@ async def async_migrate_entry(hass: HomeAssistant, entry: AirVisualConfigEntry) 
         version = 3
 
         if entry.data[CONF_INTEGRATION_TYPE] == INTEGRATION_TYPE_NODE_PRO:
-            device_registry = dr.async_get(hass)
-            entity_registry = er.async_get(hass)
+            device_registry = dr.async_get(menuai)
+            entity_registry = er.async_get(menuai)
             ip_address = entry.data[CONF_IP_ADDRESS]
 
             # Store the existing Pro device before the migration removes it:
@@ -303,11 +303,11 @@ async def async_migrate_entry(hass: HomeAssistant, entry: AirVisualConfigEntry) 
             # Schedule the removal in a task to avoid a deadlock
             # since we cannot remove a config entry that is in
             # the process of being setup.
-            hass.async_create_background_task(
-                hass.config_entries.async_remove(entry.entry_id),
+            menuai.async_create_background_task(
+                menuai.config_entries.async_remove(entry.entry_id),
                 name="remove config legacy airvisual entry {entry.title}",
             )
-            await hass.config_entries.flow.async_init(
+            await menuai.config_entries.flow.async_init(
                 DOMAIN_AIRVISUAL_PRO,
                 context={"source": SOURCE_IMPORT},
                 data=new_entry_data,
@@ -317,7 +317,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: AirVisualConfigEntry) 
             # (now under the `airvisual_pro` domain):
             new_config_entry = next(
                 entry
-                for entry in hass.config_entries.async_entries(DOMAIN_AIRVISUAL_PRO)
+                for entry in menuai.config_entries.async_entries(DOMAIN_AIRVISUAL_PRO)
                 if entry.data[CONF_IP_ADDRESS] == ip_address
             )
             new_device_entry = next(
@@ -357,10 +357,10 @@ async def async_migrate_entry(hass: HomeAssistant, entry: AirVisualConfigEntry) 
             # If any automations are using the old device ID, create a Repairs issues
             # with instructions on how to update it:
             if device_automations := automation.automations_with_device(
-                hass, old_device_entry.id
+                menuai, old_device_entry.id
             ):
                 async_create_issue(
-                    hass,
+                    menuai,
                     DOMAIN,
                     f"airvisual_pro_migration_{entry.entry_id}",
                     is_fixable=False,
@@ -377,25 +377,25 @@ async def async_migrate_entry(hass: HomeAssistant, entry: AirVisualConfigEntry) 
                     },
                 )
         else:
-            hass.config_entries.async_update_entry(entry, version=version)
+            menuai.config_entries.async_update_entry(entry, version=version)
 
     LOGGER.info("Migration to version %s successful", version)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: AirVisualConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: AirVisualConfigEntry) -> bool:
     """Unload an AirVisual config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
     if unload_ok and CONF_API_KEY in entry.data:
         # Re-calculate the update interval period for any remaining consumers of
         # this API key:
-        async_sync_geo_coordinator_update_intervals(hass, entry.data[CONF_API_KEY])
+        async_sync_geo_coordinator_update_intervals(menuai, entry.data[CONF_API_KEY])
 
     return unload_ok
 
 
-async def async_reload_entry(hass: HomeAssistant, entry: AirVisualConfigEntry) -> None:
+async def async_reload_entry(menuai: menuai, entry: AirVisualConfigEntry) -> None:
     """Handle an options update."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)

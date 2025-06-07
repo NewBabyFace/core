@@ -12,7 +12,7 @@ from zha.application.platforms.light.const import (
     LightEntityFeature as ZhaLightEntityFeature,
 )
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_MODE,
     ATTR_COLOR_TEMP_KELVIN,
@@ -24,12 +24,12 @@ from homeassistant.components.light import (
     LightEntity,
     LightEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import STATE_ON, Platform
-from homeassistant.core import HomeAssistant, State, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import color as color_util
+from menuai.config_entries import ConfigEntry
+from menuai.const import STATE_ON, Platform
+from menuai.core import menuai, State, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import color as color_util
 
 from .entity import ZHAEntity
 from .helpers import (
@@ -57,16 +57,16 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Zigbee Home Automation light from config entry."""
-    zha_data = get_zha_data(hass)
+    zha_data = get_zha_data(menuai)
     entities_to_create = zha_data.platforms[Platform.LIGHT]
 
     unsub = async_dispatcher_connect(
-        hass,
+        menuai,
         SIGNAL_ADD_ENTITIES,
         functools.partial(
             zha_async_add_entities, async_add_entities, Light, entities_to_create

@@ -10,9 +10,9 @@ from aiotedee.bridge import TedeeBridge
 from aiotedee.lock import TedeeLock
 import pytest
 
-from homeassistant.components.tedee.const import CONF_LOCAL_ACCESS_TOKEN, DOMAIN
-from homeassistant.const import CONF_HOST, CONF_WEBHOOK_ID
-from homeassistant.core import HomeAssistant
+from menuai.components.tedee.const import CONF_LOCAL_ACCESS_TOKEN, DOMAIN
+from menuai.const import CONF_HOST, CONF_WEBHOOK_ID
+from menuai.core import menuai
 
 from . import setup_integration
 
@@ -42,7 +42,7 @@ def mock_config_entry() -> MockConfigEntry:
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Mock setting up a config entry."""
     with patch(
-        "homeassistant.components.tedee.async_setup_entry", return_value=True
+        "menuai.components.tedee.async_setup_entry", return_value=True
     ) as mock_setup:
         yield mock_setup
 
@@ -52,10 +52,10 @@ def mock_tedee() -> Generator[MagicMock]:
     """Return a mocked Tedee client."""
     with (
         patch(
-            "homeassistant.components.tedee.coordinator.TedeeClient", autospec=True
+            "menuai.components.tedee.coordinator.TedeeClient", autospec=True
         ) as tedee_mock,
         patch(
-            "homeassistant.components.tedee.config_flow.TedeeClient",
+            "menuai.components.tedee.config_flow.TedeeClient",
             new=tedee_mock,
         ),
     ):
@@ -83,9 +83,9 @@ def mock_tedee() -> Generator[MagicMock]:
 
 @pytest.fixture
 async def init_integration(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry, mock_tedee: MagicMock
+    menuai: menuai, mock_config_entry: MockConfigEntry, mock_tedee: MagicMock
 ) -> MockConfigEntry:
     """Set up the Tedee integration for testing."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     return mock_config_entry

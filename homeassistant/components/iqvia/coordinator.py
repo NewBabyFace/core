@@ -8,9 +8,9 @@ from typing import Any
 
 from pyiqvia.errors import IQVIAError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import LOGGER
 
@@ -26,14 +26,14 @@ class IqviaUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: IqviaConfigEntry,
         name: str,
         update_method: Callable[[], Coroutine[Any, Any, dict[str, Any]]],
     ) -> None:
         """Initialize the coordinator."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             name=name,
             config_entry=config_entry,

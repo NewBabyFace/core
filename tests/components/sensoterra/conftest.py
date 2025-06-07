@@ -12,7 +12,7 @@ from .const import API_TOKEN
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.sensoterra.async_setup_entry",
+        "menuai.components.sensoterra.async_setup_entry",
         return_value=True,
     ) as mock_entry:
         yield mock_entry
@@ -23,7 +23,7 @@ def mock_customer_api_client() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with (
         patch(
-            "homeassistant.components.sensoterra.config_flow.CustomerApi",
+            "menuai.components.sensoterra.config_flow.CustomerApi",
             autospec=True,
         ) as mock_client,
     ):

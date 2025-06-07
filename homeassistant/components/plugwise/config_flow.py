@@ -16,8 +16,8 @@ from plugwise.exceptions import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_USER, ConfigFlow, ConfigFlowResult
-from homeassistant.const import (
+from menuai.config_entries import SOURCE_USER, ConfigFlow, ConfigFlowResult
+from menuai.const import (
     ATTR_CONFIGURATION_URL,
     CONF_BASE,
     CONF_HOST,
@@ -26,9 +26,9 @@ from homeassistant.const import (
     CONF_PORT,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import (
     DEFAULT_PORT,
@@ -68,12 +68,12 @@ def smile_user_schema(discovery_info: ZeroconfServiceInfo | None) -> vol.Schema:
     return schema
 
 
-async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> Smile:
+async def validate_input(menuai: menuai, data: dict[str, Any]) -> Smile:
     """Validate whether the user input allows us to connect to the gateway.
 
     Data has the keys from the schema with values provided by the user.
     """
-    websession = async_get_clientsession(hass, verify_ssl=False)
+    websession = async_get_clientsession(menuai, verify_ssl=False)
     api = Smile(
         host=data[CONF_HOST],
         password=data[CONF_PASSWORD],
@@ -86,13 +86,13 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> Smile:
 
 
 async def verify_connection(
-    hass: HomeAssistant, user_input: dict[str, Any]
+    menuai: menuai, user_input: dict[str, Any]
 ) -> tuple[Smile | None, dict[str, str]]:
     """Verify and return the gateway connection or an error."""
     errors: dict[str, str] = {}
 
     try:
-        return (await validate_input(hass, user_input), errors)
+        return (await validate_input(menuai, user_input), errors)
     except ConnectionFailedError:
         errors[CONF_BASE] = "cannot_connect"
     except InvalidAuthentication:
@@ -131,7 +131,7 @@ class PlugwiseConfigFlow(ConfigFlow, domain=DOMAIN):
         if config_entry := await self.async_set_unique_id(unique_id):
             try:
                 await validate_input(
-                    self.hass,
+                    self.menuai,
                     {
                         CONF_HOST: discovery_info.host,
                         CONF_PORT: discovery_info.port,
@@ -163,7 +163,7 @@ class PlugwiseConfigFlow(ConfigFlow, domain=DOMAIN):
         # If we have discovered an Adam or Anna, both might be on the network.
         # In that case, we need to cancel the Anna flow, as the Adam should
         # be added.
-        if self.hass.config_entries.flow.async_has_matching_flow(self):
+        if self.menuai.config_entries.flow.async_has_matching_flow(self):
             return self.async_abort(reason="anna_with_adam")
 
         self.context.update(
@@ -184,7 +184,7 @@ class PlugwiseConfigFlow(ConfigFlow, domain=DOMAIN):
 
         # This is an Adam, and there is already an Anna flow in progress
         if self.product == "smile_open_therm" and other_flow.product == "smile_thermo":
-            self.hass.config_entries.flow.async_abort(other_flow.flow_id)
+            self.menuai.config_entries.flow.async_abort(other_flow.flow_id)
 
         return False
 
@@ -201,7 +201,7 @@ class PlugwiseConfigFlow(ConfigFlow, domain=DOMAIN):
                 user_input[CONF_PORT] = self.discovery_info.port
                 user_input[CONF_USERNAME] = self._username
 
-            api, errors = await verify_connection(self.hass, user_input)
+            api, errors = await verify_connection(self.menuai, user_input)
             if api:
                 await self.async_set_unique_id(
                     api.smile_hostname or api.gateway_id,
@@ -233,7 +233,7 @@ class PlugwiseConfigFlow(ConfigFlow, domain=DOMAIN):
                 CONF_PASSWORD: reconfigure_entry.data.get(CONF_PASSWORD),
             }
 
-            api, errors = await verify_connection(self.hass, full_input)
+            api, errors = await verify_connection(self.menuai, full_input)
             if api:
                 await self.async_set_unique_id(
                     api.smile_hostname or api.gateway_id,

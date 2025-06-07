@@ -11,12 +11,12 @@ from aioswitcher.api.messages import SwitcherBaseResponse
 from aioswitcher.api.remotes import SwitcherBreezeRemote
 from aioswitcher.device import DeviceCategory, DeviceState, ThermostatSwing
 
-from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.button import ButtonEntity, ButtonEntityDescription
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import SwitcherConfigEntry
 from .const import SIGNAL_DEVICE_ADD
@@ -75,7 +75,7 @@ THERMOSTAT_BUTTONS = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: SwitcherConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -85,8 +85,8 @@ async def async_setup_entry(
         """Get remote and add button from Switcher device."""
         data = cast(SwitcherBreezeRemote, coordinator.data)
         if coordinator.data.device_type.category == DeviceCategory.THERMOSTAT:
-            remote: SwitcherBreezeRemote = await hass.async_add_executor_job(
-                get_breeze_remote_manager(hass).get_remote, data.remote_id
+            remote: SwitcherBreezeRemote = await menuai.async_add_executor_job(
+                get_breeze_remote_manager(menuai).get_remote, data.remote_id
             )
             async_add_entities(
                 SwitcherThermostatButtonEntity(coordinator, description, remote)
@@ -95,7 +95,7 @@ async def async_setup_entry(
             )
 
     config_entry.async_on_unload(
-        async_dispatcher_connect(hass, SIGNAL_DEVICE_ADD, async_add_buttons)
+        async_dispatcher_connect(menuai, SIGNAL_DEVICE_ADD, async_add_buttons)
     )
 
 
@@ -136,6 +136,6 @@ class SwitcherThermostatButtonEntity(SwitcherEntity, ButtonEntity):
         if error or not response or not response.successful:
             self.coordinator.last_update_success = False
             self.async_write_ha_state()
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Call api for {self.name} failed, response/error: {response or error}"
             )

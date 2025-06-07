@@ -1,4 +1,4 @@
-"""Tuya Home Assistant Base Device Model."""
+"""Tuya MenuAI Base Device Model."""
 
 from __future__ import annotations
 
@@ -10,9 +10,9 @@ from typing import Any, Literal, Self, overload
 
 from tuya_sharing import CustomerDevice, Manager
 
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import Entity
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity import Entity
 
 from .const import DOMAIN, LOGGER, TUYA_HA_SIGNAL_UPDATE_ENTITY, DPCode, DPType
 from .util import remap_value
@@ -277,11 +277,11 @@ class TuyaEntity(Entity):
 
         return None
 
-    async def async_added_to_hass(self) -> None:
-        """Call when entity is added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Call when entity is added to menuai."""
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"{TUYA_HA_SIGNAL_UPDATE_ENTITY}_{self.device.id}",
                 self._handle_state_update,
             )

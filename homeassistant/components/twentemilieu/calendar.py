@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
-from homeassistant.components.calendar import CalendarEntity, CalendarEvent
-from homeassistant.const import CONF_ID
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import dt as dt_util
+from menuai.components.calendar import CalendarEntity, CalendarEvent
+from menuai.const import CONF_ID
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import dt as dt_util
 
 from .const import WASTE_TYPE_TO_DESCRIPTION
 from .coordinator import TwenteMilieuConfigEntry
@@ -16,7 +16,7 @@ from .entity import TwenteMilieuEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: TwenteMilieuConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -43,7 +43,7 @@ class TwenteMilieuCalendar(TwenteMilieuEntity, CalendarEntity):
         return self._event
 
     async def async_get_events(
-        self, hass: HomeAssistant, start_date: datetime, end_date: datetime
+        self, menuai: menuai, start_date: datetime, end_date: datetime
     ) -> list[CalendarEvent]:
         """Return calendar events within a datetime range."""
         events: list[CalendarEvent] = []
@@ -87,7 +87,7 @@ class TwenteMilieuCalendar(TwenteMilieuEntity, CalendarEntity):
 
         super()._handle_coordinator_update()
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai."""
+        await super().async_added_to_menuai()
         self._handle_coordinator_update()

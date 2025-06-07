@@ -8,10 +8,10 @@ from typing import Any
 
 from goodwe import Inverter, InverterError, RequestFailedException
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import SCAN_INTERVAL
 
@@ -36,13 +36,13 @@ class GoodweUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entry: GoodweConfigEntry,
         inverter: Inverter,
     ) -> None:
         """Initialize update coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
             name=entry.title,

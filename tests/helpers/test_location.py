@@ -1,8 +1,8 @@
-"""Tests Home Assistant location helpers."""
+"""Tests MenuAI location helpers."""
 
-from homeassistant.const import ATTR_FRIENDLY_NAME, ATTR_LATITUDE, ATTR_LONGITUDE
-from homeassistant.core import HomeAssistant, State
-from homeassistant.helpers import location
+from menuai.const import ATTR_FRIENDLY_NAME, ATTR_LATITUDE, ATTR_LONGITUDE
+from menuai.core import menuai, State
+from menuai.helpers import location
 
 
 def test_has_location_with_invalid_states() -> None:
@@ -46,86 +46,86 @@ def test_closest_returns_closest() -> None:
     assert state == location.closest(123.45, 123.45, [state, state2])
 
 
-async def test_coordinates_function_as_attributes(hass: HomeAssistant) -> None:
+async def test_coordinates_function_as_attributes(menuai: menuai) -> None:
     """Test coordinates function."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "test.object", "happy", {"latitude": 32.87336, "longitude": -117.22943}
     )
-    assert location.find_coordinates(hass, "test.object") == "32.87336,-117.22943"
+    assert location.find_coordinates(menuai, "test.object") == "32.87336,-117.22943"
 
 
-async def test_coordinates_function_as_state(hass: HomeAssistant) -> None:
+async def test_coordinates_function_as_state(menuai: menuai) -> None:
     """Test coordinates function."""
-    hass.states.async_set("test.object", "32.87336,-117.22943")
-    assert location.find_coordinates(hass, "test.object") == "32.87336,-117.22943"
+    menuai.states.async_set("test.object", "32.87336,-117.22943")
+    assert location.find_coordinates(menuai, "test.object") == "32.87336,-117.22943"
 
 
-async def test_coordinates_function_device_tracker_in_zone(hass: HomeAssistant) -> None:
+async def test_coordinates_function_device_tracker_in_zone(menuai: menuai) -> None:
     """Test coordinates function."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "zone.home",
         "zoning",
         {"latitude": 32.87336, "longitude": -117.22943},
     )
-    hass.states.async_set("device_tracker.device", "home")
+    menuai.states.async_set("device_tracker.device", "home")
     assert (
-        location.find_coordinates(hass, "device_tracker.device")
+        location.find_coordinates(menuai, "device_tracker.device")
         == "32.87336,-117.22943"
     )
 
 
-async def test_coordinates_function_zone_friendly_name(hass: HomeAssistant) -> None:
+async def test_coordinates_function_zone_friendly_name(menuai: menuai) -> None:
     """Test coordinates function."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "zone.home",
         "zoning",
         {"latitude": 32.87336, "longitude": -117.22943, ATTR_FRIENDLY_NAME: "my_home"},
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "test.object",
         "my_home",
     )
-    assert location.find_coordinates(hass, "test.object") == "32.87336,-117.22943"
-    assert location.find_coordinates(hass, "my_home") == "32.87336,-117.22943"
+    assert location.find_coordinates(menuai, "test.object") == "32.87336,-117.22943"
+    assert location.find_coordinates(menuai, "my_home") == "32.87336,-117.22943"
 
 
 async def test_coordinates_function_device_tracker_from_input_select(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test coordinates function."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "input_select.select",
         "device_tracker.device",
         {"options": "device_tracker.device"},
     )
-    hass.states.async_set("device_tracker.device", "32.87336,-117.22943")
+    menuai.states.async_set("device_tracker.device", "32.87336,-117.22943")
     assert (
-        location.find_coordinates(hass, "input_select.select") == "32.87336,-117.22943"
+        location.find_coordinates(menuai, "input_select.select") == "32.87336,-117.22943"
     )
 
 
-def test_coordinates_function_returns_none_on_recursion(hass: HomeAssistant) -> None:
+def test_coordinates_function_returns_none_on_recursion(menuai: menuai) -> None:
     """Test coordinates function."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "test.first",
         "test.second",
     )
-    hass.states.async_set("test.second", "test.first")
-    assert location.find_coordinates(hass, "test.first") is None
+    menuai.states.async_set("test.second", "test.first")
+    assert location.find_coordinates(menuai, "test.first") is None
 
 
 async def test_coordinates_function_returns_state_if_no_coords(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test test_coordinates function."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "test.object",
         "abc",
     )
-    assert location.find_coordinates(hass, "test.object") == "abc"
+    assert location.find_coordinates(menuai, "test.object") == "abc"
 
 
-def test_coordinates_function_returns_input_if_no_coords(hass: HomeAssistant) -> None:
+def test_coordinates_function_returns_input_if_no_coords(menuai: menuai) -> None:
     """Test test_coordinates function."""
-    assert location.find_coordinates(hass, "test.abc") == "test.abc"
-    assert location.find_coordinates(hass, "abc") == "abc"
+    assert location.find_coordinates(menuai, "test.abc") == "test.abc"
+    assert location.find_coordinates(menuai, "abc") == "abc"

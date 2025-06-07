@@ -1,6 +1,6 @@
 """Common test utilities for binary_sensor entity component tests."""
 
-from homeassistant.components.binary_sensor import BinarySensorEntity
+from menuai.components.binary_sensor import BinarySensorEntity
 
 from tests.common import MockEntity
 

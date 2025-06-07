@@ -6,11 +6,11 @@ from typing import Final
 
 from kasa.smart.modules.clean import AreaUnit
 
-from homeassistant.const import Platform, UnitOfArea, UnitOfTemperature
+from menuai.const import Platform, UnitOfArea, UnitOfTemperature
 
 DOMAIN = "tplink"
 
-DISCOVERY_TIMEOUT = 5  # Home Assistant will complain if startup takes > 10s
+DISCOVERY_TIMEOUT = 5  # MenuAI will complain if startup takes > 10s
 CONNECT_TIMEOUT = 5
 
 # Identifier used for primary control state.

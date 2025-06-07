@@ -6,19 +6,19 @@ from typing import Any
 
 from wakeonlan import send_magic_packet
 
-from homeassistant.const import (
+from menuai.const import (
     ATTR_CONNECTIONS,
     ATTR_IDENTIFIERS,
     CONF_HOST,
     CONF_MAC,
     CONF_MODEL,
 )
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.trigger import PluggableAction
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity
+from menuai.helpers.trigger import PluggableAction
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import CONF_MANUFACTURER, DOMAIN, LOGGER
 from .coordinator import SamsungTVDataUpdateCoordinator
@@ -63,14 +63,14 @@ class SamsungTVEntity(CoordinatorEntity[SamsungTVDataUpdateCoordinator], Entity)
             or self._bridge.power_off_in_progress
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Connect and subscribe to dispatcher signals and state updates."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         if (entry := self.registry_entry) and entry.device_id:
             self.async_on_remove(
                 self._turn_on_action.async_register(
-                    self.hass, async_get_turn_on_trigger(entry.device_id)
+                    self.menuai, async_get_turn_on_trigger(entry.device_id)
                 )
             )
 
@@ -90,7 +90,7 @@ class SamsungTVEntity(CoordinatorEntity[SamsungTVDataUpdateCoordinator], Entity)
         """Turn the remote on."""
         if self._turn_on_action:
             LOGGER.debug("Attempting to turn on %s via automation", self.entity_id)
-            await self._turn_on_action.async_run(self.hass, self._context)
+            await self._turn_on_action.async_run(self.menuai, self._context)
         elif self._mac:
             LOGGER.warning(
                 "Attempting to turn on %s via Wake-On-Lan; if this does not work, "
@@ -98,13 +98,13 @@ class SamsungTVEntity(CoordinatorEntity[SamsungTVDataUpdateCoordinator], Entity)
                 "a turn_on automation",
                 self.entity_id,
             )
-            await self.hass.async_add_executor_job(self._wake_on_lan)
+            await self.menuai.async_add_executor_job(self._wake_on_lan)
         else:
             LOGGER.error(
                 "Unable to turn on %s, as it does not have an automation configured",
                 self.entity_id,
             )
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="service_unsupported",
                 translation_placeholders={"entity": self.entity_id},

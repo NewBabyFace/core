@@ -4,23 +4,23 @@ from typing import Any
 
 import pytest
 
-from homeassistant.components.deconz.const import CONF_GESTURE, DOMAIN
-from homeassistant.components.deconz.deconz_event import (
+from menuai.components.deconz.const import CONF_GESTURE, DOMAIN
+from menuai.components.deconz.deconz_event import (
     CONF_DECONZ_ALARM_EVENT,
     CONF_DECONZ_EVENT,
 )
-from homeassistant.components.deconz.util import serial_from_unique_id
-from homeassistant.const import (
+from menuai.components.deconz.util import serial_from_unique_id
+from menuai.const import (
     CONF_CODE,
     CONF_DEVICE_ID,
     CONF_EVENT,
     CONF_ID,
     CONF_UNIQUE_ID,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.setup import async_setup_component
-from homeassistant.util import slugify
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.setup import async_setup_component
+from menuai.util import slugify
 
 from tests.components.logbook.common import MockRow, mock_humanify
 
@@ -56,7 +56,7 @@ from tests.components.logbook.common import MockRow, mock_humanify
 )
 @pytest.mark.usefixtures("config_entry_setup")
 async def test_humanifying_deconz_alarm_event(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     sensor_payload: dict[str, Any],
 ) -> None:
@@ -70,12 +70,12 @@ async def test_humanifying_deconz_alarm_event(
     removed_device_event_id = "removed_device"
     removed_device_serial = "00:00:00:00:00:00:00:05"
 
-    hass.config.components.add("recorder")
-    assert await async_setup_component(hass, "logbook", {})
-    await hass.async_block_till_done()
+    menuai.config.components.add("recorder")
+    assert await async_setup_component(menuai, "logbook", {})
+    await menuai.async_block_till_done()
 
     events = mock_humanify(
-        hass,
+        menuai,
         [
             MockRow(
                 CONF_DECONZ_ALARM_EVENT,
@@ -149,7 +149,7 @@ async def test_humanifying_deconz_alarm_event(
 )
 @pytest.mark.usefixtures("config_entry_setup")
 async def test_humanifying_deconz_event(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     sensor_payload: dict[str, Any],
 ) -> None:
@@ -181,12 +181,12 @@ async def test_humanifying_deconz_event(
     removed_device_event_id = "removed_device"
     removed_device_serial = "00:00:00:00:00:00:00:05"
 
-    hass.config.components.add("recorder")
-    assert await async_setup_component(hass, "logbook", {})
-    await hass.async_block_till_done()
+    menuai.config.components.add("recorder")
+    assert await async_setup_component(menuai, "logbook", {})
+    await menuai.async_block_till_done()
 
     events = mock_humanify(
-        hass,
+        menuai,
         [
             # Event without matching device trigger
             MockRow(

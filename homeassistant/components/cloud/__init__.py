@@ -1,4 +1,4 @@
-"""Component to integrate the Home Assistant cloud."""
+"""Component to integrate the MenuAI cloud."""
 
 from __future__ import annotations
 
@@ -9,34 +9,34 @@ from enum import Enum
 import logging
 from typing import cast
 
-from hass_nabucasa import Cloud
+from menuai_nabucasa import Cloud
 import voluptuous as vol
 
-from homeassistant.components import alexa, google_assistant
-from homeassistant.config_entries import SOURCE_SYSTEM, ConfigEntry
-from homeassistant.const import (
+from menuai.components import alexa, google_assistant
+from menuai.config_entries import SOURCE_SYSTEM, ConfigEntry
+from menuai.const import (
     CONF_DESCRIPTION,
     CONF_MODE,
     CONF_NAME,
     CONF_REGION,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     FORMAT_DATETIME,
     Platform,
 )
-from homeassistant.core import Event, HassJob, HomeAssistant, ServiceCall, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv, entityfilter
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.discovery import async_load_platform
-from homeassistant.helpers.dispatcher import (
+from menuai.core import Event, menuaiJob, menuai, ServiceCall, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv, entityfilter
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.discovery import async_load_platform
+from menuai.helpers.dispatcher import (
     async_dispatcher_connect,
     async_dispatcher_send,
 )
-from homeassistant.helpers.event import async_call_later
-from homeassistant.helpers.service import async_register_admin_service
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.loader import async_get_integration, bind_hass
-from homeassistant.util.signal_type import SignalType
+from menuai.helpers.event import async_call_later
+from menuai.helpers.service import async_register_admin_service
+from menuai.helpers.typing import ConfigType
+from menuai.loader import async_get_integration, bind_menuai
+from menuai.util.signal_type import SignalType
 
 # Pre-import backup to avoid it being imported
 # later when the import executor is busy and delaying
@@ -141,7 +141,7 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-class CloudNotAvailable(HomeAssistantError):
+class CloudNotAvailable(menuaiError):
     """Raised when an action requires the cloud but it's not available."""
 
 
@@ -156,98 +156,98 @@ class CloudConnectionState(Enum):
     CLOUD_DISCONNECTED = "cloud_disconnected"
 
 
-@bind_hass
+@bind_menuai
 @callback
-def async_is_logged_in(hass: HomeAssistant) -> bool:
+def async_is_logged_in(menuai: menuai) -> bool:
     """Test if user is logged in.
 
     Note: This returns True even if not currently connected to the cloud.
     """
-    return DATA_CLOUD in hass.data and hass.data[DATA_CLOUD].is_logged_in
+    return DATA_CLOUD in menuai.data and menuai.data[DATA_CLOUD].is_logged_in
 
 
-@bind_hass
+@bind_menuai
 @callback
-def async_is_connected(hass: HomeAssistant) -> bool:
+def async_is_connected(menuai: menuai) -> bool:
     """Test if connected to the cloud."""
-    return DATA_CLOUD in hass.data and hass.data[DATA_CLOUD].iot.connected
+    return DATA_CLOUD in menuai.data and menuai.data[DATA_CLOUD].iot.connected
 
 
 @callback
 def async_listen_connection_change(
-    hass: HomeAssistant,
+    menuai: menuai,
     target: Callable[[CloudConnectionState], Awaitable[None] | None],
 ) -> Callable[[], None]:
     """Notify on connection state changes."""
-    return async_dispatcher_connect(hass, SIGNAL_CLOUD_CONNECTION_STATE, target)
+    return async_dispatcher_connect(menuai, SIGNAL_CLOUD_CONNECTION_STATE, target)
 
 
-@bind_hass
+@bind_menuai
 @callback
-def async_active_subscription(hass: HomeAssistant) -> bool:
+def async_active_subscription(menuai: menuai) -> bool:
     """Test if user has an active subscription."""
-    return async_is_logged_in(hass) and not hass.data[DATA_CLOUD].subscription_expired
+    return async_is_logged_in(menuai) and not menuai.data[DATA_CLOUD].subscription_expired
 
 
-async def async_get_or_create_cloudhook(hass: HomeAssistant, webhook_id: str) -> str:
+async def async_get_or_create_cloudhook(menuai: menuai, webhook_id: str) -> str:
     """Get or create a cloudhook."""
-    if not async_is_connected(hass):
+    if not async_is_connected(menuai):
         raise CloudNotConnected
 
-    if not async_is_logged_in(hass):
+    if not async_is_logged_in(menuai):
         raise CloudNotAvailable
 
-    cloud = hass.data[DATA_CLOUD]
+    cloud = menuai.data[DATA_CLOUD]
     cloudhooks = cloud.client.cloudhooks
     if hook := cloudhooks.get(webhook_id):
         return cast(str, hook["cloudhook_url"])
 
-    return await async_create_cloudhook(hass, webhook_id)
+    return await async_create_cloudhook(menuai, webhook_id)
 
 
-@bind_hass
-async def async_create_cloudhook(hass: HomeAssistant, webhook_id: str) -> str:
+@bind_menuai
+async def async_create_cloudhook(menuai: menuai, webhook_id: str) -> str:
     """Create a cloudhook."""
-    if not async_is_connected(hass):
+    if not async_is_connected(menuai):
         raise CloudNotConnected
 
-    if not async_is_logged_in(hass):
+    if not async_is_logged_in(menuai):
         raise CloudNotAvailable
 
-    cloud = hass.data[DATA_CLOUD]
+    cloud = menuai.data[DATA_CLOUD]
     hook = await cloud.cloudhooks.async_create(webhook_id, True)
     cloudhook_url: str = hook["cloudhook_url"]
     return cloudhook_url
 
 
-@bind_hass
-async def async_delete_cloudhook(hass: HomeAssistant, webhook_id: str) -> None:
+@bind_menuai
+async def async_delete_cloudhook(menuai: menuai, webhook_id: str) -> None:
     """Delete a cloudhook."""
-    if DATA_CLOUD not in hass.data:
+    if DATA_CLOUD not in menuai.data:
         raise CloudNotAvailable
 
-    await hass.data[DATA_CLOUD].cloudhooks.async_delete(webhook_id)
+    await menuai.data[DATA_CLOUD].cloudhooks.async_delete(webhook_id)
 
 
-@bind_hass
+@bind_menuai
 @callback
-def async_remote_ui_url(hass: HomeAssistant) -> str:
+def async_remote_ui_url(menuai: menuai) -> str:
     """Get the remote UI URL."""
-    if not async_is_logged_in(hass):
+    if not async_is_logged_in(menuai):
         raise CloudNotAvailable
 
-    if not hass.data[DATA_CLOUD].client.prefs.remote_enabled:
+    if not menuai.data[DATA_CLOUD].client.prefs.remote_enabled:
         raise CloudNotAvailable
 
-    if not (remote_domain := hass.data[DATA_CLOUD].client.prefs.remote_domain):
+    if not (remote_domain := menuai.data[DATA_CLOUD].client.prefs.remote_domain):
         raise CloudNotAvailable
 
     return f"https://{remote_domain}"
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
-    """Initialize the Home Assistant cloud."""
-    log_handler = hass.data[DATA_CLOUD_LOG_HANDLER] = await _setup_log_handler(hass)
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
+    """Initialize the MenuAI cloud."""
+    log_handler = menuai.data[DATA_CLOUD_LOG_HANDLER] = await _setup_log_handler(menuai)
 
     # Process configs
     if DOMAIN in config:
@@ -260,24 +260,24 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     google_conf = kwargs.pop(CONF_GOOGLE_ACTIONS, None) or GACTIONS_SCHEMA({})
 
     # Cloud settings
-    prefs = CloudPreferences(hass)
+    prefs = CloudPreferences(menuai)
     await prefs.async_initialize()
 
     # Initialize Cloud
-    websession = async_get_clientsession(hass)
-    client = CloudClient(hass, prefs, websession, alexa_conf, google_conf)
-    cloud = hass.data[DATA_CLOUD] = Cloud(client, **kwargs)
+    websession = async_get_clientsession(menuai)
+    client = CloudClient(menuai, prefs, websession, alexa_conf, google_conf)
+    cloud = menuai.data[DATA_CLOUD] = Cloud(client, **kwargs)
 
     async def _shutdown(event: Event) -> None:
         """Shutdown event."""
         await cloud.stop()
         logging.root.removeHandler(log_handler)
-        del hass.data[DATA_CLOUD_LOG_HANDLER]
+        del menuai.data[DATA_CLOUD_LOG_HANDLER]
 
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _shutdown)
+    menuai.bus.async_listen_once(EVENT_menuai_STOP, _shutdown)
 
     _remote_handle_prefs_updated(cloud)
-    _setup_services(hass, prefs)
+    _setup_services(menuai, prefs)
 
     async def async_startup_repairs(_: datetime) -> None:
         """Create repair issues after startup."""
@@ -285,13 +285,13 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             return
 
         if subscription_info := await async_subscription_info(cloud):
-            async_manage_legacy_subscription_issue(hass, subscription_info)
+            async_manage_legacy_subscription_issue(menuai, subscription_info)
 
     loaded = False
     stt_platform_loaded = asyncio.Event()
     tts_platform_loaded = asyncio.Event()
     stt_tts_entities_added = asyncio.Event()
-    hass.data[DATA_PLATFORMS_SETUP] = {
+    menuai.data[DATA_PLATFORMS_SETUP] = {
         Platform.STT: stt_platform_loaded,
         Platform.TTS: tts_platform_loaded,
         "stt_tts_entities_added": stt_tts_entities_added,
@@ -306,20 +306,20 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             return
         loaded = True
 
-        await hass.config_entries.flow.async_init(
+        await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": SOURCE_SYSTEM}
         )
 
     async def _on_connect() -> None:
         """Handle cloud connect."""
         async_dispatcher_send(
-            hass, SIGNAL_CLOUD_CONNECTION_STATE, CloudConnectionState.CLOUD_CONNECTED
+            menuai, SIGNAL_CLOUD_CONNECTION_STATE, CloudConnectionState.CLOUD_CONNECTED
         )
 
     async def _on_disconnect() -> None:
         """Handle cloud disconnect."""
         async_dispatcher_send(
-            hass, SIGNAL_CLOUD_CONNECTION_STATE, CloudConnectionState.CLOUD_DISCONNECTED
+            menuai, SIGNAL_CLOUD_CONNECTION_STATE, CloudConnectionState.CLOUD_DISCONNECTED
         )
 
     async def _on_initialized() -> None:
@@ -332,14 +332,14 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     cloud.register_on_initialized(_on_initialized)
 
     await cloud.initialize()
-    http_api.async_setup(hass)
+    http_api.async_setup(menuai)
 
-    account_link.async_setup(hass)
+    account_link.async_setup(menuai)
 
     # Load legacy tts platform for backwards compatibility.
-    hass.async_create_task(
+    menuai.async_create_task(
         async_load_platform(
-            hass,
+            menuai,
             Platform.TTS,
             DOMAIN,
             {"platform_loaded": tts_platform_loaded},
@@ -349,9 +349,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     )
 
     async_call_later(
-        hass=hass,
+        menuai=menuai,
         delay=timedelta(hours=STARTUP_REPAIR_DELAY),
-        action=HassJob(
+        action=menuaiJob(
             async_startup_repairs, "cloud startup repairs", cancel_on_shutdown=True
         ),
     )
@@ -382,22 +382,22 @@ def _remote_handle_prefs_updated(cloud: Cloud[CloudClient]) -> None:
     cloud.client.prefs.async_listen_updates(remote_prefs_updated)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up a config entry."""
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-    stt_tts_entities_added = hass.data[DATA_PLATFORMS_SETUP]["stt_tts_entities_added"]
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    stt_tts_entities_added = menuai.data[DATA_PLATFORMS_SETUP]["stt_tts_entities_added"]
     stt_tts_entities_added.set()
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 @callback
-def _setup_services(hass: HomeAssistant, prefs: CloudPreferences) -> None:
+def _setup_services(menuai: menuai, prefs: CloudPreferences) -> None:
     """Set up services for cloud component."""
 
     async def _service_handler(service: ServiceCall) -> None:
@@ -407,20 +407,20 @@ def _setup_services(hass: HomeAssistant, prefs: CloudPreferences) -> None:
         elif service.service == SERVICE_REMOTE_DISCONNECT:
             await prefs.async_update(remote_enabled=False)
 
-    async_register_admin_service(hass, DOMAIN, SERVICE_REMOTE_CONNECT, _service_handler)
+    async_register_admin_service(menuai, DOMAIN, SERVICE_REMOTE_CONNECT, _service_handler)
     async_register_admin_service(
-        hass, DOMAIN, SERVICE_REMOTE_DISCONNECT, _service_handler
+        menuai, DOMAIN, SERVICE_REMOTE_DISCONNECT, _service_handler
     )
 
 
-async def _setup_log_handler(hass: HomeAssistant) -> FixedSizeQueueLogHandler:
+async def _setup_log_handler(menuai: menuai) -> FixedSizeQueueLogHandler:
     fmt = (
         "%(asctime)s.%(msecs)03d %(levelname)s (%(threadName)s) [%(name)s] %(message)s"
     )
     handler = FixedSizeQueueLogHandler()
     handler.setFormatter(logging.Formatter(fmt, datefmt=FORMAT_DATETIME))
 
-    integration = await async_get_integration(hass, DOMAIN)
+    integration = await async_get_integration(menuai, DOMAIN)
     loggers: set[str] = {integration.pkg_path, *(integration.loggers or [])}
 
     for logger_name in loggers:

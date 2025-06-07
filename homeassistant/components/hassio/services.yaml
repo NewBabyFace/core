@@ -50,17 +50,17 @@ backup_full:
       example: my_backup_mount
       selector:
         backup_location:
-    homeassistant_exclude_database:
+    menuai_exclude_database:
       default: false
       selector:
         boolean:
 
 backup_partial:
   fields:
-    homeassistant:
+    menuai:
       selector:
         boolean:
-    homeassistant_exclude_database:
+    menuai_exclude_database:
       default: false
       selector:
         boolean:
@@ -69,7 +69,7 @@ backup_partial:
       selector:
         object:
     folders:
-      example: ["homeassistant", "share"]
+      example: ["menuai", "share"]
       selector:
         object:
     name:
@@ -106,11 +106,11 @@ restore_partial:
       required: true
       selector:
         text:
-    homeassistant:
+    menuai:
       selector:
         boolean:
     folders:
-      example: ["homeassistant", "share"]
+      example: ["menuai", "share"]
       selector:
         object:
     addons:

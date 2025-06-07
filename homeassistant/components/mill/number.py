@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from mill import Heater, MillDevice
 
-from homeassistant.components.number import NumberDeviceClass, NumberEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_USERNAME, UnitOfPower
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.number import NumberDeviceClass, NumberEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_USERNAME, UnitOfPower
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import CLOUD, CONNECTION_TYPE, DOMAIN
 from .coordinator import MillDataUpdateCoordinator
@@ -16,13 +16,13 @@ from .entity import MillBaseEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Mill Number."""
     if entry.data.get(CONNECTION_TYPE) == CLOUD:
-        mill_data_coordinator: MillDataUpdateCoordinator = hass.data[DOMAIN][CLOUD][
+        mill_data_coordinator: MillDataUpdateCoordinator = menuai.data[DOMAIN][CLOUD][
             entry.data[CONF_USERNAME]
         ]
 

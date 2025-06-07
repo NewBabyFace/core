@@ -2,8 +2,8 @@
 
 import pytest
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
+from menuai.const import Platform
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -15,17 +15,17 @@ def platforms() -> list[Platform]:
 
 
 async def test_binary_sensors(
-    hass: HomeAssistant, setup_entry: MockConfigEntry
+    menuai: menuai, setup_entry: MockConfigEntry
 ) -> None:
     """Test binary sensors and check test values are correctly set."""
-    assert len(hass.states.async_all("binary_sensor")) == 10
-    assert hass.states.get("binary_sensor.roborock_s7_maxv_mop_attached").state == "on"
+    assert len(menuai.states.async_all("binary_sensor")) == 10
+    assert menuai.states.get("binary_sensor.roborock_s7_maxv_mop_attached").state == "on"
     assert (
-        hass.states.get("binary_sensor.roborock_s7_maxv_water_box_attached").state
+        menuai.states.get("binary_sensor.roborock_s7_maxv_water_box_attached").state
         == "on"
     )
     assert (
-        hass.states.get("binary_sensor.roborock_s7_maxv_water_shortage").state == "off"
+        menuai.states.get("binary_sensor.roborock_s7_maxv_water_shortage").state == "off"
     )
-    assert hass.states.get("binary_sensor.roborock_s7_maxv_cleaning").state == "off"
-    assert hass.states.get("binary_sensor.roborock_s7_maxv_charging").state == "on"
+    assert menuai.states.get("binary_sensor.roborock_s7_maxv_cleaning").state == "off"
+    assert menuai.states.get("binary_sensor.roborock_s7_maxv_charging").state == "on"

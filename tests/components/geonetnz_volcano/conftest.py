@@ -2,8 +2,8 @@
 
 import pytest
 
-from homeassistant.components.geonetnz_volcano import DOMAIN
-from homeassistant.const import (
+from menuai.components.geonetnz_volcano import DOMAIN
+from menuai.const import (
     CONF_LATITUDE,
     CONF_LONGITUDE,
     CONF_RADIUS,

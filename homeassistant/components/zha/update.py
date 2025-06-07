@@ -9,18 +9,18 @@ from typing import Any
 from zha.exceptions import ZHAException
 from zigpy.application import ControllerApplication
 
-from homeassistant.components.update import (
+from menuai.components.update import (
     UpdateDeviceClass,
     UpdateEntity,
     UpdateEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
 )
@@ -50,20 +50,20 @@ OTA_MESSAGE_RELIABILITY = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Zigbee Home Automation update from config entry."""
-    zha_data = get_zha_data(hass)
+    zha_data = get_zha_data(menuai)
     if zha_data.update_coordinator is None:
         zha_data.update_coordinator = ZHAFirmwareUpdateCoordinator(
-            hass, get_zha_gateway(hass).application_controller
+            menuai, get_zha_gateway(menuai).application_controller
         )
     entities_to_create = zha_data.platforms[Platform.UPDATE]
 
     unsub = async_dispatcher_connect(
-        hass,
+        menuai,
         SIGNAL_ADD_ENTITIES,
         functools.partial(
             zha_async_add_entities,
@@ -75,15 +75,15 @@ async def async_setup_entry(
     config_entry.async_on_unload(unsub)
 
 
-class ZHAFirmwareUpdateCoordinator(DataUpdateCoordinator[None]):  # pylint: disable=hass-enforce-class-module
+class ZHAFirmwareUpdateCoordinator(DataUpdateCoordinator[None]):  # pylint: disable=menuai-enforce-class-module
     """Firmware update coordinator that broadcasts updates network-wide."""
 
     def __init__(
-        self, hass: HomeAssistant, controller_application: ControllerApplication
+        self, menuai: menuai, controller_application: ControllerApplication
     ) -> None:
         """Initialize the coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             name="ZHA firmware update coordinator",
             update_method=self.async_update_data,
@@ -112,7 +112,7 @@ class ZHAFirmwareUpdateEntity(
 
     def __init__(self, entity_data: EntityData, **kwargs: Any) -> None:
         """Initialize the ZHA siren."""
-        zha_data = get_zha_data(entity_data.device_proxy.gateway_proxy.hass)
+        zha_data = get_zha_data(entity_data.device_proxy.gateway_proxy.menuai)
         assert zha_data.update_coordinator is not None
 
         super().__init__(entity_data, coordinator=zha_data.update_coordinator, **kwargs)
@@ -187,7 +187,7 @@ class ZHAFirmwareUpdateEntity(
         try:
             await self.entity_data.entity.async_install(version=version)
         except ZHAException as exc:
-            raise HomeAssistantError(exc) from exc
+            raise menuaiError(exc) from exc
         finally:
             self.async_write_ha_state()
 

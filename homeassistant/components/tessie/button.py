@@ -14,9 +14,9 @@ from tessie_api import (
     wake,
 )
 
-from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.button import ButtonEntity, ButtonEntityDescription
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import TessieConfigEntry
 from .entity import TessieEntity
@@ -48,7 +48,7 @@ DESCRIPTIONS: tuple[TessieButtonEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: TessieConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

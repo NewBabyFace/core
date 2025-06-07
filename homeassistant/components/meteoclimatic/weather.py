@@ -2,13 +2,13 @@
 
 from meteoclimatic import Condition
 
-from homeassistant.components.weather import WeatherEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import UnitOfPressure, UnitOfSpeed, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import (
+from menuai.components.weather import WeatherEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import UnitOfPressure, UnitOfSpeed, UnitOfTemperature
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
 )
@@ -26,12 +26,12 @@ def format_condition(condition):
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Meteoclimatic weather platform."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = menuai.data[DOMAIN][entry.entry_id]
 
     async_add_entities([MeteoclimaticWeather(coordinator)], False)
 

@@ -1,11 +1,11 @@
-"""API for nVent RAYCHEM SENZ bound to Home Assistant OAuth."""
+"""API for nVent RAYCHEM SENZ bound to MenuAI OAuth."""
 
 from typing import cast
 
 from aiosenz import AbstractSENZAuth
 from httpx import AsyncClient
 
-from homeassistant.helpers import config_entry_oauth2_flow
+from menuai.helpers import config_entry_oauth2_flow
 
 
 class SENZConfigEntryAuth(AbstractSENZAuth):

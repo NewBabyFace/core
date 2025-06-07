@@ -1,11 +1,11 @@
 {
-  "domain": "homeassistant_green",
-  "name": "Home Assistant Green",
-  "after_dependencies": ["hassio"],
+  "domain": "menuai_green",
+  "name": "MenuAI Green",
+  "after_dependencies": ["menuaiio"],
   "codeowners": ["@home-assistant/core"],
   "config_flow": false,
-  "dependencies": ["hardware", "homeassistant_hardware"],
-  "documentation": "https://www.home-assistant.io/integrations/homeassistant_green",
+  "dependencies": ["hardware", "menuai_hardware"],
+  "documentation": "https://www.home-assistant.io/integrations/menuai_green",
   "integration_type": "hardware",
   "single_config_entry": true
 }

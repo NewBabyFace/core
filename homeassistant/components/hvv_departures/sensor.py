@@ -7,14 +7,14 @@ from typing import Any
 from aiohttp import ClientConnectorError
 from pygti.exceptions import InvalidAuth
 
-from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
-from homeassistant.const import ATTR_ID, CONF_OFFSET
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import aiohttp_client
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import Throttle
-from homeassistant.util.dt import get_time_zone, utcnow
+from menuai.components.sensor import SensorDeviceClass, SensorEntity
+from menuai.const import ATTR_ID, CONF_OFFSET
+from menuai.core import menuai
+from menuai.helpers import aiohttp_client
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import Throttle
+from menuai.util.dt import get_time_zone, utcnow
 
 from .const import ATTRIBUTION, CONF_REAL_TIME, CONF_STATION, DOMAIN, MANUFACTURER
 from .hub import HVVConfigEntry
@@ -40,16 +40,16 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: HVVConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the sensor platform."""
     hub = config_entry.runtime_data
 
-    session = aiohttp_client.async_get_clientsession(hass)
+    session = aiohttp_client.async_get_clientsession(menuai)
 
-    sensor = HVVDepartureSensor(hass, config_entry, session, hub)
+    sensor = HVVDepartureSensor(menuai, config_entry, session, hub)
     async_add_entities([sensor], True)
 
 
@@ -62,7 +62,7 @@ class HVVDepartureSensor(SensorEntity):
     _attr_has_entity_name = True
     _attr_available = False
 
-    def __init__(self, hass, config_entry, session, hub):
+    def __init__(self, menuai, config_entry, session, hub):
         """Initialize."""
         self.config_entry = config_entry
         self.station_name = self.config_entry.data[CONF_STATION]["name"]

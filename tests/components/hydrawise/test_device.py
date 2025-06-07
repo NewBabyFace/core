@@ -2,14 +2,14 @@
 
 from unittest.mock import Mock
 
-from homeassistant.components.hydrawise.const import DOMAIN
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.components.hydrawise.const import DOMAIN
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 
 def test_zones_in_device_registry(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mock_added_config_entry: ConfigEntry,
     mock_pydrawise: Mock,
@@ -28,7 +28,7 @@ def test_zones_in_device_registry(
 
 
 def test_controller_in_device_registry(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mock_added_config_entry: ConfigEntry,
     mock_pydrawise: Mock,

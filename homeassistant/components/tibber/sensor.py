@@ -12,15 +12,15 @@ from typing import Any
 import aiohttp
 import tibber
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
-    EVENT_HOMEASSISTANT_STOP,
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
+    EVENT_menuai_STOP,
     PERCENTAGE,
     SIGNAL_STRENGTH_DECIBELS,
     EntityCategory,
@@ -29,17 +29,17 @@ from homeassistant.const import (
     UnitOfEnergy,
     UnitOfPower,
 )
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.exceptions import PlatformNotReady
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
-from homeassistant.helpers.update_coordinator import (
+from menuai.core import Event, menuai, callback
+from menuai.exceptions import PlatformNotReady
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
+from menuai.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
 )
-from homeassistant.util import Throttle, dt as dt_util
+from menuai.util import Throttle, dt as dt_util
 
 from .const import DOMAIN, MANUFACTURER
 from .coordinator import TibberDataCoordinator
@@ -261,16 +261,16 @@ SENSORS: tuple[SensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Tibber sensor."""
 
-    tibber_connection = hass.data[DOMAIN]
+    tibber_connection = menuai.data[DOMAIN]
 
-    entity_registry = er.async_get(hass)
-    device_registry = dr.async_get(hass)
+    entity_registry = er.async_get(menuai)
+    device_registry = dr.async_get(menuai)
 
     coordinator: TibberDataCoordinator | None = None
     entities: list[TibberSensor] = []
@@ -287,7 +287,7 @@ async def async_setup_entry(
         if home.has_active_subscription:
             entities.append(TibberSensorElPrice(home))
             if coordinator is None:
-                coordinator = TibberDataCoordinator(hass, entry, tibber_connection)
+                coordinator = TibberDataCoordinator(menuai, entry, tibber_connection)
             entities.extend(
                 TibberDataSensor(home, coordinator, entity_description)
                 for entity_description in SENSORS
@@ -299,7 +299,7 @@ async def async_setup_entry(
             )
             await home.rt_subscribe(
                 TibberRtDataCoordinator(
-                    entity_creator.add_sensors, home, hass
+                    entity_creator.add_sensors, home, menuai
                 ).async_set_updated_data
             )
 
@@ -608,19 +608,19 @@ class TibberRtEntityCreator:
             self._async_add_entities(new_entities)
 
 
-class TibberRtDataCoordinator(DataUpdateCoordinator):  # pylint: disable=hass-enforce-class-module
+class TibberRtDataCoordinator(DataUpdateCoordinator):  # pylint: disable=menuai-enforce-class-module
     """Handle Tibber realtime data."""
 
     def __init__(
         self,
         add_sensor_callback: Callable[[TibberRtDataCoordinator, Any], None],
         tibber_home: tibber.TibberHome,
-        hass: HomeAssistant,
+        menuai: menuai,
     ) -> None:
         """Initialize the data handler."""
         self._add_sensor_callback = add_sensor_callback
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             name=tibber_home.info["viewer"]["home"]["address"].get(
                 "address1", "Tibber"
@@ -630,11 +630,11 @@ class TibberRtDataCoordinator(DataUpdateCoordinator):  # pylint: disable=hass-en
         self._async_remove_device_updates_handler = self.async_add_listener(
             self._data_updated
         )
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, self._handle_ha_stop)
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, self._handle_ha_stop)
 
     @callback
     def _handle_ha_stop(self, _event: Event) -> None:
-        """Handle Home Assistant stopping."""
+        """Handle MenuAI stopping."""
         self._async_remove_device_updates_handler()
 
     @callback

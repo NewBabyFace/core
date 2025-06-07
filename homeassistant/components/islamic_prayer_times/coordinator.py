@@ -8,12 +8,12 @@ from typing import Any, cast
 
 from prayer_times_calculator_offline import PrayerTimesCalculator
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
-from homeassistant.helpers.event import async_track_point_in_time
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-from homeassistant.util import dt as dt_util
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_LATITUDE, CONF_LONGITUDE
+from menuai.core import CALLBACK_TYPE, menuai, callback
+from menuai.helpers.event import async_track_point_in_time
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.util import dt as dt_util
 
 from .const import (
     CONF_CALC_METHOD,
@@ -38,11 +38,11 @@ class IslamicPrayerDataUpdateCoordinator(DataUpdateCoordinator[dict[str, datetim
     config_entry: IslamicPrayerTimesConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: IslamicPrayerTimesConfigEntry
+        self, menuai: menuai, config_entry: IslamicPrayerTimesConfigEntry
     ) -> None:
         """Initialize the Islamic Prayer client."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -104,7 +104,7 @@ class IslamicPrayerDataUpdateCoordinator(DataUpdateCoordinator[dict[str, datetim
         _LOGGER.debug("Scheduling next update for Islamic prayer times")
 
         self.event_unsub = async_track_point_in_time(
-            self.hass, self.async_request_update, midnight_dt + timedelta(seconds=1)
+            self.menuai, self.async_request_update, midnight_dt + timedelta(seconds=1)
         )
 
     async def async_request_update(self, _: datetime) -> None:

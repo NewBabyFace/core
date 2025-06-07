@@ -9,14 +9,14 @@ from pyvizio import AppConfig, VizioAsync
 from pyvizio.api.apps import find_app_name
 from pyvizio.const import APP_HOME, INPUT_APPS, NO_APP_RUNNING, UNKNOWN_APP
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     MediaPlayerDeviceClass,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_ACCESS_TOKEN,
     CONF_DEVICE_CLASS,
     CONF_EXCLUDE,
@@ -24,15 +24,15 @@ from homeassistant.const import (
     CONF_INCLUDE,
     CONF_NAME,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr, entity_platform
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import (
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr, entity_platform
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import (
     async_dispatcher_connect,
     async_dispatcher_send,
 )
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
     CONF_ADDITIONAL_CONFIGS,
@@ -61,7 +61,7 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -102,7 +102,7 @@ async def async_setup_entry(
         params["data"] = new_data
 
     if params:
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             config_entry,
             **params,  # type: ignore[arg-type]
         )
@@ -113,11 +113,11 @@ async def async_setup_entry(
         name,
         auth_token=token,
         device_type=VIZIO_DEVICE_CLASSES[device_class],
-        session=async_get_clientsession(hass, False),
+        session=async_get_clientsession(menuai, False),
         timeout=DEFAULT_TIMEOUT,
     )
 
-    apps_coordinator = hass.data[DOMAIN].get(CONF_APPS)
+    apps_coordinator = menuai.data[DOMAIN].get(CONF_APPS)
 
     entity = VizioDevice(config_entry, device, name, device_class, apps_coordinator)
 
@@ -206,7 +206,7 @@ class VizioDevice(MediaPlayerEntity):
             self._attr_available = True
 
         if not self._received_device_info:
-            device_reg = dr.async_get(self.hass)
+            device_reg = dr.async_get(self.menuai)
             assert self._config_entry.unique_id
             device = device_reg.async_get_device(
                 identifiers={(DOMAIN, self._config_entry.unique_id)}
@@ -302,13 +302,13 @@ class VizioDevice(MediaPlayerEntity):
 
     @staticmethod
     async def _async_send_update_options_signal(
-        hass: HomeAssistant, config_entry: ConfigEntry
+        menuai: menuai, config_entry: ConfigEntry
     ) -> None:
         """Send update event when Vizio config entry is updated."""
         # Move this method to component level if another entity ever gets added for a
         # single config entry.
         # See here: https://github.com/home-assistant/core/pull/30653#discussion_r366426121
-        async_dispatcher_send(hass, config_entry.entry_id, config_entry)
+        async_dispatcher_send(menuai, config_entry.entry_id, config_entry)
 
     async def _async_update_options(self, config_entry: ConfigEntry) -> None:
         """Update options if the update signal comes from this entity."""
@@ -327,7 +327,7 @@ class VizioDevice(MediaPlayerEntity):
             log_api_exception=False,
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks when entity is added."""
         # Register callback for when config entry is updated.
         self.async_on_remove(
@@ -339,7 +339,7 @@ class VizioDevice(MediaPlayerEntity):
         # Register callback for update event
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, self._config_entry.entry_id, self._async_update_options
+                self.menuai, self._config_entry.entry_id, self._async_update_options
             )
         )
 

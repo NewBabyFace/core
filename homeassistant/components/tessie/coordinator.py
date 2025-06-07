@@ -12,10 +12,10 @@ from tesla_fleet_api.exceptions import InvalidToken, MissingToken, TeslaFleetErr
 from tesla_fleet_api.tessie import EnergySite
 from tessie_api import get_state, get_status
 
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 if TYPE_CHECKING:
     from . import TessieConfigEntry
@@ -49,7 +49,7 @@ class TessieStateUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: TessieConfigEntry,
         api_key: str,
         vin: str,
@@ -57,7 +57,7 @@ class TessieStateUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     ) -> None:
         """Initialize Tessie Data Update Coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name="Tessie",
@@ -65,7 +65,7 @@ class TessieStateUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         )
         self.api_key = api_key
         self.vin = vin
-        self.session = async_get_clientsession(hass)
+        self.session = async_get_clientsession(menuai)
         self.data = flatten(data)
 
     async def _async_update_data(self) -> dict[str, Any]:
@@ -103,14 +103,14 @@ class TessieEnergySiteLiveCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: TessieConfigEntry,
         api: EnergySite,
         data: dict[str, Any],
     ) -> None:
         """Initialize Tessie Energy Site Live coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name="Tessie Energy Site Live",
@@ -148,11 +148,11 @@ class TessieEnergySiteInfoCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     config_entry: TessieConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: TessieConfigEntry, api: EnergySite
+        self, menuai: menuai, config_entry: TessieConfigEntry, api: EnergySite
     ) -> None:
         """Initialize Tessie Energy Info coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name="Tessie Energy Site Info",

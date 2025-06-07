@@ -6,7 +6,7 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 from teslemetry_stream import Signal
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     ATTR_MEDIA_VOLUME_LEVEL,
     DOMAIN as MEDIA_PLAYER_DOMAIN,
     SERVICE_MEDIA_NEXT_TRACK,
@@ -16,28 +16,28 @@ from homeassistant.components.media_player import (
     SERVICE_VOLUME_SET,
     MediaPlayerState,
 )
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import assert_entities, assert_entities_alt, reload_platform, setup_platform
 from .const import COMMAND_OK, METADATA_NOSCOPE, VEHICLE_DATA_ALT
 
 
 async def test_media_player(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
     mock_legacy: AsyncMock,
 ) -> None:
     """Tests that the media player entities are correct."""
 
-    entry = await setup_platform(hass, [Platform.MEDIA_PLAYER])
-    assert_entities(hass, entry.entry_id, entity_registry, snapshot)
+    entry = await setup_platform(menuai, [Platform.MEDIA_PLAYER])
+    assert_entities(menuai, entry.entry_id, entity_registry, snapshot)
 
 
 async def test_media_player_alt(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
     mock_vehicle_data: AsyncMock,
@@ -46,12 +46,12 @@ async def test_media_player_alt(
     """Tests that the media player entities are correct."""
 
     mock_vehicle_data.return_value = VEHICLE_DATA_ALT
-    entry = await setup_platform(hass, [Platform.MEDIA_PLAYER])
-    assert_entities_alt(hass, entry.entry_id, entity_registry, snapshot)
+    entry = await setup_platform(menuai, [Platform.MEDIA_PLAYER])
+    assert_entities_alt(menuai, entry.entry_id, entity_registry, snapshot)
 
 
 async def test_media_player_noscope(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
     mock_metadata: AsyncMock,
@@ -60,18 +60,18 @@ async def test_media_player_noscope(
     """Tests that the media player entities are correct without required scope."""
 
     mock_metadata.return_value = METADATA_NOSCOPE
-    entry = await setup_platform(hass, [Platform.MEDIA_PLAYER])
-    assert_entities(hass, entry.entry_id, entity_registry, snapshot)
+    entry = await setup_platform(menuai, [Platform.MEDIA_PLAYER])
+    assert_entities(menuai, entry.entry_id, entity_registry, snapshot)
 
 
 async def test_media_player_services(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mock_legacy: AsyncMock,
 ) -> None:
     """Tests that the media player services work."""
 
-    await setup_platform(hass, [Platform.MEDIA_PLAYER])
+    await setup_platform(menuai, [Platform.MEDIA_PLAYER])
 
     entity_id = "media_player.test_media_player"
 
@@ -79,13 +79,13 @@ async def test_media_player_services(
         "tesla_fleet_api.teslemetry.Vehicle.adjust_volume",
         return_value=COMMAND_OK,
     ) as call:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             SERVICE_VOLUME_SET,
             {ATTR_ENTITY_ID: entity_id, ATTR_MEDIA_VOLUME_LEVEL: 0.5},
             blocking=True,
         )
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state.attributes[ATTR_MEDIA_VOLUME_LEVEL] == 0.5
         call.assert_called_once()
 
@@ -93,13 +93,13 @@ async def test_media_player_services(
         "tesla_fleet_api.teslemetry.Vehicle.media_toggle_playback",
         return_value=COMMAND_OK,
     ) as call:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             SERVICE_MEDIA_PAUSE,
             {ATTR_ENTITY_ID: entity_id},
             blocking=True,
         )
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state.state == MediaPlayerState.PAUSED
         call.assert_called_once()
 
@@ -108,13 +108,13 @@ async def test_media_player_services(
         "tesla_fleet_api.teslemetry.Vehicle.media_toggle_playback",
         return_value=COMMAND_OK,
     ) as call:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             SERVICE_MEDIA_PLAY,
             {ATTR_ENTITY_ID: entity_id},
             blocking=True,
         )
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state.state == MediaPlayerState.PLAYING
         call.assert_called_once()
 
@@ -122,39 +122,39 @@ async def test_media_player_services(
         "tesla_fleet_api.teslemetry.Vehicle.media_next_track",
         return_value=COMMAND_OK,
     ) as call:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             SERVICE_MEDIA_NEXT_TRACK,
             {ATTR_ENTITY_ID: entity_id},
             blocking=True,
         )
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         call.assert_called_once()
 
     with patch(
         "tesla_fleet_api.teslemetry.Vehicle.media_prev_track",
         return_value=COMMAND_OK,
     ) as call:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             SERVICE_MEDIA_PREVIOUS_TRACK,
             {ATTR_ENTITY_ID: entity_id},
             blocking=True,
         )
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         call.assert_called_once()
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_update_streaming(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mock_vehicle_data: AsyncMock,
     mock_add_listener: AsyncMock,
 ) -> None:
     """Tests that the media player entities with streaming are correct."""
 
-    entry = await setup_platform(hass, [Platform.MEDIA_PLAYER])
+    entry = await setup_platform(menuai, [Platform.MEDIA_PLAYER])
 
     # Stream update
     mock_add_listener.send(
@@ -173,8 +173,8 @@ async def test_update_streaming(
             "createdAt": "2024-10-04T10:45:17.537Z",
         }
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("media_player.test_media_player")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("media_player.test_media_player")
     assert state == snapshot(name="off")
 
     mock_add_listener.send(
@@ -193,12 +193,12 @@ async def test_update_streaming(
             "createdAt": "2024-10-04T10:55:17.000Z",
         }
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("media_player.test_media_player")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("media_player.test_media_player")
     assert state == snapshot(name="on")
 
-    await reload_platform(hass, entry, [Platform.MEDIA_PLAYER])
+    await reload_platform(menuai, entry, [Platform.MEDIA_PLAYER])
 
     # Ensure the restored state is the same as the previous state
-    state = hass.states.get("media_player.test_media_player")
+    state = menuai.states.get("media_player.test_media_player")
     assert state == snapshot(name="on")

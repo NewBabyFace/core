@@ -7,33 +7,33 @@ from aioshelly.exceptions import DeviceConnectionError, InvalidAuthError, RpcCal
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
-from homeassistant.components.shelly.const import DOMAIN
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
-from homeassistant.const import ATTR_ENTITY_ID, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_registry import EntityRegistry
+from menuai.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
+from menuai.components.shelly.const import DOMAIN
+from menuai.config_entries import SOURCE_REAUTH, ConfigEntryState
+from menuai.const import ATTR_ENTITY_ID, STATE_UNKNOWN
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_registry import EntityRegistry
 
 from . import init_integration
 
 
 async def test_block_button(
-    hass: HomeAssistant, mock_block_device: Mock, entity_registry: EntityRegistry
+    menuai: menuai, mock_block_device: Mock, entity_registry: EntityRegistry
 ) -> None:
     """Test block device reboot button."""
-    await init_integration(hass, 1)
+    await init_integration(menuai, 1)
 
     entity_id = "button.test_name_reboot"
 
     # reboot button
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_UNKNOWN
 
     assert (entry := entity_registry.async_get(entity_id))
     assert entry.unique_id == "123456789ABC_reboot"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         BUTTON_DOMAIN,
         SERVICE_PRESS,
         {ATTR_ENTITY_ID: entity_id},
@@ -43,24 +43,24 @@ async def test_block_button(
 
 
 async def test_rpc_button(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_rpc_device: Mock,
     entity_registry: EntityRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test rpc device OTA button."""
-    await init_integration(hass, 2)
+    await init_integration(menuai, 2)
 
     entity_id = "button.test_name_reboot"
 
     # reboot button
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state == snapshot(name=f"{entity_id}-state")
 
     assert (entry := entity_registry.async_get(entity_id))
     assert entry == snapshot(name=f"{entity_id}-entry")
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         BUTTON_DOMAIN,
         SERVICE_PRESS,
         {ATTR_ENTITY_ID: entity_id},
@@ -83,18 +83,18 @@ async def test_rpc_button(
     ],
 )
 async def test_rpc_button_exc(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_rpc_device: Mock,
     exception: Exception,
     error: str,
 ) -> None:
     """Test RPC button with exception."""
-    await init_integration(hass, 2)
+    await init_integration(menuai, 2)
 
     mock_rpc_device.trigger_reboot.side_effect = exception
 
-    with pytest.raises(HomeAssistantError, match=error):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match=error):
+        await menuai.services.async_call(
             BUTTON_DOMAIN,
             SERVICE_PRESS,
             {ATTR_ENTITY_ID: "button.test_name_reboot"},
@@ -103,14 +103,14 @@ async def test_rpc_button_exc(
 
 
 async def test_rpc_button_reauth_error(
-    hass: HomeAssistant, mock_rpc_device: Mock
+    menuai: menuai, mock_rpc_device: Mock
 ) -> None:
     """Test rpc device OTA button with authentication error."""
-    entry = await init_integration(hass, 2)
+    entry = await init_integration(menuai, 2)
 
     mock_rpc_device.trigger_reboot.side_effect = InvalidAuthError
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         BUTTON_DOMAIN,
         SERVICE_PRESS,
         {ATTR_ENTITY_ID: "button.test_name_reboot"},
@@ -119,7 +119,7 @@ async def test_rpc_button_reauth_error(
 
     assert entry.state is ConfigEntryState.LOADED
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
 
     flow = flows[0]
@@ -140,7 +140,7 @@ async def test_rpc_button_reauth_error(
     ],
 )
 async def test_migrate_unique_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_block_device: Mock,
     mock_rpc_device: Mock,
     entity_registry: EntityRegistry,
@@ -151,7 +151,7 @@ async def test_migrate_unique_id(
     migration: bool,
 ) -> None:
     """Test migration of unique_id."""
-    entry = await init_integration(hass, gen, skip_setup=True)
+    entry = await init_integration(menuai, gen, skip_setup=True)
 
     entity = entity_registry.async_get_or_create(
         suggested_object_id="test_name_reboot",
@@ -163,8 +163,8 @@ async def test_migrate_unique_id(
     )
     assert entity.unique_id == old_unique_id
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     entity_entry = entity_registry.async_get("button.test_name_reboot")
     assert entity_entry
@@ -177,7 +177,7 @@ async def test_migrate_unique_id(
 
 
 async def test_rpc_blu_trv_button(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_blu_trv: Mock,
     entity_registry: EntityRegistry,
     monkeypatch: pytest.MonkeyPatch,
@@ -188,17 +188,17 @@ async def test_rpc_blu_trv_button(
     monkeypatch.delitem(mock_blu_trv.status, "script:2")
     monkeypatch.delitem(mock_blu_trv.status, "script:3")
 
-    await init_integration(hass, 3, model=MODEL_BLU_GATEWAY_G3)
+    await init_integration(menuai, 3, model=MODEL_BLU_GATEWAY_G3)
 
     entity_id = "button.trv_name_calibrate"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state == snapshot(name=f"{entity_id}-state")
 
     entry = entity_registry.async_get(entity_id)
     assert entry == snapshot(name=f"{entity_id}-entry")
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         BUTTON_DOMAIN,
         SERVICE_PRESS,
         {ATTR_ENTITY_ID: entity_id},
@@ -221,7 +221,7 @@ async def test_rpc_blu_trv_button(
     ],
 )
 async def test_rpc_blu_trv_button_exc(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_blu_trv: Mock,
     monkeypatch: pytest.MonkeyPatch,
     exception: Exception,
@@ -232,12 +232,12 @@ async def test_rpc_blu_trv_button_exc(
     monkeypatch.delitem(mock_blu_trv.status, "script:2")
     monkeypatch.delitem(mock_blu_trv.status, "script:3")
 
-    await init_integration(hass, 3, model=MODEL_BLU_GATEWAY_G3)
+    await init_integration(menuai, 3, model=MODEL_BLU_GATEWAY_G3)
 
     mock_blu_trv.trigger_blu_trv_calibration.side_effect = exception
 
-    with pytest.raises(HomeAssistantError, match=error):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match=error):
+        await menuai.services.async_call(
             BUTTON_DOMAIN,
             SERVICE_PRESS,
             {ATTR_ENTITY_ID: "button.trv_name_calibrate"},
@@ -246,7 +246,7 @@ async def test_rpc_blu_trv_button_exc(
 
 
 async def test_rpc_blu_trv_button_auth_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_blu_trv: Mock,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -255,11 +255,11 @@ async def test_rpc_blu_trv_button_auth_error(
     monkeypatch.delitem(mock_blu_trv.status, "script:2")
     monkeypatch.delitem(mock_blu_trv.status, "script:3")
 
-    entry = await init_integration(hass, 3, model=MODEL_BLU_GATEWAY_G3)
+    entry = await init_integration(menuai, 3, model=MODEL_BLU_GATEWAY_G3)
 
     mock_blu_trv.trigger_blu_trv_calibration.side_effect = InvalidAuthError
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         BUTTON_DOMAIN,
         SERVICE_PRESS,
         {ATTR_ENTITY_ID: "button.trv_name_calibrate"},
@@ -268,7 +268,7 @@ async def test_rpc_blu_trv_button_auth_error(
 
     assert entry.state is ConfigEntryState.LOADED
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
 
     flow = flows[0]

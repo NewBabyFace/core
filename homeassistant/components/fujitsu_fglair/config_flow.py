@@ -8,10 +8,10 @@ from ayla_iot_unofficial import AylaAuthError, new_ayla_api
 from ayla_iot_unofficial.fujitsu_consts import FGLAIR_APP_CREDENTIALS
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.helpers import aiohttp_client
-from homeassistant.helpers.selector import SelectSelector, SelectSelectorConfig
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.helpers import aiohttp_client
+from menuai.helpers.selector import SelectSelector, SelectSelectorConfig
 
 from .const import API_TIMEOUT, CONF_REGION, DOMAIN, REGION_DEFAULT, REGION_EU
 
@@ -53,7 +53,7 @@ class FGLairConfigFlow(ConfigFlow, domain=DOMAIN):
             app_id,
             app_secret,
             europe=user_input[CONF_REGION] == REGION_EU,
-            websession=aiohttp_client.async_get_clientsession(self.hass),
+            websession=aiohttp_client.async_get_clientsession(self.menuai),
             timeout=API_TIMEOUT,
         )
         try:

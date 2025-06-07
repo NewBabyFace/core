@@ -3,11 +3,11 @@
 from datetime import timedelta
 import logging
 
-from homeassistant.const import __version__ as HA_VERSION
+from menuai.const import __version__ as HA_VERSION
 
 LOGGER = logging.getLogger(__package__)
 
-APP_ID = f"homeassistant-{HA_VERSION}"
+APP_ID = f"menuai-{HA_VERSION}"
 
 DOMAIN = "hydrawise"
 DEFAULT_WATERING_TIME = timedelta(minutes=15)

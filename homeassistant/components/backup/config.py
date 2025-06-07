@@ -12,11 +12,11 @@ from typing import TYPE_CHECKING, Self, TypedDict
 
 from cronsim import CronSim
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import issue_registry as ir
-from homeassistant.helpers.event import async_call_later, async_track_point_in_time
-from homeassistant.helpers.typing import UNDEFINED, UndefinedType
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai, callback
+from menuai.helpers import issue_registry as ir
+from menuai.helpers.event import async_call_later, async_track_point_in_time
+from menuai.helpers.typing import UNDEFINED, UndefinedType
+from menuai.util import dt as dt_util
 
 from .const import DOMAIN, LOGGER
 from .models import BackupManagerError, Folder
@@ -160,7 +160,7 @@ class BackupConfigData:
 class BackupConfig:
     """Handle backup config."""
 
-    def __init__(self, hass: HomeAssistant, manager: BackupManager) -> None:
+    def __init__(self, menuai: menuai, manager: BackupManager) -> None:
         """Initialize backup config."""
         self.data = BackupConfigData(
             agents={},
@@ -169,7 +169,7 @@ class BackupConfig:
             retention=RetentionConfig(),
             schedule=BackupSchedule(),
         )
-        self._hass = hass
+        self._menuai = menuai
         self._manager = manager
 
     def load(self, stored_config: StoredBackupConfig) -> None:
@@ -226,7 +226,7 @@ class BackupConfig:
         if create_backup is not UNDEFINED:
             self.data.create_backup = replace(self.data.create_backup, **create_backup)
             if "agent_ids" in create_backup:
-                check_unavailable_agents(self._hass, self._manager)
+                check_unavailable_agents(self._menuai, self._manager)
         if retention is not UNDEFINED:
             new_retention = RetentionConfig(**retention)
             if new_retention != self.data.retention:
@@ -419,7 +419,7 @@ class RetentionConfig(BaseRetentionConfig):
             )
 
         manager.remove_next_delete_event = async_call_later(
-            manager.hass, timedelta(days=1), _delete_backups
+            manager.menuai, timedelta(days=1), _delete_backups
         )
 
     @callback
@@ -602,7 +602,7 @@ class BackupSchedule:
         LOGGER.debug("Scheduling next automatic backup at %s", next_time)
         self.next_automatic_backup = next_time
         manager.remove_next_backup_event = async_track_point_in_time(
-            manager.hass, _create_backup, next_time
+            manager.menuai, _create_backup, next_time
         )
 
     def to_dict(self) -> StoredBackupSchedule:
@@ -778,7 +778,7 @@ async def delete_backups_exceeding_configured_count(manager: BackupManager) -> N
 
 
 @callback
-def check_unavailable_agents(hass: HomeAssistant, manager: BackupManager) -> None:
+def check_unavailable_agents(menuai: menuai, manager: BackupManager) -> None:
     """Check for unavailable agents."""
     if missing_agent_ids := set(manager.config.data.create_backup.agent_ids) - set(
         manager.backup_agents
@@ -789,7 +789,7 @@ def check_unavailable_agents(hass: HomeAssistant, manager: BackupManager) -> Non
         )
 
     # Remove issues for unavailable agents that are not unavailable anymore.
-    issue_registry = ir.async_get(hass)
+    issue_registry = ir.async_get(menuai)
     existing_missing_agent_issue_ids = {
         issue_id
         for domain, issue_id in issue_registry.issues
@@ -803,14 +803,14 @@ def check_unavailable_agents(hass: HomeAssistant, manager: BackupManager) -> Non
     for issue_id in existing_missing_agent_issue_ids - set(
         current_missing_agent_issue_ids
     ):
-        ir.async_delete_issue(hass, DOMAIN, issue_id)
+        ir.async_delete_issue(menuai, DOMAIN, issue_id)
     for issue_id, agent_id in current_missing_agent_issue_ids.items():
         ir.async_create_issue(
-            hass,
+            menuai,
             DOMAIN,
             issue_id,
             is_fixable=False,
-            learn_more_url="homeassistant://config/backup",
+            learn_more_url="menuai://config/backup",
             severity=ir.IssueSeverity.WARNING,
             translation_key="automatic_backup_agents_unavailable",
             translation_placeholders={

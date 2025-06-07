@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Generator
 from typing import TYPE_CHECKING
 
-from homeassistant.exceptions import HomeAssistantError
+from menuai.exceptions import menuaiError
 
 from .core import Orientation
 
@@ -154,7 +154,7 @@ def find_moov(mp4_io: BufferedIOBase) -> int:
         mp4_io.seek(index)
         box_header = mp4_io.read(8)
         if len(box_header) != 8 or box_header[0:4] == b"\x00\x00\x00\x00":
-            raise HomeAssistantError("moov atom not found")
+            raise menuaiError("moov atom not found")
         if box_header[4:8] == b"moov":
             return index
         index += int.from_bytes(box_header[0:4], byteorder="big")

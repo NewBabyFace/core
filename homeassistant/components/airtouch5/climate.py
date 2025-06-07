@@ -21,7 +21,7 @@ from airtouch5py.packets.zone_control import (
 from airtouch5py.packets.zone_name import ZoneName
 from airtouch5py.packets.zone_status import ZonePowerState, ZoneStatusZone
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     FAN_AUTO,
     FAN_DIFFUSE,
     FAN_FOCUS,
@@ -34,10 +34,10 @@ from homeassistant.components.climate import (
     ClimateEntityFeature,
     HVACMode,
 )
-from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import ATTR_TEMPERATURE, UnitOfTemperature
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import Airtouch5ConfigEntry
 from .const import DOMAIN, FAN_INTELLIGENT_AUTO, FAN_TURBO
@@ -91,7 +91,7 @@ FAN_MODE_TO_SET_AC_FAN_SPEED = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: Airtouch5ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -201,15 +201,15 @@ class Airtouch5AC(Airtouch5ClimateEntity):
         self._attr_fan_mode = AC_FAN_SPEED_TO_FAN_SPEED[status.ac_fan_speed]
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Add data updated listener after this object has been initialized."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self._client.ac_status_callbacks.append(self._async_update_attrs)
         self._async_update_attrs(self._client.latest_ac_status)
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Remove data updated listener after this object has been initialized."""
-        await super().async_will_remove_from_hass()
+        await super().async_will_remove_from_menuai()
         self._client.ac_status_callbacks.remove(self._async_update_attrs)
 
     async def _control(
@@ -316,15 +316,15 @@ class Airtouch5Zone(Airtouch5ClimateEntity):
 
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Add data updated listener after this object has been initialized."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self._client.zone_status_callbacks.append(self._async_update_attrs)
         self._async_update_attrs(self._client.latest_zone_status)
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Remove data updated listener after this object has been initialized."""
-        await super().async_will_remove_from_hass()
+        await super().async_will_remove_from_menuai()
         self._client.zone_status_callbacks.remove(self._async_update_attrs)
 
     async def _control(

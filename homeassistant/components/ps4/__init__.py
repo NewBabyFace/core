@@ -10,22 +10,22 @@ from typing import TYPE_CHECKING
 from pyps4_2ndscreen.ddp import DDPProtocol, async_create_ddp_endpoint
 from pyps4_2ndscreen.media_art import COUNTRIES
 
-from homeassistant.components import persistent_notification
-from homeassistant.components.media_player import (
+from menuai.components import persistent_notification
+from menuai.components.media_player import (
     ATTR_MEDIA_CONTENT_TYPE,
     ATTR_MEDIA_TITLE,
     MediaType,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_LOCKED, CONF_REGION, CONF_TOKEN, Platform
-from homeassistant.core import HomeAssistant, split_entity_id
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.json import save_json
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util import location as location_util
-from homeassistant.util.json import JsonObjectType, load_json_object
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_LOCKED, CONF_REGION, CONF_TOKEN, Platform
+from menuai.core import menuai, split_entity_id
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.json import save_json
+from menuai.helpers.typing import ConfigType
+from menuai.util import location as location_util
+from menuai.util.json import JsonObjectType, load_json_object
 
 from .config_flow import PlayStation4FlowHandler  # noqa: F401
 from .const import ATTR_MEDIA_IMAGE_URL, COUNTRYCODE_NAMES, DOMAIN, GAMES_FILE, PS4_DATA
@@ -50,32 +50,32 @@ class PS4Data:
     protocol: DDPProtocol
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the PS4 Component."""
     transport, protocol = await async_create_ddp_endpoint()
-    hass.data[PS4_DATA] = PS4Data(
+    menuai.data[PS4_DATA] = PS4Data(
         devices=[],
         protocol=protocol,
     )
     _LOGGER.debug("PS4 DDP endpoint created: %s, %s", transport, protocol)
-    async_setup_services(hass)
+    async_setup_services(menuai)
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up PS4 from a config entry."""
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a PS4 config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
-async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_migrate_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Migrate old entry."""
-    config_entries = hass.config_entries
+    config_entries = menuai.config_entries
     data = entry.data
     version = entry.version
 
@@ -89,7 +89,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Migrate Version 1 -> Version 2: New region codes.
     if version == 1:
         loc = await location_util.async_detect_location_info(
-            async_get_clientsession(hass)
+            async_get_clientsession(menuai)
         )
         if loc:
             country = COUNTRYCODE_NAMES.get(loc.country_code)
@@ -106,7 +106,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Migrate Version 2 -> Version 3: Update identifier format.
     if version == 2:
         # Prevent changing entity_id. Updates entity registry.
-        registry = er.async_get(hass)
+        registry = er.async_get(menuai)
 
         for e_entry in registry.entities.get_entries_for_config_entry_id(
             entry.entry_id
@@ -142,7 +142,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             [here](/config/integrations)."""
 
     persistent_notification.async_create(
-        hass,
+        menuai,
         title="PlayStation 4 Integration Configuration Requires Update",
         message=msg,
         notification_id="config_entry_migration",
@@ -156,31 +156,31 @@ def format_unique_id(creds, mac_address):
     return f"{mac_address}_{suffix}"
 
 
-def load_games(hass: HomeAssistant, unique_id: str) -> JsonObjectType:
+def load_games(menuai: menuai, unique_id: str) -> JsonObjectType:
     """Load games for sources."""
-    g_file = hass.config.path(GAMES_FILE.format(unique_id))
+    g_file = menuai.config.path(GAMES_FILE.format(unique_id))
     try:
         games = load_json_object(g_file)
-    except HomeAssistantError as error:
+    except menuaiError as error:
         games = {}
         _LOGGER.error("Failed to load games file: %s", error)
 
     # If file exists
     if os.path.isfile(g_file):
-        games = _reformat_data(hass, games, unique_id)
+        games = _reformat_data(menuai, games, unique_id)
     return games
 
 
-def save_games(hass: HomeAssistant, games: dict, unique_id: str):
+def save_games(menuai: menuai, games: dict, unique_id: str):
     """Save games to file."""
-    g_file = hass.config.path(GAMES_FILE.format(unique_id))
+    g_file = menuai.config.path(GAMES_FILE.format(unique_id))
     try:
         save_json(g_file, games)
     except OSError as error:
         _LOGGER.error("Could not save game list, %s", error)
 
 
-def _reformat_data(hass: HomeAssistant, games: dict, unique_id: str) -> dict:
+def _reformat_data(menuai: menuai, games: dict, unique_id: str) -> dict:
     """Reformat data to correct format."""
     data_reformatted = False
 
@@ -199,5 +199,5 @@ def _reformat_data(hass: HomeAssistant, games: dict, unique_id: str) -> dict:
             _LOGGER.debug("Reformatting media data for item: %s, %s", game, data)
 
     if data_reformatted:
-        save_games(hass, games, unique_id)
+        save_games(menuai, games, unique_id)
     return games

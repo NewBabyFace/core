@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from odp_amsterdam import Garage, ODPAmsterdam, VehicleType
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN, LOGGER, SCAN_INTERVAL
 
@@ -20,13 +20,13 @@ class GaragesAmsterdamDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Gara
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: GaragesAmsterdamConfigEntry,
         client: ODPAmsterdam,
     ) -> None:
         """Initialize global Garages Amsterdam data updater."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name=DOMAIN,

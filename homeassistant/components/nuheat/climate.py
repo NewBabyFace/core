@@ -11,20 +11,20 @@ from nuheat.util import (
     nuheat_to_fahrenheit,
 )
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_HVAC_MODE,
     ClimateEntity,
     ClimateEntityFeature,
     HVACAction,
     HVACMode,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import event as event_helper
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_TEMPERATURE, UnitOfTemperature
+from menuai.core import menuai, callback
+from menuai.helpers import event as event_helper
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, MANUFACTURER, NUHEAT_API_STATE_SHIFT_DELAY
 
@@ -53,14 +53,14 @@ SCHEDULE_MODE_TO_PRESET_MODE_MAP = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the NuHeat thermostat(s)."""
-    thermostat, coordinator = hass.data[DOMAIN][config_entry.entry_id]
+    thermostat, coordinator = menuai.data[DOMAIN][config_entry.entry_id]
 
-    temperature_unit = hass.config.units.temperature_unit
+    temperature_unit = menuai.config.units.temperature_unit
     entity = NuHeatThermostat(coordinator, thermostat, temperature_unit)
 
     # No longer need a service as set_hvac_mode to auto does this
@@ -212,7 +212,7 @@ class NuHeatThermostat(CoordinatorEntity, ClimateEntity):
         self._schedule_update()
 
     def _schedule_update(self):
-        if not self.hass:
+        if not self.menuai:
             return
 
         # Update the new state
@@ -223,16 +223,16 @@ class NuHeatThermostat(CoordinatorEntity, ClimateEntity):
         # in the future to make sure the change actually
         # took effect
         event_helper.call_later(
-            self.hass, NUHEAT_API_STATE_SHIFT_DELAY, self._forced_refresh
+            self.menuai, NUHEAT_API_STATE_SHIFT_DELAY, self._forced_refresh
         )
 
     async def _forced_refresh(self, *_) -> None:
         """Force a refresh."""
         await self.coordinator.async_refresh()
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai."""
+        await super().async_added_to_menuai()
         self._update_internal_state()
 
     @callback

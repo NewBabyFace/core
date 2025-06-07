@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 from pyuptimerobot import UptimeRobotException
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .common import (
     MOCK_UPTIMEROBOT_ACCOUNT,
@@ -21,11 +21,11 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_entry_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test config entry diagnostics."""
-    entry = await setup_uptimerobot_integration(hass)
+    entry = await setup_uptimerobot_integration(menuai)
 
     with patch(
         "pyuptimerobot.UptimeRobot.async_get_account_details",
@@ -35,8 +35,8 @@ async def test_entry_diagnostics(
         ),
     ):
         result = await get_diagnostics_for_config_entry(
-            hass,
-            hass_client,
+            menuai,
+            menuai_client,
             entry,
         )
 
@@ -58,19 +58,19 @@ async def test_entry_diagnostics(
 
 
 async def test_entry_diagnostics_exception(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test config entry diagnostics with exception."""
-    entry = await setup_uptimerobot_integration(hass)
+    entry = await setup_uptimerobot_integration(menuai)
 
     with patch(
         "pyuptimerobot.UptimeRobot.async_get_account_details",
         side_effect=UptimeRobotException("Test exception"),
     ):
         result = await get_diagnostics_for_config_entry(
-            hass,
-            hass_client,
+            menuai,
+            menuai_client,
             entry,
         )
 

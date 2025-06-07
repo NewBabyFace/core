@@ -5,16 +5,16 @@ from __future__ import annotations
 from chip.clusters import Objects as clusters
 from matter_server.client.models import device_types
 
-from homeassistant.components.valve import (
+from menuai.components.valve import (
     ValveDeviceClass,
     ValveEntity,
     ValveEntityDescription,
     ValveEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .entity import MatterEntity
 from .helpers import get_matter
@@ -26,12 +26,12 @@ ValveStateEnum = ValveConfigurationAndControl.Enums.ValveStateEnum
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Matter valve platform from Config Entry."""
-    matter = get_matter(hass)
+    matter = get_matter(menuai)
     matter.register_platform_handler(Platform.VALVE, async_add_entities)
 
 

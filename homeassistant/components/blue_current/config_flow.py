@@ -14,8 +14,8 @@ from bluecurrent_api.exceptions import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_API_TOKEN
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_API_TOKEN
 
 from .const import DOMAIN, LOGGER
 

@@ -4,15 +4,15 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.recorder import CONF_DB_URL
-from homeassistant.components.sensor import (
+from menuai.components.recorder import CONF_DB_URL
+from menuai.components.sensor import (
     CONF_STATE_CLASS,
     SensorDeviceClass,
     SensorStateClass,
 )
-from homeassistant.components.sql.const import CONF_COLUMN_NAME, CONF_QUERY, DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import (
+from menuai.components.sql.const import CONF_COLUMN_NAME, CONF_QUERY, DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.const import (
     CONF_DEVICE_CLASS,
     CONF_ICON,
     CONF_NAME,
@@ -21,8 +21,8 @@ from homeassistant.const import (
     CONF_VALUE_TEMPLATE,
     UnitOfInformation,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.trigger_template_entity import (
+from menuai.core import menuai
+from menuai.helpers.trigger_template_entity import (
     CONF_AVAILABILITY,
     CONF_PICTURE,
 )
@@ -261,12 +261,12 @@ YAML_CONFIG_ALL_TEMPLATES = {
 
 
 async def init_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: dict[str, Any] | None = None,
     entry_id: str = "1",
     source: str = SOURCE_USER,
 ) -> MockConfigEntry:
-    """Set up the SQL integration in Home Assistant."""
+    """Set up the SQL integration in MenuAI."""
     if not config:
         config = ENTRY_CONFIG
 
@@ -278,8 +278,8 @@ async def init_integration(
         entry_id=entry_id,
     )
 
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     return config_entry

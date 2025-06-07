@@ -17,19 +17,19 @@ from bluetooth_adapters import (
 from habluetooth import get_manager
 import voluptuous as vol
 
-from homeassistant.components import onboarding
-from homeassistant.config_entries import (
+from menuai.components import onboarding
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.core import callback
-from homeassistant.helpers.schema_config_entry_flow import (
+from menuai.core import callback
+from menuai.helpers.schema_config_entry_flow import (
     SchemaFlowFormStep,
     SchemaOptionsFlowHandler,
 )
-from homeassistant.helpers.typing import DiscoveryInfoType
+from menuai.helpers.typing import DiscoveryInfoType
 
 from .const import (
     CONF_ADAPTER,
@@ -113,7 +113,7 @@ class BluetoothConfigFlow(ConfigFlow, domain=DOMAIN):
 
         address = details[ADAPTER_ADDRESS]
 
-        if user_input is not None or not onboarding.async_is_onboarded(self.hass):
+        if user_input is not None or not onboarding.async_is_onboarded(self.menuai):
             await self.async_set_unique_id(address, raise_on_progress=False)
             self._abort_if_unique_id_configured()
             return self.async_create_entry(
@@ -202,10 +202,10 @@ class BluetoothConfigFlow(ConfigFlow, domain=DOMAIN):
                 entry.data.get(CONF_SOURCE_CONFIG_ENTRY_ID) == source_config_entry_id
                 and entry.unique_id != source
             ):
-                self.hass.config_entries.async_update_entry(
+                self.menuai.config_entries.async_update_entry(
                     entry, unique_id=source, data={**entry.data, **data}
                 )
-                self.hass.config_entries.async_schedule_reload(entry.entry_id)
+                self.menuai.config_entries.async_schedule_reload(entry.entry_id)
                 return self.async_abort(reason="already_configured")
         scanner = get_manager().async_scanner_by_source(source)
         assert scanner is not None

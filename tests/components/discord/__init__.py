@@ -4,9 +4,9 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import nextcord
 
-from homeassistant.components.discord.const import DOMAIN
-from homeassistant.const import CONF_API_TOKEN, CONF_NAME
-from homeassistant.core import HomeAssistant
+from menuai.components.discord.const import DOMAIN
+from menuai.const import CONF_API_TOKEN, CONF_NAME
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -21,14 +21,14 @@ CONF_DATA = {
 }
 
 
-def create_entry(hass: HomeAssistant) -> MockConfigEntry:
-    """Add config entry in Home Assistant."""
+def create_entry(menuai: menuai) -> MockConfigEntry:
+    """Add config entry in MenuAI."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         data=CONF_DATA,
         unique_id="1234567890",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     return entry
 
 
@@ -38,14 +38,14 @@ def mocked_discord_info():
     mocked_discord.id = "1234567890"
     mocked_discord.name = NAME
     return patch(
-        "homeassistant.components.discord.config_flow.nextcord.Client.application_info",
+        "menuai.components.discord.config_flow.nextcord.Client.application_info",
         return_value=mocked_discord,
     )
 
 
 def patch_discord_login():
     """Patch discord info."""
-    return patch("homeassistant.components.discord.config_flow.nextcord.Client.login")
+    return patch("menuai.components.discord.config_flow.nextcord.Client.login")
 
 
 def mock_exception():

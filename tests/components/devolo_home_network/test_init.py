@@ -6,19 +6,19 @@ from devolo_plc_api.exceptions.device import DeviceNotFound
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.binary_sensor import DOMAIN as BINARY_SENSOR
-from homeassistant.components.button import DOMAIN as BUTTON
-from homeassistant.components.device_tracker import DOMAIN as DEVICE_TRACKER
-from homeassistant.components.devolo_home_network.const import DOMAIN
-from homeassistant.components.image import DOMAIN as IMAGE
-from homeassistant.components.sensor import DOMAIN as SENSOR
-from homeassistant.components.switch import DOMAIN as SWITCH
-from homeassistant.components.update import DOMAIN as UPDATE
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.entity_platform import async_get_platforms
+from menuai.components.binary_sensor import DOMAIN as BINARY_SENSOR
+from menuai.components.button import DOMAIN as BUTTON
+from menuai.components.device_tracker import DOMAIN as DEVICE_TRACKER
+from menuai.components.devolo_home_network.const import DOMAIN
+from menuai.components.image import DOMAIN as IMAGE
+from menuai.components.sensor import DOMAIN as SENSOR
+from menuai.components.switch import DOMAIN as SWITCH
+from menuai.components.update import DOMAIN as UPDATE
+from menuai.config_entries import ConfigEntryState
+from menuai.const import EVENT_menuai_STOP
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.helpers.entity_platform import async_get_platforms
 
 from . import configure_integration
 from .const import IP
@@ -29,7 +29,7 @@ from .mock import MockDevice
     "device", ["mock_device", "mock_repeater_device", "mock_ipv6_device"]
 )
 async def test_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     device: str,
     device_registry: dr.DeviceRegistry,
     snapshot: SnapshotAssertion,
@@ -37,9 +37,9 @@ async def test_setup_entry(
 ) -> None:
     """Test setup entry."""
     mock_device: MockDevice = request.getfixturevalue(device)
-    entry = configure_integration(hass)
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry = configure_integration(menuai)
+    assert await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
     assert entry.state is ConfigEntryState.LOADED
 
     device_info = device_registry.async_get_device(
@@ -48,34 +48,34 @@ async def test_setup_entry(
     assert device_info == snapshot
 
 
-async def test_setup_device_not_found(hass: HomeAssistant) -> None:
+async def test_setup_device_not_found(menuai: menuai) -> None:
     """Test setup entry."""
-    entry = configure_integration(hass)
+    entry = configure_integration(menuai)
     with patch(
-        "homeassistant.components.devolo_home_network.Device.async_connect",
+        "menuai.components.devolo_home_network.Device.async_connect",
         side_effect=DeviceNotFound(IP),
     ):
-        await hass.config_entries.async_setup(entry.entry_id)
+        await menuai.config_entries.async_setup(entry.entry_id)
         assert entry.state is ConfigEntryState.SETUP_RETRY
 
 
 @pytest.mark.usefixtures("mock_device")
-async def test_unload_entry(hass: HomeAssistant) -> None:
+async def test_unload_entry(menuai: menuai) -> None:
     """Test unload entry."""
-    entry = configure_integration(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
-    await hass.config_entries.async_unload(entry.entry_id)
+    entry = configure_integration(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
     assert entry.state is ConfigEntryState.NOT_LOADED
 
 
-async def test_hass_stop(hass: HomeAssistant, mock_device: MockDevice) -> None:
-    """Test homeassistant stop event."""
-    entry = configure_integration(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
-    await hass.async_block_till_done()
+async def test_menuai_stop(menuai: menuai, mock_device: MockDevice) -> None:
+    """Test menuai stop event."""
+    entry = configure_integration(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
+    menuai.bus.async_fire(EVENT_menuai_STOP)
+    await menuai.async_block_till_done()
     mock_device.async_disconnect.assert_called_once()
 
 
@@ -94,17 +94,17 @@ async def test_hass_stop(hass: HomeAssistant, mock_device: MockDevice) -> None:
     ],
 )
 async def test_platforms(
-    hass: HomeAssistant,
+    menuai: menuai,
     device: str,
     expected_platforms: set[str],
     request: pytest.FixtureRequest,
 ) -> None:
     """Test platform assembly."""
     request.getfixturevalue(device)
-    entry = configure_integration(hass)
+    entry = configure_integration(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
-    platforms = [platform.domain for platform in async_get_platforms(hass, DOMAIN)]
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
+    platforms = [platform.domain for platform in async_get_platforms(menuai, DOMAIN)]
     assert len(platforms) == len(expected_platforms)
     assert all(platform in platforms for platform in expected_platforms)

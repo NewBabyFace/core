@@ -6,10 +6,10 @@ from typing import Any
 from pysmappee import helper, mqtt
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_IP_ADDRESS
-from homeassistant.helpers import config_entry_oauth2_flow
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.config_entries import ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_IP_ADDRESS
+from menuai.helpers import config_entry_oauth2_flow
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from . import api
 from .const import (
@@ -89,13 +89,13 @@ class SmappeeFlowHandler(
         if helper.is_smappee_genius(self.serial_number):
             # next generation device, attempt connect to the local mqtt broker
             smappee_mqtt = mqtt.SmappeeLocalMqtt(serial_number=self.serial_number)
-            connect = await self.hass.async_add_executor_job(smappee_mqtt.start_attempt)
+            connect = await self.menuai.async_add_executor_job(smappee_mqtt.start_attempt)
             if not connect:
                 return self.async_abort(reason="cannot_connect")
         else:
             # legacy devices, without local mqtt broker, try api access
             smappee_api = api.api.SmappeeLocalApi(ip=self.ip_address)
-            logon = await self.hass.async_add_executor_job(smappee_api.logon)
+            logon = await self.menuai.async_add_executor_job(smappee_api.logon)
             if logon is None:
                 return self.async_abort(reason="cannot_connect")
 
@@ -162,9 +162,9 @@ class SmappeeFlowHandler(
 
         # Attempt 1: try to use the local api (older generation) to resolve host to serialnumber
         smappee_api = api.api.SmappeeLocalApi(ip=ip_address)
-        logon = await self.hass.async_add_executor_job(smappee_api.logon)
+        logon = await self.menuai.async_add_executor_job(smappee_api.logon)
         if logon is not None:
-            advanced_config = await self.hass.async_add_executor_job(
+            advanced_config = await self.menuai.async_add_executor_job(
                 smappee_api.load_advanced_config
             )
             for config_item in advanced_config:
@@ -173,14 +173,14 @@ class SmappeeFlowHandler(
         else:
             # Attempt 2: try to use the local mqtt broker (newer generation) to resolve host to serialnumber
             smappee_mqtt = mqtt.SmappeeLocalMqtt()
-            connect = await self.hass.async_add_executor_job(smappee_mqtt.start_attempt)
+            connect = await self.menuai.async_add_executor_job(smappee_mqtt.start_attempt)
             if not connect:
                 return self.async_abort(reason="cannot_connect")
 
-            serial_number = await self.hass.async_add_executor_job(
+            serial_number = await self.menuai.async_add_executor_job(
                 smappee_mqtt.start_and_wait_for_config
             )
-            await self.hass.async_add_executor_job(smappee_mqtt.stop)
+            await self.menuai.async_add_executor_job(smappee_mqtt.stop)
             if serial_number is None:
                 return self.async_abort(reason="cannot_connect")
 

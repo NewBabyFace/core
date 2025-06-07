@@ -1,6 +1,6 @@
 """Constants for Pterodactyl tests."""
 
-from homeassistant.const import CONF_API_KEY, CONF_URL
+from menuai.const import CONF_API_KEY, CONF_URL
 
 TEST_URL = "https://192.168.0.1:8080/"
 

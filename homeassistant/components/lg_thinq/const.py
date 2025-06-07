@@ -3,7 +3,7 @@
 from datetime import timedelta
 from typing import Final
 
-from homeassistant.const import UnitOfTemperature
+from menuai.const import UnitOfTemperature
 
 # Config flow
 DOMAIN = "lg_thinq"

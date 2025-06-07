@@ -1,23 +1,23 @@
-"""Test Home Assistant thread utils."""
+"""Test MenuAI thread utils."""
 
 import asyncio
 from unittest.mock import Mock, patch
 
 import pytest
 
-from homeassistant.core import HomeAssistant
-from homeassistant.util import thread
-from homeassistant.util.async_ import run_callback_threadsafe
-from homeassistant.util.thread import ThreadWithException
+from menuai.core import menuai
+from menuai.util import thread
+from menuai.util.async_ import run_callback_threadsafe
+from menuai.util.thread import ThreadWithException
 
 
-async def test_thread_with_exception_invalid(hass: HomeAssistant) -> None:
+async def test_thread_with_exception_invalid(menuai: menuai) -> None:
     """Test throwing an invalid thread exception."""
 
     finish_event = asyncio.Event()
 
     def _do_nothing(*_):
-        run_callback_threadsafe(hass.loop, finish_event.set)
+        run_callback_threadsafe(menuai.loop, finish_event.set)
 
     test_thread = ThreadWithException(target=_do_nothing)
     test_thread.start()
@@ -28,7 +28,7 @@ async def test_thread_with_exception_invalid(hass: HomeAssistant) -> None:
     test_thread.join()
 
 
-async def test_thread_not_started(hass: HomeAssistant) -> None:
+async def test_thread_not_started(menuai: menuai) -> None:
     """Test throwing when the thread is not started."""
 
     test_thread = ThreadWithException(target=lambda *_: None)
@@ -37,13 +37,13 @@ async def test_thread_not_started(hass: HomeAssistant) -> None:
         test_thread.raise_exc(TimeoutError)
 
 
-async def test_thread_fails_raise(hass: HomeAssistant) -> None:
+async def test_thread_fails_raise(menuai: menuai) -> None:
     """Test throwing after already ended."""
 
     finish_event = asyncio.Event()
 
     def _do_nothing(*_):
-        run_callback_threadsafe(hass.loop, finish_event.set)
+        run_callback_threadsafe(menuai.loop, finish_event.set)
 
     test_thread = ThreadWithException(target=_do_nothing)
     test_thread.start()
@@ -72,7 +72,7 @@ async def test_deadlock_safe_shutdown_no_threads() -> None:
         daemon_thread_mock,
     ]
 
-    with patch("homeassistant.util.threading.enumerate", return_value=mock_threads):
+    with patch("menuai.util.threading.enumerate", return_value=mock_threads):
         thread.deadlock_safe_shutdown()
 
     assert not dead_thread_mock.join.called
@@ -101,7 +101,7 @@ async def test_deadlock_safe_shutdown() -> None:
         exception_thread_mock,
     ]
 
-    with patch("homeassistant.util.threading.enumerate", return_value=mock_threads):
+    with patch("menuai.util.threading.enumerate", return_value=mock_threads):
         thread.deadlock_safe_shutdown()
 
     expected_timeout = thread.THREADING_SHUTDOWN_TIMEOUT / 2

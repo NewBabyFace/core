@@ -14,24 +14,24 @@ from typing import TYPE_CHECKING, Any, Literal, overload
 import voluptuous as vol
 import voluptuous_serialize
 
-from homeassistant.components import websocket_api
-from homeassistant.components.websocket_api import ActiveConnection
-from homeassistant.const import (
+from menuai.components import websocket_api
+from menuai.components.websocket_api import ActiveConnection
+from menuai.const import (
     ATTR_ENTITY_ID,
     CONF_DEVICE_ID,
     CONF_DOMAIN,
     CONF_ENTITY_ID,
     CONF_PLATFORM,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import (
+from menuai.core import menuai, callback
+from menuai.helpers import (
     config_validation as cv,
     device_registry as dr,
     entity_registry as er,
 )
-from homeassistant.helpers.typing import ConfigType, VolSchemaType
-from homeassistant.loader import IntegrationNotFound
-from homeassistant.requirements import (
+from menuai.helpers.typing import ConfigType, VolSchemaType
+from menuai.loader import IntegrationNotFound
+from menuai.requirements import (
     RequirementsNotFound,
     async_get_integration_with_requirements,
 )
@@ -100,7 +100,7 @@ class DeviceAutomationType(Enum):
     )
 
 
-# TYPES is deprecated as of Home Assistant 2022.2, use DeviceAutomationType instead
+# TYPES is deprecated as of MenuAI 2022.2, use DeviceAutomationType instead
 TYPES = {
     "trigger": DeviceAutomationType.TRIGGER.value,
     "condition": DeviceAutomationType.CONDITION.value,
@@ -108,30 +108,30 @@ TYPES = {
 }
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up device automation."""
-    websocket_api.async_register_command(hass, websocket_device_automation_list_actions)
+    websocket_api.async_register_command(menuai, websocket_device_automation_list_actions)
     websocket_api.async_register_command(
-        hass, websocket_device_automation_list_conditions
+        menuai, websocket_device_automation_list_conditions
     )
     websocket_api.async_register_command(
-        hass, websocket_device_automation_list_triggers
+        menuai, websocket_device_automation_list_triggers
     )
     websocket_api.async_register_command(
-        hass, websocket_device_automation_get_action_capabilities
+        menuai, websocket_device_automation_get_action_capabilities
     )
     websocket_api.async_register_command(
-        hass, websocket_device_automation_get_condition_capabilities
+        menuai, websocket_device_automation_get_condition_capabilities
     )
     websocket_api.async_register_command(
-        hass, websocket_device_automation_get_trigger_capabilities
+        menuai, websocket_device_automation_get_trigger_capabilities
     )
     return True
 
 
 @overload
 async def async_get_device_automation_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     domain: str,
     automation_type: Literal[DeviceAutomationType.TRIGGER],
 ) -> DeviceAutomationTriggerProtocol: ...
@@ -139,7 +139,7 @@ async def async_get_device_automation_platform(
 
 @overload
 async def async_get_device_automation_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     domain: str,
     automation_type: Literal[DeviceAutomationType.CONDITION],
 ) -> DeviceAutomationConditionProtocol: ...
@@ -147,7 +147,7 @@ async def async_get_device_automation_platform(
 
 @overload
 async def async_get_device_automation_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     domain: str,
     automation_type: Literal[DeviceAutomationType.ACTION],
 ) -> DeviceAutomationActionProtocol: ...
@@ -155,12 +155,12 @@ async def async_get_device_automation_platform(
 
 @overload
 async def async_get_device_automation_platform(
-    hass: HomeAssistant, domain: str, automation_type: DeviceAutomationType
+    menuai: menuai, domain: str, automation_type: DeviceAutomationType
 ) -> DeviceAutomationPlatformType: ...
 
 
 async def async_get_device_automation_platform(
-    hass: HomeAssistant, domain: str, automation_type: DeviceAutomationType
+    menuai: menuai, domain: str, automation_type: DeviceAutomationType
 ) -> DeviceAutomationPlatformType:
     """Load device automation platform for integration.
 
@@ -168,7 +168,7 @@ async def async_get_device_automation_platform(
     """
     platform_name = automation_type.value.section
     try:
-        integration = await async_get_integration_with_requirements(hass, domain)
+        integration = await async_get_integration_with_requirements(menuai, domain)
         platform = await integration.async_get_platform(platform_name)
     except IntegrationNotFound as err:
         raise InvalidDeviceAutomationConfig(
@@ -189,7 +189,7 @@ async def async_get_device_automation_platform(
 
 @callback
 def _async_set_entity_device_automation_metadata(
-    hass: HomeAssistant, automation: dict[str, Any]
+    menuai: menuai, automation: dict[str, Any]
 ) -> None:
     """Set device automation metadata based on entity registry entry data."""
     if "metadata" not in automation:
@@ -197,7 +197,7 @@ def _async_set_entity_device_automation_metadata(
     if ATTR_ENTITY_ID not in automation or "secondary" in automation["metadata"]:
         return
 
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
     # Guard against the entry being removed before this is called
     if not (entry := entity_registry.async_get(automation[ATTR_ENTITY_ID])):
         return
@@ -206,7 +206,7 @@ def _async_set_entity_device_automation_metadata(
 
 
 async def _async_get_device_automations_from_domain(
-    hass: HomeAssistant,
+    menuai: menuai,
     domain: str,
     automation_type: DeviceAutomationType,
     device_ids: Iterable[str],
@@ -215,7 +215,7 @@ async def _async_get_device_automations_from_domain(
     """List device automations."""
     try:
         platform = await async_get_device_automation_platform(
-            hass, domain, automation_type
+            menuai, domain, automation_type
         )
     except InvalidDeviceAutomationConfig:
         return []
@@ -224,7 +224,7 @@ async def _async_get_device_automations_from_domain(
 
     return await asyncio.gather(  # type: ignore[no-any-return]
         *(
-            getattr(platform, function_name)(hass, device_id)
+            getattr(platform, function_name)(menuai, device_id)
             for device_id in device_ids
         ),
         return_exceptions=return_exceptions,
@@ -232,13 +232,13 @@ async def _async_get_device_automations_from_domain(
 
 
 async def async_get_device_automations(
-    hass: HomeAssistant,
+    menuai: menuai,
     automation_type: DeviceAutomationType,
     device_ids: Iterable[str] | None = None,
 ) -> Mapping[str, list[dict[str, Any]]]:
     """List device automations."""
-    device_registry = dr.async_get(hass)
-    entity_registry = er.async_get(hass)
+    device_registry = dr.async_get(menuai)
+    entity_registry = er.async_get(menuai)
     domain_devices: dict[str, set[str]] = {}
     device_entities_domains: dict[str, set[str]] = {}
     match_device_ids = set(device_ids or device_registry.devices)
@@ -253,7 +253,7 @@ async def async_get_device_automations(
         if (device := device_registry.async_get(device_id)) is None:
             raise DeviceNotFound
         for entry_id in device.config_entries:
-            if config_entry := hass.config_entries.async_get_entry(entry_id):
+            if config_entry := menuai.config_entries.async_get_entry(entry_id):
                 domain_devices.setdefault(config_entry.domain, set()).add(device_id)
         for domain in device_entities_domains.get(device_id, []):
             domain_devices.setdefault(domain, set()).add(device_id)
@@ -266,7 +266,7 @@ async def async_get_device_automations(
     for domain_results in await asyncio.gather(
         *(
             _async_get_device_automations_from_domain(
-                hass, domain, automation_type, domain_device_ids, return_exceptions
+                menuai, domain, automation_type, domain_device_ids, return_exceptions
             )
             for domain, domain_device_ids in domain_devices.items()
         )
@@ -284,21 +284,21 @@ async def async_get_device_automations(
                 )
                 continue
             for automation in device_results:
-                _async_set_entity_device_automation_metadata(hass, automation)
+                _async_set_entity_device_automation_metadata(menuai, automation)
                 combined_results[automation["device_id"]].append(automation)
 
     return combined_results
 
 
 async def _async_get_device_automation_capabilities(
-    hass: HomeAssistant,
+    menuai: menuai,
     automation_type: DeviceAutomationType,
     automation: Mapping[str, Any],
 ) -> dict[str, Any]:
     """List device automations."""
     try:
         platform = await async_get_device_automation_platform(
-            hass, automation[CONF_DOMAIN], automation_type
+            menuai, automation[CONF_DOMAIN], automation_type
         )
     except InvalidDeviceAutomationConfig:
         return {}
@@ -310,7 +310,7 @@ async def _async_get_device_automation_capabilities(
         return {}
 
     try:
-        capabilities = await getattr(platform, function_name)(hass, automation)
+        capabilities = await getattr(platform, function_name)(menuai, automation)
     except (EntityNotFound, InvalidDeviceAutomationConfig):
         return {}
 
@@ -328,10 +328,10 @@ async def _async_get_device_automation_capabilities(
 
 @callback
 def async_get_entity_registry_entry_or_raise(
-    hass: HomeAssistant, entity_registry_id: str
+    menuai: menuai, entity_registry_id: str
 ) -> er.RegistryEntry:
     """Get an entity registry entry from entry ID or raise."""
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
     entry = entity_registry.async_get(entity_registry_id)
     if entry is None:
         raise EntityNotFound
@@ -340,12 +340,12 @@ def async_get_entity_registry_entry_or_raise(
 
 @callback
 def async_validate_entity_schema(
-    hass: HomeAssistant, config: ConfigType, schema: VolSchemaType
+    menuai: menuai, config: ConfigType, schema: VolSchemaType
 ) -> ConfigType:
     """Validate schema and resolve entity registry entry id to entity_id."""
     config = schema(config)
 
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     if CONF_ENTITY_ID in config:
         config[CONF_ENTITY_ID] = er.async_resolve_entity_id(
             registry, config[CONF_ENTITY_ID]
@@ -355,18 +355,18 @@ def async_validate_entity_schema(
 
 
 def handle_device_errors(
-    func: Callable[[HomeAssistant, ActiveConnection, dict[str, Any]], Awaitable[None]],
+    func: Callable[[menuai, ActiveConnection, dict[str, Any]], Awaitable[None]],
 ) -> Callable[
-    [HomeAssistant, ActiveConnection, dict[str, Any]], Coroutine[Any, Any, None]
+    [menuai, ActiveConnection, dict[str, Any]], Coroutine[Any, Any, None]
 ]:
     """Handle device automation errors."""
 
     @wraps(func)
     async def with_error_handling(
-        hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+        menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
     ) -> None:
         try:
-            await func(hass, connection, msg)
+            await func(menuai, connection, msg)
         except DeviceNotFound:
             connection.send_error(
                 msg["id"], websocket_api.ERR_NOT_FOUND, "Device not found"
@@ -384,13 +384,13 @@ def handle_device_errors(
 @websocket_api.async_response
 @handle_device_errors
 async def websocket_device_automation_list_actions(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle request for device actions."""
     device_id = msg["device_id"]
     actions = (
         await async_get_device_automations(
-            hass, DeviceAutomationType.ACTION, [device_id]
+            menuai, DeviceAutomationType.ACTION, [device_id]
         )
     ).get(device_id)
     connection.send_result(msg["id"], actions)
@@ -405,13 +405,13 @@ async def websocket_device_automation_list_actions(
 @websocket_api.async_response
 @handle_device_errors
 async def websocket_device_automation_list_conditions(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle request for device conditions."""
     device_id = msg["device_id"]
     conditions = (
         await async_get_device_automations(
-            hass, DeviceAutomationType.CONDITION, [device_id]
+            menuai, DeviceAutomationType.CONDITION, [device_id]
         )
     ).get(device_id)
     connection.send_result(msg["id"], conditions)
@@ -426,13 +426,13 @@ async def websocket_device_automation_list_conditions(
 @websocket_api.async_response
 @handle_device_errors
 async def websocket_device_automation_list_triggers(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle request for device triggers."""
     device_id = msg["device_id"]
     triggers = (
         await async_get_device_automations(
-            hass, DeviceAutomationType.TRIGGER, [device_id]
+            menuai, DeviceAutomationType.TRIGGER, [device_id]
         )
     ).get(device_id)
     connection.send_result(msg["id"], triggers)
@@ -447,12 +447,12 @@ async def websocket_device_automation_list_triggers(
 @websocket_api.async_response
 @handle_device_errors
 async def websocket_device_automation_get_action_capabilities(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle request for device action capabilities."""
     action = msg["action"]
     capabilities = await _async_get_device_automation_capabilities(
-        hass, DeviceAutomationType.ACTION, action
+        menuai, DeviceAutomationType.ACTION, action
     )
     connection.send_result(msg["id"], capabilities)
 
@@ -468,12 +468,12 @@ async def websocket_device_automation_get_action_capabilities(
 @websocket_api.async_response
 @handle_device_errors
 async def websocket_device_automation_get_condition_capabilities(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle request for device condition capabilities."""
     condition = msg["condition"]
     capabilities = await _async_get_device_automation_capabilities(
-        hass, DeviceAutomationType.CONDITION, condition
+        menuai, DeviceAutomationType.CONDITION, condition
     )
     connection.send_result(msg["id"], capabilities)
 
@@ -492,11 +492,11 @@ async def websocket_device_automation_get_condition_capabilities(
 @websocket_api.async_response
 @handle_device_errors
 async def websocket_device_automation_get_trigger_capabilities(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle request for device trigger capabilities."""
     trigger = msg["trigger"]
     capabilities = await _async_get_device_automation_capabilities(
-        hass, DeviceAutomationType.TRIGGER, trigger
+        menuai, DeviceAutomationType.TRIGGER, trigger
     )
     connection.send_result(msg["id"], capabilities)

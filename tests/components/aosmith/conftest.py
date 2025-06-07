@@ -15,10 +15,10 @@ from py_aosmith.models import (
 )
 import pytest
 
-from homeassistant.components.aosmith.const import DOMAIN
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
-from homeassistant.core import HomeAssistant
-from homeassistant.util.unit_system import US_CUSTOMARY_SYSTEM
+from menuai.components.aosmith.const import DOMAIN
+from menuai.const import CONF_EMAIL, CONF_PASSWORD
+from menuai.core import menuai
+from menuai.util.unit_system import US_CUSTOMARY_SYSTEM
 
 from tests.common import MockConfigEntry, async_load_json_object_fixture
 
@@ -130,7 +130,7 @@ def mock_config_entry() -> MockConfigEntry:
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.aosmith.async_setup_entry", return_value=True
+        "menuai.components.aosmith.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -161,7 +161,7 @@ def get_devices_fixture_has_vacation_mode() -> bool:
 
 @pytest.fixture
 async def mock_client(
-    hass: HomeAssistant,
+    menuai: menuai,
     get_devices_fixture_heat_pump: bool,
     get_devices_fixture_mode_pending: bool,
     get_devices_fixture_setpoint_pending: bool,
@@ -177,7 +177,7 @@ async def mock_client(
         )
     ]
     get_all_device_info_fixture = await async_load_json_object_fixture(
-        hass, "get_all_device_info.json", DOMAIN
+        menuai, "get_all_device_info.json", DOMAIN
     )
 
     client_mock = MagicMock(AOSmithAPIClient)
@@ -192,19 +192,19 @@ async def mock_client(
 
 @pytest.fixture
 async def init_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_client: MagicMock,
 ) -> MockConfigEntry:
     """Set up the integration for testing."""
-    hass.config.units = US_CUSTOMARY_SYSTEM
+    menuai.config.units = US_CUSTOMARY_SYSTEM
 
     with patch(
-        "homeassistant.components.aosmith.AOSmithAPIClient", return_value=mock_client
+        "menuai.components.aosmith.AOSmithAPIClient", return_value=mock_client
     ):
-        mock_config_entry.add_to_hass(hass)
+        mock_config_entry.add_to_menuai(menuai)
 
-        await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
         return mock_config_entry

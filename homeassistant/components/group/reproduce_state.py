@@ -5,14 +5,14 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Any
 
-from homeassistant.core import Context, HomeAssistant, State
-from homeassistant.helpers.state import async_reproduce_state
+from menuai.core import Context, menuai, State
+from menuai.helpers.state import async_reproduce_state
 
 from . import get_entity_ids
 
 
 async def async_reproduce_states(
-    hass: HomeAssistant,
+    menuai: menuai,
     states: Iterable[State],
     *,
     context: Context | None = None,
@@ -30,8 +30,8 @@ async def async_reproduce_states(
             context=state.context,
         )
         for state in states
-        for member in get_entity_ids(hass, state.entity_id)
+        for member in get_entity_ids(menuai, state.entity_id)
     ]
     await async_reproduce_state(
-        hass, states_copy, context=context, reproduce_options=reproduce_options
+        menuai, states_copy, context=context, reproduce_options=reproduce_options
     )

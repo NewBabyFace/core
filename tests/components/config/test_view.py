@@ -5,11 +5,11 @@ from contextlib import AbstractContextManager, nullcontext as does_not_raise
 
 import pytest
 
-from homeassistant.components.config import view
-from homeassistant.core import HomeAssistant
+from menuai.components.config import view
+from menuai.core import menuai
 
 
-async def _mock_validator(hass: HomeAssistant, key: str, data: dict) -> dict:
+async def _mock_validator(menuai: menuai, key: str, data: dict) -> dict:
     """Mock data validator."""
     return data
 
@@ -24,7 +24,7 @@ async def _mock_validator(hass: HomeAssistant, key: str, data: dict) -> dict:
     ],
 )
 async def test_view_requires_data_schema_or_validator(
-    hass: HomeAssistant,
+    menuai: menuai,
     data_schema: Callable | None,
     data_validator: Callable | None,
     expected_result: AbstractContextManager,

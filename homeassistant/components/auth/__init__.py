@@ -12,7 +12,7 @@ be in JSON as it's more readable.
 Exchange the authorization code retrieved from the login flow for tokens.
 
 {
-    "client_id": "https://hassbian.local:8123/",
+    "client_id": "https://menuaibian.local:8123/",
     "grant_type": "authorization_code",
     "code": "411ee2f916e648d691e937ae9344681e"
 }
@@ -27,7 +27,7 @@ used to authorize the refresh token.
     "expires_in": 1800,
     "refresh_token": "IJKLMNOPQRST",
     "token_type": "Bearer",
-    "ha_auth_provider": "homeassistant"
+    "ha_auth_provider": "menuai"
 }
 
 ## Grant type refresh_token
@@ -35,7 +35,7 @@ used to authorize the refresh token.
 Request a new access token using a refresh token.
 
 {
-    "client_id": "https://hassbian.local:8123/",
+    "client_id": "https://menuaibian.local:8123/",
     "grant_type": "refresh_token",
     "refresh_token": "IJKLMNOPQRST"
 }
@@ -82,7 +82,7 @@ The result payload likes
         "name": "John Doe",
         "is_owner": true,
         "credentials": [{
-            "auth_provider_type": "homeassistant",
+            "auth_provider_type": "menuai",
             "auth_provider_id": null
         }],
         "mfa_modules": [{
@@ -97,7 +97,7 @@ The result payload likes
 
 Send websocket command `auth/long_lived_access_token` will create
 a long-lived access token for current user. Access token will not be saved in
-Home Assistant. User need to record the token in secure place.
+MenuAI. User need to record the token in secure place.
 
 {
     "id": 11,
@@ -137,29 +137,29 @@ from aiohttp import web
 from multidict import MultiDictProxy
 import voluptuous as vol
 
-from homeassistant.auth import InvalidAuthError
-from homeassistant.auth.models import (
+from menuai.auth import InvalidAuthError
+from menuai.auth.models import (
     TOKEN_TYPE_LONG_LIVED_ACCESS_TOKEN,
     Credentials,
     RefreshToken,
     User,
 )
-from homeassistant.components import websocket_api
-from homeassistant.components.http import KEY_HASS
-from homeassistant.components.http.auth import (
+from menuai.components import websocket_api
+from menuai.components.http import KEY_menuai
+from menuai.components.http.auth import (
     async_sign_path,
     async_user_not_allowed_do_auth,
 )
-from homeassistant.components.http.ban import log_invalid_auth
-from homeassistant.components.http.data_validator import RequestDataValidator
-from homeassistant.components.http.view import HomeAssistantView
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.config_entry_oauth2_flow import OAuth2AuthorizeCallbackView
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.loader import bind_hass
-from homeassistant.util import dt as dt_util
-from homeassistant.util.hass_dict import HassKey
+from menuai.components.http.ban import log_invalid_auth
+from menuai.components.http.data_validator import RequestDataValidator
+from menuai.components.http.view import menuaiView
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.config_entry_oauth2_flow import OAuth2AuthorizeCallbackView
+from menuai.helpers.typing import ConfigType
+from menuai.loader import bind_menuai
+from menuai.util import dt as dt_util
+from menuai.util.menuai_dict import menuaiKey
 
 from . import indieauth, login_flow, mfa_setup_flow
 
@@ -167,46 +167,46 @@ DOMAIN = "auth"
 
 type StoreResultType = Callable[[str, Credentials], str]
 type RetrieveResultType = Callable[[str, str], Credentials | None]
-DATA_STORE: HassKey[StoreResultType] = HassKey(DOMAIN)
+DATA_STORE: menuaiKey[StoreResultType] = menuaiKey(DOMAIN)
 CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)
 
 DELETE_CURRENT_TOKEN_DELAY = 2
 
 
-@bind_hass
+@bind_menuai
 def create_auth_code(
-    hass: HomeAssistant, client_id: str, credential: Credentials
+    menuai: menuai, client_id: str, credential: Credentials
 ) -> str:
     """Create an authorization code to fetch tokens."""
-    return hass.data[DATA_STORE](client_id, credential)
+    return menuai.data[DATA_STORE](client_id, credential)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Component to allow users to login."""
     store_result, retrieve_result = _create_auth_code_store()
 
-    hass.data[DATA_STORE] = store_result
+    menuai.data[DATA_STORE] = store_result
 
-    hass.http.register_view(TokenView(retrieve_result))
-    hass.http.register_view(RevokeTokenView())
-    hass.http.register_view(LinkUserView(retrieve_result))
-    hass.http.register_view(OAuth2AuthorizeCallbackView())
+    menuai.http.register_view(TokenView(retrieve_result))
+    menuai.http.register_view(RevokeTokenView())
+    menuai.http.register_view(LinkUserView(retrieve_result))
+    menuai.http.register_view(OAuth2AuthorizeCallbackView())
 
-    websocket_api.async_register_command(hass, websocket_current_user)
-    websocket_api.async_register_command(hass, websocket_create_long_lived_access_token)
-    websocket_api.async_register_command(hass, websocket_refresh_tokens)
-    websocket_api.async_register_command(hass, websocket_delete_refresh_token)
-    websocket_api.async_register_command(hass, websocket_delete_all_refresh_tokens)
-    websocket_api.async_register_command(hass, websocket_sign_path)
-    websocket_api.async_register_command(hass, websocket_refresh_token_set_expiry)
+    websocket_api.async_register_command(menuai, websocket_current_user)
+    websocket_api.async_register_command(menuai, websocket_create_long_lived_access_token)
+    websocket_api.async_register_command(menuai, websocket_refresh_tokens)
+    websocket_api.async_register_command(menuai, websocket_delete_refresh_token)
+    websocket_api.async_register_command(menuai, websocket_delete_all_refresh_tokens)
+    websocket_api.async_register_command(menuai, websocket_sign_path)
+    websocket_api.async_register_command(menuai, websocket_refresh_token_set_expiry)
 
-    login_flow.async_setup(hass, store_result)
-    mfa_setup_flow.async_setup(hass)
+    login_flow.async_setup(menuai, store_result)
+    mfa_setup_flow.async_setup(menuai)
 
     return True
 
 
-class RevokeTokenView(HomeAssistantView):
+class RevokeTokenView(menuaiView):
     """View to revoke tokens."""
 
     url = "/auth/revoke"
@@ -216,7 +216,7 @@ class RevokeTokenView(HomeAssistantView):
 
     async def post(self, request: web.Request) -> web.Response:
         """Revoke a token."""
-        hass = request.app[KEY_HASS]
+        menuai = request.app[KEY_menuai]
         data = cast(MultiDictProxy[str], await request.post())
 
         # OAuth 2.0 Token Revocation [RFC7009]
@@ -226,16 +226,16 @@ class RevokeTokenView(HomeAssistantView):
         if (token := data.get("token")) is None:
             return web.Response(status=HTTPStatus.OK)
 
-        refresh_token = hass.auth.async_get_refresh_token_by_token(token)
+        refresh_token = menuai.auth.async_get_refresh_token_by_token(token)
 
         if refresh_token is None:
             return web.Response(status=HTTPStatus.OK)
 
-        hass.auth.async_remove_refresh_token(refresh_token)
+        menuai.auth.async_remove_refresh_token(refresh_token)
         return web.Response(status=HTTPStatus.OK)
 
 
-class TokenView(HomeAssistantView):
+class TokenView(menuaiView):
     """View to issue tokens."""
 
     url = "/auth/token"
@@ -250,7 +250,7 @@ class TokenView(HomeAssistantView):
     @log_invalid_auth
     async def post(self, request: web.Request) -> web.Response:
         """Grant a token."""
-        hass = request.app[KEY_HASS]
+        menuai = request.app[KEY_menuai]
         data = cast(MultiDictProxy[str], await request.post())
 
         grant_type = data.get("grant_type")
@@ -265,10 +265,10 @@ class TokenView(HomeAssistantView):
             return await RevokeTokenView.post(self, request)  # type: ignore[arg-type]
 
         if grant_type == "authorization_code":
-            return await self._async_handle_auth_code(hass, data, request)
+            return await self._async_handle_auth_code(menuai, data, request)
 
         if grant_type == "refresh_token":
-            return await self._async_handle_refresh_token(hass, data, request)
+            return await self._async_handle_refresh_token(menuai, data, request)
 
         return self.json(
             {"error": "unsupported_grant_type"}, status_code=HTTPStatus.BAD_REQUEST
@@ -276,7 +276,7 @@ class TokenView(HomeAssistantView):
 
     async def _async_handle_auth_code(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         data: MultiDictProxy[str],
         request: web.Request,
     ) -> web.Response:
@@ -302,9 +302,9 @@ class TokenView(HomeAssistantView):
                 status_code=HTTPStatus.BAD_REQUEST,
             )
 
-        user = await hass.auth.async_get_or_create_user(credential)
+        user = await menuai.auth.async_get_or_create_user(credential)
 
-        if user_access_error := async_user_not_allowed_do_auth(hass, user):
+        if user_access_error := async_user_not_allowed_do_auth(menuai, user):
             return self.json(
                 {
                     "error": "access_denied",
@@ -313,11 +313,11 @@ class TokenView(HomeAssistantView):
                 status_code=HTTPStatus.FORBIDDEN,
             )
 
-        refresh_token = await hass.auth.async_create_refresh_token(
+        refresh_token = await menuai.auth.async_create_refresh_token(
             user, client_id, credential=credential
         )
         try:
-            access_token = hass.auth.async_create_access_token(
+            access_token = menuai.auth.async_create_access_token(
                 refresh_token, request.remote
             )
         except InvalidAuthError as exc:
@@ -344,7 +344,7 @@ class TokenView(HomeAssistantView):
 
     async def _async_handle_refresh_token(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         data: MultiDictProxy[str],
         request: web.Request,
     ) -> web.Response:
@@ -361,7 +361,7 @@ class TokenView(HomeAssistantView):
                 {"error": "invalid_request"}, status_code=HTTPStatus.BAD_REQUEST
             )
 
-        refresh_token = hass.auth.async_get_refresh_token_by_token(token)
+        refresh_token = menuai.auth.async_get_refresh_token_by_token(token)
 
         if refresh_token is None:
             return self.json(
@@ -374,7 +374,7 @@ class TokenView(HomeAssistantView):
             )
 
         if user_access_error := async_user_not_allowed_do_auth(
-            hass, refresh_token.user
+            menuai, refresh_token.user
         ):
             return self.json(
                 {
@@ -385,7 +385,7 @@ class TokenView(HomeAssistantView):
             )
 
         try:
-            access_token = hass.auth.async_create_access_token(
+            access_token = menuai.auth.async_create_access_token(
                 refresh_token, request.remote
             )
         except InvalidAuthError as exc:
@@ -409,7 +409,7 @@ class TokenView(HomeAssistantView):
         )
 
 
-class LinkUserView(HomeAssistantView):
+class LinkUserView(menuaiView):
     """View to link existing users to new credentials."""
 
     url = "/auth/link_user"
@@ -422,15 +422,15 @@ class LinkUserView(HomeAssistantView):
     @RequestDataValidator(vol.Schema({"code": str, "client_id": str}))
     async def post(self, request: web.Request, data: dict[str, Any]) -> web.Response:
         """Link a user."""
-        hass = request.app[KEY_HASS]
-        user: User = request["hass_user"]
+        menuai = request.app[KEY_menuai]
+        user: User = request["menuai_user"]
 
         credentials = self._retrieve_credentials(data["client_id"], data["code"])
 
         if credentials is None:
             return self.json_message("Invalid code", status_code=HTTPStatus.BAD_REQUEST)
 
-        linked_user = await hass.auth.async_get_user_by_credentials(credentials)
+        linked_user = await menuai.auth.async_get_user_by_credentials(credentials)
         if linked_user != user and linked_user is not None:
             return self.json_message(
                 "Credential already linked", status_code=HTTPStatus.BAD_REQUEST
@@ -438,7 +438,7 @@ class LinkUserView(HomeAssistantView):
 
         # No-op if credential is already linked to the user it will be linked to
         if linked_user != user:
-            await hass.auth.async_link_user(user, credentials)
+            await menuai.auth.async_link_user(user, credentials)
         return self.json_message("User linked")
 
 
@@ -486,11 +486,11 @@ def _create_auth_code_store() -> tuple[StoreResultType, RetrieveResultType]:
 @websocket_api.ws_require_user()
 @websocket_api.async_response
 async def websocket_current_user(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Return the current user."""
     user = connection.user
-    enabled_modules = await hass.auth.async_get_enabled_mfa(user)
+    enabled_modules = await menuai.auth.async_get_enabled_mfa(user)
 
     connection.send_message(
         websocket_api.result_message(
@@ -513,7 +513,7 @@ async def websocket_current_user(
                         "name": module.name,
                         "enabled": module.id in enabled_modules,
                     }
-                    for module in hass.auth.auth_mfa_modules
+                    for module in menuai.auth.auth_mfa_modules
                 ],
             },
         )
@@ -531,10 +531,10 @@ async def websocket_current_user(
 @websocket_api.ws_require_user()
 @websocket_api.async_response
 async def websocket_create_long_lived_access_token(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Create or a long-lived access token."""
-    refresh_token = await hass.auth.async_create_refresh_token(
+    refresh_token = await menuai.auth.async_create_refresh_token(
         connection.user,
         client_name=msg["client_name"],
         client_icon=msg.get("client_icon"),
@@ -543,7 +543,7 @@ async def websocket_create_long_lived_access_token(
     )
 
     try:
-        access_token = hass.auth.async_create_access_token(refresh_token)
+        access_token = menuai.auth.async_create_access_token(refresh_token)
     except InvalidAuthError as exc:
         connection.send_error(msg["id"], websocket_api.ERR_UNAUTHORIZED, str(exc))
         return
@@ -555,7 +555,7 @@ async def websocket_create_long_lived_access_token(
 @websocket_api.ws_require_user()
 @callback
 def websocket_refresh_tokens(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Return metadata of users refresh tokens."""
     current_id = connection.refresh_token_id
@@ -599,7 +599,7 @@ def websocket_refresh_tokens(
 )
 @websocket_api.ws_require_user()
 def websocket_delete_refresh_token(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle a delete refresh token request."""
     refresh_token = connection.user.refresh_tokens.get(msg["refresh_token_id"])
@@ -608,7 +608,7 @@ def websocket_delete_refresh_token(
         connection.send_error(msg["id"], "invalid_token_id", "Received invalid token")
         return
 
-    hass.auth.async_remove_refresh_token(refresh_token)
+    menuai.auth.async_remove_refresh_token(refresh_token)
 
     connection.send_result(msg["id"], {})
 
@@ -623,7 +623,7 @@ def websocket_delete_refresh_token(
 )
 @websocket_api.ws_require_user()
 def websocket_delete_all_refresh_tokens(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle delete all refresh tokens request."""
     current_refresh_token: RefreshToken
@@ -642,7 +642,7 @@ def websocket_delete_all_refresh_tokens(
         if limit_token_types and token_type != token.token_type:
             continue
         try:
-            hass.auth.async_remove_refresh_token(token)
+            menuai.auth.async_remove_refresh_token(token)
         except Exception:
             getLogger(__name__).exception("Error during refresh token removal")
             remove_failed = True
@@ -661,27 +661,27 @@ def websocket_delete_all_refresh_tokens(
         close the connection.
 
         This is implemented as a tracked task to ensure the token
-        is still deleted if Home Assistant is shut down during
+        is still deleted if MenuAI is shut down during
         the delay.
 
         It should not be refactored to use a call_later as that
         would not be tracked and the token would not be deleted
-        if Home Assistant was shut down during the delay.
+        if MenuAI was shut down during the delay.
         """
         try:
             await asyncio.sleep(DELETE_CURRENT_TOKEN_DELAY)
         finally:
             # If the task is cancelled because we are shutting down, delete
             # the token right away.
-            hass.auth.async_remove_refresh_token(current_refresh_token)
+            menuai.auth.async_remove_refresh_token(current_refresh_token)
 
     if delete_current_token and (
         not limit_token_types or current_refresh_token.token_type == token_type
     ):
         # Deleting the token will close the connection so we need
         # to do it with a delay in a tracked task to ensure it still
-        # happens if Home Assistant is shutting down.
-        hass.async_create_task(_delete_current_token_soon())
+        # happens if MenuAI is shutting down.
+        menuai.async_create_task(_delete_current_token_soon())
 
 
 @websocket_api.websocket_command(
@@ -694,7 +694,7 @@ def websocket_delete_all_refresh_tokens(
 @websocket_api.ws_require_user()
 @callback
 def websocket_sign_path(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle a sign path request."""
     connection.send_message(
@@ -702,7 +702,7 @@ def websocket_sign_path(
             msg["id"],
             {
                 "path": async_sign_path(
-                    hass,
+                    menuai,
                     msg["path"],
                     timedelta(seconds=msg["expires"]),
                 )
@@ -721,7 +721,7 @@ def websocket_sign_path(
 )
 @websocket_api.ws_require_user()
 def websocket_refresh_token_set_expiry(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle a set expiry of a refresh token request."""
     refresh_token = connection.user.refresh_tokens.get(msg["refresh_token_id"])
@@ -730,5 +730,5 @@ def websocket_refresh_token_set_expiry(
         connection.send_error(msg["id"], "invalid_token_id", "Received invalid token")
         return
 
-    hass.auth.async_set_expiry(refresh_token, enable_expiry=msg["enable_expiry"])
+    menuai.auth.async_set_expiry(refresh_token, enable_expiry=msg["enable_expiry"])
     connection.send_result(msg["id"], {})

@@ -1,13 +1,13 @@
 """Constants for HERE Travel Time tests."""
 
-from homeassistant.components.here_travel_time.const import (
+from menuai.components.here_travel_time.const import (
     CONF_DESTINATION_LATITUDE,
     CONF_DESTINATION_LONGITUDE,
     CONF_ORIGIN_LATITUDE,
     CONF_ORIGIN_LONGITUDE,
     TRAVEL_MODE_CAR,
 )
-from homeassistant.const import CONF_API_KEY, CONF_MODE, CONF_NAME
+from menuai.const import CONF_API_KEY, CONF_MODE, CONF_NAME
 
 API_KEY = "test"
 

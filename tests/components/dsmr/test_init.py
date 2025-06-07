@@ -4,10 +4,10 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from homeassistant.components.dsmr.const import DOMAIN
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.dsmr.const import DOMAIN
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry
 
@@ -84,7 +84,7 @@ from tests.common import MockConfigEntry
     ],
 )
 async def test_migrate_unique_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     dsmr_connection_fixture: tuple[MagicMock, MagicMock, MagicMock],
     dsmr_version: str,
@@ -106,7 +106,7 @@ async def test_migrate_unique_id(
         },
     )
 
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
     entity: er.RegistryEntry = entity_registry.async_get_or_create(
         suggested_object_id="my_sensor",
@@ -118,8 +118,8 @@ async def test_migrate_unique_id(
     )
     assert entity.unique_id == old_unique_id
 
-    assert await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(mock_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert (
         entity_registry.async_get_entity_id(SENSOR_DOMAIN, DOMAIN, old_unique_id)

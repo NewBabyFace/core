@@ -3,11 +3,11 @@
 import pytest
 import requests_mock
 
-from homeassistant.components.switch import SERVICE_TURN_OFF, SERVICE_TURN_ON
-from homeassistant.components.wallbox.const import CHARGER_STATUS_ID_KEY
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
+from menuai.components.switch import SERVICE_TURN_OFF, SERVICE_TURN_ON
+from menuai.components.wallbox.const import CHARGER_STATUS_ID_KEY
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
 
 from . import authorisation_response, setup_integration
 from .const import MOCK_SWITCH_ENTITY_ID
@@ -16,13 +16,13 @@ from tests.common import MockConfigEntry
 
 
 async def test_wallbox_switch_class(
-    hass: HomeAssistant, entry: MockConfigEntry
+    menuai: menuai, entry: MockConfigEntry
 ) -> None:
     """Test wallbox switch class."""
 
-    await setup_integration(hass, entry)
+    await setup_integration(menuai, entry)
 
-    state = hass.states.get(MOCK_SWITCH_ENTITY_ID)
+    state = menuai.states.get(MOCK_SWITCH_ENTITY_ID)
     assert state
     assert state.state == "on"
 
@@ -38,7 +38,7 @@ async def test_wallbox_switch_class(
             status_code=200,
         )
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "switch",
             SERVICE_TURN_ON,
             {
@@ -47,7 +47,7 @@ async def test_wallbox_switch_class(
             blocking=True,
         )
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "switch",
             SERVICE_TURN_OFF,
             {
@@ -58,11 +58,11 @@ async def test_wallbox_switch_class(
 
 
 async def test_wallbox_switch_class_connection_error(
-    hass: HomeAssistant, entry: MockConfigEntry
+    menuai: menuai, entry: MockConfigEntry
 ) -> None:
     """Test wallbox switch class connection error."""
 
-    await setup_integration(hass, entry)
+    await setup_integration(menuai, entry)
 
     with requests_mock.Mocker() as mock_request:
         mock_request.get(
@@ -77,7 +77,7 @@ async def test_wallbox_switch_class_connection_error(
         )
 
         with pytest.raises(ConnectionError):
-            await hass.services.async_call(
+            await menuai.services.async_call(
                 "switch",
                 SERVICE_TURN_ON,
                 {
@@ -86,7 +86,7 @@ async def test_wallbox_switch_class_connection_error(
                 blocking=True,
             )
         with pytest.raises(ConnectionError):
-            await hass.services.async_call(
+            await menuai.services.async_call(
                 "switch",
                 SERVICE_TURN_OFF,
                 {
@@ -97,11 +97,11 @@ async def test_wallbox_switch_class_connection_error(
 
 
 async def test_wallbox_switch_class_authentication_error(
-    hass: HomeAssistant, entry: MockConfigEntry
+    menuai: menuai, entry: MockConfigEntry
 ) -> None:
     """Test wallbox switch class connection error."""
 
-    await setup_integration(hass, entry)
+    await setup_integration(menuai, entry)
 
     with requests_mock.Mocker() as mock_request:
         mock_request.get(
@@ -116,7 +116,7 @@ async def test_wallbox_switch_class_authentication_error(
         )
 
         with pytest.raises(ConfigEntryAuthFailed):
-            await hass.services.async_call(
+            await menuai.services.async_call(
                 "switch",
                 SERVICE_TURN_ON,
                 {
@@ -125,7 +125,7 @@ async def test_wallbox_switch_class_authentication_error(
                 blocking=True,
             )
         with pytest.raises(ConfigEntryAuthFailed):
-            await hass.services.async_call(
+            await menuai.services.async_call(
                 "switch",
                 SERVICE_TURN_OFF,
                 {

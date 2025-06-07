@@ -9,19 +9,19 @@ from typing import Any, cast
 
 import aiotractive
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_BATTERY_CHARGING,
     ATTR_BATTERY_LEVEL,
     CONF_EMAIL,
     CONF_PASSWORD,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     Platform,
 )
-from homeassistant.core import Event, HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.dispatcher import async_dispatcher_send
+from menuai.core import Event, menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.dispatcher import async_dispatcher_send
 
 from .const import (
     ATTR_ACTIVITY_LABEL,
@@ -77,14 +77,14 @@ class TractiveData:
 type TractiveConfigEntry = ConfigEntry[TractiveData]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: TractiveConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: TractiveConfigEntry) -> bool:
     """Set up tractive from a config entry."""
     data = entry.data
 
     client = aiotractive.Tractive(
         data[CONF_EMAIL],
         data[CONF_PASSWORD],
-        session=async_get_clientsession(hass),
+        session=async_get_clientsession(menuai),
         client_id=CLIENT_ID,
     )
     try:
@@ -96,7 +96,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: TractiveConfigEntry) -> 
         await client.close()
         raise ConfigEntryNotReady from error
 
-    tractive = TractiveClient(hass, client, creds["user_id"], entry)
+    tractive = TractiveClient(menuai, client, creds["user_id"], entry)
 
     try:
         trackable_objects = await client.trackable_objects()
@@ -112,13 +112,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: TractiveConfigEntry) -> 
 
     entry.runtime_data = TractiveData(tractive, filtered_trackables)
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     async def cancel_listen_task(_: Event) -> None:
         await tractive.unsubscribe()
 
     entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, cancel_listen_task)
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, cancel_listen_task)
     )
     entry.async_on_unload(tractive.unsubscribe)
 
@@ -157,9 +157,9 @@ async def _generate_trackables(
     return Trackables(tracker, trackable, tracker_details, hw_info, pos_report)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: TractiveConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: TractiveConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 class TractiveClient:
@@ -167,13 +167,13 @@ class TractiveClient:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         client: aiotractive.Tractive,
         user_id: str,
         config_entry: ConfigEntry,
     ) -> None:
         """Initialize the client."""
-        self._hass = hass
+        self._menuai = menuai
         self._client = client
         self._user_id = user_id
         self._last_hw_time = 0
@@ -246,7 +246,7 @@ class TractiveClient:
                     if bool(set(SWITCH_KEY_MAP.values()).intersection(event)):
                         self._send_switch_update(event)
             except aiotractive.exceptions.UnauthorizedError:
-                self._config_entry.async_start_reauth(self._hass)
+                self._config_entry.async_start_reauth(self._menuai)
                 await self.unsubscribe()
                 _LOGGER.error(
                     "Authentication failed for %s, try reconfiguring device",
@@ -267,7 +267,7 @@ class TractiveClient:
                 self._last_hw_time = 0
                 self._last_pos_time = 0
                 async_dispatcher_send(
-                    self._hass, f"{SERVER_UNAVAILABLE}-{self._user_id}"
+                    self._menuai, f"{SERVER_UNAVAILABLE}-{self._user_id}"
                 )
                 await asyncio.sleep(RECONNECT_INTERVAL.total_seconds())
                 server_was_unavailable = True
@@ -330,7 +330,7 @@ class TractiveClient:
         self, event_name: str, tracker_id: str, payload: dict[str, Any]
     ) -> None:
         async_dispatcher_send(
-            self._hass,
+            self._menuai,
             f"{event_name}-{tracker_id}",
             payload,
         )

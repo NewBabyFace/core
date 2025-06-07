@@ -2,17 +2,17 @@
 
 import pytest
 
-from homeassistant.components.lametric.const import DOMAIN
-from homeassistant.components.sensor import ATTR_STATE_CLASS, SensorStateClass
-from homeassistant.const import (
+from menuai.components.lametric.const import DOMAIN
+from menuai.components.sensor import ATTR_STATE_CLASS, SensorStateClass
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     ATTR_FRIENDLY_NAME,
     ATTR_UNIT_OF_MEASUREMENT,
     PERCENTAGE,
     EntityCategory,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 pytestmark = pytest.mark.usefixtures(
     "entity_registry_enabled_by_default", "init_integration"
@@ -20,12 +20,12 @@ pytestmark = pytest.mark.usefixtures(
 
 
 async def test_wifi_signal(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test the LaMetric Wi-Fi sensor."""
-    state = hass.states.get("sensor.frenck_s_lametric_wi_fi_signal")
+    state = menuai.states.get("sensor.frenck_s_lametric_wi_fi_signal")
     assert state
     assert state.attributes.get(ATTR_DEVICE_CLASS) is None
     assert state.attributes.get(ATTR_FRIENDLY_NAME) == "Frenck's LaMetric Wi-Fi signal"

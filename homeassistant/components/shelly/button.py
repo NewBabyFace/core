@@ -10,19 +10,19 @@ from typing import TYPE_CHECKING, Any, Final
 from aioshelly.const import BLU_TRV_IDENTIFIER, MODEL_BLU_GATEWAY_G3, RPC_GENERATIONS
 from aioshelly.exceptions import DeviceConnectionError, InvalidAuthError, RpcCallError
 
-from homeassistant.components.button import (
+from menuai.components.button import (
     ButtonDeviceClass,
     ButtonEntity,
     ButtonEntityDescription,
 )
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.util import slugify
+from menuai.const import EntityCategory
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
+from menuai.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
+from menuai.util import slugify
 
 from .const import DOMAIN, LOGGER, SHELLY_GAS_MODELS
 from .coordinator import ShellyBlockCoordinator, ShellyConfigEntry, ShellyRpcCoordinator
@@ -125,7 +125,7 @@ def async_migrate_unique_ids(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ShellyConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -141,7 +141,7 @@ async def async_setup_entry(
         assert coordinator is not None
 
     await er.async_migrate_entries(
-        hass, config_entry.entry_id, partial(async_migrate_unique_ids, coordinator)
+        menuai, config_entry.entry_id, partial(async_migrate_unique_ids, coordinator)
     )
 
     entities: list[ShellyButton | ShellyBluTrvButton] = []
@@ -194,7 +194,7 @@ class ShellyBaseButton(
             await self._press_method()
         except DeviceConnectionError as err:
             self.coordinator.last_update_success = False
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="device_communication_action_error",
                 translation_placeholders={
@@ -203,7 +203,7 @@ class ShellyBaseButton(
                 },
             ) from err
         except RpcCallError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="rpc_call_action_error",
                 translation_placeholders={

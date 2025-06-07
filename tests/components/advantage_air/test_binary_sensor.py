@@ -3,10 +3,10 @@
 from datetime import timedelta
 from unittest.mock import AsyncMock, patch
 
-from homeassistant.const import STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.util import dt as dt_util
+from menuai.const import STATE_OFF, STATE_ON
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.util import dt as dt_util
 
 from . import add_mock_config
 
@@ -14,17 +14,17 @@ from tests.common import async_fire_time_changed
 
 
 async def test_binary_sensor_async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_get: AsyncMock,
 ) -> None:
     """Test binary sensor setup."""
 
-    await add_mock_config(hass)
+    await add_mock_config(menuai)
 
     # Test First Air Filter
     entity_id = "binary_sensor.myzone_filter"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_OFF
 
@@ -34,7 +34,7 @@ async def test_binary_sensor_async_setup_entry(
 
     # Test Second Air Filter
     entity_id = "binary_sensor.mytemp_filter"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_ON
 
@@ -44,7 +44,7 @@ async def test_binary_sensor_async_setup_entry(
 
     # Test First Motion Sensor
     entity_id = "binary_sensor.myzone_zone_open_with_sensor_motion"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_ON
 
@@ -54,7 +54,7 @@ async def test_binary_sensor_async_setup_entry(
 
     # Test Second Motion Sensor
     entity_id = "binary_sensor.myzone_zone_closed_with_sensor_motion"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_OFF
 
@@ -65,19 +65,19 @@ async def test_binary_sensor_async_setup_entry(
     # Test First MyZone Sensor (disabled by default)
     entity_id = "binary_sensor.myzone_zone_open_with_sensor_myzone"
 
-    assert not hass.states.get(entity_id)
+    assert not menuai.states.get(entity_id)
 
     mock_get.reset_mock()
 
-    with patch("homeassistant.config_entries.RELOAD_AFTER_UPDATE_DELAY", 1):
+    with patch("menuai.config_entries.RELOAD_AFTER_UPDATE_DELAY", 1):
         entity_registry.async_update_entity(entity_id=entity_id, disabled_by=None)
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=2))
-        await hass.async_block_till_done(wait_background_tasks=True)
+        async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(seconds=2))
+        await menuai.async_block_till_done(wait_background_tasks=True)
         assert len(mock_get.mock_calls) == 1
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_ON
 
@@ -88,19 +88,19 @@ async def test_binary_sensor_async_setup_entry(
     # Test Second Motion Sensor (disabled by default)
     entity_id = "binary_sensor.myzone_zone_closed_with_sensor_myzone"
 
-    assert not hass.states.get(entity_id)
+    assert not menuai.states.get(entity_id)
 
     mock_get.reset_mock()
 
-    with patch("homeassistant.config_entries.RELOAD_AFTER_UPDATE_DELAY", 1):
+    with patch("menuai.config_entries.RELOAD_AFTER_UPDATE_DELAY", 1):
         entity_registry.async_update_entity(entity_id=entity_id, disabled_by=None)
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=2))
-        await hass.async_block_till_done(wait_background_tasks=True)
+        async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(seconds=2))
+        await menuai.async_block_till_done(wait_background_tasks=True)
         assert len(mock_get.mock_calls) == 1
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_OFF
 

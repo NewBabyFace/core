@@ -9,10 +9,10 @@ from typing import Any
 from pyrympro import CannotConnectError, RymPro, UnauthorizedError
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD, CONF_TOKEN, CONF_UNIQUE_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_EMAIL, CONF_PASSWORD, CONF_TOKEN, CONF_UNIQUE_ID
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN
 
@@ -26,13 +26,13 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
 )
 
 
-async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
+async def validate_input(menuai: menuai, data: dict[str, Any]) -> dict[str, Any]:
     """Validate the user input allows us to connect.
 
     Data has the keys from STEP_USER_DATA_SCHEMA with values provided by the user.
     """
 
-    rympro = RymPro(async_get_clientsession(hass))
+    rympro = RymPro(async_get_clientsession(menuai))
 
     token = await rympro.login(data[CONF_EMAIL], data[CONF_PASSWORD], "ha")
 
@@ -58,7 +58,7 @@ class RymproConfigFlow(ConfigFlow, domain=DOMAIN):
         errors = {}
 
         try:
-            info = await validate_input(self.hass, user_input)
+            info = await validate_input(self.menuai, user_input)
         except CannotConnectError:
             errors["base"] = "cannot_connect"
         except UnauthorizedError:

@@ -8,14 +8,14 @@ from unittest.mock import patch
 import aiounifi
 import pytest
 
-from homeassistant.components.unifi.const import DOMAIN
-from homeassistant.components.unifi.errors import AuthenticationRequired, CannotConnect
-from homeassistant.components.unifi.hub import get_unifi_api
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_HOST, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.util import dt as dt_util
+from menuai.components.unifi.const import DOMAIN
+from menuai.components.unifi.errors import AuthenticationRequired, CannotConnect
+from menuai.components.unifi.hub import get_unifi_api
+from menuai.config_entries import ConfigEntryState
+from menuai.const import CONF_HOST, Platform
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.util import dt as dt_util
 
 from .conftest import ConfigEntryFactoryType, WebsocketStateManager
 
@@ -29,7 +29,7 @@ async def test_hub_setup(
 ) -> None:
     """Successful setup."""
     with patch(
-        "homeassistant.config_entries.ConfigEntries.async_forward_entry_setups",
+        "menuai.config_entries.ConfigEntries.async_forward_entry_setups",
         return_value=True,
     ) as forward_entry_setup:
         config_entry = await config_entry_factory()
@@ -56,32 +56,32 @@ async def test_hub_setup(
 
 
 async def test_reset_after_successful_setup(
-    hass: HomeAssistant, config_entry_setup: MockConfigEntry
+    menuai: menuai, config_entry_setup: MockConfigEntry
 ) -> None:
     """Calling reset when the entry has been setup."""
     assert config_entry_setup.state is ConfigEntryState.LOADED
 
-    assert await hass.config_entries.async_unload(config_entry_setup.entry_id)
+    assert await menuai.config_entries.async_unload(config_entry_setup.entry_id)
     assert config_entry_setup.state is ConfigEntryState.NOT_LOADED
 
 
 async def test_reset_fails(
-    hass: HomeAssistant, config_entry_setup: MockConfigEntry
+    menuai: menuai, config_entry_setup: MockConfigEntry
 ) -> None:
     """Calling reset when the entry has been setup can return false."""
     assert config_entry_setup.state is ConfigEntryState.LOADED
 
     with patch(
-        "homeassistant.config_entries.ConfigEntries.async_forward_entry_unload",
+        "menuai.config_entries.ConfigEntries.async_forward_entry_unload",
         return_value=False,
     ):
-        assert not await hass.config_entries.async_unload(config_entry_setup.entry_id)
+        assert not await menuai.config_entries.async_unload(config_entry_setup.entry_id)
         assert config_entry_setup.state is ConfigEntryState.FAILED_UNLOAD
 
 
 @pytest.mark.usefixtures("mock_device_registry")
 async def test_connection_state_signalling(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry_factory: ConfigEntryFactoryType,
     mock_websocket_state: WebsocketStateManager,
     client_payload: list[dict[str, Any]],
@@ -99,15 +99,15 @@ async def test_connection_state_signalling(
     await config_entry_factory()
 
     # Controller is connected
-    assert hass.states.get("device_tracker.client").state == "home"
+    assert menuai.states.get("device_tracker.client").state == "home"
 
     await mock_websocket_state.disconnect()
     # Controller is disconnected
-    assert hass.states.get("device_tracker.client").state == "unavailable"
+    assert menuai.states.get("device_tracker.client").state == "unavailable"
 
     await mock_websocket_state.reconnect()
     # Controller is once again connected
-    assert hass.states.get("device_tracker.client").state == "home"
+    assert menuai.states.get("device_tracker.client").state == "home"
 
 
 async def test_reconnect_mechanism(
@@ -150,7 +150,7 @@ async def test_reconnect_mechanism_exceptions(
     with (
         patch("aiounifi.Controller.login", side_effect=exception),
         patch(
-            "homeassistant.components.unifi.hub.hub.UnifiWebsocket.reconnect"
+            "menuai.components.unifi.hub.hub.UnifiWebsocket.reconnect"
         ) as mock_reconnect,
     ):
         await mock_websocket_state.disconnect()
@@ -174,7 +174,7 @@ async def test_reconnect_mechanism_exceptions(
     ],
 )
 async def test_get_unifi_api_fails_to_connect(
-    hass: HomeAssistant,
+    menuai: menuai,
     side_effect: Exception,
     raised_exception: Exception,
     config_entry_data: MappingProxyType[str, Any],
@@ -184,4 +184,4 @@ async def test_get_unifi_api_fails_to_connect(
         patch("aiounifi.Controller.login", side_effect=side_effect),
         pytest.raises(raised_exception),
     ):
-        await get_unifi_api(hass, config_entry_data)
+        await get_unifi_api(menuai, config_entry_data)

@@ -7,10 +7,10 @@ from typing import Any
 
 from ohme import ApiException, OhmeApiClient
 
-from homeassistant.components.time import TimeEntity, TimeEntityDescription
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.time import TimeEntity, TimeEntityDescription
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import OhmeConfigEntry
@@ -42,7 +42,7 @@ TIME_DESCRIPTION = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: OhmeConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -72,7 +72,7 @@ class OhmeTime(OhmeEntity, TimeEntity):
         try:
             await self.entity_description.set_fn(self.coordinator.client, value)
         except ApiException as e:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_key="api_failed", translation_domain=DOMAIN
             ) from e
         await self.coordinator.async_request_refresh()

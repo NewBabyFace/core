@@ -9,13 +9,13 @@ from unittest.mock import MagicMock, Mock, call, patch, sentinel
 
 import pytest
 
-from homeassistant.components import usb
-from homeassistant.components.usb.models import USBDevice
-from homeassistant.const import EVENT_HOMEASSISTANT_STARTED, EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.service_info.usb import UsbServiceInfo
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.components import usb
+from menuai.components.usb.models import USBDevice
+from menuai.const import EVENT_menuai_STARTED, EVENT_menuai_STOP
+from menuai.core import menuai
+from menuai.helpers.service_info.usb import UsbServiceInfo
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from . import (
     force_usb_polling_watcher,  # noqa: F401
@@ -44,7 +44,7 @@ slae_sh_device = USBDevice(
 
 
 async def test_aiousbwatcher_discovery(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test that aiousbwatcher can discover a device without raising an exception."""
     new_usb = [{"domain": "test1", "vid": "3039"}, {"domain": "test2", "vid": "0FA0"}]
@@ -71,23 +71,23 @@ async def test_aiousbwatcher_discovery(
 
     with (
         patch("sys.platform", "linux"),
-        patch("homeassistant.components.usb.async_get_usb", return_value=new_usb),
+        patch("menuai.components.usb.async_get_usb", return_value=new_usb),
         patch_scanned_serial_ports(return_value=mock_ports),
         patch(
-            "homeassistant.components.usb.AIOUSBWatcher", return_value=MockAIOUSBWatcher
+            "menuai.components.usb.AIOUSBWatcher", return_value=MockAIOUSBWatcher
         ),
-        patch.object(hass.config_entries.flow, "async_init") as mock_config_flow,
+        patch.object(menuai.config_entries.flow, "async_init") as mock_config_flow,
     ):
-        assert await async_setup_component(hass, "usb", {"usb": {}})
-        await hass.async_block_till_done()
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, "usb", {"usb": {}})
+        await menuai.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
+        await menuai.async_block_till_done()
 
         assert aiousbwatcher_callback is not None
 
         assert len(mock_config_flow.mock_calls) == 1
         assert mock_config_flow.mock_calls[0][1][0] == "test1"
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         assert len(mock_config_flow.mock_calls) == 1
 
         mock_ports.append(
@@ -102,23 +102,23 @@ async def test_aiousbwatcher_discovery(
         )
 
         aiousbwatcher_callback()
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         async_fire_time_changed(
-            hass, dt_util.utcnow() + timedelta(seconds=usb.ADD_REMOVE_SCAN_COOLDOWN)
+            menuai, dt_util.utcnow() + timedelta(seconds=usb.ADD_REMOVE_SCAN_COOLDOWN)
         )
-        await hass.async_block_till_done(wait_background_tasks=True)
+        await menuai.async_block_till_done(wait_background_tasks=True)
 
         assert len(mock_config_flow.mock_calls) == 2
         assert mock_config_flow.mock_calls[1][1][0] == "test2"
 
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
-        await hass.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STOP)
+        await menuai.async_block_till_done()
 
 
 @pytest.mark.usefixtures("force_usb_polling_watcher")
 async def test_polling_discovery(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test that polling can discover a device without raising an exception."""
     new_usb = [{"domain": "test1", "vid": "3039"}]
@@ -146,32 +146,32 @@ async def test_polling_discovery(
     with (
         patch("sys.platform", "linux"),
         patch(
-            "homeassistant.components.usb.POLLING_MONITOR_SCAN_PERIOD",
+            "menuai.components.usb.POLLING_MONITOR_SCAN_PERIOD",
             timedelta(seconds=0.01),
         ),
-        patch("homeassistant.components.usb.async_get_usb", return_value=new_usb),
+        patch("menuai.components.usb.async_get_usb", return_value=new_usb),
         patch_scanned_serial_ports(side_effect=scan_serial_ports) as mock_ports,
-        patch.object(hass.config_entries.flow, "async_init") as mock_config_flow,
+        patch.object(menuai.config_entries.flow, "async_init") as mock_config_flow,
     ):
-        assert await async_setup_component(hass, "usb", {"usb": {}})
-        await hass.async_block_till_done()
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, "usb", {"usb": {}})
+        await menuai.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
+        await menuai.async_block_till_done()
 
         # Wait until a new device is discovered after a few polling attempts
         assert len(mock_config_flow.mock_calls) == 0
         await mock_comports_found_device.wait()
-        await hass.async_block_till_done(wait_background_tasks=True)
+        await menuai.async_block_till_done(wait_background_tasks=True)
 
     assert len(mock_config_flow.mock_calls) == 1
     assert mock_config_flow.mock_calls[0][1][0] == "test1"
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire(EVENT_menuai_STOP)
+    await menuai.async_block_till_done()
 
 
 @pytest.mark.usefixtures("force_usb_polling_watcher")
-async def test_removal_by_aiousbwatcher_before_started(hass: HomeAssistant) -> None:
+async def test_removal_by_aiousbwatcher_before_started(menuai: menuai) -> None:
     """Test a device is removed by the aiousbwatcher before started."""
     new_usb = [{"domain": "test1", "vid": "3039", "pid": "3039"}]
 
@@ -187,26 +187,26 @@ async def test_removal_by_aiousbwatcher_before_started(hass: HomeAssistant) -> N
     ]
 
     with (
-        patch("homeassistant.components.usb.async_get_usb", return_value=new_usb),
+        patch("menuai.components.usb.async_get_usb", return_value=new_usb),
         patch_scanned_serial_ports(return_value=mock_ports),
-        patch.object(hass.config_entries.flow, "async_init") as mock_config_flow,
+        patch.object(menuai.config_entries.flow, "async_init") as mock_config_flow,
     ):
-        assert await async_setup_component(hass, "usb", {"usb": {}})
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, "usb", {"usb": {}})
+        await menuai.async_block_till_done()
 
     with patch_scanned_serial_ports(return_value=[]):
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-        await hass.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
+        await menuai.async_block_till_done()
 
     assert len(mock_config_flow.mock_calls) == 0
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire(EVENT_menuai_STOP)
+    await menuai.async_block_till_done()
 
 
 @pytest.mark.usefixtures("force_usb_polling_watcher")
 async def test_discovered_by_websocket_scan(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test a device is discovered from websocket scan."""
     new_usb = [{"domain": "test1", "vid": "3039", "pid": "3039"}]
@@ -223,19 +223,19 @@ async def test_discovered_by_websocket_scan(
     ]
 
     with (
-        patch("homeassistant.components.usb.async_get_usb", return_value=new_usb),
+        patch("menuai.components.usb.async_get_usb", return_value=new_usb),
         patch_scanned_serial_ports(return_value=mock_ports),
-        patch.object(hass.config_entries.flow, "async_init") as mock_config_flow,
+        patch.object(menuai.config_entries.flow, "async_init") as mock_config_flow,
     ):
-        assert await async_setup_component(hass, "usb", {"usb": {}})
-        await hass.async_block_till_done()
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-        await hass.async_block_till_done()
-        ws_client = await hass_ws_client(hass)
+        assert await async_setup_component(menuai, "usb", {"usb": {}})
+        await menuai.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
+        await menuai.async_block_till_done()
+        ws_client = await menuai_ws_client(menuai)
         await ws_client.send_json({"id": 1, "type": "usb/scan"})
         response = await ws_client.receive_json()
         assert response["success"]
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_config_flow.mock_calls) == 1
     assert mock_config_flow.mock_calls[0][1][0] == "test1"
@@ -243,7 +243,7 @@ async def test_discovered_by_websocket_scan(
 
 @pytest.mark.usefixtures("force_usb_polling_watcher")
 async def test_discovered_by_websocket_scan_limited_by_description_matcher(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test a device is discovered from websocket scan is limited by the description matcher."""
     new_usb = [
@@ -262,19 +262,19 @@ async def test_discovered_by_websocket_scan_limited_by_description_matcher(
     ]
 
     with (
-        patch("homeassistant.components.usb.async_get_usb", return_value=new_usb),
+        patch("menuai.components.usb.async_get_usb", return_value=new_usb),
         patch_scanned_serial_ports(return_value=mock_ports),
-        patch.object(hass.config_entries.flow, "async_init") as mock_config_flow,
+        patch.object(menuai.config_entries.flow, "async_init") as mock_config_flow,
     ):
-        assert await async_setup_component(hass, "usb", {"usb": {}})
-        await hass.async_block_till_done()
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-        await hass.async_block_till_done()
-        ws_client = await hass_ws_client(hass)
+        assert await async_setup_component(menuai, "usb", {"usb": {}})
+        await menuai.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
+        await menuai.async_block_till_done()
+        ws_client = await menuai_ws_client(menuai)
         await ws_client.send_json({"id": 1, "type": "usb/scan"})
         response = await ws_client.receive_json()
         assert response["success"]
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_config_flow.mock_calls) == 1
     assert mock_config_flow.mock_calls[0][1][0] == "test1"
@@ -282,7 +282,7 @@ async def test_discovered_by_websocket_scan_limited_by_description_matcher(
 
 @pytest.mark.usefixtures("force_usb_polling_watcher")
 async def test_most_targeted_matcher_wins(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test that the most targeted matcher is used."""
     new_usb = [
@@ -302,19 +302,19 @@ async def test_most_targeted_matcher_wins(
     ]
 
     with (
-        patch("homeassistant.components.usb.async_get_usb", return_value=new_usb),
+        patch("menuai.components.usb.async_get_usb", return_value=new_usb),
         patch_scanned_serial_ports(return_value=mock_ports),
-        patch.object(hass.config_entries.flow, "async_init") as mock_config_flow,
+        patch.object(menuai.config_entries.flow, "async_init") as mock_config_flow,
     ):
-        assert await async_setup_component(hass, "usb", {"usb": {}})
-        await hass.async_block_till_done()
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-        await hass.async_block_till_done()
-        ws_client = await hass_ws_client(hass)
+        assert await async_setup_component(menuai, "usb", {"usb": {}})
+        await menuai.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
+        await menuai.async_block_till_done()
+        ws_client = await menuai_ws_client(menuai)
         await ws_client.send_json({"id": 1, "type": "usb/scan"})
         response = await ws_client.receive_json()
         assert response["success"]
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_config_flow.mock_calls) == 1
     assert mock_config_flow.mock_calls[0][1][0] == "more"
@@ -322,7 +322,7 @@ async def test_most_targeted_matcher_wins(
 
 @pytest.mark.usefixtures("force_usb_polling_watcher")
 async def test_discovered_by_websocket_scan_rejected_by_description_matcher(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test a device is discovered from websocket scan rejected by the description matcher."""
     new_usb = [
@@ -341,26 +341,26 @@ async def test_discovered_by_websocket_scan_rejected_by_description_matcher(
     ]
 
     with (
-        patch("homeassistant.components.usb.async_get_usb", return_value=new_usb),
+        patch("menuai.components.usb.async_get_usb", return_value=new_usb),
         patch_scanned_serial_ports(return_value=mock_ports),
-        patch.object(hass.config_entries.flow, "async_init") as mock_config_flow,
+        patch.object(menuai.config_entries.flow, "async_init") as mock_config_flow,
     ):
-        assert await async_setup_component(hass, "usb", {"usb": {}})
-        await hass.async_block_till_done()
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-        await hass.async_block_till_done()
-        ws_client = await hass_ws_client(hass)
+        assert await async_setup_component(menuai, "usb", {"usb": {}})
+        await menuai.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
+        await menuai.async_block_till_done()
+        ws_client = await menuai_ws_client(menuai)
         await ws_client.send_json({"id": 1, "type": "usb/scan"})
         response = await ws_client.receive_json()
         assert response["success"]
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_config_flow.mock_calls) == 0
 
 
 @pytest.mark.usefixtures("force_usb_polling_watcher")
 async def test_discovered_by_websocket_scan_limited_by_serial_number_matcher(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test a device is discovered from websocket scan is limited by the serial_number matcher."""
     new_usb = [
@@ -384,19 +384,19 @@ async def test_discovered_by_websocket_scan_limited_by_serial_number_matcher(
     ]
 
     with (
-        patch("homeassistant.components.usb.async_get_usb", return_value=new_usb),
+        patch("menuai.components.usb.async_get_usb", return_value=new_usb),
         patch_scanned_serial_ports(return_value=mock_ports),
-        patch.object(hass.config_entries.flow, "async_init") as mock_config_flow,
+        patch.object(menuai.config_entries.flow, "async_init") as mock_config_flow,
     ):
-        assert await async_setup_component(hass, "usb", {"usb": {}})
-        await hass.async_block_till_done()
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-        await hass.async_block_till_done()
-        ws_client = await hass_ws_client(hass)
+        assert await async_setup_component(menuai, "usb", {"usb": {}})
+        await menuai.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
+        await menuai.async_block_till_done()
+        ws_client = await menuai_ws_client(menuai)
         await ws_client.send_json({"id": 1, "type": "usb/scan"})
         response = await ws_client.receive_json()
         assert response["success"]
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_config_flow.mock_calls) == 1
     assert mock_config_flow.mock_calls[0][1][0] == "test1"
@@ -404,7 +404,7 @@ async def test_discovered_by_websocket_scan_limited_by_serial_number_matcher(
 
 @pytest.mark.usefixtures("force_usb_polling_watcher")
 async def test_discovered_by_websocket_scan_rejected_by_serial_number_matcher(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test a device is discovered from websocket scan is rejected by the serial_number matcher."""
     new_usb = [
@@ -423,26 +423,26 @@ async def test_discovered_by_websocket_scan_rejected_by_serial_number_matcher(
     ]
 
     with (
-        patch("homeassistant.components.usb.async_get_usb", return_value=new_usb),
+        patch("menuai.components.usb.async_get_usb", return_value=new_usb),
         patch_scanned_serial_ports(return_value=mock_ports),
-        patch.object(hass.config_entries.flow, "async_init") as mock_config_flow,
+        patch.object(menuai.config_entries.flow, "async_init") as mock_config_flow,
     ):
-        assert await async_setup_component(hass, "usb", {"usb": {}})
-        await hass.async_block_till_done()
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-        await hass.async_block_till_done()
-        ws_client = await hass_ws_client(hass)
+        assert await async_setup_component(menuai, "usb", {"usb": {}})
+        await menuai.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
+        await menuai.async_block_till_done()
+        ws_client = await menuai_ws_client(menuai)
         await ws_client.send_json({"id": 1, "type": "usb/scan"})
         response = await ws_client.receive_json()
         assert response["success"]
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_config_flow.mock_calls) == 0
 
 
 @pytest.mark.usefixtures("force_usb_polling_watcher")
 async def test_discovered_by_websocket_scan_limited_by_manufacturer_matcher(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test a device is discovered from websocket scan is limited by the manufacturer matcher."""
     new_usb = [
@@ -466,19 +466,19 @@ async def test_discovered_by_websocket_scan_limited_by_manufacturer_matcher(
     ]
 
     with (
-        patch("homeassistant.components.usb.async_get_usb", return_value=new_usb),
+        patch("menuai.components.usb.async_get_usb", return_value=new_usb),
         patch_scanned_serial_ports(return_value=mock_ports),
-        patch.object(hass.config_entries.flow, "async_init") as mock_config_flow,
+        patch.object(menuai.config_entries.flow, "async_init") as mock_config_flow,
     ):
-        assert await async_setup_component(hass, "usb", {"usb": {}})
-        await hass.async_block_till_done()
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-        await hass.async_block_till_done()
-        ws_client = await hass_ws_client(hass)
+        assert await async_setup_component(menuai, "usb", {"usb": {}})
+        await menuai.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
+        await menuai.async_block_till_done()
+        ws_client = await menuai_ws_client(menuai)
         await ws_client.send_json({"id": 1, "type": "usb/scan"})
         response = await ws_client.receive_json()
         assert response["success"]
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_config_flow.mock_calls) == 1
     assert mock_config_flow.mock_calls[0][1][0] == "test1"
@@ -486,7 +486,7 @@ async def test_discovered_by_websocket_scan_limited_by_manufacturer_matcher(
 
 @pytest.mark.usefixtures("force_usb_polling_watcher")
 async def test_discovered_by_websocket_scan_rejected_by_manufacturer_matcher(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test a device is discovered from websocket scan is rejected by the manufacturer matcher."""
     new_usb = [
@@ -510,26 +510,26 @@ async def test_discovered_by_websocket_scan_rejected_by_manufacturer_matcher(
     ]
 
     with (
-        patch("homeassistant.components.usb.async_get_usb", return_value=new_usb),
+        patch("menuai.components.usb.async_get_usb", return_value=new_usb),
         patch_scanned_serial_ports(return_value=mock_ports),
-        patch.object(hass.config_entries.flow, "async_init") as mock_config_flow,
+        patch.object(menuai.config_entries.flow, "async_init") as mock_config_flow,
     ):
-        assert await async_setup_component(hass, "usb", {"usb": {}})
-        await hass.async_block_till_done()
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-        await hass.async_block_till_done()
-        ws_client = await hass_ws_client(hass)
+        assert await async_setup_component(menuai, "usb", {"usb": {}})
+        await menuai.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
+        await menuai.async_block_till_done()
+        ws_client = await menuai_ws_client(menuai)
         await ws_client.send_json({"id": 1, "type": "usb/scan"})
         response = await ws_client.receive_json()
         assert response["success"]
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_config_flow.mock_calls) == 0
 
 
 @pytest.mark.usefixtures("force_usb_polling_watcher")
 async def test_discovered_by_websocket_rejected_with_empty_serial_number_only(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test a device is discovered from websocket is rejected with empty serial number."""
     new_usb = [
@@ -548,26 +548,26 @@ async def test_discovered_by_websocket_rejected_with_empty_serial_number_only(
     ]
 
     with (
-        patch("homeassistant.components.usb.async_get_usb", return_value=new_usb),
+        patch("menuai.components.usb.async_get_usb", return_value=new_usb),
         patch_scanned_serial_ports(return_value=mock_ports),
-        patch.object(hass.config_entries.flow, "async_init") as mock_config_flow,
+        patch.object(menuai.config_entries.flow, "async_init") as mock_config_flow,
     ):
-        assert await async_setup_component(hass, "usb", {"usb": {}})
-        await hass.async_block_till_done()
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-        await hass.async_block_till_done()
-        ws_client = await hass_ws_client(hass)
+        assert await async_setup_component(menuai, "usb", {"usb": {}})
+        await menuai.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
+        await menuai.async_block_till_done()
+        ws_client = await menuai_ws_client(menuai)
         await ws_client.send_json({"id": 1, "type": "usb/scan"})
         response = await ws_client.receive_json()
         assert response["success"]
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_config_flow.mock_calls) == 0
 
 
 @pytest.mark.usefixtures("force_usb_polling_watcher")
 async def test_discovered_by_websocket_scan_match_vid_only(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test a device is discovered from websocket scan only matching vid."""
     new_usb = [{"domain": "test1", "vid": "3039"}]
@@ -584,19 +584,19 @@ async def test_discovered_by_websocket_scan_match_vid_only(
     ]
 
     with (
-        patch("homeassistant.components.usb.async_get_usb", return_value=new_usb),
+        patch("menuai.components.usb.async_get_usb", return_value=new_usb),
         patch_scanned_serial_ports(return_value=mock_ports),
-        patch.object(hass.config_entries.flow, "async_init") as mock_config_flow,
+        patch.object(menuai.config_entries.flow, "async_init") as mock_config_flow,
     ):
-        assert await async_setup_component(hass, "usb", {"usb": {}})
-        await hass.async_block_till_done()
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-        await hass.async_block_till_done()
-        ws_client = await hass_ws_client(hass)
+        assert await async_setup_component(menuai, "usb", {"usb": {}})
+        await menuai.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
+        await menuai.async_block_till_done()
+        ws_client = await menuai_ws_client(menuai)
         await ws_client.send_json({"id": 1, "type": "usb/scan"})
         response = await ws_client.receive_json()
         assert response["success"]
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_config_flow.mock_calls) == 1
     assert mock_config_flow.mock_calls[0][1][0] == "test1"
@@ -604,7 +604,7 @@ async def test_discovered_by_websocket_scan_match_vid_only(
 
 @pytest.mark.usefixtures("force_usb_polling_watcher")
 async def test_discovered_by_websocket_scan_match_vid_wrong_pid(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test a device is discovered from websocket scan only matching vid but wrong pid."""
     new_usb = [{"domain": "test1", "vid": "3039", "pid": "9999"}]
@@ -621,26 +621,26 @@ async def test_discovered_by_websocket_scan_match_vid_wrong_pid(
     ]
 
     with (
-        patch("homeassistant.components.usb.async_get_usb", return_value=new_usb),
+        patch("menuai.components.usb.async_get_usb", return_value=new_usb),
         patch_scanned_serial_ports(return_value=mock_ports),
-        patch.object(hass.config_entries.flow, "async_init") as mock_config_flow,
+        patch.object(menuai.config_entries.flow, "async_init") as mock_config_flow,
     ):
-        assert await async_setup_component(hass, "usb", {"usb": {}})
-        await hass.async_block_till_done()
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-        await hass.async_block_till_done()
-        ws_client = await hass_ws_client(hass)
+        assert await async_setup_component(menuai, "usb", {"usb": {}})
+        await menuai.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
+        await menuai.async_block_till_done()
+        ws_client = await menuai_ws_client(menuai)
         await ws_client.send_json({"id": 1, "type": "usb/scan"})
         response = await ws_client.receive_json()
         assert response["success"]
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_config_flow.mock_calls) == 0
 
 
 @pytest.mark.usefixtures("force_usb_polling_watcher")
 async def test_discovered_by_websocket_no_vid_pid(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test a device is discovered from websocket scan with no vid or pid."""
     new_usb = [{"domain": "test1", "vid": "3039", "pid": "9999"}]
@@ -657,26 +657,26 @@ async def test_discovered_by_websocket_no_vid_pid(
     ]
 
     with (
-        patch("homeassistant.components.usb.async_get_usb", return_value=new_usb),
+        patch("menuai.components.usb.async_get_usb", return_value=new_usb),
         patch_scanned_serial_ports(return_value=mock_ports),
-        patch.object(hass.config_entries.flow, "async_init") as mock_config_flow,
+        patch.object(menuai.config_entries.flow, "async_init") as mock_config_flow,
     ):
-        assert await async_setup_component(hass, "usb", {"usb": {}})
-        await hass.async_block_till_done()
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-        await hass.async_block_till_done()
-        ws_client = await hass_ws_client(hass)
+        assert await async_setup_component(menuai, "usb", {"usb": {}})
+        await menuai.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
+        await menuai.async_block_till_done()
+        ws_client = await menuai_ws_client(menuai)
         await ws_client.send_json({"id": 1, "type": "usb/scan"})
         response = await ws_client.receive_json()
         assert response["success"]
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_config_flow.mock_calls) == 0
 
 
 @pytest.mark.usefixtures("force_usb_polling_watcher")
 async def test_non_matching_discovered_by_scanner_after_started(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test a websocket scan that does not match."""
     new_usb = [{"domain": "test1", "vid": "4444", "pid": "4444"}]
@@ -693,25 +693,25 @@ async def test_non_matching_discovered_by_scanner_after_started(
     ]
 
     with (
-        patch("homeassistant.components.usb.async_get_usb", return_value=new_usb),
+        patch("menuai.components.usb.async_get_usb", return_value=new_usb),
         patch_scanned_serial_ports(return_value=mock_ports),
-        patch.object(hass.config_entries.flow, "async_init") as mock_config_flow,
+        patch.object(menuai.config_entries.flow, "async_init") as mock_config_flow,
     ):
-        assert await async_setup_component(hass, "usb", {"usb": {}})
-        await hass.async_block_till_done()
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-        await hass.async_block_till_done()
-        ws_client = await hass_ws_client(hass)
+        assert await async_setup_component(menuai, "usb", {"usb": {}})
+        await menuai.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
+        await menuai.async_block_till_done()
+        ws_client = await menuai_ws_client(menuai)
         await ws_client.send_json({"id": 1, "type": "usb/scan"})
         response = await ws_client.receive_json()
         assert response["success"]
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_config_flow.mock_calls) == 0
 
 
 async def test_aiousbwatcher_on_wsl_fallback_without_throwing_exception(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test that aiousbwatcher on WSL failure results in fallback to scanning without raising an exception."""
     new_usb = [{"domain": "test1", "vid": "3039"}]
@@ -728,25 +728,25 @@ async def test_aiousbwatcher_on_wsl_fallback_without_throwing_exception(
     ]
 
     with (
-        patch("homeassistant.components.usb.async_get_usb", return_value=new_usb),
+        patch("menuai.components.usb.async_get_usb", return_value=new_usb),
         patch_scanned_serial_ports(return_value=mock_ports),
-        patch.object(hass.config_entries.flow, "async_init") as mock_config_flow,
+        patch.object(menuai.config_entries.flow, "async_init") as mock_config_flow,
     ):
-        assert await async_setup_component(hass, "usb", {"usb": {}})
-        await hass.async_block_till_done()
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-        await hass.async_block_till_done()
-        ws_client = await hass_ws_client(hass)
+        assert await async_setup_component(menuai, "usb", {"usb": {}})
+        await menuai.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
+        await menuai.async_block_till_done()
+        ws_client = await menuai_ws_client(menuai)
         await ws_client.send_json({"id": 1, "type": "usb/scan"})
         response = await ws_client.receive_json()
         assert response["success"]
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_config_flow.mock_calls) == 1
     assert mock_config_flow.mock_calls[0][1][0] == "test1"
 
 
-async def test_discovered_by_aiousbwatcher_before_started(hass: HomeAssistant) -> None:
+async def test_discovered_by_aiousbwatcher_before_started(menuai: menuai) -> None:
     """Test a device is discovered since aiousbwatcher is now running."""
     new_usb = [{"domain": "test1", "vid": "3039", "pid": "3039"}]
 
@@ -772,29 +772,29 @@ async def test_discovered_by_aiousbwatcher_before_started(hass: HomeAssistant) -
 
     with (
         patch("sys.platform", "linux"),
-        patch("homeassistant.components.usb.async_get_usb", return_value=new_usb),
+        patch("menuai.components.usb.async_get_usb", return_value=new_usb),
         patch_scanned_serial_ports(return_value=initial_ports),
         patch(
-            "homeassistant.components.usb.AIOUSBWatcher", return_value=MockAIOUSBWatcher
+            "menuai.components.usb.AIOUSBWatcher", return_value=MockAIOUSBWatcher
         ),
-        patch.object(hass.config_entries.flow, "async_init") as mock_config_flow,
+        patch.object(menuai.config_entries.flow, "async_init") as mock_config_flow,
     ):
-        assert await async_setup_component(hass, "usb", {"usb": {}})
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, "usb", {"usb": {}})
+        await menuai.async_block_till_done()
 
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-        await hass.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
+        await menuai.async_block_till_done()
 
         assert len(mock_config_flow.mock_calls) == 0
 
         initial_ports.extend(mock_ports)
         aiousbwatcher_callback()
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         async_fire_time_changed(
-            hass, dt_util.utcnow() + timedelta(seconds=usb.ADD_REMOVE_SCAN_COOLDOWN)
+            menuai, dt_util.utcnow() + timedelta(seconds=usb.ADD_REMOVE_SCAN_COOLDOWN)
         )
-        await hass.async_block_till_done(wait_background_tasks=True)
+        await menuai.async_block_till_done(wait_background_tasks=True)
 
         assert len(mock_config_flow.mock_calls) == 1
 
@@ -881,7 +881,7 @@ def test_human_readable_device_name() -> None:
 
 @pytest.mark.usefixtures("force_usb_polling_watcher")
 async def test_async_is_plugged_in(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test async_is_plugged_in."""
     new_usb = [{"domain": "test1", "vid": "3039", "pid": "3039"}]
@@ -903,26 +903,26 @@ async def test_async_is_plugged_in(
     }
 
     with (
-        patch("homeassistant.components.usb.async_get_usb", return_value=new_usb),
+        patch("menuai.components.usb.async_get_usb", return_value=new_usb),
         patch_scanned_serial_ports(return_value=[]),
-        patch.object(hass.config_entries.flow, "async_init"),
+        patch.object(menuai.config_entries.flow, "async_init"),
     ):
-        assert await async_setup_component(hass, "usb", {"usb": {}})
-        await hass.async_block_till_done()
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-        await hass.async_block_till_done()
-        assert not usb.async_is_plugged_in(hass, matcher)
+        assert await async_setup_component(menuai, "usb", {"usb": {}})
+        await menuai.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
+        await menuai.async_block_till_done()
+        assert not usb.async_is_plugged_in(menuai, matcher)
 
     with (
         patch_scanned_serial_ports(return_value=mock_ports),
-        patch.object(hass.config_entries.flow, "async_init"),
+        patch.object(menuai.config_entries.flow, "async_init"),
     ):
-        ws_client = await hass_ws_client(hass)
+        ws_client = await menuai_ws_client(menuai)
         await ws_client.send_json({"id": 1, "type": "usb/scan"})
         response = await ws_client.receive_json()
         assert response["success"]
-        await hass.async_block_till_done()
-        assert usb.async_is_plugged_in(hass, matcher)
+        await menuai.async_block_till_done()
+        assert usb.async_is_plugged_in(menuai, matcher)
 
 
 @pytest.mark.usefixtures("force_usb_polling_watcher")
@@ -937,50 +937,50 @@ async def test_async_is_plugged_in(
     ],
 )
 async def test_async_is_plugged_in_case_enforcement(
-    hass: HomeAssistant, matcher
+    menuai: menuai, matcher
 ) -> None:
     """Test `async_is_plugged_in` throws an error when incorrect cases are used."""
 
     new_usb = [{"domain": "test1", "vid": "ABCD"}]
 
     with (
-        patch("homeassistant.components.usb.async_get_usb", return_value=new_usb),
+        patch("menuai.components.usb.async_get_usb", return_value=new_usb),
         patch_scanned_serial_ports(return_value=[]),
-        patch.object(hass.config_entries.flow, "async_init"),
+        patch.object(menuai.config_entries.flow, "async_init"),
     ):
-        assert await async_setup_component(hass, "usb", {"usb": {}})
-        await hass.async_block_till_done()
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, "usb", {"usb": {}})
+        await menuai.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
+        await menuai.async_block_till_done()
 
         with pytest.raises(ValueError):
-            usb.async_is_plugged_in(hass, matcher)
+            usb.async_is_plugged_in(menuai, matcher)
 
 
 @pytest.mark.usefixtures("force_usb_polling_watcher")
 async def test_web_socket_triggers_discovery_request_callbacks(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test the websocket call triggers a discovery request callback."""
     mock_callback = Mock()
 
     with (
-        patch("homeassistant.components.usb.async_get_usb", return_value=[]),
+        patch("menuai.components.usb.async_get_usb", return_value=[]),
         patch_scanned_serial_ports(return_value=[]),
-        patch.object(hass.config_entries.flow, "async_init"),
+        patch.object(menuai.config_entries.flow, "async_init"),
     ):
-        assert await async_setup_component(hass, "usb", {"usb": {}})
-        await hass.async_block_till_done()
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, "usb", {"usb": {}})
+        await menuai.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
+        await menuai.async_block_till_done()
 
-        cancel = usb.async_register_scan_request_callback(hass, mock_callback)
+        cancel = usb.async_register_scan_request_callback(menuai, mock_callback)
 
-        ws_client = await hass_ws_client(hass)
+        ws_client = await menuai_ws_client(menuai)
         await ws_client.send_json({"id": 1, "type": "usb/scan"})
         response = await ws_client.receive_json()
         assert response["success"]
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         assert len(mock_callback.mock_calls) == 1
         cancel()
@@ -988,38 +988,38 @@ async def test_web_socket_triggers_discovery_request_callbacks(
         await ws_client.send_json({"id": 2, "type": "usb/scan"})
         response = await ws_client.receive_json()
         assert response["success"]
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         assert len(mock_callback.mock_calls) == 1
 
 
 @pytest.mark.usefixtures("force_usb_polling_watcher")
 async def test_initial_scan_callback(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test it's possible to register a callback when the initial scan is done."""
     mock_callback_1 = Mock()
     mock_callback_2 = Mock()
 
     with (
-        patch("homeassistant.components.usb.async_get_usb", return_value=[]),
+        patch("menuai.components.usb.async_get_usb", return_value=[]),
         patch_scanned_serial_ports(return_value=[]),
-        patch.object(hass.config_entries.flow, "async_init"),
+        patch.object(menuai.config_entries.flow, "async_init"),
     ):
-        assert await async_setup_component(hass, "usb", {"usb": {}})
-        cancel_1 = usb.async_register_initial_scan_callback(hass, mock_callback_1)
+        assert await async_setup_component(menuai, "usb", {"usb": {}})
+        cancel_1 = usb.async_register_initial_scan_callback(menuai, mock_callback_1)
         assert len(mock_callback_1.mock_calls) == 0
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         assert len(mock_callback_1.mock_calls) == 0
 
         # This triggers the initial scan
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-        await hass.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
+        await menuai.async_block_till_done()
         assert len(mock_callback_1.mock_calls) == 1
 
         # A callback registered now should be called immediately. The old callback
         # should not be called again
-        cancel_2 = usb.async_register_initial_scan_callback(hass, mock_callback_2)
+        cancel_2 = usb.async_register_initial_scan_callback(menuai, mock_callback_2)
         assert len(mock_callback_1.mock_calls) == 1
         assert len(mock_callback_2.mock_calls) == 1
 
@@ -1030,33 +1030,33 @@ async def test_initial_scan_callback(
 
 @pytest.mark.usefixtures("force_usb_polling_watcher")
 async def test_cancel_initial_scan_callback(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test it's possible to cancel an initial scan callback."""
     mock_callback = Mock()
 
     with (
-        patch("homeassistant.components.usb.async_get_usb", return_value=[]),
+        patch("menuai.components.usb.async_get_usb", return_value=[]),
         patch_scanned_serial_ports(return_value=[]),
-        patch.object(hass.config_entries.flow, "async_init"),
+        patch.object(menuai.config_entries.flow, "async_init"),
     ):
-        assert await async_setup_component(hass, "usb", {"usb": {}})
-        cancel = usb.async_register_initial_scan_callback(hass, mock_callback)
+        assert await async_setup_component(menuai, "usb", {"usb": {}})
+        cancel = usb.async_register_initial_scan_callback(menuai, mock_callback)
         assert len(mock_callback.mock_calls) == 0
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         assert len(mock_callback.mock_calls) == 0
         cancel()
 
         # This triggers the initial scan
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-        await hass.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
+        await menuai.async_block_till_done()
         assert len(mock_callback.mock_calls) == 0
 
 
 @pytest.mark.usefixtures("force_usb_polling_watcher")
 async def test_resolve_serial_by_id(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test the discovery data resolves to serial/by-id."""
     new_usb = [{"domain": "test1", "vid": "3039", "pid": "3039"}]
@@ -1073,23 +1073,23 @@ async def test_resolve_serial_by_id(
     ]
 
     with (
-        patch("homeassistant.components.usb.async_get_usb", return_value=new_usb),
+        patch("menuai.components.usb.async_get_usb", return_value=new_usb),
         patch_scanned_serial_ports(return_value=mock_ports),
         patch(
-            "homeassistant.components.usb.get_serial_by_id",
+            "menuai.components.usb.get_serial_by_id",
             return_value="/dev/serial/by-id/bla",
         ),
-        patch.object(hass.config_entries.flow, "async_init") as mock_config_flow,
+        patch.object(menuai.config_entries.flow, "async_init") as mock_config_flow,
     ):
-        assert await async_setup_component(hass, "usb", {"usb": {}})
-        await hass.async_block_till_done()
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-        await hass.async_block_till_done()
-        ws_client = await hass_ws_client(hass)
+        assert await async_setup_component(menuai, "usb", {"usb": {}})
+        await menuai.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
+        await menuai.async_block_till_done()
+        ws_client = await menuai_ws_client(menuai)
         await ws_client.send_json({"id": 1, "type": "usb/scan"})
         response = await ws_client.receive_json()
         assert response["success"]
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_config_flow.mock_calls) == 1
     assert mock_config_flow.mock_calls[0][1][0] == "test1"
@@ -1171,7 +1171,7 @@ async def test_resolve_serial_by_id(
     ],
 )
 async def test_cp2102n_ordering_on_macos(
-    ports: list[MagicMock], hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    ports: list[MagicMock], menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test CP2102N ordering on macOS."""
 
@@ -1181,19 +1181,19 @@ async def test_cp2102n_ordering_on_macos(
 
     with (
         patch("sys.platform", "darwin"),
-        patch("homeassistant.components.usb.async_get_usb", return_value=new_usb),
+        patch("menuai.components.usb.async_get_usb", return_value=new_usb),
         patch_scanned_serial_ports(return_value=ports),
-        patch.object(hass.config_entries.flow, "async_init") as mock_config_flow,
+        patch.object(menuai.config_entries.flow, "async_init") as mock_config_flow,
     ):
-        assert await async_setup_component(hass, "usb", {"usb": {}})
-        await hass.async_block_till_done()
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-        await hass.async_block_till_done()
-        ws_client = await hass_ws_client(hass)
+        assert await async_setup_component(menuai, "usb", {"usb": {}})
+        await menuai.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
+        await menuai.async_block_till_done()
+        ws_client = await menuai_ws_client(menuai)
         await ws_client.send_json({"id": 1, "type": "usb/scan"})
         response = await ws_client.receive_json()
         assert response["success"]
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_config_flow.mock_calls) == 1
     assert mock_config_flow.mock_calls[0][1][0] == "test1"
@@ -1207,7 +1207,7 @@ async def test_cp2102n_ordering_on_macos(
     [
         (
             "UsbServiceInfo",
-            "homeassistant.helpers.service_info.usb.UsbServiceInfo",
+            "menuai.helpers.service_info.usb.UsbServiceInfo",
             UsbServiceInfo,
         ),
     ],
@@ -1230,9 +1230,9 @@ def test_deprecated_constants(
 
 
 @pytest.mark.usefixtures("force_usb_polling_watcher")
-@patch("homeassistant.components.usb.REQUEST_SCAN_COOLDOWN", 0)
+@patch("menuai.components.usb.REQUEST_SCAN_COOLDOWN", 0)
 async def test_register_port_event_callback(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test the registration of a port event callback."""
 
@@ -1254,7 +1254,7 @@ async def test_register_port_event_callback(
         description=conbee_device.description,
     )
 
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     mock_callback1 = Mock()
     mock_callback2 = Mock()
@@ -1263,10 +1263,10 @@ async def test_register_port_event_callback(
     with (
         patch_scanned_serial_ports(return_value=[]),
     ):
-        assert await async_setup_component(hass, "usb", {"usb": {}})
+        assert await async_setup_component(menuai, "usb", {"usb": {}})
 
-        _cancel1 = usb.async_register_port_event_callback(hass, mock_callback1)
-        cancel2 = usb.async_register_port_event_callback(hass, mock_callback2)
+        _cancel1 = usb.async_register_port_event_callback(menuai, mock_callback1)
+        cancel2 = usb.async_register_port_event_callback(menuai, mock_callback2)
 
     assert mock_callback1.mock_calls == []
     assert mock_callback2.mock_calls == []
@@ -1292,7 +1292,7 @@ async def test_register_port_event_callback(
         await ws_client.send_json({"id": 2, "type": "usb/scan"})
         response = await ws_client.receive_json()
         assert response["success"]
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert mock_callback1.mock_calls == [call(set(), {port2})]
     assert mock_callback2.mock_calls == []  # The second callback was unregistered
@@ -1305,7 +1305,7 @@ async def test_register_port_event_callback(
         await ws_client.send_json({"id": 3, "type": "usb/scan"})
         response = await ws_client.receive_json()
         assert response["success"]
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     # Nothing changed so no callback is called
     assert mock_callback1.mock_calls == []
@@ -1316,17 +1316,17 @@ async def test_register_port_event_callback(
         await ws_client.send_json({"id": 4, "type": "usb/scan"})
         response = await ws_client.receive_json()
         assert response["success"]
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert mock_callback1.mock_calls == [call({port2}, {port1})]
     assert mock_callback2.mock_calls == []
 
 
 @pytest.mark.usefixtures("force_usb_polling_watcher")
-@patch("homeassistant.components.usb.REQUEST_SCAN_COOLDOWN", 0)
+@patch("menuai.components.usb.REQUEST_SCAN_COOLDOWN", 0)
 async def test_register_port_event_callback_failure(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test port event callback failure handling."""
@@ -1349,7 +1349,7 @@ async def test_register_port_event_callback_failure(
         description=conbee_device.description,
     )
 
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     mock_callback1 = Mock(side_effect=RuntimeError("Failure 1"))
     mock_callback2 = Mock(side_effect=RuntimeError("Failure 2"))
@@ -1358,10 +1358,10 @@ async def test_register_port_event_callback_failure(
     with (
         patch_scanned_serial_ports(return_value=[]),
     ):
-        assert await async_setup_component(hass, "usb", {"usb": {}})
+        assert await async_setup_component(menuai, "usb", {"usb": {}})
 
-        usb.async_register_port_event_callback(hass, mock_callback1)
-        usb.async_register_port_event_callback(hass, mock_callback2)
+        usb.async_register_port_event_callback(menuai, mock_callback1)
+        usb.async_register_port_event_callback(menuai, mock_callback2)
 
     assert mock_callback1.mock_calls == []
     assert mock_callback2.mock_calls == []
@@ -1369,12 +1369,12 @@ async def test_register_port_event_callback_failure(
     # Add two new ports
     with (
         patch_scanned_serial_ports(return_value=[port1, port2]),
-        caplog.at_level(logging.ERROR, logger="homeassistant.components.usb"),
+        caplog.at_level(logging.ERROR, logger="menuai.components.usb"),
     ):
         await ws_client.send_json({"id": 1, "type": "usb/scan"})
         response = await ws_client.receive_json()
         assert response["success"]
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     # Both were called even though they raised exceptions
     assert mock_callback1.mock_calls == [call({port1, port2}, set())]

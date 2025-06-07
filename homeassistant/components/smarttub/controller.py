@@ -9,13 +9,13 @@ from aiohttp import client_exceptions
 from smarttub import APIError, LoginFailed, SmartTub, Spa
 from smarttub.api import Account
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_EMAIL, CONF_PASSWORD
+from menuai.core import menuai, callback
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import device_registry as dr
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
     ATTR_ERRORS,
@@ -35,15 +35,15 @@ type SmartTubConfigEntry = ConfigEntry[SmartTubController]
 
 
 class SmartTubController:
-    """Interface between Home Assistant and the SmartTub API."""
+    """Interface between MenuAI and the SmartTub API."""
 
     coordinator: DataUpdateCoordinator[dict[str, Any]]
     spas: list[Spa]
     _account: Account
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize an interface to SmartTub."""
-        self._hass = hass
+        self._menuai = menuai
 
     async def async_setup_entry(self, entry: SmartTubConfigEntry) -> bool:
         """Perform initial setup.
@@ -70,7 +70,7 @@ class SmartTubController:
         self.spas = await self._account.get_spas()
 
         self.coordinator = DataUpdateCoordinator(
-            self._hass,
+            self._menuai,
             _LOGGER,
             name=DOMAIN,
             update_method=self.async_update_data,
@@ -113,7 +113,7 @@ class SmartTubController:
     @callback
     def async_register_devices(self, entry: SmartTubConfigEntry) -> None:
         """Register devices with the device registry for all spas."""
-        device_registry = dr.async_get(self._hass)
+        device_registry = dr.async_get(self._menuai)
         for spa in self.spas:
             device_registry.async_get_or_create(
                 config_entry_id=entry.entry_id,
@@ -126,7 +126,7 @@ class SmartTubController:
     async def login(self, email: str, password: str) -> Account:
         """Retrieve the account corresponding to the specified email and password."""
 
-        api = SmartTub(async_get_clientsession(self._hass))
+        api = SmartTub(async_get_clientsession(self._menuai))
 
         await api.login(email, password)
         return await api.get_account()

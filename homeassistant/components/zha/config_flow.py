@@ -14,12 +14,12 @@ from zha.application.const import RadioType
 import zigpy.backups
 from zigpy.config import CONF_DEVICE, CONF_DEVICE_PATH
 
-from homeassistant.components import onboarding, usb
-from homeassistant.components.file_upload import process_uploaded_file
-from homeassistant.components.hassio import AddonError, AddonState
-from homeassistant.components.homeassistant_hardware import silabs_multiprotocol_addon
-from homeassistant.components.homeassistant_yellow import hardware as yellow_hardware
-from homeassistant.config_entries import (
+from menuai.components import onboarding, usb
+from menuai.components.file_upload import process_uploaded_file
+from menuai.components.menuaiio import AddonError, AddonState
+from menuai.components.menuai_hardware import silabs_multiprotocol_addon
+from menuai.components.menuai_yellow import hardware as yellow_hardware
+from menuai.config_entries import (
     SOURCE_IGNORE,
     SOURCE_ZEROCONF,
     ConfigEntry,
@@ -30,14 +30,14 @@ from homeassistant.config_entries import (
     OperationNotAllowed,
     OptionsFlow,
 )
-from homeassistant.const import CONF_NAME
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.hassio import is_hassio
-from homeassistant.helpers.selector import FileSelector, FileSelectorConfig
-from homeassistant.helpers.service_info.usb import UsbServiceInfo
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
-from homeassistant.util import dt as dt_util
+from menuai.const import CONF_NAME
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.menuaiio import is_menuaiio
+from menuai.helpers.selector import FileSelector, FileSelectorConfig
+from menuai.helpers.service_info.usb import UsbServiceInfo
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.util import dt as dt_util
 
 from .const import CONF_BAUDRATE, CONF_FLOW_CONTROL, CONF_RADIO_TYPE, DOMAIN
 from .radio_manager import (
@@ -102,15 +102,15 @@ def _format_backup_choice(
     return f"{dt_util.as_local(backup.backup_time).strftime('%c')} ({identifier})"
 
 
-async def list_serial_ports(hass: HomeAssistant) -> list[ListPortInfo]:
+async def list_serial_ports(menuai: menuai) -> list[ListPortInfo]:
     """List all serial ports, including the Yellow radio and the multi-PAN addon."""
     ports: list[ListPortInfo] = []
-    ports.extend(await hass.async_add_executor_job(serial.tools.list_ports.comports))
+    ports.extend(await menuai.async_add_executor_job(serial.tools.list_ports.comports))
 
     # Add useful info to the Yellow's serial port selection screen
     try:
-        yellow_hardware.async_info(hass)
-    except HomeAssistantError:
+        yellow_hardware.async_info(menuai)
+    except menuaiError:
         pass
     else:
         # PySerial does not properly handle the Yellow's serial port with the CM5
@@ -122,10 +122,10 @@ async def list_serial_ports(hass: HomeAssistant) -> list[ListPortInfo]:
         ports = [p for p in ports if not p.device.startswith("/dev/ttyAMA")]
         ports.insert(0, port)
 
-    if is_hassio(hass):
+    if is_menuaiio(menuai):
         # Present the multi-PAN addon as a setup option, if it's available
         multipan_manager = (
-            await silabs_multiprotocol_addon.get_multiprotocol_addon_manager(hass)
+            await silabs_multiprotocol_addon.get_multiprotocol_addon_manager(menuai)
         )
 
         try:
@@ -149,26 +149,26 @@ async def list_serial_ports(hass: HomeAssistant) -> list[ListPortInfo]:
 class BaseZhaFlow(ConfigEntryBaseFlow):
     """Mixin for common ZHA flow steps and forms."""
 
-    _hass: HomeAssistant
+    _menuai: menuai
     _title: str
 
     def __init__(self) -> None:
         """Initialize flow instance."""
         super().__init__()
 
-        self._hass = None  # type: ignore[assignment]
+        self._menuai = None  # type: ignore[assignment]
         self._radio_mgr = ZhaRadioManager()
 
     @property
-    def hass(self) -> HomeAssistant:
-        """Return hass."""
-        return self._hass
+    def menuai(self) -> menuai:
+        """Return menuai."""
+        return self._menuai
 
-    @hass.setter
-    def hass(self, hass: HomeAssistant) -> None:
-        """Set hass."""
-        self._hass = hass
-        self._radio_mgr.hass = hass
+    @menuai.setter
+    def menuai(self, menuai: menuai) -> None:
+        """Set menuai."""
+        self._menuai = menuai
+        self._radio_mgr.menuai = menuai
 
     async def _async_create_radio_entry(self) -> ConfigFlowResult:
         """Create a config entry with the current flow state."""
@@ -177,7 +177,7 @@ class BaseZhaFlow(ConfigEntryBaseFlow):
         assert self._radio_mgr.device_settings is not None
 
         device_settings = self._radio_mgr.device_settings.copy()
-        device_settings[CONF_DEVICE_PATH] = await self.hass.async_add_executor_job(
+        device_settings[CONF_DEVICE_PATH] = await self.menuai.async_add_executor_job(
             usb.get_serial_by_id, self._radio_mgr.device_path
         )
 
@@ -193,7 +193,7 @@ class BaseZhaFlow(ConfigEntryBaseFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Choose a serial port."""
-        ports = await list_serial_ports(self.hass)
+        ports = await list_serial_ports(self.menuai)
         list_of_ports = [
             f"{p}{', s/n: ' + p.serial_number if p.serial_number else ''}"
             + (f" - {p.manufacturer}" if p.manufacturer else "")
@@ -379,7 +379,7 @@ class BaseZhaFlow(ConfigEntryBaseFlow):
             strategies.append(FORMATION_FORM_NEW_NETWORK)
 
         # Automatically form a new network if we're onboarding with a brand new radio
-        if not onboarding.async_is_onboarded(self.hass) and set(strategies) == {
+        if not onboarding.async_is_onboarded(self.menuai) and set(strategies) == {
             FORMATION_UPLOAD_MANUAL_BACKUP,
             FORMATION_FORM_INITIAL_NETWORK,
         }:
@@ -415,7 +415,7 @@ class BaseZhaFlow(ConfigEntryBaseFlow):
         self, uploaded_file_id: str
     ) -> zigpy.backups.NetworkBackup:
         """Read and parse an uploaded backup JSON file."""
-        with process_uploaded_file(self.hass, uploaded_file_id) as file_path:
+        with process_uploaded_file(self.menuai, uploaded_file_id) as file_path:
             contents = file_path.read_text()
 
         return zigpy.backups.NetworkBackup.from_dict(json.loads(contents))
@@ -428,7 +428,7 @@ class BaseZhaFlow(ConfigEntryBaseFlow):
 
         if user_input is not None:
             try:
-                self._radio_mgr.chosen_backup = await self.hass.async_add_executor_job(
+                self._radio_mgr.chosen_backup = await self.menuai.async_add_executor_job(
                     self._parse_uploaded_backup, user_input[UPLOADED_BACKUP_FILE]
                 )
             except ValueError:
@@ -565,7 +565,7 @@ class ZhaConfigFlowHandler(BaseZhaFlow, ConfigFlow, domain=DOMAIN):
 
         # Without confirmation, discovery can automatically progress into parts of the
         # config flow logic that interacts with hardware.
-        if user_input is not None or not onboarding.async_is_onboarded(self.hass):
+        if user_input is not None or not onboarding.async_is_onboarded(self.menuai):
             # Probe the radio type if we don't have one yet
             if self._radio_mgr.radio_type is None:
                 probe_result = await self._radio_mgr.detect_radio_type()
@@ -609,9 +609,9 @@ class ZhaConfigFlowHandler(BaseZhaFlow, ConfigFlow, domain=DOMAIN):
 
         # If they already have a discovery for deconz we ignore the usb discovery as
         # they probably want to use it there instead
-        if self.hass.config_entries.flow.async_progress_by_handler(DECONZ_DOMAIN):
+        if self.menuai.config_entries.flow.async_progress_by_handler(DECONZ_DOMAIN):
             return self.async_abort(reason="not_zha_device")
-        for entry in self.hass.config_entries.async_entries(DECONZ_DOMAIN):
+        for entry in self.menuai.config_entries.async_entries(DECONZ_DOMAIN):
             if entry.source != SOURCE_IGNORE:
                 return self.async_abort(reason="not_zha_device")
 
@@ -740,7 +740,7 @@ class ZhaOptionsFlowHandler(BaseZhaFlow, OptionsFlow):
         if user_input is not None:
             # OperationNotAllowed: ZHA is not running
             with suppress(OperationNotAllowed):
-                await self.hass.config_entries.async_unload(self.config_entry.entry_id)
+                await self.menuai.config_entries.async_unload(self.config_entry.entry_id)
 
             return await self.async_step_prompt_migrate_or_reconfigure()
 
@@ -791,12 +791,12 @@ class ZhaOptionsFlowHandler(BaseZhaFlow, OptionsFlow):
     async def _async_create_radio_entry(self):
         """Re-implementation of the base flow's final step to update the config."""
         device_settings = self._radio_mgr.device_settings.copy()
-        device_settings[CONF_DEVICE_PATH] = await self.hass.async_add_executor_job(
+        device_settings[CONF_DEVICE_PATH] = await self.menuai.async_add_executor_job(
             usb.get_serial_by_id, self._radio_mgr.device_path
         )
 
         # Avoid creating both `.options` and `.data` by directly writing `data` here
-        self.hass.config_entries.async_update_entry(
+        self.menuai.config_entries.async_update_entry(
             entry=self.config_entry,
             data={
                 CONF_DEVICE: device_settings,
@@ -806,7 +806,7 @@ class ZhaOptionsFlowHandler(BaseZhaFlow, OptionsFlow):
         )
 
         # Reload ZHA after we finish
-        await self.hass.config_entries.async_setup(self.config_entry.entry_id)
+        await self.menuai.config_entries.async_setup(self.config_entry.entry_id)
 
         # Intentionally do not set `data` to avoid creating `options`, we set it above
         return self.async_create_entry(title=self._title, data={})
@@ -819,6 +819,6 @@ class ZhaOptionsFlowHandler(BaseZhaFlow, OptionsFlow):
         ):
             return
 
-        self.hass.async_create_task(
-            self.hass.config_entries.async_setup(self.config_entry.entry_id)
+        self.menuai.async_create_task(
+            self.menuai.config_entries.async_setup(self.config_entry.entry_id)
         )

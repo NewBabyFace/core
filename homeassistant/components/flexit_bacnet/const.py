@@ -7,7 +7,7 @@ from flexit_bacnet import (
     VENTILATION_MODE_STOP,
 )
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     PRESET_AWAY,
     PRESET_BOOST,
     PRESET_HOME,

@@ -10,10 +10,10 @@ from aiohttp import ClientConnectorError
 from aiomusiccast import MusicCastConnectionException, MusicCastDevice
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.service_info.ssdp import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.service_info.ssdp import (
     ATTR_UPNP_FRIENDLY_NAME,
     ATTR_UPNP_SERIAL,
     SsdpServiceInfo,
@@ -50,7 +50,7 @@ class MusicCastFlowHandler(ConfigFlow, domain=DOMAIN):
 
         try:
             info = await MusicCastDevice.get_device_info(
-                host, async_get_clientsession(self.hass)
+                host, async_get_clientsession(self.menuai)
             )
         except (MusicCastConnectionException, ClientConnectorError):
             errors["base"] = "cannot_connect"
@@ -70,7 +70,7 @@ class MusicCastFlowHandler(ConfigFlow, domain=DOMAIN):
                 data={
                     CONF_HOST: host,
                     CONF_SERIAL: serial_number,
-                    CONF_UPNP_DESC: await get_upnp_desc(self.hass, host),
+                    CONF_UPNP_DESC: await get_upnp_desc(self.menuai, host),
                 },
             )
 
@@ -89,7 +89,7 @@ class MusicCastFlowHandler(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Handle ssdp discoveries."""
         if not await MusicCastDevice.check_yamaha_ssdp(
-            discovery_info.ssdp_location, async_get_clientsession(self.hass)
+            discovery_info.ssdp_location, async_get_clientsession(self.menuai)
         ):
             return self.async_abort(reason="yxc_control_url_missing")
 

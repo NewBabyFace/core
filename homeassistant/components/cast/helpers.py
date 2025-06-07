@@ -16,13 +16,13 @@ from pychromecast import dial
 from pychromecast.const import CAST_TYPE_GROUP
 from pychromecast.models import CastInfo
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import aiohttp_client
+from menuai.core import menuai
+from menuai.helpers import aiohttp_client
 
 from .const import DOMAIN
 
 if TYPE_CHECKING:
-    from homeassistant.components import zeroconf
+    from menuai.components import zeroconf
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -55,14 +55,14 @@ class ChromecastInfo:
         """Return the UUID."""
         return self.cast_info.uuid
 
-    def fill_out_missing_chromecast_info(self, hass: HomeAssistant) -> ChromecastInfo:
+    def fill_out_missing_chromecast_info(self, menuai: menuai) -> ChromecastInfo:
         """Return a new ChromecastInfo object with missing attributes filled in.
 
         Uses blocking HTTP / HTTPS.
         """
         cast_info = self.cast_info
         if self.cast_info.cast_type is None or self.cast_info.manufacturer is None:
-            unknown_models = hass.data[DOMAIN]["unknown_models"]
+            unknown_models = menuai.data[DOMAIN]["unknown_models"]
             if self.cast_info.model_name not in unknown_models:
                 # Manufacturer and cast type is not available in mDNS data,
                 # get it over HTTP
@@ -248,10 +248,10 @@ def _is_url(url):
     return all([result.scheme, result.netloc])
 
 
-async def _fetch_playlist(hass, url, supported_content_types):
+async def _fetch_playlist(menuai, url, supported_content_types):
     """Fetch a playlist from the given url."""
     try:
-        session = aiohttp_client.async_get_clientsession(hass, verify_ssl=False)
+        session = aiohttp_client.async_get_clientsession(menuai, verify_ssl=False)
         async with session.get(url, timeout=aiohttp.ClientTimeout(total=5)) as resp:
             charset = resp.charset or "utf-8"
             if resp.content_type in supported_content_types:
@@ -268,7 +268,7 @@ async def _fetch_playlist(hass, url, supported_content_types):
     return playlist_data
 
 
-async def parse_m3u(hass, url):
+async def parse_m3u(menuai, url):
     """Very simple m3u parser.
 
     Based on https://github.com/dvndrsn/M3uParser/blob/master/m3uparser.py
@@ -280,7 +280,7 @@ async def parse_m3u(hass, url):
         # Additional informal types used by Mozilla gecko not included as they
         # don't reliably indicate HLS streams
     )
-    m3u_data = await _fetch_playlist(hass, url, hls_content_types)
+    m3u_data = await _fetch_playlist(menuai, url, hls_content_types)
     m3u_lines = m3u_data.splitlines()
 
     playlist = []
@@ -316,12 +316,12 @@ async def parse_m3u(hass, url):
     return playlist
 
 
-async def parse_pls(hass, url):
+async def parse_pls(menuai, url):
     """Very simple pls parser.
 
     Based on https://github.com/mariob/plsparser/blob/master/src/plsparser.py
     """
-    pls_data = await _fetch_playlist(hass, url, ())
+    pls_data = await _fetch_playlist(menuai, url, ())
 
     pls_parser = configparser.ConfigParser()
     try:
@@ -361,12 +361,12 @@ async def parse_pls(hass, url):
     return playlist
 
 
-async def parse_playlist(hass, url):
+async def parse_playlist(menuai, url):
     """Parse an m3u or pls playlist."""
     if url.endswith((".m3u", ".m3u8")):
-        playlist = await parse_m3u(hass, url)
+        playlist = await parse_m3u(menuai, url)
     else:
-        playlist = await parse_pls(hass, url)
+        playlist = await parse_pls(menuai, url)
 
     if not playlist:
         raise PlaylistError(f"Empty playlist {url}")

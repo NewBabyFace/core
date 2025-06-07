@@ -2,7 +2,7 @@
 
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.drop_connect.const import (
+from menuai.components.drop_connect.const import (
     CONF_COMMAND_TOPIC,
     CONF_DATA_TOPIC,
     CONF_DEVICE_DESC,
@@ -13,10 +13,10 @@ from homeassistant.components.drop_connect.const import (
     CONF_HUB_ID,
     DOMAIN,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.config_entries import ConfigEntry
+from menuai.const import STATE_UNKNOWN
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry
 
@@ -247,7 +247,7 @@ def config_entry_ro_filter() -> ConfigEntry:
 
 
 def help_assert_entries(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
     config_entry: ConfigEntry,
@@ -261,10 +261,10 @@ def help_assert_entries(
     assert entity_entries
     if assert_unknown:
         for entity_entry in entity_entries:
-            assert hass.states.get(entity_entry.entity_id).state == STATE_UNKNOWN
+            assert menuai.states.get(entity_entry.entity_id).state == STATE_UNKNOWN
         return
 
     for entity_entry in entity_entries:
-        assert hass.states.get(entity_entry.entity_id) == snapshot(
+        assert menuai.states.get(entity_entry.entity_id) == snapshot(
             name=f"{entity_entry.entity_id}-{step}"
         )

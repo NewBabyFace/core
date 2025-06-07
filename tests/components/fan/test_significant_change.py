@@ -2,14 +2,14 @@
 
 import pytest
 
-from homeassistant.components.fan import (
+from menuai.components.fan import (
     ATTR_DIRECTION,
     ATTR_OSCILLATING,
     ATTR_PERCENTAGE,
     ATTR_PERCENTAGE_STEP,
     ATTR_PRESET_MODE,
 )
-from homeassistant.components.fan.significant_change import (
+from menuai.components.fan.significant_change import (
     async_check_significant_change,
 )
 

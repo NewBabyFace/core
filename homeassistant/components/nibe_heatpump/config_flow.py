@@ -18,10 +18,10 @@ from nibe.heatpump import HeatPump, Model
 import voluptuous as vol
 import yarl
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_IP_ADDRESS, CONF_MODEL
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import selector
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_IP_ADDRESS, CONF_MODEL
+from menuai.core import menuai
+from menuai.helpers import selector
 
 from .const import (
     CONF_CONNECTION_TYPE,
@@ -84,7 +84,7 @@ class FieldError(Exception):
 
 
 async def validate_nibegw_input(
-    hass: HomeAssistant, data: dict[str, Any]
+    menuai: menuai, data: dict[str, Any]
 ) -> tuple[str, dict[str, Any]]:
     """Validate the user input allows us to connect."""
 
@@ -128,7 +128,7 @@ async def validate_nibegw_input(
 
 
 async def validate_modbus_input(
-    hass: HomeAssistant, data: dict[str, Any]
+    menuai: menuai, data: dict[str, Any]
 ) -> tuple[str, dict[str, Any]]:
     """Validate the user input allows us to connect."""
 
@@ -189,7 +189,7 @@ class NibeHeatPumpConfigFlow(ConfigFlow, domain=DOMAIN):
         errors = {}
 
         try:
-            title, data = await validate_modbus_input(self.hass, user_input)
+            title, data = await validate_modbus_input(self.menuai, user_input)
         except FieldError as exception:
             LOGGER.debug("Validation error %s", exception)
             errors[exception.field] = exception.error
@@ -215,7 +215,7 @@ class NibeHeatPumpConfigFlow(ConfigFlow, domain=DOMAIN):
         errors = {}
 
         try:
-            title, data = await validate_nibegw_input(self.hass, user_input)
+            title, data = await validate_nibegw_input(self.menuai, user_input)
         except FieldError as exception:
             LOGGER.exception("Validation error")
             errors[exception.field] = exception.error

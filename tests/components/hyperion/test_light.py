@@ -7,18 +7,18 @@ from unittest.mock import AsyncMock, Mock, call, patch
 from hyperion import const
 import pytest
 
-from homeassistant.components.hyperion import (
+from menuai.components.hyperion import (
     get_hyperion_device_id,
     light as hyperion_light,
 )
-from homeassistant.components.hyperion.const import (
+from menuai.components.hyperion.const import (
     CONF_EFFECT_HIDE_LIST,
     DEFAULT_ORIGIN,
     DOMAIN,
     HYPERION_MANUFACTURER_NAME,
     HYPERION_MODEL_NAME,
 )
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_EFFECT,
     ATTR_HS_COLOR,
@@ -26,8 +26,8 @@ from homeassistant.components.light import (
     ColorMode,
     LightEntityFeature,
 )
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntry, ConfigEntryState
-from homeassistant.const import (
+from menuai.config_entries import SOURCE_REAUTH, ConfigEntry, ConfigEntryState
+from menuai.const import (
     ATTR_ENTITY_ID,
     CONF_HOST,
     CONF_PORT,
@@ -36,8 +36,8 @@ from homeassistant.const import (
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from . import (
     TEST_AUTH_NOT_REQUIRED_RESP,
@@ -63,43 +63,43 @@ from . import (
 
 
 def _get_config_entry_from_unique_id(
-    hass: HomeAssistant, unique_id: str
+    menuai: menuai, unique_id: str
 ) -> ConfigEntry | None:
-    for entry in hass.config_entries.async_entries(domain=DOMAIN):
+    for entry in menuai.config_entries.async_entries(domain=DOMAIN):
         if entry.unique_id == TEST_SYSINFO_ID:
             return entry
     return None
 
 
-async def test_setup_config_entry(hass: HomeAssistant) -> None:
+async def test_setup_config_entry(menuai: menuai) -> None:
     """Test setting up the component via config entries."""
-    await setup_test_config_entry(hass, hyperion_client=create_mock_client())
-    assert hass.states.get(TEST_ENTITY_ID_1) is not None
+    await setup_test_config_entry(menuai, hyperion_client=create_mock_client())
+    assert menuai.states.get(TEST_ENTITY_ID_1) is not None
 
 
 async def test_setup_config_entry_not_ready_connect_fail(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test the component not being ready."""
     client = create_mock_client()
     client.async_client_connect = AsyncMock(return_value=False)
-    await setup_test_config_entry(hass, hyperion_client=client)
-    assert hass.states.get(TEST_ENTITY_ID_1) is None
+    await setup_test_config_entry(menuai, hyperion_client=client)
+    assert menuai.states.get(TEST_ENTITY_ID_1) is None
 
 
 async def test_setup_config_entry_not_ready_switch_instance_fail(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test the component not being ready."""
     client = create_mock_client()
     client.async_client_switch_instance = AsyncMock(return_value=False)
-    await setup_test_config_entry(hass, hyperion_client=client)
+    await setup_test_config_entry(menuai, hyperion_client=client)
     assert client.async_client_disconnect.called
-    assert hass.states.get(TEST_ENTITY_ID_1) is None
+    assert menuai.states.get(TEST_ENTITY_ID_1) is None
 
 
 async def test_setup_config_entry_not_ready_load_state_fail(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test the component not being ready."""
     client = create_mock_client()
@@ -110,17 +110,17 @@ async def test_setup_config_entry_not_ready_load_state_fail(
         }
     )
 
-    await setup_test_config_entry(hass, hyperion_client=client)
+    await setup_test_config_entry(menuai, hyperion_client=client)
     assert client.async_client_disconnect.called
-    assert hass.states.get(TEST_ENTITY_ID_1) is None
+    assert menuai.states.get(TEST_ENTITY_ID_1) is None
 
 
 async def test_setup_config_entry_dynamic_instances(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test dynamic changes in the instance configuration."""
-    config_entry = add_test_config_entry(hass)
+    config_entry = add_test_config_entry(menuai)
 
     master_client = create_mock_client()
     master_client.instances = [TEST_INSTANCE_1, TEST_INSTANCE_2]
@@ -129,14 +129,14 @@ async def test_setup_config_entry_dynamic_instances(
     entity_client.instances = master_client.instances
 
     with patch(
-        "homeassistant.components.hyperion.client.HyperionClient",
+        "menuai.components.hyperion.client.HyperionClient",
         side_effect=[master_client, entity_client, entity_client],
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
-    assert hass.states.get(TEST_ENTITY_ID_1) is not None
-    assert hass.states.get(TEST_ENTITY_ID_2) is not None
+    assert menuai.states.get(TEST_ENTITY_ID_1) is not None
+    assert menuai.states.get(TEST_ENTITY_ID_2) is not None
 
     assert master_client.set_callbacks.called
 
@@ -146,7 +146,7 @@ async def test_setup_config_entry_dynamic_instances(
     ]
 
     with patch(
-        "homeassistant.components.hyperion.client.HyperionClient",
+        "menuai.components.hyperion.client.HyperionClient",
         return_value=entity_client,
     ):
         await instance_callback(
@@ -159,11 +159,11 @@ async def test_setup_config_entry_dynamic_instances(
                 ],
             }
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    assert hass.states.get(TEST_ENTITY_ID_1) is None
-    assert hass.states.get(TEST_ENTITY_ID_2) is not None
-    assert hass.states.get(TEST_ENTITY_ID_3) is not None
+    assert menuai.states.get(TEST_ENTITY_ID_1) is None
+    assert menuai.states.get(TEST_ENTITY_ID_2) is not None
+    assert menuai.states.get(TEST_ENTITY_ID_3) is not None
 
     # Instance 1 is stopped, it should still be registered.
     assert entity_registry.async_is_registered(TEST_ENTITY_ID_1)
@@ -174,7 +174,7 @@ async def test_setup_config_entry_dynamic_instances(
         f"{const.KEY_INSTANCE}-{const.KEY_UPDATE}"
     ]
     with patch(
-        "homeassistant.components.hyperion.client.HyperionClient",
+        "menuai.components.hyperion.client.HyperionClient",
         return_value=entity_client,
     ):
         await instance_callback(
@@ -183,18 +183,18 @@ async def test_setup_config_entry_dynamic_instances(
                 const.KEY_DATA: [TEST_INSTANCE_2, TEST_INSTANCE_3],
             }
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    assert hass.states.get(TEST_ENTITY_ID_1) is None
-    assert hass.states.get(TEST_ENTITY_ID_2) is not None
-    assert hass.states.get(TEST_ENTITY_ID_3) is not None
+    assert menuai.states.get(TEST_ENTITY_ID_1) is None
+    assert menuai.states.get(TEST_ENTITY_ID_2) is not None
+    assert menuai.states.get(TEST_ENTITY_ID_3) is not None
 
     # Instance 1 is removed, it should not still be registered.
     assert not entity_registry.async_is_registered(TEST_ENTITY_ID_1)
 
     # == Inject a new instances update (re-add instance 1, but not running)
     with patch(
-        "homeassistant.components.hyperion.client.HyperionClient",
+        "menuai.components.hyperion.client.HyperionClient",
         return_value=entity_client,
     ):
         await instance_callback(
@@ -207,15 +207,15 @@ async def test_setup_config_entry_dynamic_instances(
                 ],
             }
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    assert hass.states.get(TEST_ENTITY_ID_1) is None
-    assert hass.states.get(TEST_ENTITY_ID_2) is not None
-    assert hass.states.get(TEST_ENTITY_ID_3) is not None
+    assert menuai.states.get(TEST_ENTITY_ID_1) is None
+    assert menuai.states.get(TEST_ENTITY_ID_2) is not None
+    assert menuai.states.get(TEST_ENTITY_ID_3) is not None
 
     # == Inject a new instances update (re-add instance 1, running)
     with patch(
-        "homeassistant.components.hyperion.client.HyperionClient",
+        "menuai.components.hyperion.client.HyperionClient",
         return_value=entity_client,
     ):
         await instance_callback(
@@ -224,20 +224,20 @@ async def test_setup_config_entry_dynamic_instances(
                 const.KEY_DATA: [TEST_INSTANCE_1, TEST_INSTANCE_2, TEST_INSTANCE_3],
             }
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    assert hass.states.get(TEST_ENTITY_ID_1) is not None
-    assert hass.states.get(TEST_ENTITY_ID_2) is not None
-    assert hass.states.get(TEST_ENTITY_ID_3) is not None
+    assert menuai.states.get(TEST_ENTITY_ID_1) is not None
+    assert menuai.states.get(TEST_ENTITY_ID_2) is not None
+    assert menuai.states.get(TEST_ENTITY_ID_3) is not None
 
 
-async def test_light_basic_properties(hass: HomeAssistant) -> None:
+async def test_light_basic_properties(menuai: menuai) -> None:
     """Test the basic properties."""
     client = create_mock_client()
     client.priorities = [{const.KEY_PRIORITY: TEST_PRIORITY}]
-    await setup_test_config_entry(hass, hyperion_client=client)
+    await setup_test_config_entry(menuai, hyperion_client=client)
 
-    entity_state = hass.states.get(TEST_ENTITY_ID_1)
+    entity_state = menuai.states.get(TEST_ENTITY_ID_1)
     assert entity_state
     assert entity_state.state == "on"
     assert entity_state.attributes["brightness"] == 255
@@ -253,15 +253,15 @@ async def test_light_basic_properties(hass: HomeAssistant) -> None:
     assert entity_state.attributes["supported_features"] == LightEntityFeature.EFFECT
 
 
-async def test_light_async_turn_on(hass: HomeAssistant) -> None:
+async def test_light_async_turn_on(menuai: menuai) -> None:
     """Test turning the light on."""
     client = create_mock_client()
     client.priorities = [{const.KEY_PRIORITY: TEST_PRIORITY}]
-    await setup_test_config_entry(hass, hyperion_client=client)
+    await setup_test_config_entry(menuai, hyperion_client=client)
 
     # On (=), 100% (=), solid (=), [255,255,255] (=)
     client.async_send_set_color = AsyncMock(return_value=True)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN, SERVICE_TURN_ON, {ATTR_ENTITY_ID: TEST_ENTITY_ID_1}, blocking=True
     )
 
@@ -279,7 +279,7 @@ async def test_light_async_turn_on(hass: HomeAssistant) -> None:
     client.async_send_set_color = AsyncMock(return_value=True)
     client.async_send_set_adjustment = AsyncMock(return_value=True)
     client.adjustment = [{const.KEY_ID: TEST_ID}]
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID_1, ATTR_BRIGHTNESS: brightness},
@@ -300,7 +300,7 @@ async def test_light_async_turn_on(hass: HomeAssistant) -> None:
     # Simulate a false return of async_send_set_adjustment
     client.async_send_set_adjustment = AsyncMock(return_value=False)
     client.adjustment = [{const.KEY_ID: TEST_ID}]
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID_1, ATTR_BRIGHTNESS: brightness},
@@ -310,7 +310,7 @@ async def test_light_async_turn_on(hass: HomeAssistant) -> None:
     # Simulate a state callback from Hyperion.
     client.adjustment = [{const.KEY_BRIGHTNESS: 50}]
     call_registered_callback(client, "adjustment-update")
-    entity_state = hass.states.get(TEST_ENTITY_ID_1)
+    entity_state = menuai.states.get(TEST_ENTITY_ID_1)
     assert entity_state
     assert entity_state.state == "on"
     assert entity_state.attributes["brightness"] == brightness
@@ -318,7 +318,7 @@ async def test_light_async_turn_on(hass: HomeAssistant) -> None:
     # On (=), 50% (=), solid (=), [0,255,255] (!)
     hs_color = (180.0, 100.0)
     client.async_send_set_color = AsyncMock(return_value=True)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID_1, ATTR_HS_COLOR: hs_color},
@@ -344,7 +344,7 @@ async def test_light_async_turn_on(hass: HomeAssistant) -> None:
     ]
 
     call_registered_callback(client, "priorities-update")
-    entity_state = hass.states.get(TEST_ENTITY_ID_1)
+    entity_state = menuai.states.get(TEST_ENTITY_ID_1)
     assert entity_state
     assert entity_state.attributes["hs_color"] == hs_color
     assert entity_state.attributes["icon"] == hyperion_light.ICON_LIGHTBULB
@@ -355,7 +355,7 @@ async def test_light_async_turn_on(hass: HomeAssistant) -> None:
     client.async_send_set_adjustment = AsyncMock(return_value=True)
     client.adjustment = [{const.KEY_ID: TEST_ID}]
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID_1, ATTR_BRIGHTNESS: brightness},
@@ -374,7 +374,7 @@ async def test_light_async_turn_on(hass: HomeAssistant) -> None:
     )
     client.adjustment = [{const.KEY_BRIGHTNESS: 100}]
     call_registered_callback(client, "adjustment-update")
-    entity_state = hass.states.get(TEST_ENTITY_ID_1)
+    entity_state = menuai.states.get(TEST_ENTITY_ID_1)
     assert entity_state
     assert entity_state.attributes["brightness"] == brightness
 
@@ -383,7 +383,7 @@ async def test_light_async_turn_on(hass: HomeAssistant) -> None:
     client.async_send_clear = AsyncMock(return_value=True)
     client.async_send_set_effect = AsyncMock(return_value=True)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID_1, ATTR_EFFECT: effect},
@@ -405,7 +405,7 @@ async def test_light_async_turn_on(hass: HomeAssistant) -> None:
         }
     ]
     call_registered_callback(client, "priorities-update")
-    entity_state = hass.states.get(TEST_ENTITY_ID_1)
+    entity_state = menuai.states.get(TEST_ENTITY_ID_1)
     assert entity_state
     assert entity_state.attributes["icon"] == hyperion_light.ICON_EFFECT
     assert entity_state.attributes["effect"] == effect
@@ -414,7 +414,7 @@ async def test_light_async_turn_on(hass: HomeAssistant) -> None:
     # Ensure changing the color will move the effect to 'Solid' automatically.
     hs_color = (240.0, 100.0)
     client.async_send_set_color = AsyncMock(return_value=True)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID_1, ATTR_HS_COLOR: hs_color},
@@ -438,7 +438,7 @@ async def test_light_async_turn_on(hass: HomeAssistant) -> None:
         }
     ]
     call_registered_callback(client, "priorities-update")
-    entity_state = hass.states.get(TEST_ENTITY_ID_1)
+    entity_state = menuai.states.get(TEST_ENTITY_ID_1)
     assert entity_state
     assert entity_state.attributes["hs_color"] == hs_color
     assert entity_state.attributes["icon"] == hyperion_light.ICON_LIGHTBULB
@@ -450,7 +450,7 @@ async def test_light_async_turn_on(hass: HomeAssistant) -> None:
     client.async_send_clear = AsyncMock(return_value=True)
     client.async_send_set_effect = AsyncMock(return_value=True)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN, SERVICE_TURN_ON, {ATTR_ENTITY_ID: TEST_ENTITY_ID_1}, blocking=True
     )
 
@@ -459,54 +459,54 @@ async def test_light_async_turn_on(hass: HomeAssistant) -> None:
 
 
 async def test_light_async_turn_on_fail_async_send_set_effect(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test async_send_set_effect failure when turning on the light."""
     client = create_mock_client()
     client.is_on = Mock(return_value=True)
     client.async_send_clear = AsyncMock(return_value=True)
     client.async_send_set_effect = AsyncMock(return_value=False)
-    await setup_test_config_entry(hass, hyperion_client=client)
-    await hass.services.async_call(
+    await setup_test_config_entry(menuai, hyperion_client=client)
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID_1, ATTR_EFFECT: "Warm Mood Blobs"},
         blocking=True,
     )
     assert client.method_calls[-1] == call.async_send_set_effect(
-        priority=180, effect={"name": "Warm Mood Blobs"}, origin="Home Assistant"
+        priority=180, effect={"name": "Warm Mood Blobs"}, origin="MenuAI"
     )
 
 
 async def test_light_async_turn_on_fail_async_send_set_color(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test async_send_set_color failure when turning on the light."""
     client = create_mock_client()
     client.is_on = Mock(return_value=True)
     client.async_send_clear = AsyncMock(return_value=True)
     client.async_send_set_color = AsyncMock(return_value=False)
-    await setup_test_config_entry(hass, hyperion_client=client)
-    await hass.services.async_call(
+    await setup_test_config_entry(menuai, hyperion_client=client)
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID_1, ATTR_HS_COLOR: (240.0, 100.0)},
         blocking=True,
     )
     assert client.method_calls[-1] == call.async_send_set_color(
-        priority=180, color=(0, 0, 255), origin="Home Assistant"
+        priority=180, color=(0, 0, 255), origin="MenuAI"
     )
 
 
 async def test_light_async_turn_off_fail_async_send_send_clear(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test async_send_clear failure when turning off the light."""
     client = create_mock_client()
     client.async_send_clear = AsyncMock(return_value=False)
-    await setup_test_config_entry(hass, hyperion_client=client)
+    await setup_test_config_entry(menuai, hyperion_client=client)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID_1},
@@ -515,13 +515,13 @@ async def test_light_async_turn_off_fail_async_send_send_clear(
     assert client.method_calls[-1] == call.async_send_clear(priority=TEST_PRIORITY)
 
 
-async def test_light_async_turn_off(hass: HomeAssistant) -> None:
+async def test_light_async_turn_off(menuai: menuai) -> None:
     """Test turning the light off."""
     client = create_mock_client()
-    await setup_test_config_entry(hass, hyperion_client=client)
+    await setup_test_config_entry(menuai, hyperion_client=client)
 
     client.async_send_clear = AsyncMock(return_value=True)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID_1},
@@ -535,18 +535,18 @@ async def test_light_async_turn_off(hass: HomeAssistant) -> None:
 
 
 async def test_light_async_updates_from_hyperion_client(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test receiving a variety of Hyperion client callbacks."""
     client = create_mock_client()
     client.priorities = [{const.KEY_PRIORITY: TEST_PRIORITY}]
-    await setup_test_config_entry(hass, hyperion_client=client)
+    await setup_test_config_entry(menuai, hyperion_client=client)
 
     # Bright change gets accepted.
     brightness = 10
     client.adjustment = [{const.KEY_BRIGHTNESS: brightness}]
     call_registered_callback(client, "adjustment-update")
-    entity_state = hass.states.get(TEST_ENTITY_ID_1)
+    entity_state = menuai.states.get(TEST_ENTITY_ID_1)
     assert entity_state
     assert entity_state.state == "on"
     assert entity_state.attributes["brightness"] == round(255 * (brightness / 100.0))
@@ -555,7 +555,7 @@ async def test_light_async_updates_from_hyperion_client(
     bad_brightness = -200
     client.adjustment = [{const.KEY_BRIGHTNESS: bad_brightness}]
     call_registered_callback(client, "adjustment-update")
-    entity_state = hass.states.get(TEST_ENTITY_ID_1)
+    entity_state = menuai.states.get(TEST_ENTITY_ID_1)
     assert entity_state
     assert entity_state.state == "on"
     assert entity_state.attributes["brightness"] == round(255 * (brightness / 100.0))
@@ -573,7 +573,7 @@ async def test_light_async_updates_from_hyperion_client(
     ]
 
     call_registered_callback(client, "priorities-update")
-    entity_state = hass.states.get(TEST_ENTITY_ID_1)
+    entity_state = menuai.states.get(TEST_ENTITY_ID_1)
     assert entity_state
     assert entity_state.attributes["effect"] == effect
     assert entity_state.attributes["icon"] == hyperion_light.ICON_EFFECT
@@ -593,7 +593,7 @@ async def test_light_async_updates_from_hyperion_client(
     ]
 
     call_registered_callback(client, "priorities-update")
-    entity_state = hass.states.get(TEST_ENTITY_ID_1)
+    entity_state = menuai.states.get(TEST_ENTITY_ID_1)
     assert entity_state
     assert entity_state.attributes["effect"] == hyperion_light.KEY_EFFECT_SOLID
     assert entity_state.attributes["icon"] == hyperion_light.ICON_LIGHTBULB
@@ -603,7 +603,7 @@ async def test_light_async_updates_from_hyperion_client(
     client.priorities = []
 
     call_registered_callback(client, "priorities-update")
-    entity_state = hass.states.get(TEST_ENTITY_ID_1)
+    entity_state = menuai.states.get(TEST_ENTITY_ID_1)
     assert entity_state
     assert entity_state.state == "off"
 
@@ -611,7 +611,7 @@ async def test_light_async_updates_from_hyperion_client(
     effects = [{const.KEY_NAME: "One"}, {const.KEY_NAME: "Two"}]
     client.effects = effects
     call_registered_callback(client, "effects-update")
-    entity_state = hass.states.get(TEST_ENTITY_ID_1)
+    entity_state = menuai.states.get(TEST_ENTITY_ID_1)
     assert entity_state
     assert entity_state.attributes["effect_list"] == [
         hyperion_light.KEY_EFFECT_SOLID
@@ -622,7 +622,7 @@ async def test_light_async_updates_from_hyperion_client(
     # Turn on late, check state, disconnect, ensure it cannot be turned off.
     client.has_loaded_state = False
     call_registered_callback(client, "client-update", {"loaded-state": False})
-    entity_state = hass.states.get(TEST_ENTITY_ID_1)
+    entity_state = menuai.states.get(TEST_ENTITY_ID_1)
     assert entity_state
     assert entity_state.state == "unavailable"
 
@@ -639,12 +639,12 @@ async def test_light_async_updates_from_hyperion_client(
         }
     ]
     call_registered_callback(client, "client-update", {"loaded-state": True})
-    entity_state = hass.states.get(TEST_ENTITY_ID_1)
+    entity_state = menuai.states.get(TEST_ENTITY_ID_1)
     assert entity_state
     assert entity_state.state == "on"
 
 
-async def test_full_state_loaded_on_start(hass: HomeAssistant) -> None:
+async def test_full_state_loaded_on_start(menuai: menuai) -> None:
     """Test receiving a variety of Hyperion client callbacks."""
     client = create_mock_client()
 
@@ -661,9 +661,9 @@ async def test_full_state_loaded_on_start(hass: HomeAssistant) -> None:
     ]
     client.effects = [{const.KEY_NAME: "One"}, {const.KEY_NAME: "Two"}]
 
-    await setup_test_config_entry(hass, hyperion_client=client)
+    await setup_test_config_entry(menuai, hyperion_client=client)
 
-    entity_state = hass.states.get(TEST_ENTITY_ID_1)
+    entity_state = menuai.states.get(TEST_ENTITY_ID_1)
     assert entity_state
     assert entity_state.attributes["brightness"] == round(255 * (brightness / 100.0))
     assert entity_state.attributes["effect"] == hyperion_light.KEY_EFFECT_SOLID
@@ -671,57 +671,57 @@ async def test_full_state_loaded_on_start(hass: HomeAssistant) -> None:
     assert entity_state.attributes["hs_color"] == (180.0, 100.0)
 
 
-async def test_unload_entry(hass: HomeAssistant) -> None:
+async def test_unload_entry(menuai: menuai) -> None:
     """Test unload."""
     client = create_mock_client()
-    await setup_test_config_entry(hass, hyperion_client=client)
-    assert hass.states.get(TEST_ENTITY_ID_1) is not None
+    await setup_test_config_entry(menuai, hyperion_client=client)
+    assert menuai.states.get(TEST_ENTITY_ID_1) is not None
     assert client.async_client_connect.call_count == 2
     assert not client.async_client_disconnect.called
-    entry = _get_config_entry_from_unique_id(hass, TEST_SYSINFO_ID)
+    entry = _get_config_entry_from_unique_id(menuai, TEST_SYSINFO_ID)
     assert entry
 
-    await hass.config_entries.async_unload(entry.entry_id)
+    await menuai.config_entries.async_unload(entry.entry_id)
     assert client.async_client_disconnect.call_count == 2
 
 
 async def test_version_log_warning(
-    caplog: pytest.LogCaptureFixture, hass: HomeAssistant
+    caplog: pytest.LogCaptureFixture, menuai: menuai
 ) -> None:
     """Test warning on old version."""
     client = create_mock_client()
     client.async_sysinfo_version = AsyncMock(return_value="2.0.0-alpha.7")
-    await setup_test_config_entry(hass, hyperion_client=client)
-    assert hass.states.get(TEST_ENTITY_ID_1) is not None
+    await setup_test_config_entry(menuai, hyperion_client=client)
+    assert menuai.states.get(TEST_ENTITY_ID_1) is not None
     assert "Please consider upgrading" in caplog.text
 
 
 async def test_version_no_log_warning(
-    caplog: pytest.LogCaptureFixture, hass: HomeAssistant
+    caplog: pytest.LogCaptureFixture, menuai: menuai
 ) -> None:
     """Test no warning on acceptable version."""
     client = create_mock_client()
     client.async_sysinfo_version = AsyncMock(return_value="2.0.0-alpha.9")
-    await setup_test_config_entry(hass, hyperion_client=client)
-    assert hass.states.get(TEST_ENTITY_ID_1) is not None
+    await setup_test_config_entry(menuai, hyperion_client=client)
+    assert menuai.states.get(TEST_ENTITY_ID_1) is not None
     assert "Please consider upgrading" not in caplog.text
 
 
-async def test_setup_entry_no_token_reauth(hass: HomeAssistant) -> None:
+async def test_setup_entry_no_token_reauth(menuai: menuai) -> None:
     """Verify a reauth flow when auth is required but no token provided."""
     client = create_mock_client()
-    config_entry = add_test_config_entry(hass)
+    config_entry = add_test_config_entry(menuai)
     client.async_is_auth_required = AsyncMock(return_value=TEST_AUTH_REQUIRED_RESP)
 
     with (
         patch(
-            "homeassistant.components.hyperion.client.HyperionClient",
+            "menuai.components.hyperion.client.HyperionClient",
             return_value=client,
         ),
-        patch.object(hass.config_entries.flow, "async_init") as mock_flow_init,
+        patch.object(menuai.config_entries.flow, "async_init") as mock_flow_init,
     ):
-        assert not await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert not await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
         assert client.async_client_disconnect.called
         mock_flow_init.assert_called_once_with(
             DOMAIN,
@@ -736,11 +736,11 @@ async def test_setup_entry_no_token_reauth(hass: HomeAssistant) -> None:
         assert config_entry.state is ConfigEntryState.SETUP_ERROR
 
 
-async def test_setup_entry_bad_token_reauth(hass: HomeAssistant) -> None:
+async def test_setup_entry_bad_token_reauth(menuai: menuai) -> None:
     """Verify a reauth flow when a bad token is provided."""
     client = create_mock_client()
     config_entry = add_test_config_entry(
-        hass,
+        menuai,
         data={CONF_HOST: TEST_HOST, CONF_PORT: TEST_PORT, CONF_TOKEN: "expired_token"},
     )
     client.async_is_auth_required = AsyncMock(return_value=TEST_AUTH_NOT_REQUIRED_RESP)
@@ -749,13 +749,13 @@ async def test_setup_entry_bad_token_reauth(hass: HomeAssistant) -> None:
     client.async_client_login = AsyncMock(return_value=False)
     with (
         patch(
-            "homeassistant.components.hyperion.client.HyperionClient",
+            "menuai.components.hyperion.client.HyperionClient",
             return_value=client,
         ),
-        patch.object(hass.config_entries.flow, "async_init") as mock_flow_init,
+        patch.object(menuai.config_entries.flow, "async_init") as mock_flow_init,
     ):
-        assert not await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert not await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
         assert client.async_client_disconnect.called
         mock_flow_init.assert_called_once_with(
             DOMAIN,
@@ -770,18 +770,18 @@ async def test_setup_entry_bad_token_reauth(hass: HomeAssistant) -> None:
         assert config_entry.state is ConfigEntryState.SETUP_ERROR
 
 
-async def test_light_option_effect_hide_list(hass: HomeAssistant) -> None:
+async def test_light_option_effect_hide_list(menuai: menuai) -> None:
     """Test the effect_hide_list option."""
     client = create_mock_client()
     client.effects = [{const.KEY_NAME: "One"}, {const.KEY_NAME: "Two"}]
 
     await setup_test_config_entry(
-        hass,
+        menuai,
         hyperion_client=client,
         options={CONF_EFFECT_HIDE_LIST: ["Two", "Three"]},
     )
 
-    entity_state = hass.states.get(TEST_ENTITY_ID_1)
+    entity_state = menuai.states.get(TEST_ENTITY_ID_1)
     assert entity_state
     assert entity_state.attributes["effect_list"] == [
         "Solid",
@@ -790,14 +790,14 @@ async def test_light_option_effect_hide_list(hass: HomeAssistant) -> None:
 
 
 async def test_device_info(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Verify device information includes expected details."""
     client = create_mock_client()
 
-    await setup_test_config_entry(hass, hyperion_client=client)
+    await setup_test_config_entry(menuai, hyperion_client=client)
 
     device_id = get_hyperion_device_id(TEST_SYSINFO_ID, TEST_INSTANCE)
 

@@ -8,7 +8,7 @@ from chip.clusters import Objects as clusters
 from matter_server.client.models import device_types
 from matter_server.common.helpers.util import create_attribute_path_from_attribute
 
-from homeassistant.components.water_heater import (
+from menuai.components.water_heater import (
     STATE_ECO,
     STATE_HIGH_DEMAND,
     STATE_OFF,
@@ -16,15 +16,15 @@ from homeassistant.components.water_heater import (
     WaterHeaterEntityDescription,
     WaterHeaterEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_TEMPERATURE,
     PRECISION_WHOLE,
     Platform,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .entity import MatterEntity
 from .helpers import get_matter
@@ -41,12 +41,12 @@ WATER_HEATER_SYSTEM_MODE_MAP = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Matter WaterHeater platform from Config Entry."""
-    matter = get_matter(hass)
+    matter = get_matter(menuai)
     matter.register_platform_handler(Platform.WATER_HEATER, async_add_entities)
 
 

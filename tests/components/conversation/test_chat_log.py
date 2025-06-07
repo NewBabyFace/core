@@ -9,7 +9,7 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 import voluptuous as vol
 
-from homeassistant.components.conversation import (
+from menuai.components.conversation import (
     AssistantContent,
     ConversationInput,
     ConverseError,
@@ -17,17 +17,17 @@ from homeassistant.components.conversation import (
     UserContent,
     async_get_chat_log,
 )
-from homeassistant.components.conversation.chat_log import DATA_CHAT_LOGS
-from homeassistant.core import Context, HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import chat_session, llm
-from homeassistant.util import dt as dt_util
+from menuai.components.conversation.chat_log import DATA_CHAT_LOGS
+from menuai.core import Context, menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import chat_session, llm
+from menuai.util import dt as dt_util
 
 from tests.common import async_fire_time_changed
 
 
 @pytest.fixture
-def mock_conversation_input(hass: HomeAssistant) -> ConversationInput:
+def mock_conversation_input(menuai: menuai) -> ConversationInput:
     """Return a conversation input instance."""
     return ConversationInput(
         text="Hello",
@@ -42,19 +42,19 @@ def mock_conversation_input(hass: HomeAssistant) -> ConversationInput:
 @pytest.fixture
 def mock_ulid() -> Generator[Mock]:
     """Mock the ulid library."""
-    with patch("homeassistant.helpers.chat_session.ulid_now") as mock_ulid_now:
+    with patch("menuai.helpers.chat_session.ulid_now") as mock_ulid_now:
         mock_ulid_now.return_value = "mock-ulid"
         yield mock_ulid_now
 
 
 async def test_cleanup(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_conversation_input: ConversationInput,
 ) -> None:
     """Test cleanup of the chat log."""
     with (
-        chat_session.async_get_chat_session(hass) as session,
-        async_get_chat_log(hass, session, mock_conversation_input) as chat_log,
+        chat_session.async_get_chat_session(menuai) as session,
+        async_get_chat_log(menuai, session, mock_conversation_input) as chat_log,
     ):
         conversation_id = session.conversation_id
         # Add message so it persists
@@ -65,29 +65,29 @@ async def test_cleanup(
             )
         )
 
-    assert conversation_id in hass.data[DATA_CHAT_LOGS]
+    assert conversation_id in menuai.data[DATA_CHAT_LOGS]
 
     # Set the last updated to be older than the timeout
-    hass.data[chat_session.DATA_CHAT_SESSION][conversation_id].last_updated = (
+    menuai.data[chat_session.DATA_CHAT_SESSION][conversation_id].last_updated = (
         dt_util.utcnow() + chat_session.CONVERSATION_TIMEOUT
     )
 
     async_fire_time_changed(
-        hass,
+        menuai,
         dt_util.utcnow() + chat_session.CONVERSATION_TIMEOUT * 2 + timedelta(seconds=1),
     )
 
-    assert conversation_id not in hass.data[DATA_CHAT_LOGS]
+    assert conversation_id not in menuai.data[DATA_CHAT_LOGS]
 
 
 async def test_default_content(
-    hass: HomeAssistant, mock_conversation_input: ConversationInput
+    menuai: menuai, mock_conversation_input: ConversationInput
 ) -> None:
     """Test filtering of messages."""
     with (
-        chat_session.async_get_chat_session(hass) as session,
-        async_get_chat_log(hass, session, mock_conversation_input) as chat_log,
-        async_get_chat_log(hass, session, mock_conversation_input) as chat_log2,
+        chat_session.async_get_chat_session(menuai) as session,
+        async_get_chat_log(menuai, session, mock_conversation_input) as chat_log,
+        async_get_chat_log(menuai, session, mock_conversation_input) as chat_log2,
     ):
         assert chat_log is chat_log2
         assert len(chat_log.content) == 2
@@ -98,18 +98,18 @@ async def test_default_content(
 
 
 async def test_llm_api(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_conversation_input: ConversationInput,
 ) -> None:
     """Test when we reference an LLM API."""
     with (
-        chat_session.async_get_chat_session(hass) as session,
-        async_get_chat_log(hass, session, mock_conversation_input) as chat_log,
+        chat_session.async_get_chat_session(menuai) as session,
+        async_get_chat_log(menuai, session, mock_conversation_input) as chat_log,
     ):
         await chat_log.async_update_llm_data(
             conversing_domain="test",
             user_input=mock_conversation_input,
-            user_llm_hass_api="assist",
+            user_llm_menuai_api="assist",
             user_llm_prompt=None,
         )
 
@@ -118,20 +118,20 @@ async def test_llm_api(
 
 
 async def test_unknown_llm_api(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_conversation_input: ConversationInput,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test when we reference an LLM API that does not exists."""
     with (
-        chat_session.async_get_chat_session(hass) as session,
-        async_get_chat_log(hass, session, mock_conversation_input) as chat_log,
+        chat_session.async_get_chat_session(menuai) as session,
+        async_get_chat_log(menuai, session, mock_conversation_input) as chat_log,
         pytest.raises(ConverseError) as exc_info,
     ):
         await chat_log.async_update_llm_data(
             conversing_domain="test",
             user_input=mock_conversation_input,
-            user_llm_hass_api="unknown-api",
+            user_llm_menuai_api="unknown-api",
             user_llm_prompt=None,
         )
 
@@ -140,7 +140,7 @@ async def test_unknown_llm_api(
 
 
 async def test_multiple_llm_apis(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_conversation_input: ConversationInput,
 ) -> None:
     """Test when we reference an LLM API."""
@@ -163,17 +163,17 @@ async def test_multiple_llm_apis(
             """Return a list of tools."""
             return llm.APIInstance(self, "My API Prompt", llm_context, [MyTool()])
 
-    api = MyAPI(hass=hass, id="my-api", name="Test")
-    llm.async_register_api(hass, api)
+    api = MyAPI(menuai=menuai, id="my-api", name="Test")
+    llm.async_register_api(menuai, api)
 
     with (
-        chat_session.async_get_chat_session(hass) as session,
-        async_get_chat_log(hass, session, mock_conversation_input) as chat_log,
+        chat_session.async_get_chat_session(menuai) as session,
+        async_get_chat_log(menuai, session, mock_conversation_input) as chat_log,
     ):
         await chat_log.async_update_llm_data(
             conversing_domain="test",
             user_input=mock_conversation_input,
-            user_llm_hass_api=["assist", "my-api"],
+            user_llm_menuai_api=["assist", "my-api"],
             user_llm_prompt=None,
         )
 
@@ -182,20 +182,20 @@ async def test_multiple_llm_apis(
 
 
 async def test_template_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_conversation_input: ConversationInput,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test that template error handling works."""
     with (
-        chat_session.async_get_chat_session(hass) as session,
-        async_get_chat_log(hass, session, mock_conversation_input) as chat_log,
+        chat_session.async_get_chat_session(menuai) as session,
+        async_get_chat_log(menuai, session, mock_conversation_input) as chat_log,
         pytest.raises(ConverseError) as exc_info,
     ):
         await chat_log.async_update_llm_data(
             conversing_domain="test",
             user_input=mock_conversation_input,
-            user_llm_hass_api=None,
+            user_llm_menuai_api=None,
             user_llm_prompt="{{ invalid_syntax",
         )
 
@@ -204,7 +204,7 @@ async def test_template_error(
 
 
 async def test_template_variables(
-    hass: HomeAssistant, mock_conversation_input: ConversationInput
+    menuai: menuai, mock_conversation_input: ConversationInput
 ) -> None:
     """Test that template variables work."""
     mock_user = Mock()
@@ -213,14 +213,14 @@ async def test_template_variables(
     mock_conversation_input.context = Context(user_id=mock_user.id)
 
     with (
-        chat_session.async_get_chat_session(hass) as session,
-        async_get_chat_log(hass, session, mock_conversation_input) as chat_log,
-        patch("homeassistant.auth.AuthManager.async_get_user", return_value=mock_user),
+        chat_session.async_get_chat_session(menuai) as session,
+        async_get_chat_log(menuai, session, mock_conversation_input) as chat_log,
+        patch("menuai.auth.AuthManager.async_get_user", return_value=mock_user),
     ):
         await chat_log.async_update_llm_data(
             conversing_domain="test",
             user_input=mock_conversation_input,
-            user_llm_hass_api=None,
+            user_llm_menuai_api=None,
             user_llm_prompt=(
                 "The instance name is {{ ha_name }}. "
                 "The user name is {{ user_name }}. "
@@ -236,7 +236,7 @@ async def test_template_variables(
 
 
 async def test_extra_systen_prompt(
-    hass: HomeAssistant, mock_conversation_input: ConversationInput
+    menuai: menuai, mock_conversation_input: ConversationInput
 ) -> None:
     """Test that extra system prompt works."""
     extra_system_prompt = "Garage door cover.garage_door has been left open for 30 minutes. We asked the user if they want to close it."
@@ -246,13 +246,13 @@ async def test_extra_systen_prompt(
     mock_conversation_input.extra_system_prompt = extra_system_prompt
 
     with (
-        chat_session.async_get_chat_session(hass) as session,
-        async_get_chat_log(hass, session, mock_conversation_input) as chat_log,
+        chat_session.async_get_chat_session(menuai) as session,
+        async_get_chat_log(menuai, session, mock_conversation_input) as chat_log,
     ):
         await chat_log.async_update_llm_data(
             conversing_domain="test",
             user_input=mock_conversation_input,
-            user_llm_hass_api=None,
+            user_llm_menuai_api=None,
             user_llm_prompt=None,
         )
         chat_log.async_add_assistant_content_without_tools(
@@ -270,13 +270,13 @@ async def test_extra_systen_prompt(
     mock_conversation_input.extra_system_prompt = None
 
     with (
-        chat_session.async_get_chat_session(hass, conversation_id) as session,
-        async_get_chat_log(hass, session, mock_conversation_input) as chat_log,
+        chat_session.async_get_chat_session(menuai, conversation_id) as session,
+        async_get_chat_log(menuai, session, mock_conversation_input) as chat_log,
     ):
         await chat_log.async_update_llm_data(
             conversing_domain="test",
             user_input=mock_conversation_input,
-            user_llm_hass_api=None,
+            user_llm_menuai_api=None,
             user_llm_prompt=None,
         )
 
@@ -287,13 +287,13 @@ async def test_extra_systen_prompt(
     mock_conversation_input.extra_system_prompt = extra_system_prompt2
 
     with (
-        chat_session.async_get_chat_session(hass, conversation_id) as session,
-        async_get_chat_log(hass, session, mock_conversation_input) as chat_log,
+        chat_session.async_get_chat_session(menuai, conversation_id) as session,
+        async_get_chat_log(menuai, session, mock_conversation_input) as chat_log,
     ):
         await chat_log.async_update_llm_data(
             conversing_domain="test",
             user_input=mock_conversation_input,
-            user_llm_hass_api=None,
+            user_llm_menuai_api=None,
             user_llm_prompt=None,
         )
         chat_log.async_add_assistant_content_without_tools(
@@ -311,13 +311,13 @@ async def test_extra_systen_prompt(
     mock_conversation_input.extra_system_prompt = None
 
     with (
-        chat_session.async_get_chat_session(hass, conversation_id) as session,
-        async_get_chat_log(hass, session, mock_conversation_input) as chat_log,
+        chat_session.async_get_chat_session(menuai, conversation_id) as session,
+        async_get_chat_log(menuai, session, mock_conversation_input) as chat_log,
     ):
         await chat_log.async_update_llm_data(
             conversing_domain="test",
             user_input=mock_conversation_input,
-            user_llm_hass_api=None,
+            user_llm_menuai_api=None,
             user_llm_prompt=None,
         )
 
@@ -334,7 +334,7 @@ async def test_extra_systen_prompt(
     ],
 )
 async def test_tool_call(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_conversation_input: ConversationInput,
     prerun_tool_tasks: tuple[str],
 ) -> None:
@@ -349,18 +349,18 @@ async def test_tool_call(
     mock_tool.async_call.return_value = "Test response"
 
     with patch(
-        "homeassistant.helpers.llm.AssistAPI._async_get_tools", return_value=[]
+        "menuai.helpers.llm.AssistAPI._async_get_tools", return_value=[]
     ) as mock_get_tools:
         mock_get_tools.return_value = [mock_tool]
 
         with (
-            chat_session.async_get_chat_session(hass) as session,
-            async_get_chat_log(hass, session, mock_conversation_input) as chat_log,
+            chat_session.async_get_chat_session(menuai) as session,
+            async_get_chat_log(menuai, session, mock_conversation_input) as chat_log,
         ):
             await chat_log.async_update_llm_data(
                 conversing_domain="test",
                 user_input=mock_conversation_input,
-                user_llm_hass_api="assist",
+                user_llm_menuai_api="assist",
                 user_llm_prompt=None,
             )
             content = AssistantContent(
@@ -381,7 +381,7 @@ async def test_tool_call(
             )
 
             tool_call_tasks = {
-                tool_call_id: hass.async_create_task(
+                tool_call_id: menuai.async_create_task(
                     chat_log.llm_api.async_call_tool(content.tool_calls[0]),
                     tool_call_id,
                 )
@@ -413,7 +413,7 @@ async def test_tool_call(
 
 
 async def test_tool_call_exception(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_conversation_input: ConversationInput,
 ) -> None:
     """Test using the session tool calling API."""
@@ -424,20 +424,20 @@ async def test_tool_call_exception(
     mock_tool.parameters = vol.Schema(
         {vol.Optional("param1", description="Test parameters"): str}
     )
-    mock_tool.async_call.side_effect = HomeAssistantError("Test error")
+    mock_tool.async_call.side_effect = menuaiError("Test error")
 
     with (
         patch(
-            "homeassistant.helpers.llm.AssistAPI._async_get_tools", return_value=[]
+            "menuai.helpers.llm.AssistAPI._async_get_tools", return_value=[]
         ) as mock_get_tools,
-        chat_session.async_get_chat_session(hass) as session,
-        async_get_chat_log(hass, session, mock_conversation_input) as chat_log,
+        chat_session.async_get_chat_session(menuai) as session,
+        async_get_chat_log(menuai, session, mock_conversation_input) as chat_log,
     ):
         mock_get_tools.return_value = [mock_tool]
         await chat_log.async_update_llm_data(
             conversing_domain="test",
             user_input=mock_conversation_input,
-            user_llm_hass_api="assist",
+            user_llm_menuai_api="assist",
             user_llm_prompt=None,
         )
         result = None
@@ -460,7 +460,7 @@ async def test_tool_call_exception(
     assert result == ToolResultContent(
         agent_id=mock_conversation_input.agent_id,
         tool_call_id="mock-tool-call-id",
-        tool_result={"error": "HomeAssistantError", "error_text": "Test error"},
+        tool_result={"error": "menuaiError", "error_text": "Test error"},
         tool_name="test_tool",
     )
 
@@ -549,7 +549,7 @@ async def test_tool_call_exception(
     ],
 )
 async def test_add_delta_content_stream(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_conversation_input: ConversationInput,
     snapshot: SnapshotAssertion,
     deltas: list[dict],
@@ -564,7 +564,7 @@ async def test_add_delta_content_stream(
     )
 
     async def tool_call(
-        hass: HomeAssistant, tool_input: llm.ToolInput, llm_context: llm.LLMContext
+        menuai: menuai, tool_input: llm.ToolInput, llm_context: llm.LLMContext
     ) -> str:
         """Call the tool."""
         return tool_input.tool_args["param1"]
@@ -582,11 +582,11 @@ async def test_add_delta_content_stream(
 
     with (
         patch(
-            "homeassistant.helpers.llm.AssistAPI._async_get_tools", return_value=[]
+            "menuai.helpers.llm.AssistAPI._async_get_tools", return_value=[]
         ) as mock_get_tools,
-        chat_session.async_get_chat_session(hass) as session,
+        chat_session.async_get_chat_session(menuai) as session,
         async_get_chat_log(
-            hass,
+            menuai,
             session,
             mock_conversation_input,
             chat_log_delta_listener=lambda chat_log, delta: captured_deltas.append(
@@ -598,7 +598,7 @@ async def test_add_delta_content_stream(
         await chat_log.async_update_llm_data(
             conversing_domain="test",
             user_input=mock_conversation_input,
-            user_llm_hass_api="assist",
+            user_llm_menuai_api="assist",
             user_llm_prompt=None,
         )
 
@@ -618,7 +618,7 @@ async def test_add_delta_content_stream(
 
 
 async def test_add_delta_content_stream_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_conversation_input: ConversationInput,
 ) -> None:
     """Test streaming deltas error handling."""
@@ -629,8 +629,8 @@ async def test_add_delta_content_stream_errors(
             yield d
 
     with (
-        chat_session.async_get_chat_session(hass) as session,
-        async_get_chat_log(hass, session, mock_conversation_input) as chat_log,
+        chat_session.async_get_chat_session(menuai) as session,
+        async_get_chat_log(menuai, session, mock_conversation_input) as chat_log,
     ):
         # Stream content without LLM API set
         with pytest.raises(ValueError):
@@ -666,22 +666,22 @@ async def test_add_delta_content_stream_errors(
 
 
 async def test_chat_log_reuse(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_conversation_input: ConversationInput,
 ) -> None:
     """Test that we can reuse a chat log."""
     with (
-        chat_session.async_get_chat_session(hass) as session,
-        async_get_chat_log(hass, session) as chat_log,
+        chat_session.async_get_chat_session(menuai) as session,
+        async_get_chat_log(menuai, session) as chat_log,
     ):
         assert chat_log.conversation_id == session.conversation_id
         assert len(chat_log.content) == 1
 
-        with async_get_chat_log(hass, session) as chat_log2:
+        with async_get_chat_log(menuai, session) as chat_log2:
             assert chat_log2 is chat_log
             assert len(chat_log.content) == 1
 
-        with async_get_chat_log(hass, session, mock_conversation_input) as chat_log2:
+        with async_get_chat_log(menuai, session, mock_conversation_input) as chat_log2:
             assert chat_log2 is chat_log
             assert len(chat_log.content) == 2
             assert chat_log.content[1].role == "user"
@@ -689,13 +689,13 @@ async def test_chat_log_reuse(
 
 
 async def test_chat_log_continue_conversation(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_conversation_input: ConversationInput,
 ) -> None:
     """Test continue conversation."""
     with (
-        chat_session.async_get_chat_session(hass) as session,
-        async_get_chat_log(hass, session) as chat_log,
+        chat_session.async_get_chat_session(menuai) as session,
+        async_get_chat_log(menuai, session) as chat_log,
     ):
         assert chat_log.continue_conversation is False
         chat_log.async_add_user_content(UserContent(mock_conversation_input.text))

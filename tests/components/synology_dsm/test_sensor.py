@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 import pytest
 from synology_dsm.api.core.external_usb import SynoCoreExternalUSBDevice
 
-from homeassistant.components.synology_dsm.const import DOMAIN
-from homeassistant.const import (
+from menuai.components.synology_dsm.const import DOMAIN
+from menuai.const import (
     CONF_HOST,
     CONF_MAC,
     CONF_PASSWORD,
@@ -14,8 +14,8 @@ from homeassistant.const import (
     CONF_SSL,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .common import mock_dsm_information
 from .consts import HOST, MACS, PASSWORD, PORT, SERIAL, USE_SSL, USERNAME
@@ -26,7 +26,7 @@ from tests.common import MockConfigEntry
 @pytest.fixture
 def mock_dsm_with_usb():
     """Mock a successful service with USB support."""
-    with patch("homeassistant.components.synology_dsm.common.SynologyDSM") as dsm:
+    with patch("menuai.components.synology_dsm.common.SynologyDSM") as dsm:
         dsm.login = AsyncMock(return_value=True)
         dsm.update = AsyncMock(return_value=True)
 
@@ -101,7 +101,7 @@ def mock_dsm_with_usb():
 @pytest.fixture
 def mock_dsm_without_usb():
     """Mock a successful service without USB devices."""
-    with patch("homeassistant.components.synology_dsm.common.SynologyDSM") as dsm:
+    with patch("menuai.components.synology_dsm.common.SynologyDSM") as dsm:
         dsm.login = AsyncMock(return_value=True)
         dsm.update = AsyncMock(return_value=True)
 
@@ -118,12 +118,12 @@ def mock_dsm_without_usb():
 
 @pytest.fixture
 async def setup_dsm_with_usb(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_dsm_with_usb: MagicMock,
 ):
     """Mock setup of synology dsm config entry with USB."""
     with patch(
-        "homeassistant.components.synology_dsm.common.SynologyDSM",
+        "menuai.components.synology_dsm.common.SynologyDSM",
         return_value=mock_dsm_with_usb,
     ):
         entry = MockConfigEntry(
@@ -138,21 +138,21 @@ async def setup_dsm_with_usb(
             },
             unique_id=SERIAL,
         )
-        entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
         yield mock_dsm_with_usb
 
 
 @pytest.fixture
 async def setup_dsm_without_usb(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_dsm_without_usb: MagicMock,
 ):
     """Mock setup of synology dsm config entry without USB."""
     with patch(
-        "homeassistant.components.synology_dsm.common.SynologyDSM",
+        "menuai.components.synology_dsm.common.SynologyDSM",
         return_value=mock_dsm_without_usb,
     ):
         entry = MockConfigEntry(
@@ -167,15 +167,15 @@ async def setup_dsm_without_usb(
             },
             unique_id=SERIAL,
         )
-        entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
         yield mock_dsm_without_usb
 
 
 async def test_external_usb(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     setup_dsm_with_usb: MagicMock,
 ) -> None:
@@ -189,7 +189,7 @@ async def test_external_usb(
     assert entity_entry.disabled_by is er.RegistryEntryDisabler.INTEGRATION
 
     # test partition size sensor
-    sensor = hass.states.get(
+    sensor = menuai.states.get(
         "sensor.nas_meontheinternet_com_usb_disk_1_partition_1_partition_size"
     )
     assert sensor is not None
@@ -204,7 +204,7 @@ async def test_external_usb(
     assert sensor.attributes["attribution"] == "Data provided by Synology"
 
     # test partition used space sensor
-    sensor = hass.states.get(
+    sensor = menuai.states.get(
         "sensor.nas_meontheinternet_com_usb_disk_1_partition_1_partition_used_space"
     )
     assert sensor is not None
@@ -219,7 +219,7 @@ async def test_external_usb(
     assert sensor.attributes["attribution"] == "Data provided by Synology"
 
     # test partition used sensor
-    sensor = hass.states.get(
+    sensor = menuai.states.get(
         "sensor.nas_meontheinternet_com_usb_disk_1_partition_1_partition_used"
     )
     assert sensor is not None
@@ -234,9 +234,9 @@ async def test_external_usb(
 
 
 async def test_no_external_usb(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_dsm_without_usb: MagicMock,
 ) -> None:
     """Test Synology DSM without USB."""
-    sensor = hass.states.get("sensor.nas_meontheinternet_com_usb_disk_1_device_size")
+    sensor = menuai.states.get("sensor.nas_meontheinternet_com_usb_disk_1_device_size")
     assert sensor is None

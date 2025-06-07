@@ -6,20 +6,20 @@ from unittest.mock import patch
 from pyatmo.const import ALL_SCOPES
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.netatmo import config_flow
-from homeassistant.components.netatmo.const import (
+from menuai import config_entries
+from menuai.components.netatmo import config_flow
+from menuai.components.netatmo.const import (
     CONF_NEW_AREA,
     CONF_WEATHER_AREAS,
     DOMAIN,
     OAUTH2_AUTHORIZE,
     OAUTH2_TOKEN,
 )
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import config_entry_oauth2_flow
-from homeassistant.helpers.service_info.zeroconf import (
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers import config_entry_oauth2_flow
+from menuai.helpers.service_info.zeroconf import (
     ATTR_PROPERTIES_ID,
     ZeroconfServiceInfo,
 )
@@ -33,20 +33,20 @@ from tests.typing import ClientSessionGenerator
 VALID_CONFIG = {}
 
 
-async def test_abort_if_existing_entry(hass: HomeAssistant) -> None:
+async def test_abort_if_existing_entry(menuai: menuai) -> None:
     """Check flow abort when an entry already exist."""
-    MockConfigEntry(domain=DOMAIN).add_to_hass(hass)
+    MockConfigEntry(domain=DOMAIN).add_to_menuai(menuai)
 
     flow = config_flow.NetatmoFlowHandler()
-    flow.hass = hass
+    flow.menuai = menuai
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "netatmo", context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "single_instance_allowed"
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "netatmo",
         context={"source": config_entries.SOURCE_HOMEKIT},
         data=ZeroconfServiceInfo(
@@ -65,17 +65,17 @@ async def test_abort_if_existing_entry(hass: HomeAssistant) -> None:
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_full_flow(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
     """Check full flow."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "netatmo", context={"source": config_entries.SOURCE_USER}
     )
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
@@ -90,7 +90,7 @@ async def test_full_flow(
         f"&state={state}&scope={scope}"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == 200
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
@@ -106,15 +106,15 @@ async def test_full_flow(
     )
 
     with patch(
-        "homeassistant.components.netatmo.async_setup_entry", return_value=True
+        "menuai.components.netatmo.async_setup_entry", return_value=True
     ) as mock_setup:
-        await hass.config_entries.flow.async_configure(result["flow_id"])
+        await menuai.config_entries.flow.async_configure(result["flow_id"])
 
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
     assert len(mock_setup.mock_calls) == 1
 
 
-async def test_option_flow(hass: HomeAssistant) -> None:
+async def test_option_flow(menuai: menuai) -> None:
     """Test config flow options."""
     valid_option = {
         "lat_ne": 32.91336,
@@ -142,28 +142,28 @@ async def test_option_flow(hass: HomeAssistant) -> None:
         data=VALID_CONFIG,
         options={},
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "public_weather_areas"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"], user_input={CONF_NEW_AREA: "Home"}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "public_weather"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"], user_input=valid_option
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "public_weather_areas"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"], user_input={}
     )
 
@@ -172,7 +172,7 @@ async def test_option_flow(hass: HomeAssistant) -> None:
         assert config_entry.options[CONF_WEATHER_AREAS]["Home"][k] == v
 
 
-async def test_option_flow_wrong_coordinates(hass: HomeAssistant) -> None:
+async def test_option_flow_wrong_coordinates(menuai: menuai) -> None:
     """Test config flow options with mixed up coordinates."""
     valid_option = {
         "lat_ne": 32.1234567,
@@ -200,28 +200,28 @@ async def test_option_flow_wrong_coordinates(hass: HomeAssistant) -> None:
         data=VALID_CONFIG,
         options={},
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "public_weather_areas"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"], user_input={CONF_NEW_AREA: "Home"}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "public_weather"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"], user_input=valid_option
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "public_weather_areas"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"], user_input={}
     )
 
@@ -232,17 +232,17 @@ async def test_option_flow_wrong_coordinates(hass: HomeAssistant) -> None:
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_reauth(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
     """Test initialization of the reauth flow."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "netatmo", context={"source": config_entries.SOURCE_USER}
     )
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
@@ -257,7 +257,7 @@ async def test_reauth(
         f"&state={state}&scope={scope}"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == 200
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
@@ -273,34 +273,34 @@ async def test_reauth(
     )
 
     with patch(
-        "homeassistant.components.netatmo.async_setup_entry", return_value=True
+        "menuai.components.netatmo.async_setup_entry", return_value=True
     ) as mock_setup:
-        await hass.config_entries.flow.async_configure(result["flow_id"])
-        await hass.async_block_till_done()
+        await menuai.config_entries.flow.async_configure(result["flow_id"])
+        await menuai.async_block_till_done()
 
-    new_entry = hass.config_entries.async_entries(DOMAIN)[0]
+    new_entry = menuai.config_entries.async_entries(DOMAIN)[0]
 
     assert new_entry.state is ConfigEntryState.LOADED
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
     assert len(mock_setup.mock_calls) == 1
 
     # Should show form
-    result = await start_reauth_flow(hass, new_entry)
+    result = await start_reauth_flow(menuai, new_entry)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
     # Confirm reauth flow
-    result2 = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result2 = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
         },
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == 200
 
@@ -316,15 +316,15 @@ async def test_reauth(
 
     # Update entry
     with patch(
-        "homeassistant.components.netatmo.async_setup_entry", return_value=True
+        "menuai.components.netatmo.async_setup_entry", return_value=True
     ) as mock_setup:
-        result3 = await hass.config_entries.flow.async_configure(result2["flow_id"])
-        await hass.async_block_till_done()
+        result3 = await menuai.config_entries.flow.async_configure(result2["flow_id"])
+        await menuai.async_block_till_done()
 
-    new_entry2 = hass.config_entries.async_entries(DOMAIN)[0]
+    new_entry2 = menuai.config_entries.async_entries(DOMAIN)[0]
 
     assert result3["type"] is FlowResultType.ABORT
     assert result3["reason"] == "reauth_successful"
     assert new_entry2.state is ConfigEntryState.LOADED
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
     assert len(mock_setup.mock_calls) == 1

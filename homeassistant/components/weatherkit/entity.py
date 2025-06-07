@@ -1,8 +1,8 @@
 """Base entity for weatherkit."""
 
-from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.entity import Entity
+from menuai.const import CONF_LATITUDE, CONF_LONGITUDE
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.entity import Entity
 
 from .const import DOMAIN, MANUFACTURER
 from .coordinator import WeatherKitDataUpdateCoordinator

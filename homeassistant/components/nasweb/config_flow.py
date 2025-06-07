@@ -9,13 +9,13 @@ import voluptuous as vol
 from webio_api import WebioAPI
 from webio_api.api_client import AuthError
 
-from homeassistant import config_entries
-from homeassistant.config_entries import ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_UNIQUE_ID, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import AbortFlow
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.network import NoURLAvailableError
+from menuai import config_entries
+from menuai.config_entries import ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_UNIQUE_ID, CONF_USERNAME
+from menuai.core import menuai
+from menuai.data_entry_flow import AbortFlow
+from menuai.exceptions import menuaiError
+from menuai.helpers.network import NoURLAvailableError
 
 from .const import DOMAIN
 from .coordinator import NASwebCoordinator
@@ -36,7 +36,7 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
 )
 
 
-async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
+async def validate_input(menuai: menuai, data: dict[str, Any]) -> dict[str, Any]:
     """Validate user-provided data."""
     webio_api = WebioAPI(data[CONF_HOST], data[CONF_USERNAME], data[CONF_PASSWORD])
     if not await webio_api.check_connection():
@@ -47,14 +47,14 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
         raise InvalidAuth from e
 
     nasweb_data = NASwebData()
-    nasweb_data.initialize(hass)
+    nasweb_data.initialize(menuai)
     try:
         webio_serial = webio_api.get_serial_number()
         if webio_serial is None:
             raise MissingNASwebData("Device serial number is not available")
 
-        coordinator = NASwebCoordinator(hass, webio_api)
-        webhook_url = nasweb_data.get_webhook_url(hass)
+        coordinator = NASwebCoordinator(menuai, webio_api)
+        webhook_url = nasweb_data.get_webhook_url(menuai)
         nasweb_data.notify_coordinator.add_coordinator(webio_serial, coordinator)
         subscription = await webio_api.status_subscription(webhook_url, True)
         if not subscription:
@@ -72,7 +72,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
 
         name = webio_api.get_name()
     finally:
-        nasweb_data.deinitialize(hass)
+        nasweb_data.deinitialize(menuai)
     return {"title": name, CONF_UNIQUE_ID: webio_serial}
 
 
@@ -88,7 +88,7 @@ class NASwebConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
         if user_input is not None:
             try:
-                info = await validate_input(self.hass, user_input)
+                info = await validate_input(self.menuai, user_input)
                 await self.async_set_unique_id(info[CONF_UNIQUE_ID])
                 self._abort_if_unique_id_configured()
             except CannotConnect:
@@ -121,17 +121,17 @@ class NASwebConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(menuaiError):
     """Error to indicate there is invalid auth."""
 
 
-class MissingNASwebData(HomeAssistantError):
+class MissingNASwebData(menuaiError):
     """Error to indicate missing information from NASweb."""
 
 
-class MissingNASwebStatus(HomeAssistantError):
+class MissingNASwebStatus(menuaiError):
     """Error to indicate there was no status received from NASweb."""

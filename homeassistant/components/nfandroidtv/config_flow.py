@@ -8,8 +8,8 @@ from typing import Any
 from notifications_android_tv.notifications import ConnectError, Notifications
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_NAME
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_NAME
 
 from .const import DEFAULT_NAME, DOMAIN
 
@@ -50,7 +50,7 @@ class NFAndroidTVFlowHandler(ConfigFlow, domain=DOMAIN):
     async def _async_try_connect(self, host: str) -> str | None:
         """Try connecting to Android TV / Fire TV."""
         try:
-            await self.hass.async_add_executor_job(Notifications, host)
+            await self.menuai.async_add_executor_job(Notifications, host)
         except ConnectError:
             _LOGGER.error("Error connecting to device at %s", host)
             return "cannot_connect"

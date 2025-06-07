@@ -21,13 +21,13 @@ from deebot_client.events import (
 )
 from sucks import VacBot
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_BATTERY_LEVEL,
     CONF_DESCRIPTION,
     PERCENTAGE,
@@ -35,9 +35,9 @@ from homeassistant.const import (
     UnitOfArea,
     UnitOfTime,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
 
 from . import EcovacsConfigEntry
 from .const import LEGACY_SUPPORTED_LIFESPANS, SUPPORTED_LIFESPANS
@@ -203,7 +203,7 @@ LEGACY_LIFESPAN_SENSORS = tuple(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: EcovacsConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -244,7 +244,7 @@ async def async_setup_entry(
             async_add_entities(entities)
 
     def _fire_ecovacs_legacy_lifespan_event(_: Any) -> None:
-        hass.create_task(_add_legacy_entities())
+        menuai.create_task(_add_legacy_entities())
 
     for device in controller.legacy_devices:
         config_entry.async_on_unload(
@@ -283,9 +283,9 @@ class EcovacsSensor(
         ):
             self._attr_native_unit_of_measurement = native_unit_of_measurement
 
-    async def async_added_to_hass(self) -> None:
-        """Set up the event listeners now that hass is ready."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Set up the event listeners now that menuai is ready."""
+        await super().async_added_to_menuai()
 
         async def on_event(event: Event) -> None:
             value = self.entity_description.value_fn(event)
@@ -306,9 +306,9 @@ class EcovacsLifespanSensor(
 
     entity_description: EcovacsLifespanSensorEntityDescription
 
-    async def async_added_to_hass(self) -> None:
-        """Set up the event listeners now that hass is ready."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Set up the event listeners now that menuai is ready."""
+        await super().async_added_to_menuai()
 
         async def on_event(event: LifeSpanEvent) -> None:
             if event.type == self.entity_description.component:
@@ -333,9 +333,9 @@ class EcovacsErrorSensor(
         entity_category=EntityCategory.DIAGNOSTIC,
     )
 
-    async def async_added_to_hass(self) -> None:
-        """Set up the event listeners now that hass is ready."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Set up the event listeners now that menuai is ready."""
+        await super().async_added_to_menuai()
 
         async def on_event(event: ErrorEvent) -> None:
             self._attr_native_value = event.code
@@ -365,8 +365,8 @@ class EcovacsLegacyLifespanSensor(EcovacsLegacyEntity, SensorEntity):
             value = int(value * 100)
         self._attr_native_value = value
 
-    async def async_added_to_hass(self) -> None:
-        """Set up the event listeners now that hass is ready."""
+    async def async_added_to_menuai(self) -> None:
+        """Set up the event listeners now that menuai is ready."""
 
         def on_event(_: Any) -> None:
             if (

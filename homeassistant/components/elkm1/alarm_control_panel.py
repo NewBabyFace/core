@@ -11,18 +11,18 @@ from elkm1_lib.elk import Elk
 from elkm1_lib.keypads import Keypad
 import voluptuous as vol
 
-from homeassistant.components.alarm_control_panel import (
+from menuai.components.alarm_control_panel import (
     ATTR_CHANGED_BY,
     AlarmControlPanelEntity,
     AlarmControlPanelEntityFeature,
     AlarmControlPanelState,
     CodeFormat,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.typing import VolDictType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, entity_platform
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.restore_state import RestoreEntity
+from menuai.helpers.typing import VolDictType
 
 from . import ElkM1ConfigEntry
 from .const import (
@@ -53,7 +53,7 @@ SERVICE_ALARM_CLEAR_BYPASS = "alarm_clear_bypass"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ElkM1ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -119,9 +119,9 @@ class ElkArea(ElkAttachedEntity, AlarmControlPanelEntity, RestoreEntity):
         self._changed_by: str | None = None
         self._state: AlarmControlPanelState | None = None
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callback for ElkM1 changes."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         if len(self._elk.areas.elements) == 1:
             for keypad in self._elk.keypads:
                 keypad.add_callback(self._watch_keypad)
@@ -198,7 +198,7 @@ class ElkArea(ElkAttachedEntity, AlarmControlPanelEntity, RestoreEntity):
         return self._changed_by
 
     def _element_changed(self, element: Element, changeset: dict[str, Any]) -> None:
-        elk_state_to_hass_state = {
+        elk_state_to_menuai_state = {
             ArmedStatus.DISARMED: AlarmControlPanelState.DISARMED,
             ArmedStatus.ARMED_AWAY: AlarmControlPanelState.ARMED_AWAY,
             ArmedStatus.ARMED_STAY: AlarmControlPanelState.ARMED_HOME,
@@ -220,7 +220,7 @@ class ElkArea(ElkAttachedEntity, AlarmControlPanelEntity, RestoreEntity):
                 else AlarmControlPanelState.PENDING
             )
         elif self._element.armed_status is not None:
-            self._state = elk_state_to_hass_state[self._element.armed_status]
+            self._state = elk_state_to_menuai_state[self._element.armed_status]
         else:
             self._state = None
 

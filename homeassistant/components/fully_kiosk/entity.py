@@ -6,12 +6,12 @@ import json
 
 from yarl import URL
 
-from homeassistant.components import mqtt
-from homeassistant.const import ATTR_CONNECTIONS
-from homeassistant.core import CALLBACK_TYPE, callback
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.components import mqtt
+from menuai.const import ATTR_CONNECTIONS
+from menuai.core import CALLBACK_TYPE, callback
+from menuai.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
+from menuai.helpers.entity import Entity
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import FullyKioskDataUpdateCoordinator
@@ -67,7 +67,7 @@ class FullyKioskEntity(CoordinatorEntity[FullyKioskDataUpdateCoordinator], Entit
         data = self.coordinator.data
         if (
             event is None
-            or not mqtt.mqtt_config_entry_enabled(self.hass)
+            or not mqtt.mqtt_config_entry_enabled(self.menuai)
             or not data["settings"]["mqttEnabled"]
         ):
             return None
@@ -85,4 +85,4 @@ class FullyKioskEntity(CoordinatorEntity[FullyKioskDataUpdateCoordinator], Entit
             .replace("$deviceId", data["deviceID"])
         )
 
-        return await mqtt.async_subscribe(self.hass, topic, message_callback)
+        return await mqtt.async_subscribe(self.menuai, topic, message_callback)

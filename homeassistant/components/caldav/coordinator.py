@@ -10,10 +10,10 @@ from typing import TYPE_CHECKING
 
 import caldav
 
-from homeassistant.components.calendar import CalendarEvent, extract_offset
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-from homeassistant.util import dt as dt_util
+from menuai.components.calendar import CalendarEvent, extract_offset
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.util import dt as dt_util
 
 from .api import get_attr_value
 
@@ -31,7 +31,7 @@ class CalDavUpdateCoordinator(DataUpdateCoordinator[CalendarEvent | None]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entry: CalDavConfigEntry | None,
         calendar: caldav.Calendar,
         days: int,
@@ -40,7 +40,7 @@ class CalDavUpdateCoordinator(DataUpdateCoordinator[CalendarEvent | None]):
     ) -> None:
         """Set up how we are going to search the WebDav calendar."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
             name=f"CalDAV {calendar.name}",
@@ -53,11 +53,11 @@ class CalDavUpdateCoordinator(DataUpdateCoordinator[CalendarEvent | None]):
         self.offset: timedelta | None = None
 
     async def async_get_events(
-        self, hass: HomeAssistant, start_date: datetime, end_date: datetime
+        self, menuai: menuai, start_date: datetime, end_date: datetime
     ) -> list[CalendarEvent]:
         """Get all events in a specific time frame."""
         # Get event list from the current calendar
-        vevent_list = await hass.async_add_executor_job(
+        vevent_list = await menuai.async_add_executor_job(
             partial(
                 self.calendar.search,
                 start=start_date,
@@ -93,7 +93,7 @@ class CalDavUpdateCoordinator(DataUpdateCoordinator[CalendarEvent | None]):
 
         # We have to retrieve the results for the whole day as the server
         # won't return events that have already started
-        results = await self.hass.async_add_executor_job(
+        results = await self.menuai.async_add_executor_job(
             partial(
                 self.calendar.search,
                 start=start_of_today,

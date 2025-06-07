@@ -7,10 +7,10 @@ import logging
 
 from mysensors import BaseAsyncGateway
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceEntry
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceEntry
 
 from .const import (
     ATTR_DEVICES,
@@ -27,52 +27,52 @@ from .gateway import finish_setup, gw_stop, setup_gateway
 
 _LOGGER = logging.getLogger(__name__)
 
-DATA_HASS_CONFIG = "hass_config"
+DATA_menuai_CONFIG = "menuai_config"
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up an instance of the MySensors integration.
 
     Every instance has a connection to exactly one Gateway.
     """
-    gateway = await setup_gateway(hass, entry)
+    gateway = await setup_gateway(menuai, entry)
 
     if not gateway:
         _LOGGER.error("Gateway setup failed for %s", entry.data)
         return False
 
-    mysensors_data = hass.data.setdefault(DOMAIN, {})
+    mysensors_data = menuai.data.setdefault(DOMAIN, {})
     if MYSENSORS_GATEWAYS not in mysensors_data:
         mysensors_data[MYSENSORS_GATEWAYS] = {}
     mysensors_data[MYSENSORS_GATEWAYS][entry.entry_id] = gateway
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-    await finish_setup(hass, entry, gateway)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await finish_setup(menuai, entry, gateway)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Remove an instance of the MySensors integration."""
 
-    gateway: BaseAsyncGateway = hass.data[DOMAIN][MYSENSORS_GATEWAYS][entry.entry_id]
+    gateway: BaseAsyncGateway = menuai.data[DOMAIN][MYSENSORS_GATEWAYS][entry.entry_id]
 
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
     if not unload_ok:
         return False
 
-    del hass.data[DOMAIN][MYSENSORS_GATEWAYS][entry.entry_id]
-    hass.data[DOMAIN].pop(MYSENSORS_DISCOVERED_NODES.format(entry.entry_id), None)
+    del menuai.data[DOMAIN][MYSENSORS_GATEWAYS][entry.entry_id]
+    menuai.data[DOMAIN].pop(MYSENSORS_DISCOVERED_NODES.format(entry.entry_id), None)
 
-    await gw_stop(hass, entry, gateway)
+    await gw_stop(menuai, entry, gateway)
     return True
 
 
 async def async_remove_config_entry_device(
-    hass: HomeAssistant, config_entry: ConfigEntry, device_entry: DeviceEntry
+    menuai: menuai, config_entry: ConfigEntry, device_entry: DeviceEntry
 ) -> bool:
     """Remove a MySensors config entry from a device."""
-    gateway: BaseAsyncGateway = hass.data[DOMAIN][MYSENSORS_GATEWAYS][
+    gateway: BaseAsyncGateway = menuai.data[DOMAIN][MYSENSORS_GATEWAYS][
         config_entry.entry_id
     ]
     device_id = next(
@@ -83,7 +83,7 @@ async def async_remove_config_entry_device(
     gateway.tasks.persistence.need_save = True
 
     # remove node from discovered nodes
-    hass.data[DOMAIN].setdefault(
+    menuai.data[DOMAIN].setdefault(
         MYSENSORS_DISCOVERED_NODES.format(config_entry.entry_id), set()
     ).remove(node_id)
 
@@ -92,8 +92,8 @@ async def async_remove_config_entry_device(
 
 @callback
 def setup_mysensors_platform(
-    hass: HomeAssistant,
-    domain: Platform,  # hass platform name
+    menuai: menuai,
+    domain: Platform,  # menuai platform name
     discovery_info: DiscoveryInfo,
     device_class: type[MySensorsChildEntity]
     | Mapping[SensorType, type[MySensorsChildEntity]],
@@ -118,7 +118,7 @@ def setup_mysensors_platform(
     new_devices: list[MySensorsChildEntity] = []
     new_dev_ids: list[DevId] = discovery_info[ATTR_DEVICES]
     for dev_id in new_dev_ids:
-        devices: dict[DevId, MySensorsChildEntity] = get_mysensors_devices(hass, domain)
+        devices: dict[DevId, MySensorsChildEntity] = get_mysensors_devices(menuai, domain)
         if dev_id in devices:
             _LOGGER.debug(
                 "Skipping setup of %s for platform %s as it already exists",
@@ -127,7 +127,7 @@ def setup_mysensors_platform(
             )
             continue
         gateway_id, node_id, child_id, value_type = dev_id
-        gateway: BaseAsyncGateway = hass.data[DOMAIN][MYSENSORS_GATEWAYS][gateway_id]
+        gateway: BaseAsyncGateway = menuai.data[DOMAIN][MYSENSORS_GATEWAYS][gateway_id]
 
         if isinstance(device_class, dict):
             child = gateway.sensors[node_id].children[child_id]

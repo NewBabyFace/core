@@ -7,8 +7,8 @@ import logging
 from zcc import ControlPoint
 from zcc.device import ControlPointDevice
 
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity
 
 from .const import DOMAIN
 
@@ -44,18 +44,18 @@ class ZimiEntity(Entity):
 
     @property
     def available(self) -> bool:
-        """Return True if Home Assistant is able to read the state and control the underlying device."""
+        """Return True if MenuAI is able to read the state and control the underlying device."""
         return self._device.is_connected
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to the events."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self._device.subscribe(self)
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Cleanup ZimiLight with removal of notification prior to removal."""
         self._device.unsubscribe(self)
-        await super().async_will_remove_from_hass()
+        await super().async_will_remove_from_menuai()
 
     def notify(self, _observable: object) -> None:
         """Receive notification from device that state has changed.

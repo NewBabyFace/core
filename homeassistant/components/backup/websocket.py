@@ -4,9 +4,9 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
+from menuai.components import websocket_api
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
 
 from .config import Day, ScheduleRecurrence
 from .const import DATA_MANAGER, LOGGER
@@ -15,36 +15,36 @@ from .models import BackupNotFound, Folder
 
 
 @callback
-def async_register_websocket_handlers(hass: HomeAssistant, with_hassio: bool) -> None:
+def async_register_websocket_handlers(menuai: menuai, with_menuaiio: bool) -> None:
     """Register websocket commands."""
-    websocket_api.async_register_command(hass, backup_agents_info)
+    websocket_api.async_register_command(menuai, backup_agents_info)
 
-    if with_hassio:
-        websocket_api.async_register_command(hass, handle_backup_end)
-        websocket_api.async_register_command(hass, handle_backup_start)
+    if with_menuaiio:
+        websocket_api.async_register_command(menuai, handle_backup_end)
+        websocket_api.async_register_command(menuai, handle_backup_start)
 
-    websocket_api.async_register_command(hass, handle_details)
-    websocket_api.async_register_command(hass, handle_info)
-    websocket_api.async_register_command(hass, handle_can_decrypt_on_download)
-    websocket_api.async_register_command(hass, handle_create)
-    websocket_api.async_register_command(hass, handle_create_with_automatic_settings)
-    websocket_api.async_register_command(hass, handle_delete)
-    websocket_api.async_register_command(hass, handle_restore)
+    websocket_api.async_register_command(menuai, handle_details)
+    websocket_api.async_register_command(menuai, handle_info)
+    websocket_api.async_register_command(menuai, handle_can_decrypt_on_download)
+    websocket_api.async_register_command(menuai, handle_create)
+    websocket_api.async_register_command(menuai, handle_create_with_automatic_settings)
+    websocket_api.async_register_command(menuai, handle_delete)
+    websocket_api.async_register_command(menuai, handle_restore)
 
-    websocket_api.async_register_command(hass, handle_config_info)
-    websocket_api.async_register_command(hass, handle_config_update)
+    websocket_api.async_register_command(menuai, handle_config_info)
+    websocket_api.async_register_command(menuai, handle_config_update)
 
 
 @websocket_api.require_admin
 @websocket_api.websocket_command({vol.Required("type"): "backup/info"})
 @websocket_api.async_response
 async def handle_info(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """List all stored backups."""
-    manager = hass.data[DATA_MANAGER]
+    manager = menuai.data[DATA_MANAGER]
     backups, agent_errors = await manager.async_get_backups()
     connection.send_result(
         msg["id"],
@@ -72,12 +72,12 @@ async def handle_info(
 )
 @websocket_api.async_response
 async def handle_details(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Get backup details for a specific backup."""
-    backup, agent_errors = await hass.data[DATA_MANAGER].async_get_backup(
+    backup, agent_errors = await menuai.data[DATA_MANAGER].async_get_backup(
         msg["backup_id"]
     )
     connection.send_result(
@@ -100,12 +100,12 @@ async def handle_details(
 )
 @websocket_api.async_response
 async def handle_delete(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Delete a backup."""
-    agent_errors = await hass.data[DATA_MANAGER].async_delete_backup(msg["backup_id"])
+    agent_errors = await menuai.data[DATA_MANAGER].async_delete_backup(msg["backup_id"])
     connection.send_result(
         msg["id"],
         {
@@ -126,25 +126,25 @@ async def handle_delete(
         vol.Optional("restore_addons"): [str],
         vol.Optional("restore_database", default=True): bool,
         vol.Optional("restore_folders"): [vol.Coerce(Folder)],
-        vol.Optional("restore_homeassistant", default=True): bool,
+        vol.Optional("restore_menuai", default=True): bool,
     }
 )
 @websocket_api.async_response
 async def handle_restore(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Restore a backup."""
     try:
-        await hass.data[DATA_MANAGER].async_restore_backup(
+        await menuai.data[DATA_MANAGER].async_restore_backup(
             msg["backup_id"],
             agent_id=msg["agent_id"],
             password=msg.get("password"),
             restore_addons=msg.get("restore_addons"),
             restore_database=msg["restore_database"],
             restore_folders=msg.get("restore_folders"),
-            restore_homeassistant=msg["restore_homeassistant"],
+            restore_menuai=msg["restore_menuai"],
         )
     except BackupNotFound:
         connection.send_error(msg["id"], "backup_not_found", "Backup not found")
@@ -165,13 +165,13 @@ async def handle_restore(
 )
 @websocket_api.async_response
 async def handle_can_decrypt_on_download(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Check if the supplied password is correct."""
     try:
-        await hass.data[DATA_MANAGER].async_can_decrypt_on_download(
+        await menuai.data[DATA_MANAGER].async_can_decrypt_on_download(
             msg["backup_id"],
             agent_id=msg["agent_id"],
             password=msg.get("password"),
@@ -197,26 +197,26 @@ async def handle_can_decrypt_on_download(
         vol.Optional("include_all_addons", default=False): bool,
         vol.Optional("include_database", default=True): bool,
         vol.Optional("include_folders"): [vol.Coerce(Folder)],
-        vol.Optional("include_homeassistant", default=True): bool,
+        vol.Optional("include_menuai", default=True): bool,
         vol.Optional("name"): vol.Any(str, None),
         vol.Optional("password"): vol.Any(str, None),
     }
 )
 @websocket_api.async_response
 async def handle_create(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Generate a backup."""
 
-    backup = await hass.data[DATA_MANAGER].async_initiate_backup(
+    backup = await menuai.data[DATA_MANAGER].async_initiate_backup(
         agent_ids=msg["agent_ids"],
         include_addons=msg.get("include_addons"),
         include_all_addons=msg["include_all_addons"],
         include_database=msg["include_database"],
         include_folders=msg.get("include_folders"),
-        include_homeassistant=msg["include_homeassistant"],
+        include_menuai=msg["include_menuai"],
         name=msg.get("name"),
         password=msg.get("password"),
     )
@@ -231,20 +231,20 @@ async def handle_create(
 )
 @websocket_api.async_response
 async def handle_create_with_automatic_settings(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Generate a backup with stored settings."""
 
-    config_data = hass.data[DATA_MANAGER].config.data
-    backup = await hass.data[DATA_MANAGER].async_initiate_backup(
+    config_data = menuai.data[DATA_MANAGER].config.data
+    backup = await menuai.data[DATA_MANAGER].async_initiate_backup(
         agent_ids=config_data.create_backup.agent_ids,
         include_addons=config_data.create_backup.include_addons,
         include_all_addons=config_data.create_backup.include_all_addons,
         include_database=config_data.create_backup.include_database,
         include_folders=config_data.create_backup.include_folders,
-        include_homeassistant=True,  # always include HA
+        include_menuai=True,  # always include HA
         name=config_data.create_backup.name,
         password=config_data.create_backup.password,
         with_automatic_settings=True,
@@ -256,12 +256,12 @@ async def handle_create_with_automatic_settings(
 @websocket_api.websocket_command({vol.Required("type"): "backup/start"})
 @websocket_api.async_response
 async def handle_backup_start(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Backup start notification."""
-    manager = hass.data[DATA_MANAGER]
+    manager = menuai.data[DATA_MANAGER]
     LOGGER.debug("Backup start notification")
 
     try:
@@ -277,12 +277,12 @@ async def handle_backup_start(
 @websocket_api.websocket_command({vol.Required("type"): "backup/end"})
 @websocket_api.async_response
 async def handle_backup_end(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Backup end notification."""
-    manager = hass.data[DATA_MANAGER]
+    manager = menuai.data[DATA_MANAGER]
     LOGGER.debug("Backup end notification")
 
     try:
@@ -298,12 +298,12 @@ async def handle_backup_end(
 @websocket_api.websocket_command({vol.Required("type"): "backup/agents/info"})
 @websocket_api.async_response
 async def backup_agents_info(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Return backup agents info."""
-    manager = hass.data[DATA_MANAGER]
+    manager = menuai.data[DATA_MANAGER]
     connection.send_result(
         msg["id"],
         {
@@ -319,12 +319,12 @@ async def backup_agents_info(
 @websocket_api.websocket_command({vol.Required("type"): "backup/config/info"})
 @websocket_api.async_response
 async def handle_config_info(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Send the stored backup config."""
-    manager = hass.data[DATA_MANAGER]
+    manager = menuai.data[DATA_MANAGER]
     config = manager.config.data.to_dict()
     # Remove state from schedule, it's not needed in the frontend
     # mypy doesn't like deleting from TypedDict, ignore it
@@ -406,12 +406,12 @@ async def handle_config_info(
     }
 )
 def handle_config_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Update the stored backup config."""
-    manager = hass.data[DATA_MANAGER]
+    manager = menuai.data[DATA_MANAGER]
     changes = dict(msg)
     changes.pop("id")
     changes.pop("type")

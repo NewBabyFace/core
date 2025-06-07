@@ -7,9 +7,9 @@ from datetime import timedelta
 import logging
 from typing import Any
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .helpers import PingDataICMPLib, PingDataSubProcess
 
@@ -35,7 +35,7 @@ class PingUpdateCoordinator(DataUpdateCoordinator[PingResult]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: PingConfigEntry,
         ping: PingDataSubProcess | PingDataICMPLib,
     ) -> None:
@@ -43,7 +43,7 @@ class PingUpdateCoordinator(DataUpdateCoordinator[PingResult]):
         self.ping = ping
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=f"Ping {ping.ip_address}",

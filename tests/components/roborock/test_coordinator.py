@@ -7,15 +7,15 @@ from unittest.mock import patch
 import pytest
 from roborock.exceptions import RoborockException
 
-from homeassistant.components.roborock.const import (
+from menuai.components.roborock.const import (
     V1_CLOUD_IN_CLEANING_INTERVAL,
     V1_CLOUD_NOT_CLEANING_INTERVAL,
     V1_LOCAL_IN_CLEANING_INTERVAL,
     V1_LOCAL_NOT_CLEANING_INTERVAL,
 )
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.util import dt as dt_util
 
 from .mock_data import PROP
 
@@ -36,7 +36,7 @@ def platforms() -> list[Platform]:
     ],
 )
 async def test_dynamic_cloud_scan_interval(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_roborock_entry: MockConfigEntry,
     bypass_api_fixture_v1_only,
     interval: timedelta,
@@ -48,29 +48,29 @@ async def test_dynamic_cloud_scan_interval(
     with (
         # Force the system to use the cloud api.
         patch(
-            "homeassistant.components.roborock.coordinator.RoborockLocalClientV1.ping",
+            "menuai.components.roborock.coordinator.RoborockLocalClientV1.ping",
             side_effect=RoborockException(),
         ),
         patch(
-            "homeassistant.components.roborock.RoborockMqttClientV1.get_prop",
+            "menuai.components.roborock.RoborockMqttClientV1.get_prop",
             return_value=prop,
         ),
     ):
-        await hass.config_entries.async_setup(mock_roborock_entry.entry_id)
-    assert hass.states.get("sensor.roborock_s7_maxv_battery").state == "100"
+        await menuai.config_entries.async_setup(mock_roborock_entry.entry_id)
+    assert menuai.states.get("sensor.roborock_s7_maxv_battery").state == "100"
     prop = copy.deepcopy(prop)
     prop.status.battery = 20
     with patch(
-        "homeassistant.components.roborock.RoborockMqttClientV1.get_prop",
+        "menuai.components.roborock.RoborockMqttClientV1.get_prop",
         return_value=prop,
     ):
         async_fire_time_changed(
-            hass, dt_util.utcnow() + interval - timedelta(seconds=5)
+            menuai, dt_util.utcnow() + interval - timedelta(seconds=5)
         )
-        assert hass.states.get("sensor.roborock_s7_maxv_battery").state == "100"
-        async_fire_time_changed(hass, dt_util.utcnow() + interval)
+        assert menuai.states.get("sensor.roborock_s7_maxv_battery").state == "100"
+        async_fire_time_changed(menuai, dt_util.utcnow() + interval)
 
-    assert hass.states.get("sensor.roborock_s7_maxv_battery").state == "20"
+    assert menuai.states.get("sensor.roborock_s7_maxv_battery").state == "20"
 
 
 @pytest.mark.parametrize(
@@ -81,7 +81,7 @@ async def test_dynamic_cloud_scan_interval(
     ],
 )
 async def test_dynamic_local_scan_interval(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_roborock_entry: MockConfigEntry,
     bypass_api_fixture_v1_only,
     interval: timedelta,
@@ -92,23 +92,23 @@ async def test_dynamic_local_scan_interval(
     prop.status.in_cleaning = in_cleaning
     with (
         patch(
-            "homeassistant.components.roborock.coordinator.RoborockLocalClientV1.get_prop",
+            "menuai.components.roborock.coordinator.RoborockLocalClientV1.get_prop",
             return_value=prop,
         ),
     ):
-        await hass.config_entries.async_setup(mock_roborock_entry.entry_id)
-    assert hass.states.get("sensor.roborock_s7_maxv_battery").state == "100"
+        await menuai.config_entries.async_setup(mock_roborock_entry.entry_id)
+    assert menuai.states.get("sensor.roborock_s7_maxv_battery").state == "100"
     prop = copy.deepcopy(prop)
     prop.status.battery = 20
     with patch(
-        "homeassistant.components.roborock.coordinator.RoborockLocalClientV1.get_prop",
+        "menuai.components.roborock.coordinator.RoborockLocalClientV1.get_prop",
         return_value=prop,
     ):
         async_fire_time_changed(
-            hass, dt_util.utcnow() + interval - timedelta(seconds=5)
+            menuai, dt_util.utcnow() + interval - timedelta(seconds=5)
         )
-        assert hass.states.get("sensor.roborock_s7_maxv_battery").state == "100"
+        assert menuai.states.get("sensor.roborock_s7_maxv_battery").state == "100"
 
-        async_fire_time_changed(hass, dt_util.utcnow() + interval)
+        async_fire_time_changed(menuai, dt_util.utcnow() + interval)
 
-    assert hass.states.get("sensor.roborock_s7_maxv_battery").state == "20"
+    assert menuai.states.get("sensor.roborock_s7_maxv_battery").state == "20"

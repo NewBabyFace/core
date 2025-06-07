@@ -8,16 +8,16 @@ from urllib.parse import urlparse
 
 import voluptuous as vol
 
-from homeassistant.components import ssdp
-from homeassistant.config_entries import (
+from menuai.components import ssdp
+from menuai.config_entries import (
     SOURCE_IGNORE,
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.service_info.ssdp import (
+from menuai.core import menuai, callback
+from menuai.helpers.service_info.ssdp import (
     ATTR_UPNP_DEVICE_TYPE,
     ATTR_UPNP_FRIENDLY_NAME,
     ATTR_UPNP_MODEL_NAME,
@@ -63,22 +63,22 @@ def _is_complete_discovery(discovery_info: SsdpServiceInfo) -> bool:
 
 
 async def _async_discovered_igd_devices(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> list[SsdpServiceInfo]:
     """Discovery IGD devices."""
     return await ssdp.async_get_discovery_info_by_st(
-        hass, ST_IGD_V1
-    ) + await ssdp.async_get_discovery_info_by_st(hass, ST_IGD_V2)
+        menuai, ST_IGD_V1
+    ) + await ssdp.async_get_discovery_info_by_st(menuai, ST_IGD_V2)
 
 
 async def _async_mac_address_from_discovery(
-    hass: HomeAssistant, discovery: SsdpServiceInfo
+    menuai: menuai, discovery: SsdpServiceInfo
 ) -> str | None:
     """Get the mac address from a discovery."""
     location = get_preferred_location(discovery.ssdp_all_locations)
     host = urlparse(location).hostname
     assert host is not None
-    return await async_get_mac_address_from_host(hass, host)
+    return await async_get_mac_address_from_host(menuai, host)
 
 
 def _is_igd_device(discovery_info: SsdpServiceInfo) -> bool:
@@ -107,7 +107,7 @@ class UpnpFlowHandler(ConfigFlow, domain=DOMAIN):
     @property
     def _discoveries(self) -> dict[str, SsdpServiceInfo]:
         """Get current discoveries."""
-        domain_data: dict = self.hass.data.setdefault(DOMAIN, {})
+        domain_data: dict = self.menuai.data.setdefault(DOMAIN, {})
         return domain_data.setdefault(DOMAIN_DISCOVERIES, {})
 
     def _add_discovery(self, discovery: SsdpServiceInfo) -> None:
@@ -138,7 +138,7 @@ class UpnpFlowHandler(ConfigFlow, domain=DOMAIN):
             return await self._async_create_entry_from_discovery(discovery)
 
         # Discover devices.
-        discoveries = await _async_discovered_igd_devices(self.hass)
+        discoveries = await _async_discovered_igd_devices(self.menuai)
 
         # Store discoveries which have not been configured.
         current_unique_ids = {
@@ -195,7 +195,7 @@ class UpnpFlowHandler(ConfigFlow, domain=DOMAIN):
         # Ensure not already configuring/configured.
         unique_id = discovery_info.ssdp_usn
         await self.async_set_unique_id(unique_id)
-        mac_address = await _async_mac_address_from_discovery(self.hass, discovery_info)
+        mac_address = await _async_mac_address_from_discovery(self.menuai, discovery_info)
         host = discovery_info.ssdp_headers["_host"]
         self._abort_if_unique_id_configured(
             # Store mac address and other data for older entries.
@@ -261,7 +261,7 @@ class UpnpFlowHandler(ConfigFlow, domain=DOMAIN):
         """Ignore this config flow."""
         usn = user_input["unique_id"]
         discovery = self._remove_discovery(usn)
-        mac_address = await _async_mac_address_from_discovery(self.hass, discovery)
+        mac_address = await _async_mac_address_from_discovery(self.menuai, discovery)
         data = {
             CONFIG_ENTRY_UDN: discovery.ssdp_udn,
             CONFIG_ENTRY_ST: discovery.ssdp_st,
@@ -290,7 +290,7 @@ class UpnpFlowHandler(ConfigFlow, domain=DOMAIN):
         )
 
         title = _friendly_name_from_discovery(discovery)
-        mac_address = await _async_mac_address_from_discovery(self.hass, discovery)
+        mac_address = await _async_mac_address_from_discovery(self.menuai, discovery)
         data = {
             CONFIG_ENTRY_UDN: discovery.ssdp_udn,
             CONFIG_ENTRY_ST: discovery.ssdp_st,

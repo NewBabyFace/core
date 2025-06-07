@@ -21,13 +21,13 @@ from requests.exceptions import SSLError, Timeout
 from url_normalize import url_normalize
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_MAC,
     CONF_NAME,
     CONF_PASSWORD,
@@ -36,8 +36,8 @@ from homeassistant.const import (
     CONF_USERNAME,
     CONF_VERIFY_SSL,
 )
-from homeassistant.core import callback
-from homeassistant.helpers.service_info.ssdp import (
+from menuai.core import callback
+from menuai.helpers.service_info.ssdp import (
     ATTR_UPNP_FRIENDLY_NAME,
     ATTR_UPNP_MANUFACTURER,
     ATTR_UPNP_MODEL_NAME,
@@ -158,7 +158,7 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
 
         conn = None
         try:
-            conn = await self.hass.async_add_executor_job(_get_connection)
+            conn = await self.menuai.async_add_executor_job(_get_connection)
         except LoginErrorUsernameWrongException:
             errors[CONF_USERNAME] = "incorrect_username"
         except LoginErrorPasswordWrongException:
@@ -241,10 +241,10 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
             )
         assert conn
 
-        info, wlan_settings = await self.hass.async_add_executor_job(
+        info, wlan_settings = await self.menuai.async_add_executor_job(
             get_device_info, conn
         )
-        await self.hass.async_add_executor_job(self._disconnect, conn)
+        await self.menuai.async_add_executor_job(self._disconnect, conn)
 
         user_input.update(
             {
@@ -304,7 +304,7 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
                 return False
             return isinstance(basic_info, dict)  # Crude content check
 
-        if not await self.hass.async_add_executor_job(_is_supported_device):
+        if not await self.menuai.async_add_executor_job(_is_supported_device):
             return self.async_abort(reason="unsupported_device")
 
         self.context.update(
@@ -345,7 +345,7 @@ class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
         conn = await self._connect(new_data, errors)
         if conn:
-            await self.hass.async_add_executor_job(self._disconnect, conn)
+            await self.menuai.async_add_executor_job(self._disconnect, conn)
         if errors:
             return await self._async_show_reauth_form(
                 user_input=user_input, errors=errors

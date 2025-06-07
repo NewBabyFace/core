@@ -4,15 +4,15 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.myuplink.const import (
+from menuai import config_entries
+from menuai.components.myuplink.const import (
     DOMAIN,
     OAUTH2_AUTHORIZE,
     OAUTH2_TOKEN,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import config_entry_oauth2_flow
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers import config_entry_oauth2_flow
 
 from .const import CLIENT_ID, UNIQUE_ID
 
@@ -26,18 +26,18 @@ CURRENT_SCOPE = "WRITESYSTEM READSYSTEM offline_access"
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_full_flow(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     access_token: str,
     setup_credentials,
 ) -> None:
     """Check full flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": REDIRECT_URL,
@@ -51,7 +51,7 @@ async def test_full_flow(
         f"&scope={CURRENT_SCOPE.replace(' ', '+')}"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == 200
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
@@ -67,12 +67,12 @@ async def test_full_flow(
     )
 
     with patch(
-        f"homeassistant.components.{DOMAIN}.async_setup_entry", return_value=True
+        f"menuai.components.{DOMAIN}.async_setup_entry", return_value=True
     ) as mock_setup:
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
-        await hass.async_block_till_done()
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
+        await menuai.async_block_till_done()
 
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
     assert len(mock_setup.mock_calls) == 1
 
     assert result["data"]["auth_implementation"] == DOMAIN
@@ -103,8 +103,8 @@ async def test_full_flow(
     ids=["reauth_only", "account_mismatch", "wrong_scope"],
 )
 async def test_flow_reauth_abort(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     setup_credentials: None,
     mock_config_entry: MockConfigEntry,
@@ -127,22 +127,22 @@ async def test_flow_reauth_abort(
             "expires_at": expires_at,
         },
     }
-    assert hass.config_entries.async_update_entry(
+    assert menuai.config_entries.async_update_entry(
         mock_config_entry, data=CURRENT_TOKEN, unique_id=unique_id
     )
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
 
-    result = await mock_config_entry.start_reauth_flow(hass)
+    result = await mock_config_entry.start_reauth_flow(menuai)
 
     assert result["step_id"] == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
     assert result["step_id"] == "auth"
 
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": REDIRECT_URL,
@@ -155,7 +155,7 @@ async def test_flow_reauth_abort(
         f"&scope={CURRENT_SCOPE.replace(' ', '+')}"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == 200
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
@@ -172,15 +172,15 @@ async def test_flow_reauth_abort(
     )
 
     with patch(
-        f"homeassistant.components.{DOMAIN}.async_setup_entry", return_value=True
+        f"menuai.components.{DOMAIN}.async_setup_entry", return_value=True
     ):
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
-        await hass.async_block_till_done()
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
+        await menuai.async_block_till_done()
 
     assert result.get("type") is FlowResultType.ABORT
     assert result.get("reason") == expected_reason
 
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
 
 
 @pytest.mark.usefixtures("current_request_with_host")
@@ -201,8 +201,8 @@ async def test_flow_reauth_abort(
     ids=["reauth_only", "account_mismatch"],
 )
 async def test_flow_reconfigure_abort(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     setup_credentials: None,
     mock_config_entry: MockConfigEntry,
@@ -225,17 +225,17 @@ async def test_flow_reconfigure_abort(
             "expires_at": expires_at,
         },
     }
-    assert hass.config_entries.async_update_entry(
+    assert menuai.config_entries.async_update_entry(
         mock_config_entry, data=CURRENT_TOKEN, unique_id=unique_id
     )
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
 
-    result = await mock_config_entry.start_reconfigure_flow(hass)
+    result = await mock_config_entry.start_reconfigure_flow(menuai)
 
     assert result["step_id"] == "auth"
 
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": REDIRECT_URL,
@@ -248,7 +248,7 @@ async def test_flow_reconfigure_abort(
         f"&scope={CURRENT_SCOPE.replace(' ', '+')}"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == 200
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
@@ -265,12 +265,12 @@ async def test_flow_reconfigure_abort(
     )
 
     with patch(
-        f"homeassistant.components.{DOMAIN}.async_setup_entry", return_value=True
+        f"menuai.components.{DOMAIN}.async_setup_entry", return_value=True
     ):
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
-        await hass.async_block_till_done()
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
+        await menuai.async_block_till_done()
 
     assert result.get("type") is FlowResultType.ABORT
     assert result.get("reason") == expected_reason
 
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1

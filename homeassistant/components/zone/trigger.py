@@ -6,30 +6,30 @@ import logging
 
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     ATTR_FRIENDLY_NAME,
     CONF_ENTITY_ID,
     CONF_EVENT,
     CONF_PLATFORM,
     CONF_ZONE,
 )
-from homeassistant.core import (
+from menuai.core import (
     CALLBACK_TYPE,
     Event,
     EventStateChangedData,
-    HassJob,
-    HomeAssistant,
+    menuaiJob,
+    menuai,
     callback,
 )
-from homeassistant.helpers import (
+from menuai.helpers import (
     condition,
     config_validation as cv,
     entity_registry as er,
     location,
 )
-from homeassistant.helpers.event import async_track_state_change_event
-from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers.event import async_track_state_change_event
+from menuai.helpers.trigger import TriggerActionType, TriggerInfo
+from menuai.helpers.typing import ConfigType
 
 EVENT_ENTER = "enter"
 EVENT_LEAVE = "leave"
@@ -52,11 +52,11 @@ _TRIGGER_SCHEMA = cv.TRIGGER_BASE_SCHEMA.extend(
 
 
 async def async_validate_trigger_config(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> ConfigType:
     """Validate trigger config."""
     config = _TRIGGER_SCHEMA(config)
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     config[CONF_ENTITY_ID] = er.async_validate_entity_ids(
         registry, config[CONF_ENTITY_ID]
     )
@@ -64,7 +64,7 @@ async def async_validate_trigger_config(
 
 
 async def async_attach_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     action: TriggerActionType,
     trigger_info: TriggerInfo,
@@ -76,7 +76,7 @@ async def async_attach_trigger(
     entity_id: list[str] = config[CONF_ENTITY_ID]
     zone_entity_id: str = config[CONF_ZONE]
     event: str = config[CONF_EVENT]
-    job = HassJob(action)
+    job = menuaiJob(action)
 
     @callback
     def zone_automation_listener(zone_event: Event[EventStateChangedData]) -> None:
@@ -90,7 +90,7 @@ async def async_attach_trigger(
         ):
             return
 
-        if not (zone_state := hass.states.get(zone_entity_id)):
+        if not (zone_state := menuai.states.get(zone_entity_id)):
             _LOGGER.warning(
                 (
                     "Automation '%s' is referencing non-existing zone '%s' in a zone"
@@ -101,14 +101,14 @@ async def async_attach_trigger(
             )
             return
 
-        from_match = condition.zone(hass, zone_state, from_s) if from_s else False
-        to_match = condition.zone(hass, zone_state, to_s) if to_s else False
+        from_match = condition.zone(menuai, zone_state, from_s) if from_s else False
+        to_match = condition.zone(menuai, zone_state, to_s) if to_s else False
 
         if (event == EVENT_ENTER and not from_match and to_match) or (
             event == EVENT_LEAVE and from_match and not to_match
         ):
             description = f"{entity} {_EVENT_DESCRIPTION[event]} {zone_state.attributes[ATTR_FRIENDLY_NAME]}"
-            hass.async_run_hass_job(
+            menuai.async_run_menuai_job(
                 job,
                 {
                     "trigger": {
@@ -125,4 +125,4 @@ async def async_attach_trigger(
                 to_s.context if to_s else None,
             )
 
-    return async_track_state_change_event(hass, entity_id, zone_automation_listener)
+    return async_track_state_change_event(menuai, entity_id, zone_automation_listener)

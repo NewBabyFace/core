@@ -8,8 +8,8 @@ from typing import Any
 import vlc
 import voluptuous as vol
 
-from homeassistant.components import media_source
-from homeassistant.components.media_player import (
+from menuai.components import media_source
+from menuai.components.media_player import (
     PLATFORM_SCHEMA as MEDIA_PLAYER_PLATFORM_SCHEMA,
     BrowseMedia,
     MediaPlayerEntity,
@@ -18,12 +18,12 @@ from homeassistant.components.media_player import (
     MediaType,
     async_process_play_media_url,
 )
-from homeassistant.const import CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import dt as dt_util
+from menuai.const import CONF_NAME
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import dt as dt_util
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ PLATFORM_SCHEMA = MEDIA_PLAYER_PLATFORM_SCHEMA.extend(
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -125,7 +125,7 @@ class VlcDevice(MediaPlayerEntity):
         # Handle media_source
         if media_source.is_media_source_id(media_id):
             sourced_media = await media_source.async_resolve_media(
-                self.hass, media_id, self.entity_id
+                self.menuai, media_id, self.entity_id
             )
             media_id = sourced_media.url
 
@@ -137,13 +137,13 @@ class VlcDevice(MediaPlayerEntity):
             )
             return
 
-        media_id = async_process_play_media_url(self.hass, media_id)
+        media_id = async_process_play_media_url(self.menuai, media_id)
 
         def play():
             self._vlc.set_media(self._instance.media_new(media_id))
             self._vlc.play()
 
-        await self.hass.async_add_executor_job(play)
+        await self.menuai.async_add_executor_job(play)
         self._attr_state = MediaPlayerState.PLAYING
 
     async def async_browse_media(
@@ -153,7 +153,7 @@ class VlcDevice(MediaPlayerEntity):
     ) -> BrowseMedia:
         """Implement the websocket media browsing helper."""
         return await media_source.async_browse_media(
-            self.hass,
+            self.menuai,
             media_content_id,
             content_filter=lambda item: item.media_content_type.startswith("audio/"),
         )

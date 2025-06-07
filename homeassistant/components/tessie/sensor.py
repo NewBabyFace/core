@@ -8,13 +8,13 @@ from datetime import datetime, timedelta
 from itertools import chain
 from typing import cast
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     PERCENTAGE,
     EntityCategory,
     UnitOfElectricCurrent,
@@ -27,11 +27,11 @@ from homeassistant.const import (
     UnitOfTemperature,
     UnitOfTime,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
-from homeassistant.util import dt as dt_util
-from homeassistant.util.variance import ignore_variance
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
+from menuai.util import dt as dt_util
+from menuai.util.variance import ignore_variance
 
 from . import TessieConfigEntry
 from .const import TessieChargeStates, TessieWallConnectorStates
@@ -373,7 +373,7 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: TessieConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

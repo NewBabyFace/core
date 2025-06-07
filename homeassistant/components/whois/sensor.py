@@ -9,21 +9,21 @@ from typing import cast
 
 from whois import Domain
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_DOMAIN, EntityCategory, UnitOfTime
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_DOMAIN, EntityCategory, UnitOfTime
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
 )
-from homeassistant.util import dt as dt_util
+from menuai.util import dt as dt_util
 
 from .const import (
     ATTR_EXPIRES,
@@ -75,9 +75,9 @@ def _get_status_type(status: str | None) -> str | None:
         return None
 
     # If the status is not in the STATUS_TYPES, return the status as is.
-    for icann_status, hass_status in STATUS_TYPES.items():
+    for icann_status, menuai_status in STATUS_TYPES.items():
         if icann_status in status:
-            return hass_status
+            return menuai_status
 
     # If the status is not in the STATUS_TYPES, return None.
     return None
@@ -159,12 +159,12 @@ SENSORS: tuple[WhoisSensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the platform from config_entry."""
-    coordinator: DataUpdateCoordinator[Domain | None] = hass.data[DOMAIN][
+    coordinator: DataUpdateCoordinator[Domain | None] = menuai.data[DOMAIN][
         entry.entry_id
     ]
     async_add_entities(

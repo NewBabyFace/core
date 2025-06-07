@@ -6,9 +6,9 @@ from mill import Mill
 from mill_local import Mill as MillLocal
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_IP_ADDRESS, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_IP_ADDRESS, CONF_PASSWORD, CONF_USERNAME
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import CLOUD, CONNECTION_TYPE, DOMAIN, LOCAL
 
@@ -56,7 +56,7 @@ class MillConfigFlow(ConfigFlow, domain=DOMAIN):
 
         mill_data_connection = MillLocal(
             user_input[CONF_IP_ADDRESS],
-            websession=async_get_clientsession(self.hass),
+            websession=async_get_clientsession(self.menuai),
         )
 
         await self.async_set_unique_id(mill_data_connection.device_ip)
@@ -97,7 +97,7 @@ class MillConfigFlow(ConfigFlow, domain=DOMAIN):
         mill_data_connection = Mill(
             username,
             password,
-            websession=async_get_clientsession(self.hass),
+            websession=async_get_clientsession(self.menuai),
         )
 
         errors = {}

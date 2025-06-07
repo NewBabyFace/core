@@ -15,10 +15,10 @@ from blebox_uniapi.error import (
 from blebox_uniapi.session import ApiHost
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_PORT, CONF_USERNAME
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_PORT, CONF_USERNAME
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from . import get_maybe_authenticated_session
 from .const import (
@@ -87,15 +87,15 @@ class BleBoxConfigFlow(ConfigFlow, domain=DOMAIN):
         self, discovery_info: ZeroconfServiceInfo
     ) -> ConfigFlowResult:
         """Handle zeroconf discovery."""
-        hass = self.hass
+        menuai = self.menuai
         ipaddress = (discovery_info.host, discovery_info.port)
         self.device_config["host"] = discovery_info.host
         self.device_config["port"] = discovery_info.port
 
-        websession = async_get_clientsession(hass)
+        websession = async_get_clientsession(menuai)
 
         api_host = ApiHost(
-            *ipaddress, DEFAULT_SETUP_TIMEOUT, websession, hass.loop, _LOGGER
+            *ipaddress, DEFAULT_SETUP_TIMEOUT, websession, menuai.loop, _LOGGER
         )
 
         try:
@@ -146,7 +146,7 @@ class BleBoxConfigFlow(ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle initial user-triggered config step."""
-        hass = self.hass
+        menuai = self.menuai
         schema = create_schema(user_input)
 
         if user_input is None:
@@ -170,10 +170,10 @@ class BleBoxConfigFlow(ConfigFlow, domain=DOMAIN):
                     description_placeholders={"address": f"{host}:{port}"},
                 )
 
-        websession = get_maybe_authenticated_session(hass, password, username)
+        websession = get_maybe_authenticated_session(menuai, password, username)
 
         api_host = ApiHost(
-            host, port, DEFAULT_SETUP_TIMEOUT, websession, hass.loop, _LOGGER
+            host, port, DEFAULT_SETUP_TIMEOUT, websession, menuai.loop, _LOGGER
         )
         try:
             product = await Box.async_from_host(api_host)

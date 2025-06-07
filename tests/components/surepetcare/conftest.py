@@ -5,9 +5,9 @@ from unittest.mock import patch
 import pytest
 from surepy import MESTART_RESOURCE
 
-from homeassistant.components.surepetcare.const import DOMAIN
-from homeassistant.const import CONF_PASSWORD, CONF_TOKEN, CONF_USERNAME
-from homeassistant.core import HomeAssistant
+from menuai.components.surepetcare.const import DOMAIN
+from menuai.const import CONF_PASSWORD, CONF_TOKEN, CONF_USERNAME
+from menuai.core import menuai
 
 from . import MOCK_API_DATA
 
@@ -32,7 +32,7 @@ async def surepetcare():
 
 
 @pytest.fixture
-async def mock_config_entry_setup(hass: HomeAssistant) -> MockConfigEntry:
+async def mock_config_entry_setup(menuai: menuai) -> MockConfigEntry:
     """Help setting up a mocked config entry."""
     data = {
         CONF_USERNAME: "test-username",
@@ -43,6 +43,6 @@ async def mock_config_entry_setup(hass: HomeAssistant) -> MockConfigEntry:
         "pets": [24680],
     }
     entry = MockConfigEntry(domain=DOMAIN, data=data)
-    entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(entry.entry_id)
+    entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(entry.entry_id)
     return entry

@@ -7,4 +7,4 @@ ruff \
   format \
   --check \
   --quiet \
-  homeassistant tests script *.py
+  menuai tests script *.py

@@ -1,9 +1,9 @@
-"""Adapter to wrap the pyjuicenet api for home assistant."""
+"""Adapter to wrap the pyjuicenet api for MenuAI."""
 
 from pyjuicenet import Charger
 
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.update_coordinator import (
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
 )

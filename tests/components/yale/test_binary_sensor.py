@@ -5,8 +5,8 @@ import datetime
 from freezegun.api import FrozenDateTimeFactory
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.lock import DOMAIN as LOCK_DOMAIN
-from homeassistant.const import (
+from menuai.components.lock import DOMAIN as LOCK_DOMAIN
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_LOCK,
     SERVICE_UNLOCK,
@@ -14,9 +14,9 @@ from homeassistant.const import (
     STATE_ON,
     STATE_UNAVAILABLE,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.util import dt as dt_util
 
 from .mocks import (
     _create_yale_with_devices,
@@ -29,48 +29,48 @@ from .mocks import (
 from tests.common import async_fire_time_changed
 
 
-async def test_doorsense(hass: HomeAssistant) -> None:
+async def test_doorsense(menuai: menuai) -> None:
     """Test creation of a lock with doorsense and bridge."""
     lock_one = await _mock_lock_from_fixture(
-        hass, "get_lock.online_with_doorsense.json"
+        menuai, "get_lock.online_with_doorsense.json"
     )
-    await _create_yale_with_devices(hass, [lock_one])
-    states = hass.states
+    await _create_yale_with_devices(menuai, [lock_one])
+    states = menuai.states
     assert states.get("binary_sensor.online_with_doorsense_name_door").state == STATE_ON
 
     data = {ATTR_ENTITY_ID: "lock.online_with_doorsense_name"}
-    await hass.services.async_call(LOCK_DOMAIN, SERVICE_UNLOCK, data, blocking=True)
+    await menuai.services.async_call(LOCK_DOMAIN, SERVICE_UNLOCK, data, blocking=True)
 
     assert states.get("binary_sensor.online_with_doorsense_name_door").state == STATE_ON
 
-    await hass.services.async_call(LOCK_DOMAIN, SERVICE_LOCK, data, blocking=True)
+    await menuai.services.async_call(LOCK_DOMAIN, SERVICE_LOCK, data, blocking=True)
 
     assert (
         states.get("binary_sensor.online_with_doorsense_name_door").state == STATE_OFF
     )
 
 
-async def test_lock_bridge_offline(hass: HomeAssistant) -> None:
+async def test_lock_bridge_offline(menuai: menuai) -> None:
     """Test creation of a lock with doorsense and bridge that goes offline."""
     lock_one = await _mock_lock_from_fixture(
-        hass, "get_lock.online_with_doorsense.json"
+        menuai, "get_lock.online_with_doorsense.json"
     )
     activities = await _mock_activities_from_fixture(
-        hass, "get_activity.bridge_offline.json"
+        menuai, "get_activity.bridge_offline.json"
     )
-    await _create_yale_with_devices(hass, [lock_one], activities=activities)
-    states = hass.states
+    await _create_yale_with_devices(menuai, [lock_one], activities=activities)
+    states = menuai.states
     assert (
         states.get("binary_sensor.online_with_doorsense_name_door").state
         == STATE_UNAVAILABLE
     )
 
 
-async def test_create_doorbell(hass: HomeAssistant) -> None:
+async def test_create_doorbell(menuai: menuai) -> None:
     """Test creation of a doorbell."""
-    doorbell_one = await _mock_doorbell_from_fixture(hass, "get_doorbell.json")
-    await _create_yale_with_devices(hass, [doorbell_one])
-    states = hass.states
+    doorbell_one = await _mock_doorbell_from_fixture(menuai, "get_doorbell.json")
+    await _create_yale_with_devices(menuai, [doorbell_one])
+    states = menuai.states
     assert states.get("binary_sensor.k98gidt45gul_name_motion").state == STATE_OFF
     assert (
         states.get("binary_sensor.k98gidt45gul_name_image_capture").state == STATE_OFF
@@ -85,11 +85,11 @@ async def test_create_doorbell(hass: HomeAssistant) -> None:
     )
 
 
-async def test_create_doorbell_offline(hass: HomeAssistant) -> None:
+async def test_create_doorbell_offline(menuai: menuai) -> None:
     """Test creation of a doorbell that is offline."""
-    doorbell_one = await _mock_doorbell_from_fixture(hass, "get_doorbell.offline.json")
-    await _create_yale_with_devices(hass, [doorbell_one])
-    states = hass.states
+    doorbell_one = await _mock_doorbell_from_fixture(menuai, "get_doorbell.offline.json")
+    await _create_yale_with_devices(menuai, [doorbell_one])
+    states = menuai.states
     assert states.get("binary_sensor.tmt100_name_motion").state == STATE_UNAVAILABLE
     assert states.get("binary_sensor.tmt100_name_connectivity").state == STATE_OFF
     assert (
@@ -98,35 +98,35 @@ async def test_create_doorbell_offline(hass: HomeAssistant) -> None:
 
 
 async def test_create_doorbell_with_motion(
-    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+    menuai: menuai, freezer: FrozenDateTimeFactory
 ) -> None:
     """Test creation of a doorbell."""
-    doorbell_one = await _mock_doorbell_from_fixture(hass, "get_doorbell.json")
+    doorbell_one = await _mock_doorbell_from_fixture(menuai, "get_doorbell.json")
     activities = await _mock_activities_from_fixture(
-        hass, "get_activity.doorbell_motion.json"
+        menuai, "get_activity.doorbell_motion.json"
     )
-    await _create_yale_with_devices(hass, [doorbell_one], activities=activities)
-    states = hass.states
+    await _create_yale_with_devices(menuai, [doorbell_one], activities=activities)
+    states = menuai.states
     assert states.get("binary_sensor.k98gidt45gul_name_motion").state == STATE_ON
     assert states.get("binary_sensor.k98gidt45gul_name_connectivity").state == STATE_ON
     assert (
         states.get("binary_sensor.k98gidt45gul_name_doorbell_ding").state == STATE_OFF
     )
     freezer.tick(40)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
     assert states.get("binary_sensor.k98gidt45gul_name_motion").state == STATE_OFF
 
 
 async def test_doorbell_update_via_socketio(
-    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+    menuai: menuai, freezer: FrozenDateTimeFactory
 ) -> None:
     """Test creation of a doorbell that can be updated via socketio."""
-    doorbell_one = await _mock_doorbell_from_fixture(hass, "get_doorbell.json")
+    doorbell_one = await _mock_doorbell_from_fixture(menuai, "get_doorbell.json")
 
-    _, socketio = await _create_yale_with_devices(hass, [doorbell_one])
+    _, socketio = await _create_yale_with_devices(menuai, [doorbell_one])
     assert doorbell_one.pubsub_channel == "7c7a6672-59c8-3333-ffff-dcd98705cccc"
-    states = hass.states
+    states = menuai.states
     assert states.get("binary_sensor.k98gidt45gul_name_motion").state == STATE_OFF
     assert (
         states.get("binary_sensor.k98gidt45gul_name_doorbell_ding").state == STATE_OFF
@@ -149,7 +149,7 @@ async def test_doorbell_update_via_socketio(
         },
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert states.get("binary_sensor.k98gidt45gul_name_image_capture").state == STATE_ON
 
@@ -180,7 +180,7 @@ async def test_doorbell_update_via_socketio(
         },
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert states.get("binary_sensor.k98gidt45gul_name_motion").state == STATE_ON
     assert (
@@ -188,8 +188,8 @@ async def test_doorbell_update_via_socketio(
     )
 
     freezer.tick(40)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     assert (
         states.get("binary_sensor.k98gidt45gul_name_image_capture").state == STATE_OFF
@@ -203,13 +203,13 @@ async def test_doorbell_update_via_socketio(
         },
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert states.get("binary_sensor.k98gidt45gul_name_doorbell_ding").state == STATE_ON
 
     freezer.tick(40)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     assert (
         states.get("binary_sensor.k98gidt45gul_name_doorbell_ding").state == STATE_OFF
@@ -217,28 +217,28 @@ async def test_doorbell_update_via_socketio(
 
 
 async def test_doorbell_device_registry(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test creation of a lock with doorsense and bridge ands up in the registry."""
-    doorbell_one = await _mock_doorbell_from_fixture(hass, "get_doorbell.offline.json")
-    await _create_yale_with_devices(hass, [doorbell_one])
+    doorbell_one = await _mock_doorbell_from_fixture(menuai, "get_doorbell.offline.json")
+    await _create_yale_with_devices(menuai, [doorbell_one])
 
     reg_device = device_registry.async_get_device(identifiers={("yale", "tmt100")})
     assert reg_device == snapshot
 
 
-async def test_door_sense_update_via_socketio(hass: HomeAssistant) -> None:
+async def test_door_sense_update_via_socketio(menuai: menuai) -> None:
     """Test creation of a lock with doorsense and bridge."""
-    lock_one = await _mock_doorsense_enabled_yale_lock_detail(hass)
+    lock_one = await _mock_doorsense_enabled_yale_lock_detail(menuai)
     assert lock_one.pubsub_channel == "pubsub"
 
-    activities = await _mock_activities_from_fixture(hass, "get_activity.lock.json")
+    activities = await _mock_activities_from_fixture(menuai, "get_activity.lock.json")
     config_entry, socketio = await _create_yale_with_devices(
-        hass, [lock_one], activities=activities
+        menuai, [lock_one], activities=activities
     )
-    states = hass.states
+    states = menuai.states
     assert states.get("binary_sensor.online_with_doorsense_name_door").state == STATE_ON
 
     listener = list(socketio._listeners)[0]
@@ -248,7 +248,7 @@ async def test_door_sense_update_via_socketio(hass: HomeAssistant) -> None:
         {"status": "kAugLockState_Unlocking", "doorState": "closed"},
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert (
         states.get("binary_sensor.online_with_doorsense_name_door").state == STATE_OFF
@@ -260,22 +260,22 @@ async def test_door_sense_update_via_socketio(hass: HomeAssistant) -> None:
         {"status": "kAugLockState_Locking", "doorState": "open"},
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert states.get("binary_sensor.online_with_doorsense_name_door").state == STATE_ON
 
-    async_fire_time_changed(hass, dt_util.utcnow() + datetime.timedelta(seconds=30))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + datetime.timedelta(seconds=30))
+    await menuai.async_block_till_done()
     assert states.get("binary_sensor.online_with_doorsense_name_door").state == STATE_ON
 
     socketio.connected = True
-    async_fire_time_changed(hass, dt_util.utcnow() + datetime.timedelta(seconds=30))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + datetime.timedelta(seconds=30))
+    await menuai.async_block_till_done()
     assert states.get("binary_sensor.online_with_doorsense_name_door").state == STATE_ON
 
     # Ensure socketio status is always preserved
-    async_fire_time_changed(hass, dt_util.utcnow() + datetime.timedelta(hours=2))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + datetime.timedelta(hours=2))
+    await menuai.async_block_till_done()
     assert states.get("binary_sensor.online_with_doorsense_name_door").state == STATE_ON
 
     listener(
@@ -284,22 +284,22 @@ async def test_door_sense_update_via_socketio(hass: HomeAssistant) -> None:
         {"status": "kAugLockState_Unlocking", "doorState": "open"},
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert states.get("binary_sensor.online_with_doorsense_name_door").state == STATE_ON
 
-    async_fire_time_changed(hass, dt_util.utcnow() + datetime.timedelta(hours=4))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + datetime.timedelta(hours=4))
+    await menuai.async_block_till_done()
     assert states.get("binary_sensor.online_with_doorsense_name_door").state == STATE_ON
 
-    await hass.config_entries.async_unload(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
 
-async def test_create_lock_with_doorbell(hass: HomeAssistant) -> None:
+async def test_create_lock_with_doorbell(menuai: menuai) -> None:
     """Test creation of a lock with a doorbell."""
-    lock_one = await _mock_lock_from_fixture(hass, "lock_with_doorbell.online.json")
-    await _create_yale_with_devices(hass, [lock_one])
-    states = hass.states
+    lock_one = await _mock_lock_from_fixture(menuai, "lock_with_doorbell.online.json")
+    await _create_yale_with_devices(menuai, [lock_one])
+    states = menuai.states
     assert (
         states.get(
             "binary_sensor.a6697750d607098bae8d6baa11ef8063_name_doorbell_ding"

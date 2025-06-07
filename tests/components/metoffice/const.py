@@ -1,7 +1,7 @@
 """Helpers for testing Met Office DataPoint."""
 
-from homeassistant.components.metoffice.const import DOMAIN
-from homeassistant.const import CONF_API_KEY, CONF_LATITUDE, CONF_LONGITUDE, CONF_NAME
+from menuai.components.metoffice.const import DOMAIN
+from menuai.const import CONF_API_KEY, CONF_LATITUDE, CONF_LONGITUDE, CONF_NAME
 
 TEST_DATETIME_STRING = "2024-11-23T12:00:00+00:00"
 

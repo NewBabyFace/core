@@ -3,8 +3,8 @@
 from syrupy.assertion import SnapshotAssertion
 from syrupy.filters import props
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_registry import EntityRegistry
+from menuai.core import menuai
+from menuai.helpers.entity_registry import EntityRegistry
 
 from .const import TEST_BUTTON_EVENT_ENTITY_ID
 
@@ -14,9 +14,9 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_async_get_config_entry_diagnostics(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: EntityRegistry,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     integration: None,
     mock_config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
@@ -25,10 +25,10 @@ async def test_async_get_config_entry_diagnostics(
 
     # Enable an Event entity
     entity_registry.async_update_entity(TEST_BUTTON_EVENT_ENTITY_ID, disabled_by=None)
-    hass.config_entries.async_schedule_reload(mock_config_entry.entry_id)
+    menuai.config_entries.async_schedule_reload(mock_config_entry.entry_id)
 
     result = await get_diagnostics_for_config_entry(
-        hass, hass_client, mock_config_entry
+        menuai, menuai_client, mock_config_entry
     )
 
     assert result == snapshot(

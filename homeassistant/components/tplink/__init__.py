@@ -19,9 +19,9 @@ from kasa import (
 )
 from kasa.httpclient import get_cookie_jar
 
-from homeassistant import config_entries
-from homeassistant.components import network
-from homeassistant.const import (
+from menuai import config_entries
+from menuai.components import network
+from menuai.const import (
     CONF_ALIAS,
     CONF_AUTHENTICATION,
     CONF_DEVICE,
@@ -32,16 +32,16 @@ from homeassistant.const import (
     CONF_PORT,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import (
+from menuai.core import menuai, callback
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import (
     config_validation as cv,
     device_registry as dr,
     discovery_flow,
 )
-from homeassistant.helpers.aiohttp_client import async_create_clientsession
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers.aiohttp_client import async_create_clientsession
+from menuai.helpers.event import async_track_time_interval
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     CONF_AES_KEYS,
@@ -65,23 +65,23 @@ CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 _LOGGER = logging.getLogger(__name__)
 
 
-def create_async_tplink_clientsession(hass: HomeAssistant) -> ClientSession:
+def create_async_tplink_clientsession(menuai: menuai) -> ClientSession:
     """Return aiohttp clientsession with cookie jar configured."""
     return async_create_clientsession(
-        hass, verify_ssl=False, cookie_jar=get_cookie_jar()
+        menuai, verify_ssl=False, cookie_jar=get_cookie_jar()
     )
 
 
 @callback
 def async_trigger_discovery(
-    hass: HomeAssistant,
+    menuai: menuai,
     discovered_devices: dict[str, Device],
 ) -> None:
     """Trigger config flows for discovered devices."""
 
     for formatted_mac, device in discovered_devices.items():
         discovery_flow.async_create_flow(
-            hass,
+            menuai,
             DOMAIN,
             context={"source": config_entries.SOURCE_INTEGRATION_DISCOVERY},
             data={
@@ -93,11 +93,11 @@ def async_trigger_discovery(
         )
 
 
-async def async_discover_devices(hass: HomeAssistant) -> dict[str, Device]:
+async def async_discover_devices(menuai: menuai) -> dict[str, Device]:
     """Discover TPLink devices on configured network interfaces."""
 
-    credentials = await get_credentials(hass)
-    broadcast_addresses = await network.async_get_ipv4_broadcast_addresses(hass)
+    credentials = await get_credentials(menuai)
+    broadcast_addresses = await network.async_get_ipv4_broadcast_addresses(menuai)
     tasks = [
         Discover.discover(
             target=str(address),
@@ -114,28 +114,28 @@ async def async_discover_devices(hass: HomeAssistant) -> dict[str, Device]:
     return discovered_devices
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the TP-Link component."""
-    hass.data.setdefault(DOMAIN, {})
+    menuai.data.setdefault(DOMAIN, {})
 
     async def _async_discovery(*_: Any) -> None:
-        if discovered := await async_discover_devices(hass):
-            async_trigger_discovery(hass, discovered)
+        if discovered := await async_discover_devices(menuai):
+            async_trigger_discovery(menuai, discovered)
 
-    hass.async_create_background_task(
+    menuai.async_create_background_task(
         _async_discovery(), "tplink first discovery", eager_start=True
     )
     async_track_time_interval(
-        hass, _async_discovery, DISCOVERY_INTERVAL, cancel_on_shutdown=True
+        menuai, _async_discovery, DISCOVERY_INTERVAL, cancel_on_shutdown=True
     )
 
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: TPLinkConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: TPLinkConfigEntry) -> bool:
     """Set up TPLink from a config entry."""
     host: str = entry.data[CONF_HOST]
-    credentials = await get_credentials(hass)
+    credentials = await get_credentials(menuai)
     entry_credentials_hash = entry.data.get(CONF_CREDENTIALS_HASH)
     entry_use_http = entry.data.get(CONF_USES_HTTP, False)
     entry_aes_keys = entry.data.get(CONF_AES_KEYS)
@@ -150,7 +150,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: TPLinkConfigEntry) -> bo
                 "Invalid connection parameters dict for %s: %s", host, conn_params_dict
             )
 
-    client = create_async_tplink_clientsession(hass) if entry_use_http else None
+    client = create_async_tplink_clientsession(menuai) if entry_use_http else None
     config = DeviceConfig(
         host,
         timeout=CONNECT_TIMEOUT,
@@ -172,7 +172,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: TPLinkConfigEntry) -> bo
         # If the stored credentials_hash was used but doesn't work remove it
         if not credentials and entry_credentials_hash:
             data = {k: v for k, v in entry.data.items() if k != CONF_CREDENTIALS_HASH}
-            hass.config_entries.async_update_entry(entry, data=data)
+            menuai.config_entries.async_update_entry(entry, data=data)
         raise ConfigEntryAuthFailed(
             translation_domain=DOMAIN,
             translation_key="device_authentication",
@@ -206,7 +206,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: TPLinkConfigEntry) -> bo
     if entry.data.get(CONF_MODEL) != device.model:
         updates[CONF_MODEL] = device.model
     if updates:
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry,
             data={
                 **entry.data,
@@ -232,7 +232,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: TPLinkConfigEntry) -> bo
         )
 
     parent_coordinator = TPLinkDataUpdateCoordinator(
-        hass, device, timedelta(seconds=5), entry
+        menuai, device, timedelta(seconds=5), entry
     )
 
     camera_creds: Credentials | None = None
@@ -243,16 +243,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: TPLinkConfigEntry) -> bo
     live_view = entry.data.get(CONF_LIVE_VIEW)
 
     entry.runtime_data = TPLinkData(parent_coordinator, camera_creds, live_view)
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: TPLinkConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: TPLinkConfigEntry) -> bool:
     """Unload a config entry."""
     data = entry.runtime_data
     device = data.parent_coordinator.device
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
     await device.protocol.close()
 
     return unload_ok
@@ -286,18 +286,18 @@ def get_device_name(device: Device, parent: Device | None = None) -> str | None:
     return None
 
 
-async def get_credentials(hass: HomeAssistant) -> Credentials | None:
-    """Retrieve the credentials from hass data."""
-    if DOMAIN in hass.data and CONF_AUTHENTICATION in hass.data[DOMAIN]:
-        auth = hass.data[DOMAIN][CONF_AUTHENTICATION]
+async def get_credentials(menuai: menuai) -> Credentials | None:
+    """Retrieve the credentials from menuai data."""
+    if DOMAIN in menuai.data and CONF_AUTHENTICATION in menuai.data[DOMAIN]:
+        auth = menuai.data[DOMAIN][CONF_AUTHENTICATION]
         return Credentials(auth[CONF_USERNAME], auth[CONF_PASSWORD])
 
     return None
 
 
-async def set_credentials(hass: HomeAssistant, username: str, password: str) -> None:
-    """Save the credentials to HASS data."""
-    hass.data.setdefault(DOMAIN, {})[CONF_AUTHENTICATION] = {
+async def set_credentials(menuai: menuai, username: str, password: str) -> None:
+    """Save the credentials to menuai data."""
+    menuai.data.setdefault(DOMAIN, {})[CONF_AUTHENTICATION] = {
         CONF_USERNAME: username,
         CONF_PASSWORD: password,
     }
@@ -331,7 +331,7 @@ def _device_id_is_mac_or_none(mac: str, device_ids: Iterable[str]) -> str | None
 
 
 async def async_migrate_entry(
-    hass: HomeAssistant, config_entry: TPLinkConfigEntry
+    menuai: menuai, config_entry: TPLinkConfigEntry
 ) -> bool:
     """Migrate old entry."""
     entry_version = config_entry.version
@@ -354,7 +354,7 @@ async def async_migrate_entry(
         # identifiers. Now we create separate devices connected with via_device
         # so the identifier linkage must be removed otherwise the devices will
         # always be linked into one device.
-        dev_reg = dr.async_get(hass)
+        dev_reg = dr.async_get(menuai)
         for device in dr.async_entries_for_config_entry(dev_reg, config_entry.entry_id):
             original_identifiers = device.identifiers
             # Get only the tplink identifier, could be tapo or other integrations.
@@ -394,7 +394,7 @@ async def async_migrate_entry(
                 new_identifiers,
             )
 
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             config_entry, minor_version=new_minor_version
         )
 
@@ -414,7 +414,7 @@ async def async_migrate_entry(
             if credentials_hash := config_dict.pop(CONF_CREDENTIALS_HASH, None):
                 updates[CONF_CREDENTIALS_HASH] = credentials_hash
                 updates[CONF_DEVICE_CONFIG] = config_dict
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             config_entry,
             data={
                 **config_entry.data,
@@ -443,7 +443,7 @@ async def async_migrate_entry(
                 updates[CONF_CONNECTION_PARAMETERS] = connection_parameters
             if (use_http := config_dict.get(CONF_USES_HTTP)) is not None:
                 updates[CONF_USES_HTTP] = use_http
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             config_entry,
             data={
                 **entry_data,

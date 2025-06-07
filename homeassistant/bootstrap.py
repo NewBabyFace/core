@@ -1,4 +1,4 @@
-"""Provide methods to bootstrap a Home Assistant instance."""
+"""Provide methods to bootstrap a MenuAI instance."""
 
 from __future__ import annotations
 
@@ -72,7 +72,7 @@ from .const import (
     SIGNAL_BOOTSTRAP_INTEGRATIONS,
 )
 from .core_config import async_process_ha_core_config
-from .exceptions import HomeAssistantError
+from .exceptions import menuaiError
 from .helpers import (
     area_registry,
     backup,
@@ -107,7 +107,7 @@ from .setup import (
     async_setup_component,
 )
 from .util.async_ import create_eager_task
-from .util.hass_dict import HassKey
+from .util.menuai_dict import menuaiKey
 from .util.logging import async_activate_log_queue_handler
 from .util.package import async_get_user_site, is_docker_env, is_virtual_env
 from .util.system_info import is_official_image
@@ -132,8 +132,8 @@ SETUP_ORDER_SORT_KEY = partial(contains, BASE_PLATFORMS)
 
 ERROR_LOG_FILENAME = "home-assistant.log"
 
-# hass.data key for logging information.
-DATA_REGISTRIES_LOADED: HassKey[None] = HassKey("bootstrap_registries_loaded")
+# menuai.data key for logging information.
+DATA_REGISTRIES_LOADED: menuaiKey[None] = menuaiKey("bootstrap_registries_loaded")
 
 LOG_SLOW_STARTUP_INTERVAL = 60
 SLOW_STARTUP_CHECK_INTERVAL = 1
@@ -145,7 +145,7 @@ WRAP_UP_TIMEOUT = 300
 COOLDOWN_TIME = 60
 
 # Core integrations are unconditionally loaded
-CORE_INTEGRATIONS = {"homeassistant", "persistent_notification"}
+CORE_INTEGRATIONS = {"menuai", "persistent_notification"}
 
 # Integrations that are loaded right after the core is set up
 LOGGING_AND_HTTP_DEPS_INTEGRATIONS = {
@@ -155,7 +155,7 @@ LOGGING_AND_HTTP_DEPS_INTEGRATIONS = {
     # Set log levels
     "logger",
     # Ensure network config is available
-    # before hassio or any other integration is
+    # before menuaiio or any other integration is
     # loaded that might create an aiohttp client session
     "network",
     # Error logging
@@ -199,7 +199,7 @@ STAGE_1_INTEGRATIONS = {
     # To provide account link implementations
     "cloud",
     # Ensure supervisor is available
-    "hassio",
+    "menuaiio",
 }
 
 DEFAULT_INTEGRATIONS = {
@@ -240,7 +240,7 @@ DEFAULT_INTEGRATIONS_RECOVERY_MODE = {
 }
 DEFAULT_INTEGRATIONS_SUPERVISOR = {
     # These integrations are set up if using the Supervisor
-    "hassio",
+    "menuaiio",
 }
 
 CRITICAL_INTEGRATIONS = {
@@ -272,41 +272,41 @@ PRELOAD_STORAGE = [
 ]
 
 
-async def async_setup_hass(
+async def async_setup_menuai(
     runtime_config: RuntimeConfig,
-) -> core.HomeAssistant | None:
-    """Set up Home Assistant."""
+) -> core.menuai | None:
+    """Set up MenuAI."""
 
-    async def create_hass() -> core.HomeAssistant:
-        """Create the hass object and do basic setup."""
-        hass = core.HomeAssistant(runtime_config.config_dir)
-        loader.async_setup(hass)
+    async def create_menuai() -> core.menuai:
+        """Create the menuai object and do basic setup."""
+        menuai = core.menuai(runtime_config.config_dir)
+        loader.async_setup(menuai)
 
         await async_enable_logging(
-            hass,
+            menuai,
             runtime_config.verbose,
             runtime_config.log_rotate_days,
             runtime_config.log_file,
             runtime_config.log_no_color,
         )
 
-        if runtime_config.debug or hass.loop.get_debug():
-            hass.config.debug = True
+        if runtime_config.debug or menuai.loop.get_debug():
+            menuai.config.debug = True
 
-        hass.config.safe_mode = runtime_config.safe_mode
-        hass.config.skip_pip = runtime_config.skip_pip
-        hass.config.skip_pip_packages = runtime_config.skip_pip_packages
+        menuai.config.safe_mode = runtime_config.safe_mode
+        menuai.config.skip_pip = runtime_config.skip_pip
+        menuai.config.skip_pip_packages = runtime_config.skip_pip_packages
 
-        return hass
+        return menuai
 
-    hass = await create_hass()
+    menuai = await create_menuai()
 
     if runtime_config.skip_pip or runtime_config.skip_pip_packages:
         _LOGGER.warning(
             "Skipping pip installation of required modules. This may cause issues"
         )
 
-    if not await conf_util.async_ensure_config_exists(hass):
+    if not await conf_util.async_ensure_config_exists(menuai):
         _LOGGER.error("Error getting configuration path")
         return None
 
@@ -318,11 +318,11 @@ async def async_setup_hass(
         config_dict = None
         basic_setup_success = False
 
-        await hass.async_add_executor_job(conf_util.process_ha_config_upgrade, hass)
+        await menuai.async_add_executor_job(conf_util.process_ha_config_upgrade, menuai)
 
         try:
-            config_dict = await conf_util.async_hass_config_yaml(hass)
-        except HomeAssistantError as err:
+            config_dict = await conf_util.async_menuai_config_yaml(menuai)
+        except menuaiError as err:
             _LOGGER.error(
                 "Failed to parse configuration.yaml: %s. Activating recovery mode",
                 err,
@@ -332,82 +332,82 @@ async def async_setup_hass(
                 await async_mount_local_lib_path(runtime_config.config_dir)
 
             basic_setup_success = (
-                await async_from_config_dict(config_dict, hass) is not None
+                await async_from_config_dict(config_dict, menuai) is not None
             )
 
         if config_dict is None:
             recovery_mode = True
-            await hass.async_stop(force=True)
-            hass = await create_hass()
+            await menuai.async_stop(force=True)
+            menuai = await create_menuai()
 
         elif not basic_setup_success:
             _LOGGER.warning(
                 "Unable to set up core integrations. Activating recovery mode"
             )
             recovery_mode = True
-            await hass.async_stop(force=True)
-            hass = await create_hass()
+            await menuai.async_stop(force=True)
+            menuai = await create_menuai()
 
         elif any(
-            domain not in hass.config.components for domain in CRITICAL_INTEGRATIONS
+            domain not in menuai.config.components for domain in CRITICAL_INTEGRATIONS
         ):
             _LOGGER.warning(
                 "Detected that %s did not load. Activating recovery mode",
                 ",".join(CRITICAL_INTEGRATIONS),
             )
 
-            old_config = hass.config
-            old_logging = hass.data.get(DATA_LOGGING)
+            old_config = menuai.config
+            old_logging = menuai.data.get(DATA_LOGGING)
 
             recovery_mode = True
-            await hass.async_stop(force=True)
-            hass = await create_hass()
+            await menuai.async_stop(force=True)
+            menuai = await create_menuai()
 
             if old_logging:
-                hass.data[DATA_LOGGING] = old_logging
-            hass.config.debug = old_config.debug
-            hass.config.skip_pip = old_config.skip_pip
-            hass.config.skip_pip_packages = old_config.skip_pip_packages
-            hass.config.internal_url = old_config.internal_url
-            hass.config.external_url = old_config.external_url
+                menuai.data[DATA_LOGGING] = old_logging
+            menuai.config.debug = old_config.debug
+            menuai.config.skip_pip = old_config.skip_pip
+            menuai.config.skip_pip_packages = old_config.skip_pip_packages
+            menuai.config.internal_url = old_config.internal_url
+            menuai.config.external_url = old_config.external_url
             # Setup loader cache after the config dir has been set
-            loader.async_setup(hass)
+            loader.async_setup(menuai)
 
     if recovery_mode:
         _LOGGER.info("Starting in recovery mode")
-        hass.config.recovery_mode = True
+        menuai.config.recovery_mode = True
 
-        http_conf = (await http.async_get_last_config(hass)) or {}
+        http_conf = (await http.async_get_last_config(menuai)) or {}
 
         await async_from_config_dict(
             {"recovery_mode": {}, "http": http_conf},
-            hass,
+            menuai,
         )
-    elif hass.config.safe_mode:
+    elif menuai.config.safe_mode:
         _LOGGER.info("Starting in safe mode")
 
     if runtime_config.open_ui:
-        hass.add_job(open_hass_ui, hass)
+        menuai.add_job(open_menuai_ui, menuai)
 
-    return hass
+    return menuai
 
 
-def open_hass_ui(hass: core.HomeAssistant) -> None:
+def open_menuai_ui(menuai: core.menuai) -> None:
     """Open the UI."""
     import webbrowser  # pylint: disable=import-outside-toplevel
 
-    if hass.config.api is None or "frontend" not in hass.config.components:
+    if menuai.config.api is None or "frontend" not in menuai.config.components:
         _LOGGER.warning("Cannot launch the UI because frontend not loaded")
         return
 
-    scheme = "https" if hass.config.api.use_ssl else "http"
+    scheme = "https" if menuai.config.api.use_ssl else "http"
     url = str(
-        yarl.URL.build(scheme=scheme, host="127.0.0.1", port=hass.config.api.port)
+        yarl.URL.build(scheme=scheme, host="127.0.0.1", port=menuai.config.api.port)
     )
 
     if not webbrowser.open(url):
         _LOGGER.warning(
-            "Unable to open the Home Assistant UI in a browser. Open it yourself at %s",
+            "Unable to open the MenuAI UI in a browser. Open it yourself at %s",
             url,
         )
 
@@ -429,47 +429,47 @@ def _init_blocking_io_modules_in_executor() -> None:
     is_docker_env()
 
 
-async def async_load_base_functionality(hass: core.HomeAssistant) -> None:
+async def async_load_base_functionality(menuai: core.menuai) -> None:
     """Load the registries and modules that will do blocking I/O."""
-    if DATA_REGISTRIES_LOADED in hass.data:
+    if DATA_REGISTRIES_LOADED in menuai.data:
         return
-    hass.data[DATA_REGISTRIES_LOADED] = None
-    entity.async_setup(hass)
-    frame.async_setup(hass)
-    template.async_setup(hass)
-    translation.async_setup(hass)
+    menuai.data[DATA_REGISTRIES_LOADED] = None
+    entity.async_setup(menuai)
+    frame.async_setup(menuai)
+    template.async_setup(menuai)
+    translation.async_setup(menuai)
     await asyncio.gather(
-        create_eager_task(get_internal_store_manager(hass).async_initialize()),
-        create_eager_task(area_registry.async_load(hass)),
-        create_eager_task(category_registry.async_load(hass)),
-        create_eager_task(device_registry.async_load(hass)),
-        create_eager_task(entity_registry.async_load(hass)),
-        create_eager_task(floor_registry.async_load(hass)),
-        create_eager_task(issue_registry.async_load(hass)),
-        create_eager_task(label_registry.async_load(hass)),
-        hass.async_add_executor_job(_init_blocking_io_modules_in_executor),
-        create_eager_task(template.async_load_custom_templates(hass)),
-        create_eager_task(restore_state.async_load(hass)),
-        create_eager_task(hass.config_entries.async_initialize()),
-        create_eager_task(async_get_system_info(hass)),
+        create_eager_task(get_internal_store_manager(menuai).async_initialize()),
+        create_eager_task(area_registry.async_load(menuai)),
+        create_eager_task(category_registry.async_load(menuai)),
+        create_eager_task(device_registry.async_load(menuai)),
+        create_eager_task(entity_registry.async_load(menuai)),
+        create_eager_task(floor_registry.async_load(menuai)),
+        create_eager_task(issue_registry.async_load(menuai)),
+        create_eager_task(label_registry.async_load(menuai)),
+        menuai.async_add_executor_job(_init_blocking_io_modules_in_executor),
+        create_eager_task(template.async_load_custom_templates(menuai)),
+        create_eager_task(restore_state.async_load(menuai)),
+        create_eager_task(menuai.config_entries.async_initialize()),
+        create_eager_task(async_get_system_info(menuai)),
     )
 
 
 async def async_from_config_dict(
-    config: ConfigType, hass: core.HomeAssistant
-) -> core.HomeAssistant | None:
-    """Try to configure Home Assistant from a configuration dictionary.
+    config: ConfigType, menuai: core.menuai
+) -> core.menuai | None:
+    """Try to configure MenuAI from a configuration dictionary.
 
     Dynamically loads required components and its dependencies.
     This method is a coroutine.
     """
     start = monotonic()
 
-    hass.config_entries = config_entries.ConfigEntries(hass, config)
+    menuai.config_entries = config_entries.ConfigEntries(menuai, config)
     # Prime custom component cache early so we know if registry entries are tied
     # to a custom integration
-    await loader.async_get_custom_components(hass)
-    await async_load_base_functionality(hass)
+    await loader.async_get_custom_components(menuai)
+    await async_load_base_functionality(menuai)
 
     # Set up core.
     _LOGGER.debug("Setting up %s", CORE_INTEGRATIONS)
@@ -478,37 +478,37 @@ async def async_from_config_dict(
         await asyncio.gather(
             *(
                 create_eager_task(
-                    async_setup_component(hass, domain, config),
+                    async_setup_component(menuai, domain, config),
                     name=f"bootstrap setup {domain}",
-                    loop=hass.loop,
+                    loop=menuai.loop,
                 )
                 for domain in CORE_INTEGRATIONS
             )
         )
     ):
-        _LOGGER.error("Home Assistant core failed to initialize. ")
+        _LOGGER.error("MenuAI core failed to initialize. ")
         return None
 
-    _LOGGER.debug("Home Assistant core initialized")
+    _LOGGER.debug("MenuAI core initialized")
 
     core_config = config.get(core.DOMAIN, {})
 
     try:
-        await async_process_ha_core_config(hass, core_config)
+        await async_process_ha_core_config(menuai, core_config)
     except vol.Invalid as config_err:
-        conf_util.async_log_schema_error(config_err, core.DOMAIN, core_config, hass)
-        async_notify_setup_error(hass, core.DOMAIN)
+        conf_util.async_log_schema_error(config_err, core.DOMAIN, core_config, menuai)
+        async_notify_setup_error(menuai, core.DOMAIN)
         return None
-    except HomeAssistantError:
+    except menuaiError:
         _LOGGER.error(
-            "Home Assistant core failed to initialize. Further initialization aborted"
+            "MenuAI core failed to initialize. Further initialization aborted"
         )
         return None
 
-    await _async_set_up_integrations(hass, config)
+    await _async_set_up_integrations(menuai, config)
 
     stop = monotonic()
-    _LOGGER.info("Home Assistant initialized in %.2fs", stop - start)
+    _LOGGER.info("MenuAI initialized in %.2fs", stop - start)
 
     if (
         REQUIRED_NEXT_PYTHON_HA_RELEASE
@@ -519,7 +519,7 @@ async def async_from_config_dict(
         _LOGGER.warning(
             (
                 "Support for the running Python version %s is deprecated and "
-                "will be removed in Home Assistant %s; "
+                "will be removed in MenuAI %s; "
                 "Please upgrade Python to %s"
             ),
             current_python_version,
@@ -527,7 +527,7 @@ async def async_from_config_dict(
             required_python_version,
         )
         issue_registry.async_create_issue(
-            hass,
+            menuai,
             core.DOMAIN,
             f"python_version_{required_python_version}",
             is_fixable=False,
@@ -541,11 +541,11 @@ async def async_from_config_dict(
             },
         )
 
-    return hass
+    return menuai
 
 
 async def async_enable_logging(
-    hass: core.HomeAssistant,
+    menuai: core.menuai,
     verbose: bool = False,
     log_rotate_days: int | None = None,
     log_file: str | None = None,
@@ -615,7 +615,7 @@ async def async_enable_logging(
 
     # Log errors to a file if we have write access to file or config dir
     if log_file is None:
-        err_log_path = hass.config.path(ERROR_LOG_FILENAME)
+        err_log_path = menuai.config.path(ERROR_LOG_FILENAME)
     else:
         err_log_path = os.path.abspath(log_file)
 
@@ -627,7 +627,7 @@ async def async_enable_logging(
     if (err_path_exists and os.access(err_log_path, os.W_OK)) or (
         not err_path_exists and os.access(err_dir, os.W_OK)
     ):
-        err_handler = await hass.async_add_executor_job(
+        err_handler = await menuai.async_add_executor_job(
             _create_log_file, err_log_path, log_rotate_days
         )
 
@@ -638,11 +638,11 @@ async def async_enable_logging(
         logger.setLevel(logging.INFO if verbose else logging.WARNING)
 
         # Save the log file location for access by other components.
-        hass.data[DATA_LOGGING] = err_log_path
+        menuai.data[DATA_LOGGING] = err_log_path
     else:
         _LOGGER.error("Unable to set up error log %s (access denied)", err_log_path)
 
-    async_activate_log_queue_handler(hass)
+    async_activate_log_queue_handler(menuai)
 
 
 def _create_log_file(
@@ -690,17 +690,17 @@ async def async_mount_local_lib_path(config_dir: str) -> str:
     return deps_dir
 
 
-def _get_domains(hass: core.HomeAssistant, config: dict[str, Any]) -> set[str]:
+def _get_domains(menuai: core.menuai, config: dict[str, Any]) -> set[str]:
     """Get domains of components to set up."""
-    # Filter out the repeating and common config section [homeassistant]
+    # Filter out the repeating and common config section [menuai]
     domains = {
         domain for key in config if (domain := cv.domain_key(key)) != core.DOMAIN
     }
 
     # Add config entry and default domains
-    if not hass.config.recovery_mode:
+    if not menuai.config.recovery_mode:
         domains.update(DEFAULT_INTEGRATIONS)
-        domains.update(hass.config_entries.async_domains())
+        domains.update(menuai.config_entries.async_domains())
     else:
         domains.update(DEFAULT_INTEGRATIONS_RECOVERY_MODE)
 
@@ -712,7 +712,7 @@ def _get_domains(hass: core.HomeAssistant, config: dict[str, Any]) -> set[str]:
 
 
 async def _async_resolve_domains_and_preload(
-    hass: core.HomeAssistant, config: dict[str, Any]
+    menuai: core.menuai, config: dict[str, Any]
 ) -> tuple[dict[str, Integration], dict[str, Integration]]:
     """Resolve all dependencies and return integrations to set up.
 
@@ -722,7 +722,7 @@ async def _async_resolve_domains_and_preload(
     - The second dictionary contains the same integrations as the first dictionary
       together with all their dependencies.
     """
-    domains_to_setup = _get_domains(hass, config)
+    domains_to_setup = _get_domains(menuai, config)
     platform_integrations = conf_util.extract_platform_integrations(
         config, BASE_PLATFORMS
     )
@@ -759,7 +759,7 @@ async def _async_resolve_domains_and_preload(
     # Resolve all dependencies so we know all integrations
     # that will have to be loaded and start right-away
     integrations_or_excs = await loader.async_get_integrations(
-        hass, {*domains_to_setup, *additional_domains_to_process}
+        menuai, {*domains_to_setup, *additional_domains_to_process}
     )
     # Eliminate those missing or with invalid manifest
     integrations_to_process = {
@@ -768,7 +768,7 @@ async def _async_resolve_domains_and_preload(
         if isinstance(itg, Integration)
     }
     integrations_dependencies = await loader.resolve_integrations_dependencies(
-        hass, integrations_to_process.values()
+        menuai, integrations_to_process.values()
     )
     # Eliminate those without valid dependencies
     integrations_to_process = {
@@ -782,7 +782,7 @@ async def _async_resolve_domains_and_preload(
     }
     all_integrations_to_setup = integrations_to_setup.copy()
     all_integrations_to_setup.update(
-        (dep, loader.async_get_loaded_integration(hass, dep))
+        (dep, loader.async_get_loaded_integration(menuai, dep))
         for domain in integrations_to_setup
         for dep in integrations_dependencies[domain].difference(
             all_integrations_to_setup
@@ -795,14 +795,14 @@ async def _async_resolve_domains_and_preload(
     # The exceptions will be detected and handled later in the bootstrap process.
     integrations_after_dependencies = (
         await loader.resolve_integrations_after_dependencies(
-            hass, integrations_to_process.values(), ignore_exceptions=True
+            menuai, integrations_to_process.values(), ignore_exceptions=True
         )
     )
     integrations_requirements = {
         domain: itg.requirements for domain, itg in integrations_to_process.items()
     }
     integrations_requirements.update(
-        (dep, loader.async_get_loaded_integration(hass, dep).requirements)
+        (dep, loader.async_get_loaded_integration(menuai, dep).requirements)
         for deps in integrations_after_dependencies.values()
         for dep in deps.difference(integrations_requirements)
     )
@@ -811,8 +811,8 @@ async def _async_resolve_domains_and_preload(
     # Optimistically check if requirements are already installed
     # ahead of setting up the integrations so we can prime the cache
     # We do not wait for this since it's an optimization only
-    hass.async_create_background_task(
-        requirements.async_load_installed_versions(hass, all_requirements),
+    menuai.async_create_background_task(
+        requirements.async_load_installed_versions(menuai, all_requirements),
         "check installed requirements",
         eager_start=True,
     )
@@ -828,8 +828,8 @@ async def _async_resolve_domains_and_preload(
     # wait for the translation load lock, loading will be done by the
     # time it gets to it.
     translations_to_load = {*all_integrations_to_setup, *additional_domains_to_process}
-    hass.async_create_background_task(
-        translation.async_load_integrations(hass, translations_to_load),
+    menuai.async_create_background_task(
+        translation.async_load_integrations(menuai, translations_to_load),
         "load translations",
         eager_start=True,
     )
@@ -837,8 +837,8 @@ async def _async_resolve_domains_and_preload(
     # Preload storage for all integrations we are going to set up
     # so we do not have to wait for it to be loaded when we need it
     # in the setup process.
-    hass.async_create_background_task(
-        get_internal_store_manager(hass).async_preload(
+    menuai.async_create_background_task(
+        get_internal_store_manager(menuai).async_preload(
             [*PRELOAD_STORAGE, *all_integrations_to_setup]
         ),
         "preload storage",
@@ -849,19 +849,19 @@ async def _async_resolve_domains_and_preload(
 
 
 async def _async_set_up_integrations(
-    hass: core.HomeAssistant, config: dict[str, Any]
+    menuai: core.menuai, config: dict[str, Any]
 ) -> None:
     """Set up all the integrations."""
-    watcher = _WatchPendingSetups(hass, _setup_started(hass))
+    watcher = _WatchPendingSetups(menuai, _setup_started(menuai))
     watcher.async_start()
 
     integrations, all_integrations = await _async_resolve_domains_and_preload(
-        hass, config
+        menuai, config
     )
     # Detect all cycles
     integrations_after_dependencies = (
         await loader.resolve_integrations_after_dependencies(
-            hass, all_integrations.values(), set(all_integrations)
+            menuai, all_integrations.values(), set(all_integrations)
         )
     )
     all_domains = set(integrations_after_dependencies)
@@ -873,15 +873,15 @@ async def _async_set_up_integrations(
         all_domains - domains,
     )
 
-    async_set_domains_to_be_loaded(hass, all_domains)
+    async_set_domains_to_be_loaded(menuai, all_domains)
 
     # Initialize recorder
     if "recorder" in all_domains:
-        recorder.async_initialize_recorder(hass)
+        recorder.async_initialize_recorder(menuai)
 
     # Initialize backup
     if "backup" in all_domains:
-        backup.async_initialize_backup(hass)
+        backup.async_initialize_backup(menuai)
 
     stages: list[tuple[str, set[str], int | None]] = [
         *(
@@ -899,7 +899,7 @@ async def _async_set_up_integrations(
             _LOGGER.info("Nothing to set up in stage %s: %s", name, domain_group)
             continue
 
-        stage_domains = stage_domains_unfiltered - hass.config.components
+        stage_domains = stage_domains_unfiltered - menuai.config.components
         if not stage_domains:
             _LOGGER.info("Already set up stage %s: %s", name, stage_domains_unfiltered)
             continue
@@ -910,7 +910,7 @@ async def _async_set_up_integrations(
             for dep in integrations_after_dependencies[domain]
             if dep not in stage_domains
         }
-        stage_dep_domains = stage_dep_domains_unfiltered - hass.config.components
+        stage_dep_domains = stage_dep_domains_unfiltered - menuai.config.components
 
         stage_all_domains = stage_domains | stage_dep_domains
 
@@ -924,41 +924,41 @@ async def _async_set_up_integrations(
         )
 
         if timeout is None:
-            await _async_setup_multi_components(hass, stage_all_domains, config)
+            await _async_setup_multi_components(menuai, stage_all_domains, config)
             continue
         try:
-            async with hass.timeout.async_timeout(
+            async with menuai.timeout.async_timeout(
                 timeout,
                 cool_down=COOLDOWN_TIME,
                 cancel_message=f"Bootstrap stage {name} timeout",
             ):
-                await _async_setup_multi_components(hass, stage_all_domains, config)
+                await _async_setup_multi_components(menuai, stage_all_domains, config)
         except TimeoutError:
             _LOGGER.warning(
                 "Setup timed out for stage %s waiting on %s - moving forward",
                 name,
-                hass._active_tasks,  # noqa: SLF001
+                menuai._active_tasks,  # noqa: SLF001
             )
 
     # Wrap up startup
     _LOGGER.debug("Waiting for startup to wrap up")
     try:
-        async with hass.timeout.async_timeout(
+        async with menuai.timeout.async_timeout(
             WRAP_UP_TIMEOUT,
             cool_down=COOLDOWN_TIME,
             cancel_message="Bootstrap startup wrap up timeout",
         ):
-            await hass.async_block_till_done()
+            await menuai.async_block_till_done()
     except TimeoutError:
         _LOGGER.warning(
             "Setup timed out for bootstrap waiting on %s - moving forward",
-            hass._active_tasks,  # noqa: SLF001
+            menuai._active_tasks,  # noqa: SLF001
         )
 
     watcher.async_stop()
 
     if _LOGGER.isEnabledFor(logging.DEBUG):
-        setup_time = async_get_setup_timings(hass)
+        setup_time = async_get_setup_timings(menuai)
         _LOGGER.debug(
             "Integration setup times: %s",
             dict(sorted(setup_time.items(), key=itemgetter(1), reverse=True)),
@@ -970,16 +970,16 @@ class _WatchPendingSetups:
 
     def __init__(
         self,
-        hass: core.HomeAssistant,
+        menuai: core.menuai,
         setup_started: dict[tuple[str, str | None], float],
     ) -> None:
         """Initialize the WatchPendingSetups class."""
-        self._hass = hass
+        self._menuai = menuai
         self._setup_started = setup_started
         self._duration_count = 0
         self._handle: asyncio.TimerHandle | None = None
         self._previous_was_empty = True
-        self._loop = hass.loop
+        self._loop = menuai.loop
 
     def _async_watch(self) -> None:
         """Periodic log of setups that are pending."""
@@ -993,7 +993,7 @@ class _WatchPendingSetups:
 
         if remaining_with_setup_started:
             _LOGGER.debug("Integration remaining: %s", remaining_with_setup_started)
-        elif waiting_tasks := self._hass._active_tasks:  # noqa: SLF001
+        elif waiting_tasks := self._menuai._active_tasks:  # noqa: SLF001
             _LOGGER.debug("Waiting on tasks: %s", waiting_tasks)
         self._async_dispatch(remaining_with_setup_started)
         if (
@@ -1007,14 +1007,14 @@ class _WatchPendingSetups:
                 self._setup_started,
             )
 
-        _LOGGER.debug("Running timeout Zones: %s", self._hass.timeout.zones)
+        _LOGGER.debug("Running timeout Zones: %s", self._menuai.timeout.zones)
         self._async_schedule_next()
 
     def _async_dispatch(self, remaining_with_setup_started: dict[str, float]) -> None:
         """Dispatch the signal."""
         if remaining_with_setup_started or not self._previous_was_empty:
             async_dispatcher_send_internal(
-                self._hass, SIGNAL_BOOTSTRAP_INTEGRATIONS, remaining_with_setup_started
+                self._menuai, SIGNAL_BOOTSTRAP_INTEGRATIONS, remaining_with_setup_started
             )
         self._previous_was_empty = not remaining_with_setup_started
 
@@ -1037,7 +1037,7 @@ class _WatchPendingSetups:
 
 
 async def _async_setup_multi_components(
-    hass: core.HomeAssistant,
+    menuai: core.menuai,
     domains: set[str],
     config: dict[str, Any],
 ) -> None:
@@ -1046,8 +1046,8 @@ async def _async_setup_multi_components(
     # to wait to be imported, and the sooner we can get the base platforms
     # loaded the sooner we can start loading the rest of the integrations.
     futures = {
-        domain: hass.async_create_task_internal(
-            async_setup_component(hass, domain, config),
+        domain: menuai.async_create_task_internal(
+            async_setup_component(menuai, domain, config),
             f"setup component {domain}",
             eager_start=True,
         )

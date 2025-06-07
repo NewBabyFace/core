@@ -7,8 +7,8 @@ from api.soma_api import SomaApi
 from requests import RequestException
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_PORT
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_PORT
 
 from .const import DOMAIN
 
@@ -42,14 +42,14 @@ class SomaFlowHandler(ConfigFlow, domain=DOMAIN):
     async def async_step_creation(self, user_input: dict[str, Any]) -> ConfigFlowResult:
         """Finish config flow."""
         try:
-            api = await self.hass.async_add_executor_job(
+            api = await self.menuai.async_add_executor_job(
                 SomaApi, user_input["host"], user_input["port"]
             )
         except RequestException:
             _LOGGER.error("Connection to SOMA Connect failed with RequestException")
             return self.async_abort(reason="connection_error")
         try:
-            result = await self.hass.async_add_executor_job(api.list_devices)
+            result = await self.menuai.async_add_executor_job(api.list_devices)
             _LOGGER.debug("Successfully set up Soma Connect")
             if result["result"] == "success":
                 return self.async_create_entry(

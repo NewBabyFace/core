@@ -10,9 +10,9 @@ from typing import Any
 from nice_go import AuthFailedError, NiceGOApi
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_EMAIL, CONF_NAME, CONF_PASSWORD
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_EMAIL, CONF_NAME, CONF_PASSWORD
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import CONF_REFRESH_TOKEN, CONF_REFRESH_TOKEN_CREATION_TIME, DOMAIN
 
@@ -46,7 +46,7 @@ class NiceGOConfigFlow(ConfigFlow, domain=DOMAIN):
                 refresh_token = await hub.authenticate(
                     user_input[CONF_EMAIL],
                     user_input[CONF_PASSWORD],
-                    async_get_clientsession(self.hass),
+                    async_get_clientsession(self.menuai),
                 )
             except AuthFailedError:
                 errors["base"] = "invalid_auth"
@@ -88,7 +88,7 @@ class NiceGOConfigFlow(ConfigFlow, domain=DOMAIN):
                 refresh_token = await hub.authenticate(
                     user_input[CONF_EMAIL],
                     user_input[CONF_PASSWORD],
-                    async_get_clientsession(self.hass),
+                    async_get_clientsession(self.menuai),
                 )
             except AuthFailedError:
                 errors["base"] = "invalid_auth"

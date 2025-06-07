@@ -9,14 +9,14 @@ from typing import Any
 from pyrisco import CannotConnectError, RiscoCloud, RiscoLocal, UnauthorizedError
 import voluptuous as vol
 
-from homeassistant.components.alarm_control_panel import AlarmControlPanelState
-from homeassistant.config_entries import (
+from menuai.components.alarm_control_panel import AlarmControlPanelState
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PIN,
@@ -25,8 +25,8 @@ from homeassistant.const import (
     CONF_TYPE,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.core import menuai, callback
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
     CONF_CODE_ARM_REQUIRED,
@@ -69,7 +69,7 @@ HA_STATES = [
 
 
 async def validate_cloud_input(
-    hass: HomeAssistant, data: dict[str, Any]
+    menuai: menuai, data: dict[str, Any]
 ) -> dict[str, str]:
     """Validate the user input allows us to connect to Risco Cloud.
 
@@ -78,7 +78,7 @@ async def validate_cloud_input(
     risco = RiscoCloud(data[CONF_USERNAME], data[CONF_PASSWORD], data[CONF_PIN])
 
     try:
-        await risco.login(async_get_clientsession(hass))
+        await risco.login(async_get_clientsession(menuai))
     finally:
         await risco.close()
 
@@ -86,7 +86,7 @@ async def validate_cloud_input(
 
 
 async def validate_local_input(
-    hass: HomeAssistant, data: Mapping[str, str]
+    menuai: menuai, data: Mapping[str, str]
 ) -> dict[str, Any]:
     """Validate the user input allows us to connect to a local panel.
 
@@ -151,7 +151,7 @@ class RiscoConfigFlow(ConfigFlow, domain=DOMAIN):
                 self._abort_if_unique_id_configured()
 
             try:
-                info = await validate_cloud_input(self.hass, user_input)
+                info = await validate_cloud_input(self.menuai, user_input)
             except CannotConnectError:
                 errors["base"] = "cannot_connect"
             except UnauthorizedError:
@@ -162,12 +162,12 @@ class RiscoConfigFlow(ConfigFlow, domain=DOMAIN):
             else:
                 if not self._reauth_entry:
                     return self.async_create_entry(title=info["title"], data=user_input)
-                self.hass.config_entries.async_update_entry(
+                self.menuai.config_entries.async_update_entry(
                     self._reauth_entry,
                     data=user_input,
                     unique_id=user_input[CONF_USERNAME],
                 )
-                await self.hass.config_entries.async_reload(self._reauth_entry.entry_id)
+                await self.menuai.config_entries.async_reload(self._reauth_entry.entry_id)
                 return self.async_abort(reason="reauth_successful")
 
         return self.async_show_form(
@@ -188,7 +188,7 @@ class RiscoConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
         if user_input is not None:
             try:
-                info = await validate_local_input(self.hass, user_input)
+                info = await validate_local_input(self.menuai, user_input)
             except CannotConnectError as ex:
                 _LOGGER.debug("Cannot connect", exc_info=ex)
                 errors["base"] = "cannot_connect"

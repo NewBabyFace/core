@@ -4,20 +4,20 @@ from unittest.mock import AsyncMock
 
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     DOMAIN as SWITCH_DOMAIN,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
 )
-from homeassistant.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import add_mock_config
 
 
 async def test_cover_async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_get: AsyncMock,
     mock_update: AsyncMock,
@@ -25,11 +25,11 @@ async def test_cover_async_setup_entry(
 ) -> None:
     """Test switch platform."""
 
-    await add_mock_config(hass)
+    await add_mock_config(menuai)
 
     # Test Fresh Air Switch Entity
     entity_id = "switch.myzone_fresh_air"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_OFF
 
@@ -37,7 +37,7 @@ async def test_cover_async_setup_entry(
     assert entry
     assert entry.unique_id == "uniqueid-ac1-freshair"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: [entity_id]},
@@ -46,7 +46,7 @@ async def test_cover_async_setup_entry(
     mock_update.assert_called_once()
     mock_update.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: [entity_id]},
@@ -57,13 +57,13 @@ async def test_cover_async_setup_entry(
 
     # Test MyFan Switch Entity
     entity_id = "switch.myzone_myfan"
-    assert hass.states.get(entity_id) == snapshot(name=entity_id)
+    assert menuai.states.get(entity_id) == snapshot(name=entity_id)
 
     entry = entity_registry.async_get(entity_id)
     assert entry
     assert entry.unique_id == "uniqueid-ac1-myfan"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: [entity_id]},
@@ -73,7 +73,7 @@ async def test_cover_async_setup_entry(
     assert mock_update.call_args[0][0] == snapshot(name=f"{entity_id}-turnon")
     mock_update.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: [entity_id]},
@@ -84,19 +84,19 @@ async def test_cover_async_setup_entry(
 
 
 async def test_things_switch(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_get: AsyncMock,
     mock_update: AsyncMock,
 ) -> None:
     """Test things switches."""
 
-    await add_mock_config(hass)
+    await add_mock_config(menuai)
 
     # Test Switch Entity
     entity_id = "switch.relay"
     thing_id = "205"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_ON
 
@@ -104,7 +104,7 @@ async def test_things_switch(
     assert entry
     assert entry.unique_id == f"uniqueid-{thing_id}"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: [entity_id]},
@@ -113,7 +113,7 @@ async def test_things_switch(
     mock_update.assert_called_once()
     mock_update.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: [entity_id]},

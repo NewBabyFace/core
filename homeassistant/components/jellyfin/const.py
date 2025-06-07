@@ -3,12 +3,12 @@
 import logging
 from typing import Final
 
-from homeassistant.components.media_player import MediaClass, MediaType
-from homeassistant.const import Platform, __version__ as hass_version
+from menuai.components.media_player import MediaClass, MediaType
+from menuai.const import Platform, __version__ as menuai_version
 
 DOMAIN: Final = "jellyfin"
 
-CLIENT_VERSION: Final = hass_version
+CLIENT_VERSION: Final = menuai_version
 
 COLLECTION_TYPE_MOVIES: Final = "movies"
 COLLECTION_TYPE_MUSIC: Final = "music"
@@ -56,7 +56,7 @@ SUPPORTED_AUDIO_CODECS: Final = ["aac", "mp3", "vorbis", "wma"]
 PLAYABLE_ITEM_TYPES: Final = [ITEM_TYPE_AUDIO, ITEM_TYPE_EPISODE, ITEM_TYPE_MOVIE]
 
 
-USER_APP_NAME: Final = "Home Assistant"
+USER_APP_NAME: Final = "MenuAI"
 USER_AGENT: Final = f"Home-Assistant/{CLIENT_VERSION}"
 
 CONTENT_TYPE_MAP = {

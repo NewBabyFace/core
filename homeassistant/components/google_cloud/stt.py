@@ -9,7 +9,7 @@ from google.api_core.exceptions import GoogleAPIError, Unauthenticated
 from google.api_core.retry import AsyncRetry
 from google.cloud import speech_v1
 
-from homeassistant.components.stt import (
+from menuai.components.stt import (
     AudioBitRates,
     AudioChannels,
     AudioCodecs,
@@ -20,10 +20,10 @@ from homeassistant.components.stt import (
     SpeechResultState,
     SpeechToTextEntity,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
     CONF_SERVICE_ACCOUNT_INFO,
@@ -37,7 +37,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -143,7 +143,7 @@ class GoogleCloudSpeechToTextEntity(SpeechToTextEntity):
         except GoogleAPIError as err:
             _LOGGER.error("Error occurred during Google Cloud STT call: %s", err)
             if isinstance(err, Unauthenticated):
-                self._entry.async_start_reauth(self.hass)
+                self._entry.async_start_reauth(self.menuai)
             return SpeechResult(None, SpeechResultState.ERROR)
 
         return SpeechResult(transcript, SpeechResultState.SUCCESS)

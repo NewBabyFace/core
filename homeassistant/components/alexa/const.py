@@ -2,8 +2,8 @@
 
 from collections import OrderedDict
 
-from homeassistant.components import climate
-from homeassistant.const import UnitOfTemperature
+from menuai.components import climate
+from menuai.const import UnitOfTemperature
 
 DOMAIN = "alexa"
 EVENT_ALEXA_SMART_HOME = "alexa_smart_home"

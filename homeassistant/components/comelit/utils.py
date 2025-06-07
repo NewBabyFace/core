@@ -8,11 +8,11 @@ from aiocomelit import ComelitSerialBridgeObject
 from aiocomelit.exceptions import CannotAuthenticate, CannotConnect, CannotRetrieveData
 from aiohttp import ClientSession, CookieJar
 
-from homeassistant.components.climate import DOMAIN as CLIMATE_DOMAIN
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import (
+from menuai.components.climate import DOMAIN as CLIMATE_DOMAIN
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import (
     aiohttp_client,
     device_registry as dr,
     entity_registry as er,
@@ -22,10 +22,10 @@ from .const import _LOGGER, DOMAIN
 from .entity import ComelitBridgeBaseEntity
 
 
-async def async_client_session(hass: HomeAssistant) -> ClientSession:
+async def async_client_session(menuai: menuai) -> ClientSession:
     """Return a new aiohttp session."""
     return aiohttp_client.async_create_clientsession(
-        hass, verify_ssl=False, cookie_jar=CookieJar(unsafe=True)
+        menuai, verify_ssl=False, cookie_jar=CookieJar(unsafe=True)
     )
 
 
@@ -33,7 +33,7 @@ def load_api_data(device: ComelitSerialBridgeObject, domain: str) -> list[Any]:
     """Load data from the API."""
     # This function is called when the data is loaded from the API
     if not isinstance(device.val, list):
-        raise HomeAssistantError(
+        raise menuaiError(
             translation_domain=domain, translation_key="invalid_clima_data"
         )
     # CLIMATE has a 2 item tuple:
@@ -43,13 +43,13 @@ def load_api_data(device: ComelitSerialBridgeObject, domain: str) -> list[Any]:
 
 
 async def cleanup_stale_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     entry_unique_id: str,
     device: ComelitSerialBridgeObject,
 ) -> None:
     """Cleanup stale entity."""
-    entity_reg: er.EntityRegistry = er.async_get(hass)
+    entity_reg: er.EntityRegistry = er.async_get(menuai)
 
     identifiers: list[str] = []
 
@@ -61,15 +61,15 @@ async def cleanup_stale_entity(
             identifiers.append(f"{config_entry.entry_id}-{device.type}-{device.index}")
 
     if len(identifiers) > 0:
-        _async_remove_state_config_entry_from_devices(hass, identifiers, config_entry)
+        _async_remove_state_config_entry_from_devices(menuai, identifiers, config_entry)
 
 
 def _async_remove_state_config_entry_from_devices(
-    hass: HomeAssistant, identifiers: list[str], config_entry: ConfigEntry
+    menuai: menuai, identifiers: list[str], config_entry: ConfigEntry
 ) -> None:
     """Remove config entry from device."""
 
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     for identifier in identifiers:
         device = device_registry.async_get_device(identifiers={(DOMAIN, identifier)})
         if device:
@@ -96,20 +96,20 @@ def bridge_api_call[_T: ComelitBridgeBaseEntity, **_P](
             await func(self, *args, **kwargs)
         except CannotConnect as err:
             self.coordinator.last_update_success = False
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="cannot_connect",
                 translation_placeholders={"error": repr(err)},
             ) from err
         except CannotRetrieveData as err:
             self.coordinator.last_update_success = False
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="cannot_retrieve_data",
                 translation_placeholders={"error": repr(err)},
             ) from err
         except CannotAuthenticate:
             self.coordinator.last_update_success = False
-            self.coordinator.config_entry.async_start_reauth(self.hass)
+            self.coordinator.config_entry.async_start_reauth(self.menuai)
 
     return cmd_wrapper

@@ -6,10 +6,10 @@ from typing import TYPE_CHECKING
 
 from aiopulse import Roller
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN, LOGGER
 
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 @callback
 def async_add_acmeda_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_class: type,
     config_entry: AcmedaConfigEntry,
     current: set[int],
@@ -43,10 +43,10 @@ def async_add_acmeda_entities(
 
 
 async def update_devices(
-    hass: HomeAssistant, config_entry: ConfigEntry, api: dict[int, Roller]
+    menuai: menuai, config_entry: ConfigEntry, api: dict[int, Roller]
 ) -> None:
-    """Tell hass that device info has been updated."""
-    dev_registry = dr.async_get(hass)
+    """Tell menuai that device info has been updated."""
+    dev_registry = dr.async_get(menuai)
 
     for api_item in api.values():
         # Update Device name

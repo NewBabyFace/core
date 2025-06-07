@@ -9,8 +9,8 @@ from aiohttp import ClientResponseError
 from odp_amsterdam import ODPAmsterdam, VehicleType
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.helpers import aiohttp_client
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.helpers import aiohttp_client
 
 from .const import DOMAIN
 
@@ -31,7 +31,7 @@ class GaragesAmsterdamConfigFlow(ConfigFlow, domain=DOMAIN):
             self._options = []
             try:
                 api_data = await ODPAmsterdam(
-                    session=aiohttp_client.async_get_clientsession(self.hass)
+                    session=aiohttp_client.async_get_clientsession(self.menuai)
                 ).all_garages(vehicle=VehicleType.CAR)
             except ClientResponseError:
                 _LOGGER.error("Unexpected response from server")

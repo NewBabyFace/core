@@ -8,12 +8,12 @@ from unittest.mock import patch
 import pytest
 import requests
 
-from homeassistant import config_entries
-from homeassistant.components.picnic import const
-from homeassistant.components.picnic.const import DOMAIN
-from homeassistant.components.picnic.sensor import SENSOR_TYPES
-from homeassistant.components.sensor import SensorDeviceClass
-from homeassistant.const import (
+from menuai import config_entries
+from menuai.components.picnic import const
+from menuai.components.picnic.const import DOMAIN
+from menuai.components.picnic.sensor import SENSOR_TYPES
+from menuai.components.sensor import SensorDeviceClass
+from menuai.const import (
     CONF_ACCESS_TOKEN,
     CONF_COUNTRY_CODE,
     CURRENCY_EURO,
@@ -21,8 +21,8 @@ from homeassistant.const import (
     STATE_UNKNOWN,
     Platform,
 )
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.util import dt as dt_util
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.util import dt as dt_util
 
 from tests.common import (
     MockConfigEntry,
@@ -94,18 +94,18 @@ DEFAULT_DELIVERY_RESPONSE = {
 SENSOR_KEYS = [desc.key for desc in SENSOR_TYPES]
 
 
-@pytest.mark.usefixtures("hass_storage")
+@pytest.mark.usefixtures("menuai_storage")
 class TestPicnicSensor(unittest.IsolatedAsyncioTestCase):
     """Test the Picnic sensor."""
 
     async def asyncSetUp(self):
         """Set up things to be run when tests are started."""
         self._manager = async_test_home_assistant()
-        self.hass = await self._manager.__aenter__()
-        self.entity_registry = er.async_get(self.hass)
+        self.menuai = await self._manager.__aenter__()
+        self.entity_registry = er.async_get(self.menuai)
 
         # Patch the api client
-        self.picnic_patcher = patch("homeassistant.components.picnic.PicnicAPI")
+        self.picnic_patcher = patch("menuai.components.picnic.PicnicAPI")
         self.picnic_mock = self.picnic_patcher.start()
         self.picnic_mock().session.auth_token = "3q29fpwhulzes"
 
@@ -119,22 +119,22 @@ class TestPicnicSensor(unittest.IsolatedAsyncioTestCase):
             data=config_data,
             unique_id="295-6y3-1nf4",
         )
-        self.config_entry.add_to_hass(self.hass)
+        self.config_entry.add_to_menuai(self.menuai)
 
     async def asyncTearDown(self):
-        """Tear down the test setup, stop hass/patchers."""
-        await self.hass.async_stop(force=True)
+        """Tear down the test setup, stop menuai/patchers."""
+        await self.menuai.async_stop(force=True)
         await self._manager.__aexit__(None, None, None)
         self.picnic_patcher.stop()
 
     @property
     def _coordinator(self):
-        return self.hass.data[const.DOMAIN][self.config_entry.entry_id][
+        return self.menuai.data[const.DOMAIN][self.config_entry.entry_id][
             const.CONF_COORDINATOR
         ]
 
     def _assert_sensor(self, name, state=None, cls=None, unit=None, disabled=False):
-        sensor = self.hass.states.get(name)
+        sensor = self.menuai.states.get(name)
         if disabled:
             assert sensor is None
             return
@@ -163,8 +163,8 @@ class TestPicnicSensor(unittest.IsolatedAsyncioTestCase):
             ]
             self.picnic_mock().get_delivery_position.return_value = {}
 
-        await self.hass.config_entries.async_setup(self.config_entry.entry_id)
-        await self.hass.async_block_till_done()
+        await self.menuai.config_entries.async_setup(self.config_entry.entry_id)
+        await self.menuai.async_block_till_done()
 
         if enable_all_sensors:
             await self._enable_all_sensors()
@@ -180,15 +180,15 @@ class TestPicnicSensor(unittest.IsolatedAsyncioTestCase):
                 entry.entity_id, disabled_by=None
             )
             assert updated_entry.disabled is False
-        await self.hass.async_block_till_done()
+        await self.menuai.async_block_till_done()
 
         # Trigger a reload of the data
         async_fire_time_changed(
-            self.hass,
+            self.menuai,
             dt_util.utcnow()
             + timedelta(seconds=config_entries.RELOAD_AFTER_UPDATE_DELAY + 1),
         )
-        await self.hass.async_block_till_done()
+        await self.menuai.async_block_till_done()
 
     async def test_sensor_setup_platform_not_available(self):
         """Test the set-up of the sensor platform if API is not available."""
@@ -205,12 +205,12 @@ class TestPicnicSensor(unittest.IsolatedAsyncioTestCase):
 
         # Assert that sensors are not set up
         assert (
-            self.hass.states.get("sensor.mock_title_max_order_time_of_selected_slot")
+            self.menuai.states.get("sensor.mock_title_max_order_time_of_selected_slot")
             is None
         )
-        assert self.hass.states.get("sensor.mock_title_status_of_last_order") is None
+        assert self.menuai.states.get("sensor.mock_title_status_of_last_order") is None
         assert (
-            self.hass.states.get("sensor.mock_title_total_price_of_last_order") is None
+            self.menuai.states.get("sensor.mock_title_total_price_of_last_order") is None
         )
 
     async def test_sensors_setup(self):
@@ -569,7 +569,7 @@ class TestPicnicSensor(unittest.IsolatedAsyncioTestCase):
         # Setup platform and default mock responses
         await self._setup_platform(use_default_responses=True)
 
-        device_registry = dr.async_get(self.hass)
+        device_registry = dr.async_get(self.menuai)
         picnic_service = device_registry.async_get_device(
             identifiers={(const.DOMAIN, DEFAULT_USER_RESPONSE["user_id"])}
         )

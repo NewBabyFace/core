@@ -9,13 +9,13 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 from rabbitair import Mode, Model, Speed
 
-from homeassistant import config_entries
-from homeassistant.components.rabbitair.const import DOMAIN
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_HOST, CONF_MAC
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai import config_entries
+from menuai.components.rabbitair.const import DOMAIN
+from menuai.const import CONF_ACCESS_TOKEN, CONF_HOST, CONF_MAC
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 TEST_HOST = "1.1.1.1"
 TEST_NAME = "abcdef1234_123456789012345678"
@@ -79,26 +79,26 @@ def get_mock_state(
 
 
 @pytest.mark.usefixtures("rabbitair_connect")
-async def test_form(hass: HomeAssistant) -> None:
+async def test_form(menuai: menuai) -> None:
     """Test we get the form."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert not result["errors"]
 
     with patch(
-        "homeassistant.components.rabbitair.async_setup_entry",
+        "menuai.components.rabbitair.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_HOST: TEST_HOST,
                 CONF_ACCESS_TOKEN: TEST_TOKEN,
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == TEST_TITLE
@@ -121,10 +121,10 @@ async def test_form(hass: HomeAssistant) -> None:
     ],
 )
 async def test_form_cannot_connect(
-    hass: HomeAssistant, error_type: type[Exception], base_value: str
+    menuai: menuai, error_type: type[Exception], base_value: str
 ) -> None:
     """Test we handle cannot connect error."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -134,7 +134,7 @@ async def test_form_cannot_connect(
         "rabbitair.UdpClient.get_info",
         side_effect=error_type,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_HOST: TEST_HOST,
@@ -146,19 +146,19 @@ async def test_form_cannot_connect(
     assert result2["errors"] == {"base": base_value}
 
 
-async def test_form_unknown_error(hass: HomeAssistant) -> None:
+async def test_form_unknown_error(menuai: menuai) -> None:
     """Test we handle unknown error."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert not result["errors"]
 
     with patch(
-        "homeassistant.components.rabbitair.config_flow.validate_input",
+        "menuai.components.rabbitair.config_flow.validate_input",
         side_effect=Exception,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_HOST: TEST_HOST,
@@ -171,9 +171,9 @@ async def test_form_unknown_error(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("rabbitair_connect")
-async def test_zeroconf_discovery(hass: HomeAssistant) -> None:
+async def test_zeroconf_discovery(menuai: menuai) -> None:
     """Test zeroconf discovery setup flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_ZEROCONF}, data=ZEROCONF_DATA
     )
 
@@ -181,17 +181,17 @@ async def test_zeroconf_discovery(hass: HomeAssistant) -> None:
     assert not result["errors"]
 
     with patch(
-        "homeassistant.components.rabbitair.async_setup_entry",
+        "menuai.components.rabbitair.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_HOST: TEST_NAME + ".local",
                 CONF_ACCESS_TOKEN: TEST_TOKEN,
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == TEST_TITLE
@@ -203,7 +203,7 @@ async def test_zeroconf_discovery(hass: HomeAssistant) -> None:
     assert result2["result"].unique_id == TEST_UNIQUE_ID
     assert len(mock_setup_entry.mock_calls) == 1
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_ZEROCONF}, data=ZEROCONF_DATA
     )
 

@@ -6,13 +6,13 @@ from screenlogicpy.const.data import ATTR, DEVICE
 from screenlogicpy.const.msg import CODE
 from screenlogicpy.device_const.circuit import GENERIC_CIRCUIT_NAMES, INTERFACE
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ColorMode,
     LightEntity,
     LightEntityDescription,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import LIGHT_CIRCUIT_FUNCTIONS
 from .entity import ScreenLogicCircuitEntity, ScreenLogicPushEntityDescription
@@ -20,7 +20,7 @@ from .types import ScreenLogicConfigEntry
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ScreenLogicConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

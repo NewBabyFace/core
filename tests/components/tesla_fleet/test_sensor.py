@@ -7,10 +7,10 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 from tesla_fleet_api.exceptions import VehicleOffline
 
-from homeassistant.components.tesla_fleet.coordinator import VEHICLE_INTERVAL
-from homeassistant.const import STATE_UNAVAILABLE, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.tesla_fleet.coordinator import VEHICLE_INTERVAL
+from menuai.const import STATE_UNAVAILABLE, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import assert_entities, assert_entities_alt, setup_platform
 from .const import VEHICLE_DATA_ALT
@@ -20,7 +20,7 @@ from tests.common import MockConfigEntry, async_fire_time_changed
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     normal_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
@@ -31,17 +31,17 @@ async def test_sensors(
 
     freezer.move_to("2024-01-01 00:00:00+00:00")
 
-    await setup_platform(hass, normal_config_entry, [Platform.SENSOR])
+    await setup_platform(menuai, normal_config_entry, [Platform.SENSOR])
 
-    assert_entities(hass, normal_config_entry.entry_id, entity_registry, snapshot)
+    assert_entities(menuai, normal_config_entry.entry_id, entity_registry, snapshot)
 
     # Coordinator refresh
     mock_vehicle_data.return_value = VEHICLE_DATA_ALT
     freezer.tick(VEHICLE_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    assert_entities_alt(hass, normal_config_entry.entry_id, entity_registry, snapshot)
+    assert_entities_alt(menuai, normal_config_entry.entry_id, entity_registry, snapshot)
 
 
 @pytest.mark.parametrize(
@@ -53,7 +53,7 @@ async def test_sensors(
     ],
 )
 async def test_sensors_restore(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     normal_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
@@ -67,13 +67,13 @@ async def test_sensors_restore(
 
     freezer.move_to("2024-01-01 00:00:00+00:00")
 
-    await setup_platform(hass, normal_config_entry, [Platform.SENSOR])
+    await setup_platform(menuai, normal_config_entry, [Platform.SENSOR])
 
-    assert hass.states.get(entity_id).state == initial
+    assert menuai.states.get(entity_id).state == initial
 
     mock_vehicle_data.side_effect = VehicleOffline
 
-    with patch("homeassistant.components.tesla_fleet.PLATFORMS", [Platform.SENSOR]):
-        assert await hass.config_entries.async_reload(normal_config_entry.entry_id)
+    with patch("menuai.components.tesla_fleet.PLATFORMS", [Platform.SENSOR]):
+        assert await menuai.config_entries.async_reload(normal_config_entry.entry_id)
 
-    assert hass.states.get(entity_id).state == restored
+    assert menuai.states.get(entity_id).state == restored

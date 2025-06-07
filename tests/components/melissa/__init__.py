@@ -1,12 +1,12 @@
 """Tests for the melissa component."""
 
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 VALID_CONFIG = {"melissa": {"username": "********", "password": "********"}}
 
 
-async def setup_integration(hass: HomeAssistant) -> None:
-    """Set up the melissa integration in Home Assistant."""
-    assert await async_setup_component(hass, "melissa", VALID_CONFIG)
-    await hass.async_block_till_done()
+async def setup_integration(menuai: menuai) -> None:
+    """Set up the melissa integration in MenuAI."""
+    assert await async_setup_component(menuai, "melissa", VALID_CONFIG)
+    await menuai.async_block_till_done()

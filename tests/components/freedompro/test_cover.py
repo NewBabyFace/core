@@ -5,21 +5,21 @@ from unittest.mock import ANY, patch
 
 import pytest
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     ATTR_POSITION,
     DOMAIN as COVER_DOMAIN,
     CoverState,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_CLOSE_COVER,
     SERVICE_OPEN_COVER,
     SERVICE_SET_COVER_POSITION,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.entity_component import async_update_entity
-from homeassistant.util.dt import utcnow
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.entity_component import async_update_entity
+from menuai.util.dt import utcnow
 
 from .conftest import get_states_response_for_uid
 
@@ -38,7 +38,7 @@ from tests.common import MockConfigEntry, async_fire_time_changed
     ],
 )
 async def test_cover_get_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
     init_integration: MockConfigEntry,
@@ -56,7 +56,7 @@ async def test_cover_get_state(
     assert device.name == name
     assert device.model == model
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == CoverState.CLOSED
     assert state.attributes.get("friendly_name") == name
@@ -68,13 +68,13 @@ async def test_cover_get_state(
     states_response = get_states_response_for_uid(uid)
     states_response[0]["state"]["position"] = 100
     with patch(
-        "homeassistant.components.freedompro.coordinator.get_states",
+        "menuai.components.freedompro.coordinator.get_states",
         return_value=states_response,
     ):
-        async_fire_time_changed(hass, utcnow() + timedelta(hours=2))
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, utcnow() + timedelta(hours=2))
+        await menuai.async_block_till_done()
 
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert state.attributes.get("friendly_name") == name
 
@@ -97,7 +97,7 @@ async def test_cover_get_state(
     ],
 )
 async def test_cover_set_position(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     init_integration: MockConfigEntry,
     entity_id: str,
@@ -107,7 +107,7 @@ async def test_cover_set_position(
 ) -> None:
     """Test set position of the cover."""
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == CoverState.CLOSED
     assert state.attributes.get("friendly_name") == name
@@ -116,8 +116,8 @@ async def test_cover_set_position(
     assert entry
     assert entry.unique_id == uid
 
-    with patch("homeassistant.components.freedompro.cover.put_state") as mock_put_state:
-        await hass.services.async_call(
+    with patch("menuai.components.freedompro.cover.put_state") as mock_put_state:
+        await menuai.services.async_call(
             COVER_DOMAIN,
             SERVICE_SET_COVER_POSITION,
             {ATTR_ENTITY_ID: [entity_id], ATTR_POSITION: 33},
@@ -128,13 +128,13 @@ async def test_cover_set_position(
     states_response = get_states_response_for_uid(uid)
     states_response[0]["state"]["position"] = 33
     with patch(
-        "homeassistant.components.freedompro.coordinator.get_states",
+        "menuai.components.freedompro.coordinator.get_states",
         return_value=states_response,
     ):
-        async_fire_time_changed(hass, utcnow() + timedelta(hours=2))
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, utcnow() + timedelta(hours=2))
+        await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == CoverState.OPEN
     assert state.attributes["current_position"] == 33
 
@@ -151,7 +151,7 @@ async def test_cover_set_position(
     ],
 )
 async def test_cover_close(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     init_integration: MockConfigEntry,
     entity_id: str,
@@ -164,14 +164,14 @@ async def test_cover_close(
     states_response = get_states_response_for_uid(uid)
     states_response[0]["state"]["position"] = 100
     with patch(
-        "homeassistant.components.freedompro.coordinator.get_states",
+        "menuai.components.freedompro.coordinator.get_states",
         return_value=states_response,
     ):
-        await async_update_entity(hass, entity_id)
-        async_fire_time_changed(hass, utcnow() + timedelta(hours=2))
-        await hass.async_block_till_done()
+        await async_update_entity(menuai, entity_id)
+        async_fire_time_changed(menuai, utcnow() + timedelta(hours=2))
+        await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == CoverState.OPEN
     assert state.attributes.get("friendly_name") == name
@@ -180,8 +180,8 @@ async def test_cover_close(
     assert entry
     assert entry.unique_id == uid
 
-    with patch("homeassistant.components.freedompro.cover.put_state") as mock_put_state:
-        await hass.services.async_call(
+    with patch("menuai.components.freedompro.cover.put_state") as mock_put_state:
+        await menuai.services.async_call(
             COVER_DOMAIN,
             SERVICE_CLOSE_COVER,
             {ATTR_ENTITY_ID: [entity_id]},
@@ -191,13 +191,13 @@ async def test_cover_close(
 
     states_response[0]["state"]["position"] = 0
     with patch(
-        "homeassistant.components.freedompro.coordinator.get_states",
+        "menuai.components.freedompro.coordinator.get_states",
         return_value=states_response,
     ):
-        async_fire_time_changed(hass, utcnow() + timedelta(hours=2))
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, utcnow() + timedelta(hours=2))
+        await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == CoverState.CLOSED
 
 
@@ -213,7 +213,7 @@ async def test_cover_close(
     ],
 )
 async def test_cover_open(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     init_integration: MockConfigEntry,
     entity_id: str,
@@ -223,7 +223,7 @@ async def test_cover_open(
 ) -> None:
     """Test open cover."""
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == CoverState.CLOSED
     assert state.attributes.get("friendly_name") == name
@@ -232,8 +232,8 @@ async def test_cover_open(
     assert entry
     assert entry.unique_id == uid
 
-    with patch("homeassistant.components.freedompro.cover.put_state") as mock_put_state:
-        await hass.services.async_call(
+    with patch("menuai.components.freedompro.cover.put_state") as mock_put_state:
+        await menuai.services.async_call(
             COVER_DOMAIN,
             SERVICE_OPEN_COVER,
             {ATTR_ENTITY_ID: [entity_id]},
@@ -244,11 +244,11 @@ async def test_cover_open(
     states_response = get_states_response_for_uid(uid)
     states_response[0]["state"]["position"] = 100
     with patch(
-        "homeassistant.components.freedompro.coordinator.get_states",
+        "menuai.components.freedompro.coordinator.get_states",
         return_value=states_response,
     ):
-        async_fire_time_changed(hass, utcnow() + timedelta(hours=2))
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, utcnow() + timedelta(hours=2))
+        await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == CoverState.OPEN

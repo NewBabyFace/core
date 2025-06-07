@@ -12,9 +12,9 @@ from iaqualink.exception import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.helpers.httpx_client import get_async_client
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.helpers.httpx_client import get_async_client
 
 from .const import DOMAIN
 
@@ -36,7 +36,7 @@ class AqualinkFlowHandler(ConfigFlow, domain=DOMAIN):
 
             try:
                 async with AqualinkClient(
-                    username, password, httpx_client=get_async_client(self.hass)
+                    username, password, httpx_client=get_async_client(self.menuai)
                 ):
                     pass
             except AqualinkServiceUnauthorizedException:

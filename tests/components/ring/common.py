@@ -2,31 +2,31 @@
 
 from unittest.mock import patch
 
-from homeassistant.components.automation import DOMAIN as AUTOMATION_DOMAIN
-from homeassistant.components.ring import DOMAIN
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er, translation
-from homeassistant.setup import async_setup_component
+from menuai.components.automation import DOMAIN as AUTOMATION_DOMAIN
+from menuai.components.ring import DOMAIN
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er, translation
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 
 
-async def setup_platform(hass: HomeAssistant, platform: Platform) -> None:
+async def setup_platform(menuai: menuai, platform: Platform) -> None:
     """Set up the ring platform and prerequisites."""
-    if not hass.config_entries.async_has_entries(DOMAIN):
+    if not menuai.config_entries.async_has_entries(DOMAIN):
         MockConfigEntry(
             domain=DOMAIN, data={"username": "foo", "token": {}}
-        ).add_to_hass(hass)
-    with patch("homeassistant.components.ring.PLATFORMS", [platform]):
-        assert await async_setup_component(hass, DOMAIN, {})
-    await hass.async_block_till_done(wait_background_tasks=True)
+        ).add_to_menuai(menuai)
+    with patch("menuai.components.ring.PLATFORMS", [platform]):
+        assert await async_setup_component(menuai, DOMAIN, {})
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
 
-async def setup_automation(hass: HomeAssistant, alias: str, entity_id: str) -> None:
+async def setup_automation(menuai: menuai, alias: str, entity_id: str) -> None:
     """Set up an automation for tests."""
     assert await async_setup_component(
-        hass,
+        menuai,
         AUTOMATION_DOMAIN,
         {
             AUTOMATION_DOMAIN: {
@@ -39,7 +39,7 @@ async def setup_automation(hass: HomeAssistant, alias: str, entity_id: str) -> N
 
 
 async def async_check_entity_translations(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     config_entry_id: str,
     platform_domain: str,
@@ -58,10 +58,10 @@ async def async_check_entity_translations(
     )
 
     translations = await translation.async_get_translations(
-        hass, "en", "entity", [DOMAIN]
+        menuai, "en", "entity", [DOMAIN]
     )
     device_class_translations = await translation.async_get_translations(
-        hass, "en", "entity_component", [platform_domain]
+        menuai, "en", "entity_component", [platform_domain]
     )
     unique_device_classes = set()
     used_translation_keys = set()

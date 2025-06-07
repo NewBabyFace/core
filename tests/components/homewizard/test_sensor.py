@@ -6,11 +6,11 @@ from homewizard_energy.errors import RequestError
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.homewizard.const import UPDATE_INTERVAL
-from homeassistant.const import STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.util import dt as dt_util
+from menuai.components.homewizard.const import UPDATE_INTERVAL
+from menuai.const import STATE_UNAVAILABLE
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.util import dt as dt_util
 
 from tests.common import async_fire_time_changed
 
@@ -313,7 +313,7 @@ pytestmark = [
     ],
 )
 async def test_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
@@ -321,7 +321,7 @@ async def test_sensors(
 ) -> None:
     """Test that sensor entity snapshots match."""
     for entity_id in entity_ids:
-        assert (state := hass.states.get(entity_id))
+        assert (state := menuai.states.get(entity_id))
         assert snapshot(name=f"{entity_id}:state") == state
 
         assert (entity_entry := entity_registry.async_get(state.entity_id))
@@ -463,11 +463,11 @@ async def test_sensors(
     ],
 )
 async def test_disabled_by_default_sensors(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, entity_ids: list[str]
+    menuai: menuai, entity_registry: er.EntityRegistry, entity_ids: list[str]
 ) -> None:
     """Test the disabled by default sensors."""
     for entity_id in entity_ids:
-        assert not hass.states.get(entity_id)
+        assert not menuai.states.get(entity_id)
 
         assert (entry := entity_registry.async_get(entity_id))
         assert entry.disabled
@@ -476,37 +476,37 @@ async def test_disabled_by_default_sensors(
 
 @pytest.mark.parametrize("exception", [RequestError])
 async def test_sensors_unreachable(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_homewizardenergy: MagicMock,
     exception: Exception,
 ) -> None:
     """Test sensor handles API unreachable."""
-    assert (state := hass.states.get("sensor.device_energy_import_tariff_1"))
+    assert (state := menuai.states.get("sensor.device_energy_import_tariff_1"))
     assert state.state == "10830.511"
 
     mock_homewizardenergy.combined.side_effect = exception
-    async_fire_time_changed(hass, dt_util.utcnow() + UPDATE_INTERVAL)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + UPDATE_INTERVAL)
+    await menuai.async_block_till_done()
 
-    assert (state := hass.states.get(state.entity_id))
+    assert (state := menuai.states.get(state.entity_id))
     assert state.state == STATE_UNAVAILABLE
 
 
 @pytest.mark.parametrize("exception", [RequestError])
 async def test_external_sensors_unreachable(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_homewizardenergy: MagicMock,
     exception: Exception,
 ) -> None:
     """Test external device sensor handles API unreachable."""
-    assert (state := hass.states.get("sensor.gas_meter_gas"))
+    assert (state := menuai.states.get("sensor.gas_meter_gas"))
     assert state.state == "111.111"
 
     mock_homewizardenergy.combined.side_effect = exception
-    async_fire_time_changed(hass, dt_util.utcnow() + UPDATE_INTERVAL)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + UPDATE_INTERVAL)
+    await menuai.async_block_till_done()
 
-    assert (state := hass.states.get(state.entity_id))
+    assert (state := menuai.states.get(state.entity_id))
     assert state.state == STATE_UNAVAILABLE
 
 
@@ -915,9 +915,9 @@ async def test_external_sensors_unreachable(
     ],
 )
 async def test_entities_not_created_for_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_ids: list[str],
 ) -> None:
     """Ensures entities for a specific device are not created."""
     for entity_id in entity_ids:
-        assert not hass.states.get(entity_id)
+        assert not menuai.states.get(entity_id)

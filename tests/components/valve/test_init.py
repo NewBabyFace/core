@@ -5,7 +5,7 @@ from collections.abc import Generator
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.valve import (
+from menuai.components.valve import (
     DOMAIN,
     ValveDeviceClass,
     ValveEntity,
@@ -13,16 +13,16 @@ from homeassistant.components.valve import (
     ValveEntityFeature,
     ValveState,
 )
-from homeassistant.config_entries import ConfigEntry, ConfigEntryState, ConfigFlow
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry, ConfigEntryState, ConfigFlow
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_SET_VALVE_POSITION,
     SERVICE_TOGGLE,
     STATE_UNAVAILABLE,
     Platform,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from tests.common import (
     MockConfigEntry,
@@ -120,16 +120,16 @@ class MockBinaryValveEntity(ValveEntity):
 
 
 @pytest.fixture(autouse=True)
-def config_flow_fixture(hass: HomeAssistant) -> Generator[None]:
+def config_flow_fixture(menuai: menuai) -> Generator[None]:
     """Mock config flow."""
-    mock_platform(hass, f"{TEST_DOMAIN}.config_flow")
+    mock_platform(menuai, f"{TEST_DOMAIN}.config_flow")
 
     with mock_config_flow(TEST_DOMAIN, MockFlow):
         yield
 
 
 @pytest.fixture
-def mock_config_entry(hass: HomeAssistant) -> tuple[MockConfigEntry, list[ValveEntity]]:
+def mock_config_entry(menuai: menuai) -> tuple[MockConfigEntry, list[ValveEntity]]:
     """Mock a config entry which sets up a couple of valve entities."""
     entities = [
         MockBinaryValveEntity(
@@ -146,24 +146,24 @@ def mock_config_entry(hass: HomeAssistant) -> tuple[MockConfigEntry, list[ValveE
     ]
 
     async def async_setup_entry_init(
-        hass: HomeAssistant, config_entry: ConfigEntry
+        menuai: menuai, config_entry: ConfigEntry
     ) -> bool:
         """Set up test config entry."""
-        await hass.config_entries.async_forward_entry_setups(
+        await menuai.config_entries.async_forward_entry_setups(
             config_entry, [Platform.VALVE]
         )
         return True
 
     async def async_unload_entry_init(
-        hass: HomeAssistant, config_entry: ConfigEntry
+        menuai: menuai, config_entry: ConfigEntry
     ) -> bool:
         """Unload up test config entry."""
-        await hass.config_entries.async_unload_platforms(config_entry, [Platform.VALVE])
+        await menuai.config_entries.async_unload_platforms(config_entry, [Platform.VALVE])
         return True
 
-    mock_platform(hass, f"{TEST_DOMAIN}.config_flow")
+    mock_platform(menuai, f"{TEST_DOMAIN}.config_flow")
     mock_integration(
-        hass,
+        menuai,
         MockModule(
             TEST_DOMAIN,
             async_setup_entry=async_setup_entry_init,
@@ -172,7 +172,7 @@ def mock_config_entry(hass: HomeAssistant) -> tuple[MockConfigEntry, list[ValveE
     )
 
     async def async_setup_entry_platform(
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         async_add_entities: AddConfigEntryEntitiesCallback,
     ) -> None:
@@ -180,99 +180,99 @@ def mock_config_entry(hass: HomeAssistant) -> tuple[MockConfigEntry, list[ValveE
         async_add_entities(entities)
 
     mock_platform(
-        hass,
+        menuai,
         f"{TEST_DOMAIN}.{DOMAIN}",
         MockPlatform(async_setup_entry=async_setup_entry_platform),
     )
 
     config_entry = MockConfigEntry(domain=TEST_DOMAIN)
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     return (config_entry, entities)
 
 
 async def test_valve_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: tuple[MockConfigEntry, list[ValveEntity]],
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test setup and tear down of valve platform and entity."""
     config_entry = mock_config_entry[0]
 
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
     for entity in mock_config_entry[1]:
         entity_id = entity.entity_id
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert state == snapshot
 
-    assert await hass.config_entries.async_unload(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_unload(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.NOT_LOADED
 
     for entity in mock_config_entry[1]:
         entity_id = entity.entity_id
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert state.state == STATE_UNAVAILABLE
         assert state == snapshot
 
 
 async def test_services(
-    hass: HomeAssistant, mock_config_entry: tuple[MockConfigEntry, list[ValveEntity]]
+    menuai: menuai, mock_config_entry: tuple[MockConfigEntry, list[ValveEntity]]
 ) -> None:
     """Test the provided services."""
     config_entry = mock_config_entry[0]
     ent1, ent2 = mock_config_entry[1]
 
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Test init all valves should be open
-    assert is_open(hass, ent1)
-    assert is_open(hass, ent2)
+    assert is_open(menuai, ent1)
+    assert is_open(menuai, ent2)
 
     # call basic toggle services
-    await call_service(hass, SERVICE_TOGGLE, ent1)
-    await call_service(hass, SERVICE_TOGGLE, ent2)
+    await call_service(menuai, SERVICE_TOGGLE, ent1)
+    await call_service(menuai, SERVICE_TOGGLE, ent2)
 
     # entities without stop should be closed and with stop should be closing
-    assert is_closed(hass, ent1)
-    assert is_closing(hass, ent2)
+    assert is_closed(menuai, ent1)
+    assert is_closing(menuai, ent2)
     ent2.finish_movement()
-    assert is_closed(hass, ent2)
+    assert is_closed(menuai, ent2)
 
     # call basic toggle services and set different valve position states
-    await call_service(hass, SERVICE_TOGGLE, ent1)
-    await call_service(hass, SERVICE_TOGGLE, ent2)
-    await hass.async_block_till_done()
+    await call_service(menuai, SERVICE_TOGGLE, ent1)
+    await call_service(menuai, SERVICE_TOGGLE, ent2)
+    await menuai.async_block_till_done()
 
     # entities should be in correct state depending on the SUPPORT_STOP feature and valve position
-    assert is_open(hass, ent1)
-    assert is_opening(hass, ent2)
+    assert is_open(menuai, ent1)
+    assert is_opening(menuai, ent2)
 
     # call basic toggle services
-    await call_service(hass, SERVICE_TOGGLE, ent1)
-    await call_service(hass, SERVICE_TOGGLE, ent2)
+    await call_service(menuai, SERVICE_TOGGLE, ent1)
+    await call_service(menuai, SERVICE_TOGGLE, ent2)
 
     # entities should be in correct state depending on the SUPPORT_STOP feature and valve position
-    assert is_closed(hass, ent1)
-    assert not is_opening(hass, ent2)
-    assert not is_closing(hass, ent2)
-    assert is_closed(hass, ent2)
+    assert is_closed(menuai, ent1)
+    assert not is_opening(menuai, ent2)
+    assert not is_closing(menuai, ent2)
+    assert is_closed(menuai, ent2)
 
-    await call_service(hass, SERVICE_SET_VALVE_POSITION, ent2, 50)
-    assert is_opening(hass, ent2)
+    await call_service(menuai, SERVICE_SET_VALVE_POSITION, ent2, 50)
+    assert is_opening(menuai, ent2)
 
 
-async def test_valve_device_class(hass: HomeAssistant) -> None:
+async def test_valve_device_class(menuai: menuai) -> None:
     """Test valve entity with defaults."""
     default_valve = MockValveEntity()
-    default_valve.hass = hass
+    default_valve.menuai = menuai
 
     assert default_valve.device_class is None
 
@@ -284,21 +284,21 @@ async def test_valve_device_class(hass: HomeAssistant) -> None:
     assert default_valve.device_class is ValveDeviceClass.GAS
 
     water_valve = MockValveEntity(device_class=ValveDeviceClass.WATER)
-    water_valve.hass = hass
+    water_valve.menuai = menuai
 
     assert water_valve.device_class is ValveDeviceClass.WATER
 
 
-async def test_valve_report_position(hass: HomeAssistant) -> None:
+async def test_valve_report_position(menuai: menuai) -> None:
     """Test valve entity with defaults."""
     default_valve = MockValveEntity(reports_position=None)
-    default_valve.hass = hass
+    default_valve.menuai = menuai
 
     with pytest.raises(ValueError):
         _ = default_valve.reports_position
 
     second_valve = MockValveEntity(reports_position=True)
-    second_valve.hass = hass
+    second_valve.menuai = menuai
 
     assert second_valve.reports_position is True
 
@@ -308,35 +308,35 @@ async def test_valve_report_position(hass: HomeAssistant) -> None:
     assert third_valve.reports_position is True
 
 
-async def test_none_state(hass: HomeAssistant) -> None:
+async def test_none_state(menuai: menuai) -> None:
     """Test different criteria for closeness."""
     binary_valve_with_none_is_closed_attr = MockBinaryValveEntity(is_closed=None)
-    binary_valve_with_none_is_closed_attr.hass = hass
+    binary_valve_with_none_is_closed_attr.menuai = menuai
 
     assert binary_valve_with_none_is_closed_attr.state is None
 
     pos_valve_with_none_is_closed_attr = MockValveEntity()
-    pos_valve_with_none_is_closed_attr.hass = hass
+    pos_valve_with_none_is_closed_attr.menuai = menuai
 
     assert pos_valve_with_none_is_closed_attr.state is None
 
 
-async def test_supported_features(hass: HomeAssistant) -> None:
+async def test_supported_features(menuai: menuai) -> None:
     """Test valve entity with defaults."""
     valve = MockValveEntity(features=None)
-    valve.hass = hass
+    valve.menuai = menuai
 
     assert valve.supported_features is None
 
 
 def call_service(
-    hass: HomeAssistant, service: str, ent: ValveEntity, position: int | None = None
+    menuai: menuai, service: str, ent: ValveEntity, position: int | None = None
 ):
     """Call any service on entity."""
     params = {ATTR_ENTITY_ID: ent.entity_id}
     if position is not None:
         params["position"] = position
-    return hass.services.async_call(DOMAIN, service, params, blocking=True)
+    return menuai.services.async_call(DOMAIN, service, params, blocking=True)
 
 
 def set_valve_position(ent, position) -> None:
@@ -344,21 +344,21 @@ def set_valve_position(ent, position) -> None:
     ent._values["current_valve_position"] = position
 
 
-def is_open(hass: HomeAssistant, ent: ValveEntity) -> bool:
+def is_open(menuai: menuai, ent: ValveEntity) -> bool:
     """Return if the valve is closed based on the statemachine."""
-    return hass.states.is_state(ent.entity_id, ValveState.OPEN)
+    return menuai.states.is_state(ent.entity_id, ValveState.OPEN)
 
 
-def is_opening(hass: HomeAssistant, ent: ValveEntity) -> bool:
+def is_opening(menuai: menuai, ent: ValveEntity) -> bool:
     """Return if the valve is closed based on the statemachine."""
-    return hass.states.is_state(ent.entity_id, ValveState.OPENING)
+    return menuai.states.is_state(ent.entity_id, ValveState.OPENING)
 
 
-def is_closed(hass: HomeAssistant, ent: ValveEntity) -> bool:
+def is_closed(menuai: menuai, ent: ValveEntity) -> bool:
     """Return if the valve is closed based on the statemachine."""
-    return hass.states.is_state(ent.entity_id, ValveState.CLOSED)
+    return menuai.states.is_state(ent.entity_id, ValveState.CLOSED)
 
 
-def is_closing(hass: HomeAssistant, ent: ValveEntity) -> bool:
+def is_closing(menuai: menuai, ent: ValveEntity) -> bool:
     """Return if the valve is closed based on the statemachine."""
-    return hass.states.is_state(ent.entity_id, ValveState.CLOSING)
+    return menuai.states.is_state(ent.entity_id, ValveState.CLOSING)

@@ -2,7 +2,7 @@
 
 from typing import Final
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 DOMAIN: Final = "moon"
 PLATFORMS: Final = [Platform.SENSOR]

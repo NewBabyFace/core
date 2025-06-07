@@ -10,20 +10,20 @@ from typing import Literal, final
 from propcache.api import cached_property
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import STATE_OFF, STATE_ON, EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity import Entity, EntityDescription
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util.hass_dict import HassKey
+from menuai.config_entries import ConfigEntry
+from menuai.const import STATE_OFF, STATE_ON, EntityCategory
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity import Entity, EntityDescription
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.typing import ConfigType
+from menuai.util.menuai_dict import menuaiKey
 
 _LOGGER = logging.getLogger(__name__)
 
 DOMAIN = "binary_sensor"
-DATA_COMPONENT: HassKey[EntityComponent[BinarySensorEntity]] = HassKey(DOMAIN)
+DATA_COMPONENT: menuaiKey[EntityComponent[BinarySensorEntity]] = menuaiKey(DOMAIN)
 ENTITY_ID_FORMAT = DOMAIN + ".{}"
 PLATFORM_SCHEMA = cv.PLATFORM_SCHEMA
 PLATFORM_SCHEMA_BASE = cv.PLATFORM_SCHEMA_BASE
@@ -124,24 +124,24 @@ DEVICE_CLASSES = [cls.value for cls in BinarySensorDeviceClass]
 # mypy: disallow-any-generics
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Track states and offer events for binary sensors."""
-    component = hass.data[DATA_COMPONENT] = EntityComponent[BinarySensorEntity](
-        logging.getLogger(__name__), DOMAIN, hass, SCAN_INTERVAL
+    component = menuai.data[DATA_COMPONENT] = EntityComponent[BinarySensorEntity](
+        logging.getLogger(__name__), DOMAIN, menuai, SCAN_INTERVAL
     )
 
     await component.async_setup(config)
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up a config entry."""
-    return await hass.data[DATA_COMPONENT].async_setup_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_setup_entry(entry)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.data[DATA_COMPONENT].async_unload_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_unload_entry(entry)
 
 
 class BinarySensorEntityDescription(EntityDescription, frozen_or_thawed=True):
@@ -164,11 +164,11 @@ class BinarySensorEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_)
     _attr_is_on: bool | None = None
     _attr_state: None = None
 
-    async def async_internal_added_to_hass(self) -> None:
-        """Call when the binary sensor entity is added to hass."""
-        await super().async_internal_added_to_hass()
+    async def async_internal_added_to_menuai(self) -> None:
+        """Call when the binary sensor entity is added to menuai."""
+        await super().async_internal_added_to_menuai()
         if self.entity_category == EntityCategory.CONFIG:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Entity {self.entity_id} cannot be added as the entity category is set to config"
             )
 

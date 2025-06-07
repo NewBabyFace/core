@@ -6,11 +6,11 @@ from libsoundtouch import soundtouch_device
 from libsoundtouch.device import SoundTouchDevice
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, Platform
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, Platform
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     DOMAIN,
@@ -48,7 +48,7 @@ CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
 class SoundTouchData:
-    """SoundTouch data stored in the Home Assistant data object."""
+    """SoundTouch data stored in the MenuAI data object."""
 
     def __init__(self, device: SoundTouchDevice) -> None:
         """Initialize the SoundTouch data object for a device."""
@@ -56,7 +56,7 @@ class SoundTouchData:
         self.media_player = None
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up Bose SoundTouch component."""
 
     async def service_handle(service: ServiceCall) -> None:
@@ -67,7 +67,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         if slaves_ids:
             slaves = [
                 data.media_player
-                for data in hass.data[DOMAIN].values()
+                for data in menuai.data[DOMAIN].values()
                 if data.media_player.entity_id in slaves_ids
             ]
 
@@ -75,7 +75,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             iter(
                 [
                     data.media_player
-                    for data in hass.data[DOMAIN].values()
+                    for data in menuai.data[DOMAIN].values()
                     if data.media_player.entity_id == master_id
                 ]
             ),
@@ -89,36 +89,36 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         if service.service == SERVICE_PLAY_EVERYWHERE:
             slaves = [
                 data.media_player
-                for data in hass.data[DOMAIN].values()
+                for data in menuai.data[DOMAIN].values()
                 if data.media_player.entity_id != master_id
             ]
-            await hass.async_add_executor_job(master.create_zone, slaves)
+            await menuai.async_add_executor_job(master.create_zone, slaves)
         elif service.service == SERVICE_CREATE_ZONE:
-            await hass.async_add_executor_job(master.create_zone, slaves)
+            await menuai.async_add_executor_job(master.create_zone, slaves)
         elif service.service == SERVICE_REMOVE_ZONE_SLAVE:
-            await hass.async_add_executor_job(master.remove_zone_slave, slaves)
+            await menuai.async_add_executor_job(master.remove_zone_slave, slaves)
         elif service.service == SERVICE_ADD_ZONE_SLAVE:
-            await hass.async_add_executor_job(master.add_zone_slave, slaves)
+            await menuai.async_add_executor_job(master.add_zone_slave, slaves)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_PLAY_EVERYWHERE,
         service_handle,
         schema=SERVICE_PLAY_EVERYWHERE_SCHEMA,
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_CREATE_ZONE,
         service_handle,
         schema=SERVICE_CREATE_ZONE_SCHEMA,
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_REMOVE_ZONE_SLAVE,
         service_handle,
         schema=SERVICE_REMOVE_ZONE_SCHEMA,
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_ADD_ZONE_SLAVE,
         service_handle,
@@ -128,18 +128,18 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up Bose SoundTouch from a config entry."""
-    device = await hass.async_add_executor_job(soundtouch_device, entry.data[CONF_HOST])
+    device = await menuai.async_add_executor_job(soundtouch_device, entry.data[CONF_HOST])
 
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = SoundTouchData(device)
+    menuai.data.setdefault(DOMAIN, {})[entry.entry_id] = SoundTouchData(device)
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        del hass.data[DOMAIN][entry.entry_id]
+    if unload_ok := await menuai.config_entries.async_unload_platforms(entry, PLATFORMS):
+        del menuai.data[DOMAIN][entry.entry_id]
     return unload_ok

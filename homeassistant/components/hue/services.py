@@ -8,9 +8,9 @@ import logging
 from aiohue import HueBridgeV1, HueBridgeV2
 import voluptuous as vol
 
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.service import verify_domain_control
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import config_validation as cv
+from menuai.helpers.service import verify_domain_control
 
 from .bridge import HueBridge, HueConfigEntry
 from .const import (
@@ -25,7 +25,7 @@ from .const import (
 LOGGER = logging.getLogger(__name__)
 
 
-def async_setup_services(hass: HomeAssistant) -> None:
+def async_setup_services(menuai: menuai) -> None:
     """Register services for Hue integration."""
 
     async def hue_activate_scene(call: ServiceCall, skip_reload=True) -> None:
@@ -37,7 +37,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
         dynamic = call.data.get(ATTR_DYNAMIC, False)
 
         # Call the set scene function on each bridge
-        entries: list[HueConfigEntry] = hass.config_entries.async_loaded_entries(DOMAIN)
+        entries: list[HueConfigEntry] = menuai.config_entries.async_loaded_entries(DOMAIN)
         tasks = [
             hue_activate_scene_v1(
                 entry.runtime_data, group_name, scene_name, transition
@@ -60,10 +60,10 @@ def async_setup_services(hass: HomeAssistant) -> None:
             )
 
     # Register a local handler for scene activation
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_HUE_ACTIVATE_SCENE,
-        verify_domain_control(hass, DOMAIN)(hue_activate_scene),
+        verify_domain_control(menuai, DOMAIN)(hue_activate_scene),
         schema=vol.Schema(
             {
                 vol.Required(ATTR_GROUP_NAME): cv.string,

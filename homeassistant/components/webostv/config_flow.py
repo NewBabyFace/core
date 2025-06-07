@@ -9,12 +9,12 @@ from urllib.parse import urlparse
 from aiowebostv import WebOsClient, WebOsTvPairError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
-from homeassistant.const import CONF_CLIENT_SECRET, CONF_HOST
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.service_info.ssdp import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
+from menuai.const import CONF_CLIENT_SECRET, CONF_HOST
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.service_info.ssdp import (
     ATTR_UPNP_FRIENDLY_NAME,
     ATTR_UPNP_UDN,
     SsdpServiceInfo,
@@ -33,13 +33,13 @@ DATA_SCHEMA = vol.Schema(
 
 
 async def async_control_connect(
-    hass: HomeAssistant, host: str, key: str | None
+    menuai: menuai, host: str, key: str | None
 ) -> WebOsClient:
     """Create LG webOS client and connect to the TV."""
     client = WebOsClient(
         host,
         key,
-        client_session=async_get_clientsession(hass),
+        client_session=async_get_clientsession(menuai),
     )
 
     await client.connect()
@@ -85,7 +85,7 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             try:
-                client = await async_control_connect(self.hass, self._host, None)
+                client = await async_control_connect(self.menuai, self._host, None)
             except WebOsTvPairError:
                 errors["base"] = "error_pairing"
             except WEBOSTV_EXCEPTIONS:
@@ -121,7 +121,7 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
         await self.async_set_unique_id(uuid)
         self._abort_if_unique_id_configured({CONF_HOST: self._host})
 
-        if self.hass.config_entries.flow.async_has_matching_flow(self):
+        if self.menuai.config_entries.flow.async_has_matching_flow(self):
             return self.async_abort(reason="already_in_progress")
 
         self._uuid = uuid
@@ -146,7 +146,7 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             try:
-                client = await async_control_connect(self.hass, self._host, None)
+                client = await async_control_connect(self.menuai, self._host, None)
             except WebOsTvPairError:
                 errors["base"] = "error_pairing"
             except WEBOSTV_EXCEPTIONS:
@@ -170,7 +170,7 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
             client_key = reconfigure_entry.data.get(CONF_CLIENT_SECRET)
 
             try:
-                client = await async_control_connect(self.hass, host, client_key)
+                client = await async_control_connect(self.menuai, host, client_key)
             except WebOsTvPairError:
                 errors["base"] = "error_pairing"
             except WEBOSTV_EXCEPTIONS:
@@ -213,7 +213,7 @@ class OptionsFlowHandler(OptionsFlow):
         # Get sources
         sources_list = []
         try:
-            client = await async_control_connect(self.hass, self.host, self.key)
+            client = await async_control_connect(self.menuai, self.host, self.key)
             sources_list = get_sources(client.tv_state)
         except WebOsTvPairError:
             errors["base"] = "error_pairing"

@@ -1,9 +1,9 @@
 """Tests for the To-do integration."""
 
-from homeassistant.components.todo import DOMAIN, TodoItem, TodoListEntity
-from homeassistant.config_entries import ConfigEntry, ConfigFlow
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.todo import DOMAIN, TodoItem, TodoListEntity
+from menuai.config_entries import ConfigEntry, ConfigFlow
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from tests.common import MockConfigEntry, MockPlatform, mock_platform
 
@@ -43,13 +43,13 @@ class MockTodoListEntity(TodoListEntity):
 
 
 async def create_mock_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     entities: list[TodoListEntity],
 ) -> MockConfigEntry:
     """Create a todo platform with the specified entities."""
 
     async def async_setup_entry_platform(
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         async_add_entities: AddConfigEntryEntitiesCallback,
     ) -> None:
@@ -57,14 +57,14 @@ async def create_mock_platform(
         async_add_entities(entities)
 
     mock_platform(
-        hass,
+        menuai,
         f"{TEST_DOMAIN}.{DOMAIN}",
         MockPlatform(async_setup_entry=async_setup_entry_platform),
     )
 
     config_entry = MockConfigEntry(domain=TEST_DOMAIN)
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     return config_entry

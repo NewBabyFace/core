@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, intent
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, intent
 
 from . import (
     ATTR_TEMPERATURE,
@@ -17,9 +17,9 @@ from . import (
 )
 
 
-async def async_setup_intents(hass: HomeAssistant) -> None:
+async def async_setup_intents(menuai: menuai) -> None:
     """Set up the climate intents."""
-    intent.async_register(hass, SetTemperatureIntent())
+    intent.async_register(menuai, SetTemperatureIntent())
 
 
 class SetTemperatureIntent(intent.IntentHandler):
@@ -39,7 +39,7 @@ class SetTemperatureIntent(intent.IntentHandler):
 
     async def async_handle(self, intent_obj: intent.Intent) -> intent.IntentResponse:
         """Handle the intent."""
-        hass = intent_obj.hass
+        menuai = intent_obj.menuai
         slots = self.async_validate_slots(intent_obj.slots)
 
         temperature: float = slots["temperature"]["value"]
@@ -70,7 +70,7 @@ class SetTemperatureIntent(intent.IntentHandler):
             floor_id=slots.get("preferred_floor_id", {}).get("value"),
         )
         match_result = intent.async_match_targets(
-            hass, match_constraints, match_preferences
+            menuai, match_constraints, match_preferences
         )
         if not match_result.is_match:
             raise intent.MatchFailedError(
@@ -80,7 +80,7 @@ class SetTemperatureIntent(intent.IntentHandler):
         assert match_result.states
         climate_state = match_result.states[0]
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SET_TEMPERATURE,
             service_data={ATTR_TEMPERATURE: temperature},

@@ -6,8 +6,8 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.upnp.const import (
+from menuai import config_entries
+from menuai.components.upnp.const import (
     CONFIG_ENTRY_FORCE_POLL,
     CONFIG_ENTRY_HOST,
     CONFIG_ENTRY_LOCATION,
@@ -18,9 +18,9 @@ from homeassistant.components.upnp.const import (
     DOMAIN,
     ST_IGD_V1,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.ssdp import (
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.ssdp import (
     ATTR_UPNP_DEVICE_TYPE,
     ATTR_UPNP_UDN,
     SsdpServiceInfo,
@@ -45,10 +45,10 @@ from tests.common import MockConfigEntry
     "mock_setup_entry",
     "mock_mac_address_from_host",
 )
-async def test_flow_ssdp(hass: HomeAssistant) -> None:
+async def test_flow_ssdp(menuai: menuai) -> None:
     """Test config flow: discovered + configured through ssdp."""
     # Discovered via step ssdp.
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_SSDP},
         data=TEST_DISCOVERY,
@@ -57,7 +57,7 @@ async def test_flow_ssdp(hass: HomeAssistant) -> None:
     assert result["step_id"] == "ssdp_confirm"
 
     # Confirm via step ssdp_confirm.
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={},
     )
@@ -78,10 +78,10 @@ async def test_flow_ssdp(hass: HomeAssistant) -> None:
     "mock_setup_entry",
     "mock_mac_address_from_host",
 )
-async def test_flow_ssdp_ignore(hass: HomeAssistant) -> None:
+async def test_flow_ssdp_ignore(menuai: menuai) -> None:
     """Test config flow: discovered + ignore through ssdp."""
     # Discovered via step ssdp.
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_SSDP},
         data=TEST_DISCOVERY,
@@ -90,7 +90,7 @@ async def test_flow_ssdp_ignore(hass: HomeAssistant) -> None:
     assert result["step_id"] == "ssdp_confirm"
 
     # Ignore entry.
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_IGNORE},
         data={"unique_id": TEST_USN, "title": TEST_FRIENDLY_NAME},
@@ -107,10 +107,10 @@ async def test_flow_ssdp_ignore(hass: HomeAssistant) -> None:
     }
 
 
-async def test_flow_ssdp_incomplete_discovery(hass: HomeAssistant) -> None:
+async def test_flow_ssdp_incomplete_discovery(menuai: menuai) -> None:
     """Test config flow: incomplete discovery through ssdp."""
     # Discovered via step ssdp.
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_SSDP},
         data=SsdpServiceInfo(
@@ -128,10 +128,10 @@ async def test_flow_ssdp_incomplete_discovery(hass: HomeAssistant) -> None:
     assert result["reason"] == "incomplete_discovery"
 
 
-async def test_flow_ssdp_non_igd_device(hass: HomeAssistant) -> None:
+async def test_flow_ssdp_non_igd_device(menuai: menuai) -> None:
     """Test config flow: incomplete discovery through ssdp."""
     # Discovered via step ssdp.
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_SSDP},
         data=SsdpServiceInfo(
@@ -154,10 +154,10 @@ async def test_flow_ssdp_non_igd_device(hass: HomeAssistant) -> None:
     "mock_setup_entry",
     "mock_no_mac_address_from_host",
 )
-async def test_flow_ssdp_no_mac_address(hass: HomeAssistant) -> None:
+async def test_flow_ssdp_no_mac_address(menuai: menuai) -> None:
     """Test config flow: discovered + configured through ssdp."""
     # Discovered via step ssdp.
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_SSDP},
         data=TEST_DISCOVERY,
@@ -166,7 +166,7 @@ async def test_flow_ssdp_no_mac_address(hass: HomeAssistant) -> None:
     assert result["step_id"] == "ssdp_confirm"
 
     # Confirm via step ssdp_confirm.
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={},
     )
@@ -183,7 +183,7 @@ async def test_flow_ssdp_no_mac_address(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("mock_mac_address_from_host")
-async def test_flow_ssdp_discovery_changed_udn_match_mac(hass: HomeAssistant) -> None:
+async def test_flow_ssdp_discovery_changed_udn_match_mac(menuai: menuai) -> None:
     """Test config flow: discovery through ssdp, same device, but new UDN, matched on mac address."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -198,14 +198,14 @@ async def test_flow_ssdp_discovery_changed_udn_match_mac(hass: HomeAssistant) ->
         source=config_entries.SOURCE_SSDP,
         state=config_entries.ConfigEntryState.NOT_LOADED,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     # New discovery via step ssdp.
     new_udn = TEST_UDN + "2"
     new_discovery = deepcopy(TEST_DISCOVERY)
     new_discovery.ssdp_usn = f"{new_udn}::{TEST_ST}"
     new_discovery.upnp["_udn"] = new_udn
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_SSDP},
         data=new_discovery,
@@ -215,7 +215,7 @@ async def test_flow_ssdp_discovery_changed_udn_match_mac(hass: HomeAssistant) ->
 
 
 @pytest.mark.usefixtures("mock_mac_address_from_host")
-async def test_flow_ssdp_discovery_changed_udn_match_host(hass: HomeAssistant) -> None:
+async def test_flow_ssdp_discovery_changed_udn_match_host(menuai: menuai) -> None:
     """Test config flow: discovery through ssdp, same device, but new UDN, matched on mac address."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -230,14 +230,14 @@ async def test_flow_ssdp_discovery_changed_udn_match_host(hass: HomeAssistant) -
         source=config_entries.SOURCE_SSDP,
         state=config_entries.ConfigEntryState.NOT_LOADED,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     # New discovery via step ssdp.
     new_udn = TEST_UDN + "2"
     new_discovery = deepcopy(TEST_DISCOVERY)
     new_discovery.ssdp_usn = f"{new_udn}::{TEST_ST}"
     new_discovery.upnp["_udn"] = new_udn
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_SSDP},
         data=new_discovery,
@@ -251,7 +251,7 @@ async def test_flow_ssdp_discovery_changed_udn_match_host(hass: HomeAssistant) -
     "mock_setup_entry",
 )
 async def test_flow_ssdp_discovery_changed_udn_but_st_differs(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test config flow: discovery through ssdp, same device, but new UDN, and different ST, so not matched --> new discovery."""
     entry = MockConfigEntry(
@@ -267,18 +267,18 @@ async def test_flow_ssdp_discovery_changed_udn_but_st_differs(
         source=config_entries.SOURCE_SSDP,
         state=config_entries.ConfigEntryState.NOT_LOADED,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     # UDN + mac address different: New discovery via step ssdp.
     new_udn = TEST_UDN + "2"
     with patch(
-        "homeassistant.components.upnp.device.get_mac_address",
+        "menuai.components.upnp.device.get_mac_address",
         return_value=TEST_MAC_ADDRESS + "2",
     ):
         new_discovery = deepcopy(TEST_DISCOVERY)
         new_discovery.ssdp_usn = f"{new_udn}::{TEST_ST}"
         new_discovery.upnp["_udn"] = new_udn
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_SSDP},
             data=new_discovery,
@@ -288,7 +288,7 @@ async def test_flow_ssdp_discovery_changed_udn_but_st_differs(
 
     # UDN + ST different: New discovery via step ssdp.
     with patch(
-        "homeassistant.components.upnp.device.get_mac_address",
+        "menuai.components.upnp.device.get_mac_address",
         return_value=TEST_MAC_ADDRESS,
     ):
         new_st = TEST_ST + "2"
@@ -296,7 +296,7 @@ async def test_flow_ssdp_discovery_changed_udn_but_st_differs(
         new_discovery.ssdp_usn = f"{new_udn}::{new_st}"
         new_discovery.ssdp_st = new_st
         new_discovery.upnp["_udn"] = new_udn
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_SSDP},
             data=new_discovery,
@@ -306,7 +306,7 @@ async def test_flow_ssdp_discovery_changed_udn_but_st_differs(
 
 
 @pytest.mark.usefixtures("mock_mac_address_from_host")
-async def test_flow_ssdp_discovery_changed_location(hass: HomeAssistant) -> None:
+async def test_flow_ssdp_discovery_changed_location(menuai: menuai) -> None:
     """Test config flow: discovery through ssdp, same device, but new location."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -321,14 +321,14 @@ async def test_flow_ssdp_discovery_changed_location(hass: HomeAssistant) -> None
         source=config_entries.SOURCE_SSDP,
         state=config_entries.ConfigEntryState.NOT_LOADED,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     # Discovery via step ssdp.
     new_location = TEST_DISCOVERY.ssdp_location + "2"
     new_discovery = deepcopy(TEST_DISCOVERY)
     new_discovery.ssdp_location = new_location
     new_discovery.ssdp_all_locations = {new_location}
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_SSDP},
         data=new_discovery,
@@ -341,7 +341,7 @@ async def test_flow_ssdp_discovery_changed_location(hass: HomeAssistant) -> None
 
 
 @pytest.mark.usefixtures("mock_mac_address_from_host")
-async def test_flow_ssdp_discovery_ignored_entry(hass: HomeAssistant) -> None:
+async def test_flow_ssdp_discovery_ignored_entry(menuai: menuai) -> None:
     """Test config flow: discovery through ssdp, same device, but new UDN, matched on mac address."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -355,9 +355,9 @@ async def test_flow_ssdp_discovery_ignored_entry(hass: HomeAssistant) -> None:
         },
         source=config_entries.SOURCE_IGNORE,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_SSDP},
         data=TEST_DISCOVERY,
@@ -368,7 +368,7 @@ async def test_flow_ssdp_discovery_ignored_entry(hass: HomeAssistant) -> None:
 
 @pytest.mark.usefixtures("mock_mac_address_from_host")
 async def test_flow_ssdp_discovery_changed_udn_ignored_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test config flow: discovery through ssdp, same device, but new UDN, matched on mac address, entry ignored."""
     entry = MockConfigEntry(
@@ -383,14 +383,14 @@ async def test_flow_ssdp_discovery_changed_udn_ignored_entry(
         },
         source=config_entries.SOURCE_IGNORE,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     # New discovery via step ssdp.
     new_udn = TEST_UDN + "2"
     new_discovery = deepcopy(TEST_DISCOVERY)
     new_discovery.ssdp_usn = f"{new_udn}::{TEST_ST}"
     new_discovery.upnp["_udn"] = new_udn
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_SSDP},
         data=new_discovery,
@@ -404,17 +404,17 @@ async def test_flow_ssdp_discovery_changed_udn_ignored_entry(
     "mock_setup_entry",
     "mock_mac_address_from_host",
 )
-async def test_flow_user(hass: HomeAssistant) -> None:
+async def test_flow_user(menuai: menuai) -> None:
     """Test config flow: discovered + configured through user."""
     # Discovered via step user.
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
     # Confirmed via step user.
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={"unique_id": TEST_USN},
     )
@@ -435,9 +435,9 @@ async def test_flow_user(hass: HomeAssistant) -> None:
     "mock_setup_entry",
     "mock_mac_address_from_host",
 )
-async def test_flow_user_no_discovery(hass: HomeAssistant) -> None:
+async def test_flow_user_no_discovery(menuai: menuai) -> None:
     """Test config flow: user, but no discovery."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.ABORT
@@ -449,13 +449,13 @@ async def test_flow_user_no_discovery(hass: HomeAssistant) -> None:
     "mock_setup_entry",
     "mock_mac_address_from_host",
 )
-async def test_flow_ssdp_with_mismatched_udn(hass: HomeAssistant) -> None:
+async def test_flow_ssdp_with_mismatched_udn(menuai: menuai) -> None:
     """Test config flow: discovered + configured through ssdp, where the UDN differs in the SSDP-discovery vs device description."""
     # Discovered via step ssdp.
     test_discovery = copy.deepcopy(TEST_DISCOVERY)
     test_discovery.upnp[ATTR_UPNP_UDN] = "uuid:another_udn"
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_SSDP},
         data=test_discovery,
@@ -464,7 +464,7 @@ async def test_flow_ssdp_with_mismatched_udn(hass: HomeAssistant) -> None:
     assert result["step_id"] == "ssdp_confirm"
 
     # Confirm via step ssdp_confirm.
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={},
     )
@@ -481,21 +481,21 @@ async def test_flow_ssdp_with_mismatched_udn(hass: HomeAssistant) -> None:
 
 
 async def test_options_flow(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_config_entry: MockConfigEntry
 ) -> None:
     """Test that the options flow works."""
-    result = await hass.config_entries.options.async_init(mock_config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(mock_config_entry.entry_id)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
     user_input = {
         CONFIG_ENTRY_FORCE_POLL: True,
     }
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"] == {
         CONFIG_ENTRY_FORCE_POLL: True,

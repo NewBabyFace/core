@@ -6,23 +6,23 @@ from unittest.mock import AsyncMock, patch
 from pyownet import protocol
 import pytest
 
-from homeassistant.components.onewire.const import (
+from menuai.components.onewire.const import (
     DOMAIN,
     INPUT_ENTRY_CLEAR_OPTIONS,
     INPUT_ENTRY_DEVICE_SELECTION,
     MANUFACTURER_MAXIM,
 )
-from homeassistant.config_entries import SOURCE_HASSIO, SOURCE_USER, SOURCE_ZEROCONF
-from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.service_info.hassio import HassioServiceInfo
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.config_entries import SOURCE_menuaiIO, SOURCE_USER, SOURCE_ZEROCONF
+from menuai.const import CONF_HOST, CONF_PORT
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers import device_registry as dr
+from menuai.helpers.service_info.menuaiio import menuaiioServiceInfo
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from tests.common import MockConfigEntry
 
-_HASSIO_DISCOVERY = HassioServiceInfo(
+_menuaiIO_DISCOVERY = menuaiioServiceInfo(
     config={"host": "1302b8e0-owserver", "port": 4304, "addon": "owserver (1-wire)"},
     name="owserver (1-wire)",
     slug="1302b8e0_owserver",
@@ -58,16 +58,16 @@ async def filled_device_registry(
     return device_registry
 
 
-async def test_user_flow(hass: HomeAssistant) -> None:
+async def test_user_flow(menuai: menuai) -> None:
     """Test user flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
     with patch(
-        "homeassistant.components.onewire.onewirehub.protocol.proxy",
+        "menuai.components.onewire.onewirehub.protocol.proxy",
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={CONF_HOST: "1.2.3.4", CONF_PORT: 1234},
         )
@@ -78,18 +78,18 @@ async def test_user_flow(hass: HomeAssistant) -> None:
     assert new_entry.data == {CONF_HOST: "1.2.3.4", CONF_PORT: 1234}
 
 
-async def test_user_flow_recovery(hass: HomeAssistant) -> None:
+async def test_user_flow_recovery(menuai: menuai) -> None:
     """Test user flow recovery after invalid server."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
     # Invalid server
     with patch(
-        "homeassistant.components.onewire.onewirehub.protocol.proxy",
+        "menuai.components.onewire.onewirehub.protocol.proxy",
         side_effect=protocol.ConnError,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={CONF_HOST: "1.2.3.4", CONF_PORT: 1234},
         )
@@ -100,9 +100,9 @@ async def test_user_flow_recovery(hass: HomeAssistant) -> None:
 
     # Valid server
     with patch(
-        "homeassistant.components.onewire.onewirehub.protocol.proxy",
+        "menuai.components.onewire.onewirehub.protocol.proxy",
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={CONF_HOST: "1.2.3.4", CONF_PORT: 1234},
         )
@@ -114,14 +114,14 @@ async def test_user_flow_recovery(hass: HomeAssistant) -> None:
 
 
 async def test_user_duplicate(
-    hass: HomeAssistant, config_entry: MockConfigEntry
+    menuai: menuai, config_entry: MockConfigEntry
 ) -> None:
     """Test user duplicate flow."""
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -129,7 +129,7 @@ async def test_user_duplicate(
     assert not result["errors"]
 
     # Duplicate server
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_HOST: "1.2.3.4", CONF_PORT: 1234},
     )
@@ -138,20 +138,20 @@ async def test_user_duplicate(
 
 
 async def test_reconfigure_flow(
-    hass: HomeAssistant, config_entry: MockConfigEntry, mock_setup_entry: AsyncMock
+    menuai: menuai, config_entry: MockConfigEntry, mock_setup_entry: AsyncMock
 ) -> None:
     """Test reconfigure flow."""
-    result = await config_entry.start_reconfigure_flow(hass)
+    result = await config_entry.start_reconfigure_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reconfigure"
     assert not result["errors"]
 
     # Invalid server
     with patch(
-        "homeassistant.components.onewire.onewirehub.protocol.proxy",
+        "menuai.components.onewire.onewirehub.protocol.proxy",
         side_effect=protocol.ConnError,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={CONF_HOST: "2.3.4.5", CONF_PORT: 2345},
         )
@@ -162,9 +162,9 @@ async def test_reconfigure_flow(
 
     # Valid server
     with patch(
-        "homeassistant.components.onewire.onewirehub.protocol.proxy",
+        "menuai.components.onewire.onewirehub.protocol.proxy",
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={CONF_HOST: "2.3.4.5", CONF_PORT: 2345},
         )
@@ -177,7 +177,7 @@ async def test_reconfigure_flow(
 
 
 async def test_reconfigure_duplicate(
-    hass: HomeAssistant, config_entry: MockConfigEntry, mock_setup_entry: AsyncMock
+    menuai: menuai, config_entry: MockConfigEntry, mock_setup_entry: AsyncMock
 ) -> None:
     """Test reconfigure duplicate flow."""
     other_config_entry = MockConfigEntry(
@@ -189,15 +189,15 @@ async def test_reconfigure_duplicate(
         },
         entry_id="other",
     )
-    other_config_entry.add_to_hass(hass)
+    other_config_entry.add_to_menuai(menuai)
 
-    result = await config_entry.start_reconfigure_flow(hass)
+    result = await config_entry.start_reconfigure_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reconfigure"
     assert not result["errors"]
 
     # Duplicate server
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_HOST: "2.3.4.5", CONF_PORT: 2345},
     )
@@ -209,12 +209,12 @@ async def test_reconfigure_duplicate(
     assert other_config_entry.data == {CONF_HOST: "2.3.4.5", CONF_PORT: 2345}
 
 
-async def test_hassio_flow(hass: HomeAssistant) -> None:
-    """Test HassIO discovery flow."""
-    result = await hass.config_entries.flow.async_init(
+async def test_menuaiio_flow(menuai: menuai) -> None:
+    """Test menuaiIO discovery flow."""
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
-        context={"source": SOURCE_HASSIO},
-        data=_HASSIO_DISCOVERY,
+        context={"source": SOURCE_menuaiIO},
+        data=_menuaiIO_DISCOVERY,
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "discovery_confirm"
@@ -222,10 +222,10 @@ async def test_hassio_flow(hass: HomeAssistant) -> None:
 
     # Cannot connect to server => retry
     with patch(
-        "homeassistant.components.onewire.onewirehub.protocol.proxy",
+        "menuai.components.onewire.onewirehub.protocol.proxy",
         side_effect=protocol.ConnError,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={},
         )
@@ -236,9 +236,9 @@ async def test_hassio_flow(hass: HomeAssistant) -> None:
 
     # Connect OK
     with patch(
-        "homeassistant.components.onewire.onewirehub.protocol.proxy",
+        "menuai.components.onewire.onewirehub.protocol.proxy",
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={},
         )
@@ -250,20 +250,20 @@ async def test_hassio_flow(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("config_entry")
-async def test_hassio_duplicate(hass: HomeAssistant) -> None:
-    """Test HassIO discovery duplicate flow."""
-    result = await hass.config_entries.flow.async_init(
+async def test_menuaiio_duplicate(menuai: menuai) -> None:
+    """Test menuaiIO discovery duplicate flow."""
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
-        context={"source": SOURCE_HASSIO},
-        data=_HASSIO_DISCOVERY,
+        context={"source": SOURCE_menuaiIO},
+        data=_menuaiIO_DISCOVERY,
     )
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
 
 
-async def test_zeroconf_flow(hass: HomeAssistant) -> None:
+async def test_zeroconf_flow(menuai: menuai) -> None:
     """Test zeroconf discovery flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_ZEROCONF},
         data=_ZEROCONF_DISCOVERY,
@@ -274,10 +274,10 @@ async def test_zeroconf_flow(hass: HomeAssistant) -> None:
 
     # Cannot connect to server => retry
     with patch(
-        "homeassistant.components.onewire.onewirehub.protocol.proxy",
+        "menuai.components.onewire.onewirehub.protocol.proxy",
         side_effect=protocol.ConnError,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={},
         )
@@ -288,9 +288,9 @@ async def test_zeroconf_flow(hass: HomeAssistant) -> None:
 
     # Connect OK
     with patch(
-        "homeassistant.components.onewire.onewirehub.protocol.proxy",
+        "menuai.components.onewire.onewirehub.protocol.proxy",
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={},
         )
@@ -302,9 +302,9 @@ async def test_zeroconf_flow(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("config_entry")
-async def test_zeroconf_duplicate(hass: HomeAssistant) -> None:
+async def test_zeroconf_duplicate(menuai: menuai) -> None:
     """Test zeroconf discovery duplicate flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_ZEROCONF},
         data=_ZEROCONF_DISCOVERY,
@@ -315,13 +315,13 @@ async def test_zeroconf_duplicate(hass: HomeAssistant) -> None:
 
 @pytest.mark.usefixtures("filled_device_registry")
 async def test_user_options_clear(
-    hass: HomeAssistant, config_entry: MockConfigEntry
+    menuai: menuai, config_entry: MockConfigEntry
 ) -> None:
     """Test clearing the options."""
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
     # Verify that first config step comes back with a selection list of all the 28-family devices
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result["data_schema"].schema["device_selection"].options == {
         "28.111111111111": False,
         "28.222222222222": False,
@@ -329,7 +329,7 @@ async def test_user_options_clear(
     }
 
     # Verify that the clear-input action clears the options dict
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={INPUT_ENTRY_CLEAR_OPTIONS: True},
     )
@@ -339,13 +339,13 @@ async def test_user_options_clear(
 
 @pytest.mark.usefixtures("filled_device_registry")
 async def test_user_options_empty_selection_recovery(
-    hass: HomeAssistant, config_entry: MockConfigEntry
+    menuai: menuai, config_entry: MockConfigEntry
 ) -> None:
     """Test leaving the selection of devices empty."""
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
     # Verify that first config step comes back with a selection list of all the 28-family devices
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result["data_schema"].schema["device_selection"].options == {
         "28.111111111111": False,
         "28.222222222222": False,
@@ -353,7 +353,7 @@ async def test_user_options_empty_selection_recovery(
     }
 
     # Verify that an empty selection shows the form again
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={INPUT_ENTRY_DEVICE_SELECTION: []},
     )
@@ -362,7 +362,7 @@ async def test_user_options_empty_selection_recovery(
     assert result["errors"] == {"base": "device_not_selected"}
 
     # Verify that a single selected device to configure comes back as a form with the device to configure
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={INPUT_ENTRY_DEVICE_SELECTION: ["28.111111111111"]},
     )
@@ -370,7 +370,7 @@ async def test_user_options_empty_selection_recovery(
     assert result["description_placeholders"]["sensor_id"] == "28.111111111111"
 
     # Verify that the setting for the device comes back as default when no input is given
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={},
     )
@@ -383,16 +383,16 @@ async def test_user_options_empty_selection_recovery(
 
 @pytest.mark.usefixtures("filled_device_registry")
 async def test_user_options_set_single(
-    hass: HomeAssistant, config_entry: MockConfigEntry
+    menuai: menuai, config_entry: MockConfigEntry
 ) -> None:
     """Test configuring a single device."""
     # Clear config options to certify functionality when starting from scratch
-    hass.config_entries.async_update_entry(config_entry, options={})
+    menuai.config_entries.async_update_entry(config_entry, options={})
 
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
     # Verify that first config step comes back with a selection list of all the 28-family devices
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result["data_schema"].schema["device_selection"].options == {
         "28.111111111111": False,
         "28.222222222222": False,
@@ -400,7 +400,7 @@ async def test_user_options_set_single(
     }
 
     # Verify that a single selected device to configure comes back as a form with the device to configure
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={INPUT_ENTRY_DEVICE_SELECTION: ["28.111111111111"]},
     )
@@ -408,7 +408,7 @@ async def test_user_options_set_single(
     assert result["description_placeholders"]["sensor_id"] == "28.111111111111"
 
     # Verify that the setting for the device comes back as default when no input is given
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={},
     )
@@ -420,19 +420,19 @@ async def test_user_options_set_single(
 
 
 async def test_user_options_set_multiple(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     filled_device_registry: dr.DeviceRegistry,
 ) -> None:
     """Test configuring multiple consecutive devices in a row."""
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
     # Verify that first config step comes back with a selection list of all the 28-family devices
     for entry in dr.async_entries_for_config_entry(
         filled_device_registry, config_entry.entry_id
     ):
         filled_device_registry.async_update_device(entry.id, name_by_user="Given Name")
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result["data_schema"].schema["device_selection"].options == {
         "Given Name (28.111111111111)": False,
         "Given Name (28.222222222222)": False,
@@ -441,7 +441,7 @@ async def test_user_options_set_multiple(
 
     # Verify that selecting two devices to configure comes back as a
     #  form with the first device to configure using it's long name as entry
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             INPUT_ENTRY_DEVICE_SELECTION: [
@@ -457,7 +457,7 @@ async def test_user_options_set_multiple(
     )
 
     # Verify that next sensor is coming up for configuration after the first
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={"precision": "temperature"},
     )
@@ -468,7 +468,7 @@ async def test_user_options_set_multiple(
     )
 
     # Verify that the setting for the device comes back as default when no input is given
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={"precision": "temperature9"},
     )
@@ -484,13 +484,13 @@ async def test_user_options_set_multiple(
 
 
 async def test_user_options_no_devices(
-    hass: HomeAssistant, config_entry: MockConfigEntry
+    menuai: menuai, config_entry: MockConfigEntry
 ) -> None:
     """Test that options does not change when no devices are available."""
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
     # Verify that first config step comes back with an empty list of possible devices to choose from
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
-    await hass.async_block_till_done()
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "no_configurable_devices"

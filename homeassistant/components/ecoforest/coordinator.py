@@ -6,9 +6,9 @@ from pyecoforest.api import EcoforestApi
 from pyecoforest.exceptions import EcoforestError
 from pyecoforest.models.device import Device
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import POLLING_INTERVAL
 
@@ -21,12 +21,12 @@ class EcoforestCoordinator(DataUpdateCoordinator[Device]):
     """DataUpdateCoordinator to gather data from ecoforest device."""
 
     def __init__(
-        self, hass: HomeAssistant, entry: EcoforestConfigEntry, api: EcoforestApi
+        self, menuai: menuai, entry: EcoforestConfigEntry, api: EcoforestApi
     ) -> None:
         """Initialize DataUpdateCoordinator."""
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
             name="ecoforest",

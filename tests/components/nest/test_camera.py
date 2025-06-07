@@ -14,15 +14,15 @@ from freezegun import freeze_time
 from google_nest_sdm.event import EventMessage
 import pytest
 
-from homeassistant.components import camera
-from homeassistant.components.camera import CameraState, StreamType
-from homeassistant.components.nest.const import DOMAIN
-from homeassistant.components.websocket_api import TYPE_RESULT
-from homeassistant.const import ATTR_FRIENDLY_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.setup import async_setup_component
-from homeassistant.util.dt import utcnow
+from menuai.components import camera
+from menuai.components.camera import CameraState, StreamType
+from menuai.components.nest.const import DOMAIN
+from menuai.components.websocket_api import TYPE_RESULT
+from menuai.const import ATTR_FRIENDLY_NAME
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.setup import async_setup_component
+from menuai.util.dt import utcnow
 
 from .common import DEVICE_ID, CreateDevice, PlatformSetup
 from .conftest import FakeAuth
@@ -150,11 +150,11 @@ def make_stream_url_response(
 
 
 @pytest.fixture
-async def mock_create_stream(hass: HomeAssistant) -> Generator[AsyncMock]:
+async def mock_create_stream(menuai: menuai) -> Generator[AsyncMock]:
     """Fixture to mock out the create stream call."""
-    assert await async_setup_component(hass, "stream", {})
+    assert await async_setup_component(menuai, "stream", {})
     with patch(
-        "homeassistant.components.camera.create_stream", autospec=True
+        "menuai.components.camera.create_stream", autospec=True
     ) as mock_stream:
         mock_stream.return_value.endpoint_url.return_value = (
             "http://home.assistant/playlist.m3u8"
@@ -166,11 +166,11 @@ async def mock_create_stream(hass: HomeAssistant) -> Generator[AsyncMock]:
 
 
 async def async_get_image(
-    hass: HomeAssistant, width: int | None = None, height: int | None = None
+    menuai: menuai, width: int | None = None, height: int | None = None
 ) -> bytes:
     """Get the camera image."""
     image = await camera.async_get_image(
-        hass, "camera.my_camera", width=width, height=height
+        menuai, "camera.my_camera", width=width, height=height
     )
     assert image.content_type == "image/jpeg"
     return image.content
@@ -190,21 +190,21 @@ async def async_frontend_stream_types(
     return msg["result"].get("frontend_stream_types")
 
 
-async def fire_alarm(hass: HomeAssistant, point_in_time: datetime.datetime) -> None:
+async def fire_alarm(menuai: menuai, point_in_time: datetime.datetime) -> None:
     """Fire an alarm and wait for callbacks to run."""
     with freeze_time(point_in_time):
-        async_fire_time_changed(hass, point_in_time)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, point_in_time)
+        await menuai.async_block_till_done()
 
 
-async def test_no_devices(hass: HomeAssistant, setup_platform: PlatformSetup) -> None:
+async def test_no_devices(menuai: menuai, setup_platform: PlatformSetup) -> None:
     """Test configuration that returns no devices."""
     await setup_platform()
-    assert len(hass.states.async_all()) == 0
+    assert len(menuai.states.async_all()) == 0
 
 
 async def test_ineligible_device(
-    hass: HomeAssistant, setup_platform: PlatformSetup, create_device: CreateDevice
+    menuai: menuai, setup_platform: PlatformSetup, create_device: CreateDevice
 ) -> None:
     """Test configuration with devices that do not support cameras."""
     create_device.create(
@@ -216,11 +216,11 @@ async def test_ineligible_device(
     )
 
     await setup_platform()
-    assert len(hass.states.async_all()) == 0
+    assert len(menuai.states.async_all()) == 0
 
 
 async def test_camera_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     setup_platform: PlatformSetup,
@@ -229,8 +229,8 @@ async def test_camera_device(
     """Test a basic camera with a live stream."""
     await setup_platform()
 
-    assert len(hass.states.async_all()) == 1
-    camera = hass.states.get("camera.my_camera")
+    assert len(menuai.states.async_all()) == 1
+    camera = menuai.states.get("camera.my_camera")
     assert camera is not None
     assert camera.state == CameraState.STREAMING
     assert camera.attributes.get(ATTR_FRIENDLY_NAME) == "My Camera"
@@ -246,36 +246,36 @@ async def test_camera_device(
 
 
 async def test_camera_stream(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_platform: PlatformSetup,
     camera_device: None,
     auth: FakeAuth,
     mock_create_stream: Mock,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test a basic camera and fetch its live stream."""
     auth.responses = [make_stream_url_response()]
     await setup_platform()
 
-    assert len(hass.states.async_all()) == 1
-    cam = hass.states.get("camera.my_camera")
+    assert len(menuai.states.async_all()) == 1
+    cam = menuai.states.get("camera.my_camera")
     assert cam is not None
     assert cam.state == CameraState.STREAMING
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     frontend_stream_types = await async_frontend_stream_types(
         client, "camera.my_camera"
     )
     assert frontend_stream_types == [StreamType.HLS]
 
-    stream_source = await camera.async_get_stream_source(hass, "camera.my_camera")
+    stream_source = await camera.async_get_stream_source(menuai, "camera.my_camera")
     assert stream_source == "rtsp://some/url?auth=g.0.streamingToken"
 
 
 async def test_camera_ws_stream(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_platform,
     camera_device,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     auth,
     mock_create_stream,
 ) -> None:
@@ -283,11 +283,11 @@ async def test_camera_ws_stream(
     auth.responses = [make_stream_url_response()]
     await setup_platform()
 
-    assert len(hass.states.async_all()) == 1
-    cam = hass.states.get("camera.my_camera")
+    assert len(menuai.states.async_all()) == 1
+    cam = menuai.states.get("camera.my_camera")
     assert cam is not None
     assert cam.state == CameraState.STREAMING
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     frontend_stream_types = await async_frontend_stream_types(
         client, "camera.my_camera"
     )
@@ -309,22 +309,22 @@ async def test_camera_ws_stream(
 
 
 async def test_camera_ws_stream_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_platform,
     camera_device,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     auth,
 ) -> None:
     """Test a basic camera that supports web rtc."""
     auth.responses = [aiohttp.web.Response(status=HTTPStatus.BAD_REQUEST)]
     await setup_platform()
 
-    assert len(hass.states.async_all()) == 1
-    cam = hass.states.get("camera.my_camera")
+    assert len(menuai.states.async_all()) == 1
+    cam = menuai.states.get("camera.my_camera")
     assert cam is not None
     assert cam.state == CameraState.STREAMING
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json(
         {
             "id": 3,
@@ -342,7 +342,7 @@ async def test_camera_ws_stream_failure(
 
 
 async def test_camera_stream_missing_trait(
-    hass: HomeAssistant, setup_platform, create_device
+    menuai: menuai, setup_platform, create_device
 ) -> None:
     """Test that cameras missing a live stream are not supported."""
     create_device.create(
@@ -360,11 +360,11 @@ async def test_camera_stream_missing_trait(
     )
     await setup_platform()
 
-    assert len(hass.states.async_all()) == 0
+    assert len(menuai.states.async_all()) == 0
 
 
 async def test_refresh_expired_stream_token(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_platform: PlatformSetup,
     auth: FakeAuth,
     camera_device: None,
@@ -383,65 +383,65 @@ async def test_refresh_expired_stream_token(
         make_stream_url_response(stream_3_expiration, token_num=3),
     ]
     await setup_platform()
-    assert await async_setup_component(hass, "stream", {})
+    assert await async_setup_component(menuai, "stream", {})
 
-    assert len(hass.states.async_all()) == 1
-    cam = hass.states.get("camera.my_camera")
+    assert len(menuai.states.async_all()) == 1
+    cam = menuai.states.get("camera.my_camera")
     assert cam is not None
     assert cam.state == CameraState.STREAMING
 
     # Request a stream for the camera entity to exercise nest cam + camera interaction
     # and shutdown on url expiration
-    with patch("homeassistant.components.camera.create_stream") as create_stream:
+    with patch("menuai.components.camera.create_stream") as create_stream:
         create_stream.return_value.start = AsyncMock()
-        hls_url = await camera.async_request_stream(hass, "camera.my_camera", fmt="hls")
+        hls_url = await camera.async_request_stream(menuai, "camera.my_camera", fmt="hls")
         assert hls_url.startswith("/api/hls/")  # Includes access token
         assert create_stream.called
 
-    stream_source = await camera.async_get_stream_source(hass, "camera.my_camera")
+    stream_source = await camera.async_get_stream_source(menuai, "camera.my_camera")
     assert stream_source == "rtsp://some/url?auth=g.1.streamingToken"
 
     # Fire alarm before stream_1_expiration. The stream url is not refreshed
     next_update = now + datetime.timedelta(seconds=25)
-    await fire_alarm(hass, next_update)
-    stream_source = await camera.async_get_stream_source(hass, "camera.my_camera")
+    await fire_alarm(menuai, next_update)
+    stream_source = await camera.async_get_stream_source(menuai, "camera.my_camera")
     assert stream_source == "rtsp://some/url?auth=g.1.streamingToken"
 
     # Alarm is near stream_1_expiration which causes the stream extension
     next_update = now + datetime.timedelta(seconds=65)
-    await fire_alarm(hass, next_update)
-    stream_source = await camera.async_get_stream_source(hass, "camera.my_camera")
+    await fire_alarm(menuai, next_update)
+    stream_source = await camera.async_get_stream_source(menuai, "camera.my_camera")
     assert stream_source == "rtsp://some/url?auth=g.2.streamingToken"
 
     # HLS stream is not re-created, just the source is updated
-    with patch("homeassistant.components.camera.create_stream") as create_stream:
+    with patch("menuai.components.camera.create_stream") as create_stream:
         hls_url1 = await camera.async_request_stream(
-            hass, "camera.my_camera", fmt="hls"
+            menuai, "camera.my_camera", fmt="hls"
         )
         assert hls_url == hls_url1
 
     # Next alarm is well before stream_2_expiration, no change
     next_update = now + datetime.timedelta(seconds=100)
-    await fire_alarm(hass, next_update)
-    stream_source = await camera.async_get_stream_source(hass, "camera.my_camera")
+    await fire_alarm(menuai, next_update)
+    stream_source = await camera.async_get_stream_source(menuai, "camera.my_camera")
     assert stream_source == "rtsp://some/url?auth=g.2.streamingToken"
 
     # Alarm is near stream_2_expiration, causing it to be extended
     next_update = now + datetime.timedelta(seconds=155)
-    await fire_alarm(hass, next_update)
-    stream_source = await camera.async_get_stream_source(hass, "camera.my_camera")
+    await fire_alarm(menuai, next_update)
+    stream_source = await camera.async_get_stream_source(menuai, "camera.my_camera")
     assert stream_source == "rtsp://some/url?auth=g.3.streamingToken"
 
     # HLS stream is still not re-created
-    with patch("homeassistant.components.camera.create_stream") as create_stream:
+    with patch("menuai.components.camera.create_stream") as create_stream:
         hls_url2 = await camera.async_request_stream(
-            hass, "camera.my_camera", fmt="hls"
+            menuai, "camera.my_camera", fmt="hls"
         )
         assert hls_url == hls_url2
 
 
 async def test_stream_response_already_expired(
-    hass: HomeAssistant,
+    menuai: menuai,
     auth: FakeAuth,
     setup_platform: PlatformSetup,
     camera_device: None,
@@ -456,24 +456,24 @@ async def test_stream_response_already_expired(
     ]
     await setup_platform()
 
-    assert len(hass.states.async_all()) == 1
-    cam = hass.states.get("camera.my_camera")
+    assert len(menuai.states.async_all()) == 1
+    cam = menuai.states.get("camera.my_camera")
     assert cam is not None
     assert cam.state == CameraState.STREAMING
 
     # The stream is expired, but we return it anyway
-    stream_source = await camera.async_get_stream_source(hass, "camera.my_camera")
+    stream_source = await camera.async_get_stream_source(menuai, "camera.my_camera")
     assert stream_source == "rtsp://some/url?auth=g.1.streamingToken"
 
-    await fire_alarm(hass, now)
+    await fire_alarm(menuai, now)
 
     # Second attempt sees that the stream is expired and refreshes
-    stream_source = await camera.async_get_stream_source(hass, "camera.my_camera")
+    stream_source = await camera.async_get_stream_source(menuai, "camera.my_camera")
     assert stream_source == "rtsp://some/url?auth=g.2.streamingToken"
 
 
 async def test_extending_stream_already_expired(
-    hass: HomeAssistant,
+    menuai: menuai,
     auth: FakeAuth,
     setup_platform: PlatformSetup,
     camera_device: None,
@@ -490,34 +490,34 @@ async def test_extending_stream_already_expired(
     ]
     await setup_platform()
 
-    assert len(hass.states.async_all()) == 1
-    cam = hass.states.get("camera.my_camera")
+    assert len(menuai.states.async_all()) == 1
+    cam = menuai.states.get("camera.my_camera")
     assert cam is not None
     assert cam.state == CameraState.STREAMING
 
     # The stream is expired, but we return it anyway
-    stream_source = await camera.async_get_stream_source(hass, "camera.my_camera")
+    stream_source = await camera.async_get_stream_source(menuai, "camera.my_camera")
     assert stream_source == "rtsp://some/url?auth=g.1.streamingToken"
 
     # Jump to when the stream will be refreshed
-    await fire_alarm(hass, now + datetime.timedelta(seconds=160))
-    stream_source = await camera.async_get_stream_source(hass, "camera.my_camera")
+    await fire_alarm(menuai, now + datetime.timedelta(seconds=160))
+    stream_source = await camera.async_get_stream_source(menuai, "camera.my_camera")
     assert stream_source == "rtsp://some/url?auth=g.2.streamingToken"
 
     # The stream will have expired in the past, but 1 minute min refresh interval is applied.
     # The stream token is not updated.
-    await fire_alarm(hass, now + datetime.timedelta(seconds=170))
-    stream_source = await camera.async_get_stream_source(hass, "camera.my_camera")
+    await fire_alarm(menuai, now + datetime.timedelta(seconds=170))
+    stream_source = await camera.async_get_stream_source(menuai, "camera.my_camera")
     assert stream_source == "rtsp://some/url?auth=g.2.streamingToken"
 
     # Now go past the min update interval and the stream is refreshed
-    await fire_alarm(hass, now + datetime.timedelta(seconds=225))
-    stream_source = await camera.async_get_stream_source(hass, "camera.my_camera")
+    await fire_alarm(menuai, now + datetime.timedelta(seconds=225))
+    stream_source = await camera.async_get_stream_source(menuai, "camera.my_camera")
     assert stream_source == "rtsp://some/url?auth=g.3.streamingToken"
 
 
 async def test_camera_removed(
-    hass: HomeAssistant,
+    menuai: menuai,
     auth: FakeAuth,
     camera_device: None,
     setup_platform: PlatformSetup,
@@ -525,8 +525,8 @@ async def test_camera_removed(
     """Test case where entities are removed and stream tokens revoked."""
     await setup_platform()
 
-    assert len(hass.states.async_all()) == 1
-    cam = hass.states.get("camera.my_camera")
+    assert len(menuai.states.async_all()) == 1
+    cam = menuai.states.get("camera.my_camera")
     assert cam is not None
     assert cam.state == CameraState.STREAMING
 
@@ -535,17 +535,17 @@ async def test_camera_removed(
         make_stream_url_response(),
         aiohttp.web.json_response({"results": {}}),
     ]
-    stream_source = await camera.async_get_stream_source(hass, "camera.my_camera")
+    stream_source = await camera.async_get_stream_source(menuai, "camera.my_camera")
     assert stream_source == "rtsp://some/url?auth=g.0.streamingToken"
 
-    for config_entry in hass.config_entries.async_entries(DOMAIN):
-        await hass.config_entries.async_remove(config_entry.entry_id)
-    await hass.async_block_till_done()
-    assert len(hass.states.async_all()) == 0
+    for config_entry in menuai.config_entries.async_entries(DOMAIN):
+        await menuai.config_entries.async_remove(config_entry.entry_id)
+    await menuai.async_block_till_done()
+    assert len(menuai.states.async_all()) == 0
 
 
 async def test_camera_remove_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     auth: FakeAuth,
     camera_device: None,
     setup_platform: PlatformSetup,
@@ -553,8 +553,8 @@ async def test_camera_remove_failure(
     """Test case where revoking the stream token fails on unload."""
     await setup_platform()
 
-    assert len(hass.states.async_all()) == 1
-    cam = hass.states.get("camera.my_camera")
+    assert len(menuai.states.async_all()) == 1
+    cam = menuai.states.get("camera.my_camera")
     assert cam is not None
     assert cam.state == CameraState.STREAMING
 
@@ -564,18 +564,18 @@ async def test_camera_remove_failure(
         # Stop command will get a failure response
         aiohttp.web.Response(status=HTTPStatus.INTERNAL_SERVER_ERROR),
     ]
-    stream_source = await camera.async_get_stream_source(hass, "camera.my_camera")
+    stream_source = await camera.async_get_stream_source(menuai, "camera.my_camera")
     assert stream_source == "rtsp://some/url?auth=g.0.streamingToken"
 
     # Unload should succeed even if an RPC fails
-    for config_entry in hass.config_entries.async_entries(DOMAIN):
-        await hass.config_entries.async_remove(config_entry.entry_id)
-    await hass.async_block_till_done()
-    assert len(hass.states.async_all()) == 0
+    for config_entry in menuai.config_entries.async_entries(DOMAIN):
+        await menuai.config_entries.async_remove(config_entry.entry_id)
+    await menuai.async_block_till_done()
+    assert len(menuai.states.async_all()) == 0
 
 
 async def test_refresh_expired_stream_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     auth: FakeAuth,
     setup_platform: PlatformSetup,
     camera_device: None,
@@ -592,39 +592,39 @@ async def test_refresh_expired_stream_failure(
         make_stream_url_response(expiration=stream_2_expiration, token_num=2),
     ]
     await setup_platform()
-    assert await async_setup_component(hass, "stream", {})
+    assert await async_setup_component(menuai, "stream", {})
 
-    assert len(hass.states.async_all()) == 1
-    cam = hass.states.get("camera.my_camera")
+    assert len(menuai.states.async_all()) == 1
+    cam = menuai.states.get("camera.my_camera")
     assert cam is not None
     assert cam.state == CameraState.STREAMING
 
     # Request an HLS stream
-    with patch("homeassistant.components.camera.create_stream") as create_stream:
+    with patch("menuai.components.camera.create_stream") as create_stream:
         create_stream.return_value.start = AsyncMock()
         create_stream.return_value.stop = AsyncMock()
-        hls_url = await camera.async_request_stream(hass, "camera.my_camera", fmt="hls")
+        hls_url = await camera.async_request_stream(menuai, "camera.my_camera", fmt="hls")
         assert hls_url.startswith("/api/hls/")  # Includes access token
         assert create_stream.called
 
-    stream_source = await camera.async_get_stream_source(hass, "camera.my_camera")
+    stream_source = await camera.async_get_stream_source(menuai, "camera.my_camera")
     assert stream_source == "rtsp://some/url?auth=g.1.streamingToken"
 
     # Fire alarm when stream is nearing expiration, causing it to be extended.
     # The stream expires.
     next_update = now + datetime.timedelta(seconds=65)
-    await fire_alarm(hass, next_update)
+    await fire_alarm(menuai, next_update)
 
     # The stream is entirely refreshed
-    stream_source = await camera.async_get_stream_source(hass, "camera.my_camera")
+    stream_source = await camera.async_get_stream_source(menuai, "camera.my_camera")
     assert stream_source == "rtsp://some/url?auth=g.2.streamingToken"
 
     # Requesting an HLS stream will create an entirely new stream
-    with patch("homeassistant.components.camera.create_stream") as create_stream:
+    with patch("menuai.components.camera.create_stream") as create_stream:
         create_stream.return_value.start = AsyncMock()
         # The HLS stream endpoint was invalidated, with a new auth token
         hls_url2 = await camera.async_request_stream(
-            hass, "camera.my_camera", fmt="hls"
+            menuai, "camera.my_camera", fmt="hls"
         )
         assert hls_url != hls_url2
         assert hls_url2.startswith("/api/hls/")  # Includes access token
@@ -633,9 +633,9 @@ async def test_refresh_expired_stream_failure(
 
 @pytest.mark.usefixtures("webrtc_camera_device")
 async def test_camera_web_rtc(
-    hass: HomeAssistant,
+    menuai: menuai,
     auth,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     setup_platform,
 ) -> None:
     """Test a basic camera that supports web rtc."""
@@ -653,16 +653,16 @@ async def test_camera_web_rtc(
     ]
     await setup_platform()
 
-    assert len(hass.states.async_all()) == 1
-    cam = hass.states.get("camera.my_camera")
+    assert len(menuai.states.async_all()) == 1
+    cam = menuai.states.get("camera.my_camera")
     assert cam is not None
     assert cam.state == CameraState.STREAMING
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     assert await async_frontend_stream_types(client, "camera.my_camera") == [
         StreamType.WEB_RTC
     ]
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json_auto_id(
         {
             "type": "camera/webrtc/offer",
@@ -692,25 +692,25 @@ async def test_camera_web_rtc(
     }
 
     # Nest WebRTC cameras return a placeholder
-    await async_get_image(hass)
-    await async_get_image(hass, width=1024, height=768)
+    await async_get_image(menuai)
+    await async_get_image(menuai, width=1024, height=768)
 
 
 @pytest.mark.usefixtures("auth", "camera_device")
 async def test_camera_web_rtc_unsupported(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     setup_platform,
 ) -> None:
     """Test a basic camera that supports web rtc."""
     await setup_platform()
 
-    assert len(hass.states.async_all()) == 1
-    cam = hass.states.get("camera.my_camera")
+    assert len(menuai.states.async_all()) == 1
+    cam = menuai.states.get("camera.my_camera")
     assert cam is not None
     assert cam.state == CameraState.STREAMING
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     assert await async_frontend_stream_types(client, "camera.my_camera") == [
         StreamType.HLS
     ]
@@ -734,9 +734,9 @@ async def test_camera_web_rtc_unsupported(
 
 @pytest.mark.usefixtures("webrtc_camera_device")
 async def test_camera_web_rtc_offer_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     auth,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     setup_platform,
 ) -> None:
     """Test a basic camera that supports web rtc."""
@@ -745,12 +745,12 @@ async def test_camera_web_rtc_offer_failure(
     ]
     await setup_platform()
 
-    assert len(hass.states.async_all()) == 1
-    cam = hass.states.get("camera.my_camera")
+    assert len(menuai.states.async_all()) == 1
+    cam = menuai.states.get("camera.my_camera")
     assert cam is not None
     assert cam.state == CameraState.STREAMING
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json_auto_id(
         {
             "type": "camera/webrtc/offer",
@@ -783,9 +783,9 @@ async def test_camera_web_rtc_offer_failure(
 
 @pytest.mark.usefixtures("mock_create_stream")
 async def test_camera_multiple_streams(
-    hass: HomeAssistant,
+    menuai: menuai,
     auth,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     create_device,
     setup_platform,
 ) -> None:
@@ -821,22 +821,22 @@ async def test_camera_multiple_streams(
     )
     await setup_platform()
 
-    assert len(hass.states.async_all()) == 1
-    cam = hass.states.get("camera.my_camera")
+    assert len(menuai.states.async_all()) == 1
+    cam = menuai.states.get("camera.my_camera")
     assert cam is not None
     assert cam.state == CameraState.STREAMING
     # Prefer WebRTC over RTSP/HLS
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     assert await async_frontend_stream_types(client, "camera.my_camera") == [
         StreamType.WEB_RTC
     ]
 
     # RTSP stream is not supported
-    stream_source = await camera.async_get_stream_source(hass, "camera.my_camera")
+    stream_source = await camera.async_get_stream_source(menuai, "camera.my_camera")
     assert not stream_source
 
     # WebRTC stream
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json_auto_id(
         {
             "type": "camera/webrtc/offer",
@@ -868,9 +868,9 @@ async def test_camera_multiple_streams(
 
 @pytest.mark.usefixtures("webrtc_camera_device")
 async def test_webrtc_refresh_expired_stream(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_platform: PlatformSetup,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     auth: FakeAuth,
 ) -> None:
     """Test a camera webrtc expiration and refresh."""
@@ -898,18 +898,18 @@ async def test_webrtc_refresh_expired_stream(
         ),
     ]
     await setup_platform()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == 1
-    cam = hass.states.get("camera.my_camera")
+    assert len(menuai.states.async_all()) == 1
+    cam = menuai.states.get("camera.my_camera")
     assert cam is not None
     assert cam.state == CameraState.STREAMING
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     assert await async_frontend_stream_types(client, "camera.my_camera") == [
         StreamType.WEB_RTC
     ]
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json_auto_id(
         {
             "type": "camera/webrtc/offer",
@@ -946,12 +946,12 @@ async def test_webrtc_refresh_expired_stream(
 
     # Fire alarm before stream_1_expiration. The stream url is not refreshed
     next_update = now + datetime.timedelta(seconds=25)
-    await fire_alarm(hass, next_update)
+    await fire_alarm(menuai, next_update)
     assert len(auth.captured_requests) == 1
 
     # Alarm is near stream_1_expiration which causes the stream extension
     next_update = now + datetime.timedelta(seconds=60)
-    await fire_alarm(hass, next_update)
+    await fire_alarm(menuai, next_update)
 
     assert len(auth.captured_requests) >= 2
     assert (

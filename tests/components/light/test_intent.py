@@ -1,30 +1,30 @@
 """Tests for the light intents."""
 
-from homeassistant.components import light
-from homeassistant.components.light import ATTR_SUPPORTED_COLOR_MODES, ColorMode, intent
-from homeassistant.const import ATTR_ENTITY_ID, SERVICE_TURN_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.intent import async_handle
+from menuai.components import light
+from menuai.components.light import ATTR_SUPPORTED_COLOR_MODES, ColorMode, intent
+from menuai.const import ATTR_ENTITY_ID, SERVICE_TURN_ON
+from menuai.core import menuai
+from menuai.helpers.intent import async_handle
 
 from tests.common import async_mock_service
 
 
-async def test_intent_set_color(hass: HomeAssistant) -> None:
+async def test_intent_set_color(menuai: menuai) -> None:
     """Test the set color intent."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "light.hello_2", "off", {ATTR_SUPPORTED_COLOR_MODES: [ColorMode.HS]}
     )
-    hass.states.async_set("switch.hello", "off")
-    calls = async_mock_service(hass, light.DOMAIN, light.SERVICE_TURN_ON)
-    await intent.async_setup_intents(hass)
+    menuai.states.async_set("switch.hello", "off")
+    calls = async_mock_service(menuai, light.DOMAIN, light.SERVICE_TURN_ON)
+    await intent.async_setup_intents(menuai)
 
     await async_handle(
-        hass,
+        menuai,
         "test",
         intent.INTENT_SET,
         {"name": {"value": "Hello 2"}, "color": {"value": "blue"}},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(calls) == 1
     call = calls[0]
@@ -34,17 +34,17 @@ async def test_intent_set_color(hass: HomeAssistant) -> None:
     assert call.data.get(light.ATTR_RGB_COLOR) == (0, 0, 255)
 
 
-async def test_intent_set_color_and_brightness(hass: HomeAssistant) -> None:
+async def test_intent_set_color_and_brightness(menuai: menuai) -> None:
     """Test the set color intent."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "light.hello_2", "off", {ATTR_SUPPORTED_COLOR_MODES: [ColorMode.HS]}
     )
-    hass.states.async_set("switch.hello", "off")
-    calls = async_mock_service(hass, light.DOMAIN, light.SERVICE_TURN_ON)
-    await intent.async_setup_intents(hass)
+    menuai.states.async_set("switch.hello", "off")
+    calls = async_mock_service(menuai, light.DOMAIN, light.SERVICE_TURN_ON)
+    await intent.async_setup_intents(menuai)
 
     await async_handle(
-        hass,
+        menuai,
         "test",
         intent.INTENT_SET,
         {
@@ -53,7 +53,7 @@ async def test_intent_set_color_and_brightness(hass: HomeAssistant) -> None:
             "brightness": {"value": "20"},
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(calls) == 1
     call = calls[0]
@@ -64,16 +64,16 @@ async def test_intent_set_color_and_brightness(hass: HomeAssistant) -> None:
     assert call.data.get(light.ATTR_BRIGHTNESS_PCT) == 20
 
 
-async def test_intent_set_temperature(hass: HomeAssistant) -> None:
+async def test_intent_set_temperature(menuai: menuai) -> None:
     """Test setting the color temperature in kevin via intent."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "light.test", "off", {ATTR_SUPPORTED_COLOR_MODES: [ColorMode.COLOR_TEMP]}
     )
-    calls = async_mock_service(hass, light.DOMAIN, light.SERVICE_TURN_ON)
-    await intent.async_setup_intents(hass)
+    calls = async_mock_service(menuai, light.DOMAIN, light.SERVICE_TURN_ON)
+    await intent.async_setup_intents(menuai)
 
     await async_handle(
-        hass,
+        menuai,
         "test",
         intent.INTENT_SET,
         {
@@ -81,7 +81,7 @@ async def test_intent_set_temperature(hass: HomeAssistant) -> None:
             "temperature": {"value": 2000},
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(calls) == 1
     call = calls[0]

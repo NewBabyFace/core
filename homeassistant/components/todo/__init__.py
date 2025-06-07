@@ -11,24 +11,24 @@ from typing import Any, final
 from propcache.api import cached_property
 import voluptuous as vol
 
-from homeassistant.components import frontend, websocket_api
-from homeassistant.components.websocket_api import ERR_NOT_FOUND, ERR_NOT_SUPPORTED
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_ENTITY_ID
-from homeassistant.core import (
+from menuai.components import frontend, websocket_api
+from menuai.components.websocket_api import ERR_NOT_FOUND, ERR_NOT_SUPPORTED
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_ENTITY_ID
+from menuai.core import (
     CALLBACK_TYPE,
-    HomeAssistant,
+    menuai,
     ServiceCall,
     SupportsResponse,
     callback,
 )
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util import dt as dt_util
-from homeassistant.util.json import JsonValueType
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity import Entity
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.typing import ConfigType
+from menuai.util import dt as dt_util
+from menuai.util.json import JsonValueType
 
 from .const import (
     ATTR_DESCRIPTION,
@@ -118,17 +118,17 @@ def _validate_supported_features(
             )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up Todo entities."""
-    component = hass.data[DATA_COMPONENT] = EntityComponent[TodoListEntity](
-        _LOGGER, DOMAIN, hass, SCAN_INTERVAL
+    component = menuai.data[DATA_COMPONENT] = EntityComponent[TodoListEntity](
+        _LOGGER, DOMAIN, menuai, SCAN_INTERVAL
     )
 
-    frontend.async_register_built_in_panel(hass, "todo", "todo", "mdi:clipboard-list")
+    frontend.async_register_built_in_panel(menuai, "todo", "todo", "mdi:clipboard-list")
 
-    websocket_api.async_register_command(hass, websocket_handle_subscribe_todo_items)
-    websocket_api.async_register_command(hass, websocket_handle_todo_item_list)
-    websocket_api.async_register_command(hass, websocket_handle_todo_item_move)
+    websocket_api.async_register_command(menuai, websocket_handle_subscribe_todo_items)
+    websocket_api.async_register_command(menuai, websocket_handle_todo_item_list)
+    websocket_api.async_register_command(menuai, websocket_handle_todo_item_move)
 
     component.async_register_entity_service(
         TodoServices.ADD_ITEM,
@@ -198,14 +198,14 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up a config entry."""
-    return await hass.data[DATA_COMPONENT].async_setup_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_setup_entry(entry)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.data[DATA_COMPONENT].async_unload_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_unload_entry(entry)
 
 
 @dataclasses.dataclass
@@ -324,12 +324,12 @@ class TodoListEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 )
 @websocket_api.async_response
 async def websocket_handle_subscribe_todo_items(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Subscribe to To-do list item updates."""
     entity_id: str = msg["entity_id"]
 
-    if not (entity := hass.data[DATA_COMPONENT].get_entity(entity_id)):
+    if not (entity := menuai.data[DATA_COMPONENT].get_entity(entity_id)):
         connection.send_error(
             msg["id"],
             "invalid_entity_id",
@@ -379,12 +379,12 @@ def _api_items_factory(obj: Iterable[tuple[str, Any]]) -> dict[str, str]:
 )
 @websocket_api.async_response
 async def websocket_handle_todo_item_list(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle the list of To-do items in a To-do- list."""
     if (
         not (entity_id := msg[CONF_ENTITY_ID])
-        or not (entity := hass.data[DATA_COMPONENT].get_entity(entity_id))
+        or not (entity := menuai.data[DATA_COMPONENT].get_entity(entity_id))
         or not isinstance(entity, TodoListEntity)
     ):
         connection.send_error(msg["id"], ERR_NOT_FOUND, "Entity not found")
@@ -414,10 +414,10 @@ async def websocket_handle_todo_item_list(
 )
 @websocket_api.async_response
 async def websocket_handle_todo_item_move(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle move of a To-do item within a To-do list."""
-    if not (entity := hass.data[DATA_COMPONENT].get_entity(msg["entity_id"])):
+    if not (entity := menuai.data[DATA_COMPONENT].get_entity(msg["entity_id"])):
         connection.send_error(msg["id"], ERR_NOT_FOUND, "Entity not found")
         return
 
@@ -437,7 +437,7 @@ async def websocket_handle_todo_item_move(
         await entity.async_move_todo_item(
             uid=msg["uid"], previous_uid=msg.get("previous_uid")
         )
-    except HomeAssistantError as ex:
+    except menuaiError as ex:
         connection.send_error(msg["id"], "failed", str(ex))
     else:
         connection.send_result(msg["id"])

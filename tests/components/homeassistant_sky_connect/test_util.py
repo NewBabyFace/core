@@ -1,14 +1,14 @@
 """Test SkyConnect utilities."""
 
-from homeassistant.components.homeassistant_sky_connect.const import (
+from menuai.components.menuai_sky_connect.const import (
     DOMAIN,
     HardwareVariant,
 )
-from homeassistant.components.homeassistant_sky_connect.util import (
+from menuai.components.menuai_sky_connect.util import (
     get_hardware_variant,
     get_usb_service_info,
 )
-from homeassistant.helpers.service_info.usb import UsbServiceInfo
+from menuai.helpers.service_info.usb import UsbServiceInfo
 
 from tests.common import MockConfigEntry
 
@@ -36,7 +36,7 @@ CONNECT_ZBT1_CONFIG_ENTRY = MockConfigEntry(
         "pid": "EA60",
         "serial_number": "3c0ed67c628beb11b1cd64a0f320645d",
         "manufacturer": "Nabu Casa",
-        "product": "Home Assistant Connect ZBT-1",
+        "product": "MenuAI Connect ZBT-1",
         "firmware": "ezsp",
     },
     version=2,

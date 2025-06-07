@@ -37,8 +37,8 @@ from sqlalchemy.engine.interfaces import Dialect
 from sqlalchemy.orm import aliased, declarative_base, relationship
 from sqlalchemy.orm.session import Session
 
-from homeassistant.components.recorder.const import SupportedDialect
-from homeassistant.const import (
+from menuai.components.recorder.const import SupportedDialect
+from menuai.const import (
     ATTR_ATTRIBUTION,
     ATTR_RESTORED,
     ATTR_SUPPORTED_FEATURES,
@@ -48,11 +48,11 @@ from homeassistant.const import (
     MAX_LENGTH_STATE_ENTITY_ID,
     MAX_LENGTH_STATE_STATE,
 )
-from homeassistant.core import Context, Event, EventOrigin, State, split_entity_id
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.json import JSON_DUMP, json_bytes
-from homeassistant.util import dt as dt_util
-from homeassistant.util.json import JSON_DECODE_EXCEPTIONS, json_loads
+from menuai.core import Context, Event, EventOrigin, State, split_entity_id
+from menuai.helpers import entity_registry as er
+from menuai.helpers.json import JSON_DUMP, json_bytes
+from menuai.util import dt as dt_util
+from menuai.util.json import JSON_DECODE_EXCEPTIONS, json_loads
 
 ALL_DOMAIN_EXCLUDE_ATTRS = {ATTR_ATTRIBUTION, ATTR_RESTORED, ATTR_SUPPORTED_FEATURES}
 

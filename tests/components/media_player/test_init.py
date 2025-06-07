@@ -8,8 +8,8 @@ from unittest.mock import patch
 import pytest
 import voluptuous as vol
 
-from homeassistant.components import media_player
-from homeassistant.components.media_player import (
+from menuai.components import media_player
+from menuai.components.media_player import (
     ATTR_MEDIA_CONTENT_ID,
     ATTR_MEDIA_CONTENT_TYPE,
     ATTR_MEDIA_FILTER_CLASSES,
@@ -22,14 +22,14 @@ from homeassistant.components.media_player import (
     SearchMedia,
     SearchMediaQuery,
 )
-from homeassistant.components.media_player.const import (
+from menuai.components.media_player.const import (
     SERVICE_BROWSE_MEDIA,
     SERVICE_SEARCH_MEDIA,
 )
-from homeassistant.components.websocket_api import TYPE_RESULT
-from homeassistant.const import ATTR_ENTITY_ID, STATE_OFF
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.websocket_api import TYPE_RESULT
+from menuai.const import ATTR_ENTITY_ID, STATE_OFF
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import (
     MockEntityPlatform,
@@ -41,9 +41,9 @@ from tests.typing import ClientSessionGenerator, WebSocketGenerator
 
 
 @pytest.fixture(autouse=True)
-async def setup_homeassistant(hass: HomeAssistant):
-    """Set up the homeassistant integration."""
-    await async_setup_component(hass, "homeassistant", {})
+async def setup_menuai(menuai: menuai):
+    """Set up the menuai integration."""
+    await async_setup_component(menuai, "menuai", {})
 
 
 def _create_tuples(enum: type[Enum], constant_prefix: str) -> list[tuple[Enum, str]]:
@@ -131,27 +131,27 @@ def test_deprecated_constants_const(
         "grouping",
     ],
 )
-def test_support_properties(hass: HomeAssistant, property_suffix: str) -> None:
+def test_support_properties(menuai: menuai, property_suffix: str) -> None:
     """Test support_*** properties explicitly."""
 
     all_features = media_player.MediaPlayerEntityFeature(653887)
     feature = media_player.MediaPlayerEntityFeature[property_suffix.upper()]
 
     entity1 = MediaPlayerEntity()
-    entity1.hass = hass
-    entity1.platform = MockEntityPlatform(hass)
+    entity1.menuai = menuai
+    entity1.platform = MockEntityPlatform(menuai)
     entity1._attr_supported_features = media_player.MediaPlayerEntityFeature(0)
     entity2 = MediaPlayerEntity()
-    entity2.hass = hass
-    entity2.platform = MockEntityPlatform(hass)
+    entity2.menuai = menuai
+    entity2.platform = MockEntityPlatform(menuai)
     entity2._attr_supported_features = all_features
     entity3 = MediaPlayerEntity()
-    entity3.hass = hass
-    entity3.platform = MockEntityPlatform(hass)
+    entity3.menuai = menuai
+    entity3.platform = MockEntityPlatform(menuai)
     entity3._attr_supported_features = feature
     entity4 = MediaPlayerEntity()
-    entity4.hass = hass
-    entity4.platform = MockEntityPlatform(hass)
+    entity4.menuai = menuai
+    entity4.platform = MockEntityPlatform(menuai)
     entity4._attr_supported_features = all_features - feature
 
     assert getattr(entity1, f"support_{property_suffix}") is False
@@ -161,21 +161,21 @@ def test_support_properties(hass: HomeAssistant, property_suffix: str) -> None:
 
 
 async def test_get_image_http(
-    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+    menuai: menuai, menuai_client_no_auth: ClientSessionGenerator
 ) -> None:
     """Test get image via http command."""
     await async_setup_component(
-        hass, "media_player", {"media_player": {"platform": "demo"}}
+        menuai, "media_player", {"media_player": {"platform": "demo"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("media_player.bedroom")
+    state = menuai.states.get("media_player.bedroom")
     assert "entity_picture_local" not in state.attributes
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
 
     with patch(
-        "homeassistant.components.media_player.MediaPlayerEntity.async_get_media_image",
+        "menuai.components.media_player.MediaPlayerEntity.async_get_media_image",
         return_value=(b"image", "image/jpeg"),
     ):
         resp = await client.get(state.attributes["entity_picture"])
@@ -185,26 +185,26 @@ async def test_get_image_http(
 
 
 async def test_get_image_http_remote(
-    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+    menuai: menuai, menuai_client_no_auth: ClientSessionGenerator
 ) -> None:
     """Test get image url via http command."""
     with patch(
-        "homeassistant.components.media_player.MediaPlayerEntity."
+        "menuai.components.media_player.MediaPlayerEntity."
         "media_image_remotely_accessible",
         return_value=True,
     ):
         await async_setup_component(
-            hass, "media_player", {"media_player": {"platform": "demo"}}
+            menuai, "media_player", {"media_player": {"platform": "demo"}}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-        state = hass.states.get("media_player.bedroom")
+        state = menuai.states.get("media_player.bedroom")
         assert "entity_picture_local" in state.attributes
 
-        client = await hass_client_no_auth()
+        client = await menuai_client_no_auth()
 
         with patch(
-            "homeassistant.components.media_player.MediaPlayerEntity."
+            "menuai.components.media_player.MediaPlayerEntity."
             "async_get_media_image",
             return_value=(b"image", "image/jpeg"),
         ):
@@ -215,28 +215,28 @@ async def test_get_image_http_remote(
 
 
 async def test_get_image_http_log_credentials_redacted(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test credentials are redacted when logging url when fetching image."""
     url = "http://vi:pass@example.com/default.jpg"
     with patch(
-        "homeassistant.components.demo.media_player.DemoYoutubePlayer.media_image_url",
+        "menuai.components.demo.media_player.DemoYoutubePlayer.media_image_url",
         url,
     ):
         await async_setup_component(
-            hass, "media_player", {"media_player": {"platform": "demo"}}
+            menuai, "media_player", {"media_player": {"platform": "demo"}}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-        state = hass.states.get("media_player.bedroom")
+        state = menuai.states.get("media_player.bedroom")
         assert "entity_picture_local" not in state.attributes
 
         aioclient_mock.get(url, exc=TimeoutError())
 
-        client = await hass_client_no_auth()
+        client = await menuai_client_no_auth()
 
         resp = await client.get(state.attributes["entity_picture"])
 
@@ -249,26 +249,26 @@ async def test_get_image_http_log_credentials_redacted(
 
 
 async def test_get_async_get_browse_image(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test get browse image."""
     await async_setup_component(
-        hass, "media_player", {"media_player": {"platform": "demo"}}
+        menuai, "media_player", {"media_player": {"platform": "demo"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    entity_comp = hass.data.get("entity_components", {}).get("media_player")
+    entity_comp = menuai.data.get("entity_components", {}).get("media_player")
     assert entity_comp
 
     player = entity_comp.get_entity("media_player.bedroom")
     assert player
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
 
     with patch(
-        "homeassistant.components.media_player.MediaPlayerEntity."
+        "menuai.components.media_player.MediaPlayerEntity."
         "async_get_browse_image",
         return_value=(b"image", "image/jpeg"),
     ):
@@ -280,18 +280,18 @@ async def test_get_async_get_browse_image(
 
 
 async def test_media_browse(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test browsing media."""
     await async_setup_component(
-        hass, "media_player", {"media_player": {"platform": "demo"}}
+        menuai, "media_player", {"media_player": {"platform": "demo"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     with patch(
-        "homeassistant.components.demo.media_player.DemoBrowsePlayer.async_browse_media",
+        "menuai.components.demo.media_player.DemoBrowsePlayer.async_browse_media",
         return_value=BrowseMedia(
             media_class=MediaClass.DIRECTORY,
             media_content_id="mock-id",
@@ -332,7 +332,7 @@ async def test_media_browse(
     assert mock_browse_media.mock_calls[0][1] == ("album", "abcd")
 
     with patch(
-        "homeassistant.components.demo.media_player.DemoBrowsePlayer.async_browse_media",
+        "menuai.components.demo.media_player.DemoBrowsePlayer.async_browse_media",
         return_value={"bla": "yo"},
     ):
         await client.send_json(
@@ -351,15 +351,15 @@ async def test_media_browse(
     assert msg["result"] == {"bla": "yo"}
 
 
-async def test_media_browse_service(hass: HomeAssistant) -> None:
+async def test_media_browse_service(menuai: menuai) -> None:
     """Test browsing media using service call."""
     await async_setup_component(
-        hass, "media_player", {"media_player": {"platform": "demo"}}
+        menuai, "media_player", {"media_player": {"platform": "demo"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     with patch(
-        "homeassistant.components.demo.media_player.DemoBrowsePlayer.async_browse_media",
+        "menuai.components.demo.media_player.DemoBrowsePlayer.async_browse_media",
         return_value=BrowseMedia(
             media_class=MediaClass.DIRECTORY,
             media_content_id="mock-id",
@@ -387,7 +387,7 @@ async def test_media_browse_service(hass: HomeAssistant) -> None:
             ],
         ),
     ) as mock_browse_media:
-        result = await hass.services.async_call(
+        result = await menuai.services.async_call(
             "media_player",
             SERVICE_BROWSE_MEDIA,
             {
@@ -421,18 +421,18 @@ async def test_media_browse_service(hass: HomeAssistant) -> None:
 
 
 async def test_media_search(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test browsing media."""
     await async_setup_component(
-        hass, "media_player", {"media_player": {"platform": "demo"}}
+        menuai, "media_player", {"media_player": {"platform": "demo"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     with patch(
-        "homeassistant.components.demo.media_player.DemoSearchPlayer.async_search_media",
+        "menuai.components.demo.media_player.DemoSearchPlayer.async_search_media",
         return_value=SearchMedia(
             result=[
                 BrowseMedia(
@@ -486,12 +486,12 @@ async def test_media_search(
     )
 
 
-async def test_media_search_service(hass: HomeAssistant) -> None:
+async def test_media_search_service(menuai: menuai) -> None:
     """Test browsing media."""
     await async_setup_component(
-        hass, "media_player", {"media_player": {"platform": "demo"}}
+        menuai, "media_player", {"media_player": {"platform": "demo"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     expected = [
         BrowseMedia(
             media_class=MediaClass.DIRECTORY,
@@ -505,10 +505,10 @@ async def test_media_search_service(hass: HomeAssistant) -> None:
     ]
 
     with patch(
-        "homeassistant.components.demo.media_player.DemoSearchPlayer.async_search_media",
+        "menuai.components.demo.media_player.DemoSearchPlayer.async_search_media",
         return_value=SearchMedia(result=expected),
     ) as mock_search_media:
-        result = await hass.services.async_call(
+        result = await menuai.services.async_call(
             "media_player",
             SERVICE_SEARCH_MEDIA,
             {
@@ -533,21 +533,21 @@ async def test_media_search_service(hass: HomeAssistant) -> None:
     )
 
 
-async def test_group_members_available_when_off(hass: HomeAssistant) -> None:
+async def test_group_members_available_when_off(menuai: menuai) -> None:
     """Test that group_members are still available when media_player is off."""
     await async_setup_component(
-        hass, "media_player", {"media_player": {"platform": "demo"}}
+        menuai, "media_player", {"media_player": {"platform": "demo"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "media_player",
         "turn_off",
         {ATTR_ENTITY_ID: "media_player.group"},
         blocking=True,
     )
 
-    state = hass.states.get("media_player.group")
+    state = menuai.states.get("media_player.group")
     assert state.state == STATE_OFF
     assert "group_members" in state.attributes
 
@@ -563,18 +563,18 @@ async def test_group_members_available_when_off(hass: HomeAssistant) -> None:
         ("replace", MediaPlayerEnqueue.REPLACE),
     ],
 )
-async def test_enqueue_rewrite(hass: HomeAssistant, input, expected) -> None:
+async def test_enqueue_rewrite(menuai: menuai, input, expected) -> None:
     """Test that group_members are still available when media_player is off."""
     await async_setup_component(
-        hass, "media_player", {"media_player": {"platform": "demo"}}
+        menuai, "media_player", {"media_player": {"platform": "demo"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Fake group support for DemoYoutubePlayer
     with patch(
-        "homeassistant.components.demo.media_player.DemoYoutubePlayer.play_media",
+        "menuai.components.demo.media_player.DemoYoutubePlayer.play_media",
     ) as mock_play_media:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "media_player",
             "play_media",
             {
@@ -590,15 +590,15 @@ async def test_enqueue_rewrite(hass: HomeAssistant, input, expected) -> None:
     assert mock_play_media.mock_calls[0][2]["enqueue"] == expected
 
 
-async def test_enqueue_alert_exclusive(hass: HomeAssistant) -> None:
+async def test_enqueue_alert_exclusive(menuai: menuai) -> None:
     """Test that alert and enqueue cannot be used together."""
     await async_setup_component(
-        hass, "media_player", {"media_player": {"platform": "demo"}}
+        menuai, "media_player", {"media_player": {"platform": "demo"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     with pytest.raises(vol.Invalid):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "media_player",
             "play_media",
             {
@@ -622,9 +622,9 @@ async def test_enqueue_alert_exclusive(hass: HomeAssistant) -> None:
     ],
 )
 async def test_get_async_get_browse_image_quoting(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
+    menuai_ws_client: WebSocketGenerator,
     media_content_id: str,
 ) -> None:
     """Test get browse image using media_content_id with special characters.
@@ -633,20 +633,20 @@ async def test_get_async_get_browse_image_quoting(
     passed into get_browse_image_url().
     """
     await async_setup_component(
-        hass, "media_player", {"media_player": {"platform": "demo"}}
+        menuai, "media_player", {"media_player": {"platform": "demo"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    entity_comp = hass.data.get("entity_components", {}).get("media_player")
+    entity_comp = menuai.data.get("entity_components", {}).get("media_player")
     assert entity_comp
 
     player = entity_comp.get_entity("media_player.bedroom")
     assert player
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
 
     with patch(
-        "homeassistant.components.media_player.MediaPlayerEntity."
+        "menuai.components.media_player.MediaPlayerEntity."
         "async_get_browse_image",
     ) as mock_browse_image:
         url = player.get_browse_image_url("album", media_content_id)
@@ -655,7 +655,7 @@ async def test_get_async_get_browse_image_quoting(
 
 
 def test_deprecated_supported_features_ints(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test deprecated supported features ints."""
 
@@ -666,8 +666,8 @@ def test_deprecated_supported_features_ints(
             return 1
 
     entity = MockMediaPlayerEntity()
-    entity.hass = hass
-    entity.platform = MockEntityPlatform(hass)
+    entity.menuai = menuai
+    entity.platform = MockEntityPlatform(menuai)
     assert entity.supported_features_compat is MediaPlayerEntityFeature(1)
     assert "MockMediaPlayerEntity" in caplog.text
     assert "is using deprecated supported features values" in caplog.text

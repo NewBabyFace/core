@@ -2,9 +2,9 @@
 
 from pylutron import Keypad, Lutron, LutronEntity, LutronEvent
 
-from homeassistant.const import ATTR_IDENTIFIERS, ATTR_VIA_DEVICE
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity
+from menuai.const import ATTR_IDENTIFIERS, ATTR_VIA_DEVICE
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity
 
 from .const import DOMAIN
 
@@ -23,7 +23,7 @@ class LutronBaseEntity(Entity):
         self._controller = controller
         self._area_name = area_name
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
         self._lutron_device.subscribe(self._update_callback, None)
 

@@ -8,27 +8,27 @@ from urllib.parse import urlparse
 from ndms2_client import Client, ConnectionException, InterfaceInfo, TelnetConnection
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
     CONF_SCAN_INTERVAL,
     CONF_USERNAME,
 )
-from homeassistant.core import callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.service_info.ssdp import (
+from menuai.core import callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.service_info.ssdp import (
     ATTR_UPNP_FRIENDLY_NAME,
     ATTR_UPNP_UDN,
     SsdpServiceInfo,
 )
-from homeassistant.helpers.typing import VolDictType
+from menuai.helpers.typing import VolDictType
 
 from .const import (
     CONF_CONSIDER_HOME,
@@ -81,7 +81,7 @@ class KeeneticFlowHandler(ConfigFlow, domain=DOMAIN):
             )
 
             try:
-                router_info = await self.hass.async_add_executor_job(
+                router_info = await self.menuai.async_add_executor_job(
                     _client.get_router_info
                 )
             except ConnectionException:
@@ -150,11 +150,11 @@ class KeeneticOptionsFlowHandler(OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Manage the options."""
-        router: KeeneticRouter = self.hass.data[DOMAIN][self.config_entry.entry_id][
+        router: KeeneticRouter = self.menuai.data[DOMAIN][self.config_entry.entry_id][
             ROUTER
         ]
 
-        interfaces: list[InterfaceInfo] = await self.hass.async_add_executor_job(
+        interfaces: list[InterfaceInfo] = await self.menuai.async_add_executor_job(
             router.client.get_interfaces
         )
 

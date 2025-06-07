@@ -9,12 +9,12 @@ import logging
 from pylitterbot import Account, FeederRobot, LitterRobot
 from pylitterbot.exceptions import LitterRobotException, LitterRobotLoginException
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN
 
@@ -31,18 +31,18 @@ class LitterRobotDataUpdateCoordinator(DataUpdateCoordinator[None]):
     config_entry: LitterRobotConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: LitterRobotConfigEntry
+        self, menuai: menuai, config_entry: LitterRobotConfigEntry
     ) -> None:
         """Initialize the Litter-Robot data update coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
             update_interval=UPDATE_INTERVAL,
         )
 
-        self.account = Account(websession=async_get_clientsession(hass))
+        self.account = Account(websession=async_get_clientsession(menuai))
 
     async def _async_update_data(self) -> None:
         """Update all device states from the Litter-Robot API."""

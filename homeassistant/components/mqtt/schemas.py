@@ -6,7 +6,7 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_DEVICE,
     CONF_ENTITY_CATEGORY,
     CONF_ICON,
@@ -17,9 +17,9 @@ from homeassistant.const import (
     CONF_UNIQUE_ID,
     CONF_VALUE_TEMPLATE,
 )
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity import ENTITY_CATEGORIES_SCHEMA
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity import ENTITY_CATEGORIES_SCHEMA
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     AVAILABILITY_LATEST,

@@ -9,11 +9,11 @@ from typing import Any, Generic, TypeVar, cast
 from pyprusalink import JobInfo, LegacyPrinterStatus, PrinterStatus, PrusaLink
 from pyprusalink.types import Conflict, PrinterState
 
-from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.button import ButtonEntity, ButtonEntityDescription
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import PrusaLinkUpdateCoordinator
@@ -70,12 +70,12 @@ BUTTONS: dict[str, tuple[PrusaLinkButtonEntityDescription, ...]] = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up PrusaLink buttons based on a config entry."""
-    coordinators: dict[str, PrusaLinkUpdateCoordinator] = hass.data[DOMAIN][
+    coordinators: dict[str, PrusaLinkUpdateCoordinator] = menuai.data[DOMAIN][
         entry.entry_id
     ]
 
@@ -120,11 +120,11 @@ class PrusaLinkButtonEntity(PrusaLinkEntity, ButtonEntity):
         try:
             await func(job_id)
         except Conflict as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 "Action conflicts with current printer state"
             ) from err
 
-        coordinators: dict[str, PrusaLinkUpdateCoordinator] = self.hass.data[DOMAIN][
+        coordinators: dict[str, PrusaLinkUpdateCoordinator] = self.menuai.data[DOMAIN][
             self.coordinator.config_entry.entry_id
         ]
 

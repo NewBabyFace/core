@@ -11,17 +11,17 @@ from typing import TYPE_CHECKING
 from amcrest import AmcrestError
 import voluptuous as vol
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.const import CONF_BINARY_SENSORS, CONF_NAME
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import Throttle
+from menuai.const import CONF_BINARY_SENSORS, CONF_NAME
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import Throttle
 
 from .const import (
     BINARY_SENSOR_SCAN_INTERVAL_SECS,
@@ -134,7 +134,7 @@ def check_binary_sensors(value: list[str]) -> list[str]:
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -144,7 +144,7 @@ async def async_setup_platform(
         return
 
     name = discovery_info[CONF_NAME]
-    device = hass.data[DATA_AMCREST][DEVICES][name]
+    device = menuai.data[DATA_AMCREST][DEVICES][name]
     binary_sensors = discovery_info[CONF_BINARY_SENSORS]
     async_add_entities(
         [
@@ -249,12 +249,12 @@ class AmcrestBinarySensor(BinarySensorEntity):
         self._attr_is_on = state
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to signals."""
         if self.entity_description.key == _ONLINE_KEY:
             self.async_on_remove(
                 async_dispatcher_connect(
-                    self.hass,
+                    self.menuai,
                     service_signal(SERVICE_UPDATE, self._signal_name),
                     self.async_on_demand_update_online,
                 )
@@ -262,7 +262,7 @@ class AmcrestBinarySensor(BinarySensorEntity):
         else:
             self.async_on_remove(
                 async_dispatcher_connect(
-                    self.hass,
+                    self.menuai,
                     service_signal(SERVICE_UPDATE, self._signal_name),
                     self.async_write_ha_state,
                 )
@@ -274,7 +274,7 @@ class AmcrestBinarySensor(BinarySensorEntity):
             for event_code in event_codes:
                 self.async_on_remove(
                     async_dispatcher_connect(
-                        self.hass,
+                        self.menuai,
                         service_signal(
                             SERVICE_EVENT,
                             self._signal_name,

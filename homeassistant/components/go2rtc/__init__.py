@@ -18,7 +18,7 @@ from go2rtc_client.ws import (
 import voluptuous as vol
 from webrtc_models import RTCIceCandidateInit
 
-from homeassistant.components.camera import (
+from menuai.components.camera import (
     Camera,
     CameraWebRTCProvider,
     WebRTCAnswer as HAWebRTCAnswer,
@@ -28,20 +28,20 @@ from homeassistant.components.camera import (
     WebRTCSendMessage,
     async_register_webrtc_provider,
 )
-from homeassistant.components.default_config import DOMAIN as DEFAULT_CONFIG_DOMAIN
-from homeassistant.config_entries import SOURCE_SYSTEM, ConfigEntry
-from homeassistant.const import CONF_URL, EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import (
+from menuai.components.default_config import DOMAIN as DEFAULT_CONFIG_DOMAIN
+from menuai.config_entries import SOURCE_SYSTEM, ConfigEntry
+from menuai.const import CONF_URL, EVENT_menuai_STOP
+from menuai.core import Event, menuai, callback
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import (
     config_validation as cv,
     discovery_flow,
     issue_registry as ir,
 )
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util.hass_dict import HassKey
-from homeassistant.util.package import is_docker_env
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.typing import ConfigType
+from menuai.util.menuai_dict import menuaiKey
+from menuai.util.package import is_docker_env
 
 from .const import (
     CONF_DEBUG_UI,
@@ -96,15 +96,15 @@ CONFIG_SCHEMA = vol.Schema(
     extra=vol.ALLOW_EXTRA,
 )
 
-_DATA_GO2RTC: HassKey[str] = HassKey(DOMAIN)
+_DATA_GO2RTC: menuaiKey[str] = menuaiKey(DOMAIN)
 _RETRYABLE_ERRORS = (ClientConnectionError, ServerConnectionError)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up WebRTC."""
     url: str | None = None
     if DOMAIN not in config and DEFAULT_CONFIG_DOMAIN not in config:
-        await _remove_go2rtc_entries(hass)
+        await _remove_go2rtc_entries(menuai)
         return True
 
     if not (configured_by_user := DOMAIN in config) or not (
@@ -113,17 +113,17 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         if not is_docker_env():
             if not configured_by_user:
                 # Remove config entry if it exists
-                await _remove_go2rtc_entries(hass)
+                await _remove_go2rtc_entries(menuai)
                 return True
             _LOGGER.warning("Go2rtc URL required in non-docker installs")
             return False
-        if not (binary := await _get_binary(hass)):
+        if not (binary := await _get_binary(menuai)):
             _LOGGER.error("Could not find go2rtc docker binary")
             return False
 
         # HA will manage the binary
         server = Server(
-            hass, binary, enable_ui=config.get(DOMAIN, {}).get(CONF_DEBUG_UI, False)
+            menuai, binary, enable_ui=config.get(DOMAIN, {}).get(CONF_DEBUG_UI, False)
         )
         try:
             await server.start()
@@ -134,34 +134,34 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         async def on_stop(event: Event) -> None:
             await server.stop()
 
-        hass.bus.async_listen(EVENT_HOMEASSISTANT_STOP, on_stop)
+        menuai.bus.async_listen(EVENT_menuai_STOP, on_stop)
 
         url = HA_MANAGED_URL
 
-    hass.data[_DATA_GO2RTC] = url
+    menuai.data[_DATA_GO2RTC] = url
     discovery_flow.async_create_flow(
-        hass, DOMAIN, context={"source": SOURCE_SYSTEM}, data={}
+        menuai, DOMAIN, context={"source": SOURCE_SYSTEM}, data={}
     )
     return True
 
 
-async def _remove_go2rtc_entries(hass: HomeAssistant) -> None:
+async def _remove_go2rtc_entries(menuai: menuai) -> None:
     """Remove go2rtc config entries, if any."""
-    for entry in hass.config_entries.async_entries(DOMAIN):
-        await hass.config_entries.async_remove(entry.entry_id)
+    for entry in menuai.config_entries.async_entries(DOMAIN):
+        await menuai.config_entries.async_remove(entry.entry_id)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up go2rtc from a config entry."""
-    url = hass.data[_DATA_GO2RTC]
+    url = menuai.data[_DATA_GO2RTC]
 
     # Validate the server URL
     try:
-        client = Go2RtcRestClient(async_get_clientsession(hass), url)
+        client = Go2RtcRestClient(async_get_clientsession(menuai), url)
         version = await client.validate_server_version()
         if version < AwesomeVersion(RECOMMENDED_VERSION):
             ir.async_create_issue(
-                hass,
+                menuai,
                 DOMAIN,
                 "recommended_version",
                 is_fixable=False,
@@ -188,29 +188,29 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.warning("Could not connect to go2rtc instance on %s (%s)", url, err)
         return False
 
-    provider = WebRTCProvider(hass, url)
-    async_register_webrtc_provider(hass, provider)
+    provider = WebRTCProvider(menuai, url)
+    async_register_webrtc_provider(menuai, provider)
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a go2rtc config entry."""
     return True
 
 
-async def _get_binary(hass: HomeAssistant) -> str | None:
+async def _get_binary(menuai: menuai) -> str | None:
     """Return the binary path if found."""
-    return await hass.async_add_executor_job(shutil.which, "go2rtc")
+    return await menuai.async_add_executor_job(shutil.which, "go2rtc")
 
 
 class WebRTCProvider(CameraWebRTCProvider):
     """WebRTC provider."""
 
-    def __init__(self, hass: HomeAssistant, url: str) -> None:
+    def __init__(self, menuai: menuai, url: str) -> None:
         """Initialize the WebRTC provider."""
-        self._hass = hass
+        self._menuai = menuai
         self._url = url
-        self._session = async_get_clientsession(hass)
+        self._session = async_get_clientsession(menuai)
         self._rest_client = Go2RtcRestClient(self._session, url)
         self._sessions: dict[str, Go2RtcWsClient] = {}
 
@@ -290,4 +290,4 @@ class WebRTCProvider(CameraWebRTCProvider):
     def async_close_session(self, session_id: str) -> None:
         """Close the session."""
         ws_client = self._sessions.pop(session_id)
-        self._hass.async_create_task(ws_client.close())
+        self._menuai.async_create_task(ws_client.close())

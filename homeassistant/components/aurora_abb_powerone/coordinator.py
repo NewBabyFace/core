@@ -6,9 +6,9 @@ from time import sleep
 from aurorapy.client import AuroraError, AuroraSerialClient, AuroraTimeoutError
 from serial import SerialException
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN, SCAN_INTERVAL
 
@@ -25,7 +25,7 @@ class AuroraAbbDataUpdateCoordinator(DataUpdateCoordinator[dict[str, float]]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: AuroraAbbConfigEntry,
         comport: str,
         address: int,
@@ -35,7 +35,7 @@ class AuroraAbbDataUpdateCoordinator(DataUpdateCoordinator[dict[str, float]]):
         self.available = False
         self.client = AuroraSerialClient(address, comport, parity="N", timeout=1)
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -45,7 +45,7 @@ class AuroraAbbDataUpdateCoordinator(DataUpdateCoordinator[dict[str, float]]):
     def _update_data(self) -> dict[str, float]:
         """Fetch new state data for the sensors.
 
-        This is the only function that should fetch new data for Home Assistant.
+        This is the only function that should fetch new data for MenuAI.
         """
         data: dict[str, float] = {}
         self.available_prev = self.available
@@ -109,4 +109,4 @@ class AuroraAbbDataUpdateCoordinator(DataUpdateCoordinator[dict[str, float]]):
 
     async def _async_update_data(self) -> dict[str, float]:
         """Update inverter data in the executor."""
-        return await self.hass.async_add_executor_job(self._update_data)
+        return await self.menuai.async_add_executor_job(self._update_data)

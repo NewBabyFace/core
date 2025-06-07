@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock, patch
 from freebox_api.exceptions import HttpRequestError
 import pytest
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 from .const import (
     DATA_CALL_GET_CALLS_LOG,
@@ -32,19 +32,19 @@ from tests.common import MockConfigEntry
 def mock_path():
     """Mock path lib."""
     with (
-        patch("homeassistant.components.freebox.router.Path"),
-        patch("homeassistant.components.freebox.router.os.makedirs"),
+        patch("menuai.components.freebox.router.Path"),
+        patch("menuai.components.freebox.router.os.makedirs"),
     ):
         yield
 
 
 @pytest.fixture
 def mock_device_registry_devices(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ):
     """Create device registry devices so the device tracker entities are enabled."""
     config_entry = MockConfigEntry(domain="something_else")
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     for idx, device in enumerate(
         (
@@ -65,7 +65,7 @@ def mock_device_registry_devices(
 @pytest.fixture(name="router")
 def mock_router(mock_device_registry_devices):
     """Mock a successful connection."""
-    with patch("homeassistant.components.freebox.router.Freepybox") as service_mock:
+    with patch("menuai.components.freebox.router.Freepybox") as service_mock:
         instance = service_mock.return_value
         instance.open = AsyncMock()
         instance.system.get_config = AsyncMock(return_value=DATA_SYSTEM_GET_CONFIG)

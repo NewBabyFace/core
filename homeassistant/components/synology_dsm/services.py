@@ -7,7 +7,7 @@ from typing import cast
 
 from synology_dsm.exceptions import SynologyDSMException
 
-from homeassistant.core import HomeAssistant, ServiceCall
+from menuai.core import menuai, ServiceCall
 
 from .const import CONF_SERIAL, DOMAIN, SERVICE_REBOOT, SERVICE_SHUTDOWN, SERVICES
 from .coordinator import SynologyDSMConfigEntry
@@ -15,14 +15,14 @@ from .coordinator import SynologyDSMConfigEntry
 LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_services(hass: HomeAssistant) -> None:
+async def async_setup_services(menuai: menuai) -> None:
     """Service handler setup."""
 
     async def service_handler(call: ServiceCall) -> None:
         """Handle service call."""
         serial: str | None = call.data.get(CONF_SERIAL)
         entries: list[SynologyDSMConfigEntry] = (
-            hass.config_entries.async_loaded_entries(DOMAIN)
+            menuai.config_entries.async_loaded_entries(DOMAIN)
         )
         dsm_devices = {
             cast(str, entry.unique_id): entry.runtime_data for entry in entries
@@ -30,7 +30,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
         if serial:
             entry: SynologyDSMConfigEntry | None = (
-                hass.config_entries.async_entry_for_domain_unique_id(DOMAIN, serial)
+                menuai.config_entries.async_entry_for_domain_unique_id(DOMAIN, serial)
             )
             assert entry
             dsm_device = entry.runtime_data
@@ -74,4 +74,4 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 return
 
     for service in SERVICES:
-        hass.services.async_register(DOMAIN, service, service_handler)
+        menuai.services.async_register(DOMAIN, service, service_handler)

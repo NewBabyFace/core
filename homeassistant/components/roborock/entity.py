@@ -16,10 +16,10 @@ from roborock.version_1_apis.roborock_client_v1 import (
 from roborock.version_1_apis.roborock_mqtt_client_v1 import RoborockMqttClientV1
 from roborock.version_a01_apis import RoborockClientA01
 
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import RoborockDataUpdateCoordinator, RoborockDataUpdateCoordinatorA01
@@ -72,7 +72,7 @@ class RoborockEntityV1(RoborockEntity):
                 command_name = command.name
             else:
                 command_name = command
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="command_failed",
                 translation_placeholders={
@@ -138,19 +138,19 @@ class RoborockCoordinatedEntityV1(
             listener_request = [listener_request]
         self.listener_requests = listener_request or []
 
-    async def async_added_to_hass(self) -> None:
-        """Add listeners when the device is added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Add listeners when the device is added to menuai."""
+        await super().async_added_to_menuai()
         for listener_request in self.listener_requests:
             self.api.add_listener(
                 listener_request, self._update_from_listener, cache=self.api.cache
             )
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Remove listeners when the device is removed from hass."""
+    async def async_will_remove_from_menuai(self) -> None:
+        """Remove listeners when the device is removed from menuai."""
         for listener_request in self.listener_requests:
             self.api.remove_listener(listener_request, self._update_from_listener)
-        await super().async_will_remove_from_hass()
+        await super().async_will_remove_from_menuai()
 
     @property
     def _device_status(self) -> Status:

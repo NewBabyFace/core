@@ -26,12 +26,12 @@ def _load_plugin_from_file(module_name: str, file: str) -> ModuleType:
     return module
 
 
-@pytest.fixture(name="hass_enforce_type_hints", scope="package")
-def hass_enforce_type_hints_fixture() -> ModuleType:
+@pytest.fixture(name="menuai_enforce_type_hints", scope="package")
+def menuai_enforce_type_hints_fixture() -> ModuleType:
     """Fixture to provide a requests mocker."""
     return _load_plugin_from_file(
-        "hass_enforce_type_hints",
-        "pylint/plugins/hass_enforce_type_hints.py",
+        "menuai_enforce_type_hints",
+        "pylint/plugins/menuai_enforce_type_hints.py",
     )
 
 
@@ -42,99 +42,99 @@ def linter_fixture() -> UnittestLinter:
 
 
 @pytest.fixture(name="type_hint_checker")
-def type_hint_checker_fixture(hass_enforce_type_hints, linter) -> BaseChecker:
+def type_hint_checker_fixture(menuai_enforce_type_hints, linter) -> BaseChecker:
     """Fixture to provide a requests mocker."""
-    type_hint_checker = hass_enforce_type_hints.HassTypeHintChecker(linter)
-    type_hint_checker.module = "homeassistant.components.pylint_test"
+    type_hint_checker = menuai_enforce_type_hints.menuaiTypeHintChecker(linter)
+    type_hint_checker.module = "menuai.components.pylint_test"
     return type_hint_checker
 
 
-@pytest.fixture(name="hass_imports", scope="package")
-def hass_imports_fixture() -> ModuleType:
+@pytest.fixture(name="menuai_imports", scope="package")
+def menuai_imports_fixture() -> ModuleType:
     """Fixture to provide a requests mocker."""
     return _load_plugin_from_file(
-        "hass_imports",
-        "pylint/plugins/hass_imports.py",
+        "menuai_imports",
+        "pylint/plugins/menuai_imports.py",
     )
 
 
 @pytest.fixture(name="imports_checker")
-def imports_checker_fixture(hass_imports, linter) -> BaseChecker:
+def imports_checker_fixture(menuai_imports, linter) -> BaseChecker:
     """Fixture to provide a requests mocker."""
-    type_hint_checker = hass_imports.HassImportsFormatChecker(linter)
-    type_hint_checker.module = "homeassistant.components.pylint_test"
+    type_hint_checker = menuai_imports.menuaiImportsFormatChecker(linter)
+    type_hint_checker.module = "menuai.components.pylint_test"
     return type_hint_checker
 
 
-@pytest.fixture(name="hass_enforce_super_call", scope="package")
-def hass_enforce_super_call_fixture() -> ModuleType:
+@pytest.fixture(name="menuai_enforce_super_call", scope="package")
+def menuai_enforce_super_call_fixture() -> ModuleType:
     """Fixture to provide a requests mocker."""
     return _load_plugin_from_file(
-        "hass_enforce_super_call",
-        "pylint/plugins/hass_enforce_super_call.py",
+        "menuai_enforce_super_call",
+        "pylint/plugins/menuai_enforce_super_call.py",
     )
 
 
 @pytest.fixture(name="super_call_checker")
-def super_call_checker_fixture(hass_enforce_super_call, linter) -> BaseChecker:
+def super_call_checker_fixture(menuai_enforce_super_call, linter) -> BaseChecker:
     """Fixture to provide a requests mocker."""
-    super_call_checker = hass_enforce_super_call.HassEnforceSuperCallChecker(linter)
-    super_call_checker.module = "homeassistant.components.pylint_test"
+    super_call_checker = menuai_enforce_super_call.menuaiEnforceSuperCallChecker(linter)
+    super_call_checker.module = "menuai.components.pylint_test"
     return super_call_checker
 
 
-@pytest.fixture(name="hass_enforce_sorted_platforms", scope="package")
-def hass_enforce_sorted_platforms_fixture() -> ModuleType:
-    """Fixture to the content for the hass_enforce_sorted_platforms check."""
+@pytest.fixture(name="menuai_enforce_sorted_platforms", scope="package")
+def menuai_enforce_sorted_platforms_fixture() -> ModuleType:
+    """Fixture to the content for the menuai_enforce_sorted_platforms check."""
     return _load_plugin_from_file(
-        "hass_enforce_sorted_platforms",
-        "pylint/plugins/hass_enforce_sorted_platforms.py",
+        "menuai_enforce_sorted_platforms",
+        "pylint/plugins/menuai_enforce_sorted_platforms.py",
     )
 
 
 @pytest.fixture(name="enforce_sorted_platforms_checker")
 def enforce_sorted_platforms_checker_fixture(
-    hass_enforce_sorted_platforms, linter
+    menuai_enforce_sorted_platforms, linter
 ) -> BaseChecker:
-    """Fixture to provide a hass_enforce_sorted_platforms checker."""
+    """Fixture to provide a menuai_enforce_sorted_platforms checker."""
     enforce_sorted_platforms_checker = (
-        hass_enforce_sorted_platforms.HassEnforceSortedPlatformsChecker(linter)
+        menuai_enforce_sorted_platforms.menuaiEnforceSortedPlatformsChecker(linter)
     )
-    enforce_sorted_platforms_checker.module = "homeassistant.components.pylint_test"
+    enforce_sorted_platforms_checker.module = "menuai.components.pylint_test"
     return enforce_sorted_platforms_checker
 
 
-@pytest.fixture(name="hass_enforce_class_module", scope="package")
-def hass_enforce_class_module_fixture() -> ModuleType:
-    """Fixture to the content for the hass_enforce_class_module check."""
+@pytest.fixture(name="menuai_enforce_class_module", scope="package")
+def menuai_enforce_class_module_fixture() -> ModuleType:
+    """Fixture to the content for the menuai_enforce_class_module check."""
     return _load_plugin_from_file(
-        "hass_enforce_class_module",
-        "pylint/plugins/hass_enforce_class_module.py",
+        "menuai_enforce_class_module",
+        "pylint/plugins/menuai_enforce_class_module.py",
     )
 
 
 @pytest.fixture(name="enforce_class_module_checker")
-def enforce_class_module_fixture(hass_enforce_class_module, linter) -> BaseChecker:
-    """Fixture to provide a hass_enforce_class_module checker."""
-    enforce_class_module_checker = hass_enforce_class_module.HassEnforceClassModule(
+def enforce_class_module_fixture(menuai_enforce_class_module, linter) -> BaseChecker:
+    """Fixture to provide a menuai_enforce_class_module checker."""
+    enforce_class_module_checker = menuai_enforce_class_module.menuaiEnforceClassModule(
         linter
     )
-    enforce_class_module_checker.module = "homeassistant.components.pylint_test"
+    enforce_class_module_checker.module = "menuai.components.pylint_test"
     return enforce_class_module_checker
 
 
-@pytest.fixture(name="hass_decorator", scope="package")
-def hass_decorator_fixture() -> ModuleType:
+@pytest.fixture(name="menuai_decorator", scope="package")
+def menuai_decorator_fixture() -> ModuleType:
     """Fixture to provide a pylint plugin."""
     return _load_plugin_from_file(
-        "hass_imports",
-        "pylint/plugins/hass_decorator.py",
+        "menuai_imports",
+        "pylint/plugins/menuai_decorator.py",
     )
 
 
 @pytest.fixture(name="decorator_checker")
-def decorator_checker_fixture(hass_decorator, linter) -> BaseChecker:
+def decorator_checker_fixture(menuai_decorator, linter) -> BaseChecker:
     """Fixture to provide a pylint checker."""
-    type_hint_checker = hass_decorator.HassDecoratorChecker(linter)
-    type_hint_checker.module = "homeassistant.components.pylint_test"
+    type_hint_checker = menuai_decorator.menuaiDecoratorChecker(linter)
+    type_hint_checker.module = "menuai.components.pylint_test"
     return type_hint_checker

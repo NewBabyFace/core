@@ -9,7 +9,7 @@ from typing import Any, cast
 import pyeverlights
 import voluptuous as vol
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_EFFECT,
     ATTR_HS_COLOR,
@@ -18,14 +18,14 @@ from homeassistant.components.light import (
     LightEntity,
     LightEntityFeature,
 )
-from homeassistant.const import CONF_HOSTS
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import PlatformNotReady
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import color as color_util
+from menuai.const import CONF_HOSTS
+from menuai.core import menuai
+from menuai.exceptions import PlatformNotReady
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import color as color_util
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -47,7 +47,7 @@ def color_int_to_rgb(value: int) -> tuple[int, int, int]:
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -56,7 +56,7 @@ async def async_setup_platform(
     lights = []
 
     for ipaddr in config[CONF_HOSTS]:
-        api = pyeverlights.EverLights(ipaddr, async_get_clientsession(hass))
+        api = pyeverlights.EverLights(ipaddr, async_get_clientsession(menuai))
 
         try:
             status = await api.get_status()

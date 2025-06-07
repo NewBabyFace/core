@@ -4,11 +4,11 @@ import socket
 
 import motionmount
 
-from homeassistant.components.number import NumberEntity
-from homeassistant.const import PERCENTAGE
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.number import NumberEntity
+from menuai.const import PERCENTAGE
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import MotionMountConfigEntry
 from .const import DOMAIN
@@ -18,7 +18,7 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: MotionMountConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -58,7 +58,7 @@ class MotionMountExtension(MotionMountEntity, NumberEntity):
         try:
             await self.mm.set_extension(int(value))
         except (TimeoutError, socket.gaierror) as ex:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="failed_communication",
             ) from ex
@@ -89,7 +89,7 @@ class MotionMountTurn(MotionMountEntity, NumberEntity):
         try:
             await self.mm.set_turn(int(value * -1))
         except (TimeoutError, socket.gaierror) as ex:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="failed_communication",
             ) from ex

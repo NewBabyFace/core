@@ -2,11 +2,11 @@
 
 from unittest.mock import patch
 
-from homeassistant import config_entries
-from homeassistant.components.progettihwsw.const import DOMAIN
-from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.progettihwsw.const import DOMAIN
+from menuai.const import CONF_HOST, CONF_PORT
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
@@ -18,10 +18,10 @@ mock_value_step_user = {
 }
 
 
-async def test_form(hass: HomeAssistant) -> None:
+async def test_form(menuai: menuai) -> None:
     """Test we get the form."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -33,10 +33,10 @@ async def test_form(hass: HomeAssistant) -> None:
     }
 
     with patch(
-        "homeassistant.components.progettihwsw.config_flow.ProgettiHWSWAPI.check_board",
+        "menuai.components.progettihwsw.config_flow.ProgettiHWSWAPI.check_board",
         return_value=mock_value_step_user,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_HOST: "", CONF_PORT: 80},
         )
@@ -46,10 +46,10 @@ async def test_form(hass: HomeAssistant) -> None:
     assert result2["errors"] == {}
 
     with patch(
-        "homeassistant.components.progettihwsw.async_setup_entry",
+        "menuai.components.progettihwsw.async_setup_entry",
         return_value=True,
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             mock_value_step_rm,
         )
@@ -61,19 +61,19 @@ async def test_form(hass: HomeAssistant) -> None:
     assert result3["data"]["relay_count"] == result3["data"]["input_count"] == 1
 
 
-async def test_form_cannot_connect(hass: HomeAssistant) -> None:
+async def test_form_cannot_connect(menuai: menuai) -> None:
     """Test we handle unexisting board."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result["step_id"] == "user"
 
     with patch(
-        "homeassistant.components.progettihwsw.config_flow.ProgettiHWSWAPI.check_board",
+        "menuai.components.progettihwsw.config_flow.ProgettiHWSWAPI.check_board",
         return_value=False,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_HOST: "", CONF_PORT: 80},
         )
@@ -83,9 +83,9 @@ async def test_form_cannot_connect(hass: HomeAssistant) -> None:
     assert result2["errors"] == {"base": "cannot_connect"}
 
 
-async def test_form_existing_entry_exception(hass: HomeAssistant) -> None:
+async def test_form_existing_entry_exception(menuai: menuai) -> None:
     """Test we handle existing board."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -98,9 +98,9 @@ async def test_form_existing_entry_exception(hass: HomeAssistant) -> None:
             CONF_PORT: 80,
         },
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: "", CONF_PORT: 80},
     )
@@ -109,19 +109,19 @@ async def test_form_existing_entry_exception(hass: HomeAssistant) -> None:
     assert result2["reason"] == "already_configured"
 
 
-async def test_form_user_exception(hass: HomeAssistant) -> None:
+async def test_form_user_exception(menuai: menuai) -> None:
     """Test we handle unknown exception."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result["step_id"] == "user"
 
     with patch(
-        "homeassistant.components.progettihwsw.config_flow.validate_input",
+        "menuai.components.progettihwsw.config_flow.validate_input",
         side_effect=Exception,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_HOST: "", CONF_PORT: 80},
         )

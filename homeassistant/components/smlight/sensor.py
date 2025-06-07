@@ -9,17 +9,17 @@ from itertools import chain
 
 from pysmlight import Info, Sensors
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import EntityCategory, UnitOfInformation, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
-from homeassistant.util.dt import utcnow
+from menuai.const import EntityCategory, UnitOfInformation, UnitOfTemperature
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
+from menuai.util.dt import utcnow
 
 from .const import UPTIME_DEVIATION
 from .coordinator import SmConfigEntry, SmDataUpdateCoordinator
@@ -134,7 +134,7 @@ UPTIME: list[SmSensorEntityDescription] = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: SmConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

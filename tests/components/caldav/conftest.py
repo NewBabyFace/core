@@ -4,8 +4,8 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from homeassistant.components.caldav.const import DOMAIN
-from homeassistant.const import (
+from menuai.components.caldav.const import DOMAIN
+from menuai.const import (
     CONF_PASSWORD,
     CONF_URL,
     CONF_USERNAME,
@@ -29,7 +29,7 @@ def mock_platforms() -> list[Platform]:
 @pytest.fixture(autouse=True)
 async def mock_patch_platforms(platforms: list[str]) -> None:
     """Fixture to set up the integration."""
-    with patch(f"homeassistant.components.{DOMAIN}.PLATFORMS", platforms):
+    with patch(f"menuai.components.{DOMAIN}.PLATFORMS", platforms):
         yield
 
 
@@ -43,7 +43,7 @@ def mock_calendars() -> list[Mock]:
 def mock_dav_client(calendars: list[Mock]) -> Mock:
     """Fixture to mock the DAVClient."""
     with patch(
-        "homeassistant.components.caldav.calendar.caldav.DAVClient"
+        "menuai.components.caldav.calendar.caldav.DAVClient"
     ) as mock_client:
         mock_client.return_value.principal.return_value.calendars.return_value = (
             calendars

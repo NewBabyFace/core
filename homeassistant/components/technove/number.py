@@ -8,16 +8,16 @@ from typing import Any
 
 from technove import MIN_CURRENT, TechnoVE
 
-from homeassistant.components.number import (
+from menuai.components.number import (
     NumberDeviceClass,
     NumberEntity,
     NumberEntityDescription,
     NumberMode,
 )
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import TechnoVEConfigEntry, TechnoVEDataUpdateCoordinator
@@ -63,7 +63,7 @@ NUMBERS = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: TechnoVEConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

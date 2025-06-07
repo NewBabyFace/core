@@ -2,17 +2,17 @@
 
 from __future__ import annotations
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_NAME
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
     ALERT_TYPE_AIR,
@@ -62,13 +62,13 @@ BINARY_SENSOR_TYPES: tuple[BinarySensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Ukraine Alarm binary sensor entities based on a config entry."""
     name = config_entry.data[CONF_NAME]
-    coordinator = hass.data[DOMAIN][config_entry.entry_id]
+    coordinator = menuai.data[DOMAIN][config_entry.entry_id]
 
     async_add_entities(
         UkraineAlarmSensor(

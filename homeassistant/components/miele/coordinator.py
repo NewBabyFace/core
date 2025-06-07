@@ -10,9 +10,9 @@ import logging
 
 from pymiele import MieleAction, MieleDevice
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .api import AsyncConfigEntryAuth
 from .const import DOMAIN
@@ -41,12 +41,12 @@ class MieleDataUpdateCoordinator(DataUpdateCoordinator[MieleCoordinatorData]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         api: AsyncConfigEntryAuth,
     ) -> None:
         """Initialize the Miele data coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             name=DOMAIN,
             update_interval=timedelta(seconds=120),

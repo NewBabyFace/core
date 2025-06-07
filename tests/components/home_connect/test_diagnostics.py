@@ -5,20 +5,20 @@ from unittest.mock import MagicMock
 
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.home_connect.const import DOMAIN
-from homeassistant.components.home_connect.diagnostics import (
+from menuai.components.home_connect.const import DOMAIN
+from menuai.components.home_connect.diagnostics import (
     async_get_config_entry_diagnostics,
     async_get_device_diagnostics,
 )
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 from tests.common import MockConfigEntry
 
 
 async def test_async_get_config_entry_diagnostics(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
     config_entry: MockConfigEntry,
     integration_setup: Callable[[MagicMock], Awaitable[bool]],
@@ -28,11 +28,11 @@ async def test_async_get_config_entry_diagnostics(
     assert await integration_setup(client)
     assert config_entry.state is ConfigEntryState.LOADED
 
-    assert await async_get_config_entry_diagnostics(hass, config_entry) == snapshot
+    assert await async_get_config_entry_diagnostics(menuai, config_entry) == snapshot
 
 
 async def test_async_get_device_diagnostics(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     client: MagicMock,
     config_entry: MockConfigEntry,
@@ -48,4 +48,4 @@ async def test_async_get_device_diagnostics(
         identifiers={(DOMAIN, "SIEMENS-HCS02DWH1-6BE58C26DCC1")},
     )
 
-    assert await async_get_device_diagnostics(hass, config_entry, device) == snapshot
+    assert await async_get_device_diagnostics(menuai, config_entry, device) == snapshot

@@ -11,16 +11,16 @@ from ismartgate.common import AbstractInfoResponse, ApiError
 from ismartgate.const import GogoGate2ApiErrorCode, ISmartGateApiErrorCode
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import (
     CONF_DEVICE,
     CONF_IP_ADDRESS,
     CONF_PASSWORD,
     CONF_USERNAME,
 )
-from homeassistant.data_entry_flow import AbortFlow
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
-from homeassistant.helpers.service_info.zeroconf import (
+from menuai.data_entry_flow import AbortFlow
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.helpers.service_info.zeroconf import (
     ATTR_PROPERTIES_ID,
     ZeroconfServiceInfo,
 )
@@ -67,7 +67,7 @@ class Gogogate2FlowHandler(ConfigFlow, domain=DOMAIN):
         self._async_abort_entries_match({CONF_IP_ADDRESS: ip_address})
 
         self._ip_address = ip_address
-        if self.hass.config_entries.flow.async_has_matching_flow(self):
+        if self.menuai.config_entries.flow.async_has_matching_flow(self):
             raise AbortFlow("already_in_progress")
 
         self._device_type = DEVICE_TYPE_ISMARTGATE
@@ -85,7 +85,7 @@ class Gogogate2FlowHandler(ConfigFlow, domain=DOMAIN):
         errors = {}
 
         if user_input:
-            api = get_api(self.hass, user_input)
+            api = get_api(self.menuai, user_input)
             try:
                 data: AbstractInfoResponse = await api.async_info()
                 data_dict = dataclasses.asdict(data)

@@ -16,17 +16,17 @@ from tesla_fleet_api.exceptions import (
     TeslaFleetError,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_TOKEN, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import config_validation as cv, device_registry as dr
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.config_entry_oauth2_flow import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_ACCESS_TOKEN, CONF_TOKEN, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import config_validation as cv, device_registry as dr
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.config_entry_oauth2_flow import (
     OAuth2Session,
     async_get_config_entry_implementation,
 )
-from homeassistant.helpers.device_registry import DeviceInfo
+from menuai.helpers.device_registry import DeviceInfo
 
 from .const import DOMAIN, LOGGER, MODELS
 from .coordinator import (
@@ -56,26 +56,26 @@ type TeslaFleetConfigEntry = ConfigEntry[TeslaFleetData]
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: TeslaFleetConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: TeslaFleetConfigEntry) -> bool:
     """Set up TeslaFleet config."""
 
     try:
-        implementation = await async_get_config_entry_implementation(hass, entry)
+        implementation = await async_get_config_entry_implementation(menuai, entry)
     except ValueError as e:
         # Remove invalid implementation from config entry then raise AuthFailed
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry, data={"auth_implementation": None}
         )
         raise ConfigEntryAuthFailed from e
 
     access_token = entry.data[CONF_TOKEN][CONF_ACCESS_TOKEN]
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
 
     token = jwt.decode(access_token, options={"verify_signature": False})
     scopes: list[Scope] = [Scope(s) for s in token["scp"]]
     region: str = token["ou_code"].lower()
 
-    oauth_session = OAuth2Session(hass, entry, implementation)
+    oauth_session = OAuth2Session(menuai, entry, implementation)
     refresh_lock = asyncio.Lock()
 
     async def _refresh_token() -> str:
@@ -117,7 +117,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: TeslaFleetConfigEntry) -
     except TeslaFleetError as e:
         raise ConfigEntryNotReady from e
 
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
 
     # Create array of classes
     vehicles: list[TeslaFleetVehicleData] = []
@@ -130,11 +130,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: TeslaFleetConfigEntry) -
             signing = product["command_signing"] == "required"
             if signing:
                 if not tesla.private_key:
-                    await tesla.get_private_key(hass.config.path("tesla_fleet.key"))
+                    await tesla.get_private_key(menuai.config.path("tesla_fleet.key"))
                 api = tesla.vehicles.createSigned(vin)
             else:
                 api = tesla.vehicles.createFleet(vin)
-            coordinator = TeslaFleetVehicleDataCoordinator(hass, entry, api, product)
+            coordinator = TeslaFleetVehicleDataCoordinator(menuai, entry, api, product)
 
             await coordinator.async_config_entry_first_refresh()
 
@@ -170,12 +170,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: TeslaFleetConfigEntry) -
 
             api = tesla.energySites.create(site_id)
 
-            live_coordinator = TeslaFleetEnergySiteLiveCoordinator(hass, entry, api)
+            live_coordinator = TeslaFleetEnergySiteLiveCoordinator(menuai, entry, api)
             history_coordinator = TeslaFleetEnergySiteHistoryCoordinator(
-                hass, entry, api
+                menuai, entry, api
             )
             info_coordinator = TeslaFleetEnergySiteInfoCoordinator(
-                hass, entry, api, product
+                menuai, entry, api, product
             )
 
             await live_coordinator.async_config_entry_first_refresh()
@@ -221,10 +221,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: TeslaFleetConfigEntry) -
 
     # Setup Platforms
     entry.runtime_data = TeslaFleetData(vehicles, energysites, scopes)
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: TeslaFleetConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: TeslaFleetConfigEntry) -> bool:
     """Unload TeslaFleet Config."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

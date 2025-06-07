@@ -3,12 +3,12 @@
 from rtmapi import Rtm
 import voluptuous as vol
 
-from homeassistant.components import configurator
-from homeassistant.const import CONF_API_KEY, CONF_ID, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.typing import ConfigType
+from menuai.components import configurator
+from menuai.const import CONF_API_KEY, CONF_ID, CONF_NAME
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.typing import ConfigType
 
 from .const import LOGGER
 from .entity import RememberTheMilkEntity
@@ -43,11 +43,11 @@ SERVICE_SCHEMA_CREATE_TASK = vol.Schema(
 SERVICE_SCHEMA_COMPLETE_TASK = vol.Schema({vol.Required(CONF_ID): cv.string})
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Remember the milk component."""
-    component = EntityComponent[RememberTheMilkEntity](LOGGER, DOMAIN, hass)
+    component = EntityComponent[RememberTheMilkEntity](LOGGER, DOMAIN, menuai)
 
-    stored_rtm_config = RememberTheMilkConfiguration(hass)
+    stored_rtm_config = RememberTheMilkConfiguration(menuai)
     for rtm_config in config[DOMAIN]:
         account_name = rtm_config[CONF_NAME]
         LOGGER.debug("Adding Remember the milk account %s", account_name)
@@ -57,7 +57,7 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
         if token:
             LOGGER.debug("found token for account %s", account_name)
             _create_instance(
-                hass,
+                menuai,
                 account_name,
                 api_key,
                 shared_secret,
@@ -67,7 +67,7 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
             )
         else:
             _register_new_account(
-                hass, account_name, api_key, shared_secret, stored_rtm_config, component
+                menuai, account_name, api_key, shared_secret, stored_rtm_config, component
             )
 
     LOGGER.debug("Finished adding all Remember the milk accounts")
@@ -75,7 +75,7 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 
 def _create_instance(
-    hass: HomeAssistant,
+    menuai: menuai,
     account_name: str,
     api_key: str,
     shared_secret: str,
@@ -87,13 +87,13 @@ def _create_instance(
         account_name, api_key, shared_secret, token, stored_rtm_config
     )
     component.add_entities([entity])
-    hass.services.register(
+    menuai.services.register(
         DOMAIN,
         f"{account_name}_create_task",
         entity.create_task,
         schema=SERVICE_SCHEMA_CREATE_TASK,
     )
-    hass.services.register(
+    menuai.services.register(
         DOMAIN,
         f"{account_name}_complete_task",
         entity.complete_task,
@@ -102,7 +102,7 @@ def _create_instance(
 
 
 def _register_new_account(
-    hass: HomeAssistant,
+    menuai: menuai,
     account_name: str,
     api_key: str,
     shared_secret: str,
@@ -120,7 +120,7 @@ def _register_new_account(
         if api.token is None:
             LOGGER.error("Failed to register, please try again")
             configurator.notify_errors(
-                hass, request_id, "Failed to register, please try again."
+                menuai, request_id, "Failed to register, please try again."
             )
             return
 
@@ -128,7 +128,7 @@ def _register_new_account(
         LOGGER.debug("Retrieved new token from server")
 
         _create_instance(
-            hass,
+            menuai,
             account_name,
             api_key,
             shared_secret,
@@ -137,10 +137,10 @@ def _register_new_account(
             component,
         )
 
-        configurator.request_done(hass, request_id)
+        configurator.request_done(menuai, request_id)
 
     request_id = configurator.request_config(
-        hass,
+        menuai,
         f"{DOMAIN} - {account_name}",
         callback=register_account_callback,
         description=(

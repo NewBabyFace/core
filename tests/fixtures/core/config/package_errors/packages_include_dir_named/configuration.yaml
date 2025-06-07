@@ -2,6 +2,6 @@
 adr_0007_1:
   - host: blah.com
 
-homeassistant:
+menuai:
   # Load packages
   packages: !include_dir_named integrations

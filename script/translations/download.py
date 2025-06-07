@@ -63,9 +63,9 @@ def save_json(filename: Path, data: list | dict) -> None:
 
 def get_component_path(lang, component) -> Path | None:
     """Get the component translation path."""
-    if (Path("homeassistant") / "components" / component).is_dir():
+    if (Path("menuai") / "components" / component).is_dir():
         return (
-            Path("homeassistant")
+            Path("menuai")
             / "components"
             / component
             / "translations"
@@ -77,7 +77,7 @@ def get_component_path(lang, component) -> Path | None:
 def get_platform_path(lang, component, platform) -> Path:
     """Get the platform translation path."""
     return (
-        Path("homeassistant")
+        Path("menuai")
         / "components"
         / component
         / "translations"
@@ -105,7 +105,7 @@ def save_language_translations(lang, translations):
                 )
                 continue
             if not (
-                Path("homeassistant") / "components" / component / "strings.json"
+                Path("menuai") / "components" / component / "strings.json"
             ).exists():
                 print(
                     f"Skipping {lang} for {component}, as the integration doesn't have a strings.json file."
@@ -142,7 +142,7 @@ def delete_old_translations():
 
 def get_current_keys(component: str) -> dict[str, Any]:
     """Get the current keys for a component."""
-    strings_path = Path("homeassistant") / "components" / component / "strings.json"
+    strings_path = Path("menuai") / "components" / component / "strings.json"
     return load_json_from_path(strings_path)
 
 

@@ -5,8 +5,8 @@ https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/d
 
 import ast
 
-from script.hassfest import ast_parse_module
-from script.hassfest.model import Config, Integration
+from script.menuaifest import ast_parse_module
+from script.menuaifest.model import Config, Integration
 
 DIAGNOSTICS_FUNCTIONS = {
     "async_get_config_entry_diagnostics",

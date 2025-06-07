@@ -11,29 +11,29 @@ from tibber import (
     RetryableHttpExceptionError,
 )
 
-from homeassistant import config_entries
-from homeassistant.components.recorder import Recorder
-from homeassistant.components.tibber.config_flow import (
+from menuai import config_entries
+from menuai.components.recorder import Recorder
+from menuai.components.tibber.config_flow import (
     ERR_CLIENT,
     ERR_TIMEOUT,
     ERR_TOKEN,
 )
-from homeassistant.components.tibber.const import DOMAIN
-from homeassistant.const import CONF_ACCESS_TOKEN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.tibber.const import DOMAIN
+from menuai.const import CONF_ACCESS_TOKEN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 
 @pytest.fixture(name="tibber_setup", autouse=True)
 def tibber_setup_fixture():
     """Patch tibber setup entry."""
-    with patch("homeassistant.components.tibber.async_setup_entry", return_value=True):
+    with patch("menuai.components.tibber.async_setup_entry", return_value=True):
         yield
 
 
-async def test_show_config_form(recorder_mock: Recorder, hass: HomeAssistant) -> None:
+async def test_show_config_form(recorder_mock: Recorder, menuai: menuai) -> None:
     """Test show configuration form."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -41,7 +41,7 @@ async def test_show_config_form(recorder_mock: Recorder, hass: HomeAssistant) ->
     assert result["step_id"] == "user"
 
 
-async def test_create_entry(recorder_mock: Recorder, hass: HomeAssistant) -> None:
+async def test_create_entry(recorder_mock: Recorder, menuai: menuai) -> None:
     """Test create entry from user input."""
     test_data = {
         CONF_ACCESS_TOKEN: "valid",
@@ -56,7 +56,7 @@ async def test_create_entry(recorder_mock: Recorder, hass: HomeAssistant) -> Non
     type(tibber_mock).name = PropertyMock(return_value=title)
 
     with patch("tibber.Tibber", return_value=tibber_mock):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}, data=test_data
         )
 
@@ -76,7 +76,7 @@ async def test_create_entry(recorder_mock: Recorder, hass: HomeAssistant) -> Non
     ],
 )
 async def test_create_entry_exceptions(
-    recorder_mock: Recorder, hass: HomeAssistant, exception, expected_error
+    recorder_mock: Recorder, menuai: menuai, exception, expected_error
 ) -> None:
     """Test create entry from user input."""
     test_data = {
@@ -92,7 +92,7 @@ async def test_create_entry_exceptions(
     type(tibber_mock).name = PropertyMock(return_value=title)
 
     with patch("tibber.Tibber", return_value=tibber_mock):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}, data=test_data
         )
 
@@ -101,7 +101,7 @@ async def test_create_entry_exceptions(
 
 
 async def test_flow_entry_already_exists(
-    recorder_mock: Recorder, hass: HomeAssistant, config_entry
+    recorder_mock: Recorder, menuai: menuai, config_entry
 ) -> None:
     """Test user input for config_entry that already exists."""
     test_data = {
@@ -109,7 +109,7 @@ async def test_flow_entry_already_exists(
     }
 
     with patch("tibber.Tibber.update_info", return_value=None):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}, data=test_data
         )
 

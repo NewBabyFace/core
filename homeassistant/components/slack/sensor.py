@@ -4,22 +4,22 @@ from __future__ import annotations
 
 from slack_sdk.web.async_client import AsyncWebClient
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import dt as dt_util
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import dt as dt_util
 
 from .const import ATTR_SNOOZE, DOMAIN, SLACK_DATA
 from .entity import SlackEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -27,7 +27,7 @@ async def async_setup_entry(
     async_add_entities(
         [
             SlackSensorEntity(
-                hass.data[DOMAIN][entry.entry_id][SLACK_DATA],
+                menuai.data[DOMAIN][entry.entry_id][SLACK_DATA],
                 SensorEntityDescription(
                     key="do_not_disturb_until",
                     translation_key="do_not_disturb_until",

@@ -1,1 +1,1 @@
-"""Tests for the Rhasspy integration."""
+"""Tests for the Rmenuaipy integration."""

@@ -1,14 +1,14 @@
-"""Test Home Assistant icon util methods."""
+"""Test MenuAI icon util methods."""
 
 import pathlib
 from unittest.mock import Mock, patch
 
 import pytest
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import icon
-from homeassistant.loader import IntegrationNotFound
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.helpers import icon
+from menuai.loader import IntegrationNotFound
+from menuai.setup import async_setup_component
 
 
 def test_battery_icon() -> None:
@@ -60,10 +60,10 @@ def test_signal_icon() -> None:
     assert icon.icon_for_signal_level(100) == "mdi:signal-cellular-3"
 
 
-def test_load_icons_files(hass: HomeAssistant) -> None:
+def test_load_icons_files(menuai: menuai) -> None:
     """Test the load icons files function."""
-    file1 = hass.config.path("custom_components", "test", "icons.json")
-    file2 = hass.config.path("custom_components", "test", "invalid.json")
+    file1 = menuai.config.path("custom_components", "test", "icons.json")
+    file2 = menuai.config.path("custom_components", "test", "invalid.json")
     assert icon._load_icons_files({"test": file1, "invalid": file2}) == {
         "test": {
             "entity": {
@@ -79,37 +79,37 @@ def test_load_icons_files(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("enable_custom_integrations")
-async def test_get_icons(hass: HomeAssistant) -> None:
+async def test_get_icons(menuai: menuai) -> None:
     """Test the get icon helper."""
-    icons = await icon.async_get_icons(hass, "entity")
+    icons = await icon.async_get_icons(menuai, "entity")
     assert icons == {}
 
-    icons = await icon.async_get_icons(hass, "entity_component")
+    icons = await icon.async_get_icons(menuai, "entity_component")
     assert icons == {}
 
     # Set up test switch component
-    assert await async_setup_component(hass, "switch", {"switch": {"platform": "test"}})
+    assert await async_setup_component(menuai, "switch", {"switch": {"platform": "test"}})
 
     # Test getting icons for the entity component
-    icons = await icon.async_get_icons(hass, "entity_component")
+    icons = await icon.async_get_icons(menuai, "entity_component")
     assert icons["switch"]["_"]["default"] == "mdi:toggle-switch-variant"
 
     # Test services icons are available
-    icons = await icon.async_get_icons(hass, "services")
+    icons = await icon.async_get_icons(menuai, "services")
     assert len(icons) == 1
     assert icons["switch"]["turn_off"] == {"service": "mdi:toggle-switch-variant-off"}
 
     # Ensure icons file for platform isn't loaded, as that isn't supported
-    icons = await icon.async_get_icons(hass, "entity")
+    icons = await icon.async_get_icons(menuai, "entity")
     assert icons == {}
     with pytest.raises(ValueError, match="test.switch"):
-        await icon.async_get_icons(hass, "entity", ["test.switch"])
+        await icon.async_get_icons(menuai, "entity", ["test.switch"])
 
     # Load up an custom integration
-    hass.config.components.add("test_package")
-    await hass.async_block_till_done()
+    menuai.config.components.add("test_package")
+    await menuai.async_block_till_done()
 
-    icons = await icon.async_get_icons(hass, "entity")
+    icons = await icon.async_get_icons(menuai, "entity")
     assert len(icons) == 1
 
     assert icons == {
@@ -120,15 +120,15 @@ async def test_get_icons(hass: HomeAssistant) -> None:
         }
     }
 
-    icons = await icon.async_get_icons(hass, "services")
+    icons = await icon.async_get_icons(menuai, "services")
     assert len(icons) == 2
     assert icons["test_package"]["enable_god_mode"] == {"service": "mdi:shield"}
 
     # Load another one
-    hass.config.components.add("test_embedded")
-    await hass.async_block_till_done()
+    menuai.config.components.add("test_embedded")
+    await menuai.async_block_till_done()
 
-    icons = await icon.async_get_icons(hass, "entity")
+    icons = await icon.async_get_icons(menuai, "entity")
     assert len(icons) == 2
 
     assert icons["test_package"] == {
@@ -141,14 +141,14 @@ async def test_get_icons(hass: HomeAssistant) -> None:
     with pytest.raises(
         IntegrationNotFound, match="Integration 'non_existing' not found"
     ):
-        await icon.async_get_icons(hass, "entity", ["non_existing"])
+        await icon.async_get_icons(menuai, "entity", ["non_existing"])
 
 
-async def test_get_icons_while_loading_components(hass: HomeAssistant) -> None:
+async def test_get_icons_while_loading_components(menuai: menuai) -> None:
     """Test the get icons helper loads icons."""
     integration = Mock(file_path=pathlib.Path(__file__))
     integration.name = "Component 1"
-    hass.config.components.add("component1")
+    menuai.config.components.add("component1")
     load_count = 0
 
     def mock_load_icons_files(files):
@@ -159,16 +159,16 @@ async def test_get_icons_while_loading_components(hass: HomeAssistant) -> None:
 
     with (
         patch(
-            "homeassistant.helpers.icon._load_icons_files",
+            "menuai.helpers.icon._load_icons_files",
             mock_load_icons_files,
         ),
         patch(
-            "homeassistant.helpers.icon.async_get_integrations",
+            "menuai.helpers.icon.async_get_integrations",
             return_value={"component1": integration},
         ),
     ):
         times = 5
-        all_icons = [await icon.async_get_icons(hass, "entity") for _ in range(times)]
+        all_icons = [await icon.async_get_icons(menuai, "entity") for _ in range(times)]
 
     assert all_icons == [
         {"component1": {"climate": {"test": {"icon": "mdi:home"}}}}
@@ -177,20 +177,20 @@ async def test_get_icons_while_loading_components(hass: HomeAssistant) -> None:
     assert load_count == 1
 
 
-async def test_caching(hass: HomeAssistant) -> None:
+async def test_caching(menuai: menuai) -> None:
     """Test we cache data."""
-    hass.config.components.add("binary_sensor")
-    hass.config.components.add("switch")
+    menuai.config.components.add("binary_sensor")
+    menuai.config.components.add("switch")
 
     # Patch with same method so we can count invocations
     with patch(
-        "homeassistant.helpers.icon.build_resources",
+        "menuai.helpers.icon.build_resources",
         side_effect=icon.build_resources,
     ) as mock_build:
-        load1 = await icon.async_get_icons(hass, "entity_component")
+        load1 = await icon.async_get_icons(menuai, "entity_component")
         assert len(mock_build.mock_calls) == 2
 
-        load2 = await icon.async_get_icons(hass, "entity_component")
+        load2 = await icon.async_get_icons(menuai, "entity_component")
         assert len(mock_build.mock_calls) == 2
 
         assert load1 == load2
@@ -199,30 +199,30 @@ async def test_caching(hass: HomeAssistant) -> None:
         assert load1["switch"]
 
     load_switch_only = await icon.async_get_icons(
-        hass, "entity_component", integrations={"switch"}
+        menuai, "entity_component", integrations={"switch"}
     )
     assert load_switch_only
     assert list(load_switch_only) == ["switch"]
 
     load_binary_sensor_only = await icon.async_get_icons(
-        hass, "entity_component", integrations={"binary_sensor"}
+        menuai, "entity_component", integrations={"binary_sensor"}
     )
     assert load_binary_sensor_only
     assert list(load_binary_sensor_only) == ["binary_sensor"]
 
     # Check if new loaded component, trigger load
-    hass.config.components.add("media_player")
+    menuai.config.components.add("media_player")
     with patch(
-        "homeassistant.helpers.icon._load_icons_files",
+        "menuai.helpers.icon._load_icons_files",
         side_effect=icon._load_icons_files,
     ) as mock_load:
         load_sensor_only = await icon.async_get_icons(
-            hass, "entity_component", integrations={"switch"}
+            menuai, "entity_component", integrations={"switch"}
         )
         assert load_sensor_only
         assert len(mock_load.mock_calls) == 0
 
         await icon.async_get_icons(
-            hass, "entity_component", integrations={"media_player"}
+            menuai, "entity_component", integrations={"media_player"}
         )
         assert len(mock_load.mock_calls) == 1

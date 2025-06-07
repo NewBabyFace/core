@@ -13,10 +13,10 @@ from peblar import (
     PeblarError,
 )
 
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers.aiohttp_client import async_create_clientsession
+from menuai.const import CONF_HOST, CONF_PASSWORD, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers.aiohttp_client import async_create_clientsession
 
 from .coordinator import (
     PeblarConfigEntry,
@@ -37,13 +37,13 @@ PLATFORMS = [
 ]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: PeblarConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: PeblarConfigEntry) -> bool:
     """Set up Peblar from a config entry."""
 
     # Set up connection to the Peblar charger
     peblar = Peblar(
         host=entry.data[CONF_HOST],
-        session=async_create_clientsession(hass, cookie_jar=CookieJar(unsafe=True)),
+        session=async_create_clientsession(menuai, cookie_jar=CookieJar(unsafe=True)),
     )
     try:
         await peblar.login(password=entry.data[CONF_PASSWORD])
@@ -59,11 +59,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: PeblarConfigEntry) -> bo
         ) from err
 
     # Setup the data coordinators
-    meter_coordinator = PeblarDataUpdateCoordinator(hass, entry, api)
+    meter_coordinator = PeblarDataUpdateCoordinator(menuai, entry, api)
     user_configuration_coordinator = PeblarUserConfigurationDataUpdateCoordinator(
-        hass, entry, peblar
+        menuai, entry, peblar
     )
-    version_coordinator = PeblarVersionDataUpdateCoordinator(hass, entry, peblar)
+    version_coordinator = PeblarVersionDataUpdateCoordinator(menuai, entry, peblar)
     await asyncio.gather(
         meter_coordinator.async_config_entry_first_refresh(),
         user_configuration_coordinator.async_config_entry_first_refresh(),
@@ -79,11 +79,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: PeblarConfigEntry) -> bo
     )
 
     # Forward the setup to the platforms
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: PeblarConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: PeblarConfigEntry) -> bool:
     """Unload Peblar config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

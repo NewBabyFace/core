@@ -6,7 +6,7 @@ from telegram import ChatFullInfo, User
 from telegram.constants import AccentColor
 from telegram.error import BadRequest, InvalidToken, NetworkError
 
-from homeassistant.components.telegram_bot.const import (
+from menuai.components.telegram_bot.const import (
     ATTR_PARSER,
     BOT_NAME,
     CONF_ALLOWED_CHAT_IDS,
@@ -25,55 +25,55 @@ from homeassistant.components.telegram_bot.const import (
     PLATFORM_WEBHOOKS,
     SUBENTRY_TYPE_ALLOWED_CHAT_IDS,
 )
-from homeassistant.config_entries import SOURCE_IMPORT, SOURCE_USER, ConfigSubentry
-from homeassistant.const import CONF_API_KEY, CONF_PLATFORM, CONF_URL
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.issue_registry import IssueRegistry
+from menuai.config_entries import SOURCE_IMPORT, SOURCE_USER, ConfigSubentry
+from menuai.const import CONF_API_KEY, CONF_PLATFORM, CONF_URL
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.issue_registry import IssueRegistry
 
 from tests.common import MockConfigEntry
 
 
 async def test_options_flow(
-    hass: HomeAssistant, mock_webhooks_config_entry: MockConfigEntry
+    menuai: menuai, mock_webhooks_config_entry: MockConfigEntry
 ) -> None:
     """Test options flow."""
 
-    mock_webhooks_config_entry.add_to_hass(hass)
+    mock_webhooks_config_entry.add_to_menuai(menuai)
 
     # test: no input
 
-    result = await hass.config_entries.options.async_init(
+    result = await menuai.config_entries.options.async_init(
         mock_webhooks_config_entry.entry_id
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["step_id"] == "init"
     assert result["type"] == FlowResultType.FORM
 
     # test: valid input
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         {
             ATTR_PARSER: PARSER_HTML,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["data"][ATTR_PARSER] == PARSER_HTML
 
 
 async def test_reconfigure_flow_broadcast(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_webhooks_config_entry: MockConfigEntry,
     mock_external_calls: None,
 ) -> None:
     """Test reconfigure flow for broadcast bot."""
-    mock_webhooks_config_entry.add_to_hass(hass)
+    mock_webhooks_config_entry.add_to_menuai(menuai)
 
-    result = await mock_webhooks_config_entry.start_reconfigure_flow(hass)
+    result = await mock_webhooks_config_entry.start_reconfigure_flow(menuai)
     assert result["step_id"] == "reconfigure"
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] is None
@@ -81,18 +81,18 @@ async def test_reconfigure_flow_broadcast(
     # test: invalid proxy url
 
     with patch(
-        "homeassistant.components.telegram_bot.config_flow.Bot.get_me",
+        "menuai.components.telegram_bot.config_flow.Bot.get_me",
     ) as mock_bot:
         mock_bot.side_effect = NetworkError("mock invalid proxy")
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_PLATFORM: PLATFORM_BROADCAST,
                 CONF_PROXY_URL: "invalid",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["step_id"] == "reconfigure"
     assert result["type"] is FlowResultType.FORM
@@ -100,14 +100,14 @@ async def test_reconfigure_flow_broadcast(
 
     # test: valid
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_PLATFORM: PLATFORM_BROADCAST,
             CONF_PROXY_URL: "https://test",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reconfigure_successful"
@@ -115,26 +115,26 @@ async def test_reconfigure_flow_broadcast(
 
 
 async def test_reconfigure_flow_webhooks(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_webhooks_config_entry: MockConfigEntry,
     mock_external_calls: None,
 ) -> None:
     """Test reconfigure flow for webhook."""
-    mock_webhooks_config_entry.add_to_hass(hass)
+    mock_webhooks_config_entry.add_to_menuai(menuai)
 
-    result = await mock_webhooks_config_entry.start_reconfigure_flow(hass)
+    result = await mock_webhooks_config_entry.start_reconfigure_flow(menuai)
     assert result["step_id"] == "reconfigure"
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] is None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_PLATFORM: PLATFORM_WEBHOOKS,
             CONF_PROXY_URL: "https://test",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["step_id"] == "webhooks"
     assert result["type"] is FlowResultType.FORM
@@ -142,7 +142,7 @@ async def test_reconfigure_flow_webhooks(
 
     # test: invalid url
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_URL: "http://test",
@@ -156,7 +156,7 @@ async def test_reconfigure_flow_webhooks(
 
     # test: HA external url not configured
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_TRUSTED_NETWORKS: "149.154.160.0/20,91.108.4.0/22"},
     )
@@ -167,7 +167,7 @@ async def test_reconfigure_flow_webhooks(
 
     # test: invalid trusted networks
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_URL: "https://reconfigure",
@@ -181,7 +181,7 @@ async def test_reconfigure_flow_webhooks(
 
     # test: valid input
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_URL: "https://reconfigure",
@@ -198,13 +198,13 @@ async def test_reconfigure_flow_webhooks(
 
 
 async def test_create_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test user flow."""
 
     # test: no input
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
@@ -216,11 +216,11 @@ async def test_create_entry(
     # test: invalid proxy url
 
     with patch(
-        "homeassistant.components.telegram_bot.config_flow.Bot.get_me",
+        "menuai.components.telegram_bot.config_flow.Bot.get_me",
     ) as mock_bot:
         mock_bot.side_effect = NetworkError("mock invalid proxy")
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_PLATFORM: PLATFORM_WEBHOOKS,
@@ -228,7 +228,7 @@ async def test_create_entry(
                 CONF_PROXY_URL: "invalid",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["step_id"] == "user"
     assert result["type"] is FlowResultType.FORM
@@ -237,10 +237,10 @@ async def test_create_entry(
     # test: valid input, to continue with webhooks step
 
     with patch(
-        "homeassistant.components.telegram_bot.config_flow.Bot.get_me",
+        "menuai.components.telegram_bot.config_flow.Bot.get_me",
         return_value=User(123456, "Testbot", True),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_PLATFORM: PLATFORM_WEBHOOKS,
@@ -248,7 +248,7 @@ async def test_create_entry(
                 CONF_PROXY_URL: "https://proxy",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["step_id"] == "webhooks"
     assert result["type"] is FlowResultType.FORM
@@ -256,14 +256,14 @@ async def test_create_entry(
 
     # test: valid input for webhooks
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_URL: "https://test",
             CONF_TRUSTED_NETWORKS: "149.154.160.0/20",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "Testbot"
@@ -275,13 +275,13 @@ async def test_create_entry(
 
 
 async def test_reauth_flow(
-    hass: HomeAssistant, mock_webhooks_config_entry: MockConfigEntry
+    menuai: menuai, mock_webhooks_config_entry: MockConfigEntry
 ) -> None:
     """Test a reauthentication flow."""
-    mock_webhooks_config_entry.add_to_hass(hass)
+    mock_webhooks_config_entry.add_to_menuai(menuai)
 
     result = await mock_webhooks_config_entry.start_reauth_flow(
-        hass, data={CONF_API_KEY: "dummy"}
+        menuai, data={CONF_API_KEY: "dummy"}
     )
     assert result["step_id"] == "reauth_confirm"
     assert result["type"] is FlowResultType.FORM
@@ -290,15 +290,15 @@ async def test_reauth_flow(
     # test: reauth invalid api key
 
     with patch(
-        "homeassistant.components.telegram_bot.config_flow.Bot.get_me"
+        "menuai.components.telegram_bot.config_flow.Bot.get_me"
     ) as mock_bot:
         mock_bot.side_effect = InvalidToken("mock invalid token error")
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_API_KEY: "new mock api key"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"]["base"] == "invalid_api_key"
@@ -306,14 +306,14 @@ async def test_reauth_flow(
     # test: valid
 
     with patch(
-        "homeassistant.components.telegram_bot.config_flow.Bot.get_me",
+        "menuai.components.telegram_bot.config_flow.Bot.get_me",
         return_value=User(123456, "Testbot", True),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_API_KEY: "new mock api key"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"
@@ -321,21 +321,21 @@ async def test_reauth_flow(
 
 
 async def test_subentry_flow(
-    hass: HomeAssistant, mock_broadcast_config_entry: MockConfigEntry
+    menuai: menuai, mock_broadcast_config_entry: MockConfigEntry
 ) -> None:
     """Test subentry flow."""
-    mock_broadcast_config_entry.add_to_hass(hass)
+    mock_broadcast_config_entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.telegram_bot.config_flow.Bot.get_me",
+        "menuai.components.telegram_bot.config_flow.Bot.get_me",
         return_value=User(123456, "Testbot", True),
     ):
-        assert await hass.config_entries.async_setup(
+        assert await menuai.config_entries.async_setup(
             mock_broadcast_config_entry.entry_id
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    result = await hass.config_entries.subentries.async_init(
+    result = await menuai.config_entries.subentries.async_init(
         (mock_broadcast_config_entry.entry_id, SUBENTRY_TYPE_ALLOWED_CHAT_IDS),
         context={"source": SOURCE_USER},
     )
@@ -343,7 +343,7 @@ async def test_subentry_flow(
     assert result["step_id"] == "user"
 
     with patch(
-        "homeassistant.components.telegram_bot.config_flow.Bot.get_chat",
+        "menuai.components.telegram_bot.config_flow.Bot.get_chat",
         return_value=ChatFullInfo(
             id=987654321,
             title="mock title",
@@ -353,11 +353,11 @@ async def test_subentry_flow(
             accent_color_id=AccentColor.COLOR_000,
         ),
     ):
-        result = await hass.config_entries.subentries.async_configure(
+        result = await menuai.config_entries.subentries.async_configure(
             result["flow_id"],
             user_input={CONF_CHAT_ID: 987654321},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     subentry_id = list(mock_broadcast_config_entry.subentries)[-1]
     subentry: ConfigSubentry = mock_broadcast_config_entry.subentries[subentry_id]
@@ -370,21 +370,21 @@ async def test_subentry_flow(
 
 
 async def test_subentry_flow_chat_error(
-    hass: HomeAssistant, mock_broadcast_config_entry: MockConfigEntry
+    menuai: menuai, mock_broadcast_config_entry: MockConfigEntry
 ) -> None:
     """Test subentry flow."""
-    mock_broadcast_config_entry.add_to_hass(hass)
+    mock_broadcast_config_entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.telegram_bot.config_flow.Bot.get_me",
+        "menuai.components.telegram_bot.config_flow.Bot.get_me",
         return_value=User(123456, "Testbot", True),
     ):
-        assert await hass.config_entries.async_setup(
+        assert await menuai.config_entries.async_setup(
             mock_broadcast_config_entry.entry_id
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    result = await hass.config_entries.subentries.async_init(
+    result = await menuai.config_entries.subentries.async_init(
         (mock_broadcast_config_entry.entry_id, SUBENTRY_TYPE_ALLOWED_CHAT_IDS),
         context={"source": SOURCE_USER},
     )
@@ -394,15 +394,15 @@ async def test_subentry_flow_chat_error(
     # test: chat not found
 
     with patch(
-        "homeassistant.components.telegram_bot.config_flow.Bot.get_chat"
+        "menuai.components.telegram_bot.config_flow.Bot.get_chat"
     ) as mock_bot:
         mock_bot.side_effect = BadRequest("mock chat not found")
 
-        result = await hass.config_entries.subentries.async_configure(
+        result = await menuai.config_entries.subentries.async_configure(
             result["flow_id"],
             user_input={CONF_CHAT_ID: 1234567890},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
@@ -411,7 +411,7 @@ async def test_subentry_flow_chat_error(
     # test: chat id already configured
 
     with patch(
-        "homeassistant.components.telegram_bot.config_flow.Bot.get_chat",
+        "menuai.components.telegram_bot.config_flow.Bot.get_chat",
         return_value=ChatFullInfo(
             id=1234567890,
             title="mock title",
@@ -421,27 +421,27 @@ async def test_subentry_flow_chat_error(
             accent_color_id=AccentColor.COLOR_000,
         ),
     ):
-        result = await hass.config_entries.subentries.async_configure(
+        result = await menuai.config_entries.subentries.async_configure(
             result["flow_id"],
             user_input={CONF_CHAT_ID: 1234567890},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
 
 
 async def test_import_failed(
-    hass: HomeAssistant, issue_registry: IssueRegistry
+    menuai: menuai, issue_registry: IssueRegistry
 ) -> None:
     """Test import flow failed."""
 
     with patch(
-        "homeassistant.components.telegram_bot.config_flow.Bot.get_me"
+        "menuai.components.telegram_bot.config_flow.Bot.get_me"
     ) as mock_bot:
         mock_bot.side_effect = InvalidToken("mock invalid token error")
 
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": SOURCE_IMPORT},
             data={
@@ -451,7 +451,7 @@ async def test_import_failed(
                 CONF_BOT_COUNT: 1,
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "import_failed"
@@ -469,7 +469,7 @@ async def test_import_failed(
 
 
 async def test_import_multiple(
-    hass: HomeAssistant, issue_registry: IssueRegistry
+    menuai: menuai, issue_registry: IssueRegistry
 ) -> None:
     """Test import flow with multiple duplicated entries."""
 
@@ -482,17 +482,17 @@ async def test_import_multiple(
     }
 
     with patch(
-        "homeassistant.components.telegram_bot.config_flow.Bot.get_me",
+        "menuai.components.telegram_bot.config_flow.Bot.get_me",
         return_value=User(123456, "Testbot", True),
     ):
         # test: import first entry success
 
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": SOURCE_IMPORT},
             data=data,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         assert result["type"] is FlowResultType.CREATE_ENTRY
         assert result["data"][CONF_PLATFORM] == PLATFORM_BROADCAST
@@ -509,18 +509,18 @@ async def test_import_multiple(
 
         # test: import 2nd entry failed due to duplicate
 
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": SOURCE_IMPORT},
             data=data,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         assert result["type"] is FlowResultType.ABORT
         assert result["reason"] == "already_configured"
 
 
-async def test_duplicate_entry(hass: HomeAssistant) -> None:
+async def test_duplicate_entry(menuai: menuai) -> None:
     """Test user flow with duplicated entries."""
 
     data = {
@@ -529,17 +529,17 @@ async def test_duplicate_entry(hass: HomeAssistant) -> None:
     }
 
     with patch(
-        "homeassistant.components.telegram_bot.config_flow.Bot.get_me",
+        "menuai.components.telegram_bot.config_flow.Bot.get_me",
         return_value=User(123456, "Testbot", True),
     ):
         # test: import first entry success
 
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": SOURCE_USER},
             data=data,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         assert result["type"] is FlowResultType.CREATE_ENTRY
         assert result["data"][CONF_PLATFORM] == PLATFORM_BROADCAST
@@ -548,12 +548,12 @@ async def test_duplicate_entry(hass: HomeAssistant) -> None:
 
         # test: import 2nd entry failed due to duplicate
 
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": SOURCE_USER},
             data=data,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         assert result["type"] is FlowResultType.ABORT
         assert result["reason"] == "already_configured"

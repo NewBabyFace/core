@@ -2,9 +2,9 @@
 
 import logging
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .const import CONF_HAS_PWD
 from .coordinator import SolarlogConfigEntry, SolarLogCoordinator
@@ -14,22 +14,22 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORMS = [Platform.SENSOR]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: SolarlogConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: SolarlogConfigEntry) -> bool:
     """Set up a config entry for solarlog."""
-    coordinator = SolarLogCoordinator(hass, entry)
+    coordinator = SolarLogCoordinator(menuai, entry)
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: SolarlogConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: SolarlogConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 async def async_migrate_entry(
-    hass: HomeAssistant, config_entry: SolarlogConfigEntry
+    menuai: menuai, config_entry: SolarlogConfigEntry
 ) -> bool:
     """Migrate old entry."""
     _LOGGER.debug("Migrating from version %s", config_entry.version)
@@ -41,7 +41,7 @@ async def async_migrate_entry(
     if config_entry.version == 1:
         if config_entry.minor_version < 2:
             # migrate old entity unique id
-            entity_reg = er.async_get(hass)
+            entity_reg = er.async_get(menuai)
             entities: list[er.RegistryEntry] = er.async_entries_for_config_entry(
                 entity_reg, config_entry.entry_id
             )
@@ -61,7 +61,7 @@ async def async_migrate_entry(
             new = {**config_entry.data}
             new[CONF_HAS_PWD] = False
 
-            hass.config_entries.async_update_entry(
+            menuai.config_entries.async_update_entry(
                 config_entry, data=new, minor_version=3, version=1
             )
 

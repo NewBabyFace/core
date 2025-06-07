@@ -7,11 +7,11 @@ from dataclasses import dataclass
 from pyezvizapi.constants import DeviceSwitchType, SoundMode
 from pyezvizapi.exceptions import HTTPError, PyEzvizError
 
-from homeassistant.components.select import SelectEntity, SelectEntityDescription
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.select import SelectEntity, SelectEntityDescription
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import EzvizConfigEntry, EzvizDataUpdateCoordinator
 from .entity import EzvizEntity
@@ -36,7 +36,7 @@ SELECT_TYPE = EzvizSelectEntityDescription(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: EzvizConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -83,6 +83,6 @@ class EzvizSelect(EzvizEntity, SelectEntity):
             self.coordinator.ezviz_client.alarm_sound(self._serial, sound_mode_value, 1)
 
         except (HTTPError, PyEzvizError) as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Cannot set Warning sound level for {self.entity_id}"
             ) from err

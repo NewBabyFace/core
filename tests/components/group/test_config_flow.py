@@ -5,12 +5,12 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.group import DOMAIN, async_setup_entry
-from homeassistant.const import STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import entity_registry as er
+from menuai import config_entries
+from menuai.components.group import DOMAIN, async_setup_entry
+from menuai.const import STATE_UNKNOWN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry, get_schema_suggested_value
 from tests.typing import WebSocketGenerator
@@ -61,7 +61,7 @@ from tests.typing import WebSocketGenerator
     ],
 )
 async def test_config_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     group_type,
     group_state,
     member_state,
@@ -73,25 +73,25 @@ async def test_config_flow(
     """Test the config flow."""
     members = [f"{group_type}.one", f"{group_type}.two"]
     for member in members:
-        hass.states.async_set(member, member_state, member_attributes)
+        menuai.states.async_set(member, member_state, member_attributes)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.MENU
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": group_type},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == group_type
 
     with patch(
-        "homeassistant.components.group.async_setup_entry", wraps=async_setup_entry
+        "menuai.components.group.async_setup_entry", wraps=async_setup_entry
     ) as mock_setup_entry:
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "name": "Living Room",
@@ -99,7 +99,7 @@ async def test_config_flow(
                 **extra_input,
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "Living Room"
@@ -113,7 +113,7 @@ async def test_config_flow(
     }
     assert len(mock_setup_entry.mock_calls) == 1
 
-    config_entry = hass.config_entries.async_entries(DOMAIN)[0]
+    config_entry = menuai.config_entries.async_entries(DOMAIN)[0]
     assert config_entry.data == {}
     assert config_entry.options == {
         "entities": members,
@@ -123,7 +123,7 @@ async def test_config_flow(
         **extra_options,
     }
 
-    state = hass.states.get(f"{group_type}.living_room")
+    state = menuai.states.get(f"{group_type}.living_room")
     assert state.state == group_state
     assert state.attributes["entity_id"] == members
     for key in extra_attrs:
@@ -149,7 +149,7 @@ async def test_config_flow(
     ],
 )
 async def test_config_flow_hides_members(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     group_type,
     extra_input,
@@ -171,20 +171,20 @@ async def test_config_flow_hides_members(
     assert entry.hidden_by is None
 
     members = [f"{group_type}.one", f"{group_type}.two", fake_uuid, entry.id]
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.MENU
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": group_type},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == group_type
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "name": "Living Room",
@@ -193,7 +193,7 @@ async def test_config_flow_hides_members(
             **extra_input,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
 
@@ -223,16 +223,16 @@ async def test_config_flow_hides_members(
     ],
 )
 async def test_options(
-    hass: HomeAssistant, group_type, member_state, extra_options, options_options
+    menuai: menuai, group_type, member_state, extra_options, options_options
 ) -> None:
     """Test reconfiguring."""
     members1 = [f"{group_type}.one", f"{group_type}.two"]
     members2 = [f"{group_type}.four", f"{group_type}.five"]
 
     for member in members1:
-        hass.states.async_set(member, member_state, {})
+        menuai.states.async_set(member, member_state, {})
     for member in members2:
-        hass.states.async_set(member, member_state, {})
+        menuai.states.async_set(member, member_state, {})
 
     group_config_entry = MockConfigEntry(
         data={},
@@ -245,17 +245,17 @@ async def test_options(
         },
         title="Bed Room",
     )
-    group_config_entry.add_to_hass(hass)
+    group_config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(group_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(group_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(f"{group_type}.bed_room")
+    state = menuai.states.get(f"{group_type}.bed_room")
     assert state.attributes["entity_id"] == members1
 
-    config_entry = hass.config_entries.async_entries(DOMAIN)[0]
+    config_entry = menuai.config_entries.async_entries(DOMAIN)[0]
 
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == group_type
     assert (
@@ -266,7 +266,7 @@ async def test_options(
         f"{group_type}.bed_room"
     ]
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={"entities": members2, **options_options},
     )
@@ -289,21 +289,21 @@ async def test_options(
     assert config_entry.title == "Bed Room"
 
     # Check config entry is reloaded with new options
-    await hass.async_block_till_done()
-    state = hass.states.get(f"{group_type}.bed_room")
+    await menuai.async_block_till_done()
+    state = menuai.states.get(f"{group_type}.bed_room")
     assert state.attributes["entity_id"] == members2
 
     # Check we don't get suggestions from another entry
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.MENU
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": group_type},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == group_type
 
@@ -325,7 +325,7 @@ async def test_options(
     ],
 )
 async def test_all_options(
-    hass: HomeAssistant, group_type, extra_options, extra_options_after, advanced
+    menuai: menuai, group_type, extra_options, extra_options_after, advanced
 ) -> None:
     """Test reconfiguring."""
     members1 = [f"{group_type}.one", f"{group_type}.two"]
@@ -342,22 +342,22 @@ async def test_all_options(
         },
         title="Bed Room",
     )
-    group_config_entry.add_to_hass(hass)
+    group_config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(group_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(group_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(f"{group_type}.bed_room")
+    assert menuai.states.get(f"{group_type}.bed_room")
 
-    config_entry = hass.config_entries.async_entries(DOMAIN)[0]
+    config_entry = menuai.config_entries.async_entries(DOMAIN)[0]
 
-    result = await hass.config_entries.options.async_init(
+    result = await menuai.config_entries.options.async_init(
         config_entry.entry_id, context={"show_advanced_options": advanced}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == group_type
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "entities": members2,
@@ -405,7 +405,7 @@ async def test_all_options(
     ],
 )
 async def test_options_flow_hides_members(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     group_type,
     extra_input,
@@ -447,22 +447,22 @@ async def test_options_flow_hides_members(
         },
         title="Bed Room",
     )
-    group_config_entry.add_to_hass(hass)
+    group_config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(group_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(group_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    result = await hass.config_entries.options.async_init(group_config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(group_config_entry.entry_id)
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "entities": members,
             "hide_members": hide_members,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
 
@@ -504,8 +504,8 @@ SENSOR_ATTRS = [{"icon": "mdi:calculator"}, {"max_entity_id": "sensor.input_two"
     ],
 )
 async def test_config_flow_preview(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     domain: str,
     extra_user_input: dict[str, Any],
     input_states: list[str],
@@ -513,20 +513,20 @@ async def test_config_flow_preview(
     extra_attributes: list[dict[str, Any]],
 ) -> None:
     """Test the config flow preview."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     input_entities = [f"{domain}.input_one", f"{domain}.input_two"]
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.MENU
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": domain},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == domain
     assert result["errors"] is None
@@ -561,8 +561,8 @@ async def test_config_flow_preview(
     msg = await client.receive_json()
     assert msg["success"]
 
-    hass.states.async_set(input_entities[0], input_states[0])
-    hass.states.async_set(input_entities[1], input_states[1])
+    menuai.states.async_set(input_entities[0], input_states[0])
+    menuai.states.async_set(input_entities[1], input_states[1])
 
     await client.send_json_auto_id(
         {
@@ -588,7 +588,7 @@ async def test_config_flow_preview(
         | extra_attributes[1],
         "state": group_state,
     }
-    assert len(hass.states.async_all()) == 2
+    assert len(menuai.states.async_all()) == 2
 
 
 @pytest.mark.parametrize(
@@ -622,8 +622,8 @@ async def test_config_flow_preview(
     ],
 )
 async def test_option_flow_preview(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     domain: str,
     extra_config_flow_data: dict[str, Any],
     extra_user_input: dict[str, Any],
@@ -647,19 +647,19 @@ async def test_option_flow_preview(
         | extra_config_flow_data,
         title="My group",
     )
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] is None
     assert result["preview"] == "group"
 
-    hass.states.async_set(input_entities[0], input_states[0])
-    hass.states.async_set(input_entities[1], input_states[1])
+    menuai.states.async_set(input_entities[0], input_states[0])
+    menuai.states.async_set(input_entities[1], input_states[1])
 
     await client.send_json_auto_id(
         {
@@ -680,14 +680,14 @@ async def test_option_flow_preview(
         | extra_attributes[1],
         "state": group_state,
     }
-    assert len(hass.states.async_all()) == 3
+    assert len(menuai.states.async_all()) == 3
 
 
 async def test_option_flow_sensor_preview_config_entry_removed(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test the option flow preview where the config entry is removed."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     input_entities = ["sensor.input_one", "sensor.input_two"]
 
@@ -704,16 +704,16 @@ async def test_option_flow_sensor_preview_config_entry_removed(
         },
         title="My min_max",
     )
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] is None
     assert result["preview"] == "group"
 
-    await hass.config_entries.async_remove(config_entry.entry_id)
+    await menuai.config_entries.async_remove(config_entry.entry_id)
 
     await client.send_json_auto_id(
         {

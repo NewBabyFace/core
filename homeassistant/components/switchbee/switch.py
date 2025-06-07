@@ -13,11 +13,11 @@ from switchbee.device import (
     SwitchBeeTimerSwitch,
 )
 
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import SwitchBeeCoordinator
@@ -25,12 +25,12 @@ from .entity import SwitchBeeDeviceEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Switchbee switch."""
-    coordinator: SwitchBeeCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: SwitchBeeCoordinator = menuai.data[DOMAIN][entry.entry_id]
 
     async_add_entities(
         SwitchBeeSwitchEntity(device, coordinator)
@@ -98,7 +98,7 @@ class SwitchBeeSwitchEntity[
             await self.coordinator.api.set_state(self._device.id, state)
         except (SwitchBeeError, SwitchBeeDeviceOfflineError) as exp:
             await self.coordinator.async_refresh()
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Failed to set {self._attr_name} state {state}, {exp!s}"
             ) from exp
 

@@ -9,11 +9,11 @@ from solarlog_cli.solarlog_exceptions import (
     SolarLogError,
 )
 
-from homeassistant.components.solarlog.const import CONF_HAS_PWD, DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_HOST, CONF_PASSWORD
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.solarlog.const import CONF_HAS_PWD, DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_HOST, CONF_PASSWORD
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from .const import HOST
 
@@ -21,16 +21,16 @@ from tests.common import MockConfigEntry
 
 
 @pytest.mark.usefixtures("test_connect")
-async def test_form(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
+async def test_form(menuai: menuai, mock_setup_entry: AsyncMock) -> None:
     """Test we get the form."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: HOST, CONF_HAS_PWD: False},
     )
@@ -44,19 +44,19 @@ async def test_form(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
 
 @pytest.mark.usefixtures("test_connect")
 async def test_user(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_solarlog_connector: AsyncMock,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test user config."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
     # tests with all provided
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {CONF_HOST: HOST, CONF_HAS_PWD: False}
     )
 
@@ -79,7 +79,7 @@ async def test_user(
     ],
 )
 async def test_form_exceptions(
-    hass: HomeAssistant,
+    menuai: menuai,
     exception1: Exception,
     error1: dict[str, str],
     exception2: Exception,
@@ -88,7 +88,7 @@ async def test_form_exceptions(
 ) -> None:
     """Test we can handle Form exceptions."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -97,7 +97,7 @@ async def test_form_exceptions(
     mock_solarlog_connector.test_connection.side_effect = exception1
 
     # tests with connection error
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={CONF_HOST: HOST, CONF_HAS_PWD: False}
     )
 
@@ -109,14 +109,14 @@ async def test_form_exceptions(
     mock_solarlog_connector.test_connection.side_effect = None
     mock_solarlog_connector.test_extended_data_available.side_effect = exception2
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={CONF_HOST: HOST, CONF_HAS_PWD: True}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "password"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={CONF_PASSWORD: "pwd"}
     )
 
@@ -127,7 +127,7 @@ async def test_form_exceptions(
     mock_solarlog_connector.test_extended_data_available.side_effect = None
 
     # tests with all provided
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={CONF_PASSWORD: "pwd"}
     )
 
@@ -136,12 +136,12 @@ async def test_form_exceptions(
     assert result["data"][CONF_PASSWORD] == "pwd"
 
 
-async def test_abort_if_already_setup(hass: HomeAssistant, test_connect: None) -> None:
+async def test_abort_if_already_setup(menuai: menuai, test_connect: None) -> None:
     """Test we abort if the device is already setup."""
 
-    MockConfigEntry(domain=DOMAIN, data={CONF_HOST: HOST}).add_to_hass(hass)
+    MockConfigEntry(domain=DOMAIN, data={CONF_HOST: HOST}).add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
@@ -149,7 +149,7 @@ async def test_abort_if_already_setup(hass: HomeAssistant, test_connect: None) -
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: HOST, CONF_HAS_PWD: False},
     )
@@ -165,7 +165,7 @@ async def test_abort_if_already_setup(hass: HomeAssistant, test_connect: None) -
     ],
 )
 async def test_reconfigure_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_solarlog_connector: AsyncMock,
     has_password: bool,
@@ -181,14 +181,14 @@ async def test_reconfigure_flow(
         },
         minor_version=3,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reconfigure"
 
     # test with all data provided
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {CONF_HAS_PWD: True, CONF_PASSWORD: password}
     )
 
@@ -196,7 +196,7 @@ async def test_reconfigure_flow(
     assert result["reason"] == "reconfigure_successful"
     assert len(mock_setup_entry.mock_calls) == 1
 
-    entry = hass.config_entries.async_get_entry(entry.entry_id)
+    entry = menuai.config_entries.async_get_entry(entry.entry_id)
     assert entry
     assert entry.title == HOST
     assert entry.data[CONF_HAS_PWD] == has_password
@@ -211,7 +211,7 @@ async def test_reconfigure_flow(
     ],
 )
 async def test_reauth(
-    hass: HomeAssistant,
+    menuai: menuai,
     exception: Exception,
     error: dict[str, str],
     mock_solarlog_connector: AsyncMock,
@@ -229,16 +229,16 @@ async def test_reauth(
         },
         minor_version=3,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await entry.start_reauth_flow(hass)
+    result = await entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
     mock_solarlog_connector.test_extended_data_available.side_effect = exception
 
     # tests with connection error
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_PASSWORD: "other_pwd"},
     )
@@ -250,7 +250,7 @@ async def test_reauth(
     mock_solarlog_connector.test_extended_data_available.side_effect = None
 
     # tests with all information provided
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_PASSWORD: "other_pwd"},
     )

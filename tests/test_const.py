@@ -7,8 +7,8 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from homeassistant import const
-from homeassistant.components import alarm_control_panel, lock
+from menuai import const
+from menuai.components import alarm_control_panel, lock
 
 from .common import (
     extract_stack_to_frame,
@@ -132,15 +132,15 @@ def test_deprecated_unit_of_conductivity_members(
     with (
         patch.dict(sys.modules, {module_name: Mock(__file__=filename)}),
         patch(
-            "homeassistant.helpers.frame.linecache.getline",
+            "menuai.helpers.frame.linecache.getline",
             return_value="await session.close()",
         ),
         patch(
-            "homeassistant.helpers.frame.get_current_frame",
+            "menuai.helpers.frame.get_current_frame",
             return_value=extract_stack_to_frame(
                 [
                     Mock(
-                        filename="/home/paulus/homeassistant/core.py",
+                        filename="/home/paulus/menuai/core.py",
                         lineno="23",
                         line="do_something()",
                     ),

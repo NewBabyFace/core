@@ -12,18 +12,18 @@ from pylamarzocco import (
 from pylamarzocco.const import FirmwareType
 from pylamarzocco.exceptions import AuthFail, RequestNotSuccessful
 
-from homeassistant.components.bluetooth import async_discovered_service_info
-from homeassistant.const import (
+from menuai.components.bluetooth import async_discovered_service_info
+from menuai.const import (
     CONF_MAC,
     CONF_PASSWORD,
     CONF_TOKEN,
     CONF_USERNAME,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import issue_registry as ir
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import issue_registry as ir
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import CONF_USE_BLUETOOTH, DOMAIN
 from .coordinator import (
@@ -51,13 +51,13 @@ BT_MODEL_PREFIXES = ("MICRA", "MINI", "GS3")
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: LaMarzoccoConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: LaMarzoccoConfigEntry) -> bool:
     """Set up La Marzocco as config entry."""
 
     assert entry.unique_id
     serial = entry.unique_id
 
-    client = async_get_clientsession(hass)
+    client = async_get_clientsession(menuai)
     cloud_client = LaMarzoccoCloudClient(
         username=entry.data[CONF_USERNAME],
         password=entry.data[CONF_PASSWORD],
@@ -83,7 +83,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: LaMarzoccoConfigEntry) -
     if gateway_version < version.parse("v5.0.9"):
         # incompatible gateway firmware, create an issue
         ir.async_create_issue(
-            hass,
+            menuai,
             DOMAIN,
             "unsupported_gateway_firmware",
             is_fixable=False,
@@ -98,7 +98,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: LaMarzoccoConfigEntry) -
         token := settings.ble_auth_token
     ):
         if CONF_MAC not in entry.data:
-            for discovery_info in async_discovered_service_info(hass):
+            for discovery_info in async_discovered_service_info(menuai):
                 if (
                     (name := discovery_info.name)
                     and name.startswith(BT_MODEL_PREFIXES)
@@ -106,7 +106,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: LaMarzoccoConfigEntry) -
                 ):
                     _LOGGER.debug("Found Bluetooth device, configuring with Bluetooth")
                     # found a device, add MAC address to config entry
-                    hass.config_entries.async_update_entry(
+                    menuai.config_entries.async_update_entry(
                         entry,
                         data={
                             **entry.data,
@@ -116,7 +116,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: LaMarzoccoConfigEntry) -
 
         if not entry.data[CONF_TOKEN]:
             # update the token in the config entry
-            hass.config_entries.async_update_entry(
+            menuai.config_entries.async_update_entry(
                 entry,
                 data={
                     **entry.data,
@@ -138,10 +138,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: LaMarzoccoConfigEntry) -
     )
 
     coordinators = LaMarzoccoRuntimeData(
-        LaMarzoccoConfigUpdateCoordinator(hass, entry, device),
-        LaMarzoccoSettingsUpdateCoordinator(hass, entry, device),
-        LaMarzoccoScheduleUpdateCoordinator(hass, entry, device),
-        LaMarzoccoStatisticsUpdateCoordinator(hass, entry, device),
+        LaMarzoccoConfigUpdateCoordinator(menuai, entry, device),
+        LaMarzoccoSettingsUpdateCoordinator(menuai, entry, device),
+        LaMarzoccoScheduleUpdateCoordinator(menuai, entry, device),
+        LaMarzoccoStatisticsUpdateCoordinator(menuai, entry, device),
     )
 
     await asyncio.gather(
@@ -153,25 +153,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: LaMarzoccoConfigEntry) -
 
     entry.runtime_data = coordinators
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     async def update_listener(
-        hass: HomeAssistant, entry: LaMarzoccoConfigEntry
+        menuai: menuai, entry: LaMarzoccoConfigEntry
     ) -> None:
-        await hass.config_entries.async_reload(entry.entry_id)
+        await menuai.config_entries.async_reload(entry.entry_id)
 
     entry.async_on_unload(entry.add_update_listener(update_listener))
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: LaMarzoccoConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: LaMarzoccoConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 async def async_migrate_entry(
-    hass: HomeAssistant, entry: LaMarzoccoConfigEntry
+    menuai: menuai, entry: LaMarzoccoConfigEntry
 ) -> bool:
     """Migrate config entry."""
     if entry.version > 3:
@@ -208,7 +208,7 @@ async def async_migrate_entry(
         }
         if CONF_MAC in entry.data:
             v3_data[CONF_MAC] = entry.data[CONF_MAC]
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry,
             data=v3_data,
             version=3,

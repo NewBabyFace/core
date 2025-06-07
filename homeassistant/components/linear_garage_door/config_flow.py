@@ -11,11 +11,11 @@ from linear_garage_door import Linear
 from linear_garage_door.errors import InvalidLoginError
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_EMAIL, CONF_PASSWORD
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN
 
@@ -28,7 +28,7 @@ STEP_USER_DATA_SCHEMA = {
 
 
 async def validate_input(
-    hass: HomeAssistant,
+    menuai: menuai,
     data: dict[str, str],
 ) -> dict[str, Sequence[Collection[str]]]:
     """Validate the user input allows us to connect.
@@ -44,7 +44,7 @@ async def validate_input(
             data["email"],
             data["password"],
             device_id=device_id,
-            client_session=async_get_clientsession(hass),
+            client_session=async_get_clientsession(menuai),
         )
 
         sites = await hub.get_sites()
@@ -82,7 +82,7 @@ class LinearGarageDoorConfigFlow(ConfigFlow, domain=DOMAIN):
         errors = {}
 
         try:
-            info = await validate_input(self.hass, user_input)
+            info = await validate_input(self.menuai, user_input)
         except InvalidAuth:
             errors["base"] = "invalid_auth"
         except Exception:
@@ -152,9 +152,9 @@ class LinearGarageDoorConfigFlow(ConfigFlow, domain=DOMAIN):
         return await self.async_step_user()
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(menuaiError):
     """Error to indicate there is invalid auth."""
 
 
-class InvalidDeviceID(HomeAssistantError):
+class InvalidDeviceID(menuaiError):
     """Error to indicate there is invalid device ID."""

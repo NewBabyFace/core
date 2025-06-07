@@ -8,9 +8,9 @@ from typing import Any
 import voluptuous as vol
 import zeversolar
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST
-from homeassistant.helpers import config_validation as cv
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST
+from menuai.helpers import config_validation as cv
 
 from .const import DOMAIN
 
@@ -41,7 +41,7 @@ class ZeverSolarConfigFlow(ConfigFlow, domain=DOMAIN):
 
         client = zeversolar.ZeverSolarClient(host=user_input[CONF_HOST])
         try:
-            data = await self.hass.async_add_executor_job(client.get_data)
+            data = await self.menuai.async_add_executor_job(client.get_data)
         except zeversolar.ZeverSolarHTTPNotFound:
             errors["base"] = "invalid_host"
         except zeversolar.ZeverSolarHTTPError:

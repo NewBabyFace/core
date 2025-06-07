@@ -10,16 +10,16 @@ from pynordpool import (
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.nordpool.const import DOMAIN
-from homeassistant.components.nordpool.services import (
+from menuai.components.nordpool.const import DOMAIN
+from menuai.components.nordpool.services import (
     ATTR_AREAS,
     ATTR_CONFIG_ENTRY,
     ATTR_CURRENCY,
     SERVICE_GET_PRICES_FOR_DATE,
 )
-from homeassistant.const import ATTR_DATE
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
+from menuai.const import ATTR_DATE
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
 
 from tests.common import MockConfigEntry
 
@@ -37,7 +37,7 @@ TEST_SERVICE_DATA_USE_DEFAULTS = {
 
 @pytest.mark.freeze_time("2024-11-05T18:00:00+00:00")
 async def test_service_call(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: MockConfigEntry,
     snapshot: SnapshotAssertion,
 ) -> None:
@@ -45,7 +45,7 @@ async def test_service_call(
 
     service_data = TEST_SERVICE_DATA.copy()
     service_data[ATTR_CONFIG_ENTRY] = load_int.entry_id
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         DOMAIN,
         SERVICE_GET_PRICES_FOR_DATE,
         service_data,
@@ -58,7 +58,7 @@ async def test_service_call(
 
     service_data = TEST_SERVICE_DATA_USE_DEFAULTS.copy()
     service_data[ATTR_CONFIG_ENTRY] = load_int.entry_id
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         DOMAIN,
         SERVICE_GET_PRICES_FOR_DATE,
         service_data,
@@ -79,7 +79,7 @@ async def test_service_call(
 )
 @pytest.mark.freeze_time("2024-11-05T18:00:00+00:00")
 async def test_service_call_failures(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: MockConfigEntry,
     error: Exception,
     key: str,
@@ -90,12 +90,12 @@ async def test_service_call_failures(
 
     with (
         patch(
-            "homeassistant.components.nordpool.coordinator.NordPoolClient.async_get_delivery_period",
+            "menuai.components.nordpool.coordinator.NordPoolClient.async_get_delivery_period",
             side_effect=error,
         ),
         pytest.raises(ServiceValidationError) as err,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_GET_PRICES_FOR_DATE,
             service_data,
@@ -107,7 +107,7 @@ async def test_service_call_failures(
 
 @pytest.mark.freeze_time("2024-11-05T18:00:00+00:00")
 async def test_empty_response_returns_empty_list(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: MockConfigEntry,
     snapshot: SnapshotAssertion,
 ) -> None:
@@ -117,11 +117,11 @@ async def test_empty_response_returns_empty_list(
 
     with (
         patch(
-            "homeassistant.components.nordpool.coordinator.NordPoolClient.async_get_delivery_period",
+            "menuai.components.nordpool.coordinator.NordPoolClient.async_get_delivery_period",
             side_effect=NordPoolEmptyResponseError,
         ),
     ):
-        response = await hass.services.async_call(
+        response = await menuai.services.async_call(
             DOMAIN,
             SERVICE_GET_PRICES_FOR_DATE,
             service_data,
@@ -134,13 +134,13 @@ async def test_empty_response_returns_empty_list(
 
 @pytest.mark.freeze_time("2024-11-05T18:00:00+00:00")
 async def test_service_call_config_entry_bad_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: MockConfigEntry,
 ) -> None:
     """Test get_prices_for_date service call when config entry bad state."""
 
     with pytest.raises(ServiceValidationError) as err:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_GET_PRICES_FOR_DATE,
             TEST_SERVICE_DATA,
@@ -151,11 +151,11 @@ async def test_service_call_config_entry_bad_state(
 
     service_data = TEST_SERVICE_DATA.copy()
     service_data[ATTR_CONFIG_ENTRY] = load_int.entry_id
-    await hass.config_entries.async_unload(load_int.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(load_int.entry_id)
+    await menuai.async_block_till_done()
 
     with pytest.raises(ServiceValidationError) as err:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_GET_PRICES_FOR_DATE,
             service_data,

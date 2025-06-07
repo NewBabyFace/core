@@ -5,12 +5,12 @@ from typing import Any
 
 from pyhap.const import CATEGORY_ALARM_SYSTEM
 
-from homeassistant.components.alarm_control_panel import (
+from menuai.components.alarm_control_panel import (
     DOMAIN as ALARM_CONTROL_PANEL_DOMAIN,
     AlarmControlPanelEntityFeature,
     AlarmControlPanelState,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_CODE,
     ATTR_ENTITY_ID,
     ATTR_SUPPORTED_FEATURES,
@@ -21,7 +21,7 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import State, callback
+from menuai.core import State, callback
 
 from .accessories import TYPES, HomeAccessory
 from .const import (
@@ -38,7 +38,7 @@ HK_ALARM_NIGHT_ARMED = 2
 HK_ALARM_DISARMED = 3
 HK_ALARM_TRIGGERED = 4
 
-HASS_TO_HOMEKIT_CURRENT = {
+menuai_TO_HOMEKIT_CURRENT = {
     AlarmControlPanelState.ARMED_HOME: HK_ALARM_STAY_ARMED,
     AlarmControlPanelState.ARMED_VACATION: HK_ALARM_AWAY_ARMED,
     AlarmControlPanelState.ARMED_AWAY: HK_ALARM_AWAY_ARMED,
@@ -48,7 +48,7 @@ HASS_TO_HOMEKIT_CURRENT = {
     AlarmControlPanelState.TRIGGERED: HK_ALARM_TRIGGERED,
 }
 
-HASS_TO_HOMEKIT_TARGET = {
+menuai_TO_HOMEKIT_TARGET = {
     AlarmControlPanelState.ARMED_HOME: HK_ALARM_STAY_ARMED,
     AlarmControlPanelState.ARMED_VACATION: HK_ALARM_AWAY_ARMED,
     AlarmControlPanelState.ARMED_AWAY: HK_ALARM_AWAY_ARMED,
@@ -57,7 +57,7 @@ HASS_TO_HOMEKIT_TARGET = {
     AlarmControlPanelState.DISARMED: HK_ALARM_DISARMED,
 }
 
-HASS_TO_HOMEKIT_SERVICES = {
+menuai_TO_HOMEKIT_SERVICES = {
     SERVICE_ALARM_ARM_HOME: HK_ALARM_STAY_ARMED,
     SERVICE_ALARM_ARM_AWAY: HK_ALARM_AWAY_ARMED,
     SERVICE_ALARM_ARM_NIGHT: HK_ALARM_NIGHT_ARMED,
@@ -79,7 +79,7 @@ class SecuritySystem(HomeAccessory):
     def __init__(self, *args: Any) -> None:
         """Initialize a SecuritySystem accessory object."""
         super().__init__(*args, category=CATEGORY_ALARM_SYSTEM)
-        state = self.hass.states.get(self.entity_id)
+        state = self.menuai.states.get(self.entity_id)
         assert state
         self._alarm_code = self.config.get(ATTR_CODE)
 
@@ -120,7 +120,7 @@ class SecuritySystem(HomeAccessory):
 
         self.char_current_state = serv_alarm.configure_char(
             CHAR_CURRENT_SECURITY_STATE,
-            value=HASS_TO_HOMEKIT_CURRENT[AlarmControlPanelState.DISARMED],
+            value=menuai_TO_HOMEKIT_CURRENT[AlarmControlPanelState.DISARMED],
             valid_values={
                 key: val
                 for key, val in default_current_states.items()
@@ -129,7 +129,7 @@ class SecuritySystem(HomeAccessory):
         )
         self.char_target_state = serv_alarm.configure_char(
             CHAR_TARGET_SECURITY_STATE,
-            value=HASS_TO_HOMEKIT_SERVICES[SERVICE_ALARM_DISARM],
+            value=menuai_TO_HOMEKIT_SERVICES[SERVICE_ALARM_DISARM],
             valid_values={
                 key: val
                 for key, val in default_target_services.items()
@@ -154,25 +154,25 @@ class SecuritySystem(HomeAccessory):
     @callback
     def async_update_state(self, new_state: State) -> None:
         """Update security state after state changed."""
-        hass_state: str | AlarmControlPanelState = new_state.state
-        if hass_state in {"None", STATE_UNKNOWN, STATE_UNAVAILABLE}:
+        menuai_state: str | AlarmControlPanelState = new_state.state
+        if menuai_state in {"None", STATE_UNKNOWN, STATE_UNAVAILABLE}:
             # Bail out early for no state, unknown or unavailable
             return
-        if hass_state is not None:
-            hass_state = AlarmControlPanelState(hass_state)
+        if menuai_state is not None:
+            menuai_state = AlarmControlPanelState(menuai_state)
         if (
-            hass_state
-            and (current_state := HASS_TO_HOMEKIT_CURRENT.get(hass_state)) is not None
+            menuai_state
+            and (current_state := menuai_TO_HOMEKIT_CURRENT.get(menuai_state)) is not None
         ):
             self.char_current_state.set_value(current_state)
             _LOGGER.debug(
                 "%s: Updated current state to %s (%d)",
                 self.entity_id,
-                hass_state,
+                menuai_state,
                 current_state,
             )
         if (
-            hass_state
-            and (target_state := HASS_TO_HOMEKIT_TARGET.get(hass_state)) is not None
+            menuai_state
+            and (target_state := menuai_TO_HOMEKIT_TARGET.get(menuai_state)) is not None
         ):
             self.char_target_state.set_value(target_state)

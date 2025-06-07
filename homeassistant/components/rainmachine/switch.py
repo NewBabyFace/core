@@ -11,14 +11,14 @@ from typing import Any, Concatenate
 from regenmaschine.errors import RainMachineError
 import voluptuous as vol
 
-from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_ID, EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import VolDictType
+from menuai.components.switch import SwitchEntity, SwitchEntityDescription
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_ID, EntityCategory
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv, entity_platform
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import VolDictType
 
 from . import RainMachineConfigEntry, RainMachineData, async_update_programs_and_zones
 from .const import (
@@ -121,7 +121,7 @@ def raise_on_request_error[_T: RainMachineBaseSwitch, **_P](
         try:
             await func(self, *args, **kwargs)
         except RainMachineError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Error while executing {func.__name__}: {err}",
             ) from err
 
@@ -172,7 +172,7 @@ RESTRICTIONS_SWITCH_DESCRIPTIONS = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: RainMachineConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -267,8 +267,8 @@ class RainMachineBaseSwitch(RainMachineEntity, SwitchEntity):
     @callback
     def _update_activities(self) -> None:
         """Update all activity data."""
-        self.hass.async_create_task(
-            async_update_programs_and_zones(self.hass, self._entry)
+        self.menuai.async_create_task(
+            async_update_programs_and_zones(self.menuai, self._entry)
         )
 
     async def async_start_program(self) -> None:
@@ -317,7 +317,7 @@ class RainMachineActivitySwitch(RainMachineBaseSwitch):
             not self._entry.options[CONF_ALLOW_INACTIVE_ZONES_TO_RUN]
             and not self.coordinator.data[self.entity_description.uid]["active"]
         ):
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Cannot turn off an inactive program/zone: {self.name}"
             )
 
@@ -336,7 +336,7 @@ class RainMachineActivitySwitch(RainMachineBaseSwitch):
         ):
             self._attr_is_on = False
             self.async_write_ha_state()
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Cannot turn on an inactive program/zone: {self.name}"
             )
 

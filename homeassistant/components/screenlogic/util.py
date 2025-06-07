@@ -4,7 +4,7 @@ import logging
 
 from screenlogicpy.const.data import SHARED_VALUES
 
-from homeassistant.helpers import entity_registry as er
+from menuai.helpers import entity_registry as er
 
 from .const import DOMAIN, SL_UNIT_TO_HA_UNIT, ScreenLogicDataPath
 from .coordinator import ScreenlogicDataUpdateCoordinator
@@ -25,7 +25,7 @@ def generate_unique_id(*args: str | int | None) -> str:
 
 
 def get_ha_unit(sl_unit) -> str:
-    """Return equivalent Home Assistant unit of measurement if exists."""
+    """Return equivalent MenuAI unit of measurement if exists."""
     if (ha_unit := SL_UNIT_TO_HA_UNIT.get(sl_unit)) is not None:
         return ha_unit
     return sl_unit
@@ -38,7 +38,7 @@ def cleanup_excluded_entity(
 ) -> None:
     """Remove excluded entity if it exists."""
     assert coordinator.config_entry
-    entity_registry = er.async_get(coordinator.hass)
+    entity_registry = er.async_get(coordinator.menuai)
     unique_id = f"{coordinator.config_entry.unique_id}_{generate_unique_id(*data_path)}"
     if entity_id := entity_registry.async_get_entity_id(
         platform_domain, DOMAIN, unique_id

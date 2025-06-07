@@ -6,14 +6,14 @@ from typing import TYPE_CHECKING, Any
 
 import voluptuous as vol
 
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     DOMAIN as SWITCH_DOMAIN,
     ENTITY_ID_FORMAT,
     PLATFORM_SCHEMA as SWITCH_PLATFORM_SCHEMA,
     SwitchEntity,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_FRIENDLY_NAME,
     CONF_DEVICE_ID,
@@ -27,17 +27,17 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import TemplateError
-from homeassistant.helpers import config_validation as cv, selector, template
-from homeassistant.helpers.device import async_device_info_to_link_from_device_id
-from homeassistant.helpers.entity import async_generate_entity_id
-from homeassistant.helpers.entity_platform import (
+from menuai.core import menuai, callback
+from menuai.exceptions import TemplateError
+from menuai.helpers import config_validation as cv, selector, template
+from menuai.helpers.device import async_device_info_to_link_from_device_id
+from menuai.helpers.entity import async_generate_entity_id
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     AddEntitiesCallback,
 )
-from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.helpers.restore_state import RestoreEntity
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import TriggerUpdateCoordinator
 from .const import CONF_OBJECT_ID, CONF_PICTURE, CONF_TURN_OFF, CONF_TURN_ON, DOMAIN
@@ -105,7 +105,7 @@ SWITCH_CONFIG_SCHEMA = vol.Schema(
 
 
 def rewrite_legacy_to_modern_conf(
-    hass: HomeAssistant, config: dict[str, dict]
+    menuai: menuai, config: dict[str, dict]
 ) -> list[dict]:
     """Rewrite legacy switch configuration definitions to modern ones."""
     switches = []
@@ -114,11 +114,11 @@ def rewrite_legacy_to_modern_conf(
         entity_conf = {**entity_conf, CONF_OBJECT_ID: object_id}
 
         entity_conf = rewrite_common_legacy_to_modern_conf(
-            hass, entity_conf, LEGACY_FIELDS
+            menuai, entity_conf, LEGACY_FIELDS
         )
 
         if CONF_NAME not in entity_conf:
-            entity_conf[CONF_NAME] = template.Template(object_id, hass)
+            entity_conf[CONF_NAME] = template.Template(object_id, menuai)
 
         switches.append(entity_conf)
 
@@ -138,7 +138,7 @@ def rewrite_options_to_modern_conf(option_config: dict[str, dict]) -> dict[str, 
 @callback
 def _async_create_template_tracking_entities(
     async_add_entities: AddEntitiesCallback,
-    hass: HomeAssistant,
+    menuai: menuai,
     definitions: list[dict],
     unique_id_prefix: str | None,
 ) -> None:
@@ -153,7 +153,7 @@ def _async_create_template_tracking_entities(
 
         switches.append(
             SwitchTemplate(
-                hass,
+                menuai,
                 entity_conf,
                 unique_id,
             )
@@ -163,7 +163,7 @@ def _async_create_template_tracking_entities(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -172,29 +172,29 @@ async def async_setup_platform(
     if discovery_info is None:
         _async_create_template_tracking_entities(
             async_add_entities,
-            hass,
-            rewrite_legacy_to_modern_conf(hass, config[CONF_SWITCHES]),
+            menuai,
+            rewrite_legacy_to_modern_conf(menuai, config[CONF_SWITCHES]),
             None,
         )
         return
 
     if "coordinator" in discovery_info:
         async_add_entities(
-            TriggerSwitchEntity(hass, discovery_info["coordinator"], config)
+            TriggerSwitchEntity(menuai, discovery_info["coordinator"], config)
             for config in discovery_info["entities"]
         )
         return
 
     _async_create_template_tracking_entities(
         async_add_entities,
-        hass,
+        menuai,
         discovery_info["entities"],
         discovery_info["unique_id"],
     )
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -203,17 +203,17 @@ async def async_setup_entry(
     _options.pop("template_type")
     _options = rewrite_options_to_modern_conf(_options)
     validated_config = SWITCH_CONFIG_SCHEMA(_options)
-    async_add_entities([SwitchTemplate(hass, validated_config, config_entry.entry_id)])
+    async_add_entities([SwitchTemplate(menuai, validated_config, config_entry.entry_id)])
 
 
 @callback
 def async_create_preview_switch(
-    hass: HomeAssistant, name: str, config: dict[str, Any]
+    menuai: menuai, name: str, config: dict[str, Any]
 ) -> SwitchTemplate:
     """Create a preview switch."""
     updated_config = rewrite_options_to_modern_conf(config)
     validated_config = SWITCH_CONFIG_SCHEMA(updated_config | {CONF_NAME: name})
-    return SwitchTemplate(hass, validated_config, None)
+    return SwitchTemplate(menuai, validated_config, None)
 
 
 class SwitchTemplate(TemplateEntity, SwitchEntity, RestoreEntity):
@@ -223,15 +223,15 @@ class SwitchTemplate(TemplateEntity, SwitchEntity, RestoreEntity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config: ConfigType,
         unique_id: str | None,
     ) -> None:
         """Initialize the Template switch."""
-        super().__init__(hass, config=config, fallback_name=None, unique_id=unique_id)
+        super().__init__(menuai, config=config, fallback_name=None, unique_id=unique_id)
         if (object_id := config.get(CONF_OBJECT_ID)) is not None:
             self.entity_id = async_generate_entity_id(
-                ENTITY_ID_FORMAT, object_id, hass=hass
+                ENTITY_ID_FORMAT, object_id, menuai=menuai
             )
         name = self._attr_name
         if TYPE_CHECKING:
@@ -247,7 +247,7 @@ class SwitchTemplate(TemplateEntity, SwitchEntity, RestoreEntity):
         self._state: bool | None = False
         self._attr_assumed_state = self._template is None
         self._attr_device_info = async_device_info_to_link_from_device_id(
-            hass,
+            menuai,
             config.get(CONF_DEVICE_ID),
         )
 
@@ -268,14 +268,14 @@ class SwitchTemplate(TemplateEntity, SwitchEntity, RestoreEntity):
 
         self._state = False
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
         if self._template is None:
             # restore state after startup
-            await super().async_added_to_hass()
+            await super().async_added_to_menuai()
             if state := await self.async_get_last_state():
                 self._state = state.state == STATE_ON
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
     @callback
     def _async_setup_templates(self) -> None:
@@ -316,12 +316,12 @@ class TriggerSwitchEntity(TriggerEntity, SwitchEntity, RestoreEntity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         coordinator: TriggerUpdateCoordinator,
         config: ConfigType,
     ) -> None:
         """Initialize the entity."""
-        super().__init__(hass, coordinator, config)
+        super().__init__(menuai, coordinator, config)
         name = self._rendered.get(CONF_NAME, DEFAULT_NAME)
         self._template = config.get(CONF_STATE)
         if on_action := config.get(CONF_TURN_ON):
@@ -335,13 +335,13 @@ class TriggerSwitchEntity(TriggerEntity, SwitchEntity, RestoreEntity):
             self._parse_result.add(CONF_STATE)
 
         self._attr_device_info = async_device_info_to_link_from_device_id(
-            hass,
+            menuai,
             config.get(CONF_DEVICE_ID),
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Restore last state."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         if (
             (last_state := await self.async_get_last_state()) is not None
             and last_state.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE)

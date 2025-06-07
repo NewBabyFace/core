@@ -2,16 +2,16 @@
 
 import pytest
 
-from homeassistant.components.tado.const import (
+from menuai.components.tado.const import (
     CONST_OVERLAY_MANUAL,
     CONST_OVERLAY_TADO_DEFAULT,
     CONST_OVERLAY_TADO_MODE,
     DOMAIN,
     WATER_HEATER_FALLBACK_REPAIR,
 )
-from homeassistant.components.tado.repairs import manage_water_heater_fallback_issue
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import issue_registry as ir
+from menuai.components.tado.repairs import manage_water_heater_fallback_issue
+from menuai.core import menuai
+from menuai.helpers import issue_registry as ir
 
 
 class MockWaterHeater:
@@ -23,7 +23,7 @@ class MockWaterHeater:
 
 
 async def test_manage_water_heater_fallback_issue_not_created(
-    hass: HomeAssistant,
+    menuai: menuai,
     issue_registry: ir.IssueRegistry,
 ) -> None:
     """Test water heater fallback issue is not needed."""
@@ -33,7 +33,7 @@ async def test_manage_water_heater_fallback_issue_not_created(
     manage_water_heater_fallback_issue(
         water_heater_names=water_heater_names,
         integration_overlay_fallback=CONST_OVERLAY_TADO_MODE,
-        hass=hass,
+        menuai=menuai,
     )
     assert (
         issue_registry.async_get_issue(issue_id=expected_issue_id, domain=DOMAIN)
@@ -45,7 +45,7 @@ async def test_manage_water_heater_fallback_issue_not_created(
     "integration_overlay_fallback", [CONST_OVERLAY_TADO_DEFAULT, CONST_OVERLAY_MANUAL]
 )
 async def test_manage_water_heater_fallback_issue_created(
-    hass: HomeAssistant,
+    menuai: menuai,
     issue_registry: ir.IssueRegistry,
     integration_overlay_fallback: str,
 ) -> None:
@@ -56,7 +56,7 @@ async def test_manage_water_heater_fallback_issue_created(
     manage_water_heater_fallback_issue(
         water_heater_names=water_heater_names,
         integration_overlay_fallback=integration_overlay_fallback,
-        hass=hass,
+        menuai=menuai,
     )
     assert (
         issue_registry.async_get_issue(issue_id=expected_issue_id, domain=DOMAIN)

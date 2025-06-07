@@ -37,8 +37,8 @@ from zwave_js_server.model.node import Node
 from zwave_js_server.model.node.firmware import NodeFirmwareUpdateData
 from zwave_js_server.model.value import ConfigurationValue, get_value_id_str
 
-from homeassistant.components.websocket_api import ERR_INVALID_FORMAT, ERR_NOT_FOUND
-from homeassistant.components.zwave_js.api import (
+from menuai.components.websocket_api import ERR_INVALID_FORMAT, ERR_NOT_FOUND
+from menuai.components.zwave_js.api import (
     APPLICATION_VERSION,
     AREA_ID,
     CLIENT_SIDE_AUTH,
@@ -86,7 +86,7 @@ from homeassistant.components.zwave_js.api import (
     VALUE_SIZE,
     VERSION,
 )
-from homeassistant.components.zwave_js.const import (
+from menuai.components.zwave_js.const import (
     ATTR_COMMAND_CLASS,
     ATTR_ENDPOINT,
     ATTR_METHOD_NAME,
@@ -96,10 +96,10 @@ from homeassistant.components.zwave_js.const import (
     CONF_INSTALLER_MODE,
     DOMAIN,
 )
-from homeassistant.components.zwave_js.helpers import get_device_id
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.setup import async_setup_component
+from menuai.components.zwave_js.helpers import get_device_id
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry, MockUser
 from tests.typing import ClientSessionGenerator, WebSocketGenerator
@@ -113,24 +113,24 @@ def platforms() -> list[str]:
     return []
 
 
-def get_device(hass: HomeAssistant, node):
+def get_device(menuai: menuai, node):
     """Get device ID for a node."""
-    dev_reg = dr.async_get(hass)
+    dev_reg = dr.async_get(menuai)
     device_id = get_device_id(node.client.driver, node)
     return dev_reg.async_get_device(identifiers={device_id})
 
 
 async def test_no_driver(
-    hass: HomeAssistant,
+    menuai: menuai,
     client,
     multisensor_6,
     controller_state,
     integration,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test driver missing results in error."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
     client.driver = None
 
     # Try API call with entry ID
@@ -146,17 +146,17 @@ async def test_no_driver(
 
 
 async def test_network_status(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     multisensor_6,
     controller_state,
     client,
     integration,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test the network status websocket command."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
     client.server_logging_enabled = False
 
     # Try API call with entry ID
@@ -230,8 +230,8 @@ async def test_network_status(
     assert msg["error"]["code"] == ERR_NOT_FOUND
 
     # Test sending command with not loaded entry fails with config entry ID
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json(
         {
@@ -272,16 +272,16 @@ async def test_network_status(
 
 
 async def test_subscribe_node_status(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     multisensor_6_state,
     client,
     integration,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test the subscribe node status websocket command."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
     node_data = deepcopy(multisensor_6_state)  # Copy to allow modification in tests.
     node = Node(client, node_data)
     node.data["ready"] = False
@@ -316,7 +316,7 @@ async def test_subscribe_node_status(
         },
     )
     node.receive_event(event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     msg = await ws_client.receive_json()
 
@@ -333,7 +333,7 @@ async def test_subscribe_node_status(
         },
     )
     node.receive_event(event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     msg = await ws_client.receive_json()
 
@@ -343,14 +343,14 @@ async def test_subscribe_node_status(
 
 
 async def test_node_status(
-    hass: HomeAssistant, multisensor_6, integration, hass_ws_client: WebSocketGenerator
+    menuai: menuai, multisensor_6, integration, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test the node status websocket command."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     node = multisensor_6
-    device = get_device(hass, node)
+    device = get_device(menuai, node)
     await ws_client.send_json(
         {
             ID: 3,
@@ -384,8 +384,8 @@ async def test_node_status(
     assert msg["error"]["code"] == ERR_NOT_FOUND
 
     # Test sending command with not loaded entry fails
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json(
         {
@@ -401,17 +401,17 @@ async def test_node_status(
 
 
 async def test_node_metadata(
-    hass: HomeAssistant,
+    menuai: menuai,
     wallmote_central_scene,
     integration,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test the node metadata websocket command."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     node = wallmote_central_scene
-    device = get_device(hass, node)
+    device = get_device(menuai, node)
     await ws_client.send_json(
         {
             ID: 3,
@@ -465,8 +465,8 @@ async def test_node_metadata(
     assert msg["error"]["code"] == ERR_NOT_FOUND
 
     # Test sending command with not loaded entry fails
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json(
         {
@@ -482,15 +482,15 @@ async def test_node_metadata(
 
 
 async def test_node_alerts(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     wallmote_central_scene,
     integration,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test the node comments websocket command."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     device = device_registry.async_get_device(identifiers={(DOMAIN, "3245146787-35")})
     assert device
@@ -586,8 +586,8 @@ async def test_node_alerts(
     assert msg["error"]["code"] == ERR_NOT_FOUND
 
     # Test integration not loaded error - need to unload the integration
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json_auto_id(
         {
@@ -601,16 +601,16 @@ async def test_node_alerts(
 
 
 async def test_add_node(
-    hass: HomeAssistant,
+    menuai: menuai,
     nortek_thermostat,
     nortek_thermostat_added_event,
     integration,
     client,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test the add_node websocket command."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     client.async_send_command.return_value = {"success": True}
 
@@ -1085,8 +1085,8 @@ async def test_add_node(
     assert msg["event"]["node"]["node_id"] == node.node_id
 
     # Test sending command with not loaded entry fails
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json(
         {ID: 12, TYPE: "zwave_js/add_node", ENTRY_ID: entry.entry_id}
@@ -1098,11 +1098,11 @@ async def test_add_node(
 
 
 async def test_grant_security_classes(
-    hass: HomeAssistant, integration, client, hass_ws_client: WebSocketGenerator
+    menuai: menuai, integration, client, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test the grant_security_classes websocket command."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     client.async_send_command.return_value = {}
 
@@ -1126,8 +1126,8 @@ async def test_grant_security_classes(
     }
 
     # Test sending command with not loaded entry fails
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json(
         {
@@ -1145,11 +1145,11 @@ async def test_grant_security_classes(
 
 
 async def test_validate_dsk_and_enter_pin(
-    hass: HomeAssistant, integration, client, hass_ws_client: WebSocketGenerator
+    menuai: menuai, integration, client, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test the validate_dsk_and_enter_pin websocket command."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     client.async_send_command.return_value = {}
 
@@ -1172,8 +1172,8 @@ async def test_validate_dsk_and_enter_pin(
     }
 
     # Test sending command with not loaded entry fails
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json(
         {
@@ -1190,15 +1190,15 @@ async def test_validate_dsk_and_enter_pin(
 
 
 async def test_provision_smart_start_node(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     integration,
     client,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test provision_smart_start_node websocket command."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     client.async_send_command.return_value = {"success": True}
 
@@ -1347,8 +1347,8 @@ async def test_provision_smart_start_node(
         assert msg["error"]["message"] == "zwave_error: Z-Wave error 1 - error message"
 
     # Test sending command with not loaded entry fails
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json(
         {
@@ -1365,15 +1365,15 @@ async def test_provision_smart_start_node(
 
 
 async def test_unprovision_smart_start_node(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     integration,
     client,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test unprovision_smart_start_node websocket command."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     client.async_send_command.return_value = {}
 
@@ -1524,8 +1524,8 @@ async def test_unprovision_smart_start_node(
         assert msg["error"]["message"] == "zwave_error: Z-Wave error 1 - error message"
 
     # Test sending command with not loaded entry fails
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json_auto_id(
         {
@@ -1541,11 +1541,11 @@ async def test_unprovision_smart_start_node(
 
 
 async def test_get_provisioning_entries(
-    hass: HomeAssistant, integration, client, hass_ws_client: WebSocketGenerator
+    menuai: menuai, integration, client, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test get_provisioning_entries websocket command."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     client.async_send_command.return_value = {
         "entries": [{"dsk": "test", "securityClasses": [0], "fake": "test"}]
@@ -1589,8 +1589,8 @@ async def test_get_provisioning_entries(
         assert msg["error"]["message"] == "zwave_error: Z-Wave error 1 - error message"
 
     # Test sending command with not loaded entry fails
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json(
         {ID: 7, TYPE: "zwave_js/get_provisioning_entries", ENTRY_ID: entry.entry_id}
@@ -1602,11 +1602,11 @@ async def test_get_provisioning_entries(
 
 
 async def test_parse_qr_code_string(
-    hass: HomeAssistant, integration, client, hass_ws_client: WebSocketGenerator
+    menuai: menuai, integration, client, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test parse_qr_code_string websocket command."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     client.async_send_command.return_value = {
         "qrProvisioningInformation": {
@@ -1662,7 +1662,7 @@ async def test_parse_qr_code_string(
 
     # Test FailedZWaveCommand is caught
     with patch(
-        "homeassistant.components.zwave_js.api.async_parse_qr_code_string",
+        "menuai.components.zwave_js.api.async_parse_qr_code_string",
         side_effect=FailedZWaveCommand("failed_command", 1, "error message"),
     ):
         await ws_client.send_json(
@@ -1682,8 +1682,8 @@ async def test_parse_qr_code_string(
         assert msg["error"]["message"] == "zwave_error: Z-Wave error 1 - error message"
 
     # Test sending command with not loaded entry fails
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json(
         {
@@ -1700,11 +1700,11 @@ async def test_parse_qr_code_string(
 
 
 async def test_try_parse_dsk_from_qr_code_string(
-    hass: HomeAssistant, integration, client, hass_ws_client: WebSocketGenerator
+    menuai: menuai, integration, client, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test try_parse_dsk_from_qr_code_string websocket command."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     client.async_send_command.return_value = {"dsk": "a"}
 
@@ -1729,7 +1729,7 @@ async def test_try_parse_dsk_from_qr_code_string(
 
     # Test FailedZWaveCommand is caught
     with patch(
-        "homeassistant.components.zwave_js.api.async_try_parse_dsk_from_qr_code_string",
+        "menuai.components.zwave_js.api.async_try_parse_dsk_from_qr_code_string",
         side_effect=FailedZWaveCommand("failed_command", 1, "error message"),
     ):
         await ws_client.send_json(
@@ -1749,8 +1749,8 @@ async def test_try_parse_dsk_from_qr_code_string(
         assert msg["error"]["message"] == "zwave_error: Z-Wave error 1 - error message"
 
     # Test sending command with not loaded entry fails
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json(
         {
@@ -1767,11 +1767,11 @@ async def test_try_parse_dsk_from_qr_code_string(
 
 
 async def test_supports_feature(
-    hass: HomeAssistant, integration, client, hass_ws_client: WebSocketGenerator
+    menuai: menuai, integration, client, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test supports_feature websocket command."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     client.async_send_command.return_value = {"supported": True}
 
@@ -1790,11 +1790,11 @@ async def test_supports_feature(
 
 
 async def test_cancel_inclusion_exclusion(
-    hass: HomeAssistant, integration, client, hass_ws_client: WebSocketGenerator
+    menuai: menuai, integration, client, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test cancelling the inclusion and exclusion process."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     client.async_send_command.return_value = {"success": True}
 
@@ -1849,8 +1849,8 @@ async def test_cancel_inclusion_exclusion(
         assert msg["error"]["message"] == "zwave_error: Z-Wave error 1 - error message"
 
     # Test sending command with not loaded entry fails
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json(
         {ID: 8, TYPE: "zwave_js/stop_inclusion", ENTRY_ID: entry.entry_id}
@@ -1870,17 +1870,17 @@ async def test_cancel_inclusion_exclusion(
 
 
 async def test_remove_node(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     integration,
     client,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     nortek_thermostat,
     nortek_thermostat_removed_event,
 ) -> None:
     """Test the remove_node websocket command."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     client.async_send_command.return_value = {"success": True}
 
@@ -1967,8 +1967,8 @@ async def test_remove_node(
         assert msg["error"]["message"] == "zwave_error: Z-Wave error 1 - error message"
 
     # Test sending command with not loaded entry fails
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json(
         {ID: 5, TYPE: "zwave_js/remove_node", ENTRY_ID: entry.entry_id}
@@ -1980,18 +1980,18 @@ async def test_remove_node(
 
 
 async def test_replace_failed_node(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     nortek_thermostat,
     integration,
     client,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     nortek_thermostat_added_event,
     nortek_thermostat_removed_event,
 ) -> None:
     """Test the replace_failed_node websocket command."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     # Create device registry entry for mock node
     device = device_registry.async_get_or_create(
@@ -2330,8 +2330,8 @@ async def test_replace_failed_node(
         assert msg["error"]["message"] == "zwave_error: Z-Wave error 1 - error message"
 
     # Test sending command with not loaded entry fails
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json(
         {
@@ -2347,19 +2347,19 @@ async def test_replace_failed_node(
 
 
 async def test_remove_failed_node(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     nortek_thermostat,
     integration,
     client,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     nortek_thermostat_removed_event,
     nortek_thermostat_added_event,
 ) -> None:
     """Test the remove_failed_node websocket command."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
-    device = get_device(hass, nortek_thermostat)
+    ws_client = await menuai_ws_client(menuai)
+    device = get_device(menuai, nortek_thermostat)
 
     client.async_send_command.return_value = {"success": True}
 
@@ -2416,8 +2416,8 @@ async def test_remove_failed_node(
     client.driver.receive_event(nortek_thermostat_added_event)
 
     # Test sending command with not loaded entry fails
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json(
         {
@@ -2433,14 +2433,14 @@ async def test_remove_failed_node(
 
 
 async def test_begin_rebuilding_routes(
-    hass: HomeAssistant,
+    menuai: menuai,
     integration,
     client,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test the begin_rebuilding_routes websocket command."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     client.async_send_command.return_value = {"success": True}
 
@@ -2475,8 +2475,8 @@ async def test_begin_rebuilding_routes(
         assert msg["error"]["message"] == "zwave_error: Z-Wave error 1 - error message"
 
     # Test sending command with not loaded entry fails
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json(
         {
@@ -2492,15 +2492,15 @@ async def test_begin_rebuilding_routes(
 
 
 async def test_subscribe_rebuild_routes_progress(
-    hass: HomeAssistant,
+    menuai: menuai,
     integration,
     client,
     nortek_thermostat,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test the subscribe_rebuild_routes_progress command."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     await ws_client.send_json(
         {
@@ -2529,8 +2529,8 @@ async def test_subscribe_rebuild_routes_progress(
     assert msg["event"]["rebuild_routes_status"] == {"67": "pending"}
 
     # Test sending command with not loaded entry fails
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json(
         {
@@ -2546,15 +2546,15 @@ async def test_subscribe_rebuild_routes_progress(
 
 
 async def test_subscribe_rebuild_routes_progress_initial_value(
-    hass: HomeAssistant,
+    menuai: menuai,
     integration,
     client,
     nortek_thermostat,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test subscribe_rebuild_routes_progress command when rebuild routes in progress."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     assert not client.driver.controller.rebuild_routes_progress
 
@@ -2583,14 +2583,14 @@ async def test_subscribe_rebuild_routes_progress_initial_value(
 
 
 async def test_stop_rebuilding_routes(
-    hass: HomeAssistant,
+    menuai: menuai,
     integration,
     client,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test the stop_rebuilding_routes websocket command."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     client.async_send_command.return_value = {"success": True}
 
@@ -2625,8 +2625,8 @@ async def test_stop_rebuilding_routes(
         assert msg["error"]["message"] == "zwave_error: Z-Wave error 1 - error message"
 
     # Test sending command with not loaded entry fails
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json(
         {
@@ -2642,16 +2642,16 @@ async def test_stop_rebuilding_routes(
 
 
 async def test_rebuild_node_routes(
-    hass: HomeAssistant,
+    menuai: menuai,
     multisensor_6,
     integration,
     client,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test the rebuild_node_routes websocket command."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
-    device = get_device(hass, multisensor_6)
+    ws_client = await menuai_ws_client(menuai)
+    device = get_device(menuai, multisensor_6)
 
     client.async_send_command.return_value = {"success": True}
 
@@ -2686,8 +2686,8 @@ async def test_rebuild_node_routes(
         assert msg["error"]["message"] == "zwave_error: Z-Wave error 1 - error message"
 
     # Test sending command with not loaded entry fails
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json(
         {
@@ -2703,17 +2703,17 @@ async def test_rebuild_node_routes(
 
 
 async def test_refresh_node_info(
-    hass: HomeAssistant,
+    menuai: menuai,
     client,
     multisensor_6,
     integration,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test that the refresh_node_info WS API call works."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
-    device = get_device(hass, multisensor_6)
+    device = get_device(menuai, multisensor_6)
 
     client.async_send_command_no_wait.return_value = None
     await ws_client.send_json(
@@ -2814,8 +2814,8 @@ async def test_refresh_node_info(
         assert msg["error"]["message"] == "zwave_error: Z-Wave error 1 - error message"
 
     # Test sending command with not loaded entry fails
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json(
         {
@@ -2831,16 +2831,16 @@ async def test_refresh_node_info(
 
 
 async def test_refresh_node_values(
-    hass: HomeAssistant,
+    menuai: menuai,
     client,
     multisensor_6,
     integration,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test that the refresh_node_values WS API call works."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
-    device = get_device(hass, multisensor_6)
+    ws_client = await menuai_ws_client(menuai)
+    device = get_device(menuai, multisensor_6)
 
     client.async_send_command_no_wait.return_value = None
     await ws_client.send_json(
@@ -2891,8 +2891,8 @@ async def test_refresh_node_values(
         assert msg["error"]["message"] == "zwave_error: Z-Wave error 1 - error message"
 
     # Test sending command with not loaded entry fails
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json(
         {
@@ -2908,16 +2908,16 @@ async def test_refresh_node_values(
 
 
 async def test_refresh_node_cc_values(
-    hass: HomeAssistant,
+    menuai: menuai,
     multisensor_6,
     client,
     integration,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test that the refresh_node_cc_values WS API call works."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
-    device = get_device(hass, multisensor_6)
+    ws_client = await menuai_ws_client(menuai)
+    device = get_device(menuai, multisensor_6)
 
     client.async_send_command_no_wait.return_value = None
     await ws_client.send_json(
@@ -2985,8 +2985,8 @@ async def test_refresh_node_cc_values(
         assert msg["error"]["message"] == "zwave_error: Z-Wave error 1 - error message"
 
     # Test sending command with not loaded entry fails
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json(
         {
@@ -3003,16 +3003,16 @@ async def test_refresh_node_cc_values(
 
 
 async def test_set_config_parameter(
-    hass: HomeAssistant,
+    menuai: menuai,
     multisensor_6,
     client,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     integration,
 ) -> None:
     """Test the set_config_parameter service."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
-    device = get_device(hass, multisensor_6)
+    ws_client = await menuai_ws_client(menuai)
+    device = get_device(menuai, multisensor_6)
     new_value_data = multisensor_6.values[
         get_value_id_str(multisensor_6, 112, 102, 0, 1)
     ].data.copy()
@@ -3117,7 +3117,7 @@ async def test_set_config_parameter(
     client.async_send_command_no_wait.reset_mock()
 
     with patch(
-        "homeassistant.components.zwave_js.api.async_set_config_parameter",
+        "menuai.components.zwave_js.api.async_set_config_parameter",
     ) as set_param_mock:
         set_param_mock.side_effect = InvalidNewValue("test")
         await ws_client.send_json(
@@ -3193,7 +3193,7 @@ async def test_set_config_parameter(
 
     # Test FailedZWaveCommand is caught
     with patch(
-        "homeassistant.components.zwave_js.api.async_set_config_parameter",
+        "menuai.components.zwave_js.api.async_set_config_parameter",
         side_effect=FailedZWaveCommand("failed_command", 1, "error message"),
     ):
         await ws_client.send_json(
@@ -3213,8 +3213,8 @@ async def test_set_config_parameter(
         assert msg["error"]["message"] == "zwave_error: Z-Wave error 1 - error message"
 
     # Test sending command with not loaded entry fails
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json(
         {
@@ -3234,13 +3234,13 @@ async def test_set_config_parameter(
 
 
 async def test_get_config_parameters(
-    hass: HomeAssistant, multisensor_6, integration, hass_ws_client: WebSocketGenerator
+    menuai: menuai, multisensor_6, integration, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test the get config parameters websocket command."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
     node = multisensor_6
-    device = get_device(hass, node)
+    device = get_device(menuai, node)
 
     # Test getting configuration parameter values
     await ws_client.send_json(
@@ -3290,8 +3290,8 @@ async def test_get_config_parameters(
     assert msg["error"]["code"] == ERR_NOT_FOUND
 
     # Test sending command with not loaded entry fails
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json(
         {
@@ -3307,16 +3307,16 @@ async def test_get_config_parameters(
 
 
 async def test_set_raw_config_parameter(
-    hass: HomeAssistant,
+    menuai: menuai,
     client,
     multisensor_6,
     integration,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test that the set_raw_config_parameter WS API call works."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
-    device = get_device(hass, multisensor_6)
+    ws_client = await menuai_ws_client(menuai)
+    device = get_device(menuai, multisensor_6)
 
     # Change from async_send_command to async_send_command_no_wait
     client.async_send_command_no_wait.return_value = None
@@ -3365,8 +3365,8 @@ async def test_set_raw_config_parameter(
     assert msg["error"]["code"] == ERR_NOT_FOUND
 
     # Test sending command with not loaded entry fails
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json_auto_id(
         {
@@ -3385,16 +3385,16 @@ async def test_set_raw_config_parameter(
 
 
 async def test_get_raw_config_parameter(
-    hass: HomeAssistant,
+    menuai: menuai,
     multisensor_6,
     integration,
     client,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test the get_raw_config_parameter websocket command."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
-    device = get_device(hass, multisensor_6)
+    ws_client = await menuai_ws_client(menuai)
+    device = get_device(menuai, multisensor_6)
 
     client.async_send_command.return_value = {"value": 1}
 
@@ -3464,8 +3464,8 @@ async def test_get_raw_config_parameter(
     assert msg["error"]["message"] == "Command failed: test"
 
     # Test sending command with not loaded entry fails
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json_auto_id(
         {
@@ -3485,27 +3485,27 @@ async def test_get_raw_config_parameter(
     [({"target": "1"}, {"firmware_target": 1}), ({}, {})],
 )
 async def test_firmware_upload_view(
-    hass: HomeAssistant,
+    menuai: menuai,
     multisensor_6,
     integration,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     firmware_file,
     firmware_data: dict[str, Any],
     expected_data: dict[str, Any],
 ) -> None:
     """Test the HTTP firmware upload view."""
-    client = await hass_client()
-    device = get_device(hass, multisensor_6)
+    client = await menuai_client()
+    device = get_device(menuai, multisensor_6)
     with (
         patch(
-            "homeassistant.components.zwave_js.api.update_firmware",
+            "menuai.components.zwave_js.api.update_firmware",
         ) as mock_node_cmd,
         patch(
-            "homeassistant.components.zwave_js.api.controller_firmware_update_otw",
+            "menuai.components.zwave_js.api.controller_firmware_update_otw",
         ) as mock_controller_cmd,
         patch.dict(
-            "homeassistant.components.zwave_js.api.USER_AGENT",
-            {"HomeAssistant": "0.0.0"},
+            "menuai.components.zwave_js.api.USER_AGENT",
+            {"menuai": "0.0.0"},
         ),
     ):
         data = {"file": firmware_file}
@@ -3524,34 +3524,34 @@ async def test_firmware_upload_view(
         mock_controller_cmd.assert_not_called()
         assert mock_node_cmd.call_args[0][1:3] == (multisensor_6, [update_data])
         assert mock_node_cmd.call_args[1] == {
-            "additional_user_agent_components": {"HomeAssistant": "0.0.0"},
+            "additional_user_agent_components": {"menuai": "0.0.0"},
         }
         assert json.loads(await resp.text()) is None
 
 
 async def test_firmware_upload_view_controller(
-    hass: HomeAssistant,
+    menuai: menuai,
     client,
     integration,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     firmware_file,
 ) -> None:
     """Test the HTTP firmware upload view for a controller."""
-    hass_client = await hass_client()
-    device = get_device(hass, client.driver.controller.nodes[1])
+    menuai_client = await menuai_client()
+    device = get_device(menuai, client.driver.controller.nodes[1])
     with (
         patch(
-            "homeassistant.components.zwave_js.api.update_firmware",
+            "menuai.components.zwave_js.api.update_firmware",
         ) as mock_node_cmd,
         patch(
-            "homeassistant.components.zwave_js.api.controller_firmware_update_otw",
+            "menuai.components.zwave_js.api.controller_firmware_update_otw",
         ) as mock_controller_cmd,
         patch.dict(
-            "homeassistant.components.zwave_js.api.USER_AGENT",
-            {"HomeAssistant": "0.0.0"},
+            "menuai.components.zwave_js.api.USER_AGENT",
+            {"menuai": "0.0.0"},
         ),
     ):
-        resp = await hass_client.post(
+        resp = await menuai_client.post(
             f"/api/zwave_js/firmware/upload/{device.id}",
             data={"file": firmware_file},
         )
@@ -3562,23 +3562,23 @@ async def test_firmware_upload_view_controller(
             ),
         )
         assert mock_controller_cmd.call_args[1] == {
-            "additional_user_agent_components": {"HomeAssistant": "0.0.0"},
+            "additional_user_agent_components": {"menuai": "0.0.0"},
         }
         assert json.loads(await resp.text()) is None
 
 
 async def test_firmware_upload_view_failed_command(
-    hass: HomeAssistant,
+    menuai: menuai,
     multisensor_6,
     integration,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     firmware_file,
 ) -> None:
     """Test failed command for the HTTP firmware upload view."""
-    client = await hass_client()
-    device = get_device(hass, multisensor_6)
+    client = await menuai_client()
+    device = get_device(menuai, multisensor_6)
     with patch(
-        "homeassistant.components.zwave_js.api.update_firmware",
+        "menuai.components.zwave_js.api.update_firmware",
         side_effect=FailedCommand("test", "test"),
     ):
         resp = await client.post(
@@ -3589,11 +3589,11 @@ async def test_firmware_upload_view_failed_command(
 
 
 async def test_firmware_upload_view_invalid_payload(
-    hass: HomeAssistant, multisensor_6, integration, hass_client: ClientSessionGenerator
+    menuai: menuai, multisensor_6, integration, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test an invalid payload for the HTTP firmware upload view."""
-    device = get_device(hass, multisensor_6)
-    client = await hass_client()
+    device = get_device(menuai, multisensor_6)
+    client = await menuai_client()
     resp = await client.post(
         f"/api/zwave_js/firmware/upload/{device.id}",
         data={"wrong_key": BytesIO(bytes(10))},
@@ -3602,16 +3602,16 @@ async def test_firmware_upload_view_invalid_payload(
 
 
 async def test_firmware_upload_view_no_driver(
-    hass: HomeAssistant,
+    menuai: menuai,
     client,
     multisensor_6,
     integration,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test the HTTP firmware upload view when the driver doesn't exist."""
-    device = get_device(hass, multisensor_6)
+    device = get_device(menuai, multisensor_6)
     client.driver = None
-    aiohttp_client = await hass_client()
+    aiohttp_client = await menuai_client()
     resp = await aiohttp_client.post(
         f"/api/zwave_js/firmware/upload/{device.id}",
         data={"wrong_key": BytesIO(bytes(10))},
@@ -3624,19 +3624,19 @@ async def test_firmware_upload_view_no_driver(
     [("post", "/api/zwave_js/firmware/upload/{}")],
 )
 async def test_node_view_non_admin_user(
-    hass: HomeAssistant,
+    menuai: menuai,
     multisensor_6,
     integration,
-    hass_client: ClientSessionGenerator,
-    hass_admin_user: MockUser,
+    menuai_client: ClientSessionGenerator,
+    menuai_admin_user: MockUser,
     method,
     url,
 ) -> None:
     """Test node level views for non-admin users."""
-    client = await hass_client()
-    device = get_device(hass, multisensor_6)
+    client = await menuai_client()
+    device = get_device(menuai, multisensor_6)
     # Verify we require admin user
-    hass_admin_user.groups = []
+    menuai_admin_user.groups = []
     resp = await client.request(method, url.format(device.id))
     assert resp.status == HTTPStatus.UNAUTHORIZED
 
@@ -3648,17 +3648,17 @@ async def test_node_view_non_admin_user(
     ],
 )
 async def test_view_unloaded_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     multisensor_6,
     integration,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     method,
     url,
 ) -> None:
     """Test an unloaded config entry raises Bad Request."""
-    client = await hass_client()
-    device = get_device(hass, multisensor_6)
-    await hass.config_entries.async_unload(integration.entry_id)
+    client = await menuai_client()
+    device = get_device(menuai, multisensor_6)
+    await menuai.config_entries.async_unload(integration.entry_id)
     resp = await client.request(method, url.format(device.id))
     assert resp.status == HTTPStatus.BAD_REQUEST
 
@@ -3668,20 +3668,20 @@ async def test_view_unloaded_config_entry(
     [("post", "/api/zwave_js/firmware/upload/INVALID")],
 )
 async def test_view_invalid_device_id(
-    integration, hass_client: ClientSessionGenerator, method, url
+    integration, menuai_client: ClientSessionGenerator, method, url
 ) -> None:
     """Test an invalid device id parameter."""
-    client = await hass_client()
+    client = await menuai_client()
     resp = await client.request(method, url.format(integration.entry_id))
     assert resp.status == HTTPStatus.NOT_FOUND
 
 
 async def test_subscribe_log_updates(
-    hass: HomeAssistant, integration, client, hass_ws_client: WebSocketGenerator
+    menuai: menuai, integration, client, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test the subscribe_log_updates websocket command."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     client.async_send_command.return_value = {}
 
@@ -3769,8 +3769,8 @@ async def test_subscribe_log_updates(
     assert msg["error"]["message"] == "zwave_error: Z-Wave error 1 - error message"
 
     # Test sending command with not loaded entry fails
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json(
         {ID: 3, TYPE: "zwave_js/subscribe_log_updates", ENTRY_ID: entry.entry_id}
@@ -3782,11 +3782,11 @@ async def test_subscribe_log_updates(
 
 
 async def test_update_log_config(
-    hass: HomeAssistant, client, integration, hass_ws_client: WebSocketGenerator
+    menuai: menuai, client, integration, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test that update_log_config WS API call and schema validation works."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     # Test we can set log level
     client.async_send_command.return_value = {"success": True}
@@ -3922,8 +3922,8 @@ async def test_update_log_config(
         assert msg["error"]["message"] == "zwave_error: Z-Wave error 1 - error message"
 
     # Test sending command with not loaded entry fails
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json(
         {
@@ -3940,11 +3940,11 @@ async def test_update_log_config(
 
 
 async def test_get_log_config(
-    hass: HomeAssistant, client, integration, hass_ws_client: WebSocketGenerator
+    menuai: menuai, client, integration, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test that the get_log_config WS API call works."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     # Test we can get log configuration
     await ws_client.send_json(
@@ -3966,8 +3966,8 @@ async def test_get_log_config(
     assert log_config["force_console"] is False
 
     # Test sending command with not loaded entry fails
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json(
         {
@@ -3983,11 +3983,11 @@ async def test_get_log_config(
 
 
 async def test_data_collection(
-    hass: HomeAssistant, client, integration, hass_ws_client: WebSocketGenerator
+    menuai: menuai, client, integration, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test that the data collection WS API commands work."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     client.async_send_command.return_value = {"statisticsEnabled": False}
     await ws_client.send_json(
@@ -4026,7 +4026,7 @@ async def test_data_collection(
     assert len(client.async_send_command.call_args_list) == 1
     args = client.async_send_command.call_args_list[0][0][0]
     assert args["command"] == "driver.enable_statistics"
-    assert args["applicationName"] == "Home Assistant"
+    assert args["applicationName"] == "MenuAI"
 
     client.async_send_command.reset_mock()
 
@@ -4089,8 +4089,8 @@ async def test_data_collection(
         assert msg["error"]["message"] == "zwave_error: Z-Wave error 1 - error message"
 
     # Test sending command with not loaded entry fails
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json(
         {
@@ -4119,16 +4119,16 @@ async def test_data_collection(
 
 
 async def test_abort_firmware_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     client,
     multisensor_6,
     integration,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test that the abort_firmware_update WS API call works."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
-    device = get_device(hass, multisensor_6)
+    ws_client = await menuai_ws_client(menuai)
+    device = get_device(menuai, multisensor_6)
 
     await ws_client.send_json(
         {
@@ -4164,8 +4164,8 @@ async def test_abort_firmware_update(
         assert msg["error"]["message"] == "zwave_error: Z-Wave error 1 - error message"
 
     # Test sending command with not loaded entry fails
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json(
         {
@@ -4194,16 +4194,16 @@ async def test_abort_firmware_update(
 
 
 async def test_is_node_firmware_update_in_progress(
-    hass: HomeAssistant,
+    menuai: menuai,
     client,
     multisensor_6,
     integration,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test that the is_firmware_update_in_progress WS API call works."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
-    device = get_device(hass, multisensor_6)
+    ws_client = await menuai_ws_client(menuai)
+    device = get_device(menuai, multisensor_6)
 
     client.async_send_command.return_value = {"progress": True}
     await ws_client.send_json(
@@ -4241,8 +4241,8 @@ async def test_is_node_firmware_update_in_progress(
         assert msg["error"]["message"] == "zwave_error: Z-Wave error 1 - error message"
 
     # Test sending command with not loaded entry fails
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json(
         {
@@ -4258,15 +4258,15 @@ async def test_is_node_firmware_update_in_progress(
 
 
 async def test_subscribe_firmware_update_status(
-    hass: HomeAssistant,
+    menuai: menuai,
     multisensor_6,
     integration,
     client,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test the subscribe_firmware_update_status websocket command."""
-    ws_client = await hass_ws_client(hass)
-    device = get_device(hass, multisensor_6)
+    ws_client = await menuai_ws_client(menuai)
+    device = get_device(menuai, multisensor_6)
 
     client.async_send_command_no_wait.return_value = {}
 
@@ -4336,15 +4336,15 @@ async def test_subscribe_firmware_update_status(
 
 
 async def test_subscribe_firmware_update_status_initial_value(
-    hass: HomeAssistant,
+    menuai: menuai,
     multisensor_6,
     client,
     integration,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test subscribe_firmware_update_status WS command with in progress update."""
-    ws_client = await hass_ws_client(hass)
-    device = get_device(hass, multisensor_6)
+    ws_client = await menuai_ws_client(menuai)
+    device = get_device(menuai, multisensor_6)
 
     assert multisensor_6.firmware_update_progress is None
 
@@ -4392,11 +4392,11 @@ async def test_subscribe_firmware_update_status_initial_value(
 
 
 async def test_subscribe_controller_firmware_update_status(
-    hass: HomeAssistant, integration, client, hass_ws_client: WebSocketGenerator
+    menuai: menuai, integration, client, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test the subscribe_firmware_update_status websocket command for a node."""
-    ws_client = await hass_ws_client(hass)
-    device = get_device(hass, client.driver.controller.nodes[1])
+    ws_client = await menuai_ws_client(menuai)
+    device = get_device(menuai, client.driver.controller.nodes[1])
 
     client.async_send_command_no_wait.return_value = {}
 
@@ -4458,11 +4458,11 @@ async def test_subscribe_controller_firmware_update_status(
 
 
 async def test_subscribe_controller_firmware_update_status_initial_value(
-    hass: HomeAssistant, client, integration, hass_ws_client: WebSocketGenerator
+    menuai: menuai, client, integration, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test subscribe_firmware_update_status cmd with in progress update for node."""
-    ws_client = await hass_ws_client(hass)
-    device = get_device(hass, client.driver.controller.nodes[1])
+    ws_client = await menuai_ws_client(menuai)
+    device = get_device(menuai, client.driver.controller.nodes[1])
 
     assert client.driver.controller.firmware_update_progress is None
 
@@ -4507,16 +4507,16 @@ async def test_subscribe_controller_firmware_update_status_initial_value(
 
 
 async def test_subscribe_firmware_update_status_failures(
-    hass: HomeAssistant,
+    menuai: menuai,
     multisensor_6,
     client,
     integration,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test failures for the subscribe_firmware_update_status websocket command."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
-    device = get_device(hass, multisensor_6)
+    ws_client = await menuai_ws_client(menuai)
+    device = get_device(menuai, multisensor_6)
     # Test sending command with improper entry ID fails
     await ws_client.send_json(
         {
@@ -4531,8 +4531,8 @@ async def test_subscribe_firmware_update_status_failures(
     assert msg["error"]["code"] == ERR_NOT_FOUND
 
     # Test sending command with not loaded entry fails
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json(
         {
@@ -4548,16 +4548,16 @@ async def test_subscribe_firmware_update_status_failures(
 
 
 async def test_get_node_firmware_update_capabilities(
-    hass: HomeAssistant,
+    menuai: menuai,
     client,
     multisensor_6,
     integration,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test that the get_node_firmware_update_capabilities WS API call works."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
-    device = get_device(hass, multisensor_6)
+    ws_client = await menuai_ws_client(menuai)
+    device = get_device(menuai, multisensor_6)
 
     client.async_send_command.return_value = {
         "capabilities": {
@@ -4607,8 +4607,8 @@ async def test_get_node_firmware_update_capabilities(
         assert msg["error"]["message"] == "zwave_error: Z-Wave error 1 - error message"
 
     # Test sending command with not loaded entry fails
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json(
         {
@@ -4637,11 +4637,11 @@ async def test_get_node_firmware_update_capabilities(
 
 
 async def test_is_any_ota_firmware_update_in_progress(
-    hass: HomeAssistant, client, integration, hass_ws_client: WebSocketGenerator
+    menuai: menuai, client, integration, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test that the is_any_ota_firmware_update_in_progress WS API call works."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     client.async_send_command.return_value = {"progress": True}
     await ws_client.send_json(
@@ -4678,8 +4678,8 @@ async def test_is_any_ota_firmware_update_in_progress(
         assert msg["error"]["message"] == "zwave_error: Z-Wave error 1 - error message"
 
     # Test sending command with not loaded entry fails
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json(
         {
@@ -4708,11 +4708,11 @@ async def test_is_any_ota_firmware_update_in_progress(
 
 
 async def test_check_for_config_updates(
-    hass: HomeAssistant, client, integration, hass_ws_client: WebSocketGenerator
+    menuai: menuai, client, integration, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test that the check_for_config_updates WS API call works."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     # Test we can get log configuration
     client.async_send_command.return_value = {
@@ -4754,8 +4754,8 @@ async def test_check_for_config_updates(
         assert msg["error"]["message"] == "zwave_error: Z-Wave error 1 - error message"
 
     # Test sending command with not loaded entry fails
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json(
         {
@@ -4783,11 +4783,11 @@ async def test_check_for_config_updates(
 
 
 async def test_install_config_update(
-    hass: HomeAssistant, client, integration, hass_ws_client: WebSocketGenerator
+    menuai: menuai, client, integration, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test that the install_config_update WS API call works."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     # Test we can get log configuration
     client.async_send_command.return_value = {"success": True}
@@ -4821,8 +4821,8 @@ async def test_install_config_update(
         assert msg["error"]["message"] == "zwave_error: Z-Wave error 1 - error message"
 
     # Test sending command with not loaded entry fails
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json(
         {
@@ -4850,11 +4850,11 @@ async def test_install_config_update(
 
 
 async def test_subscribe_controller_statistics(
-    hass: HomeAssistant, integration, client, hass_ws_client: WebSocketGenerator
+    menuai: menuai, integration, client, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test the subscribe_controller_statistics command."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     await ws_client.send_json(
         {
@@ -4932,8 +4932,8 @@ async def test_subscribe_controller_statistics(
     assert msg["error"]["code"] == ERR_NOT_FOUND
 
     # Test sending command with not loaded entry fails
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json(
         {
@@ -4949,20 +4949,20 @@ async def test_subscribe_controller_statistics(
 
 
 async def test_subscribe_node_statistics(
-    hass: HomeAssistant,
+    menuai: menuai,
     multisensor_6,
     wallmote_central_scene,
     zen_31,
     integration,
     client,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test the subscribe_node_statistics command."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
-    multisensor_6_device = get_device(hass, multisensor_6)
-    zen_31_device = get_device(hass, zen_31)
-    wallmote_central_scene_device = get_device(hass, wallmote_central_scene)
+    ws_client = await menuai_ws_client(menuai)
+    multisensor_6_device = get_device(menuai, multisensor_6)
+    zen_31_device = get_device(menuai, zen_31)
+    wallmote_central_scene_device = get_device(menuai, wallmote_central_scene)
 
     await ws_client.send_json(
         {
@@ -5079,8 +5079,8 @@ async def test_subscribe_node_statistics(
     assert msg["error"]["code"] == ERR_NOT_FOUND
 
     # Test sending command with not loaded entry fails
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json(
         {
@@ -5096,17 +5096,17 @@ async def test_subscribe_node_statistics(
 
 
 async def test_hard_reset_controller(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     device_registry: dr.DeviceRegistry,
     client: MagicMock,
     get_server_version: AsyncMock,
     integration: MockConfigEntry,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test that the hard_reset_controller WS API call works."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
     assert entry.unique_id == "3245146787"
 
     async def async_send_command_driver_ready(
@@ -5191,7 +5191,7 @@ async def test_hard_reset_controller(
     client.async_send_command.side_effect = async_send_command_no_driver_ready
 
     with patch(
-        "homeassistant.components.zwave_js.api.DRIVER_READY_TIMEOUT",
+        "menuai.components.zwave_js.api.DRIVER_READY_TIMEOUT",
         new=0,
     ):
         await ws_client.send_json_auto_id(
@@ -5236,8 +5236,8 @@ async def test_hard_reset_controller(
         assert msg["error"]["message"] == "zwave_error: Z-Wave error 1 - error message"
 
     # Test sending command with not loaded entry fails
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json_auto_id(
         {
@@ -5263,17 +5263,17 @@ async def test_hard_reset_controller(
 
 
 async def test_node_capabilities(
-    hass: HomeAssistant,
+    menuai: menuai,
     multisensor_6: Node,
     integration: MockConfigEntry,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test the node_capabilities websocket command."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     node = multisensor_6
-    device = get_device(hass, node)
+    device = get_device(menuai, node)
     await ws_client.send_json_auto_id(
         {
             TYPE: "zwave_js/node_capabilities",
@@ -5305,8 +5305,8 @@ async def test_node_capabilities(
     assert msg["error"]["code"] == ERR_NOT_FOUND
 
     # Test sending command with not loaded entry fails
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json_auto_id(
         {
@@ -5321,17 +5321,17 @@ async def test_node_capabilities(
 
 
 async def test_invoke_cc_api(
-    hass: HomeAssistant,
+    menuai: menuai,
     client,
     climate_radio_thermostat_ct100_plus_different_endpoints: Node,
     integration: MockConfigEntry,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test the invoke_cc_api websocket command."""
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     device_radio_thermostat = get_device(
-        hass, climate_radio_thermostat_ct100_plus_different_endpoints
+        menuai, climate_radio_thermostat_ct100_plus_different_endpoints
     )
     assert device_radio_thermostat
 
@@ -5353,7 +5353,7 @@ async def test_invoke_cc_api(
     assert msg["success"]
     assert msg["result"] is None  # We did not specify wait_for_result=True
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(client.async_send_command_no_wait.call_args_list) == 1
     args = client.async_send_command_no_wait.call_args[0][0]
@@ -5384,7 +5384,7 @@ async def test_invoke_cc_api(
     assert msg["success"]
     assert msg["result"] is True
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(client.async_send_command.call_args_list) == 1
     args = client.async_send_command.call_args[0][0]
@@ -5422,17 +5422,17 @@ async def test_invoke_cc_api(
 async def test_get_integration_settings(
     config: dict[str, Any],
     installer_mode: bool,
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test that the get_integration_settings WS API call works."""
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     entry = MockConfigEntry(domain="zwave_js", data={"url": "ws://test.org"})
-    entry.add_to_hass(hass)
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: config})
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: config})
+    await menuai.async_block_till_done()
 
     await ws_client.send_json_auto_id(
         {
@@ -5447,13 +5447,13 @@ async def test_get_integration_settings(
 
 
 async def test_backup_nvm(
-    hass: HomeAssistant,
+    menuai: menuai,
     integration,
     client,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test the backup NVM websocket command."""
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     # Set up mocks for the controller events
     controller = client.driver.controller
@@ -5513,7 +5513,7 @@ async def test_backup_nvm(
         assert msg["event"]["total"] == 100
 
         # Wait for the backup to complete
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         # Verify the backup was called
         assert mock_backup.called
@@ -5549,8 +5549,8 @@ async def test_backup_nvm(
     assert msg["error"]["code"] == "not_found"
 
     # Test config entry not loaded
-    await hass.config_entries.async_unload(integration.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(integration.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json_auto_id(
         {
@@ -5563,17 +5563,17 @@ async def test_backup_nvm(
 
 
 async def test_restore_nvm(
-    hass: HomeAssistant,
+    menuai: menuai,
     integration,
     client,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     get_server_version: AsyncMock,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test the restore NVM websocket command."""
     entry = integration
     assert entry.unique_id == "3245146787"
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     # Set up mocks for the controller events
     controller = client.driver.controller
@@ -5640,7 +5640,7 @@ async def test_restore_nvm(
     assert msg["event"]["bytesWritten"] == 50
     assert msg["event"]["total"] == 100
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Verify the restore was called
     # The first call is the relevant one for nvm restore.
@@ -5706,7 +5706,7 @@ async def test_restore_nvm(
     client.async_send_command.side_effect = async_send_command_no_driver_ready
 
     with patch(
-        "homeassistant.components.zwave_js.api.DRIVER_READY_TIMEOUT",
+        "menuai.components.zwave_js.api.DRIVER_READY_TIMEOUT",
         new=0,
     ):
         # Send the subscription request
@@ -5729,7 +5729,7 @@ async def test_restore_nvm(
         assert msg["type"] == "result"
         assert msg["success"] is True
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     # Verify the restore was called
     # The first call is the relevant one for nvm restore.
@@ -5776,8 +5776,8 @@ async def test_restore_nvm(
     assert msg["error"]["code"] == "not_found"
 
     # Test config entry not loaded
-    await hass.config_entries.async_unload(integration.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(integration.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json_auto_id(
         {
@@ -5792,11 +5792,11 @@ async def test_restore_nvm(
 
 
 async def test_cancel_secure_bootstrap_s2(
-    hass: HomeAssistant, client, integration, hass_ws_client: WebSocketGenerator
+    menuai: menuai, client, integration, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test that the cancel_secure_bootstrap_s2 WS API call works."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     # Test successful cancellation
     await ws_client.send_json_auto_id(
@@ -5830,8 +5830,8 @@ async def test_cancel_secure_bootstrap_s2(
         assert msg["error"]["message"] == "zwave_error: Z-Wave error 1 - error message"
 
     # Test sending command with not loaded entry fails
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json_auto_id(
         {
@@ -5858,11 +5858,11 @@ async def test_cancel_secure_bootstrap_s2(
 
 
 async def test_subscribe_s2_inclusion(
-    hass: HomeAssistant, integration, client, hass_ws_client: WebSocketGenerator
+    menuai: menuai, integration, client, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test the subscribe_s2_inclusion websocket command."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     await ws_client.send_json_auto_id(
         {
@@ -5907,8 +5907,8 @@ async def test_subscribe_s2_inclusion(
     }
 
     # Test sending command with not loaded entry fails
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     await ws_client.send_json_auto_id(
         {
@@ -5934,14 +5934,14 @@ async def test_subscribe_s2_inclusion(
 
 
 async def test_lookup_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     integration: MockConfigEntry,
     client: MagicMock,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test lookup_device websocket command."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     # Create mock device response
     mock_device = MagicMock()
@@ -6058,15 +6058,15 @@ async def test_lookup_device(
 
 
 async def test_subscribe_new_devices(
-    hass: HomeAssistant,
+    menuai: menuai,
     integration,
     client,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     multisensor_6_state,
 ) -> None:
     """Test the subscribe_new_devices websocket command."""
     entry = integration
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     await ws_client.send_json_auto_id(
         {
@@ -6082,7 +6082,7 @@ async def test_subscribe_new_devices(
     # Simulate a device being registered
     node = Node(client, deepcopy(multisensor_6_state))
     client.driver.controller.emit("node added", {"node": node})
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Verify we receive the expected message
     msg = await ws_client.receive_json()

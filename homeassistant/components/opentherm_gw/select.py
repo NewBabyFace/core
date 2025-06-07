@@ -16,11 +16,11 @@ from pyotgw.vars import (
     OTGW_LED_F,
 )
 
-from homeassistant.components.select import SelectEntity, SelectEntityDescription
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_ID, EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.select import SelectEntity, SelectEntityDescription
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_ID, EntityCategory
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import OpenThermGatewayHub
 from .const import (
@@ -97,7 +97,7 @@ class PyotgwLEDMode(StrEnum):
 def pyotgw_led_mode_to_ha_led_mode(
     pyotgw_led_mode: PyotgwLEDMode,
 ) -> OpenThermSelectLEDMode | None:
-    """Convert pyotgw LED mode to Home Assistant LED mode."""
+    """Convert pyotgw LED mode to MenuAI LED mode."""
     return (
         OpenThermSelectLEDMode[PyotgwLEDMode(pyotgw_led_mode).name]
         if pyotgw_led_mode in PyotgwLEDMode
@@ -232,12 +232,12 @@ SELECT_DESCRIPTIONS: tuple[OpenThermSelectEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the OpenTherm Gateway select entities."""
-    gw_hub = hass.data[DATA_OPENTHERM_GW][DATA_GATEWAYS][config_entry.data[CONF_ID]]
+    gw_hub = menuai.data[DATA_OPENTHERM_GW][DATA_GATEWAYS][config_entry.data[CONF_ID]]
 
     async_add_entities(
         OpenThermSelect(gw_hub, description) for description in SELECT_DESCRIPTIONS

@@ -6,12 +6,12 @@ from unittest.mock import AsyncMock
 from evolutionhttp import BryantEvolutionLocalClient
 from freezegun.api import FrozenDateTimeFactory
 
-from homeassistant.components.bryant_evolution.const import CONF_SYSTEM_ZONE, DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_FILENAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.util.unit_system import US_CUSTOMARY_SYSTEM
+from menuai.components.bryant_evolution.const import CONF_SYSTEM_ZONE, DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.const import CONF_FILENAME
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.util.unit_system import US_CUSTOMARY_SYSTEM
 
 from .conftest import DEFAULT_SYSTEM_ZONES
 from .test_climate import trigger_polling
@@ -22,7 +22,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def test_setup_integration_prevented_by_unavailable_client(
-    hass: HomeAssistant, mock_evolution_client_factory: AsyncMock
+    menuai: menuai, mock_evolution_client_factory: AsyncMock
 ) -> None:
     """Test that setup throws ConfigEntryNotReady when the client is unavailable."""
     mock_evolution_client_factory.side_effect = FileNotFoundError("test error")
@@ -33,14 +33,14 @@ async def test_setup_integration_prevented_by_unavailable_client(
             CONF_SYSTEM_ZONE: [(1, 1)],
         },
     )
-    mock_evolution_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_evolution_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_evolution_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_evolution_entry.entry_id)
+    await menuai.async_block_till_done()
     assert mock_evolution_entry.state is ConfigEntryState.SETUP_RETRY
 
 
 async def test_setup_integration_client_returns_none(
-    hass: HomeAssistant, mock_evolution_client_factory: AsyncMock
+    menuai: menuai, mock_evolution_client_factory: AsyncMock
 ) -> None:
     """Test that an unavailable client causes ConfigEntryNotReady."""
     mock_client = AsyncMock(spec=BryantEvolutionLocalClient)
@@ -55,44 +55,44 @@ async def test_setup_integration_client_returns_none(
         domain=DOMAIN,
         data={CONF_FILENAME: "/dev/ttyUSB0", CONF_SYSTEM_ZONE: [(1, 1)]},
     )
-    mock_evolution_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_evolution_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_evolution_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_evolution_entry.entry_id)
+    await menuai.async_block_till_done()
     assert mock_evolution_entry.state is ConfigEntryState.SETUP_RETRY
 
 
 async def test_setup_multiple_systems_zones(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_evolution_client_factory: AsyncMock,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test that a device with multiple systems and zones works."""
-    hass.config.units = US_CUSTOMARY_SYSTEM
+    menuai.config.units = US_CUSTOMARY_SYSTEM
     mock_evolution_entry = MockConfigEntry(
         domain=DOMAIN,
         data={CONF_FILENAME: "/dev/ttyUSB0", CONF_SYSTEM_ZONE: DEFAULT_SYSTEM_ZONES},
     )
-    mock_evolution_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_evolution_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_evolution_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_evolution_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Set the temperature of each zone to its zone number so that we can
     # ensure we've created the right client for each zone.
     for sz, client in mock_evolution_entry.runtime_data.items():
         client.read_current_temperature.return_value = sz[1]
-    await trigger_polling(hass, freezer)
+    await trigger_polling(menuai, freezer)
 
     # Check that each system and zone has the expected temperature value to
     # verify that the initial setup flow worked as expected.
     for sz in DEFAULT_SYSTEM_ZONES:
         system = sz[0]
         zone = sz[1]
-        state = hass.states.get(f"climate.system_{system}_zone_{zone}")
-        assert state, hass.states.async_all()
+        state = menuai.states.get(f"climate.system_{system}_zone_{zone}")
+        assert state, menuai.states.async_all()
         assert state.attributes["current_temperature"] == zone
 
     # Check that the created devices are wired to each other as expected.
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
 
     def find_device(name):
         return next(filter(lambda x: x.name == name, device_registry.devices.values()))

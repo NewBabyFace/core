@@ -4,10 +4,10 @@ import logging
 
 import pytest
 
-from homeassistant.components.button import DOMAIN, ButtonEntity
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.button import DOMAIN, ButtonEntity
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import TEST_DOMAIN
 
@@ -25,11 +25,11 @@ class MockButtonEntity(MockEntity, ButtonEntity):
 
 
 @pytest.fixture
-async def setup_platform(hass: HomeAssistant) -> None:
+async def setup_platform(menuai: menuai) -> None:
     """Set up the button entity platform."""
 
     async def async_setup_platform(
-        hass: HomeAssistant,
+        menuai: menuai,
         config: ConfigType,
         async_add_entities: AddConfigEntryEntitiesCallback,
         discovery_info: DiscoveryInfoType | None = None,
@@ -45,7 +45,7 @@ async def setup_platform(hass: HomeAssistant) -> None:
         )
 
     mock_platform(
-        hass,
+        menuai,
         f"{TEST_DOMAIN}.{DOMAIN}",
         MockPlatform(async_setup_platform=async_setup_platform),
     )

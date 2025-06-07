@@ -80,7 +80,7 @@
       "fields": {
         "datetime": {
           "name": "Date & time",
-          "description": "The date and time to set. The time zone of the Home Assistant instance is assumed. If omitted, the current date and time is used."
+          "description": "The date and time to set. The time zone of the MenuAI instance is assumed. If omitted, the current date and time is used."
         },
         "config_entry_id": {
           "name": "Config entry",

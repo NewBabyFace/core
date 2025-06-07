@@ -3,28 +3,28 @@
 import pytest
 from Tami4EdgeAPI import exceptions
 
-from homeassistant import config_entries
-from homeassistant.components.tami4.const import CONF_PHONE, DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.tami4.const import CONF_PHONE, DOMAIN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 
 async def test_step_user_valid_number(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry,
     mock_request_otp,
     mock__get_devices_metadata,
 ) -> None:
     """Test user step with valid phone number."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_PHONE: "+972555555555"},
     )
@@ -34,21 +34,21 @@ async def test_step_user_valid_number(
 
 
 async def test_step_user_invalid_number(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry,
     mock_request_otp,
     mock__get_devices_metadata,
 ) -> None:
     """Test user step with invalid phone number."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_PHONE: "+275123"},
     )
@@ -63,7 +63,7 @@ async def test_step_user_invalid_number(
     indirect=["mock_request_otp"],
 )
 async def test_step_user_exception(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry,
     mock_request_otp,
     mock__get_devices_metadata,
@@ -71,14 +71,14 @@ async def test_step_user_exception(
 ) -> None:
     """Test user step with exception."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_PHONE: "+972555555555"},
     )
@@ -88,7 +88,7 @@ async def test_step_user_exception(
 
 
 async def test_step_otp_valid(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry,
     mock_request_otp,
     mock_submit_otp,
@@ -96,14 +96,14 @@ async def test_step_otp_valid(
 ) -> None:
     """Test user step with valid phone number."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_PHONE: "+972555555555"},
     )
@@ -111,7 +111,7 @@ async def test_step_otp_valid(
     assert result["step_id"] == "otp"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={"otp": "123456"},
     )
@@ -126,17 +126,17 @@ async def test_step_otp_valid(
     "mock_submit_otp",
     "mock__get_devices_metadata_no_name",
 )
-async def test_step_otp_valid_device_no_name(hass: HomeAssistant) -> None:
+async def test_step_otp_valid_device_no_name(menuai: menuai) -> None:
     """Test user step with valid phone number."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_PHONE: "+972555555555"},
     )
@@ -144,7 +144,7 @@ async def test_step_otp_valid_device_no_name(hass: HomeAssistant) -> None:
     assert result["step_id"] == "otp"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={"otp": "123456"},
     )
@@ -163,7 +163,7 @@ async def test_step_otp_valid_device_no_name(hass: HomeAssistant) -> None:
     indirect=["mock_submit_otp"],
 )
 async def test_step_otp_exception(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry,
     mock_request_otp,
     mock_submit_otp,
@@ -172,14 +172,14 @@ async def test_step_otp_exception(
 ) -> None:
     """Test user step with valid phone number."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_PHONE: "+972555555555"},
     )
@@ -187,7 +187,7 @@ async def test_step_otp_exception(
     assert result["step_id"] == "otp"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={"otp": "123456"},
     )

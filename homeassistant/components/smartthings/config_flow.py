@@ -6,10 +6,10 @@ from typing import Any
 
 from pysmartthings import SmartThings
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlowResult
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_TOKEN
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.config_entry_oauth2_flow import AbstractOAuth2FlowHandler
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlowResult
+from menuai.const import CONF_ACCESS_TOKEN, CONF_TOKEN
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.config_entry_oauth2_flow import AbstractOAuth2FlowHandler
 
 from .const import CONF_LOCATION_ID, DOMAIN, OLD_DATA, REQUESTED_SCOPES, SCOPES
 
@@ -37,7 +37,7 @@ class SmartThingsConfigFlow(AbstractOAuth2FlowHandler, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Check we have the cloud integration set up."""
-        if "cloud" not in self.hass.config.components:
+        if "cloud" not in self.menuai.config.components:
             return self.async_abort(
                 reason="cloud_not_enabled",
                 description_placeholders={"default_config": "default_config"},
@@ -48,7 +48,7 @@ class SmartThingsConfigFlow(AbstractOAuth2FlowHandler, domain=DOMAIN):
         """Create an entry for SmartThings."""
         if not set(data[CONF_TOKEN]["scope"].split()) >= set(SCOPES):
             return self.async_abort(reason="missing_scopes")
-        client = SmartThings(session=async_get_clientsession(self.hass))
+        client = SmartThings(session=async_get_clientsession(self.menuai))
         client.authenticate(data[CONF_TOKEN][CONF_ACCESS_TOKEN])
         locations = await client.get_locations()
         location = locations[0]

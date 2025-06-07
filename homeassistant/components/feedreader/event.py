@@ -7,11 +7,11 @@ import logging
 
 from feedparser import FeedParserDict
 
-from homeassistant.components.event import EventEntity
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.components.event import EventEntity
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from . import FeedReaderConfigEntry
 from .const import DOMAIN, EVENT_FEEDREADER
@@ -26,7 +26,7 @@ ATTR_TITLE = "title"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: FeedReaderConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

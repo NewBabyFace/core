@@ -3,17 +3,17 @@
 import pytest
 import requests_mock
 
-from homeassistant.components.input_number import ATTR_VALUE, SERVICE_SET_VALUE
-from homeassistant.components.number import DOMAIN as NUMBER_DOMAIN
-from homeassistant.components.wallbox import InvalidAuth
-from homeassistant.components.wallbox.const import (
+from menuai.components.input_number import ATTR_VALUE, SERVICE_SET_VALUE
+from menuai.components.number import DOMAIN as NUMBER_DOMAIN
+from menuai.components.wallbox import InvalidAuth
+from menuai.components.wallbox.const import (
     CHARGER_ENERGY_PRICE_KEY,
     CHARGER_MAX_CHARGING_CURRENT_KEY,
     CHARGER_MAX_ICP_CURRENT_KEY,
 )
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
 
 from . import (
     authorisation_response,
@@ -31,11 +31,11 @@ from tests.common import MockConfigEntry
 
 
 async def test_wallbox_number_class(
-    hass: HomeAssistant, entry: MockConfigEntry
+    menuai: menuai, entry: MockConfigEntry
 ) -> None:
     """Test wallbox sensor class."""
 
-    await setup_integration(hass, entry)
+    await setup_integration(menuai, entry)
 
     with requests_mock.Mocker() as mock_request:
         mock_request.get(
@@ -48,11 +48,11 @@ async def test_wallbox_number_class(
             json={CHARGER_MAX_CHARGING_CURRENT_KEY: 20},
             status_code=200,
         )
-        state = hass.states.get(MOCK_NUMBER_ENTITY_ID)
+        state = menuai.states.get(MOCK_NUMBER_ENTITY_ID)
         assert state.attributes["min"] == 6
         assert state.attributes["max"] == 25
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "number",
             SERVICE_SET_VALUE,
             {
@@ -64,23 +64,23 @@ async def test_wallbox_number_class(
 
 
 async def test_wallbox_number_class_bidir(
-    hass: HomeAssistant, entry: MockConfigEntry
+    menuai: menuai, entry: MockConfigEntry
 ) -> None:
     """Test wallbox sensor class."""
 
-    await setup_integration_bidir(hass, entry)
+    await setup_integration_bidir(menuai, entry)
 
-    state = hass.states.get(MOCK_NUMBER_ENTITY_ID)
+    state = menuai.states.get(MOCK_NUMBER_ENTITY_ID)
     assert state.attributes["min"] == -25
     assert state.attributes["max"] == 25
 
 
 async def test_wallbox_number_energy_class(
-    hass: HomeAssistant, entry: MockConfigEntry
+    menuai: menuai, entry: MockConfigEntry
 ) -> None:
     """Test wallbox sensor class."""
 
-    await setup_integration(hass, entry)
+    await setup_integration(menuai, entry)
 
     with requests_mock.Mocker() as mock_request:
         mock_request.get(
@@ -95,7 +95,7 @@ async def test_wallbox_number_energy_class(
             status_code=200,
         )
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "number",
             SERVICE_SET_VALUE,
             {
@@ -107,11 +107,11 @@ async def test_wallbox_number_energy_class(
 
 
 async def test_wallbox_number_class_connection_error(
-    hass: HomeAssistant, entry: MockConfigEntry
+    menuai: menuai, entry: MockConfigEntry
 ) -> None:
     """Test wallbox sensor class."""
 
-    await setup_integration(hass, entry)
+    await setup_integration(menuai, entry)
 
     with requests_mock.Mocker() as mock_request:
         mock_request.get(
@@ -126,7 +126,7 @@ async def test_wallbox_number_class_connection_error(
         )
 
         with pytest.raises(ConnectionError):
-            await hass.services.async_call(
+            await menuai.services.async_call(
                 "number",
                 SERVICE_SET_VALUE,
                 {
@@ -138,11 +138,11 @@ async def test_wallbox_number_class_connection_error(
 
 
 async def test_wallbox_number_class_energy_price_connection_error(
-    hass: HomeAssistant, entry: MockConfigEntry
+    menuai: menuai, entry: MockConfigEntry
 ) -> None:
     """Test wallbox sensor class."""
 
-    await setup_integration(hass, entry)
+    await setup_integration(menuai, entry)
 
     with requests_mock.Mocker() as mock_request:
         mock_request.get(
@@ -157,7 +157,7 @@ async def test_wallbox_number_class_energy_price_connection_error(
         )
 
         with pytest.raises(ConnectionError):
-            await hass.services.async_call(
+            await menuai.services.async_call(
                 "number",
                 SERVICE_SET_VALUE,
                 {
@@ -169,11 +169,11 @@ async def test_wallbox_number_class_energy_price_connection_error(
 
 
 async def test_wallbox_number_class_energy_price_auth_error(
-    hass: HomeAssistant, entry: MockConfigEntry
+    menuai: menuai, entry: MockConfigEntry
 ) -> None:
     """Test wallbox sensor class."""
 
-    await setup_integration(hass, entry)
+    await setup_integration(menuai, entry)
 
     with requests_mock.Mocker() as mock_request:
         mock_request.get(
@@ -188,7 +188,7 @@ async def test_wallbox_number_class_energy_price_auth_error(
         )
 
         with pytest.raises(ConfigEntryAuthFailed):
-            await hass.services.async_call(
+            await menuai.services.async_call(
                 "number",
                 SERVICE_SET_VALUE,
                 {
@@ -200,23 +200,23 @@ async def test_wallbox_number_class_energy_price_auth_error(
 
 
 async def test_wallbox_number_class_platform_not_ready(
-    hass: HomeAssistant, entry: MockConfigEntry
+    menuai: menuai, entry: MockConfigEntry
 ) -> None:
     """Test wallbox lock not loaded on authentication error."""
 
-    await setup_integration_platform_not_ready(hass, entry)
+    await setup_integration_platform_not_ready(menuai, entry)
 
-    state = hass.states.get(MOCK_NUMBER_ENTITY_ID)
+    state = menuai.states.get(MOCK_NUMBER_ENTITY_ID)
 
     assert state is None
 
 
 async def test_wallbox_number_class_icp_energy(
-    hass: HomeAssistant, entry: MockConfigEntry
+    menuai: menuai, entry: MockConfigEntry
 ) -> None:
     """Test wallbox sensor class."""
 
-    await setup_integration(hass, entry)
+    await setup_integration(menuai, entry)
 
     with requests_mock.Mocker() as mock_request:
         mock_request.get(
@@ -231,7 +231,7 @@ async def test_wallbox_number_class_icp_energy(
             status_code=200,
         )
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             NUMBER_DOMAIN,
             SERVICE_SET_VALUE,
             {
@@ -243,11 +243,11 @@ async def test_wallbox_number_class_icp_energy(
 
 
 async def test_wallbox_number_class_icp_energy_auth_error(
-    hass: HomeAssistant, entry: MockConfigEntry
+    menuai: menuai, entry: MockConfigEntry
 ) -> None:
     """Test wallbox sensor class."""
 
-    await setup_integration(hass, entry)
+    await setup_integration(menuai, entry)
 
     with requests_mock.Mocker() as mock_request:
         mock_request.get(
@@ -262,7 +262,7 @@ async def test_wallbox_number_class_icp_energy_auth_error(
         )
 
         with pytest.raises(InvalidAuth):
-            await hass.services.async_call(
+            await menuai.services.async_call(
                 NUMBER_DOMAIN,
                 SERVICE_SET_VALUE,
                 {
@@ -274,11 +274,11 @@ async def test_wallbox_number_class_icp_energy_auth_error(
 
 
 async def test_wallbox_number_class_icp_energy_connection_error(
-    hass: HomeAssistant, entry: MockConfigEntry
+    menuai: menuai, entry: MockConfigEntry
 ) -> None:
     """Test wallbox sensor class."""
 
-    await setup_integration(hass, entry)
+    await setup_integration(menuai, entry)
 
     with requests_mock.Mocker() as mock_request:
         mock_request.get(
@@ -293,7 +293,7 @@ async def test_wallbox_number_class_icp_energy_connection_error(
         )
 
         with pytest.raises(ConnectionError):
-            await hass.services.async_call(
+            await menuai.services.async_call(
                 NUMBER_DOMAIN,
                 SERVICE_SET_VALUE,
                 {

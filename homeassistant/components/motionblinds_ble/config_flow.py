@@ -10,18 +10,18 @@ from bleak.backends.device import BLEDevice
 from motionblindsble.const import DISPLAY_NAME, SETTING_DISCONNECT_TIME, MotionBlindType
 import voluptuous as vol
 
-from homeassistant.components import bluetooth
-from homeassistant.components.bluetooth import BluetoothServiceInfoBleak
-from homeassistant.config_entries import (
+from menuai.components import bluetooth
+from menuai.components.bluetooth import BluetoothServiceInfoBleak
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_ADDRESS
-from homeassistant.core import callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.selector import (
+from menuai.const import CONF_ADDRESS
+from menuai.core import callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.selector import (
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
@@ -94,7 +94,7 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
                 )
             return await self.async_step_confirm()
 
-        scanner_count = bluetooth.async_scanner_count(self.hass, connectable=True)
+        scanner_count = bluetooth.async_scanner_count(self.menuai, connectable=True)
         if not scanner_count:
             _LOGGER.error("No bluetooth adapter found")
             return self.async_abort(reason=EXCEPTION_MAP[NoBluetoothAdapter])
@@ -148,12 +148,12 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
             _LOGGER.error("Invalid MAC code: %s", mac_code.upper())
             raise InvalidMACCode
 
-        scanner_count = bluetooth.async_scanner_count(self.hass, connectable=True)
+        scanner_count = bluetooth.async_scanner_count(self.menuai, connectable=True)
         if not scanner_count:
             _LOGGER.error("No bluetooth adapter found")
             raise NoBluetoothAdapter
 
-        bleak_scanner = bluetooth.async_get_scanner(self.hass)
+        bleak_scanner = bluetooth.async_get_scanner(self.menuai)
         devices = await bleak_scanner.discover()
 
         if len(devices) == 0:
@@ -241,19 +241,19 @@ def get_mac_from_local_name(data: str) -> str | None:
     return str(match.group(1)) if match else None
 
 
-class CouldNotFindMotor(HomeAssistantError):
+class CouldNotFindMotor(menuaiError):
     """Error to indicate no motor with that MAC code could be found."""
 
 
-class InvalidMACCode(HomeAssistantError):
+class InvalidMACCode(menuaiError):
     """Error to indicate the MAC code is invalid."""
 
 
-class NoBluetoothAdapter(HomeAssistantError):
+class NoBluetoothAdapter(menuaiError):
     """Error to indicate no bluetooth adapter could be found."""
 
 
-class NoDevicesFound(HomeAssistantError):
+class NoDevicesFound(menuaiError):
     """Error to indicate no bluetooth devices could be found."""
 
 

@@ -10,23 +10,23 @@ from pyisy import ISY, ISYConnectionError, ISYInvalidAuthError, ISYResponseParse
 from pyisy.constants import CONFIG_NETWORKING, CONFIG_PORTAL
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_USERNAME,
     CONF_VARIABLES,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     Platform,
 )
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import (
+from menuai.core import Event, menuai, callback
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import (
     aiohttp_client,
     config_validation as cv,
     device_registry as dr,
 )
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     _LOGGER,
@@ -56,15 +56,15 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the ISY 994 integration."""
 
-    async_setup_services(hass)
+    async_setup_services(menuai)
 
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: IsyConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: IsyConfigEntry) -> bool:
     """Set up the ISY 994 integration."""
     isy_config = entry.data
     isy_options = entry.options
@@ -83,12 +83,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: IsyConfigEntry) -> bool:
         https = False
         port = host.port or 80
         session = aiohttp_client.async_create_clientsession(
-            hass, verify_ssl=False, cookie_jar=CookieJar(unsafe=True)
+            menuai, verify_ssl=False, cookie_jar=CookieJar(unsafe=True)
         )
     elif host.scheme == SCHEME_HTTPS:
         https = True
         port = host.port or 443
-        session = aiohttp_client.async_get_clientsession(hass)
+        session = aiohttp_client.async_get_clientsession(menuai)
     else:
         _LOGGER.error("The ISY/IoX host value in configuration is invalid")
         return False
@@ -150,21 +150,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: IsyConfigEntry) -> bool:
         for resource in isy.networking.nobjs:
             isy_data.net_resources.append(resource)
 
-    # Dump ISY Clock Information. Future: Add ISY as sensor to Hass with attrs
+    # Dump ISY Clock Information. Future: Add ISY as sensor to menuai with attrs
     _LOGGER.debug(repr(isy.clock))
 
     isy_data.root = isy
-    _async_get_or_create_isy_device_in_registry(hass, entry, isy)
+    _async_get_or_create_isy_device_in_registry(menuai, entry, isy)
 
     # Load platforms for the devices in the ISY controller that we support.
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     # Clean-up any old entities that we no longer provide.
-    _async_cleanup_registry_entries(hass, entry)
+    _async_cleanup_registry_entries(menuai, entry)
 
     @callback
     def _async_stop_auto_update(event: Event) -> None:
-        """Stop the isy auto update on Home Assistant Shutdown."""
+        """Stop the isy auto update on MenuAI Shutdown."""
         _LOGGER.debug("ISY Stopping Event Stream and automatic updates")
         isy.websocket.stop()
 
@@ -173,22 +173,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: IsyConfigEntry) -> bool:
 
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
     entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _async_stop_auto_update)
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, _async_stop_auto_update)
     )
 
     return True
 
 
-async def _async_update_listener(hass: HomeAssistant, entry: IsyConfigEntry) -> None:
+async def _async_update_listener(menuai: menuai, entry: IsyConfigEntry) -> None:
     """Handle options update."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)
 
 
 @callback
 def _async_get_or_create_isy_device_in_registry(
-    hass: HomeAssistant, entry: IsyConfigEntry, isy: ISY
+    menuai: menuai, entry: IsyConfigEntry, isy: ISY
 ) -> None:
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, isy.uuid)},
@@ -220,9 +220,9 @@ def _create_service_device_info(isy: ISY, name: str, unique_id: str) -> DeviceIn
     )
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: IsyConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: IsyConfigEntry) -> bool:
     """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
     _LOGGER.debug("ISY Stopping Event Stream and automatic updates")
     entry.runtime_data.root.websocket.stop()
@@ -231,7 +231,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: IsyConfigEntry) -> bool
 
 
 async def async_remove_config_entry_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: IsyConfigEntry,
     device_entry: dr.DeviceEntry,
 ) -> bool:

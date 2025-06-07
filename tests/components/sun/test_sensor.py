@@ -7,30 +7,30 @@ import astral.sun
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.components import sun
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.components import sun
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_setting_rising(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test retrieving sun setting and rising."""
     utc_now = datetime(2016, 11, 1, 8, 0, 0, tzinfo=dt_util.UTC)
     freezer.move_to(utc_now)
-    await async_setup_component(hass, sun.DOMAIN, {sun.DOMAIN: {}})
-    await hass.async_block_till_done()
+    await async_setup_component(menuai, sun.DOMAIN, {sun.DOMAIN: {}})
+    await menuai.async_block_till_done()
 
     utc_today = utc_now.date()
 
     location = LocationInfo(
-        latitude=hass.config.latitude, longitude=hass.config.longitude
+        latitude=menuai.config.latitude, longitude=menuai.config.longitude
     )
 
     mod = -1
@@ -90,28 +90,28 @@ async def test_setting_rising(
     expected_solar_elevation = astral.sun.elevation(location.observer, utc_now)
     expected_solar_azimuth = astral.sun.azimuth(location.observer, utc_now)
 
-    state1 = hass.states.get("sensor.sun_next_dawn")
-    state2 = hass.states.get("sensor.sun_next_dusk")
-    state3 = hass.states.get("sensor.sun_next_midnight")
-    state4 = hass.states.get("sensor.sun_next_noon")
-    state5 = hass.states.get("sensor.sun_next_rising")
-    state6 = hass.states.get("sensor.sun_next_setting")
+    state1 = menuai.states.get("sensor.sun_next_dawn")
+    state2 = menuai.states.get("sensor.sun_next_dusk")
+    state3 = menuai.states.get("sensor.sun_next_midnight")
+    state4 = menuai.states.get("sensor.sun_next_noon")
+    state5 = menuai.states.get("sensor.sun_next_rising")
+    state6 = menuai.states.get("sensor.sun_next_setting")
     assert next_dawn.replace(microsecond=0) == dt_util.parse_datetime(state1.state)
     assert next_dusk.replace(microsecond=0) == dt_util.parse_datetime(state2.state)
     assert next_midnight.replace(microsecond=0) == dt_util.parse_datetime(state3.state)
     assert next_noon.replace(microsecond=0) == dt_util.parse_datetime(state4.state)
     assert next_rising.replace(microsecond=0) == dt_util.parse_datetime(state5.state)
     assert next_setting.replace(microsecond=0) == dt_util.parse_datetime(state6.state)
-    solar_elevation_state = hass.states.get("sensor.sun_solar_elevation")
+    solar_elevation_state = menuai.states.get("sensor.sun_solar_elevation")
     assert float(solar_elevation_state.state) == pytest.approx(
         expected_solar_elevation, 0.1
     )
-    solar_azimuth_state = hass.states.get("sensor.sun_solar_azimuth")
+    solar_azimuth_state = menuai.states.get("sensor.sun_solar_azimuth")
     assert float(solar_azimuth_state.state) == pytest.approx(
         expected_solar_azimuth, 0.1
     )
 
-    entry_ids = hass.config_entries.async_entries("sun")
+    entry_ids = menuai.config_entries.async_entries("sun")
 
     entity = entity_registry.async_get("sensor.sun_next_dawn")
 
@@ -121,23 +121,23 @@ async def test_setting_rising(
 
     freezer.tick(timedelta(hours=24))
     # Block once for Sun to update
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     # Block another time for the sensors to update
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Make sure all the signals work
-    assert state1.state != hass.states.get("sensor.sun_next_dawn").state
-    assert state2.state != hass.states.get("sensor.sun_next_dusk").state
-    assert state3.state != hass.states.get("sensor.sun_next_midnight").state
-    assert state4.state != hass.states.get("sensor.sun_next_noon").state
-    assert state5.state != hass.states.get("sensor.sun_next_rising").state
-    assert state6.state != hass.states.get("sensor.sun_next_setting").state
+    assert state1.state != menuai.states.get("sensor.sun_next_dawn").state
+    assert state2.state != menuai.states.get("sensor.sun_next_dusk").state
+    assert state3.state != menuai.states.get("sensor.sun_next_midnight").state
+    assert state4.state != menuai.states.get("sensor.sun_next_noon").state
+    assert state5.state != menuai.states.get("sensor.sun_next_rising").state
+    assert state6.state != menuai.states.get("sensor.sun_next_setting").state
     assert (
         solar_elevation_state.state
-        != hass.states.get("sensor.sun_solar_elevation").state
+        != menuai.states.get("sensor.sun_solar_elevation").state
     )
     assert (
-        solar_azimuth_state.state != hass.states.get("sensor.sun_solar_azimuth").state
+        solar_azimuth_state.state != menuai.states.get("sensor.sun_solar_azimuth").state
     )
 
     entity = entity_registry.async_get("sensor.sun_next_dusk")

@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 
 from bluecurrent_api import Client
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -27,7 +27,7 @@ class FutureContainer:
 
 
 def create_client_mock(
-    hass: HomeAssistant,
+    menuai: menuai,
     future_container: FutureContainer,
     started_loop: Event,
     charge_point: dict,
@@ -51,7 +51,7 @@ def create_client_mock(
         started_loop.clear()
 
         if future_container.future.done():
-            future_container.future = hass.loop.create_future()
+            future_container.future = menuai.loop.create_future()
         await future_container.future
 
     async def get_charge_points() -> None:
@@ -87,14 +87,14 @@ def create_client_mock(
 
 
 async def init_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     platform="",
     charge_point: dict | None = None,
     status: dict | None = None,
     grid: dict | None = None,
 ) -> tuple[MagicMock, Event, FutureContainer]:
-    """Set up the Blue Current integration in Home Assistant."""
+    """Set up the Blue Current integration in MenuAI."""
 
     if charge_point is None:
         charge_point = DEFAULT_CHARGE_POINT
@@ -105,19 +105,19 @@ async def init_integration(
     if grid is None:
         grid = {}
 
-    future_container = FutureContainer(hass.loop.create_future())
+    future_container = FutureContainer(menuai.loop.create_future())
     started_loop = Event()
 
     client_mock = create_client_mock(
-        hass, future_container, started_loop, charge_point, status, grid
+        menuai, future_container, started_loop, charge_point, status, grid
     )
 
     with (
-        patch("homeassistant.components.blue_current.PLATFORMS", [platform]),
-        patch("homeassistant.components.blue_current.Client", return_value=client_mock),
+        patch("menuai.components.blue_current.PLATFORMS", [platform]),
+        patch("menuai.components.blue_current.Client", return_value=client_mock),
     ):
-        config_entry.add_to_hass(hass)
+        config_entry.add_to_menuai(menuai)
 
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
     return client_mock, started_loop, future_container

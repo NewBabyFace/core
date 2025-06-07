@@ -7,35 +7,35 @@ from matter_server.client.models.node import MatterNode
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .common import snapshot_matter_entities
 
 
 @pytest.mark.usefixtures("matter_devices")
 async def test_buttons(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test buttons."""
-    snapshot_matter_entities(hass, entity_registry, snapshot, Platform.BUTTON)
+    snapshot_matter_entities(menuai, entity_registry, snapshot, Platform.BUTTON)
 
 
 @pytest.mark.parametrize("node_fixture", ["eve_energy_plug"])
 async def test_identify_button(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     matter_node: MatterNode,
 ) -> None:
     """Test button entity is created for a Matter Identify Cluster."""
-    state = hass.states.get("button.eve_energy_plug_identify")
+    state = menuai.states.get("button.eve_energy_plug_identify")
     assert state
     assert state.attributes["friendly_name"] == "Eve Energy Plug Identify"
     # test press action
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "button",
         "press",
         {
@@ -53,20 +53,20 @@ async def test_identify_button(
 
 @pytest.mark.parametrize("node_fixture", ["silabs_dishwasher"])
 async def test_operational_state_buttons(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     matter_node: MatterNode,
 ) -> None:
     """Test if button entities are created for operational state commands."""
-    assert hass.states.get("button.dishwasher_pause")
-    assert hass.states.get("button.dishwasher_start")
-    assert hass.states.get("button.dishwasher_stop")
+    assert menuai.states.get("button.dishwasher_pause")
+    assert menuai.states.get("button.dishwasher_start")
+    assert menuai.states.get("button.dishwasher_stop")
 
     # resume may not be discovered as it's missing in the supported command list
-    assert hass.states.get("button.dishwasher_resume") is None
+    assert menuai.states.get("button.dishwasher_resume") is None
 
     # test press action
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "button",
         "press",
         {

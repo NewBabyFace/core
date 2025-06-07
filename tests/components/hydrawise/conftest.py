@@ -21,10 +21,10 @@ from pydrawise.schema import (
 )
 import pytest
 
-from homeassistant.components.hydrawise.const import DOMAIN
-from homeassistant.const import CONF_API_KEY, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
+from menuai.components.hydrawise.const import DOMAIN
+from menuai.const import CONF_API_KEY, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.util import dt as dt_util
 
 from tests.common import MockConfigEntry
 
@@ -33,7 +33,7 @@ from tests.common import MockConfigEntry
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.hydrawise.async_setup_entry", return_value=True
+        "menuai.components.hydrawise.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -233,17 +233,17 @@ async def mock_added_config_entry(
 
 @pytest.fixture
 async def mock_add_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_pydrawise: AsyncMock,
 ) -> Callable[[], Awaitable[MockConfigEntry]]:
     """Callable that creates a mock ConfigEntry that's been added to HA."""
 
     async def callback() -> MockConfigEntry:
-        mock_config_entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
-        assert DOMAIN in hass.config_entries.async_domains()
+        mock_config_entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
+        assert DOMAIN in menuai.config_entries.async_domains()
         return mock_config_entry
 
     return callback

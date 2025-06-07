@@ -12,22 +12,22 @@ from jellyfin_apiclient_python.connection_manager import (
     ConnectionManager,
 )
 
-from homeassistant import exceptions
-from homeassistant.const import CONF_PASSWORD, CONF_URL, CONF_USERNAME
-from homeassistant.core import HomeAssistant
+from menuai import exceptions
+from menuai.const import CONF_PASSWORD, CONF_URL, CONF_USERNAME
+from menuai.core import menuai
 
 from .const import CLIENT_VERSION, ITEM_KEY_IMAGE_TAGS, USER_AGENT, USER_APP_NAME
 
 
 async def validate_input(
-    hass: HomeAssistant, user_input: dict[str, Any], client: JellyfinClient
+    menuai: menuai, user_input: dict[str, Any], client: JellyfinClient
 ) -> tuple[str, dict[str, Any]]:
     """Validate that the provided url and credentials can be used to connect."""
     url = user_input[CONF_URL]
     username = user_input[CONF_USERNAME]
     password = user_input[CONF_PASSWORD]
 
-    user_id, connect_result = await hass.async_add_executor_job(
+    user_id, connect_result = await menuai.async_add_executor_job(
         _connect, client, url, username, password
     )
 
@@ -123,9 +123,9 @@ def get_artwork_url(
     return str(client.jellyfin.artwork(artwork_id, artwork_type, max_width))
 
 
-class CannotConnect(exceptions.HomeAssistantError):
+class CannotConnect(exceptions.menuaiError):
     """Error to indicate the server is unreachable."""
 
 
-class InvalidAuth(exceptions.HomeAssistantError):
+class InvalidAuth(exceptions.menuaiError):
     """Error to indicate the credentials are invalid."""

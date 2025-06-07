@@ -8,16 +8,16 @@ from typing import Any
 from aiohasupervisor import SupervisorError
 from awesomeversion import AwesomeVersion, AwesomeVersionStrategy
 
-from homeassistant.components.update import (
+from menuai.components.update import (
     UpdateEntity,
     UpdateEntityDescription,
     UpdateEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_ICON, ATTR_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_ICON, ATTR_NAME
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
     ADDONS_COORDINATOR,
@@ -30,10 +30,10 @@ from .const import (
     DATA_KEY_SUPERVISOR,
 )
 from .entity import (
-    HassioAddonEntity,
-    HassioCoreEntity,
-    HassioOSEntity,
-    HassioSupervisorEntity,
+    menuaiioAddonEntity,
+    menuaiioCoreEntity,
+    menuaiioOSEntity,
+    menuaiioSupervisorEntity,
 )
 from .update_helper import update_addon, update_core, update_os
 
@@ -44,12 +44,12 @@ ENTITY_DESCRIPTION = UpdateEntityDescription(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Supervisor update based on a config entry."""
-    coordinator = hass.data[ADDONS_COORDINATOR]
+    coordinator = menuai.data[ADDONS_COORDINATOR]
 
     entities = [
         SupervisorSupervisorUpdateEntity(
@@ -71,7 +71,7 @@ async def async_setup_entry(
         for addon in coordinator.data[DATA_KEY_ADDONS].values()
     )
 
-    if coordinator.is_hass_os:
+    if coordinator.is_menuai_os:
         entities.append(
             SupervisorOSUpdateEntity(
                 coordinator=coordinator,
@@ -82,7 +82,7 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class SupervisorAddonUpdateEntity(HassioAddonEntity, UpdateEntity):
+class SupervisorAddonUpdateEntity(menuaiioAddonEntity, UpdateEntity):
     """Update entity to handle updates for the Supervisor add-ons."""
 
     _attr_supported_features = (
@@ -122,7 +122,7 @@ class SupervisorAddonUpdateEntity(HassioAddonEntity, UpdateEntity):
         if not self.available:
             return None
         if self._addon_data[ATTR_ICON]:
-            return f"/api/hassio/addons/{self._addon_slug}/icon"
+            return f"/api/menuaiio/addons/{self._addon_slug}/icon"
         return None
 
     async def async_release_notes(self) -> str | None:
@@ -150,20 +150,20 @@ class SupervisorAddonUpdateEntity(HassioAddonEntity, UpdateEntity):
     ) -> None:
         """Install an update."""
         await update_addon(
-            self.hass, self._addon_slug, backup, self.title, self.installed_version
+            self.menuai, self._addon_slug, backup, self.title, self.installed_version
         )
         await self.coordinator.async_refresh()
 
 
-class SupervisorOSUpdateEntity(HassioOSEntity, UpdateEntity):
-    """Update entity to handle updates for the Home Assistant Operating System."""
+class SupervisorOSUpdateEntity(menuaiioOSEntity, UpdateEntity):
+    """Update entity to handle updates for the MenuAI Operating System."""
 
     _attr_supported_features = (
         UpdateEntityFeature.INSTALL
         | UpdateEntityFeature.SPECIFIC_VERSION
         | UpdateEntityFeature.BACKUP
     )
-    _attr_title = "Home Assistant Operating System"
+    _attr_title = "MenuAI Operating System"
 
     @property
     def latest_version(self) -> str:
@@ -178,7 +178,7 @@ class SupervisorOSUpdateEntity(HassioOSEntity, UpdateEntity):
     @property
     def entity_picture(self) -> str | None:
         """Return the icon of the entity."""
-        return "https://brands.home-assistant.io/homeassistant/icon.png"
+        return "https://brands.home-assistant.io/menuai/icon.png"
 
     @property
     def release_url(self) -> str | None:
@@ -194,14 +194,14 @@ class SupervisorOSUpdateEntity(HassioOSEntity, UpdateEntity):
         self, version: str | None, backup: bool, **kwargs: Any
     ) -> None:
         """Install an update."""
-        await update_os(self.hass, version, backup)
+        await update_os(self.menuai, version, backup)
 
 
-class SupervisorSupervisorUpdateEntity(HassioSupervisorEntity, UpdateEntity):
-    """Update entity to handle updates for the Home Assistant Supervisor."""
+class SupervisorSupervisorUpdateEntity(menuaiioSupervisorEntity, UpdateEntity):
+    """Update entity to handle updates for the MenuAI Supervisor."""
 
     _attr_supported_features = UpdateEntityFeature.INSTALL
-    _attr_title = "Home Assistant Supervisor"
+    _attr_title = "MenuAI Supervisor"
 
     @property
     def latest_version(self) -> str:
@@ -229,7 +229,7 @@ class SupervisorSupervisorUpdateEntity(HassioSupervisorEntity, UpdateEntity):
     @property
     def entity_picture(self) -> str | None:
         """Return the icon of the entity."""
-        return "https://brands.home-assistant.io/hassio/icon.png"
+        return "https://brands.home-assistant.io/menuaiio/icon.png"
 
     async def async_install(
         self, version: str | None, backup: bool, **kwargs: Any
@@ -238,20 +238,20 @@ class SupervisorSupervisorUpdateEntity(HassioSupervisorEntity, UpdateEntity):
         try:
             await self.coordinator.supervisor_client.supervisor.update()
         except SupervisorError as err:
-            raise HomeAssistantError(
-                f"Error updating Home Assistant Supervisor: {err}"
+            raise menuaiError(
+                f"Error updating MenuAI Supervisor: {err}"
             ) from err
 
 
-class SupervisorCoreUpdateEntity(HassioCoreEntity, UpdateEntity):
-    """Update entity to handle updates for Home Assistant Core."""
+class SupervisorCoreUpdateEntity(menuaiioCoreEntity, UpdateEntity):
+    """Update entity to handle updates for MenuAI Core."""
 
     _attr_supported_features = (
         UpdateEntityFeature.INSTALL
         | UpdateEntityFeature.SPECIFIC_VERSION
         | UpdateEntityFeature.BACKUP
     )
-    _attr_title = "Home Assistant Core"
+    _attr_title = "MenuAI Core"
 
     @property
     def latest_version(self) -> str:
@@ -266,7 +266,7 @@ class SupervisorCoreUpdateEntity(HassioCoreEntity, UpdateEntity):
     @property
     def entity_picture(self) -> str | None:
         """Return the icon of the entity."""
-        return "https://brands.home-assistant.io/homeassistant/icon.png"
+        return "https://brands.home-assistant.io/menuai/icon.png"
 
     @property
     def release_url(self) -> str | None:
@@ -280,4 +280,4 @@ class SupervisorCoreUpdateEntity(HassioCoreEntity, UpdateEntity):
         self, version: str | None, backup: bool, **kwargs: Any
     ) -> None:
         """Install an update."""
-        await update_core(self.hass, version, backup)
+        await update_core(self.menuai, version, backup)

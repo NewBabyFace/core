@@ -12,13 +12,13 @@ from bimmer_connected.vehicle import MyBMWVehicle
 from bimmer_connected.vehicle.climate import ClimateActivityState
 from bimmer_connected.vehicle.fuel_and_battery import ChargingState
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     PERCENTAGE,
     STATE_UNKNOWN,
     UnitOfElectricCurrent,
@@ -26,9 +26,9 @@ from homeassistant.const import (
     UnitOfPressure,
     UnitOfVolume,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import dt as dt_util
 
 from . import BMWConfigEntry
 from .coordinator import BMWDataUpdateCoordinator
@@ -188,7 +188,7 @@ SENSOR_TYPES: list[BMWSensorEntityDescription] = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: BMWConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

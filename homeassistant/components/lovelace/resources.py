@@ -8,11 +8,11 @@ import uuid
 
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.const import CONF_ID, CONF_RESOURCES, CONF_TYPE
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import collection, storage
+from menuai.components import websocket_api
+from menuai.const import CONF_ID, CONF_RESOURCES, CONF_TYPE
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import collection, storage
 
 from .const import (
     CONF_RESOURCE_TYPE_WS,
@@ -55,10 +55,10 @@ class ResourceStorageCollection(collection.DictStorageCollection):
     CREATE_SCHEMA = vol.Schema(RESOURCE_CREATE_FIELDS)
     UPDATE_SCHEMA = vol.Schema(RESOURCE_UPDATE_FIELDS)
 
-    def __init__(self, hass: HomeAssistant, ll_config: LovelaceConfig) -> None:
+    def __init__(self, menuai: menuai, ll_config: LovelaceConfig) -> None:
         """Initialize the storage collection."""
         super().__init__(
-            storage.Store(hass, RESOURCES_STORAGE_VERSION, RESOURCE_STORAGE_KEY),
+            storage.Store(menuai, RESOURCES_STORAGE_VERSION, RESOURCE_STORAGE_KEY),
         )
         self.ll_config = ll_config
 
@@ -78,7 +78,7 @@ class ResourceStorageCollection(collection.DictStorageCollection):
         # Import it from config.
         try:
             conf = await self.ll_config.async_load(False)
-        except HomeAssistantError:
+        except menuaiError:
             return None
 
         if CONF_RESOURCES not in conf:
@@ -133,14 +133,14 @@ class ResourceStorageCollectionWebsocket(collection.DictStorageCollectionWebsock
     """Class to expose storage collection management over websocket."""
 
     @callback
-    def async_setup(self, hass: HomeAssistant) -> None:
+    def async_setup(self, menuai: menuai) -> None:
         """Set up the websocket commands."""
-        super().async_setup(hass)
+        super().async_setup(menuai)
 
         # Register lovelace/resources for backwards compatibility, remove in
-        # Home Assistant Core 2025.1
+        # MenuAI Core 2025.1
         websocket_api.async_register_command(
-            hass,
+            menuai,
             self.api_prefix,
             self.ws_list_item,
             websocket_api.BASE_COMMAND_MESSAGE_SCHEMA.extend(
@@ -151,9 +151,9 @@ class ResourceStorageCollectionWebsocket(collection.DictStorageCollectionWebsock
     @staticmethod
     @websocket_api.async_response
     async def ws_list_item(
-        hass: HomeAssistant,
+        menuai: menuai,
         connection: websocket_api.ActiveConnection,
         msg: dict[str, Any],
     ) -> None:
         """Send Lovelace UI resources over WebSocket connection."""
-        await websocket_lovelace_resources_impl(hass, connection, msg)
+        await websocket_lovelace_resources_impl(menuai, connection, msg)

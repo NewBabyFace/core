@@ -7,8 +7,8 @@ from typing import Any
 
 import numpy as np
 
-from homeassistant.components.sensor import SensorEntity
-from homeassistant.const import (
+from menuai.components.sensor import SensorEntity
+from menuai.const import (
     ATTR_UNIT_OF_MEASUREMENT,
     CONF_ATTRIBUTE,
     CONF_MAXIMUM,
@@ -18,16 +18,16 @@ from homeassistant.const import (
     CONF_UNIT_OF_MEASUREMENT,
     STATE_UNKNOWN,
 )
-from homeassistant.core import (
+from menuai.core import (
     Event,
     EventStateChangedData,
-    HomeAssistant,
+    menuai,
     State,
     callback,
 )
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.event import async_track_state_change_event
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.event import async_track_state_change_event
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import (
     CONF_COMPENSATION,
@@ -45,7 +45,7 @@ ATTR_SOURCE_ATTRIBUTE = "source_attribute"
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -55,7 +55,7 @@ async def async_setup_platform(
         return
 
     compensation: str = discovery_info[CONF_COMPENSATION]
-    conf: dict[str, Any] = hass.data[DATA_COMPENSATION][compensation]
+    conf: dict[str, Any] = menuai.data[DATA_COMPENSATION][compensation]
 
     source: str = conf[CONF_SOURCE]
     attribute: str | None = conf.get(CONF_ATTRIBUTE)
@@ -109,11 +109,11 @@ class CompensationSensor(SensorEntity):
         self._minimum = minimum
         self._maximum = maximum
 
-    async def async_added_to_hass(self) -> None:
-        """Handle added to Hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Handle added to menuai."""
         self.async_on_remove(
             async_track_state_change_event(
-                self.hass,
+                self.menuai,
                 [self._source_entity_id],
                 self._async_compensation_sensor_state_listener,
             )

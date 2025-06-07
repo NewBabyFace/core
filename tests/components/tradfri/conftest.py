@@ -13,7 +13,7 @@ from pytradfri.const import ATTR_FIRMWARE_VERSION, ATTR_GATEWAY_ID
 from pytradfri.device import Device
 from pytradfri.gateway import Gateway
 
-from homeassistant.components.tradfri.const import DOMAIN
+from menuai.components.tradfri.const import DOMAIN
 
 from . import GATEWAY_ID, TRADFRI_PATH
 from .common import CommandStore

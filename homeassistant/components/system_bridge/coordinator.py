@@ -21,17 +21,17 @@ from systembridgemodels.modules import (
     RegisterDataListener,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_HOST,
     CONF_PORT,
     CONF_TOKEN,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN, GET_DATA_WAIT_TIMEOUT, MODULES
 from .data import SystemBridgeData
@@ -44,7 +44,7 @@ class SystemBridgeDataUpdateCoordinator(DataUpdateCoordinator[SystemBridgeData])
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         LOGGER: logging.Logger,
         *,
         entry: ConfigEntry,
@@ -58,14 +58,14 @@ class SystemBridgeDataUpdateCoordinator(DataUpdateCoordinator[SystemBridgeData])
             api_host=entry.data[CONF_HOST],
             api_port=entry.data[CONF_PORT],
             token=entry.data[CONF_TOKEN],
-            session=async_get_clientsession(hass),
+            session=async_get_clientsession(menuai),
             can_close_session=False,
         )
 
         self._host = entry.data[CONF_HOST]
 
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=entry,
             name=DOMAIN,
@@ -97,7 +97,7 @@ class SystemBridgeDataUpdateCoordinator(DataUpdateCoordinator[SystemBridgeData])
         await self.websocket_client.close()
         if self.listen_task is not None:
             self.listen_task.cancel(
-                msg="WebSocket closed on Home Assistant shutdown",
+                msg="WebSocket closed on MenuAI shutdown",
             )
 
     async def clean_disconnect(self) -> None:
@@ -174,7 +174,7 @@ class SystemBridgeDataUpdateCoordinator(DataUpdateCoordinator[SystemBridgeData])
             await self.check_websocket_connected()
 
             self.logger.debug("Create listener task for %s", self.title)
-            self.listen_task = self.hass.async_create_background_task(
+            self.listen_task = self.menuai.async_create_background_task(
                 self._listen_for_data(),
                 name="System Bridge WebSocket Listener",
                 eager_start=False,
@@ -205,9 +205,9 @@ class SystemBridgeDataUpdateCoordinator(DataUpdateCoordinator[SystemBridgeData])
             self.last_update_success = True
             self.async_update_listeners()
 
-            # Clean disconnect WebSocket on Home Assistant shutdown
-            self.unsub = self.hass.bus.async_listen_once(
-                EVENT_HOMEASSISTANT_STOP,
+            # Clean disconnect WebSocket on MenuAI shutdown
+            self.unsub = self.menuai.bus.async_listen_once(
+                EVENT_menuai_STOP,
                 lambda _: self.close_websocket(),
             )
 

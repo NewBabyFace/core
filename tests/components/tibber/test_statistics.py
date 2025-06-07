@@ -2,11 +2,11 @@
 
 from unittest.mock import AsyncMock
 
-from homeassistant.components.recorder import Recorder
-from homeassistant.components.recorder.statistics import statistics_during_period
-from homeassistant.components.tibber.coordinator import TibberDataCoordinator
-from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
+from menuai.components.recorder import Recorder
+from menuai.components.recorder.statistics import statistics_during_period
+from menuai.components.tibber.coordinator import TibberDataCoordinator
+from menuai.core import menuai
+from menuai.util import dt as dt_util
 
 from .test_common import CONSUMPTION_DATA_1, PRODUCTION_DATA_1, mock_get_homes
 
@@ -15,7 +15,7 @@ from tests.components.recorder.common import async_wait_recording_done
 
 
 async def test_async_setup_entry(
-    recorder_mock: Recorder, hass: HomeAssistant, config_entry: MockConfigEntry
+    recorder_mock: Recorder, menuai: menuai, config_entry: MockConfigEntry
 ) -> None:
     """Test setup Tibber."""
     tibber_connection = AsyncMock()
@@ -24,9 +24,9 @@ async def test_async_setup_entry(
     tibber_connection.fetch_production_data_active_homes.return_value = None
     tibber_connection.get_homes = mock_get_homes
 
-    coordinator = TibberDataCoordinator(hass, config_entry, tibber_connection)
+    coordinator = TibberDataCoordinator(menuai, config_entry, tibber_connection)
     await coordinator._async_update_data()
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
     for statistic_id, data, key in (
         ("tibber:energy_consumption_home_id", CONSUMPTION_DATA_1, "consumption"),
@@ -34,9 +34,9 @@ async def test_async_setup_entry(
         ("tibber:energy_production_home_id", PRODUCTION_DATA_1, "production"),
         ("tibber:energy_profit_home_id", PRODUCTION_DATA_1, "profit"),
     ):
-        stats = await hass.async_add_executor_job(
+        stats = await menuai.async_add_executor_job(
             statistics_during_period,
-            hass,
+            menuai,
             dt_util.parse_datetime(data[0]["from"]),
             None,
             {statistic_id},

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import datetime
 
-from homeassistant.components.media_player import MediaClass, MediaType
-from homeassistant.const import Platform
+from menuai.components.media_player import MediaClass, MediaType
+from menuai.const import Platform
 
 UPNP_ST = "urn:schemas-upnp-org:device:ZonePlayer:1"
 

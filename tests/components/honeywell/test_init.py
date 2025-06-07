@@ -6,15 +6,15 @@ from aiohttp.client_exceptions import ClientConnectionError
 import aiosomecomfort
 import pytest
 
-from homeassistant.components.honeywell.const import (
+from menuai.components.honeywell.const import (
     CONF_COOL_AWAY_TEMPERATURE,
     CONF_HEAT_AWAY_TEMPERATURE,
     DOMAIN,
 )
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.config_entries import ConfigEntryState
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 from . import init_integration
 
@@ -23,53 +23,53 @@ from tests.common import MockConfigEntry
 MIGRATE_OPTIONS_KEYS = {CONF_COOL_AWAY_TEMPERATURE, CONF_HEAT_AWAY_TEMPERATURE}
 
 
-@patch("homeassistant.components.honeywell.UPDATE_LOOP_SLEEP_TIME", 0)
-async def test_setup_entry(hass: HomeAssistant, config_entry: MockConfigEntry) -> None:
+@patch("menuai.components.honeywell.UPDATE_LOOP_SLEEP_TIME", 0)
+async def test_setup_entry(menuai: menuai, config_entry: MockConfigEntry) -> None:
     """Initialize the config entry."""
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
     assert config_entry.state is ConfigEntryState.LOADED
     assert (
-        hass.states.async_entity_ids_count() == 4
+        menuai.states.async_entity_ids_count() == 4
     )  # 1 climate entity; 2 sensor entities
 
 
-@patch("homeassistant.components.honeywell.UPDATE_LOOP_SLEEP_TIME", 0)
+@patch("menuai.components.honeywell.UPDATE_LOOP_SLEEP_TIME", 0)
 async def test_setup_multiple_entry(
-    hass: HomeAssistant, config_entry: MockConfigEntry, config_entry2: MockConfigEntry
+    menuai: menuai, config_entry: MockConfigEntry, config_entry2: MockConfigEntry
 ) -> None:
     """Initialize the config entry."""
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
     assert config_entry.state is ConfigEntryState.LOADED
 
-    config_entry2.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry2.entry_id)
-    await hass.async_block_till_done()
+    config_entry2.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry2.entry_id)
+    await menuai.async_block_till_done()
     assert config_entry2.state is ConfigEntryState.LOADED
 
 
 async def test_setup_multiple_thermostats(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     location: MagicMock,
     another_device: MagicMock,
 ) -> None:
     """Test that the config form is shown."""
     location.devices_by_id[another_device.deviceid] = another_device
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
     assert config_entry.state is ConfigEntryState.LOADED
     assert (
-        hass.states.async_entity_ids_count() == 8
+        menuai.states.async_entity_ids_count() == 8
     )  # 2 climate entities; 4 sensor entities; 2 switch entities
 
 
 async def test_setup_multiple_thermostats_with_same_deviceid(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     config_entry: MockConfigEntry,
     device: MagicMock,
@@ -80,17 +80,17 @@ async def test_setup_multiple_thermostats_with_same_deviceid(
     mock_location2.locationid.return_value = "location2"
     mock_location2.devices_by_id = {device.deviceid: device}
     client.locations_by_id["location2"] = mock_location2
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
     assert config_entry.state is ConfigEntryState.LOADED
     assert (
-        hass.states.async_entity_ids_count() == 4
+        menuai.states.async_entity_ids_count() == 4
     )  # 1 climate entity; 2 sensor entities; 1 switch enitiy
     assert "Platform honeywell does not generate unique IDs" not in caplog.text
 
 
-async def test_away_temps_migration(hass: HomeAssistant) -> None:
+async def test_away_temps_migration(menuai: menuai) -> None:
     """Test away temps migrate to config options."""
     legacy_config = MockConfigEntry(
         domain=DOMAIN,
@@ -103,9 +103,9 @@ async def test_away_temps_migration(hass: HomeAssistant) -> None:
         options={},
     )
 
-    legacy_config.add_to_hass(hass)
-    await hass.config_entries.async_setup(legacy_config.entry_id)
-    await hass.async_block_till_done()
+    legacy_config.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(legacy_config.entry_id)
+    await menuai.async_block_till_done()
     assert legacy_config.options == {
         CONF_COOL_AWAY_TEMPERATURE: 1,
         CONF_HEAT_AWAY_TEMPERATURE: 2,
@@ -113,11 +113,11 @@ async def test_away_temps_migration(hass: HomeAssistant) -> None:
 
 
 async def test_login_error(
-    hass: HomeAssistant, client: MagicMock, config_entry: MagicMock
+    menuai: menuai, client: MagicMock, config_entry: MagicMock
 ) -> None:
     """Test login errors from API."""
     client.login.side_effect = aiosomecomfort.AuthError
-    await init_integration(hass, config_entry)
+    await init_integration(menuai, config_entry)
     assert config_entry.state is ConfigEntryState.SETUP_ERROR
 
 
@@ -131,28 +131,28 @@ async def test_login_error(
     ],
 )
 async def test_connection_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
     config_entry: MagicMock,
     the_error: Exception,
 ) -> None:
     """Test Connection errors from API."""
     client.login.side_effect = the_error
-    await init_integration(hass, config_entry)
+    await init_integration(menuai, config_entry)
     assert config_entry.state is ConfigEntryState.SETUP_RETRY
 
 
 async def test_no_devices(
-    hass: HomeAssistant, client: MagicMock, config_entry: MagicMock
+    menuai: menuai, client: MagicMock, config_entry: MagicMock
 ) -> None:
     """Test no devices from API."""
     client.locations_by_id = {}
-    await init_integration(hass, config_entry)
+    await init_integration(menuai, config_entry)
     assert config_entry.state is ConfigEntryState.SETUP_ERROR
 
 
 async def test_remove_stale_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     device_registry: dr.DeviceRegistry,
     location: MagicMock,
@@ -167,23 +167,23 @@ async def test_remove_stale_device(
         data={},
         unique_id="unique_id",
     )
-    config_entry_other.add_to_hass(hass)
+    config_entry_other.add_to_menuai(menuai)
     device_entry_other = device_registry.async_get_or_create(
         config_entry_id=config_entry_other.entry_id,
         identifiers={("OtherDomain", 7654321)},
     )
 
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_registry.async_update_device(
         device_entry_other.id,
         add_config_entry_id=config_entry.entry_id,
         merge_identifiers={(DOMAIN, 7654321)},
     )
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
     assert config_entry.state is ConfigEntryState.LOADED
-    assert hass.states.async_entity_ids_count() == 8
+    assert menuai.states.async_entity_ids_count() == 8
 
     device_entries = dr.async_entries_for_config_entry(
         device_registry, config_entry.entry_id
@@ -208,20 +208,20 @@ async def test_remove_stale_device(
         (DOMAIN, 7654321) in device.identifiers for device in device_entries_other
     )
 
-    assert await hass.config_entries.async_unload(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_unload(config_entry.entry_id)
+    await menuai.async_block_till_done()
     assert config_entry.state is ConfigEntryState.NOT_LOADED
 
     del location.devices_by_id[another_device.deviceid]
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
     assert (
-        hass.states.async_entity_ids_count() == 4
+        menuai.states.async_entity_ids_count() == 4
     )  # 1 climate entities; 2 sensor entities; 1 switch entity
 
     device_entries = dr.async_entries_for_config_entry(

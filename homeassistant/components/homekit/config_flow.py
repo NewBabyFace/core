@@ -12,20 +12,20 @@ from typing import Any, Final, TypedDict
 
 import voluptuous as vol
 
-from homeassistant.components import device_automation
-from homeassistant.components.camera import DOMAIN as CAMERA_DOMAIN
-from homeassistant.components.lock import DOMAIN as LOCK_DOMAIN
-from homeassistant.components.media_player import DOMAIN as MEDIA_PLAYER_DOMAIN
-from homeassistant.components.remote import DOMAIN as REMOTE_DOMAIN
-from homeassistant.components.valve import DOMAIN as VALVE_DOMAIN
-from homeassistant.config_entries import (
+from menuai.components import device_automation
+from menuai.components.camera import DOMAIN as CAMERA_DOMAIN
+from menuai.components.lock import DOMAIN as LOCK_DOMAIN
+from menuai.components.media_player import DOMAIN as MEDIA_PLAYER_DOMAIN
+from menuai.components.remote import DOMAIN as REMOTE_DOMAIN
+from menuai.components.valve import DOMAIN as VALVE_DOMAIN
+from menuai.config_entries import (
     SOURCE_IMPORT,
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_FRIENDLY_NAME,
     CONF_DEVICES,
     CONF_DOMAINS,
@@ -34,14 +34,14 @@ from homeassistant.const import (
     CONF_NAME,
     CONF_PORT,
 )
-from homeassistant.core import HomeAssistant, callback, split_entity_id
-from homeassistant.helpers import (
+from menuai.core import menuai, callback, split_entity_id
+from menuai.helpers import (
     config_validation as cv,
     device_registry as dr,
     entity_registry as er,
     selector,
 )
-from homeassistant.loader import async_get_integrations
+from menuai.loader import async_get_integrations
 
 from .const import (
     CONF_ENTITY_CONFIG,
@@ -158,9 +158,9 @@ def _make_entity_filter(
     )
 
 
-async def _async_domain_names(hass: HomeAssistant, domains: list[str]) -> str:
+async def _async_domain_names(menuai: menuai, domains: list[str]) -> str:
     """Build a list of integration names from domains."""
-    name_to_type_map = await _async_name_to_type_map(hass)
+    name_to_type_map = await _async_name_to_type_map(menuai)
     return ", ".join(
         [name for domain, name in name_to_type_map.items() if domain in domains]
     )
@@ -189,9 +189,9 @@ def _async_cameras_from_entities(entities: list[str]) -> list[str]:
     ]
 
 
-async def _async_name_to_type_map(hass: HomeAssistant) -> dict[str, str]:
+async def _async_name_to_type_map(menuai: menuai) -> dict[str, str]:
     """Create a mapping of types of devices/entities HomeKit can support."""
-    integrations = await async_get_integrations(hass, SUPPORTED_DOMAINS)
+    integrations = await async_get_integrations(menuai, SUPPORTED_DOMAINS)
     return {
         domain: integration_or_exception.name
         if (integration_or_exception := integrations[domain])
@@ -224,7 +224,7 @@ class HomeKitConfigFlow(ConfigFlow, domain=DOMAIN):
         default_domains = (
             [] if self._async_current_entries(include_ignore=False) else DEFAULT_DOMAINS
         )
-        name_to_type_map = await _async_name_to_type_map(self.hass)
+        name_to_type_map = await _async_name_to_type_map(self.menuai)
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema(
@@ -243,7 +243,7 @@ class HomeKitConfigFlow(ConfigFlow, domain=DOMAIN):
         hk_data = self.hk_data
 
         if user_input is not None:
-            port = async_find_next_available_port(self.hass, DEFAULT_CONFIG_FLOW_PORT)
+            port = async_find_next_available_port(self.menuai, DEFAULT_CONFIG_FLOW_PORT)
             await self._async_add_entries_for_accessory_mode_entities(port)
             hk_data[CONF_PORT] = port
             conf_filter: EntityFilterDict = hk_data[CONF_FILTER]
@@ -269,19 +269,19 @@ class HomeKitConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> None:
         """Generate new flows for entities that need their own instances."""
         accessory_mode_entity_ids = _async_get_entity_ids_for_accessory_mode(
-            self.hass, self.hk_data[CONF_FILTER][CONF_INCLUDE_DOMAINS]
+            self.menuai, self.hk_data[CONF_FILTER][CONF_INCLUDE_DOMAINS]
         )
         exiting_entity_ids_accessory_mode = _async_entity_ids_with_accessory_mode(
-            self.hass
+            self.menuai
         )
         next_port_to_check = last_assigned_port + 1
         for entity_id in accessory_mode_entity_ids:
             if entity_id in exiting_entity_ids_accessory_mode:
                 continue
-            port = async_find_next_available_port(self.hass, next_port_to_check)
+            port = async_find_next_available_port(self.menuai, next_port_to_check)
             next_port_to_check = port + 1
-            self.hass.async_create_task(
-                self.hass.config_entries.flow.async_init(
+            self.menuai.async_create_task(
+                self.menuai.config_entries.flow.async_init(
                     DOMAIN,
                     context={"source": "accessory"},
                     data={CONF_ENTITY_ID: entity_id, CONF_PORT: port},
@@ -295,7 +295,7 @@ class HomeKitConfigFlow(ConfigFlow, domain=DOMAIN):
         entity_id = accessory_input[CONF_ENTITY_ID]
         port = accessory_input[CONF_PORT]
 
-        state = self.hass.states.get(entity_id)
+        state = self.menuai.states.get(entity_id)
         assert state is not None
         name = state.attributes.get(ATTR_FRIENDLY_NAME) or state.entity_id
 
@@ -405,7 +405,7 @@ class OptionsFlowHandler(OptionsFlow):
             hk_options.pop(CONF_INCLUDE_EXCLUDE_MODE, None)
             return self.async_create_entry(title="", data=self.hk_options)
 
-        all_supported_devices = await _async_get_supported_devices(self.hass)
+        all_supported_devices = await _async_get_supported_devices(self.menuai)
         # Strip out devices that no longer exist to prevent error in the UI
         devices = [
             device_id
@@ -502,7 +502,7 @@ class OptionsFlowHandler(OptionsFlow):
         entity_filter = hk_options.get(CONF_FILTER, {})
         entities = entity_filter.get(CONF_INCLUDE_ENTITIES, [])
         all_supported_entities = _async_get_matching_entities(
-            self.hass, domains, include_entity_category=True, include_hidden=True
+            self.menuai, domains, include_entity_category=True, include_hidden=True
         )
         # In accessory mode we can only have one
         default_value = next(
@@ -546,7 +546,7 @@ class OptionsFlowHandler(OptionsFlow):
         entity_filter: EntityFilterDict = hk_options.get(CONF_FILTER, {})
         entities = entity_filter.get(CONF_INCLUDE_ENTITIES, [])
         all_supported_entities = _async_get_matching_entities(
-            self.hass, domains, include_entity_category=True, include_hidden=True
+            self.menuai, domains, include_entity_category=True, include_hidden=True
         )
         # Strip out entities that no longer exist to prevent error in the UI
         default_value = [
@@ -556,7 +556,7 @@ class OptionsFlowHandler(OptionsFlow):
         return self.async_show_form(
             step_id="include",
             description_placeholders={
-                "domains": await _async_domain_names(self.hass, domains)
+                "domains": await _async_domain_names(self.menuai, domains)
             },
             data_schema=vol.Schema(
                 {
@@ -584,7 +584,7 @@ class OptionsFlowHandler(OptionsFlow):
             entities = cv.ensure_list(user_input[CONF_ENTITIES])
             if CAMERA_DOMAIN in domains:
                 camera_entities = _async_get_matching_entities(
-                    self.hass, [CAMERA_DOMAIN]
+                    self.menuai, [CAMERA_DOMAIN]
                 )
                 self.included_cameras = [
                     entity_id
@@ -601,7 +601,7 @@ class OptionsFlowHandler(OptionsFlow):
         entity_filter = self.hk_options.get(CONF_FILTER, {})
         entities = entity_filter.get(CONF_INCLUDE_ENTITIES, [])
 
-        all_supported_entities = _async_get_matching_entities(self.hass, domains)
+        all_supported_entities = _async_get_matching_entities(self.menuai, domains)
         if not entities:
             entities = entity_filter.get(CONF_EXCLUDE_ENTITIES, [])
 
@@ -613,7 +613,7 @@ class OptionsFlowHandler(OptionsFlow):
         return self.async_show_form(
             step_id="exclude",
             description_placeholders={
-                "domains": await _async_domain_names(self.hass, domains)
+                "domains": await _async_domain_names(self.menuai, domains)
             },
             data_schema=vol.Schema(
                 {
@@ -654,7 +654,7 @@ class OptionsFlowHandler(OptionsFlow):
         domains = entity_filter.get(CONF_INCLUDE_DOMAINS, [])
         if include_entities := entity_filter.get(CONF_INCLUDE_ENTITIES):
             domains.extend(_domains_set_from_entities(include_entities))
-        name_to_type_map = await _async_name_to_type_map(self.hass)
+        name_to_type_map = await _async_name_to_type_map(self.menuai)
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema(
@@ -674,12 +674,12 @@ class OptionsFlowHandler(OptionsFlow):
         )
 
 
-async def _async_get_supported_devices(hass: HomeAssistant) -> dict[str, str]:
+async def _async_get_supported_devices(menuai: menuai) -> dict[str, str]:
     """Return all supported devices."""
     results = await device_automation.async_get_device_automations(
-        hass, device_automation.DeviceAutomationType.TRIGGER
+        menuai, device_automation.DeviceAutomationType.TRIGGER
     )
-    dev_reg = dr.async_get(hass)
+    dev_reg = dr.async_get(menuai)
     unsorted: dict[str, str] = {}
     for device_id in results:
         entry = dev_reg.async_get(device_id)
@@ -704,17 +704,17 @@ def _exclude_by_entity_registry(
 
 
 def _async_get_matching_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     domains: list[str] | None = None,
     include_entity_category: bool = False,
     include_hidden: bool = False,
 ) -> list[str]:
     """Fetch all entities or entities in the given domains."""
-    ent_reg = er.async_get(hass)
+    ent_reg = er.async_get(menuai)
     return [
         state.entity_id
         for state in sorted(
-            hass.states.async_all(domains and set(domains)),
+            menuai.states.async_all(domains and set(domains)),
             key=lambda item: item.entity_id,
         )
         if not _exclude_by_entity_registry(
@@ -730,7 +730,7 @@ def _domains_set_from_entities(entity_ids: Iterable[str]) -> set[str]:
 
 @callback
 def _async_get_entity_ids_for_accessory_mode(
-    hass: HomeAssistant, include_domains: Iterable[str]
+    menuai: menuai, include_domains: Iterable[str]
 ) -> list[str]:
     """Build a list of entities that should be paired in accessory mode."""
     accessory_mode_domains = {
@@ -742,18 +742,18 @@ def _async_get_entity_ids_for_accessory_mode(
 
     return [
         state.entity_id
-        for state in hass.states.async_all(accessory_mode_domains)
+        for state in menuai.states.async_all(accessory_mode_domains)
         if state_needs_accessory_mode(state)
     ]
 
 
 @callback
-def _async_entity_ids_with_accessory_mode(hass: HomeAssistant) -> set[str]:
+def _async_entity_ids_with_accessory_mode(menuai: menuai) -> set[str]:
     """Return a set of entity ids that have config entries in accessory mode."""
 
     entity_ids: set[str] = set()
 
-    current_entries = hass.config_entries.async_entries(DOMAIN)
+    current_entries = menuai.config_entries.async_entries(DOMAIN)
     for entry in current_entries:
         # We have to handle the case where the data has not yet
         # been migrated to options because the data was just

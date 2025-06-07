@@ -5,11 +5,11 @@ from unittest.mock import Mock
 
 from aiohttp import ClientError
 
-from homeassistant.components.isy994.const import DOMAIN, ISY_URL_POSTFIX
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.isy994.const import DOMAIN, ISY_URL_POSTFIX
+from menuai.config_entries import ConfigEntryState
+from menuai.const import CONF_HOST
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from .test_config_flow import MOCK_HOSTNAME, MOCK_UUID
 
@@ -22,14 +22,14 @@ MOCK_HEARTBEAT = "2021-05-01T00:00:00.000000"
 
 
 async def test_system_health(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test system health."""
     aioclient_mock.get(f"http://{MOCK_HOSTNAME}{ISY_URL_POSTFIX}", text="")
 
-    hass.config.components.add(DOMAIN)
-    assert await async_setup_component(hass, "system_health", {})
-    await hass.async_block_till_done()
+    menuai.config.components.add(DOMAIN)
+    assert await async_setup_component(menuai, "system_health", {})
+    await menuai.async_block_till_done()
 
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -38,7 +38,7 @@ async def test_system_health(
         unique_id=MOCK_UUID,
         state=ConfigEntryState.LOADED,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     isy_data = Mock(
         root=Mock(
@@ -51,7 +51,7 @@ async def test_system_health(
     )
     entry.runtime_data = isy_data
 
-    info = await get_system_health_info(hass, DOMAIN)
+    info = await get_system_health_info(menuai, DOMAIN)
 
     for key, val in info.items():
         if asyncio.iscoroutine(val):
@@ -64,14 +64,14 @@ async def test_system_health(
 
 
 async def test_system_health_failed_connect(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test system health."""
     aioclient_mock.get(f"http://{MOCK_HOSTNAME}{ISY_URL_POSTFIX}", exc=ClientError)
 
-    hass.config.components.add(DOMAIN)
-    assert await async_setup_component(hass, "system_health", {})
-    await hass.async_block_till_done()
+    menuai.config.components.add(DOMAIN)
+    assert await async_setup_component(menuai, "system_health", {})
+    await menuai.async_block_till_done()
 
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -80,7 +80,7 @@ async def test_system_health_failed_connect(
         unique_id=MOCK_UUID,
         state=ConfigEntryState.LOADED,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     isy_data = Mock(
         root=Mock(
@@ -93,7 +93,7 @@ async def test_system_health_failed_connect(
     )
     entry.runtime_data = isy_data
 
-    info = await get_system_health_info(hass, DOMAIN)
+    info = await get_system_health_info(menuai, DOMAIN)
 
     for key, val in info.items():
         if asyncio.iscoroutine(val):

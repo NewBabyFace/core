@@ -8,10 +8,10 @@ from mcp.types import CallToolResult, ListToolsResult, TextContent, Tool
 import pytest
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import Context, HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import llm
+from menuai.config_entries import ConfigEntryState
+from menuai.core import Context, menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import llm
 
 from .conftest import TEST_API_NAME
 
@@ -66,13 +66,13 @@ def create_llm_context() -> llm.LLMContext:
 
 
 async def test_init(
-    hass: HomeAssistant, config_entry: MockConfigEntry, mock_mcp_client: Mock
+    menuai: menuai, config_entry: MockConfigEntry, mock_mcp_client: Mock
 ) -> None:
     """Test the integration is initialized and can be unloaded cleanly."""
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
     assert config_entry.state is ConfigEntryState.LOADED
 
-    await hass.config_entries.async_unload(config_entry.entry_id)
+    await menuai.config_entries.async_unload(config_entry.entry_id)
     assert config_entry.state is ConfigEntryState.NOT_LOADED
 
 
@@ -86,7 +86,7 @@ async def test_init(
     ],
 )
 async def test_mcp_server_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_mcp_client: Mock,
     side_effect: Exception,
@@ -94,12 +94,12 @@ async def test_mcp_server_failure(
     """Test the integration fails to setup if the server fails initialization."""
     mock_mcp_client.side_effect = side_effect
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
     assert config_entry.state is ConfigEntryState.SETUP_RETRY
 
 
 async def test_mcp_server_authentication_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     credential: None,
     config_entry_with_auth: MockConfigEntry,
     mock_mcp_client: Mock,
@@ -109,38 +109,38 @@ async def test_mcp_server_authentication_failure(
         "Authentication required", request=None, response=httpx.Response(401)
     )
 
-    await hass.config_entries.async_setup(config_entry_with_auth.entry_id)
+    await menuai.config_entries.async_setup(config_entry_with_auth.entry_id)
     assert config_entry_with_auth.state is ConfigEntryState.SETUP_ERROR
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
     assert flows[0]["step_id"] == "reauth_confirm"
 
 
 async def test_list_tools_failure(
-    hass: HomeAssistant, config_entry: MockConfigEntry, mock_mcp_client: Mock
+    menuai: menuai, config_entry: MockConfigEntry, mock_mcp_client: Mock
 ) -> None:
     """Test the integration fails to load if the first data fetch returns an error."""
     mock_mcp_client.return_value.list_tools.side_effect = httpx.HTTPStatusError(
         "", request=None, response=httpx.Response(500)
     )
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
     assert config_entry.state is ConfigEntryState.SETUP_RETRY
 
 
 async def test_llm_get_api_tools(
-    hass: HomeAssistant, config_entry: MockConfigEntry, mock_mcp_client: Mock
+    menuai: menuai, config_entry: MockConfigEntry, mock_mcp_client: Mock
 ) -> None:
     """Test MCP tools are returned as LLM API tools."""
     mock_mcp_client.return_value.list_tools.return_value = ListToolsResult(
         tools=[SEARCH_MEMORY_TOOL, SAVE_MEMORY_TOOL],
     )
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
     assert config_entry.state is ConfigEntryState.LOADED
 
-    apis = llm.async_get_apis(hass)
+    apis = llm.async_get_apis(menuai)
     api = next(iter([api for api in apis if api.name == TEST_API_NAME]))
     assert api
 
@@ -168,17 +168,17 @@ async def test_llm_get_api_tools(
 
 
 async def test_call_tool(
-    hass: HomeAssistant, config_entry: MockConfigEntry, mock_mcp_client: Mock
+    menuai: menuai, config_entry: MockConfigEntry, mock_mcp_client: Mock
 ) -> None:
     """Test calling an MCP Tool through the LLM API."""
     mock_mcp_client.return_value.list_tools.return_value = ListToolsResult(
         tools=[SEARCH_MEMORY_TOOL]
     )
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
     assert config_entry.state is ConfigEntryState.LOADED
 
-    apis = llm.async_get_apis(hass)
+    apis = llm.async_get_apis(menuai)
     api = next(iter([api for api in apis if api.name == TEST_API_NAME]))
     assert api
 
@@ -191,7 +191,7 @@ async def test_call_tool(
         content=[TextContent(type="text", text="User was born in February")]
     )
     result = await tool.async_call(
-        hass,
+        menuai,
         llm.ToolInput(
             tool_name="search_memory", tool_args={"query": "User's birth month"}
         ),
@@ -203,17 +203,17 @@ async def test_call_tool(
 
 
 async def test_call_tool_fails(
-    hass: HomeAssistant, config_entry: MockConfigEntry, mock_mcp_client: Mock
+    menuai: menuai, config_entry: MockConfigEntry, mock_mcp_client: Mock
 ) -> None:
     """Test handling an MCP Tool call failure."""
     mock_mcp_client.return_value.list_tools.return_value = ListToolsResult(
         tools=[SEARCH_MEMORY_TOOL]
     )
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
     assert config_entry.state is ConfigEntryState.LOADED
 
-    apis = llm.async_get_apis(hass)
+    apis = llm.async_get_apis(menuai)
     api = next(iter([api for api in apis if api.name == TEST_API_NAME]))
     assert api
 
@@ -226,10 +226,10 @@ async def test_call_tool_fails(
         "Server error", request=None, response=httpx.Response(500)
     )
     with pytest.raises(
-        HomeAssistantError, match="Error when calling tool: Server error"
+        menuaiError, match="Error when calling tool: Server error"
     ):
         await tool.async_call(
-            hass,
+            menuai,
             llm.ToolInput(
                 tool_name="search_memory", tool_args={"query": "User's birth month"}
             ),
@@ -238,16 +238,16 @@ async def test_call_tool_fails(
 
 
 async def test_convert_tool_schema_fails(
-    hass: HomeAssistant, config_entry: MockConfigEntry, mock_mcp_client: Mock
+    menuai: menuai, config_entry: MockConfigEntry, mock_mcp_client: Mock
 ) -> None:
-    """Test a failure converting an MCP tool schema to a Home Assistant schema."""
+    """Test a failure converting an MCP tool schema to a MenuAI schema."""
     mock_mcp_client.return_value.list_tools.return_value = ListToolsResult(
         tools=[SEARCH_MEMORY_TOOL]
     )
 
     with patch(
-        "homeassistant.components.mcp.coordinator.convert_to_voluptuous",
+        "menuai.components.mcp.coordinator.convert_to_voluptuous",
         side_effect=ValueError,
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
+        await menuai.config_entries.async_setup(config_entry.entry_id)
         assert config_entry.state is ConfigEntryState.SETUP_RETRY

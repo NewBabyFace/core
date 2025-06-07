@@ -56,14 +56,14 @@ from .const import (
     UnitOfLength,
     __version__,
 )
-from .core import DOMAIN as HOMEASSISTANT_DOMAIN, HomeAssistant
+from .core import DOMAIN as menuai_DOMAIN, menuai
 from .generated.currencies import HISTORIC_CURRENCIES
 from .helpers import config_validation as cv, issue_registry as ir
 from .helpers.entity_values import EntityValues
 from .helpers.storage import Store
 from .helpers.typing import UNDEFINED, UndefinedType
 from .util import dt as dt_util, location
-from .util.hass_dict import HassKey
+from .util.menuai_dict import menuaiKey
 from .util.package import is_docker_env
 from .util.unit_system import (
     _CONF_UNIT_SYSTEM_IMPERIAL,
@@ -80,7 +80,7 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
-DATA_CUSTOMIZE: HassKey[EntityValues] = HassKey("hass_customize")
+DATA_CUSTOMIZE: menuaiKey[EntityValues] = menuaiKey("menuai_customize")
 
 CONF_CREDENTIAL: Final = "credential"
 CONF_ICE_SERVERS: Final = "ice_servers"
@@ -188,53 +188,53 @@ _CUSTOMIZE_CONFIG_SCHEMA = vol.Schema(
 
 
 def _raise_issue_if_imperial_unit_system(
-    hass: HomeAssistant, config: dict[str, Any]
+    menuai: menuai, config: dict[str, Any]
 ) -> dict[str, Any]:
     if config.get(CONF_UNIT_SYSTEM) == _CONF_UNIT_SYSTEM_IMPERIAL:
         ir.async_create_issue(
-            hass,
-            HOMEASSISTANT_DOMAIN,
+            menuai,
+            menuai_DOMAIN,
             "imperial_unit_system",
             is_fixable=False,
-            learn_more_url="homeassistant://config/general",
+            learn_more_url="menuai://config/general",
             severity=ir.IssueSeverity.WARNING,
             translation_key="imperial_unit_system",
         )
         config[CONF_UNIT_SYSTEM] = _CONF_UNIT_SYSTEM_US_CUSTOMARY
     else:
-        ir.async_delete_issue(hass, HOMEASSISTANT_DOMAIN, "imperial_unit_system")
+        ir.async_delete_issue(menuai, menuai_DOMAIN, "imperial_unit_system")
 
     return config
 
 
-def _raise_issue_if_historic_currency(hass: HomeAssistant, currency: str) -> None:
+def _raise_issue_if_historic_currency(menuai: menuai, currency: str) -> None:
     if currency not in HISTORIC_CURRENCIES:
-        ir.async_delete_issue(hass, HOMEASSISTANT_DOMAIN, "historic_currency")
+        ir.async_delete_issue(menuai, menuai_DOMAIN, "historic_currency")
         return
 
     ir.async_create_issue(
-        hass,
-        HOMEASSISTANT_DOMAIN,
+        menuai,
+        menuai_DOMAIN,
         "historic_currency",
         is_fixable=False,
-        learn_more_url="homeassistant://config/general",
+        learn_more_url="menuai://config/general",
         severity=ir.IssueSeverity.WARNING,
         translation_key="historic_currency",
         translation_placeholders={"currency": currency},
     )
 
 
-def _raise_issue_if_no_country(hass: HomeAssistant, country: str | None) -> None:
+def _raise_issue_if_no_country(menuai: menuai, country: str | None) -> None:
     if country is not None:
-        ir.async_delete_issue(hass, HOMEASSISTANT_DOMAIN, "country_not_configured")
+        ir.async_delete_issue(menuai, menuai_DOMAIN, "country_not_configured")
         return
 
     ir.async_create_issue(
-        hass,
-        HOMEASSISTANT_DOMAIN,
+        menuai,
+        menuai_DOMAIN,
         "country_not_configured",
         is_fixable=False,
-        learn_more_url="homeassistant://config/general",
+        learn_more_url="menuai://config/general",
         severity=ir.IssueSeverity.WARNING,
         translation_key="country_not_configured",
     )
@@ -347,22 +347,22 @@ CORE_CONFIG_SCHEMA = vol.All(
 )
 
 
-async def async_process_ha_core_config(hass: HomeAssistant, config: dict) -> None:
-    """Process the [homeassistant] section from the configuration.
+async def async_process_ha_core_config(menuai: menuai, config: dict) -> None:
+    """Process the [menuai] section from the configuration.
 
     This method is a coroutine.
     """
     # CORE_CONFIG_SCHEMA is not async safe since it uses vol.IsDir
     # so we need to run it in an executor job.
-    config = await hass.async_add_executor_job(CORE_CONFIG_SCHEMA, config)
+    config = await menuai.async_add_executor_job(CORE_CONFIG_SCHEMA, config)
 
     # Check if we need to raise an issue for imperial unit system
-    config = _raise_issue_if_imperial_unit_system(hass, config)
+    config = _raise_issue_if_imperial_unit_system(menuai, config)
 
     # Only load auth during startup.
-    if not hasattr(hass, "auth"):
+    if not hasattr(menuai, "auth"):
         if (auth_conf := config.get(CONF_AUTH_PROVIDERS)) is None:
-            auth_conf = [{"type": "homeassistant"}]
+            auth_conf = [{"type": "menuai"}]
 
         mfa_conf = config.get(
             CONF_AUTH_MFA_MODULES,
@@ -370,12 +370,12 @@ async def async_process_ha_core_config(hass: HomeAssistant, config: dict) -> Non
         )
 
         setattr(
-            hass, "auth", await auth.auth_manager_from_config(hass, auth_conf, mfa_conf)
+            menuai, "auth", await auth.auth_manager_from_config(menuai, auth_conf, mfa_conf)
         )
 
-    await hass.config.async_load()
+    await menuai.config.async_load()
 
-    hac = hass.config
+    hac = menuai.config
 
     if any(
         k in config
@@ -425,8 +425,8 @@ async def async_process_ha_core_config(hass: HomeAssistant, config: dict) -> Non
             for server in config[CONF_WEBRTC][CONF_ICE_SERVERS]
         ]
 
-    _raise_issue_if_historic_currency(hass, hass.config.currency)
-    _raise_issue_if_no_country(hass, hass.config.country)
+    _raise_issue_if_historic_currency(menuai, menuai.config.currency)
+    _raise_issue_if_no_country(menuai, menuai.config.country)
 
     if CONF_TIME_ZONE in config:
         await hac.async_set_time_zone(config[CONF_TIME_ZONE])
@@ -435,10 +435,10 @@ async def async_process_ha_core_config(hass: HomeAssistant, config: dict) -> Non
         if is_docker_env():
             hac.media_dirs = {"local": "/media"}
         else:
-            hac.media_dirs = {"local": hass.config.path("media")}
+            hac.media_dirs = {"local": menuai.config.path("media")}
 
     # Init whitelist external dir
-    hac.allowlist_external_dirs = {hass.config.path("www"), *hac.media_dirs.values()}
+    hac.allowlist_external_dirs = {menuai.config.path("www"), *hac.media_dirs.values()}
     if CONF_ALLOWLIST_EXTERNAL_DIRS in config:
         hac.allowlist_external_dirs.update(set(config[CONF_ALLOWLIST_EXTERNAL_DIRS]))
 
@@ -466,7 +466,7 @@ async def async_process_ha_core_config(hass: HomeAssistant, config: dict) -> Non
     cust_glob = OrderedDict(config[CONF_CUSTOMIZE_GLOB])
 
     for name, pkg in config[CONF_PACKAGES].items():
-        if (pkg_cust := pkg.get(HOMEASSISTANT_DOMAIN)) is None:
+        if (pkg_cust := pkg.get(menuai_DOMAIN)) is None:
             continue
 
         try:
@@ -479,7 +479,7 @@ async def async_process_ha_core_config(hass: HomeAssistant, config: dict) -> Non
         cust_domain.update(pkg_cust[CONF_CUSTOMIZE_DOMAIN])
         cust_glob.update(pkg_cust[CONF_CUSTOMIZE_GLOB])
 
-    hass.data[DATA_CUSTOMIZE] = EntityValues(cust_exact, cust_domain, cust_glob)
+    menuai.data[DATA_CUSTOMIZE] = EntityValues(cust_exact, cust_domain, cust_glob)
 
     if CONF_UNIT_SYSTEM in config:
         hac.units = get_unit_system(config[CONF_UNIT_SYSTEM])
@@ -492,7 +492,7 @@ class _ComponentSet(set[str]):
 
     Examples:
     `light`, `switch`, `hue`, `mjpeg.camera`, `universal.media_player`,
-    `homeassistant.scene`
+    `menuai.scene`
 
     The top level components set only contains the top level components.
 
@@ -532,16 +532,16 @@ class _ComponentSet(set[str]):
 
 
 class Config:
-    """Configuration settings for Home Assistant."""
+    """Configuration settings for MenuAI."""
 
     _store: Config._ConfigStore
 
-    def __init__(self, hass: HomeAssistant, config_dir: str) -> None:
+    def __init__(self, menuai: menuai, config_dir: str) -> None:
         """Initialize a new config object."""
         # pylint: disable-next=import-outside-toplevel
         from .components.zone import DEFAULT_RADIUS
 
-        self.hass = hass
+        self.menuai = menuai
 
         self.latitude: float = 0
         self.longitude: float = 0
@@ -597,13 +597,13 @@ class Config:
         # Dictionary of Media folders that integrations may use
         self.media_dirs: dict[str, str] = {}
 
-        # If Home Assistant is running in recovery mode
+        # If MenuAI is running in recovery mode
         self.recovery_mode: bool = False
 
         # Use legacy template behavior
         self.legacy_templates: bool = False
 
-        # If Home Assistant is running in safe mode
+        # If MenuAI is running in safe mode
         self.safe_mode: bool = False
 
         self.webrtc = RTCConfiguration()
@@ -613,10 +613,10 @@ class Config:
 
         This must be called before the config object is used.
         """
-        self._store = self._ConfigStore(self.hass)
+        self._store = self._ConfigStore(self.menuai)
 
     def distance(self, lat: float, lon: float) -> float | None:
-        """Calculate distance from Home Assistant.
+        """Calculate distance from MenuAI.
 
         Async friendly.
         """
@@ -646,7 +646,7 @@ class Config:
         """Check if the path is valid for access from outside.
 
         This function does blocking I/O and should not be called from the event loop.
-        Use hass.async_add_executor_job to schedule it on the executor.
+        Use menuai.async_add_executor_job to schedule it on the executor.
         """
         assert path is not None
 
@@ -695,7 +695,7 @@ class Config:
             "radius": self.radius,
             "recovery_mode": self.recovery_mode,
             "safe_mode": self.safe_mode,
-            "state": self.hass.state.value,
+            "state": self.menuai.state.value,
             "time_zone": self.time_zone,
             "unit_system": self.units.as_dict(),
             "version": __version__,
@@ -762,13 +762,13 @@ class Config:
         """Update the configuration from a dictionary."""
         await self._async_update(source=ConfigSource.STORAGE, **kwargs)
         await self._async_store()
-        self.hass.bus.async_fire_internal(EVENT_CORE_CONFIG_UPDATE, kwargs)
+        self.menuai.bus.async_fire_internal(EVENT_CORE_CONFIG_UPDATE, kwargs)
 
-        _raise_issue_if_historic_currency(self.hass, self.currency)
-        _raise_issue_if_no_country(self.hass, self.country)
+        _raise_issue_if_historic_currency(self.menuai, self.currency)
+        _raise_issue_if_no_country(self.menuai, self.country)
 
     async def async_load(self) -> None:
-        """Load [homeassistant] core config."""
+        """Load [menuai] core config."""
         if not (data := await self._store.async_load()):
             return
 
@@ -803,7 +803,7 @@ class Config:
         )
 
     async def _async_store(self) -> None:
-        """Store [homeassistant] core config."""
+        """Store [menuai] core config."""
         data = {
             "latitude": self.latitude,
             "longitude": self.longitude,
@@ -825,10 +825,10 @@ class Config:
     class _ConfigStore(Store[dict[str, Any]]):
         """Class to help storing Config data."""
 
-        def __init__(self, hass: HomeAssistant) -> None:
+        def __init__(self, menuai: menuai) -> None:
             """Initialize storage class."""
             super().__init__(
-                hass,
+                menuai,
                 CORE_STORAGE_VERSION,
                 CORE_STORAGE_KEY,
                 private=True,
@@ -861,13 +861,13 @@ class Config:
                 # owner account.
                 data["language"] = "en"
                 try:
-                    owner = await self.hass.auth.async_get_owner()
+                    owner = await self.menuai.auth.async_get_owner()
                     if owner is not None:
                         # pylint: disable-next=import-outside-toplevel
                         from .components.frontend import storage as frontend_store
 
                         owner_store = await frontend_store.async_user_store(
-                            self.hass, owner.id
+                            self.menuai, owner.id
                         )
 
                         if (

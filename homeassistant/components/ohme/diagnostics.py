@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .coordinator import OhmeConfigEntry
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, config_entry: OhmeConfigEntry
+    menuai: menuai, config_entry: OhmeConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for Ohme."""
     coordinators = config_entry.runtime_data

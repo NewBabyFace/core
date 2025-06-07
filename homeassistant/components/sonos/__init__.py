@@ -22,26 +22,26 @@ from soco.events_base import Event as SonosEvent, SubscriptionBase
 from soco.exceptions import SoCoException
 import voluptuous as vol
 
-from homeassistant import config_entries
-from homeassistant.components import ssdp
-from homeassistant.components.media_player import DOMAIN as MP_DOMAIN
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOSTS, EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, callback
-from homeassistant.helpers import (
+from menuai import config_entries
+from menuai.components import ssdp
+from menuai.components.media_player import DOMAIN as MP_DOMAIN
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOSTS, EVENT_menuai_STOP
+from menuai.core import CALLBACK_TYPE, Event, menuai, callback
+from menuai.helpers import (
     config_validation as cv,
     device_registry as dr,
     issue_registry as ir,
 )
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.event import async_call_later, async_track_time_interval
-from homeassistant.helpers.service_info.ssdp import (
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.event import async_call_later, async_track_time_interval
+from menuai.helpers.service_info.ssdp import (
     ATTR_UPNP_MODEL_NAME,
     ATTR_UPNP_UDN,
     SsdpServiceInfo,
 )
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util.async_ import create_eager_task
+from menuai.helpers.typing import ConfigType
+from menuai.util.async_ import create_eager_task
 
 from .alarms import SonosAlarms
 from .const import (
@@ -121,15 +121,15 @@ class SonosData:
         self.unjoin_data: dict[str, UnjoinData] = {}
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Sonos component."""
     conf = config.get(DOMAIN)
 
-    hass.data[DOMAIN] = conf or {}
+    menuai.data[DOMAIN] = conf or {}
 
     if conf is not None:
-        hass.async_create_task(
-            hass.config_entries.flow.async_init(
+        menuai.async_create_task(
+            menuai.config_entries.flow.async_init(
                 DOMAIN, context={"source": config_entries.SOURCE_IMPORT}
             )
         )
@@ -137,18 +137,18 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up Sonos from a config entry."""
     soco_config.EVENTS_MODULE = events_asyncio
     soco_config.REQUEST_TIMEOUT = 9.5
     soco_config.ZGT_EVENT_FALLBACK = False
     zonegroupstate.EVENT_CACHE_TIMEOUT = SUBSCRIPTION_TIMEOUT
 
-    if DATA_SONOS not in hass.data:
-        hass.data[DATA_SONOS] = SonosData()
+    if DATA_SONOS not in menuai.data:
+        menuai.data[DATA_SONOS] = SonosData()
 
-    data = hass.data[DATA_SONOS]
-    config = hass.data[DOMAIN].get("media_player", {})
+    data = menuai.data[DATA_SONOS]
+    config = menuai.data[DOMAIN].get("media_player", {})
     hosts = config.get(CONF_HOSTS, [])
     _LOGGER.debug("Reached async_setup_entry, config=%s", config)
 
@@ -165,19 +165,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             deprecated_address,
         )
 
-    manager = hass.data[DATA_SONOS_DISCOVERY_MANAGER] = SonosDiscoveryManager(
-        hass, entry, data, hosts
+    manager = menuai.data[DATA_SONOS_DISCOVERY_MANAGER] = SonosDiscoveryManager(
+        menuai, entry, data, hosts
     )
     await manager.setup_platforms_and_discovery()
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a Sonos config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-    await hass.data[DATA_SONOS_DISCOVERY_MANAGER].async_shutdown()
-    hass.data.pop(DATA_SONOS)
-    hass.data.pop(DATA_SONOS_DISCOVERY_MANAGER)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
+    await menuai.data[DATA_SONOS_DISCOVERY_MANAGER].async_shutdown()
+    menuai.data.pop(DATA_SONOS)
+    menuai.data.pop(DATA_SONOS_DISCOVERY_MANAGER)
     return unload_ok
 
 
@@ -185,10 +185,10 @@ class SonosDiscoveryManager:
     """Manage sonos discovery."""
 
     def __init__(
-        self, hass: HomeAssistant, entry: ConfigEntry, data: SonosData, hosts: list[str]
+        self, menuai: menuai, entry: ConfigEntry, data: SonosData, hosts: list[str]
     ) -> None:
         """Init discovery manager."""
-        self.hass = hass
+        self.menuai = menuai
         self.entry = entry
         self.data = data
         self.hosts = set(hosts)
@@ -219,7 +219,7 @@ class SonosDiscoveryManager:
             return
         soco = SoCo(ip_address)
         # Cache now to avoid household ID lookup during first ZoneGroupState processing
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             getattr,
             soco,
             "household_id",
@@ -243,7 +243,7 @@ class SonosDiscoveryManager:
             if not zones_to_add:
                 return
 
-            self.hass.async_create_task(
+            self.menuai.async_create_task(
                 self.async_add_speakers(zones_to_add, subscription, soco.uid),
                 eager_start=True,
             )
@@ -255,7 +255,7 @@ class SonosDiscoveryManager:
             if advertise_ip := soco_config.EVENT_ADVERTISE_IP:
                 listener_address += f" (advertising as {advertise_ip})"
             ir.async_create_issue(
-                self.hass,
+                self.menuai,
                 DOMAIN,
                 SUB_FAIL_ISSUE_ID,
                 is_fixable=False,
@@ -277,7 +277,7 @@ class SonosDiscoveryManager:
                 _LOGGER.debug("Unsubscription from %s failed: %s", ip_address, ex)
 
             try:
-                await self.hass.async_add_executor_job(soco.zone_group_state.poll, soco)
+                await self.menuai.async_add_executor_job(soco.zone_group_state.poll, soco)
             except (OSError, SoCoException, Timeout) as ex:
                 _LOGGER.warning(
                     "Fallback pollling to %s failed, setup cannot continue: %s",
@@ -289,7 +289,7 @@ class SonosDiscoveryManager:
             _async_add_visible_zones()
 
         cancel_failure_callback = async_call_later(
-            self.hass, ZGS_SUBSCRIPTION_TIMEOUT, async_subscription_failed
+            self.menuai, ZGS_SUBSCRIPTION_TIMEOUT, async_subscription_failed
         )
 
         @callback
@@ -298,7 +298,7 @@ class SonosDiscoveryManager:
             _LOGGER.debug("Subscription to %s succeeded", ip_address)
             cancel_failure_callback()
             ir.async_delete_issue(
-                self.hass,
+                self.menuai,
                 DOMAIN,
                 SUB_FAIL_ISSUE_ID,
             )
@@ -369,7 +369,7 @@ class SonosDiscoveryManager:
                 self._add_speaker(soco, sub)
 
         async with self.creation_lock:
-            await self.hass.async_add_executor_job(_add_speakers)
+            await self.menuai.async_add_executor_job(_add_speakers)
 
     def _add_speaker(
         self, soco: SoCo, zone_group_state_sub: SubscriptionBase | None
@@ -380,7 +380,7 @@ class SonosDiscoveryManager:
             if soco.uid not in self.data.boot_counts:
                 self.data.boot_counts[soco.uid] = soco.boot_seqnum
             _LOGGER.debug("Adding new speaker: %s", speaker_info)
-            speaker = SonosSpeaker(self.hass, soco, speaker_info, zone_group_state_sub)
+            speaker = SonosSpeaker(self.menuai, soco, speaker_info, zone_group_state_sub)
             self.data.discovered[soco.uid] = speaker
             for coordinator, coord_dict in (
                 (SonosAlarms, self.data.alarms),
@@ -388,7 +388,7 @@ class SonosDiscoveryManager:
             ):
                 c_dict: dict[str, Any] = coord_dict
                 if soco.household_id not in c_dict:
-                    new_coordinator = coordinator(self.hass, soco.household_id)
+                    new_coordinator = coordinator(self.menuai, soco.household_id)
                     new_coordinator.setup(soco)
                     c_dict[soco.household_id] = new_coordinator
             speaker.setup(self.entry)
@@ -402,10 +402,10 @@ class SonosDiscoveryManager:
 
         # Loop through each configured host and verify that Soco attributes are available for it.
         for host in self.hosts.copy():
-            ip_addr = await self.hass.async_add_executor_job(socket.gethostbyname, host)
+            ip_addr = await self.menuai.async_add_executor_job(socket.gethostbyname, host)
             soco = SoCo(ip_addr)
             try:
-                visible_zones = await self.hass.async_add_executor_job(
+                visible_zones = await self.menuai.async_add_executor_job(
                     sync_get_visible_zones,
                     soco,
                 )
@@ -443,7 +443,7 @@ class SonosDiscoveryManager:
         # Loop through each configured host that is not in error.  Send a discovery message
         # if a speaker does not already exist, or ping the speaker if it is unavailable.
         for host in self.hosts.copy():
-            ip_addr = await self.hass.async_add_executor_job(socket.gethostbyname, host)
+            ip_addr = await self.menuai.async_add_executor_job(socket.gethostbyname, host)
             soco = SoCo(ip_addr)
             # Skip hosts that are in error to avoid blocking call on soco.uuid in event loop
             if self.hosts_in_error.get(ip_addr):
@@ -472,10 +472,10 @@ class SonosDiscoveryManager:
                     _LOGGER.warning("Discovery message failed to %s : %s", ip_addr, ex)
             elif not known_speaker.available:
                 try:
-                    await self.hass.async_add_executor_job(known_speaker.ping)
+                    await self.menuai.async_add_executor_job(known_speaker.ping)
                     # Only send the message if the ping was successful.
                     async_dispatcher_send(
-                        self.hass,
+                        self.menuai,
                         f"{SONOS_SPEAKER_ACTIVITY}-{soco.uid}",
                         "manual zone scan",
                     )
@@ -485,7 +485,7 @@ class SonosDiscoveryManager:
                     )
 
         self.data.hosts_heartbeat = async_call_later(
-            self.hass, DISCOVERY_INTERVAL.total_seconds(), self.async_poll_manual_hosts
+            self.menuai, DISCOVERY_INTERVAL.total_seconds(), self.async_poll_manual_hosts
         )
 
     async def _async_handle_discovery_message(
@@ -506,10 +506,10 @@ class SonosDiscoveryManager:
                 await self.async_subscribe_to_zone_updates(discovered_ip)
             elif boot_seqnum and boot_seqnum > self.data.boot_counts[uid]:
                 self.data.boot_counts[uid] = boot_seqnum
-                async_dispatcher_send(self.hass, f"{SONOS_REBOOTED}-{uid}")
+                async_dispatcher_send(self.menuai, f"{SONOS_REBOOTED}-{uid}")
             else:
                 async_dispatcher_send(
-                    self.hass, f"{SONOS_SPEAKER_ACTIVITY}-{uid}", source
+                    self.menuai, f"{SONOS_SPEAKER_ACTIVITY}-{uid}", source
                 )
 
     @callback
@@ -526,7 +526,7 @@ class SonosDiscoveryManager:
                 "ssdp:byebye received from %s", info.upnp.get("friendlyName", uid)
             )
             reason = info.ssdp_headers.get("X-RINCON-REASON", "ssdp:byebye")
-            async_dispatcher_send(self.hass, f"{SONOS_VANISHED}-{uid}", reason)
+            async_dispatcher_send(self.menuai, f"{SONOS_VANISHED}-{uid}", reason)
             return
 
         self.async_discovered_player(
@@ -573,7 +573,7 @@ class SonosDiscoveryManager:
             _LOGGER.debug("New %s discovery uid=%s: %s", source, uid, info)
             self.data.discovery_known.add(uid)
         self.entry.async_create_background_task(
-            self.hass,
+            self.menuai,
             self._async_handle_discovery_message(
                 uid,
                 discovered_ip,
@@ -585,18 +585,18 @@ class SonosDiscoveryManager:
 
     async def setup_platforms_and_discovery(self) -> None:
         """Set up platforms and discovery."""
-        await self.hass.config_entries.async_forward_entry_setups(self.entry, PLATFORMS)
+        await self.menuai.config_entries.async_forward_entry_setups(self.entry, PLATFORMS)
         self.entry.async_on_unload(
-            self.hass.bus.async_listen_once(
-                EVENT_HOMEASSISTANT_STOP,
+            self.menuai.bus.async_listen_once(
+                EVENT_menuai_STOP,
                 self._async_stop_event_listener,
             )
         )
         _LOGGER.debug("Adding discovery job")
         if self.hosts:
             self.entry.async_on_unload(
-                self.hass.bus.async_listen_once(
-                    EVENT_HOMEASSISTANT_STOP,
+                self.menuai.bus.async_listen_once(
+                    EVENT_menuai_STOP,
                     self._stop_manual_heartbeat,
                 )
             )
@@ -604,16 +604,16 @@ class SonosDiscoveryManager:
 
         self.entry.async_on_unload(
             await ssdp.async_register_callback(
-                self.hass, self._async_ssdp_discovered_player, {"st": UPNP_ST}
+                self.menuai, self._async_ssdp_discovered_player, {"st": UPNP_ST}
             )
         )
 
         self.entry.async_on_unload(
             async_track_time_interval(
-                self.hass,
+                self.menuai,
                 partial(
                     async_dispatcher_send,
-                    self.hass,
+                    self.menuai,
                     SONOS_CHECK_ACTIVITY,
                 ),
                 AVAILABILITY_CHECK_INTERVAL,
@@ -622,10 +622,10 @@ class SonosDiscoveryManager:
 
 
 async def async_remove_config_entry_device(
-    hass: HomeAssistant, config_entry: ConfigEntry, device_entry: dr.DeviceEntry
+    menuai: menuai, config_entry: ConfigEntry, device_entry: dr.DeviceEntry
 ) -> bool:
     """Remove Sonos config entry from a device."""
-    known_devices = hass.data[DATA_SONOS].discovered.keys()
+    known_devices = menuai.data[DATA_SONOS].discovered.keys()
     for identifier in device_entry.identifiers:
         if identifier[0] != DOMAIN:
             continue

@@ -6,9 +6,9 @@ import asyncio
 
 from pytouchlinesl import TouchlineSL
 
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.const import CONF_PASSWORD, CONF_USERNAME, Platform
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 from .const import DOMAIN
 from .coordinator import TouchlineSLConfigEntry, TouchlineSLModuleCoordinator
@@ -16,14 +16,14 @@ from .coordinator import TouchlineSLConfigEntry, TouchlineSLModuleCoordinator
 PLATFORMS: list[Platform] = [Platform.CLIMATE]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: TouchlineSLConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: TouchlineSLConfigEntry) -> bool:
     """Set up Roth Touchline SL from a config entry."""
     account = TouchlineSL(
         username=entry.data[CONF_USERNAME], password=entry.data[CONF_PASSWORD]
     )
 
     coordinators: list[TouchlineSLModuleCoordinator] = [
-        TouchlineSLModuleCoordinator(hass, entry, module)
+        TouchlineSLModuleCoordinator(menuai, entry, module)
         for module in await account.modules()
     ]
 
@@ -34,7 +34,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: TouchlineSLConfigEntry) 
         ]
     )
 
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
 
     # Create a new Device for each coorodinator to represent each module
     for c in coordinators:
@@ -49,13 +49,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: TouchlineSLConfigEntry) 
         )
 
     entry.runtime_data = coordinators
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, entry: TouchlineSLConfigEntry
+    menuai: menuai, entry: TouchlineSLConfigEntry
 ) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

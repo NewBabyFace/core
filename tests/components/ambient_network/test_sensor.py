@@ -9,9 +9,9 @@ from freezegun import freeze_time
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .conftest import setup_platform
 
@@ -26,7 +26,7 @@ from tests.common import async_fire_time_changed, snapshot_platform
 )
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     open_api: OpenAPI,
     aioambient: AsyncMock,
     config_entry: ConfigEntry,
@@ -34,28 +34,28 @@ async def test_sensors(
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test all sensors under normal operation."""
-    await setup_platform(True, hass, config_entry)
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await setup_platform(True, menuai, config_entry)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
 
 @pytest.mark.parametrize("config_entry", ["BB:BB:BB:BB:BB:BB"], indirect=True)
 async def test_sensors_with_no_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     open_api: OpenAPI,
     aioambient: AsyncMock,
     config_entry: ConfigEntry,
 ) -> None:
     """Test that the sensors are not populated if the last data is absent."""
-    await setup_platform(True, hass, config_entry)
+    await setup_platform(True, menuai, config_entry)
 
-    sensor = hass.states.get("sensor.station_b_temperature")
+    sensor = menuai.states.get("sensor.station_b_temperature")
     assert sensor is not None
     assert "last_measured" not in sensor.attributes
 
 
 @pytest.mark.parametrize("config_entry", ["AA:AA:AA:AA:AA:AA"], indirect=True)
 async def test_sensors_disappearing(
-    hass: HomeAssistant,
+    menuai: menuai,
     open_api: OpenAPI,
     aioambient: AsyncMock,
     config_entry: ConfigEntry,
@@ -66,8 +66,8 @@ async def test_sensors_disappearing(
     initial_datetime = datetime(year=2023, month=11, day=8)
     with freeze_time(initial_datetime) as frozen_datetime:
         # Normal state, sensor is available.
-        await setup_platform(True, hass, config_entry)
-        sensor = hass.states.get("sensor.station_a_relative_pressure")
+        await setup_platform(True, menuai, config_entry)
+        sensor = menuai.states.get("sensor.station_a_relative_pressure")
         assert sensor is not None
         assert float(sensor.state) == pytest.approx(1001.89694313129)
 
@@ -78,10 +78,10 @@ async def test_sensors_disappearing(
                 open_api, "get_device_details", side_effect=RequestError()
             ):
                 frozen_datetime.tick(timedelta(minutes=10))
-                async_fire_time_changed(hass)
-                await hass.async_block_till_done()
+                async_fire_time_changed(menuai)
+                await menuai.async_block_till_done()
 
-            sensor = hass.states.get("sensor.station_a_relative_pressure")
+            sensor = menuai.states.get("sensor.station_a_relative_pressure")
             assert sensor is not None
             assert sensor.state == "unavailable"
             assert caplog.text.count("Cannot connect to Ambient Network") == 1
@@ -90,9 +90,9 @@ async def test_sensors_disappearing(
         # should only show up once.
         for _ in range(5):
             frozen_datetime.tick(timedelta(minutes=10))
-            async_fire_time_changed(hass)
-            await hass.async_block_till_done()
-            sensor = hass.states.get("sensor.station_a_relative_pressure")
+            async_fire_time_changed(menuai)
+            await menuai.async_block_till_done()
+            sensor = menuai.states.get("sensor.station_a_relative_pressure")
             assert sensor is not None
             assert float(sensor.state) == pytest.approx(1001.89694313129)
             assert caplog.text.count("Fetching ambient_network data recovered") == 1

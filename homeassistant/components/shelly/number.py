@@ -10,7 +10,7 @@ from aioshelly.block_device import Block
 from aioshelly.const import RPC_GENERATIONS
 from aioshelly.exceptions import DeviceConnectionError, InvalidAuthError
 
-from homeassistant.components.number import (
+from menuai.components.number import (
     DOMAIN as NUMBER_PLATFORM,
     NumberEntity,
     NumberEntityDescription,
@@ -18,11 +18,11 @@ from homeassistant.components.number import (
     NumberMode,
     RestoreNumber,
 )
-from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.entity_registry import RegistryEntry
+from menuai.const import PERCENTAGE, EntityCategory, UnitOfTemperature
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.entity_registry import RegistryEntry
 
 from .const import CONF_SLEEP_PERIOD, DOMAIN, LOGGER, VIRTUAL_NUMBER_MODE_MAP
 from .coordinator import ShellyBlockCoordinator, ShellyConfigEntry, ShellyRpcCoordinator
@@ -214,7 +214,7 @@ RPC_NUMBERS: Final = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ShellyConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -224,7 +224,7 @@ async def async_setup_entry(
         assert coordinator
 
         async_setup_entry_rpc(
-            hass, config_entry, async_add_entities, RPC_NUMBERS, RpcNumber
+            menuai, config_entry, async_add_entities, RPC_NUMBERS, RpcNumber
         )
 
         # the user can remove virtual components from the device configuration, so
@@ -233,7 +233,7 @@ async def async_setup_entry(
             coordinator.device.config, NUMBER_PLATFORM
         )
         async_remove_orphaned_entities(
-            hass,
+            menuai,
             config_entry.entry_id,
             coordinator.mac,
             NUMBER_PLATFORM,
@@ -244,7 +244,7 @@ async def async_setup_entry(
 
     if config_entry.data[CONF_SLEEP_PERIOD]:
         async_setup_entry_attribute_entities(
-            hass,
+            menuai,
             config_entry,
             async_add_entities,
             NUMBERS,
@@ -269,9 +269,9 @@ class BlockSleepingNumber(ShellySleepingBlockAttributeEntity, RestoreNumber):
         self.restored_data: NumberExtraStoredData | None = None
         super().__init__(coordinator, block, attribute, description, entry)
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self.restored_data = await self.async_get_last_number_data()
 
     @property
@@ -301,7 +301,7 @@ class BlockSleepingNumber(ShellySleepingBlockAttributeEntity, RestoreNumber):
             return await self.coordinator.device.http_request("get", path, params)
         except DeviceConnectionError as err:
             self.coordinator.last_update_success = False
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="device_communication_action_error",
                 translation_placeholders={

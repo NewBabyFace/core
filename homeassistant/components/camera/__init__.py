@@ -22,48 +22,48 @@ from propcache.api import cached_property, under_cached_property
 import voluptuous as vol
 from webrtc_models import RTCIceCandidateInit, RTCIceServer
 
-from homeassistant.components import websocket_api
-from homeassistant.components.http import KEY_AUTHENTICATED, HomeAssistantView
-from homeassistant.components.media_player import (
+from menuai.components import websocket_api
+from menuai.components.http import KEY_AUTHENTICATED, menuaiView
+from menuai.components.media_player import (
     ATTR_MEDIA_CONTENT_ID,
     ATTR_MEDIA_CONTENT_TYPE,
     DOMAIN as DOMAIN_MP,
     SERVICE_PLAY_MEDIA,
 )
-from homeassistant.components.stream import (
+from menuai.components.stream import (
     FORMAT_CONTENT_TYPE,
     OUTPUT_FORMATS,
     Orientation,
     Stream,
     create_stream,
 )
-from homeassistant.components.websocket_api import ActiveConnection
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.components.websocket_api import ActiveConnection
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_ENTITY_ID,
     CONF_FILENAME,
     CONTENT_TYPE_MULTIPART,
-    EVENT_HOMEASSISTANT_STARTED,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STARTED,
+    EVENT_menuai_STOP,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
 )
-from homeassistant.core import Event, HomeAssistant, ServiceCall, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv, issue_registry as ir
-from homeassistant.helpers.deprecation import (
+from menuai.core import Event, menuai, ServiceCall, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv, issue_registry as ir
+from menuai.helpers.deprecation import (
     DeprecatedConstantEnum,
     all_with_deprecated_constants,
     check_if_deprecated_constant,
     dir_with_deprecated_constants,
 )
-from homeassistant.helpers.entity import Entity, EntityDescription
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.network import get_url
-from homeassistant.helpers.template import Template
-from homeassistant.helpers.typing import ConfigType, VolDictType
-from homeassistant.loader import bind_hass
+from menuai.helpers.entity import Entity, EntityDescription
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.event import async_track_time_interval
+from menuai.helpers.network import get_url
+from menuai.helpers.template import Template
+from menuai.helpers.typing import ConfigType, VolDictType
+from menuai.loader import bind_menuai
 
 from .const import (
     CAMERA_IMAGE_TIMEOUT,
@@ -114,7 +114,7 @@ ATTR_FILENAME: Final = "filename"
 ATTR_MEDIA_PLAYER: Final = "media_player"
 ATTR_FORMAT: Final = "format"
 
-# These constants are deprecated as of Home Assistant 2024.10
+# These constants are deprecated as of MenuAI 2024.10
 # Please use the StreamType enum instead.
 _DEPRECATED_STATE_RECORDING = DeprecatedConstantEnum(CameraState.RECORDING, "2025.10")
 _DEPRECATED_STATE_STREAMING = DeprecatedConstantEnum(CameraState.STREAMING, "2025.10")
@@ -169,11 +169,11 @@ class CameraCapabilities:
     frontend_stream_types: set[StreamType]
 
 
-@bind_hass
-async def async_request_stream(hass: HomeAssistant, entity_id: str, fmt: str) -> str:
+@bind_menuai
+async def async_request_stream(menuai: menuai, entity_id: str, fmt: str) -> str:
     """Request a stream for a camera entity."""
-    camera = get_camera_from_entity_id(hass, entity_id)
-    return await _async_stream_endpoint_url(hass, camera, fmt)
+    camera = get_camera_from_entity_id(menuai, entity_id)
+    return await _async_stream_endpoint_url(menuai, camera, fmt)
 
 
 async def _async_get_image(
@@ -215,12 +215,12 @@ async def _async_get_image(
 
                 return image
 
-    raise HomeAssistantError("Unable to get image")
+    raise menuaiError("Unable to get image")
 
 
-@bind_hass
+@bind_menuai
 async def async_get_image(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_id: str,
     timeout: int = 10,
     width: int | None = None,
@@ -230,7 +230,7 @@ async def async_get_image(
 
     width and height will be passed to the underlying camera.
     """
-    camera = get_camera_from_entity_id(hass, entity_id)
+    camera = get_camera_from_entity_id(menuai, entity_id)
     return await _async_get_image(camera, timeout, width, height)
 
 
@@ -249,19 +249,19 @@ async def _async_get_stream_image(
     return None
 
 
-@bind_hass
-async def async_get_stream_source(hass: HomeAssistant, entity_id: str) -> str | None:
+@bind_menuai
+async def async_get_stream_source(menuai: menuai, entity_id: str) -> str | None:
     """Fetch the stream source for a camera entity."""
-    camera = get_camera_from_entity_id(hass, entity_id)
+    camera = get_camera_from_entity_id(menuai, entity_id)
     return await camera.stream_source()
 
 
-@bind_hass
+@bind_menuai
 async def async_get_mjpeg_stream(
-    hass: HomeAssistant, request: web.Request, entity_id: str
+    menuai: menuai, request: web.Request, entity_id: str
 ) -> web.StreamResponse | None:
     """Fetch an mjpeg stream from a camera entity."""
-    camera = get_camera_from_entity_id(hass, entity_id)
+    camera = get_camera_from_entity_id(menuai, entity_id)
 
     try:
         stream = await camera.handle_async_mjpeg_stream(request)
@@ -328,24 +328,24 @@ async def async_get_still_stream(
     return response
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the camera component."""
-    component = hass.data[DATA_COMPONENT] = EntityComponent[Camera](
-        _LOGGER, DOMAIN, hass, SCAN_INTERVAL
+    component = menuai.data[DATA_COMPONENT] = EntityComponent[Camera](
+        _LOGGER, DOMAIN, menuai, SCAN_INTERVAL
     )
 
-    prefs = CameraPreferences(hass)
+    prefs = CameraPreferences(menuai)
     await prefs.async_load()
-    hass.data[DATA_CAMERA_PREFS] = prefs
+    menuai.data[DATA_CAMERA_PREFS] = prefs
 
-    hass.http.register_view(CameraImageView(component))
-    hass.http.register_view(CameraMjpegStream(component))
+    menuai.http.register_view(CameraImageView(component))
+    menuai.http.register_view(CameraMjpegStream(component))
 
-    websocket_api.async_register_command(hass, ws_camera_stream)
-    websocket_api.async_register_command(hass, websocket_get_prefs)
-    websocket_api.async_register_command(hass, websocket_update_prefs)
-    websocket_api.async_register_command(hass, ws_camera_capabilities)
-    async_register_ws(hass)
+    websocket_api.async_register_command(menuai, ws_camera_stream)
+    websocket_api.async_register_command(menuai, websocket_get_prefs)
+    websocket_api.async_register_command(menuai, websocket_update_prefs)
+    websocket_api.async_register_command(menuai, ws_camera_capabilities)
+    async_register_ws(menuai)
 
     await component.async_setup(config)
 
@@ -361,7 +361,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             stream.add_provider("hls")
             await stream.start()
 
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, preload_stream)
+    menuai.bus.async_listen_once(EVENT_menuai_STARTED, preload_stream)
 
     @callback
     def update_tokens(t: datetime) -> None:
@@ -371,7 +371,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             entity.async_write_ha_state()
 
     unsub = async_track_time_interval(
-        hass, update_tokens, TOKEN_CHANGE_INTERVAL, name="Camera update tokens"
+        menuai, update_tokens, TOKEN_CHANGE_INTERVAL, name="Camera update tokens"
     )
 
     @callback
@@ -379,7 +379,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         """Unsubscribe track time interval timer."""
         unsub()
 
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, unsub_track_time_interval)
+    menuai.bus.async_listen_once(EVENT_menuai_STOP, unsub_track_time_interval)
 
     component.async_register_entity_service(
         SERVICE_ENABLE_MOTION, None, "async_enable_motion_detection"
@@ -403,8 +403,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     @callback
     def get_ice_servers() -> list[RTCIceServer]:
-        if hass.config.webrtc.ice_servers:
-            return hass.config.webrtc.ice_servers
+        if menuai.config.webrtc.ice_servers:
+            return menuai.config.webrtc.ice_servers
         return [
             RTCIceServer(
                 urls=[
@@ -414,18 +414,18 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             ),
         ]
 
-    async_register_ice_servers(hass, get_ice_servers)
+    async_register_ice_servers(menuai, get_ice_servers)
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up a config entry."""
-    return await hass.data[DATA_COMPONENT].async_setup_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_setup_entry(entry)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.data[DATA_COMPONENT].async_unload_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_unload_entry(entry)
 
 
 CACHED_PROPERTIES_WITH_ATTR_ = {
@@ -556,10 +556,10 @@ class Camera(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
                 if not source:
                     return None
                 self.stream = create_stream(
-                    self.hass,
+                    self.menuai,
                     source,
                     options=self.stream_options,
-                    dynamic_stream_settings=await self.hass.data[
+                    dynamic_stream_settings=await self.menuai.data[
                         DATA_CAMERA_PREFS
                     ].get_dynamic_stream_settings(self.entity_id),
                     stream_label=self.entity_id,
@@ -593,7 +593,7 @@ class Camera(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
             )
             return
 
-        raise HomeAssistantError("Camera does not support WebRTC")
+        raise menuaiError("Camera does not support WebRTC")
 
     def camera_image(
         self, width: int | None = None, height: int | None = None
@@ -605,7 +605,7 @@ class Camera(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
         self, width: int | None = None, height: int | None = None
     ) -> bytes | None:
         """Return bytes of camera image."""
-        return await self.hass.async_add_executor_job(
+        return await self.menuai.async_add_executor_job(
             partial(self.camera_image, width=width, height=height)
         )
 
@@ -648,7 +648,7 @@ class Camera(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_turn_off(self) -> None:
         """Turn off camera."""
-        await self.hass.async_add_executor_job(self.turn_off)
+        await self.menuai.async_add_executor_job(self.turn_off)
 
     def turn_on(self) -> None:
         """Turn on camera."""
@@ -656,7 +656,7 @@ class Camera(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_turn_on(self) -> None:
         """Turn on camera."""
-        await self.hass.async_add_executor_job(self.turn_on)
+        await self.menuai.async_add_executor_job(self.turn_on)
 
     def enable_motion_detection(self) -> None:
         """Enable motion detection in the camera."""
@@ -664,7 +664,7 @@ class Camera(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_enable_motion_detection(self) -> None:
         """Call the job and enable motion detection."""
-        await self.hass.async_add_executor_job(self.enable_motion_detection)
+        await self.menuai.async_add_executor_job(self.enable_motion_detection)
 
     def disable_motion_detection(self) -> None:
         """Disable motion detection in camera."""
@@ -672,7 +672,7 @@ class Camera(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_disable_motion_detection(self) -> None:
         """Call the job and disable motion detection."""
-        await self.hass.async_add_executor_job(self.disable_motion_detection)
+        await self.menuai.async_add_executor_job(self.disable_motion_detection)
 
     @final
     @property
@@ -697,9 +697,9 @@ class Camera(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
         self.access_tokens.append(hex(_RND.getrandbits(256))[2:])
         self.__dict__.pop("entity_picture", None)
 
-    async def async_internal_added_to_hass(self) -> None:
-        """Run when entity about to be added to hass."""
-        await super().async_internal_added_to_hass()
+    async def async_internal_added_to_menuai(self) -> None:
+        """Run when entity about to be added to menuai."""
+        await super().async_internal_added_to_menuai()
         self.__supports_stream = (
             self.supported_features_compat & CameraEntityFeature.STREAM
         )
@@ -728,13 +728,13 @@ class Camera(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
                 self.async_write_ha_state()
 
     async def _async_get_supported_webrtc_provider[_T](
-        self, fn: Callable[[HomeAssistant, Camera], Coroutine[None, None, _T | None]]
+        self, fn: Callable[[menuai, Camera], Coroutine[None, None, _T | None]]
     ) -> _T | None:
         """Get first provider that supports this camera."""
         if CameraEntityFeature.STREAM not in self.supported_features_compat:
             return None
 
-        return await fn(self.hass, self)
+        return await fn(self.menuai, self)
 
     @callback
     def _async_get_webrtc_client_configuration(self) -> WebRTCClientConfiguration:
@@ -749,7 +749,7 @@ class Camera(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
         ice_servers = [
             server
-            for servers in self.hass.data.get(DATA_ICE_SERVERS, [])
+            for servers in self.menuai.data.get(DATA_ICE_SERVERS, [])
             for server in servers()
         ]
         config.configuration.ice_servers.extend(ice_servers)
@@ -763,7 +763,7 @@ class Camera(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
         if self._webrtc_provider:
             await self._webrtc_provider.async_on_webrtc_candidate(session_id, candidate)
         else:
-            raise HomeAssistantError("Cannot handle WebRTC candidate")
+            raise menuaiError("Cannot handle WebRTC candidate")
 
     @callback
     def close_webrtc_session(self, session_id: str) -> None:
@@ -806,10 +806,10 @@ class Camera(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
         ):
             self.__supports_stream = supports_stream
             self._invalidate_camera_capabilities_cache()
-            self.hass.async_create_task(self.async_refresh_providers())
+            self.menuai.async_create_task(self.async_refresh_providers())
 
 
-class CameraView(HomeAssistantView):
+class CameraView(menuaiView):
     """Base CameraView."""
 
     requires_auth = False
@@ -864,7 +864,7 @@ class CameraImageView(CameraView):
                 int(width) if width else None,
                 int(height) if height else None,
             )
-        except (HomeAssistantError, ValueError) as ex:
+        except (menuaiError, ValueError) as ex:
             raise web.HTTPInternalServerError from ex
 
         return web.Response(body=image.content, content_type=image.content_type)
@@ -906,13 +906,13 @@ class CameraMjpegStream(CameraView):
 )
 @websocket_api.async_response
 async def ws_camera_capabilities(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle get camera capabilities websocket command.
 
     Async friendly.
     """
-    camera = get_camera_from_entity_id(hass, msg["entity_id"])
+    camera = get_camera_from_entity_id(menuai, msg["entity_id"])
     connection.send_result(msg["id"], asdict(camera.camera_capabilities))
 
 
@@ -925,7 +925,7 @@ async def ws_camera_capabilities(
 )
 @websocket_api.async_response
 async def ws_camera_stream(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle get camera stream websocket command.
 
@@ -933,10 +933,10 @@ async def ws_camera_stream(
     """
     try:
         entity_id = msg["entity_id"]
-        camera = get_camera_from_entity_id(hass, entity_id)
-        url = await _async_stream_endpoint_url(hass, camera, fmt=msg["format"])
+        camera = get_camera_from_entity_id(menuai, entity_id)
+        url = await _async_stream_endpoint_url(menuai, camera, fmt=msg["format"])
         connection.send_result(msg["id"], {"url": url})
-    except HomeAssistantError as ex:
+    except menuaiError as ex:
         _LOGGER.error("Error requesting stream: %s", ex)
         connection.send_error(msg["id"], "start_stream_failed", str(ex))
     except TimeoutError:
@@ -951,10 +951,10 @@ async def ws_camera_stream(
 )
 @websocket_api.async_response
 async def websocket_get_prefs(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle request for account info."""
-    stream_prefs = await hass.data[DATA_CAMERA_PREFS].get_dynamic_stream_settings(
+    stream_prefs = await menuai.data[DATA_CAMERA_PREFS].get_dynamic_stream_settings(
         msg["entity_id"]
     )
     connection.send_result(msg["id"], asdict(stream_prefs))
@@ -970,7 +970,7 @@ async def websocket_get_prefs(
 )
 @websocket_api.async_response
 async def websocket_update_prefs(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle request for account info."""
     changes = dict(msg)
@@ -978,10 +978,10 @@ async def websocket_update_prefs(
     changes.pop("type")
     entity_id = changes.pop("entity_id")
     try:
-        entity_prefs = await hass.data[DATA_CAMERA_PREFS].async_update(
+        entity_prefs = await menuai.data[DATA_CAMERA_PREFS].async_update(
             entity_id, **changes
         )
-    except HomeAssistantError as ex:
+    except menuaiError as ex:
         _LOGGER.error("Error setting camera preferences: %s", ex)
         connection.send_error(msg["id"], "update_failed", str(ex))
     else:
@@ -998,13 +998,13 @@ class _TemplateCameraEntity:
         """Initialize."""
         self._camera = camera
         self._entity_id = camera.entity_id
-        self._hass = camera.hass
+        self._menuai = camera.menuai
         self._service = service
 
     def _report_issue(self) -> None:
         """Create a repair issue."""
         ir.async_create_issue(
-            self._hass,
+            self._menuai,
             DOMAIN,
             f"deprecated_filename_template_{self._entity_id}_{self._service}",
             breaks_in_ha_version="2025.6.0",
@@ -1032,7 +1032,7 @@ async def async_handle_snapshot_service(
     camera: Camera, service_call: ServiceCall
 ) -> None:
     """Handle snapshot services calls."""
-    hass = camera.hass
+    menuai = camera.menuai
     filename: Template = service_call.data[ATTR_FILENAME]
 
     snapshot_file = filename.async_render(
@@ -1040,8 +1040,8 @@ async def async_handle_snapshot_service(
     )
 
     # check if we allow to access to that file
-    if not hass.config.is_allowed_path(snapshot_file):
-        raise HomeAssistantError(
+    if not menuai.config.is_allowed_path(snapshot_file):
+        raise menuaiError(
             f"Cannot write `{snapshot_file}`, no access to path; `allowlist_external_dirs` may need to be adjusted in `configuration.yaml`"
         )
 
@@ -1053,7 +1053,7 @@ async def async_handle_snapshot_service(
                 else await camera.async_camera_image()
             )
     except TimeoutError as err:
-        raise HomeAssistantError(
+        raise menuaiError(
             f"Unable to get snapshot: Timed out after {CAMERA_IMAGE_TIMEOUT} seconds"
         ) from err
 
@@ -1067,21 +1067,21 @@ async def async_handle_snapshot_service(
             img_file.write(image_data)
 
     try:
-        await hass.async_add_executor_job(_write_image, snapshot_file, image)
+        await menuai.async_add_executor_job(_write_image, snapshot_file, image)
     except OSError as err:
-        raise HomeAssistantError(f"Can't write image to file: {err}") from err
+        raise menuaiError(f"Can't write image to file: {err}") from err
 
 
 async def async_handle_play_stream_service(
     camera: Camera, service_call: ServiceCall
 ) -> None:
     """Handle play stream services calls."""
-    hass = camera.hass
+    menuai = camera.menuai
     fmt = service_call.data[ATTR_FORMAT]
-    url = await _async_stream_endpoint_url(camera.hass, camera, fmt)
-    url = f"{get_url(hass)}{url}"
+    url = await _async_stream_endpoint_url(camera.menuai, camera, fmt)
+    url = f"{get_url(menuai)}{url}"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN_MP,
         SERVICE_PLAY_MEDIA,
         {
@@ -1095,11 +1095,11 @@ async def async_handle_play_stream_service(
 
 
 async def _async_stream_endpoint_url(
-    hass: HomeAssistant, camera: Camera, fmt: str
+    menuai: menuai, camera: Camera, fmt: str
 ) -> str:
     stream = await camera.async_create_stream()
     if not stream:
-        raise HomeAssistantError(
+        raise menuaiError(
             f"{camera.entity_id} does not support play stream service"
         )
 
@@ -1115,7 +1115,7 @@ async def async_handle_record_service(
     stream = await camera.async_create_stream()
 
     if not stream:
-        raise HomeAssistantError(f"{camera.entity_id} does not support record service")
+        raise menuaiError(f"{camera.entity_id} does not support record service")
 
     filename = service_call.data[CONF_FILENAME]
     video_path = filename.async_render(

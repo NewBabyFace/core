@@ -8,10 +8,10 @@ from xbox.webapi.api.client import XboxLiveClient
 from xbox.webapi.api.provider.smartglass.models import SmartglassConsoleList
 from xbox.webapi.common.signed_session import SignedSession
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_entry_oauth2_flow, config_validation as cv
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import config_entry_oauth2_flow, config_validation as cv
 
 from . import api
 from .const import DOMAIN
@@ -29,15 +29,15 @@ PLATFORMS = [
 ]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up xbox from a config entry."""
     implementation = (
         await config_entry_oauth2_flow.async_get_config_entry_implementation(
-            hass, entry
+            menuai, entry
         )
     )
-    session = config_entry_oauth2_flow.OAuth2Session(hass, entry, implementation)
-    signed_session = await hass.async_add_executor_job(SignedSession)
+    session = config_entry_oauth2_flow.OAuth2Session(menuai, entry, implementation)
+    signed_session = await menuai.async_add_executor_job(SignedSession)
     auth = api.AsyncConfigEntryAuth(signed_session, session)
 
     client = XboxLiveClient(auth)
@@ -48,27 +48,27 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         consoles.dict(),
     )
 
-    coordinator = XboxUpdateCoordinator(hass, entry, client, consoles)
+    coordinator = XboxUpdateCoordinator(menuai, entry, client, consoles)
     await coordinator.async_config_entry_first_refresh()
 
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
+    menuai.data.setdefault(DOMAIN, {})[entry.entry_id] = {
         "client": XboxLiveClient(auth),
         "consoles": consoles,
         "coordinator": coordinator,
     }
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
         # Unsub from coordinator updates
-        hass.data[DOMAIN][entry.entry_id]["sensor_unsub"]()
-        hass.data[DOMAIN][entry.entry_id]["binary_sensor_unsub"]()
-        hass.data[DOMAIN].pop(entry.entry_id)
+        menuai.data[DOMAIN][entry.entry_id]["sensor_unsub"]()
+        menuai.data[DOMAIN][entry.entry_id]["binary_sensor_unsub"]()
+        menuai.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok

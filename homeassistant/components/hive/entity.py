@@ -6,9 +6,9 @@ from typing import Any
 
 from apyhiveapi import Hive
 
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import Entity
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity import Entity
 
 from .const import DOMAIN
 
@@ -32,8 +32,8 @@ class HiveEntity(Entity):
         )
         self.attributes: dict[str, Any] = {}
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to Home Assistant."""
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to MenuAI."""
         self.async_on_remove(
-            async_dispatcher_connect(self.hass, DOMAIN, self.async_write_ha_state)
+            async_dispatcher_connect(self.menuai, DOMAIN, self.async_write_ha_state)
         )

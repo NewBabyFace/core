@@ -6,23 +6,23 @@ from contextlib import suppress
 
 from aiowebostv import WebOsClient, WebOsTvPairError
 
-from homeassistant.components import notify as hass_notify
-from homeassistant.const import (
+from menuai.components import notify as menuai_notify
+from menuai.const import (
     CONF_CLIENT_SECRET,
     CONF_HOST,
     CONF_NAME,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     Platform,
 )
-from homeassistant.core import Event, HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers import config_validation as cv, discovery
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import Event, menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers import config_validation as cv, discovery
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     ATTR_CONFIG_ENTRY_ID,
-    DATA_HASS_CONFIG,
+    DATA_menuai_CONFIG,
     DOMAIN,
     PLATFORMS,
     WEBOSTV_EXCEPTIONS,
@@ -32,21 +32,21 @@ from .helpers import WebOsTvConfigEntry, update_client_key
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the LG webOS TV platform."""
-    hass.data.setdefault(DOMAIN, {DATA_HASS_CONFIG: config})
+    menuai.data.setdefault(DOMAIN, {DATA_menuai_CONFIG: config})
 
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: WebOsTvConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: WebOsTvConfigEntry) -> bool:
     """Set the config entry up."""
     host = entry.data[CONF_HOST]
     key = entry.data[CONF_CLIENT_SECRET]
 
     # Attempt a connection, but fail gracefully if tv is off for example.
     entry.runtime_data = client = WebOsClient(
-        host, key, client_session=async_get_clientsession(hass)
+        host, key, client_session=async_get_clientsession(menuai)
     )
     with suppress(*WEBOSTV_EXCEPTIONS):
         try:
@@ -56,22 +56,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: WebOsTvConfigEntry) -> b
 
     # If pairing request accepted there will be no error
     # Update the stored key without triggering reauth
-    update_client_key(hass, entry)
+    update_client_key(menuai, entry)
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     # set up notify platform, no entry support for notify component yet,
     # have to use discovery to load platform.
-    hass.async_create_task(
+    menuai.async_create_task(
         discovery.async_load_platform(
-            hass,
+            menuai,
             Platform.NOTIFY,
             DOMAIN,
             {
                 CONF_NAME: entry.title,
                 ATTR_CONFIG_ENTRY_ID: entry.entry_id,
             },
-            hass.data[DOMAIN][DATA_HASS_CONFIG],
+            menuai.data[DOMAIN][DATA_menuai_CONFIG],
         )
     )
 
@@ -83,21 +83,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: WebOsTvConfigEntry) -> b
         await client.disconnect()
 
     entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, async_on_stop)
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, async_on_stop)
     )
     return True
 
 
-async def async_update_options(hass: HomeAssistant, entry: WebOsTvConfigEntry) -> None:
+async def async_update_options(menuai: menuai, entry: WebOsTvConfigEntry) -> None:
     """Update options."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: WebOsTvConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: WebOsTvConfigEntry) -> bool:
     """Unload a config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+    if unload_ok := await menuai.config_entries.async_unload_platforms(entry, PLATFORMS):
         client = entry.runtime_data
-        await hass_notify.async_reload(hass, DOMAIN)
+        await menuai_notify.async_reload(menuai, DOMAIN)
         client.clear_state_update_callbacks()
         await client.disconnect()
 

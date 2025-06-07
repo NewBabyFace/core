@@ -9,12 +9,12 @@ from unittest.mock import patch
 from freezegun import freeze_time
 import pytest
 
-from homeassistant.components import wake_word
-from homeassistant.config_entries import ConfigEntry, ConfigEntryState, ConfigFlow
-from homeassistant.const import EntityCategory, Platform
-from homeassistant.core import HomeAssistant, State
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.setup import async_setup_component
+from menuai.components import wake_word
+from menuai.config_entries import ConfigEntry, ConfigEntryState, ConfigFlow
+from menuai.const import EntityCategory, Platform
+from menuai.core import menuai, State
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.setup import async_setup_component
 
 from .common import mock_wake_word_entity_platform
 
@@ -88,9 +88,9 @@ class WakeWordFlow(ConfigFlow):
 
 
 @pytest.fixture(autouse=True)
-def config_flow_fixture(hass: HomeAssistant) -> Generator[None]:
+def config_flow_fixture(menuai: menuai) -> Generator[None]:
     """Mock config flow."""
-    mock_platform(hass, f"{TEST_DOMAIN}.config_flow")
+    mock_platform(menuai, f"{TEST_DOMAIN}.config_flow")
 
     with mock_config_flow(TEST_DOMAIN, WakeWordFlow):
         yield
@@ -98,41 +98,41 @@ def config_flow_fixture(hass: HomeAssistant) -> Generator[None]:
 
 @pytest.fixture(name="setup")
 async def setup_fixture(
-    hass: HomeAssistant,
+    menuai: menuai,
     tmp_path: Path,
 ) -> MockProviderEntity:
     """Set up the test environment."""
     provider = MockProviderEntity()
-    await mock_config_entry_setup(hass, tmp_path, provider)
+    await mock_config_entry_setup(menuai, tmp_path, provider)
 
     return provider
 
 
 async def mock_config_entry_setup(
-    hass: HomeAssistant, tmp_path: Path, mock_provider_entity: MockProviderEntity
+    menuai: menuai, tmp_path: Path, mock_provider_entity: MockProviderEntity
 ) -> MockConfigEntry:
     """Set up a test provider via config entry."""
 
     async def async_setup_entry_init(
-        hass: HomeAssistant, config_entry: ConfigEntry
+        menuai: menuai, config_entry: ConfigEntry
     ) -> bool:
         """Set up test config entry."""
-        await hass.config_entries.async_forward_entry_setups(
+        await menuai.config_entries.async_forward_entry_setups(
             config_entry, [Platform.WAKE_WORD]
         )
         return True
 
     async def async_unload_entry_init(
-        hass: HomeAssistant, config_entry: ConfigEntry
+        menuai: menuai, config_entry: ConfigEntry
     ) -> bool:
         """Unload up test config entry."""
-        await hass.config_entries.async_forward_entry_unload(
+        await menuai.config_entries.async_forward_entry_unload(
             config_entry, Platform.WAKE_WORD
         )
         return True
 
     mock_integration(
-        hass,
+        menuai,
         MockModule(
             TEST_DOMAIN,
             async_setup_entry=async_setup_entry_init,
@@ -141,7 +141,7 @@ async def mock_config_entry_setup(
     )
 
     async def async_setup_entry_platform(
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         async_add_entities: AddConfigEntryEntitiesCallback,
     ) -> None:
@@ -149,24 +149,24 @@ async def mock_config_entry_setup(
         async_add_entities([mock_provider_entity])
 
     mock_wake_word_entity_platform(
-        hass, tmp_path, TEST_DOMAIN, async_setup_entry_platform
+        menuai, tmp_path, TEST_DOMAIN, async_setup_entry_platform
     )
 
     config_entry = MockConfigEntry(domain=TEST_DOMAIN)
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     return config_entry
 
 
 async def test_config_entry_unload(
-    hass: HomeAssistant, tmp_path: Path, mock_provider_entity: MockProviderEntity
+    menuai: menuai, tmp_path: Path, mock_provider_entity: MockProviderEntity
 ) -> None:
     """Test we can unload config entry."""
-    config_entry = await mock_config_entry_setup(hass, tmp_path, mock_provider_entity)
+    config_entry = await mock_config_entry_setup(menuai, tmp_path, mock_provider_entity)
     assert config_entry.state is ConfigEntryState.LOADED
-    await hass.config_entries.async_unload(config_entry.entry_id)
+    await menuai.config_entries.async_unload(config_entry.entry_id)
     assert config_entry.state is ConfigEntryState.NOT_LOADED
 
 
@@ -179,7 +179,7 @@ async def test_config_entry_unload(
     ],
 )
 async def test_detected_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     tmp_path: Path,
     setup: MockProviderEntity,
     wake_word_id: str | None,
@@ -207,7 +207,7 @@ async def test_detected_entity(
 
 
 async def test_not_detected_entity(
-    hass: HomeAssistant, setup: MockProviderEntity
+    menuai: menuai, setup: MockProviderEntity
 ) -> None:
     """Test unsuccessful detection through entity."""
 
@@ -226,68 +226,68 @@ async def test_not_detected_entity(
     assert state == setup.state
 
 
-async def test_default_engine_none(hass: HomeAssistant, tmp_path: Path) -> None:
+async def test_default_engine_none(menuai: menuai, tmp_path: Path) -> None:
     """Test async_default_entity."""
-    assert await async_setup_component(hass, wake_word.DOMAIN, {wake_word.DOMAIN: {}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, wake_word.DOMAIN, {wake_word.DOMAIN: {}})
+    await menuai.async_block_till_done()
 
-    assert wake_word.async_default_entity(hass) is None
+    assert wake_word.async_default_entity(menuai) is None
 
 
 async def test_default_engine_entity(
-    hass: HomeAssistant, tmp_path: Path, mock_provider_entity: MockProviderEntity
+    menuai: menuai, tmp_path: Path, mock_provider_entity: MockProviderEntity
 ) -> None:
     """Test async_default_entity."""
-    await mock_config_entry_setup(hass, tmp_path, mock_provider_entity)
+    await mock_config_entry_setup(menuai, tmp_path, mock_provider_entity)
 
-    assert wake_word.async_default_entity(hass) == f"{wake_word.DOMAIN}.{TEST_DOMAIN}"
+    assert wake_word.async_default_entity(menuai) == f"{wake_word.DOMAIN}.{TEST_DOMAIN}"
 
 
 async def test_get_engine_entity(
-    hass: HomeAssistant, tmp_path: Path, mock_provider_entity: MockProviderEntity
+    menuai: menuai, tmp_path: Path, mock_provider_entity: MockProviderEntity
 ) -> None:
     """Test async_get_speech_to_text_engine."""
-    await mock_config_entry_setup(hass, tmp_path, mock_provider_entity)
+    await mock_config_entry_setup(menuai, tmp_path, mock_provider_entity)
 
     assert (
-        wake_word.async_get_wake_word_detection_entity(hass, f"{wake_word.DOMAIN}.test")
+        wake_word.async_get_wake_word_detection_entity(menuai, f"{wake_word.DOMAIN}.test")
         is mock_provider_entity
     )
 
 
 async def test_restore_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     tmp_path: Path,
     mock_provider_entity: MockProviderEntity,
 ) -> None:
     """Test we restore state in the integration."""
     entity_id = f"{wake_word.DOMAIN}.{TEST_DOMAIN}"
     timestamp = "2023-01-01T23:59:59+00:00"
-    mock_restore_cache(hass, (State(entity_id, timestamp),))
+    mock_restore_cache(menuai, (State(entity_id, timestamp),))
 
-    config_entry = await mock_config_entry_setup(hass, tmp_path, mock_provider_entity)
-    await hass.async_block_till_done()
+    config_entry = await mock_config_entry_setup(menuai, tmp_path, mock_provider_entity)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == timestamp
 
 
 async def test_entity_attributes(
-    hass: HomeAssistant, mock_provider_entity: MockProviderEntity
+    menuai: menuai, mock_provider_entity: MockProviderEntity
 ) -> None:
     """Test that the provider entity attributes match expectations."""
     assert mock_provider_entity.entity_category == EntityCategory.DIAGNOSTIC
 
 
 async def test_list_wake_words(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup: MockProviderEntity,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test that the list_wake_words websocket command works."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json(
         {
             "id": 5,
@@ -308,12 +308,12 @@ async def test_list_wake_words(
 
 
 async def test_list_wake_words_unknown_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup: MockProviderEntity,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test that the list_wake_words websocket command handles unknown entity."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json(
         {
             "id": 5,
@@ -329,16 +329,16 @@ async def test_list_wake_words_unknown_entity(
 
 
 async def test_list_wake_words_timeout(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup: MockProviderEntity,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test that the list_wake_words websocket command handles unknown entity."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     with (
         patch.object(setup, "get_supported_wake_words", partial(asyncio.sleep, 1)),
-        patch("homeassistant.components.wake_word.TIMEOUT_FETCH_WAKE_WORDS", 0),
+        patch("menuai.components.wake_word.TIMEOUT_FETCH_WAKE_WORDS", 0),
     ):
         await client.send_json(
             {

@@ -1,4 +1,4 @@
-"""Provide an authentication layer for Home Assistant."""
+"""Provide an authentication layer for MenuAI."""
 
 from __future__ import annotations
 
@@ -12,23 +12,23 @@ from typing import Any, cast
 
 import jwt
 
-from homeassistant.core import (
+from menuai.core import (
     CALLBACK_TYPE,
-    HassJob,
-    HassJobType,
-    HomeAssistant,
+    menuaiJob,
+    menuaiJobType,
+    menuai,
     callback,
 )
-from homeassistant.data_entry_flow import FlowHandler, FlowManager, FlowResultType
-from homeassistant.helpers.event import async_track_point_in_utc_time
-from homeassistant.util import dt as dt_util
+from menuai.data_entry_flow import FlowHandler, FlowManager, FlowResultType
+from menuai.helpers.event import async_track_point_in_utc_time
+from menuai.util import dt as dt_util
 
 from . import auth_store, jwt_wrapper, models
 from .const import ACCESS_TOKEN_EXPIRATION, GROUP_ID_ADMIN, REFRESH_TOKEN_EXPIRATION
 from .mfa_modules import MultiFactorAuthModule, auth_mfa_module_from_config
 from .models import AuthFlowContext, AuthFlowResult
 from .providers import AuthProvider, LoginFlow, auth_provider_from_config
-from .providers.homeassistant import HassAuthProvider
+from .providers.menuai import menuaiAuthProvider
 
 EVENT_USER_ADDED = "user_added"
 EVENT_USER_UPDATED = "user_updated"
@@ -48,7 +48,7 @@ class InvalidProvider(Exception):
 
 
 async def auth_manager_from_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     provider_configs: list[dict[str, Any]],
     module_configs: list[dict[str, Any]],
 ) -> AuthManager:
@@ -57,12 +57,12 @@ async def auth_manager_from_config(
     CORE_CONFIG_SCHEMA will make sure no duplicated auth providers or
     mfa modules exist in configs.
     """
-    store = auth_store.AuthStore(hass)
+    store = auth_store.AuthStore(menuai)
     await store.async_load()
     if provider_configs:
         providers = await asyncio.gather(
             *(
-                auth_provider_from_config(hass, store, config)
+                auth_provider_from_config(menuai, store, config)
                 for config in provider_configs
             )
         )
@@ -74,8 +74,8 @@ async def auth_manager_from_config(
         key = (provider.type, provider.id)
         provider_hash[key] = provider
 
-        if isinstance(provider, HassAuthProvider):
-            # Can be removed in 2026.7 with the legacy mode of homeassistant auth provider
+        if isinstance(provider, menuaiAuthProvider):
+            # Can be removed in 2026.7 with the legacy mode of menuai auth provider
             # We need to initialize the provider to create the repair if needed as otherwise
             # the provider will be initialized on first use, which could be rare as users
             # don't frequently change auth settings
@@ -83,7 +83,7 @@ async def auth_manager_from_config(
 
     if module_configs:
         modules = await asyncio.gather(
-            *(auth_mfa_module_from_config(hass, config) for config in module_configs)
+            *(auth_mfa_module_from_config(menuai, config) for config in module_configs)
         )
     else:
         modules = []
@@ -92,7 +92,7 @@ async def auth_manager_from_config(
     for module in modules:
         module_hash[module.id] = module
 
-    manager = AuthManager(hass, store, provider_hash, module_hash)
+    manager = AuthManager(menuai, store, provider_hash, module_hash)
     await manager.async_setup()
     return manager
 
@@ -104,9 +104,9 @@ class AuthManagerFlowManager(
 
     _flow_result = AuthFlowResult
 
-    def __init__(self, hass: HomeAssistant, auth_manager: AuthManager) -> None:
+    def __init__(self, menuai: menuai, auth_manager: AuthManager) -> None:
         """Init auth manager flows."""
-        super().__init__(hass)
+        super().__init__(menuai)
         self.auth_manager = auth_manager
 
     async def async_create_flow(
@@ -172,33 +172,33 @@ class AuthManagerFlowManager(
 
 
 class AuthManager:
-    """Manage the authentication for Home Assistant."""
+    """Manage the authentication for MenuAI."""
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         store: auth_store.AuthStore,
         providers: _ProviderDict,
         mfa_modules: _MfaModuleDict,
     ) -> None:
         """Initialize the auth manager."""
-        self.hass = hass
+        self.menuai = menuai
         self._store = store
         self._providers = providers
         self._mfa_modules = mfa_modules
-        self.login_flow = AuthManagerFlowManager(hass, self)
+        self.login_flow = AuthManagerFlowManager(menuai, self)
         self._revoke_callbacks: dict[str, set[CALLBACK_TYPE]] = {}
         self._expire_callback: CALLBACK_TYPE | None = None
-        self._remove_expired_job = HassJob(
-            self._async_remove_expired_refresh_tokens, job_type=HassJobType.Callback
+        self._remove_expired_job = menuaiJob(
+            self._async_remove_expired_refresh_tokens, job_type=menuaiJobType.Callback
         )
 
     async def async_setup(self) -> None:
         """Set up the auth manager."""
-        hass = self.hass
-        hass.async_add_shutdown_job(
-            HassJob(
-                self._async_cancel_expiration_schedule, job_type=HassJobType.Callback
+        menuai = self.menuai
+        menuai.async_add_shutdown_job(
+            menuaiJob(
+                self._async_cancel_expiration_schedule, job_type=menuaiJobType.Callback
             )
         )
         self._async_track_next_refresh_token_expiration()
@@ -275,7 +275,7 @@ class AuthManager:
             local_only=local_only,
         )
 
-        self.hass.bus.async_fire(EVENT_USER_ADDED, {"user_id": user.id})
+        self.menuai.bus.async_fire(EVENT_USER_ADDED, {"user_id": user.id})
 
         return user
 
@@ -299,7 +299,7 @@ class AuthManager:
 
         user = await self._store.async_create_user(**kwargs)
 
-        self.hass.bus.async_fire(EVENT_USER_ADDED, {"user_id": user.id})
+        self.menuai.bus.async_fire(EVENT_USER_ADDED, {"user_id": user.id})
 
         return user
 
@@ -328,7 +328,7 @@ class AuthManager:
             local_only=info.local_only,
         )
 
-        self.hass.bus.async_fire(EVENT_USER_ADDED, {"user_id": user.id})
+        self.menuai.bus.async_fire(EVENT_USER_ADDED, {"user_id": user.id})
 
         return user
 
@@ -356,7 +356,7 @@ class AuthManager:
 
         await self._store.async_remove_user(user)
 
-        self.hass.bus.async_fire(EVENT_USER_REMOVED, {"user_id": user.id})
+        self.menuai.bus.async_fire(EVENT_USER_REMOVED, {"user_id": user.id})
 
     async def async_update_user(
         self,
@@ -384,7 +384,7 @@ class AuthManager:
             else:
                 await self.async_deactivate_user(user)
 
-        self.hass.bus.async_fire(EVENT_USER_UPDATED, {"user_id": user.id})
+        self.menuai.bus.async_fire(EVENT_USER_UPDATED, {"user_id": user.id})
 
     @callback
     def async_update_user_credentials_data(
@@ -562,7 +562,7 @@ class AuthManager:
                 next_expiration = expire_at
 
         self._expire_callback = async_track_point_in_utc_time(
-            self.hass,
+            self.menuai,
             self._remove_expired_job,
             dt_util.utc_from_timestamp(next_expiration),
         )

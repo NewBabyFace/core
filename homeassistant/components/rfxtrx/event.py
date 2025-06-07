@@ -7,12 +7,12 @@ from typing import Any
 
 from RFXtrx import ControlEvent, RFXtrxDevice, RFXtrxEvent, SensorEvent
 
-from homeassistant.components.event import EventEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import slugify
+from menuai.components.event import EventEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.entity import Entity
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import slugify
 
 from . import DeviceTuple, async_setup_platform_entry
 from .const import DEVICE_PACKET_TYPE_LIGHTING4
@@ -22,7 +22,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -59,7 +59,7 @@ async def async_setup_entry(
         return entities
 
     await async_setup_platform_entry(
-        hass, config_entry, async_add_entities, _supported, _constructor
+        menuai, config_entry, async_add_entities, _supported, _constructor
     )
 
 

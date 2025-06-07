@@ -4,17 +4,17 @@ from __future__ import annotations
 
 from aiomealie import MealieError, MutateShoppingItem, ShoppingItem, ShoppingList
 
-from homeassistant.components.todo import (
+from menuai.components.todo import (
     DOMAIN as TODO_DOMAIN,
     TodoItem,
     TodoItemStatus,
     TodoListEntity,
     TodoListEntityFeature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import MealieConfigEntry, MealieShoppingListCoordinator
@@ -44,7 +44,7 @@ def _convert_api_item(item: ShoppingItem) -> TodoItem:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: MealieConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -57,7 +57,7 @@ async def async_setup_entry(
 
     def _async_delete_entities(lists: set[str]) -> None:
         """Delete entities for removed shopping lists."""
-        entity_registry = er.async_get(hass)
+        entity_registry = er.async_get(menuai)
         for list_id in lists:
             entity_id = entity_registry.async_get_entity_id(
                 TODO_DOMAIN, DOMAIN, f"{entry.unique_id}_{list_id}"
@@ -134,7 +134,7 @@ class MealieShoppingListTodoListEntity(MealieEntity, TodoListEntity):
         try:
             await self.coordinator.client.add_shopping_item(new_shopping_item)
         except MealieError as exception:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="add_item_error",
                 translation_placeholders={
@@ -184,7 +184,7 @@ class MealieShoppingListTodoListEntity(MealieEntity, TodoListEntity):
                 list_item.item_id, update_shopping_item
             )
         except MealieError as exception:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="update_item_error",
                 translation_placeholders={
@@ -200,7 +200,7 @@ class MealieShoppingListTodoListEntity(MealieEntity, TodoListEntity):
             for uid in uids:
                 await self.coordinator.client.delete_shopping_item(uid)
         except MealieError as exception:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="delete_item_error",
                 translation_placeholders={
@@ -220,13 +220,13 @@ class MealieShoppingListTodoListEntity(MealieEntity, TodoListEntity):
 
         item_idx = {itm.item_id: idx for idx, itm in enumerate(list_items)}
         if uid not in item_idx:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="item_not_found_error",
                 translation_placeholders={"shopping_list_item": uid},
             )
         if previous_uid and previous_uid not in item_idx:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="item_not_found_error",
                 translation_placeholders={"shopping_list_item": previous_uid},

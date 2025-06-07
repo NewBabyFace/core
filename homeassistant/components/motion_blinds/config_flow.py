@@ -8,16 +8,16 @@ from typing import Any
 from motionblinds import MotionDiscovery, MotionGateway
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_API_KEY, CONF_HOST
-from homeassistant.core import callback
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.const import CONF_API_KEY, CONF_HOST
+from menuai.core import callback
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
 
 from .const import (
     CONF_INTERFACE,
@@ -95,7 +95,7 @@ class MotionBlindsFlowHandler(ConfigFlow, domain=DOMAIN):
         gateway = MotionGateway(ip=discovery_info.ip, key="abcd1234-56ef-78")
         try:
             # key not needed for GetDeviceList request
-            await self.hass.async_add_executor_job(gateway.GetDeviceList)
+            await self.menuai.async_add_executor_job(gateway.GetDeviceList)
         except Exception:
             _LOGGER.exception("Failed to connect to Motion Gateway")
             return self.async_abort(reason="not_motionblinds")
@@ -125,7 +125,7 @@ class MotionBlindsFlowHandler(ConfigFlow, domain=DOMAIN):
 
             # Use MotionGateway discovery
             discover_class = MotionDiscovery()
-            gateways = await self.hass.async_add_executor_job(discover_class.discover)
+            gateways = await self.menuai.async_add_executor_job(discover_class.discover)
             self._ips = list(gateways)
 
             if len(self._ips) == 1:
@@ -162,14 +162,14 @@ class MotionBlindsFlowHandler(ConfigFlow, domain=DOMAIN):
             key = user_input[CONF_API_KEY]
             assert self._host
 
-            connect_gateway_class = ConnectMotionGateway(self.hass)
+            connect_gateway_class = ConnectMotionGateway(self.menuai)
             if not await connect_gateway_class.async_connect_gateway(self._host, key):
                 return self.async_abort(reason="connection_error")
             motion_gateway = connect_gateway_class.gateway_device
 
             # check socket interface
             check_multicast_class = ConnectMotionGateway(
-                self.hass, interface=DEFAULT_INTERFACE
+                self.menuai, interface=DEFAULT_INTERFACE
             )
             multicast_interface = await check_multicast_class.async_check_interface(
                 self._host, key

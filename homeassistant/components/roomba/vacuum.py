@@ -6,17 +6,17 @@ import asyncio
 import logging
 from typing import Any
 
-from homeassistant.components.vacuum import (
+from menuai.components.vacuum import (
     ATTR_STATUS,
     StateVacuumEntity,
     VacuumActivity,
     VacuumEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import dt as dt_util
-from homeassistant.util.unit_system import METRIC_SYSTEM
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import dt as dt_util
+from menuai.util.unit_system import METRIC_SYSTEM
 
 from . import roomba_reported_state
 from .const import DOMAIN
@@ -87,12 +87,12 @@ SUPPORT_BRAAVA = SUPPORT_IROBOT | VacuumEntityFeature.FAN_SPEED
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the iRobot Roomba vacuum cleaner."""
-    domain_data: RoombaData = hass.data[DOMAIN][config_entry.entry_id]
+    domain_data: RoombaData = menuai.data[DOMAIN][config_entry.entry_id]
     roomba = domain_data.roomba
     blid = domain_data.blid
 
@@ -195,7 +195,7 @@ class IRobotVacuum(IRobotEntity, StateVacuumEntity):
 
         if cleaned_area := mission_state.get("sqft", 0):  # Imperial
             # Convert to m2 if the unit_system is set to metric
-            if self.hass.config.units is METRIC_SYSTEM:
+            if self.menuai.config.units is METRIC_SYSTEM:
                 cleaned_area = round(cleaned_area * 0.0929)
 
         return (cleaning_time, cleaned_area)
@@ -210,17 +210,17 @@ class IRobotVacuum(IRobotEntity, StateVacuumEntity):
     async def async_start(self) -> None:
         """Start or resume the cleaning task."""
         if self.state == VacuumActivity.PAUSED:
-            await self.hass.async_add_executor_job(self.vacuum.send_command, "resume")
+            await self.menuai.async_add_executor_job(self.vacuum.send_command, "resume")
         else:
-            await self.hass.async_add_executor_job(self.vacuum.send_command, "start")
+            await self.menuai.async_add_executor_job(self.vacuum.send_command, "start")
 
     async def async_stop(self, **kwargs):
         """Stop the vacuum cleaner."""
-        await self.hass.async_add_executor_job(self.vacuum.send_command, "stop")
+        await self.menuai.async_add_executor_job(self.vacuum.send_command, "stop")
 
     async def async_pause(self) -> None:
         """Pause the cleaning cycle."""
-        await self.hass.async_add_executor_job(self.vacuum.send_command, "pause")
+        await self.menuai.async_add_executor_job(self.vacuum.send_command, "pause")
 
     async def async_return_to_base(self, **kwargs):
         """Set the vacuum cleaner to return to the dock."""
@@ -230,16 +230,16 @@ class IRobotVacuum(IRobotEntity, StateVacuumEntity):
                 if self.state == VacuumActivity.PAUSED:
                     break
                 await asyncio.sleep(1)
-        await self.hass.async_add_executor_job(self.vacuum.send_command, "dock")
+        await self.menuai.async_add_executor_job(self.vacuum.send_command, "dock")
 
     async def async_locate(self, **kwargs):
         """Located vacuum."""
-        await self.hass.async_add_executor_job(self.vacuum.send_command, "find")
+        await self.menuai.async_add_executor_job(self.vacuum.send_command, "find")
 
     async def async_send_command(self, command, params=None, **kwargs):
         """Send raw command."""
         _LOGGER.debug("async_send_command %s (%s), %s", command, params, kwargs)
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             self.vacuum.send_command, command, params
         )
 
@@ -305,10 +305,10 @@ class RoombaVacuumCarpetBoost(RoombaVacuum):
             _LOGGER.error("No such fan speed available: %s", fan_speed)
             return
         # The set_preference method does only accept string values
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             self.vacuum.set_preference, "carpetBoost", str(carpet_boost)
         )
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             self.vacuum.set_preference, "vacHigh", str(high_perf)
         )
 
@@ -385,10 +385,10 @@ class BraavaJet(IRobotVacuum):
             overlap = OVERLAP_DEEP
         else:
             overlap = OVERLAP_EXTENDED
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             self.vacuum.set_preference, "rankOverlap", overlap
         )
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             self.vacuum.set_preference,
             "padWetness",
             {"disposable": spray, "reusable": spray},

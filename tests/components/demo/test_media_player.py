@@ -6,7 +6,7 @@ from unittest.mock import patch
 import pytest
 import voluptuous as vol
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     ATTR_GROUP_MEMBERS,
     ATTR_INPUT_SOURCE,
     ATTR_MEDIA_CONTENT_ID,
@@ -27,7 +27,7 @@ from homeassistant.components.media_player import (
     RepeatMode,
     is_on,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_ENTITY_PICTURE,
     ATTR_SUPPORTED_FEATURES,
@@ -51,9 +51,9 @@ from homeassistant.const import (
     STATE_PLAYING,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import DATA_CLIENTSESSION, _make_key
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import DATA_CLIENTSESSION, _make_key
+from menuai.setup import async_setup_component
 
 from tests.typing import ClientSessionGenerator
 
@@ -64,7 +64,7 @@ TEST_ENTITY_ID = "media_player.walkman"
 def autouse_disable_platforms(disable_platforms):
     """Auto use the disable_platforms fixture."""
     with patch(
-        "homeassistant.components.demo.COMPONENTS_WITH_CONFIG_ENTRY_DEMO_PLATFORM",
+        "menuai.components.demo.COMPONENTS_WITH_CONFIG_ENTRY_DEMO_PLATFORM",
         [Platform.MEDIA_PLAYER],
     ):
         yield
@@ -74,318 +74,318 @@ def autouse_disable_platforms(disable_platforms):
 def media_player_media_seek_fixture():
     """Mock demo YouTube player media seek."""
     with patch(
-        "homeassistant.components.demo.media_player.DemoYoutubePlayer.media_seek",
+        "menuai.components.demo.media_player.DemoYoutubePlayer.media_seek",
         autospec=True,
     ) as seek:
         yield seek
 
 
-async def test_source_select(hass: HomeAssistant) -> None:
+async def test_source_select(menuai: menuai) -> None:
     """Test the input source service."""
     entity_id = "media_player.lounge_room"
 
     assert await async_setup_component(
-        hass, MP_DOMAIN, {"media_player": {"platform": "demo"}}
+        menuai, MP_DOMAIN, {"media_player": {"platform": "demo"}}
     )
-    await hass.async_block_till_done()
-    state = hass.states.get(entity_id)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(entity_id)
     assert state.attributes.get(ATTR_INPUT_SOURCE) == "dvd"
 
     with pytest.raises(vol.Invalid):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MP_DOMAIN,
             SERVICE_SELECT_SOURCE,
             {ATTR_ENTITY_ID: entity_id, ATTR_INPUT_SOURCE: None},
             blocking=True,
         )
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.attributes.get(ATTR_INPUT_SOURCE) == "dvd"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_SELECT_SOURCE,
         {ATTR_ENTITY_ID: entity_id, ATTR_INPUT_SOURCE: "xbox"},
         blocking=True,
     )
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.attributes.get(ATTR_INPUT_SOURCE) == "xbox"
 
 
-async def test_repeat_set(hass: HomeAssistant) -> None:
+async def test_repeat_set(menuai: menuai) -> None:
     """Test the repeat set service."""
     entity_id = "media_player.walkman"
 
     assert await async_setup_component(
-        hass, MP_DOMAIN, {"media_player": {"platform": "demo"}}
+        menuai, MP_DOMAIN, {"media_player": {"platform": "demo"}}
     )
-    await hass.async_block_till_done()
-    state = hass.states.get(entity_id)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(entity_id)
     assert state.attributes.get(ATTR_MEDIA_REPEAT) == RepeatMode.OFF
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_REPEAT_SET,
         {ATTR_ENTITY_ID: entity_id, ATTR_MEDIA_REPEAT: RepeatMode.ALL},
         blocking=True,
     )
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.attributes.get(ATTR_MEDIA_REPEAT) == RepeatMode.ALL
 
 
-async def test_clear_playlist(hass: HomeAssistant) -> None:
+async def test_clear_playlist(menuai: menuai) -> None:
     """Test clear playlist."""
     assert await async_setup_component(
-        hass, MP_DOMAIN, {"media_player": {"platform": "demo"}}
+        menuai, MP_DOMAIN, {"media_player": {"platform": "demo"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == STATE_PLAYING
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_CLEAR_PLAYLIST,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID},
         blocking=True,
     )
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == STATE_OFF
 
 
-async def test_volume_services(hass: HomeAssistant) -> None:
+async def test_volume_services(menuai: menuai) -> None:
     """Test the volume service."""
     assert await async_setup_component(
-        hass, MP_DOMAIN, {"media_player": {"platform": "demo"}}
+        menuai, MP_DOMAIN, {"media_player": {"platform": "demo"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes.get(ATTR_MEDIA_VOLUME_LEVEL) == 1.0
 
     with pytest.raises(vol.Invalid):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MP_DOMAIN,
             SERVICE_VOLUME_SET,
             {ATTR_ENTITY_ID: TEST_ENTITY_ID, ATTR_MEDIA_VOLUME_LEVEL: None},
             blocking=True,
         )
 
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes.get(ATTR_MEDIA_VOLUME_LEVEL) == 1.0
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_VOLUME_SET,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID, ATTR_MEDIA_VOLUME_LEVEL: 0.5},
         blocking=True,
     )
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes.get(ATTR_MEDIA_VOLUME_LEVEL) == 0.5
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_VOLUME_DOWN,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID},
         blocking=True,
     )
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes.get(ATTR_MEDIA_VOLUME_LEVEL) == 0.4
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_VOLUME_UP,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID},
         blocking=True,
     )
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes.get(ATTR_MEDIA_VOLUME_LEVEL) == 0.5
 
     assert state.attributes.get(ATTR_MEDIA_VOLUME_MUTED) is False
 
     with pytest.raises(vol.Invalid):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MP_DOMAIN,
             SERVICE_VOLUME_MUTE,
             {ATTR_ENTITY_ID: TEST_ENTITY_ID, ATTR_MEDIA_VOLUME_MUTED: None},
             blocking=True,
         )
 
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes.get(ATTR_MEDIA_VOLUME_MUTED) is False
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_VOLUME_MUTE,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID, ATTR_MEDIA_VOLUME_MUTED: True},
         blocking=True,
     )
 
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes.get(ATTR_MEDIA_VOLUME_MUTED) is True
 
 
-async def test_turning_off_and_on(hass: HomeAssistant) -> None:
+async def test_turning_off_and_on(menuai: menuai) -> None:
     """Test turn_on and turn_off."""
     assert await async_setup_component(
-        hass, MP_DOMAIN, {"media_player": {"platform": "demo"}}
+        menuai, MP_DOMAIN, {"media_player": {"platform": "demo"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == STATE_PLAYING
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID},
         blocking=True,
     )
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == STATE_OFF
-    assert not is_on(hass, TEST_ENTITY_ID)
+    assert not is_on(menuai, TEST_ENTITY_ID)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID},
         blocking=True,
     )
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == STATE_PLAYING
-    assert is_on(hass, TEST_ENTITY_ID)
+    assert is_on(menuai, TEST_ENTITY_ID)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_TOGGLE,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID},
         blocking=True,
     )
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == STATE_OFF
-    assert not is_on(hass, TEST_ENTITY_ID)
+    assert not is_on(menuai, TEST_ENTITY_ID)
 
 
-async def test_playing_pausing(hass: HomeAssistant) -> None:
+async def test_playing_pausing(menuai: menuai) -> None:
     """Test media_pause."""
     assert await async_setup_component(
-        hass, MP_DOMAIN, {"media_player": {"platform": "demo"}}
+        menuai, MP_DOMAIN, {"media_player": {"platform": "demo"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == STATE_PLAYING
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_MEDIA_PAUSE,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID},
         blocking=True,
     )
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == STATE_PAUSED
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_MEDIA_PLAY_PAUSE,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID},
         blocking=True,
     )
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == STATE_PLAYING
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_MEDIA_PLAY_PAUSE,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID},
         blocking=True,
     )
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == STATE_PAUSED
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_MEDIA_PLAY,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID},
         blocking=True,
     )
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == STATE_PLAYING
 
 
-async def test_prev_next_track(hass: HomeAssistant) -> None:
+async def test_prev_next_track(menuai: menuai) -> None:
     """Test media_next_track and media_previous_track ."""
     assert await async_setup_component(
-        hass, MP_DOMAIN, {"media_player": {"platform": "demo"}}
+        menuai, MP_DOMAIN, {"media_player": {"platform": "demo"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes.get(ATTR_MEDIA_TRACK) == 1
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_MEDIA_NEXT_TRACK,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID},
         blocking=True,
     )
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes.get(ATTR_MEDIA_TRACK) == 2
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_MEDIA_NEXT_TRACK,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID},
         blocking=True,
     )
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes.get(ATTR_MEDIA_TRACK) == 3
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_MEDIA_PREVIOUS_TRACK,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID},
         blocking=True,
     )
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes.get(ATTR_MEDIA_TRACK) == 2
 
     assert await async_setup_component(
-        hass, MP_DOMAIN, {"media_player": {"platform": "demo"}}
+        menuai, MP_DOMAIN, {"media_player": {"platform": "demo"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     ent_id = "media_player.lounge_room"
-    state = hass.states.get(ent_id)
+    state = menuai.states.get(ent_id)
     assert state.attributes.get(ATTR_MEDIA_EPISODE) == "1"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_MEDIA_NEXT_TRACK,
         {ATTR_ENTITY_ID: ent_id},
         blocking=True,
     )
-    state = hass.states.get(ent_id)
+    state = menuai.states.get(ent_id)
     assert state.attributes.get(ATTR_MEDIA_EPISODE) == "2"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_MEDIA_PREVIOUS_TRACK,
         {ATTR_ENTITY_ID: ent_id},
         blocking=True,
     )
-    state = hass.states.get(ent_id)
+    state = menuai.states.get(ent_id)
     assert state.attributes.get(ATTR_MEDIA_EPISODE) == "1"
 
 
-async def test_play_media(hass: HomeAssistant) -> None:
+async def test_play_media(menuai: menuai) -> None:
     """Test play_media ."""
     assert await async_setup_component(
-        hass, MP_DOMAIN, {"media_player": {"platform": "demo"}}
+        menuai, MP_DOMAIN, {"media_player": {"platform": "demo"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     ent_id = "media_player.living_room"
-    state = hass.states.get(ent_id)
+    state = menuai.states.get(ent_id)
     assert (
         MediaPlayerEntityFeature.PLAY_MEDIA
         & state.attributes.get(ATTR_SUPPORTED_FEATURES)
@@ -394,13 +394,13 @@ async def test_play_media(hass: HomeAssistant) -> None:
     assert state.attributes.get(ATTR_MEDIA_CONTENT_ID) is not None
 
     with pytest.raises(vol.Invalid):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MP_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {ATTR_ENTITY_ID: ent_id, ATTR_MEDIA_CONTENT_ID: "some_id"},
             blocking=True,
         )
-    state = hass.states.get(ent_id)
+    state = menuai.states.get(ent_id)
     assert (
         MediaPlayerEntityFeature.PLAY_MEDIA
         & state.attributes.get(ATTR_SUPPORTED_FEATURES)
@@ -408,7 +408,7 @@ async def test_play_media(hass: HomeAssistant) -> None:
     )
     assert state.attributes.get(ATTR_MEDIA_CONTENT_ID) != "some_id"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_PLAY_MEDIA,
         {
@@ -418,7 +418,7 @@ async def test_play_media(hass: HomeAssistant) -> None:
         },
         blocking=True,
     )
-    state = hass.states.get(ent_id)
+    state = menuai.states.get(ent_id)
     assert (
         MediaPlayerEntityFeature.PLAY_MEDIA
         & state.attributes.get(ATTR_SUPPORTED_FEATURES)
@@ -427,20 +427,20 @@ async def test_play_media(hass: HomeAssistant) -> None:
     assert state.attributes.get(ATTR_MEDIA_CONTENT_ID) == "some_id"
 
 
-async def test_seek(hass: HomeAssistant, mock_media_seek) -> None:
+async def test_seek(menuai: menuai, mock_media_seek) -> None:
     """Test seek."""
     assert await async_setup_component(
-        hass, MP_DOMAIN, {"media_player": {"platform": "demo"}}
+        menuai, MP_DOMAIN, {"media_player": {"platform": "demo"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     ent_id = "media_player.living_room"
-    state = hass.states.get(ent_id)
+    state = menuai.states.get(ent_id)
     assert state.attributes[ATTR_SUPPORTED_FEATURES] & MediaPlayerEntityFeature.SEEK
     assert not mock_media_seek.called
 
     with pytest.raises(vol.Invalid):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MP_DOMAIN,
             SERVICE_MEDIA_SEEK,
             {
@@ -451,7 +451,7 @@ async def test_seek(hass: HomeAssistant, mock_media_seek) -> None:
         )
     assert not mock_media_seek.called
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_MEDIA_SEEK,
         {
@@ -463,34 +463,34 @@ async def test_seek(hass: HomeAssistant, mock_media_seek) -> None:
     assert mock_media_seek.called
 
 
-async def test_stop(hass: HomeAssistant) -> None:
+async def test_stop(menuai: menuai) -> None:
     """Test stop."""
     assert await async_setup_component(
-        hass, MP_DOMAIN, {"media_player": {"platform": "demo"}}
+        menuai, MP_DOMAIN, {"media_player": {"platform": "demo"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == STATE_PLAYING
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_MEDIA_STOP,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID},
         blocking=True,
     )
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == STATE_OFF
 
 
 async def test_media_image_proxy(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test the media server image proxy server ."""
     assert await async_setup_component(
-        hass, MP_DOMAIN, {"media_player": {"platform": "demo"}}
+        menuai, MP_DOMAIN, {"media_player": {"platform": "demo"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     fake_picture_data = "test.test"
 
@@ -519,29 +519,29 @@ async def test_media_image_proxy(
         def detach(self):
             """Test websession detach."""
 
-    hass.data[DATA_CLIENTSESSION] = {_make_key(): MockWebsession()}
+    menuai.data[DATA_CLIENTSESSION] = {_make_key(): MockWebsession()}
 
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == STATE_PLAYING
-    client = await hass_client()
+    client = await menuai_client()
     req = await client.get(state.attributes.get(ATTR_ENTITY_PICTURE))
     assert req.status == HTTPStatus.OK
     assert await req.text() == fake_picture_data
 
 
-async def test_grouping(hass: HomeAssistant) -> None:
+async def test_grouping(menuai: menuai) -> None:
     """Test the join/unjoin services."""
     walkman = "media_player.walkman"
     kitchen = "media_player.kitchen"
 
     assert await async_setup_component(
-        hass, MP_DOMAIN, {"media_player": {"platform": "demo"}}
+        menuai, MP_DOMAIN, {"media_player": {"platform": "demo"}}
     )
-    await hass.async_block_till_done()
-    state = hass.states.get(walkman)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(walkman)
     assert state.attributes.get(ATTR_GROUP_MEMBERS) == []
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_JOIN,
         {
@@ -552,14 +552,14 @@ async def test_grouping(hass: HomeAssistant) -> None:
         },
         blocking=True,
     )
-    state = hass.states.get(walkman)
+    state = menuai.states.get(walkman)
     assert state.attributes.get(ATTR_GROUP_MEMBERS) == [walkman, kitchen]
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_UNJOIN,
         {ATTR_ENTITY_ID: walkman},
         blocking=True,
     )
-    state = hass.states.get(walkman)
+    state = menuai.states.get(walkman)
     assert state.attributes.get(ATTR_GROUP_MEMBERS) == []

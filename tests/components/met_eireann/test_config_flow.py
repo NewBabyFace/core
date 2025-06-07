@@ -4,25 +4,25 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.met_eireann.const import DOMAIN, HOME_LOCATION_NAME
-from homeassistant.const import CONF_ELEVATION, CONF_LATITUDE, CONF_LONGITUDE
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.met_eireann.const import DOMAIN, HOME_LOCATION_NAME
+from menuai.const import CONF_ELEVATION, CONF_LATITUDE, CONF_LONGITUDE
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 
 @pytest.fixture(name="met_eireann_setup", autouse=True)
 def met_setup_fixture():
     """Patch Met Éireann setup entry."""
     with patch(
-        "homeassistant.components.met_eireann.async_setup_entry", return_value=True
+        "menuai.components.met_eireann.async_setup_entry", return_value=True
     ):
         yield
 
 
-async def test_show_config_form(hass: HomeAssistant) -> None:
+async def test_show_config_form(menuai: menuai) -> None:
     """Test show configuration form."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -30,17 +30,17 @@ async def test_show_config_form(hass: HomeAssistant) -> None:
     assert result["step_id"] == config_entries.SOURCE_USER
 
 
-async def test_flow_with_home_location(hass: HomeAssistant) -> None:
+async def test_flow_with_home_location(menuai: menuai) -> None:
     """Test config flow.
 
     Test the flow when a default location is configured.
     Then it should return a form with default values.
     """
-    hass.config.latitude = 1
-    hass.config.longitude = 2
-    hass.config.elevation = 3
+    menuai.config.latitude = 1
+    menuai.config.longitude = 2
+    menuai.config.elevation = 3
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -54,7 +54,7 @@ async def test_flow_with_home_location(hass: HomeAssistant) -> None:
     assert default_data["elevation"] == 3
 
 
-async def test_create_entry(hass: HomeAssistant) -> None:
+async def test_create_entry(menuai: menuai) -> None:
     """Test create entry from user input."""
     test_data = {
         "name": "test",
@@ -63,7 +63,7 @@ async def test_create_entry(hass: HomeAssistant) -> None:
         CONF_ELEVATION: 0,
     }
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}, data=test_data
     )
 
@@ -72,7 +72,7 @@ async def test_create_entry(hass: HomeAssistant) -> None:
     assert result["data"] == test_data
 
 
-async def test_flow_entry_already_exists(hass: HomeAssistant) -> None:
+async def test_flow_entry_already_exists(menuai: menuai) -> None:
     """Test user input for config_entry that already exists.
 
     Test to ensure the config form does not allow duplicate entries.
@@ -85,13 +85,13 @@ async def test_flow_entry_already_exists(hass: HomeAssistant) -> None:
     }
 
     # Create the first entry and assert that it is created successfully
-    result1 = await hass.config_entries.flow.async_init(
+    result1 = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}, data=test_data
     )
     assert result1["type"] is FlowResultType.CREATE_ENTRY
 
     # Create the second entry and assert that it is aborted
-    result2 = await hass.config_entries.flow.async_init(
+    result2 = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}, data=test_data
     )
     assert result2["type"] is FlowResultType.ABORT

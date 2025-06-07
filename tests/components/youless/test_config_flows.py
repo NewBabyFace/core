@@ -3,10 +3,10 @@
 from unittest.mock import MagicMock, patch
 from urllib.error import URLError
 
-from homeassistant.components.youless import DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.youless import DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 
 def _get_mock_youless_api(initialize=None):
@@ -20,9 +20,9 @@ def _get_mock_youless_api(initialize=None):
     return mock_youless
 
 
-async def test_full_flow(hass: HomeAssistant) -> None:
+async def test_full_flow(menuai: menuai) -> None:
     """Check setup."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
@@ -34,10 +34,10 @@ async def test_full_flow(hass: HomeAssistant) -> None:
         initialize={"homes": [{"id": 1, "name": "myhome"}]}
     )
     with patch(
-        "homeassistant.components.youless.config_flow.YoulessAPI",
+        "menuai.components.youless.config_flow.YoulessAPI",
         return_value=mock_youless,
     ) as mocked_youless:
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {"host": "localhost"},
         )
@@ -47,9 +47,9 @@ async def test_full_flow(hass: HomeAssistant) -> None:
     assert len(mocked_youless.mock_calls) == 1
 
 
-async def test_not_found(hass: HomeAssistant) -> None:
+async def test_not_found(menuai: menuai) -> None:
     """Check setup."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
@@ -59,10 +59,10 @@ async def test_not_found(hass: HomeAssistant) -> None:
 
     mock_youless = _get_mock_youless_api(initialize=URLError(""))
     with patch(
-        "homeassistant.components.youless.config_flow.YoulessAPI",
+        "menuai.components.youless.config_flow.YoulessAPI",
         return_value=mock_youless,
     ) as mocked_youless:
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {"host": "localhost"},
         )

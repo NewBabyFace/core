@@ -6,14 +6,14 @@ from unittest.mock import AsyncMock, Mock, PropertyMock, patch
 import pytest
 from webrtc_models import RTCIceCandidateInit
 
-from homeassistant.components import camera
-from homeassistant.components.camera.const import StreamType
-from homeassistant.components.camera.webrtc import WebRTCAnswer, WebRTCSendMessage
-from homeassistant.config_entries import ConfigEntry, ConfigFlow
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.setup import async_setup_component
+from menuai.components import camera
+from menuai.components.camera.const import StreamType
+from menuai.components.camera.webrtc import WebRTCAnswer, WebRTCSendMessage
+from menuai.config_entries import ConfigEntry, ConfigFlow
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.setup import async_setup_component
 
 from .common import STREAM_SOURCE, WEBRTC_ANSWER, SomeTestProvider
 
@@ -28,31 +28,31 @@ from tests.common import (
 
 
 @pytest.fixture(autouse=True)
-async def setup_homeassistant(hass: HomeAssistant) -> None:
-    """Set up the homeassistant integration."""
-    await async_setup_component(hass, "homeassistant", {})
+async def setup_menuai(menuai: menuai) -> None:
+    """Set up the menuai integration."""
+    await async_setup_component(menuai, "menuai", {})
 
 
 @pytest.fixture(autouse=True)
 def camera_only() -> Generator[None]:
     """Enable only the camera platform."""
     with patch(
-        "homeassistant.components.demo.COMPONENTS_WITH_CONFIG_ENTRY_DEMO_PLATFORM",
+        "menuai.components.demo.COMPONENTS_WITH_CONFIG_ENTRY_DEMO_PLATFORM",
         [Platform.CAMERA],
     ):
         yield
 
 
 @pytest.fixture(name="mock_camera")
-async def mock_camera_fixture(hass: HomeAssistant) -> AsyncGenerator[None]:
+async def mock_camera_fixture(menuai: menuai) -> AsyncGenerator[None]:
     """Initialize a demo camera platform."""
     assert await async_setup_component(
-        hass, "camera", {camera.DOMAIN: {"platform": "demo"}}
+        menuai, "camera", {camera.DOMAIN: {"platform": "demo"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     with patch(
-        "homeassistant.components.demo.camera.Path.read_bytes",
+        "menuai.components.demo.camera.Path.read_bytes",
         return_value=b"Test",
     ):
         yield
@@ -62,7 +62,7 @@ async def mock_camera_fixture(hass: HomeAssistant) -> AsyncGenerator[None]:
 def mock_camera_hls_fixture(mock_camera: None) -> Generator[None]:
     """Initialize a demo camera platform with HLS."""
     with patch(
-        "homeassistant.components.camera.Camera.camera_capabilities",
+        "menuai.components.camera.Camera.camera_capabilities",
         new_callable=PropertyMock(
             return_value=camera.CameraCapabilities({StreamType.HLS})
         ),
@@ -83,11 +83,11 @@ async def mock_camera_webrtc(
 
     with (
         patch(
-            "homeassistant.components.camera.Camera.async_handle_async_webrtc_offer",
+            "menuai.components.camera.Camera.async_handle_async_webrtc_offer",
             side_effect=async_handle_async_webrtc_offer,
         ),
         patch(
-            "homeassistant.components.camera.Camera.camera_capabilities",
+            "menuai.components.camera.Camera.camera_capabilities",
             new_callable=PropertyMock(
                 return_value=camera.CameraCapabilities({StreamType.WEB_RTC})
             ),
@@ -110,12 +110,12 @@ def mock_camera_with_device_fixture() -> Generator[None]:
 
     with (
         patch(
-            "homeassistant.components.camera.Camera.has_entity_name",
+            "menuai.components.camera.Camera.has_entity_name",
             new_callable=PropertyMock(return_value=True),
         ),
-        patch("homeassistant.components.camera.Camera.unique_id", new=UniqueIdMock()),
+        patch("menuai.components.camera.Camera.unique_id", new=UniqueIdMock()),
         patch(
-            "homeassistant.components.camera.Camera.device_info",
+            "menuai.components.camera.Camera.device_info",
             new_callable=PropertyMock(return_value=dev_info),
         ),
     ):
@@ -126,30 +126,30 @@ def mock_camera_with_device_fixture() -> Generator[None]:
 def mock_camera_with_no_name_fixture(mock_camera_with_device: None) -> Generator[None]:
     """Initialize a demo camera platform with a device and no name."""
     with patch(
-        "homeassistant.components.camera.Camera._attr_name",
+        "menuai.components.camera.Camera._attr_name",
         new_callable=PropertyMock(return_value=None),
     ):
         yield
 
 
 @pytest.fixture(name="mock_stream")
-async def mock_stream_fixture(hass: HomeAssistant) -> None:
+async def mock_stream_fixture(menuai: menuai) -> None:
     """Initialize a demo camera platform with streaming."""
-    assert await async_setup_component(hass, "stream", {"stream": {}})
+    assert await async_setup_component(menuai, "stream", {"stream": {}})
 
 
 @pytest.fixture(name="mock_stream_source")
 def mock_stream_source_fixture() -> Generator[AsyncMock]:
     """Fixture to create an RTSP stream source."""
     with patch(
-        "homeassistant.components.camera.Camera.stream_source",
+        "menuai.components.camera.Camera.stream_source",
         return_value=STREAM_SOURCE,
     ) as mock_stream_source:
         yield mock_stream_source
 
 
 @pytest.fixture
-async def mock_test_webrtc_cameras(hass: HomeAssistant) -> None:
+async def mock_test_webrtc_cameras(menuai: menuai) -> None:
     """Initialize test WebRTC cameras with native RTC support."""
 
     # Cannot use the fixture mock_camera_web_rtc as it's mocking Camera.async_handle_web_rtc_offer
@@ -194,28 +194,28 @@ async def mock_test_webrtc_cameras(hass: HomeAssistant) -> None:
     domain = "test"
 
     entry = MockConfigEntry(domain=domain)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     async def async_setup_entry_init(
-        hass: HomeAssistant, config_entry: ConfigEntry
+        menuai: menuai, config_entry: ConfigEntry
     ) -> bool:
         """Set up test config entry."""
-        await hass.config_entries.async_forward_entry_setups(
+        await menuai.config_entries.async_forward_entry_setups(
             config_entry, [Platform.CAMERA]
         )
         return True
 
     async def async_unload_entry_init(
-        hass: HomeAssistant, config_entry: ConfigEntry
+        menuai: menuai, config_entry: ConfigEntry
     ) -> bool:
         """Unload test config entry."""
-        await hass.config_entries.async_forward_entry_unload(
+        await menuai.config_entries.async_forward_entry_unload(
             config_entry, Platform.CAMERA
         )
         return True
 
     mock_integration(
-        hass,
+        menuai,
         MockModule(
             domain,
             async_setup_entry=async_setup_entry_init,
@@ -223,27 +223,27 @@ async def mock_test_webrtc_cameras(hass: HomeAssistant) -> None:
         ),
     )
     setup_test_component_platform(
-        hass,
+        menuai,
         camera.DOMAIN,
         [AsyncNoCandidateCamera(), AsyncCamera()],
         from_config_entry=True,
     )
-    mock_platform(hass, f"{domain}.config_flow", Mock())
+    mock_platform(menuai, f"{domain}.config_flow", Mock())
 
     with mock_config_flow(domain, ConfigFlow):
-        assert await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
 
 @pytest.fixture
 async def register_test_provider(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> AsyncGenerator[SomeTestProvider]:
     """Add WebRTC test provider."""
-    await async_setup_component(hass, "camera", {})
+    await async_setup_component(menuai, "camera", {})
 
     provider = SomeTestProvider()
-    unsub = camera.async_register_webrtc_provider(hass, provider)
-    await hass.async_block_till_done()
+    unsub = camera.async_register_webrtc_provider(menuai, provider)
+    await menuai.async_block_till_done()
     yield provider
     unsub()

@@ -4,11 +4,11 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components.deluge.const import DEFAULT_NAME, DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_SOURCE
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.deluge.const import DEFAULT_NAME, DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_SOURCE
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from . import CONF_DATA
 
@@ -51,13 +51,13 @@ def mock_api_unknown_error():
 @pytest.fixture(name="deluge_setup", autouse=True)
 def deluge_setup_fixture():
     """Mock deluge entry setup."""
-    with patch("homeassistant.components.deluge.async_setup_entry", return_value=True):
+    with patch("menuai.components.deluge.async_setup_entry", return_value=True):
         yield
 
 
-async def test_flow_user(hass: HomeAssistant, api) -> None:
+async def test_flow_user(menuai: menuai, api) -> None:
     """Test user initialized flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data=CONF_DATA,
@@ -67,16 +67,16 @@ async def test_flow_user(hass: HomeAssistant, api) -> None:
     assert result["data"] == CONF_DATA
 
 
-async def test_flow_user_already_configured(hass: HomeAssistant, api) -> None:
+async def test_flow_user_already_configured(menuai: menuai, api) -> None:
     """Test user initialized flow with duplicate server."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         data=CONF_DATA,
     )
 
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={CONF_SOURCE: SOURCE_USER}, data=CONF_DATA
     )
 
@@ -84,9 +84,9 @@ async def test_flow_user_already_configured(hass: HomeAssistant, api) -> None:
     assert result["reason"] == "already_configured"
 
 
-async def test_flow_user_cannot_connect(hass: HomeAssistant, conn_error) -> None:
+async def test_flow_user_cannot_connect(menuai: menuai, conn_error) -> None:
     """Test user initialized flow with unreachable server."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={CONF_SOURCE: SOURCE_USER}, data=CONF_DATA
     )
     assert result["type"] is FlowResultType.FORM
@@ -94,9 +94,9 @@ async def test_flow_user_cannot_connect(hass: HomeAssistant, conn_error) -> None
     assert result["errors"] == {"base": "cannot_connect"}
 
 
-async def test_flow_user_unknown_error(hass: HomeAssistant, unknown_error) -> None:
+async def test_flow_user_unknown_error(menuai: menuai, unknown_error) -> None:
     """Test user initialized flow with unreachable server."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={CONF_SOURCE: SOURCE_USER}, data=CONF_DATA
     )
     assert result["type"] is FlowResultType.FORM
@@ -104,20 +104,20 @@ async def test_flow_user_unknown_error(hass: HomeAssistant, unknown_error) -> No
     assert result["errors"] == {"base": "unknown"}
 
 
-async def test_flow_reauth(hass: HomeAssistant, api) -> None:
+async def test_flow_reauth(menuai: menuai, api) -> None:
     """Test reauth step."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         data=CONF_DATA,
     )
 
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await entry.start_reauth_flow(hass)
+    result = await entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=CONF_DATA,
     )

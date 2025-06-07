@@ -6,15 +6,15 @@ from collections.abc import Iterable
 import time
 from typing import Any
 
-from homeassistant.components.remote import (
+from menuai.components.remote import (
     ATTR_DELAY_SECS,
     ATTR_NUM_REPEATS,
     DEFAULT_DELAY_SECS,
     DEFAULT_NUM_REPEATS,
     RemoteEntity,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import LOGGER
 from .coordinator import JellyfinConfigEntry, JellyfinDataUpdateCoordinator
@@ -22,7 +22,7 @@ from .entity import JellyfinClientEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: JellyfinConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

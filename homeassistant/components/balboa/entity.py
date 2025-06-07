@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from pybalboa import EVENT_UPDATE, SpaClient
 
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
-from homeassistant.helpers.entity import Entity
+from menuai.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
+from menuai.helpers.entity import Entity
 
 from .const import DOMAIN
 
@@ -36,6 +36,6 @@ class BalboaEntity(Entity):
         """Return whether the state is based on actual reading from device."""
         return not self._client.available
 
-    async def async_added_to_hass(self) -> None:
-        """Run when entity about to be added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Run when entity about to be added to menuai."""
         self.async_on_remove(self._client.on(EVENT_UPDATE, self.async_write_ha_state))

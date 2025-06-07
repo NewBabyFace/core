@@ -5,13 +5,13 @@ import logging
 
 from aiopvpc import BadApiTokenAuthError, EsiosApiData, PVPCData
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_API_TOKEN
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util import dt as dt_util
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_API_TOKEN
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.util import dt as dt_util
 
 from .const import ATTR_POWER, ATTR_POWER_P3, ATTR_TARIFF, DOMAIN
 
@@ -24,20 +24,20 @@ class ElecPricesDataUpdateCoordinator(DataUpdateCoordinator[EsiosApiData]):
     config_entry: ConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, entry: ConfigEntry, sensor_keys: set[str]
+        self, menuai: menuai, entry: ConfigEntry, sensor_keys: set[str]
     ) -> None:
         """Initialize."""
         self.api = PVPCData(
-            session=async_get_clientsession(hass),
+            session=async_get_clientsession(menuai),
             tariff=entry.data[ATTR_TARIFF],
-            local_timezone=hass.config.time_zone,
+            local_timezone=menuai.config.time_zone,
             power=entry.data[ATTR_POWER],
             power_valley=entry.data[ATTR_POWER_P3],
             api_token=entry.data.get(CONF_API_TOKEN),
             sensor_keys=tuple(sensor_keys),
         )
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
             name=DOMAIN,

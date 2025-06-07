@@ -8,8 +8,8 @@ from urllib.error import URLError
 from panasonic_viera import TV_TYPE_ENCRYPTED, RemoteControl, SOAPError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PIN, CONF_PORT
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_NAME, CONF_PIN, CONF_PORT
 
 from .const import (
     ATTR_DEVICE_INFO,
@@ -53,11 +53,11 @@ class PanasonicVieraConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             await self.async_load_data(user_input)
             try:
-                self._remote = await self.hass.async_add_executor_job(
+                self._remote = await self.menuai.async_add_executor_job(
                     partial(RemoteControl, self._data[CONF_HOST], self._data[CONF_PORT])
                 )
                 assert self._remote is not None
-                self._data[ATTR_DEVICE_INFO] = await self.hass.async_add_executor_job(
+                self._data[ATTR_DEVICE_INFO] = await self.menuai.async_add_executor_job(
                     self._remote.get_device_info
                 )
             except (URLError, SOAPError, OSError) as err:
@@ -114,7 +114,7 @@ class PanasonicVieraConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             pin = user_input[CONF_PIN]
             try:
-                await self.hass.async_add_executor_job(
+                await self.menuai.async_add_executor_job(
                     partial(self._remote.authorize_pin_code, pincode=pin)
                 )
             except SOAPError as err:
@@ -141,8 +141,8 @@ class PanasonicVieraConfigFlow(ConfigFlow, domain=DOMAIN):
                 )
 
         try:
-            await self.hass.async_add_executor_job(
-                partial(self._remote.request_pin_code, name="Home Assistant")
+            await self.menuai.async_add_executor_job(
+                partial(self._remote.request_pin_code, name="MenuAI")
             )
         except (URLError, SOAPError, OSError) as err:
             _LOGGER.error("The remote connection was lost: %s", err)

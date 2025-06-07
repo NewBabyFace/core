@@ -9,24 +9,24 @@ import voluptuous as vol
 from yt_dlp import YoutubeDL
 from yt_dlp.utils import DownloadError, ExtractorError
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     ATTR_MEDIA_CONTENT_ID,
     ATTR_MEDIA_CONTENT_TYPE,
     DOMAIN as MEDIA_PLAYER_DOMAIN,
     MEDIA_PLAYER_PLAY_MEDIA_SCHEMA,
     SERVICE_PLAY_MEDIA,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import (
-    HomeAssistant,
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import (
+    menuai,
     ServiceCall,
     ServiceResponse,
     SupportsResponse,
 )
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     ATTR_FORMAT_QUERY,
@@ -44,13 +44,13 @@ CONF_DEFAULT_STREAM_QUERY = "default_query"
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up Media Extractor from a config entry."""
 
     return True
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the media extractor service."""
 
     async def extract_media_url(call: ServiceCall) -> ServiceResponse:
@@ -71,14 +71,14 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                 ),
             )
 
-        result = await hass.async_add_executor_job(extract_info)
+        result = await menuai.async_add_executor_job(extract_info)
         if "entries" in result:
             _LOGGER.warning("Playlists are not supported, looking for the first video")
             entries = list(result["entries"])
             if entries:
                 selected_media = entries[0]
             else:
-                raise HomeAssistantError("Playlist is empty")
+                raise menuaiError("Playlist is empty")
         else:
             selected_media = result
         if "formats" in selected_media:
@@ -92,13 +92,13 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     def play_media(call: ServiceCall) -> None:
         """Get stream URL and send it to the play_media service."""
-        MediaExtractor(hass, config.get(DOMAIN, {}), call.data).extract_and_send()
+        MediaExtractor(menuai, config.get(DOMAIN, {}), call.data).extract_and_send()
 
     default_format_query = config.get(DOMAIN, {}).get(
         CONF_DEFAULT_STREAM_QUERY, DEFAULT_STREAM_QUERY
     )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_EXTRACT_MEDIA_URL,
         extract_media_url,
@@ -113,7 +113,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         supports_response=SupportsResponse.ONLY,
     )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_PLAY_MEDIA,
         play_media,
@@ -136,12 +136,12 @@ class MediaExtractor:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         component_config: dict[str, Any],
         call_data: dict[str, Any],
     ) -> None:
         """Initialize media extractor."""
-        self.hass = hass
+        self.menuai = menuai
         self.config = component_config
         self.call_data = call_data
 
@@ -171,7 +171,7 @@ class MediaExtractor:
     def get_stream_selector(self) -> Callable[[str], str]:
         """Return format selector for the media URL."""
         cookies_file = Path(
-            self.hass.config.config_dir, "media_extractor", "cookies.txt"
+            self.menuai.config.config_dir, "media_extractor", "cookies.txt"
         )
         ydl_params = {"quiet": True, "logger": _LOGGER}
         if cookies_file.exists():
@@ -237,8 +237,8 @@ class MediaExtractor:
         if entity_id:
             data[ATTR_ENTITY_ID] = entity_id
 
-        self.hass.create_task(
-            self.hass.services.async_call(MEDIA_PLAYER_DOMAIN, SERVICE_PLAY_MEDIA, data)
+        self.menuai.create_task(
+            self.menuai.services.async_call(MEDIA_PLAYER_DOMAIN, SERVICE_PLAY_MEDIA, data)
         )
 
     def get_stream_query_for_entity(self, entity_id: str | None) -> str:

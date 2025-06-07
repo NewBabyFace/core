@@ -278,7 +278,7 @@
     'wind_speed': 12.24,
   })
 # ---
-# name: test_setup_hass[load_platforms0]
+# name: test_setup_menuai[load_platforms0]
   ReadOnlyDict({
     'attribution': 'Swedish weather institute (SMHI)',
     'cloud_coverage': 100,

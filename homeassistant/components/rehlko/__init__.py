@@ -6,11 +6,11 @@ import logging
 
 from aiokem import AioKem, AuthenticationError
 
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.util import dt as dt_util
+from menuai.const import CONF_EMAIL, CONF_PASSWORD, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.util import dt as dt_util
 
 from .const import (
     CONF_REFRESH_TOKEN,
@@ -26,9 +26,9 @@ PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR]
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: RehlkoConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: RehlkoConfigEntry) -> bool:
     """Set up Rehlko from a config entry."""
-    websession = async_get_clientsession(hass)
+    websession = async_get_clientsession(menuai)
     rehlko = AioKem(session=websession, home_timezone=dt_util.get_default_time_zone())
     # If requests take more than 20 seconds; timeout and let the setup retry.
     rehlko.set_timeout(20)
@@ -37,7 +37,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: RehlkoConfigEntry) -> bo
         """Handle refresh token update."""
         _LOGGER.debug("Saving refresh token")
         # Update the config entry with the new refresh token
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry,
             data={**entry.data, CONF_REFRESH_TOKEN: refresh_token},
         )
@@ -74,7 +74,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: RehlkoConfigEntry) -> bo
         for device_data in home_data[DEVICE_DATA_DEVICES]:
             device_id = device_data[DEVICE_DATA_ID]
             coordinator = RehlkoUpdateCoordinator(
-                hass=hass,
+                menuai=menuai,
                 logger=_LOGGER,
                 config_entry=entry,
                 home_data=home_data,
@@ -87,7 +87,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: RehlkoConfigEntry) -> bo
             # the Rehlko API with requests
             await coordinator.async_config_entry_first_refresh()
             coordinators[device_id] = coordinator
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     # Retrys enabled after successful connection to prevent blocking startup
     rehlko.set_retry_policy(retry_count=3, retry_delays=[5, 10, 20])
     # Rehlko service can be slow to respond, increase timeout for polls.
@@ -95,7 +95,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: RehlkoConfigEntry) -> bo
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: RehlkoConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: RehlkoConfigEntry) -> bool:
     """Unload a config entry."""
     await entry.runtime_data.rehlko.close()
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

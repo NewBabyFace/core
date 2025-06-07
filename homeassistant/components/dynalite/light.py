@@ -2,27 +2,27 @@
 
 from typing import Any
 
-from homeassistant.components.light import ATTR_BRIGHTNESS, ColorMode, LightEntity
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.light import ATTR_BRIGHTNESS, ColorMode, LightEntity
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .bridge import DynaliteConfigEntry
 from .entity import DynaliteBase, async_setup_entry_base
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: DynaliteConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Record the async_add_entities function to add them later when received from Dynalite."""
     async_setup_entry_base(
-        hass, config_entry, async_add_entities, "light", DynaliteLight
+        menuai, config_entry, async_add_entities, "light", DynaliteLight
     )
 
 
 class DynaliteLight(DynaliteBase, LightEntity):
-    """Representation of a Dynalite Channel as a Home Assistant Light."""
+    """Representation of a Dynalite Channel as a MenuAI Light."""
 
     _attr_color_mode = ColorMode.BRIGHTNESS
     _attr_supported_color_modes = {ColorMode.BRIGHTNESS}

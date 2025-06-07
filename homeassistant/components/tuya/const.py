@@ -7,8 +7,8 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 import logging
 
-from homeassistant.components.sensor import SensorDeviceClass
-from homeassistant.const import (
+from menuai.components.sensor import SensorDeviceClass
+from menuai.const import (
     CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
     CONCENTRATION_MILLIGRAMS_PER_CUBIC_METER,
     CONCENTRATION_PARTS_PER_BILLION,

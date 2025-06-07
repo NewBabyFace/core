@@ -12,7 +12,7 @@ from ical.calendar_stream import IcsCalendarStream
 from ical.compat import enable_compat_mode
 from ical.exceptions import CalendarParseError
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -34,10 +34,10 @@ def _compat_calendar_from_ics(ics: str) -> Calendar:
         return IcsCalendarStream.calendar_from_ics(compat_ics)
 
 
-async def parse_calendar(hass: HomeAssistant, ics: str) -> Calendar:
+async def parse_calendar(menuai: menuai, ics: str) -> Calendar:
     """Parse the ICS content and return a Calendar object."""
     try:
-        return await hass.async_add_executor_job(_compat_calendar_from_ics, ics)
+        return await menuai.async_add_executor_job(_compat_calendar_from_ics, ics)
     except CalendarParseError as err:
         _LOGGER.error("Error parsing calendar information: %s", err.message)
         _LOGGER.debug("Additional calendar error detail: %s", str(err.detailed_error))

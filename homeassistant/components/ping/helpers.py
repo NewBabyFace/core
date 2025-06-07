@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 from icmplib import NameLookupError, async_ping
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .const import ICMP_TIMEOUT, PING_TIMEOUT
 
@@ -31,9 +31,9 @@ class PingData:
     data: dict[str, Any] | None = None
     is_alive: bool = False
 
-    def __init__(self, hass: HomeAssistant, host: str, count: int) -> None:
+    def __init__(self, menuai: menuai, host: str, count: int) -> None:
         """Initialize the data object."""
-        self.hass = hass
+        self.menuai = menuai
         self.ip_address = host
         self._count = count
 
@@ -42,10 +42,10 @@ class PingDataICMPLib(PingData):
     """The Class for handling the data retrieval using icmplib."""
 
     def __init__(
-        self, hass: HomeAssistant, host: str, count: int, privileged: bool | None
+        self, menuai: menuai, host: str, count: int, privileged: bool | None
     ) -> None:
         """Initialize the data object."""
-        super().__init__(hass, host, count)
+        super().__init__(menuai, host, count)
         self._privileged = privileged
 
     async def async_update(self) -> None:
@@ -86,10 +86,10 @@ class PingDataSubProcess(PingData):
     """The Class for handling the data retrieval using the ping binary."""
 
     def __init__(
-        self, hass: HomeAssistant, host: str, count: int, privileged: bool | None
+        self, menuai: menuai, host: str, count: int, privileged: bool | None
     ) -> None:
         """Initialize the data object."""
-        super().__init__(hass, host, count)
+        super().__init__(menuai, host, count)
         self._ping_cmd = [
             "ping",
             "-n",

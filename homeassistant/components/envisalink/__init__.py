@@ -6,18 +6,18 @@ import logging
 from pyenvisalink import EnvisalinkAlarmPanel
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_CODE,
     CONF_HOST,
     CONF_TIMEOUT,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     Platform,
 )
-from homeassistant.core import HomeAssistant, ServiceCall, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.discovery import async_load_platform
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai, ServiceCall, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.discovery import async_load_platform
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.typing import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -107,7 +107,7 @@ SERVICE_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up for Envisalink devices."""
     conf = config[DOMAIN]
 
@@ -124,7 +124,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     zones = conf.get(CONF_ZONES)
     partitions = conf.get(CONF_PARTITIONS)
     connection_timeout = conf.get(CONF_TIMEOUT)
-    sync_connect: asyncio.Future[bool] = hass.loop.create_future()
+    sync_connect: asyncio.Future[bool] = menuai.loop.create_future()
 
     controller = EnvisalinkAlarmPanel(
         host,
@@ -135,11 +135,11 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         password,
         zone_dump,
         keep_alive,
-        hass.loop,
+        menuai.loop,
         connection_timeout,
         False,
     )
-    hass.data[DATA_EVL] = controller
+    menuai.data[DATA_EVL] = controller
 
     @callback
     def async_login_fail_callback(data):
@@ -153,7 +153,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         """Network failure callback."""
         _LOGGER.error("Could not establish a connection with the Envisalink- retrying")
         if not sync_connect.done():
-            hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, stop_envisalink)
+            menuai.bus.async_listen_once(EVENT_menuai_STOP, stop_envisalink)
             sync_connect.set_result(True)
 
     @callback
@@ -161,26 +161,26 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         """Handle a successful connection."""
         _LOGGER.debug("Established a connection with the Envisalink")
         if not sync_connect.done():
-            hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, stop_envisalink)
+            menuai.bus.async_listen_once(EVENT_menuai_STOP, stop_envisalink)
             sync_connect.set_result(True)
 
     @callback
     def async_zones_updated_callback(data):
         """Handle zone timer updates."""
         _LOGGER.debug("Envisalink sent a zone update event. Updating zones")
-        async_dispatcher_send(hass, SIGNAL_ZONE_UPDATE, data)
+        async_dispatcher_send(menuai, SIGNAL_ZONE_UPDATE, data)
 
     @callback
     def async_alarm_data_updated_callback(data):
         """Handle non-alarm based info updates."""
         _LOGGER.debug("Envisalink sent new alarm info. Updating alarms")
-        async_dispatcher_send(hass, SIGNAL_KEYPAD_UPDATE, data)
+        async_dispatcher_send(menuai, SIGNAL_KEYPAD_UPDATE, data)
 
     @callback
     def async_partition_updated_callback(data):
         """Handle partition changes thrown by evl (including alarms)."""
         _LOGGER.debug("The envisalink sent a partition update event")
-        async_dispatcher_send(hass, SIGNAL_PARTITION_UPDATE, data)
+        async_dispatcher_send(menuai, SIGNAL_PARTITION_UPDATE, data)
 
     @callback
     def stop_envisalink(event):
@@ -210,18 +210,18 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     # Load sub-components for Envisalink
     if partitions:
-        hass.async_create_task(
+        menuai.async_create_task(
             async_load_platform(
-                hass,
+                menuai,
                 Platform.ALARM_CONTROL_PANEL,
                 "envisalink",
                 {CONF_PARTITIONS: partitions, CONF_CODE: code, CONF_PANIC: panic_type},
                 config,
             )
         )
-        hass.async_create_task(
+        menuai.async_create_task(
             async_load_platform(
-                hass,
+                menuai,
                 Platform.SENSOR,
                 "envisalink",
                 {CONF_PARTITIONS: partitions, CONF_CODE: code},
@@ -229,16 +229,16 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             )
         )
     if zones:
-        hass.async_create_task(
+        menuai.async_create_task(
             async_load_platform(
-                hass, Platform.BINARY_SENSOR, "envisalink", {CONF_ZONES: zones}, config
+                menuai, Platform.BINARY_SENSOR, "envisalink", {CONF_ZONES: zones}, config
             )
         )
 
         # Zone bypass switches are not currently created due to an issue with some panels.
         # These switches will be re-added in the future after some further refactoring of the integration.
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_CUSTOM_FUNCTION, handle_custom_function, schema=SERVICE_SCHEMA
     )
 

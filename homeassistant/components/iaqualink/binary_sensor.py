@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from iaqualink.device import AqualinkBinarySensor
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import AqualinkConfigEntry
 from .entity import AqualinkEntity
@@ -18,21 +18,21 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: AqualinkConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up discovered binary sensors."""
     async_add_entities(
         (
-            HassAqualinkBinarySensor(dev)
+            menuaiAqualinkBinarySensor(dev)
             for dev in config_entry.runtime_data.binary_sensors
         ),
         True,
     )
 
 
-class HassAqualinkBinarySensor(
+class menuaiAqualinkBinarySensor(
     AqualinkEntity[AqualinkBinarySensor], BinarySensorEntity
 ):
     """Representation of a binary sensor."""

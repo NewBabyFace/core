@@ -7,11 +7,11 @@ from typing import Any
 from aiohomekit.model.characteristics import CharacteristicsTypes
 from aiohomekit.model.services import Service, ServicesTypes
 
-from homeassistant.components.lock import LockEntity, LockState
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_BATTERY_LEVEL, STATE_UNKNOWN, Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.lock import LockEntity, LockState
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_BATTERY_LEVEL, STATE_UNKNOWN, Platform
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import KNOWN_DEVICES
 from .connection import HKDevice
@@ -30,13 +30,13 @@ REVERSED_TARGET_STATE_MAP = {v: k for k, v in TARGET_STATE_MAP.items()}
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Homekit lock."""
     hkid: str = config_entry.data["AccessoryPairingID"]
-    conn: HKDevice = hass.data[KNOWN_DEVICES][hkid]
+    conn: HKDevice = menuai.data[KNOWN_DEVICES][hkid]
 
     @callback
     def async_add_service(service: Service) -> bool:

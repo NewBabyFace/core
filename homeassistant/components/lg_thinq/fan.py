@@ -10,14 +10,14 @@ from thinqconnect import DeviceType
 from thinqconnect.devices.const import Property as ThinQProperty
 from thinqconnect.integration import ActiveMode
 
-from homeassistant.components.fan import (
+from menuai.components.fan import (
     FanEntity,
     FanEntityDescription,
     FanEntityFeature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util.percentage import (
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util.percentage import (
     ordered_list_item_to_percentage,
     percentage_to_ordered_list_item,
 )
@@ -60,7 +60,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ThinqConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

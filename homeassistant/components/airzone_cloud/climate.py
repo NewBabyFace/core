@@ -40,7 +40,7 @@ from aioairzone_cloud.const import (
     AZD_ZONES,
 )
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_HVAC_MODE,
     ATTR_TARGET_TEMP_HIGH,
     ATTR_TARGET_TEMP_LOW,
@@ -53,10 +53,10 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import ATTR_TEMPERATURE, UnitOfTemperature
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import AirzoneCloudConfigEntry, AirzoneUpdateCoordinator
 from .entity import (
@@ -83,7 +83,7 @@ FAN_SPEED_MAPS: Final[dict[int, dict[int, str]]] = {
     },
 }
 
-HVAC_ACTION_LIB_TO_HASS: Final[dict[OperationAction, HVACAction]] = {
+HVAC_ACTION_LIB_TO_menuai: Final[dict[OperationAction, HVACAction]] = {
     OperationAction.COOLING: HVACAction.COOLING,
     OperationAction.DRYING: HVACAction.DRYING,
     OperationAction.FAN: HVACAction.FAN,
@@ -91,7 +91,7 @@ HVAC_ACTION_LIB_TO_HASS: Final[dict[OperationAction, HVACAction]] = {
     OperationAction.IDLE: HVACAction.IDLE,
     OperationAction.OFF: HVACAction.OFF,
 }
-HVAC_MODE_LIB_TO_HASS: Final[dict[OperationMode, HVACMode]] = {
+HVAC_MODE_LIB_TO_menuai: Final[dict[OperationMode, HVACMode]] = {
     OperationMode.STOP: HVACMode.OFF,
     OperationMode.COOLING: HVACMode.COOL,
     OperationMode.COOLING_AIR: HVACMode.COOL,
@@ -106,7 +106,7 @@ HVAC_MODE_LIB_TO_HASS: Final[dict[OperationMode, HVACMode]] = {
     OperationMode.DRY: HVACMode.DRY,
     OperationMode.AUTO: HVACMode.HEAT_COOL,
 }
-HVAC_MODE_HASS_TO_LIB: Final[dict[HVACMode, OperationMode]] = {
+HVAC_MODE_menuai_TO_LIB: Final[dict[HVACMode, OperationMode]] = {
     HVACMode.OFF: OperationMode.STOP,
     HVACMode.COOL: OperationMode.COOLING,
     HVACMode.HEAT: OperationMode.HEATING,
@@ -117,7 +117,7 @@ HVAC_MODE_HASS_TO_LIB: Final[dict[HVACMode, OperationMode]] = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: AirzoneCloudConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -182,7 +182,7 @@ class AirzoneClimate(AirzoneEntity, ClimateEntity):
         self._attr_target_temperature_step = self.get_airzone_value(AZD_TEMP_STEP)
 
         self._attr_hvac_modes = [
-            HVAC_MODE_LIB_TO_HASS[mode] for mode in self.get_airzone_value(AZD_MODES)
+            HVAC_MODE_LIB_TO_menuai[mode] for mode in self.get_airzone_value(AZD_MODES)
         ]
         if HVACMode.OFF not in self._attr_hvac_modes:
             self._attr_hvac_modes += [HVACMode.OFF]
@@ -203,11 +203,11 @@ class AirzoneClimate(AirzoneEntity, ClimateEntity):
         """Update climate attributes."""
         self._attr_current_temperature = self.get_airzone_value(AZD_TEMP)
         self._attr_current_humidity = self.get_airzone_value(AZD_HUMIDITY)
-        self._attr_hvac_action = HVAC_ACTION_LIB_TO_HASS[
+        self._attr_hvac_action = HVAC_ACTION_LIB_TO_menuai[
             self.get_airzone_value(AZD_ACTION)
         ]
         if self.get_airzone_value(AZD_POWER):
-            self._attr_hvac_mode = HVAC_MODE_LIB_TO_HASS[
+            self._attr_hvac_mode = HVAC_MODE_LIB_TO_menuai[
                 self.get_airzone_value(AZD_MODE)
             ]
         else:
@@ -395,7 +395,7 @@ class AirzoneDeviceGroupClimate(AirzoneClimate):
         if hvac_mode == HVACMode.OFF:
             params[API_PARAMS][API_POWER] = False
         else:
-            mode = HVAC_MODE_HASS_TO_LIB[hvac_mode]
+            mode = HVAC_MODE_menuai_TO_LIB[hvac_mode]
             params[API_PARAMS][API_MODE] = mode.value
             params[API_PARAMS][API_POWER] = True
         await self._async_update_params(params)
@@ -426,7 +426,7 @@ class AirzoneAidooClimate(AirzoneAidooEntity, AirzoneDeviceClimate):
                 API_VALUE: False,
             }
         else:
-            mode = HVAC_MODE_HASS_TO_LIB[hvac_mode]
+            mode = HVAC_MODE_menuai_TO_LIB[hvac_mode]
             params[API_MODE] = {
                 API_VALUE: mode.value,
             }
@@ -499,9 +499,9 @@ class AirzoneZoneClimate(AirzoneZoneEntity, AirzoneDeviceClimate):
                 API_VALUE: False,
             }
         else:
-            mode = HVAC_MODE_HASS_TO_LIB[hvac_mode]
+            mode = HVAC_MODE_menuai_TO_LIB[hvac_mode]
             cur_mode = self.get_airzone_value(AZD_MODE)
-            if hvac_mode != HVAC_MODE_LIB_TO_HASS[cur_mode]:
+            if hvac_mode != HVAC_MODE_LIB_TO_menuai[cur_mode]:
                 if self.get_airzone_value(AZD_MASTER):
                     params[API_MODE] = {
                         API_VALUE: mode.value,
@@ -515,6 +515,6 @@ class AirzoneZoneClimate(AirzoneZoneEntity, AirzoneDeviceClimate):
         await self._async_update_params(params)
 
         if slave_raise:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Mode can't be changed on slave zone {self.entity_id}"
             )

@@ -8,9 +8,9 @@ from typing import Any, Final
 
 from aioamazondevices.api import AmazonDevice, AmazonEchoApi
 
-from homeassistant.components.notify import NotifyEntity, NotifyEntityDescription
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.notify import NotifyEntity, NotifyEntityDescription
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import AmazonConfigEntry
 from .entity import AmazonEntity
@@ -45,7 +45,7 @@ NOTIFY: Final = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: AmazonConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

@@ -7,11 +7,11 @@ from typing import Any
 from pyforked_daapd import ForkedDaapdAPI
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PASSWORD, CONF_PORT
-from homeassistant.core import callback
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
+from menuai.const import CONF_HOST, CONF_NAME, CONF_PASSWORD, CONF_PORT
+from menuai.core import callback
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import (
     CONF_LIBRESPOT_JAVA_PORT,
@@ -118,7 +118,7 @@ class ForkedDaapdFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def validate_input(self, user_input):
         """Validate the user input."""
-        websession = async_get_clientsession(self.hass)
+        websession = async_get_clientsession(self.menuai)
         validate_result = await ForkedDaapdAPI.test_connection(
             websession=websession,
             host=user_input[CONF_HOST],
@@ -179,7 +179,7 @@ class ForkedDaapdFlowHandler(ConfigFlow, domain=DOMAIN):
         for entry in self._async_current_entries():
             if entry.data.get(CONF_HOST) != discovery_info.host:
                 continue
-            self.hass.config_entries.async_update_entry(
+            self.menuai.config_entries.async_update_entry(
                 entry,
                 title=zeroconf_properties["Machine Name"],
             )

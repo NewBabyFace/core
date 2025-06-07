@@ -4,22 +4,22 @@ from unittest.mock import AsyncMock, MagicMock, call
 
 import pytest
 
-from homeassistant.components.opentherm_gw import DOMAIN
-from homeassistant.components.opentherm_gw.const import OpenThermDeviceIdentifier
-from homeassistant.components.switch import (
+from menuai.components.opentherm_gw import DOMAIN
+from menuai.components.opentherm_gw.const import OpenThermDeviceIdentifier
+from menuai.components.switch import (
     DOMAIN as SWITCH_DOMAIN,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     CONF_ID,
     STATE_OFF,
     STATE_ON,
     STATE_UNKNOWN,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry
 
@@ -28,7 +28,7 @@ from tests.common import MockConfigEntry
     "entity_key", ["central_heating_1_override", "central_heating_2_override"]
 )
 async def test_switch_added_disabled(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_config_entry: MockConfigEntry,
     mock_pyotgw: MagicMock,
@@ -36,10 +36,10 @@ async def test_switch_added_disabled(
 ) -> None:
     """Test switch gets added in disabled state."""
 
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert (
         switch_entity_id := entity_registry.async_get_entity_id(
@@ -62,7 +62,7 @@ async def test_switch_added_disabled(
     ],
 )
 async def test_ch_override_switch(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_config_entry: MockConfigEntry,
     mock_pyotgw: MagicMock,
@@ -72,10 +72,10 @@ async def test_ch_override_switch(
     """Test central heating override switch."""
 
     setattr(mock_pyotgw.return_value, target_func, AsyncMock(side_effect=[0, 1]))
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert (
         switch_entity_id := entity_registry.async_get_entity_id(
@@ -84,9 +84,9 @@ async def test_ch_override_switch(
             f"{mock_config_entry.data[CONF_ID]}-{OpenThermDeviceIdentifier.GATEWAY}-{entity_key}",
         )
     ) is not None
-    assert hass.states.get(switch_entity_id).state == STATE_UNKNOWN
+    assert menuai.states.get(switch_entity_id).state == STATE_UNKNOWN
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_OFF,
         {
@@ -94,9 +94,9 @@ async def test_ch_override_switch(
         },
         blocking=True,
     )
-    assert hass.states.get(switch_entity_id).state == STATE_OFF
+    assert menuai.states.get(switch_entity_id).state == STATE_OFF
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -104,7 +104,7 @@ async def test_ch_override_switch(
         },
         blocking=True,
     )
-    assert hass.states.get(switch_entity_id).state == STATE_ON
+    assert menuai.states.get(switch_entity_id).state == STATE_ON
 
     mock_func = getattr(mock_pyotgw.return_value, target_func)
     assert mock_func.await_count == 2

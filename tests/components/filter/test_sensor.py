@@ -5,8 +5,8 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant import config as hass_config
-from homeassistant.components.filter.const import (
+from menuai import config as menuai_config
+from menuai.components.filter.const import (
     CONF_FILTER_NAME,
     CONF_FILTER_PRECISION,
     CONF_FILTER_WINDOW_SIZE,
@@ -17,7 +17,7 @@ from homeassistant.components.filter.const import (
     FILTER_NAME_TIME_SMA,
     TIME_SMA_LAST,
 )
-from homeassistant.components.filter.sensor import (
+from menuai.components.filter.sensor import (
     LowPassFilter,
     OutlierFilter,
     RangeFilter,
@@ -25,13 +25,13 @@ from homeassistant.components.filter.sensor import (
     TimeSMAFilter,
     TimeThrottleFilter,
 )
-from homeassistant.components.recorder import Recorder
-from homeassistant.components.sensor import (
+from menuai.components.recorder import Recorder
+from menuai.components.sensor import (
     ATTR_STATE_CLASS,
     SensorDeviceClass,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     ATTR_UNIT_OF_MEASUREMENT,
     CONF_ENTITY_ID,
@@ -41,10 +41,10 @@ from homeassistant.const import (
     STATE_UNKNOWN,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant, State
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai, State
+from menuai.helpers import entity_registry as er
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from tests.common import MockConfigEntry, assert_setup_component, get_fixture_path
 
@@ -66,7 +66,7 @@ def values_fixture() -> list[State]:
     return values
 
 
-async def test_setup_fail(hass: HomeAssistant) -> None:
+async def test_setup_fail(menuai: menuai) -> None:
     """Test if filter doesn't exist."""
     config = {
         "sensor": {
@@ -76,12 +76,12 @@ async def test_setup_fail(hass: HomeAssistant) -> None:
         }
     }
     with assert_setup_component(0):
-        assert await async_setup_component(hass, "sensor", config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, "sensor", config)
+        await menuai.async_block_till_done()
 
 
 async def test_chain(
-    recorder_mock: Recorder, hass: HomeAssistant, values: list[State]
+    recorder_mock: Recorder, menuai: menuai, values: list[State]
 ) -> None:
     """Test if filter chaining works."""
     config = {
@@ -98,25 +98,25 @@ async def test_chain(
     }
 
     with assert_setup_component(1, "sensor"):
-        assert await async_setup_component(hass, "sensor", config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, "sensor", config)
+        await menuai.async_block_till_done()
 
         for value in values:
-            hass.states.async_set(config["sensor"]["entity_id"], value.state)
-            await hass.async_block_till_done()
+            menuai.states.async_set(config["sensor"]["entity_id"], value.state)
+            await menuai.async_block_till_done()
 
-        state = hass.states.get("sensor.test")
+        state = menuai.states.get("sensor.test")
         assert state.state == "18.05"
 
 
 async def test_from_config_entry(
     recorder_mock: Recorder,
-    hass: HomeAssistant,
+    menuai: menuai,
     loaded_entry: MockConfigEntry,
 ) -> None:
     """Test if filter works loaded from config entry."""
 
-    state = hass.states.get("sensor.filtered_sensor")
+    state = menuai.states.get("sensor.filtered_sensor")
     assert state.state == "22.0"
 
 
@@ -135,19 +135,19 @@ async def test_from_config_entry(
 )
 async def test_from_config_entry_duration(
     recorder_mock: Recorder,
-    hass: HomeAssistant,
+    menuai: menuai,
     loaded_entry: MockConfigEntry,
 ) -> None:
     """Test if filter works loaded from config entry with duration."""
 
-    state = hass.states.get("sensor.filtered_sensor")
+    state = menuai.states.get("sensor.filtered_sensor")
     assert state.state == "20.0"
 
 
 @pytest.mark.parametrize("missing", [True, False])
 async def test_chain_history(
     recorder_mock: Recorder,
-    hass: HomeAssistant,
+    menuai: menuai,
     values: list[State],
     missing: bool,
 ) -> None:
@@ -184,30 +184,30 @@ async def test_chain_history(
 
     with (
         patch(
-            "homeassistant.components.recorder.history.state_changes_during_period",
+            "menuai.components.recorder.history.state_changes_during_period",
             return_value=fake_states,
         ),
         patch(
-            "homeassistant.components.recorder.history.get_last_state_changes",
+            "menuai.components.recorder.history.get_last_state_changes",
             return_value=fake_states,
         ),
     ):
         with assert_setup_component(1, "sensor"):
-            assert await async_setup_component(hass, "sensor", config)
-            await hass.async_block_till_done()
+            assert await async_setup_component(menuai, "sensor", config)
+            await menuai.async_block_till_done()
 
         for value in values:
-            hass.states.async_set(config["sensor"]["entity_id"], value.state)
-            await hass.async_block_till_done()
+            menuai.states.async_set(config["sensor"]["entity_id"], value.state)
+            await menuai.async_block_till_done()
 
-        state = hass.states.get("sensor.test")
+        state = menuai.states.get("sensor.test")
         if missing:
             assert state.state == "18.05"
         else:
             assert state.state == "17.05"
 
 
-async def test_source_state_none(recorder_mock: Recorder, hass: HomeAssistant) -> None:
+async def test_source_state_none(recorder_mock: Recorder, menuai: menuai) -> None:
     """Test is source sensor state is null and sets state to STATE_UNKNOWN."""
 
     config = {
@@ -234,40 +234,40 @@ async def test_source_state_none(recorder_mock: Recorder, hass: HomeAssistant) -
             },
         ]
     }
-    await async_setup_component(hass, "sensor", config)
-    await hass.async_block_till_done()
+    await async_setup_component(menuai, "sensor", config)
+    await menuai.async_block_till_done()
 
-    hass.states.async_set("sensor.test_state", 0)
+    menuai.states.async_set("sensor.test_state", 0)
 
-    await hass.async_block_till_done()
-    state = hass.states.get("sensor.template_test")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("sensor.template_test")
     assert state.state == "0"
 
-    await hass.async_block_till_done()
-    state = hass.states.get("sensor.test")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("sensor.test")
     assert state.state == "0.0"
 
     # Force Template Reload
     yaml_path = get_fixture_path("sensor_configuration.yaml", "template")
-    with patch.object(hass_config, "YAML_CONFIG_FILE", yaml_path):
-        await hass.services.async_call(
+    with patch.object(menuai_config, "YAML_CONFIG_FILE", yaml_path):
+        await menuai.services.async_call(
             "template",
             SERVICE_RELOAD,
             {},
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     # Template state gets to None
-    state = hass.states.get("sensor.template_test")
+    state = menuai.states.get("sensor.template_test")
     assert state is None
 
     # Filter sensor ignores None state setting state to STATE_UNKNOWN
-    state = hass.states.get("sensor.test")
+    state = menuai.states.get("sensor.test")
     assert state.state == STATE_UNKNOWN
 
 
-async def test_history_time(recorder_mock: Recorder, hass: HomeAssistant) -> None:
+async def test_history_time(recorder_mock: Recorder, menuai: menuai) -> None:
     """Test loading from history based on a time window."""
     config = {
         "sensor": {
@@ -291,25 +291,25 @@ async def test_history_time(recorder_mock: Recorder, hass: HomeAssistant) -> Non
     }
     with (
         patch(
-            "homeassistant.components.recorder.history.state_changes_during_period",
+            "menuai.components.recorder.history.state_changes_during_period",
             return_value=fake_states,
         ),
         patch(
-            "homeassistant.components.recorder.history.get_last_state_changes",
+            "menuai.components.recorder.history.get_last_state_changes",
             return_value=fake_states,
         ),
     ):
         with assert_setup_component(1, "sensor"):
-            assert await async_setup_component(hass, "sensor", config)
-            await hass.async_block_till_done()
+            assert await async_setup_component(menuai, "sensor", config)
+            await menuai.async_block_till_done()
 
-        await hass.async_block_till_done()
-        state = hass.states.get("sensor.test")
+        await menuai.async_block_till_done()
+        state = menuai.states.get("sensor.test")
         assert state.state == "18.0"
 
 
 async def test_setup(
-    recorder_mock: Recorder, hass: HomeAssistant, entity_registry: er.EntityRegistry
+    recorder_mock: Recorder, menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test if filter attributes are inherited."""
     config = {
@@ -325,10 +325,10 @@ async def test_setup(
     }
 
     with assert_setup_component(1, "sensor"):
-        assert await async_setup_component(hass, "sensor", config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, "sensor", config)
+        await menuai.async_block_till_done()
 
-        hass.states.async_set(
+        menuai.states.async_set(
             "sensor.test_monitored",
             1,
             {
@@ -338,8 +338,8 @@ async def test_setup(
                 ATTR_STATE_CLASS: SensorStateClass.MEASUREMENT,
             },
         )
-        await hass.async_block_till_done()
-        state = hass.states.get("sensor.test")
+        await menuai.async_block_till_done()
+        state = menuai.states.get("sensor.test")
         assert state.attributes["icon"] == "mdi:test"
         assert state.attributes[ATTR_DEVICE_CLASS] == SensorDeviceClass.TEMPERATURE
         assert state.attributes[ATTR_STATE_CLASS] is SensorStateClass.MEASUREMENT
@@ -351,7 +351,7 @@ async def test_setup(
         assert entity_id == "sensor.test"
 
 
-async def test_invalid_state(recorder_mock: Recorder, hass: HomeAssistant) -> None:
+async def test_invalid_state(recorder_mock: Recorder, menuai: menuai) -> None:
     """Test if filter attributes are inherited."""
     config = {
         "sensor": {
@@ -365,29 +365,29 @@ async def test_invalid_state(recorder_mock: Recorder, hass: HomeAssistant) -> No
     }
 
     with assert_setup_component(1, "sensor"):
-        assert await async_setup_component(hass, "sensor", config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, "sensor", config)
+        await menuai.async_block_till_done()
 
-        hass.states.async_set("sensor.test_monitored", "unknown")
-        await hass.async_block_till_done()
+        menuai.states.async_set("sensor.test_monitored", "unknown")
+        await menuai.async_block_till_done()
 
-        state = hass.states.get("sensor.test")
+        state = menuai.states.get("sensor.test")
         assert state.state == STATE_UNKNOWN
 
-        hass.states.async_set("sensor.test_monitored", STATE_UNAVAILABLE)
-        await hass.async_block_till_done()
+        menuai.states.async_set("sensor.test_monitored", STATE_UNAVAILABLE)
+        await menuai.async_block_till_done()
 
-        state = hass.states.get("sensor.test")
+        state = menuai.states.get("sensor.test")
         assert state.state == STATE_UNAVAILABLE
 
-        hass.states.async_set("sensor.test_monitored", "invalid")
-        await hass.async_block_till_done()
+        menuai.states.async_set("sensor.test_monitored", "invalid")
+        await menuai.async_block_till_done()
 
-        state = hass.states.get("sensor.test")
+        state = menuai.states.get("sensor.test")
         assert state.state == STATE_UNAVAILABLE
 
 
-async def test_timestamp_state(recorder_mock: Recorder, hass: HomeAssistant) -> None:
+async def test_timestamp_state(recorder_mock: Recorder, menuai: menuai) -> None:
     """Test if filter state is a datetime."""
     config = {
         "sensor": {
@@ -401,17 +401,17 @@ async def test_timestamp_state(recorder_mock: Recorder, hass: HomeAssistant) -> 
     }
 
     with assert_setup_component(1, "sensor"):
-        assert await async_setup_component(hass, "sensor", config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, "sensor", config)
+        await menuai.async_block_till_done()
 
-        hass.states.async_set(
+        menuai.states.async_set(
             "sensor.test_monitored",
             "2022-02-01T23:04:05+00:00",
             {ATTR_DEVICE_CLASS: SensorDeviceClass.TIMESTAMP},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-        state = hass.states.get("sensor.test")
+        state = menuai.states.get("sensor.test")
         assert state.state == "2022-02-01T23:04:05+00:00"
         assert state.attributes.get(ATTR_DEVICE_CLASS) == SensorDeviceClass.TIMESTAMP
 
@@ -545,11 +545,11 @@ def test_time_sma(values: list[State]) -> None:
     assert filtered.state == 21.5
 
 
-async def test_reload(recorder_mock: Recorder, hass: HomeAssistant) -> None:
+async def test_reload(recorder_mock: Recorder, menuai: menuai) -> None:
     """Verify we can reload filter sensors."""
-    hass.states.async_set("sensor.test_monitored", 12345)
+    menuai.states.async_set("sensor.test_monitored", 12345)
     await async_setup_component(
-        hass,
+        menuai,
         "sensor",
         {
             "sensor": {
@@ -564,26 +564,26 @@ async def test_reload(recorder_mock: Recorder, hass: HomeAssistant) -> None:
             }
         },
     )
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == 2
+    assert len(menuai.states.async_all()) == 2
 
-    assert hass.states.get("sensor.test")
+    assert menuai.states.get("sensor.test")
 
     yaml_path = get_fixture_path("configuration.yaml", "filter")
 
-    with patch.object(hass_config, "YAML_CONFIG_FILE", yaml_path):
-        await hass.services.async_call(
+    with patch.object(menuai_config, "YAML_CONFIG_FILE", yaml_path):
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_RELOAD,
             {},
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == 2
+    assert len(menuai.states.async_all()) == 2
 
-    assert hass.states.get("sensor.test") is None
-    assert hass.states.get("sensor.filtered_realistic_humidity")
+    assert menuai.states.get("sensor.test") is None
+    assert menuai.states.get("sensor.filtered_realistic_humidity")

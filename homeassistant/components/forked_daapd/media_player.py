@@ -9,8 +9,8 @@ from typing import Any
 
 from pylibrespot_java import LibrespotJavaAPI
 
-from homeassistant.components import media_source
-from homeassistant.components.media_player import (
+from menuai.components import media_source
+from menuai.components.media_player import (
     ATTR_MEDIA_ANNOUNCE,
     ATTR_MEDIA_ENQUEUE,
     BrowseMedia,
@@ -21,21 +21,21 @@ from homeassistant.components.media_player import (
     MediaType,
     async_process_play_media_url,
 )
-from homeassistant.components.spotify import (
+from menuai.components.spotify import (
     async_browse_media as spotify_async_browse_media,
     is_spotify_media_type,
     resolve_spotify_media_type,
     spotify_uri_from_media_browser_url,
 )
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.dispatcher import (
+from menuai.const import CONF_HOST
+from menuai.core import menuai, callback
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.dispatcher import (
     async_dispatcher_connect,
     async_dispatcher_send,
 )
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util.dt import utcnow
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util.dt import utcnow
 
 from .browse_media import (
     convert_to_owntone_uri,
@@ -76,7 +76,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ForkedDaapdConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -86,7 +86,7 @@ async def async_setup_entry(
     host: str = config_entry.data[CONF_HOST]
     forked_daapd_api = forked_daapd_updater.api
     forked_daapd_master = ForkedDaapdMaster(
-        clientsession=async_get_clientsession(hass),
+        clientsession=async_get_clientsession(menuai),
         api=forked_daapd_api,
         ip_address=host,
         config_entry=config_entry,
@@ -100,7 +100,7 @@ async def async_setup_entry(
 
     config_entry.async_on_unload(
         async_dispatcher_connect(
-            hass, SIGNAL_ADD_ZONES.format(config_entry.entry_id), async_add_zones
+            menuai, SIGNAL_ADD_ZONES.format(config_entry.entry_id), async_add_zones
         )
     )
     config_entry.async_on_unload(config_entry.add_update_listener(update_listener))
@@ -110,10 +110,10 @@ async def async_setup_entry(
     await forked_daapd_updater.async_init()
 
 
-async def update_listener(hass: HomeAssistant, entry: ForkedDaapdConfigEntry) -> None:
+async def update_listener(menuai: menuai, entry: ForkedDaapdConfigEntry) -> None:
     """Handle options update."""
     async_dispatcher_send(
-        hass, SIGNAL_CONFIG_OPTIONS_UPDATE.format(entry.entry_id), entry.options
+        menuai, SIGNAL_CONFIG_OPTIONS_UPDATE.format(entry.entry_id), entry.options
     )
 
 
@@ -131,11 +131,11 @@ class ForkedDaapdZone(MediaPlayerEntity):
         self._available = True
         self._entry_id = entry_id
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Use lifecycle hooks."""
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 SIGNAL_UPDATE_OUTPUTS.format(self._entry_id),
                 self._async_update_output_callback,
             )
@@ -259,46 +259,46 @@ class ForkedDaapdMaster(MediaPlayerEntity):
         self._source = SOURCE_NAME_DEFAULT
         self._max_playlists = None
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Use lifecycle hooks."""
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 SIGNAL_UPDATE_PLAYER.format(self._entry_id),
                 self._update_player,
             )
         )
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 SIGNAL_UPDATE_QUEUE.format(self._entry_id),
                 self._update_queue,
             )
         )
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 SIGNAL_UPDATE_OUTPUTS.format(self._entry_id),
                 self._update_outputs,
             )
         )
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 SIGNAL_UPDATE_MASTER.format(self._entry_id),
                 self._update_callback,
             )
         )
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 SIGNAL_CONFIG_OPTIONS_UPDATE.format(self._entry_id),
                 self.update_options,
             )
         )
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 SIGNAL_UPDATE_DATABASE.format(self._entry_id),
                 self._update_database,
             )
@@ -654,7 +654,7 @@ class ForkedDaapdMaster(MediaPlayerEntity):
         if media_source.is_media_source_id(media_id):
             media_type = MediaType.MUSIC
             play_item = await media_source.async_resolve_media(
-                self.hass, media_id, self.entity_id
+                self.menuai, media_id, self.entity_id
             )
             media_id = play_item.url
         elif is_owntone_media_content_id(media_id):
@@ -668,7 +668,7 @@ class ForkedDaapdMaster(MediaPlayerEntity):
             return
 
         if media_type == MediaType.MUSIC:
-            media_id = async_process_play_media_url(self.hass, media_id)
+            media_id = async_process_play_media_url(self.menuai, media_id)
         elif media_type not in CAN_PLAY_TYPE:
             _LOGGER.warning("Media type '%s' not supported", media_type)
             return
@@ -821,7 +821,7 @@ class ForkedDaapdMaster(MediaPlayerEntity):
             media_content_id
         ):
             ms_result = await media_source.async_browse_media(
-                self.hass,
+                self.menuai,
                 media_content_id,
                 content_filter=lambda bm: bm.media_content_type in CAN_PLAY_TYPE,
             )
@@ -830,11 +830,11 @@ class ForkedDaapdMaster(MediaPlayerEntity):
             other_sources: list[BrowseMedia] = (
                 list(ms_result.children) if ms_result.children else []
             )
-        if "spotify" in self.hass.config.components and (
+        if "spotify" in self.menuai.config.components and (
             media_content_type is None or is_spotify_media_type(media_content_type)
         ):
             spotify_result = await spotify_async_browse_media(
-                self.hass, media_content_type, media_content_id
+                self.menuai, media_content_type, media_content_id
             )
             if media_content_type is not None:
                 return spotify_result

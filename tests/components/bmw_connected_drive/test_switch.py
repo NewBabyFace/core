@@ -8,10 +8,10 @@ import pytest
 import respx
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
 
 from . import (
     REMOTE_SERVICE_EXC_REASON,
@@ -26,7 +26,7 @@ from tests.common import snapshot_platform
 @pytest.mark.usefixtures("bmw_fixture")
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_entity_state_attrs(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
 ) -> None:
@@ -34,12 +34,12 @@ async def test_entity_state_attrs(
 
     # Setup component
     with patch(
-        "homeassistant.components.bmw_connected_drive.PLATFORMS",
+        "menuai.components.bmw_connected_drive.PLATFORMS",
         [Platform.SWITCH],
     ):
-        mock_config_entry = await setup_mocked_integration(hass)
+        mock_config_entry = await setup_mocked_integration(menuai)
 
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
 
 @pytest.mark.parametrize(
@@ -52,7 +52,7 @@ async def test_entity_state_attrs(
     ],
 )
 async def test_service_call_success(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_id: str,
     new_value: str,
     old_value: str,
@@ -63,19 +63,19 @@ async def test_service_call_success(
     """Test successful switch change."""
 
     # Setup component
-    assert await setup_mocked_integration(hass)
-    hass.states.async_set(entity_id, old_value)
-    assert hass.states.get(entity_id).state == old_value
+    assert await setup_mocked_integration(menuai)
+    menuai.states.async_set(entity_id, old_value)
+    assert menuai.states.get(entity_id).state == old_value
 
     # Test
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch",
         f"turn_{new_value}",
         blocking=True,
         target={"entity_id": entity_id},
     )
     check_remote_service_call(bmw_fixture, remote_service, remote_service_params)
-    assert hass.states.get(entity_id).state == new_value
+    assert menuai.states.get(entity_id).state == new_value
 
 
 @pytest.mark.usefixtures("bmw_fixture")
@@ -84,18 +84,18 @@ async def test_service_call_success(
     [
         (
             MyBMWRemoteServiceError(REMOTE_SERVICE_EXC_REASON),
-            HomeAssistantError,
+            menuaiError,
             REMOTE_SERVICE_EXC_TRANSLATION,
         ),
         (
             MyBMWAPIError(REMOTE_SERVICE_EXC_REASON),
-            HomeAssistantError,
+            menuaiError,
             REMOTE_SERVICE_EXC_TRANSLATION,
         ),
     ],
 )
 async def test_service_call_fail(
-    hass: HomeAssistant,
+    menuai: menuai,
     raised: Exception,
     expected: Exception,
     exc_translation: str,
@@ -104,7 +104,7 @@ async def test_service_call_fail(
     """Test exception handling."""
 
     # Setup component
-    assert await setup_mocked_integration(hass)
+    assert await setup_mocked_integration(menuai)
     entity_id = "switch.i4_edrive40_climate"
 
     # Setup exception
@@ -116,30 +116,30 @@ async def test_service_call_fail(
 
     # Turning switch to ON
     old_value = "off"
-    hass.states.async_set(entity_id, old_value)
-    assert hass.states.get(entity_id).state == old_value
+    menuai.states.async_set(entity_id, old_value)
+    assert menuai.states.get(entity_id).state == old_value
 
     # Test
     with pytest.raises(expected, match=exc_translation):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "switch",
             "turn_on",
             blocking=True,
             target={"entity_id": entity_id},
         )
-    assert hass.states.get(entity_id).state == old_value
+    assert menuai.states.get(entity_id).state == old_value
 
     # Turning switch to OFF
     old_value = "on"
-    hass.states.async_set(entity_id, old_value)
-    assert hass.states.get(entity_id).state == old_value
+    menuai.states.async_set(entity_id, old_value)
+    assert menuai.states.get(entity_id).state == old_value
 
     # Test
     with pytest.raises(expected, match=exc_translation):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "switch",
             "turn_off",
             blocking=True,
             target={"entity_id": entity_id},
         )
-    assert hass.states.get(entity_id).state == old_value
+    assert menuai.states.get(entity_id).state == old_value

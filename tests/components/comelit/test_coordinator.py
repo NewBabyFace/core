@@ -6,9 +6,9 @@ from aiocomelit.exceptions import CannotAuthenticate, CannotConnect, CannotRetri
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.components.comelit.const import SCAN_INTERVAL
-from homeassistant.const import STATE_OFF, STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant
+from menuai.components.comelit.const import SCAN_INTERVAL
+from menuai.const import STATE_OFF, STATE_UNAVAILABLE
+from menuai.core import menuai
 
 from . import setup_integration
 
@@ -24,7 +24,7 @@ from tests.common import MockConfigEntry, async_fire_time_changed
     ],
 )
 async def test_coordinator_data_update_fails(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     mock_serial_bridge: AsyncMock,
     mock_serial_bridge_config_entry: MockConfigEntry,
@@ -34,16 +34,16 @@ async def test_coordinator_data_update_fails(
 
     entity_id = "light.light0"
 
-    await setup_integration(hass, mock_serial_bridge_config_entry)
+    await setup_integration(menuai, mock_serial_bridge_config_entry)
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_OFF
 
     mock_serial_bridge.login.side_effect = side_effect
 
     freezer.tick(SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_UNAVAILABLE

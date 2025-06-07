@@ -5,9 +5,9 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from homeassistant.const import ATTR_SUGGESTED_AREA
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity
+from menuai.const import ATTR_SUGGESTED_AREA
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity
 
 from .const import CONFIG_URL, DOMAIN, MANUFACTURER, UNASSIGNED_AREA
 from .models import LutronCasetaData
@@ -63,7 +63,7 @@ class LutronCasetaEntity(Entity):
             info[ATTR_SUGGESTED_AREA] = area
         self._attr_device_info = info
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
         self._smartbridge.add_subscriber(self.device_id, self.async_write_ha_state)
 

@@ -6,26 +6,26 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant import exceptions
-from homeassistant.const import CONF_FOR, CONF_PLATFORM, CONF_VALUE_TEMPLATE
-from homeassistant.core import (
+from menuai import exceptions
+from menuai.const import CONF_FOR, CONF_PLATFORM, CONF_VALUE_TEMPLATE
+from menuai.core import (
     CALLBACK_TYPE,
     Event,
     EventStateChangedData,
-    HassJob,
-    HomeAssistant,
+    menuaiJob,
+    menuai,
     callback,
 )
-from homeassistant.helpers import config_validation as cv, template
-from homeassistant.helpers.event import (
+from menuai.helpers import config_validation as cv, template
+from menuai.helpers.event import (
     TrackTemplate,
     TrackTemplateResult,
     async_call_later,
     async_track_template_result,
 )
-from homeassistant.helpers.template import Template, result_as_boolean
-from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers.template import Template, result_as_boolean
+from menuai.helpers.trigger import TriggerActionType, TriggerInfo
+from menuai.helpers.typing import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ TRIGGER_SCHEMA = IF_ACTION_SCHEMA = cv.TRIGGER_BASE_SCHEMA.extend(
 
 
 async def async_attach_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     action: TriggerActionType,
     trigger_info: TriggerInfo,
@@ -52,7 +52,7 @@ async def async_attach_trigger(
     value_template: Template = config[CONF_VALUE_TEMPLATE]
     time_delta = config.get(CONF_FOR)
     delay_cancel = None
-    job = HassJob(action)
+    job = menuaiJob(action)
     armed = False
 
     # Arm at setup if the template is already false.
@@ -123,7 +123,7 @@ async def async_attach_trigger(
         def call_action(*_: Any) -> None:
             """Call action with right context."""
             nonlocal trigger_variables
-            hass.async_run_hass_job(
+            menuai.async_run_menuai_job(
                 job,
                 {"trigger": {**template_variables, **trigger_variables}},
                 (to_s.context if to_s else None),
@@ -148,10 +148,10 @@ async def async_attach_trigger(
 
         trigger_variables["for"] = period
 
-        delay_cancel = async_call_later(hass, period.total_seconds(), call_action)
+        delay_cancel = async_call_later(menuai, period.total_seconds(), call_action)
 
     info = async_track_template_result(
-        hass,
+        menuai,
         [TrackTemplate(value_template, variables)],
         template_listener,
     )

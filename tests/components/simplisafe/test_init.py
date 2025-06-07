@@ -2,14 +2,14 @@
 
 from unittest.mock import patch
 
-from homeassistant.components.simplisafe import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.setup import async_setup_component
+from menuai.components.simplisafe import DOMAIN
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.setup import async_setup_component
 
 
 async def test_base_station_migration(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry, api, config, config_entry
+    menuai: menuai, device_registry: dr.DeviceRegistry, api, config, config_entry
 ) -> None:
     """Test that errors are shown when duplicates are added."""
     old_identifers = (DOMAIN, 12345)
@@ -24,27 +24,27 @@ async def test_base_station_migration(
 
     with (
         patch(
-            "homeassistant.components.simplisafe.config_flow.API.async_from_auth",
+            "menuai.components.simplisafe.config_flow.API.async_from_auth",
             return_value=api,
         ),
         patch(
-            "homeassistant.components.simplisafe.API.async_from_auth",
+            "menuai.components.simplisafe.API.async_from_auth",
             return_value=api,
         ),
         patch(
-            "homeassistant.components.simplisafe.API.async_from_refresh_token",
+            "menuai.components.simplisafe.API.async_from_refresh_token",
             return_value=api,
         ),
         patch(
-            "homeassistant.components.simplisafe.SimpliSafe._async_start_websocket_loop"
+            "menuai.components.simplisafe.SimpliSafe._async_start_websocket_loop"
         ),
         patch(
-            "homeassistant.components.simplisafe.PLATFORMS",
+            "menuai.components.simplisafe.PLATFORMS",
             [],
         ),
     ):
-        assert await async_setup_component(hass, DOMAIN, config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, config)
+        await menuai.async_block_till_done()
 
     assert device_registry.async_get_device(identifiers={old_identifers}) is None
     assert device_registry.async_get_device(identifiers={new_identifiers}) is not None

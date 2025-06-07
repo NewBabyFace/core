@@ -8,18 +8,18 @@ from typing import Any
 from sharkiq import OperatingModes, PowerModes, Properties, SharkIqVacuum
 import voluptuous as vol
 
-from homeassistant.components.vacuum import (
+from menuai.components.vacuum import (
     StateVacuumEntity,
     VacuumActivity,
     VacuumEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import config_validation as cv, entity_platform
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, LOGGER, SERVICE_CLEAN_ROOM, SHARK
 from .coordinator import SharkIqUpdateCoordinator
@@ -48,12 +48,12 @@ ATTR_ROOMS = "rooms"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Shark IQ vacuum cleaner."""
-    coordinator: SharkIqUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
+    coordinator: SharkIqUpdateCoordinator = menuai.data[DOMAIN][config_entry.entry_id]
     devices: Iterable[SharkIqVacuum] = coordinator.shark_vacs.values()
     device_names = [d.name for d in devices]
     LOGGER.debug(

@@ -12,10 +12,10 @@ from typing import Any
 from luftdaten import Luftdaten
 from luftdaten.exceptions import LuftdatenError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import CONF_SENSOR_ID, DEFAULT_SCAN_INTERVAL, DOMAIN
 
@@ -24,12 +24,12 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORMS = [Platform.SENSOR]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up Sensor.Community as config entry."""
 
     # For backwards compat, set unique ID
     if entry.unique_id is None:
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry, unique_id=str(entry.data[CONF_SENSOR_ID])
         )
 
@@ -50,7 +50,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         return data
 
     coordinator: DataUpdateCoordinator[dict[str, Any]] = DataUpdateCoordinator(
-        hass,
+        menuai,
         _LOGGER,
         config_entry=entry,
         name=f"{DOMAIN}_{sensor_community.sensor_id}",
@@ -59,14 +59,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
     await coordinator.async_config_entry_first_refresh()
 
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    menuai.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload an Sensor.Community config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        del hass.data[DOMAIN][entry.entry_id]
+    if unload_ok := await menuai.config_entries.async_unload_platforms(entry, PLATFORMS):
+        del menuai.data[DOMAIN][entry.entry_id]
     return unload_ok

@@ -8,8 +8,8 @@ from aioazuredevops.models.core import Project
 from aioazuredevops.models.work_item import WorkItem, WorkItemFields
 from aioazuredevops.models.work_item_type import Category, Icon, State, WorkItemType
 
-from homeassistant.components.azure_devops.const import CONF_ORG, CONF_PAT, CONF_PROJECT
-from homeassistant.core import HomeAssistant
+from menuai.components.azure_devops.const import CONF_ORG, CONF_PAT, CONF_PROJECT
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -131,13 +131,13 @@ DEVOPS_WORK_ITEMS = [
 
 
 async def setup_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
 ) -> bool:
     """Fixture for setting up the component."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    result = await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     return result

@@ -8,11 +8,11 @@ from typing import Any
 from goalzero import Yeti, exceptions
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_NAME
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_NAME
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
 
 from .const import DEFAULT_NAME, DOMAIN, MANUFACTURER
 
@@ -103,7 +103,7 @@ class GoalZeroFlowHandler(ConfigFlow, domain=DOMAIN):
     async def _async_try_connect(self, host: str) -> tuple[str | None, str | None]:
         """Try connecting to Goal Zero Yeti."""
         try:
-            api = Yeti(host, async_get_clientsession(self.hass))
+            api = Yeti(host, async_get_clientsession(self.menuai))
             await api.sysinfo()
         except exceptions.ConnectError:
             return None, "cannot_connect"

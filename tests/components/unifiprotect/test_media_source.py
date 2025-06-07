@@ -16,16 +16,16 @@ from uiprotect.data import (
 )
 from uiprotect.exceptions import NvrError
 
-from homeassistant.components.media_player import BrowseError, MediaClass
-from homeassistant.components.media_source import MediaSourceItem
-from homeassistant.components.unifiprotect.const import DOMAIN
-from homeassistant.components.unifiprotect.media_source import (
+from menuai.components.media_player import BrowseError, MediaClass
+from menuai.components.media_source import MediaSourceItem
+from menuai.components.unifiprotect.const import DOMAIN
+from menuai.components.unifiprotect.media_source import (
     ProtectMediaSource,
     async_get_media_source,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.util import dt as dt_util
 
 from .conftest import MockUFPFixture
 from .utils import init_entry
@@ -33,9 +33,9 @@ from .utils import init_entry
 from tests.common import MockConfigEntry
 
 
-async def test_get_media_source(hass: HomeAssistant) -> None:
+async def test_get_media_source(menuai: menuai) -> None:
     """Test the async_get_media_source function and ProtectMediaSource constructor."""
-    source = await async_get_media_source(hass)
+    source = await async_get_media_source(menuai)
     assert isinstance(source, ProtectMediaSource)
     assert source.domain == DOMAIN
 
@@ -50,27 +50,27 @@ async def test_get_media_source(hass: HomeAssistant) -> None:
     ],
 )
 async def test_resolve_media_bad_identifier(
-    hass: HomeAssistant, ufp: MockUFPFixture, identifier: str
+    menuai: menuai, ufp: MockUFPFixture, identifier: str
 ) -> None:
     """Test resolving bad identifiers."""
 
     ufp.api.get_bootstrap = AsyncMock(return_value=ufp.api.bootstrap)
     ufp.api.get_event = AsyncMock(side_effect=NvrError)
-    await init_entry(hass, ufp, [], regenerate_ids=False)
+    await init_entry(menuai, ufp, [], regenerate_ids=False)
 
-    source = await async_get_media_source(hass)
-    media_item = MediaSourceItem(hass, DOMAIN, identifier, None)
+    source = await async_get_media_source(menuai)
+    media_item = MediaSourceItem(menuai, DOMAIN, identifier, None)
     with pytest.raises(BrowseError):
         await source.async_resolve_media(media_item)
 
 
 async def test_resolve_media_thumbnail(
-    hass: HomeAssistant, ufp: MockUFPFixture, doorbell: Camera, fixed_now: datetime
+    menuai: menuai, ufp: MockUFPFixture, doorbell: Camera, fixed_now: datetime
 ) -> None:
     """Test resolving event thumbnails."""
 
     ufp.api.get_bootstrap = AsyncMock(return_value=ufp.api.bootstrap)
-    await init_entry(hass, ufp, [doorbell], regenerate_ids=False)
+    await init_entry(menuai, ufp, [doorbell], regenerate_ids=False)
 
     event = Event(
         model=ModelType.EVENT,
@@ -86,8 +86,8 @@ async def test_resolve_media_thumbnail(
     event._api = ufp.api
     ufp.api.bootstrap.events = {"test_event_id": event}
 
-    source = await async_get_media_source(hass)
-    media_item = MediaSourceItem(hass, DOMAIN, "test_id:eventthumb:test_event_id", None)
+    source = await async_get_media_source(menuai)
+    media_item = MediaSourceItem(menuai, DOMAIN, "test_id:eventthumb:test_event_id", None)
     play_media = await source.async_resolve_media(media_item)
 
     assert play_media.mime_type == "image/jpeg"
@@ -97,12 +97,12 @@ async def test_resolve_media_thumbnail(
 
 
 async def test_resolve_media_event(
-    hass: HomeAssistant, ufp: MockUFPFixture, doorbell: Camera, fixed_now: datetime
+    menuai: menuai, ufp: MockUFPFixture, doorbell: Camera, fixed_now: datetime
 ) -> None:
     """Test resolving event clips."""
 
     ufp.api.get_bootstrap = AsyncMock(return_value=ufp.api.bootstrap)
-    await init_entry(hass, ufp, [doorbell], regenerate_ids=False)
+    await init_entry(menuai, ufp, [doorbell], regenerate_ids=False)
 
     event = Event(
         model=ModelType.EVENT,
@@ -118,8 +118,8 @@ async def test_resolve_media_event(
     event._api = ufp.api
     ufp.api.get_event = AsyncMock(return_value=event)
 
-    source = await async_get_media_source(hass)
-    media_item = MediaSourceItem(hass, DOMAIN, "test_id:event:test_event_id", None)
+    source = await async_get_media_source(menuai)
+    media_item = MediaSourceItem(menuai, DOMAIN, "test_id:event:test_event_id", None)
     play_media = await source.async_resolve_media(media_item)
 
     start = event.start.replace(microsecond=0).isoformat()
@@ -152,27 +152,27 @@ async def test_resolve_media_event(
     ],
 )
 async def test_browse_media_bad_identifier(
-    hass: HomeAssistant, ufp: MockUFPFixture, identifier: str
+    menuai: menuai, ufp: MockUFPFixture, identifier: str
 ) -> None:
     """Test browsing media with bad identifiers."""
 
     ufp.api.get_bootstrap = AsyncMock(return_value=ufp.api.bootstrap)
     ufp.api.get_event = AsyncMock(side_effect=NvrError)
-    await init_entry(hass, ufp, [], regenerate_ids=False)
+    await init_entry(menuai, ufp, [], regenerate_ids=False)
 
-    source = await async_get_media_source(hass)
-    media_item = MediaSourceItem(hass, DOMAIN, identifier, None)
+    source = await async_get_media_source(menuai)
+    media_item = MediaSourceItem(menuai, DOMAIN, identifier, None)
     with pytest.raises(BrowseError):
         await source.async_browse_media(media_item)
 
 
 async def test_browse_media_event_ongoing(
-    hass: HomeAssistant, ufp: MockUFPFixture, fixed_now: datetime, doorbell: Camera
+    menuai: menuai, ufp: MockUFPFixture, fixed_now: datetime, doorbell: Camera
 ) -> None:
     """Test browsing event that is still ongoing."""
 
     ufp.api.get_bootstrap = AsyncMock(return_value=ufp.api.bootstrap)
-    await init_entry(hass, ufp, [doorbell], regenerate_ids=False)
+    await init_entry(menuai, ufp, [doorbell], regenerate_ids=False)
 
     event = Event(
         model=ModelType.EVENT,
@@ -188,21 +188,21 @@ async def test_browse_media_event_ongoing(
     event._api = ufp.api
     ufp.api.get_event = AsyncMock(return_value=event)
 
-    source = await async_get_media_source(hass)
-    media_item = MediaSourceItem(hass, DOMAIN, f"test_id:event:{event.id}", None)
+    source = await async_get_media_source(menuai)
+    media_item = MediaSourceItem(menuai, DOMAIN, f"test_id:event:{event.id}", None)
     with pytest.raises(BrowseError):
         await source.async_browse_media(media_item)
 
 
 async def test_browse_media_root_multiple_consoles(
-    hass: HomeAssistant, ufp: MockUFPFixture, bootstrap: Bootstrap
+    menuai: menuai, ufp: MockUFPFixture, bootstrap: Bootstrap
 ) -> None:
     """Test browsing root level media with multiple consoles."""
 
     ufp.api.bootstrap._has_media = True
 
-    await hass.config_entries.async_setup(ufp.entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(ufp.entry.entry_id)
+    await menuai.async_block_till_done()
 
     bootstrap2 = bootstrap.model_copy()
     bootstrap2._has_media = True
@@ -226,7 +226,7 @@ async def test_browse_media_root_multiple_consoles(
     api2.async_disconnect_ws = AsyncMock()
 
     with patch(
-        "homeassistant.components.unifiprotect.utils.ProtectApiClient"
+        "menuai.components.unifiprotect.utils.ProtectApiClient"
     ) as mock_api:
         mock_config = MockConfigEntry(
             domain=DOMAIN,
@@ -240,15 +240,15 @@ async def test_browse_media_root_multiple_consoles(
             },
             version=2,
         )
-        mock_config.add_to_hass(hass)
+        mock_config.add_to_menuai(menuai)
 
         mock_api.return_value = api2
 
-        await hass.config_entries.async_setup(mock_config.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(mock_config.entry_id)
+        await menuai.async_block_till_done()
 
-    source = await async_get_media_source(hass)
-    media_item = MediaSourceItem(hass, DOMAIN, None, None)
+    source = await async_get_media_source(menuai)
+    media_item = MediaSourceItem(menuai, DOMAIN, None, None)
 
     browse = await source.async_browse_media(media_item)
 
@@ -261,14 +261,14 @@ async def test_browse_media_root_multiple_consoles(
 
 
 async def test_browse_media_root_multiple_consoles_only_one_media(
-    hass: HomeAssistant, ufp: MockUFPFixture, bootstrap: Bootstrap
+    menuai: menuai, ufp: MockUFPFixture, bootstrap: Bootstrap
 ) -> None:
     """Test browsing root level media with multiple consoles."""
 
     ufp.api.bootstrap._has_media = True
 
-    await hass.config_entries.async_setup(ufp.entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(ufp.entry.entry_id)
+    await menuai.async_block_till_done()
 
     bootstrap2 = bootstrap.model_copy()
     bootstrap2._has_media = False
@@ -291,7 +291,7 @@ async def test_browse_media_root_multiple_consoles_only_one_media(
     api2.async_disconnect_ws = AsyncMock()
 
     with patch(
-        "homeassistant.components.unifiprotect.utils.ProtectApiClient"
+        "menuai.components.unifiprotect.utils.ProtectApiClient"
     ) as mock_api:
         mock_config = MockConfigEntry(
             domain=DOMAIN,
@@ -305,15 +305,15 @@ async def test_browse_media_root_multiple_consoles_only_one_media(
             },
             version=2,
         )
-        mock_config.add_to_hass(hass)
+        mock_config.add_to_menuai(menuai)
 
         mock_api.return_value = api2
 
-        await hass.config_entries.async_setup(mock_config.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(mock_config.entry_id)
+        await menuai.async_block_till_done()
 
-    source = await async_get_media_source(hass)
-    media_item = MediaSourceItem(hass, DOMAIN, None, None)
+    source = await async_get_media_source(menuai)
+    media_item = MediaSourceItem(menuai, DOMAIN, None, None)
 
     browse = await source.async_browse_media(media_item)
 
@@ -325,15 +325,15 @@ async def test_browse_media_root_multiple_consoles_only_one_media(
 
 
 async def test_browse_media_root_single_console(
-    hass: HomeAssistant, ufp: MockUFPFixture, doorbell: Camera
+    menuai: menuai, ufp: MockUFPFixture, doorbell: Camera
 ) -> None:
     """Test browsing root level media with a single console."""
 
     ufp.api.get_bootstrap = AsyncMock(return_value=ufp.api.bootstrap)
-    await init_entry(hass, ufp, [doorbell], regenerate_ids=False)
+    await init_entry(menuai, ufp, [doorbell], regenerate_ids=False)
 
-    source = await async_get_media_source(hass)
-    media_item = MediaSourceItem(hass, DOMAIN, None, None)
+    source = await async_get_media_source(menuai)
+    media_item = MediaSourceItem(menuai, DOMAIN, None, None)
 
     browse = await source.async_browse_media(media_item)
 
@@ -348,7 +348,7 @@ async def test_browse_media_root_single_console(
 
 
 async def test_browse_media_camera(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     ufp: MockUFPFixture,
     doorbell: Camera,
@@ -357,7 +357,7 @@ async def test_browse_media_camera(
     """Test browsing camera selector level media."""
 
     ufp.api.get_bootstrap = AsyncMock(return_value=ufp.api.bootstrap)
-    await init_entry(hass, ufp, [doorbell, camera])
+    await init_entry(menuai, ufp, [doorbell, camera])
 
     ufp.api.bootstrap.auth_user.all_permissions = [
         Permission.unifi_dict_to_dict(
@@ -372,10 +372,10 @@ async def test_browse_media_camera(
         "camera.test_camera_high_resolution_channel",
         disabled_by=er.RegistryEntryDisabler("user"),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    source = await async_get_media_source(hass)
-    media_item = MediaSourceItem(hass, DOMAIN, "test_id:browse", None)
+    source = await async_get_media_source(menuai)
+    media_item = MediaSourceItem(menuai, DOMAIN, "test_id:browse", None)
 
     browse = await source.async_browse_media(media_item)
 
@@ -390,17 +390,17 @@ async def test_browse_media_camera(
 
 
 async def test_browse_media_camera_offline(
-    hass: HomeAssistant, ufp: MockUFPFixture, doorbell: Camera
+    menuai: menuai, ufp: MockUFPFixture, doorbell: Camera
 ) -> None:
     """Test browsing camera selector level media when camera is offline."""
 
     doorbell.is_connected = False
 
     ufp.api.get_bootstrap = AsyncMock(return_value=ufp.api.bootstrap)
-    await init_entry(hass, ufp, [doorbell])
+    await init_entry(menuai, ufp, [doorbell])
 
-    source = await async_get_media_source(hass)
-    media_item = MediaSourceItem(hass, DOMAIN, "test_id:browse", None)
+    source = await async_get_media_source(menuai)
+    media_item = MediaSourceItem(menuai, DOMAIN, "test_id:browse", None)
 
     browse = await source.async_browse_media(media_item)
 
@@ -415,15 +415,15 @@ async def test_browse_media_camera_offline(
 
 
 async def test_browse_media_event_type(
-    hass: HomeAssistant, ufp: MockUFPFixture, doorbell: Camera
+    menuai: menuai, ufp: MockUFPFixture, doorbell: Camera
 ) -> None:
     """Test browsing event type selector level media."""
 
     ufp.api.get_bootstrap = AsyncMock(return_value=ufp.api.bootstrap)
-    await init_entry(hass, ufp, [doorbell], regenerate_ids=False)
+    await init_entry(menuai, ufp, [doorbell], regenerate_ids=False)
 
-    source = await async_get_media_source(hass)
-    media_item = MediaSourceItem(hass, DOMAIN, "test_id:browse:all", None)
+    source = await async_get_media_source(menuai)
+    media_item = MediaSourceItem(menuai, DOMAIN, "test_id:browse:all", None)
 
     browse = await source.async_browse_media(media_item)
 
@@ -476,7 +476,7 @@ TWO_MONTH_SIMPLE = (
 )
 @pytest.mark.freeze_time("2022-09-15 03:00:00-07:00")
 async def test_browse_media_time(
-    hass: HomeAssistant,
+    menuai: menuai,
     ufp: MockUFPFixture,
     doorbell: Camera,
     start: datetime,
@@ -490,11 +490,11 @@ async def test_browse_media_time(
     ufp.api.bootstrap._recording_start = dt_util.as_utc(start)
 
     ufp.api.get_bootstrap = AsyncMock(return_value=ufp.api.bootstrap)
-    await init_entry(hass, ufp, [doorbell], regenerate_ids=False)
+    await init_entry(menuai, ufp, [doorbell], regenerate_ids=False)
 
     base_id = f"test_id:browse:{doorbell.id}:all"
-    source = await async_get_media_source(hass)
-    media_item = MediaSourceItem(hass, DOMAIN, base_id, None)
+    source = await async_get_media_source(menuai)
+    media_item = MediaSourceItem(menuai, DOMAIN, base_id, None)
 
     browse = await source.async_browse_media(media_item)
 
@@ -548,7 +548,7 @@ TWO_MONTH_TIMEZONE = (
 )
 @pytest.mark.freeze_time("2022-08-31 21:00:00-07:00")
 async def test_browse_media_time_timezone(
-    hass: HomeAssistant,
+    menuai: menuai,
     ufp: MockUFPFixture,
     doorbell: Camera,
     start: datetime,
@@ -562,11 +562,11 @@ async def test_browse_media_time_timezone(
     ufp.api.bootstrap._recording_start = dt_util.as_utc(start)
 
     ufp.api.get_bootstrap = AsyncMock(return_value=ufp.api.bootstrap)
-    await init_entry(hass, ufp, [doorbell], regenerate_ids=False)
+    await init_entry(menuai, ufp, [doorbell], regenerate_ids=False)
 
     base_id = f"test_id:browse:{doorbell.id}:all"
-    source = await async_get_media_source(hass)
-    media_item = MediaSourceItem(hass, DOMAIN, base_id, None)
+    source = await async_get_media_source(menuai)
+    media_item = MediaSourceItem(menuai, DOMAIN, base_id, None)
 
     browse = await source.async_browse_media(media_item)
 
@@ -587,12 +587,12 @@ async def test_browse_media_time_timezone(
 
 
 async def test_browse_media_recent(
-    hass: HomeAssistant, ufp: MockUFPFixture, doorbell: Camera, fixed_now: datetime
+    menuai: menuai, ufp: MockUFPFixture, doorbell: Camera, fixed_now: datetime
 ) -> None:
     """Test browsing event selector level media for recent days."""
 
     ufp.api.get_bootstrap = AsyncMock(return_value=ufp.api.bootstrap)
-    await init_entry(hass, ufp, [doorbell], regenerate_ids=False)
+    await init_entry(menuai, ufp, [doorbell], regenerate_ids=False)
 
     event = Event(
         model=ModelType.EVENT,
@@ -609,8 +609,8 @@ async def test_browse_media_recent(
     ufp.api.get_events_raw = AsyncMock(return_value=[event.unifi_dict()])
 
     base_id = f"test_id:browse:{doorbell.id}:motion:recent:1"
-    source = await async_get_media_source(hass)
-    media_item = MediaSourceItem(hass, DOMAIN, base_id, None)
+    source = await async_get_media_source(menuai)
+    media_item = MediaSourceItem(menuai, DOMAIN, base_id, None)
 
     browse = await source.async_browse_media(media_item)
 
@@ -624,13 +624,13 @@ async def test_browse_media_recent(
 
 
 async def test_browse_media_recent_truncated(
-    hass: HomeAssistant, ufp: MockUFPFixture, doorbell: Camera, fixed_now: datetime
+    menuai: menuai, ufp: MockUFPFixture, doorbell: Camera, fixed_now: datetime
 ) -> None:
     """Test browsing event selector level media for recent days."""
-    hass.config_entries.async_update_entry(ufp.entry, options={"max_media": 1})
+    menuai.config_entries.async_update_entry(ufp.entry, options={"max_media": 1})
 
     ufp.api.get_bootstrap = AsyncMock(return_value=ufp.api.bootstrap)
-    await init_entry(hass, ufp, [doorbell], regenerate_ids=False)
+    await init_entry(menuai, ufp, [doorbell], regenerate_ids=False)
 
     event = Event(
         model=ModelType.EVENT,
@@ -647,8 +647,8 @@ async def test_browse_media_recent_truncated(
     ufp.api.get_events_raw = AsyncMock(return_value=[event.unifi_dict()])
 
     base_id = f"test_id:browse:{doorbell.id}:motion:recent:1"
-    source = await async_get_media_source(hass)
-    media_item = MediaSourceItem(hass, DOMAIN, base_id, None)
+    source = await async_get_media_source(menuai)
+    media_item = MediaSourceItem(menuai, DOMAIN, base_id, None)
 
     browse = await source.async_browse_media(media_item)
 
@@ -882,7 +882,7 @@ async def test_browse_media_recent_truncated(
     ],
 )
 async def test_browse_media_event(
-    hass: HomeAssistant,
+    menuai: menuai,
     ufp: MockUFPFixture,
     doorbell: Camera,
     fixed_now: datetime,
@@ -892,7 +892,7 @@ async def test_browse_media_event(
     """Test browsing specific event."""
 
     ufp.api.get_bootstrap = AsyncMock(return_value=ufp.api.bootstrap)
-    await init_entry(hass, ufp, [doorbell], regenerate_ids=False)
+    await init_entry(menuai, ufp, [doorbell], regenerate_ids=False)
 
     event.start = fixed_now - timedelta(seconds=20)
     event.end = fixed_now
@@ -900,8 +900,8 @@ async def test_browse_media_event(
     event._api = ufp.api
     ufp.api.get_event = AsyncMock(return_value=event)
 
-    source = await async_get_media_source(hass)
-    media_item = MediaSourceItem(hass, DOMAIN, "test_id:event:test_event_id", None)
+    source = await async_get_media_source(menuai)
+    media_item = MediaSourceItem(menuai, DOMAIN, "test_id:event:test_event_id", None)
 
     browse = await source.async_browse_media(media_item)
     # chop off the datetime/duration
@@ -914,12 +914,12 @@ async def test_browse_media_event(
 
 
 async def test_browse_media_eventthumb(
-    hass: HomeAssistant, ufp: MockUFPFixture, doorbell: Camera, fixed_now: datetime
+    menuai: menuai, ufp: MockUFPFixture, doorbell: Camera, fixed_now: datetime
 ) -> None:
     """Test browsing specific event."""
 
     ufp.api.get_bootstrap = AsyncMock(return_value=ufp.api.bootstrap)
-    await init_entry(hass, ufp, [doorbell], regenerate_ids=False)
+    await init_entry(menuai, ufp, [doorbell], regenerate_ids=False)
 
     event = Event(
         model=ModelType.EVENT,
@@ -935,8 +935,8 @@ async def test_browse_media_eventthumb(
     event._api = ufp.api
     ufp.api.get_event = AsyncMock(return_value=event)
 
-    source = await async_get_media_source(hass)
-    media_item = MediaSourceItem(hass, DOMAIN, "test_id:eventthumb:test_event_id", None)
+    source = await async_get_media_source(menuai)
+    media_item = MediaSourceItem(menuai, DOMAIN, "test_id:eventthumb:test_event_id", None)
 
     browse = await source.async_browse_media(media_item)
 
@@ -947,7 +947,7 @@ async def test_browse_media_eventthumb(
 
 @pytest.mark.freeze_time("2022-09-15 03:00:00-07:00")
 async def test_browse_media_day(
-    hass: HomeAssistant, ufp: MockUFPFixture, doorbell: Camera
+    menuai: menuai, ufp: MockUFPFixture, doorbell: Camera
 ) -> None:
     """Test browsing day selector level media."""
 
@@ -956,11 +956,11 @@ async def test_browse_media_day(
     ufp.api.bootstrap._recording_start = dt_util.as_utc(start)
 
     ufp.api.get_bootstrap = AsyncMock(return_value=ufp.api.bootstrap)
-    await init_entry(hass, ufp, [doorbell], regenerate_ids=False)
+    await init_entry(menuai, ufp, [doorbell], regenerate_ids=False)
 
     base_id = f"test_id:browse:{doorbell.id}:all:range:{end.year}:{end.month}"
-    source = await async_get_media_source(hass)
-    media_item = MediaSourceItem(hass, DOMAIN, base_id, None)
+    source = await async_get_media_source(menuai)
+    media_item = MediaSourceItem(menuai, DOMAIN, base_id, None)
 
     browse = await source.async_browse_media(media_item)
 
@@ -975,7 +975,7 @@ async def test_browse_media_day(
 
 
 async def test_browse_media_browse_day(
-    hass: HomeAssistant, ufp: MockUFPFixture, doorbell: Camera, fixed_now: datetime
+    menuai: menuai, ufp: MockUFPFixture, doorbell: Camera, fixed_now: datetime
 ) -> None:
     """Test events for a specific day."""
 
@@ -983,7 +983,7 @@ async def test_browse_media_browse_day(
     ufp.api.bootstrap._recording_start = last_month
 
     ufp.api.get_bootstrap = AsyncMock(return_value=ufp.api.bootstrap)
-    await init_entry(hass, ufp, [doorbell], regenerate_ids=False)
+    await init_entry(menuai, ufp, [doorbell], regenerate_ids=False)
 
     event = Event(
         model=ModelType.EVENT,
@@ -1000,8 +1000,8 @@ async def test_browse_media_browse_day(
     ufp.api.get_events_raw = AsyncMock(return_value=[event.unifi_dict()])
 
     base_id = f"test_id:browse:{doorbell.id}:motion:range:{fixed_now.year}:{fixed_now.month}:1"
-    source = await async_get_media_source(hass)
-    media_item = MediaSourceItem(hass, DOMAIN, base_id, None)
+    source = await async_get_media_source(menuai)
+    media_item = MediaSourceItem(menuai, DOMAIN, base_id, None)
 
     browse = await source.async_browse_media(media_item)
 
@@ -1016,7 +1016,7 @@ async def test_browse_media_browse_day(
 
 
 async def test_browse_media_browse_whole_month(
-    hass: HomeAssistant, ufp: MockUFPFixture, doorbell: Camera, fixed_now: datetime
+    menuai: menuai, ufp: MockUFPFixture, doorbell: Camera, fixed_now: datetime
 ) -> None:
     """Test events for a specific day."""
 
@@ -1025,7 +1025,7 @@ async def test_browse_media_browse_whole_month(
     ufp.api.bootstrap._recording_start = last_month
 
     ufp.api.get_bootstrap = AsyncMock(return_value=ufp.api.bootstrap)
-    await init_entry(hass, ufp, [doorbell], regenerate_ids=False)
+    await init_entry(menuai, ufp, [doorbell], regenerate_ids=False)
 
     event = Event(
         model=ModelType.EVENT,
@@ -1044,8 +1044,8 @@ async def test_browse_media_browse_whole_month(
     base_id = (
         f"test_id:browse:{doorbell.id}:all:range:{fixed_now.year}:{fixed_now.month}:all"
     )
-    source = await async_get_media_source(hass)
-    media_item = MediaSourceItem(hass, DOMAIN, base_id, None)
+    source = await async_get_media_source(menuai)
+    media_item = MediaSourceItem(menuai, DOMAIN, base_id, None)
 
     browse = await source.async_browse_media(media_item)
 
@@ -1059,7 +1059,7 @@ async def test_browse_media_browse_whole_month(
 
 
 async def test_browse_media_browse_whole_month_december(
-    hass: HomeAssistant, ufp: MockUFPFixture, doorbell: Camera, fixed_now: datetime
+    menuai: menuai, ufp: MockUFPFixture, doorbell: Camera, fixed_now: datetime
 ) -> None:
     """Test events for a specific day."""
 
@@ -1068,7 +1068,7 @@ async def test_browse_media_browse_whole_month_december(
     ufp.api.bootstrap._recording_start = last_month
 
     ufp.api.get_bootstrap = AsyncMock(return_value=ufp.api.bootstrap)
-    await init_entry(hass, ufp, [doorbell], regenerate_ids=False)
+    await init_entry(menuai, ufp, [doorbell], regenerate_ids=False)
 
     event1 = Event(
         model=ModelType.EVENT,
@@ -1131,8 +1131,8 @@ async def test_browse_media_browse_whole_month_december(
     base_id = (
         f"test_id:browse:{doorbell.id}:all:range:{fixed_now.year}:{fixed_now.month}:all"
     )
-    source = await async_get_media_source(hass)
-    media_item = MediaSourceItem(hass, DOMAIN, base_id, None)
+    source = await async_get_media_source(menuai)
+    media_item = MediaSourceItem(menuai, DOMAIN, base_id, None)
 
     browse = await source.async_browse_media(media_item)
 

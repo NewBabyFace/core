@@ -15,16 +15,16 @@ from aiogithubapi import (
 from aiogithubapi.const import OAUTH_USER_LOGIN
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_ACCESS_TOKEN
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import (
+from menuai.const import CONF_ACCESS_TOKEN
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import (
     SERVER_SOFTWARE,
     async_get_clientsession,
 )
@@ -32,9 +32,9 @@ from homeassistant.helpers.aiohttp_client import (
 from .const import CLIENT_ID, CONF_REPOSITORIES, DEFAULT_REPOSITORIES, DOMAIN, LOGGER
 
 
-async def get_repositories(hass: HomeAssistant, access_token: str) -> list[str]:
+async def get_repositories(menuai: menuai, access_token: str) -> list[str]:
     """Return a list of repositories that the user owns or has starred."""
-    client = GitHubAPI(token=access_token, session=async_get_clientsession(hass))
+    client = GitHubAPI(token=access_token, session=async_get_clientsession(menuai))
     repositories = set()
 
     async def _get_starred_repositories() -> None:
@@ -136,7 +136,7 @@ class GitHubConfigFlow(ConfigFlow, domain=DOMAIN):
         if not self._device:
             self._device = GitHubDeviceAPI(
                 client_id=CLIENT_ID,
-                session=async_get_clientsession(self.hass),
+                session=async_get_clientsession(self.menuai),
                 client_name=SERVER_SOFTWARE,
             )
 
@@ -148,7 +148,7 @@ class GitHubConfigFlow(ConfigFlow, domain=DOMAIN):
                 return self.async_abort(reason="could_not_register")
 
         if self.login_task is None:
-            self.login_task = self.hass.async_create_task(_wait_for_login())
+            self.login_task = self.menuai.async_create_task(_wait_for_login())
 
         if self.login_task.done():
             if self.login_task.exception():
@@ -180,7 +180,7 @@ class GitHubConfigFlow(ConfigFlow, domain=DOMAIN):
             assert self._login is not None
 
         if not user_input:
-            repositories = await get_repositories(self.hass, self._login.access_token)
+            repositories = await get_repositories(self.menuai, self._login.access_token)
             return self.async_show_form(
                 step_id="repositories",
                 data_schema=vol.Schema(
@@ -227,7 +227,7 @@ class OptionsFlowHandler(OptionsFlow):
                 CONF_REPOSITORIES
             ]
             repositories = await get_repositories(
-                self.hass, self.config_entry.data[CONF_ACCESS_TOKEN]
+                self.menuai, self.config_entry.data[CONF_ACCESS_TOKEN]
             )
 
             # In case the user has removed a starred repository that is already tracked

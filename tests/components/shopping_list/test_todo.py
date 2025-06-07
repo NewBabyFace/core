@@ -5,16 +5,16 @@ from typing import Any
 
 import pytest
 
-from homeassistant.components.todo import (
+from menuai.components.todo import (
     ATTR_ITEM,
     ATTR_RENAME,
     ATTR_STATUS,
     DOMAIN as TODO_DOMAIN,
     TodoServices,
 )
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
 
 from tests.typing import WebSocketGenerator
 
@@ -25,12 +25,12 @@ type WsMoveItemType = Callable[[str, str | None], Coroutine[Any, Any, dict[str, 
 
 
 @pytest.fixture
-async def ws_get_items(hass_ws_client: WebSocketGenerator) -> WsGetItemsType:
+async def ws_get_items(menuai_ws_client: WebSocketGenerator) -> WsGetItemsType:
     """Fixture to fetch items from the todo websocket."""
 
     async def get() -> list[dict[str, str]]:
         # Fetch items using To-do platform
-        client = await hass_ws_client()
+        client = await menuai_ws_client()
         await client.send_json_auto_id(
             {
                 "type": "todo/item/list",
@@ -45,12 +45,12 @@ async def ws_get_items(hass_ws_client: WebSocketGenerator) -> WsGetItemsType:
 
 
 @pytest.fixture
-async def ws_move_item(hass_ws_client: WebSocketGenerator) -> WsMoveItemType:
+async def ws_move_item(menuai_ws_client: WebSocketGenerator) -> WsMoveItemType:
     """Fixture to move an item in the todo list."""
 
     async def move(uid: str, previous_uid: str | None) -> dict[str, Any]:
         # Fetch items using To-do platform
-        client = await hass_ws_client()
+        client = await menuai_ws_client()
         data = {
             "type": "todo/item/move",
             "entity_id": TEST_ENTITY,
@@ -65,15 +65,15 @@ async def ws_move_item(hass_ws_client: WebSocketGenerator) -> WsMoveItemType:
 
 
 async def test_get_items(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     sl_setup: None,
     ws_get_items: WsGetItemsType,
 ) -> None:
     """Test creating a shopping list item with the WS API and verifying with To-do API."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
     assert state
     assert state.state == "0"
 
@@ -91,18 +91,18 @@ async def test_get_items(
     assert items[0]["summary"] == "soda"
     assert items[0]["status"] == "needs_action"
 
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
     assert state
     assert state.state == "1"
 
 
 async def test_add_item(
-    hass: HomeAssistant,
+    menuai: menuai,
     sl_setup: None,
     ws_get_items: WsGetItemsType,
 ) -> None:
     """Test adding shopping_list item and listing it."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.ADD_ITEM,
         {
@@ -118,18 +118,18 @@ async def test_add_item(
     assert items[0]["summary"] == "soda"
     assert items[0]["status"] == "needs_action"
 
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
     assert state
     assert state.state == "1"
 
 
 async def test_remove_item(
-    hass: HomeAssistant,
+    menuai: menuai,
     sl_setup: None,
     ws_get_items: WsGetItemsType,
 ) -> None:
     """Test removing a todo item."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.ADD_ITEM,
         {ATTR_ITEM: "soda"},
@@ -142,11 +142,11 @@ async def test_remove_item(
     assert items[0]["status"] == "needs_action"
     assert "uid" in items[0]
 
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
     assert state
     assert state.state == "1"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.REMOVE_ITEM,
         {
@@ -159,20 +159,20 @@ async def test_remove_item(
     items = await ws_get_items()
     assert len(items) == 0
 
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
     assert state
     assert state.state == "0"
 
 
 async def test_bulk_remove(
-    hass: HomeAssistant,
+    menuai: menuai,
     sl_setup: None,
     ws_get_items: WsGetItemsType,
 ) -> None:
     """Test removing a todo item."""
 
     for _i in range(5):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             TODO_DOMAIN,
             TodoServices.ADD_ITEM,
             {
@@ -186,11 +186,11 @@ async def test_bulk_remove(
     assert len(items) == 5
     uids = [item["uid"] for item in items]
 
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
     assert state
     assert state.state == "5"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.REMOVE_ITEM,
         {
@@ -203,20 +203,20 @@ async def test_bulk_remove(
     items = await ws_get_items()
     assert len(items) == 0
 
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
     assert state
     assert state.state == "0"
 
 
 async def test_update_item(
-    hass: HomeAssistant,
+    menuai: menuai,
     sl_setup: None,
     ws_get_items: WsGetItemsType,
 ) -> None:
     """Test updating a todo item."""
 
     # Create new item
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.ADD_ITEM,
         {
@@ -233,12 +233,12 @@ async def test_update_item(
     assert item["summary"] == "soda"
     assert item["status"] == "needs_action"
 
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
     assert state
     assert state.state == "1"
 
     # Mark item completed
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.UPDATE_ITEM,
         {
@@ -256,20 +256,20 @@ async def test_update_item(
     assert item["summary"] == "soda"
     assert item["status"] == "completed"
 
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
     assert state
     assert state.state == "0"
 
 
 async def test_partial_update_item(
-    hass: HomeAssistant,
+    menuai: menuai,
     sl_setup: None,
     ws_get_items: WsGetItemsType,
 ) -> None:
     """Test updating a todo item with partial information."""
 
     # Create new item
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.ADD_ITEM,
         {
@@ -286,12 +286,12 @@ async def test_partial_update_item(
     assert item["summary"] == "soda"
     assert item["status"] == "needs_action"
 
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
     assert state
     assert state.state == "1"
 
     # Mark item completed without changing the summary
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.UPDATE_ITEM,
         {
@@ -309,12 +309,12 @@ async def test_partial_update_item(
     assert item["summary"] == "soda"
     assert item["status"] == "completed"
 
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
     assert state
     assert state.state == "0"
 
     # Change the summary without changing the status
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.UPDATE_ITEM,
         {
@@ -332,20 +332,20 @@ async def test_partial_update_item(
     assert item["summary"] == "other summary"
     assert item["status"] == "completed"
 
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
     assert state
     assert state.state == "0"
 
 
 async def test_update_invalid_item(
-    hass: HomeAssistant,
+    menuai: menuai,
     sl_setup: None,
     ws_get_items: WsGetItemsType,
 ) -> None:
     """Test updating a todo item that does not exist."""
 
     with pytest.raises(ServiceValidationError, match="Unable to find"):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             TODO_DOMAIN,
             TodoServices.UPDATE_ITEM,
             {
@@ -384,7 +384,7 @@ async def test_update_invalid_item(
     ],
 )
 async def test_move_item(
-    hass: HomeAssistant,
+    menuai: menuai,
     sl_setup: None,
     ws_get_items: WsGetItemsType,
     ws_move_item: WsMoveItemType,
@@ -395,7 +395,7 @@ async def test_move_item(
     """Test moving a todo item within the list."""
 
     for i in range(1, 5):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             TODO_DOMAIN,
             TodoServices.ADD_ITEM,
             {
@@ -426,14 +426,14 @@ async def test_move_item(
 
 
 async def test_move_invalid_item(
-    hass: HomeAssistant,
+    menuai: menuai,
     sl_setup: None,
     ws_get_items: WsGetItemsType,
     ws_move_item: WsMoveItemType,
 ) -> None:
     """Test moving an item that does not exist."""
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.ADD_ITEM,
         {ATTR_ITEM: "soda"},
@@ -453,14 +453,14 @@ async def test_move_invalid_item(
 
 
 async def test_subscribe_item(
-    hass: HomeAssistant,
+    menuai: menuai,
     sl_setup: None,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test updating a todo item."""
 
     # Create new item
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.ADD_ITEM,
         {
@@ -471,7 +471,7 @@ async def test_subscribe_item(
     )
 
     # Subscribe and get the initial list
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json_auto_id(
         {
             "type": "todo/item/subscribe",
@@ -495,7 +495,7 @@ async def test_subscribe_item(
     assert uid
 
     # Rename item item completed
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.UPDATE_ITEM,
         {

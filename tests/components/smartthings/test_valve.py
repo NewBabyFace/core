@@ -7,17 +7,17 @@ from pysmartthings.models import HealthStatus
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.smartthings import MAIN
-from homeassistant.components.valve import DOMAIN as VALVE_DOMAIN, ValveState
-from homeassistant.const import (
+from menuai.components.smartthings import MAIN
+from menuai.components.valve import DOMAIN as VALVE_DOMAIN, ValveState
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_CLOSE_VALVE,
     SERVICE_OPEN_VALVE,
     STATE_UNAVAILABLE,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import (
     setup_integration,
@@ -30,16 +30,16 @@ from tests.common import MockConfigEntry
 
 
 async def test_all_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test all entities."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    snapshot_smartthings_entities(hass, entity_registry, snapshot, Platform.VALVE)
+    snapshot_smartthings_entities(menuai, entity_registry, snapshot, Platform.VALVE)
 
 
 @pytest.mark.parametrize("device_fixture", ["virtual_valve"])
@@ -51,16 +51,16 @@ async def test_all_entities(
     ],
 )
 async def test_valve_open_close(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
     action: str,
     command: Command,
 ) -> None:
     """Test valve open and close command."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         VALVE_DOMAIN,
         action,
         {ATTR_ENTITY_ID: "valve.volvo"},
@@ -73,17 +73,17 @@ async def test_valve_open_close(
 
 @pytest.mark.parametrize("device_fixture", ["virtual_valve"])
 async def test_state_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test state update."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    assert hass.states.get("valve.volvo").state == ValveState.CLOSED
+    assert menuai.states.get("valve.volvo").state == ValveState.CLOSED
 
     await trigger_update(
-        hass,
+        menuai,
         devices,
         "612ab3c2-3bb0-48f7-b2c0-15b169cb2fc3",
         Capability.VALVE,
@@ -91,39 +91,39 @@ async def test_state_update(
         "open",
     )
 
-    assert hass.states.get("valve.volvo").state == ValveState.OPEN
+    assert menuai.states.get("valve.volvo").state == ValveState.OPEN
 
 
 @pytest.mark.parametrize("device_fixture", ["virtual_valve"])
 async def test_availability(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test availability."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    assert hass.states.get("valve.volvo").state == ValveState.CLOSED
-
-    await trigger_health_update(
-        hass, devices, "612ab3c2-3bb0-48f7-b2c0-15b169cb2fc3", HealthStatus.OFFLINE
-    )
-
-    assert hass.states.get("valve.volvo").state == STATE_UNAVAILABLE
+    assert menuai.states.get("valve.volvo").state == ValveState.CLOSED
 
     await trigger_health_update(
-        hass, devices, "612ab3c2-3bb0-48f7-b2c0-15b169cb2fc3", HealthStatus.ONLINE
+        menuai, devices, "612ab3c2-3bb0-48f7-b2c0-15b169cb2fc3", HealthStatus.OFFLINE
     )
 
-    assert hass.states.get("valve.volvo").state == ValveState.CLOSED
+    assert menuai.states.get("valve.volvo").state == STATE_UNAVAILABLE
+
+    await trigger_health_update(
+        menuai, devices, "612ab3c2-3bb0-48f7-b2c0-15b169cb2fc3", HealthStatus.ONLINE
+    )
+
+    assert menuai.states.get("valve.volvo").state == ValveState.CLOSED
 
 
 @pytest.mark.parametrize("device_fixture", ["virtual_valve"])
 async def test_availability_at_start(
-    hass: HomeAssistant,
+    menuai: menuai,
     unavailable_device: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test unavailable at boot."""
-    await setup_integration(hass, mock_config_entry)
-    assert hass.states.get("valve.volvo").state == STATE_UNAVAILABLE
+    await setup_integration(menuai, mock_config_entry)
+    assert menuai.states.get("valve.volvo").state == STATE_UNAVAILABLE

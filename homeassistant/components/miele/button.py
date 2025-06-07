@@ -8,10 +8,10 @@ from typing import Final
 
 import aiohttp
 
-from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.button import ButtonEntity, ButtonEntityDescription
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN, PROCESS_ACTION, MieleActions, MieleAppliance
 from .coordinator import MieleConfigEntry
@@ -107,7 +107,7 @@ BUTTON_TYPES: Final[tuple[MieleButtonDefinition, ...]] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MieleConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -154,7 +154,7 @@ class MieleButton(MieleEntity, ButtonEntity):
                 {PROCESS_ACTION: self.entity_description.press_data},
             )
         except aiohttp.ClientResponseError as ex:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="set_state_error",
                 translation_placeholders={

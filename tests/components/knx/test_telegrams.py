@@ -6,12 +6,12 @@ from typing import Any
 
 import pytest
 
-from homeassistant.components.knx.const import (
+from menuai.components.knx.const import (
     CONF_KNX_TELEGRAM_LOG_SIZE,
     KNX_MODULE_KEY,
 )
-from homeassistant.components.knx.telegrams import TelegramDict
-from homeassistant.core import HomeAssistant
+from menuai.components.knx.telegrams import TelegramDict
+from menuai.core import menuai
 
 from .conftest import KNXTestKit
 
@@ -41,7 +41,7 @@ MOCK_TELEGRAMS = [
         "dpt_name": None,
         "payload": [1, 2, 3, 4],
         "source": "0.0.0",
-        "source_name": "Home Assistant",
+        "source_name": "MenuAI",
         "telegramtype": "GroupValueWrite",
         "timestamp": MOCK_TIMESTAMP,
         "unit": None,
@@ -65,55 +65,55 @@ def assert_telegram_history(telegrams: list[TelegramDict]) -> bool:
 
 
 async def test_store_telegam_history(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXTestKit,
-    hass_storage: dict[str, Any],
+    menuai_storage: dict[str, Any],
 ) -> None:
     """Test storing telegram history."""
     await knx.setup_integration()
 
     await knx.receive_write("1/3/4", True)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "knx", "send", {"address": "2/2/2", "payload": [1, 2, 3, 4]}, blocking=True
     )
     await knx.assert_write("2/2/2", (1, 2, 3, 4))
 
-    assert len(hass.data[KNX_MODULE_KEY].telegrams.recent_telegrams) == 2
+    assert len(menuai.data[KNX_MODULE_KEY].telegrams.recent_telegrams) == 2
     with pytest.raises(KeyError):
-        hass_storage["knx/telegrams_history.json"]
+        menuai_storage["knx/telegrams_history.json"]
 
-    await hass.config_entries.async_unload(knx.mock_config_entry.entry_id)
-    saved_telegrams = hass_storage["knx/telegrams_history.json"]["data"]
+    await menuai.config_entries.async_unload(knx.mock_config_entry.entry_id)
+    saved_telegrams = menuai_storage["knx/telegrams_history.json"]["data"]
     assert assert_telegram_history(saved_telegrams)
 
 
 async def test_load_telegam_history(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXTestKit,
-    hass_storage: dict[str, Any],
+    menuai_storage: dict[str, Any],
 ) -> None:
     """Test telegram history restoration."""
-    hass_storage["knx/telegrams_history.json"] = {"version": 1, "data": MOCK_TELEGRAMS}
+    menuai_storage["knx/telegrams_history.json"] = {"version": 1, "data": MOCK_TELEGRAMS}
     await knx.setup_integration()
-    loaded_telegrams = hass.data[KNX_MODULE_KEY].telegrams.recent_telegrams
+    loaded_telegrams = menuai.data[KNX_MODULE_KEY].telegrams.recent_telegrams
     assert assert_telegram_history(loaded_telegrams)
     # TelegramDict "payload" is a tuple, this shall be restored when loading from JSON
     assert isinstance(loaded_telegrams[1]["payload"], tuple)
 
 
 async def test_remove_telegam_history(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXTestKit,
-    hass_storage: dict[str, Any],
+    menuai_storage: dict[str, Any],
 ) -> None:
     """Test telegram history removal when configured to size 0."""
-    hass_storage["knx/telegrams_history.json"] = {"version": 1, "data": MOCK_TELEGRAMS}
-    knx.mock_config_entry.add_to_hass(hass)
-    hass.config_entries.async_update_entry(
+    menuai_storage["knx/telegrams_history.json"] = {"version": 1, "data": MOCK_TELEGRAMS}
+    knx.mock_config_entry.add_to_menuai(menuai)
+    menuai.config_entries.async_update_entry(
         knx.mock_config_entry,
         data=knx.mock_config_entry.data | {CONF_KNX_TELEGRAM_LOG_SIZE: 0},
     )
-    await knx.setup_integration(add_entry_to_hass=False)
-    # Store.async_remove() is mocked by hass_storage - check that data was removed.
-    assert "knx/telegrams_history.json" not in hass_storage
-    assert not hass.data[KNX_MODULE_KEY].telegrams.recent_telegrams
+    await knx.setup_integration(add_entry_to_menuai=False)
+    # Store.async_remove() is mocked by menuai_storage - check that data was removed.
+    assert "knx/telegrams_history.json" not in menuai_storage
+    assert not menuai.data[KNX_MODULE_KEY].telegrams.recent_telegrams

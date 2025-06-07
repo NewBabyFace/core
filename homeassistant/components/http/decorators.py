@@ -1,4 +1,4 @@
-"""Decorators for the Home Assistant API."""
+"""Decorators for the MenuAI API."""
 
 from __future__ import annotations
 
@@ -8,10 +8,10 @@ from typing import Any, Concatenate, overload
 
 from aiohttp.web import Request, Response, StreamResponse
 
-from homeassistant.auth.models import User
-from homeassistant.exceptions import Unauthorized
+from menuai.auth.models import User
+from menuai.exceptions import Unauthorized
 
-from .view import HomeAssistantView
+from .view import menuaiView
 
 type _ResponseType = Response | StreamResponse
 type _FuncType[_T, **_P, _R] = Callable[
@@ -21,7 +21,7 @@ type _FuncType[_T, **_P, _R] = Callable[
 
 @overload
 def require_admin[
-    _HomeAssistantViewT: HomeAssistantView,
+    _menuaiViewT: menuaiView,
     **_P,
     _ResponseT: _ResponseType,
 ](
@@ -30,53 +30,53 @@ def require_admin[
     perm_category: str | None = None,
     permission: str | None = None,
 ) -> Callable[
-    [_FuncType[_HomeAssistantViewT, _P, _ResponseT]],
-    _FuncType[_HomeAssistantViewT, _P, _ResponseT],
+    [_FuncType[_menuaiViewT, _P, _ResponseT]],
+    _FuncType[_menuaiViewT, _P, _ResponseT],
 ]: ...
 
 
 @overload
 def require_admin[
-    _HomeAssistantViewT: HomeAssistantView,
+    _menuaiViewT: menuaiView,
     **_P,
     _ResponseT: _ResponseType,
 ](
-    _func: _FuncType[_HomeAssistantViewT, _P, _ResponseT],
-) -> _FuncType[_HomeAssistantViewT, _P, _ResponseT]: ...
+    _func: _FuncType[_menuaiViewT, _P, _ResponseT],
+) -> _FuncType[_menuaiViewT, _P, _ResponseT]: ...
 
 
 def require_admin[
-    _HomeAssistantViewT: HomeAssistantView,
+    _menuaiViewT: menuaiView,
     **_P,
     _ResponseT: _ResponseType,
 ](
-    _func: _FuncType[_HomeAssistantViewT, _P, _ResponseT] | None = None,
+    _func: _FuncType[_menuaiViewT, _P, _ResponseT] | None = None,
     *,
     perm_category: str | None = None,
     permission: str | None = None,
 ) -> (
     Callable[
-        [_FuncType[_HomeAssistantViewT, _P, _ResponseT]],
-        _FuncType[_HomeAssistantViewT, _P, _ResponseT],
+        [_FuncType[_menuaiViewT, _P, _ResponseT]],
+        _FuncType[_menuaiViewT, _P, _ResponseT],
     ]
-    | _FuncType[_HomeAssistantViewT, _P, _ResponseT]
+    | _FuncType[_menuaiViewT, _P, _ResponseT]
 ):
-    """Home Assistant API decorator to require user to be an admin."""
+    """MenuAI API decorator to require user to be an admin."""
 
     def decorator_require_admin(
-        func: _FuncType[_HomeAssistantViewT, _P, _ResponseT],
-    ) -> _FuncType[_HomeAssistantViewT, _P, _ResponseT]:
+        func: _FuncType[_menuaiViewT, _P, _ResponseT],
+    ) -> _FuncType[_menuaiViewT, _P, _ResponseT]:
         """Wrap the provided with_admin function."""
 
         @wraps(func)
         async def with_admin(
-            self: _HomeAssistantViewT,
+            self: _menuaiViewT,
             request: Request,
             *args: _P.args,
             **kwargs: _P.kwargs,
         ) -> _ResponseT:
             """Check admin and call function."""
-            user: User = request["hass_user"]
+            user: User = request["menuai_user"]
             if not user.is_admin:
                 raise Unauthorized(perm_category=perm_category, permission=permission)
 

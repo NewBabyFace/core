@@ -2,7 +2,7 @@
 
 from subarulink.const import ALL_DOORS, DRIVERS_DOOR, TAILGATE_DOOR
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 DOMAIN = "subaru"
 FETCH_INTERVAL = 300

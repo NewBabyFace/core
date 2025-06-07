@@ -8,10 +8,10 @@ from typing import Any
 
 from pybalboa import SpaClient
 
-from homeassistant.components.time import TimeEntity
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.time import TimeEntity
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import BalboaConfigEntry
 from .entity import BalboaEntity
@@ -20,7 +20,7 @@ FILTER_CYCLE = "filter_cycle_"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: BalboaConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

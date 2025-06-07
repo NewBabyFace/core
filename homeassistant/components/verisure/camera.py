@@ -7,28 +7,28 @@ import os
 
 from verisure import Error as VerisureError
 
-from homeassistant.components.camera import Camera
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import (
+from menuai.components.camera import Camera
+from menuai.config_entries import ConfigEntry
+from menuai.const import EVENT_menuai_STOP
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     async_get_current_platform,
 )
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import CONF_GIID, DOMAIN, LOGGER, SERVICE_CAPTURE_SMARTCAM
 from .coordinator import VerisureDataUpdateCoordinator
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Verisure sensors based on a config entry."""
-    coordinator: VerisureDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: VerisureDataUpdateCoordinator = menuai.data[DOMAIN][entry.entry_id]
 
     platform = async_get_current_platform()
     platform.async_register_entity_service(
@@ -38,7 +38,7 @@ async def async_setup_entry(
     )
 
     async_add_entities(
-        VerisureSmartcam(coordinator, serial_number, hass.config.config_dir)
+        VerisureSmartcam(coordinator, serial_number, menuai.config.config_dir)
         for serial_number in coordinator.data["cameras"]
     )
 
@@ -137,7 +137,7 @@ class VerisureSmartcam(CoordinatorEntity[VerisureDataUpdateCoordinator], Camera)
         except VerisureError as ex:
             LOGGER.error("Could not capture image, %s", ex)
 
-    async def async_added_to_hass(self) -> None:
-        """Entity added to Home Assistant."""
-        await super().async_added_to_hass()
-        self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, self.delete_image)
+    async def async_added_to_menuai(self) -> None:
+        """Entity added to MenuAI."""
+        await super().async_added_to_menuai()
+        self.menuai.bus.async_listen_once(EVENT_menuai_STOP, self.delete_image)

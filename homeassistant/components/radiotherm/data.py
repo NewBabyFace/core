@@ -8,8 +8,8 @@ from typing import Any
 import radiotherm
 from radiotherm.thermostat import CommonThermostat
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 from .const import TIMEOUT
 
@@ -47,16 +47,16 @@ def _get_init_data(host: str) -> RadioThermInitData:
     )
 
 
-async def async_get_init_data(hass: HomeAssistant, host: str) -> RadioThermInitData:
+async def async_get_init_data(menuai: menuai, host: str) -> RadioThermInitData:
     """Get the RadioInitData."""
-    return await hass.async_add_executor_job(_get_init_data, host)
+    return await menuai.async_add_executor_job(_get_init_data, host)
 
 
 def _get_data(device: CommonThermostat) -> RadioThermUpdate:
     # Request the current state from the thermostat.
     # Radio thermostats are very slow, and sometimes don't respond
     # very quickly.  So we need to keep the number of calls to them
-    # to a bare minimum or we'll hit the Home Assistant 10 sec warning.  We
+    # to a bare minimum or we'll hit the MenuAI 10 sec warning.  We
     # have to make one call to /tstat to get temps but we'll try and
     # keep the other calls to a minimum.  Even with this, these
     # thermostats tend to time out sometimes when they're actively
@@ -69,7 +69,7 @@ def _get_data(device: CommonThermostat) -> RadioThermUpdate:
 
 
 async def async_get_data(
-    hass: HomeAssistant, device: CommonThermostat
+    menuai: menuai, device: CommonThermostat
 ) -> RadioThermUpdate:
     """Fetch the data from the thermostat."""
-    return await hass.async_add_executor_job(_get_data, device)
+    return await menuai.async_add_executor_job(_get_data, device)

@@ -6,16 +6,16 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     PLATFORM_SCHEMA as SWITCH_PLATFORM_SCHEMA,
     SwitchEntity,
     SwitchEntityDescription,
 )
-from homeassistant.const import CONF_MONITORED_CONDITIONS, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_MONITORED_CONDITIONS, Platform
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import DOMAIN
 from .entity import WirelessTagBaseSensor
@@ -56,13 +56,13 @@ PLATFORM_SCHEMA = SWITCH_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up switches for a Wireless Sensor Tags."""
-    platform = hass.data[DOMAIN]
+    platform = menuai.data[DOMAIN]
 
     tags = platform.load_tags()
     monitored_conditions = config[CONF_MONITORED_CONDITIONS]
@@ -73,7 +73,7 @@ async def async_setup_platform(
                 description.key in monitored_conditions
                 and description.key in tag.allowed_monitoring_types
             ):
-                async_migrate_unique_id(hass, tag, Platform.SWITCH, description.key)
+                async_migrate_unique_id(menuai, tag, Platform.SWITCH, description.key)
                 entities.append(WirelessTagSwitch(platform, tag, description))
 
     async_add_entities(entities, True)

@@ -10,9 +10,9 @@ from typing import Any
 from aioairzone.exceptions import AirzoneError
 from aioairzone.localapi import AirzoneLocalApi
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import AIOAIRZONE_DEVICE_TIMEOUT_SEC, DOMAIN
 
@@ -30,7 +30,7 @@ class AirzoneUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: AirzoneConfigEntry,
         airzone: AirzoneLocalApi,
     ) -> None:
@@ -38,7 +38,7 @@ class AirzoneUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.airzone = airzone
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,

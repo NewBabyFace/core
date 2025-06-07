@@ -12,13 +12,13 @@ from urllib.error import URLError
 
 import feedparser
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_URL
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers.storage import Store
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util import dt as dt_util
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_URL
+from menuai.core import menuai, callback
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers.storage import Store
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.util import dt as dt_util
 
 from .const import CONF_MAX_ENTRIES, DEFAULT_SCAN_INTERVAL, DOMAIN, EVENT_FEEDREADER
 
@@ -40,7 +40,7 @@ class FeedReaderCoordinator(
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: FeedReaderConfigEntry,
         storage: StoredData,
     ) -> None:
@@ -55,7 +55,7 @@ class FeedReaderCoordinator(
         self._feed: feedparser.FeedParserDict | None = None
         self._feed_id = self.url
         super().__init__(
-            hass=hass,
+            menuai=menuai,
             logger=_LOGGER,
             config_entry=config_entry,
             name=f"{DOMAIN} {self.url}",
@@ -78,7 +78,7 @@ class FeedReaderCoordinator(
                 modified=None if not self._feed else self._feed.get("modified"),
             )
 
-        feed = await self.hass.async_add_executor_job(_parse_feed)
+        feed = await self.menuai.async_add_executor_job(_parse_feed)
 
         if not feed:
             raise UpdateFailed(f"Error fetching feed data from {self.url}")
@@ -173,7 +173,7 @@ class FeedReaderCoordinator(
                 entry,
             )
         entry["feed_url"] = self.url
-        self.hass.bus.async_fire(self._event_type, entry)
+        self.menuai.bus.async_fire(self._event_type, entry)
         _LOGGER.debug("New event fired for entry %s", entry.get("link"))
 
     @callback
@@ -210,11 +210,11 @@ class FeedReaderCoordinator(
 class StoredData:
     """Represent a data storage."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize data storage."""
         self._data: dict[str, struct_time] = {}
-        self.hass = hass
-        self._store: Store[dict[str, str]] = Store(hass, STORAGE_VERSION, DOMAIN)
+        self.menuai = menuai
+        self._store: Store[dict[str, str]] = Store(menuai, STORAGE_VERSION, DOMAIN)
         self.is_initialized = False
 
     async def async_setup(self) -> None:

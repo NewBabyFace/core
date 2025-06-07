@@ -11,8 +11,8 @@ import warnings
 from qnapstats import QNAPStats
 import urllib3
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
@@ -21,8 +21,8 @@ from homeassistant.const import (
     CONF_USERNAME,
     CONF_VERIFY_SSL,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN
 
@@ -46,10 +46,10 @@ def suppress_insecure_request_warning():
 class QnapCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
     """Custom coordinator for the qnap integration."""
 
-    def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: ConfigEntry) -> None:
         """Initialize the qnap coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -85,4 +85,4 @@ class QnapCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
 
     async def _async_update_data(self) -> dict[str, dict[str, Any]]:
         """Get the latest data from the Qnap API."""
-        return await self.hass.async_add_executor_job(self._sync_update)
+        return await self.menuai.async_add_executor_job(self._sync_update)

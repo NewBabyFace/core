@@ -9,9 +9,9 @@ from linkplay.discovery import linkplay_factory_httpapi_bridge
 from linkplay.exceptions import LinkPlayRequestException
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_MODEL
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_MODEL
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import DOMAIN
 from .utils import async_get_client_session
@@ -31,7 +31,7 @@ class LinkPlayConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Handle Zeroconf discovery."""
 
-        session: ClientSession = await async_get_client_session(self.hass)
+        session: ClientSession = await async_get_client_session(self.menuai)
         bridge: LinkPlayBridge | None = None
 
         try:
@@ -77,7 +77,7 @@ class LinkPlayConfigFlow(ConfigFlow, domain=DOMAIN):
         """Handle a flow initialized by the user."""
         errors: dict[str, str] = {}
         if user_input:
-            session: ClientSession = await async_get_client_session(self.hass)
+            session: ClientSession = await async_get_client_session(self.menuai)
             bridge: LinkPlayBridge | None = None
 
             try:

@@ -7,11 +7,11 @@ from nexia.const import BRAND_NEXIA
 from nexia.home import NexiaHome
 from nexia.thermostat import NexiaThermostat
 
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import device_registry as dr
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import CONF_BRAND, DOMAIN, PLATFORMS
 from .coordinator import NexiaDataUpdateCoordinator
@@ -21,21 +21,21 @@ from .util import is_invalid_auth_code
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: NexiaConfigEntry) -> bool:
-    """Configure the base Nexia device for Home Assistant."""
+async def async_setup_entry(menuai: menuai, entry: NexiaConfigEntry) -> bool:
+    """Configure the base Nexia device for MenuAI."""
 
     conf = entry.data
     username = conf[CONF_USERNAME]
     password = conf[CONF_PASSWORD]
     brand = conf.get(CONF_BRAND, BRAND_NEXIA)
 
-    state_file = hass.config.path(f"nexia_config_{username}.conf")
-    session = async_get_clientsession(hass)
+    state_file = menuai.config.path(f"nexia_config_{username}.conf")
+    session = async_get_clientsession(menuai)
     nexia_home = NexiaHome(
         session,
         username=username,
         password=password,
-        device_name=hass.config.location_name,
+        device_name=menuai.config.location_name,
         state_file=state_file,
         brand=brand,
     )
@@ -58,21 +58,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: NexiaConfigEntry) -> boo
             f"Error connecting to Nexia service: {os_error}"
         ) from os_error
 
-    coordinator = NexiaDataUpdateCoordinator(hass, entry, nexia_home)
+    coordinator = NexiaDataUpdateCoordinator(menuai, entry, nexia_home)
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: NexiaConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: NexiaConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 async def async_remove_config_entry_device(
-    hass: HomeAssistant, entry: NexiaConfigEntry, device_entry: dr.DeviceEntry
+    menuai: menuai, entry: NexiaConfigEntry, device_entry: dr.DeviceEntry
 ) -> bool:
     """Remove a nexia config entry from a device."""
     coordinator = entry.runtime_data
@@ -88,7 +88,7 @@ async def async_remove_config_entry_device(
     return True
 
 
-async def async_migrate_entry(hass: HomeAssistant, entry: NexiaConfigEntry) -> bool:
+async def async_migrate_entry(menuai: menuai, entry: NexiaConfigEntry) -> bool:
     """Migrate entry."""
 
     _LOGGER.debug("Migrating from version %s", entry.version)
@@ -97,7 +97,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: NexiaConfigEntry) -> b
         # 1 -> 2: Unique ID from integer to string
         if entry.minor_version == 1:
             minor_version = 2
-            hass.config_entries.async_update_entry(
+            menuai.config_entries.async_update_entry(
                 entry, unique_id=str(entry.unique_id), minor_version=minor_version
             )
 

@@ -11,13 +11,13 @@ from typing import Any
 
 from goodwe import Inverter, Sensor, SensorKind
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     PERCENTAGE,
     EntityCategory,
     UnitOfApparentPower,
@@ -30,13 +30,13 @@ from homeassistant.const import (
     UnitOfTemperature,
     UnitOfTime,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.event import async_track_point_in_time
-from homeassistant.helpers.typing import StateType
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.event import async_track_point_in_time
+from menuai.helpers.typing import StateType
+from menuai.helpers.update_coordinator import CoordinatorEntity
+from menuai.util import dt as dt_util
 
 from .const import DOMAIN
 from .coordinator import GoodweConfigEntry, GoodweUpdateCoordinator
@@ -50,7 +50,7 @@ BATTERY_SOC = "battery_soc"
 # The inverter is only powered by the solar panels and not mains power, so it goes dead when the sun goes down.
 # The "_day" sensors are reset to 0 when the inverter wakes up in the morning when the sun comes up and power to the inverter is restored.
 # This makes sure daily values are reset at midnight instead of at sunrise.
-# When the inverter has a battery connected, HomeAssistant will not reset the values but let the inverter reset them by looking at the unavailable state of the inverter.
+# When the inverter has a battery connected, menuai will not reset the values but let the inverter reset them by looking at the unavailable state of the inverter.
 DAILY_RESET = ["e_day", "e_load_day"]
 
 _MAIN_SENSORS = (
@@ -163,7 +163,7 @@ TEXT_SENSOR = GoodweSensorEntityDescription(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: GoodweConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -250,22 +250,22 @@ class InverterSensor(CoordinatorEntity[GoodweUpdateCoordinator], SensorEntity):
             dt_util.now() + timedelta(days=1, minutes=1)
         )
         self._stop_reset = async_track_point_in_time(
-            self.hass, self.async_reset, next_midnight
+            self.menuai, self.async_reset, next_midnight
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Schedule reset task at midnight."""
         if self._sensor.id_ in DAILY_RESET:
             next_midnight = dt_util.start_of_local_day(
                 dt_util.now() + timedelta(days=1)
             )
             self._stop_reset = async_track_point_in_time(
-                self.hass, self.async_reset, next_midnight
+                self.menuai, self.async_reset, next_midnight
             )
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Remove reset task at midnight."""
         if self._sensor.id_ in DAILY_RESET and self._stop_reset is not None:
             self._stop_reset()
-        await super().async_will_remove_from_hass()
+        await super().async_will_remove_from_menuai()

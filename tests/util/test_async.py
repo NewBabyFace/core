@@ -6,8 +6,8 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-from homeassistant.core import HomeAssistant
-from homeassistant.util import async_ as hasync
+from menuai.core import menuai
+from menuai.util import async_ as hasync
 
 from tests.common import extract_stack_to_frame
 
@@ -61,16 +61,16 @@ async def test_gather_with_limited_concurrency() -> None:
     assert results == [2, 2, -1, -1]
 
 
-async def test_shutdown_run_callback_threadsafe(hass: HomeAssistant) -> None:
+async def test_shutdown_run_callback_threadsafe(menuai: menuai) -> None:
     """Test we can shutdown run_callback_threadsafe."""
-    hasync.shutdown_run_callback_threadsafe(hass.loop)
+    hasync.shutdown_run_callback_threadsafe(menuai.loop)
     callback = MagicMock()
 
     with pytest.raises(RuntimeError):
-        hasync.run_callback_threadsafe(hass.loop, callback)
+        hasync.run_callback_threadsafe(menuai.loop, callback)
 
 
-async def test_run_callback_threadsafe(hass: HomeAssistant) -> None:
+async def test_run_callback_threadsafe(menuai: menuai) -> None:
     """Test run_callback_threadsafe runs code in the event loop."""
     it_ran = False
 
@@ -78,36 +78,36 @@ async def test_run_callback_threadsafe(hass: HomeAssistant) -> None:
         nonlocal it_ran
         it_ran = True
 
-    with patch.dict(hass.loop.__dict__, {"_thread_id": -1}):
-        assert hasync.run_callback_threadsafe(hass.loop, callback)
+    with patch.dict(menuai.loop.__dict__, {"_thread_id": -1}):
+        assert hasync.run_callback_threadsafe(menuai.loop, callback)
     assert it_ran is False
 
     # Verify that async_block_till_done will flush
     # out the callback
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert it_ran is True
 
 
-async def test_callback_is_always_scheduled(hass: HomeAssistant) -> None:
+async def test_callback_is_always_scheduled(menuai: menuai) -> None:
     """Test run_callback_threadsafe always calls call_soon_threadsafe before checking for shutdown."""
     # We have to check the shutdown state AFTER the callback is scheduled otherwise
     # the function could continue on and the caller call `future.result()` after
     # the point in the main thread where callbacks are no longer run.
 
     callback = MagicMock()
-    hasync.shutdown_run_callback_threadsafe(hass.loop)
+    hasync.shutdown_run_callback_threadsafe(menuai.loop)
 
     with (
-        patch.dict(hass.loop.__dict__, {"_thread_id": -1}),
-        patch.object(hass.loop, "call_soon_threadsafe") as mock_call_soon_threadsafe,
+        patch.dict(menuai.loop.__dict__, {"_thread_id": -1}),
+        patch.object(menuai.loop, "call_soon_threadsafe") as mock_call_soon_threadsafe,
         pytest.raises(RuntimeError),
     ):
-        hasync.run_callback_threadsafe(hass.loop, callback)
+        hasync.run_callback_threadsafe(menuai.loop, callback)
 
     mock_call_soon_threadsafe.assert_called_once()
 
 
-async def test_create_eager_task_312(hass: HomeAssistant) -> None:
+async def test_create_eager_task_312(menuai: menuai) -> None:
     """Test create_eager_task schedules a task eagerly in the event loop.
 
     For Python 3.12+, the task is scheduled eagerly in the event loop.
@@ -131,7 +131,7 @@ async def test_create_eager_task_312(hass: HomeAssistant) -> None:
     await task2
 
 
-async def test_create_eager_task_from_thread(hass: HomeAssistant) -> None:
+async def test_create_eager_task_from_thread(menuai: menuai) -> None:
     """Test we report trying to create an eager task from a thread."""
 
     coro = asyncio.sleep(0)
@@ -145,14 +145,14 @@ async def test_create_eager_task_from_thread(hass: HomeAssistant) -> None:
             "Detected code that attempted to create an asyncio task from a thread. Please report this issue"
         ),
     ):
-        await hass.async_add_executor_job(create_task)
+        await menuai.async_add_executor_job(create_task)
 
     # Avoid `RuntimeWarning: coroutine 'sleep' was never awaited`
     await coro
 
 
 async def test_create_eager_task_from_thread_in_integration(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test we report trying to create an eager task from a thread."""
 
@@ -164,12 +164,12 @@ async def test_create_eager_task_from_thread_in_integration(
     frames = extract_stack_to_frame(
         [
             Mock(
-                filename="/home/paulus/homeassistant/core.py",
+                filename="/home/paulus/menuai/core.py",
                 lineno="23",
                 line="do_something()",
             ),
             Mock(
-                filename="/home/paulus/homeassistant/components/hue/light.py",
+                filename="/home/paulus/menuai/components/hue/light.py",
                 lineno="23",
                 line="self.light.is_on",
             ),
@@ -183,27 +183,27 @@ async def test_create_eager_task_from_thread_in_integration(
     with (
         pytest.raises(RuntimeError, match="no running event loop"),
         patch(
-            "homeassistant.helpers.frame.linecache.getline",
+            "menuai.helpers.frame.linecache.getline",
             return_value="self.light.is_on",
         ),
         patch(
-            "homeassistant.util.loop._get_line_from_cache",
+            "menuai.util.loop._get_line_from_cache",
             return_value="mock_line",
         ),
         patch(
-            "homeassistant.util.loop.get_current_frame",
+            "menuai.util.loop.get_current_frame",
             return_value=frames,
         ),
         patch(
-            "homeassistant.helpers.frame.get_current_frame",
+            "menuai.helpers.frame.get_current_frame",
             return_value=frames,
         ),
     ):
-        await hass.async_add_executor_job(create_task)
+        await menuai.async_add_executor_job(create_task)
 
     assert (
         "Detected that integration 'hue' attempted to create an asyncio task "
-        "from a thread at homeassistant/components/hue/light.py, line 23: "
+        "from a thread at menuai/components/hue/light.py, line 23: "
         "self.light.is_on"
     ) in caplog.text
 
@@ -211,9 +211,9 @@ async def test_create_eager_task_from_thread_in_integration(
     await coro
 
 
-async def test_get_scheduled_timer_handles(hass: HomeAssistant) -> None:
+async def test_get_scheduled_timer_handles(menuai: menuai) -> None:
     """Test get_scheduled_timer_handles returns all scheduled timer handles."""
-    loop = hass.loop
+    loop = menuai.loop
     timer_handle = loop.call_later(10, lambda: None)
     timer_handle2 = loop.call_later(5, lambda: None)
     timer_handle3 = loop.call_later(15, lambda: None)

@@ -8,16 +8,16 @@ import logging
 
 from pysmlight.web import CmdWrapper
 
-from homeassistant.components.button import (
+from menuai.components.button import (
     DOMAIN as BUTTON_DOMAIN,
     ButtonDeviceClass,
     ButtonEntity,
     ButtonEntityDescription,
 )
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import EntityCategory
+from menuai.core import menuai, callback
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import SmConfigEntry, SmDataUpdateCoordinator
@@ -65,7 +65,7 @@ ROUTER = SmButtonDescription(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: SmConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -86,7 +86,7 @@ async def async_setup_entry(
                 async_add_entities([SmButton(coordinator, router, idx)])
                 entity_created[idx] = True
             elif zb_type != 1 and (startup or entity_created[idx]):
-                entity_registry = er.async_get(hass)
+                entity_registry = er.async_get(menuai)
                 button = f"_{idx}" if idx else ""
                 if entity_id := entity_registry.async_get_entity_id(
                     BUTTON_DOMAIN,

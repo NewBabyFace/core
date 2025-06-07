@@ -12,12 +12,12 @@ from motionblindsble.const import (
 from motionblindsble.device import MotionDevice
 import pytest
 
-from homeassistant.components.motionblinds_ble.const import (
+from menuai.components.motionblinds_ble.const import (
     ATTR_BATTERY,
     ATTR_SIGNAL_STRENGTH,
 )
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.core import HomeAssistant
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.core import menuai
 
 from . import setup_integration
 
@@ -88,7 +88,7 @@ from tests.common import MockConfigEntry
     ],
 )
 async def test_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_motion_device: Mock,
     name: str,
@@ -100,9 +100,9 @@ async def test_sensor(
 ) -> None:
     """Test sensors."""
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    assert hass.states.get(f"{SENSOR_DOMAIN}.{name}_{sensor}").state == initial_value
+    assert menuai.states.get(f"{SENSOR_DOMAIN}.{name}_{sensor}").state == initial_value
     update_func = register_callback(mock_motion_device).call_args[0][0]
     update_func(*args)
-    assert hass.states.get(f"{SENSOR_DOMAIN}.{name}_{sensor}").state == expected_value
+    assert menuai.states.get(f"{SENSOR_DOMAIN}.{name}_{sensor}").state == expected_value

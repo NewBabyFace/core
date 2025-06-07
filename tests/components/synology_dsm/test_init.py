@@ -4,14 +4,14 @@ from unittest.mock import MagicMock, patch
 
 from synology_dsm.exceptions import SynologyDSMLoginInvalidException
 
-from homeassistant.components.synology_dsm.const import (
+from menuai.components.synology_dsm.const import (
     CONF_BACKUP_PATH,
     CONF_BACKUP_SHARE,
     DEFAULT_VERIFY_SSL,
     DOMAIN,
     SERVICES,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_MAC,
     CONF_PASSWORD,
@@ -21,22 +21,22 @@ from homeassistant.const import (
     CONF_USERNAME,
     CONF_VERIFY_SSL,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from .consts import HOST, MACS, PASSWORD, PORT, USE_SSL, USERNAME
 
 from tests.common import MockConfigEntry
 
 
-async def test_services_registered(hass: HomeAssistant, mock_dsm: MagicMock) -> None:
+async def test_services_registered(menuai: menuai, mock_dsm: MagicMock) -> None:
     """Test if all services are registered."""
     with (
         patch(
-            "homeassistant.components.synology_dsm.common.SynologyDSM",
+            "menuai.components.synology_dsm.common.SynologyDSM",
             return_value=mock_dsm,
         ),
-        patch("homeassistant.components.synology_dsm.PLATFORMS", return_value=[]),
+        patch("menuai.components.synology_dsm.PLATFORMS", return_value=[]),
     ):
         entry = MockConfigEntry(
             domain=DOMAIN,
@@ -49,21 +49,21 @@ async def test_services_registered(hass: HomeAssistant, mock_dsm: MagicMock) -> 
                 CONF_MAC: MACS[0],
             },
         )
-        entry.add_to_hass(hass)
-        assert await hass.config_entries.async_setup(entry.entry_id)
+        entry.add_to_menuai(menuai)
+        assert await menuai.config_entries.async_setup(entry.entry_id)
         for service in SERVICES:
-            assert hass.services.has_service(DOMAIN, service)
+            assert menuai.services.has_service(DOMAIN, service)
 
 
-async def test_reauth_triggered(hass: HomeAssistant) -> None:
+async def test_reauth_triggered(menuai: menuai) -> None:
     """Test if reauthentication flow is triggered."""
     with (
         patch(
-            "homeassistant.components.synology_dsm.SynoApi.async_setup",
+            "menuai.components.synology_dsm.SynoApi.async_setup",
             side_effect=SynologyDSMLoginInvalidException(USERNAME),
         ),
         patch(
-            "homeassistant.components.synology_dsm.config_flow.SynologyDSMFlowHandler.async_step_reauth",
+            "menuai.components.synology_dsm.config_flow.SynologyDSMFlowHandler.async_step_reauth",
             return_value={
                 "type": FlowResultType.FORM,
                 "flow_id": "mock_flow",
@@ -82,22 +82,22 @@ async def test_reauth_triggered(hass: HomeAssistant) -> None:
                 CONF_MAC: MACS[0],
             },
         )
-        entry.add_to_hass(hass)
-        assert not await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        entry.add_to_menuai(menuai)
+        assert not await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
         mock_async_step_reauth.assert_called_once()
 
 
 async def test_config_entry_migrations(
-    hass: HomeAssistant, mock_dsm: MagicMock
+    menuai: menuai, mock_dsm: MagicMock
 ) -> None:
     """Test if reauthentication flow is triggered."""
     with (
         patch(
-            "homeassistant.components.synology_dsm.common.SynologyDSM",
+            "menuai.components.synology_dsm.common.SynologyDSM",
             return_value=mock_dsm,
         ),
-        patch("homeassistant.components.synology_dsm.PLATFORMS", return_value=[]),
+        patch("menuai.components.synology_dsm.PLATFORMS", return_value=[]),
     ):
         entry = MockConfigEntry(
             domain=DOMAIN,
@@ -111,13 +111,13 @@ async def test_config_entry_migrations(
             },
             options={CONF_SCAN_INTERVAL: 30},
         )
-        entry.add_to_hass(hass)
+        entry.add_to_menuai(menuai)
 
         assert CONF_VERIFY_SSL not in entry.data
         assert CONF_BACKUP_SHARE not in entry.options
         assert CONF_BACKUP_PATH not in entry.options
 
-        assert await hass.config_entries.async_setup(entry.entry_id)
+        assert await menuai.config_entries.async_setup(entry.entry_id)
 
         assert entry.data[CONF_VERIFY_SSL] == DEFAULT_VERIFY_SSL
         assert CONF_SCAN_INTERVAL not in entry.options

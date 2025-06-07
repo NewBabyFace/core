@@ -1,12 +1,12 @@
-"""Event platform for Home Assistant Backup integration."""
+"""Event platform for MenuAI Backup integration."""
 
 from __future__ import annotations
 
 from typing import Final
 
-from homeassistant.components.event import EventEntity
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.event import EventEntity
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import BackupConfigEntry, BackupDataUpdateCoordinator
 from .entity import BackupManagerBaseEntity
@@ -17,7 +17,7 @@ ATTR_FAILED_REASON: Final[str] = "failed_reason"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: BackupConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

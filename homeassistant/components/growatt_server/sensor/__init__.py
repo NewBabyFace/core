@@ -8,14 +8,14 @@ import logging
 
 import growattServer
 
-from homeassistant.components.sensor import SensorEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_NAME, CONF_PASSWORD, CONF_URL, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryError
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import Throttle, dt as dt_util
+from menuai.components.sensor import SensorEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_NAME, CONF_PASSWORD, CONF_URL, CONF_USERNAME
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryError
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import Throttle, dt as dt_util
 
 from ..const import (
     CONF_PLANT_ID,
@@ -59,7 +59,7 @@ def get_device_list(api, config):
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -79,13 +79,13 @@ async def async_setup_entry(
         )
         url = DEFAULT_URL
         config[CONF_URL] = url
-        hass.config_entries.async_update_entry(config_entry, data=config)
+        menuai.config_entries.async_update_entry(config_entry, data=config)
 
     # Initialise the library with the username & a random id each time it is started
     api = growattServer.GrowattApi(add_random_user_id=True, agent_identifier=username)
     api.server_url = url
 
-    devices, plant_id = await hass.async_add_executor_job(get_device_list, api, config)
+    devices, plant_id = await menuai.async_add_executor_job(get_device_list, api, config)
 
     probe = GrowattData(api, username, password, plant_id, "total")
     entities = [

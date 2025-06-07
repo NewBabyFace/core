@@ -6,11 +6,11 @@ from typing import Any
 
 from yalesmartalarmclient import YaleLock, YaleLockState
 
-from homeassistant.components.lock import LockEntity, LockState
-from homeassistant.const import ATTR_CODE
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.lock import LockEntity, LockState
+from menuai.const import ATTR_CODE
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import YaleConfigEntry
 from .const import (
@@ -30,7 +30,7 @@ LOCK_STATE_MAP = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: YaleConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -70,15 +70,15 @@ class YaleDoorlock(YaleLockEntity, LockEntity):
         lock_state = False
         try:
             if state is YaleLockState.LOCKED:
-                lock_state = await self.hass.async_add_executor_job(
+                lock_state = await self.menuai.async_add_executor_job(
                     self.lock_data.close
                 )
             if code and state is YaleLockState.UNLOCKED:
-                lock_state = await self.hass.async_add_executor_job(
+                lock_state = await self.menuai.async_add_executor_job(
                     self.lock_data.open, code
                 )
         except YALE_ALL_ERRORS as error:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="set_lock",
                 translation_placeholders={
@@ -91,7 +91,7 @@ class YaleDoorlock(YaleLockEntity, LockEntity):
             self.lock_data.set_state(state)
             self.async_write_ha_state()
             return
-        raise HomeAssistantError(
+        raise menuaiError(
             translation_domain=DOMAIN,
             translation_key="could_not_change_lock",
         )

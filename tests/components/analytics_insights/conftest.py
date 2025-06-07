@@ -1,13 +1,13 @@
-"""Common fixtures for the Homeassistant Analytics tests."""
+"""Common fixtures for the menuai Analytics tests."""
 
 from collections.abc import Generator
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from python_homeassistant_analytics import CurrentAnalytics
-from python_homeassistant_analytics.models import Addon, CustomIntegration, Integration
+from python_menuai_analytics import CurrentAnalytics
+from python_menuai_analytics.models import Addon, CustomIntegration, Integration
 
-from homeassistant.components.analytics_insights.const import (
+from menuai.components.analytics_insights.const import (
     CONF_TRACKED_ADDONS,
     CONF_TRACKED_CUSTOM_INTEGRATIONS,
     CONF_TRACKED_INTEGRATIONS,
@@ -21,7 +21,7 @@ from tests.common import MockConfigEntry, load_fixture, load_json_object_fixture
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.analytics_insights.async_setup_entry",
+        "menuai.components.analytics_insights.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
         yield mock_setup_entry
@@ -29,14 +29,14 @@ def mock_setup_entry() -> Generator[AsyncMock]:
 
 @pytest.fixture
 def mock_analytics_client() -> Generator[AsyncMock]:
-    """Mock a Homeassistant Analytics client."""
+    """Mock a menuai Analytics client."""
     with (
         patch(
-            "homeassistant.components.analytics_insights.HomeassistantAnalyticsClient",
+            "menuai.components.analytics_insights.menuaiAnalyticsClient",
             autospec=True,
         ) as mock_client,
         patch(
-            "homeassistant.components.analytics_insights.config_flow.HomeassistantAnalyticsClient",
+            "menuai.components.analytics_insights.config_flow.menuaiAnalyticsClient",
             new=mock_client,
         ),
     ):
@@ -67,7 +67,7 @@ def mock_config_entry() -> MockConfigEntry:
     """Mock a config entry."""
     return MockConfigEntry(
         domain=DOMAIN,
-        title="Homeassistant Analytics",
+        title="menuai Analytics",
         data={},
         options={
             CONF_TRACKED_ADDONS: ["core_samba"],

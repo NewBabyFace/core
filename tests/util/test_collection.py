@@ -1,6 +1,6 @@
 """Test collection utils."""
 
-from homeassistant.util.collection import chunked_or_all
+from menuai.util.collection import chunked_or_all
 
 
 def test_chunked_or_all() -> None:

@@ -1,11 +1,11 @@
 # Ignore everything except the specified files
 *
 
-!homeassistant/
+!menuai/
 !requirements.txt
 !script/
-script/hassfest/docker/
-!script/hassfest/docker/entrypoint.sh
+script/menuaifest/docker/
+!script/menuaifest/docker/entrypoint.sh
 
 # Temporary files
 **/__pycache__

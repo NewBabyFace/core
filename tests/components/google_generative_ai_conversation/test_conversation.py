@@ -7,16 +7,16 @@ from freezegun import freeze_time
 from google.genai.types import GenerateContentResponse
 import pytest
 
-from homeassistant.components import conversation
-from homeassistant.components.conversation import UserContent
-from homeassistant.components.google_generative_ai_conversation.conversation import (
+from menuai.components import conversation
+from menuai.components.conversation import UserContent
+from menuai.components.google_generative_ai_conversation.conversation import (
     ERROR_GETTING_RESPONSE,
     _escape_decode,
     _format_schema,
 )
-from homeassistant.const import CONF_LLM_HASS_API
-from homeassistant.core import Context, HomeAssistant
-from homeassistant.helpers import intent
+from menuai.const import CONF_LLM_menuai_API
+from menuai.core import Context, menuai
+from menuai.helpers import intent
 
 from . import API_ERROR_500, CLIENT_ERROR_BAD_REQUEST
 
@@ -37,7 +37,7 @@ def freeze_the_time():
 @pytest.fixture(autouse=True)
 def mock_ulid_tools():
     """Mock generated ULIDs for tool calls."""
-    with patch("homeassistant.helpers.llm.ulid_now", return_value="mock-tool-call"):
+    with patch("menuai.helpers.llm.ulid_now", return_value="mock-tool-call"):
         yield
 
 
@@ -68,7 +68,7 @@ def mock_send_message_stream() -> Generator[AsyncMock]:
     ],
 )
 async def test_error_handling(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_init_component,
     error,
@@ -80,7 +80,7 @@ async def test_error_handling(
         side_effect=error,
     ):
         result = await conversation.async_converse(
-            hass,
+            menuai,
             "hello",
             None,
             Context(),
@@ -96,7 +96,7 @@ async def test_error_handling(
 @pytest.mark.usefixtures("mock_init_component")
 @pytest.mark.usefixtures("mock_ulid_tools")
 async def test_function_call(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry_with_assist: MockConfigEntry,
     mock_chat_log: MockChatLog,  # noqa: F811
     mock_send_message_stream: AsyncMock,
@@ -190,7 +190,7 @@ async def test_function_call(
     )
 
     result = await conversation.async_converse(
-        hass,
+        menuai,
         "Please call the test function",
         mock_chat_log.conversation_id,
         context,
@@ -226,7 +226,7 @@ async def test_function_call(
 @pytest.mark.usefixtures("mock_init_component")
 @pytest.mark.usefixtures("mock_ulid_tools")
 async def test_google_search_tool_is_sent(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry_with_google_search: MockConfigEntry,
     mock_chat_log: MockChatLog,  # noqa: F811
     mock_send_message_stream: AsyncMock,
@@ -275,7 +275,7 @@ async def test_google_search_tool_is_sent(
     ) as mock_create:
         mock_create.return_value.send_message_stream = mock_send_message_stream
         result = await conversation.async_converse(
-            hass,
+            menuai,
             "Who won the 2024 FIFA World Cup?",
             mock_chat_log.conversation_id,
             context,
@@ -292,7 +292,7 @@ async def test_google_search_tool_is_sent(
 
 @pytest.mark.usefixtures("mock_init_component")
 async def test_blocked_response(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_chat_log: MockChatLog,  # noqa: F811
     mock_send_message_stream: AsyncMock,
@@ -324,7 +324,7 @@ async def test_blocked_response(
     mock_send_message_stream.return_value = messages
 
     result = await conversation.async_converse(
-        hass,
+        menuai,
         "Please call the test function",
         mock_chat_log.conversation_id,
         context,
@@ -341,7 +341,7 @@ async def test_blocked_response(
 
 @pytest.mark.usefixtures("mock_init_component")
 async def test_empty_response(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_chat_log: MockChatLog,  # noqa: F811
     mock_send_message_stream: AsyncMock,
@@ -369,7 +369,7 @@ async def test_empty_response(
     mock_send_message_stream.return_value = messages
 
     result = await conversation.async_converse(
-        hass,
+        menuai,
         "Hello",
         mock_chat_log.conversation_id,
         context,
@@ -385,7 +385,7 @@ async def test_empty_response(
 
 @pytest.mark.usefixtures("mock_init_component")
 async def test_none_response(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_chat_log: MockChatLog,  # noqa: F811
     mock_send_message_stream: AsyncMock,
@@ -403,7 +403,7 @@ async def test_none_response(
     mock_send_message_stream.return_value = messages
 
     result = await conversation.async_converse(
-        hass,
+        menuai,
         "Hello",
         mock_chat_log.conversation_id,
         context,
@@ -420,18 +420,18 @@ async def test_none_response(
 
 @pytest.mark.usefixtures("mock_init_component")
 async def test_converse_error(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_config_entry: MockConfigEntry
 ) -> None:
     """Test handling ChatLog raising ConverseError."""
     with patch("google.genai.models.AsyncModels.get"):
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             mock_config_entry,
-            options={**mock_config_entry.options, CONF_LLM_HASS_API: "invalid_llm_api"},
+            options={**mock_config_entry.options, CONF_LLM_menuai_API: "invalid_llm_api"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     result = await conversation.async_converse(
-        hass,
+        menuai,
         "hello",
         None,
         Context(),
@@ -447,10 +447,10 @@ async def test_converse_error(
 
 @pytest.mark.usefixtures("mock_init_component")
 async def test_conversation_agent(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_config_entry: MockConfigEntry
 ) -> None:
     """Test GoogleGenerativeAIAgent."""
-    agent = conversation.get_agent_manager(hass).async_get_agent(
+    agent = conversation.get_agent_manager(menuai).async_get_agent(
         mock_config_entry.entry_id
     )
     assert agent.supported_languages == "*"
@@ -607,7 +607,7 @@ async def test_format_schema(openapi, genai_schema) -> None:
 
 @pytest.mark.usefixtures("mock_init_component")
 async def test_empty_content_in_chat_history(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_chat_log: MockChatLog,  # noqa: F811
     mock_send_message_stream: AsyncMock,
@@ -644,7 +644,7 @@ async def test_empty_content_in_chat_history(
     ) as mock_create:
         mock_create.return_value.send_message_stream = mock_send_message_stream
         await conversation.async_converse(
-            hass,
+            menuai,
             "Hello",
             mock_chat_log.conversation_id,
             context,
@@ -661,7 +661,7 @@ async def test_empty_content_in_chat_history(
 
 @pytest.mark.usefixtures("mock_init_component")
 async def test_history_always_user_first_turn(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_chat_log: MockChatLog,  # noqa: F811
     mock_send_message_stream: AsyncMock,
@@ -704,7 +704,7 @@ async def test_history_always_user_first_turn(
     ) as mock_create:
         mock_create.return_value.send_message_stream = mock_send_message_stream
         await conversation.async_converse(
-            hass,
+            menuai,
             "Hello",
             mock_chat_log.conversation_id,
             context,

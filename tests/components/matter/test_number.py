@@ -9,10 +9,10 @@ from matter_server.common.helpers.util import create_attribute_path_from_attribu
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
 
 from .common import (
     set_node_attribute,
@@ -23,65 +23,65 @@ from .common import (
 
 @pytest.mark.usefixtures("matter_devices")
 async def test_numbers(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test numbers."""
-    snapshot_matter_entities(hass, entity_registry, snapshot, Platform.NUMBER)
+    snapshot_matter_entities(menuai, entity_registry, snapshot, Platform.NUMBER)
 
 
 @pytest.mark.parametrize("node_fixture", ["dimmable_light"])
 async def test_level_control_config_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     matter_node: MatterNode,
 ) -> None:
     """Test number entities are created for the LevelControl cluster (config) attributes."""
-    state = hass.states.get("number.mock_dimmable_light_on_level")
+    state = menuai.states.get("number.mock_dimmable_light_on_level")
     assert state
     assert state.state == "255"
 
-    state = hass.states.get("number.mock_dimmable_light_on_transition_time")
+    state = menuai.states.get("number.mock_dimmable_light_on_transition_time")
     assert state
     assert state.state == "0.0"
 
-    state = hass.states.get("number.mock_dimmable_light_off_transition_time")
+    state = menuai.states.get("number.mock_dimmable_light_off_transition_time")
     assert state
     assert state.state == "0.0"
 
-    state = hass.states.get("number.mock_dimmable_light_on_off_transition_time")
+    state = menuai.states.get("number.mock_dimmable_light_on_off_transition_time")
     assert state
     assert state.state == "0.0"
 
     set_node_attribute(matter_node, 1, 0x00000008, 0x0011, 20)
-    await trigger_subscription_callback(hass, matter_client)
+    await trigger_subscription_callback(menuai, matter_client)
 
-    state = hass.states.get("number.mock_dimmable_light_on_level")
+    state = menuai.states.get("number.mock_dimmable_light_on_level")
     assert state
     assert state.state == "20"
 
 
 @pytest.mark.parametrize("node_fixture", ["eve_weather_sensor"])
 async def test_eve_weather_sensor_altitude(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     matter_node: MatterNode,
 ) -> None:
     """Test weather sensor created from (Eve) custom cluster."""
     # pressure sensor on Eve custom cluster
-    state = hass.states.get("number.eve_weather_altitude_above_sea_level")
+    state = menuai.states.get("number.eve_weather_altitude_above_sea_level")
     assert state
     assert state.state == "40.0"
 
     set_node_attribute(matter_node, 1, 319486977, 319422483, 800)
-    await trigger_subscription_callback(hass, matter_client)
-    state = hass.states.get("number.eve_weather_altitude_above_sea_level")
+    await trigger_subscription_callback(menuai, matter_client)
+    state = menuai.states.get("number.eve_weather_altitude_above_sea_level")
     assert state
     assert state.state == "800.0"
 
     # test set value
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "number",
         "set_value",
         {
@@ -103,16 +103,16 @@ async def test_eve_weather_sensor_altitude(
 
 @pytest.mark.parametrize("node_fixture", ["dimmable_light"])
 async def test_matter_exception_on_write_attribute(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     matter_node: MatterNode,
 ) -> None:
-    """Test if a MatterError gets converted to HomeAssistantError by using a dimmable_light fixture."""
-    state = hass.states.get("number.mock_dimmable_light_on_level")
+    """Test if a MatterError gets converted to menuaiError by using a dimmable_light fixture."""
+    state = menuai.states.get("number.mock_dimmable_light_on_level")
     assert state
     matter_client.write_attribute.side_effect = MatterError("Boom")
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             "number",
             "set_value",
             {

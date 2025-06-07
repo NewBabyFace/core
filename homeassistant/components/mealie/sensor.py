@@ -5,14 +5,14 @@ from dataclasses import dataclass
 
 from aiomealie import Statistics
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
 
 from .coordinator import MealieConfigEntry, MealieStatisticsCoordinator
 from .entity import MealieEntity
@@ -57,7 +57,7 @@ SENSOR_TYPES: tuple[MealieStatisticsSensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: MealieConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

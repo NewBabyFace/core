@@ -8,12 +8,12 @@ import logging
 import httpx
 import ollama
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_URL, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import config_validation as cv
-from homeassistant.util.ssl import get_default_context
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_URL, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import config_validation as cv
+from menuai.util.ssl import get_default_context
 
 from .const import (
     CONF_KEEP_ALIVE,
@@ -43,7 +43,7 @@ CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 PLATFORMS = (Platform.CONVERSATION,)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up Ollama from a config entry."""
     settings = {**entry.data, **entry.options}
     client = ollama.AsyncClient(host=settings[CONF_URL], verify=get_default_context())
@@ -53,15 +53,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except (TimeoutError, httpx.ConnectError) as err:
         raise ConfigEntryNotReady(err) from err
 
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = client
+    menuai.data.setdefault(DOMAIN, {})[entry.entry_id] = client
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload Ollama."""
-    if not await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+    if not await menuai.config_entries.async_unload_platforms(entry, PLATFORMS):
         return False
-    hass.data[DOMAIN].pop(entry.entry_id)
+    menuai.data[DOMAIN].pop(entry.entry_id)
     return True

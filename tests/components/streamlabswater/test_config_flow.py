@@ -2,29 +2,29 @@
 
 from unittest.mock import AsyncMock, patch
 
-from homeassistant import config_entries
-from homeassistant.components.streamlabswater.const import DOMAIN
-from homeassistant.const import CONF_API_KEY
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.streamlabswater.const import DOMAIN
+from menuai.const import CONF_API_KEY
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
 
-async def test_form(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
+async def test_form(menuai: menuai, mock_setup_entry: AsyncMock) -> None:
     """Test we get the form."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    with patch("homeassistant.components.streamlabswater.config_flow.StreamlabsClient"):
-        result = await hass.config_entries.flow.async_configure(
+    with patch("menuai.components.streamlabswater.config_flow.StreamlabsClient"):
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_API_KEY: "abc"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "Streamlabs"
@@ -33,18 +33,18 @@ async def test_form(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
 
 
 async def test_form_cannot_connect(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock
+    menuai: menuai, mock_setup_entry: AsyncMock
 ) -> None:
     """Test we handle cannot connect error."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     with patch(
-        "homeassistant.components.streamlabswater.config_flow.StreamlabsClient.get_locations",
+        "menuai.components.streamlabswater.config_flow.StreamlabsClient.get_locations",
         return_value={},
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_API_KEY: "abc"},
         )
@@ -52,12 +52,12 @@ async def test_form_cannot_connect(
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": "cannot_connect"}
 
-    with patch("homeassistant.components.streamlabswater.config_flow.StreamlabsClient"):
-        result = await hass.config_entries.flow.async_configure(
+    with patch("menuai.components.streamlabswater.config_flow.StreamlabsClient"):
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_API_KEY: "abc"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "Streamlabs"
@@ -65,17 +65,17 @@ async def test_form_cannot_connect(
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_form_unknown(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
+async def test_form_unknown(menuai: menuai, mock_setup_entry: AsyncMock) -> None:
     """Test we handle unknown error."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     with patch(
-        "homeassistant.components.streamlabswater.config_flow.StreamlabsClient.get_locations",
+        "menuai.components.streamlabswater.config_flow.StreamlabsClient.get_locations",
         side_effect=Exception,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_API_KEY: "abc"},
         )
@@ -83,12 +83,12 @@ async def test_form_unknown(hass: HomeAssistant, mock_setup_entry: AsyncMock) ->
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": "unknown"}
 
-    with patch("homeassistant.components.streamlabswater.config_flow.StreamlabsClient"):
-        result = await hass.config_entries.flow.async_configure(
+    with patch("menuai.components.streamlabswater.config_flow.StreamlabsClient"):
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_API_KEY: "abc"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "Streamlabs"
@@ -96,24 +96,24 @@ async def test_form_unknown(hass: HomeAssistant, mock_setup_entry: AsyncMock) ->
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_form_entry_already_exists(hass: HomeAssistant) -> None:
+async def test_form_entry_already_exists(menuai: menuai) -> None:
     """Test we handle if the entry already exists."""
 
     entry = MockConfigEntry(
         domain=DOMAIN,
         data={CONF_API_KEY: "abc"},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     with patch(
-        "homeassistant.components.streamlabswater.config_flow.StreamlabsClient.get_locations",
+        "menuai.components.streamlabswater.config_flow.StreamlabsClient.get_locations",
         side_effect=Exception,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_API_KEY: "abc"},
         )

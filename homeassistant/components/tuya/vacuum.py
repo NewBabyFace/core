@@ -6,14 +6,14 @@ from typing import Any
 
 from tuya_sharing import CustomerDevice, Manager
 
-from homeassistant.components.vacuum import (
+from menuai.components.vacuum import (
     StateVacuumEntity,
     VacuumActivity,
     VacuumEntityFeature,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import TuyaConfigEntry
 from .const import TUYA_DISCOVERY_NEW, DPCode, DPType
@@ -48,27 +48,27 @@ TUYA_STATUS_TO_HA = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: TuyaConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Tuya vacuum dynamically through Tuya discovery."""
-    hass_data = entry.runtime_data
+    menuai_data = entry.runtime_data
 
     @callback
     def async_discover_device(device_ids: list[str]) -> None:
         """Discover and add a discovered Tuya vacuum."""
         entities: list[TuyaVacuumEntity] = []
         for device_id in device_ids:
-            device = hass_data.manager.device_map[device_id]
+            device = menuai_data.manager.device_map[device_id]
             if device.category == "sd":
-                entities.append(TuyaVacuumEntity(device, hass_data.manager))
+                entities.append(TuyaVacuumEntity(device, menuai_data.manager))
         async_add_entities(entities)
 
-    async_discover_device([*hass_data.manager.device_map])
+    async_discover_device([*menuai_data.manager.device_map])
 
     entry.async_on_unload(
-        async_dispatcher_connect(hass, TUYA_DISCOVERY_NEW, async_discover_device)
+        async_dispatcher_connect(menuai, TUYA_DISCOVERY_NEW, async_discover_device)
     )
 
 

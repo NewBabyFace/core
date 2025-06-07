@@ -9,17 +9,17 @@ import logging
 from watergate_local_api import WatergateLocalApiClient
 from watergate_local_api.models import WebhookEvent
 
-from homeassistant.components.http import HomeAssistantView
-from homeassistant.components.webhook import (
+from menuai.components.http import menuaiView
+from menuai.components.webhook import (
     Request,
     Response,
     async_generate_url,
     async_register,
     async_unregister,
 )
-from homeassistant.const import CONF_IP_ADDRESS, CONF_WEBHOOK_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.dispatcher import async_dispatcher_send
+from menuai.const import CONF_IP_ADDRESS, CONF_WEBHOOK_ID, Platform
+from menuai.core import menuai
+from menuai.helpers.dispatcher import async_dispatcher_send
 
 from .const import AUTO_SHUT_OFF_EVENT_NAME, DOMAIN
 from .coordinator import WatergateConfigEntry, WatergateDataCoordinator
@@ -39,7 +39,7 @@ PLATFORMS: list[Platform] = [
 ]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: WatergateConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: WatergateConfigEntry) -> bool:
     """Set up Watergate from a config entry."""
     sonic_address = entry.data[CONF_IP_ADDRESS]
     webhook_id = entry.data[CONF_WEBHOOK_ID]
@@ -53,11 +53,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: WatergateConfigEntry) ->
         sonic_address if sonic_address.startswith("http") else f"http://{sonic_address}"
     )
 
-    coordinator = WatergateDataCoordinator(hass, entry, watergate_client)
+    coordinator = WatergateDataCoordinator(menuai, entry, watergate_client)
     entry.runtime_data = coordinator
 
     async_register(
-        hass, DOMAIN, "Watergate", webhook_id, get_webhook_handler(coordinator)
+        menuai, DOMAIN, "Watergate", webhook_id, get_webhook_handler(coordinator)
     )
 
     _LOGGER.debug("Registered webhook: %s", webhook_id)
@@ -65,31 +65,31 @@ async def async_setup_entry(hass: HomeAssistant, entry: WatergateConfigEntry) ->
     await coordinator.async_config_entry_first_refresh()
 
     await watergate_client.async_set_webhook_url(
-        async_generate_url(hass, webhook_id, allow_ip=True, prefer_external=False)
+        async_generate_url(menuai, webhook_id, allow_ip=True, prefer_external=False)
     )
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: WatergateConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: WatergateConfigEntry) -> bool:
     """Unload a config entry."""
     webhook_id = entry.data[CONF_WEBHOOK_ID]
-    async_unregister(hass, webhook_id)
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    async_unregister(menuai, webhook_id)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 def get_webhook_handler(
     coordinator: WatergateDataCoordinator,
-) -> Callable[[HomeAssistant, str, Request], Awaitable[Response | None]]:
+) -> Callable[[menuai, str, Request], Awaitable[Response | None]]:
     """Return webhook handler."""
 
     async def async_webhook_handler(
-        hass: HomeAssistant, webhook_id: str, request: Request
+        menuai: menuai, webhook_id: str, request: Request
     ) -> Response | None:
         if not request.body_exists:
-            return HomeAssistantView.json(
+            return menuaiView.json(
                 result="No Body", status_code=HTTPStatus.BAD_REQUEST
             )
 
@@ -126,11 +126,11 @@ def get_webhook_handler(
             coordinator_data.state.power_supply = data.supply
         elif body_type == WEBHOOK_AUTO_SHUT_OFF:
             async_dispatcher_send(
-                hass, AUTO_SHUT_OFF_EVENT_NAME.format(data.type.lower()), data
+                menuai, AUTO_SHUT_OFF_EVENT_NAME.format(data.type.lower()), data
             )
 
         coordinator.async_set_updated_data(coordinator_data)
 
-        return HomeAssistantView.json(result="OK", status_code=HTTPStatus.OK)
+        return menuaiView.json(result="OK", status_code=HTTPStatus.OK)
 
     return async_webhook_handler

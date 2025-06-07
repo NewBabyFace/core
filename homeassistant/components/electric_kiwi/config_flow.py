@@ -9,9 +9,9 @@ from typing import Any
 from electrickiwi_api import ElectricKiwiApi
 from electrickiwi_api.exceptions import ApiException
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlowResult
-from homeassistant.const import CONF_NAME
-from homeassistant.helpers import config_entry_oauth2_flow
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlowResult
+from menuai.const import CONF_NAME
+from menuai.helpers import config_entry_oauth2_flow
 
 from . import api
 from .const import DOMAIN, SCOPE_VALUES
@@ -56,7 +56,7 @@ class ElectricKiwiOauth2FlowHandler(
     async def async_oauth_create_entry(self, data: dict) -> ConfigFlowResult:
         """Create an entry for Electric Kiwi."""
         ek_api = ElectricKiwiApi(
-            api.ConfigFlowElectricKiwiAuth(self.hass, data["token"]["access_token"])
+            api.ConfigFlowElectricKiwiAuth(self.menuai, data["token"]["access_token"])
         )
 
         try:

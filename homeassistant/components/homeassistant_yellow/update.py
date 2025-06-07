@@ -1,4 +1,4 @@
-"""Home Assistant Yellow firmware update entity."""
+"""MenuAI Yellow firmware update entity."""
 
 from __future__ import annotations
 
@@ -6,25 +6,25 @@ import logging
 
 import aiohttp
 
-from homeassistant.components.homeassistant_hardware.coordinator import (
+from menuai.components.menuai_hardware.coordinator import (
     FirmwareUpdateCoordinator,
 )
-from homeassistant.components.homeassistant_hardware.update import (
+from menuai.components.menuai_hardware.update import (
     BaseFirmwareUpdateEntity,
     FirmwareUpdateEntityDescription,
 )
-from homeassistant.components.homeassistant_hardware.util import (
+from menuai.components.menuai_hardware.util import (
     ApplicationType,
     FirmwareInfo,
 )
-from homeassistant.components.update import UpdateDeviceClass
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.update import UpdateDeviceClass
+from menuai.config_entries import ConfigEntry
+from menuai.const import EntityCategory
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
     DOMAIN,
@@ -106,7 +106,7 @@ FIRMWARE_ENTITY_DESCRIPTIONS: dict[
 
 
 def _async_create_update_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     session: aiohttp.ClientSession,
     async_add_entities: AddConfigEntryEntitiesCallback,
@@ -128,7 +128,7 @@ def _async_create_update_entity(
         device=RADIO_DEVICE,
         config_entry=config_entry,
         update_coordinator=FirmwareUpdateCoordinator(
-            hass,
+            menuai,
             session,
             NABU_CASA_FIRMWARE_RELEASES_URL,
         ),
@@ -139,11 +139,11 @@ def _async_create_update_entity(
         old_type: ApplicationType | None, new_type: ApplicationType | None
     ) -> None:
         """Replace the current entity when the firmware type changes."""
-        er.async_get(hass).async_remove(entity.entity_id)
+        er.async_get(menuai).async_remove(entity.entity_id)
         async_add_entities(
             [
                 _async_create_update_entity(
-                    hass, config_entry, session, async_add_entities
+                    menuai, config_entry, session, async_add_entities
                 )
             ]
         )
@@ -156,14 +156,14 @@ def _async_create_update_entity(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the firmware update config entry."""
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
     entity = _async_create_update_entity(
-        hass, config_entry, session, async_add_entities
+        menuai, config_entry, session, async_add_entities
     )
 
     async_add_entities([entity])
@@ -198,7 +198,7 @@ class FirmwareUpdateEntity(BaseFirmwareUpdateEntity):
                 firmware_type=ApplicationType(self._config_entry.data[FIRMWARE]),
                 firmware_version=self._config_entry.data[FIRMWARE_VERSION],
                 owners=[],
-                source="homeassistant_yellow",
+                source="menuai_yellow",
             )
 
     def _update_attributes(self) -> None:
@@ -206,7 +206,7 @@ class FirmwareUpdateEntity(BaseFirmwareUpdateEntity):
         super()._update_attributes()
 
         assert self.device_entry is not None
-        device_registry = dr.async_get(self.hass)
+        device_registry = dr.async_get(self.menuai)
         device_registry.async_update_device(
             device_id=self.device_entry.id,
             sw_version=f"{self.entity_description.firmware_name} {self._attr_installed_version}",
@@ -215,7 +215,7 @@ class FirmwareUpdateEntity(BaseFirmwareUpdateEntity):
     @callback
     def _firmware_info_callback(self, firmware_info: FirmwareInfo) -> None:
         """Handle updated firmware info being pushed by an integration."""
-        self.hass.config_entries.async_update_entry(
+        self.menuai.config_entries.async_update_entry(
             self._config_entry,
             data={
                 **self._config_entry.data,

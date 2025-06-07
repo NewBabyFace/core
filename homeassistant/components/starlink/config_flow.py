@@ -7,8 +7,8 @@ from typing import Any
 from starlink_grpc import ChannelContext, GrpcError, get_id
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_IP_ADDRESS
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_IP_ADDRESS
 
 from .const import DOMAIN
 
@@ -46,7 +46,7 @@ class StarlinkConfigFlow(ConfigFlow, domain=DOMAIN):
         context = ChannelContext(target=url)
         response: str | None
         try:
-            response = await self.hass.async_add_executor_job(get_id, context)
+            response = await self.menuai.async_add_executor_job(get_id, context)
         except GrpcError:
             response = None
         context.close()

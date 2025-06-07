@@ -10,9 +10,9 @@ from aussiebb.asyncio import AussieBB, AuthenticationException
 from aussiebb.const import FETCH_TYPES
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import CONF_SERVICES, DOMAIN
 
@@ -36,7 +36,7 @@ class AussieBroadbandConfigFlow(ConfigFlow, domain=DOMAIN):
         self.client = AussieBB(
             user_input[CONF_USERNAME],
             user_input[CONF_PASSWORD],
-            async_get_clientsession(self.hass),
+            async_get_clientsession(self.menuai),
         )
         try:
             await self.client.login()

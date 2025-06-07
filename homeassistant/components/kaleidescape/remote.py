@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING
 
 from kaleidescape import const as kaleidescape_const
 
-from homeassistant.components.remote import RemoteEntity
-from homeassistant.exceptions import HomeAssistantError
+from menuai.components.remote import RemoteEntity
+from menuai.exceptions import menuaiError
 
 from .const import DOMAIN
 from .entity import KaleidescapeEntity
@@ -16,18 +16,18 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
     from typing import Any
 
-    from homeassistant.config_entries import ConfigEntry
-    from homeassistant.core import HomeAssistant
-    from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+    from menuai.config_entries import ConfigEntry
+    from menuai.core import menuai
+    from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the platform from a config entry."""
-    entities = [KaleidescapeRemote(hass.data[DOMAIN][entry.entry_id])]
+    entities = [KaleidescapeRemote(menuai.data[DOMAIN][entry.entry_id])]
     async_add_entities(entities)
 
 
@@ -68,5 +68,5 @@ class KaleidescapeRemote(KaleidescapeEntity, RemoteEntity):
         """Send a command to a device."""
         for cmd in command:
             if cmd not in VALID_COMMANDS:
-                raise HomeAssistantError(f"{cmd} is not a known command")
+                raise menuaiError(f"{cmd} is not a known command")
             await getattr(self._device, cmd)()

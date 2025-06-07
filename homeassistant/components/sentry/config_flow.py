@@ -8,13 +8,13 @@ from typing import Any
 from sentry_sdk.utils import BadDsn, Dsn
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.core import callback
+from menuai.core import callback
 
 from .const import (
     CONF_DSN,

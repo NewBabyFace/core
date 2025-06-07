@@ -7,11 +7,11 @@ from typing import Any
 
 import attr
 
-from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.const import ATTR_CONFIGURATION_URL, CONF_HOST
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.device_registry import DeviceEntry
+from menuai.components.diagnostics import async_redact_data
+from menuai.const import ATTR_CONFIGURATION_URL, CONF_HOST
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.device_registry import DeviceEntry
 
 from .const import REDACT_HUB_ADDRESS, REDACT_MAC_ADDRESS, REDACT_SERIAL_NUMBER
 from .model import PowerviewConfigEntry
@@ -26,14 +26,14 @@ REDACT_CONFIG = {
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: PowerviewConfigEntry
+    menuai: menuai, entry: PowerviewConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
-    data = _async_get_diagnostics(hass, entry)
-    device_registry = dr.async_get(hass)
+    data = _async_get_diagnostics(menuai, entry)
+    device_registry = dr.async_get(menuai)
     data.update(
         device_info=[
-            _async_device_as_dict(hass, device)
+            _async_device_as_dict(menuai, device)
             for device in dr.async_entries_for_config_entry(
                 device_registry, entry.entry_id
             )
@@ -43,11 +43,11 @@ async def async_get_config_entry_diagnostics(
 
 
 async def async_get_device_diagnostics(
-    hass: HomeAssistant, entry: PowerviewConfigEntry, device: DeviceEntry
+    menuai: menuai, entry: PowerviewConfigEntry, device: DeviceEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a device entry."""
-    data = _async_get_diagnostics(hass, entry)
-    data["device_info"] = _async_device_as_dict(hass, device)
+    data = _async_get_diagnostics(menuai, entry)
+    data["device_info"] = _async_device_as_dict(menuai, device)
     # try to match on name to restrict to shade if we can
     # otherwise just return all shade data
     # shade name is unique in powerview
@@ -60,7 +60,7 @@ async def async_get_device_diagnostics(
 
 @callback
 def _async_get_diagnostics(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: PowerviewConfigEntry,
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
@@ -71,11 +71,11 @@ def _async_get_diagnostics(
 
 
 @callback
-def _async_device_as_dict(hass: HomeAssistant, device: DeviceEntry) -> dict[str, Any]:
+def _async_device_as_dict(menuai: menuai, device: DeviceEntry) -> dict[str, Any]:
     """Represent a Powerview device as a dictionary."""
 
-    # Gather information how this device is represented in Home Assistant
-    entity_registry = er.async_get(hass)
+    # Gather information how this device is represented in MenuAI
+    entity_registry = er.async_get(menuai)
 
     data = async_redact_data(attr.asdict(device), REDACT_CONFIG)
     data["entities"] = []
@@ -88,7 +88,7 @@ def _async_device_as_dict(hass: HomeAssistant, device: DeviceEntry) -> dict[str,
     )
 
     for entity_entry in entries:
-        state = hass.states.get(entity_entry.entity_id)
+        state = menuai.states.get(entity_entry.entity_id)
         state_dict = None
         if state:
             state_dict = dict(state.as_dict())

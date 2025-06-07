@@ -1,9 +1,9 @@
-"""Tests for hassfest translations."""
+"""Tests for menuaifest translations."""
 
 import pytest
 import voluptuous as vol
 
-from script.hassfest import translations
+from script.menuaifest import translations
 
 
 def test_string_with_no_placeholders_in_single_quotes() -> None:

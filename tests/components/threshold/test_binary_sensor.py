@@ -2,7 +2,7 @@
 
 import pytest
 
-from homeassistant.components.threshold.const import (
+from menuai.components.threshold.const import (
     ATTR_HYSTERESIS,
     ATTR_LOWER,
     ATTR_POSITION,
@@ -21,7 +21,7 @@ from homeassistant.components.threshold.const import (
     TYPE_RANGE,
     TYPE_UPPER,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_UNIT_OF_MEASUREMENT,
     CONF_ENTITY_ID,
@@ -34,9 +34,9 @@ from homeassistant.const import (
     Platform,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 
@@ -54,7 +54,7 @@ from tests.common import MockConfigEntry
     ],
 )
 async def test_sensor_upper(
-    hass: HomeAssistant,
+    menuai: menuai,
     vals: list[float | str | None],
     expected_position: str,
     expected_state: str,
@@ -68,10 +68,10 @@ async def test_sensor_upper(
         }
     }
 
-    assert await async_setup_component(hass, Platform.BINARY_SENSOR, config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, Platform.BINARY_SENSOR, config)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.threshold")
+    state = menuai.states.get("binary_sensor.threshold")
     assert state.attributes[ATTR_ENTITY_ID] == "sensor.test_monitored"
     assert state.attributes[ATTR_UPPER] == float(
         config[Platform.BINARY_SENSOR][CONF_UPPER]
@@ -80,9 +80,9 @@ async def test_sensor_upper(
     assert state.attributes[ATTR_TYPE] == TYPE_UPPER
 
     for val in vals:
-        hass.states.async_set("sensor.test_monitored", val)
-        await hass.async_block_till_done()
-    state = hass.states.get("binary_sensor.threshold")
+        menuai.states.async_set("sensor.test_monitored", val)
+        await menuai.async_block_till_done()
+    state = menuai.states.get("binary_sensor.threshold")
     assert state.attributes[ATTR_POSITION] == expected_position
     assert state.state == expected_state
 
@@ -100,7 +100,7 @@ async def test_sensor_upper(
     ],
 )
 async def test_sensor_lower(
-    hass: HomeAssistant,
+    menuai: menuai,
     vals: list[float | str | None],
     expected_position: str,
     expected_state: str,
@@ -114,10 +114,10 @@ async def test_sensor_lower(
         }
     }
 
-    assert await async_setup_component(hass, Platform.BINARY_SENSOR, config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, Platform.BINARY_SENSOR, config)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.threshold")
+    state = menuai.states.get("binary_sensor.threshold")
     assert state.attributes[ATTR_ENTITY_ID] == "sensor.test_monitored"
     assert state.attributes[ATTR_LOWER] == float(
         config[Platform.BINARY_SENSOR][CONF_LOWER]
@@ -126,9 +126,9 @@ async def test_sensor_lower(
     assert state.attributes[ATTR_TYPE] == TYPE_LOWER
 
     for val in vals:
-        hass.states.async_set("sensor.test_monitored", val)
-        await hass.async_block_till_done()
-    state = hass.states.get("binary_sensor.threshold")
+        menuai.states.async_set("sensor.test_monitored", val)
+        await menuai.async_block_till_done()
+    state = menuai.states.get("binary_sensor.threshold")
     assert state.attributes[ATTR_POSITION] == expected_position
     assert state.state == expected_state
 
@@ -161,7 +161,7 @@ async def test_sensor_lower(
     ],
 )
 async def test_sensor_upper_hysteresis(
-    hass: HomeAssistant,
+    menuai: menuai,
     vals: list[float | str | None],
     expected_position: str,
     expected_state: str,
@@ -176,10 +176,10 @@ async def test_sensor_upper_hysteresis(
         }
     }
 
-    assert await async_setup_component(hass, Platform.BINARY_SENSOR, config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, Platform.BINARY_SENSOR, config)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.threshold")
+    state = menuai.states.get("binary_sensor.threshold")
     assert state.attributes[ATTR_ENTITY_ID] == "sensor.test_monitored"
     assert state.attributes[ATTR_UPPER] == float(
         config[Platform.BINARY_SENSOR][CONF_UPPER]
@@ -188,9 +188,9 @@ async def test_sensor_upper_hysteresis(
     assert state.attributes[ATTR_TYPE] == TYPE_UPPER
 
     for val in vals:
-        hass.states.async_set("sensor.test_monitored", val)
-        await hass.async_block_till_done()
-    state = hass.states.get("binary_sensor.threshold")
+        menuai.states.async_set("sensor.test_monitored", val)
+        await menuai.async_block_till_done()
+    state = menuai.states.get("binary_sensor.threshold")
     assert state.attributes[ATTR_POSITION] == expected_position
     assert state.state == expected_state
 
@@ -223,7 +223,7 @@ async def test_sensor_upper_hysteresis(
     ],
 )
 async def test_sensor_lower_hysteresis(
-    hass: HomeAssistant,
+    menuai: menuai,
     vals: list[float | str | None],
     expected_position: str,
     expected_state: str,
@@ -238,10 +238,10 @@ async def test_sensor_lower_hysteresis(
         }
     }
 
-    assert await async_setup_component(hass, Platform.BINARY_SENSOR, config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, Platform.BINARY_SENSOR, config)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.threshold")
+    state = menuai.states.get("binary_sensor.threshold")
     assert state.attributes[ATTR_ENTITY_ID] == "sensor.test_monitored"
     assert state.attributes[ATTR_LOWER] == float(
         config[Platform.BINARY_SENSOR][CONF_LOWER]
@@ -250,9 +250,9 @@ async def test_sensor_lower_hysteresis(
     assert state.attributes[ATTR_TYPE] == TYPE_LOWER
 
     for val in vals:
-        hass.states.async_set("sensor.test_monitored", val)
-        await hass.async_block_till_done()
-    state = hass.states.get("binary_sensor.threshold")
+        menuai.states.async_set("sensor.test_monitored", val)
+        await menuai.async_block_till_done()
+    state = menuai.states.get("binary_sensor.threshold")
     assert state.attributes[ATTR_POSITION] == expected_position
     assert state.state == expected_state
 
@@ -285,7 +285,7 @@ async def test_sensor_lower_hysteresis(
     ],
 )
 async def test_sensor_in_range_no_hysteresis(
-    hass: HomeAssistant,
+    menuai: menuai,
     vals: list[float | str | None],
     expected_position: str,
     expected_state: str,
@@ -300,10 +300,10 @@ async def test_sensor_in_range_no_hysteresis(
         }
     }
 
-    assert await async_setup_component(hass, Platform.BINARY_SENSOR, config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, Platform.BINARY_SENSOR, config)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.threshold")
+    state = menuai.states.get("binary_sensor.threshold")
     assert state.attributes[ATTR_ENTITY_ID] == "sensor.test_monitored"
     assert state.attributes[ATTR_LOWER] == float(
         config[Platform.BINARY_SENSOR][CONF_LOWER]
@@ -315,9 +315,9 @@ async def test_sensor_in_range_no_hysteresis(
     assert state.attributes[ATTR_TYPE] == TYPE_RANGE
 
     for val in vals:
-        hass.states.async_set("sensor.test_monitored", val)
-        await hass.async_block_till_done()
-    state = hass.states.get("binary_sensor.threshold")
+        menuai.states.async_set("sensor.test_monitored", val)
+        await menuai.async_block_till_done()
+    state = menuai.states.get("binary_sensor.threshold")
     assert state.attributes[ATTR_POSITION] == expected_position
     assert state.state == expected_state
 
@@ -377,7 +377,7 @@ async def test_sensor_in_range_no_hysteresis(
     ],
 )
 async def test_sensor_in_range_with_hysteresis(
-    hass: HomeAssistant,
+    menuai: menuai,
     vals: list[float | str | None],
     expected_position: str,
     expected_state: str,
@@ -393,10 +393,10 @@ async def test_sensor_in_range_with_hysteresis(
         }
     }
 
-    assert await async_setup_component(hass, Platform.BINARY_SENSOR, config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, Platform.BINARY_SENSOR, config)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.threshold")
+    state = menuai.states.get("binary_sensor.threshold")
     assert state.attributes[ATTR_ENTITY_ID] == "sensor.test_monitored"
     assert state.attributes[ATTR_LOWER] == float(
         config[Platform.BINARY_SENSOR][CONF_LOWER]
@@ -408,15 +408,15 @@ async def test_sensor_in_range_with_hysteresis(
     assert state.attributes[ATTR_TYPE] == TYPE_RANGE
 
     for val in vals:
-        hass.states.async_set("sensor.test_monitored", val)
-        await hass.async_block_till_done()
-    state = hass.states.get("binary_sensor.threshold")
+        menuai.states.async_set("sensor.test_monitored", val)
+        await menuai.async_block_till_done()
+    state = menuai.states.get("binary_sensor.threshold")
     assert state.attributes[ATTR_POSITION] == expected_position
     assert state.state == expected_state
 
 
 async def test_sensor_in_range_unknown_state(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test if source is within the range."""
     config = {
@@ -428,17 +428,17 @@ async def test_sensor_in_range_unknown_state(
         }
     }
 
-    assert await async_setup_component(hass, Platform.BINARY_SENSOR, config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, Platform.BINARY_SENSOR, config)
+    await menuai.async_block_till_done()
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test_monitored",
         16,
         {ATTR_UNIT_OF_MEASUREMENT: UnitOfTemperature.CELSIUS},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.threshold")
+    state = menuai.states.get("binary_sensor.threshold")
 
     assert state.attributes[ATTR_ENTITY_ID] == "sensor.test_monitored"
     assert state.attributes[ATTR_SENSOR_VALUE] == 16
@@ -453,22 +453,22 @@ async def test_sensor_in_range_unknown_state(
     assert state.attributes[ATTR_TYPE] == TYPE_RANGE
     assert state.state == STATE_ON
 
-    hass.states.async_set("sensor.test_monitored", STATE_UNKNOWN)
-    await hass.async_block_till_done()
-    state = hass.states.get("binary_sensor.threshold")
+    menuai.states.async_set("sensor.test_monitored", STATE_UNKNOWN)
+    await menuai.async_block_till_done()
+    state = menuai.states.get("binary_sensor.threshold")
     assert state.attributes[ATTR_POSITION] == POSITION_UNKNOWN
     assert state.state == STATE_UNKNOWN
 
-    hass.states.async_set("sensor.test_monitored", STATE_UNAVAILABLE)
-    await hass.async_block_till_done()
-    state = hass.states.get("binary_sensor.threshold")
+    menuai.states.async_set("sensor.test_monitored", STATE_UNAVAILABLE)
+    await menuai.async_block_till_done()
+    state = menuai.states.get("binary_sensor.threshold")
     assert state.attributes[ATTR_POSITION] == POSITION_UNKNOWN
     assert state.state == STATE_UNKNOWN
 
     assert "State is not numerical" not in caplog.text
 
 
-async def test_sensor_lower_zero_threshold(hass: HomeAssistant) -> None:
+async def test_sensor_lower_zero_threshold(menuai: menuai) -> None:
     """Test if a lower threshold of zero is set."""
     config = {
         Platform.BINARY_SENSOR: {
@@ -478,25 +478,25 @@ async def test_sensor_lower_zero_threshold(hass: HomeAssistant) -> None:
         }
     }
 
-    assert await async_setup_component(hass, Platform.BINARY_SENSOR, config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, Platform.BINARY_SENSOR, config)
+    await menuai.async_block_till_done()
 
-    hass.states.async_set("sensor.test_monitored", 16)
-    await hass.async_block_till_done()
-    state = hass.states.get("binary_sensor.threshold")
+    menuai.states.async_set("sensor.test_monitored", 16)
+    await menuai.async_block_till_done()
+    state = menuai.states.get("binary_sensor.threshold")
     assert state.attributes[ATTR_TYPE] == TYPE_LOWER
     assert state.attributes[ATTR_LOWER] == float(
         config[Platform.BINARY_SENSOR][CONF_LOWER]
     )
     assert state.state == STATE_OFF
 
-    hass.states.async_set("sensor.test_monitored", -3)
-    await hass.async_block_till_done()
-    state = hass.states.get("binary_sensor.threshold")
+    menuai.states.async_set("sensor.test_monitored", -3)
+    await menuai.async_block_till_done()
+    state = menuai.states.get("binary_sensor.threshold")
     assert state.state == STATE_ON
 
 
-async def test_sensor_upper_zero_threshold(hass: HomeAssistant) -> None:
+async def test_sensor_upper_zero_threshold(menuai: menuai) -> None:
     """Test if an upper threshold of zero is set."""
     config = {
         Platform.BINARY_SENSOR: {
@@ -506,26 +506,26 @@ async def test_sensor_upper_zero_threshold(hass: HomeAssistant) -> None:
         }
     }
 
-    assert await async_setup_component(hass, Platform.BINARY_SENSOR, config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, Platform.BINARY_SENSOR, config)
+    await menuai.async_block_till_done()
 
-    hass.states.async_set("sensor.test_monitored", -10)
-    await hass.async_block_till_done()
-    state = hass.states.get("binary_sensor.threshold")
+    menuai.states.async_set("sensor.test_monitored", -10)
+    await menuai.async_block_till_done()
+    state = menuai.states.get("binary_sensor.threshold")
     assert state.attributes[ATTR_TYPE] == TYPE_UPPER
     assert state.attributes[ATTR_UPPER] == float(
         config[Platform.BINARY_SENSOR][CONF_UPPER]
     )
     assert state.state == STATE_OFF
 
-    hass.states.async_set("sensor.test_monitored", 2)
-    await hass.async_block_till_done()
-    state = hass.states.get("binary_sensor.threshold")
+    menuai.states.async_set("sensor.test_monitored", 2)
+    await menuai.async_block_till_done()
+    state = menuai.states.get("binary_sensor.threshold")
     assert state.state == STATE_ON
 
 
 async def test_sensor_no_lower_upper(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test if no lower or upper has been provided."""
     config = {
@@ -535,20 +535,20 @@ async def test_sensor_no_lower_upper(
         }
     }
 
-    await async_setup_component(hass, Platform.BINARY_SENSOR, config)
-    await hass.async_block_till_done()
+    await async_setup_component(menuai, Platform.BINARY_SENSOR, config)
+    await menuai.async_block_till_done()
 
     assert "Lower or Upper thresholds are not provided" in caplog.text
 
 
 async def test_device_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test for source entity device for Threshold."""
     source_config_entry = MockConfigEntry()
-    source_config_entry.add_to_hass(hass)
+    source_config_entry.add_to_menuai(menuai)
     source_device_entry = device_registry.async_get_or_create(
         config_entry_id=source_config_entry.entry_id,
         identifiers={("sensor", "identifier_test")},
@@ -561,7 +561,7 @@ async def test_device_id(
         config_entry=source_config_entry,
         device_id=source_device_entry.id,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert entity_registry.async_get("sensor.test_source") is not None
 
     utility_meter_config_entry = MockConfigEntry(
@@ -577,10 +577,10 @@ async def test_device_id(
         title="Threshold",
     )
 
-    utility_meter_config_entry.add_to_hass(hass)
+    utility_meter_config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(utility_meter_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(utility_meter_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     utility_meter_entity = entity_registry.async_get("binary_sensor.threshold")
     assert utility_meter_entity is not None

@@ -5,9 +5,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from homeassistant.components.jvc_projector.const import DOMAIN
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_PORT
-from homeassistant.core import HomeAssistant
+from menuai.components.jvc_projector.const import DOMAIN
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_PORT
+from menuai.core import menuai
 
 from . import MOCK_HOST, MOCK_MAC, MOCK_MODEL, MOCK_PASSWORD, MOCK_PORT
 
@@ -19,7 +19,7 @@ def fixture_mock_device(
     request: pytest.FixtureRequest,
 ) -> Generator[MagicMock]:
     """Return a mocked JVC Projector device."""
-    target = "homeassistant.components.jvc_projector.JvcProjector"
+    target = "menuai.components.jvc_projector.JvcProjector"
     if hasattr(request, "param"):
         target = request.param
 
@@ -50,11 +50,11 @@ def fixture_mock_config_entry() -> MockConfigEntry:
 
 @pytest.fixture(name="mock_integration")
 async def fixture_mock_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
 ) -> MockConfigEntry:
     """Return a mock ConfigEntry setup for the integration."""
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
     return mock_config_entry

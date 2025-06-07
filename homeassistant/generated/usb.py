@@ -1,18 +1,18 @@
 """Automatically generated file.
 
-To update, run python3 -m script.hassfest
+To update, run python3 -m script.menuaifest
 """
 
 USB = [
     {
         "description": "*skyconnect v1.0*",
-        "domain": "homeassistant_sky_connect",
+        "domain": "menuai_sky_connect",
         "pid": "EA60",
         "vid": "10C4",
     },
     {
-        "description": "*home assistant connect zbt-1*",
-        "domain": "homeassistant_sky_connect",
+        "description": "*MenuAI connect zbt-1*",
+        "domain": "menuai_sky_connect",
         "pid": "EA60",
         "vid": "10C4",
     },

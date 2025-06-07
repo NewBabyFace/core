@@ -6,14 +6,14 @@ from typing import Any
 
 from bond_async import Action, DeviceType
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     ATTR_POSITION,
     CoverDeviceClass,
     CoverEntity,
     CoverEntityFeature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import BondConfigEntry
 from .entity import BondEntity
@@ -21,18 +21,18 @@ from .models import BondData
 from .utils import BondDevice
 
 
-def _bond_to_hass_position(bond_position: int) -> int:
-    """Convert bond 0-open 100-closed to hass 0-closed 100-open."""
+def _bond_to_menuai_position(bond_position: int) -> int:
+    """Convert bond 0-open 100-closed to menuai 0-closed 100-open."""
     return abs(bond_position - 100)
 
 
-def _hass_to_bond_position(hass_position: int) -> int:
-    """Convert hass 0-closed 100-open to bond 0-open 100-closed."""
-    return 100 - hass_position
+def _menuai_to_bond_position(menuai_position: int) -> int:
+    """Convert menuai 0-closed 100-open to bond 0-open 100-closed."""
+    return 100 - menuai_position
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: BondConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -76,13 +76,13 @@ class BondCover(BondEntity, CoverEntity):
         cover_open = state.get("open")
         self._attr_is_closed = None if cover_open is None else cover_open == 0
         if (bond_position := state.get("position")) is not None:
-            self._attr_current_cover_position = _bond_to_hass_position(bond_position)
+            self._attr_current_cover_position = _bond_to_menuai_position(bond_position)
 
     async def async_set_cover_position(self, **kwargs: Any) -> None:
         """Set the cover position."""
         await self._bond.action(
             self._device_id,
-            Action.set_position(_hass_to_bond_position(kwargs[ATTR_POSITION])),
+            Action.set_position(_menuai_to_bond_position(kwargs[ATTR_POSITION])),
         )
 
     async def async_open_cover(self, **kwargs: Any) -> None:

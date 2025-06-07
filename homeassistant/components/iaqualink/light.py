@@ -6,15 +6,15 @@ from typing import Any
 
 from iaqualink.device import AqualinkLight
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_EFFECT,
     ColorMode,
     LightEntity,
     LightEntityFeature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import AqualinkConfigEntry, refresh_system
 from .entity import AqualinkEntity
@@ -24,18 +24,18 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: AqualinkConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up discovered lights."""
     async_add_entities(
-        (HassAqualinkLight(dev) for dev in config_entry.runtime_data.lights),
+        (menuaiAqualinkLight(dev) for dev in config_entry.runtime_data.lights),
         True,
     )
 
 
-class HassAqualinkLight(AqualinkEntity[AqualinkLight], LightEntity):
+class menuaiAqualinkLight(AqualinkEntity[AqualinkLight], LightEntity):
     """Representation of a light."""
 
     def __init__(self, dev: AqualinkLight) -> None:

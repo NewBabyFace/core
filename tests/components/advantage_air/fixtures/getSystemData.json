@@ -276,7 +276,7 @@
   "system": {
     "hasAircons": true,
     "hasLights": true,
-    "hasSensors": false,
+    "menuaiensors": false,
     "hasThings": true,
     "hasThingsBOG": false,
     "hasThingsLight": false,

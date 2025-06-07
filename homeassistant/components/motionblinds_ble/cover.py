@@ -9,7 +9,7 @@ from typing import Any
 from motionblindsble.const import MotionBlindType, MotionRunningType
 from motionblindsble.device import MotionDevice
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     ATTR_POSITION,
     ATTR_TILT_POSITION,
     CoverDeviceClass,
@@ -17,9 +17,9 @@ from homeassistant.components.cover import (
     CoverEntityDescription,
     CoverEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import CONF_BLIND_TYPE, CONF_MAC_CODE, DOMAIN, ICON_VERTICAL_BLIND
 from .entity import MotionblindsBLEEntity
@@ -61,7 +61,7 @@ BLIND_TYPE_TO_ENTITY_DESCRIPTION: dict[str, MotionblindsBLECoverEntityDescriptio
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -70,7 +70,7 @@ async def async_setup_entry(
     cover_class: type[MotionblindsBLECoverEntity] = BLIND_TYPE_TO_CLASS[
         entry.data[CONF_BLIND_TYPE].upper()
     ]
-    device: MotionDevice = hass.data[DOMAIN][entry.entry_id]
+    device: MotionDevice = menuai.data[DOMAIN][entry.entry_id]
     entity_description: MotionblindsBLECoverEntityDescription = (
         BLIND_TYPE_TO_ENTITY_DESCRIPTION[entry.data[CONF_BLIND_TYPE].upper()]
     )
@@ -85,7 +85,7 @@ class MotionblindsBLECoverEntity(MotionblindsBLEEntity, CoverEntity):
     _attr_is_closed: bool | None = None
     _attr_name = None
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register device callbacks."""
         _LOGGER.debug(
             "(%s) Added %s cover entity (%s)",

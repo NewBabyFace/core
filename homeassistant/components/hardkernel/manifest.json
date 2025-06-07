@@ -1,7 +1,7 @@
 {
   "domain": "hardkernel",
   "name": "Hardkernel",
-  "after_dependencies": ["hassio"],
+  "after_dependencies": ["menuaiio"],
   "codeowners": ["@home-assistant/core"],
   "config_flow": false,
   "dependencies": ["hardware"],

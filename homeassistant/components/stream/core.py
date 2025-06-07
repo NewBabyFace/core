@@ -14,10 +14,10 @@ from typing import TYPE_CHECKING, Any, cast
 from aiohttp import web
 import numpy as np
 
-from homeassistant.components.http import KEY_HASS, HomeAssistantView
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
-from homeassistant.helpers.event import async_call_later
-from homeassistant.util.decorator import Registry
+from menuai.components.http import KEY_menuai, menuaiView
+from menuai.core import CALLBACK_TYPE, menuai, callback
+from menuai.helpers.event import async_call_later
+from menuai.util.decorator import Registry
 
 from .const import (
     ATTR_STREAMS,
@@ -29,7 +29,7 @@ from .const import (
 if TYPE_CHECKING:
     from av import Packet, VideoCodecContext
 
-    from homeassistant.components.camera import DynamicStreamSettings
+    from menuai.components.camera import DynamicStreamSettings
 
     from . import Stream
 
@@ -231,12 +231,12 @@ class IdleTimer:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         timeout: int,
         idle_callback: Callable[[], Coroutine[Any, Any, None]],
     ) -> None:
         """Initialize IdleTimer."""
-        self._hass = hass
+        self._menuai = menuai
         self._timeout = timeout
         self._callback = idle_callback
         self._unsub: CALLBACK_TYPE | None = None
@@ -246,14 +246,14 @@ class IdleTimer:
         """Start the idle timer if not already started."""
         self.idle = False
         if self._unsub is None:
-            self._unsub = async_call_later(self._hass, self._timeout, self.fire)
+            self._unsub = async_call_later(self._menuai, self._timeout, self.fire)
 
     def awake(self) -> None:
         """Keep the idle time alive by resetting the timeout."""
         self.idle = False
         # Reset idle timeout
         self.clear()
-        self._unsub = async_call_later(self._hass, self._timeout, self.fire)
+        self._unsub = async_call_later(self._menuai, self._timeout, self.fire)
 
     def clear(self) -> None:
         """Clear and disable the timer if it has not already fired."""
@@ -265,7 +265,7 @@ class IdleTimer:
         """Invoke the idle timeout callback, called when the alarm fires."""
         self.idle = True
         self._unsub = None
-        self._hass.async_create_task(self._callback())
+        self._menuai.async_create_task(self._callback())
 
 
 class StreamOutput:
@@ -273,14 +273,14 @@ class StreamOutput:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         idle_timer: IdleTimer,
         stream_settings: StreamSettings,
         dynamic_stream_settings: DynamicStreamSettings,
         deque_maxlen: int | None = None,
     ) -> None:
         """Initialize a stream output."""
-        self._hass = hass
+        self._menuai = menuai
         self.idle_timer = idle_timer
         self.stream_settings = stream_settings
         self.dynamic_stream_settings = dynamic_stream_settings
@@ -351,7 +351,7 @@ class StreamOutput:
 
     def put(self, segment: Segment) -> None:
         """Store output."""
-        self._hass.loop.call_soon_threadsafe(self._async_put, segment)
+        self._menuai.loop.call_soon_threadsafe(self._async_put, segment)
 
     @callback
     def _async_put(self, segment: Segment) -> None:
@@ -368,7 +368,7 @@ class StreamOutput:
         self.idle_timer.clear()
 
 
-class StreamView(HomeAssistantView):
+class StreamView(menuaiView):
     """Base StreamView.
 
     For implementation of a new stream format, define `url` and `name`
@@ -381,10 +381,10 @@ class StreamView(HomeAssistantView):
         self, request: web.Request, token: str, sequence: str = "", part_num: str = ""
     ) -> web.StreamResponse:
         """Start a GET request."""
-        hass = request.app[KEY_HASS]
+        menuai = request.app[KEY_menuai]
 
         stream = next(
-            (s for s in hass.data[DOMAIN][ATTR_STREAMS] if s.access_token == token),
+            (s for s in menuai.data[DOMAIN][ATTR_STREAMS] if s.access_token == token),
             None,
         )
 
@@ -431,7 +431,7 @@ class KeyFrameConverter:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         stream_settings: StreamSettings,
         dynamic_stream_settings: DynamicStreamSettings,
     ) -> None:
@@ -440,11 +440,11 @@ class KeyFrameConverter:
         # Keep import here so that we can import stream integration
         # without installing reqs
         # pylint: disable-next=import-outside-toplevel
-        from homeassistant.components.camera.img_util import TurboJPEGSingleton
+        from menuai.components.camera.img_util import TurboJPEGSingleton
 
         self._packet: Packet | None = None
         self._event: asyncio.Event = asyncio.Event()
-        self._hass = hass
+        self._menuai = menuai
         self._image: bytes | None = None
         self._turbojpeg = TurboJPEGSingleton.instance()
         self._lock = asyncio.Lock()
@@ -458,7 +458,7 @@ class KeyFrameConverter:
         This is called from the worker thread.
         """
         self._packet = packet
-        self._hass.loop.call_soon_threadsafe(self._event.set)
+        self._menuai.loop.call_soon_threadsafe(self._event.set)
 
     def create_codec_context(self, codec_context: VideoCodecContext) -> None:
         """Create a codec context to be used for decoding the keyframes.
@@ -539,5 +539,5 @@ class KeyFrameConverter:
             self._event.clear()
             await self._event.wait()
         async with self._lock:
-            await self._hass.async_add_executor_job(self._generate_image, width, height)
+            await self._menuai.async_add_executor_job(self._generate_image, width, height)
         return self._image

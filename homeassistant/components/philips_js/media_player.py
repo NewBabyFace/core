@@ -6,7 +6,7 @@ from typing import Any
 
 from haphilipsjs import ConnectionFailure
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     BrowseError,
     BrowseMedia,
     MediaClass,
@@ -16,10 +16,10 @@ from homeassistant.components.media_player import (
     MediaPlayerState,
     MediaType,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.trigger import PluggableAction
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.trigger import PluggableAction
 
 from . import LOGGER as _LOGGER
 from .coordinator import PhilipsTVConfigEntry, PhilipsTVDataUpdateCoordinator
@@ -47,7 +47,7 @@ def _inverted(data):
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: PhilipsTVConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -82,14 +82,14 @@ class PhilipsTVMediaPlayer(PhilipsJsEntity, MediaPlayerEntity):
         super().__init__(coordinator)
         self._update_from_coordinator()
 
-    async def async_added_to_hass(self) -> None:
-        """Handle being added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Handle being added to menuai."""
+        await super().async_added_to_menuai()
 
         if (entry := self.registry_entry) and entry.device_id:
             self.async_on_remove(
                 self._turn_on.async_register(
-                    self.hass, async_get_turn_on_trigger(entry.device_id)
+                    self.menuai, async_get_turn_on_trigger(entry.device_id)
                 )
             )
 
@@ -118,7 +118,7 @@ class PhilipsTVMediaPlayer(PhilipsJsEntity, MediaPlayerEntity):
             await self._tv.setPowerState("On")
             self._attr_state = MediaPlayerState.ON
         else:
-            await self._turn_on.async_run(self.hass, self._context)
+            await self._turn_on.async_run(self.menuai, self._context)
         await self._async_update_soon()
 
     async def async_turn_off(self) -> None:
@@ -220,7 +220,7 @@ class PhilipsTVMediaPlayer(PhilipsJsEntity, MediaPlayerEntity):
                 await self._async_update_soon()
                 return
 
-        raise HomeAssistantError(f"Unable to find channel {media_id}")
+        raise menuaiError(f"Unable to find channel {media_id}")
 
     async def async_play_media(
         self, media_type: MediaType | str, media_id: str, **kwargs: Any
@@ -235,9 +235,9 @@ class PhilipsTVMediaPlayer(PhilipsJsEntity, MediaPlayerEntity):
                 await self._tv.setApplication(app["intent"])
                 await self._async_update_soon()
             else:
-                raise HomeAssistantError(f"Unable to find application {media_id}")
+                raise menuaiError(f"Unable to find application {media_id}")
         else:
-            raise HomeAssistantError(f"Unsupported media type {media_type}")
+            raise menuaiError(f"Unsupported media type {media_type}")
 
     async def async_browse_media_channels(self, expanded: bool) -> BrowseMedia:
         """Return channel media objects."""

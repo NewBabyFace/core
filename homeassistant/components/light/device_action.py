@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant.components.device_automation import (
+from menuai.components.device_automation import (
     async_get_entity_registry_entry_or_raise,
     async_validate_entity_schema,
     toggle_entity,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     CONF_DEVICE_ID,
     CONF_DOMAIN,
@@ -17,11 +17,11 @@ from homeassistant.const import (
     CONF_TYPE,
     SERVICE_TURN_ON,
 )
-from homeassistant.core import Context, HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.entity import get_supported_features
-from homeassistant.helpers.typing import ConfigType, TemplateVarsType, VolDictType
+from menuai.core import Context, menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.entity import get_supported_features
+from menuai.helpers.typing import ConfigType, TemplateVarsType, VolDictType
 
 from . import (
     ATTR_BRIGHTNESS_PCT,
@@ -60,14 +60,14 @@ _ACTION_SCHEMA = cv.DEVICE_ACTION_BASE_SCHEMA.extend(
 
 
 async def async_validate_action_config(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> ConfigType:
     """Validate config."""
-    return async_validate_entity_schema(hass, config, _ACTION_SCHEMA)
+    return async_validate_entity_schema(menuai, config, _ACTION_SCHEMA)
 
 
 async def async_call_action_from_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     variables: TemplateVarsType,
     context: Context | None,
@@ -78,7 +78,7 @@ async def async_call_action_from_config(
         and config[CONF_TYPE] != toggle_entity.CONF_TURN_ON
     ):
         await toggle_entity.async_call_action_from_config(
-            hass, config, variables, context, DOMAIN
+            menuai, config, variables, context, DOMAIN
         )
         return
 
@@ -94,25 +94,25 @@ async def async_call_action_from_config(
     if config[CONF_TYPE] == TYPE_FLASH:
         data[ATTR_FLASH] = config.get(ATTR_FLASH, FLASH_SHORT)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN, SERVICE_TURN_ON, data, blocking=True, context=context
     )
 
 
 async def async_get_actions(
-    hass: HomeAssistant, device_id: str
+    menuai: menuai, device_id: str
 ) -> list[dict[str, str]]:
     """List device actions."""
-    actions = await toggle_entity.async_get_actions(hass, device_id, DOMAIN)
+    actions = await toggle_entity.async_get_actions(menuai, device_id, DOMAIN)
 
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
 
     for entry in er.async_entries_for_device(entity_registry, device_id):
         if entry.domain != DOMAIN:
             continue
 
-        supported_color_modes = get_supported_color_modes(hass, entry.entity_id)
-        supported_features = get_supported_features(hass, entry.entity_id)
+        supported_color_modes = get_supported_color_modes(menuai, entry.entity_id)
+        supported_features = get_supported_features(menuai, entry.entity_id)
 
         base_action = {
             CONF_DEVICE_ID: device_id,
@@ -135,17 +135,17 @@ async def async_get_actions(
 
 
 async def async_get_action_capabilities(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> dict[str, vol.Schema]:
     """List action capabilities."""
     if config[CONF_TYPE] != toggle_entity.CONF_TURN_ON:
         return {}
 
     try:
-        entry = async_get_entity_registry_entry_or_raise(hass, config[CONF_ENTITY_ID])
-        supported_color_modes = get_supported_color_modes(hass, entry.entity_id)
-        supported_features = get_supported_features(hass, entry.entity_id)
-    except HomeAssistantError:
+        entry = async_get_entity_registry_entry_or_raise(menuai, config[CONF_ENTITY_ID])
+        supported_color_modes = get_supported_color_modes(menuai, entry.entity_id)
+        supported_features = get_supported_features(menuai, entry.entity_id)
+    except menuaiError:
         supported_color_modes = None
         supported_features = 0
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .const import DATA_COMPONENT, DATA_TTS_MANAGER
 
@@ -14,10 +14,10 @@ if TYPE_CHECKING:
 
 
 def get_engine_instance(
-    hass: HomeAssistant, engine: str
+    menuai: menuai, engine: str
 ) -> TextToSpeechEntity | Provider | None:
     """Get engine instance."""
-    if entity := hass.data[DATA_COMPONENT].get_entity(engine):
+    if entity := menuai.data[DATA_COMPONENT].get_entity(engine):
         return entity
 
-    return hass.data[DATA_TTS_MANAGER].providers.get(engine)
+    return menuai.data[DATA_TTS_MANAGER].providers.get(engine)

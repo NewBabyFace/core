@@ -7,8 +7,8 @@ import aiohttp
 from moehlenhoff_alpha2 import Alpha2Base
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST
 
 from .const import DOMAIN
 

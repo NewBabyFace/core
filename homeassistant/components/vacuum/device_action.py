@@ -4,17 +4,17 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant.components.device_automation import async_validate_entity_schema
-from homeassistant.const import (
+from menuai.components.device_automation import async_validate_entity_schema
+from menuai.const import (
     ATTR_ENTITY_ID,
     CONF_DEVICE_ID,
     CONF_DOMAIN,
     CONF_ENTITY_ID,
     CONF_TYPE,
 )
-from homeassistant.core import Context, HomeAssistant
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.typing import ConfigType, TemplateVarsType
+from menuai.core import Context, menuai
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.typing import ConfigType, TemplateVarsType
 
 from . import DOMAIN, SERVICE_RETURN_TO_BASE, SERVICE_START
 
@@ -29,17 +29,17 @@ _ACTION_SCHEMA = cv.DEVICE_ACTION_BASE_SCHEMA.extend(
 
 
 async def async_validate_action_config(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> ConfigType:
     """Validate config."""
-    return async_validate_entity_schema(hass, config, _ACTION_SCHEMA)
+    return async_validate_entity_schema(menuai, config, _ACTION_SCHEMA)
 
 
 async def async_get_actions(
-    hass: HomeAssistant, device_id: str
+    menuai: menuai, device_id: str
 ) -> list[dict[str, str]]:
     """List device actions for Vacuum devices."""
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     actions = []
 
     # Get all the integrations entities for this device
@@ -60,7 +60,7 @@ async def async_get_actions(
 
 
 async def async_call_action_from_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     variables: TemplateVarsType,
     context: Context | None,
@@ -73,6 +73,6 @@ async def async_call_action_from_config(
     elif config[CONF_TYPE] == "dock":
         service = SERVICE_RETURN_TO_BASE
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN, service, service_data, blocking=True, context=context
     )

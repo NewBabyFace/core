@@ -6,10 +6,10 @@ import logging
 from nacl.encoding import Base64Encoder
 from nacl.secret import SecretBox
 
-from homeassistant.components import zone as zone_comp
-from homeassistant.components.device_tracker import SourceType
-from homeassistant.const import ATTR_LATITUDE, ATTR_LONGITUDE, STATE_HOME
-from homeassistant.util import decorator, slugify
+from menuai.components import zone as zone_comp
+from menuai.components.device_tracker import SourceType
+from menuai.const import ATTR_LATITUDE, ATTR_LONGITUDE, STATE_HOME
+from menuai.util import decorator, slugify
 
 from .helper import supports_encryption
 
@@ -180,7 +180,7 @@ def encrypt_message(secret, topic, message):
 
 
 @HANDLERS.register("location")
-async def async_handle_location_message(hass, context, message):
+async def async_handle_location_message(menuai, context, message):
     """Handle a location message."""
     if not context.async_valid_accuracy(message):
         return
@@ -198,12 +198,12 @@ async def async_handle_location_message(hass, context, message):
         return
 
     context.async_see(**kwargs)
-    context.async_see_beacons(hass, dev_id, kwargs)
+    context.async_see_beacons(menuai, dev_id, kwargs)
 
 
-async def _async_transition_message_enter(hass, context, message, location):
+async def _async_transition_message_enter(menuai, context, message, location):
     """Execute enter event."""
-    zone = hass.states.get(f"zone.{slugify(location)}")
+    zone = menuai.states.get(f"zone.{slugify(location)}")
     dev_id, kwargs = _parse_see_args(message, context.mqtt_topic)
 
     if zone is None and message.get("t") == "b":
@@ -215,7 +215,7 @@ async def _async_transition_message_enter(hass, context, message, location):
         if location not in beacons:
             beacons.add(location)
         _LOGGER.debug("Added beacon %s", location)
-        context.async_see_beacons(hass, dev_id, kwargs)
+        context.async_see_beacons(menuai, dev_id, kwargs)
     else:
         # Normal region
         regions = context.regions_entered[dev_id]
@@ -224,10 +224,10 @@ async def _async_transition_message_enter(hass, context, message, location):
         _LOGGER.debug("Enter region %s", location)
         _set_gps_from_zone(kwargs, location, zone)
         context.async_see(**kwargs)
-        context.async_see_beacons(hass, dev_id, kwargs)
+        context.async_see_beacons(menuai, dev_id, kwargs)
 
 
-async def _async_transition_message_leave(hass, context, message, location):
+async def _async_transition_message_leave(menuai, context, message, location):
     """Execute leave event."""
     dev_id, kwargs = _parse_see_args(message, context.mqtt_topic)
     regions = context.regions_entered[dev_id]
@@ -239,16 +239,16 @@ async def _async_transition_message_leave(hass, context, message, location):
     if location in beacons:
         beacons.remove(location)
         _LOGGER.debug("Remove beacon %s", location)
-        context.async_see_beacons(hass, dev_id, kwargs)
+        context.async_see_beacons(menuai, dev_id, kwargs)
     else:
         new_region = regions[-1] if regions else None
         if new_region:
             # Exit to previous region
-            zone = hass.states.get(f"zone.{slugify(new_region)}")
+            zone = menuai.states.get(f"zone.{slugify(new_region)}")
             _set_gps_from_zone(kwargs, new_region, zone)
             _LOGGER.debug("Exit to %s", new_region)
             context.async_see(**kwargs)
-            context.async_see_beacons(hass, dev_id, kwargs)
+            context.async_see_beacons(menuai, dev_id, kwargs)
             return
 
         _LOGGER.debug("Exit to GPS")
@@ -256,11 +256,11 @@ async def _async_transition_message_leave(hass, context, message, location):
         # Check for GPS accuracy
         if context.async_valid_accuracy(message):
             context.async_see(**kwargs)
-            context.async_see_beacons(hass, dev_id, kwargs)
+            context.async_see_beacons(menuai, dev_id, kwargs)
 
 
 @HANDLERS.register("transition")
-async def async_handle_transition_message(hass, context, message):
+async def async_handle_transition_message(menuai, context, message):
     """Handle a transition message."""
     if message.get("desc") is None:
         _LOGGER.error(
@@ -281,16 +281,16 @@ async def async_handle_transition_message(hass, context, message):
         location = STATE_HOME
 
     if message["event"] == "enter":
-        await _async_transition_message_enter(hass, context, message, location)
+        await _async_transition_message_enter(menuai, context, message, location)
     elif message["event"] == "leave":
-        await _async_transition_message_leave(hass, context, message, location)
+        await _async_transition_message_leave(menuai, context, message, location)
     else:
         _LOGGER.error(
             "Misformatted mqtt msgs, _type=transition, event=%s", message["event"]
         )
 
 
-async def async_handle_waypoint(hass, name_base, waypoint):
+async def async_handle_waypoint(menuai, name_base, waypoint):
     """Handle a waypoint."""
     name = waypoint["desc"]
     pretty_name = f"{name_base} - {name}"
@@ -302,7 +302,7 @@ async def async_handle_waypoint(hass, name_base, waypoint):
     entity_id = zone_comp.ENTITY_ID_FORMAT.format(slugify(pretty_name))
 
     # Check if state already exists
-    if hass.states.get(entity_id) is not None:
+    if menuai.states.get(entity_id) is not None:
         return
 
     zone = zone_comp.Zone.from_yaml(
@@ -315,14 +315,14 @@ async def async_handle_waypoint(hass, name_base, waypoint):
             zone_comp.CONF_PASSIVE: False,
         },
     )
-    zone.hass = hass
+    zone.menuai = menuai
     zone.entity_id = entity_id
     zone.async_write_ha_state()
 
 
 @HANDLERS.register("waypoint")
 @HANDLERS.register("waypoints")
-async def async_handle_waypoints_message(hass, context, message):
+async def async_handle_waypoints_message(menuai, context, message):
     """Handle a waypoints message."""
     if not context.import_waypoints:
         return
@@ -340,11 +340,11 @@ async def async_handle_waypoints_message(hass, context, message):
     name_base = " ".join(_parse_topic(message["topic"], context.mqtt_topic))
 
     for wayp in wayps:
-        await async_handle_waypoint(hass, name_base, wayp)
+        await async_handle_waypoint(menuai, name_base, wayp)
 
 
 @HANDLERS.register("encrypted")
-async def async_handle_encrypted_message(hass, context, message):
+async def async_handle_encrypted_message(menuai, context, message):
     """Handle an encrypted message."""
     if "topic" not in message and isinstance(context.secret, dict):
         _LOGGER.error("You cannot set per topic secrets when using HTTP")
@@ -361,7 +361,7 @@ async def async_handle_encrypted_message(hass, context, message):
     if "topic" in message and "topic" not in decrypted:
         decrypted["topic"] = message["topic"]
 
-    await async_handle_message(hass, context, decrypted)
+    await async_handle_message(menuai, context, decrypted)
 
 
 @HANDLERS.register("lwt")
@@ -370,17 +370,17 @@ async def async_handle_encrypted_message(hass, context, message):
 @HANDLERS.register("cmd")
 @HANDLERS.register("steps")
 @HANDLERS.register("card")
-async def async_handle_not_impl_msg(hass, context, message):
+async def async_handle_not_impl_msg(menuai, context, message):
     """Handle valid but not implemented message types."""
     _LOGGER.debug("Not handling %s message: %s", message.get("_type"), message)
 
 
-async def async_handle_unsupported_msg(hass, context, message):
+async def async_handle_unsupported_msg(menuai, context, message):
     """Handle an unsupported or invalid message type."""
     _LOGGER.warning("Received unsupported message type: %s", message.get("_type"))
 
 
-async def async_handle_message(hass, context, message):
+async def async_handle_message(menuai, context, message):
     """Handle an OwnTracks message."""
     msgtype = message.get("_type")
 
@@ -388,4 +388,4 @@ async def async_handle_message(hass, context, message):
 
     handler = HANDLERS.get(msgtype, async_handle_unsupported_msg)
 
-    await handler(hass, context, message)
+    await handler(menuai, context, message)

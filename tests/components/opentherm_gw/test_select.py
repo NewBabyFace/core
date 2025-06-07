@@ -15,27 +15,27 @@ from pyotgw.vars import (
 )
 import pytest
 
-from homeassistant.components.opentherm_gw import DOMAIN
-from homeassistant.components.opentherm_gw.const import (
+from menuai.components.opentherm_gw import DOMAIN
+from menuai.components.opentherm_gw.const import (
     DATA_GATEWAYS,
     DATA_OPENTHERM_GW,
     OpenThermDeviceIdentifier,
 )
-from homeassistant.components.opentherm_gw.select import (
+from menuai.components.opentherm_gw.select import (
     OpenThermSelectGPIOMode,
     OpenThermSelectLEDMode,
     PyotgwGPIOMode,
     PyotgwLEDMode,
 )
-from homeassistant.components.select import (
+from menuai.components.select import (
     ATTR_OPTION,
     DOMAIN as SELECT_DOMAIN,
     SERVICE_SELECT_OPTION,
 )
-from homeassistant.const import ATTR_ENTITY_ID, CONF_ID, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.dispatcher import async_dispatcher_send
+from menuai.const import ATTR_ENTITY_ID, CONF_ID, STATE_UNKNOWN
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.helpers.dispatcher import async_dispatcher_send
 
 from tests.common import MockConfigEntry
 
@@ -108,7 +108,7 @@ from tests.common import MockConfigEntry
     ],
 )
 async def test_select_change_value(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_config_entry: MockConfigEntry,
     mock_pyotgw: MagicMock,
@@ -125,10 +125,10 @@ async def test_select_change_value(
         target_func_name,
         AsyncMock(return_value=target_param_2),
     )
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert (
         select_entity_id := entity_registry.async_get_entity_id(
@@ -137,15 +137,15 @@ async def test_select_change_value(
             f"{mock_config_entry.data[CONF_ID]}-{OpenThermDeviceIdentifier.GATEWAY}-{entity_key}",
         )
     ) is not None
-    assert hass.states.get(select_entity_id).state == STATE_UNKNOWN
+    assert menuai.states.get(select_entity_id).state == STATE_UNKNOWN
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SELECT_DOMAIN,
         SERVICE_SELECT_OPTION,
         {ATTR_ENTITY_ID: select_entity_id, ATTR_OPTION: resulting_state},
         blocking=True,
     )
-    assert hass.states.get(select_entity_id).state == resulting_state
+    assert menuai.states.get(select_entity_id).state == resulting_state
 
     target = getattr(mock_pyotgw.return_value, target_func_name)
     target.assert_awaited_once_with(target_param_1, target_param_2)
@@ -185,7 +185,7 @@ async def test_select_change_value(
     ],
 )
 async def test_select_state_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_config_entry: MockConfigEntry,
     mock_pyotgw: MagicMock,
@@ -195,10 +195,10 @@ async def test_select_state_update(
 ) -> None:
     """Test GPIO mode selector."""
 
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert (
         select_entity_id := entity_registry.async_get_entity_id(
@@ -207,13 +207,13 @@ async def test_select_state_update(
             f"{mock_config_entry.data[CONF_ID]}-{OpenThermDeviceIdentifier.GATEWAY}-{entity_key}",
         )
     ) is not None
-    assert hass.states.get(select_entity_id).state == STATE_UNKNOWN
+    assert menuai.states.get(select_entity_id).state == STATE_UNKNOWN
 
-    gw_hub = hass.data[DATA_OPENTHERM_GW][DATA_GATEWAYS][
+    gw_hub = menuai.data[DATA_OPENTHERM_GW][DATA_GATEWAYS][
         mock_config_entry.data[CONF_ID]
     ]
     async_dispatcher_send(
-        hass,
+        menuai,
         gw_hub.update_signal,
         {
             OpenThermDeviceIdentifier.BOILER: {},
@@ -221,6 +221,6 @@ async def test_select_state_update(
             OpenThermDeviceIdentifier.THERMOSTAT: {},
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(select_entity_id).state == resulting_state
+    assert menuai.states.get(select_entity_id).state == resulting_state

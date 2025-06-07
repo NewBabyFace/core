@@ -10,20 +10,20 @@ from apple_weatherkit.client import (
 )
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.weatherkit.config_flow import (
+from menuai import config_entries
+from menuai.components.weatherkit.config_flow import (
     WeatherKitUnsupportedLocationError,
 )
-from homeassistant.components.weatherkit.const import (
+from menuai.components.weatherkit.const import (
     CONF_KEY_ID,
     CONF_KEY_PEM,
     CONF_SERVICE_ID,
     CONF_TEAM_ID,
     DOMAIN,
 )
-from homeassistant.const import CONF_LATITUDE, CONF_LOCATION, CONF_LONGITUDE
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.const import CONF_LATITUDE, CONF_LOCATION, CONF_LONGITUDE
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from . import EXAMPLE_CONFIG_DATA
 
@@ -41,23 +41,23 @@ EXAMPLE_USER_INPUT = {
 }
 
 
-async def test_form(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
+async def test_form(menuai: menuai, mock_setup_entry: AsyncMock) -> None:
     """Test we get the form and create an entry."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
     with patch(
-        "homeassistant.components.weatherkit.WeatherKitApiClient.get_availability",
+        "menuai.components.weatherkit.WeatherKitApiClient.get_availability",
         return_value=[DataSetType.CURRENT_WEATHER],
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             EXAMPLE_USER_INPUT,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
 
@@ -78,18 +78,18 @@ async def test_form(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
     ],
 )
 async def test_error_handling(
-    hass: HomeAssistant, exception: Exception, expected_error: str
+    menuai: menuai, exception: Exception, expected_error: str
 ) -> None:
     """Test that we handle various exceptions and generate appropriate errors."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     with patch(
-        "homeassistant.components.weatherkit.WeatherKitApiClient.get_availability",
+        "menuai.components.weatherkit.WeatherKitApiClient.get_availability",
         side_effect=exception,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             EXAMPLE_USER_INPUT,
         )
@@ -98,17 +98,17 @@ async def test_error_handling(
     assert result["errors"] == {"base": expected_error}
 
 
-async def test_form_unsupported_location(hass: HomeAssistant) -> None:
+async def test_form_unsupported_location(menuai: menuai) -> None:
     """Test we handle when WeatherKit does not support the location."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     with patch(
-        "homeassistant.components.weatherkit.WeatherKitApiClient.get_availability",
+        "menuai.components.weatherkit.WeatherKitApiClient.get_availability",
         return_value=[],
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             EXAMPLE_USER_INPUT,
         )
@@ -118,10 +118,10 @@ async def test_form_unsupported_location(hass: HomeAssistant) -> None:
 
     # Test that we can recover from this error by changing the location
     with patch(
-        "homeassistant.components.weatherkit.WeatherKitApiClient.get_availability",
+        "menuai.components.weatherkit.WeatherKitApiClient.get_availability",
         return_value=[DataSetType.CURRENT_WEATHER],
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             EXAMPLE_USER_INPUT,
         )
@@ -150,29 +150,29 @@ async def test_form_unsupported_location(hass: HomeAssistant) -> None:
     ids=["Correct footer", "No footer", "Trailing characters", "Em dash in footer"],
 )
 async def test_auto_fix_key_input(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     input_header: str,
     input_footer: str,
 ) -> None:
     """Test that we fix common user errors in key input."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
     with patch(
-        "homeassistant.components.weatherkit.WeatherKitApiClient.get_availability",
+        "menuai.components.weatherkit.WeatherKitApiClient.get_availability",
         return_value=[DataSetType.CURRENT_WEATHER],
     ):
         user_input = EXAMPLE_USER_INPUT.copy()
         user_input[CONF_KEY_PEM] = f"{input_header}whateverkey{input_footer}"
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
 

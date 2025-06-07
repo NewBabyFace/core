@@ -18,12 +18,12 @@ from pytrafikverket import (
     UnknownError,
 )
 
-from homeassistant.const import CONF_API_KEY, CONF_WEEKDAY
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util import dt as dt_util
+from menuai.const import CONF_API_KEY, CONF_WEEKDAY
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.util import dt as dt_util
 
 from .const import CONF_FILTER_PRODUCT, CONF_FROM, CONF_TIME, CONF_TO, DOMAIN
 from .util import next_departuredate
@@ -75,17 +75,17 @@ class TVDataUpdateCoordinator(DataUpdateCoordinator[TrainData]):
     from_station: StationInfoModel
     to_station: StationInfoModel
 
-    def __init__(self, hass: HomeAssistant, config_entry: TVTrainConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: TVTrainConfigEntry) -> None:
         """Initialize the Trafikverket coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
             update_interval=TIME_BETWEEN_UPDATES,
         )
         self._train_api = TrafikverketTrain(
-            async_get_clientsession(hass), config_entry.data[CONF_API_KEY]
+            async_get_clientsession(menuai), config_entry.data[CONF_API_KEY]
         )
         self._time: time | None = dt_util.parse_time(config_entry.data[CONF_TIME])
         self._weekdays: list[str] = config_entry.data[CONF_WEEKDAY]

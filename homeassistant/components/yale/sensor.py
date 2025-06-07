@@ -11,21 +11,21 @@ from yalexs.doorbell import Doorbell
 from yalexs.keypad import KeypadDetail
 from yalexs.lock import LockDetail
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     RestoreSensor,
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_PICTURE,
     PERCENTAGE,
     STATE_UNAVAILABLE,
     EntityCategory,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import YaleConfigEntry
 from .const import (
@@ -80,7 +80,7 @@ SENSOR_TYPE_KEYPAD_BATTERY = YaleSensorEntityDescription[KeypadDetail](
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: YaleConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -166,9 +166,9 @@ class YaleOperatorSensor(YaleEntity, RestoreSensor):
 
         return attributes
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Restore ATTR_CHANGED_BY on startup since it is likely no longer in the activity log."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         last_state = await self.async_get_last_state()
         last_sensor_state = await self.async_get_last_sensor_data()

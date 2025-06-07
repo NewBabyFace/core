@@ -15,7 +15,7 @@ from xknx.telegram import Telegram, TelegramDirection
 from xknx.telegram.address import GroupAddress, IndividualAddress
 from xknx.telegram.apci import APCI, GroupValueRead, GroupValueResponse, GroupValueWrite
 
-from homeassistant.components.knx.const import (
+from menuai.components.knx.const import (
     CONF_KNX_AUTOMATIC,
     CONF_KNX_CONNECTION_TYPE,
     CONF_KNX_DEFAULT_RATE_LIMIT,
@@ -28,15 +28,15 @@ from homeassistant.components.knx.const import (
     DEFAULT_ROUTING_IA,
     DOMAIN,
 )
-from homeassistant.components.knx.project import STORAGE_KEY as KNX_PROJECT_STORAGE_KEY
-from homeassistant.components.knx.storage.config_store import (
+from menuai.components.knx.project import STORAGE_KEY as KNX_PROJECT_STORAGE_KEY
+from menuai.components.knx.storage.config_store import (
     STORAGE_KEY as KNX_CONFIG_STORAGE_KEY,
 )
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.setup import async_setup_component
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.helpers.typing import ConfigType
+from menuai.setup import async_setup_component
 
 from . import KnxEntityGenerator
 
@@ -57,14 +57,14 @@ class KNXTestKit:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         mock_config_entry: MockConfigEntry,
-        hass_storage: dict[str, Any],
+        menuai_storage: dict[str, Any],
     ) -> None:
         """Init KNX test helper class."""
-        self.hass: HomeAssistant = hass
+        self.menuai: menuai = menuai
         self.mock_config_entry: MockConfigEntry = mock_config_entry
-        self.hass_storage: dict[str, Any] = hass_storage
+        self.menuai_storage: dict[str, Any] = menuai_storage
         self.xknx: XKNX
         # outgoing telegrams will be put in the List instead of sent to the interface
         # telegrams to an InternalGroupAddress won't be queued here
@@ -72,7 +72,7 @@ class KNXTestKit:
 
     def assert_state(self, entity_id: str, state: str, **attributes) -> None:
         """Assert the state of an entity."""
-        test_state = self.hass.states.get(entity_id)
+        test_state = self.menuai.states.get(entity_id)
         assert test_state.state == state
         for attribute, value in attributes.items():
             assert test_state.attributes.get(attribute) == value
@@ -81,7 +81,7 @@ class KNXTestKit:
         self,
         yaml_config: ConfigType | None = None,
         config_store_fixture: str | None = None,
-        add_entry_to_hass: bool = True,
+        add_entry_to_menuai: bool = True,
     ) -> None:
         """Create the KNX integration."""
 
@@ -114,14 +114,14 @@ class KNXTestKit:
             return DEFAULT
 
         if config_store_fixture:
-            self.hass_storage[
+            self.menuai_storage[
                 KNX_CONFIG_STORAGE_KEY
             ] = await async_load_json_object_fixture(
-                self.hass, config_store_fixture, DOMAIN
+                self.menuai, config_store_fixture, DOMAIN
             )
 
-        if add_entry_to_hass:
-            self.mock_config_entry.add_to_hass(self.hass)
+        if add_entry_to_menuai:
+            self.mock_config_entry.add_to_menuai(self.menuai)
 
         knx_config = {DOMAIN: yaml_config or {}}
         with patch(
@@ -129,8 +129,8 @@ class KNXTestKit:
             return_value=knx_ip_interface_mock(),
             side_effect=fish_xknx,
         ):
-            await async_setup_component(self.hass, DOMAIN, knx_config)
-            await self.hass.async_block_till_done()
+            await async_setup_component(self.menuai, DOMAIN, knx_config)
+            await self.menuai.async_block_till_done()
 
     ########################
     # Telegram counter tests
@@ -142,7 +142,7 @@ class KNXTestKit:
 
     async def assert_no_telegram(self) -> None:
         """Assert if every telegram in test List was checked."""
-        await self.hass.async_block_till_done()
+        await self.menuai.async_block_till_done()
         remaining_telegram_count = len(self._outgoing_telegrams)
         assert not remaining_telegram_count, (
             f"Found remaining unasserted Telegrams: {remaining_telegram_count}\n"
@@ -151,7 +151,7 @@ class KNXTestKit:
 
     async def assert_telegram_count(self, count: int) -> None:
         """Assert outgoing telegram count in test List."""
-        await self.hass.async_block_till_done()
+        await self.menuai.async_block_till_done()
         actual_count = len(self._outgoing_telegrams)
         assert actual_count == count, (
             f"Outgoing telegrams: {actual_count} - Expected: {count}\n"
@@ -268,7 +268,7 @@ class KNXTestKit:
             )
         )
         await self.xknx.telegrams.join()
-        await self.hass.async_block_till_done()
+        await self.menuai.async_block_till_done()
 
     async def receive_read(self, group_address: str, source: str | None = None) -> None:
         """Inject incoming GroupValueRead telegram."""
@@ -327,20 +327,20 @@ def mock_config_entry() -> MockConfigEntry:
 
 @pytest.fixture
 async def knx(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
-    hass_storage: dict[str, Any],
+    menuai_storage: dict[str, Any],
 ):
     """Create a KNX TestKit instance."""
-    knx_test_kit = KNXTestKit(hass, mock_config_entry, hass_storage)
+    knx_test_kit = KNXTestKit(menuai, mock_config_entry, menuai_storage)
     yield knx_test_kit
     await knx_test_kit.assert_no_telegram()
 
 
 @pytest.fixture
-def load_knxproj(hass_storage: dict[str, Any]) -> None:
+def load_knxproj(menuai_storage: dict[str, Any]) -> None:
     """Mock KNX project data."""
-    hass_storage[KNX_PROJECT_STORAGE_KEY] = {
+    menuai_storage[KNX_PROJECT_STORAGE_KEY] = {
         "version": 1,
         "data": FIXTURE_PROJECT_DATA,
     }
@@ -348,16 +348,16 @@ def load_knxproj(hass_storage: dict[str, Any]) -> None:
 
 @pytest.fixture
 async def create_ui_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
-    hass_ws_client: WebSocketGenerator,
-    hass_storage: dict[str, Any],
+    menuai_ws_client: WebSocketGenerator,
+    menuai_storage: dict[str, Any],
 ) -> KnxEntityGenerator:
     """Return a helper to create KNX entities via WS.
 
     The KNX integration must be set up before using the helper.
     """
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     async def _create_ui_entity(
         platform: Platform,

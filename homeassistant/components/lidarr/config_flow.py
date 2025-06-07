@@ -10,10 +10,10 @@ from aiopyarr import exceptions
 from aiopyarr.lidarr_client import LidarrClient
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_API_KEY, CONF_URL, CONF_VERIFY_SSL
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_API_KEY, CONF_URL, CONF_VERIFY_SSL
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DEFAULT_NAME, DOMAIN
 
@@ -47,7 +47,7 @@ class LidarrConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             try:
-                if result := await validate_input(self.hass, user_input):
+                if result := await validate_input(self.menuai, user_input):
                     user_input[CONF_API_KEY] = result[1]
             except exceptions.ArrAuthenticationException:
                 errors = {"base": "invalid_auth"}
@@ -89,7 +89,7 @@ class LidarrConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 async def validate_input(
-    hass: HomeAssistant, data: dict[str, Any]
+    menuai: menuai, data: dict[str, Any]
 ) -> tuple[str, str, str] | None:
     """Validate the user input allows us to connect.
 
@@ -98,7 +98,7 @@ async def validate_input(
     lidarr = LidarrClient(
         api_token=data.get(CONF_API_KEY, ""),
         url=data[CONF_URL],
-        session=async_get_clientsession(hass),
+        session=async_get_clientsession(menuai),
         verify_ssl=data[CONF_VERIFY_SSL],
     )
     if CONF_API_KEY not in data:

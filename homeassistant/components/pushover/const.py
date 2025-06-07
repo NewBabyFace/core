@@ -3,7 +3,7 @@
 from typing import Final
 
 DOMAIN: Final = "pushover"
-DATA_HASS_CONFIG: Final = "pushover_hass_config"
+DATA_menuai_CONFIG: Final = "pushover_menuai_config"
 DEFAULT_NAME: Final = "Pushover"
 
 ATTR_ATTACHMENT: Final = "attachment"

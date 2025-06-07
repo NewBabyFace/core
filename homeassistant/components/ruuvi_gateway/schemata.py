@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant.const import CONF_HOST, CONF_TOKEN
+from menuai.const import CONF_HOST, CONF_TOKEN
 
 CONFIG_SCHEMA = vol.Schema(
     {

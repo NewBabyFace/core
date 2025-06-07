@@ -9,8 +9,8 @@ from elkm1_lib.discovery import ElkSystem
 from elkm1_lib.elk import Elk
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import (
     CONF_ADDRESS,
     CONF_HOST,
     CONF_PASSWORD,
@@ -18,12 +18,12 @@ from homeassistant.const import (
     CONF_PROTOCOL,
     CONF_USERNAME,
 )
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
-from homeassistant.helpers.typing import DiscoveryInfoType, VolDictType
-from homeassistant.util import slugify
-from homeassistant.util.network import is_ip_address
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.helpers.typing import DiscoveryInfoType, VolDictType
+from menuai.util import slugify
+from menuai.util.network import is_ip_address
 
 from . import async_wait_for_elk_to_sync, hostname_from_url
 from .const import CONF_AUTO_CONFIGURE, DISCOVER_SCAN_TIMEOUT, DOMAIN, LOGIN_TIMEOUT
@@ -175,17 +175,17 @@ class Elkm1ConfigFlow(ConfigFlow, domain=DOMAIN):
                 entry.unique_id == mac
                 or hostname_from_url(entry.data[CONF_HOST]) == host
             ):
-                if async_update_entry_from_discovery(self.hass, entry, device):
-                    self.hass.config_entries.async_schedule_reload(entry.entry_id)
+                if async_update_entry_from_discovery(self.menuai, entry, device):
+                    self.menuai.config_entries.async_schedule_reload(entry.entry_id)
                 return self.async_abort(reason="already_configured")
         self.host = host
-        if self.hass.config_entries.flow.async_has_matching_flow(self):
+        if self.menuai.config_entries.flow.async_has_matching_flow(self):
             return self.async_abort(reason="already_in_progress")
         # Handled ignored case since _async_current_entries
         # is called with include_ignore=False
         self._abort_if_unique_id_configured()
         if not device.port:
-            if discovered_device := await async_discover_device(self.hass, host):
+            if discovered_device := await async_discover_device(self.menuai, host):
                 self._discovered_device = discovered_device
             else:
                 return self.async_abort(reason="cannot_connect")
@@ -222,7 +222,7 @@ class Elkm1ConfigFlow(ConfigFlow, domain=DOMAIN):
             for entry in self._async_current_entries(include_ignore=False)
         }
         discovered_devices = await async_discover_devices(
-            self.hass, DISCOVER_SCAN_TIMEOUT
+            self.menuai, DISCOVER_SCAN_TIMEOUT
         )
         self._discovered_devices = {
             dr.format_mac(device.mac_address): device for device in discovered_devices
@@ -312,7 +312,7 @@ class Elkm1ConfigFlow(ConfigFlow, domain=DOMAIN):
             # We might be able to discover the device via directed UDP
             # in case its on another subnet
             if device := await async_discover_device(
-                self.hass, user_input[CONF_ADDRESS]
+                self.menuai, user_input[CONF_ADDRESS]
             ):
                 await self.async_set_unique_id(
                     dr.format_mac(device.mac_address), raise_on_progress=False
@@ -355,7 +355,7 @@ class Elkm1ConfigFlow(ConfigFlow, domain=DOMAIN):
         if (
             host
             and is_ip_address(host)
-            and (device := await async_discover_device(self.hass, host))
+            and (device := await async_discover_device(self.menuai, host))
         ):
             await self.async_set_unique_id(
                 dr.format_mac(device.mac_address), raise_on_progress=False
@@ -377,5 +377,5 @@ class Elkm1ConfigFlow(ConfigFlow, domain=DOMAIN):
         return hostname_from_url(url) in existing_hosts
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(menuaiError):
     """Error to indicate there is invalid auth."""

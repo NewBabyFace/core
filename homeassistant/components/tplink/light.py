@@ -12,7 +12,7 @@ from kasa.interfaces import LightEffect
 from kasa.iot import IotDevice
 import voluptuous as vol
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_TEMP_KELVIN,
     ATTR_EFFECT,
@@ -26,11 +26,11 @@ from homeassistant.components.light import (
     LightEntityFeature,
     filter_supported_color_modes,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import VolDictType
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import VolDictType
 
 from . import TPLinkConfigEntry, legacy_device_id
 from .const import DOMAIN
@@ -155,7 +155,7 @@ def _get_backwards_compatible_light_unique_id(
         # pyHS100 treated them as SmartPlug but the old code
         # created them as lights
         # https://github.com/home-assistant/core/blob/2021.9.7/ \
-        # homeassistant/components/tplink/common.py#L86
+        # menuai/components/tplink/common.py#L86
         return legacy_device_id(device)
 
     # Newer devices can have child lights. While there isn't currently
@@ -194,7 +194,7 @@ LIGHT_EFFECT_DESCRIPTIONS: tuple[TPLinkLightEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: TPLinkConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -209,7 +209,7 @@ async def async_setup_entry(
 
     def _check_device() -> None:
         entities = CoordinatedTPLinkModuleEntity.entities_for_device_and_its_children(
-            hass=hass,
+            menuai=menuai,
             device=device,
             coordinator=parent_coordinator,
             entity_class=TPLinkLightEntity,
@@ -220,7 +220,7 @@ async def async_setup_entry(
         )
         entities.extend(
             CoordinatedTPLinkModuleEntity.entities_for_device_and_its_children(
-                hass=hass,
+                menuai=menuai,
                 device=device,
                 coordinator=parent_coordinator,
                 entity_class=TPLinkLightEffectEntity,
@@ -404,9 +404,9 @@ class TPLinkLightEffectEntity(TPLinkLightEntity):
 
         self._effect_module = device.modules[Module.LightEffect]
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Call update attributes after the device is added to the platform."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         self._register_effects_services()
 
@@ -515,7 +515,7 @@ class TPLinkLightEffectEntity(TPLinkLightEntity):
         try:
             await self._effect_module.set_custom_effect(effect)
         except KasaException as ex:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="set_custom_effect",
                 translation_placeholders={
@@ -547,7 +547,7 @@ class TPLinkLightEffectEntity(TPLinkLightEntity):
         try:
             await self._effect_module.set_custom_effect(effect)
         except KasaException as ex:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="set_custom_effect",
                 translation_placeholders={

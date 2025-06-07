@@ -5,9 +5,9 @@ import logging
 from aiowebdav2.client import Client, ClientOptions
 from aiowebdav2.exceptions import WebDavError
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.core import menuai, callback
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN
 
@@ -17,7 +17,7 @@ _LOGGER = logging.getLogger(__name__)
 @callback
 def async_create_client(
     *,
-    hass: HomeAssistant,
+    menuai: menuai,
     url: str,
     username: str,
     password: str,
@@ -30,7 +30,7 @@ def async_create_client(
         password=password,
         options=ClientOptions(
             verify_ssl=verify_ssl,
-            session=async_get_clientsession(hass),
+            session=async_get_clientsession(menuai),
         ),
     )
 

@@ -6,11 +6,11 @@ from dataclasses import dataclass
 from datetime import timedelta
 import os
 
-from homeassistant.components.select import SelectEntity, SelectEntityDescription
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.select import SelectEntity, SelectEntityDescription
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import READ_MODE_INT
 from .entity import OneWireEntity, OneWireEntityDescription
@@ -46,7 +46,7 @@ ENTITY_DESCRIPTIONS: dict[str, tuple[OneWireEntityDescription, ...]] = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: OneWireConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -63,7 +63,7 @@ async def async_setup_entry(
     hub = config_entry.runtime_data
     await _add_entities(hub, hub.devices)
     config_entry.async_on_unload(
-        async_dispatcher_connect(hass, SIGNAL_NEW_DEVICE_CONNECTED, _add_entities)
+        async_dispatcher_connect(menuai, SIGNAL_NEW_DEVICE_CONNECTED, _add_entities)
     )
 
 

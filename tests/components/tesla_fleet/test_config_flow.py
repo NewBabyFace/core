@@ -5,21 +5,21 @@ from urllib.parse import parse_qs, urlparse
 
 import pytest
 
-from homeassistant.components.application_credentials import (
+from menuai.components.application_credentials import (
     ClientCredential,
     async_import_client_credential,
 )
-from homeassistant.components.tesla_fleet.const import (
+from menuai.components.tesla_fleet.const import (
     AUTHORIZE_URL,
     DOMAIN,
     SCOPES,
     TOKEN_URL,
 )
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import config_entry_oauth2_flow
-from homeassistant.setup import async_setup_component
+from menuai.config_entries import SOURCE_USER
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers import config_entry_oauth2_flow
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 from tests.test_util.aiohttp import AiohttpClientMocker
@@ -30,10 +30,10 @@ UNIQUE_ID = "uid"
 
 
 @pytest.fixture
-async def access_token(hass: HomeAssistant) -> str:
+async def access_token(menuai: menuai) -> str:
     """Return a valid access token."""
     return config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "sub": UNIQUE_ID,
             "aud": [],
@@ -52,12 +52,12 @@ async def access_token(hass: HomeAssistant) -> str:
 
 
 @pytest.fixture(autouse=True)
-async def create_credential(hass: HomeAssistant) -> None:
+async def create_credential(menuai: menuai) -> None:
     """Create a user credential."""
     # Create user application credential
-    assert await async_setup_component(hass, "application_credentials", {})
+    assert await async_setup_component(menuai, "application_credentials", {})
     await async_import_client_credential(
-        hass,
+        menuai,
         DOMAIN,
         ClientCredential("user_client_id", "user_client_secret"),
         "user_cred",
@@ -66,21 +66,21 @@ async def create_credential(hass: HomeAssistant) -> None:
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_full_flow_user_cred(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     access_token: str,
 ) -> None:
     """Check full flow."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.EXTERNAL_STEP
 
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": REDIRECT,
@@ -97,7 +97,7 @@ async def test_full_flow_user_cred(
     assert parsed_query["scope"][0] == " ".join(SCOPES)
     assert "code_challenge" not in parsed_query  # Ensure not a PKCE flow
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == 200
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
@@ -113,11 +113,11 @@ async def test_full_flow_user_cred(
         },
     )
     with patch(
-        "homeassistant.components.tesla_fleet.async_setup_entry", return_value=True
+        "menuai.components.tesla_fleet.async_setup_entry", return_value=True
     ) as mock_setup:
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
     assert len(mock_setup.mock_calls) == 1
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -131,8 +131,8 @@ async def test_full_flow_user_cred(
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_reauthentication(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     access_token: str,
 ) -> None:
@@ -143,23 +143,23 @@ async def test_reauthentication(
         version=1,
         data={},
     )
-    old_entry.add_to_hass(hass)
+    old_entry.add_to_menuai(menuai)
 
-    result = await old_entry.start_reauth_flow(hass)
+    result = await old_entry.start_reauth_flow(menuai)
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
 
-    result = await hass.config_entries.flow.async_configure(flows[0]["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(flows[0]["flow_id"], {})
 
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": REDIRECT,
         },
     )
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     await client.get(f"/auth/external/callback?code=abcd&state={state}")
 
     aioclient_mock.post(
@@ -173,9 +173,9 @@ async def test_reauthentication(
     )
 
     with patch(
-        "homeassistant.components.tesla_fleet.async_setup_entry", return_value=True
+        "menuai.components.tesla_fleet.async_setup_entry", return_value=True
     ):
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result
     assert result["type"] is FlowResultType.ABORT
@@ -184,28 +184,28 @@ async def test_reauthentication(
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_reauth_account_mismatch(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     access_token: str,
 ) -> None:
     """Test Tesla Fleet reauthentication with different account."""
     old_entry = MockConfigEntry(domain=DOMAIN, unique_id="baduid", version=1, data={})
-    old_entry.add_to_hass(hass)
+    old_entry.add_to_menuai(menuai)
 
-    result = await old_entry.start_reauth_flow(hass)
+    result = await old_entry.start_reauth_flow(menuai)
 
-    flows = hass.config_entries.flow.async_progress()
-    result = await hass.config_entries.flow.async_configure(flows[0]["flow_id"], {})
+    flows = menuai.config_entries.flow.async_progress()
+    result = await menuai.config_entries.flow.async_configure(flows[0]["flow_id"], {})
 
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": REDIRECT,
         },
     )
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     await client.get(f"/auth/external/callback?code=abcd&state={state}")
 
     aioclient_mock.post(
@@ -219,9 +219,9 @@ async def test_reauth_account_mismatch(
     )
 
     with patch(
-        "homeassistant.components.tesla_fleet.async_setup_entry", return_value=True
+        "menuai.components.tesla_fleet.async_setup_entry", return_value=True
     ):
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_account_mismatch"

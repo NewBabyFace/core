@@ -2,8 +2,8 @@
 
 import pytest
 
-from homeassistant.components.screenlogic import DOMAIN
-from homeassistant.const import CONF_IP_ADDRESS, CONF_PORT, CONF_SCAN_INTERVAL
+from menuai.components.screenlogic import DOMAIN
+from menuai.const import CONF_IP_ADDRESS, CONF_PORT, CONF_SCAN_INTERVAL
 
 from . import (
     MOCK_ADAPTER_IP,

@@ -7,10 +7,10 @@ from typing import Any
 from tesla_fleet_api.const import Scope
 from tesla_fleet_api.teslemetry import Vehicle
 
-from homeassistant.components.update import UpdateEntity, UpdateEntityFeature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.restore_state import RestoreEntity
+from menuai.components.update import UpdateEntity, UpdateEntityFeature
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.restore_state import RestoreEntity
 
 from . import TeslemetryConfigEntry
 from .entity import (
@@ -31,7 +31,7 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: TeslemetryConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -147,9 +147,9 @@ class TeslemetryStreamingUpdateEntity(
             "vehicle_state_software_update_status",
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         if (state := await self.async_get_last_state()) is not None:
             self._attr_in_progress = state.attributes.get("in_progress", False)
             self._install_percentage = state.attributes.get("install_percentage", False)

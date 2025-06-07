@@ -6,11 +6,11 @@ import logging
 
 from pyloadapi import CannotConnect, InvalidAuth, ParserError, PyLoadAPI
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_USERNAME
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN
 
@@ -44,11 +44,11 @@ class PyLoadCoordinator(DataUpdateCoordinator[PyLoadData]):
     config_entry: PyLoadConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: PyLoadConfigEntry, pyload: PyLoadAPI
+        self, menuai: menuai, config_entry: PyLoadConfigEntry, pyload: PyLoadAPI
     ) -> None:
         """Initialize pyLoad coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,

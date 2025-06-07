@@ -2,9 +2,9 @@
 
 from unittest.mock import MagicMock
 
-from homeassistant.components.tplink_omada.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.components.tplink_omada.const import DOMAIN
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 from tests.common import MockConfigEntry
 
@@ -18,7 +18,7 @@ MOCK_ENTRY_DATA = {
 
 
 async def test_missing_devices_removed_at_startup(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mock_omada_client: MagicMock,
 ) -> None:
@@ -29,7 +29,7 @@ async def test_missing_devices_removed_at_startup(
         data=dict(MOCK_ENTRY_DATA),
         unique_id="12345",
     )
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     device_entry = device_registry.async_get_or_create(
         config_entry_id=mock_config_entry.entry_id,
@@ -41,7 +41,7 @@ async def test_missing_devices_removed_at_startup(
 
     assert device_registry.async_get(device_entry.id) == device_entry
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert device_registry.async_get(device_entry.id) is None

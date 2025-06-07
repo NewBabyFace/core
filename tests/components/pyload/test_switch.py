@@ -7,18 +7,18 @@ from pyloadapi import CannotConnect, InvalidAuth
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.pyload.switch import PyLoadSwitch
-from homeassistant.components.switch import (
+from menuai.components.pyload.switch import PyLoadSwitch
+from menuai.components.switch import (
     DOMAIN as SWITCH_DOMAIN,
     SERVICE_TOGGLE,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
 )
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import entity_registry as er
+from menuai.config_entries import ConfigEntryState
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry, snapshot_platform
 
@@ -41,14 +41,14 @@ API_CALL = {
 def switch_only() -> Generator[None]:
     """Enable only the switch platform."""
     with patch(
-        "homeassistant.components.pyload.PLATFORMS",
+        "menuai.components.pyload.PLATFORMS",
         [Platform.SWITCH],
     ):
         yield
 
 
 async def test_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
@@ -56,13 +56,13 @@ async def test_state(
 ) -> None:
     """Test switch state."""
 
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
 
 @pytest.mark.parametrize(
@@ -74,7 +74,7 @@ async def test_state(
     ],
 )
 async def test_turn_on_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_pyloadapi: AsyncMock,
     service_call: str,
@@ -82,9 +82,9 @@ async def test_turn_on_off(
 ) -> None:
     """Test switch turn on/off, toggle method."""
 
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
@@ -93,7 +93,7 @@ async def test_turn_on_off(
     )
 
     for entity_entry in entity_entries:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SWITCH_DOMAIN,
             service_call,
             {ATTR_ENTITY_ID: entity_entry.entity_id},
@@ -119,7 +119,7 @@ async def test_turn_on_off(
     [CannotConnect, InvalidAuth],
 )
 async def test_turn_on_off_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_pyloadapi: AsyncMock,
     service_call: str,
@@ -128,9 +128,9 @@ async def test_turn_on_off_errors(
 ) -> None:
     """Test switch turn on/off, toggle method."""
 
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
@@ -144,7 +144,7 @@ async def test_turn_on_off_errors(
 
     for entity_entry in entity_entries:
         with pytest.raises(ServiceValidationError):
-            await hass.services.async_call(
+            await menuai.services.async_call(
                 SWITCH_DOMAIN,
                 service_call,
                 {ATTR_ENTITY_ID: entity_entry.entity_id},

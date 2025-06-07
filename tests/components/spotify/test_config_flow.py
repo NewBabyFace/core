@@ -6,20 +6,20 @@ from unittest.mock import MagicMock, patch
 import pytest
 from spotifyaio import SpotifyConnectionError
 
-from homeassistant.components.spotify.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import config_entry_oauth2_flow
+from menuai.components.spotify.const import DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers import config_entry_oauth2_flow
 
 from tests.common import MockConfigEntry
 from tests.test_util.aiohttp import AiohttpClientMocker
 from tests.typing import ClientSessionGenerator
 
 
-async def test_abort_if_no_configuration(hass: HomeAssistant) -> None:
+async def test_abort_if_no_configuration(menuai: menuai) -> None:
     """Check flow aborts when no configuration is present."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
@@ -30,18 +30,18 @@ async def test_abort_if_no_configuration(hass: HomeAssistant) -> None:
 @pytest.mark.usefixtures("current_request_with_host")
 @pytest.mark.usefixtures("setup_credentials")
 async def test_full_flow(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     mock_spotify: MagicMock,
 ) -> None:
     """Check a full flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
@@ -59,7 +59,7 @@ async def test_full_flow(
         "user-top-read,user-read-playback-position,user-read-recently-played,user-follow-read"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == HTTPStatus.OK
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
@@ -76,12 +76,12 @@ async def test_full_flow(
     )
 
     with (
-        patch("homeassistant.components.spotify.async_setup_entry", return_value=True),
+        patch("menuai.components.spotify.async_setup_entry", return_value=True),
     ):
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1, result
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1, result
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     result["data"]["token"].pop("expires_at")
@@ -98,24 +98,24 @@ async def test_full_flow(
 @pytest.mark.usefixtures("current_request_with_host")
 @pytest.mark.usefixtures("setup_credentials")
 async def test_abort_if_spotify_error(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     mock_spotify: MagicMock,
 ) -> None:
     """Check Spotify errors causes flow to abort."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
         },
     )
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     await client.get(f"/auth/external/callback?code=abcd&state={state}")
 
     aioclient_mock.post(
@@ -130,7 +130,7 @@ async def test_abort_if_spotify_error(
 
     mock_spotify.return_value.get_current_user.side_effect = SpotifyConnectionError
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "connection_error"
@@ -139,30 +139,30 @@ async def test_abort_if_spotify_error(
 @pytest.mark.usefixtures("current_request_with_host")
 @pytest.mark.usefixtures("setup_credentials")
 async def test_reauthentication(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     mock_spotify: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test Spotify reauthentication."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await mock_config_entry.start_reauth_flow(hass)
+    result = await mock_config_entry.start_reauth_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
         },
     )
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     await client.get(f"/auth/external/callback?code=abcd&state={state}")
 
     aioclient_mock.post(
@@ -176,9 +176,9 @@ async def test_reauthentication(
     )
 
     with (
-        patch("homeassistant.components.spotify.async_setup_entry", return_value=True),
+        patch("menuai.components.spotify.async_setup_entry", return_value=True),
     ):
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"
@@ -194,27 +194,27 @@ async def test_reauthentication(
 @pytest.mark.usefixtures("current_request_with_host")
 @pytest.mark.usefixtures("setup_credentials")
 async def test_reauth_account_mismatch(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     mock_spotify: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test Spotify reauthentication with different account."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await mock_config_entry.start_reauth_flow(hass)
+    result = await mock_config_entry.start_reauth_flow(menuai)
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
         },
     )
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     await client.get(f"/auth/external/callback?code=abcd&state={state}")
 
     aioclient_mock.post(
@@ -230,7 +230,7 @@ async def test_reauth_account_mismatch(
     mock_spotify.return_value.get_current_user.return_value.user_id = (
         "different_user_id"
     )
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_account_mismatch"

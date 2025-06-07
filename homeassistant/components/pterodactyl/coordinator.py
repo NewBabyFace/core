@@ -5,11 +5,11 @@ from __future__ import annotations
 from datetime import timedelta
 import logging
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_API_KEY, CONF_URL
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_API_KEY, CONF_URL
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import (
     PterodactylAPI,
@@ -33,13 +33,13 @@ class PterodactylCoordinator(DataUpdateCoordinator[dict[str, PterodactylData]]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: PterodactylConfigEntry,
     ) -> None:
         """Initialize coordinator instance."""
 
         super().__init__(
-            hass=hass,
+            menuai=menuai,
             name=config_entry.data[CONF_URL],
             config_entry=config_entry,
             logger=_LOGGER,
@@ -49,7 +49,7 @@ class PterodactylCoordinator(DataUpdateCoordinator[dict[str, PterodactylData]]):
     async def _async_setup(self) -> None:
         """Set up the Pterodactyl data coordinator."""
         self.api = PterodactylAPI(
-            hass=self.hass,
+            menuai=self.menuai,
             host=self.config_entry.data[CONF_URL],
             api_key=self.config_entry.data[CONF_API_KEY],
         )

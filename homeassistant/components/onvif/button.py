@@ -1,10 +1,10 @@
 """ONVIF Buttons."""
 
-from homeassistant.components.button import ButtonDeviceClass, ButtonEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.button import ButtonDeviceClass, ButtonEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .device import ONVIFDevice
@@ -12,12 +12,12 @@ from .entity import ONVIFBaseEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up ONVIF button based on a config entry."""
-    device = hass.data[DOMAIN][config_entry.unique_id]
+    device = menuai.data[DOMAIN][config_entry.unique_id]
     async_add_entities([RebootButton(device), SetSystemDateAndTimeButton(device)])
 
 

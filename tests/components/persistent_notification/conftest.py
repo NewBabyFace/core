@@ -2,12 +2,12 @@
 
 import pytest
 
-from homeassistant.components import persistent_notification as pn
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components import persistent_notification as pn
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 
 @pytest.fixture(autouse=True)
-async def setup_integration(hass: HomeAssistant) -> None:
+async def setup_integration(menuai: menuai) -> None:
     """Set up persistent notification integration."""
-    assert await async_setup_component(hass, pn.DOMAIN, {})
+    assert await async_setup_component(menuai, pn.DOMAIN, {})

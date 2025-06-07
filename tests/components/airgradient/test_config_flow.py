@@ -9,12 +9,12 @@ from airgradient import (
     ConfigurationControl,
 )
 
-from homeassistant.components.airgradient.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER, SOURCE_ZEROCONF
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.components.airgradient.const import DOMAIN
+from menuai.config_entries import SOURCE_USER, SOURCE_ZEROCONF
+from menuai.const import CONF_HOST
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from tests.common import MockConfigEntry
 
@@ -50,24 +50,24 @@ ZEROCONF_DISCOVERY = ZeroconfServiceInfo(
 
 
 async def test_full_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_new_airgradient_client: AsyncMock,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test full flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: "10.0.0.131"},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "I-9PSL"
     assert result["data"] == {
@@ -80,19 +80,19 @@ async def test_full_flow(
 
 
 async def test_flow_with_registered_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_cloud_airgradient_client: AsyncMock,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test we don't revert the cloud setting."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: "10.0.0.131"},
     )
@@ -102,7 +102,7 @@ async def test_flow_with_registered_device(
 
 
 async def test_flow_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_airgradient_client: AsyncMock,
     mock_setup_entry: AsyncMock,
 ) -> None:
@@ -111,106 +111,106 @@ async def test_flow_errors(
         AirGradientConnectionError()
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: "10.0.0.131"},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": "cannot_connect"}
 
     mock_airgradient_client.get_current_measures.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: "10.0.0.131"},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.CREATE_ENTRY
 
 
 async def test_flow_old_firmware_version(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_airgradient_client: AsyncMock,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test flow with old firmware version."""
     mock_airgradient_client.get_current_measures.side_effect = AirGradientParseError
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: "10.0.0.131"},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "invalid_version"
 
 
 async def test_duplicate(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_airgradient_client: AsyncMock,
     mock_setup_entry: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test duplicate flow."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: "10.0.0.131"},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
 
 
 async def test_zeroconf_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_new_airgradient_client: AsyncMock,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test zeroconf flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_ZEROCONF},
         data=ZEROCONF_DISCOVERY,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "discovery_confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "I-9PSL"
     assert result["data"] == {
@@ -223,12 +223,12 @@ async def test_zeroconf_flow(
 
 
 async def test_zeroconf_flow_cloud_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_cloud_airgradient_client: AsyncMock,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test zeroconf flow doesn't revert the cloud setting."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_ZEROCONF},
         data=ZEROCONF_DISCOVERY,
@@ -236,7 +236,7 @@ async def test_zeroconf_flow_cloud_device(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "discovery_confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {},
     )
@@ -244,9 +244,9 @@ async def test_zeroconf_flow_cloud_device(
     mock_cloud_airgradient_client.set_configuration_control.assert_not_called()
 
 
-async def test_zeroconf_flow_abort_old_firmware(hass: HomeAssistant) -> None:
+async def test_zeroconf_flow_abort_old_firmware(menuai: menuai) -> None:
     """Test zeroconf flow aborts with old firmware."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_ZEROCONF},
         data=OLD_ZEROCONF_DISCOVERY,
@@ -256,11 +256,11 @@ async def test_zeroconf_flow_abort_old_firmware(hass: HomeAssistant) -> None:
 
 
 async def test_zeroconf_flow_abort_duplicate(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_config_entry: MockConfigEntry
 ) -> None:
     """Test zeroconf flow aborts with duplicate."""
-    mock_config_entry.add_to_hass(hass)
-    result = await hass.config_entries.flow.async_init(
+    mock_config_entry.add_to_menuai(menuai)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_ZEROCONF},
         data=ZEROCONF_DISCOVERY,
@@ -270,49 +270,49 @@ async def test_zeroconf_flow_abort_duplicate(
 
 
 async def test_user_flow_works_discovery(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_new_airgradient_client: AsyncMock,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test user flow can continue after discovery happened."""
-    await hass.config_entries.flow.async_init(
+    await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_ZEROCONF},
         data=ZEROCONF_DISCOVERY,
     )
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
-    assert len(hass.config_entries.flow.async_progress(DOMAIN)) == 2
+    assert len(menuai.config_entries.flow.async_progress(DOMAIN)) == 2
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: "10.0.0.131"},
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
 
     # Verify the discovery flow was aborted
-    assert not hass.config_entries.flow.async_progress(DOMAIN)
+    assert not menuai.config_entries.flow.async_progress(DOMAIN)
 
 
 async def test_reconfigure_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_new_airgradient_client: AsyncMock,
     mock_setup_entry: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test reconfigure flow."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await mock_config_entry.start_reconfigure_flow(hass)
+    result = await mock_config_entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: "10.0.0.131"},
     )
@@ -325,23 +325,23 @@ async def test_reconfigure_flow(
 
 
 async def test_reconfigure_flow_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_new_airgradient_client: AsyncMock,
     mock_setup_entry: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test reconfigure flow."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
     mock_new_airgradient_client.get_current_measures.side_effect = (
         AirGradientConnectionError()
     )
 
-    result = await mock_config_entry.start_reconfigure_flow(hass)
+    result = await mock_config_entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: "10.0.0.132"},
     )
@@ -352,7 +352,7 @@ async def test_reconfigure_flow_errors(
 
     mock_new_airgradient_client.get_current_measures.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: "10.0.0.132"},
     )
@@ -365,24 +365,24 @@ async def test_reconfigure_flow_errors(
 
 
 async def test_reconfigure_flow_unique_id_mismatch(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_new_airgradient_client: AsyncMock,
     mock_setup_entry: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test reconfigure flow aborts with unique id mismatch."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     mock_new_airgradient_client.get_current_measures.return_value.serial_number = (
         "84fce612f5b9"
     )
 
-    result = await mock_config_entry.start_reconfigure_flow(hass)
+    result = await mock_config_entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: "10.0.0.132"},
     )

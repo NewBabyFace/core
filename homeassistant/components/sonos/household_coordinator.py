@@ -9,8 +9,8 @@ from typing import Any
 
 from soco import SoCo
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.debounce import Debouncer
+from menuai.core import menuai, callback
+from menuai.helpers.debounce import Debouncer
 
 from .const import DATA_SONOS
 from .exception import SonosUpdateError
@@ -23,9 +23,9 @@ class SonosHouseholdCoordinator:
 
     cache_update_lock: asyncio.Lock
 
-    def __init__(self, hass: HomeAssistant, household_id: str) -> None:
+    def __init__(self, menuai: menuai, household_id: str) -> None:
         """Initialize the data."""
-        self.hass = hass
+        self.menuai = menuai
         self.household_id = household_id
         self.async_poll: Callable[[], Coroutine[None, None, None]] | None = None
         self.last_processed_event_id: int | None = None
@@ -33,14 +33,14 @@ class SonosHouseholdCoordinator:
     def setup(self, soco: SoCo) -> None:
         """Set up the SonosAlarm instance."""
         self.update_cache(soco)
-        self.hass.add_job(self._async_setup)
+        self.menuai.add_job(self._async_setup)
 
     @callback
     def _async_setup(self) -> None:
         """Finish setup in async context."""
         self.cache_update_lock = asyncio.Lock()
         self.async_poll = Debouncer[Coroutine[Any, Any, None]](
-            self.hass,
+            self.menuai,
             _LOGGER,
             cooldown=3,
             immediate=False,
@@ -54,7 +54,7 @@ class SonosHouseholdCoordinator:
 
     async def _async_poll(self) -> None:
         """Poll any known speaker."""
-        discovered = self.hass.data[DATA_SONOS].discovered
+        discovered = self.menuai.data[DATA_SONOS].discovered
 
         for uid, speaker in discovered.items():
             _LOGGER.debug("Polling %s using %s", self.class_type, speaker.soco)

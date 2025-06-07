@@ -1,4 +1,4 @@
-"""Deprecation helpers for Home Assistant."""
+"""Deprecation helpers for MenuAI."""
 
 from __future__ import annotations
 
@@ -191,8 +191,8 @@ def _print_deprecation_warning_internal_impl(
     log_when_no_integration_is_found: bool,
 ) -> None:
     # pylint: disable=import-outside-toplevel
-    from homeassistant.core import async_get_hass_or_none
-    from homeassistant.loader import async_suggest_report_issue
+    from menuai.core import async_get_menuai_or_none
+    from menuai.loader import async_suggest_report_issue
 
     from .frame import MissingIntegrationFrame, get_integration_frame
 
@@ -215,7 +215,7 @@ def _print_deprecation_warning_internal_impl(
     else:
         if integration_frame.custom_integration:
             report_issue = async_suggest_report_issue(
-                async_get_hass_or_none(),
+                async_get_menuai_or_none(),
                 integration_domain=integration_frame.integration,
                 module=integration_frame.module,
             )

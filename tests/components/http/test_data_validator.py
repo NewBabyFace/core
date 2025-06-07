@@ -6,9 +6,9 @@ from unittest.mock import Mock
 from aiohttp import web
 import voluptuous as vol
 
-from homeassistant.components.http import KEY_HASS, HomeAssistantView
-from homeassistant.components.http.data_validator import RequestDataValidator
-from homeassistant.helpers.http import KEY_ALLOW_CONFIGURED_CORS
+from menuai.components.http import KEY_menuai, menuaiView
+from menuai.components.http.data_validator import RequestDataValidator
+from menuai.helpers.http import KEY_ALLOW_CONFIGURED_CORS
 
 from tests.typing import ClientSessionGenerator
 
@@ -16,10 +16,10 @@ from tests.typing import ClientSessionGenerator
 async def get_client(aiohttp_client, validator):
     """Generate a client that hits a view decorated with validator."""
     app = web.Application()
-    app[KEY_HASS] = Mock(is_stopping=False)
+    app[KEY_menuai] = Mock(is_stopping=False)
     app[KEY_ALLOW_CONFIGURED_CORS] = lambda _: None
 
-    class TestView(HomeAssistantView):
+    class TestView(menuaiView):
         url = "/"
         name = "test"
         requires_auth = False
@@ -29,7 +29,7 @@ async def get_client(aiohttp_client, validator):
             """Test method."""
             return b""
 
-    TestView().register(app[KEY_HASS], app, app.router)
+    TestView().register(app[KEY_menuai], app, app.router)
     return await aiohttp_client(app)
 
 

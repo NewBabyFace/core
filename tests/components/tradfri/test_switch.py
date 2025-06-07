@@ -6,10 +6,10 @@ import pytest
 from pytradfri.const import ATTR_REACHABLE_STATE
 from pytradfri.device import Device
 
-from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
-from homeassistant.components.tradfri.const import DOMAIN
-from homeassistant.const import STATE_OFF, STATE_ON, STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant
+from menuai.components.switch import DOMAIN as SWITCH_DOMAIN
+from menuai.components.tradfri.const import DOMAIN
+from menuai.const import STATE_OFF, STATE_ON, STATE_UNAVAILABLE
+from menuai.core import menuai
 
 from .common import CommandStore, setup_integration
 
@@ -24,23 +24,23 @@ def outlet() -> str:
 
 @pytest.mark.parametrize("device", ["outlet"], indirect=True)
 async def test_switch_available(
-    hass: HomeAssistant,
+    menuai: menuai,
     command_store: CommandStore,
     device: Device,
 ) -> None:
     """Test switch available property."""
     entity_id = "switch.test"
-    await setup_integration(hass)
+    await setup_integration(menuai)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_OFF
 
     await command_store.trigger_observe_callback(
-        hass, device, {ATTR_REACHABLE_STATE: 0}
+        menuai, device, {ATTR_REACHABLE_STATE: 0}
     )
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_UNAVAILABLE
 
@@ -54,7 +54,7 @@ async def test_switch_available(
     ],
 )
 async def test_turn_on_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     command_store: CommandStore,
     device: Device,
     service: str,
@@ -62,13 +62,13 @@ async def test_turn_on_off(
 ) -> None:
     """Test turning switch on/off."""
     entity_id = "switch.test"
-    await setup_integration(hass)
+    await setup_integration(menuai)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_OFF
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         service,
         {
@@ -76,10 +76,10 @@ async def test_turn_on_off(
         },
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await command_store.trigger_observe_callback(hass, device)
+    await command_store.trigger_observe_callback(menuai, device)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == expected_state

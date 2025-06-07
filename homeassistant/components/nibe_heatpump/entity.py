@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from nibe.coil import Coil, CoilData
 
-from homeassistant.helpers.entity import async_generate_entity_id
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.helpers.entity import async_generate_entity_id
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .coordinator import CoilCoordinator
 
@@ -22,7 +22,7 @@ class CoilEntity(CoordinatorEntity[CoilCoordinator]):
         """Initialize base entity."""
         super().__init__(coordinator, {coil.address})
         self.entity_id = async_generate_entity_id(
-            entity_format, coil.name, hass=coordinator.hass
+            entity_format, coil.name, menuai=coordinator.menuai
         )
         self._attr_name = coil.title
         self._attr_unique_id = f"{coordinator.unique_id}-{coil.address}"

@@ -17,16 +17,16 @@ import aiohttp
 from propcache.api import cached_property
 import requests
 
-from homeassistant import config_entries
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, callback
-from homeassistant.exceptions import (
+from menuai import config_entries
+from menuai.const import EVENT_menuai_STOP
+from menuai.core import CALLBACK_TYPE, Event, menuai, callback
+from menuai.exceptions import (
     ConfigEntryAuthFailed,
     ConfigEntryError,
     ConfigEntryNotReady,
-    HomeAssistantError,
+    menuaiError,
 )
-from homeassistant.util.dt import utcnow
+from menuai.util.dt import utcnow
 
 from . import entity, event
 from .debounce import Debouncer
@@ -39,7 +39,7 @@ REQUEST_REFRESH_DEFAULT_IMMEDIATE = True
 _DataT = TypeVar("_DataT", default=dict[str, Any])
 
 
-class UpdateFailed(HomeAssistantError):
+class UpdateFailed(menuaiError):
     """Raised when an update has failed."""
 
 
@@ -63,7 +63,7 @@ class DataUpdateCoordinator(BaseDataUpdateCoordinatorProtocol, Generic[_DataT]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         logger: logging.Logger,
         *,
         config_entry: config_entries.ConfigEntry | None | UndefinedType = UNDEFINED,
@@ -75,7 +75,7 @@ class DataUpdateCoordinator(BaseDataUpdateCoordinatorProtocol, Generic[_DataT]):
         always_update: bool = True,
     ) -> None:
         """Initialize global data updater."""
-        self.hass = hass
+        self.menuai = menuai
         self.logger = logger
         self.name = name
         self.update_method = update_method
@@ -114,7 +114,7 @@ class DataUpdateCoordinator(BaseDataUpdateCoordinatorProtocol, Generic[_DataT]):
 
         if request_refresh_debouncer is None:
             request_refresh_debouncer = Debouncer(
-                hass,
+                menuai,
                 logger,
                 cooldown=REQUEST_REFRESH_DEFAULT_COOLDOWN,
                 immediate=REQUEST_REFRESH_DEFAULT_IMMEDIATE,
@@ -129,21 +129,21 @@ class DataUpdateCoordinator(BaseDataUpdateCoordinatorProtocol, Generic[_DataT]):
             self.config_entry.async_on_unload(self.async_shutdown)
 
     async def async_register_shutdown(self) -> None:
-        """Register shutdown on HomeAssistant stop.
+        """Register shutdown on menuai stop.
 
         Should only be used by coordinators that are not linked to a config entry.
         """
         if self.config_entry:
             raise RuntimeError("This should only be used outside of config entries.")
 
-        async def _on_hass_stop(_: Event) -> None:
-            """Shutdown coordinator on HomeAssistant stop."""
-            # Already cleared on EVENT_HOMEASSISTANT_STOP, via async_fire_internal
+        async def _on_menuai_stop(_: Event) -> None:
+            """Shutdown coordinator on menuai stop."""
+            # Already cleared on EVENT_menuai_STOP, via async_fire_internal
             self._unsub_shutdown = None
             await self.async_shutdown()
 
-        self._unsub_shutdown = self.hass.bus.async_listen_once(
-            EVENT_HOMEASSISTANT_STOP, _on_hass_stop
+        self._unsub_shutdown = self.menuai.bus.async_listen_once(
+            EVENT_menuai_STOP, _on_menuai_stop
         )
 
     @callback
@@ -237,8 +237,8 @@ class DataUpdateCoordinator(BaseDataUpdateCoordinatorProtocol, Generic[_DataT]):
         # We use loop.call_at because DataUpdateCoordinator does
         # not need an exact update interval which also avoids
         # calling dt_util.utcnow() on every update.
-        hass = self.hass
-        loop = hass.loop
+        menuai = self.menuai
+        loop = menuai.loop
 
         next_refresh = (
             int(loop.time()) + self._microsecond + self._update_interval_seconds
@@ -252,13 +252,13 @@ class DataUpdateCoordinator(BaseDataUpdateCoordinatorProtocol, Generic[_DataT]):
         """Handle a refresh interval occurrence."""
         if self.config_entry:
             self.config_entry.async_create_background_task(
-                self.hass,
+                self.menuai,
                 self._handle_refresh_interval(),
                 name=f"{self.name} - {self.config_entry.title} - refresh",
                 eager_start=True,
             )
         else:
-            self.hass.async_create_background_task(
+            self.menuai.async_create_background_task(
                 self._handle_refresh_interval(),
                 name=f"{self.name} - refresh",
                 eager_start=True,
@@ -368,7 +368,7 @@ class DataUpdateCoordinator(BaseDataUpdateCoordinatorProtocol, Generic[_DataT]):
         self._async_unsub_refresh()
         self._debounced_refresh.async_cancel()
 
-        if self._shutdown_requested or (scheduled and self.hass.is_stopping):
+        if self._shutdown_requested or (scheduled and self.menuai.is_stopping):
             return
 
         if log_timing := self.logger.isEnabledFor(logging.DEBUG):
@@ -442,7 +442,7 @@ class DataUpdateCoordinator(BaseDataUpdateCoordinatorProtocol, Generic[_DataT]):
                 raise
 
             if self.config_entry:
-                self.config_entry.async_start_reauth(self.hass)
+                self.config_entry.async_start_reauth(self.menuai)
         except NotImplementedError as err:
             self.last_exception = err
             raise
@@ -465,7 +465,7 @@ class DataUpdateCoordinator(BaseDataUpdateCoordinatorProtocol, Generic[_DataT]):
                     monotonic() - start,
                     self.last_update_success,
                 )
-            if not auth_failed and self._listeners and not self.hass.is_stopping:
+            if not auth_failed and self._listeners and not self.menuai.is_stopping:
                 self._schedule_refresh()
 
         self._async_refresh_finished()
@@ -546,9 +546,9 @@ class BaseCoordinatorEntity[
         """No need to poll. Coordinator notifies entity of updates."""
         return False
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai."""
+        await super().async_added_to_menuai()
         self.async_on_remove(
             self.coordinator.async_add_listener(
                 self._handle_coordinator_update, self.coordinator_context

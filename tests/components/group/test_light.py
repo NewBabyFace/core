@@ -5,9 +5,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from homeassistant import config as hass_config
-from homeassistant.components.group import DOMAIN, SERVICE_RELOAD, light as group
-from homeassistant.components.light import (
+from menuai import config as menuai_config
+from menuai.components.group import DOMAIN, SERVICE_RELOAD, light as group
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_MODE,
     ATTR_COLOR_NAME,
@@ -29,7 +29,7 @@ from homeassistant.components.light import (
     SERVICE_TURN_ON,
     ColorMode,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_SUPPORTED_FEATURES,
     EVENT_CALL_SERVICE,
@@ -38,9 +38,9 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import Event, HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.core import Event, menuai
+from menuai.helpers import entity_registry as er
+from menuai.setup import async_setup_component
 
 from tests.common import (
     async_capture_events,
@@ -51,12 +51,12 @@ from tests.components.light.common import MockLight
 
 
 async def test_default_state(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test light group default state."""
-    hass.states.async_set("light.kitchen", "on")
+    menuai.states.async_set("light.kitchen", "on")
     await async_setup_component(
-        hass,
+        menuai,
         LIGHT_DOMAIN,
         {
             LIGHT_DOMAIN: {
@@ -68,11 +68,11 @@ async def test_default_state(
             }
         },
     )
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("light.bedroom_group")
+    state = menuai.states.get("light.bedroom_group")
     assert state is not None
     assert state.state == STATE_ON
     assert state.attributes[ATTR_SUPPORTED_FEATURES] == 0
@@ -88,7 +88,7 @@ async def test_default_state(
     assert entry.unique_id == "unique_identifier"
 
 
-async def test_state_reporting_any(hass: HomeAssistant) -> None:
+async def test_state_reporting_any(menuai: menuai) -> None:
     """Test the state reporting in 'any' mode.
 
     The group state is unavailable if all group members are unavailable.
@@ -97,7 +97,7 @@ async def test_state_reporting_any(hass: HomeAssistant) -> None:
     Otherwise, the group state is off.
     """
     await async_setup_component(
-        hass,
+        menuai,
         LIGHT_DOMAIN,
         {
             LIGHT_DOMAIN: {
@@ -107,76 +107,76 @@ async def test_state_reporting_any(hass: HomeAssistant) -> None:
             }
         },
     )
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
     # Initial state with no group member in the state machine -> unavailable
-    assert hass.states.get("light.light_group").state == STATE_UNAVAILABLE
+    assert menuai.states.get("light.light_group").state == STATE_UNAVAILABLE
 
     # All group members unavailable -> unavailable
-    hass.states.async_set("light.test1", STATE_UNAVAILABLE)
-    hass.states.async_set("light.test2", STATE_UNAVAILABLE)
-    await hass.async_block_till_done()
-    assert hass.states.get("light.light_group").state == STATE_UNAVAILABLE
+    menuai.states.async_set("light.test1", STATE_UNAVAILABLE)
+    menuai.states.async_set("light.test2", STATE_UNAVAILABLE)
+    await menuai.async_block_till_done()
+    assert menuai.states.get("light.light_group").state == STATE_UNAVAILABLE
 
     # All group members unknown -> unknown
-    hass.states.async_set("light.test1", STATE_UNKNOWN)
-    hass.states.async_set("light.test2", STATE_UNKNOWN)
-    await hass.async_block_till_done()
-    assert hass.states.get("light.light_group").state == STATE_UNKNOWN
+    menuai.states.async_set("light.test1", STATE_UNKNOWN)
+    menuai.states.async_set("light.test2", STATE_UNKNOWN)
+    await menuai.async_block_till_done()
+    assert menuai.states.get("light.light_group").state == STATE_UNKNOWN
 
     # Group members unknown or unavailable -> unknown
-    hass.states.async_set("light.test1", STATE_UNKNOWN)
-    hass.states.async_set("light.test2", STATE_UNAVAILABLE)
-    await hass.async_block_till_done()
-    assert hass.states.get("light.light_group").state == STATE_UNKNOWN
+    menuai.states.async_set("light.test1", STATE_UNKNOWN)
+    menuai.states.async_set("light.test2", STATE_UNAVAILABLE)
+    await menuai.async_block_till_done()
+    assert menuai.states.get("light.light_group").state == STATE_UNKNOWN
 
     # At least one member on -> group on
-    hass.states.async_set("light.test1", STATE_ON)
-    hass.states.async_set("light.test2", STATE_UNAVAILABLE)
-    await hass.async_block_till_done()
-    assert hass.states.get("light.light_group").state == STATE_ON
+    menuai.states.async_set("light.test1", STATE_ON)
+    menuai.states.async_set("light.test2", STATE_UNAVAILABLE)
+    await menuai.async_block_till_done()
+    assert menuai.states.get("light.light_group").state == STATE_ON
 
-    hass.states.async_set("light.test1", STATE_ON)
-    hass.states.async_set("light.test2", STATE_OFF)
-    await hass.async_block_till_done()
-    assert hass.states.get("light.light_group").state == STATE_ON
+    menuai.states.async_set("light.test1", STATE_ON)
+    menuai.states.async_set("light.test2", STATE_OFF)
+    await menuai.async_block_till_done()
+    assert menuai.states.get("light.light_group").state == STATE_ON
 
-    hass.states.async_set("light.test1", STATE_ON)
-    hass.states.async_set("light.test2", STATE_ON)
-    await hass.async_block_till_done()
-    assert hass.states.get("light.light_group").state == STATE_ON
+    menuai.states.async_set("light.test1", STATE_ON)
+    menuai.states.async_set("light.test2", STATE_ON)
+    await menuai.async_block_till_done()
+    assert menuai.states.get("light.light_group").state == STATE_ON
 
-    hass.states.async_set("light.test1", STATE_ON)
-    hass.states.async_set("light.test2", STATE_UNKNOWN)
-    await hass.async_block_till_done()
-    assert hass.states.get("light.light_group").state == STATE_ON
+    menuai.states.async_set("light.test1", STATE_ON)
+    menuai.states.async_set("light.test2", STATE_UNKNOWN)
+    await menuai.async_block_till_done()
+    assert menuai.states.get("light.light_group").state == STATE_ON
 
     # Otherwise -> off
-    hass.states.async_set("light.test1", STATE_OFF)
-    hass.states.async_set("light.test2", STATE_OFF)
-    await hass.async_block_till_done()
-    assert hass.states.get("light.light_group").state == STATE_OFF
+    menuai.states.async_set("light.test1", STATE_OFF)
+    menuai.states.async_set("light.test2", STATE_OFF)
+    await menuai.async_block_till_done()
+    assert menuai.states.get("light.light_group").state == STATE_OFF
 
-    hass.states.async_set("light.test1", STATE_UNKNOWN)
-    hass.states.async_set("light.test2", STATE_OFF)
-    await hass.async_block_till_done()
-    assert hass.states.get("light.light_group").state == STATE_OFF
+    menuai.states.async_set("light.test1", STATE_UNKNOWN)
+    menuai.states.async_set("light.test2", STATE_OFF)
+    await menuai.async_block_till_done()
+    assert menuai.states.get("light.light_group").state == STATE_OFF
 
-    hass.states.async_set("light.test1", STATE_UNAVAILABLE)
-    hass.states.async_set("light.test2", STATE_OFF)
-    await hass.async_block_till_done()
-    assert hass.states.get("light.light_group").state == STATE_OFF
+    menuai.states.async_set("light.test1", STATE_UNAVAILABLE)
+    menuai.states.async_set("light.test2", STATE_OFF)
+    await menuai.async_block_till_done()
+    assert menuai.states.get("light.light_group").state == STATE_OFF
 
     # All group members removed from the state machine -> unavailable
-    hass.states.async_remove("light.test1")
-    hass.states.async_remove("light.test2")
-    await hass.async_block_till_done()
-    assert hass.states.get("light.light_group").state == STATE_UNAVAILABLE
+    menuai.states.async_remove("light.test1")
+    menuai.states.async_remove("light.test2")
+    await menuai.async_block_till_done()
+    assert menuai.states.get("light.light_group").state == STATE_UNAVAILABLE
 
 
-async def test_state_reporting_all(hass: HomeAssistant) -> None:
+async def test_state_reporting_all(menuai: menuai) -> None:
     """Test the state reporting in 'all' mode.
 
     The group state is unavailable if all group members are unavailable.
@@ -185,7 +185,7 @@ async def test_state_reporting_all(hass: HomeAssistant) -> None:
     Otherwise, the group state is on.
     """
     await async_setup_component(
-        hass,
+        menuai,
         LIGHT_DOMAIN,
         {
             LIGHT_DOMAIN: {
@@ -195,81 +195,81 @@ async def test_state_reporting_all(hass: HomeAssistant) -> None:
             }
         },
     )
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
     # Initial state with no group member in the state machine -> unavailable
-    assert hass.states.get("light.light_group").state == STATE_UNAVAILABLE
+    assert menuai.states.get("light.light_group").state == STATE_UNAVAILABLE
 
     # All group members unavailable -> unavailable
-    hass.states.async_set("light.test1", STATE_UNAVAILABLE)
-    hass.states.async_set("light.test2", STATE_UNAVAILABLE)
-    await hass.async_block_till_done()
-    assert hass.states.get("light.light_group").state == STATE_UNAVAILABLE
+    menuai.states.async_set("light.test1", STATE_UNAVAILABLE)
+    menuai.states.async_set("light.test2", STATE_UNAVAILABLE)
+    await menuai.async_block_till_done()
+    assert menuai.states.get("light.light_group").state == STATE_UNAVAILABLE
 
     # At least one member unknown or unavailable -> group unknown
-    hass.states.async_set("light.test1", STATE_ON)
-    hass.states.async_set("light.test2", STATE_UNAVAILABLE)
-    await hass.async_block_till_done()
-    assert hass.states.get("light.light_group").state == STATE_UNKNOWN
+    menuai.states.async_set("light.test1", STATE_ON)
+    menuai.states.async_set("light.test2", STATE_UNAVAILABLE)
+    await menuai.async_block_till_done()
+    assert menuai.states.get("light.light_group").state == STATE_UNKNOWN
 
-    hass.states.async_set("light.test1", STATE_ON)
-    hass.states.async_set("light.test2", STATE_UNKNOWN)
-    await hass.async_block_till_done()
-    assert hass.states.get("light.light_group").state == STATE_UNKNOWN
+    menuai.states.async_set("light.test1", STATE_ON)
+    menuai.states.async_set("light.test2", STATE_UNKNOWN)
+    await menuai.async_block_till_done()
+    assert menuai.states.get("light.light_group").state == STATE_UNKNOWN
 
-    hass.states.async_set("light.test1", STATE_UNKNOWN)
-    hass.states.async_set("light.test2", STATE_UNKNOWN)
-    await hass.async_block_till_done()
-    assert hass.states.get("light.light_group").state == STATE_UNKNOWN
+    menuai.states.async_set("light.test1", STATE_UNKNOWN)
+    menuai.states.async_set("light.test2", STATE_UNKNOWN)
+    await menuai.async_block_till_done()
+    assert menuai.states.get("light.light_group").state == STATE_UNKNOWN
 
-    hass.states.async_set("light.test1", STATE_OFF)
-    hass.states.async_set("light.test2", STATE_UNAVAILABLE)
-    await hass.async_block_till_done()
-    assert hass.states.get("light.light_group").state == STATE_UNKNOWN
+    menuai.states.async_set("light.test1", STATE_OFF)
+    menuai.states.async_set("light.test2", STATE_UNAVAILABLE)
+    await menuai.async_block_till_done()
+    assert menuai.states.get("light.light_group").state == STATE_UNKNOWN
 
-    hass.states.async_set("light.test1", STATE_OFF)
-    hass.states.async_set("light.test2", STATE_UNKNOWN)
-    await hass.async_block_till_done()
-    assert hass.states.get("light.light_group").state == STATE_UNKNOWN
+    menuai.states.async_set("light.test1", STATE_OFF)
+    menuai.states.async_set("light.test2", STATE_UNKNOWN)
+    await menuai.async_block_till_done()
+    assert menuai.states.get("light.light_group").state == STATE_UNKNOWN
 
-    hass.states.async_set("binary_sensor.test1", STATE_UNKNOWN)
-    hass.states.async_set("binary_sensor.test2", STATE_UNAVAILABLE)
-    await hass.async_block_till_done()
-    assert hass.states.get("light.light_group").state == STATE_UNKNOWN
+    menuai.states.async_set("binary_sensor.test1", STATE_UNKNOWN)
+    menuai.states.async_set("binary_sensor.test2", STATE_UNAVAILABLE)
+    await menuai.async_block_till_done()
+    assert menuai.states.get("light.light_group").state == STATE_UNKNOWN
 
     # At least one member off -> group off
-    hass.states.async_set("light.test1", STATE_ON)
-    hass.states.async_set("light.test2", STATE_OFF)
-    await hass.async_block_till_done()
-    assert hass.states.get("light.light_group").state == STATE_OFF
+    menuai.states.async_set("light.test1", STATE_ON)
+    menuai.states.async_set("light.test2", STATE_OFF)
+    await menuai.async_block_till_done()
+    assert menuai.states.get("light.light_group").state == STATE_OFF
 
-    hass.states.async_set("light.test1", STATE_OFF)
-    hass.states.async_set("light.test2", STATE_OFF)
-    await hass.async_block_till_done()
-    assert hass.states.get("light.light_group").state == STATE_OFF
+    menuai.states.async_set("light.test1", STATE_OFF)
+    menuai.states.async_set("light.test2", STATE_OFF)
+    await menuai.async_block_till_done()
+    assert menuai.states.get("light.light_group").state == STATE_OFF
 
     # Otherwise -> on
-    hass.states.async_set("light.test1", STATE_ON)
-    hass.states.async_set("light.test2", STATE_ON)
-    await hass.async_block_till_done()
-    assert hass.states.get("light.light_group").state == STATE_ON
+    menuai.states.async_set("light.test1", STATE_ON)
+    menuai.states.async_set("light.test2", STATE_ON)
+    await menuai.async_block_till_done()
+    assert menuai.states.get("light.light_group").state == STATE_ON
 
     # All group members removed from the state machine -> unavailable
-    hass.states.async_remove("light.test1")
-    hass.states.async_remove("light.test2")
-    await hass.async_block_till_done()
-    assert hass.states.get("light.light_group").state == STATE_UNAVAILABLE
+    menuai.states.async_remove("light.test1")
+    menuai.states.async_remove("light.test2")
+    await menuai.async_block_till_done()
+    assert menuai.states.get("light.light_group").state == STATE_UNAVAILABLE
 
 
-async def test_brightness(hass: HomeAssistant) -> None:
+async def test_brightness(menuai: menuai) -> None:
     """Test brightness reporting."""
     entities = [
         MockLight("test1", STATE_ON),
         MockLight("test2", STATE_OFF),
     ]
-    setup_test_component_platform(hass, LIGHT_DOMAIN, entities)
+    setup_test_component_platform(menuai, LIGHT_DOMAIN, entities)
 
     entity0 = entities[0]
     entity0.supported_color_modes = {ColorMode.BRIGHTNESS}
@@ -281,7 +281,7 @@ async def test_brightness(hass: HomeAssistant) -> None:
     entity1.color_mode = ColorMode.BRIGHTNESS
 
     assert await async_setup_component(
-        hass,
+        menuai,
         LIGHT_DOMAIN,
         {
             LIGHT_DOMAIN: [
@@ -294,39 +294,39 @@ async def test_brightness(hass: HomeAssistant) -> None:
             ]
         },
     )
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("light.light_group")
+    state = menuai.states.get("light.light_group")
     assert state.state == STATE_ON
     assert state.attributes[ATTR_BRIGHTNESS] == 255
     assert state.attributes[ATTR_COLOR_MODE] == "brightness"
     assert state.attributes[ATTR_SUPPORTED_FEATURES] == 0
     assert state.attributes[ATTR_SUPPORTED_COLOR_MODES] == ["brightness"]
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": [entity1.entity_id], ATTR_BRIGHTNESS: 100},
         blocking=True,
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("light.light_group")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("light.light_group")
     assert state.state == STATE_ON
     assert state.attributes[ATTR_BRIGHTNESS] == 177
     assert state.attributes[ATTR_COLOR_MODE] == "brightness"
     assert state.attributes[ATTR_SUPPORTED_FEATURES] == 0
     assert state.attributes[ATTR_SUPPORTED_COLOR_MODES] == ["brightness"]
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_off",
         {"entity_id": [entity0.entity_id]},
         blocking=True,
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("light.light_group")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("light.light_group")
     assert state.state == STATE_ON
     assert state.attributes[ATTR_BRIGHTNESS] == 100
     assert state.attributes[ATTR_COLOR_MODE] == "brightness"
@@ -334,13 +334,13 @@ async def test_brightness(hass: HomeAssistant) -> None:
     assert state.attributes[ATTR_SUPPORTED_COLOR_MODES] == ["brightness"]
 
 
-async def test_color_hs(hass: HomeAssistant) -> None:
+async def test_color_hs(menuai: menuai) -> None:
     """Test hs color reporting."""
     entities = [
         MockLight("test1", STATE_ON),
         MockLight("test2", STATE_OFF),
     ]
-    setup_test_component_platform(hass, LIGHT_DOMAIN, entities)
+    setup_test_component_platform(menuai, LIGHT_DOMAIN, entities)
 
     entity0 = entities[0]
     entity0.supported_color_modes = {ColorMode.HS}
@@ -353,7 +353,7 @@ async def test_color_hs(hass: HomeAssistant) -> None:
     entity1.color_mode = ColorMode.HS
 
     assert await async_setup_component(
-        hass,
+        menuai,
         LIGHT_DOMAIN,
         {
             LIGHT_DOMAIN: [
@@ -366,51 +366,51 @@ async def test_color_hs(hass: HomeAssistant) -> None:
             ]
         },
     )
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("light.light_group")
+    state = menuai.states.get("light.light_group")
     assert state.state == STATE_ON
     assert state.attributes[ATTR_COLOR_MODE] == "hs"
     assert state.attributes[ATTR_HS_COLOR] == (0, 100)
     assert state.attributes[ATTR_SUPPORTED_COLOR_MODES] == ["hs"]
     assert state.attributes[ATTR_SUPPORTED_FEATURES] == 0
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": [entity1.entity_id], ATTR_HS_COLOR: (0, 50)},
         blocking=True,
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("light.light_group")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("light.light_group")
     assert state.attributes[ATTR_COLOR_MODE] == "hs"
     assert state.attributes[ATTR_HS_COLOR] == (0, 75)
     assert state.attributes[ATTR_SUPPORTED_COLOR_MODES] == ["hs"]
     assert state.attributes[ATTR_SUPPORTED_FEATURES] == 0
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_off",
         {"entity_id": [entity0.entity_id]},
         blocking=True,
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("light.light_group")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("light.light_group")
     assert state.attributes[ATTR_COLOR_MODE] == "hs"
     assert state.attributes[ATTR_HS_COLOR] == (0, 50)
     assert state.attributes[ATTR_SUPPORTED_COLOR_MODES] == ["hs"]
     assert state.attributes[ATTR_SUPPORTED_FEATURES] == 0
 
 
-async def test_color_rgb(hass: HomeAssistant) -> None:
+async def test_color_rgb(menuai: menuai) -> None:
     """Test rgbw color reporting."""
     entities = [
         MockLight("test1", STATE_ON),
         MockLight("test2", STATE_OFF),
     ]
-    setup_test_component_platform(hass, LIGHT_DOMAIN, entities)
+    setup_test_component_platform(menuai, LIGHT_DOMAIN, entities)
 
     entity0 = entities[0]
     entity0.supported_color_modes = {ColorMode.RGB}
@@ -425,7 +425,7 @@ async def test_color_rgb(hass: HomeAssistant) -> None:
     entity1.rgb_color = (255, 128, 64)
 
     assert await async_setup_component(
-        hass,
+        menuai,
         LIGHT_DOMAIN,
         {
             LIGHT_DOMAIN: [
@@ -438,51 +438,51 @@ async def test_color_rgb(hass: HomeAssistant) -> None:
             ]
         },
     )
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("light.light_group")
+    state = menuai.states.get("light.light_group")
     assert state.state == STATE_ON
     assert state.attributes[ATTR_COLOR_MODE] == "rgb"
     assert state.attributes[ATTR_RGB_COLOR] == (0, 64, 128)
     assert state.attributes[ATTR_SUPPORTED_COLOR_MODES] == ["rgb"]
     assert state.attributes[ATTR_SUPPORTED_FEATURES] == 0
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": [entity1.entity_id]},
         blocking=True,
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("light.light_group")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("light.light_group")
     assert state.attributes[ATTR_COLOR_MODE] == "rgb"
     assert state.attributes[ATTR_RGB_COLOR] == (127, 96, 96)
     assert state.attributes[ATTR_SUPPORTED_COLOR_MODES] == ["rgb"]
     assert state.attributes[ATTR_SUPPORTED_FEATURES] == 0
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_off",
         {"entity_id": [entity0.entity_id]},
         blocking=True,
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("light.light_group")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("light.light_group")
     assert state.attributes[ATTR_COLOR_MODE] == "rgb"
     assert state.attributes[ATTR_RGB_COLOR] == (255, 128, 64)
     assert state.attributes[ATTR_SUPPORTED_COLOR_MODES] == ["rgb"]
     assert state.attributes[ATTR_SUPPORTED_FEATURES] == 0
 
 
-async def test_color_rgbw(hass: HomeAssistant) -> None:
+async def test_color_rgbw(menuai: menuai) -> None:
     """Test rgbw color reporting."""
     entities = [
         MockLight("test1", STATE_ON),
         MockLight("test2", STATE_OFF),
     ]
-    setup_test_component_platform(hass, LIGHT_DOMAIN, entities)
+    setup_test_component_platform(menuai, LIGHT_DOMAIN, entities)
 
     entity0 = entities[0]
     entity0.supported_color_modes = {ColorMode.RGBW}
@@ -497,7 +497,7 @@ async def test_color_rgbw(hass: HomeAssistant) -> None:
     entity1.rgbw_color = (255, 128, 64, 0)
 
     assert await async_setup_component(
-        hass,
+        menuai,
         LIGHT_DOMAIN,
         {
             LIGHT_DOMAIN: [
@@ -510,51 +510,51 @@ async def test_color_rgbw(hass: HomeAssistant) -> None:
             ]
         },
     )
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("light.light_group")
+    state = menuai.states.get("light.light_group")
     assert state.state == STATE_ON
     assert state.attributes[ATTR_COLOR_MODE] == "rgbw"
     assert state.attributes[ATTR_RGBW_COLOR] == (0, 64, 128, 255)
     assert state.attributes[ATTR_SUPPORTED_COLOR_MODES] == ["rgbw"]
     assert state.attributes[ATTR_SUPPORTED_FEATURES] == 0
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": [entity1.entity_id]},
         blocking=True,
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("light.light_group")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("light.light_group")
     assert state.attributes[ATTR_COLOR_MODE] == "rgbw"
     assert state.attributes[ATTR_RGBW_COLOR] == (127, 96, 96, 127)
     assert state.attributes[ATTR_SUPPORTED_COLOR_MODES] == ["rgbw"]
     assert state.attributes[ATTR_SUPPORTED_FEATURES] == 0
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_off",
         {"entity_id": [entity0.entity_id]},
         blocking=True,
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("light.light_group")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("light.light_group")
     assert state.attributes[ATTR_COLOR_MODE] == "rgbw"
     assert state.attributes[ATTR_RGBW_COLOR] == (255, 128, 64, 0)
     assert state.attributes[ATTR_SUPPORTED_COLOR_MODES] == ["rgbw"]
     assert state.attributes[ATTR_SUPPORTED_FEATURES] == 0
 
 
-async def test_color_rgbww(hass: HomeAssistant) -> None:
+async def test_color_rgbww(menuai: menuai) -> None:
     """Test rgbww color reporting."""
     entities = [
         MockLight("test1", STATE_ON),
         MockLight("test2", STATE_OFF),
     ]
-    setup_test_component_platform(hass, LIGHT_DOMAIN, entities)
+    setup_test_component_platform(menuai, LIGHT_DOMAIN, entities)
 
     entity0 = entities[0]
     entity0.supported_color_modes = {ColorMode.RGBWW}
@@ -569,7 +569,7 @@ async def test_color_rgbww(hass: HomeAssistant) -> None:
     entity1.rgbww_color = (255, 128, 64, 32, 0)
 
     assert await async_setup_component(
-        hass,
+        menuai,
         LIGHT_DOMAIN,
         {
             LIGHT_DOMAIN: [
@@ -582,51 +582,51 @@ async def test_color_rgbww(hass: HomeAssistant) -> None:
             ]
         },
     )
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("light.light_group")
+    state = menuai.states.get("light.light_group")
     assert state.state == STATE_ON
     assert state.attributes[ATTR_COLOR_MODE] == "rgbww"
     assert state.attributes[ATTR_RGBWW_COLOR] == (0, 32, 64, 128, 255)
     assert state.attributes[ATTR_SUPPORTED_COLOR_MODES] == ["rgbww"]
     assert state.attributes[ATTR_SUPPORTED_FEATURES] == 0
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": [entity1.entity_id]},
         blocking=True,
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("light.light_group")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("light.light_group")
     assert state.attributes[ATTR_COLOR_MODE] == "rgbww"
     assert state.attributes[ATTR_RGBWW_COLOR] == (127, 80, 64, 80, 127)
     assert state.attributes[ATTR_SUPPORTED_COLOR_MODES] == ["rgbww"]
     assert state.attributes[ATTR_SUPPORTED_FEATURES] == 0
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_off",
         {"entity_id": [entity0.entity_id]},
         blocking=True,
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("light.light_group")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("light.light_group")
     assert state.attributes[ATTR_COLOR_MODE] == "rgbww"
     assert state.attributes[ATTR_RGBWW_COLOR] == (255, 128, 64, 32, 0)
     assert state.attributes[ATTR_SUPPORTED_COLOR_MODES] == ["rgbww"]
     assert state.attributes[ATTR_SUPPORTED_FEATURES] == 0
 
 
-async def test_white(hass: HomeAssistant) -> None:
+async def test_white(menuai: menuai) -> None:
     """Test white reporting."""
     entities = [
         MockLight("test1", STATE_ON),
         MockLight("test2", STATE_ON),
     ]
-    setup_test_component_platform(hass, LIGHT_DOMAIN, entities)
+    setup_test_component_platform(menuai, LIGHT_DOMAIN, entities)
 
     entity0 = entities[0]
     entity0.supported_color_modes = {ColorMode.HS, ColorMode.WHITE}
@@ -639,7 +639,7 @@ async def test_white(hass: HomeAssistant) -> None:
     entity1.brightness = 128
 
     assert await async_setup_component(
-        hass,
+        menuai,
         LIGHT_DOMAIN,
         {
             LIGHT_DOMAIN: [
@@ -652,38 +652,38 @@ async def test_white(hass: HomeAssistant) -> None:
             ]
         },
     )
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("light.light_group")
+    state = menuai.states.get("light.light_group")
     assert state.attributes[ATTR_COLOR_MODE] == "white"
     assert state.attributes[ATTR_BRIGHTNESS] == 191
     assert state.attributes[ATTR_SUPPORTED_FEATURES] == 0
     assert state.attributes[ATTR_SUPPORTED_COLOR_MODES] == ["hs", "white"]
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": ["light.light_group"], ATTR_WHITE: 128},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("light.light_group")
+    state = menuai.states.get("light.light_group")
     assert state.attributes[ATTR_COLOR_MODE] == "white"
     assert state.attributes[ATTR_BRIGHTNESS] == 128
     assert state.attributes[ATTR_SUPPORTED_FEATURES] == 0
     assert state.attributes[ATTR_SUPPORTED_COLOR_MODES] == ["hs", "white"]
 
 
-async def test_color_temp(hass: HomeAssistant) -> None:
+async def test_color_temp(menuai: menuai) -> None:
     """Test color temp reporting."""
     entities = [
         MockLight("test1", STATE_ON),
         MockLight("test2", STATE_OFF),
     ]
-    setup_test_component_platform(hass, LIGHT_DOMAIN, entities)
+    setup_test_component_platform(menuai, LIGHT_DOMAIN, entities)
 
     entity0 = entities[0]
     entity0.supported_color_modes = {ColorMode.COLOR_TEMP}
@@ -696,7 +696,7 @@ async def test_color_temp(hass: HomeAssistant) -> None:
     entity1.color_mode = ColorMode.COLOR_TEMP
 
     assert await async_setup_component(
-        hass,
+        menuai,
         LIGHT_DOMAIN,
         {
             LIGHT_DOMAIN: [
@@ -709,51 +709,51 @@ async def test_color_temp(hass: HomeAssistant) -> None:
             ]
         },
     )
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("light.light_group")
+    state = menuai.states.get("light.light_group")
     assert state.attributes[ATTR_COLOR_MODE] == "color_temp"
     assert state.attributes[ATTR_COLOR_TEMP_KELVIN] == 2
     assert state.attributes[ATTR_SUPPORTED_FEATURES] == 0
     assert state.attributes[ATTR_SUPPORTED_COLOR_MODES] == ["color_temp"]
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": [entity1.entity_id], ATTR_COLOR_TEMP_KELVIN: 1000},
         blocking=True,
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("light.light_group")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("light.light_group")
     assert state.attributes[ATTR_COLOR_MODE] == "color_temp"
     assert state.attributes[ATTR_COLOR_TEMP_KELVIN] == 501
     assert state.attributes[ATTR_SUPPORTED_FEATURES] == 0
     assert state.attributes[ATTR_SUPPORTED_COLOR_MODES] == ["color_temp"]
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_off",
         {"entity_id": [entity0.entity_id]},
         blocking=True,
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("light.light_group")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("light.light_group")
     assert state.attributes[ATTR_COLOR_MODE] == "color_temp"
     assert state.attributes[ATTR_COLOR_TEMP_KELVIN] == 1000
     assert state.attributes[ATTR_SUPPORTED_FEATURES] == 0
     assert state.attributes[ATTR_SUPPORTED_COLOR_MODES] == ["color_temp"]
 
 
-async def test_emulated_color_temp_group(hass: HomeAssistant) -> None:
+async def test_emulated_color_temp_group(menuai: menuai) -> None:
     """Test emulated color temperature in a group."""
     entities = [
         MockLight("test1", STATE_ON),
         MockLight("test2", STATE_OFF),
         MockLight("test3", STATE_OFF),
     ]
-    setup_test_component_platform(hass, LIGHT_DOMAIN, entities)
+    setup_test_component_platform(menuai, LIGHT_DOMAIN, entities)
 
     entity0 = entities[0]
     entity0.supported_color_modes = {ColorMode.COLOR_TEMP}
@@ -768,7 +768,7 @@ async def test_emulated_color_temp_group(hass: HomeAssistant) -> None:
     entity2.color_mode = ColorMode.HS
 
     assert await async_setup_component(
-        hass,
+        menuai,
         LIGHT_DOMAIN,
         {
             LIGHT_DOMAIN: [
@@ -782,35 +782,35 @@ async def test_emulated_color_temp_group(hass: HomeAssistant) -> None:
         },
     )
 
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
-    await hass.async_block_till_done()
-    await hass.services.async_call(
+    await menuai.async_block_till_done()
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.light_group", ATTR_COLOR_TEMP_KELVIN: 5000},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("light.test1")
+    state = menuai.states.get("light.test1")
     assert state.state == STATE_ON
     assert state.attributes[ATTR_COLOR_TEMP_KELVIN] == 5000
     assert ATTR_HS_COLOR in state.attributes
 
-    state = hass.states.get("light.test2")
+    state = menuai.states.get("light.test2")
     assert state.state == STATE_ON
     assert state.attributes[ATTR_COLOR_TEMP_KELVIN] == 5000
     assert ATTR_HS_COLOR in state.attributes
 
-    state = hass.states.get("light.test3")
+    state = menuai.states.get("light.test3")
     assert state.state == STATE_ON
     assert state.attributes[ATTR_HS_COLOR] == (27.001, 19.243)
 
 
-async def test_min_max_mireds(hass: HomeAssistant) -> None:
+async def test_min_max_mireds(menuai: menuai) -> None:
     """Test min/max mireds reporting.
 
     min/max mireds is reported both when light is on and off
@@ -819,7 +819,7 @@ async def test_min_max_mireds(hass: HomeAssistant) -> None:
         MockLight("test1", STATE_ON),
         MockLight("test2", STATE_OFF),
     ]
-    setup_test_component_platform(hass, LIGHT_DOMAIN, entities)
+    setup_test_component_platform(menuai, LIGHT_DOMAIN, entities)
 
     entity0 = entities[0]
     entity0.supported_color_modes = {ColorMode.COLOR_TEMP}
@@ -835,7 +835,7 @@ async def test_min_max_mireds(hass: HomeAssistant) -> None:
     entity1._attr_max_color_temp_kelvin = 1234567890
 
     assert await async_setup_component(
-        hass,
+        menuai,
         LIGHT_DOMAIN,
         {
             LIGHT_DOMAIN: [
@@ -848,42 +848,42 @@ async def test_min_max_mireds(hass: HomeAssistant) -> None:
             ]
         },
     )
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
-    await hass.async_block_till_done()
-    state = hass.states.get("light.light_group")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("light.light_group")
     assert state.attributes[ATTR_MIN_COLOR_TEMP_KELVIN] == 1
     assert state.attributes[ATTR_MAX_COLOR_TEMP_KELVIN] == 1234567890
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": [entity0.entity_id]},
         blocking=True,
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("light.light_group")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("light.light_group")
     assert state.attributes[ATTR_MIN_COLOR_TEMP_KELVIN] == 1
     assert state.attributes[ATTR_MAX_COLOR_TEMP_KELVIN] == 1234567890
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_off",
         {"entity_id": [entity0.entity_id]},
         blocking=True,
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("light.light_group")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("light.light_group")
     assert state.attributes[ATTR_MIN_COLOR_TEMP_KELVIN] == 1
     assert state.attributes[ATTR_MAX_COLOR_TEMP_KELVIN] == 1234567890
 
 
-async def test_effect_list(hass: HomeAssistant) -> None:
+async def test_effect_list(menuai: menuai) -> None:
     """Test effect_list reporting."""
     await async_setup_component(
-        hass,
+        menuai,
         LIGHT_DOMAIN,
         {
             LIGHT_DOMAIN: {
@@ -893,30 +893,30 @@ async def test_effect_list(hass: HomeAssistant) -> None:
             }
         },
     )
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "light.test1",
         STATE_ON,
         {ATTR_EFFECT_LIST: ["None", "Random", "Colorloop"], ATTR_SUPPORTED_FEATURES: 4},
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("light.light_group")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("light.light_group")
     assert set(state.attributes[ATTR_EFFECT_LIST]) == {"None", "Random", "Colorloop"}
     # These ensure the output is sorted as expected
     assert state.attributes[ATTR_EFFECT_LIST][0] == "None"
     assert state.attributes[ATTR_EFFECT_LIST][1] == "Colorloop"
     assert state.attributes[ATTR_EFFECT_LIST][2] == "Random"
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "light.test2",
         STATE_ON,
         {ATTR_EFFECT_LIST: ["None", "Random", "Rainbow"], ATTR_SUPPORTED_FEATURES: 4},
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("light.light_group")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("light.light_group")
     assert set(state.attributes[ATTR_EFFECT_LIST]) == {
         "None",
         "Random",
@@ -924,13 +924,13 @@ async def test_effect_list(hass: HomeAssistant) -> None:
         "Rainbow",
     }
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "light.test1",
         STATE_OFF,
         {ATTR_EFFECT_LIST: ["None", "Colorloop", "Seven"], ATTR_SUPPORTED_FEATURES: 4},
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("light.light_group")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("light.light_group")
     assert set(state.attributes[ATTR_EFFECT_LIST]) == {
         "None",
         "Random",
@@ -940,10 +940,10 @@ async def test_effect_list(hass: HomeAssistant) -> None:
     }
 
 
-async def test_effect(hass: HomeAssistant) -> None:
+async def test_effect(menuai: menuai) -> None:
     """Test effect reporting."""
     await async_setup_component(
-        hass,
+        menuai,
         LIGHT_DOMAIN,
         {
             LIGHT_DOMAIN: {
@@ -953,50 +953,50 @@ async def test_effect(hass: HomeAssistant) -> None:
             }
         },
     )
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "light.test1", STATE_ON, {ATTR_EFFECT: "None", ATTR_SUPPORTED_FEATURES: 6}
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("light.light_group")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("light.light_group")
     assert state.attributes[ATTR_EFFECT] == "None"
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "light.test2", STATE_ON, {ATTR_EFFECT: "None", ATTR_SUPPORTED_FEATURES: 6}
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("light.light_group")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("light.light_group")
     assert state.attributes[ATTR_EFFECT] == "None"
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "light.test3", STATE_ON, {ATTR_EFFECT: "Random", ATTR_SUPPORTED_FEATURES: 6}
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("light.light_group")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("light.light_group")
     assert state.attributes[ATTR_EFFECT] == "None"
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "light.test1", STATE_OFF, {ATTR_EFFECT: "None", ATTR_SUPPORTED_FEATURES: 6}
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "light.test2", STATE_OFF, {ATTR_EFFECT: "None", ATTR_SUPPORTED_FEATURES: 6}
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("light.light_group")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("light.light_group")
     assert state.attributes[ATTR_EFFECT] == "Random"
 
 
-async def test_supported_color_modes(hass: HomeAssistant) -> None:
+async def test_supported_color_modes(menuai: menuai) -> None:
     """Test supported_color_modes reporting."""
     entities = [
         MockLight("test1", STATE_ON),
         MockLight("test2", STATE_OFF),
         MockLight("test3", STATE_OFF),
     ]
-    setup_test_component_platform(hass, LIGHT_DOMAIN, entities)
+    setup_test_component_platform(menuai, LIGHT_DOMAIN, entities)
 
     entity0 = entities[0]
     entity0.supported_color_modes = {ColorMode.COLOR_TEMP, ColorMode.HS}
@@ -1011,7 +1011,7 @@ async def test_supported_color_modes(hass: HomeAssistant) -> None:
     entity2.color_mode = ColorMode.UNKNOWN
 
     assert await async_setup_component(
-        hass,
+        menuai,
         LIGHT_DOMAIN,
         {
             LIGHT_DOMAIN: [
@@ -1024,11 +1024,11 @@ async def test_supported_color_modes(hass: HomeAssistant) -> None:
             ]
         },
     )
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("light.light_group")
+    state = menuai.states.get("light.light_group")
     assert set(state.attributes[ATTR_SUPPORTED_COLOR_MODES]) == {
         "color_temp",
         "hs",
@@ -1037,14 +1037,14 @@ async def test_supported_color_modes(hass: HomeAssistant) -> None:
     }
 
 
-async def test_color_mode(hass: HomeAssistant) -> None:
+async def test_color_mode(menuai: menuai) -> None:
     """Test color_mode reporting."""
     entities = [
         MockLight("test1", STATE_ON),
         MockLight("test2", STATE_OFF),
         MockLight("test3", STATE_OFF),
     ]
-    setup_test_component_platform(hass, LIGHT_DOMAIN, entities)
+    setup_test_component_platform(menuai, LIGHT_DOMAIN, entities)
 
     entity0 = entities[0]
     entity0.supported_color_modes = {ColorMode.COLOR_TEMP, ColorMode.HS}
@@ -1059,7 +1059,7 @@ async def test_color_mode(hass: HomeAssistant) -> None:
     entity2.color_mode = ColorMode.HS
 
     assert await async_setup_component(
-        hass,
+        menuai,
         LIGHT_DOMAIN,
         {
             LIGHT_DOMAIN: [
@@ -1072,45 +1072,45 @@ async def test_color_mode(hass: HomeAssistant) -> None:
             ]
         },
     )
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("light.light_group")
+    state = menuai.states.get("light.light_group")
     assert state.attributes[ATTR_COLOR_MODE] == ColorMode.COLOR_TEMP
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": [entity1.entity_id]},
         blocking=True,
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("light.light_group")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("light.light_group")
     assert state.attributes[ATTR_COLOR_MODE] == ColorMode.COLOR_TEMP
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": [entity2.entity_id]},
         blocking=True,
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("light.light_group")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("light.light_group")
     assert state.attributes[ATTR_COLOR_MODE] == ColorMode.COLOR_TEMP
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_off",
         {"entity_id": [entity0.entity_id, entity1.entity_id]},
         blocking=True,
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("light.light_group")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("light.light_group")
     assert state.attributes[ATTR_COLOR_MODE] == ColorMode.HS
 
 
-async def test_color_mode2(hass: HomeAssistant) -> None:
+async def test_color_mode2(menuai: menuai) -> None:
     """Test onoff color_mode and brightness are given lowest priority."""
     entities = [
         MockLight("test1", STATE_ON),
@@ -1120,7 +1120,7 @@ async def test_color_mode2(hass: HomeAssistant) -> None:
         MockLight("test5", STATE_ON),
         MockLight("test6", STATE_ON),
     ]
-    setup_test_component_platform(hass, LIGHT_DOMAIN, entities)
+    setup_test_component_platform(menuai, LIGHT_DOMAIN, entities)
 
     entity = entities[0]
     entity.supported_color_modes = {ColorMode.COLOR_TEMP}
@@ -1147,7 +1147,7 @@ async def test_color_mode2(hass: HomeAssistant) -> None:
     entity.color_mode = ColorMode.ONOFF
 
     assert await async_setup_component(
-        hass,
+        menuai,
         LIGHT_DOMAIN,
         {
             LIGHT_DOMAIN: [
@@ -1167,30 +1167,30 @@ async def test_color_mode2(hass: HomeAssistant) -> None:
             ]
         },
     )
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("light.light_group")
+    state = menuai.states.get("light.light_group")
     assert state.attributes[ATTR_SUPPORTED_COLOR_MODES] == [ColorMode.COLOR_TEMP]
     assert state.attributes[ATTR_COLOR_MODE] == ColorMode.COLOR_TEMP
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_off",
         {"entity_id": ["light.test1"]},
         blocking=True,
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("light.light_group")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("light.light_group")
     assert state.attributes[ATTR_SUPPORTED_COLOR_MODES] == [ColorMode.COLOR_TEMP]
     assert state.attributes[ATTR_COLOR_MODE] == ColorMode.COLOR_TEMP
 
 
-async def test_supported_features(hass: HomeAssistant) -> None:
+async def test_supported_features(menuai: menuai) -> None:
     """Test supported features reporting."""
     await async_setup_component(
-        hass,
+        menuai,
         LIGHT_DOMAIN,
         {
             LIGHT_DOMAIN: {
@@ -1200,40 +1200,40 @@ async def test_supported_features(hass: HomeAssistant) -> None:
             }
         },
     )
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
-    hass.states.async_set("light.test1", STATE_ON, {ATTR_SUPPORTED_FEATURES: 0})
-    await hass.async_block_till_done()
-    state = hass.states.get("light.light_group")
+    menuai.states.async_set("light.test1", STATE_ON, {ATTR_SUPPORTED_FEATURES: 0})
+    await menuai.async_block_till_done()
+    state = menuai.states.get("light.light_group")
     assert state.attributes[ATTR_SUPPORTED_FEATURES] == 0
 
     # SUPPORT_COLOR_TEMP = 2
     # SUPPORT_COLOR_TEMP = 2 will be blocked in favour of ColorMode.COLOR_TEMP
-    hass.states.async_set("light.test2", STATE_ON, {ATTR_SUPPORTED_FEATURES: 2})
-    await hass.async_block_till_done()
-    state = hass.states.get("light.light_group")
+    menuai.states.async_set("light.test2", STATE_ON, {ATTR_SUPPORTED_FEATURES: 2})
+    await menuai.async_block_till_done()
+    state = menuai.states.get("light.light_group")
     assert state.attributes[ATTR_SUPPORTED_FEATURES] == 0
 
     # LightEntityFeature.TRANSITION | LightEntityFeature.FLASH | SUPPORT_BRIGHTNESS = 41
     # SUPPORT_BRIGHTNESS = 1 will be translated to ColorMode.BRIGHTNESS
-    hass.states.async_set("light.test1", STATE_OFF, {ATTR_SUPPORTED_FEATURES: 41})
-    await hass.async_block_till_done()
-    state = hass.states.get("light.light_group")
+    menuai.states.async_set("light.test1", STATE_OFF, {ATTR_SUPPORTED_FEATURES: 41})
+    await menuai.async_block_till_done()
+    state = menuai.states.get("light.light_group")
     # LightEntityFeature.TRANSITION | LightEntityFeature.FLASH = 40
     assert state.attributes[ATTR_SUPPORTED_FEATURES] == 40
 
     # Test that unknown feature 256 is blocked
-    hass.states.async_set("light.test2", STATE_OFF, {ATTR_SUPPORTED_FEATURES: 256})
-    await hass.async_block_till_done()
-    state = hass.states.get("light.light_group")
+    menuai.states.async_set("light.test2", STATE_OFF, {ATTR_SUPPORTED_FEATURES: 256})
+    await menuai.async_block_till_done()
+    state = menuai.states.get("light.light_group")
     assert state.attributes[ATTR_SUPPORTED_FEATURES] == 40
 
 
 @pytest.mark.parametrize("supported_color_modes", [ColorMode.HS, ColorMode.RGB])
 async def test_service_calls(
-    hass: HomeAssistant,
+    menuai: menuai,
     supported_color_modes,
 ) -> None:
     """Test service calls."""
@@ -1242,7 +1242,7 @@ async def test_service_calls(
         MockLight("ceiling_lights", STATE_OFF),
         MockLight("kitchen_lights", STATE_OFF),
     ]
-    setup_test_component_platform(hass, LIGHT_DOMAIN, entities)
+    setup_test_component_platform(menuai, LIGHT_DOMAIN, entities)
 
     entity0 = entities[0]
     entity0.supported_color_modes = {supported_color_modes}
@@ -1263,7 +1263,7 @@ async def test_service_calls(
     entity2.rgb_color = (255, 128, 64)
 
     await async_setup_component(
-        hass,
+        menuai,
         LIGHT_DOMAIN,
         {
             LIGHT_DOMAIN: [
@@ -1280,47 +1280,47 @@ async def test_service_calls(
             ]
         },
     )
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
-    group_state = hass.states.get("light.light_group")
+    group_state = menuai.states.get("light.light_group")
     assert group_state.state == STATE_ON
     assert group_state.attributes[ATTR_SUPPORTED_COLOR_MODES] == [supported_color_modes]
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TOGGLE,
         {ATTR_ENTITY_ID: "light.light_group"},
         blocking=True,
     )
-    assert hass.states.get("light.bed_light").state == STATE_OFF
-    assert hass.states.get("light.ceiling_lights").state == STATE_OFF
-    assert hass.states.get("light.kitchen_lights").state == STATE_OFF
+    assert menuai.states.get("light.bed_light").state == STATE_OFF
+    assert menuai.states.get("light.ceiling_lights").state == STATE_OFF
+    assert menuai.states.get("light.kitchen_lights").state == STATE_OFF
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.light_group"},
         blocking=True,
     )
 
-    assert hass.states.get("light.bed_light").state == STATE_ON
-    assert hass.states.get("light.ceiling_lights").state == STATE_ON
-    assert hass.states.get("light.kitchen_lights").state == STATE_ON
+    assert menuai.states.get("light.bed_light").state == STATE_ON
+    assert menuai.states.get("light.ceiling_lights").state == STATE_ON
+    assert menuai.states.get("light.kitchen_lights").state == STATE_ON
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: "light.light_group"},
         blocking=True,
     )
 
-    assert hass.states.get("light.bed_light").state == STATE_OFF
-    assert hass.states.get("light.ceiling_lights").state == STATE_OFF
-    assert hass.states.get("light.kitchen_lights").state == STATE_OFF
+    assert menuai.states.get("light.bed_light").state == STATE_OFF
+    assert menuai.states.get("light.ceiling_lights").state == STATE_OFF
+    assert menuai.states.get("light.kitchen_lights").state == STATE_OFF
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -1331,22 +1331,22 @@ async def test_service_calls(
         blocking=True,
     )
 
-    state = hass.states.get("light.bed_light")
+    state = menuai.states.get("light.bed_light")
     assert state.state == STATE_ON
     assert state.attributes[ATTR_BRIGHTNESS] == 128
     assert state.attributes[ATTR_RGB_COLOR] == (42, 255, 255)
 
-    state = hass.states.get("light.ceiling_lights")
+    state = menuai.states.get("light.ceiling_lights")
     assert state.state == STATE_ON
     assert state.attributes[ATTR_BRIGHTNESS] == 128
     assert state.attributes[ATTR_RGB_COLOR] == (42, 255, 255)
 
-    state = hass.states.get("light.kitchen_lights")
+    state = menuai.states.get("light.kitchen_lights")
     assert state.state == STATE_ON
     assert state.attributes[ATTR_BRIGHTNESS] == 128
     assert state.attributes[ATTR_RGB_COLOR] == (42, 255, 255)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -1357,26 +1357,26 @@ async def test_service_calls(
         blocking=True,
     )
 
-    state = hass.states.get("light.bed_light")
+    state = menuai.states.get("light.bed_light")
     assert state.state == STATE_ON
     assert state.attributes[ATTR_BRIGHTNESS] == 128
     assert state.attributes[ATTR_RGB_COLOR] == (255, 0, 0)
 
-    state = hass.states.get("light.ceiling_lights")
+    state = menuai.states.get("light.ceiling_lights")
     assert state.state == STATE_ON
     assert state.attributes[ATTR_BRIGHTNESS] == 128
     assert state.attributes[ATTR_RGB_COLOR] == (255, 0, 0)
 
-    state = hass.states.get("light.kitchen_lights")
+    state = menuai.states.get("light.kitchen_lights")
     assert state.state == STATE_ON
     assert state.attributes[ATTR_BRIGHTNESS] == 128
     assert state.attributes[ATTR_RGB_COLOR] == (255, 0, 0)
 
 
-async def test_service_call_effect(hass: HomeAssistant) -> None:
+async def test_service_call_effect(menuai: menuai) -> None:
     """Test service calls."""
     await async_setup_component(
-        hass,
+        menuai,
         LIGHT_DOMAIN,
         {
             LIGHT_DOMAIN: [
@@ -1393,13 +1393,13 @@ async def test_service_call_effect(hass: HomeAssistant) -> None:
             ]
         },
     )
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("light.light_group").state == STATE_ON
+    assert menuai.states.get("light.light_group").state == STATE_ON
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -1411,39 +1411,39 @@ async def test_service_call_effect(hass: HomeAssistant) -> None:
         blocking=True,
     )
 
-    state = hass.states.get("light.bed_light")
+    state = menuai.states.get("light.bed_light")
     assert state.state == STATE_ON
     assert state.attributes[ATTR_BRIGHTNESS] == 128
     assert state.attributes[ATTR_EFFECT] == "Random"
     assert state.attributes[ATTR_RGB_COLOR] == (42, 255, 255)
 
-    state = hass.states.get("light.ceiling_lights")
+    state = menuai.states.get("light.ceiling_lights")
     assert state.state == STATE_ON
     assert state.attributes[ATTR_BRIGHTNESS] == 128
     assert state.attributes[ATTR_RGB_COLOR] == (42, 255, 255)
 
-    state = hass.states.get("light.kitchen_lights")
+    state = menuai.states.get("light.kitchen_lights")
     assert state.state == STATE_ON
     assert state.attributes[ATTR_BRIGHTNESS] == 128
     assert state.attributes[ATTR_RGB_COLOR] == (42, 255, 255)
 
 
-async def test_invalid_service_calls(hass: HomeAssistant) -> None:
+async def test_invalid_service_calls(menuai: menuai) -> None:
     """Test invalid service call arguments get discarded."""
     add_entities = MagicMock()
     await group.async_setup_platform(
-        hass, {"name": "test", "entities": ["light.test1", "light.test2"]}, add_entities
+        menuai, {"name": "test", "entities": ["light.test1", "light.test2"]}, add_entities
     )
-    await async_setup_component(hass, "light", {})
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await async_setup_component(menuai, "light", {})
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
     assert add_entities.call_count == 1
     grouped_light = add_entities.call_args[0][0][0]
-    grouped_light.hass = hass
+    grouped_light.menuai = menuai
 
-    service_call_events = async_capture_events(hass, EVENT_CALL_SERVICE)
+    service_call_events = async_capture_events(menuai, EVENT_CALL_SERVICE)
 
     await grouped_light.async_turn_on(brightness=150, four_oh_four="404")
     data = {ATTR_ENTITY_ID: ["light.test1", "light.test2"], ATTR_BRIGHTNESS: 150}
@@ -1477,10 +1477,10 @@ async def test_invalid_service_calls(hass: HomeAssistant) -> None:
     service_call_events.clear()
 
 
-async def test_reload(hass: HomeAssistant) -> None:
+async def test_reload(menuai: menuai) -> None:
     """Test the ability to reload lights."""
     await async_setup_component(
-        hass,
+        menuai,
         LIGHT_DOMAIN,
         {
             LIGHT_DOMAIN: [
@@ -1497,34 +1497,34 @@ async def test_reload(hass: HomeAssistant) -> None:
             ]
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await hass.async_block_till_done()
-    await hass.async_start()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
 
-    await hass.async_block_till_done()
-    assert hass.states.get("light.light_group").state == STATE_ON
+    await menuai.async_block_till_done()
+    assert menuai.states.get("light.light_group").state == STATE_ON
 
     yaml_path = get_fixture_path("configuration.yaml", "group")
-    with patch.object(hass_config, "YAML_CONFIG_FILE", yaml_path):
-        await hass.services.async_call(
+    with patch.object(menuai_config, "YAML_CONFIG_FILE", yaml_path):
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_RELOAD,
             {},
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    assert hass.states.get("light.light_group") is None
-    assert hass.states.get("light.master_hall_lights_g") is not None
-    assert hass.states.get("light.outside_patio_lights_g") is not None
+    assert menuai.states.get("light.light_group") is None
+    assert menuai.states.get("light.master_hall_lights_g") is not None
+    assert menuai.states.get("light.outside_patio_lights_g") is not None
 
 
-async def test_reload_with_platform_not_setup(hass: HomeAssistant) -> None:
+async def test_reload_with_platform_not_setup(menuai: menuai) -> None:
     """Test the ability to reload lights."""
-    hass.states.async_set("light.bowl", STATE_ON)
+    menuai.states.async_set("light.bowl", STATE_ON)
     await async_setup_component(
-        hass,
+        menuai,
         LIGHT_DOMAIN,
         {
             LIGHT_DOMAIN: [
@@ -1533,7 +1533,7 @@ async def test_reload_with_platform_not_setup(hass: HomeAssistant) -> None:
         },
     )
     assert await async_setup_component(
-        hass,
+        menuai,
         "group",
         {
             "group": {
@@ -1541,29 +1541,29 @@ async def test_reload_with_platform_not_setup(hass: HomeAssistant) -> None:
             }
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     yaml_path = get_fixture_path("configuration.yaml", "group")
-    with patch.object(hass_config, "YAML_CONFIG_FILE", yaml_path):
-        await hass.services.async_call(
+    with patch.object(menuai_config, "YAML_CONFIG_FILE", yaml_path):
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_RELOAD,
             {},
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    assert hass.states.get("light.light_group") is None
-    assert hass.states.get("light.master_hall_lights_g") is not None
-    assert hass.states.get("light.outside_patio_lights_g") is not None
+    assert menuai.states.get("light.light_group") is None
+    assert menuai.states.get("light.master_hall_lights_g") is not None
+    assert menuai.states.get("light.outside_patio_lights_g") is not None
 
 
 async def test_reload_with_base_integration_platform_not_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test the ability to reload lights."""
     assert await async_setup_component(
-        hass,
+        menuai,
         "group",
         {
             "group": {
@@ -1571,34 +1571,34 @@ async def test_reload_with_base_integration_platform_not_setup(
             }
         },
     )
-    await hass.async_block_till_done()
-    hass.states.async_set("light.master_hall_lights", STATE_ON)
-    hass.states.async_set("light.master_hall_lights_2", STATE_OFF)
+    await menuai.async_block_till_done()
+    menuai.states.async_set("light.master_hall_lights", STATE_ON)
+    menuai.states.async_set("light.master_hall_lights_2", STATE_OFF)
 
-    hass.states.async_set("light.outside_patio_lights", STATE_OFF)
-    hass.states.async_set("light.outside_patio_lights_2", STATE_OFF)
+    menuai.states.async_set("light.outside_patio_lights", STATE_OFF)
+    menuai.states.async_set("light.outside_patio_lights_2", STATE_OFF)
 
     yaml_path = get_fixture_path("configuration.yaml", "group")
-    with patch.object(hass_config, "YAML_CONFIG_FILE", yaml_path):
-        await hass.services.async_call(
+    with patch.object(menuai_config, "YAML_CONFIG_FILE", yaml_path):
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_RELOAD,
             {},
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    assert hass.states.get("light.light_group") is None
-    assert hass.states.get("light.master_hall_lights_g") is not None
-    assert hass.states.get("light.outside_patio_lights_g") is not None
-    assert hass.states.get("light.master_hall_lights_g").state == STATE_ON
-    assert hass.states.get("light.outside_patio_lights_g").state == STATE_OFF
+    assert menuai.states.get("light.light_group") is None
+    assert menuai.states.get("light.master_hall_lights_g") is not None
+    assert menuai.states.get("light.outside_patio_lights_g") is not None
+    assert menuai.states.get("light.master_hall_lights_g").state == STATE_ON
+    assert menuai.states.get("light.outside_patio_lights_g").state == STATE_OFF
 
 
-async def test_nested_group(hass: HomeAssistant) -> None:
+async def test_nested_group(menuai: menuai) -> None:
     """Test nested light group."""
     await async_setup_component(
-        hass,
+        menuai,
         LIGHT_DOMAIN,
         {
             LIGHT_DOMAIN: [
@@ -1618,11 +1618,11 @@ async def test_nested_group(hass: HomeAssistant) -> None:
             ]
         },
     )
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("light.bedroom_group")
+    state = menuai.states.get("light.bedroom_group")
     assert state is not None
     assert state.state == STATE_ON
     assert state.attributes.get(ATTR_ENTITY_ID) == [
@@ -1630,20 +1630,20 @@ async def test_nested_group(hass: HomeAssistant) -> None:
         "light.kitchen_lights",
     ]
 
-    state = hass.states.get("light.nested_group")
+    state = menuai.states.get("light.nested_group")
     assert state is not None
     assert state.state == STATE_ON
     assert state.attributes.get(ATTR_ENTITY_ID) == ["light.bedroom_group"]
 
     # Test controlling the nested group
     async with asyncio.timeout(0.5):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             LIGHT_DOMAIN,
             SERVICE_TOGGLE,
             {ATTR_ENTITY_ID: "light.nested_group"},
             blocking=True,
         )
-    assert hass.states.get("light.bed_light").state == STATE_OFF
-    assert hass.states.get("light.kitchen_lights").state == STATE_OFF
-    assert hass.states.get("light.bedroom_group").state == STATE_OFF
-    assert hass.states.get("light.nested_group").state == STATE_OFF
+    assert menuai.states.get("light.bed_light").state == STATE_OFF
+    assert menuai.states.get("light.kitchen_lights").state == STATE_OFF
+    assert menuai.states.get("light.bedroom_group").state == STATE_OFF
+    assert menuai.states.get("light.nested_group").state == STATE_OFF

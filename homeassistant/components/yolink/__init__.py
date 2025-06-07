@@ -13,17 +13,17 @@ from yolink.exception import YoLinkAuthFailError, YoLinkClientError
 from yolink.home_manager import YoLinkHome
 from yolink.message_listener import MessageListener
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import EVENT_menuai_STOP, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import (
     aiohttp_client,
     config_entry_oauth2_flow,
     config_validation as cv,
     device_registry as dr,
 )
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers.typing import ConfigType
 
 from . import api
 from .const import ATTR_LORA_INFO, DOMAIN, YOLINK_EVENT
@@ -53,14 +53,14 @@ PLATFORMS = [
 class YoLinkHomeMessageListener(MessageListener):
     """YoLink home message listener."""
 
-    def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
+    def __init__(self, menuai: menuai, entry: ConfigEntry) -> None:
         """Init YoLink home message listener."""
-        self._hass = hass
+        self._menuai = menuai
         self._entry = entry
 
     def on_message(self, device: YoLinkDevice, msg_data: dict[str, Any]) -> None:
         """On YoLink home message received."""
-        entry_data = self._hass.data[DOMAIN].get(self._entry.entry_id)
+        entry_data = self._menuai.data[DOMAIN].get(self._entry.entry_id)
         if not entry_data:
             return
         device_coordinators = entry_data.device_coordinators
@@ -81,7 +81,7 @@ class YoLinkHomeMessageListener(MessageListener):
             in [ATTR_DEVICE_SMART_REMOTER, ATTR_DEVICE_SWITCH]
             and msg_data.get("event") is not None
         ):
-            device_registry = dr.async_get(self._hass)
+            device_registry = dr.async_get(self._menuai)
             device_entry = device_registry.async_get_device(
                 identifiers={(DOMAIN, device_coordinator.device.device_id)}
             )
@@ -97,7 +97,7 @@ class YoLinkHomeMessageListener(MessageListener):
                 "type": f"button_{button_idx}_{key_press_type}",
                 "device_id": device_entry.id,
             }
-            self._hass.bus.async_fire(YOLINK_EVENT, event_data)
+            self._menuai.bus.async_fire(YOLINK_EVENT, event_data)
 
 
 @dataclass
@@ -108,33 +108,33 @@ class YoLinkHomeStore:
     device_coordinators: dict[str, YoLinkCoordinator]
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up YoLink."""
 
-    async_setup_services(hass)
+    async_setup_services(menuai)
 
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up yolink from a config entry."""
-    hass.data.setdefault(DOMAIN, {})
+    menuai.data.setdefault(DOMAIN, {})
     implementation = (
         await config_entry_oauth2_flow.async_get_config_entry_implementation(
-            hass, entry
+            menuai, entry
         )
     )
 
-    session = config_entry_oauth2_flow.OAuth2Session(hass, entry, implementation)
+    session = config_entry_oauth2_flow.OAuth2Session(menuai, entry, implementation)
 
     auth_mgr = api.ConfigEntryAuth(
-        hass, aiohttp_client.async_get_clientsession(hass), session
+        menuai, aiohttp_client.async_get_clientsession(menuai), session
     )
     yolink_home = YoLinkHome()
     try:
         async with asyncio.timeout(10):
             await yolink_home.async_setup(
-                auth_mgr, YoLinkHomeMessageListener(hass, entry)
+                auth_mgr, YoLinkHomeMessageListener(menuai, entry)
             )
     except YoLinkAuthFailError as yl_auth_err:
         raise ConfigEntryAuthFailed from yl_auth_err
@@ -155,32 +155,32 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             paried_device_id := device_pairing_mapping.get(device.device_id)
         ) is not None:
             paried_device = yolink_home.get_device(paried_device_id)
-        device_coordinator = YoLinkCoordinator(hass, entry, device, paried_device)
+        device_coordinator = YoLinkCoordinator(menuai, entry, device, paried_device)
         try:
             await device_coordinator.async_config_entry_first_refresh()
         except ConfigEntryNotReady:
             # Not failure by fetching device state
             device_coordinator.data = {}
         device_coordinators[device.device_id] = device_coordinator
-    hass.data[DOMAIN][entry.entry_id] = YoLinkHomeStore(
+    menuai.data[DOMAIN][entry.entry_id] = YoLinkHomeStore(
         yolink_home, device_coordinators
     )
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     async def async_yolink_unload(event) -> None:
         """Unload yolink."""
         await yolink_home.async_unload()
 
     entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, async_yolink_unload)
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, async_yolink_unload)
     )
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        await hass.data[DOMAIN][entry.entry_id].home_instance.async_unload()
-        hass.data[DOMAIN].pop(entry.entry_id)
+    if unload_ok := await menuai.config_entries.async_unload_platforms(entry, PLATFORMS):
+        await menuai.data[DOMAIN][entry.entry_id].home_instance.async_unload()
+        menuai.data[DOMAIN].pop(entry.entry_id)
     return unload_ok

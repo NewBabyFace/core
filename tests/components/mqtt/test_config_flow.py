@@ -14,23 +14,23 @@ from aiohasupervisor.models import Discovery
 import pytest
 import voluptuous as vol
 
-from homeassistant import config_entries
-from homeassistant.components import mqtt
-from homeassistant.components.hassio import AddonError
-from homeassistant.components.mqtt.config_flow import PWD_NOT_CHANGED
-from homeassistant.components.mqtt.util import learn_more_url
-from homeassistant.config_entries import ConfigSubentry, ConfigSubentryData
-from homeassistant.const import (
+from menuai import config_entries
+from menuai.components import mqtt
+from menuai.components.menuaiio import AddonError
+from menuai.components.mqtt.config_flow import PWD_NOT_CHANGED
+from menuai.components.mqtt.util import learn_more_url
+from menuai.config_entries import ConfigSubentry, ConfigSubentryData
+from menuai.const import (
     CONF_CLIENT_ID,
     CONF_PASSWORD,
     CONF_PORT,
     CONF_PROTOCOL,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.service_info.hassio import HassioServiceInfo
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.service_info.menuaiio import menuaiioServiceInfo
 
 from .common import (
     MOCK_BINARY_SENSOR_SUBENTRY_DATA_SINGLE,
@@ -128,7 +128,7 @@ MOCK_ENTRY_OPTIONS = {
 def mock_finish_setup() -> Generator[MagicMock]:
     """Mock out the finish setup method."""
     with patch(
-        "homeassistant.components.mqtt.MQTT.async_connect", return_value=True
+        "menuai.components.mqtt.MQTT.async_connect", return_value=True
     ) as mock_finish:
         yield mock_finish
 
@@ -137,7 +137,7 @@ def mock_finish_setup() -> Generator[MagicMock]:
 def mock_client_cert_check_fail() -> Generator[MagicMock]:
     """Mock the client certificate check."""
     with patch(
-        "homeassistant.components.mqtt.config_flow.load_pem_x509_certificate",
+        "menuai.components.mqtt.config_flow.load_pem_x509_certificate",
         side_effect=ValueError,
     ) as mock_cert_check:
         yield mock_cert_check
@@ -147,7 +147,7 @@ def mock_client_cert_check_fail() -> Generator[MagicMock]:
 def mock_client_key_check_fail() -> Generator[MagicMock]:
     """Mock the client key file check."""
     with patch(
-        "homeassistant.components.mqtt.config_flow.load_pem_private_key",
+        "menuai.components.mqtt.config_flow.load_pem_private_key",
         side_effect=ValueError,
     ) as mock_key_check:
         yield mock_key_check
@@ -163,18 +163,18 @@ def mock_context_client_key() -> bytes:
 def mock_ssl_context(mock_context_client_key: bytes) -> Generator[dict[str, MagicMock]]:
     """Mock the SSL context used to load the cert chain and to load verify locations."""
     with (
-        patch("homeassistant.components.mqtt.config_flow.SSLContext") as mock_context,
+        patch("menuai.components.mqtt.config_flow.SSLContext") as mock_context,
         patch(
-            "homeassistant.components.mqtt.config_flow.load_pem_private_key"
+            "menuai.components.mqtt.config_flow.load_pem_private_key"
         ) as mock_pem_key_check,
         patch(
-            "homeassistant.components.mqtt.config_flow.load_der_private_key"
+            "menuai.components.mqtt.config_flow.load_der_private_key"
         ) as mock_der_key_check,
         patch(
-            "homeassistant.components.mqtt.config_flow.load_pem_x509_certificate"
+            "menuai.components.mqtt.config_flow.load_pem_x509_certificate"
         ) as mock_pem_cert_check,
         patch(
-            "homeassistant.components.mqtt.config_flow.load_der_x509_certificate"
+            "menuai.components.mqtt.config_flow.load_der_x509_certificate"
         ) as mock_der_cert_check,
     ):
         mock_pem_key_check().private_bytes.return_value = mock_context_client_key
@@ -194,7 +194,7 @@ def mock_ssl_context(mock_context_client_key: bytes) -> Generator[dict[str, Magi
 def mock_reload_after_entry_update() -> Generator[MagicMock]:
     """Mock out the reload after updating the entry."""
     with patch(
-        "homeassistant.components.mqtt._async_config_entry_updated"
+        "menuai.components.mqtt._async_config_entry_updated"
     ) as mock_reload:
         yield mock_reload
 
@@ -202,7 +202,7 @@ def mock_reload_after_entry_update() -> Generator[MagicMock]:
 @pytest.fixture
 def mock_try_connection() -> Generator[MagicMock]:
     """Mock the try connection method."""
-    with patch("homeassistant.components.mqtt.config_flow.try_connection") as mock_try:
+    with patch("menuai.components.mqtt.config_flow.try_connection") as mock_try:
         yield mock_try
 
 
@@ -232,7 +232,7 @@ def mock_try_connection_success() -> Generator[MqttMockPahoClient]:
         return (0, mid)
 
     with patch(
-        "homeassistant.components.mqtt.async_client.AsyncMQTTClient"
+        "menuai.components.mqtt.async_client.AsyncMQTTClient"
     ) as mock_client:
         mock_client().loop_start = loop_start
         mock_client().subscribe = _subscribe
@@ -248,9 +248,9 @@ def mock_try_connection_time_out() -> Generator[MagicMock]:
     # Patch prevent waiting 5 sec for a timeout
     with (
         patch(
-            "homeassistant.components.mqtt.async_client.AsyncMQTTClient"
+            "menuai.components.mqtt.async_client.AsyncMQTTClient"
         ) as mock_client,
-        patch("homeassistant.components.mqtt.config_flow.MQTT_TIMEOUT", 0),
+        patch("menuai.components.mqtt.config_flow.MQTT_TIMEOUT", 0),
     ):
         mock_client().loop_start = lambda *args: 1
         yield mock_client()
@@ -289,7 +289,7 @@ def mock_process_uploaded_file(
 
     @contextmanager
     def _mock_process_uploaded_file(
-        hass: HomeAssistant, file_id: str
+        menuai: menuai, file_id: str
     ) -> Iterator[Path | None]:
         if file_id == file_id_ca:
             with open(tmp_path / "ca.crt", "wb") as cafile:
@@ -307,7 +307,7 @@ def mock_process_uploaded_file(
             pytest.fail(f"Unexpected file_id: {file_id}")
 
     with patch(
-        "homeassistant.components.mqtt.config_flow.process_uploaded_file",
+        "menuai.components.mqtt.config_flow.process_uploaded_file",
         side_effect=_mock_process_uploaded_file,
     ) as mock_upload:
         mock_upload.file_id = {
@@ -322,16 +322,16 @@ def mock_process_uploaded_file(
 def supervisor_fixture() -> Generator[MagicMock]:
     """Mock Supervisor."""
     with patch(
-        "homeassistant.components.mqtt.config_flow.is_hassio", return_value=True
-    ) as is_hassio:
-        yield is_hassio
+        "menuai.components.mqtt.config_flow.is_menuaiio", return_value=True
+    ) as is_menuaiio:
+        yield is_menuaiio
 
 
 @pytest.fixture(name="addon_setup_time", autouse=True)
 def addon_setup_time_fixture() -> Generator[int]:
     """Mock add-on setup sleep time."""
     with patch(
-        "homeassistant.components.mqtt.config_flow.ADDON_SETUP_TIMEOUT", new=0
+        "menuai.components.mqtt.config_flow.ADDON_SETUP_TIMEOUT", new=0
     ) as addon_setup_time:
         yield addon_setup_time
 
@@ -343,19 +343,19 @@ def mock_get_addon_discovery_info(get_addon_discovery_info: AsyncMock) -> None:
 
 @pytest.mark.usefixtures("mqtt_client_mock")
 async def test_user_connection_works(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_try_connection: MagicMock,
     mock_finish_setup: MagicMock,
 ) -> None:
     """Test we can finish a config flow."""
     mock_try_connection.return_value = True
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "mqtt", context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"broker": "127.0.0.1"}
     )
 
@@ -375,21 +375,21 @@ async def test_user_connection_works(
 
 @pytest.mark.usefixtures("mqtt_client_mock", "supervisor", "supervisor_client")
 async def test_user_connection_works_with_supervisor(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_try_connection: MagicMock,
     mock_finish_setup: MagicMock,
 ) -> None:
     """Test we can finish a config flow with a supervised install."""
     mock_try_connection.return_value = True
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "mqtt", context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.MENU
     assert result["menu_options"] == ["addon", "broker"]
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": "broker"},
     )
@@ -397,7 +397,7 @@ async def test_user_connection_works_with_supervisor(
     # Assert a manual setup flow
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"broker": "127.0.0.1"}
     )
 
@@ -410,31 +410,31 @@ async def test_user_connection_works_with_supervisor(
     assert len(mock_try_connection.mock_calls) == 1
     # Check config entry got setup
     assert len(mock_finish_setup.mock_calls) == 1
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
 
 @pytest.mark.usefixtures("mqtt_client_mock")
 async def test_user_v5_connection_works(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_try_connection: MagicMock,
     mock_finish_setup: MagicMock,
 ) -> None:
     """Test we can finish a config flow."""
     mock_try_connection.return_value = True
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "mqtt",
         context={"source": config_entries.SOURCE_USER, "show_advanced_options": True},
     )
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"broker": "127.0.0.1", "advanced_options": True}
     )
 
     assert result["step_id"] == "broker"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             mqtt.CONF_BROKER: "another-broker",
@@ -455,17 +455,17 @@ async def test_user_v5_connection_works(
 
 
 async def test_user_connection_fails(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_try_connection_time_out: MagicMock,
     mock_finish_setup: MagicMock,
 ) -> None:
     """Test if connection cannot be made."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "mqtt", context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"broker": "127.0.0.1"}
     )
 
@@ -478,9 +478,9 @@ async def test_user_connection_fails(
     assert len(mock_finish_setup.mock_calls) == 0
 
 
-@pytest.mark.parametrize("hass_config", [{"mqtt": {"sensor": {"state_topic": "test"}}}])
+@pytest.mark.parametrize("menuai_config", [{"mqtt": {"sensor": {"state_topic": "test"}}}])
 async def test_manual_config_set(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_try_connection: MqttMockPahoClient,
     mock_finish_setup: MagicMock,
 ) -> None:
@@ -490,12 +490,12 @@ async def test_manual_config_set(
     mock_try_connection.return_value = True
 
     # Start config flow
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "mqtt", context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"broker": "127.0.0.1", "port": "1883"}
     )
 
@@ -513,52 +513,52 @@ async def test_manual_config_set(
     )
     # Check config entry got setup
     assert len(mock_finish_setup.mock_calls) == 1
-    config_entry = hass.config_entries.async_entries(mqtt.DOMAIN)[0]
+    config_entry = menuai.config_entries.async_entries(mqtt.DOMAIN)[0]
     assert config_entry.title == "127.0.0.1"
 
 
-async def test_user_single_instance(hass: HomeAssistant) -> None:
+async def test_user_single_instance(menuai: menuai) -> None:
     """Test we only allow a single config flow."""
     MockConfigEntry(
         domain="mqtt",
         version=mqtt.CONFIG_ENTRY_VERSION,
         minor_version=mqtt.CONFIG_ENTRY_MINOR_VERSION,
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "mqtt", context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "single_instance_allowed"
 
 
-async def test_hassio_already_configured(hass: HomeAssistant) -> None:
+async def test_menuaiio_already_configured(menuai: menuai) -> None:
     """Test we only allow a single config flow."""
     MockConfigEntry(
         domain="mqtt",
         version=mqtt.CONFIG_ENTRY_VERSION,
         minor_version=mqtt.CONFIG_ENTRY_MINOR_VERSION,
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
-        "mqtt", context={"source": config_entries.SOURCE_HASSIO}
+    result = await menuai.config_entries.flow.async_init(
+        "mqtt", context={"source": config_entries.SOURCE_menuaiIO}
     )
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "single_instance_allowed"
 
 
-async def test_hassio_ignored(hass: HomeAssistant) -> None:
+async def test_menuaiio_ignored(menuai: menuai) -> None:
     """Test we supervisor discovered instance can be ignored."""
     MockConfigEntry(
         domain=mqtt.DOMAIN,
         source=config_entries.SOURCE_IGNORE,
         version=mqtt.CONFIG_ENTRY_VERSION,
         minor_version=mqtt.CONFIG_ENTRY_MINOR_VERSION,
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         mqtt.DOMAIN,
-        data=HassioServiceInfo(
+        data=menuaiioServiceInfo(
             config={
                 "addon": "Mosquitto",
                 "host": "mock-mosquitto",
@@ -569,35 +569,35 @@ async def test_hassio_ignored(hass: HomeAssistant) -> None:
             slug="mosquitto",
             uuid="1234",
         ),
-        context={"source": config_entries.SOURCE_HASSIO},
+        context={"source": config_entries.SOURCE_menuaiIO},
     )
     assert result
     assert result.get("type") is FlowResultType.ABORT
     assert result.get("reason") == "single_instance_allowed"
 
 
-async def test_hassio_confirm(
-    hass: HomeAssistant,
+async def test_menuaiio_confirm(
+    menuai: menuai,
     mock_try_connection_success: MqttMockPahoClient,
     mock_finish_setup: MagicMock,
 ) -> None:
     """Test we can finish a config flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "mqtt",
-        data=HassioServiceInfo(
+        data=menuaiioServiceInfo(
             config=ADD_ON_DISCOVERY_INFO.copy(),
             name="Mosquitto Mqtt Broker",
             slug="mosquitto",
             uuid="1234",
         ),
-        context={"source": config_entries.SOURCE_HASSIO},
+        context={"source": config_entries.SOURCE_menuaiIO},
     )
     assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == "hassio_confirm"
+    assert result["step_id"] == "menuaiio_confirm"
     assert result["description_placeholders"] == {"addon": "Mosquitto Mqtt Broker"}
 
     mock_try_connection_success.reset_mock()
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"discovery": True}
     )
 
@@ -615,15 +615,15 @@ async def test_hassio_confirm(
     assert len(mock_finish_setup.mock_calls) == 1
 
 
-async def test_hassio_cannot_connect(
-    hass: HomeAssistant,
+async def test_menuaiio_cannot_connect(
+    menuai: menuai,
     mock_try_connection_time_out: MagicMock,
     mock_finish_setup: MagicMock,
 ) -> None:
     """Test a config flow is aborted when a connection was not successful."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "mqtt",
-        data=HassioServiceInfo(
+        data=menuaiioServiceInfo(
             config={
                 "addon": "Mock Addon",
                 "host": "core-mosquitto",
@@ -637,14 +637,14 @@ async def test_hassio_cannot_connect(
             slug="mosquitto",
             uuid="1234",
         ),
-        context={"source": config_entries.SOURCE_HASSIO},
+        context={"source": config_entries.SOURCE_menuaiIO},
     )
     assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == "hassio_confirm"
+    assert result["step_id"] == "menuaiio_confirm"
     assert result["description_placeholders"] == {"addon": "Mock Addon"}
 
     mock_try_connection_time_out.reset_mock()
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"discovery": True}
     )
 
@@ -673,7 +673,7 @@ async def test_hassio_cannot_connect(
     ],
 )
 async def test_addon_flow_with_supervisor_addon_running(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_try_connection_success: MagicMock,
     mock_finish_setup: MagicMock,
 ) -> None:
@@ -682,7 +682,7 @@ async def test_addon_flow_with_supervisor_addon_running(
     Case: The Mosquitto add-on is already installed, and running.
     """
     # show menu
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "mqtt", context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.MENU
@@ -691,11 +691,11 @@ async def test_addon_flow_with_supervisor_addon_running(
 
     # select install via add-on
     mock_try_connection_success.reset_mock()
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": "addon"},
     )
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["result"].data == {
         "broker": "core-mosquitto",
@@ -727,7 +727,7 @@ async def test_addon_flow_with_supervisor_addon_running(
     ],
 )
 async def test_addon_flow_with_supervisor_addon_installed(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_try_connection_success: MagicMock,
     mock_finish_setup: MagicMock,
 ) -> None:
@@ -736,7 +736,7 @@ async def test_addon_flow_with_supervisor_addon_installed(
     Case: The Mosquitto add-on is installed, but not running.
     """
     # show menu
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "mqtt", context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.MENU
@@ -744,7 +744,7 @@ async def test_addon_flow_with_supervisor_addon_installed(
     assert result["step_id"] == "user"
 
     # select install via add-on
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": "addon"},
     )
@@ -753,16 +753,16 @@ async def test_addon_flow_with_supervisor_addon_installed(
     assert result["type"] is FlowResultType.SHOW_PROGRESS
     assert result["progress_action"] == "start_addon"
     assert result["step_id"] == "start_addon"
-    await hass.async_block_till_done()
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done(wait_background_tasks=True)
     mock_try_connection_success.reset_mock()
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": "start_addon"},
     )
 
     # add-on is running, so entry can be installed
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["result"].data == {
         "broker": "core-mosquitto",
@@ -794,7 +794,7 @@ async def test_addon_flow_with_supervisor_addon_installed(
     ],
 )
 async def test_addon_flow_with_supervisor_addon_running_connection_fails(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_try_connection: MagicMock,
 ) -> None:
     """Test we perform an auto config flow with a supervised install.
@@ -802,7 +802,7 @@ async def test_addon_flow_with_supervisor_addon_running_connection_fails(
     Case: The Mosquitto add-on is already installed, and running.
     """
     # show menu
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "mqtt", context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.MENU
@@ -811,11 +811,11 @@ async def test_addon_flow_with_supervisor_addon_running_connection_fails(
 
     # select install via add-on but the connection fails and the flow will be aborted.
     mock_try_connection.return_value = False
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": "addon"},
     )
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
     assert result["type"] is FlowResultType.ABORT
 
 
@@ -826,7 +826,7 @@ async def test_addon_flow_with_supervisor_addon_running_connection_fails(
     "addon_installed",
 )
 async def test_addon_not_running_api_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     start_addon: AsyncMock,
 ) -> None:
     """Test we perform an auto config flow with a supervised install.
@@ -835,14 +835,14 @@ async def test_addon_not_running_api_error(
     """
     start_addon.side_effect = SupervisorError()
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "mqtt", context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.MENU
     assert result["menu_options"] == ["addon", "broker"]
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": "addon"},
     )
@@ -850,9 +850,9 @@ async def test_addon_not_running_api_error(
     assert result["type"] is FlowResultType.SHOW_PROGRESS
     assert result["progress_action"] == "start_addon"
     assert result["step_id"] == "start_addon"
-    await hass.async_block_till_done()
-    await hass.async_block_till_done(wait_background_tasks=True)
-    result = await hass.config_entries.flow.async_configure(
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done(wait_background_tasks=True)
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": "install_addon"},
     )
@@ -869,7 +869,7 @@ async def test_addon_not_running_api_error(
     "addon_installed",
 )
 async def test_addon_discovery_info_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     addon_info: AsyncMock,
     get_addon_discovery_info: AsyncMock,
 ) -> None:
@@ -879,14 +879,14 @@ async def test_addon_discovery_info_error(
     """
     get_addon_discovery_info.side_effect = AddonError
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "mqtt", context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.MENU
     assert result["menu_options"] == ["addon", "broker"]
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": "addon"},
     )
@@ -894,9 +894,9 @@ async def test_addon_discovery_info_error(
     assert result["type"] is FlowResultType.SHOW_PROGRESS
     assert result["progress_action"] == "start_addon"
     assert result["step_id"] == "start_addon"
-    await hass.async_block_till_done()
-    await hass.async_block_till_done(wait_background_tasks=True)
-    result = await hass.config_entries.flow.async_configure(
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done(wait_background_tasks=True)
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": "start_addon"},
     )
@@ -913,7 +913,7 @@ async def test_addon_discovery_info_error(
     "addon_installed",
 )
 async def test_addon_info_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     addon_info: AsyncMock,
 ) -> None:
     """Test we perform an auto config flow with a supervised install.
@@ -922,14 +922,14 @@ async def test_addon_info_error(
     """
     addon_info.side_effect = SupervisorError()
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "mqtt", context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.MENU
     assert result["menu_options"] == ["addon", "broker"]
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": "addon"},
     )
@@ -961,7 +961,7 @@ async def test_addon_info_error(
     ],
 )
 async def test_addon_flow_with_supervisor_addon_not_installed(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_try_connection_success: MagicMock,
     mock_finish_setup: MagicMock,
 ) -> None:
@@ -969,14 +969,14 @@ async def test_addon_flow_with_supervisor_addon_not_installed(
 
     Case: The Mosquitto add-on is not yet installed nor running.
     """
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "mqtt", context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.MENU
     assert result["menu_options"] == ["addon", "broker"]
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": "addon"},
     )
@@ -984,9 +984,9 @@ async def test_addon_flow_with_supervisor_addon_not_installed(
     assert result["type"] is FlowResultType.SHOW_PROGRESS
     assert result["progress_action"] == "install_addon"
     assert result["step_id"] == "install_addon"
-    await hass.async_block_till_done()
-    await hass.async_block_till_done(wait_background_tasks=True)
-    result = await hass.config_entries.flow.async_configure(
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done(wait_background_tasks=True)
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": "install_addon"},
     )
@@ -995,10 +995,10 @@ async def test_addon_flow_with_supervisor_addon_not_installed(
     assert result["type"] is FlowResultType.SHOW_PROGRESS
     assert result["progress_action"] == "start_addon"
     assert result["step_id"] == "start_addon"
-    await hass.async_block_till_done()
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done(wait_background_tasks=True)
     mock_try_connection_success.reset_mock()
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": "start_addon"},
     )
@@ -1024,7 +1024,7 @@ async def test_addon_flow_with_supervisor_addon_not_installed(
     "start_addon",
 )
 async def test_addon_not_installed_failures(
-    hass: HomeAssistant,
+    menuai: menuai,
     install_addon: AsyncMock,
 ) -> None:
     """Test we perform an auto config flow with a supervised install.
@@ -1033,14 +1033,14 @@ async def test_addon_not_installed_failures(
     """
     install_addon.side_effect = SupervisorError()
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "mqtt", context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.MENU
     assert result["menu_options"] == ["addon", "broker"]
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": "addon"},
     )
@@ -1048,9 +1048,9 @@ async def test_addon_not_installed_failures(
     assert result["type"] is FlowResultType.SHOW_PROGRESS
     assert result["progress_action"] == "install_addon"
     assert result["step_id"] == "install_addon"
-    await hass.async_block_till_done()
-    await hass.async_block_till_done(wait_background_tasks=True)
-    result = await hass.config_entries.flow.async_configure(
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done(wait_background_tasks=True)
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": "install_addon"},
     )
@@ -1061,29 +1061,29 @@ async def test_addon_not_installed_failures(
 
 
 async def test_option_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
 ) -> None:
     """Test config flow options."""
     with patch(
-        "homeassistant.config.async_hass_config_yaml", AsyncMock(return_value={})
+        "menuai.config.async_menuai_config_yaml", AsyncMock(return_value={})
     ) as yaml_mock:
         await mqtt_mock_entry()
-        config_entry = hass.config_entries.async_entries(mqtt.DOMAIN)[0]
+        config_entry = menuai.config_entries.async_entries(mqtt.DOMAIN)[0]
 
-        result = await hass.config_entries.options.async_init(config_entry.entry_id)
+        result = await menuai.config_entries.options.async_init(config_entry.entry_id)
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "options"
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         yaml_mock.reset_mock()
 
-        result = await hass.config_entries.options.async_configure(
+        result = await menuai.config_entries.options.async_configure(
             result["flow_id"],
             user_input={
                 mqtt.CONF_DISCOVERY: True,
-                "discovery_prefix": "homeassistant",
+                "discovery_prefix": "menuai",
                 "birth_enable": True,
                 "birth_topic": "ha_state/online",
                 "birth_payload": "online",
@@ -1097,12 +1097,12 @@ async def test_option_flow(
             },
         )
         assert result["type"] is FlowResultType.CREATE_ENTRY
-        await hass.async_block_till_done()
-        await hass.async_block_till_done(wait_background_tasks=True)
+        await menuai.async_block_till_done()
+        await menuai.async_block_till_done(wait_background_tasks=True)
         assert config_entry.data == {mqtt.CONF_BROKER: "mock-broker"}
         assert config_entry.options == {
             mqtt.CONF_DISCOVERY: True,
-            mqtt.CONF_DISCOVERY_PREFIX: "homeassistant",
+            mqtt.CONF_DISCOVERY_PREFIX: "menuai",
             mqtt.CONF_BIRTH_MESSAGE: {
                 mqtt.ATTR_TOPIC: "ha_state/online",
                 mqtt.ATTR_PAYLOAD: "online",
@@ -1117,7 +1117,7 @@ async def test_option_flow(
             },
         }
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         # assert that the entry was reloaded with the new config
     assert yaml_mock.await_count
 
@@ -1159,7 +1159,7 @@ async def test_option_flow(
     ],
 )
 async def test_bad_certificate(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     mock_try_connection_success: MqttMockPahoClient,
     mock_ssl_context: dict[str, MagicMock],
@@ -1221,9 +1221,9 @@ async def test_bad_certificate(
         test_input.pop(mqtt.CONF_CLIENT_KEY)
 
     mqtt_mock = await mqtt_mock_entry()
-    config_entry: MockConfigEntry = hass.config_entries.async_entries(mqtt.DOMAIN)[0]
+    config_entry: MockConfigEntry = menuai.config_entries.async_entries(mqtt.DOMAIN)[0]
     # Add at least one advanced option to get the full form
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         config_entry,
         data={
             mqtt.CONF_BROKER: "test-broker",
@@ -1234,15 +1234,15 @@ async def test_bad_certificate(
             CONF_PROTOCOL: "3.1.1",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     mqtt_mock.async_connect.reset_mock()
 
-    result = await config_entry.start_reconfigure_flow(hass, show_advanced_options=True)
+    result = await config_entry.start_reconfigure_flow(menuai, show_advanced_options=True)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "broker"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             mqtt.CONF_BROKER: "another-broker",
@@ -1259,7 +1259,7 @@ async def test_bad_certificate(
     test_input["set_ca_cert"] = set_ca_cert
     test_input["tls_insecure"] = tls_insecure
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=test_input,
     )
@@ -1282,7 +1282,7 @@ async def test_bad_certificate(
 )
 @pytest.mark.usefixtures("mock_reload_after_entry_update")
 async def test_keepalive_validation(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     mock_try_connection: MagicMock,
     input_value: str,
@@ -1298,9 +1298,9 @@ async def test_keepalive_validation(
 
     mqtt_mock = await mqtt_mock_entry()
     mock_try_connection.return_value = True
-    config_entry: MockConfigEntry = hass.config_entries.async_entries(mqtt.DOMAIN)[0]
+    config_entry: MockConfigEntry = menuai.config_entries.async_entries(mqtt.DOMAIN)[0]
     # Add at least one advanced option to get the full form
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         config_entry,
         data={
             mqtt.CONF_BROKER: "test-broker",
@@ -1311,18 +1311,18 @@ async def test_keepalive_validation(
 
     mqtt_mock.async_connect.reset_mock()
 
-    result = await config_entry.start_reconfigure_flow(hass, show_advanced_options=True)
+    result = await config_entry.start_reconfigure_flow(menuai, show_advanced_options=True)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "broker"
 
     if error:
         with pytest.raises(vol.Invalid):
-            result = await hass.config_entries.flow.async_configure(
+            result = await menuai.config_entries.flow.async_configure(
                 result["flow_id"],
                 user_input=test_input,
             )
         return
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=test_input,
     )
@@ -1331,7 +1331,7 @@ async def test_keepalive_validation(
 
 
 async def test_disable_birth_will(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     mock_try_connection: MagicMock,
     mock_reload_after_entry_update: MagicMock,
@@ -1339,27 +1339,27 @@ async def test_disable_birth_will(
     """Test disabling birth and will."""
     await mqtt_mock_entry()
     mock_try_connection.return_value = True
-    config_entry = hass.config_entries.async_entries(mqtt.DOMAIN)[0]
-    hass.config_entries.async_update_entry(
+    config_entry = menuai.config_entries.async_entries(mqtt.DOMAIN)[0]
+    menuai.config_entries.async_update_entry(
         config_entry,
         data={
             mqtt.CONF_BROKER: "test-broker",
             CONF_PORT: 1234,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     mock_reload_after_entry_update.reset_mock()
 
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "options"
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             mqtt.CONF_DISCOVERY: True,
-            mqtt.CONF_DISCOVERY_PREFIX: "homeassistant",
+            mqtt.CONF_DISCOVERY_PREFIX: "menuai",
             "birth_enable": False,
             "birth_topic": "ha_state/online",
             "birth_payload": "online",
@@ -1376,24 +1376,24 @@ async def test_disable_birth_will(
     assert result["data"] == {
         "birth_message": {},
         "discovery": True,
-        "discovery_prefix": "homeassistant",
+        "discovery_prefix": "menuai",
         "will_message": {},
     }
     assert config_entry.data == {mqtt.CONF_BROKER: "test-broker", CONF_PORT: 1234}
     assert config_entry.options == {
         mqtt.CONF_DISCOVERY: True,
-        mqtt.CONF_DISCOVERY_PREFIX: "homeassistant",
+        mqtt.CONF_DISCOVERY_PREFIX: "menuai",
         mqtt.CONF_BIRTH_MESSAGE: {},
         mqtt.CONF_WILL_MESSAGE: {},
     }
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     # assert that the entry was reloaded with the new config
     assert mock_reload_after_entry_update.call_count == 1
 
 
 async def test_invalid_discovery_prefix(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     mock_try_connection: MagicMock,
     mock_reload_after_entry_update: MagicMock,
@@ -1401,8 +1401,8 @@ async def test_invalid_discovery_prefix(
     """Test setting an invalid discovery prefix."""
     mqtt_mock = await mqtt_mock_entry()
     mock_try_connection.return_value = True
-    config_entry = hass.config_entries.async_entries(mqtt.DOMAIN)[0]
-    hass.config_entries.async_update_entry(
+    config_entry = menuai.config_entries.async_entries(mqtt.DOMAIN)[0]
+    menuai.config_entries.async_update_entry(
         config_entry,
         data={
             mqtt.CONF_BROKER: "test-broker",
@@ -1410,25 +1410,25 @@ async def test_invalid_discovery_prefix(
         },
         options={
             mqtt.CONF_DISCOVERY: True,
-            mqtt.CONF_DISCOVERY_PREFIX: "homeassistant",
+            mqtt.CONF_DISCOVERY_PREFIX: "menuai",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     mock_reload_after_entry_update.reset_mock()
     mqtt_mock.async_connect.reset_mock()
 
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "options"
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert mqtt_mock.async_connect.call_count == 0
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             mqtt.CONF_DISCOVERY: True,
-            mqtt.CONF_DISCOVERY_PREFIX: "homeassistant#invalid",
+            mqtt.CONF_DISCOVERY_PREFIX: "menuai#invalid",
         },
     )
     assert result["type"] is FlowResultType.FORM
@@ -1440,10 +1440,10 @@ async def test_invalid_discovery_prefix(
     }
     assert config_entry.options == {
         mqtt.CONF_DISCOVERY: True,
-        mqtt.CONF_DISCOVERY_PREFIX: "homeassistant",
+        mqtt.CONF_DISCOVERY_PREFIX: "menuai",
     }
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     # assert that the entry was not reloaded with the new config
     assert mock_reload_after_entry_update.call_count == 0
 
@@ -1460,14 +1460,14 @@ def get_default(schema: vol.Schema, key: str) -> Any | None:
 
 @pytest.mark.usefixtures("mock_reload_after_entry_update")
 async def test_option_flow_default_suggested_values(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     mock_try_connection_success: MqttMockPahoClient,
 ) -> None:
     """Test config flow options has default/suggested values."""
     await mqtt_mock_entry()
-    config_entry = hass.config_entries.async_entries(mqtt.DOMAIN)[0]
-    hass.config_entries.async_update_entry(
+    config_entry = menuai.config_entries.async_entries(mqtt.DOMAIN)[0]
+    menuai.config_entries.async_update_entry(
         config_entry,
         data={
             mqtt.CONF_BROKER: "test-broker",
@@ -1491,10 +1491,10 @@ async def test_option_flow_default_suggested_values(
             },
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Test default/suggested values from config
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "options"
     defaults = {
@@ -1514,7 +1514,7 @@ async def test_option_flow_default_suggested_values(
     for key, value in suggested.items():
         assert get_schema_suggested_value(result["data_schema"].schema, key) == value
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "birth_topic": "ha_state/onl1ne",
@@ -1530,7 +1530,7 @@ async def test_option_flow_default_suggested_values(
     assert result["type"] is FlowResultType.CREATE_ENTRY
 
     # Test updated default/suggested values from config
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "options"
     defaults = {
@@ -1550,7 +1550,7 @@ async def test_option_flow_default_suggested_values(
     for key, value in suggested.items():
         assert get_schema_suggested_value(result["data_schema"].schema, key) == value
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "birth_topic": "ha_state/onl1ne",
@@ -1566,7 +1566,7 @@ async def test_option_flow_default_suggested_values(
     assert result["type"] is FlowResultType.CREATE_ENTRY
 
     # Make sure all MQTT related jobs are done before ending the test
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
 @pytest.mark.parametrize(
@@ -1575,7 +1575,7 @@ async def test_option_flow_default_suggested_values(
 )
 @pytest.mark.usefixtures("mock_reload_after_entry_update")
 async def test_skipping_advanced_options(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     mock_try_connection: MagicMock,
     advanced_options: bool,
@@ -1592,18 +1592,18 @@ async def test_skipping_advanced_options(
 
     mqtt_mock = await mqtt_mock_entry()
     mock_try_connection.return_value = True
-    config_entry: MockConfigEntry = hass.config_entries.async_entries(mqtt.DOMAIN)[0]
+    config_entry: MockConfigEntry = menuai.config_entries.async_entries(mqtt.DOMAIN)[0]
     mqtt_mock.async_connect.reset_mock()
 
     result = await config_entry.start_reconfigure_flow(
-        hass, show_advanced_options=advanced_options
+        menuai, show_advanced_options=advanced_options
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "broker"
 
     assert ("advanced_options" in result["data_schema"].schema) == advanced_options
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=test_input,
     )
@@ -1641,7 +1641,7 @@ async def test_skipping_advanced_options(
 )
 @pytest.mark.usefixtures("mock_reload_after_entry_update")
 async def test_step_reauth(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_client_mock: MqttMockPahoClient,
     mock_try_connection: MagicMock,
     test_input: dict[str, Any],
@@ -1657,31 +1657,31 @@ async def test_step_reauth(
         version=mqtt.CONFIG_ENTRY_VERSION,
         minor_version=mqtt.CONFIG_ENTRY_MINOR_VERSION,
     )
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
 
     # Start reauth flow
-    config_entry.async_start_reauth(hass)
-    await hass.async_block_till_done()
+    config_entry.async_start_reauth(menuai)
+    await menuai.async_block_till_done()
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
     result = flows[0]
     assert result["step_id"] == "reauth_confirm"
     assert result["context"]["source"] == "reauth"
 
     # Show the form
-    result = await config_entry.start_reauth_flow(hass)
+    result = await config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
     # Simulate re-auth fails
     mock_try_connection.return_value = False
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input=user_input
     )
     assert result["type"] is FlowResultType.FORM
@@ -1689,15 +1689,15 @@ async def test_step_reauth(
 
     # Simulate re-auth succeeds
     mock_try_connection.return_value = True
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input=user_input
     )
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"
 
-    assert len(hass.config_entries.async_entries()) == 1
+    assert len(menuai.config_entries.async_entries()) == 1
     assert config_entry.data.get(CONF_PASSWORD) == new_password
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
 @pytest.mark.parametrize(
@@ -1716,8 +1716,8 @@ async def test_step_reauth(
 @pytest.mark.usefixtures(
     "mqtt_client_mock", "mock_reload_after_entry_update", "supervisor", "addon_running"
 )
-async def test_step_hassio_reauth(
-    hass: HomeAssistant, mock_try_connection: MagicMock, addon_info: AsyncMock
+async def test_step_menuaiio_reauth(
+    menuai: menuai, mock_try_connection: MagicMock, addon_info: AsyncMock
 ) -> None:
     """Test that the reauth step works in case the Mosquitto broker add-on was re-installed."""
 
@@ -1738,17 +1738,17 @@ async def test_step_hassio_reauth(
         version=mqtt.CONFIG_ENTRY_VERSION,
         minor_version=mqtt.CONFIG_ENTRY_MINOR_VERSION,
     )
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
 
     assert config_entry.data.get(CONF_PASSWORD) == "stale-secret"
 
     # Start reauth flow
     mock_try_connection.reset_mock()
     mock_try_connection.return_value = True
-    config_entry.async_start_reauth(hass)
-    await hass.async_block_till_done()
-    flows = hass.config_entries.flow.async_progress()
+    config_entry.async_start_reauth(menuai)
+    await menuai.async_block_till_done()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 0
 
     # Assert the entry is updated automatically
@@ -1795,13 +1795,13 @@ async def test_step_hassio_reauth(
 @pytest.mark.usefixtures(
     "mqtt_client_mock", "mock_reload_after_entry_update", "supervisor", "addon_running"
 )
-async def test_step_hassio_reauth_no_discovery_info(
-    hass: HomeAssistant,
+async def test_step_menuaiio_reauth_no_discovery_info(
+    menuai: menuai,
     mock_try_connection: MagicMock,
     addon_info: AsyncMock,
     broker: str,
 ) -> None:
-    """Test hassio reauth flow defaults to manual flow.
+    """Test menuaiio reauth flow defaults to manual flow.
 
     Test that the reauth step defaults to
     normal reauth flow if fetching add-on discovery info failed,
@@ -1825,17 +1825,17 @@ async def test_step_hassio_reauth_no_discovery_info(
         version=mqtt.CONFIG_ENTRY_VERSION,
         minor_version=mqtt.CONFIG_ENTRY_MINOR_VERSION,
     )
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
 
     assert config_entry.data.get(CONF_PASSWORD) == "wrong-pass"
 
     # Start reauth flow
     mock_try_connection.reset_mock()
     mock_try_connection.return_value = True
-    config_entry.async_start_reauth(hass)
-    await hass.async_block_till_done()
-    flows = hass.config_entries.flow.async_progress()
+    config_entry.async_start_reauth(menuai)
+    await menuai.async_block_till_done()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
     result = flows[0]
     assert result["step_id"] == "reauth_confirm"
@@ -1847,7 +1847,7 @@ async def test_step_hassio_reauth_no_discovery_info(
 
 
 async def test_reconfigure_user_connection_fails(
-    hass: HomeAssistant, mock_try_connection_time_out: MagicMock
+    menuai: menuai, mock_try_connection_time_out: MagicMock
 ) -> None:
     """Test if connection cannot be made."""
     config_entry = MockConfigEntry(
@@ -1855,19 +1855,19 @@ async def test_reconfigure_user_connection_fails(
         version=mqtt.CONFIG_ENTRY_VERSION,
         minor_version=mqtt.CONFIG_ENTRY_MINOR_VERSION,
     )
-    config_entry.add_to_hass(hass)
-    hass.config_entries.async_update_entry(
+    config_entry.add_to_menuai(menuai)
+    menuai.config_entries.async_update_entry(
         config_entry,
         data={
             mqtt.CONF_BROKER: "test-broker",
             CONF_PORT: 1234,
         },
     )
-    result = await config_entry.start_reconfigure_flow(hass, show_advanced_options=True)
+    result = await config_entry.start_reconfigure_flow(menuai, show_advanced_options=True)
     assert result["type"] is FlowResultType.FORM
 
     mock_try_connection_time_out.reset_mock()
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={mqtt.CONF_BROKER: "bad-broker", CONF_PORT: 2345},
     )
@@ -1885,7 +1885,7 @@ async def test_reconfigure_user_connection_fails(
 
 
 async def test_options_bad_birth_message_fails(
-    hass: HomeAssistant, mock_try_connection: MqttMockPahoClient
+    menuai: menuai, mock_try_connection: MqttMockPahoClient
 ) -> None:
     """Test bad birth message."""
     config_entry = MockConfigEntry(
@@ -1893,8 +1893,8 @@ async def test_options_bad_birth_message_fails(
         version=mqtt.CONFIG_ENTRY_VERSION,
         minor_version=mqtt.CONFIG_ENTRY_MINOR_VERSION,
     )
-    config_entry.add_to_hass(hass)
-    hass.config_entries.async_update_entry(
+    config_entry.add_to_menuai(menuai)
+    menuai.config_entries.async_update_entry(
         config_entry,
         data={
             mqtt.CONF_BROKER: "test-broker",
@@ -1904,11 +1904,11 @@ async def test_options_bad_birth_message_fails(
 
     mock_try_connection.return_value = True
 
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "options"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={"birth_topic": "ha_state/online/#"},
     )
@@ -1923,7 +1923,7 @@ async def test_options_bad_birth_message_fails(
 
 
 async def test_options_bad_will_message_fails(
-    hass: HomeAssistant, mock_try_connection: MagicMock
+    menuai: menuai, mock_try_connection: MagicMock
 ) -> None:
     """Test bad will message."""
     config_entry = MockConfigEntry(
@@ -1931,8 +1931,8 @@ async def test_options_bad_will_message_fails(
         version=mqtt.CONFIG_ENTRY_VERSION,
         minor_version=mqtt.CONFIG_ENTRY_MINOR_VERSION,
     )
-    config_entry.add_to_hass(hass)
-    hass.config_entries.async_update_entry(
+    config_entry.add_to_menuai(menuai)
+    menuai.config_entries.async_update_entry(
         config_entry,
         data={
             mqtt.CONF_BROKER: "test-broker",
@@ -1942,11 +1942,11 @@ async def test_options_bad_will_message_fails(
 
     mock_try_connection.return_value = True
 
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "options"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={"will_topic": "ha_state/offline/#"},
     )
@@ -1966,7 +1966,7 @@ async def test_options_bad_will_message_fails(
 )
 @pytest.mark.usefixtures("mock_ssl_context", "mock_process_uploaded_file")
 async def test_try_connection_with_advanced_parameters(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_try_connection_success: MqttMockPahoClient,
     mock_context_client_key: bytes,
 ) -> None:
@@ -1976,8 +1976,8 @@ async def test_try_connection_with_advanced_parameters(
         version=mqtt.CONFIG_ENTRY_VERSION,
         minor_version=mqtt.CONFIG_ENTRY_MINOR_VERSION,
     )
-    config_entry.add_to_hass(hass)
-    hass.config_entries.async_update_entry(
+    config_entry.add_to_menuai(menuai)
+    menuai.config_entries.async_update_entry(
         config_entry,
         data={
             mqtt.CONF_BROKER: "test-broker",
@@ -2009,7 +2009,7 @@ async def test_try_connection_with_advanced_parameters(
     )
 
     # Test default/suggested values from config
-    result = await config_entry.start_reconfigure_flow(hass, show_advanced_options=True)
+    result = await config_entry.start_reconfigure_flow(menuai, show_advanced_options=True)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "broker"
     defaults = {
@@ -2034,7 +2034,7 @@ async def test_try_connection_with_advanced_parameters(
 
     # test we can change username and password
     mock_try_connection_success.reset_mock()
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             mqtt.CONF_BROKER: "another-broker",
@@ -2051,7 +2051,7 @@ async def test_try_connection_with_advanced_parameters(
     )
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reconfigure_successful"
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # check if the username and password was set from config flow and not from configuration.yaml
     assert mock_try_connection_success.username_pw_set.mock_calls[0][1] == (
@@ -2066,7 +2066,7 @@ async def test_try_connection_with_advanced_parameters(
             return file.read()
 
     # check if the client certificate settings saved
-    client_cert_path = await hass.async_add_executor_job(
+    client_cert_path = await menuai.async_add_executor_job(
         mqtt.util.get_file_path, mqtt.CONF_CLIENT_CERT
     )
     assert (
@@ -2074,11 +2074,11 @@ async def test_try_connection_with_advanced_parameters(
         == client_cert_path
     )
     assert (
-        await hass.async_add_executor_job(read_file, client_cert_path)
+        await menuai.async_add_executor_job(read_file, client_cert_path)
         == MOCK_CLIENT_CERT
     )
 
-    client_key_path = await hass.async_add_executor_job(
+    client_key_path = await menuai.async_add_executor_job(
         mqtt.util.get_file_path, mqtt.CONF_CLIENT_KEY
     )
     assert (
@@ -2086,7 +2086,7 @@ async def test_try_connection_with_advanced_parameters(
         == client_key_path
     )
     assert (
-        await hass.async_add_executor_job(read_file, client_key_path)
+        await menuai.async_add_executor_job(read_file, client_key_path)
         == mock_context_client_key
     )
 
@@ -2095,12 +2095,12 @@ async def test_try_connection_with_advanced_parameters(
         "/new/path",
         {"h3": "v3"},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
 @pytest.mark.usefixtures("mock_ssl_context")
 async def test_setup_with_advanced_settings(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_try_connection: MagicMock,
     mock_process_uploaded_file: MagicMock,
 ) -> None:
@@ -2112,8 +2112,8 @@ async def test_setup_with_advanced_settings(
         version=mqtt.CONFIG_ENTRY_VERSION,
         minor_version=mqtt.CONFIG_ENTRY_MINOR_VERSION,
     )
-    config_entry.add_to_hass(hass)
-    hass.config_entries.async_update_entry(
+    config_entry.add_to_menuai(menuai)
+    menuai.config_entries.async_update_entry(
         config_entry,
         data={
             mqtt.CONF_BROKER: "test-broker",
@@ -2123,13 +2123,13 @@ async def test_setup_with_advanced_settings(
 
     mock_try_connection.return_value = True
 
-    result = await config_entry.start_reconfigure_flow(hass, show_advanced_options=True)
+    result = await config_entry.start_reconfigure_flow(menuai, show_advanced_options=True)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "broker"
     assert result["data_schema"].schema["advanced_options"]
 
     # first iteration, basic settings
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             mqtt.CONF_BROKER: "test-broker",
@@ -2153,7 +2153,7 @@ async def test_setup_with_advanced_settings(
     assert mqtt.CONF_CLIENT_KEY not in result["data_schema"].schema
 
     # second iteration, advanced settings with request for client cert
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             mqtt.CONF_BROKER: "test-broker",
@@ -2184,7 +2184,7 @@ async def test_setup_with_advanced_settings(
     assert result["data_schema"].schema[mqtt.CONF_WS_HEADERS]
 
     # third iteration, advanced settings with client cert and key set and bad json payload
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             mqtt.CONF_BROKER: "test-broker",
@@ -2209,7 +2209,7 @@ async def test_setup_with_advanced_settings(
 
     # fourth iteration, advanced settings with client cert and key set
     # and correct json payload for ws_headers
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             mqtt.CONF_BROKER: "test-broker",
@@ -2278,7 +2278,7 @@ async def test_setup_with_advanced_settings(
     ],
 )
 async def test_setup_with_certificates(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_try_connection: MagicMock,
     mock_process_uploaded_file: MagicMock,
     client_key_password: str,
@@ -2291,8 +2291,8 @@ async def test_setup_with_certificates(
         version=mqtt.CONFIG_ENTRY_VERSION,
         minor_version=mqtt.CONFIG_ENTRY_MINOR_VERSION,
     )
-    config_entry.add_to_hass(hass)
-    hass.config_entries.async_update_entry(
+    config_entry.add_to_menuai(menuai)
+    menuai.config_entries.async_update_entry(
         config_entry,
         data={
             mqtt.CONF_BROKER: "test-broker",
@@ -2302,13 +2302,13 @@ async def test_setup_with_certificates(
 
     mock_try_connection.return_value = True
 
-    result = await config_entry.start_reconfigure_flow(hass, show_advanced_options=True)
+    result = await config_entry.start_reconfigure_flow(menuai, show_advanced_options=True)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "broker"
     assert result["data_schema"].schema["advanced_options"]
 
     # first iteration, basic settings
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             mqtt.CONF_BROKER: "test-broker",
@@ -2332,7 +2332,7 @@ async def test_setup_with_certificates(
     assert mqtt.CONF_CLIENT_KEY not in result["data_schema"].schema
 
     # second iteration, advanced settings with request for client cert
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             mqtt.CONF_BROKER: "test-broker",
@@ -2363,7 +2363,7 @@ async def test_setup_with_certificates(
     assert result["data_schema"].schema[mqtt.CONF_TRANSPORT]
 
     # third iteration, advanced settings with client cert and key and CA certificate
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             mqtt.CONF_BROKER: "test-broker",
@@ -2402,7 +2402,7 @@ async def test_setup_with_certificates(
 
 @pytest.mark.usefixtures("mock_ssl_context", "mock_process_uploaded_file")
 async def test_change_websockets_transport_to_tcp(
-    hass: HomeAssistant, mock_try_connection: MagicMock
+    menuai: menuai, mock_try_connection: MagicMock
 ) -> None:
     """Test reconfiguration flow changing websockets transport settings."""
     config_entry = MockConfigEntry(
@@ -2410,8 +2410,8 @@ async def test_change_websockets_transport_to_tcp(
         version=mqtt.CONFIG_ENTRY_VERSION,
         minor_version=mqtt.CONFIG_ENTRY_MINOR_VERSION,
     )
-    config_entry.add_to_hass(hass)
-    hass.config_entries.async_update_entry(
+    config_entry.add_to_menuai(menuai)
+    menuai.config_entries.async_update_entry(
         config_entry,
         data={
             mqtt.CONF_BROKER: "test-broker",
@@ -2424,7 +2424,7 @@ async def test_change_websockets_transport_to_tcp(
 
     mock_try_connection.return_value = True
 
-    result = await config_entry.start_reconfigure_flow(hass, show_advanced_options=True)
+    result = await config_entry.start_reconfigure_flow(menuai, show_advanced_options=True)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "broker"
     assert result["data_schema"].schema["transport"]
@@ -2432,7 +2432,7 @@ async def test_change_websockets_transport_to_tcp(
     assert result["data_schema"].schema["ws_headers"]
 
     # Change transport to tcp
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             mqtt.CONF_BROKER: "test-broker",
@@ -2467,19 +2467,19 @@ async def test_change_websockets_transport_to_tcp(
     ],
 )
 async def test_reconfigure_flow_form(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_try_connection: MagicMock,
     mqtt_mock_entry: MqttMockHAClientGenerator,
 ) -> None:
     """Test reconfigure flow."""
     await mqtt_mock_entry()
-    entry: MockConfigEntry = hass.config_entries.async_entries(mqtt.DOMAIN)[0]
-    result = await entry.start_reconfigure_flow(hass, show_advanced_options=True)
+    entry: MockConfigEntry = menuai.config_entries.async_entries(mqtt.DOMAIN)[0]
+    result = await entry.start_reconfigure_flow(menuai, show_advanced_options=True)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "broker"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             mqtt.CONF_BROKER: "10.10.10,10",
@@ -2499,7 +2499,7 @@ async def test_reconfigure_flow_form(
         mqtt.CONF_WS_HEADERS: {"header_1": "custom_header1"},
         mqtt.CONF_WS_PATH: "/some_new_path",
     }
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
 
 @pytest.mark.usefixtures("mock_ssl_context", "mock_process_uploaded_file")
@@ -2518,19 +2518,19 @@ async def test_reconfigure_flow_form(
     ],
 )
 async def test_reconfigure_no_changed_password(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_try_connection: MagicMock,
     mqtt_mock_entry: MqttMockHAClientGenerator,
 ) -> None:
     """Test reconfigure flow."""
     await mqtt_mock_entry()
-    entry: MockConfigEntry = hass.config_entries.async_entries(mqtt.DOMAIN)[0]
-    result = await entry.start_reconfigure_flow(hass, show_advanced_options=True)
+    entry: MockConfigEntry = menuai.config_entries.async_entries(mqtt.DOMAIN)[0]
+    result = await entry.start_reconfigure_flow(menuai, show_advanced_options=True)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "broker"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             mqtt.CONF_BROKER: "10.10.10,10",
@@ -2554,7 +2554,7 @@ async def test_reconfigure_no_changed_password(
         mqtt.CONF_WS_HEADERS: {"header_1": "custom_header1"},
         mqtt.CONF_WS_PATH: "/some_new_path",
     }
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
 
 @pytest.mark.parametrize(
@@ -2574,7 +2574,7 @@ async def test_reconfigure_no_changed_password(
 )
 @pytest.mark.usefixtures("mock_reload_after_entry_update")
 async def test_migrate_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     version: int,
     minor_version: int,
@@ -2584,19 +2584,19 @@ async def test_migrate_config_entry(
     expected_minor_version: int,
 ) -> None:
     """Test migrating a config entry."""
-    config_entry = hass.config_entries.async_entries(mqtt.DOMAIN)[0]
+    config_entry = menuai.config_entries.async_entries(mqtt.DOMAIN)[0]
     # Mock to a migratable or compatbible config entry version
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         config_entry,
         data=data,
         options=options,
         version=version,
         minor_version=minor_version,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     # Start MQTT
     await mqtt_mock_entry()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert (
         config_entry.data | config_entry.options == MOCK_ENTRY_DATA | MOCK_ENTRY_OPTIONS
     )
@@ -2619,7 +2619,7 @@ async def test_migrate_config_entry(
 )
 @pytest.mark.usefixtures("mock_reload_after_entry_update")
 async def test_migrate_of_incompatible_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     version: int,
     minor_version: int,
@@ -2629,16 +2629,16 @@ async def test_migrate_of_incompatible_config_entry(
     expected_minor_version: int,
 ) -> None:
     """Test migrating a config entry."""
-    config_entry = hass.config_entries.async_entries(mqtt.DOMAIN)[0]
+    config_entry = menuai.config_entries.async_entries(mqtt.DOMAIN)[0]
     # Mock an incompatible config entry version
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         config_entry,
         data=data,
         options=options,
         version=version,
         minor_version=minor_version,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert config_entry.version == expected_version
     assert config_entry.minor_version == expected_minor_version
 
@@ -3141,7 +3141,7 @@ async def test_migrate_of_incompatible_config_entry(
     ],
 )
 async def test_subentry_configflow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     config_subentries_data: dict[str, Any],
     mock_device_user_input: dict[str, Any],
@@ -3159,9 +3159,9 @@ async def test_subentry_configflow(
     component = next(iter(config_subentries_data["components"].values()))
 
     await mqtt_mock_entry()
-    config_entry = hass.config_entries.async_entries(mqtt.DOMAIN)[0]
+    config_entry = menuai.config_entries.async_entries(mqtt.DOMAIN)[0]
 
-    result = await hass.config_entries.subentries.async_init(
+    result = await menuai.config_entries.subentries.async_init(
         (config_entry.entry_id, "device"),
         context={"source": config_entries.SOURCE_USER},
     )
@@ -3169,7 +3169,7 @@ async def test_subentry_configflow(
     assert result["step_id"] == "device"
 
     # Test the URL validation
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         user_input={
             "name": device_name,
@@ -3180,7 +3180,7 @@ async def test_subentry_configflow(
     assert result["step_id"] == "device"
     assert result["errors"]["configuration_url"] == "invalid_url"
 
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         user_input=mock_device_user_input,
     )
@@ -3191,7 +3191,7 @@ async def test_subentry_configflow(
     # Process entity flow (initial step)
 
     # Test the entity picture URL validation
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         user_input={
             "platform": component["platform"],
@@ -3203,7 +3203,7 @@ async def test_subentry_configflow(
     assert result["step_id"] == "entity"
 
     # Try again with valid data
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         user_input={
             "platform": component["platform"],
@@ -3228,7 +3228,7 @@ async def test_subentry_configflow(
         # First test validators if set of test
         for failed_user_input, failed_errors in mock_entity_details_failed_user_input:
             # Test an invalid entity details user input case
-            result = await hass.config_entries.subentries.async_configure(
+            result = await menuai.config_entries.subentries.async_configure(
                 result["flow_id"],
                 user_input=failed_user_input,
             )
@@ -3236,7 +3236,7 @@ async def test_subentry_configflow(
             assert result["errors"] == failed_errors
 
         # Now try again with valid data
-        result = await hass.config_entries.subentries.async_configure(
+        result = await menuai.config_entries.subentries.async_configure(
             result["flow_id"],
             user_input=mock_entity_details_user_input,
         )
@@ -3255,7 +3255,7 @@ async def test_subentry_configflow(
     # Process mqtt platform config flow
     # Test an invalid mqtt user input case
     for failed_user_input, failed_errors in mock_failed_mqtt_user_input:
-        result = await hass.config_entries.subentries.async_configure(
+        result = await menuai.config_entries.subentries.async_configure(
             result["flow_id"],
             user_input=failed_user_input,
         )
@@ -3263,7 +3263,7 @@ async def test_subentry_configflow(
         assert result["errors"] == failed_errors
 
     # Try again with a valid configuration
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"], user_input=mock_mqtt_user_input
     )
 
@@ -3281,7 +3281,7 @@ async def test_subentry_configflow(
     for option, value in mock_device_user_input.items():
         assert subentry_device_data[option] == value
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
 @pytest.mark.parametrize(
@@ -3298,19 +3298,19 @@ async def test_subentry_configflow(
     ids=["notify"],
 )
 async def test_subentry_reconfigure_remove_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test the subentry ConfigFlow reconfigure removing an entity."""
     await mqtt_mock_entry()
-    config_entry: MockConfigEntry = hass.config_entries.async_entries(mqtt.DOMAIN)[0]
+    config_entry: MockConfigEntry = menuai.config_entries.async_entries(mqtt.DOMAIN)[0]
     subentry_id: str
     subentry: ConfigSubentry
     subentry_id, subentry = next(iter(config_entry.subentries.items()))
     result = await config_entry.start_subentry_reconfigure_flow(
-        hass, "device", subentry_id
+        menuai, "device", subentry_id
     )
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "summary_menu"
@@ -3354,7 +3354,7 @@ async def test_subentry_reconfigure_remove_entity(
     ]
 
     # assert we can delete an entity
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         {"next_step_id": "delete_entity"},
     )
@@ -3365,7 +3365,7 @@ async def test_subentry_reconfigure_remove_entity(
         {"value": object_list[1], "label": entity_name_1},
     ]
     # remove notify_the_second_notifier
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         user_input={
             "component": object_list[1],
@@ -3384,7 +3384,7 @@ async def test_subentry_reconfigure_remove_entity(
     ]
 
     # finish reconfigure flow
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         {"next_step_id": "save_changes"},
     )
@@ -3421,7 +3421,7 @@ async def test_subentry_reconfigure_remove_entity(
     ids=["notify"],
 )
 async def test_subentry_reconfigure_edit_entity_multi_entitites(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
@@ -3429,12 +3429,12 @@ async def test_subentry_reconfigure_edit_entity_multi_entitites(
 ) -> None:
     """Test the subentry ConfigFlow reconfigure with multi entities."""
     await mqtt_mock_entry()
-    config_entry: MockConfigEntry = hass.config_entries.async_entries(mqtt.DOMAIN)[0]
+    config_entry: MockConfigEntry = menuai.config_entries.async_entries(mqtt.DOMAIN)[0]
     subentry_id: str
     subentry: ConfigSubentry
     subentry_id, subentry = next(iter(config_entry.subentries.items()))
     result = await config_entry.start_subentry_reconfigure_flow(
-        hass, "device", subentry_id
+        menuai, "device", subentry_id
     )
 
     assert result["type"] is FlowResultType.MENU
@@ -3477,7 +3477,7 @@ async def test_subentry_reconfigure_edit_entity_multi_entitites(
     ]
 
     # assert we can update an entity
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         {"next_step_id": "update_entity"},
     )
@@ -3488,7 +3488,7 @@ async def test_subentry_reconfigure_edit_entity_multi_entitites(
         {"value": object_list[1], "label": entity_name_1},
     ]
     # select second entity
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         user_input={
             "component": object_list[1],
@@ -3498,7 +3498,7 @@ async def test_subentry_reconfigure_edit_entity_multi_entitites(
     assert result["step_id"] == "entity"
 
     # submit the common entity data with changed entity_picture
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         user_input={
             "entity_picture": "https://example.com",
@@ -3508,7 +3508,7 @@ async def test_subentry_reconfigure_edit_entity_multi_entitites(
     assert result["step_id"] == "mqtt_platform_config"
 
     # submit the new platform specific entity data
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         user_input=user_input_mqtt,
     )
@@ -3516,7 +3516,7 @@ async def test_subentry_reconfigure_edit_entity_multi_entitites(
     assert result["step_id"] == "summary_menu"
 
     # finish reconfigure flow
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         {"next_step_id": "save_changes"},
     )
@@ -3632,7 +3632,7 @@ async def test_subentry_reconfigure_edit_entity_multi_entitites(
     ids=["notify", "sensor", "light_basic"],
 )
 async def test_subentry_reconfigure_edit_entity_single_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
@@ -3647,12 +3647,12 @@ async def test_subentry_reconfigure_edit_entity_single_entity(
 ) -> None:
     """Test the subentry ConfigFlow reconfigure with single entity."""
     await mqtt_mock_entry()
-    config_entry: MockConfigEntry = hass.config_entries.async_entries(mqtt.DOMAIN)[0]
+    config_entry: MockConfigEntry = menuai.config_entries.async_entries(mqtt.DOMAIN)[0]
     subentry_id: str
     subentry: ConfigSubentry
     subentry_id, subentry = next(iter(config_entry.subentries.items()))
     result = await config_entry.start_subentry_reconfigure_flow(
-        hass, "device", subentry_id
+        menuai, "device", subentry_id
     )
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "summary_menu"
@@ -3687,7 +3687,7 @@ async def test_subentry_reconfigure_edit_entity_single_entity(
     ]
 
     # assert we can update the entity, there is no select step
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         {"next_step_id": "update_entity"},
     )
@@ -3695,7 +3695,7 @@ async def test_subentry_reconfigure_edit_entity_single_entity(
     assert result["step_id"] == "entity"
 
     # submit the new common entity data, reset entity_picture
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         user_input={},
     )
@@ -3708,7 +3708,7 @@ async def test_subentry_reconfigure_edit_entity_single_entity(
         # Additional entity flow step
         assert result["step_id"] == "entity_platform_config"
         for entity_validation_config, errors in user_input_platform_config_validation:
-            result = await hass.config_entries.subentries.async_configure(
+            result = await menuai.config_entries.subentries.async_configure(
                 result["flow_id"],
                 user_input=entity_validation_config,
             )
@@ -3716,7 +3716,7 @@ async def test_subentry_reconfigure_edit_entity_single_entity(
             assert result.get("errors") == errors
             assert result["type"] is FlowResultType.FORM
 
-        result = await hass.config_entries.subentries.async_configure(
+        result = await menuai.config_entries.subentries.async_configure(
             result["flow_id"],
             user_input=user_input_platform_config,
         )
@@ -3724,7 +3724,7 @@ async def test_subentry_reconfigure_edit_entity_single_entity(
         assert result["step_id"] == "mqtt_platform_config"
 
     # submit the new platform specific entity data,
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         user_input=user_input_mqtt,
     )
@@ -3732,7 +3732,7 @@ async def test_subentry_reconfigure_edit_entity_single_entity(
     assert result["step_id"] == "summary_menu"
 
     # finish reconfigure flow
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         {"next_step_id": "save_changes"},
     )
@@ -3781,7 +3781,7 @@ async def test_subentry_reconfigure_edit_entity_single_entity(
     ids=["sensor_last_reset_template"],
 )
 async def test_subentry_reconfigure_edit_entity_reset_fields(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
@@ -3791,12 +3791,12 @@ async def test_subentry_reconfigure_edit_entity_reset_fields(
 ) -> None:
     """Test the subentry ConfigFlow reconfigure resets filtered out fields."""
     await mqtt_mock_entry()
-    config_entry: MockConfigEntry = hass.config_entries.async_entries(mqtt.DOMAIN)[0]
+    config_entry: MockConfigEntry = menuai.config_entries.async_entries(mqtt.DOMAIN)[0]
     subentry_id: str
     subentry: ConfigSubentry
     subentry_id, subentry = next(iter(config_entry.subentries.items()))
     result = await config_entry.start_subentry_reconfigure_flow(
-        hass, "device", subentry_id
+        menuai, "device", subentry_id
     )
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "summary_menu"
@@ -3832,7 +3832,7 @@ async def test_subentry_reconfigure_edit_entity_reset_fields(
     ]
 
     # assert we can update the entity, there is no select step
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         {"next_step_id": "update_entity"},
     )
@@ -3840,7 +3840,7 @@ async def test_subentry_reconfigure_edit_entity_reset_fields(
     assert result["step_id"] == "entity"
 
     # submit the new common entity data, reset entity_picture
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         user_input={},
     )
@@ -3848,7 +3848,7 @@ async def test_subentry_reconfigure_edit_entity_reset_fields(
     assert result["step_id"] == "entity_platform_config"
 
     # submit the new entity platform config
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         user_input=user_input_entity_details,
     )
@@ -3856,7 +3856,7 @@ async def test_subentry_reconfigure_edit_entity_reset_fields(
     assert result["step_id"] == "mqtt_platform_config"
 
     # submit the new platform specific mqtt data,
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         user_input=user_input_mqtt,
     )
@@ -3864,7 +3864,7 @@ async def test_subentry_reconfigure_edit_entity_reset_fields(
     assert result["step_id"] == "summary_menu"
 
     # finish reconfigure flow
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         {"next_step_id": "save_changes"},
     )
@@ -3911,7 +3911,7 @@ async def test_subentry_reconfigure_edit_entity_reset_fields(
     ids=["notify_notify"],
 )
 async def test_subentry_reconfigure_add_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
@@ -3920,12 +3920,12 @@ async def test_subentry_reconfigure_add_entity(
 ) -> None:
     """Test the subentry ConfigFlow reconfigure and add an entity."""
     await mqtt_mock_entry()
-    config_entry: MockConfigEntry = hass.config_entries.async_entries(mqtt.DOMAIN)[0]
+    config_entry: MockConfigEntry = menuai.config_entries.async_entries(mqtt.DOMAIN)[0]
     subentry_id: str
     subentry: ConfigSubentry
     subentry_id, subentry = next(iter(config_entry.subentries.items()))
     result = await config_entry.start_subentry_reconfigure_flow(
-        hass, "device", subentry_id
+        menuai, "device", subentry_id
     )
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "summary_menu"
@@ -3957,7 +3957,7 @@ async def test_subentry_reconfigure_add_entity(
     ]
 
     # assert we can update the entity, there is no select step
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         {"next_step_id": "entity"},
     )
@@ -3965,7 +3965,7 @@ async def test_subentry_reconfigure_add_entity(
     assert result["step_id"] == "entity"
 
     # submit the new common entity data
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         user_input=user_input_entity,
     )
@@ -3973,7 +3973,7 @@ async def test_subentry_reconfigure_add_entity(
     assert result["step_id"] == "mqtt_platform_config"
 
     # submit the new platform specific entity data
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         user_input=user_input_mqtt,
     )
@@ -3981,7 +3981,7 @@ async def test_subentry_reconfigure_add_entity(
     assert result["step_id"] == "summary_menu"
 
     # Finish reconfigure flow
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         {"next_step_id": "save_changes"},
     )
@@ -4013,18 +4013,18 @@ async def test_subentry_reconfigure_add_entity(
     ],
 )
 async def test_subentry_reconfigure_update_device_properties(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     device_registry: dr.DeviceRegistry,
 ) -> None:
     """Test the subentry ConfigFlow reconfigure and update device properties."""
     await mqtt_mock_entry()
-    config_entry: MockConfigEntry = hass.config_entries.async_entries(mqtt.DOMAIN)[0]
+    config_entry: MockConfigEntry = menuai.config_entries.async_entries(mqtt.DOMAIN)[0]
     subentry_id: str
     subentry: ConfigSubentry
     subentry_id, subentry = next(iter(config_entry.subentries.items()))
     result = await config_entry.start_subentry_reconfigure_flow(
-        hass, "device", subentry_id
+        menuai, "device", subentry_id
     )
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "summary_menu"
@@ -4056,7 +4056,7 @@ async def test_subentry_reconfigure_update_device_properties(
     ]
 
     # assert we can update the device properties
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         {"next_step_id": "device"},
     )
@@ -4064,7 +4064,7 @@ async def test_subentry_reconfigure_update_device_properties(
     assert result["step_id"] == "device"
 
     # Update the device details
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         user_input={
             "name": "Beer notifier",
@@ -4078,7 +4078,7 @@ async def test_subentry_reconfigure_update_device_properties(
     assert result["step_id"] == "summary_menu"
 
     # finish reconfigure flow
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         {"next_step_id": "save_changes"},
     )
@@ -4106,12 +4106,12 @@ async def test_subentry_reconfigure_update_device_properties(
     ],
 )
 async def test_subentry_reconfigure_availablity(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
 ) -> None:
     """Test the subentry ConfigFlow reconfigure and update device properties."""
     await mqtt_mock_entry()
-    config_entry: MockConfigEntry = hass.config_entries.async_entries(mqtt.DOMAIN)[0]
+    config_entry: MockConfigEntry = menuai.config_entries.async_entries(mqtt.DOMAIN)[0]
     subentry_id: str
     subentry: ConfigSubentry
     subentry_id, subentry = next(iter(config_entry.subentries.items()))
@@ -4125,20 +4125,20 @@ async def test_subentry_reconfigure_availablity(
     assert subentry.data.get("availability") == expected_availability
 
     result = await config_entry.start_subentry_reconfigure_flow(
-        hass, "device", subentry_id
+        menuai, "device", subentry_id
     )
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "summary_menu"
 
     # assert we can set the availability config
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         {"next_step_id": "availability"},
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "availability"
 
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         user_input={
             "availability_topic": "test/new_availability#invalid_topic",
@@ -4148,7 +4148,7 @@ async def test_subentry_reconfigure_availablity(
     )
     assert result["errors"] == {"availability_topic": "invalid_subscribe_topic"}
 
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         user_input={
             "availability_topic": "test/new_availability",
@@ -4158,7 +4158,7 @@ async def test_subentry_reconfigure_availablity(
     )
 
     # finish reconfigure flow
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         {"next_step_id": "save_changes"},
     )
@@ -4175,18 +4175,18 @@ async def test_subentry_reconfigure_availablity(
 
     # Assert we can reset the availability config
     result = await config_entry.start_subentry_reconfigure_flow(
-        hass, "device", subentry_id
+        menuai, "device", subentry_id
     )
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "summary_menu"
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         {"next_step_id": "availability"},
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "availability"
 
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         user_input={
             "payload_available": "1",
@@ -4195,7 +4195,7 @@ async def test_subentry_reconfigure_availablity(
     )
 
     # Finish reconfigure flow
-    result = await hass.config_entries.subentries.async_configure(
+    result = await menuai.config_entries.subentries.async_configure(
         result["flow_id"],
         {"next_step_id": "save_changes"},
     )

@@ -3,10 +3,10 @@
 import logging
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.components.light import ColorMode, LightEntity
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.light import ColorMode, LightEntity
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
     KNOWN_UNSUPPORTED_DEVICE_TYPES,
@@ -21,7 +21,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: NiceGOConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

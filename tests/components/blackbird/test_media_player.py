@@ -6,18 +6,18 @@ from unittest import mock
 import pytest
 import voluptuous as vol
 
-from homeassistant.components.blackbird.const import DOMAIN, SERVICE_SETALLZONES
-from homeassistant.components.blackbird.media_player import (
+from menuai.components.blackbird.const import DOMAIN, SERVICE_SETALLZONES
+from menuai.components.blackbird.media_player import (
     DATA_BLACKBIRD,
     PLATFORM_SCHEMA,
 )
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
 )
-from homeassistant.const import STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.const import STATE_OFF, STATE_ON
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import MockEntityPlatform
 
@@ -177,14 +177,14 @@ def mock_blackbird() -> MockBlackbird:
 
 
 @pytest.fixture
-async def setup_blackbird(hass: HomeAssistant, mock_blackbird: MockBlackbird) -> None:
+async def setup_blackbird(menuai: menuai, mock_blackbird: MockBlackbird) -> None:
     """Set up blackbird."""
     with mock.patch(
-        "homeassistant.components.blackbird.media_player.get_blackbird",
+        "menuai.components.blackbird.media_player.get_blackbird",
         return_value=mock_blackbird,
     ):
         await async_setup_component(
-            hass,
+            menuai,
             "media_player",
             {
                 "media_player": {
@@ -199,43 +199,43 @@ async def setup_blackbird(hass: HomeAssistant, mock_blackbird: MockBlackbird) ->
                 }
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
 
 @pytest.fixture
 def media_player_entity(
-    hass: HomeAssistant, setup_blackbird: None
+    menuai: menuai, setup_blackbird: None
 ) -> MediaPlayerEntity:
     """Return the media player entity."""
-    media_player = hass.data[DATA_BLACKBIRD]["/dev/ttyUSB0-3"]
-    media_player.hass = hass
-    media_player.platform = MockEntityPlatform(hass)
+    media_player = menuai.data[DATA_BLACKBIRD]["/dev/ttyUSB0-3"]
+    media_player.menuai = menuai
+    media_player.platform = MockEntityPlatform(menuai)
     media_player.entity_id = "media_player.zone_3"
     return media_player
 
 
 @pytest.mark.usefixtures("setup_blackbird")
-async def test_setup_platform(hass: HomeAssistant) -> None:
+async def test_setup_platform(menuai: menuai) -> None:
     """Test setting up platform."""
     # One service must be registered
-    assert hass.services.has_service(DOMAIN, SERVICE_SETALLZONES)
-    assert len(hass.data[DATA_BLACKBIRD]) == 1
-    assert hass.data[DATA_BLACKBIRD]["/dev/ttyUSB0-3"].name == "Zone name"
+    assert menuai.services.has_service(DOMAIN, SERVICE_SETALLZONES)
+    assert len(menuai.data[DATA_BLACKBIRD]) == 1
+    assert menuai.data[DATA_BLACKBIRD]["/dev/ttyUSB0-3"].name == "Zone name"
 
 
 async def test_setallzones_service_call_with_entity_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     media_player_entity: MediaPlayerEntity,
     mock_blackbird: MockBlackbird,
 ) -> None:
     """Test set all zone source service call with entity id."""
-    await hass.async_add_executor_job(media_player_entity.update)
+    await menuai.async_add_executor_job(media_player_entity.update)
     assert media_player_entity.name == "Zone name"
     assert media_player_entity.state == STATE_ON
     assert media_player_entity.source == "one"
 
     # Call set all zones service
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SETALLZONES,
         {"entity_id": "media_player.zone_3", "source": "three"},
@@ -244,34 +244,34 @@ async def test_setallzones_service_call_with_entity_id(
 
     # Check that source was changed
     assert mock_blackbird.zones[3].av == 3
-    await hass.async_add_executor_job(media_player_entity.update)
+    await menuai.async_add_executor_job(media_player_entity.update)
     assert media_player_entity.source == "three"
 
 
 async def test_setallzones_service_call_without_entity_id(
     mock_blackbird: MockBlackbird,
-    hass: HomeAssistant,
+    menuai: menuai,
     media_player_entity: MediaPlayerEntity,
 ) -> None:
     """Test set all zone source service call without entity id."""
-    await hass.async_add_executor_job(media_player_entity.update)
+    await menuai.async_add_executor_job(media_player_entity.update)
     assert media_player_entity.name == "Zone name"
     assert media_player_entity.state == STATE_ON
     assert media_player_entity.source == "one"
 
     # Call set all zones service
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN, SERVICE_SETALLZONES, {"source": "three"}, blocking=True
     )
 
     # Check that source was changed
     assert mock_blackbird.zones[3].av == 3
-    await hass.async_add_executor_job(media_player_entity.update)
+    await menuai.async_add_executor_job(media_player_entity.update)
     assert media_player_entity.source == "three"
 
 
 async def test_update(
-    hass: HomeAssistant, media_player_entity: MediaPlayerEntity
+    menuai: menuai, media_player_entity: MediaPlayerEntity
 ) -> None:
     """Test updating values from blackbird."""
 
@@ -285,7 +285,7 @@ async def test_name(media_player_entity: MediaPlayerEntity) -> None:
 
 
 async def test_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     media_player_entity: MediaPlayerEntity,
     mock_blackbird: MockBlackbird,
 ) -> None:
@@ -293,7 +293,7 @@ async def test_state(
     assert media_player_entity.state == STATE_ON
 
     mock_blackbird.zones[3].power = False
-    await hass.async_add_executor_job(media_player_entity.update)
+    await menuai.async_add_executor_job(media_player_entity.update)
     assert media_player_entity.state == STATE_OFF
 
 
@@ -308,14 +308,14 @@ async def test_supported_features(media_player_entity: MediaPlayerEntity) -> Non
 
 
 async def test_source(
-    hass: HomeAssistant, media_player_entity: MediaPlayerEntity
+    menuai: menuai, media_player_entity: MediaPlayerEntity
 ) -> None:
     """Test source property."""
     assert media_player_entity.source == "one"
 
 
 async def test_media_title(
-    hass: HomeAssistant, media_player_entity: MediaPlayerEntity
+    menuai: menuai, media_player_entity: MediaPlayerEntity
 ) -> None:
     """Test media title property."""
     assert media_player_entity.media_title == "one"
@@ -328,54 +328,54 @@ async def test_source_list(media_player_entity: MediaPlayerEntity) -> None:
 
 
 async def test_select_source(
-    hass: HomeAssistant,
+    menuai: menuai,
     media_player_entity: MediaPlayerEntity,
     mock_blackbird: MockBlackbird,
 ) -> None:
     """Test source selection methods."""
-    await hass.async_add_executor_job(media_player_entity.update)
+    await menuai.async_add_executor_job(media_player_entity.update)
 
     assert media_player_entity.source == "one"
 
     await media_player_entity.async_select_source("two")
     assert mock_blackbird.zones[3].av == 2
-    await hass.async_add_executor_job(media_player_entity.update)
+    await menuai.async_add_executor_job(media_player_entity.update)
     assert media_player_entity.source == "two"
 
     # Trying to set unknown source.
     await media_player_entity.async_select_source("no name")
     assert mock_blackbird.zones[3].av == 2
-    await hass.async_add_executor_job(media_player_entity.update)
+    await menuai.async_add_executor_job(media_player_entity.update)
     assert media_player_entity.source == "two"
 
 
 async def test_turn_on(
-    hass: HomeAssistant,
+    menuai: menuai,
     media_player_entity: MediaPlayerEntity,
     mock_blackbird: MockBlackbird,
 ) -> None:
     """Testing turning on the zone."""
     mock_blackbird.zones[3].power = False
-    await hass.async_add_executor_job(media_player_entity.update)
+    await menuai.async_add_executor_job(media_player_entity.update)
     assert media_player_entity.state == STATE_OFF
 
     await media_player_entity.async_turn_on()
     assert mock_blackbird.zones[3].power
-    await hass.async_add_executor_job(media_player_entity.update)
+    await menuai.async_add_executor_job(media_player_entity.update)
     assert media_player_entity.state == STATE_ON
 
 
 async def test_turn_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     media_player_entity: MediaPlayerEntity,
     mock_blackbird: MockBlackbird,
 ) -> None:
     """Testing turning off the zone."""
     mock_blackbird.zones[3].power = True
-    await hass.async_add_executor_job(media_player_entity.update)
+    await menuai.async_add_executor_job(media_player_entity.update)
     assert media_player_entity.state == STATE_ON
 
     await media_player_entity.async_turn_off()
     assert not mock_blackbird.zones[3].power
-    await hass.async_add_executor_job(media_player_entity.update)
+    await menuai.async_add_executor_job(media_player_entity.update)
     assert media_player_entity.state == STATE_OFF

@@ -14,18 +14,18 @@ import tempfile
 from aiohttp import BodyPartReader, web
 import voluptuous as vol
 
-from homeassistant.components.http import KEY_HASS, HomeAssistantView
-from homeassistant.components.http.data_validator import RequestDataValidator
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util import raise_if_invalid_filename
-from homeassistant.util.hass_dict import HassKey
-from homeassistant.util.ulid import ulid_hex
+from menuai.components.http import KEY_menuai, menuaiView
+from menuai.components.http.data_validator import RequestDataValidator
+from menuai.const import EVENT_menuai_STOP
+from menuai.core import Event, menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType
+from menuai.util import raise_if_invalid_filename
+from menuai.util.menuai_dict import menuaiKey
+from menuai.util.ulid import ulid_hex
 
 DOMAIN = "file_upload"
-_DATA: HassKey[FileUploadData] = HassKey(DOMAIN)
+_DATA: menuaiKey[FileUploadData] = menuaiKey(DOMAIN)
 
 ONE_MEGABYTE = 1024 * 1024
 MAX_SIZE = 100 * ONE_MEGABYTE
@@ -35,15 +35,15 @@ CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)
 
 
 @contextmanager
-def process_uploaded_file(hass: HomeAssistant, file_id: str) -> Iterator[Path]:
+def process_uploaded_file(menuai: menuai, file_id: str) -> Iterator[Path]:
     """Get an uploaded file.
 
     File is removed at the end of the context.
     """
-    if DOMAIN not in hass.data:
+    if DOMAIN not in menuai.data:
         raise ValueError("File does not exist")
 
-    file_upload_data = hass.data[_DATA]
+    file_upload_data = menuai.data[_DATA]
 
     if not file_upload_data.has_file(file_id):
         raise ValueError("File does not exist")
@@ -55,9 +55,9 @@ def process_uploaded_file(hass: HomeAssistant, file_id: str) -> Iterator[Path]:
         shutil.rmtree(file_upload_data.file_dir(file_id))
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up File Upload."""
-    hass.http.register_view(FileUploadView)
+    menuai.http.register_view(FileUploadView)
     return True
 
 
@@ -69,27 +69,27 @@ class FileUploadData:
     files: dict[str, str]
 
     @classmethod
-    async def create(cls, hass: HomeAssistant) -> FileUploadData:
+    async def create(cls, menuai: menuai) -> FileUploadData:
         """Initialize the file upload data."""
 
         def _create_temp_dir() -> Path:
             """Create temporary directory."""
             temp_dir = Path(tempfile.gettempdir()) / TEMP_DIR_NAME
 
-            # If it exists, it's an old one and Home Assistant didn't shut down correctly.
+            # If it exists, it's an old one and MenuAI didn't shut down correctly.
             if temp_dir.exists():
                 shutil.rmtree(temp_dir)
 
             temp_dir.mkdir(0o700)
             return temp_dir
 
-        temp_dir = await hass.async_add_executor_job(_create_temp_dir)
+        temp_dir = await menuai.async_add_executor_job(_create_temp_dir)
 
         def cleanup_unused_files(ev: Event) -> None:
             """Clean up unused files."""
             shutil.rmtree(temp_dir)
 
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, cleanup_unused_files)
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, cleanup_unused_files)
 
         return cls(temp_dir, {})
 
@@ -106,7 +106,7 @@ class FileUploadData:
         return self.file_dir(file_id) / self.files[file_id]
 
 
-class FileUploadView(HomeAssistantView):
+class FileUploadView(menuaiView):
     """HTTP View to upload files."""
 
     url = "/api/file_upload"
@@ -148,13 +148,13 @@ class FileUploadView(HomeAssistantView):
         except ValueError as err:
             raise web.HTTPBadRequest from err
 
-        hass = request.app[KEY_HASS]
+        menuai = request.app[KEY_menuai]
         file_id = ulid_hex()
 
-        if _DATA not in hass.data:
-            hass.data[_DATA] = await FileUploadData.create(hass)
+        if _DATA not in menuai.data:
+            menuai.data[_DATA] = await FileUploadData.create(menuai)
 
-        file_upload_data = hass.data[_DATA]
+        file_upload_data = menuai.data[_DATA]
         file_dir = file_upload_data.file_dir(file_id)
         queue: SimpleQueue[tuple[bytes, asyncio.Future[None] | None] | None] = (
             SimpleQueue()
@@ -168,12 +168,12 @@ class FileUploadView(HomeAssistantView):
                         break
                     _chunk, _future = _chunk_future
                     if _future is not None:
-                        hass.loop.call_soon_threadsafe(_future.set_result, None)
+                        menuai.loop.call_soon_threadsafe(_future.set_result, None)
                     file_handle.write(_chunk)
 
         fut: asyncio.Future[None] | None = None
         try:
-            fut = hass.async_add_executor_job(_sync_queue_consumer)
+            fut = menuai.async_add_executor_job(_sync_queue_consumer)
             megabytes_sending = 0
             while chunk := await file_field_reader.read_chunk(ONE_MEGABYTE):
                 megabytes_sending += 1
@@ -181,7 +181,7 @@ class FileUploadView(HomeAssistantView):
                     queue.put_nowait((chunk, None))
                     continue
 
-                chunk_future = hass.loop.create_future()
+                chunk_future = menuai.loop.create_future()
                 queue.put_nowait((chunk, chunk_future))
                 await asyncio.wait(
                     (fut, chunk_future), return_when=asyncio.FIRST_COMPLETED
@@ -202,18 +202,18 @@ class FileUploadView(HomeAssistantView):
     @RequestDataValidator({vol.Required("file_id"): str})
     async def delete(self, request: web.Request, data: dict[str, str]) -> web.Response:
         """Delete a file."""
-        hass = request.app[KEY_HASS]
+        menuai = request.app[KEY_menuai]
 
-        if DOMAIN not in hass.data:
+        if DOMAIN not in menuai.data:
             raise web.HTTPNotFound
 
         file_id = data["file_id"]
-        file_upload_data = hass.data[_DATA]
+        file_upload_data = menuai.data[_DATA]
 
         if file_upload_data.files.pop(file_id, None) is None:
             raise web.HTTPNotFound
 
-        await hass.async_add_executor_job(
+        await menuai.async_add_executor_job(
             lambda: shutil.rmtree(file_upload_data.file_dir(file_id))
         )
 

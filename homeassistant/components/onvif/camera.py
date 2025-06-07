@@ -9,20 +9,20 @@ from onvif.exceptions import ONVIFError
 import voluptuous as vol
 from yarl import URL
 
-from homeassistant.components import ffmpeg
-from homeassistant.components.camera import Camera, CameraEntityFeature
-from homeassistant.components.ffmpeg import CONF_EXTRA_ARGUMENTS, get_ffmpeg_manager
-from homeassistant.components.stream import (
+from menuai.components import ffmpeg
+from menuai.components.camera import Camera, CameraEntityFeature
+from menuai.components.ffmpeg import CONF_EXTRA_ARGUMENTS, get_ffmpeg_manager
+from menuai.components.stream import (
     CONF_RTSP_TRANSPORT,
     CONF_USE_WALLCLOCK_AS_TIMESTAMPS,
     RTSP_TRANSPORTS,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import HTTP_BASIC_AUTHENTICATION
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.helpers.aiohttp_client import async_aiohttp_proxy_stream
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import HTTP_BASIC_AUTHENTICATION
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, entity_platform
+from menuai.helpers.aiohttp_client import async_aiohttp_proxy_stream
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
     ABSOLUTE_MOVE,
@@ -55,7 +55,7 @@ from .models import Profile
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -86,7 +86,7 @@ async def async_setup_entry(
         "async_perform_ptz",
     )
 
-    device = hass.data[DOMAIN][config_entry.unique_id]
+    device = menuai.data[DOMAIN][config_entry.unique_id]
     async_add_entities(
         [ONVIFCameraEntity(device, profile) for profile in device.profiles]
     )
@@ -154,7 +154,7 @@ class ONVIFCameraEntity(ONVIFBaseEntity, Camera):
 
         stream_uri = await self._async_get_stream_uri()
         return await ffmpeg.async_get_image(
-            self.hass,
+            self.menuai,
             stream_uri,
             extra_cmd=self.device.config_entry.options.get(CONF_EXTRA_ARGUMENTS),
             width=width,
@@ -165,7 +165,7 @@ class ONVIFCameraEntity(ONVIFBaseEntity, Camera):
         """Generate an HTTP MJPEG stream from the camera."""
         LOGGER.debug("Handling mjpeg stream from camera '%s'", self.device.name)
 
-        ffmpeg_manager = get_ffmpeg_manager(self.hass)
+        ffmpeg_manager = get_ffmpeg_manager(self.menuai)
         stream = CameraMjpeg(ffmpeg_manager.binary)
         stream_uri = await self._async_get_stream_uri()
 
@@ -177,7 +177,7 @@ class ONVIFCameraEntity(ONVIFBaseEntity, Camera):
         try:
             stream_reader = await stream.get_reader()
             return await async_aiohttp_proxy_stream(
-                self.hass,
+                self.menuai,
                 request,
                 stream_reader,
                 ffmpeg_manager.ffmpeg_stream_content_type,

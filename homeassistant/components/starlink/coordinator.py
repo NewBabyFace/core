@@ -26,11 +26,11 @@ from starlink_grpc import (
     status_data,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_IP_ADDRESS
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_IP_ADDRESS
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -55,13 +55,13 @@ class StarlinkUpdateCoordinator(DataUpdateCoordinator[StarlinkData]):
 
     config_entry: StarlinkConfigEntry
 
-    def __init__(self, hass: HomeAssistant, config_entry: StarlinkConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: StarlinkConfigEntry) -> None:
         """Initialize an UpdateCoordinator for a group of sensors."""
         self.channel_context = ChannelContext(target=config_entry.data[CONF_IP_ADDRESS])
         self.history_stats_start = None
-        self.timezone = ZoneInfo(hass.config.time_zone)
+        self.timezone = ZoneInfo(menuai.config.time_zone)
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=config_entry.title,
@@ -94,7 +94,7 @@ class StarlinkUpdateCoordinator(DataUpdateCoordinator[StarlinkData]):
     async def _async_update_data(self) -> StarlinkData:
         async with asyncio.timeout(4):
             try:
-                result = await self.hass.async_add_executor_job(self._get_starlink_data)
+                result = await self.menuai.async_add_executor_job(self._get_starlink_data)
             except GrpcError as exc:
                 raise UpdateFailed from exc
             return result
@@ -103,25 +103,25 @@ class StarlinkUpdateCoordinator(DataUpdateCoordinator[StarlinkData]):
         """Set whether Starlink system tied to this coordinator should be stowed."""
         async with asyncio.timeout(4):
             try:
-                await self.hass.async_add_executor_job(
+                await self.menuai.async_add_executor_job(
                     set_stow_state, not stow, self.channel_context
                 )
             except GrpcError as exc:
-                raise HomeAssistantError from exc
+                raise menuaiError from exc
 
     async def async_reboot_starlink(self) -> None:
         """Reboot the Starlink system tied to this coordinator."""
         async with asyncio.timeout(4):
             try:
-                await self.hass.async_add_executor_job(reboot, self.channel_context)
+                await self.menuai.async_add_executor_job(reboot, self.channel_context)
             except GrpcError as exc:
-                raise HomeAssistantError from exc
+                raise menuaiError from exc
 
     async def async_set_sleep_schedule_enabled(self, sleep_schedule: bool) -> None:
         """Set whether Starlink system uses the configured sleep schedule."""
         async with asyncio.timeout(4):
             try:
-                await self.hass.async_add_executor_job(
+                await self.menuai.async_add_executor_job(
                     set_sleep_config,
                     self.data.sleep[0],
                     self.data.sleep[1],
@@ -129,13 +129,13 @@ class StarlinkUpdateCoordinator(DataUpdateCoordinator[StarlinkData]):
                     self.channel_context,
                 )
             except GrpcError as exc:
-                raise HomeAssistantError from exc
+                raise menuaiError from exc
 
     async def async_set_sleep_start(self, start: int) -> None:
         """Set Starlink system sleep schedule start time."""
         async with asyncio.timeout(4):
             try:
-                await self.hass.async_add_executor_job(
+                await self.menuai.async_add_executor_job(
                     set_sleep_config,
                     start,
                     self.data.sleep[1],
@@ -143,7 +143,7 @@ class StarlinkUpdateCoordinator(DataUpdateCoordinator[StarlinkData]):
                     self.channel_context,
                 )
             except GrpcError as exc:
-                raise HomeAssistantError from exc
+                raise menuaiError from exc
 
     async def async_set_sleep_duration(self, end: int) -> None:
         """Set Starlink system sleep schedule end time."""
@@ -153,7 +153,7 @@ class StarlinkUpdateCoordinator(DataUpdateCoordinator[StarlinkData]):
             duration += 1440
         async with asyncio.timeout(4):
             try:
-                await self.hass.async_add_executor_job(
+                await self.menuai.async_add_executor_job(
                     set_sleep_config,
                     self.data.sleep[0],
                     duration,
@@ -161,4 +161,4 @@ class StarlinkUpdateCoordinator(DataUpdateCoordinator[StarlinkData]):
                     self.channel_context,
                 )
             except GrpcError as exc:
-                raise HomeAssistantError from exc
+                raise menuaiError from exc

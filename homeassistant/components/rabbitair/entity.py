@@ -7,10 +7,10 @@ from typing import Any
 
 from rabbitair import Model
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_MAC
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_MAC
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import RabbitAirDataUpdateCoordinator

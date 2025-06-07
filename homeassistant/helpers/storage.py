@@ -15,24 +15,24 @@ from typing import Any
 
 from propcache.api import cached_property
 
-from homeassistant.const import (
-    EVENT_HOMEASSISTANT_FINAL_WRITE,
-    EVENT_HOMEASSISTANT_STARTED,
-    EVENT_HOMEASSISTANT_STOP,
+from menuai.const import (
+    EVENT_menuai_FINAL_WRITE,
+    EVENT_menuai_STARTED,
+    EVENT_menuai_STOP,
 )
-from homeassistant.core import (
+from menuai.core import (
     CALLBACK_TYPE,
-    DOMAIN as HOMEASSISTANT_DOMAIN,
+    DOMAIN as menuai_DOMAIN,
     CoreState,
     Event,
-    HomeAssistant,
+    menuai,
     callback,
 )
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.loader import bind_hass
-from homeassistant.util import dt as dt_util, json as json_util
-from homeassistant.util.file import WriteError
-from homeassistant.util.hass_dict import HassKey
+from menuai.exceptions import menuaiError
+from menuai.loader import bind_menuai
+from menuai.util import dt as dt_util, json as json_util
+from menuai.util.file import WriteError
+from menuai.util.menuai_dict import menuaiKey
 
 from . import json as json_helper
 
@@ -43,15 +43,15 @@ MAX_LOAD_CONCURRENTLY = 6
 STORAGE_DIR = ".storage"
 _LOGGER = logging.getLogger(__name__)
 
-STORAGE_SEMAPHORE: HassKey[asyncio.Semaphore] = HassKey("storage_semaphore")
-STORAGE_MANAGER: HassKey[_StoreManager] = HassKey("storage_manager")
+STORAGE_SEMAPHORE: menuaiKey[asyncio.Semaphore] = menuaiKey("storage_semaphore")
+STORAGE_MANAGER: menuaiKey[_StoreManager] = menuaiKey("storage_manager")
 
 MANAGER_CLEANUP_DELAY = 60
 
 
-@bind_hass
+@bind_menuai
 async def async_migrator[_T: Mapping[str, Any] | Sequence[Any]](
-    hass: HomeAssistant,
+    menuai: menuai,
     old_path: str,
     store: Store[_T],
     *,
@@ -76,7 +76,7 @@ async def async_migrator[_T: Mapping[str, Any] | Sequence[Any]](
 
         return json_util.load_json(old_path)
 
-    config = await hass.async_add_executor_job(load_old_config)
+    config = await menuai.async_add_executor_job(load_old_config)
 
     if config is None:
         return None
@@ -85,21 +85,21 @@ async def async_migrator[_T: Mapping[str, Any] | Sequence[Any]](
         config = await old_conf_migrate_func(config)
 
     await store.async_save(config)
-    await hass.async_add_executor_job(os.remove, old_path)
+    await menuai.async_add_executor_job(os.remove, old_path)
     return config
 
 
-def get_internal_store_manager(hass: HomeAssistant) -> _StoreManager:
+def get_internal_store_manager(menuai: menuai) -> _StoreManager:
     """Get the store manager.
 
     This function is not part of the API and should only be
-    used in the Home Assistant core internals. It is not
+    used in the MenuAI core internals. It is not
     guaranteed to be stable.
     """
-    if STORAGE_MANAGER not in hass.data:
-        manager = _StoreManager(hass)
-        hass.data[STORAGE_MANAGER] = manager
-    return hass.data[STORAGE_MANAGER]
+    if STORAGE_MANAGER not in menuai.data:
+        manager = _StoreManager(menuai)
+        menuai.data[STORAGE_MANAGER] = manager
+    return menuai.data[STORAGE_MANAGER]
 
 
 class _StoreManager:
@@ -108,21 +108,21 @@ class _StoreManager:
     The store manager is used to cache and manage storage files.
     """
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize storage manager class."""
-        self._hass = hass
+        self._menuai = menuai
         self._invalidated: set[str] = set()
         self._files: set[str] | None = None
         self._data_preload: dict[str, json_util.JsonValueType] = {}
-        self._storage_path: Path = Path(hass.config.config_dir).joinpath(STORAGE_DIR)
+        self._storage_path: Path = Path(menuai.config.config_dir).joinpath(STORAGE_DIR)
         self._cancel_cleanup: asyncio.TimerHandle | None = None
 
     async def async_initialize(self) -> None:
         """Initialize the storage manager."""
-        hass = self._hass
-        await hass.async_add_executor_job(self._initialize_files)
-        hass.bus.async_listen_once(
-            EVENT_HOMEASSISTANT_STARTED,
+        menuai = self._menuai
+        await menuai.async_add_executor_job(self._initialize_files)
+        menuai.bus.async_listen_once(
+            EVENT_menuai_STARTED,
             self._async_schedule_cleanup,
         )
 
@@ -176,12 +176,12 @@ class _StoreManager:
     @callback
     def _async_schedule_cleanup(self, _event: Event) -> None:
         """Schedule the cleanup of old files."""
-        self._cancel_cleanup = self._hass.loop.call_later(
+        self._cancel_cleanup = self._menuai.loop.call_later(
             MANAGER_CLEANUP_DELAY, self._async_cleanup
         )
         # Handle the case where we stop in the first 60s
-        self._hass.bus.async_listen_once(
-            EVENT_HOMEASSISTANT_STOP,
+        self._menuai.bus.async_listen_once(
+            EVENT_menuai_STOP,
             self._async_cancel_and_cleanup,
         )
 
@@ -198,7 +198,7 @@ class _StoreManager:
         """Cleanup unused cache.
 
         If nothing consumes the cache 60s after startup or when we
-        stop Home Assistant, we'll clear the cache.
+        stop MenuAI, we'll clear the cache.
         """
         self._data_preload.clear()
 
@@ -206,7 +206,7 @@ class _StoreManager:
         """Cache the keys."""
         # If async_initialize has not been called yet, we can't preload
         if self._files is not None and (existing := self._files.intersection(keys)):
-            await self._hass.async_add_executor_job(self._preload, existing)
+            await self._menuai.async_add_executor_job(self._preload, existing)
 
     def _preload(self, keys: Iterable[str]) -> None:
         """Cache the keys."""
@@ -226,13 +226,13 @@ class _StoreManager:
             self._files = set(os.listdir(self._storage_path))
 
 
-@bind_hass
+@bind_menuai
 class Store[_T: Mapping[str, Any] | Sequence[Any]]:
     """Class to help storing data."""
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         version: int,
         key: str,
         private: bool = False,
@@ -246,7 +246,7 @@ class Store[_T: Mapping[str, Any] | Sequence[Any]]:
         self.version = version
         self.minor_version = minor_version
         self.key = key
-        self.hass = hass
+        self.menuai = menuai
         self._private = private
         self._data: dict[str, Any] | None = None
         self._delay_handle: asyncio.TimerHandle | None = None
@@ -257,12 +257,12 @@ class Store[_T: Mapping[str, Any] | Sequence[Any]]:
         self._atomic_writes = atomic_writes
         self._read_only = read_only
         self._next_write_time = 0.0
-        self._manager = get_internal_store_manager(hass)
+        self._manager = get_internal_store_manager(menuai)
 
     @cached_property
     def path(self):
         """Return the config path."""
-        return self.hass.config.path(STORAGE_DIR, self.key)
+        return self.menuai.config.path(STORAGE_DIR, self.key)
 
     def make_read_only(self) -> None:
         """Make the store read-only.
@@ -284,7 +284,7 @@ class Store[_T: Mapping[str, Any] | Sequence[Any]]:
         if self._load_future:
             return await self._load_future
 
-        self._load_future = self.hass.loop.create_future()
+        self._load_future = self.menuai.loop.create_future()
         try:
             result = await self._async_load()
         except BaseException as ex:
@@ -303,9 +303,9 @@ class Store[_T: Mapping[str, Any] | Sequence[Any]]:
 
     async def _async_load(self) -> _T | None:
         """Load the data and ensure the task is removed."""
-        if STORAGE_SEMAPHORE not in self.hass.data:
-            self.hass.data[STORAGE_SEMAPHORE] = asyncio.Semaphore(MAX_LOAD_CONCURRENTLY)
-        async with self.hass.data[STORAGE_SEMAPHORE]:
+        if STORAGE_SEMAPHORE not in self.menuai.data:
+            self.menuai.data[STORAGE_SEMAPHORE] = asyncio.Semaphore(MAX_LOAD_CONCURRENTLY)
+        async with self.menuai.data[STORAGE_SEMAPHORE]:
             return await self._async_load_data()
 
     async def _async_load_data(self):
@@ -327,10 +327,10 @@ class Store[_T: Mapping[str, Any] | Sequence[Any]]:
                 return None
         else:
             try:
-                data = await self.hass.async_add_executor_job(
+                data = await self.menuai.async_add_executor_job(
                     json_util.load_json, self.path
                 )
-            except HomeAssistantError as err:
+            except menuaiError as err:
                 if isinstance(err.__cause__, JSONDecodeError):
                     # If we have a JSONDecodeError, it means the file is corrupt.
                     # We can't recover from this, so we'll log an error, rename the file and
@@ -339,7 +339,7 @@ class Store[_T: Mapping[str, Any] | Sequence[Any]]:
                     isotime = dt_util.utcnow().isoformat()
                     corrupt_postfix = f".corrupt.{isotime}"
                     corrupt_path = f"{self.path}{corrupt_postfix}"
-                    await self.hass.async_add_executor_job(
+                    await self.menuai.async_add_executor_job(
                         os.rename, self.path, corrupt_path
                     )
                     storage_key = self.key
@@ -359,15 +359,15 @@ class Store[_T: Mapping[str, Any] | Sequence[Any]]:
                         async_create_issue,
                     )
 
-                    issue_domain = HOMEASSISTANT_DOMAIN
+                    issue_domain = menuai_DOMAIN
                     if (
                         domain := (storage_key.partition(".")[0])
-                    ) and domain in self.hass.config.components:
+                    ) and domain in self.menuai.config.components:
                         issue_domain = domain
 
                     async_create_issue(
-                        self.hass,
-                        HOMEASSISTANT_DOMAIN,
+                        self.menuai,
+                        menuai_DOMAIN,
                         f"storage_corruption_{storage_key}_{isotime}",
                         is_fixable=True,
                         issue_domain=issue_domain,
@@ -429,7 +429,7 @@ class Store[_T: Mapping[str, Any] | Sequence[Any]]:
             "data": data,
         }
 
-        if self.hass.state is CoreState.stopping:
+        if self.menuai.state is CoreState.stopping:
             self._async_ensure_final_write_listener()
             return
 
@@ -449,7 +449,7 @@ class Store[_T: Mapping[str, Any] | Sequence[Any]]:
             "data_func": data_func,
         }
 
-        next_when = self.hass.loop.time() + delay
+        next_when = self.menuai.loop.time() + delay
         if self._delay_handle and self._delay_handle.when() < next_when:
             self._next_write_time = next_when
             return
@@ -457,7 +457,7 @@ class Store[_T: Mapping[str, Any] | Sequence[Any]]:
         self._async_cleanup_delay_listener()
         self._async_ensure_final_write_listener()
 
-        if self.hass.state is CoreState.stopping:
+        if self.menuai.state is CoreState.stopping:
             return
 
         # We use call_later directly here to avoid a circular import
@@ -466,20 +466,20 @@ class Store[_T: Mapping[str, Any] | Sequence[Any]]:
     @callback
     def _async_reschedule_delayed_write(self, when: float) -> None:
         """Reschedule a delayed write."""
-        self._delay_handle = self.hass.loop.call_at(
+        self._delay_handle = self.menuai.loop.call_at(
             when, self._async_schedule_callback_delayed_write
         )
 
     @callback
     def _async_schedule_callback_delayed_write(self) -> None:
         """Schedule the delayed write in a task."""
-        if self.hass.loop.time() < self._next_write_time:
+        if self.menuai.loop.time() < self._next_write_time:
             # Timer fired too early because there were multiple
             # calls to async_delay_save before the first one
             # wrote. Reschedule the timer to the next write time.
             self._async_reschedule_delayed_write(self._next_write_time)
             return
-        self.hass.async_create_task_internal(
+        self.menuai.async_create_task_internal(
             self._async_callback_delayed_write(), eager_start=True
         )
 
@@ -487,8 +487,8 @@ class Store[_T: Mapping[str, Any] | Sequence[Any]]:
     def _async_ensure_final_write_listener(self) -> None:
         """Ensure that we write if we quit before delay has passed."""
         if self._unsub_final_write_listener is None:
-            self._unsub_final_write_listener = self.hass.bus.async_listen_once(
-                EVENT_HOMEASSISTANT_FINAL_WRITE,
+            self._unsub_final_write_listener = self.menuai.bus.async_listen_once(
+                EVENT_menuai_FINAL_WRITE,
                 self._async_callback_final_write,
             )
 
@@ -508,14 +508,14 @@ class Store[_T: Mapping[str, Any] | Sequence[Any]]:
 
     async def _async_callback_delayed_write(self) -> None:
         """Handle a delayed write callback."""
-        # catch the case where a call is scheduled and then we stop Home Assistant
-        if self.hass.state is CoreState.stopping:
+        # catch the case where a call is scheduled and then we stop MenuAI
+        if self.menuai.state is CoreState.stopping:
             self._async_ensure_final_write_listener()
             return
         await self._async_handle_write_data()
 
     async def _async_callback_final_write(self, _event: Event) -> None:
-        """Handle a write because Home Assistant is in final write state."""
+        """Handle a write because MenuAI is in final write state."""
         self._unsub_final_write_listener = None
         await self._async_handle_write_data()
 
@@ -542,7 +542,7 @@ class Store[_T: Mapping[str, Any] | Sequence[Any]]:
                 _LOGGER.error("Error writing config for %s: %s", self.key, err)
 
     async def _async_write_data(self, path: str, data: dict) -> None:
-        await self.hass.async_add_executor_job(self._write_data, self.path, data)
+        await self.menuai.async_add_executor_job(self._write_data, self.path, data)
 
     def _write_data(self, path: str, data: dict) -> None:
         """Write the data."""
@@ -571,4 +571,4 @@ class Store[_T: Mapping[str, Any] | Sequence[Any]]:
         self._async_cleanup_final_write_listener()
 
         with suppress(FileNotFoundError):
-            await self.hass.async_add_executor_job(os.unlink, self.path)
+            await self.menuai.async_add_executor_job(os.unlink, self.path)

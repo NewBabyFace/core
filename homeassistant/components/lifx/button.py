@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-from homeassistant.components.button import (
+from menuai.components.button import (
     ButtonDeviceClass,
     ButtonEntity,
     ButtonEntityDescription,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN, IDENTIFY, RESTART
 from .coordinator import LIFXUpdateCoordinator
@@ -30,12 +30,12 @@ IDENTIFY_BUTTON_DESCRIPTION = ButtonEntityDescription(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up LIFX from a config entry."""
-    domain_data = hass.data[DOMAIN]
+    domain_data = menuai.data[DOMAIN]
     coordinator: LIFXUpdateCoordinator = domain_data[entry.entry_id]
     async_add_entities(
         [LIFXRestartButton(coordinator), LIFXIdentifyButton(coordinator)]

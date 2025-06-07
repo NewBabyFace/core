@@ -14,12 +14,12 @@ from typing import TYPE_CHECKING, Any
 
 from aiounifi.interfaces.api_handlers import ItemEvent
 
-from homeassistant.const import Platform
-from homeassistant.core import callback
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.const import Platform
+from menuai.core import callback
+from menuai.helpers import entity_registry as er
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from ..const import LOGGER, UNIFI_WIRELESS_CLIENTS
 from ..entity import UnifiEntity, UnifiEntityDescription
@@ -55,10 +55,10 @@ class UnifiEntityLoader:
             hub.api.traffic_rules.update,
             hub.api.traffic_routes.update,
         )
-        self.wireless_clients = hub.hass.data[UNIFI_WIRELESS_CLIENTS]
+        self.wireless_clients = hub.menuai.data[UNIFI_WIRELESS_CLIENTS]
 
         self._dataUpdateCoordinator = DataUpdateCoordinator(
-            hub.hass,
+            hub.menuai,
             LOGGER,
             name="Unifi entity poller",
             update_method=self._update_pollable_api_data,
@@ -113,7 +113,7 @@ class UnifiEntityLoader:
         Provide inactive clients to device tracker and switch platform.
         """
         config = self.hub.config
-        entity_registry = er.async_get(self.hub.hass)
+        entity_registry = er.async_get(self.hub.menuai)
         macs: list[str] = [
             entry.unique_id.split("-", 1)[1]
             for entry in er.async_entries_for_config_entry(
@@ -186,7 +186,7 @@ class UnifiEntityLoader:
 
         self.hub.config.entry.async_on_unload(
             async_dispatcher_connect(
-                self.hub.hass,
+                self.hub.menuai,
                 self.hub.signal_options_update,
                 add_unifi_entities,
             )

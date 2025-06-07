@@ -8,12 +8,12 @@ import pytest
 from pytest_unordered import unordered
 import RFXtrx
 
-from homeassistant.components import automation
-from homeassistant.components.device_automation import DeviceAutomationType
-from homeassistant.components.rfxtrx import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.setup import async_setup_component
+from menuai.components import automation
+from menuai.components.device_automation import DeviceAutomationType
+from menuai.components.rfxtrx import DOMAIN
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.setup import async_setup_component
 
 from .conftest import create_rfx_test_cfg
 
@@ -47,16 +47,16 @@ async def test_device_test_data(rfxtrx, device: DeviceTestData) -> None:
     }
 
 
-async def setup_entry(hass: HomeAssistant, devices: dict[str, Any]) -> None:
+async def setup_entry(menuai: menuai, devices: dict[str, Any]) -> None:
     """Construct a config setup."""
     entry_data = create_rfx_test_cfg(devices=devices)
     mock_entry = MockConfigEntry(domain="rfxtrx", unique_id=DOMAIN, data=entry_data)
 
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
-    await hass.async_start()
+    await menuai.config_entries.async_setup(mock_entry.entry_id)
+    await menuai.async_block_till_done()
+    await menuai.async_start()
 
 
 def _get_expected_actions(data):
@@ -79,13 +79,13 @@ def _get_expected_actions(data):
     ],
 )
 async def test_get_actions(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     device: DeviceTestData,
     expected,
 ) -> None:
     """Test we get the expected actions from a rfxtrx."""
-    await setup_entry(hass, {device.code: {}})
+    await setup_entry(menuai, {device.code: {}})
 
     device_entry = device_registry.async_get_device(
         identifiers=device.device_identifiers
@@ -103,7 +103,7 @@ async def test_get_actions(
     assert device_entry
 
     actions = await async_get_device_automations(
-        hass, DeviceAutomationType.ACTION, device_entry.id
+        menuai, DeviceAutomationType.ACTION, device_entry.id
     )
     actions = [action for action in actions if action["domain"] == DOMAIN]
 
@@ -136,7 +136,7 @@ async def test_get_actions(
     ],
 )
 async def test_action(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     rfxtrx: RFXtrx.Connect,
     device: DeviceTestData,
@@ -145,7 +145,7 @@ async def test_action(
 ) -> None:
     """Test for actions."""
 
-    await setup_entry(hass, {device.code: {}})
+    await setup_entry(menuai, {device.code: {}})
 
     device_entry = device_registry.async_get_device(
         identifiers=device.device_identifiers
@@ -153,7 +153,7 @@ async def test_action(
     assert device_entry
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -172,28 +172,28 @@ async def test_action(
         },
     )
 
-    hass.bus.async_fire("test_event")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event")
+    await menuai.async_block_till_done()
 
     rfxtrx.transport.send.assert_called_once_with(bytearray.fromhex(expected))
 
 
 async def test_invalid_action(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test for invalid actions."""
     device = DEVICE_LIGHTING_1
 
-    await setup_entry(hass, {device.code: {}})
+    await setup_entry(menuai, {device.code: {}})
 
     device_identifiers: Any = device.device_identifiers
     device_entry = device_registry.async_get_device(identifiers=device_identifiers)
     assert device_entry
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -212,6 +212,6 @@ async def test_invalid_action(
             ]
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert "Subtype invalid not found in device commands" in caplog.text

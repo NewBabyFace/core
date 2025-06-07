@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from PyTado.http import DeviceActivationStatus
 import pytest
 
-from homeassistant.components.tado import CONF_REFRESH_TOKEN, DOMAIN
+from menuai.components.tado import CONF_REFRESH_TOKEN, DOMAIN
 
 from tests.common import MockConfigEntry, load_json_object_fixture
 
@@ -15,8 +15,8 @@ from tests.common import MockConfigEntry, load_json_object_fixture
 def mock_tado_api() -> Generator[MagicMock]:
     """Mock the Tado API."""
     with (
-        patch("homeassistant.components.tado.Tado") as mock_tado,
-        patch("homeassistant.components.tado.config_flow.Tado", new=mock_tado),
+        patch("menuai.components.tado.Tado") as mock_tado,
+        patch("menuai.components.tado.config_flow.Tado", new=mock_tado),
     ):
         client = mock_tado.return_value
         client.device_verification_url.return_value = (
@@ -32,7 +32,7 @@ def mock_tado_api() -> Generator[MagicMock]:
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Mock the setup entry."""
     with patch(
-        "homeassistant.components.tado.async_setup_entry", return_value=True
+        "menuai.components.tado.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 

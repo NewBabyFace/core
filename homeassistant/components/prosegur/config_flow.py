@@ -8,11 +8,11 @@ from pyprosegur.auth import COUNTRY, Auth
 from pyprosegur.installation import Installation
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_COUNTRY, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import aiohttp_client, selector
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_COUNTRY, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import aiohttp_client, selector
 
 from .const import CONF_CONTRACT, DOMAIN
 
@@ -29,9 +29,9 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
 )
 
 
-async def validate_input(hass: HomeAssistant, data):
+async def validate_input(menuai: menuai, data):
     """Validate the user input allows us to connect."""
-    session = aiohttp_client.async_get_clientsession(hass)
+    session = aiohttp_client.async_get_clientsession(menuai)
     auth = Auth(session, data[CONF_USERNAME], data[CONF_PASSWORD], data[CONF_COUNTRY])
     try:
         contracts = await Installation.list(auth)
@@ -58,7 +58,7 @@ class ProsegurConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if user_input:
             try:
-                self.auth, self.contracts = await validate_input(self.hass, user_input)
+                self.auth, self.contracts = await validate_input(self.menuai, user_input)
             except CannotConnect:
                 errors["base"] = "cannot_connect"
             except InvalidAuth:
@@ -121,7 +121,7 @@ class ProsegurConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input:
             try:
                 user_input[CONF_COUNTRY] = reauth_entry.data[CONF_COUNTRY]
-                self.auth, self.contracts = await validate_input(self.hass, user_input)
+                self.auth, self.contracts = await validate_input(self.menuai, user_input)
 
             except CannotConnect:
                 errors["base"] = "cannot_connect"
@@ -153,9 +153,9 @@ class ProsegurConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(menuaiError):
     """Error to indicate there is invalid auth."""

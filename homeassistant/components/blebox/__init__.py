@@ -6,16 +6,16 @@ from blebox_uniapi.box import Box
 from blebox_uniapi.error import Error
 from blebox_uniapi.session import ApiHost
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
     CONF_USERNAME,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
 
 from .const import DEFAULT_SETUP_TIMEOUT
 from .helpers import get_maybe_authenticated_session
@@ -37,7 +37,7 @@ PLATFORMS = [
 PARALLEL_UPDATES = 0
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: BleBoxConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: BleBoxConfigEntry) -> bool:
     """Set up BleBox devices from a config entry."""
     host = entry.data[CONF_HOST]
     port = entry.data[CONF_PORT]
@@ -47,9 +47,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: BleBoxConfigEntry) -> bo
 
     timeout = DEFAULT_SETUP_TIMEOUT
 
-    websession = get_maybe_authenticated_session(hass, password, username)
+    websession = get_maybe_authenticated_session(menuai, password, username)
 
-    api_host = ApiHost(host, port, timeout, websession, hass.loop)
+    api_host = ApiHost(host, port, timeout, websession, menuai.loop)
 
     try:
         product = await Box.async_from_host(api_host)
@@ -59,11 +59,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: BleBoxConfigEntry) -> bo
 
     entry.runtime_data = product
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: BleBoxConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: BleBoxConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from tests.common import raise_contains_mocks
 
@@ -43,8 +43,8 @@ def mock_config_store(data: dict[str, Any] | None = None) -> Generator[dict[str,
         # To ensure that the data can be serialized
         data[file_name] = json.loads(json.dumps(data_to_write))
 
-    async def mock_async_hass_config_yaml(hass: HomeAssistant) -> dict:
-        """Mock version of async_hass_config_yaml."""
+    async def mock_async_menuai_config_yaml(menuai: menuai) -> dict:
+        """Mock version of async_menuai_config_yaml."""
         result = {}
         # Return a configuration.yaml with "automation" mapped to the contents of
         # automations.yaml and so on.
@@ -55,18 +55,18 @@ def mock_config_store(data: dict[str, Any] | None = None) -> Generator[dict[str,
 
     with (
         patch(
-            "homeassistant.components.config.view._read",
+            "menuai.components.config.view._read",
             side_effect=mock_read,
             autospec=True,
         ),
         patch(
-            "homeassistant.components.config.view._write",
+            "menuai.components.config.view._write",
             side_effect=mock_write,
             autospec=True,
         ),
         patch(
-            "homeassistant.config.async_hass_config_yaml",
-            side_effect=mock_async_hass_config_yaml,
+            "menuai.config.async_menuai_config_yaml",
+            side_effect=mock_async_menuai_config_yaml,
             autospec=True,
         ),
     ):
@@ -74,7 +74,7 @@ def mock_config_store(data: dict[str, Any] | None = None) -> Generator[dict[str,
 
 
 @pytest.fixture
-def hass_config_store() -> Generator[dict[str, Any]]:
+def menuai_config_store() -> Generator[dict[str, Any]]:
     """Fixture to mock config yaml store."""
     with mock_config_store() as stored_data:
         yield stored_data

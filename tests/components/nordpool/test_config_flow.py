@@ -14,11 +14,11 @@ from pynordpool import (
 )
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.nordpool.const import CONF_AREAS, DOMAIN
-from homeassistant.const import CONF_CURRENCY
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.nordpool.const import CONF_AREAS, DOMAIN
+from menuai.const import CONF_CURRENCY
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from . import ENTRY_CONFIG
 
@@ -27,20 +27,20 @@ from tests.test_util.aiohttp import AiohttpClientMocker
 
 
 @pytest.mark.freeze_time("2024-11-05T18:00:00+00:00")
-async def test_form(hass: HomeAssistant, get_client: NordPoolClient) -> None:
+async def test_form(menuai: menuai, get_client: NordPoolClient) -> None:
     """Test we get the form."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["step_id"] == "user"
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         ENTRY_CONFIG,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["version"] == 1
@@ -50,11 +50,11 @@ async def test_form(hass: HomeAssistant, get_client: NordPoolClient) -> None:
 
 @pytest.mark.freeze_time("2024-11-05T18:00:00+00:00")
 async def test_single_config_entry(
-    hass: HomeAssistant, load_int: None, get_client: NordPoolClient
+    menuai: menuai, load_int: None, get_client: NordPoolClient
 ) -> None:
     """Test abort for single config entry."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.ABORT
@@ -72,14 +72,14 @@ async def test_single_config_entry(
     ],
 )
 async def test_cannot_connect(
-    hass: HomeAssistant,
+    menuai: menuai,
     get_client: NordPoolClient,
     error_message: Exception,
     p_error: str,
 ) -> None:
     """Test cannot connect error."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -87,17 +87,17 @@ async def test_cannot_connect(
     assert result["step_id"] == config_entries.SOURCE_USER
 
     with patch(
-        "homeassistant.components.nordpool.coordinator.NordPoolClient.async_get_delivery_period",
+        "menuai.components.nordpool.coordinator.NordPoolClient.async_get_delivery_period",
         side_effect=error_message,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input=ENTRY_CONFIG,
         )
 
     assert result["errors"] == {"base": p_error}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=ENTRY_CONFIG,
     )
@@ -109,14 +109,14 @@ async def test_cannot_connect(
 
 @pytest.mark.freeze_time("2024-11-05T18:00:00+00:00")
 async def test_reconfigure(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: MockConfigEntry,
 ) -> None:
     """Test reconfiguration."""
 
-    result = await load_int.start_reconfigure_flow(hass)
+    result = await load_int.start_reconfigure_flow(menuai)
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_AREAS: ["SE3"],
@@ -145,7 +145,7 @@ async def test_reconfigure(
     ],
 )
 async def test_reconfigure_cannot_connect(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: MockConfigEntry,
     aioclient_mock: AiohttpClientMocker,
     load_json: list[dict[str, Any]],
@@ -154,13 +154,13 @@ async def test_reconfigure_cannot_connect(
 ) -> None:
     """Test cannot connect error in a reeconfigure flow."""
 
-    result = await load_int.start_reconfigure_flow(hass)
+    result = await load_int.start_reconfigure_flow(menuai)
 
     with patch(
-        "homeassistant.components.nordpool.coordinator.NordPoolClient.async_get_delivery_period",
+        "menuai.components.nordpool.coordinator.NordPoolClient.async_get_delivery_period",
         side_effect=error_message,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={
                 CONF_AREAS: ["SE3"],
@@ -170,7 +170,7 @@ async def test_reconfigure_cannot_connect(
 
     assert result["errors"] == {"base": p_error}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_AREAS: ["SE3"],

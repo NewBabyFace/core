@@ -9,15 +9,15 @@ from aiohttp import ClientError, ClientResponseError
 import jwt
 from myuplink import MyUplinkAPI, get_manufacturer, get_model, get_system_name
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import (
+from menuai.const import Platform
+from menuai.core import menuai, callback
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import (
     aiohttp_client,
     config_entry_oauth2_flow,
     device_registry as dr,
 )
-from homeassistant.helpers.device_registry import DeviceEntry
+from menuai.helpers.device_registry import DeviceEntry
 
 from .api import AsyncConfigEntryAuth
 from .const import DOMAIN, OAUTH2_SCOPES
@@ -36,17 +36,17 @@ PLATFORMS: list[Platform] = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, config_entry: MyUplinkConfigEntry
+    menuai: menuai, config_entry: MyUplinkConfigEntry
 ) -> bool:
     """Set up myUplink from a config entry."""
 
     implementation = (
         await config_entry_oauth2_flow.async_get_config_entry_implementation(
-            hass, config_entry
+            menuai, config_entry
         )
     )
-    session = config_entry_oauth2_flow.OAuth2Session(hass, config_entry, implementation)
-    auth = AsyncConfigEntryAuth(aiohttp_client.async_get_clientsession(hass), session)
+    session = config_entry_oauth2_flow.OAuth2Session(menuai, config_entry, implementation)
+    auth = AsyncConfigEntryAuth(aiohttp_client.async_get_clientsession(menuai), session)
 
     try:
         await auth.async_get_access_token()
@@ -74,31 +74,31 @@ async def async_setup_entry(
 
     # Setup MyUplinkAPI and coordinator for data fetch
     api = MyUplinkAPI(auth)
-    coordinator = MyUplinkDataCoordinator(hass, config_entry, api)
+    coordinator = MyUplinkDataCoordinator(menuai, config_entry, api)
     await coordinator.async_config_entry_first_refresh()
     config_entry.runtime_data = coordinator
 
     # Update device registry
-    create_devices(hass, config_entry, coordinator)
+    create_devices(menuai, config_entry, coordinator)
 
-    await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: MyUplinkConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: MyUplinkConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 @callback
 def create_devices(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MyUplinkConfigEntry,
     coordinator: MyUplinkDataCoordinator,
 ) -> None:
     """Update all devices."""
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
 
     for system in coordinator.data.systems:
         devices_in_system = [x.id for x in system.devices]
@@ -116,7 +116,7 @@ def create_devices(
 
 
 async def async_remove_config_entry_device(
-    hass: HomeAssistant, config_entry: MyUplinkConfigEntry, device_entry: DeviceEntry
+    menuai: menuai, config_entry: MyUplinkConfigEntry, device_entry: DeviceEntry
 ) -> bool:
     """Remove myuplink config entry from a device."""
 
@@ -127,7 +127,7 @@ async def async_remove_config_entry_device(
 
 
 async def async_migrate_entry(
-    hass: HomeAssistant, config_entry: MyUplinkConfigEntry
+    menuai: menuai, config_entry: MyUplinkConfigEntry
 ) -> bool:
     """Migrate old entry."""
 
@@ -138,7 +138,7 @@ async def async_migrate_entry(
             options={"verify_signature": False},
         )
         uid = token["sub"]
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             config_entry, unique_id=uid, minor_version=2
         )
         _LOGGER.info(

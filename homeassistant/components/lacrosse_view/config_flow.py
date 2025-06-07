@@ -9,10 +9,10 @@ from typing import Any
 from lacrosse_view import LaCrosse, Location, LoginError
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN
 
@@ -25,10 +25,10 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
 _LOGGER = logging.getLogger(__name__)
 
 
-async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> list[Location]:
+async def validate_input(menuai: menuai, data: dict[str, Any]) -> list[Location]:
     """Validate the user input allows us to connect."""
 
-    api = LaCrosse(async_get_clientsession(hass))
+    api = LaCrosse(async_get_clientsession(menuai))
 
     try:
         if await api.login(data["username"], data["password"]):
@@ -68,7 +68,7 @@ class LaCrosseViewConfigFlow(ConfigFlow, domain=DOMAIN):
         errors = {}
 
         try:
-            info = await validate_input(self.hass, user_input)
+            info = await validate_input(self.menuai, user_input)
         except InvalidAuth:
             _LOGGER.exception("Could not login")
             errors["base"] = "invalid_auth"
@@ -139,13 +139,13 @@ class LaCrosseViewConfigFlow(ConfigFlow, domain=DOMAIN):
         return await self.async_step_user()
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(menuaiError):
     """Error to indicate there is invalid auth."""
 
 
-class NoLocations(HomeAssistantError):
+class NoLocations(menuaiError):
     """Error to indicate there are no locations."""
 
 
-class NonExistentEntry(HomeAssistantError):
+class NonExistentEntry(menuaiError):
     """Error to indicate that the entry does not exist when it should."""

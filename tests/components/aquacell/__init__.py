@@ -2,13 +2,13 @@
 
 from aioaquacell import Brand
 
-from homeassistant.components.aquacell.const import (
+from menuai.components.aquacell.const import (
     CONF_BRAND,
     CONF_REFRESH_TOKEN,
     CONF_REFRESH_TOKEN_CREATION_TIME,
 )
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
-from homeassistant.core import HomeAssistant
+from menuai.const import CONF_EMAIL, CONF_PASSWORD
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -36,10 +36,10 @@ TEST_USER_INPUT = {
 DSN = "DSN"
 
 
-async def setup_integration(hass: HomeAssistant, config_entry: MockConfigEntry) -> None:
+async def setup_integration(menuai: menuai, config_entry: MockConfigEntry) -> None:
     """Fixture for setting up the component."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()

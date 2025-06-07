@@ -5,12 +5,12 @@ from unittest.mock import patch
 from hatasmota.discovery import get_status_sensor_entities
 import pytest
 
-from homeassistant.components.tasmota.const import (
+from menuai.components.tasmota.const import (
     CONF_DISCOVERY_PREFIX,
     DEFAULT_PREFIX,
     DOMAIN,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 from tests.components.light.conftest import mock_light_profiles  # noqa: F401
@@ -37,9 +37,9 @@ def disable_status_sensor(status_sensor_disabled):
         yield
 
 
-async def setup_tasmota_helper(hass: HomeAssistant) -> None:
+async def setup_tasmota_helper(menuai: menuai) -> None:
     """Set up Tasmota."""
-    hass.config.components.add("tasmota")
+    menuai.config.components.add("tasmota")
 
     entry = MockConfigEntry(
         data={CONF_DISCOVERY_PREFIX: DEFAULT_PREFIX},
@@ -47,15 +47,15 @@ async def setup_tasmota_helper(hass: HomeAssistant) -> None:
         title="Tasmota",
     )
 
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert "tasmota" in hass.config.components
+    assert "tasmota" in menuai.config.components
 
 
 @pytest.fixture
-async def setup_tasmota(hass: HomeAssistant) -> None:
+async def setup_tasmota(menuai: menuai) -> None:
     """Set up Tasmota."""
-    await setup_tasmota_helper(hass)
+    await setup_tasmota_helper(menuai)

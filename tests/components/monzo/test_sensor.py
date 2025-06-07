@@ -9,16 +9,16 @@ from monzopy import InvalidMonzoAPIResponseError
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.monzo.const import DOMAIN
-from homeassistant.components.monzo.sensor import (
+from menuai.components.monzo.const import DOMAIN
+from menuai.components.monzo.sensor import (
     ACCOUNT_SENSORS,
     POT_SENSORS,
     MonzoSensorEntityDescription,
 )
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.const import STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant, State
-from homeassistant.helpers import entity_registry as er
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.const import STATE_UNAVAILABLE
+from menuai.core import menuai, State
+from menuai.helpers import entity_registry as er
 
 from . import setup_integration
 from .conftest import TEST_ACCOUNTS, TEST_POTS
@@ -34,12 +34,12 @@ EXPECTED_VALUE_GETTERS = {
 
 
 async def async_get_entity_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     acc_id: str,
     description: MonzoSensorEntityDescription,
 ) -> str | None:
     """Get an entity id for a user's attribute."""
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
     unique_id = f"{acc_id}_{description.key}"
 
     return entity_registry.async_get_entity_id(SENSOR_DOMAIN, DOMAIN, unique_id)
@@ -62,22 +62,22 @@ def async_assert_state_equals(
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensor_default_enabled_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     monzo: AsyncMock,
     polling_config_entry: MockConfigEntry,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai_client_no_auth: ClientSessionGenerator,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test entities enabled by default."""
-    await setup_integration(hass, polling_config_entry)
+    await setup_integration(menuai, polling_config_entry)
 
     for acc in TEST_ACCOUNTS:
         for sensor_description in ACCOUNT_SENSORS:
-            entity_id = await async_get_entity_id(hass, acc["id"], sensor_description)
+            entity_id = await async_get_entity_id(menuai, acc["id"], sensor_description)
             assert entity_id
             assert entity_registry.async_is_registered(entity_id)
 
-            state = hass.states.get(entity_id)
+            state = menuai.states.get(entity_id)
             assert state.state == str(
                 EXPECTED_VALUE_GETTERS[sensor_description.key](acc)
             )
@@ -85,41 +85,41 @@ async def test_sensor_default_enabled_entities(
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_unavailable_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     basic_monzo: AsyncMock,
     polling_config_entry: MockConfigEntry,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai_client_no_auth: ClientSessionGenerator,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test entities enabled by default."""
-    await setup_integration(hass, polling_config_entry)
+    await setup_integration(menuai, polling_config_entry)
     basic_monzo.user_account.pots.return_value = [{"id": "pot_savings"}]
     freezer.tick(timedelta(minutes=100))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
-    entity_id = await async_get_entity_id(hass, TEST_POTS[0]["id"], POT_SENSORS[0])
-    state = hass.states.get(entity_id)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
+    entity_id = await async_get_entity_id(menuai, TEST_POTS[0]["id"], POT_SENSORS[0])
+    state = menuai.states.get(entity_id)
     assert state.state == "unknown"
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_all_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
     monzo: AsyncMock,
     polling_config_entry: MockConfigEntry,
 ) -> None:
     """Test all entities."""
-    await setup_integration(hass, polling_config_entry)
+    await setup_integration(menuai, polling_config_entry)
 
     await snapshot_platform(
-        hass, entity_registry, snapshot, polling_config_entry.entry_id
+        menuai, entity_registry, snapshot, polling_config_entry.entry_id
     )
 
 
 async def test_update_failed(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     monzo: AsyncMock,
     polling_config_entry: MockConfigEntry,
@@ -127,22 +127,22 @@ async def test_update_failed(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test all entities."""
-    await setup_integration(hass, polling_config_entry)
+    await setup_integration(menuai, polling_config_entry)
 
     monzo.user_account.accounts.side_effect = InvalidMonzoAPIResponseError(
         {"acc_id": None}, "account_id"
     )
     freezer.tick(timedelta(minutes=10))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     assert "Invalid Monzo API response." in caplog.text
     assert "account_id" in caplog.text
     assert "acc_id" in caplog.text
 
     entity_id = await async_get_entity_id(
-        hass, TEST_ACCOUNTS[0]["id"], ACCOUNT_SENSORS[0]
+        menuai, TEST_ACCOUNTS[0]["id"], ACCOUNT_SENSORS[0]
     )
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state is not None
     assert state.state == STATE_UNAVAILABLE

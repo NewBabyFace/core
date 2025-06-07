@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from homeassistant.const import CONF_API_KEY, CONF_ID, CONF_LOCATION
+from menuai.const import CONF_API_KEY, CONF_ID, CONF_LOCATION
 
 ENTRY_CONFIG = {
     CONF_API_KEY: "1234567890",

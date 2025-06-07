@@ -34,7 +34,7 @@ from samsungtvws.exceptions import (
 from samsungtvws.remote import ChannelEmitCommand, SendRemoteKey
 from websockets.exceptions import ConnectionClosedError, WebSocketException
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_DESCRIPTION,
     CONF_HOST,
     CONF_ID,
@@ -45,12 +45,12 @@ from homeassistant.const import (
     CONF_TIMEOUT,
     CONF_TOKEN,
 )
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_component
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.util import dt as dt_util
+from menuai.core import CALLBACK_TYPE, menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_component
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.device_registry import format_mac
+from menuai.util import dt as dt_util
 
 from .const import (
     CONF_SESSION_ID,
@@ -101,13 +101,13 @@ def model_requires_encryption(model: str | None) -> bool:
 
 
 async def async_get_device_info(
-    hass: HomeAssistant,
+    menuai: menuai,
     host: str,
 ) -> tuple[str, int | None, str | None, dict[str, Any] | None]:
     """Fetch the port, method, and device info."""
     # Try the websocket ssl and non-ssl ports
     for port in WEBSOCKET_PORTS:
-        bridge = SamsungTVBridge.get_bridge(hass, METHOD_WEBSOCKET, host, port)
+        bridge = SamsungTVBridge.get_bridge(menuai, METHOD_WEBSOCKET, host, port)
         if info := await bridge.async_device_info():
             LOGGER.debug(
                 "Fetching rest info via %s was successful: %s, checking for encrypted",
@@ -117,7 +117,7 @@ async def async_get_device_info(
             # Check the encrypted port if the model requires encryption
             if model_requires_encryption(info.get("device", {}).get("modelName")):
                 encrypted_bridge = SamsungTVEncryptedBridge(
-                    hass, METHOD_ENCRYPTED_WEBSOCKET, host, ENCRYPTED_WEBSOCKET_PORT
+                    menuai, METHOD_ENCRYPTED_WEBSOCKET, host, ENCRYPTED_WEBSOCKET_PORT
                 )
                 result = await encrypted_bridge.async_try_connect()
                 if result != RESULT_CANNOT_CONNECT:
@@ -130,7 +130,7 @@ async def async_get_device_info(
             return RESULT_SUCCESS, port, METHOD_WEBSOCKET, info
 
     # Try legacy port
-    bridge = SamsungTVBridge.get_bridge(hass, METHOD_LEGACY, host, LEGACY_PORT)
+    bridge = SamsungTVBridge.get_bridge(menuai, METHOD_LEGACY, host, LEGACY_PORT)
     result = await bridge.async_try_connect()
     if result in SUCCESSFUL_RESULTS:
         return result, LEGACY_PORT, METHOD_LEGACY, await bridge.async_device_info()
@@ -144,7 +144,7 @@ class SamsungTVBridge(ABC):
 
     @staticmethod
     def get_bridge(
-        hass: HomeAssistant,
+        menuai: menuai,
         method: str,
         host: str,
         port: int | None = None,
@@ -152,16 +152,16 @@ class SamsungTVBridge(ABC):
     ) -> SamsungTVBridge:
         """Get Bridge instance."""
         if method == METHOD_LEGACY or port == LEGACY_PORT:
-            return SamsungTVLegacyBridge(hass, method, host, port or LEGACY_PORT)
+            return SamsungTVLegacyBridge(menuai, method, host, port or LEGACY_PORT)
         if method == METHOD_ENCRYPTED_WEBSOCKET or port == ENCRYPTED_WEBSOCKET_PORT:
-            return SamsungTVEncryptedBridge(hass, method, host, port, entry_data)
-        return SamsungTVWSBridge(hass, method, host, port, entry_data)
+            return SamsungTVEncryptedBridge(menuai, method, host, port, entry_data)
+        return SamsungTVWSBridge(menuai, method, host, port, entry_data)
 
     def __init__(
-        self, hass: HomeAssistant, method: str, host: str, port: int | None = None
+        self, menuai: menuai, method: str, host: str, port: int | None = None
     ) -> None:
         """Initialize Bridge."""
-        self.hass = hass
+        self.menuai = menuai
         self.port = port
         self.method = method
         self.host = host
@@ -261,10 +261,10 @@ class SamsungTVLegacyBridge(SamsungTVBridge):
     """The Bridge for Legacy TVs."""
 
     def __init__(
-        self, hass: HomeAssistant, method: str, host: str, port: int | None
+        self, menuai: menuai, method: str, host: str, port: int | None
     ) -> None:
         """Initialize Bridge."""
-        super().__init__(hass, method, host, port)
+        super().__init__(menuai, method, host, port)
         self.config = {
             CONF_NAME: VALUE_CONF_NAME,
             CONF_DESCRIPTION: VALUE_CONF_NAME,
@@ -278,7 +278,7 @@ class SamsungTVLegacyBridge(SamsungTVBridge):
 
     async def async_is_on(self) -> bool:
         """Tells if the TV is on."""
-        return await self.hass.async_add_executor_job(self._is_on)
+        return await self.menuai.async_add_executor_job(self._is_on)
 
     def _is_on(self) -> bool:
         """Tells if the TV is on."""
@@ -293,7 +293,7 @@ class SamsungTVLegacyBridge(SamsungTVBridge):
 
     async def async_try_connect(self) -> str:
         """Try to connect to the Legacy TV."""
-        return await self.hass.async_add_executor_job(self._try_connect)
+        return await self.menuai.async_add_executor_job(self._try_connect)
 
     def _try_connect(self) -> str:
         """Try to connect to the Legacy TV."""
@@ -330,7 +330,7 @@ class SamsungTVLegacyBridge(SamsungTVBridge):
     def _notify_reauth_callback(self) -> None:
         """Notify access denied callback."""
         if self._reauth_callback is not None:
-            self.hass.loop.call_soon_threadsafe(self._reauth_callback)
+            self.menuai.loop.call_soon_threadsafe(self._reauth_callback)
 
     def _get_remote(self) -> Remote:
         """Create or return a remote control instance."""
@@ -358,7 +358,7 @@ class SamsungTVLegacyBridge(SamsungTVBridge):
                 first_key = False
             else:
                 await asyncio.sleep(KEY_PRESS_TIMEOUT)
-            await self.hass.async_add_executor_job(self._send_key, key)
+            await self.menuai.async_add_executor_job(self._send_key, key)
 
     def _send_key(self, key: str) -> None:
         """Send a key using legacy protocol."""
@@ -375,7 +375,7 @@ class SamsungTVLegacyBridge(SamsungTVBridge):
                     self._remote = None
         except (UnhandledResponse, AccessDenied) as err:
             # We got a response so it's on.
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="error_sending_command",
                 translation_placeholders={"error": repr(err), "host": self.host},
@@ -390,7 +390,7 @@ class SamsungTVLegacyBridge(SamsungTVBridge):
 
     async def async_close_remote(self) -> None:
         """Close remote object."""
-        await self.hass.async_add_executor_job(self._close_remote)
+        await self.menuai.async_add_executor_job(self._close_remote)
 
     def _close_remote(self) -> None:
         """Close remote object."""
@@ -411,13 +411,13 @@ class SamsungTVWSBaseBridge[
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         method: str,
         host: str,
         port: int | None = None,
     ) -> None:
         """Initialize Bridge."""
-        super().__init__(hass, method, host, port)
+        super().__init__(menuai, method, host, port)
         self._remote: _RemoteT | None = None
         self._remote_lock = asyncio.Lock()
 
@@ -482,14 +482,14 @@ class SamsungTVWSBridge(
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         method: str,
         host: str,
         port: int | None = None,
         entry_data: Mapping[str, Any] | None = None,
     ) -> None:
         """Initialize Bridge."""
-        super().__init__(hass, method, host, port)
+        super().__init__(menuai, method, host, port)
         if entry_data:
             self.token = entry_data.get(CONF_TOKEN)
         self._rest_api: SamsungTVAsyncRest | None = None
@@ -571,7 +571,7 @@ class SamsungTVWSBridge(
             assert self.port
             self._rest_api = SamsungTVAsyncRest(
                 host=self.host,
-                session=async_get_clientsession(self.hass),
+                session=async_get_clientsession(self.menuai),
                 port=self.port,
                 timeout=TIMEOUT_WEBSOCKET,
             )
@@ -717,14 +717,14 @@ class SamsungTVEncryptedBridge(
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         method: str,
         host: str,
         port: int | None = None,
         entry_data: Mapping[str, Any] | None = None,
     ) -> None:
         """Initialize Bridge."""
-        super().__init__(hass, method, host, port)
+        super().__init__(menuai, method, host, port)
         self._power_off_warning_logged: bool = False
         self._model: str | None = None
         self._short_model: str | None = None
@@ -754,7 +754,7 @@ class SamsungTVEncryptedBridge(
             async with SamsungTVEncryptedWSAsyncRemote(
                 host=self.host,
                 port=self.port,
-                web_session=async_get_clientsession(self.hass),
+                web_session=async_get_clientsession(self.menuai),
                 token=self.token or "",
                 session_id=self.session_id or "",
                 timeout=TIMEOUT_REQUEST,
@@ -783,7 +783,7 @@ class SamsungTVEncryptedBridge(
             assert self.port
             rest_api = SamsungTVAsyncRest(
                 host=self.host,
-                session=async_get_clientsession(self.hass),
+                session=async_get_clientsession(self.menuai),
                 port=rest_api_port,
                 timeout=TIMEOUT_WEBSOCKET,
             )
@@ -814,7 +814,7 @@ class SamsungTVEncryptedBridge(
             self._remote = SamsungTVEncryptedWSAsyncRemote(
                 host=self.host,
                 port=self.port,
-                web_session=async_get_clientsession(self.hass),
+                web_session=async_get_clientsession(self.menuai),
                 token=self.token or "",
                 session_id=self.session_id or "",
                 timeout=TIMEOUT_WEBSOCKET,

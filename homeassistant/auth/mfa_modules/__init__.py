@@ -1,4 +1,4 @@
-"""Pluggable auth modules for Home Assistant."""
+"""Pluggable auth modules for MenuAI."""
 
 from __future__ import annotations
 
@@ -9,14 +9,14 @@ from typing import Any
 import voluptuous as vol
 from voluptuous.humanize import humanize_error
 
-from homeassistant import data_entry_flow, requirements
-from homeassistant.const import CONF_ID, CONF_NAME, CONF_TYPE
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResult
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.importlib import async_import_module
-from homeassistant.util.decorator import Registry
-from homeassistant.util.hass_dict import HassKey
+from menuai import data_entry_flow, requirements
+from menuai.const import CONF_ID, CONF_NAME, CONF_TYPE
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResult
+from menuai.exceptions import menuaiError
+from menuai.helpers.importlib import async_import_module
+from menuai.util.decorator import Registry
+from menuai.util.menuai_dict import menuaiKey
 
 MULTI_FACTOR_AUTH_MODULES: Registry[str, type[MultiFactorAuthModule]] = Registry()
 
@@ -30,7 +30,7 @@ MULTI_FACTOR_AUTH_MODULE_SCHEMA = vol.Schema(
     extra=vol.ALLOW_EXTRA,
 )
 
-DATA_REQS: HassKey[set[str]] = HassKey("mfa_auth_module_reqs_processed")
+DATA_REQS: menuaiKey[set[str]] = menuaiKey("mfa_auth_module_reqs_processed")
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -41,9 +41,9 @@ class MultiFactorAuthModule:
     DEFAULT_TITLE = "Unnamed auth module"
     MAX_RETRY_TIME = 3
 
-    def __init__(self, hass: HomeAssistant, config: dict[str, Any]) -> None:
+    def __init__(self, menuai: menuai, config: dict[str, Any]) -> None:
         """Initialize an auth module."""
-        self.hass = hass
+        self.menuai = menuai
         self.config = config
 
     @property
@@ -131,11 +131,11 @@ class SetupFlow[_MultiFactorAuthModuleT: MultiFactorAuthModule = MultiFactorAuth
 
 
 async def auth_mfa_module_from_config(
-    hass: HomeAssistant, config: dict[str, Any]
+    menuai: menuai, config: dict[str, Any]
 ) -> MultiFactorAuthModule:
     """Initialize an auth module from a config."""
     module_name: str = config[CONF_TYPE]
-    module = await _load_mfa_module(hass, module_name)
+    module = await _load_mfa_module(menuai, module_name)
 
     try:
         config = module.CONFIG_SCHEMA(config)
@@ -147,32 +147,32 @@ async def auth_mfa_module_from_config(
         )
         raise
 
-    return MULTI_FACTOR_AUTH_MODULES[module_name](hass, config)
+    return MULTI_FACTOR_AUTH_MODULES[module_name](menuai, config)
 
 
-async def _load_mfa_module(hass: HomeAssistant, module_name: str) -> types.ModuleType:
+async def _load_mfa_module(menuai: menuai, module_name: str) -> types.ModuleType:
     """Load an mfa auth module."""
-    module_path = f"homeassistant.auth.mfa_modules.{module_name}"
+    module_path = f"menuai.auth.mfa_modules.{module_name}"
 
     try:
-        module = await async_import_module(hass, module_path)
+        module = await async_import_module(menuai, module_path)
     except ImportError as err:
         _LOGGER.error("Unable to load mfa module %s: %s", module_name, err)
-        raise HomeAssistantError(
+        raise menuaiError(
             f"Unable to load mfa module {module_name}: {err}"
         ) from err
 
-    if hass.config.skip_pip or not hasattr(module, "REQUIREMENTS"):
+    if menuai.config.skip_pip or not hasattr(module, "REQUIREMENTS"):
         return module
 
-    processed = hass.data.get(DATA_REQS)
+    processed = menuai.data.get(DATA_REQS)
     if processed and module_name in processed:
         return module
 
-    processed = hass.data[DATA_REQS] = set()
+    processed = menuai.data[DATA_REQS] = set()
 
     await requirements.async_process_requirements(
-        hass, module_path, module.REQUIREMENTS
+        menuai, module_path, module.REQUIREMENTS
     )
 
     processed.add(module_name)

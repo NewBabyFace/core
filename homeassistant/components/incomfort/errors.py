@@ -1,11 +1,11 @@
 """Exceptions raised by Intergas InComfort integration."""
 
-from homeassistant.exceptions import ConfigEntryNotReady, HomeAssistantError
+from menuai.exceptions import ConfigEntryNotReady, menuaiError
 
 from .const import DOMAIN
 
 
-class NotFound(HomeAssistantError):
+class NotFound(menuaiError):
     """Raise exception if no Lan2RF Gateway was found."""
 
     translation_domain = DOMAIN

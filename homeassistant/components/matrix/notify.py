@@ -6,16 +6,16 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.notify import (
+from menuai.components.notify import (
     ATTR_DATA,
     ATTR_MESSAGE,
     ATTR_TARGET,
     PLATFORM_SCHEMA as NOTIFY_PLATFORM_SCHEMA,
     BaseNotificationService,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import RoomID
 from .const import DOMAIN, SERVICE_SEND_MESSAGE
@@ -28,7 +28,7 @@ PLATFORM_SCHEMA = NOTIFY_PLATFORM_SCHEMA.extend(
 
 
 def get_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> MatrixNotificationService:
@@ -49,4 +49,4 @@ class MatrixNotificationService(BaseNotificationService):
         service_data = {ATTR_TARGET: target_rooms, ATTR_MESSAGE: message}
         if (data := kwargs.get(ATTR_DATA)) is not None:
             service_data[ATTR_DATA] = data
-        self.hass.services.call(DOMAIN, SERVICE_SEND_MESSAGE, service_data=service_data)
+        self.menuai.services.call(DOMAIN, SERVICE_SEND_MESSAGE, service_data=service_data)

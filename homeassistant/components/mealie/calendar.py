@@ -6,9 +6,9 @@ from datetime import datetime
 
 from aiomealie import Mealplan, MealplanEntryType
 
-from homeassistant.components.calendar import CalendarEntity, CalendarEvent
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.calendar import CalendarEntity, CalendarEvent
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import MealieConfigEntry, MealieMealplanCoordinator
 from .entity import MealieEntity
@@ -17,7 +17,7 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: MealieConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -66,7 +66,7 @@ class MealieMealplanCalendarEntity(MealieEntity, CalendarEntity):
         return _get_event_from_mealplan(sorted_mealplans[0])
 
     async def async_get_events(
-        self, hass: HomeAssistant, start_date: datetime, end_date: datetime
+        self, menuai: menuai, start_date: datetime, end_date: datetime
     ) -> list[CalendarEvent]:
         """Get all events in a specific time frame."""
         mealplans = (

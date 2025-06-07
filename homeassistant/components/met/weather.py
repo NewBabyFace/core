@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.components.weather import (
+from menuai.components.weather import (
     ATTR_FORECAST_CONDITION,
     ATTR_FORECAST_TIME,
     ATTR_WEATHER_CLOUD_COVERAGE,
@@ -22,7 +22,7 @@ from homeassistant.components.weather import (
     SingleCoordinatorWeatherEntity,
     WeatherEntityFeature,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_LATITUDE,
     CONF_LONGITUDE,
     CONF_NAME,
@@ -31,11 +31,11 @@ from homeassistant.const import (
     UnitOfSpeed,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er, sun
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util.unit_system import METRIC_SYSTEM
+from menuai.core import menuai, callback
+from menuai.helpers import entity_registry as er, sun
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util.unit_system import METRIC_SYSTEM
 
 from .const import (
     ATTR_CONDITION_CLEAR_NIGHT,
@@ -52,18 +52,18 @@ DEFAULT_NAME = "Met.no"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MetWeatherConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Add a weather entity from a config_entry."""
     coordinator = config_entry.runtime_data
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
 
     name: str | None
-    is_metric = hass.config.units is METRIC_SYSTEM
+    is_metric = menuai.config.units is METRIC_SYSTEM
     if config_entry.data.get(CONF_TRACK_HOME, False):
-        name = hass.config.location_name
+        name = menuai.config.location_name
     else:
         name = config_entry.data.get(CONF_NAME, DEFAULT_NAME)
         if TYPE_CHECKING:
@@ -147,7 +147,7 @@ class MetWeather(SingleCoordinatorWeatherEntity[MetDataUpdateCoordinator]):
         if condition is None:
             return None
 
-        if condition == ATTR_CONDITION_SUNNY and not sun.is_up(self.hass):
+        if condition == ATTR_CONDITION_SUNNY and not sun.is_up(self.menuai):
             condition = ATTR_CONDITION_CLEAR_NIGHT
 
         return format_condition(condition)

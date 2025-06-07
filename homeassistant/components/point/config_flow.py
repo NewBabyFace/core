@@ -4,10 +4,10 @@ from collections.abc import Mapping
 import logging
 from typing import Any
 
-from homeassistant.components.webhook import async_generate_id
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlowResult
-from homeassistant.const import CONF_TOKEN, CONF_WEBHOOK_ID
-from homeassistant.helpers.config_entry_oauth2_flow import AbstractOAuth2FlowHandler
+from menuai.components.webhook import async_generate_id
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlowResult
+from menuai.const import CONF_TOKEN, CONF_WEBHOOK_ID
+from menuai.helpers.config_entry_oauth2_flow import AbstractOAuth2FlowHandler
 
 from .const import DOMAIN
 

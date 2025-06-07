@@ -8,13 +8,13 @@ import logging
 import iperf3
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     DOMAIN as SENSOR_DOMAIN,
     SensorDeviceClass,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_HOSTS,
     CONF_MONITORED_CONDITIONS,
@@ -23,12 +23,12 @@ from homeassistant.const import (
     CONF_SCAN_INTERVAL,
     UnitOfDataRate,
 )
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.discovery import async_load_platform
-from homeassistant.helpers.dispatcher import dispatcher_send
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import config_validation as cv
+from menuai.helpers.discovery import async_load_platform
+from menuai.helpers.dispatcher import dispatcher_send
+from menuai.helpers.event import async_track_time_interval
+from menuai.helpers.typing import ConfigType
 
 DOMAIN = "iperf3"
 DATA_UPDATED = f"{DOMAIN}_data_updated"
@@ -103,31 +103,31 @@ CONFIG_SCHEMA = vol.Schema(
 SERVICE_SCHEMA = vol.Schema({vol.Optional(ATTR_HOST, default=None): cv.string})
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the iperf3 component."""
-    hass.data[DOMAIN] = {}
+    menuai.data[DOMAIN] = {}
 
     conf = config[DOMAIN]
     for host in conf[CONF_HOSTS]:
-        data = hass.data[DOMAIN][host[CONF_HOST]] = Iperf3Data(hass, host)
+        data = menuai.data[DOMAIN][host[CONF_HOST]] = Iperf3Data(menuai, host)
 
         if not conf[CONF_MANUAL]:
-            async_track_time_interval(hass, data.update, conf[CONF_SCAN_INTERVAL])
+            async_track_time_interval(menuai, data.update, conf[CONF_SCAN_INTERVAL])
 
     def update(call: ServiceCall) -> None:
         """Service call to manually update the data."""
         called_host = call.data[ATTR_HOST]
-        if called_host in hass.data[DOMAIN]:
-            hass.data[DOMAIN][called_host].update()
+        if called_host in menuai.data[DOMAIN]:
+            menuai.data[DOMAIN][called_host].update()
         else:
-            for iperf3_host in hass.data[DOMAIN].values():
+            for iperf3_host in menuai.data[DOMAIN].values():
                 iperf3_host.update()
 
-    hass.services.async_register(DOMAIN, "speedtest", update, schema=SERVICE_SCHEMA)
+    menuai.services.async_register(DOMAIN, "speedtest", update, schema=SERVICE_SCHEMA)
 
-    hass.async_create_task(
+    menuai.async_create_task(
         async_load_platform(
-            hass,
+            menuai,
             SENSOR_DOMAIN,
             DOMAIN,
             {CONF_MONITORED_CONDITIONS: conf[CONF_MONITORED_CONDITIONS]},
@@ -141,9 +141,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 class Iperf3Data:
     """Get the latest data from iperf3."""
 
-    def __init__(self, hass, host):
+    def __init__(self, menuai, host):
         """Initialize the data object."""
-        self._hass = hass
+        self._menuai = menuai
         self._host = host
         self.data = {ATTR_DOWNLOAD: None, ATTR_UPLOAD: None, ATTR_VERSION: None}
 
@@ -190,7 +190,7 @@ class Iperf3Data:
                 self._run_test(ATTR_UPLOAD), "sent_Mbps", None
             )
 
-        dispatcher_send(self._hass, DATA_UPDATED, self.host)
+        dispatcher_send(self._menuai, DATA_UPDATED, self.host)
 
     def _run_test(self, test_type):
         """Run and return the iperf3 data."""

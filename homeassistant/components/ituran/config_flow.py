@@ -10,7 +10,7 @@ from pyituran import Ituran
 from pyituran.exceptions import IturanApiError, IturanAuthError
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
 
 from .const import (
     CONF_ID_OR_PASSPORT,

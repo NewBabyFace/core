@@ -12,18 +12,18 @@ from watchdog.events import (
     EVENT_TYPE_MOVED,
 )
 
-from homeassistant.components.event import EventEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.event import EventEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -66,10 +66,10 @@ class FolderWatcherEventEntity(EventEntity):
         self._trigger_event(event, _extra)
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         signal = f"folder_watcher-{self._entry.entry_id}"
         self.async_on_remove(
-            async_dispatcher_connect(self.hass, signal, self._async_handle_event)
+            async_dispatcher_connect(self.menuai, signal, self._async_handle_event)
         )

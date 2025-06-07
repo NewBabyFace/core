@@ -6,13 +6,13 @@ from http import HTTPStatus
 import pytest
 from requests_mock.mocker import Mocker
 
-from homeassistant.components.fitbit.const import (
+from menuai.components.fitbit.const import (
     CONF_CLIENT_ID,
     CONF_CLIENT_SECRET,
     OAUTH2_TOKEN,
 )
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
 
 from .conftest import (
     CLIENT_ID,
@@ -28,7 +28,7 @@ from tests.test_util.aiohttp import AiohttpClientMocker
 
 
 async def test_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     integration_setup: Callable[[], Awaitable[bool]],
     config_entry: MockConfigEntry,
     setup_credentials: None,
@@ -39,8 +39,8 @@ async def test_setup(
     assert await integration_setup()
     assert config_entry.state is ConfigEntryState.LOADED
 
-    assert await hass.config_entries.async_unload(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_unload(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.NOT_LOADED
 
@@ -115,7 +115,7 @@ async def test_token_refresh_success(
 )
 @pytest.mark.parametrize("closing", [True, False])
 async def test_token_requires_reauth(
-    hass: HomeAssistant,
+    menuai: menuai,
     integration_setup: Callable[[], Awaitable[bool]],
     config_entry: MockConfigEntry,
     aioclient_mock: AiohttpClientMocker,
@@ -134,13 +134,13 @@ async def test_token_requires_reauth(
     assert not await integration_setup()
     assert config_entry.state is ConfigEntryState.SETUP_ERROR
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
     assert flows[0]["step_id"] == "reauth_confirm"
 
 
 async def test_device_update_coordinator_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     integration_setup: Callable[[], Awaitable[bool]],
     config_entry: MockConfigEntry,
     setup_credentials: None,
@@ -160,7 +160,7 @@ async def test_device_update_coordinator_failure(
 
 
 async def test_device_update_coordinator_reauth(
-    hass: HomeAssistant,
+    menuai: menuai,
     integration_setup: Callable[[], Awaitable[bool]],
     config_entry: MockConfigEntry,
     setup_credentials: None,
@@ -181,6 +181,6 @@ async def test_device_update_coordinator_reauth(
     assert not await integration_setup()
     assert config_entry.state is ConfigEntryState.SETUP_ERROR
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
     assert flows[0]["step_id"] == "reauth_confirm"

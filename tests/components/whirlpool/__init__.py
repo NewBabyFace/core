@@ -4,18 +4,18 @@ from unittest.mock import MagicMock
 
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.whirlpool.const import CONF_BRAND, DOMAIN
-from homeassistant.const import CONF_PASSWORD, CONF_REGION, CONF_USERNAME, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_registry import EntityRegistry
+from menuai.components.whirlpool.const import CONF_BRAND, DOMAIN
+from menuai.const import CONF_PASSWORD, CONF_REGION, CONF_USERNAME, Platform
+from menuai.core import menuai
+from menuai.helpers.entity_registry import EntityRegistry
 
 from tests.common import MockConfigEntry
 
 
 async def init_integration(
-    hass: HomeAssistant, region: str = "EU", brand: str = "Whirlpool"
+    menuai: menuai, region: str = "EU", brand: str = "Whirlpool"
 ) -> MockConfigEntry:
-    """Set up the Whirlpool integration in Home Assistant."""
+    """Set up the Whirlpool integration in MenuAI."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         data={
@@ -26,27 +26,27 @@ async def init_integration(
         },
     )
 
-    return await init_integration_with_entry(hass, entry)
+    return await init_integration_with_entry(menuai, entry)
 
 
 async def init_integration_with_entry(
-    hass: HomeAssistant, entry: MockConfigEntry
+    menuai: menuai, entry: MockConfigEntry
 ) -> MockConfigEntry:
-    """Set up the Whirlpool integration in Home Assistant."""
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    """Set up the Whirlpool integration in MenuAI."""
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
     return entry
 
 
 def snapshot_whirlpool_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: EntityRegistry,
     snapshot: SnapshotAssertion,
     platform: Platform,
 ) -> None:
     """Snapshot Whirlpool entities."""
-    entities = hass.states.async_all(platform)
+    entities = menuai.states.async_all(platform)
     for entity_state in entities:
         entity_entry = entity_registry.async_get(entity_state.entity_id)
         assert entity_entry == snapshot(name=f"{entity_entry.entity_id}-entry")
@@ -54,11 +54,11 @@ def snapshot_whirlpool_entities(
 
 
 async def trigger_attr_callback(
-    hass: HomeAssistant, mock_api_instance: MagicMock
+    menuai: menuai, mock_api_instance: MagicMock
 ) -> None:
     """Simulate an update trigger from the API."""
 
     for call in mock_api_instance.register_attr_callback.call_args_list:
         update_ha_state_cb = call[0][0]
         update_ha_state_cb()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()

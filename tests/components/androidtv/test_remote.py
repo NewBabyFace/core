@@ -6,23 +6,23 @@ from unittest.mock import call, patch
 from androidtv.constants import KEYS
 import pytest
 
-from homeassistant.components.androidtv.const import (
+from menuai.components.androidtv.const import (
     CONF_TURN_OFF_COMMAND,
     CONF_TURN_ON_COMMAND,
 )
-from homeassistant.components.remote import (
+from menuai.components.remote import (
     ATTR_NUM_REPEATS,
     DOMAIN as REMOTE_DOMAIN,
     SERVICE_SEND_COMMAND,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_COMMAND,
     ATTR_ENTITY_ID,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
 
 from . import patchers
 from .common import (
@@ -42,7 +42,7 @@ def _setup(config: dict[str, Any]) -> tuple[str, str, MockConfigEntry]:
 
 
 async def _test_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_id,
     ha_service_name,
     androidtv_method,
@@ -63,7 +63,7 @@ async def _test_service(
         else "firetv.firetv_async.FireTVAsync"
     )
     with patch(f"androidtv.{androidtv_patch}.{androidtv_method}") as api_call:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             REMOTE_DOMAIN,
             ha_service_name,
             service_data=service_data,
@@ -76,24 +76,24 @@ async def _test_service(
 
 
 @pytest.mark.parametrize("config", [CONFIG_ANDROID_DEFAULT, CONFIG_FIRETV_DEFAULT])
-async def test_services_remote(hass: HomeAssistant, config) -> None:
+async def test_services_remote(menuai: menuai, config) -> None:
     """Test services for remote entity."""
     patch_key, entity_id, config_entry = _setup(config)
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with patchers.patch_connect(True)[patch_key]:
         with patchers.patch_shell(SHELL_RESPONSE_OFF)[patch_key]:
-            assert await hass.config_entries.async_setup(config_entry.entry_id)
-            await hass.async_block_till_done()
+            assert await menuai.config_entries.async_setup(config_entry.entry_id)
+            await menuai.async_block_till_done()
 
         with (
             patchers.patch_shell(SHELL_RESPONSE_STANDBY)[patch_key],
             patchers.PATCH_SCREENCAP,
         ):
-            await _test_service(hass, entity_id, SERVICE_TURN_OFF, "turn_off")
-            await _test_service(hass, entity_id, SERVICE_TURN_ON, "turn_on")
+            await _test_service(menuai, entity_id, SERVICE_TURN_OFF, "turn_off")
+            await _test_service(menuai, entity_id, SERVICE_TURN_ON, "turn_on")
             await _test_service(
-                hass,
+                menuai,
                 entity_id,
                 SERVICE_SEND_COMMAND,
                 "adb_shell",
@@ -108,11 +108,11 @@ async def test_services_remote(hass: HomeAssistant, config) -> None:
 
 
 @pytest.mark.parametrize("config", [CONFIG_ANDROID_DEFAULT, CONFIG_FIRETV_DEFAULT])
-async def test_services_remote_custom(hass: HomeAssistant, config) -> None:
+async def test_services_remote_custom(menuai: menuai, config) -> None:
     """Test services with custom options for remote entity."""
     patch_key, entity_id, config_entry = _setup(config)
-    config_entry.add_to_hass(hass)
-    hass.config_entries.async_update_entry(
+    config_entry.add_to_menuai(menuai)
+    menuai.config_entries.async_update_entry(
         config_entry,
         options={
             CONF_TURN_OFF_COMMAND: "test off",
@@ -122,38 +122,38 @@ async def test_services_remote_custom(hass: HomeAssistant, config) -> None:
 
     with patchers.patch_connect(True)[patch_key]:
         with patchers.patch_shell(SHELL_RESPONSE_OFF)[patch_key]:
-            assert await hass.config_entries.async_setup(config_entry.entry_id)
-            await hass.async_block_till_done()
+            assert await menuai.config_entries.async_setup(config_entry.entry_id)
+            await menuai.async_block_till_done()
 
         with (
             patchers.patch_shell(SHELL_RESPONSE_STANDBY)[patch_key],
             patchers.PATCH_SCREENCAP,
         ):
             await _test_service(
-                hass, entity_id, SERVICE_TURN_OFF, "adb_shell", None, ["test off"]
+                menuai, entity_id, SERVICE_TURN_OFF, "adb_shell", None, ["test off"]
             )
             await _test_service(
-                hass, entity_id, SERVICE_TURN_ON, "adb_shell", None, ["test on"]
+                menuai, entity_id, SERVICE_TURN_ON, "adb_shell", None, ["test on"]
             )
 
 
-async def test_remote_unicode_decode_error(hass: HomeAssistant) -> None:
+async def test_remote_unicode_decode_error(menuai: menuai) -> None:
     """Test sending a command via the send_command remote service that raises a UnicodeDecodeError exception."""
     patch_key, entity_id, config_entry = _setup(CONFIG_ANDROID_DEFAULT)
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     response = b"test response"
 
     with patchers.patch_connect(True)[patch_key]:
         with patchers.patch_shell(SHELL_RESPONSE_OFF)[patch_key]:
-            assert await hass.config_entries.async_setup(config_entry.entry_id)
-            await hass.async_block_till_done()
+            assert await menuai.config_entries.async_setup(config_entry.entry_id)
+            await menuai.async_block_till_done()
 
         with patch(
             "androidtv.basetv.basetv_async.BaseTVAsync.adb_shell",
             side_effect=UnicodeDecodeError("utf-8", response, 0, len(response), "TEST"),
         ) as api_call:
             try:
-                await hass.services.async_call(
+                await menuai.services.async_call(
                     REMOTE_DOMAIN,
                     SERVICE_SEND_COMMAND,
                     service_data={ATTR_ENTITY_ID: entity_id, ATTR_COMMAND: "BACK"},

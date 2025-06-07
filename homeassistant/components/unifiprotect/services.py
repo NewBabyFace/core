@@ -11,24 +11,24 @@ from uiprotect.data import Camera, Chime
 from uiprotect.exceptions import ClientError
 import voluptuous as vol
 
-from homeassistant.components.binary_sensor import BinarySensorDeviceClass
-from homeassistant.const import ATTR_DEVICE_ID, ATTR_NAME, Platform
-from homeassistant.core import (
-    HomeAssistant,
+from menuai.components.binary_sensor import BinarySensorDeviceClass
+from menuai.const import ATTR_DEVICE_ID, ATTR_NAME, Platform
+from menuai.core import (
+    menuai,
     ServiceCall,
     ServiceResponse,
     SupportsResponse,
     callback,
 )
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import (
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers import (
     config_validation as cv,
     device_registry as dr,
     entity_registry as er,
 )
-from homeassistant.helpers.service import async_extract_referenced_entity_ids
-from homeassistant.util.json import JsonValueType
-from homeassistant.util.read_only_dict import ReadOnlyDict
+from menuai.helpers.service import async_extract_referenced_entity_ids
+from menuai.util.json import JsonValueType
+from menuai.util.read_only_dict import ReadOnlyDict
 
 from .const import (
     ATTR_MESSAGE,
@@ -98,25 +98,25 @@ GET_USER_KEYRING_INFO_SCHEMA = vol.All(
 
 
 @callback
-def _async_get_ufp_instance(hass: HomeAssistant, device_id: str) -> ProtectApiClient:
-    device_registry = dr.async_get(hass)
+def _async_get_ufp_instance(menuai: menuai, device_id: str) -> ProtectApiClient:
+    device_registry = dr.async_get(menuai)
     if not (device_entry := device_registry.async_get(device_id)):
-        raise HomeAssistantError(f"No device found for device id: {device_id}")
+        raise menuaiError(f"No device found for device id: {device_id}")
 
     if device_entry.via_device_id is not None:
-        return _async_get_ufp_instance(hass, device_entry.via_device_id)
+        return _async_get_ufp_instance(menuai, device_entry.via_device_id)
 
     config_entry_ids = device_entry.config_entries
-    if ufp_instance := async_ufp_instance_for_config_entry_ids(hass, config_entry_ids):
+    if ufp_instance := async_ufp_instance_for_config_entry_ids(menuai, config_entry_ids):
         return ufp_instance
 
-    raise HomeAssistantError(f"No device found for device id: {device_id}")
+    raise menuaiError(f"No device found for device id: {device_id}")
 
 
 @callback
 def _async_get_ufp_camera(call: ServiceCall) -> Camera:
-    ref = async_extract_referenced_entity_ids(call.hass, call)
-    entity_registry = er.async_get(call.hass)
+    ref = async_extract_referenced_entity_ids(call.menuai, call)
+    entity_registry = er.async_get(call.menuai)
 
     entity_id = ref.indirectly_referenced.pop()
     camera_entity = entity_registry.async_get(entity_id)
@@ -124,16 +124,16 @@ def _async_get_ufp_camera(call: ServiceCall) -> Camera:
     assert camera_entity.device_id is not None
     camera_mac = _async_unique_id_to_mac(camera_entity.unique_id)
 
-    instance = _async_get_ufp_instance(call.hass, camera_entity.device_id)
+    instance = _async_get_ufp_instance(call.menuai, camera_entity.device_id)
     return cast(Camera, instance.bootstrap.get_device_from_mac(camera_mac))
 
 
 @callback
 def _async_get_protect_from_call(call: ServiceCall) -> set[ProtectApiClient]:
     return {
-        _async_get_ufp_instance(call.hass, device_id)
+        _async_get_ufp_instance(call.menuai, device_id)
         for device_id in async_extract_referenced_entity_ids(
-            call.hass, call
+            call.menuai, call
         ).referenced_devices
     }
 
@@ -150,7 +150,7 @@ async def _async_service_call_nvr(
             *(getattr(i.bootstrap.nvr, method)(*args, **kwargs) for i in instances)
         )
     except (ClientError, ValidationError) as err:
-        raise HomeAssistantError(str(err)) from err
+        raise menuaiError(str(err)) from err
 
 
 async def add_doorbell_text(call: ServiceCall) -> None:
@@ -196,8 +196,8 @@ def _async_unique_id_to_mac(unique_id: str) -> str:
 
 async def set_chime_paired_doorbells(call: ServiceCall) -> None:
     """Set paired doorbells on chime."""
-    ref = async_extract_referenced_entity_ids(call.hass, call)
-    entity_registry = er.async_get(call.hass)
+    ref = async_extract_referenced_entity_ids(call.menuai, call)
+    entity_registry = er.async_get(call.menuai)
 
     entity_id = ref.indirectly_referenced.pop()
     chime_button = entity_registry.async_get(entity_id)
@@ -205,13 +205,13 @@ async def set_chime_paired_doorbells(call: ServiceCall) -> None:
     assert chime_button.device_id is not None
     chime_mac = _async_unique_id_to_mac(chime_button.unique_id)
 
-    instance = _async_get_ufp_instance(call.hass, chime_button.device_id)
+    instance = _async_get_ufp_instance(call.menuai, chime_button.device_id)
     chime = instance.bootstrap.get_device_from_mac(chime_mac)
     chime = cast(Chime, chime)
     assert chime is not None
 
     call.data = ReadOnlyDict(call.data.get("doorbells") or {})
-    doorbell_refs = async_extract_referenced_entity_ids(call.hass, call)
+    doorbell_refs = async_extract_referenced_entity_ids(call.menuai, call)
     doorbell_ids: set[str] = set()
     for camera_id in doorbell_refs.referenced | doorbell_refs.indirectly_referenced:
         doorbell_sensor = entity_registry.async_get(camera_id)
@@ -237,7 +237,7 @@ async def get_user_keyring_info(call: ServiceCall) -> ServiceResponse:
     camera = _async_get_ufp_camera(call)
     ulp_users = camera.api.bootstrap.ulp_users.as_list()
     if not ulp_users:
-        raise HomeAssistantError("No users found, please check Protect permissions.")
+        raise menuaiError("No users found, please check Protect permissions.")
 
     user_keyrings: list[JsonValueType] = [
         {
@@ -303,10 +303,10 @@ SERVICES = [
 ]
 
 
-def async_setup_services(hass: HomeAssistant) -> None:
+def async_setup_services(menuai: menuai) -> None:
     """Set up the global UniFi Protect services."""
 
     for name, method, schema, supports_response in SERVICES:
-        hass.services.async_register(
+        menuai.services.async_register(
             DOMAIN, name, method, schema=schema, supports_response=supports_response
         )

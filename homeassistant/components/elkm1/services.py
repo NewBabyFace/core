@@ -5,10 +5,10 @@ from __future__ import annotations
 from elkm1_lib.elk import Elk, Panel
 import voluptuous as vol
 
-from homeassistant.core import HomeAssistant, ServiceCall, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai, ServiceCall, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
+from menuai.util import dt as dt_util
 
 from .const import DOMAIN
 from .models import ELKM1Data
@@ -27,9 +27,9 @@ SET_TIME_SERVICE_SCHEMA = vol.Schema(
 )
 
 
-def _find_elk_by_prefix(hass: HomeAssistant, prefix: str) -> Elk | None:
+def _find_elk_by_prefix(menuai: menuai, prefix: str) -> Elk | None:
     """Search all config entries for a given prefix."""
-    for entry in hass.config_entries.async_entries(DOMAIN):
+    for entry in menuai.config_entries.async_entries(DOMAIN):
         if not entry.runtime_data:
             continue
         elk_data: ELKM1Data = entry.runtime_data
@@ -42,9 +42,9 @@ def _find_elk_by_prefix(hass: HomeAssistant, prefix: str) -> Elk | None:
 def _async_get_elk_panel(service: ServiceCall) -> Panel:
     """Get the ElkM1 panel from a service call."""
     prefix = service.data["prefix"]
-    elk = _find_elk_by_prefix(service.hass, prefix)
+    elk = _find_elk_by_prefix(service.menuai, prefix)
     if elk is None:
-        raise HomeAssistantError(f"No ElkM1 with prefix '{prefix}' found")
+        raise menuaiError(f"No ElkM1 with prefix '{prefix}' found")
     return elk.panel
 
 
@@ -63,15 +63,15 @@ def _set_time_service(service: ServiceCall) -> None:
     _async_get_elk_panel(service).set_time(dt_util.now())
 
 
-def async_setup_services(hass: HomeAssistant) -> None:
+def async_setup_services(menuai: menuai) -> None:
     """Create ElkM1 services."""
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, "speak_word", _speak_word_service, SPEAK_SERVICE_SCHEMA
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, "speak_phrase", _speak_phrase_service, SPEAK_SERVICE_SCHEMA
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, "set_time", _set_time_service, SET_TIME_SERVICE_SCHEMA
     )

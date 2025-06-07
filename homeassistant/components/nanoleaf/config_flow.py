@@ -10,16 +10,16 @@ from typing import Any, Final, cast
 from aionanoleaf import InvalidToken, Nanoleaf, Unauthorized, Unavailable
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_TOKEN
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.json import save_json
-from homeassistant.helpers.service_info.ssdp import SsdpServiceInfo
-from homeassistant.helpers.service_info.zeroconf import (
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_TOKEN
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.json import save_json
+from menuai.helpers.service_info.ssdp import SsdpServiceInfo
+from menuai.helpers.service_info.zeroconf import (
     ATTR_PROPERTIES_ID,
     ZeroconfServiceInfo,
 )
-from homeassistant.util.json import JsonObjectType, JsonValueType, load_json_object
+from menuai.util.json import JsonObjectType, JsonValueType, load_json_object
 
 from .const import DOMAIN
 
@@ -56,7 +56,7 @@ class NanoleafConfigFlow(ConfigFlow, domain=DOMAIN):
             )
         self._async_abort_entries_match({CONF_HOST: user_input[CONF_HOST]})
         self.nanoleaf = Nanoleaf(
-            async_get_clientsession(self.hass), user_input[CONF_HOST]
+            async_get_clientsession(self.menuai), user_input[CONF_HOST]
         )
         try:
             await self.nanoleaf.authorize()
@@ -84,7 +84,7 @@ class NanoleafConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Handle Nanoleaf reauth flow if token is invalid."""
         self.nanoleaf = Nanoleaf(
-            async_get_clientsession(self.hass), entry_data[CONF_HOST]
+            async_get_clientsession(self.menuai), entry_data[CONF_HOST]
         )
         self.context["title_placeholders"] = {"name": self._get_reauth_entry().title}
         return await self.async_step_link()
@@ -134,8 +134,8 @@ class NanoleafConfigFlow(ConfigFlow, domain=DOMAIN):
 
         # Import from discovery integration
         self.device_id = device_id
-        self.discovery_conf = await self.hass.async_add_executor_job(
-            load_json_object, self.hass.config.path(CONFIG_FILE)
+        self.discovery_conf = await self.menuai.async_add_executor_job(
+            load_json_object, self.menuai.config.path(CONFIG_FILE)
         )
 
         auth_token: JsonValueType = None
@@ -146,13 +146,13 @@ class NanoleafConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if auth_token is not None:
             self.nanoleaf = Nanoleaf(
-                async_get_clientsession(self.hass), host, cast(str, auth_token)
+                async_get_clientsession(self.menuai), host, cast(str, auth_token)
             )
             _LOGGER.warning(
                 "Importing Nanoleaf %s from the discovery integration", name
             )
             return await self.async_setup_finish(discovery_integration_import=True)
-        self.nanoleaf = Nanoleaf(async_get_clientsession(self.hass), host)
+        self.nanoleaf = Nanoleaf(async_get_clientsession(self.menuai), host)
         self.context["title_placeholders"] = {"name": name}
         return await self.async_step_link()
 
@@ -213,12 +213,12 @@ class NanoleafConfigFlow(ConfigFlow, domain=DOMAIN):
                 name,
             )
             if self.discovery_conf:
-                await self.hass.async_add_executor_job(
-                    save_json, self.hass.config.path(CONFIG_FILE), self.discovery_conf
+                await self.menuai.async_add_executor_job(
+                    save_json, self.menuai.config.path(CONFIG_FILE), self.discovery_conf
                 )
             else:
-                await self.hass.async_add_executor_job(
-                    os.remove, self.hass.config.path(CONFIG_FILE)
+                await self.menuai.async_add_executor_job(
+                    os.remove, self.menuai.config.path(CONFIG_FILE)
                 )
 
         return self.async_create_entry(

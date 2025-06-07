@@ -8,9 +8,9 @@ from typing import Any
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import area_registry as ar, floor_registry as fr
-from homeassistant.util.dt import utcnow
+from menuai.core import menuai
+from menuai.helpers import area_registry as ar, floor_registry as fr
+from menuai.util.dt import utcnow
 
 from tests.common import async_capture_events, flush_store
 
@@ -23,11 +23,11 @@ async def test_list_floors(floor_registry: fr.FloorRegistry) -> None:
 
 @pytest.mark.usefixtures("freezer")
 async def test_create_floor(
-    hass: HomeAssistant,
+    menuai: menuai,
     floor_registry: fr.FloorRegistry,
 ) -> None:
     """Make sure that we can create floors."""
-    update_events = async_capture_events(hass, fr.EVENT_FLOOR_REGISTRY_UPDATED)
+    update_events = async_capture_events(menuai, fr.EVENT_FLOOR_REGISTRY_UPDATED)
     floor = floor_registry.async_create(
         name="First floor",
         icon="mdi:home-floor-1",
@@ -47,7 +47,7 @@ async def test_create_floor(
 
     assert len(floor_registry.floors) == 1
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(update_events) == 1
     assert update_events[0].data == {
@@ -57,10 +57,10 @@ async def test_create_floor(
 
 
 async def test_create_floor_with_name_already_in_use(
-    hass: HomeAssistant, floor_registry: fr.FloorRegistry
+    menuai: menuai, floor_registry: fr.FloorRegistry
 ) -> None:
     """Make sure that we can't create a floor with a name already in use."""
-    update_events = async_capture_events(hass, fr.EVENT_FLOOR_REGISTRY_UPDATED)
+    update_events = async_capture_events(menuai, fr.EVENT_FLOOR_REGISTRY_UPDATED)
     floor_registry.async_create("First floor")
 
     with pytest.raises(
@@ -69,7 +69,7 @@ async def test_create_floor_with_name_already_in_use(
     ):
         floor_registry.async_create("First floor")
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(floor_registry.floors) == 1
     assert len(update_events) == 1
@@ -90,10 +90,10 @@ async def test_create_floor_with_id_already_in_use(
 
 
 async def test_delete_floor(
-    hass: HomeAssistant, floor_registry: fr.FloorRegistry
+    menuai: menuai, floor_registry: fr.FloorRegistry
 ) -> None:
     """Make sure that we can delete a floor."""
-    update_events = async_capture_events(hass, fr.EVENT_FLOOR_REGISTRY_UPDATED)
+    update_events = async_capture_events(menuai, fr.EVENT_FLOOR_REGISTRY_UPDATED)
     floor = floor_registry.async_create("First floor")
     assert len(floor_registry.floors) == 1
 
@@ -101,7 +101,7 @@ async def test_delete_floor(
 
     assert not floor_registry.floors
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(update_events) == 2
     assert update_events[0].data == {
@@ -125,7 +125,7 @@ async def test_delete_non_existing_floor(floor_registry: fr.FloorRegistry) -> No
 
 
 async def test_update_floor(
-    hass: HomeAssistant,
+    menuai: menuai,
     floor_registry: fr.FloorRegistry,
     freezer: FrozenDateTimeFactory,
 ) -> None:
@@ -133,7 +133,7 @@ async def test_update_floor(
     created_at = datetime.fromisoformat("2024-01-01T01:00:00+00:00")
     freezer.move_to(created_at)
 
-    update_events = async_capture_events(hass, fr.EVENT_FLOOR_REGISTRY_UPDATED)
+    update_events = async_capture_events(menuai, fr.EVENT_FLOOR_REGISTRY_UPDATED)
     floor = floor_registry.async_create("First floor")
 
     assert floor == fr.FloorEntry(
@@ -171,7 +171,7 @@ async def test_update_floor(
 
     assert len(floor_registry.floors) == 1
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(update_events) == 2
     assert update_events[0].data == {
@@ -185,10 +185,10 @@ async def test_update_floor(
 
 
 async def test_update_floor_with_same_data(
-    hass: HomeAssistant, floor_registry: fr.FloorRegistry
+    menuai: menuai, floor_registry: fr.FloorRegistry
 ) -> None:
     """Make sure that we can reapply the same data to a floor and it won't update."""
-    update_events = async_capture_events(hass, fr.EVENT_FLOOR_REGISTRY_UPDATED)
+    update_events = async_capture_events(menuai, fr.EVENT_FLOOR_REGISTRY_UPDATED)
     floor = floor_registry.async_create(
         "First floor",
         icon="mdi:home-floor-1",
@@ -201,7 +201,7 @@ async def test_update_floor_with_same_data(
     )
     assert floor == updated_floor
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # No update event
     assert len(update_events) == 1
@@ -261,7 +261,7 @@ async def test_update_floor_with_normalized_name_already_in_use(
 
 
 async def test_load_floors(
-    hass: HomeAssistant,
+    menuai: menuai,
     floor_registry: fr.FloorRegistry,
     freezer: FrozenDateTimeFactory,
 ) -> None:
@@ -286,7 +286,7 @@ async def test_load_floors(
 
     assert len(floor_registry.floors) == 2
 
-    registry2 = fr.FloorRegistry(hass)
+    registry2 = fr.FloorRegistry(menuai)
     await flush_store(floor_registry._store)
     await registry2.async_load()
 
@@ -302,11 +302,11 @@ async def test_load_floors(
 
 @pytest.mark.parametrize("load_registries", [False])
 async def test_loading_floors_from_storage(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
 ) -> None:
     """Test loading stored floors on start."""
-    hass_storage[fr.STORAGE_KEY] = {
+    menuai_storage[fr.STORAGE_KEY] = {
         "version": fr.STORAGE_VERSION_MAJOR,
         "data": {
             "floors": [
@@ -321,8 +321,8 @@ async def test_loading_floors_from_storage(
         },
     }
 
-    await fr.async_load(hass)
-    registry = fr.async_get(hass)
+    await fr.async_load(menuai)
+    registry = fr.async_get(menuai)
 
     assert len(registry.floors) == 1
 
@@ -374,7 +374,7 @@ async def test_async_get_floor_by_name_not_found(
 
 
 async def test_floor_removed_from_areas(
-    hass: HomeAssistant,
+    menuai: menuai,
     area_registry: ar.AreaRegistry,
     floor_registry: fr.FloorRegistry,
 ) -> None:
@@ -390,14 +390,14 @@ async def test_floor_removed_from_areas(
     assert len(entries) == 1
 
     floor_registry.async_delete(floor.floor_id)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     entries = ar.async_entries_for_floor(area_registry, floor.floor_id)
     assert len(entries) == 0
 
 
 async def test_async_create_thread_safety(
-    hass: HomeAssistant,
+    menuai: menuai,
     floor_registry: fr.FloorRegistry,
 ) -> None:
     """Test async_create raises when called from wrong thread."""
@@ -405,11 +405,11 @@ async def test_async_create_thread_safety(
         RuntimeError,
         match="Detected code that calls floor_registry.async_create from a thread.",
     ):
-        await hass.async_add_executor_job(floor_registry.async_create, "any")
+        await menuai.async_add_executor_job(floor_registry.async_create, "any")
 
 
 async def test_async_delete_thread_safety(
-    hass: HomeAssistant,
+    menuai: menuai,
     floor_registry: fr.FloorRegistry,
 ) -> None:
     """Test async_delete raises when called from wrong thread."""
@@ -419,11 +419,11 @@ async def test_async_delete_thread_safety(
         RuntimeError,
         match="Detected code that calls floor_registry.async_delete from a thread.",
     ):
-        await hass.async_add_executor_job(floor_registry.async_delete, any_floor)
+        await menuai.async_add_executor_job(floor_registry.async_delete, any_floor)
 
 
 async def test_async_update_thread_safety(
-    hass: HomeAssistant,
+    menuai: menuai,
     floor_registry: fr.FloorRegistry,
 ) -> None:
     """Test async_update raises when called from wrong thread."""
@@ -433,17 +433,17 @@ async def test_async_update_thread_safety(
         RuntimeError,
         match="Detected code that calls floor_registry.async_update from a thread.",
     ):
-        await hass.async_add_executor_job(
+        await menuai.async_add_executor_job(
             partial(floor_registry.async_update, any_floor.floor_id, name="new name")
         )
 
 
 @pytest.mark.parametrize("load_registries", [False])
 async def test_migration_from_1_1(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
+    menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
     """Test migration from version 1.1."""
-    hass_storage[fr.STORAGE_KEY] = {
+    menuai_storage[fr.STORAGE_KEY] = {
         "version": 1,
         "data": {
             "floors": [
@@ -458,8 +458,8 @@ async def test_migration_from_1_1(
         },
     }
 
-    await fr.async_load(hass)
-    registry = fr.async_get(hass)
+    await fr.async_load(menuai)
+    registry = fr.async_get(menuai)
 
     # Test data was loaded
     entry = registry.async_get_floor_by_name("mock")
@@ -467,7 +467,7 @@ async def test_migration_from_1_1(
 
     # Check we store migrated data
     await flush_store(registry._store)
-    assert hass_storage[fr.STORAGE_KEY] == {
+    assert menuai_storage[fr.STORAGE_KEY] == {
         "version": fr.STORAGE_VERSION_MAJOR,
         "minor_version": fr.STORAGE_VERSION_MINOR,
         "key": fr.STORAGE_KEY,

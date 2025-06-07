@@ -7,15 +7,15 @@ from aiohttp import ClientResponseError
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.fan import (
+from menuai.components.fan import (
     ATTR_PERCENTAGE,
     DOMAIN as FAN_DOMAIN,
     SERVICE_SET_PERCENTAGE,
 )
-from homeassistant.const import ATTR_ENTITY_ID, SERVICE_TURN_OFF, SERVICE_TURN_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_ENTITY_ID, SERVICE_TURN_OFF, SERVICE_TURN_ON
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry, snapshot_platform
 
@@ -27,7 +27,7 @@ ENTITY_ID = "fan.hood_fan"
 
 @pytest.mark.parametrize("load_device_file", ["fan_devices.json"])
 async def test_fan_states(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_miele_client: MagicMock,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
@@ -35,12 +35,12 @@ async def test_fan_states(
 ) -> None:
     """Test fan entity state."""
 
-    await snapshot_platform(hass, entity_registry, snapshot, setup_platform.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, setup_platform.entry_id)
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_fan_states_api_push(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_miele_client: MagicMock,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
@@ -49,7 +49,7 @@ async def test_fan_states_api_push(
 ) -> None:
     """Test fan state when the API pushes data via SSE."""
 
-    await snapshot_platform(hass, entity_registry, snapshot, setup_platform.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, setup_platform.entry_id)
 
 
 @pytest.mark.parametrize("load_device_file", ["fan_devices.json"])
@@ -61,7 +61,7 @@ async def test_fan_states_api_push(
     ],
 )
 async def test_fan_control(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_miele_client: MagicMock,
     setup_platform: MockConfigEntry,
     service: str,
@@ -69,7 +69,7 @@ async def test_fan_control(
 ) -> None:
     """Test the fan can be turned on/off."""
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TEST_PLATFORM,
         service,
         {ATTR_ENTITY_ID: ENTITY_ID},
@@ -89,7 +89,7 @@ async def test_fan_control(
     ],
 )
 async def test_fan_set_speed(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_miele_client: MagicMock,
     setup_platform: MockConfigEntry,
     service: str,
@@ -98,7 +98,7 @@ async def test_fan_set_speed(
 ) -> None:
     """Test the fan can set percentage."""
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TEST_PLATFORM,
         service,
         {ATTR_ENTITY_ID: ENTITY_ID, ATTR_PERCENTAGE: percentage},
@@ -110,13 +110,13 @@ async def test_fan_set_speed(
 
 
 async def test_fan_turn_on_w_percentage(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_miele_client: MagicMock,
     setup_platform: None,
 ) -> None:
     """Test the fan can turn on with percentage."""
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TEST_PLATFORM,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: ENTITY_ID, ATTR_PERCENTAGE: 50},
@@ -135,7 +135,7 @@ async def test_fan_turn_on_w_percentage(
     ],
 )
 async def test_api_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_miele_client: MagicMock,
     setup_platform: MockConfigEntry,
     service: str,
@@ -143,15 +143,15 @@ async def test_api_failure(
     """Test handling of exception from API."""
     mock_miele_client.send_action.side_effect = ClientResponseError("test", "Test")
 
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             TEST_PLATFORM, service, {ATTR_ENTITY_ID: ENTITY_ID}, blocking=True
         )
     mock_miele_client.send_action.assert_called_once()
 
 
 async def test_set_percentage(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_miele_client: MagicMock,
     setup_platform: None,
 ) -> None:
@@ -159,9 +159,9 @@ async def test_set_percentage(
     mock_miele_client.send_action.side_effect = ClientResponseError("test", "Test")
 
     with pytest.raises(
-        HomeAssistantError, match=f"Failed to set state for {ENTITY_ID}"
+        menuaiError, match=f"Failed to set state for {ENTITY_ID}"
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             TEST_PLATFORM,
             SERVICE_SET_PERCENTAGE,
             {ATTR_ENTITY_ID: ENTITY_ID, ATTR_PERCENTAGE: 50},

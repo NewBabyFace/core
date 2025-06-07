@@ -13,7 +13,7 @@ from pytradfri.const import (
 )
 from pytradfri.device import Device
 
-from homeassistant.components.fan import (
+from menuai.components.fan import (
     ATTR_PERCENTAGE,
     ATTR_PERCENTAGE_STEP,
     ATTR_PRESET_MODE,
@@ -24,28 +24,28 @@ from homeassistant.components.fan import (
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_SUPPORTED_FEATURES,
     STATE_OFF,
     STATE_ON,
     STATE_UNAVAILABLE,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .common import CommandStore, setup_integration
 
 
 @pytest.mark.parametrize("device", ["air_purifier"], indirect=True)
 async def test_fan_available(
-    hass: HomeAssistant,
+    menuai: menuai,
     command_store: CommandStore,
     device: Device,
 ) -> None:
     """Test fan available property."""
     entity_id = "fan.test"
-    await setup_integration(hass)
+    await setup_integration(menuai)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_PERCENTAGE] == 18
@@ -55,10 +55,10 @@ async def test_fan_available(
     assert state.attributes[ATTR_SUPPORTED_FEATURES] == 57
 
     await command_store.trigger_observe_callback(
-        hass, device, {ATTR_REACHABLE_STATE: 0}
+        menuai, device, {ATTR_REACHABLE_STATE: 0}
     )
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_UNAVAILABLE
 
@@ -151,7 +151,7 @@ async def test_fan_available(
     ],
 )
 async def test_services(
-    hass: HomeAssistant,
+    menuai: menuai,
     command_store: CommandStore,
     device: Device,
     service: str,
@@ -163,9 +163,9 @@ async def test_services(
 ) -> None:
     """Test fan services."""
     entity_id = "fan.test"
-    await setup_integration(hass)
+    await setup_integration(menuai)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_PERCENTAGE] == 18
@@ -174,21 +174,21 @@ async def test_services(
     assert state.attributes[ATTR_PRESET_MODE] is None
     assert state.attributes[ATTR_SUPPORTED_FEATURES] == 57
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         FAN_DOMAIN,
         service,
         {"entity_id": entity_id, **service_data},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     await command_store.trigger_observe_callback(
-        hass,
+        menuai,
         device,
         {ROOT_AIR_PURIFIER: [device_state]},
     )
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == expected_state
     assert state.attributes[ATTR_PERCENTAGE] == expected_percentage

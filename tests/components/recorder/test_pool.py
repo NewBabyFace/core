@@ -7,9 +7,9 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from homeassistant.components.recorder.const import DB_WORKER_PREFIX
-from homeassistant.components.recorder.pool import RecorderPool
-from homeassistant.core import HomeAssistant
+from menuai.components.recorder.const import DB_WORKER_PREFIX
+from menuai.components.recorder.pool import RecorderPool
+from menuai.core import menuai
 
 
 async def test_recorder_pool_called_from_event_loop() -> None:
@@ -25,7 +25,7 @@ async def test_recorder_pool_called_from_event_loop() -> None:
 
 
 async def test_recorder_pool(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test RecorderPool gives the same connection in the creating thread."""
     recorder_and_worker_thread_ids: set[int] = set()
@@ -54,7 +54,7 @@ async def test_recorder_pool(
         session = get_session()
         connections.append(session.connection().connection.driver_connection)
         session.close()
-        hass.loop.call_soon_threadsafe(event.set)
+        menuai.loop.call_soon_threadsafe(event.set)
 
     caplog.clear()
     event.clear()

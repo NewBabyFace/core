@@ -9,10 +9,10 @@ import logging
 from aiohttp import ClientError
 from imeon_inverter_api.inverter import Inverter
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import TIMEOUT
 
@@ -36,12 +36,12 @@ class InverterCoordinator(DataUpdateCoordinator[dict[str, str | float | int]]):
     # Implement methods to fetch and update data
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entry: InverterConfigEntry,
     ) -> None:
         """Initialize data update coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             name=HUBNAME,
             update_interval=INTERVAL,

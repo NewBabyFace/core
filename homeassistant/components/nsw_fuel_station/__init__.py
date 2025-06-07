@@ -8,10 +8,10 @@ import logging
 
 from nsw_fuel import FuelCheckClient, FuelCheckError, Station
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DATA_NSW_FUEL_STATION
 
@@ -23,22 +23,22 @@ SCAN_INTERVAL = datetime.timedelta(hours=1)
 CONFIG_SCHEMA = cv.platform_only_config_schema(DOMAIN)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the NSW Fuel Station platform."""
     client = FuelCheckClient()
 
     async def async_update_data():
-        return await hass.async_add_executor_job(fetch_station_price_data, client)
+        return await menuai.async_add_executor_job(fetch_station_price_data, client)
 
     coordinator = DataUpdateCoordinator(
-        hass,
+        menuai,
         _LOGGER,
         config_entry=None,
         name="sensor",
         update_interval=SCAN_INTERVAL,
         update_method=async_update_data,
     )
-    hass.data[DATA_NSW_FUEL_STATION] = coordinator
+    menuai.data[DATA_NSW_FUEL_STATION] = coordinator
 
     await coordinator.async_refresh()
 

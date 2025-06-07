@@ -29,9 +29,9 @@ from aiohasupervisor.models import (
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.components.repairs import DOMAIN as REPAIRS_DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.repairs import DOMAIN as REPAIRS_DOMAIN
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from .test_init import MOCK_ENVIRON
 
@@ -39,9 +39,9 @@ from tests.typing import WebSocketGenerator
 
 
 @pytest.fixture(autouse=True)
-async def setup_repairs(hass: HomeAssistant) -> None:
+async def setup_repairs(menuai: menuai) -> None:
     """Set up the repairs integration."""
-    assert await async_setup_component(hass, REPAIRS_DOMAIN, {REPAIRS_DOMAIN: {}})
+    assert await async_setup_component(menuai, REPAIRS_DOMAIN, {REPAIRS_DOMAIN: {}})
 
 
 @pytest.fixture(autouse=True)
@@ -98,7 +98,7 @@ def assert_repair_in_list(
         "breaks_in_ha_version": None,
         "created": ANY,
         "dismissed_version": None,
-        "domain": "hassio",
+        "domain": "menuaiio",
         "ignored": False,
         "is_fixable": False,
         "issue_id": f"{repair_type}_system_{reason}",
@@ -127,7 +127,7 @@ def assert_issue_repair_in_list(
         "breaks_in_ha_version": None,
         "created": ANY,
         "dismissed_version": None,
-        "domain": "hassio",
+        "domain": "menuaiio",
         "ignored": False,
         "is_fixable": fixable,
         "issue_id": uuid,
@@ -141,19 +141,19 @@ def assert_issue_repair_in_list(
 
 @pytest.mark.usefixtures("all_setup_requests")
 async def test_unhealthy_issues(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor_client: AsyncMock,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test issues added for unhealthy systems."""
     mock_resolution_info(
         supervisor_client, unhealthy=[UnhealthyReason.DOCKER, UnhealthyReason.SETUP]
     )
 
-    result = await async_setup_component(hass, "hassio", {})
+    result = await async_setup_component(menuai, "menuaiio", {})
     assert result
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json({"id": 1, "type": "repairs/list_issues"})
     msg = await client.receive_json()
@@ -165,9 +165,9 @@ async def test_unhealthy_issues(
 
 @pytest.mark.usefixtures("all_setup_requests")
 async def test_unsupported_issues(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor_client: AsyncMock,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test issues added for unsupported systems."""
     mock_resolution_info(
@@ -175,10 +175,10 @@ async def test_unsupported_issues(
         unsupported=[UnsupportedReason.CONTENT_TRUST, UnsupportedReason.OS],
     )
 
-    result = await async_setup_component(hass, "hassio", {})
+    result = await async_setup_component(menuai, "menuaiio", {})
     assert result
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json({"id": 1, "type": "repairs/list_issues"})
     msg = await client.receive_json()
@@ -192,17 +192,17 @@ async def test_unsupported_issues(
 
 @pytest.mark.usefixtures("all_setup_requests")
 async def test_unhealthy_issues_add_remove(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor_client: AsyncMock,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test unhealthy issues added and removed from dispatches."""
     mock_resolution_info(supervisor_client)
 
-    result = await async_setup_component(hass, "hassio", {})
+    result = await async_setup_component(menuai, "menuaiio", {})
     assert result
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json(
         {
@@ -219,7 +219,7 @@ async def test_unhealthy_issues_add_remove(
     )
     msg = await client.receive_json()
     assert msg["success"]
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     await client.send_json({"id": 2, "type": "repairs/list_issues"})
     msg = await client.receive_json()
@@ -239,7 +239,7 @@ async def test_unhealthy_issues_add_remove(
     )
     msg = await client.receive_json()
     assert msg["success"]
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     await client.send_json({"id": 4, "type": "repairs/list_issues"})
     msg = await client.receive_json()
@@ -249,17 +249,17 @@ async def test_unhealthy_issues_add_remove(
 
 @pytest.mark.usefixtures("all_setup_requests")
 async def test_unsupported_issues_add_remove(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor_client: AsyncMock,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test unsupported issues added and removed from dispatches."""
     mock_resolution_info(supervisor_client)
 
-    result = await async_setup_component(hass, "hassio", {})
+    result = await async_setup_component(menuai, "menuaiio", {})
     assert result
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json(
         {
@@ -276,7 +276,7 @@ async def test_unsupported_issues_add_remove(
     )
     msg = await client.receive_json()
     assert msg["success"]
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     await client.send_json({"id": 2, "type": "repairs/list_issues"})
     msg = await client.receive_json()
@@ -296,7 +296,7 @@ async def test_unsupported_issues_add_remove(
     )
     msg = await client.receive_json()
     assert msg["success"]
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     await client.send_json({"id": 4, "type": "repairs/list_issues"})
     msg = await client.receive_json()
@@ -306,9 +306,9 @@ async def test_unsupported_issues_add_remove(
 
 @pytest.mark.usefixtures("all_setup_requests")
 async def test_reset_issues_supervisor_restart(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor_client: AsyncMock,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """All issues reset on supervisor restart."""
     mock_resolution_info(
@@ -336,10 +336,10 @@ async def test_reset_issues_supervisor_restart(
         },
     )
 
-    result = await async_setup_component(hass, "hassio", {})
+    result = await async_setup_component(menuai, "menuaiio", {})
     assert result
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json({"id": 1, "type": "repairs/list_issues"})
     msg = await client.receive_json()
@@ -370,7 +370,7 @@ async def test_reset_issues_supervisor_restart(
     )
     msg = await client.receive_json()
     assert msg["success"]
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     await client.send_json({"id": 3, "type": "repairs/list_issues"})
     msg = await client.receive_json()
@@ -380,9 +380,9 @@ async def test_reset_issues_supervisor_restart(
 
 @pytest.mark.usefixtures("all_setup_requests")
 async def test_reasons_added_and_removed(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor_client: AsyncMock,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test an unsupported/unhealthy reasons being added and removed at same time."""
     mock_resolution_info(
@@ -391,10 +391,10 @@ async def test_reasons_added_and_removed(
         unhealthy=[UnhealthyReason.DOCKER],
     )
 
-    result = await async_setup_component(hass, "hassio", {})
+    result = await async_setup_component(menuai, "menuaiio", {})
     assert result
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json({"id": 1, "type": "repairs/list_issues"})
     msg = await client.receive_json()
@@ -421,7 +421,7 @@ async def test_reasons_added_and_removed(
     )
     msg = await client.receive_json()
     assert msg["success"]
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     await client.send_json({"id": 3, "type": "repairs/list_issues"})
     msg = await client.receive_json()
@@ -435,9 +435,9 @@ async def test_reasons_added_and_removed(
 
 @pytest.mark.usefixtures("all_setup_requests")
 async def test_ignored_unsupported_skipped(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor_client: AsyncMock,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Unsupported reasons which have an identical unhealthy reason are ignored."""
     mock_resolution_info(
@@ -446,10 +446,10 @@ async def test_ignored_unsupported_skipped(
         unhealthy=[UnhealthyReason.PRIVILEGED],
     )
 
-    result = await async_setup_component(hass, "hassio", {})
+    result = await async_setup_component(menuai, "menuaiio", {})
     assert result
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json({"id": 1, "type": "repairs/list_issues"})
     msg = await client.receive_json()
@@ -460,9 +460,9 @@ async def test_ignored_unsupported_skipped(
 
 @pytest.mark.usefixtures("all_setup_requests")
 async def test_new_unsupported_unhealthy_reason(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor_client: AsyncMock,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """New unsupported/unhealthy reasons result in a generic repair until next core update."""
     mock_resolution_info(
@@ -471,10 +471,10 @@ async def test_new_unsupported_unhealthy_reason(
         unhealthy=["fake_unhealthy"],
     )
 
-    result = await async_setup_component(hass, "hassio", {})
+    result = await async_setup_component(menuai, "menuaiio", {})
     assert result
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json({"id": 1, "type": "repairs/list_issues"})
     msg = await client.receive_json()
@@ -484,7 +484,7 @@ async def test_new_unsupported_unhealthy_reason(
         "breaks_in_ha_version": None,
         "created": ANY,
         "dismissed_version": None,
-        "domain": "hassio",
+        "domain": "menuaiio",
         "ignored": False,
         "is_fixable": False,
         "issue_id": "unhealthy_system_fake_unhealthy",
@@ -498,7 +498,7 @@ async def test_new_unsupported_unhealthy_reason(
         "breaks_in_ha_version": None,
         "created": ANY,
         "dismissed_version": None,
-        "domain": "hassio",
+        "domain": "menuaiio",
         "ignored": False,
         "is_fixable": False,
         "issue_id": "unsupported_system_fake_unsupported",
@@ -512,9 +512,9 @@ async def test_new_unsupported_unhealthy_reason(
 
 @pytest.mark.usefixtures("all_setup_requests")
 async def test_supervisor_issues(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor_client: AsyncMock,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test repairs added for supervisor issue."""
     mock_resolution_info(
@@ -552,10 +552,10 @@ async def test_supervisor_issues(
         },
     )
 
-    result = await async_setup_component(hass, "hassio", {})
+    result = await async_setup_component(menuai, "menuaiio", {})
     assert result
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json({"id": 1, "type": "repairs/list_issues"})
     msg = await client.receive_json()
@@ -568,7 +568,7 @@ async def test_supervisor_issues(
         type_="detached_addon_missing",
         fixable=False,
         reference="test",
-        placeholders={"addon_url": "/hassio/addon/test", "addon": "test"},
+        placeholders={"addon_url": "/menuaiio/addon/test", "addon": "test"},
     )
     assert_issue_repair_in_list(
         msg["result"]["issues"],
@@ -582,10 +582,10 @@ async def test_supervisor_issues(
 
 @pytest.mark.usefixtures("all_setup_requests")
 async def test_supervisor_issues_initial_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor_client: AsyncMock,
     resolution_info: AsyncMock,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test issues manager retries after initial update failure."""
@@ -618,12 +618,12 @@ async def test_supervisor_issues_initial_failure(
         resolution_info.return_value,
     ]
 
-    with patch("homeassistant.components.hassio.issues.REQUEST_REFRESH_DELAY", new=0.1):
-        result = await async_setup_component(hass, "hassio", {})
-        await hass.async_block_till_done()
+    with patch("menuai.components.menuaiio.issues.REQUEST_REFRESH_DELAY", new=0.1):
+        result = await async_setup_component(menuai, "menuaiio", {})
+        await menuai.async_block_till_done()
         assert result
 
-        client = await hass_ws_client(hass)
+        client = await menuai_ws_client(menuai)
 
         await client.send_json({"id": 1, "type": "repairs/list_issues"})
         msg = await client.receive_json()
@@ -631,7 +631,7 @@ async def test_supervisor_issues_initial_failure(
         assert len(msg["result"]["issues"]) == 0
 
         freezer.tick(timedelta(milliseconds=200))
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         await client.send_json({"id": 2, "type": "repairs/list_issues"})
         msg = await client.receive_json()
         assert msg["success"]
@@ -640,17 +640,17 @@ async def test_supervisor_issues_initial_failure(
 
 @pytest.mark.usefixtures("all_setup_requests")
 async def test_supervisor_issues_add_remove(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor_client: AsyncMock,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test supervisor issues added and removed from dispatches."""
     mock_resolution_info(supervisor_client)
 
-    result = await async_setup_component(hass, "hassio", {})
+    result = await async_setup_component(menuai, "menuaiio", {})
     assert result
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json(
         {
@@ -677,7 +677,7 @@ async def test_supervisor_issues_add_remove(
     )
     msg = await client.receive_json()
     assert msg["success"]
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     await client.send_json({"id": 2, "type": "repairs/list_issues"})
     msg = await client.receive_json()
@@ -709,7 +709,7 @@ async def test_supervisor_issues_add_remove(
     )
     msg = await client.receive_json()
     assert msg["success"]
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     await client.send_json({"id": 4, "type": "repairs/list_issues"})
     msg = await client.receive_json()
@@ -719,10 +719,10 @@ async def test_supervisor_issues_add_remove(
 
 @pytest.mark.usefixtures("all_setup_requests")
 async def test_supervisor_issues_suggestions_fail(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor_client: AsyncMock,
     resolution_suggestions_for_issue: AsyncMock,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test failing to get suggestions for issue skips it."""
     mock_resolution_info(
@@ -738,10 +738,10 @@ async def test_supervisor_issues_suggestions_fail(
     )
     resolution_suggestions_for_issue.side_effect = SupervisorTimeoutError
 
-    result = await async_setup_component(hass, "hassio", {})
+    result = await async_setup_component(menuai, "menuaiio", {})
     assert result
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json({"id": 1, "type": "repairs/list_issues"})
     msg = await client.receive_json()
@@ -751,17 +751,17 @@ async def test_supervisor_issues_suggestions_fail(
 
 @pytest.mark.usefixtures("all_setup_requests")
 async def test_supervisor_remove_missing_issue_without_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor_client: AsyncMock,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test HA skips message to remove issue that it didn't know about (sync issue)."""
     mock_resolution_info(supervisor_client)
 
-    result = await async_setup_component(hass, "hassio", {})
+    result = await async_setup_component(menuai, "menuaiio", {})
     assert result
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json(
         {
@@ -780,21 +780,21 @@ async def test_supervisor_remove_missing_issue_without_error(
     )
     msg = await client.receive_json()
     assert msg["success"]
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
 @pytest.mark.usefixtures("all_setup_requests")
 async def test_system_is_not_ready(
-    hass: HomeAssistant,
+    menuai: menuai,
     resolution_info: AsyncMock,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """Ensure hassio starts despite error."""
+    """Ensure menuaiio starts despite error."""
     resolution_info.side_effect = SupervisorBadRequestError(
         "System is not ready with state: setup"
     )
 
-    assert await async_setup_component(hass, "hassio", {})
+    assert await async_setup_component(menuai, "menuaiio", {})
     assert "Failed to update supervisor issues" in caplog.text
 
 
@@ -803,17 +803,17 @@ async def test_system_is_not_ready(
 )
 @pytest.mark.usefixtures("all_setup_requests")
 async def test_supervisor_issues_detached_addon_missing(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor_client: AsyncMock,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test supervisor issue for detached addon due to missing repository."""
     mock_resolution_info(supervisor_client)
 
-    result = await async_setup_component(hass, "hassio", {})
+    result = await async_setup_component(menuai, "menuaiio", {})
     assert result
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json(
         {
@@ -832,7 +832,7 @@ async def test_supervisor_issues_detached_addon_missing(
     )
     msg = await client.receive_json()
     assert msg["success"]
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     await client.send_json({"id": 2, "type": "repairs/list_issues"})
     msg = await client.receive_json()
@@ -847,6 +847,6 @@ async def test_supervisor_issues_detached_addon_missing(
         placeholders={
             "reference": "test",
             "addon": "test",
-            "addon_url": "/hassio/addon/test",
+            "addon_url": "/menuaiio/addon/test",
         },
     )

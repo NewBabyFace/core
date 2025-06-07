@@ -4,9 +4,9 @@ import asyncio
 
 from aiohttp import ClientError
 
-from homeassistant.components.airly.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.airly.const import DOMAIN
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from . import init_integration
 
@@ -15,16 +15,16 @@ from tests.test_util.aiohttp import AiohttpClientMocker
 
 
 async def test_airly_system_health(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test Airly system health."""
     aioclient_mock.get("https://airapi.airly.eu/v2/", text="")
 
-    await init_integration(hass, aioclient_mock)
-    assert await async_setup_component(hass, "system_health", {})
-    await hass.async_block_till_done()
+    await init_integration(menuai, aioclient_mock)
+    assert await async_setup_component(menuai, "system_health", {})
+    await menuai.async_block_till_done()
 
-    info = await get_system_health_info(hass, DOMAIN)
+    info = await get_system_health_info(menuai, DOMAIN)
 
     for key, val in info.items():
         if asyncio.iscoroutine(val):
@@ -36,16 +36,16 @@ async def test_airly_system_health(
 
 
 async def test_airly_system_health_fail(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test Airly system health."""
     aioclient_mock.get("https://airapi.airly.eu/v2/", exc=ClientError)
 
-    await init_integration(hass, aioclient_mock)
-    assert await async_setup_component(hass, "system_health", {})
-    await hass.async_block_till_done()
+    await init_integration(menuai, aioclient_mock)
+    assert await async_setup_component(menuai, "system_health", {})
+    await menuai.async_block_till_done()
 
-    info = await get_system_health_info(hass, DOMAIN)
+    info = await get_system_health_info(menuai, DOMAIN)
 
     for key, val in info.items():
         if asyncio.iscoroutine(val):

@@ -7,13 +7,13 @@ from pyaehw4a1.aehw4a1 import AehW4a1
 import pyaehw4a1.exceptions
 import voluptuous as vol
 
-from homeassistant import config_entries
-from homeassistant.components.climate import DOMAIN as CLIMATE_DOMAIN
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_IP_ADDRESS, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
+from menuai import config_entries
+from menuai.components.climate import DOMAIN as CLIMATE_DOMAIN
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_IP_ADDRESS, Platform
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType
 
 from .const import DOMAIN
 
@@ -49,10 +49,10 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Hisense AEH-W4A1 integration."""
     conf = config.get(DOMAIN)
-    hass.data[DOMAIN] = {}
+    menuai.data[DOMAIN] = {}
 
     if conf is not None:
         devices = conf[CONF_IP_ADDRESS][:]
@@ -63,9 +63,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                 conf[CONF_IP_ADDRESS].remove(device)
                 _LOGGER.warning("Hisense AEH-W4A1 at %s not found", device)
         if conf[CONF_IP_ADDRESS]:
-            hass.data[DOMAIN] = conf
-            hass.async_create_task(
-                hass.config_entries.flow.async_init(
+            menuai.data[DOMAIN] = conf
+            menuai.async_create_task(
+                menuai.config_entries.flow.async_init(
                     DOMAIN,
                     context={"source": config_entries.SOURCE_IMPORT},
                 )
@@ -74,12 +74,12 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up a config entry for Hisense AEH-W4A1."""
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

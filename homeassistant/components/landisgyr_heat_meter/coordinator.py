@@ -7,9 +7,9 @@ import serial
 from ultraheat_api.response import HeatMeterResponse
 from ultraheat_api.service import HeatMeterService
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import POLLING_INTERVAL, ULTRAHEAT_TIMEOUT
 
@@ -22,11 +22,11 @@ class UltraheatCoordinator(DataUpdateCoordinator[HeatMeterResponse]):
     config_entry: ConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: ConfigEntry, api: HeatMeterService
+        self, menuai: menuai, config_entry: ConfigEntry, api: HeatMeterService
     ) -> None:
         """Initialize my coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name="ultraheat",
@@ -38,6 +38,6 @@ class UltraheatCoordinator(DataUpdateCoordinator[HeatMeterResponse]):
         """Fetch data from API endpoint."""
         try:
             async with asyncio.timeout(ULTRAHEAT_TIMEOUT):
-                return await self.hass.async_add_executor_job(self.api.read)
+                return await self.menuai.async_add_executor_job(self.api.read)
         except (FileNotFoundError, serial.SerialException) as err:
             raise UpdateFailed(f"Error communicating with API: {err}") from err

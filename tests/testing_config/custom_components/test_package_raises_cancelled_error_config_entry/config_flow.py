@@ -1,7 +1,7 @@
 """Config flow."""
 
-from homeassistant.config_entries import ConfigFlow
-from homeassistant.core import HomeAssistant
+from menuai.config_entries import ConfigFlow
+from menuai.core import menuai
 
 
 class MockConfigFlow(
@@ -10,6 +10,6 @@ class MockConfigFlow(
     """Mock config flow."""
 
 
-async def _async_has_devices(hass: HomeAssistant) -> bool:
+async def _async_has_devices(menuai: menuai) -> bool:
     """Return if there are devices that can be discovered."""
     return True

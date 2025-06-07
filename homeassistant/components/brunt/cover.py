@@ -7,17 +7,17 @@ from typing import Any
 from aiohttp.client_exceptions import ClientResponseError
 from brunt import Thing
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     ATTR_POSITION,
     CoverDeviceClass,
     CoverEntity,
     CoverEntityFeature,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
     ATTR_REQUEST_POSITION,
@@ -32,7 +32,7 @@ from .coordinator import BruntConfigEntry, BruntCoordinator
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: BruntConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -85,9 +85,9 @@ class BruntDevice(CoordinatorEntity[BruntCoordinator], CoverEntity):
             model=self._thing.model,
         )
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai."""
+        await super().async_added_to_menuai()
         self.async_on_remove(
             self.coordinator.async_add_listener(self._brunt_update_listener)
         )
@@ -159,7 +159,7 @@ class BruntDevice(CoordinatorEntity[BruntCoordinator], CoverEntity):
                 position, thing_uri=self._thing.thing_uri
             )
         except ClientResponseError as exc:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Unable to reposition {self._thing.name}"
             ) from exc
         self.coordinator.update_interval = FAST_INTERVAL

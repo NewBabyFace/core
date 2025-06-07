@@ -1,4 +1,4 @@
-"""Support for exposing Home Assistant via Zeroconf."""
+"""Support for exposing MenuAI via Zeroconf."""
 
 from __future__ import annotations
 
@@ -13,28 +13,28 @@ import voluptuous as vol
 from zeroconf import InterfaceChoice, IPVersion
 from zeroconf.asyncio import AsyncServiceInfo
 
-from homeassistant.components import network
-from homeassistant.const import (
-    EVENT_HOMEASSISTANT_CLOSE,
-    EVENT_HOMEASSISTANT_STOP,
+from menuai.components import network
+from menuai.const import (
+    EVENT_menuai_CLOSE,
+    EVENT_menuai_STOP,
     __version__,
 )
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv, instance_id
-from homeassistant.helpers.deprecation import (
+from menuai.core import Event, menuai, callback
+from menuai.helpers import config_validation as cv, instance_id
+from menuai.helpers.deprecation import (
     DeprecatedConstant,
     all_with_deprecated_constants,
     check_if_deprecated_constant,
     dir_with_deprecated_constants,
 )
-from homeassistant.helpers.network import NoURLAvailableError, get_url
-from homeassistant.helpers.service_info.zeroconf import (
+from menuai.helpers.network import NoURLAvailableError, get_url
+from menuai.helpers.service_info.zeroconf import (
     ATTR_PROPERTIES_ID as _ATTR_PROPERTIES_ID,
     ZeroconfServiceInfo as _ZeroconfServiceInfo,
 )
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.loader import async_get_homekit, async_get_zeroconf, bind_hass
-from homeassistant.setup import async_when_setup_or_start
+from menuai.helpers.typing import ConfigType
+from menuai.loader import async_get_homekit, async_get_zeroconf, bind_menuai
+from menuai.setup import async_when_setup_or_start
 
 from . import websocket_api
 from .const import DOMAIN, ZEROCONF_TYPE
@@ -65,7 +65,7 @@ MAX_NAME_LEN = 63
 # Attributes for ZeroconfServiceInfo[ATTR_PROPERTIES]
 _DEPRECATED_ATTR_PROPERTIES_ID = DeprecatedConstant(
     _ATTR_PROPERTIES_ID,
-    "homeassistant.helpers.service_info.zeroconf.ATTR_PROPERTIES_ID",
+    "menuai.helpers.service_info.zeroconf.ATTR_PROPERTIES_ID",
     "2026.2",
 )
 
@@ -87,38 +87,38 @@ CONFIG_SCHEMA = vol.Schema(
 
 _DEPRECATED_ZeroconfServiceInfo = DeprecatedConstant(
     _ZeroconfServiceInfo,
-    "homeassistant.helpers.service_info.zeroconf.ZeroconfServiceInfo",
+    "menuai.helpers.service_info.zeroconf.ZeroconfServiceInfo",
     "2026.2",
 )
 
 
-@bind_hass
-async def async_get_instance(hass: HomeAssistant) -> HaZeroconf:
+@bind_menuai
+async def async_get_instance(menuai: menuai) -> HaZeroconf:
     """Get or create the shared HaZeroconf instance."""
-    return cast(HaZeroconf, (_async_get_instance(hass)).zeroconf)
+    return cast(HaZeroconf, (_async_get_instance(menuai)).zeroconf)
 
 
-@bind_hass
-async def async_get_async_instance(hass: HomeAssistant) -> HaAsyncZeroconf:
+@bind_menuai
+async def async_get_async_instance(menuai: menuai) -> HaAsyncZeroconf:
     """Get or create the shared HaAsyncZeroconf instance."""
-    return _async_get_instance(hass)
+    return _async_get_instance(menuai)
 
 
 @callback
-def async_get_async_zeroconf(hass: HomeAssistant) -> HaAsyncZeroconf:
+def async_get_async_zeroconf(menuai: menuai) -> HaAsyncZeroconf:
     """Get or create the shared HaAsyncZeroconf instance.
 
     This method must be run in the event loop, and is an alternative
     to the async_get_async_instance method when a coroutine cannot be used.
     """
-    return _async_get_instance(hass)
+    return _async_get_instance(menuai)
 
 
-def _async_get_instance(hass: HomeAssistant) -> HaAsyncZeroconf:
-    if DOMAIN in hass.data:
-        return cast(HaAsyncZeroconf, hass.data[DOMAIN])
+def _async_get_instance(menuai: menuai) -> HaAsyncZeroconf:
+    if DOMAIN in menuai.data:
+        return cast(HaAsyncZeroconf, menuai.data[DOMAIN])
 
-    zeroconf = HaZeroconf(**_async_get_zc_args(hass))
+    zeroconf = HaZeroconf(**_async_get_zc_args(menuai))
     aio_zc = HaAsyncZeroconf(zc=zeroconf)
 
     install_multiple_zeroconf_catcher(zeroconf)
@@ -129,8 +129,8 @@ def _async_get_instance(hass: HomeAssistant) -> HaAsyncZeroconf:
 
     # Wait to the close event to shutdown zeroconf to give
     # integrations time to send a good bye message
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_CLOSE, _async_stop_zeroconf)
-    hass.data[DOMAIN] = aio_zc
+    menuai.bus.async_listen_once(EVENT_menuai_CLOSE, _async_stop_zeroconf)
+    menuai.data[DOMAIN] = aio_zc
 
     return aio_zc
 
@@ -146,10 +146,10 @@ def _async_zc_has_functional_dual_stack() -> bool:
     )
 
 
-def _async_get_zc_args(hass: HomeAssistant) -> dict[str, Any]:
+def _async_get_zc_args(menuai: menuai) -> dict[str, Any]:
     """Get zeroconf arguments from config."""
     zc_args: dict[str, Any] = {"ip_version": IPVersion.V4Only}
-    adapters = network.async_get_loaded_adapters(hass)
+    adapters = network.async_get_loaded_adapters(menuai)
     ipv6 = False
     if _async_zc_has_functional_dual_stack():
         if any(adapter["enabled"] and adapter["ipv6"] for adapter in adapters):
@@ -181,39 +181,39 @@ def _async_get_zc_args(hass: HomeAssistant) -> dict[str, Any]:
     return zc_args
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
-    """Set up Zeroconf and make Home Assistant discoverable."""
-    aio_zc = _async_get_instance(hass)
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
+    """Set up Zeroconf and make MenuAI discoverable."""
+    aio_zc = _async_get_instance(menuai)
     zeroconf = cast(HaZeroconf, aio_zc.zeroconf)
-    zeroconf_types = await async_get_zeroconf(hass)
-    homekit_models = await async_get_homekit(hass)
+    zeroconf_types = await async_get_zeroconf(menuai)
+    homekit_models = await async_get_homekit(menuai)
     homekit_model_lookup, homekit_model_matchers = build_homekit_model_lookups(
         homekit_models
     )
     discovery = ZeroconfDiscovery(
-        hass,
+        menuai,
         zeroconf,
         zeroconf_types,
         homekit_model_lookup,
         homekit_model_matchers,
     )
     await discovery.async_setup()
-    hass.data[DATA_DISCOVERY] = discovery
-    websocket_api.async_setup(hass)
+    menuai.data[DATA_DISCOVERY] = discovery
+    websocket_api.async_setup(menuai)
 
-    async def _async_zeroconf_hass_start(hass: HomeAssistant, comp: str) -> None:
-        """Expose Home Assistant on zeroconf when it starts.
+    async def _async_zeroconf_menuai_start(menuai: menuai, comp: str) -> None:
+        """Expose MenuAI on zeroconf when it starts.
 
         Wait till started or otherwise HTTP is not up and running.
         """
-        uuid = await instance_id.async_get(hass)
-        await _async_register_hass_zc_service(hass, aio_zc, uuid)
+        uuid = await instance_id.async_get(menuai)
+        await _async_register_menuai_zc_service(menuai, aio_zc, uuid)
 
-    async def _async_zeroconf_hass_stop(_event: Event) -> None:
+    async def _async_zeroconf_menuai_stop(_event: Event) -> None:
         await discovery.async_stop()
 
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _async_zeroconf_hass_stop)
-    async_when_setup_or_start(hass, "frontend", _async_zeroconf_hass_start)
+    menuai.bus.async_listen_once(EVENT_menuai_STOP, _async_zeroconf_menuai_stop)
+    async_when_setup_or_start(menuai, "frontend", _async_zeroconf_menuai_start)
 
     return True
 
@@ -226,12 +226,12 @@ def _filter_disallowed_characters(name: str) -> str:
     return name.replace(".", " ")
 
 
-async def _async_register_hass_zc_service(
-    hass: HomeAssistant, aio_zc: HaAsyncZeroconf, uuid: str
+async def _async_register_menuai_zc_service(
+    menuai: menuai, aio_zc: HaAsyncZeroconf, uuid: str
 ) -> None:
     # Get instance UUID
     valid_location_name = _truncate_location_name_to_valid(
-        _filter_disallowed_characters(hass.config.location_name or "Home")
+        _filter_disallowed_characters(menuai.config.location_name or "Home")
     )
 
     params = {
@@ -248,10 +248,10 @@ async def _async_register_hass_zc_service(
 
     # Get instance URL's
     with suppress(NoURLAvailableError):
-        params["external_url"] = get_url(hass, allow_internal=False)
+        params["external_url"] = get_url(menuai, allow_internal=False)
 
     with suppress(NoURLAvailableError):
-        params["internal_url"] = get_url(hass, allow_external=False)
+        params["internal_url"] = get_url(menuai, allow_external=False)
 
     # Set old base URL based on external or internal
     params["base_url"] = params["external_url"] or params["internal_url"]
@@ -262,8 +262,8 @@ async def _async_register_hass_zc_service(
         ZEROCONF_TYPE,
         name=f"{valid_location_name}.{ZEROCONF_TYPE}",
         server=f"{uuid}.local.",
-        parsed_addresses=await network.async_get_announce_addresses(hass),
-        port=hass.http.server_port,
+        parsed_addresses=await network.async_get_announce_addresses(menuai),
+        port=menuai.http.server_port,
         properties=params,
     )
 

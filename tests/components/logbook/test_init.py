@@ -10,19 +10,19 @@ from freezegun import freeze_time
 import pytest
 import voluptuous as vol
 
-from homeassistant import core as ha
-from homeassistant.components import logbook, recorder
+from menuai import core as ha
+from menuai.components import logbook, recorder
 
-# pylint: disable-next=hass-component-root-import
-from homeassistant.components.alexa.smart_home import EVENT_ALEXA_SMART_HOME
-from homeassistant.components.automation import EVENT_AUTOMATION_TRIGGERED
-from homeassistant.components.logbook.models import EventAsRow, LazyEventPartialState
-from homeassistant.components.logbook.processor import EventProcessor
-from homeassistant.components.logbook.queries.common import PSEUDO_EVENT_STATE_CHANGED
-from homeassistant.components.recorder import Recorder
-from homeassistant.components.script import EVENT_SCRIPT_STARTED
-from homeassistant.components.sensor import SensorStateClass
-from homeassistant.const import (
+# pylint: disable-next=menuai-component-root-import
+from menuai.components.alexa.smart_home import EVENT_ALEXA_SMART_HOME
+from menuai.components.automation import EVENT_AUTOMATION_TRIGGERED
+from menuai.components.logbook.models import EventAsRow, LazyEventPartialState
+from menuai.components.logbook.processor import EventProcessor
+from menuai.components.logbook.queries.common import PSEUDO_EVENT_STATE_CHANGED
+from menuai.components.recorder import Recorder
+from menuai.components.script import EVENT_SCRIPT_STARTED
+from menuai.components.sensor import SensorStateClass
+from menuai.const import (
     ATTR_DOMAIN,
     ATTR_ENTITY_ID,
     ATTR_FRIENDLY_NAME,
@@ -34,18 +34,18 @@ from homeassistant.const import (
     CONF_EXCLUDE,
     CONF_INCLUDE,
     EVENT_CALL_SERVICE,
-    EVENT_HOMEASSISTANT_START,
-    EVENT_HOMEASSISTANT_STARTED,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_START,
+    EVENT_menuai_STARTED,
+    EVENT_menuai_STOP,
     EVENT_LOGBOOK_ENTRY,
     STATE_OFF,
     STATE_ON,
 )
-from homeassistant.core import Event, HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.entityfilter import CONF_ENTITY_GLOBS
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.core import Event, menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.entityfilter import CONF_ENTITY_GLOBS
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from .common import MockRow, mock_humanify
 
@@ -60,23 +60,23 @@ EMPTY_CONFIG = logbook.CONFIG_SCHEMA({logbook.DOMAIN: {}})
 
 
 @pytest.fixture
-async def hass_(recorder_mock: Recorder, hass: HomeAssistant) -> HomeAssistant:
+async def menuai_(recorder_mock: Recorder, menuai: menuai) -> menuai:
     """Set up things to be run when tests are started."""
-    assert await async_setup_component(hass, logbook.DOMAIN, EMPTY_CONFIG)
-    return hass
+    assert await async_setup_component(menuai, logbook.DOMAIN, EMPTY_CONFIG)
+    return menuai
 
 
 @pytest.fixture
-async def set_utc(hass: HomeAssistant) -> None:
+async def set_utc(menuai: menuai) -> None:
     """Set timezone to UTC."""
-    await hass.config.async_set_time_zone("UTC")
+    await menuai.config.async_set_time_zone("UTC")
 
 
-async def test_service_call_create_logbook_entry(hass_: HomeAssistant) -> None:
+async def test_service_call_create_logbook_entry(menuai_: menuai) -> None:
     """Test if service call create log book entry."""
-    calls = async_capture_events(hass_, logbook.EVENT_LOGBOOK_ENTRY)
+    calls = async_capture_events(menuai_, logbook.EVENT_LOGBOOK_ENTRY)
 
-    await hass_.services.async_call(
+    await menuai_.services.async_call(
         logbook.DOMAIN,
         "log",
         {
@@ -87,7 +87,7 @@ async def test_service_call_create_logbook_entry(hass_: HomeAssistant) -> None:
         },
         True,
     )
-    await hass_.services.async_call(
+    await menuai_.services.async_call(
         logbook.DOMAIN,
         "log",
         {
@@ -99,8 +99,8 @@ async def test_service_call_create_logbook_entry(hass_: HomeAssistant) -> None:
     # Logbook entry service call results in firing an event.
     # Our service call will unblock when the event listeners have been
     # scheduled. This means that they may not have been processed yet.
-    await async_wait_recording_done(hass_)
-    event_processor = EventProcessor(hass_, (EVENT_LOGBOOK_ENTRY,))
+    await async_wait_recording_done(menuai_)
+    event_processor = EventProcessor(menuai_, (EVENT_LOGBOOK_ENTRY,))
 
     events = list(
         event_processor.get_events(
@@ -127,12 +127,12 @@ async def test_service_call_create_logbook_entry(hass_: HomeAssistant) -> None:
 
 @pytest.mark.usefixtures("recorder_mock")
 async def test_service_call_create_logbook_entry_invalid_entity_id(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test if service call create log book entry with an invalid entity id."""
-    await async_setup_component(hass, "logbook", {})
-    await hass.async_block_till_done()
-    hass.bus.async_fire(
+    await async_setup_component(menuai, "logbook", {})
+    await menuai.async_block_till_done()
+    menuai.bus.async_fire(
         logbook.EVENT_LOGBOOK_ENTRY,
         {
             logbook.ATTR_NAME: "Alarm",
@@ -141,8 +141,8 @@ async def test_service_call_create_logbook_entry_invalid_entity_id(
             logbook.ATTR_ENTITY_ID: 1234,
         },
     )
-    await async_wait_recording_done(hass)
-    event_processor = EventProcessor(hass, (EVENT_LOGBOOK_ENTRY,))
+    await async_wait_recording_done(menuai)
+    event_processor = EventProcessor(menuai, (EVENT_LOGBOOK_ENTRY,))
     events = list(
         event_processor.get_events(
             dt_util.utcnow() - timedelta(hours=1),
@@ -157,28 +157,28 @@ async def test_service_call_create_logbook_entry_invalid_entity_id(
 
 
 async def test_service_call_create_log_book_entry_no_message(
-    hass_: HomeAssistant,
+    menuai_: menuai,
 ) -> None:
     """Test if service call create log book entry without message."""
-    calls = async_capture_events(hass_, logbook.EVENT_LOGBOOK_ENTRY)
+    calls = async_capture_events(menuai_, logbook.EVENT_LOGBOOK_ENTRY)
 
     with pytest.raises(vol.Invalid):
-        await hass_.services.async_call(logbook.DOMAIN, "log", {}, True)
+        await menuai_.services.async_call(logbook.DOMAIN, "log", {}, True)
 
     # Logbook entry service call results in firing an event.
     # Our service call will unblock when the event listeners have been
     # scheduled. This means that they may not have been processed yet.
-    await hass_.async_block_till_done()
+    await menuai_.async_block_till_done()
 
     assert len(calls) == 0
 
 
 async def test_filter_sensor(
-    hass_: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai_: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test numeric sensors are filtered."""
 
-    registry = er.async_get(hass_)
+    registry = er.async_get(menuai_)
 
     # Unregistered sensor without a unit of measurement - should be in logbook
     entity_id1 = "sensor.bla"
@@ -201,19 +201,19 @@ async def test_filter_sensor(
     ).entity_id
     attributes_4 = None
 
-    hass_.states.async_set(entity_id1, None, attributes_1)  # Excluded
-    hass_.states.async_set(entity_id1, 10, attributes_1)  # Included
-    hass_.states.async_set(entity_id2, None, attributes_2)  # Excluded
-    hass_.states.async_set(entity_id2, 10, attributes_2)  # Excluded
-    hass_.states.async_set(entity_id3, None, attributes_3)  # Excluded
-    hass_.states.async_set(entity_id3, 10, attributes_3)  # Excluded
-    hass_.states.async_set(entity_id1, 20, attributes_1)  # Included
-    hass_.states.async_set(entity_id2, 20, attributes_2)  # Excluded
-    hass_.states.async_set(entity_id4, None, attributes_4)  # Excluded
-    hass_.states.async_set(entity_id4, 10, attributes_4)  # Included
+    menuai_.states.async_set(entity_id1, None, attributes_1)  # Excluded
+    menuai_.states.async_set(entity_id1, 10, attributes_1)  # Included
+    menuai_.states.async_set(entity_id2, None, attributes_2)  # Excluded
+    menuai_.states.async_set(entity_id2, 10, attributes_2)  # Excluded
+    menuai_.states.async_set(entity_id3, None, attributes_3)  # Excluded
+    menuai_.states.async_set(entity_id3, 10, attributes_3)  # Excluded
+    menuai_.states.async_set(entity_id1, 20, attributes_1)  # Included
+    menuai_.states.async_set(entity_id2, 20, attributes_2)  # Excluded
+    menuai_.states.async_set(entity_id4, None, attributes_4)  # Excluded
+    menuai_.states.async_set(entity_id4, 10, attributes_4)  # Included
 
-    await async_wait_recording_done(hass_)
-    client = await hass_client()
+    await async_wait_recording_done(menuai_)
+    client = await menuai_client()
     entries = await _async_fetch_logbook(client)
 
     assert len(entries) == 3
@@ -222,51 +222,51 @@ async def test_filter_sensor(
     _assert_entry(entries[2], name="ble", entity_id=entity_id4, state="10")
 
 
-async def test_home_assistant_start_stop_not_grouped(hass_: HomeAssistant) -> None:
+async def test_home_assistant_start_stop_not_grouped(menuai_: menuai) -> None:
     """Test if HA start and stop events are no longer grouped."""
-    await async_setup_component(hass_, "homeassistant", {})
-    await hass_.async_block_till_done()
+    await async_setup_component(menuai_, "menuai", {})
+    await menuai_.async_block_till_done()
     entries = mock_humanify(
-        hass_,
+        menuai_,
         (
-            MockRow(EVENT_HOMEASSISTANT_STOP),
-            MockRow(EVENT_HOMEASSISTANT_START),
+            MockRow(EVENT_menuai_STOP),
+            MockRow(EVENT_menuai_START),
         ),
     )
 
     assert len(entries) == 2
-    assert_entry(entries[0], name="Home Assistant", message="stopped", domain=ha.DOMAIN)
-    assert_entry(entries[1], name="Home Assistant", message="started", domain=ha.DOMAIN)
+    assert_entry(entries[0], name="MenuAI", message="stopped", domain=ha.DOMAIN)
+    assert_entry(entries[1], name="MenuAI", message="started", domain=ha.DOMAIN)
 
 
-async def test_home_assistant_start(hass_: HomeAssistant) -> None:
+async def test_home_assistant_start(menuai_: menuai) -> None:
     """Test if HA start is not filtered or converted into a restart."""
-    await async_setup_component(hass_, "homeassistant", {})
-    await hass_.async_block_till_done()
+    await async_setup_component(menuai_, "menuai", {})
+    await menuai_.async_block_till_done()
     entity_id = "switch.bla"
     pointA = dt_util.utcnow()
 
     entries = mock_humanify(
-        hass_,
+        menuai_,
         (
-            MockRow(EVENT_HOMEASSISTANT_START),
+            MockRow(EVENT_menuai_START),
             create_state_changed_event(pointA, entity_id, 10).row,
         ),
     )
 
     assert len(entries) == 2
-    assert_entry(entries[0], name="Home Assistant", message="started", domain=ha.DOMAIN)
+    assert_entry(entries[0], name="MenuAI", message="started", domain=ha.DOMAIN)
     assert_entry(entries[1], pointA, "bla", entity_id=entity_id)
 
 
-def test_process_custom_logbook_entries(hass_: HomeAssistant) -> None:
+def test_process_custom_logbook_entries(menuai_: menuai) -> None:
     """Test if custom log book entries get added as an entry."""
     name = "Nice name"
     message = "has a custom entry"
     entity_id = "sun.sun"
 
     entries = mock_humanify(
-        hass_,
+        menuai_,
         (
             MockRow(
                 logbook.EVENT_LOGBOOK_ENTRY,
@@ -346,36 +346,36 @@ def create_state_changed_event_from_old_new(
 
 @pytest.mark.usefixtures("recorder_mock")
 async def test_logbook_view(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test the logbook view."""
-    await async_setup_component(hass, "logbook", {})
-    await async_recorder_block_till_done(hass)
-    client = await hass_client()
+    await async_setup_component(menuai, "logbook", {})
+    await async_recorder_block_till_done(menuai)
+    client = await menuai_client()
     response = await client.get(f"/api/logbook/{dt_util.utcnow().isoformat()}")
     assert response.status == HTTPStatus.OK
 
 
 @pytest.mark.usefixtures("recorder_mock")
 async def test_logbook_view_invalid_start_date_time(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test the logbook view with an invalid date time."""
-    await async_setup_component(hass, "logbook", {})
-    await async_recorder_block_till_done(hass)
-    client = await hass_client()
+    await async_setup_component(menuai, "logbook", {})
+    await async_recorder_block_till_done(menuai)
+    client = await menuai_client()
     response = await client.get("/api/logbook/INVALID")
     assert response.status == HTTPStatus.BAD_REQUEST
 
 
 @pytest.mark.usefixtures("recorder_mock")
 async def test_logbook_view_invalid_end_date_time(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test the logbook view."""
-    await async_setup_component(hass, "logbook", {})
-    await async_recorder_block_till_done(hass)
-    client = await hass_client()
+    await async_setup_component(menuai, "logbook", {})
+    await async_recorder_block_till_done(menuai)
+    client = await menuai_client()
     response = await client.get(
         f"/api/logbook/{dt_util.utcnow().isoformat()}?end_time=INVALID"
     )
@@ -384,22 +384,22 @@ async def test_logbook_view_invalid_end_date_time(
 
 @pytest.mark.usefixtures("recorder_mock", "set_utc")
 async def test_logbook_view_period_entity(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test the logbook view with period and entity."""
-    await async_setup_component(hass, "logbook", {})
-    await async_recorder_block_till_done(hass)
+    await async_setup_component(menuai, "logbook", {})
+    await async_recorder_block_till_done(menuai)
 
     entity_id_test = "switch.test"
-    hass.states.async_set(entity_id_test, STATE_OFF)
-    hass.states.async_set(entity_id_test, STATE_ON)
+    menuai.states.async_set(entity_id_test, STATE_OFF)
+    menuai.states.async_set(entity_id_test, STATE_ON)
     entity_id_second = "switch.second"
-    hass.states.async_set(entity_id_second, STATE_OFF)
-    hass.states.async_set(entity_id_second, STATE_ON)
-    await async_wait_recording_done(hass)
+    menuai.states.async_set(entity_id_second, STATE_OFF)
+    menuai.states.async_set(entity_id_second, STATE_ON)
+    await async_wait_recording_done(menuai)
 
-    client = await hass_client()
+    client = await menuai_client()
 
     # Today time 00:00:00
     start = dt_util.utcnow().date()
@@ -469,7 +469,7 @@ async def test_logbook_view_period_entity(
 
 @pytest.mark.usefixtures("recorder_mock")
 async def test_logbook_describe_event(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test teaching logbook about a new event."""
 
@@ -477,13 +477,13 @@ async def test_logbook_describe_event(
         """Describe an event."""
         return {"name": "Test Name", "message": "tested a message"}
 
-    hass.config.components.add("fake_integration")
+    menuai.config.components.add("fake_integration")
     mock_platform(
-        hass,
+        menuai,
         "fake_integration.logbook",
         Mock(
             async_describe_events=(
-                lambda hass, async_describe_event: async_describe_event(
+                lambda menuai, async_describe_event: async_describe_event(
                     "test_domain",
                     "some_event",
                     _describe,
@@ -492,12 +492,12 @@ async def test_logbook_describe_event(
         ),
     )
 
-    assert await async_setup_component(hass, "logbook", {})
+    assert await async_setup_component(menuai, "logbook", {})
     with freeze_time(dt_util.utcnow() - timedelta(seconds=5)):
-        hass.bus.async_fire("some_event")
-        await async_wait_recording_done(hass)
+        menuai.bus.async_fire("some_event")
+        await async_wait_recording_done(menuai)
 
-    client = await hass_client()
+    client = await menuai_client()
     # Today time 00:00:00
     start = dt_util.utcnow().date()
     start_date = datetime(start.year, start.month, start.day, tzinfo=dt_util.UTC)
@@ -518,7 +518,7 @@ async def test_logbook_describe_event(
 
 @pytest.mark.usefixtures("recorder_mock")
 async def test_exclude_described_event(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test exclusions of events that are described by another integration."""
     name = "My Automation Rule"
@@ -535,7 +535,7 @@ async def test_exclude_described_event(
         }
 
     def async_describe_events(
-        hass: HomeAssistant,
+        menuai: menuai,
         async_describe_event: Callable[
             [str, str, Callable[[Event], dict[str, str]]], None
         ],
@@ -544,15 +544,15 @@ async def test_exclude_described_event(
         async_describe_event("automation", "some_automation_event", _describe)
         async_describe_event("sensor", "some_event", _describe)
 
-    hass.config.components.add("fake_integration")
+    menuai.config.components.add("fake_integration")
     mock_platform(
-        hass,
+        menuai,
         "fake_integration.logbook",
         Mock(async_describe_events=async_describe_events),
     )
 
     assert await async_setup_component(
-        hass,
+        menuai,
         logbook.DOMAIN,
         {
             logbook.DOMAIN: {
@@ -562,20 +562,20 @@ async def test_exclude_described_event(
     )
 
     with freeze_time(dt_util.utcnow() - timedelta(seconds=5)):
-        hass.bus.async_fire(
+        menuai.bus.async_fire(
             "some_automation_event",
             {logbook.ATTR_NAME: name, logbook.ATTR_ENTITY_ID: entity_id},
         )
-        hass.bus.async_fire(
+        menuai.bus.async_fire(
             "some_automation_event",
             {logbook.ATTR_NAME: name, logbook.ATTR_ENTITY_ID: entity_id2},
         )
-        hass.bus.async_fire(
+        menuai.bus.async_fire(
             "some_event", {logbook.ATTR_NAME: name, logbook.ATTR_ENTITY_ID: entity_id3}
         )
-        await async_wait_recording_done(hass)
+        await async_wait_recording_done(menuai)
 
-    client = await hass_client()
+    client = await menuai_client()
     # Today time 00:00:00
     start = dt_util.utcnow().date()
     start_date = datetime(start.year, start.month, start.day, tzinfo=dt_util.UTC)
@@ -595,21 +595,21 @@ async def test_exclude_described_event(
 
 @pytest.mark.usefixtures("recorder_mock")
 async def test_logbook_view_end_time_entity(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test the logbook view with end_time and entity."""
-    await async_setup_component(hass, "logbook", {})
-    await async_recorder_block_till_done(hass)
+    await async_setup_component(menuai, "logbook", {})
+    await async_recorder_block_till_done(menuai)
 
     entity_id_test = "switch.test"
-    hass.states.async_set(entity_id_test, STATE_OFF)
-    hass.states.async_set(entity_id_test, STATE_ON)
+    menuai.states.async_set(entity_id_test, STATE_OFF)
+    menuai.states.async_set(entity_id_test, STATE_ON)
     entity_id_second = "switch.second"
-    hass.states.async_set(entity_id_second, STATE_OFF)
-    hass.states.async_set(entity_id_second, STATE_ON)
-    await async_wait_recording_done(hass)
+    menuai.states.async_set(entity_id_second, STATE_OFF)
+    menuai.states.async_set(entity_id_second, STATE_ON)
+    await async_wait_recording_done(menuai)
 
-    client = await hass_client()
+    client = await menuai_client()
 
     # Today time 00:00:00
     start = dt_util.utcnow().date()
@@ -656,38 +656,38 @@ async def test_logbook_view_end_time_entity(
 
 @pytest.mark.usefixtures("recorder_mock")
 async def test_logbook_entity_filter_with_automations(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test the logbook view with end_time and entity with automations and scripts."""
     await asyncio.gather(
         *[
-            async_setup_component(hass, comp, {})
-            for comp in ("homeassistant", "logbook", "automation", "script")
+            async_setup_component(menuai, comp, {})
+            for comp in ("menuai", "logbook", "automation", "script")
         ]
     )
 
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
 
     entity_id_test = "alarm_control_panel.area_001"
-    hass.states.async_set(entity_id_test, STATE_OFF)
-    hass.states.async_set(entity_id_test, STATE_ON)
+    menuai.states.async_set(entity_id_test, STATE_OFF)
+    menuai.states.async_set(entity_id_test, STATE_ON)
     entity_id_second = "alarm_control_panel.area_002"
-    hass.states.async_set(entity_id_second, STATE_OFF)
-    hass.states.async_set(entity_id_second, STATE_ON)
+    menuai.states.async_set(entity_id_second, STATE_OFF)
+    menuai.states.async_set(entity_id_second, STATE_ON)
 
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_AUTOMATION_TRIGGERED,
         {ATTR_NAME: "Mock automation", ATTR_ENTITY_ID: "automation.mock_automation"},
     )
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_SCRIPT_STARTED,
         {ATTR_NAME: "Mock script", ATTR_ENTITY_ID: "script.mock_script"},
     )
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_START)
+    menuai.bus.async_fire(EVENT_menuai_START)
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    client = await hass_client()
+    client = await menuai_client()
 
     # Today time 00:00:00
     start = dt_util.utcnow().date()
@@ -706,7 +706,7 @@ async def test_logbook_entity_filter_with_automations(
     assert json_dict[1]["entity_id"] == entity_id_second
     assert json_dict[2]["entity_id"] == "automation.mock_automation"
     assert json_dict[3]["entity_id"] == "script.mock_script"
-    assert json_dict[4]["domain"] == "homeassistant"
+    assert json_dict[4]["domain"] == "menuai"
 
     # Test entries for 3 days with filter by entity_id
     end_time = start + timedelta(hours=72)
@@ -743,28 +743,28 @@ async def test_logbook_entity_filter_with_automations(
 
 @pytest.mark.usefixtures("recorder_mock")
 async def test_logbook_entity_no_longer_in_state_machine(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
-    """Test the logbook view with an entity that hass been removed from the state machine."""
-    await async_setup_component(hass, "logbook", {})
-    await async_setup_component(hass, "automation", {})
-    await async_setup_component(hass, "script", {})
+    """Test the logbook view with an entity that menuai been removed from the state machine."""
+    await async_setup_component(menuai, "logbook", {})
+    await async_setup_component(menuai, "automation", {})
+    await async_setup_component(menuai, "script", {})
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
     entity_id_test = "alarm_control_panel.area_001"
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id_test, STATE_OFF, {ATTR_FRIENDLY_NAME: "Alarm Control Panel"}
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id_test, STATE_ON, {ATTR_FRIENDLY_NAME: "Alarm Control Panel"}
     )
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    hass.states.async_remove(entity_id_test)
+    menuai.states.async_remove(entity_id_test)
 
-    client = await hass_client()
+    client = await menuai_client()
 
     # Today time 00:00:00
     start = dt_util.utcnow().date()
@@ -783,32 +783,32 @@ async def test_logbook_entity_no_longer_in_state_machine(
 
 @pytest.mark.usefixtures("recorder_mock", "set_utc")
 async def test_filter_continuous_sensor_values(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test remove continuous sensor events from logbook."""
-    await async_setup_component(hass, "logbook", {})
-    await async_recorder_block_till_done(hass)
+    await async_setup_component(menuai, "logbook", {})
+    await async_recorder_block_till_done(menuai)
 
     entity_id_test = "switch.test"
-    hass.states.async_set(entity_id_test, STATE_OFF)
-    hass.states.async_set(entity_id_test, STATE_ON)
+    menuai.states.async_set(entity_id_test, STATE_OFF)
+    menuai.states.async_set(entity_id_test, STATE_ON)
     entity_id_second = "sensor.bla"
-    hass.states.async_set(entity_id_second, STATE_OFF, {"unit_of_measurement": "foo"})
-    hass.states.async_set(entity_id_second, STATE_ON, {"unit_of_measurement": "foo"})
+    menuai.states.async_set(entity_id_second, STATE_OFF, {"unit_of_measurement": "foo"})
+    menuai.states.async_set(entity_id_second, STATE_ON, {"unit_of_measurement": "foo"})
     entity_id_third = "light.bla"
-    hass.states.async_set(entity_id_third, STATE_OFF, {"unit_of_measurement": "foo"})
-    hass.states.async_set(entity_id_third, STATE_ON, {"unit_of_measurement": "foo"})
+    menuai.states.async_set(entity_id_third, STATE_OFF, {"unit_of_measurement": "foo"})
+    menuai.states.async_set(entity_id_third, STATE_ON, {"unit_of_measurement": "foo"})
     entity_id_proximity = "proximity.bla"
-    hass.states.async_set(entity_id_proximity, STATE_OFF)
-    hass.states.async_set(entity_id_proximity, STATE_ON)
+    menuai.states.async_set(entity_id_proximity, STATE_OFF)
+    menuai.states.async_set(entity_id_proximity, STATE_ON)
     entity_id_counter = "counter.bla"
-    hass.states.async_set(entity_id_counter, STATE_OFF)
-    hass.states.async_set(entity_id_counter, STATE_ON)
+    menuai.states.async_set(entity_id_counter, STATE_OFF)
+    menuai.states.async_set(entity_id_counter, STATE_ON)
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    client = await hass_client()
+    client = await menuai_client()
 
     # Today time 00:00:00
     start = dt_util.utcnow().date()
@@ -826,29 +826,29 @@ async def test_filter_continuous_sensor_values(
 
 @pytest.mark.usefixtures("recorder_mock", "set_utc")
 async def test_exclude_new_entities(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test if events are excluded on first update."""
     await asyncio.gather(
         *[
-            async_setup_component(hass, comp, {})
-            for comp in ("homeassistant", "logbook")
+            async_setup_component(menuai, comp, {})
+            for comp in ("menuai", "logbook")
         ]
     )
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
 
     entity_id = "climate.bla"
     entity_id2 = "climate.blu"
 
-    hass.states.async_set(entity_id, STATE_OFF)
-    hass.states.async_set(entity_id2, STATE_ON)
-    hass.states.async_set(entity_id2, STATE_OFF)
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_START)
+    menuai.states.async_set(entity_id, STATE_OFF)
+    menuai.states.async_set(entity_id2, STATE_ON)
+    menuai.states.async_set(entity_id2, STATE_OFF)
+    menuai.bus.async_fire(EVENT_menuai_START)
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    client = await hass_client()
+    client = await menuai_client()
 
     # Today time 00:00:00
     start = dt_util.utcnow().date()
@@ -861,41 +861,41 @@ async def test_exclude_new_entities(
 
     assert len(response_json) == 2
     assert response_json[0]["entity_id"] == entity_id2
-    assert response_json[1]["domain"] == "homeassistant"
+    assert response_json[1]["domain"] == "menuai"
     assert response_json[1]["message"] == "started"
 
 
 @pytest.mark.usefixtures("recorder_mock", "set_utc")
 async def test_exclude_removed_entities(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test if events are excluded on last update."""
     await asyncio.gather(
         *[
-            async_setup_component(hass, comp, {})
-            for comp in ("homeassistant", "logbook")
+            async_setup_component(menuai, comp, {})
+            for comp in ("menuai", "logbook")
         ]
     )
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
 
     entity_id = "climate.bla"
     entity_id2 = "climate.blu"
 
-    hass.states.async_set(entity_id, STATE_ON)
-    hass.states.async_set(entity_id, STATE_OFF)
+    menuai.states.async_set(entity_id, STATE_ON)
+    menuai.states.async_set(entity_id, STATE_OFF)
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_START)
+    menuai.bus.async_fire(EVENT_menuai_START)
 
-    hass.states.async_set(entity_id2, STATE_ON)
-    hass.states.async_set(entity_id2, STATE_OFF)
+    menuai.states.async_set(entity_id2, STATE_ON)
+    menuai.states.async_set(entity_id2, STATE_OFF)
 
-    hass.states.async_remove(entity_id)
-    hass.states.async_remove(entity_id2)
+    menuai.states.async_remove(entity_id)
+    menuai.states.async_remove(entity_id2)
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    client = await hass_client()
+    client = await menuai_client()
 
     # Today time 00:00:00
     start = dt_util.utcnow().date()
@@ -908,39 +908,39 @@ async def test_exclude_removed_entities(
 
     assert len(response_json) == 3
     assert response_json[0]["entity_id"] == entity_id
-    assert response_json[1]["domain"] == "homeassistant"
+    assert response_json[1]["domain"] == "menuai"
     assert response_json[1]["message"] == "started"
     assert response_json[2]["entity_id"] == entity_id2
 
 
 @pytest.mark.usefixtures("recorder_mock", "set_utc")
 async def test_exclude_attribute_changes(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test if events of attribute changes are filtered."""
     await asyncio.gather(
         *[
-            async_setup_component(hass, comp, {})
-            for comp in ("homeassistant", "logbook")
+            async_setup_component(menuai, comp, {})
+            for comp in ("menuai", "logbook")
         ]
     )
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_START)
+    menuai.bus.async_fire(EVENT_menuai_START)
 
-    hass.states.async_set("light.kitchen", STATE_OFF)
-    hass.states.async_set("light.kitchen", STATE_ON, {"brightness": 100})
-    hass.states.async_set("light.kitchen", STATE_ON, {"brightness": 200})
-    hass.states.async_set("light.kitchen", STATE_ON, {"brightness": 300})
-    hass.states.async_set("light.kitchen", STATE_ON, {"brightness": 400})
-    hass.states.async_set("light.kitchen", STATE_OFF)
+    menuai.states.async_set("light.kitchen", STATE_OFF)
+    menuai.states.async_set("light.kitchen", STATE_ON, {"brightness": 100})
+    menuai.states.async_set("light.kitchen", STATE_ON, {"brightness": 200})
+    menuai.states.async_set("light.kitchen", STATE_ON, {"brightness": 300})
+    menuai.states.async_set("light.kitchen", STATE_ON, {"brightness": 400})
+    menuai.states.async_set("light.kitchen", STATE_OFF)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    client = await hass_client()
+    client = await menuai_client()
 
     # Today time 00:00:00
     start = dt_util.utcnow().date()
@@ -952,24 +952,24 @@ async def test_exclude_attribute_changes(
     response_json = await response.json()
 
     assert len(response_json) == 3
-    assert response_json[0]["domain"] == "homeassistant"
+    assert response_json[0]["domain"] == "menuai"
     assert response_json[1]["entity_id"] == "light.kitchen"
     assert response_json[2]["entity_id"] == "light.kitchen"
 
 
 @pytest.mark.usefixtures("recorder_mock")
 async def test_logbook_entity_context_id(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test the logbook view with end_time and entity with automations and scripts."""
     await asyncio.gather(
         *[
-            async_setup_component(hass, comp, {})
-            for comp in ("homeassistant", "logbook", "automation", "script")
+            async_setup_component(menuai, comp, {})
+            for comp in ("menuai", "logbook", "automation", "script")
         ]
     )
 
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
 
     context = ha.Context(
         id="01GTDGKBCH00GW0X476W5TVAAA",
@@ -978,17 +978,17 @@ async def test_logbook_entity_context_id(
 
     # An Automation
     automation_entity_id_test = "automation.alarm"
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_AUTOMATION_TRIGGERED,
         {ATTR_NAME: "Mock automation", ATTR_ENTITY_ID: automation_entity_id_test},
         context=context,
     )
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_SCRIPT_STARTED,
         {ATTR_NAME: "Mock script", ATTR_ENTITY_ID: "script.mock_script"},
         context=context,
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         automation_entity_id_test,
         STATE_ON,
         {ATTR_FRIENDLY_NAME: "Alarm Automation"},
@@ -996,50 +996,50 @@ async def test_logbook_entity_context_id(
     )
 
     entity_id_test = "alarm_control_panel.area_001"
-    hass.states.async_set(entity_id_test, STATE_OFF, context=context)
-    await hass.async_block_till_done()
-    hass.states.async_set(entity_id_test, STATE_ON, context=context)
-    await hass.async_block_till_done()
+    menuai.states.async_set(entity_id_test, STATE_OFF, context=context)
+    await menuai.async_block_till_done()
+    menuai.states.async_set(entity_id_test, STATE_ON, context=context)
+    await menuai.async_block_till_done()
     entity_id_second = "alarm_control_panel.area_002"
-    hass.states.async_set(entity_id_second, STATE_OFF, context=context)
-    await hass.async_block_till_done()
-    hass.states.async_set(entity_id_second, STATE_ON, context=context)
-    await hass.async_block_till_done()
+    menuai.states.async_set(entity_id_second, STATE_OFF, context=context)
+    await menuai.async_block_till_done()
+    menuai.states.async_set(entity_id_second, STATE_ON, context=context)
+    await menuai.async_block_till_done()
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_START)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire(EVENT_menuai_START)
+    await menuai.async_block_till_done()
 
-    await hass.async_add_executor_job(
+    await menuai.async_add_executor_job(
         logbook.log_entry,
-        hass,
+        menuai,
         "mock_name",
         "mock_message",
         "alarm_control_panel",
         "alarm_control_panel.area_003",
         context,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await hass.async_add_executor_job(
+    await menuai.async_add_executor_job(
         logbook.log_entry,
-        hass,
+        menuai,
         "mock_name",
         "mock_message",
-        "homeassistant",
+        "menuai",
         None,
         context,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # A service call
     light_turn_off_service_context = ha.Context(
         id="01GTDGKBCH00GW0X476W5TVBFC",
         user_id="9400facee45711eaa9308bfd3d19e474",
     )
-    hass.states.async_set("light.switch", STATE_ON)
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.switch", STATE_ON)
+    await menuai.async_block_till_done()
 
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_CALL_SERVICE,
         {
             ATTR_DOMAIN: "light",
@@ -1048,14 +1048,14 @@ async def test_logbook_entity_context_id(
         },
         context=light_turn_off_service_context,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "light.switch", STATE_OFF, context=light_turn_off_service_context
     )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    client = await hass_client()
+    client = await menuai_client()
 
     # Today time 00:00:00
     start = dt_util.utcnow().date()
@@ -1092,7 +1092,7 @@ async def test_logbook_entity_context_id(
     assert json_dict[3]["context_entity_id_name"] == "Alarm Automation"
     assert json_dict[3]["context_user_id"] == "b400facee45711eaa9308bfd3d19e474"
 
-    assert json_dict[4]["domain"] == "homeassistant"
+    assert json_dict[4]["domain"] == "menuai"
 
     assert json_dict[5]["entity_id"] == "alarm_control_panel.area_003"
     assert json_dict[5]["context_event_type"] == "automation_triggered"
@@ -1101,7 +1101,7 @@ async def test_logbook_entity_context_id(
     assert json_dict[5]["context_entity_id_name"] == "Alarm Automation"
     assert json_dict[5]["context_user_id"] == "b400facee45711eaa9308bfd3d19e474"
 
-    assert json_dict[6]["domain"] == "homeassistant"
+    assert json_dict[6]["domain"] == "menuai"
     assert json_dict[6]["context_user_id"] == "b400facee45711eaa9308bfd3d19e474"
 
     assert json_dict[7]["entity_id"] == "light.switch"
@@ -1113,17 +1113,17 @@ async def test_logbook_entity_context_id(
 
 @pytest.mark.usefixtures("recorder_mock")
 async def test_logbook_context_id_automation_script_started_manually(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test the logbook populates context_ids for scripts and automations started manually."""
     await asyncio.gather(
         *[
-            async_setup_component(hass, comp, {})
-            for comp in ("homeassistant", "logbook", "automation", "script")
+            async_setup_component(menuai, comp, {})
+            for comp in ("menuai", "logbook", "automation", "script")
         ]
     )
 
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
 
     # An Automation
     automation_entity_id_test = "automation.alarm"
@@ -1131,7 +1131,7 @@ async def test_logbook_context_id_automation_script_started_manually(
         id="01GTDGKBCH00GW0X476W5TVCCC",
         user_id="f400facee45711eaa9308bfd3d19e474",
     )
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_AUTOMATION_TRIGGERED,
         {ATTR_NAME: "Mock automation", ATTR_ENTITY_ID: automation_entity_id_test},
         context=automation_context,
@@ -1140,30 +1140,30 @@ async def test_logbook_context_id_automation_script_started_manually(
         id="01GTDGKBCH00GW0X476W5TVAAA",
         user_id="b400facee45711eaa9308bfd3d19e474",
     )
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_SCRIPT_STARTED,
         {ATTR_NAME: "Mock script", ATTR_ENTITY_ID: "script.mock_script"},
         context=script_context,
     )
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_START)
+    menuai.bus.async_fire(EVENT_menuai_START)
 
     script_2_context = ha.Context(
         id="01GTDGKBCH00GW0X476W5TVEEE",
         user_id="b400facee45711eaa9308bfd3d19e474",
     )
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_SCRIPT_STARTED,
         {ATTR_NAME: "Mock script"},
         context=script_2_context,
     )
-    hass.states.async_set("switch.new", STATE_ON, context=script_2_context)
-    hass.states.async_set("switch.new", STATE_OFF, context=script_2_context)
+    menuai.states.async_set("switch.new", STATE_ON, context=script_2_context)
+    menuai.states.async_set("switch.new", STATE_OFF, context=script_2_context)
 
-    await hass.async_block_till_done()
-    await async_wait_recording_done(hass)
+    await menuai.async_block_till_done()
+    await async_wait_recording_done(menuai)
 
-    client = await hass_client()
+    client = await menuai_client()
 
     # Today time 00:00:00
     start = dt_util.utcnow().date()
@@ -1188,7 +1188,7 @@ async def test_logbook_context_id_automation_script_started_manually(
     assert json_dict[1]["context_user_id"] == "b400facee45711eaa9308bfd3d19e474"
     assert json_dict[1]["context_id"] == "01GTDGKBCH00GW0X476W5TVAAA"
 
-    assert json_dict[2]["domain"] == "homeassistant"
+    assert json_dict[2]["domain"] == "menuai"
 
     assert json_dict[3]["entity_id"] is None
     assert json_dict[3]["name"] == "Mock script"
@@ -1206,17 +1206,17 @@ async def test_logbook_context_id_automation_script_started_manually(
 
 @pytest.mark.usefixtures("recorder_mock")
 async def test_logbook_entity_context_parent_id(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test the logbook view links events via context parent_id."""
     await asyncio.gather(
         *[
-            async_setup_component(hass, comp, {})
-            for comp in ("homeassistant", "logbook", "automation", "script")
+            async_setup_component(menuai, comp, {})
+            for comp in ("menuai", "logbook", "automation", "script")
         ]
     )
 
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
 
     context = ha.Context(
         id="01GTDGKBCH00GW0X476W5TVAAA",
@@ -1225,7 +1225,7 @@ async def test_logbook_entity_context_parent_id(
 
     # An Automation triggering scripts with a new context
     automation_entity_id_test = "automation.alarm"
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_AUTOMATION_TRIGGERED,
         {ATTR_NAME: "Mock automation", ATTR_ENTITY_ID: automation_entity_id_test},
         context=context,
@@ -1236,12 +1236,12 @@ async def test_logbook_entity_context_parent_id(
         parent_id="01GTDGKBCH00GW0X476W5TVAAA",
         user_id="b400facee45711eaa9308bfd3d19e474",
     )
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_SCRIPT_STARTED,
         {ATTR_NAME: "Mock script", ATTR_ENTITY_ID: "script.mock_script"},
         context=child_context,
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         automation_entity_id_test,
         STATE_ON,
         {ATTR_FRIENDLY_NAME: "Alarm Automation"},
@@ -1249,38 +1249,38 @@ async def test_logbook_entity_context_parent_id(
     )
 
     entity_id_test = "alarm_control_panel.area_001"
-    hass.states.async_set(entity_id_test, STATE_OFF, context=child_context)
-    await hass.async_block_till_done()
-    hass.states.async_set(entity_id_test, STATE_ON, context=child_context)
-    await hass.async_block_till_done()
+    menuai.states.async_set(entity_id_test, STATE_OFF, context=child_context)
+    await menuai.async_block_till_done()
+    menuai.states.async_set(entity_id_test, STATE_ON, context=child_context)
+    await menuai.async_block_till_done()
     entity_id_second = "alarm_control_panel.area_002"
-    hass.states.async_set(entity_id_second, STATE_OFF, context=child_context)
-    await hass.async_block_till_done()
-    hass.states.async_set(entity_id_second, STATE_ON, context=child_context)
-    await hass.async_block_till_done()
+    menuai.states.async_set(entity_id_second, STATE_OFF, context=child_context)
+    await menuai.async_block_till_done()
+    menuai.states.async_set(entity_id_second, STATE_ON, context=child_context)
+    await menuai.async_block_till_done()
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_START)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire(EVENT_menuai_START)
+    await menuai.async_block_till_done()
 
     logbook.async_log_entry(
-        hass,
+        menuai,
         "mock_name",
         "mock_message",
         "alarm_control_panel",
         "alarm_control_panel.area_003",
         child_context,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     logbook.async_log_entry(
-        hass,
+        menuai,
         "mock_name",
         "mock_message",
-        "homeassistant",
+        "menuai",
         None,
         child_context,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # A state change via service call with the script as the parent
     light_turn_off_service_context = ha.Context(
@@ -1288,10 +1288,10 @@ async def test_logbook_entity_context_parent_id(
         parent_id="01GTDGKBCH00GW0X476W5TVDDD",
         user_id="9400facee45711eaa9308bfd3d19e474",
     )
-    hass.states.async_set("light.switch", STATE_ON)
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.switch", STATE_ON)
+    await menuai.async_block_till_done()
 
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_CALL_SERVICE,
         {
             ATTR_DOMAIN: "light",
@@ -1300,12 +1300,12 @@ async def test_logbook_entity_context_parent_id(
         },
         context=light_turn_off_service_context,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "light.switch", STATE_OFF, context=light_turn_off_service_context
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # An event with a parent event, but the parent event isn't available
     missing_parent_context = ha.Context(
@@ -1314,16 +1314,16 @@ async def test_logbook_entity_context_parent_id(
         user_id="485cacf93ef84d25a99ced3126b921d2",
     )
     logbook.async_log_entry(
-        hass,
+        menuai,
         "mock_name",
         "mock_message",
         "alarm_control_panel",
         "alarm_control_panel.area_009",
         missing_parent_context,
     )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    client = await hass_client()
+    client = await menuai_client()
 
     # Today time 00:00:00
     start = dt_util.utcnow().date()
@@ -1361,7 +1361,7 @@ async def test_logbook_entity_context_parent_id(
     assert json_dict[3]["context_entity_id_name"] == "mock script"
     assert json_dict[3]["context_user_id"] == "b400facee45711eaa9308bfd3d19e474"
 
-    assert json_dict[4]["domain"] == "homeassistant"
+    assert json_dict[4]["domain"] == "menuai"
 
     assert json_dict[5]["entity_id"] == "alarm_control_panel.area_003"
     assert json_dict[5]["context_event_type"] == "script_started"
@@ -1370,7 +1370,7 @@ async def test_logbook_entity_context_parent_id(
     assert json_dict[5]["context_entity_id_name"] == "mock script"
     assert json_dict[5]["context_user_id"] == "b400facee45711eaa9308bfd3d19e474"
 
-    assert json_dict[6]["domain"] == "homeassistant"
+    assert json_dict[6]["domain"] == "menuai"
     assert json_dict[6]["context_user_id"] == "b400facee45711eaa9308bfd3d19e474"
 
     assert json_dict[7]["entity_id"] == "light.switch"
@@ -1389,18 +1389,18 @@ async def test_logbook_entity_context_parent_id(
 
 @pytest.mark.usefixtures("recorder_mock")
 async def test_logbook_context_from_template(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test the logbook view with end_time and entity with automations and scripts."""
     await asyncio.gather(
         *[
-            async_setup_component(hass, comp, {})
-            for comp in ("homeassistant", "logbook")
+            async_setup_component(menuai, comp, {})
+            for comp in ("menuai", "logbook")
         ]
     )
 
     assert await async_setup_component(
-        hass,
+        menuai,
         "switch",
         {
             "switch": {
@@ -1421,29 +1421,29 @@ async def test_logbook_context_from_template(
             }
         },
     )
-    await async_recorder_block_till_done(hass)
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await async_recorder_block_till_done(menuai)
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
     # Entity added (should not be logged)
-    hass.states.async_set("switch.test_state", STATE_ON)
-    await hass.async_block_till_done()
+    menuai.states.async_set("switch.test_state", STATE_ON)
+    await menuai.async_block_till_done()
 
     # First state change (should be logged)
-    hass.states.async_set("switch.test_state", STATE_OFF)
-    await hass.async_block_till_done()
+    menuai.states.async_set("switch.test_state", STATE_OFF)
+    await menuai.async_block_till_done()
 
     switch_turn_off_context = ha.Context(
         id="01GTDGKBCH00GW0X476W5TVBFC",
         user_id="9400facee45711eaa9308bfd3d19e474",
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "switch.test_state", STATE_ON, context=switch_turn_off_context
     )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    client = await hass_client()
+    client = await menuai_client()
 
     # Today time 00:00:00
     start = dt_util.utcnow().date()
@@ -1458,7 +1458,7 @@ async def test_logbook_context_from_template(
     assert response.status == HTTPStatus.OK
     json_dict = await response.json()
 
-    assert json_dict[0]["domain"] == "homeassistant"
+    assert json_dict[0]["domain"] == "menuai"
     assert "context_entity_id" not in json_dict[0]
 
     assert json_dict[1]["entity_id"] == "switch.test_template_switch"
@@ -1480,12 +1480,12 @@ async def test_logbook_context_from_template(
 
 @pytest.mark.usefixtures("recorder_mock")
 async def test_logbook_(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test the logbook view with a single entity and ."""
-    await async_setup_component(hass, "logbook", {})
+    await async_setup_component(menuai, "logbook", {})
     assert await async_setup_component(
-        hass,
+        menuai,
         "switch",
         {
             "switch": {
@@ -1506,29 +1506,29 @@ async def test_logbook_(
             }
         },
     )
-    await async_recorder_block_till_done(hass)
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await async_recorder_block_till_done(menuai)
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
     # Entity added (should not be logged)
-    hass.states.async_set("switch.test_state", STATE_ON)
-    await hass.async_block_till_done()
+    menuai.states.async_set("switch.test_state", STATE_ON)
+    await menuai.async_block_till_done()
 
     # First state change (should be logged)
-    hass.states.async_set("switch.test_state", STATE_OFF)
-    await hass.async_block_till_done()
+    menuai.states.async_set("switch.test_state", STATE_OFF)
+    await menuai.async_block_till_done()
 
     switch_turn_off_context = ha.Context(
         id="01GTDGKBCH00GW0X476W5TVBFC",
         user_id="9400facee45711eaa9308bfd3d19e474",
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "switch.test_state", STATE_ON, context=switch_turn_off_context
     )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    client = await hass_client()
+    client = await menuai_client()
 
     # Today time 00:00:00
     start = dt_util.utcnow().date()
@@ -1552,27 +1552,27 @@ async def test_logbook_(
 
 @pytest.mark.usefixtures("recorder_mock")
 async def test_logbook_many_entities_multiple_calls(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test the logbook view with a many entities called multiple times."""
-    await async_setup_component(hass, "logbook", {})
-    await async_setup_component(hass, "automation", {})
+    await async_setup_component(menuai, "logbook", {})
+    await async_setup_component(menuai, "automation", {})
 
-    await async_recorder_block_till_done(hass)
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await async_recorder_block_till_done(menuai)
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
     for automation_id in range(5):
-        hass.bus.async_fire(
+        menuai.bus.async_fire(
             EVENT_AUTOMATION_TRIGGERED,
             {
                 ATTR_NAME: f"Mock automation {automation_id}",
                 ATTR_ENTITY_ID: f"automation.mock_{automation_id}_automation",
             },
         )
-    await async_wait_recording_done(hass)
-    client = await hass_client()
+    await async_wait_recording_done(menuai)
+    client = await menuai_client()
 
     # Today time 00:00:00
     start = dt_util.utcnow().date()
@@ -1625,22 +1625,22 @@ async def test_logbook_many_entities_multiple_calls(
 
 @pytest.mark.usefixtures("recorder_mock")
 async def test_custom_log_entry_discoverable_via_(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test if a custom log entry is later discoverable via ."""
-    await async_setup_component(hass, "logbook", {})
-    await async_recorder_block_till_done(hass)
+    await async_setup_component(menuai, "logbook", {})
+    await async_recorder_block_till_done(menuai)
 
     logbook.async_log_entry(
-        hass,
+        menuai,
         "Alarm",
         "is triggered",
         "switch",
         "switch.test_switch",
     )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    client = await hass_client()
+    client = await menuai_client()
 
     # Today time 00:00:00
     start = dt_util.utcnow().date()
@@ -1663,12 +1663,12 @@ async def test_custom_log_entry_discoverable_via_(
 
 @pytest.mark.usefixtures("recorder_mock")
 async def test_logbook_multiple_entities(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test the logbook view with a multiple entities."""
-    await async_setup_component(hass, "logbook", {})
+    await async_setup_component(menuai, "logbook", {})
     assert await async_setup_component(
-        hass,
+        menuai,
         "switch",
         {
             "switch": {
@@ -1689,39 +1689,39 @@ async def test_logbook_multiple_entities(
             }
         },
     )
-    await async_recorder_block_till_done(hass)
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await async_recorder_block_till_done(menuai)
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
     # Entity added (should not be logged)
-    hass.states.async_set("switch.test_state", STATE_ON)
-    hass.states.async_set("light.test_state", STATE_ON)
-    hass.states.async_set("binary_sensor.test_state", STATE_ON)
+    menuai.states.async_set("switch.test_state", STATE_ON)
+    menuai.states.async_set("light.test_state", STATE_ON)
+    menuai.states.async_set("binary_sensor.test_state", STATE_ON)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # First state change (should be logged)
-    hass.states.async_set("switch.test_state", STATE_OFF)
-    hass.states.async_set("light.test_state", STATE_OFF)
-    hass.states.async_set("binary_sensor.test_state", STATE_OFF)
+    menuai.states.async_set("switch.test_state", STATE_OFF)
+    menuai.states.async_set("light.test_state", STATE_OFF)
+    menuai.states.async_set("binary_sensor.test_state", STATE_OFF)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     switch_turn_off_context = ha.Context(
         id="01GTDGKBCH00GW0X476W5TVBFC",
         user_id="9400facee45711eaa9308bfd3d19e474",
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "switch.test_state", STATE_ON, context=switch_turn_off_context
     )
-    hass.states.async_set("light.test_state", STATE_ON, context=switch_turn_off_context)
-    hass.states.async_set(
+    menuai.states.async_set("light.test_state", STATE_ON, context=switch_turn_off_context)
+    menuai.states.async_set(
         "binary_sensor.test_state", STATE_ON, context=switch_turn_off_context
     )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    client = await hass_client()
+    client = await menuai_client()
 
     # Today time 00:00:00
     start = dt_util.utcnow().date()
@@ -1790,12 +1790,12 @@ async def test_logbook_multiple_entities(
 
 @pytest.mark.usefixtures("recorder_mock")
 async def test_logbook_invalid_entity(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test the logbook view with requesting an invalid entity."""
-    await async_setup_component(hass, "logbook", {})
-    await hass.async_block_till_done()
-    client = await hass_client()
+    await async_setup_component(menuai, "logbook", {})
+    await menuai.async_block_till_done()
+    client = await menuai_client()
 
     # Today time 00:00:00
     start = dt_util.utcnow().date()
@@ -1811,42 +1811,42 @@ async def test_logbook_invalid_entity(
 
 @pytest.mark.usefixtures("recorder_mock")
 async def test_icon_and_state(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test to ensure state and custom icons are returned."""
     await asyncio.gather(
         *[
-            async_setup_component(hass, comp, {})
-            for comp in ("homeassistant", "logbook")
+            async_setup_component(menuai, comp, {})
+            for comp in ("menuai", "logbook")
         ]
     )
 
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_START)
+    menuai.bus.async_fire(EVENT_menuai_START)
 
-    hass.states.async_set("light.kitchen", STATE_OFF, {"icon": "mdi:chemical-weapon"})
-    hass.states.async_set(
+    menuai.states.async_set("light.kitchen", STATE_OFF, {"icon": "mdi:chemical-weapon"})
+    menuai.states.async_set(
         "light.kitchen", STATE_ON, {"brightness": 100, "icon": "mdi:security"}
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "light.kitchen", STATE_ON, {"brightness": 200, "icon": "mdi:security"}
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "light.kitchen", STATE_ON, {"brightness": 300, "icon": "mdi:security"}
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "light.kitchen", STATE_ON, {"brightness": 400, "icon": "mdi:security"}
     )
-    hass.states.async_set("light.kitchen", STATE_OFF, {"icon": "mdi:chemical-weapon"})
+    menuai.states.async_set("light.kitchen", STATE_OFF, {"icon": "mdi:chemical-weapon"})
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    client = await hass_client()
+    client = await menuai_client()
     response_json = await _async_fetch_logbook(client)
 
     assert len(response_json) == 3
-    assert response_json[0]["domain"] == "homeassistant"
+    assert response_json[0]["domain"] == "menuai"
     assert response_json[1]["entity_id"] == "light.kitchen"
     assert response_json[1]["icon"] == "mdi:security"
     assert response_json[1]["state"] == STATE_ON
@@ -1857,14 +1857,14 @@ async def test_icon_and_state(
 
 @pytest.mark.usefixtures("recorder_mock")
 async def test_fire_logbook_entries(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test many logbook entry calls."""
-    await async_setup_component(hass, "logbook", {})
-    await async_recorder_block_till_done(hass)
+    await async_setup_component(menuai, "logbook", {})
+    await async_recorder_block_till_done(menuai)
 
     for _ in range(10):
-        hass.bus.async_fire(
+        menuai.bus.async_fire(
             logbook.EVENT_LOGBOOK_ENTRY,
             {
                 logbook.ATTR_NAME: "Alarm",
@@ -1873,11 +1873,11 @@ async def test_fire_logbook_entries(
                 logbook.ATTR_ENTITY_ID: "sensor.xyz",
             },
         )
-        hass.bus.async_fire(
+        menuai.bus.async_fire(
             logbook.EVENT_LOGBOOK_ENTRY,
             {},
         )
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         logbook.EVENT_LOGBOOK_ENTRY,
         {
             logbook.ATTR_NAME: "Alarm",
@@ -1885,9 +1885,9 @@ async def test_fire_logbook_entries(
             logbook.ATTR_DOMAIN: "switch",
         },
     )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    client = await hass_client()
+    client = await menuai_client()
     response_json = await _async_fetch_logbook(client)
 
     # The empty events should be skipped
@@ -1896,44 +1896,44 @@ async def test_fire_logbook_entries(
 
 @pytest.mark.usefixtures("recorder_mock")
 async def test_exclude_events_domain(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test if events are filtered if domain is excluded in config."""
     entity_id = "switch.bla"
     entity_id2 = "sensor.blu"
 
-    await async_setup_component(hass, "homeassistant", {})
+    await async_setup_component(menuai, "menuai", {})
     config = logbook.CONFIG_SCHEMA(
         {
             ha.DOMAIN: {},
             logbook.DOMAIN: {CONF_EXCLUDE: {CONF_DOMAINS: ["switch", "alexa"]}},
         }
     )
-    await async_setup_component(hass, "logbook", config)
-    await async_recorder_block_till_done(hass)
+    await async_setup_component(menuai, "logbook", config)
+    await async_recorder_block_till_done(menuai)
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_START)
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-    hass.states.async_set(entity_id, None)
-    hass.states.async_set(entity_id, 10)
-    hass.states.async_set(entity_id2, None)
-    hass.states.async_set(entity_id2, 20)
+    menuai.bus.async_fire(EVENT_menuai_START)
+    menuai.bus.async_fire(EVENT_menuai_STARTED)
+    menuai.states.async_set(entity_id, None)
+    menuai.states.async_set(entity_id, 10)
+    menuai.states.async_set(entity_id2, None)
+    menuai.states.async_set(entity_id2, 20)
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    client = await hass_client()
+    client = await menuai_client()
     entries = await _async_fetch_logbook(client)
 
     assert len(entries) == 2
     _assert_entry(
-        entries[0], name="Home Assistant", message="started", domain=ha.DOMAIN
+        entries[0], name="MenuAI", message="started", domain=ha.DOMAIN
     )
     _assert_entry(entries[1], name="blu", entity_id=entity_id2)
 
 
 @pytest.mark.usefixtures("recorder_mock")
 async def test_exclude_events_domain_glob(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test if events are filtered if domain or glob is excluded in config."""
     entity_id = "switch.bla"
@@ -1952,34 +1952,34 @@ async def test_exclude_events_domain_glob(
         }
     )
     await asyncio.gather(
-        async_setup_component(hass, "homeassistant", {}),
-        async_setup_component(hass, "logbook", config),
+        async_setup_component(menuai, "menuai", {}),
+        async_setup_component(menuai, "logbook", config),
     )
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_START)
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-    hass.states.async_set(entity_id, None)
-    hass.states.async_set(entity_id, 10)
-    hass.states.async_set(entity_id2, None)
-    hass.states.async_set(entity_id2, 20)
-    hass.states.async_set(entity_id3, None)
-    hass.states.async_set(entity_id3, 30)
+    menuai.bus.async_fire(EVENT_menuai_START)
+    menuai.bus.async_fire(EVENT_menuai_STARTED)
+    menuai.states.async_set(entity_id, None)
+    menuai.states.async_set(entity_id, 10)
+    menuai.states.async_set(entity_id2, None)
+    menuai.states.async_set(entity_id2, 20)
+    menuai.states.async_set(entity_id3, None)
+    menuai.states.async_set(entity_id3, 30)
 
-    await async_wait_recording_done(hass)
-    client = await hass_client()
+    await async_wait_recording_done(menuai)
+    client = await menuai_client()
     entries = await _async_fetch_logbook(client)
 
     assert len(entries) == 2
     _assert_entry(
-        entries[0], name="Home Assistant", message="started", domain=ha.DOMAIN
+        entries[0], name="MenuAI", message="started", domain=ha.DOMAIN
     )
     _assert_entry(entries[1], name="blu", entity_id=entity_id2)
 
 
 @pytest.mark.usefixtures("recorder_mock")
 async def test_include_events_entity(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test if events are filtered if entity is included in config."""
     entity_id = "sensor.bla"
@@ -1990,39 +1990,39 @@ async def test_include_events_entity(
             ha.DOMAIN: {},
             logbook.DOMAIN: {
                 CONF_INCLUDE: {
-                    CONF_DOMAINS: ["homeassistant"],
+                    CONF_DOMAINS: ["menuai"],
                     CONF_ENTITIES: [entity_id2],
                 }
             },
         }
     )
     await asyncio.gather(
-        async_setup_component(hass, "homeassistant", {}),
-        async_setup_component(hass, "logbook", config),
+        async_setup_component(menuai, "menuai", {}),
+        async_setup_component(menuai, "logbook", config),
     )
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_START)
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-    hass.states.async_set(entity_id, None)
-    hass.states.async_set(entity_id, 10)
-    hass.states.async_set(entity_id2, None)
-    hass.states.async_set(entity_id2, 20)
+    menuai.bus.async_fire(EVENT_menuai_START)
+    menuai.bus.async_fire(EVENT_menuai_STARTED)
+    menuai.states.async_set(entity_id, None)
+    menuai.states.async_set(entity_id, 10)
+    menuai.states.async_set(entity_id2, None)
+    menuai.states.async_set(entity_id2, 20)
 
-    await async_wait_recording_done(hass)
-    client = await hass_client()
+    await async_wait_recording_done(menuai)
+    client = await menuai_client()
     entries = await _async_fetch_logbook(client)
 
     assert len(entries) == 2
     _assert_entry(
-        entries[0], name="Home Assistant", message="started", domain=ha.DOMAIN
+        entries[0], name="MenuAI", message="started", domain=ha.DOMAIN
     )
     _assert_entry(entries[1], name="blu", entity_id=entity_id2)
 
 
 @pytest.mark.usefixtures("recorder_mock")
 async def test_exclude_events_entity(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test if events are filtered if entity is excluded in config."""
     entity_id = "sensor.bla"
@@ -2035,68 +2035,68 @@ async def test_exclude_events_entity(
         }
     )
     await asyncio.gather(
-        async_setup_component(hass, "homeassistant", {}),
-        async_setup_component(hass, "logbook", config),
+        async_setup_component(menuai, "menuai", {}),
+        async_setup_component(menuai, "logbook", config),
     )
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_START)
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-    hass.states.async_set(entity_id, None)
-    hass.states.async_set(entity_id, 10)
-    hass.states.async_set(entity_id2, None)
-    hass.states.async_set(entity_id2, 20)
+    menuai.bus.async_fire(EVENT_menuai_START)
+    menuai.bus.async_fire(EVENT_menuai_STARTED)
+    menuai.states.async_set(entity_id, None)
+    menuai.states.async_set(entity_id, 10)
+    menuai.states.async_set(entity_id2, None)
+    menuai.states.async_set(entity_id2, 20)
 
-    await async_wait_recording_done(hass)
-    client = await hass_client()
+    await async_wait_recording_done(menuai)
+    client = await menuai_client()
     entries = await _async_fetch_logbook(client)
     assert len(entries) == 2
     _assert_entry(
-        entries[0], name="Home Assistant", message="started", domain=ha.DOMAIN
+        entries[0], name="MenuAI", message="started", domain=ha.DOMAIN
     )
     _assert_entry(entries[1], name="blu", entity_id=entity_id2)
 
 
 @pytest.mark.usefixtures("recorder_mock")
 async def test_include_events_domain(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test if events are filtered if domain is included in config."""
-    assert await async_setup_component(hass, "alexa", {})
+    assert await async_setup_component(menuai, "alexa", {})
     entity_id = "switch.bla"
     entity_id2 = "sensor.blu"
     config = logbook.CONFIG_SCHEMA(
         {
             ha.DOMAIN: {},
             logbook.DOMAIN: {
-                CONF_INCLUDE: {CONF_DOMAINS: ["homeassistant", "sensor", "alexa"]}
+                CONF_INCLUDE: {CONF_DOMAINS: ["menuai", "sensor", "alexa"]}
             },
         }
     )
     await asyncio.gather(
-        async_setup_component(hass, "homeassistant", {}),
-        async_setup_component(hass, "logbook", config),
+        async_setup_component(menuai, "menuai", {}),
+        async_setup_component(menuai, "logbook", config),
     )
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_START)
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-    hass.bus.async_fire(
+    menuai.bus.async_fire(EVENT_menuai_START)
+    menuai.bus.async_fire(EVENT_menuai_STARTED)
+    menuai.bus.async_fire(
         EVENT_ALEXA_SMART_HOME,
         {"request": {"namespace": "Alexa.Discovery", "name": "Discover"}},
     )
-    hass.states.async_set(entity_id, None)
-    hass.states.async_set(entity_id, 10)
-    hass.states.async_set(entity_id2, None)
-    hass.states.async_set(entity_id2, 20)
+    menuai.states.async_set(entity_id, None)
+    menuai.states.async_set(entity_id, 10)
+    menuai.states.async_set(entity_id2, None)
+    menuai.states.async_set(entity_id2, 20)
 
-    await async_wait_recording_done(hass)
-    client = await hass_client()
+    await async_wait_recording_done(menuai)
+    client = await menuai_client()
     entries = await _async_fetch_logbook(client)
 
     assert len(entries) == 3
     _assert_entry(
-        entries[0], name="Home Assistant", message="started", domain=ha.DOMAIN
+        entries[0], name="MenuAI", message="started", domain=ha.DOMAIN
     )
     _assert_entry(entries[1], name="Amazon Alexa", domain="alexa")
     _assert_entry(entries[2], name="blu", entity_id=entity_id2)
@@ -2104,10 +2104,10 @@ async def test_include_events_domain(
 
 @pytest.mark.usefixtures("recorder_mock")
 async def test_include_events_domain_glob(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test if events are filtered if domain or glob is included in config."""
-    assert await async_setup_component(hass, "alexa", {})
+    assert await async_setup_component(menuai, "alexa", {})
     entity_id = "switch.bla"
     entity_id2 = "sensor.blu"
     entity_id3 = "switch.included"
@@ -2116,19 +2116,19 @@ async def test_include_events_domain_glob(
             ha.DOMAIN: {},
             logbook.DOMAIN: {
                 CONF_INCLUDE: {
-                    CONF_DOMAINS: ["homeassistant", "sensor", "alexa"],
+                    CONF_DOMAINS: ["menuai", "sensor", "alexa"],
                     CONF_ENTITY_GLOBS: ["*.included"],
                 }
             },
         }
     )
     await asyncio.gather(
-        async_setup_component(hass, "homeassistant", {}),
-        async_setup_component(hass, "logbook", config),
+        async_setup_component(menuai, "menuai", {}),
+        async_setup_component(menuai, "logbook", config),
     )
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
 
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         logbook.EVENT_LOGBOOK_ENTRY,
         {
             logbook.ATTR_NAME: "Alarm",
@@ -2136,26 +2136,26 @@ async def test_include_events_domain_glob(
             logbook.ATTR_ENTITY_ID: "switch.any",
         },
     )
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_START)
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-    hass.bus.async_fire(
+    menuai.bus.async_fire(EVENT_menuai_START)
+    menuai.bus.async_fire(EVENT_menuai_STARTED)
+    menuai.bus.async_fire(
         EVENT_ALEXA_SMART_HOME,
         {"request": {"namespace": "Alexa.Discovery", "name": "Discover"}},
     )
-    hass.states.async_set(entity_id, None)
-    hass.states.async_set(entity_id, 10)
-    hass.states.async_set(entity_id2, None)
-    hass.states.async_set(entity_id2, 20)
-    hass.states.async_set(entity_id3, None)
-    hass.states.async_set(entity_id3, 30)
+    menuai.states.async_set(entity_id, None)
+    menuai.states.async_set(entity_id, 10)
+    menuai.states.async_set(entity_id2, None)
+    menuai.states.async_set(entity_id2, 20)
+    menuai.states.async_set(entity_id3, None)
+    menuai.states.async_set(entity_id3, 30)
 
-    await async_wait_recording_done(hass)
-    client = await hass_client()
+    await async_wait_recording_done(menuai)
+    client = await menuai_client()
     entries = await _async_fetch_logbook(client)
 
     assert len(entries) == 4
     _assert_entry(
-        entries[0], name="Home Assistant", message="started", domain=ha.DOMAIN
+        entries[0], name="MenuAI", message="started", domain=ha.DOMAIN
     )
     _assert_entry(entries[1], name="Amazon Alexa", domain="alexa")
     _assert_entry(entries[2], name="blu", entity_id=entity_id2)
@@ -2164,7 +2164,7 @@ async def test_include_events_domain_glob(
 
 @pytest.mark.usefixtures("recorder_mock")
 async def test_include_exclude_events_no_globs(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test if events are filtered if include and exclude is configured."""
     entity_id = "switch.bla"
@@ -2177,7 +2177,7 @@ async def test_include_exclude_events_no_globs(
             ha.DOMAIN: {},
             logbook.DOMAIN: {
                 CONF_INCLUDE: {
-                    CONF_DOMAINS: ["sensor", "homeassistant"],
+                    CONF_DOMAINS: ["sensor", "menuai"],
                     CONF_ENTITIES: ["switch.bla"],
                 },
                 CONF_EXCLUDE: {
@@ -2188,31 +2188,31 @@ async def test_include_exclude_events_no_globs(
         }
     )
     await asyncio.gather(
-        async_setup_component(hass, "homeassistant", {}),
-        async_setup_component(hass, "logbook", config),
+        async_setup_component(menuai, "menuai", {}),
+        async_setup_component(menuai, "logbook", config),
     )
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_START)
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-    hass.states.async_set(entity_id, None)
-    hass.states.async_set(entity_id, 10)
-    hass.states.async_set(entity_id2, None)
-    hass.states.async_set(entity_id2, 10)
-    hass.states.async_set(entity_id3, None)
-    hass.states.async_set(entity_id3, 10)
-    hass.states.async_set(entity_id, 20)
-    hass.states.async_set(entity_id2, 20)
-    hass.states.async_set(entity_id4, None)
-    hass.states.async_set(entity_id4, 10)
+    menuai.bus.async_fire(EVENT_menuai_START)
+    menuai.bus.async_fire(EVENT_menuai_STARTED)
+    menuai.states.async_set(entity_id, None)
+    menuai.states.async_set(entity_id, 10)
+    menuai.states.async_set(entity_id2, None)
+    menuai.states.async_set(entity_id2, 10)
+    menuai.states.async_set(entity_id3, None)
+    menuai.states.async_set(entity_id3, 10)
+    menuai.states.async_set(entity_id, 20)
+    menuai.states.async_set(entity_id2, 20)
+    menuai.states.async_set(entity_id4, None)
+    menuai.states.async_set(entity_id4, 10)
 
-    await async_wait_recording_done(hass)
-    client = await hass_client()
+    await async_wait_recording_done(menuai)
+    client = await menuai_client()
     entries = await _async_fetch_logbook(client)
 
     assert len(entries) == 6
     _assert_entry(
-        entries[0], name="Home Assistant", message="started", domain=ha.DOMAIN
+        entries[0], name="MenuAI", message="started", domain=ha.DOMAIN
     )
     _assert_entry(entries[1], name="bla", entity_id=entity_id, state="10")
     _assert_entry(entries[2], name="blu", entity_id=entity_id2, state="10")
@@ -2223,7 +2223,7 @@ async def test_include_exclude_events_no_globs(
 
 @pytest.mark.usefixtures("recorder_mock")
 async def test_include_exclude_events_with_glob_filters(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test if events are filtered if include and exclude is configured."""
     entity_id = "switch.bla"
@@ -2237,7 +2237,7 @@ async def test_include_exclude_events_with_glob_filters(
             ha.DOMAIN: {},
             logbook.DOMAIN: {
                 CONF_INCLUDE: {
-                    CONF_DOMAINS: ["sensor", "homeassistant"],
+                    CONF_DOMAINS: ["sensor", "menuai"],
                     CONF_ENTITIES: ["switch.bla"],
                     CONF_ENTITY_GLOBS: ["*.included"],
                 },
@@ -2250,35 +2250,35 @@ async def test_include_exclude_events_with_glob_filters(
         }
     )
     await asyncio.gather(
-        async_setup_component(hass, "homeassistant", {}),
-        async_setup_component(hass, "logbook", config),
+        async_setup_component(menuai, "menuai", {}),
+        async_setup_component(menuai, "logbook", config),
     )
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_START)
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-    hass.states.async_set(entity_id, None)
-    hass.states.async_set(entity_id, 10)
-    hass.states.async_set(entity_id2, None)
-    hass.states.async_set(entity_id2, 10)
-    hass.states.async_set(entity_id3, None)
-    hass.states.async_set(entity_id3, 10)
-    hass.states.async_set(entity_id, 20)
-    hass.states.async_set(entity_id2, 20)
-    hass.states.async_set(entity_id4, None)
-    hass.states.async_set(entity_id4, 30)
-    hass.states.async_set(entity_id5, None)
-    hass.states.async_set(entity_id5, 30)
-    hass.states.async_set(entity_id6, None)
-    hass.states.async_set(entity_id6, 30)
+    menuai.bus.async_fire(EVENT_menuai_START)
+    menuai.bus.async_fire(EVENT_menuai_STARTED)
+    menuai.states.async_set(entity_id, None)
+    menuai.states.async_set(entity_id, 10)
+    menuai.states.async_set(entity_id2, None)
+    menuai.states.async_set(entity_id2, 10)
+    menuai.states.async_set(entity_id3, None)
+    menuai.states.async_set(entity_id3, 10)
+    menuai.states.async_set(entity_id, 20)
+    menuai.states.async_set(entity_id2, 20)
+    menuai.states.async_set(entity_id4, None)
+    menuai.states.async_set(entity_id4, 30)
+    menuai.states.async_set(entity_id5, None)
+    menuai.states.async_set(entity_id5, 30)
+    menuai.states.async_set(entity_id6, None)
+    menuai.states.async_set(entity_id6, 30)
 
-    await async_wait_recording_done(hass)
-    client = await hass_client()
+    await async_wait_recording_done(menuai)
+    client = await menuai_client()
     entries = await _async_fetch_logbook(client)
 
     assert len(entries) == 7
     _assert_entry(
-        entries[0], name="Home Assistant", message="started", domain=ha.DOMAIN
+        entries[0], name="MenuAI", message="started", domain=ha.DOMAIN
     )
     _assert_entry(entries[1], name="bla", entity_id=entity_id, state="10")
     _assert_entry(entries[2], name="blu", entity_id=entity_id2, state="10")
@@ -2290,7 +2290,7 @@ async def test_include_exclude_events_with_glob_filters(
 
 @pytest.mark.usefixtures("recorder_mock")
 async def test_empty_config(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test we can handle an empty entity filter."""
     entity_id = "sensor.blu"
@@ -2302,47 +2302,47 @@ async def test_empty_config(
         }
     )
     await asyncio.gather(
-        async_setup_component(hass, "homeassistant", {}),
-        async_setup_component(hass, "logbook", config),
+        async_setup_component(menuai, "menuai", {}),
+        async_setup_component(menuai, "logbook", config),
     )
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_START)
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-    hass.states.async_set(entity_id, None)
-    hass.states.async_set(entity_id, 10)
+    menuai.bus.async_fire(EVENT_menuai_START)
+    menuai.bus.async_fire(EVENT_menuai_STARTED)
+    menuai.states.async_set(entity_id, None)
+    menuai.states.async_set(entity_id, 10)
 
-    await async_wait_recording_done(hass)
-    client = await hass_client()
+    await async_wait_recording_done(menuai)
+    client = await menuai_client()
     entries = await _async_fetch_logbook(client)
 
     assert len(entries) == 2
     _assert_entry(
-        entries[0], name="Home Assistant", message="started", domain=ha.DOMAIN
+        entries[0], name="MenuAI", message="started", domain=ha.DOMAIN
     )
     _assert_entry(entries[1], name="blu", entity_id=entity_id)
 
 
 @pytest.mark.usefixtures("recorder_mock")
 async def test_context_filter(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test we can filter by context."""
-    assert await async_setup_component(hass, "logbook", {})
-    await async_recorder_block_till_done(hass)
+    assert await async_setup_component(menuai, "logbook", {})
+    await async_recorder_block_till_done(menuai)
 
     entity_id = "switch.blu"
     context = ha.Context()
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_START)
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-    hass.states.async_set(entity_id, None)
-    hass.states.async_set(entity_id, "on", context=context)
-    hass.states.async_set(entity_id, "off")
-    hass.states.async_set(entity_id, "unknown", context=context)
+    menuai.bus.async_fire(EVENT_menuai_START)
+    menuai.bus.async_fire(EVENT_menuai_STARTED)
+    menuai.states.async_set(entity_id, None)
+    menuai.states.async_set(entity_id, "on", context=context)
+    menuai.states.async_set(entity_id, "off")
+    menuai.states.async_set(entity_id, "unknown", context=context)
 
-    await async_wait_recording_done(hass)
-    client = await hass_client()
+    await async_wait_recording_done(menuai)
+    client = await menuai_client()
 
     # Test results
     entries = await _async_fetch_logbook(client, {"context_id": context.id})
@@ -2403,41 +2403,41 @@ def _assert_entry(
 
 @pytest.mark.usefixtures("recorder_mock")
 async def test_get_events(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test logbook get_events."""
     now = dt_util.utcnow()
     await asyncio.gather(
         *[
-            async_setup_component(hass, comp, {})
-            for comp in ("homeassistant", "logbook")
+            async_setup_component(menuai, comp, {})
+            for comp in ("menuai", "logbook")
         ]
     )
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_START)
+    menuai.bus.async_fire(EVENT_menuai_START)
 
-    hass.states.async_set("light.kitchen", STATE_OFF)
-    await hass.async_block_till_done()
-    hass.states.async_set("light.kitchen", STATE_ON, {"brightness": 100})
-    await hass.async_block_till_done()
-    hass.states.async_set("light.kitchen", STATE_ON, {"brightness": 200})
-    await hass.async_block_till_done()
-    hass.states.async_set("light.kitchen", STATE_ON, {"brightness": 300})
-    await hass.async_block_till_done()
-    hass.states.async_set("light.kitchen", STATE_ON, {"brightness": 400})
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.kitchen", STATE_OFF)
+    await menuai.async_block_till_done()
+    menuai.states.async_set("light.kitchen", STATE_ON, {"brightness": 100})
+    await menuai.async_block_till_done()
+    menuai.states.async_set("light.kitchen", STATE_ON, {"brightness": 200})
+    await menuai.async_block_till_done()
+    menuai.states.async_set("light.kitchen", STATE_ON, {"brightness": 300})
+    await menuai.async_block_till_done()
+    menuai.states.async_set("light.kitchen", STATE_ON, {"brightness": 400})
+    await menuai.async_block_till_done()
     context = ha.Context(
         id="01GTDGKBCH00GW0X476W5TVAAA",
         user_id="b400facee45711eaa9308bfd3d19e474",
     )
 
-    hass.states.async_set("light.kitchen", STATE_OFF, context=context)
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.kitchen", STATE_OFF, context=context)
+    await menuai.async_block_till_done()
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -2524,14 +2524,14 @@ async def test_get_events(
 
 @pytest.mark.usefixtures("recorder_mock")
 async def test_get_events_future_start_time(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test get_events with a future start time."""
-    await async_setup_component(hass, "logbook", {})
-    await async_recorder_block_till_done(hass)
+    await async_setup_component(menuai, "logbook", {})
+    await async_recorder_block_till_done(menuai)
     future = dt_util.utcnow() + timedelta(hours=10)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -2550,13 +2550,13 @@ async def test_get_events_future_start_time(
 
 @pytest.mark.usefixtures("recorder_mock")
 async def test_get_events_bad_start_time(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test get_events bad start time."""
-    await async_setup_component(hass, "logbook", {})
-    await async_recorder_block_till_done(hass)
+    await async_setup_component(menuai, "logbook", {})
+    await async_recorder_block_till_done(menuai)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -2571,14 +2571,14 @@ async def test_get_events_bad_start_time(
 
 @pytest.mark.usefixtures("recorder_mock")
 async def test_get_events_bad_end_time(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test get_events bad end time."""
     now = dt_util.utcnow()
-    await async_setup_component(hass, "logbook", {})
-    await async_recorder_block_till_done(hass)
+    await async_setup_component(menuai, "logbook", {})
+    await async_recorder_block_till_done(menuai)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -2594,13 +2594,13 @@ async def test_get_events_bad_end_time(
 
 @pytest.mark.usefixtures("recorder_mock")
 async def test_get_events_invalid_filters(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test get_events invalid filters."""
-    await async_setup_component(hass, "logbook", {})
-    await async_recorder_block_till_done(hass)
+    await async_setup_component(menuai, "logbook", {})
+    await async_recorder_block_till_done(menuai)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -2625,21 +2625,21 @@ async def test_get_events_invalid_filters(
 
 @pytest.mark.usefixtures("recorder_mock")
 async def test_get_events_with_device_ids(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     device_registry: dr.DeviceRegistry,
 ) -> None:
     """Test logbook get_events for device ids."""
     now = dt_util.utcnow()
     await asyncio.gather(
         *[
-            async_setup_component(hass, comp, {})
-            for comp in ("homeassistant", "logbook")
+            async_setup_component(menuai, comp, {})
+            for comp in ("menuai", "logbook")
         ]
     )
 
     entry = MockConfigEntry(domain="test", data={"first": True}, options=None)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     device = device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -2656,7 +2656,7 @@ async def test_get_events_with_device_ids(
 
         @ha.callback
         def async_describe_events(
-            hass: HomeAssistant,  # noqa: N805
+            menuai: menuai,  # noqa: N805
             async_describe_event: Callable[
                 [str, str, Callable[[Event], dict[str, str]]], None
             ],
@@ -2673,31 +2673,31 @@ async def test_get_events_with_device_ids(
 
             async_describe_event("test", "mock_event", async_describe_test_event)
 
-    logbook._process_logbook_platform(hass, "test", MockLogbookPlatform)
+    logbook._process_logbook_platform(menuai, "test", MockLogbookPlatform)
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_START)
-    hass.bus.async_fire("mock_event", {"device_id": device.id})
+    menuai.bus.async_fire(EVENT_menuai_START)
+    menuai.bus.async_fire("mock_event", {"device_id": device.id})
 
-    hass.states.async_set("light.kitchen", STATE_OFF)
-    await hass.async_block_till_done()
-    hass.states.async_set("light.kitchen", STATE_ON, {"brightness": 100})
-    await hass.async_block_till_done()
-    hass.states.async_set("light.kitchen", STATE_ON, {"brightness": 200})
-    await hass.async_block_till_done()
-    hass.states.async_set("light.kitchen", STATE_ON, {"brightness": 300})
-    await hass.async_block_till_done()
-    hass.states.async_set("light.kitchen", STATE_ON, {"brightness": 400})
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.kitchen", STATE_OFF)
+    await menuai.async_block_till_done()
+    menuai.states.async_set("light.kitchen", STATE_ON, {"brightness": 100})
+    await menuai.async_block_till_done()
+    menuai.states.async_set("light.kitchen", STATE_ON, {"brightness": 200})
+    await menuai.async_block_till_done()
+    menuai.states.async_set("light.kitchen", STATE_ON, {"brightness": 300})
+    await menuai.async_block_till_done()
+    menuai.states.async_set("light.kitchen", STATE_ON, {"brightness": 400})
+    await menuai.async_block_till_done()
     context = ha.Context(
         id="01GTDGKBCH00GW0X476W5TVAAA",
         user_id="b400facee45711eaa9308bfd3d19e474",
     )
 
-    hass.states.async_set("light.kitchen", STATE_OFF, context=context)
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.kitchen", STATE_OFF, context=context)
+    await menuai.async_block_till_done()
 
-    await async_wait_recording_done(hass)
-    client = await hass_ws_client()
+    await async_wait_recording_done(menuai)
+    client = await menuai_ws_client()
 
     await client.send_json(
         {
@@ -2766,17 +2766,17 @@ async def test_get_events_with_device_ids(
 
 @pytest.mark.usefixtures("recorder_mock")
 async def test_logbook_select_entities_context_id(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test the logbook view with end_time and entity with automations and scripts."""
     await asyncio.gather(
         *[
-            async_setup_component(hass, comp, {})
-            for comp in ("homeassistant", "logbook", "automation", "script")
+            async_setup_component(menuai, comp, {})
+            for comp in ("menuai", "logbook", "automation", "script")
         ]
     )
 
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
 
     context = ha.Context(
         id="01GTDGKBCH00GW0X476W5TVAAA",
@@ -2785,17 +2785,17 @@ async def test_logbook_select_entities_context_id(
 
     # An Automation
     automation_entity_id_test = "automation.alarm"
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_AUTOMATION_TRIGGERED,
         {ATTR_NAME: "Mock automation", ATTR_ENTITY_ID: automation_entity_id_test},
         context=context,
     )
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_SCRIPT_STARTED,
         {ATTR_NAME: "Mock script", ATTR_ENTITY_ID: "script.mock_script"},
         context=context,
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         automation_entity_id_test,
         STATE_ON,
         {ATTR_FRIENDLY_NAME: "Alarm Automation"},
@@ -2803,48 +2803,48 @@ async def test_logbook_select_entities_context_id(
     )
 
     entity_id_test = "alarm_control_panel.area_001"
-    hass.states.async_set(entity_id_test, STATE_OFF, context=context)
-    await hass.async_block_till_done()
-    hass.states.async_set(entity_id_test, STATE_ON, context=context)
-    await hass.async_block_till_done()
+    menuai.states.async_set(entity_id_test, STATE_OFF, context=context)
+    await menuai.async_block_till_done()
+    menuai.states.async_set(entity_id_test, STATE_ON, context=context)
+    await menuai.async_block_till_done()
     entity_id_second = "alarm_control_panel.area_002"
-    hass.states.async_set(entity_id_second, STATE_OFF, context=context)
-    await hass.async_block_till_done()
-    hass.states.async_set(entity_id_second, STATE_ON, context=context)
-    await hass.async_block_till_done()
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_START)
-    await hass.async_block_till_done()
+    menuai.states.async_set(entity_id_second, STATE_OFF, context=context)
+    await menuai.async_block_till_done()
+    menuai.states.async_set(entity_id_second, STATE_ON, context=context)
+    await menuai.async_block_till_done()
+    menuai.bus.async_fire(EVENT_menuai_START)
+    await menuai.async_block_till_done()
     entity_id_third = "alarm_control_panel.area_003"
 
     logbook.async_log_entry(
-        hass,
+        menuai,
         "mock_name",
         "mock_message",
         "alarm_control_panel",
         entity_id_third,
         context,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     logbook.async_log_entry(
-        hass,
+        menuai,
         "mock_name",
         "mock_message",
-        "homeassistant",
+        "menuai",
         None,
         context,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # A service call
     light_turn_off_service_context = ha.Context(
         id="01GTDGKBCH00GW0X476W5TVBFC",
         user_id="9400facee45711eaa9308bfd3d19e474",
     )
-    hass.states.async_set("light.switch", STATE_ON)
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.switch", STATE_ON)
+    await menuai.async_block_till_done()
 
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         EVENT_CALL_SERVICE,
         {
             ATTR_DOMAIN: "light",
@@ -2853,14 +2853,14 @@ async def test_logbook_select_entities_context_id(
         },
         context=light_turn_off_service_context,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "light.switch", STATE_OFF, context=light_turn_off_service_context
     )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    client = await hass_client()
+    client = await menuai_client()
 
     # Today time 00:00:00
     start = dt_util.utcnow().date()
@@ -2902,41 +2902,41 @@ async def test_logbook_select_entities_context_id(
 
 @pytest.mark.usefixtures("recorder_mock")
 async def test_get_events_with_context_state(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test logbook get_events with a context state."""
     now = dt_util.utcnow()
     await asyncio.gather(
         *[
-            async_setup_component(hass, comp, {})
-            for comp in ("homeassistant", "logbook")
+            async_setup_component(menuai, comp, {})
+            for comp in ("menuai", "logbook")
         ]
     )
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_START)
-    hass.states.async_set("binary_sensor.is_light", STATE_ON)
-    hass.states.async_set("light.kitchen1", STATE_OFF)
-    hass.states.async_set("light.kitchen2", STATE_OFF)
+    menuai.bus.async_fire(EVENT_menuai_START)
+    menuai.states.async_set("binary_sensor.is_light", STATE_ON)
+    menuai.states.async_set("light.kitchen1", STATE_OFF)
+    menuai.states.async_set("light.kitchen2", STATE_OFF)
 
     context = ha.Context(
         id="01GTDGKBCH00GW0X476W5TVAAA",
         user_id="b400facee45711eaa9308bfd3d19e474",
     )
-    hass.states.async_set("binary_sensor.is_light", STATE_OFF, context=context)
-    await hass.async_block_till_done()
-    hass.states.async_set(
+    menuai.states.async_set("binary_sensor.is_light", STATE_OFF, context=context)
+    await menuai.async_block_till_done()
+    menuai.states.async_set(
         "light.kitchen1", STATE_ON, {"brightness": 100}, context=context
     )
-    await hass.async_block_till_done()
-    hass.states.async_set(
+    await menuai.async_block_till_done()
+    menuai.states.async_set(
         "light.kitchen2", STATE_ON, {"brightness": 200}, context=context
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
 
     await client.send_json(
         {
@@ -2967,24 +2967,24 @@ async def test_get_events_with_context_state(
 
 
 @pytest.mark.usefixtures("recorder_mock")
-async def test_logbook_with_empty_config(hass: HomeAssistant) -> None:
+async def test_logbook_with_empty_config(menuai: menuai) -> None:
     """Test we handle a empty configuration."""
     assert await async_setup_component(
-        hass,
+        menuai,
         logbook.DOMAIN,
         {
             logbook.DOMAIN: {},
             recorder.DOMAIN: {},
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
 @pytest.mark.usefixtures("recorder_mock")
-async def test_logbook_with_non_iterable_entity_filter(hass: HomeAssistant) -> None:
+async def test_logbook_with_non_iterable_entity_filter(menuai: menuai) -> None:
     """Test we handle a non-iterable entity filter."""
     assert await async_setup_component(
-        hass,
+        menuai,
         logbook.DOMAIN,
         {
             logbook.DOMAIN: {
@@ -3001,4 +3001,4 @@ async def test_logbook_with_non_iterable_entity_filter(hass: HomeAssistant) -> N
             },
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()

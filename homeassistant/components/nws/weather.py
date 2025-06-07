@@ -8,7 +8,7 @@ from typing import Any, Required, TypedDict, cast
 
 import voluptuous as vol
 
-from homeassistant.components.weather import (
+from menuai.components.weather import (
     ATTR_CONDITION_CLEAR_NIGHT,
     ATTR_CONDITION_SUNNY,
     ATTR_FORECAST_CONDITION,
@@ -25,7 +25,7 @@ from homeassistant.components.weather import (
     Forecast,
     WeatherEntityFeature,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_LATITUDE,
     CONF_LONGITUDE,
     UnitOfLength,
@@ -33,17 +33,17 @@ from homeassistant.const import (
     UnitOfSpeed,
     UnitOfTemperature,
 )
-from homeassistant.core import (
-    HomeAssistant,
+from menuai.core import (
+    menuai,
     ServiceResponse,
     SupportsResponse,
     callback,
 )
-from homeassistant.helpers import entity_platform, entity_registry as er
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import TimestampDataUpdateCoordinator
-from homeassistant.util.json import JsonValueType
-from homeassistant.util.unit_conversion import SpeedConverter, TemperatureConverter
+from menuai.helpers import entity_platform, entity_registry as er
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import TimestampDataUpdateCoordinator
+from menuai.util.json import JsonValueType
+from menuai.util.unit_conversion import SpeedConverter, TemperatureConverter
 
 from . import NWSConfigEntry, NWSData, base_unique_id, device_info
 from .const import (
@@ -87,12 +87,12 @@ def convert_condition(time: str, weather: tuple[tuple[str, int | None], ...]) ->
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: NWSConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the NWS weather platform."""
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
     nws_data = entry.runtime_data
 
     # Remove hourly entity from legacy config entries
@@ -169,9 +169,9 @@ class NWSWeather(CoordinatorWeatherEntity[TimestampDataUpdateCoordinator[None]])
         self._attr_device_info = device_info(latitude, longitude)
         self._attr_name = self.station
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai."""
+        await super().async_added_to_menuai()
         self.async_on_remove(partial(self._remove_forecast_listener, "daily"))
         self.async_on_remove(partial(self._remove_forecast_listener, "hourly"))
         self.async_on_remove(partial(self._remove_forecast_listener, "twice_daily"))

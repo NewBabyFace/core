@@ -7,24 +7,24 @@ from unittest.mock import ANY, patch
 import pytest
 from pytest_unordered import unordered
 
-from homeassistant.components.camera import CameraEntityFeature
-from homeassistant.components.climate import ATTR_MAX_TEMP, ATTR_MIN_TEMP, HVACMode
+from menuai.components.camera import CameraEntityFeature
+from menuai.components.climate import ATTR_MAX_TEMP, ATTR_MIN_TEMP, HVACMode
 
-# pylint: disable-next=hass-component-root-import
-from homeassistant.components.demo.binary_sensor import DemoBinarySensor
+# pylint: disable-next=menuai-component-root-import
+from menuai.components.demo.binary_sensor import DemoBinarySensor
 
-# pylint: disable-next=hass-component-root-import
-from homeassistant.components.demo.cover import DemoCover
+# pylint: disable-next=menuai-component-root-import
+from menuai.components.demo.cover import DemoCover
 
-# pylint: disable-next=hass-component-root-import
-from homeassistant.components.demo.light import LIGHT_EFFECT_LIST, DemoLight
+# pylint: disable-next=menuai-component-root-import
+from menuai.components.demo.light import LIGHT_EFFECT_LIST, DemoLight
 
-# pylint: disable-next=hass-component-root-import
-from homeassistant.components.demo.media_player import AbstractDemoPlayer
+# pylint: disable-next=menuai-component-root-import
+from menuai.components.demo.media_player import AbstractDemoPlayer
 
-# pylint: disable-next=hass-component-root-import
-from homeassistant.components.demo.switch import DemoSwitch
-from homeassistant.components.google_assistant import (
+# pylint: disable-next=menuai-component-root-import
+from menuai.components.demo.switch import DemoSwitch
+from menuai.components.google_assistant import (
     EVENT_COMMAND_RECEIVED,
     EVENT_QUERY_RECEIVED,
     EVENT_SYNC_RECEIVED,
@@ -32,22 +32,22 @@ from homeassistant.components.google_assistant import (
     smart_home as sh,
     trait,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_UNIT_OF_MEASUREMENT,
     EVENT_CALL_SERVICE,
     Platform,
     UnitOfTemperature,
     __version__,
 )
-from homeassistant.core import HomeAssistant, State
-from homeassistant.core_config import async_process_ha_core_config
-from homeassistant.helpers import (
+from menuai.core import menuai, State
+from menuai.core_config import async_process_ha_core_config
+from menuai.helpers import (
     area_registry as ar,
     device_registry as dr,
     entity_platform,
     entity_registry as er,
 )
-from homeassistant.setup import async_setup_component
+from menuai.setup import async_setup_component
 
 from . import BASIC_CONFIG, MockConfig
 
@@ -60,7 +60,7 @@ REQ_ID = "ff36a3cc-ec34-11e6-b1a0-64510650abcf"
 async def light_only() -> None:
     """Enable only the light platform."""
     with patch(
-        "homeassistant.components.demo.COMPONENTS_WITH_CONFIG_ENTRY_DEMO_PLATFORM",
+        "menuai.components.demo.COMPONENTS_WITH_CONFIG_ENTRY_DEMO_PLATFORM",
         [Platform.LIGHT],
     ):
         yield
@@ -80,7 +80,7 @@ def registries(
     return ret
 
 
-async def test_async_handle_message(hass: HomeAssistant) -> None:
+async def test_async_handle_message(menuai: menuai) -> None:
     """Test the async handle message method."""
     config = MockConfig(
         should_expose=lambda state: state.entity_id != "light.not_expose",
@@ -93,7 +93,7 @@ async def test_async_handle_message(hass: HomeAssistant) -> None:
     )
 
     result = await sh.async_handle_message(
-        hass,
+        menuai,
         config,
         "test-agent",
         "test-agent",
@@ -111,10 +111,10 @@ async def test_async_handle_message(hass: HomeAssistant) -> None:
         "payload": {"errorCode": const.ERR_PROTOCOL_ERROR},
     }
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     result = await sh.async_handle_message(
-        hass,
+        menuai,
         config,
         "test-agent",
         "test-agent",
@@ -131,10 +131,10 @@ async def test_async_handle_message(hass: HomeAssistant) -> None:
         "payload": {"errorCode": const.ERR_PROTOCOL_ERROR},
     }
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
-async def test_sync_message(hass: HomeAssistant, registries) -> None:
+async def test_sync_message(menuai: menuai, registries) -> None:
     """Test a sync message."""
     entity = registries.entity.async_get_or_create(
         "light",
@@ -155,18 +155,18 @@ async def test_sync_message(hass: HomeAssistant, registries) -> None:
         effect_list=LIGHT_EFFECT_LIST,
         effect=LIGHT_EFFECT_LIST[0],
     )
-    light.hass = hass
-    light.platform = MockEntityPlatform(hass)
+    light.menuai = menuai
+    light.platform = MockEntityPlatform(menuai)
     light.entity_id = "light.demo_light"
     light._attr_device_info = None
     light._attr_name = "Demo Light"
     light.async_write_ha_state()
 
     # This should not show up in the sync request
-    hass.states.async_set("sensor.no_match", "something")
+    menuai.states.async_set("sensor.no_match", "something")
 
     # Excluded via config
-    hass.states.async_set("light.not_expose", "on")
+    menuai.states.async_set("light.not_expose", "on")
 
     config = MockConfig(
         should_expose=lambda state: state.entity_id != "light.not_expose",
@@ -178,10 +178,10 @@ async def test_sync_message(hass: HomeAssistant, registries) -> None:
         },
     )
 
-    events = async_capture_events(hass, EVENT_SYNC_RECEIVED)
+    events = async_capture_events(menuai, EVENT_SYNC_RECEIVED)
 
     result = await sh.async_handle_message(
-        hass,
+        menuai,
         config,
         "test-agent",
         "test-agent",
@@ -257,7 +257,7 @@ async def test_sync_message(hass: HomeAssistant, registries) -> None:
             ],
         },
     }
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(events) == 1
     assert events[0].event_type == EVENT_SYNC_RECEIVED
@@ -265,10 +265,10 @@ async def test_sync_message(hass: HomeAssistant, registries) -> None:
 
 
 @pytest.mark.parametrize("area_on_device", [True, False])
-async def test_sync_in_area(area_on_device, hass: HomeAssistant, registries) -> None:
+async def test_sync_in_area(area_on_device, menuai: menuai, registries) -> None:
     """Test a sync message where room hint comes from area."""
     entry = MockConfigEntry()
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     area = registries.area.async_create("Living Room")
 
     device = registries.device.async_get_or_create(
@@ -301,8 +301,8 @@ async def test_sync_in_area(area_on_device, hass: HomeAssistant, registries) -> 
         effect_list=LIGHT_EFFECT_LIST,
         effect=LIGHT_EFFECT_LIST[0],
     )
-    light.hass = hass
-    light.platform = MockEntityPlatform(hass)
+    light.menuai = menuai
+    light.platform = MockEntityPlatform(menuai)
     light.entity_id = entity.entity_id
     light._attr_device_info = None
     light._attr_name = "Demo Light"
@@ -310,10 +310,10 @@ async def test_sync_in_area(area_on_device, hass: HomeAssistant, registries) -> 
 
     config = MockConfig(should_expose=lambda _: True, entity_config={})
 
-    events = async_capture_events(hass, EVENT_SYNC_RECEIVED)
+    events = async_capture_events(menuai, EVENT_SYNC_RECEIVED)
 
     result = await sh.async_handle_message(
-        hass,
+        menuai,
         config,
         "test-agent",
         "test-agent",
@@ -380,14 +380,14 @@ async def test_sync_in_area(area_on_device, hass: HomeAssistant, registries) -> 
             ],
         },
     }
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(events) == 1
     assert events[0].event_type == EVENT_SYNC_RECEIVED
     assert events[0].data == {"request_id": REQ_ID, "source": "cloud"}
 
 
-async def test_query_message(hass: HomeAssistant) -> None:
+async def test_query_message(menuai: menuai) -> None:
     """Test a sync message."""
     light = DemoLight(
         None,
@@ -397,8 +397,8 @@ async def test_query_message(hass: HomeAssistant) -> None:
         effect_list=LIGHT_EFFECT_LIST,
         effect=LIGHT_EFFECT_LIST[0],
     )
-    light.hass = hass
-    light.platform = MockEntityPlatform(hass)
+    light.menuai = menuai
+    light.platform = MockEntityPlatform(menuai)
     light.entity_id = "light.demo_light"
     light._attr_device_info = None
     light._attr_name = "Demo Light"
@@ -407,25 +407,25 @@ async def test_query_message(hass: HomeAssistant) -> None:
     light2 = DemoLight(
         None, "Another Light", state=True, hs_color=(180, 75), ct=2500, brightness=78
     )
-    light2.hass = hass
-    light2.platform = MockEntityPlatform(hass)
+    light2.menuai = menuai
+    light2.platform = MockEntityPlatform(menuai)
     light2.entity_id = "light.another_light"
     light2._attr_device_info = None
     light2._attr_name = "Another Light"
     light2.async_write_ha_state()
 
     light3 = DemoLight(None, "Color temp Light", state=True, ct=2500, brightness=200)
-    light3.hass = hass
-    light3.platform = MockEntityPlatform(hass)
+    light3.menuai = menuai
+    light3.platform = MockEntityPlatform(menuai)
     light3.entity_id = "light.color_temp_light"
     light3._attr_device_info = None
     light3._attr_name = "Color temp Light"
     light3.async_write_ha_state()
 
-    events = async_capture_events(hass, EVENT_QUERY_RECEIVED)
+    events = async_capture_events(menuai, EVENT_QUERY_RECEIVED)
 
     result = await sh.async_handle_message(
-        hass,
+        menuai,
         BASIC_CONFIG,
         "test-agent",
         "test-agent",
@@ -476,7 +476,7 @@ async def test_query_message(hass: HomeAssistant) -> None:
         },
     }
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(events) == 1
     assert events[0].event_type == EVENT_QUERY_RECEIVED
@@ -497,23 +497,23 @@ async def test_query_message(hass: HomeAssistant) -> None:
     [(False, True, 20, 0.2), (True, ANY, ANY, ANY)],
 )
 async def test_execute(
-    hass: HomeAssistant, light_only, report_state, on, brightness, value
+    menuai: menuai, light_only, report_state, on, brightness, value
 ) -> None:
     """Test an execute command."""
-    await async_setup_component(hass, "homeassistant", {})
-    await async_setup_component(hass, "light", {"light": {"platform": "demo"}})
-    await hass.async_block_till_done()
+    await async_setup_component(menuai, "menuai", {})
+    await async_setup_component(menuai, "light", {"light": {"platform": "demo"}})
+    await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light", "turn_off", {"entity_id": "light.ceiling_lights"}, blocking=True
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    events = async_capture_events(hass, EVENT_COMMAND_RECEIVED)
-    service_events = async_capture_events(hass, EVENT_CALL_SERVICE)
+    events = async_capture_events(menuai, EVENT_COMMAND_RECEIVED)
+    service_events = async_capture_events(menuai, EVENT_CALL_SERVICE)
 
     result = await sh.async_handle_message(
-        hass,
+        menuai,
         MockConfig(should_report_state=report_state),
         None,
         None,
@@ -548,7 +548,7 @@ async def test_execute(
         },
         const.SOURCE_CLOUD,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result == {
         "requestId": REQ_ID,
@@ -645,24 +645,24 @@ async def test_execute(
     ("report_state", "on", "brightness", "value"), [(False, False, ANY, ANY)]
 )
 async def test_execute_times_out(
-    hass: HomeAssistant, light_only, report_state, on, brightness, value
+    menuai: menuai, light_only, report_state, on, brightness, value
 ) -> None:
     """Test an execute command which times out."""
     orig_execute_limit = sh.EXECUTE_LIMIT
     sh.EXECUTE_LIMIT = 0.02  # Decrease timeout to 20ms
-    await async_setup_component(hass, "homeassistant", {})
-    await async_setup_component(hass, "light", {"light": {"platform": "demo"}})
-    await hass.async_block_till_done()
+    await async_setup_component(menuai, "menuai", {})
+    await async_setup_component(menuai, "light", {"light": {"platform": "demo"}})
+    await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light", "turn_off", {"entity_id": "light.ceiling_lights"}, blocking=True
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    events = async_capture_events(hass, EVENT_COMMAND_RECEIVED)
-    service_events = async_capture_events(hass, EVENT_CALL_SERVICE)
+    events = async_capture_events(menuai, EVENT_COMMAND_RECEIVED)
+    service_events = async_capture_events(menuai, EVENT_CALL_SERVICE)
 
-    platforms = entity_platform.async_get_platforms(hass, "demo")
+    platforms = entity_platform.async_get_platforms(menuai, "demo")
     assert platforms[0].domain == "light"
     assert platforms[0].entities["light.ceiling_lights"]
 
@@ -674,7 +674,7 @@ async def test_execute_times_out(
 
     with patch.object(DemoLight, "async_turn_on", wraps=slow_turn_on):
         result = await sh.async_handle_message(
-            hass,
+            menuai,
             MockConfig(should_report_state=report_state),
             None,
             None,
@@ -711,8 +711,8 @@ async def test_execute_times_out(
         )
 
         turn_on_wait.set()
-        await hass.async_block_till_done()
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result == {
         "requestId": REQ_ID,
@@ -805,9 +805,9 @@ async def test_execute_times_out(
     sh.EXECUTE_LIMIT = orig_execute_limit
 
 
-async def test_raising_error_trait(hass: HomeAssistant) -> None:
+async def test_raising_error_trait(menuai: menuai) -> None:
     """Test raising an error while executing a trait command."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "climate.bla",
         HVACMode.HEAT,
         {
@@ -817,11 +817,11 @@ async def test_raising_error_trait(hass: HomeAssistant) -> None:
         },
     )
 
-    events = async_capture_events(hass, EVENT_COMMAND_RECEIVED)
-    await hass.async_block_till_done()
+    events = async_capture_events(menuai, EVENT_COMMAND_RECEIVED)
+    await menuai.async_block_till_done()
 
     result = await sh.async_handle_message(
-        hass,
+        menuai,
         BASIC_CONFIG,
         "test-agent",
         "test-agent",
@@ -878,10 +878,10 @@ async def test_raising_error_trait(hass: HomeAssistant) -> None:
     }
 
 
-async def test_serialize_input_boolean(hass: HomeAssistant) -> None:
+async def test_serialize_input_boolean(menuai: menuai) -> None:
     """Test serializing an input boolean entity."""
     state = State("input_boolean.bla", "on")
-    entity = sh.GoogleEntity(hass, BASIC_CONFIG, state)
+    entity = sh.GoogleEntity(menuai, BASIC_CONFIG, state)
     result = entity.sync_serialize(None, "mock-uuid")
     assert result == {
         "id": "input_boolean.bla",
@@ -893,7 +893,7 @@ async def test_serialize_input_boolean(hass: HomeAssistant) -> None:
     }
 
 
-async def test_unavailable_state_does_sync(hass: HomeAssistant) -> None:
+async def test_unavailable_state_does_sync(menuai: menuai) -> None:
     """Test that an unavailable entity does sync over."""
     light = DemoLight(
         None,
@@ -903,18 +903,18 @@ async def test_unavailable_state_does_sync(hass: HomeAssistant) -> None:
         effect_list=LIGHT_EFFECT_LIST,
         effect=LIGHT_EFFECT_LIST[0],
     )
-    light.hass = hass
-    light.platform = MockEntityPlatform(hass)
+    light.menuai = menuai
+    light.platform = MockEntityPlatform(menuai)
     light.entity_id = "light.demo_light"
     light._available = False
     light._attr_device_info = None
     light._attr_name = "Demo Light"
     light.async_write_ha_state()
 
-    events = async_capture_events(hass, EVENT_SYNC_RECEIVED)
+    events = async_capture_events(menuai, EVENT_SYNC_RECEIVED)
 
     result = await sh.async_handle_message(
-        hass,
+        menuai,
         BASIC_CONFIG,
         "test-agent",
         "test-agent",
@@ -975,7 +975,7 @@ async def test_unavailable_state_does_sync(hass: HomeAssistant) -> None:
             ],
         },
     }
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(events) == 1
     assert events[0].event_type == EVENT_SYNC_RECEIVED
@@ -991,7 +991,7 @@ async def test_unavailable_state_does_sync(hass: HomeAssistant) -> None:
     ],
 )
 async def test_device_class_switch(
-    hass: HomeAssistant, device_class, google_type
+    menuai: menuai, device_class, google_type
 ) -> None:
     """Test that a cover entity syncs to the correct device type."""
     sensor = DemoSwitch(
@@ -1001,15 +1001,15 @@ async def test_device_class_switch(
         assumed=False,
         device_class=device_class,
     )
-    sensor.hass = hass
-    sensor.platform = MockEntityPlatform(hass)
+    sensor.menuai = menuai
+    sensor.platform = MockEntityPlatform(menuai)
     sensor.entity_id = "switch.demo_sensor"
     sensor._attr_device_info = None
     sensor._attr_name = "Demo Sensor"
     sensor.async_write_ha_state()
 
     result = await sh.async_handle_message(
-        hass,
+        menuai,
         BASIC_CONFIG,
         "test-agent",
         "test-agent",
@@ -1046,21 +1046,21 @@ async def test_device_class_switch(
     ],
 )
 async def test_device_class_binary_sensor(
-    hass: HomeAssistant, device_class, google_type
+    menuai: menuai, device_class, google_type
 ) -> None:
     """Test that a binary entity syncs to the correct device type."""
     sensor = DemoBinarySensor(
         None, "Demo Sensor", state=False, device_class=device_class
     )
-    sensor.hass = hass
-    sensor.platform = MockEntityPlatform(hass)
+    sensor.menuai = menuai
+    sensor.platform = MockEntityPlatform(menuai)
     sensor.entity_id = "binary_sensor.demo_sensor"
     sensor._attr_device_info = None
     sensor._attr_name = "Demo Sensor"
     sensor.async_write_ha_state()
 
     result = await sh.async_handle_message(
-        hass,
+        menuai,
         BASIC_CONFIG,
         "test-agent",
         "test-agent",
@@ -1103,19 +1103,19 @@ async def test_device_class_binary_sensor(
     ],
 )
 async def test_device_class_cover(
-    hass: HomeAssistant, device_class, google_type
+    menuai: menuai, device_class, google_type
 ) -> None:
     """Test that a cover entity syncs to the correct device type."""
-    sensor = DemoCover(None, hass, "Demo Sensor", device_class=device_class)
-    sensor.hass = hass
-    sensor.platform = MockEntityPlatform(hass)
+    sensor = DemoCover(None, menuai, "Demo Sensor", device_class=device_class)
+    sensor.menuai = menuai
+    sensor.platform = MockEntityPlatform(menuai)
     sensor.entity_id = "cover.demo_sensor"
     sensor._attr_device_info = None
     sensor._attr_name = "Demo Sensor"
     sensor.async_write_ha_state()
 
     result = await sh.async_handle_message(
-        hass,
+        menuai,
         BASIC_CONFIG,
         "test-agent",
         "test-agent",
@@ -1154,17 +1154,17 @@ async def test_device_class_cover(
     ],
 )
 async def test_device_media_player(
-    hass: HomeAssistant, device_class, google_type
+    menuai: menuai, device_class, google_type
 ) -> None:
     """Test that a binary entity syncs to the correct device type."""
     sensor = AbstractDemoPlayer("Demo", device_class=device_class)
-    sensor.hass = hass
-    sensor.platform = MockEntityPlatform(hass)
+    sensor.menuai = menuai
+    sensor.platform = MockEntityPlatform(menuai)
     sensor.entity_id = "media_player.demo"
     sensor.async_write_ha_state()
 
     result = await sh.async_handle_message(
-        hass,
+        menuai,
         BASIC_CONFIG,
         "test-agent",
         "test-agent",
@@ -1196,14 +1196,14 @@ async def test_device_media_player(
     }
 
 
-async def test_query_disconnect(hass: HomeAssistant) -> None:
+async def test_query_disconnect(menuai: menuai) -> None:
     """Test a disconnect message."""
-    config = MockConfig(hass=hass)
+    config = MockConfig(menuai=menuai)
     config.async_enable_report_state()
     assert config._unsub_report_state is not None
     with patch.object(config, "async_disconnect_agent_user") as mock_disconnect:
         result = await sh.async_handle_message(
-            hass,
+            menuai,
             config,
             "test-agent",
             "test-agent",
@@ -1214,24 +1214,24 @@ async def test_query_disconnect(hass: HomeAssistant) -> None:
     assert len(mock_disconnect.mock_calls) == 1
 
 
-async def test_trait_execute_adding_query_data(hass: HomeAssistant) -> None:
+async def test_trait_execute_adding_query_data(menuai: menuai) -> None:
     """Test a trait execute influencing query data."""
     await async_process_ha_core_config(
-        hass,
+        menuai,
         {"external_url": "https://example.com"},
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "camera.office",
         "idle",
         {"supported_features": CameraEntityFeature.STREAM},
     )
 
     with patch(
-        "homeassistant.components.camera.async_request_stream",
+        "menuai.components.camera.async_request_stream",
         return_value="/api/streams/bla",
     ):
         result = await sh.async_handle_message(
-            hass,
+            menuai,
             BASIC_CONFIG,
             None,
             None,
@@ -1285,12 +1285,12 @@ async def test_trait_execute_adding_query_data(hass: HomeAssistant) -> None:
     }
 
 
-async def test_identify(hass: HomeAssistant) -> None:
+async def test_identify(menuai: menuai) -> None:
     """Test identify message."""
     user_agent_id = "mock-user-id"
     proxy_device_id = user_agent_id
     result = await sh.async_handle_message(
-        hass,
+        menuai,
         BASIC_CONFIG,
         user_agent_id,
         user_agent_id,
@@ -1345,8 +1345,8 @@ async def test_identify(hass: HomeAssistant) -> None:
                 "isProxy": True,
                 "deviceInfo": {
                     "hwVersion": "UNKNOWN_HW_VERSION",
-                    "manufacturer": "Home Assistant",
-                    "model": "Home Assistant",
+                    "manufacturer": "MenuAI",
+                    "model": "MenuAI",
                     "swVersion": __version__,
                 },
             }
@@ -1354,22 +1354,22 @@ async def test_identify(hass: HomeAssistant) -> None:
     }
 
 
-async def test_reachable_devices(hass: HomeAssistant) -> None:
+async def test_reachable_devices(menuai: menuai) -> None:
     """Test REACHABLE_DEVICES intent."""
     # Matching passed in device.
-    hass.states.async_set("light.ceiling_lights", "on")
+    menuai.states.async_set("light.ceiling_lights", "on")
 
     # Unsupported entity
-    hass.states.async_set("not_supported.entity", "something")
+    menuai.states.async_set("not_supported.entity", "something")
 
     # Excluded via config
-    hass.states.async_set("light.not_expose", "on")
+    menuai.states.async_set("light.not_expose", "on")
 
     # Not passed in as google_id
-    hass.states.async_set("light.not_mentioned", "on")
+    menuai.states.async_set("light.not_mentioned", "on")
 
     # Has 2FA
-    hass.states.async_set("lock.has_2fa", "on")
+    menuai.states.async_set("lock.has_2fa", "on")
 
     config = MockConfig(
         should_expose=lambda state: state.entity_id != "light.not_expose",
@@ -1379,7 +1379,7 @@ async def test_reachable_devices(hass: HomeAssistant) -> None:
     proxy_device_id = user_agent_id
 
     result = await sh.async_handle_message(
-        hass,
+        menuai,
         config,
         user_agent_id,
         user_agent_id,
@@ -1441,7 +1441,7 @@ async def test_reachable_devices(hass: HomeAssistant) -> None:
 
 
 async def test_sync_message_recovery(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test a sync message recovers from bad entities."""
     light = DemoLight(
@@ -1450,14 +1450,14 @@ async def test_sync_message_recovery(
         state=False,
         hs_color=(180, 75),
     )
-    light.hass = hass
-    light.platform = MockEntityPlatform(hass)
+    light.menuai = menuai
+    light.platform = MockEntityPlatform(menuai)
     light.entity_id = "light.demo_light"
     light._attr_device_info = None
     light._attr_name = "Demo Light"
     light.async_write_ha_state()
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "light.bad_light",
         "on",
         {
@@ -1467,7 +1467,7 @@ async def test_sync_message_recovery(
     )
 
     result = await sh.async_handle_message(
-        hass,
+        menuai,
         BASIC_CONFIG,
         "test-agent",
         "test-agent",
@@ -1506,11 +1506,11 @@ async def test_sync_message_recovery(
 
 
 async def test_query_recover(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test that we recover if an entity raises during query."""
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "light.good",
         "on",
         {
@@ -1518,7 +1518,7 @@ async def test_query_recover(
             "brightness": 50,
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "light.bad",
         "on",
         {
@@ -1528,7 +1528,7 @@ async def test_query_recover(
     )
 
     result = await sh.async_handle_message(
-        hass,
+        menuai,
         BASIC_CONFIG,
         "test-agent",
         "test-agent",
@@ -1550,7 +1550,7 @@ async def test_query_recover(
     )
 
     assert (
-        f"Unexpected error serializing query for {hass.states.get('light.bad')}"
+        f"Unexpected error serializing query for {menuai.states.get('light.bad')}"
         in caplog.text
     )
     assert result == {
@@ -1565,12 +1565,12 @@ async def test_query_recover(
 
 
 async def test_proxy_selected(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test that we handle proxy selected."""
 
     result = await sh.async_handle_message(
-        hass,
+        menuai,
         BASIC_CONFIG,
         "test-agent",
         "test-agent",

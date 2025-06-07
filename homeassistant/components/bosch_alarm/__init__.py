@@ -6,12 +6,12 @@ from ssl import SSLError
 
 from bosch_alarm_mode2 import Panel
 
-from homeassistant.const import CONF_HOST, CONF_MAC, CONF_PASSWORD, CONF_PORT, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import config_validation as cv, device_registry as dr
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import CONF_HOST, CONF_MAC, CONF_PASSWORD, CONF_PORT, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import config_validation as cv, device_registry as dr
+from menuai.helpers.device_registry import CONNECTION_NETWORK_MAC
+from menuai.helpers.typing import ConfigType
 
 from .const import CONF_INSTALLER_CODE, CONF_USER_CODE, DOMAIN
 from .services import setup_services
@@ -27,13 +27,13 @@ PLATFORMS: list[Platform] = [
 ]
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up bosch alarm services."""
-    setup_services(hass)
+    setup_services(menuai)
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: BoschAlarmConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: BoschAlarmConfigEntry) -> bool:
     """Set up Bosch Alarm from a config entry."""
 
     panel = Panel(
@@ -60,7 +60,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: BoschAlarmConfigEntry) -
 
     entry.runtime_data = panel
 
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
 
     mac = entry.data.get(CONF_MAC)
 
@@ -73,12 +73,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: BoschAlarmConfigEntry) -
         model=panel.model,
         sw_version=panel.firmware_version,
     )
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: BoschAlarmConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: BoschAlarmConfigEntry) -> bool:
     """Unload a config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+    if unload_ok := await menuai.config_entries.async_unload_platforms(entry, PLATFORMS):
         await entry.runtime_data.disconnect()
     return unload_ok

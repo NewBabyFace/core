@@ -10,15 +10,15 @@ from fyta_cli.fyta_exceptions import (
 )
 import pytest
 
-from homeassistant.components.fyta.const import CONF_EXPIRATION, DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import (
+from menuai.components.fyta.const import CONF_EXPIRATION, DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.const import (
     CONF_ACCESS_TOKEN,
     CONF_PASSWORD,
     CONF_USERNAME,
     Platform,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from . import setup_platform
 from .const import ACCESS_TOKEN, EXPIRATION, EXPIRATION_OLD, PASSWORD, USERNAME
@@ -27,22 +27,22 @@ from tests.common import MockConfigEntry
 
 
 async def test_load_unload(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_fyta_connector: AsyncMock,
 ) -> None:
     """Test load and unload."""
 
-    await setup_platform(hass, mock_config_entry, [Platform.SENSOR])
+    await setup_platform(menuai, mock_config_entry, [Platform.SENSOR])
     assert mock_config_entry.state is ConfigEntryState.LOADED
 
-    assert await hass.config_entries.async_unload(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_unload(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
     assert mock_config_entry.state is ConfigEntryState.NOT_LOADED
 
 
 async def test_refresh_expired_token(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_fyta_connector: AsyncMock,
 ) -> None:
@@ -51,7 +51,7 @@ async def test_refresh_expired_token(
     mock_fyta_connector.expiration = datetime.fromisoformat(EXPIRATION_OLD).replace(
         tzinfo=UTC
     )
-    await setup_platform(hass, mock_config_entry, [Platform.SENSOR])
+    await setup_platform(menuai, mock_config_entry, [Platform.SENSOR])
     assert mock_config_entry.state is ConfigEntryState.LOADED
 
     assert len(mock_fyta_connector.login.mock_calls) == 1
@@ -66,7 +66,7 @@ async def test_refresh_expired_token(
     ],
 )
 async def test_invalid_credentials(
-    hass: HomeAssistant,
+    menuai: menuai,
     exception: Exception,
     mock_config_entry: MockConfigEntry,
     mock_fyta_connector: AsyncMock,
@@ -78,14 +78,14 @@ async def test_invalid_credentials(
     )
     mock_fyta_connector.login.side_effect = exception
 
-    await setup_platform(hass, mock_config_entry, [Platform.SENSOR])
-    await hass.async_block_till_done()
+    await setup_platform(menuai, mock_config_entry, [Platform.SENSOR])
+    await menuai.async_block_till_done()
 
     assert mock_config_entry.state is ConfigEntryState.SETUP_ERROR
 
 
 async def test_raise_config_entry_not_ready_when_offline(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_fyta_connector: AsyncMock,
 ) -> None:
@@ -93,16 +93,16 @@ async def test_raise_config_entry_not_ready_when_offline(
 
     mock_fyta_connector.update_all_plants.side_effect = FytaConnectionError
 
-    await setup_platform(hass, mock_config_entry, [Platform.SENSOR])
-    await hass.async_block_till_done()
+    await setup_platform(menuai, mock_config_entry, [Platform.SENSOR])
+    await menuai.async_block_till_done()
 
     assert mock_config_entry.state is ConfigEntryState.SETUP_RETRY
 
-    assert len(hass.config_entries.flow.async_progress()) == 0
+    assert len(menuai.config_entries.flow.async_progress()) == 0
 
 
 async def test_raise_config_entry_not_ready_when_offline_and_expired(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_fyta_connector: AsyncMock,
 ) -> None:
@@ -113,16 +113,16 @@ async def test_raise_config_entry_not_ready_when_offline_and_expired(
         tzinfo=UTC
     )
 
-    await setup_platform(hass, mock_config_entry, [Platform.SENSOR])
-    await hass.async_block_till_done()
+    await setup_platform(menuai, mock_config_entry, [Platform.SENSOR])
+    await menuai.async_block_till_done()
 
     assert mock_config_entry.state is ConfigEntryState.SETUP_RETRY
 
-    assert len(hass.config_entries.flow.async_progress()) == 0
+    assert len(menuai.config_entries.flow.async_progress()) == 0
 
 
 async def test_migrate_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_fyta_connector: AsyncMock,
 ) -> None:
     """Test successful migration of entry data."""
@@ -136,13 +136,13 @@ async def test_migrate_config_entry(
         version=1,
         minor_version=1,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     assert entry.version == 1
     assert entry.minor_version == 1
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert entry.version == 1
     assert entry.minor_version == 2

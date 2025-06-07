@@ -1,4 +1,4 @@
-"""Config flow for the Home Assistant Green integration."""
+"""Config flow for the MenuAI Green integration."""
 
 from __future__ import annotations
 
@@ -9,20 +9,20 @@ from typing import Any
 import aiohttp
 import voluptuous as vol
 
-from homeassistant.components.hassio import (
-    HassioAPIError,
+from menuai.components.menuaiio import (
+    menuaiioAPIError,
     async_get_green_settings,
     async_set_green_settings,
 )
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.core import callback
-from homeassistant.helpers import selector
-from homeassistant.helpers.hassio import is_hassio
+from menuai.core import callback
+from menuai.helpers import selector
+from menuai.helpers.menuaiio import is_menuaiio
 
 from .const import DOMAIN
 
@@ -38,8 +38,8 @@ STEP_HW_SETTINGS_SCHEMA = vol.Schema(
 )
 
 
-class HomeAssistantGreenConfigFlow(ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for Home Assistant Green."""
+class menuaiGreenConfigFlow(ConfigFlow, domain=DOMAIN):
+    """Handle a config flow for MenuAI Green."""
 
     VERSION = 1
 
@@ -47,19 +47,19 @@ class HomeAssistantGreenConfigFlow(ConfigFlow, domain=DOMAIN):
     @callback
     def async_get_options_flow(
         config_entry: ConfigEntry,
-    ) -> HomeAssistantGreenOptionsFlow:
+    ) -> menuaiGreenOptionsFlow:
         """Return the options flow."""
-        return HomeAssistantGreenOptionsFlow()
+        return menuaiGreenOptionsFlow()
 
     async def async_step_system(
         self, data: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle the initial step."""
-        return self.async_create_entry(title="Home Assistant Green", data={})
+        return self.async_create_entry(title="MenuAI Green", data={})
 
 
-class HomeAssistantGreenOptionsFlow(OptionsFlow):
-    """Handle an option flow for Home Assistant Green."""
+class menuaiGreenOptionsFlow(OptionsFlow):
+    """Handle an option flow for MenuAI Green."""
 
     _hw_settings: dict[str, bool] | None = None
 
@@ -67,8 +67,8 @@ class HomeAssistantGreenOptionsFlow(OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Manage the options."""
-        if not is_hassio(self.hass):
-            return self.async_abort(reason="not_hassio")
+        if not is_menuaiio(self.menuai):
+            return self.async_abort(reason="not_menuaiio")
 
         return await self.async_step_hardware_settings()
 
@@ -82,8 +82,8 @@ class HomeAssistantGreenOptionsFlow(OptionsFlow):
                 return self.async_create_entry(data={})
             try:
                 async with asyncio.timeout(10):
-                    await async_set_green_settings(self.hass, user_input)
-            except (aiohttp.ClientError, TimeoutError, HassioAPIError) as err:
+                    await async_set_green_settings(self.menuai, user_input)
+            except (aiohttp.ClientError, TimeoutError, menuaiioAPIError) as err:
                 _LOGGER.warning("Failed to write hardware settings", exc_info=err)
                 return self.async_abort(reason="write_hw_settings_error")
             return self.async_create_entry(data={})
@@ -91,9 +91,9 @@ class HomeAssistantGreenOptionsFlow(OptionsFlow):
         try:
             async with asyncio.timeout(10):
                 self._hw_settings: dict[str, bool] = await async_get_green_settings(
-                    self.hass
+                    self.menuai
                 )
-        except (aiohttp.ClientError, TimeoutError, HassioAPIError) as err:
+        except (aiohttp.ClientError, TimeoutError, menuaiioAPIError) as err:
             _LOGGER.warning("Failed to read hardware settings", exc_info=err)
             return self.async_abort(reason="read_hw_settings_error")
 

@@ -8,7 +8,7 @@ from typing import Any
 
 from pyfibaro.fibaro_device import DeviceModel
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ENTITY_ID_FORMAT,
     PRESET_AWAY,
     PRESET_BOOST,
@@ -17,9 +17,9 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.const import ATTR_TEMPERATURE, Platform, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import ATTR_TEMPERATURE, Platform, UnitOfTemperature
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import FibaroConfigEntry
 from .entity import FibaroEntity
@@ -108,7 +108,7 @@ OP_MODE_ACTIONS = ("setMode", "setOperatingMode", "setThermostatMode")
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: FibaroConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -211,8 +211,8 @@ class FibaroThermostat(FibaroEntity, ClimateEntity):
                 ClimateEntityFeature.TURN_OFF | ClimateEntityFeature.TURN_ON
             )
 
-    async def async_added_to_hass(self) -> None:
-        """Call when entity is added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Call when entity is added to menuai."""
         _LOGGER.debug(
             (
                 "Climate %s\n"
@@ -227,7 +227,7 @@ class FibaroThermostat(FibaroEntity, ClimateEntity):
             self._op_mode_device.fibaro_id if self._op_mode_device else "None",
             self._fan_mode_device.fibaro_id if self._fan_mode_device else "None",
         )
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         # Register update callback for child devices
         siblings = self.controller.get_siblings(self.fibaro_device)

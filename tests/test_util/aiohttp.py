@@ -20,10 +20,10 @@ from aiohttp.streams import StreamReader
 from multidict import CIMultiDict
 from yarl import URL
 
-from homeassistant.const import EVENT_HOMEASSISTANT_CLOSE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.json import json_dumps
-from homeassistant.util.json import json_loads
+from menuai.const import EVENT_menuai_CLOSE
+from menuai.core import menuai
+from menuai.helpers.json import json_dumps
+from menuai.util.json import json_loads
 
 RETYPE = type(re.compile(""))
 
@@ -320,19 +320,19 @@ def mock_aiohttp_client() -> Iterator[AiohttpClientMocker]:
     """Context manager to mock aiohttp client."""
     mocker = AiohttpClientMocker()
 
-    def create_session(hass: HomeAssistant, *args: Any, **kwargs: Any) -> ClientSession:
-        session = mocker.create_session(hass.loop)
+    def create_session(menuai: menuai, *args: Any, **kwargs: Any) -> ClientSession:
+        session = mocker.create_session(menuai.loop)
 
         async def close_session(event):
             """Close session."""
             await session.close()
 
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_CLOSE, close_session)
+        menuai.bus.async_listen_once(EVENT_menuai_CLOSE, close_session)
 
         return session
 
     with mock.patch(
-        "homeassistant.helpers.aiohttp_client._async_create_clientsession",
+        "menuai.helpers.aiohttp_client._async_create_clientsession",
         side_effect=create_session,
     ):
         yield mocker

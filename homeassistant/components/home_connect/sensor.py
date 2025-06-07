@@ -7,16 +7,16 @@ from typing import cast
 
 from aiohomeconnect.model import EventKey, StatusKey
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfVolume
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import dt as dt_util, slugify
+from menuai.const import PERCENTAGE, EntityCategory, UnitOfVolume
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import dt as dt_util, slugify
 
 from .common import setup_home_connect_entry
 from .const import (
@@ -534,7 +534,7 @@ def _get_entities_for_appliance(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: HomeConnectConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -571,9 +571,9 @@ class HomeConnectSensor(HomeConnectEntity, SensorEntity):
             case _:
                 self._attr_native_value = status
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai."""
+        await super().async_added_to_menuai()
         if self.entity_description.fetch_unit:
             data = self.appliance.status[cast(StatusKey, self.bsh_key)]
             if data.unit:
@@ -598,9 +598,9 @@ class HomeConnectProgramSensor(HomeConnectSensor):
 
     program_running: bool = False
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register listener."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self.async_on_remove(
             self.coordinator.async_add_listener(
                 self._handle_operation_state_event,

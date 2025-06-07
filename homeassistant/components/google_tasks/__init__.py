@@ -6,10 +6,10 @@ import asyncio
 
 from aiohttp import ClientError, ClientResponseError
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import config_entry_oauth2_flow
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import config_entry_oauth2_flow
 
 from . import api
 from .const import DOMAIN
@@ -23,15 +23,15 @@ __all__ = [
 PLATFORMS: list[Platform] = [Platform.TODO]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: GoogleTasksConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: GoogleTasksConfigEntry) -> bool:
     """Set up Google Tasks from a config entry."""
     implementation = (
         await config_entry_oauth2_flow.async_get_config_entry_implementation(
-            hass, entry
+            menuai, entry
         )
     )
-    session = config_entry_oauth2_flow.OAuth2Session(hass, entry, implementation)
-    auth = api.AsyncConfigEntryAuth(hass, session)
+    session = config_entry_oauth2_flow.OAuth2Session(menuai, entry, implementation)
+    auth = api.AsyncConfigEntryAuth(menuai, session)
     try:
         await auth.async_get_access_token()
     except ClientResponseError as err:
@@ -50,7 +50,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: GoogleTasksConfigEntry) 
 
     coordinators = [
         TaskUpdateCoordinator(
-            hass,
+            menuai,
             entry,
             auth,
             task_list["id"],
@@ -67,13 +67,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: GoogleTasksConfigEntry) 
     )
     entry.runtime_data = coordinators
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, entry: GoogleTasksConfigEntry
+    menuai: menuai, entry: GoogleTasksConfigEntry
 ) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

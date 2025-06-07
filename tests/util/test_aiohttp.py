@@ -2,7 +2,7 @@
 
 from aiohttp import web
 
-from homeassistant.util import aiohttp
+from menuai.util import aiohttp
 
 
 async def test_request_json() -> None:

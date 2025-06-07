@@ -6,8 +6,8 @@ from gardena_bluetooth.const import Battery, Sensor, Valve
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
+from menuai.const import Platform
+from menuai.core import menuai
 
 from . import setup_entry
 
@@ -34,7 +34,7 @@ from tests.common import MockConfigEntry
     ],
 )
 async def test_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mock_entry: MockConfigEntry,
     mock_read_char_raw: dict[str, bytes],
@@ -46,17 +46,17 @@ async def test_setup(
     """Test setup creates expected entities."""
 
     mock_read_char_raw[uuid] = raw[0]
-    await setup_entry(hass, mock_entry, [Platform.SENSOR])
-    assert hass.states.get(entity_id) == snapshot
+    await setup_entry(menuai, mock_entry, [Platform.SENSOR])
+    assert menuai.states.get(entity_id) == snapshot
 
     for char_raw in raw[1:]:
         mock_read_char_raw[uuid] = char_raw
         await scan_step()
-        assert hass.states.get(entity_id) == snapshot
+        assert menuai.states.get(entity_id) == snapshot
 
 
 async def test_connected_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mock_entry: MockConfigEntry,
     mock_read_char_raw: dict[str, bytes],
@@ -69,12 +69,12 @@ async def test_connected_state(
     )
     mock_read_char_raw[Sensor.battery_level.uuid] = Sensor.battery_level.encode(45)
 
-    await setup_entry(hass, mock_entry, [Platform.SENSOR])
-    assert hass.states.get("sensor.mock_title_sensor_battery") == snapshot
+    await setup_entry(menuai, mock_entry, [Platform.SENSOR])
+    assert menuai.states.get("sensor.mock_title_sensor_battery") == snapshot
 
     mock_read_char_raw[Sensor.connected_state.uuid] = Sensor.connected_state.encode(
         True
     )
 
     await scan_step()
-    assert hass.states.get("sensor.mock_title_sensor_battery") == snapshot
+    assert menuai.states.get("sensor.mock_title_sensor_battery") == snapshot

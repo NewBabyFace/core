@@ -5,18 +5,18 @@ import logging
 from pycomfoconnect import Bridge, ComfoConnect
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_NAME,
     CONF_PIN,
     CONF_TOKEN,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     Platform,
 )
-from homeassistant.core import Event, HomeAssistant
-from homeassistant.helpers import config_validation as cv, discovery
-from homeassistant.helpers.dispatcher import dispatcher_send
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import Event, menuai
+from menuai.helpers import config_validation as cv, discovery
+from menuai.helpers.dispatcher import dispatcher_send
+from menuai.helpers.typing import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ CONF_USER_AGENT = "user_agent"
 DEFAULT_NAME = "ComfoAirQ"
 DEFAULT_PIN = 0
 DEFAULT_TOKEN = "00000000000000000000000000000001"
-DEFAULT_USER_AGENT = "Home Assistant"
+DEFAULT_USER_AGENT = "MenuAI"
 
 CONFIG_SCHEMA = vol.Schema(
     {
@@ -49,7 +49,7 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the ComfoConnect bridge."""
 
     conf = config[DOMAIN]
@@ -68,8 +68,8 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
     _LOGGER.debug("Bridge found: %s (%s)", bridge.uuid.hex(), bridge.host)
 
     # Setup ComfoConnect Bridge
-    ccb = ComfoConnectBridge(hass, bridge, name, token, user_agent, pin)
-    hass.data[DOMAIN] = ccb
+    ccb = ComfoConnectBridge(menuai, bridge, name, token, user_agent, pin)
+    menuai.data[DOMAIN] = ccb
 
     # Start connection with bridge
     ccb.connect()
@@ -78,10 +78,10 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
     def _shutdown(_event: Event) -> None:
         ccb.disconnect()
 
-    hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, _shutdown)
+    menuai.bus.listen_once(EVENT_menuai_STOP, _shutdown)
 
     # Load platforms
-    discovery.load_platform(hass, Platform.FAN, DOMAIN, {}, config)
+    discovery.load_platform(menuai, Platform.FAN, DOMAIN, {}, config)
 
     return True
 
@@ -91,7 +91,7 @@ class ComfoConnectBridge:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         bridge: Bridge,
         name: str,
         token: str,
@@ -100,7 +100,7 @@ class ComfoConnectBridge:
     ) -> None:
         """Initialize the ComfoConnect bridge."""
         self.name = name
-        self.hass = hass
+        self.menuai = menuai
         self.unique_id = bridge.uuid.hex()
 
         self.comfoconnect = ComfoConnect(
@@ -125,5 +125,5 @@ class ComfoConnectBridge:
         """Notify listeners that we have received an update."""
         _LOGGER.debug("Received update for %s: %s", var, value)
         dispatcher_send(
-            self.hass, SIGNAL_COMFOCONNECT_UPDATE_RECEIVED.format(var), value
+            self.menuai, SIGNAL_COMFOCONNECT_UPDATE_RECEIVED.format(var), value
         )

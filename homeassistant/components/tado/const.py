@@ -10,7 +10,7 @@ from PyTado.const import (
     CONST_HVAC_OFF,
 )
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     FAN_AUTO,
     FAN_HIGH,
     FAN_LOW,

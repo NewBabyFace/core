@@ -29,7 +29,7 @@ def _validate_integration(config: Config, integration: Integration) -> None:
     needs_unique_id = integration.domain not in UNIQUE_ID_IGNORE and (
         "async_step_discovery" in config_flow
         or "async_step_bluetooth" in config_flow
-        or "async_step_hassio" in config_flow
+        or "async_step_menuaiio" in config_flow
         or "async_step_homekit" in config_flow
         or "async_step_mqtt" in config_flow
         or "async_step_ssdp" in config_flow
@@ -207,20 +207,20 @@ def _generate_integrations(
 
 def validate(integrations: dict[str, Integration], config: Config) -> None:
     """Validate config flow file."""
-    config_flow_path = config.root / "homeassistant/generated/config_flows.py"
-    integrations_path = config.root / "homeassistant/generated/integrations.json"
+    config_flow_path = config.root / "menuai/generated/config_flows.py"
+    integrations_path = config.root / "menuai/generated/integrations.json"
     config.cache["config_flow"] = content = _generate_and_validate(integrations, config)
 
     if config.specific_integrations:
         return
 
-    brands = Brand.load_dir(config.root / "homeassistant/brands", config)
+    brands = Brand.load_dir(config.root / "menuai/brands", config)
     validate_brands(brands, integrations, config)
 
     if config_flow_path.read_text() != content:
         config.add_error(
             "config_flow",
-            "File config_flows.py is not up to date. Run python3 -m script.hassfest",
+            "File config_flows.py is not up to date. Run python3 -m script.menuaifest",
             fixable=True,
         )
 
@@ -230,14 +230,14 @@ def validate(integrations: dict[str, Integration], config: Config) -> None:
     if integrations_path.read_text() != content + "\n":
         config.add_error(
             "config_flow",
-            "File integrations.json is not up to date. Run python3 -m script.hassfest",
+            "File integrations.json is not up to date. Run python3 -m script.menuaifest",
             fixable=True,
         )
 
 
 def generate(integrations: dict[str, Integration], config: Config) -> None:
     """Generate config flow file."""
-    config_flow_path = config.root / "homeassistant/generated/config_flows.py"
-    integrations_path = config.root / "homeassistant/generated/integrations.json"
+    config_flow_path = config.root / "menuai/generated/config_flows.py"
+    integrations_path = config.root / "menuai/generated/integrations.json"
     config_flow_path.write_text(f"{config.cache['config_flow']}")
     integrations_path.write_text(f"{config.cache['integrations']}\n")

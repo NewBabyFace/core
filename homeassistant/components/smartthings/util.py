@@ -1,10 +1,10 @@
 """Utility functions for SmartThings integration."""
 
-from homeassistant.components.automation import automations_with_entity
-from homeassistant.components.script import scripts_with_entity
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.issue_registry import (
+from menuai.components.automation import automations_with_entity
+from menuai.components.script import scripts_with_entity
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.helpers.issue_registry import (
     IssueSeverity,
     async_create_issue,
     async_delete_issue,
@@ -14,7 +14,7 @@ from .const import DOMAIN
 
 
 def deprecate_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     platform_domain: str,
     entity_unique_id: str,
@@ -31,7 +31,7 @@ def deprecate_entity(
         if entity_entry.disabled:
             entity_registry.async_remove(entity_id)
             async_delete_issue(
-                hass,
+                menuai,
                 DOMAIN,
                 f"{issue_string}_{entity_id}",
             )
@@ -41,7 +41,7 @@ def deprecate_entity(
             "entity_id": entity_id,
             "entity_name": entity_entry.name or entity_entry.original_name or "Unknown",
         }
-        if items := get_automations_and_scripts_using_entity(hass, entity_id):
+        if items := get_automations_and_scripts_using_entity(menuai, entity_id):
             translation_key = f"{translation_key}_scripts"
             placeholders.update(
                 {
@@ -49,7 +49,7 @@ def deprecate_entity(
                 }
             )
         async_create_issue(
-            hass,
+            menuai,
             DOMAIN,
             f"{issue_string}_{entity_id}",
             breaks_in_ha_version=version,
@@ -63,16 +63,16 @@ def deprecate_entity(
 
 
 def get_automations_and_scripts_using_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_id: str,
 ) -> list[str]:
     """Get automations and scripts using an entity."""
-    automations = automations_with_entity(hass, entity_id)
-    scripts = scripts_with_entity(hass, entity_id)
+    automations = automations_with_entity(menuai, entity_id)
+    scripts = scripts_with_entity(menuai, entity_id)
     if not automations and not scripts:
         return []
 
-    entity_reg = er.async_get(hass)
+    entity_reg = er.async_get(menuai)
     return [
         f"- [{item.original_name}](/config/{integration}/edit/{item.unique_id})"
         for integration, entities in (

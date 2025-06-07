@@ -9,9 +9,9 @@ from bleak_retry_connector import Allocations
 from freezegun import freeze_time
 import pytest
 
-from homeassistant.components.bluetooth import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.util.dt import utcnow
+from menuai.components.bluetooth import DOMAIN
+from menuai.core import menuai
+from menuai.util.dt import utcnow
 
 from . import (
     HCI0_SOURCE_ADDRESS,
@@ -30,10 +30,10 @@ from tests.typing import WebSocketGenerator
 
 @pytest.mark.usefixtures("enable_bluetooth")
 async def test_subscribe_advertisements(
-    hass: HomeAssistant,
+    menuai: menuai,
     register_hci0_scanner: None,
     register_hci1_scanner: None,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test bluetooth subscribe_advertisements."""
     address = "44:44:33:11:23:12"
@@ -45,10 +45,10 @@ async def test_subscribe_advertisements(
         local_name="wohand_signal_100", service_uuids=[]
     )
     inject_advertisement_with_source(
-        hass, switchbot_device_signal_100, switchbot_adv_signal_100, HCI0_SOURCE_ADDRESS
+        menuai, switchbot_device_signal_100, switchbot_adv_signal_100, HCI0_SOURCE_ADDRESS
     )
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -86,7 +86,7 @@ async def test_subscribe_advertisements(
         rssi=-80,
     )
     inject_advertisement_with_source(
-        hass, switchbot_device_signal_100, switchbot_adv_signal_100, HCI1_SOURCE_ADDRESS
+        menuai, switchbot_device_signal_100, switchbot_adv_signal_100, HCI1_SOURCE_ADDRESS
     )
     async with asyncio.timeout(1):
         response = await client.receive_json()
@@ -117,7 +117,7 @@ async def test_subscribe_advertisements(
             return_value=future_monotonic_time,
         ),
     ):
-        async_fire_time_changed(hass, future_time)
+        async_fire_time_changed(menuai, future_time)
     async with asyncio.timeout(1):
         response = await client.receive_json()
     assert response["event"] == {"remove": [{"address": "44:44:33:11:23:12"}]}
@@ -125,11 +125,11 @@ async def test_subscribe_advertisements(
 
 @pytest.mark.usefixtures("enable_bluetooth")
 async def test_subscribe_connection_allocations(
-    hass: HomeAssistant,
+    menuai: menuai,
     register_hci0_scanner: None,
     register_hci1_scanner: None,
     register_non_connectable_scanner: None,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test bluetooth subscribe_connection_allocations."""
     address = "44:44:33:11:23:12"
@@ -141,10 +141,10 @@ async def test_subscribe_connection_allocations(
         local_name="wohand_signal_100", service_uuids=[]
     )
     inject_advertisement_with_source(
-        hass, switchbot_device_signal_100, switchbot_adv_signal_100, HCI0_SOURCE_ADDRESS
+        menuai, switchbot_device_signal_100, switchbot_adv_signal_100, HCI0_SOURCE_ADDRESS
     )
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -221,16 +221,16 @@ async def test_subscribe_connection_allocations(
 
 @pytest.mark.usefixtures("enable_bluetooth")
 async def test_subscribe_connection_allocations_specific_scanner(
-    hass: HomeAssistant,
+    menuai: menuai,
     register_non_connectable_scanner: None,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test bluetooth subscribe_connection_allocations for a specific source address."""
     entry = MockConfigEntry(
         domain=DOMAIN, unique_id=NON_CONNECTABLE_REMOTE_SOURCE_ADDRESS
     )
-    entry.add_to_hass(hass)
-    client = await hass_ws_client()
+    entry.add_to_menuai(menuai)
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -257,11 +257,11 @@ async def test_subscribe_connection_allocations_specific_scanner(
 
 @pytest.mark.usefixtures("enable_bluetooth")
 async def test_subscribe_connection_allocations_invalid_config_entry_id(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test bluetooth subscribe_connection_allocations for an invalid config entry id."""
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -278,13 +278,13 @@ async def test_subscribe_connection_allocations_invalid_config_entry_id(
 
 @pytest.mark.usefixtures("enable_bluetooth")
 async def test_subscribe_connection_allocations_invalid_scanner(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test bluetooth subscribe_connection_allocations for an invalid source address."""
     entry = MockConfigEntry(domain=DOMAIN, unique_id="invalid")
-    entry.add_to_hass(hass)
-    client = await hass_ws_client()
+    entry.add_to_menuai(menuai)
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -301,11 +301,11 @@ async def test_subscribe_connection_allocations_invalid_scanner(
 
 @pytest.mark.usefixtures("enable_bluetooth")
 async def test_subscribe_scanner_details(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test bluetooth subscribe_connection_allocations."""
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -332,7 +332,7 @@ async def test_subscribe_scanner_details(
 
     manager = _get_manager()
     hci3_scanner = FakeScanner("AA:BB:CC:DD:EE:33", "hci3")
-    cancel_hci3 = manager.async_register_hass_scanner(hci3_scanner)
+    cancel_hci3 = manager.async_register_menuai_scanner(hci3_scanner)
 
     async with asyncio.timeout(1):
         response = await client.receive_json()
@@ -363,13 +363,13 @@ async def test_subscribe_scanner_details(
 
 @pytest.mark.usefixtures("enable_bluetooth")
 async def test_subscribe_scanner_details_specific_scanner(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test bluetooth subscribe_scanner_details for a specific source address."""
     entry = MockConfigEntry(domain=DOMAIN, unique_id="AA:BB:CC:DD:EE:33")
-    entry.add_to_hass(hass)
-    client = await hass_ws_client()
+    entry.add_to_menuai(menuai)
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -382,7 +382,7 @@ async def test_subscribe_scanner_details_specific_scanner(
     assert response["success"]
     manager = _get_manager()
     hci3_scanner = FakeScanner("AA:BB:CC:DD:EE:33", "hci3")
-    cancel_hci3 = manager.async_register_hass_scanner(hci3_scanner)
+    cancel_hci3 = manager.async_register_menuai_scanner(hci3_scanner)
 
     async with asyncio.timeout(1):
         response = await client.receive_json()
@@ -413,11 +413,11 @@ async def test_subscribe_scanner_details_specific_scanner(
 
 @pytest.mark.usefixtures("enable_bluetooth")
 async def test_subscribe_scanner_details_invalid_config_entry_id(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test bluetooth subscribe_scanner_details for an invalid config entry id."""
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,

@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock
 import pytest
 from todoist_api_python.models import Due, Task
 
-from homeassistant.components.todo import (
+from menuai.components.todo import (
     ATTR_DESCRIPTION,
     ATTR_DUE_DATE,
     ATTR_DUE_DATETIME,
@@ -16,9 +16,9 @@ from homeassistant.components.todo import (
     DOMAIN as TODO_DOMAIN,
     TodoServices,
 )
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_component import async_update_entity
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.helpers.entity_component import async_update_entity
 
 from .conftest import PROJECT_ID, make_api_task
 
@@ -32,9 +32,9 @@ def platforms() -> list[Platform]:
 
 
 @pytest.fixture(autouse=True)
-async def set_time_zone(hass: HomeAssistant) -> None:
+async def set_time_zone(menuai: menuai) -> None:
     """Set the time zone for the tests that keesp UTC-6 all year round."""
-    await hass.config.async_set_time_zone("America/Regina")
+    await menuai.config.async_set_time_zone("America/Regina")
 
 
 @pytest.mark.parametrize(
@@ -72,13 +72,13 @@ async def set_time_zone(hass: HomeAssistant) -> None:
     ],
 )
 async def test_todo_item_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: None,
     expected_state: str,
 ) -> None:
     """Test for a To-do List entity state."""
 
-    state = hass.states.get("todo.name")
+    state = menuai.states.get("todo.name")
     assert state
     assert state.state == expected_state
 
@@ -162,7 +162,7 @@ async def test_todo_item_state(
     ids=["summary", "due_date", "due_datetime", "description"],
 )
 async def test_add_todo_list_item(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: None,
     api: AsyncMock,
     item_data: dict[str, Any],
@@ -172,7 +172,7 @@ async def test_add_todo_list_item(
 ) -> None:
     """Test for adding a To-do Item."""
 
-    state = hass.states.get("todo.name")
+    state = menuai.states.get("todo.name")
     assert state
     assert state.state == "0"
 
@@ -180,7 +180,7 @@ async def test_add_todo_list_item(
     # Fake API response when state is refreshed after create
     api.get_tasks.return_value = tasks_after_update
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.ADD_ITEM,
         {ATTR_ITEM: "Soda", **item_data},
@@ -193,11 +193,11 @@ async def test_add_todo_list_item(
     assert args.kwargs == {"project_id": PROJECT_ID, "content": "Soda", **add_kwargs}
 
     # Verify state is refreshed
-    state = hass.states.get("todo.name")
+    state = menuai.states.get("todo.name")
     assert state
     assert state.state == "1"
 
-    result = await hass.services.async_call(
+    result = await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.GET_ITEMS,
         {},
@@ -212,13 +212,13 @@ async def test_add_todo_list_item(
     ("tasks"), [[make_api_task(id="task-id-1", content="Soda", is_completed=False)]]
 )
 async def test_update_todo_item_status(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: None,
     api: AsyncMock,
 ) -> None:
     """Test for updating a To-do Item that changes the status."""
 
-    state = hass.states.get("todo.name")
+    state = menuai.states.get("todo.name")
     assert state
     assert state.state == "1"
 
@@ -230,7 +230,7 @@ async def test_update_todo_item_status(
         make_api_task(id="task-id-1", content="Soda", is_completed=True)
     ]
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.UPDATE_ITEM,
         {ATTR_ITEM: "task-id-1", ATTR_STATUS: "completed"},
@@ -244,7 +244,7 @@ async def test_update_todo_item_status(
     assert not api.reopen_task.called
 
     # Verify state is refreshed
-    state = hass.states.get("todo.name")
+    state = menuai.states.get("todo.name")
     assert state
     assert state.state == "0"
 
@@ -253,7 +253,7 @@ async def test_update_todo_item_status(
         make_api_task(id="task-id-1", content="Soda", is_completed=False)
     ]
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.UPDATE_ITEM,
         {ATTR_ITEM: "task-id-1", ATTR_STATUS: "needs_action"},
@@ -266,7 +266,7 @@ async def test_update_todo_item_status(
     assert args.kwargs.get("task_id") == "task-id-1"
 
     # Verify state is refreshed
-    state = hass.states.get("todo.name")
+    state = menuai.states.get("todo.name")
     assert state
     assert state.state == "1"
 
@@ -460,7 +460,7 @@ async def test_update_todo_item_status(
     ],
 )
 async def test_update_todo_items(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: None,
     api: AsyncMock,
     update_data: dict[str, Any],
@@ -470,7 +470,7 @@ async def test_update_todo_items(
 ) -> None:
     """Test for updating a To-do Item that changes the summary."""
 
-    state = hass.states.get("todo.name")
+    state = menuai.states.get("todo.name")
     assert state
     assert state.state == "1"
 
@@ -479,7 +479,7 @@ async def test_update_todo_items(
     # Fake API response when state is refreshed after close
     api.get_tasks.return_value = tasks_after_update
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.UPDATE_ITEM,
         {ATTR_ITEM: "task-id-1", **update_data},
@@ -491,7 +491,7 @@ async def test_update_todo_items(
     assert args
     assert args.kwargs == update_kwargs
 
-    result = await hass.services.async_call(
+    result = await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.GET_ITEMS,
         {},
@@ -512,13 +512,13 @@ async def test_update_todo_items(
     ],
 )
 async def test_remove_todo_item(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: None,
     api: AsyncMock,
 ) -> None:
     """Test for removing a To-do Item."""
 
-    state = hass.states.get("todo.name")
+    state = menuai.states.get("todo.name")
     assert state
     assert state.state == "2"
 
@@ -526,7 +526,7 @@ async def test_remove_todo_item(
     # Fake API response when state is refreshed after close
     api.get_tasks.return_value = []
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.REMOVE_ITEM,
         {ATTR_ITEM: ["task-id-1", "task-id-2"]},
@@ -538,8 +538,8 @@ async def test_remove_todo_item(
     assert args[0].kwargs.get("task_id") == "task-id-1"
     assert args[1].kwargs.get("task_id") == "task-id-2"
 
-    await async_update_entity(hass, "todo.name")
-    state = hass.states.get("todo.name")
+    await async_update_entity(menuai, "todo.name")
+    state = menuai.states.get("todo.name")
     assert state
     assert state.state == "0"
 
@@ -548,15 +548,15 @@ async def test_remove_todo_item(
     ("tasks"), [[make_api_task(id="task-id-1", content="Cheese", is_completed=False)]]
 )
 async def test_subscribe(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: None,
     api: AsyncMock,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test for subscribing to state updates."""
 
     # Subscribe and get the initial list
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json_auto_id(
         {
             "type": "todo/item/subscribe",
@@ -582,7 +582,7 @@ async def test_subscribe(
     api.get_tasks.return_value = [
         make_api_task(id="test-id-1", content="Wine", is_completed=False)
     ]
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.UPDATE_ITEM,
         {ATTR_ITEM: "Cheese", ATTR_RENAME: "Wine"},

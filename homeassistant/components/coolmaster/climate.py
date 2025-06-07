@@ -7,15 +7,15 @@ from typing import Any
 
 from pycoolmasternet_async import SWING_MODES
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ClimateEntity,
     ClimateEntityFeature,
     HVACMode,
 )
-from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import ATTR_TEMPERATURE, UnitOfTemperature
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import CONF_SUPPORTED_MODES
 from .coordinator import CoolmasterConfigEntry, CoolmasterDataUpdateCoordinator
@@ -37,7 +37,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: CoolmasterConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -147,7 +147,7 @@ class CoolmasterClimate(CoolmasterEntity, ClimateEntity):
         try:
             self._unit = await self._unit.set_swing(swing_mode)
         except ValueError as error:
-            raise HomeAssistantError(error) from error
+            raise menuaiError(error) from error
         self.async_write_ha_state()
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:

@@ -4,12 +4,12 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 from syrupy.filters import props
 
-from homeassistant.components.unifi.const import (
+from menuai.components.unifi.const import (
     CONF_ALLOW_BANDWIDTH_SENSORS,
     CONF_ALLOW_UPTIME_SENSORS,
     CONF_BLOCK_CLIENT,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 from tests.components.diagnostics import get_diagnostics_for_config_entry
@@ -190,12 +190,12 @@ WLAN_DATA = [
 @pytest.mark.parametrize("dpi_group_payload", [DPI_GROUP_DATA])
 @pytest.mark.parametrize("wlan_payload", [WLAN_DATA])
 async def test_entry_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     config_entry_setup: MockConfigEntry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test config entry diagnostics."""
     assert await get_diagnostics_for_config_entry(
-        hass, hass_client, config_entry_setup
+        menuai, menuai_client, config_entry_setup
     ) == snapshot(exclude=props("created_at", "modified_at"))

@@ -5,12 +5,12 @@ from __future__ import annotations
 import httpx
 from pyenphase import Envoy
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.httpx_client import get_async_client
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import device_registry as dr
+from menuai.helpers.httpx_client import get_async_client
 
 from .const import (
     DOMAIN,
@@ -21,7 +21,7 @@ from .const import (
 from .coordinator import EnphaseConfigEntry, EnphaseUpdateCoordinator
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: EnphaseConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: EnphaseConfigEntry) -> bool:
     """Set up Enphase Envoy from a config entry."""
 
     host = entry.data[CONF_HOST]
@@ -36,13 +36,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: EnphaseConfigEntry) -> b
         if options.get(
             OPTION_DISABLE_KEEP_ALIVE, OPTION_DISABLE_KEEP_ALIVE_DEFAULT_VALUE
         )
-        else Envoy(host, get_async_client(hass, verify_ssl=False))
+        else Envoy(host, get_async_client(menuai, verify_ssl=False))
     )
-    coordinator = EnphaseUpdateCoordinator(hass, envoy, entry)
+    coordinator = EnphaseUpdateCoordinator(menuai, envoy, entry)
 
     await coordinator.async_config_entry_first_refresh()
     if not entry.unique_id:
-        hass.config_entries.async_update_entry(entry, unique_id=envoy.serial_number)
+        menuai.config_entries.async_update_entry(entry, unique_id=envoy.serial_number)
 
     if entry.unique_id != envoy.serial_number:
         # If the serial number of the device does not match the unique_id
@@ -62,7 +62,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: EnphaseConfigEntry) -> b
 
     entry.runtime_data = coordinator
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     # Reload entry when it is updated.
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
@@ -70,21 +70,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: EnphaseConfigEntry) -> b
     return True
 
 
-async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def async_reload_entry(menuai: menuai, entry: ConfigEntry) -> None:
     """Reload the config entry when it changed."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: EnphaseConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: EnphaseConfigEntry) -> bool:
     """Unload a config entry."""
     coordinator = entry.runtime_data
     coordinator.async_cancel_token_refresh()
     coordinator.async_cancel_firmware_refresh()
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 async def async_remove_config_entry_device(
-    hass: HomeAssistant, config_entry: EnphaseConfigEntry, device_entry: dr.DeviceEntry
+    menuai: menuai, config_entry: EnphaseConfigEntry, device_entry: dr.DeviceEntry
 ) -> bool:
     """Remove an enphase_envoy config entry from a device."""
     dev_ids = {dev_id[1] for dev_id in device_entry.identifiers if dev_id[0] == DOMAIN}

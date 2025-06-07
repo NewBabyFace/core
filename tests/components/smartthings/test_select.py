@@ -7,17 +7,17 @@ from pysmartthings.models import HealthStatus
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.select import (
+from menuai.components.select import (
     ATTR_OPTION,
     ATTR_OPTIONS,
     DOMAIN as SELECT_DOMAIN,
     SERVICE_SELECT_OPTION,
 )
-from homeassistant.components.smartthings import MAIN
-from homeassistant.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import entity_registry as er
+from menuai.components.smartthings import MAIN
+from menuai.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE, Platform
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import entity_registry as er
 
 from . import (
     set_attribute_value,
@@ -31,31 +31,31 @@ from tests.common import MockConfigEntry
 
 
 async def test_all_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test all entities."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    snapshot_smartthings_entities(hass, entity_registry, snapshot, Platform.SELECT)
+    snapshot_smartthings_entities(menuai, entity_registry, snapshot, Platform.SELECT)
 
 
 @pytest.mark.parametrize("device_fixture", ["da_wm_wd_000001"])
 async def test_state_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test state update."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    assert hass.states.get("select.dryer").state == "stop"
+    assert menuai.states.get("select.dryer").state == "stop"
 
     await trigger_update(
-        hass,
+        menuai,
         devices,
         "02f7256e-8353-5bdd-547f-bd5b1647e01b",
         Capability.DRYER_OPERATING_STATE,
@@ -63,12 +63,12 @@ async def test_state_update(
         "run",
     )
 
-    assert hass.states.get("select.dryer").state == "run"
+    assert menuai.states.get("select.dryer").state == "run"
 
 
 @pytest.mark.parametrize("device_fixture", ["da_wm_wd_000001"])
 async def test_select_option(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
@@ -79,9 +79,9 @@ async def test_select_option(
         Attribute.REMOTE_CONTROL_ENABLED,
         "true",
     )
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SELECT_DOMAIN,
         SERVICE_SELECT_OPTION,
         {ATTR_ENTITY_ID: "select.dryer", ATTR_OPTION: "run"},
@@ -98,14 +98,14 @@ async def test_select_option(
 
 @pytest.mark.parametrize("device_fixture", ["da_ks_range_0101x"])
 async def test_select_option_map(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test state update."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    state = hass.states.get("select.vulcan_lamp")
+    state = menuai.states.get("select.vulcan_lamp")
     assert state
     assert state.state == "extra_high"
     assert state.attributes[ATTR_OPTIONS] == [
@@ -113,7 +113,7 @@ async def test_select_option_map(
         "extra_high",
     ]
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SELECT_DOMAIN,
         SERVICE_SELECT_OPTION,
         {ATTR_ENTITY_ID: "select.vulcan_lamp", ATTR_OPTION: "extra_high"},
@@ -130,7 +130,7 @@ async def test_select_option_map(
 
 @pytest.mark.parametrize("device_fixture", ["da_wm_wd_000001"])
 async def test_select_option_without_remote_control(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
@@ -141,13 +141,13 @@ async def test_select_option_without_remote_control(
         Attribute.REMOTE_CONTROL_ENABLED,
         "false",
     )
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     with pytest.raises(
         ServiceValidationError,
         match="Can only be updated when remote control is enabled",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SELECT_DOMAIN,
             SERVICE_SELECT_OPTION,
             {ATTR_ENTITY_ID: "select.dryer", ATTR_OPTION: "run"},
@@ -158,34 +158,34 @@ async def test_select_option_without_remote_control(
 
 @pytest.mark.parametrize("device_fixture", ["da_wm_wd_000001"])
 async def test_availability(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test availability."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    assert hass.states.get("select.dryer").state == "stop"
-
-    await trigger_health_update(
-        hass, devices, "02f7256e-8353-5bdd-547f-bd5b1647e01b", HealthStatus.OFFLINE
-    )
-
-    assert hass.states.get("select.dryer").state == STATE_UNAVAILABLE
+    assert menuai.states.get("select.dryer").state == "stop"
 
     await trigger_health_update(
-        hass, devices, "02f7256e-8353-5bdd-547f-bd5b1647e01b", HealthStatus.ONLINE
+        menuai, devices, "02f7256e-8353-5bdd-547f-bd5b1647e01b", HealthStatus.OFFLINE
     )
 
-    assert hass.states.get("select.dryer").state == "stop"
+    assert menuai.states.get("select.dryer").state == STATE_UNAVAILABLE
+
+    await trigger_health_update(
+        menuai, devices, "02f7256e-8353-5bdd-547f-bd5b1647e01b", HealthStatus.ONLINE
+    )
+
+    assert menuai.states.get("select.dryer").state == "stop"
 
 
 @pytest.mark.parametrize("device_fixture", ["da_wm_wd_000001"])
 async def test_availability_at_start(
-    hass: HomeAssistant,
+    menuai: menuai,
     unavailable_device: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test unavailable at boot."""
-    await setup_integration(hass, mock_config_entry)
-    assert hass.states.get("select.dryer").state == STATE_UNAVAILABLE
+    await setup_integration(menuai, mock_config_entry)
+    assert menuai.states.get("select.dryer").state == STATE_UNAVAILABLE

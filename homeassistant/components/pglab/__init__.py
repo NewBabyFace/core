@@ -8,17 +8,17 @@ from pypglab.mqtt import (
     Subscribe_CallBack as PyPGLabSubscribeCallBack,
 )
 
-from homeassistant.components import mqtt
-from homeassistant.components.mqtt import (
+from menuai.components import mqtt
+from menuai.components.mqtt import (
     ReceiveMessage,
     async_prepare_subscribe_topics,
     async_subscribe_topics,
     async_unsubscribe_topics,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import config_validation as cv
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import config_validation as cv
 
 from .const import DOMAIN, LOGGER
 from .discovery import PGLabDiscovery
@@ -29,18 +29,18 @@ CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, config_entry: PGLabConfigEntry
+    menuai: menuai, config_entry: PGLabConfigEntry
 ) -> bool:
     """Set up PG LAB Electronics integration from a config entry."""
 
     async def mqtt_publish(topic: str, payload: str, qos: int, retain: bool) -> None:
-        """Publish an MQTT message using the Home Assistant MQTT client."""
-        await mqtt.async_publish(hass, topic, payload, qos, retain)
+        """Publish an MQTT message using the MenuAI MQTT client."""
+        await mqtt.async_publish(menuai, topic, payload, qos, retain)
 
     async def mqtt_subscribe(
         sub_state: PyPGLabSubState, topic: str, callback_func: PyPGLabSubscribeCallBack
     ) -> PyPGLabSubState:
-        """Subscribe to MQTT topics using the Home Assistant MQTT client."""
+        """Subscribe to MQTT topics using the MenuAI MQTT client."""
 
         @callback
         def mqtt_message_received(msg: ReceiveMessage) -> None:
@@ -54,14 +54,14 @@ async def async_setup_entry(
             }
         }
 
-        sub_state = async_prepare_subscribe_topics(hass, sub_state, topics)
-        await async_subscribe_topics(hass, sub_state)
+        sub_state = async_prepare_subscribe_topics(menuai, sub_state, topics)
+        await async_subscribe_topics(menuai, sub_state)
         return sub_state
 
     async def mqtt_unsubscribe(sub_state: PyPGLabSubState) -> None:
-        async_unsubscribe_topics(hass, sub_state)
+        async_unsubscribe_topics(menuai, sub_state)
 
-    if not await mqtt.async_wait_for_mqtt_client(hass):
+    if not await mqtt.async_wait_for_mqtt_client(menuai):
         LOGGER.error("MQTT integration not available")
         raise ConfigEntryNotReady("MQTT integration not available")
 
@@ -72,18 +72,18 @@ async def async_setup_entry(
     config_entry.runtime_data = PGLabDiscovery()
 
     # Start to discovery PG Lab devices.
-    await config_entry.runtime_data.start(hass, pglab_mqtt, config_entry)
+    await config_entry.runtime_data.start(menuai, pglab_mqtt, config_entry)
 
     return True
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, config_entry: PGLabConfigEntry
+    menuai: menuai, config_entry: PGLabConfigEntry
 ) -> bool:
     """Unload a config entry."""
 
     # Stop PGLab device discovery.
     pglab_discovery = config_entry.runtime_data
-    await pglab_discovery.stop(hass, config_entry)
+    await pglab_discovery.stop(menuai, config_entry)
 
     return True

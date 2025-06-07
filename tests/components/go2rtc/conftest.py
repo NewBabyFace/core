@@ -7,10 +7,10 @@ from awesomeversion import AwesomeVersion
 from go2rtc_client.rest import _StreamClient, _WebRTCClient
 import pytest
 
-from homeassistant.components.go2rtc.const import RECOMMENDED_VERSION
-from homeassistant.components.go2rtc.server import Server
+from menuai.components.go2rtc.const import RECOMMENDED_VERSION
+from menuai.components.go2rtc.server import Server
 
-GO2RTC_PATH = "homeassistant.components.go2rtc"
+GO2RTC_PATH = "menuai.components.go2rtc"
 
 
 @pytest.fixture
@@ -18,9 +18,9 @@ def rest_client() -> Generator[AsyncMock]:
     """Mock a go2rtc rest client."""
     with (
         patch(
-            "homeassistant.components.go2rtc.Go2RtcRestClient",
+            "menuai.components.go2rtc.Go2RtcRestClient",
         ) as mock_client,
-        patch("homeassistant.components.go2rtc.server.Go2RtcRestClient", mock_client),
+        patch("menuai.components.go2rtc.server.Go2RtcRestClient", mock_client),
     ):
         client = mock_client.return_value
         client.streams = streams = Mock(spec_set=_StreamClient)
@@ -36,7 +36,7 @@ def rest_client() -> Generator[AsyncMock]:
 def ws_client() -> Generator[Mock]:
     """Mock a go2rtc websocket client."""
     with patch(
-        "homeassistant.components.go2rtc.Go2RtcWsClient", autospec=True
+        "menuai.components.go2rtc.Go2RtcWsClient", autospec=True
     ) as ws_client_mock:
         yield ws_client_mock.return_value
 

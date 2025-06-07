@@ -11,7 +11,7 @@ from freezegun import freeze_time
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.util import dt as dt_util
+from menuai.util import dt as dt_util
 
 from tests.components.light.conftest import mock_light_profiles  # noqa: F401
 
@@ -32,7 +32,7 @@ def controller() -> Generator[FakeController]:
     """Replace aiohomekit.Controller with an instance of aiohomekit.testing.FakeController."""
     instance = FakeController()
     with patch(
-        "homeassistant.components.homekit_controller.utils.Controller",
+        "menuai.components.homekit_controller.utils.Controller",
         return_value=instance,
     ):
         yield instance

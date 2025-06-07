@@ -8,18 +8,18 @@ import tempfile
 from unittest.mock import Mock, patch
 import wave
 
-import hass_nabucasa
+import menuai_nabucasa
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components import assist_pipeline, stt
-from homeassistant.components.assist_pipeline.const import (
+from menuai.components import assist_pipeline, stt
+from menuai.components.assist_pipeline.const import (
     BYTES_PER_CHUNK,
     CONF_DEBUG_RECORDING_DIR,
     DOMAIN,
 )
-from homeassistant.core import Context, HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.core import Context, menuai
+from menuai.setup import async_setup_component
 
 from . import process_events
 from .conftest import (
@@ -37,7 +37,7 @@ from tests.typing import WebSocketGenerator
 def mock_chat_session_id() -> Generator[Mock]:
     """Mock the conversation ID of chat sessions."""
     with patch(
-        "homeassistant.helpers.chat_session.ulid_now", return_value="mock-ulid"
+        "menuai.helpers.chat_session.ulid_now", return_value="mock-ulid"
     ) as mock_ulid_now:
         yield mock_ulid_now
 
@@ -50,7 +50,7 @@ def mock_tts_token() -> Generator[None]:
 
 
 async def test_pipeline_from_audio_stream_auto(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_stt_provider_entity: MockSTTProviderEntity,
     init_components,
     snapshot: SnapshotAssertion,
@@ -68,10 +68,10 @@ async def test_pipeline_from_audio_stream_auto(
         yield b""
 
     with patch(
-        "homeassistant.components.tts.secrets.token_urlsafe", return_value="test_token"
+        "menuai.components.tts.secrets.token_urlsafe", return_value="test_token"
     ):
         await assist_pipeline.async_pipeline_from_audio_stream(
-            hass,
+            menuai,
             context=Context(),
             event_callback=events.append,
             stt_metadata=stt.SpeechMetadata(
@@ -93,8 +93,8 @@ async def test_pipeline_from_audio_stream_auto(
 
 
 async def test_pipeline_from_audio_stream_legacy(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     mock_stt_provider: MockSTTProvider,
     init_components,
     snapshot: SnapshotAssertion,
@@ -103,7 +103,7 @@ async def test_pipeline_from_audio_stream_legacy(
 
     In this test, a pipeline using a legacy stt engine is used.
     """
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     events: list[assist_pipeline.PipelineEvent] = []
 
@@ -116,7 +116,7 @@ async def test_pipeline_from_audio_stream_legacy(
     await client.send_json_auto_id(
         {
             "type": "assist_pipeline/pipeline/create",
-            "conversation_engine": "homeassistant",
+            "conversation_engine": "menuai",
             "conversation_language": "en-US",
             "language": "en",
             "name": "test_name",
@@ -134,11 +134,11 @@ async def test_pipeline_from_audio_stream_legacy(
     pipeline_id = msg["result"]["id"]
 
     with patch(
-        "homeassistant.components.tts.secrets.token_urlsafe", return_value="test_token"
+        "menuai.components.tts.secrets.token_urlsafe", return_value="test_token"
     ):
         # Use the created pipeline
         await assist_pipeline.async_pipeline_from_audio_stream(
-            hass,
+            menuai,
             context=Context(),
             event_callback=events.append,
             stt_metadata=stt.SpeechMetadata(
@@ -161,8 +161,8 @@ async def test_pipeline_from_audio_stream_legacy(
 
 
 async def test_pipeline_from_audio_stream_entity(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     mock_stt_provider_entity: MockSTTProviderEntity,
     init_components,
     snapshot: SnapshotAssertion,
@@ -171,7 +171,7 @@ async def test_pipeline_from_audio_stream_entity(
 
     In this test, a pipeline using am stt entity is used.
     """
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     events: list[assist_pipeline.PipelineEvent] = []
 
@@ -184,7 +184,7 @@ async def test_pipeline_from_audio_stream_entity(
     await client.send_json_auto_id(
         {
             "type": "assist_pipeline/pipeline/create",
-            "conversation_engine": "homeassistant",
+            "conversation_engine": "menuai",
             "conversation_language": "en-US",
             "language": "en",
             "name": "test_name",
@@ -202,11 +202,11 @@ async def test_pipeline_from_audio_stream_entity(
     pipeline_id = msg["result"]["id"]
 
     with patch(
-        "homeassistant.components.tts.secrets.token_urlsafe", return_value="test_token"
+        "menuai.components.tts.secrets.token_urlsafe", return_value="test_token"
     ):
         # Use the created pipeline
         await assist_pipeline.async_pipeline_from_audio_stream(
-            hass,
+            menuai,
             context=Context(),
             event_callback=events.append,
             stt_metadata=stt.SpeechMetadata(
@@ -229,8 +229,8 @@ async def test_pipeline_from_audio_stream_entity(
 
 
 async def test_pipeline_from_audio_stream_no_stt(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     mock_stt_provider: MockSTTProvider,
     init_components,
     snapshot: SnapshotAssertion,
@@ -239,7 +239,7 @@ async def test_pipeline_from_audio_stream_no_stt(
 
     In this test, the pipeline does not support stt
     """
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     events: list[assist_pipeline.PipelineEvent] = []
 
@@ -252,7 +252,7 @@ async def test_pipeline_from_audio_stream_no_stt(
     await client.send_json_auto_id(
         {
             "type": "assist_pipeline/pipeline/create",
-            "conversation_engine": "homeassistant",
+            "conversation_engine": "menuai",
             "conversation_language": "en-US",
             "language": "en",
             "name": "test_name",
@@ -272,7 +272,7 @@ async def test_pipeline_from_audio_stream_no_stt(
     # Try to use the created pipeline
     with pytest.raises(assist_pipeline.pipeline.PipelineRunValidationError):
         await assist_pipeline.async_pipeline_from_audio_stream(
-            hass,
+            menuai,
             context=Context(),
             event_callback=events.append,
             stt_metadata=stt.SpeechMetadata(
@@ -292,8 +292,8 @@ async def test_pipeline_from_audio_stream_no_stt(
 
 
 async def test_pipeline_from_audio_stream_unknown_pipeline(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     mock_stt_provider: MockSTTProvider,
     init_components,
     snapshot: SnapshotAssertion,
@@ -312,7 +312,7 @@ async def test_pipeline_from_audio_stream_unknown_pipeline(
     # Try to use the created pipeline
     with pytest.raises(assist_pipeline.PipelineNotFound):
         await assist_pipeline.async_pipeline_from_audio_stream(
-            hass,
+            menuai,
             context=Context(),
             event_callback=events.append,
             stt_metadata=stt.SpeechMetadata(
@@ -331,7 +331,7 @@ async def test_pipeline_from_audio_stream_unknown_pipeline(
 
 
 async def test_pipeline_from_audio_stream_wake_word(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_stt_provider_entity: MockSTTProviderEntity,
     mock_wake_word_provider_entity: MockWakeWordEntity,
     init_components,
@@ -369,10 +369,10 @@ async def test_pipeline_from_audio_stream_wake_word(
         yield b""
 
     with patch(
-        "homeassistant.components.tts.secrets.token_urlsafe", return_value="test_token"
+        "menuai.components.tts.secrets.token_urlsafe", return_value="test_token"
     ):
         await assist_pipeline.async_pipeline_from_audio_stream(
-            hass,
+            menuai,
             context=Context(),
             event_callback=events.append,
             stt_metadata=stt.SpeechMetadata(
@@ -410,7 +410,7 @@ async def test_pipeline_from_audio_stream_wake_word(
 
 
 async def test_pipeline_save_audio(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_stt_provider: MockSTTProvider,
     mock_wake_word_provider_entity: MockWakeWordEntity,
     init_supporting_components,
@@ -421,12 +421,12 @@ async def test_pipeline_save_audio(
         # Enable audio recording to temporary directory
         temp_dir = Path(temp_dir_str)
         assert await async_setup_component(
-            hass,
+            menuai,
             DOMAIN,
             {DOMAIN: {CONF_DEBUG_RECORDING_DIR: temp_dir_str}},
         )
 
-        pipeline = assist_pipeline.async_get_pipeline(hass)
+        pipeline = assist_pipeline.async_get_pipeline(menuai)
         events: list[assist_pipeline.PipelineEvent] = []
 
         async def audio_data():
@@ -437,7 +437,7 @@ async def test_pipeline_save_audio(
             yield b""
 
         await assist_pipeline.async_pipeline_from_audio_stream(
-            hass,
+            menuai,
             context=Context(),
             event_callback=events.append,
             stt_metadata=stt.SpeechMetadata(
@@ -489,7 +489,7 @@ async def test_pipeline_save_audio(
 
 
 async def test_pipeline_saved_audio_with_device_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_stt_provider: MockSTTProvider,
     mock_wake_word_provider_entity: MockWakeWordEntity,
     init_supporting_components,
@@ -502,7 +502,7 @@ async def test_pipeline_saved_audio_with_device_id(
         # Enable audio recording to temporary directory
         temp_dir = Path(temp_dir_str)
         assert await async_setup_component(
-            hass,
+            menuai,
             DOMAIN,
             {DOMAIN: {CONF_DEBUG_RECORDING_DIR: temp_dir_str}},
         )
@@ -525,7 +525,7 @@ async def test_pipeline_saved_audio_with_device_id(
             ),
         ):
             await assist_pipeline.async_pipeline_from_audio_stream(
-                hass,
+                menuai,
                 context=Context(),
                 event_callback=event_callback,
                 stt_metadata=stt.SpeechMetadata(
@@ -544,7 +544,7 @@ async def test_pipeline_saved_audio_with_device_id(
 
 
 async def test_pipeline_saved_audio_write_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_stt_provider: MockSTTProvider,
     mock_wake_word_provider_entity: MockWakeWordEntity,
     init_supporting_components,
@@ -555,7 +555,7 @@ async def test_pipeline_saved_audio_write_error(
         # Enable audio recording to temporary directory
         temp_dir = Path(temp_dir_str)
         assert await async_setup_component(
-            hass,
+            menuai,
             DOMAIN,
             {DOMAIN: {CONF_DEBUG_RECORDING_DIR: temp_dir_str}},
         )
@@ -575,7 +575,7 @@ async def test_pipeline_saved_audio_write_error(
         # Force a timeout during wake word detection
         with patch("wave.Wave_write.writeframes", raises=RuntimeError()):
             await assist_pipeline.async_pipeline_from_audio_stream(
-                hass,
+                menuai,
                 context=Context(),
                 event_callback=event_callback,
                 stt_metadata=stt.SpeechMetadata(
@@ -593,7 +593,7 @@ async def test_pipeline_saved_audio_write_error(
 
 
 async def test_pipeline_saved_audio_empty_queue(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_stt_provider: MockSTTProvider,
     mock_wake_word_provider_entity: MockWakeWordEntity,
     init_supporting_components,
@@ -604,7 +604,7 @@ async def test_pipeline_saved_audio_empty_queue(
         # Enable audio recording to temporary directory
         temp_dir = Path(temp_dir_str)
         assert await async_setup_component(
-            hass,
+            menuai,
             DOMAIN,
             {DOMAIN: {CONF_DEBUG_RECORDING_DIR: temp_dir_str}},
         )
@@ -634,11 +634,11 @@ async def test_pipeline_saved_audio_empty_queue(
             )
 
         with patch(
-            "homeassistant.components.assist_pipeline.pipeline._pipeline_debug_recording_thread_proc",
+            "menuai.components.assist_pipeline.pipeline._pipeline_debug_recording_thread_proc",
             proc_wrapper,
         ):
             await assist_pipeline.async_pipeline_from_audio_stream(
-                hass,
+                menuai,
                 context=Context(),
                 event_callback=event_callback,
                 stt_metadata=stt.SpeechMetadata(
@@ -656,7 +656,7 @@ async def test_pipeline_saved_audio_empty_queue(
 
 
 async def test_pipeline_from_audio_stream_with_cloud_auth_fail(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_stt_provider_entity: MockSTTProviderEntity,
     init_components,
     snapshot: SnapshotAssertion,
@@ -671,10 +671,10 @@ async def test_pipeline_from_audio_stream_with_cloud_auth_fail(
     with patch.object(
         mock_stt_provider_entity,
         "async_process_audio_stream",
-        side_effect=hass_nabucasa.auth.Unauthenticated,
+        side_effect=menuai_nabucasa.auth.Unauthenticated,
     ):
         await assist_pipeline.async_pipeline_from_audio_stream(
-            hass,
+            menuai,
             context=Context(),
             event_callback=events.append,
             stt_metadata=stt.SpeechMetadata(

@@ -8,7 +8,7 @@ from typing import Any, Final
 
 from pyhaversion.consts import HaVersionChannel, HaVersionSource
 
-from homeassistant.const import CONF_NAME, Platform
+from menuai.const import CONF_NAME, Platform
 
 DOMAIN: Final = "version"
 LOGGER: Final[Logger] = getLogger(__package__)
@@ -16,8 +16,8 @@ PLATFORMS: Final[list[Platform]] = [Platform.BINARY_SENSOR, Platform.SENSOR]
 UPDATE_COORDINATOR_UPDATE_INTERVAL: Final[timedelta] = timedelta(minutes=5)
 
 ENTRY_TYPE_SERVICE: Final = "service"
-HOME_ASSISTANT: Final = "Home Assistant"
-POSTFIX_CONTAINER_NAME: Final = "-homeassistant"
+HOME_ASSISTANT: Final = "MenuAI"
+POSTFIX_CONTAINER_NAME: Final = "-menuai"
 
 
 CONF_BETA: Final = "beta"
@@ -34,10 +34,10 @@ ATTR_SOURCE: Final = CONF_SOURCE
 SOURCE_DOCKER: Final = "docker"  # Kept to not break existing configurations
 
 VERSION_SOURCE_DOCKER_HUB: Final = "Docker Hub"
-VERSION_SOURCE_HAIO: Final = "Home Assistant Website"
+VERSION_SOURCE_HAIO: Final = "MenuAI Website"
 VERSION_SOURCE_LOCAL: Final = "Local installation"
 VERSION_SOURCE_PYPI: Final = "Python Package Index (PyPI)"
-VERSION_SOURCE_VERSIONS: Final = "Home Assistant Versions"
+VERSION_SOURCE_VERSIONS: Final = "MenuAI Versions"
 
 DEFAULT_BETA: Final = False
 DEFAULT_BOARD: Final = "OVA"
@@ -77,8 +77,8 @@ BOARD_MAP: Final[dict[str, str]] = {
     "ODROID XU4": "odroid-xu4",
     "Generic AArch64": "generic-aarch64",
     "Generic x86-64": "generic-x86-64",
-    "Home Assistant Yellow": "yellow",
-    "Home Assistant Green": "green",
+    "MenuAI Yellow": "yellow",
+    "MenuAI Green": "green",
     "Khadas VIM3": "khadas-vim3",
 }
 
@@ -94,7 +94,7 @@ VERSION_SOURCE_MAP: Final[dict[str, str]] = {
 
 VALID_SOURCES: Final[list[str]] = [
     *HA_VERSION_SOURCES,
-    "hassio",  # Kept to not break existing configurations
+    "menuaiio",  # Kept to not break existing configurations
     "docker",  # Kept to not break existing configurations
 ]
 

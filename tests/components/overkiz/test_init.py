@@ -1,9 +1,9 @@
 """Tests for Overkiz integration init."""
 
-from homeassistant.components.overkiz.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.components.overkiz.const import DOMAIN
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.setup import async_setup_component
 
 from .test_config_flow import TEST_EMAIL, TEST_GATEWAY_ID, TEST_PASSWORD, TEST_SERVER
 
@@ -18,7 +18,7 @@ ENTITY_SENSOR_TARGET_CLOSURE_STATE_2 = (
 )
 
 
-async def test_unique_id_migration(hass: HomeAssistant) -> None:
+async def test_unique_id_migration(menuai: menuai) -> None:
     """Test migration of sensor unique IDs."""
 
     mock_entry = MockConfigEntry(
@@ -27,10 +27,10 @@ async def test_unique_id_migration(hass: HomeAssistant) -> None:
         data={"username": TEST_EMAIL, "password": TEST_PASSWORD, "hub": TEST_SERVER},
     )
 
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
     mock_registry(
-        hass,
+        menuai,
         {
             # This entity will be migrated to "io://1234-5678-1234/3541212-core:DiscreteRSSILevelState"
             ENTITY_SENSOR_DISCRETE_RSSI_LEVEL: RegistryEntryWithDefaults(
@@ -69,10 +69,10 @@ async def test_unique_id_migration(hass: HomeAssistant) -> None:
             ),
         },
     )
-    assert await async_setup_component(hass, DOMAIN, {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {})
+    await menuai.async_block_till_done()
 
-    ent_reg = er.async_get(hass)
+    ent_reg = er.async_get(menuai)
 
     unique_id_map = {
         ENTITY_SENSOR_DISCRETE_RSSI_LEVEL: "io://1234-5678-1234/3541212-core:DiscreteRSSILevelState",

@@ -2,7 +2,7 @@
 
 import pytest
 
-from homeassistant.components.timer import (
+from menuai.components.timer import (
     ATTR_DURATION,
     SERVICE_CANCEL,
     SERVICE_PAUSE,
@@ -11,30 +11,30 @@ from homeassistant.components.timer import (
     STATUS_IDLE,
     STATUS_PAUSED,
 )
-from homeassistant.core import HomeAssistant, State
-from homeassistant.helpers.state import async_reproduce_state
+from menuai.core import menuai, State
+from menuai.helpers.state import async_reproduce_state
 
 from tests.common import async_mock_service
 
 
 async def test_reproducing_states(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test reproducing Timer states."""
-    hass.states.async_set("timer.entity_idle", STATUS_IDLE, {})
-    hass.states.async_set("timer.entity_paused", STATUS_PAUSED, {})
-    hass.states.async_set("timer.entity_active", STATUS_ACTIVE, {})
-    hass.states.async_set(
+    menuai.states.async_set("timer.entity_idle", STATUS_IDLE, {})
+    menuai.states.async_set("timer.entity_paused", STATUS_PAUSED, {})
+    menuai.states.async_set("timer.entity_active", STATUS_ACTIVE, {})
+    menuai.states.async_set(
         "timer.entity_active_attr", STATUS_ACTIVE, {ATTR_DURATION: "00:01:00"}
     )
 
-    start_calls = async_mock_service(hass, "timer", SERVICE_START)
-    pause_calls = async_mock_service(hass, "timer", SERVICE_PAUSE)
-    cancel_calls = async_mock_service(hass, "timer", SERVICE_CANCEL)
+    start_calls = async_mock_service(menuai, "timer", SERVICE_START)
+    pause_calls = async_mock_service(menuai, "timer", SERVICE_PAUSE)
+    cancel_calls = async_mock_service(menuai, "timer", SERVICE_CANCEL)
 
     # These calls should do nothing as entities already in desired state
     await async_reproduce_state(
-        hass,
+        menuai,
         [
             State("timer.entity_idle", STATUS_IDLE),
             State("timer.entity_paused", STATUS_PAUSED),
@@ -50,7 +50,7 @@ async def test_reproducing_states(
     assert len(cancel_calls) == 0
 
     # Test invalid state is handled
-    await async_reproduce_state(hass, [State("timer.entity_idle", "not_supported")])
+    await async_reproduce_state(menuai, [State("timer.entity_idle", "not_supported")])
 
     assert "not_supported" in caplog.text
     assert len(start_calls) == 0
@@ -59,7 +59,7 @@ async def test_reproducing_states(
 
     # Make sure correct services are called
     await async_reproduce_state(
-        hass,
+        menuai,
         [
             State("timer.entity_idle", STATUS_ACTIVE, {ATTR_DURATION: "00:01:00"}),
             State("timer.entity_paused", STATUS_ACTIVE),

@@ -11,17 +11,17 @@ from pyairvisual.cloud_api import (
 from pyairvisual.errors import AirVisualError
 import pytest
 
-from homeassistant.components.airvisual import (
+from menuai.components.airvisual import (
     CONF_CITY,
     CONF_INTEGRATION_TYPE,
     DOMAIN,
     INTEGRATION_TYPE_GEOGRAPHY_COORDS,
     INTEGRATION_TYPE_GEOGRAPHY_NAME,
 )
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_API_KEY, CONF_SHOW_ON_MAP
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_API_KEY, CONF_SHOW_ON_MAP
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from .conftest import (
     COORDS_CONFIG,
@@ -68,7 +68,7 @@ pytestmark = pytest.mark.usefixtures("mock_setup_entry")
     ],
 )
 async def test_create_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     cloud_api,
     config,
     entry_title,
@@ -80,13 +80,13 @@ async def test_create_entry(
     response,
 ) -> None:
     """Test creating a config entry."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}, data={"type": integration_type}
     )
     assert result["type"] is FlowResultType.FORM
@@ -94,14 +94,14 @@ async def test_create_entry(
 
     # Test errors that can arise:
     with patch.object(cloud_api.air_quality, patched_method, response):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input=config
         )
         assert result["type"] is FlowResultType.FORM
         assert result["errors"] == errors
 
     # Test that we can recover and finish the flow after errors occur:
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input=config
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -109,15 +109,15 @@ async def test_create_entry(
     assert result["data"] == {**config, CONF_INTEGRATION_TYPE: integration_type}
 
 
-async def test_duplicate_error(hass: HomeAssistant, config, setup_config_entry) -> None:
+async def test_duplicate_error(menuai: menuai, config, setup_config_entry) -> None:
     """Test that errors are shown when duplicate entries are added."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={"type": INTEGRATION_TYPE_GEOGRAPHY_COORDS},
@@ -125,7 +125,7 @@ async def test_duplicate_error(hass: HomeAssistant, config, setup_config_entry) 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "geography_by_coords"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input=config
     )
     assert result["type"] is FlowResultType.ABORT
@@ -133,14 +133,14 @@ async def test_duplicate_error(hass: HomeAssistant, config, setup_config_entry) 
 
 
 async def test_options_flow(
-    hass: HomeAssistant, config_entry, setup_config_entry
+    menuai: menuai, config_entry, setup_config_entry
 ) -> None:
     """Test config flow options."""
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"], user_input={CONF_SHOW_ON_MAP: False}
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -148,21 +148,21 @@ async def test_options_flow(
 
 
 async def test_step_reauth(
-    hass: HomeAssistant, config_entry: MockConfigEntry, setup_config_entry
+    menuai: menuai, config_entry: MockConfigEntry, setup_config_entry
 ) -> None:
     """Test that the reauth step works."""
-    result = await config_entry.start_reauth_flow(hass)
+    result = await config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
     new_api_key = "defgh67890"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={CONF_API_KEY: new_api_key}
     )
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"
 
-    assert len(hass.config_entries.async_entries()) == 1
-    assert hass.config_entries.async_entries()[0].data[CONF_API_KEY] == new_api_key
-    await hass.async_block_till_done()
+    assert len(menuai.config_entries.async_entries()) == 1
+    assert menuai.config_entries.async_entries()[0].data[CONF_API_KEY] == new_api_key
+    await menuai.async_block_till_done()

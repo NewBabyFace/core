@@ -26,7 +26,7 @@ def generate_and_validate(integrations: dict[str, Integration]) -> str:
 
 def validate(integrations: dict[str, Integration], config: Config) -> None:
     """Validate dhcp file."""
-    dhcp_path = config.root / "homeassistant/generated/dhcp.py"
+    dhcp_path = config.root / "menuai/generated/dhcp.py"
     config.cache["dhcp"] = content = generate_and_validate(integrations)
 
     if config.specific_integrations:
@@ -35,12 +35,12 @@ def validate(integrations: dict[str, Integration], config: Config) -> None:
     if dhcp_path.read_text() != content:
         config.add_error(
             "dhcp",
-            "File dhcp.py is not up to date. Run python3 -m script.hassfest",
+            "File dhcp.py is not up to date. Run python3 -m script.menuaifest",
             fixable=True,
         )
 
 
 def generate(integrations: dict[str, Integration], config: Config) -> None:
     """Generate dhcp file."""
-    dhcp_path = config.root / "homeassistant/generated/dhcp.py"
+    dhcp_path = config.root / "menuai/generated/dhcp.py"
     dhcp_path.write_text(f"{config.cache['dhcp']}")

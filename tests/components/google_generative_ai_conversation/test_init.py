@@ -7,9 +7,9 @@ import pytest
 from requests.exceptions import Timeout
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from . import API_ERROR_500, CLIENT_ERROR_API_KEY_INVALID
 
@@ -18,12 +18,12 @@ from tests.common import MockConfigEntry
 
 @pytest.mark.usefixtures("mock_init_component")
 async def test_generate_content_service_without_images(
-    hass: HomeAssistant, snapshot: SnapshotAssertion
+    menuai: menuai, snapshot: SnapshotAssertion
 ) -> None:
     """Test generate content service."""
     stubbed_generated_content = (
         "I'm thrilled to welcome you all to the release "
-        "party for the latest version of Home Assistant!"
+        "party for the latest version of MenuAI!"
     )
 
     with patch(
@@ -34,10 +34,10 @@ async def test_generate_content_service_without_images(
             candidates=[Mock()],
         ),
     ) as mock_generate:
-        response = await hass.services.async_call(
+        response = await menuai.services.async_call(
             "google_generative_ai_conversation",
             "generate_content",
-            {"prompt": "Write an opening speech for a Home Assistant release party"},
+            {"prompt": "Write an opening speech for a MenuAI release party"},
             blocking=True,
             return_response=True,
         )
@@ -50,7 +50,7 @@ async def test_generate_content_service_without_images(
 
 @pytest.mark.usefixtures("mock_init_component")
 async def test_generate_content_service_with_image(
-    hass: HomeAssistant, snapshot: SnapshotAssertion
+    menuai: menuai, snapshot: SnapshotAssertion
 ) -> None:
     """Test generate content service."""
     stubbed_generated_content = (
@@ -71,11 +71,11 @@ async def test_generate_content_service_with_image(
             return_value=b"some file",
         ),
         patch("pathlib.Path.exists", return_value=True),
-        patch.object(hass.config, "is_allowed_path", return_value=True),
+        patch.object(menuai.config, "is_allowed_path", return_value=True),
         patch("builtins.open", mock_open(read_data="this is an image")),
         patch("mimetypes.guess_type", return_value=["image/jpeg"]),
     ):
-        response = await hass.services.async_call(
+        response = await menuai.services.async_call(
             "google_generative_ai_conversation",
             "generate_content",
             {
@@ -94,7 +94,7 @@ async def test_generate_content_service_with_image(
 
 @pytest.mark.usefixtures("mock_init_component")
 async def test_generate_content_file_processing_succeeds(
-    hass: HomeAssistant, snapshot: SnapshotAssertion
+    menuai: menuai, snapshot: SnapshotAssertion
 ) -> None:
     """Test generate content service."""
     stubbed_generated_content = (
@@ -111,7 +111,7 @@ async def test_generate_content_file_processing_succeeds(
             ),
         ) as mock_generate,
         patch("pathlib.Path.exists", return_value=True),
-        patch.object(hass.config, "is_allowed_path", return_value=True),
+        patch.object(menuai.config, "is_allowed_path", return_value=True),
         patch("builtins.open", mock_open(read_data="this is an image")),
         patch("mimetypes.guess_type", return_value=["image/jpeg"]),
         patch(
@@ -129,7 +129,7 @@ async def test_generate_content_file_processing_succeeds(
             ],
         ),
     ):
-        response = await hass.services.async_call(
+        response = await menuai.services.async_call(
             "google_generative_ai_conversation",
             "generate_content",
             {
@@ -148,7 +148,7 @@ async def test_generate_content_file_processing_succeeds(
 
 @pytest.mark.usefixtures("mock_init_component")
 async def test_generate_content_file_processing_fails(
-    hass: HomeAssistant, snapshot: SnapshotAssertion
+    menuai: menuai, snapshot: SnapshotAssertion
 ) -> None:
     """Test generate content service."""
     stubbed_generated_content = (
@@ -165,7 +165,7 @@ async def test_generate_content_file_processing_fails(
             ),
         ),
         patch("pathlib.Path.exists", return_value=True),
-        patch.object(hass.config, "is_allowed_path", return_value=True),
+        patch.object(menuai.config, "is_allowed_path", return_value=True),
         patch("builtins.open", mock_open(read_data="this is an image")),
         patch("mimetypes.guess_type", return_value=["image/jpeg"]),
         patch(
@@ -187,11 +187,11 @@ async def test_generate_content_file_processing_fails(
             ],
         ),
         pytest.raises(
-            HomeAssistantError,
+            menuaiError,
             match="File `context.txt` processing failed, reason: File processing failed",
         ),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "google_generative_ai_conversation",
             "generate_content",
             {
@@ -205,7 +205,7 @@ async def test_generate_content_file_processing_fails(
 
 @pytest.mark.usefixtures("mock_init_component")
 async def test_generate_content_service_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test generate content service handles errors."""
@@ -215,11 +215,11 @@ async def test_generate_content_service_error(
             side_effect=API_ERROR_500,
         ),
         pytest.raises(
-            HomeAssistantError,
+            menuaiError,
             match="Error generating content: 500 internal-error. {'message': 'Internal Server Error', 'status': 'internal-error'}",
         ),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "google_generative_ai_conversation",
             "generate_content",
             {"prompt": "write a story about an epic fail"},
@@ -230,7 +230,7 @@ async def test_generate_content_service_error(
 
 @pytest.mark.usefixtures("mock_init_component")
 async def test_generate_content_response_has_empty_parts(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test generate content service handles response with empty parts."""
@@ -242,9 +242,9 @@ async def test_generate_content_response_has_empty_parts(
                 candidates=[Mock(content=Mock(parts=[]))],
             ),
         ),
-        pytest.raises(HomeAssistantError, match="Unknown error generating content"),
+        pytest.raises(menuaiError, match="Unknown error generating content"),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "google_generative_ai_conversation",
             "generate_content",
             {"prompt": "write a story about an epic fail"},
@@ -255,14 +255,14 @@ async def test_generate_content_response_has_empty_parts(
 
 @pytest.mark.usefixtures("mock_init_component")
 async def test_generate_content_service_with_image_not_allowed_path(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test generate content service with an image in a not allowed path."""
     with (
         patch("pathlib.Path.exists", return_value=True),
-        patch.object(hass.config, "is_allowed_path", return_value=False),
+        patch.object(menuai.config, "is_allowed_path", return_value=False),
         pytest.raises(
-            HomeAssistantError,
+            menuaiError,
             match=(
                 "Cannot read `doorbell_snapshot.jpg`, no access to path; "
                 "`allowlist_external_dirs` may need to be adjusted in "
@@ -270,7 +270,7 @@ async def test_generate_content_service_with_image_not_allowed_path(
             ),
         ),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "google_generative_ai_conversation",
             "generate_content",
             {
@@ -284,18 +284,18 @@ async def test_generate_content_service_with_image_not_allowed_path(
 
 @pytest.mark.usefixtures("mock_init_component")
 async def test_generate_content_service_with_image_not_exists(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test generate content service with an image that does not exist."""
     with (
         patch("pathlib.Path.exists", return_value=True),
-        patch.object(hass.config, "is_allowed_path", return_value=True),
+        patch.object(menuai.config, "is_allowed_path", return_value=True),
         patch("pathlib.Path.exists", return_value=False),
         pytest.raises(
-            HomeAssistantError, match="`doorbell_snapshot.jpg` does not exist"
+            menuaiError, match="`doorbell_snapshot.jpg` does not exist"
         ),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "google_generative_ai_conversation",
             "generate_content",
             {
@@ -328,28 +328,28 @@ async def test_generate_content_service_with_image_not_exists(
     ],
 )
 async def test_config_entry_error(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry, side_effect, state, reauth
+    menuai: menuai, mock_config_entry: MockConfigEntry, side_effect, state, reauth
 ) -> None:
     """Test different configuration entry errors."""
     mock_client = AsyncMock()
     mock_client.get_model.side_effect = side_effect
     with patch("google.genai.models.AsyncModels.get", side_effect=side_effect):
-        assert not await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert not await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
         assert mock_config_entry.state == state
-        assert any(mock_config_entry.async_get_active_flows(hass, {"reauth"})) == reauth
+        assert any(mock_config_entry.async_get_active_flows(menuai, {"reauth"})) == reauth
 
 
 @pytest.mark.usefixtures("mock_init_component")
 async def test_load_entry_with_unloaded_entries(
-    hass: HomeAssistant, snapshot: SnapshotAssertion
+    menuai: menuai, snapshot: SnapshotAssertion
 ) -> None:
     """Test loading an entry with unloaded entries."""
-    config_entries = hass.config_entries.async_entries(
+    config_entries = menuai.config_entries.async_entries(
         "google_generative_ai_conversation"
     )
     runtime_data = config_entries[0].runtime_data
-    await hass.config_entries.async_unload(config_entries[0].entry_id)
+    await menuai.config_entries.async_unload(config_entries[0].entry_id)
 
     entry = MockConfigEntry(
         domain="google_generative_ai_conversation",
@@ -360,11 +360,11 @@ async def test_load_entry_with_unloaded_entries(
         state=ConfigEntryState.LOADED,
     )
     entry.runtime_data = runtime_data
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     stubbed_generated_content = (
         "I'm thrilled to welcome you all to the release "
-        "party for the latest version of Home Assistant!"
+        "party for the latest version of MenuAI!"
     )
 
     with patch(
@@ -375,10 +375,10 @@ async def test_load_entry_with_unloaded_entries(
             candidates=[Mock()],
         ),
     ) as mock_generate:
-        response = await hass.services.async_call(
+        response = await menuai.services.async_call(
             "google_generative_ai_conversation",
             "generate_content",
-            {"prompt": "Write an opening speech for a Home Assistant release party"},
+            {"prompt": "Write an opening speech for a MenuAI release party"},
             blocking=True,
             return_response=True,
         )

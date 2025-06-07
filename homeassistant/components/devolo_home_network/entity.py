@@ -10,10 +10,10 @@ from devolo_plc_api.device_api import (
 from devolo_plc_api.plcnet_api import DataRate, LogicalNetwork
 from yarl import URL
 
-from homeassistant.const import ATTR_CONNECTIONS
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.const import ATTR_CONNECTIONS
+from menuai.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
+from menuai.helpers.entity import Entity
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import DevoloDataUpdateCoordinator, DevoloHomeNetworkConfigEntry

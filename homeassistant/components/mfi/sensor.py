@@ -8,12 +8,12 @@ from mficlient.client import FailedToLogin, MFiClient
 import requests
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
     SensorDeviceClass,
     SensorEntity,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
@@ -24,10 +24,10 @@ from homeassistant.const import (
     STATE_ON,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -58,7 +58,7 @@ PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -81,7 +81,7 @@ def setup_platform(
         return
 
     add_entities(
-        MfiSensor(port, hass)
+        MfiSensor(port, menuai)
         for device in client.get_devices()
         for port in device.ports.values()
         if port.model in SENSOR_MODELS
@@ -91,10 +91,10 @@ def setup_platform(
 class MfiSensor(SensorEntity):
     """Representation of a mFi sensor."""
 
-    def __init__(self, port, hass):
+    def __init__(self, port, menuai):
         """Initialize the sensor."""
         self._port = port
-        self._hass = hass
+        self._menuai = menuai
 
     @property
     def name(self):

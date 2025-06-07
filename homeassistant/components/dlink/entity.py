@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from homeassistant.const import ATTR_CONNECTIONS
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity, EntityDescription
+from menuai.const import ATTR_CONNECTIONS
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity, EntityDescription
 
 from . import DLinkConfigEntry
 from .const import ATTRIBUTION, DOMAIN, MANUFACTURER

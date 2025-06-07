@@ -4,13 +4,13 @@ from unittest.mock import Mock
 
 from pytest_unordered import unordered
 
-from homeassistant.components import automation, hue
-from homeassistant.components.device_automation import DeviceAutomationType
-from homeassistant.components.hue.v1 import device_trigger
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.components import automation, hue
+from menuai.components.device_automation import DeviceAutomationType
+from menuai.components.hue.v1 import device_trigger
+from menuai.const import Platform
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.setup import async_setup_component
 
 from .conftest import setup_platform
 from .test_sensor_v1 import HUE_DIMMER_REMOTE_1, HUE_TAP_REMOTE_1
@@ -21,7 +21,7 @@ REMOTES_RESPONSE = {"7": HUE_TAP_REMOTE_1, "8": HUE_DIMMER_REMOTE_1}
 
 
 async def test_get_triggers(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_bridge_v1: Mock,
     device_registry: dr.DeviceRegistry,
@@ -29,19 +29,19 @@ async def test_get_triggers(
     """Test we get the expected triggers from a hue remote."""
     mock_bridge_v1.mock_sensor_responses.append(REMOTES_RESPONSE)
     await setup_platform(
-        hass, mock_bridge_v1, [Platform.SENSOR, Platform.BINARY_SENSOR]
+        menuai, mock_bridge_v1, [Platform.SENSOR, Platform.BINARY_SENSOR]
     )
 
     assert len(mock_bridge_v1.mock_requests) == 1
     # 2 remotes, just 1 battery sensor
-    assert len(hass.states.async_all()) == 1
+    assert len(menuai.states.async_all()) == 1
 
     # Get triggers for specific tap switch
     hue_tap_device = device_registry.async_get_device(
         identifiers={(hue.DOMAIN, "00:00:00:00:00:44:23:08")}
     )
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, hue_tap_device.id
+        menuai, DeviceAutomationType.TRIGGER, hue_tap_device.id
     )
 
     expected_triggers = [
@@ -65,7 +65,7 @@ async def test_get_triggers(
         "sensor.hue_dimmer_switch_1_battery_level"
     )
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, hue_dimmer_device.id
+        menuai, DeviceAutomationType.TRIGGER, hue_dimmer_device.id
     )
 
     trigger_batt = {
@@ -94,7 +94,7 @@ async def test_get_triggers(
 
 
 async def test_if_fires_on_state_change(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_bridge_v1: Mock,
     device_registry: dr.DeviceRegistry,
     service_calls: list[ServiceCall],
@@ -102,17 +102,17 @@ async def test_if_fires_on_state_change(
     """Test for button press trigger firing."""
     mock_bridge_v1.mock_sensor_responses.append(REMOTES_RESPONSE)
     await setup_platform(
-        hass, mock_bridge_v1, [Platform.SENSOR, Platform.BINARY_SENSOR]
+        menuai, mock_bridge_v1, [Platform.SENSOR, Platform.BINARY_SENSOR]
     )
     assert len(mock_bridge_v1.mock_requests) == 1
-    assert len(hass.states.async_all()) == 1
+    assert len(menuai.states.async_all()) == 1
 
     # Set an automation with a specific tap switch trigger
     hue_tap_device = device_registry.async_get_device(
         identifiers={(hue.DOMAIN, "00:00:00:00:00:44:23:08")}
     )
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -161,7 +161,7 @@ async def test_if_fires_on_state_change(
 
     # Force updates to run again
     await mock_bridge_v1.sensor_manager.coordinator.async_refresh()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(mock_bridge_v1.mock_requests) == 2
 
@@ -178,6 +178,6 @@ async def test_if_fires_on_state_change(
 
     # Force updates to run again
     await mock_bridge_v1.sensor_manager.coordinator.async_refresh()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(mock_bridge_v1.mock_requests) == 3
     assert len(service_calls) == 1

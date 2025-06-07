@@ -11,7 +11,7 @@ import requests_mock
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Mock qbittorrent entry setup."""
     with patch(
-        "homeassistant.components.qbittorrent.async_setup_entry", return_value=True
+        "menuai.components.qbittorrent.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 

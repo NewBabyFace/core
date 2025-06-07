@@ -10,12 +10,12 @@ import aiohttp
 from sharkiq import SharkIqAuthError, get_ayla_api
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_PASSWORD, CONF_REGION, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import selector
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_PASSWORD, CONF_REGION, CONF_USERNAME
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import selector
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
     DOMAIN,
@@ -41,13 +41,13 @@ SHARKIQ_SCHEMA = vol.Schema(
 
 
 async def _validate_input(
-    hass: HomeAssistant, data: Mapping[str, Any]
+    menuai: menuai, data: Mapping[str, Any]
 ) -> dict[str, str]:
     """Validate the user input allows us to connect."""
     ayla_api = get_ayla_api(
         username=data[CONF_USERNAME],
         password=data[CONF_PASSWORD],
-        websession=async_get_clientsession(hass),
+        websession=async_get_clientsession(menuai),
         europe=(data[CONF_REGION] == SHARKIQ_REGION_EUROPE),
     )
 
@@ -90,7 +90,7 @@ class SharkIqConfigFlow(ConfigFlow, domain=DOMAIN):
 
         # noinspection PyBroadException
         try:
-            info = await _validate_input(self.hass, user_input)
+            info = await _validate_input(self.menuai, user_input)
         except CannotConnect:
             errors["base"] = "cannot_connect"
         except InvalidAuth:
@@ -133,7 +133,7 @@ class SharkIqConfigFlow(ConfigFlow, domain=DOMAIN):
             if not errors:
                 errors = {"base": "unknown"}
                 if entry := await self.async_set_unique_id(self.unique_id):
-                    self.hass.config_entries.async_update_entry(entry, data=user_input)
+                    self.menuai.config_entries.async_update_entry(entry, data=user_input)
                     return self.async_abort(reason="reauth_successful")
 
             if errors["base"] != "invalid_auth":
@@ -146,13 +146,13 @@ class SharkIqConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(menuaiError):
     """Error to indicate there is invalid auth."""
 
 
-class UnknownAuth(HomeAssistantError):
+class UnknownAuth(menuaiError):
     """Error to indicate there is an uncaught auth error."""

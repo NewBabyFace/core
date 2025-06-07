@@ -12,8 +12,8 @@ from elkm1_lib.elk import Elk
 from elkm1_lib.util import parse_url
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import SOURCE_IMPORT, ConfigEntry
+from menuai.const import (
     CONF_ENABLED,
     CONF_EXCLUDE,
     CONF_HOST,
@@ -26,12 +26,12 @@ from homeassistant.const import (
     Platform,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util.network import is_ip_address
+from menuai.core import menuai, callback
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import config_validation as cv
+from menuai.helpers.event import async_track_time_interval
+from menuai.helpers.typing import ConfigType
+from menuai.util.network import is_ip_address
 
 from .const import (
     ATTR_KEY,
@@ -164,24 +164,24 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, hass_config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, menuai_config: ConfigType) -> bool:
     """Set up the Elk M1 platform."""
-    async_setup_services(hass)
+    async_setup_services(menuai)
 
     async def _async_discovery(*_: Any) -> None:
         async_trigger_discovery(
-            hass, await async_discover_devices(hass, DISCOVER_SCAN_TIMEOUT)
+            menuai, await async_discover_devices(menuai, DISCOVER_SCAN_TIMEOUT)
         )
 
-    hass.async_create_background_task(_async_discovery(), "elkm1 setup discovery")
+    menuai.async_create_background_task(_async_discovery(), "elkm1 setup discovery")
     async_track_time_interval(
-        hass, _async_discovery, DISCOVERY_INTERVAL, cancel_on_shutdown=True
+        menuai, _async_discovery, DISCOVERY_INTERVAL, cancel_on_shutdown=True
     )
 
-    if DOMAIN not in hass_config:
+    if DOMAIN not in menuai_config:
         return True
 
-    for index, conf in enumerate(hass_config[DOMAIN]):
+    for index, conf in enumerate(menuai_config[DOMAIN]):
         _LOGGER.debug("Importing elkm1 #%d - %s", index, conf[CONF_HOST])
 
         # The update of the config entry is done in async_setup
@@ -189,17 +189,17 @@ async def async_setup(hass: HomeAssistant, hass_config: ConfigType) -> bool:
         # is called to avoid a situation where the user has to restart
         # twice for the changes to take effect
         current_config_entry = _async_find_matching_config_entry(
-            hass, conf[CONF_PREFIX]
+            menuai, conf[CONF_PREFIX]
         )
         if current_config_entry:
             # If they alter the yaml config we import the changes
             # since there currently is no practical way to do an options flow
             # with the large amount of include/exclude/enabled options that elkm1 has.
-            hass.config_entries.async_update_entry(current_config_entry, data=conf)
+            menuai.config_entries.async_update_entry(current_config_entry, data=conf)
             continue
 
-        hass.async_create_task(
-            hass.config_entries.flow.async_init(
+        menuai.async_create_task(
+            menuai.config_entries.flow.async_init(
                 DOMAIN,
                 context={"source": SOURCE_IMPORT},
                 data=conf,
@@ -211,15 +211,15 @@ async def async_setup(hass: HomeAssistant, hass_config: ConfigType) -> bool:
 
 @callback
 def _async_find_matching_config_entry(
-    hass: HomeAssistant, prefix: str
+    menuai: menuai, prefix: str
 ) -> ConfigEntry | None:
-    for entry in hass.config_entries.async_entries(DOMAIN):
+    for entry in menuai.config_entries.async_entries(DOMAIN):
         if entry.unique_id == prefix:
             return entry
     return None
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ElkM1ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ElkM1ConfigEntry) -> bool:
     """Set up Elk-M1 Control from a config entry."""
     conf = entry.data
 
@@ -232,8 +232,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ElkM1ConfigEntry) -> boo
             "Unique id for %s is missing during setup, trying to fill from discovery",
             host,
         )
-        if device := await async_discover_device(hass, host):
-            async_update_entry_from_discovery(hass, entry, device)
+        if device := await async_discover_device(menuai, host):
+            async_update_entry_from_discovery(menuai, entry, device)
 
     config: dict[str, Any] = {}
 
@@ -265,7 +265,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ElkM1ConfigEntry) -> boo
         if (keypress := changeset.get("last_keypress")) is None:
             return
 
-        hass.bus.async_fire(
+        menuai.bus.async_fire(
             EVENT_ELKM1_KEYPAD_KEY_PRESSED,
             {
                 ATTR_KEYPAD_NAME: keypad.name,
@@ -301,7 +301,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ElkM1ConfigEntry) -> boo
         keypads={},
     )
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
@@ -313,9 +313,9 @@ def _included(ranges: list[tuple[int, int]], set_to: bool, values: list[bool]) -
         values[rng[0] - 1 : rng[1]] = [set_to] * (rng[1] - rng[0] + 1)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ElkM1ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ElkM1ConfigEntry) -> bool:
     """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
     # disconnect cleanly
     entry.runtime_data.elk.disconnect()
     return unload_ok

@@ -9,8 +9,8 @@ import datapoint
 from datapoint.Forecast import Forecast
 from requests import HTTPError
 
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import UpdateFailed
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.update_coordinator import UpdateFailed
 
 _LOGGER = logging.getLogger(__name__)
 

@@ -8,9 +8,9 @@ from typing import Any
 from elmax_api.model.command import CoverCommand
 from elmax_api.model.cover_status import CoverStatus
 
-from homeassistant.components.cover import CoverEntity, CoverEntityFeature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.cover import CoverEntity, CoverEntityFeature
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import ElmaxConfigEntry
 from .entity import ElmaxEntity
@@ -25,7 +25,7 @@ _COMMAND_BY_MOTION_STATUS = {  # Maps the stop command to use for every cover mo
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ElmaxConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

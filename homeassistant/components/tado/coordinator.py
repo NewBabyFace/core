@@ -9,10 +9,10 @@ from typing import TYPE_CHECKING, Any
 from PyTado.interface import Tado
 from requests import RequestException
 
-from homeassistant.components.climate import PRESET_AWAY, PRESET_HOME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.components.climate import PRESET_AWAY, PRESET_HOME
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 if TYPE_CHECKING:
     from . import TadoConfigEntry
@@ -44,14 +44,14 @@ class TadoDataUpdateCoordinator(DataUpdateCoordinator[dict[str, dict]]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: TadoConfigEntry,
         tado: Tado,
         debug: bool = False,
     ) -> None:
         """Initialize the Tado data update coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -85,10 +85,10 @@ class TadoDataUpdateCoordinator(DataUpdateCoordinator[dict[str, dict]]):
 
         try:
             _LOGGER.debug("Preloading home data")
-            tado_home_call = await self.hass.async_add_executor_job(self._tado.get_me)
+            tado_home_call = await self.menuai.async_add_executor_job(self._tado.get_me)
             _LOGGER.debug("Preloading zones and devices")
-            self.zones = await self.hass.async_add_executor_job(self._tado.get_zones)
-            self.devices = await self.hass.async_add_executor_job(
+            self.zones = await self.menuai.async_add_executor_job(self._tado.get_zones)
+            self.devices = await self.menuai.async_add_executor_job(
                 self._tado.get_devices
             )
         except RequestException as err:
@@ -107,14 +107,14 @@ class TadoDataUpdateCoordinator(DataUpdateCoordinator[dict[str, dict]]):
         self.data["weather"] = home["weather"]
         self.data["geofence"] = home["geofence"]
 
-        refresh_token = await self.hass.async_add_executor_job(
+        refresh_token = await self.menuai.async_add_executor_job(
             self._tado.get_refresh_token
         )
 
         if refresh_token != self._refresh_token:
             _LOGGER.debug("New refresh token obtained from Tado: %s", refresh_token)
             self._refresh_token = refresh_token
-            self.hass.config_entries.async_update_entry(
+            self.menuai.config_entries.async_update_entry(
                 self.config_entry,
                 data={**self.config_entry.data, CONF_REFRESH_TOKEN: refresh_token},
             )
@@ -125,7 +125,7 @@ class TadoDataUpdateCoordinator(DataUpdateCoordinator[dict[str, dict]]):
         """Update the device data from Tado."""
 
         try:
-            devices = await self.hass.async_add_executor_job(self._tado.get_devices)
+            devices = await self.menuai.async_add_executor_job(self._tado.get_devices)
         except RequestException as err:
             _LOGGER.error("Error updating Tado devices: %s", err)
             raise UpdateFailed(f"Error updating Tado devices: {err}") from err
@@ -134,7 +134,7 @@ class TadoDataUpdateCoordinator(DataUpdateCoordinator[dict[str, dict]]):
             _LOGGER.error("No linked devices found for home ID %s", self.home_id)
             raise UpdateFailed(f"No linked devices found for home ID {self.home_id}")
 
-        return await self.hass.async_add_executor_job(self._update_device_info, devices)
+        return await self.menuai.async_add_executor_job(self._update_device_info, devices)
 
     def _update_device_info(self, devices: list[dict[str, Any]]) -> dict[str, dict]:
         """Update the device data from Tado."""
@@ -170,7 +170,7 @@ class TadoDataUpdateCoordinator(DataUpdateCoordinator[dict[str, dict]]):
         """Update the zone data from Tado."""
 
         try:
-            zone_states_call = await self.hass.async_add_executor_job(
+            zone_states_call = await self.menuai.async_add_executor_job(
                 self._tado.get_zone_states
             )
             zone_states = zone_states_call["zoneStates"]
@@ -189,7 +189,7 @@ class TadoDataUpdateCoordinator(DataUpdateCoordinator[dict[str, dict]]):
 
         _LOGGER.debug("Updating zone %s", zone_id)
         try:
-            data = await self.hass.async_add_executor_job(
+            data = await self.menuai.async_add_executor_job(
                 self._tado.get_zone_state, zone_id
             )
         except RequestException as err:
@@ -203,8 +203,8 @@ class TadoDataUpdateCoordinator(DataUpdateCoordinator[dict[str, dict]]):
         """Update the home data from Tado."""
 
         try:
-            weather = await self.hass.async_add_executor_job(self._tado.get_weather)
-            geofence = await self.hass.async_add_executor_job(self._tado.get_home_state)
+            weather = await self.menuai.async_add_executor_job(self._tado.get_weather)
+            geofence = await self.menuai.async_add_executor_job(self._tado.get_home_state)
         except RequestException as err:
             _LOGGER.error("Error updating Tado home: %s", err)
             raise UpdateFailed(f"Error updating Tado home: {err}") from err
@@ -221,7 +221,7 @@ class TadoDataUpdateCoordinator(DataUpdateCoordinator[dict[str, dict]]):
         """Fetch the capabilities from Tado."""
 
         try:
-            return await self.hass.async_add_executor_job(
+            return await self.menuai.async_add_executor_job(
                 self._tado.get_capabilities, zone_id
             )
         except RequestException as err:
@@ -231,7 +231,7 @@ class TadoDataUpdateCoordinator(DataUpdateCoordinator[dict[str, dict]]):
         """Fetch the auto geofencing supported from Tado."""
 
         try:
-            return await self.hass.async_add_executor_job(
+            return await self.menuai.async_add_executor_job(
                 self._tado.get_auto_geofencing_supported
             )
         except RequestException as err:
@@ -241,7 +241,7 @@ class TadoDataUpdateCoordinator(DataUpdateCoordinator[dict[str, dict]]):
         """Reset the zone back to the default operation."""
 
         try:
-            await self.hass.async_add_executor_job(
+            await self.menuai.async_add_executor_job(
                 self._tado.reset_zone_overlay, zone_id
             )
             await self._update_zone(zone_id)
@@ -255,11 +255,11 @@ class TadoDataUpdateCoordinator(DataUpdateCoordinator[dict[str, dict]]):
         """Set the presence to home, away or auto."""
 
         if presence == PRESET_AWAY:
-            await self.hass.async_add_executor_job(self._tado.set_away)
+            await self.menuai.async_add_executor_job(self._tado.set_away)
         elif presence == PRESET_HOME:
-            await self.hass.async_add_executor_job(self._tado.set_home)
+            await self.menuai.async_add_executor_job(self._tado.set_home)
         elif presence == PRESET_AUTO:
-            await self.hass.async_add_executor_job(self._tado.set_auto)
+            await self.menuai.async_add_executor_job(self._tado.set_auto)
 
     async def set_zone_overlay(
         self,
@@ -293,7 +293,7 @@ class TadoDataUpdateCoordinator(DataUpdateCoordinator[dict[str, dict]]):
         )
 
         try:
-            await self.hass.async_add_executor_job(
+            await self.menuai.async_add_executor_job(
                 self._tado.set_zone_overlay,
                 zone_id,
                 overlay_mode,
@@ -317,7 +317,7 @@ class TadoDataUpdateCoordinator(DataUpdateCoordinator[dict[str, dict]]):
     async def set_zone_off(self, zone_id, overlay_mode, device_type="HEATING"):
         """Set a zone to off."""
         try:
-            await self.hass.async_add_executor_job(
+            await self.menuai.async_add_executor_job(
                 self._tado.set_zone_overlay,
                 zone_id,
                 overlay_mode,
@@ -334,7 +334,7 @@ class TadoDataUpdateCoordinator(DataUpdateCoordinator[dict[str, dict]]):
     async def set_temperature_offset(self, device_id, offset):
         """Set temperature offset of device."""
         try:
-            await self.hass.async_add_executor_job(
+            await self.menuai.async_add_executor_job(
                 self._tado.set_temp_offset, device_id, offset
             )
         except RequestException as err:
@@ -344,10 +344,10 @@ class TadoDataUpdateCoordinator(DataUpdateCoordinator[dict[str, dict]]):
         """Send meter reading to Tado."""
         dt: str = datetime.now().strftime("%Y-%m-%d")
         if self._tado is None:
-            raise HomeAssistantError("Tado client is not initialized")
+            raise menuaiError("Tado client is not initialized")
 
         try:
-            return await self.hass.async_add_executor_job(
+            return await self.menuai.async_add_executor_job(
                 self._tado.set_eiq_meter_readings, dt, reading
             )
         except RequestException as err:
@@ -356,13 +356,13 @@ class TadoDataUpdateCoordinator(DataUpdateCoordinator[dict[str, dict]]):
     async def set_child_lock(self, device_id: str, enabled: bool) -> None:
         """Set child lock of device."""
         try:
-            await self.hass.async_add_executor_job(
+            await self.menuai.async_add_executor_job(
                 self._tado.set_child_lock,
                 device_id,
                 enabled,
             )
         except RequestException as exc:
-            raise HomeAssistantError(f"Error setting Tado child lock: {exc}") from exc
+            raise menuaiError(f"Error setting Tado child lock: {exc}") from exc
 
 
 class TadoMobileDeviceUpdateCoordinator(DataUpdateCoordinator[dict[str, dict]]):
@@ -372,13 +372,13 @@ class TadoMobileDeviceUpdateCoordinator(DataUpdateCoordinator[dict[str, dict]]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: TadoConfigEntry,
         tado: Tado,
     ) -> None:
         """Initialize the Tado data update coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -391,7 +391,7 @@ class TadoMobileDeviceUpdateCoordinator(DataUpdateCoordinator[dict[str, dict]]):
         """Fetch the latest data from Tado."""
 
         try:
-            mobile_devices = await self.hass.async_add_executor_job(
+            mobile_devices = await self.menuai.async_add_executor_job(
                 self._tado.get_mobile_devices
             )
         except RequestException as err:

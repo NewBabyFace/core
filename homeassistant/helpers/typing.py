@@ -1,4 +1,4 @@
-"""Typing Helpers for Home Assistant."""
+"""Typing Helpers for MenuAI."""
 
 from collections.abc import Mapping
 from enum import Enum
@@ -42,21 +42,21 @@ def _deprecated_typing_helper(attr: str) -> DeferredDeprecatedAlias:
 
     def value_fn() -> Any:
         # pylint: disable-next=import-outside-toplevel
-        import homeassistant.core
+        import menuai.core
 
-        return getattr(homeassistant.core, attr)
+        return getattr(menuai.core, attr)
 
-    return DeferredDeprecatedAlias(value_fn, f"homeassistant.core.{attr}", "2025.5")
+    return DeferredDeprecatedAlias(value_fn, f"menuai.core.{attr}", "2025.5")
 
 
 # The following types should not used and
 # are not present in the core code base.
 # They are kept in order not to break custom integrations
 # that may rely on them.
-# Deprecated as of 2024.5 use types from homeassistant.core instead.
+# Deprecated as of 2024.5 use types from menuai.core instead.
 _DEPRECATED_ContextType = _deprecated_typing_helper("Context")
 _DEPRECATED_EventType = _deprecated_typing_helper("Event")
-_DEPRECATED_HomeAssistantType = _deprecated_typing_helper("HomeAssistant")
+_DEPRECATED_menuaiType = _deprecated_typing_helper("menuai")
 _DEPRECATED_ServiceCallType = _deprecated_typing_helper("ServiceCall")
 
 # These can be removed if no deprecated constant are in this module anymore

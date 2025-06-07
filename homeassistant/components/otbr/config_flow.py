@@ -13,20 +13,20 @@ from python_otbr_api.tlv_parser import MeshcopTLVType
 import voluptuous as vol
 import yarl
 
-from homeassistant.components.hassio import AddonError, AddonManager
-from homeassistant.components.homeassistant_yellow import hardware as yellow_hardware
-from homeassistant.components.thread import async_get_preferred_dataset
-from homeassistant.config_entries import (
-    SOURCE_HASSIO,
+from menuai.components.menuaiio import AddonError, AddonManager
+from menuai.components.menuai_yellow import hardware as yellow_hardware
+from menuai.components.thread import async_get_preferred_dataset
+from menuai.config_entries import (
+    SOURCE_menuaiIO,
     ConfigEntryState,
     ConfigFlow,
     ConfigFlowResult,
 )
-from homeassistant.const import CONF_URL
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.service_info.hassio import HassioServiceInfo
+from menuai.const import CONF_URL
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.service_info.menuaiio import menuaiioServiceInfo
 
 from .const import DEFAULT_CHANNEL, DOMAIN
 from .util import (
@@ -41,42 +41,42 @@ if TYPE_CHECKING:
 _LOGGER = logging.getLogger(__name__)
 
 
-class AlreadyConfigured(HomeAssistantError):
+class AlreadyConfigured(menuaiError):
     """Raised when the router is already configured."""
 
 
 @callback
-def get_addon_manager(hass: HomeAssistant, slug: str) -> AddonManager:
+def get_addon_manager(menuai: menuai, slug: str) -> AddonManager:
     """Get the add-on manager."""
-    return AddonManager(hass, _LOGGER, "OpenThread Border Router", slug)
+    return AddonManager(menuai, _LOGGER, "OpenThread Border Router", slug)
 
 
-def _is_yellow(hass: HomeAssistant) -> bool:
-    """Return True if Home Assistant is running on a Home Assistant Yellow."""
+def _is_yellow(menuai: menuai) -> bool:
+    """Return True if MenuAI is running on a MenuAI Yellow."""
     try:
-        yellow_hardware.async_info(hass)
-    except HomeAssistantError:
+        yellow_hardware.async_info(menuai)
+    except menuaiError:
         return False
     return True
 
 
-async def _title(hass: HomeAssistant, discovery_info: HassioServiceInfo) -> str:
+async def _title(menuai: menuai, discovery_info: menuaiioServiceInfo) -> str:
     """Return config entry title."""
     device: str | None = None
-    addon_manager = get_addon_manager(hass, discovery_info.slug)
+    addon_manager = get_addon_manager(menuai, discovery_info.slug)
 
     with suppress(AddonError):
         addon_info = await addon_manager.async_get_addon_info()
         device = addon_info.options.get("device")
 
-    if _is_yellow(hass) and device == "/dev/ttyAMA1":
-        return f"Home Assistant Yellow ({discovery_info.name})"
+    if _is_yellow(menuai) and device == "/dev/ttyAMA1":
+        return f"MenuAI Yellow ({discovery_info.name})"
 
     if device and "SkyConnect" in device:
-        return f"Home Assistant SkyConnect ({discovery_info.name})"
+        return f"MenuAI SkyConnect ({discovery_info.name})"
 
     if device and "Connect_ZBT-1" in device:
-        return f"Home Assistant Connect ZBT-1 ({discovery_info.name})"
+        return f"MenuAI Connect ZBT-1 ({discovery_info.name})"
 
     return discovery_info.name
 
@@ -89,10 +89,10 @@ class OTBRConfigFlow(ConfigFlow, domain=DOMAIN):
     async def _set_dataset(self, api: python_otbr_api.OTBR, otbr_url: str) -> None:
         """Connect to the OTBR and create or apply a dataset if it doesn't have one."""
         if await api.get_active_dataset_tlvs() is None:
-            allowed_channel = await get_allowed_channel(self.hass, otbr_url)
+            allowed_channel = await get_allowed_channel(self.menuai, otbr_url)
 
             thread_dataset_channel = None
-            thread_dataset_tlv = await async_get_preferred_dataset(self.hass)
+            thread_dataset_tlv = await async_get_preferred_dataset(self.menuai)
             if thread_dataset_tlv:
                 dataset = tlv_parser.parse_tlv(thread_dataset_tlv)
                 if channel := dataset.get(MeshcopTLVType.CHANNEL):
@@ -121,11 +121,11 @@ class OTBRConfigFlow(ConfigFlow, domain=DOMAIN):
     async def _is_border_agent_id_configured(self, border_agent_id: bytes) -> bool:
         """Return True if another config entry's OTBR has the same border agent id."""
         config_entry: OTBRConfigEntry
-        for config_entry in self.hass.config_entries.async_loaded_entries(DOMAIN):
+        for config_entry in self.menuai.config_entries.async_loaded_entries(DOMAIN):
             data = config_entry.runtime_data
             try:
                 other_border_agent_id = await data.get_border_agent_id()
-            except HomeAssistantError:
+            except menuaiError:
                 _LOGGER.debug(
                     "Could not read border agent id from %s", data.url, exc_info=True
                 )
@@ -145,7 +145,7 @@ class OTBRConfigFlow(ConfigFlow, domain=DOMAIN):
         Will raise if the router's border agent id is in use by another config entry.
         Returns the router's border agent id.
         """
-        api = python_otbr_api.OTBR(otbr_url, async_get_clientsession(self.hass), 10)
+        api = python_otbr_api.OTBR(otbr_url, async_get_clientsession(self.menuai), 10)
         border_agent_id = await api.get_border_agent_id()
         _LOGGER.debug("border agent id for url %s: %s", otbr_url, border_agent_id.hex())
 
@@ -187,17 +187,17 @@ class OTBRConfigFlow(ConfigFlow, domain=DOMAIN):
             step_id="user", data_schema=data_schema, errors=errors
         )
 
-    async def async_step_hassio(
-        self, discovery_info: HassioServiceInfo
+    async def async_step_menuaiio(
+        self, discovery_info: menuaiioServiceInfo
     ) -> ConfigFlowResult:
-        """Handle hassio discovery."""
+        """Handle menuaiio discovery."""
         config = discovery_info.config
         url = f"http://{config['host']}:{config['port']}"
         config_entry_data = {"url": url}
 
         if current_entries := self._async_current_entries():
             for current_entry in current_entries:
-                if current_entry.source != SOURCE_HASSIO:
+                if current_entry.source != SOURCE_menuaiIO:
                     continue
                 current_url = yarl.URL(current_entry.data["url"])
                 if not (unique_id := current_entry.unique_id):
@@ -217,14 +217,14 @@ class OTBRConfigFlow(ConfigFlow, domain=DOMAIN):
                     # Reload the entry since OTBR has restarted
                     if current_entry.state == ConfigEntryState.LOADED:
                         assert current_entry.unique_id is not None
-                        await self.hass.config_entries.async_reload(
+                        await self.menuai.config_entries.async_reload(
                             current_entry.entry_id
                         )
 
                     continue
 
                 # Update URL with the new port
-                self.hass.config_entries.async_update_entry(
+                self.menuai.config_entries.async_update_entry(
                     current_entry,
                     data=config_entry_data,
                     unique_id=unique_id,  # Remove in HA Core 2025.9
@@ -245,6 +245,6 @@ class OTBRConfigFlow(ConfigFlow, domain=DOMAIN):
 
         await self.async_set_unique_id(discovery_info.uuid)
         return self.async_create_entry(
-            title=await _title(self.hass, discovery_info),
+            title=await _title(self.menuai, discovery_info),
             data=config_entry_data,
         )

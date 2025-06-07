@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA
-from homeassistant.const import (
+from menuai.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA
+from menuai.const import (
     ATTR_ENTITY_ID,
     CONF_DEVICE_ID,
     CONF_DOMAIN,
@@ -13,10 +13,10 @@ from homeassistant.const import (
     CONF_PLATFORM,
     CONF_TYPE,
 )
-from homeassistant.core import CALLBACK_TYPE, Event, HassJob, HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import CALLBACK_TYPE, Event, menuaiJob, menuai, callback
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.trigger import TriggerActionType, TriggerInfo
+from menuai.helpers.typing import ConfigType
 
 from .const import DOMAIN, EVENT_TURN_ON
 
@@ -30,10 +30,10 @@ TRIGGER_SCHEMA = DEVICE_TRIGGER_BASE_SCHEMA.extend(
 
 
 async def async_get_triggers(
-    hass: HomeAssistant, device_id: str
+    menuai: menuai, device_id: str
 ) -> list[dict[str, str]]:
     """List device triggers for Arcam FMJ Receiver control devices."""
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
 
     return [
         {
@@ -49,23 +49,23 @@ async def async_get_triggers(
 
 
 async def async_attach_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     action: TriggerActionType,
     trigger_info: TriggerInfo,
 ) -> CALLBACK_TYPE:
     """Attach a trigger."""
     trigger_data = trigger_info["trigger_data"]
-    job = HassJob(action)
+    job = menuaiJob(action)
 
     if config[CONF_TYPE] == "turn_on":
-        registry = er.async_get(hass)
+        registry = er.async_get(menuai)
         entity_id = er.async_resolve_entity_id(registry, config[ATTR_ENTITY_ID])
 
         @callback
         def _handle_event(event: Event) -> None:
             if event.data[ATTR_ENTITY_ID] == entity_id:
-                hass.async_run_hass_job(
+                menuai.async_run_menuai_job(
                     job,
                     {
                         "trigger": {
@@ -78,6 +78,6 @@ async def async_attach_trigger(
                     event.context,
                 )
 
-        return hass.bus.async_listen(EVENT_TURN_ON, _handle_event)
+        return menuai.bus.async_listen(EVENT_TURN_ON, _handle_event)
 
     return lambda: None

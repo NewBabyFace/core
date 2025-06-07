@@ -4,8 +4,8 @@ from typing import Any
 
 import pytest
 
-from homeassistant.components import light, template
-from homeassistant.components.light import (
+from menuai.components import light, template
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_TEMP_KELVIN,
     ATTR_EFFECT,
@@ -17,8 +17,8 @@ from homeassistant.components.light import (
     ColorMode,
     LightEntityFeature,
 )
-from homeassistant.components.template.light import rewrite_legacy_to_modern_conf
-from homeassistant.const import (
+from menuai.components.template.light import rewrite_legacy_to_modern_conf
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
@@ -27,10 +27,10 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.template import Template
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import entity_registry as er
+from menuai.helpers.template import Template
+from menuai.setup import async_setup_component
 
 from .conftest import ConfigurationStyle
 
@@ -364,7 +364,7 @@ TEST_UNIQUE_ID_CONFIG = {
     ],
 )
 async def test_legacy_to_modern_config(
-    hass: HomeAssistant, old_attr: str, new_attr: str, attr_template: str
+    menuai: menuai, old_attr: str, new_attr: str, attr_template: str
 ) -> None:
     """Test the conversion of legacy template to modern template."""
     config = {
@@ -378,17 +378,17 @@ async def test_legacy_to_modern_config(
             **OPTIMISTIC_ON_OFF_LIGHT_CONFIG,
         }
     }
-    altered_configs = rewrite_legacy_to_modern_conf(hass, config)
+    altered_configs = rewrite_legacy_to_modern_conf(menuai, config)
 
     assert len(altered_configs) == 1
 
     assert [
         {
-            "availability": Template("{{ 1 == 1 }}", hass),
-            "icon": Template("{{ 'mdi.abc' }}", hass),
-            "name": Template("foo bar", hass),
+            "availability": Template("{{ 1 == 1 }}", menuai),
+            "icon": Template("{{ 'mdi.abc' }}", menuai),
+            "name": Template("foo bar", menuai),
             "object_id": "foo",
-            "picture": Template("{{ 'mypicture.jpg' }}", hass),
+            "picture": Template("{{ 'mypicture.jpg' }}", menuai),
             "turn_off": {
                 "data_template": {
                     "action": "turn_off",
@@ -404,31 +404,31 @@ async def test_legacy_to_modern_config(
                 "service": "test.automation",
             },
             "unique_id": "foo-bar-light",
-            new_attr: Template(attr_template, hass),
+            new_attr: Template(attr_template, menuai),
         }
     ] == altered_configs
 
 
 async def async_setup_legacy_format(
-    hass: HomeAssistant, count: int, light_config: dict[str, Any]
+    menuai: menuai, count: int, light_config: dict[str, Any]
 ) -> None:
     """Do setup of light integration via legacy format."""
     config = {"light": {"platform": "template", "lights": light_config}}
 
     with assert_setup_component(count, light.DOMAIN):
         assert await async_setup_component(
-            hass,
+            menuai,
             light.DOMAIN,
             config,
         )
 
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
 
 async def async_setup_legacy_format_with_attribute(
-    hass: HomeAssistant,
+    menuai: menuai,
     count: int,
     attribute: str,
     attribute_template: str,
@@ -437,7 +437,7 @@ async def async_setup_legacy_format_with_attribute(
     """Do setup of a legacy light that has a single templated attribute."""
     extra = {attribute: attribute_template} if attribute and attribute_template else {}
     await async_setup_legacy_format(
-        hass,
+        menuai,
         count,
         {
             "test_template_light": {
@@ -450,25 +450,25 @@ async def async_setup_legacy_format_with_attribute(
 
 
 async def async_setup_modern_format(
-    hass: HomeAssistant, count: int, light_config: dict[str, Any]
+    menuai: menuai, count: int, light_config: dict[str, Any]
 ) -> None:
     """Do setup of light integration via new format."""
     config = {"template": {"light": light_config}}
 
     with assert_setup_component(count, template.DOMAIN):
         assert await async_setup_component(
-            hass,
+            menuai,
             template.DOMAIN,
             config,
         )
 
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
 
 async def async_setup_modern_format_with_attribute(
-    hass: HomeAssistant,
+    menuai: menuai,
     count: int,
     attribute: str,
     attribute_template: str,
@@ -477,7 +477,7 @@ async def async_setup_modern_format_with_attribute(
     """Do setup of a legacy light that has a single templated attribute."""
     extra = {attribute: attribute_template} if attribute and attribute_template else {}
     await async_setup_modern_format(
-        hass,
+        menuai,
         count,
         {
             "name": "test_template_light",
@@ -489,7 +489,7 @@ async def async_setup_modern_format_with_attribute(
 
 
 async def async_setup_trigger_format(
-    hass: HomeAssistant, count: int, light_config: dict[str, Any]
+    menuai: menuai, count: int, light_config: dict[str, Any]
 ) -> None:
     """Do setup of light integration via new format."""
     config = {
@@ -501,18 +501,18 @@ async def async_setup_trigger_format(
 
     with assert_setup_component(count, template.DOMAIN):
         assert await async_setup_component(
-            hass,
+            menuai,
             template.DOMAIN,
             config,
         )
 
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
 
 async def async_setup_trigger_format_with_attribute(
-    hass: HomeAssistant,
+    menuai: menuai,
     count: int,
     attribute: str,
     attribute_template: str,
@@ -521,7 +521,7 @@ async def async_setup_trigger_format_with_attribute(
     """Do setup of a legacy light that has a single templated attribute."""
     extra = {attribute: attribute_template} if attribute and attribute_template else {}
     await async_setup_trigger_format(
-        hass,
+        menuai,
         count,
         {
             "name": "test_template_light",
@@ -534,23 +534,23 @@ async def async_setup_trigger_format_with_attribute(
 
 @pytest.fixture
 async def setup_light(
-    hass: HomeAssistant,
+    menuai: menuai,
     count: int,
     style: ConfigurationStyle,
     light_config: dict[str, Any],
 ) -> None:
     """Do setup of light integration."""
     if style == ConfigurationStyle.LEGACY:
-        await async_setup_legacy_format(hass, count, light_config)
+        await async_setup_legacy_format(menuai, count, light_config)
     elif style == ConfigurationStyle.MODERN:
-        await async_setup_modern_format(hass, count, light_config)
+        await async_setup_modern_format(menuai, count, light_config)
     elif style == ConfigurationStyle.TRIGGER:
-        await async_setup_trigger_format(hass, count, light_config)
+        await async_setup_trigger_format(menuai, count, light_config)
 
 
 @pytest.fixture
 async def setup_state_light(
-    hass: HomeAssistant,
+    menuai: menuai,
     count: int,
     style: ConfigurationStyle,
     state_template: str,
@@ -558,7 +558,7 @@ async def setup_state_light(
     """Do setup of light integration."""
     if style == ConfigurationStyle.LEGACY:
         await async_setup_legacy_format(
-            hass,
+            menuai,
             count,
             {
                 "test_template_light": {
@@ -569,7 +569,7 @@ async def setup_state_light(
         )
     elif style == ConfigurationStyle.MODERN:
         await async_setup_modern_format(
-            hass,
+            menuai,
             count,
             {
                 **OPTIMISTIC_BRIGHTNESS_LIGHT_CONFIG,
@@ -579,7 +579,7 @@ async def setup_state_light(
         )
     elif style == ConfigurationStyle.TRIGGER:
         await async_setup_trigger_format(
-            hass,
+            menuai,
             count,
             {
                 **OPTIMISTIC_BRIGHTNESS_LIGHT_CONFIG,
@@ -591,7 +591,7 @@ async def setup_state_light(
 
 @pytest.fixture
 async def setup_single_attribute_light(
-    hass: HomeAssistant,
+    menuai: menuai,
     count: int,
     style: ConfigurationStyle,
     attribute: str,
@@ -601,21 +601,21 @@ async def setup_single_attribute_light(
     """Do setup of light integration."""
     if style == ConfigurationStyle.LEGACY:
         await async_setup_legacy_format_with_attribute(
-            hass, count, attribute, attribute_template, extra_config
+            menuai, count, attribute, attribute_template, extra_config
         )
     elif style == ConfigurationStyle.MODERN:
         await async_setup_modern_format_with_attribute(
-            hass, count, attribute, attribute_template, extra_config
+            menuai, count, attribute, attribute_template, extra_config
         )
     elif style == ConfigurationStyle.TRIGGER:
         await async_setup_trigger_format_with_attribute(
-            hass, count, attribute, attribute_template, extra_config
+            menuai, count, attribute, attribute_template, extra_config
         )
 
 
 @pytest.fixture
 async def setup_single_action_light(
-    hass: HomeAssistant,
+    menuai: menuai,
     count: int,
     style: ConfigurationStyle,
     extra_config: dict,
@@ -623,21 +623,21 @@ async def setup_single_action_light(
     """Do setup of light integration."""
     if style == ConfigurationStyle.LEGACY:
         await async_setup_legacy_format_with_attribute(
-            hass, count, "", "", extra_config
+            menuai, count, "", "", extra_config
         )
     elif style == ConfigurationStyle.MODERN:
         await async_setup_modern_format_with_attribute(
-            hass, count, "", "", extra_config
+            menuai, count, "", "", extra_config
         )
     elif style == ConfigurationStyle.TRIGGER:
         await async_setup_trigger_format_with_attribute(
-            hass, count, "", "", extra_config
+            menuai, count, "", "", extra_config
         )
 
 
 @pytest.fixture
 async def setup_empty_action_light(
-    hass: HomeAssistant,
+    menuai: menuai,
     count: int,
     style: ConfigurationStyle,
     action: str,
@@ -646,7 +646,7 @@ async def setup_empty_action_light(
     """Do setup of light integration."""
     if style == ConfigurationStyle.LEGACY:
         await async_setup_legacy_format(
-            hass,
+            menuai,
             count,
             {
                 "test_template_light": {
@@ -659,7 +659,7 @@ async def setup_empty_action_light(
         )
     elif style == ConfigurationStyle.MODERN:
         await async_setup_modern_format(
-            hass,
+            menuai,
             count,
             {
                 "name": "test_template_light",
@@ -673,7 +673,7 @@ async def setup_empty_action_light(
 
 @pytest.fixture
 async def setup_light_with_effects(
-    hass: HomeAssistant,
+    menuai: menuai,
     count: int,
     style: ConfigurationStyle,
     effect_list_template: str,
@@ -693,7 +693,7 @@ async def setup_light_with_effects(
     }
     if style == ConfigurationStyle.LEGACY:
         await async_setup_legacy_format(
-            hass,
+            menuai,
             count,
             {
                 "test_template_light": {
@@ -707,7 +707,7 @@ async def setup_light_with_effects(
         )
     elif style == ConfigurationStyle.MODERN:
         await async_setup_modern_format(
-            hass,
+            menuai,
             count,
             {
                 "name": "test_template_light",
@@ -720,7 +720,7 @@ async def setup_light_with_effects(
         )
     elif style == ConfigurationStyle.TRIGGER:
         await async_setup_trigger_format(
-            hass,
+            menuai,
             count,
             {
                 "name": "test_template_light",
@@ -735,7 +735,7 @@ async def setup_light_with_effects(
 
 @pytest.fixture
 async def setup_light_with_mireds(
-    hass: HomeAssistant,
+    menuai: menuai,
     count: int,
     style: ConfigurationStyle,
     attribute: str,
@@ -754,7 +754,7 @@ async def setup_light_with_mireds(
     }
     if style == ConfigurationStyle.LEGACY:
         await async_setup_legacy_format(
-            hass,
+            menuai,
             count,
             {
                 "test_template_light": {
@@ -767,7 +767,7 @@ async def setup_light_with_mireds(
         )
     elif style == ConfigurationStyle.MODERN:
         await async_setup_modern_format(
-            hass,
+            menuai,
             count,
             {
                 "name": "test_template_light",
@@ -779,7 +779,7 @@ async def setup_light_with_mireds(
         )
     elif style == ConfigurationStyle.TRIGGER:
         await async_setup_trigger_format(
-            hass,
+            menuai,
             count,
             {
                 "name": "test_template_light",
@@ -793,7 +793,7 @@ async def setup_light_with_mireds(
 
 @pytest.fixture
 async def setup_light_with_transition_template(
-    hass: HomeAssistant,
+    menuai: menuai,
     count: int,
     style: ConfigurationStyle,
     transition_template: str,
@@ -810,7 +810,7 @@ async def setup_light_with_transition_template(
     }
     if style == ConfigurationStyle.LEGACY:
         await async_setup_legacy_format(
-            hass,
+            menuai,
             count,
             {
                 "test_template_light": {
@@ -825,7 +825,7 @@ async def setup_light_with_transition_template(
         )
     elif style == ConfigurationStyle.MODERN:
         await async_setup_modern_format(
-            hass,
+            menuai,
             count,
             {
                 "name": "test_template_light",
@@ -839,7 +839,7 @@ async def setup_light_with_transition_template(
         )
     elif style == ConfigurationStyle.TRIGGER:
         await async_setup_trigger_format(
-            hass,
+            menuai,
             count,
             {
                 "name": "test_template_light",
@@ -868,14 +868,14 @@ async def setup_light_with_transition_template(
 )
 @pytest.mark.parametrize("state_template", ["{{states.test['big.fat...']}}"])
 async def test_template_state_invalid(
-    hass: HomeAssistant,
+    menuai: menuai,
     supported_features,
     supported_color_modes,
     expected_state,
     setup_state_light,
 ) -> None:
     """Test template state with render error."""
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state.state == expected_state
     assert state.attributes["color_mode"] is None
     assert state.attributes["supported_color_modes"] == supported_color_modes
@@ -892,21 +892,21 @@ async def test_template_state_invalid(
     ],
 )
 @pytest.mark.parametrize("state_template", ["{{ states.light.test_state.state }}"])
-async def test_template_state_text(hass: HomeAssistant, setup_state_light) -> None:
+async def test_template_state_text(menuai: menuai, setup_state_light) -> None:
     """Test the state text of a template."""
     set_state = STATE_ON
-    hass.states.async_set("light.test_state", set_state)
-    await hass.async_block_till_done()
-    state = hass.states.get("light.test_template_light")
+    menuai.states.async_set("light.test_state", set_state)
+    await menuai.async_block_till_done()
+    state = menuai.states.get("light.test_template_light")
     assert state.state == set_state
     assert state.attributes["color_mode"] == ColorMode.BRIGHTNESS
     assert state.attributes["supported_color_modes"] == [ColorMode.BRIGHTNESS]
     assert state.attributes["supported_features"] == 0
 
     set_state = STATE_OFF
-    hass.states.async_set("light.test_state", set_state)
-    await hass.async_block_till_done()
-    state = hass.states.get("light.test_template_light")
+    menuai.states.async_set("light.test_state", set_state)
+    await menuai.async_block_till_done()
+    state = menuai.states.get("light.test_template_light")
     assert state.state == set_state
     assert state.attributes["color_mode"] is None
     assert state.attributes["supported_color_modes"] == [ColorMode.BRIGHTNESS]
@@ -938,7 +938,7 @@ async def test_template_state_text(hass: HomeAssistant, setup_state_light) -> No
     ],
 )
 async def test_template_state_boolean(
-    hass: HomeAssistant,
+    menuai: menuai,
     expected_color_mode,
     expected_state,
     style,
@@ -946,10 +946,10 @@ async def test_template_state_boolean(
 ) -> None:
     """Test the setting of the state with boolean on."""
     if style == ConfigurationStyle.TRIGGER:
-        hass.states.async_set("light.test_state", expected_state)
-        await hass.async_block_till_done()
+        menuai.states.async_set("light.test_state", expected_state)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state.state == expected_state
     assert state.attributes.get("color_mode") == expected_color_mode
     assert state.attributes["supported_color_modes"] == [ColorMode.BRIGHTNESS]
@@ -1000,9 +1000,9 @@ async def test_template_state_boolean(
         ),
     ],
 )
-async def test_template_config_errors(hass: HomeAssistant, setup_light) -> None:
+async def test_template_config_errors(menuai: menuai, setup_light) -> None:
     """Test template light configuration errors."""
-    assert hass.states.async_all("light") == []
+    assert menuai.states.async_all("light") == []
 
 
 @pytest.mark.parametrize(
@@ -1025,12 +1025,12 @@ async def test_template_config_errors(hass: HomeAssistant, setup_light) -> None:
         ),
     ],
 )
-async def test_missing_key(hass: HomeAssistant, count, setup_light) -> None:
+async def test_missing_key(menuai: menuai, count, setup_light) -> None:
     """Test missing template."""
     if count:
-        assert hass.states.async_all("light") != []
+        assert menuai.states.async_all("light") != []
     else:
-        assert hass.states.async_all("light") == []
+        assert menuai.states.async_all("light") == []
 
 
 @pytest.mark.parametrize("count", [1])
@@ -1044,19 +1044,19 @@ async def test_missing_key(hass: HomeAssistant, count, setup_light) -> None:
 )
 @pytest.mark.parametrize("state_template", ["{{ states.light.test_state.state }}"])
 async def test_on_action(
-    hass: HomeAssistant, setup_state_light, calls: list[ServiceCall]
+    menuai: menuai, setup_state_light, calls: list[ServiceCall]
 ) -> None:
     """Test on action."""
-    hass.states.async_set("light.test_state", STATE_OFF)
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.test_state", STATE_OFF)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state.state == STATE_OFF
     assert state.attributes["color_mode"] is None
     assert state.attributes["supported_color_modes"] == [ColorMode.BRIGHTNESS]
     assert state.attributes["supported_features"] == 0
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_template_light"},
@@ -1108,19 +1108,19 @@ async def test_on_action(
     ],
 )
 async def test_on_action_with_transition(
-    hass: HomeAssistant, setup_light, calls: list[ServiceCall]
+    menuai: menuai, setup_light, calls: list[ServiceCall]
 ) -> None:
     """Test on action with transition."""
-    hass.states.async_set("light.test_state", STATE_OFF)
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.test_state", STATE_OFF)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state.state == STATE_OFF
     assert state.attributes["color_mode"] is None
     assert state.attributes["supported_color_modes"] == [ColorMode.BRIGHTNESS]
     assert state.attributes["supported_features"] == LightEntityFeature.TRANSITION
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_template_light", ATTR_TRANSITION: 5},
@@ -1168,29 +1168,29 @@ async def test_on_action_with_transition(
     ],
 )
 async def test_on_action_optimistic(
-    hass: HomeAssistant,
+    menuai: menuai,
     initial_state: str,
     setup_light,
     calls: list[ServiceCall],
 ) -> None:
     """Test on action with optimistic state."""
-    hass.states.async_set("light.test_state", STATE_OFF)
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.test_state", STATE_OFF)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state.state == initial_state
     assert state.attributes["color_mode"] is None
     assert state.attributes["supported_color_modes"] == [ColorMode.BRIGHTNESS]
     assert state.attributes["supported_features"] == 0
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_template_light"},
         blocking=True,
     )
 
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert len(calls) == 1
     assert calls[-1].data["action"] == "turn_on"
     assert calls[-1].data["caller"] == "light.test_template_light"
@@ -1199,14 +1199,14 @@ async def test_on_action_optimistic(
     assert state.attributes["supported_color_modes"] == [ColorMode.BRIGHTNESS]
     assert state.attributes["supported_features"] == 0
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_template_light", ATTR_BRIGHTNESS: 100},
         blocking=True,
     )
 
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert len(calls) == 2
     assert calls[-1].data["action"] == "set_level"
     assert calls[-1].data["brightness"] == 100
@@ -1228,19 +1228,19 @@ async def test_on_action_optimistic(
 )
 @pytest.mark.parametrize("state_template", ["{{ states.light.test_state.state }}"])
 async def test_off_action(
-    hass: HomeAssistant, setup_state_light, calls: list[ServiceCall]
+    menuai: menuai, setup_state_light, calls: list[ServiceCall]
 ) -> None:
     """Test off action."""
-    hass.states.async_set("light.test_state", STATE_ON)
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.test_state", STATE_ON)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state.state == STATE_ON
     assert state.attributes["color_mode"] == ColorMode.BRIGHTNESS
     assert state.attributes["supported_color_modes"] == [ColorMode.BRIGHTNESS]
     assert state.attributes["supported_features"] == 0
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: "light.test_template_light"},
@@ -1291,19 +1291,19 @@ async def test_off_action(
     ],
 )
 async def test_off_action_with_transition(
-    hass: HomeAssistant, setup_light, calls: list[ServiceCall]
+    menuai: menuai, setup_light, calls: list[ServiceCall]
 ) -> None:
     """Test off action with transition."""
-    hass.states.async_set("light.test_state", STATE_ON)
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.test_state", STATE_ON)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state.state == STATE_ON
     assert state.attributes["color_mode"] == ColorMode.BRIGHTNESS
     assert state.attributes["supported_color_modes"] == [ColorMode.BRIGHTNESS]
     assert state.attributes["supported_features"] == LightEntityFeature.TRANSITION
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: "light.test_template_light", ATTR_TRANSITION: 2},
@@ -1350,16 +1350,16 @@ async def test_off_action_with_transition(
     ],
 )
 async def test_off_action_optimistic(
-    hass: HomeAssistant, initial_state, setup_light, calls: list[ServiceCall]
+    menuai: menuai, initial_state, setup_light, calls: list[ServiceCall]
 ) -> None:
     """Test off action with optimistic state."""
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state.state == initial_state
     assert state.attributes["color_mode"] is None
     assert state.attributes["supported_color_modes"] == [ColorMode.BRIGHTNESS]
     assert state.attributes["supported_features"] == 0
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: "light.test_template_light"},
@@ -1367,7 +1367,7 @@ async def test_off_action_optimistic(
     )
 
     assert len(calls) == 1
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state.state == STATE_OFF
     assert state.attributes["color_mode"] is None
     assert state.attributes["supported_color_modes"] == [ColorMode.BRIGHTNESS]
@@ -1385,15 +1385,15 @@ async def test_off_action_optimistic(
 )
 @pytest.mark.parametrize("state_template", ["{{1 == 1}}"])
 async def test_level_action_no_template(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_state_light,
     calls: list[ServiceCall],
 ) -> None:
     """Test setting brightness with optimistic template."""
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state.attributes.get("brightness") is None
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_template_light", ATTR_BRIGHTNESS: 124},
@@ -1405,7 +1405,7 @@ async def test_level_action_no_template(
     assert calls[-1].data["brightness"] == 124
     assert calls[-1].data["caller"] == "light.test_template_light"
 
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state.state == STATE_ON
     assert state.attributes["brightness"] == 124
     assert state.attributes["color_mode"] == ColorMode.BRIGHTNESS
@@ -1441,7 +1441,7 @@ async def test_level_action_no_template(
     ],
 )
 async def test_level_template(
-    hass: HomeAssistant,
+    menuai: menuai,
     style: ConfigurationStyle,
     expected_level: Any,
     expected_color_mode: ColorMode,
@@ -1449,10 +1449,10 @@ async def test_level_template(
 ) -> None:
     """Test the template for the level."""
     if style == ConfigurationStyle.TRIGGER:
-        hass.states.async_set("light.test_state", STATE_ON)
-        await hass.async_block_till_done()
+        menuai.states.async_set("light.test_state", STATE_ON)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state.attributes.get("brightness") == expected_level
     assert state.state == STATE_ON
 
@@ -1485,7 +1485,7 @@ async def test_level_template(
     ],
 )
 async def test_temperature_template(
-    hass: HomeAssistant,
+    menuai: menuai,
     style: ConfigurationStyle,
     expected_temp: Any,
     expected_color_mode: ColorMode,
@@ -1493,10 +1493,10 @@ async def test_temperature_template(
 ) -> None:
     """Test the template for the temperature."""
     if style == ConfigurationStyle.TRIGGER:
-        hass.states.async_set("light.test_state", STATE_ON)
-        await hass.async_block_till_done()
+        menuai.states.async_set("light.test_state", STATE_ON)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state.attributes.get("color_temp") == expected_temp
     assert state.state == STATE_ON
     assert state.attributes.get("color_mode") == expected_color_mode
@@ -1516,15 +1516,15 @@ async def test_temperature_template(
     ],
 )
 async def test_temperature_action_no_template(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_single_action_light,
     calls: list[ServiceCall],
 ) -> None:
     """Test setting temperature with optimistic template."""
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state.attributes.get("color_template") is None
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_template_light", ATTR_COLOR_TEMP_KELVIN: 2898},
@@ -1536,7 +1536,7 @@ async def test_temperature_action_no_template(
     assert calls[-1].data["caller"] == "light.test_template_light"
     assert calls[-1].data["color_temp"] == 345
 
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state is not None
     assert state.attributes.get("color_temp") == 345
     assert state.state == STATE_ON
@@ -1580,10 +1580,10 @@ async def test_temperature_action_no_template(
         ),
     ],
 )
-async def test_friendly_name(hass: HomeAssistant, entity_id: str, setup_light) -> None:
+async def test_friendly_name(menuai: menuai, entity_id: str, setup_light) -> None:
     """Test the accessibility of the friendly_name attribute."""
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state is not None
 
     assert state.attributes.get("friendly_name") == "Template light"
@@ -1603,15 +1603,15 @@ async def test_friendly_name(hass: HomeAssistant, entity_id: str, setup_light) -
 @pytest.mark.parametrize(
     "attribute_template", ["{% if states.light.test_state.state %}mdi:check{% endif %}"]
 )
-async def test_icon_template(hass: HomeAssistant, setup_single_attribute_light) -> None:
+async def test_icon_template(menuai: menuai, setup_single_attribute_light) -> None:
     """Test icon template."""
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state.attributes.get("icon") in ("", None)
 
-    state = hass.states.async_set("light.test_state", STATE_ON)
-    await hass.async_block_till_done()
+    state = menuai.states.async_set("light.test_state", STATE_ON)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
 
     assert state.attributes["icon"] == "mdi:check"
 
@@ -1632,16 +1632,16 @@ async def test_icon_template(hass: HomeAssistant, setup_single_attribute_light) 
     ["{% if states.light.test_state.state %}/local/light.png{% endif %}"],
 )
 async def test_entity_picture_template(
-    hass: HomeAssistant, setup_single_attribute_light
+    menuai: menuai, setup_single_attribute_light
 ) -> None:
     """Test entity_picture template."""
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state.attributes.get("entity_picture") in ("", None)
 
-    state = hass.states.async_set("light.test_state", STATE_ON)
-    await hass.async_block_till_done()
+    state = menuai.states.async_set("light.test_state", STATE_ON)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
 
     assert state.attributes["entity_picture"] == "/local/light.png"
 
@@ -1659,15 +1659,15 @@ async def test_entity_picture_template(
     ],
 )
 async def test_legacy_color_action_no_template(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_single_action_light,
     calls: list[ServiceCall],
 ) -> None:
     """Test setting color with optimistic template."""
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state.attributes.get("hs_color") is None
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_template_light", ATTR_HS_COLOR: (40, 50)},
@@ -1680,7 +1680,7 @@ async def test_legacy_color_action_no_template(
     assert calls[-1].data["h"] == 40
     assert calls[-1].data["s"] == 50
 
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state.state == STATE_ON
     assert state.attributes["color_mode"] == ColorMode.HS
     assert state.attributes.get("hs_color") == (40, 50)
@@ -1703,15 +1703,15 @@ async def test_legacy_color_action_no_template(
     ],
 )
 async def test_hs_color_action_no_template(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_single_action_light,
     calls: list[ServiceCall],
 ) -> None:
     """Test setting color with optimistic template."""
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state.attributes.get("hs_color") is None
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_template_light", ATTR_HS_COLOR: (40, 50)},
@@ -1724,7 +1724,7 @@ async def test_hs_color_action_no_template(
     assert calls[-1].data["h"] == 40
     assert calls[-1].data["s"] == 50
 
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state.state == STATE_ON
     assert state.attributes["color_mode"] == ColorMode.HS
     assert state.attributes.get("hs_color") == (40, 50)
@@ -1745,15 +1745,15 @@ async def test_hs_color_action_no_template(
     ],
 )
 async def test_rgb_color_action_no_template(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_single_action_light,
     calls: list[ServiceCall],
 ) -> None:
     """Test setting rgb color with optimistic template."""
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state.attributes.get("rgb_color") is None
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_template_light", ATTR_RGB_COLOR: (160, 78, 192)},
@@ -1767,7 +1767,7 @@ async def test_rgb_color_action_no_template(
     assert calls[-1].data["g"] == 78
     assert calls[-1].data["b"] == 192
 
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state.state == STATE_ON
     assert state.attributes["color_mode"] == ColorMode.RGB
     assert state.attributes.get("rgb_color") == (160, 78, 192)
@@ -1788,15 +1788,15 @@ async def test_rgb_color_action_no_template(
     ],
 )
 async def test_rgbw_color_action_no_template(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_single_action_light,
     calls: list[ServiceCall],
 ) -> None:
     """Test setting rgbw color with optimistic template."""
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state.attributes.get("rgbw_color") is None
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -1814,7 +1814,7 @@ async def test_rgbw_color_action_no_template(
     assert calls[-1].data["b"] == 192
     assert calls[-1].data["w"] == 25
 
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state.state == STATE_ON
     assert state.attributes["color_mode"] == ColorMode.RGBW
     assert state.attributes.get("rgbw_color") == (160, 78, 192, 25)
@@ -1835,15 +1835,15 @@ async def test_rgbw_color_action_no_template(
     ],
 )
 async def test_rgbww_color_action_no_template(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_single_action_light,
     calls: list[ServiceCall],
 ) -> None:
     """Test setting rgbww color with optimistic template."""
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state.attributes.get("rgbww_color") is None
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -1862,7 +1862,7 @@ async def test_rgbww_color_action_no_template(
     assert calls[-1].data["cw"] == 25
     assert calls[-1].data["ww"] == 55
 
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state.state == STATE_ON
     assert state.attributes["color_mode"] == ColorMode.RGBWW
     assert state.attributes.get("rgbww_color") == (160, 78, 192, 25, 55)
@@ -1886,7 +1886,7 @@ async def test_rgbww_color_action_no_template(
     ],
 )
 async def test_legacy_color_template(
-    hass: HomeAssistant,
+    menuai: menuai,
     expected_hs: tuple[float, float] | None,
     expected_color_mode: ColorMode,
     count: int,
@@ -1900,8 +1900,8 @@ async def test_legacy_color_template(
             "color_template": color_template,
         }
     }
-    await async_setup_legacy_format(hass, count, light_config)
-    state = hass.states.get("light.test_template_light")
+    await async_setup_legacy_format(menuai, count, light_config)
+    state = menuai.states.get("light.test_template_light")
     assert state.attributes.get("hs_color") == expected_hs
     assert state.state == STATE_ON
     assert state.attributes["color_mode"] == expected_color_mode
@@ -1936,7 +1936,7 @@ async def test_legacy_color_template(
     ],
 )
 async def test_hs_template(
-    hass: HomeAssistant,
+    menuai: menuai,
     expected_hs,
     expected_color_mode,
     style: ConfigurationStyle,
@@ -1944,10 +1944,10 @@ async def test_hs_template(
 ) -> None:
     """Test the template for the color."""
     if style == ConfigurationStyle.TRIGGER:
-        hass.states.async_set("light.test_state", STATE_ON)
-        await hass.async_block_till_done()
+        menuai.states.async_set("light.test_state", STATE_ON)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state.attributes.get("hs_color") == expected_hs
     assert state.state == STATE_ON
     assert state.attributes["color_mode"] == expected_color_mode
@@ -1983,7 +1983,7 @@ async def test_hs_template(
     ],
 )
 async def test_rgb_template(
-    hass: HomeAssistant,
+    menuai: menuai,
     expected_rgb,
     expected_color_mode,
     style: ConfigurationStyle,
@@ -1991,10 +1991,10 @@ async def test_rgb_template(
 ) -> None:
     """Test the template for the color."""
     if style == ConfigurationStyle.TRIGGER:
-        hass.states.async_set("light.test_state", STATE_ON)
-        await hass.async_block_till_done()
+        menuai.states.async_set("light.test_state", STATE_ON)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state.attributes.get("rgb_color") == expected_rgb
     assert state.state == STATE_ON
     assert state.attributes["color_mode"] == expected_color_mode
@@ -2031,7 +2031,7 @@ async def test_rgb_template(
     ],
 )
 async def test_rgbw_template(
-    hass: HomeAssistant,
+    menuai: menuai,
     expected_rgbw,
     expected_color_mode,
     style: ConfigurationStyle,
@@ -2039,10 +2039,10 @@ async def test_rgbw_template(
 ) -> None:
     """Test the template for the color."""
     if style == ConfigurationStyle.TRIGGER:
-        hass.states.async_set("light.test_state", STATE_ON)
-        await hass.async_block_till_done()
+        menuai.states.async_set("light.test_state", STATE_ON)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state.attributes.get("rgbw_color") == expected_rgbw
     assert state.state == STATE_ON
     assert state.attributes["color_mode"] == expected_color_mode
@@ -2084,7 +2084,7 @@ async def test_rgbw_template(
     ],
 )
 async def test_rgbww_template(
-    hass: HomeAssistant,
+    menuai: menuai,
     expected_rgbww,
     expected_color_mode,
     style: ConfigurationStyle,
@@ -2092,10 +2092,10 @@ async def test_rgbww_template(
 ) -> None:
     """Test the template for the color."""
     if style == ConfigurationStyle.TRIGGER:
-        hass.states.async_set("light.test_state", STATE_ON)
-        await hass.async_block_till_done()
+        menuai.states.async_set("light.test_state", STATE_ON)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state.attributes.get("rgbww_color") == expected_rgbww
     assert state.state == STATE_ON
     assert state.attributes["color_mode"] == expected_color_mode
@@ -2138,14 +2138,14 @@ async def test_rgbww_template(
     ],
 )
 async def test_all_colors_mode_no_template(
-    hass: HomeAssistant, setup_light, calls: list[ServiceCall]
+    menuai: menuai, setup_light, calls: list[ServiceCall]
 ) -> None:
     """Test setting color and color temperature with optimistic template."""
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state.attributes.get("hs_color") is None
 
     # Optimistically set hs color, light should be in hs_color mode
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_template_light", ATTR_HS_COLOR: (40, 50)},
@@ -2156,7 +2156,7 @@ async def test_all_colors_mode_no_template(
     assert calls[-1].data["h"] == 40
     assert calls[-1].data["s"] == 50
 
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state.attributes["color_mode"] == ColorMode.HS
     assert state.attributes["color_temp"] is None
     assert state.attributes["hs_color"] == (40, 50)
@@ -2170,7 +2170,7 @@ async def test_all_colors_mode_no_template(
     assert state.attributes["supported_features"] == 0
 
     # Optimistically set color temp, light should be in color temp mode
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_template_light", ATTR_COLOR_TEMP_KELVIN: 8130},
@@ -2180,7 +2180,7 @@ async def test_all_colors_mode_no_template(
     assert len(calls) == 2
     assert calls[-1].data["color_temp"] == 123
 
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state.attributes["color_mode"] == ColorMode.COLOR_TEMP
     assert state.attributes["color_temp"] == 123
     assert "hs_color" in state.attributes  # Color temp represented as hs_color
@@ -2194,7 +2194,7 @@ async def test_all_colors_mode_no_template(
     assert state.attributes["supported_features"] == 0
 
     # Optimistically set rgb color, light should be in rgb_color mode
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_template_light", ATTR_RGB_COLOR: (160, 78, 192)},
@@ -2206,7 +2206,7 @@ async def test_all_colors_mode_no_template(
     assert calls[-1].data["g"] == 78
     assert calls[-1].data["b"] == 192
 
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state.attributes["color_mode"] == ColorMode.RGB
     assert state.attributes["color_temp"] is None
     assert state.attributes["rgb_color"] == (160, 78, 192)
@@ -2220,7 +2220,7 @@ async def test_all_colors_mode_no_template(
     assert state.attributes["supported_features"] == 0
 
     # Optimistically set rgbw color, light should be in rgb_color mode
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -2236,7 +2236,7 @@ async def test_all_colors_mode_no_template(
     assert calls[-1].data["b"] == 192
     assert calls[-1].data["w"] == 25
 
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state.attributes["color_mode"] == ColorMode.RGBW
     assert state.attributes["color_temp"] is None
     assert state.attributes["rgbw_color"] == (160, 78, 192, 25)
@@ -2250,7 +2250,7 @@ async def test_all_colors_mode_no_template(
     assert state.attributes["supported_features"] == 0
 
     # Optimistically set rgbww color, light should be in rgb_color mode
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -2267,7 +2267,7 @@ async def test_all_colors_mode_no_template(
     assert calls[-1].data["cw"] == 25
     assert calls[-1].data["ww"] == 55
 
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state.attributes["color_mode"] == ColorMode.RGBWW
     assert state.attributes["color_temp"] is None
     assert state.attributes["rgbww_color"] == (160, 78, 192, 25, 55)
@@ -2281,7 +2281,7 @@ async def test_all_colors_mode_no_template(
     assert state.attributes["supported_features"] == 0
 
     # Optimistically set hs color, light should again be in hs_color mode
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_template_light", ATTR_HS_COLOR: (10, 20)},
@@ -2292,7 +2292,7 @@ async def test_all_colors_mode_no_template(
     assert calls[-1].data["h"] == 10
     assert calls[-1].data["s"] == 20
 
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state.attributes["color_mode"] == ColorMode.HS
     assert state.attributes["color_temp"] is None
     assert state.attributes["hs_color"] == (10, 20)
@@ -2306,7 +2306,7 @@ async def test_all_colors_mode_no_template(
     assert state.attributes["supported_features"] == 0
 
     # Optimistically set color temp, light should again be in color temp mode
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_template_light", ATTR_COLOR_TEMP_KELVIN: 4273},
@@ -2316,7 +2316,7 @@ async def test_all_colors_mode_no_template(
     assert len(calls) == 7
     assert calls[-1].data["color_temp"] == 234
 
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state.attributes["color_mode"] == ColorMode.COLOR_TEMP
     assert state.attributes["color_temp"] == 234
     assert "hs_color" in state.attributes  # Color temp represented as hs_color
@@ -2343,7 +2343,7 @@ async def test_all_colors_mode_no_template(
     ],
 )
 async def test_effect_action(
-    hass: HomeAssistant,
+    menuai: menuai,
     effect: str,
     expected: Any,
     style: ConfigurationStyle,
@@ -2354,13 +2354,13 @@ async def test_effect_action(
 
     if style == ConfigurationStyle.TRIGGER:
         # Ensures the trigger template entity updates
-        hass.states.async_set("light.test_state", STATE_ON)
-        await hass.async_block_till_done()
+        menuai.states.async_set("light.test_state", STATE_ON)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state is not None
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_template_light", ATTR_EFFECT: effect},
@@ -2372,7 +2372,7 @@ async def test_effect_action(
     assert calls[-1].data["caller"] == "light.test_template_light"
     assert calls[-1].data["effect"] == effect
 
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state is not None
     assert state.attributes.get("effect") == expected
 
@@ -2402,17 +2402,17 @@ async def test_effect_action(
     ],
 )
 async def test_effect_list_template(
-    hass: HomeAssistant,
+    menuai: menuai,
     expected_effect_list,
     style: ConfigurationStyle,
     setup_light_with_effects,
 ) -> None:
     """Test the template for the effect list."""
     if style == ConfigurationStyle.TRIGGER:
-        hass.states.async_set("light.test_state", STATE_ON)
-        await hass.async_block_till_done()
+        menuai.states.async_set("light.test_state", STATE_ON)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state is not None
     assert state.attributes.get("effect_list") == expected_effect_list
 
@@ -2436,17 +2436,17 @@ async def test_effect_list_template(
     ],
 )
 async def test_effect_template(
-    hass: HomeAssistant,
+    menuai: menuai,
     expected_effect,
     style: ConfigurationStyle,
     setup_light_with_effects,
 ) -> None:
     """Test the template for the effect."""
     if style == ConfigurationStyle.TRIGGER:
-        hass.states.async_set("light.test_state", STATE_ON)
-        await hass.async_block_till_done()
+        menuai.states.async_set("light.test_state", STATE_ON)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state is not None
     assert state.attributes.get("effect") == expected_effect
 
@@ -2472,17 +2472,17 @@ async def test_effect_template(
     ],
 )
 async def test_min_mireds_template(
-    hass: HomeAssistant,
+    menuai: menuai,
     expected_min_mireds,
     style: ConfigurationStyle,
     setup_light_with_mireds,
 ) -> None:
     """Test the template for the min mireds."""
     if style == ConfigurationStyle.TRIGGER:
-        hass.states.async_set("light.test_state", STATE_ON)
-        await hass.async_block_till_done()
+        menuai.states.async_set("light.test_state", STATE_ON)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state is not None
     assert state.attributes.get("min_mireds") == expected_min_mireds
 
@@ -2508,17 +2508,17 @@ async def test_min_mireds_template(
     ],
 )
 async def test_max_mireds_template(
-    hass: HomeAssistant,
+    menuai: menuai,
     expected_max_mireds,
     style: ConfigurationStyle,
     setup_light_with_mireds,
 ) -> None:
     """Test the template for the max mireds."""
     if style == ConfigurationStyle.TRIGGER:
-        hass.states.async_set("light.test_state", STATE_ON)
-        await hass.async_block_till_done()
+        menuai.states.async_set("light.test_state", STATE_ON)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state is not None
     assert state.attributes.get("max_mireds") == expected_max_mireds
 
@@ -2546,7 +2546,7 @@ async def test_max_mireds_template(
     ],
 )
 async def test_supports_transition_template(
-    hass: HomeAssistant,
+    menuai: menuai,
     style: ConfigurationStyle,
     expected_supports_transition,
     setup_single_attribute_light,
@@ -2554,10 +2554,10 @@ async def test_supports_transition_template(
     """Test the template for the supports transition."""
     if style == ConfigurationStyle.TRIGGER:
         # Ensures the trigger template entity updates
-        hass.states.async_set("light.test_state", STATE_ON)
-        await hass.async_block_till_done()
+        menuai.states.async_set("light.test_state", STATE_ON)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
 
     expected_value = 1
 
@@ -2578,47 +2578,47 @@ async def test_supports_transition_template(
     [ConfigurationStyle.LEGACY, ConfigurationStyle.MODERN, ConfigurationStyle.TRIGGER],
 )
 async def test_supports_transition_template_updates(
-    hass: HomeAssistant, style: ConfigurationStyle, setup_light_with_transition_template
+    menuai: menuai, style: ConfigurationStyle, setup_light_with_transition_template
 ) -> None:
     """Test the template for the supports transition dynamically."""
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state is not None
 
-    hass.states.async_set("sensor.test", 0)
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test", 0)
+    await menuai.async_block_till_done()
 
     if style == ConfigurationStyle.TRIGGER:
         # Ensures the trigger template entity updates
-        hass.states.async_set("light.test_state", STATE_ON)
-        await hass.async_block_till_done()
+        menuai.states.async_set("light.test_state", STATE_ON)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     supported_features = state.attributes.get("supported_features")
     assert supported_features == LightEntityFeature.EFFECT
 
-    hass.states.async_set("sensor.test", 1)
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test", 1)
+    await menuai.async_block_till_done()
 
     if style == ConfigurationStyle.TRIGGER:
         # Ensures the trigger template entity updates
-        hass.states.async_set("light.test_state", STATE_OFF)
-        await hass.async_block_till_done()
+        menuai.states.async_set("light.test_state", STATE_OFF)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     supported_features = state.attributes.get("supported_features")
     assert (
         supported_features == LightEntityFeature.TRANSITION | LightEntityFeature.EFFECT
     )
 
-    hass.states.async_set("sensor.test", 0)
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test", 0)
+    await menuai.async_block_till_done()
 
     if style == ConfigurationStyle.TRIGGER:
         # Ensures the trigger template entity updates
-        hass.states.async_set("light.test_state", STATE_ON)
-        await hass.async_block_till_done()
+        menuai.states.async_set("light.test_state", STATE_ON)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     supported_features = state.attributes.get("supported_features")
     assert supported_features == LightEntityFeature.EFFECT
 
@@ -2642,32 +2642,32 @@ async def test_supports_transition_template_updates(
     ],
 )
 async def test_available_template_with_entities(
-    hass: HomeAssistant, style: ConfigurationStyle, setup_single_attribute_light
+    menuai: menuai, style: ConfigurationStyle, setup_single_attribute_light
 ) -> None:
     """Test availability templates with values from other entities."""
     # When template returns true..
-    hass.states.async_set(_STATE_AVAILABILITY_BOOLEAN, STATE_ON)
-    await hass.async_block_till_done()
+    menuai.states.async_set(_STATE_AVAILABILITY_BOOLEAN, STATE_ON)
+    await menuai.async_block_till_done()
 
     if style == ConfigurationStyle.TRIGGER:
         # Ensures the trigger template entity updates
-        hass.states.async_set("light.test_state", STATE_ON)
-        await hass.async_block_till_done()
+        menuai.states.async_set("light.test_state", STATE_ON)
+        await menuai.async_block_till_done()
 
     # Device State should not be unavailable
-    assert hass.states.get("light.test_template_light").state != STATE_UNAVAILABLE
+    assert menuai.states.get("light.test_template_light").state != STATE_UNAVAILABLE
 
     # When Availability template returns false
-    hass.states.async_set(_STATE_AVAILABILITY_BOOLEAN, STATE_OFF)
-    await hass.async_block_till_done()
+    menuai.states.async_set(_STATE_AVAILABILITY_BOOLEAN, STATE_OFF)
+    await menuai.async_block_till_done()
 
     if style == ConfigurationStyle.TRIGGER:
         # Ensures the trigger template entity updates
-        hass.states.async_set("light.test_state", STATE_OFF)
-        await hass.async_block_till_done()
+        menuai.states.async_set("light.test_state", STATE_OFF)
+        await menuai.async_block_till_done()
 
     # device state should be unavailable
-    assert hass.states.get("light.test_template_light").state == STATE_UNAVAILABLE
+    assert menuai.states.get("light.test_template_light").state == STATE_UNAVAILABLE
 
 
 @pytest.mark.parametrize(
@@ -2688,12 +2688,12 @@ async def test_available_template_with_entities(
     ],
 )
 async def test_invalid_availability_template_keeps_component_available(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_single_attribute_light,
     caplog_setup_text,
 ) -> None:
     """Test that an invalid availability keeps the device available."""
-    assert hass.states.get("light.test_template_light").state != STATE_UNAVAILABLE
+    assert menuai.states.get("light.test_template_light").state != STATE_UNAVAILABLE
     assert "UndefinedError: 'x' is undefined" in caplog_setup_text
 
 
@@ -2736,19 +2736,19 @@ async def test_invalid_availability_template_keeps_component_available(
         ),
     ],
 )
-async def test_unique_id(hass: HomeAssistant, setup_light) -> None:
+async def test_unique_id(menuai: menuai, setup_light) -> None:
     """Test unique_id option only creates one light per id."""
-    assert len(hass.states.async_all("light")) == 1
+    assert len(menuai.states.async_all("light")) == 1
 
 
 async def test_nested_unique_id(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test unique_id option creates one light per nested id."""
 
     with assert_setup_component(1, template.DOMAIN):
         assert await async_setup_component(
-            hass,
+            menuai,
             template.DOMAIN,
             {
                 "template": {
@@ -2769,11 +2769,11 @@ async def test_nested_unique_id(
             },
         )
 
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all("light")) == 2
+    assert len(menuai.states.async_all("light")) == 2
 
     entry = entity_registry.async_get("light.test_a")
     assert entry
@@ -2804,32 +2804,32 @@ async def test_nested_unique_id(
     ],
 )
 async def test_empty_color_mode_action_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     color_mode: ColorMode,
     setup_empty_action_light,
 ) -> None:
     """Test empty actions for color mode actions."""
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state.attributes["supported_color_modes"] == [color_mode]
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "light.test_template_light"},
         blocking=True,
     )
 
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state.state == STATE_ON
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         light.DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: "light.test_template_light"},
         blocking=True,
     )
 
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state.state == STATE_OFF
 
 
@@ -2855,9 +2855,9 @@ async def test_empty_color_mode_action_config(
 )
 @pytest.mark.parametrize("action", ["set_effect"])
 async def test_effect_with_empty_action(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_empty_action_light,
 ) -> None:
     """Test empty set_effect action."""
-    state = hass.states.get("light.test_template_light")
+    state = menuai.states.get("light.test_template_light")
     assert state.attributes["supported_features"] == LightEntityFeature.EFFECT

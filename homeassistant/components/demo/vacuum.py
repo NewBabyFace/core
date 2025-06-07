@@ -5,16 +5,16 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from homeassistant.components.vacuum import (
+from menuai.components.vacuum import (
     ATTR_CLEANED_AREA,
     StateVacuumEntity,
     VacuumActivity,
     VacuumEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import event
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers import event
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 SUPPORT_MINIMAL_SERVICES = VacuumEntityFeature.TURN_ON | VacuumEntityFeature.TURN_OFF
 
@@ -61,7 +61,7 @@ DEMO_VACUUM_NONE = "4_Fourth_floor"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -136,7 +136,7 @@ class StateDemoVacuum(StateVacuumEntity):
         self._attr_activity = VacuumActivity.RETURNING
         self.schedule_update_ha_state()
 
-        event.call_later(self.hass, 30, self.__set_state_to_dock)
+        event.call_later(self.menuai, 30, self.__set_state_to_dock)
 
     def clean_spot(self, **kwargs: Any) -> None:
         """Perform a spot clean-up."""
@@ -153,7 +153,7 @@ class StateDemoVacuum(StateVacuumEntity):
 
     async def async_locate(self, **kwargs: Any) -> None:
         """Locate the vacuum's position."""
-        await self.hass.services.async_call(
+        await self.menuai.services.async_call(
             "notify",
             "persistent_notification",
             service_data={"message": "I'm here!", "title": "Locate request"},

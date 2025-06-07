@@ -5,7 +5,7 @@ from __future__ import annotations
 from functools import cache
 import logging
 
-from homeassistant.components import (
+from menuai.components import (
     climate,
     cover,
     fan,
@@ -15,21 +15,21 @@ from homeassistant.components import (
     scene,
     script,
 )
-from homeassistant.const import CONF_ENTITIES, CONF_TYPE
-from homeassistant.core import (
+from menuai.const import CONF_ENTITIES, CONF_TYPE
+from menuai.core import (
     Event,
     EventStateChangedData,
-    HomeAssistant,
+    menuai,
     State,
     callback,
     split_entity_id,
 )
-from homeassistant.helpers import storage
-from homeassistant.helpers.event import (
+from menuai.helpers import storage
+from menuai.helpers.event import (
     async_track_state_added_domain,
     async_track_state_removed_domain,
 )
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers.typing import ConfigType
 
 SUPPORTED_DOMAINS = {
     climate.DOMAIN,
@@ -89,9 +89,9 @@ _LOGGER = logging.getLogger(__name__)
 class Config:
     """Hold configuration variables for the emulated hue bridge."""
 
-    def __init__(self, hass: HomeAssistant, conf: ConfigType, local_ip: str) -> None:
+    def __init__(self, menuai: menuai, conf: ConfigType, local_ip: str) -> None:
         """Initialize the instance."""
-        self.hass = hass
+        self.menuai = menuai
         self.type = conf.get(CONF_TYPE)
         self.numbers: dict[str, str] = {}
         self.store: storage.Store | None = None
@@ -163,17 +163,17 @@ class Config:
 
     async def async_setup(self) -> None:
         """Set up tracking and migrate to storage."""
-        hass = self.hass
-        self.store = storage.Store(hass, DATA_VERSION, DATA_KEY)  # type: ignore[arg-type]
-        numbers_path = hass.config.path(NUMBERS_FILE)
+        menuai = self.menuai
+        self.store = storage.Store(menuai, DATA_VERSION, DATA_KEY)  # type: ignore[arg-type]
+        numbers_path = menuai.config.path(NUMBERS_FILE)
         self.numbers = (
-            await storage.async_migrator(hass, numbers_path, self.store) or {}
+            await storage.async_migrator(menuai, numbers_path, self.store) or {}
         )
         async_track_state_added_domain(
-            hass, self.track_domains, self._clear_exposed_cache
+            menuai, self.track_domains, self._clear_exposed_cache
         )
         async_track_state_removed_domain(
-            hass, self.track_domains, self._clear_exposed_cache
+            menuai, self.track_domains, self._clear_exposed_cache
         )
 
     @cache  # pylint: disable=method-cache-max-size-none
@@ -216,7 +216,7 @@ class Config:
     @cache  # pylint: disable=method-cache-max-size-none
     def get_exposed_entity_ids(self) -> list[str]:
         """Return a list of exposed states."""
-        state_machine = self.hass.states
+        state_machine = self.menuai.states
         if self.expose_by_default:
             return [
                 state.entity_id

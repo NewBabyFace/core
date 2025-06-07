@@ -2,28 +2,28 @@
 
 from typing import cast
 
-from homeassistant.components.todo import (
+from menuai.components.todo import (
     TodoItem,
     TodoItemStatus,
     TodoListEntity,
     TodoListEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import NoMatchingShoppingListItem, ShoppingData
 from .const import DOMAIN
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the shopping_list todo platform."""
-    shopping_data = hass.data[DOMAIN]
+    shopping_data = menuai.data[DOMAIN]
     entity = ShoppingTodoListEntity(shopping_data, unique_id=config_entry.entry_id)
     async_add_entities([entity], True)
 
@@ -61,7 +61,7 @@ class ShoppingTodoListEntity(TodoListEntity):
         try:
             await self._data.async_update(item.uid, data)
         except NoMatchingShoppingListItem as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Shopping list item '{item.uid}' was not found"
             ) from err
 
@@ -77,12 +77,12 @@ class ShoppingTodoListEntity(TodoListEntity):
         try:
             await self._data.async_move_item(uid, previous_uid)
         except NoMatchingShoppingListItem as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Shopping list item '{uid}' could not be re-ordered"
             ) from err
 
-    async def async_added_to_hass(self) -> None:
-        """Entity has been added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Entity has been added to menuai."""
         # Shopping list integration doesn't currently support config entry unload
         # so this code may not be used in practice, however it is here in case
         # this changes in the future.

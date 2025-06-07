@@ -8,18 +8,18 @@ from urllib.parse import urlparse
 import av
 import pytest
 
-from homeassistant.components.stream import Stream, create_stream
-from homeassistant.components.stream.const import (
+from menuai.components.stream import Stream, create_stream
+from menuai.components.stream.const import (
     EXT_X_START_LL_HLS,
     EXT_X_START_NON_LL_HLS,
     HLS_PROVIDER,
     MAX_SEGMENTS,
     NUM_PLAYLIST_SEGMENTS,
 )
-from homeassistant.components.stream.core import Orientation, Part
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.components.stream.core import Orientation, Part
+from menuai.core import menuai
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from .common import (
     FAKE_TIME,
@@ -35,7 +35,7 @@ STREAM_SOURCE = "some-stream-source"
 INIT_BYTES = b"\x00\x00\x00\x08moov"
 FAKE_PAYLOAD = b"fake-payload"
 SEGMENT_DURATION = 10
-TEST_TIMEOUT = 5.0  # Lower than 9s home assistant timeout
+TEST_TIMEOUT = 5.0  # Lower than 9s MenuAI timeout
 MAX_ABORT_SEGMENTS = 20  # Abort test to avoid looping forever
 
 HLS_CONFIG = {
@@ -46,9 +46,9 @@ HLS_CONFIG = {
 
 
 @pytest.fixture
-async def setup_component(hass: HomeAssistant) -> None:
+async def setup_component(menuai: menuai) -> None:
     """Test fixture to setup the stream component."""
-    await async_setup_component(hass, "stream", HLS_CONFIG)
+    await async_setup_component(menuai, "stream", HLS_CONFIG)
 
 
 class HlsClient:
@@ -69,11 +69,11 @@ class HlsClient:
 
 
 @pytest.fixture
-def hls_stream(hass: HomeAssistant, hass_client: ClientSessionGenerator):
+def hls_stream(menuai: menuai, menuai_client: ClientSessionGenerator):
     """Create test fixture for creating an HLS client for a stream."""
 
     async def create_client_for_stream(stream):
-        http_client = await hass_client()
+        http_client = await menuai_client()
         parsed_url = urlparse(stream.endpoint_url(HLS_PROVIDER))
         return HlsClient(http_client, parsed_url)
 
@@ -139,7 +139,7 @@ def make_playlist(
 
 
 async def test_hls_stream(
-    hass: HomeAssistant, setup_component, hls_stream, stream_worker_sync, h264_video
+    menuai: menuai, setup_component, hls_stream, stream_worker_sync, h264_video
 ) -> None:
     """Test hls stream.
 
@@ -150,7 +150,7 @@ async def test_hls_stream(
     stream_worker_sync.pause()
 
     # Setup demo HLS track
-    stream = create_stream(hass, h264_video, {}, dynamic_stream_settings())
+    stream = create_stream(menuai, h264_video, {}, dynamic_stream_settings())
 
     # Request stream
     stream.add_provider(HLS_PROVIDER)
@@ -198,8 +198,8 @@ async def test_hls_stream(
 
 
 async def test_stream_timeout(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     setup_component,
     stream_worker_sync,
     h264_video,
@@ -208,7 +208,7 @@ async def test_stream_timeout(
     stream_worker_sync.pause()
 
     # Setup demo HLS track
-    stream = create_stream(hass, h264_video, {}, dynamic_stream_settings())
+    stream = create_stream(menuai, h264_video, {}, dynamic_stream_settings())
 
     available_states = []
 
@@ -223,7 +223,7 @@ async def test_stream_timeout(
     await stream.start()
     url = stream.endpoint_url(HLS_PROVIDER)
 
-    http_client = await hass_client()
+    http_client = await menuai_client()
 
     # Fetch playlist
     parsed_url = urlparse(url)
@@ -232,8 +232,8 @@ async def test_stream_timeout(
 
     # Wait a minute
     future = dt_util.utcnow() + timedelta(minutes=1)
-    async_fire_time_changed(hass, future)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, future)
+    await menuai.async_block_till_done()
 
     # Fetch again to reset timer
     playlist_response = await http_client.get(parsed_url.path)
@@ -243,8 +243,8 @@ async def test_stream_timeout(
 
     # Wait 5 minutes
     future = dt_util.utcnow() + timedelta(minutes=5)
-    async_fire_time_changed(hass, future)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, future)
+    await menuai.async_block_till_done()
 
     # Ensure playlist not accessible
     fail_response = await http_client.get(parsed_url.path)
@@ -255,8 +255,8 @@ async def test_stream_timeout(
 
 
 async def test_stream_timeout_after_stop(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     setup_component,
     stream_worker_sync,
     h264_video,
@@ -265,7 +265,7 @@ async def test_stream_timeout_after_stop(
     stream_worker_sync.pause()
 
     # Setup demo HLS track
-    stream = create_stream(hass, h264_video, {}, dynamic_stream_settings())
+    stream = create_stream(menuai, h264_video, {}, dynamic_stream_settings())
 
     # Request stream
     stream.add_provider(HLS_PROVIDER)
@@ -277,8 +277,8 @@ async def test_stream_timeout_after_stop(
     # Wait 5 minutes and fire callback.  Stream should already have been
     # stopped so this is a no-op.
     future = dt_util.utcnow() + timedelta(minutes=5)
-    async_fire_time_changed(hass, future)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, future)
+    await menuai.async_block_till_done()
 
 
 @pytest.mark.parametrize(
@@ -290,7 +290,7 @@ async def test_stream_timeout_after_stop(
     ],
 )
 async def test_stream_retries(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_component,
     should_retry,
     exception,
@@ -298,7 +298,7 @@ async def test_stream_retries(
     """Test hls stream is retried on failure."""
     # Setup demo HLS track
     source = "test_stream_keepalive_source"
-    stream = create_stream(hass, source, {}, dynamic_stream_settings())
+    stream = create_stream(menuai, source, {}, dynamic_stream_settings())
     track = stream.add_provider(HLS_PROVIDER)
     track.num_segments = 2
 
@@ -310,8 +310,8 @@ async def test_stream_retries(
 
     stream.set_update_callback(update_callback)
 
-    open_future1 = hass.loop.create_future()
-    open_future2 = hass.loop.create_future()
+    open_future1 = menuai.loop.create_future()
+    open_future2 = menuai.loop.create_future()
     futures = [open_future2, open_future1]
 
     original_set_state = Stream._set_state
@@ -322,13 +322,13 @@ async def test_stream_retries(
         original_set_state(self, state)
 
     def av_open_side_effect(*args, **kwargs):
-        hass.loop.call_soon_threadsafe(futures.pop().set_result, None)
+        menuai.loop.call_soon_threadsafe(futures.pop().set_result, None)
         raise exception
 
     with (
         patch("av.open") as av_open,
-        patch("homeassistant.components.stream.Stream._set_state", set_state_wrapper),
-        patch("homeassistant.components.stream.STREAM_RESTART_INCREMENT", 0),
+        patch("menuai.components.stream.Stream._set_state", set_state_wrapper),
+        patch("menuai.components.stream.STREAM_RESTART_INCREMENT", 0),
     ):
         av_open.side_effect = av_open_side_effect
         # Request stream. Enable retries which are disabled by default in tests.
@@ -336,10 +336,10 @@ async def test_stream_retries(
         await stream.start()
         await open_future1
         await open_future2
-        await hass.async_add_executor_job(stream._thread.join)
+        await menuai.async_add_executor_job(stream._thread.join)
         stream._thread = None
         assert av_open.call_count == 2
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     # Stop stream, if it hasn't quit already
     await stream.stop()
@@ -350,10 +350,10 @@ async def test_stream_retries(
 
 
 async def test_hls_playlist_view_no_output(
-    hass: HomeAssistant, setup_component, hls_stream
+    menuai: menuai, setup_component, hls_stream
 ) -> None:
     """Test rendering the hls playlist with no output segments."""
-    stream = create_stream(hass, STREAM_SOURCE, {}, dynamic_stream_settings())
+    stream = create_stream(menuai, STREAM_SOURCE, {}, dynamic_stream_settings())
     stream.add_provider(HLS_PROVIDER)
 
     hls_client = await hls_stream(stream)
@@ -364,16 +364,16 @@ async def test_hls_playlist_view_no_output(
 
 
 async def test_hls_playlist_view(
-    hass: HomeAssistant, setup_component, hls_stream, stream_worker_sync
+    menuai: menuai, setup_component, hls_stream, stream_worker_sync
 ) -> None:
     """Test rendering the hls playlist with 1 and 2 output segments."""
-    stream = create_stream(hass, STREAM_SOURCE, {}, dynamic_stream_settings())
+    stream = create_stream(menuai, STREAM_SOURCE, {}, dynamic_stream_settings())
     stream_worker_sync.pause()
     hls = stream.add_provider(HLS_PROVIDER)
     for i in range(2):
         segment = Segment(sequence=i, duration=SEGMENT_DURATION)
         hls.put(segment)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     hls_client = await hls_stream(stream)
 
@@ -385,7 +385,7 @@ async def test_hls_playlist_view(
 
     segment = Segment(sequence=2, duration=SEGMENT_DURATION)
     hls.put(segment)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     resp = await hls_client.get("/playlist.m3u8")
     assert resp.status == HTTPStatus.OK
     assert await resp.text() == make_playlist(
@@ -397,10 +397,10 @@ async def test_hls_playlist_view(
 
 
 async def test_hls_max_segments(
-    hass: HomeAssistant, setup_component, hls_stream, stream_worker_sync
+    menuai: menuai, setup_component, hls_stream, stream_worker_sync
 ) -> None:
     """Test rendering the hls playlist with more segments than the segment deque can hold."""
-    stream = create_stream(hass, STREAM_SOURCE, {}, dynamic_stream_settings())
+    stream = create_stream(menuai, STREAM_SOURCE, {}, dynamic_stream_settings())
     stream_worker_sync.pause()
     hls = stream.add_provider(HLS_PROVIDER)
 
@@ -410,7 +410,7 @@ async def test_hls_max_segments(
     for sequence in range(MAX_SEGMENTS + 1):
         segment = Segment(sequence=sequence, duration=SEGMENT_DURATION)
         hls.put(segment)
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     resp = await hls_client.get("/playlist.m3u8")
     assert resp.status == HTTPStatus.OK
@@ -446,11 +446,11 @@ async def test_hls_max_segments(
 
 
 async def test_hls_playlist_view_discontinuity(
-    hass: HomeAssistant, setup_component, hls_stream, stream_worker_sync
+    menuai: menuai, setup_component, hls_stream, stream_worker_sync
 ) -> None:
     """Test a discontinuity across segments in the stream with 3 segments."""
 
-    stream = create_stream(hass, STREAM_SOURCE, {}, dynamic_stream_settings())
+    stream = create_stream(menuai, STREAM_SOURCE, {}, dynamic_stream_settings())
     stream_worker_sync.pause()
     hls = stream.add_provider(HLS_PROVIDER)
 
@@ -464,7 +464,7 @@ async def test_hls_playlist_view_discontinuity(
         duration=SEGMENT_DURATION,
     )
     hls.put(segment)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     hls_client = await hls_stream(stream)
 
@@ -484,10 +484,10 @@ async def test_hls_playlist_view_discontinuity(
 
 
 async def test_hls_max_segments_discontinuity(
-    hass: HomeAssistant, setup_component, hls_stream, stream_worker_sync
+    menuai: menuai, setup_component, hls_stream, stream_worker_sync
 ) -> None:
     """Test a discontinuity with more segments than the segment deque can hold."""
-    stream = create_stream(hass, STREAM_SOURCE, {}, dynamic_stream_settings())
+    stream = create_stream(menuai, STREAM_SOURCE, {}, dynamic_stream_settings())
     stream_worker_sync.pause()
     hls = stream.add_provider(HLS_PROVIDER)
 
@@ -504,7 +504,7 @@ async def test_hls_max_segments_discontinuity(
             duration=SEGMENT_DURATION,
         )
         hls.put(segment)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     resp = await hls_client.get("/playlist.m3u8")
     assert resp.status == HTTPStatus.OK
@@ -525,10 +525,10 @@ async def test_hls_max_segments_discontinuity(
 
 
 async def test_remove_incomplete_segment_on_exit(
-    hass: HomeAssistant, setup_component, stream_worker_sync
+    menuai: menuai, setup_component, stream_worker_sync
 ) -> None:
     """Test that the incomplete segment gets removed when the worker thread quits."""
-    stream = create_stream(hass, STREAM_SOURCE, {}, dynamic_stream_settings())
+    stream = create_stream(menuai, STREAM_SOURCE, {}, dynamic_stream_settings())
     stream_worker_sync.pause()
     await stream.start()
     hls = stream.add_provider(HLS_PROVIDER)
@@ -539,25 +539,25 @@ async def test_remove_incomplete_segment_on_exit(
     hls.put(segment)
     segment = Segment(sequence=2, stream_id=0, duration=0)
     hls.put(segment)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     segments = hls._segments
     assert len(segments) == 3
     assert not segments[-1].complete
     stream_worker_sync.resume()
-    with patch("homeassistant.components.stream.Stream.remove_provider"):
+    with patch("menuai.components.stream.Stream.remove_provider"):
         # Patch remove_provider so the deque is not cleared
         stream._thread_quit.set()
         stream._thread.join()
         stream._thread = None
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         assert segments[-1].complete
         assert len(segments) == 2
     await stream.stop()
 
 
 async def test_hls_stream_rotate(
-    hass: HomeAssistant, setup_component, hls_stream, stream_worker_sync, h264_video
+    menuai: menuai, setup_component, hls_stream, stream_worker_sync, h264_video
 ) -> None:
     """Test hls stream with rotation applied.
 
@@ -568,7 +568,7 @@ async def test_hls_stream_rotate(
     stream_worker_sync.pause()
 
     # Setup demo HLS track
-    stream = create_stream(hass, h264_video, {}, dynamic_stream_settings())
+    stream = create_stream(menuai, h264_video, {}, dynamic_stream_settings())
 
     # Request stream
     stream.add_provider(HLS_PROVIDER)

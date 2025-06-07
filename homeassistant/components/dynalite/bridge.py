@@ -15,10 +15,10 @@ from dynalite_devices_lib.dynalite_devices import (
     DynaliteNotification,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_send
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_send
 
 from .const import ATTR_AREA, ATTR_HOST, ATTR_PACKET, ATTR_PRESET, LOGGER, PLATFORMS
 from .convert_config import convert_config
@@ -29,9 +29,9 @@ type DynaliteConfigEntry = ConfigEntry[DynaliteBridge]
 class DynaliteBridge:
     """Manages a single Dynalite bridge."""
 
-    def __init__(self, hass: HomeAssistant, config: dict[str, Any]) -> None:
+    def __init__(self, menuai: menuai, config: dict[str, Any]) -> None:
         """Initialize the system based on host parameter."""
-        self.hass = hass
+        self.menuai = menuai
         self.async_add_devices: dict[str, Callable] = {}
         self.waiting_devices: dict[str, list[str]] = {}
         self.host = config[CONF_HOST]
@@ -71,15 +71,15 @@ class DynaliteBridge:
                 "Connected" if self.dynalite_devices.connected else "Disconnected"
             )
             LOGGER.debug("%s to dynalite host", log_string)
-            async_dispatcher_send(self.hass, self.update_signal())
+            async_dispatcher_send(self.menuai, self.update_signal())
         else:
-            async_dispatcher_send(self.hass, self.update_signal(device))
+            async_dispatcher_send(self.menuai, self.update_signal(device))
 
     @callback
     def handle_notification(self, notification: DynaliteNotification) -> None:
         """Handle a notification from the platform and issue events."""
         if notification.notification == NOTIFICATION_PACKET:
-            self.hass.bus.async_fire(
+            self.menuai.bus.async_fire(
                 "dynalite_packet",
                 {
                     ATTR_HOST: self.host,
@@ -87,7 +87,7 @@ class DynaliteBridge:
                 },
             )
         if notification.notification == NOTIFICATION_PRESET:
-            self.hass.bus.async_fire(
+            self.menuai.bus.async_fire(
                 "dynalite_preset",
                 {
                     ATTR_HOST: self.host,

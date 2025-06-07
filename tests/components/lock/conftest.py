@@ -6,12 +6,12 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from homeassistant.components.lock import DOMAIN, LockEntity, LockEntityFeature
-from homeassistant.config_entries import ConfigEntry, ConfigFlow
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.lock import DOMAIN, LockEntity, LockEntityFeature
+from menuai.config_entries import ConfigEntry, ConfigFlow
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from tests.common import (
     MockConfigEntry,
@@ -62,9 +62,9 @@ class MockFlow(ConfigFlow):
 
 
 @pytest.fixture(autouse=True)
-def config_flow_fixture(hass: HomeAssistant) -> Generator[None]:
+def config_flow_fixture(menuai: menuai) -> Generator[None]:
     """Mock config flow."""
-    mock_platform(hass, f"{TEST_DOMAIN}.config_flow")
+    mock_platform(menuai, f"{TEST_DOMAIN}.config_flow")
 
     with mock_config_flow(TEST_DOMAIN, MockFlow):
         yield
@@ -84,7 +84,7 @@ async def lock_supported_features() -> LockEntityFeature:
 
 @pytest.fixture(name="mock_lock_entity")
 async def setup_lock_platform_test_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     code_format: str | None,
     supported_features: LockEntityFeature,
@@ -92,16 +92,16 @@ async def setup_lock_platform_test_entity(
     """Set up lock entity using an entity platform."""
 
     async def async_setup_entry_init(
-        hass: HomeAssistant, config_entry: ConfigEntry
+        menuai: menuai, config_entry: ConfigEntry
     ) -> bool:
         """Set up test config entry."""
-        await hass.config_entries.async_forward_entry_setups(
+        await menuai.config_entries.async_forward_entry_setups(
             config_entry, [Platform.LOCK]
         )
         return True
 
     mock_integration(
-        hass,
+        menuai,
         MockModule(
             TEST_DOMAIN,
             async_setup_entry=async_setup_entry_init,
@@ -115,7 +115,7 @@ async def setup_lock_platform_test_entity(
     )
 
     async def async_setup_entry_platform(
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         async_add_entities: AddConfigEntryEntitiesCallback,
     ) -> None:
@@ -123,17 +123,17 @@ async def setup_lock_platform_test_entity(
         async_add_entities([entity])
 
     mock_platform(
-        hass,
+        menuai,
         f"{TEST_DOMAIN}.{DOMAIN}",
         MockPlatform(async_setup_entry=async_setup_entry_platform),
     )
 
     config_entry = MockConfigEntry(domain=TEST_DOMAIN)
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity.entity_id)
+    state = menuai.states.get(entity.entity_id)
     assert state is not None
 
     return entity

@@ -7,12 +7,12 @@ import logging
 
 from numato_gpio import NumatoGpioError
 
-from homeassistant.components.binary_sensor import BinarySensorEntity
-from homeassistant.const import DEVICE_DEFAULT_NAME
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.binary_sensor import BinarySensorEntity
+from menuai.const import DEVICE_DEFAULT_NAME
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import (
     CONF_BINARY_SENSORS,
@@ -30,7 +30,7 @@ NUMATO_SIGNAL = "numato_signal_{}_{}"
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -41,11 +41,11 @@ def setup_platform(
 
     def read_gpio(device_id: int, port: int, level: bool) -> None:
         """Send signal to entity to have it update state."""
-        dispatcher_send(hass, NUMATO_SIGNAL.format(device_id, port), level)
+        dispatcher_send(menuai, NUMATO_SIGNAL.format(device_id, port), level)
 
-    api = hass.data[DOMAIN][DATA_API]
+    api = menuai.data[DOMAIN][DATA_API]
     binary_sensors = []
-    devices = hass.data[DOMAIN][CONF_DEVICES]
+    devices = menuai.data[DOMAIN][CONF_DEVICES]
     for device in [d for d in devices if CONF_BINARY_SENSORS in d]:
         device_id = device[CONF_ID]
         platform = device[CONF_BINARY_SENSORS]
@@ -104,11 +104,11 @@ class NumatoGpioBinarySensor(BinarySensorEntity):
         self._state = None
         self._api = api
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Connect state update callback."""
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 NUMATO_SIGNAL.format(self._device_id, self._port),
                 self._async_update_state,
             )

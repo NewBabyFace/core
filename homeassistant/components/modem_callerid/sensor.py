@@ -4,23 +4,23 @@ from __future__ import annotations
 
 from phone_modem import PhoneModem
 
-from homeassistant.components.sensor import SensorEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP, STATE_IDLE
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.sensor import SensorEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import EVENT_menuai_STOP, STATE_IDLE
+from menuai.core import Event, menuai, callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import CID, DATA_KEY_API, DOMAIN
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Modem Caller ID sensor."""
-    api = hass.data[DOMAIN][entry.entry_id][DATA_KEY_API]
+    api = menuai.data[DOMAIN][entry.entry_id][DATA_KEY_API]
     async_add_entities(
         [
             ModemCalleridSensor(
@@ -30,13 +30,13 @@ async def async_setup_entry(
         ]
     )
 
-    async def _async_on_hass_stop(event: Event) -> None:
+    async def _async_on_menuai_stop(event: Event) -> None:
         """HA is shutting down, close modem port."""
-        if hass.data[DOMAIN][entry.entry_id][DATA_KEY_API]:
-            await hass.data[DOMAIN][entry.entry_id][DATA_KEY_API].close()
+        if menuai.data[DOMAIN][entry.entry_id][DATA_KEY_API]:
+            await menuai.data[DOMAIN][entry.entry_id][DATA_KEY_API].close()
 
     entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _async_on_hass_stop)
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, _async_on_menuai_stop)
     )
 
 
@@ -60,10 +60,10 @@ class ModemCalleridSensor(SensorEntity):
         }
         self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, server_unique_id)})
 
-    async def async_added_to_hass(self) -> None:
-        """Call when the modem sensor is added to Home Assistant."""
+    async def async_added_to_menuai(self) -> None:
+        """Call when the modem sensor is added to MenuAI."""
         self.api.registercallback(self._async_incoming_call)
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
     @callback
     def _async_incoming_call(self, new_state: str) -> None:

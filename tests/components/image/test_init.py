@@ -11,12 +11,12 @@ import httpx
 import pytest
 import respx
 
-from homeassistant.components import image
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.setup import async_setup_component
+from menuai.components import image
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.setup import async_setup_component
 
 from .conftest import (
     MockImageEntity,
@@ -40,10 +40,10 @@ from tests.typing import ClientSessionGenerator
 
 @pytest.mark.freeze_time("2023-04-01 00:00:00+00:00")
 async def test_state(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator, mock_image_platform: None
+    menuai: menuai, menuai_client: ClientSessionGenerator, mock_image_platform: None
 ) -> None:
     """Test image state."""
-    state = hass.states.get("image.test")
+    state = menuai.states.get("image.test")
     assert state.state == "2023-04-01T00:00:00+00:00"
     access_token = state.attributes["access_token"]
     assert state.attributes == {
@@ -55,12 +55,12 @@ async def test_state(
 
 @pytest.mark.freeze_time("2023-04-01 00:00:00+00:00")
 async def test_config_entry(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     mock_image_config_entry: ConfigEntry,
 ) -> None:
     """Test setting up an image platform from a config entry."""
-    state = hass.states.get("image.test")
+    state = menuai.states.get("image.test")
     assert state.state == "2023-04-01T00:00:00+00:00"
     access_token = state.attributes["access_token"]
     assert state.attributes == {
@@ -72,19 +72,19 @@ async def test_config_entry(
 
 @pytest.mark.freeze_time("2023-04-01 00:00:00+00:00")
 async def test_state_attr(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test image state with entity picture from attr."""
-    mock_integration(hass, MockModule(domain="test"))
-    entity = MockImageEntity(hass)
+    mock_integration(menuai, MockModule(domain="test"))
+    entity = MockImageEntity(menuai)
     entity._attr_entity_picture = "abcd"
-    mock_platform(hass, "test.image", MockImagePlatform([entity]))
+    mock_platform(menuai, "test.image", MockImagePlatform([entity]))
     assert await async_setup_component(
-        hass, image.DOMAIN, {"image": {"platform": "test"}}
+        menuai, image.DOMAIN, {"image": {"platform": "test"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("image.test")
+    state = menuai.states.get("image.test")
     assert state.state == "2023-04-01T00:00:00+00:00"
     access_token = state.attributes["access_token"]
     assert state.attributes == {
@@ -95,17 +95,17 @@ async def test_state_attr(
 
 
 async def test_no_state(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test image state."""
-    mock_integration(hass, MockModule(domain="test"))
-    mock_platform(hass, "test.image", MockImagePlatform([MockImageNoStateEntity(hass)]))
+    mock_integration(menuai, MockModule(domain="test"))
+    mock_platform(menuai, "test.image", MockImagePlatform([MockImageNoStateEntity(menuai)]))
     assert await async_setup_component(
-        hass, image.DOMAIN, {"image": {"platform": "test"}}
+        menuai, image.DOMAIN, {"image": {"platform": "test"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("image.test")
+    state = menuai.states.get("image.test")
     assert state.state == "unknown"
     access_token = state.attributes["access_token"]
     assert state.attributes == {
@@ -116,21 +116,21 @@ async def test_no_state(
 
 
 async def test_no_valid_content_type(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test invalid content type."""
-    mock_integration(hass, MockModule(domain="test"))
+    mock_integration(menuai, MockModule(domain="test"))
     mock_platform(
-        hass, "test.image", MockImagePlatform([MockImageEntityInvalidContentType(hass)])
+        menuai, "test.image", MockImagePlatform([MockImageEntityInvalidContentType(menuai)])
     )
     assert await async_setup_component(
-        hass, image.DOMAIN, {"image": {"platform": "test"}}
+        menuai, image.DOMAIN, {"image": {"platform": "test"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    client = await hass_client()
+    client = await menuai_client()
 
-    state = hass.states.get("image.test")
+    state = menuai.states.get("image.test")
     # assert state.state == "unknown"
     access_token = state.attributes["access_token"]
     assert state.attributes == {
@@ -143,21 +143,21 @@ async def test_no_valid_content_type(
 
 
 async def test_valid_but_capitalized_content_type(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test invalid content type."""
-    mock_integration(hass, MockModule(domain="test"))
+    mock_integration(menuai, MockModule(domain="test"))
     mock_platform(
-        hass, "test.image", MockImagePlatform([MockImageEntityCapitalContentType(hass)])
+        menuai, "test.image", MockImagePlatform([MockImageEntityCapitalContentType(menuai)])
     )
     assert await async_setup_component(
-        hass, image.DOMAIN, {"image": {"platform": "test"}}
+        menuai, image.DOMAIN, {"image": {"platform": "test"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    client = await hass_client()
+    client = await menuai_client()
 
-    state = hass.states.get("image.test")
+    state = menuai.states.get("image.test")
     access_token = state.attributes["access_token"]
     assert state.attributes == {
         "access_token": access_token,
@@ -169,10 +169,10 @@ async def test_valid_but_capitalized_content_type(
 
 
 async def test_fetch_image_authenticated(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator, mock_image_platform: None
+    menuai: menuai, menuai_client: ClientSessionGenerator, mock_image_platform: None
 ) -> None:
     """Test fetching an image with an authenticated client."""
-    client = await hass_client()
+    client = await menuai_client()
 
     resp = await client.get("/api/image_proxy/image.test")
     assert resp.status == HTTPStatus.OK
@@ -184,10 +184,10 @@ async def test_fetch_image_authenticated(
 
 
 async def test_fetch_image_fail(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator, mock_image_platform: None
+    menuai: menuai, menuai_client: ClientSessionGenerator, mock_image_platform: None
 ) -> None:
     """Test fetching an image with an authenticated client."""
-    client = await hass_client()
+    client = await menuai_client()
 
     with patch.object(MockImageEntity, "async_image", side_effect=TimeoutError):
         resp = await client.get("/api/image_proxy/image.test")
@@ -195,17 +195,17 @@ async def test_fetch_image_fail(
 
 
 async def test_fetch_image_sync(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test fetching an image with an authenticated client."""
-    mock_integration(hass, MockModule(domain="test"))
-    mock_platform(hass, "test.image", MockImagePlatform([MockImageSyncEntity(hass)]))
+    mock_integration(menuai, MockModule(domain="test"))
+    mock_platform(menuai, "test.image", MockImagePlatform([MockImageSyncEntity(menuai)]))
     assert await async_setup_component(
-        hass, image.DOMAIN, {"image": {"platform": "test"}}
+        menuai, image.DOMAIN, {"image": {"platform": "test"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    client = await hass_client()
+    client = await menuai_client()
 
     resp = await client.get("/api/image_proxy/image.test")
     assert resp.status == HTTPStatus.OK
@@ -214,12 +214,12 @@ async def test_fetch_image_sync(
 
 
 async def test_fetch_image_unauthenticated(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     mock_image_platform: None,
 ) -> None:
     """Test fetching an image with an unauthenticated client."""
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
 
     resp = await client.get("/api/image_proxy/image.test")
     assert resp.status == HTTPStatus.FORBIDDEN
@@ -232,7 +232,7 @@ async def test_fetch_image_unauthenticated(
     )
     assert resp.status == HTTPStatus.UNAUTHORIZED
 
-    state = hass.states.get("image.test")
+    state = menuai.states.get("image.test")
     resp = await client.get(state.attributes["entity_picture"])
     assert resp.status == HTTPStatus.OK
     body = await resp.read()
@@ -244,21 +244,21 @@ async def test_fetch_image_unauthenticated(
 
 @respx.mock
 async def test_fetch_image_url_success(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test fetching an image with an authenticated client."""
     respx.get("https://example.com/myimage.jpg").respond(
         status_code=HTTPStatus.OK, content_type="image/png", content=b"Test"
     )
 
-    mock_integration(hass, MockModule(domain="test"))
-    mock_platform(hass, "test.image", MockImagePlatform([MockURLImageEntity(hass)]))
+    mock_integration(menuai, MockModule(domain="test"))
+    mock_platform(menuai, "test.image", MockImagePlatform([MockURLImageEntity(menuai)]))
     assert await async_setup_component(
-        hass, image.DOMAIN, {"image": {"platform": "test"}}
+        menuai, image.DOMAIN, {"image": {"platform": "test"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    client = await hass_client()
+    client = await menuai_client()
 
     resp = await client.get("/api/image_proxy/image.test")
     assert resp.status == HTTPStatus.OK
@@ -276,21 +276,21 @@ async def test_fetch_image_url_success(
     ],
 )
 async def test_fetch_image_url_exception(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     side_effect: Exception,
 ) -> None:
     """Test fetching an image with an authenticated client."""
     respx.get("https://example.com/myimage.jpg").mock(side_effect=side_effect)
 
-    mock_integration(hass, MockModule(domain="test"))
-    mock_platform(hass, "test.image", MockImagePlatform([MockURLImageEntity(hass)]))
+    mock_integration(menuai, MockModule(domain="test"))
+    mock_platform(menuai, "test.image", MockImagePlatform([MockURLImageEntity(menuai)]))
     assert await async_setup_component(
-        hass, image.DOMAIN, {"image": {"platform": "test"}}
+        menuai, image.DOMAIN, {"image": {"platform": "test"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    client = await hass_client()
+    client = await menuai_client()
 
     resp = await client.get("/api/image_proxy/image.test")
     assert resp.status == HTTPStatus.INTERNAL_SERVER_ERROR
@@ -305,8 +305,8 @@ async def test_fetch_image_url_exception(
     ],
 )
 async def test_fetch_image_url_wrong_content_type(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     content_type: str | None,
 ) -> None:
     """Test fetching an image with an authenticated client."""
@@ -314,46 +314,46 @@ async def test_fetch_image_url_wrong_content_type(
         status_code=HTTPStatus.OK, content_type=content_type, content=b"Test"
     )
 
-    mock_integration(hass, MockModule(domain="test"))
-    mock_platform(hass, "test.image", MockImagePlatform([MockURLImageEntity(hass)]))
+    mock_integration(menuai, MockModule(domain="test"))
+    mock_platform(menuai, "test.image", MockImagePlatform([MockURLImageEntity(menuai)]))
     assert await async_setup_component(
-        hass, image.DOMAIN, {"image": {"platform": "test"}}
+        menuai, image.DOMAIN, {"image": {"platform": "test"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    client = await hass_client()
+    client = await menuai_client()
 
     resp = await client.get("/api/image_proxy/image.test")
     assert resp.status == HTTPStatus.INTERNAL_SERVER_ERROR
 
 
 async def test_image_stream(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test image stream."""
 
-    mock_integration(hass, MockModule(domain="test"))
-    mock_image = MockURLImageEntity(hass)
-    mock_platform(hass, "test.image", MockImagePlatform([mock_image]))
+    mock_integration(menuai, MockModule(domain="test"))
+    mock_image = MockURLImageEntity(menuai)
+    mock_platform(menuai, "test.image", MockImagePlatform([mock_image]))
     assert await async_setup_component(
-        hass, image.DOMAIN, {"image": {"platform": "test"}}
+        menuai, image.DOMAIN, {"image": {"platform": "test"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    client = await hass_client()
+    client = await menuai_client()
 
-    close_future = hass.loop.create_future()
+    close_future = menuai.loop.create_future()
     original_get_still_stream = image.async_get_still_stream
 
     async def _wrap_async_get_still_stream(*args, **kwargs):
         result = await original_get_still_stream(*args, **kwargs)
-        hass.loop.call_soon(close_future.set_result, None)
+        menuai.loop.call_soon(close_future.set_result, None)
         return result
 
     with patch(
-        "homeassistant.components.image.async_get_still_stream",
+        "menuai.components.image.async_get_still_stream",
         _wrap_async_get_still_stream,
     ):
         with patch.object(mock_image, "async_image", return_value=b""):
@@ -364,44 +364,44 @@ async def test_image_stream(
             mock_image.image_last_updated = datetime.now()
             mock_image.async_write_ha_state()
             # Two blocks to ensure the frame is written
-            await hass.async_block_till_done()
-            await hass.async_block_till_done()
+            await menuai.async_block_till_done()
+            await menuai.async_block_till_done()
 
         with patch.object(mock_image, "async_image", return_value=b"") as mock:
             # Simulate a "keep alive" frame
             freezer.tick(55)
-            async_fire_time_changed(hass)
+            async_fire_time_changed(menuai)
             # Two blocks to ensure the frame is written
-            await hass.async_block_till_done()
-            await hass.async_block_till_done()
+            await menuai.async_block_till_done()
+            await menuai.async_block_till_done()
             mock.assert_called_once()
 
         with patch.object(mock_image, "async_image", return_value=None):
             freezer.tick(55)
-            async_fire_time_changed(hass)
+            async_fire_time_changed(menuai)
             # Two blocks to ensure the frame is written
-            await hass.async_block_till_done()
-            await hass.async_block_till_done()
+            await menuai.async_block_till_done()
+            await menuai.async_block_till_done()
 
     await close_future
 
 
-async def test_snapshot_service(hass: HomeAssistant) -> None:
+async def test_snapshot_service(menuai: menuai) -> None:
     """Test snapshot service."""
     mopen = mock_open()
-    mock_integration(hass, MockModule(domain="test"))
-    mock_platform(hass, "test.image", MockImagePlatform([MockImageSyncEntity(hass)]))
+    mock_integration(menuai, MockModule(domain="test"))
+    mock_platform(menuai, "test.image", MockImagePlatform([MockImageSyncEntity(menuai)]))
     assert await async_setup_component(
-        hass, image.DOMAIN, {"image": {"platform": "test"}}
+        menuai, image.DOMAIN, {"image": {"platform": "test"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     with (
-        patch("homeassistant.components.image.open", mopen, create=True),
-        patch("homeassistant.components.image.os.makedirs"),
-        patch.object(hass.config, "is_allowed_path", return_value=True),
+        patch("menuai.components.image.open", mopen, create=True),
+        patch("menuai.components.image.os.makedirs"),
+        patch.object(menuai.config, "is_allowed_path", return_value=True),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             image.DOMAIN,
             image.SERVICE_SNAPSHOT,
             {
@@ -417,24 +417,24 @@ async def test_snapshot_service(hass: HomeAssistant) -> None:
         assert mock_write.mock_calls[0][1][0] == b"Test"
 
 
-async def test_snapshot_service_no_image(hass: HomeAssistant) -> None:
+async def test_snapshot_service_no_image(menuai: menuai) -> None:
     """Test snapshot service with no image."""
     mopen = mock_open()
-    mock_integration(hass, MockModule(domain="test"))
-    mock_platform(hass, "test.image", MockImagePlatform([MockImageNoDataEntity(hass)]))
+    mock_integration(menuai, MockModule(domain="test"))
+    mock_platform(menuai, "test.image", MockImagePlatform([MockImageNoDataEntity(menuai)]))
     assert await async_setup_component(
-        hass, image.DOMAIN, {"image": {"platform": "test"}}
+        menuai, image.DOMAIN, {"image": {"platform": "test"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     with (
-        patch("homeassistant.components.image.open", mopen, create=True),
+        patch("menuai.components.image.open", mopen, create=True),
         patch(
-            "homeassistant.components.image.os.makedirs",
+            "menuai.components.image.os.makedirs",
         ),
-        patch.object(hass.config, "is_allowed_path", return_value=True),
+        patch.object(menuai.config, "is_allowed_path", return_value=True),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             image.DOMAIN,
             image.SERVICE_SNAPSHOT,
             {
@@ -449,17 +449,17 @@ async def test_snapshot_service_no_image(hass: HomeAssistant) -> None:
         assert len(mock_write.mock_calls) == 0
 
 
-async def test_snapshot_service_not_allowed_path(hass: HomeAssistant) -> None:
+async def test_snapshot_service_not_allowed_path(menuai: menuai) -> None:
     """Test snapshot service with a not allowed path."""
-    mock_integration(hass, MockModule(domain="test"))
-    mock_platform(hass, "test.image", MockImagePlatform([MockURLImageEntity(hass)]))
+    mock_integration(menuai, MockModule(domain="test"))
+    mock_platform(menuai, "test.image", MockImagePlatform([MockURLImageEntity(menuai)]))
     assert await async_setup_component(
-        hass, image.DOMAIN, {"image": {"platform": "test"}}
+        menuai, image.DOMAIN, {"image": {"platform": "test"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    with pytest.raises(HomeAssistantError, match="/test/snapshot.jpg"):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match="/test/snapshot.jpg"):
+        await menuai.services.async_call(
             image.DOMAIN,
             image.SERVICE_SNAPSHOT,
             {
@@ -470,21 +470,21 @@ async def test_snapshot_service_not_allowed_path(hass: HomeAssistant) -> None:
         )
 
 
-async def test_snapshot_service_os_error(hass: HomeAssistant) -> None:
+async def test_snapshot_service_os_error(menuai: menuai) -> None:
     """Test snapshot service with os error."""
-    mock_integration(hass, MockModule(domain="test"))
-    mock_platform(hass, "test.image", MockImagePlatform([MockImageSyncEntity(hass)]))
+    mock_integration(menuai, MockModule(domain="test"))
+    mock_platform(menuai, "test.image", MockImagePlatform([MockImageSyncEntity(menuai)]))
     assert await async_setup_component(
-        hass, image.DOMAIN, {"image": {"platform": "test"}}
+        menuai, image.DOMAIN, {"image": {"platform": "test"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     with (
-        patch.object(hass.config, "is_allowed_path", return_value=True),
+        patch.object(menuai.config, "is_allowed_path", return_value=True),
         patch("os.makedirs", side_effect=OSError),
-        pytest.raises(HomeAssistantError),
+        pytest.raises(menuaiError),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             image.DOMAIN,
             image.SERVICE_SNAPSHOT,
             {

@@ -9,14 +9,14 @@ import logging
 
 from ultraheat_api.response import HeatMeterResponse
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     EntityCategory,
     UnitOfEnergy,
     UnitOfPower,
@@ -25,15 +25,15 @@ from homeassistant.const import (
     UnitOfVolume,
     UnitOfVolumeFlowRate,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
-from homeassistant.helpers.update_coordinator import (
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
+from menuai.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
 )
-from homeassistant.util import dt as dt_util
+from menuai.util import dt as dt_util
 
 from . import DOMAIN
 
@@ -269,13 +269,13 @@ HEAT_METER_SENSOR_TYPES = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the sensor platform."""
     unique_id = entry.entry_id
-    coordinator: DataUpdateCoordinator[HeatMeterResponse] = hass.data[DOMAIN][
+    coordinator: DataUpdateCoordinator[HeatMeterResponse] = menuai.data[DOMAIN][
         entry.entry_id
     ]
 

@@ -11,10 +11,10 @@ from nettigo_air_monitor import (
 )
 from tenacity import RetryError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DEFAULT_UPDATE_INTERVAL, DOMAIN, MANUFACTURER
 
@@ -30,7 +30,7 @@ class NAMDataUpdateCoordinator(DataUpdateCoordinator[NAMSensors]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: NAMConfigEntry,
         nam: NettigoAirMonitor,
     ) -> None:
@@ -50,7 +50,7 @@ class NAMDataUpdateCoordinator(DataUpdateCoordinator[NAMSensors]):
         self.nam = nam
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,

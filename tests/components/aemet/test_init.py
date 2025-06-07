@@ -5,11 +5,11 @@ from unittest.mock import patch
 from aemet_opendata.exceptions import AemetTimeout
 from freezegun.api import FrozenDateTimeFactory
 
-from homeassistant.components.aemet.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_API_KEY, CONF_LATITUDE, CONF_LONGITUDE, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.aemet.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.const import CONF_API_KEY, CONF_LATITUDE, CONF_LONGITUDE, CONF_NAME
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .util import mock_api_call
 
@@ -24,48 +24,48 @@ CONFIG = {
 
 
 async def test_unload_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test (un)loading the AEMET integration."""
 
-    await hass.config.async_set_time_zone("UTC")
+    await menuai.config.async_set_time_zone("UTC")
     freezer.move_to("2021-01-09 12:00:00+00:00")
     with patch(
-        "homeassistant.components.aemet.AEMET.api_call",
+        "menuai.components.aemet.AEMET.api_call",
         side_effect=mock_api_call,
     ):
         config_entry = MockConfigEntry(
             domain=DOMAIN, unique_id="aemet_unique_id", data=CONFIG
         )
-        config_entry.add_to_hass(hass)
+        config_entry.add_to_menuai(menuai)
 
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
         assert config_entry.state is ConfigEntryState.LOADED
 
-        await hass.config_entries.async_unload(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_unload(config_entry.entry_id)
+        await menuai.async_block_till_done()
         assert config_entry.state is ConfigEntryState.NOT_LOADED
 
-        assert await hass.config_entries.async_remove(config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_remove(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
-        assert hass.states.get("weather.aemet") is None
+        assert menuai.states.get("weather.aemet") is None
         assert entity_registry.async_get("weather.aemet") is None
 
 
 async def test_init_town_not_found(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test TownNotFound when loading the AEMET integration."""
 
-    await hass.config.async_set_time_zone("UTC")
+    await menuai.config.async_set_time_zone("UTC")
     freezer.move_to("2021-01-09 12:00:00+00:00")
     with patch(
-        "homeassistant.components.aemet.AEMET.api_call",
+        "menuai.components.aemet.AEMET.api_call",
         side_effect=mock_api_call,
     ):
         config_entry = MockConfigEntry(
@@ -77,21 +77,21 @@ async def test_init_town_not_found(
                 CONF_NAME: "AEMET",
             },
         )
-        config_entry.add_to_hass(hass)
+        config_entry.add_to_menuai(menuai)
 
-        assert await hass.config_entries.async_setup(config_entry.entry_id) is False
+        assert await menuai.config_entries.async_setup(config_entry.entry_id) is False
 
 
 async def test_init_api_timeout(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test API timeouts when loading the AEMET integration."""
 
-    await hass.config.async_set_time_zone("UTC")
+    await menuai.config.async_set_time_zone("UTC")
     freezer.move_to("2021-01-09 12:00:00+00:00")
     with patch(
-        "homeassistant.components.aemet.AEMET.api_call",
+        "menuai.components.aemet.AEMET.api_call",
         side_effect=AemetTimeout,
     ):
         config_entry = MockConfigEntry(
@@ -103,6 +103,6 @@ async def test_init_api_timeout(
                 CONF_NAME: "AEMET",
             },
         )
-        config_entry.add_to_hass(hass)
+        config_entry.add_to_menuai(menuai)
 
-        assert await hass.config_entries.async_setup(config_entry.entry_id) is False
+        assert await menuai.config_entries.async_setup(config_entry.entry_id) is False

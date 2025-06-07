@@ -10,12 +10,12 @@ from pytrafikverket import TrafikverketFerry
 from pytrafikverket.exceptions import InvalidAuthentication, NoFerryFound
 from pytrafikverket.models import FerryStopModel
 
-from homeassistant.const import CONF_API_KEY, CONF_WEEKDAY, WEEKDAYS
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util import dt as dt_util
+from menuai.const import CONF_API_KEY, CONF_WEEKDAY, WEEKDAYS
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.util import dt as dt_util
 
 from .const import CONF_FROM, CONF_TIME, CONF_TO, DOMAIN
 
@@ -52,17 +52,17 @@ class TVDataUpdateCoordinator(DataUpdateCoordinator):
 
     config_entry: TVFerryConfigEntry
 
-    def __init__(self, hass: HomeAssistant, config_entry: TVFerryConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: TVFerryConfigEntry) -> None:
         """Initialize the Trafikverket coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
             update_interval=TIME_BETWEEN_UPDATES,
         )
         self._ferry_api = TrafikverketFerry(
-            async_get_clientsession(hass), config_entry.data[CONF_API_KEY]
+            async_get_clientsession(menuai), config_entry.data[CONF_API_KEY]
         )
         self._from: str = config_entry.data[CONF_FROM]
         self._to: str = config_entry.data[CONF_TO]

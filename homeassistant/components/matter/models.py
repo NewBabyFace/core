@@ -10,8 +10,8 @@ from chip.clusters.Objects import Cluster, ClusterAttributeDescriptor
 from matter_server.client.models.device_types import DeviceType
 from matter_server.client.models.node import MatterEndpoint
 
-from homeassistant.const import Platform
-from homeassistant.helpers.entity import EntityDescription
+from menuai.const import Platform
+from menuai.helpers.entity import EntityDescription
 
 type SensorValueTypes = type[
     clusters.uint | int | clusters.Nullable | clusters.float32 | float
@@ -47,7 +47,7 @@ class MatterEntityInfo:
     # MatterEndpoint to which the value(s) belongs
     endpoint: MatterEndpoint
 
-    # the home assistant platform for which an entity should be created
+    # the MenuAI platform for which an entity should be created
     platform: Platform
 
     # All attributes that need to be watched by entity (incl. primary)
@@ -76,7 +76,7 @@ class MatterDiscoverySchema:
     for an entity must match these conditions.
     """
 
-    # specify the hass platform for which this scheme applies (e.g. light, sensor)
+    # specify the menuai platform for which this scheme applies (e.g. light, sensor)
     platform: Platform
 
     # platform-specific entity description

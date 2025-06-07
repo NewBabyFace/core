@@ -7,9 +7,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from gridnet import Device as GridNetDevice, SmartBridge
 import pytest
 
-from homeassistant.components.pure_energie.const import DOMAIN
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
+from menuai.components.pure_energie.const import DOMAIN
+from menuai.const import CONF_HOST
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry, load_fixture
 
@@ -29,7 +29,7 @@ def mock_config_entry() -> MockConfigEntry:
 def mock_setup_entry() -> Generator[None]:
     """Mock setting up a config entry."""
     with patch(
-        "homeassistant.components.pure_energie.async_setup_entry", return_value=True
+        "menuai.components.pure_energie.async_setup_entry", return_value=True
     ):
         yield
 
@@ -38,7 +38,7 @@ def mock_setup_entry() -> Generator[None]:
 def mock_pure_energie_config_flow() -> Generator[MagicMock]:
     """Return a mocked Pure Energie client."""
     with patch(
-        "homeassistant.components.pure_energie.config_flow.GridNet", autospec=True
+        "menuai.components.pure_energie.config_flow.GridNet", autospec=True
     ) as pure_energie_mock:
         pure_energie = pure_energie_mock.return_value
         pure_energie.device.return_value = GridNetDevice.from_dict(
@@ -51,7 +51,7 @@ def mock_pure_energie_config_flow() -> Generator[MagicMock]:
 def mock_pure_energie():
     """Return a mocked Pure Energie client."""
     with patch(
-        "homeassistant.components.pure_energie.coordinator.GridNet", autospec=True
+        "menuai.components.pure_energie.coordinator.GridNet", autospec=True
     ) as pure_energie_mock:
         pure_energie = pure_energie_mock.return_value
         pure_energie.smartbridge = AsyncMock(
@@ -69,14 +69,14 @@ def mock_pure_energie():
 
 @pytest.fixture
 async def init_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_pure_energie: MagicMock,
 ) -> MockConfigEntry:
     """Set up the Pure Energie integration for testing."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     return mock_config_entry

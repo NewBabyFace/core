@@ -5,42 +5,42 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     ATTR_POSITION,
     ATTR_TILT_POSITION,
     CoverDeviceClass,
     CoverEntity,
     CoverEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.event import async_track_utc_time_change
+from menuai.config_entries import ConfigEntry
+from menuai.core import CALLBACK_TYPE, menuai, callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.event import async_track_utc_time_change
 
 from . import DOMAIN
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the demo cover platform."""
     async_add_entities(
         [
-            DemoCover(hass, "cover_1", "Kitchen Window"),
-            DemoCover(hass, "cover_2", "Hall Window", 10),
-            DemoCover(hass, "cover_3", "Living Room Window", 70, 50),
+            DemoCover(menuai, "cover_1", "Kitchen Window"),
+            DemoCover(menuai, "cover_2", "Hall Window", 10),
+            DemoCover(menuai, "cover_3", "Living Room Window", 70, 50),
             DemoCover(
-                hass,
+                menuai,
                 "cover_4",
                 "Garage Door",
                 device_class=CoverDeviceClass.GARAGE,
                 supported_features=(CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE),
             ),
             DemoCover(
-                hass,
+                menuai,
                 "cover_5",
                 "Pergola Roof",
                 tilt_position=60,
@@ -64,7 +64,7 @@ class DemoCover(CoverEntity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         unique_id: str,
         device_name: str,
         position: int | None = None,
@@ -73,7 +73,7 @@ class DemoCover(CoverEntity):
         supported_features: CoverEntityFeature | None = None,
     ) -> None:
         """Initialize the cover."""
-        self.hass = hass
+        self.menuai = menuai
         self._unique_id = unique_id
         self._position = position
         self._attr_device_class = device_class
@@ -224,7 +224,7 @@ class DemoCover(CoverEntity):
         """Listen for changes in cover."""
         if self._unsub_listener_cover is None:
             self._unsub_listener_cover = async_track_utc_time_change(
-                self.hass, self._time_changed_cover
+                self.menuai, self._time_changed_cover
             )
 
     async def _time_changed_cover(self, now: datetime) -> None:
@@ -249,7 +249,7 @@ class DemoCover(CoverEntity):
         """Listen for changes in cover tilt."""
         if self._unsub_listener_cover_tilt is None:
             self._unsub_listener_cover_tilt = async_track_utc_time_change(
-                self.hass, self._time_changed_cover_tilt
+                self.menuai, self._time_changed_cover_tilt
             )
 
     async def _time_changed_cover_tilt(self, now: datetime) -> None:

@@ -6,12 +6,12 @@ from typing import Final
 
 import voluptuous as vol
 
-from homeassistant.components.device_automation import (
+from menuai.components.device_automation import (
     DEVICE_TRIGGER_BASE_SCHEMA,
     InvalidDeviceAutomationConfig,
 )
-from homeassistant.components.homeassistant.triggers import event as event_trigger
-from homeassistant.const import (
+from menuai.components.menuai.triggers import event as event_trigger
+from menuai.const import (
     ATTR_DEVICE_ID,
     CONF_DEVICE_ID,
     CONF_DOMAIN,
@@ -19,9 +19,9 @@ from homeassistant.const import (
     CONF_PLATFORM,
     CONF_TYPE,
 )
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant
-from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import CALLBACK_TYPE, menuai
+from menuai.helpers.trigger import TriggerActionType, TriggerInfo
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     ATTR_CHANNEL,
@@ -73,7 +73,7 @@ def append_input_triggers(
 
 
 async def async_validate_trigger_config(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> ConfigType:
     """Validate config."""
     config = TRIGGER_SCHEMA(config)
@@ -82,7 +82,7 @@ async def async_validate_trigger_config(
     trigger = (config[CONF_TYPE], config[CONF_SUBTYPE])
 
     if config[CONF_TYPE] in RPC_INPUTS_EVENTS_TYPES:
-        rpc_coordinator = get_rpc_coordinator_by_device_id(hass, config[CONF_DEVICE_ID])
+        rpc_coordinator = get_rpc_coordinator_by_device_id(menuai, config[CONF_DEVICE_ID])
         if not rpc_coordinator or not rpc_coordinator.device.initialized:
             return config
 
@@ -92,7 +92,7 @@ async def async_validate_trigger_config(
 
     elif config[CONF_TYPE] in BLOCK_INPUTS_EVENTS_TYPES:
         block_coordinator = get_block_coordinator_by_device_id(
-            hass, config[CONF_DEVICE_ID]
+            menuai, config[CONF_DEVICE_ID]
         )
         if not block_coordinator or not block_coordinator.device.initialized:
             return config
@@ -112,17 +112,17 @@ async def async_validate_trigger_config(
 
 
 async def async_get_triggers(
-    hass: HomeAssistant, device_id: str
+    menuai: menuai, device_id: str
 ) -> list[dict[str, str]]:
     """List device triggers for Shelly devices."""
     triggers: list[dict[str, str]] = []
 
-    if rpc_coordinator := get_rpc_coordinator_by_device_id(hass, device_id):
+    if rpc_coordinator := get_rpc_coordinator_by_device_id(menuai, device_id):
         input_triggers = get_rpc_input_triggers(rpc_coordinator.device)
         append_input_triggers(triggers, input_triggers, device_id)
         return triggers
 
-    if block_coordinator := get_block_coordinator_by_device_id(hass, device_id):
+    if block_coordinator := get_block_coordinator_by_device_id(menuai, device_id):
         if block_coordinator.model in SHBTN_MODELS:
             input_triggers = get_shbtn_input_triggers()
             append_input_triggers(triggers, input_triggers, device_id)
@@ -147,7 +147,7 @@ async def async_get_triggers(
 
 
 async def async_attach_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     action: TriggerActionType,
     trigger_info: TriggerInfo,
@@ -165,5 +165,5 @@ async def async_attach_trigger(
 
     event_config = event_trigger.TRIGGER_SCHEMA(event_config)
     return await event_trigger.async_attach_trigger(
-        hass, event_config, action, trigger_info, platform_type="device"
+        menuai, event_config, action, trigger_info, platform_type="device"
     )

@@ -11,8 +11,8 @@ from glances_api.exceptions import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
@@ -57,16 +57,16 @@ class GlancesFlowHandler(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             user_input = {**reauth_entry.data, **user_input}
             try:
-                await get_api(self.hass, user_input)
+                await get_api(self.menuai, user_input)
             except GlancesApiAuthorizationError:
                 errors["base"] = "invalid_auth"
             except GlancesApiConnectionError:
                 errors["base"] = "cannot_connect"
             else:
-                self.hass.config_entries.async_update_entry(
+                self.menuai.config_entries.async_update_entry(
                     reauth_entry, data=user_input
                 )
-                await self.hass.config_entries.async_reload(reauth_entry.entry_id)
+                await self.menuai.config_entries.async_reload(reauth_entry.entry_id)
                 return self.async_abort(reason="reauth_successful")
 
         return self.async_show_form(
@@ -90,7 +90,7 @@ class GlancesFlowHandler(ConfigFlow, domain=DOMAIN):
                 {CONF_HOST: user_input[CONF_HOST], CONF_PORT: user_input[CONF_PORT]}
             )
             try:
-                await get_api(self.hass, user_input)
+                await get_api(self.menuai, user_input)
             except GlancesApiAuthorizationError:
                 errors["base"] = "invalid_auth"
             except (GlancesApiConnectionError, ServerVersionMismatch):

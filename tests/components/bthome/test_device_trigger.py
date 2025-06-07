@@ -2,11 +2,11 @@
 
 import pytest
 
-from homeassistant.components import automation
-from homeassistant.components.bluetooth import DOMAIN as BLUETOOTH_DOMAIN
-from homeassistant.components.bthome.const import CONF_SUBTYPE, DOMAIN
-from homeassistant.components.device_automation import DeviceAutomationType
-from homeassistant.const import (
+from menuai.components import automation
+from menuai.components.bluetooth import DOMAIN as BLUETOOTH_DOMAIN
+from menuai.components.bthome.const import CONF_SUBTYPE, DOMAIN
+from menuai.components.device_automation import DeviceAutomationType
+from menuai.const import (
     CONF_DEVICE_ID,
     CONF_DOMAIN,
     CONF_PLATFORM,
@@ -14,9 +14,9 @@ from homeassistant.const import (
     STATE_ON,
     STATE_UNAVAILABLE,
 )
-from homeassistant.core import HomeAssistant, ServiceCall, callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai, ServiceCall, callback
+from menuai.helpers import device_registry as dr
+from menuai.setup import async_setup_component
 
 from . import make_bthome_v2_adv
 
@@ -34,81 +34,81 @@ def get_device_id(mac: str) -> tuple[str, str]:
     return (BLUETOOTH_DOMAIN, mac)
 
 
-async def _async_setup_bthome_device(hass: HomeAssistant, mac: str) -> MockConfigEntry:
+async def _async_setup_bthome_device(menuai: menuai, mac: str) -> MockConfigEntry:
     config_entry = MockConfigEntry(
         domain=DOMAIN,
         unique_id=mac,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     return config_entry
 
 
-async def test_event_long_press(hass: HomeAssistant) -> None:
+async def test_event_long_press(menuai: menuai) -> None:
     """Make sure that a long press event is fired."""
     mac = "A4:C1:38:8D:18:B2"
-    entry = await _async_setup_bthome_device(hass, mac)
-    events = async_capture_events(hass, "bthome_ble_event")
+    entry = await _async_setup_bthome_device(menuai, mac)
+    events = async_capture_events(menuai, "bthome_ble_event")
 
     # Emit long press event
     inject_bluetooth_service_info_bleak(
-        hass,
+        menuai,
         make_bthome_v2_adv(mac, b"\x40\x3a\x04"),
     )
 
     # wait for the event
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(events) == 1
     assert events[0].data["address"] == "A4:C1:38:8D:18:B2"
     assert events[0].data["event_type"] == "long_press"
     assert events[0].data["event_properties"] is None
 
-    assert await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
 
-async def test_event_rotate_dimmer(hass: HomeAssistant) -> None:
+async def test_event_rotate_dimmer(menuai: menuai) -> None:
     """Make sure that a rotate dimmer event is fired."""
     mac = "A4:C1:38:8D:18:B2"
-    entry = await _async_setup_bthome_device(hass, mac)
-    events = async_capture_events(hass, "bthome_ble_event")
+    entry = await _async_setup_bthome_device(menuai, mac)
+    events = async_capture_events(menuai, "bthome_ble_event")
 
     # Emit rotate dimmer 3 steps left event
     inject_bluetooth_service_info_bleak(
-        hass,
+        menuai,
         make_bthome_v2_adv(mac, b"\x40\x3c\x01\x03"),
     )
 
     # wait for the event
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(events) == 1
     assert events[0].data["address"] == "A4:C1:38:8D:18:B2"
     assert events[0].data["event_type"] == "rotate_left"
     assert events[0].data["event_properties"] == {"steps": 3}
 
-    assert await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
 
 async def test_get_triggers_button(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Test that we get the expected triggers from a BTHome BLE sensor."""
     mac = "A4:C1:38:8D:18:B2"
-    entry = await _async_setup_bthome_device(hass, mac)
-    events = async_capture_events(hass, "bthome_ble_event")
+    entry = await _async_setup_bthome_device(menuai, mac)
+    events = async_capture_events(menuai, "bthome_ble_event")
 
     # Emit long press event so it creates the device in the registry
     inject_bluetooth_service_info_bleak(
-        hass,
+        menuai,
         make_bthome_v2_adv(mac, b"\x40\x3a\x04"),
     )
 
     # wait for the event
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(events) == 1
 
     device = device_registry.async_get_device(identifiers={get_device_id(mac)})
@@ -122,31 +122,31 @@ async def test_get_triggers_button(
         "metadata": {},
     }
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device.id
+        menuai, DeviceAutomationType.TRIGGER, device.id
     )
     assert expected_trigger in triggers
 
-    assert await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
 
 async def test_get_triggers_multiple_buttons(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Test that we get the expected triggers for multiple buttons device."""
     mac = "A4:C1:38:8D:18:B2"
-    entry = await _async_setup_bthome_device(hass, mac)
-    events = async_capture_events(hass, "bthome_ble_event")
+    entry = await _async_setup_bthome_device(menuai, mac)
+    events = async_capture_events(menuai, "bthome_ble_event")
 
     # Emit button_1 long press and button_2 press events
     # so it creates the device in the registry
     inject_bluetooth_service_info_bleak(
-        hass,
+        menuai,
         make_bthome_v2_adv(mac, b"\x40\x3a\x04\x3a\x01"),
     )
 
     # wait for the event
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(events) == 2
 
     device = device_registry.async_get_device(identifiers={get_device_id(mac)})
@@ -168,13 +168,13 @@ async def test_get_triggers_multiple_buttons(
         "metadata": {},
     }
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device.id
+        menuai, DeviceAutomationType.TRIGGER, device.id
     )
     assert expected_trigger1 in triggers
     assert expected_trigger2 in triggers
 
-    assert await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
 
 @pytest.mark.parametrize(
@@ -188,7 +188,7 @@ async def test_get_triggers_multiple_buttons(
     ],
 )
 async def test_validate_trigger_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     event_class: str,
     event_type: str,
@@ -196,22 +196,22 @@ async def test_validate_trigger_config(
 ) -> None:
     """Test unsupported trigger does not return a trigger config."""
     mac = "A4:C1:38:8D:18:B2"
-    entry = await _async_setup_bthome_device(hass, mac)
+    entry = await _async_setup_bthome_device(menuai, mac)
 
     # Emit button_1 long press and button_2 press events
     # so it creates the device in the registry
     inject_bluetooth_service_info_bleak(
-        hass,
+        menuai,
         make_bthome_v2_adv(mac, b"\x40\x3a\x04\x3a\x01"),
     )
 
     # wait for the event
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     device = device_registry.async_get_device(identifiers={get_device_id(mac)})
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -231,32 +231,32 @@ async def test_validate_trigger_config(
             ]
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    automations = hass.states.async_entity_ids(automation.DOMAIN)
+    automations = menuai.states.async_entity_ids(automation.DOMAIN)
     assert len(automations) == 1
-    assert hass.states.get(automations[0]).state == expected
+    assert menuai.states.get(automations[0]).state == expected
 
-    assert await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
 
 async def test_get_triggers_dimmer(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Test that we get the expected triggers from a BTHome BLE sensor."""
     mac = "A4:C1:38:8D:18:B2"
-    entry = await _async_setup_bthome_device(hass, mac)
-    events = async_capture_events(hass, "bthome_ble_event")
+    entry = await _async_setup_bthome_device(menuai, mac)
+    events = async_capture_events(menuai, "bthome_ble_event")
 
     # Emit rotate left with 3 steps event so it creates the device in the registry
     inject_bluetooth_service_info_bleak(
-        hass,
+        menuai,
         make_bthome_v2_adv(mac, b"\x40\x3c\x01\x03"),
     )
 
     # wait for the event
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(events) == 1
 
     device = device_registry.async_get_device(identifiers={get_device_id(mac)})
@@ -270,30 +270,30 @@ async def test_get_triggers_dimmer(
         "metadata": {},
     }
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device.id
+        menuai, DeviceAutomationType.TRIGGER, device.id
     )
     assert expected_trigger in triggers
 
-    assert await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
 
 async def test_get_triggers_for_invalid_bthome_ble_device(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Test that we don't get triggers for an invalid device."""
     mac = "A4:C1:38:8D:18:B2"
-    entry = await _async_setup_bthome_device(hass, mac)
-    events = async_capture_events(hass, "bthome_ble_event")
+    entry = await _async_setup_bthome_device(menuai, mac)
+    events = async_capture_events(menuai, "bthome_ble_event")
 
     # Creates the device in the registry but no events
     inject_bluetooth_service_info_bleak(
-        hass,
+        menuai,
         make_bthome_v2_adv(mac, b"\x40\x02\xca\x09\x03\xbf\x13"),
     )
 
     # wait to make sure there are no events
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(events) == 0
 
     invalid_device = device_registry.async_get_or_create(
@@ -302,29 +302,29 @@ async def test_get_triggers_for_invalid_bthome_ble_device(
     )
 
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, invalid_device.id
+        menuai, DeviceAutomationType.TRIGGER, invalid_device.id
     )
     assert triggers == []
 
-    assert await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
 
 async def test_get_triggers_for_invalid_device_id(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Test that we don't get triggers when using an invalid device_id."""
     mac = "DE:70:E8:B2:39:0C"
-    entry = await _async_setup_bthome_device(hass, mac)
+    entry = await _async_setup_bthome_device(menuai, mac)
 
     # Emit motion detected event so it creates the device in the registry
     inject_bluetooth_service_info_bleak(
-        hass,
+        menuai,
         make_bthome_v2_adv(mac, b"@0\xdd\x03$\x03\x00\x01\x01"),
     )
 
     # wait for the event
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     invalid_device = device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
@@ -332,37 +332,37 @@ async def test_get_triggers_for_invalid_device_id(
     )
     assert invalid_device
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, invalid_device.id
+        menuai, DeviceAutomationType.TRIGGER, invalid_device.id
     )
     assert triggers == []
 
-    assert await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
 
 async def test_if_fires_on_motion_detected(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     service_calls: list[ServiceCall],
 ) -> None:
     """Test for motion event trigger firing."""
     mac = "DE:70:E8:B2:39:0C"
-    entry = await _async_setup_bthome_device(hass, mac)
+    entry = await _async_setup_bthome_device(menuai, mac)
 
     # Emit a button event so it creates the device in the registry
     inject_bluetooth_service_info_bleak(
-        hass,
+        menuai,
         make_bthome_v2_adv(mac, b"\x40\x3a\x03"),
     )
 
     # wait for the event
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     device = device_registry.async_get_device(identifiers={get_device_id(mac)})
     device_id = device.id
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -385,13 +385,13 @@ async def test_if_fires_on_motion_detected(
 
     # Emit long press event
     inject_bluetooth_service_info_bleak(
-        hass,
+        menuai,
         make_bthome_v2_adv(mac, b"\x40\x3a\x04"),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(service_calls) == 1
     assert service_calls[0].data["some"] == "test_trigger_button_long_press"
 
-    assert await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()

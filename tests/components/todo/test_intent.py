@@ -4,9 +4,9 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components import conversation
-from homeassistant.components.homeassistant.exposed_entities import async_expose_entity
-from homeassistant.components.todo import (
+from menuai.components import conversation
+from menuai.components.menuai.exposed_entities import async_expose_entity
+from menuai.components.todo import (
     ATTR_ITEM,
     DOMAIN,
     TodoItem,
@@ -14,11 +14,11 @@ from homeassistant.components.todo import (
     TodoListEntity,
     intent as todo_intent,
 )
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import ATTR_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import intent
-from homeassistant.setup import async_setup_component
+from menuai.config_entries import ConfigEntryState
+from menuai.const import ATTR_NAME
+from menuai.core import menuai
+from menuai.helpers import intent
+from menuai.setup import async_setup_component
 
 from . import MockTodoListEntity, create_mock_platform
 
@@ -27,19 +27,19 @@ from tests.typing import WebSocketGenerator
 
 
 @pytest.fixture(autouse=True)
-async def setup_intents(hass: HomeAssistant) -> None:
+async def setup_intents(menuai: menuai) -> None:
     """Set up the intents."""
-    assert await async_setup_component(hass, "homeassistant", {})
-    await todo_intent.async_setup_intents(hass)
+    assert await async_setup_component(menuai, "menuai", {})
+    await todo_intent.async_setup_intents(menuai)
 
 
 async def test_add_item_intent(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test adding items to lists using an intent."""
-    assert await async_setup_component(hass, "homeassistant", {})
-    await todo_intent.async_setup_intents(hass)
+    assert await async_setup_component(menuai, "menuai", {})
+    await todo_intent.async_setup_intents(menuai)
 
     entity1 = MockTodoListEntity()
     entity1._attr_name = "List 1"
@@ -49,11 +49,11 @@ async def test_add_item_intent(
     entity2._attr_name = "List 2"
     entity2.entity_id = "todo.list_2"
 
-    await create_mock_platform(hass, [entity1, entity2])
+    await create_mock_platform(menuai, [entity1, entity2])
 
     # Add to first list
     response = await intent.async_handle(
-        hass,
+        menuai,
         "test",
         todo_intent.INTENT_LIST_ADD_ITEM,
         {ATTR_ITEM: {"value": " beer "}, "name": {"value": "list 1"}},
@@ -72,7 +72,7 @@ async def test_add_item_intent(
 
     # Add to second list
     response = await intent.async_handle(
-        hass,
+        menuai,
         "test",
         todo_intent.INTENT_LIST_ADD_ITEM,
         {ATTR_ITEM: {"value": "cheese"}, "name": {"value": "List 2"}},
@@ -87,7 +87,7 @@ async def test_add_item_intent(
 
     # List name is case insensitive
     response = await intent.async_handle(
-        hass,
+        menuai,
         "test",
         todo_intent.INTENT_LIST_ADD_ITEM,
         {ATTR_ITEM: {"value": "wine"}, "name": {"value": "lIST 2"}},
@@ -101,11 +101,11 @@ async def test_add_item_intent(
     assert entity2.items[1].status == TodoItemStatus.NEEDS_ACTION
 
     # Should fail if lists are not exposed
-    async_expose_entity(hass, conversation.DOMAIN, entity1.entity_id, False)
-    async_expose_entity(hass, conversation.DOMAIN, entity2.entity_id, False)
+    async_expose_entity(menuai, conversation.DOMAIN, entity1.entity_id, False)
+    async_expose_entity(menuai, conversation.DOMAIN, entity2.entity_id, False)
     with pytest.raises(intent.MatchFailedError) as err:
         await intent.async_handle(
-            hass,
+            menuai,
             "test",
             todo_intent.INTENT_LIST_ADD_ITEM,
             {"item": {"value": "cookies"}, "name": {"value": "list 1"}},
@@ -116,7 +116,7 @@ async def test_add_item_intent(
     # Missing list
     with pytest.raises(intent.MatchFailedError):
         await intent.async_handle(
-            hass,
+            menuai,
             "test",
             todo_intent.INTENT_LIST_ADD_ITEM,
             {"item": {"value": "wine"}, "name": {"value": "This list does not exist"}},
@@ -126,7 +126,7 @@ async def test_add_item_intent(
     # Fail with empty name/item
     with pytest.raises(intent.InvalidSlotInfo):
         await intent.async_handle(
-            hass,
+            menuai,
             "test",
             todo_intent.INTENT_LIST_ADD_ITEM,
             {"item": {"value": "wine"}, "name": {"value": ""}},
@@ -135,7 +135,7 @@ async def test_add_item_intent(
 
     with pytest.raises(intent.InvalidSlotInfo):
         await intent.async_handle(
-            hass,
+            menuai,
             "test",
             todo_intent.INTENT_LIST_ADD_ITEM,
             {"item": {"value": ""}, "name": {"value": "list 1"}},
@@ -144,17 +144,17 @@ async def test_add_item_intent(
 
 
 async def test_add_item_intent_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     test_entity: TodoListEntity,
 ) -> None:
     """Test errors with the add item intent."""
     test_entity._attr_name = "List 1"
-    await create_mock_platform(hass, [test_entity])
+    await create_mock_platform(menuai, [test_entity])
 
     # Try to add item in list that does not exist
     with pytest.raises(intent.MatchFailedError):
         await intent.async_handle(
-            hass,
+            menuai,
             "test",
             todo_intent.INTENT_LIST_ADD_ITEM,
             {
@@ -165,12 +165,12 @@ async def test_add_item_intent_errors(
         )
 
     # Mock the get_entity method to return None
-    hass.data[DOMAIN].get_entity = lambda entity_id: None
+    menuai.data[DOMAIN].get_entity = lambda entity_id: None
 
     # Try to add item in a list that exists but get_entity returns None
     with pytest.raises(intent.IntentHandleError, match="No to-do list: List 1"):
         await intent.async_handle(
-            hass,
+            menuai,
             "test",
             todo_intent.INTENT_LIST_ADD_ITEM,
             {
@@ -182,7 +182,7 @@ async def test_add_item_intent_errors(
 
 
 async def test_complete_item_intent(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test the complete item intent."""
     entity1 = MockTodoListEntity(
@@ -194,17 +194,17 @@ async def test_complete_item_intent(
     entity1._attr_name = "List 1"
     entity1.entity_id = "todo.list_1"
 
-    # Add entities to hass
-    config_entry = await create_mock_platform(hass, [entity1])
+    # Add entities to menuai
+    config_entry = await create_mock_platform(menuai, [entity1])
     assert config_entry.state is ConfigEntryState.LOADED
 
     assert len(entity1.items) == 2
     assert entity1.items[0].status == TodoItemStatus.NEEDS_ACTION
 
     # Complete item
-    async_mock_service(hass, DOMAIN, todo_intent.INTENT_LIST_COMPLETE_ITEM)
+    async_mock_service(menuai, DOMAIN, todo_intent.INTENT_LIST_COMPLETE_ITEM)
     response = await intent.async_handle(
-        hass,
+        menuai,
         DOMAIN,
         todo_intent.INTENT_LIST_COMPLETE_ITEM,
         {ATTR_ITEM: {"value": "beer"}, ATTR_NAME: {"value": "list 1"}},
@@ -217,7 +217,7 @@ async def test_complete_item_intent(
 
 
 async def test_complete_item_intent_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     test_entity: TodoListEntity,
 ) -> None:
     """Test errors with the complete item intent."""
@@ -229,13 +229,13 @@ async def test_complete_item_intent_errors(
     entity1._attr_name = "List 1"
     entity1.entity_id = "todo.list_1"
 
-    # Add entities to hass
-    await create_mock_platform(hass, [entity1])
+    # Add entities to menuai
+    await create_mock_platform(menuai, [entity1])
 
     # Try to complete item in list that does not exist
     with pytest.raises(intent.MatchFailedError):
         await intent.async_handle(
-            hass,
+            menuai,
             "test",
             todo_intent.INTENT_LIST_COMPLETE_ITEM,
             {
@@ -248,7 +248,7 @@ async def test_complete_item_intent_errors(
     # Try to complete item that does not exist
     with pytest.raises(intent.IntentHandleError):
         await intent.async_handle(
-            hass,
+            menuai,
             "test",
             todo_intent.INTENT_LIST_COMPLETE_ITEM,
             {ATTR_ITEM: {"value": "bread"}, ATTR_NAME: {"value": "list 1"}},
@@ -258,7 +258,7 @@ async def test_complete_item_intent_errors(
     # Item is already completed
     with pytest.raises(intent.IntentHandleError):
         await intent.async_handle(
-            hass,
+            menuai,
             "test",
             todo_intent.INTENT_LIST_COMPLETE_ITEM,
             {ATTR_ITEM: {"value": "beer"}, ATTR_NAME: {"value": "list 1"}},
@@ -267,24 +267,24 @@ async def test_complete_item_intent_errors(
 
 
 async def test_complete_item_intent_ha_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     test_entity: TodoListEntity,
 ) -> None:
     """Test error handling of HA errors with the complete item intent."""
     test_entity._attr_name = "List 1"
     test_entity.entity_id = "todo.list_1"
-    await create_mock_platform(hass, [test_entity])
+    await create_mock_platform(menuai, [test_entity])
 
     # Mock the get_entity method to return None
     with (
         patch(
-            "homeassistant.helpers.entity_component.EntityComponent.get_entity",
+            "menuai.helpers.entity_component.EntityComponent.get_entity",
             return_value=None,
         ),
         pytest.raises(intent.IntentHandleError),
     ):
         await intent.async_handle(
-            hass,
+            menuai,
             DOMAIN,
             todo_intent.INTENT_LIST_COMPLETE_ITEM,
             {ATTR_ITEM: {"value": "wine"}, ATTR_NAME: {"value": "List 1"}},

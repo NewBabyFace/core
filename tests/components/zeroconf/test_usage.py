@@ -4,10 +4,10 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from homeassistant.components.zeroconf import async_get_instance
-from homeassistant.components.zeroconf.usage import install_multiple_zeroconf_catcher
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.zeroconf import async_get_instance
+from menuai.components.zeroconf.usage import install_multiple_zeroconf_catcher
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import extract_stack_to_frame
 
@@ -26,12 +26,12 @@ class MockZeroconf:
 
 @pytest.mark.usefixtures("mock_async_zeroconf", "mock_zeroconf")
 async def test_multiple_zeroconf_instances(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test creating multiple zeroconf throws without an integration."""
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {}})
 
-    zeroconf_instance = await async_get_instance(hass)
+    zeroconf_instance = await async_get_instance(menuai)
 
     with patch("zeroconf.Zeroconf", MockZeroconf):
         install_multiple_zeroconf_catcher(zeroconf_instance)
@@ -44,12 +44,12 @@ async def test_multiple_zeroconf_instances(
 
 @pytest.mark.usefixtures("mock_async_zeroconf", "mock_zeroconf")
 async def test_multiple_zeroconf_instances_gives_shared(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test creating multiple zeroconf gives the shared instance to an integration."""
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {}})
 
-    zeroconf_instance = await async_get_instance(hass)
+    zeroconf_instance = await async_get_instance(menuai)
 
     with patch("zeroconf.Zeroconf", MockZeroconf):
         install_multiple_zeroconf_catcher(zeroconf_instance)
@@ -61,21 +61,21 @@ async def test_multiple_zeroconf_instances_gives_shared(
         )
         with (
             patch(
-                "homeassistant.helpers.frame.linecache.getline",
+                "menuai.helpers.frame.linecache.getline",
                 return_value=correct_frame.line,
             ),
             patch(
-                "homeassistant.helpers.frame.get_current_frame",
+                "menuai.helpers.frame.get_current_frame",
                 return_value=extract_stack_to_frame(
                     [
                         Mock(
-                            filename="/home/dev/homeassistant/core.py",
+                            filename="/home/dev/menuai/core.py",
                             lineno="23",
                             line="do_something()",
                         ),
                         correct_frame,
                         Mock(
-                            filename="/home/dev/homeassistant/components/zeroconf/usage.py",
+                            filename="/home/dev/menuai/components/zeroconf/usage.py",
                             lineno="23",
                             line="self.light.is_on",
                         ),

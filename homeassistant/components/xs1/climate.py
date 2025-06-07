@@ -8,29 +8,29 @@ from xs1_api_client.api_constants import ActuatorType
 from xs1_api_client.device.actuator import XS1Actuator
 from xs1_api_client.device.sensor import XS1Sensor
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ClimateEntity,
     ClimateEntityFeature,
     HVACMode,
 )
-from homeassistant.const import ATTR_TEMPERATURE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import ATTR_TEMPERATURE
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import ACTUATORS, DOMAIN, SENSORS
 from .entity import XS1DeviceEntity
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the XS1 thermostat platform."""
-    actuators: list[XS1Actuator] = hass.data[DOMAIN][ACTUATORS]
-    sensors: list[XS1Sensor] = hass.data[DOMAIN][SENSORS]
+    actuators: list[XS1Actuator] = menuai.data[DOMAIN][ACTUATORS]
+    sensors: list[XS1Sensor] = menuai.data[DOMAIN][SENSORS]
 
     thermostat_entities = []
     for actuator in actuators:
@@ -102,4 +102,4 @@ class XS1ThermostatEntity(XS1DeviceEntity, ClimateEntity):
         """Also update the sensor when available."""
         await super().async_update()
         if self.sensor is not None:
-            await self.hass.async_add_executor_job(self.sensor.update)
+            await self.menuai.async_add_executor_job(self.sensor.update)

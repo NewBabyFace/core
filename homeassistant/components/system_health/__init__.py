@@ -12,15 +12,15 @@ from typing import Any, Protocol
 import aiohttp
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import (
+from menuai.components import websocket_api
+from menuai.core import menuai, callback
+from menuai.helpers import (
     aiohttp_client,
     config_validation as cv,
     integration_platform,
 )
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.loader import bind_hass
+from menuai.helpers.typing import ConfigType
+from menuai.loader import bind_menuai
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -35,17 +35,17 @@ class SystemHealthProtocol(Protocol):
     """Define the format of system_health platforms."""
 
     def async_register(
-        self, hass: HomeAssistant, register: SystemHealthRegistration
+        self, menuai: menuai, register: SystemHealthRegistration
     ) -> None:
         """Register system health callbacks."""
 
 
-@bind_hass
+@bind_menuai
 @callback
 def async_register_info(
-    hass: HomeAssistant,
+    menuai: menuai,
     domain: str,
-    info_callback: Callable[[HomeAssistant], Awaitable[dict]],
+    info_callback: Callable[[menuai], Awaitable[dict]],
 ) -> None:
     """Register an info callback.
 
@@ -55,17 +55,17 @@ def async_register_info(
         "Calling system_health.async_register_info is deprecated; Add a system_health"
         " platform instead"
     )
-    hass.data.setdefault(DOMAIN, {})
-    SystemHealthRegistration(hass, domain).async_register_info(info_callback)
+    menuai.data.setdefault(DOMAIN, {})
+    SystemHealthRegistration(menuai, domain).async_register_info(info_callback)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the System Health component."""
-    websocket_api.async_register_command(hass, handle_info)
-    hass.data.setdefault(DOMAIN, {})
+    websocket_api.async_register_command(menuai, handle_info)
+    menuai.data.setdefault(DOMAIN, {})
 
     await integration_platform.async_process_integration_platforms(
-        hass, DOMAIN, _register_system_health_platform
+        menuai, DOMAIN, _register_system_health_platform
     )
 
     return True
@@ -73,20 +73,20 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 @callback
 def _register_system_health_platform(
-    hass: HomeAssistant, integration_domain: str, platform: SystemHealthProtocol
+    menuai: menuai, integration_domain: str, platform: SystemHealthProtocol
 ) -> None:
     """Register a system health platform."""
-    platform.async_register(hass, SystemHealthRegistration(hass, integration_domain))
+    platform.async_register(menuai, SystemHealthRegistration(menuai, integration_domain))
 
 
 async def get_integration_info(
-    hass: HomeAssistant, registration: SystemHealthRegistration
+    menuai: menuai, registration: SystemHealthRegistration
 ) -> dict[str, Any]:
     """Get integration system health."""
     try:
         assert registration.info_callback
         async with asyncio.timeout(INFO_CALLBACK_TIMEOUT):
-            data = await registration.info_callback(hass)
+            data = await registration.info_callback(menuai)
     except TimeoutError:
         data = {"error": {"type": "failed", "error": "timeout"}}
     except Exception:
@@ -102,14 +102,14 @@ async def get_integration_info(
 
 
 async def _registered_domain_data(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> AsyncGenerator[tuple[str, dict[str, Any]]]:
-    registrations: dict[str, SystemHealthRegistration] = hass.data[DOMAIN]
+    registrations: dict[str, SystemHealthRegistration] = menuai.data[DOMAIN]
     for domain, domain_data in zip(
         registrations,
         await asyncio.gather(
             *(
-                get_integration_info(hass, registration)
+                get_integration_info(menuai, registration)
                 for registration in registrations.values()
             )
         ),
@@ -118,7 +118,7 @@ async def _registered_domain_data(
         yield domain, domain_data
 
 
-async def get_info(hass: HomeAssistant) -> dict[str, dict[str, str]]:
+async def get_info(menuai: menuai) -> dict[str, dict[str, str]]:
     """Get the full set of system health information."""
     domains: dict[str, dict[str, Any]] = {}
 
@@ -131,7 +131,7 @@ async def get_info(hass: HomeAssistant) -> dict[str, dict[str, str]]:
             _LOGGER.exception("Error fetching system info for %s - %s", domain, key)
             return f"Exception: {exception}"
 
-    async for domain, domain_data in _registered_domain_data(hass):
+    async for domain, domain_data in _registered_domain_data(menuai):
         domain_info: dict[str, Any] = {}
         for key, value in domain_data["info"].items():
             info_value = await _get_info_value(value)
@@ -163,13 +163,13 @@ def _format_value(val: Any) -> Any:
 @websocket_api.websocket_command({vol.Required("type"): "system_health/info"})
 @websocket_api.async_response
 async def handle_info(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle an info request via a subscription."""
     data = {}
     pending_info: dict[tuple[str, str], asyncio.Task] = {}
 
-    async for domain, domain_data in _registered_domain_data(hass):
+    async for domain, domain_data in _registered_domain_data(menuai):
         for key, value in domain_data["info"].items():
             if asyncio.iscoroutine(value):
                 value = asyncio.create_task(value)
@@ -252,28 +252,28 @@ async def handle_info(
 class SystemHealthRegistration:
     """Helper class to track platform registration."""
 
-    hass: HomeAssistant
+    menuai: menuai
     domain: str
-    info_callback: Callable[[HomeAssistant], Awaitable[dict]] | None = None
+    info_callback: Callable[[menuai], Awaitable[dict]] | None = None
     manage_url: str | None = None
 
     @callback
     def async_register_info(
         self,
-        info_callback: Callable[[HomeAssistant], Awaitable[dict]],
+        info_callback: Callable[[menuai], Awaitable[dict]],
         manage_url: str | None = None,
     ) -> None:
         """Register an info callback."""
         self.info_callback = info_callback
         self.manage_url = manage_url
-        self.hass.data[DOMAIN][self.domain] = self
+        self.menuai.data[DOMAIN][self.domain] = self
 
 
 async def async_check_can_reach_url(
-    hass: HomeAssistant, url: str, more_info: str | None = None
+    menuai: menuai, url: str, more_info: str | None = None
 ) -> str | dict[str, str]:
     """Test if the url can be reached."""
-    session = aiohttp_client.async_get_clientsession(hass)
+    session = aiohttp_client.async_get_clientsession(menuai)
 
     try:
         await session.get(url, timeout=aiohttp.ClientTimeout(total=5))

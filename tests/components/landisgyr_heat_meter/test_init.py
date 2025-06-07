@@ -2,20 +2,20 @@
 
 from unittest.mock import MagicMock, patch
 
-from homeassistant.components.landisgyr_heat_meter.const import DOMAIN
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.landisgyr_heat_meter.const import DOMAIN
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry
 
 API_HEAT_METER_SERVICE = (
-    "homeassistant.components.landisgyr_heat_meter.ultraheat_api.HeatMeterService"
+    "menuai.components.landisgyr_heat_meter.ultraheat_api.HeatMeterService"
 )
 
 
 @patch(API_HEAT_METER_SERVICE)
-async def test_unload_entry(mock_meter_service: MagicMock, hass: HomeAssistant) -> None:
+async def test_unload_entry(mock_meter_service: MagicMock, menuai: menuai) -> None:
     """Test removing config entry."""
     mock_entry_data = {
         "device": "/dev/USB0",
@@ -28,19 +28,19 @@ async def test_unload_entry(mock_meter_service: MagicMock, hass: HomeAssistant) 
         entry_id="987654321",
         data=mock_entry_data,
     )
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
-    assert "landisgyr_heat_meter" in hass.config.components
+    assert await menuai.config_entries.async_setup(mock_entry.entry_id)
+    await menuai.async_block_till_done()
+    assert "landisgyr_heat_meter" in menuai.config.components
 
-    assert await hass.config_entries.async_remove(mock_entry.entry_id)
+    assert await menuai.config_entries.async_remove(mock_entry.entry_id)
 
 
 @patch(API_HEAT_METER_SERVICE)
 async def test_migrate_entry(
     mock_meter_service: MagicMock,
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test successful migration of entry data from version 1 to 2."""
@@ -59,7 +59,7 @@ async def test_migrate_entry(
     assert mock_entry.data == mock_entry_data
     assert mock_entry.version == 1
 
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
     # Create entity entry to migrate to new unique ID
     entity_registry.async_get_or_create(
@@ -70,9 +70,9 @@ async def test_migrate_entry(
         config_entry=mock_entry,
     )
 
-    assert await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
-    assert "landisgyr_heat_meter" in hass.config.components
+    assert await menuai.config_entries.async_setup(mock_entry.entry_id)
+    await menuai.async_block_till_done()
+    assert "landisgyr_heat_meter" in menuai.config.components
 
     # Check if entity unique id is migrated successfully
     assert mock_entry.version == 2

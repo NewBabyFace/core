@@ -20,8 +20,8 @@ from aioesphomeapi import (
 import aiohttp
 import voluptuous as vol
 
-from homeassistant.components import zeroconf
-from homeassistant.config_entries import (
+from menuai.components import zeroconf
+from menuai.config_entries import (
     SOURCE_IGNORE,
     SOURCE_REAUTH,
     SOURCE_RECONFIGURE,
@@ -30,15 +30,15 @@ from homeassistant.config_entries import (
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_PORT
-from homeassistant.core import callback
-from homeassistant.data_entry_flow import AbortFlow
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
-from homeassistant.helpers.service_info.hassio import HassioServiceInfo
-from homeassistant.helpers.service_info.mqtt import MqttServiceInfo
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
-from homeassistant.util.json import json_loads_object
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_PORT
+from menuai.core import callback
+from menuai.data_entry_flow import AbortFlow
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.helpers.service_info.menuaiio import menuaiioServiceInfo
+from menuai.helpers.service_info.mqtt import MqttServiceInfo
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.util.json import json_loads_object
 
 from .const import (
     CONF_ALLOW_SERVICE_CALLS,
@@ -299,7 +299,7 @@ class EsphomeFlowHandler(ConfigFlow, domain=DOMAIN):
         """Validate if the MAC address is already configured."""
         assert self.unique_id is not None
         if not (
-            entry := self.hass.config_entries.async_entry_for_domain_unique_id(
+            entry := self.menuai.config_entries.async_entry_for_domain_unique_id(
                 self.handler, formatted_mac
             )
         ):
@@ -327,7 +327,7 @@ class EsphomeFlowHandler(ConfigFlow, domain=DOMAIN):
         """Abort if unique_id is already configured with details."""
         assert self.unique_id is not None
         if not (
-            conflict_entry := self.hass.config_entries.async_entry_for_domain_unique_id(
+            conflict_entry := self.menuai.config_entries.async_entry_for_domain_unique_id(
                 self.handler, self.unique_id
             )
         ):
@@ -401,12 +401,12 @@ class EsphomeFlowHandler(ConfigFlow, domain=DOMAIN):
         # for configured devices.
         return self.async_abort(reason="already_configured")
 
-    async def async_step_hassio(
-        self, discovery_info: HassioServiceInfo
+    async def async_step_menuaiio(
+        self, discovery_info: menuaiioServiceInfo
     ) -> ConfigFlowResult:
         """Handle Supervisor service discovery."""
         await async_set_dashboard_info(
-            self.hass,
+            self.menuai,
             discovery_info.slug,
             discovery_info.config["host"],
             discovery_info.config["port"],
@@ -444,7 +444,7 @@ class EsphomeFlowHandler(ConfigFlow, domain=DOMAIN):
         old_mac = format_mac(self._entry_with_name_conflict.unique_id)
         new_mac = format_mac(self.unique_id)
         entry_id = self._entry_with_name_conflict.entry_id
-        self.hass.config_entries.async_update_entry(
+        self.menuai.config_entries.async_update_entry(
             self._entry_with_name_conflict,
             data={
                 **self._entry_with_name_conflict.data,
@@ -454,8 +454,8 @@ class EsphomeFlowHandler(ConfigFlow, domain=DOMAIN):
                 CONF_NOISE_PSK: self._noise_psk or "",
             },
         )
-        await async_replace_device(self.hass, entry_id, old_mac, new_mac)
-        self.hass.config_entries.async_schedule_reload(entry_id)
+        await async_replace_device(self.menuai, entry_id, old_mac, new_mac)
+        self.menuai.config_entries.async_schedule_reload(entry_id)
         return self.async_abort(
             reason="name_conflict_migrated",
             description_placeholders={
@@ -470,7 +470,7 @@ class EsphomeFlowHandler(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Handle creating a new entry by removing the old one and creating new."""
         assert self._entry_with_name_conflict is not None
-        await self.hass.config_entries.async_remove(
+        await self.menuai.config_entries.async_remove(
             self._entry_with_name_conflict.entry_id
         )
         return self._async_create_entry()
@@ -659,7 +659,7 @@ class EsphomeFlowHandler(ConfigFlow, domain=DOMAIN):
         self, host: str, port: int | None, noise_psk: str | None
     ) -> str | None:
         """Fetch device info from API and return any errors."""
-        zeroconf_instance = await zeroconf.async_get_instance(self.hass)
+        zeroconf_instance = await zeroconf.async_get_instance(self.menuai)
         cli = APIClient(
             host,
             port or DEFAULT_PORT,
@@ -716,7 +716,7 @@ class EsphomeFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def try_login(self) -> str | None:
         """Try logging in to device and return any errors."""
-        zeroconf_instance = await zeroconf.async_get_instance(self.hass)
+        zeroconf_instance = await zeroconf.async_get_instance(self.menuai)
         assert self._host is not None
         assert self._port is not None
         cli = APIClient(
@@ -745,7 +745,7 @@ class EsphomeFlowHandler(ConfigFlow, domain=DOMAIN):
         """
         if (
             self._device_name is None
-            or (manager := await async_get_or_create_dashboard_manager(self.hass))
+            or (manager := await async_get_or_create_dashboard_manager(self.menuai))
             is None
             or (dashboard := manager.async_get()) is None
         ):

@@ -6,16 +6,16 @@ import logging
 
 from nessclient import ArmingMode, ArmingState, Client
 
-from homeassistant.components.alarm_control_panel import (
+from menuai.components.alarm_control_panel import (
     AlarmControlPanelEntity,
     AlarmControlPanelEntityFeature,
     AlarmControlPanelState,
     CodeFormat,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import DATA_NESS, SIGNAL_ARMING_STATE_CHANGED
 
@@ -32,7 +32,7 @@ ARMING_MODE_TO_STATE = {
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -41,7 +41,7 @@ async def async_setup_platform(
     if discovery_info is None:
         return
 
-    device = NessAlarmPanel(hass.data[DATA_NESS], "Alarm Panel")
+    device = NessAlarmPanel(menuai.data[DATA_NESS], "Alarm Panel")
     async_add_entities([device])
 
 
@@ -61,11 +61,11 @@ class NessAlarmPanel(AlarmControlPanelEntity):
         self._client = client
         self._attr_name = name
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, SIGNAL_ARMING_STATE_CHANGED, self._handle_arming_state_change
+                self.menuai, SIGNAL_ARMING_STATE_CHANGED, self._handle_arming_state_change
             )
         )
 

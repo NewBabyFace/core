@@ -65,7 +65,7 @@
         "description": "[%key:component::zwave_js::config::step::configure_addon_user::description%]",
         "title": "[%key:component::zwave_js::config::step::configure_addon_user::title%]"
       },
-      "hassio_confirm": {
+      "menuaiio_confirm": {
         "description": "Do you want to set up the Z-Wave integration with the Z-Wave add-on?"
       },
       "install_addon": {
@@ -99,7 +99,7 @@
         "title": "Configuring add-on"
       },
       "zeroconf_confirm": {
-        "description": "Do you want to add the Z-Wave Server with home ID {home_id} found at {url} to Home Assistant?",
+        "description": "Do you want to add the Z-Wave Server with home ID {home_id} found at {url} to MenuAI?",
         "title": "Discovered Z-Wave Server"
       },
       "reconfigure": {
@@ -120,7 +120,7 @@
       },
       "restore_failed": {
         "title": "Restoring unsuccessful",
-        "description": "Your Z-Wave network could not be restored to the new controller. This means that your Z-Wave devices are not connected to Home Assistant.\n\nThe backup is saved to ”{file_path}”\n\n'<'a href=\"{file_url}\" download=\"{file_name}\"'>'Download backup file'<'/a'>'",
+        "description": "Your Z-Wave network could not be restored to the new controller. This means that your Z-Wave devices are not connected to MenuAI.\n\nThe backup is saved to ”{file_path}”\n\n'<'a href=\"{file_url}\" download=\"{file_name}\"'>'Download backup file'<'/a'>'",
         "submit": "Try again"
       },
       "choose_serial_port": {
@@ -131,7 +131,7 @@
       },
       "installation_type": {
         "title": "Set up Z-Wave",
-        "description": "In a few steps, we’re going to set up your Home Assistant Connect ZWA-2. Home Assistant can automatically install and configure the recommended Z-Wave setup, or you can customize it.",
+        "description": "In a few steps, we’re going to set up your MenuAI Connect ZWA-2. MenuAI can automatically install and configure the recommended Z-Wave setup, or you can customize it.",
         "menu_options": {
           "intent_recommended": "Recommended installation",
           "intent_custom": "Custom installation"
@@ -259,7 +259,7 @@
     "device_config_file_changed": {
       "fix_flow": {
         "abort": {
-          "cannot_connect": "Cannot connect to {device_name}. Please try again later after confirming that your Z-Wave network is up and connected to Home Assistant.",
+          "cannot_connect": "Cannot connect to {device_name}. Please try again later after confirming that your Z-Wave network is up and connected to MenuAI.",
           "issue_ignored": "Device config file update for {device_name} ignored."
         },
         "step": {
@@ -276,7 +276,7 @@
       "title": "Device configuration file changed: {device_name}"
     },
     "invalid_server_version": {
-      "description": "The version of Z-Wave Server you are currently running is too old for this version of Home Assistant. Please update the Z-Wave Server to the latest version to fix this issue.",
+      "description": "The version of Z-Wave Server you are currently running is too old for this version of MenuAI. Please update the Z-Wave Server to the latest version to fix this issue.",
       "title": "Newer version of Z-Wave Server needed"
     },
     "migrate_unique_id": {

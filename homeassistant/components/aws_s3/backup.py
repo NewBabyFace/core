@@ -9,14 +9,14 @@ from typing import Any
 
 from botocore.exceptions import BotoCoreError
 
-from homeassistant.components.backup import (
+from menuai.components.backup import (
     AgentBackup,
     BackupAgent,
     BackupAgentError,
     BackupNotFound,
     suggested_filename,
 )
-from homeassistant.core import HomeAssistant, callback
+from menuai.core import menuai, callback
 
 from . import S3ConfigEntry
 from .const import CONF_BUCKET, DATA_BACKUP_AGENT_LISTENERS, DOMAIN
@@ -49,16 +49,16 @@ def handle_boto_errors[T](
 
 
 async def async_get_backup_agents(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> list[BackupAgent]:
     """Return a list of backup agents."""
-    entries: list[S3ConfigEntry] = hass.config_entries.async_loaded_entries(DOMAIN)
-    return [S3BackupAgent(hass, entry) for entry in entries]
+    entries: list[S3ConfigEntry] = menuai.config_entries.async_loaded_entries(DOMAIN)
+    return [S3BackupAgent(menuai, entry) for entry in entries]
 
 
 @callback
 def async_register_backup_agents_listener(
-    hass: HomeAssistant,
+    menuai: menuai,
     *,
     listener: Callable[[], None],
     **kwargs: Any,
@@ -67,14 +67,14 @@ def async_register_backup_agents_listener(
 
     :return: A function to unregister the listener.
     """
-    hass.data.setdefault(DATA_BACKUP_AGENT_LISTENERS, []).append(listener)
+    menuai.data.setdefault(DATA_BACKUP_AGENT_LISTENERS, []).append(listener)
 
     @callback
     def remove_listener() -> None:
         """Remove the listener."""
-        hass.data[DATA_BACKUP_AGENT_LISTENERS].remove(listener)
-        if not hass.data[DATA_BACKUP_AGENT_LISTENERS]:
-            del hass.data[DATA_BACKUP_AGENT_LISTENERS]
+        menuai.data[DATA_BACKUP_AGENT_LISTENERS].remove(listener)
+        if not menuai.data[DATA_BACKUP_AGENT_LISTENERS]:
+            del menuai.data[DATA_BACKUP_AGENT_LISTENERS]
 
     return remove_listener
 
@@ -90,7 +90,7 @@ class S3BackupAgent(BackupAgent):
 
     domain = DOMAIN
 
-    def __init__(self, hass: HomeAssistant, entry: S3ConfigEntry) -> None:
+    def __init__(self, menuai: menuai, entry: S3ConfigEntry) -> None:
         """Initialize the S3 agent."""
         super().__init__()
         self._client = entry.runtime_data

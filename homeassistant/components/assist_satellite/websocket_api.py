@@ -6,11 +6,11 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.util import uuid as uuid_util
+from menuai.components import websocket_api
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
+from menuai.util import uuid as uuid_util
 
 from .connection_test import CONNECTION_TEST_URL_BASE
 from .const import (
@@ -25,12 +25,12 @@ CONNECTION_TEST_TIMEOUT = 30
 
 
 @callback
-def async_register_websocket_api(hass: HomeAssistant) -> None:
+def async_register_websocket_api(menuai: menuai) -> None:
     """Register the websocket API."""
-    websocket_api.async_register_command(hass, websocket_intercept_wake_word)
-    websocket_api.async_register_command(hass, websocket_get_configuration)
-    websocket_api.async_register_command(hass, websocket_set_wake_words)
-    websocket_api.async_register_command(hass, websocket_test_connection)
+    websocket_api.async_register_command(menuai, websocket_intercept_wake_word)
+    websocket_api.async_register_command(menuai, websocket_get_configuration)
+    websocket_api.async_register_command(menuai, websocket_set_wake_words)
+    websocket_api.async_register_command(menuai, websocket_test_connection)
 
 
 @websocket_api.websocket_command(
@@ -42,12 +42,12 @@ def async_register_websocket_api(hass: HomeAssistant) -> None:
 @websocket_api.require_admin
 @websocket_api.async_response
 async def websocket_intercept_wake_word(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.connection.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Intercept the next wake word from a satellite."""
-    satellite = hass.data[DATA_COMPONENT].get_entity(msg["entity_id"])
+    satellite = menuai.data[DATA_COMPONENT].get_entity(msg["entity_id"])
     if satellite is None:
         connection.send_error(
             msg["id"], websocket_api.ERR_NOT_FOUND, "Entity not found"
@@ -64,10 +64,10 @@ async def websocket_intercept_wake_word(
                     {"wake_word_phrase": wake_word_phrase},
                 )
             )
-        except HomeAssistantError as err:
+        except menuaiError as err:
             connection.send_error(msg["id"], "home_assistant_error", str(err))
 
-    task = hass.async_create_task(intercept_wake_word(), "intercept_wake_word")
+    task = menuai.async_create_task(intercept_wake_word(), "intercept_wake_word")
     connection.subscriptions[msg["id"]] = task.cancel
     connection.send_message(websocket_api.result_message(msg["id"]))
 
@@ -80,12 +80,12 @@ async def websocket_intercept_wake_word(
     }
 )
 def websocket_get_configuration(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.connection.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Get the current satellite configuration."""
-    satellite = hass.data[DATA_COMPONENT].get_entity(msg["entity_id"])
+    satellite = menuai.data[DATA_COMPONENT].get_entity(msg["entity_id"])
     if satellite is None:
         connection.send_error(
             msg["id"], websocket_api.ERR_NOT_FOUND, "Entity not found"
@@ -118,12 +118,12 @@ def websocket_get_configuration(
 @websocket_api.require_admin
 @websocket_api.async_response
 async def websocket_set_wake_words(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.connection.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Set the active wake words for the satellite."""
-    satellite = hass.data[DATA_COMPONENT].get_entity(msg["entity_id"])
+    satellite = menuai.data[DATA_COMPONENT].get_entity(msg["entity_id"])
     if satellite is None:
         connection.send_error(
             msg["id"], websocket_api.ERR_NOT_FOUND, "Entity not found"
@@ -167,15 +167,15 @@ async def websocket_set_wake_words(
 )
 @websocket_api.async_response
 async def websocket_test_connection(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.connection.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
-    """Test the connection between the device and Home Assistant.
+    """Test the connection between the device and MenuAI.
 
     Send an announcement to the device with a special media id.
     """
-    component = hass.data[DATA_COMPONENT]
+    component = menuai.data[DATA_COMPONENT]
     satellite = component.get_entity(msg["entity_id"])
     if satellite is None:
         connection.send_error(
@@ -191,12 +191,12 @@ async def websocket_test_connection(
         return
 
     # Announce and wait for event
-    connection_test_data = hass.data[CONNECTION_TEST_DATA]
+    connection_test_data = menuai.data[CONNECTION_TEST_DATA]
     connection_id = uuid_util.random_uuid_hex()
     connection_test_event = asyncio.Event()
     connection_test_data[connection_id] = connection_test_event
 
-    hass.async_create_background_task(
+    menuai.async_create_background_task(
         satellite.async_internal_announce(
             media_id=f"{CONNECTION_TEST_URL_BASE}/{connection_id}",
             preannounce=False,

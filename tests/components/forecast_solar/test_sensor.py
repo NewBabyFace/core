@@ -4,14 +4,14 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from homeassistant.components.forecast_solar.const import DOMAIN
-from homeassistant.components.sensor import (
+from menuai.components.forecast_solar.const import DOMAIN
+from menuai.components.sensor import (
     ATTR_STATE_CLASS,
     DOMAIN as SENSOR_DOMAIN,
     SensorDeviceClass,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     ATTR_FRIENDLY_NAME,
     ATTR_ICON,
@@ -19,14 +19,14 @@ from homeassistant.const import (
     UnitOfEnergy,
     UnitOfPower,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from tests.common import MockConfigEntry
 
 
 async def test_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
     init_integration: MockConfigEntry,
@@ -34,7 +34,7 @@ async def test_sensors(
     """Test the Forecast.Solar sensors."""
     entry_id = init_integration.entry_id
 
-    state = hass.states.get("sensor.energy_production_today")
+    state = menuai.states.get("sensor.energy_production_today")
     entry = entity_registry.async_get("sensor.energy_production_today")
     assert entry
     assert state
@@ -49,7 +49,7 @@ async def test_sensors(
     assert state.attributes.get(ATTR_DEVICE_CLASS) == SensorDeviceClass.ENERGY
     assert ATTR_ICON not in state.attributes
 
-    state = hass.states.get("sensor.energy_production_today_remaining")
+    state = menuai.states.get("sensor.energy_production_today_remaining")
     entry = entity_registry.async_get("sensor.energy_production_today_remaining")
     assert entry
     assert state
@@ -64,7 +64,7 @@ async def test_sensors(
     assert state.attributes.get(ATTR_DEVICE_CLASS) == SensorDeviceClass.ENERGY
     assert ATTR_ICON not in state.attributes
 
-    state = hass.states.get("sensor.energy_production_tomorrow")
+    state = menuai.states.get("sensor.energy_production_tomorrow")
     entry = entity_registry.async_get("sensor.energy_production_tomorrow")
     assert entry
     assert state
@@ -79,7 +79,7 @@ async def test_sensors(
     assert state.attributes.get(ATTR_DEVICE_CLASS) == SensorDeviceClass.ENERGY
     assert ATTR_ICON not in state.attributes
 
-    state = hass.states.get("sensor.power_highest_peak_time_today")
+    state = menuai.states.get("sensor.power_highest_peak_time_today")
     entry = entity_registry.async_get("sensor.power_highest_peak_time_today")
     assert entry
     assert state
@@ -94,7 +94,7 @@ async def test_sensors(
     assert ATTR_UNIT_OF_MEASUREMENT not in state.attributes
     assert ATTR_ICON not in state.attributes
 
-    state = hass.states.get("sensor.power_highest_peak_time_tomorrow")
+    state = menuai.states.get("sensor.power_highest_peak_time_tomorrow")
     entry = entity_registry.async_get("sensor.power_highest_peak_time_tomorrow")
     assert entry
     assert state
@@ -109,7 +109,7 @@ async def test_sensors(
     assert ATTR_UNIT_OF_MEASUREMENT not in state.attributes
     assert ATTR_ICON not in state.attributes
 
-    state = hass.states.get("sensor.power_production_now")
+    state = menuai.states.get("sensor.power_production_now")
     entry = entity_registry.async_get("sensor.power_production_now")
     assert entry
     assert state
@@ -124,7 +124,7 @@ async def test_sensors(
     assert state.attributes.get(ATTR_DEVICE_CLASS) == SensorDeviceClass.POWER
     assert ATTR_ICON not in state.attributes
 
-    state = hass.states.get("sensor.energy_current_hour")
+    state = menuai.states.get("sensor.energy_current_hour")
     entry = entity_registry.async_get("sensor.energy_current_hour")
     assert entry
     assert state
@@ -139,7 +139,7 @@ async def test_sensors(
     assert state.attributes.get(ATTR_DEVICE_CLASS) == SensorDeviceClass.ENERGY
     assert ATTR_ICON not in state.attributes
 
-    state = hass.states.get("sensor.energy_next_hour")
+    state = menuai.states.get("sensor.energy_next_hour")
     entry = entity_registry.async_get("sensor.energy_next_hour")
     assert entry
     assert state
@@ -174,13 +174,13 @@ async def test_sensors(
     ],
 )
 async def test_disabled_by_default(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     init_integration: MockConfigEntry,
     entity_id: str,
 ) -> None:
     """Test the Forecast.Solar sensors that are disabled by default."""
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state is None
 
     entry = entity_registry.async_get(entity_id)
@@ -210,7 +210,7 @@ async def test_disabled_by_default(
     ],
 )
 async def test_enabling_disable_by_default(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_config_entry: MockConfigEntry,
     mock_forecast_solar: MagicMock,
@@ -231,11 +231,11 @@ async def test_enabling_disable_by_default(
         disabled_by=None,
     )
 
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     entry = entity_registry.async_get(entity_id)
     assert entry
     assert state

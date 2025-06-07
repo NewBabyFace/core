@@ -8,16 +8,16 @@ from typing import Any
 from devolo_plc_api import Device
 from devolo_plc_api.exceptions.device import DeviceNotFound
 
-from homeassistant.components import zeroconf
-from homeassistant.const import (
+from menuai.components import zeroconf
+from menuai.const import (
     CONF_IP_ADDRESS,
     CONF_PASSWORD,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     Platform,
 )
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers.httpx_client import get_async_client
+from menuai.core import Event, menuai, callback
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers.httpx_client import get_async_client
 
 from .const import (
     CONNECTED_PLC_DEVICES,
@@ -46,11 +46,11 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: DevoloHomeNetworkConfigEntry
+    menuai: menuai, entry: DevoloHomeNetworkConfigEntry
 ) -> bool:
     """Set up devolo Home Network from a config entry."""
-    zeroconf_instance = await zeroconf.async_get_async_instance(hass)
-    async_client = get_async_client(hass)
+    zeroconf_instance = await zeroconf.async_get_async_instance(menuai)
+    async_client = get_async_client(menuai)
 
     try:
         device = Device(
@@ -77,43 +77,43 @@ async def async_setup_entry(
     coordinators: dict[str, DevoloDataUpdateCoordinator[Any]] = {}
     if device.plcnet:
         coordinators[CONNECTED_PLC_DEVICES] = DevoloLogicalNetworkCoordinator(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
         )
     if device.device and "led" in device.device.features:
         coordinators[SWITCH_LEDS] = DevoloLedSettingsGetCoordinator(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
         )
     if device.device and "restart" in device.device.features:
         coordinators[LAST_RESTART] = DevoloUptimeGetCoordinator(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
         )
     if device.device and "update" in device.device.features:
         coordinators[REGULAR_FIRMWARE] = DevoloFirmwareUpdateCoordinator(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
         )
     if device.device and "wifi1" in device.device.features:
         coordinators[CONNECTED_WIFI_CLIENTS] = (
             DevoloWifiConnectedStationsGetCoordinator(
-                hass,
+                menuai,
                 _LOGGER,
                 config_entry=entry,
             )
         )
         coordinators[NEIGHBORING_WIFI_NETWORKS] = DevoloWifiNeighborAPsGetCoordinator(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
         )
         coordinators[SWITCH_GUEST_WIFI] = DevoloWifiGuestAccessGetCoordinator(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
         )
@@ -123,21 +123,21 @@ async def async_setup_entry(
 
     entry.runtime_data.coordinators = coordinators
 
-    await hass.config_entries.async_forward_entry_setups(entry, platforms(device))
+    await menuai.config_entries.async_forward_entry_setups(entry, platforms(device))
 
     entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, disconnect)
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, disconnect)
     )
 
     return True
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, entry: DevoloHomeNetworkConfigEntry
+    menuai: menuai, entry: DevoloHomeNetworkConfigEntry
 ) -> bool:
     """Unload a config entry."""
     device = entry.runtime_data.device
-    unload_ok = await hass.config_entries.async_unload_platforms(
+    unload_ok = await menuai.config_entries.async_unload_platforms(
         entry, platforms(device)
     )
     if unload_ok:

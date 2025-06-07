@@ -23,7 +23,7 @@
           "state_class": "State class"
         },
         "data_description": {
-          "db_url": "Leave empty to use Home Assistant Recorder database",
+          "db_url": "Leave empty to use MenuAI Recorder database",
           "name": "Name that will be used for config entry and also the sensor",
           "query": "Query to run, needs to start with 'SELECT'",
           "column": "Column for returned query to present as state",

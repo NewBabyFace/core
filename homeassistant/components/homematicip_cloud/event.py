@@ -8,13 +8,13 @@ from homematicip.base.channel_event import ChannelEvent
 from homematicip.base.functionalChannels import FunctionalChannel
 from homematicip.device import Device
 
-from homeassistant.components.event import (
+from menuai.components.event import (
     EventDeviceClass,
     EventEntity,
     EventEntityDescription,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .entity import HomematicipGenericEntity
 from .hap import HomematicIPConfigEntry, HomematicipHAP
@@ -41,7 +41,7 @@ EVENT_DESCRIPTIONS = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: HomematicIPConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -89,9 +89,9 @@ class HomematicipDoorBellEvent(HomematicipGenericEntity, EventEntity):
 
         self.entity_description = description
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self.functional_channel.add_on_channel_event_handler(self._async_handle_event)
 
     @callback

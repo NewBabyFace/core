@@ -10,17 +10,17 @@ import voluptuous as vol
 from youtubeaio.types import AuthScope, ForbiddenError
 from youtubeaio.youtube import YouTube
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_REAUTH,
     ConfigEntry,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_TOKEN
-from homeassistant.core import callback
-from homeassistant.helpers import config_entry_oauth2_flow
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.selector import (
+from menuai.const import CONF_ACCESS_TOKEN, CONF_TOKEN
+from menuai.core import callback
+from menuai.helpers import config_entry_oauth2_flow
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.selector import (
     SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
@@ -87,7 +87,7 @@ class OAuth2FlowHandler(
     async def get_resource(self, token: str) -> YouTube:
         """Get Youtube resource async."""
         if self._youtube is None:
-            self._youtube = YouTube(session=async_get_clientsession(self.hass))
+            self._youtube = YouTube(session=async_get_clientsession(self.menuai))
             await self._youtube.set_user_authentication(token, [AuthScope.READ_ONLY])
         return self._youtube
 
@@ -200,7 +200,7 @@ class YouTubeOptionsFlowHandler(OptionsFlow):
                 title=self.config_entry.title,
                 data=user_input,
             )
-        youtube = YouTube(session=async_get_clientsession(self.hass))
+        youtube = YouTube(session=async_get_clientsession(self.menuai))
         await youtube.set_user_authentication(
             self.config_entry.data[CONF_TOKEN][CONF_ACCESS_TOKEN], [AuthScope.READ_ONLY]
         )

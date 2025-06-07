@@ -10,11 +10,11 @@ from aiohttp.hdrs import AUTHORIZATION
 from aiohttp.web import Request, Response
 import voluptuous as vol
 
-from homeassistant import config_entries
-from homeassistant.components.binary_sensor import DEVICE_CLASSES_SCHEMA
-from homeassistant.components.http import KEY_HASS, HomeAssistantView
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai import config_entries
+from menuai.components.binary_sensor import DEVICE_CLASSES_SCHEMA
+from menuai.components.http import KEY_menuai, menuaiView
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_ENTITY_ID,
     CONF_ACCESS_TOKEN,
     CONF_BINARY_SENSORS,
@@ -34,9 +34,9 @@ from homeassistant.const import (
     STATE_ON,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType
 
 from .config_flow import (  # Loading the config flow file will register the flow
     CONF_DEFAULT_OPTIONS,
@@ -220,19 +220,19 @@ YAML_CONFIGS = "yaml_configs"
 PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR, Platform.SWITCH]
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Konnected platform."""
     if (cfg := config.get(DOMAIN)) is None:
         cfg = {}
 
-    if DOMAIN not in hass.data:
-        hass.data[DOMAIN] = {
+    if DOMAIN not in menuai.data:
+        menuai.data[DOMAIN] = {
             CONF_ACCESS_TOKEN: cfg.get(CONF_ACCESS_TOKEN),
             CONF_API_HOST: cfg.get(CONF_API_HOST),
             CONF_DEVICES: {},
         }
 
-    hass.http.register_view(KonnectedView)
+    menuai.http.register_view(KonnectedView)
 
     # Check if they have yaml configured devices
     if CONF_DEVICES not in cfg:
@@ -240,53 +240,53 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     for device in cfg.get(CONF_DEVICES, []):
         # Attempt to importing the cfg. Use
-        # hass.async_add_job to avoid a deadlock.
-        hass.async_create_task(
-            hass.config_entries.flow.async_init(
+        # menuai.async_add_job to avoid a deadlock.
+        menuai.async_create_task(
+            menuai.config_entries.flow.async_init(
                 DOMAIN, context={"source": config_entries.SOURCE_IMPORT}, data=device
             )
         )
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up panel from a config entry."""
-    client = AlarmPanel(hass, entry)
-    # creates a panel data store in hass.data[DOMAIN][CONF_DEVICES]
+    client = AlarmPanel(menuai, entry)
+    # creates a panel data store in menuai.data[DOMAIN][CONF_DEVICES]
     await client.async_save_data()
 
     # if the cfg entry was created we know we could connect to the panel at some point
     # async_connect will handle retries until it establishes a connection
     await client.async_connect()
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     # config entry specific data to enable unload
-    hass.data[DOMAIN][entry.entry_id] = {
+    menuai.data[DOMAIN][entry.entry_id] = {
         UNDO_UPDATE_LISTENER: entry.add_update_listener(async_entry_updated)
     }
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
-    hass.data[DOMAIN][entry.entry_id][UNDO_UPDATE_LISTENER]()
+    menuai.data[DOMAIN][entry.entry_id][UNDO_UPDATE_LISTENER]()
 
     if unload_ok:
-        hass.data[DOMAIN][CONF_DEVICES].pop(entry.data[CONF_ID])
-        hass.data[DOMAIN].pop(entry.entry_id)
+        menuai.data[DOMAIN][CONF_DEVICES].pop(entry.data[CONF_ID])
+        menuai.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok
 
 
-async def async_entry_updated(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def async_entry_updated(menuai: menuai, entry: ConfigEntry) -> None:
     """Reload the config entry when options change."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)
 
 
-class KonnectedView(HomeAssistantView):
+class KonnectedView(menuaiView):
     """View creates an endpoint to receive push updates from the device."""
 
     url = UPDATE_ENDPOINT
@@ -305,17 +305,17 @@ class KonnectedView(HomeAssistantView):
 
     async def update_sensor(self, request: Request, device_id) -> Response:
         """Process a put or post."""
-        hass = request.app[KEY_HASS]
-        data = hass.data[DOMAIN]
+        menuai = request.app[KEY_menuai]
+        data = menuai.data[DOMAIN]
 
         auth = request.headers.get(AUTHORIZATION)
         tokens = []
-        if hass.data[DOMAIN].get(CONF_ACCESS_TOKEN):
-            tokens.extend([hass.data[DOMAIN][CONF_ACCESS_TOKEN]])
+        if menuai.data[DOMAIN].get(CONF_ACCESS_TOKEN):
+            tokens.extend([menuai.data[DOMAIN][CONF_ACCESS_TOKEN]])
         tokens.extend(
             [
                 entry.data[CONF_ACCESS_TOKEN]
-                for entry in hass.config_entries.async_entries(DOMAIN)
+                for entry in menuai.config_entries.async_entries(DOMAIN)
                 if entry.data.get(CONF_ACCESS_TOKEN)
             ]
         )
@@ -343,7 +343,7 @@ class KonnectedView(HomeAssistantView):
 
         if (panel := device.get("panel")) is not None:
             # connect if we haven't already
-            hass.async_create_task(panel.async_connect())
+            menuai.async_create_task(panel.async_connect())
 
         try:
             zone_num = str(payload.get(CONF_ZONE) or PIN_TO_ZONE[payload[CONF_PIN]])
@@ -371,14 +371,14 @@ class KonnectedView(HomeAssistantView):
             value = payload.get(attr)
             handler = HANDLERS.get(attr)
             if value is not None and handler:
-                hass.async_create_task(handler(hass, zone_data, payload))
+                menuai.async_create_task(handler(menuai, zone_data, payload))
 
         return self.json_message("ok")
 
     async def get(self, request: Request, device_id) -> Response:
         """Return the current binary state of a switch."""
-        hass = request.app[KEY_HASS]
-        data = hass.data[DOMAIN]
+        menuai = request.app[KEY_menuai]
+        data = menuai.data[DOMAIN]
 
         if not (device := data[CONF_DEVICES].get(device_id)):
             return self.json_message(
@@ -387,7 +387,7 @@ class KonnectedView(HomeAssistantView):
 
         if (panel := device.get("panel")) is not None:
             # connect if we haven't already
-            hass.async_create_task(panel.async_connect())
+            menuai.async_create_task(panel.async_connect())
 
         # Our data model is based on zone ids but we convert from/to pin ids
         # based on whether they are specified in the request
@@ -425,7 +425,7 @@ class KonnectedView(HomeAssistantView):
         # Make sure entity is setup
         if zone_entity_id := zone.get(ATTR_ENTITY_ID):
             resp["state"] = self.binary_value(
-                hass.states.get(zone_entity_id).state,  # type: ignore[union-attr]
+                menuai.states.get(zone_entity_id).state,  # type: ignore[union-attr]
                 zone[CONF_ACTIVATION],
             )
             return self.json(resp)

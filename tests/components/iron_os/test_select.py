@@ -22,16 +22,16 @@ from pynecil import (
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.select import (
+from menuai.components.select import (
     ATTR_OPTION,
     DOMAIN as SELECT_DOMAIN,
     SERVICE_SELECT_OPTION,
 )
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import entity_registry as er
+from menuai.config_entries import ConfigEntryState
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry, async_fire_time_changed, snapshot_platform
 
@@ -40,7 +40,7 @@ from tests.common import MockConfigEntry, async_fire_time_changed, snapshot_plat
 async def select_only() -> AsyncGenerator[None]:
     """Enable only the select platform."""
     with patch(
-        "homeassistant.components.iron_os.PLATFORMS",
+        "menuai.components.iron_os.PLATFORMS",
         [Platform.SELECT],
     ):
         yield
@@ -50,23 +50,23 @@ async def select_only() -> AsyncGenerator[None]:
     "entity_registry_enabled_by_default", "mock_pynecil", "ble_device"
 )
 async def test_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test the IronOS select platform states."""
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
     freezer.tick(timedelta(seconds=3))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
 
 @pytest.mark.parametrize(
@@ -121,7 +121,7 @@ async def test_state(
 )
 @pytest.mark.usefixtures("entity_registry_enabled_by_default", "ble_device")
 async def test_select_option(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_pynecil: AsyncMock,
     entity_id: str,
@@ -130,13 +130,13 @@ async def test_select_option(
 ) -> None:
     """Test the IronOS select option service."""
 
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SELECT_DOMAIN,
         SERVICE_SELECT_OPTION,
         service_data={ATTR_OPTION: option},
@@ -149,15 +149,15 @@ async def test_select_option(
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default", "ble_device")
 async def test_select_option_exception(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_pynecil: AsyncMock,
 ) -> None:
     """Test the IronOS select option service exception."""
 
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
@@ -167,7 +167,7 @@ async def test_select_option_exception(
         ServiceValidationError,
         match="Failed to submit setting to device, try again later",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SELECT_DOMAIN,
             SERVICE_SELECT_OPTION,
             service_data={ATTR_OPTION: "battery_3s"},

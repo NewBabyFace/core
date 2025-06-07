@@ -14,10 +14,10 @@ from typedmonarchmoney.models import (
     MonarchSubscription,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryError
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryError
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import LOGGER
 
@@ -41,13 +41,13 @@ class MonarchMoneyDataUpdateCoordinator(DataUpdateCoordinator[MonarchData]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: MonarchMoneyConfigEntry,
         client: TypedMonarchMoney,
     ) -> None:
         """Initialize the coordinator."""
         super().__init__(
-            hass=hass,
+            menuai=menuai,
             logger=LOGGER,
             config_entry=config_entry,
             name="monarchmoney",

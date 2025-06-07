@@ -4,29 +4,29 @@ from __future__ import annotations
 
 import asyncio
 
-from homeassistant.components.alarm_control_panel import (
+from menuai.components.alarm_control_panel import (
     AlarmControlPanelEntity,
     AlarmControlPanelEntityFeature,
     AlarmControlPanelState,
     CodeFormat,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import ALARM_STATE_TO_HA, CONF_GIID, DOMAIN, LOGGER
 from .coordinator import VerisureDataUpdateCoordinator
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Verisure alarm control panel from a config entry."""
-    async_add_entities([VerisureAlarm(coordinator=hass.data[DOMAIN][entry.entry_id])])
+    async_add_entities([VerisureAlarm(coordinator=menuai.data[DOMAIN][entry.entry_id])])
 
 
 class VerisureAlarm(
@@ -62,14 +62,14 @@ class VerisureAlarm(
         self, state: str, command_data: dict[str, str | dict[str, str]]
     ) -> None:
         """Send set arm state command."""
-        arm_state = await self.hass.async_add_executor_job(
+        arm_state = await self.menuai.async_add_executor_job(
             self.coordinator.verisure.request, command_data
         )
         LOGGER.debug("Verisure set arm state %s", state)
         result = None
         while result is None:
             await asyncio.sleep(0.5)
-            transaction = await self.hass.async_add_executor_job(
+            transaction = await self.menuai.async_add_executor_job(
                 self.coordinator.verisure.request,
                 self.coordinator.verisure.poll_arm_state(
                     list(arm_state["data"].values())[0], state
@@ -117,7 +117,7 @@ class VerisureAlarm(
         self._attr_changed_by = self.coordinator.data["alarm"].get("name")
         super()._handle_coordinator_update()
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai."""
+        await super().async_added_to_menuai()
         self._handle_coordinator_update()

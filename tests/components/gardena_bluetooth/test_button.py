@@ -7,9 +7,9 @@ from gardena_bluetooth.const import Reset
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
+from menuai.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
 
 from . import setup_entry
 
@@ -24,7 +24,7 @@ def mock_switch_chars(mock_read_char_raw):
 
 
 async def test_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mock_entry: MockConfigEntry,
     mock_switch_chars: dict[str, bytes],
@@ -33,16 +33,16 @@ async def test_setup(
     """Test setup creates expected entities."""
 
     entity_id = "button.mock_title_factory_reset"
-    await setup_entry(hass, mock_entry, [Platform.BUTTON])
-    assert hass.states.get(entity_id) == snapshot
+    await setup_entry(menuai, mock_entry, [Platform.BUTTON])
+    assert menuai.states.get(entity_id) == snapshot
 
     mock_switch_chars[Reset.factory_reset.uuid] = b"\x01"
     await scan_step()
-    assert hass.states.get(entity_id) == snapshot
+    assert menuai.states.get(entity_id) == snapshot
 
 
 async def test_switching(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_entry: MockConfigEntry,
     mock_client: Mock,
     mock_switch_chars: dict[str, bytes],
@@ -50,10 +50,10 @@ async def test_switching(
     """Test switching makes correct calls."""
 
     entity_id = "button.mock_title_factory_reset"
-    await setup_entry(hass, mock_entry, [Platform.BUTTON])
-    assert hass.states.get(entity_id)
+    await setup_entry(menuai, mock_entry, [Platform.BUTTON])
+    assert menuai.states.get(entity_id)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         BUTTON_DOMAIN,
         SERVICE_PRESS,
         {ATTR_ENTITY_ID: entity_id},

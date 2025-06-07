@@ -11,12 +11,12 @@ from renault_api.const import AVAILABLE_LOCALES
 from renault_api.gigya.exceptions import GigyaException
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_RECONFIGURE,
     ConfigFlow,
     ConfigFlowResult,
 )
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
 
 from .const import CONF_KAMEREON_ACCOUNT_ID, CONF_LOCALE, DOMAIN
 from .renault_hub import RenaultHub
@@ -55,7 +55,7 @@ class RenaultFlowHandler(ConfigFlow, domain=DOMAIN):
             locale = user_input[CONF_LOCALE]
             self.renault_config.update(user_input)
             self.renault_config.update(AVAILABLE_LOCALES[locale])
-            self.renault_hub = RenaultHub(self.hass, locale)
+            self.renault_hub = RenaultHub(self.menuai, locale)
             try:
                 login_success = await self.renault_hub.attempt_login(
                     user_input[CONF_USERNAME], user_input[CONF_PASSWORD]
@@ -131,7 +131,7 @@ class RenaultFlowHandler(ConfigFlow, domain=DOMAIN):
         reauth_entry = self._get_reauth_entry()
         if user_input:
             # Check credentials
-            self.renault_hub = RenaultHub(self.hass, reauth_entry.data[CONF_LOCALE])
+            self.renault_hub = RenaultHub(self.menuai, reauth_entry.data[CONF_LOCALE])
             if await self.renault_hub.attempt_login(
                 reauth_entry.data[CONF_USERNAME], user_input[CONF_PASSWORD]
             ):

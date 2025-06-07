@@ -6,11 +6,11 @@ from google_drive_api.exceptions import GoogleDriveApiError
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.google_drive.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import config_entry_oauth2_flow
+from menuai.components.google_drive.const import DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers import config_entry_oauth2_flow
 
 from .conftest import CLIENT_ID, TEST_USER_EMAIL
 
@@ -27,18 +27,18 @@ TITLE = "Google Drive"
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_full_flow(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     mock_api: MagicMock,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Check full flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
@@ -52,7 +52,7 @@ async def test_full_flow(
         "&access_type=offline&prompt=consent"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == 200
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
@@ -77,11 +77,11 @@ async def test_full_flow(
     )
 
     with patch(
-        "homeassistant.components.google_drive.async_setup_entry", return_value=True
+        "menuai.components.google_drive.async_setup_entry", return_value=True
     ) as mock_setup:
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
     assert len(mock_setup.mock_calls) == 1
     assert len(aioclient_mock.mock_calls) == 1
     assert [tuple(mock_call) for mock_call in mock_api.mock_calls] == snapshot
@@ -103,17 +103,17 @@ async def test_full_flow(
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_create_folder_error(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     mock_api: MagicMock,
 ) -> None:
     """Test case where creating the folder fails."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
@@ -127,7 +127,7 @@ async def test_create_folder_error(
         "&access_type=offline&prompt=consent"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == 200
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
@@ -149,7 +149,7 @@ async def test_create_folder_error(
         },
     )
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
     assert result.get("type") is FlowResultType.ABORT
     assert result.get("reason") == "create_folder_failure"
     assert result.get("description_placeholders") == {"message": "some error"}
@@ -169,8 +169,8 @@ async def test_create_folder_error(
     ids=["api_not_enabled", "general_exception"],
 )
 async def test_get_email_error(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     mock_api: MagicMock,
     exception: Exception,
@@ -178,11 +178,11 @@ async def test_get_email_error(
     expected_placeholders,
 ) -> None:
     """Test case where getting the email address fails."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
@@ -196,7 +196,7 @@ async def test_get_email_error(
         "&access_type=offline&prompt=consent"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == 200
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
@@ -213,7 +213,7 @@ async def test_get_email_error(
         },
     )
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
     assert result.get("type") is FlowResultType.ABORT
     assert result.get("reason") == expected_abort_reason
     assert result.get("description_placeholders") == expected_placeholders
@@ -241,8 +241,8 @@ async def test_get_email_error(
     ids=["reauth_successful", "wrong_account"],
 )
 async def test_reauth(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     config_entry: MockConfigEntry,
     aioclient_mock: AiohttpClientMocker,
     mock_api: MagicMock,
@@ -253,14 +253,14 @@ async def test_reauth(
     expected_setup_calls: int,
 ) -> None:
     """Test the reauthentication flow."""
-    config_entry.add_to_hass(hass)
-    result = await config_entry.start_reauth_flow(hass)
+    config_entry.add_to_menuai(menuai)
+    result = await config_entry.start_reauth_flow(menuai)
 
     assert result["step_id"] == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
@@ -272,7 +272,7 @@ async def test_reauth(
         f"&state={state}&scope=https://www.googleapis.com/auth/drive.file"
         "&access_type=offline&prompt=consent"
     )
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == 200
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
@@ -290,12 +290,12 @@ async def test_reauth(
     )
 
     with patch(
-        "homeassistant.components.google_drive.async_setup_entry", return_value=True
+        "menuai.components.google_drive.async_setup_entry", return_value=True
     ) as mock_setup:
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
-        await hass.async_block_till_done()
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
+        await menuai.async_block_till_done()
 
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
     assert len(mock_setup.mock_calls) == expected_setup_calls
 
     assert result.get("type") is FlowResultType.ABORT
@@ -312,20 +312,20 @@ async def test_reauth(
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_already_configured(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     config_entry: MockConfigEntry,
     aioclient_mock: AiohttpClientMocker,
     mock_api: MagicMock,
 ) -> None:
     """Test already configured account."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
@@ -339,7 +339,7 @@ async def test_already_configured(
         "&access_type=offline&prompt=consent"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == 200
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
@@ -358,6 +358,6 @@ async def test_already_configured(
         },
     )
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
     assert result.get("type") is FlowResultType.ABORT
     assert result.get("reason") == "already_configured"

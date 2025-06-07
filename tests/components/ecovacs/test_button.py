@@ -11,12 +11,12 @@ from deebot_client.events import LifeSpan
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
-from homeassistant.components.ecovacs.const import DOMAIN
-from homeassistant.components.ecovacs.controller import EcovacsController
-from homeassistant.const import ATTR_ENTITY_ID, STATE_UNKNOWN, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
+from menuai.components.ecovacs.const import DOMAIN
+from menuai.components.ecovacs.controller import EcovacsController
+from menuai.const import ATTR_ENTITY_ID, STATE_UNKNOWN, Platform
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 pytestmark = [
     pytest.mark.usefixtures("init_integration"),
@@ -99,7 +99,7 @@ def platforms() -> Platform | list[Platform]:
     ids=["yna5x1", "5xu9h3", "qhe2o2"],
 )
 async def test_buttons(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
@@ -107,14 +107,14 @@ async def test_buttons(
     entities: list[tuple[str, Command]],
 ) -> None:
     """Test that sensor entity snapshots match."""
-    assert hass.states.async_entity_ids() == [e[0] for e in entities]
+    assert menuai.states.async_entity_ids() == [e[0] for e in entities]
     device = controller.devices[0]
     for entity_id, command in entities:
-        assert (state := hass.states.get(entity_id)), f"State of {entity_id} is missing"
+        assert (state := menuai.states.get(entity_id)), f"State of {entity_id} is missing"
         assert state.state == STATE_UNKNOWN
 
         device._execute_command.reset_mock()
-        await hass.services.async_call(
+        await menuai.services.async_call(
             BUTTON_DOMAIN,
             SERVICE_PRESS,
             {ATTR_ENTITY_ID: entity_id},
@@ -122,7 +122,7 @@ async def test_buttons(
         )
         device._execute_command.assert_called_with(command)
 
-        assert (state := hass.states.get(entity_id)), f"State of {entity_id} is missing"
+        assert (state := menuai.states.get(entity_id)), f"State of {entity_id} is missing"
         assert state.state == "2024-01-01T00:00:00+00:00"
         assert snapshot(name=f"{entity_id}:state") == state
 
@@ -155,11 +155,11 @@ async def test_buttons(
     ],
 )
 async def test_disabled_by_default_buttons(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, entity_ids: list[str]
+    menuai: menuai, entity_registry: er.EntityRegistry, entity_ids: list[str]
 ) -> None:
     """Test the disabled by default buttons."""
     for entity_id in entity_ids:
-        assert not hass.states.get(entity_id)
+        assert not menuai.states.get(entity_id)
 
         assert (entry := entity_registry.async_get(entity_id)), (
             f"Entity registry entry for {entity_id} is missing"

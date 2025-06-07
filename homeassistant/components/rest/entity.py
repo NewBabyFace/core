@@ -5,10 +5,10 @@ from __future__ import annotations
 from abc import abstractmethod
 from typing import Any
 
-from homeassistant.core import callback
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.template import Template
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.core import callback
+from menuai.helpers.entity import Entity
+from menuai.helpers.template import Template
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .data import RestData
 
@@ -37,9 +37,9 @@ class RestEntity(Entity):
             return False
         return self.rest.data is not None
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai."""
+        await super().async_added_to_menuai()
         self._update_from_rest_data()
         if self._coordinator:
             self.async_on_remove(

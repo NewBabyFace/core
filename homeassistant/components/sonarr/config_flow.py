@@ -12,16 +12,16 @@ from aiopyarr.sonarr_client import SonarrClient
 import voluptuous as vol
 import yarl
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_REAUTH,
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_API_KEY, CONF_URL, CONF_VERIFY_SSL
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.const import CONF_API_KEY, CONF_URL, CONF_VERIFY_SSL
+from menuai.core import menuai, callback
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
     CONF_UPCOMING_DAYS,
@@ -35,7 +35,7 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 
-async def _validate_input(hass: HomeAssistant, data: dict[str, Any]) -> None:
+async def _validate_input(menuai: menuai, data: dict[str, Any]) -> None:
     """Validate the user input allows us to connect.
 
     Data has the keys from DATA_SCHEMA with values provided by the user.
@@ -48,7 +48,7 @@ async def _validate_input(hass: HomeAssistant, data: dict[str, Any]) -> None:
 
     sonarr = SonarrClient(
         host_configuration=host_configuration,
-        session=async_get_clientsession(hass),
+        session=async_get_clientsession(menuai),
     )
 
     await sonarr.async_get_system_status()
@@ -107,7 +107,7 @@ class SonarrConfigFlow(ConfigFlow, domain=DOMAIN):
                 user_input[CONF_VERIFY_SSL] = DEFAULT_VERIFY_SSL
 
             try:
-                await _validate_input(self.hass, user_input)
+                await _validate_input(self.menuai, user_input)
             except ArrAuthenticationException:
                 errors = {"base": "invalid_auth"}
             except ArrException:

@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from airgradient import AirGradientClient
 
-from homeassistant.const import CONF_HOST, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.const import CONF_HOST, Platform
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .coordinator import AirGradientConfigEntry, AirGradientCoordinator
 
@@ -20,26 +20,26 @@ PLATFORMS: list[Platform] = [
 ]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: AirGradientConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: AirGradientConfigEntry) -> bool:
     """Set up Airgradient from a config entry."""
 
     client = AirGradientClient(
-        entry.data[CONF_HOST], session=async_get_clientsession(hass)
+        entry.data[CONF_HOST], session=async_get_clientsession(menuai)
     )
 
-    coordinator = AirGradientCoordinator(hass, entry, client)
+    coordinator = AirGradientCoordinator(menuai, entry, client)
 
     await coordinator.async_config_entry_first_refresh()
 
     entry.runtime_data = coordinator
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, entry: AirGradientConfigEntry
+    menuai: menuai, entry: AirGradientConfigEntry
 ) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

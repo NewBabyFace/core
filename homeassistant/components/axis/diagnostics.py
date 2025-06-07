@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.const import CONF_MAC, CONF_PASSWORD, CONF_UNIQUE_ID, CONF_USERNAME
-from homeassistant.core import HomeAssistant
+from menuai.components.diagnostics import async_redact_data
+from menuai.const import CONF_MAC, CONF_PASSWORD, CONF_UNIQUE_ID, CONF_USERNAME
+from menuai.core import menuai
 
 from . import AxisConfigEntry
 
@@ -16,7 +16,7 @@ REDACT_VAPIX_PARAMS = {"root.Network", "System.SerialNumber"}
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, config_entry: AxisConfigEntry
+    menuai: menuai, config_entry: AxisConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     hub = config_entry.runtime_data

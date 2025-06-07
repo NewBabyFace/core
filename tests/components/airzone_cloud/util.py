@@ -113,9 +113,9 @@ from aioairzone_cloud.const import (
 from aioairzone_cloud.device import Device
 from aioairzone_cloud.webserver import WebServer
 
-from homeassistant.components.airzone_cloud.const import DOMAIN
-from homeassistant.const import CONF_ID, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
+from menuai.components.airzone_cloud.const import DOMAIN
+from menuai.const import CONF_ID, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -520,9 +520,9 @@ def mock_get_webserver(webserver: WebServer, devices: bool) -> dict[str, Any]:
 
 
 async def async_init_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
-    """Set up the Airzone integration in Home Assistant."""
+    """Set up the Airzone integration in MenuAI."""
 
     config_entry = MockConfigEntry(
         data=CONFIG,
@@ -530,33 +530,33 @@ async def async_init_integration(
         domain=DOMAIN,
         unique_id=CONFIG[CONF_ID],
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with (
         patch(
-            "homeassistant.components.airzone_cloud.AirzoneCloudApi.api_get_device_config",
+            "menuai.components.airzone_cloud.AirzoneCloudApi.api_get_device_config",
             side_effect=mock_get_device_config,
         ),
         patch(
-            "homeassistant.components.airzone_cloud.AirzoneCloudApi.api_get_device_status",
+            "menuai.components.airzone_cloud.AirzoneCloudApi.api_get_device_status",
             side_effect=mock_get_device_status,
         ),
         patch(
-            "homeassistant.components.airzone_cloud.AirzoneCloudApi.api_get_installation",
+            "menuai.components.airzone_cloud.AirzoneCloudApi.api_get_installation",
             return_value=GET_INSTALLATION_MOCK,
         ),
         patch(
-            "homeassistant.components.airzone_cloud.AirzoneCloudApi.api_get_installations",
+            "menuai.components.airzone_cloud.AirzoneCloudApi.api_get_installations",
             return_value=GET_INSTALLATIONS_MOCK,
         ),
         patch(
-            "homeassistant.components.airzone_cloud.AirzoneCloudApi.api_get_webserver",
+            "menuai.components.airzone_cloud.AirzoneCloudApi.api_get_webserver",
             side_effect=mock_get_webserver,
         ),
         patch(
-            "homeassistant.components.airzone_cloud.AirzoneCloudApi.login",
+            "menuai.components.airzone_cloud.AirzoneCloudApi.login",
             return_value=None,
         ),
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()

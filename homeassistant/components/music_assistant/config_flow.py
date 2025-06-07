@@ -13,11 +13,11 @@ from music_assistant_client.exceptions import (
 from music_assistant_models.api import ServerInfoMessage
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_URL
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import aiohttp_client
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_URL
+from menuai.core import menuai
+from menuai.helpers import aiohttp_client
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import DOMAIN, LOGGER
 
@@ -35,10 +35,10 @@ def get_manual_schema(user_input: dict[str, Any]) -> vol.Schema:
     )
 
 
-async def get_server_info(hass: HomeAssistant, url: str) -> ServerInfoMessage:
+async def get_server_info(menuai: menuai, url: str) -> ServerInfoMessage:
     """Validate the user input allows us to connect."""
     async with MusicAssistantClient(
-        url, aiohttp_client.async_get_clientsession(hass)
+        url, aiohttp_client.async_get_clientsession(menuai)
     ) as client:
         if TYPE_CHECKING:
             assert client.server_info is not None
@@ -62,7 +62,7 @@ class MusicAssistantConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             try:
                 self.server_info = await get_server_info(
-                    self.hass, user_input[CONF_URL]
+                    self.menuai, user_input[CONF_URL]
                 )
                 await self.async_set_unique_id(
                     self.server_info.server_id, raise_on_progress=False
@@ -112,7 +112,7 @@ class MusicAssistantConfigFlow(ConfigFlow, domain=DOMAIN):
             reload_on_update=True,
         )
         try:
-            await get_server_info(self.hass, self.server_info.base_url)
+            await get_server_info(self.menuai, self.server_info.base_url)
         except CannotConnect:
             return self.async_abort(reason="cannot_connect")
         return await self.async_step_discovery_confirm()

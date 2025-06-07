@@ -8,12 +8,12 @@ from dataclasses import dataclass
 from simplipy.errors import SimplipyError
 from simplipy.system import System
 
-from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.button import ButtonEntity, ButtonEntityDescription
+from menuai.config_entries import ConfigEntry
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import SimpliSafe
 from .const import DOMAIN
@@ -46,12 +46,12 @@ BUTTON_DESCRIPTIONS = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up SimpliSafe buttons based on a config entry."""
-    simplisafe = hass.data[DOMAIN][entry.entry_id]
+    simplisafe = menuai.data[DOMAIN][entry.entry_id]
 
     async_add_entities(
         [
@@ -85,6 +85,6 @@ class SimpliSafeButton(SimpliSafeEntity, ButtonEntity):
         try:
             await self.entity_description.push_action(self._system)
         except SimplipyError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f'Error while pressing button "{self.entity_id}": {err}'
             ) from err

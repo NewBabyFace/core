@@ -6,10 +6,10 @@ from typing import Any
 
 from pysabnzbd import SabnzbdApiException
 
-from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.button import ButtonEntity, ButtonEntityDescription
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import SabnzbdConfigEntry, SabnzbdUpdateCoordinator
@@ -38,7 +38,7 @@ BUTTON_DESCRIPTIONS: tuple[SabnzbdButtonEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: SabnzbdConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -60,7 +60,7 @@ class SabnzbdButton(SabnzbdEntity, ButtonEntity):
         try:
             await self.entity_description.press_fn(self.coordinator)
         except SabnzbdApiException as e:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="service_call_exception",
             ) from e

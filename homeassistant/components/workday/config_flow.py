@@ -8,17 +8,17 @@ from typing import Any
 from holidays import PUBLIC, HolidayBase, country_holidays, list_supported_countries
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_COUNTRY, CONF_LANGUAGE, CONF_NAME
-from homeassistant.core import callback
-from homeassistant.data_entry_flow import AbortFlow
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.selector import (
+from menuai.const import CONF_COUNTRY, CONF_LANGUAGE, CONF_NAME
+from menuai.core import callback
+from menuai.data_entry_flow import AbortFlow
+from menuai.exceptions import menuaiError
+from menuai.helpers.selector import (
     CountrySelector,
     CountrySelectorConfig,
     LanguageSelector,
@@ -32,7 +32,7 @@ from homeassistant.helpers.selector import (
     SelectSelectorMode,
     TextSelector,
 )
-from homeassistant.util import dt as dt_util
+from menuai.util import dt as dt_util
 
 from .const import (
     ALLOWED_DAYS,
@@ -123,7 +123,7 @@ def add_province_and_language_to_schema(
     )
 
 
-def _is_valid_date_range(check_date: str, error: type[HomeAssistantError]) -> bool:
+def _is_valid_date_range(check_date: str, error: type[menuaiError]) -> bool:
     """Validate date range."""
     if check_date.find(",") > 0:
         dates = check_date.split(",", maxsplit=1)
@@ -228,7 +228,7 @@ class WorkdayConfigFlow(ConfigFlow, domain=DOMAIN):
         """Handle the user initial step."""
         errors: dict[str, str] = {}
 
-        supported_countries = await self.hass.async_add_executor_job(
+        supported_countries = await self.menuai.async_add_executor_job(
             partial(list_supported_countries, include_aliases=False)
         )
 
@@ -259,7 +259,7 @@ class WorkdayConfigFlow(ConfigFlow, domain=DOMAIN):
             combined_input: dict[str, Any] = {**self.data, **user_input}
 
             try:
-                await self.hass.async_add_executor_job(
+                await self.menuai.async_add_executor_job(
                     validate_custom_dates, combined_input
                 )
             except AddDatesError:
@@ -294,7 +294,7 @@ class WorkdayConfigFlow(ConfigFlow, domain=DOMAIN):
                     options=combined_input,
                 )
 
-        schema = await self.hass.async_add_executor_job(
+        schema = await self.menuai.async_add_executor_job(
             add_province_and_language_to_schema,
             DATA_SCHEMA_OPT,
             self.data.get(CONF_COUNTRY),
@@ -327,7 +327,7 @@ class WorkdayOptionsFlowHandler(OptionsFlow):
                 combined_input.pop(CONF_PROVINCE, None)
 
             try:
-                await self.hass.async_add_executor_job(
+                await self.menuai.async_add_executor_job(
                     validate_custom_dates, combined_input
                 )
             except AddDatesError:
@@ -359,7 +359,7 @@ class WorkdayOptionsFlowHandler(OptionsFlow):
                     return self.async_create_entry(data=combined_input)
 
         options = self.config_entry.options
-        schema: vol.Schema = await self.hass.async_add_executor_job(
+        schema: vol.Schema = await self.menuai.async_add_executor_job(
             add_province_and_language_to_schema,
             DATA_SCHEMA_OPT,
             options.get(CONF_COUNTRY),
@@ -378,21 +378,21 @@ class WorkdayOptionsFlowHandler(OptionsFlow):
         )
 
 
-class AddDatesError(HomeAssistantError):
+class AddDatesError(menuaiError):
     """Exception for error adding dates."""
 
 
-class AddDateRangeError(HomeAssistantError):
+class AddDateRangeError(menuaiError):
     """Exception for error adding dates."""
 
 
-class RemoveDatesError(HomeAssistantError):
+class RemoveDatesError(menuaiError):
     """Exception for error removing dates."""
 
 
-class RemoveDateRangeError(HomeAssistantError):
+class RemoveDateRangeError(menuaiError):
     """Exception for error removing dates."""
 
 
-class CountryNotExist(HomeAssistantError):
+class CountryNotExist(menuaiError):
     """Exception country does not exist error."""

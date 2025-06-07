@@ -6,28 +6,28 @@ import uuid
 
 import pytest
 
-from homeassistant import data_entry_flow
-from homeassistant.auth import AuthManager, auth_store, models as auth_models
-from homeassistant.auth.providers import command_line
-from homeassistant.const import CONF_TYPE
-from homeassistant.core import HomeAssistant
+from menuai import data_entry_flow
+from menuai.auth import AuthManager, auth_store, models as auth_models
+from menuai.auth.providers import command_line
+from menuai.const import CONF_TYPE
+from menuai.core import menuai
 
 
 @pytest.fixture
-async def store(hass: HomeAssistant) -> auth_store.AuthStore:
+async def store(menuai: menuai) -> auth_store.AuthStore:
     """Mock store."""
-    store = auth_store.AuthStore(hass)
+    store = auth_store.AuthStore(menuai)
     await store.async_load()
     return store
 
 
 @pytest.fixture
 def provider(
-    hass: HomeAssistant, store: auth_store.AuthStore
+    menuai: menuai, store: auth_store.AuthStore
 ) -> command_line.CommandLineAuthProvider:
     """Mock provider."""
     return command_line.CommandLineAuthProvider(
-        hass,
+        menuai,
         store,
         {
             CONF_TYPE: "command_line",
@@ -42,12 +42,12 @@ def provider(
 
 @pytest.fixture
 def manager(
-    hass: HomeAssistant,
+    menuai: menuai,
     store: auth_store.AuthStore,
     provider: command_line.CommandLineAuthProvider,
 ) -> AuthManager:
     """Mock manager."""
-    return AuthManager(hass, store, {(provider.type, provider.id): provider}, {})
+    return AuthManager(menuai, store, {(provider.type, provider.id): provider}, {})
 
 
 async def test_create_new_credential(

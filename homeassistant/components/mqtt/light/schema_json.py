@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 import voluptuous as vol
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_MODE,
     ATTR_COLOR_TEMP_KELVIN,
@@ -33,7 +33,7 @@ from homeassistant.components.light import (
     brightness_supported,
     valid_supported_color_modes,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_BRIGHTNESS,
     CONF_COLOR_TEMP,
     CONF_EFFECT,
@@ -44,13 +44,13 @@ from homeassistant.const import (
     CONF_XY,
     STATE_ON,
 )
-from homeassistant.core import callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.json import json_dumps
-from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.typing import ConfigType, VolSchemaType
-from homeassistant.util import color as color_util
-from homeassistant.util.json import json_loads_object
+from menuai.core import callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.json import json_dumps
+from menuai.helpers.restore_state import RestoreEntity
+from menuai.helpers.typing import ConfigType, VolSchemaType
+from menuai.util import color as color_util
+from menuai.util.json import json_loads_object
 
 from .. import subscription
 from ..config import DEFAULT_QOS, DEFAULT_RETAIN, MQTT_RW_SCHEMA
@@ -347,7 +347,7 @@ class MqttLightJson(MqttEntity, LightEntity, RestoreEntity):
 
     async def _subscribe_topics(self) -> None:
         """(Re)Subscribe to topics."""
-        subscription.async_subscribe_topics_internal(self.hass, self._sub_state)
+        subscription.async_subscribe_topics_internal(self.menuai, self._sub_state)
 
         last_state = await self.async_get_last_state()
         if self._optimistic and last_state:

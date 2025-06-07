@@ -21,14 +21,14 @@ from reolink_aio.exceptions import (
     UnexpectedDataError,
 )
 
-from homeassistant import config_entries
-from homeassistant.components.media_source import Unresolvable
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.storage import Store
-from homeassistant.helpers.translation import async_get_exception_message
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai import config_entries
+from menuai.components.media_source import Unresolvable
+from menuai.core import menuai
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers import device_registry as dr
+from menuai.helpers.storage import Store
+from menuai.helpers.translation import async_get_exception_message
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN
 
@@ -49,7 +49,7 @@ class ReolinkData:
     firmware_coordinator: DataUpdateCoordinator[None]
 
 
-def is_connected(hass: HomeAssistant, config_entry: config_entries.ConfigEntry) -> bool:
+def is_connected(menuai: menuai, config_entry: config_entries.ConfigEntry) -> bool:
     """Check if an existing entry has a proper connection."""
     return (
         hasattr(config_entry, "runtime_data")
@@ -58,9 +58,9 @@ def is_connected(hass: HomeAssistant, config_entry: config_entries.ConfigEntry) 
     )
 
 
-def get_host(hass: HomeAssistant, config_entry_id: str) -> ReolinkHost:
+def get_host(menuai: menuai, config_entry_id: str) -> ReolinkHost:
     """Return the Reolink host from the config entry id."""
-    config_entry: ReolinkConfigEntry | None = hass.config_entries.async_get_entry(
+    config_entry: ReolinkConfigEntry | None = menuai.config_entries.async_get_entry(
         config_entry_id
     )
     if config_entry is None:
@@ -70,9 +70,9 @@ def get_host(hass: HomeAssistant, config_entry_id: str) -> ReolinkHost:
     return config_entry.runtime_data.host
 
 
-def get_store(hass: HomeAssistant, config_entry_id: str) -> Store[str]:
+def get_store(menuai: menuai, config_entry_id: str) -> Store[str]:
     """Return the reolink store."""
-    return Store[str](hass, STORAGE_VERSION, f"{DOMAIN}.{config_entry_id}.json")
+    return Store[str](menuai, STORAGE_VERSION, f"{DOMAIN}.{config_entry_id}.json")
 
 
 def get_device_uid_and_ch(
@@ -148,7 +148,7 @@ def raise_translated_error[**P, R](
                 translation_placeholders={"err": str(err)},
             ) from err
         except ReolinkError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key=check_translation_key(err)
                 or _EXCEPTION_TO_TRANSLATION_KEY.get(type(err), "unexpected"),

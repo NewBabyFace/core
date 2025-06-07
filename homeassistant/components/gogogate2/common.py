@@ -16,15 +16,15 @@ from ismartgate import (
 )
 from ismartgate.common import AbstractDoor
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_DEVICE,
     CONF_IP_ADDRESS,
     CONF_PASSWORD,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.httpx_client import get_async_client
-from homeassistant.helpers.update_coordinator import UpdateFailed
+from menuai.core import menuai
+from menuai.helpers.httpx_client import get_async_client
+from menuai.helpers.update_coordinator import UpdateFailed
 
 from .const import DEVICE_TYPE_ISMARTGATE
 from .coordinator import DeviceDataUpdateCoordinator, GogoGateConfigEntry
@@ -41,10 +41,10 @@ class StateData(NamedTuple):
 
 
 def create_data_update_coordinator(
-    hass: HomeAssistant, config_entry: GogoGateConfigEntry
+    menuai: menuai, config_entry: GogoGateConfigEntry
 ) -> DeviceDataUpdateCoordinator:
     """Get an update coordinator."""
-    api = get_api(hass, config_entry.data)
+    api = get_api(menuai, config_entry.data)
 
     async def async_update_data() -> GogoGate2InfoResponse | ISmartGateInfoResponse:
         try:
@@ -55,7 +55,7 @@ def create_data_update_coordinator(
             ) from exception
 
     return DeviceDataUpdateCoordinator(
-        hass,
+        menuai,
         config_entry,
         _LOGGER,
         api,
@@ -79,7 +79,7 @@ def sensor_unique_id(
     return f"{config_entry.unique_id}_{door.door_id}_{sensor_type}"
 
 
-def get_api(hass: HomeAssistant, config_data: Mapping[str, Any]) -> AbstractGateApi:
+def get_api(menuai: menuai, config_data: Mapping[str, Any]) -> AbstractGateApi:
     """Get an api object for config data."""
     gate_class = GogoGate2Api
 
@@ -90,5 +90,5 @@ def get_api(hass: HomeAssistant, config_data: Mapping[str, Any]) -> AbstractGate
         config_data[CONF_IP_ADDRESS],
         config_data[CONF_USERNAME],
         config_data[CONF_PASSWORD],
-        httpx_async_client=get_async_client(hass),
+        httpx_async_client=get_async_client(menuai),
     )

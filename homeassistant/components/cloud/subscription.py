@@ -7,7 +7,7 @@ import logging
 from typing import Any
 
 from aiohttp.client_exceptions import ClientError
-from hass_nabucasa import Cloud, cloud_api
+from menuai_nabucasa import Cloud, cloud_api
 
 from .client import CloudClient
 from .const import REQUEST_TIMEOUT

@@ -18,10 +18,10 @@ from aiohasupervisor.models import (
     StoreAddonUpdate,
 )
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
 
-from .handler import HassioAPIError, async_create_backup, get_supervisor_client
+from .handler import menuaiioAPIError, async_create_backup, get_supervisor_client
 
 type _FuncType[_T, **_P, _R] = Callable[Concatenate[_T, _P], Awaitable[_R]]
 type _ReturnFuncType[_T, **_P, _R] = Callable[
@@ -32,17 +32,17 @@ type _ReturnFuncType[_T, **_P, _R] = Callable[
 def api_error[_AddonManagerT: AddonManager, **_P, _R](
     error_message: str,
     *,
-    expected_error_type: type[HassioAPIError | SupervisorError] | None = None,
+    expected_error_type: type[menuaiioAPIError | SupervisorError] | None = None,
 ) -> Callable[
     [_FuncType[_AddonManagerT, _P, _R]], _ReturnFuncType[_AddonManagerT, _P, _R]
 ]:
-    """Handle HassioAPIError and raise a specific AddonError."""
-    error_type = expected_error_type or (HassioAPIError, SupervisorError)
+    """Handle menuaiioAPIError and raise a specific AddonError."""
+    error_type = expected_error_type or (menuaiioAPIError, SupervisorError)
 
-    def handle_hassio_api_error(
+    def handle_menuaiio_api_error(
         func: _FuncType[_AddonManagerT, _P, _R],
     ) -> _ReturnFuncType[_AddonManagerT, _P, _R]:
-        """Handle a HassioAPIError."""
+        """Handle a menuaiioAPIError."""
 
         @wraps(func)
         async def wrapper(
@@ -60,7 +60,7 @@ def api_error[_AddonManagerT: AddonManager, **_P, _R](
 
         return wrapper
 
-    return handle_hassio_api_error
+    return handle_menuaiio_api_error
 
 
 @dataclass
@@ -95,7 +95,7 @@ class AddonManager:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         logger: logging.Logger,
         addon_name: str,
         addon_slug: str,
@@ -103,13 +103,13 @@ class AddonManager:
         """Set up the add-on manager."""
         self.addon_name = addon_name
         self.addon_slug = addon_slug
-        self._hass = hass
+        self._menuai = menuai
         self._logger = logger
         self._install_task: asyncio.Task | None = None
         self._restart_task: asyncio.Task | None = None
         self._start_task: asyncio.Task | None = None
         self._update_task: asyncio.Task | None = None
-        self._supervisor_client = get_supervisor_client(hass)
+        self._supervisor_client = get_supervisor_client(menuai)
 
     def task_in_progress(self) -> bool:
         """Return True if any of the add-on tasks are in progress."""
@@ -269,7 +269,7 @@ class AddonManager:
 
         self._logger.debug("Creating backup: %s", name)
         await async_create_backup(
-            self._hass,
+            self._menuai,
             {"name": name, "addons": [self.addon_slug]},
             partial=True,
         )
@@ -410,8 +410,8 @@ class AddonManager:
                     self._logger.error(err)
                     break
 
-        return self._hass.async_create_task(addon_operation(), eager_start=False)
+        return self._menuai.async_create_task(addon_operation(), eager_start=False)
 
 
-class AddonError(HomeAssistantError):
+class AddonError(menuaiError):
     """Represent an error with the managed add-on."""

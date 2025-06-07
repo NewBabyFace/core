@@ -13,9 +13,9 @@ from hatasmota.utils import (
 )
 import pytest
 
-from homeassistant import core as ha
-from homeassistant.components.tasmota.const import DEFAULT_PREFIX
-from homeassistant.const import (
+from menuai import core as ha
+from menuai.components.tasmota.const import DEFAULT_PREFIX
+from menuai.const import (
     ATTR_ASSUMED_STATE,
     EVENT_STATE_CHANGED,
     STATE_OFF,
@@ -23,8 +23,8 @@ from homeassistant.const import (
     STATE_UNKNOWN,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.util import dt as dt_util
 
 from .test_common import (
     DEFAULT_CONFIG,
@@ -46,7 +46,7 @@ from tests.typing import MqttMockHAClient, MqttMockPahoClient
 
 
 async def test_controlling_state_via_mqtt(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient, setup_tasmota
+    menuai: menuai, mqtt_mock: MqttMockHAClient, setup_tasmota
 ) -> None:
     """Test state update via MQTT."""
     config = copy.deepcopy(DEFAULT_CONFIG)
@@ -54,66 +54,66 @@ async def test_controlling_state_via_mqtt(
     mac = config["mac"]
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         f"{DEFAULT_PREFIX}/{mac}/config",
         json.dumps(config),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.tasmota_binary_sensor_1")
+    state = menuai.states.get("binary_sensor.tasmota_binary_sensor_1")
     assert state.state == "unavailable"
     assert not state.attributes.get(ATTR_ASSUMED_STATE)
 
-    async_fire_mqtt_message(hass, "tasmota_49A3BC/tele/LWT", "Online")
-    await hass.async_block_till_done()
-    state = hass.states.get("binary_sensor.tasmota_binary_sensor_1")
+    async_fire_mqtt_message(menuai, "tasmota_49A3BC/tele/LWT", "Online")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("binary_sensor.tasmota_binary_sensor_1")
     assert state.state == STATE_UNKNOWN
     assert not state.attributes.get(ATTR_ASSUMED_STATE)
 
     # Test normal state update
     async_fire_mqtt_message(
-        hass, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"ON"}}'
+        menuai, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"ON"}}'
     )
-    state = hass.states.get("binary_sensor.tasmota_binary_sensor_1")
+    state = menuai.states.get("binary_sensor.tasmota_binary_sensor_1")
     assert state.state == STATE_ON
 
     async_fire_mqtt_message(
-        hass, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"OFF"}}'
+        menuai, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"OFF"}}'
     )
-    state = hass.states.get("binary_sensor.tasmota_binary_sensor_1")
+    state = menuai.states.get("binary_sensor.tasmota_binary_sensor_1")
     assert state.state == STATE_OFF
 
     # Test periodic state update
-    async_fire_mqtt_message(hass, "tasmota_49A3BC/tele/SENSOR", '{"Switch1":"ON"}')
-    state = hass.states.get("binary_sensor.tasmota_binary_sensor_1")
+    async_fire_mqtt_message(menuai, "tasmota_49A3BC/tele/SENSOR", '{"Switch1":"ON"}')
+    state = menuai.states.get("binary_sensor.tasmota_binary_sensor_1")
     assert state.state == STATE_ON
 
-    async_fire_mqtt_message(hass, "tasmota_49A3BC/tele/SENSOR", '{"Switch1":"OFF"}')
-    state = hass.states.get("binary_sensor.tasmota_binary_sensor_1")
+    async_fire_mqtt_message(menuai, "tasmota_49A3BC/tele/SENSOR", '{"Switch1":"OFF"}')
+    state = menuai.states.get("binary_sensor.tasmota_binary_sensor_1")
     assert state.state == STATE_OFF
 
     # Test polled state update
     async_fire_mqtt_message(
-        hass, "tasmota_49A3BC/stat/STATUS10", '{"StatusSNS":{"Switch1":"ON"}}'
+        menuai, "tasmota_49A3BC/stat/STATUS10", '{"StatusSNS":{"Switch1":"ON"}}'
     )
-    state = hass.states.get("binary_sensor.tasmota_binary_sensor_1")
+    state = menuai.states.get("binary_sensor.tasmota_binary_sensor_1")
     assert state.state == STATE_ON
 
     async_fire_mqtt_message(
-        hass, "tasmota_49A3BC/stat/STATUS10", '{"StatusSNS":{"Switch1":"OFF"}}'
+        menuai, "tasmota_49A3BC/stat/STATUS10", '{"StatusSNS":{"Switch1":"OFF"}}'
     )
-    state = hass.states.get("binary_sensor.tasmota_binary_sensor_1")
+    state = menuai.states.get("binary_sensor.tasmota_binary_sensor_1")
     assert state.state == STATE_OFF
 
     # Test force update flag
-    entity = hass.data["entity_components"]["binary_sensor"].get_entity(
+    entity = menuai.data["entity_components"]["binary_sensor"].get_entity(
         "binary_sensor.tasmota_binary_sensor_1"
     )
     assert not entity.force_update
 
 
 async def test_controlling_state_via_mqtt_switchname(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient, setup_tasmota
+    menuai: menuai, mqtt_mock: MqttMockHAClient, setup_tasmota
 ) -> None:
     """Test state update via MQTT."""
     config = copy.deepcopy(DEFAULT_CONFIG)
@@ -122,60 +122,60 @@ async def test_controlling_state_via_mqtt_switchname(
     mac = config["mac"]
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         f"{DEFAULT_PREFIX}/{mac}/config",
         json.dumps(config),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.tasmota_custom_name")
+    state = menuai.states.get("binary_sensor.tasmota_custom_name")
     assert state.state == "unavailable"
     assert not state.attributes.get(ATTR_ASSUMED_STATE)
 
-    async_fire_mqtt_message(hass, "tasmota_49A3BC/tele/LWT", "Online")
-    await hass.async_block_till_done()
-    state = hass.states.get("binary_sensor.tasmota_custom_name")
+    async_fire_mqtt_message(menuai, "tasmota_49A3BC/tele/LWT", "Online")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("binary_sensor.tasmota_custom_name")
     assert state.state == STATE_UNKNOWN
     assert not state.attributes.get(ATTR_ASSUMED_STATE)
 
     # Test normal state update
     async_fire_mqtt_message(
-        hass, "tasmota_49A3BC/stat/RESULT", '{"Custom Name":{"Action":"ON"}}'
+        menuai, "tasmota_49A3BC/stat/RESULT", '{"Custom Name":{"Action":"ON"}}'
     )
-    state = hass.states.get("binary_sensor.tasmota_custom_name")
+    state = menuai.states.get("binary_sensor.tasmota_custom_name")
     assert state.state == STATE_ON
 
     async_fire_mqtt_message(
-        hass, "tasmota_49A3BC/stat/RESULT", '{"Custom Name":{"Action":"OFF"}}'
+        menuai, "tasmota_49A3BC/stat/RESULT", '{"Custom Name":{"Action":"OFF"}}'
     )
-    state = hass.states.get("binary_sensor.tasmota_custom_name")
+    state = menuai.states.get("binary_sensor.tasmota_custom_name")
     assert state.state == STATE_OFF
 
     # Test periodic state update
-    async_fire_mqtt_message(hass, "tasmota_49A3BC/tele/SENSOR", '{"Custom Name":"ON"}')
-    state = hass.states.get("binary_sensor.tasmota_custom_name")
+    async_fire_mqtt_message(menuai, "tasmota_49A3BC/tele/SENSOR", '{"Custom Name":"ON"}')
+    state = menuai.states.get("binary_sensor.tasmota_custom_name")
     assert state.state == STATE_ON
 
-    async_fire_mqtt_message(hass, "tasmota_49A3BC/tele/SENSOR", '{"Custom Name":"OFF"}')
-    state = hass.states.get("binary_sensor.tasmota_custom_name")
+    async_fire_mqtt_message(menuai, "tasmota_49A3BC/tele/SENSOR", '{"Custom Name":"OFF"}')
+    state = menuai.states.get("binary_sensor.tasmota_custom_name")
     assert state.state == STATE_OFF
 
     # Test polled state update
     async_fire_mqtt_message(
-        hass, "tasmota_49A3BC/stat/STATUS10", '{"StatusSNS":{"Custom Name":"ON"}}'
+        menuai, "tasmota_49A3BC/stat/STATUS10", '{"StatusSNS":{"Custom Name":"ON"}}'
     )
-    state = hass.states.get("binary_sensor.tasmota_custom_name")
+    state = menuai.states.get("binary_sensor.tasmota_custom_name")
     assert state.state == STATE_ON
 
     async_fire_mqtt_message(
-        hass, "tasmota_49A3BC/stat/STATUS10", '{"StatusSNS":{"Custom Name":"OFF"}}'
+        menuai, "tasmota_49A3BC/stat/STATUS10", '{"StatusSNS":{"Custom Name":"OFF"}}'
     )
-    state = hass.states.get("binary_sensor.tasmota_custom_name")
+    state = menuai.states.get("binary_sensor.tasmota_custom_name")
     assert state.state == STATE_OFF
 
 
 async def test_pushon_controlling_state_via_mqtt(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient, setup_tasmota
+    menuai: menuai, mqtt_mock: MqttMockHAClient, setup_tasmota
 ) -> None:
     """Test state update via MQTT."""
     config = copy.deepcopy(DEFAULT_CONFIG)
@@ -183,50 +183,50 @@ async def test_pushon_controlling_state_via_mqtt(
     mac = config["mac"]
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         f"{DEFAULT_PREFIX}/{mac}/config",
         json.dumps(config),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.tasmota_binary_sensor_1")
+    state = menuai.states.get("binary_sensor.tasmota_binary_sensor_1")
     assert state.state == "unavailable"
     assert not state.attributes.get(ATTR_ASSUMED_STATE)
 
-    async_fire_mqtt_message(hass, "tasmota_49A3BC/tele/LWT", "Online")
-    await hass.async_block_till_done()
-    state = hass.states.get("binary_sensor.tasmota_binary_sensor_1")
+    async_fire_mqtt_message(menuai, "tasmota_49A3BC/tele/LWT", "Online")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("binary_sensor.tasmota_binary_sensor_1")
     assert state.state == STATE_UNKNOWN
     assert not state.attributes.get(ATTR_ASSUMED_STATE)
 
     # Test normal state update
     async_fire_mqtt_message(
-        hass, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"ON"}}'
+        menuai, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"ON"}}'
     )
-    state = hass.states.get("binary_sensor.tasmota_binary_sensor_1")
+    state = menuai.states.get("binary_sensor.tasmota_binary_sensor_1")
     assert state.state == STATE_ON
 
     async_fire_mqtt_message(
-        hass, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"OFF"}}'
+        menuai, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"OFF"}}'
     )
-    state = hass.states.get("binary_sensor.tasmota_binary_sensor_1")
+    state = menuai.states.get("binary_sensor.tasmota_binary_sensor_1")
     assert state.state == STATE_OFF
 
     # Test periodic state update is ignored
-    async_fire_mqtt_message(hass, "tasmota_49A3BC/tele/SENSOR", '{"Switch1":"ON"}')
-    state = hass.states.get("binary_sensor.tasmota_binary_sensor_1")
+    async_fire_mqtt_message(menuai, "tasmota_49A3BC/tele/SENSOR", '{"Switch1":"ON"}')
+    state = menuai.states.get("binary_sensor.tasmota_binary_sensor_1")
     assert state.state == STATE_OFF
 
     # Test polled state update is ignored
     async_fire_mqtt_message(
-        hass, "tasmota_49A3BC/stat/STATUS10", '{"StatusSNS":{"Switch1":"ON"}}'
+        menuai, "tasmota_49A3BC/stat/STATUS10", '{"StatusSNS":{"Switch1":"ON"}}'
     )
-    state = hass.states.get("binary_sensor.tasmota_binary_sensor_1")
+    state = menuai.states.get("binary_sensor.tasmota_binary_sensor_1")
     assert state.state == STATE_OFF
 
 
 async def test_friendly_names(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient, setup_tasmota
+    menuai: menuai, mqtt_mock: MqttMockHAClient, setup_tasmota
 ) -> None:
     """Test state update via MQTT."""
     config = copy.deepcopy(DEFAULT_CONFIG)
@@ -236,23 +236,23 @@ async def test_friendly_names(
     mac = config["mac"]
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         f"{DEFAULT_PREFIX}/{mac}/config",
         json.dumps(config),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.tasmota_binary_sensor_1")
+    state = menuai.states.get("binary_sensor.tasmota_binary_sensor_1")
     assert state.state == "unavailable"
     assert state.attributes.get("friendly_name") == "Tasmota binary_sensor 1"
 
-    state = hass.states.get("binary_sensor.tasmota_beer")
+    state = menuai.states.get("binary_sensor.tasmota_beer")
     assert state.state == "unavailable"
     assert state.attributes.get("friendly_name") == "Tasmota Beer"
 
 
 async def test_off_delay(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient, setup_tasmota
+    menuai: menuai, mqtt_mock: MqttMockHAClient, setup_tasmota
 ) -> None:
     """Test off_delay option."""
     config = copy.deepcopy(DEFAULT_CONFIG)
@@ -260,11 +260,11 @@ async def test_off_delay(
     mac = config["mac"]
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         f"{DEFAULT_PREFIX}/{mac}/config",
         json.dumps(config),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     events = []
 
@@ -273,36 +273,36 @@ async def test_off_delay(
         """Verify event got called."""
         events.append(event.data["new_state"].state)
 
-    hass.bus.async_listen(EVENT_STATE_CHANGED, callback)
+    menuai.bus.async_listen(EVENT_STATE_CHANGED, callback)
 
-    async_fire_mqtt_message(hass, "tasmota_49A3BC/tele/LWT", "Online")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "tasmota_49A3BC/tele/LWT", "Online")
+    await menuai.async_block_till_done()
     assert events == ["unknown"]
     async_fire_mqtt_message(
-        hass, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"ON"}}'
+        menuai, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"ON"}}'
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("binary_sensor.tasmota_binary_sensor_1")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("binary_sensor.tasmota_binary_sensor_1")
     assert state.state == STATE_ON
     assert events == ["unknown", "on"]
 
     async_fire_mqtt_message(
-        hass, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"ON"}}'
+        menuai, "tasmota_49A3BC/stat/RESULT", '{"Switch1":{"Action":"ON"}}'
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("binary_sensor.tasmota_binary_sensor_1")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("binary_sensor.tasmota_binary_sensor_1")
     assert state.state == STATE_ON
     assert events == ["unknown", "on", "on"]
 
-    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=1))
-    await hass.async_block_till_done()
-    state = hass.states.get("binary_sensor.tasmota_binary_sensor_1")
+    async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(seconds=1))
+    await menuai.async_block_till_done()
+    state = menuai.states.get("binary_sensor.tasmota_binary_sensor_1")
     assert state.state == STATE_OFF
     assert events == ["unknown", "on", "on", "off"]
 
 
 async def test_availability_when_connection_lost(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_client_mock: MqttMockPahoClient,
     mqtt_mock: MqttMockHAClient,
     setup_tasmota,
@@ -312,12 +312,12 @@ async def test_availability_when_connection_lost(
     config["swc"][0] = 1
     config["swn"][0] = "Test"
     await help_test_availability_when_connection_lost(
-        hass, mqtt_client_mock, mqtt_mock, Platform.BINARY_SENSOR, config
+        menuai, mqtt_client_mock, mqtt_mock, Platform.BINARY_SENSOR, config
     )
 
 
 async def test_deep_sleep_availability_when_connection_lost(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_client_mock: MqttMockPahoClient,
     mqtt_mock: MqttMockHAClient,
     setup_tasmota,
@@ -327,46 +327,46 @@ async def test_deep_sleep_availability_when_connection_lost(
     config["swc"][0] = 1
     config["swn"][0] = "Test"
     await help_test_deep_sleep_availability_when_connection_lost(
-        hass, mqtt_client_mock, mqtt_mock, Platform.BINARY_SENSOR, config
+        menuai, mqtt_client_mock, mqtt_mock, Platform.BINARY_SENSOR, config
     )
 
 
 async def test_availability(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient, setup_tasmota
+    menuai: menuai, mqtt_mock: MqttMockHAClient, setup_tasmota
 ) -> None:
     """Test availability."""
     config = copy.deepcopy(DEFAULT_CONFIG)
     config["swc"][0] = 1
     config["swn"][0] = "Test"
-    await help_test_availability(hass, mqtt_mock, Platform.BINARY_SENSOR, config)
+    await help_test_availability(menuai, mqtt_mock, Platform.BINARY_SENSOR, config)
 
 
 async def test_deep_sleep_availability(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient, setup_tasmota
+    menuai: menuai, mqtt_mock: MqttMockHAClient, setup_tasmota
 ) -> None:
     """Test availability when deep sleep is enabled."""
     config = copy.deepcopy(DEFAULT_CONFIG)
     config["swc"][0] = 1
     config["swn"][0] = "Test"
     await help_test_deep_sleep_availability(
-        hass, mqtt_mock, Platform.BINARY_SENSOR, config
+        menuai, mqtt_mock, Platform.BINARY_SENSOR, config
     )
 
 
 async def test_availability_discovery_update(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient, setup_tasmota
+    menuai: menuai, mqtt_mock: MqttMockHAClient, setup_tasmota
 ) -> None:
     """Test availability discovery update."""
     config = copy.deepcopy(DEFAULT_CONFIG)
     config["swc"][0] = 1
     config["swn"][0] = "Test"
     await help_test_availability_discovery_update(
-        hass, mqtt_mock, Platform.BINARY_SENSOR, config
+        menuai, mqtt_mock, Platform.BINARY_SENSOR, config
     )
 
 
 async def test_availability_poll_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_client_mock: MqttMockPahoClient,
     mqtt_mock: MqttMockHAClient,
     setup_tasmota,
@@ -377,7 +377,7 @@ async def test_availability_poll_state(
     config["swn"][0] = "Test"
     poll_topic = "tasmota_49A3BC/cmnd/STATUS"
     await help_test_availability_poll_state(
-        hass,
+        menuai,
         mqtt_client_mock,
         mqtt_mock,
         Platform.BINARY_SENSOR,
@@ -388,7 +388,7 @@ async def test_availability_poll_state(
 
 
 async def test_discovery_removal_binary_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock: MqttMockHAClient,
     caplog: pytest.LogCaptureFixture,
     setup_tasmota,
@@ -402,12 +402,12 @@ async def test_discovery_removal_binary_sensor(
     config2["swn"][0] = "Test"
 
     await help_test_discovery_removal(
-        hass, mqtt_mock, caplog, Platform.BINARY_SENSOR, config1, config2
+        menuai, mqtt_mock, caplog, Platform.BINARY_SENSOR, config1, config2
     )
 
 
 async def test_discovery_update_unchanged_binary_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock: MqttMockHAClient,
     caplog: pytest.LogCaptureFixture,
     setup_tasmota,
@@ -417,27 +417,27 @@ async def test_discovery_update_unchanged_binary_sensor(
     config["swc"][0] = 1
     config["swn"][0] = "Test"
     with patch(
-        "homeassistant.components.tasmota.binary_sensor.TasmotaBinarySensor.discovery_update"
+        "menuai.components.tasmota.binary_sensor.TasmotaBinarySensor.discovery_update"
     ) as discovery_update:
         await help_test_discovery_update_unchanged(
-            hass, mqtt_mock, caplog, Platform.BINARY_SENSOR, config, discovery_update
+            menuai, mqtt_mock, caplog, Platform.BINARY_SENSOR, config, discovery_update
         )
 
 
 async def test_discovery_device_remove(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient, setup_tasmota
+    menuai: menuai, mqtt_mock: MqttMockHAClient, setup_tasmota
 ) -> None:
     """Test device registry remove."""
     config = copy.deepcopy(DEFAULT_CONFIG)
     config["swc"][0] = 1
     unique_id = f"{DEFAULT_CONFIG['mac']}_binary_sensor_switch_0"
     await help_test_discovery_device_remove(
-        hass, mqtt_mock, Platform.BINARY_SENSOR, unique_id, config
+        menuai, mqtt_mock, Platform.BINARY_SENSOR, unique_id, config
     )
 
 
 async def test_entity_id_update_subscriptions(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient, setup_tasmota
+    menuai: menuai, mqtt_mock: MqttMockHAClient, setup_tasmota
 ) -> None:
     """Test MQTT subscriptions are managed when entity_id is updated."""
     config = copy.deepcopy(DEFAULT_CONFIG)
@@ -450,17 +450,17 @@ async def test_entity_id_update_subscriptions(
         get_topic_tele_will(config),
     ]
     await help_test_entity_id_update_subscriptions(
-        hass, mqtt_mock, Platform.BINARY_SENSOR, config, topics
+        menuai, mqtt_mock, Platform.BINARY_SENSOR, config, topics
     )
 
 
 async def test_entity_id_update_discovery_update(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient, setup_tasmota
+    menuai: menuai, mqtt_mock: MqttMockHAClient, setup_tasmota
 ) -> None:
     """Test MQTT discovery update when entity_id is updated."""
     config = copy.deepcopy(DEFAULT_CONFIG)
     config["swc"][0] = 1
     config["swn"][0] = "Test"
     await help_test_entity_id_update_discovery_update(
-        hass, mqtt_mock, Platform.BINARY_SENSOR, config
+        menuai, mqtt_mock, Platform.BINARY_SENSOR, config
     )

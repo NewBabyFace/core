@@ -14,24 +14,24 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.lock import (
+from menuai.components.lock import (
     DOMAIN as LOCK_DOMAIN,
     SERVICE_LOCK,
     SERVICE_OPEN,
     SERVICE_UNLOCK,
     LockState,
 )
-from homeassistant.components.webhook import async_generate_url
-from homeassistant.const import (
+from menuai.components.webhook import async_generate_url
+from menuai.const import (
     ATTR_ENTITY_ID,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceNotSupported
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.exceptions import menuaiError, ServiceNotSupported
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.setup import async_setup_component
 
 from . import setup_integration
 from .conftest import WEBHOOK_ID
@@ -41,27 +41,27 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_locks(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_tedee: MagicMock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test tedee locks."""
-    with patch("homeassistant.components.tedee.PLATFORMS", [Platform.LOCK]):
-        await setup_integration(hass, mock_config_entry)
+    with patch("menuai.components.tedee.PLATFORMS", [Platform.LOCK]):
+        await setup_integration(menuai, mock_config_entry)
 
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
 
 @pytest.mark.usefixtures("init_integration")
 async def test_lock_service_calls(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_tedee: MagicMock,
 ) -> None:
     """Test the tedee lock."""
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LOCK_DOMAIN,
         SERVICE_LOCK,
         {
@@ -72,11 +72,11 @@ async def test_lock_service_calls(
 
     assert len(mock_tedee.lock.mock_calls) == 1
     mock_tedee.lock.assert_called_once_with(12345)
-    state = hass.states.get("lock.lock_1a2b")
+    state = menuai.states.get("lock.lock_1a2b")
     assert state
     assert state.state == LockState.LOCKING
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LOCK_DOMAIN,
         SERVICE_UNLOCK,
         {
@@ -87,11 +87,11 @@ async def test_lock_service_calls(
 
     assert len(mock_tedee.unlock.mock_calls) == 1
     mock_tedee.unlock.assert_called_once_with(12345)
-    state = hass.states.get("lock.lock_1a2b")
+    state = menuai.states.get("lock.lock_1a2b")
     assert state
     assert state.state == LockState.UNLOCKING
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LOCK_DOMAIN,
         SERVICE_OPEN,
         {
@@ -102,14 +102,14 @@ async def test_lock_service_calls(
 
     assert len(mock_tedee.open.mock_calls) == 1
     mock_tedee.open.assert_called_once_with(12345)
-    state = hass.states.get("lock.lock_1a2b")
+    state = menuai.states.get("lock.lock_1a2b")
     assert state
     assert state.state == LockState.UNLOCKING
 
 
 @pytest.mark.usefixtures("init_integration")
 async def test_lock_without_pullspring(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_tedee: MagicMock,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
@@ -117,9 +117,9 @@ async def test_lock_without_pullspring(
 ) -> None:
     """Test the tedee lock without pullspring."""
     # Fetch translations
-    await async_setup_component(hass, "homeassistant", {})
+    await async_setup_component(menuai, "menuai", {})
 
-    state = hass.states.get("lock.lock_2c3d")
+    state = menuai.states.get("lock.lock_2c3d")
     assert state
     assert state == snapshot
 
@@ -136,7 +136,7 @@ async def test_lock_without_pullspring(
         ServiceNotSupported,
         match=f"Entity lock.lock_2c3d does not support action {LOCK_DOMAIN}.{SERVICE_OPEN}",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             LOCK_DOMAIN,
             SERVICE_OPEN,
             {
@@ -150,13 +150,13 @@ async def test_lock_without_pullspring(
 
 @pytest.mark.usefixtures("init_integration")
 async def test_lock_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_tedee: MagicMock,
 ) -> None:
     """Test event errors."""
     mock_tedee.lock.side_effect = TedeeClientException("Boom")
-    with pytest.raises(HomeAssistantError) as exc_info:
-        await hass.services.async_call(
+    with pytest.raises(menuaiError) as exc_info:
+        await menuai.services.async_call(
             LOCK_DOMAIN,
             SERVICE_LOCK,
             {
@@ -167,8 +167,8 @@ async def test_lock_errors(
     assert exc_info.value.translation_key == "lock_failed"
 
     mock_tedee.unlock.side_effect = TedeeClientException("Boom")
-    with pytest.raises(HomeAssistantError) as exc_info:
-        await hass.services.async_call(
+    with pytest.raises(menuaiError) as exc_info:
+        await menuai.services.async_call(
             LOCK_DOMAIN,
             SERVICE_UNLOCK,
             {
@@ -179,8 +179,8 @@ async def test_lock_errors(
     assert exc_info.value.translation_key == "unlock_failed"
 
     mock_tedee.open.side_effect = TedeeClientException("Boom")
-    with pytest.raises(HomeAssistantError) as exc_info:
-        await hass.services.async_call(
+    with pytest.raises(menuaiError) as exc_info:
+        await menuai.services.async_call(
             LOCK_DOMAIN,
             SERVICE_OPEN,
             {
@@ -202,7 +202,7 @@ async def test_lock_errors(
     ],
 )
 async def test_update_failed(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_tedee: MagicMock,
     freezer: FrozenDateTimeFactory,
     side_effect: Exception,
@@ -210,17 +210,17 @@ async def test_update_failed(
     """Test update failed."""
     mock_tedee.sync.side_effect = side_effect
     freezer.tick(timedelta(minutes=10))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("lock.lock_1a2b")
+    state = menuai.states.get("lock.lock_1a2b")
     assert state is not None
     assert state.state == STATE_UNAVAILABLE
 
 
 @pytest.mark.usefixtures("init_integration")
 async def test_cleanup_removed_locks(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_tedee: MagicMock,
     device_registry: dr.DeviceRegistry,
     mock_config_entry: MockConfigEntry,
@@ -238,8 +238,8 @@ async def test_cleanup_removed_locks(
     # remove a lock and wait for coordinator
     mock_tedee.locks_dict.pop(12345)
     freezer.tick(timedelta(minutes=10))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     devices = dr.async_entries_for_config_entry(
         device_registry, mock_config_entry.entry_id
@@ -251,13 +251,13 @@ async def test_cleanup_removed_locks(
 
 @pytest.mark.usefixtures("init_integration")
 async def test_new_lock(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_tedee: MagicMock,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Ensure new lock is added automatically."""
 
-    state = hass.states.get("lock.lock_4e5f")
+    state = menuai.states.get("lock.lock_4e5f")
     assert state is None
 
     mock_tedee.locks_dict[666666] = TedeeLock("Lock-4E5F", 666666, 2)
@@ -269,12 +269,12 @@ async def test_new_lock(
     )
 
     freezer.tick(timedelta(minutes=10))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("lock.lock_4e5f")
+    state = menuai.states.get("lock.lock_4e5f")
     assert state
-    state = hass.states.get("lock.lock_6g7h")
+    state = menuai.states.get("lock.lock_6g7h")
     assert state
 
 
@@ -289,23 +289,23 @@ async def test_new_lock(
     ],
 )
 async def test_webhook_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_tedee: MagicMock,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai_client_no_auth: ClientSessionGenerator,
     lib_state: TedeeLockState,
     expected_state: str,
 ) -> None:
     """Test updated data set through webhook."""
 
-    state = hass.states.get("lock.lock_1a2b")
+    state = menuai.states.get("lock.lock_1a2b")
     assert state
     assert state.state == LockState.UNLOCKED
 
     webhook_data = {"dummystate": lib_state.value}
     # is updated in the lib, so mock and assert below
     mock_tedee.locks_dict[12345].state = lib_state
-    client = await hass_client_no_auth()
-    webhook_url = async_generate_url(hass, WEBHOOK_ID)
+    client = await menuai_client_no_auth()
+    webhook_url = async_generate_url(menuai, WEBHOOK_ID)
 
     await client.post(
         urlparse(webhook_url).path,
@@ -313,6 +313,6 @@ async def test_webhook_update(
     )
     mock_tedee.parse_webhook_message.assert_called_once_with(webhook_data)
 
-    state = hass.states.get("lock.lock_1a2b")
+    state = menuai.states.get("lock.lock_1a2b")
     assert state
     assert state.state == expected_state

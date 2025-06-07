@@ -18,15 +18,15 @@ from aiontfy.exceptions import (
 import voluptuous as vol
 from yarl import URL
 
-from homeassistant import data_entry_flow
-from homeassistant.config_entries import (
+from menuai import data_entry_flow
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     ConfigSubentryFlow,
     SubentryFlowResult,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_CREDENTIALS,
     CONF_NAME,
     CONF_PASSWORD,
@@ -35,9 +35,9 @@ from homeassistant.const import (
     CONF_USERNAME,
     CONF_VERIFY_SSL,
 )
-from homeassistant.core import callback
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.selector import (
+from menuai.core import callback
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.selector import (
     TextSelector,
     TextSelectorConfig,
     TextSelectorType,
@@ -125,7 +125,7 @@ class NtfyConfigFlow(ConfigFlow, domain=DOMAIN):
                     CONF_USERNAME: username,
                 }
             )
-            session = async_get_clientsession(self.hass, user_input[CONF_VERIFY_SSL])
+            session = async_get_clientsession(self.menuai, user_input[CONF_VERIFY_SSL])
             if username:
                 ntfy = Ntfy(
                     user_input[CONF_URL],
@@ -139,7 +139,7 @@ class NtfyConfigFlow(ConfigFlow, domain=DOMAIN):
             try:
                 account = await ntfy.account()
                 token = (
-                    (await ntfy.generate_token("Home Assistant")).token
+                    (await ntfy.generate_token("MenuAI")).token
                     if account.username != "*"
                     else None
                 )
@@ -189,7 +189,7 @@ class NtfyConfigFlow(ConfigFlow, domain=DOMAIN):
         entry = self._get_reauth_entry()
 
         if user_input is not None:
-            session = async_get_clientsession(self.hass)
+            session = async_get_clientsession(self.menuai)
             if token := user_input.get(CONF_TOKEN):
                 ntfy = Ntfy(
                     entry.data[CONF_URL],
@@ -207,7 +207,7 @@ class NtfyConfigFlow(ConfigFlow, domain=DOMAIN):
             try:
                 account = await ntfy.account()
                 token = (
-                    (await ntfy.generate_token("Home Assistant")).token
+                    (await ntfy.generate_token("MenuAI")).token
                     if not user_input.get(CONF_TOKEN)
                     else user_input[CONF_TOKEN]
                 )

@@ -7,15 +7,15 @@ from typing import Any
 
 from pysmartthings import Attribute, Capability, Command, SmartThings
 
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     DOMAIN as SWITCH_DOMAIN,
     SwitchEntity,
     SwitchEntityDescription,
 )
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import FullDevice, SmartThingsConfigEntry
 from .const import INVALID_SWITCH_CATEGORIES, MAIN
@@ -137,7 +137,7 @@ CAPABILITY_TO_SWITCHES: dict[Capability | str, SmartThingsSwitchEntityDescriptio
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: SmartThingsConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -174,7 +174,7 @@ async def async_setup_entry(
             )
         )
     )
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
     for device in entry_data.devices.values():
         if (
             Capability.SWITCH in device.status[MAIN]
@@ -205,7 +205,7 @@ async def async_setup_entry(
                     issue = "dhw"
                     version = "2025.12.0"
                 if deprecate_entity(
-                    hass,
+                    menuai,
                     entity_registry,
                     SWITCH_DOMAIN,
                     f"{device.device.device_id}_{MAIN}_{Capability.SWITCH}_{Attribute.SWITCH}_{Attribute.SWITCH}",

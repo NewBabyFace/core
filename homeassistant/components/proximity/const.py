@@ -2,7 +2,7 @@
 
 from typing import Final
 
-from homeassistant.const import UnitOfLength
+from menuai.const import UnitOfLength
 
 ATTR_DIR_OF_TRAVEL: Final = "dir_of_travel"
 ATTR_DIST_TO: Final = "dist_to_zone"

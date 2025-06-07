@@ -17,7 +17,7 @@ extend-ignore = [
 
 [lint.isort]
 known-first-party = [
-    "homeassistant",
+    "menuai",
     "tests",
     "script",
 ]

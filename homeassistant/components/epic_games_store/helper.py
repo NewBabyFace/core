@@ -3,11 +3,11 @@
 import contextlib
 from typing import Any
 
-from homeassistant.util import dt as dt_util
+from menuai.util import dt as dt_util
 
 
 def format_game_data(raw_game_data: dict[str, Any], language: str) -> dict[str, Any]:
-    """Format raw API game data for Home Assistant users."""
+    """Format raw API game data for MenuAI users."""
     img_portrait = None
     img_landscape = None
 
@@ -55,7 +55,7 @@ def format_game_data(raw_game_data: dict[str, Any], language: str) -> dict[str, 
 
 
 def get_game_url(raw_game_data: dict[str, Any], language: str) -> str:
-    """Format raw API game data for Home Assistant users."""
+    """Format raw API game data for MenuAI users."""
     url_bundle_or_product = "bundles" if raw_game_data["offerType"] == "BUNDLE" else "p"
     url_slug: str | None = None
     try:

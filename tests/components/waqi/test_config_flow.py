@@ -7,18 +7,18 @@ from unittest.mock import AsyncMock, patch
 from aiowaqi import WAQIAirQuality, WAQIAuthenticationError, WAQIConnectionError
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.waqi.config_flow import CONF_MAP
-from homeassistant.components.waqi.const import CONF_STATION_NUMBER, DOMAIN
-from homeassistant.const import (
+from menuai import config_entries
+from menuai.components.waqi.config_flow import CONF_MAP
+from menuai.components.waqi.const import CONF_STATION_NUMBER, DOMAIN
+from menuai.const import (
     CONF_API_KEY,
     CONF_LATITUDE,
     CONF_LOCATION,
     CONF_LONGITUDE,
     CONF_METHOD,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import async_load_fixture
 
@@ -43,13 +43,13 @@ pytestmark = pytest.mark.usefixtures("mock_setup_entry")
     ],
 )
 async def test_full_map_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     method: str,
     payload: dict[str, Any],
 ) -> None:
     """Test we get the form."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -62,16 +62,16 @@ async def test_full_map_flow(
             "aiowaqi.WAQIClient.get_by_ip",
             return_value=WAQIAirQuality.from_dict(
                 json.loads(
-                    await async_load_fixture(hass, "air_quality_sensor.json", DOMAIN)
+                    await async_load_fixture(menuai, "air_quality_sensor.json", DOMAIN)
                 )
             ),
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_API_KEY: "asd", CONF_METHOD: method},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == method
@@ -84,7 +84,7 @@ async def test_full_map_flow(
             "aiowaqi.WAQIClient.get_by_coordinates",
             return_value=WAQIAirQuality.from_dict(
                 json.loads(
-                    await async_load_fixture(hass, "air_quality_sensor.json", DOMAIN)
+                    await async_load_fixture(menuai, "air_quality_sensor.json", DOMAIN)
                 )
             ),
         ),
@@ -92,16 +92,16 @@ async def test_full_map_flow(
             "aiowaqi.WAQIClient.get_by_station_number",
             return_value=WAQIAirQuality.from_dict(
                 json.loads(
-                    await async_load_fixture(hass, "air_quality_sensor.json", DOMAIN)
+                    await async_load_fixture(menuai, "air_quality_sensor.json", DOMAIN)
                 )
             ),
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             payload,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "de Jongweg, Utrecht"
@@ -121,10 +121,10 @@ async def test_full_map_flow(
     ],
 )
 async def test_flow_errors(
-    hass: HomeAssistant, exception: Exception, error: str
+    menuai: menuai, exception: Exception, error: str
 ) -> None:
     """Test we handle errors during configuration."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -137,11 +137,11 @@ async def test_flow_errors(
             side_effect=exception,
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_API_KEY: "asd", CONF_METHOD: CONF_MAP},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": error}
@@ -154,16 +154,16 @@ async def test_flow_errors(
             "aiowaqi.WAQIClient.get_by_ip",
             return_value=WAQIAirQuality.from_dict(
                 json.loads(
-                    await async_load_fixture(hass, "air_quality_sensor.json", DOMAIN)
+                    await async_load_fixture(menuai, "air_quality_sensor.json", DOMAIN)
                 )
             ),
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_API_KEY: "asd", CONF_METHOD: CONF_MAP},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "map"
@@ -176,18 +176,18 @@ async def test_flow_errors(
             "aiowaqi.WAQIClient.get_by_coordinates",
             return_value=WAQIAirQuality.from_dict(
                 json.loads(
-                    await async_load_fixture(hass, "air_quality_sensor.json", DOMAIN)
+                    await async_load_fixture(menuai, "air_quality_sensor.json", DOMAIN)
                 )
             ),
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_LOCATION: {CONF_LATITUDE: 50.0, CONF_LONGITUDE: 10.0},
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
 
@@ -230,7 +230,7 @@ async def test_flow_errors(
     ],
 )
 async def test_error_in_second_step(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     method: str,
     payload: dict[str, Any],
@@ -238,7 +238,7 @@ async def test_error_in_second_step(
     error: str,
 ) -> None:
     """Test we get the form."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -251,16 +251,16 @@ async def test_error_in_second_step(
             "aiowaqi.WAQIClient.get_by_ip",
             return_value=WAQIAirQuality.from_dict(
                 json.loads(
-                    await async_load_fixture(hass, "air_quality_sensor.json", DOMAIN)
+                    await async_load_fixture(menuai, "air_quality_sensor.json", DOMAIN)
                 )
             ),
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_API_KEY: "asd", CONF_METHOD: method},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == method
@@ -272,11 +272,11 @@ async def test_error_in_second_step(
         patch("aiowaqi.WAQIClient.get_by_coordinates", side_effect=exception),
         patch("aiowaqi.WAQIClient.get_by_station_number", side_effect=exception),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             payload,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": error}
@@ -289,7 +289,7 @@ async def test_error_in_second_step(
             "aiowaqi.WAQIClient.get_by_coordinates",
             return_value=WAQIAirQuality.from_dict(
                 json.loads(
-                    await async_load_fixture(hass, "air_quality_sensor.json", DOMAIN)
+                    await async_load_fixture(menuai, "air_quality_sensor.json", DOMAIN)
                 )
             ),
         ),
@@ -297,16 +297,16 @@ async def test_error_in_second_step(
             "aiowaqi.WAQIClient.get_by_station_number",
             return_value=WAQIAirQuality.from_dict(
                 json.loads(
-                    await async_load_fixture(hass, "air_quality_sensor.json", DOMAIN)
+                    await async_load_fixture(menuai, "air_quality_sensor.json", DOMAIN)
                 )
             ),
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             payload,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "de Jongweg, Utrecht"

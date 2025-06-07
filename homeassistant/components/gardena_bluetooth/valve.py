@@ -6,9 +6,9 @@ from typing import Any
 
 from gardena_bluetooth.const import Valve
 
-from homeassistant.components.valve import ValveEntity, ValveEntityFeature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.valve import ValveEntity, ValveEntityFeature
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import GardenaBluetoothConfigEntry, GardenaBluetoothCoordinator
 from .entity import GardenaBluetoothEntity
@@ -17,7 +17,7 @@ FALLBACK_WATERING_TIME_IN_SECONDS = 60 * 60
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: GardenaBluetoothConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

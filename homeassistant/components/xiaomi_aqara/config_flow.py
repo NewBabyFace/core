@@ -7,11 +7,11 @@ from typing import Any
 import voluptuous as vol
 from xiaomi_gateway import MULTICAST_PORT, XiaomiGateway, XiaomiGatewayDiscovery
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_MAC, CONF_NAME, CONF_PORT, CONF_PROTOCOL
-from homeassistant.core import callback
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_MAC, CONF_NAME, CONF_PORT, CONF_PROTOCOL
+from menuai.core import callback
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import (
     CONF_INTERFACE,
@@ -89,7 +89,7 @@ class XiaomiAqaraFlowHandler(ConfigFlow, domain=DOMAIN):
         # if host is already known by zeroconf discovery or manual optional settings
         if self.host is not None and self.sid is not None:
             # Connect to Xiaomi Aqara Gateway
-            self.selected_gateway = await self.hass.async_add_executor_job(
+            self.selected_gateway = await self.menuai.async_add_executor_job(
                 XiaomiGateway,
                 self.host,
                 self.sid,
@@ -112,7 +112,7 @@ class XiaomiAqaraFlowHandler(ConfigFlow, domain=DOMAIN):
         # Discover Xiaomi Aqara Gateways in the network to get required SIDs.
         xiaomi = XiaomiGatewayDiscovery(self.interface)
         try:
-            await self.hass.async_add_executor_job(xiaomi.discover_gateways)
+            await self.menuai.async_add_executor_job(xiaomi.discover_gateways)
         except gaierror:
             errors[CONF_INTERFACE] = "invalid_interface"
             return self.async_show_form_step_user(errors)

@@ -7,10 +7,10 @@ from typing import Any
 from aiomodernforms import ModernFormsConnectionError, ModernFormsDevice
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_ZEROCONF, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_MAC
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.config_entries import SOURCE_ZEROCONF, ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_MAC
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import DOMAIN
 
@@ -68,7 +68,7 @@ class ModernFormsFlowHandler(ConfigFlow, domain=DOMAIN):
             # User flow
             # Or zeroconf without MAC
             # Or zeroconf with MAC, but need to ensure device is still available
-            session = async_get_clientsession(self.hass)
+            session = async_get_clientsession(self.menuai)
             device = ModernFormsDevice(self.host, session=session)
             try:
                 device = await device.update()

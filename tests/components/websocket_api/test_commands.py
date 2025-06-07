@@ -9,25 +9,25 @@ from unittest.mock import ANY, AsyncMock, Mock, patch
 import pytest
 import voluptuous as vol
 
-from homeassistant import loader
-from homeassistant.components.device_automation import toggle_entity
-from homeassistant.components.websocket_api import const
-from homeassistant.components.websocket_api.auth import (
+from menuai import loader
+from menuai.components.device_automation import toggle_entity
+from menuai.components.websocket_api import const
+from menuai.components.websocket_api.auth import (
     TYPE_AUTH,
     TYPE_AUTH_OK,
     TYPE_AUTH_REQUIRED,
 )
-from homeassistant.components.websocket_api.const import FEATURE_COALESCE_MESSAGES, URL
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import SIGNAL_BOOTSTRAP_INTEGRATIONS
-from homeassistant.core import Context, HomeAssistant, State, SupportsResponse, callback
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.event import async_track_state_change_event
-from homeassistant.loader import async_get_integration
-from homeassistant.setup import async_set_domains_to_be_loaded, async_setup_component
-from homeassistant.util.json import json_loads
+from menuai.components.websocket_api.const import FEATURE_COALESCE_MESSAGES, URL
+from menuai.config_entries import ConfigEntryState
+from menuai.const import SIGNAL_BOOTSTRAP_INTEGRATIONS
+from menuai.core import Context, menuai, State, SupportsResponse, callback
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers import device_registry as dr
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.event import async_track_state_change_event
+from menuai.loader import async_get_integration
+from menuai.setup import async_set_domains_to_be_loaded, async_setup_component
+from menuai.util.json import json_loads
 
 from tests.common import (
     MockConfigEntry,
@@ -57,14 +57,14 @@ STATE_KEY_LONG_NAMES = {v: k for k, v in STATE_KEY_SHORT_NAMES.items()}
 
 
 @pytest.fixture
-def fake_integration(hass: HomeAssistant):
+def fake_integration(menuai: menuai):
     """Set up a mock integration with device automation support."""
     DOMAIN = "fake_integration"
 
-    hass.config.components.add(DOMAIN)
+    menuai.config.components.add(DOMAIN)
 
     mock_platform(
-        hass,
+        menuai,
         f"{DOMAIN}.device_action",
         Mock(
             ACTION_SCHEMA=toggle_entity.ACTION_SCHEMA.extend(
@@ -98,7 +98,7 @@ def _apply_entities_changes(state_dict: dict, change_dict: dict) -> None:
 
 
 async def test_fire_event(
-    hass: HomeAssistant, websocket_client: MockHAClientWebSocket
+    menuai: menuai, websocket_client: MockHAClientWebSocket
 ) -> None:
     """Test fire event command."""
     runs = []
@@ -106,7 +106,7 @@ async def test_fire_event(
     async def event_handler(event):
         runs.append(event)
 
-    hass.bus.async_listen_once("event_type_test", event_handler)
+    menuai.bus.async_listen_once("event_type_test", event_handler)
 
     await websocket_client.send_json_auto_id(
         {
@@ -127,7 +127,7 @@ async def test_fire_event(
 
 
 async def test_fire_event_without_data(
-    hass: HomeAssistant, websocket_client: MockHAClientWebSocket
+    menuai: menuai, websocket_client: MockHAClientWebSocket
 ) -> None:
     """Test fire event command."""
     runs = []
@@ -135,7 +135,7 @@ async def test_fire_event_without_data(
     async def event_handler(event):
         runs.append(event)
 
-    hass.bus.async_listen_once("event_type_test", event_handler)
+    menuai.bus.async_listen_once("event_type_test", event_handler)
 
     await websocket_client.send_json_auto_id(
         {
@@ -155,10 +155,10 @@ async def test_fire_event_without_data(
 
 
 async def test_call_service(
-    hass: HomeAssistant, websocket_client: MockHAClientWebSocket
+    menuai: menuai, websocket_client: MockHAClientWebSocket
 ) -> None:
     """Test call service command."""
-    calls = async_mock_service(hass, "domain_test", "test_service")
+    calls = async_mock_service(menuai, "domain_test", "test_service")
 
     await websocket_client.send_json_auto_id(
         {
@@ -182,9 +182,9 @@ async def test_call_service(
     assert call.context.as_dict() == msg["result"]["context"]
 
 
-async def test_return_response_error(hass: HomeAssistant, websocket_client) -> None:
+async def test_return_response_error(menuai: menuai, websocket_client) -> None:
     """Test return_response=True errors when service has no response."""
-    hass.services.async_register(
+    menuai.services.async_register(
         "domain_test", "test_service_with_no_response", lambda x: None
     )
     await websocket_client.send_json_auto_id(
@@ -205,18 +205,18 @@ async def test_return_response_error(hass: HomeAssistant, websocket_client) -> N
 
 @pytest.mark.parametrize("command", ["call_service", "call_service_action"])
 async def test_call_service_blocking(
-    hass: HomeAssistant, websocket_client: MockHAClientWebSocket, command
+    menuai: menuai, websocket_client: MockHAClientWebSocket, command
 ) -> None:
-    """Test call service commands block, except for homeassistant restart / stop."""
+    """Test call service commands block, except for menuai restart / stop."""
     async_mock_service(
-        hass,
+        menuai,
         "domain_test",
         "test_service",
         response={"hello": "world"},
         supports_response=SupportsResponse.OPTIONAL,
     )
     with patch(
-        "homeassistant.core.ServiceRegistry.async_call", autospec=True
+        "menuai.core.ServiceRegistry.async_call", autospec=True
     ) as mock_call:
         mock_call.return_value = {"foo": "bar"}
         await websocket_client.send_json_auto_id(
@@ -245,7 +245,7 @@ async def test_call_service_blocking(
     )
 
     with patch(
-        "homeassistant.core.ServiceRegistry.async_call", autospec=True
+        "menuai.core.ServiceRegistry.async_call", autospec=True
     ) as mock_call:
         mock_call.return_value = None
         await websocket_client.send_json_auto_id(
@@ -271,15 +271,15 @@ async def test_call_service_blocking(
         return_response=False,
     )
 
-    async_mock_service(hass, "homeassistant", "test_service")
+    async_mock_service(menuai, "menuai", "test_service")
     with patch(
-        "homeassistant.core.ServiceRegistry.async_call", autospec=True
+        "menuai.core.ServiceRegistry.async_call", autospec=True
     ) as mock_call:
         mock_call.return_value = None
         await websocket_client.send_json_auto_id(
             {
                 "type": "call_service",
-                "domain": "homeassistant",
+                "domain": "menuai",
                 "service": "test_service",
             },
         )
@@ -289,7 +289,7 @@ async def test_call_service_blocking(
     assert msg["success"]
     mock_call.assert_called_once_with(
         ANY,
-        "homeassistant",
+        "menuai",
         "test_service",
         ANY,
         blocking=True,
@@ -298,15 +298,15 @@ async def test_call_service_blocking(
         return_response=False,
     )
 
-    async_mock_service(hass, "homeassistant", "restart")
+    async_mock_service(menuai, "menuai", "restart")
     with patch(
-        "homeassistant.core.ServiceRegistry.async_call", autospec=True
+        "menuai.core.ServiceRegistry.async_call", autospec=True
     ) as mock_call:
         mock_call.return_value = None
         await websocket_client.send_json_auto_id(
             {
                 "type": "call_service",
-                "domain": "homeassistant",
+                "domain": "menuai",
                 "service": "restart",
             },
         )
@@ -316,7 +316,7 @@ async def test_call_service_blocking(
     assert msg["success"]
     mock_call.assert_called_once_with(
         ANY,
-        "homeassistant",
+        "menuai",
         "restart",
         ANY,
         blocking=True,
@@ -327,10 +327,10 @@ async def test_call_service_blocking(
 
 
 async def test_call_service_target(
-    hass: HomeAssistant, websocket_client: MockHAClientWebSocket
+    menuai: menuai, websocket_client: MockHAClientWebSocket
 ) -> None:
     """Test call service command with target."""
-    calls = async_mock_service(hass, "domain_test", "test_service")
+    calls = async_mock_service(menuai, "domain_test", "test_service")
 
     await websocket_client.send_json_auto_id(
         {
@@ -363,7 +363,7 @@ async def test_call_service_target(
 
 
 async def test_call_service_target_template(
-    hass: HomeAssistant, websocket_client
+    menuai: menuai, websocket_client
 ) -> None:
     """Test call service command with target does not allow template."""
     await websocket_client.send_json_auto_id(
@@ -385,7 +385,7 @@ async def test_call_service_target_template(
 
 
 async def test_call_service_not_found(
-    hass: HomeAssistant, websocket_client: MockHAClientWebSocket
+    menuai: menuai, websocket_client: MockHAClientWebSocket
 ) -> None:
     """Test call service command."""
     await websocket_client.send_json_auto_id(
@@ -407,18 +407,18 @@ async def test_call_service_not_found(
         "service": "test_service",
     }
     assert msg["error"]["translation_key"] == "service_not_found"
-    assert msg["error"]["translation_domain"] == "homeassistant"
+    assert msg["error"]["translation_domain"] == "menuai"
 
 
 async def test_call_service_child_not_found(
-    hass: HomeAssistant, websocket_client
+    menuai: menuai, websocket_client
 ) -> None:
     """Test not reporting not found errors if it's not the called service."""
 
     async def serv_handler(call):
-        await hass.services.async_call("non", "existing")
+        await menuai.services.async_call("non", "existing")
 
-    hass.services.async_register("domain_test", "test_service", serv_handler)
+    menuai.services.async_register("domain_test", "test_service", serv_handler)
 
     await websocket_client.send_json_auto_id(
         {
@@ -448,7 +448,7 @@ async def test_call_service_child_not_found(
 
 
 async def test_call_service_schema_validation_error(
-    hass: HomeAssistant, websocket_client
+    menuai: menuai, websocket_client
 ) -> None:
     """Test call service command with invalid service data."""
 
@@ -463,7 +463,7 @@ async def test_call_service_schema_validation_error(
     def service_call(call):
         calls.append(call)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         "domain_test",
         "test_service",
         service_call,
@@ -514,7 +514,7 @@ async def test_call_service_schema_validation_error(
 
 @pytest.mark.parametrize("ignore_translations_for_mock_domains", ["test"])
 async def test_call_service_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     websocket_client: MockHAClientWebSocket,
 ) -> None:
@@ -523,14 +523,14 @@ async def test_call_service_error(
 
     @callback
     def ha_error_call(_):
-        raise HomeAssistantError(
+        raise menuaiError(
             "error_message",
             translation_domain="test",
             translation_key="custom_error",
             translation_placeholders={"option": "bla"},
         )
 
-    hass.services.async_register("domain_test", "ha_error", ha_error_call)
+    menuai.services.async_register("domain_test", "ha_error", ha_error_call)
 
     @callback
     def service_error_call(_):
@@ -541,12 +541,12 @@ async def test_call_service_error(
             translation_placeholders={"option": "bla"},
         )
 
-    hass.services.async_register("domain_test", "service_error", service_error_call)
+    menuai.services.async_register("domain_test", "service_error", service_error_call)
 
     async def unknown_error_call(_):
         raise ValueError("value_error")
 
-    hass.services.async_register("domain_test", "unknown_error", unknown_error_call)
+    menuai.services.async_register("domain_test", "unknown_error", unknown_error_call)
 
     await websocket_client.send_json_auto_id(
         {
@@ -601,10 +601,10 @@ async def test_call_service_error(
 
 
 async def test_subscribe_unsubscribe_events(
-    hass: HomeAssistant, websocket_client
+    menuai: menuai, websocket_client
 ) -> None:
     """Test subscribe/unsubscribe events command."""
-    init_count = sum(hass.bus.async_listeners().values())
+    init_count = sum(menuai.bus.async_listeners().values())
 
     await websocket_client.send_json_auto_id(
         {"type": "subscribe_events", "event_type": "test_event"}
@@ -616,11 +616,11 @@ async def test_subscribe_unsubscribe_events(
     assert msg["success"]
 
     # Verify we have a new listener
-    assert sum(hass.bus.async_listeners().values()) == init_count + 1
+    assert sum(menuai.bus.async_listeners().values()) == init_count + 1
 
-    hass.bus.async_fire("ignore_event")
-    hass.bus.async_fire("test_event", {"hello": "world"})
-    hass.bus.async_fire("ignore_event")
+    menuai.bus.async_fire("ignore_event")
+    menuai.bus.async_fire("test_event", {"hello": "world"})
+    menuai.bus.async_fire("ignore_event")
 
     async with asyncio.timeout(3):
         msg = await websocket_client.receive_json()
@@ -642,15 +642,15 @@ async def test_subscribe_unsubscribe_events(
     assert msg["success"]
 
     # Check our listener got unsubscribed
-    assert sum(hass.bus.async_listeners().values()) == init_count
+    assert sum(menuai.bus.async_listeners().values()) == init_count
 
 
 async def test_get_states(
-    hass: HomeAssistant, websocket_client: MockHAClientWebSocket
+    menuai: menuai, websocket_client: MockHAClientWebSocket
 ) -> None:
     """Test get_states command."""
-    hass.states.async_set("greeting.hello", "world")
-    hass.states.async_set("greeting.bye", "universe")
+    menuai.states.async_set("greeting.hello", "world")
+    menuai.states.async_set("greeting.bye", "universe")
 
     await websocket_client.send_json_auto_id({"type": "get_states"})
 
@@ -658,13 +658,13 @@ async def test_get_states(
     assert msg["type"] == const.TYPE_RESULT
     assert msg["success"]
 
-    states = [state.as_dict() for state in hass.states.async_all()]
+    states = [state.as_dict() for state in menuai.states.async_all()]
 
     assert msg["result"] == states
 
 
 async def test_get_services(
-    hass: HomeAssistant, websocket_client: MockHAClientWebSocket
+    menuai: menuai, websocket_client: MockHAClientWebSocket
 ) -> None:
     """Test get_services command."""
     for id_ in (5, 6):
@@ -674,11 +674,11 @@ async def test_get_services(
         assert msg["id"] == id_
         assert msg["type"] == const.TYPE_RESULT
         assert msg["success"]
-        assert msg["result"].keys() == hass.services.async_services().keys()
+        assert msg["result"].keys() == menuai.services.async_services().keys()
 
 
 async def test_get_config(
-    hass: HomeAssistant, websocket_client: MockHAClientWebSocket
+    menuai: menuai, websocket_client: MockHAClientWebSocket
 ) -> None:
     """Test get_config command."""
     await websocket_client.send_json_auto_id({"type": "get_config"})
@@ -694,7 +694,7 @@ async def test_get_config(
         "whitelist_external_dirs",
         "allowlist_external_urls",
     )
-    config = hass.config.as_dict()
+    config = menuai.config.as_dict()
 
     for key in ignore_order_keys:
         if key in result:
@@ -713,21 +713,21 @@ async def test_ping(websocket_client: MockHAClientWebSocket) -> None:
 
 
 async def test_call_service_context_with_user(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
-    hass_access_token: str,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
+    menuai_access_token: str,
 ) -> None:
     """Test that the user is set in the service call context."""
-    assert await async_setup_component(hass, "websocket_api", {})
+    assert await async_setup_component(menuai, "websocket_api", {})
 
-    calls = async_mock_service(hass, "domain_test", "test_service")
-    client = await hass_client_no_auth()
+    calls = async_mock_service(menuai, "domain_test", "test_service")
+    client = await menuai_client_no_auth()
 
     async with client.ws_connect(URL) as ws:
         auth_msg = await ws.receive_json()
         assert auth_msg["type"] == TYPE_AUTH_REQUIRED
 
-        await ws.send_json({"type": TYPE_AUTH, "access_token": hass_access_token})
+        await ws.send_json({"type": TYPE_AUTH, "access_token": menuai_access_token})
 
         auth_msg = await ws.receive_json()
         assert auth_msg["type"] == TYPE_AUTH_OK
@@ -745,7 +745,7 @@ async def test_call_service_context_with_user(
         msg = await ws.receive_json()
         assert msg["success"]
 
-        refresh_token = hass.auth.async_validate_access_token(hass_access_token)
+        refresh_token = menuai.auth.async_validate_access_token(menuai_access_token)
 
         assert len(calls) == 1
         call = calls[0]
@@ -756,10 +756,10 @@ async def test_call_service_context_with_user(
 
 
 async def test_subscribe_requires_admin(
-    websocket_client: MockHAClientWebSocket, hass_admin_user: MockUser
+    websocket_client: MockHAClientWebSocket, menuai_admin_user: MockUser
 ) -> None:
     """Test subscribing events without being admin."""
-    hass_admin_user.groups = []
+    menuai_admin_user.groups = []
     await websocket_client.send_json_auto_id(
         {"type": "subscribe_events", "event_type": "test_event"}
     )
@@ -770,13 +770,13 @@ async def test_subscribe_requires_admin(
 
 
 async def test_states_filters_visible(
-    hass: HomeAssistant, hass_admin_user: MockUser, websocket_client
+    menuai: menuai, menuai_admin_user: MockUser, websocket_client
 ) -> None:
     """Test we only get entities that we're allowed to see."""
-    hass_admin_user.groups = []
-    hass_admin_user.mock_policy({"entities": {"entity_ids": {"test.entity": True}}})
-    hass.states.async_set("test.entity", "hello")
-    hass.states.async_set("test.not_visible_entity", "invisible")
+    menuai_admin_user.groups = []
+    menuai_admin_user.mock_policy({"entities": {"entity_ids": {"test.entity": True}}})
+    menuai.states.async_set("test.entity", "hello")
+    menuai.states.async_set("test.not_visible_entity", "invisible")
     await websocket_client.send_json_auto_id({"type": "get_states"})
 
     msg = await websocket_client.receive_json()
@@ -788,15 +788,15 @@ async def test_states_filters_visible(
 
 
 async def test_get_states_not_allows_nan(
-    hass: HomeAssistant, websocket_client: MockHAClientWebSocket
+    menuai: menuai, websocket_client: MockHAClientWebSocket
 ) -> None:
     """Test get_states command converts NaN to None."""
-    hass.states.async_set("greeting.hello", "world")
-    hass.states.async_set("greeting.bad", "data", {"hello": float("NaN")})
-    hass.states.async_set("greeting.bye", "universe")
+    menuai.states.async_set("greeting.hello", "world")
+    menuai.states.async_set("greeting.bad", "data", {"hello": float("NaN")})
+    menuai.states.async_set("greeting.bye", "universe")
 
     await websocket_client.send_json_auto_id({"type": "get_states"})
-    bad = dict(hass.states.get("greeting.bad").as_dict())
+    bad = dict(menuai.states.get("greeting.bad").as_dict())
     bad["attributes"] = dict(bad["attributes"])
     bad["attributes"]["hello"] = None
 
@@ -804,19 +804,19 @@ async def test_get_states_not_allows_nan(
     assert msg["type"] == const.TYPE_RESULT
     assert msg["success"]
     assert msg["result"] == [
-        hass.states.get("greeting.hello").as_dict(),
+        menuai.states.get("greeting.hello").as_dict(),
         bad,
-        hass.states.get("greeting.bye").as_dict(),
+        menuai.states.get("greeting.bye").as_dict(),
     ]
 
 
 async def test_subscribe_unsubscribe_events_whitelist(
-    hass: HomeAssistant,
+    menuai: menuai,
     websocket_client: MockHAClientWebSocket,
-    hass_admin_user: MockUser,
+    menuai_admin_user: MockUser,
 ) -> None:
     """Test subscribe/unsubscribe events on whitelist."""
-    hass_admin_user.groups = []
+    menuai_admin_user.groups = []
 
     await websocket_client.send_json_auto_id(
         {"type": "subscribe_events", "event_type": "not-in-whitelist"}
@@ -836,7 +836,7 @@ async def test_subscribe_unsubscribe_events_whitelist(
     assert msg["type"] == const.TYPE_RESULT
     assert msg["success"]
 
-    hass.bus.async_fire("themes_updated")
+    menuai.bus.async_fire("themes_updated")
 
     async with asyncio.timeout(3):
         msg = await websocket_client.receive_json()
@@ -849,13 +849,13 @@ async def test_subscribe_unsubscribe_events_whitelist(
 
 
 async def test_subscribe_unsubscribe_events_state_changed(
-    hass: HomeAssistant,
+    menuai: menuai,
     websocket_client: MockHAClientWebSocket,
-    hass_admin_user: MockUser,
+    menuai_admin_user: MockUser,
 ) -> None:
     """Test subscribe/unsubscribe state_changed events."""
-    hass_admin_user.groups = []
-    hass_admin_user.mock_policy({"entities": {"entity_ids": {"light.permitted": True}}})
+    menuai_admin_user.groups = []
+    menuai_admin_user.mock_policy({"entities": {"entity_ids": {"light.permitted": True}}})
 
     await websocket_client.send_json_auto_id(
         {"type": "subscribe_events", "event_type": "state_changed"}
@@ -866,8 +866,8 @@ async def test_subscribe_unsubscribe_events_state_changed(
     assert msg["type"] == const.TYPE_RESULT
     assert msg["success"]
 
-    hass.states.async_set("light.not_permitted", "on")
-    hass.states.async_set("light.permitted", "on")
+    menuai.states.async_set("light.not_permitted", "on")
+    menuai.states.async_set("light.permitted", "on")
 
     msg = await websocket_client.receive_json()
     assert msg["id"] == subscription
@@ -877,9 +877,9 @@ async def test_subscribe_unsubscribe_events_state_changed(
 
 
 async def test_subscribe_entities_with_unserializable_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     websocket_client: MockHAClientWebSocket,
-    hass_admin_user: MockUser,
+    menuai_admin_user: MockUser,
 ) -> None:
     """Test subscribe entities with an unserializeable state."""
 
@@ -889,13 +889,13 @@ async def test_subscribe_entities_with_unserializable_state(
         def __init__(self) -> None:
             """Init cannot serialize this."""
 
-    hass.states.async_set("light.permitted", "off", {"color": "red"})
-    hass.states.async_set(
+    menuai.states.async_set("light.permitted", "off", {"color": "red"})
+    menuai.states.async_set(
         "light.cannot_serialize",
         "off",
         {"color": "red", "cannot_serialize": CannotSerializeMe()},
     )
-    original_state = hass.states.get("light.cannot_serialize")
+    original_state = menuai.states.get("light.cannot_serialize")
     assert isinstance(original_state, State)
     state_dict = {
         "attributes": dict(original_state.attributes),
@@ -905,8 +905,8 @@ async def test_subscribe_entities_with_unserializable_state(
         "last_updated": original_state.last_updated.isoformat(),
         "state": original_state.state,
     }
-    hass_admin_user.groups = []
-    hass_admin_user.mock_policy(
+    menuai_admin_user.groups = []
+    menuai_admin_user.mock_policy(
         {
             "entities": {
                 "entity_ids": {"light.permitted": True, "light.cannot_serialize": True}
@@ -934,7 +934,7 @@ async def test_subscribe_entities_with_unserializable_state(
             }
         }
     }
-    hass.states.async_set("light.permitted", "on", {"effect": "help"})
+    menuai.states.async_set("light.permitted", "on", {"effect": "help"})
     msg = await websocket_client.receive_json()
     assert msg["id"] == subscription
     assert msg["type"] == "event"
@@ -951,7 +951,7 @@ async def test_subscribe_entities_with_unserializable_state(
             }
         }
     }
-    hass.states.async_set("light.cannot_serialize", "on", {"effect": "help"})
+    menuai.states.async_set("light.cannot_serialize", "on", {"effect": "help"})
     msg = await websocket_client.receive_json()
     assert msg["id"] == subscription
     assert msg["type"] == "event"
@@ -981,7 +981,7 @@ async def test_subscribe_entities_with_unserializable_state(
         "last_updated": ANY,
         "state": "on",
     }
-    hass.states.async_set(
+    menuai.states.async_set(
         "light.cannot_serialize",
         "off",
         {"color": "red", "cannot_serialize": CannotSerializeMe()},
@@ -996,14 +996,14 @@ async def test_subscribe_entities_with_unserializable_state(
 
 
 async def test_subscribe_unsubscribe_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     websocket_client: MockHAClientWebSocket,
-    hass_admin_user: MockUser,
+    menuai_admin_user: MockUser,
 ) -> None:
     """Test subscribe/unsubscribe entities."""
 
-    hass.states.async_set("light.permitted", "off", {"color": "red"})
-    original_state = hass.states.get("light.permitted")
+    menuai.states.async_set("light.permitted", "off", {"color": "red"})
+    original_state = menuai.states.get("light.permitted")
     assert isinstance(original_state, State)
     state_dict = {
         "attributes": dict(original_state.attributes),
@@ -1013,9 +1013,9 @@ async def test_subscribe_unsubscribe_entities(
         "last_updated": original_state.last_updated.isoformat(),
         "state": original_state.state,
     }
-    hass_admin_user.groups = []
-    hass_admin_user.mock_policy({"entities": {"entity_ids": {"light.permitted": True}}})
-    assert not hass_admin_user.is_admin
+    menuai_admin_user.groups = []
+    menuai_admin_user.mock_policy({"entities": {"entity_ids": {"light.permitted": True}}})
+    assert not menuai_admin_user.is_admin
 
     await websocket_client.send_json_auto_id({"type": "subscribe_entities"})
 
@@ -1038,14 +1038,14 @@ async def test_subscribe_unsubscribe_entities(
             }
         }
     }
-    hass.states.async_set("light.not_permitted", "on")
-    hass.states.async_set("light.permitted", "on", {"color": "blue"})
-    hass.states.async_set("light.permitted", "on", {"effect": "help"})
-    hass.states.async_set(
+    menuai.states.async_set("light.not_permitted", "on")
+    menuai.states.async_set("light.permitted", "on", {"color": "blue"})
+    menuai.states.async_set("light.permitted", "on", {"effect": "help"})
+    menuai.states.async_set(
         "light.permitted", "on", {"effect": "help", "color": ["blue", "green"]}
     )
-    hass.states.async_remove("light.permitted")
-    hass.states.async_set("light.permitted", "on", {"effect": "help", "color": "blue"})
+    menuai.states.async_remove("light.permitted")
+    menuai.states.async_set("light.permitted", "on", {"effect": "help", "color": "blue"})
 
     msg = await websocket_client.receive_json()
     assert msg["id"] == subscription
@@ -1165,18 +1165,18 @@ async def test_subscribe_unsubscribe_entities(
 
 
 async def test_subscribe_unsubscribe_entities_specific_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     websocket_client: MockHAClientWebSocket,
-    hass_admin_user: MockUser,
+    menuai_admin_user: MockUser,
 ) -> None:
     """Test subscribe/unsubscribe entities with a list of entity ids."""
 
-    hass.states.async_set("light.permitted", "off", {"color": "red"})
-    hass.states.async_set("light.not_intrested", "off", {"color": "blue"})
-    original_state = hass.states.get("light.permitted")
+    menuai.states.async_set("light.permitted", "off", {"color": "red"})
+    menuai.states.async_set("light.not_intrested", "off", {"color": "blue"})
+    original_state = menuai.states.get("light.permitted")
     assert isinstance(original_state, State)
-    hass_admin_user.groups = []
-    hass_admin_user.mock_policy(
+    menuai_admin_user.groups = []
+    menuai_admin_user.mock_policy(
         {
             "entities": {
                 "entity_ids": {"light.permitted": True, "light.not_intrested": True}
@@ -1207,9 +1207,9 @@ async def test_subscribe_unsubscribe_entities_specific_entities(
             }
         }
     }
-    hass.states.async_set("light.not_intrested", "on", {"effect": "help"})
-    hass.states.async_set("light.not_permitted", "on")
-    hass.states.async_set("light.permitted", "on", {"color": "blue"})
+    menuai.states.async_set("light.not_intrested", "on", {"effect": "help"})
+    menuai.states.async_set("light.not_permitted", "on")
+    menuai.states.async_set("light.permitted", "on", {"color": "blue"})
 
     msg = await websocket_client.receive_json()
     assert msg["id"] == subscription
@@ -1229,13 +1229,13 @@ async def test_subscribe_unsubscribe_entities_specific_entities(
 
 
 async def test_subscribe_unsubscribe_entities_with_filter(
-    hass: HomeAssistant,
+    menuai: menuai,
     websocket_client: MockHAClientWebSocket,
-    hass_admin_user: MockUser,
+    menuai_admin_user: MockUser,
 ) -> None:
     """Test subscribe/unsubscribe entities with an entity filter."""
-    hass.states.async_set("switch.not_included", "off")
-    hass.states.async_set("light.include", "off")
+    menuai.states.async_set("switch.not_included", "off")
+    menuai.states.async_set("light.include", "off")
     await websocket_client.send_json_auto_id(
         {"type": "subscribe_entities", "include": {"domains": ["light"]}}
     )
@@ -1258,8 +1258,8 @@ async def test_subscribe_unsubscribe_entities_with_filter(
             }
         }
     }
-    hass.states.async_set("switch.not_included", "on")
-    hass.states.async_set("light.include", "on")
+    menuai.states.async_set("switch.not_included", "on")
+    menuai.states.async_set("light.include", "on")
     msg = await websocket_client.receive_json()
     assert msg["id"] == subscription
     assert msg["type"] == "event"
@@ -1277,10 +1277,10 @@ async def test_subscribe_unsubscribe_entities_with_filter(
 
 
 async def test_render_template_renders_template(
-    hass: HomeAssistant, websocket_client
+    menuai: menuai, websocket_client
 ) -> None:
     """Test simple template is rendered and updated."""
-    hass.states.async_set("light.test", "on")
+    menuai.states.async_set("light.test", "on")
 
     await websocket_client.send_json_auto_id(
         {
@@ -1308,7 +1308,7 @@ async def test_render_template_renders_template(
         },
     }
 
-    hass.states.async_set("light.test", "off")
+    menuai.states.async_set("light.test", "off")
     msg = await websocket_client.receive_json()
     assert msg["id"] == subscription
     assert msg["type"] == "event"
@@ -1325,7 +1325,7 @@ async def test_render_template_renders_template(
 
 
 async def test_render_template_with_timeout_and_variables(
-    hass: HomeAssistant, websocket_client
+    menuai: menuai, websocket_client
 ) -> None:
     """Test a template with a timeout and variables renders without error."""
     await websocket_client.send_json_auto_id(
@@ -1358,10 +1358,10 @@ async def test_render_template_with_timeout_and_variables(
 
 
 async def test_render_template_manual_entity_ids_no_longer_needed(
-    hass: HomeAssistant, websocket_client
+    menuai: menuai, websocket_client
 ) -> None:
     """Test that updates to specified entity ids cause a template rerender."""
-    hass.states.async_set("light.test", "on")
+    menuai.states.async_set("light.test", "on")
 
     await websocket_client.send_json_auto_id(
         {
@@ -1389,7 +1389,7 @@ async def test_render_template_manual_entity_ids_no_longer_needed(
         },
     }
 
-    hass.states.async_set("light.test", "off")
+    menuai.states.async_set("light.test", "off")
     msg = await websocket_client.receive_json()
     assert msg["id"] == subscription
     assert msg["type"] == "event"
@@ -1477,7 +1477,7 @@ EVENT_UNDEFINED_FILTER = {
     ],
 )
 async def test_render_template_with_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     websocket_client: MockHAClientWebSocket,
     caplog: pytest.LogCaptureFixture,
     template: str,
@@ -1548,7 +1548,7 @@ async def test_render_template_with_error(
     ],
 )
 async def test_render_template_with_timeout_and_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     websocket_client: MockHAClientWebSocket,
     caplog: pytest.LogCaptureFixture,
     template: str,
@@ -1613,7 +1613,7 @@ async def test_render_template_with_timeout_and_error(
     ],
 )
 async def test_render_template_strict_with_timeout_and_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     websocket_client,
     caplog: pytest.LogCaptureFixture,
     template: str,
@@ -1674,7 +1674,7 @@ async def test_render_template_strict_with_timeout_and_error(
     ],
 )
 async def test_render_template_strict_with_timeout_and_error_2(
-    hass: HomeAssistant,
+    menuai: menuai,
     websocket_client,
     caplog: pytest.LogCaptureFixture,
     template: str,
@@ -1758,7 +1758,7 @@ async def test_render_template_strict_with_timeout_and_error_2(
     ],
 )
 async def test_render_template_error_in_template_code(
-    hass: HomeAssistant,
+    menuai: menuai,
     websocket_client: MockHAClientWebSocket,
     caplog: pytest.LogCaptureFixture,
     template: str,
@@ -1782,7 +1782,7 @@ async def test_render_template_error_in_template_code(
         for key, value in expected_event.items():
             assert msg[key] == value
 
-    hass.states.async_set("sensor.foo", "2")
+    menuai.states.async_set("sensor.foo", "2")
 
     for expected_event in expected_events_2:
         msg = await websocket_client.receive_json()
@@ -1822,7 +1822,7 @@ async def test_render_template_error_in_template_code(
     ],
 )
 async def test_render_template_error_in_template_code_2(
-    hass: HomeAssistant,
+    menuai: menuai,
     websocket_client,
     caplog: pytest.LogCaptureFixture,
     template: str,
@@ -1842,7 +1842,7 @@ async def test_render_template_error_in_template_code_2(
         for key, value in expected_event.items():
             assert msg[key] == value
 
-    hass.states.async_set("sensor.foo", "2")
+    menuai.states.async_set("sensor.foo", "2")
 
     for expected_event in expected_events_2:
         msg = await websocket_client.receive_json()
@@ -1853,7 +1853,7 @@ async def test_render_template_error_in_template_code_2(
 
 
 async def test_render_template_with_delayed_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     websocket_client: MockHAClientWebSocket,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -1862,8 +1862,8 @@ async def test_render_template_with_delayed_error(
     In this test report_errors is enabled.
     """
     caplog.set_level(logging.INFO)
-    hass.states.async_set("sensor.test", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test", "on")
+    await menuai.async_block_till_done()
 
     template_str = """
 {% if states.sensor.test.state %}
@@ -1880,15 +1880,15 @@ async def test_render_template_with_delayed_error(
             "report_errors": True,
         }
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     msg = await websocket_client.receive_json()
     subscription = msg["id"]
     assert msg["type"] == const.TYPE_RESULT
     assert msg["success"]
 
-    hass.states.async_remove("sensor.test")
-    await hass.async_block_till_done()
+    menuai.states.async_remove("sensor.test")
+    await menuai.async_block_till_done()
 
     msg = await websocket_client.receive_json()
     assert msg["id"] == subscription
@@ -1925,14 +1925,14 @@ async def test_render_template_with_delayed_error(
 
 
 async def test_render_template_with_delayed_error_2(
-    hass: HomeAssistant, websocket_client, caplog: pytest.LogCaptureFixture
+    menuai: menuai, websocket_client, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test a template with an error that only happens after a state change.
 
     In this test report_errors is disabled.
     """
-    hass.states.async_set("sensor.test", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test", "on")
+    await menuai.async_block_till_done()
 
     template_str = """
 {% if states.sensor.test.state %}
@@ -1949,15 +1949,15 @@ async def test_render_template_with_delayed_error_2(
             "report_errors": False,
         }
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     msg = await websocket_client.receive_json()
     subscription = msg["id"]
     assert msg["type"] == const.TYPE_RESULT
     assert msg["success"]
 
-    hass.states.async_remove("sensor.test")
-    await hass.async_block_till_done()
+    menuai.states.async_remove("sensor.test")
+    await menuai.async_block_till_done()
 
     msg = await websocket_client.receive_json()
     assert msg["id"] == subscription
@@ -1977,7 +1977,7 @@ async def test_render_template_with_delayed_error_2(
 
 
 async def test_render_template_with_timeout(
-    hass: HomeAssistant,
+    menuai: menuai,
     websocket_client: MockHAClientWebSocket,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -2008,7 +2008,7 @@ async def test_render_template_with_timeout(
 
 
 async def test_render_template_returns_with_match_all(
-    hass: HomeAssistant, websocket_client
+    menuai: menuai, websocket_client
 ) -> None:
     """Test that a template that would match with all entities still return success."""
     await websocket_client.send_json_auto_id(
@@ -2021,11 +2021,11 @@ async def test_render_template_returns_with_match_all(
 
 
 async def test_manifest_list(
-    hass: HomeAssistant, websocket_client: MockHAClientWebSocket
+    menuai: menuai, websocket_client: MockHAClientWebSocket
 ) -> None:
     """Test loading manifests."""
-    http = await async_get_integration(hass, "http")
-    websocket_api = await async_get_integration(hass, "websocket_api")
+    http = await async_get_integration(menuai, "http")
+    websocket_api = await async_get_integration(menuai, "websocket_api")
 
     await websocket_client.send_json_auto_id({"type": "manifest/list"})
 
@@ -2039,15 +2039,15 @@ async def test_manifest_list(
 
 
 async def test_manifest_list_specific_integrations(
-    hass: HomeAssistant, websocket_client
+    menuai: menuai, websocket_client
 ) -> None:
     """Test loading manifests for specific integrations."""
-    websocket_api = await async_get_integration(hass, "websocket_api")
+    websocket_api = await async_get_integration(menuai, "websocket_api")
 
     await websocket_client.send_json_auto_id(
         {"type": "manifest/list", "integrations": ["hue", "websocket_api"]}
     )
-    hue = await async_get_integration(hass, "hue")
+    hue = await async_get_integration(menuai, "hue")
 
     msg = await websocket_client.receive_json()
     assert msg["type"] == const.TYPE_RESULT
@@ -2059,10 +2059,10 @@ async def test_manifest_list_specific_integrations(
 
 
 async def test_manifest_get(
-    hass: HomeAssistant, websocket_client: MockHAClientWebSocket
+    menuai: menuai, websocket_client: MockHAClientWebSocket
 ) -> None:
     """Test getting a manifest."""
-    hue = await async_get_integration(hass, "hue")
+    hue = await async_get_integration(menuai, "hue")
 
     await websocket_client.send_json_auto_id(
         {"type": "manifest/get", "integration": "hue"}
@@ -2085,12 +2085,12 @@ async def test_manifest_get(
 
 
 async def test_entity_source_admin(
-    hass: HomeAssistant,
+    menuai: menuai,
     websocket_client: MockHAClientWebSocket,
-    hass_admin_user: MockUser,
+    menuai_admin_user: MockUser,
 ) -> None:
     """Check that we fetch sources correctly."""
-    platform = MockEntityPlatform(hass)
+    platform = MockEntityPlatform(menuai)
 
     await platform.async_add_entities(
         [MockEntity(name="Entity 1"), MockEntity(name="Entity 2")]
@@ -2108,8 +2108,8 @@ async def test_entity_source_admin(
     }
 
     # Mock policy
-    hass_admin_user.groups = []
-    hass_admin_user.mock_policy(
+    menuai_admin_user.groups = []
+    menuai_admin_user.mock_policy(
         {"entities": {"entity_ids": {"test_domain.entity_2": True}}}
     )
 
@@ -2125,10 +2125,10 @@ async def test_entity_source_admin(
 
 
 async def test_subscribe_trigger(
-    hass: HomeAssistant, websocket_client: MockHAClientWebSocket
+    menuai: menuai, websocket_client: MockHAClientWebSocket
 ) -> None:
     """Test subscribing to a trigger."""
-    init_count = sum(hass.bus.async_listeners().values())
+    init_count = sum(menuai.bus.async_listeners().values())
 
     await websocket_client.send_json_auto_id(
         {
@@ -2143,13 +2143,13 @@ async def test_subscribe_trigger(
     assert msg["success"]
 
     # Verify we have a new listener
-    assert sum(hass.bus.async_listeners().values()) == init_count + 1
+    assert sum(menuai.bus.async_listeners().values()) == init_count + 1
 
     context = Context()
 
-    hass.bus.async_fire("ignore_event")
-    hass.bus.async_fire("test_event", {"hello": "world"}, context=context)
-    hass.bus.async_fire("ignore_event")
+    menuai.bus.async_fire("ignore_event")
+    menuai.bus.async_fire("test_event", {"hello": "world"}, context=context)
+    menuai.bus.async_fire("ignore_event")
 
     async with asyncio.timeout(3):
         msg = await websocket_client.receive_json()
@@ -2173,14 +2173,14 @@ async def test_subscribe_trigger(
     assert msg["success"]
 
     # Check our listener got unsubscribed
-    assert sum(hass.bus.async_listeners().values()) == init_count
+    assert sum(menuai.bus.async_listeners().values()) == init_count
 
 
 async def test_test_condition(
-    hass: HomeAssistant, websocket_client: MockHAClientWebSocket
+    menuai: menuai, websocket_client: MockHAClientWebSocket
 ) -> None:
     """Test testing a condition."""
-    hass.states.async_set("hello.world", "paulus")
+    menuai.states.async_set("hello.world", "paulus")
 
     await websocket_client.send_json_auto_id(
         {
@@ -2233,11 +2233,11 @@ async def test_test_condition(
 
 
 async def test_execute_script(
-    hass: HomeAssistant, websocket_client: MockHAClientWebSocket
+    menuai: menuai, websocket_client: MockHAClientWebSocket
 ) -> None:
     """Test testing a condition."""
     calls = async_mock_service(
-        hass, "domain_test", "test_service", response={"hello": "world"}
+        menuai, "domain_test", "test_service", response={"hello": "world"}
     )
 
     await websocket_client.send_json_auto_id(
@@ -2274,8 +2274,8 @@ async def test_execute_script(
     assert msg_var["type"] == const.TYPE_RESULT
     assert msg_var["success"]
 
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(calls) == 2
 
@@ -2296,7 +2296,7 @@ async def test_execute_script(
     ("raise_exception", "err_code"),
     [
         (
-            HomeAssistantError(
+            menuaiError(
                 "Some error",
                 translation_domain="test",
                 translation_key="test_error",
@@ -2317,14 +2317,14 @@ async def test_execute_script(
 )
 @pytest.mark.parametrize("ignore_translations_for_mock_domains", ["test"])
 async def test_execute_script_err_localization(
-    hass: HomeAssistant,
+    menuai: menuai,
     websocket_client: MockHAClientWebSocket,
-    raise_exception: HomeAssistantError,
+    raise_exception: menuaiError,
     err_code: str,
 ) -> None:
     """Test testing a condition."""
     async_mock_service(
-        hass, "domain_test", "test_service", raise_exception=raise_exception
+        menuai, "domain_test", "test_service", raise_exception=raise_exception
     )
 
     await websocket_client.send_json_auto_id(
@@ -2351,13 +2351,13 @@ async def test_execute_script_err_localization(
 
 
 async def test_execute_script_complex_response(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test testing a condition."""
-    await async_setup_component(hass, "homeassistant", {})
-    await async_setup_component(hass, "calendar", {"calendar": {"platform": "demo"}})
-    await hass.async_block_till_done()
-    ws_client = await hass_ws_client(hass)
+    await async_setup_component(menuai, "menuai", {})
+    await async_setup_component(menuai, "calendar", {"calendar": {"platform": "demo"}})
+    await menuai.async_block_till_done()
+    ws_client = await menuai_ws_client(menuai)
 
     await ws_client.send_json_auto_id(
         {
@@ -2393,25 +2393,25 @@ async def test_execute_script_complex_response(
 
 
 async def test_execute_script_with_dynamically_validated_action(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     device_registry: dr.DeviceRegistry,
     fake_integration,
 ) -> None:
     """Test executing a script with an action which is dynamically validated."""
 
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
-    module_cache = hass.data[loader.DATA_COMPONENTS]
+    module_cache = menuai.data[loader.DATA_COMPONENTS]
     module = module_cache["fake_integration.device_action"]
     module.async_call_action_from_config = AsyncMock()
     module.async_validate_action_config = AsyncMock(
-        side_effect=lambda hass, config: config
+        side_effect=lambda menuai, config: config
     )
 
     config_entry = MockConfigEntry(domain="fake_integration", data={})
-    config_entry.mock_state(hass, ConfigEntryState.LOADED)
-    config_entry.add_to_hass(hass)
+    config_entry.mock_state(menuai, ConfigEntryState.LOADED)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -2439,9 +2439,9 @@ async def test_execute_script_with_dynamically_validated_action(
 
 
 async def test_subscribe_unsubscribe_bootstrap_integrations(
-    hass: HomeAssistant,
+    menuai: menuai,
     websocket_client: MockHAClientWebSocket,
-    hass_admin_user: MockUser,
+    menuai_admin_user: MockUser,
 ) -> None:
     """Test subscribe/unsubscribe bootstrap_integrations."""
     await websocket_client.send_json_auto_id(
@@ -2455,7 +2455,7 @@ async def test_subscribe_unsubscribe_bootstrap_integrations(
 
     message = {"august": 12.5, "isy994": 12.8}
 
-    async_dispatcher_send(hass, SIGNAL_BOOTSTRAP_INTEGRATIONS, message)
+    async_dispatcher_send(menuai, SIGNAL_BOOTSTRAP_INTEGRATIONS, message)
     msg = await websocket_client.receive_json()
     assert msg["id"] == subscription
     assert msg["type"] == "event"
@@ -2463,13 +2463,13 @@ async def test_subscribe_unsubscribe_bootstrap_integrations(
 
 
 async def test_integration_setup_info(
-    hass: HomeAssistant,
+    menuai: menuai,
     websocket_client: MockHAClientWebSocket,
-    hass_admin_user: MockUser,
+    menuai_admin_user: MockUser,
 ) -> None:
     """Test subscribe/unsubscribe bootstrap_integrations."""
     with patch(
-        "homeassistant.components.websocket_api.commands.async_get_setup_timings",
+        "menuai.components.websocket_api.commands.async_get_setup_timings",
         return_value={
             "august": 12.5,
             "isy994": 12.8,
@@ -2539,7 +2539,7 @@ async def test_validate_config_works(
                 "'non_existing', 'entity_id': 'hello.world', 'state': 'paulus'}"
             ),
         ),
-        # Raises HomeAssistantError
+        # Raises menuaiError
         (
             "conditions",
             {
@@ -2576,9 +2576,9 @@ async def test_validate_config_invalid(
 
 
 async def test_message_coalescing(
-    hass: HomeAssistant,
+    menuai: menuai,
     websocket_client: MockHAClientWebSocket,
-    hass_admin_user: MockUser,
+    menuai_admin_user: MockUser,
 ) -> None:
     """Test enabling message coalescing."""
     await websocket_client.send_json(
@@ -2588,7 +2588,7 @@ async def test_message_coalescing(
             "features": {FEATURE_COALESCE_MESSAGES: 1},
         }
     )
-    hass.states.async_set("light.permitted", "on", {"color": "red"})
+    menuai.states.async_set("light.permitted", "on", {"color": "red"})
 
     data = await websocket_client.receive_str()
     msg = json_loads(data)
@@ -2614,9 +2614,9 @@ async def test_message_coalescing(
         }
     }
 
-    hass.states.async_set("light.permitted", "on", {"color": "yellow"})
-    hass.states.async_set("light.permitted", "on", {"color": "green"})
-    hass.states.async_set("light.permitted", "on", {"color": "blue"})
+    menuai.states.async_set("light.permitted", "on", {"color": "yellow"})
+    menuai.states.async_set("light.permitted", "on", {"color": "green"})
+    menuai.states.async_set("light.permitted", "on", {"color": "blue"})
 
     data = await websocket_client.receive_str()
     msgs = json_loads(data)
@@ -2642,17 +2642,17 @@ async def test_message_coalescing(
         "c": {"light.permitted": {"+": {"a": {"color": "blue"}, "c": ANY, "lu": ANY}}}
     }
 
-    hass.states.async_set("light.permitted", "on", {"color": "yellow"})
-    hass.states.async_set("light.permitted", "on", {"color": "green"})
-    hass.states.async_set("light.permitted", "on", {"color": "blue"})
+    menuai.states.async_set("light.permitted", "on", {"color": "yellow"})
+    menuai.states.async_set("light.permitted", "on", {"color": "green"})
+    menuai.states.async_set("light.permitted", "on", {"color": "blue"})
     await websocket_client.close()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
 async def test_message_coalescing_not_supported_by_websocket_client(
-    hass: HomeAssistant,
+    menuai: menuai,
     websocket_client: MockHAClientWebSocket,
-    hass_admin_user: MockUser,
+    menuai_admin_user: MockUser,
 ) -> None:
     """Test enabling message coalescing not supported by websocket client."""
     await websocket_client.send_json({"id": 7, "type": "subscribe_entities"})
@@ -2663,8 +2663,8 @@ async def test_message_coalescing_not_supported_by_websocket_client(
     assert msg["type"] == const.TYPE_RESULT
     assert msg["success"]
 
-    hass.states.async_set("light.permitted", "on", {"color": "red"})
-    hass.states.async_set("light.permitted", "on", {"color": "blue"})
+    menuai.states.async_set("light.permitted", "on", {"color": "red"})
+    menuai.states.async_set("light.permitted", "on", {"color": "blue"})
 
     data = await websocket_client.receive_str()
     msg = json_loads(data)
@@ -2690,13 +2690,13 @@ async def test_message_coalescing_not_supported_by_websocket_client(
         "c": {"light.permitted": {"+": {"a": {"color": "blue"}, "c": ANY, "lu": ANY}}}
     }
     await websocket_client.close()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
 async def test_client_message_coalescing(
-    hass: HomeAssistant,
+    menuai: menuai,
     websocket_client: MockHAClientWebSocket,
-    hass_admin_user: MockUser,
+    menuai_admin_user: MockUser,
 ) -> None:
     """Test client message coalescing."""
     await websocket_client.send_json(
@@ -2709,7 +2709,7 @@ async def test_client_message_coalescing(
             {"id": 7, "type": "subscribe_entities"},
         ]
     )
-    hass.states.async_set("light.permitted", "on", {"color": "red"})
+    menuai.states.async_set("light.permitted", "on", {"color": "red"})
 
     data = await websocket_client.receive_str()
     msgs = json_loads(data)
@@ -2733,9 +2733,9 @@ async def test_client_message_coalescing(
         }
     }
 
-    hass.states.async_set("light.permitted", "on", {"color": "yellow"})
-    hass.states.async_set("light.permitted", "on", {"color": "green"})
-    hass.states.async_set("light.permitted", "on", {"color": "blue"})
+    menuai.states.async_set("light.permitted", "on", {"color": "yellow"})
+    menuai.states.async_set("light.permitted", "on", {"color": "green"})
+    menuai.states.async_set("light.permitted", "on", {"color": "blue"})
 
     data = await websocket_client.receive_str()
     msgs = json_loads(data)
@@ -2761,19 +2761,19 @@ async def test_client_message_coalescing(
         "c": {"light.permitted": {"+": {"a": {"color": "blue"}, "c": ANY, "lu": ANY}}}
     }
 
-    hass.states.async_set("light.permitted", "on", {"color": "yellow"})
-    hass.states.async_set("light.permitted", "on", {"color": "green"})
-    hass.states.async_set("light.permitted", "on", {"color": "blue"})
+    menuai.states.async_set("light.permitted", "on", {"color": "yellow"})
+    menuai.states.async_set("light.permitted", "on", {"color": "green"})
+    menuai.states.async_set("light.permitted", "on", {"color": "blue"})
     await websocket_client.close()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
 async def test_integration_descriptions(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test we can get integration descriptions."""
-    assert await async_setup_component(hass, "config", {})
-    ws_client = await hass_ws_client(hass)
+    assert await async_setup_component(menuai, "config", {})
+    ws_client = await menuai_ws_client(menuai)
 
     await ws_client.send_json_auto_id({"type": "integration/descriptions"})
     response = await ws_client.receive_json()
@@ -2783,9 +2783,9 @@ async def test_integration_descriptions(
 
 
 async def test_subscribe_entities_chained_state_change(
-    hass: HomeAssistant,
+    menuai: menuai,
     websocket_client: MockHAClientWebSocket,
-    hass_admin_user: MockUser,
+    menuai_admin_user: MockUser,
 ) -> None:
     """Test chaining state changed events.
 
@@ -2795,9 +2795,9 @@ async def test_subscribe_entities_chained_state_change(
 
     @callback
     def auto_off_listener(event):
-        hass.states.async_set("light.permitted", "off")
+        menuai.states.async_set("light.permitted", "off")
 
-    async_track_state_change_event(hass, ["light.permitted"], auto_off_listener)
+    async_track_state_change_event(menuai, ["light.permitted"], auto_off_listener)
 
     await websocket_client.send_json_auto_id({"type": "subscribe_entities"})
 
@@ -2813,7 +2813,7 @@ async def test_subscribe_entities_chained_state_change(
     assert msg["type"] == "event"
     assert msg["event"] == {"a": {}}
 
-    hass.states.async_set("light.permitted", "on")
+    menuai.states.async_set("light.permitted", "on")
     data = await websocket_client.receive_str()
     msg = json_loads(data)
     assert msg["id"] == subscription
@@ -2830,7 +2830,7 @@ async def test_subscribe_entities_chained_state_change(
     }
 
     await websocket_client.close()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
 @pytest.mark.parametrize(
@@ -2841,14 +2841,14 @@ async def test_subscribe_entities_chained_state_change(
     ],
 )
 async def test_wait_integration(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     domain: str,
     result: dict[str, Any],
 ) -> None:
     """Test we can get wait for an integration to load."""
-    assert await async_setup_component(hass, "config", {})
-    ws_client = await hass_ws_client(hass)
+    assert await async_setup_component(menuai, "config", {})
+    ws_client = await menuai_ws_client(menuai)
 
     await ws_client.send_json_auto_id({"type": "integration/wait", "domain": domain})
     response = await ws_client.receive_json()
@@ -2861,20 +2861,20 @@ async def test_wait_integration(
 
 
 async def test_wait_integration_startup(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test we can get wait for an integration to load during startup."""
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     setup_stall = asyncio.Event()
     setup_started = asyncio.Event()
 
-    async def mock_setup(hass: HomeAssistant, _) -> bool:
+    async def mock_setup(menuai: menuai, _) -> bool:
         setup_started.set()
         await setup_stall.wait()
         return True
 
-    mock_integration(hass, MockModule("test", async_setup=mock_setup))
+    mock_integration(menuai, MockModule("test", async_setup=mock_setup))
 
     # The integration is not loaded, and is also not scheduled to load
     await ws_client.send_json_auto_id({"type": "integration/wait", "domain": "test"})
@@ -2887,14 +2887,14 @@ async def test_wait_integration_startup(
     }
 
     # Mark the component as scheduled to be loaded
-    async_set_domains_to_be_loaded(hass, {"test"})
+    async_set_domains_to_be_loaded(menuai, {"test"})
 
     # Start loading the component, including its config entries
-    hass.async_create_task(async_setup_component(hass, "test", {}))
+    menuai.async_create_task(async_setup_component(menuai, "test", {}))
     await setup_started.wait()
 
     # The component is not yet loaded
-    assert "test" not in hass.config.components
+    assert "test" not in menuai.config.components
 
     # Allow setup to proceed
     setup_stall.set()
@@ -2910,4 +2910,4 @@ async def test_wait_integration_startup(
     }
 
     # The component has been loaded
-    assert "test" in hass.config.components
+    assert "test" in menuai.config.components

@@ -7,14 +7,14 @@ from ohme import ChargeSlot
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.ohme.const import DOMAIN
-from homeassistant.components.ohme.services import (
+from menuai.components.ohme.const import DOMAIN
+from menuai.components.ohme.services import (
     ATTR_CONFIG_ENTRY,
     ATTR_PRICE_CAP,
     SERVICE_LIST_CHARGE_SLOTS,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
 
 from . import setup_integration
 
@@ -22,14 +22,14 @@ from tests.common import MockConfigEntry
 
 
 async def test_list_charge_slots(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_client: MagicMock,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test list charge slots service."""
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     mock_client.slots = [
         ChargeSlot(
@@ -39,7 +39,7 @@ async def test_list_charge_slots(
         )
     ]
 
-    assert snapshot == await hass.services.async_call(
+    assert snapshot == await menuai.services.async_call(
         DOMAIN,
         "list_charge_slots",
         {
@@ -51,17 +51,17 @@ async def test_list_charge_slots(
 
 
 async def test_set_price_cap(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_client: MagicMock,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test set price cap service."""
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
     mock_client.async_change_price_cap = AsyncMock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         "set_price_cap",
         {
@@ -75,20 +75,20 @@ async def test_set_price_cap(
 
 
 async def test_list_charge_slots_exception(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_client: MagicMock,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test list charge slots service."""
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     # Test error
     with pytest.raises(
         ServiceValidationError, match="Invalid config entry provided. Got invalid"
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_LIST_CHARGE_SLOTS,
             {ATTR_CONFIG_ENTRY: "invalid"},

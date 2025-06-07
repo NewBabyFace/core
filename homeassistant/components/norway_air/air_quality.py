@@ -8,16 +8,16 @@ import logging
 import metno
 import voluptuous as vol
 
-from homeassistant.components.air_quality import (
+from menuai.components.air_quality import (
     PLATFORM_SCHEMA as AIR_QUALITY_PLATFORM_SCHEMA,
     AirQualityEntity,
 )
-from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_LATITUDE, CONF_LONGITUDE, CONF_NAME
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -42,25 +42,25 @@ SCAN_INTERVAL = timedelta(minutes=5)
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the air_quality norway sensor."""
     forecast = config.get(CONF_FORECAST)
-    latitude = config.get(CONF_LATITUDE, hass.config.latitude)
-    longitude = config.get(CONF_LONGITUDE, hass.config.longitude)
+    latitude = config.get(CONF_LATITUDE, menuai.config.latitude)
+    longitude = config.get(CONF_LONGITUDE, menuai.config.longitude)
     name = config.get(CONF_NAME)
 
     if None in (latitude, longitude):
-        _LOGGER.error("Latitude or longitude not set in Home Assistant config")
+        _LOGGER.error("Latitude or longitude not set in MenuAI config")
         return
 
     coordinates = {"lat": str(latitude), "lon": str(longitude)}
 
     async_add_entities(
-        [AirSensor(name, coordinates, forecast, async_get_clientsession(hass))], True
+        [AirSensor(name, coordinates, forecast, async_get_clientsession(menuai))], True
     )
 
 

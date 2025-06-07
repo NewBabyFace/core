@@ -6,22 +6,22 @@ from typing import Any
 
 from bleak.exc import BleakError
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     ATTR_POSITION,
     CoverDeviceClass,
     CoverEntity,
     CoverEntityFeature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import IdasenDeskConfigEntry, IdasenDeskCoordinator
 from .entity import IdasenDeskEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: IdasenDeskConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -57,28 +57,28 @@ class IdasenDeskCover(IdasenDeskEntity, CoverEntity):
         try:
             await self._desk.move_down()
         except BleakError as err:
-            raise HomeAssistantError("Failed to move down: Bluetooth error") from err
+            raise menuaiError("Failed to move down: Bluetooth error") from err
 
     async def async_open_cover(self, **kwargs: Any) -> None:
         """Open the cover."""
         try:
             await self._desk.move_up()
         except BleakError as err:
-            raise HomeAssistantError("Failed to move up: Bluetooth error") from err
+            raise menuaiError("Failed to move up: Bluetooth error") from err
 
     async def async_stop_cover(self, **kwargs: Any) -> None:
         """Stop the cover."""
         try:
             await self._desk.stop()
         except BleakError as err:
-            raise HomeAssistantError("Failed to stop moving: Bluetooth error") from err
+            raise menuaiError("Failed to stop moving: Bluetooth error") from err
 
     async def async_set_cover_position(self, **kwargs: Any) -> None:
         """Move the cover shutter to a specific position."""
         try:
             await self._desk.move_to(int(kwargs[ATTR_POSITION]))
         except BleakError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 "Failed to move to specified position: Bluetooth error"
             ) from err
 

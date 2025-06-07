@@ -12,8 +12,8 @@ from typing import Any
 from bleak import BleakError
 from bluetooth_data_tools import monotonic_time_coarse
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.debounce import Debouncer
+from menuai.core import menuai, callback
+from menuai.helpers.debounce import Debouncer
 
 from . import BluetoothChange, BluetoothScanningMode, BluetoothServiceInfoBleak
 from .passive_update_coordinator import PassiveBluetoothDataUpdateCoordinator
@@ -58,7 +58,7 @@ class ActiveBluetoothDataUpdateCoordinator[_T](PassiveBluetoothDataUpdateCoordin
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         logger: logging.Logger,
         *,
         address: str,
@@ -73,7 +73,7 @@ class ActiveBluetoothDataUpdateCoordinator[_T](PassiveBluetoothDataUpdateCoordin
         connectable: bool = True,
     ) -> None:
         """Initialize the coordinator."""
-        super().__init__(hass, logger, address, mode, connectable)
+        super().__init__(menuai, logger, address, mode, connectable)
         # It's None before the first successful update.
         # Set type to just T to remove annoying checks that data is not None
         # when it was already checked during setup.
@@ -90,7 +90,7 @@ class ActiveBluetoothDataUpdateCoordinator[_T](PassiveBluetoothDataUpdateCoordin
 
         if poll_debouncer is None:
             poll_debouncer = Debouncer(
-                hass,
+                menuai,
                 logger,
                 cooldown=POLL_DEFAULT_COOLDOWN,
                 immediate=POLL_DEFAULT_IMMEDIATE,
@@ -104,7 +104,7 @@ class ActiveBluetoothDataUpdateCoordinator[_T](PassiveBluetoothDataUpdateCoordin
 
     def needs_poll(self, service_info: BluetoothServiceInfoBleak) -> bool:
         """Return true if time to try and poll."""
-        if self.hass.is_stopping:
+        if self.menuai.is_stopping:
             return False
         poll_age: float | None = None
         if self._last_poll:

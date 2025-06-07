@@ -10,8 +10,8 @@ from typing import Any, Literal, final
 from propcache.api import cached_property
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_TEMPERATURE,
     PRECISION_TENTHS,
     PRECISION_WHOLE,
@@ -20,16 +20,16 @@ from homeassistant.const import (
     SERVICE_TURN_ON,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant, ServiceCall, callback
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity import Entity, EntityDescription
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.temperature import display_temp as show_temp
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.loader import async_suggest_report_issue
-from homeassistant.util.hass_dict import HassKey
-from homeassistant.util.unit_conversion import TemperatureConverter
+from menuai.core import menuai, ServiceCall, callback
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity import Entity, EntityDescription
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.temperature import display_temp as show_temp
+from menuai.helpers.typing import ConfigType
+from menuai.loader import async_suggest_report_issue
+from menuai.util.menuai_dict import menuaiKey
+from menuai.util.unit_conversion import TemperatureConverter
 
 from .const import (  # noqa: F401
     ATTR_CURRENT_HUMIDITY,
@@ -93,7 +93,7 @@ from .const import (  # noqa: F401
 
 _LOGGER = logging.getLogger(__name__)
 
-DATA_COMPONENT: HassKey[EntityComponent[ClimateEntity]] = HassKey(DOMAIN)
+DATA_COMPONENT: menuaiKey[EntityComponent[ClimateEntity]] = menuaiKey(DOMAIN)
 ENTITY_ID_FORMAT = DOMAIN + ".{}"
 PLATFORM_SCHEMA = cv.PLATFORM_SCHEMA
 PLATFORM_SCHEMA_BASE = cv.PLATFORM_SCHEMA_BASE
@@ -128,10 +128,10 @@ SET_TEMPERATURE_SCHEMA = vol.All(
 # mypy: disallow-any-generics
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up climate entities."""
-    component = hass.data[DATA_COMPONENT] = EntityComponent[ClimateEntity](
-        _LOGGER, DOMAIN, hass, SCAN_INTERVAL
+    component = menuai.data[DATA_COMPONENT] = EntityComponent[ClimateEntity](
+        _LOGGER, DOMAIN, menuai, SCAN_INTERVAL
     )
     await component.async_setup(config)
 
@@ -201,14 +201,14 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up a config entry."""
-    return await hass.data[DATA_COMPONENT].async_setup_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_setup_entry(entry)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.data[DATA_COMPONENT].async_unload_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_unload_entry(entry)
 
 
 class ClimateEntityDescription(EntityDescription, frozen_or_thawed=True):
@@ -304,7 +304,7 @@ class ClimateEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
         """Return the precision of the system."""
         if hasattr(self, "_attr_precision"):
             return self._attr_precision
-        if self.hass.config.units.temperature_unit == UnitOfTemperature.CELSIUS:
+        if self.menuai.config.units.temperature_unit == UnitOfTemperature.CELSIUS:
             return PRECISION_TENTHS
         return PRECISION_WHOLE
 
@@ -314,12 +314,12 @@ class ClimateEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
         supported_features = self.supported_features
         temperature_unit = self.temperature_unit
         precision = self.precision
-        hass = self.hass
+        menuai = self.menuai
 
         data: dict[str, Any] = {
             ATTR_HVAC_MODES: self.hvac_modes,
-            ATTR_MIN_TEMP: show_temp(hass, self.min_temp, temperature_unit, precision),
-            ATTR_MAX_TEMP: show_temp(hass, self.max_temp, temperature_unit, precision),
+            ATTR_MIN_TEMP: show_temp(menuai, self.min_temp, temperature_unit, precision),
+            ATTR_MAX_TEMP: show_temp(menuai, self.max_temp, temperature_unit, precision),
         }
 
         if target_temperature_step := self.target_temperature_step:
@@ -350,17 +350,17 @@ class ClimateEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
         supported_features = self.supported_features
         temperature_unit = self.temperature_unit
         precision = self.precision
-        hass = self.hass
+        menuai = self.menuai
 
         data: dict[str, str | float | None] = {
             ATTR_CURRENT_TEMPERATURE: show_temp(
-                hass, self.current_temperature, temperature_unit, precision
+                menuai, self.current_temperature, temperature_unit, precision
             ),
         }
 
         if ClimateEntityFeature.TARGET_TEMPERATURE in supported_features:
             data[ATTR_TEMPERATURE] = show_temp(
-                hass,
+                menuai,
                 self.target_temperature,
                 temperature_unit,
                 precision,
@@ -368,10 +368,10 @@ class ClimateEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
         if ClimateEntityFeature.TARGET_TEMPERATURE_RANGE in supported_features:
             data[ATTR_TARGET_TEMP_HIGH] = show_temp(
-                hass, self.target_temperature_high, temperature_unit, precision
+                menuai, self.target_temperature_high, temperature_unit, precision
             )
             data[ATTR_TARGET_TEMP_LOW] = show_temp(
-                hass, self.target_temperature_low, temperature_unit, precision
+                menuai, self.target_temperature_low, temperature_unit, precision
             )
 
         if (current_humidity := self.current_humidity) is not None:
@@ -537,7 +537,7 @@ class ClimateEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
         translation_key = f"not_valid_{mode_type}_mode"
         if mode_type == "hvac":
             report_issue = async_suggest_report_issue(
-                self.hass,
+                self.menuai,
                 integration_domain=self.platform.platform_name,
                 module=type(self).__module__,
             )
@@ -570,7 +570,7 @@ class ClimateEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_set_temperature(self, **kwargs: Any) -> None:
         """Set new target temperature."""
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             ft.partial(self.set_temperature, **kwargs)
         )
 
@@ -580,7 +580,7 @@ class ClimateEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_set_humidity(self, humidity: int) -> None:
         """Set new target humidity."""
-        await self.hass.async_add_executor_job(self.set_humidity, humidity)
+        await self.menuai.async_add_executor_job(self.set_humidity, humidity)
 
     @final
     async def async_handle_set_fan_mode_service(self, fan_mode: str) -> None:
@@ -594,7 +594,7 @@ class ClimateEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_set_fan_mode(self, fan_mode: str) -> None:
         """Set new target fan mode."""
-        await self.hass.async_add_executor_job(self.set_fan_mode, fan_mode)
+        await self.menuai.async_add_executor_job(self.set_fan_mode, fan_mode)
 
     @final
     async def async_handle_set_hvac_mode_service(self, hvac_mode: HVACMode) -> None:
@@ -608,7 +608,7 @@ class ClimateEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Set new target hvac mode."""
-        await self.hass.async_add_executor_job(self.set_hvac_mode, hvac_mode)
+        await self.menuai.async_add_executor_job(self.set_hvac_mode, hvac_mode)
 
     @final
     async def async_handle_set_swing_mode_service(self, swing_mode: str) -> None:
@@ -622,7 +622,7 @@ class ClimateEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_set_swing_mode(self, swing_mode: str) -> None:
         """Set new target swing operation."""
-        await self.hass.async_add_executor_job(self.set_swing_mode, swing_mode)
+        await self.menuai.async_add_executor_job(self.set_swing_mode, swing_mode)
 
     @final
     async def async_handle_set_swing_horizontal_mode_service(
@@ -640,7 +640,7 @@ class ClimateEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_set_swing_horizontal_mode(self, swing_horizontal_mode: str) -> None:
         """Set new target horizontal swing operation."""
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             self.set_swing_horizontal_mode, swing_horizontal_mode
         )
 
@@ -656,7 +656,7 @@ class ClimateEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Set new preset mode."""
-        await self.hass.async_add_executor_job(self.set_preset_mode, preset_mode)
+        await self.menuai.async_add_executor_job(self.set_preset_mode, preset_mode)
 
     def turn_on(self) -> None:
         """Turn the entity on."""
@@ -666,7 +666,7 @@ class ClimateEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
         """Turn the entity on."""
         # Forward to self.turn_on if it's been overridden.
         if type(self).turn_on is not ClimateEntity.turn_on:
-            await self.hass.async_add_executor_job(self.turn_on)
+            await self.menuai.async_add_executor_job(self.turn_on)
             return
 
         # If there are only two HVAC modes, and one of those modes is OFF,
@@ -694,7 +694,7 @@ class ClimateEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
         """Turn the entity off."""
         # Forward to self.turn_on if it's been overridden.
         if type(self).turn_off is not ClimateEntity.turn_off:
-            await self.hass.async_add_executor_job(self.turn_off)
+            await self.menuai.async_add_executor_job(self.turn_off)
             return
 
         # Fake turn off
@@ -712,7 +712,7 @@ class ClimateEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
         """Toggle the entity."""
         # Forward to self.toggle if it's been overridden.
         if type(self).toggle is not ClimateEntity.toggle:
-            await self.hass.async_add_executor_job(self.toggle)
+            await self.menuai.async_add_executor_job(self.toggle)
             return
 
         # We assume that since turn_off is supported, HVACMode.OFF is as well.
@@ -804,7 +804,7 @@ async def async_service_temperature_set(
             translation_key="missing_target_temperature_range_entity_feature",
         )
 
-    hass = entity.hass
+    menuai = entity.menuai
     kwargs: dict[str, Any] = {}
     min_temp = entity.min_temp
     max_temp = entity.max_temp
@@ -824,7 +824,7 @@ async def async_service_temperature_set(
     for value, temp in service_call.data.items():
         if value in CONVERTIBLE_ATTRIBUTE:
             kwargs[value] = check_temp = TemperatureConverter.convert(
-                temp, hass.config.units.temperature_unit, temp_unit
+                temp, menuai.config.units.temperature_unit, temp_unit
             )
 
             _LOGGER.debug(
@@ -832,7 +832,7 @@ async def async_service_temperature_set(
                 check_temp,
                 entity.temperature_unit,
                 temp,
-                hass.config.units.temperature_unit,
+                menuai.config.units.temperature_unit,
                 min_temp,
                 temp_unit,
                 max_temp,

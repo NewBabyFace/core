@@ -7,9 +7,9 @@ from hlk_sw16 import create_hlk_sw16_connection
 from hlk_sw16.protocol import SW16Client
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.core import HomeAssistant
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_PORT
+from menuai.core import menuai
 
 from .const import (
     CONNECTION_TIMEOUT,
@@ -28,12 +28,12 @@ DATA_SCHEMA = vol.Schema(
 )
 
 
-async def connect_client(hass: HomeAssistant, user_input: dict[str, Any]) -> SW16Client:
+async def connect_client(menuai: menuai, user_input: dict[str, Any]) -> SW16Client:
     """Connect the HLK-SW16 client."""
     client_aw = create_hlk_sw16_connection(
         host=user_input[CONF_HOST],
         port=user_input[CONF_PORT],
-        loop=hass.loop,
+        loop=menuai.loop,
         timeout=CONNECTION_TIMEOUT,
         reconnect_interval=DEFAULT_RECONNECT_INTERVAL,
         keep_alive_interval=DEFAULT_KEEP_ALIVE_INTERVAL,
@@ -42,10 +42,10 @@ async def connect_client(hass: HomeAssistant, user_input: dict[str, Any]) -> SW1
         return await client_aw
 
 
-async def validate_input(hass: HomeAssistant, user_input: dict[str, Any]) -> None:
+async def validate_input(menuai: menuai, user_input: dict[str, Any]) -> None:
     """Validate the user input allows us to connect."""
     try:
-        client = await connect_client(hass, user_input)
+        client = await connect_client(menuai, user_input)
     except TimeoutError as err:
         raise CannotConnect from err
 
@@ -85,7 +85,7 @@ class SW16FlowHandler(ConfigFlow, domain=DOMAIN):
                 {CONF_HOST: user_input[CONF_HOST], CONF_PORT: user_input[CONF_PORT]}
             )
             try:
-                await validate_input(self.hass, user_input)
+                await validate_input(self.menuai, user_input)
                 address = f"{user_input[CONF_HOST]}:{user_input[CONF_PORT]}"
                 return self.async_create_entry(title=address, data=user_input)
             except CannotConnect:

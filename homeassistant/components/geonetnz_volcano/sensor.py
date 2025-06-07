@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import logging
 
-from homeassistant.components.sensor import SensorEntity
-from homeassistant.const import ATTR_LATITUDE, ATTR_LONGITUDE, UnitOfLength
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import dt as dt_util
-from homeassistant.util.unit_conversion import DistanceConverter
+from menuai.components.sensor import SensorEntity
+from menuai.const import ATTR_LATITUDE, ATTR_LONGITUDE, UnitOfLength
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import dt as dt_util
+from menuai.util.unit_conversion import DistanceConverter
 
 from . import GeonetnzVolcanoConfigEntry
 from .const import (
@@ -29,7 +29,7 @@ ATTR_LAST_UPDATE_SUCCESSFUL = "feed_last_update_successful"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: GeonetnzVolcanoConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -47,10 +47,10 @@ async def async_setup_entry(
 
     manager.listeners.append(
         async_dispatcher_connect(
-            hass, manager.async_event_new_entity(), async_add_sensor
+            menuai, manager.async_event_new_entity(), async_add_sensor
         )
     )
-    hass.async_create_task(manager.async_update())
+    menuai.async_create_task(manager.async_update())
     _LOGGER.debug("Sensor setup done")
 
 
@@ -78,16 +78,16 @@ class GeonetnzVolcanoSensor(SensorEntity):
         self._feed_last_update_successful = None
         self._remove_signal_update = None
 
-    async def async_added_to_hass(self) -> None:
-        """Call when entity is added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Call when entity is added to menuai."""
         self._remove_signal_update = async_dispatcher_connect(
-            self.hass,
+            self.menuai,
             f"geonetnz_volcano_update_{self._external_id}",
             self._update_callback,
         )
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Call when entity will be removed from hass."""
+    async def async_will_remove_from_menuai(self) -> None:
+        """Call when entity will be removed from menuai."""
         if self._remove_signal_update:
             self._remove_signal_update()
 

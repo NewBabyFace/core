@@ -6,19 +6,19 @@ from unittest.mock import Mock
 from aioshelly.exceptions import DeviceConnectionError, InvalidAuthError, RpcCallError
 import pytest
 
-from homeassistant.components.select import (
+from menuai.components.select import (
     ATTR_OPTION,
     ATTR_OPTIONS,
     DOMAIN as SELECT_PLATFORM,
     SERVICE_SELECT_OPTION,
 )
-from homeassistant.components.shelly.const import DOMAIN
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
-from homeassistant.const import ATTR_ENTITY_ID, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceRegistry
-from homeassistant.helpers.entity_registry import EntityRegistry
+from menuai.components.shelly.const import DOMAIN
+from menuai.config_entries import SOURCE_REAUTH, ConfigEntryState
+from menuai.const import ATTR_ENTITY_ID, STATE_UNKNOWN
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import DeviceRegistry
+from menuai.helpers.entity_registry import EntityRegistry
 
 from . import init_integration, register_device, register_entity
 
@@ -31,7 +31,7 @@ from . import init_integration, register_device, register_entity
     ],
 )
 async def test_rpc_device_virtual_enum(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: EntityRegistry,
     mock_rpc_device: Mock,
     monkeypatch: pytest.MonkeyPatch,
@@ -58,9 +58,9 @@ async def test_rpc_device_virtual_enum(
     status["enum:203"] = {"value": value}
     monkeypatch.setattr(mock_rpc_device, "status", status)
 
-    await init_integration(hass, 3)
+    await init_integration(menuai, 3)
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == expected_state
     assert state.attributes.get(ATTR_OPTIONS) == [
         "Title 1",
@@ -74,11 +74,11 @@ async def test_rpc_device_virtual_enum(
     monkeypatch.setitem(mock_rpc_device.status["enum:203"], "value", "option 2")
     mock_rpc_device.mock_update()
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == "option 2"
 
     monkeypatch.setitem(mock_rpc_device.status["enum:203"], "value", "option 1")
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SELECT_PLATFORM,
         SERVICE_SELECT_OPTION,
         {ATTR_ENTITY_ID: entity_id, ATTR_OPTION: "Title 1"},
@@ -88,12 +88,12 @@ async def test_rpc_device_virtual_enum(
     mock_rpc_device.enum_set.assert_called_once_with(203, "option 1")
     mock_rpc_device.mock_update()
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == "Title 1"
 
 
 async def test_rpc_remove_virtual_enum_when_mode_label(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: EntityRegistry,
     device_registry: DeviceRegistry,
     mock_rpc_device: Mock,
@@ -114,10 +114,10 @@ async def test_rpc_remove_virtual_enum_when_mode_label(
     status["enum:200"] = {"value": "one"}
     monkeypatch.setattr(mock_rpc_device, "status", status)
 
-    config_entry = await init_integration(hass, 3, skip_setup=True)
+    config_entry = await init_integration(menuai, 3, skip_setup=True)
     device_entry = register_device(device_registry, config_entry)
     entity_id = register_entity(
-        hass,
+        menuai,
         SELECT_PLATFORM,
         "test_name_enum_200",
         "enum:200-enum",
@@ -125,23 +125,23 @@ async def test_rpc_remove_virtual_enum_when_mode_label(
         device_id=device_entry.id,
     )
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert entity_registry.async_get(entity_id) is None
 
 
 async def test_rpc_remove_virtual_enum_when_orphaned(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: EntityRegistry,
     device_registry: DeviceRegistry,
     mock_rpc_device: Mock,
 ) -> None:
     """Check whether the virtual enum will be removed if it has been removed from the device configuration."""
-    config_entry = await init_integration(hass, 3, skip_setup=True)
+    config_entry = await init_integration(menuai, 3, skip_setup=True)
     device_entry = register_device(device_registry, config_entry)
     entity_id = register_entity(
-        hass,
+        menuai,
         SELECT_PLATFORM,
         "test_name_enum_200",
         "enum:200-enum",
@@ -149,8 +149,8 @@ async def test_rpc_remove_virtual_enum_when_orphaned(
         device_id=device_entry.id,
     )
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert entity_registry.async_get(entity_id) is None
 
@@ -169,7 +169,7 @@ async def test_rpc_remove_virtual_enum_when_orphaned(
     ],
 )
 async def test_select_set_exc(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_rpc_device: Mock,
     monkeypatch: pytest.MonkeyPatch,
     exception: Exception,
@@ -193,12 +193,12 @@ async def test_select_set_exc(
     status["enum:203"] = {"value": "option 1"}
     monkeypatch.setattr(mock_rpc_device, "status", status)
 
-    await init_integration(hass, 3)
+    await init_integration(menuai, 3)
 
     mock_rpc_device.enum_set.side_effect = exception
 
-    with pytest.raises(HomeAssistantError, match=error):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match=error):
+        await menuai.services.async_call(
             SELECT_PLATFORM,
             SERVICE_SELECT_OPTION,
             {
@@ -210,7 +210,7 @@ async def test_select_set_exc(
 
 
 async def test_select_set_reauth_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_rpc_device: Mock,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -232,11 +232,11 @@ async def test_select_set_reauth_error(
     status["enum:203"] = {"value": "option 1"}
     monkeypatch.setattr(mock_rpc_device, "status", status)
 
-    entry = await init_integration(hass, 3)
+    entry = await init_integration(menuai, 3)
 
     mock_rpc_device.enum_set.side_effect = InvalidAuthError
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SELECT_PLATFORM,
         SERVICE_SELECT_OPTION,
         {
@@ -248,7 +248,7 @@ async def test_select_set_reauth_error(
 
     assert entry.state is ConfigEntryState.LOADED
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
 
     flow = flows[0]

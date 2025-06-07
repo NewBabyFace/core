@@ -8,10 +8,10 @@ from automower_ble.mower import Mower
 from bleak import BleakError
 from bleak_retry_connector import close_stale_connections_by_address
 
-from homeassistant.components import bluetooth
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.components import bluetooth
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN, LOGGER
 
@@ -25,7 +25,7 @@ class HusqvarnaCoordinator(DataUpdateCoordinator[dict[str, bytes]]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         mower: Mower,
         address: str,
@@ -34,7 +34,7 @@ class HusqvarnaCoordinator(DataUpdateCoordinator[dict[str, bytes]]):
     ) -> None:
         """Initialize global data updater."""
         super().__init__(
-            hass=hass,
+            menuai=menuai,
             logger=LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -57,7 +57,7 @@ class HusqvarnaCoordinator(DataUpdateCoordinator[dict[str, bytes]]):
         await close_stale_connections_by_address(self.address)
 
         device = bluetooth.async_ble_device_from_address(
-            self.hass, self.address, connectable=True
+            self.menuai, self.address, connectable=True
         )
 
         try:

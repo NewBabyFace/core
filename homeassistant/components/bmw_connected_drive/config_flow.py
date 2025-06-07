@@ -15,18 +15,18 @@ from bimmer_connected.models import (
 from httpx import RequestError
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_REAUTH,
     SOURCE_RECONFIGURE,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_PASSWORD, CONF_REGION, CONF_SOURCE, CONF_USERNAME
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.selector import SelectSelector, SelectSelectorConfig
-from homeassistant.util.ssl import get_default_context
+from menuai.const import CONF_PASSWORD, CONF_REGION, CONF_SOURCE, CONF_USERNAME
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.selector import SelectSelector, SelectSelectorConfig
+from menuai.util.ssl import get_default_context
 
 from . import DOMAIN
 from .const import (
@@ -67,7 +67,7 @@ CAPTCHA_SCHEMA = vol.Schema(
 )
 
 
-async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, str]:
+async def validate_input(menuai: menuai, data: dict[str, Any]) -> dict[str, str]:
     """Validate the user input allows us to connect.
 
     Data has the keys from DATA_SCHEMA with values provided by the user.
@@ -134,7 +134,7 @@ class BMWConfigFlow(ConfigFlow, domain=DOMAIN):
 
             info = None
             try:
-                info = await validate_input(self.hass, self.data)
+                info = await validate_input(self.menuai, self.data)
             except MissingCaptcha:
                 errors["base"] = "missing_captcha"
             except CannotConnect:
@@ -245,12 +245,12 @@ class BMWOptionsFlow(OptionsFlow):
             # Required as each successful login will store the latest refresh_token
             # using async_update_entry, which would otherwise trigger a full reload
             # if the options would be refreshed using a listener.
-            changed = self.hass.config_entries.async_update_entry(
+            changed = self.menuai.config_entries.async_update_entry(
                 self.config_entry,
                 options=user_input,
             )
             if changed:
-                await self.hass.config_entries.async_reload(self.config_entry.entry_id)
+                await self.menuai.config_entries.async_reload(self.config_entry.entry_id)
             return self.async_create_entry(title="", data=user_input)
         return self.async_show_form(
             step_id="account_options",
@@ -265,13 +265,13 @@ class BMWOptionsFlow(OptionsFlow):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(menuaiError):
     """Error to indicate there is invalid auth."""
 
 
-class MissingCaptcha(HomeAssistantError):
+class MissingCaptcha(menuaiError):
     """Error to indicate the captcha token is missing."""

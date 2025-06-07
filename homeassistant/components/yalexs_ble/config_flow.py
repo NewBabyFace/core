@@ -17,21 +17,21 @@ from yalexs_ble import (
 )
 from yalexs_ble.const import YALE_MFR_ID
 
-from homeassistant.components.bluetooth import (
+from menuai.components.bluetooth import (
     BluetoothServiceInfoBleak,
     async_ble_device_from_address,
     async_discovered_service_info,
 )
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_ADDRESS
-from homeassistant.core import callback
-from homeassistant.data_entry_flow import AbortFlow
-from homeassistant.helpers.typing import DiscoveryInfoType
+from menuai.const import CONF_ADDRESS
+from menuai.core import callback
+from menuai.data_entry_flow import AbortFlow
+from menuai.helpers.typing import DiscoveryInfoType
 
 from .const import CONF_ALWAYS_CONNECTED, CONF_KEY, CONF_LOCAL_NAME, CONF_SLOT, DOMAIN
 from .util import async_find_existing_service_info, human_readable_name
@@ -128,13 +128,13 @@ class YalexsConfigFlow(ConfigFlow, domain=DOMAIN):
                 )
 
         self._discovery_info = async_find_existing_service_info(
-            self.hass, self.local_name, address
+            self.menuai, self.local_name, address
         )
         if not self._discovery_info:
             return self.async_abort(reason="no_devices_found")
 
         self._address = address
-        if self.hass.config_entries.flow.async_has_matching_flow(self):
+        if self.menuai.config_entries.flow.async_has_matching_flow(self):
             raise AbortFlow("already_in_progress")
 
         self._lock_cfg = lock_cfg
@@ -159,7 +159,7 @@ class YalexsConfigFlow(ConfigFlow, domain=DOMAIN):
                 # we assume they do not want to use the discovered keys for
                 # some reason.
                 return True
-            self.hass.config_entries.flow.async_abort(other_flow.flow_id)
+            self.menuai.config_entries.flow.async_abort(other_flow.flow_id)
 
         return False
 
@@ -204,7 +204,7 @@ class YalexsConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             if (
                 device := async_ble_device_from_address(
-                    self.hass, reauth_entry.data[CONF_ADDRESS], True
+                    self.menuai, reauth_entry.data[CONF_ADDRESS], True
                 )
             ) is None:
                 errors = {"base": "no_longer_in_range"}
@@ -273,7 +273,7 @@ class YalexsConfigFlow(ConfigFlow, domain=DOMAIN):
                 for entry in self._async_current_entries()
                 if local_name_is_unique(entry.data.get(CONF_LOCAL_NAME))
             }
-            for discovery in async_discovered_service_info(self.hass):
+            for discovery in async_discovered_service_info(self.menuai):
                 if (
                     discovery.address in current_addresses
                     or discovery.name in current_unique_names

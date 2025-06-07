@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import (
     CONF_OUTPUTS,
@@ -23,7 +23,7 @@ from . import (
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -33,7 +33,7 @@ async def async_setup_platform(
         return
 
     configured_zones = discovery_info[CONF_ZONES]
-    controller = hass.data[DATA_SATEL]
+    controller = menuai.data[DATA_SATEL]
 
     devices = []
 
@@ -86,7 +86,7 @@ class SatelIntegraBinarySensor(BinarySensorEntity):
         self._react_to_signal = react_to_signal
         self._satel = controller
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
         if self._react_to_signal == SIGNAL_OUTPUTS_UPDATED:
             if self._device_number in self._satel.violated_outputs:
@@ -99,7 +99,7 @@ class SatelIntegraBinarySensor(BinarySensorEntity):
             self._state = 0
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, self._react_to_signal, self._devices_updated
+                self.menuai, self._react_to_signal, self._devices_updated
             )
         )
 

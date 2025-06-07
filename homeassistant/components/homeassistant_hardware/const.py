@@ -1,11 +1,11 @@
-"""Constants for the Homeassistant Hardware integration."""
+"""Constants for the menuai Hardware integration."""
 
 from __future__ import annotations
 
 import logging
 from typing import TYPE_CHECKING
 
-from homeassistant.util.hass_dict import HassKey
+from menuai.util.menuai_dict import menuaiKey
 
 if TYPE_CHECKING:
     from .helpers import HardwareInfoDispatcher
@@ -13,8 +13,8 @@ if TYPE_CHECKING:
 
 LOGGER = logging.getLogger(__package__)
 
-DOMAIN = "homeassistant_hardware"
-DATA_COMPONENT: HassKey[HardwareInfoDispatcher] = HassKey(DOMAIN)
+DOMAIN = "menuai_hardware"
+DATA_COMPONENT: menuaiKey[HardwareInfoDispatcher] = menuaiKey(DOMAIN)
 
 ZHA_DOMAIN = "zha"
 OTBR_DOMAIN = "otbr"

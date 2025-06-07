@@ -16,13 +16,13 @@ from electrickiwi_api.model import (
 )
 import pytest
 
-from homeassistant.components.application_credentials import (
+from menuai.components.application_credentials import (
     ClientCredential,
     async_import_client_credential,
 )
-from homeassistant.components.electric_kiwi.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.electric_kiwi.const import DOMAIN
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry, load_json_value_fixture
 
@@ -32,11 +32,11 @@ REDIRECT_URI = "https://example.com/auth/external/callback"
 
 
 @pytest.fixture(autouse=True)
-async def setup_credentials(hass: HomeAssistant) -> None:
+async def setup_credentials(menuai: menuai) -> None:
     """Fixture to setup application credentials component."""
-    await async_setup_component(hass, "application_credentials", {})
+    await async_setup_component(menuai, "application_credentials", {})
     await async_import_client_credential(
-        hass,
+        menuai,
         DOMAIN,
         ClientCredential(CLIENT_ID, CLIENT_SECRET),
     )
@@ -47,11 +47,11 @@ def electrickiwi_api() -> Generator[AsyncMock]:
     """Mock ek api and return values."""
     with (
         patch(
-            "homeassistant.components.electric_kiwi.ElectricKiwiApi",
+            "menuai.components.electric_kiwi.ElectricKiwiApi",
             autospec=True,
         ) as mock_client,
         patch(
-            "homeassistant.components.electric_kiwi.config_flow.ElectricKiwiApi",
+            "menuai.components.electric_kiwi.config_flow.ElectricKiwiApi",
             new=mock_client,
         ),
     ):
@@ -82,7 +82,7 @@ def electrickiwi_api() -> Generator[AsyncMock]:
 
 
 @pytest.fixture(name="config_entry")
-def mock_config_entry(hass: HomeAssistant) -> MockConfigEntry:
+def mock_config_entry(menuai: menuai) -> MockConfigEntry:
     """Create mocked config entry."""
     return MockConfigEntry(
         title="Electric Kiwi",
@@ -105,7 +105,7 @@ def mock_config_entry(hass: HomeAssistant) -> MockConfigEntry:
 
 
 @pytest.fixture(name="config_entry2")
-def mock_config_entry2(hass: HomeAssistant) -> MockConfigEntry:
+def mock_config_entry2(menuai: menuai) -> MockConfigEntry:
     """Create mocked config entry."""
     return MockConfigEntry(
         title="Electric Kiwi",
@@ -128,7 +128,7 @@ def mock_config_entry2(hass: HomeAssistant) -> MockConfigEntry:
 
 
 @pytest.fixture(name="migrated_config_entry")
-def mock_migrated_config_entry(hass: HomeAssistant) -> MockConfigEntry:
+def mock_migrated_config_entry(menuai: menuai) -> MockConfigEntry:
     """Create mocked config entry."""
     return MockConfigEntry(
         title="Electric Kiwi",
@@ -154,7 +154,7 @@ def mock_migrated_config_entry(hass: HomeAssistant) -> MockConfigEntry:
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Mock setting up a config entry."""
     with patch(
-        "homeassistant.components.electric_kiwi.async_setup_entry", return_value=True
+        "menuai.components.electric_kiwi.async_setup_entry", return_value=True
     ) as mock_setup:
         yield mock_setup
 
@@ -163,7 +163,7 @@ def mock_setup_entry() -> Generator[AsyncMock]:
 def electric_kiwi_auth() -> Generator[AsyncMock]:
     """Patch access to electric kiwi access token."""
     with patch(
-        "homeassistant.components.electric_kiwi.api.ConfigEntryElectricKiwiAuth"
+        "menuai.components.electric_kiwi.api.ConfigEntryElectricKiwiAuth"
     ) as mock_auth:
         mock_auth.return_value.async_get_access_token = AsyncMock("auth_token")
         yield mock_auth

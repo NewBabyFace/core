@@ -19,13 +19,13 @@ from zwave_js_server.const.command_class.lock import (
 from zwave_js_server.exceptions import BaseZwaveJSServerError
 from zwave_js_server.util.lock import clear_usercode, set_configuration, set_usercode
 
-from homeassistant.components.lock import DOMAIN as LOCK_DOMAIN, LockEntity, LockState
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.lock import DOMAIN as LOCK_DOMAIN, LockEntity, LockState
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv, entity_platform
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
     ATTR_AUTO_RELOCK_TIME,
@@ -60,7 +60,7 @@ UNIT16_SCHEMA = vol.All(vol.Coerce(int), vol.Range(min=0, max=65535))
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -79,7 +79,7 @@ async def async_setup_entry(
 
     config_entry.async_on_unload(
         async_dispatcher_connect(
-            hass, f"{DOMAIN}_{config_entry.entry_id}_add_{LOCK_DOMAIN}", async_add_lock
+            menuai, f"{DOMAIN}_{config_entry.entry_id}_add_{LOCK_DOMAIN}", async_add_lock
         )
     )
 
@@ -165,7 +165,7 @@ class ZWaveLock(ZWaveBaseEntity, LockEntity):
         try:
             await set_usercode(self.info.node, code_slot, usercode)
         except BaseZwaveJSServerError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Unable to set lock usercode on lock {self.entity_id} code_slot "
                 f"{code_slot}: {err}"
             ) from err
@@ -176,7 +176,7 @@ class ZWaveLock(ZWaveBaseEntity, LockEntity):
         try:
             await clear_usercode(self.info.node, code_slot)
         except BaseZwaveJSServerError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Unable to clear lock usercode on lock {self.entity_id} code_slot "
                 f"{code_slot}: {err}"
             ) from err

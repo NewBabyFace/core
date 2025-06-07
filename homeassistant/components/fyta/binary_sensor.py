@@ -8,14 +8,14 @@ from typing import Final
 
 from fyta_cli.fyta_models import Plant
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import FytaConfigEntry
 from .entity import FytaPlantEntity
@@ -83,7 +83,7 @@ BINARY_SENSORS: Final[list[FytaBinarySensorEntityDescription]] = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: FytaConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

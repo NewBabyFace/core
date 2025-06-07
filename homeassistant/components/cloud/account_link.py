@@ -8,11 +8,11 @@ from typing import Any
 
 import aiohttp
 from awesomeversion import AwesomeVersion
-from hass_nabucasa import account_link
+from menuai_nabucasa import account_link
 
-from homeassistant.const import __version__ as HA_VERSION
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_entry_oauth2_flow, event
+from menuai.const import __version__ as HA_VERSION
+from menuai.core import menuai, callback
+from menuai.helpers import config_entry_oauth2_flow, event
 
 from .const import DATA_CLOUD, DOMAIN
 
@@ -27,18 +27,18 @@ CURRENT_PLAIN_VERSION = AwesomeVersion(
 
 
 @callback
-def async_setup(hass: HomeAssistant) -> None:
+def async_setup(menuai: menuai) -> None:
     """Set up cloud account link."""
     config_entry_oauth2_flow.async_add_implementation_provider(
-        hass, DOMAIN, async_provide_implementation
+        menuai, DOMAIN, async_provide_implementation
     )
 
 
 async def async_provide_implementation(
-    hass: HomeAssistant, domain: str
+    menuai: menuai, domain: str
 ) -> list[config_entry_oauth2_flow.AbstractOAuth2Implementation]:
     """Provide an implementation for a domain."""
-    services = await _get_services(hass)
+    services = await _get_services(menuai)
 
     for service in services:
         if (
@@ -47,7 +47,7 @@ async def async_provide_implementation(
             and (
                 service.get("accepts_new_authorizations", True)
                 or (
-                    (entries := hass.config_entries.async_entries(domain))
+                    (entries := menuai.config_entries.async_entries(domain))
                     and any(
                         entry.data.get("auth_implementation") == DOMAIN
                         for entry in entries
@@ -55,33 +55,33 @@ async def async_provide_implementation(
                 )
             )
         ):
-            return [CloudOAuth2Implementation(hass, domain)]
+            return [CloudOAuth2Implementation(menuai, domain)]
 
     return []
 
 
-async def _get_services(hass: HomeAssistant) -> list[dict[str, Any]]:
+async def _get_services(menuai: menuai) -> list[dict[str, Any]]:
     """Get the available services."""
     services: list[dict[str, Any]]
-    if DATA_SERVICES in hass.data:
-        services = hass.data[DATA_SERVICES]
+    if DATA_SERVICES in menuai.data:
+        services = menuai.data[DATA_SERVICES]
         return services
 
     try:
         services = await account_link.async_fetch_available_services(
-            hass.data[DATA_CLOUD]
+            menuai.data[DATA_CLOUD]
         )
     except (aiohttp.ClientError, TimeoutError):
         return []
 
-    hass.data[DATA_SERVICES] = services
+    menuai.data[DATA_SERVICES] = services
 
     @callback
     def clear_services(_now: datetime) -> None:
         """Clear services cache."""
-        hass.data.pop(DATA_SERVICES, None)
+        menuai.data.pop(DATA_SERVICES, None)
 
-    event.async_call_later(hass, CACHE_TIMEOUT, clear_services)
+    event.async_call_later(menuai, CACHE_TIMEOUT, clear_services)
 
     return services
 
@@ -89,15 +89,15 @@ async def _get_services(hass: HomeAssistant) -> list[dict[str, Any]]:
 class CloudOAuth2Implementation(config_entry_oauth2_flow.AbstractOAuth2Implementation):
     """Cloud implementation of the OAuth2 flow."""
 
-    def __init__(self, hass: HomeAssistant, service: str) -> None:
+    def __init__(self, menuai: menuai, service: str) -> None:
         """Initialize cloud OAuth2 implementation."""
-        self.hass = hass
+        self.menuai = menuai
         self.service = service
 
     @property
     def name(self) -> str:
         """Name of the implementation."""
-        return "Home Assistant Cloud"
+        return "MenuAI Cloud"
 
     @property
     def domain(self) -> str:
@@ -107,7 +107,7 @@ class CloudOAuth2Implementation(config_entry_oauth2_flow.AbstractOAuth2Implement
     async def async_generate_authorize_url(self, flow_id: str) -> str:
         """Generate a url for the user to authorize."""
         helper = account_link.AuthorizeAccountHelper(
-            self.hass.data[DATA_CLOUD], self.service
+            self.menuai.data[DATA_CLOUD], self.service
         )
         authorize_url = await helper.async_get_authorize_url()
 
@@ -123,13 +123,13 @@ class CloudOAuth2Implementation(config_entry_oauth2_flow.AbstractOAuth2Implement
                     "Failed to fetch tokens for flow %s: %s", flow_id, err.code
                 )
             else:
-                await self.hass.config_entries.flow.async_configure(
+                await self.menuai.config_entries.flow.async_configure(
                     flow_id=flow_id, user_input=tokens
                 )
 
         # It's a background task because it should be cancelled on shutdown and there's nothing else
         # we can do in such case. There's also no need to wait for this during setup.
-        self.hass.async_create_background_task(
+        self.menuai.async_create_background_task(
             await_tokens(), name="Awaiting OAuth tokens"
         )
 
@@ -144,6 +144,6 @@ class CloudOAuth2Implementation(config_entry_oauth2_flow.AbstractOAuth2Implement
     async def _async_refresh_token(self, token: dict) -> dict:
         """Refresh a token."""
         new_token = await account_link.async_fetch_access_token(
-            self.hass.data[DATA_CLOUD], self.service, token["refresh_token"]
+            self.menuai.data[DATA_CLOUD], self.service, token["refresh_token"]
         )
         return {**token, **new_token}

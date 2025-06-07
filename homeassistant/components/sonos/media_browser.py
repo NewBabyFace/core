@@ -13,15 +13,15 @@ from soco.data_structures import DidlContainer, DidlObject
 from soco.ms_data_structures import MusicServiceItem
 from soco.music_library import MusicLibrary
 
-from homeassistant.components import media_source, plex, spotify
-from homeassistant.components.media_player import (
+from menuai.components import media_source, plex, spotify
+from menuai.components.media_player import (
     BrowseError,
     BrowseMedia,
     MediaClass,
     MediaType,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.network import is_internal_request
+from menuai.core import menuai
+from menuai.helpers.network import is_internal_request
 
 from .const import (
     DOMAIN,
@@ -125,7 +125,7 @@ def _get_title(id_string: str) -> str:
 
 
 async def async_browse_media(
-    hass: HomeAssistant,
+    menuai: menuai,
     speaker: SonosSpeaker,
     media: SonosMedia,
     get_browse_image_url: GetBrowseImageUrlType,
@@ -136,7 +136,7 @@ async def async_browse_media(
 
     if media_content_id is None:
         return await root_payload(
-            hass,
+            menuai,
             speaker,
             media,
             get_browse_image_url,
@@ -145,42 +145,42 @@ async def async_browse_media(
 
     if media_source.is_media_source_id(media_content_id):
         return await media_source.async_browse_media(
-            hass, media_content_id, content_filter=media_source_filter
+            menuai, media_content_id, content_filter=media_source_filter
         )
 
     if plex.is_plex_media_id(media_content_id):
         return await plex.async_browse_media(
-            hass, media_content_type, media_content_id, platform=DOMAIN
+            menuai, media_content_type, media_content_id, platform=DOMAIN
         )
 
     if media_content_type == "plex":
-        return await plex.async_browse_media(hass, None, None, platform=DOMAIN)
+        return await plex.async_browse_media(menuai, None, None, platform=DOMAIN)
 
     if spotify.is_spotify_media_type(media_content_type):
         return await spotify.async_browse_media(
-            hass, media_content_type, media_content_id, can_play_artist=False
+            menuai, media_content_type, media_content_id, can_play_artist=False
         )
 
     if media_content_type == "library":
-        return await hass.async_add_executor_job(
+        return await menuai.async_add_executor_job(
             library_payload,
             media.library,
             partial(
                 get_thumbnail_url_full,
                 media,
-                is_internal_request(hass),
+                is_internal_request(menuai),
                 get_browse_image_url,
             ),
         )
 
     if media_content_type == "favorites":
-        return await hass.async_add_executor_job(
+        return await menuai.async_add_executor_job(
             favorites_payload,
             speaker.favorites,
         )
 
     if media_content_type == "favorites_folder":
-        return await hass.async_add_executor_job(
+        return await menuai.async_add_executor_job(
             favorites_folder_payload,
             speaker.favorites,
             media_content_id,
@@ -192,14 +192,14 @@ async def async_browse_media(
         "search_type": media_content_type,
         "idstring": media_content_id,
     }
-    response = await hass.async_add_executor_job(
+    response = await menuai.async_add_executor_job(
         build_item_response,
         media.library,
         payload,
         partial(
             get_thumbnail_url_full,
             media,
-            is_internal_request(hass),
+            is_internal_request(menuai),
             get_browse_image_url,
         ),
     )
@@ -315,7 +315,7 @@ def item_payload(item: DidlObject, get_thumbnail_url=None) -> BrowseMedia:
 
 
 async def root_payload(
-    hass: HomeAssistant,
+    menuai: menuai,
     speaker: SonosSpeaker,
     media: SonosMedia,
     get_browse_image_url: GetBrowseImageUrlType,
@@ -336,7 +336,7 @@ async def root_payload(
             )
         )
 
-    if await hass.async_add_executor_job(
+    if await menuai.async_add_executor_job(
         partial(media.library.browse_by_idstring, "tracks", "", max_items=1)
     ):
         children.append(
@@ -351,7 +351,7 @@ async def root_payload(
             )
         )
 
-    if "plex" in hass.config.components:
+    if "plex" in menuai.config.components:
         children.append(
             BrowseMedia(
                 title="Plex",
@@ -364,14 +364,14 @@ async def root_payload(
             )
         )
 
-    if "spotify" in hass.config.components:
-        result = await spotify.async_browse_media(hass, None, None)
+    if "spotify" in menuai.config.components:
+        result = await spotify.async_browse_media(menuai, None, None)
         if result.children:
             children.extend(result.children)
 
     try:
         item = await media_source.async_browse_media(
-            hass, None, content_filter=media_source_filter
+            menuai, None, content_filter=media_source_filter
         )
         # If domain is None, it's overview of available sources
         if item.domain is None and item.children is not None:
@@ -383,7 +383,7 @@ async def root_payload(
 
     if len(children) == 1:
         return await async_browse_media(
-            hass,
+            menuai,
             speaker,
             media,
             get_browse_image_url,

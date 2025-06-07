@@ -4,10 +4,10 @@ import logging
 
 from pyownet import protocol
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import device_registry as dr
 
 from .const import DOMAIN
 from .onewirehub import OneWireConfigEntry, OneWireHub
@@ -22,9 +22,9 @@ _PLATFORMS = [
 ]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: OneWireConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: OneWireConfigEntry) -> bool:
     """Set up a 1-Wire proxy for a config entry."""
-    onewire_hub = OneWireHub(hass, entry)
+    onewire_hub = OneWireHub(menuai, entry)
     try:
         await onewire_hub.initialize()
     except (
@@ -35,7 +35,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: OneWireConfigEntry) -> b
 
     entry.runtime_data = onewire_hub
 
-    await hass.config_entries.async_forward_entry_setups(entry, _PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, _PLATFORMS)
 
     onewire_hub.schedule_scan_for_new_devices()
 
@@ -45,7 +45,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: OneWireConfigEntry) -> b
 
 
 async def async_remove_config_entry_device(
-    hass: HomeAssistant, config_entry: OneWireConfigEntry, device_entry: dr.DeviceEntry
+    menuai: menuai, config_entry: OneWireConfigEntry, device_entry: dr.DeviceEntry
 ) -> bool:
     """Remove a config entry from a device."""
     onewire_hub = config_entry.runtime_data
@@ -55,15 +55,15 @@ async def async_remove_config_entry_device(
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, config_entry: OneWireConfigEntry
+    menuai: menuai, config_entry: OneWireConfigEntry
 ) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(config_entry, _PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(config_entry, _PLATFORMS)
 
 
 async def options_update_listener(
-    hass: HomeAssistant, entry: OneWireConfigEntry
+    menuai: menuai, entry: OneWireConfigEntry
 ) -> None:
     """Handle options update."""
     _LOGGER.debug("Configuration options updated, reloading OneWire integration")
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)

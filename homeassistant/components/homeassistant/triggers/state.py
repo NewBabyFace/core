@@ -8,29 +8,29 @@ import logging
 
 import voluptuous as vol
 
-from homeassistant import exceptions
-from homeassistant.const import CONF_ATTRIBUTE, CONF_FOR, CONF_PLATFORM, MATCH_ALL
-from homeassistant.core import (
+from menuai import exceptions
+from menuai.const import CONF_ATTRIBUTE, CONF_FOR, CONF_PLATFORM, MATCH_ALL
+from menuai.core import (
     CALLBACK_TYPE,
     Event,
     EventStateChangedData,
-    HassJob,
-    HomeAssistant,
+    menuaiJob,
+    menuai,
     State,
     callback,
 )
-from homeassistant.helpers import (
+from menuai.helpers import (
     config_validation as cv,
     entity_registry as er,
     template,
 )
-from homeassistant.helpers.event import (
+from menuai.helpers.event import (
     async_track_same_state,
     async_track_state_change_event,
     process_state_match,
 )
-from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers.trigger import TriggerActionType, TriggerInfo
+from menuai.helpers.typing import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -70,7 +70,7 @@ TRIGGER_ATTRIBUTE_SCHEMA = BASE_SCHEMA.extend(
 
 
 async def async_validate_trigger_config(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> ConfigType:
     """Validate trigger config."""
     if not isinstance(config, dict):
@@ -83,7 +83,7 @@ async def async_validate_trigger_config(
     else:
         config = TRIGGER_STATE_SCHEMA(config)
 
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     config[CONF_ENTITY_ID] = er.async_validate_entity_ids(
         registry, cv.entity_ids_or_uuids(config[CONF_ENTITY_ID])
     )
@@ -92,7 +92,7 @@ async def async_validate_trigger_config(
 
 
 async def async_attach_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     action: TriggerActionType,
     trigger_info: TriggerInfo,
@@ -125,7 +125,7 @@ async def async_attach_trigger(
     unsub_track_same: dict[str, Callable[[], None]] = {}
     period: dict[str, timedelta] = {}
     attribute = config.get(CONF_ATTRIBUTE)
-    job = HassJob(action, f"state trigger {trigger_info}")
+    job = menuaiJob(action, f"state trigger {trigger_info}")
 
     trigger_data = trigger_info["trigger_data"]
     _variables = trigger_info["variables"] or {}
@@ -168,7 +168,7 @@ async def async_attach_trigger(
         @callback
         def call_action() -> None:
             """Call action with right context."""
-            hass.async_run_hass_job(
+            menuai.async_run_menuai_job(
                 job,
                 {
                     "trigger": {
@@ -225,14 +225,14 @@ async def async_attach_trigger(
             return cur_value == new_value
 
         unsub_track_same[entity] = async_track_same_state(
-            hass,
+            menuai,
             period[entity],
             call_action,
             _check_same_state,
             entity_ids=entity,
         )
 
-    unsub = async_track_state_change_event(hass, entity_ids, state_automation_listener)
+    unsub = async_track_state_change_event(menuai, entity_ids, state_automation_listener)
 
     @callback
     def async_remove() -> None:

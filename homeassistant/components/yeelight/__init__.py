@@ -8,19 +8,19 @@ import voluptuous as vol
 from yeelight import BulbException
 from yeelight.aio import AsyncBulb
 
-from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import SOURCE_IMPORT, ConfigEntry
+from menuai.const import (
     CONF_DEVICES,
     CONF_HOST,
     CONF_ID,
     CONF_MODEL,
     CONF_NAME,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType, VolDictType
+from menuai.core import menuai, callback
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType, VolDictType
 
 from .const import (
     ACTION_OFF,
@@ -113,25 +113,25 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Yeelight bulbs."""
     conf = config.get(DOMAIN, {})
-    hass.data[DOMAIN] = {
+    menuai.data[DOMAIN] = {
         DATA_CUSTOM_EFFECTS: conf.get(CONF_CUSTOM_EFFECTS, {}),
         DATA_CONFIG_ENTRIES: {},
     }
     # Make sure the scanner is always started in case we are
     # going to retry via ConfigEntryNotReady and the bulb has changed
     # ip
-    scanner = YeelightScanner.async_get(hass)
+    scanner = YeelightScanner.async_get(menuai)
     await scanner.async_setup()
 
     # Import manually configured devices
     for host, device_config in config.get(DOMAIN, {}).get(CONF_DEVICES, {}).items():
         _LOGGER.debug("Importing configured %s", host)
         entry_config = {CONF_HOST: host, **device_config}
-        hass.async_create_task(
-            hass.config_entries.flow.async_init(
+        menuai.async_create_task(
+            menuai.config_entries.flow.async_init(
                 DOMAIN, context={"source": SOURCE_IMPORT}, data=entry_config
             )
         )
@@ -140,12 +140,12 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 
 async def _async_initialize(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     device: YeelightDevice,
 ) -> None:
     """Initialize a Yeelight device."""
-    entry_data = hass.data[DOMAIN][DATA_CONFIG_ENTRIES][entry.entry_id] = {}
+    entry_data = menuai.data[DOMAIN][DATA_CONFIG_ENTRIES][entry.entry_id] = {}
     await device.async_setup()
     entry_data[DATA_DEVICE] = device
 
@@ -153,14 +153,14 @@ async def _async_initialize(
         device.capabilities
         and entry.data.get(CONF_DETECTED_MODEL) != device.capabilities["model"]
     ):
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry,
             data={**entry.data, CONF_DETECTED_MODEL: device.capabilities["model"]},
         )
 
 
 @callback
-def _async_normalize_config_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+def _async_normalize_config_entry(menuai: menuai, entry: ConfigEntry) -> None:
     """Move options from data for imported entries.
 
     Initialize options with default values for other entries.
@@ -168,7 +168,7 @@ def _async_normalize_config_entry(hass: HomeAssistant, entry: ConfigEntry) -> No
     Copy the unique id to CONF_ID if it is missing
     """
     if not entry.options:
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry,
             data={
                 CONF_HOST: entry.data.get(CONF_HOST),
@@ -192,28 +192,28 @@ def _async_normalize_config_entry(hass: HomeAssistant, entry: ConfigEntry) -> No
             unique_id=entry.unique_id or entry.data.get(CONF_ID),
         )
     elif entry.unique_id and not entry.data.get(CONF_ID):
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry,
             data={CONF_HOST: entry.data.get(CONF_HOST), CONF_ID: entry.unique_id},
         )
     elif entry.data.get(CONF_ID) and not entry.unique_id:
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry,
             unique_id=entry.data[CONF_ID],
         )
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up Yeelight from a config entry."""
-    _async_normalize_config_entry(hass, entry)
+    _async_normalize_config_entry(menuai, entry)
 
     if not entry.data.get(CONF_HOST):
         bulb_id = async_format_id(entry.data.get(CONF_ID, entry.unique_id))
         raise ConfigEntryNotReady(f"Waiting for {bulb_id} to be discovered")
 
     try:
-        device = await _async_get_device(hass, entry.data[CONF_HOST], entry)
-        await _async_initialize(hass, entry, device)
+        device = await _async_get_device(menuai, entry.data[CONF_HOST], entry)
+        await _async_initialize(menuai, entry, device)
     except (TimeoutError, OSError, BulbException) as ex:
         raise ConfigEntryNotReady from ex
 
@@ -230,7 +230,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             f"expected {expected_unique_id}, found {found_unique_id}"
         )
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     # Wait to install the reload listener until everything was successfully initialized
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
@@ -238,20 +238,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    data_config_entries = hass.data[DOMAIN][DATA_CONFIG_ENTRIES]
+    data_config_entries = menuai.data[DOMAIN][DATA_CONFIG_ENTRIES]
     data_config_entries.pop(entry.entry_id)
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
-async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def _async_update_listener(menuai: menuai, entry: ConfigEntry) -> None:
     """Handle options update."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)
 
 
 async def _async_get_device(
-    hass: HomeAssistant, host: str, entry: ConfigEntry
+    menuai: menuai, host: str, entry: ConfigEntry
 ) -> YeelightDevice:
     # Get model from config and capabilities
     model = entry.options.get(CONF_MODEL) or entry.data.get(CONF_DETECTED_MODEL)
@@ -259,7 +259,7 @@ async def _async_get_device(
     # Set up device
     bulb = AsyncBulb(host, model=model or None)
 
-    device = YeelightDevice(hass, host, {**entry.options, **entry.data}, bulb)
+    device = YeelightDevice(menuai, host, {**entry.options, **entry.data}, bulb)
     # start listening for local pushes
     await device.bulb.async_listen(device.async_update_callback)
 
@@ -273,10 +273,10 @@ async def _async_get_device(
     def _async_stop_listen_on_unload():
         """Stop listen task."""
         _LOGGER.debug("Shutting down Yeelight Listener (unload)")
-        hass.async_create_task(device.bulb.async_stop_listening())
+        menuai.async_create_task(device.bulb.async_stop_listening())
 
     entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, async_stop_listen_task)
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, async_stop_listen_task)
     )
     entry.async_on_unload(_async_stop_listen_on_unload)
 

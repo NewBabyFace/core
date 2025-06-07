@@ -2,7 +2,7 @@
 
 from unittest.mock import AsyncMock, patch
 
-from homeassistant.const import CONF_HOST, CONF_NAME
+from menuai.const import CONF_HOST, CONF_NAME
 
 HOST = "1.2.3.4"
 NAME = "Android TV / Fire TV"
@@ -26,6 +26,6 @@ async def _create_mocked_tv(raise_exception=False):
 
 def _patch_config_flow_tv(mocked_tv):
     return patch(
-        "homeassistant.components.nfandroidtv.config_flow.Notifications",
+        "menuai.components.nfandroidtv.config_flow.Notifications",
         return_value=mocked_tv,
     )

@@ -6,12 +6,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from homeassistant.components.dlink.const import CONF_USE_LEGACY_PROTOCOL, DOMAIN
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
-from homeassistant.setup import async_setup_component
+from menuai.components.dlink.const import CONF_USE_LEGACY_PROTOCOL, DOMAIN
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 
@@ -44,23 +44,23 @@ CONF_DHCP_FLOW_NEW_IP = DhcpServiceInfo(
 type ComponentSetup = Callable[[], Awaitable[None]]
 
 
-def create_entry(hass: HomeAssistant, unique_id: str | None = None) -> MockConfigEntry:
-    """Create fixture for adding config entry in Home Assistant."""
+def create_entry(menuai: menuai, unique_id: str | None = None) -> MockConfigEntry:
+    """Create fixture for adding config entry in MenuAI."""
     entry = MockConfigEntry(domain=DOMAIN, data=CONF_DATA, unique_id=unique_id)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     return entry
 
 
 @pytest.fixture
-def config_entry(hass: HomeAssistant) -> MockConfigEntry:
-    """Add config entry in Home Assistant."""
-    return create_entry(hass)
+def config_entry(menuai: menuai) -> MockConfigEntry:
+    """Add config entry in MenuAI."""
+    return create_entry(menuai)
 
 
 @pytest.fixture
-def config_entry_with_uid(hass: HomeAssistant) -> MockConfigEntry:
-    """Add config entry with unique ID in Home Assistant."""
-    return create_entry(hass, unique_id="aabbccddeeff")
+def config_entry_with_uid(menuai: menuai) -> MockConfigEntry:
+    """Add config entry with unique ID in MenuAI."""
+    return create_entry(menuai, unique_id="aabbccddeeff")
 
 
 @pytest.fixture
@@ -102,7 +102,7 @@ def mocked_plug_legacy_no_auth(mocked_plug_legacy: MagicMock) -> MagicMock:
 def patch_config_flow(mocked_plug: MagicMock):
     """Patch D-Link Smart Plug config flow."""
     return patch(
-        "homeassistant.components.dlink.config_flow.SmartPlug",
+        "menuai.components.dlink.config_flow.SmartPlug",
         return_value=mocked_plug,
     )
 
@@ -110,44 +110,44 @@ def patch_config_flow(mocked_plug: MagicMock):
 def patch_setup(mocked_plug: MagicMock):
     """Patch D-Link Smart Plug object."""
     return patch(
-        "homeassistant.components.dlink.SmartPlug",
+        "menuai.components.dlink.SmartPlug",
         return_value=mocked_plug,
     )
 
 
 async def mock_setup_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     mocked_plug: MagicMock,
 ) -> None:
-    """Set up the D-Link integration in Home Assistant."""
+    """Set up the D-Link integration in MenuAI."""
     with patch_setup(mocked_plug):
-        assert await async_setup_component(hass, DOMAIN, {})
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, {})
+        await menuai.async_block_till_done()
 
 
 @pytest.fixture
 async def setup_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry_with_uid: MockConfigEntry,
     mocked_plug: MagicMock,
 ) -> Generator[ComponentSetup]:
-    """Set up the D-Link integration in Home Assistant."""
+    """Set up the D-Link integration in MenuAI."""
 
     async def func() -> None:
-        await mock_setup_integration(hass, mocked_plug)
+        await mock_setup_integration(menuai, mocked_plug)
 
     return func
 
 
 @pytest.fixture
 async def setup_integration_legacy(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry_with_uid: MockConfigEntry,
     mocked_plug_legacy: MagicMock,
 ) -> Generator[ComponentSetup]:
-    """Set up the D-Link integration in Home Assistant with different data."""
+    """Set up the D-Link integration in MenuAI with different data."""
 
     async def func() -> None:
-        await mock_setup_integration(hass, mocked_plug_legacy)
+        await mock_setup_integration(menuai, mocked_plug_legacy)
 
     return func

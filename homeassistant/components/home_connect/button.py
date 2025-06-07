@@ -3,10 +3,10 @@
 from aiohomeconnect.model import CommandKey
 from aiohomeconnect.model.error import HomeConnectError
 
-from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.button import ButtonEntity, ButtonEntityDescription
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .common import setup_home_connect_entry
 from .const import APPLIANCES_WITH_PROGRAMS, DOMAIN
@@ -67,7 +67,7 @@ def _get_entities_for_appliance(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: HomeConnectConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -116,7 +116,7 @@ class HomeConnectCommandButtonEntity(HomeConnectButtonEntity):
                 value=True,
             )
         except HomeConnectError as error:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="execute_command",
                 translation_placeholders={
@@ -149,7 +149,7 @@ class HomeConnectStopProgramButtonEntity(HomeConnectButtonEntity):
         try:
             await self.coordinator.client.stop_program(self.appliance.info.ha_id)
         except HomeConnectError as error:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="stop_program",
                 translation_placeholders=get_dict_from_home_connect_error(error),

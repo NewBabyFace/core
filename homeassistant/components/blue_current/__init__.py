@@ -14,11 +14,11 @@ from bluecurrent_api.exceptions import (
     WebsocketError,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_NAME, CONF_API_TOKEN, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers.dispatcher import async_dispatcher_send
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_NAME, CONF_API_TOKEN, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers.dispatcher import async_dispatcher_send
 
 from .const import DOMAIN, EVSE_ID, LOGGER, MODEL_TYPE
 
@@ -35,12 +35,12 @@ VALUE_TYPES = ["CH_STATUS"]
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, config_entry: BlueCurrentConfigEntry
+    menuai: menuai, config_entry: BlueCurrentConfigEntry
 ) -> bool:
     """Set up Blue Current as a config entry."""
     client = Client()
     api_token = config_entry.data[CONF_API_TOKEN]
-    connector = Connector(hass, config_entry, client)
+    connector = Connector(menuai, config_entry, client)
 
     try:
         await client.validate_api_token(api_token)
@@ -49,33 +49,33 @@ async def async_setup_entry(
     except BlueCurrentException as err:
         raise ConfigEntryNotReady from err
     config_entry.async_create_background_task(
-        hass, connector.run_task(), "blue_current-websocket"
+        menuai, connector.run_task(), "blue_current-websocket"
     )
 
     await client.wait_for_charge_points()
     config_entry.runtime_data = connector
-    await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 
     return True
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, config_entry: BlueCurrentConfigEntry
+    menuai: menuai, config_entry: BlueCurrentConfigEntry
 ) -> bool:
     """Unload the Blue Current config entry."""
 
-    return await hass.config_entries.async_unload_platforms(config_entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(config_entry, PLATFORMS)
 
 
 class Connector:
     """Define a class that connects to the Blue Current websocket API."""
 
     def __init__(
-        self, hass: HomeAssistant, config: BlueCurrentConfigEntry, client: Client
+        self, menuai: menuai, config: BlueCurrentConfigEntry, client: Client
     ) -> None:
         """Initialize."""
         self.config = config
-        self.hass = hass
+        self.menuai = menuai
         self.client = client
         self.charge_points: dict[str, dict] = {}
         self.grid: dict[str, Any] = {}
@@ -130,11 +130,11 @@ class Connector:
 
     def dispatch_charge_point_update_signal(self, evse_id: str) -> None:
         """Dispatch a charge point update signal."""
-        async_dispatcher_send(self.hass, f"{DOMAIN}_charge_point_update_{evse_id}")
+        async_dispatcher_send(self.menuai, f"{DOMAIN}_charge_point_update_{evse_id}")
 
     def dispatch_grid_update_signal(self) -> None:
         """Dispatch a grid update signal."""
-        async_dispatcher_send(self.hass, f"{DOMAIN}_grid_update")
+        async_dispatcher_send(self.menuai, f"{DOMAIN}_grid_update")
 
     async def on_open(self) -> None:
         """Fetch data when connection is established."""

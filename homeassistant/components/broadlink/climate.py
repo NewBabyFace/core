@@ -3,17 +3,17 @@
 from enum import IntEnum
 from typing import Any
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_TEMPERATURE,
     ClimateEntity,
     ClimateEntityFeature,
     HVACAction,
     HVACMode,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import PRECISION_HALVES, Platform, UnitOfTemperature
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import PRECISION_HALVES, Platform, UnitOfTemperature
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN, DOMAINS_AND_TYPES
 from .device import BroadlinkDevice
@@ -29,12 +29,12 @@ class SensorMode(IntEnum):
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Broadlink climate entities."""
-    device = hass.data[DOMAIN].devices[config_entry.entry_id]
+    device = menuai.data[DOMAIN].devices[config_entry.entry_id]
 
     if device.api.type in DOMAINS_AND_TYPES[Platform.CLIMATE]:
         async_add_entities([BroadlinkThermostat(device)])

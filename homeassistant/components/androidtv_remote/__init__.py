@@ -12,10 +12,10 @@ from androidtvremote2 import (
     InvalidAuth,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_NAME, EVENT_HOMEASSISTANT_STOP, Platform
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, CONF_NAME, EVENT_menuai_STOP, Platform
+from menuai.core import Event, menuai, callback
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 
 from .helpers import create_api, get_enable_ime
 
@@ -27,11 +27,11 @@ AndroidTVRemoteConfigEntry = ConfigEntry[AndroidTVRemote]
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: AndroidTVRemoteConfigEntry
+    menuai: menuai, entry: AndroidTVRemoteConfigEntry
 ) -> bool:
     """Set up Android TV Remote from a config entry."""
     _LOGGER.debug("async_setup_entry: %s", entry.data)
-    api = create_api(hass, entry.data[CONF_HOST], get_enable_ime(entry))
+    api = create_api(menuai, entry.data[CONF_HOST], get_enable_ime(entry))
 
     @callback
     def is_available_updated(is_available: bool) -> None:
@@ -51,13 +51,13 @@ async def async_setup_entry(
         # The Android TV is hard reset or the certificate and key files were deleted.
         raise ConfigEntryAuthFailed from exc
     except (CannotConnect, ConnectionClosed, TimeoutError) as exc:
-        # The Android TV is network unreachable. Raise exception and let Home Assistant retry
+        # The Android TV is network unreachable. Raise exception and let MenuAI retry
         # later. If device gets a new IP address the zeroconf flow will update the config.
         raise ConfigEntryNotReady from exc
 
     def reauth_needed() -> None:
         """Start a reauth flow if Android TV is hard reset while reconnecting."""
-        entry.async_start_reauth(hass)
+        entry.async_start_reauth(menuai)
 
     # Start a task (canceled in disconnect) to keep reconnecting if device becomes
     # network unreachable. If device gets a new IP address the zeroconf flow will
@@ -66,15 +66,15 @@ async def async_setup_entry(
 
     entry.runtime_data = api
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     @callback
-    def on_hass_stop(event: Event) -> None:
-        """Stop push updates when hass stops."""
+    def on_menuai_stop(event: Event) -> None:
+        """Stop push updates when menuai stops."""
         api.disconnect()
 
     entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, on_hass_stop)
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, on_menuai_stop)
     )
     entry.async_on_unload(entry.add_update_listener(async_update_options))
     entry.async_on_unload(api.disconnect)
@@ -82,15 +82,15 @@ async def async_setup_entry(
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     _LOGGER.debug("async_unload_entry: %s", entry.data)
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
-async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def async_update_options(menuai: menuai, entry: ConfigEntry) -> None:
     """Handle options update."""
     _LOGGER.debug(
         "async_update_options: data: %s options: %s", entry.data, entry.options
     )
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)

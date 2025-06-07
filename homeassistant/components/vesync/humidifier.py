@@ -5,18 +5,18 @@ from typing import Any
 
 from pyvesync.vesyncbasedevice import VeSyncBaseDevice
 
-from homeassistant.components.humidifier import (
+from menuai.components.humidifier import (
     MODE_AUTO,
     MODE_NORMAL,
     MODE_SLEEP,
     HumidifierEntity,
     HumidifierEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .common import is_humidifier
 from .const import (
@@ -48,13 +48,13 @@ VS_TO_HA_MODE_MAP = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the VeSync humidifier platform."""
 
-    coordinator = hass.data[DOMAIN][VS_COORDINATOR]
+    coordinator = menuai.data[DOMAIN][VS_COORDINATOR]
 
     @callback
     def discover(devices):
@@ -62,10 +62,10 @@ async def async_setup_entry(
         _setup_entities(devices, async_add_entities, coordinator)
 
     config_entry.async_on_unload(
-        async_dispatcher_connect(hass, VS_DISCOVERY.format(VS_DEVICES), discover)
+        async_dispatcher_connect(menuai, VS_DISCOVERY.format(VS_DEVICES), discover)
     )
 
-    _setup_entities(hass.data[DOMAIN][VS_DEVICES], async_add_entities, coordinator)
+    _setup_entities(menuai.data[DOMAIN][VS_DEVICES], async_add_entities, coordinator)
 
 
 @callback
@@ -149,18 +149,18 @@ class VeSyncHumidifierHA(VeSyncBaseEntity, HumidifierEntity):
     def set_humidity(self, humidity: int) -> None:
         """Set the target humidity of the device."""
         if not self.device.set_humidity(humidity):
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"An error occurred while setting humidity {humidity}."
             )
 
     def set_mode(self, mode: str) -> None:
         """Set the mode of the device."""
         if mode not in self.available_modes:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"{mode} is not one of the valid available modes: {self.available_modes}"
             )
         if not self.device.set_humidity_mode(self._get_vs_mode(mode)):
-            raise HomeAssistantError(f"An error occurred while setting mode {mode}.")
+            raise menuaiError(f"An error occurred while setting mode {mode}.")
 
         if mode == MODE_SLEEP:
             # We successfully changed the mode. Consider it a success even if display operation fails.
@@ -176,7 +176,7 @@ class VeSyncHumidifierHA(VeSyncBaseEntity, HumidifierEntity):
         """Turn the device on."""
         success = self.device.turn_on()
         if not success:
-            raise HomeAssistantError("An error occurred while turning on.")
+            raise menuaiError("An error occurred while turning on.")
 
         self.schedule_update_ha_state()
 
@@ -184,7 +184,7 @@ class VeSyncHumidifierHA(VeSyncBaseEntity, HumidifierEntity):
         """Turn the device off."""
         success = self.device.turn_off()
         if not success:
-            raise HomeAssistantError("An error occurred while turning off.")
+            raise menuaiError("An error occurred while turning off.")
 
         self.schedule_update_ha_state()
 

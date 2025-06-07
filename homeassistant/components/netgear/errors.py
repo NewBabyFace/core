@@ -1,9 +1,9 @@
 """Errors for the Netgear component."""
 
-from homeassistant.exceptions import HomeAssistantError
+from menuai.exceptions import menuaiError
 
 
-class NetgearException(HomeAssistantError):
+class NetgearException(menuaiError):
     """Base class for Netgear exceptions."""
 
 

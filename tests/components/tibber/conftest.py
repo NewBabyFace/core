@@ -5,29 +5,29 @@ from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
 import pytest
 
-from homeassistant.components.recorder import Recorder
-from homeassistant.components.tibber.const import DOMAIN
-from homeassistant.const import CONF_ACCESS_TOKEN
-from homeassistant.core import HomeAssistant
+from menuai.components.recorder import Recorder
+from menuai.components.tibber.const import DOMAIN
+from menuai.const import CONF_ACCESS_TOKEN
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
 
 @pytest.fixture
-def config_entry(hass: HomeAssistant) -> MockConfigEntry:
+def config_entry(menuai: menuai) -> MockConfigEntry:
     """Tibber config entry."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
         data={CONF_ACCESS_TOKEN: "token"},
         unique_id="tibber",
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     return config_entry
 
 
 @pytest.fixture
 async def mock_tibber_setup(
-    recorder_mock: Recorder, config_entry: MockConfigEntry, hass: HomeAssistant
+    recorder_mock: Recorder, config_entry: MockConfigEntry, menuai: menuai
 ) -> AsyncGenerator[MagicMock]:
     """Mock tibber entry setup."""
     unique_user_id = "unique_user_id"
@@ -41,6 +41,6 @@ async def mock_tibber_setup(
     tibber_mock.rt_disconnect = AsyncMock()
 
     with patch("tibber.Tibber", return_value=tibber_mock):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
         yield tibber_mock

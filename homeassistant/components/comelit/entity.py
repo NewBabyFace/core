@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from aiocomelit import ComelitSerialBridgeObject
 
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .coordinator import ComelitSerialBridge
 

@@ -8,13 +8,13 @@ from typing import Any
 
 from bluecurrent_api.client import Client
 
-from homeassistant.components.button import (
+from menuai.components.button import (
     ButtonDeviceClass,
     ButtonEntity,
     ButtonEntityDescription,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import BlueCurrentConfigEntry, Connector
 from .entity import ChargepointEntity
@@ -49,7 +49,7 @@ CHARGE_POINT_BUTTONS = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: BlueCurrentConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

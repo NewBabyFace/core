@@ -6,14 +6,14 @@ from pycsspeechtts import pycsspeechtts
 from requests.exceptions import HTTPError
 import voluptuous as vol
 
-from homeassistant.components.tts import (
+from menuai.components.tts import (
     CONF_LANG,
     PLATFORM_SCHEMA as TTS_PLATFORM_SCHEMA,
     Provider,
 )
-from homeassistant.const import CONF_API_KEY, CONF_REGION, CONF_TYPE, PERCENTAGE
-from homeassistant.generated.microsoft_tts import SUPPORTED_LANGUAGES
-from homeassistant.helpers import config_validation as cv
+from menuai.const import CONF_API_KEY, CONF_REGION, CONF_TYPE, PERCENTAGE
+from menuai.generated.microsoft_tts import SUPPORTED_LANGUAGES
+from menuai.helpers import config_validation as cv
 
 CONF_GENDER = "gender"
 CONF_OUTPUT = "output"
@@ -54,7 +54,7 @@ PLATFORM_SCHEMA = TTS_PLATFORM_SCHEMA.extend(
 )
 
 
-def get_engine(hass, config, discovery_info=None):
+def get_engine(menuai, config, discovery_info=None):
     """Set up Microsoft speech component."""
     return MicrosoftProvider(
         config[CONF_API_KEY],

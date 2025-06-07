@@ -1,11 +1,11 @@
 """Common test utilities for sensor entity component tests."""
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     RestoreSensor,
     SensorDeviceClass,
     SensorEntity,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
     CONCENTRATION_PARTS_PER_MILLION,
     LIGHT_LUX,
@@ -100,9 +100,9 @@ class MockSensor(MockEntity, SensorEntity):
 class MockRestoreSensor(MockSensor, RestoreSensor):
     """Mock RestoreSensor class."""
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Restore native_value and native_unit_of_measurement."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         if (last_sensor_data := await self.async_get_last_sensor_data()) is None:
             return
         self._values["native_value"] = last_sensor_data.native_value

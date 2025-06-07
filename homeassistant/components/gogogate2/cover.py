@@ -11,13 +11,13 @@ from ismartgate.common import (
     get_configured_doors,
 )
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     CoverDeviceClass,
     CoverEntity,
     CoverEntityFeature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .common import cover_unique_id
 from .coordinator import DeviceDataUpdateCoordinator, GogoGateConfigEntry
@@ -25,7 +25,7 @@ from .entity import GoGoGate2Entity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: GogoGateConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

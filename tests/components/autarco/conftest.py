@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock, patch
 from autarco import AccountSite, Battery, Inverter, Solar
 import pytest
 
-from homeassistant.components.autarco.const import DOMAIN
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
+from menuai.components.autarco.const import DOMAIN
+from menuai.const import CONF_EMAIL, CONF_PASSWORD
 
 from tests.common import MockConfigEntry
 
@@ -16,7 +16,7 @@ from tests.common import MockConfigEntry
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.autarco.async_setup_entry", return_value=True
+        "menuai.components.autarco.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -26,11 +26,11 @@ def mock_autarco_client() -> Generator[AsyncMock]:
     """Mock a Autarco client."""
     with (
         patch(
-            "homeassistant.components.autarco.Autarco",
+            "menuai.components.autarco.Autarco",
             autospec=True,
         ) as mock_client,
         patch(
-            "homeassistant.components.autarco.config_flow.Autarco",
+            "menuai.components.autarco.config_flow.Autarco",
             new=mock_client,
         ),
     ):

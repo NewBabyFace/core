@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from homeassistant.components.rituals_perfume_genie.const import ACCOUNT_HASH, DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
+from menuai.components.rituals_perfume_genie.const import ACCOUNT_HASH, DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry, load_json_object_fixture
 
@@ -83,20 +83,20 @@ def mock_diffuser_v2_no_battery_no_cartridge() -> MagicMock:
 
 
 async def init_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_diffusers: list[MagicMock],
 ) -> None:
     """Initialize the Rituals Perfume Genie integration with the given Config Entry and Diffuser list."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
     with patch(
-        "homeassistant.components.rituals_perfume_genie.Account.get_devices",
+        "menuai.components.rituals_perfume_genie.Account.get_devices",
         return_value=mock_diffusers,
     ):
-        await hass.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.config_entries.async_setup(mock_config_entry.entry_id)
 
     assert mock_config_entry.state is ConfigEntryState.LOADED
-    assert mock_config_entry.entry_id in hass.data[DOMAIN]
-    assert hass.data[DOMAIN]
+    assert mock_config_entry.entry_id in menuai.data[DOMAIN]
+    assert menuai.data[DOMAIN]
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()

@@ -37,13 +37,13 @@ from anthropic.types import (
 )
 from voluptuous_openapi import convert
 
-from homeassistant.components import conversation
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_LLM_HASS_API, MATCH_ALL
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr, intent, llm
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components import conversation
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_LLM_menuai_API, MATCH_ALL
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr, intent, llm
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import AnthropicConfigEntry
 from .const import (
@@ -67,7 +67,7 @@ MAX_TOOL_ITERATIONS = 10
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: AnthropicConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -295,7 +295,7 @@ async def _transform_stream(  # noqa: C901 - This is complex, but better to have
             if (usage := response.usage) is not None:
                 chat_log.async_trace(_create_token_stats(input_usage, usage))
             if response.delta.stop_reason == "refusal":
-                raise HomeAssistantError("Potential policy violation detected")
+                raise menuaiError("Potential policy violation detected")
         elif isinstance(response, RawMessageStopEvent):
             if current_message is not None:
                 messages.append(current_message)
@@ -340,7 +340,7 @@ class AnthropicConversationEntity(
             model="Claude",
             entry_type=dr.DeviceEntryType.SERVICE,
         )
-        if self.entry.options.get(CONF_LLM_HASS_API):
+        if self.entry.options.get(CONF_LLM_menuai_API):
             self._attr_supported_features = (
                 conversation.ConversationEntityFeature.CONTROL
             )
@@ -350,9 +350,9 @@ class AnthropicConversationEntity(
         """Return a list of supported languages."""
         return MATCH_ALL
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to Home Assistant."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to MenuAI."""
+        await super().async_added_to_menuai()
         self.entry.async_on_unload(
             self.entry.add_update_listener(self._async_entry_update_listener)
         )
@@ -369,7 +369,7 @@ class AnthropicConversationEntity(
             await chat_log.async_update_llm_data(
                 DOMAIN,
                 user_input,
-                options.get(CONF_LLM_HASS_API),
+                options.get(CONF_LLM_menuai_API),
                 options.get(CONF_PROMPT),
             )
         except conversation.ConverseError as err:
@@ -415,7 +415,7 @@ class AnthropicConversationEntity(
             try:
                 stream = await client.messages.create(**model_args)
             except anthropic.AnthropicError as err:
-                raise HomeAssistantError(
+                raise menuaiError(
                     f"Sorry, I had a problem talking to Anthropic: {err}"
                 ) from err
 
@@ -447,8 +447,8 @@ class AnthropicConversationEntity(
         )
 
     async def _async_entry_update_listener(
-        self, hass: HomeAssistant, entry: ConfigEntry
+        self, menuai: menuai, entry: ConfigEntry
     ) -> None:
         """Handle options update."""
         # Reload as we update device info + entity name + supported features
-        await hass.config_entries.async_reload(entry.entry_id)
+        await menuai.config_entries.async_reload(entry.entry_id)

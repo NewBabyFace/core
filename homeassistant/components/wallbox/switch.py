@@ -1,13 +1,13 @@
-"""Home Assistant component for accessing the Wallbox Portal API. The switch component creates a switch entity."""
+"""MenuAI component for accessing the Wallbox Portal API. The switch component creates a switch entity."""
 
 from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchEntity, SwitchEntityDescription
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
     CHARGER_DATA_KEY,
@@ -29,12 +29,12 @@ SWITCH_TYPES: dict[str, SwitchEntityDescription] = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Create wallbox sensor entities in HASS."""
-    coordinator: WallboxCoordinator = hass.data[DOMAIN][entry.entry_id]
+    """Create wallbox sensor entities in menuai."""
+    coordinator: WallboxCoordinator = menuai.data[DOMAIN][entry.entry_id]
     async_add_entities(
         [WallboxSwitch(coordinator, SWITCH_TYPES[CHARGER_PAUSE_RESUME_KEY])]
     )

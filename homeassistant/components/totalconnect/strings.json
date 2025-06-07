@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Total Connect 2.0 account credentials",
-        "description": "It is highly recommended to use a 'standard' Total Connect user account with Home Assistant. The account should not have full administrative privileges.",
+        "description": "It is highly recommended to use a 'standard' Total Connect user account with MenuAI. The account should not have full administrative privileges.",
         "data": {
           "username": "[%key:common::config_flow::data::username%]",
           "password": "[%key:common::config_flow::data::password%]"

@@ -8,16 +8,16 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from homeassistant.components import recorder
-from homeassistant.components.recorder import statistics
-from homeassistant.components.recorder.auto_repairs.statistics.duplicates import (
+from menuai.components import recorder
+from menuai.components.recorder import statistics
+from menuai.components.recorder.auto_repairs.statistics.duplicates import (
     delete_statistics_duplicates,
     delete_statistics_meta_duplicates,
 )
-from homeassistant.components.recorder.statistics import async_add_external_statistics
-from homeassistant.components.recorder.util import session_scope
-from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
+from menuai.components.recorder.statistics import async_add_external_statistics
+from menuai.components.recorder.util import session_scope
+from menuai.core import menuai
+from menuai.util import dt as dt_util
 
 from ...common import async_wait_recording_done
 
@@ -26,7 +26,7 @@ from tests.typing import RecorderInstanceContextManager
 
 
 @pytest.fixture
-async def mock_recorder_before_hass(
+async def mock_recorder_before_menuai(
     async_test_recorder: RecorderInstanceContextManager,
 ) -> None:
     """Set up recorder."""
@@ -34,14 +34,14 @@ async def mock_recorder_before_hass(
 
 @pytest.mark.usefixtures("recorder_mock")
 async def test_delete_duplicates_no_duplicates(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test removal of duplicated statistics."""
-    await async_wait_recording_done(hass)
-    instance = recorder.get_instance(hass)
-    with session_scope(hass=hass) as session:
-        delete_statistics_duplicates(instance, hass, session)
+    await async_wait_recording_done(menuai)
+    instance = recorder.get_instance(menuai)
+    with session_scope(menuai=menuai) as session:
+        delete_statistics_duplicates(instance, menuai, session)
     assert "duplicated statistics rows" not in caplog.text
     assert "Found non identical" not in caplog.text
     assert "Found duplicated" not in caplog.text
@@ -49,11 +49,11 @@ async def test_delete_duplicates_no_duplicates(
 
 @pytest.mark.usefixtures("recorder_mock")
 async def test_duplicate_statistics_handle_integrity_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test the recorder does not blow up if statistics is duplicated."""
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
     period1 = dt_util.as_utc(dt_util.parse_datetime("2021-09-01 00:00:00"))
     period2 = dt_util.as_utc(dt_util.parse_datetime("2021-09-30 23:00:00"))
@@ -90,18 +90,18 @@ async def test_duplicate_statistics_handle_integrity_error(
         ) as insert_statistics_mock,
     ):
         async_add_external_statistics(
-            hass, external_energy_metadata_1, external_energy_statistics_1
+            menuai, external_energy_metadata_1, external_energy_statistics_1
         )
         async_add_external_statistics(
-            hass, external_energy_metadata_1, external_energy_statistics_1
+            menuai, external_energy_metadata_1, external_energy_statistics_1
         )
         async_add_external_statistics(
-            hass, external_energy_metadata_1, external_energy_statistics_2
+            menuai, external_energy_metadata_1, external_energy_statistics_2
         )
-        await async_wait_recording_done(hass)
+        await async_wait_recording_done(menuai)
         assert insert_statistics_mock.call_count == 3
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         tmp = session.query(recorder.db_schema.Statistics).all()
         assert len(tmp) == 2
 
@@ -132,7 +132,7 @@ def _create_engine_28(*args, **kwargs):
 
 
 @pytest.mark.parametrize("persistent_database", [True])
-@pytest.mark.usefixtures("hass_storage")  # Prevent test hass from writing to storage
+@pytest.mark.usefixtures("menuai_storage")  # Prevent test menuai from writing to storage
 async def test_delete_metadata_duplicates(
     async_test_recorder: RecorderInstanceContextManager,
     caplog: pytest.LogCaptureFixture,
@@ -167,8 +167,8 @@ async def test_delete_metadata_duplicates(
         "unit_of_measurement": "%",
     }
 
-    def add_statistics_meta(hass: HomeAssistant) -> None:
-        with session_scope(hass=hass) as session:
+    def add_statistics_meta(menuai: menuai) -> None:
+        with session_scope(menuai=menuai) as session:
             session.add(
                 recorder.db_schema.StatisticsMeta.from_meta(external_energy_metadata_1)
             )
@@ -179,8 +179,8 @@ async def test_delete_metadata_duplicates(
                 recorder.db_schema.StatisticsMeta.from_meta(external_co2_metadata)
             )
 
-    def get_statistics_meta(hass: HomeAssistant) -> list:
-        with session_scope(hass=hass, read_only=True) as session:
+    def get_statistics_meta(menuai: menuai) -> list:
+        with session_scope(menuai=menuai, read_only=True) as session:
             return list(session.query(recorder.db_schema.StatisticsMeta).all())
 
     # Create some duplicated statistics_meta with schema version 28
@@ -193,21 +193,21 @@ async def test_delete_metadata_duplicates(
             recorder.migration, "non_live_data_migration_needed", return_value=False
         ),
         patch(
-            "homeassistant.components.recorder.core.create_engine",
+            "menuai.components.recorder.core.create_engine",
             new=_create_engine_28,
         ),
     ):
         async with (
-            async_test_home_assistant() as hass,
-            async_test_recorder(hass),
+            async_test_home_assistant() as menuai,
+            async_test_recorder(menuai),
         ):
-            await async_wait_recording_done(hass)
-            await async_wait_recording_done(hass)
+            await async_wait_recording_done(menuai)
+            await async_wait_recording_done(menuai)
 
-            instance = recorder.get_instance(hass)
-            await instance.async_add_executor_job(add_statistics_meta, hass)
+            instance = recorder.get_instance(menuai)
+            await instance.async_add_executor_job(add_statistics_meta, menuai)
 
-            tmp = await instance.async_add_executor_job(get_statistics_meta, hass)
+            tmp = await instance.async_add_executor_job(get_statistics_meta, menuai)
             assert len(tmp) == 3
             assert tmp[0].id == 1
             assert tmp[0].statistic_id == "test:total_energy_import_tariff_1"
@@ -216,31 +216,31 @@ async def test_delete_metadata_duplicates(
             assert tmp[2].id == 3
             assert tmp[2].statistic_id == "test:fossil_percentage"
 
-            await hass.async_stop()
+            await menuai.async_stop()
 
     # Test that the duplicates are removed during migration from schema 28
     async with (
-        async_test_home_assistant() as hass,
-        async_test_recorder(hass),
+        async_test_home_assistant() as menuai,
+        async_test_recorder(menuai),
     ):
-        await hass.async_start()
-        await async_wait_recording_done(hass)
-        await async_wait_recording_done(hass)
+        await menuai.async_start()
+        await async_wait_recording_done(menuai)
+        await async_wait_recording_done(menuai)
 
         assert "Deleted 1 duplicated statistics_meta rows" in caplog.text
-        instance = recorder.get_instance(hass)
-        tmp = await instance.async_add_executor_job(get_statistics_meta, hass)
+        instance = recorder.get_instance(menuai)
+        tmp = await instance.async_add_executor_job(get_statistics_meta, menuai)
         assert len(tmp) == 2
         assert tmp[0].id == 2
         assert tmp[0].statistic_id == "test:total_energy_import_tariff_1"
         assert tmp[1].id == 3
         assert tmp[1].statistic_id == "test:fossil_percentage"
 
-        await hass.async_stop()
+        await menuai.async_stop()
 
 
 @pytest.mark.parametrize("persistent_database", [True])
-@pytest.mark.usefixtures("hass_storage")  # Prevent test hass from writing to storage
+@pytest.mark.usefixtures("menuai_storage")  # Prevent test menuai from writing to storage
 async def test_delete_metadata_duplicates_many(
     async_test_recorder: RecorderInstanceContextManager,
     caplog: pytest.LogCaptureFixture,
@@ -275,8 +275,8 @@ async def test_delete_metadata_duplicates_many(
         "unit_of_measurement": "%",
     }
 
-    def add_statistics_meta(hass: HomeAssistant) -> None:
-        with session_scope(hass=hass) as session:
+    def add_statistics_meta(menuai: menuai) -> None:
+        with session_scope(menuai=menuai) as session:
             session.add(
                 recorder.db_schema.StatisticsMeta.from_meta(external_energy_metadata_1)
             )
@@ -299,8 +299,8 @@ async def test_delete_metadata_duplicates_many(
                 recorder.db_schema.StatisticsMeta.from_meta(external_co2_metadata)
             )
 
-    def get_statistics_meta(hass: HomeAssistant) -> list:
-        with session_scope(hass=hass, read_only=True) as session:
+    def get_statistics_meta(menuai: menuai) -> list:
+        with session_scope(menuai=menuai, read_only=True) as session:
             return list(session.query(recorder.db_schema.StatisticsMeta).all())
 
     # Create some duplicated statistics with schema version 28
@@ -313,34 +313,34 @@ async def test_delete_metadata_duplicates_many(
             recorder.migration, "non_live_data_migration_needed", return_value=False
         ),
         patch(
-            "homeassistant.components.recorder.core.create_engine",
+            "menuai.components.recorder.core.create_engine",
             new=_create_engine_28,
         ),
     ):
         async with (
-            async_test_home_assistant() as hass,
-            async_test_recorder(hass),
+            async_test_home_assistant() as menuai,
+            async_test_recorder(menuai),
         ):
-            await async_wait_recording_done(hass)
-            await async_wait_recording_done(hass)
+            await async_wait_recording_done(menuai)
+            await async_wait_recording_done(menuai)
 
-            instance = recorder.get_instance(hass)
-            await instance.async_add_executor_job(add_statistics_meta, hass)
+            instance = recorder.get_instance(menuai)
+            await instance.async_add_executor_job(add_statistics_meta, menuai)
 
-            await hass.async_stop()
+            await menuai.async_stop()
 
     # Test that the duplicates are removed during migration from schema 28
     async with (
-        async_test_home_assistant() as hass,
-        async_test_recorder(hass),
+        async_test_home_assistant() as menuai,
+        async_test_recorder(menuai),
     ):
-        await hass.async_start()
-        await async_wait_recording_done(hass)
-        await async_wait_recording_done(hass)
+        await menuai.async_start()
+        await async_wait_recording_done(menuai)
+        await async_wait_recording_done(menuai)
 
         assert "Deleted 1102 duplicated statistics_meta rows" in caplog.text
-        instance = recorder.get_instance(hass)
-        tmp = await instance.async_add_executor_job(get_statistics_meta, hass)
+        instance = recorder.get_instance(menuai)
+        tmp = await instance.async_add_executor_job(get_statistics_meta, menuai)
         assert len(tmp) == 3
         assert tmp[0].id == 1101
         assert tmp[0].statistic_id == "test:total_energy_import_tariff_1"
@@ -349,16 +349,16 @@ async def test_delete_metadata_duplicates_many(
         assert tmp[2].id == 1105
         assert tmp[2].statistic_id == "test:fossil_percentage"
 
-        await hass.async_stop()
+        await menuai.async_stop()
 
 
 @pytest.mark.usefixtures("recorder_mock")
 async def test_delete_metadata_duplicates_no_duplicates(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test removal of duplicated statistics."""
-    await async_wait_recording_done(hass)
-    with session_scope(hass=hass) as session:
-        instance = recorder.get_instance(hass)
+    await async_wait_recording_done(menuai)
+    with session_scope(menuai=menuai) as session:
+        instance = recorder.get_instance(menuai)
         delete_statistics_meta_duplicates(instance, session)
     assert "duplicated statistics_meta rows" not in caplog.text

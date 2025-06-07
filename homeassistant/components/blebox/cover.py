@@ -7,7 +7,7 @@ from typing import Any
 import blebox_uniapi.cover
 from blebox_uniapi.cover import BleboxCoverState
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     ATTR_POSITION,
     ATTR_TILT_POSITION,
     CoverDeviceClass,
@@ -15,8 +15,8 @@ from homeassistant.components.cover import (
     CoverEntityFeature,
     CoverState,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import BleBoxConfigEntry
 from .entity import BleBoxEntity
@@ -27,7 +27,7 @@ BLEBOX_TO_COVER_DEVICE_CLASSES = {
     "shutter": CoverDeviceClass.SHUTTER,
 }
 
-BLEBOX_TO_HASS_COVER_STATES = {
+BLEBOX_TO_menuai_COVER_STATES = {
     None: None,
     # all blebox covers
     BleboxCoverState.MOVING_DOWN: CoverState.CLOSING,
@@ -43,7 +43,7 @@ BLEBOX_TO_HASS_COVER_STATES = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: BleBoxConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -140,5 +140,5 @@ class BleBoxCoverEntity(BleBoxEntity[blebox_uniapi.cover.Cover], CoverEntity):
         await self._feature.async_set_tilt_position(100 - position)
 
     def _is_state(self, state_name) -> bool | None:
-        value = BLEBOX_TO_HASS_COVER_STATES[self._feature.state]
+        value = BLEBOX_TO_menuai_COVER_STATES[self._feature.state]
         return None if value is None else value == state_name

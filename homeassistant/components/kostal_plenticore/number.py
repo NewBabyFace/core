@@ -8,18 +8,18 @@ import logging
 
 from pykoplenti import SettingsData
 
-from homeassistant.components.number import (
+from menuai.components.number import (
     NumberDeviceClass,
     NumberEntity,
     NumberEntityDescription,
     NumberMode,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfPower
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import PERCENTAGE, EntityCategory, UnitOfPower
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import SettingDataUpdateCoordinator
@@ -73,18 +73,18 @@ NUMBER_SETTINGS_DATA = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Add Kostal Plenticore Number entities."""
-    plenticore = hass.data[DOMAIN][entry.entry_id]
+    plenticore = menuai.data[DOMAIN][entry.entry_id]
 
     entities = []
 
     available_settings_data = await plenticore.client.get_settings()
     settings_data_update_coordinator = SettingDataUpdateCoordinator(
-        hass, entry, _LOGGER, "Settings Data", timedelta(seconds=30), plenticore
+        menuai, entry, _LOGGER, "Settings Data", timedelta(seconds=30), plenticore
     )
 
     for description in NUMBER_SETTINGS_DATA:
@@ -178,17 +178,17 @@ class PlenticoreDataNumber(
             and self.data_id in self.coordinator.data[self.module_id]
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register this entity on the Update Coordinator."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self.async_on_remove(
             self.coordinator.start_fetch_data(self.module_id, self.data_id)
         )
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Unregister this entity from the Update Coordinator."""
         self.coordinator.stop_fetch_data(self.module_id, self.data_id)
-        await super().async_will_remove_from_hass()
+        await super().async_will_remove_from_menuai()
 
     @property
     def native_value(self) -> float | None:

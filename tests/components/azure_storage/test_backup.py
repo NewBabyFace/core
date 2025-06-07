@@ -10,17 +10,17 @@ from azure.core.exceptions import AzureError, HttpResponseError, ServiceRequestE
 from azure.storage.blob import BlobProperties
 import pytest
 
-from homeassistant.components.azure_storage.backup import (
+from menuai.components.azure_storage.backup import (
     async_register_backup_agents_listener,
 )
-from homeassistant.components.azure_storage.const import (
+from menuai.components.azure_storage.const import (
     DATA_BACKUP_AGENT_LISTENERS,
     DOMAIN,
 )
-from homeassistant.components.backup import DOMAIN as BACKUP_DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.backup import async_initialize_backup
-from homeassistant.setup import async_setup_component
+from menuai.components.backup import DOMAIN as BACKUP_DOMAIN
+from menuai.core import menuai
+from menuai.helpers.backup import async_initialize_backup
+from menuai.setup import async_setup_component
 
 from . import setup_integration
 from .const import BACKUP_METADATA, TEST_BACKUP
@@ -31,29 +31,29 @@ from tests.typing import ClientSessionGenerator, MagicMock, WebSocketGenerator
 
 @pytest.fixture(autouse=True)
 async def setup_backup_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
 ) -> AsyncGenerator[None]:
     """Set up onedrive integration."""
     with (
-        patch("homeassistant.components.backup.is_hassio", return_value=False),
-        patch("homeassistant.components.backup.store.STORE_DELAY_SAVE", 0),
+        patch("menuai.components.backup.is_menuaiio", return_value=False),
+        patch("menuai.components.backup.store.STORE_DELAY_SAVE", 0),
     ):
-        async_initialize_backup(hass)
-        assert await async_setup_component(hass, BACKUP_DOMAIN, {})
-        await setup_integration(hass, mock_config_entry)
+        async_initialize_backup(menuai)
+        assert await async_setup_component(menuai, BACKUP_DOMAIN, {})
+        await setup_integration(menuai, mock_config_entry)
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         yield
 
 
 async def test_agents_info(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test backup agent info."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json_auto_id({"type": "backup/agents/info"})
     response = await client.receive_json()
@@ -71,13 +71,13 @@ async def test_agents_info(
 
 
 async def test_agents_list_backups(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test agent list backups."""
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json_auto_id({"type": "backup/info"})
     response = await client.receive_json()
 
@@ -100,8 +100,8 @@ async def test_agents_list_backups(
             "failed_agent_ids": [],
             "failed_folders": [],
             "folders": [],
-            "homeassistant_included": True,
-            "homeassistant_version": "2024.12.0.dev0",
+            "menuai_included": True,
+            "menuai_version": "2024.12.0.dev0",
             "name": "Core 2024.12.0.dev0",
             "with_automatic_settings": None,
         }
@@ -109,14 +109,14 @@ async def test_agents_list_backups(
 
 
 async def test_agents_get_backup(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test agent get backup."""
 
     backup_id = TEST_BACKUP.backup_id
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json_auto_id({"type": "backup/details", "backup_id": backup_id})
     response = await client.receive_json()
 
@@ -138,20 +138,20 @@ async def test_agents_get_backup(
         "failed_agent_ids": [],
         "failed_folders": [],
         "folders": [],
-        "homeassistant_included": True,
-        "homeassistant_version": "2024.12.0.dev0",
+        "menuai_included": True,
+        "menuai_version": "2024.12.0.dev0",
         "name": "Core 2024.12.0.dev0",
         "with_automatic_settings": None,
     }
 
 
 async def test_agents_get_backup_does_not_throw_on_not_found(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test agent get backup does not throw on a backup not found."""
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json_auto_id({"type": "backup/details", "backup_id": "random"})
     response = await client.receive_json()
 
@@ -161,12 +161,12 @@ async def test_agents_get_backup_does_not_throw_on_not_found(
 
 
 async def test_agents_delete(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     mock_client: MagicMock,
 ) -> None:
     """Test agent delete backup."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json_auto_id(
         {
@@ -182,12 +182,12 @@ async def test_agents_delete(
 
 
 async def test_agents_delete_not_throwing_on_not_found(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     mock_client: MagicMock,
 ) -> None:
     """Test agent delete backup does not throw on a backup not found."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json_auto_id(
         {
@@ -203,19 +203,19 @@ async def test_agents_delete_not_throwing_on_not_found(
 
 
 async def test_agents_upload(
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     caplog: pytest.LogCaptureFixture,
     mock_client: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test agent upload backup."""
-    client = await hass_client()
+    client = await menuai_client()
     with (
         patch(
-            "homeassistant.components.backup.manager.BackupManager.async_get_backup",
+            "menuai.components.backup.manager.BackupManager.async_get_backup",
         ) as fetch_backup,
         patch(
-            "homeassistant.components.backup.manager.read_backup",
+            "menuai.components.backup.manager.read_backup",
             return_value=TEST_BACKUP,
         ),
         patch("pathlib.Path.open") as mocked_open,
@@ -238,12 +238,12 @@ async def test_agents_upload(
 
 
 async def test_agents_download(
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     mock_client: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test agent download backup."""
-    client = await hass_client()
+    client = await menuai_client()
     backup_id = BACKUP_METADATA["backup_id"]
 
     resp = await client.get(
@@ -255,7 +255,7 @@ async def test_agents_download(
 
 
 async def test_agents_error_on_download_not_found(
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     mock_client: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
@@ -270,7 +270,7 @@ async def test_agents_error_on_download_not_found(
         async_list_blobs(BACKUP_METADATA),
         async_list_blobs({}),
     ]
-    client = await hass_client()
+    client = await menuai_client()
     backup_id = BACKUP_METADATA["backup_id"]
 
     resp = await client.get(
@@ -298,8 +298,8 @@ async def test_agents_error_on_download_not_found(
     ],
 )
 async def test_error_during_delete(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     mock_client: MagicMock,
     mock_config_entry: MockConfigEntry,
     error: Exception,
@@ -308,7 +308,7 @@ async def test_error_during_delete(
     """Test the error wrapper."""
     mock_client.delete_blob.side_effect = error
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json_auto_id(
         {
@@ -324,14 +324,14 @@ async def test_error_during_delete(
     }
 
 
-async def test_listeners_get_cleaned_up(hass: HomeAssistant) -> None:
+async def test_listeners_get_cleaned_up(menuai: menuai) -> None:
     """Test listener gets cleaned up."""
     listener = MagicMock()
-    remove_listener = async_register_backup_agents_listener(hass, listener=listener)
+    remove_listener = async_register_backup_agents_listener(menuai, listener=listener)
 
-    hass.data[DATA_BACKUP_AGENT_LISTENERS] = [
+    menuai.data[DATA_BACKUP_AGENT_LISTENERS] = [
         listener
     ]  # make sure it's the last listener
     remove_listener()
 
-    assert hass.data.get(DATA_BACKUP_AGENT_LISTENERS) is None
+    assert menuai.data.get(DATA_BACKUP_AGENT_LISTENERS) is None

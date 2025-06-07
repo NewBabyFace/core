@@ -2,17 +2,17 @@
 
 import pytest
 
-from homeassistant.components import automation
-from homeassistant.components.device_automation import DeviceAutomationType
-from homeassistant.components.device_automation.exceptions import (
+from menuai.components import automation
+from menuai.components.device_automation import DeviceAutomationType
+from menuai.components.device_automation.exceptions import (
     InvalidDeviceAutomationConfig,
 )
-from homeassistant.components.webostv import DOMAIN, device_trigger
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr
-from homeassistant.setup import async_setup_component
+from menuai.components.webostv import DOMAIN, device_trigger
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai, ServiceCall
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr
+from menuai.setup import async_setup_component
 
 from . import setup_webostv
 from .const import ENTITY_ID, FAKE_UUID
@@ -21,10 +21,10 @@ from tests.common import MockConfigEntry, async_get_device_automations
 
 
 async def test_get_triggers(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry, client
+    menuai: menuai, device_registry: dr.DeviceRegistry, client
 ) -> None:
     """Test we get the expected triggers."""
-    await setup_webostv(hass)
+    await setup_webostv(menuai)
 
     device = device_registry.async_get_device(identifiers={(DOMAIN, FAKE_UUID)})
 
@@ -37,24 +37,24 @@ async def test_get_triggers(
     }
 
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device.id
+        menuai, DeviceAutomationType.TRIGGER, device.id
     )
     assert turn_on_trigger in triggers
 
 
 async def test_if_fires_on_turn_on_request(
-    hass: HomeAssistant,
+    menuai: menuai,
     service_calls: list[ServiceCall],
     device_registry: dr.DeviceRegistry,
     client,
 ) -> None:
     """Test for turn_on and turn_off triggers firing."""
-    await setup_webostv(hass)
+    await setup_webostv(menuai)
 
     device = device_registry.async_get_device(identifiers={(DOMAIN, FAKE_UUID)})
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -90,7 +90,7 @@ async def test_if_fires_on_turn_on_request(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "media_player",
         "turn_on",
         {"entity_id": ENTITY_ID},
@@ -105,21 +105,21 @@ async def test_if_fires_on_turn_on_request(
 
 
 async def test_invalid_trigger_raises(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry, client
+    menuai: menuai, device_registry: dr.DeviceRegistry, client
 ) -> None:
     """Test invalid trigger platform or device id raises."""
-    await setup_webostv(hass)
+    await setup_webostv(menuai)
 
     # Test wrong trigger platform type
-    with pytest.raises(HomeAssistantError, match="Unhandled trigger type: wrong.type"):
+    with pytest.raises(menuaiError, match="Unhandled trigger type: wrong.type"):
         await device_trigger.async_attach_trigger(
-            hass, {"type": "wrong.type", "device_id": "invalid_device_id"}, None, {}
+            menuai, {"type": "wrong.type", "device_id": "invalid_device_id"}, None, {}
         )
 
     # Test invalid device id
     with pytest.raises(InvalidDeviceAutomationConfig):
         await device_trigger.async_validate_trigger_config(
-            hass,
+            menuai,
             {
                 "platform": "device",
                 "domain": DOMAIN,
@@ -137,18 +137,18 @@ async def test_invalid_trigger_raises(
     ],
 )
 async def test_invalid_entry_raises(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     client,
     domain: str,
     entry_state: ConfigEntryState,
 ) -> None:
     """Test device id not loaded or from another domain raises."""
-    await setup_webostv(hass)
+    await setup_webostv(menuai)
 
     entry = MockConfigEntry(domain=domain, state=entry_state, data={})
     entry.runtime_data = None
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     device = device_registry.async_get_or_create(
         config_entry_id=entry.entry_id, identifiers={("fake", "fake")}
@@ -163,4 +163,4 @@ async def test_invalid_entry_raises(
 
     # Test that device id from non webostv domain raises exception
     with pytest.raises(InvalidDeviceAutomationConfig):
-        await device_trigger.async_validate_trigger_config(hass, config)
+        await device_trigger.async_validate_trigger_config(menuai, config)

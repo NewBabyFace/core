@@ -13,8 +13,8 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from tests.common import async_fire_time_changed
 
@@ -28,7 +28,7 @@ from tests.common import async_fire_time_changed
 )
 @pytest.mark.usefixtures("setup_integration")
 async def test_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     entity_name: str,
     snapshot: SnapshotAssertion,
@@ -37,7 +37,7 @@ async def test_sensor(
     assert (entry := entity_registry.async_get(entity_name))
     assert entry == snapshot
 
-    assert (state := hass.states.get(entity_name))
+    assert (state := menuai.states.get(entity_name))
     assert state == snapshot
 
 
@@ -52,13 +52,13 @@ async def test_sensor(
 )
 @pytest.mark.usefixtures("setup_integration")
 async def test_sensor_update_fail(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     electricity_maps: AsyncMock,
     error: Exception,
 ) -> None:
     """Test sensor error handling."""
-    assert (state := hass.states.get("sensor.electricity_maps_co2_intensity"))
+    assert (state := menuai.states.get("sensor.electricity_maps_co2_intensity"))
     assert state.state == "45.9862319009581"
     assert len(electricity_maps.mock_calls) == 1
 
@@ -66,10 +66,10 @@ async def test_sensor_update_fail(
     electricity_maps.latest_carbon_intensity_by_country_code.side_effect = error
 
     freezer.tick(timedelta(minutes=20))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    assert (state := hass.states.get("sensor.electricity_maps_co2_intensity"))
+    assert (state := menuai.states.get("sensor.electricity_maps_co2_intensity"))
     assert state.state == "unavailable"
     assert len(electricity_maps.mock_calls) == 2
 
@@ -78,22 +78,22 @@ async def test_sensor_update_fail(
     electricity_maps.latest_carbon_intensity_by_country_code.side_effect = None
 
     freezer.tick(timedelta(minutes=20))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    assert (state := hass.states.get("sensor.electricity_maps_co2_intensity"))
+    assert (state := menuai.states.get("sensor.electricity_maps_co2_intensity"))
     assert state.state == "45.9862319009581"
     assert len(electricity_maps.mock_calls) == 3
 
 
 @pytest.mark.usefixtures("setup_integration")
 async def test_sensor_reauth_triggered(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     electricity_maps: AsyncMock,
 ) -> None:
     """Test if reauth flow is triggered."""
-    assert (state := hass.states.get("sensor.electricity_maps_co2_intensity"))
+    assert (state := menuai.states.get("sensor.electricity_maps_co2_intensity"))
     assert state.state == "45.9862319009581"
 
     electricity_maps.latest_carbon_intensity_by_coordinates.side_effect = (
@@ -104,9 +104,9 @@ async def test_sensor_reauth_triggered(
     )
 
     freezer.tick(timedelta(minutes=20))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    assert (flows := hass.config_entries.flow.async_progress())
+    assert (flows := menuai.config_entries.flow.async_progress())
     assert len(flows) == 1
     assert flows[0]["step_id"] == "reauth_confirm"

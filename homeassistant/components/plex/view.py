@@ -9,8 +9,8 @@ from aiohttp import web
 from aiohttp.hdrs import CACHE_CONTROL
 from aiohttp.typedefs import LooseHeaders
 
-from homeassistant.components.http import KEY_AUTHENTICATED, KEY_HASS, HomeAssistantView
-from homeassistant.components.media_player import async_fetch_image
+from menuai.components.http import KEY_AUTHENTICATED, KEY_menuai, menuaiView
+from menuai.components.media_player import async_fetch_image
 
 from .const import SERVERS
 from .helpers import get_plex_data
@@ -18,7 +18,7 @@ from .helpers import get_plex_data
 _LOGGER = logging.getLogger(__name__)
 
 
-class PlexImageView(HomeAssistantView):
+class PlexImageView(menuaiView):
     """Media player view to serve a Plex image."""
 
     name = "api:plex:image"
@@ -34,14 +34,14 @@ class PlexImageView(HomeAssistantView):
         if not request[KEY_AUTHENTICATED]:
             return web.Response(status=HTTPStatus.UNAUTHORIZED)
 
-        hass = request.app[KEY_HASS]
-        if (server := get_plex_data(hass)[SERVERS].get(server_id)) is None:
+        menuai = request.app[KEY_menuai]
+        if (server := get_plex_data(menuai)[SERVERS].get(server_id)) is None:
             return web.Response(status=HTTPStatus.NOT_FOUND)
 
         if (image_url := server.thumbnail_cache.get(media_content_id)) is None:
             return web.Response(status=HTTPStatus.NOT_FOUND)
 
-        data, content_type = await async_fetch_image(_LOGGER, hass, image_url)
+        data, content_type = await async_fetch_image(_LOGGER, menuai, image_url)
 
         if data is None:
             return web.Response(status=HTTPStatus.SERVICE_UNAVAILABLE)

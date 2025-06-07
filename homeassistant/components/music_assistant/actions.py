@@ -7,16 +7,16 @@ from typing import TYPE_CHECKING
 from music_assistant_models.enums import MediaType
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import (
-    HomeAssistant,
+from menuai.config_entries import ConfigEntryState
+from menuai.core import (
+    menuai,
     ServiceCall,
     ServiceResponse,
     SupportsResponse,
     callback,
 )
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import config_validation as cv
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import config_validation as cv
 
 from .const import (
     ATTR_ALBUM_ARTISTS_ONLY,
@@ -71,11 +71,11 @@ DEFAULT_SORT_ORDER = "name"
 
 @callback
 def get_music_assistant_client(
-    hass: HomeAssistant, config_entry_id: str
+    menuai: menuai, config_entry_id: str
 ) -> MusicAssistantClient:
     """Get the Music Assistant client for the given config entry."""
     entry: MusicAssistantConfigEntry | None
-    if not (entry := hass.config_entries.async_get_entry(config_entry_id)):
+    if not (entry := menuai.config_entries.async_get_entry(config_entry_id)):
         raise ServiceValidationError("Entry not found")
     if entry.state is not ConfigEntryState.LOADED:
         raise ServiceValidationError("Entry not loaded")
@@ -83,9 +83,9 @@ def get_music_assistant_client(
 
 
 @callback
-def register_actions(hass: HomeAssistant) -> None:
+def register_actions(menuai: menuai) -> None:
     """Register custom actions."""
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_SEARCH,
         handle_search,
@@ -104,7 +104,7 @@ def register_actions(hass: HomeAssistant) -> None:
         ),
         supports_response=SupportsResponse.ONLY,
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_GET_LIBRARY,
         handle_get_library,
@@ -127,7 +127,7 @@ def register_actions(hass: HomeAssistant) -> None:
 
 async def handle_search(call: ServiceCall) -> ServiceResponse:
     """Handle queue_command action."""
-    mass = get_music_assistant_client(call.hass, call.data[ATTR_CONFIG_ENTRY_ID])
+    mass = get_music_assistant_client(call.menuai, call.data[ATTR_CONFIG_ENTRY_ID])
     search_name = call.data[ATTR_SEARCH_NAME]
     search_artist = call.data.get(ATTR_SEARCH_ARTIST)
     search_album = call.data.get(ATTR_SEARCH_ALBUM)
@@ -180,7 +180,7 @@ async def handle_search(call: ServiceCall) -> ServiceResponse:
 
 async def handle_get_library(call: ServiceCall) -> ServiceResponse:
     """Handle get_library action."""
-    mass = get_music_assistant_client(call.hass, call.data[ATTR_CONFIG_ENTRY_ID])
+    mass = get_music_assistant_client(call.menuai, call.data[ATTR_CONFIG_ENTRY_ID])
     media_type = call.data[ATTR_MEDIA_TYPE]
     limit = call.data.get(ATTR_LIMIT, DEFAULT_LIMIT)
     offset = call.data.get(ATTR_OFFSET, DEFAULT_OFFSET)

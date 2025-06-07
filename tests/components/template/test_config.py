@@ -5,8 +5,8 @@ from __future__ import annotations
 import pytest
 import voluptuous as vol
 
-from homeassistant.components.template.config import CONFIG_SECTION_SCHEMA
-from homeassistant.core import HomeAssistant
+from menuai.components.template.config import CONFIG_SECTION_SCHEMA
+from menuai.core import menuai
 
 
 @pytest.mark.parametrize(
@@ -44,7 +44,7 @@ from homeassistant.core import HomeAssistant
         },
     ],
 )
-async def test_invalid_schema(hass: HomeAssistant, config: dict) -> None:
+async def test_invalid_schema(menuai: menuai, config: dict) -> None:
     """Test invalid config schemas."""
     with pytest.raises(vol.Invalid):
         CONFIG_SECTION_SCHEMA(config)

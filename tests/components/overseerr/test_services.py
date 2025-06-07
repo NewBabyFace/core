@@ -6,16 +6,16 @@ import pytest
 from python_overseerr import OverseerrConnectionError
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.overseerr.const import (
+from menuai.components.overseerr.const import (
     ATTR_CONFIG_ENTRY_ID,
     ATTR_REQUESTED_BY,
     ATTR_SORT_ORDER,
     ATTR_STATUS,
     DOMAIN,
 )
-from homeassistant.components.overseerr.services import SERVICE_GET_REQUESTS
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
+from menuai.components.overseerr.services import SERVICE_GET_REQUESTS
+from menuai.core import menuai
+from menuai.exceptions import menuaiError, ServiceValidationError
 
 from . import setup_integration
 
@@ -23,16 +23,16 @@ from tests.common import MockConfigEntry
 
 
 async def test_service_get_requests(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_overseerr_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test the get_requests service."""
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         DOMAIN,
         SERVICE_GET_REQUESTS,
         {
@@ -53,7 +53,7 @@ async def test_service_get_requests(
 
 
 async def test_service_get_requests_no_meta(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_overseerr_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
@@ -62,9 +62,9 @@ async def test_service_get_requests_no_meta(
     mock_overseerr_client.get_movie_details.side_effect = OverseerrConnectionError
     mock_overseerr_client.get_tv_details.side_effect = OverseerrConnectionError
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         DOMAIN,
         SERVICE_GET_REQUESTS,
         {ATTR_CONFIG_ENTRY_ID: mock_config_entry.entry_id},
@@ -83,13 +83,13 @@ async def test_service_get_requests_no_meta(
             {},
             "get_requests",
             OverseerrConnectionError("Timeout"),
-            HomeAssistantError,
+            menuaiError,
             "Error connecting to the Overseerr instance: Timeout",
         )
     ],
 )
 async def test_services_connection_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_overseerr_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     service: str,
@@ -101,12 +101,12 @@ async def test_services_connection_error(
 ) -> None:
     """Test a connection error in the services."""
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     getattr(mock_overseerr_client, function).side_effect = exception
 
     with pytest.raises(raised_exception, match=message):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             service,
             {ATTR_CONFIG_ENTRY_ID: mock_config_entry.entry_id} | payload,
@@ -122,21 +122,21 @@ async def test_services_connection_error(
     ],
 )
 async def test_service_entry_availability(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_overseerr_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     service: str,
     payload: dict[str, str],
 ) -> None:
     """Test the services without valid entry."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
     mock_config_entry2 = MockConfigEntry(domain=DOMAIN)
-    mock_config_entry2.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry2.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     with pytest.raises(ServiceValidationError, match="Mock Title is not loaded"):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             service,
             {ATTR_CONFIG_ENTRY_ID: mock_config_entry2.entry_id} | payload,
@@ -147,7 +147,7 @@ async def test_service_entry_availability(
     with pytest.raises(
         ServiceValidationError, match='Integration "overseerr" not found in registry'
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             service,
             {ATTR_CONFIG_ENTRY_ID: "bad-config_id"} | payload,

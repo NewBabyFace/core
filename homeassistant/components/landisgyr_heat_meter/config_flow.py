@@ -11,11 +11,11 @@ from serial.tools import list_ports
 import ultraheat_api
 import voluptuous as vol
 
-from homeassistant.components import usb
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_DEVICE
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.components import usb
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_DEVICE
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from .const import DOMAIN, ULTRAHEAT_TIMEOUT
 
@@ -45,7 +45,7 @@ class LandisgyrConfigFlow(ConfigFlow, domain=DOMAIN):
             if user_input[CONF_DEVICE] == CONF_MANUAL_PATH:
                 return await self.async_step_setup_serial_manual_path()
 
-            dev_path = await self.hass.async_add_executor_job(
+            dev_path = await self.menuai.async_add_executor_job(
                 usb.get_serial_by_id, user_input[CONF_DEVICE]
             )
             _LOGGER.debug("Using this path : %s", dev_path)
@@ -55,7 +55,7 @@ class LandisgyrConfigFlow(ConfigFlow, domain=DOMAIN):
             except CannotConnect:
                 errors["base"] = "cannot_connect"
 
-        ports = await get_usb_ports(self.hass)
+        ports = await get_usb_ports(self.menuai)
         ports[CONF_MANUAL_PATH] = CONF_MANUAL_PATH
 
         schema = vol.Schema({vol.Required(CONF_DEVICE): vol.In(ports)})
@@ -106,7 +106,7 @@ class LandisgyrConfigFlow(ConfigFlow, domain=DOMAIN):
         try:
             async with asyncio.timeout(ULTRAHEAT_TIMEOUT):
                 # validate and retrieve the model and device number for a unique id
-                data = await self.hass.async_add_executor_job(heat_meter.read)
+                data = await self.menuai.async_add_executor_job(heat_meter.read)
 
         except (TimeoutError, serial.SerialException) as err:
             _LOGGER.warning("Failed read data from: %s. %s", port, err)
@@ -116,9 +116,9 @@ class LandisgyrConfigFlow(ConfigFlow, domain=DOMAIN):
         return data.model, data.device_number
 
 
-async def get_usb_ports(hass: HomeAssistant) -> dict[str, str]:
+async def get_usb_ports(menuai: menuai) -> dict[str, str]:
     """Return a dict of USB ports and their friendly names."""
-    ports = await hass.async_add_executor_job(list_ports.comports)
+    ports = await menuai.async_add_executor_job(list_ports.comports)
     port_descriptions = {}
     for port in ports:
         # this prevents an issue with usb_device_from_port
@@ -139,5 +139,5 @@ async def get_usb_ports(hass: HomeAssistant) -> dict[str, str]:
     return port_descriptions
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""

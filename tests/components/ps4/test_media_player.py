@@ -7,8 +7,8 @@ from pyps4_2ndscreen.credential import get_ddp_message
 from pyps4_2ndscreen.ddp import DEFAULT_UDP_PORT
 from pyps4_2ndscreen.media_art import TYPE_APP as PS_TYPE_APP
 
-from homeassistant.components import ps4
-from homeassistant.components.media_player import (
+from menuai.components import ps4
+from menuai.components.media_player import (
     ATTR_INPUT_SOURCE,
     ATTR_INPUT_SOURCE_LIST,
     ATTR_MEDIA_CONTENT_ID,
@@ -16,7 +16,7 @@ from homeassistant.components.media_player import (
     ATTR_MEDIA_TITLE,
     MediaType,
 )
-from homeassistant.components.ps4.const import (
+from menuai.components.ps4.const import (
     ATTR_MEDIA_IMAGE_URL,
     CONFIG_ENTRY_VERSION as VERSION,
     DEFAULT_REGION,
@@ -24,7 +24,7 @@ from homeassistant.components.ps4.const import (
     GAMES_FILE,
     PS4_DATA,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_COMMAND,
     ATTR_ENTITY_ID,
     ATTR_LOCKED,
@@ -37,9 +37,9 @@ from homeassistant.const import (
     STATE_STANDBY,
     STATE_UNKNOWN,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 
@@ -128,11 +128,11 @@ MOCK_DATA = {CONF_TOKEN: MOCK_CREDS, "devices": [MOCK_DEVICE]}
 
 MOCK_CONFIG = MockConfigEntry(domain=DOMAIN, data=MOCK_DATA, entry_id=MOCK_ENTRY_ID)
 
-MOCK_LOAD = "homeassistant.components.ps4.media_player.load_games"
+MOCK_LOAD = "menuai.components.ps4.media_player.load_games"
 
 
 async def setup_mock_component(
-    hass: HomeAssistant, entry: MockConfigEntry | None = None
+    menuai: menuai, entry: MockConfigEntry | None = None
 ) -> str:
     """Set up Mock Media Player."""
     if entry is None:
@@ -142,22 +142,22 @@ async def setup_mock_component(
     else:
         mock_entry = entry
 
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
-    await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
+    await async_setup_component(menuai, DOMAIN, {DOMAIN: {}})
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    mock_entities = hass.states.async_entity_ids()
+    mock_entities = menuai.states.async_entity_ids()
 
     return mock_entities[0]
 
 
 async def mock_ddp_response(
-    hass: HomeAssistant, mock_status_data: dict[str, Any]
+    menuai: menuai, mock_status_data: dict[str, Any]
 ) -> None:
     """Mock raw UDP response from device."""
-    mock_protocol = hass.data[PS4_DATA].protocol
+    mock_protocol = menuai.data[PS4_DATA].protocol
     assert mock_protocol.local_port == DEFAULT_UDP_PORT
     mock_code = mock_status_data.get("status_code")
     mock_status = mock_status_data.get("status")
@@ -165,63 +165,63 @@ async def mock_ddp_response(
     mock_response = get_ddp_message(mock_status_header, mock_status_data).encode()
 
     mock_protocol.datagram_received(mock_response, (MOCK_HOST, MOCK_RANDOM_PORT))
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
-async def test_media_player_is_setup_correctly_with_entry(hass: HomeAssistant) -> None:
+async def test_media_player_is_setup_correctly_with_entry(menuai: menuai) -> None:
     """Test entity is setup correctly with entry correctly."""
-    mock_entity_id = await setup_mock_component(hass)
-    mock_state = hass.states.get(mock_entity_id).state
+    mock_entity_id = await setup_mock_component(menuai)
+    mock_state = menuai.states.get(mock_entity_id).state
 
     # Assert status updated callback is added to protocol.
-    assert len(hass.data[PS4_DATA].protocol.callbacks) == 1
+    assert len(menuai.data[PS4_DATA].protocol.callbacks) == 1
 
-    # Test that entity is added to hass.
-    assert hass.data[PS4_DATA].protocol is not None
+    # Test that entity is added to menuai.
+    assert menuai.data[PS4_DATA].protocol is not None
     assert mock_entity_id == f"media_player.{MOCK_NAME}"
     assert mock_state == STATE_UNKNOWN
 
 
-async def test_state_standby_is_set(hass: HomeAssistant) -> None:
+async def test_state_standby_is_set(menuai: menuai) -> None:
     """Test that state is set to standby."""
-    mock_entity_id = await setup_mock_component(hass)
+    mock_entity_id = await setup_mock_component(menuai)
 
-    await mock_ddp_response(hass, MOCK_STATUS_STANDBY)
+    await mock_ddp_response(menuai, MOCK_STATUS_STANDBY)
 
-    assert hass.states.get(mock_entity_id).state == STATE_STANDBY
+    assert menuai.states.get(mock_entity_id).state == STATE_STANDBY
 
 
-async def test_state_playing_is_set(hass: HomeAssistant) -> None:
+async def test_state_playing_is_set(menuai: menuai) -> None:
     """Test that state is set to playing."""
-    mock_entity_id = await setup_mock_component(hass)
-    mock_func = "homeassistant.components.ps4.media_player.pyps4.Ps4Async.async_get_ps_store_data"
+    mock_entity_id = await setup_mock_component(menuai)
+    mock_func = "menuai.components.ps4.media_player.pyps4.Ps4Async.async_get_ps_store_data"
 
     with patch(mock_func, return_value=None):
-        await mock_ddp_response(hass, MOCK_STATUS_PLAYING)
+        await mock_ddp_response(menuai, MOCK_STATUS_PLAYING)
 
-    assert hass.states.get(mock_entity_id).state == STATE_PLAYING
+    assert menuai.states.get(mock_entity_id).state == STATE_PLAYING
 
 
-async def test_state_idle_is_set(hass: HomeAssistant) -> None:
+async def test_state_idle_is_set(menuai: menuai) -> None:
     """Test that state is set to idle."""
-    mock_entity_id = await setup_mock_component(hass)
+    mock_entity_id = await setup_mock_component(menuai)
 
-    await mock_ddp_response(hass, MOCK_STATUS_IDLE)
+    await mock_ddp_response(menuai, MOCK_STATUS_IDLE)
 
-    assert hass.states.get(mock_entity_id).state == STATE_IDLE
+    assert menuai.states.get(mock_entity_id).state == STATE_IDLE
 
 
-async def test_state_none_is_set(hass: HomeAssistant) -> None:
+async def test_state_none_is_set(menuai: menuai) -> None:
     """Test that state is set to None."""
-    mock_entity_id = await setup_mock_component(hass)
+    mock_entity_id = await setup_mock_component(menuai)
 
-    assert hass.states.get(mock_entity_id).state == STATE_UNKNOWN
+    assert menuai.states.get(mock_entity_id).state == STATE_UNKNOWN
 
 
-async def test_media_attributes_are_fetched(hass: HomeAssistant) -> None:
+async def test_media_attributes_are_fetched(menuai: menuai) -> None:
     """Test that media attributes are fetched."""
-    mock_entity_id = await setup_mock_component(hass)
-    mock_func = "homeassistant.components.ps4.media_player.pyps4.Ps4Async.async_get_ps_store_data"
+    mock_entity_id = await setup_mock_component(menuai)
+    mock_func = "menuai.components.ps4.media_player.pyps4.Ps4Async.async_get_ps_store_data"
 
     # Mock result from fetching data.
     mock_result = MagicMock()
@@ -230,10 +230,10 @@ async def test_media_attributes_are_fetched(hass: HomeAssistant) -> None:
     mock_result.game_type = "not_an_app"
 
     with patch(mock_func, return_value=mock_result) as mock_fetch:
-        await mock_ddp_response(hass, MOCK_STATUS_PLAYING)
-        await hass.async_block_till_done(wait_background_tasks=True)
+        await mock_ddp_response(menuai, MOCK_STATUS_PLAYING)
+        await menuai.async_block_till_done(wait_background_tasks=True)
 
-    mock_state = hass.states.get(mock_entity_id)
+    mock_state = menuai.states.get(mock_entity_id)
     mock_attrs = dict(mock_state.attributes)
 
     assert len(mock_fetch.mock_calls) == 1
@@ -246,16 +246,16 @@ async def test_media_attributes_are_fetched(hass: HomeAssistant) -> None:
     assert mock_attrs.get(ATTR_MEDIA_CONTENT_TYPE) == MOCK_TITLE_TYPE
 
     # Change state so that the next fetch is called.
-    await mock_ddp_response(hass, MOCK_STATUS_STANDBY)
+    await mock_ddp_response(menuai, MOCK_STATUS_STANDBY)
 
     # Test that content type of app is set.
     mock_result.game_type = PS_TYPE_APP
 
     with patch(mock_func, return_value=mock_result) as mock_fetch_app:
-        await mock_ddp_response(hass, MOCK_STATUS_PLAYING)
-        await hass.async_block_till_done(wait_background_tasks=True)
+        await mock_ddp_response(menuai, MOCK_STATUS_PLAYING)
+        await menuai.async_block_till_done(wait_background_tasks=True)
 
-    mock_state = hass.states.get(mock_entity_id)
+    mock_state = menuai.states.get(mock_entity_id)
     mock_attrs = dict(mock_state.attributes)
 
     assert len(mock_fetch_app.mock_calls) == 1
@@ -263,19 +263,19 @@ async def test_media_attributes_are_fetched(hass: HomeAssistant) -> None:
 
 
 async def test_media_attributes_are_loaded(
-    hass: HomeAssistant, patch_load_json_object: MagicMock
+    menuai: menuai, patch_load_json_object: MagicMock
 ) -> None:
     """Test that media attributes are loaded."""
-    mock_entity_id = await setup_mock_component(hass)
+    mock_entity_id = await setup_mock_component(menuai)
     patch_load_json_object.return_value = {MOCK_TITLE_ID: MOCK_GAMES_DATA_LOCKED}
 
     with patch(
-        "homeassistant.components.ps4.media_player.pyps4.Ps4Async.async_get_ps_store_data",
+        "menuai.components.ps4.media_player.pyps4.Ps4Async.async_get_ps_store_data",
         return_value=None,
     ) as mock_fetch:
-        await mock_ddp_response(hass, MOCK_STATUS_PLAYING)
+        await mock_ddp_response(menuai, MOCK_STATUS_PLAYING)
 
-    mock_state = hass.states.get(mock_entity_id)
+    mock_state = menuai.states.get(mock_entity_id)
     mock_attrs = dict(mock_state.attributes)
 
     # Ensure that data is not fetched.
@@ -291,20 +291,20 @@ async def test_media_attributes_are_loaded(
 
 
 async def test_device_info_is_set_from_status_correctly(
-    hass: HomeAssistant, patch_get_status, device_registry: dr.DeviceRegistry
+    menuai: menuai, patch_get_status, device_registry: dr.DeviceRegistry
 ) -> None:
     """Test that device info is set correctly from status update."""
     patch_get_status.return_value = MOCK_STATUS_STANDBY
-    mock_entity_id = await setup_mock_component(hass)
+    mock_entity_id = await setup_mock_component(menuai)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Reformat mock status-sw_version for assertion.
     mock_version = MOCK_STATUS_STANDBY["system-version"]
     mock_version = mock_version[1:4]
     mock_version = f"{mock_version[0]}.{mock_version[1:]}"
 
-    mock_state = hass.states.get(mock_entity_id).state
+    mock_state = menuai.states.get(mock_entity_id).state
 
     mock_d_entries = device_registry.devices
     mock_entry = device_registry.async_get_device(identifiers={(DOMAIN, MOCK_HOST_ID)})
@@ -318,13 +318,13 @@ async def test_device_info_is_set_from_status_correctly(
 
 
 async def test_device_info_is_assummed(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test that device info is assumed if device is unavailable."""
     # Create a device registry entry with device info.
-    MOCK_CONFIG.add_to_hass(hass)
+    MOCK_CONFIG.add_to_menuai(menuai)
     device_registry.async_get_or_create(
         config_entry_id=MOCK_ENTRY_ID,
         name=MOCK_HOST_NAME,
@@ -344,24 +344,24 @@ async def test_device_info_is_assummed(
         "media_player", DOMAIN, mock_unique_id
     )
 
-    mock_entity_id = await setup_mock_component(hass)
-    mock_state = hass.states.get(mock_entity_id).state
+    mock_entity_id = await setup_mock_component(menuai)
+    mock_state = menuai.states.get(mock_entity_id).state
 
     # Ensure that state is not set.
     assert mock_state == STATE_UNKNOWN
 
     # Ensure that entity_id is the same as the existing.
-    mock_entities = hass.states.async_entity_ids()
+    mock_entities = menuai.states.async_entity_ids()
     assert len(mock_entities) == 1
     assert mock_entities[0] == mock_entity_id
 
 
 async def test_device_info_assummed_works(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Reverse test that device info assumption works."""
-    mock_entity_id = await setup_mock_component(hass)
-    mock_state = hass.states.get(mock_entity_id).state
+    mock_entity_id = await setup_mock_component(menuai)
+    mock_state = menuai.states.get(mock_entity_id).state
     mock_d_entries = device_registry.devices
 
     # Ensure that state is not set.
@@ -371,94 +371,94 @@ async def test_device_info_assummed_works(
     assert not mock_d_entries
 
 
-async def test_turn_on(hass: HomeAssistant) -> None:
+async def test_turn_on(menuai: menuai) -> None:
     """Test that turn on service calls function."""
-    mock_entity_id = await setup_mock_component(hass)
-    mock_func = "homeassistant.components.ps4.media_player.pyps4.Ps4Async.wakeup"
+    mock_entity_id = await setup_mock_component(menuai)
+    mock_func = "menuai.components.ps4.media_player.pyps4.Ps4Async.wakeup"
 
     with patch(mock_func) as mock_call:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "media_player", "turn_on", {ATTR_ENTITY_ID: mock_entity_id}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_call.mock_calls) == 1
 
 
-async def test_turn_off(hass: HomeAssistant) -> None:
+async def test_turn_off(menuai: menuai) -> None:
     """Test that turn off service calls function."""
-    mock_entity_id = await setup_mock_component(hass)
-    mock_func = "homeassistant.components.ps4.media_player.pyps4.Ps4Async.standby"
+    mock_entity_id = await setup_mock_component(menuai)
+    mock_func = "menuai.components.ps4.media_player.pyps4.Ps4Async.standby"
 
     with patch(mock_func) as mock_call:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "media_player", "turn_off", {ATTR_ENTITY_ID: mock_entity_id}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_call.mock_calls) == 1
 
 
-async def test_toggle(hass: HomeAssistant) -> None:
+async def test_toggle(menuai: menuai) -> None:
     """Test that toggle service calls function."""
-    mock_entity_id = await setup_mock_component(hass)
-    mock_func = "homeassistant.components.ps4.media_player.pyps4.Ps4Async.toggle"
+    mock_entity_id = await setup_mock_component(menuai)
+    mock_func = "menuai.components.ps4.media_player.pyps4.Ps4Async.toggle"
 
     with patch(mock_func) as mock_call:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "media_player", "toggle", {ATTR_ENTITY_ID: mock_entity_id}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_call.mock_calls) == 1
 
 
-async def test_media_pause(hass: HomeAssistant) -> None:
+async def test_media_pause(menuai: menuai) -> None:
     """Test that media pause service calls function."""
-    mock_entity_id = await setup_mock_component(hass)
+    mock_entity_id = await setup_mock_component(menuai)
     mock_func = (
-        "homeassistant.components.ps4.media_player.pyps4.Ps4Async.remote_control"
+        "menuai.components.ps4.media_player.pyps4.Ps4Async.remote_control"
     )
 
     with patch(mock_func) as mock_call:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "media_player", "media_pause", {ATTR_ENTITY_ID: mock_entity_id}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_call.mock_calls) == 1
 
 
-async def test_media_stop(hass: HomeAssistant) -> None:
+async def test_media_stop(menuai: menuai) -> None:
     """Test that media stop service calls function."""
-    mock_entity_id = await setup_mock_component(hass)
+    mock_entity_id = await setup_mock_component(menuai)
     mock_func = (
-        "homeassistant.components.ps4.media_player.pyps4.Ps4Async.remote_control"
+        "menuai.components.ps4.media_player.pyps4.Ps4Async.remote_control"
     )
 
     with patch(mock_func) as mock_call:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "media_player", "media_stop", {ATTR_ENTITY_ID: mock_entity_id}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_call.mock_calls) == 1
 
 
 async def test_select_source(
-    hass: HomeAssistant, patch_load_json_object: MagicMock
+    menuai: menuai, patch_load_json_object: MagicMock
 ) -> None:
     """Test that select source service calls function with title."""
     patch_load_json_object.return_value = {MOCK_TITLE_ID: MOCK_GAMES_DATA}
     with patch("pyps4_2ndscreen.ps4.get_status", return_value=MOCK_STATUS_IDLE):
-        mock_entity_id = await setup_mock_component(hass)
+        mock_entity_id = await setup_mock_component(menuai)
 
     with (
         patch("pyps4_2ndscreen.ps4.Ps4Async.start_title") as mock_call,
-        patch("homeassistant.components.ps4.media_player.PS4Device.async_update"),
+        patch("menuai.components.ps4.media_player.PS4Device.async_update"),
     ):
         # Test with title name.
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "media_player",
             "select_source",
             {ATTR_ENTITY_ID: mock_entity_id, ATTR_INPUT_SOURCE: MOCK_TITLE_NAME},
@@ -469,19 +469,19 @@ async def test_select_source(
 
 
 async def test_select_source_caps(
-    hass: HomeAssistant, patch_load_json_object: MagicMock
+    menuai: menuai, patch_load_json_object: MagicMock
 ) -> None:
     """Test that select source service calls function with upper case title."""
     patch_load_json_object.return_value = {MOCK_TITLE_ID: MOCK_GAMES_DATA}
     with patch("pyps4_2ndscreen.ps4.get_status", return_value=MOCK_STATUS_IDLE):
-        mock_entity_id = await setup_mock_component(hass)
+        mock_entity_id = await setup_mock_component(menuai)
 
     with (
         patch("pyps4_2ndscreen.ps4.Ps4Async.start_title") as mock_call,
-        patch("homeassistant.components.ps4.media_player.PS4Device.async_update"),
+        patch("menuai.components.ps4.media_player.PS4Device.async_update"),
     ):
         # Test with title name in caps.
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "media_player",
             "select_source",
             {
@@ -495,19 +495,19 @@ async def test_select_source_caps(
 
 
 async def test_select_source_id(
-    hass: HomeAssistant, patch_load_json_object: MagicMock
+    menuai: menuai, patch_load_json_object: MagicMock
 ) -> None:
     """Test that select source service calls function with Title ID."""
     patch_load_json_object.return_value = {MOCK_TITLE_ID: MOCK_GAMES_DATA}
     with patch("pyps4_2ndscreen.ps4.get_status", return_value=MOCK_STATUS_IDLE):
-        mock_entity_id = await setup_mock_component(hass)
+        mock_entity_id = await setup_mock_component(menuai)
 
     with (
         patch("pyps4_2ndscreen.ps4.Ps4Async.start_title") as mock_call,
-        patch("homeassistant.components.ps4.media_player.PS4Device.async_update"),
+        patch("menuai.components.ps4.media_player.PS4Device.async_update"),
     ):
         # Test with title ID.
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "media_player",
             "select_source",
             {ATTR_ENTITY_ID: mock_entity_id, ATTR_INPUT_SOURCE: MOCK_TITLE_ID},
@@ -517,12 +517,12 @@ async def test_select_source_id(
     assert len(mock_call.mock_calls) == 1
 
 
-async def test_ps4_send_command(hass: HomeAssistant) -> None:
+async def test_ps4_send_command(menuai: menuai) -> None:
     """Test that ps4 send command service calls function."""
-    mock_entity_id = await setup_mock_component(hass)
+    mock_entity_id = await setup_mock_component(menuai)
 
     with patch("pyps4_2ndscreen.ps4.Ps4Async.remote_control") as mock_call:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             "send_command",
             {ATTR_ENTITY_ID: mock_entity_id, ATTR_COMMAND: "ps"},
@@ -532,18 +532,18 @@ async def test_ps4_send_command(hass: HomeAssistant) -> None:
     assert len(mock_call.mock_calls) == 1
 
 
-async def test_entry_is_unloaded(hass: HomeAssistant) -> None:
+async def test_entry_is_unloaded(menuai: menuai) -> None:
     """Test that entry is unloaded."""
     mock_entry = MockConfigEntry(
         domain=ps4.DOMAIN, data=MOCK_DATA, version=VERSION, entry_id=MOCK_ENTRY_ID
     )
-    mock_entity_id = await setup_mock_component(hass, mock_entry)
-    mock_unload = await ps4.async_unload_entry(hass, mock_entry)
+    mock_entity_id = await setup_mock_component(menuai, mock_entry)
+    mock_unload = await ps4.async_unload_entry(menuai, mock_entry)
 
     assert mock_unload is True
-    assert not hass.data[PS4_DATA].devices
+    assert not menuai.data[PS4_DATA].devices
 
     # Test that callback listener for entity is removed from protocol.
-    assert not hass.data[PS4_DATA].protocol.callbacks
+    assert not menuai.data[PS4_DATA].protocol.callbacks
 
-    assert hass.states.get(mock_entity_id) is None
+    assert menuai.states.get(mock_entity_id) is None

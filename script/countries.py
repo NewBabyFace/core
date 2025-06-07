@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pycountry
 
-from .hassfest.serializer import format_python_namespace
+from .menuaifest.serializer import format_python_namespace
 
 countries = {x.alpha_2 for x in pycountry.countries}
 
@@ -18,7 +18,7 @@ The values are directly corresponding to the ISO 3166 standard. If you need chan
 to the political situation in the world, please contact the ISO 3166 working group.
 """
 
-Path("homeassistant/generated/countries.py").write_text(
+Path("menuai/generated/countries.py").write_text(
     format_python_namespace(
         {
             "COUNTRIES": countries,

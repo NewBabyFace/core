@@ -15,34 +15,34 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from sqlalchemy.schema import Index
 
-from homeassistant.components import recorder
-from homeassistant.components.recorder import (
+from menuai.components import recorder
+from menuai.components.recorder import (
     Recorder,
     core,
     db_schema,
     migration,
     statistics,
 )
-from homeassistant.components.recorder.db_schema import (
+from menuai.components.recorder.db_schema import (
     Events,
     EventTypes,
     MigrationChanges,
     States,
     StatesMeta,
 )
-from homeassistant.components.recorder.models import process_timestamp
-from homeassistant.components.recorder.queries import (
+from menuai.components.recorder.models import process_timestamp
+from menuai.components.recorder.queries import (
     get_migration_changes,
     select_event_type_ids,
 )
-from homeassistant.components.recorder.util import (
+from menuai.components.recorder.util import (
     execute_stmt_lambda_element,
     get_index_by_name,
     session_scope,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
-from homeassistant.util.ulid import bytes_to_ulid, ulid_at_time, ulid_to_bytes
+from menuai.core import menuai
+from menuai.util import dt as dt_util
+from menuai.util.ulid import bytes_to_ulid, ulid_at_time, ulid_to_bytes
 
 from .common import (
     async_attach_db_engine,
@@ -54,25 +54,25 @@ from .conftest import instrument_migration
 from tests.common import async_test_home_assistant
 from tests.typing import RecorderInstanceContextManager
 
-CREATE_ENGINE_TARGET = "homeassistant.components.recorder.core.create_engine"
+CREATE_ENGINE_TARGET = "menuai.components.recorder.core.create_engine"
 SCHEMA_MODULE_32 = "tests.components.recorder.db_schema_32"
 
 
 @pytest.fixture
-async def mock_recorder_before_hass(
+async def mock_recorder_before_menuai(
     async_test_recorder: RecorderInstanceContextManager,
 ) -> None:
     """Set up recorder."""
 
 
-async def _async_wait_migration_done(hass: HomeAssistant) -> None:
+async def _async_wait_migration_done(menuai: menuai) -> None:
     """Wait for the migration to be done."""
-    await recorder.get_instance(hass).async_block_till_done()
-    await async_recorder_block_till_done(hass)
+    await recorder.get_instance(menuai).async_block_till_done()
+    await async_recorder_block_till_done(menuai)
 
 
-def _get_migration_id(hass: HomeAssistant) -> dict[str, int]:
-    with session_scope(hass=hass, read_only=True) as session:
+def _get_migration_id(menuai: menuai) -> dict[str, int]:
+    with session_scope(menuai=menuai, read_only=True) as session:
         return dict(execute_stmt_lambda_element(session, get_migration_changes()))
 
 
@@ -122,7 +122,7 @@ def db_schema_32():
 @pytest.mark.parametrize("persistent_database", [True])
 @pytest.mark.parametrize("enable_migrate_event_context_ids", [True])
 @pytest.mark.parametrize("indices_to_drop", [[], [("events", "ix_events_context_id")]])
-@pytest.mark.usefixtures("hass_storage")  # Prevent test hass from writing to storage
+@pytest.mark.usefixtures("menuai_storage")  # Prevent test menuai from writing to storage
 async def test_migrate_events_context_ids(
     async_test_recorder: RecorderInstanceContextManager,
     indices_to_drop: list[tuple[str, str]],
@@ -136,7 +136,7 @@ async def test_migrate_events_context_ids(
     uuid_bin = test_uuid.bytes
 
     def _insert_events():
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             session.add_all(
                 (
                     old_db_schema.Events(
@@ -229,33 +229,33 @@ async def test_migrate_events_context_ids(
         patch(CREATE_ENGINE_TARGET, new=_create_engine_test),
     ):
         async with (
-            async_test_home_assistant() as hass,
-            async_test_recorder(hass) as instance,
+            async_test_home_assistant() as menuai,
+            async_test_recorder(menuai) as instance,
         ):
             await instance.async_add_executor_job(_insert_events)
 
-            await async_wait_recording_done(hass)
+            await async_wait_recording_done(menuai)
             now = dt_util.utcnow()
             expected_ulid_fallback_start = ulid_to_bytes(ulid_at_time(now.timestamp()))[
                 0:6
             ]
-            await _async_wait_migration_done(hass)
+            await _async_wait_migration_done(menuai)
 
             # Remove index
             instance.recorder_and_worker_thread_ids.add(threading.get_ident())
             for table, index in indices_to_drop:
-                with session_scope(hass=hass) as session:
+                with session_scope(menuai=menuai) as session:
                     assert get_index_by_name(session, table, index) is not None
                 migration._drop_index(instance.get_session, table, index)
 
-            await hass.async_stop()
-            await hass.async_block_till_done()
+            await menuai.async_stop()
+            await menuai.async_block_till_done()
 
     def _object_as_dict(obj):
         return {c.key: getattr(obj, c.key) for c in inspect(obj).mapper.column_attrs}
 
     def _fetch_migrated_events():
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             events = (
                 session.query(Events)
                 .filter(
@@ -276,44 +276,44 @@ async def test_migrate_events_context_ids(
             return {event.event_type: _object_as_dict(event) for event in events}
 
     # Run again with new schema, let migration run
-    async with async_test_home_assistant() as hass:
+    async with async_test_home_assistant() as menuai:
         with (
             freeze_time(now),
-            instrument_migration(hass) as instrumented_migration,
+            instrument_migration(menuai) as instrumented_migration,
             patch(
                 "sqlalchemy.schema.Index.create", autospec=True, wraps=Index.create
             ) as wrapped_idx_create,
             patch.object(migration.EventIDPostMigration, "migrate_data"),
         ):
             async with async_test_recorder(
-                hass, wait_recorder=False, wait_recorder_setup=False
+                menuai, wait_recorder=False, wait_recorder_setup=False
             ) as instance:
                 # Check the context ID migrator is considered non-live
-                assert recorder.util.async_migration_is_live(hass) is False
+                assert recorder.util.async_migration_is_live(menuai) is False
                 instrumented_migration.migration_stall.set()
                 instance.recorder_and_worker_thread_ids.add(threading.get_ident())
 
-                await hass.async_block_till_done()
-                await async_wait_recording_done(hass)
-                await async_wait_recording_done(hass)
+                await menuai.async_block_till_done()
+                await async_wait_recording_done(menuai)
+                await async_wait_recording_done(menuai)
 
                 events_by_type = await instance.async_add_executor_job(
                     _fetch_migrated_events
                 )
 
                 migration_changes = await instance.async_add_executor_job(
-                    _get_migration_id, hass
+                    _get_migration_id, menuai
                 )
 
                 # Check the index which will be removed by the migrator no longer exists
-                with session_scope(hass=hass) as session:
+                with session_scope(menuai=menuai) as session:
                     assert (
                         get_index_by_name(session, "events", "ix_events_context_id")
                         is None
                     )
 
-                await hass.async_stop()
-                await hass.async_block_till_done()
+                await menuai.async_stop()
+                await menuai.async_block_till_done()
 
     # Check the index we removed was recreated
     index_names = [call[1][0].name for call in wrapped_idx_create.mock_calls]
@@ -396,7 +396,7 @@ async def test_migrate_events_context_ids(
 
 @pytest.mark.parametrize("persistent_database", [True])
 @pytest.mark.parametrize("enable_migrate_event_context_ids", [True])
-@pytest.mark.usefixtures("hass_storage")  # Prevent test hass from writing to storage
+@pytest.mark.usefixtures("menuai_storage")  # Prevent test menuai from writing to storage
 async def test_finish_migrate_events_context_ids(
     async_test_recorder: RecorderInstanceContextManager,
 ) -> None:
@@ -410,7 +410,7 @@ async def test_finish_migrate_events_context_ids(
     old_db_schema = sys.modules[SCHEMA_MODULE_32]
 
     def _insert_migration():
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             session.merge(
                 MigrationChanges(
                     migration_id=migration.EventsContextIDMigration.migration_id,
@@ -433,20 +433,20 @@ async def test_finish_migrate_events_context_ids(
         patch(CREATE_ENGINE_TARGET, new=_create_engine_test),
     ):
         async with (
-            async_test_home_assistant() as hass,
-            async_test_recorder(hass) as instance,
+            async_test_home_assistant() as menuai,
+            async_test_recorder(menuai) as instance,
         ):
             instance.recorder_and_worker_thread_ids.add(threading.get_ident())
 
-            await hass.async_block_till_done()
-            await async_wait_recording_done(hass)
+            await menuai.async_block_till_done()
+            await async_wait_recording_done(menuai)
 
             # Check the index which will be removed by the migrator exists
-            with session_scope(hass=hass) as session:
+            with session_scope(menuai=menuai) as session:
                 assert get_index_by_name(session, "events", "ix_events_context_id")
 
-            await hass.async_stop()
-            await hass.async_block_till_done()
+            await menuai.async_stop()
+            await menuai.async_block_till_done()
 
     # Run once with new schema, fake migration did not complete
     with (
@@ -454,39 +454,39 @@ async def test_finish_migrate_events_context_ids(
         patch(CREATE_ENGINE_TARGET, new=_create_engine_test),
     ):
         async with (
-            async_test_home_assistant() as hass,
-            async_test_recorder(hass) as instance,
+            async_test_home_assistant() as menuai,
+            async_test_recorder(menuai) as instance,
         ):
             instance.recorder_and_worker_thread_ids.add(threading.get_ident())
 
-            await hass.async_block_till_done()
-            await async_wait_recording_done(hass)
-            await async_wait_recording_done(hass)
+            await menuai.async_block_till_done()
+            await async_wait_recording_done(menuai)
+            await async_wait_recording_done(menuai)
 
             # Fake migration ran with old version
             await instance.async_add_executor_job(_insert_migration)
-            await async_wait_recording_done(hass)
+            await async_wait_recording_done(menuai)
 
             # Check the index which will be removed by the migrator exists
-            with session_scope(hass=hass) as session:
+            with session_scope(menuai=menuai) as session:
                 assert get_index_by_name(session, "events", "ix_events_context_id")
 
-            await hass.async_stop()
-            await hass.async_block_till_done()
+            await menuai.async_stop()
+            await menuai.async_block_till_done()
 
     # Run again with new schema, let migration complete
     async with (
-        async_test_home_assistant() as hass,
-        async_test_recorder(hass) as instance,
+        async_test_home_assistant() as menuai,
+        async_test_recorder(menuai) as instance,
     ):
         instance.recorder_and_worker_thread_ids.add(threading.get_ident())
 
-        await hass.async_block_till_done()
-        await async_wait_recording_done(hass)
-        await async_wait_recording_done(hass)
+        await menuai.async_block_till_done()
+        await async_wait_recording_done(menuai)
+        await async_wait_recording_done(menuai)
 
         migration_changes = await instance.async_add_executor_job(
-            _get_migration_id, hass
+            _get_migration_id, menuai
         )
         # Check migration ran again
         assert (
@@ -495,17 +495,17 @@ async def test_finish_migrate_events_context_ids(
         )
 
         # Check the index which will be removed by the migrator no longer exists
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             assert get_index_by_name(session, "events", "ix_events_context_id") is None
 
-        await hass.async_stop()
-        await hass.async_block_till_done()
+        await menuai.async_stop()
+        await menuai.async_block_till_done()
 
 
 @pytest.mark.parametrize("persistent_database", [True])
 @pytest.mark.parametrize("enable_migrate_state_context_ids", [True])
 @pytest.mark.parametrize("indices_to_drop", [[], [("states", "ix_states_context_id")]])
-@pytest.mark.usefixtures("hass_storage")  # Prevent test hass from writing to storage
+@pytest.mark.usefixtures("menuai_storage")  # Prevent test menuai from writing to storage
 async def test_migrate_states_context_ids(
     async_test_recorder: RecorderInstanceContextManager,
     indices_to_drop: list[tuple[str, str]],
@@ -519,7 +519,7 @@ async def test_migrate_states_context_ids(
     uuid_bin = test_uuid.bytes
 
     def _insert_states():
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             session.add_all(
                 (
                     old_db_schema.States(
@@ -594,29 +594,29 @@ async def test_migrate_states_context_ids(
         patch(CREATE_ENGINE_TARGET, new=_create_engine_test),
     ):
         async with (
-            async_test_home_assistant() as hass,
-            async_test_recorder(hass) as instance,
+            async_test_home_assistant() as menuai,
+            async_test_recorder(menuai) as instance,
         ):
             await instance.async_add_executor_job(_insert_states)
 
-            await async_wait_recording_done(hass)
-            await _async_wait_migration_done(hass)
+            await async_wait_recording_done(menuai)
+            await _async_wait_migration_done(menuai)
 
             # Remove index
             instance.recorder_and_worker_thread_ids.add(threading.get_ident())
             for table, index in indices_to_drop:
-                with session_scope(hass=hass) as session:
+                with session_scope(menuai=menuai) as session:
                     assert get_index_by_name(session, table, index) is not None
                 migration._drop_index(instance.get_session, table, index)
 
-            await hass.async_stop()
-            await hass.async_block_till_done()
+            await menuai.async_stop()
+            await menuai.async_block_till_done()
 
     def _object_as_dict(obj):
         return {c.key: getattr(obj, c.key) for c in inspect(obj).mapper.column_attrs}
 
     def _fetch_migrated_states():
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             events = (
                 session.query(States)
                 .filter(
@@ -637,43 +637,43 @@ async def test_migrate_states_context_ids(
             return {state.entity_id: _object_as_dict(state) for state in events}
 
     # Run again with new schema, let migration run
-    async with async_test_home_assistant() as hass:
+    async with async_test_home_assistant() as menuai:
         with (
-            instrument_migration(hass) as instrumented_migration,
+            instrument_migration(menuai) as instrumented_migration,
             patch(
                 "sqlalchemy.schema.Index.create", autospec=True, wraps=Index.create
             ) as wrapped_idx_create,
             patch.object(migration.EventIDPostMigration, "migrate_data"),
         ):
             async with async_test_recorder(
-                hass, wait_recorder=False, wait_recorder_setup=False
+                menuai, wait_recorder=False, wait_recorder_setup=False
             ) as instance:
                 # Check the context ID migrator is considered non-live
-                assert recorder.util.async_migration_is_live(hass) is False
+                assert recorder.util.async_migration_is_live(menuai) is False
                 instrumented_migration.migration_stall.set()
                 instance.recorder_and_worker_thread_ids.add(threading.get_ident())
 
-                await hass.async_block_till_done()
-                await async_wait_recording_done(hass)
-                await async_wait_recording_done(hass)
+                await menuai.async_block_till_done()
+                await async_wait_recording_done(menuai)
+                await async_wait_recording_done(menuai)
 
                 states_by_entity_id = await instance.async_add_executor_job(
                     _fetch_migrated_states
                 )
 
                 migration_changes = await instance.async_add_executor_job(
-                    _get_migration_id, hass
+                    _get_migration_id, menuai
                 )
 
                 # Check the index which will be removed by the migrator no longer exists
-                with session_scope(hass=hass) as session:
+                with session_scope(menuai=menuai) as session:
                     assert (
                         get_index_by_name(session, "states", "ix_states_context_id")
                         is None
                     )
 
-                await hass.async_stop()
-                await hass.async_block_till_done()
+                await menuai.async_stop()
+                await menuai.async_block_till_done()
 
     # Check the index we removed was recreated
     index_names = [call[1][0].name for call in wrapped_idx_create.mock_calls]
@@ -760,7 +760,7 @@ async def test_migrate_states_context_ids(
 
 @pytest.mark.parametrize("persistent_database", [True])
 @pytest.mark.parametrize("enable_migrate_state_context_ids", [True])
-@pytest.mark.usefixtures("hass_storage")  # Prevent test hass from writing to storage
+@pytest.mark.usefixtures("menuai_storage")  # Prevent test menuai from writing to storage
 async def test_finish_migrate_states_context_ids(
     async_test_recorder: RecorderInstanceContextManager,
 ) -> None:
@@ -774,7 +774,7 @@ async def test_finish_migrate_states_context_ids(
     old_db_schema = sys.modules[SCHEMA_MODULE_32]
 
     def _insert_migration():
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             session.merge(
                 MigrationChanges(
                     migration_id=migration.StatesContextIDMigration.migration_id,
@@ -797,20 +797,20 @@ async def test_finish_migrate_states_context_ids(
         patch(CREATE_ENGINE_TARGET, new=_create_engine_test),
     ):
         async with (
-            async_test_home_assistant() as hass,
-            async_test_recorder(hass) as instance,
+            async_test_home_assistant() as menuai,
+            async_test_recorder(menuai) as instance,
         ):
             instance.recorder_and_worker_thread_ids.add(threading.get_ident())
 
-            await hass.async_block_till_done()
-            await async_wait_recording_done(hass)
+            await menuai.async_block_till_done()
+            await async_wait_recording_done(menuai)
 
             # Check the index which will be removed by the migrator exists
-            with session_scope(hass=hass) as session:
+            with session_scope(menuai=menuai) as session:
                 assert get_index_by_name(session, "states", "ix_states_context_id")
 
-            await hass.async_stop()
-            await hass.async_block_till_done()
+            await menuai.async_stop()
+            await menuai.async_block_till_done()
 
     # Run once with new schema, fake migration did not complete
     with (
@@ -818,39 +818,39 @@ async def test_finish_migrate_states_context_ids(
         patch(CREATE_ENGINE_TARGET, new=_create_engine_test),
     ):
         async with (
-            async_test_home_assistant() as hass,
-            async_test_recorder(hass) as instance,
+            async_test_home_assistant() as menuai,
+            async_test_recorder(menuai) as instance,
         ):
             instance.recorder_and_worker_thread_ids.add(threading.get_ident())
 
-            await hass.async_block_till_done()
-            await async_wait_recording_done(hass)
-            await async_wait_recording_done(hass)
+            await menuai.async_block_till_done()
+            await async_wait_recording_done(menuai)
+            await async_wait_recording_done(menuai)
 
             # Fake migration ran with old version
             await instance.async_add_executor_job(_insert_migration)
-            await async_wait_recording_done(hass)
+            await async_wait_recording_done(menuai)
 
             # Check the index which will be removed by the migrator exists
-            with session_scope(hass=hass) as session:
+            with session_scope(menuai=menuai) as session:
                 assert get_index_by_name(session, "states", "ix_states_context_id")
 
-            await hass.async_stop()
-            await hass.async_block_till_done()
+            await menuai.async_stop()
+            await menuai.async_block_till_done()
 
     # Run again with new schema, let migration complete
     async with (
-        async_test_home_assistant() as hass,
-        async_test_recorder(hass) as instance,
+        async_test_home_assistant() as menuai,
+        async_test_recorder(menuai) as instance,
     ):
         instance.recorder_and_worker_thread_ids.add(threading.get_ident())
 
-        await hass.async_block_till_done()
-        await async_wait_recording_done(hass)
-        await async_wait_recording_done(hass)
+        await menuai.async_block_till_done()
+        await async_wait_recording_done(menuai)
+        await async_wait_recording_done(menuai)
 
         migration_changes = await instance.async_add_executor_job(
-            _get_migration_id, hass
+            _get_migration_id, menuai
         )
         # Check migration ran again
         assert (
@@ -859,16 +859,16 @@ async def test_finish_migrate_states_context_ids(
         )
 
         # Check the index which will be removed by the migrator no longer exists
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             assert get_index_by_name(session, "states", "ix_states_context_id") is None
 
-        await hass.async_stop()
-        await hass.async_block_till_done()
+        await menuai.async_stop()
+        await menuai.async_block_till_done()
 
 
 @pytest.mark.parametrize("persistent_database", [True])
 @pytest.mark.parametrize("enable_migrate_event_type_ids", [True])
-@pytest.mark.usefixtures("hass_storage")  # Prevent test hass from writing to storage
+@pytest.mark.usefixtures("menuai_storage")  # Prevent test menuai from writing to storage
 async def test_migrate_event_type_ids(
     async_test_recorder: RecorderInstanceContextManager,
 ) -> None:
@@ -877,7 +877,7 @@ async def test_migrate_event_type_ids(
     old_db_schema = sys.modules[SCHEMA_MODULE_32]
 
     def _insert_events():
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             session.add_all(
                 (
                     old_db_schema.Events(
@@ -906,19 +906,19 @@ async def test_migrate_event_type_ids(
         patch(CREATE_ENGINE_TARGET, new=_create_engine_test),
     ):
         async with (
-            async_test_home_assistant() as hass,
-            async_test_recorder(hass) as instance,
+            async_test_home_assistant() as menuai,
+            async_test_recorder(menuai) as instance,
         ):
             await instance.async_add_executor_job(_insert_events)
 
-            await async_wait_recording_done(hass)
-            await _async_wait_migration_done(hass)
+            await async_wait_recording_done(menuai)
+            await _async_wait_migration_done(menuai)
 
-            await hass.async_stop()
-            await hass.async_block_till_done()
+            await menuai.async_stop()
+            await menuai.async_block_till_done()
 
     def _fetch_migrated_events():
-        with session_scope(hass=hass, read_only=True) as session:
+        with session_scope(menuai=menuai, read_only=True) as session:
             events = (
                 session.query(Events.event_id, Events.time_fired, EventTypes.event_type)
                 .filter(
@@ -947,30 +947,30 @@ async def test_migrate_event_type_ids(
             return result
 
     def _get_many():
-        with session_scope(hass=hass, read_only=True) as session:
+        with session_scope(menuai=menuai, read_only=True) as session:
             return instance.event_type_manager.get_many(
                 ("event_type_one", "event_type_two"), session
             )
 
     # Run again with new schema, let migration run
     async with (
-        async_test_home_assistant() as hass,
-        async_test_recorder(hass) as instance,
+        async_test_home_assistant() as menuai,
+        async_test_recorder(menuai) as instance,
     ):
         instance.recorder_and_worker_thread_ids.add(threading.get_ident())
 
-        await hass.async_block_till_done()
-        await async_wait_recording_done(hass)
-        await async_wait_recording_done(hass)
+        await menuai.async_block_till_done()
+        await async_wait_recording_done(menuai)
+        await async_wait_recording_done(menuai)
 
         events_by_type = await instance.async_add_executor_job(_fetch_migrated_events)
         mapped = await instance.async_add_executor_job(_get_many)
         migration_changes = await instance.async_add_executor_job(
-            _get_migration_id, hass
+            _get_migration_id, menuai
         )
 
-        await hass.async_stop()
-        await hass.async_block_till_done()
+        await menuai.async_stop()
+        await menuai.async_block_till_done()
 
     assert len(events_by_type["event_type_one"]) == 2
     assert len(events_by_type["event_type_two"]) == 1
@@ -986,7 +986,7 @@ async def test_migrate_event_type_ids(
 
 @pytest.mark.parametrize("persistent_database", [True])
 @pytest.mark.parametrize("enable_migrate_entity_ids", [True])
-@pytest.mark.usefixtures("hass_storage")  # Prevent test hass from writing to storage
+@pytest.mark.usefixtures("menuai_storage")  # Prevent test menuai from writing to storage
 async def test_migrate_entity_ids(
     async_test_recorder: RecorderInstanceContextManager,
 ) -> None:
@@ -995,7 +995,7 @@ async def test_migrate_entity_ids(
     old_db_schema = sys.modules[SCHEMA_MODULE_32]
 
     def _insert_states():
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             session.add_all(
                 (
                     old_db_schema.States(
@@ -1024,19 +1024,19 @@ async def test_migrate_entity_ids(
         patch(CREATE_ENGINE_TARGET, new=_create_engine_test),
     ):
         async with (
-            async_test_home_assistant() as hass,
-            async_test_recorder(hass) as instance,
+            async_test_home_assistant() as menuai,
+            async_test_recorder(menuai) as instance,
         ):
             await instance.async_add_executor_job(_insert_states)
 
-            await async_wait_recording_done(hass)
-            await _async_wait_migration_done(hass)
+            await async_wait_recording_done(menuai)
+            await _async_wait_migration_done(menuai)
 
-            await hass.async_stop()
-            await hass.async_block_till_done()
+            await menuai.async_stop()
+            await menuai.async_block_till_done()
 
     def _fetch_migrated_states():
-        with session_scope(hass=hass, read_only=True) as session:
+        with session_scope(menuai=menuai, read_only=True) as session:
             states = (
                 session.query(
                     States.state,
@@ -1061,24 +1061,24 @@ async def test_migrate_entity_ids(
 
     # Run again with new schema, let migration run
     async with (
-        async_test_home_assistant() as hass,
-        async_test_recorder(hass) as instance,
+        async_test_home_assistant() as menuai,
+        async_test_recorder(menuai) as instance,
     ):
         instance.recorder_and_worker_thread_ids.add(threading.get_ident())
 
-        await hass.async_block_till_done()
-        await async_wait_recording_done(hass)
-        await async_wait_recording_done(hass)
+        await menuai.async_block_till_done()
+        await async_wait_recording_done(menuai)
+        await async_wait_recording_done(menuai)
 
         states_by_entity_id = await instance.async_add_executor_job(
             _fetch_migrated_states
         )
         migration_changes = await instance.async_add_executor_job(
-            _get_migration_id, hass
+            _get_migration_id, menuai
         )
 
-        await hass.async_stop()
-        await hass.async_block_till_done()
+        await menuai.async_stop()
+        await menuai.async_block_till_done()
 
     assert len(states_by_entity_id["sensor.two"]) == 2
     assert len(states_by_entity_id["sensor.one"]) == 1
@@ -1094,7 +1094,7 @@ async def test_migrate_entity_ids(
 @pytest.mark.parametrize(
     "indices_to_drop", [[], [("states", "ix_states_entity_id_last_updated_ts")]]
 )
-@pytest.mark.usefixtures("hass_storage")  # Prevent test hass from writing to storage
+@pytest.mark.usefixtures("menuai_storage")  # Prevent test menuai from writing to storage
 async def test_post_migrate_entity_ids(
     async_test_recorder: RecorderInstanceContextManager,
     indices_to_drop: list[tuple[str, str]],
@@ -1104,7 +1104,7 @@ async def test_post_migrate_entity_ids(
     old_db_schema = sys.modules[SCHEMA_MODULE_32]
 
     def _insert_events():
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             session.add_all(
                 (
                     old_db_schema.States(
@@ -1135,26 +1135,26 @@ async def test_post_migrate_entity_ids(
         patch(CREATE_ENGINE_TARGET, new=_create_engine_test),
     ):
         async with (
-            async_test_home_assistant() as hass,
-            async_test_recorder(hass) as instance,
+            async_test_home_assistant() as menuai,
+            async_test_recorder(menuai) as instance,
         ):
             await instance.async_add_executor_job(_insert_events)
 
-            await async_wait_recording_done(hass)
-            await _async_wait_migration_done(hass)
+            await async_wait_recording_done(menuai)
+            await _async_wait_migration_done(menuai)
 
             # Remove index
             instance.recorder_and_worker_thread_ids.add(threading.get_ident())
             for table, index in indices_to_drop:
-                with session_scope(hass=hass) as session:
+                with session_scope(menuai=menuai) as session:
                     assert get_index_by_name(session, table, index) is not None
                 migration._drop_index(instance.get_session, table, index)
 
-            await hass.async_stop()
-            await hass.async_block_till_done()
+            await menuai.async_stop()
+            await menuai.async_block_till_done()
 
     def _fetch_migrated_states():
-        with session_scope(hass=hass, read_only=True) as session:
+        with session_scope(menuai=menuai, read_only=True) as session:
             states = session.query(
                 States.state,
                 States.entity_id,
@@ -1170,20 +1170,20 @@ async def test_post_migrate_entity_ids(
         patch.object(migration.EventIDPostMigration, "migrate_data"),
     ):
         async with (
-            async_test_home_assistant() as hass,
-            async_test_recorder(hass) as instance,
+            async_test_home_assistant() as menuai,
+            async_test_recorder(menuai) as instance,
         ):
             instance.recorder_and_worker_thread_ids.add(threading.get_ident())
 
-            await hass.async_block_till_done()
-            await async_wait_recording_done(hass)
+            await menuai.async_block_till_done()
+            await async_wait_recording_done(menuai)
 
             states_by_state = await instance.async_add_executor_job(
                 _fetch_migrated_states
             )
 
             # Check the index which will be removed by the migrator no longer exists
-            with session_scope(hass=hass) as session:
+            with session_scope(menuai=menuai) as session:
                 assert (
                     get_index_by_name(
                         session, "states", "ix_states_entity_id_last_updated_ts"
@@ -1191,8 +1191,8 @@ async def test_post_migrate_entity_ids(
                     is None
                 )
 
-            await hass.async_stop()
-            await hass.async_block_till_done()
+            await menuai.async_stop()
+            await menuai.async_block_till_done()
 
     # Check the index we removed was recreated
     index_names = [call[1][0].name for call in wrapped_idx_create.mock_calls]
@@ -1205,7 +1205,7 @@ async def test_post_migrate_entity_ids(
 
 @pytest.mark.parametrize("persistent_database", [True])
 @pytest.mark.parametrize("enable_migrate_entity_ids", [True])
-@pytest.mark.usefixtures("hass_storage")  # Prevent test hass from writing to storage
+@pytest.mark.usefixtures("menuai_storage")  # Prevent test menuai from writing to storage
 async def test_migrate_null_entity_ids(
     async_test_recorder: RecorderInstanceContextManager,
 ) -> None:
@@ -1214,7 +1214,7 @@ async def test_migrate_null_entity_ids(
     old_db_schema = sys.modules[SCHEMA_MODULE_32]
 
     def _insert_states():
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             session.add(
                 old_db_schema.States(
                     entity_id="sensor.one",
@@ -1246,19 +1246,19 @@ async def test_migrate_null_entity_ids(
         patch(CREATE_ENGINE_TARGET, new=_create_engine_test),
     ):
         async with (
-            async_test_home_assistant() as hass,
-            async_test_recorder(hass) as instance,
+            async_test_home_assistant() as menuai,
+            async_test_recorder(menuai) as instance,
         ):
             await instance.async_add_executor_job(_insert_states)
 
-            await async_wait_recording_done(hass)
-            await _async_wait_migration_done(hass)
+            await async_wait_recording_done(menuai)
+            await _async_wait_migration_done(menuai)
 
-            await hass.async_stop()
-            await hass.async_block_till_done()
+            await menuai.async_stop()
+            await menuai.async_block_till_done()
 
     def _fetch_migrated_states():
-        with session_scope(hass=hass, read_only=True) as session:
+        with session_scope(menuai=menuai, read_only=True) as session:
             states = (
                 session.query(
                     States.state,
@@ -1282,27 +1282,27 @@ async def test_migrate_null_entity_ids(
             return result
 
     def _get_migration_id():
-        with session_scope(hass=hass, read_only=True) as session:
+        with session_scope(menuai=menuai, read_only=True) as session:
             return dict(execute_stmt_lambda_element(session, get_migration_changes()))
 
     # Run again with new schema, let migration run
     async with (
-        async_test_home_assistant() as hass,
-        async_test_recorder(hass) as instance,
+        async_test_home_assistant() as menuai,
+        async_test_recorder(menuai) as instance,
     ):
         instance.recorder_and_worker_thread_ids.add(threading.get_ident())
 
-        await hass.async_block_till_done()
-        await async_wait_recording_done(hass)
-        await async_wait_recording_done(hass)
+        await menuai.async_block_till_done()
+        await async_wait_recording_done(menuai)
+        await async_wait_recording_done(menuai)
 
         states_by_entity_id = await instance.async_add_executor_job(
             _fetch_migrated_states
         )
         migration_changes = await instance.async_add_executor_job(_get_migration_id)
 
-        await hass.async_stop()
-        await hass.async_block_till_done()
+        await menuai.async_stop()
+        await menuai.async_block_till_done()
 
     assert len(states_by_entity_id[migration._EMPTY_ENTITY_ID]) == 1000
     assert len(states_by_entity_id["sensor.one"]) == 2
@@ -1315,7 +1315,7 @@ async def test_migrate_null_entity_ids(
 
 @pytest.mark.parametrize("persistent_database", [True])
 @pytest.mark.parametrize("enable_migrate_event_type_ids", [True])
-@pytest.mark.usefixtures("hass_storage")  # Prevent test hass from writing to storage
+@pytest.mark.usefixtures("menuai_storage")  # Prevent test menuai from writing to storage
 async def test_migrate_null_event_type_ids(
     async_test_recorder: RecorderInstanceContextManager,
 ) -> None:
@@ -1324,7 +1324,7 @@ async def test_migrate_null_event_type_ids(
     old_db_schema = sys.modules[SCHEMA_MODULE_32]
 
     def _insert_events():
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             session.add(
                 old_db_schema.Events(
                     event_type="event_type_one",
@@ -1356,19 +1356,19 @@ async def test_migrate_null_event_type_ids(
         patch(CREATE_ENGINE_TARGET, new=_create_engine_test),
     ):
         async with (
-            async_test_home_assistant() as hass,
-            async_test_recorder(hass) as instance,
+            async_test_home_assistant() as menuai,
+            async_test_recorder(menuai) as instance,
         ):
             await instance.async_add_executor_job(_insert_events)
 
-            await async_wait_recording_done(hass)
-            await _async_wait_migration_done(hass)
+            await async_wait_recording_done(menuai)
+            await _async_wait_migration_done(menuai)
 
-            await hass.async_stop()
-            await hass.async_block_till_done()
+            await menuai.async_stop()
+            await menuai.async_block_till_done()
 
     def _fetch_migrated_events():
-        with session_scope(hass=hass, read_only=True) as session:
+        with session_scope(menuai=menuai, read_only=True) as session:
             events = (
                 session.query(Events.event_id, Events.time_fired, EventTypes.event_type)
                 .filter(
@@ -1397,25 +1397,25 @@ async def test_migrate_null_event_type_ids(
             return result
 
     def _get_migration_id():
-        with session_scope(hass=hass, read_only=True) as session:
+        with session_scope(menuai=menuai, read_only=True) as session:
             return dict(execute_stmt_lambda_element(session, get_migration_changes()))
 
     # Run again with new schema, let migration run
     async with (
-        async_test_home_assistant() as hass,
-        async_test_recorder(hass) as instance,
+        async_test_home_assistant() as menuai,
+        async_test_recorder(menuai) as instance,
     ):
         instance.recorder_and_worker_thread_ids.add(threading.get_ident())
 
-        await hass.async_block_till_done()
-        await async_wait_recording_done(hass)
-        await async_wait_recording_done(hass)
+        await menuai.async_block_till_done()
+        await async_wait_recording_done(menuai)
+        await async_wait_recording_done(menuai)
 
         events_by_type = await instance.async_add_executor_job(_fetch_migrated_events)
         migration_changes = await instance.async_add_executor_job(_get_migration_id)
 
-        await hass.async_stop()
-        await hass.async_block_till_done()
+        await menuai.async_stop()
+        await menuai.async_block_till_done()
 
     assert len(events_by_type["event_type_one"]) == 2
     assert len(events_by_type[migration._EMPTY_EVENT_TYPE]) == 1000
@@ -1427,11 +1427,11 @@ async def test_migrate_null_event_type_ids(
 
 @pytest.mark.usefixtures("db_schema_32")
 async def test_stats_timestamp_conversion_is_reentrant(
-    hass: HomeAssistant, recorder_mock: Recorder
+    menuai: menuai, recorder_mock: Recorder
 ) -> None:
     """Test stats migration is reentrant."""
-    await async_wait_recording_done(hass)
-    await async_attach_db_engine(hass)
+    await async_wait_recording_done(menuai)
+    await async_attach_db_engine(menuai)
     importlib.import_module(SCHEMA_MODULE_32)
     old_db_schema = sys.modules[SCHEMA_MODULE_32]
     now = dt_util.utcnow()
@@ -1441,11 +1441,11 @@ async def test_stats_timestamp_conversion_is_reentrant(
 
     def _do_migration():
         migration._migrate_statistics_columns_to_timestamp_removing_duplicates(
-            hass, recorder_mock, recorder_mock.get_session, recorder_mock.engine
+            menuai, recorder_mock, recorder_mock.get_session, recorder_mock.engine
         )
 
     def _insert_fake_metadata():
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             session.add(
                 old_db_schema.StatisticsMeta(
                     id=1000,
@@ -1459,7 +1459,7 @@ async def test_stats_timestamp_conversion_is_reentrant(
             )
 
     def _insert_pre_timestamp_stat(date_time: datetime.datetime) -> None:
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             session.add(
                 old_db_schema.StatisticsShortTerm(
                     metadata_id=1000,
@@ -1474,7 +1474,7 @@ async def test_stats_timestamp_conversion_is_reentrant(
             )
 
     def _insert_post_timestamp_stat(date_time: datetime.datetime) -> None:
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             session.add(
                 db_schema.StatisticsShortTerm(
                     metadata_id=1000,
@@ -1489,7 +1489,7 @@ async def test_stats_timestamp_conversion_is_reentrant(
             )
 
     def _get_all_short_term_stats() -> list[dict[str, Any]]:
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             results = [
                 {
                     field.name: getattr(result, field.name)
@@ -1505,19 +1505,19 @@ async def test_stats_timestamp_conversion_is_reentrant(
 
     # Do not optimize this block, its intentionally written to interleave
     # with the migration
-    await hass.async_add_executor_job(_insert_fake_metadata)
-    await async_wait_recording_done(hass)
-    await hass.async_add_executor_job(_insert_pre_timestamp_stat, one_year_ago)
-    await async_wait_recording_done(hass)
-    await hass.async_add_executor_job(_do_migration)
-    await hass.async_add_executor_job(_insert_post_timestamp_stat, six_months_ago)
-    await async_wait_recording_done(hass)
-    await hass.async_add_executor_job(_do_migration)
-    await hass.async_add_executor_job(_insert_pre_timestamp_stat, one_month_ago)
-    await async_wait_recording_done(hass)
-    await hass.async_add_executor_job(_do_migration)
+    await menuai.async_add_executor_job(_insert_fake_metadata)
+    await async_wait_recording_done(menuai)
+    await menuai.async_add_executor_job(_insert_pre_timestamp_stat, one_year_ago)
+    await async_wait_recording_done(menuai)
+    await menuai.async_add_executor_job(_do_migration)
+    await menuai.async_add_executor_job(_insert_post_timestamp_stat, six_months_ago)
+    await async_wait_recording_done(menuai)
+    await menuai.async_add_executor_job(_do_migration)
+    await menuai.async_add_executor_job(_insert_pre_timestamp_stat, one_month_ago)
+    await async_wait_recording_done(menuai)
+    await menuai.async_add_executor_job(_do_migration)
 
-    final_result = await hass.async_add_executor_job(_get_all_short_term_stats)
+    final_result = await menuai.async_add_executor_job(_get_all_short_term_stats)
     # Normalize timestamps since each engine returns them differently
     for row in final_result:
         if row["created"] is not None:
@@ -1583,11 +1583,11 @@ async def test_stats_timestamp_conversion_is_reentrant(
 
 @pytest.mark.usefixtures("db_schema_32")
 async def test_stats_timestamp_with_one_by_one(
-    hass: HomeAssistant, recorder_mock: Recorder
+    menuai: menuai, recorder_mock: Recorder
 ) -> None:
     """Test stats migration with one by one."""
-    await async_wait_recording_done(hass)
-    await async_attach_db_engine(hass)
+    await async_wait_recording_done(menuai)
+    await async_attach_db_engine(menuai)
     importlib.import_module(SCHEMA_MODULE_32)
     old_db_schema = sys.modules[SCHEMA_MODULE_32]
     now = dt_util.utcnow()
@@ -1602,11 +1602,11 @@ async def test_stats_timestamp_with_one_by_one(
             side_effect=IntegrityError("test", "test", "test"),
         ):
             migration._migrate_statistics_columns_to_timestamp_removing_duplicates(
-                hass, recorder_mock, recorder_mock.get_session, recorder_mock.engine
+                menuai, recorder_mock, recorder_mock.get_session, recorder_mock.engine
             )
 
     def _insert_fake_metadata():
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             session.add(
                 old_db_schema.StatisticsMeta(
                     id=1000,
@@ -1620,7 +1620,7 @@ async def test_stats_timestamp_with_one_by_one(
             )
 
     def _insert_pre_timestamp_stat(date_time: datetime.datetime) -> None:
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             session.add_all(
                 (
                     old_db_schema.StatisticsShortTerm(
@@ -1647,7 +1647,7 @@ async def test_stats_timestamp_with_one_by_one(
             )
 
     def _insert_post_timestamp_stat(date_time: datetime.datetime) -> None:
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             session.add_all(
                 (
                     db_schema.StatisticsShortTerm(
@@ -1675,7 +1675,7 @@ async def test_stats_timestamp_with_one_by_one(
 
     def _get_all_stats(table: old_db_schema.StatisticsBase) -> list[dict[str, Any]]:
         """Get all stats from a table."""
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             results = [
                 {field.name: getattr(result, field.name) for field in table.__table__.c}
                 for result in session.query(table)
@@ -1691,8 +1691,8 @@ async def test_stats_timestamp_with_one_by_one(
         _insert_pre_timestamp_stat(one_month_ago)
         _do_migration()
 
-    await hass.async_add_executor_job(_insert_and_do_migration)
-    final_short_term_result = await hass.async_add_executor_job(
+    await menuai.async_add_executor_job(_insert_and_do_migration)
+    final_short_term_result = await menuai.async_add_executor_job(
         _get_all_stats, old_db_schema.StatisticsShortTerm
     )
     final_short_term_result = sorted(
@@ -1750,7 +1750,7 @@ async def test_stats_timestamp_with_one_by_one(
         },
     ]
 
-    final_result = await hass.async_add_executor_job(
+    final_result = await menuai.async_add_executor_job(
         _get_all_stats, old_db_schema.Statistics
     )
     final_result = sorted(final_result, key=lambda row: row["start_ts"])
@@ -1809,11 +1809,11 @@ async def test_stats_timestamp_with_one_by_one(
 
 @pytest.mark.usefixtures("db_schema_32")
 async def test_stats_timestamp_with_one_by_one_removes_duplicates(
-    hass: HomeAssistant, recorder_mock: Recorder
+    menuai: menuai, recorder_mock: Recorder
 ) -> None:
     """Test stats migration with one by one removes duplicates."""
-    await async_wait_recording_done(hass)
-    await async_attach_db_engine(hass)
+    await async_wait_recording_done(menuai)
+    await async_attach_db_engine(menuai)
     importlib.import_module(SCHEMA_MODULE_32)
     old_db_schema = sys.modules[SCHEMA_MODULE_32]
     now = dt_util.utcnow()
@@ -1835,11 +1835,11 @@ async def test_stats_timestamp_with_one_by_one_removes_duplicates(
             ),
         ):
             migration._migrate_statistics_columns_to_timestamp_removing_duplicates(
-                hass, recorder_mock, recorder_mock.get_session, recorder_mock.engine
+                menuai, recorder_mock, recorder_mock.get_session, recorder_mock.engine
             )
 
     def _insert_fake_metadata():
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             session.add(
                 old_db_schema.StatisticsMeta(
                     id=1000,
@@ -1853,7 +1853,7 @@ async def test_stats_timestamp_with_one_by_one_removes_duplicates(
             )
 
     def _insert_pre_timestamp_stat(date_time: datetime.datetime) -> None:
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             session.add_all(
                 (
                     old_db_schema.StatisticsShortTerm(
@@ -1880,7 +1880,7 @@ async def test_stats_timestamp_with_one_by_one_removes_duplicates(
             )
 
     def _insert_post_timestamp_stat(date_time: datetime.datetime) -> None:
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             session.add_all(
                 (
                     db_schema.StatisticsShortTerm(
@@ -1908,7 +1908,7 @@ async def test_stats_timestamp_with_one_by_one_removes_duplicates(
 
     def _get_all_stats(table: old_db_schema.StatisticsBase) -> list[dict[str, Any]]:
         """Get all stats from a table."""
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             results = [
                 {field.name: getattr(result, field.name) for field in table.__table__.c}
                 for result in session.query(table)
@@ -1924,8 +1924,8 @@ async def test_stats_timestamp_with_one_by_one_removes_duplicates(
         _insert_pre_timestamp_stat(one_month_ago)
         _do_migration()
 
-    await hass.async_add_executor_job(_insert_and_do_migration)
-    final_short_term_result = await hass.async_add_executor_job(
+    await menuai.async_add_executor_job(_insert_and_do_migration)
+    final_short_term_result = await menuai.async_add_executor_job(
         _get_all_stats, old_db_schema.StatisticsShortTerm
     )
     final_short_term_result = sorted(
@@ -1985,7 +1985,7 @@ async def test_stats_timestamp_with_one_by_one_removes_duplicates(
 
     # All the duplicates should have been removed but
     # the non-duplicates should still be there
-    final_result = await hass.async_add_executor_job(
+    final_result = await menuai.async_add_executor_job(
         _get_all_stats, old_db_schema.Statistics
     )
     assert final_result == [
@@ -2009,7 +2009,7 @@ async def test_stats_timestamp_with_one_by_one_removes_duplicates(
 
 
 @pytest.mark.parametrize("persistent_database", [True])
-@pytest.mark.usefixtures("hass_storage")  # Prevent test hass from writing to storage
+@pytest.mark.usefixtures("menuai_storage")  # Prevent test menuai from writing to storage
 async def test_stats_migrate_times(
     async_test_recorder: RecorderInstanceContextManager,
     caplog: pytest.LogCaptureFixture,
@@ -2042,7 +2042,7 @@ async def test_stats_migrate_times(
     number_of_migrations = 5
 
     def _get_index_names(table):
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             return inspect(session.connection()).get_indexes(table)
 
     with (
@@ -2052,22 +2052,22 @@ async def test_stats_migrate_times(
         patch(CREATE_ENGINE_TARGET, new=_create_engine_test),
     ):
         async with (
-            async_test_home_assistant() as hass,
-            async_test_recorder(hass) as instance,
+            async_test_home_assistant() as menuai,
+            async_test_recorder(menuai) as instance,
         ):
-            await hass.async_block_till_done()
-            await async_wait_recording_done(hass)
-            await async_wait_recording_done(hass)
+            await menuai.async_block_till_done()
+            await async_wait_recording_done(menuai)
+            await async_wait_recording_done(menuai)
 
             def _add_data():
-                with session_scope(hass=hass) as session:
+                with session_scope(menuai=menuai) as session:
                     session.add(old_db_schema.StatisticsMeta.from_meta(mock_metadata))
-                with session_scope(hass=hass) as session:
+                with session_scope(menuai=menuai) as session:
                     session.add(old_db_schema.Statistics(**statistics_kwargs))
                     session.add(old_db_schema.StatisticsShortTerm(**statistics_kwargs))
 
             await instance.async_add_executor_job(_add_data)
-            await hass.async_block_till_done()
+            await menuai.async_block_till_done()
             await instance.async_block_till_done()
 
             statistics_indexes = await instance.async_add_executor_job(
@@ -2081,8 +2081,8 @@ async def test_stats_migrate_times(
                 index["name"] for index in statistics_short_term_indexes
             }
 
-            await hass.async_stop()
-            await hass.async_block_till_done()
+            await menuai.async_stop()
+            await menuai.async_block_till_done()
 
     assert "ix_statistics_statistic_id_start" in statistics_index_names
     assert (
@@ -2092,19 +2092,19 @@ async def test_stats_migrate_times(
 
     # Test that the times are migrated during migration from schema 32
     async with (
-        async_test_home_assistant() as hass,
-        async_test_recorder(hass) as instance,
+        async_test_home_assistant() as menuai,
+        async_test_recorder(menuai) as instance,
     ):
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         # We need to wait for all the migration tasks to complete
         # before we can check the database.
         for _ in range(number_of_migrations):
             await instance.async_block_till_done()
-            await async_wait_recording_done(hass)
+            await async_wait_recording_done(menuai)
 
         def _get_test_data_from_db():
-            with session_scope(hass=hass) as session:
+            with session_scope(menuai=menuai) as session:
                 statistics_result = list(
                     session.query(recorder.db_schema.Statistics)
                     .join(
@@ -2161,11 +2161,11 @@ async def test_stats_migrate_times(
             not in statistics_short_term_index_names
         )
 
-        await hass.async_stop()
+        await menuai.async_stop()
 
 
 @pytest.mark.parametrize("persistent_database", [True])
-@pytest.mark.usefixtures("hass_storage")  # Prevent test hass from writing to storage
+@pytest.mark.usefixtures("menuai_storage")  # Prevent test menuai from writing to storage
 async def test_cleanup_unmigrated_state_timestamps(
     async_test_recorder: RecorderInstanceContextManager,
 ) -> None:
@@ -2180,7 +2180,7 @@ async def test_cleanup_unmigrated_state_timestamps(
         return {c.key: getattr(obj, c.key) for c in inspect(obj).mapper.column_attrs}
 
     def _insert_states():
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             state1 = old_db_schema.States(
                 entity_id="state.test_state1",
                 last_updated=datetime.datetime(
@@ -2235,7 +2235,7 @@ async def test_cleanup_unmigrated_state_timestamps(
             )
             session.add_all((state3,))
 
-        with session_scope(hass=hass, read_only=True) as session:
+        with session_scope(menuai=menuai, read_only=True) as session:
             states = session.query(old_db_schema.States).all()
             assert len(states) == 3
 
@@ -2246,49 +2246,49 @@ async def test_cleanup_unmigrated_state_timestamps(
         patch(CREATE_ENGINE_TARGET, new=_create_engine_test),
     ):
         async with (
-            async_test_home_assistant() as hass,
-            async_test_recorder(hass) as instance,
+            async_test_home_assistant() as menuai,
+            async_test_recorder(menuai) as instance,
         ):
             await instance.async_add_executor_job(_insert_states)
 
-            await async_wait_recording_done(hass)
+            await async_wait_recording_done(menuai)
             now = dt_util.utcnow()
-            await _async_wait_migration_done(hass)
-            await async_wait_recording_done(hass)
+            await _async_wait_migration_done(menuai)
+            await async_wait_recording_done(menuai)
 
-            await hass.async_stop()
-            await hass.async_block_till_done()
+            await menuai.async_stop()
+            await menuai.async_block_till_done()
 
     def _fetch_migrated_states():
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             states = session.query(States).all()
             assert len(states) == 3
             return {state.state_id: _object_as_dict(state) for state in states}
 
     # Run again with new schema, let migration run
-    async with async_test_home_assistant() as hass:
+    async with async_test_home_assistant() as menuai:
         with (
             freeze_time(now),
-            instrument_migration(hass) as instrumented_migration,
+            instrument_migration(menuai) as instrumented_migration,
         ):
             async with async_test_recorder(
-                hass, wait_recorder=False, wait_recorder_setup=False
+                menuai, wait_recorder=False, wait_recorder_setup=False
             ) as instance:
                 # Check the context ID migrator is considered non-live
-                assert recorder.util.async_migration_is_live(hass) is False
+                assert recorder.util.async_migration_is_live(menuai) is False
                 instrumented_migration.migration_stall.set()
                 instance.recorder_and_worker_thread_ids.add(threading.get_ident())
 
-                await hass.async_block_till_done()
-                await async_wait_recording_done(hass)
-                await async_wait_recording_done(hass)
+                await menuai.async_block_till_done()
+                await async_wait_recording_done(menuai)
+                await async_wait_recording_done(menuai)
 
                 states_by_metadata_id = await instance.async_add_executor_job(
                     _fetch_migrated_states
                 )
 
-                await hass.async_stop()
-                await hass.async_block_till_done()
+                await menuai.async_stop()
+                await menuai.async_block_till_done()
 
     assert len(states_by_metadata_id) == 3
     for state in states_by_metadata_id.values():

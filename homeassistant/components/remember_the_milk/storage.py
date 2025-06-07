@@ -1,4 +1,4 @@
-"""Store RTM configuration in Home Assistant storage."""
+"""Store RTM configuration in MenuAI storage."""
 
 from __future__ import annotations
 
@@ -6,8 +6,8 @@ import json
 from pathlib import Path
 from typing import cast
 
-from homeassistant.const import CONF_TOKEN
-from homeassistant.core import HomeAssistant
+from menuai.const import CONF_TOKEN
+from menuai.core import menuai
 
 from .const import LOGGER
 
@@ -21,9 +21,9 @@ CONF_TIMESERIES_ID = "timeseries_id"
 class RememberTheMilkConfiguration:
     """Internal configuration data for Remember The Milk."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Create new instance of configuration."""
-        self._config_file_path = hass.config.path(CONFIG_FILE_NAME)
+        self._config_file_path = menuai.config.path(CONFIG_FILE_NAME)
         self._config = {}
         LOGGER.debug("Loading configuration from file: %s", self._config_file_path)
         try:
@@ -77,15 +77,15 @@ class RememberTheMilkConfiguration:
             self._config[profile_name][CONF_ID_MAP] = {}
 
     def get_rtm_id(
-        self, profile_name: str, hass_id: str
+        self, profile_name: str, menuai_id: str
     ) -> tuple[str, str, str] | None:
-        """Get the RTM ids for a Home Assistant task ID.
+        """Get the RTM ids for a MenuAI task ID.
 
         The id of a RTM tasks consists of the tuple:
         list id, timeseries id and the task id.
         """
         self._initialize_profile(profile_name)
-        ids = self._config[profile_name][CONF_ID_MAP].get(hass_id)
+        ids = self._config[profile_name][CONF_ID_MAP].get(menuai_id)
         if ids is None:
             return None
         return ids[CONF_LIST_ID], ids[CONF_TIMESERIES_ID], ids[CONF_TASK_ID]
@@ -93,24 +93,24 @@ class RememberTheMilkConfiguration:
     def set_rtm_id(
         self,
         profile_name: str,
-        hass_id: str,
+        menuai_id: str,
         list_id: str,
         time_series_id: str,
         rtm_task_id: str,
     ) -> None:
-        """Add/Update the RTM task ID for a Home Assistant task IS."""
+        """Add/Update the RTM task ID for a MenuAI task IS."""
         self._initialize_profile(profile_name)
         id_tuple = {
             CONF_LIST_ID: list_id,
             CONF_TIMESERIES_ID: time_series_id,
             CONF_TASK_ID: rtm_task_id,
         }
-        self._config[profile_name][CONF_ID_MAP][hass_id] = id_tuple
+        self._config[profile_name][CONF_ID_MAP][menuai_id] = id_tuple
         self._save_config()
 
-    def delete_rtm_id(self, profile_name: str, hass_id: str) -> None:
+    def delete_rtm_id(self, profile_name: str, menuai_id: str) -> None:
         """Delete a key mapping."""
         self._initialize_profile(profile_name)
-        if hass_id in self._config[profile_name][CONF_ID_MAP]:
-            del self._config[profile_name][CONF_ID_MAP][hass_id]
+        if menuai_id in self._config[profile_name][CONF_ID_MAP]:
+            del self._config[profile_name][CONF_ID_MAP][menuai_id]
             self._save_config()

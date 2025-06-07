@@ -2,14 +2,14 @@
 
 from typing import TYPE_CHECKING
 
-from homeassistant.components.event import (
+from menuai.components.event import (
     EventDeviceClass,
     EventEntity,
     EventEntityDescription,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .device import DoorbirdEvent
@@ -33,7 +33,7 @@ EVENT_DESCRIPTIONS = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: DoorBirdConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -68,11 +68,11 @@ class DoorBirdEventEntity(DoorBirdEntity, EventEntity):
         friendly_name = slug_name.replace("_", " ")
         self._attr_name = friendly_name[0:1].upper() + friendly_name[1:].lower()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to device events."""
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"{DOMAIN}_{self._doorbird_event.event}",
                 self._async_handle_event,
             )

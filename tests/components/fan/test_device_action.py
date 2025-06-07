@@ -3,14 +3,14 @@
 import pytest
 from pytest_unordered import unordered
 
-from homeassistant.components import automation
-from homeassistant.components.device_automation import DeviceAutomationType
-from homeassistant.components.fan import DOMAIN
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.entity_registry import RegistryEntryHider
-from homeassistant.setup import async_setup_component
+from menuai.components import automation
+from menuai.components.device_automation import DeviceAutomationType
+from menuai.components.fan import DOMAIN
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.entity_registry import RegistryEntryHider
+from menuai.setup import async_setup_component
 
 from tests.common import (
     MockConfigEntry,
@@ -25,13 +25,13 @@ def stub_blueprint_populate_autouse(stub_blueprint_populate: None) -> None:
 
 
 async def test_get_actions(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test we get the expected actions from a fan."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -51,7 +51,7 @@ async def test_get_actions(
         for action in ("turn_on", "turn_off", "toggle")
     ]
     actions = await async_get_device_automations(
-        hass, DeviceAutomationType.ACTION, device_entry.id
+        menuai, DeviceAutomationType.ACTION, device_entry.id
     )
     assert actions == unordered(expected_actions)
 
@@ -66,7 +66,7 @@ async def test_get_actions(
     ],
 )
 async def test_get_actions_hidden_auxiliary(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     hidden_by,
@@ -74,7 +74,7 @@ async def test_get_actions_hidden_auxiliary(
 ) -> None:
     """Test we get the expected actions from a hidden or auxiliary entity."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -99,19 +99,19 @@ async def test_get_actions_hidden_auxiliary(
         for action in ("turn_on", "turn_off", "toggle")
     ]
     actions = await async_get_device_automations(
-        hass, DeviceAutomationType.ACTION, device_entry.id
+        menuai, DeviceAutomationType.ACTION, device_entry.id
     )
     assert actions == unordered(expected_actions)
 
 
 async def test_action(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test for turn_on and turn_off actions."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -121,7 +121,7 @@ async def test_action(
     )
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -165,26 +165,26 @@ async def test_action(
         },
     )
 
-    turn_off_calls = async_mock_service(hass, "fan", "turn_off")
-    turn_on_calls = async_mock_service(hass, "fan", "turn_on")
-    toggle_calls = async_mock_service(hass, "fan", "toggle")
+    turn_off_calls = async_mock_service(menuai, "fan", "turn_off")
+    turn_on_calls = async_mock_service(menuai, "fan", "turn_on")
+    toggle_calls = async_mock_service(menuai, "fan", "toggle")
 
-    hass.bus.async_fire("test_event_turn_off")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event_turn_off")
+    await menuai.async_block_till_done()
     assert len(turn_off_calls) == 1
     assert turn_off_calls[0].data["entity_id"] == entry.entity_id
     assert len(turn_on_calls) == 0
     assert len(toggle_calls) == 0
 
-    hass.bus.async_fire("test_event_turn_on")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event_turn_on")
+    await menuai.async_block_till_done()
     assert len(turn_off_calls) == 1
     assert len(turn_on_calls) == 1
     assert turn_on_calls[0].data["entity_id"] == entry.entity_id
     assert len(toggle_calls) == 0
 
-    hass.bus.async_fire("test_event_toggle")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event_toggle")
+    await menuai.async_block_till_done()
     assert len(turn_off_calls) == 1
     assert len(turn_on_calls) == 1
     assert len(toggle_calls) == 1
@@ -192,13 +192,13 @@ async def test_action(
 
 
 async def test_action_legacy(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test for turn_on and turn_off actions."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -208,7 +208,7 @@ async def test_action_legacy(
     )
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -228,8 +228,8 @@ async def test_action_legacy(
         },
     )
 
-    turn_off_calls = async_mock_service(hass, "fan", "turn_off")
+    turn_off_calls = async_mock_service(menuai, "fan", "turn_off")
 
-    hass.bus.async_fire("test_event_turn_off")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event_turn_off")
+    await menuai.async_block_till_done()
     assert len(turn_off_calls) == 1

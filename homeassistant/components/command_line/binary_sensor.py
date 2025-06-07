@@ -5,8 +5,8 @@ from __future__ import annotations
 import asyncio
 from datetime import datetime, timedelta
 
-from homeassistant.components.binary_sensor import BinarySensorEntity
-from homeassistant.const import (
+from menuai.components.binary_sensor import BinarySensorEntity
+from menuai.const import (
     CONF_COMMAND,
     CONF_NAME,
     CONF_PAYLOAD_OFF,
@@ -14,16 +14,16 @@ from homeassistant.const import (
     CONF_SCAN_INTERVAL,
     CONF_VALUE_TEMPLATE,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.template import Template
-from homeassistant.helpers.trigger_template_entity import (
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.event import async_track_time_interval
+from menuai.helpers.template import Template
+from menuai.helpers.trigger_template_entity import (
     ManualTriggerEntity,
     ValueTemplate,
 )
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import dt as dt_util
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import dt as dt_util
 
 from .const import CONF_COMMAND_TIMEOUT, LOGGER, TRIGGER_ENTITY_OPTIONS
 from .sensor import CommandSensorData
@@ -36,7 +36,7 @@ SCAN_INTERVAL = timedelta(seconds=60)
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -55,10 +55,10 @@ async def async_setup_platform(
     )
     value_template: ValueTemplate | None = binary_sensor_config.get(CONF_VALUE_TEMPLATE)
 
-    data = CommandSensorData(hass, command, command_timeout)
+    data = CommandSensorData(menuai, command, command_timeout)
 
     trigger_entity_config = {
-        CONF_NAME: Template(binary_sensor_config.get(CONF_NAME, DEFAULT_NAME), hass),
+        CONF_NAME: Template(binary_sensor_config.get(CONF_NAME, DEFAULT_NAME), menuai),
         **{
             k: v for k, v in binary_sensor_config.items() if k in TRIGGER_ENTITY_OPTIONS
         },
@@ -93,7 +93,7 @@ class CommandBinarySensor(ManualTriggerEntity, BinarySensorEntity):
         scan_interval: timedelta,
     ) -> None:
         """Initialize the Command line binary sensor."""
-        super().__init__(self.hass, config)
+        super().__init__(self.menuai, config)
         self.data = data
         self._attr_is_on = None
         self._payload_on = payload_on
@@ -102,13 +102,13 @@ class CommandBinarySensor(ManualTriggerEntity, BinarySensorEntity):
         self._scan_interval = scan_interval
         self._process_updates: asyncio.Lock | None = None
 
-    async def async_added_to_hass(self) -> None:
-        """Call when entity about to be added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Call when entity about to be added to menuai."""
+        await super().async_added_to_menuai()
         await self._update_entity_state()
         self.async_on_remove(
             async_track_time_interval(
-                self.hass,
+                self.menuai,
                 self._update_entity_state,
                 self._scan_interval,
                 name=f"Command Line Binary Sensor - {self.name}",

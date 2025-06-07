@@ -2,7 +2,7 @@
 
 import pytest
 
-from homeassistant.components.waze_travel_time.const import (
+from menuai.components.waze_travel_time.const import (
     CONF_AVOID_FERRIES,
     CONF_AVOID_SUBSCRIPTION_ROADS,
     CONF_AVOID_TOLL_ROADS,
@@ -21,8 +21,8 @@ from homeassistant.components.waze_travel_time.const import (
     DOMAIN,
     METRIC_UNITS,
 )
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
 
 from .const import MOCK_CONFIG
 
@@ -34,9 +34,9 @@ from tests.common import MockConfigEntry
     [(MOCK_CONFIG, DEFAULT_OPTIONS)],
 )
 @pytest.mark.usefixtures("mock_update", "mock_config")
-async def test_service_get_travel_times(hass: HomeAssistant) -> None:
+async def test_service_get_travel_times(menuai: menuai) -> None:
     """Test service get_travel_times."""
-    response_data = await hass.services.async_call(
+    response_data = await menuai.services.async_call(
         "waze_travel_time",
         "get_travel_times",
         {
@@ -63,7 +63,7 @@ async def test_service_get_travel_times(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("mock_update")
-async def test_migrate_entry_v1_v2(hass: HomeAssistant) -> None:
+async def test_migrate_entry_v1_v2(menuai: menuai) -> None:
     """Test successful migration of entry data."""
     mock_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -79,11 +79,11 @@ async def test_migrate_entry_v1_v2(hass: HomeAssistant) -> None:
         },
     )
 
-    mock_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    updated_entry = hass.config_entries.async_get_entry(mock_entry.entry_id)
+    updated_entry = menuai.config_entries.async_get_entry(mock_entry.entry_id)
 
     assert updated_entry.state is ConfigEntryState.LOADED
     assert updated_entry.version == 2
@@ -106,11 +106,11 @@ async def test_migrate_entry_v1_v2(hass: HomeAssistant) -> None:
         },
     )
 
-    mock_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    updated_entry = hass.config_entries.async_get_entry(mock_entry.entry_id)
+    updated_entry = menuai.config_entries.async_get_entry(mock_entry.entry_id)
 
     assert updated_entry.state is ConfigEntryState.LOADED
     assert updated_entry.version == 2

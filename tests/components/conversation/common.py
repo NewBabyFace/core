@@ -1,17 +1,17 @@
 """Provide common tests tools for conversation."""
 
-from homeassistant.components import conversation
-from homeassistant.core import HomeAssistant
+from menuai.components import conversation
+from menuai.core import menuai
 
 from . import MockAgent
 
 from tests.common import MockConfigEntry
 
 
-def mock_conversation_agent_fixture_helper(hass: HomeAssistant) -> MockAgent:
+def mock_conversation_agent_fixture_helper(menuai: menuai) -> MockAgent:
     """Mock agent."""
     entry = MockConfigEntry(entry_id="mock-entry")
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     agent = MockAgent(entry.entry_id, ["smurfish"])
-    conversation.async_set_agent(hass, entry, agent)
+    conversation.async_set_agent(menuai, entry, agent)
     return agent

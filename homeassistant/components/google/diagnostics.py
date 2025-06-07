@@ -3,9 +3,9 @@
 import datetime
 from typing import Any
 
-from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
+from menuai.components.diagnostics import async_redact_data
+from menuai.core import menuai
+from menuai.util import dt as dt_util
 
 from .store import GoogleConfigEntry
 
@@ -39,7 +39,7 @@ def redact_store(data: dict[str, Any]) -> dict[str, Any]:
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, config_entry: GoogleConfigEntry
+    menuai: menuai, config_entry: GoogleConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     payload: dict[str, Any] = {

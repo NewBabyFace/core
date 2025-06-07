@@ -67,7 +67,7 @@ rules:
   entity-disabled-by-default: done
   discovery:
     status: done
-    comment: hassio and mDNS/zeroconf discovery implemented
+    comment: menuaiio and mDNS/zeroconf discovery implemented
   stale-devices:
     status: done
     comment: >

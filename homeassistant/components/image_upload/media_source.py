@@ -2,22 +2,22 @@
 
 from __future__ import annotations
 
-from homeassistant.components.media_player import BrowseError, MediaClass
-from homeassistant.components.media_source import (
+from menuai.components.media_player import BrowseError, MediaClass
+from menuai.components.media_source import (
     BrowseMediaSource,
     MediaSource,
     MediaSourceItem,
     PlayMedia,
     Unresolvable,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .const import DOMAIN
 
 
-async def async_get_media_source(hass: HomeAssistant) -> ImageUploadMediaSource:
+async def async_get_media_source(menuai: menuai) -> ImageUploadMediaSource:
     """Set up image media source."""
-    return ImageUploadMediaSource(hass)
+    return ImageUploadMediaSource(menuai)
 
 
 class ImageUploadMediaSource(MediaSource):
@@ -25,14 +25,14 @@ class ImageUploadMediaSource(MediaSource):
 
     name: str = "Image Upload"
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize ImageMediaSource."""
         super().__init__(DOMAIN)
-        self.hass = hass
+        self.menuai = menuai
 
     async def async_resolve_media(self, item: MediaSourceItem) -> PlayMedia:
         """Resolve media to a url."""
-        image = self.hass.data[DOMAIN].data.get(item.identifier)
+        image = self.menuai.data[DOMAIN].data.get(item.identifier)
 
         if not image:
             raise Unresolvable(f"Could not resolve media item: {item.identifier}")
@@ -60,7 +60,7 @@ class ImageUploadMediaSource(MediaSource):
                 can_play=True,
                 can_expand=False,
             )
-            for image in self.hass.data[DOMAIN].data.values()
+            for image in self.menuai.data[DOMAIN].data.values()
         ]
 
         return BrowseMediaSource(

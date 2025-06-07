@@ -16,7 +16,7 @@ from zha.application.platforms.climate.const import (
     HVACMode as ZHAHVACMode,
 )
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_HVAC_MODE,
     ATTR_TARGET_TEMP_HIGH,
     ATTR_TARGET_TEMP_LOW,
@@ -26,11 +26,11 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import PRECISION_TENTHS, Platform, UnitOfTemperature
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import PRECISION_TENTHS, Platform, UnitOfTemperature
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .entity import ZHAEntity
 from .helpers import (
@@ -64,16 +64,16 @@ ZHA_TO_HA_HVAC_ACTION = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Zigbee Home Automation sensor from config entry."""
-    zha_data = get_zha_data(hass)
+    zha_data = get_zha_data(menuai)
     entities_to_create = zha_data.platforms[Platform.CLIMATE]
 
     unsub = async_dispatcher_connect(
-        hass,
+        menuai,
         SIGNAL_ADD_ENTITIES,
         functools.partial(
             zha_async_add_entities, async_add_entities, Thermostat, entities_to_create

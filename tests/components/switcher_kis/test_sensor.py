@@ -2,8 +2,8 @@
 
 import pytest
 
-from homeassistant.core import HomeAssistant
-from homeassistant.util import slugify
+from menuai.core import menuai
+from menuai.util import slugify
 
 from . import init_integration
 from .consts import (
@@ -39,9 +39,9 @@ DEVICE_SENSORS_TUPLE = (
 
 
 @pytest.mark.parametrize("mock_bridge", [DUMMY_SWITCHER_SENSORS_DEVICES], indirect=True)
-async def test_sensor_platform(hass: HomeAssistant, mock_bridge) -> None:
+async def test_sensor_platform(menuai: menuai, mock_bridge) -> None:
     """Test sensor platform."""
-    entry = await init_integration(hass)
+    entry = await init_integration(menuai)
     assert mock_bridge
 
     assert mock_bridge.is_running is True
@@ -50,28 +50,28 @@ async def test_sensor_platform(hass: HomeAssistant, mock_bridge) -> None:
     for device, sensors in DEVICE_SENSORS_TUPLE:
         for sensor, field in sensors:
             entity_id = f"sensor.{slugify(device.name)}_{sensor}"
-            state = hass.states.get(entity_id)
+            state = menuai.states.get(entity_id)
             assert state.state == str(getattr(device, field))
 
 
 @pytest.mark.parametrize("mock_bridge", [[DUMMY_WATER_HEATER_DEVICE]], indirect=True)
 async def test_sensor_update(
-    hass: HomeAssistant, mock_bridge, monkeypatch: pytest.MonkeyPatch
+    menuai: menuai, mock_bridge, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test sensor update."""
-    await init_integration(hass)
+    await init_integration(menuai)
     assert mock_bridge
 
     device = DUMMY_WATER_HEATER_DEVICE
     field = "power_consumption"
     entity_id = f"sensor.{slugify(device.name)}_power"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == str(getattr(device, field))
 
     monkeypatch.setattr(device, field, 1431)
     mock_bridge.mock_callbacks([DUMMY_WATER_HEATER_DEVICE])
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == "1431"

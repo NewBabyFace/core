@@ -7,25 +7,25 @@ from typing import Any
 from pysmhi import SmhiForecastException, SMHIPointForecast
 import voluptuous as vol
 
-from homeassistant.components.weather import DOMAIN as WEATHER_DOMAIN
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_LATITUDE, CONF_LOCATION, CONF_LONGITUDE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import (
+from menuai.components.weather import DOMAIN as WEATHER_DOMAIN
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_LATITUDE, CONF_LOCATION, CONF_LONGITUDE
+from menuai.core import menuai
+from menuai.helpers import (
     aiohttp_client,
     device_registry as dr,
     entity_registry as er,
 )
-from homeassistant.helpers.selector import LocationSelector
+from menuai.helpers.selector import LocationSelector
 
 from .const import DEFAULT_NAME, DOMAIN, HOME_LOCATION_NAME
 
 
 async def async_check_location(
-    hass: HomeAssistant, longitude: float, latitude: float
+    menuai: menuai, longitude: float, latitude: float
 ) -> bool:
     """Return true if location is ok."""
-    session = aiohttp_client.async_get_clientsession(hass)
+    session = aiohttp_client.async_get_clientsession(menuai)
     smhi_api = SMHIPointForecast(str(longitude), str(latitude), session=session)
     try:
         await smhi_api.async_get_daily_forecast()
@@ -50,11 +50,11 @@ class SmhiFlowHandler(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             lat: float = user_input[CONF_LOCATION][CONF_LATITUDE]
             lon: float = user_input[CONF_LOCATION][CONF_LONGITUDE]
-            if await async_check_location(self.hass, lon, lat):
+            if await async_check_location(self.menuai, lon, lat):
                 name = f"{DEFAULT_NAME} {round(lat, 6)} {round(lon, 6)}"
                 if (
-                    lat == self.hass.config.latitude
-                    and lon == self.hass.config.longitude
+                    lat == self.menuai.config.latitude
+                    and lon == self.menuai.config.longitude
                 ):
                     name = HOME_LOCATION_NAME
 
@@ -65,8 +65,8 @@ class SmhiFlowHandler(ConfigFlow, domain=DOMAIN):
             errors["base"] = "wrong_location"
 
         home_location = {
-            CONF_LATITUDE: self.hass.config.latitude,
-            CONF_LONGITUDE: self.hass.config.longitude,
+            CONF_LATITUDE: self.menuai.config.latitude,
+            CONF_LONGITUDE: self.menuai.config.longitude,
         }
         return self.async_show_form(
             step_id="user",
@@ -86,7 +86,7 @@ class SmhiFlowHandler(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             lat: float = user_input[CONF_LOCATION][CONF_LATITUDE]
             lon: float = user_input[CONF_LOCATION][CONF_LONGITUDE]
-            if await async_check_location(self.hass, lon, lat):
+            if await async_check_location(self.menuai, lon, lat):
                 unique_id = f"{lat}-{lon}"
                 await self.async_set_unique_id(unique_id)
                 self._abort_if_unique_id_configured()
@@ -94,7 +94,7 @@ class SmhiFlowHandler(ConfigFlow, domain=DOMAIN):
                 old_lat = reconfigure_entry.data[CONF_LOCATION][CONF_LATITUDE]
                 old_lon = reconfigure_entry.data[CONF_LOCATION][CONF_LONGITUDE]
 
-                entity_reg = er.async_get(self.hass)
+                entity_reg = er.async_get(self.menuai)
                 if entity := entity_reg.async_get_entity_id(
                     WEATHER_DOMAIN, DOMAIN, f"{old_lat}, {old_lon}"
                 ):
@@ -102,7 +102,7 @@ class SmhiFlowHandler(ConfigFlow, domain=DOMAIN):
                         entity, new_unique_id=f"{lat}, {lon}"
                     )
 
-                device_reg = dr.async_get(self.hass)
+                device_reg = dr.async_get(self.menuai)
                 if device := device_reg.async_get_device(
                     identifiers={(DOMAIN, f"{old_lat}, {old_lon}")}
                 ):

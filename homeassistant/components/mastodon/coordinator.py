@@ -8,9 +8,9 @@ from datetime import timedelta
 from mastodon import Mastodon
 from mastodon.Mastodon import Account, Instance, InstanceV2, MastodonError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import LOGGER
 
@@ -34,11 +34,11 @@ class MastodonCoordinator(DataUpdateCoordinator[Account]):
     config_entry: MastodonConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: MastodonConfigEntry, client: Mastodon
+        self, menuai: menuai, config_entry: MastodonConfigEntry, client: Mastodon
     ) -> None:
         """Initialize coordinator."""
         super().__init__(
-            hass,
+            menuai,
             logger=LOGGER,
             config_entry=config_entry,
             name="Mastodon",
@@ -48,7 +48,7 @@ class MastodonCoordinator(DataUpdateCoordinator[Account]):
 
     async def _async_update_data(self) -> Account:
         try:
-            account: Account = await self.hass.async_add_executor_job(
+            account: Account = await self.menuai.async_add_executor_job(
                 self.client.account_verify_credentials
             )
         except MastodonError as ex:

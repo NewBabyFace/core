@@ -3,19 +3,19 @@
 from datetime import timedelta
 from unittest.mock import patch
 
-from homeassistant.components import recorder
-from homeassistant.components.recorder import Recorder
-from homeassistant.components.recorder.db_schema import RecorderRuns
-from homeassistant.components.recorder.models import process_timestamp
-from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
+from menuai.components import recorder
+from menuai.components.recorder import Recorder
+from menuai.components.recorder.db_schema import RecorderRuns
+from menuai.components.recorder.models import process_timestamp
+from menuai.core import menuai
+from menuai.util import dt as dt_util
 
 from tests.typing import RecorderInstanceGenerator
 
 
-async def test_run_history(recorder_mock: Recorder, hass: HomeAssistant) -> None:
+async def test_run_history(recorder_mock: Recorder, menuai: menuai) -> None:
     """Test the run history gives the correct run."""
-    instance = recorder.get_instance(hass)
+    instance = recorder.get_instance(menuai)
     now = dt_util.utcnow()
     three_days_ago = now - timedelta(days=3)
     two_days_ago = now - timedelta(days=2)
@@ -40,7 +40,7 @@ async def test_run_history(recorder_mock: Recorder, hass: HomeAssistant) -> None
 
 async def test_run_history_while_recorder_is_not_yet_started(
     async_setup_recorder_instance: RecorderInstanceGenerator,
-    hass: HomeAssistant,
+    menuai: menuai,
     recorder_db_url: str,
 ) -> None:
     """Test the run history while recorder is not yet started.
@@ -51,9 +51,9 @@ async def test_run_history_while_recorder_is_not_yet_started(
     # Prevent the run history from starting to ensure
     # we can test run_history.current.start returns the expected value
     with patch(
-        "homeassistant.components.recorder.table_managers.recorder_runs.RecorderRunsManager.start",
+        "menuai.components.recorder.table_managers.recorder_runs.RecorderRunsManager.start",
     ):
-        instance = await async_setup_recorder_instance(hass)
+        instance = await async_setup_recorder_instance(menuai)
     run_history = instance.recorder_runs_manager
     assert run_history.current.start == run_history.recording_start
 

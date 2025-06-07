@@ -7,21 +7,21 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components import sonos
-from homeassistant.components.sonos import SonosDiscoveryManager
-from homeassistant.components.sonos.const import (
+from menuai import config_entries
+from menuai.components import sonos
+from menuai.components.sonos import SonosDiscoveryManager
+from menuai.components.sonos.const import (
     DATA_SONOS_DISCOVERY_MANAGER,
     SONOS_SPEAKER_ACTIVITY,
 )
-from homeassistant.components.sonos.exception import SonosUpdateError
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.components.sonos.exception import SonosUpdateError
+from menuai.core import menuai, callback
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers import entity_registry as er
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from .conftest import MockSoCo, SoCoMockFactory
 
@@ -29,84 +29,84 @@ from tests.common import async_fire_time_changed
 
 
 async def test_creating_entry_sets_up_media_player(
-    hass: HomeAssistant, zeroconf_payload: ZeroconfServiceInfo
+    menuai: menuai, zeroconf_payload: ZeroconfServiceInfo
 ) -> None:
     """Test setting up Sonos loads the media player."""
 
     # Initiate a discovery to allow a user config flow
-    await hass.config_entries.flow.async_init(
+    await menuai.config_entries.flow.async_init(
         sonos.DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=zeroconf_payload,
     )
 
     with patch(
-        "homeassistant.components.sonos.media_player.async_setup_entry",
+        "menuai.components.sonos.media_player.async_setup_entry",
     ) as mock_setup:
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             sonos.DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
 
         # Confirmation form
         assert result["type"] is FlowResultType.FORM
 
-        result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
         assert result["type"] is FlowResultType.CREATE_ENTRY
 
-        await hass.async_block_till_done(wait_background_tasks=True)
+        await menuai.async_block_till_done(wait_background_tasks=True)
 
     assert len(mock_setup.mock_calls) == 1
 
 
-async def test_configuring_sonos_creates_entry(hass: HomeAssistant) -> None:
+async def test_configuring_sonos_creates_entry(menuai: menuai) -> None:
     """Test that specifying config will create an entry."""
     with patch(
-        "homeassistant.components.sonos.async_setup_entry",
+        "menuai.components.sonos.async_setup_entry",
         return_value=True,
     ) as mock_setup:
         await async_setup_component(
-            hass,
+            menuai,
             sonos.DOMAIN,
             {"sonos": {"media_player": {"interface_addr": "127.0.0.1"}}},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_setup.mock_calls) == 1
 
 
-async def test_not_configuring_sonos_not_creates_entry(hass: HomeAssistant) -> None:
+async def test_not_configuring_sonos_not_creates_entry(menuai: menuai) -> None:
     """Test that no config will not create an entry."""
     with patch(
-        "homeassistant.components.sonos.async_setup_entry",
+        "menuai.components.sonos.async_setup_entry",
         return_value=True,
     ) as mock_setup:
-        await async_setup_component(hass, sonos.DOMAIN, {})
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, sonos.DOMAIN, {})
+        await menuai.async_block_till_done()
 
     assert len(mock_setup.mock_calls) == 0
 
 
 async def test_async_poll_manual_hosts_warnings(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test that host warnings are not logged repeatedly."""
     await async_setup_component(
-        hass,
+        menuai,
         sonos.DOMAIN,
         {"sonos": {"media_player": {"interface_addr": "127.0.0.1"}}},
     )
-    await hass.async_block_till_done()
-    manager: SonosDiscoveryManager = hass.data[DATA_SONOS_DISCOVERY_MANAGER]
+    await menuai.async_block_till_done()
+    manager: SonosDiscoveryManager = menuai.data[DATA_SONOS_DISCOVERY_MANAGER]
     manager.hosts.add("10.10.10.10")
     with (
         caplog.at_level(logging.DEBUG),
         patch.object(manager, "_async_handle_discovery_message"),
         patch(
-            "homeassistant.components.sonos.async_call_later"
+            "menuai.components.sonos.async_call_later"
         ) as mock_async_call_later,
-        patch("homeassistant.components.sonos.async_dispatcher_send"),
+        patch("menuai.components.sonos.async_dispatcher_send"),
         patch(
-            "homeassistant.components.sonos.sync_get_visible_zones",
+            "menuai.components.sonos.sync_get_visible_zones",
             side_effect=[
                 OSError(),
                 OSError(),
@@ -175,9 +175,9 @@ class _MockSoCoVisibleZones(MockSoCo):
         return self.vz_return
 
 
-async def _setup_hass(hass: HomeAssistant):
+async def _setup_menuai(menuai: menuai):
     await async_setup_component(
-        hass,
+        menuai,
         sonos.DOMAIN,
         {
             "sonos": {
@@ -188,11 +188,11 @@ async def _setup_hass(hass: HomeAssistant):
             }
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
 async def test_async_poll_manual_hosts_1(
-    hass: HomeAssistant,
+    menuai: menuai,
     soco_factory: SoCoMockFactory,
     entity_registry: er.EntityRegistry,
     caplog: pytest.LogCaptureFixture,
@@ -202,7 +202,7 @@ async def test_async_poll_manual_hosts_1(
     soco_2 = soco_factory.cache_mock(MockSoCo(), "10.10.10.2", "Bedroom")
 
     with caplog.at_level(logging.WARNING):
-        await _setup_hass(hass)
+        await _setup_menuai(menuai)
         assert "media_player.bedroom" in entity_registry.entities
         assert "media_player.living_room" not in entity_registry.entities
         assert (
@@ -214,11 +214,11 @@ async def test_async_poll_manual_hosts_1(
             not in caplog.text
         )
 
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
 
 async def test_async_poll_manual_hosts_2(
-    hass: HomeAssistant,
+    menuai: menuai,
     soco_factory: SoCoMockFactory,
     entity_registry: er.EntityRegistry,
     caplog: pytest.LogCaptureFixture,
@@ -228,7 +228,7 @@ async def test_async_poll_manual_hosts_2(
     soco_2 = soco_factory.cache_mock(_MockSoCoOsError(), "10.10.10.2", "Bedroom")
 
     with caplog.at_level(logging.WARNING):
-        await _setup_hass(hass)
+        await _setup_menuai(menuai)
         assert "media_player.bedroom" not in entity_registry.entities
         assert "media_player.living_room" in entity_registry.entities
         assert (
@@ -240,11 +240,11 @@ async def test_async_poll_manual_hosts_2(
             in caplog.text
         )
 
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
 
 async def test_async_poll_manual_hosts_3(
-    hass: HomeAssistant,
+    menuai: menuai,
     soco_factory: SoCoMockFactory,
     entity_registry: er.EntityRegistry,
     caplog: pytest.LogCaptureFixture,
@@ -254,7 +254,7 @@ async def test_async_poll_manual_hosts_3(
     soco_2 = soco_factory.cache_mock(_MockSoCoOsError(), "10.10.10.2", "Bedroom")
 
     with caplog.at_level(logging.WARNING):
-        await _setup_hass(hass)
+        await _setup_menuai(menuai)
         assert "media_player.bedroom" not in entity_registry.entities
         assert "media_player.living_room" not in entity_registry.entities
         assert (
@@ -266,11 +266,11 @@ async def test_async_poll_manual_hosts_3(
             in caplog.text
         )
 
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
 
 async def test_async_poll_manual_hosts_4(
-    hass: HomeAssistant,
+    menuai: menuai,
     soco_factory: SoCoMockFactory,
     entity_registry: er.EntityRegistry,
     caplog: pytest.LogCaptureFixture,
@@ -280,7 +280,7 @@ async def test_async_poll_manual_hosts_4(
     soco_2 = soco_factory.cache_mock(MockSoCo(), "10.10.10.2", "Bedroom")
 
     with caplog.at_level(logging.WARNING):
-        await _setup_hass(hass)
+        await _setup_menuai(menuai)
         assert "media_player.bedroom" in entity_registry.entities
         assert "media_player.living_room" in entity_registry.entities
         assert (
@@ -292,20 +292,20 @@ async def test_async_poll_manual_hosts_4(
             not in caplog.text
         )
 
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
 
 class SpeakerActivity:
     """Unit test class to track speaker activity messages."""
 
-    def __init__(self, hass: HomeAssistant, soco: MockSoCo) -> None:
+    def __init__(self, menuai: menuai, soco: MockSoCo) -> None:
         """Create the object from soco."""
         self.soco = soco
-        self.hass = hass
+        self.menuai = menuai
         self.call_count: int = 0
         self.event = asyncio.Event()
         async_dispatcher_connect(
-            self.hass,
+            self.menuai,
             f"{SONOS_SPEAKER_ACTIVITY}-{self.soco.uid}",
             self.speaker_activity,
         )
@@ -319,7 +319,7 @@ class SpeakerActivity:
 
 
 async def test_async_poll_manual_hosts_5(
-    hass: HomeAssistant,
+    menuai: menuai,
     soco_factory: SoCoMockFactory,
     entity_registry: er.EntityRegistry,
     caplog: pytest.LogCaptureFixture,
@@ -328,13 +328,13 @@ async def test_async_poll_manual_hosts_5(
     soco_1 = soco_factory.cache_mock(MockSoCo(), "10.10.10.1", "Living Room")
     soco_1.renderingControl = Mock()
     soco_1.renderingControl.GetVolume = Mock()
-    speaker_1_activity = SpeakerActivity(hass, soco_1)
+    speaker_1_activity = SpeakerActivity(menuai, soco_1)
     soco_2 = soco_factory.cache_mock(MockSoCo(), "10.10.10.2", "Bedroom")
     soco_2.renderingControl = Mock()
     soco_2.renderingControl.GetVolume = Mock()
-    speaker_2_activity = SpeakerActivity(hass, soco_2)
+    speaker_2_activity = SpeakerActivity(menuai, soco_2)
     with patch(
-        "homeassistant.components.sonos.DISCOVERY_INTERVAL"
+        "menuai.components.sonos.DISCOVERY_INTERVAL"
     ) as mock_discovery_interval:
         # Speed up manual discovery interval so second iteration runs sooner
         mock_discovery_interval.total_seconds = Mock(side_effect=[0.5, 60])
@@ -342,13 +342,13 @@ async def test_async_poll_manual_hosts_5(
         with caplog.at_level(logging.DEBUG):
             caplog.clear()
 
-            await _setup_hass(hass)
+            await _setup_menuai(menuai)
 
             assert "media_player.bedroom" in entity_registry.entities
             assert "media_player.living_room" in entity_registry.entities
 
-            async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=0.5))
-            await hass.async_block_till_done()
+            async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(seconds=0.5))
+            await menuai.async_block_till_done()
             await asyncio.gather(
                 *[speaker_1_activity.event.wait(), speaker_2_activity.event.wait()]
             )
@@ -357,11 +357,11 @@ async def test_async_poll_manual_hosts_5(
             assert "Activity on Living Room" in caplog.text
             assert "Activity on Bedroom" in caplog.text
 
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
 
 async def test_async_poll_manual_hosts_6(
-    hass: HomeAssistant,
+    menuai: menuai,
     soco_factory: SoCoMockFactory,
     entity_registry: er.EntityRegistry,
     caplog: pytest.LogCaptureFixture,
@@ -372,36 +372,36 @@ async def test_async_poll_manual_hosts_6(
     soco_1.renderingControl = Mock()
     soco_1.renderingControl.GetVolume = Mock()
     soco_1.renderingControl.GetVolume.side_effect = SonosUpdateError()
-    speaker_1_activity = SpeakerActivity(hass, soco_1)
+    speaker_1_activity = SpeakerActivity(menuai, soco_1)
     soco_2 = soco_factory.cache_mock(MockSoCo(), "10.10.10.2", "Bedroom")
     soco_2.renderingControl = Mock()
     soco_2.renderingControl.GetVolume = Mock()
     soco_2.renderingControl.GetVolume.side_effect = SonosUpdateError()
-    speaker_2_activity = SpeakerActivity(hass, soco_2)
+    speaker_2_activity = SpeakerActivity(menuai, soco_2)
 
     with patch(
-        "homeassistant.components.sonos.DISCOVERY_INTERVAL"
+        "menuai.components.sonos.DISCOVERY_INTERVAL"
     ) as mock_discovery_interval:
         # Speed up manual discovery interval so second iteration runs sooner
         mock_discovery_interval.total_seconds = Mock(side_effect=[0.0, 60])
-        await _setup_hass(hass)
+        await _setup_menuai(menuai)
 
         assert "media_player.bedroom" in entity_registry.entities
         assert "media_player.living_room" in entity_registry.entities
 
         with caplog.at_level(logging.DEBUG):
             caplog.clear()
-            await hass.async_block_till_done()
+            await menuai.async_block_till_done()
             assert "Activity on Living Room" not in caplog.text
             assert "Activity on Bedroom" not in caplog.text
             assert speaker_1_activity.call_count == 0
             assert speaker_2_activity.call_count == 0
 
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
 
 async def test_async_poll_manual_hosts_7(
-    hass: HomeAssistant,
+    menuai: menuai,
     soco_factory: SoCoMockFactory,
     entity_registry: er.EntityRegistry,
 ) -> None:
@@ -417,8 +417,8 @@ async def test_async_poll_manual_hosts_7(
     soco_1.set_visible_zones({soco_1, soco_2, soco_3, soco_4, soco_5})
     soco_2.set_visible_zones({soco_1, soco_2, soco_3, soco_4, soco_5})
 
-    await _setup_hass(hass)
-    await hass.async_block_till_done()
+    await _setup_menuai(menuai)
+    await menuai.async_block_till_done()
 
     assert "media_player.bedroom" in entity_registry.entities
     assert "media_player.living_room" in entity_registry.entities
@@ -426,11 +426,11 @@ async def test_async_poll_manual_hosts_7(
     assert "media_player.garage" in entity_registry.entities
     assert "media_player.studio" in entity_registry.entities
 
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
 
 async def test_async_poll_manual_hosts_8(
-    hass: HomeAssistant,
+    menuai: menuai,
     soco_factory: SoCoMockFactory,
     entity_registry: er.EntityRegistry,
 ) -> None:
@@ -446,20 +446,20 @@ async def test_async_poll_manual_hosts_8(
     soco_1.set_visible_zones({soco_2, soco_3, soco_4, soco_5})
     soco_2.set_visible_zones({soco_2, soco_3, soco_4, soco_5})
 
-    await _setup_hass(hass)
-    await hass.async_block_till_done()
+    await _setup_menuai(menuai)
+    await menuai.async_block_till_done()
 
     assert "media_player.bedroom" in entity_registry.entities
     assert "media_player.living_room" not in entity_registry.entities
     assert "media_player.basement" in entity_registry.entities
     assert "media_player.garage" in entity_registry.entities
     assert "media_player.studio" in entity_registry.entities
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
 
-async def _setup_hass_ipv6_address_not_supported(hass: HomeAssistant):
+async def _setup_menuai_ipv6_address_not_supported(menuai: menuai):
     await async_setup_component(
-        hass,
+        menuai,
         sonos.DOMAIN,
         {
             "sonos": {
@@ -470,17 +470,17 @@ async def _setup_hass_ipv6_address_not_supported(hass: HomeAssistant):
             }
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
 async def test_ipv6_not_supported(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Tests that invalid ipv4 addresses do not generate stack dump."""
     with caplog.at_level(logging.DEBUG):
         caplog.clear()
-        await _setup_hass_ipv6_address_not_supported(hass)
-        await hass.async_block_till_done()
+        await _setup_menuai_ipv6_address_not_supported(menuai)
+        await menuai.async_block_till_done()
     assert "invalid ip_address received" in caplog.text
     assert "2001:db8:3333:4444:5555:6666:7777:8888" in caplog.text

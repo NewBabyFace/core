@@ -7,17 +7,17 @@ from typing import Any
 import voluptuous as vol
 from wled import WLED, Device, WLEDConnectionError
 
-from homeassistant.components import onboarding
-from homeassistant.config_entries import (
+from menuai.components import onboarding
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_HOST, CONF_MAC
-from homeassistant.core import callback
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.const import CONF_HOST, CONF_MAC
+from menuai.core import callback
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import CONF_KEEP_MAIN_LIGHT, DEFAULT_KEEP_MAIN_LIGHT, DOMAIN
 
@@ -100,7 +100,7 @@ class WLEDFlowHandler(ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle a flow initiated by zeroconf."""
-        if user_input is not None or not onboarding.async_is_onboarded(self.hass):
+        if user_input is not None or not onboarding.async_is_onboarded(self.menuai):
             return self.async_create_entry(
                 title=self.discovered_device.info.name,
                 data={
@@ -115,7 +115,7 @@ class WLEDFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def _async_get_device(self, host: str) -> Device:
         """Get device information from WLED device."""
-        session = async_get_clientsession(self.hass)
+        session = async_get_clientsession(self.menuai)
         wled = WLED(host, session=session)
         return await wled.update()
 

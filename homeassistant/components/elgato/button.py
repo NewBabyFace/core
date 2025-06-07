@@ -8,15 +8,15 @@ from typing import Any
 
 from elgato import Elgato, ElgatoError
 
-from homeassistant.components.button import (
+from menuai.components.button import (
     ButtonDeviceClass,
     ButtonEntity,
     ButtonEntityDescription,
 )
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import ElgatoConfigEntry, ElgatoDataUpdateCoordinator
 from .entity import ElgatoEntity
@@ -48,7 +48,7 @@ BUTTONS = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ElgatoConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -85,6 +85,6 @@ class ElgatoButtonEntity(ElgatoEntity, ButtonEntity):
         try:
             await self.entity_description.press_fn(self.coordinator.client)
         except ElgatoError as error:
-            raise HomeAssistantError(
+            raise menuaiError(
                 "An error occurred while communicating with the Elgato Light"
             ) from error

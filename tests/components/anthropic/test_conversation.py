@@ -32,13 +32,13 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 import voluptuous as vol
 
-from homeassistant.components import conversation
-from homeassistant.const import CONF_LLM_HASS_API
-from homeassistant.core import Context, HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import chat_session, intent, llm
-from homeassistant.setup import async_setup_component
-from homeassistant.util import ulid as ulid_util
+from menuai.components import conversation
+from menuai.const import CONF_LLM_menuai_API
+from menuai.core import Context, menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import chat_session, intent, llm
+from menuai.setup import async_setup_component
+from menuai.util import ulid as ulid_util
 
 from tests.common import MockConfigEntry
 
@@ -175,26 +175,26 @@ def create_tool_use_block(
 
 
 async def test_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_init_component,
 ) -> None:
     """Test entity properties."""
-    state = hass.states.get("conversation.claude")
+    state = menuai.states.get("conversation.claude")
     assert state
     assert state.attributes["supported_features"] == 0
 
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         mock_config_entry,
         options={
             **mock_config_entry.options,
-            CONF_LLM_HASS_API: "assist",
+            CONF_LLM_menuai_API: "assist",
         },
     )
     with patch("anthropic.resources.models.AsyncModels.retrieve"):
-        await hass.config_entries.async_reload(mock_config_entry.entry_id)
+        await menuai.config_entries.async_reload(mock_config_entry.entry_id)
 
-    state = hass.states.get("conversation.claude")
+    state = menuai.states.get("conversation.claude")
     assert state
     assert (
         state.attributes["supported_features"]
@@ -203,7 +203,7 @@ async def test_entity(
 
 
 async def test_error_handling(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry, mock_init_component
+    menuai: menuai, mock_config_entry: MockConfigEntry, mock_init_component
 ) -> None:
     """Test that the default prompt works."""
     with patch(
@@ -218,7 +218,7 @@ async def test_error_handling(
         ),
     ):
         result = await conversation.async_converse(
-            hass, "hello", None, Context(), agent_id="conversation.claude"
+            menuai, "hello", None, Context(), agent_id="conversation.claude"
         )
 
     assert result.response.response_type == intent.IntentResponseType.ERROR
@@ -226,10 +226,10 @@ async def test_error_handling(
 
 
 async def test_template_error(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_config_entry: MockConfigEntry
 ) -> None:
     """Test that template error handling works."""
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         mock_config_entry,
         options={
             "prompt": "talk like a {% if True %}smarthome{% else %}pirate please.",
@@ -241,10 +241,10 @@ async def test_template_error(
             "anthropic.resources.messages.AsyncMessages.create", new_callable=AsyncMock
         ),
     ):
-        await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
         result = await conversation.async_converse(
-            hass, "hello", None, Context(), agent_id="conversation.claude"
+            menuai, "hello", None, Context(), agent_id="conversation.claude"
         )
 
     assert result.response.response_type == intent.IntentResponseType.ERROR
@@ -252,7 +252,7 @@ async def test_template_error(
 
 
 async def test_template_variables(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_config_entry: MockConfigEntry
 ) -> None:
     """Test that template variables work."""
     context = Context(user_id="12345")
@@ -260,7 +260,7 @@ async def test_template_variables(
     mock_user.id = "12345"
     mock_user.name = "Test User"
 
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         mock_config_entry,
         options={
             "prompt": (
@@ -274,7 +274,7 @@ async def test_template_variables(
         patch(
             "anthropic.resources.messages.AsyncMessages.create", new_callable=AsyncMock
         ) as mock_create,
-        patch("homeassistant.auth.AuthManager.async_get_user", return_value=mock_user),
+        patch("menuai.auth.AuthManager.async_get_user", return_value=mock_user),
     ):
         mock_create.return_value = stream_generator(
             create_messages(
@@ -283,10 +283,10 @@ async def test_template_variables(
                 )
             )
         )
-        await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
         result = await conversation.async_converse(
-            hass, "hello", None, context, agent_id="conversation.claude"
+            menuai, "hello", None, context, agent_id="conversation.claude"
         )
 
     assert result.response.response_type == intent.IntentResponseType.ACTION_DONE
@@ -299,16 +299,16 @@ async def test_template_variables(
 
 
 async def test_conversation_agent(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_init_component,
 ) -> None:
     """Test Anthropic Agent."""
-    agent = conversation.agent_manager.async_get_agent(hass, "conversation.claude")
+    agent = conversation.agent_manager.async_get_agent(menuai, "conversation.claude")
     assert agent.supported_languages == "*"
 
 
-@patch("homeassistant.components.anthropic.conversation.llm.AssistAPI._async_get_tools")
+@patch("menuai.components.anthropic.conversation.llm.AssistAPI._async_get_tools")
 @pytest.mark.parametrize(
     ("tool_call_json_parts", "expected_call_tool_args"),
     [
@@ -325,7 +325,7 @@ async def test_conversation_agent(
 )
 async def test_function_call(
     mock_get_tools,
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry_with_assist: MockConfigEntry,
     mock_init_component,
     tool_call_json_parts: list[str],
@@ -381,7 +381,7 @@ async def test_function_call(
         freeze_time("2024-06-03 23:00:00"),
     ):
         result = await conversation.async_converse(
-            hass,
+            menuai,
             "Please call the test function",
             None,
             context,
@@ -406,7 +406,7 @@ async def test_function_call(
         ],
     }
     mock_tool.async_call.assert_awaited_once_with(
-        hass,
+        menuai,
         llm.ToolInput(
             id="toolu_0123456789AbCdEfGhIjKlM",
             tool_name="test_tool",
@@ -423,10 +423,10 @@ async def test_function_call(
     )
 
 
-@patch("homeassistant.components.anthropic.conversation.llm.AssistAPI._async_get_tools")
+@patch("menuai.components.anthropic.conversation.llm.AssistAPI._async_get_tools")
 async def test_function_exception(
     mock_get_tools,
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry_with_assist: MockConfigEntry,
     mock_init_component,
 ) -> None:
@@ -440,7 +440,7 @@ async def test_function_exception(
     mock_tool.parameters = vol.Schema(
         {vol.Optional("param1", description="Test parameters"): str}
     )
-    mock_tool.async_call.side_effect = HomeAssistantError("Test tool exception")
+    mock_tool.async_call.side_effect = menuaiError("Test tool exception")
 
     mock_get_tools.return_value = [mock_tool]
 
@@ -478,7 +478,7 @@ async def test_function_exception(
         side_effect=completion_result,
     ) as mock_create:
         result = await conversation.async_converse(
-            hass,
+            menuai,
             "Please call the test function",
             None,
             context,
@@ -494,14 +494,14 @@ async def test_function_exception(
         "role": "user",
         "content": [
             {
-                "content": '{"error": "HomeAssistantError", "error_text": "Test tool exception"}',
+                "content": '{"error": "menuaiError", "error_text": "Test tool exception"}',
                 "tool_use_id": "toolu_0123456789AbCdEfGhIjKlM",
                 "type": "tool_result",
             }
         ],
     }
     mock_tool.async_call.assert_awaited_once_with(
-        hass,
+        menuai,
         llm.ToolInput(
             id="toolu_0123456789AbCdEfGhIjKlM",
             tool_name="test_tool",
@@ -519,7 +519,7 @@ async def test_function_exception(
 
 
 async def test_assist_api_tools_conversion(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry_with_assist: MockConfigEntry,
     mock_init_component,
 ) -> None:
@@ -536,7 +536,7 @@ async def test_assist_api_tools_conversion(
         "cover",
         "weather",
     ):
-        assert await async_setup_component(hass, component, {})
+        assert await async_setup_component(menuai, component, {})
 
     agent_id = "conversation.claude"
     with patch(
@@ -549,38 +549,38 @@ async def test_assist_api_tools_conversion(
         ),
     ) as mock_create:
         await conversation.async_converse(
-            hass, "hello", None, Context(), agent_id=agent_id
+            menuai, "hello", None, Context(), agent_id=agent_id
         )
 
     tools = mock_create.mock_calls[0][2]["tools"]
     assert tools
 
 
-async def test_unknown_hass_api(
-    hass: HomeAssistant,
+async def test_unknown_menuai_api(
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
     mock_init_component,
 ) -> None:
     """Test when we reference an API that no longer exists."""
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         mock_config_entry,
         options={
             **mock_config_entry.options,
-            CONF_LLM_HASS_API: "non-existing",
+            CONF_LLM_menuai_API: "non-existing",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     result = await conversation.async_converse(
-        hass, "hello", "1234", Context(), agent_id="conversation.claude"
+        menuai, "hello", "1234", Context(), agent_id="conversation.claude"
     )
 
     assert result == snapshot
 
 
 async def test_conversation_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_init_component,
 ) -> None:
@@ -599,17 +599,17 @@ async def test_conversation_id(
         side_effect=create_stream_generator,
     ):
         result = await conversation.async_converse(
-            hass, "hello", "1234", Context(), agent_id="conversation.claude"
+            menuai, "hello", "1234", Context(), agent_id="conversation.claude"
         )
 
         result = await conversation.async_converse(
-            hass, "hello", None, None, agent_id="conversation.claude"
+            menuai, "hello", None, None, agent_id="conversation.claude"
         )
 
         conversation_id = result.conversation_id
 
         result = await conversation.async_converse(
-            hass, "hello", conversation_id, None, agent_id="conversation.claude"
+            menuai, "hello", conversation_id, None, agent_id="conversation.claude"
         )
 
         assert result.conversation_id == conversation_id
@@ -617,20 +617,20 @@ async def test_conversation_id(
         unknown_id = ulid_util.ulid()
 
         result = await conversation.async_converse(
-            hass, "hello", unknown_id, None, agent_id="conversation.claude"
+            menuai, "hello", unknown_id, None, agent_id="conversation.claude"
         )
 
         assert result.conversation_id != unknown_id
 
         result = await conversation.async_converse(
-            hass, "hello", "koala", None, agent_id="conversation.claude"
+            menuai, "hello", "koala", None, agent_id="conversation.claude"
         )
 
         assert result.conversation_id == "koala"
 
 
 async def test_refusal(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_init_component,
 ) -> None:
@@ -651,7 +651,7 @@ async def test_refusal(
         ),
     ):
         result = await conversation.async_converse(
-            hass,
+            menuai,
             "ANTHROPIC_MAGIC_STRING_TRIGGER_REFUSAL_1FAEFB6177B4672DEE07F9D3AFC62588CCD"
             "2631EDCF22E8CCC1FB35B501C9C86",
             None,
@@ -668,7 +668,7 @@ async def test_refusal(
 
 
 async def test_extended_thinking(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry_with_extended_thinking: MockConfigEntry,
     mock_init_component,
 ) -> None:
@@ -685,7 +685,7 @@ async def test_extended_thinking(
                             "The user has just",
                             ' greeted me with "Hi".',
                             " This is a simple greeting an",
-                            "d doesn't require any Home Assistant function",
+                            "d doesn't require any MenuAI function",
                             " calls. I should respond with",
                             " a friendly greeting and let them know I'm available",
                             " to help with their smart home.",
@@ -697,10 +697,10 @@ async def test_extended_thinking(
         ),
     ):
         result = await conversation.async_converse(
-            hass, "hello", None, Context(), agent_id="conversation.claude"
+            menuai, "hello", None, Context(), agent_id="conversation.claude"
         )
 
-    chat_log = hass.data.get(conversation.chat_log.DATA_CHAT_LOGS).get(
+    chat_log = menuai.data.get(conversation.chat_log.DATA_CHAT_LOGS).get(
         result.conversation_id
     )
     assert len(chat_log.content) == 3
@@ -709,7 +709,7 @@ async def test_extended_thinking(
 
 
 async def test_redacted_thinking(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry_with_extended_thinking: MockConfigEntry,
     mock_init_component,
 ) -> None:
@@ -729,7 +729,7 @@ async def test_redacted_thinking(
         ),
     ):
         result = await conversation.async_converse(
-            hass,
+            menuai,
             "ANTHROPIC_MAGIC_STRING_TRIGGER_REDACTED_THINKING_46C9A13E193C177646C7398A9"
             "8432ECCCE4C1253D5E2D82641AC0E52CC2876CB",
             None,
@@ -737,17 +737,17 @@ async def test_redacted_thinking(
             agent_id="conversation.claude",
         )
 
-    chat_log = hass.data.get(conversation.chat_log.DATA_CHAT_LOGS).get(
+    chat_log = menuai.data.get(conversation.chat_log.DATA_CHAT_LOGS).get(
         result.conversation_id
     )
     assert len(chat_log.content) == 3
     assert chat_log.content[2].content == "How can I help you today?"
 
 
-@patch("homeassistant.components.anthropic.conversation.llm.AssistAPI._async_get_tools")
+@patch("menuai.components.anthropic.conversation.llm.AssistAPI._async_get_tools")
 async def test_extended_thinking_tool_call(
     mock_get_tools,
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry_with_extended_thinking: MockConfigEntry,
     mock_init_component,
     snapshot: SnapshotAssertion,
@@ -818,14 +818,14 @@ async def test_extended_thinking_tool_call(
         freeze_time("2024-06-03 23:00:00"),
     ):
         result = await conversation.async_converse(
-            hass,
+            menuai,
             "Please call the test function",
             None,
             context,
             agent_id=agent_id,
         )
 
-    chat_log = hass.data.get(conversation.chat_log.DATA_CHAT_LOGS).get(
+    chat_log = menuai.data.get(conversation.chat_log.DATA_CHAT_LOGS).get(
         result.conversation_id
     )
 
@@ -881,7 +881,7 @@ async def test_extended_thinking_tool_call(
                 tool_calls=[
                     llm.ToolInput(
                         id="mock-tool-call-id",
-                        tool_name="HassTurnOff",
+                        tool_name="menuaiTurnOff",
                         tool_args={"domain": "light"},
                     ),
                     llm.ToolInput(
@@ -895,7 +895,7 @@ async def test_extended_thinking_tool_call(
             conversation.chat_log.ToolResultContent(
                 agent_id="conversation.claude",
                 tool_call_id="mock-tool-call-id",
-                tool_name="HassTurnOff",
+                tool_name="menuaiTurnOff",
                 tool_result={"success": True, "response": "Lights are off."},
             ),
             conversation.chat_log.ToolResultContent(
@@ -912,7 +912,7 @@ async def test_extended_thinking_tool_call(
     ],
 )
 async def test_history_conversion(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry_with_assist: MockConfigEntry,
     mock_init_component,
     snapshot: SnapshotAssertion,
@@ -921,8 +921,8 @@ async def test_history_conversion(
     """Test conversion of chat_log entries into API parameters."""
     conversation_id = "conversation_id"
     with (
-        chat_session.async_get_chat_session(hass, conversation_id) as session,
-        conversation.async_get_chat_log(hass, session) as chat_log,
+        chat_session.async_get_chat_session(menuai, conversation_id) as session,
+        conversation.async_get_chat_log(menuai, session) as chat_log,
         patch(
             "anthropic.resources.messages.AsyncMessages.create",
             new_callable=AsyncMock,
@@ -938,7 +938,7 @@ async def test_history_conversion(
         chat_log.content = content
 
         await conversation.async_converse(
-            hass,
+            menuai,
             "Are you sure?",
             conversation_id,
             Context(),

@@ -11,8 +11,8 @@ from azure.core.pipeline.transport._aiohttp import (
 from azure.storage.blob.aio import ContainerClient
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
     CONF_ACCOUNT_NAME,
@@ -35,7 +35,7 @@ class AzureStorageConfigFlow(ConfigFlow, domain=DOMAIN):
         ContainerClient has a blocking call to open in cpython
         """
 
-        session = async_get_clientsession(self.hass)
+        session = async_get_clientsession(self.menuai)
 
         def create_container_client() -> ContainerClient:
             return ContainerClient(
@@ -45,7 +45,7 @@ class AzureStorageConfigFlow(ConfigFlow, domain=DOMAIN):
                 transport=AioHttpTransport(session=session),
             )
 
-        return await self.hass.async_add_executor_job(create_container_client)
+        return await self.menuai.async_add_executor_job(create_container_client)
 
     async def validate_config(
         self, container_client: ContainerClient

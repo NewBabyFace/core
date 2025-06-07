@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from pynuki.device import NukiDevice
 
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import NukiCoordinator
@@ -18,7 +18,7 @@ class NukiEntity[_NukiDeviceT: NukiDevice](CoordinatorEntity[NukiCoordinator]):
     The CoordinatorEntity class provides:
       should_poll
       async_update
-      async_added_to_hass
+      async_added_to_menuai
       available
 
     """

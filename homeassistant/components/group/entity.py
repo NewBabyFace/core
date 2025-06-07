@@ -7,20 +7,20 @@ from collections.abc import Callable, Collection, Mapping
 import logging
 from typing import Any
 
-from homeassistant.const import ATTR_ASSUMED_STATE, ATTR_ENTITY_ID, STATE_OFF, STATE_ON
-from homeassistant.core import (
+from menuai.const import ATTR_ASSUMED_STATE, ATTR_ENTITY_ID, STATE_OFF, STATE_ON
+from menuai.core import (
     CALLBACK_TYPE,
     Event,
     EventStateChangedData,
-    HomeAssistant,
+    menuai,
     State,
     callback,
     split_entity_id,
 )
-from homeassistant.helpers import start
-from homeassistant.helpers.entity import Entity, async_generate_entity_id
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.event import async_track_state_change_event
+from menuai.helpers import start
+from menuai.helpers.entity import Entity, async_generate_entity_id
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.event import async_track_state_change_event
 
 from .const import ATTR_AUTO, ATTR_ORDER, DATA_COMPONENT, DOMAIN, GROUP_ORDER, REG_KEY
 from .registry import GroupIntegrationRegistry, SingleStateType
@@ -48,7 +48,7 @@ class GroupEntity(Entity):
         """Render a preview."""
 
         for entity_id in self._entity_ids:
-            if (state := self.hass.states.get(entity_id)) is None:
+            if (state := self.menuai.states.get(entity_id)) is None:
                 continue
             self.async_update_supported_features(entity_id, state)
 
@@ -67,13 +67,13 @@ class GroupEntity(Entity):
 
         async_state_changed_listener(None)
         return async_track_state_change_event(
-            self.hass, self._entity_ids, async_state_changed_listener
+            self.menuai, self._entity_ids, async_state_changed_listener
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register listeners."""
         for entity_id in self._entity_ids:
-            if (state := self.hass.states.get(entity_id)) is None:
+            if (state := self.menuai.states.get(entity_id)) is None:
                 continue
             self.async_update_supported_features(entity_id, state)
 
@@ -90,13 +90,13 @@ class GroupEntity(Entity):
 
         self.async_on_remove(
             async_track_state_change_event(
-                self.hass, self._entity_ids, async_state_changed_listener
+                self.menuai, self._entity_ids, async_state_changed_listener
             )
         )
-        self.async_on_remove(start.async_at_start(self.hass, self._update_at_start))
+        self.async_on_remove(start.async_at_start(self.menuai, self._update_at_start))
 
     @callback
-    def _update_at_start(self, _: HomeAssistant) -> None:
+    def _update_at_start(self, _: menuai) -> None:
         """Update the group state at start."""
         self.async_update_group_state()
         self.async_write_ha_state()
@@ -104,7 +104,7 @@ class GroupEntity(Entity):
     @callback
     def async_defer_or_update_ha_state(self) -> None:
         """Only update once at start."""
-        if not self.hass.is_running:
+        if not self.menuai.is_running:
             return
 
         self.async_update_group_state()
@@ -137,7 +137,7 @@ class Group(Entity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         name: str,
         *,
         created_by_service: bool,
@@ -150,7 +150,7 @@ class Group(Entity):
 
         This Object has factory function for creation.
         """
-        self.hass = hass
+        self.menuai = menuai
         self._attr_name = name
         self._state: str | None = None
         self._attr_icon = icon
@@ -169,7 +169,7 @@ class Group(Entity):
     @staticmethod
     @callback
     def async_create_group_entity(
-        hass: HomeAssistant,
+        menuai: menuai,
         name: str,
         *,
         created_by_service: bool,
@@ -181,15 +181,15 @@ class Group(Entity):
     ) -> Group:
         """Create a group entity."""
         if order is None:
-            hass.data.setdefault(GROUP_ORDER, 0)
-            order = hass.data[GROUP_ORDER]
+            menuai.data.setdefault(GROUP_ORDER, 0)
+            order = menuai.data[GROUP_ORDER]
             # Keep track of the group order without iterating
             # every state in the state machine every time
             # we setup a new group
-            hass.data[GROUP_ORDER] += 1
+            menuai.data[GROUP_ORDER] += 1
 
         group = Group(
-            hass,
+            menuai,
             name,
             created_by_service=created_by_service,
             entity_ids=entity_ids,
@@ -199,14 +199,14 @@ class Group(Entity):
         )
 
         group.entity_id = async_generate_entity_id(
-            ENTITY_ID_FORMAT, object_id or name, hass=hass
+            ENTITY_ID_FORMAT, object_id or name, menuai=menuai
         )
 
         return group
 
     @staticmethod
     async def async_create_group(
-        hass: HomeAssistant,
+        menuai: menuai,
         name: str,
         *,
         created_by_service: bool,
@@ -221,7 +221,7 @@ class Group(Entity):
         This method must be run in the event loop.
         """
         group = Group.async_create_group_entity(
-            hass,
+            menuai,
             name,
             created_by_service=created_by_service,
             entity_ids=entity_ids,
@@ -232,7 +232,7 @@ class Group(Entity):
         )
 
         # If called before the platform async_setup is called (test cases)
-        await async_get_component(hass).async_add_entities([group])
+        await async_get_component(menuai).async_add_entities([group])
         return group
 
     def set_name(self, value: str) -> None:
@@ -327,7 +327,7 @@ class Group(Entity):
             registry.state_group_mapping.pop(self.entity_id)
 
     @callback
-    def _async_start(self, _: HomeAssistant | None = None) -> None:
+    def _async_start(self, _: menuai | None = None) -> None:
         """Start tracking members and write state."""
         self._reset_tracked_state()
         self._async_start_tracking()
@@ -341,14 +341,14 @@ class Group(Entity):
         """
         if self.trackable and self._async_unsub_state_changed is None:
             self._async_unsub_state_changed = async_track_state_change_event(
-                self.hass, self.trackable, self._async_state_changed_listener
+                self.menuai, self.trackable, self._async_state_changed_listener
             )
 
         self._async_update_group_state()
 
     @callback
     def _async_stop(self) -> None:
-        """Unregister the group from Home Assistant.
+        """Unregister the group from MenuAI.
 
         This method must be run in the event loop.
         """
@@ -362,15 +362,15 @@ class Group(Entity):
         self._state = None
         self._async_update_group_state()
 
-    async def async_added_to_hass(self) -> None:
-        """Handle addition to Home Assistant."""
-        self._registry = self.hass.data[REG_KEY]
+    async def async_added_to_menuai(self) -> None:
+        """Handle addition to MenuAI."""
+        self._registry = self.menuai.data[REG_KEY]
         self._set_tracked(self._entity_ids)
-        self.async_on_remove(start.async_at_start(self.hass, self._async_start))
+        self.async_on_remove(start.async_at_start(self.menuai, self._async_start))
         self.async_on_remove(self._async_deregister)
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Handle removal from Home Assistant."""
+    async def async_will_remove_from_menuai(self) -> None:
+        """Handle removal from MenuAI."""
         self._async_stop()
 
     async def _async_state_changed_listener(
@@ -400,7 +400,7 @@ class Group(Entity):
         self._on_states = set()
 
         for entity_id in self.trackable:
-            if (state := self.hass.states.get(entity_id)) is not None:
+            if (state := self.menuai.states.get(entity_id)) is not None:
                 self._see_state(state)
 
     def _see_state(self, new_state: State) -> None:
@@ -451,7 +451,7 @@ class Group(Entity):
         num_on_states = len(self._on_states)
         # If all the entity domains we are tracking
         # have the same on state we use this state
-        # and its hass.data[REG_KEY].on_off_mapping to off
+        # and its menuai.data[REG_KEY].on_off_mapping to off
         if num_on_states == 1:
             on_state = next(iter(self._on_states))
         # If we do not have an on state for any domains
@@ -474,10 +474,10 @@ class Group(Entity):
             self._state = STATE_OFF
 
 
-def async_get_component(hass: HomeAssistant) -> EntityComponent[Group]:
+def async_get_component(menuai: menuai) -> EntityComponent[Group]:
     """Get the group entity component."""
-    if (component := hass.data.get(DATA_COMPONENT)) is None:
-        component = hass.data[DATA_COMPONENT] = EntityComponent[Group](
-            _PACKAGE_LOGGER, DOMAIN, hass
+    if (component := menuai.data.get(DATA_COMPONENT)) is None:
+        component = menuai.data[DATA_COMPONENT] = EntityComponent[Group](
+            _PACKAGE_LOGGER, DOMAIN, menuai
         )
     return component

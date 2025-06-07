@@ -7,8 +7,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from homeassistant.components.cpuspeed.const import DOMAIN
-from homeassistant.core import HomeAssistant
+from menuai.components.cpuspeed.const import DOMAIN
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -32,7 +32,7 @@ def mock_cpuinfo_config_flow() -> Generator[MagicMock]:
     to return True.
     """
     with patch(
-        "homeassistant.components.cpuspeed.config_flow.cpuinfo.get_cpu_info",
+        "menuai.components.cpuspeed.config_flow.cpuinfo.get_cpu_info",
         return_value=True,
     ) as cpuinfo_mock:
         yield cpuinfo_mock
@@ -42,7 +42,7 @@ def mock_cpuinfo_config_flow() -> Generator[MagicMock]:
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Mock setting up a config entry."""
     with patch(
-        "homeassistant.components.cpuspeed.async_setup_entry", return_value=True
+        "menuai.components.cpuspeed.async_setup_entry", return_value=True
     ) as mock_setup:
         yield mock_setup
 
@@ -58,7 +58,7 @@ def mock_cpuinfo() -> Generator[MagicMock]:
     }
 
     with patch(
-        "homeassistant.components.cpuspeed.cpuinfo.get_cpu_info",
+        "menuai.components.cpuspeed.cpuinfo.get_cpu_info",
         return_value=info,
     ) as cpuinfo_mock:
         yield cpuinfo_mock
@@ -66,12 +66,12 @@ def mock_cpuinfo() -> Generator[MagicMock]:
 
 @pytest.fixture
 async def init_integration(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry, mock_cpuinfo: MagicMock
+    menuai: menuai, mock_config_entry: MockConfigEntry, mock_cpuinfo: MagicMock
 ) -> MockConfigEntry:
     """Set up the CPU Speed integration for testing."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     return mock_config_entry

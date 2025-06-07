@@ -5,14 +5,14 @@ from typing import Any
 
 from ical.diagnostics import redact_ics
 
-from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.util import dt as dt_util
 
 from . import RemoteCalendarConfigEntry
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: RemoteCalendarConfigEntry
+    menuai: menuai, entry: RemoteCalendarConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     coordinator = entry.runtime_data

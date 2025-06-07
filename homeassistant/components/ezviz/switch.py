@@ -8,14 +8,14 @@ from typing import Any
 from pyezvizapi.constants import DeviceSwitchType, SupportExt
 from pyezvizapi.exceptions import HTTPError, PyEzvizError
 
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     SwitchDeviceClass,
     SwitchEntity,
     SwitchEntityDescription,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import EzvizConfigEntry, EzvizDataUpdateCoordinator
 from .entity import EzvizEntity
@@ -105,7 +105,7 @@ SWITCH_TYPES: dict[int, EzvizSwitchEntityDescription] = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: EzvizConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -141,7 +141,7 @@ class EzvizSwitch(EzvizEntity, SwitchEntity):
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Change a device switch on the camera."""
         try:
-            if await self.hass.async_add_executor_job(
+            if await self.menuai.async_add_executor_job(
                 self.coordinator.ezviz_client.switch_status,
                 self._serial,
                 self._switch_number,
@@ -151,12 +151,12 @@ class EzvizSwitch(EzvizEntity, SwitchEntity):
                 self.async_write_ha_state()
 
         except (HTTPError, PyEzvizError) as err:
-            raise HomeAssistantError(f"Failed to turn on switch {self.name}") from err
+            raise menuaiError(f"Failed to turn on switch {self.name}") from err
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Change a device switch on the camera."""
         try:
-            if await self.hass.async_add_executor_job(
+            if await self.menuai.async_add_executor_job(
                 self.coordinator.ezviz_client.switch_status,
                 self._serial,
                 self._switch_number,
@@ -166,7 +166,7 @@ class EzvizSwitch(EzvizEntity, SwitchEntity):
                 self.async_write_ha_state()
 
         except (HTTPError, PyEzvizError) as err:
-            raise HomeAssistantError(f"Failed to turn off switch {self.name}") from err
+            raise menuaiError(f"Failed to turn off switch {self.name}") from err
 
     @callback
     def _handle_coordinator_update(self) -> None:

@@ -6,17 +6,17 @@ import asyncio
 from enum import IntFlag
 from typing import TYPE_CHECKING
 
-from homeassistant.util.hass_dict import HassKey
+from menuai.util.menuai_dict import menuaiKey
 
 if TYPE_CHECKING:
-    from homeassistant.helpers.entity_component import EntityComponent
+    from menuai.helpers.entity_component import EntityComponent
 
     from .entity import AssistSatelliteEntity
 
 DOMAIN = "assist_satellite"
 
-DATA_COMPONENT: HassKey[EntityComponent[AssistSatelliteEntity]] = HassKey(DOMAIN)
-CONNECTION_TEST_DATA: HassKey[dict[str, asyncio.Event]] = HassKey(
+DATA_COMPONENT: menuaiKey[EntityComponent[AssistSatelliteEntity]] = menuaiKey(DOMAIN)
+CONNECTION_TEST_DATA: menuaiKey[dict[str, asyncio.Event]] = menuaiKey(
     f"{DOMAIN}_connection_tests"
 )
 

@@ -8,26 +8,26 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components import valve
-from homeassistant.components.valve import (
+from menuai.components import valve
+from menuai.components.valve import (
     DEVICE_CLASSES_SCHEMA,
     ValveEntity,
     ValveEntityFeature,
     ValveState,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_DEVICE_CLASS,
     CONF_NAME,
     CONF_OPTIMISTIC,
     CONF_VALUE_TEMPLATE,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, VolSchemaType
-from homeassistant.util.json import JSON_DECODE_EXCEPTIONS, json_loads
-from homeassistant.util.percentage import (
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import ConfigType, VolSchemaType
+from menuai.util.json import JSON_DECODE_EXCEPTIONS, json_loads
+from menuai.util.percentage import (
     percentage_to_ranged_value,
     ranged_value_to_percentage,
 )
@@ -134,13 +134,13 @@ DISCOVERY_SCHEMA = vol.All(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up MQTT valve through YAML and through MQTT discovery."""
     async_setup_entity_entry_helper(
-        hass,
+        menuai,
         config_entry,
         MqttValve,
         valve.DOMAIN,
@@ -349,7 +349,7 @@ class MqttValve(MqttEntity, ValveEntity):
 
     async def _subscribe_topics(self) -> None:
         """(Re)Subscribe to topics."""
-        subscription.async_subscribe_topics_internal(self.hass, self._sub_state)
+        subscription.async_subscribe_topics_internal(self.menuai, self._sub_state)
 
     async def async_open_valve(self) -> None:
         """Move the valve up.

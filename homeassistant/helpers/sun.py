@@ -6,19 +6,19 @@ from collections.abc import Callable
 import datetime
 from typing import TYPE_CHECKING, Any, cast
 
-from homeassistant.const import SUN_EVENT_SUNRISE, SUN_EVENT_SUNSET
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.loader import bind_hass
-from homeassistant.util import dt as dt_util
-from homeassistant.util.hass_dict import HassKey
+from menuai.const import SUN_EVENT_SUNRISE, SUN_EVENT_SUNSET
+from menuai.core import menuai, callback
+from menuai.loader import bind_menuai
+from menuai.util import dt as dt_util
+from menuai.util.menuai_dict import menuaiKey
 
 if TYPE_CHECKING:
     import astral
     import astral.location
 
-DATA_LOCATION_CACHE: HassKey[
+DATA_LOCATION_CACHE: menuaiKey[
     dict[tuple[str, str, str, float, float], astral.location.Location]
-] = HassKey("astral_location_cache")
+] = menuaiKey("astral_location_cache")
 
 ELEVATION_AGNOSTIC_EVENTS = ("noon", "midnight")
 
@@ -26,40 +26,40 @@ type _AstralSunEventCallable = Callable[..., datetime.datetime]
 
 
 @callback
-@bind_hass
+@bind_menuai
 def get_astral_location(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> tuple[astral.location.Location, astral.Elevation]:
-    """Get an astral location for the current Home Assistant configuration."""
+    """Get an astral location for the current MenuAI configuration."""
     from astral import LocationInfo  # pylint: disable=import-outside-toplevel
     from astral.location import Location  # pylint: disable=import-outside-toplevel
 
-    latitude = hass.config.latitude
-    longitude = hass.config.longitude
-    timezone = str(hass.config.time_zone)
-    elevation = hass.config.elevation
+    latitude = menuai.config.latitude
+    longitude = menuai.config.longitude
+    timezone = str(menuai.config.time_zone)
+    elevation = menuai.config.elevation
     info = ("", "", timezone, latitude, longitude)
 
     # Cache astral locations so they aren't recreated with the same args
-    if DATA_LOCATION_CACHE not in hass.data:
-        hass.data[DATA_LOCATION_CACHE] = {}
+    if DATA_LOCATION_CACHE not in menuai.data:
+        menuai.data[DATA_LOCATION_CACHE] = {}
 
-    if info not in hass.data[DATA_LOCATION_CACHE]:
-        hass.data[DATA_LOCATION_CACHE][info] = Location(LocationInfo(*info))
+    if info not in menuai.data[DATA_LOCATION_CACHE]:
+        menuai.data[DATA_LOCATION_CACHE][info] = Location(LocationInfo(*info))
 
-    return hass.data[DATA_LOCATION_CACHE][info], elevation
+    return menuai.data[DATA_LOCATION_CACHE][info], elevation
 
 
 @callback
-@bind_hass
+@bind_menuai
 def get_astral_event_next(
-    hass: HomeAssistant,
+    menuai: menuai,
     event: str,
     utc_point_in_time: datetime.datetime | None = None,
     offset: datetime.timedelta | None = None,
 ) -> datetime.datetime:
     """Calculate the next specified solar event."""
-    location, elevation = get_astral_location(hass)
+    location, elevation = get_astral_location(menuai)
     return get_location_astral_event_next(
         location, elevation, event, utc_point_in_time, offset
     )
@@ -109,14 +109,14 @@ def get_location_astral_event_next(
 
 
 @callback
-@bind_hass
+@bind_menuai
 def get_astral_event_date(
-    hass: HomeAssistant,
+    menuai: menuai,
     event: str,
     date: datetime.date | datetime.datetime | None = None,
 ) -> datetime.datetime | None:
     """Calculate the astral event time for the specified date."""
-    location, elevation = get_astral_location(hass)
+    location, elevation = get_astral_location(menuai)
 
     if date is None:
         date = dt_util.now().date()
@@ -136,15 +136,15 @@ def get_astral_event_date(
 
 
 @callback
-@bind_hass
+@bind_menuai
 def is_up(
-    hass: HomeAssistant, utc_point_in_time: datetime.datetime | None = None
+    menuai: menuai, utc_point_in_time: datetime.datetime | None = None
 ) -> bool:
     """Calculate if the sun is currently up."""
     if utc_point_in_time is None:
         utc_point_in_time = dt_util.utcnow()
 
-    next_sunrise = get_astral_event_next(hass, SUN_EVENT_SUNRISE, utc_point_in_time)
-    next_sunset = get_astral_event_next(hass, SUN_EVENT_SUNSET, utc_point_in_time)
+    next_sunrise = get_astral_event_next(menuai, SUN_EVENT_SUNRISE, utc_point_in_time)
+    next_sunset = get_astral_event_next(menuai, SUN_EVENT_SUNSET, utc_point_in_time)
 
     return next_sunrise > next_sunset

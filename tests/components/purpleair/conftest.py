@@ -8,8 +8,8 @@ from aiopurpleair.endpoints.sensors import NearbySensorResult
 from aiopurpleair.models.sensors import GetSensorsResponse
 import pytest
 
-from homeassistant.components.purpleair.const import DOMAIN
-from homeassistant.core import HomeAssistant
+from menuai.components.purpleair.const import DOMAIN
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry, load_fixture
 
@@ -38,7 +38,7 @@ def api_fixture(get_sensors_response: GetSensorsResponse) -> Mock:
 
 @pytest.fixture(name="config_entry")
 def config_entry_fixture(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry_data: dict[str, Any],
     config_entry_options: dict[str, Any],
 ) -> MockConfigEntry:
@@ -50,7 +50,7 @@ def config_entry_fixture(
         data=config_entry_data,
         options=config_entry_options,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     return entry
 
 
@@ -82,16 +82,16 @@ def get_sensors_response_fixture() -> GetSensorsResponse:
 def mock_aiopurpleair_fixture(api: Mock) -> Generator[Mock]:
     """Define a fixture to patch aiopurpleair."""
     with (
-        patch("homeassistant.components.purpleair.config_flow.API", return_value=api),
-        patch("homeassistant.components.purpleair.coordinator.API", return_value=api),
+        patch("menuai.components.purpleair.config_flow.API", return_value=api),
+        patch("menuai.components.purpleair.coordinator.API", return_value=api),
     ):
         yield api
 
 
 @pytest.fixture(name="setup_config_entry")
 async def setup_config_entry_fixture(
-    hass: HomeAssistant, config_entry: MockConfigEntry, mock_aiopurpleair: Mock
+    menuai: menuai, config_entry: MockConfigEntry, mock_aiopurpleair: Mock
 ) -> None:
     """Define a fixture to set up purpleair."""
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()

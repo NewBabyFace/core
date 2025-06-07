@@ -5,18 +5,18 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from homeassistant.components import mqtt
-from homeassistant.components.sensor import (
+from menuai.components import mqtt
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorStateClass,
 )
-from homeassistant.const import DEGREE, UnitOfPrecipitationDepth, UnitOfTemperature
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import slugify
-from homeassistant.util.json import json_loads_object
+from menuai.const import DEGREE, UnitOfPrecipitationDepth, UnitOfTemperature
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import slugify
+from menuai.util.json import json_loads_object
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -113,7 +113,7 @@ def _slug(name: str) -> str:
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -121,7 +121,7 @@ async def async_setup_platform(
     """Set up the ARWN platform."""
 
     # Make sure MQTT integration is enabled and the client is available
-    if not await mqtt.async_wait_for_mqtt_client(hass):
+    if not await mqtt.async_wait_for_mqtt_client(menuai):
         _LOGGER.error("MQTT integration is not available")
         return
 
@@ -144,15 +144,15 @@ async def async_setup_platform(
         if not sensors:
             return
 
-        if (store := hass.data.get(DATA_ARWN)) is None:
-            store = hass.data[DATA_ARWN] = {}
+        if (store := menuai.data.get(DATA_ARWN)) is None:
+            store = menuai.data[DATA_ARWN] = {}
 
         if "timestamp" in event:
             del event["timestamp"]
 
         for sensor in sensors:
             if sensor.name not in store:
-                sensor.hass = hass
+                sensor.menuai = menuai
                 sensor.set_event(event)
                 store[sensor.name] = sensor
                 _LOGGER.debug(
@@ -167,7 +167,7 @@ async def async_setup_platform(
                 )
                 store[sensor.name].set_event(event)
 
-    await mqtt.async_subscribe(hass, TOPIC, async_sensor_event_received, 0)
+    await mqtt.async_subscribe(menuai, TOPIC, async_sensor_event_received, 0)
 
 
 class ArwnSensor(SensorEntity):

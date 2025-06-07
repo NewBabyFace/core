@@ -13,11 +13,11 @@ from typing import Any, cast
 
 from fritzconnection.core.fritzmonitor import FritzMonitor
 
-from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
-from homeassistant.const import CONF_HOST, CONF_PORT, EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import Event, HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.sensor import SensorDeviceClass, SensorEntity
+from menuai.const import CONF_HOST, CONF_PORT, EVENT_menuai_STOP
+from menuai.core import Event, menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import FritzBoxCallMonitorConfigEntry
 from .base import Contact, FritzBoxPhonebook
@@ -46,7 +46,7 @@ class CallState(StrEnum):
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: FritzBoxCallMonitorConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -110,20 +110,20 @@ class FritzBoxCallSensor(SensorEntity):
             sw_version=self._fritzbox_phonebook.fph.fc.system_version,
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Connect to FRITZ!Box to monitor its call state."""
-        await super().async_added_to_hass()
-        await self.hass.async_add_executor_job(self._start_call_monitor)
+        await super().async_added_to_menuai()
+        await self.menuai.async_add_executor_job(self._start_call_monitor)
         self.async_on_remove(
-            self.hass.bus.async_listen_once(
-                EVENT_HOMEASSISTANT_STOP, self._stop_call_monitor
+            self.menuai.bus.async_listen_once(
+                EVENT_menuai_STOP, self._stop_call_monitor
             )
         )
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Disconnect from FRITZ!Box by stopping monitor."""
-        await super().async_will_remove_from_hass()
-        await self.hass.async_add_executor_job(self._stop_call_monitor)
+        await super().async_will_remove_from_menuai()
+        await self.menuai.async_add_executor_job(self._stop_call_monitor)
 
     def _start_call_monitor(self) -> None:
         """Check connection and start callmonitor thread."""

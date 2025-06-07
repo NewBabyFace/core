@@ -1,4 +1,4 @@
-"""Hass.io const variables."""
+"""menuai.io const variables."""
 
 from __future__ import annotations
 
@@ -6,14 +6,14 @@ from datetime import timedelta
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
-from homeassistant.util.hass_dict import HassKey
+from menuai.util.menuai_dict import menuaiKey
 
 if TYPE_CHECKING:
-    from .config import HassioConfig
-    from .handler import HassIO
+    from .config import menuaiioConfig
+    from .handler import menuaiIO
 
 
-DOMAIN = "hassio"
+DOMAIN = "menuaiio"
 
 ATTR_ADDON = "addon"
 ATTR_ADDONS = "addons"
@@ -27,8 +27,8 @@ ATTR_ENABLE = "enable"
 ATTR_ENDPOINT = "endpoint"
 ATTR_FOLDERS = "folders"
 ATTR_HEALTHY = "healthy"
-ATTR_HOMEASSISTANT = "homeassistant"
-ATTR_HOMEASSISTANT_EXCLUDE_DATABASE = "homeassistant_exclude_database"
+ATTR_menuai = "menuai"
+ATTR_menuai_EXCLUDE_DATABASE = "menuai_exclude_database"
 ATTR_INPUT = "input"
 ATTR_ISSUES = "issues"
 ATTR_MESSAGE = "message"
@@ -51,9 +51,9 @@ ATTR_WS_EVENT = "event"
 
 X_AUTH_TOKEN = "X-Supervisor-Token"
 X_INGRESS_PATH = "X-Ingress-Path"
-X_HASS_USER_ID = "X-Hass-User-ID"
-X_HASS_IS_ADMIN = "X-Hass-Is-Admin"
-X_HASS_SOURCE = "X-Hass-Source"
+X_menuai_USER_ID = "X-menuai-User-ID"
+X_menuai_IS_ADMIN = "X-menuai-Is-Admin"
+X_menuai_SOURCE = "X-menuai-Source"
 
 WS_TYPE = "type"
 WS_ID = "id"
@@ -71,23 +71,23 @@ EVENT_ISSUE_REMOVED = "issue_removed"
 
 UPDATE_KEY_SUPERVISOR = "supervisor"
 
-ADDONS_COORDINATOR = "hassio_addons_coordinator"
+ADDONS_COORDINATOR = "menuaiio_addons_coordinator"
 
 
-DATA_COMPONENT: HassKey[HassIO] = HassKey(DOMAIN)
-DATA_CONFIG_STORE: HassKey[HassioConfig] = HassKey("hassio_config_store")
-DATA_CORE_INFO = "hassio_core_info"
-DATA_CORE_STATS = "hassio_core_stats"
-DATA_HOST_INFO = "hassio_host_info"
-DATA_STORE = "hassio_store"
-DATA_INFO = "hassio_info"
-DATA_OS_INFO = "hassio_os_info"
-DATA_NETWORK_INFO = "hassio_network_info"
-DATA_SUPERVISOR_INFO = "hassio_supervisor_info"
-DATA_SUPERVISOR_STATS = "hassio_supervisor_stats"
-DATA_ADDONS_INFO = "hassio_addons_info"
-DATA_ADDONS_STATS = "hassio_addons_stats"
-HASSIO_UPDATE_INTERVAL = timedelta(minutes=5)
+DATA_COMPONENT: menuaiKey[menuaiIO] = menuaiKey(DOMAIN)
+DATA_CONFIG_STORE: menuaiKey[menuaiioConfig] = menuaiKey("menuaiio_config_store")
+DATA_CORE_INFO = "menuaiio_core_info"
+DATA_CORE_STATS = "menuaiio_core_stats"
+DATA_HOST_INFO = "menuaiio_host_info"
+DATA_STORE = "menuaiio_store"
+DATA_INFO = "menuaiio_info"
+DATA_OS_INFO = "menuaiio_os_info"
+DATA_NETWORK_INFO = "menuaiio_network_info"
+DATA_SUPERVISOR_INFO = "menuaiio_supervisor_info"
+DATA_SUPERVISOR_STATS = "menuaiio_supervisor_stats"
+DATA_ADDONS_INFO = "menuaiio_addons_info"
+DATA_ADDONS_STATS = "menuaiio_addons_stats"
+menuaiIO_UPDATE_INTERVAL = timedelta(minutes=5)
 
 ATTR_AUTO_UPDATE = "auto_update"
 ATTR_VERSION = "version"
@@ -118,8 +118,8 @@ ISSUE_KEY_SYSTEM_DOCKER_CONFIG = "issue_system_docker_config"
 ISSUE_KEY_ADDON_DETACHED_ADDON_MISSING = "issue_addon_detached_addon_missing"
 ISSUE_KEY_ADDON_DETACHED_ADDON_REMOVED = "issue_addon_detached_addon_removed"
 
-CORE_CONTAINER = "homeassistant"
-SUPERVISOR_CONTAINER = "hassio_supervisor"
+CORE_CONTAINER = "menuai"
+SUPERVISOR_CONTAINER = "menuaiio_supervisor"
 
 CONTAINER_STATS = "stats"
 CONTAINER_INFO = "info"
@@ -141,8 +141,8 @@ REQUEST_REFRESH_DELAY = 10
 class SupervisorEntityModel(StrEnum):
     """Supervisor entity model."""
 
-    ADDON = "Home Assistant Add-on"
-    OS = "Home Assistant Operating System"
-    CORE = "Home Assistant Core"
-    SUPERVIOSR = "Home Assistant Supervisor"
-    HOST = "Home Assistant Host"
+    ADDON = "MenuAI Add-on"
+    OS = "MenuAI Operating System"
+    CORE = "MenuAI Core"
+    SUPERVIOSR = "MenuAI Supervisor"
+    HOST = "MenuAI Host"

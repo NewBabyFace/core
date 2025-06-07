@@ -2,9 +2,9 @@
 
 from pyatag import AtagException
 
-from homeassistant.components.atag import DOMAIN
-from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.core import HomeAssistant
+from menuai.components.atag import DOMAIN
+from menuai.const import CONF_HOST, CONF_PORT
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 from tests.test_util.aiohttp import AiohttpClientMocker
@@ -91,18 +91,18 @@ def mock_connection(
 
 
 async def init_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     skip_setup: bool = False,
     unique_id: str = UID,
 ) -> MockConfigEntry:
-    """Set up the Atag integration in Home Assistant."""
+    """Set up the Atag integration in MenuAI."""
     mock_connection(aioclient_mock)
     entry = MockConfigEntry(domain=DOMAIN, data=USER_INPUT, unique_id=unique_id)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     if not skip_setup:
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     return entry

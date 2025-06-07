@@ -2,13 +2,13 @@
 
 from datetime import timedelta
 
-from homeassistant.components.broadlink.const import DOMAIN
-from homeassistant.components.broadlink.updater import BroadlinkSP4UpdateManager
-from homeassistant.const import ATTR_FRIENDLY_NAME, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.entity_component import async_update_entity
-from homeassistant.util import dt as dt_util
+from menuai.components.broadlink.const import DOMAIN
+from menuai.components.broadlink.updater import BroadlinkSP4UpdateManager
+from menuai.const import ATTR_FRIENDLY_NAME, Platform
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.entity_component import async_update_entity
+from menuai.util import dt as dt_util
 
 from . import get_device
 
@@ -16,7 +16,7 @@ from tests.common import async_fire_time_changed
 
 
 async def test_a1_sensor_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
@@ -31,7 +31,7 @@ async def test_a1_sensor_setup(
         "noise": 1,
     }
 
-    mock_setup = await device.setup_entry(hass, mock_api=mock_api)
+    mock_setup = await device.setup_entry(menuai, mock_api=mock_api)
 
     assert mock_api.check_sensors_raw.call_count == 1
     device_entry = device_registry.async_get_device(
@@ -43,8 +43,8 @@ async def test_a1_sensor_setup(
 
     sensors_and_states = {
         (
-            hass.states.get(sensor.entity_id).attributes[ATTR_FRIENDLY_NAME],
-            hass.states.get(sensor.entity_id).state,
+            menuai.states.get(sensor.entity_id).attributes[ATTR_FRIENDLY_NAME],
+            menuai.states.get(sensor.entity_id).state,
         )
         for sensor in sensors
     }
@@ -58,7 +58,7 @@ async def test_a1_sensor_setup(
 
 
 async def test_a1_sensor_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
@@ -73,7 +73,7 @@ async def test_a1_sensor_update(
         "noise": 1,
     }
 
-    mock_setup = await device.setup_entry(hass, mock_api=mock_api)
+    mock_setup = await device.setup_entry(menuai, mock_api=mock_api)
 
     device_entry = device_registry.async_get_device(
         identifiers={(DOMAIN, mock_setup.entry.unique_id)}
@@ -89,13 +89,13 @@ async def test_a1_sensor_update(
         "light": 3,
         "noise": 2,
     }
-    await async_update_entity(hass, next(iter(sensors)).entity_id)
+    await async_update_entity(menuai, next(iter(sensors)).entity_id)
     assert mock_setup.api.check_sensors_raw.call_count == 2
 
     sensors_and_states = {
         (
-            hass.states.get(sensor.entity_id).attributes[ATTR_FRIENDLY_NAME],
-            hass.states.get(sensor.entity_id).state,
+            menuai.states.get(sensor.entity_id).attributes[ATTR_FRIENDLY_NAME],
+            menuai.states.get(sensor.entity_id).state,
         )
         for sensor in sensors
     }
@@ -109,7 +109,7 @@ async def test_a1_sensor_update(
 
 
 async def test_rm_pro_sensor_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
@@ -118,7 +118,7 @@ async def test_rm_pro_sensor_setup(
     mock_api = device.get_mock_api()
     mock_api.check_sensors.return_value = {"temperature": 18.2}
 
-    mock_setup = await device.setup_entry(hass, mock_api=mock_api)
+    mock_setup = await device.setup_entry(menuai, mock_api=mock_api)
 
     assert mock_api.check_sensors.call_count == 1
     device_entry = device_registry.async_get_device(
@@ -130,8 +130,8 @@ async def test_rm_pro_sensor_setup(
 
     sensors_and_states = {
         (
-            hass.states.get(sensor.entity_id).attributes[ATTR_FRIENDLY_NAME],
-            hass.states.get(sensor.entity_id).state,
+            menuai.states.get(sensor.entity_id).attributes[ATTR_FRIENDLY_NAME],
+            menuai.states.get(sensor.entity_id).state,
         )
         for sensor in sensors
     }
@@ -139,7 +139,7 @@ async def test_rm_pro_sensor_setup(
 
 
 async def test_rm_pro_sensor_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
@@ -148,7 +148,7 @@ async def test_rm_pro_sensor_update(
     mock_api = device.get_mock_api()
     mock_api.check_sensors.return_value = {"temperature": 25.7}
 
-    mock_setup = await device.setup_entry(hass, mock_api=mock_api)
+    mock_setup = await device.setup_entry(menuai, mock_api=mock_api)
 
     device_entry = device_registry.async_get_device(
         identifiers={(DOMAIN, mock_setup.entry.unique_id)}
@@ -158,13 +158,13 @@ async def test_rm_pro_sensor_update(
     assert len(sensors) == 1
 
     mock_setup.api.check_sensors.return_value = {"temperature": 25.8}
-    await async_update_entity(hass, next(iter(sensors)).entity_id)
+    await async_update_entity(menuai, next(iter(sensors)).entity_id)
     assert mock_setup.api.check_sensors.call_count == 2
 
     sensors_and_states = {
         (
-            hass.states.get(sensor.entity_id).attributes[ATTR_FRIENDLY_NAME],
-            hass.states.get(sensor.entity_id).state,
+            menuai.states.get(sensor.entity_id).attributes[ATTR_FRIENDLY_NAME],
+            menuai.states.get(sensor.entity_id).state,
         )
         for sensor in sensors
     }
@@ -172,7 +172,7 @@ async def test_rm_pro_sensor_update(
 
 
 async def test_rm_pro_filter_crazy_temperature(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
@@ -184,7 +184,7 @@ async def test_rm_pro_filter_crazy_temperature(
     mock_api = device.get_mock_api()
     mock_api.check_sensors.return_value = {"temperature": 22.9}
 
-    mock_setup = await device.setup_entry(hass, mock_api=mock_api)
+    mock_setup = await device.setup_entry(menuai, mock_api=mock_api)
 
     device_entry = device_registry.async_get_device(
         identifiers={(DOMAIN, mock_setup.entry.unique_id)}
@@ -194,13 +194,13 @@ async def test_rm_pro_filter_crazy_temperature(
     assert len(sensors) == 1
 
     mock_setup.api.check_sensors.return_value = {"temperature": -7}
-    await async_update_entity(hass, next(iter(sensors)).entity_id)
+    await async_update_entity(menuai, next(iter(sensors)).entity_id)
     assert mock_setup.api.check_sensors.call_count == 2
 
     sensors_and_states = {
         (
-            hass.states.get(sensor.entity_id).attributes[ATTR_FRIENDLY_NAME],
-            hass.states.get(sensor.entity_id).state,
+            menuai.states.get(sensor.entity_id).attributes[ATTR_FRIENDLY_NAME],
+            menuai.states.get(sensor.entity_id).state,
         )
         for sensor in sensors
     }
@@ -208,7 +208,7 @@ async def test_rm_pro_filter_crazy_temperature(
 
 
 async def test_rm_mini3_no_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
@@ -217,7 +217,7 @@ async def test_rm_mini3_no_sensor(
     mock_api = device.get_mock_api()
     mock_api.check_sensors.return_value = {"temperature": 0}
 
-    mock_setup = await device.setup_entry(hass, mock_api=mock_api)
+    mock_setup = await device.setup_entry(menuai, mock_api=mock_api)
 
     assert mock_api.check_sensors.call_count <= 1
     device_entry = device_registry.async_get_device(
@@ -229,7 +229,7 @@ async def test_rm_mini3_no_sensor(
 
 
 async def test_rm4_pro_hts2_sensor_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
@@ -238,7 +238,7 @@ async def test_rm4_pro_hts2_sensor_setup(
     mock_api = device.get_mock_api()
     mock_api.check_sensors.return_value = {"temperature": 22.5, "humidity": 43.7}
 
-    mock_setup = await device.setup_entry(hass, mock_api=mock_api)
+    mock_setup = await device.setup_entry(menuai, mock_api=mock_api)
 
     assert mock_api.check_sensors.call_count == 1
     device_entry = device_registry.async_get_device(
@@ -250,8 +250,8 @@ async def test_rm4_pro_hts2_sensor_setup(
 
     sensors_and_states = {
         (
-            hass.states.get(sensor.entity_id).attributes[ATTR_FRIENDLY_NAME],
-            hass.states.get(sensor.entity_id).state,
+            menuai.states.get(sensor.entity_id).attributes[ATTR_FRIENDLY_NAME],
+            menuai.states.get(sensor.entity_id).state,
         )
         for sensor in sensors
     }
@@ -262,7 +262,7 @@ async def test_rm4_pro_hts2_sensor_setup(
 
 
 async def test_rm4_pro_hts2_sensor_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
@@ -271,7 +271,7 @@ async def test_rm4_pro_hts2_sensor_update(
     mock_api = device.get_mock_api()
     mock_api.check_sensors.return_value = {"temperature": 16.7, "humidity": 34.1}
 
-    mock_setup = await device.setup_entry(hass, mock_api=mock_api)
+    mock_setup = await device.setup_entry(menuai, mock_api=mock_api)
 
     device_entry = device_registry.async_get_device(
         identifiers={(DOMAIN, mock_setup.entry.unique_id)}
@@ -281,13 +281,13 @@ async def test_rm4_pro_hts2_sensor_update(
     assert len(sensors) == 2
 
     mock_setup.api.check_sensors.return_value = {"temperature": 16.8, "humidity": 34.0}
-    await async_update_entity(hass, next(iter(sensors)).entity_id)
+    await async_update_entity(menuai, next(iter(sensors)).entity_id)
     assert mock_setup.api.check_sensors.call_count == 2
 
     sensors_and_states = {
         (
-            hass.states.get(sensor.entity_id).attributes[ATTR_FRIENDLY_NAME],
-            hass.states.get(sensor.entity_id).state,
+            menuai.states.get(sensor.entity_id).attributes[ATTR_FRIENDLY_NAME],
+            menuai.states.get(sensor.entity_id).state,
         )
         for sensor in sensors
     }
@@ -298,7 +298,7 @@ async def test_rm4_pro_hts2_sensor_update(
 
 
 async def test_rm4_pro_no_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
@@ -307,7 +307,7 @@ async def test_rm4_pro_no_sensor(
     mock_api = device.get_mock_api()
     mock_api.check_sensors.return_value = {"temperature": 0, "humidity": 0}
 
-    mock_setup = await device.setup_entry(hass, mock_api=mock_api)
+    mock_setup = await device.setup_entry(menuai, mock_api=mock_api)
 
     assert mock_api.check_sensors.call_count <= 1
     device_entry = device_registry.async_get_device(
@@ -319,7 +319,7 @@ async def test_rm4_pro_no_sensor(
 
 
 async def test_scb1e_sensor_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
@@ -338,7 +338,7 @@ async def test_scb1e_sensor_setup(
         "childlock": 0,
     }
 
-    mock_setup = await device.setup_entry(hass, mock_api=mock_api)
+    mock_setup = await device.setup_entry(menuai, mock_api=mock_api)
 
     assert mock_api.get_state.call_count == 1
     device_entry = device_registry.async_get_device(
@@ -350,8 +350,8 @@ async def test_scb1e_sensor_setup(
 
     sensors_and_states = {
         (
-            hass.states.get(sensor.entity_id).attributes[ATTR_FRIENDLY_NAME],
-            hass.states.get(sensor.entity_id).state,
+            menuai.states.get(sensor.entity_id).attributes[ATTR_FRIENDLY_NAME],
+            menuai.states.get(sensor.entity_id).state,
         )
         for sensor in sensors
     }
@@ -365,7 +365,7 @@ async def test_scb1e_sensor_setup(
 
 
 async def test_scb1e_sensor_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
@@ -390,7 +390,7 @@ async def test_scb1e_sensor_update(
         + timedelta(seconds=1)
     )
 
-    mock_setup = await device.setup_entry(hass, mock_api=mock_api)
+    mock_setup = await device.setup_entry(menuai, mock_api=mock_api)
 
     device_entry = device_registry.async_get_device(
         identifiers={(DOMAIN, mock_setup.entry.unique_id)}
@@ -411,15 +411,15 @@ async def test_scb1e_sensor_update(
         "childlock": 0,
     }
 
-    async_fire_time_changed(hass, target_time)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, target_time)
+    await menuai.async_block_till_done()
 
     assert mock_setup.api.get_state.call_count == 2
 
     sensors_and_states = {
         (
-            hass.states.get(sensor.entity_id).attributes[ATTR_FRIENDLY_NAME],
-            hass.states.get(sensor.entity_id).state,
+            menuai.states.get(sensor.entity_id).attributes[ATTR_FRIENDLY_NAME],
+            menuai.states.get(sensor.entity_id).state,
         )
         for sensor in sensors
     }

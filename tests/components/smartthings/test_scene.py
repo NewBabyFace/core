@@ -4,10 +4,10 @@ from unittest.mock import AsyncMock
 
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.scene import DOMAIN as SCENE_DOMAIN
-from homeassistant.const import ATTR_ENTITY_ID, SERVICE_TURN_ON, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.scene import DOMAIN as SCENE_DOMAIN
+from menuai.const import ATTR_ENTITY_ID, SERVICE_TURN_ON, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import setup_integration, snapshot_smartthings_entities
 
@@ -15,27 +15,27 @@ from tests.common import MockConfigEntry
 
 
 async def test_all_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mock_smartthings: AsyncMock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test all entities."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    snapshot_smartthings_entities(hass, entity_registry, snapshot, Platform.SCENE)
+    snapshot_smartthings_entities(menuai, entity_registry, snapshot, Platform.SCENE)
 
 
 async def test_activate_scene(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_smartthings: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test activating a scene."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SCENE_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "scene.away"},

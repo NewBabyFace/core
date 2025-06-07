@@ -12,11 +12,11 @@ from propcache.api import cached_property
 from python_otbr_api import tlv_parser
 from python_otbr_api.tlv_parser import MeshcopTLVType
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.singleton import singleton
-from homeassistant.helpers.storage import Store
-from homeassistant.util import dt as dt_util, ulid as ulid_util
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.singleton import singleton
+from menuai.helpers.storage import Store
+from menuai.util import dt as dt_util, ulid as ulid_util
 
 from . import discovery
 
@@ -30,7 +30,7 @@ SAVE_DELAY = 10
 _LOGGER = logging.getLogger(__name__)
 
 
-class DatasetPreferredError(HomeAssistantError):
+class DatasetPreferredError(menuaiError):
     """Raised when attempting to delete the preferred dataset."""
 
 
@@ -184,14 +184,14 @@ class DatasetStoreStore(Store):
 class DatasetStore:
     """Class to hold a collection of thread datasets."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize the dataset store."""
-        self.hass = hass
+        self.menuai = menuai
         self.datasets: dict[str, DatasetEntry] = {}
         self._preferred_dataset: str | None = None
         self._set_preferred_dataset_task: Task | None = None
         self._store: Store[dict[str, Any]] = DatasetStoreStore(
-            hass,
+            menuai,
             STORAGE_VERSION_MAJOR,
             STORAGE_KEY,
             atomic_writes=True,
@@ -216,12 +216,12 @@ class DatasetStore:
             MeshcopTLVType.EXTPANID not in dataset
             or MeshcopTLVType.ACTIVETIMESTAMP not in dataset
         ):
-            raise HomeAssistantError("Invalid dataset")
+            raise menuaiError("Invalid dataset")
 
         # Don't allow setting preferred border agent ID without setting
         # preferred extended address
         if preferred_border_agent_id is not None and preferred_extended_address is None:
-            raise HomeAssistantError(
+            raise menuaiError(
                 "Must set preferred extended address with preferred border agent ID"
             )
 
@@ -303,7 +303,7 @@ class DatasetStore:
             and preferred_extended_address
             and not self._set_preferred_dataset_task
         ):
-            self._set_preferred_dataset_task = self.hass.async_create_task(
+            self._set_preferred_dataset_task = self.menuai.async_create_task(
                 self._set_preferred_dataset_if_only_network(
                     entry.id, preferred_extended_address
                 )
@@ -330,7 +330,7 @@ class DatasetStore:
         # Don't allow setting preferred border agent ID without setting
         # preferred extended address
         if border_agent_id is not None and extended_address is None:
-            raise HomeAssistantError(
+            raise menuaiError(
                 "Must set preferred extended address with preferred border agent ID"
             )
 
@@ -382,12 +382,12 @@ class DatasetStore:
 
         # Start Thread router discovery
         thread_discovery = discovery.ThreadRouterDiscovery(
-            self.hass, router_discovered, lambda key: None
+            self.menuai, router_discovered, lambda key: None
         )
         await thread_discovery.async_start()
 
-        found_own_router = self.hass.async_create_task(own_router_evt.wait())
-        found_other_router = self.hass.async_create_task(other_router_evt.wait())
+        found_own_router = self.menuai.async_create_task(own_router_evt.wait())
+        found_other_router = self.menuai.async_create_task(other_router_evt.wait())
         pending = {found_own_router, found_other_router}
         (done, pending) = await wait(pending, timeout=BORDER_AGENT_DISCOVERY_TIMEOUT)
         if found_other_router in done:
@@ -450,15 +450,15 @@ class DatasetStore:
 
 
 @singleton(DATA_STORE)
-async def async_get_store(hass: HomeAssistant) -> DatasetStore:
+async def async_get_store(menuai: menuai) -> DatasetStore:
     """Get the dataset store."""
-    store = DatasetStore(hass)
+    store = DatasetStore(menuai)
     await store.async_load()
     return store
 
 
 async def async_add_dataset(
-    hass: HomeAssistant,
+    menuai: menuai,
     source: str,
     tlv: str,
     *,
@@ -466,21 +466,21 @@ async def async_add_dataset(
     preferred_extended_address: str | None = None,
 ) -> None:
     """Add a dataset."""
-    store = await async_get_store(hass)
+    store = await async_get_store(menuai)
     store.async_add(source, tlv, preferred_border_agent_id, preferred_extended_address)
 
 
-async def async_get_dataset(hass: HomeAssistant, dataset_id: str) -> str | None:
+async def async_get_dataset(menuai: menuai, dataset_id: str) -> str | None:
     """Get a dataset."""
-    store = await async_get_store(hass)
+    store = await async_get_store(menuai)
     if (entry := store.async_get(dataset_id)) is None:
         return None
     return entry.tlv
 
 
-async def async_get_preferred_dataset(hass: HomeAssistant) -> str | None:
+async def async_get_preferred_dataset(menuai: menuai) -> str | None:
     """Get the preferred dataset."""
-    store = await async_get_store(hass)
+    store = await async_get_store(menuai)
     if (preferred_dataset := store.preferred_dataset) is None or (
         entry := store.async_get(preferred_dataset)
     ) is None:

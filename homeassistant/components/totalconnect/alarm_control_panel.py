@@ -6,16 +6,16 @@ from total_connect_client import ArmingHelper
 from total_connect_client.exceptions import BadResultCodeError, UsercodeInvalid
 from total_connect_client.location import TotalConnectLocation
 
-from homeassistant.components.alarm_control_panel import (
+from menuai.components.alarm_control_panel import (
     AlarmControlPanelEntity,
     AlarmControlPanelEntityFeature,
     AlarmControlPanelState,
     CodeFormat,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import entity_platform
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers import entity_platform
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import CODE_REQUIRED, DOMAIN
 from .coordinator import TotalConnectConfigEntry, TotalConnectDataUpdateCoordinator
@@ -26,7 +26,7 @@ SERVICE_ALARM_ARM_HOME_INSTANT = "arm_home_instant"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: TotalConnectConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -125,15 +125,15 @@ class TotalConnectAlarm(TotalConnectLocationEntity, AlarmControlPanelEntity):
         """Send disarm command."""
         self._check_usercode(code)
         try:
-            await self.hass.async_add_executor_job(self._disarm)
+            await self.menuai.async_add_executor_job(self._disarm)
         except UsercodeInvalid as error:
-            self.coordinator.config_entry.async_start_reauth(self.hass)
-            raise HomeAssistantError(
+            self.coordinator.config_entry.async_start_reauth(self.menuai)
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="disarm_invalid_code",
             ) from error
         except BadResultCodeError as error:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="disarm_failed",
                 translation_placeholders={"device": self.device.name},
@@ -148,15 +148,15 @@ class TotalConnectAlarm(TotalConnectLocationEntity, AlarmControlPanelEntity):
         """Send arm home command."""
         self._check_usercode(code)
         try:
-            await self.hass.async_add_executor_job(self._arm_home)
+            await self.menuai.async_add_executor_job(self._arm_home)
         except UsercodeInvalid as error:
-            self.coordinator.config_entry.async_start_reauth(self.hass)
-            raise HomeAssistantError(
+            self.coordinator.config_entry.async_start_reauth(self.menuai)
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="arm_home_invalid_code",
             ) from error
         except BadResultCodeError as error:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="arm_home_failed",
                 translation_placeholders={"device": self.device.name},
@@ -171,15 +171,15 @@ class TotalConnectAlarm(TotalConnectLocationEntity, AlarmControlPanelEntity):
         """Send arm away command."""
         self._check_usercode(code)
         try:
-            await self.hass.async_add_executor_job(self._arm_away)
+            await self.menuai.async_add_executor_job(self._arm_away)
         except UsercodeInvalid as error:
-            self.coordinator.config_entry.async_start_reauth(self.hass)
-            raise HomeAssistantError(
+            self.coordinator.config_entry.async_start_reauth(self.menuai)
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="arm_away_invalid_code",
             ) from error
         except BadResultCodeError as error:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="arm_away_failed",
                 translation_placeholders={"device": self.device.name},
@@ -194,15 +194,15 @@ class TotalConnectAlarm(TotalConnectLocationEntity, AlarmControlPanelEntity):
         """Send arm night command."""
         self._check_usercode(code)
         try:
-            await self.hass.async_add_executor_job(self._arm_night)
+            await self.menuai.async_add_executor_job(self._arm_night)
         except UsercodeInvalid as error:
-            self.coordinator.config_entry.async_start_reauth(self.hass)
-            raise HomeAssistantError(
+            self.coordinator.config_entry.async_start_reauth(self.menuai)
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="arm_night_invalid_code",
             ) from error
         except BadResultCodeError as error:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="arm_night_failed",
                 translation_placeholders={"device": self.device.name},
@@ -216,15 +216,15 @@ class TotalConnectAlarm(TotalConnectLocationEntity, AlarmControlPanelEntity):
     async def async_alarm_arm_home_instant(self) -> None:
         """Send arm home instant command."""
         try:
-            await self.hass.async_add_executor_job(self._arm_home_instant)
+            await self.menuai.async_add_executor_job(self._arm_home_instant)
         except UsercodeInvalid as error:
-            self.coordinator.config_entry.async_start_reauth(self.hass)
-            raise HomeAssistantError(
+            self.coordinator.config_entry.async_start_reauth(self.menuai)
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="arm_home_instant_invalid_code",
             ) from error
         except BadResultCodeError as error:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="arm_home_instant_failed",
                 translation_placeholders={"device": self.device.name},
@@ -238,15 +238,15 @@ class TotalConnectAlarm(TotalConnectLocationEntity, AlarmControlPanelEntity):
     async def async_alarm_arm_away_instant(self) -> None:
         """Send arm away instant command."""
         try:
-            await self.hass.async_add_executor_job(self._arm_away_instant)
+            await self.menuai.async_add_executor_job(self._arm_away_instant)
         except UsercodeInvalid as error:
-            self.coordinator.config_entry.async_start_reauth(self.hass)
-            raise HomeAssistantError(
+            self.coordinator.config_entry.async_start_reauth(self.menuai)
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="arm_away_instant_invalid_code",
             ) from error
         except BadResultCodeError as error:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="arm_away_instant_failed",
                 translation_placeholders={"device": self.device.name},

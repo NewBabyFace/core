@@ -2,7 +2,7 @@
 
 from pyhap.const import HAP_REPR_AID, HAP_REPR_CHARS, HAP_REPR_IID, HAP_REPR_VALUE
 
-from homeassistant.components.fan import (
+from menuai.components.fan import (
     ATTR_DIRECTION,
     ATTR_OSCILLATING,
     ATTR_PERCENTAGE,
@@ -14,35 +14,35 @@ from homeassistant.components.fan import (
     DOMAIN as FAN_DOMAIN,
     FanEntityFeature,
 )
-from homeassistant.components.homekit.accessories import HomeDriver
-from homeassistant.components.homekit.const import (
+from menuai.components.homekit.accessories import HomeDriver
+from menuai.components.homekit.const import (
     ATTR_VALUE,
     CHAR_CONFIGURED_NAME,
     PROP_MIN_STEP,
     SERV_SWITCH,
 )
-from homeassistant.components.homekit.type_fans import Fan
-from homeassistant.const import (
+from menuai.components.homekit.type_fans import Fan
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_SUPPORTED_FEATURES,
-    EVENT_HOMEASSISTANT_START,
+    EVENT_menuai_START,
     STATE_OFF,
     STATE_ON,
     STATE_UNKNOWN,
 )
-from homeassistant.core import CoreState, Event, HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import CoreState, Event, menuai
+from menuai.helpers import entity_registry as er
 
 from tests.common import async_mock_service
 
 
-async def test_fan_basic(hass: HomeAssistant, hk_driver, events: list[Event]) -> None:
+async def test_fan_basic(menuai: menuai, hk_driver, events: list[Event]) -> None:
     """Test fan with char state."""
     entity_id = "fan.demo"
 
-    hass.states.async_set(entity_id, STATE_ON, {ATTR_SUPPORTED_FEATURES: 0})
-    await hass.async_block_till_done()
-    acc = Fan(hass, hk_driver, "Fan", entity_id, 1, None)
+    menuai.states.async_set(entity_id, STATE_ON, {ATTR_SUPPORTED_FEATURES: 0})
+    await menuai.async_block_till_done()
+    acc = Fan(menuai, hk_driver, "Fan", entity_id, 1, None)
     hk_driver.add_accessory(acc)
 
     assert acc.aid == 1
@@ -53,24 +53,24 @@ async def test_fan_basic(hass: HomeAssistant, hk_driver, events: list[Event]) ->
     assert acc.char_speed is None
 
     acc.run()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert acc.char_active.value == 1
 
-    hass.states.async_set(entity_id, STATE_OFF, {ATTR_SUPPORTED_FEATURES: 0})
-    await hass.async_block_till_done()
+    menuai.states.async_set(entity_id, STATE_OFF, {ATTR_SUPPORTED_FEATURES: 0})
+    await menuai.async_block_till_done()
     assert acc.char_active.value == 0
 
-    hass.states.async_set(entity_id, STATE_UNKNOWN)
-    await hass.async_block_till_done()
+    menuai.states.async_set(entity_id, STATE_UNKNOWN)
+    await menuai.async_block_till_done()
     assert acc.char_active.value == 0
 
-    hass.states.async_remove(entity_id)
-    await hass.async_block_till_done()
+    menuai.states.async_remove(entity_id)
+    await menuai.async_block_till_done()
     assert acc.char_active.value == 0
 
     # Set from HomeKit
-    call_turn_on = async_mock_service(hass, FAN_DOMAIN, "turn_on")
-    call_turn_off = async_mock_service(hass, FAN_DOMAIN, "turn_off")
+    call_turn_on = async_mock_service(menuai, FAN_DOMAIN, "turn_on")
+    call_turn_off = async_mock_service(menuai, FAN_DOMAIN, "turn_off")
 
     char_active_iid = acc.char_active.to_HAP()[HAP_REPR_IID]
 
@@ -86,14 +86,14 @@ async def test_fan_basic(hass: HomeAssistant, hk_driver, events: list[Event]) ->
         },
         "mock_addr",
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert call_turn_on
     assert call_turn_on[0].data[ATTR_ENTITY_ID] == entity_id
     assert len(events) == 1
     assert events[-1].data[ATTR_VALUE] is None
 
-    hass.states.async_set(entity_id, STATE_ON)
-    await hass.async_block_till_done()
+    menuai.states.async_set(entity_id, STATE_ON)
+    await menuai.async_block_till_done()
 
     hk_driver.set_characteristics(
         {
@@ -107,7 +107,7 @@ async def test_fan_basic(hass: HomeAssistant, hk_driver, events: list[Event]) ->
         },
         "mock_addr",
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert call_turn_off
     assert call_turn_off[0].data[ATTR_ENTITY_ID] == entity_id
     assert len(events) == 2
@@ -115,12 +115,12 @@ async def test_fan_basic(hass: HomeAssistant, hk_driver, events: list[Event]) ->
 
 
 async def test_fan_direction(
-    hass: HomeAssistant, hk_driver, events: list[Event]
+    menuai: menuai, hk_driver, events: list[Event]
 ) -> None:
     """Test fan with direction."""
     entity_id = "fan.demo"
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {
@@ -128,17 +128,17 @@ async def test_fan_direction(
             ATTR_DIRECTION: DIRECTION_FORWARD,
         },
     )
-    await hass.async_block_till_done()
-    acc = Fan(hass, hk_driver, "Fan", entity_id, 1, None)
+    await menuai.async_block_till_done()
+    acc = Fan(menuai, hk_driver, "Fan", entity_id, 1, None)
     hk_driver.add_accessory(acc)
 
     assert acc.char_direction.value == 0
 
     acc.run()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert acc.char_direction.value == 0
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {
@@ -146,11 +146,11 @@ async def test_fan_direction(
             ATTR_DIRECTION: DIRECTION_REVERSE,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert acc.char_direction.value == 1
 
     # Set from HomeKit
-    call_set_direction = async_mock_service(hass, FAN_DOMAIN, "set_direction")
+    call_set_direction = async_mock_service(menuai, FAN_DOMAIN, "set_direction")
 
     char_direction_iid = acc.char_direction.to_HAP()[HAP_REPR_IID]
 
@@ -166,7 +166,7 @@ async def test_fan_direction(
         },
         "mock_addr",
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert call_set_direction[0]
     assert call_set_direction[0].data[ATTR_ENTITY_ID] == entity_id
     assert call_set_direction[0].data[ATTR_DIRECTION] == DIRECTION_FORWARD
@@ -186,7 +186,7 @@ async def test_fan_direction(
         "mock_addr",
     )
     acc.char_direction.client_update_value(1)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert call_set_direction[1]
     assert call_set_direction[1].data[ATTR_ENTITY_ID] == entity_id
     assert call_set_direction[1].data[ATTR_DIRECTION] == DIRECTION_REVERSE
@@ -195,36 +195,36 @@ async def test_fan_direction(
 
 
 async def test_fan_oscillate(
-    hass: HomeAssistant, hk_driver, events: list[Event]
+    menuai: menuai, hk_driver, events: list[Event]
 ) -> None:
     """Test fan with oscillate."""
     entity_id = "fan.demo"
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {ATTR_SUPPORTED_FEATURES: FanEntityFeature.OSCILLATE, ATTR_OSCILLATING: False},
     )
-    await hass.async_block_till_done()
-    acc = Fan(hass, hk_driver, "Fan", entity_id, 1, None)
+    await menuai.async_block_till_done()
+    acc = Fan(menuai, hk_driver, "Fan", entity_id, 1, None)
     hk_driver.add_accessory(acc)
 
     assert acc.char_swing.value == 0
 
     acc.run()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert acc.char_swing.value == 0
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {ATTR_SUPPORTED_FEATURES: FanEntityFeature.OSCILLATE, ATTR_OSCILLATING: True},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert acc.char_swing.value == 1
 
     # Set from HomeKit
-    call_oscillate = async_mock_service(hass, FAN_DOMAIN, "oscillate")
+    call_oscillate = async_mock_service(menuai, FAN_DOMAIN, "oscillate")
 
     char_swing_iid = acc.char_swing.to_HAP()[HAP_REPR_IID]
 
@@ -241,7 +241,7 @@ async def test_fan_oscillate(
         "mock_addr",
     )
     acc.char_swing.client_update_value(0)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert call_oscillate[0]
     assert call_oscillate[0].data[ATTR_ENTITY_ID] == entity_id
     assert call_oscillate[0].data[ATTR_OSCILLATING] is False
@@ -261,7 +261,7 @@ async def test_fan_oscillate(
         "mock_addr",
     )
     acc.char_swing.client_update_value(1)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert call_oscillate[1]
     assert call_oscillate[1].data[ATTR_ENTITY_ID] == entity_id
     assert call_oscillate[1].data[ATTR_OSCILLATING] is True
@@ -269,11 +269,11 @@ async def test_fan_oscillate(
     assert events[-1].data[ATTR_VALUE] is True
 
 
-async def test_fan_speed(hass: HomeAssistant, hk_driver, events: list[Event]) -> None:
+async def test_fan_speed(menuai: menuai, hk_driver, events: list[Event]) -> None:
     """Test fan with speed."""
     entity_id = "fan.demo"
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {
@@ -282,8 +282,8 @@ async def test_fan_speed(hass: HomeAssistant, hk_driver, events: list[Event]) ->
             ATTR_PERCENTAGE_STEP: 25,
         },
     )
-    await hass.async_block_till_done()
-    acc = Fan(hass, hk_driver, "Fan", entity_id, 1, None)
+    await menuai.async_block_till_done()
+    acc = Fan(menuai, hk_driver, "Fan", entity_id, 1, None)
     hk_driver.add_accessory(acc)
 
     # Initial value can be anything but 0. If it is 0, it might cause HomeKit to set the
@@ -292,9 +292,9 @@ async def test_fan_speed(hass: HomeAssistant, hk_driver, events: list[Event]) ->
     assert acc.char_speed.properties[PROP_MIN_STEP] == 25
 
     acc.run()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {
@@ -303,11 +303,11 @@ async def test_fan_speed(hass: HomeAssistant, hk_driver, events: list[Event]) ->
             ATTR_PERCENTAGE: 100,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert acc.char_speed.value == 100
 
     # Set from HomeKit
-    call_set_percentage = async_mock_service(hass, FAN_DOMAIN, "set_percentage")
+    call_set_percentage = async_mock_service(menuai, FAN_DOMAIN, "set_percentage")
 
     char_speed_iid = acc.char_speed.to_HAP()[HAP_REPR_IID]
     char_active_iid = acc.char_active.to_HAP()[HAP_REPR_IID]
@@ -325,7 +325,7 @@ async def test_fan_speed(hass: HomeAssistant, hk_driver, events: list[Event]) ->
         "mock_addr",
     )
     acc.char_speed.client_update_value(42)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert acc.char_speed.value == 50
     assert acc.char_active.value == 1
 
@@ -336,7 +336,7 @@ async def test_fan_speed(hass: HomeAssistant, hk_driver, events: list[Event]) ->
     assert events[-1].data[ATTR_VALUE] == 42
 
     # Verify speed is preserved from off to on
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_OFF,
         {
@@ -345,11 +345,11 @@ async def test_fan_speed(hass: HomeAssistant, hk_driver, events: list[Event]) ->
             ATTR_PERCENTAGE: 42,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert acc.char_speed.value == 50
     assert acc.char_active.value == 0
 
-    call_turn_on = async_mock_service(hass, FAN_DOMAIN, "turn_on")
+    call_turn_on = async_mock_service(menuai, FAN_DOMAIN, "turn_on")
 
     hk_driver.set_characteristics(
         {
@@ -363,7 +363,7 @@ async def test_fan_speed(hass: HomeAssistant, hk_driver, events: list[Event]) ->
         },
         "mock_addr",
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert acc.char_speed.value == 50
     assert acc.char_active.value == 1
 
@@ -372,12 +372,12 @@ async def test_fan_speed(hass: HomeAssistant, hk_driver, events: list[Event]) ->
 
 
 async def test_fan_set_all_one_shot(
-    hass: HomeAssistant, hk_driver, events: list[Event]
+    menuai: menuai, hk_driver, events: list[Event]
 ) -> None:
     """Test fan with speed."""
     entity_id = "fan.demo"
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {
@@ -389,17 +389,17 @@ async def test_fan_set_all_one_shot(
             ATTR_DIRECTION: DIRECTION_FORWARD,
         },
     )
-    await hass.async_block_till_done()
-    acc = Fan(hass, hk_driver, "Fan", entity_id, 1, None)
+    await menuai.async_block_till_done()
+    acc = Fan(menuai, hk_driver, "Fan", entity_id, 1, None)
     hk_driver.add_accessory(acc)
 
     # Initial value can be anything but 0. If it is 0, it might cause HomeKit to set the
     # speed to 100 when turning on a fan on a freshly booted up server.
     assert acc.char_speed.value != 0
     acc.run()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_OFF,
         {
@@ -411,15 +411,15 @@ async def test_fan_set_all_one_shot(
             ATTR_DIRECTION: DIRECTION_FORWARD,
         },
     )
-    await hass.async_block_till_done()
-    assert hass.states.get(entity_id).state == STATE_OFF
+    await menuai.async_block_till_done()
+    assert menuai.states.get(entity_id).state == STATE_OFF
 
     # Set from HomeKit
-    call_set_percentage = async_mock_service(hass, FAN_DOMAIN, "set_percentage")
-    call_oscillate = async_mock_service(hass, FAN_DOMAIN, "oscillate")
-    call_set_direction = async_mock_service(hass, FAN_DOMAIN, "set_direction")
-    call_turn_on = async_mock_service(hass, FAN_DOMAIN, "turn_on")
-    call_turn_off = async_mock_service(hass, FAN_DOMAIN, "turn_off")
+    call_set_percentage = async_mock_service(menuai, FAN_DOMAIN, "set_percentage")
+    call_oscillate = async_mock_service(menuai, FAN_DOMAIN, "oscillate")
+    call_set_direction = async_mock_service(menuai, FAN_DOMAIN, "set_direction")
+    call_turn_on = async_mock_service(menuai, FAN_DOMAIN, "turn_on")
+    call_turn_off = async_mock_service(menuai, FAN_DOMAIN, "turn_off")
 
     char_active_iid = acc.char_active.to_HAP()[HAP_REPR_IID]
     char_direction_iid = acc.char_direction.to_HAP()[HAP_REPR_IID]
@@ -453,7 +453,7 @@ async def test_fan_set_all_one_shot(
         },
         "mock_addr",
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert not call_turn_on
     assert call_set_percentage[0]
     assert call_set_percentage[0].data[ATTR_ENTITY_ID] == entity_id
@@ -470,7 +470,7 @@ async def test_fan_set_all_one_shot(
     assert events[1].data[ATTR_VALUE] == DIRECTION_REVERSE
     assert events[2].data[ATTR_VALUE] == 42
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {
@@ -482,7 +482,7 @@ async def test_fan_set_all_one_shot(
             ATTR_DIRECTION: DIRECTION_FORWARD,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     hk_driver.set_characteristics(
         {
@@ -513,7 +513,7 @@ async def test_fan_set_all_one_shot(
     )
     # Turn on should not be called if its already on
     # and we set a fan speed
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(events) == 6
     assert call_set_percentage[1]
     assert call_set_percentage[1].data[ATTR_ENTITY_ID] == entity_id
@@ -556,7 +556,7 @@ async def test_fan_set_all_one_shot(
         },
         "mock_addr",
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(events) == 7
     assert call_turn_off
@@ -567,10 +567,10 @@ async def test_fan_set_all_one_shot(
 
 
 async def test_fan_restore(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, hk_driver
+    menuai: menuai, entity_registry: er.EntityRegistry, hk_driver
 ) -> None:
     """Test setting up an entity from state in the event registry."""
-    hass.set_state(CoreState.not_running)
+    menuai.set_state(CoreState.not_running)
 
     entity_registry.async_get_or_create(
         "fan",
@@ -590,17 +590,17 @@ async def test_fan_restore(
         original_device_class="mock-device-class",
     )
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_START, {})
-    await hass.async_block_till_done()
+    menuai.bus.async_fire(EVENT_menuai_START, {})
+    await menuai.async_block_till_done()
 
-    acc = Fan(hass, hk_driver, "Fan", "fan.simple", 2, None)
+    acc = Fan(menuai, hk_driver, "Fan", "fan.simple", 2, None)
     assert acc.category == 3
     assert acc.char_active is not None
     assert acc.char_direction is None
     assert acc.char_speed is None
     assert acc.char_swing is None
 
-    acc = Fan(hass, hk_driver, "Fan", "fan.all_info_set", 3, None)
+    acc = Fan(menuai, hk_driver, "Fan", "fan.all_info_set", 3, None)
     assert acc.category == 3
     assert acc.char_active is not None
     assert acc.char_direction is not None
@@ -609,12 +609,12 @@ async def test_fan_restore(
 
 
 async def test_fan_multiple_preset_modes(
-    hass: HomeAssistant, hk_driver: HomeDriver, events: list[Event]
+    menuai: menuai, hk_driver: HomeDriver, events: list[Event]
 ) -> None:
     """Test fan with multiple preset modes."""
     entity_id = "fan.demo"
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {
@@ -623,8 +623,8 @@ async def test_fan_multiple_preset_modes(
             ATTR_PRESET_MODES: ["auto", "smart"],
         },
     )
-    await hass.async_block_till_done()
-    acc = Fan(hass, hk_driver, "Fan", entity_id, 1, None)
+    await menuai.async_block_till_done()
+    acc = Fan(menuai, hk_driver, "Fan", entity_id, 1, None)
     hk_driver.add_accessory(acc)
 
     assert acc.preset_mode_chars["auto"].value == 1
@@ -634,9 +634,9 @@ async def test_fan_multiple_preset_modes(
     assert configured_name_char.value == "auto"
 
     acc.run()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {
@@ -645,13 +645,13 @@ async def test_fan_multiple_preset_modes(
             ATTR_PRESET_MODES: ["auto", "smart"],
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert acc.preset_mode_chars["auto"].value == 0
     assert acc.preset_mode_chars["smart"].value == 1
     # Set from HomeKit
-    call_set_preset_mode = async_mock_service(hass, FAN_DOMAIN, "set_preset_mode")
-    call_turn_on = async_mock_service(hass, FAN_DOMAIN, "turn_on")
+    call_set_preset_mode = async_mock_service(menuai, FAN_DOMAIN, "set_preset_mode")
+    call_turn_on = async_mock_service(menuai, FAN_DOMAIN, "turn_on")
 
     char_auto_iid = acc.preset_mode_chars["auto"].to_HAP()[HAP_REPR_IID]
 
@@ -667,7 +667,7 @@ async def test_fan_multiple_preset_modes(
         },
         "mock_addr",
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert call_set_preset_mode[0]
     assert call_set_preset_mode[0].data[ATTR_ENTITY_ID] == entity_id
     assert call_set_preset_mode[0].data[ATTR_PRESET_MODE] == "auto"
@@ -686,7 +686,7 @@ async def test_fan_multiple_preset_modes(
         },
         "mock_addr",
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert call_turn_on[0]
     assert call_turn_on[0].data[ATTR_ENTITY_ID] == entity_id
     assert events[-1].data["service"] == "turn_on"
@@ -694,12 +694,12 @@ async def test_fan_multiple_preset_modes(
 
 
 async def test_fan_single_preset_mode(
-    hass: HomeAssistant, hk_driver, events: list[Event]
+    menuai: menuai, hk_driver, events: list[Event]
 ) -> None:
     """Test fan with a single preset mode."""
     entity_id = "fan.demo"
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {
@@ -710,18 +710,18 @@ async def test_fan_single_preset_mode(
             ATTR_PRESET_MODES: ["smart"],
         },
     )
-    await hass.async_block_till_done()
-    acc = Fan(hass, hk_driver, "Fan", entity_id, 1, None)
+    await menuai.async_block_till_done()
+    acc = Fan(menuai, hk_driver, "Fan", entity_id, 1, None)
     hk_driver.add_accessory(acc)
 
     assert acc.char_target_fan_state.value == 1
 
     acc.run()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Set from HomeKit
-    call_set_preset_mode = async_mock_service(hass, FAN_DOMAIN, "set_preset_mode")
-    call_turn_on = async_mock_service(hass, FAN_DOMAIN, "turn_on")
+    call_set_preset_mode = async_mock_service(menuai, FAN_DOMAIN, "set_preset_mode")
+    call_turn_on = async_mock_service(menuai, FAN_DOMAIN, "turn_on")
 
     char_target_fan_state_iid = acc.char_target_fan_state.to_HAP()[HAP_REPR_IID]
 
@@ -737,7 +737,7 @@ async def test_fan_single_preset_mode(
         },
         "mock_addr",
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert call_turn_on[0]
     assert call_turn_on[0].data[ATTR_ENTITY_ID] == entity_id
     assert call_turn_on[0].data[ATTR_PERCENTAGE] == 42
@@ -756,14 +756,14 @@ async def test_fan_single_preset_mode(
         },
         "mock_addr",
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert call_set_preset_mode[0]
     assert call_set_preset_mode[0].data[ATTR_ENTITY_ID] == entity_id
     assert call_set_preset_mode[0].data[ATTR_PRESET_MODE] == "smart"
     assert events[-1].data["service"] == "set_preset_mode"
     assert len(events) == 2
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {
@@ -774,5 +774,5 @@ async def test_fan_single_preset_mode(
             ATTR_PRESET_MODES: ["smart"],
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert acc.char_target_fan_state.value == 0

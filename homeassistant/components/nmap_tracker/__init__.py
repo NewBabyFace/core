@@ -13,19 +13,19 @@ import aiooui
 from getmac import get_mac_address
 from nmap import PortScanner, PortScannerError
 
-from homeassistant.components.device_tracker import (
+from menuai.components.device_tracker import (
     CONF_CONSIDER_HOME,
     CONF_SCAN_INTERVAL,
     DEFAULT_CONSIDER_HOME,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_EXCLUDE, CONF_HOSTS, EVENT_HOMEASSISTANT_STARTED
-from homeassistant.core import CoreState, HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.util import dt as dt_util
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_EXCLUDE, CONF_HOSTS, EVENT_menuai_STARTED
+from menuai.core import CoreState, menuai, callback
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.event import async_track_time_interval
+from menuai.util import dt as dt_util
 
 from .const import (
     CONF_HOME_INTERVAL,
@@ -82,37 +82,37 @@ class NmapTrackedDevices:
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up Nmap Tracker from a config entry."""
-    domain_data = hass.data.setdefault(DOMAIN, {})
+    domain_data = menuai.data.setdefault(DOMAIN, {})
     devices = domain_data.setdefault(NMAP_TRACKED_DEVICES, NmapTrackedDevices())
-    scanner = domain_data[entry.entry_id] = NmapDeviceScanner(hass, entry, devices)
+    scanner = domain_data[entry.entry_id] = NmapDeviceScanner(menuai, entry, devices)
     await scanner.async_setup()
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
-async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def _async_update_listener(menuai: menuai, entry: ConfigEntry) -> None:
     """Handle options update."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
     if unload_ok:
-        _async_untrack_devices(hass, entry)
-        hass.data[DOMAIN].pop(entry.entry_id)
+        _async_untrack_devices(menuai, entry)
+        menuai.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok
 
 
 @callback
-def _async_untrack_devices(hass: HomeAssistant, entry: ConfigEntry) -> None:
+def _async_untrack_devices(menuai: menuai, entry: ConfigEntry) -> None:
     """Remove tracking for devices owned by this config entry."""
-    devices = hass.data[DOMAIN][NMAP_TRACKED_DEVICES]
+    devices = menuai.data[DOMAIN][NMAP_TRACKED_DEVICES]
     remove_mac_addresses = [
         mac_address
         for mac_address, entry_id in devices.config_entry_owner.items()
@@ -133,14 +133,14 @@ class NmapDeviceScanner:
     """Scanner for devices using nmap."""
 
     def __init__(
-        self, hass: HomeAssistant, entry: ConfigEntry, devices: NmapTrackedDevices
+        self, menuai: menuai, entry: ConfigEntry, devices: NmapTrackedDevices
     ) -> None:
         """Initialize the scanner."""
         self.devices = devices
         self.home_interval = None
         self.consider_home = DEFAULT_CONSIDER_HOME
 
-        self._hass = hass
+        self._menuai = menuai
         self._entry = entry
 
         self._scan_lock = None
@@ -176,16 +176,16 @@ class NmapDeviceScanner:
                 seconds=cv.positive_float(config[CONF_CONSIDER_HOME])
             )
         self._scan_lock = asyncio.Lock()
-        if self._hass.state is CoreState.running:
+        if self._menuai.state is CoreState.running:
             await self._async_start_scanner()
             return
 
         self._entry.async_on_unload(
-            self._hass.bus.async_listen(
-                EVENT_HOMEASSISTANT_STARTED, self._async_start_scanner
+            self._menuai.bus.async_listen(
+                EVENT_menuai_STARTED, self._async_start_scanner
             )
         )
-        registry = er.async_get(self._hass)
+        registry = er.async_get(self._menuai)
         self._known_mac_addresses = {
             entry.unique_id: entry.original_name
             for entry in registry.entities.get_entries_for_config_entry_id(
@@ -213,14 +213,14 @@ class NmapDeviceScanner:
         self._entry.async_on_unload(self._async_stop)
         self._entry.async_on_unload(
             async_track_time_interval(
-                self._hass,
+                self._menuai,
                 self._async_scan_devices,
                 self._scan_interval,
             )
         )
         if not aiooui.is_loaded():
             await aiooui.async_load()
-        self._hass.async_create_task(self._async_scan_devices())
+        self._menuai.async_create_task(self._async_scan_devices())
 
     def _build_options(self):
         """Build the command line and strip out last results that do not need to be updated."""
@@ -286,7 +286,7 @@ class NmapDeviceScanner:
                 now,
                 1,
             )
-            async_dispatcher_send(self._hass, self.signal_device_missing, mac_address)
+            async_dispatcher_send(self._menuai, self.signal_device_missing, mac_address)
 
     def _run_nmap_scan(self):
         """Run nmap and return the result."""
@@ -353,12 +353,12 @@ class NmapDeviceScanner:
             self.consider_home,
         )
         device.reason = reason
-        async_dispatcher_send(self._hass, signal_device_update(formatted_mac), False)
+        async_dispatcher_send(self._menuai, signal_device_update(formatted_mac), False)
         del self.devices.ipv4_last_mac[ipv4]
 
     async def _async_run_nmap_scan(self):
         """Scan the network for devices and dispatch events."""
-        result = await self._hass.async_add_executor_job(self._run_nmap_scan)
+        result = await self._menuai.async_add_executor_job(self._run_nmap_scan)
         if self._stopping:
             return
 
@@ -374,7 +374,7 @@ class NmapDeviceScanner:
             # Mac address only returned if nmap ran as root
             mac = info["addresses"].get(
                 "mac"
-            ) or await self._hass.async_add_executor_job(
+            ) or await self._menuai.async_add_executor_job(
                 partial(get_mac_address, ip=ipv4)
             )
             if mac is None:
@@ -402,8 +402,8 @@ class NmapDeviceScanner:
             self._last_results.append(device)
 
             if new:
-                async_dispatcher_send(self._hass, self.signal_device_new, formatted_mac)
+                async_dispatcher_send(self._menuai, self.signal_device_new, formatted_mac)
             else:
                 async_dispatcher_send(
-                    self._hass, signal_device_update(formatted_mac), True
+                    self._menuai, signal_device_update(formatted_mac), True
                 )

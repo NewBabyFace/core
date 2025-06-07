@@ -9,11 +9,11 @@ from urllib.parse import urlparse
 from directv import DIRECTV, DIRECTVError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.service_info.ssdp import ATTR_UPNP_SERIAL, SsdpServiceInfo
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_NAME
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.service_info.ssdp import ATTR_UPNP_SERIAL, SsdpServiceInfo
 
 from .const import CONF_RECEIVER_ID, DOMAIN
 
@@ -23,12 +23,12 @@ ERROR_CANNOT_CONNECT = "cannot_connect"
 ERROR_UNKNOWN = "unknown"
 
 
-async def validate_input(hass: HomeAssistant, data: dict) -> dict[str, Any]:
+async def validate_input(menuai: menuai, data: dict) -> dict[str, Any]:
     """Validate the user input allows us to connect.
 
     Data has the keys from DATA_SCHEMA with values provided by the user.
     """
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
     directv = DIRECTV(data[CONF_HOST], session=session)
     device = await directv.update()
 
@@ -52,7 +52,7 @@ class DirecTVConfigFlow(ConfigFlow, domain=DOMAIN):
             return self._show_setup_form()
 
         try:
-            info = await validate_input(self.hass, user_input)
+            info = await validate_input(self.menuai, user_input)
         except DIRECTVError:
             return self._show_setup_form({"base": ERROR_CANNOT_CONNECT})
         except Exception:
@@ -85,7 +85,7 @@ class DirecTVConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
         try:
-            info = await validate_input(self.hass, self.discovery_info)
+            info = await validate_input(self.menuai, self.discovery_info)
         except DIRECTVError:
             return self.async_abort(reason=ERROR_CANNOT_CONNECT)
         except Exception:

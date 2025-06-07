@@ -2,11 +2,11 @@
 
 import pytest
 
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.components.weather import DOMAIN as WEATHER_DOMAIN
-from homeassistant.components.zamg.const import CONF_STATION_ID, DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.components.weather import DOMAIN as WEATHER_DOMAIN
+from menuai.components.zamg.const import CONF_STATION_ID, DOMAIN
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import FIXTURE_CONFIG_ENTRY
 from .conftest import (
@@ -62,7 +62,7 @@ from tests.common import MockConfigEntry
 )
 @pytest.mark.usefixtures("mock_zamg_coordinator")
 async def test_migrate_unique_ids(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     entitydata: dict,
     old_unique_id: str,
@@ -72,7 +72,7 @@ async def test_migrate_unique_ids(
     """Test successful migration of entity unique_ids."""
     FIXTURE_CONFIG_ENTRY["data"][CONF_STATION_ID] = station_id
     mock_config_entry = MockConfigEntry(**FIXTURE_CONFIG_ENTRY)
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     entity: er.RegistryEntry = entity_registry.async_get_or_create(
         **entitydata,
@@ -81,8 +81,8 @@ async def test_migrate_unique_ids(
 
     assert entity.unique_id == old_unique_id
 
-    assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     entity_migrated = entity_registry.async_get(entity.entity_id)
     assert entity_migrated
@@ -108,7 +108,7 @@ async def test_migrate_unique_ids(
 )
 @pytest.mark.usefixtures("mock_zamg_coordinator")
 async def test_dont_migrate_unique_ids(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     entitydata: dict,
     old_unique_id: str,
@@ -118,7 +118,7 @@ async def test_dont_migrate_unique_ids(
     """Test successful migration of entity unique_ids."""
     FIXTURE_CONFIG_ENTRY["data"][CONF_STATION_ID] = station_id
     mock_config_entry = MockConfigEntry(**FIXTURE_CONFIG_ENTRY)
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     # create existing entry with new_unique_id
     existing_entity = entity_registry.async_get_or_create(
@@ -136,8 +136,8 @@ async def test_dont_migrate_unique_ids(
 
     assert entity.unique_id == old_unique_id
 
-    assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     entity_migrated = entity_registry.async_get(entity.entity_id)
     assert entity_migrated
@@ -167,14 +167,14 @@ async def test_dont_migrate_unique_ids(
 )
 @pytest.mark.usefixtures("mock_zamg_coordinator")
 async def test_unload_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     entitydata: dict,
     unique_id: str,
 ) -> None:
     """Test unload entity unique_ids."""
     mock_config_entry = MockConfigEntry(**FIXTURE_CONFIG_ENTRY)
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     entity_registry.async_get_or_create(
         WEATHER_DOMAIN,
@@ -191,10 +191,10 @@ async def test_unload_entry(
 
     assert entity.unique_id == unique_id
 
-    assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert await hass.config_entries.async_remove(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_remove(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert hass.config_entries.async_get_entry(unique_id) is None
+    assert menuai.config_entries.async_get_entry(unique_id) is None

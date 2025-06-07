@@ -7,9 +7,9 @@ from datetime import timedelta
 
 from nyt_games import Connections, NYTGamesClient, NYTGamesError, SpellingBee, Wordle
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import LOGGER
 
@@ -33,13 +33,13 @@ class NYTGamesCoordinator(DataUpdateCoordinator[NYTGamesData]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: NYTGamesConfigEntry,
         client: NYTGamesClient,
     ) -> None:
         """Initialize coordinator."""
         super().__init__(
-            hass,
+            menuai,
             logger=LOGGER,
             config_entry=config_entry,
             name="NYT Games",

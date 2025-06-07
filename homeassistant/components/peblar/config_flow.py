@@ -9,15 +9,15 @@ from aiohttp import CookieJar
 from peblar import Peblar, PeblarAuthenticationError, PeblarConnectionError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_PASSWORD
-from homeassistant.helpers.aiohttp_client import async_create_clientsession
-from homeassistant.helpers.selector import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_PASSWORD
+from menuai.helpers.aiohttp_client import async_create_clientsession
+from menuai.helpers.selector import (
     TextSelector,
     TextSelectorConfig,
     TextSelectorType,
 )
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import DOMAIN, LOGGER
 
@@ -39,7 +39,7 @@ class PeblarFlowHandler(ConfigFlow, domain=DOMAIN):
             peblar = Peblar(
                 host=user_input[CONF_HOST],
                 session=async_create_clientsession(
-                    self.hass, cookie_jar=CookieJar(unsafe=True)
+                    self.menuai, cookie_jar=CookieJar(unsafe=True)
                 ),
             )
             try:
@@ -87,7 +87,7 @@ class PeblarFlowHandler(ConfigFlow, domain=DOMAIN):
             peblar = Peblar(
                 host=user_input[CONF_HOST],
                 session=async_create_clientsession(
-                    self.hass, cookie_jar=CookieJar(unsafe=True)
+                    self.menuai, cookie_jar=CookieJar(unsafe=True)
                 ),
             )
             try:
@@ -158,7 +158,7 @@ class PeblarFlowHandler(ConfigFlow, domain=DOMAIN):
             peblar = Peblar(
                 host=self._discovery_info.host,
                 session=async_create_clientsession(
-                    self.hass, cookie_jar=CookieJar(unsafe=True)
+                    self.menuai, cookie_jar=CookieJar(unsafe=True)
                 ),
             )
             try:
@@ -210,7 +210,7 @@ class PeblarFlowHandler(ConfigFlow, domain=DOMAIN):
             peblar = Peblar(
                 host=reauth_entry.data[CONF_HOST],
                 session=async_create_clientsession(
-                    self.hass, cookie_jar=CookieJar(unsafe=True)
+                    self.menuai, cookie_jar=CookieJar(unsafe=True)
                 ),
             )
             try:

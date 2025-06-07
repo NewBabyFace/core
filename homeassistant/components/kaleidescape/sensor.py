@@ -5,8 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from homeassistant.components.sensor import SensorEntity, SensorEntityDescription
-from homeassistant.const import PERCENTAGE, EntityCategory
+from menuai.components.sensor import SensorEntity, SensorEntityDescription
+from menuai.const import PERCENTAGE, EntityCategory
 
 from .const import DOMAIN
 from .entity import KaleidescapeEntity
@@ -16,10 +16,10 @@ if TYPE_CHECKING:
 
     from kaleidescape import Device as KaleidescapeDevice
 
-    from homeassistant.config_entries import ConfigEntry
-    from homeassistant.core import HomeAssistant
-    from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-    from homeassistant.helpers.typing import StateType
+    from menuai.config_entries import ConfigEntry
+    from menuai.core import menuai
+    from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+    from menuai.helpers.typing import StateType
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -131,12 +131,12 @@ SENSOR_TYPES: tuple[KaleidescapeSensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the platform from a config entry."""
-    device: KaleidescapeDevice = hass.data[DOMAIN][entry.entry_id]
+    device: KaleidescapeDevice = menuai.data[DOMAIN][entry.entry_id]
     async_add_entities(
         KaleidescapeSensor(device, description) for description in SENSOR_TYPES
     )

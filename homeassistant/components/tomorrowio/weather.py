@@ -6,7 +6,7 @@ from datetime import datetime
 
 from pytomorrowio.const import DAILY, FORECASTS, HOURLY, NOWCAST, WeatherCode
 
-from homeassistant.components.weather import (
+from menuai.components.weather import (
     ATTR_FORECAST_CONDITION,
     ATTR_FORECAST_HUMIDITY,
     ATTR_FORECAST_NATIVE_DEW_POINT,
@@ -22,8 +22,8 @@ from homeassistant.components.weather import (
     SingleCoordinatorWeatherEntity,
     WeatherEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_API_KEY,
     UnitOfLength,
     UnitOfPrecipitationDepth,
@@ -31,11 +31,11 @@ from homeassistant.const import (
     UnitOfSpeed,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.sun import is_up
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai, callback
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.sun import is_up
+from menuai.util import dt as dt_util
 
 from .const import (
     CLEAR_CONDITIONS,
@@ -64,13 +64,13 @@ from .entity import TomorrowioEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up a config entry."""
-    coordinator = hass.data[DOMAIN][config_entry.data[CONF_API_KEY]]
-    entity_registry = er.async_get(hass)
+    coordinator = menuai.data[DOMAIN][config_entry.data[CONF_API_KEY]]
+    entity_registry = er.async_get(menuai)
 
     entities = [TomorrowioWeatherEntity(config_entry, coordinator, 4, DAILY)]
 
@@ -141,7 +141,7 @@ class TomorrowioWeatherEntity(TomorrowioEntity, SingleCoordinatorWeatherEntity):
         """Return formatted Forecast dict from Tomorrow.io forecast data."""
         if use_datetime:
             translated_condition = self._translate_condition(
-                condition, is_up(self.hass, forecast_dt)
+                condition, is_up(self.menuai, forecast_dt)
             )
         else:
             translated_condition = self._translate_condition(condition, True)
@@ -209,7 +209,7 @@ class TomorrowioWeatherEntity(TomorrowioEntity, SingleCoordinatorWeatherEntity):
         """Return the condition."""
         return self._translate_condition(
             self._get_current_property(TMRW_ATTR_CONDITION),
-            is_up(self.hass),
+            is_up(self.menuai),
         )
 
     @property

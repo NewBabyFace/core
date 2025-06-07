@@ -6,7 +6,7 @@ from haphilipsjs.typing import ChannelListType, ContextType, FavoriteListType
 from syrupy.assertion import SnapshotAssertion
 from syrupy.filters import props
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 from tests.components.diagnostics import get_diagnostics_for_config_entry
@@ -37,8 +37,8 @@ TV_FAVORITE_LISTS = {
 
 
 async def test_entry_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     snapshot: SnapshotAssertion,
     mock_config_entry: MockConfigEntry,
     mock_tv: AsyncMock,
@@ -57,10 +57,10 @@ async def test_entry_diagnostics(
     mock_tv.channel_lists = TV_CHANNEL_LISTS
     mock_tv.favorite_lists = TV_FAVORITE_LISTS
 
-    assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
 
     result = await get_diagnostics_for_config_entry(
-        hass, hass_client, mock_config_entry
+        menuai, menuai_client, mock_config_entry
     )
 
     assert result == snapshot(exclude=props("entry_id", "created_at", "modified_at"))

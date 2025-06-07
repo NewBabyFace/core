@@ -9,17 +9,17 @@ from transmission_rpc.error import (
     TransmissionError,
 )
 
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
-from homeassistant.components.transmission.const import (
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.components.switch import DOMAIN as SWITCH_DOMAIN
+from menuai.components.transmission.const import (
     DEFAULT_PATH,
     DEFAULT_SSL,
     DOMAIN,
 )
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_PATH, CONF_SSL
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.config_entries import ConfigEntryState
+from menuai.const import CONF_PATH, CONF_SSL
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import MOCK_CONFIG_DATA, MOCK_CONFIG_DATA_VERSION_1_1, OLD_MOCK_CONFIG_DATA
 
@@ -33,18 +33,18 @@ def mock_api():
         yield api
 
 
-async def test_successful_config_entry(hass: HomeAssistant) -> None:
+async def test_successful_config_entry(menuai: menuai) -> None:
     """Test settings up integration from config entry."""
 
     entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG_DATA)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
+    await menuai.config_entries.async_setup(entry.entry_id)
 
     assert entry.state is ConfigEntryState.LOADED
 
 
-async def test_config_flow_entry_migrate_1_1_to_1_2(hass: HomeAssistant) -> None:
+async def test_config_flow_entry_migrate_1_1_to_1_2(menuai: menuai) -> None:
     """Test that config flow entry is migrated correctly from v1.1 to v1.2."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -52,10 +52,10 @@ async def test_config_flow_entry_migrate_1_1_to_1_2(hass: HomeAssistant) -> None
         version=1,
         minor_version=1,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Test that config entry is at the current version.
     assert entry.version == 1
@@ -66,57 +66,57 @@ async def test_config_flow_entry_migrate_1_1_to_1_2(hass: HomeAssistant) -> None
 
 
 async def test_setup_failed_connection_error(
-    hass: HomeAssistant, mock_api: MagicMock
+    menuai: menuai, mock_api: MagicMock
 ) -> None:
     """Test integration failed due to connection error."""
 
     entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG_DATA)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     mock_api.side_effect = TransmissionConnectError()
 
-    await hass.config_entries.async_setup(entry.entry_id)
+    await menuai.config_entries.async_setup(entry.entry_id)
     assert entry.state is ConfigEntryState.SETUP_RETRY
 
 
 async def test_setup_failed_auth_error(
-    hass: HomeAssistant, mock_api: MagicMock
+    menuai: menuai, mock_api: MagicMock
 ) -> None:
     """Test integration failed due to invalid credentials error."""
 
     entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG_DATA)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     mock_api.side_effect = TransmissionAuthError()
 
-    await hass.config_entries.async_setup(entry.entry_id)
+    await menuai.config_entries.async_setup(entry.entry_id)
     assert entry.state is ConfigEntryState.SETUP_ERROR
 
 
 async def test_setup_failed_unexpected_error(
-    hass: HomeAssistant, mock_api: MagicMock
+    menuai: menuai, mock_api: MagicMock
 ) -> None:
     """Test integration failed due to unexpected error."""
 
     entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG_DATA)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     mock_api.side_effect = TransmissionError()
 
-    await hass.config_entries.async_setup(entry.entry_id)
+    await menuai.config_entries.async_setup(entry.entry_id)
     assert entry.state is ConfigEntryState.SETUP_ERROR
 
 
-async def test_unload_entry(hass: HomeAssistant) -> None:
+async def test_unload_entry(menuai: menuai) -> None:
     """Test removing integration."""
     entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG_DATA)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.NOT_LOADED
 
@@ -157,7 +157,7 @@ async def test_unload_entry(hass: HomeAssistant) -> None:
     ],
 )
 async def test_migrate_unique_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     domain: str,
     old_unique_id: str,
@@ -165,7 +165,7 @@ async def test_migrate_unique_id(
 ) -> None:
     """Test unique id migration."""
     entry = MockConfigEntry(domain=DOMAIN, data=OLD_MOCK_CONFIG_DATA, entry_id="1234")
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     entity: er.RegistryEntry = entity_registry.async_get_or_create(
         suggested_object_id=f"my_{domain}",
@@ -177,8 +177,8 @@ async def test_migrate_unique_id(
     )
     assert entity.unique_id == old_unique_id
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     migrated_entity = entity_registry.async_get(entity.entity_id)
 

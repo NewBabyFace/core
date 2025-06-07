@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from homeassistant.components.swiss_public_transport.const import (
+from menuai.components.swiss_public_transport.const import (
     CONF_DESTINATION,
     CONF_START,
     DOMAIN,
@@ -23,11 +23,11 @@ def mock_opendata_client() -> Generator[AsyncMock]:
     """Mock a Opendata client."""
     with (
         patch(
-            "homeassistant.components.swiss_public_transport.OpendataTransport",
+            "menuai.components.swiss_public_transport.OpendataTransport",
             autospec=True,
         ) as mock_client,
         patch(
-            "homeassistant.components.swiss_public_transport.config_flow.OpendataTransport",
+            "menuai.components.swiss_public_transport.config_flow.OpendataTransport",
             new=mock_client,
         ),
     ):
@@ -57,7 +57,7 @@ def mock_swiss_public_transport_config_entry() -> MockConfigEntry:
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.swiss_public_transport.async_setup_entry",
+        "menuai.components.swiss_public_transport.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
         yield mock_setup_entry

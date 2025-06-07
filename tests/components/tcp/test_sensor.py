@@ -5,9 +5,9 @@ from unittest.mock import call, patch
 
 import pytest
 
-from homeassistant.components.tcp import common as tcp
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.tcp import common as tcp
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import assert_setup_component
 
@@ -43,7 +43,7 @@ socket_test_value = "123"
 @pytest.fixture(name="mock_socket")
 def mock_socket_fixture(mock_select):
     """Mock socket."""
-    with patch("homeassistant.components.tcp.entity.socket.socket") as mock_socket:
+    with patch("menuai.components.tcp.entity.socket.socket") as mock_socket:
         socket_instance = mock_socket.return_value.__enter__.return_value
         socket_instance.recv.return_value = socket_test_value.encode()
         yield socket_instance
@@ -53,7 +53,7 @@ def mock_socket_fixture(mock_select):
 def mock_select_fixture():
     """Mock select."""
     with patch(
-        "homeassistant.components.tcp.entity.select.select",
+        "menuai.components.tcp.entity.select.select",
         return_value=(True, False, False),
     ) as mock_select:
         yield mock_select
@@ -63,7 +63,7 @@ def mock_select_fixture():
 def mock_ssl_context_fixture():
     """Mock select."""
     with patch(
-        "homeassistant.components.tcp.entity.ssl.create_default_context",
+        "menuai.components.tcp.entity.ssl.create_default_context",
     ) as mock_ssl_context:
         mock_ssl_context.return_value.wrap_socket.return_value.recv.return_value = (
             socket_test_value + "567"
@@ -71,28 +71,28 @@ def mock_ssl_context_fixture():
         yield mock_ssl_context
 
 
-async def test_setup_platform_valid_config(hass: HomeAssistant, mock_socket) -> None:
+async def test_setup_platform_valid_config(menuai: menuai, mock_socket) -> None:
     """Check a valid configuration and call add_entities with sensor."""
     with assert_setup_component(1, "sensor"):
-        assert await async_setup_component(hass, "sensor", TEST_CONFIG)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, "sensor", TEST_CONFIG)
+        await menuai.async_block_till_done()
 
 
-async def test_setup_platform_invalid_config(hass: HomeAssistant, mock_socket) -> None:
+async def test_setup_platform_invalid_config(menuai: menuai, mock_socket) -> None:
     """Check an invalid configuration."""
     with assert_setup_component(0):
         assert await async_setup_component(
-            hass, "sensor", {"sensor": {"platform": "tcp", "porrt": 1234}}
+            menuai, "sensor", {"sensor": {"platform": "tcp", "porrt": 1234}}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
 
-async def test_state(hass: HomeAssistant, mock_socket, mock_select) -> None:
+async def test_state(menuai: menuai, mock_socket, mock_select) -> None:
     """Return the contents of _state."""
-    assert await async_setup_component(hass, "sensor", TEST_CONFIG)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", TEST_CONFIG)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
 
     assert state
     assert state.state == "7.123"
@@ -113,7 +113,7 @@ async def test_state(hass: HomeAssistant, mock_socket, mock_select) -> None:
     assert mock_socket.recv.call_args == call(SENSOR_TEST_CONFIG["buffer_size"])
 
 
-async def test_config_uses_defaults(hass: HomeAssistant, mock_socket) -> None:
+async def test_config_uses_defaults(menuai: menuai, mock_socket) -> None:
     """Check if defaults were set."""
     config = copy(SENSOR_TEST_CONFIG)
 
@@ -121,10 +121,10 @@ async def test_config_uses_defaults(hass: HomeAssistant, mock_socket) -> None:
         del config[key]
 
     with assert_setup_component(1) as result_config:
-        assert await async_setup_component(hass, "sensor", {"sensor": config})
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, "sensor", {"sensor": config})
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.tcp_sensor")
+    state = menuai.states.get("sensor.tcp_sensor")
 
     assert state
     assert state.state == "123"
@@ -134,62 +134,62 @@ async def test_config_uses_defaults(hass: HomeAssistant, mock_socket) -> None:
 
 
 @pytest.mark.parametrize("sock_attr", ["connect", "send"])
-async def test_update_socket_error(hass: HomeAssistant, mock_socket, sock_attr) -> None:
+async def test_update_socket_error(menuai: menuai, mock_socket, sock_attr) -> None:
     """Test socket errors during update."""
     socket_method = getattr(mock_socket, sock_attr)
     socket_method.side_effect = OSError("Boom")
 
-    assert await async_setup_component(hass, "sensor", TEST_CONFIG)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", TEST_CONFIG)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
 
     assert state
     assert state.state == "unknown"
 
 
 async def test_update_select_fails(
-    hass: HomeAssistant, mock_socket, mock_select
+    menuai: menuai, mock_socket, mock_select
 ) -> None:
     """Test select fails to return a socket for reading."""
     mock_select.return_value = (False, False, False)
 
-    assert await async_setup_component(hass, "sensor", TEST_CONFIG)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", TEST_CONFIG)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
 
     assert state
     assert state.state == "unknown"
 
 
 async def test_update_returns_if_template_render_fails(
-    hass: HomeAssistant, mock_socket
+    menuai: menuai, mock_socket
 ) -> None:
     """Return None if rendering the template fails."""
     config = copy(SENSOR_TEST_CONFIG)
     config[tcp.CONF_VALUE_TEMPLATE] = "{{ value / 0 }}"
 
-    assert await async_setup_component(hass, "sensor", {"sensor": config})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", {"sensor": config})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
 
     assert state
     assert state.state == "unknown"
 
 
 async def test_ssl_state(
-    hass: HomeAssistant, mock_socket, mock_select, mock_ssl_context
+    menuai: menuai, mock_socket, mock_select, mock_ssl_context
 ) -> None:
     """Return the contents of _state, updated over SSL."""
     config = copy(SENSOR_TEST_CONFIG)
     config[tcp.CONF_SSL] = "on"
 
-    assert await async_setup_component(hass, "sensor", {"sensor": config})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", {"sensor": config})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
 
     assert state
     assert state.state == "7.123567"
@@ -213,17 +213,17 @@ async def test_ssl_state(
 
 
 async def test_ssl_state_verify_off(
-    hass: HomeAssistant, mock_socket, mock_select, mock_ssl_context
+    menuai: menuai, mock_socket, mock_select, mock_ssl_context
 ) -> None:
     """Return the contents of _state, updated over SSL (verify_ssl disabled)."""
     config = copy(SENSOR_TEST_CONFIG)
     config[tcp.CONF_SSL] = "on"
     config[tcp.CONF_VERIFY_SSL] = "off"
 
-    assert await async_setup_component(hass, "sensor", {"sensor": config})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", {"sensor": config})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
 
     assert state
     assert state.state == "7.123567"

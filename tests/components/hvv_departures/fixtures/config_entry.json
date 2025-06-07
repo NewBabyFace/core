@@ -6,7 +6,7 @@
     "city": "Schmalfeld",
     "combinedName": "Schmalfeld, Holstenstra\u00dfe",
     "coordinate": { "x": 9.986115, "y": 53.874122 },
-    "hasStationInformation": false,
+    "menuaitationInformation": false,
     "id": "Master:75279",
     "name": "Holstenstra\u00dfe",
     "serviceTypes": ["bus"],

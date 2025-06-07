@@ -8,13 +8,13 @@ from aiowithings import Device, WithingsClient
 from aiowithings.models import NotificationConfiguration
 import pytest
 
-from homeassistant.components.application_credentials import (
+from menuai.components.application_credentials import (
     ClientCredential,
     async_import_client_credential,
 )
-from homeassistant.components.withings.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.withings.const import DOMAIN
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from . import (
     load_activity_fixture,
@@ -46,11 +46,11 @@ def mock_scopes() -> list[str]:
 
 
 @pytest.fixture(autouse=True)
-async def setup_credentials(hass: HomeAssistant) -> None:
+async def setup_credentials(menuai: menuai) -> None:
     """Fixture to setup credentials."""
-    assert await async_setup_component(hass, "application_credentials", {})
+    assert await async_setup_component(menuai, "application_credentials", {})
     await async_import_client_credential(
-        hass,
+        menuai,
         DOMAIN,
         ClientCredential(CLIENT_ID, CLIENT_SECRET),
         DOMAIN,
@@ -65,7 +65,7 @@ def mock_expires_at() -> int:
 
 @pytest.fixture
 def webhook_config_entry(expires_at: int, scopes: list[str]) -> MockConfigEntry:
-    """Create Withings entry in Home Assistant."""
+    """Create Withings entry in MenuAI."""
     return MockConfigEntry(
         domain=DOMAIN,
         title=TITLE,
@@ -88,7 +88,7 @@ def webhook_config_entry(expires_at: int, scopes: list[str]) -> MockConfigEntry:
 
 @pytest.fixture
 def cloudhook_config_entry(expires_at: int, scopes: list[str]) -> MockConfigEntry:
-    """Create Withings entry in Home Assistant."""
+    """Create Withings entry in MenuAI."""
     return MockConfigEntry(
         domain=DOMAIN,
         title=TITLE,
@@ -112,7 +112,7 @@ def cloudhook_config_entry(expires_at: int, scopes: list[str]) -> MockConfigEntr
 
 @pytest.fixture
 def polling_config_entry(expires_at: int, scopes: list[str]) -> MockConfigEntry:
-    """Create Withings entry in Home Assistant."""
+    """Create Withings entry in MenuAI."""
     return MockConfigEntry(
         domain=DOMAIN,
         title=TITLE,
@@ -135,7 +135,7 @@ def polling_config_entry(expires_at: int, scopes: list[str]) -> MockConfigEntry:
 
 @pytest.fixture
 def second_polling_config_entry(expires_at: int, scopes: list[str]) -> MockConfigEntry:
-    """Create Withings entry in Home Assistant."""
+    """Create Withings entry in MenuAI."""
     return MockConfigEntry(
         domain=DOMAIN,
         title="Not Henk",
@@ -187,7 +187,7 @@ def mock_withings():
     mock.get_workouts_in_period.return_value = workouts
 
     with patch(
-        "homeassistant.components.withings.WithingsClient",
+        "menuai.components.withings.WithingsClient",
         return_value=mock,
     ):
         yield mock
@@ -200,11 +200,11 @@ def disable_webhook_delay():
     mock = AsyncMock()
     with (
         patch(
-            "homeassistant.components.withings.SUBSCRIBE_DELAY",
+            "menuai.components.withings.SUBSCRIBE_DELAY",
             timedelta(seconds=0),
         ),
         patch(
-            "homeassistant.components.withings.UNSUBSCRIBE_DELAY",
+            "menuai.components.withings.UNSUBSCRIBE_DELAY",
             timedelta(seconds=0),
         ),
     ):

@@ -1,19 +1,19 @@
 """Test the number websocket API."""
 
-from homeassistant.components.number.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.number.const import DOMAIN
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.typing import WebSocketGenerator
 
 
 async def test_device_class_units(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test we can get supported units."""
-    assert await async_setup_component(hass, DOMAIN, {})
+    assert await async_setup_component(menuai, DOMAIN, {})
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     # Device class with units which number allows customizing & converting
     await client.send_json_auto_id(

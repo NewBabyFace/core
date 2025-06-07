@@ -28,7 +28,7 @@ from uuid import UUID
 import voluptuous as vol
 import voluptuous_serialize
 
-from homeassistant.const import (
+from menuai.const import (
     ATTR_AREA_ID,
     ATTR_DEVICE_ID,
     ATTR_ENTITY_ID,
@@ -95,24 +95,24 @@ from homeassistant.const import (
     WEEKDAYS,
     UnitOfTemperature,
 )
-from homeassistant.core import (
-    DOMAIN as HOMEASSISTANT_DOMAIN,
-    HomeAssistant,
-    async_get_hass,
-    async_get_hass_or_none,
+from menuai.core import (
+    DOMAIN as menuai_DOMAIN,
+    menuai,
+    async_get_menuai,
+    async_get_menuai_or_none,
     split_entity_id,
     valid_entity_id,
 )
-from homeassistant.exceptions import HomeAssistantError, TemplateError
-from homeassistant.generated import currencies
-from homeassistant.generated.countries import COUNTRIES
-from homeassistant.generated.languages import LANGUAGES
-from homeassistant.util import (
+from menuai.exceptions import menuaiError, TemplateError
+from menuai.generated import currencies
+from menuai.generated.countries import COUNTRIES
+from menuai.generated.languages import LANGUAGES
+from menuai.util import (
     dt as dt_util,
     raise_if_invalid_path,
     slugify as util_slugify,
 )
-from homeassistant.util.yaml.objects import NodeStrClass
+from menuai.util.yaml.objects import NodeStrClass
 
 from . import script_variables as script_variables_helper, template as template_helper
 from .frame import get_integration_logger
@@ -121,27 +121,27 @@ from .typing import VolDictType, VolSchemaType
 TIME_PERIOD_ERROR = "offset {} should be format 'HH:MM', 'HH:MM:SS' or 'HH:MM:SS.F'"
 
 
-class MustValidateInExecutor(HomeAssistantError):
+class MustValidateInExecutor(menuaiError):
     """Raised when validation must happen in an executor thread."""
 
 
-class _Hass(threading.local):
-    """Container which makes a HomeAssistant instance available to validators."""
+class _menuai(threading.local):
+    """Container which makes a menuai instance available to validators."""
 
-    hass: HomeAssistant | None = None
+    menuai: menuai | None = None
 
 
-_hass = _Hass()
+_menuai = _menuai()
 """Set when doing async friendly schema validation."""
 
 
-def _async_get_hass_or_none() -> HomeAssistant | None:
-    """Return the HomeAssistant instance or None.
+def _async_get_menuai_or_none() -> menuai | None:
+    """Return the menuai instance or None.
 
-    First tries core.async_get_hass_or_none, then _hass which is
+    First tries core.async_get_menuai_or_none, then _menuai which is
     set when doing async friendly schema validation.
     """
-    return async_get_hass_or_none() or _hass.hass
+    return async_get_menuai_or_none() or _menuai.menuai
 
 
 _validating_async: ContextVar[bool] = ContextVar("_validating_async", default=False)
@@ -157,7 +157,7 @@ def not_async_friendly[**_P, _R](validator: Callable[_P, _R]) -> Callable[_P, _R
 
     @functools.wraps(validator)
     def _not_async_friendly(*args: _P.args, **kwargs: _P.kwargs) -> _R:
-        if _validating_async.get() and async_get_hass_or_none():
+        if _validating_async.get() and async_get_menuai_or_none():
             # Raise if doing async friendly validation and validation
             # is happening in the event loop
             raise MustValidateInExecutor
@@ -171,17 +171,17 @@ class UrlProtocolSchema(StrEnum):
 
     HTTP = "http"
     HTTPS = "https"
-    HOMEASSISTANT = "homeassistant"
+    menuai = "menuai"
 
 
 EXTERNAL_URL_PROTOCOL_SCHEMA_LIST = frozenset(
     {UrlProtocolSchema.HTTP, UrlProtocolSchema.HTTPS}
 )
 CONFIGURATION_URL_PROTOCOL_SCHEMA_LIST = frozenset(
-    {UrlProtocolSchema.HOMEASSISTANT, UrlProtocolSchema.HTTP, UrlProtocolSchema.HTTPS}
+    {UrlProtocolSchema.menuai, UrlProtocolSchema.HTTP, UrlProtocolSchema.HTTPS}
 )
 
-# Home Assistant types
+# MenuAI types
 byte = vol.All(vol.Coerce(int), vol.Range(min=0, max=255))
 small_float = vol.All(vol.Coerce(float), vol.Range(min=0, max=1))
 positive_int = vol.All(vol.Coerce(int), vol.Range(min=0))
@@ -720,7 +720,7 @@ def template(value: Any | None) -> template_helper.Template:
         raise vol.Invalid("template value is None")
     if isinstance(value, (list, dict, template_helper.Template)):
         raise vol.Invalid("template value should be a string")
-    if not (hass := _async_get_hass_or_none()):
+    if not (menuai := _async_get_menuai_or_none()):
         # pylint: disable-next=import-outside-toplevel
         from .frame import ReportBehavior, report_usage
 
@@ -732,7 +732,7 @@ def template(value: Any | None) -> template_helper.Template:
             core_behavior=ReportBehavior.LOG,
         )
 
-    template_value = template_helper.Template(str(value), hass)
+    template_value = template_helper.Template(str(value), menuai)
 
     try:
         template_value.ensure_valid()
@@ -749,7 +749,7 @@ def dynamic_template(value: Any | None) -> template_helper.Template:
         raise vol.Invalid("template value should be a string")
     if not template_helper.is_template_string(str(value)):
         raise vol.Invalid("template value does not contain a dynamic template")
-    if not (hass := _async_get_hass_or_none()):
+    if not (menuai := _async_get_menuai_or_none()):
         # pylint: disable-next=import-outside-toplevel
         from .frame import ReportBehavior, report_usage
 
@@ -761,7 +761,7 @@ def dynamic_template(value: Any | None) -> template_helper.Template:
             core_behavior=ReportBehavior.LOG,
         )
 
-    template_value = template_helper.Template(str(value), hass)
+    template_value = template_helper.Template(str(value), menuai)
 
     try:
         template_value.ensure_valid()
@@ -868,7 +868,7 @@ def url(
 
 
 def configuration_url(value: Any) -> str:
-    """Validate an URL that allows the homeassistant schema."""
+    """Validate an URL that allows the menuai schema."""
     return url(value, CONFIGURATION_URL_PROTOCOL_SCHEMA_LIST)
 
 
@@ -1151,7 +1151,7 @@ def custom_serializer(schema: Any) -> Any:
 
 def _custom_serializer(schema: Any, *, allow_section: bool) -> Any:
     """Serialize additional types for voluptuous_serialize."""
-    from homeassistant import data_entry_flow  # pylint: disable=import-outside-toplevel
+    from menuai import data_entry_flow  # pylint: disable=import-outside-toplevel
 
     from . import selector  # pylint: disable=import-outside-toplevel
 
@@ -1219,12 +1219,12 @@ def _no_yaml_config_schema(
         # pylint: disable-next=import-outside-toplevel
         from .issue_registry import IssueSeverity, async_create_issue
 
-        # HomeAssistantError is raised if called from the wrong thread
-        with contextlib.suppress(HomeAssistantError):
-            hass = async_get_hass()
+        # menuaiError is raised if called from the wrong thread
+        with contextlib.suppress(menuaiError):
+            menuai = async_get_menuai()
             async_create_issue(
-                hass,
-                HOMEASSISTANT_DOMAIN,
+                menuai,
+                menuai_DOMAIN,
                 f"{issue_base}_{domain}",
                 is_fixable=False,
                 issue_domain=domain,
@@ -2105,7 +2105,7 @@ language = vol.In(LANGUAGES, msg="invalid RFC 5646 formatted language")
 
 
 async def async_validate(
-    hass: HomeAssistant, validator: Callable[[Any], Any], value: Any
+    menuai: menuai, validator: Callable[[Any], Any], value: Any
 ) -> Any:
     """Async friendly schema validation.
 
@@ -2116,18 +2116,18 @@ async def async_validate(
     try:
         return validator(value)
     except MustValidateInExecutor:
-        return await hass.async_add_executor_job(
-            _validate_in_executor, hass, validator, value
+        return await menuai.async_add_executor_job(
+            _validate_in_executor, menuai, validator, value
         )
     finally:
         _validating_async.set(False)
 
 
 def _validate_in_executor(
-    hass: HomeAssistant, validator: Callable[[Any], Any], value: Any
+    menuai: menuai, validator: Callable[[Any], Any], value: Any
 ) -> Any:
-    _hass.hass = hass
+    _menuai.menuai = menuai
     try:
         return validator(value)
     finally:
-        _hass.hass = None
+        _menuai.menuai = None

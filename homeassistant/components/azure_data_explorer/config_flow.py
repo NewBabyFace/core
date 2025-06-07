@@ -8,9 +8,9 @@ from typing import Any
 from azure.kusto.data.exceptions import KustoAuthenticationError, KustoServiceError
 import voluptuous as vol
 
-from homeassistant import config_entries
-from homeassistant.config_entries import ConfigFlowResult
-from homeassistant.helpers.selector import BooleanSelector
+from menuai import config_entries
+from menuai.config_entries import ConfigFlowResult
+from menuai.helpers.selector import BooleanSelector
 
 from . import AzureDataExplorerClient
 from .const import (
@@ -53,7 +53,7 @@ class ADXConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         client = AzureDataExplorerClient(data)
 
         try:
-            await self.hass.async_add_executor_job(client.test_connection)
+            await self.menuai.async_add_executor_job(client.test_connection)
 
         except KustoAuthenticationError as exp:
             _LOGGER.error(exp)

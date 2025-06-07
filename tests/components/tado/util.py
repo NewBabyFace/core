@@ -2,17 +2,17 @@
 
 import requests_mock
 
-from homeassistant.components.tado import CONF_REFRESH_TOKEN, DOMAIN
-from homeassistant.core import HomeAssistant
+from menuai.components.tado import CONF_REFRESH_TOKEN, DOMAIN
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry, async_load_fixture
 
 
 async def async_init_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     skip_setup: bool = False,
 ):
-    """Set up the tado integration in Home Assistant."""
+    """Set up the tado integration in MenuAI."""
 
     token_fixture = "token.json"
     devices_fixture = "devices.json"
@@ -60,127 +60,127 @@ async def async_init_integration(
     with requests_mock.mock() as m:
         m.post(
             "https://auth.tado.com/oauth/token",
-            text=await async_load_fixture(hass, token_fixture, DOMAIN),
+            text=await async_load_fixture(menuai, token_fixture, DOMAIN),
         )
         m.get(
             "https://my.tado.com/api/v2/me",
-            text=await async_load_fixture(hass, me_fixture, DOMAIN),
+            text=await async_load_fixture(menuai, me_fixture, DOMAIN),
         )
         m.get(
             "https://my.tado.com/api/v2/homes/1/",
-            text=await async_load_fixture(hass, home_fixture, DOMAIN),
+            text=await async_load_fixture(menuai, home_fixture, DOMAIN),
         )
         m.get(
             "https://my.tado.com/api/v2/homes/1/weather",
-            text=await async_load_fixture(hass, weather_fixture, DOMAIN),
+            text=await async_load_fixture(menuai, weather_fixture, DOMAIN),
         )
         m.get(
             "https://my.tado.com/api/v2/homes/1/state",
-            text=await async_load_fixture(hass, home_state_fixture, DOMAIN),
+            text=await async_load_fixture(menuai, home_state_fixture, DOMAIN),
         )
         m.get(
             "https://my.tado.com/api/v2/homes/1/devices",
-            text=await async_load_fixture(hass, devices_fixture, DOMAIN),
+            text=await async_load_fixture(menuai, devices_fixture, DOMAIN),
         )
         m.get(
             "https://my.tado.com/api/v2/homes/1/mobileDevices",
-            text=await async_load_fixture(hass, mobile_devices_fixture, DOMAIN),
+            text=await async_load_fixture(menuai, mobile_devices_fixture, DOMAIN),
         )
         m.get(
             "https://my.tado.com/api/v2/devices/WR1/",
-            text=await async_load_fixture(hass, device_wr1_fixture, DOMAIN),
+            text=await async_load_fixture(menuai, device_wr1_fixture, DOMAIN),
         )
         m.get(
             "https://my.tado.com/api/v2/devices/WR1/temperatureOffset",
-            text=await async_load_fixture(hass, device_temp_offset, DOMAIN),
+            text=await async_load_fixture(menuai, device_temp_offset, DOMAIN),
         )
         m.get(
             "https://my.tado.com/api/v2/devices/WR4/temperatureOffset",
-            text=await async_load_fixture(hass, device_temp_offset, DOMAIN),
+            text=await async_load_fixture(menuai, device_temp_offset, DOMAIN),
         )
         m.get(
             "https://my.tado.com/api/v2/homes/1/zones",
-            text=await async_load_fixture(hass, zones_fixture, DOMAIN),
+            text=await async_load_fixture(menuai, zones_fixture, DOMAIN),
         )
         m.get(
             "https://my.tado.com/api/v2/homes/1/zoneStates",
-            text=await async_load_fixture(hass, zone_states_fixture, DOMAIN),
+            text=await async_load_fixture(menuai, zone_states_fixture, DOMAIN),
         )
         m.get(
             "https://my.tado.com/api/v2/homes/1/zones/6/capabilities",
-            text=await async_load_fixture(hass, zone_6_capabilities_fixture, DOMAIN),
+            text=await async_load_fixture(menuai, zone_6_capabilities_fixture, DOMAIN),
         )
         m.get(
             "https://my.tado.com/api/v2/homes/1/zones/5/capabilities",
-            text=await async_load_fixture(hass, zone_5_capabilities_fixture, DOMAIN),
+            text=await async_load_fixture(menuai, zone_5_capabilities_fixture, DOMAIN),
         )
         m.get(
             "https://my.tado.com/api/v2/homes/1/zones/4/capabilities",
-            text=await async_load_fixture(hass, zone_4_capabilities_fixture, DOMAIN),
+            text=await async_load_fixture(menuai, zone_4_capabilities_fixture, DOMAIN),
         )
         m.get(
             "https://my.tado.com/api/v2/homes/1/zones/3/capabilities",
-            text=await async_load_fixture(hass, zone_3_capabilities_fixture, DOMAIN),
+            text=await async_load_fixture(menuai, zone_3_capabilities_fixture, DOMAIN),
         )
         m.get(
             "https://my.tado.com/api/v2/homes/1/zones/2/capabilities",
-            text=await async_load_fixture(hass, zone_2_capabilities_fixture, DOMAIN),
+            text=await async_load_fixture(menuai, zone_2_capabilities_fixture, DOMAIN),
         )
         m.get(
             "https://my.tado.com/api/v2/homes/1/zones/1/capabilities",
-            text=await async_load_fixture(hass, zone_1_capabilities_fixture, DOMAIN),
+            text=await async_load_fixture(menuai, zone_1_capabilities_fixture, DOMAIN),
         )
         m.get(
             "https://my.tado.com/api/v2/homes/1/zones/1/defaultOverlay",
-            text=await async_load_fixture(hass, zone_def_overlay, DOMAIN),
+            text=await async_load_fixture(menuai, zone_def_overlay, DOMAIN),
         )
         m.get(
             "https://my.tado.com/api/v2/homes/1/zones/2/defaultOverlay",
-            text=await async_load_fixture(hass, zone_def_overlay, DOMAIN),
+            text=await async_load_fixture(menuai, zone_def_overlay, DOMAIN),
         )
         m.get(
             "https://my.tado.com/api/v2/homes/1/zones/3/defaultOverlay",
-            text=await async_load_fixture(hass, zone_def_overlay, DOMAIN),
+            text=await async_load_fixture(menuai, zone_def_overlay, DOMAIN),
         )
         m.get(
             "https://my.tado.com/api/v2/homes/1/zones/4/defaultOverlay",
-            text=await async_load_fixture(hass, zone_def_overlay, DOMAIN),
+            text=await async_load_fixture(menuai, zone_def_overlay, DOMAIN),
         )
         m.get(
             "https://my.tado.com/api/v2/homes/1/zones/5/defaultOverlay",
-            text=await async_load_fixture(hass, zone_def_overlay, DOMAIN),
+            text=await async_load_fixture(menuai, zone_def_overlay, DOMAIN),
         )
         m.get(
             "https://my.tado.com/api/v2/homes/1/zones/6/defaultOverlay",
-            text=await async_load_fixture(hass, zone_def_overlay, DOMAIN),
+            text=await async_load_fixture(menuai, zone_def_overlay, DOMAIN),
         )
         m.get(
             "https://my.tado.com/api/v2/homes/1/zones/6/state",
-            text=await async_load_fixture(hass, zone_6_state_fixture, DOMAIN),
+            text=await async_load_fixture(menuai, zone_6_state_fixture, DOMAIN),
         )
         m.get(
             "https://my.tado.com/api/v2/homes/1/zones/5/state",
-            text=await async_load_fixture(hass, zone_5_state_fixture, DOMAIN),
+            text=await async_load_fixture(menuai, zone_5_state_fixture, DOMAIN),
         )
         m.get(
             "https://my.tado.com/api/v2/homes/1/zones/4/state",
-            text=await async_load_fixture(hass, zone_4_state_fixture, DOMAIN),
+            text=await async_load_fixture(menuai, zone_4_state_fixture, DOMAIN),
         )
         m.get(
             "https://my.tado.com/api/v2/homes/1/zones/3/state",
-            text=await async_load_fixture(hass, zone_3_state_fixture, DOMAIN),
+            text=await async_load_fixture(menuai, zone_3_state_fixture, DOMAIN),
         )
         m.get(
             "https://my.tado.com/api/v2/homes/1/zones/2/state",
-            text=await async_load_fixture(hass, zone_2_state_fixture, DOMAIN),
+            text=await async_load_fixture(menuai, zone_2_state_fixture, DOMAIN),
         )
         m.get(
             "https://my.tado.com/api/v2/homes/1/zones/1/state",
-            text=await async_load_fixture(hass, zone_1_state_fixture, DOMAIN),
+            text=await async_load_fixture(menuai, zone_1_state_fixture, DOMAIN),
         )
         m.post(
             "https://login.tado.com/oauth2/token",
-            text=await async_load_fixture(hass, token_fixture, DOMAIN),
+            text=await async_load_fixture(menuai, token_fixture, DOMAIN),
         )
         entry = MockConfigEntry(
             domain=DOMAIN,
@@ -190,13 +190,13 @@ async def async_init_integration(
             },
             options={"fallback": "NEXT_TIME_BLOCK"},
         )
-        entry.add_to_hass(hass)
+        entry.add_to_menuai(menuai)
 
         if not skip_setup:
-            await hass.config_entries.async_setup(entry.entry_id)
-            await hass.async_block_till_done()
+            await menuai.config_entries.async_setup(entry.entry_id)
+            await menuai.async_block_till_done()
 
         # For a first refresh
         await entry.runtime_data.coordinator.async_refresh()
         await entry.runtime_data.mobile_coordinator.async_refresh()
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()

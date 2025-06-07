@@ -4,14 +4,14 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from homeassistant.components.remote import (
+from menuai.components.remote import (
     ATTR_COMMAND,
     DOMAIN as REMOTE_DOMAIN,
     SERVICE_SEND_COMMAND,
 )
-from homeassistant.const import ATTR_ENTITY_ID, SERVICE_TURN_OFF, SERVICE_TURN_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.const import ATTR_ENTITY_ID, SERVICE_TURN_OFF, SERVICE_TURN_ON
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from . import MOCK_SERIAL
 
@@ -19,15 +19,15 @@ ENTITY_ID = f"remote.kaleidescape_device_{MOCK_SERIAL}"
 
 
 @pytest.mark.usefixtures("mock_device", "mock_integration")
-async def test_entity(hass: HomeAssistant) -> None:
+async def test_entity(menuai: menuai) -> None:
     """Test entity attributes."""
-    assert hass.states.get(ENTITY_ID)
+    assert menuai.states.get(ENTITY_ID)
 
 
 @pytest.mark.usefixtures("mock_integration")
-async def test_commands(hass: HomeAssistant, mock_device: MagicMock) -> None:
+async def test_commands(menuai: menuai, mock_device: MagicMock) -> None:
     """Test service calls."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         REMOTE_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: ENTITY_ID},
@@ -35,7 +35,7 @@ async def test_commands(hass: HomeAssistant, mock_device: MagicMock) -> None:
     )
     assert mock_device.leave_standby.call_count == 1
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         REMOTE_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: ENTITY_ID},
@@ -43,7 +43,7 @@ async def test_commands(hass: HomeAssistant, mock_device: MagicMock) -> None:
     )
     assert mock_device.enter_standby.call_count == 1
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         REMOTE_DOMAIN,
         SERVICE_SEND_COMMAND,
         {ATTR_ENTITY_ID: ENTITY_ID, ATTR_COMMAND: ["select"]},
@@ -51,7 +51,7 @@ async def test_commands(hass: HomeAssistant, mock_device: MagicMock) -> None:
     )
     assert mock_device.select.call_count == 1
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         REMOTE_DOMAIN,
         SERVICE_SEND_COMMAND,
         {ATTR_ENTITY_ID: ENTITY_ID, ATTR_COMMAND: ["up"]},
@@ -59,7 +59,7 @@ async def test_commands(hass: HomeAssistant, mock_device: MagicMock) -> None:
     )
     assert mock_device.up.call_count == 1
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         REMOTE_DOMAIN,
         SERVICE_SEND_COMMAND,
         {ATTR_ENTITY_ID: ENTITY_ID, ATTR_COMMAND: ["down"]},
@@ -67,7 +67,7 @@ async def test_commands(hass: HomeAssistant, mock_device: MagicMock) -> None:
     )
     assert mock_device.down.call_count == 1
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         REMOTE_DOMAIN,
         SERVICE_SEND_COMMAND,
         {ATTR_ENTITY_ID: ENTITY_ID, ATTR_COMMAND: ["left"]},
@@ -75,7 +75,7 @@ async def test_commands(hass: HomeAssistant, mock_device: MagicMock) -> None:
     )
     assert mock_device.left.call_count == 1
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         REMOTE_DOMAIN,
         SERVICE_SEND_COMMAND,
         {ATTR_ENTITY_ID: ENTITY_ID, ATTR_COMMAND: ["right"]},
@@ -83,7 +83,7 @@ async def test_commands(hass: HomeAssistant, mock_device: MagicMock) -> None:
     )
     assert mock_device.right.call_count == 1
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         REMOTE_DOMAIN,
         SERVICE_SEND_COMMAND,
         {ATTR_ENTITY_ID: ENTITY_ID, ATTR_COMMAND: ["cancel"]},
@@ -91,7 +91,7 @@ async def test_commands(hass: HomeAssistant, mock_device: MagicMock) -> None:
     )
     assert mock_device.cancel.call_count == 1
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         REMOTE_DOMAIN,
         SERVICE_SEND_COMMAND,
         {ATTR_ENTITY_ID: ENTITY_ID, ATTR_COMMAND: ["replay"]},
@@ -99,7 +99,7 @@ async def test_commands(hass: HomeAssistant, mock_device: MagicMock) -> None:
     )
     assert mock_device.replay.call_count == 1
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         REMOTE_DOMAIN,
         SERVICE_SEND_COMMAND,
         {ATTR_ENTITY_ID: ENTITY_ID, ATTR_COMMAND: ["scan_forward"]},
@@ -107,7 +107,7 @@ async def test_commands(hass: HomeAssistant, mock_device: MagicMock) -> None:
     )
     assert mock_device.scan_forward.call_count == 1
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         REMOTE_DOMAIN,
         SERVICE_SEND_COMMAND,
         {ATTR_ENTITY_ID: ENTITY_ID, ATTR_COMMAND: ["scan_reverse"]},
@@ -115,7 +115,7 @@ async def test_commands(hass: HomeAssistant, mock_device: MagicMock) -> None:
     )
     assert mock_device.scan_reverse.call_count == 1
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         REMOTE_DOMAIN,
         SERVICE_SEND_COMMAND,
         {ATTR_ENTITY_ID: ENTITY_ID, ATTR_COMMAND: ["go_movie_covers"]},
@@ -123,7 +123,7 @@ async def test_commands(hass: HomeAssistant, mock_device: MagicMock) -> None:
     )
     assert mock_device.go_movie_covers.call_count == 1
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         REMOTE_DOMAIN,
         SERVICE_SEND_COMMAND,
         {ATTR_ENTITY_ID: ENTITY_ID, ATTR_COMMAND: ["menu_toggle"]},
@@ -133,10 +133,10 @@ async def test_commands(hass: HomeAssistant, mock_device: MagicMock) -> None:
 
 
 @pytest.mark.usefixtures("mock_device", "mock_integration")
-async def test_unknown_command(hass: HomeAssistant) -> None:
+async def test_unknown_command(menuai: menuai) -> None:
     """Test service calls."""
-    with pytest.raises(HomeAssistantError) as err:
-        await hass.services.async_call(
+    with pytest.raises(menuaiError) as err:
+        await menuai.services.async_call(
             REMOTE_DOMAIN,
             SERVICE_SEND_COMMAND,
             {ATTR_ENTITY_ID: ENTITY_ID, ATTR_COMMAND: ["bad"]},

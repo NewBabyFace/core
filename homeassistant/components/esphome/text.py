@@ -6,8 +6,8 @@ from functools import partial
 
 from aioesphomeapi import EntityInfo, TextInfo, TextMode as EsphomeTextMode, TextState
 
-from homeassistant.components.text import TextEntity, TextMode
-from homeassistant.core import callback
+from menuai.components.text import TextEntity, TextMode
+from menuai.core import callback
 
 from .entity import (
     EsphomeEntity,

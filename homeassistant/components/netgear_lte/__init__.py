@@ -6,19 +6,19 @@ from aiohttp.cookiejar import CookieJar
 import eternalegypt
 from eternalegypt.eternalegypt import SMS
 
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PASSWORD, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import config_validation as cv, discovery
-from homeassistant.helpers.aiohttp_client import async_create_clientsession
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import CONF_HOST, CONF_NAME, CONF_PASSWORD, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import config_validation as cv, discovery
+from menuai.helpers.aiohttp_client import async_create_clientsession
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     ATTR_FROM,
     ATTR_HOST,
     ATTR_MESSAGE,
     ATTR_SMS_ID,
-    DATA_HASS_CONFIG,
+    DATA_menuai_CONFIG,
     DATA_SESSION,
     DOMAIN,
 )
@@ -58,21 +58,21 @@ PLATFORMS = [
 CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up Netgear LTE component."""
-    hass.data[DATA_HASS_CONFIG] = config
+    menuai.data[DATA_menuai_CONFIG] = config
 
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: NetgearLTEConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: NetgearLTEConfigEntry) -> bool:
     """Set up Netgear LTE from a config entry."""
     host = entry.data[CONF_HOST]
     password = entry.data[CONF_PASSWORD]
 
-    data: dict[str, Any] = hass.data.setdefault(DOMAIN, {})
+    data: dict[str, Any] = menuai.data.setdefault(DOMAIN, {})
     if not (session := data.get(DATA_SESSION)) or session.closed:
-        session = async_create_clientsession(hass, cookie_jar=CookieJar(unsafe=True))
+        session = async_create_clientsession(menuai, cookie_jar=CookieJar(unsafe=True))
     modem = eternalegypt.Modem(hostname=host, websession=session)
 
     try:
@@ -88,37 +88,37 @@ async def async_setup_entry(hass: HomeAssistant, entry: NetgearLTEConfigEntry) -
             ATTR_FROM: sms.sender,
             ATTR_MESSAGE: sms.message,
         }
-        hass.bus.async_fire(EVENT_SMS, data)
+        menuai.bus.async_fire(EVENT_SMS, data)
 
     await modem.add_sms_listener(fire_sms_event)
 
-    coordinator = NetgearLTEDataUpdateCoordinator(hass, entry, modem)
+    coordinator = NetgearLTEDataUpdateCoordinator(menuai, entry, modem)
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
 
-    await async_setup_services(hass, modem)
+    await async_setup_services(menuai, modem)
 
     await discovery.async_load_platform(
-        hass,
+        menuai,
         Platform.NOTIFY,
         DOMAIN,
         {CONF_NAME: entry.title, "modem": modem},
-        hass.data[DATA_HASS_CONFIG],
+        menuai.data[DATA_menuai_CONFIG],
     )
 
-    await hass.config_entries.async_forward_entry_setups(
+    await menuai.config_entries.async_forward_entry_setups(
         entry, [platform for platform in PLATFORMS if platform != Platform.NOTIFY]
     )
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: NetgearLTEConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: NetgearLTEConfigEntry) -> bool:
     """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-    if not hass.config_entries.async_loaded_entries(DOMAIN):
-        hass.data.pop(DOMAIN, None)
-        for service_name in hass.services.async_services()[DOMAIN]:
-            hass.services.async_remove(DOMAIN, service_name)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
+    if not menuai.config_entries.async_loaded_entries(DOMAIN):
+        menuai.data.pop(DOMAIN, None)
+        for service_name in menuai.services.async_services()[DOMAIN]:
+            menuai.services.async_remove(DOMAIN, service_name)
 
     return unload_ok

@@ -19,12 +19,12 @@ from aiolookin import (
 )
 from aiolookin.models import UDPCommandType, UDPEvent
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, Platform
+from menuai.core import menuai, callback
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import device_registry as dr
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
     DOMAIN,
@@ -91,12 +91,12 @@ class LookinUDPManager:
             self._subscriptions = None
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up lookin from a config entry."""
-    domain_data = hass.data.setdefault(DOMAIN, {})
+    domain_data = menuai.data.setdefault(DOMAIN, {})
     host = entry.data[CONF_HOST]
     lookin_protocol = LookInHttpProtocol(
-        api_uri=f"http://{host}", session=async_get_clientsession(hass)
+        api_uri=f"http://{host}", session=async_get_clientsession(menuai)
     )
 
     try:
@@ -121,7 +121,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if lookin_device.model >= 2:
         coordinator_class = LookinDataUpdateCoordinator[MeteoSensor]
         meteo_coordinator = coordinator_class(
-            hass,
+            menuai,
             entry,
             push_coordinator,
             name=entry.title,
@@ -140,7 +140,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         else:
             updater = _async_remote_updater(lookin_protocol, uuid)
         coordinator = LookinDataUpdateCoordinator(
-            hass,
+            menuai,
             entry,
             push_coordinator,
             name=f"{entry.title} {uuid}",
@@ -172,7 +172,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             )
         )
 
-    hass.data[DOMAIN][entry.entry_id] = LookinData(
+    menuai.data[DOMAIN][entry.entry_id] = LookinData(
         host=host,
         lookin_udp_subs=lookin_udp_subs,
         lookin_device=lookin_device,
@@ -182,27 +182,27 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         device_coordinators=device_coordinators,
     )
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        hass.data[DOMAIN].pop(entry.entry_id)
+    if unload_ok := await menuai.config_entries.async_unload_platforms(entry, PLATFORMS):
+        menuai.data[DOMAIN].pop(entry.entry_id)
 
-    if not hass.config_entries.async_loaded_entries(DOMAIN):
-        manager: LookinUDPManager = hass.data[DOMAIN][UDP_MANAGER]
+    if not menuai.config_entries.async_loaded_entries(DOMAIN):
+        manager: LookinUDPManager = menuai.data[DOMAIN][UDP_MANAGER]
         await manager.async_stop()
     return unload_ok
 
 
 async def async_remove_config_entry_device(
-    hass: HomeAssistant, entry: ConfigEntry, device_entry: dr.DeviceEntry
+    menuai: menuai, entry: ConfigEntry, device_entry: dr.DeviceEntry
 ) -> bool:
     """Remove lookin config entry from a device."""
-    data: LookinData = hass.data[DOMAIN][entry.entry_id]
+    data: LookinData = menuai.data[DOMAIN][entry.entry_id]
     all_identifiers: set[tuple[str, str]] = {
         (DOMAIN, data.lookin_device.id),
         *((DOMAIN, remote["UUID"]) for remote in data.devices),

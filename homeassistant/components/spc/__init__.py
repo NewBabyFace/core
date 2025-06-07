@@ -7,11 +7,11 @@ from pyspcwebgw.area import Area
 from pyspcwebgw.zone import Zone
 import voluptuous as vol
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import aiohttp_client, config_validation as cv, discovery
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import aiohttp_client, config_validation as cv, discovery
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.typing import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -37,40 +37,40 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the SPC component."""
 
     async def async_update_callback(spc_object):
         if isinstance(spc_object, Area):
-            async_dispatcher_send(hass, SIGNAL_UPDATE_ALARM.format(spc_object.id))
+            async_dispatcher_send(menuai, SIGNAL_UPDATE_ALARM.format(spc_object.id))
         elif isinstance(spc_object, Zone):
-            async_dispatcher_send(hass, SIGNAL_UPDATE_SENSOR.format(spc_object.id))
+            async_dispatcher_send(menuai, SIGNAL_UPDATE_SENSOR.format(spc_object.id))
 
-    session = aiohttp_client.async_get_clientsession(hass)
+    session = aiohttp_client.async_get_clientsession(menuai)
 
     spc = SpcWebGateway(
-        loop=hass.loop,
+        loop=menuai.loop,
         session=session,
         api_url=config[DOMAIN].get(CONF_API_URL),
         ws_url=config[DOMAIN].get(CONF_WS_URL),
         async_callback=async_update_callback,
     )
 
-    hass.data[DATA_API] = spc
+    menuai.data[DATA_API] = spc
 
     if not await spc.async_load_parameters():
         _LOGGER.error("Failed to load area/zone information from SPC")
         return False
 
     # add sensor devices for each zone (typically motion/fire/door sensors)
-    hass.async_create_task(
-        discovery.async_load_platform(hass, Platform.BINARY_SENSOR, DOMAIN, {}, config)
+    menuai.async_create_task(
+        discovery.async_load_platform(menuai, Platform.BINARY_SENSOR, DOMAIN, {}, config)
     )
 
     # create a separate alarm panel for each area
-    hass.async_create_task(
+    menuai.async_create_task(
         discovery.async_load_platform(
-            hass, Platform.ALARM_CONTROL_PANEL, DOMAIN, {}, config
+            menuai, Platform.ALARM_CONTROL_PANEL, DOMAIN, {}, config
         )
     )
 

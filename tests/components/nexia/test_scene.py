@@ -1,16 +1,16 @@
 """The scene tests for the nexia platform."""
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .util import async_init_integration
 
 
-async def test_automation_scenes(hass: HomeAssistant) -> None:
+async def test_automation_scenes(menuai: menuai) -> None:
     """Test creation automation scenes."""
 
-    await async_init_integration(hass)
+    await async_init_integration(menuai)
 
-    state = hass.states.get("scene.away_short")
+    state = menuai.states.get("scene.away_short")
     expected_attributes = {
         "attribution": "Data provided by Trane Technologies",
         "description": (
@@ -38,7 +38,7 @@ async def test_automation_scenes(hass: HomeAssistant) -> None:
         state.attributes[key] == value for key, value in expected_attributes.items()
     )
 
-    state = hass.states.get("scene.power_outage")
+    state = menuai.states.get("scene.power_outage")
     expected_attributes = {
         "attribution": "Data provided by Trane Technologies",
         "description": (
@@ -58,7 +58,7 @@ async def test_automation_scenes(hass: HomeAssistant) -> None:
         state.attributes[key] == value for key, value in expected_attributes.items()
     )
 
-    state = hass.states.get("scene.power_restored")
+    state = menuai.states.get("scene.power_restored")
     expected_attributes = {
         "attribution": "Data provided by Trane Technologies",
         "description": (

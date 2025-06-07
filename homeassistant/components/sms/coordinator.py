@@ -6,7 +6,7 @@ import logging
 
 import gammu
 
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DEFAULT_SCAN_INTERVAL
 
@@ -16,10 +16,10 @@ _LOGGER = logging.getLogger(__name__)
 class SignalCoordinator(DataUpdateCoordinator):
     """Signal strength coordinator."""
 
-    def __init__(self, hass, gateway):
+    def __init__(self, menuai, gateway):
         """Initialize signal strength coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             name="Device signal state",
             update_interval=timedelta(seconds=DEFAULT_SCAN_INTERVAL),
@@ -38,10 +38,10 @@ class SignalCoordinator(DataUpdateCoordinator):
 class NetworkCoordinator(DataUpdateCoordinator):
     """Network info coordinator."""
 
-    def __init__(self, hass, gateway):
+    def __init__(self, menuai, gateway):
         """Initialize network info coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             name="Device network state",
             update_interval=timedelta(seconds=DEFAULT_SCAN_INTERVAL),

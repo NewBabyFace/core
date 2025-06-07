@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant.const import CONF_PLATFORM
-from homeassistant.core import CALLBACK_TYPE, Event, HassJob, HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import CONF_PLATFORM
+from menuai.core import CALLBACK_TYPE, Event, menuaiJob, menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.trigger import TriggerActionType, TriggerInfo
+from menuai.helpers.typing import ConfigType
 
 from .const import DEVICE_ID, DOMAIN, EVENT_TAG_SCANNED, TAG_ID
 
@@ -22,7 +22,7 @@ TRIGGER_SCHEMA = cv.TRIGGER_BASE_SCHEMA.extend(
 
 
 async def async_attach_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     action: TriggerActionType,
     trigger_info: TriggerInfo,
@@ -34,7 +34,7 @@ async def async_attach_trigger(
         set(config[DEVICE_ID]) if DEVICE_ID in config else None
     )
 
-    job = HassJob(action)
+    job = menuaiJob(action)
 
     async def handle_event(event: Event) -> None:
         """Listen for tag scan events and calls the action when data matches."""
@@ -43,7 +43,7 @@ async def async_attach_trigger(
         ):
             return
 
-        task = hass.async_run_hass_job(
+        task = menuai.async_run_menuai_job(
             job,
             {
                 "trigger": {
@@ -59,4 +59,4 @@ async def async_attach_trigger(
         if task:
             await task
 
-    return hass.bus.async_listen(EVENT_TAG_SCANNED, handle_event)
+    return menuai.bus.async_listen(EVENT_TAG_SCANNED, handle_event)

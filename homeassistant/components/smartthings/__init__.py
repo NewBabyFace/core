@@ -27,8 +27,8 @@ from pysmartthings import (
 )
 from pysmartthings.models import HealthStatus
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_CONNECTIONS,
     ATTR_HW_VERSION,
     ATTR_MANUFACTURER,
@@ -38,18 +38,18 @@ from homeassistant.const import (
     ATTR_VIA_DEVICE,
     CONF_ACCESS_TOKEN,
     CONF_TOKEN,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     Platform,
 )
-from homeassistant.core import Event, HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.config_entry_oauth2_flow import (
+from menuai.core import Event, menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.config_entry_oauth2_flow import (
     OAuth2Session,
     async_get_config_entry_implementation,
 )
-from homeassistant.helpers.entity_registry import RegistryEntry, async_migrate_entries
+from menuai.helpers.entity_registry import RegistryEntry, async_migrate_entries
 
 from .const import (
     BINARY_SENSOR_ATTRIBUTES_TO_CAPABILITIES,
@@ -108,14 +108,14 @@ PLATFORMS = [
 ]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: SmartThingsConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: SmartThingsConfigEntry) -> bool:
     """Initialize config entry which represents an installed SmartApp."""
     # The oauth smartthings entry will have a token, older ones are version 3
     # after migration but still require reauthentication
     if CONF_TOKEN not in entry.data:
         raise ConfigEntryAuthFailed("Config entry missing token")
-    implementation = await async_get_config_entry_implementation(hass, entry)
-    session = OAuth2Session(hass, entry, implementation)
+    implementation = await async_get_config_entry_implementation(menuai, entry)
+    session = OAuth2Session(menuai, entry, implementation)
 
     try:
         await session.async_ensure_token_valid()
@@ -124,7 +124,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: SmartThingsConfigEntry) 
             raise ConfigEntryAuthFailed("Token not valid, trigger renewal") from err
         raise ConfigEntryNotReady from err
 
-    client = SmartThings(session=async_get_clientsession(hass))
+    client = SmartThings(session=async_get_clientsession(menuai))
 
     async def _refresh_token() -> str:
         await session.async_ensure_token_valid()
@@ -139,13 +139,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: SmartThingsConfigEntry) 
         _LOGGER.debug(
             "We hit the limit of max connections or we could not remove the old one, so retrying"
         )
-        hass.config_entries.async_schedule_reload(entry.entry_id)
+        menuai.config_entries.async_schedule_reload(entry.entry_id)
 
     client.max_connections_reached_callback = _handle_max_connections
 
     def _handle_new_subscription_identifier(identifier: str | None) -> None:
         """Handle a new subscription identifier."""
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry,
             data={
                 **entry.data,
@@ -179,7 +179,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: SmartThingsConfigEntry) 
     _handle_new_subscription_identifier(subscription_id)
 
     entry.async_create_background_task(
-        hass,
+        menuai,
         client.subscribe(
             entry.data[CONF_LOCATION_ID],
             entry.data[CONF_TOKEN][CONF_INSTALLED_APP_ID],
@@ -214,7 +214,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: SmartThingsConfigEntry) 
     except SmartThingsAuthenticationFailedError as err:
         raise ConfigEntryAuthFailed from err
 
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     create_devices(device_registry, device_status, entry, rooms)
 
     scenes = {
@@ -256,7 +256,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: SmartThingsConfigEntry) 
             event.capability is Capability.BUTTON
             and event.attribute is Attribute.BUTTON
         ):
-            hass.bus.async_fire(
+            menuai.bus.async_fire(
                 EVENT_BUTTON,
                 {
                     "component_id": event.component_id,
@@ -277,10 +277,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: SmartThingsConfigEntry) 
         await client.delete_subscription(subscription_id)
 
     entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _handle_shutdown)
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, _handle_shutdown)
     )
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     device_entries = dr.async_entries_for_config_entry(device_registry, entry.entry_id)
     for device_entry in device_entries:
@@ -302,22 +302,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: SmartThingsConfigEntry) 
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, entry: SmartThingsConfigEntry
+    menuai: menuai, entry: SmartThingsConfigEntry
 ) -> bool:
     """Unload a config entry."""
     client = entry.runtime_data.client
     if (subscription_id := entry.data.get(CONF_SUBSCRIPTION_ID)) is not None:
         with contextlib.suppress(SmartThingsConnectionError):
             await client.delete_subscription(subscription_id)
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
-async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_migrate_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Handle config entry migration."""
 
     if entry.version < 3:
         # We keep the old data around, so we can use that to clean up the webhook in the future
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry, version=3, data={OLD_DATA: dict(entry.data)}
         )
 
@@ -378,7 +378,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                         Attribute.COMPLETION_TIME,
                     }:
                         capability = determine_machine_type(
-                            hass, entry.entry_id, device_id
+                            menuai, entry.entry_id, device_id
                         )
                         if capability is None:
                             return None
@@ -397,8 +397,8 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
             return None
 
-        await async_migrate_entries(hass, entry.entry_id, migrate_entities)
-        hass.config_entries.async_update_entry(
+        await async_migrate_entries(menuai, entry.entry_id, migrate_entities)
+        menuai.config_entries.async_update_entry(
             entry,
             minor_version=2,
         )
@@ -407,12 +407,12 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 def determine_machine_type(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry_id: str,
     device_id: str,
 ) -> Capability | None:
     """Determine the machine type for a device."""
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
     entries = er.async_entries_for_config_entry(entity_registry, entry_id)
     device_entries = [entry for entry in entries if device_id in entry.unique_id]
     for entry in device_entries:

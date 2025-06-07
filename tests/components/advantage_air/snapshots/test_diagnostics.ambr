@@ -278,7 +278,7 @@
     'system': dict({
       'hasAircons': True,
       'hasLights': True,
-      'hasSensors': False,
+      'menuaiensors': False,
       'hasThings': True,
       'hasThingsBOG': False,
       'hasThingsLight': False,

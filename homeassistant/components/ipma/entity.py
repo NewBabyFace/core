@@ -5,8 +5,8 @@ from __future__ import annotations
 from pyipma.api import IPMA_API
 from pyipma.location import Location
 
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.entity import Entity
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.entity import Entity
 
 from .const import DOMAIN
 

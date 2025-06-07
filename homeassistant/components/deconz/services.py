@@ -5,14 +5,14 @@ from typing import TYPE_CHECKING
 from pydeconz.utils import normalize_bridge_id
 import voluptuous as vol
 
-from homeassistant.core import HomeAssistant, ServiceCall, callback
-from homeassistant.helpers import (
+from menuai.core import menuai, ServiceCall, callback
+from menuai.helpers import (
     config_validation as cv,
     device_registry as dr,
     entity_registry as er,
 )
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
-from homeassistant.util.read_only_dict import ReadOnlyDict
+from menuai.helpers.device_registry import CONNECTION_NETWORK_MAC
+from menuai.util.read_only_dict import ReadOnlyDict
 
 from .const import CONF_BRIDGE_ID, DOMAIN, LOGGER
 from .hub import DeconzHub
@@ -59,7 +59,7 @@ SERVICE_TO_SCHEMA = {
 
 
 @callback
-def async_setup_services(hass: HomeAssistant) -> None:
+def async_setup_services(menuai: menuai) -> None:
     """Set up services for deCONZ integration."""
 
     async def async_call_deconz_service(service_call: ServiceCall) -> None:
@@ -72,7 +72,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
             bridge_id = normalize_bridge_id(service_data[CONF_BRIDGE_ID])
 
             entry: DeconzConfigEntry
-            for entry in hass.config_entries.async_loaded_entries(DOMAIN):
+            for entry in menuai.config_entries.async_loaded_entries(DOMAIN):
                 possible_hub = entry.runtime_data
                 if possible_hub.bridgeid == bridge_id:
                     hub = possible_hub
@@ -84,7 +84,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
                 return
         else:
             try:
-                hub = get_master_hub(hass)
+                hub = get_master_hub(menuai)
             except ValueError:
                 LOGGER.error("No master gateway available")
                 return
@@ -99,7 +99,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
             await async_remove_orphaned_entries_service(hub)
 
     for service in SUPPORTED_SERVICES:
-        hass.services.async_register(
+        menuai.services.async_register(
             DOMAIN,
             service,
             async_call_deconz_service,
@@ -147,8 +147,8 @@ async def async_refresh_devices_service(hub: DeconzHub) -> None:
 
 async def async_remove_orphaned_entries_service(hub: DeconzHub) -> None:
     """Remove orphaned deCONZ entries from device and entity registries."""
-    device_registry = dr.async_get(hub.hass)
-    entity_registry = er.async_get(hub.hass)
+    device_registry = dr.async_get(hub.menuai)
+    entity_registry = er.async_get(hub.menuai)
 
     entity_entries = er.async_entries_for_config_entry(
         entity_registry, hub.config_entry.entry_id

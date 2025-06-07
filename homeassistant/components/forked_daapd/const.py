@@ -1,6 +1,6 @@
 """Const for forked-daapd."""
 
-from homeassistant.components.media_player import MediaPlayerEntityFeature, MediaType
+from menuai.components.media_player import MediaPlayerEntityFeature, MediaType
 
 CALLBACK_TIMEOUT = 8  # max time between command and callback from forked-daapd server
 CAN_PLAY_TYPE = {

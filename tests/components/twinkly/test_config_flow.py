@@ -4,12 +4,12 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from homeassistant.components.twinkly.const import DOMAIN
-from homeassistant.config_entries import SOURCE_DHCP, SOURCE_USER
-from homeassistant.const import CONF_HOST, CONF_ID, CONF_MODEL, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.components.twinkly.const import DOMAIN
+from menuai.config_entries import SOURCE_DHCP, SOURCE_USER
+from menuai.const import CONF_HOST, CONF_ID, CONF_MODEL, CONF_NAME
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
 
 from .const import TEST_MAC, TEST_MODEL, TEST_NAME
 
@@ -17,9 +17,9 @@ from tests.common import MockConfigEntry
 
 
 @pytest.mark.usefixtures("mock_twinkly_client", "mock_setup_entry")
-async def test_full_flow(hass: HomeAssistant) -> None:
+async def test_full_flow(menuai: menuai) -> None:
     """Test the full flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
@@ -27,7 +27,7 @@ async def test_full_flow(hass: HomeAssistant) -> None:
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: "192.168.0.123"},
     )
@@ -43,14 +43,14 @@ async def test_full_flow(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("mock_setup_entry")
-async def test_exceptions(hass: HomeAssistant, mock_twinkly_client: AsyncMock) -> None:
+async def test_exceptions(menuai: menuai, mock_twinkly_client: AsyncMock) -> None:
     """Test the failure when raising exceptions."""
     mock_twinkly_client.get_details.side_effect = TimeoutError
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: "192.168.0.123"},
     )
@@ -61,7 +61,7 @@ async def test_exceptions(hass: HomeAssistant, mock_twinkly_client: AsyncMock) -
 
     mock_twinkly_client.get_details.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: "192.168.0.123"},
     )
@@ -70,11 +70,11 @@ async def test_exceptions(hass: HomeAssistant, mock_twinkly_client: AsyncMock) -
 
 @pytest.mark.usefixtures("mock_twinkly_client", "mock_setup_entry")
 async def test_already_configured(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_config_entry: MockConfigEntry
 ) -> None:
     """Test the device is already configured."""
-    mock_config_entry.add_to_hass(hass)
-    result = await hass.config_entries.flow.async_init(
+    mock_config_entry.add_to_menuai(menuai)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
@@ -82,7 +82,7 @@ async def test_already_configured(
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {CONF_HOST: "192.168.0.123"}
     )
     assert result["type"] is FlowResultType.ABORT
@@ -90,9 +90,9 @@ async def test_already_configured(
 
 
 @pytest.mark.usefixtures("mock_twinkly_client", "mock_setup_entry")
-async def test_dhcp_full_flow(hass: HomeAssistant) -> None:
+async def test_dhcp_full_flow(menuai: menuai) -> None:
     """Test DHCP discovery flow can confirm right away."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_DHCP},
         data=DhcpServiceInfo(
@@ -105,7 +105,7 @@ async def test_dhcp_full_flow(hass: HomeAssistant) -> None:
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "discovery_confirm"
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == TEST_NAME
     assert result["data"] == {
@@ -119,12 +119,12 @@ async def test_dhcp_full_flow(hass: HomeAssistant) -> None:
 
 @pytest.mark.usefixtures("mock_twinkly_client")
 async def test_dhcp_already_configured(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_config_entry: MockConfigEntry
 ) -> None:
     """Test DHCP discovery flow aborts if entry already setup."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_DHCP},
         data=DhcpServiceInfo(
@@ -141,9 +141,9 @@ async def test_dhcp_already_configured(
 
 
 @pytest.mark.usefixtures("mock_twinkly_client", "mock_setup_entry")
-async def test_user_flow_works_discovery(hass: HomeAssistant) -> None:
+async def test_user_flow_works_discovery(menuai: menuai) -> None:
     """Test user flow can continue after discovery happened."""
-    await hass.config_entries.flow.async_init(
+    await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_DHCP},
         data=DhcpServiceInfo(
@@ -152,19 +152,19 @@ async def test_user_flow_works_discovery(hass: HomeAssistant) -> None:
             macaddress="002d133baabb",
         ),
     )
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
-    assert len(hass.config_entries.flow.async_progress(DOMAIN)) == 2
+    assert len(menuai.config_entries.flow.async_progress(DOMAIN)) == 2
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: "10.0.0.131"},
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
 
     # Verify the discovery flow was aborted
-    assert not hass.config_entries.flow.async_progress(DOMAIN)
+    assert not menuai.config_entries.flow.async_progress(DOMAIN)

@@ -1,18 +1,18 @@
 """The tests for SleepIQ binary sensor platform."""
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     DOMAIN as BINARY_SENSOR_DOMAIN,
     BinarySensorDeviceClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     ATTR_FRIENDLY_NAME,
     ATTR_ICON,
     STATE_OFF,
     STATE_ON,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .conftest import (
     BED_NAME,
@@ -28,12 +28,12 @@ from .conftest import (
 
 
 async def test_binary_sensors(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, mock_asyncsleepiq
+    menuai: menuai, entity_registry: er.EntityRegistry, mock_asyncsleepiq
 ) -> None:
     """Test the SleepIQ binary sensors."""
-    await setup_platform(hass, BINARY_SENSOR_DOMAIN)
+    await setup_platform(menuai, BINARY_SENSOR_DOMAIN)
 
-    state = hass.states.get(
+    state = menuai.states.get(
         f"binary_sensor.sleepnumber_{BED_NAME_LOWER}_{SLEEPER_L_NAME_LOWER}_is_in_bed"
     )
     assert state.state == STATE_ON
@@ -50,7 +50,7 @@ async def test_binary_sensors(
     assert entity
     assert entity.unique_id == f"{SLEEPER_L_ID}_is_in_bed"
 
-    state = hass.states.get(
+    state = menuai.states.get(
         f"binary_sensor.sleepnumber_{BED_NAME_LOWER}_{SLEEPER_R_NAME_LOWER}_is_in_bed"
     )
     assert state.state == STATE_OFF

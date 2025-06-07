@@ -6,13 +6,13 @@ from pydeconz.websocket import State
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.deconz.config_flow import DECONZ_MANUFACTURERURL
-from homeassistant.components.deconz.const import DOMAIN
-from homeassistant.config_entries import SOURCE_SSDP
-from homeassistant.const import STATE_OFF, STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.service_info.ssdp import (
+from menuai.components.deconz.config_flow import DECONZ_MANUFACTURERURL
+from menuai.components.deconz.const import DOMAIN
+from menuai.config_entries import SOURCE_SSDP
+from menuai.const import STATE_OFF, STATE_UNAVAILABLE
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.helpers.service_info.ssdp import (
     ATTR_UPNP_MANUFACTURER_URL,
     ATTR_UPNP_SERIAL,
     ATTR_UPNP_UDN,
@@ -50,36 +50,36 @@ async def test_device_registry_entry(
 )
 @pytest.mark.usefixtures("config_entry_setup")
 async def test_connection_status_signalling(
-    hass: HomeAssistant, mock_websocket_state
+    menuai: menuai, mock_websocket_state
 ) -> None:
     """Make sure that connection status triggers a dispatcher send."""
-    assert hass.states.get("binary_sensor.presence").state == STATE_OFF
+    assert menuai.states.get("binary_sensor.presence").state == STATE_OFF
 
     await mock_websocket_state(State.RETRYING)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("binary_sensor.presence").state == STATE_UNAVAILABLE
+    assert menuai.states.get("binary_sensor.presence").state == STATE_UNAVAILABLE
 
     await mock_websocket_state(State.RUNNING)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("binary_sensor.presence").state == STATE_OFF
+    assert menuai.states.get("binary_sensor.presence").state == STATE_OFF
 
 
 async def test_update_address(
-    hass: HomeAssistant, config_entry_setup: MockConfigEntry
+    menuai: menuai, config_entry_setup: MockConfigEntry
 ) -> None:
     """Make sure that connection status triggers a dispatcher send."""
     assert config_entry_setup.data["host"] == "1.2.3.4"
 
     with (
         patch(
-            "homeassistant.components.deconz.async_setup_entry",
+            "menuai.components.deconz.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
         patch("pydeconz.gateway.WSClient") as ws_mock,
     ):
-        await hass.config_entries.flow.async_init(
+        await menuai.config_entries.flow.async_init(
             DOMAIN,
             data=SsdpServiceInfo(
                 ssdp_st="mock_st",
@@ -93,7 +93,7 @@ async def test_update_address(
             ),
             context={"source": SOURCE_SSDP},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert ws_mock.call_args[0][1] == "2.3.4.5"
     assert config_entry_setup.data["host"] == "2.3.4.5"

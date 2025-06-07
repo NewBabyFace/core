@@ -20,13 +20,13 @@ from pyisy.helpers import EventListener, NodeProperty
 from pyisy.nodes import Node, NodeChangedEvent
 from pyisy.variables import Variable
 
-from homeassistant.components.number import (
+from menuai.components.number import (
     NumberEntity,
     NumberEntityDescription,
     NumberMode,
     RestoreNumber,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_VARIABLES,
     PERCENTAGE,
     STATE_UNAVAILABLE,
@@ -34,18 +34,18 @@ from homeassistant.const import (
     EntityCategory,
     Platform,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util.percentage import (
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util.percentage import (
     percentage_to_ranged_value,
     ranged_value_to_percentage,
 )
 
 from .const import CONF_VAR_SENSOR_STRING, DEFAULT_VAR_SENSOR_STRING, UOM_8_BIT_RANGE
 from .entity import ISYAuxControlEntity
-from .helpers import convert_isy_value_to_hass
+from .helpers import convert_isy_value_to_menuai
 from .models import IsyConfigEntry
 
 ISY_MAX_SIZE = (2**32) / 2
@@ -72,7 +72,7 @@ BACKLIGHT_MEMORY_FILTER = {"memory": DEV_BL_ADDR, "cmd1": DEV_CMD_MEMORY_WRITE}
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: IsyConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -170,7 +170,7 @@ class ISYAuxControlNumberEntity(ISYAuxControlEntity, NumberEntity):
             return
 
         if not await self._node.send_cmd(self._control, val=value, uom=node_prop.uom):
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Could not set {self.name} to {value} for {self._node.address}"
             )
 
@@ -203,7 +203,7 @@ class ISYVariableNumberEntity(NumberEntity):
         self._attr_unique_id = unique_id
         self._attr_device_info = device_info
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to the node change events."""
         self._change_handler = self._node.status_events.subscribe(self.async_on_update)
 
@@ -215,7 +215,7 @@ class ISYVariableNumberEntity(NumberEntity):
     @property
     def native_value(self) -> float | int | None:
         """Return the state of the variable."""
-        return convert_isy_value_to_hass(
+        return convert_isy_value_to_menuai(
             self._node.init if self._init_entity else self._node.status,
             "",
             self._node.prec,
@@ -231,7 +231,7 @@ class ISYVariableNumberEntity(NumberEntity):
     async def async_set_native_value(self, value: float) -> None:
         """Set new value."""
         if not await self._node.set_value(value, init=self._init_entity):
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Could not set {self.name} to {value} for {self._node.address}"
             )
 
@@ -254,9 +254,9 @@ class ISYBacklightNumberEntity(ISYAuxControlEntity, RestoreNumber):
         self._memory_change_handler: EventListener | None = None
         self._attr_native_value = 0
 
-    async def async_added_to_hass(self) -> None:
-        """Load the last known state when added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Load the last known state when added to menuai."""
+        await super().async_added_to_menuai()
         if (last_state := await self.async_get_last_state()) and (
             last_number_data := await self.async_get_last_number_data()
         ):
@@ -290,7 +290,7 @@ class ISYBacklightNumberEntity(ISYAuxControlEntity, RestoreNumber):
         if not await self._node.send_cmd(
             CMD_BACKLIGHT, val=int(value), uom=UOM_PERCENTAGE
         ):
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Could not set backlight to {value}% for {self._node.address}"
             )
         self._attr_native_value = value

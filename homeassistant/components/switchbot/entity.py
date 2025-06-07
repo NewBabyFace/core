@@ -9,15 +9,15 @@ from typing import Any, Concatenate
 from switchbot import Switchbot, SwitchbotDevice
 from switchbot.devices.device import SwitchbotOperationError
 
-from homeassistant.components.bluetooth.passive_update_coordinator import (
+from menuai.components.bluetooth.passive_update_coordinator import (
     PassiveBluetoothCoordinatorEntity,
 )
-from homeassistant.const import ATTR_CONNECTIONS
-from homeassistant.core import callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import ToggleEntity
+from menuai.const import ATTR_CONNECTIONS
+from menuai.core import callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import ToggleEntity
 
 from .const import DOMAIN, MANUFACTURER
 from .coordinator import SwitchbotDataUpdateCoordinator
@@ -77,10 +77,10 @@ class SwitchbotEntity(
         self._async_update_attrs()
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
         self.async_on_remove(self._device.subscribe(self._handle_coordinator_update))
-        return await super().async_added_to_hass()
+        return await super().async_added_to_menuai()
 
     async def async_update(self) -> None:
         """Update the entity.
@@ -102,7 +102,7 @@ def exception_handler[_EntityT: SwitchbotEntity, **_P](
         try:
             await func(self, *args, **kwargs)
         except SwitchbotOperationError as error:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="operation_error",
                 translation_placeholders={"error": str(error)},

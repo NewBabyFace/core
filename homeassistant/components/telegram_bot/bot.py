@@ -24,17 +24,17 @@ from telegram.error import TelegramError
 from telegram.ext import CallbackContext, filters
 from telegram.request import HTTPXRequest
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_COMMAND,
     CONF_API_KEY,
     HTTP_BEARER_AUTHENTICATION,
     HTTP_DIGEST_AUTHENTICATION,
 )
-from homeassistant.core import Context, HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import issue_registry as ir
-from homeassistant.util.ssl import get_default_context, get_default_no_verify_context
+from menuai.core import Context, menuai
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import issue_registry as ir
+from menuai.util.ssl import get_default_context, get_default_no_verify_context
 
 from .const import (
     ATTR_ARGS,
@@ -102,9 +102,9 @@ type TelegramBotConfigEntry = ConfigEntry[TelegramNotificationService]
 class BaseTelegramBot:
     """The base class for the telegram bot."""
 
-    def __init__(self, hass: HomeAssistant, config: TelegramBotConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config: TelegramBotConfigEntry) -> None:
         """Initialize the bot base class."""
-        self.hass = hass
+        self.menuai = menuai
         self.config = config
 
     @abstractmethod
@@ -135,7 +135,7 @@ class BaseTelegramBot:
         event_context = Context()
 
         _LOGGER.debug("Firing event %s: %s", event_type, event_data)
-        self.hass.bus.async_fire(event_type, event_data, context=event_context)
+        self.menuai.bus.async_fire(event_type, event_data, context=event_context)
         return True
 
     @staticmethod
@@ -223,7 +223,7 @@ class TelegramNotificationService:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         app: BaseTelegramBot,
         bot: Bot,
         config: TelegramBotConfigEntry,
@@ -240,7 +240,7 @@ class TelegramNotificationService:
         }
         self._parse_mode = self._parsers.get(parser)
         self.bot = bot
-        self.hass = hass
+        self.menuai = menuai
 
     def _get_allowed_chat_ids(self) -> list[int]:
         allowed_chat_ids: list[int] = [
@@ -425,7 +425,7 @@ class TelegramNotificationService:
                     event_data[ATTR_MESSAGE_THREAD_ID] = kwargs_msg[
                         ATTR_MESSAGE_THREAD_ID
                     ]
-                self.hass.bus.async_fire(
+                self.menuai.bus.async_fire(
                     EVENT_TELEGRAM_SENT, event_data, context=context
                 )
             elif not isinstance(out, bool):
@@ -570,7 +570,7 @@ class TelegramNotificationService:
         """Send a photo, sticker, video, or document."""
         params = self._get_msg_kwargs(kwargs)
         file_content = await load_data(
-            self.hass,
+            self.menuai,
             url=kwargs.get(ATTR_URL),
             filepath=kwargs.get(ATTR_FILE),
             username=kwargs.get(ATTR_USERNAME),
@@ -788,7 +788,7 @@ class TelegramNotificationService:
         )
 
 
-def initialize_bot(hass: HomeAssistant, p_config: MappingProxyType[str, Any]) -> Bot:
+def initialize_bot(menuai: menuai, p_config: MappingProxyType[str, Any]) -> Bot:
     """Initialize telegram bot with proxy support."""
     api_key: str = p_config[CONF_API_KEY]
     proxy_url: str | None = p_config.get(CONF_PROXY_URL)
@@ -804,7 +804,7 @@ def initialize_bot(hass: HomeAssistant, p_config: MappingProxyType[str, Any]) ->
             # indicated to put them here.
             auth = proxy_params.pop("username"), proxy_params.pop("password")
             ir.create_issue(
-                hass,
+                menuai,
                 DOMAIN,
                 "proxy_params_auth_deprecation",
                 breaks_in_ha_version="2024.10.0",
@@ -821,7 +821,7 @@ def initialize_bot(hass: HomeAssistant, p_config: MappingProxyType[str, Any]) ->
             )
         else:
             ir.create_issue(
-                hass,
+                menuai,
                 DOMAIN,
                 "proxy_params_deprecation",
                 breaks_in_ha_version="2024.10.0",
@@ -845,7 +845,7 @@ def initialize_bot(hass: HomeAssistant, p_config: MappingProxyType[str, Any]) ->
 
 
 async def load_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     url=None,
     filepath=None,
     username=None,
@@ -901,8 +901,8 @@ async def load_data(
                     "Can't load data in %s after %s retries", url, retry_num
                 )
         elif filepath is not None:
-            if hass.config.is_allowed_path(filepath):
-                return await hass.async_add_executor_job(
+            if menuai.config.is_allowed_path(filepath):
+                return await menuai.async_add_executor_job(
                     _read_file_as_bytesio, filepath
                 )
 

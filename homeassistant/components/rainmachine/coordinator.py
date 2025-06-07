@@ -6,12 +6,12 @@ from collections.abc import Callable, Coroutine
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import (
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import (
     async_dispatcher_connect,
     async_dispatcher_send,
 )
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import LOGGER
 
@@ -29,7 +29,7 @@ class RainMachineDataUpdateCoordinator(DataUpdateCoordinator[dict]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         *,
         entry: RainMachineConfigEntry,
         name: str,
@@ -39,7 +39,7 @@ class RainMachineDataUpdateCoordinator(DataUpdateCoordinator[dict]):
     ) -> None:
         """Initialize."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=entry,
             name=name,
@@ -82,7 +82,7 @@ class RainMachineDataUpdateCoordinator(DataUpdateCoordinator[dict]):
             (self.signal_reboot_requested, async_reboot_requested),
         ):
             self._signal_handler_unsubs.append(
-                async_dispatcher_connect(self.hass, signal, func)
+                async_dispatcher_connect(self.menuai, signal, func)
             )
 
         @callback
@@ -90,7 +90,7 @@ class RainMachineDataUpdateCoordinator(DataUpdateCoordinator[dict]):
             """Check whether an active reboot has been completed."""
             if self._rebooting and self.last_update_success:
                 LOGGER.debug("%s discovered reboot complete", self.name)
-                async_dispatcher_send(self.hass, self.signal_reboot_completed)
+                async_dispatcher_send(self.menuai, self.signal_reboot_completed)
 
         self.async_add_listener(async_check_reboot_complete)
 

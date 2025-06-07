@@ -6,22 +6,22 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_ELEVATION,
     CONF_LATITUDE,
     CONF_LONGITUDE,
     CONF_NAME,
     UnitOfLength,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.selector import (
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.selector import (
     NumberSelector,
     NumberSelectorConfig,
     NumberSelectorMode,
@@ -37,10 +37,10 @@ from .const import (
 
 
 @callback
-def configured_instances(hass: HomeAssistant) -> set[str]:
+def configured_instances(menuai: menuai) -> set[str]:
     """Return a set of configured met.no instances."""
     entries = []
-    for entry in hass.config_entries.async_entries(DOMAIN):
+    for entry in menuai.config_entries.async_entries(DOMAIN):
         if entry.data.get("track_home"):
             entries.append("home")
             continue
@@ -51,7 +51,7 @@ def configured_instances(hass: HomeAssistant) -> set[str]:
 
 
 def _get_data_schema(
-    hass: HomeAssistant, config_entry: ConfigEntry | None = None
+    menuai: menuai, config_entry: ConfigEntry | None = None
 ) -> vol.Schema:
     """Get a schema with default values."""
     # If tracking home or no config entry is passed in, default value come from Home location
@@ -59,12 +59,12 @@ def _get_data_schema(
         return vol.Schema(
             {
                 vol.Required(CONF_NAME, default=HOME_LOCATION_NAME): str,
-                vol.Required(CONF_LATITUDE, default=hass.config.latitude): cv.latitude,
+                vol.Required(CONF_LATITUDE, default=menuai.config.latitude): cv.latitude,
                 vol.Required(
-                    CONF_LONGITUDE, default=hass.config.longitude
+                    CONF_LONGITUDE, default=menuai.config.longitude
                 ): cv.longitude,
                 vol.Required(
-                    CONF_ELEVATION, default=hass.config.elevation
+                    CONF_ELEVATION, default=menuai.config.elevation
                 ): NumberSelector(
                     NumberSelectorConfig(
                         mode=NumberSelectorMode.BOX,
@@ -109,7 +109,7 @@ class MetConfigFlowHandler(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             if (
                 f"{user_input.get(CONF_LATITUDE)}-{user_input.get(CONF_LONGITUDE)}"
-                not in configured_instances(self.hass)
+                not in configured_instances(self.menuai)
             ):
                 return self.async_create_entry(
                     title=user_input[CONF_NAME], data=user_input
@@ -118,7 +118,7 @@ class MetConfigFlowHandler(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="user",
-            data_schema=_get_data_schema(self.hass),
+            data_schema=_get_data_schema(self.menuai),
             errors=errors,
         )
 
@@ -128,9 +128,9 @@ class MetConfigFlowHandler(ConfigFlow, domain=DOMAIN):
         """Handle a flow initialized by onboarding."""
         # Don't create entry if latitude or longitude isn't set.
         # Also, filters out our onboarding default location.
-        if (not self.hass.config.latitude and not self.hass.config.longitude) or (
-            self.hass.config.latitude == DEFAULT_HOME_LATITUDE
-            and self.hass.config.longitude == DEFAULT_HOME_LONGITUDE
+        if (not self.menuai.config.latitude and not self.menuai.config.longitude) or (
+            self.menuai.config.latitude == DEFAULT_HOME_LATITUDE
+            and self.menuai.config.longitude == DEFAULT_HOME_LONGITUDE
         ):
             return self.async_abort(reason="no_home")
 
@@ -157,7 +157,7 @@ class MetOptionsFlowHandler(OptionsFlow):
 
         if user_input is not None:
             # Update config entry with data from user input
-            self.hass.config_entries.async_update_entry(
+            self.menuai.config_entries.async_update_entry(
                 self.config_entry, data=user_input
             )
             return self.async_create_entry(
@@ -166,5 +166,5 @@ class MetOptionsFlowHandler(OptionsFlow):
 
         return self.async_show_form(
             step_id="init",
-            data_schema=_get_data_schema(self.hass, config_entry=self.config_entry),
+            data_schema=_get_data_schema(self.menuai, config_entry=self.config_entry),
         )

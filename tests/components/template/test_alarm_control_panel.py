@@ -5,12 +5,12 @@ from typing import Any
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components import template
-from homeassistant.components.alarm_control_panel import (
+from menuai.components import template
+from menuai.components.alarm_control_panel import (
     DOMAIN as ALARM_DOMAIN,
     AlarmControlPanelState,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_DOMAIN,
     ATTR_ENTITY_ID,
     ATTR_SERVICE_DATA,
@@ -19,9 +19,9 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import Event, HomeAssistant, State, callback
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.core import Event, menuai, State, callback
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.setup import async_setup_component
 
 from .conftest import ConfigurationStyle
 
@@ -33,7 +33,7 @@ TEST_STATE_ENTITY_ID = "alarm_control_panel.test"
 
 
 @pytest.fixture
-def call_service_events(hass: HomeAssistant) -> list[Event]:
+def call_service_events(menuai: menuai) -> list[Event]:
     """Track service call events for alarm_control_panel.test."""
     events: list[Event] = []
     entity_id = "alarm_control_panel.test"
@@ -46,7 +46,7 @@ def call_service_events(hass: HomeAssistant) -> list[Event]:
             return
         events.append(event)
 
-    hass.bus.async_listen(EVENT_CALL_SERVICE, capture_events)
+    menuai.bus.async_listen(EVENT_CALL_SERVICE, capture_events)
 
     return events
 
@@ -112,56 +112,56 @@ TEMPLATE_ALARM_CONFIG = {
 
 
 async def async_setup_legacy_format(
-    hass: HomeAssistant, count: int, panel_config: dict[str, Any]
+    menuai: menuai, count: int, panel_config: dict[str, Any]
 ) -> None:
     """Do setup of alarm control panel integration via legacy format."""
     config = {"alarm_control_panel": {"platform": "template", "panels": panel_config}}
 
     with assert_setup_component(count, ALARM_DOMAIN):
         assert await async_setup_component(
-            hass,
+            menuai,
             ALARM_DOMAIN,
             config,
         )
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
 
 async def async_setup_modern_format(
-    hass: HomeAssistant, count: int, panel_config: dict[str, Any]
+    menuai: menuai, count: int, panel_config: dict[str, Any]
 ) -> None:
     """Do setup of alarm control panel integration via modern format."""
     config = {"template": {"alarm_control_panel": panel_config}}
 
     with assert_setup_component(count, template.DOMAIN):
         assert await async_setup_component(
-            hass,
+            menuai,
             template.DOMAIN,
             config,
         )
 
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
 
 @pytest.fixture
 async def setup_panel(
-    hass: HomeAssistant,
+    menuai: menuai,
     count: int,
     style: ConfigurationStyle,
     panel_config: dict[str, Any],
 ) -> None:
     """Do setup of alarm control panel integration."""
     if style == ConfigurationStyle.LEGACY:
-        await async_setup_legacy_format(hass, count, panel_config)
+        await async_setup_legacy_format(menuai, count, panel_config)
     elif style == ConfigurationStyle.MODERN:
-        await async_setup_modern_format(hass, count, panel_config)
+        await async_setup_modern_format(menuai, count, panel_config)
 
 
 async def async_setup_state_panel(
-    hass: HomeAssistant,
+    menuai: menuai,
     count: int,
     style: ConfigurationStyle,
     state_template: str,
@@ -169,7 +169,7 @@ async def async_setup_state_panel(
     """Do setup of alarm control panel integration using a state template."""
     if style == ConfigurationStyle.LEGACY:
         await async_setup_legacy_format(
-            hass,
+            menuai,
             count,
             {
                 TEST_OBJECT_ID: {
@@ -180,7 +180,7 @@ async def async_setup_state_panel(
         )
     elif style == ConfigurationStyle.MODERN:
         await async_setup_modern_format(
-            hass,
+            menuai,
             count,
             {
                 "name": TEST_OBJECT_ID,
@@ -192,18 +192,18 @@ async def async_setup_state_panel(
 
 @pytest.fixture
 async def setup_state_panel(
-    hass: HomeAssistant,
+    menuai: menuai,
     count: int,
     style: ConfigurationStyle,
     state_template: str,
 ):
     """Do setup of alarm control panel integration using a state template."""
-    await async_setup_state_panel(hass, count, style, state_template)
+    await async_setup_state_panel(menuai, count, style, state_template)
 
 
 @pytest.fixture
 async def setup_base_panel(
-    hass: HomeAssistant,
+    menuai: menuai,
     count: int,
     style: ConfigurationStyle,
     state_template: str | None,
@@ -213,14 +213,14 @@ async def setup_base_panel(
     if style == ConfigurationStyle.LEGACY:
         extra = {"value_template": state_template} if state_template else {}
         await async_setup_legacy_format(
-            hass,
+            menuai,
             count,
             {TEST_OBJECT_ID: {**extra, **panel_config}},
         )
     elif style == ConfigurationStyle.MODERN:
         extra = {"state": state_template} if state_template else {}
         await async_setup_modern_format(
-            hass,
+            menuai,
             count,
             {
                 "name": TEST_OBJECT_ID,
@@ -232,7 +232,7 @@ async def setup_base_panel(
 
 @pytest.fixture
 async def setup_single_attribute_state_panel(
-    hass: HomeAssistant,
+    menuai: menuai,
     count: int,
     style: ConfigurationStyle,
     state_template: str,
@@ -243,7 +243,7 @@ async def setup_single_attribute_state_panel(
     extra = {attribute: attribute_template} if attribute and attribute_template else {}
     if style == ConfigurationStyle.LEGACY:
         await async_setup_legacy_format(
-            hass,
+            menuai,
             count,
             {
                 TEST_OBJECT_ID: {
@@ -255,7 +255,7 @@ async def setup_single_attribute_state_panel(
         )
     elif style == ConfigurationStyle.MODERN:
         await async_setup_modern_format(
-            hass,
+            menuai,
             count,
             {
                 "name": TEST_OBJECT_ID,
@@ -273,7 +273,7 @@ async def setup_single_attribute_state_panel(
     "style", [ConfigurationStyle.LEGACY, ConfigurationStyle.MODERN]
 )
 @pytest.mark.usefixtures("setup_state_panel")
-async def test_template_state_text(hass: HomeAssistant) -> None:
+async def test_template_state_text(menuai: menuai) -> None:
     """Test the state text of a template."""
 
     for set_state in (
@@ -288,14 +288,14 @@ async def test_template_state_text(hass: HomeAssistant) -> None:
         AlarmControlPanelState.PENDING,
         AlarmControlPanelState.TRIGGERED,
     ):
-        hass.states.async_set(TEST_STATE_ENTITY_ID, set_state)
-        await hass.async_block_till_done()
-        state = hass.states.get(TEST_ENTITY_ID)
+        menuai.states.async_set(TEST_STATE_ENTITY_ID, set_state)
+        await menuai.async_block_till_done()
+        state = menuai.states.get(TEST_ENTITY_ID)
         assert state.state == set_state
 
-    hass.states.async_set(TEST_STATE_ENTITY_ID, "invalid_state")
-    await hass.async_block_till_done()
-    state = hass.states.get(TEST_ENTITY_ID)
+    menuai.states.async_set(TEST_STATE_ENTITY_ID, "invalid_state")
+    await menuai.async_block_till_done()
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == "unknown"
 
 
@@ -320,9 +320,9 @@ async def test_template_state_text(hass: HomeAssistant) -> None:
     "style", [ConfigurationStyle.LEGACY, ConfigurationStyle.MODERN]
 )
 @pytest.mark.usefixtures("setup_state_panel")
-async def test_state_template_states(hass: HomeAssistant, expected: str) -> None:
+async def test_state_template_states(menuai: menuai, expected: str) -> None:
     """Test the state template."""
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == expected
 
 
@@ -344,16 +344,16 @@ async def test_state_template_states(hass: HomeAssistant, expected: str) -> None
 )
 @pytest.mark.usefixtures("setup_single_attribute_state_panel")
 async def test_icon_template(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test icon template."""
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes.get("icon") in ("", None)
 
-    hass.states.async_set("switch.test_state", STATE_ON)
-    await hass.async_block_till_done()
+    menuai.states.async_set("switch.test_state", STATE_ON)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes["icon"] == "mdi:check"
 
 
@@ -375,26 +375,26 @@ async def test_icon_template(
 )
 @pytest.mark.usefixtures("setup_single_attribute_state_panel")
 async def test_picture_template(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test icon template."""
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes.get("entity_picture") in ("", None)
 
-    hass.states.async_set("switch.test_state", STATE_ON)
-    await hass.async_block_till_done()
+    menuai.states.async_set("switch.test_state", STATE_ON)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes["entity_picture"] == "local/panel.png"
 
 
 async def test_setup_config_entry(
-    hass: HomeAssistant, snapshot: SnapshotAssertion
+    menuai: menuai, snapshot: SnapshotAssertion
 ) -> None:
     """Test the config flow."""
     value_template = "{{ states('alarm_control_panel.one') }}"
 
-    hass.states.async_set("alarm_control_panel.one", "armed_away", {})
+    menuai.states.async_set("alarm_control_panel.one", "armed_away", {})
 
     template_config_entry = MockConfigEntry(
         data={},
@@ -408,18 +408,18 @@ async def test_setup_config_entry(
         },
         title="My template",
     )
-    template_config_entry.add_to_hass(hass)
+    template_config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(template_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(template_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("alarm_control_panel.my_template")
+    state = menuai.states.get("alarm_control_panel.my_template")
     assert state is not None
     assert state == snapshot
 
-    hass.states.async_set("alarm_control_panel.one", "disarmed", {})
-    await hass.async_block_till_done()
-    state = hass.states.get("alarm_control_panel.my_template")
+    menuai.states.async_set("alarm_control_panel.one", "disarmed", {})
+    await menuai.async_block_till_done()
+    state = menuai.states.get("alarm_control_panel.my_template")
     assert state.state == AlarmControlPanelState.DISARMED
 
 
@@ -431,11 +431,11 @@ async def test_setup_config_entry(
     "panel_config", [OPTIMISTIC_TEMPLATE_ALARM_CONFIG, EMPTY_ACTIONS]
 )
 @pytest.mark.usefixtures("setup_base_panel")
-async def test_optimistic_states(hass: HomeAssistant) -> None:
+async def test_optimistic_states(menuai: menuai) -> None:
     """Test the optimistic state."""
 
-    state = hass.states.get(TEST_ENTITY_ID)
-    await hass.async_block_till_done()
+    state = menuai.states.get(TEST_ENTITY_ID)
+    await menuai.async_block_till_done()
     assert state.state == "unknown"
 
     for service, set_state in (
@@ -447,14 +447,14 @@ async def test_optimistic_states(hass: HomeAssistant) -> None:
         ("alarm_disarm", AlarmControlPanelState.DISARMED),
         ("alarm_trigger", AlarmControlPanelState.TRIGGERED),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             ALARM_DOMAIN,
             service,
             {"entity_id": TEST_ENTITY_ID, "code": "1234"},
             blocking=True,
         )
-        await hass.async_block_till_done()
-        assert hass.states.get(TEST_ENTITY_ID).state == set_state
+        await menuai.async_block_till_done()
+        assert menuai.states.get(TEST_ENTITY_ID).state == set_state
 
 
 @pytest.mark.parametrize("count", [0])
@@ -478,10 +478,10 @@ async def test_optimistic_states(hass: HomeAssistant) -> None:
 )
 @pytest.mark.usefixtures("setup_base_panel")
 async def test_template_syntax_error(
-    hass: HomeAssistant, msg, caplog_setup_text
+    menuai: menuai, msg, caplog_setup_text
 ) -> None:
     """Test templating syntax error."""
-    assert len(hass.states.async_all("alarm_control_panel")) == 0
+    assert len(menuai.states.async_all("alarm_control_panel")) == 0
     assert (msg) in caplog_setup_text
 
 
@@ -522,10 +522,10 @@ async def test_template_syntax_error(
 )
 @pytest.mark.usefixtures("start_ha")
 async def test_legacy_template_syntax_error(
-    hass: HomeAssistant, msg, caplog_setup_text
+    menuai: menuai, msg, caplog_setup_text
 ) -> None:
     """Test templating syntax error."""
-    assert len(hass.states.async_all("alarm_control_panel")) == 0
+    assert len(menuai.states.async_all("alarm_control_panel")) == 0
     assert (msg) in caplog_setup_text
 
 
@@ -541,9 +541,9 @@ async def test_legacy_template_syntax_error(
     ],
 )
 @pytest.mark.usefixtures("setup_single_attribute_state_panel")
-async def test_name(hass: HomeAssistant, test_entity_id: str) -> None:
+async def test_name(menuai: menuai, test_entity_id: str) -> None:
     """Test the accessibility of the name attribute."""
-    state = hass.states.get(test_entity_id)
+    state = menuai.states.get(test_entity_id)
     assert state is not None
     assert state.attributes.get("friendly_name") == "Template Alarm Panel"
 
@@ -568,16 +568,16 @@ async def test_name(hass: HomeAssistant, test_entity_id: str) -> None:
 )
 @pytest.mark.usefixtures("setup_state_panel")
 async def test_actions(
-    hass: HomeAssistant, service, call_service_events: list[Event]
+    menuai: menuai, service, call_service_events: list[Event]
 ) -> None:
     """Test alarm actions."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         ALARM_DOMAIN,
         service,
         {"entity_id": TEST_ENTITY_ID, "code": "1234"},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(call_service_events) == 1
     assert call_service_events[0].data["service"] == service
     assert call_service_events[0].data["service_data"]["code"] == TEST_ENTITY_ID
@@ -618,18 +618,18 @@ async def test_actions(
     ],
 )
 @pytest.mark.usefixtures("setup_panel")
-async def test_unique_id(hass: HomeAssistant) -> None:
+async def test_unique_id(menuai: menuai) -> None:
     """Test unique_id option only creates one alarm control panel per id."""
-    assert len(hass.states.async_all()) == 1
+    assert len(menuai.states.async_all()) == 1
 
 
 async def test_nested_unique_id(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test a template unique_id propagates to alarm_control_panel unique_ids."""
     with assert_setup_component(1, template.DOMAIN):
         assert await async_setup_component(
-            hass,
+            menuai,
             template.DOMAIN,
             {
                 "template": {
@@ -652,11 +652,11 @@ async def test_nested_unique_id(
             },
         )
 
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all("alarm_control_panel")) == 2
+    assert len(menuai.states.async_all("alarm_control_panel")) == 2
 
     entry = entity_registry.async_get("alarm_control_panel.test_a")
     assert entry
@@ -703,9 +703,9 @@ async def test_nested_unique_id(
     ],
 )
 @pytest.mark.usefixtures("setup_base_panel")
-async def test_code_config(hass: HomeAssistant, code_format, code_arm_required) -> None:
+async def test_code_config(menuai: menuai, code_format, code_arm_required) -> None:
     """Test configuration options related to alarm code."""
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes.get("code_format") == code_format
     assert state.attributes.get("code_arm_required") == code_arm_required
 
@@ -752,7 +752,7 @@ async def test_code_config(hass: HomeAssistant, code_format, code_arm_required) 
     ],
 )
 async def test_restore_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     count: int,
     state_template: str,
     style: ConfigurationStyle,
@@ -766,28 +766,28 @@ async def test_restore_state(
         restored_state,
         {},
     )
-    mock_restore_cache(hass, (fake_state,))
-    await async_setup_state_panel(hass, count, style, state_template)
+    mock_restore_cache(menuai, (fake_state,))
+    await async_setup_state_panel(menuai, count, style, state_template)
 
-    state = hass.states.get("alarm_control_panel.test_template_panel")
+    state = menuai.states.get("alarm_control_panel.test_template_panel")
     assert state.state == initial_state
 
 
 async def test_device_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test for device for button template."""
 
     device_config_entry = MockConfigEntry()
-    device_config_entry.add_to_hass(hass)
+    device_config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=device_config_entry.entry_id,
         identifiers={("test", "identifier_test")},
         connections={("mac", "30:31:32:33:34:35")},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert device_entry is not None
     assert device_entry.id is not None
 
@@ -805,10 +805,10 @@ async def test_device_id(
         title="My template",
     )
 
-    template_config_entry.add_to_hass(hass)
+    template_config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(template_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(template_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     template_entity = entity_registry.async_get("alarm_control_panel.my_template")
     assert template_entity is not None

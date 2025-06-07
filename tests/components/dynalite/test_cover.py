@@ -7,7 +7,7 @@ from dynalite_devices_lib.cover import DynaliteTimeCoverWithTiltDevice
 from dynalite_devices_lib.dynalitebase import DynaliteBaseDevice
 import pytest
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     ATTR_CURRENT_POSITION,
     ATTR_CURRENT_TILT_POSITION,
     ATTR_POSITION,
@@ -15,9 +15,9 @@ from homeassistant.components.cover import (
     CoverDeviceClass,
     CoverState,
 )
-from homeassistant.const import ATTR_DEVICE_CLASS, ATTR_FRIENDLY_NAME
-from homeassistant.core import HomeAssistant, State
-from homeassistant.exceptions import HomeAssistantError
+from menuai.const import ATTR_DEVICE_CLASS, ATTR_FRIENDLY_NAME
+from menuai.core import menuai, State
+from menuai.exceptions import menuaiError
 
 from .common import (
     ATTR_ARGS,
@@ -50,10 +50,10 @@ def mock_device() -> Mock:
     return mock_dev
 
 
-async def test_cover_setup(hass: HomeAssistant, mock_device: Mock) -> None:
+async def test_cover_setup(menuai: menuai, mock_device: Mock) -> None:
     """Test a successful setup."""
-    await create_entity_from_device(hass, mock_device)
-    entity_state = hass.states.get("cover.name")
+    await create_entity_from_device(menuai, mock_device)
+    entity_state = menuai.states.get("cover.name")
     assert entity_state.attributes[ATTR_FRIENDLY_NAME] == mock_device.name
     assert (
         entity_state.attributes[ATTR_CURRENT_POSITION]
@@ -65,7 +65,7 @@ async def test_cover_setup(hass: HomeAssistant, mock_device: Mock) -> None:
     )
     assert entity_state.attributes[ATTR_DEVICE_CLASS] == mock_device.device_class
     await run_service_tests(
-        hass,
+        menuai,
         mock_device,
         "cover",
         [
@@ -89,20 +89,20 @@ async def test_cover_setup(hass: HomeAssistant, mock_device: Mock) -> None:
     )
 
 
-async def test_cover_without_tilt(hass: HomeAssistant, mock_device: Mock) -> None:
+async def test_cover_without_tilt(menuai: menuai, mock_device: Mock) -> None:
     """Test a cover with no tilt."""
     mock_device.has_tilt = False
-    await create_entity_from_device(hass, mock_device)
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    await create_entity_from_device(menuai, mock_device)
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             "cover", "open_cover_tilt", {"entity_id": "cover.name"}, blocking=True
         )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     mock_device.async_open_cover_tilt.assert_not_called()
 
 
 async def check_cover_position(
-    hass: HomeAssistant,
+    menuai: menuai,
     update_func: Callable[[DynaliteBaseDevice | None], None],
     device: Mock,
     closing: bool,
@@ -115,49 +115,49 @@ async def check_cover_position(
     device.is_opening = opening
     device.is_closed = closed
     update_func(device)
-    await hass.async_block_till_done()
-    entity_state = hass.states.get("cover.name")
+    await menuai.async_block_till_done()
+    entity_state = menuai.states.get("cover.name")
     assert entity_state.state == expected
 
 
-async def test_cover_positions(hass: HomeAssistant, mock_device: Mock) -> None:
+async def test_cover_positions(menuai: menuai, mock_device: Mock) -> None:
     """Test that the state updates in the various positions."""
-    update_func = await create_entity_from_device(hass, mock_device)
+    update_func = await create_entity_from_device(menuai, mock_device)
     await check_cover_position(
-        hass, update_func, mock_device, True, False, False, CoverState.CLOSING
+        menuai, update_func, mock_device, True, False, False, CoverState.CLOSING
     )
     await check_cover_position(
-        hass, update_func, mock_device, False, True, False, CoverState.OPENING
+        menuai, update_func, mock_device, False, True, False, CoverState.OPENING
     )
     await check_cover_position(
-        hass, update_func, mock_device, False, False, True, CoverState.CLOSED
+        menuai, update_func, mock_device, False, False, True, CoverState.CLOSED
     )
     await check_cover_position(
-        hass, update_func, mock_device, False, False, False, CoverState.OPEN
+        menuai, update_func, mock_device, False, False, False, CoverState.OPEN
     )
 
 
-async def test_cover_restore_state(hass: HomeAssistant, mock_device: Mock) -> None:
+async def test_cover_restore_state(menuai: menuai, mock_device: Mock) -> None:
     """Test restore from cache."""
     mock_restore_cache(
-        hass,
+        menuai,
         [State("cover.name", CoverState.OPEN, attributes={ATTR_CURRENT_POSITION: 77})],
     )
-    await create_entity_from_device(hass, mock_device)
+    await create_entity_from_device(menuai, mock_device)
     mock_device.init_level.assert_called_once_with(77)
-    entity_state = hass.states.get("cover.name")
+    entity_state = menuai.states.get("cover.name")
     assert entity_state.state == CoverState.OPEN
 
 
 async def test_cover_restore_state_bad_cache(
-    hass: HomeAssistant, mock_device: Mock
+    menuai: menuai, mock_device: Mock
 ) -> None:
     """Test restore from a cache without the attribute."""
     mock_restore_cache(
-        hass,
+        menuai,
         [State("cover.name", CoverState.OPEN, attributes={"bla bla": 77})],
     )
-    await create_entity_from_device(hass, mock_device)
+    await create_entity_from_device(menuai, mock_device)
     mock_device.init_level.assert_not_called()
-    entity_state = hass.states.get("cover.name")
+    entity_state = menuai.states.get("cover.name")
     assert entity_state.state == CoverState.CLOSED

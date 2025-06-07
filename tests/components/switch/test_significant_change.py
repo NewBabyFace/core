@@ -1,6 +1,6 @@
 """Test the sensor significant change platform."""
 
-from homeassistant.components.switch.significant_change import (
+from menuai.components.switch.significant_change import (
     async_check_significant_change,
 )
 

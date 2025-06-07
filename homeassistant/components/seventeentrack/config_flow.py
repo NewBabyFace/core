@@ -9,11 +9,11 @@ from pyseventeentrack import Client as SeventeenTrackClient
 from pyseventeentrack.errors import SeventeenTrackError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import callback
-from homeassistant.helpers import aiohttp_client
-from homeassistant.helpers.schema_config_entry_flow import (
+from menuai.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import callback
+from menuai.helpers import aiohttp_client
+from menuai.helpers.schema_config_entry_flow import (
     SchemaFlowFormStep,
     SchemaOptionsFlowHandler,
 )
@@ -99,5 +99,5 @@ class SeventeenTrackConfigFlow(ConfigFlow, domain=DOMAIN):
 
     @callback
     def _get_client(self):
-        session = aiohttp_client.async_get_clientsession(self.hass)
+        session = aiohttp_client.async_get_clientsession(self.menuai)
         return SeventeenTrackClient(session=session)

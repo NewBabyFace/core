@@ -4,10 +4,10 @@ import pytest
 from pytest_unordered import unordered
 from pywemo.subscribe import EVENT_TYPE_LONG_PRESS
 
-from homeassistant.components.automation import DOMAIN as AUTOMATION_DOMAIN
-from homeassistant.components.device_automation import DeviceAutomationType
-from homeassistant.components.wemo.const import DOMAIN, WEMO_SUBSCRIPTION_EVENT
-from homeassistant.const import (
+from menuai.components.automation import DOMAIN as AUTOMATION_DOMAIN
+from menuai.components.device_automation import DeviceAutomationType
+from menuai.components.wemo.const import DOMAIN, WEMO_SUBSCRIPTION_EVENT
+from menuai.const import (
     CONF_DEVICE_ID,
     CONF_DOMAIN,
     CONF_ENTITY_ID,
@@ -15,9 +15,9 @@ from homeassistant.const import (
     CONF_TYPE,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.setup import async_setup_component
 
 from tests.common import async_get_device_automations, async_mock_service
 
@@ -31,11 +31,11 @@ def pywemo_model():
 
 
 async def setup_automation(
-    hass: HomeAssistant, device_id: str, trigger_type: str
+    menuai: menuai, device_id: str, trigger_type: str
 ) -> None:
     """Set up an automation trigger for testing triggering."""
     return await async_setup_component(
-        hass,
+        menuai,
         AUTOMATION_DOMAIN,
         {
             AUTOMATION_DOMAIN: [
@@ -56,7 +56,7 @@ async def setup_automation(
     )
 
 
-async def test_get_triggers(hass: HomeAssistant, wemo_entity) -> None:
+async def test_get_triggers(menuai: menuai, wemo_entity) -> None:
     """Test that the triggers appear for a supported device."""
     assert wemo_entity.device_id is not None
 
@@ -94,20 +94,20 @@ async def test_get_triggers(hass: HomeAssistant, wemo_entity) -> None:
         },
     ]
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, wemo_entity.device_id
+        menuai, DeviceAutomationType.TRIGGER, wemo_entity.device_id
     )
     assert triggers == unordered(expected_triggers)
 
 
 async def test_fires_on_long_press(
-    hass: HomeAssistant, wemo_entity: er.RegistryEntry
+    menuai: menuai, wemo_entity: er.RegistryEntry
 ) -> None:
     """Test wemo long press trigger firing."""
-    assert await setup_automation(hass, wemo_entity.device_id, EVENT_TYPE_LONG_PRESS)
-    calls = async_mock_service(hass, "test", "automation")
+    assert await setup_automation(menuai, wemo_entity.device_id, EVENT_TYPE_LONG_PRESS)
+    calls = async_mock_service(menuai, "test", "automation")
 
     message = {CONF_DEVICE_ID: wemo_entity.device_id, CONF_TYPE: EVENT_TYPE_LONG_PRESS}
-    hass.bus.async_fire(WEMO_SUBSCRIPTION_EVENT, message)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire(WEMO_SUBSCRIPTION_EVENT, message)
+    await menuai.async_block_till_done()
     assert len(calls) == 1
     assert calls[0].data == DATA_MESSAGE

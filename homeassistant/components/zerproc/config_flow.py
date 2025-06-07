@@ -4,15 +4,15 @@ import logging
 
 import pyzerproc
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_entry_flow
+from menuai.core import menuai
+from menuai.helpers import config_entry_flow
 
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
 
-async def _async_has_devices(hass: HomeAssistant) -> bool:
+async def _async_has_devices(menuai: menuai) -> bool:
     """Return if there are devices that can be discovered."""
     try:
         devices = await pyzerproc.discover()

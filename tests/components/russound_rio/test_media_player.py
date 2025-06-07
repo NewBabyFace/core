@@ -7,7 +7,7 @@ from aiorussound.exceptions import CommandError
 from aiorussound.models import PlayStatus
 import pytest
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     ATTR_INPUT_SOURCE,
     ATTR_MEDIA_SEEK_POSITION,
     ATTR_MEDIA_VOLUME_LEVEL,
@@ -15,7 +15,7 @@ from homeassistant.components.media_player import (
     DOMAIN as MP_DOMAIN,
     SERVICE_SELECT_SOURCE,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_MEDIA_SEEK,
     SERVICE_TURN_OFF,
@@ -31,8 +31,8 @@ from homeassistant.const import (
     STATE_PAUSED,
     STATE_PLAYING,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from . import mock_state_update, setup_integration
 from .const import ENTITY_ID_ZONE_1
@@ -53,7 +53,7 @@ from tests.common import MockConfigEntry
     ],
 )
 async def test_entity_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_russound_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     zone_status: bool,
@@ -61,26 +61,26 @@ async def test_entity_state(
     media_player_state: str,
 ) -> None:
     """Test media player state."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
     mock_russound_client.controllers[1].zones[1].status = zone_status
     mock_russound_client.sources[1].play_status = source_play_status
     await mock_state_update(mock_russound_client)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(ENTITY_ID_ZONE_1)
+    state = menuai.states.get(ENTITY_ID_ZONE_1)
     assert state.state == media_player_state
 
 
 async def test_media_volume(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_russound_client: AsyncMock,
 ) -> None:
     """Test volume service."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     # Test volume up
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_VOLUME_UP,
         {ATTR_ENTITY_ID: ENTITY_ID_ZONE_1},
@@ -90,7 +90,7 @@ async def test_media_volume(
     mock_russound_client.controllers[1].zones[1].volume_up.assert_called_once()
 
     # Test volume down
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_VOLUME_DOWN,
         {ATTR_ENTITY_ID: ENTITY_ID_ZONE_1},
@@ -99,7 +99,7 @@ async def test_media_volume(
 
     mock_russound_client.controllers[1].zones[1].volume_down.assert_called_once()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_VOLUME_SET,
         {ATTR_ENTITY_ID: ENTITY_ID_ZONE_1, ATTR_MEDIA_VOLUME_LEVEL: 0.30},
@@ -112,15 +112,15 @@ async def test_media_volume(
 
 
 async def test_volume_mute(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_russound_client: AsyncMock,
 ) -> None:
     """Test mute service."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     # Test mute (w/ toggle mute support)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_VOLUME_MUTE,
         {ATTR_ENTITY_ID: ENTITY_ID_ZONE_1, ATTR_MEDIA_VOLUME_MUTED: True},
@@ -133,7 +133,7 @@ async def test_volume_mute(
     mock_russound_client.controllers[1].zones[1].is_mute = True
 
     # Test mute when already muted (w/ toggle mute support)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_VOLUME_MUTE,
         {ATTR_ENTITY_ID: ENTITY_ID_ZONE_1, ATTR_MEDIA_VOLUME_MUTED: True},
@@ -144,7 +144,7 @@ async def test_volume_mute(
     mock_russound_client.supported_features = [FeatureFlag.COMMANDS_ZONE_MUTE_OFF_ON]
 
     # Test mute (w/ dedicated commands)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_VOLUME_MUTE,
         {ATTR_ENTITY_ID: ENTITY_ID_ZONE_1, ATTR_MEDIA_VOLUME_MUTED: True},
@@ -154,7 +154,7 @@ async def test_volume_mute(
     mock_russound_client.controllers[1].zones[1].mute.assert_called_once()
 
     # Test unmute (w/ dedicated commands)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_VOLUME_MUTE,
         {ATTR_ENTITY_ID: ENTITY_ID_ZONE_1, ATTR_MEDIA_VOLUME_MUTED: False},
@@ -172,16 +172,16 @@ async def test_volume_mute(
     ],
 )
 async def test_source_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_russound_client: AsyncMock,
     source_name: str,
     source_id: int,
 ) -> None:
     """Test source service."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_SELECT_SOURCE,
         {ATTR_ENTITY_ID: ENTITY_ID_ZONE_1, ATTR_INPUT_SOURCE: source_name},
@@ -194,22 +194,22 @@ async def test_source_service(
 
 
 async def test_invalid_source_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_russound_client: AsyncMock,
 ) -> None:
     """Test source service with invalid source ID."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     mock_russound_client.controllers[1].zones[
         1
     ].select_source.side_effect = CommandError
 
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match="Error executing async_select_source on entity media_player.mca_c5_backyard",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MP_DOMAIN,
             SERVICE_SELECT_SOURCE,
             {ATTR_ENTITY_ID: ENTITY_ID_ZONE_1, ATTR_INPUT_SOURCE: "Aux"},
@@ -218,33 +218,33 @@ async def test_invalid_source_service(
 
 
 async def test_power_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_russound_client: AsyncMock,
 ) -> None:
     """Test power service."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     data = {ATTR_ENTITY_ID: ENTITY_ID_ZONE_1}
 
-    await hass.services.async_call(MP_DOMAIN, SERVICE_TURN_ON, data, blocking=True)
+    await menuai.services.async_call(MP_DOMAIN, SERVICE_TURN_ON, data, blocking=True)
 
     mock_russound_client.controllers[1].zones[1].zone_on.assert_called_once()
 
-    await hass.services.async_call(MP_DOMAIN, SERVICE_TURN_OFF, data, blocking=True)
+    await menuai.services.async_call(MP_DOMAIN, SERVICE_TURN_OFF, data, blocking=True)
 
     mock_russound_client.controllers[1].zones[1].zone_off.assert_called_once()
 
 
 async def test_media_seek(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_russound_client: AsyncMock,
 ) -> None:
     """Test media seek service."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_MEDIA_SEEK,
         {ATTR_ENTITY_ID: ENTITY_ID_ZONE_1, ATTR_MEDIA_SEEK_POSITION: 100},

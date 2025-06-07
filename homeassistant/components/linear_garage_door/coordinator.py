@@ -11,11 +11,11 @@ from typing import Any, cast
 from linear_garage_door import Linear
 from linear_garage_door.errors import InvalidLoginError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -34,10 +34,10 @@ class LinearUpdateCoordinator(DataUpdateCoordinator[dict[str, LinearDevice]]):
     _devices: list[dict[str, Any]] | None = None
     config_entry: ConfigEntry
 
-    def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: ConfigEntry) -> None:
         """Initialize DataUpdateCoordinator for Linear."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name="Linear Garage Door",
@@ -70,7 +70,7 @@ class LinearUpdateCoordinator(DataUpdateCoordinator[dict[str, LinearDevice]]):
                 email=self.config_entry.data["email"],
                 password=self.config_entry.data["password"],
                 device_id=self.config_entry.data["device_id"],
-                client_session=async_get_clientsession(self.hass),
+                client_session=async_get_clientsession(self.menuai),
             )
         except InvalidLoginError as err:
             if (

@@ -2,27 +2,27 @@
 
 from pyoctoprintapi import OctoprintClient, OctoprintPrinterInfo
 
-from homeassistant.components.button import ButtonDeviceClass, ButtonEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.components.button import ButtonDeviceClass, ButtonEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from . import OctoprintDataUpdateCoordinator
 from .const import DOMAIN
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Octoprint control buttons."""
-    coordinator: OctoprintDataUpdateCoordinator = hass.data[DOMAIN][
+    coordinator: OctoprintDataUpdateCoordinator = menuai.data[DOMAIN][
         config_entry.entry_id
     ]["coordinator"]
-    client: OctoprintClient = hass.data[DOMAIN][config_entry.entry_id]["client"]
+    client: OctoprintClient = menuai.data[DOMAIN][config_entry.entry_id]["client"]
     device_id = config_entry.unique_id
     assert device_id is not None
 
@@ -213,5 +213,5 @@ class OctoprintRestartOctoprintButton(OctoprintSystemButton):
         await self.client.restart()
 
 
-class InvalidPrinterState(HomeAssistantError):
+class InvalidPrinterState(menuaiError):
     """Service attempted in invalid state."""

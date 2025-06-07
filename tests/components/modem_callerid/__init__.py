@@ -9,14 +9,14 @@ from serial.tools.list_ports_common import ListPortInfo
 def patch_init_modem():
     """Mock modem."""
     return patch(
-        "homeassistant.components.modem_callerid.PhoneModem.initialize",
+        "menuai.components.modem_callerid.PhoneModem.initialize",
     )
 
 
 def patch_config_flow_modem():
     """Mock modem config flow."""
     return patch(
-        "homeassistant.components.modem_callerid.config_flow.PhoneModem.test",
+        "menuai.components.modem_callerid.config_flow.PhoneModem.test",
     )
 
 

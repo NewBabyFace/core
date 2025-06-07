@@ -4,14 +4,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.core import HomeAssistant, callback
+from menuai.core import menuai, callback
 
 from . import ATTR_CURRENT_ACTIVITY
 
 
 @callback
 def async_check_significant_change(
-    hass: HomeAssistant,
+    menuai: menuai,
     old_state: str,
     old_attrs: dict,
     new_state: str,

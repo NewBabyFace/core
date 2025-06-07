@@ -23,15 +23,15 @@ from simplipy.websocket import (
     WebsocketEvent,
 )
 
-from homeassistant.components.alarm_control_panel import (
+from menuai.components.alarm_control_panel import (
     AlarmControlPanelEntity,
     AlarmControlPanelEntityFeature,
     AlarmControlPanelState,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import SimpliSafe
 from .const import (
@@ -103,12 +103,12 @@ WEBSOCKET_EVENTS_TO_LISTEN_FOR = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up a SimpliSafe alarm control panel based on a config entry."""
-    simplisafe = hass.data[DOMAIN][entry.entry_id]
+    simplisafe = menuai.data[DOMAIN][entry.entry_id]
     async_add_entities(
         [SimpliSafeAlarm(simplisafe, system) for system in simplisafe.systems.values()],
         True,
@@ -153,7 +153,7 @@ class SimpliSafeAlarm(SimpliSafeEntity, AlarmControlPanelEntity):
         try:
             await self._system.async_set_off()
         except SimplipyError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f'Error while disarming "{self._system.system_id}": {err}'
             ) from err
 
@@ -165,7 +165,7 @@ class SimpliSafeAlarm(SimpliSafeEntity, AlarmControlPanelEntity):
         try:
             await self._system.async_set_home()
         except SimplipyError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f'Error while arming (home) "{self._system.system_id}": {err}'
             ) from err
 
@@ -177,7 +177,7 @@ class SimpliSafeAlarm(SimpliSafeEntity, AlarmControlPanelEntity):
         try:
             await self._system.async_set_away()
         except SimplipyError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f'Error while arming (away) "{self._system.system_id}": {err}'
             ) from err
 

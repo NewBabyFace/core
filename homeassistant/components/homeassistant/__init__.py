@@ -8,10 +8,10 @@ from typing import TYPE_CHECKING, Any
 
 import voluptuous as vol
 
-from homeassistant import config as conf_util, core_config
-from homeassistant.auth.permissions.const import CAT_ENTITIES, POLICY_CONTROL
-from homeassistant.components import persistent_notification
-from homeassistant.const import (
+from menuai import config as conf_util, core_config
+from menuai.auth.permissions.const import CAT_ENTITIES, POLICY_CONTROL
+from menuai.components import persistent_notification
+from menuai.const import (
     ATTR_ELEVATION,
     ATTR_ENTITY_ID,
     ATTR_LATITUDE,
@@ -23,32 +23,32 @@ from homeassistant.const import (
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
 )
-from homeassistant.core import (
-    HomeAssistant,
+from menuai.core import (
+    menuai,
     ServiceCall,
     ServiceResponse,
     callback,
     split_entity_id,
 )
-from homeassistant.exceptions import HomeAssistantError, Unauthorized, UnknownUser
-from homeassistant.helpers import (
+from menuai.exceptions import menuaiError, Unauthorized, UnknownUser
+from menuai.helpers import (
     config_validation as cv,
     issue_registry as ir,
     recorder,
     restore_state,
 )
-from homeassistant.helpers.entity_component import async_update_entity
-from homeassistant.helpers.importlib import async_import_module
-from homeassistant.helpers.issue_registry import IssueSeverity
-from homeassistant.helpers.service import (
+from menuai.helpers.entity_component import async_update_entity
+from menuai.helpers.importlib import async_import_module
+from menuai.helpers.issue_registry import IssueSeverity
+from menuai.helpers.service import (
     async_extract_config_entry_ids,
     async_extract_referenced_entity_ids,
     async_register_admin_service,
 )
-from homeassistant.helpers.signal import KEY_HA_STOP
-from homeassistant.helpers.system_info import async_get_system_info
-from homeassistant.helpers.template import async_load_custom_templates
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers.signal import KEY_HA_STOP
+from menuai.helpers.system_info import async_get_system_info
+from menuai.helpers.template import async_load_custom_templates
+from menuai.helpers.typing import ConfigType
 
 # The scene integration will do a late import of scene
 # so we want to make sure its loaded with the component
@@ -59,8 +59,8 @@ from .const import (
     DATA_EXPOSED_ENTITIES,
     DATA_STOP_HANDLER,
     DOMAIN,
-    SERVICE_HOMEASSISTANT_RESTART,
-    SERVICE_HOMEASSISTANT_STOP,
+    SERVICE_menuai_RESTART,
+    SERVICE_menuai_STOP,
 )
 from .exposed_entities import ExposedEntities, async_should_expose  # noqa: F401
 
@@ -87,7 +87,7 @@ SCHEMA_RELOAD_CONFIG_ENTRY = vol.All(
 )
 SCHEMA_RESTART = vol.Schema({vol.Optional(ATTR_SAFE_MODE, default=False): bool})
 
-SHUTDOWN_SERVICES = (SERVICE_HOMEASSISTANT_STOP, SERVICE_HOMEASSISTANT_RESTART)
+SHUTDOWN_SERVICES = (SERVICE_menuai_STOP, SERVICE_menuai_RESTART)
 
 DEPRECATION_URL = (
     "https://www.home-assistant.io/blog/2025/05/22/"
@@ -95,22 +95,22 @@ DEPRECATION_URL = (
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa: C901
-    """Set up general services related to Home Assistant."""
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:  # noqa: C901
+    """Set up general services related to MenuAI."""
 
     async def async_save_persistent_states(service: ServiceCall) -> None:
-        """Handle calls to homeassistant.save_persistent_states."""
-        await restore_state.RestoreStateData.async_save_persistent_states(hass)
+        """Handle calls to menuai.save_persistent_states."""
+        await restore_state.RestoreStateData.async_save_persistent_states(menuai)
 
     async def async_handle_turn_service(service: ServiceCall) -> None:
-        """Handle calls to homeassistant.turn_on/off."""
-        referenced = async_extract_referenced_entity_ids(hass, service)
+        """Handle calls to menuai.turn_on/off."""
+        referenced = async_extract_referenced_entity_ids(menuai, service)
         all_referenced = referenced.referenced | referenced.indirectly_referenced
 
         # Generic turn on/off method requires entity id
         if not all_referenced:
             _LOGGER.error(
-                "The service homeassistant.%s cannot be called without a target",
+                "The service menuai.%s cannot be called without a target",
                 service.service,
             )
             return
@@ -127,13 +127,13 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
             # This leads to endless loop.
             if domain == DOMAIN:
                 _LOGGER.warning(
-                    "Called service homeassistant.%s with invalid entities %s",
+                    "Called service menuai.%s with invalid entities %s",
                     service.service,
                     ", ".join(ent_ids),
                 )
                 continue
 
-            if not hass.services.has_service(domain, service.service):
+            if not menuai.services.has_service(domain, service.service):
                 unsupported_entities.update(set(ent_ids) & referenced.referenced)
                 continue
 
@@ -144,7 +144,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
             data[ATTR_ENTITY_ID] = list(ent_ids)
 
             tasks.append(
-                hass.services.async_call(
+                menuai.services.async_call(
                     domain,
                     service.service,
                     data,
@@ -155,7 +155,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
 
         if unsupported_entities:
             _LOGGER.warning(
-                "The service homeassistant.%s does not support entities %s",
+                "The service menuai.%s does not support entities %s",
                 service.service,
                 ", ".join(sorted(unsupported_entities)),
             )
@@ -163,44 +163,44 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
         if tasks:
             await asyncio.gather(*tasks)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_SAVE_PERSISTENT_STATES, async_save_persistent_states
     )
 
     service_schema = vol.Schema({ATTR_ENTITY_ID: cv.entity_ids}, extra=vol.ALLOW_EXTRA)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_TURN_OFF, async_handle_turn_service, schema=service_schema
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_TURN_ON, async_handle_turn_service, schema=service_schema
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_TOGGLE, async_handle_turn_service, schema=service_schema
     )
 
     async def async_handle_core_service(call: ServiceCall) -> None:
         """Service handler for handling core services."""
-        stop_handler: Callable[[HomeAssistant, bool], Coroutine[Any, Any, None]]
+        stop_handler: Callable[[menuai, bool], Coroutine[Any, Any, None]]
 
         if call.service in SHUTDOWN_SERVICES and recorder.async_migration_in_progress(
-            hass
+            menuai
         ):
             _LOGGER.error(
                 "The system cannot %s while a database upgrade is in progress",
                 call.service,
             )
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"The system cannot {call.service} "
                 "while a database upgrade is in progress."
             )
 
-        if call.service == SERVICE_HOMEASSISTANT_STOP:
-            stop_handler = hass.data[DATA_STOP_HANDLER]
-            await stop_handler(hass, False)
+        if call.service == SERVICE_menuai_STOP:
+            stop_handler = menuai.data[DATA_STOP_HANDLER]
+            await stop_handler(menuai, False)
             return
 
-        errors = await conf_util.async_check_ha_config_file(hass)
+        errors = await conf_util.async_check_ha_config_file(menuai)
 
         if errors:
             _LOGGER.error(
@@ -209,26 +209,26 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
                 errors,
             )
             persistent_notification.async_create(
-                hass,
+                menuai,
                 "Config error. See [the logs](/config/logs) for details.",
                 "Config validating",
                 f"{DOMAIN}.check_config",
             )
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"The system cannot {call.service} "
                 f"because the configuration is not valid: {errors}"
             )
 
-        if call.service == SERVICE_HOMEASSISTANT_RESTART:
+        if call.service == SERVICE_menuai_RESTART:
             if call.data[ATTR_SAFE_MODE]:
-                await conf_util.async_enable_safe_mode(hass)
-            stop_handler = hass.data[DATA_STOP_HANDLER]
-            await stop_handler(hass, True)
+                await conf_util.async_enable_safe_mode(menuai)
+            stop_handler = menuai.data[DATA_STOP_HANDLER]
+            await stop_handler(menuai, True)
 
     async def async_handle_update_service(call: ServiceCall) -> None:
         """Service handler for updating an entity."""
         if call.context.user_id:
-            user = await hass.auth.async_get_user(call.context.user_id)
+            user = await menuai.auth.async_get_user(call.context.user_id)
 
             if user is None:
                 raise UnknownUser(
@@ -247,26 +247,26 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
                     )
 
         tasks = [
-            async_update_entity(hass, entity) for entity in call.data[ATTR_ENTITY_ID]
+            async_update_entity(menuai, entity) for entity in call.data[ATTR_ENTITY_ID]
         ]
 
         if tasks:
             await asyncio.gather(*tasks)
 
     async_register_admin_service(
-        hass, DOMAIN, SERVICE_HOMEASSISTANT_STOP, async_handle_core_service
+        menuai, DOMAIN, SERVICE_menuai_STOP, async_handle_core_service
     )
     async_register_admin_service(
-        hass,
+        menuai,
         DOMAIN,
-        SERVICE_HOMEASSISTANT_RESTART,
+        SERVICE_menuai_RESTART,
         async_handle_core_service,
         SCHEMA_RESTART,
     )
     async_register_admin_service(
-        hass, DOMAIN, SERVICE_CHECK_CONFIG, async_handle_core_service
+        menuai, DOMAIN, SERVICE_CHECK_CONFIG, async_handle_core_service
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_UPDATE_ENTITY,
         async_handle_update_service,
@@ -276,16 +276,16 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
     async def async_handle_reload_config(call: ServiceCall) -> None:
         """Service handler for reloading core config."""
         try:
-            conf = await conf_util.async_hass_config_yaml(hass)
-        except HomeAssistantError as err:
+            conf = await conf_util.async_menuai_config_yaml(menuai)
+        except menuaiError as err:
             _LOGGER.error(err)
             return
 
         # auth only processed during startup
-        await core_config.async_process_ha_core_config(hass, conf.get(DOMAIN) or {})
+        await core_config.async_process_ha_core_config(menuai, conf.get(DOMAIN) or {})
 
     async_register_admin_service(
-        hass, DOMAIN, SERVICE_RELOAD_CORE_CONFIG, async_handle_reload_config
+        menuai, DOMAIN, SERVICE_RELOAD_CORE_CONFIG, async_handle_reload_config
     )
 
     async def async_set_location(call: ServiceCall) -> None:
@@ -298,10 +298,10 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
         if (elevation := call.data.get(ATTR_ELEVATION)) is not None:
             service_data["elevation"] = elevation
 
-        await hass.config.async_update(**service_data)
+        await menuai.config.async_update(**service_data)
 
     async_register_admin_service(
-        hass,
+        menuai,
         DOMAIN,
         SERVICE_SET_LOCATION,
         async_set_location,
@@ -316,10 +316,10 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
 
     async def async_handle_reload_templates(call: ServiceCall) -> None:
         """Service handler to reload custom Jinja."""
-        await async_load_custom_templates(hass)
+        await async_load_custom_templates(menuai)
 
     async_register_admin_service(
-        hass, DOMAIN, SERVICE_RELOAD_CUSTOM_TEMPLATES, async_handle_reload_templates
+        menuai, DOMAIN, SERVICE_RELOAD_CUSTOM_TEMPLATES, async_handle_reload_templates
     )
 
     async def async_handle_reload_config_entry(call: ServiceCall) -> None:
@@ -327,18 +327,18 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
         reload_entries: set[str] = set()
         if ATTR_ENTRY_ID in call.data:
             reload_entries.add(call.data[ATTR_ENTRY_ID])
-        reload_entries.update(await async_extract_config_entry_ids(hass, call))
+        reload_entries.update(await async_extract_config_entry_ids(menuai, call))
         if not reload_entries:
             raise ValueError("There were no matching config entries to reload")
         await asyncio.gather(
             *(
-                hass.config_entries.async_reload(config_entry_id)
+                menuai.config_entries.async_reload(config_entry_id)
                 for config_entry_id in reload_entries
             )
         )
 
     async_register_admin_service(
-        hass,
+        menuai,
         DOMAIN,
         SERVICE_RELOAD_CONFIG_ENTRY,
         async_handle_reload_config_entry,
@@ -354,31 +354,31 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
         Additionally, it also calls the `homeasssitant.reload_core_config`
         service, as that reloads the core YAML configuration, the
         `frontend.reload_themes` service that reloads the themes, and the
-        `homeassistant.reload_custom_templates` service that reloads any custom
+        `menuai.reload_custom_templates` service that reloads any custom
         jinja into memory.
 
         We only do so, if there are no configuration errors.
         """
 
-        if errors := await conf_util.async_check_ha_config_file(hass):
+        if errors := await conf_util.async_check_ha_config_file(menuai):
             _LOGGER.error(
                 "The system cannot reload because the configuration is not valid: %s",
                 errors,
             )
-            raise HomeAssistantError(
+            raise menuaiError(
                 "Cannot quick reload all YAML configurations because the "
                 f"configuration is not valid: {errors}"
             )
 
-        services = hass.services.async_services_internal()
+        services = menuai.services.async_services_internal()
         tasks = [
-            hass.services.async_call(
+            menuai.services.async_call(
                 domain, SERVICE_RELOAD, context=call.context, blocking=True
             )
             for domain, domain_services in services.items()
             if domain != "notify" and SERVICE_RELOAD in domain_services
         ] + [
-            hass.services.async_call(
+            menuai.services.async_call(
                 domain, service, context=call.context, blocking=True
             )
             for domain, service in (
@@ -391,15 +391,15 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
         await asyncio.gather(*tasks)
 
     async_register_admin_service(
-        hass, DOMAIN, SERVICE_RELOAD_ALL, async_handle_reload_all
+        menuai, DOMAIN, SERVICE_RELOAD_ALL, async_handle_reload_all
     )
 
-    exposed_entities = ExposedEntities(hass)
+    exposed_entities = ExposedEntities(menuai)
     await exposed_entities.async_initialize()
-    hass.data[DATA_EXPOSED_ENTITIES] = exposed_entities
-    async_set_stop_handler(hass, _async_stop)
+    menuai.data[DATA_EXPOSED_ENTITIES] = exposed_entities
+    async_set_stop_handler(menuai, _async_stop)
 
-    info = await async_get_system_info(hass)
+    info = await async_get_system_info(menuai)
 
     installation_type = info["installation_type"][15:]
     deprecated_method = installation_type in {
@@ -410,17 +410,17 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
     if arch == "armv7":
         if installation_type == "OS":
             # Local import to avoid circular dependencies
-            # We use the import helper because hassio
+            # We use the import helper because menuaiio
             # may not be loaded yet and we don't want to
             # do blocking I/O in the event loop to import it.
             if TYPE_CHECKING:
                 # pylint: disable-next=import-outside-toplevel
-                from homeassistant.components import hassio
+                from menuai.components import menuaiio
             else:
-                hassio = await async_import_module(
-                    hass, "homeassistant.components.hassio"
+                menuaiio = await async_import_module(
+                    menuai, "menuai.components.menuaiio"
                 )
-            os_info = hassio.get_os_info(hass)
+            os_info = menuaiio.get_os_info(menuai)
             assert os_info is not None
             issue_id = "deprecated_os_"
             board = os_info.get("board")
@@ -429,7 +429,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
             elif board in {"tinker", "odroid-xu4", "rpi2"}:
                 issue_id += "armv7"
             ir.async_create_issue(
-                hass,
+                menuai,
                 DOMAIN,
                 issue_id,
                 breaks_in_ha_version="2025.12.0",
@@ -443,7 +443,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
             )
         elif installation_type == "Container":
             ir.async_create_issue(
-                hass,
+                menuai,
                 DOMAIN,
                 "deprecated_container_armv7",
                 breaks_in_ha_version="2025.12.0",
@@ -462,7 +462,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
         if deprecated_architecture:
             issue_id += "_architecture"
         ir.async_create_issue(
-            hass,
+            menuai,
             DOMAIN,
             issue_id,
             breaks_in_ha_version="2025.12.0",
@@ -479,17 +479,17 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
     return True
 
 
-async def _async_stop(hass: HomeAssistant, restart: bool) -> None:
-    """Stop home assistant."""
+async def _async_stop(menuai: menuai, restart: bool) -> None:
+    """Stop MenuAI."""
     exit_code = RESTART_EXIT_CODE if restart else 0
-    # Track trask in hass.data. No need to cleanup, we're stopping.
-    hass.data[KEY_HA_STOP] = asyncio.create_task(hass.async_stop(exit_code))
+    # Track trask in menuai.data. No need to cleanup, we're stopping.
+    menuai.data[KEY_HA_STOP] = asyncio.create_task(menuai.async_stop(exit_code))
 
 
 @callback
 def async_set_stop_handler(
-    hass: HomeAssistant,
-    stop_handler: Callable[[HomeAssistant, bool], Coroutine[Any, Any, None]],
+    menuai: menuai,
+    stop_handler: Callable[[menuai, bool], Coroutine[Any, Any, None]],
 ) -> None:
     """Set function which is called by the stop and restart services."""
-    hass.data[DATA_STOP_HANDLER] = stop_handler
+    menuai.data[DATA_STOP_HANDLER] = stop_handler

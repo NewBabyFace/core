@@ -7,15 +7,15 @@ from typing import Any
 
 from systembridgemodels.notification import Notification
 
-from homeassistant.components.notify import (
+from menuai.components.notify import (
     ATTR_DATA,
     ATTR_TITLE,
     ATTR_TITLE_DEFAULT,
     BaseNotificationService,
 )
-from homeassistant.const import ATTR_ICON, CONF_ENTITY_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import ATTR_ICON, CONF_ENTITY_ID
+from menuai.core import menuai
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import DOMAIN
 from .coordinator import SystemBridgeDataUpdateCoordinator
@@ -29,7 +29,7 @@ ATTR_TIMEOUT = "timeout"
 
 
 async def async_get_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> SystemBridgeNotificationService | None:
@@ -37,7 +37,7 @@ async def async_get_service(
     if discovery_info is None:
         return None
 
-    coordinator: SystemBridgeDataUpdateCoordinator = hass.data[DOMAIN][
+    coordinator: SystemBridgeDataUpdateCoordinator = menuai.data[DOMAIN][
         discovery_info[CONF_ENTITY_ID]
     ]
 

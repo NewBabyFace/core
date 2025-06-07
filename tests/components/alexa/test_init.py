@@ -1,22 +1,22 @@
 """Tests for alexa."""
 
-from homeassistant.components.alexa.const import EVENT_ALEXA_SMART_HOME
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.alexa.const import EVENT_ALEXA_SMART_HOME
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.components.logbook.common import MockRow, mock_humanify
 
 
-async def test_humanify_alexa_event(hass: HomeAssistant) -> None:
+async def test_humanify_alexa_event(menuai: menuai) -> None:
     """Test humanifying Alexa event."""
-    hass.config.components.add("recorder")
-    await async_setup_component(hass, "alexa", {})
-    await async_setup_component(hass, "logbook", {})
-    await hass.async_block_till_done()
-    hass.states.async_set("light.kitchen", "on", {"friendly_name": "Kitchen Light"})
+    menuai.config.components.add("recorder")
+    await async_setup_component(menuai, "alexa", {})
+    await async_setup_component(menuai, "logbook", {})
+    await menuai.async_block_till_done()
+    menuai.states.async_set("light.kitchen", "on", {"friendly_name": "Kitchen Light"})
 
     results = mock_humanify(
-        hass,
+        menuai,
         [
             MockRow(
                 EVENT_ALEXA_SMART_HOME,

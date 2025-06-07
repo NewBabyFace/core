@@ -2,7 +2,7 @@
 
 from datetime import UTC, datetime
 
-from homeassistant.components.subaru.const import (
+from menuai.components.subaru.const import (
     API_GEN_1,
     API_GEN_2,
     API_GEN_3,

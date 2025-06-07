@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai, callback
+from menuai.helpers import entity_registry as er
 
 from .const import DOMAIN, LOGGER, SENSOR_TYPE_NEXT_PICKUP
 from .coordinator import RidwellDataUpdateCoordinator
@@ -15,26 +15,26 @@ from .coordinator import RidwellDataUpdateCoordinator
 PLATFORMS: list[Platform] = [Platform.CALENDAR, Platform.SENSOR, Platform.SWITCH]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up Ridwell from a config entry."""
-    coordinator = RidwellDataUpdateCoordinator(hass, entry)
+    coordinator = RidwellDataUpdateCoordinator(menuai, entry)
     await coordinator.async_initialize()
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
+    menuai.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        hass.data[DOMAIN].pop(entry.entry_id)
+    if unload_ok := await menuai.config_entries.async_unload_platforms(entry, PLATFORMS):
+        menuai.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok
 
 
-async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_migrate_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Migrate an old config entry."""
     version = entry.version
 
@@ -44,7 +44,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # common format for platforms going forward:
     if version == 1:
         version = 2
-        hass.config_entries.async_update_entry(entry, version=version)
+        menuai.config_entries.async_update_entry(entry, version=version)
 
         @callback
         def migrate_unique_id(entity_entry: er.RegistryEntry) -> dict[str, Any]:
@@ -53,7 +53,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 "new_unique_id": f"{entity_entry.unique_id}_{SENSOR_TYPE_NEXT_PICKUP}"
             }
 
-        await er.async_migrate_entries(hass, entry.entry_id, migrate_unique_id)
+        await er.async_migrate_entries(menuai, entry.entry_id, migrate_unique_id)
 
     LOGGER.debug("Migration to version %s successful", version)
 

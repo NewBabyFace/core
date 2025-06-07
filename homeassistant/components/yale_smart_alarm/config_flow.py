@@ -9,15 +9,15 @@ import voluptuous as vol
 from yalesmartalarmclient.client import YaleSmartAlarmClient
 from yalesmartalarmclient.exceptions import AuthenticationError
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import callback
-from homeassistant.helpers import config_validation as cv
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import callback
+from menuai.helpers import config_validation as cv
 
 from .const import (
     CONF_AREA_ID,
@@ -91,7 +91,7 @@ class YaleConfigFlow(ConfigFlow, domain=DOMAIN):
             username = reauth_entry.data[CONF_USERNAME]
             password = user_input[CONF_PASSWORD]
 
-            errors = await self.hass.async_add_executor_job(
+            errors = await self.menuai.async_add_executor_job(
                 validate_credentials, username, password
             )
             if not errors:
@@ -116,7 +116,7 @@ class YaleConfigFlow(ConfigFlow, domain=DOMAIN):
             reconfigure_entry = self._get_reconfigure_entry()
             username = user_input[CONF_USERNAME]
 
-            errors = await self.hass.async_add_executor_job(
+            errors = await self.menuai.async_add_executor_job(
                 validate_credentials, username, user_input[CONF_PASSWORD]
             )
             if (
@@ -148,7 +148,7 @@ class YaleConfigFlow(ConfigFlow, domain=DOMAIN):
             password = user_input[CONF_PASSWORD]
             area = user_input.get(CONF_AREA_ID, DEFAULT_AREA_ID)
 
-            errors = await self.hass.async_add_executor_job(
+            errors = await self.menuai.async_add_executor_job(
                 validate_credentials, username, password
             )
             if not errors:

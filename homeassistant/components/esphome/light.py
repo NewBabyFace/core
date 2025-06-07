@@ -15,7 +15,7 @@ from aioesphomeapi import (
     LightState,
 )
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_TEMP_KELVIN,
     ATTR_EFFECT,
@@ -31,7 +31,7 @@ from homeassistant.components.light import (
     LightEntity,
     LightEntityFeature,
 )
-from homeassistant.core import callback
+from menuai.core import callback
 
 from .entity import (
     EsphomeEntity,
@@ -96,7 +96,7 @@ def _mired_to_kelvin(mired_temperature: float) -> int:
     """Convert absolute mired shift to degrees kelvin.
 
     This function rounds the converted value instead of flooring the value as
-    is done in homeassistant.util.color.color_temperature_mired_to_kelvin().
+    is done in menuai.util.color.color_temperature_mired_to_kelvin().
 
     If the value of mired_temperature is less than or equal to zero, return
     the original value to avoid a divide by zero.

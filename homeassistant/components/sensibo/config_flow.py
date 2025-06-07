@@ -8,10 +8,10 @@ from typing import Any
 from pysensibo.exceptions import AuthenticationError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_API_KEY
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.selector import TextSelector
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_API_KEY
+from menuai.core import menuai
+from menuai.helpers.selector import TextSelector
 
 from .const import DOMAIN
 from .util import NoDevicesError, NoUsernameError, async_validate_api
@@ -24,13 +24,13 @@ DATA_SCHEMA = vol.Schema(
 
 
 async def validate_api(
-    hass: HomeAssistant, api_key: str
+    menuai: menuai, api_key: str
 ) -> tuple[str | None, dict[str, str]]:
     """Validate the API key."""
     errors: dict[str, str] = {}
     username: str | None = None
     try:
-        username = await async_validate_api(hass, api_key)
+        username = await async_validate_api(menuai, api_key)
     except AuthenticationError:
         errors["base"] = "invalid_auth"
     except ConnectionError:
@@ -61,7 +61,7 @@ class SensiboConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if user_input:
             api_key = user_input[CONF_API_KEY]
-            username, errors = await validate_api(self.hass, api_key)
+            username, errors = await validate_api(self.menuai, api_key)
             if username:
                 reauth_entry = self._get_reauth_entry()
                 if username == reauth_entry.unique_id:
@@ -90,7 +90,7 @@ class SensiboConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if user_input:
             api_key = user_input[CONF_API_KEY]
-            username, errors = await validate_api(self.hass, api_key)
+            username, errors = await validate_api(self.menuai, api_key)
             if username:
                 reconfigure_entry = self._get_reconfigure_entry()
                 if username == reconfigure_entry.unique_id:
@@ -120,7 +120,7 @@ class SensiboConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if user_input:
             api_key = user_input[CONF_API_KEY]
-            username, errors = await validate_api(self.hass, api_key)
+            username, errors = await validate_api(self.menuai, api_key)
             if username:
                 await self.async_set_unique_id(username)
                 self._abort_if_unique_id_configured()

@@ -36,7 +36,7 @@ def main() -> int | None:
         "pip",
         "install",
         "-c",
-        "homeassistant/package_constraints.txt",
+        "menuai/package_constraints.txt",
         "-U",
         *requirements,
     ]

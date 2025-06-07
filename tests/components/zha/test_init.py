@@ -10,23 +10,23 @@ from zigpy.application import ControllerApplication
 from zigpy.config import CONF_DEVICE, CONF_DEVICE_PATH
 from zigpy.exceptions import TransientConnectionError
 
-from homeassistant.components.zha.const import (
+from menuai.components.zha.const import (
     CONF_BAUDRATE,
     CONF_FLOW_CONTROL,
     CONF_RADIO_TYPE,
     CONF_USB_PATH,
     DOMAIN,
 )
-from homeassistant.components.zha.helpers import get_zha_data, get_zha_gateway
-from homeassistant.const import (
-    EVENT_HOMEASSISTANT_STOP,
+from menuai.components.zha.helpers import get_zha_data, get_zha_gateway
+from menuai.const import (
+    EVENT_menuai_STOP,
     MAJOR_VERSION,
     MINOR_VERSION,
     Platform,
 )
-from homeassistant.core import CoreState, HomeAssistant
-from homeassistant.helpers.event import async_call_later
-from homeassistant.setup import async_setup_component
+from menuai.core import CoreState, menuai
+from menuai.helpers.event import async_call_later
+from menuai.setup import async_setup_component
 
 from .test_light import LIGHT_ON_OFF
 
@@ -39,12 +39,12 @@ DATA_PORT_PATH = "/dev/serial/by-id/FTDI_USB__-__Serial_Cable_12345678-if00-port
 @pytest.fixture(autouse=True)
 def disable_platform_only():
     """Disable platforms to speed up tests."""
-    with patch("homeassistant.components.zha.PLATFORMS", []):
+    with patch("menuai.components.zha.PLATFORMS", []):
         yield
 
 
 @pytest.fixture
-def config_entry_v1(hass: HomeAssistant):
+def config_entry_v1(menuai: menuai):
     """Config entry version 1 fixture."""
     return MockConfigEntry(
         domain=DOMAIN,
@@ -54,13 +54,13 @@ def config_entry_v1(hass: HomeAssistant):
 
 
 @pytest.mark.parametrize("config", [{}, {DOMAIN: {}}])
-@patch("homeassistant.components.zha.async_setup_entry", AsyncMock(return_value=True))
+@patch("menuai.components.zha.async_setup_entry", AsyncMock(return_value=True))
 async def test_migration_from_v1_no_baudrate(
-    hass: HomeAssistant, config_entry_v1, config
+    menuai: menuai, config_entry_v1, config
 ) -> None:
     """Test migration of config entry from v1."""
-    config_entry_v1.add_to_hass(hass)
-    assert await async_setup_component(hass, DOMAIN, config)
+    config_entry_v1.add_to_menuai(menuai)
+    assert await async_setup_component(menuai, DOMAIN, config)
 
     assert config_entry_v1.data[CONF_RADIO_TYPE] == DATA_RADIO_TYPE
     assert CONF_DEVICE in config_entry_v1.data
@@ -69,13 +69,13 @@ async def test_migration_from_v1_no_baudrate(
     assert config_entry_v1.version == 4
 
 
-@patch("homeassistant.components.zha.async_setup_entry", AsyncMock(return_value=True))
+@patch("menuai.components.zha.async_setup_entry", AsyncMock(return_value=True))
 async def test_migration_from_v1_with_baudrate(
-    hass: HomeAssistant, config_entry_v1
+    menuai: menuai, config_entry_v1
 ) -> None:
     """Test migration of config entry from v1 with baudrate in config."""
-    config_entry_v1.add_to_hass(hass)
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_BAUDRATE: 115200}})
+    config_entry_v1.add_to_menuai(menuai)
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_BAUDRATE: 115200}})
 
     assert config_entry_v1.data[CONF_RADIO_TYPE] == DATA_RADIO_TYPE
     assert CONF_DEVICE in config_entry_v1.data
@@ -86,13 +86,13 @@ async def test_migration_from_v1_with_baudrate(
     assert config_entry_v1.version == 4
 
 
-@patch("homeassistant.components.zha.async_setup_entry", AsyncMock(return_value=True))
+@patch("menuai.components.zha.async_setup_entry", AsyncMock(return_value=True))
 async def test_migration_from_v1_wrong_baudrate(
-    hass: HomeAssistant, config_entry_v1
+    menuai: menuai, config_entry_v1
 ) -> None:
     """Test migration of config entry from v1 with wrong baudrate."""
-    config_entry_v1.add_to_hass(hass)
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_BAUDRATE: 115222}})
+    config_entry_v1.add_to_menuai(menuai)
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_BAUDRATE: 115222}})
 
     assert config_entry_v1.data[CONF_RADIO_TYPE] == DATA_RADIO_TYPE
     assert CONF_DEVICE in config_entry_v1.data
@@ -114,13 +114,13 @@ async def test_migration_from_v1_wrong_baudrate(
         {CONF_RADIO_TYPE: "ezsp", CONF_USB_PATH: "str"},
     ],
 )
-async def test_config_depreciation(hass: HomeAssistant, zha_config) -> None:
+async def test_config_depreciation(menuai: menuai, zha_config) -> None:
     """Test config option depreciation."""
 
     with patch(
-        "homeassistant.components.zha.async_setup", return_value=True
+        "menuai.components.zha.async_setup", return_value=True
     ) as setup_mock:
-        assert await async_setup_component(hass, DOMAIN, {DOMAIN: zha_config})
+        assert await async_setup_component(menuai, DOMAIN, {DOMAIN: zha_config})
         assert setup_mock.call_count == 1
 
 
@@ -141,10 +141,10 @@ async def test_config_depreciation(hass: HomeAssistant, zha_config) -> None:
     ],
 )
 @patch(
-    "homeassistant.components.zha.websocket_api.async_load_api", Mock(return_value=True)
+    "menuai.components.zha.websocket_api.async_load_api", Mock(return_value=True)
 )
 async def test_setup_with_v3_cleaning_uri(
-    hass: HomeAssistant,
+    menuai: menuai,
     path: str,
     cleaned_path: str,
     mock_zigpy_connect: ControllerApplication,
@@ -162,11 +162,11 @@ async def test_setup_with_v3_cleaning_uri(
         },
         version=4,
     )
-    config_entry_v4.add_to_hass(hass)
+    config_entry_v4.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(config_entry_v4.entry_id)
-    await hass.async_block_till_done()
-    await hass.config_entries.async_unload(config_entry_v4.entry_id)
+    await menuai.config_entries.async_setup(config_entry_v4.entry_id)
+    await menuai.async_block_till_done()
+    await menuai.config_entries.async_unload(config_entry_v4.entry_id)
 
     assert config_entry_v4.data[CONF_RADIO_TYPE] == DATA_RADIO_TYPE
     assert config_entry_v4.data[CONF_DEVICE][CONF_DEVICE_PATH] == cleaned_path
@@ -189,20 +189,20 @@ async def test_setup_with_v3_cleaning_uri(
         ("deconz", 115200, None, 115200, None),
     ],
 )
-@patch("homeassistant.components.zha.async_setup_entry", AsyncMock(return_value=True))
+@patch("menuai.components.zha.async_setup_entry", AsyncMock(return_value=True))
 async def test_migration_baudrate_and_flow_control(
     radio_type: str,
     old_baudrate: int,
     old_flow_control: typing.Literal["hardware", "software", None],
     new_baudrate: int,
     new_flow_control: typing.Literal["hardware", "software", None],
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test baudrate and flow control migration."""
 
-    config_entry.add_to_hass(hass)
-    hass.config_entries.async_update_entry(
+    config_entry.add_to_menuai(menuai)
+    menuai.config_entries.async_update_entry(
         config_entry,
         data={
             **config_entry.data,
@@ -216,8 +216,8 @@ async def test_migration_baudrate_and_flow_control(
         version=3,
     )
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.version > 3
     assert config_entry.data[CONF_DEVICE][CONF_BAUDRATE] == new_baudrate
@@ -225,11 +225,11 @@ async def test_migration_baudrate_and_flow_control(
 
 
 @patch(
-    "homeassistant.components.zha.PLATFORMS",
+    "menuai.components.zha.PLATFORMS",
     [Platform.LIGHT, Platform.BUTTON, Platform.SENSOR, Platform.SELECT],
 )
 async def test_zha_retry_unique_ids(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     zigpy_device_mock,
     mock_zigpy_connect: ControllerApplication,
@@ -237,7 +237,7 @@ async def test_zha_retry_unique_ids(
 ) -> None:
     """Test that ZHA retrying creates unique entity IDs."""
 
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     # Ensure we have some device to try to load
     app = mock_zigpy_connect
@@ -251,61 +251,61 @@ async def test_zha_retry_unique_ids(
         side_effect=[TransientConnectionError(), None],
     ) as mock_connect:
         with patch(
-            "homeassistant.config_entries.async_call_later",
-            lambda hass, delay, action: async_call_later(hass, 0.01, action),
+            "menuai.config_entries.async_call_later",
+            lambda menuai, delay, action: async_call_later(menuai, 0.01, action),
         ):
-            await hass.config_entries.async_setup(config_entry.entry_id)
-            await hass.async_block_till_done(wait_background_tasks=True)
+            await menuai.config_entries.async_setup(config_entry.entry_id)
+            await menuai.async_block_till_done(wait_background_tasks=True)
 
             # Wait for the config entry setup to retry
             await asyncio.sleep(0.1)
-            await hass.async_block_till_done(wait_background_tasks=True)
+            await menuai.async_block_till_done(wait_background_tasks=True)
 
         assert len(mock_connect.mock_calls) == 2
 
-    await hass.config_entries.async_unload(config_entry.entry_id)
+    await menuai.config_entries.async_unload(config_entry.entry_id)
 
     assert "does not generate unique IDs" not in caplog.text
 
 
 async def test_shutdown_on_ha_stop(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_zigpy_connect: ControllerApplication,
 ) -> None:
     """Test that the ZHA gateway is stopped when HA is shut down."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    zha_data = get_zha_data(hass)
+    zha_data = get_zha_data(menuai)
 
     with patch.object(
         zha_data.gateway_proxy, "shutdown", wraps=zha_data.gateway_proxy.shutdown
     ) as mock_shutdown:
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
-        hass.set_state(CoreState.stopping)
-        await hass.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STOP)
+        menuai.set_state(CoreState.stopping)
+        await menuai.async_block_till_done()
 
     assert len(mock_shutdown.mock_calls) == 1
 
 
 async def test_timezone_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_zigpy_connect: ControllerApplication,
 ) -> None:
     """Test that the ZHA gateway timezone is updated when HA timezone changes."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    gateway = get_zha_gateway(hass)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    gateway = get_zha_gateway(menuai)
 
-    assert hass.config.time_zone == "US/Pacific"
+    assert menuai.config.time_zone == "US/Pacific"
     assert gateway.config.local_timezone == zoneinfo.ZoneInfo("US/Pacific")
 
-    await hass.config.async_update(time_zone="America/New_York")
+    await menuai.config.async_update(time_zone="America/New_York")
 
-    assert hass.config.time_zone == "America/New_York"
+    assert menuai.config.time_zone == "America/New_York"
     assert gateway.config.local_timezone == zoneinfo.ZoneInfo("America/New_York")

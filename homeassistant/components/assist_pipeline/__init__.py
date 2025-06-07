@@ -7,10 +7,10 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components import stt
-from homeassistant.core import Context, HomeAssistant
-from homeassistant.helpers import chat_session
-from homeassistant.helpers.typing import ConfigType
+from menuai.components import stt
+from menuai.core import Context, menuai
+from menuai.helpers import chat_session
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     CONF_DEBUG_RECORDING_DIR,
@@ -79,22 +79,22 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Assist pipeline integration."""
-    hass.data[DATA_CONFIG] = config.get(DOMAIN, {})
+    menuai.data[DATA_CONFIG] = config.get(DOMAIN, {})
 
     # wake_word_id -> timestamp of last detection (monotonic_ns)
-    hass.data[DATA_LAST_WAKE_UP] = {}
+    menuai.data[DATA_LAST_WAKE_UP] = {}
 
-    await async_setup_pipeline_store(hass)
-    await async_run_migrations(hass)
-    async_register_websocket_api(hass)
+    await async_setup_pipeline_store(menuai)
+    await async_run_migrations(menuai)
+    async_register_websocket_api(menuai)
 
     return True
 
 
 async def async_pipeline_from_audio_stream(
-    hass: HomeAssistant,
+    menuai: menuai,
     *,
     context: Context,
     event_callback: PipelineEventCallback,
@@ -115,7 +115,7 @@ async def async_pipeline_from_audio_stream(
 
     Raises PipelineNotFound if no pipeline is found.
     """
-    with chat_session.async_get_chat_session(hass, conversation_id) as session:
+    with chat_session.async_get_chat_session(menuai, conversation_id) as session:
         pipeline_input = PipelineInput(
             session=session,
             device_id=device_id,
@@ -124,9 +124,9 @@ async def async_pipeline_from_audio_stream(
             wake_word_phrase=wake_word_phrase,
             conversation_extra_system_prompt=conversation_extra_system_prompt,
             run=PipelineRun(
-                hass,
+                menuai,
                 context=context,
-                pipeline=async_get_pipeline(hass, pipeline_id=pipeline_id),
+                pipeline=async_get_pipeline(menuai, pipeline_id=pipeline_id),
                 start_stage=start_stage,
                 end_stage=end_stage,
                 event_callback=event_callback,

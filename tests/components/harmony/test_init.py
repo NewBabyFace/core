@@ -1,10 +1,10 @@
 """Test init of Logitch Harmony Hub integration."""
 
-from homeassistant.components.harmony.const import DOMAIN
-from homeassistant.const import CONF_HOST, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.components.harmony.const import DOMAIN
+from menuai.const import CONF_HOST, CONF_NAME
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.setup import async_setup_component
 
 from .const import (
     ENTITY_NILE_TV,
@@ -21,16 +21,16 @@ from tests.common import MockConfigEntry, RegistryEntryWithDefaults, mock_regist
 
 
 async def test_unique_id_migration(
-    mock_hc, hass: HomeAssistant, mock_write_config
+    mock_hc, menuai: menuai, mock_write_config
 ) -> None:
     """Test migration of switch unique ids to stable ones."""
     entry = MockConfigEntry(
         domain=DOMAIN, data={CONF_HOST: "192.0.2.0", CONF_NAME: HUB_NAME}
     )
 
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     mock_registry(
-        hass,
+        menuai,
         {
             # old format
             ENTITY_WATCH_TV: RegistryEntryWithDefaults(
@@ -69,10 +69,10 @@ async def test_unique_id_migration(
             ),
         },
     )
-    assert await async_setup_component(hass, DOMAIN, {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {})
+    await menuai.async_block_till_done()
 
-    ent_reg = er.async_get(hass)
+    ent_reg = er.async_get(menuai)
 
     switch_tv = ent_reg.async_get(ENTITY_WATCH_TV)
     assert switch_tv.unique_id == f"activity_{WATCH_TV_ACTIVITY_ID}"

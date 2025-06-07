@@ -16,18 +16,18 @@ from async_upnp_client.profiles.profile import find_device_of_type
 from getmac import get_mac_address
 import voluptuous as vol
 
-from homeassistant.components import ssdp
-from homeassistant.config_entries import (
+from menuai.components import ssdp
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_DEVICE_ID, CONF_HOST, CONF_MAC, CONF_TYPE, CONF_URL
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import IntegrationError
-from homeassistant.helpers import config_validation as cv, device_registry as dr
-from homeassistant.helpers.service_info.ssdp import (
+from menuai.const import CONF_DEVICE_ID, CONF_HOST, CONF_MAC, CONF_TYPE, CONF_URL
+from menuai.core import menuai, callback
+from menuai.exceptions import IntegrationError
+from menuai.helpers import config_validation as cv, device_registry as dr
+from menuai.helpers.service_info.ssdp import (
     ATTR_UPNP_DEVICE_TYPE,
     ATTR_UPNP_FRIENDLY_NAME,
     ATTR_UPNP_MANUFACTURER,
@@ -35,7 +35,7 @@ from homeassistant.helpers.service_info.ssdp import (
     ATTR_UPNP_SERVICE_LIST,
     SsdpServiceInfo,
 )
-from homeassistant.helpers.typing import VolDictType
+from menuai.helpers.typing import VolDictType
 
 from .const import (
     CONF_BROWSE_UNFILTERED,
@@ -188,7 +188,7 @@ class DlnaDmrFlowHandler(ConfigFlow, domain=DOMAIN):
         # not available - the data values will just be None in that case
         for dev_type in DmrDevice.DEVICE_TYPES:
             discovery = await ssdp.async_get_discovery_info_by_udn_st(
-                self.hass, self._udn, dev_type
+                self.menuai, self._udn, dev_type
             )
             if discovery:
                 await self._async_set_info_from_discovery(
@@ -227,7 +227,7 @@ class DlnaDmrFlowHandler(ConfigFlow, domain=DOMAIN):
         LOGGER.debug("_async_connect: location: %s", self._location)
         assert self._location, "self._location has not been set before connect"
 
-        domain_data = get_domain_data(self.hass)
+        domain_data = get_domain_data(self.menuai)
         try:
             device = await domain_data.upnp_factory.async_create_device(self._location)
         except UpnpError as err:
@@ -254,7 +254,7 @@ class DlnaDmrFlowHandler(ConfigFlow, domain=DOMAIN):
             self._name = device.name
 
         if not self._mac and (host := urlparse(self._location).hostname):
-            self._mac = await _async_get_mac_address(self.hass, host)
+            self._mac = await _async_get_mac_address(self.menuai, host)
 
     def _create_entry(self) -> ConfigFlowResult:
         """Create a config entry, assuming all required information is now known."""
@@ -299,7 +299,7 @@ class DlnaDmrFlowHandler(ConfigFlow, domain=DOMAIN):
         )
 
         if host := discovery_info.ssdp_headers.get("_host"):
-            self._mac = await _async_get_mac_address(self.hass, host)
+            self._mac = await _async_get_mac_address(self.menuai, host)
 
         if abort_if_configured:
             # Abort if already configured, but update the last-known location
@@ -317,7 +317,7 @@ class DlnaDmrFlowHandler(ConfigFlow, domain=DOMAIN):
         discoveries: list[SsdpServiceInfo] = []
         for udn_st in DmrDevice.DEVICE_TYPES:
             st_discoveries = await ssdp.async_get_discovery_info_by_st(
-                self.hass, udn_st
+                self.menuai, udn_st
             )
             discoveries.extend(st_discoveries)
 
@@ -402,10 +402,10 @@ def _is_ignored_device(discovery_info: SsdpServiceInfo) -> bool:
     flow, which will list all discovered but unconfigured devices.
     """
     # Did the discovery trigger more than just this flow?
-    if len(discovery_info.x_homeassistant_matching_domains) > 1:
+    if len(discovery_info.x_menuai_matching_domains) > 1:
         LOGGER.debug(
             "Ignoring device supported by multiple integrations: %s",
-            discovery_info.x_homeassistant_matching_domains,
+            discovery_info.x_menuai_matching_domains,
         )
         return True
 
@@ -463,7 +463,7 @@ def _is_dmr_device(discovery_info: SsdpServiceInfo) -> bool:
     return True
 
 
-async def _async_get_mac_address(hass: HomeAssistant, host: str) -> str | None:
+async def _async_get_mac_address(menuai: menuai, host: str) -> str | None:
     """Get mac address from host name, IPv4 address, or IPv6 address."""
     # Help mypy, which has trouble with the async_add_executor_job + partial call
     mac_address: str | None
@@ -472,18 +472,18 @@ async def _async_get_mac_address(hass: HomeAssistant, host: str) -> str | None:
     try:
         ip_addr = ip_address(host)
     except ValueError:
-        mac_address = await hass.async_add_executor_job(
+        mac_address = await menuai.async_add_executor_job(
             partial(get_mac_address, hostname=host)
         )
     else:
         if ip_addr.version == 4:
-            mac_address = await hass.async_add_executor_job(
+            mac_address = await menuai.async_add_executor_job(
                 partial(get_mac_address, ip=host)
             )
         else:
             # Drop scope_id from IPv6 address by converting via int
             ip_addr = IPv6Address(int(ip_addr))
-            mac_address = await hass.async_add_executor_job(
+            mac_address = await menuai.async_add_executor_job(
                 partial(get_mac_address, ip6=str(ip_addr))
             )
 

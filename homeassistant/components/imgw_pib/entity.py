@@ -1,6 +1,6 @@
 """Define the IMGW-PIB entity."""
 
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import ATTRIBUTION
 from .coordinator import ImgwPibDataUpdateCoordinator

@@ -7,9 +7,9 @@ from typing import Any
 
 from pypoint import PointSession
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util.dt import parse_datetime
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.util.dt import parse_datetime
 
 from .const import DOMAIN, SCAN_INTERVAL
 
@@ -19,10 +19,10 @@ _LOGGER = logging.getLogger(__name__)
 class PointDataUpdateCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
     """Class to manage fetching Point data from the API."""
 
-    def __init__(self, hass: HomeAssistant, point: PointSession) -> None:
+    def __init__(self, menuai: menuai, point: PointSession) -> None:
         """Initialize."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             name=DOMAIN,
             update_interval=SCAN_INTERVAL,

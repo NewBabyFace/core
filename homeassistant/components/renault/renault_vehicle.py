@@ -14,9 +14,9 @@ from renault_api.exceptions import RenaultException
 from renault_api.kamereon import models, schemas
 from renault_api.renault_vehicle import RenaultVehicle
 
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceInfo
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import DeviceInfo
 
 if TYPE_CHECKING:
     from . import RenaultConfigEntry
@@ -39,11 +39,11 @@ def with_error_wrapping[**_P, _R](
         *args: _P.args,
         **kwargs: _P.kwargs,
     ) -> _R:
-        """Catch RenaultException errors and raise HomeAssistantError."""
+        """Catch RenaultException errors and raise menuaiError."""
         try:
             return await func(self, *args, **kwargs)
         except RenaultException as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="unknown_error",
                 translation_placeholders={"error": str(err)},
@@ -71,7 +71,7 @@ class RenaultVehicleProxy:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: RenaultConfigEntry,
         hub: RenaultHub,
         vehicle: RenaultVehicle,
@@ -79,7 +79,7 @@ class RenaultVehicleProxy:
         scan_interval: timedelta,
     ) -> None:
         """Initialise vehicle proxy."""
-        self.hass = hass
+        self.menuai = menuai
         self.config_entry = config_entry
         self._vehicle = vehicle
         self._details = details
@@ -116,7 +116,7 @@ class RenaultVehicleProxy:
         """Load available coordinators."""
         self.coordinators = {
             coord.key: RenaultDataUpdateCoordinator(
-                self.hass,
+                self.menuai,
                 self.config_entry,
                 self._hub,
                 LOGGER,

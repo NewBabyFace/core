@@ -5,11 +5,11 @@ from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 
-from homeassistant.components.risco import CannotConnectError, UnauthorizedError
-from homeassistant.components.risco.coordinator import LAST_EVENT_TIMESTAMP_KEY
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.util import dt as dt_util
+from menuai.components.risco import CannotConnectError, UnauthorizedError
+from menuai.components.risco.coordinator import LAST_EVENT_TIMESTAMP_KEY
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.util import dt as dt_util
 
 from tests.common import async_fire_time_changed
 
@@ -110,11 +110,11 @@ CATEGORIES_TO_EVENTS = {
 def _no_zones_and_partitions():
     with (
         patch(
-            "homeassistant.components.risco.RiscoLocal.zones",
+            "menuai.components.risco.RiscoLocal.zones",
             new_callable=PropertyMock(return_value=[]),
         ),
         patch(
-            "homeassistant.components.risco.RiscoLocal.partitions",
+            "menuai.components.risco.RiscoLocal.partitions",
             new_callable=PropertyMock(return_value=[]),
         ),
     ):
@@ -123,23 +123,23 @@ def _no_zones_and_partitions():
 
 @pytest.mark.parametrize("exception", [CannotConnectError, UnauthorizedError])
 async def test_error_on_login(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     login_with_error,
     cloud_config_entry,
 ) -> None:
     """Test error on login."""
-    await hass.config_entries.async_setup(cloud_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(cloud_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     for entity_id in ENTITY_IDS.values():
         assert not entity_registry.async_is_registered(entity_id)
 
 
-def _check_state(hass: HomeAssistant, category: str, entity_id: str) -> None:
+def _check_state(menuai: menuai, category: str, entity_id: str) -> None:
     event_index = CATEGORIES_TO_EVENTS[category]
     event = TEST_EVENTS[event_index]
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == dt_util.parse_datetime(event.time).isoformat()
     assert state.attributes["category_id"] == event.category_id
     assert state.attributes["category_name"] == event.category_name
@@ -160,15 +160,15 @@ def _check_state(hass: HomeAssistant, category: str, entity_id: str) -> None:
 
 
 @pytest.fixture
-async def _set_utc_time_zone(hass: HomeAssistant) -> None:
-    await hass.config.async_set_time_zone("UTC")
+async def _set_utc_time_zone(menuai: menuai) -> None:
+    await menuai.config.async_set_time_zone("UTC")
 
 
 @pytest.fixture
 def save_mock():
     """Create a mock for async_save."""
     with patch(
-        "homeassistant.components.risco.coordinator.Store.async_save",
+        "menuai.components.risco.coordinator.Store.async_save",
     ) as save_mock:
         yield save_mock
 
@@ -176,7 +176,7 @@ def save_mock():
 @pytest.mark.parametrize("events", [TEST_EVENTS])
 @pytest.mark.usefixtures("two_zone_cloud", "_set_utc_time_zone")
 async def test_cloud_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     save_mock,
     setup_risco_cloud,
@@ -187,23 +187,23 @@ async def test_cloud_setup(
 
     save_mock.assert_awaited_once_with({LAST_EVENT_TIMESTAMP_KEY: TEST_EVENTS[0].time})
     for category, entity_id in ENTITY_IDS.items():
-        _check_state(hass, category, entity_id)
+        _check_state(menuai, category, entity_id)
 
     with (
         patch(
-            "homeassistant.components.risco.RiscoCloud.get_events", return_value=[]
+            "menuai.components.risco.RiscoCloud.get_events", return_value=[]
         ) as events_mock,
         patch(
-            "homeassistant.components.risco.coordinator.Store.async_load",
+            "menuai.components.risco.coordinator.Store.async_load",
             return_value={LAST_EVENT_TIMESTAMP_KEY: TEST_EVENTS[0].time},
         ),
     ):
-        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=65))
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(seconds=65))
+        await menuai.async_block_till_done()
         events_mock.assert_awaited_once_with(TEST_EVENTS[0].time, 10)
 
     for category, entity_id in ENTITY_IDS.items():
-        _check_state(hass, category, entity_id)
+        _check_state(menuai, category, entity_id)
 
 
 @pytest.mark.usefixtures("setup_risco_local", "_no_zones_and_partitions")

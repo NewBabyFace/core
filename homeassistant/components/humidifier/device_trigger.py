@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant.components.device_automation import (
+from menuai.components.device_automation import (
     DEVICE_TRIGGER_BASE_SCHEMA,
     toggle_entity,
 )
-from homeassistant.components.homeassistant.triggers import (
+from menuai.components.menuai.triggers import (
     numeric_state as numeric_state_trigger,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_ABOVE,
     CONF_BELOW,
     CONF_DEVICE_ID,
@@ -22,10 +22,10 @@ from homeassistant.const import (
     CONF_TYPE,
     PERCENTAGE,
 )
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import CALLBACK_TYPE, menuai
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.trigger import TriggerActionType, TriggerInfo
+from menuai.helpers.typing import ConfigType
 
 from . import ATTR_CURRENT_HUMIDITY, DOMAIN
 
@@ -68,18 +68,18 @@ TRIGGER_SCHEMA = vol.All(
 
 
 async def async_get_triggers(
-    hass: HomeAssistant, device_id: str
+    menuai: menuai, device_id: str
 ) -> list[dict[str, str]]:
     """List device triggers for Humidifier devices."""
-    registry = er.async_get(hass)
-    triggers = await toggle_entity.async_get_triggers(hass, device_id, DOMAIN)
+    registry = er.async_get(menuai)
+    triggers = await toggle_entity.async_get_triggers(menuai, device_id, DOMAIN)
 
     # Get all the integrations entities for this device
     for entry in er.async_entries_for_device(registry, device_id):
         if entry.domain != DOMAIN:
             continue
 
-        state = hass.states.get(entry.entity_id)
+        state = menuai.states.get(entry.entity_id)
 
         # Add triggers for each entity that belongs to this integration
         base_trigger = {
@@ -108,7 +108,7 @@ async def async_get_triggers(
 
 
 async def async_attach_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     action: TriggerActionType,
     trigger_info: TriggerInfo,
@@ -143,18 +143,18 @@ async def async_attach_trigger(
 
         numeric_state_config = (
             await numeric_state_trigger.async_validate_trigger_config(
-                hass, numeric_state_config
+                menuai, numeric_state_config
             )
         )
         return await numeric_state_trigger.async_attach_trigger(
-            hass, numeric_state_config, action, trigger_info, platform_type="device"
+            menuai, numeric_state_config, action, trigger_info, platform_type="device"
         )
 
-    return await toggle_entity.async_attach_trigger(hass, config, action, trigger_info)
+    return await toggle_entity.async_attach_trigger(menuai, config, action, trigger_info)
 
 
 async def async_get_trigger_capabilities(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> dict[str, vol.Schema]:
     """List trigger capabilities."""
     if config[CONF_TYPE] in {"current_humidity_changed", "target_humidity_changed"}:
@@ -171,4 +171,4 @@ async def async_get_trigger_capabilities(
                 }
             )
         }
-    return await toggle_entity.async_get_trigger_capabilities(hass, config)
+    return await toggle_entity.async_get_trigger_capabilities(menuai, config)

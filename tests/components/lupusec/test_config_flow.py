@@ -6,17 +6,17 @@ from unittest.mock import patch
 from lupupy import LupusecException
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.lupusec.const import DOMAIN
-from homeassistant.const import (
+from menuai import config_entries
+from menuai.components.lupusec.const import DOMAIN
+from menuai.const import (
     CONF_HOST,
     CONF_IP_ADDRESS,
     CONF_NAME,
     CONF_PASSWORD,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
@@ -40,9 +40,9 @@ MOCK_IMPORT_STEP_NAME = {
 }
 
 
-async def test_form_valid_input(hass: HomeAssistant) -> None:
+async def test_form_valid_input(menuai: menuai) -> None:
     """Test handling valid user input."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -50,18 +50,18 @@ async def test_form_valid_input(hass: HomeAssistant) -> None:
 
     with (
         patch(
-            "homeassistant.components.lupusec.async_setup_entry",
+            "menuai.components.lupusec.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
         patch(
-            "homeassistant.components.lupusec.config_flow.lupupy.Lupusec",
+            "menuai.components.lupusec.config_flow.lupupy.Lupusec",
         ) as mock_initialize_lupusec,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             MOCK_DATA_STEP,
         )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == MOCK_DATA_STEP[CONF_HOST]
@@ -79,24 +79,24 @@ async def test_form_valid_input(hass: HomeAssistant) -> None:
     ],
 )
 async def test_flow_user_init_data_error_and_recover(
-    hass: HomeAssistant, raise_error, text_error
+    menuai: menuai, raise_error, text_error
 ) -> None:
     """Test exceptions and recovery."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
     with patch(
-        "homeassistant.components.lupusec.config_flow.lupupy.Lupusec",
+        "menuai.components.lupusec.config_flow.lupupy.Lupusec",
         side_effect=raise_error,
     ) as mock_initialize_lupusec:
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             MOCK_DATA_STEP,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["errors"] == {"base": text_error}
@@ -106,19 +106,19 @@ async def test_flow_user_init_data_error_and_recover(
     # Recover
     with (
         patch(
-            "homeassistant.components.lupusec.async_setup_entry",
+            "menuai.components.lupusec.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
         patch(
-            "homeassistant.components.lupusec.config_flow.lupupy.Lupusec",
+            "menuai.components.lupusec.config_flow.lupupy.Lupusec",
         ) as mock_initialize_lupusec,
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             MOCK_DATA_STEP,
         )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.CREATE_ENTRY
     assert result3["title"] == MOCK_DATA_STEP[CONF_HOST]
@@ -127,7 +127,7 @@ async def test_flow_user_init_data_error_and_recover(
     assert len(mock_initialize_lupusec.mock_calls) == 1
 
 
-async def test_flow_user_init_data_already_configured(hass: HomeAssistant) -> None:
+async def test_flow_user_init_data_already_configured(menuai: menuai) -> None:
     """Test duplicate config entry.."""
 
     entry = MockConfigEntry(
@@ -136,20 +136,20 @@ async def test_flow_user_init_data_already_configured(hass: HomeAssistant) -> No
         data=MOCK_DATA_STEP,
     )
 
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         MOCK_DATA_STEP,
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.ABORT
     assert result2["reason"] == "already_configured"

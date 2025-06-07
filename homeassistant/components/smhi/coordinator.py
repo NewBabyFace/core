@@ -7,11 +7,11 @@ from dataclasses import dataclass
 
 from pysmhi import SMHIForecast, SmhiForecastException, SMHIPointForecast
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_LATITUDE, CONF_LOCATION, CONF_LONGITUDE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import aiohttp_client
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_LATITUDE, CONF_LOCATION, CONF_LONGITUDE
+from menuai.core import menuai
+from menuai.helpers import aiohttp_client
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DEFAULT_SCAN_INTERVAL, DOMAIN, LOGGER, TIMEOUT
 
@@ -31,10 +31,10 @@ class SMHIDataUpdateCoordinator(DataUpdateCoordinator[SMHIForecastData]):
 
     config_entry: SMHIConfigEntry
 
-    def __init__(self, hass: HomeAssistant, config_entry: SMHIConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: SMHIConfigEntry) -> None:
         """Initialize the SMHI coordinator."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -43,7 +43,7 @@ class SMHIDataUpdateCoordinator(DataUpdateCoordinator[SMHIForecastData]):
         self._smhi_api = SMHIPointForecast(
             config_entry.data[CONF_LOCATION][CONF_LONGITUDE],
             config_entry.data[CONF_LOCATION][CONF_LATITUDE],
-            session=aiohttp_client.async_get_clientsession(hass),
+            session=aiohttp_client.async_get_clientsession(menuai),
         )
 
     async def _async_update_data(self) -> SMHIForecastData:

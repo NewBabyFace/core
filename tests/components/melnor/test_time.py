@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from datetime import time, timedelta
 
-from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.util import dt as dt_util
 
 from .conftest import (
     mock_config_entry,
@@ -17,12 +17,12 @@ from .conftest import (
 from tests.common import async_fire_time_changed
 
 
-async def test_schedule_start_time(hass: HomeAssistant) -> None:
+async def test_schedule_start_time(menuai: menuai) -> None:
     """Test the frequency schedule start time."""
 
     now = dt_util.now()
 
-    entry = mock_config_entry(hass)
+    entry = mock_config_entry(menuai)
 
     with (
         patch_async_ble_device_from_address(),
@@ -31,25 +31,25 @@ async def test_schedule_start_time(hass: HomeAssistant) -> None:
     ):
         device = device_patch.return_value
 
-        assert await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
-        time_entity = hass.states.get("time.zone_1_schedule_start_time")
+        time_entity = menuai.states.get("time.zone_1_schedule_start_time")
 
         assert time_entity is not None
         assert time_entity.state == device.zone1.frequency.start_time.isoformat()
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "time",
             "set_value",
             {"entity_id": "time.zone_1_schedule_start_time", "time": time(1, 0)},
             blocking=True,
         )
 
-        async_fire_time_changed(hass, now + timedelta(seconds=10))
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, now + timedelta(seconds=10))
+        await menuai.async_block_till_done()
 
-        time_entity = hass.states.get("time.zone_1_schedule_start_time")
+        time_entity = menuai.states.get("time.zone_1_schedule_start_time")
 
         assert time_entity is not None
         assert time_entity.state == time(1, 0).isoformat()

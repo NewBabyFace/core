@@ -14,17 +14,17 @@ from azure.servicebus.exceptions import (
 )
 import voluptuous as vol
 
-from homeassistant.components.notify import (
+from menuai.components.notify import (
     ATTR_DATA,
     ATTR_TARGET,
     ATTR_TITLE,
     PLATFORM_SCHEMA as NOTIFY_PLATFORM_SCHEMA,
     BaseNotificationService,
 )
-from homeassistant.const import CONTENT_TYPE_JSON
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONTENT_TYPE_JSON
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 CONF_CONNECTION_STRING = "connection_string"
 CONF_QUEUE_NAME = "queue"
@@ -53,7 +53,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def get_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> ServiceBusNotificationService | None:
@@ -65,7 +65,7 @@ def get_service(
     # Library can do synchronous IO when creating the clients.
     # Passes in loop here, but can't run setup on the event loop.
     servicebus = ServiceBusClient.from_connection_string(
-        connection_string, loop=hass.loop
+        connection_string, loop=menuai.loop
     )
 
     client: ServiceBusSender | None = None

@@ -10,16 +10,16 @@ from typing import TYPE_CHECKING, Final
 
 from uiprotect.data import ModelType, ProtectAdoptableDeviceModel
 
-from homeassistant.components.button import (
+from menuai.components.button import (
     ButtonDeviceClass,
     ButtonEntity,
     ButtonEntityDescription,
 )
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import Platform
+from menuai.core import menuai, callback
+from menuai.helpers import entity_registry as er
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DEVICES_THAT_ADOPT, DOMAIN
 from .data import ProtectDeviceType, UFPConfigEntry
@@ -107,9 +107,9 @@ _MODEL_DESCRIPTIONS: dict[ModelType, Sequence[ProtectEntityDescription]] = {
 
 @callback
 def _async_remove_adopt_button(
-    hass: HomeAssistant, device: ProtectAdoptableDeviceModel
+    menuai: menuai, device: ProtectAdoptableDeviceModel
 ) -> None:
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
     if entity_id := entity_registry.async_get_entity_id(
         Platform.BUTTON, DOMAIN, f"{device.mac}_adopt"
     ):
@@ -117,7 +117,7 @@ def _async_remove_adopt_button(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: UFPConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -143,7 +143,7 @@ async def async_setup_entry(
         async_add_entities(
             [*base_entities(ufp_device=device), *adopt_entities(ufp_device=device)]
         )
-        _async_remove_adopt_button(hass, device)
+        _async_remove_adopt_button(menuai, device)
 
     @callback
     def _async_add_unadopted_device(device: ProtectAdoptableDeviceModel) -> None:
@@ -154,12 +154,12 @@ async def async_setup_entry(
 
     data.async_subscribe_adopt(_add_new_device)
     entry.async_on_unload(
-        async_dispatcher_connect(hass, data.add_signal, _async_add_unadopted_device)
+        async_dispatcher_connect(menuai, data.add_signal, _async_add_unadopted_device)
     )
     async_add_entities([*base_entities(), *adopt_entities()])
 
     for device in data.get_by_types(DEVICES_THAT_ADOPT):
-        _async_remove_adopt_button(hass, device)
+        _async_remove_adopt_button(menuai, device)
 
 
 class ProtectButton(ProtectDeviceEntity, ButtonEntity):

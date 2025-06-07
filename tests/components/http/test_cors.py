@@ -16,10 +16,10 @@ from aiohttp.hdrs import (
 from aiohttp.test_utils import TestClient
 import pytest
 
-from homeassistant.components.http.cors import setup_cors
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.http import KEY_ALLOW_CONFIGURED_CORS, HomeAssistantView
-from homeassistant.setup import async_setup_component
+from menuai.components.http.cors import setup_cors
+from menuai.core import menuai
+from menuai.helpers.http import KEY_ALLOW_CONFIGURED_CORS, menuaiView
+from menuai.setup import async_setup_component
 
 from . import HTTP_HEADER_HA_AUTH
 
@@ -28,19 +28,19 @@ from tests.typing import ClientSessionGenerator
 TRUSTED_ORIGIN = "https://home-assistant.io"
 
 
-async def test_cors_middleware_loaded_by_default(hass: HomeAssistant) -> None:
+async def test_cors_middleware_loaded_by_default(menuai: menuai) -> None:
     """Test accessing to server from banned IP when feature is off."""
-    with patch("homeassistant.components.http.setup_cors") as mock_setup:
-        await async_setup_component(hass, "http", {"http": {}})
+    with patch("menuai.components.http.setup_cors") as mock_setup:
+        await async_setup_component(menuai, "http", {"http": {}})
 
     assert len(mock_setup.mock_calls) == 1
 
 
-async def test_cors_middleware_loaded_from_config(hass: HomeAssistant) -> None:
+async def test_cors_middleware_loaded_from_config(menuai: menuai) -> None:
     """Test accessing to server from banned IP when feature is off."""
-    with patch("homeassistant.components.http.setup_cors") as mock_setup:
+    with patch("menuai.components.http.setup_cors") as mock_setup:
         await async_setup_component(
-            hass,
+            menuai,
             "http",
             {"http": {"cors_allowed_origins": ["http://home-assistant.io"]}},
         )
@@ -106,10 +106,10 @@ async def test_cors_preflight_allowed(client) -> None:
     assert req.headers[ACCESS_CONTROL_ALLOW_HEADERS] == "X-REQUESTED-WITH"
 
 
-async def test_cors_middleware_with_cors_allowed_view(hass: HomeAssistant) -> None:
+async def test_cors_middleware_with_cors_allowed_view(menuai: menuai) -> None:
     """Test that we can configure cors and have a cors_allowed view."""
 
-    class MyView(HomeAssistantView):
+    class MyView(menuaiView):
         """Test view that allows CORS."""
 
         requires_auth = False
@@ -125,41 +125,41 @@ async def test_cors_middleware_with_cors_allowed_view(hass: HomeAssistant) -> No
             return "test"
 
     assert await async_setup_component(
-        hass, "http", {"http": {"cors_allowed_origins": ["http://home-assistant.io"]}}
+        menuai, "http", {"http": {"cors_allowed_origins": ["http://home-assistant.io"]}}
     )
 
-    hass.http.register_view(MyView("/api/test", "api:test"))
-    hass.http.register_view(MyView("/api/test", "api:test2"))
-    hass.http.register_view(MyView("/api/test2", "api:test"))
+    menuai.http.register_view(MyView("/api/test", "api:test"))
+    menuai.http.register_view(MyView("/api/test", "api:test2"))
+    menuai.http.register_view(MyView("/api/test2", "api:test"))
 
-    hass.http.app._on_startup.freeze()
-    await hass.http.app.startup()
+    menuai.http.app._on_startup.freeze()
+    await menuai.http.app.startup()
 
 
 async def test_cors_works_with_frontend(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test CORS works with the frontend."""
     assert await async_setup_component(
-        hass,
+        menuai,
         "frontend",
         {"http": {"cors_allowed_origins": ["http://home-assistant.io"]}},
     )
-    client = await hass_client()
+    client = await menuai_client()
     resp = await client.get("/")
     assert resp.status == HTTPStatus.OK
 
 
 async def test_cors_on_static_files(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test that we enable CORS for static files."""
     assert await async_setup_component(
-        hass, "frontend", {"http": {"cors_allowed_origins": ["http://www.example.com"]}}
+        menuai, "frontend", {"http": {"cors_allowed_origins": ["http://www.example.com"]}}
     )
-    hass.http.register_static_path("/something", str(Path(__file__).parent))
+    menuai.http.register_static_path("/something", str(Path(__file__).parent))
 
-    client = await hass_client()
+    client = await menuai_client()
     resp = await client.options(
         "/something/__init__.py",
         headers={

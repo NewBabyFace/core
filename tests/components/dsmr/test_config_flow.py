@@ -9,11 +9,11 @@ import pytest
 import serial
 import serial.tools.list_ports
 
-from homeassistant import config_entries
-from homeassistant.components.dsmr import config_flow
-from homeassistant.components.dsmr.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.dsmr import config_flow
+from menuai.components.dsmr.const import DOMAIN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
@@ -33,11 +33,11 @@ def com_port():
 
 
 async def test_setup_network(
-    hass: HomeAssistant,
+    menuai: menuai,
     dsmr_connection_send_validate_fixture: tuple[MagicMock, MagicMock, MagicMock],
 ) -> None:
     """Test we can setup network."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -45,7 +45,7 @@ async def test_setup_network(
     assert result["step_id"] == "user"
     assert result["errors"] is None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"type": "Network"},
     )
@@ -54,8 +54,8 @@ async def test_setup_network(
     assert result["step_id"] == "setup_network"
     assert result["errors"] == {}
 
-    with patch("homeassistant.components.dsmr.async_setup_entry", return_value=True):
-        result = await hass.config_entries.flow.async_configure(
+    with patch("menuai.components.dsmr.async_setup_entry", return_value=True):
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "host": "10.10.0.1",
@@ -63,7 +63,7 @@ async def test_setup_network(
                 "dsmr_version": "2.2",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     entry_data = {
         "host": "10.10.0.1",
@@ -78,7 +78,7 @@ async def test_setup_network(
 
 
 async def test_setup_network_rfxtrx(
-    hass: HomeAssistant,
+    menuai: menuai,
     dsmr_connection_send_validate_fixture: tuple[MagicMock, MagicMock, MagicMock],
     rfxtrx_dsmr_connection_send_validate_fixture: tuple[
         MagicMock, MagicMock, MagicMock
@@ -87,7 +87,7 @@ async def test_setup_network_rfxtrx(
     """Test we can setup network."""
     (connection_factory, transport, protocol) = dsmr_connection_send_validate_fixture
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -95,7 +95,7 @@ async def test_setup_network_rfxtrx(
     assert result["step_id"] == "user"
     assert result["errors"] is None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"type": "Network"},
     )
@@ -107,8 +107,8 @@ async def test_setup_network_rfxtrx(
     # set-up DSMRProtocol to yield no valid telegram, this will retry with RFXtrxDSMRProtocol
     protocol.telegram = {}
 
-    with patch("homeassistant.components.dsmr.async_setup_entry", return_value=True):
-        result = await hass.config_entries.flow.async_configure(
+    with patch("menuai.components.dsmr.async_setup_entry", return_value=True):
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "host": "10.10.0.1",
@@ -116,7 +116,7 @@ async def test_setup_network_rfxtrx(
                 "dsmr_version": "2.2",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     entry_data = {
         "host": "10.10.0.1",
@@ -198,7 +198,7 @@ async def test_setup_network_rfxtrx(
 @patch("serial.tools.list_ports.comports", return_value=[com_port()])
 async def test_setup_serial(
     com_mock,
-    hass: HomeAssistant,
+    menuai: menuai,
     dsmr_connection_send_validate_fixture: tuple[MagicMock, MagicMock, MagicMock],
     version: str,
     entry_data: dict[str, Any],
@@ -206,7 +206,7 @@ async def test_setup_serial(
     """Test we can setup serial."""
     port = com_port()
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -214,7 +214,7 @@ async def test_setup_serial(
     assert result["step_id"] == "user"
     assert result["errors"] is None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"type": "Serial"},
     )
@@ -223,12 +223,12 @@ async def test_setup_serial(
     assert result["step_id"] == "setup_serial"
     assert result["errors"] == {}
 
-    with patch("homeassistant.components.dsmr.async_setup_entry", return_value=True):
-        result = await hass.config_entries.flow.async_configure(
+    with patch("menuai.components.dsmr.async_setup_entry", return_value=True):
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {"port": port.device, "dsmr_version": version},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == port.device
@@ -238,7 +238,7 @@ async def test_setup_serial(
 @patch("serial.tools.list_ports.comports", return_value=[com_port()])
 async def test_setup_serial_rfxtrx(
     com_mock,
-    hass: HomeAssistant,
+    menuai: menuai,
     dsmr_connection_send_validate_fixture: tuple[MagicMock, MagicMock, MagicMock],
     rfxtrx_dsmr_connection_send_validate_fixture: tuple[
         MagicMock, MagicMock, MagicMock
@@ -249,7 +249,7 @@ async def test_setup_serial_rfxtrx(
 
     port = com_port()
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -257,7 +257,7 @@ async def test_setup_serial_rfxtrx(
     assert result["step_id"] == "user"
     assert result["errors"] is None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"type": "Serial"},
     )
@@ -269,12 +269,12 @@ async def test_setup_serial_rfxtrx(
     # set-up DSMRProtocol to yield no valid telegram, this will retry with RFXtrxDSMRProtocol
     protocol.telegram = {}
 
-    with patch("homeassistant.components.dsmr.async_setup_entry", return_value=True):
-        result = await hass.config_entries.flow.async_configure(
+    with patch("menuai.components.dsmr.async_setup_entry", return_value=True):
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {"port": port.device, "dsmr_version": "2.2"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     entry_data = {
         "port": port.device,
@@ -290,11 +290,11 @@ async def test_setup_serial_rfxtrx(
 @patch("serial.tools.list_ports.comports", return_value=[com_port()])
 async def test_setup_serial_manual(
     com_mock,
-    hass: HomeAssistant,
+    menuai: menuai,
     dsmr_connection_send_validate_fixture: tuple[MagicMock, MagicMock, MagicMock],
 ) -> None:
     """Test we can setup serial with manual entry."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -302,7 +302,7 @@ async def test_setup_serial_manual(
     assert result["step_id"] == "user"
     assert result["errors"] is None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"type": "Serial"},
     )
@@ -311,7 +311,7 @@ async def test_setup_serial_manual(
     assert result["step_id"] == "setup_serial"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"port": "Enter Manually", "dsmr_version": "2.2"},
     )
@@ -320,11 +320,11 @@ async def test_setup_serial_manual(
     assert result["step_id"] == "setup_serial_manual_path"
     assert result["errors"] is None
 
-    with patch("homeassistant.components.dsmr.async_setup_entry", return_value=True):
-        result = await hass.config_entries.flow.async_configure(
+    with patch("menuai.components.dsmr.async_setup_entry", return_value=True):
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], {"port": "/dev/ttyUSB0"}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     entry_data = {
         "port": "/dev/ttyUSB0",
@@ -340,7 +340,7 @@ async def test_setup_serial_manual(
 @patch("serial.tools.list_ports.comports", return_value=[com_port()])
 async def test_setup_serial_fail(
     com_mock,
-    hass: HomeAssistant,
+    menuai: menuai,
     dsmr_connection_send_validate_fixture: tuple[MagicMock, MagicMock, MagicMock],
 ) -> None:
     """Test failed serial connection."""
@@ -348,7 +348,7 @@ async def test_setup_serial_fail(
 
     port = com_port()
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -362,7 +362,7 @@ async def test_setup_serial_fail(
     assert result["step_id"] == "user"
     assert result["errors"] is None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"type": "Serial"},
     )
@@ -372,10 +372,10 @@ async def test_setup_serial_fail(
     assert result["errors"] == {}
 
     with patch(
-        "homeassistant.components.dsmr.config_flow.create_dsmr_reader",
+        "menuai.components.dsmr.config_flow.create_dsmr_reader",
         first_fail_connection_factory,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {"port": port.device, "dsmr_version": "2.2"},
         )
@@ -388,7 +388,7 @@ async def test_setup_serial_fail(
 @patch("serial.tools.list_ports.comports", return_value=[com_port()])
 async def test_setup_serial_timeout(
     com_mock,
-    hass: HomeAssistant,
+    menuai: menuai,
     dsmr_connection_send_validate_fixture: tuple[MagicMock, MagicMock, MagicMock],
     rfxtrx_dsmr_connection_send_validate_fixture: tuple[
         MagicMock, MagicMock, MagicMock
@@ -404,7 +404,7 @@ async def test_setup_serial_timeout(
 
     port = com_port()
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -424,7 +424,7 @@ async def test_setup_serial_timeout(
     assert result["step_id"] == "user"
     assert result["errors"] is None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"type": "Serial"},
     )
@@ -433,8 +433,8 @@ async def test_setup_serial_timeout(
     assert result["step_id"] == "setup_serial"
     assert result["errors"] == {}
 
-    with patch("homeassistant.components.dsmr.async_setup_entry", return_value=True):
-        result = await hass.config_entries.flow.async_configure(
+    with patch("menuai.components.dsmr.async_setup_entry", return_value=True):
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], {"port": port.device, "dsmr_version": "2.2"}
         )
 
@@ -446,7 +446,7 @@ async def test_setup_serial_timeout(
 @patch("serial.tools.list_ports.comports", return_value=[com_port()])
 async def test_setup_serial_wrong_telegram(
     com_mock,
-    hass: HomeAssistant,
+    menuai: menuai,
     dsmr_connection_send_validate_fixture: tuple[MagicMock, MagicMock, MagicMock],
     rfxtrx_dsmr_connection_send_validate_fixture: tuple[
         MagicMock, MagicMock, MagicMock
@@ -462,7 +462,7 @@ async def test_setup_serial_wrong_telegram(
 
     port = com_port()
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -470,7 +470,7 @@ async def test_setup_serial_wrong_telegram(
     assert result["step_id"] == "user"
     assert result["errors"] is None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"type": "Serial"},
     )
@@ -482,7 +482,7 @@ async def test_setup_serial_wrong_telegram(
     protocol.telegram = {}
     rfxtrx_protocol.telegram = {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"port": port.device, "dsmr_version": "2.2"},
     )
@@ -492,7 +492,7 @@ async def test_setup_serial_wrong_telegram(
     assert result["errors"] == {"base": "cannot_communicate"}
 
 
-async def test_options_flow(hass: HomeAssistant) -> None:
+async def test_options_flow(menuai: menuai) -> None:
     """Test options flow."""
 
     entry_data = {
@@ -505,14 +505,14 @@ async def test_options_flow(hass: HomeAssistant) -> None:
         data=entry_data,
         unique_id="/dev/ttyUSB0",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await menuai.config_entries.options.async_init(entry.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "time_between_update": 15,
@@ -520,12 +520,12 @@ async def test_options_flow(hass: HomeAssistant) -> None:
     )
 
     with (
-        patch("homeassistant.components.dsmr.async_setup_entry", return_value=True),
-        patch("homeassistant.components.dsmr.async_unload_entry", return_value=True),
+        patch("menuai.components.dsmr.async_setup_entry", return_value=True),
+        patch("menuai.components.dsmr.async_unload_entry", return_value=True),
     ):
         assert result["type"] is FlowResultType.CREATE_ENTRY
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert entry.options == {"time_between_update": 15}
 

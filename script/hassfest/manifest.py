@@ -17,8 +17,8 @@ from awesomeversion import (
 import voluptuous as vol
 from voluptuous.humanize import humanize_error
 
-from homeassistant.const import Platform
-from homeassistant.helpers import config_validation as cv
+from menuai.const import Platform
+from menuai.helpers import config_validation as cv
 from script.util import sort_manifest as util_sort_manifest
 
 from .model import Config, Integration, ScaledQualityScaleTiers
@@ -26,7 +26,7 @@ from .model import Config, Integration, ScaledQualityScaleTiers
 DOCUMENTATION_URL_SCHEMA = "https"
 DOCUMENTATION_URL_HOST = "www.home-assistant.io"
 DOCUMENTATION_URL_PATH_PREFIX = "/integrations/"
-DOCUMENTATION_URL_EXCEPTIONS = {"https://www.home-assistant.io/hassio"}
+DOCUMENTATION_URL_EXCEPTIONS = {"https://www.home-assistant.io/menuaiio"}
 
 _CORE_DOCUMENTATION_BASE = "https://www.home-assistant.io/integrations"
 
@@ -77,12 +77,12 @@ NO_IOT_CLASS = [
     "hardkernel",
     "hardware",
     "history",
-    "homeassistant",
-    "homeassistant_alerts",
-    "homeassistant_green",
-    "homeassistant_hardware",
-    "homeassistant_sky_connect",
-    "homeassistant_yellow",
+    "menuai",
+    "menuai_alerts",
+    "menuai_green",
+    "menuai_hardware",
+    "menuai_sky_connect",
+    "menuai_yellow",
     "image_upload",
     "input_boolean",
     "input_button",
@@ -404,7 +404,7 @@ def sort_manifest(integration: Integration, config: Config) -> bool:
 
 def validate(integrations: dict[str, Integration], config: Config) -> None:
     """Handle all integrations manifests."""
-    core_components_dir = config.root / "homeassistant/components"
+    core_components_dir = config.root / "menuai/components"
     manifests_resorted = []
     for integration in integrations.values():
         validate_manifest(integration, core_components_dir)

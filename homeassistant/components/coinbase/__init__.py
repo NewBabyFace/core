@@ -10,11 +10,11 @@ from coinbase.rest.rest_base import HTTPError
 from coinbase.wallet.client import Client as LegacyClient
 from coinbase.wallet.error import AuthenticationError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_API_KEY, CONF_API_TOKEN, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.util import Throttle
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_API_KEY, CONF_API_TOKEN, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.util import Throttle
 
 from .const import (
     ACCOUNT_IS_VAULT,
@@ -47,23 +47,23 @@ MIN_TIME_BETWEEN_UPDATES = timedelta(minutes=1)
 type CoinbaseConfigEntry = ConfigEntry[CoinbaseData]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: CoinbaseConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: CoinbaseConfigEntry) -> bool:
     """Set up Coinbase from a config entry."""
 
-    instance = await hass.async_add_executor_job(create_and_update_instance, entry)
+    instance = await menuai.async_add_executor_job(create_and_update_instance, entry)
 
     entry.async_on_unload(entry.add_update_listener(update_listener))
 
     entry.runtime_data = instance
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: CoinbaseConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: CoinbaseConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 def create_and_update_instance(entry: CoinbaseConfigEntry) -> CoinbaseData:
@@ -83,13 +83,13 @@ def create_and_update_instance(entry: CoinbaseConfigEntry) -> CoinbaseData:
 
 
 async def update_listener(
-    hass: HomeAssistant, config_entry: CoinbaseConfigEntry
+    menuai: menuai, config_entry: CoinbaseConfigEntry
 ) -> None:
     """Handle options update."""
 
-    await hass.config_entries.async_reload(config_entry.entry_id)
+    await menuai.config_entries.async_reload(config_entry.entry_id)
 
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     entities = er.async_entries_for_config_entry(registry, config_entry.entry_id)
 
     # Remove orphaned entities

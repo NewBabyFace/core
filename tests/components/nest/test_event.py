@@ -9,9 +9,9 @@ from google_nest_sdm.event import EventMessage, EventType
 from google_nest_sdm.traits import TraitType
 import pytest
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.util.dt import utcnow
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.util.dt import utcnow
 
 from .common import DEVICE_ID, TEST_CLIP_URL, CreateDevice, create_nest_event
 from .conftest import PlatformSetup
@@ -142,7 +142,7 @@ def create_event_messages(
     ],
 )
 async def test_receive_events(
-    hass: HomeAssistant,
+    menuai: menuai,
     subscriber: AsyncMock,
     setup_platform: PlatformSetup,
     create_device: CreateDevice,
@@ -161,7 +161,7 @@ async def test_receive_events(
     )
     await setup_platform()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == "unknown"
     assert state.attributes == {
         **expected_attributes,
@@ -169,9 +169,9 @@ async def test_receive_events(
     }
 
     await subscriber.async_receive_event(create_events([api_event_type]))
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == "2024-08-24T12:00:00.000+00:00"
     assert state.attributes == {
         **expected_attributes,
@@ -182,7 +182,7 @@ async def test_receive_events(
 
 @pytest.mark.parametrize(("trait_type"), [(TraitType.DOORBELL_CHIME)])
 async def test_ignore_unrelated_event(
-    hass: HomeAssistant,
+    menuai: menuai,
     subscriber: AsyncMock,
     setup_platform: PlatformSetup,
     create_device: CreateDevice,
@@ -198,9 +198,9 @@ async def test_ignore_unrelated_event(
 
     # Device does not have traits matching this event type
     await subscriber.async_receive_event(create_events([EventType.CAMERA_MOTION]))
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("event.front_chime")
+    state = menuai.states.get("event.front_chime")
     assert state.state == "unknown"
     assert state.attributes == {
         "device_class": "doorbell",
@@ -212,13 +212,13 @@ async def test_ignore_unrelated_event(
 
 @pytest.mark.freeze_time("2024-08-24T12:00:00Z")
 async def test_event_threads(
-    hass: HomeAssistant,
+    menuai: menuai,
     subscriber: AsyncMock,
     setup_platform: PlatformSetup,
     create_device: CreateDevice,
     freezer: FrozenDateTimeFactory,
 ) -> None:
-    """Test multiple events delivered as part of a thread are a single home assistant event."""
+    """Test multiple events delivered as part of a thread are a single MenuAI event."""
     create_device.create(
         raw_traits={
             TraitType.DOORBELL_CHIME: {},
@@ -227,7 +227,7 @@ async def test_event_threads(
     )
     await setup_platform()
 
-    state = hass.states.get("event.front_chime")
+    state = menuai.states.get("event.front_chime")
     assert state.state == "unknown"
 
     # Doorbell event is received
@@ -243,9 +243,9 @@ async def test_event_threads(
             parameters={"eventThreadState": "STARTED"},
         )
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("event.front_chime")
+    state = menuai.states.get("event.front_chime")
     assert state.state == "2024-08-24T12:00:02.000+00:00"
     assert state.attributes == {
         "device_class": "doorbell",
@@ -272,9 +272,9 @@ async def test_event_threads(
             parameters={"eventThreadState": "ENDED"},
         )
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("event.front_chime")
+    state = menuai.states.get("event.front_chime")
     assert (
         state.state == "2024-08-24T12:00:02.000+00:00"
     )  # A second event is not received
@@ -303,9 +303,9 @@ async def test_event_threads(
             parameters={"eventThreadState": "ENDED"},
         )
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("event.front_chime")
+    state = menuai.states.get("event.front_chime")
     assert state.state == "2024-08-24T12:00:06.000+00:00"  # Third event is received
     assert state.attributes == {
         "device_class": "doorbell",

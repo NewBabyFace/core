@@ -8,13 +8,13 @@ from unittest.mock import Mock
 
 from webrtc_models import RTCIceCandidateInit
 
-from homeassistant.components.camera import (
+from menuai.components.camera import (
     Camera,
     CameraWebRTCProvider,
     WebRTCAnswer,
     WebRTCSendMessage,
 )
-from homeassistant.core import callback
+from menuai.core import callback
 
 EMPTY_8_6_JPEG = b"empty_8_6"
 WEBRTC_ANSWER = "a=sendonly"

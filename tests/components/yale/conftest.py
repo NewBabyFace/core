@@ -5,8 +5,8 @@ from unittest.mock import patch
 import pytest
 from yalexs.manager.ratelimit import _RateLimitChecker
 
-from homeassistant.components.yale.const import DOMAIN
-from homeassistant.core import HomeAssistant
+from menuai.components.yale.const import DOMAIN
+from menuai.core import menuai
 
 from .mocks import mock_client_credentials, mock_config_entry
 
@@ -17,7 +17,7 @@ from tests.common import MockConfigEntry, load_fixture
 def mock_discovery_fixture():
     """Mock discovery to avoid loading the whole bluetooth stack."""
     with patch(
-        "homeassistant.components.yale.data.discovery_flow.async_create_flow"
+        "menuai.components.yale.data.discovery_flow.async_create_flow"
     ) as mock_discovery:
         yield mock_discovery
 
@@ -54,9 +54,9 @@ def load_reauth_jwt_wrong_account_fixture() -> str:
 
 
 @pytest.fixture(name="client_credentials", autouse=True)
-async def mock_client_credentials_fixture(hass: HomeAssistant) -> None:
+async def mock_client_credentials_fixture(menuai: menuai) -> None:
     """Mock client credentials."""
-    await mock_client_credentials(hass)
+    await mock_client_credentials(menuai)
 
 
 @pytest.fixture(name="skip_cloud", autouse=True)
@@ -68,5 +68,5 @@ def skip_cloud_fixture():
     We do not need to test it here as we only need to test our
     usage of the oauth2 helpers.
     """
-    with patch("homeassistant.components.cloud.async_setup", return_value=True):
+    with patch("menuai.components.cloud.async_setup", return_value=True):
         yield

@@ -8,7 +8,7 @@ from typing import Any, cast
 from aiocomelit import ComelitSerialBridgeObject
 from aiocomelit.const import CLIMATE
 
-from homeassistant.components.humidifier import (
+from menuai.components.humidifier import (
     DOMAIN as HUMIDIFIER_DOMAIN,
     MODE_AUTO,
     MODE_NORMAL,
@@ -17,9 +17,9 @@ from homeassistant.components.humidifier import (
     HumidifierEntity,
     HumidifierEntityFeature,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import ComelitConfigEntry, ComelitSerialBridge
@@ -58,7 +58,7 @@ MODE_TO_ACTION: dict[str, HumidifierComelitCommand] = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ComelitConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -77,7 +77,7 @@ async def async_setup_entry(
                 HumidifierDeviceClass.DEHUMIDIFIER,
             ):
                 await cleanup_stale_entity(
-                    hass,
+                    menuai,
                     config_entry,
                     f"{config_entry.entry_id}-{device.index}-{device_class}",
                     device,

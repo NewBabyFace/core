@@ -11,8 +11,8 @@ from yalexs.doorbell import DoorbellDetail
 from yalexs.lock import LockDetail
 from yalexs.manager.const import ACTIVITY_UPDATE_INTERVAL
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import aiohttp_client
+from menuai.core import menuai, callback
+from menuai.helpers import aiohttp_client
 
 from . import YaleData
 
@@ -20,12 +20,12 @@ TIME_TO_DECLARE_DETECTION = timedelta(seconds=ACTIVITY_UPDATE_INTERVAL.total_sec
 
 
 @callback
-def async_create_yale_clientsession(hass: HomeAssistant) -> aiohttp.ClientSession:
+def async_create_yale_clientsession(menuai: menuai) -> aiohttp.ClientSession:
     """Create an aiohttp session for the yale integration."""
     # Create an aiohttp session instead of using the default one since the
     # default one is likely to trigger yale's WAF if another integration
     # is also using Cloudflare
-    return aiohttp_client.async_create_clientsession(hass)
+    return aiohttp_client.async_create_clientsession(menuai)
 
 
 def retrieve_time_based_activity(

@@ -3,17 +3,17 @@
 from datetime import timedelta
 from unittest.mock import ANY, patch
 
-from homeassistant.components.lock import (
+from menuai.components.lock import (
     DOMAIN as LOCK_DOMAIN,
     SERVICE_LOCK,
     SERVICE_UNLOCK,
     LockState,
 )
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.entity_component import async_update_entity
-from homeassistant.util.dt import utcnow
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.entity_component import async_update_entity
+from menuai.util.dt import utcnow
 
 from .conftest import get_states_response_for_uid
 
@@ -23,7 +23,7 @@ uid = "2WRRJR6RCZQZSND8VP0YTO3YXCSOFPKBMW8T51TU-LQ*2VAS3HTWINNZ5N6HVEIPDJ6NX85P2
 
 
 async def test_lock_get_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
     init_integration: MockConfigEntry,
@@ -38,7 +38,7 @@ async def test_lock_get_state(
     assert device.model == "lock"
 
     entity_id = "lock.lock"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == LockState.UNLOCKED
     assert state.attributes.get("friendly_name") == "lock"
@@ -50,13 +50,13 @@ async def test_lock_get_state(
     states_response = get_states_response_for_uid(uid)
     states_response[0]["state"]["lock"] = 1
     with patch(
-        "homeassistant.components.freedompro.coordinator.get_states",
+        "menuai.components.freedompro.coordinator.get_states",
         return_value=states_response,
     ):
-        async_fire_time_changed(hass, utcnow() + timedelta(hours=2))
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, utcnow() + timedelta(hours=2))
+        await menuai.async_block_till_done()
 
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert state.attributes.get("friendly_name") == "lock"
 
@@ -68,7 +68,7 @@ async def test_lock_get_state(
 
 
 async def test_lock_set_unlock(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     init_integration: MockConfigEntry,
 ) -> None:
@@ -79,14 +79,14 @@ async def test_lock_set_unlock(
     states_response = get_states_response_for_uid(uid)
     states_response[0]["state"]["lock"] = 1
     with patch(
-        "homeassistant.components.freedompro.coordinator.get_states",
+        "menuai.components.freedompro.coordinator.get_states",
         return_value=states_response,
     ):
-        await async_update_entity(hass, entity_id)
-        async_fire_time_changed(hass, utcnow() + timedelta(hours=2))
-        await hass.async_block_till_done()
+        await async_update_entity(menuai, entity_id)
+        async_fire_time_changed(menuai, utcnow() + timedelta(hours=2))
+        await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == LockState.LOCKED
     assert state.attributes.get("friendly_name") == "lock"
@@ -95,8 +95,8 @@ async def test_lock_set_unlock(
     assert entry
     assert entry.unique_id == uid
 
-    with patch("homeassistant.components.freedompro.lock.put_state") as mock_put_state:
-        await hass.services.async_call(
+    with patch("menuai.components.freedompro.lock.put_state") as mock_put_state:
+        await menuai.services.async_call(
             LOCK_DOMAIN,
             SERVICE_UNLOCK,
             {ATTR_ENTITY_ID: [entity_id]},
@@ -107,25 +107,25 @@ async def test_lock_set_unlock(
     states_response = get_states_response_for_uid(uid)
     states_response[0]["state"]["lock"] = 0
     with patch(
-        "homeassistant.components.freedompro.coordinator.get_states",
+        "menuai.components.freedompro.coordinator.get_states",
         return_value=states_response,
     ):
-        async_fire_time_changed(hass, utcnow() + timedelta(hours=2))
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, utcnow() + timedelta(hours=2))
+        await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == LockState.UNLOCKED
 
 
 async def test_lock_set_lock(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     init_integration: MockConfigEntry,
 ) -> None:
     """Test set on of the lock."""
 
     entity_id = "lock.lock"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == LockState.UNLOCKED
     assert state.attributes.get("friendly_name") == "lock"
@@ -134,8 +134,8 @@ async def test_lock_set_lock(
     assert entry
     assert entry.unique_id == uid
 
-    with patch("homeassistant.components.freedompro.lock.put_state") as mock_put_state:
-        await hass.services.async_call(
+    with patch("menuai.components.freedompro.lock.put_state") as mock_put_state:
+        await menuai.services.async_call(
             LOCK_DOMAIN,
             SERVICE_LOCK,
             {ATTR_ENTITY_ID: [entity_id]},
@@ -146,12 +146,12 @@ async def test_lock_set_lock(
     states_response = get_states_response_for_uid(uid)
     states_response[0]["state"]["lock"] = 1
     with patch(
-        "homeassistant.components.freedompro.coordinator.get_states",
+        "menuai.components.freedompro.coordinator.get_states",
         return_value=states_response,
     ):
-        async_fire_time_changed(hass, utcnow() + timedelta(hours=2))
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, utcnow() + timedelta(hours=2))
+        await menuai.async_block_till_done()
 
-    await hass.async_block_till_done()
-    state = hass.states.get(entity_id)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(entity_id)
     assert state.state == LockState.LOCKED

@@ -8,17 +8,17 @@ import secrets
 from aiohttp import web
 from toonapi import Status, Toon, ToonError
 
-from homeassistant.components import cloud, webhook
-from homeassistant.components.webhook import (
+from menuai.components import cloud, webhook
+from menuai.components.webhook import (
     async_register as webhook_register,
     async_unregister as webhook_unregister,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_WEBHOOK_ID, EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import Event, HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.config_entry_oauth2_flow import OAuth2Session
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_WEBHOOK_ID, EVENT_menuai_STOP
+from menuai.core import Event, menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.config_entry_oauth2_flow import OAuth2Session
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import CONF_CLOUDHOOK_URL, DEFAULT_SCAN_INTERVAL, DOMAIN
 
@@ -31,7 +31,7 @@ class ToonDataUpdateCoordinator(DataUpdateCoordinator[Status]):
     config_entry: ConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, entry: ConfigEntry, session: OAuth2Session
+        self, menuai: menuai, entry: ConfigEntry, session: OAuth2Session
     ) -> None:
         """Initialize global Toon data updater."""
         self.session = session
@@ -42,12 +42,12 @@ class ToonDataUpdateCoordinator(DataUpdateCoordinator[Status]):
 
         self.toon = Toon(
             token=session.token["access_token"],
-            session=async_get_clientsession(hass),
+            session=async_get_clientsession(menuai),
             token_refresh_method=async_token_refresh,
         )
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
             name=DOMAIN,
@@ -58,35 +58,35 @@ class ToonDataUpdateCoordinator(DataUpdateCoordinator[Status]):
         """Register a webhook with Toon to get live updates."""
         if CONF_WEBHOOK_ID not in self.config_entry.data:
             data = {**self.config_entry.data, CONF_WEBHOOK_ID: secrets.token_hex()}
-            self.hass.config_entries.async_update_entry(self.config_entry, data=data)
+            self.menuai.config_entries.async_update_entry(self.config_entry, data=data)
 
-        if cloud.async_active_subscription(self.hass):
+        if cloud.async_active_subscription(self.menuai):
             if CONF_CLOUDHOOK_URL not in self.config_entry.data:
                 try:
                     webhook_url = await cloud.async_create_cloudhook(
-                        self.hass, self.config_entry.data[CONF_WEBHOOK_ID]
+                        self.menuai, self.config_entry.data[CONF_WEBHOOK_ID]
                     )
                 except cloud.CloudNotConnected:
                     webhook_url = webhook.async_generate_url(
-                        self.hass, self.config_entry.data[CONF_WEBHOOK_ID]
+                        self.menuai, self.config_entry.data[CONF_WEBHOOK_ID]
                     )
                 else:
                     data = {**self.config_entry.data, CONF_CLOUDHOOK_URL: webhook_url}
-                    self.hass.config_entries.async_update_entry(
+                    self.menuai.config_entries.async_update_entry(
                         self.config_entry, data=data
                     )
             else:
                 webhook_url = self.config_entry.data[CONF_CLOUDHOOK_URL]
         else:
             webhook_url = webhook.async_generate_url(
-                self.hass, self.config_entry.data[CONF_WEBHOOK_ID]
+                self.menuai, self.config_entry.data[CONF_WEBHOOK_ID]
             )
 
         # Ensure the webhook is not registered already
-        webhook_unregister(self.hass, self.config_entry.data[CONF_WEBHOOK_ID])
+        webhook_unregister(self.menuai, self.config_entry.data[CONF_WEBHOOK_ID])
 
         webhook_register(
-            self.hass,
+            self.menuai,
             DOMAIN,
             "Toon",
             self.config_entry.data[CONF_WEBHOOK_ID],
@@ -101,12 +101,12 @@ class ToonDataUpdateCoordinator(DataUpdateCoordinator[Status]):
         except ToonError as err:
             _LOGGER.error("Error during webhook registration - %s", err)
 
-        self.hass.bus.async_listen_once(
-            EVENT_HOMEASSISTANT_STOP, self.unregister_webhook
+        self.menuai.bus.async_listen_once(
+            EVENT_menuai_STOP, self.unregister_webhook
         )
 
     async def handle_webhook(
-        self, hass: HomeAssistant, webhook_id: str, request: web.Request
+        self, menuai: menuai, webhook_id: str, request: web.Request
     ) -> None:
         """Handle webhook callback."""
         try:
@@ -145,7 +145,7 @@ class ToonDataUpdateCoordinator(DataUpdateCoordinator[Status]):
         except ToonError as err:
             _LOGGER.error("Failed unregistering Toon webhook - %s", err)
 
-        webhook_unregister(self.hass, self.config_entry.data[CONF_WEBHOOK_ID])
+        webhook_unregister(self.menuai, self.config_entry.data[CONF_WEBHOOK_ID])
 
     async def _async_update_data(self) -> Status:
         """Fetch data from Toon."""

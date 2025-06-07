@@ -11,18 +11,18 @@ from aiohttp import ClientResponseError
 from doorbirdpy import DoorBird
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
-from homeassistant.helpers.typing import VolDictType
+from menuai.const import CONF_HOST, CONF_NAME, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.helpers.typing import VolDictType
 
 from .const import (
     CONF_EVENTS,
@@ -57,9 +57,9 @@ def _schema_with_defaults(
     )
 
 
-async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, str]:
+async def validate_input(menuai: menuai, data: dict[str, Any]) -> dict[str, str]:
     """Validate the user input allows us to connect."""
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
     device = DoorBird(
         data[CONF_HOST], data[CONF_USERNAME], data[CONF_PASSWORD], http_session=session
     )
@@ -78,9 +78,9 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     return {"title": data[CONF_HOST], "mac_addr": mac_addr}
 
 
-async def async_verify_supported_device(hass: HomeAssistant, host: str) -> bool:
+async def async_verify_supported_device(menuai: menuai, host: str) -> bool:
     """Verify the doorbell state endpoint returns a 401."""
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
     device = DoorBird(host, "", "", http_session=session)
     try:
         await device.doorbell_state()
@@ -176,7 +176,7 @@ class DoorBirdConfigFlow(ConfigFlow, domain=DOMAIN):
 
         self._async_abort_entries_match({CONF_HOST: host})
 
-        if not await async_verify_supported_device(self.hass, host):
+        if not await async_verify_supported_device(self.menuai, host):
             return self.async_abort(reason="not_doorbird_device")
 
         chop_ending = "._axis-video._tcp.local."
@@ -197,7 +197,7 @@ class DoorBirdConfigFlow(ConfigFlow, domain=DOMAIN):
         errors = {}
         info = {}
         try:
-            info = await validate_input(self.hass, user_input)
+            info = await validate_input(self.menuai, user_input)
         except CannotConnect:
             errors["base"] = "cannot_connect"
         except InvalidAuth:
@@ -237,9 +237,9 @@ class OptionsFlowHandler(OptionsFlow):
         return self.async_show_form(step_id="init", data_schema=options_schema)
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(menuaiError):
     """Error to indicate there is invalid auth."""

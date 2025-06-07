@@ -6,10 +6,10 @@ from libsoundtouch import soundtouch_device
 from requests import RequestException
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST
+from menuai.helpers import config_validation as cv
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import DOMAIN
 
@@ -81,7 +81,7 @@ class SoundtouchConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def _async_get_device_id(self, raise_on_progress: bool = True) -> None:
         """Get device ID from SoundTouch device."""
-        device = await self.hass.async_add_executor_job(soundtouch_device, self.host)
+        device = await self.menuai.async_add_executor_job(soundtouch_device, self.host)
 
         # Check if already configured
         await self.async_set_unique_id(

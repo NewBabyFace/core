@@ -5,7 +5,7 @@ import logging
 from aiohttp.client_exceptions import ClientConnectionError
 from pysensibo.exceptions import AuthenticationError, SensiboError
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 LOGGER = logging.getLogger(__package__)
 

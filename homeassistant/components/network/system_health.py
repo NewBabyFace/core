@@ -2,8 +2,8 @@
 
 from typing import Any
 
-from homeassistant.components import system_health
-from homeassistant.core import HomeAssistant, callback
+from menuai.components import system_health
+from menuai.core import menuai, callback
 
 from . import Adapter, async_get_adapters, async_get_announce_addresses
 from .models import IPv4ConfiguredAddress, IPv6ConfiguredAddress
@@ -11,7 +11,7 @@ from .models import IPv4ConfiguredAddress, IPv6ConfiguredAddress
 
 @callback
 def async_register(
-    hass: HomeAssistant, register: system_health.SystemHealthRegistration
+    menuai: menuai, register: system_health.SystemHealthRegistration
 ) -> None:
     """Register system health callbacks."""
     register.async_register_info(system_health_info, "/config/network")
@@ -28,10 +28,10 @@ def _get_adapter_info(adapter: Adapter) -> str:
     return f"{adapter['name']} ({state}{default}{auto})"
 
 
-async def system_health_info(hass: HomeAssistant) -> dict[str, Any]:
+async def system_health_info(menuai: menuai) -> dict[str, Any]:
     """Get info for the info page."""
 
-    adapters = await async_get_adapters(hass)
+    adapters = await async_get_adapters(menuai)
     data: dict[str, Any] = {
         # k: v for adapter in adapters for k, v in _get_adapter_info(adapter).items()
         "adapters": ", ".join([_get_adapter_info(adapter) for adapter in adapters]),
@@ -47,7 +47,7 @@ async def system_health_info(hass: HomeAssistant) -> dict[str, Any]:
                 for adapter in adapters
             ]
         ),
-        "announce_addresses": ", ".join(await async_get_announce_addresses(hass)),
+        "announce_addresses": ", ".join(await async_get_announce_addresses(menuai)),
     }
 
     return data

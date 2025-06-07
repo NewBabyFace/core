@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any
 
 import voluptuous as vol
 
-from homeassistant.components.alarm_control_panel import (
+from menuai.components.alarm_control_panel import (
     ENTITY_ID_FORMAT,
     PLATFORM_SCHEMA as ALARM_CONTROL_PANEL_PLATFORM_SCHEMA,
     AlarmControlPanelEntity,
@@ -17,8 +17,8 @@ from homeassistant.components.alarm_control_panel import (
     AlarmControlPanelState,
     CodeFormat,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_CODE,
     CONF_DEVICE_ID,
     CONF_NAME,
@@ -28,18 +28,18 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import TemplateError
-from homeassistant.helpers import config_validation as cv, selector, template
-from homeassistant.helpers.device import async_device_info_to_link_from_device_id
-from homeassistant.helpers.entity import async_generate_entity_id
-from homeassistant.helpers.entity_platform import (
+from menuai.core import menuai, callback
+from menuai.exceptions import TemplateError
+from menuai.helpers import config_validation as cv, selector, template
+from menuai.helpers.device import async_device_info_to_link_from_device_id
+from menuai.helpers.entity import async_generate_entity_id
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     AddEntitiesCallback,
 )
-from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.script import Script
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.helpers.restore_state import RestoreEntity
+from menuai.helpers.script import Script
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import CONF_OBJECT_ID, CONF_PICTURE, DOMAIN
 from .entity import AbstractTemplateEntity
@@ -165,7 +165,7 @@ ALARM_CONTROL_PANEL_CONFIG_SCHEMA = vol.Schema(
 
 
 def rewrite_legacy_to_modern_conf(
-    hass: HomeAssistant, config: dict[str, dict]
+    menuai: menuai, config: dict[str, dict]
 ) -> list[dict]:
     """Rewrite legacy alarm control panel configuration definitions to modern ones."""
     alarm_control_panels = []
@@ -174,11 +174,11 @@ def rewrite_legacy_to_modern_conf(
         entity_conf = {**entity_conf, CONF_OBJECT_ID: object_id}
 
         entity_conf = rewrite_common_legacy_to_modern_conf(
-            hass, entity_conf, LEGACY_FIELDS
+            menuai, entity_conf, LEGACY_FIELDS
         )
 
         if CONF_NAME not in entity_conf:
-            entity_conf[CONF_NAME] = template.Template(object_id, hass)
+            entity_conf[CONF_NAME] = template.Template(object_id, menuai)
 
         alarm_control_panels.append(entity_conf)
 
@@ -188,7 +188,7 @@ def rewrite_legacy_to_modern_conf(
 @callback
 def _async_create_template_tracking_entities(
     async_add_entities: AddEntitiesCallback,
-    hass: HomeAssistant,
+    menuai: menuai,
     definitions: list[dict],
     unique_id_prefix: str | None,
 ) -> None:
@@ -203,7 +203,7 @@ def _async_create_template_tracking_entities(
 
         alarm_control_panels.append(
             AlarmControlPanelTemplate(
-                hass,
+                menuai,
                 entity_conf,
                 unique_id,
             )
@@ -223,7 +223,7 @@ def rewrite_options_to_modern_conf(option_config: dict[str, dict]) -> dict[str, 
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -235,7 +235,7 @@ async def async_setup_entry(
     async_add_entities(
         [
             AlarmControlPanelTemplate(
-                hass,
+                menuai,
                 validated_config,
                 config_entry.entry_id,
             )
@@ -244,7 +244,7 @@ async def async_setup_entry(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -253,15 +253,15 @@ async def async_setup_platform(
     if discovery_info is None:
         _async_create_template_tracking_entities(
             async_add_entities,
-            hass,
-            rewrite_legacy_to_modern_conf(hass, config[CONF_ALARM_CONTROL_PANELS]),
+            menuai,
+            rewrite_legacy_to_modern_conf(menuai, config[CONF_ALARM_CONTROL_PANELS]),
             None,
         )
         return
 
     _async_create_template_tracking_entities(
         async_add_entities,
-        hass,
+        menuai,
         discovery_info["entities"],
         discovery_info["unique_id"],
     )
@@ -414,18 +414,18 @@ class AlarmControlPanelTemplate(TemplateEntity, AbstractTemplateAlarmControlPane
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config: dict,
         unique_id: str | None,
     ) -> None:
         """Initialize the panel."""
         TemplateEntity.__init__(
-            self, hass, config=config, fallback_name=None, unique_id=unique_id
+            self, menuai, config=config, fallback_name=None, unique_id=unique_id
         )
         AbstractTemplateAlarmControlPanel.__init__(self, config)
         if (object_id := config.get(CONF_OBJECT_ID)) is not None:
             self.entity_id = async_generate_entity_id(
-                ENTITY_ID_FORMAT, object_id, hass=hass
+                ENTITY_ID_FORMAT, object_id, menuai=menuai
             )
         name = self._attr_name
         if TYPE_CHECKING:
@@ -439,13 +439,13 @@ class AlarmControlPanelTemplate(TemplateEntity, AbstractTemplateAlarmControlPane
             self._attr_supported_features |= supported_feature
 
         self._attr_device_info = async_device_info_to_link_from_device_id(
-            hass,
+            menuai,
             config.get(CONF_DEVICE_ID),
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Restore last state."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         await self._async_handle_restored_state()
 
     @callback

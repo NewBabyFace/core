@@ -285,7 +285,7 @@
           'Genres': list([
             'string',
           ]),
-          'HasSubtitles': True,
+          'menuaiubtitles': True,
           'Height': 0,
           'Id': 'EPISODE-UUID',
           'ImageBlurHashes': dict({
@@ -675,7 +675,7 @@
           'SeriesId': 'SERIES-UUID',
           'SeriesName': 'SERIES',
           'SeriesPrimaryImageTag': 'string',
-          'SeriesStudio': 'HASS',
+          'SeriesStudio': 'menuai',
           'SeriesThumbImageTag': 'string',
           'SeriesTimerId': 'string',
           'ServerId': 'SERVER-UUID',
@@ -1004,7 +1004,7 @@
           'Genres': list([
             'string',
           ]),
-          'HasSubtitles': True,
+          'menuaiubtitles': True,
           'Height': 0,
           'Id': 'EPISODE-UUID',
           'ImageBlurHashes': dict({
@@ -1394,7 +1394,7 @@
           'SeriesId': 'SERIES-UUID',
           'SeriesName': 'SERIES',
           'SeriesPrimaryImageTag': 'string',
-          'SeriesStudio': 'HASS',
+          'SeriesStudio': 'menuai',
           'SeriesThumbImageTag': 'string',
           'SeriesTimerId': 'string',
           'ServerId': 'SERVER-UUID',

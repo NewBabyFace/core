@@ -5,10 +5,10 @@ from unittest.mock import patch
 from pysnmp.proto.rfc1902 import Integer32
 import pytest
 
-from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
-from homeassistant.const import STATE_OFF, STATE_ON, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.switch import DOMAIN as SWITCH_DOMAIN
+from menuai.const import STATE_OFF, STATE_ON, STATE_UNKNOWN
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 config = {
     SWITCH_DOMAIN: {
@@ -22,46 +22,46 @@ config = {
 }
 
 
-async def test_snmp_integer_switch_off(hass: HomeAssistant) -> None:
+async def test_snmp_integer_switch_off(menuai: menuai) -> None:
     """Test snmp switch returning int 0 for off."""
 
     mock_data = Integer32(0)
     with patch(
-        "homeassistant.components.snmp.switch.getCmd",
+        "menuai.components.snmp.switch.getCmd",
         return_value=(None, None, None, [[mock_data]]),
     ):
-        assert await async_setup_component(hass, SWITCH_DOMAIN, config)
-        await hass.async_block_till_done()
-        state = hass.states.get("switch.snmp")
+        assert await async_setup_component(menuai, SWITCH_DOMAIN, config)
+        await menuai.async_block_till_done()
+        state = menuai.states.get("switch.snmp")
         assert state.state == STATE_OFF
 
 
-async def test_snmp_integer_switch_on(hass: HomeAssistant) -> None:
+async def test_snmp_integer_switch_on(menuai: menuai) -> None:
     """Test snmp switch returning int 1 for on."""
 
     mock_data = Integer32(1)
     with patch(
-        "homeassistant.components.snmp.switch.getCmd",
+        "menuai.components.snmp.switch.getCmd",
         return_value=(None, None, None, [[mock_data]]),
     ):
-        assert await async_setup_component(hass, SWITCH_DOMAIN, config)
-        await hass.async_block_till_done()
-        state = hass.states.get("switch.snmp")
+        assert await async_setup_component(menuai, SWITCH_DOMAIN, config)
+        await menuai.async_block_till_done()
+        state = menuai.states.get("switch.snmp")
         assert state.state == STATE_ON
 
 
 async def test_snmp_integer_switch_unknown(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test snmp switch returning int 3 (not a configured payload) for unknown."""
 
     mock_data = Integer32(3)
     with patch(
-        "homeassistant.components.snmp.switch.getCmd",
+        "menuai.components.snmp.switch.getCmd",
         return_value=(None, None, None, [[mock_data]]),
     ):
-        assert await async_setup_component(hass, SWITCH_DOMAIN, config)
-        await hass.async_block_till_done()
-        state = hass.states.get("switch.snmp")
+        assert await async_setup_component(menuai, SWITCH_DOMAIN, config)
+        await menuai.async_block_till_done()
+        state = menuai.states.get("switch.snmp")
         assert state.state == STATE_UNKNOWN
         assert "Invalid payload '3' received for entity" in caplog.text

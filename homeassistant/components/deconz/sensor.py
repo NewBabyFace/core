@@ -27,14 +27,14 @@ from pydeconz.models.sensor.switch import Switch
 from pydeconz.models.sensor.temperature import Temperature
 from pydeconz.models.sensor.time import Time
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     DOMAIN as SENSOR_DOMAIN,
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_TEMPERATURE,
     ATTR_VOLTAGE,
     CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
@@ -49,10 +49,10 @@ from homeassistant.const import (
     UnitOfTemperature,
     UnitOfTime,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
+from menuai.util import dt as dt_util
 
 from . import DeconzConfigEntry
 from .const import ATTR_DARK, ATTR_ON
@@ -330,7 +330,7 @@ ENTITY_DESCRIPTIONS: tuple[DeconzSensorDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: DeconzConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

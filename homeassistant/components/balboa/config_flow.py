@@ -9,16 +9,16 @@ from pybalboa import SpaClient
 from pybalboa.exceptions import SpaConnectionError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_MODEL
-from homeassistant.core import callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.schema_config_entry_flow import (
+from menuai.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_MODEL
+from menuai.core import callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.schema_config_entry_flow import (
     SchemaFlowFormStep,
     SchemaOptionsFlowHandler,
 )
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
 
 from .const import CONF_SYNC_TIME, DOMAIN
 
@@ -128,5 +128,5 @@ class BalboaSpaClientFlowHandler(ConfigFlow, domain=DOMAIN):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""

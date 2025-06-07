@@ -16,9 +16,9 @@ from habiticalib import (
 )
 import voluptuous as vol
 
-from homeassistant import data_entry_flow
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import (
+from menuai import data_entry_flow
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import (
     CONF_API_KEY,
     CONF_NAME,
     CONF_PASSWORD,
@@ -26,8 +26,8 @@ from homeassistant.const import (
     CONF_USERNAME,
     CONF_VERIFY_SSL,
 )
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.selector import (
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.selector import (
     TextSelector,
     TextSelectorConfig,
     TextSelectorType,
@@ -326,7 +326,7 @@ class HabiticaConfigFlow(ConfigFlow, domain=DOMAIN):
         """Validate login with login credentials."""
         errors: dict[str, str] = {}
         session = async_get_clientsession(
-            self.hass, verify_ssl=user_input.get(CONF_VERIFY_SSL, True)
+            self.menuai, verify_ssl=user_input.get(CONF_VERIFY_SSL, True)
         )
         api = Habitica(session=session, x_client=X_CLIENT)
         try:
@@ -354,7 +354,7 @@ class HabiticaConfigFlow(ConfigFlow, domain=DOMAIN):
         """Validate authentication with api key."""
         errors: dict[str, str] = {}
         session = async_get_clientsession(
-            self.hass, verify_ssl=user_input.get(CONF_VERIFY_SSL, True)
+            self.menuai, verify_ssl=user_input.get(CONF_VERIFY_SSL, True)
         )
         api = Habitica(
             session=session,

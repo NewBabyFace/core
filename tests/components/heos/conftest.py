@@ -27,9 +27,9 @@ from pyheos import (
 import pytest
 import pytest_asyncio
 
-from homeassistant.components.heos import DOMAIN
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.helpers.service_info.ssdp import (
+from menuai.components.heos import DOMAIN
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
+from menuai.helpers.service_info.ssdp import (
     ATTR_UPNP_DEVICE_TYPE,
     ATTR_UPNP_FRIENDLY_NAME,
     ATTR_UPNP_MANUFACTURER,
@@ -73,8 +73,8 @@ def new_heos_mock_fixture(controller: MockHeos) -> Iterator[Mock]:
     """Patch the Heos class to return the mock instance."""
     new_mock = Mock(return_value=controller)
     with (
-        patch("homeassistant.components.heos.coordinator.Heos", new=new_mock),
-        patch("homeassistant.components.heos.config_flow.Heos", new=new_mock),
+        patch("menuai.components.heos.coordinator.Heos", new=new_mock),
+        patch("menuai.components.heos.config_flow.Heos", new=new_mock),
     ):
         yield new_mock
 

@@ -11,13 +11,13 @@ from aiohttp import ClientConnectionError, ClientResponseError
 from bond_async import Bond, RequestorUUID
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntryState, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_HOST, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.config_entries import ConfigEntryState, ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_ACCESS_TOKEN, CONF_HOST, CONF_NAME
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import DOMAIN
 from .utils import BondHub
@@ -32,12 +32,12 @@ DISCOVERY_SCHEMA = vol.Schema({vol.Required(CONF_ACCESS_TOKEN): str})
 TOKEN_SCHEMA = vol.Schema({})
 
 
-async def async_get_token(hass: HomeAssistant, host: str) -> str | None:
+async def async_get_token(menuai: menuai, host: str) -> str | None:
     """Try to fetch the token from the bond device."""
     bond = Bond(
         host,
         "",
-        session=async_get_clientsession(hass),
+        session=async_get_clientsession(menuai),
         requestor_uuid=RequestorUUID.HOME_ASSISTANT,
     )
     response: dict[str, str] = {}
@@ -46,13 +46,13 @@ async def async_get_token(hass: HomeAssistant, host: str) -> str | None:
     return response.get("token")
 
 
-async def _validate_input(hass: HomeAssistant, data: dict[str, Any]) -> tuple[str, str]:
+async def _validate_input(menuai: menuai, data: dict[str, Any]) -> tuple[str, str]:
     """Validate the user input allows us to connect."""
 
     bond = Bond(
         data[CONF_HOST],
         data[CONF_ACCESS_TOKEN],
-        session=async_get_clientsession(hass),
+        session=async_get_clientsession(menuai),
         requestor_uuid=RequestorUUID.HOME_ASSISTANT,
     )
     try:
@@ -93,14 +93,14 @@ class BondConfigFlow(ConfigFlow, domain=DOMAIN):
         """
         host = self._discovered[CONF_HOST]
         try:
-            if not (token := await async_get_token(self.hass, host)):
+            if not (token := await async_get_token(self.menuai, host)):
                 return
         except TimeoutError:
             return
 
         self._discovered[CONF_ACCESS_TOKEN] = token
         try:
-            bond_id, hub_name = await _validate_input(self.hass, self._discovered)
+            bond_id, hub_name = await _validate_input(self.menuai, self._discovered)
         except InputValidationError:
             return
         await self.async_set_unique_id(bond_id)
@@ -135,7 +135,7 @@ class BondConfigFlow(ConfigFlow, domain=DOMAIN):
                 continue
             updates = {CONF_HOST: host}
             if entry.state is ConfigEntryState.SETUP_ERROR and (
-                token := await async_get_token(self.hass, host)
+                token := await async_get_token(self.menuai, host)
             ):
                 updates[CONF_ACCESS_TOKEN] = token
             return self.async_update_reload_and_abort(
@@ -179,7 +179,7 @@ class BondConfigFlow(ConfigFlow, domain=DOMAIN):
                 CONF_HOST: self._discovered[CONF_HOST],
             }
             try:
-                bond_id, hub_name = await _validate_input(self.hass, data)
+                bond_id, hub_name = await _validate_input(self.menuai, data)
             except InputValidationError as error:
                 errors["base"] = error.base
             else:
@@ -211,7 +211,7 @@ class BondConfigFlow(ConfigFlow, domain=DOMAIN):
         errors = {}
         if user_input is not None:
             try:
-                bond_id, hub_name = await _validate_input(self.hass, user_input)
+                bond_id, hub_name = await _validate_input(self.menuai, user_input)
             except InputValidationError as error:
                 errors["base"] = error.base
             else:
@@ -226,7 +226,7 @@ class BondConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class InputValidationError(HomeAssistantError):
+class InputValidationError(menuaiError):
     """Error to indicate we cannot proceed due to invalid input."""
 
     def __init__(self, base: str) -> None:

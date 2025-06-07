@@ -7,21 +7,21 @@ from typing import Final
 
 import voluptuous as vol
 
-from homeassistant.const import CONF_EVENT, CONF_PLATFORM, CONF_SOURCE, CONF_ZONE
-from homeassistant.core import (
+from menuai.const import CONF_EVENT, CONF_PLATFORM, CONF_SOURCE, CONF_ZONE
+from menuai.core import (
     CALLBACK_TYPE,
     Event,
     EventStateChangedData,
-    HassJob,
-    HomeAssistant,
+    menuaiJob,
+    menuai,
     State,
     callback,
 )
-from homeassistant.helpers import condition, config_validation as cv
-from homeassistant.helpers.config_validation import entity_domain
-from homeassistant.helpers.event import TrackStates, async_track_state_change_filtered
-from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers import condition, config_validation as cv
+from menuai.helpers.config_validation import entity_domain
+from menuai.helpers.event import TrackStates, async_track_state_change_filtered
+from menuai.helpers.trigger import TriggerActionType, TriggerInfo
+from menuai.helpers.typing import ConfigType
 
 from . import DOMAIN
 
@@ -49,7 +49,7 @@ def source_match(state: State | None, source: str) -> bool:
 
 
 async def async_attach_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     action: TriggerActionType,
     trigger_info: TriggerInfo,
@@ -59,7 +59,7 @@ async def async_attach_trigger(
     source: str = config[CONF_SOURCE].lower()
     zone_entity_id: str = config[CONF_ZONE]
     trigger_event: str = config[CONF_EVENT]
-    job = HassJob(action)
+    job = menuaiJob(action)
 
     @callback
     def state_change_listener(event: Event[EventStateChangedData]) -> None:
@@ -70,7 +70,7 @@ async def async_attach_trigger(
         if not source_match(from_state, source) and not source_match(to_state, source):
             return
 
-        if (zone_state := hass.states.get(zone_entity_id)) is None:
+        if (zone_state := menuai.states.get(zone_entity_id)) is None:
             _LOGGER.warning(
                 "Unable to execute automation %s: Zone %s not found",
                 trigger_info["name"],
@@ -79,14 +79,14 @@ async def async_attach_trigger(
             return
 
         from_match = (
-            condition.zone(hass, zone_state, from_state) if from_state else False
+            condition.zone(menuai, zone_state, from_state) if from_state else False
         )
-        to_match = condition.zone(hass, zone_state, to_state) if to_state else False
+        to_match = condition.zone(menuai, zone_state, to_state) if to_state else False
 
         if (trigger_event == EVENT_ENTER and not from_match and to_match) or (
             trigger_event == EVENT_LEAVE and from_match and not to_match
         ):
-            hass.async_run_hass_job(
+            menuai.async_run_menuai_job(
                 job,
                 {
                     "trigger": {
@@ -105,5 +105,5 @@ async def async_attach_trigger(
             )
 
     return async_track_state_change_filtered(
-        hass, TrackStates(False, set(), {DOMAIN}), state_change_listener
+        menuai, TrackStates(False, set(), {DOMAIN}), state_change_listener
     ).async_remove

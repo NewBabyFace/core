@@ -1,12 +1,12 @@
 """Base class for Squeezebox Sensor entities."""
 
-from homeassistant.helpers.device_registry import (
+from menuai.helpers.device_registry import (
     CONNECTION_NETWORK_MAC,
     DeviceInfo,
     format_mac,
 )
-from homeassistant.helpers.entity import EntityDescription
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.helpers.entity import EntityDescription
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, STATUS_QUERY_UUID
 from .coordinator import (

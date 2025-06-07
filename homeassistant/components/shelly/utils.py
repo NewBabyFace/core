@@ -26,29 +26,29 @@ from aioshelly.const import (
 from aioshelly.rpc_device import RpcDevice, WsServer
 from yarl import URL
 
-from homeassistant.components import network
-from homeassistant.components.http import HomeAssistantView
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.components import network
+from menuai.components.http import menuaiView
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_HOST,
     CONF_MODEL,
     CONF_PORT,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
 )
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.helpers import (
+from menuai.core import Event, menuai, callback
+from menuai.helpers import (
     device_registry as dr,
     entity_registry as er,
     issue_registry as ir,
     singleton,
 )
-from homeassistant.helpers.device_registry import (
+from menuai.helpers.device_registry import (
     CONNECTION_BLUETOOTH,
     CONNECTION_NETWORK_MAC,
     DeviceInfo,
 )
-from homeassistant.helpers.network import NoURLAvailableError, get_url
-from homeassistant.util.dt import utcnow
+from menuai.helpers.network import NoURLAvailableError, get_url
+from menuai.util.dt import utcnow
 
 from .const import (
     API_WS_URL,
@@ -79,10 +79,10 @@ from .const import (
 
 @callback
 def async_remove_shelly_entity(
-    hass: HomeAssistant, domain: str, unique_id: str
+    menuai: menuai, domain: str, unique_id: str
 ) -> None:
     """Remove a Shelly entity."""
-    entity_reg = er.async_get(hass)
+    entity_reg = er.async_get(menuai)
     entity_id = entity_reg.async_get_entity_id(domain, DOMAIN, unique_id)
     if entity_id:
         LOGGER.debug("Removing entity: %s", entity_id)
@@ -270,18 +270,18 @@ def get_shbtn_input_triggers() -> list[tuple[str, str]]:
 
 
 @singleton.singleton("shelly_coap")
-async def get_coap_context(hass: HomeAssistant) -> COAP:
+async def get_coap_context(menuai: menuai) -> COAP:
     """Get CoAP context to be used in all Shelly Gen1 devices."""
     context = COAP()
 
-    adapters = await network.async_get_adapters(hass)
+    adapters = await network.async_get_adapters(menuai)
     LOGGER.debug("Network adapters: %s", adapters)
 
     ipv4: list[IPv4Address] = []
     if not network.async_only_default_interface_enabled(adapters):
         ipv4.extend(
             address
-            for address in await network.async_get_enabled_source_ips(hass)
+            for address in await network.async_get_enabled_source_ips(menuai)
             if address.version == 4
             and not (
                 address.is_link_local
@@ -291,8 +291,8 @@ async def get_coap_context(hass: HomeAssistant) -> COAP:
             )
         )
     LOGGER.debug("Network IPv4 addresses: %s", ipv4)
-    if DOMAIN in hass.data:
-        port = hass.data[DOMAIN].get(CONF_COAP_PORT, DEFAULT_COAP_PORT)
+    if DOMAIN in menuai.data:
+        port = menuai.data[DOMAIN].get(CONF_COAP_PORT, DEFAULT_COAP_PORT)
     else:
         port = DEFAULT_COAP_PORT
     LOGGER.info("Starting CoAP context with UDP port %s", port)
@@ -302,11 +302,11 @@ async def get_coap_context(hass: HomeAssistant) -> COAP:
     def shutdown_listener(ev: Event) -> None:
         context.close()
 
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, shutdown_listener)
+    menuai.bus.async_listen_once(EVENT_menuai_STOP, shutdown_listener)
     return context
 
 
-class ShellyReceiver(HomeAssistantView):
+class ShellyReceiver(menuaiView):
     """Handle pushes from Shelly Gen2 devices."""
 
     requires_auth = False
@@ -323,10 +323,10 @@ class ShellyReceiver(HomeAssistantView):
 
 
 @singleton.singleton("shelly_ws_server")
-async def get_ws_context(hass: HomeAssistant) -> WsServer:
+async def get_ws_context(menuai: menuai) -> WsServer:
     """Get websocket server context to be used in all Shelly Gen2 devices."""
     ws_server = WsServer()
-    hass.http.register_view(ShellyReceiver(ws_server))
+    menuai.http.register_view(ShellyReceiver(ws_server))
     return ws_server
 
 
@@ -520,12 +520,12 @@ def get_rpc_input_triggers(device: RpcDevice) -> list[tuple[str, str]]:
 
 @callback
 def update_device_fw_info(
-    hass: HomeAssistant, shellydevice: BlockDevice | RpcDevice, entry: ConfigEntry
+    menuai: menuai, shellydevice: BlockDevice | RpcDevice, entry: ConfigEntry
 ) -> None:
     """Update the firmware version information in the device registry."""
     assert entry.unique_id
 
-    dev_reg = dr.async_get(hass)
+    dev_reg = dr.async_get(menuai)
     if device := dev_reg.async_get_device(
         identifiers={(DOMAIN, entry.entry_id)},
         connections={(CONNECTION_NETWORK_MAC, dr.format_mac(entry.unique_id))},
@@ -569,11 +569,11 @@ def get_release_url(gen: int, model: str, beta: bool) -> str | None:
 
 @callback
 def async_create_issue_unsupported_firmware(
-    hass: HomeAssistant, entry: ConfigEntry
+    menuai: menuai, entry: ConfigEntry
 ) -> None:
     """Create a repair issue if the device runs an unsupported firmware."""
     ir.async_create_issue(
-        hass,
+        menuai,
         DOMAIN,
         FIRMWARE_UNSUPPORTED_ISSUE_ID.format(unique=entry.unique_id),
         is_fixable=False,
@@ -618,10 +618,10 @@ def get_host(host: str) -> str:
 
 @callback
 def async_remove_shelly_rpc_entities(
-    hass: HomeAssistant, domain: str, mac: str, keys: list[str]
+    menuai: menuai, domain: str, mac: str, keys: list[str]
 ) -> None:
     """Remove RPC based Shelly entity."""
-    entity_reg = er.async_get(hass)
+    entity_reg = er.async_get(menuai)
     for key in keys:
         if entity_id := entity_reg.async_get_entity_id(domain, DOMAIN, f"{mac}-{key}"):
             LOGGER.debug("Removing entity: %s", entity_id)
@@ -654,7 +654,7 @@ def get_virtual_component_ids(config: dict[str, Any], platform: str) -> list[str
 
 @callback
 def async_remove_orphaned_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry_id: str,
     mac: str,
     platform: str,
@@ -663,8 +663,8 @@ def async_remove_orphaned_entities(
 ) -> None:
     """Remove orphaned entities."""
     orphaned_entities = []
-    entity_reg = er.async_get(hass)
-    device_reg = dr.async_get(hass)
+    entity_reg = er.async_get(menuai)
+    device_reg = dr.async_get(menuai)
 
     if not (
         devices := device_reg.devices.get_devices_for_config_entry_id(config_entry_id)
@@ -687,13 +687,13 @@ def async_remove_orphaned_entities(
             orphaned_entities.append(entity.unique_id.split("-", 1)[1])
 
     if orphaned_entities:
-        async_remove_shelly_rpc_entities(hass, platform, mac, orphaned_entities)
+        async_remove_shelly_rpc_entities(menuai, platform, mac, orphaned_entities)
 
 
-def get_rpc_ws_url(hass: HomeAssistant) -> str | None:
+def get_rpc_ws_url(menuai: menuai) -> str | None:
     """Return the RPC websocket URL."""
     try:
-        raw_url = get_url(hass, prefer_external=False, allow_cloud=False)
+        raw_url = get_url(menuai, prefer_external=False, allow_cloud=False)
     except NoURLAvailableError:
         LOGGER.debug("URL not available, skipping outbound websocket setup")
         return None

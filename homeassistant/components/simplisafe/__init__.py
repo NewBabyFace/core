@@ -39,33 +39,33 @@ from simplipy.websocket import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_CODE,
     ATTR_DEVICE_ID,
     CONF_CODE,
     CONF_TOKEN,
     CONF_USERNAME,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     Platform,
 )
-from homeassistant.core import CoreState, Event, HomeAssistant, ServiceCall, callback
-from homeassistant.exceptions import (
+from menuai.core import CoreState, Event, menuai, ServiceCall, callback
+from menuai.exceptions import (
     ConfigEntryAuthFailed,
     ConfigEntryNotReady,
-    HomeAssistantError,
+    menuaiError,
 )
-from homeassistant.helpers import (
+from menuai.helpers import (
     aiohttp_client,
     config_validation as cv,
     device_registry as dr,
 )
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.service import (
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.service import (
     async_register_admin_service,
     verify_domain_control,
 )
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
     ATTR_ALARM_DURATION,
@@ -183,7 +183,7 @@ SERVICE_SET_SYSTEM_PROPERTIES_SCHEMA = vol.Schema(
     }
 )
 
-WEBSOCKET_EVENTS_TO_FIRE_HASS_EVENT = [
+WEBSOCKET_EVENTS_TO_FIRE_menuai_EVENT = [
     EVENT_AUTOMATIC_TEST,
     EVENT_CAMERA_MOTION_DETECTED,
     EVENT_DOORBELL_DETECTED,
@@ -196,11 +196,11 @@ WEBSOCKET_EVENTS_TO_FIRE_HASS_EVENT = [
 
 @callback
 def _async_get_system_for_service_call(
-    hass: HomeAssistant, call: ServiceCall
+    menuai: menuai, call: ServiceCall
 ) -> SystemType:
     """Get the SimpliSafe system related to a service call (by device ID)."""
     device_id = call.data[ATTR_DEVICE_ID]
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
 
     if (
         alarm_control_panel_device_entry := device_registry.async_get(device_id)
@@ -224,7 +224,7 @@ def _async_get_system_for_service_call(
     system_id = int(system_id_str)
 
     for entry_id in base_station_device_entry.config_entries:
-        if (simplisafe := hass.data[DOMAIN].get(entry_id)) is None:
+        if (simplisafe := menuai.data[DOMAIN].get(entry_id)) is None:
             continue
         return cast(SystemType, simplisafe.systems[system_id])
 
@@ -233,10 +233,10 @@ def _async_get_system_for_service_call(
 
 @callback
 def _async_register_base_station(
-    hass: HomeAssistant, entry: ConfigEntry, system: SystemType
+    menuai: menuai, entry: ConfigEntry, system: SystemType
 ) -> None:
     """Register a new bridge."""
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
 
     base_station = device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
@@ -262,7 +262,7 @@ def _async_register_base_station(
 
 
 @callback
-def _async_standardize_config_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+def _async_standardize_config_entry(menuai: menuai, entry: ConfigEntry) -> None:
     """Bring a config entry up to current standards."""
     if CONF_TOKEN not in entry.data:
         raise ConfigEntryAuthFailed(
@@ -283,15 +283,15 @@ def _async_standardize_config_entry(hass: HomeAssistant, entry: ConfigEntry) -> 
             CONF_CODE: data.pop(CONF_CODE),
         }
     if entry_updates:
-        hass.config_entries.async_update_entry(entry, **entry_updates)
+        menuai.config_entries.async_update_entry(entry, **entry_updates)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up SimpliSafe as config entry."""
-    _async_standardize_config_entry(hass, entry)
+    _async_standardize_config_entry(menuai, entry)
 
-    _verify_domain_control = verify_domain_control(hass, DOMAIN)
-    websession = aiohttp_client.async_get_clientsession(hass)
+    _verify_domain_control = verify_domain_control(menuai, DOMAIN)
+    websession = aiohttp_client.async_get_clientsession(menuai)
 
     try:
         api = await API.async_from_refresh_token(
@@ -303,17 +303,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         LOGGER.error("Config entry failed: %s", err)
         raise ConfigEntryNotReady from err
 
-    simplisafe = SimpliSafe(hass, entry, api)
+    simplisafe = SimpliSafe(menuai, entry, api)
 
     try:
         await simplisafe.async_init()
     except SimplipyError as err:
         raise ConfigEntryNotReady from err
 
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.entry_id] = simplisafe
+    menuai.data.setdefault(DOMAIN, {})
+    menuai.data[DOMAIN][entry.entry_id] = simplisafe
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     @callback
     def extract_system(
@@ -323,12 +323,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         async def wrapper(call: ServiceCall) -> None:
             """Wrap the service function."""
-            system = _async_get_system_for_service_call(hass, call)
+            system = _async_get_system_for_service_call(menuai, call)
 
             try:
                 await func(call, system)
             except SimplipyError as err:
-                raise HomeAssistantError(
+                raise menuaiError(
                     f'Error while executing "{call.service}": {err}'
                 ) from err
 
@@ -353,7 +353,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     ) -> None:
         """Set one or more system parameters."""
         if not isinstance(system, SystemV3):
-            raise HomeAssistantError("Can only set system properties on V3 systems")
+            raise menuaiError("Can only set system properties on V3 systems")
 
         await system.async_set_properties(
             {prop: value for prop, value in call.data.items() if prop != ATTR_DEVICE_ID}
@@ -368,13 +368,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             SERVICE_SET_SYSTEM_PROPERTIES_SCHEMA,
         ),
     ):
-        if hass.services.has_service(DOMAIN, service):
+        if menuai.services.has_service(DOMAIN, service):
             continue
-        async_register_admin_service(hass, DOMAIN, service, method, schema=schema)
+        async_register_admin_service(menuai, DOMAIN, service, method, schema=schema)
 
     current_options = {**entry.options}
 
-    async def async_reload_entry(_: HomeAssistant, updated_entry: ConfigEntry) -> None:
+    async def async_reload_entry(_: menuai, updated_entry: ConfigEntry) -> None:
         """Handle an options update.
 
         This method will get called in two scenarios:
@@ -389,24 +389,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if updated_options == current_options:
             return
 
-        await hass.config_entries.async_reload(entry.entry_id)
+        await menuai.config_entries.async_reload(entry.entry_id)
 
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a SimpliSafe config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id)
+        menuai.data[DOMAIN].pop(entry.entry_id)
 
-    if not hass.config_entries.async_loaded_entries(DOMAIN):
+    if not menuai.config_entries.async_loaded_entries(DOMAIN):
         # If this is the last loaded instance of SimpliSafe, deregister any services
         # defined during integration setup:
         for service_name in SERVICES:
-            hass.services.async_remove(DOMAIN, service_name)
+            menuai.services.async_remove(DOMAIN, service_name)
 
     return unload_ok
 
@@ -414,10 +414,10 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 class SimpliSafe:
     """Define a SimpliSafe data object."""
 
-    def __init__(self, hass: HomeAssistant, entry: ConfigEntry, api: API) -> None:
+    def __init__(self, menuai: menuai, entry: ConfigEntry, api: API) -> None:
         """Initialize."""
         self._api = api
-        self._hass = hass
+        self._menuai = menuai
         self._system_notifications: dict[int, set[SystemNotification]] = {}
         self._websocket_reconnect_task: asyncio.Task | None = None
         self.entry = entry
@@ -431,8 +431,8 @@ class SimpliSafe:
     @callback
     def _async_process_new_notifications(self, system: SystemType) -> None:
         """Act on any new system notifications."""
-        if self._hass.state is not CoreState.running:
-            # If HASS isn't fully running yet, it may cause the SIMPLISAFE_NOTIFICATION
+        if self._menuai.state is not CoreState.running:
+            # If menuai isn't fully running yet, it may cause the SIMPLISAFE_NOTIFICATION
             # event to fire before dependent components (like automation) are fully
             # ready. If that's the case, skip:
             return
@@ -453,7 +453,7 @@ class SimpliSafe:
             if notification.link:
                 text = f"{text} For more information: {notification.link}"
 
-            self._hass.bus.async_fire(
+            self._menuai.bus.async_fire(
                 EVENT_SIMPLISAFE_NOTIFICATION,
                 event_data={
                     ATTR_CATEGORY: notification.category,
@@ -482,7 +482,7 @@ class SimpliSafe:
 
         LOGGER.debug("Reconnecting to websocket")
         await self._async_cancel_websocket_loop()
-        self._websocket_reconnect_task = self._hass.async_create_task(
+        self._websocket_reconnect_task = self._menuai.async_create_task(
             self._async_start_websocket_loop()
         )
 
@@ -505,10 +505,10 @@ class SimpliSafe:
         LOGGER.debug("New websocket event: %s", event)
 
         async_dispatcher_send(
-            self._hass, DISPATCHER_TOPIC_WEBSOCKET_EVENT.format(event.system_id), event
+            self._menuai, DISPATCHER_TOPIC_WEBSOCKET_EVENT.format(event.system_id), event
         )
 
-        if event.event_type not in WEBSOCKET_EVENTS_TO_FIRE_HASS_EVENT:
+        if event.event_type not in WEBSOCKET_EVENTS_TO_FIRE_menuai_EVENT:
             return
 
         sensor_type: str | None
@@ -517,7 +517,7 @@ class SimpliSafe:
         else:
             sensor_type = None
 
-        self._hass.bus.async_fire(
+        self._menuai.bus.async_fire(
             EVENT_SIMPLISAFE_EVENT,
             event_data={
                 ATTR_LAST_EVENT_CHANGED_BY: event.changed_by,
@@ -547,8 +547,8 @@ class SimpliSafe:
             await self._async_cancel_websocket_loop()
 
         self.entry.async_on_unload(
-            self._hass.bus.async_listen_once(
-                EVENT_HOMEASSISTANT_STOP, async_websocket_disconnect_listener
+            self._menuai.bus.async_listen_once(
+                EVENT_menuai_STOP, async_websocket_disconnect_listener
             )
         )
 
@@ -556,7 +556,7 @@ class SimpliSafe:
         for system in self.systems.values():
             self._system_notifications[system.system_id] = set()
 
-            _async_register_base_station(self._hass, self.entry, system)
+            _async_register_base_station(self._menuai, self.entry, system)
 
             # Future events will come from the websocket, but since subscription to the
             # websocket doesn't provide the most recent event, we grab it from the REST
@@ -570,7 +570,7 @@ class SimpliSafe:
                 self.initial_event_to_use[system.system_id] = {}
 
         self.coordinator = DataUpdateCoordinator(
-            self._hass,
+            self._menuai,
             LOGGER,
             name=self.entry.title,
             update_interval=DEFAULT_SCAN_INTERVAL,
@@ -580,8 +580,8 @@ class SimpliSafe:
         @callback
         def async_save_refresh_token(token: str) -> None:
             """Save a refresh token to the config entry."""
-            LOGGER.debug("Saving new refresh token to HASS storage")
-            self._hass.config_entries.async_update_entry(
+            LOGGER.debug("Saving new refresh token to menuai storage")
+            self._menuai.config_entries.async_update_entry(
                 self.entry,
                 data={**self.entry.data, CONF_TOKEN: token},
             )
@@ -593,7 +593,7 @@ class SimpliSafe:
             # Open a new websocket connection with the fresh token:
             assert self._api.websocket
             await self._async_cancel_websocket_loop()
-            self._websocket_reconnect_task = self._hass.async_create_task(
+            self._websocket_reconnect_task = self._menuai.async_create_task(
                 self._async_start_websocket_loop()
             )
 

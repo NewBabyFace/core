@@ -6,7 +6,7 @@ import asyncio
 from collections.abc import Callable
 from logging import Logger
 
-from homeassistant.core import HassJob, HomeAssistant, callback
+from menuai.core import menuaiJob, menuai, callback
 
 
 class Debouncer[_R_co]:
@@ -14,7 +14,7 @@ class Debouncer[_R_co]:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         logger: Logger,
         *,
         cooldown: float,
@@ -28,7 +28,7 @@ class Debouncer[_R_co]:
                    wait <cooldown> until executing next invocation.
         function: optional and can be instantiated later.
         """
-        self.hass = hass
+        self.menuai = menuai
         self.logger = logger
         self._function = function
         self.cooldown = cooldown
@@ -37,10 +37,10 @@ class Debouncer[_R_co]:
         self._execute_at_end_of_timer: bool = False
         self._execute_lock = asyncio.Lock()
         self._background = background
-        self._job: HassJob[[], _R_co] | None = (
+        self._job: menuaiJob[[], _R_co] | None = (
             None
             if function is None
-            else HassJob(
+            else menuaiJob(
                 function, f"debouncer cooldown={cooldown}, immediate={immediate}"
             )
         )
@@ -56,7 +56,7 @@ class Debouncer[_R_co]:
         """Update the function being wrapped by the Debouncer."""
         self._function = function
         if self._job is None or function != self._job.target:
-            self._job = HassJob(
+            self._job = menuaiJob(
                 function,
                 f"debouncer cooldown={self.cooldown}, immediate={self.immediate}",
             )
@@ -108,7 +108,7 @@ class Debouncer[_R_co]:
 
             assert self._job is not None
             try:
-                if task := self.hass.async_run_hass_job(
+                if task := self.menuai.async_run_menuai_job(
                     self._job, background=self._background
                 ):
                     await task
@@ -131,7 +131,7 @@ class Debouncer[_R_co]:
                 return
 
             try:
-                if task := self.hass.async_run_hass_job(
+                if task := self.menuai.async_run_menuai_job(
                     self._job, background=self._background
                 ):
                     await task
@@ -169,11 +169,11 @@ class Debouncer[_R_co]:
         self._execute_at_end_of_timer = False
         name = f"debouncer {self._job} finish cooldown={self.cooldown}, immediate={self.immediate}"
         if not self._background:
-            self.hass.async_create_task(
+            self.menuai.async_create_task(
                 self._handle_timer_finish(), name, eager_start=True
             )
             return
-        self.hass.async_create_background_task(
+        self.menuai.async_create_background_task(
             self._handle_timer_finish(), name, eager_start=True
         )
 
@@ -181,6 +181,6 @@ class Debouncer[_R_co]:
     def _schedule_timer(self) -> None:
         """Schedule a timer."""
         if not self._shutdown_requested:
-            self._timer_task = self.hass.loop.call_later(
+            self._timer_task = self.menuai.loop.call_later(
                 self.cooldown, self._on_debounce
             )

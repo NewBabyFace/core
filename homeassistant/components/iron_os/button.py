@@ -7,10 +7,10 @@ from enum import StrEnum
 
 from pynecil import CharSetting
 
-from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.button import ButtonEntity, ButtonEntityDescription
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import IronOSConfigEntry
 from .coordinator import IronOSCoordinators
@@ -51,7 +51,7 @@ BUTTON_DESCRIPTIONS: tuple[IronOSButtonEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: IronOSConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

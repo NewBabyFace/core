@@ -11,7 +11,7 @@ from typing import Any, NamedTuple
 
 import aiohttp
 
-from homeassistant.const import __version__ as HA_VERSION
+from menuai.const import __version__ as HA_VERSION
 
 WHOAMI_URL = "https://services.home-assistant.io/whoami/v1"
 WHOAMI_URL_DEV = "https://services-dev.home-assistant.workers.dev/whoami/v1"

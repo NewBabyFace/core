@@ -8,7 +8,7 @@ from pywizlight import PilotBuilder
 from pywizlight.bulblibrary import BulbClass, BulbType, Features
 from pywizlight.scenes import get_id_from_scene_name
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_TEMP_KELVIN,
     ATTR_EFFECT,
@@ -19,8 +19,8 @@ from homeassistant.components.light import (
     LightEntityFeature,
     filter_supported_color_modes,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import WizConfigEntry
 from .entity import WizToggleEntity
@@ -55,7 +55,7 @@ def _async_pilot_builder(**kwargs: Any) -> PilotBuilder:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: WizConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

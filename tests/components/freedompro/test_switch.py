@@ -3,12 +3,12 @@
 from datetime import timedelta
 from unittest.mock import ANY, patch
 
-from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN, SERVICE_TURN_ON
-from homeassistant.const import ATTR_ENTITY_ID, SERVICE_TURN_OFF, STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_component import async_update_entity
-from homeassistant.util.dt import utcnow
+from menuai.components.switch import DOMAIN as SWITCH_DOMAIN, SERVICE_TURN_ON
+from menuai.const import ATTR_ENTITY_ID, SERVICE_TURN_OFF, STATE_OFF, STATE_ON
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity_component import async_update_entity
+from menuai.util.dt import utcnow
 
 from .conftest import get_states_response_for_uid
 
@@ -18,14 +18,14 @@ uid = "3WRRJR6RCZQZSND8VP0YTO3YXCSOFPKBMW8T51TU-LQ*1JKU1MVWHQL-Z9SCUS85VFXMRGNDC
 
 
 async def test_switch_get_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     init_integration: MockConfigEntry,
 ) -> None:
     """Test states of the switch."""
 
     entity_id = "switch.irrigation_switch"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_OFF
     assert state.attributes.get("friendly_name") == "Irrigation switch"
@@ -37,13 +37,13 @@ async def test_switch_get_state(
     states_response = get_states_response_for_uid(uid)
     states_response[0]["state"]["on"] = True
     with patch(
-        "homeassistant.components.freedompro.coordinator.get_states",
+        "menuai.components.freedompro.coordinator.get_states",
         return_value=states_response,
     ):
-        async_fire_time_changed(hass, utcnow() + timedelta(hours=2))
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, utcnow() + timedelta(hours=2))
+        await menuai.async_block_till_done()
 
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert state.attributes.get("friendly_name") == "Irrigation switch"
 
@@ -55,7 +55,7 @@ async def test_switch_get_state(
 
 
 async def test_switch_set_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     init_integration: MockConfigEntry,
 ) -> None:
@@ -66,14 +66,14 @@ async def test_switch_set_off(
     states_response = get_states_response_for_uid(uid)
     states_response[0]["state"]["on"] = True
     with patch(
-        "homeassistant.components.freedompro.coordinator.get_states",
+        "menuai.components.freedompro.coordinator.get_states",
         return_value=states_response,
     ):
-        await async_update_entity(hass, entity_id)
-        async_fire_time_changed(hass, utcnow() + timedelta(hours=2))
-        await hass.async_block_till_done()
+        await async_update_entity(menuai, entity_id)
+        async_fire_time_changed(menuai, utcnow() + timedelta(hours=2))
+        await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_ON
     assert state.attributes.get("friendly_name") == "Irrigation switch"
@@ -83,9 +83,9 @@ async def test_switch_set_off(
     assert entry.unique_id == uid
 
     with patch(
-        "homeassistant.components.freedompro.switch.put_state"
+        "menuai.components.freedompro.switch.put_state"
     ) as mock_put_state:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SWITCH_DOMAIN,
             SERVICE_TURN_OFF,
             {ATTR_ENTITY_ID: [entity_id]},
@@ -96,25 +96,25 @@ async def test_switch_set_off(
     states_response = get_states_response_for_uid(uid)
     states_response[0]["state"]["on"] = False
     with patch(
-        "homeassistant.components.freedompro.coordinator.get_states",
+        "menuai.components.freedompro.coordinator.get_states",
         return_value=states_response,
     ):
-        async_fire_time_changed(hass, utcnow() + timedelta(hours=2))
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, utcnow() + timedelta(hours=2))
+        await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_OFF
 
 
 async def test_switch_set_on(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     init_integration: MockConfigEntry,
 ) -> None:
     """Test set on of the switch."""
 
     entity_id = "switch.irrigation_switch"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_OFF
     assert state.attributes.get("friendly_name") == "Irrigation switch"
@@ -124,9 +124,9 @@ async def test_switch_set_on(
     assert entry.unique_id == uid
 
     with patch(
-        "homeassistant.components.freedompro.switch.put_state"
+        "menuai.components.freedompro.switch.put_state"
     ) as mock_put_state:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SWITCH_DOMAIN,
             SERVICE_TURN_ON,
             {ATTR_ENTITY_ID: [entity_id]},
@@ -137,11 +137,11 @@ async def test_switch_set_on(
     states_response = get_states_response_for_uid(uid)
     states_response[0]["state"]["on"] = True
     with patch(
-        "homeassistant.components.freedompro.coordinator.get_states",
+        "menuai.components.freedompro.coordinator.get_states",
         return_value=states_response,
     ):
-        async_fire_time_changed(hass, utcnow() + timedelta(hours=2))
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, utcnow() + timedelta(hours=2))
+        await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_ON

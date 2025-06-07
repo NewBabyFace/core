@@ -4,14 +4,14 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     DOMAIN as SWITCH_DOMAIN,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
 )
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import setup_integration
 
@@ -19,29 +19,29 @@ from tests.common import MockConfigEntry, snapshot_platform
 
 
 async def test_switches(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
     mock_config_entry: MockConfigEntry,
     mock_client: MagicMock,
 ) -> None:
     """Test the Ohme switches."""
-    with patch("homeassistant.components.ohme.PLATFORMS", [Platform.SWITCH]):
-        await setup_integration(hass, mock_config_entry)
+    with patch("menuai.components.ohme.PLATFORMS", [Platform.SWITCH]):
+        await setup_integration(menuai, mock_config_entry)
 
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
 
 async def test_cap_switch_on(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_client: MagicMock,
 ) -> None:
     """Test the switch turn_on action."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
     mock_client.async_change_price_cap = AsyncMock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -54,15 +54,15 @@ async def test_cap_switch_on(
 
 
 async def test_cap_switch_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_client: MagicMock,
 ) -> None:
     """Test the switch turn_off action."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
     mock_client.async_change_price_cap = AsyncMock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_OFF,
         {
@@ -75,14 +75,14 @@ async def test_cap_switch_off(
 
 
 async def test_config_switch_on(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_client: MagicMock,
 ) -> None:
     """Test the switch turn_on action."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -95,14 +95,14 @@ async def test_config_switch_on(
 
 
 async def test_config_switch_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_client: MagicMock,
 ) -> None:
     """Test the switch turn_off action."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_OFF,
         {

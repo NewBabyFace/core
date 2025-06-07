@@ -10,14 +10,14 @@ from typing import Any, cast
 import pyatmo
 from pyatmo.modules import PublicWeatherArea
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_LATITUDE,
     ATTR_LONGITUDE,
     CONCENTRATION_PARTS_PER_MILLION,
@@ -31,15 +31,15 @@ from homeassistant.const import (
     UnitOfSpeed,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import (
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import (
     async_dispatcher_connect,
     async_dispatcher_send,
 )
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
 
 from .const import (
     CONF_URL_ENERGY,
@@ -389,7 +389,7 @@ BATTERY_SENSOR_DESCRIPTION = NetatmoSensorEntityDescription(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -403,7 +403,7 @@ async def async_setup_entry(
         async_add_entities([entity])
 
     entry.async_on_unload(
-        async_dispatcher_connect(hass, NETATMO_CREATE_BATTERY, _create_battery_entity)
+        async_dispatcher_connect(menuai, NETATMO_CREATE_BATTERY, _create_battery_entity)
     )
 
     @callback
@@ -416,7 +416,7 @@ async def async_setup_entry(
 
     entry.async_on_unload(
         async_dispatcher_connect(
-            hass, NETATMO_CREATE_WEATHER_SENSOR, _create_weather_sensor_entity
+            menuai, NETATMO_CREATE_WEATHER_SENSOR, _create_weather_sensor_entity
         )
     )
 
@@ -434,7 +434,7 @@ async def async_setup_entry(
         )
 
     entry.async_on_unload(
-        async_dispatcher_connect(hass, NETATMO_CREATE_SENSOR, _create_sensor_entity)
+        async_dispatcher_connect(menuai, NETATMO_CREATE_SENSOR, _create_sensor_entity)
     )
 
     @callback
@@ -451,12 +451,12 @@ async def async_setup_entry(
 
     entry.async_on_unload(
         async_dispatcher_connect(
-            hass, NETATMO_CREATE_ROOM_SENSOR, _create_room_sensor_entity
+            menuai, NETATMO_CREATE_ROOM_SENSOR, _create_room_sensor_entity
         )
     )
 
-    device_registry = dr.async_get(hass)
-    data_handler = hass.data[DOMAIN][entry.entry_id][DATA_HANDLER]
+    device_registry = dr.async_get(menuai)
+    data_handler = menuai.data[DOMAIN][entry.entry_id][DATA_HANDLER]
 
     async def add_public_entities(update: bool = True) -> None:
         """Retrieve Netatmo public weather entities."""
@@ -479,7 +479,7 @@ async def async_setup_entry(
 
                 if update:
                     async_dispatcher_send(
-                        hass,
+                        menuai,
                         f"netatmo-config-{area.area_name}",
                         area,
                     )
@@ -507,7 +507,7 @@ async def async_setup_entry(
         async_add_entities(new_entities)
 
     async_dispatcher_connect(
-        hass, f"signal-{DOMAIN}-public-update-{entry.entry_id}", add_public_entities
+        menuai, f"signal-{DOMAIN}-public-update-{entry.entry_id}", add_public_entities
     )
 
     await add_public_entities(False)
@@ -726,13 +726,13 @@ class NetatmoPublicSensor(NetatmoBaseEntity, SensorEntity):
             configuration_url=CONF_URL_PUBLIC_WEATHER,
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Entity created."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"netatmo-config-{self.area.area_name}",
                 self.async_config_update_callback,
             )

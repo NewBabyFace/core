@@ -11,18 +11,18 @@ import pytest
 from pytest_unordered import unordered
 import voluptuous as vol
 
-from homeassistant import config_entries as core_ce, data_entry_flow, loader
-from homeassistant.components.config import config_entries
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE, CONF_RADIUS
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import config_entry_flow, config_validation as cv
-from homeassistant.helpers.discovery_flow import DiscoveryKey
-from homeassistant.helpers.service_info.hassio import HassioServiceInfo
-from homeassistant.loader import IntegrationNotFound
-from homeassistant.setup import async_setup_component
-from homeassistant.util.dt import utcnow
+from menuai import config_entries as core_ce, data_entry_flow, loader
+from menuai.components.config import config_entries
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_LATITUDE, CONF_LONGITUDE, CONF_RADIUS
+from menuai.core import menuai, callback
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers import config_entry_flow, config_validation as cv
+from menuai.helpers.discovery_flow import DiscoveryKey
+from menuai.helpers.service_info.menuaiio import menuaiioServiceInfo
+from menuai.loader import IntegrationNotFound
+from menuai.setup import async_setup_component
+from menuai.util.dt import utcnow
 
 from tests.common import (
     MockConfigEntry,
@@ -36,19 +36,19 @@ from tests.typing import ClientSessionGenerator, WebSocketGenerator
 
 
 @pytest.fixture(autouse=True)
-def mock_test_component(hass: HomeAssistant) -> None:
+def mock_test_component(menuai: menuai) -> None:
     """Ensure a component called 'test' exists."""
-    mock_integration(hass, MockModule("test"))
+    mock_integration(menuai, MockModule("test"))
 
 
 @pytest.fixture
 async def client(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> TestClient:
     """Fixture that can interact with the config manager API."""
-    await async_setup_component(hass, "http", {})
-    config_entries.async_setup(hass)
-    return await hass_client()
+    await async_setup_component(menuai, "http", {})
+    config_entries.async_setup(menuai)
+    return await menuai_client()
 
 
 @pytest.fixture
@@ -69,20 +69,20 @@ def mock_flow() -> Generator[None]:
 
 @pytest.mark.usefixtures("freezer")
 @pytest.mark.usefixtures("mock_flow")
-async def test_get_entries(hass: HomeAssistant, client: TestClient) -> None:
+async def test_get_entries(menuai: menuai, client: TestClient) -> None:
     """Test get entries."""
-    mock_integration(hass, MockModule("comp1"))
+    mock_integration(menuai, MockModule("comp1"))
     mock_integration(
-        hass, MockModule("comp2", partial_manifest={"integration_type": "helper"})
+        menuai, MockModule("comp2", partial_manifest={"integration_type": "helper"})
     )
     mock_integration(
-        hass, MockModule("comp3", partial_manifest={"integration_type": "hub"})
+        menuai, MockModule("comp3", partial_manifest={"integration_type": "hub"})
     )
     mock_integration(
-        hass, MockModule("comp4", partial_manifest={"integration_type": "device"})
+        menuai, MockModule("comp4", partial_manifest={"integration_type": "device"})
     )
     mock_integration(
-        hass, MockModule("comp5", partial_manifest={"integration_type": "service"})
+        menuai, MockModule("comp5", partial_manifest={"integration_type": "service"})
     )
 
     config_entry_flow.register_discovery_flow("comp2", "Comp 2", lambda: None)
@@ -93,30 +93,30 @@ async def test_get_entries(hass: HomeAssistant, client: TestClient) -> None:
         source="bla",
     )
     entry.supports_unload = True
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     MockConfigEntry(
         domain="comp2",
         title="Test 2",
         source="bla2",
         state=core_ce.ConfigEntryState.SETUP_ERROR,
         reason="Unsupported API",
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
     MockConfigEntry(
         domain="comp3",
         title="Test 3",
         source="bla3",
         disabled_by=core_ce.ConfigEntryDisabler.USER,
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
     MockConfigEntry(
         domain="comp4",
         title="Test 4",
         source="bla4",
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
     MockConfigEntry(
         domain="comp5",
         title="Test 5",
         source="bla5",
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
     resp = await client.get("/api/config/config_entries/entry")
     assert resp.status == HTTPStatus.OK
@@ -258,79 +258,79 @@ async def test_get_entries(hass: HomeAssistant, client: TestClient) -> None:
     assert data[0]["domain"] == "comp5"
 
 
-async def test_remove_entry(hass: HomeAssistant, client: TestClient) -> None:
+async def test_remove_entry(menuai: menuai, client: TestClient) -> None:
     """Test removing an entry via the API."""
     entry = MockConfigEntry(domain="test", state=core_ce.ConfigEntryState.LOADED)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     resp = await client.delete(f"/api/config/config_entries/entry/{entry.entry_id}")
     assert resp.status == HTTPStatus.OK
     data = await resp.json()
     assert data == {"require_restart": True}
-    assert len(hass.config_entries.async_entries()) == 0
+    assert len(menuai.config_entries.async_entries()) == 0
 
 
-async def test_reload_entry(hass: HomeAssistant, client: TestClient) -> None:
+async def test_reload_entry(menuai: menuai, client: TestClient) -> None:
     """Test reloading an entry via the API."""
     entry = MockConfigEntry(domain="test", state=core_ce.ConfigEntryState.LOADED)
-    entry.add_to_hass(hass)
-    hass.config.components.add("test")
+    entry.add_to_menuai(menuai)
+    menuai.config.components.add("test")
     resp = await client.post(
         f"/api/config/config_entries/entry/{entry.entry_id}/reload"
     )
     assert resp.status == HTTPStatus.OK
     data = await resp.json()
     assert data == {"require_restart": True}
-    assert len(hass.config_entries.async_entries()) == 1
+    assert len(menuai.config_entries.async_entries()) == 1
 
 
-async def test_reload_invalid_entry(hass: HomeAssistant, client: TestClient) -> None:
+async def test_reload_invalid_entry(menuai: menuai, client: TestClient) -> None:
     """Test reloading an invalid entry via the API."""
     resp = await client.post("/api/config/config_entries/entry/invalid/reload")
     assert resp.status == HTTPStatus.NOT_FOUND
 
 
 async def test_remove_entry_unauth(
-    hass: HomeAssistant, client: TestClient, hass_admin_user: MockUser
+    menuai: menuai, client: TestClient, menuai_admin_user: MockUser
 ) -> None:
     """Test removing an entry via the API."""
-    hass_admin_user.groups = []
+    menuai_admin_user.groups = []
     entry = MockConfigEntry(domain="demo", state=core_ce.ConfigEntryState.LOADED)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     resp = await client.delete(f"/api/config/config_entries/entry/{entry.entry_id}")
     assert resp.status == HTTPStatus.UNAUTHORIZED
-    assert len(hass.config_entries.async_entries()) == 1
+    assert len(menuai.config_entries.async_entries()) == 1
 
 
 async def test_reload_entry_unauth(
-    hass: HomeAssistant, client: TestClient, hass_admin_user: MockUser
+    menuai: menuai, client: TestClient, menuai_admin_user: MockUser
 ) -> None:
     """Test reloading an entry via the API."""
-    hass_admin_user.groups = []
+    menuai_admin_user.groups = []
     entry = MockConfigEntry(domain="demo", state=core_ce.ConfigEntryState.LOADED)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     resp = await client.post(
         f"/api/config/config_entries/entry/{entry.entry_id}/reload"
     )
     assert resp.status == HTTPStatus.UNAUTHORIZED
-    assert len(hass.config_entries.async_entries()) == 1
+    assert len(menuai.config_entries.async_entries()) == 1
 
 
 async def test_reload_entry_in_failed_state(
-    hass: HomeAssistant, client: TestClient, hass_admin_user: MockUser
+    menuai: menuai, client: TestClient, menuai_admin_user: MockUser
 ) -> None:
     """Test reloading an entry via the API that has already failed to unload."""
     entry = MockConfigEntry(domain="demo", state=core_ce.ConfigEntryState.FAILED_UNLOAD)
-    entry.add_to_hass(hass)
-    hass.config.components.add("demo")
+    entry.add_to_menuai(menuai)
+    menuai.config.components.add("demo")
     resp = await client.post(
         f"/api/config/config_entries/entry/{entry.entry_id}/reload"
     )
     assert resp.status == HTTPStatus.FORBIDDEN
-    assert len(hass.config_entries.async_entries()) == 1
+    assert len(menuai.config_entries.async_entries()) == 1
 
 
 async def test_reload_entry_in_setup_retry(
-    hass: HomeAssistant, client: TestClient, hass_admin_user: MockUser
+    menuai: menuai, client: TestClient, menuai_admin_user: MockUser
 ) -> None:
     """Test reloading an entry via the API that is in setup retry."""
     mock_setup_entry = AsyncMock(return_value=True)
@@ -338,7 +338,7 @@ async def test_reload_entry_in_setup_retry(
     mock_migrate_entry = AsyncMock(return_value=True)
 
     mock_integration(
-        hass,
+        menuai,
         MockModule(
             "comp",
             async_setup_entry=mock_setup_entry,
@@ -346,21 +346,21 @@ async def test_reload_entry_in_setup_retry(
             async_migrate_entry=mock_migrate_entry,
         ),
     )
-    mock_platform(hass, "comp.config_flow", None)
+    mock_platform(menuai, "comp.config_flow", None)
     entry = MockConfigEntry(domain="comp", state=core_ce.ConfigEntryState.SETUP_RETRY)
     entry.supports_unload = True
-    entry.add_to_hass(hass)
-    hass.config.components.add("comp")
+    entry.add_to_menuai(menuai)
+    menuai.config.components.add("comp")
 
     with mock_config_flow("comp", ConfigFlow), mock_config_flow("test", ConfigFlow):
         resp = await client.post(
             f"/api/config/config_entries/entry/{entry.entry_id}/reload"
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     assert resp.status == HTTPStatus.OK
     data = await resp.json()
     assert data == {"require_restart": False}
-    assert len(hass.config_entries.async_entries()) == 1
+    assert len(menuai.config_entries.async_entries()) == 1
 
 
 @pytest.mark.parametrize(
@@ -372,7 +372,7 @@ async def test_reload_entry_in_setup_retry(
     ],
 )
 async def test_available_flows(
-    hass: HomeAssistant, client: TestClient, type_filter: str | None, result: set[str]
+    menuai: menuai, client: TestClient, type_filter: str | None, result: set[str]
 ) -> None:
     """Test querying the available flows."""
     with patch.object(
@@ -395,9 +395,9 @@ async def test_available_flows(
 
 
 @pytest.mark.parametrize("ignore_translations_for_mock_domains", ["test"])
-async def test_initialize_flow(hass: HomeAssistant, client: TestClient) -> None:
+async def test_initialize_flow(menuai: menuai, client: TestClient) -> None:
     """Test we can initialize a flow."""
-    mock_platform(hass, "test.config_flow", None)
+    mock_platform(menuai, "test.config_flow", None)
 
     class TestFlow(core_ce.ConfigFlow):
         async def async_step_user(self, user_input=None):
@@ -446,18 +446,18 @@ async def test_initialize_flow(hass: HomeAssistant, client: TestClient) -> None:
 
 
 async def test_initialize_flow_unmet_dependency(
-    hass: HomeAssistant, client: TestClient
+    menuai: menuai, client: TestClient
 ) -> None:
     """Test unmet dependencies are listed."""
-    mock_platform(hass, "test.config_flow", None)
+    mock_platform(menuai, "test.config_flow", None)
 
     config_schema = vol.Schema({"comp_conf": {"hello": str}}, required=True)
     mock_integration(
-        hass, MockModule(domain="dependency_1", config_schema=config_schema)
+        menuai, MockModule(domain="dependency_1", config_schema=config_schema)
     )
     # The test2 config flow should  fail because dependency_1 can't be automatically setup
     mock_integration(
-        hass,
+        menuai,
         MockModule(domain="test2", partial_manifest={"dependencies": ["dependency_1"]}),
     )
 
@@ -477,10 +477,10 @@ async def test_initialize_flow_unmet_dependency(
 
 
 async def test_initialize_flow_unauth(
-    hass: HomeAssistant, client: TestClient, hass_admin_user: MockUser
+    menuai: menuai, client: TestClient, menuai_admin_user: MockUser
 ) -> None:
     """Test we can initialize a flow."""
-    hass_admin_user.groups = []
+    menuai_admin_user.groups = []
 
     class TestFlow(core_ce.ConfigFlow):
         async def async_step_user(self, user_input=None):
@@ -505,9 +505,9 @@ async def test_initialize_flow_unauth(
 
 
 @pytest.mark.parametrize("ignore_translations_for_mock_domains", ["test"])
-async def test_abort(hass: HomeAssistant, client: TestClient) -> None:
+async def test_abort(menuai: menuai, client: TestClient) -> None:
     """Test a flow that aborts."""
-    mock_platform(hass, "test.config_flow", None)
+    mock_platform(menuai, "test.config_flow", None)
 
     class TestFlow(core_ce.ConfigFlow):
         async def async_step_user(self, user_input=None):
@@ -530,12 +530,12 @@ async def test_abort(hass: HomeAssistant, client: TestClient) -> None:
 
 
 @pytest.mark.usefixtures("freezer")
-async def test_create_account(hass: HomeAssistant, client: TestClient) -> None:
+async def test_create_account(menuai: menuai, client: TestClient) -> None:
     """Test a flow that creates an account."""
-    mock_platform(hass, "test.config_flow", None)
+    mock_platform(menuai, "test.config_flow", None)
 
     mock_integration(
-        hass, MockModule("test", async_setup_entry=AsyncMock(return_value=True))
+        menuai, MockModule("test", async_setup_entry=AsyncMock(return_value=True))
     )
 
     class TestFlow(core_ce.ConfigFlow):
@@ -553,7 +553,7 @@ async def test_create_account(hass: HomeAssistant, client: TestClient) -> None:
 
     assert resp.status == HTTPStatus.OK
 
-    entries = hass.config_entries.async_entries("test")
+    entries = menuai.config_entries.async_entries("test")
     assert len(entries) == 1
 
     timestamp = utcnow().timestamp()
@@ -594,12 +594,12 @@ async def test_create_account(hass: HomeAssistant, client: TestClient) -> None:
 
 
 @pytest.mark.usefixtures("freezer")
-async def test_two_step_flow(hass: HomeAssistant, client: TestClient) -> None:
+async def test_two_step_flow(menuai: menuai, client: TestClient) -> None:
     """Test we can finish a two step flow."""
     mock_integration(
-        hass, MockModule("test", async_setup_entry=AsyncMock(return_value=True))
+        menuai, MockModule("test", async_setup_entry=AsyncMock(return_value=True))
     )
-    mock_platform(hass, "test.config_flow", None)
+    mock_platform(menuai, "test.config_flow", None)
 
     class TestFlow(core_ce.ConfigFlow):
         VERSION = 1
@@ -639,7 +639,7 @@ async def test_two_step_flow(hass: HomeAssistant, client: TestClient) -> None:
         )
         assert resp.status == HTTPStatus.OK
 
-        entries = hass.config_entries.async_entries("test")
+        entries = menuai.config_entries.async_entries("test")
         assert len(entries) == 1
 
         timestamp = utcnow().timestamp()
@@ -680,13 +680,13 @@ async def test_two_step_flow(hass: HomeAssistant, client: TestClient) -> None:
 
 
 async def test_continue_flow_unauth(
-    hass: HomeAssistant, client: TestClient, hass_admin_user: MockUser
+    menuai: menuai, client: TestClient, menuai_admin_user: MockUser
 ) -> None:
     """Test we can't finish a two step flow."""
     mock_integration(
-        hass, MockModule("test", async_setup_entry=AsyncMock(return_value=True))
+        menuai, MockModule("test", async_setup_entry=AsyncMock(return_value=True))
     )
-    mock_platform(hass, "test.config_flow", None)
+    mock_platform(menuai, "test.config_flow", None)
 
     class TestFlow(core_ce.ConfigFlow):
         VERSION = 1
@@ -719,7 +719,7 @@ async def test_continue_flow_unauth(
             "preview": None,
         }
 
-    hass_admin_user.groups = []
+    menuai_admin_user.groups = []
 
     resp = await client.post(
         f"/api/config/config_entries/flow/{flow_id}",
@@ -729,27 +729,27 @@ async def test_continue_flow_unauth(
 
 
 async def test_get_progress_index(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test querying for the flows that are in progress."""
-    assert await async_setup_component(hass, "config", {})
-    mock_platform(hass, "test.config_flow", None)
-    ws_client = await hass_ws_client(hass)
+    assert await async_setup_component(menuai, "config", {})
+    mock_platform(menuai, "test.config_flow", None)
+    ws_client = await menuai_ws_client(menuai)
 
     mock_integration(
-        hass, MockModule("test", async_setup_entry=AsyncMock(return_value=True))
+        menuai, MockModule("test", async_setup_entry=AsyncMock(return_value=True))
     )
 
     entry = MockConfigEntry(domain="test", title="Test", entry_id="1234")
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     class TestFlow(core_ce.ConfigFlow):
         VERSION = 5
 
-        async def async_step_hassio(
-            self, discovery_info: HassioServiceInfo
+        async def async_step_menuaiio(
+            self, discovery_info: menuaiioServiceInfo
         ) -> ConfigFlowResult:
-            """Handle a Hass.io discovery."""
+            """Handle a menuai.io discovery."""
             return await self.async_step_account()
 
         async def async_step_account(self, user_input: dict[str, Any] | None = None):
@@ -769,17 +769,17 @@ async def test_get_progress_index(
             return await self.async_step_account()
 
     with mock_config_flow("test", TestFlow):
-        form_hassio = await hass.config_entries.flow.async_init(
-            "test", context={"source": core_ce.SOURCE_HASSIO}
+        form_menuaiio = await menuai.config_entries.flow.async_init(
+            "test", context={"source": core_ce.SOURCE_menuaiIO}
         )
-        form_user = await hass.config_entries.flow.async_init(
+        form_user = await menuai.config_entries.flow.async_init(
             "test", context={"source": core_ce.SOURCE_USER}
         )
-        form_reconfigure = await hass.config_entries.flow.async_init(
+        form_reconfigure = await menuai.config_entries.flow.async_init(
             "test", context={"source": core_ce.SOURCE_RECONFIGURE, "entry_id": "1234"}
         )
 
-    for form in (form_hassio, form_user, form_reconfigure):
+    for form in (form_menuaiio, form_user, form_reconfigure):
         assert form["type"] == data_entry_flow.FlowResultType.FORM
         assert form["step_id"] == "account"
 
@@ -791,21 +791,21 @@ async def test_get_progress_index(
     # Active flows with SOURCE_USER and SOURCE_RECONFIGURE should be filtered out
     assert response["result"] == [
         {
-            "flow_id": form_hassio["flow_id"],
+            "flow_id": form_menuaiio["flow_id"],
             "handler": "test",
             "step_id": "account",
-            "context": {"source": core_ce.SOURCE_HASSIO},
+            "context": {"source": core_ce.SOURCE_menuaiIO},
         }
     ]
 
 
 async def test_get_progress_index_unauth(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, hass_admin_user: MockUser
+    menuai: menuai, menuai_ws_client: WebSocketGenerator, menuai_admin_user: MockUser
 ) -> None:
     """Test we can't get flows that are in progress."""
-    assert await async_setup_component(hass, "config", {})
-    hass_admin_user.groups = []
-    ws_client = await hass_ws_client(hass)
+    assert await async_setup_component(menuai, "config", {})
+    menuai_admin_user.groups = []
+    ws_client = await menuai_ws_client(menuai)
 
     await ws_client.send_json({"id": 5, "type": "config_entries/flow/progress"})
     response = await ws_client.receive_json()
@@ -815,9 +815,9 @@ async def test_get_progress_index_unauth(
 
 
 @pytest.mark.parametrize("ignore_translations_for_mock_domains", ["test"])
-async def test_get_progress_flow(hass: HomeAssistant, client: TestClient) -> None:
+async def test_get_progress_flow(menuai: menuai, client: TestClient) -> None:
     """Test we can query the API for same result as we get from init a flow."""
-    mock_platform(hass, "test.config_flow", None)
+    mock_platform(menuai, "test.config_flow", None)
 
     class TestFlow(core_ce.ConfigFlow):
         async def async_step_user(self, user_input=None):
@@ -850,10 +850,10 @@ async def test_get_progress_flow(hass: HomeAssistant, client: TestClient) -> Non
 
 @pytest.mark.parametrize("ignore_translations_for_mock_domains", ["test"])
 async def test_get_progress_flow_unauth(
-    hass: HomeAssistant, client: TestClient, hass_admin_user: MockUser
+    menuai: menuai, client: TestClient, menuai_admin_user: MockUser
 ) -> None:
     """Test we can can't query the API for result of flow."""
-    mock_platform(hass, "test.config_flow", None)
+    mock_platform(menuai, "test.config_flow", None)
 
     class TestFlow(core_ce.ConfigFlow):
         async def async_step_user(self, user_input=None):
@@ -876,7 +876,7 @@ async def test_get_progress_flow_unauth(
     assert resp.status == HTTPStatus.OK
     data = await resp.json()
 
-    hass_admin_user.groups = []
+    menuai_admin_user.groups = []
 
     resp2 = await client.get(f"/api/config/config_entries/flow/{data['flow_id']}")
 
@@ -884,33 +884,33 @@ async def test_get_progress_flow_unauth(
 
 
 async def test_get_progress_subscribe(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test querying for the flows that are in progress."""
-    assert await async_setup_component(hass, "config", {})
-    mock_platform(hass, "test.config_flow", None)
-    ws_client = await hass_ws_client(hass)
+    assert await async_setup_component(menuai, "config", {})
+    mock_platform(menuai, "test.config_flow", None)
+    ws_client = await menuai_ws_client(menuai)
 
     mock_integration(
-        hass, MockModule("test", async_setup_entry=AsyncMock(return_value=True))
+        menuai, MockModule("test", async_setup_entry=AsyncMock(return_value=True))
     )
 
     entry = MockConfigEntry(domain="test", title="Test", entry_id="1234")
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     class TestFlow(core_ce.ConfigFlow):
         VERSION = 5
 
         async def async_step_bluetooth(
-            self, discovery_info: HassioServiceInfo
+            self, discovery_info: menuaiioServiceInfo
         ) -> ConfigFlowResult:
             """Handle a bluetooth discovery."""
             return self.async_abort(reason="already_configured")
 
-        async def async_step_hassio(
-            self, discovery_info: HassioServiceInfo
+        async def async_step_menuaiio(
+            self, discovery_info: menuaiioServiceInfo
         ) -> ConfigFlowResult:
-            """Handle a Hass.io discovery."""
+            """Handle a menuai.io discovery."""
             return await self.async_step_account()
 
         async def async_step_account(self, user_input: dict[str, Any] | None = None):
@@ -943,7 +943,7 @@ async def test_get_progress_subscribe(
 
     flow_context = {
         "bluetooth": {"source": core_ce.SOURCE_BLUETOOTH},
-        "hassio": {"source": core_ce.SOURCE_HASSIO},
+        "menuaiio": {"source": core_ce.SOURCE_menuaiIO},
         "user": {"source": core_ce.SOURCE_USER},
         "reauth": {"source": core_ce.SOURCE_REAUTH, "entry_id": "1234"},
         "reconfigure": {"source": core_ce.SOURCE_RECONFIGURE, "entry_id": "1234"},
@@ -952,21 +952,21 @@ async def test_get_progress_subscribe(
 
     with mock_config_flow("test", TestFlow):
         for key, context in flow_context.items():
-            forms[key] = await hass.config_entries.flow.async_init(
+            forms[key] = await menuai.config_entries.flow.async_init(
                 "test", context=context
             )
 
     assert forms["bluetooth"]["type"] == data_entry_flow.FlowResultType.ABORT
-    for key in ("hassio", "user", "reauth", "reconfigure"):
+    for key in ("menuaiio", "user", "reauth", "reconfigure"):
         assert forms[key]["type"] == data_entry_flow.FlowResultType.FORM
         assert forms[key]["step_id"] == "account"
 
-    for key in ("hassio", "user", "reauth", "reconfigure"):
-        hass.config_entries.flow.async_abort(forms[key]["flow_id"])
+    for key in ("menuaiio", "user", "reauth", "reconfigure"):
+        menuai.config_entries.flow.async_abort(forms[key]["flow_id"])
 
     # Uninitialized flows and flows with SOURCE_USER and SOURCE_RECONFIGURE
     # should be filtered out
-    for key in ("hassio", "reauth"):
+    for key in ("menuaiio", "reauth"):
         response = await ws_client.receive_json()
         assert response == {
             "event": [
@@ -984,7 +984,7 @@ async def test_get_progress_subscribe(
             "id": 1,
             "type": "event",
         }
-    for key in ("hassio", "reauth"):
+    for key in ("menuaiio", "reauth"):
         response = await ws_client.receive_json()
         assert response == {
             "event": [
@@ -999,33 +999,33 @@ async def test_get_progress_subscribe(
 
 
 async def test_get_progress_subscribe_in_progress(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test querying for the flows that are in progress."""
-    assert await async_setup_component(hass, "config", {})
-    mock_platform(hass, "test.config_flow", None)
-    ws_client = await hass_ws_client(hass)
+    assert await async_setup_component(menuai, "config", {})
+    mock_platform(menuai, "test.config_flow", None)
+    ws_client = await menuai_ws_client(menuai)
 
     mock_integration(
-        hass, MockModule("test", async_setup_entry=AsyncMock(return_value=True))
+        menuai, MockModule("test", async_setup_entry=AsyncMock(return_value=True))
     )
 
     entry = MockConfigEntry(domain="test", title="Test", entry_id="1234")
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     class TestFlow(core_ce.ConfigFlow):
         VERSION = 5
 
         async def async_step_bluetooth(
-            self, discovery_info: HassioServiceInfo
+            self, discovery_info: menuaiioServiceInfo
         ) -> ConfigFlowResult:
             """Handle a bluetooth discovery."""
             return self.async_abort(reason="already_configured")
 
-        async def async_step_hassio(
-            self, discovery_info: HassioServiceInfo
+        async def async_step_menuaiio(
+            self, discovery_info: menuaiioServiceInfo
         ) -> ConfigFlowResult:
-            """Handle a Hass.io discovery."""
+            """Handle a menuai.io discovery."""
             return await self.async_step_account()
 
         async def async_step_account(self, user_input: dict[str, Any] | None = None):
@@ -1052,7 +1052,7 @@ async def test_get_progress_subscribe_in_progress(
 
     flow_context = {
         "bluetooth": {"source": core_ce.SOURCE_BLUETOOTH},
-        "hassio": {"source": core_ce.SOURCE_HASSIO},
+        "menuaiio": {"source": core_ce.SOURCE_menuaiIO},
         "user": {"source": core_ce.SOURCE_USER},
         "reauth": {"source": core_ce.SOURCE_REAUTH, "entry_id": "1234"},
         "reconfigure": {"source": core_ce.SOURCE_RECONFIGURE, "entry_id": "1234"},
@@ -1061,12 +1061,12 @@ async def test_get_progress_subscribe_in_progress(
 
     with mock_config_flow("test", TestFlow):
         for key, context in flow_context.items():
-            forms[key] = await hass.config_entries.flow.async_init(
+            forms[key] = await menuai.config_entries.flow.async_init(
                 "test", context=context
             )
 
     assert forms["bluetooth"]["type"] == data_entry_flow.FlowResultType.ABORT
-    for key in ("hassio", "user", "reauth", "reconfigure"):
+    for key in ("menuaiio", "user", "reauth", "reconfigure"):
         assert forms[key]["type"] == data_entry_flow.FlowResultType.FORM
         assert forms[key]["step_id"] == "account"
 
@@ -1090,7 +1090,7 @@ async def test_get_progress_subscribe_in_progress(
                         "flow_id": forms[key]["flow_id"],
                         "type": None,
                     }
-                    for key in ("hassio", "reauth")
+                    for key in ("menuaiio", "reauth")
                 ]
             ),
             "id": 1,
@@ -1101,10 +1101,10 @@ async def test_get_progress_subscribe_in_progress(
     response = await ws_client.receive_json()
     assert response == {"id": ANY, "result": None, "success": True, "type": "result"}
 
-    for key in ("hassio", "user", "reauth", "reconfigure"):
-        hass.config_entries.flow.async_abort(forms[key]["flow_id"])
+    for key in ("menuaiio", "user", "reauth", "reconfigure"):
+        menuai.config_entries.flow.async_abort(forms[key]["flow_id"])
 
-    for key in ("hassio", "reauth"):
+    for key in ("menuaiio", "reauth"):
         response = await ws_client.receive_json()
         assert response == {
             "event": [
@@ -1119,12 +1119,12 @@ async def test_get_progress_subscribe_in_progress(
 
 
 async def test_get_progress_subscribe_unauth(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, hass_admin_user: MockUser
+    menuai: menuai, menuai_ws_client: WebSocketGenerator, menuai_admin_user: MockUser
 ) -> None:
     """Test we can't subscribe to flows."""
-    assert await async_setup_component(hass, "config", {})
-    hass_admin_user.groups = []
-    ws_client = await hass_ws_client(hass)
+    assert await async_setup_component(menuai, "config", {})
+    menuai_admin_user.groups = []
+    ws_client = await menuai_ws_client(menuai)
 
     await ws_client.send_json({"id": 5, "type": "config_entries/flow/subscribe"})
     response = await ws_client.receive_json()
@@ -1133,7 +1133,7 @@ async def test_get_progress_subscribe_unauth(
     assert response["error"]["code"] == "unauthorized"
 
 
-async def test_options_flow(hass: HomeAssistant, client: TestClient) -> None:
+async def test_options_flow(menuai: menuai, client: TestClient) -> None:
     """Test we can change options."""
 
     class TestFlow(core_ce.ConfigFlow):
@@ -1153,14 +1153,14 @@ async def test_options_flow(hass: HomeAssistant, client: TestClient) -> None:
 
             return OptionsFlowHandler()
 
-    mock_integration(hass, MockModule("test"))
-    mock_platform(hass, "test.config_flow", None)
+    mock_integration(menuai, MockModule("test"))
+    mock_platform(menuai, "test.config_flow", None)
     MockConfigEntry(
         domain="test",
         entry_id="test1",
         source="bla",
-    ).add_to_hass(hass)
-    entry = hass.config_entries.async_entries()[0]
+    ).add_to_menuai(menuai)
+    entry = menuai.config_entries.async_entries()[0]
 
     with mock_config_flow("test", TestFlow):
         url = "/api/config/config_entries/options/flow"
@@ -1191,9 +1191,9 @@ async def test_options_flow(hass: HomeAssistant, client: TestClient) -> None:
     ],
 )
 async def test_options_flow_unauth(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: TestClient,
-    hass_admin_user: MockUser,
+    menuai_admin_user: MockUser,
     endpoint: str,
     method: str,
 ) -> None:
@@ -1213,16 +1213,16 @@ async def test_options_flow_unauth(
 
             return OptionsFlowHandler()
 
-    mock_integration(hass, MockModule("test"))
-    mock_platform(hass, "test.config_flow", None)
+    mock_integration(menuai, MockModule("test"))
+    mock_platform(menuai, "test.config_flow", None)
     MockConfigEntry(
         domain="test",
         entry_id="test1",
         source="bla",
-    ).add_to_hass(hass)
-    entry = hass.config_entries.async_entries()[0]
+    ).add_to_menuai(menuai)
+    entry = menuai.config_entries.async_entries()[0]
 
-    hass_admin_user.groups = []
+    menuai_admin_user.groups = []
 
     with mock_config_flow("test", TestFlow):
         resp = await getattr(client, method)(endpoint, json={"handler": entry.entry_id})
@@ -1230,12 +1230,12 @@ async def test_options_flow_unauth(
     assert resp.status == HTTPStatus.UNAUTHORIZED
 
 
-async def test_two_step_options_flow(hass: HomeAssistant, client: TestClient) -> None:
+async def test_two_step_options_flow(menuai: menuai, client: TestClient) -> None:
     """Test we can finish a two step options flow."""
     mock_integration(
-        hass, MockModule("test", async_setup_entry=AsyncMock(return_value=True))
+        menuai, MockModule("test", async_setup_entry=AsyncMock(return_value=True))
     )
-    mock_platform(hass, "test.config_flow", None)
+    mock_platform(menuai, "test.config_flow", None)
 
     class TestFlow(core_ce.ConfigFlow):
         @staticmethod
@@ -1258,8 +1258,8 @@ async def test_two_step_options_flow(hass: HomeAssistant, client: TestClient) ->
         domain="test",
         entry_id="test1",
         source="bla",
-    ).add_to_hass(hass)
-    entry = hass.config_entries.async_entries()[0]
+    ).add_to_menuai(menuai)
+    entry = menuai.config_entries.async_entries()[0]
 
     with mock_config_flow("test", TestFlow):
         url = "/api/config/config_entries/options/flow"
@@ -1297,13 +1297,13 @@ async def test_two_step_options_flow(hass: HomeAssistant, client: TestClient) ->
 
 
 async def test_options_flow_with_invalid_data(
-    hass: HomeAssistant, client: TestClient
+    menuai: menuai, client: TestClient
 ) -> None:
     """Test an options flow with invalid_data."""
     mock_integration(
-        hass, MockModule("test", async_setup_entry=AsyncMock(return_value=True))
+        menuai, MockModule("test", async_setup_entry=AsyncMock(return_value=True))
     )
-    mock_platform(hass, "test.config_flow", None)
+    mock_platform(menuai, "test.config_flow", None)
 
     class TestFlow(core_ce.ConfigFlow):
         @staticmethod
@@ -1333,8 +1333,8 @@ async def test_options_flow_with_invalid_data(
         domain="test",
         entry_id="test1",
         source="bla",
-    ).add_to_hass(hass)
-    entry = hass.config_entries.async_entries()[0]
+    ).add_to_menuai(menuai)
+    entry = menuai.config_entries.async_entries()[0]
 
     with mock_config_flow("test", TestFlow):
         url = "/api/config/config_entries/options/flow"
@@ -1372,7 +1372,7 @@ async def test_options_flow_with_invalid_data(
         assert data == {"errors": {"choices": "invalid is not a valid option"}}
 
 
-async def test_subentry_flow(hass: HomeAssistant, client) -> None:
+async def test_subentry_flow(menuai: menuai, client) -> None:
     """Test we can start a subentry flow."""
 
     class TestFlow(core_ce.ConfigFlow):
@@ -1394,14 +1394,14 @@ async def test_subentry_flow(hass: HomeAssistant, client) -> None:
         ) -> dict[str, type[core_ce.ConfigSubentryFlow]]:
             return {"test": TestFlow.SubentryFlowHandler}
 
-    mock_integration(hass, MockModule("test"))
-    mock_platform(hass, "test.config_flow", None)
+    mock_integration(menuai, MockModule("test"))
+    mock_platform(menuai, "test.config_flow", None)
     MockConfigEntry(
         domain="test",
         entry_id="test1",
         source="bla",
-    ).add_to_hass(hass)
-    entry = hass.config_entries.async_entries()[0]
+    ).add_to_menuai(menuai)
+    entry = menuai.config_entries.async_entries()[0]
 
     with mock_config_flow("test", TestFlow):
         url = "/api/config/config_entries/subentries/flow"
@@ -1423,7 +1423,7 @@ async def test_subentry_flow(hass: HomeAssistant, client) -> None:
     }
 
 
-async def test_subentry_reconfigure_flow(hass: HomeAssistant, client) -> None:
+async def test_subentry_reconfigure_flow(menuai: menuai, client) -> None:
     """Test we can start and finish a subentry reconfigure flow."""
 
     class TestFlow(core_ce.ConfigFlow):
@@ -1456,8 +1456,8 @@ async def test_subentry_reconfigure_flow(hass: HomeAssistant, client) -> None:
         ) -> dict[str, type[core_ce.ConfigSubentryFlow]]:
             return {"test": TestFlow.SubentryFlowHandler}
 
-    mock_integration(hass, MockModule("test"))
-    mock_platform(hass, "test.config_flow", None)
+    mock_integration(menuai, MockModule("test"))
+    mock_platform(menuai, "test.config_flow", None)
     MockConfigEntry(
         domain="test",
         entry_id="test1",
@@ -1471,8 +1471,8 @@ async def test_subentry_reconfigure_flow(hass: HomeAssistant, client) -> None:
                 unique_id=None,
             )
         ],
-    ).add_to_hass(hass)
-    entry = hass.config_entries.async_entries()[0]
+    ).add_to_menuai(menuai)
+    entry = menuai.config_entries.async_entries()[0]
 
     with mock_config_flow("test", TestFlow):
         url = "/api/config/config_entries/subentries/flow"
@@ -1502,7 +1502,7 @@ async def test_subentry_reconfigure_flow(hass: HomeAssistant, client) -> None:
         )
     assert resp.status == HTTPStatus.OK
 
-    entries = hass.config_entries.async_entries("test")
+    entries = menuai.config_entries.async_entries("test")
     assert len(entries) == 1
 
     data = await resp.json()
@@ -1514,7 +1514,7 @@ async def test_subentry_reconfigure_flow(hass: HomeAssistant, client) -> None:
         "description_placeholders": None,
     }
 
-    entry = hass.config_entries.async_entries()[0]
+    entry = menuai.config_entries.async_entries()[0]
     assert entry.subentries == {
         "mock_id": core_ce.ConfigSubentry(
             data={"test": "blah"},
@@ -1526,7 +1526,7 @@ async def test_subentry_reconfigure_flow(hass: HomeAssistant, client) -> None:
     }
 
 
-async def test_subentry_flow_abort_duplicate(hass: HomeAssistant, client) -> None:
+async def test_subentry_flow_abort_duplicate(menuai: menuai, client) -> None:
     """Test we can handle a subentry flow raising due to unique_id collision."""
 
     class TestFlow(core_ce.ConfigFlow):
@@ -1551,8 +1551,8 @@ async def test_subentry_flow_abort_duplicate(hass: HomeAssistant, client) -> Non
         ) -> dict[str, type[core_ce.ConfigSubentryFlow]]:
             return {"test": TestFlow.SubentryFlowHandler}
 
-    mock_integration(hass, MockModule("test"))
-    mock_platform(hass, "test.config_flow", None)
+    mock_integration(menuai, MockModule("test"))
+    mock_platform(menuai, "test.config_flow", None)
     MockConfigEntry(
         domain="test",
         entry_id="test1",
@@ -1566,8 +1566,8 @@ async def test_subentry_flow_abort_duplicate(hass: HomeAssistant, client) -> Non
                 unique_id="test",
             )
         ],
-    ).add_to_hass(hass)
-    entry = hass.config_entries.async_entries()[0]
+    ).add_to_menuai(menuai)
+    entry = menuai.config_entries.async_entries()[0]
 
     with mock_config_flow("test", TestFlow):
         url = "/api/config/config_entries/subentries/flow"
@@ -1595,7 +1595,7 @@ async def test_subentry_flow_abort_duplicate(hass: HomeAssistant, client) -> Non
         )
     assert resp.status == HTTPStatus.OK
 
-    entries = hass.config_entries.async_entries("test")
+    entries = menuai.config_entries.async_entries("test")
     assert len(entries) == 1
 
     data = await resp.json()
@@ -1609,7 +1609,7 @@ async def test_subentry_flow_abort_duplicate(hass: HomeAssistant, client) -> Non
 
 
 async def test_subentry_does_not_support_reconfigure(
-    hass: HomeAssistant, client: TestClient
+    menuai: menuai, client: TestClient
 ) -> None:
     """Test a subentry flow that does not support reconfigure step."""
 
@@ -1628,8 +1628,8 @@ async def test_subentry_does_not_support_reconfigure(
         ) -> dict[str, type[core_ce.ConfigSubentryFlow]]:
             return {"test": TestFlow.SubentryFlowHandler}
 
-    mock_integration(hass, MockModule("test"))
-    mock_platform(hass, "test.config_flow", None)
+    mock_integration(menuai, MockModule("test"))
+    mock_platform(menuai, "test.config_flow", None)
     MockConfigEntry(
         domain="test",
         entry_id="test1",
@@ -1643,8 +1643,8 @@ async def test_subentry_does_not_support_reconfigure(
                 unique_id=None,
             )
         ],
-    ).add_to_hass(hass)
-    entry = hass.config_entries.async_entries()[0]
+    ).add_to_menuai(menuai)
+    entry = menuai.config_entries.async_entries()[0]
 
     with mock_config_flow("test", TestFlow):
         url = "/api/config/config_entries/subentries/flow"
@@ -1668,7 +1668,7 @@ async def test_subentry_does_not_support_reconfigure(
     ],
 )
 async def test_subentry_flow_unauth(
-    hass: HomeAssistant, client, hass_admin_user: MockUser, endpoint: str, method: str
+    menuai: menuai, client, menuai_admin_user: MockUser, endpoint: str, method: str
 ) -> None:
     """Test unauthorized on subentry flow."""
 
@@ -1688,16 +1688,16 @@ async def test_subentry_flow_unauth(
         ) -> dict[str, type[core_ce.ConfigSubentryFlow]]:
             return {"test": TestFlow.SubentryFlowHandler}
 
-    mock_integration(hass, MockModule("test"))
-    mock_platform(hass, "test.config_flow", None)
+    mock_integration(menuai, MockModule("test"))
+    mock_platform(menuai, "test.config_flow", None)
     MockConfigEntry(
         domain="test",
         entry_id="test1",
         source="bla",
-    ).add_to_hass(hass)
-    entry = hass.config_entries.async_entries()[0]
+    ).add_to_menuai(menuai)
+    entry = menuai.config_entries.async_entries()[0]
 
-    hass_admin_user.groups = []
+    menuai_admin_user.groups = []
 
     with mock_config_flow("test", TestFlow):
         resp = await getattr(client, method)(endpoint, json={"handler": entry.entry_id})
@@ -1705,12 +1705,12 @@ async def test_subentry_flow_unauth(
     assert resp.status == HTTPStatus.UNAUTHORIZED
 
 
-async def test_two_step_subentry_flow(hass: HomeAssistant, client) -> None:
+async def test_two_step_subentry_flow(menuai: menuai, client) -> None:
     """Test we can finish a two step subentry flow."""
     mock_integration(
-        hass, MockModule("test", async_setup_entry=AsyncMock(return_value=True))
+        menuai, MockModule("test", async_setup_entry=AsyncMock(return_value=True))
     )
-    mock_platform(hass, "test.config_flow", None)
+    mock_platform(menuai, "test.config_flow", None)
 
     class TestFlow(core_ce.ConfigFlow):
         class SubentryFlowHandler(core_ce.ConfigSubentryFlow):
@@ -1738,8 +1738,8 @@ async def test_two_step_subentry_flow(hass: HomeAssistant, client) -> None:
         domain="test",
         entry_id="test1",
         source="bla",
-    ).add_to_hass(hass)
-    entry = hass.config_entries.async_entries()[0]
+    ).add_to_menuai(menuai)
+    entry = menuai.config_entries.async_entries()[0]
 
     with mock_config_flow("test", TestFlow):
         url = "/api/config/config_entries/subentries/flow"
@@ -1783,12 +1783,12 @@ async def test_two_step_subentry_flow(hass: HomeAssistant, client) -> None:
         }
 
 
-async def test_subentry_flow_with_invalid_data(hass: HomeAssistant, client) -> None:
+async def test_subentry_flow_with_invalid_data(menuai: menuai, client) -> None:
     """Test a subentry flow with invalid_data."""
     mock_integration(
-        hass, MockModule("test", async_setup_entry=AsyncMock(return_value=True))
+        menuai, MockModule("test", async_setup_entry=AsyncMock(return_value=True))
     )
-    mock_platform(hass, "test.config_flow", None)
+    mock_platform(menuai, "test.config_flow", None)
 
     class TestFlow(core_ce.ConfigFlow):
         class SubentryFlowHandler(core_ce.ConfigSubentryFlow):
@@ -1818,8 +1818,8 @@ async def test_subentry_flow_with_invalid_data(hass: HomeAssistant, client) -> N
         domain="test",
         entry_id="test1",
         source="bla",
-    ).add_to_hass(hass)
-    entry = hass.config_entries.async_entries()[0]
+    ).add_to_menuai(menuai)
+    entry = menuai.config_entries.async_entries()[0]
 
     with mock_config_flow("test", TestFlow):
         url = "/api/config/config_entries/subentries/flow"
@@ -1859,14 +1859,14 @@ async def test_subentry_flow_with_invalid_data(hass: HomeAssistant, client) -> N
 
 @pytest.mark.usefixtures("freezer")
 async def test_get_single(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test that we can get a config entry."""
-    assert await async_setup_component(hass, "config", {})
-    ws_client = await hass_ws_client(hass)
+    assert await async_setup_component(menuai, "config", {})
+    ws_client = await menuai_ws_client(menuai)
 
     entry = MockConfigEntry(domain="test", state=core_ce.ConfigEntryState.LOADED)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     assert entry.pref_disable_new_entities is False
     assert entry.pref_disable_polling is False
@@ -1918,15 +1918,15 @@ async def test_get_single(
 
 
 async def test_update_prefrences(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test that we can update system options."""
-    assert await async_setup_component(hass, "config", {})
-    ws_client = await hass_ws_client(hass)
+    assert await async_setup_component(menuai, "config", {})
+    ws_client = await menuai_ws_client(menuai)
 
     entry = MockConfigEntry(domain="test", state=core_ce.ConfigEntryState.LOADED)
-    entry.add_to_hass(hass)
-    hass.config.components.add("test")
+    entry.add_to_menuai(menuai)
+    menuai.config.components.add("test")
 
     assert entry.pref_disable_new_entities is False
     assert entry.pref_disable_polling is False
@@ -1970,14 +1970,14 @@ async def test_update_prefrences(
 
 
 async def test_update_entry(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test that we can update entry."""
-    assert await async_setup_component(hass, "config", {})
-    ws_client = await hass_ws_client(hass)
+    assert await async_setup_component(menuai, "config", {})
+    ws_client = await menuai_ws_client(menuai)
 
     entry = MockConfigEntry(domain="demo", title="Initial Title")
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     await ws_client.send_json(
         {
@@ -1995,11 +1995,11 @@ async def test_update_entry(
 
 
 async def test_update_entry_nonexisting(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test that we can update entry."""
-    assert await async_setup_component(hass, "config", {})
-    ws_client = await hass_ws_client(hass)
+    assert await async_setup_component(menuai, "config", {})
+    ws_client = await menuai_ws_client(menuai)
 
     await ws_client.send_json(
         {
@@ -2016,16 +2016,16 @@ async def test_update_entry_nonexisting(
 
 
 async def test_disable_entry(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test that we can disable entry."""
-    assert await async_setup_component(hass, "config", {})
-    ws_client = await hass_ws_client(hass)
+    assert await async_setup_component(menuai, "config", {})
+    ws_client = await menuai_ws_client(menuai)
 
     entry = MockConfigEntry(domain="test", state=core_ce.ConfigEntryState.LOADED)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     assert entry.disabled_by is None
-    hass.config.components.add("test")
+    menuai.config.components.add("test")
 
     # Disable
     await ws_client.send_json(
@@ -2077,11 +2077,11 @@ async def test_disable_entry(
 
 
 async def test_disable_entry_nonexisting(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test that we can disable entry."""
-    assert await async_setup_component(hass, "config", {})
-    ws_client = await hass_ws_client(hass)
+    assert await async_setup_component(menuai, "config", {})
+    ws_client = await menuai_ws_client(menuai)
 
     await ws_client.send_json(
         {
@@ -2114,17 +2114,17 @@ async def test_disable_entry_nonexisting(
     ],
 )
 async def test_ignore_flow(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     flow_context: dict,
     entry_discovery_keys: dict[str, tuple[DiscoveryKey, ...]],
 ) -> None:
     """Test we can ignore a flow."""
-    assert await async_setup_component(hass, "config", {})
+    assert await async_setup_component(menuai, "config", {})
     mock_integration(
-        hass, MockModule("test", async_setup_entry=AsyncMock(return_value=True))
+        menuai, MockModule("test", async_setup_entry=AsyncMock(return_value=True))
     )
-    mock_platform(hass, "test.config_flow", None)
+    mock_platform(menuai, "test.config_flow", None)
 
     class TestFlow(core_ce.ConfigFlow):
         VERSION = 1
@@ -2136,10 +2136,10 @@ async def test_ignore_flow(
         async def async_step_account(self, user_input=None):
             raise NotImplementedError
 
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     with mock_config_flow("test", TestFlow):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             "test", context={"source": core_ce.SOURCE_USER} | flow_context
         )
         assert result["type"] is FlowResultType.FORM
@@ -2156,9 +2156,9 @@ async def test_ignore_flow(
 
         assert response["success"]
 
-    assert len(hass.config_entries.flow.async_progress()) == 0
+    assert len(menuai.config_entries.flow.async_progress()) == 0
 
-    entry = hass.config_entries.async_entries("test")[0]
+    entry = menuai.config_entries.async_entries("test")[0]
     assert entry.source == "ignore"
     assert entry.unique_id == "mock-unique-id"
     assert entry.title == "Test Integration"
@@ -2167,11 +2167,11 @@ async def test_ignore_flow(
 
 
 async def test_ignore_flow_nonexisting(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test we can ignore a flow."""
-    assert await async_setup_component(hass, "config", {})
-    ws_client = await hass_ws_client(hass)
+    assert await async_setup_component(menuai, "config", {})
+    ws_client = await menuai_ws_client(menuai)
 
     await ws_client.send_json(
         {
@@ -2189,22 +2189,22 @@ async def test_ignore_flow_nonexisting(
 
 @pytest.mark.usefixtures("freezer")
 async def test_get_matching_entries_ws(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test get entries with the websocket api."""
-    assert await async_setup_component(hass, "config", {})
-    mock_integration(hass, MockModule("comp1"))
+    assert await async_setup_component(menuai, "config", {})
+    mock_integration(menuai, MockModule("comp1"))
     mock_integration(
-        hass, MockModule("comp2", partial_manifest={"integration_type": "helper"})
+        menuai, MockModule("comp2", partial_manifest={"integration_type": "helper"})
     )
     mock_integration(
-        hass, MockModule("comp3", partial_manifest={"integration_type": "hub"})
+        menuai, MockModule("comp3", partial_manifest={"integration_type": "hub"})
     )
     mock_integration(
-        hass, MockModule("comp4", partial_manifest={"integration_type": "device"})
+        menuai, MockModule("comp4", partial_manifest={"integration_type": "device"})
     )
     mock_integration(
-        hass, MockModule("comp5", partial_manifest={"integration_type": "service"})
+        menuai, MockModule("comp5", partial_manifest={"integration_type": "service"})
     )
 
     entry = MockConfigEntry(
@@ -2212,32 +2212,32 @@ async def test_get_matching_entries_ws(
         title="Test 1",
         source="bla",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     MockConfigEntry(
         domain="comp2",
         title="Test 2",
         source="bla2",
         state=core_ce.ConfigEntryState.SETUP_ERROR,
         reason="Unsupported API",
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
     MockConfigEntry(
         domain="comp3",
         title="Test 3",
         source="bla3",
         disabled_by=core_ce.ConfigEntryDisabler.USER,
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
     MockConfigEntry(
         domain="comp4",
         title="Test 4",
         source="bla4",
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
     MockConfigEntry(
         domain="comp5",
         title="Test 5",
         source="bla5",
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     await ws_client.send_json_auto_id({"type": "config_entries/get"})
     response = await ws_client.receive_json()
@@ -2488,7 +2488,7 @@ async def test_get_matching_entries_ws(
 
     # Verify we skip broken integrations
     with patch(
-        "homeassistant.components.config.config_entries.async_get_integrations",
+        "menuai.components.config.config_entries.async_get_integrations",
         return_value={"any": IntegrationNotFound("any")},
     ):
         await ws_client.send_json_auto_id(
@@ -2609,7 +2609,7 @@ async def test_get_matching_entries_ws(
 
     # Verify we don't send config entries when only helpers are requested
     with patch(
-        "homeassistant.components.config.config_entries.async_get_integrations",
+        "menuai.components.config.config_entries.async_get_integrations",
         return_value={"any": IntegrationNotFound("any")},
     ):
         await ws_client.send_json_auto_id(
@@ -2625,7 +2625,7 @@ async def test_get_matching_entries_ws(
     # Verify we raise if something really goes wrong
 
     with patch(
-        "homeassistant.components.config.config_entries.async_get_integrations",
+        "menuai.components.config.config_entries.async_get_integrations",
         return_value={"any": Exception()},
     ):
         await ws_client.send_json_auto_id(
@@ -2640,40 +2640,40 @@ async def test_get_matching_entries_ws(
 
 
 async def test_subscribe_entries_ws(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test subscribe entries with the websocket api."""
-    assert await async_setup_component(hass, "config", {})
-    mock_integration(hass, MockModule("comp1"))
+    assert await async_setup_component(menuai, "config", {})
+    mock_integration(menuai, MockModule("comp1"))
     mock_integration(
-        hass, MockModule("comp2", partial_manifest={"integration_type": "helper"})
+        menuai, MockModule("comp2", partial_manifest={"integration_type": "helper"})
     )
     mock_integration(
-        hass, MockModule("comp3", partial_manifest={"integration_type": "device"})
+        menuai, MockModule("comp3", partial_manifest={"integration_type": "device"})
     )
     entry = MockConfigEntry(
         domain="comp1",
         title="Test 1",
         source="bla",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     MockConfigEntry(
         domain="comp2",
         title="Test 2",
         source="bla2",
         state=core_ce.ConfigEntryState.SETUP_ERROR,
         reason="Unsupported API",
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
     MockConfigEntry(
         domain="comp3",
         title="Test 3",
         source="bla3",
         disabled_by=core_ce.ConfigEntryDisabler.USER,
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     await ws_client.send_json(
         {
@@ -2765,7 +2765,7 @@ async def test_subscribe_entries_ws(
     ]
     freezer.tick()
     modified = utcnow().timestamp()
-    assert hass.config_entries.async_update_entry(entry, title="changed")
+    assert menuai.config_entries.async_update_entry(entry, title="changed")
     response = await ws_client.receive_json()
     assert response["id"] == 5
     assert response["event"] == [
@@ -2796,7 +2796,7 @@ async def test_subscribe_entries_ws(
     ]
     freezer.tick()
     modified = utcnow().timestamp()
-    await hass.config_entries.async_remove(entry.entry_id)
+    await menuai.config_entries.async_remove(entry.entry_id)
     response = await ws_client.receive_json()
     assert response["id"] == 5
     assert response["event"] == [
@@ -2826,7 +2826,7 @@ async def test_subscribe_entries_ws(
         }
     ]
     freezer.tick()
-    await hass.config_entries.async_add(entry)
+    await menuai.config_entries.async_add(entry)
     response = await ws_client.receive_json()
     assert response["id"] == 5
     assert response["event"] == [
@@ -2858,29 +2858,29 @@ async def test_subscribe_entries_ws(
 
 
 async def test_subscribe_entries_ws_filtered(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test subscribe entries with the websocket api with a type filter."""
     created = utcnow().timestamp()
-    assert await async_setup_component(hass, "config", {})
-    mock_integration(hass, MockModule("comp1"))
+    assert await async_setup_component(menuai, "config", {})
+    mock_integration(menuai, MockModule("comp1"))
     mock_integration(
-        hass, MockModule("comp2", partial_manifest={"integration_type": "helper"})
+        menuai, MockModule("comp2", partial_manifest={"integration_type": "helper"})
     )
     mock_integration(
-        hass, MockModule("comp3", partial_manifest={"integration_type": "device"})
+        menuai, MockModule("comp3", partial_manifest={"integration_type": "device"})
     )
     mock_integration(
-        hass, MockModule("comp4", partial_manifest={"integration_type": "service"})
+        menuai, MockModule("comp4", partial_manifest={"integration_type": "service"})
     )
     entry = MockConfigEntry(
         domain="comp1",
         title="Test 1",
         source="bla",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     entry2 = MockConfigEntry(
         domain="comp2",
         title="Test 2",
@@ -2888,22 +2888,22 @@ async def test_subscribe_entries_ws_filtered(
         state=core_ce.ConfigEntryState.SETUP_ERROR,
         reason="Unsupported API",
     )
-    entry2.add_to_hass(hass)
+    entry2.add_to_menuai(menuai)
     entry3 = MockConfigEntry(
         domain="comp3",
         title="Test 3",
         source="bla3",
         disabled_by=core_ce.ConfigEntryDisabler.USER,
     )
-    entry3.add_to_hass(hass)
+    entry3.add_to_menuai(menuai)
     entry4 = MockConfigEntry(
         domain="comp4",
         title="Test 4",
         source="bla4",
     )
-    entry4.add_to_hass(hass)
+    entry4.add_to_menuai(menuai)
 
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     await ws_client.send_json(
         {
@@ -2971,9 +2971,9 @@ async def test_subscribe_entries_ws_filtered(
     ]
     freezer.tick()
     modified = utcnow().timestamp()
-    assert hass.config_entries.async_update_entry(entry, title="changed")
-    assert hass.config_entries.async_update_entry(entry3, title="changed too")
-    assert hass.config_entries.async_update_entry(entry4, title="changed but ignored")
+    assert menuai.config_entries.async_update_entry(entry, title="changed")
+    assert menuai.config_entries.async_update_entry(entry3, title="changed too")
+    assert menuai.config_entries.async_update_entry(entry4, title="changed but ignored")
     response = await ws_client.receive_json()
     assert response["id"] == 5
     assert response["event"] == [
@@ -3032,8 +3032,8 @@ async def test_subscribe_entries_ws_filtered(
     ]
     freezer.tick()
     modified = utcnow().timestamp()
-    await hass.config_entries.async_remove(entry.entry_id)
-    await hass.config_entries.async_remove(entry2.entry_id)
+    await menuai.config_entries.async_remove(entry.entry_id)
+    await menuai.config_entries.async_remove(entry2.entry_id)
     response = await ws_client.receive_json()
     assert response["id"] == 5
     assert response["event"] == [
@@ -3063,7 +3063,7 @@ async def test_subscribe_entries_ws_filtered(
         }
     ]
     freezer.tick()
-    await hass.config_entries.async_add(entry)
+    await menuai.config_entries.async_add(entry)
     response = await ws_client.receive_json()
     assert response["id"] == 5
     assert response["event"] == [
@@ -3095,13 +3095,13 @@ async def test_subscribe_entries_ws_filtered(
 
 
 async def test_flow_with_multiple_schema_errors(
-    hass: HomeAssistant, client: TestClient
+    menuai: menuai, client: TestClient
 ) -> None:
     """Test an config flow with multiple schema errors."""
     mock_integration(
-        hass, MockModule("test", async_setup_entry=AsyncMock(return_value=True))
+        menuai, MockModule("test", async_setup_entry=AsyncMock(return_value=True))
     )
-    mock_platform(hass, "test.config_flow", None)
+    mock_platform(menuai, "test.config_flow", None)
 
     class TestFlow(core_ce.ConfigFlow):
         async def async_step_user(self, user_input=None):
@@ -3139,13 +3139,13 @@ async def test_flow_with_multiple_schema_errors(
 
 
 async def test_flow_with_multiple_schema_errors_base(
-    hass: HomeAssistant, client: TestClient
+    menuai: menuai, client: TestClient
 ) -> None:
     """Test an config flow with multiple schema errors where fields are not in the schema."""
     mock_integration(
-        hass, MockModule("test", async_setup_entry=AsyncMock(return_value=True))
+        menuai, MockModule("test", async_setup_entry=AsyncMock(return_value=True))
     )
-    mock_platform(hass, "test.config_flow", None)
+    mock_platform(menuai, "test.config_flow", None)
 
     class TestFlow(core_ce.ConfigFlow):
         async def async_step_user(self, user_input=None):
@@ -3185,18 +3185,18 @@ async def test_flow_with_multiple_schema_errors_base(
 @pytest.mark.parametrize("ignore_translations_for_mock_domains", ["test"])
 @pytest.mark.usefixtures("freezer")
 async def test_supports_reconfigure(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: TestClient,
 ) -> None:
     """Test a flow that support reconfigure step."""
-    mock_platform(hass, "test.config_flow", None)
+    mock_platform(menuai, "test.config_flow", None)
 
     mock_integration(
-        hass, MockModule("test", async_setup_entry=AsyncMock(return_value=True))
+        menuai, MockModule("test", async_setup_entry=AsyncMock(return_value=True))
     )
 
     entry = MockConfigEntry(domain="test", title="Test", entry_id="1")
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     class TestFlow(core_ce.ConfigFlow):
         VERSION = 1
@@ -3246,7 +3246,7 @@ async def test_supports_reconfigure(
         )
     assert resp.status == HTTPStatus.OK
 
-    entries = hass.config_entries.async_entries("test")
+    entries = menuai.config_entries.async_entries("test")
     assert len(entries) == 1
 
     data = await resp.json()
@@ -3260,13 +3260,13 @@ async def test_supports_reconfigure(
 
 
 async def test_does_not_support_reconfigure(
-    hass: HomeAssistant, client: TestClient
+    menuai: menuai, client: TestClient
 ) -> None:
     """Test a flow that does not support reconfigure step."""
-    mock_platform(hass, "test.config_flow", None)
+    mock_platform(menuai, "test.config_flow", None)
 
     mock_integration(
-        hass, MockModule("test", async_setup_entry=AsyncMock(return_value=True))
+        menuai, MockModule("test", async_setup_entry=AsyncMock(return_value=True))
     )
 
     class TestFlow(core_ce.ConfigFlow):
@@ -3289,11 +3289,11 @@ async def test_does_not_support_reconfigure(
 
 
 async def test_list_subentries(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test that we can list subentries."""
-    assert await async_setup_component(hass, "config", {})
-    ws_client = await hass_ws_client(hass)
+    assert await async_setup_component(menuai, "config", {})
+    ws_client = await menuai_ws_client(menuai)
 
     entry = MockConfigEntry(
         domain="test",
@@ -3308,7 +3308,7 @@ async def test_list_subentries(
             )
         ],
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     assert entry.pref_disable_new_entities is False
     assert entry.pref_disable_polling is False
@@ -3348,11 +3348,11 @@ async def test_list_subentries(
 
 
 async def test_delete_subentry(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test that we can delete a subentry."""
-    assert await async_setup_component(hass, "config", {})
-    ws_client = await hass_ws_client(hass)
+    assert await async_setup_component(menuai, "config", {})
+    ws_client = await menuai_ws_client(menuai)
 
     entry = MockConfigEntry(
         domain="test",
@@ -3366,7 +3366,7 @@ async def test_delete_subentry(
             )
         ],
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     assert entry.pref_disable_new_entities is False
     assert entry.pref_disable_polling is False

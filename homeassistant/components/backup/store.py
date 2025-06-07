@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, TypedDict
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.storage import Store
+from menuai.core import menuai, callback
+from menuai.helpers.storage import Store
 
 from .const import DOMAIN
 
@@ -29,10 +29,10 @@ class StoredBackupData(TypedDict):
 class _BackupStore(Store[StoredBackupData]):
     """Class to help storing backup data."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize storage class."""
         super().__init__(
-            hass,
+            menuai,
             STORAGE_VERSION,
             STORAGE_KEY,
             minor_version=STORAGE_VERSION_MINOR,
@@ -95,11 +95,11 @@ class _BackupStore(Store[StoredBackupData]):
 class BackupStore:
     """Store backup config."""
 
-    def __init__(self, hass: HomeAssistant, manager: BackupManager) -> None:
+    def __init__(self, menuai: menuai, manager: BackupManager) -> None:
         """Initialize the backup store."""
-        self._hass = hass
+        self._menuai = menuai
         self._manager = manager
-        self._store = _BackupStore(hass)
+        self._store = _BackupStore(menuai)
 
     async def load(self) -> StoredBackupData | None:
         """Load the store."""

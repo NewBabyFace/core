@@ -18,29 +18,29 @@ from zwave_js_server.exceptions import FailedCommand
 from zwave_js_server.model.driver import Driver
 from zwave_js_server.version import VersionInfo
 
-from homeassistant.components import usb
-from homeassistant.components.hassio import (
+from menuai.components import usb
+from menuai.components.menuaiio import (
     AddonError,
     AddonInfo,
     AddonManager,
     AddonState,
 )
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_USB,
     ConfigEntry,
     ConfigEntryState,
     ConfigFlow,
     ConfigFlowResult,
 )
-from homeassistant.const import CONF_NAME, CONF_URL
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.data_entry_flow import AbortFlow
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.hassio import is_hassio
-from homeassistant.helpers.service_info.hassio import HassioServiceInfo
-from homeassistant.helpers.service_info.usb import UsbServiceInfo
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
-from homeassistant.helpers.typing import VolDictType
+from menuai.const import CONF_NAME, CONF_URL
+from menuai.core import menuai, callback
+from menuai.data_entry_flow import AbortFlow
+from menuai.exceptions import menuaiError
+from menuai.helpers.menuaiio import is_menuaiio
+from menuai.helpers.service_info.menuaiio import menuaiioServiceInfo
+from menuai.helpers.service_info.usb import UsbServiceInfo
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.helpers.typing import VolDictType
 
 from .addon import get_addon_manager
 from .const import (
@@ -117,7 +117,7 @@ def get_on_supervisor_schema(user_input: dict[str, Any]) -> vol.Schema:
     return vol.Schema({vol.Optional(CONF_USE_ADDON, default=default_use_addon): bool})
 
 
-async def validate_input(hass: HomeAssistant, user_input: dict) -> VersionInfo:
+async def validate_input(menuai: menuai, user_input: dict) -> VersionInfo:
     """Validate if the user input allows us to connect."""
     ws_address = user_input[CONF_URL]
 
@@ -125,7 +125,7 @@ async def validate_input(hass: HomeAssistant, user_input: dict) -> VersionInfo:
         raise InvalidInput("invalid_ws_url")
 
     try:
-        return await async_get_version_info(hass, ws_address)
+        return await async_get_version_info(menuai, ws_address)
     except CannotConnect as err:
         raise InvalidInput("cannot_connect") from err
 
@@ -161,9 +161,9 @@ def get_usb_ports() -> dict[str, str]:
     )
 
 
-async def async_get_usb_ports(hass: HomeAssistant) -> dict[str, str]:
+async def async_get_usb_ports(menuai: menuai) -> dict[str, str]:
     """Return a dict of USB ports and their friendly names."""
-    return await hass.async_add_executor_job(get_usb_ports)
+    return await menuai.async_add_executor_job(get_usb_ports)
 
 
 class ZWaveJSConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -204,7 +204,7 @@ class ZWaveJSConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Install Z-Wave JS add-on."""
         if not self.install_task:
-            self.install_task = self.hass.async_create_task(self._async_install_addon())
+            self.install_task = self.menuai.async_create_task(self._async_install_addon())
 
         if not self.install_task.done():
             return self.async_show_progress(
@@ -236,7 +236,7 @@ class ZWaveJSConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Start Z-Wave JS add-on."""
         if not self.start_task:
-            self.start_task = self.hass.async_create_task(self._async_start_addon())
+            self.start_task = self.menuai.async_create_task(self._async_start_addon())
 
         if not self.start_task.done():
             return self.async_show_progress(
@@ -267,7 +267,7 @@ class ZWaveJSConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def _async_start_addon(self) -> None:
         """Start the Z-Wave JS add-on."""
-        addon_manager: AddonManager = get_addon_manager(self.hass)
+        addon_manager: AddonManager = get_addon_manager(self.menuai)
         self.version_info = None
         if self.restart_addon:
             await addon_manager.async_schedule_restart_addon()
@@ -283,7 +283,7 @@ class ZWaveJSConfigFlow(ConfigFlow, domain=DOMAIN):
                         f"ws://{discovery_info['host']}:{discovery_info['port']}"
                     )
                 self.version_info = await async_get_version_info(
-                    self.hass, self.ws_address
+                    self.menuai, self.ws_address
                 )
             except (AbortFlow, CannotConnect) as err:
                 _LOGGER.debug(
@@ -320,7 +320,7 @@ class ZWaveJSConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def _async_get_addon_info(self) -> AddonInfo:
         """Return and cache Z-Wave JS add-on info."""
-        addon_manager: AddonManager = get_addon_manager(self.hass)
+        addon_manager: AddonManager = get_addon_manager(self.menuai)
         try:
             addon_info: AddonInfo = await addon_manager.async_get_addon_info()
         except AddonError as err:
@@ -345,7 +345,7 @@ class ZWaveJSConfigFlow(ConfigFlow, domain=DOMAIN):
         self.original_addon_config = dict(addon_config)
         # Remove legacy network_key
         new_addon_config.pop(CONF_ADDON_NETWORK_KEY, None)
-        addon_manager: AddonManager = get_addon_manager(self.hass)
+        addon_manager: AddonManager = get_addon_manager(self.menuai)
         try:
             await addon_manager.async_set_addon_options(new_addon_config)
         except AddonError as err:
@@ -354,12 +354,12 @@ class ZWaveJSConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def _async_install_addon(self) -> None:
         """Install the Z-Wave JS add-on."""
-        addon_manager: AddonManager = get_addon_manager(self.hass)
+        addon_manager: AddonManager = get_addon_manager(self.menuai)
         await addon_manager.async_schedule_install_addon()
 
     async def _async_get_addon_discovery_info(self) -> dict:
         """Return add-on discovery info."""
-        addon_manager: AddonManager = get_addon_manager(self.hass)
+        addon_manager: AddonManager = get_addon_manager(self.menuai)
         try:
             discovery_info_config = await addon_manager.async_get_addon_discovery_info()
         except AddonError as err:
@@ -372,7 +372,7 @@ class ZWaveJSConfigFlow(ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle the initial step."""
-        if is_hassio(self.hass):
+        if is_menuaiio(self.menuai):
             return await self.async_step_installation_type()
 
         return await self.async_step_manual()
@@ -432,7 +432,7 @@ class ZWaveJSConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_usb(self, discovery_info: UsbServiceInfo) -> ConfigFlowResult:
         """Handle USB Discovery."""
-        if not is_hassio(self.hass):
+        if not is_menuaiio(self.menuai):
             return self.async_abort(reason="discovery_requires_supervisor")
         if any(
             flow
@@ -465,7 +465,7 @@ class ZWaveJSConfigFlow(ConfigFlow, domain=DOMAIN):
         if vid == "10C4" and pid == "EA60" and description and "2652" in description:
             return self.async_abort(reason="not_zwave_device")
 
-        discovery_info.device = await self.hass.async_add_executor_job(
+        discovery_info.device = await self.menuai.async_add_executor_job(
             usb.get_serial_by_id, discovery_info.device
         )
 
@@ -473,7 +473,7 @@ class ZWaveJSConfigFlow(ConfigFlow, domain=DOMAIN):
         if (
             addon_info.state not in (AddonState.NOT_INSTALLED, AddonState.INSTALLING)
             and (addon_device := addon_info.options.get(CONF_ADDON_DEVICE)) is not None
-            and await self.hass.async_add_executor_job(
+            and await self.menuai.async_add_executor_job(
                 usb.get_serial_by_id, addon_device
             )
             == discovery_info.device
@@ -490,7 +490,7 @@ class ZWaveJSConfigFlow(ConfigFlow, domain=DOMAIN):
         dev_path = discovery_info.device
         self.usb_path = dev_path
         if manufacturer == "Nabu Casa" and description == "ZWA-2 - Nabu Casa ZWA-2":
-            title = "Home Assistant Connect ZWA-2"
+            title = "MenuAI Connect ZWA-2"
         else:
             human_name = usb.human_readable_device_name(
                 dev_path,
@@ -521,7 +521,7 @@ class ZWaveJSConfigFlow(ConfigFlow, domain=DOMAIN):
         errors = {}
 
         try:
-            version_info = await validate_input(self.hass, user_input)
+            version_info = await validate_input(self.menuai, user_input)
         except InvalidInput as err:
             errors["base"] = err.error
         except Exception:
@@ -547,8 +547,8 @@ class ZWaveJSConfigFlow(ConfigFlow, domain=DOMAIN):
             step_id="manual", data_schema=get_manual_schema(user_input), errors=errors
         )
 
-    async def async_step_hassio(
-        self, discovery_info: HassioServiceInfo
+    async def async_step_menuaiio(
+        self, discovery_info: menuaiioServiceInfo
     ) -> ConfigFlowResult:
         """Receive configuration from add-on discovery info.
 
@@ -564,16 +564,16 @@ class ZWaveJSConfigFlow(ConfigFlow, domain=DOMAIN):
             f"ws://{discovery_info.config['host']}:{discovery_info.config['port']}"
         )
         try:
-            version_info = await async_get_version_info(self.hass, self.ws_address)
+            version_info = await async_get_version_info(self.menuai, self.ws_address)
         except CannotConnect:
             return self.async_abort(reason="cannot_connect")
 
         await self.async_set_unique_id(str(version_info.home_id))
         self._abort_if_unique_id_configured(updates={CONF_URL: self.ws_address})
 
-        return await self.async_step_hassio_confirm()
+        return await self.async_step_menuaiio_confirm()
 
-    async def async_step_hassio_confirm(
+    async def async_step_menuaiio_confirm(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Confirm the add-on discovery."""
@@ -582,7 +582,7 @@ class ZWaveJSConfigFlow(ConfigFlow, domain=DOMAIN):
                 user_input={CONF_USE_ADDON: True}
             )
 
-        return self.async_show_form(step_id="hassio_confirm")
+        return self.async_show_form(step_id="menuaiio_confirm")
 
     async def async_step_intent_recommended(
         self, user_input: dict[str, Any] | None = None
@@ -730,7 +730,7 @@ class ZWaveJSConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if not self._usb_discovery:
             try:
-                ports = await async_get_usb_ports(self.hass)
+                ports = await async_get_usb_ports(self.menuai)
             except OSError as err:
                 _LOGGER.error("Failed to get USB ports: %s", err)
                 return self.async_abort(reason="usb_ports_failed")
@@ -762,7 +762,7 @@ class ZWaveJSConfigFlow(ConfigFlow, domain=DOMAIN):
             if not self.version_info:
                 try:
                     self.version_info = await async_get_version_info(
-                        self.hass, self.ws_address
+                        self.menuai, self.ws_address
                     )
                 except CannotConnect as err:
                     raise AbortFlow("cannot_connect") from err
@@ -790,7 +790,7 @@ class ZWaveJSConfigFlow(ConfigFlow, domain=DOMAIN):
         """Return a config entry for the flow."""
         # Abort any other flows that may be in progress
         for progress in self._async_in_progress():
-            self.hass.config_entries.flow.async_abort(progress["flow_id"])
+            self.menuai.config_entries.flow.async_abort(progress["flow_id"])
 
         return self.async_create_entry(
             title=TITLE,
@@ -813,16 +813,16 @@ class ZWaveJSConfigFlow(ConfigFlow, domain=DOMAIN):
         """Update the config entry with new data."""
         config_entry = self._reconfigure_config_entry
         assert config_entry is not None
-        self.hass.config_entries.async_update_entry(
+        self.menuai.config_entries.async_update_entry(
             config_entry, data=config_entry.data | updates
         )
-        self.hass.config_entries.async_schedule_reload(config_entry.entry_id)
+        self.menuai.config_entries.async_schedule_reload(config_entry.entry_id)
 
     async def async_step_intent_reconfigure(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Manage the options."""
-        if is_hassio(self.hass):
+        if is_menuaiio(self.menuai):
             return await self.async_step_on_supervisor_reconfigure()
 
         return await self.async_step_manual_reconfigure()
@@ -868,7 +868,7 @@ class ZWaveJSConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Backup the current network."""
         if self.backup_task is None:
-            self.backup_task = self.hass.async_create_task(self._async_backup_network())
+            self.backup_task = self.menuai.async_create_task(self._async_backup_network())
 
         if not self.backup_task.done():
             return self.async_show_progress(
@@ -892,7 +892,7 @@ class ZWaveJSConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Restore the backup."""
         if self.restore_backup_task is None:
-            self.restore_backup_task = self.hass.async_create_task(
+            self.restore_backup_task = self.menuai.async_create_task(
                 self._async_restore_network_backup()
             )
 
@@ -967,7 +967,7 @@ class ZWaveJSConfigFlow(ConfigFlow, domain=DOMAIN):
 
         try:
             version_info = await async_get_version_info(
-                self.hass, config_entry.data[CONF_URL]
+                self.menuai, config_entry.data[CONF_URL]
             )
         except CannotConnect:
             # Just log this error, as there's nothing to do about it here.
@@ -979,12 +979,12 @@ class ZWaveJSConfigFlow(ConfigFlow, domain=DOMAIN):
                 "unique id with new home id, after controller reset"
             )
         else:
-            self.hass.config_entries.async_update_entry(
+            self.menuai.config_entries.async_update_entry(
                 config_entry, unique_id=str(version_info.home_id)
             )
 
         # Unload the config entry before asking the user to unplug the controller.
-        await self.hass.config_entries.async_unload(config_entry.entry_id)
+        await self.menuai.config_entries.async_unload(config_entry.entry_id)
 
         return self.async_show_form(
             step_id="instruct_unplug",
@@ -1008,7 +1008,7 @@ class ZWaveJSConfigFlow(ConfigFlow, domain=DOMAIN):
         errors = {}
 
         try:
-            version_info = await validate_input(self.hass, user_input)
+            version_info = await validate_input(self.menuai, user_input)
         except InvalidInput as err:
             errors["base"] = err.error
         except Exception:
@@ -1053,14 +1053,14 @@ class ZWaveJSConfigFlow(ConfigFlow, domain=DOMAIN):
         if not user_input[CONF_USE_ADDON]:
             if config_entry.data.get(CONF_USE_ADDON):
                 # Unload the config entry before stopping the add-on.
-                await self.hass.config_entries.async_unload(config_entry.entry_id)
-                addon_manager = get_addon_manager(self.hass)
+                await self.menuai.config_entries.async_unload(config_entry.entry_id)
+                addon_manager = get_addon_manager(self.menuai)
                 _LOGGER.debug("Stopping Z-Wave JS add-on")
                 try:
                     await addon_manager.async_stop_addon()
                 except AddonError as err:
                     _LOGGER.error(err)
-                    self.hass.config_entries.async_schedule_reload(
+                    self.menuai.config_entries.async_schedule_reload(
                         config_entry.entry_id
                     )
                     raise AbortFlow("addon_stop_failed") from err
@@ -1112,7 +1112,7 @@ class ZWaveJSConfigFlow(ConfigFlow, domain=DOMAIN):
                 config_entry := self._reconfigure_config_entry
             ) and config_entry.data.get(CONF_USE_ADDON):
                 # Disconnect integration before restarting add-on.
-                await self.hass.config_entries.async_unload(config_entry.entry_id)
+                await self.menuai.config_entries.async_unload(config_entry.entry_id)
 
             return await self.async_step_start_addon()
 
@@ -1139,7 +1139,7 @@ class ZWaveJSConfigFlow(ConfigFlow, domain=DOMAIN):
         emulate_hardware = addon_config.get(CONF_ADDON_EMULATE_HARDWARE, False)
 
         try:
-            ports = await async_get_usb_ports(self.hass)
+            ports = await async_get_usb_ports(self.menuai)
         except OSError as err:
             _LOGGER.error("Failed to get USB ports: %s", err)
             return self.async_abort(reason="usb_ports_failed")
@@ -1184,7 +1184,7 @@ class ZWaveJSConfigFlow(ConfigFlow, domain=DOMAIN):
             return await self.async_step_start_addon()
 
         try:
-            ports = await async_get_usb_ports(self.hass)
+            ports = await async_get_usb_ports(self.menuai)
         except OSError as err:
             _LOGGER.error("Failed to get USB ports: %s", err)
             return self.async_abort(reason="usb_ports_failed")
@@ -1194,7 +1194,7 @@ class ZWaveJSConfigFlow(ConfigFlow, domain=DOMAIN):
         old_usb_path = addon_config.get(CONF_ADDON_DEVICE, "")
         # Remove the old controller from the ports list.
         ports.pop(
-            await self.hass.async_add_executor_job(usb.get_serial_by_id, old_usb_path),
+            await self.menuai.async_add_executor_job(usb.get_serial_by_id, old_usb_path),
             None,
         )
 
@@ -1252,7 +1252,7 @@ class ZWaveJSConfigFlow(ConfigFlow, domain=DOMAIN):
         # before restoring the backup.
         # We will do this in the restore nvm progress task,
         # to get a nicer user experience.
-        self.hass.config_entries.async_update_entry(
+        self.menuai.config_entries.async_update_entry(
             config_entry,
             data={
                 **config_entry.data,
@@ -1295,7 +1295,7 @@ class ZWaveJSConfigFlow(ConfigFlow, domain=DOMAIN):
         if not self.version_info:
             try:
                 self.version_info = await async_get_version_info(
-                    self.hass, self.ws_address
+                    self.menuai, self.ws_address
                 )
             except CannotConnect:
                 return await self.async_revert_addon_config(reason="cannot_connect")
@@ -1335,7 +1335,7 @@ class ZWaveJSConfigFlow(ConfigFlow, domain=DOMAIN):
         if self.revert_reason or not self.original_addon_config:
             config_entry = self._reconfigure_config_entry
             assert config_entry is not None
-            self.hass.config_entries.async_schedule_reload(config_entry.entry_id)
+            self.menuai.config_entries.async_schedule_reload(config_entry.entry_id)
             return self.async_abort(reason=reason)
 
         self.revert_reason = reason
@@ -1366,12 +1366,12 @@ class ZWaveJSConfigFlow(ConfigFlow, domain=DOMAIN):
 
         # save the backup to a file just in case
         self.backup_filepath = Path(
-            self.hass.config.path(
+            self.menuai.config.path(
                 f"zwavejs_nvm_backup_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.bin"
             )
         )
         try:
-            await self.hass.async_add_executor_job(
+            await self.menuai.async_add_executor_job(
                 self.backup_filepath.write_bytes,
                 self.backup_data,
             )
@@ -1387,16 +1387,16 @@ class ZWaveJSConfigFlow(ConfigFlow, domain=DOMAIN):
         # Make sure we keep the old devices
         # so that user customizations are not lost,
         # when loading the config entry.
-        self.hass.config_entries.async_update_entry(
+        self.menuai.config_entries.async_update_entry(
             config_entry, data=config_entry.data | {CONF_KEEP_OLD_DEVICES: True}
         )
 
         # Reload the config entry to reconnect the client after the addon restart
-        await self.hass.config_entries.async_reload(config_entry.entry_id)
+        await self.menuai.config_entries.async_reload(config_entry.entry_id)
 
         data = config_entry.data.copy()
         data.pop(CONF_KEEP_OLD_DEVICES, None)
-        self.hass.config_entries.async_update_entry(config_entry, data=data)
+        self.menuai.config_entries.async_update_entry(config_entry, data=data)
 
         @callback
         def forward_progress(event: dict) -> None:
@@ -1433,7 +1433,7 @@ class ZWaveJSConfigFlow(ConfigFlow, domain=DOMAIN):
                     await wait_driver_ready.wait()
             try:
                 version_info = await async_get_version_info(
-                    self.hass, config_entry.data[CONF_URL]
+                    self.menuai, config_entry.data[CONF_URL]
                 )
             except CannotConnect:
                 # Just log this error, as there's nothing to do about it here.
@@ -1444,10 +1444,10 @@ class ZWaveJSConfigFlow(ConfigFlow, domain=DOMAIN):
                     "unique id with new home id, after controller reset"
                 )
             else:
-                self.hass.config_entries.async_update_entry(
+                self.menuai.config_entries.async_update_entry(
                     config_entry, unique_id=str(version_info.home_id)
                 )
-            await self.hass.config_entries.async_reload(config_entry.entry_id)
+            await self.menuai.config_entries.async_reload(config_entry.entry_id)
 
             # Reload the config entry two times to clean up
             # the stale device entry.
@@ -1455,7 +1455,7 @@ class ZWaveJSConfigFlow(ConfigFlow, domain=DOMAIN):
             # but different hardware identifiers, the integration
             # will create a new device for the new controller, on the first reload,
             # but not immediately remove the old device.
-            await self.hass.config_entries.async_reload(config_entry.entry_id)
+            await self.menuai.config_entries.async_reload(config_entry.entry_id)
 
         finally:
             for unsub in unsubs:
@@ -1472,7 +1472,7 @@ class ZWaveJSConfigFlow(ConfigFlow, domain=DOMAIN):
         return client.driver
 
 
-class InvalidInput(HomeAssistantError):
+class InvalidInput(menuaiError):
     """Error to indicate input data is invalid."""
 
     def __init__(self, error: str) -> None:

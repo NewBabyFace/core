@@ -2,8 +2,8 @@
 
 from unittest.mock import MagicMock
 
-from homeassistant.components.google_assistant import http
-from homeassistant.core import HomeAssistant
+from menuai.components.google_assistant import http
+from menuai.core import menuai
 
 
 def mock_google_config_store(agent_user_ids=None):
@@ -25,14 +25,14 @@ class MockConfig(http.GoogleConfig):
         agent_user_ids=None,
         enabled=True,
         entity_config=None,
-        hass: HomeAssistant | None = None,
+        menuai: menuai | None = None,
         secure_devices_pin=None,
         should_2fa=None,
         should_expose=None,
         should_report_state=False,
     ) -> None:
         """Initialize config."""
-        super().__init__(hass, None)
+        super().__init__(menuai, None)
         self._enabled = enabled
         self._entity_config = entity_config or {}
         self._secure_devices_pin = secure_devices_pin

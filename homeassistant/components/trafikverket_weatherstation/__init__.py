@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
 
 from .const import PLATFORMS
 from .coordinator import TVDataUpdateCoordinator
@@ -11,17 +11,17 @@ from .coordinator import TVDataUpdateCoordinator
 TVWeatherConfigEntry = ConfigEntry[TVDataUpdateCoordinator]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: TVWeatherConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: TVWeatherConfigEntry) -> bool:
     """Set up Trafikverket Weatherstation from a config entry."""
 
-    coordinator = TVDataUpdateCoordinator(hass, entry)
+    coordinator = TVDataUpdateCoordinator(menuai, entry)
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: TVWeatherConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: TVWeatherConfigEntry) -> bool:
     """Unload Trafikverket Weatherstation config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

@@ -8,9 +8,9 @@ from unittest.mock import MagicMock, patch
 from gotailwind import TailwindDeviceStatus
 import pytest
 
-from homeassistant.components.tailwind.const import DOMAIN
-from homeassistant.const import CONF_HOST, CONF_TOKEN
-from homeassistant.core import HomeAssistant
+from menuai.components.tailwind.const import DOMAIN
+from menuai.const import CONF_HOST, CONF_TOKEN
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry, load_fixture
 
@@ -39,7 +39,7 @@ def mock_config_entry() -> MockConfigEntry:
 def mock_setup_entry() -> Generator[None]:
     """Mock setting up a config entry."""
     with patch(
-        "homeassistant.components.tailwind.async_setup_entry", return_value=True
+        "menuai.components.tailwind.async_setup_entry", return_value=True
     ):
         yield
 
@@ -49,10 +49,10 @@ def mock_tailwind(device_fixture: str) -> Generator[MagicMock]:
     """Return a mocked Tailwind client."""
     with (
         patch(
-            "homeassistant.components.tailwind.coordinator.Tailwind", autospec=True
+            "menuai.components.tailwind.coordinator.Tailwind", autospec=True
         ) as tailwind_mock,
         patch(
-            "homeassistant.components.tailwind.config_flow.Tailwind",
+            "menuai.components.tailwind.config_flow.Tailwind",
             new=tailwind_mock,
         ),
     ):
@@ -65,14 +65,14 @@ def mock_tailwind(device_fixture: str) -> Generator[MagicMock]:
 
 @pytest.fixture
 async def init_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_tailwind: MagicMock,
 ) -> MockConfigEntry:
     """Set up the Tailwind integration for testing."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     return mock_config_entry

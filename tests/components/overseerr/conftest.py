@@ -7,9 +7,9 @@ import pytest
 from python_overseerr import MovieDetails, RequestCount, RequestResponse
 from python_overseerr.models import TVDetails, WebhookNotificationConfig
 
-from homeassistant.components.overseerr import CONF_CLOUDHOOK_URL
-from homeassistant.components.overseerr.const import DOMAIN
-from homeassistant.const import (
+from menuai.components.overseerr import CONF_CLOUDHOOK_URL
+from menuai.components.overseerr.const import DOMAIN
+from menuai.const import (
     CONF_API_KEY,
     CONF_HOST,
     CONF_PORT,
@@ -26,7 +26,7 @@ from tests.common import MockConfigEntry, load_fixture
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.overseerr.async_setup_entry",
+        "menuai.components.overseerr.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
         yield mock_setup_entry
@@ -37,11 +37,11 @@ def mock_overseerr_client() -> Generator[AsyncMock]:
     """Mock an Overseerr client."""
     with (
         patch(
-            "homeassistant.components.overseerr.coordinator.OverseerrClient",
+            "menuai.components.overseerr.coordinator.OverseerrClient",
             autospec=True,
         ) as mock_client,
         patch(
-            "homeassistant.components.overseerr.config_flow.OverseerrClient",
+            "menuai.components.overseerr.config_flow.OverseerrClient",
             new=mock_client,
         ),
     ):

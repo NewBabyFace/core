@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util.hass_dict import HassKey
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType
+from menuai.util.menuai_dict import menuaiKey
 
 from .const import DOMAIN
 from .coordinator import WLEDDataUpdateCoordinator, WLEDReleasesDataUpdateCoordinator
@@ -24,29 +24,29 @@ PLATFORMS = (
 
 type WLEDConfigEntry = ConfigEntry[WLEDDataUpdateCoordinator]
 
-WLED_KEY: HassKey[WLEDReleasesDataUpdateCoordinator] = HassKey(DOMAIN)
+WLED_KEY: menuaiKey[WLEDReleasesDataUpdateCoordinator] = menuaiKey(DOMAIN)
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the WLED integration.
 
     We set up a single coordinator for fetching WLED releases, which
     is used across all WLED devices (and config entries) to avoid
     fetching the same data multiple times for each.
     """
-    hass.data[WLED_KEY] = WLEDReleasesDataUpdateCoordinator(hass)
-    await hass.data[WLED_KEY].async_request_refresh()
+    menuai.data[WLED_KEY] = WLEDReleasesDataUpdateCoordinator(menuai)
+    await menuai.data[WLED_KEY].async_request_refresh()
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: WLEDConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: WLEDConfigEntry) -> bool:
     """Set up WLED from a config entry."""
-    entry.runtime_data = WLEDDataUpdateCoordinator(hass, entry=entry)
+    entry.runtime_data = WLEDDataUpdateCoordinator(menuai, entry=entry)
     await entry.runtime_data.async_config_entry_first_refresh()
 
     # Set up all platforms for this device/entry.
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     # Reload entry when its updated.
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
@@ -54,9 +54,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: WLEDConfigEntry) -> bool
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: WLEDConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: WLEDConfigEntry) -> bool:
     """Unload WLED config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+    if unload_ok := await menuai.config_entries.async_unload_platforms(entry, PLATFORMS):
         coordinator = entry.runtime_data
 
         # Ensure disconnected and cleanup stop sub
@@ -67,6 +67,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: WLEDConfigEntry) -> boo
     return unload_ok
 
 
-async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def async_reload_entry(menuai: menuai, entry: ConfigEntry) -> None:
     """Reload the config entry when it changed."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)

@@ -4,13 +4,13 @@ import logging
 
 from pydeconz.models import ResourceType
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 LOGGER = logging.getLogger(__package__)
 
 DOMAIN = "deconz"
 
-HASSIO_CONFIGURATION_URL = "homeassistant://hassio/ingress/core_deconz"
+menuaiIO_CONFIGURATION_URL = "menuai://menuaiio/ingress/core_deconz"
 
 CONF_BRIDGE_ID = "bridgeid"
 CONF_GROUP_ID_BASE = "group_id_base"

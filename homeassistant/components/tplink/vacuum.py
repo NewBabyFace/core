@@ -8,15 +8,15 @@ from typing import Any
 from kasa import Device, Module
 from kasa.smart.modules.clean import Clean, Status
 
-from homeassistant.components.vacuum import (
+from menuai.components.vacuum import (
     DOMAIN as VACUUM_DOMAIN,
     StateVacuumEntity,
     StateVacuumEntityDescription,
     VacuumActivity,
     VacuumEntityFeature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import TPLinkConfigEntry
 from .coordinator import TPLinkDataUpdateCoordinator
@@ -61,7 +61,7 @@ VACUUM_DESCRIPTIONS: tuple[TPLinkVacuumEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: TPLinkConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -75,7 +75,7 @@ async def async_setup_entry(
 
     def _check_device() -> None:
         entities = CoordinatedTPLinkModuleEntity.entities_for_device_and_its_children(
-            hass=hass,
+            menuai=menuai,
             device=device,
             coordinator=parent_coordinator,
             entity_class=TPLinkVacuumEntity,

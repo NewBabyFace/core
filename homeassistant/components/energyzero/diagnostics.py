@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import timedelta
 from typing import Any
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .coordinator import EnergyZeroConfigEntry, EnergyZeroData
 
@@ -29,7 +29,7 @@ def get_gas_price(data: EnergyZeroData, hours: int) -> float | None:
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: EnergyZeroConfigEntry
+    menuai: menuai, entry: EnergyZeroConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     coordinator_data = entry.runtime_data.data

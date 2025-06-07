@@ -4,10 +4,10 @@ from unittest.mock import DEFAULT, patch
 
 from screenlogicpy import ScreenLogicGateway
 
-from homeassistant.components.screenlogic import DOMAIN
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.components.screenlogic import DOMAIN
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from . import (
     DATA_MIN_ENTITY_CLEANUP,
@@ -21,13 +21,13 @@ from tests.common import MockConfigEntry
 
 
 async def test_async_cleanup_entries(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test cleanup of unused entities."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     device: dr.DeviceEntry = device_registry.async_get_or_create(
         config_entry_id=mock_config_entry.entry_id,
@@ -65,8 +65,8 @@ async def test_async_cleanup_entries(
             _async_connected_request=DEFAULT,
         ),
     ):
-        assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     deleted_entity = entity_registry.async_get(unused_entity.entity_id)
     assert deleted_entity is None

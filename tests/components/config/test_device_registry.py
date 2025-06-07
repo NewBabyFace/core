@@ -6,12 +6,12 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from pytest_unordered import unordered
 
-from homeassistant.components.config import device_registry
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.setup import async_setup_component
-from homeassistant.util.dt import utcnow
+from menuai.components.config import device_registry
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.setup import async_setup_component
+from menuai.util.dt import utcnow
 
 from tests.common import MockConfigEntry, MockModule, mock_integration
 from tests.typing import MockHAClientWebSocket, WebSocketGenerator
@@ -24,22 +24,22 @@ def stub_blueprint_populate_autouse(stub_blueprint_populate: None) -> None:
 
 @pytest.fixture(name="client")
 async def client_fixture(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> MockHAClientWebSocket:
     """Fixture that can interact with the config manager API."""
-    device_registry.async_setup(hass)
-    return await hass_ws_client(hass)
+    device_registry.async_setup(menuai)
+    return await menuai_ws_client(menuai)
 
 
 @pytest.mark.usefixtures("freezer")
 async def test_list_devices(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MockHAClientWebSocket,
     device_registry: dr.DeviceRegistry,
 ) -> None:
     """Test list entries."""
     entry = MockConfigEntry(title=None)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     device1 = device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         connections={("ethernet", "12:34:56:78:90:AB:CD:EF")},
@@ -114,7 +114,7 @@ async def test_list_devices(
         """Good luck serializing me."""
 
     device_registry.async_update_device(device2.id, name=Unserializable())
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     await client.send_json_auto_id({"type": "config/device_registry/list"})
     msg = await client.receive_json()
@@ -163,7 +163,7 @@ async def test_list_devices(
     ],
 )
 async def test_update_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MockHAClientWebSocket,
     device_registry: dr.DeviceRegistry,
     freezer: FrozenDateTimeFactory,
@@ -172,7 +172,7 @@ async def test_update_device(
 ) -> None:
     """Test update entry."""
     entry = MockConfigEntry(title=None)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     created_at = datetime.fromisoformat("2024-07-16T13:30:00.900075+00:00")
     freezer.move_to(created_at)
     device = device_registry.async_get_or_create(
@@ -197,7 +197,7 @@ async def test_update_device(
     )
 
     msg = await client.receive_json()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(device_registry.devices) == 1
 
     device = device_registry.async_get_device(
@@ -218,14 +218,14 @@ async def test_update_device(
 
 
 async def test_update_device_labels(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MockHAClientWebSocket,
     device_registry: dr.DeviceRegistry,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test update entry labels."""
     entry = MockConfigEntry(title=None)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     created_at = datetime.fromisoformat("2024-07-16T13:30:00.900075+00:00")
     freezer.move_to(created_at)
     device = device_registry.async_get_or_create(
@@ -249,7 +249,7 @@ async def test_update_device_labels(
     )
 
     msg = await client.receive_json()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(device_registry.devices) == 1
 
     device = device_registry.async_get_device(
@@ -268,29 +268,29 @@ async def test_update_device_labels(
 
 
 async def test_remove_config_entry_from_device(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     device_registry: dr.DeviceRegistry,
 ) -> None:
     """Test removing config entry from device."""
-    assert await async_setup_component(hass, "config", {})
-    ws_client = await hass_ws_client(hass)
+    assert await async_setup_component(menuai, "config", {})
+    ws_client = await menuai_ws_client(menuai)
 
     can_remove = False
 
     async def async_remove_config_entry_device(
-        hass: HomeAssistant, config_entry: ConfigEntry, device_entry: dr.DeviceEntry
+        menuai: menuai, config_entry: ConfigEntry, device_entry: dr.DeviceEntry
     ) -> bool:
         return can_remove
 
     mock_integration(
-        hass,
+        menuai,
         MockModule(
             "comp1", async_remove_config_entry_device=async_remove_config_entry_device
         ),
     )
     mock_integration(
-        hass,
+        menuai,
         MockModule(
             "comp2", async_remove_config_entry_device=async_remove_config_entry_device
         ),
@@ -302,7 +302,7 @@ async def test_remove_config_entry_from_device(
         source="bla",
     )
     entry_1.supports_remove_device = True
-    entry_1.add_to_hass(hass)
+    entry_1.add_to_menuai(menuai)
 
     entry_2 = MockConfigEntry(
         domain="comp1",
@@ -310,7 +310,7 @@ async def test_remove_config_entry_from_device(
         source="bla",
     )
     entry_2.supports_remove_device = True
-    entry_2.add_to_hass(hass)
+    entry_2.add_to_menuai(menuai)
 
     device_registry.async_get_or_create(
         config_entry_id=entry_1.entry_id,
@@ -354,25 +354,25 @@ async def test_remove_config_entry_from_device(
 
 
 async def test_remove_config_entry_from_device_fails(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     device_registry: dr.DeviceRegistry,
 ) -> None:
     """Test removing config entry from device failing cases."""
-    assert await async_setup_component(hass, "config", {})
-    ws_client = await hass_ws_client(hass)
+    assert await async_setup_component(menuai, "config", {})
+    ws_client = await menuai_ws_client(menuai)
 
     async def async_remove_config_entry_device(
-        hass: HomeAssistant, config_entry: ConfigEntry, device_entry: dr.DeviceEntry
+        menuai: menuai, config_entry: ConfigEntry, device_entry: dr.DeviceEntry
     ) -> bool:
         return True
 
     mock_integration(
-        hass,
+        menuai,
         MockModule("comp1"),
     )
     mock_integration(
-        hass,
+        menuai,
         MockModule(
             "comp2", async_remove_config_entry_device=async_remove_config_entry_device
         ),
@@ -383,7 +383,7 @@ async def test_remove_config_entry_from_device_fails(
         title="Test 1",
         source="bla",
     )
-    entry_1.add_to_hass(hass)
+    entry_1.add_to_menuai(menuai)
 
     entry_2 = MockConfigEntry(
         domain="comp2",
@@ -391,7 +391,7 @@ async def test_remove_config_entry_from_device_fails(
         source="bla",
     )
     entry_2.supports_remove_device = True
-    entry_2.add_to_hass(hass)
+    entry_2.add_to_menuai(menuai)
 
     entry_3 = MockConfigEntry(
         domain="comp3",
@@ -399,7 +399,7 @@ async def test_remove_config_entry_from_device_fails(
         source="bla",
     )
     entry_3.supports_remove_device = True
-    entry_3.add_to_hass(hass)
+    entry_3.add_to_menuai(menuai)
 
     device_registry.async_get_or_create(
         config_entry_id=entry_1.entry_id,
@@ -471,18 +471,18 @@ async def test_remove_config_entry_from_device_fails(
 
 
 async def test_remove_config_entry_from_device_if_integration_remove(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     device_registry: dr.DeviceRegistry,
 ) -> None:
     """Test removing config entry from device doesn't lead to an error when the integration removes the entry."""
-    assert await async_setup_component(hass, "config", {})
-    ws_client = await hass_ws_client(hass)
+    assert await async_setup_component(menuai, "config", {})
+    ws_client = await menuai_ws_client(menuai)
 
     can_remove = False
 
     async def async_remove_config_entry_device(
-        hass: HomeAssistant, config_entry: ConfigEntry, device_entry: dr.DeviceEntry
+        menuai: menuai, config_entry: ConfigEntry, device_entry: dr.DeviceEntry
     ) -> bool:
         if can_remove:
             device_registry.async_update_device(
@@ -491,13 +491,13 @@ async def test_remove_config_entry_from_device_if_integration_remove(
         return can_remove
 
     mock_integration(
-        hass,
+        menuai,
         MockModule(
             "comp1", async_remove_config_entry_device=async_remove_config_entry_device
         ),
     )
     mock_integration(
-        hass,
+        menuai,
         MockModule(
             "comp2", async_remove_config_entry_device=async_remove_config_entry_device
         ),
@@ -509,7 +509,7 @@ async def test_remove_config_entry_from_device_if_integration_remove(
         source="bla",
     )
     entry_1.supports_remove_device = True
-    entry_1.add_to_hass(hass)
+    entry_1.add_to_menuai(menuai)
 
     entry_2 = MockConfigEntry(
         domain="comp1",
@@ -517,7 +517,7 @@ async def test_remove_config_entry_from_device_if_integration_remove(
         source="bla",
     )
     entry_2.supports_remove_device = True
-    entry_2.add_to_hass(hass)
+    entry_2.add_to_menuai(menuai)
 
     device_registry.async_get_or_create(
         config_entry_id=entry_1.entry_id,

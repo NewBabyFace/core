@@ -7,9 +7,9 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant import exceptions
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.helpers import config_validation as cv
+from menuai import exceptions
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.helpers import config_validation as cv
 
 from .const import _LOGGER, CONF_DOWNLOAD_DIR, DEFAULT_NAME, DOMAIN
 
@@ -47,9 +47,9 @@ class DownloaderConfigFlow(ConfigFlow, domain=DOMAIN):
         """Validate the user input if the directory exists."""
         download_path = user_input[CONF_DOWNLOAD_DIR]
         if not os.path.isabs(download_path):
-            download_path = self.hass.config.path(download_path)
+            download_path = self.menuai.config.path(download_path)
 
-        if not await self.hass.async_add_executor_job(os.path.isdir, download_path):
+        if not await self.menuai.async_add_executor_job(os.path.isdir, download_path):
             _LOGGER.error(
                 "Download path %s does not exist. File Downloader not active",
                 download_path,
@@ -57,5 +57,5 @@ class DownloaderConfigFlow(ConfigFlow, domain=DOMAIN):
             raise DirectoryDoesNotExist
 
 
-class DirectoryDoesNotExist(exceptions.HomeAssistantError):
+class DirectoryDoesNotExist(exceptions.menuaiError):
     """Error to indicate the specified download directory does not exist."""

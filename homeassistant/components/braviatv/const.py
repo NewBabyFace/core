@@ -14,8 +14,8 @@ CONF_NICKNAME: Final = "nickname"
 CONF_USE_PSK: Final = "use_psk"
 
 DOMAIN: Final = "braviatv"
-LEGACY_CLIENT_ID: Final = "HomeAssistant"
-NICKNAME_PREFIX: Final = "Home Assistant"
+LEGACY_CLIENT_ID: Final = "menuai"
+NICKNAME_PREFIX: Final = "MenuAI"
 
 
 class SourceType(StrEnum):

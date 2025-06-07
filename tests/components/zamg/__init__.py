@@ -1,7 +1,7 @@
 """Tests for the ZAMG component."""
 
-from homeassistant import config_entries
-from homeassistant.components.zamg.const import CONF_STATION_ID, DOMAIN
+from menuai import config_entries
+from menuai.components.zamg.const import CONF_STATION_ID, DOMAIN
 
 from .conftest import TEST_STATION_ID, TEST_STATION_NAME
 

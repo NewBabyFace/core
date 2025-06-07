@@ -8,9 +8,9 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_FILE_PATH
-from homeassistant.core import HomeAssistant
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_FILE_PATH
+from menuai.core import menuai
 
 from .const import DOMAIN
 
@@ -19,14 +19,14 @@ DATA_SCHEMA = vol.Schema({vol.Required(CONF_FILE_PATH): str})
 _LOGGER = logging.getLogger(__name__)
 
 
-def validate_path(hass: HomeAssistant, path: str) -> tuple[str | None, dict[str, str]]:
+def validate_path(menuai: menuai, path: str) -> tuple[str | None, dict[str, str]]:
     """Validate path."""
     get_path = pathlib.Path(path)
     if not get_path.exists() or not get_path.is_file():
         _LOGGER.error("Can not access file %s", path)
         return (None, {"base": "not_valid"})
 
-    if not hass.config.is_allowed_path(path):
+    if not menuai.config.is_allowed_path(path):
         _LOGGER.error("Filepath %s is not allowed", path)
         return (None, {"base": "not_allowed"})
 
@@ -47,8 +47,8 @@ class FilesizeConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            full_path, errors = await self.hass.async_add_executor_job(
-                validate_path, self.hass, user_input[CONF_FILE_PATH]
+            full_path, errors = await self.menuai.async_add_executor_job(
+                validate_path, self.menuai, user_input[CONF_FILE_PATH]
             )
             if not errors:
                 await self.async_set_unique_id(full_path)
@@ -72,8 +72,8 @@ class FilesizeConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             reconfigure_entry = self._get_reconfigure_entry()
-            full_path, errors = await self.hass.async_add_executor_job(
-                validate_path, self.hass, user_input[CONF_FILE_PATH]
+            full_path, errors = await self.menuai.async_add_executor_job(
+                validate_path, self.menuai, user_input[CONF_FILE_PATH]
             )
             if not errors:
                 await self.async_set_unique_id(full_path)

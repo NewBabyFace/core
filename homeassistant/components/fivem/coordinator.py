@@ -8,10 +8,10 @@ from typing import Any
 
 from fivem import FiveM, FiveMServerOfflineError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, CONF_PORT
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
     ATTR_PLAYERS_LIST,
@@ -32,7 +32,7 @@ type FiveMConfigEntry = ConfigEntry[FiveMDataUpdateCoordinator]
 class FiveMDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     """Class to manage fetching FiveM data."""
 
-    def __init__(self, hass: HomeAssistant, entry: FiveMConfigEntry) -> None:
+    def __init__(self, menuai: menuai, entry: FiveMConfigEntry) -> None:
         """Initialize server instance."""
         self.unique_id = entry.entry_id
         self.server = None
@@ -46,7 +46,7 @@ class FiveMDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         update_interval = timedelta(seconds=SCAN_INTERVAL)
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
             name=DOMAIN,

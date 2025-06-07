@@ -9,20 +9,20 @@ import pytest
 from synology_dsm.api.photos import SynoPhotosAlbum, SynoPhotosItem
 from synology_dsm.exceptions import SynologyDSMException
 
-from homeassistant.components.media_player import MediaClass
-from homeassistant.components.media_source import (
+from menuai.components.media_player import MediaClass
+from menuai.components.media_source import (
     BrowseError,
     BrowseMedia,
     MediaSourceItem,
     Unresolvable,
 )
-from homeassistant.components.synology_dsm.const import DOMAIN
-from homeassistant.components.synology_dsm.media_source import (
+from menuai.components.synology_dsm.const import DOMAIN
+from menuai.components.synology_dsm.media_source import (
     SynologyDsmMediaView,
     SynologyPhotosMediaSource,
     async_get_media_source,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_MAC,
     CONF_PASSWORD,
@@ -30,8 +30,8 @@ from homeassistant.const import (
     CONF_SSL,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.util.aiohttp import MockRequest
+from menuai.core import menuai
+from menuai.util.aiohttp import MockRequest
 
 from .common import mock_dsm_information
 from .consts import HOST, MACS, PASSWORD, PORT, USE_SSL, USERNAME
@@ -74,10 +74,10 @@ def dsm_with_photos() -> MagicMock:
 
 
 @pytest.mark.usefixtures("setup_media_source")
-async def test_get_media_source(hass: HomeAssistant) -> None:
+async def test_get_media_source(menuai: menuai) -> None:
     """Test the async_get_media_source function and SynologyPhotosMediaSource constructor."""
 
-    source = await async_get_media_source(hass)
+    source = await async_get_media_source(menuai)
     assert isinstance(source, SynologyPhotosMediaSource)
     assert source.domain == DOMAIN
 
@@ -93,11 +93,11 @@ async def test_get_media_source(hass: HomeAssistant) -> None:
     ],
 )
 async def test_resolve_media_bad_identifier(
-    hass: HomeAssistant, identifier: str, exception_msg: str
+    menuai: menuai, identifier: str, exception_msg: str
 ) -> None:
     """Test resolve_media with bad identifiers."""
-    source = await async_get_media_source(hass)
-    item = MediaSourceItem(hass, DOMAIN, identifier, None)
+    source = await async_get_media_source(menuai)
+    item = MediaSourceItem(menuai, DOMAIN, identifier, None)
     with pytest.raises(Unresolvable, match=exception_msg):
         await source.async_resolve_media(item)
 
@@ -129,11 +129,11 @@ async def test_resolve_media_bad_identifier(
     ],
 )
 async def test_resolve_media_success(
-    hass: HomeAssistant, identifier: str, url: str, mime_type: str
+    menuai: menuai, identifier: str, url: str, mime_type: str
 ) -> None:
     """Test successful resolving an item."""
-    source = await async_get_media_source(hass)
-    item = MediaSourceItem(hass, DOMAIN, identifier, None)
+    source = await async_get_media_source(menuai)
+    item = MediaSourceItem(menuai, DOMAIN, identifier, None)
     result = await source.async_resolve_media(item)
 
     assert result.url == url
@@ -141,11 +141,11 @@ async def test_resolve_media_success(
 
 
 @pytest.mark.usefixtures("setup_media_source")
-async def test_browse_media_unconfigured(hass: HomeAssistant) -> None:
+async def test_browse_media_unconfigured(menuai: menuai) -> None:
     """Test browse_media without any devices being configured."""
-    source = await async_get_media_source(hass)
+    source = await async_get_media_source(menuai)
     item = MediaSourceItem(
-        hass, DOMAIN, "unique_id/album_id/cache_key/filename.jpg", None
+        menuai, DOMAIN, "unique_id/album_id/cache_key/filename.jpg", None
     )
     with pytest.raises(BrowseError, match="Diskstation not initialized"):
         await source.async_browse_media(item)
@@ -153,15 +153,15 @@ async def test_browse_media_unconfigured(hass: HomeAssistant) -> None:
 
 @pytest.mark.usefixtures("setup_media_source")
 async def test_browse_media_album_error(
-    hass: HomeAssistant, dsm_with_photos: MagicMock
+    menuai: menuai, dsm_with_photos: MagicMock
 ) -> None:
     """Test browse_media with unknown album."""
     with (
         patch(
-            "homeassistant.components.synology_dsm.common.SynologyDSM",
+            "menuai.components.synology_dsm.common.SynologyDSM",
             return_value=dsm_with_photos,
         ),
-        patch("homeassistant.components.synology_dsm.PLATFORMS", return_value=[]),
+        patch("menuai.components.synology_dsm.PLATFORMS", return_value=[]),
     ):
         entry = MockConfigEntry(
             domain=DOMAIN,
@@ -175,17 +175,17 @@ async def test_browse_media_album_error(
             },
             unique_id="mocked_syno_dsm_entry",
         )
-        entry.add_to_hass(hass)
-        assert await hass.config_entries.async_setup(entry.entry_id)
+        entry.add_to_menuai(menuai)
+        assert await menuai.config_entries.async_setup(entry.entry_id)
 
     # exception in get_albums()
     dsm_with_photos.photos.get_albums = AsyncMock(
         side_effect=SynologyDSMException("", None)
     )
 
-    source = await async_get_media_source(hass)
+    source = await async_get_media_source(menuai)
 
-    item = MediaSourceItem(hass, DOMAIN, entry.unique_id, None)
+    item = MediaSourceItem(menuai, DOMAIN, entry.unique_id, None)
     result = await source.async_browse_media(item)
 
     assert result
@@ -195,15 +195,15 @@ async def test_browse_media_album_error(
 
 @pytest.mark.usefixtures("setup_media_source")
 async def test_browse_media_get_root(
-    hass: HomeAssistant, dsm_with_photos: MagicMock
+    menuai: menuai, dsm_with_photos: MagicMock
 ) -> None:
     """Test browse_media returning root media sources."""
     with (
         patch(
-            "homeassistant.components.synology_dsm.common.SynologyDSM",
+            "menuai.components.synology_dsm.common.SynologyDSM",
             return_value=dsm_with_photos,
         ),
-        patch("homeassistant.components.synology_dsm.PLATFORMS", return_value=[]),
+        patch("menuai.components.synology_dsm.PLATFORMS", return_value=[]),
     ):
         entry = MockConfigEntry(
             domain=DOMAIN,
@@ -217,11 +217,11 @@ async def test_browse_media_get_root(
             },
             unique_id="mocked_syno_dsm_entry",
         )
-        entry.add_to_hass(hass)
-        assert await hass.config_entries.async_setup(entry.entry_id)
+        entry.add_to_menuai(menuai)
+        assert await menuai.config_entries.async_setup(entry.entry_id)
 
-    source = await async_get_media_source(hass)
-    item = MediaSourceItem(hass, DOMAIN, "", None)
+    source = await async_get_media_source(menuai)
+    item = MediaSourceItem(menuai, DOMAIN, "", None)
     result = await source.async_browse_media(item)
 
     assert result
@@ -232,15 +232,15 @@ async def test_browse_media_get_root(
 
 @pytest.mark.usefixtures("setup_media_source")
 async def test_browse_media_get_albums(
-    hass: HomeAssistant, dsm_with_photos: MagicMock
+    menuai: menuai, dsm_with_photos: MagicMock
 ) -> None:
     """Test browse_media returning albums."""
     with (
         patch(
-            "homeassistant.components.synology_dsm.common.SynologyDSM",
+            "menuai.components.synology_dsm.common.SynologyDSM",
             return_value=dsm_with_photos,
         ),
-        patch("homeassistant.components.synology_dsm.PLATFORMS", return_value=[]),
+        patch("menuai.components.synology_dsm.PLATFORMS", return_value=[]),
     ):
         entry = MockConfigEntry(
             domain=DOMAIN,
@@ -254,11 +254,11 @@ async def test_browse_media_get_albums(
             },
             unique_id="mocked_syno_dsm_entry",
         )
-        entry.add_to_hass(hass)
-        assert await hass.config_entries.async_setup(entry.entry_id)
+        entry.add_to_menuai(menuai)
+        assert await menuai.config_entries.async_setup(entry.entry_id)
 
-    source = await async_get_media_source(hass)
-    item = MediaSourceItem(hass, DOMAIN, "mocked_syno_dsm_entry", None)
+    source = await async_get_media_source(menuai)
+    item = MediaSourceItem(menuai, DOMAIN, "mocked_syno_dsm_entry", None)
     result = await source.async_browse_media(item)
 
     assert result
@@ -276,15 +276,15 @@ async def test_browse_media_get_albums(
 
 @pytest.mark.usefixtures("setup_media_source")
 async def test_browse_media_get_items_error(
-    hass: HomeAssistant, dsm_with_photos: MagicMock
+    menuai: menuai, dsm_with_photos: MagicMock
 ) -> None:
     """Test browse_media returning albums."""
     with (
         patch(
-            "homeassistant.components.synology_dsm.common.SynologyDSM",
+            "menuai.components.synology_dsm.common.SynologyDSM",
             return_value=dsm_with_photos,
         ),
-        patch("homeassistant.components.synology_dsm.PLATFORMS", return_value=[]),
+        patch("menuai.components.synology_dsm.PLATFORMS", return_value=[]),
     ):
         entry = MockConfigEntry(
             domain=DOMAIN,
@@ -298,14 +298,14 @@ async def test_browse_media_get_items_error(
             },
             unique_id="mocked_syno_dsm_entry",
         )
-        entry.add_to_hass(hass)
-        assert await hass.config_entries.async_setup(entry.entry_id)
+        entry.add_to_menuai(menuai)
+        assert await menuai.config_entries.async_setup(entry.entry_id)
 
-    source = await async_get_media_source(hass)
+    source = await async_get_media_source(menuai)
 
     # unknown album
     dsm_with_photos.photos.get_items_from_album = AsyncMock(return_value=[])
-    item = MediaSourceItem(hass, DOMAIN, "mocked_syno_dsm_entry/1", None)
+    item = MediaSourceItem(menuai, DOMAIN, "mocked_syno_dsm_entry/1", None)
     result = await source.async_browse_media(item)
 
     assert result
@@ -316,7 +316,7 @@ async def test_browse_media_get_items_error(
     dsm_with_photos.photos.get_items_from_album = AsyncMock(
         side_effect=SynologyDSMException("", None)
     )
-    item = MediaSourceItem(hass, DOMAIN, "mocked_syno_dsm_entry/1", None)
+    item = MediaSourceItem(menuai, DOMAIN, "mocked_syno_dsm_entry/1", None)
     result = await source.async_browse_media(item)
 
     assert result
@@ -327,7 +327,7 @@ async def test_browse_media_get_items_error(
     dsm_with_photos.photos.get_items_from_shared_space = AsyncMock(
         side_effect=SynologyDSMException("", None)
     )
-    item = MediaSourceItem(hass, DOMAIN, "mocked_syno_dsm_entry/shared", None)
+    item = MediaSourceItem(menuai, DOMAIN, "mocked_syno_dsm_entry/shared", None)
     result = await source.async_browse_media(item)
 
     assert result
@@ -337,15 +337,15 @@ async def test_browse_media_get_items_error(
 
 @pytest.mark.usefixtures("setup_media_source")
 async def test_browse_media_get_items_thumbnail_error(
-    hass: HomeAssistant, dsm_with_photos: MagicMock
+    menuai: menuai, dsm_with_photos: MagicMock
 ) -> None:
     """Test browse_media returning albums."""
     with (
         patch(
-            "homeassistant.components.synology_dsm.common.SynologyDSM",
+            "menuai.components.synology_dsm.common.SynologyDSM",
             return_value=dsm_with_photos,
         ),
-        patch("homeassistant.components.synology_dsm.PLATFORMS", return_value=[]),
+        patch("menuai.components.synology_dsm.PLATFORMS", return_value=[]),
     ):
         entry = MockConfigEntry(
             domain=DOMAIN,
@@ -359,15 +359,15 @@ async def test_browse_media_get_items_thumbnail_error(
             },
             unique_id="mocked_syno_dsm_entry",
         )
-        entry.add_to_hass(hass)
-        assert await hass.config_entries.async_setup(entry.entry_id)
+        entry.add_to_menuai(menuai)
+        assert await menuai.config_entries.async_setup(entry.entry_id)
 
-    source = await async_get_media_source(hass)
+    source = await async_get_media_source(menuai)
 
     dsm_with_photos.photos.get_item_thumbnail_url = AsyncMock(
         side_effect=SynologyDSMException("", None)
     )
-    item = MediaSourceItem(hass, DOMAIN, "mocked_syno_dsm_entry/1", None)
+    item = MediaSourceItem(menuai, DOMAIN, "mocked_syno_dsm_entry/1", None)
     result = await source.async_browse_media(item)
 
     assert result
@@ -379,15 +379,15 @@ async def test_browse_media_get_items_thumbnail_error(
 
 @pytest.mark.usefixtures("setup_media_source")
 async def test_browse_media_get_items(
-    hass: HomeAssistant, dsm_with_photos: MagicMock
+    menuai: menuai, dsm_with_photos: MagicMock
 ) -> None:
     """Test browse_media returning albums."""
     with (
         patch(
-            "homeassistant.components.synology_dsm.common.SynologyDSM",
+            "menuai.components.synology_dsm.common.SynologyDSM",
             return_value=dsm_with_photos,
         ),
-        patch("homeassistant.components.synology_dsm.PLATFORMS", return_value=[]),
+        patch("menuai.components.synology_dsm.PLATFORMS", return_value=[]),
     ):
         entry = MockConfigEntry(
             domain=DOMAIN,
@@ -401,12 +401,12 @@ async def test_browse_media_get_items(
             },
             unique_id="mocked_syno_dsm_entry",
         )
-        entry.add_to_hass(hass)
-        assert await hass.config_entries.async_setup(entry.entry_id)
+        entry.add_to_menuai(menuai)
+        assert await menuai.config_entries.async_setup(entry.entry_id)
 
-    source = await async_get_media_source(hass)
+    source = await async_get_media_source(menuai)
 
-    item = MediaSourceItem(hass, DOMAIN, "mocked_syno_dsm_entry/1", None)
+    item = MediaSourceItem(menuai, DOMAIN, "mocked_syno_dsm_entry/1", None)
     result = await source.async_browse_media(item)
 
     assert result
@@ -430,7 +430,7 @@ async def test_browse_media_get_items(
     assert not item.can_expand
     assert item.thumbnail == "http://my.thumbnail.url"
 
-    item = MediaSourceItem(hass, DOMAIN, "mocked_syno_dsm_entry/shared", None)
+    item = MediaSourceItem(menuai, DOMAIN, "mocked_syno_dsm_entry/shared", None)
     result = await source.async_browse_media(item)
     assert result
     assert len(result.children) == 1
@@ -449,10 +449,10 @@ async def test_browse_media_get_items(
 
 @pytest.mark.usefixtures("setup_media_source")
 async def test_media_view(
-    hass: HomeAssistant, tmp_path: Path, dsm_with_photos: MagicMock
+    menuai: menuai, tmp_path: Path, dsm_with_photos: MagicMock
 ) -> None:
     """Test SynologyDsmMediaView returning albums."""
-    view = SynologyDsmMediaView(hass)
+    view = SynologyDsmMediaView(menuai)
     request = MockRequest(b"", DOMAIN)
 
     # diskation not set uped
@@ -461,10 +461,10 @@ async def test_media_view(
 
     with (
         patch(
-            "homeassistant.components.synology_dsm.common.SynologyDSM",
+            "menuai.components.synology_dsm.common.SynologyDSM",
             return_value=dsm_with_photos,
         ),
-        patch("homeassistant.components.synology_dsm.PLATFORMS", return_value=[]),
+        patch("menuai.components.synology_dsm.PLATFORMS", return_value=[]),
     ):
         entry = MockConfigEntry(
             domain=DOMAIN,
@@ -478,8 +478,8 @@ async def test_media_view(
             },
             unique_id="mocked_syno_dsm_entry",
         )
-        entry.add_to_hass(hass)
-        assert await hass.config_entries.async_setup(entry.entry_id)
+        entry.add_to_menuai(menuai)
+        assert await menuai.config_entries.async_setup(entry.entry_id)
 
     with pytest.raises(web.HTTPNotFound):
         await view.get(request, "", "10_1298753/filename/")

@@ -6,12 +6,12 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from homeassistant.components.aws_s3.backup import (
+from menuai.components.aws_s3.backup import (
     MULTIPART_MIN_PART_SIZE_BYTES,
     suggested_filenames,
 )
-from homeassistant.components.aws_s3.const import DOMAIN
-from homeassistant.components.backup import AgentBackup
+from menuai.components.aws_s3.const import DOMAIN
+from menuai.components.backup import AgentBackup
 
 from .const import USER_INPUT
 
@@ -31,8 +31,8 @@ def test_backup(request: pytest.FixtureRequest) -> None:
         database_included=True,
         extra_metadata={},
         folders=[],
-        homeassistant_included=True,
-        homeassistant_version="2024.12.0.dev0",
+        menuai_included=True,
+        menuai_version="2024.12.0.dev0",
         name="Core 2024.12.0.dev0",
         protected=False,
         size=request.param,

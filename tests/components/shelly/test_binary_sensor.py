@@ -8,12 +8,12 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
-from homeassistant.components.shelly.const import UPDATE_PERIOD_MULTIPLIER
-from homeassistant.const import STATE_OFF, STATE_ON, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant, State
-from homeassistant.helpers.device_registry import DeviceRegistry
-from homeassistant.helpers.entity_registry import EntityRegistry
+from menuai.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
+from menuai.components.shelly.const import UPDATE_PERIOD_MULTIPLIER
+from menuai.const import STATE_OFF, STATE_ON, STATE_UNKNOWN
+from menuai.core import menuai, State
+from menuai.helpers.device_registry import DeviceRegistry
+from menuai.helpers.entity_registry import EntityRegistry
 
 from . import (
     init_integration,
@@ -30,7 +30,7 @@ SENSOR_BLOCK_ID = 3
 
 
 async def test_block_binary_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_block_device: Mock,
     monkeypatch: pytest.MonkeyPatch,
     entity_registry: EntityRegistry,
@@ -38,15 +38,15 @@ async def test_block_binary_sensor(
     """Test block binary sensor."""
     monkeypatch.setitem(mock_block_device.shelly, "num_outputs", 1)
     entity_id = f"{BINARY_SENSOR_DOMAIN}.test_name_overpowering"
-    await init_integration(hass, 1)
+    await init_integration(menuai, 1)
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_OFF
 
     monkeypatch.setattr(mock_block_device.blocks[RELAY_BLOCK_ID], "overpower", 1)
     mock_block_device.mock_update()
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_ON
 
     assert (entry := entity_registry.async_get(entity_id))
@@ -54,23 +54,23 @@ async def test_block_binary_sensor(
 
 
 async def test_block_binary_sensor_extra_state_attr(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_block_device: Mock,
     monkeypatch: pytest.MonkeyPatch,
     entity_registry: EntityRegistry,
 ) -> None:
     """Test block binary sensor extra state attributes."""
     entity_id = f"{BINARY_SENSOR_DOMAIN}.test_name_gas"
-    await init_integration(hass, 1)
+    await init_integration(menuai, 1)
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_ON
     assert state.attributes.get("detected") == "mild"
 
     monkeypatch.setattr(mock_block_device.blocks[SENSOR_BLOCK_ID], "gas", "none")
     mock_block_device.mock_update()
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_OFF
     assert state.attributes.get("detected") == "none"
 
@@ -79,24 +79,24 @@ async def test_block_binary_sensor_extra_state_attr(
 
 
 async def test_block_rest_binary_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     mock_block_device: Mock,
     monkeypatch: pytest.MonkeyPatch,
     entity_registry: EntityRegistry,
 ) -> None:
     """Test block REST binary sensor."""
-    entity_id = register_entity(hass, BINARY_SENSOR_DOMAIN, "test_name_cloud", "cloud")
+    entity_id = register_entity(menuai, BINARY_SENSOR_DOMAIN, "test_name_cloud", "cloud")
     monkeypatch.setitem(mock_block_device.status, "cloud", {"connected": False})
-    await init_integration(hass, 1)
+    await init_integration(menuai, 1)
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_OFF
 
     monkeypatch.setitem(mock_block_device.status["cloud"], "connected", True)
-    await mock_rest_update(hass, freezer)
+    await mock_rest_update(menuai, freezer)
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_ON
 
     assert (entry := entity_registry.async_get(entity_id))
@@ -104,32 +104,32 @@ async def test_block_rest_binary_sensor(
 
 
 async def test_block_rest_binary_sensor_connected_battery_devices(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     mock_block_device: Mock,
     monkeypatch: pytest.MonkeyPatch,
     entity_registry: EntityRegistry,
 ) -> None:
     """Test block REST binary sensor for connected battery devices."""
-    entity_id = register_entity(hass, BINARY_SENSOR_DOMAIN, "test_name_cloud", "cloud")
+    entity_id = register_entity(menuai, BINARY_SENSOR_DOMAIN, "test_name_cloud", "cloud")
     monkeypatch.setitem(mock_block_device.status, "cloud", {"connected": False})
     monkeypatch.setitem(mock_block_device.settings["device"], "type", MODEL_MOTION)
     monkeypatch.setitem(mock_block_device.settings["coiot"], "update_period", 3600)
-    await init_integration(hass, 1, model=MODEL_MOTION)
+    await init_integration(menuai, 1, model=MODEL_MOTION)
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_OFF
 
     monkeypatch.setitem(mock_block_device.status["cloud"], "connected", True)
 
     # Verify no update on fast intervals
-    await mock_rest_update(hass, freezer)
-    assert (state := hass.states.get(entity_id))
+    await mock_rest_update(menuai, freezer)
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_OFF
 
     # Verify update on slow intervals
-    await mock_rest_update(hass, freezer, seconds=UPDATE_PERIOD_MULTIPLIER * 3600)
-    assert (state := hass.states.get(entity_id))
+    await mock_rest_update(menuai, freezer, seconds=UPDATE_PERIOD_MULTIPLIER * 3600)
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_ON
 
     assert (entry := entity_registry.async_get(entity_id))
@@ -137,29 +137,29 @@ async def test_block_rest_binary_sensor_connected_battery_devices(
 
 
 async def test_block_sleeping_binary_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_block_device: Mock,
     monkeypatch: pytest.MonkeyPatch,
     entity_registry: EntityRegistry,
 ) -> None:
     """Test block sleeping binary sensor."""
     entity_id = f"{BINARY_SENSOR_DOMAIN}.test_name_motion"
-    await init_integration(hass, 1, sleep_period=1000)
+    await init_integration(menuai, 1, sleep_period=1000)
 
     # Sensor should be created when device is online
-    assert hass.states.get(entity_id) is None
+    assert menuai.states.get(entity_id) is None
 
     # Make device online
     mock_block_device.mock_online()
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_OFF
 
     monkeypatch.setattr(mock_block_device.blocks[SENSOR_BLOCK_ID], "motion", 1)
     mock_block_device.mock_update()
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_ON
 
     assert (entry := entity_registry.async_get(entity_id))
@@ -167,50 +167,50 @@ async def test_block_sleeping_binary_sensor(
 
 
 async def test_block_restored_sleeping_binary_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_block_device: Mock,
     device_registry: DeviceRegistry,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Test block restored sleeping binary sensor."""
-    entry = await init_integration(hass, 1, sleep_period=1000, skip_setup=True)
+    entry = await init_integration(menuai, 1, sleep_period=1000, skip_setup=True)
     device = register_device(device_registry, entry)
     entity_id = register_entity(
-        hass,
+        menuai,
         BINARY_SENSOR_DOMAIN,
         "test_name_motion",
         "sensor_0-motion",
         entry,
         device_id=device.id,
     )
-    mock_restore_cache(hass, [State(entity_id, STATE_ON)])
+    mock_restore_cache(menuai, [State(entity_id, STATE_ON)])
     monkeypatch.setattr(mock_block_device, "initialized", False)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_ON
 
     # Make device online
     monkeypatch.setattr(mock_block_device, "initialized", True)
     mock_block_device.mock_online()
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_OFF
 
 
 async def test_block_restored_sleeping_binary_sensor_no_last_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_block_device: Mock,
     device_registry: DeviceRegistry,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Test block restored sleeping binary sensor missing last state."""
-    entry = await init_integration(hass, 1, sleep_period=1000, skip_setup=True)
+    entry = await init_integration(menuai, 1, sleep_period=1000, skip_setup=True)
     device = register_device(device_registry, entry)
     entity_id = register_entity(
-        hass,
+        menuai,
         BINARY_SENSOR_DOMAIN,
         "test_name_motion",
         "sensor_0-motion",
@@ -218,32 +218,32 @@ async def test_block_restored_sleeping_binary_sensor_no_last_state(
         device_id=device.id,
     )
     monkeypatch.setattr(mock_block_device, "initialized", False)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_UNKNOWN
 
     # Make device online
     monkeypatch.setattr(mock_block_device, "initialized", True)
     mock_block_device.mock_online()
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_OFF
 
 
 async def test_rpc_binary_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_rpc_device: Mock,
     monkeypatch: pytest.MonkeyPatch,
     entity_registry: EntityRegistry,
 ) -> None:
     """Test RPC binary sensor."""
     entity_id = f"{BINARY_SENSOR_DOMAIN}.test_name_test_cover_0_overpowering"
-    await init_integration(hass, 2)
+    await init_integration(menuai, 2)
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_OFF
 
     mutate_rpc_device_status(
@@ -251,7 +251,7 @@ async def test_rpc_binary_sensor(
     )
     mock_rpc_device.mock_update()
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_ON
 
     assert (entry := entity_registry.async_get(entity_id))
@@ -259,26 +259,26 @@ async def test_rpc_binary_sensor(
 
 
 async def test_rpc_binary_sensor_removal(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_rpc_device: Mock,
     monkeypatch: pytest.MonkeyPatch,
     entity_registry: EntityRegistry,
 ) -> None:
     """Test RPC binary sensor is removed due to removal_condition."""
     entity_id = register_entity(
-        hass, BINARY_SENSOR_DOMAIN, "test_cover_0_input", "input:0-input"
+        menuai, BINARY_SENSOR_DOMAIN, "test_cover_0_input", "input:0-input"
     )
 
     assert entity_registry.async_get(entity_id) is not None
 
     monkeypatch.setattr(mock_rpc_device, "status", {"input:0": {"state": False}})
-    await init_integration(hass, 2)
+    await init_integration(menuai, 2)
 
     assert entity_registry.async_get(entity_id) is None
 
 
 async def test_rpc_sleeping_binary_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_rpc_device: Mock,
     monkeypatch: pytest.MonkeyPatch,
     entity_registry: EntityRegistry,
@@ -287,30 +287,30 @@ async def test_rpc_sleeping_binary_sensor(
     entity_id = f"{BINARY_SENSOR_DOMAIN}.test_name_cloud"
     monkeypatch.setattr(mock_rpc_device, "connected", False)
     monkeypatch.setitem(mock_rpc_device.status["sys"], "wakeup_period", 1000)
-    config_entry = await init_integration(hass, 2, sleep_period=1000)
+    config_entry = await init_integration(menuai, 2, sleep_period=1000)
 
     # Sensor should be created when device is online
-    assert hass.states.get(entity_id) is None
+    assert menuai.states.get(entity_id) is None
 
     register_entity(
-        hass, BINARY_SENSOR_DOMAIN, "test_name_cloud", "cloud-cloud", config_entry
+        menuai, BINARY_SENSOR_DOMAIN, "test_name_cloud", "cloud-cloud", config_entry
     )
 
     # Make device online
     mock_rpc_device.mock_online()
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_OFF
 
     mutate_rpc_device_status(monkeypatch, mock_rpc_device, "cloud", "connected", True)
     mock_rpc_device.mock_update()
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_ON
 
     # test external power sensor
-    assert (state := hass.states.get("binary_sensor.test_name_external_power"))
+    assert (state := menuai.states.get("binary_sensor.test_name_external_power"))
     assert state.state == STATE_ON
 
     assert (
@@ -320,16 +320,16 @@ async def test_rpc_sleeping_binary_sensor(
 
 
 async def test_rpc_restored_sleeping_binary_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_rpc_device: Mock,
     device_registry: DeviceRegistry,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Test RPC restored binary sensor."""
-    entry = await init_integration(hass, 2, sleep_period=1000, skip_setup=True)
+    entry = await init_integration(menuai, 2, sleep_period=1000, skip_setup=True)
     device = register_device(device_registry, entry)
     entity_id = register_entity(
-        hass,
+        menuai,
         BINARY_SENSOR_DOMAIN,
         "test_name_cloud",
         "cloud-cloud",
@@ -337,35 +337,35 @@ async def test_rpc_restored_sleeping_binary_sensor(
         device_id=device.id,
     )
 
-    mock_restore_cache(hass, [State(entity_id, STATE_ON)])
+    mock_restore_cache(menuai, [State(entity_id, STATE_ON)])
     monkeypatch.setattr(mock_rpc_device, "initialized", False)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_ON
 
     # Make device online
     monkeypatch.setattr(mock_rpc_device, "initialized", True)
     mock_rpc_device.mock_update()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_OFF
 
 
 async def test_rpc_restored_sleeping_binary_sensor_no_last_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_rpc_device: Mock,
     device_registry: DeviceRegistry,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Test RPC restored sleeping binary sensor missing last state."""
-    entry = await init_integration(hass, 2, sleep_period=1000, skip_setup=True)
+    entry = await init_integration(menuai, 2, sleep_period=1000, skip_setup=True)
     device = register_device(device_registry, entry)
     entity_id = register_entity(
-        hass,
+        menuai,
         BINARY_SENSOR_DOMAIN,
         "test_name_cloud",
         "cloud-cloud",
@@ -375,22 +375,22 @@ async def test_rpc_restored_sleeping_binary_sensor_no_last_state(
 
     monkeypatch.setattr(mock_rpc_device, "initialized", False)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_UNKNOWN
 
     # Make device online
     monkeypatch.setattr(mock_rpc_device, "initialized", True)
     mock_rpc_device.mock_online()
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     # Mock update
     mock_rpc_device.mock_update()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_OFF
 
 
@@ -402,7 +402,7 @@ async def test_rpc_restored_sleeping_binary_sensor_no_last_state(
     ],
 )
 async def test_rpc_device_virtual_binary_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: EntityRegistry,
     mock_rpc_device: Mock,
     monkeypatch: pytest.MonkeyPatch,
@@ -421,9 +421,9 @@ async def test_rpc_device_virtual_binary_sensor(
     status["boolean:203"] = {"value": True}
     monkeypatch.setattr(mock_rpc_device, "status", status)
 
-    await init_integration(hass, 3)
+    await init_integration(menuai, 3)
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_ON
 
     assert (entry := entity_registry.async_get(entity_id))
@@ -432,12 +432,12 @@ async def test_rpc_device_virtual_binary_sensor(
     monkeypatch.setitem(mock_rpc_device.status["boolean:203"], "value", False)
     mock_rpc_device.mock_update()
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_OFF
 
 
 async def test_rpc_remove_virtual_binary_sensor_when_mode_toggle(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: EntityRegistry,
     device_registry: DeviceRegistry,
     mock_rpc_device: Mock,
@@ -452,10 +452,10 @@ async def test_rpc_remove_virtual_binary_sensor_when_mode_toggle(
     status["boolean:200"] = {"value": True}
     monkeypatch.setattr(mock_rpc_device, "status", status)
 
-    config_entry = await init_integration(hass, 3, skip_setup=True)
+    config_entry = await init_integration(menuai, 3, skip_setup=True)
     device_entry = register_device(device_registry, config_entry)
     entity_id = register_entity(
-        hass,
+        menuai,
         BINARY_SENSOR_DOMAIN,
         "test_name_boolean_200",
         "boolean:200-boolean",
@@ -463,23 +463,23 @@ async def test_rpc_remove_virtual_binary_sensor_when_mode_toggle(
         device_id=device_entry.id,
     )
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert entity_registry.async_get(entity_id) is None
 
 
 async def test_rpc_remove_virtual_binary_sensor_when_orphaned(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: EntityRegistry,
     device_registry: DeviceRegistry,
     mock_rpc_device: Mock,
 ) -> None:
     """Check whether the virtual binary sensor will be removed if it has been removed from the device configuration."""
-    config_entry = await init_integration(hass, 3, skip_setup=True)
+    config_entry = await init_integration(menuai, 3, skip_setup=True)
     device_entry = register_device(device_registry, config_entry)
     entity_id = register_entity(
-        hass,
+        menuai,
         BINARY_SENSOR_DOMAIN,
         "test_name_boolean_200",
         "boolean:200-boolean",
@@ -487,25 +487,25 @@ async def test_rpc_remove_virtual_binary_sensor_when_orphaned(
         device_id=device_entry.id,
     )
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert entity_registry.async_get(entity_id) is None
 
 
 async def test_blu_trv_binary_sensor_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_blu_trv: Mock,
     entity_registry: EntityRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test BLU TRV binary sensor entity."""
-    await init_integration(hass, 3, model=MODEL_BLU_GATEWAY_G3)
+    await init_integration(menuai, 3, model=MODEL_BLU_GATEWAY_G3)
 
     for entity in ("calibration",):
         entity_id = f"{BINARY_SENSOR_DOMAIN}.trv_name_{entity}"
 
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state == snapshot(name=f"{entity_id}-state")
 
         entry = entity_registry.async_get(entity_id)
@@ -513,18 +513,18 @@ async def test_blu_trv_binary_sensor_entity(
 
 
 async def test_rpc_flood_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_rpc_device: Mock,
     entity_registry: EntityRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test RPC flood sensor entities."""
-    await init_integration(hass, 4)
+    await init_integration(menuai, 4)
 
     for entity in ("flood", "mute"):
         entity_id = f"{BINARY_SENSOR_DOMAIN}.test_name_kitchen_{entity}"
 
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state == snapshot(name=f"{entity_id}-state")
 
         entry = entity_registry.async_get(entity_id)

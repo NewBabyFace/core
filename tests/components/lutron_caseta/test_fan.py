@@ -1,16 +1,16 @@
 """Tests for the Lutron Caseta integration."""
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import MockBridge, async_setup_integration
 
 
 async def test_fan_unique_id(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test a light unique id."""
-    await async_setup_integration(hass, MockBridge)
+    await async_setup_integration(menuai, MockBridge)
 
     fan_entity_id = "fan.master_bedroom_ceiling_fan"
 

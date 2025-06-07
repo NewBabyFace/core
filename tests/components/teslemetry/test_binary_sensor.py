@@ -7,10 +7,10 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 from teslemetry_stream import Signal
 
-from homeassistant.components.teslemetry.coordinator import VEHICLE_INTERVAL
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.teslemetry.coordinator import VEHICLE_INTERVAL
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import assert_entities, assert_entities_alt, setup_platform
 from .const import VEHICLE_DATA_ALT
@@ -20,19 +20,19 @@ from tests.common import async_fire_time_changed
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_binary_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Tests that the binary sensor entities are correct."""
 
-    entry = await setup_platform(hass, [Platform.BINARY_SENSOR])
-    assert_entities(hass, entry.entry_id, entity_registry, snapshot)
+    entry = await setup_platform(menuai, [Platform.BINARY_SENSOR])
+    assert_entities(menuai, entry.entry_id, entity_registry, snapshot)
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_binary_sensor_refresh(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
     mock_vehicle_data: AsyncMock,
@@ -40,20 +40,20 @@ async def test_binary_sensor_refresh(
 ) -> None:
     """Tests that the binary sensor entities are correct."""
 
-    entry = await setup_platform(hass, [Platform.BINARY_SENSOR])
+    entry = await setup_platform(menuai, [Platform.BINARY_SENSOR])
 
     # Refresh
     mock_vehicle_data.return_value = VEHICLE_DATA_ALT
     freezer.tick(VEHICLE_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    assert_entities_alt(hass, entry.entry_id, entity_registry, snapshot)
+    assert_entities_alt(menuai, entry.entry_id, entity_registry, snapshot)
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_binary_sensors_streaming(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
     freezer: FrozenDateTimeFactory,
@@ -64,7 +64,7 @@ async def test_binary_sensors_streaming(
 
     freezer.move_to("2024-01-01 00:00:00+00:00")
 
-    entry = await setup_platform(hass, [Platform.BINARY_SENSOR])
+    entry = await setup_platform(menuai, [Platform.BINARY_SENSOR])
 
     # Stream update
     mock_add_listener.send(
@@ -90,11 +90,11 @@ async def test_binary_sensors_streaming(
             "createdAt": "2024-10-04T10:45:17.537Z",
         }
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Reload the entry
-    await hass.config_entries.async_reload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_reload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Assert the entities restored their values
     for entity_id in (
@@ -106,12 +106,12 @@ async def test_binary_sensors_streaming(
         "binary_sensor.test_front_passenger_door",
         "binary_sensor.test_driver_seat_belt",
     ):
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state.state == snapshot(name=f"{entity_id}-state")
 
 
 async def test_binary_sensors_connectivity(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
     freezer: FrozenDateTimeFactory,
@@ -122,7 +122,7 @@ async def test_binary_sensors_connectivity(
 
     freezer.move_to("2024-01-01 00:00:00+00:00")
 
-    await setup_platform(hass, [Platform.BINARY_SENSOR])
+    await setup_platform(menuai, [Platform.BINARY_SENSOR])
 
     # Stream update
     mock_add_listener.send(
@@ -141,12 +141,12 @@ async def test_binary_sensors_connectivity(
             "createdAt": "2024-10-04T10:45:17.537Z",
         }
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Assert the entities restored their values
     for entity_id in (
         "binary_sensor.test_cellular",
         "binary_sensor.test_wi_fi",
     ):
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state.state == snapshot(name=f"{entity_id}-state")

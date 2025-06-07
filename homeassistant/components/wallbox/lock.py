@@ -1,14 +1,14 @@
-"""Home Assistant component for accessing the Wallbox Portal API. The lock component creates a lock entity."""
+"""MenuAI component for accessing the Wallbox Portal API. The lock component creates a lock entity."""
 
 from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.lock import LockEntity, LockEntityDescription
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import PlatformNotReady
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.lock import LockEntity, LockEntityDescription
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import PlatformNotReady
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
     CHARGER_DATA_KEY,
@@ -28,12 +28,12 @@ LOCK_TYPES: dict[str, LockEntityDescription] = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Create wallbox lock entities in HASS."""
-    coordinator: WallboxCoordinator = hass.data[DOMAIN][entry.entry_id]
+    """Create wallbox lock entities in menuai."""
+    coordinator: WallboxCoordinator = menuai.data[DOMAIN][entry.entry_id]
     # Check if the user is authorized to lock, if so, add lock component
     try:
         await coordinator.async_set_lock_unlock(

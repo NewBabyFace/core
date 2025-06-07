@@ -8,12 +8,12 @@ from xknx.telegram import Telegram, TelegramDirection
 from xknx.telegram.address import DeviceGroupAddress, parse_device_group_address
 from xknx.telegram.apci import GroupValueRead, GroupValueResponse, GroupValueWrite
 
-from homeassistant.const import CONF_PLATFORM, CONF_TYPE
-from homeassistant.core import CALLBACK_TYPE, HassJob, HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
-from homeassistant.helpers.typing import ConfigType, VolDictType
+from menuai.const import CONF_PLATFORM, CONF_TYPE
+from menuai.core import CALLBACK_TYPE, menuaiJob, menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.trigger import TriggerActionType, TriggerInfo
+from menuai.helpers.typing import ConfigType, VolDictType
 
 from .const import DOMAIN
 from .schema import ga_validator
@@ -51,7 +51,7 @@ TRIGGER_SCHEMA = cv.TRIGGER_BASE_SCHEMA.extend(
 
 
 async def async_attach_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     action: TriggerActionType,
     trigger_info: TriggerInfo,
@@ -64,7 +64,7 @@ async def async_attach_trigger(
     _transcoder = config.get(CONF_TYPE)
     trigger_transcoder = DPTBase.parse_transcoder(_transcoder) if _transcoder else None
 
-    job = HassJob(action, f"KNX trigger {trigger_info}")
+    job = menuaiJob(action, f"KNX trigger {trigger_info}")
     trigger_data = trigger_info["trigger_data"]
 
     @callback
@@ -106,10 +106,10 @@ async def async_attach_trigger(
         else:
             telegram_trigger_data = {**trigger_data, **telegram_dict}
 
-        hass.async_run_hass_job(job, {"trigger": telegram_trigger_data})
+        menuai.async_run_menuai_job(job, {"trigger": telegram_trigger_data})
 
     return async_dispatcher_connect(
-        hass,
+        menuai,
         signal=SIGNAL_KNX_TELEGRAM,
         target=async_call_trigger_action,
     )

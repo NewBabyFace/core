@@ -11,16 +11,16 @@ from typing import Any
 from pyControl4.error_handling import C4Exception
 from pyControl4.room import C4Room
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     MediaPlayerDeviceClass,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
     MediaType,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from . import Control4ConfigEntry, Control4RuntimeData
 from .director_utils import update_variables_for_config_entry
@@ -65,7 +65,7 @@ class _RoomSource:
     name: str
 
 
-async def get_rooms(hass: HomeAssistant, entry: Control4ConfigEntry):
+async def get_rooms(menuai: menuai, entry: Control4ConfigEntry):
     """Return a list of all Control4 rooms."""
     return [
         item
@@ -75,7 +75,7 @@ async def get_rooms(hass: HomeAssistant, entry: Control4ConfigEntry):
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: Control4ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -88,7 +88,7 @@ async def async_setup_entry(
         _LOGGER.debug("No UI Configuration found for Control4")
         return
 
-    all_rooms = await get_rooms(hass, entry)
+    all_rooms = await get_rooms(menuai, entry)
     if not all_rooms:
         return
 
@@ -99,13 +99,13 @@ async def async_setup_entry(
         """Fetch data from Control4 director."""
         try:
             return await update_variables_for_config_entry(
-                hass, entry, VARIABLES_OF_INTEREST
+                menuai, entry, VARIABLES_OF_INTEREST
             )
         except C4Exception as err:
             raise UpdateFailed(f"Error communicating with API: {err}") from err
 
     coordinator = DataUpdateCoordinator[dict[int, dict[str, Any]]](
-        hass,
+        menuai,
         _LOGGER,
         name="room",
         update_method=async_update_data,

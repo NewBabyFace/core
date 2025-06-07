@@ -12,8 +12,8 @@ from aiohttp import web
 from dateutil import parser
 import pytest
 
-from homeassistant.components.stream import create_stream
-from homeassistant.components.stream.const import (
+from menuai.components.stream import create_stream
+from menuai.components.stream.const import (
     ATTR_SETTINGS,
     CONF_LL_HLS,
     CONF_PART_DURATION,
@@ -21,9 +21,9 @@ from homeassistant.components.stream.const import (
     DOMAIN,
     HLS_PROVIDER,
 )
-from homeassistant.components.stream.core import Part
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.stream.core import Part
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from .common import (
     FAKE_TIME,
@@ -47,12 +47,12 @@ VERY_LARGE_LAST_BYTE_POS = 9007199254740991
 
 
 @pytest.fixture
-def hls_stream(hass: HomeAssistant, hass_client: ClientSessionGenerator):
+def hls_stream(menuai: menuai, menuai_client: ClientSessionGenerator):
     """Create test fixture for creating an HLS client for a stream."""
 
     async def create_client_for_stream(stream):
         stream.ll_hls = True
-        http_client = await hass_client()
+        http_client = await menuai_client()
         parsed_url = urlparse(stream.endpoint_url(HLS_PROVIDER))
         return HlsClient(http_client, parsed_url)
 
@@ -119,7 +119,7 @@ def make_hint(segment, part):
 
 
 async def test_ll_hls_stream(
-    hass: HomeAssistant, hls_stream, stream_worker_sync
+    menuai: menuai, hls_stream, stream_worker_sync
 ) -> None:
     """Test hls stream.
 
@@ -127,7 +127,7 @@ async def test_ll_hls_stream(
     integration with the stream component.
     """
     await async_setup_component(
-        hass,
+        menuai,
         "stream",
         {
             "stream": {
@@ -145,7 +145,7 @@ async def test_ll_hls_stream(
     num_playlist_segments = 3
     # Setup demo HLS track
     source = generate_h264_video(duration=num_playlist_segments * SEGMENT_DURATION + 2)
-    stream = create_stream(hass, source, {}, dynamic_stream_settings())
+    stream = create_stream(menuai, source, {}, dynamic_stream_settings())
 
     # Request stream
     stream.add_provider(HLS_PROVIDER)
@@ -256,11 +256,11 @@ async def test_ll_hls_stream(
 
 
 async def test_ll_hls_playlist_view(
-    hass: HomeAssistant, hls_stream, stream_worker_sync
+    menuai: menuai, hls_stream, stream_worker_sync
 ) -> None:
     """Test rendering the hls playlist with 1 and 2 output segments."""
     await async_setup_component(
-        hass,
+        menuai,
         "stream",
         {
             "stream": {
@@ -271,7 +271,7 @@ async def test_ll_hls_playlist_view(
         },
     )
 
-    stream = create_stream(hass, STREAM_SOURCE, {}, dynamic_stream_settings())
+    stream = create_stream(menuai, STREAM_SOURCE, {}, dynamic_stream_settings())
     stream_worker_sync.pause()
     hls = stream.add_provider(HLS_PROVIDER)
 
@@ -283,7 +283,7 @@ async def test_ll_hls_playlist_view(
             segment.async_add_part(part, 0)
             hls.part_put()
         complete_segment(segment)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     hls_client = await hls_stream(stream)
 
@@ -308,7 +308,7 @@ async def test_ll_hls_playlist_view(
         hls.part_put()
     complete_segment(segment)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     resp = await hls_client.get("/playlist.m3u8")
     assert resp.status == HTTPStatus.OK
     assert await resp.text() == make_playlist(
@@ -327,11 +327,11 @@ async def test_ll_hls_playlist_view(
 
 
 async def test_ll_hls_msn(
-    hass: HomeAssistant, hls_stream, stream_worker_sync, hls_sync
+    menuai: menuai, hls_stream, stream_worker_sync, hls_sync
 ) -> None:
     """Test that requests using _HLS_msn get held and returned or rejected."""
     await async_setup_component(
-        hass,
+        menuai,
         "stream",
         {
             "stream": {
@@ -342,7 +342,7 @@ async def test_ll_hls_msn(
         },
     )
 
-    stream = create_stream(hass, STREAM_SOURCE, {}, dynamic_stream_settings())
+    stream = create_stream(menuai, STREAM_SOURCE, {}, dynamic_stream_settings())
     stream_worker_sync.pause()
 
     hls = stream.add_provider(HLS_PROVIDER)
@@ -393,7 +393,7 @@ async def test_ll_hls_msn(
 
 
 async def test_ll_hls_playlist_bad_msn_part(
-    hass: HomeAssistant, hls_stream, stream_worker_sync
+    menuai: menuai, hls_stream, stream_worker_sync
 ) -> None:
     """Test some playlist requests with invalid _HLS_msn/_HLS_part."""
 
@@ -401,7 +401,7 @@ async def test_ll_hls_playlist_bad_msn_part(
         raise web.HTTPBadRequest
 
     await async_setup_component(
-        hass,
+        menuai,
         "stream",
         {
             "stream": {
@@ -412,7 +412,7 @@ async def test_ll_hls_playlist_bad_msn_part(
         },
     )
 
-    stream = create_stream(hass, STREAM_SOURCE, {}, dynamic_stream_settings())
+    stream = create_stream(menuai, STREAM_SOURCE, {}, dynamic_stream_settings())
     stream_worker_sync.pause()
 
     hls = stream.add_provider(HLS_PROVIDER)
@@ -465,19 +465,19 @@ async def test_ll_hls_playlist_bad_msn_part(
     assert (
         await hls_client.get(
             "/playlist.m3u8?_HLS_msn=1&_HLS_part="
-            f"{num_completed_parts - 1 + hass.data[DOMAIN][ATTR_SETTINGS].hls_advance_part_limit}"
+            f"{num_completed_parts - 1 + menuai.data[DOMAIN][ATTR_SETTINGS].hls_advance_part_limit}"
         )
     ).status == HTTPStatus.BAD_REQUEST
     stream_worker_sync.resume()
 
 
 async def test_ll_hls_playlist_rollover_part(
-    hass: HomeAssistant, hls_stream, stream_worker_sync, hls_sync
+    menuai: menuai, hls_stream, stream_worker_sync, hls_sync
 ) -> None:
     """Test playlist request rollover."""
 
     await async_setup_component(
-        hass,
+        menuai,
         "stream",
         {
             "stream": {
@@ -488,7 +488,7 @@ async def test_ll_hls_playlist_rollover_part(
         },
     )
 
-    stream = create_stream(hass, STREAM_SOURCE, {}, dynamic_stream_settings())
+    stream = create_stream(menuai, STREAM_SOURCE, {}, dynamic_stream_settings())
     stream_worker_sync.pause()
 
     hls = stream.add_provider(HLS_PROVIDER)
@@ -505,7 +505,7 @@ async def test_ll_hls_playlist_rollover_part(
             hls.part_put()
         complete_segment(segment)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     hls_sync.reset_request_pool(4)
     segment = hls.get_segment(1)
@@ -532,7 +532,7 @@ async def test_ll_hls_playlist_rollover_part(
 
     segment = create_segment(sequence=2)
     hls.put(segment)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     remaining_parts = create_parts(SEQUENCE_BYTES)
     segment.async_add_part(remaining_parts.pop(0), 0)
@@ -553,12 +553,12 @@ async def test_ll_hls_playlist_rollover_part(
 
 
 async def test_ll_hls_playlist_msn_part(
-    hass: HomeAssistant, hls_stream, stream_worker_sync, hls_sync
+    menuai: menuai, hls_stream, stream_worker_sync, hls_sync
 ) -> None:
     """Test that requests using _HLS_msn and _HLS_part get held and returned."""
 
     await async_setup_component(
-        hass,
+        menuai,
         "stream",
         {
             "stream": {
@@ -569,7 +569,7 @@ async def test_ll_hls_playlist_msn_part(
         },
     )
 
-    stream = create_stream(hass, STREAM_SOURCE, {}, dynamic_stream_settings())
+    stream = create_stream(menuai, STREAM_SOURCE, {}, dynamic_stream_settings())
     stream_worker_sync.pause()
 
     hls = stream.add_provider(HLS_PROVIDER)
@@ -595,14 +595,14 @@ async def test_ll_hls_playlist_msn_part(
     # Make requests for all the part segments up to n+ADVANCE_PART_LIMIT
     hls_sync.reset_request_pool(
         num_completed_parts
-        + int(-(-hass.data[DOMAIN][ATTR_SETTINGS].hls_advance_part_limit // 1))
+        + int(-(-menuai.data[DOMAIN][ATTR_SETTINGS].hls_advance_part_limit // 1))
     )
     msn_requests = asyncio.gather(
         *(
             hls_client.get(f"/playlist.m3u8?_HLS_msn=1&_HLS_part={i}")
             for i in range(
                 num_completed_parts
-                + int(-(-hass.data[DOMAIN][ATTR_SETTINGS].hls_advance_part_limit // 1))
+                + int(-(-menuai.data[DOMAIN][ATTR_SETTINGS].hls_advance_part_limit // 1))
             )
         )
     )
@@ -622,11 +622,11 @@ async def test_ll_hls_playlist_msn_part(
 
 
 async def test_get_part_segments(
-    hass: HomeAssistant, hls_stream, stream_worker_sync, hls_sync
+    menuai: menuai, hls_stream, stream_worker_sync, hls_sync
 ) -> None:
     """Test requests for part segments and hinted parts."""
     await async_setup_component(
-        hass,
+        menuai,
         "stream",
         {
             "stream": {
@@ -637,7 +637,7 @@ async def test_get_part_segments(
         },
     )
 
-    stream = create_stream(hass, STREAM_SOURCE, {}, dynamic_stream_settings())
+    stream = create_stream(menuai, STREAM_SOURCE, {}, dynamic_stream_settings())
     stream_worker_sync.pause()
 
     hls = stream.add_provider(HLS_PROVIDER)

@@ -11,7 +11,7 @@ from zwave_js_server.event import Event
 from zwave_js_server.exceptions import FailedZWaveCommand
 from zwave_js_server.model.node import Node
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_CURRENT_HUMIDITY,
     ATTR_CURRENT_TEMPERATURE,
     ATTR_FAN_MODE,
@@ -33,10 +33,10 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.components.zwave_js.climate import ATTR_FAN_STATE
-from homeassistant.components.zwave_js.const import DOMAIN, SERVICE_REFRESH_VALUE
-from homeassistant.components.zwave_js.helpers import ZwaveValueMatcher
-from homeassistant.const import (
+from menuai.components.zwave_js.climate import ATTR_FAN_STATE
+from menuai.components.zwave_js.const import DOMAIN, SERVICE_REFRESH_VALUE
+from menuai.components.zwave_js.helpers import ZwaveValueMatcher
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_SUPPORTED_FEATURES,
     ATTR_TEMPERATURE,
@@ -44,8 +44,8 @@ from homeassistant.const import (
     SERVICE_TURN_ON,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
 
 from .common import (
     CLIMATE_DANFOSS_LC13_ENTITY,
@@ -64,7 +64,7 @@ def platforms() -> list[str]:
 
 
 async def test_thermostat_v2(
-    hass: HomeAssistant,
+    menuai: menuai,
     client,
     climate_radio_thermostat_ct100_plus,
     integration,
@@ -72,7 +72,7 @@ async def test_thermostat_v2(
 ) -> None:
     """Test a thermostat v2 command class entity."""
     node = climate_radio_thermostat_ct100_plus
-    state = hass.states.get(CLIMATE_RADIO_THERMOSTAT_ENTITY)
+    state = menuai.states.get(CLIMATE_RADIO_THERMOSTAT_ENTITY)
 
     assert state
     assert state.state == HVACMode.HEAT
@@ -102,7 +102,7 @@ async def test_thermostat_v2(
     client.async_send_command.reset_mock()
 
     # Check that turning the device on is a no-op because it is already on
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: CLIMATE_RADIO_THERMOSTAT_ENTITY},
@@ -114,7 +114,7 @@ async def test_thermostat_v2(
     client.async_send_command.reset_mock()
 
     # Test setting hvac mode
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {
@@ -138,7 +138,7 @@ async def test_thermostat_v2(
     client.async_send_command.reset_mock()
 
     # Test setting temperature
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_TEMPERATURE,
         {
@@ -192,7 +192,7 @@ async def test_thermostat_v2(
     )
     node.receive_event(event)
 
-    state = hass.states.get(CLIMATE_RADIO_THERMOSTAT_ENTITY)
+    state = menuai.states.get(CLIMATE_RADIO_THERMOSTAT_ENTITY)
     assert state.state == HVACMode.COOL
     assert state.attributes[ATTR_TEMPERATURE] == 22.8
     assert state.attributes[ATTR_TARGET_TEMP_HIGH] is None
@@ -218,7 +218,7 @@ async def test_thermostat_v2(
     )
     node.receive_event(event)
 
-    state = hass.states.get(CLIMATE_RADIO_THERMOSTAT_ENTITY)
+    state = menuai.states.get(CLIMATE_RADIO_THERMOSTAT_ENTITY)
     assert state.state == HVACMode.HEAT_COOL
     assert state.attributes[ATTR_TEMPERATURE] is None
     assert state.attributes[ATTR_TARGET_TEMP_HIGH] == 22.8
@@ -227,7 +227,7 @@ async def test_thermostat_v2(
     client.async_send_command.reset_mock()
 
     # Test setting temperature with heat_cool
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_TEMPERATURE,
         {
@@ -265,7 +265,7 @@ async def test_thermostat_v2(
 
     # Test setting invalid hvac mode
     with pytest.raises(ValueError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             CLIMATE_DOMAIN,
             SERVICE_SET_HVAC_MODE,
             {
@@ -278,7 +278,7 @@ async def test_thermostat_v2(
     client.async_send_command.reset_mock()
 
     # Test setting fan mode
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_FAN_MODE,
         {
@@ -302,7 +302,7 @@ async def test_thermostat_v2(
     client.async_send_command.reset_mock()
 
     # Test turning device off then on to see if the previous state is retained
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: CLIMATE_RADIO_THERMOSTAT_ENTITY},
@@ -343,7 +343,7 @@ async def test_thermostat_v2(
     client.async_send_command.reset_mock()
 
     # Test turning device on
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: CLIMATE_RADIO_THERMOSTAT_ENTITY},
@@ -365,7 +365,7 @@ async def test_thermostat_v2(
 
     # Test setting invalid fan mode
     with pytest.raises(ServiceValidationError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             CLIMATE_DOMAIN,
             SERVICE_SET_FAN_MODE,
             {
@@ -378,7 +378,7 @@ async def test_thermostat_v2(
     # Refresh value should log an error when there is an issue
     client.async_send_command.reset_mock()
     client.async_send_command.side_effect = FailedZWaveCommand("test", 1, "test")
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_REFRESH_VALUE,
         {
@@ -386,12 +386,12 @@ async def test_thermostat_v2(
         },
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert "Error while refreshing value" in caplog.text
 
 
 async def test_thermostat_v2_turn_on_after_off(
-    hass: HomeAssistant, client, climate_radio_thermostat_ct100_plus, integration
+    menuai: menuai, client, climate_radio_thermostat_ct100_plus, integration
 ) -> None:
     """Test thermostat v2 command class entity that is turned on after starting off."""
     node = climate_radio_thermostat_ct100_plus
@@ -420,7 +420,7 @@ async def test_thermostat_v2_turn_on_after_off(
     client.async_send_command.reset_mock()
 
     # Test turning device on
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: CLIMATE_RADIO_THERMOSTAT_ENTITY},
@@ -442,7 +442,7 @@ async def test_thermostat_v2_turn_on_after_off(
 
 
 async def test_thermostat_turn_on_after_off_no_heat_cool_auto(
-    hass: HomeAssistant, client, aeotec_radiator_thermostat_state, integration
+    menuai: menuai, client, aeotec_radiator_thermostat_state, integration
 ) -> None:
     """Test thermostat that is turned on after starting off w/o heat, cool, or auto."""
     node_state = copy.deepcopy(aeotec_radiator_thermostat_state)
@@ -457,14 +457,14 @@ async def test_thermostat_turn_on_after_off_no_heat_cool_auto(
     value["value"] = 0
     node = Node(client, node_state)
     client.driver.controller.emit("node added", {"node": node})
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     entity_id = "climate.thermostat_hvac"
-    assert hass.states.get(entity_id).state == HVACMode.OFF
+    assert menuai.states.get(entity_id).state == HVACMode.OFF
 
     client.async_send_command.reset_mock()
 
     # Test turning device on sets it to first available mode (Energy heat)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: entity_id},
@@ -484,7 +484,7 @@ async def test_thermostat_turn_on_after_off_no_heat_cool_auto(
 
 
 async def test_thermostat_turn_on_after_off_with_resume(
-    hass: HomeAssistant, client, aeotec_radiator_thermostat_state, integration
+    menuai: menuai, client, aeotec_radiator_thermostat_state, integration
 ) -> None:
     """Test thermostat that is turned on after starting off with resume support."""
     node_state = copy.deepcopy(aeotec_radiator_thermostat_state)
@@ -503,14 +503,14 @@ async def test_thermostat_turn_on_after_off_with_resume(
     value["value"] = 0
     node = Node(client, node_state)
     client.driver.controller.emit("node added", {"node": node})
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     entity_id = "climate.thermostat_hvac"
-    assert hass.states.get(entity_id).state == HVACMode.OFF
+    assert menuai.states.get(entity_id).state == HVACMode.OFF
 
     client.async_send_command.reset_mock()
 
     # Test turning device on sends resume command
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: entity_id},
@@ -530,13 +530,13 @@ async def test_thermostat_turn_on_after_off_with_resume(
 
 
 async def test_thermostat_different_endpoints(
-    hass: HomeAssistant,
+    menuai: menuai,
     client,
     climate_radio_thermostat_ct100_plus_different_endpoints,
     integration,
 ) -> None:
     """Test an entity with values on a different endpoint from the primary value."""
-    state = hass.states.get(CLIMATE_RADIO_THERMOSTAT_ENTITY)
+    state = menuai.states.get(CLIMATE_RADIO_THERMOSTAT_ENTITY)
 
     assert state.attributes[ATTR_CURRENT_TEMPERATURE] == 22.8
     assert state.attributes[ATTR_FAN_MODE] == "Auto low"
@@ -545,11 +545,11 @@ async def test_thermostat_different_endpoints(
 
 
 async def test_setpoint_thermostat(
-    hass: HomeAssistant, client, climate_danfoss_lc_13, integration
+    menuai: menuai, client, climate_danfoss_lc_13, integration
 ) -> None:
     """Test a setpoint thermostat command class entity."""
     node = climate_danfoss_lc_13
-    state = hass.states.get(CLIMATE_DANFOSS_LC13_ENTITY)
+    state = menuai.states.get(CLIMATE_DANFOSS_LC13_ENTITY)
 
     assert state
     assert state.state == HVACMode.HEAT
@@ -563,7 +563,7 @@ async def test_setpoint_thermostat(
     client.async_send_command_no_wait.reset_mock()
 
     # Test setting temperature
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_TEMPERATURE,
         {
@@ -575,7 +575,7 @@ async def test_setpoint_thermostat(
 
     # Test setting illegal mode raises an error
     with pytest.raises(ValueError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             CLIMATE_DOMAIN,
             SERVICE_SET_HVAC_MODE,
             {
@@ -587,7 +587,7 @@ async def test_setpoint_thermostat(
 
     # Test that setting HVACMode.HEAT works. If the no-op logic didn't work, this would
     # raise an error
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {
@@ -633,7 +633,7 @@ async def test_setpoint_thermostat(
     )
     node.receive_event(event)
 
-    state = hass.states.get(CLIMATE_DANFOSS_LC13_ENTITY)
+    state = menuai.states.get(CLIMATE_DANFOSS_LC13_ENTITY)
     assert state.state == HVACMode.HEAT
     assert state.attributes[ATTR_TEMPERATURE] == 23
 
@@ -641,11 +641,11 @@ async def test_setpoint_thermostat(
 
 
 async def test_thermostat_heatit_z_trm6(
-    hass: HomeAssistant, client, climate_heatit_z_trm6, integration
+    menuai: menuai, client, climate_heatit_z_trm6, integration
 ) -> None:
     """Test a heatit Z-TRM6 entity."""
     node = climate_heatit_z_trm6
-    state = hass.states.get(CLIMATE_FLOOR_THERMOSTAT_ENTITY)
+    state = menuai.states.get(CLIMATE_FLOOR_THERMOSTAT_ENTITY)
 
     assert state
     assert state.state == HVACMode.HEAT
@@ -686,7 +686,7 @@ async def test_thermostat_heatit_z_trm6(
         },
     )
     node.receive_event(event)
-    state = hass.states.get(CLIMATE_FLOOR_THERMOSTAT_ENTITY)
+    state = menuai.states.get(CLIMATE_FLOOR_THERMOSTAT_ENTITY)
     assert state
     assert state.attributes[ATTR_CURRENT_TEMPERATURE] == 0
 
@@ -709,27 +709,27 @@ async def test_thermostat_heatit_z_trm6(
         },
     )
     node.receive_event(event)
-    state = hass.states.get(CLIMATE_FLOOR_THERMOSTAT_ENTITY)
+    state = menuai.states.get(CLIMATE_FLOOR_THERMOSTAT_ENTITY)
     assert state
     assert state.attributes[ATTR_CURRENT_TEMPERATURE] == 21.9
 
 
 async def test_thermostat_heatit_z_trm3_no_value(
-    hass: HomeAssistant, client, climate_heatit_z_trm3_no_value, integration
+    menuai: menuai, client, climate_heatit_z_trm3_no_value, integration
 ) -> None:
     """Test a heatit Z-TRM3 entity that is missing a value."""
     # When the config parameter that specifies what sensor to use has no value, we fall
     # back to the first temperature sensor found on the device
-    state = hass.states.get(CLIMATE_FLOOR_THERMOSTAT_ENTITY)
+    state = menuai.states.get(CLIMATE_FLOOR_THERMOSTAT_ENTITY)
     assert state.attributes[ATTR_CURRENT_TEMPERATURE] == 22.5
 
 
 async def test_thermostat_heatit_z_trm3(
-    hass: HomeAssistant, client, climate_heatit_z_trm3, integration
+    menuai: menuai, client, climate_heatit_z_trm3, integration
 ) -> None:
     """Test a heatit Z-TRM3 entity."""
     node = climate_heatit_z_trm3
-    state = hass.states.get(CLIMATE_FLOOR_THERMOSTAT_ENTITY)
+    state = menuai.states.get(CLIMATE_FLOOR_THERMOSTAT_ENTITY)
 
     assert state
     assert state.state == HVACMode.HEAT
@@ -768,7 +768,7 @@ async def test_thermostat_heatit_z_trm3(
         },
     )
     node.receive_event(event)
-    state = hass.states.get(CLIMATE_FLOOR_THERMOSTAT_ENTITY)
+    state = menuai.states.get(CLIMATE_FLOOR_THERMOSTAT_ENTITY)
     assert state
     assert state.attributes[ATTR_CURRENT_TEMPERATURE] == 0
 
@@ -791,17 +791,17 @@ async def test_thermostat_heatit_z_trm3(
         },
     )
     node.receive_event(event)
-    state = hass.states.get(CLIMATE_FLOOR_THERMOSTAT_ENTITY)
+    state = menuai.states.get(CLIMATE_FLOOR_THERMOSTAT_ENTITY)
     assert state
     assert state.attributes[ATTR_CURRENT_TEMPERATURE] == 25.5
 
 
 async def test_thermostat_heatit_z_trm2fx(
-    hass: HomeAssistant, client, climate_heatit_z_trm2fx, integration
+    menuai: menuai, client, climate_heatit_z_trm2fx, integration
 ) -> None:
     """Test a heatit Z-TRM2fx entity."""
     node = climate_heatit_z_trm2fx
-    state = hass.states.get(CLIMATE_FLOOR_THERMOSTAT_ENTITY)
+    state = menuai.states.get(CLIMATE_FLOOR_THERMOSTAT_ENTITY)
 
     assert state
     assert state.state == HVACMode.HEAT
@@ -841,19 +841,19 @@ async def test_thermostat_heatit_z_trm2fx(
         },
     )
     node.receive_event(event)
-    state = hass.states.get(CLIMATE_FLOOR_THERMOSTAT_ENTITY)
+    state = menuai.states.get(CLIMATE_FLOOR_THERMOSTAT_ENTITY)
     assert state
     assert state.attributes[ATTR_CURRENT_TEMPERATURE] == 0
 
 
 async def test_thermostat_srt321_hrt4_zw(
-    hass: HomeAssistant, client, srt321_hrt4_zw, integration
+    menuai: menuai, client, srt321_hrt4_zw, integration
 ) -> None:
     """Test a climate entity from a HRT4-ZW / SRT321 thermostat device.
 
     This device currently has no setpoint values.
     """
-    state = hass.states.get(CLIMATE_MAIN_HEAT_ACTIONNER)
+    state = menuai.states.get(CLIMATE_MAIN_HEAT_ACTIONNER)
 
     assert state
     assert state.state == HVACMode.OFF
@@ -866,18 +866,18 @@ async def test_thermostat_srt321_hrt4_zw(
 
 
 async def test_preset_and_no_setpoint(
-    hass: HomeAssistant, client, climate_eurotronic_spirit_z, integration
+    menuai: menuai, client, climate_eurotronic_spirit_z, integration
 ) -> None:
     """Test preset without setpoint value."""
     node = climate_eurotronic_spirit_z
 
-    state = hass.states.get(CLIMATE_EUROTRONICS_SPIRIT_Z_ENTITY)
+    state = menuai.states.get(CLIMATE_EUROTRONICS_SPIRIT_Z_ENTITY)
     assert state
     assert state.state == HVACMode.HEAT
     assert state.attributes[ATTR_TEMPERATURE] == 22
 
     # Test setting preset mode Full power
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_PRESET_MODE,
         {
@@ -920,14 +920,14 @@ async def test_preset_and_no_setpoint(
     )
     node.receive_event(event)
 
-    state = hass.states.get(CLIMATE_EUROTRONICS_SPIRIT_Z_ENTITY)
+    state = menuai.states.get(CLIMATE_EUROTRONICS_SPIRIT_Z_ENTITY)
     assert state.state == HVACMode.HEAT
     assert state.attributes[ATTR_TEMPERATURE] is None
     assert state.attributes[ATTR_PRESET_MODE] == "Full power"
 
     with pytest.raises(ServiceValidationError):
         # Test setting invalid preset mode
-        await hass.services.async_call(
+        await menuai.services.async_call(
             CLIMATE_DOMAIN,
             SERVICE_SET_PRESET_MODE,
             {
@@ -942,7 +942,7 @@ async def test_preset_and_no_setpoint(
     client.async_send_command.reset_mock()
 
     # Restore hvac mode by setting preset None
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_PRESET_MODE,
         {
@@ -965,24 +965,24 @@ async def test_preset_and_no_setpoint(
 
 
 async def test_temp_unit_fix(
-    hass: HomeAssistant,
+    menuai: menuai,
     client,
     climate_radio_thermostat_ct101_multiple_temp_units,
     climate_radio_thermostat_ct100_mode_and_setpoint_on_different_endpoints,
     integration,
 ) -> None:
     """Test temperaturee unit fix."""
-    state = hass.states.get("climate.thermostat")
+    state = menuai.states.get("climate.thermostat")
     assert state
     assert state.attributes["current_temperature"] == 18.3
 
-    state = hass.states.get("climate.z_wave_thermostat")
+    state = menuai.states.get("climate.z_wave_thermostat")
     assert state
     assert state.attributes["current_temperature"] == 21.1
 
 
 async def test_thermostat_unknown_values(
-    hass: HomeAssistant, client, climate_radio_thermostat_ct100_plus_state, integration
+    menuai: menuai, client, climate_radio_thermostat_ct100_plus_state, integration
 ) -> None:
     """Test a thermostat v2 with unknown values."""
     node_state = replace_value_of_zwave_value(
@@ -997,7 +997,7 @@ async def test_thermostat_unknown_values(
     )
     node = Node(client, node_state)
     client.driver.controller.emit("node added", {"node": node})
-    await hass.async_block_till_done()
-    state = hass.states.get(CLIMATE_RADIO_THERMOSTAT_ENTITY)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(CLIMATE_RADIO_THERMOSTAT_ENTITY)
 
     assert ATTR_HVAC_ACTION not in state.attributes

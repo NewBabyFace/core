@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import mill
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONCENTRATION_PARTS_PER_BILLION,
     CONCENTRATION_PARTS_PER_MILLION,
     CONF_IP_ADDRESS,
@@ -22,11 +22,11 @@ from homeassistant.const import (
     UnitOfPower,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
     BATTERY,
@@ -146,13 +146,13 @@ SOCKET_SENSOR_TYPES: tuple[SensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Mill sensor."""
     if entry.data.get(CONNECTION_TYPE) == LOCAL:
-        mill_data_coordinator = hass.data[DOMAIN][LOCAL][entry.data[CONF_IP_ADDRESS]]
+        mill_data_coordinator = menuai.data[DOMAIN][LOCAL][entry.data[CONF_IP_ADDRESS]]
 
         async_add_entities(
             LocalMillSensor(
@@ -163,7 +163,7 @@ async def async_setup_entry(
         )
         return
 
-    mill_data_coordinator = hass.data[DOMAIN][CLOUD][entry.data[CONF_USERNAME]]
+    mill_data_coordinator = menuai.data[DOMAIN][CLOUD][entry.data[CONF_USERNAME]]
 
     entities = [
         MillSensor(

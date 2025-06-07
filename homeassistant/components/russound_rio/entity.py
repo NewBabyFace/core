@@ -7,9 +7,9 @@ from typing import Any, Concatenate
 from aiorussound import Controller, RussoundClient, RussoundTcpConnectionHandler
 from aiorussound.models import CallbackType
 
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
-from homeassistant.helpers.entity import Entity
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
+from menuai.helpers.entity import Entity
 
 from .const import DOMAIN, RUSSOUND_RIO_EXCEPTIONS
 
@@ -25,7 +25,7 @@ def command[_EntityT: RussoundBaseEntity, **_P](
         try:
             await func(self, *args, **kwargs)
         except RUSSOUND_RIO_EXCEPTIONS as exc:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="command_error",
                 translation_placeholders={
@@ -90,10 +90,10 @@ class RussoundBaseEntity(Entity):
         self._controller = _client.controllers[self._controller.controller_id]
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callback handlers."""
         await self._client.register_state_update_callbacks(self._state_update_callback)
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Remove callbacks."""
         self._client.unregister_state_update_callbacks(self._state_update_callback)

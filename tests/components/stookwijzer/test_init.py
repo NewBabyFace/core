@@ -4,62 +4,62 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.components.stookwijzer.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er, issue_registry as ir
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.components.stookwijzer.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.const import CONF_LATITUDE, CONF_LONGITUDE
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er, issue_registry as ir
 
 from tests.common import MockConfigEntry
 
 
 async def test_load_unload_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_stookwijzer: MagicMock,
 ) -> None:
     """Test the Stookwijzer configuration entry loading and unloading."""
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert mock_config_entry.state is ConfigEntryState.LOADED
     assert len(mock_stookwijzer.return_value.async_update.mock_calls) == 1
 
-    await hass.config_entries.async_unload(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert mock_config_entry.state is ConfigEntryState.NOT_LOADED
 
 
 async def test_config_entry_not_ready(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_stookwijzer: MagicMock,
 ) -> None:
     """Test the Stookwijzer configuration entry loading and unloading."""
     mock_stookwijzer.return_value.advice = None
 
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert mock_config_entry.state is ConfigEntryState.SETUP_RETRY
     assert len(mock_stookwijzer.return_value.async_update.mock_calls) == 1
 
 
 async def test_migrate_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_v1_config_entry: MockConfigEntry,
     mock_stookwijzer: MagicMock,
 ) -> None:
     """Test successful migration of entry data."""
     assert mock_v1_config_entry.version == 1
 
-    mock_v1_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_v1_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_v1_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_v1_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert mock_v1_config_entry.state is ConfigEntryState.LOADED
     assert len(mock_stookwijzer.async_transform_coordinates.mock_calls) == 1
@@ -72,7 +72,7 @@ async def test_migrate_entry(
 
 
 async def test_entry_migration_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_v1_config_entry: MockConfigEntry,
     mock_stookwijzer: MagicMock,
     issue_registry: ir.IssueRegistry,
@@ -83,9 +83,9 @@ async def test_entry_migration_failure(
     # Failed getting the transformed coordinates
     mock_stookwijzer.async_transform_coordinates.return_value = None
 
-    mock_v1_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_v1_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_v1_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_v1_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert mock_v1_config_entry.state is ConfigEntryState.MIGRATION_ERROR
     assert issue_registry.async_get_issue(DOMAIN, "location_migration_failed")
@@ -95,12 +95,12 @@ async def test_entry_migration_failure(
 
 @pytest.mark.usefixtures("mock_stookwijzer")
 async def test_entity_entry_migration(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test successful migration of entry data."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
     entity = entity_registry.async_get_or_create(
         suggested_object_id="advice",
         disabled_by=None,
@@ -112,9 +112,9 @@ async def test_entity_entry_migration(
 
     assert entity.unique_id == mock_config_entry.entry_id
 
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert (
         entity_registry.async_get_entity_id(

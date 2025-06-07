@@ -5,20 +5,20 @@ from typing import Any
 
 from pyfreedompro import put_state
 
-from homeassistant.components.lock import LockEntity
-from homeassistant.const import CONF_API_KEY
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import aiohttp_client
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.components.lock import LockEntity
+from menuai.const import CONF_API_KEY
+from menuai.core import menuai, callback
+from menuai.helpers import aiohttp_client
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import FreedomproConfigEntry, FreedomproDataUpdateCoordinator
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: FreedomproConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -26,7 +26,7 @@ async def async_setup_entry(
     api_key: str = entry.data[CONF_API_KEY]
     coordinator = entry.runtime_data
     async_add_entities(
-        Device(hass, api_key, device, coordinator)
+        Device(menuai, api_key, device, coordinator)
         for device in coordinator.data
         if device["type"] == "lock"
     )
@@ -40,15 +40,15 @@ class Device(CoordinatorEntity[FreedomproDataUpdateCoordinator], LockEntity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         api_key: str,
         device: dict[str, Any],
         coordinator: FreedomproDataUpdateCoordinator,
     ) -> None:
         """Initialize the Freedompro lock."""
         super().__init__(coordinator)
-        self._hass = hass
-        self._session = aiohttp_client.async_get_clientsession(self._hass)
+        self._menuai = menuai
+        self._session = aiohttp_client.async_get_clientsession(self._menuai)
         self._api_key = api_key
         self._attr_unique_id = device["uid"]
         self._type = device["type"]
@@ -82,9 +82,9 @@ class Device(CoordinatorEntity[FreedomproDataUpdateCoordinator], LockEntity):
                     self._attr_is_locked = False
         super()._handle_coordinator_update()
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai."""
+        await super().async_added_to_menuai()
         self._handle_coordinator_update()
 
     async def async_lock(self, **kwargs: Any) -> None:

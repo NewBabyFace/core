@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.util.event_type import EventType
+from menuai.util.event_type import EventType
 
 
 def extract_event_type_ids(

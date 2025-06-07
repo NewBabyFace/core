@@ -10,10 +10,10 @@ from pytouchlinesl import Module, Zone
 from pytouchlinesl.client import RothAPIError
 from pytouchlinesl.client.models import GlobalScheduleModel
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -36,11 +36,11 @@ class TouchlineSLModuleCoordinator(DataUpdateCoordinator[TouchlineSLModuleData])
     config_entry: TouchlineSLConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: TouchlineSLConfigEntry, module: Module
+        self, menuai: menuai, config_entry: TouchlineSLConfigEntry, module: Module
     ) -> None:
         """Initialize coordinator."""
         super().__init__(
-            hass,
+            menuai,
             logger=_LOGGER,
             config_entry=config_entry,
             name=f"Touchline SL ({module.name})",

@@ -7,7 +7,7 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_TARGET_TEMP_HIGH,
     ATTR_TARGET_TEMP_LOW,
     FAN_AUTO,
@@ -21,7 +21,7 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_TEMPERATURE,
     PRECISION_HALVES,
@@ -30,16 +30,16 @@ from homeassistant.const import (
     STATE_ON,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import (
+from menuai.core import menuai, ServiceCall
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import (
     config_validation as cv,
     device_registry as dr,
     entity_platform,
 )
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util.unit_conversion import TemperatureConverter
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util.unit_conversion import TemperatureConverter
 
 from . import EcobeeConfigEntry, EcobeeData
 from .const import (
@@ -83,7 +83,7 @@ DEFAULT_MAX_HUMIDITY = 50
 HUMIDIFIER_MANUAL_MODE = "manual"
 
 # Order matters, because for reverse mapping we don't want to map HEAT to AUX
-ECOBEE_HVAC_TO_HASS = collections.OrderedDict(
+ECOBEE_HVAC_TO_menuai = collections.OrderedDict(
     [
         ("heat", HVACMode.HEAT),
         ("cool", HVACMode.COOL),
@@ -92,12 +92,12 @@ ECOBEE_HVAC_TO_HASS = collections.OrderedDict(
         (ECOBEE_AUX_HEAT_ONLY, HVACMode.HEAT),
     ]
 )
-# Reverse key/value pair, drop auxHeatOnly as it doesn't map to specific HASS mode
-HASS_TO_ECOBEE_HVAC = {
-    v: k for k, v in ECOBEE_HVAC_TO_HASS.items() if k != ECOBEE_AUX_HEAT_ONLY
+# Reverse key/value pair, drop auxHeatOnly as it doesn't map to specific menuai mode
+menuai_TO_ECOBEE_HVAC = {
+    v: k for k, v in ECOBEE_HVAC_TO_menuai.items() if k != ECOBEE_AUX_HEAT_ONLY
 }
 
-ECOBEE_HVAC_ACTION_TO_HASS = {
+ECOBEE_HVAC_ACTION_TO_menuai = {
     # Map to None if we do not know how to represent.
     "heatPump": HVACAction.HEATING,
     "heatPump2": HVACAction.HEATING,
@@ -117,12 +117,12 @@ ECOBEE_HVAC_ACTION_TO_HASS = {
     "compWaterHeater": None,
 }
 
-ECOBEE_TO_HASS_PRESET = {
+ECOBEE_TO_menuai_PRESET = {
     "Away": PRESET_AWAY,
     "Home": PRESET_HOME,
     "Sleep": PRESET_SLEEP,
 }
-HASS_TO_ECOBEE_PRESET = {v: k for k, v in ECOBEE_TO_HASS_PRESET.items()}
+menuai_TO_ECOBEE_PRESET = {v: k for k, v in ECOBEE_TO_menuai_PRESET.items()}
 
 PRESET_TO_ECOBEE_HOLD = {
     PRESET_HOLD_NEXT_TRANSITION: "nextTransition",
@@ -202,7 +202,7 @@ SUPPORT_FLAGS = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: EcobeeConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -225,7 +225,7 @@ async def async_setup_entry(
                 thermostat["name"],
                 thermostat["modelNumber"],
             )
-        entities.append(Thermostat(data, index, thermostat, hass))
+        entities.append(Thermostat(data, index, thermostat, menuai))
 
     async_add_entities(entities, True)
 
@@ -286,28 +286,28 @@ async def async_setup_entry(
 
             thermostat.schedule_update_ha_state(True)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_CREATE_VACATION,
         create_vacation_service,
         schema=CREATE_VACATION_SCHEMA,
     )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_DELETE_VACATION,
         delete_vacation_service,
         schema=DELETE_VACATION_SCHEMA,
     )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_SET_FAN_MIN_ON_TIME,
         fan_min_on_time_set_service,
         schema=SET_FAN_MIN_ON_TIME_SCHEMA,
     )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_RESUME_PROGRAM,
         resume_program_set_service,
@@ -362,7 +362,7 @@ class Thermostat(ClimateEntity):
         data: EcobeeData,
         thermostat_index: int,
         thermostat: dict,
-        hass: HomeAssistant,
+        menuai: menuai,
     ) -> None:
         """Initialize the thermostat."""
         self.data = data
@@ -372,7 +372,7 @@ class Thermostat(ClimateEntity):
         self.vacation = None
         self._last_active_hvac_mode = HVACMode.HEAT_COOL
         self._last_hvac_mode_before_aux_heat = HVACMode.HEAT_COOL
-        self._hass = hass
+        self._menuai = menuai
 
         self._attr_hvac_modes = []
         if self.settings["heatStages"] or self.settings["hasHeatPump"]:
@@ -516,7 +516,7 @@ class Thermostat(ClimateEntity):
                     return PRESET_AWAY_INDEFINITELY
 
                 if name := self.comfort_settings.get(event["holdClimateRef"]):
-                    return ECOBEE_TO_HASS_PRESET.get(name, name)
+                    return ECOBEE_TO_menuai_PRESET.get(name, name)
 
                 # Any hold not based on a climate is a temp hold
                 return PRESET_TEMPERATURE
@@ -530,14 +530,14 @@ class Thermostat(ClimateEntity):
         if name := self.comfort_settings.get(
             self.thermostat["program"]["currentClimateRef"]
         ):
-            return ECOBEE_TO_HASS_PRESET.get(name, name)
+            return ECOBEE_TO_menuai_PRESET.get(name, name)
 
         return None
 
     @property
     def hvac_mode(self):
         """Return current operation."""
-        return ECOBEE_HVAC_TO_HASS[self.settings["hvacMode"]]
+        return ECOBEE_HVAC_TO_menuai[self.settings["hvacMode"]]
 
     @property
     def current_humidity(self) -> int | None:
@@ -561,9 +561,9 @@ class Thermostat(ClimateEntity):
             return HVACAction.IDLE
 
         actions = [
-            ECOBEE_HVAC_ACTION_TO_HASS[status]
+            ECOBEE_HVAC_ACTION_TO_menuai[status]
             for status in self.thermostat["equipmentStatus"].split(",")
-            if ECOBEE_HVAC_ACTION_TO_HASS[status] is not None
+            if ECOBEE_HVAC_ACTION_TO_menuai[status] is not None
         ]
 
         for action in (
@@ -614,7 +614,7 @@ class Thermostat(ClimateEntity):
     def remote_sensor_ids_names(self) -> list:
         """Return the remote sensor device id and name_by_user for the thermostat."""
         sensors_info = self.thermostat.get("remoteSensors", [])
-        device_registry = dr.async_get(self._hass)
+        device_registry = dr.async_get(self._menuai)
 
         return [
             {
@@ -648,7 +648,7 @@ class Thermostat(ClimateEntity):
 
     def set_preset_mode(self, preset_mode: str) -> None:
         """Activate a preset."""
-        preset_mode = HASS_TO_ECOBEE_PRESET.get(preset_mode, preset_mode)
+        preset_mode = menuai_TO_ECOBEE_PRESET.get(preset_mode, preset_mode)
 
         if preset_mode == self.preset_mode:
             return
@@ -699,7 +699,7 @@ class Thermostat(ClimateEntity):
         # Return presets provided by the ecobee API, and an indefinite away
         # preset which we handle separately in set_preset_mode().
         return [
-            ECOBEE_TO_HASS_PRESET.get(name, name)
+            ECOBEE_TO_menuai_PRESET.get(name, name)
             for name in self.comfort_settings.values()
         ] + [PRESET_AWAY_INDEFINITELY]
 
@@ -803,7 +803,7 @@ class Thermostat(ClimateEntity):
 
     def set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Set HVAC mode (auto, auxHeatOnly, cool, heat, off)."""
-        ecobee_value = HASS_TO_ECOBEE_HVAC.get(hvac_mode)
+        ecobee_value = menuai_TO_ECOBEE_HVAC.get(hvac_mode)
         if ecobee_value is None:
             _LOGGER.error("Invalid mode for set_hvac_mode: %s", hvac_mode)
             return
@@ -841,7 +841,7 @@ class Thermostat(ClimateEntity):
                 )
 
         # Get device name from device id.
-        device_registry = dr.async_get(self.hass)
+        device_registry = dr.async_get(self.menuai)
         sensor_names: list[str] = []
         sensor_ids: list[str] = []
         for device_id in device_ids:
@@ -920,7 +920,7 @@ class Thermostat(ClimateEntity):
 
     def _sensor_devices_in_preset_mode(self, preset_mode: str | None) -> list[str]:
         """Return current sensor device name_by_user or name used in climate."""
-        device_registry = dr.async_get(self._hass)
+        device_registry = dr.async_get(self._menuai)
         sensor_names = self._sensors_in_preset_mode(preset_mode)
         return sorted(
             [
@@ -965,12 +965,12 @@ class Thermostat(ClimateEntity):
         vacation_name = service_data[ATTR_VACATION_NAME]
         cool_temp = TemperatureConverter.convert(
             service_data[ATTR_COOL_TEMP],
-            self.hass.config.units.temperature_unit,
+            self.menuai.config.units.temperature_unit,
             UnitOfTemperature.FAHRENHEIT,
         )
         heat_temp = TemperatureConverter.convert(
             service_data[ATTR_HEAT_TEMP],
-            self.hass.config.units.temperature_unit,
+            self.menuai.config.units.temperature_unit,
             UnitOfTemperature.FAHRENHEIT,
         )
         start_date = service_data.get(ATTR_START_DATE)

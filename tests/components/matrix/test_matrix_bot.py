@@ -1,17 +1,17 @@
 """Configure and test MatrixBot."""
 
-from homeassistant.components.matrix import MatrixBot
-from homeassistant.components.matrix.const import DOMAIN, SERVICE_SEND_MESSAGE
-from homeassistant.components.notify import DOMAIN as NOTIFY_DOMAIN
-from homeassistant.core import HomeAssistant
+from menuai.components.matrix import MatrixBot
+from menuai.components.matrix.const import DOMAIN, SERVICE_SEND_MESSAGE
+from menuai.components.notify import DOMAIN as NOTIFY_DOMAIN
+from menuai.core import menuai
 
 from .conftest import TEST_NOTIFIER_NAME
 
 
-async def test_services(hass: HomeAssistant, matrix_bot: MatrixBot) -> None:
-    """Test hass/MatrixBot state."""
+async def test_services(menuai: menuai, matrix_bot: MatrixBot) -> None:
+    """Test menuai/MatrixBot state."""
 
-    services = hass.services.async_services()
+    services = menuai.services.async_services()
 
     # Verify that the matrix service is registered
     assert (matrix_service := services.get(DOMAIN))

@@ -12,15 +12,15 @@ from xknx import XKNX
 from xknx.core.connection_state import XknxConnectionState, XknxConnectionType
 from xknx.devices import Sensor as XknxSensor
 
-from homeassistant import config_entries
-from homeassistant.components.sensor import (
+from menuai import config_entries
+from menuai.components.sensor import (
     CONF_STATE_CLASS,
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_DEVICE_CLASS,
     CONF_ENTITY_CATEGORY,
     CONF_NAME,
@@ -28,10 +28,10 @@ from homeassistant.const import (
     EntityCategory,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, StateType
-from homeassistant.util.enum import try_parse_enum
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import ConfigType, StateType
+from menuai.util.enum import try_parse_enum
 
 from . import KNXModule
 from .const import ATTR_SOURCE, KNX_MODULE_KEY
@@ -110,12 +110,12 @@ SYSTEM_ENTITY_DESCRIPTIONS = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: config_entries.ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up sensor(s) for KNX platform."""
-    knx_module = hass.data[KNX_MODULE_KEY]
+    knx_module = menuai.data[KNX_MODULE_KEY]
     entities: list[SensorEntity] = []
     entities.extend(
         KNXSystemSensor(knx_module, description)
@@ -215,7 +215,7 @@ class KNXSystemSensor(SensorEntity):
         """Call after device was updated."""
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Store register state change callback."""
         self.knx.xknx.connection_manager.register_connection_state_changed_cb(
             self.after_update_callback

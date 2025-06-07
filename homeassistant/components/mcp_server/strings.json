@@ -4,10 +4,10 @@
       "user": {
         "description": "See the [integration documentation]({more_info_url}) for setup instructions.",
         "data": {
-          "llm_hass_api": "[%key:common::config_flow::data::llm_hass_api%]"
+          "llm_menuai_api": "[%key:common::config_flow::data::llm_menuai_api%]"
         },
         "data_description": {
-          "llm_hass_api": "The method for controlling Home Assistant to expose with the Model Context Protocol."
+          "llm_menuai_api": "The method for controlling MenuAI to expose with the Model Context Protocol."
         }
       }
     },

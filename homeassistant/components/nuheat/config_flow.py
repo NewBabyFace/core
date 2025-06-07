@@ -8,10 +8,10 @@ import nuheat
 import requests.exceptions
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from .const import CONF_SERIAL_NUMBER, DOMAIN
 
@@ -26,7 +26,7 @@ DATA_SCHEMA = vol.Schema(
 )
 
 
-async def validate_input(hass: HomeAssistant, data):
+async def validate_input(menuai: menuai, data):
     """Validate the user input allows us to connect.
 
     Data has the keys from DATA_SCHEMA with values provided by the user.
@@ -34,7 +34,7 @@ async def validate_input(hass: HomeAssistant, data):
     api = nuheat.NuHeat(data[CONF_USERNAME], data[CONF_PASSWORD])
 
     try:
-        await hass.async_add_executor_job(api.authenticate)
+        await menuai.async_add_executor_job(api.authenticate)
     except requests.exceptions.Timeout as ex:
         raise CannotConnect from ex
     except requests.exceptions.HTTPError as ex:
@@ -51,7 +51,7 @@ async def validate_input(hass: HomeAssistant, data):
         raise InvalidAuth from ex
 
     try:
-        thermostat = await hass.async_add_executor_job(
+        thermostat = await menuai.async_add_executor_job(
             api.get_thermostat, data[CONF_SERIAL_NUMBER]
         )
     except requests.exceptions.HTTPError as ex:
@@ -72,7 +72,7 @@ class NuHeatConfigFlow(ConfigFlow, domain=DOMAIN):
         errors = {}
         if user_input is not None:
             try:
-                info = await validate_input(self.hass, user_input)
+                info = await validate_input(self.menuai, user_input)
             except CannotConnect:
                 errors["base"] = "cannot_connect"
             except InvalidAuth:
@@ -93,13 +93,13 @@ class NuHeatConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(menuaiError):
     """Error to indicate there is invalid auth."""
 
 
-class InvalidThermostat(HomeAssistantError):
+class InvalidThermostat(menuaiError):
     """Error to indicate there is invalid thermostat."""

@@ -5,11 +5,11 @@ import logging
 from pyituran import Ituran, Vehicle
 from pyituran.exceptions import IturanApiError, IturanAuthError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers import device_registry as dr
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
     CONF_ID_OR_PASSPORT,
@@ -29,10 +29,10 @@ class IturanDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Vehicle]]):
 
     config_entry: IturanConfigEntry
 
-    def __init__(self, hass: HomeAssistant, entry: IturanConfigEntry) -> None:
+    def __init__(self, menuai: menuai, entry: IturanConfigEntry) -> None:
         """Initialize account-wide Ituran data updater."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             name=f"{DOMAIN}-{entry.data[CONF_ID_OR_PASSPORT]}",
             update_interval=UPDATE_INTERVAL,
@@ -65,7 +65,7 @@ class IturanDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Vehicle]]):
 
     def _cleanup_removed_vehicles(self, data: dict[str, Vehicle]) -> None:
         account_vehicles = {(DOMAIN, license_plate) for license_plate in data}
-        device_registry = dr.async_get(self.hass)
+        device_registry = dr.async_get(self.menuai)
         device_entries = dr.async_entries_for_config_entry(
             device_registry, config_entry_id=self.config_entry.entry_id
         )

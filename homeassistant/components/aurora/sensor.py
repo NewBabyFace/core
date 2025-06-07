@@ -2,17 +2,17 @@
 
 from __future__ import annotations
 
-from homeassistant.components.sensor import SensorEntity, SensorStateClass
-from homeassistant.const import PERCENTAGE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.sensor import SensorEntity, SensorStateClass
+from menuai.const import PERCENTAGE
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import AuroraConfigEntry
 from .entity import AuroraEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: AuroraConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

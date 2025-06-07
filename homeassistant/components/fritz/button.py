@@ -7,16 +7,16 @@ from dataclasses import dataclass
 import logging
 from typing import Any, Final
 
-from homeassistant.components.button import (
+from menuai.components.button import (
     ButtonDeviceClass,
     ButtonEntity,
     ButtonEntityDescription,
 )
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import EntityCategory
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import BUTTON_TYPE_WOL, CONNECTION_TYPE_LAN, MeshRoles
 from .coordinator import (
@@ -73,7 +73,7 @@ BUTTONS: Final = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: FritzConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -89,7 +89,7 @@ async def async_setup_entry(
         async_add_entities(entities_list)
         return
 
-    data_fritz = hass.data[FRITZ_DATA_KEY]
+    data_fritz = menuai.data[FRITZ_DATA_KEY]
     entities_list += _async_wol_buttons_list(avm_wrapper, data_fritz)
 
     async_add_entities(entities_list)
@@ -101,7 +101,7 @@ async def async_setup_entry(
 
     entry.async_on_unload(
         async_dispatcher_connect(
-            hass, avm_wrapper.signal_device_new, async_update_avm_device
+            menuai, avm_wrapper.signal_device_new, async_update_avm_device
         )
     )
 

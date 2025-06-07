@@ -17,17 +17,17 @@ from aiohttp.web_exceptions import (
 )
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.components.http import KEY_HASS, HomeAssistantView
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.loader import async_suggest_report_issue
-from homeassistant.util import dt as dt_util, language as language_util
+from menuai.components import websocket_api
+from menuai.components.http import KEY_menuai, menuaiView
+from menuai.config_entries import ConfigEntry
+from menuai.const import STATE_UNAVAILABLE, STATE_UNKNOWN
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.restore_state import RestoreEntity
+from menuai.helpers.typing import ConfigType
+from menuai.loader import async_suggest_report_issue
+from menuai.util import dt as dt_util, language as language_util
 
 from .const import (
     DATA_COMPONENT,
@@ -71,64 +71,64 @@ CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)
 
 
 @callback
-def async_default_engine(hass: HomeAssistant) -> str | None:
+def async_default_engine(menuai: menuai) -> str | None:
     """Return the domain or entity id of the default engine."""
     default_entity_id: str | None = None
 
-    for entity in hass.data[DATA_COMPONENT].entities:
+    for entity in menuai.data[DATA_COMPONENT].entities:
         if entity.platform and entity.platform.platform_name == "cloud":
             return entity.entity_id
 
         if default_entity_id is None:
             default_entity_id = entity.entity_id
 
-    return default_entity_id or async_default_provider(hass)
+    return default_entity_id or async_default_provider(menuai)
 
 
 @callback
 def async_get_speech_to_text_entity(
-    hass: HomeAssistant, entity_id: str
+    menuai: menuai, entity_id: str
 ) -> SpeechToTextEntity | None:
     """Return stt entity."""
-    return hass.data[DATA_COMPONENT].get_entity(entity_id)
+    return menuai.data[DATA_COMPONENT].get_entity(entity_id)
 
 
 @callback
 def async_get_speech_to_text_engine(
-    hass: HomeAssistant, engine_id: str
+    menuai: menuai, engine_id: str
 ) -> SpeechToTextEntity | Provider | None:
     """Return stt entity or legacy provider."""
-    if entity := async_get_speech_to_text_entity(hass, engine_id):
+    if entity := async_get_speech_to_text_entity(menuai, engine_id):
         return entity
-    return async_get_provider(hass, engine_id)
+    return async_get_provider(menuai, engine_id)
 
 
 @callback
-def async_get_speech_to_text_languages(hass: HomeAssistant) -> set[str]:
+def async_get_speech_to_text_languages(menuai: menuai) -> set[str]:
     """Return a set with the union of languages supported by stt engines."""
     languages = set()
 
-    for entity in hass.data[DATA_COMPONENT].entities:
+    for entity in menuai.data[DATA_COMPONENT].entities:
         for language_tag in entity.supported_languages:
             languages.add(language_tag)
 
-    for engine in hass.data[DATA_PROVIDERS].values():
+    for engine in menuai.data[DATA_PROVIDERS].values():
         for language_tag in engine.supported_languages:
             languages.add(language_tag)
 
     return languages
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up STT."""
-    websocket_api.async_register_command(hass, websocket_list_engines)
+    websocket_api.async_register_command(menuai, websocket_list_engines)
 
-    component = hass.data[DATA_COMPONENT] = EntityComponent[SpeechToTextEntity](
-        _LOGGER, DOMAIN, hass
+    component = menuai.data[DATA_COMPONENT] = EntityComponent[SpeechToTextEntity](
+        _LOGGER, DOMAIN, menuai
     )
 
     component.register_shutdown()
-    platform_setups = async_setup_legacy(hass, config)
+    platform_setups = async_setup_legacy(menuai, config)
 
     for setup in platform_setups:
         # Tasks are created as tracked tasks to ensure startup
@@ -137,20 +137,20 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         # any config entries that use stt as a base platform
         # to be able to start with out having to wait for the
         # legacy platforms to finish setting up.
-        hass.async_create_task(setup, eager_start=True)
+        menuai.async_create_task(setup, eager_start=True)
 
-    hass.http.register_view(SpeechToTextView(hass.data[DATA_PROVIDERS]))
+    menuai.http.register_view(SpeechToTextView(menuai.data[DATA_PROVIDERS]))
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up a config entry."""
-    return await hass.data[DATA_COMPONENT].async_setup_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_setup_entry(entry)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.data[DATA_COMPONENT].async_unload_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_unload_entry(entry)
 
 
 class SpeechToTextEntity(RestoreEntity):
@@ -197,9 +197,9 @@ class SpeechToTextEntity(RestoreEntity):
     def supported_channels(self) -> list[AudioChannels]:
         """Return a list of supported channels."""
 
-    async def async_internal_added_to_hass(self) -> None:
-        """Call when the provider entity is added to hass."""
-        await super().async_internal_added_to_hass()
+    async def async_internal_added_to_menuai(self) -> None:
+        """Call when the provider entity is added to menuai."""
+        await super().async_internal_added_to_menuai()
         state = await self.async_get_last_state()
         if (
             state is not None
@@ -244,7 +244,7 @@ class SpeechToTextEntity(RestoreEntity):
         return True
 
 
-class SpeechToTextView(HomeAssistantView):
+class SpeechToTextView(menuaiView):
     """STT view to generate a text from audio stream."""
 
     _legacy_provider_reported = False
@@ -258,10 +258,10 @@ class SpeechToTextView(HomeAssistantView):
 
     async def post(self, request: web.Request, provider: str) -> web.Response:
         """Convert Speech (audio) to text."""
-        hass = request.app[KEY_HASS]
+        menuai = request.app[KEY_menuai]
         provider_entity: SpeechToTextEntity | None = None
         if (
-            not (provider_entity := async_get_speech_to_text_entity(hass, provider))
+            not (provider_entity := async_get_speech_to_text_entity(menuai, provider))
             and provider not in self.providers
         ):
             raise HTTPNotFound
@@ -273,7 +273,7 @@ class SpeechToTextView(HomeAssistantView):
             raise HTTPBadRequest(text=str(err)) from err
 
         if not provider_entity:
-            stt_provider = self._get_provider(hass, provider)
+            stt_provider = self._get_provider(menuai, provider)
 
             # Check format
             if not stt_provider.check_metadata(metadata):
@@ -298,15 +298,15 @@ class SpeechToTextView(HomeAssistantView):
 
     async def get(self, request: web.Request, provider: str) -> web.Response:
         """Return provider specific audio information."""
-        hass = request.app[KEY_HASS]
+        menuai = request.app[KEY_menuai]
         if (
-            not (provider_entity := async_get_speech_to_text_entity(hass, provider))
+            not (provider_entity := async_get_speech_to_text_entity(menuai, provider))
             and provider not in self.providers
         ):
             raise HTTPNotFound
 
         if not provider_entity:
-            stt_provider = self._get_provider(hass, provider)
+            stt_provider = self._get_provider(menuai, provider)
 
             return self.json(
                 {
@@ -330,7 +330,7 @@ class SpeechToTextView(HomeAssistantView):
             }
         )
 
-    def _get_provider(self, hass: HomeAssistant, provider: str) -> Provider:
+    def _get_provider(self, menuai: menuai, provider: str) -> Provider:
         """Get provider.
 
         Method for legacy providers.
@@ -340,8 +340,8 @@ class SpeechToTextView(HomeAssistantView):
 
         if not self._legacy_provider_reported:
             self._legacy_provider_reported = True
-            report_issue = self._suggest_report_issue(hass, provider, stt_provider)
-            # This should raise in Home Assistant Core 2023.9
+            report_issue = self._suggest_report_issue(menuai, provider, stt_provider)
+            # This should raise in MenuAI Core 2023.9
             _LOGGER.warning(
                 "Provider %s (%s) is using a legacy implementation, "
                 "and should be updated to use the SpeechToTextEntity. Please "
@@ -354,11 +354,11 @@ class SpeechToTextView(HomeAssistantView):
         return stt_provider
 
     def _suggest_report_issue(
-        self, hass: HomeAssistant, provider: str, provider_instance: object
+        self, menuai: menuai, provider: str, provider_instance: object
     ) -> str:
         """Suggest to report an issue."""
         return async_suggest_report_issue(
-            hass, integration_domain=provider, module=type(provider_instance).__module__
+            menuai, integration_domain=provider, module=type(provider_instance).__module__
         )
 
 
@@ -416,7 +416,7 @@ def _metadata_from_header(request: web.Request) -> SpeechMetadata:
 )
 @callback
 def websocket_list_engines(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict
 ) -> None:
     """List speech-to-text engines and, optionally, if they support a given language."""
     country = msg.get("country")
@@ -424,7 +424,7 @@ def websocket_list_engines(
     providers = []
     provider_info: dict[str, Any]
 
-    for entity in hass.data[DATA_COMPONENT].entities:
+    for entity in menuai.data[DATA_COMPONENT].entities:
         provider_info = {
             "engine_id": entity.entity_id,
             "supported_languages": entity.supported_languages,
@@ -435,7 +435,7 @@ def websocket_list_engines(
             )
         providers.append(provider_info)
 
-    for engine_id, provider in hass.data[DATA_PROVIDERS].items():
+    for engine_id, provider in menuai.data[DATA_PROVIDERS].items():
         provider_info = {
             "engine_id": engine_id,
             "name": provider.name,

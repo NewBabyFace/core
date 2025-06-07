@@ -12,10 +12,10 @@ from pylutron_caseta.pairing import PAIR_CA, PAIR_CERT, PAIR_KEY, async_pair
 from pylutron_caseta.smartbridge import Smartbridge
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_NAME
-from homeassistant.core import callback
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_NAME
+from menuai.core import callback
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import (
     ABORT_REASON_CANNOT_CONNECT,
@@ -108,7 +108,7 @@ class LutronCasetaFlowHandler(ConfigFlow, domain=DOMAIN):
 
         if (
             not self.attempted_tls_validation
-            and await self.hass.async_add_executor_job(self._tls_assets_exist)
+            and await self.menuai.async_add_executor_job(self._tls_assets_exist)
             and await self.async_get_lutron_id()
         ):
             self.tls_assets_validated = True
@@ -128,7 +128,7 @@ class LutronCasetaFlowHandler(ConfigFlow, domain=DOMAIN):
                 errors["base"] = "cannot_connect"
 
             if not errors:
-                await self.hass.async_add_executor_job(self._write_tls_assets, assets)
+                await self.menuai.async_add_executor_job(self._write_tls_assets, assets)
                 return self.async_create_entry(title=self.bridge_id, data=self.data)
 
         return self.async_show_form(
@@ -153,14 +153,14 @@ class LutronCasetaFlowHandler(ConfigFlow, domain=DOMAIN):
         """Write the tls assets to disk."""
         for asset_key, conf_key in FILE_MAPPING.items():
             with open(
-                self.hass.config.path(self.data[conf_key]), "w", encoding="utf8"
+                self.menuai.config.path(self.data[conf_key]), "w", encoding="utf8"
             ) as file_handle:
                 file_handle.write(assets[asset_key])
 
     def _tls_assets_exist(self):
         """Check to see if tls assets are already on disk."""
         for conf_key in FILE_MAPPING.values():
-            if not os.path.exists(self.hass.config.path(self.data[conf_key])):
+            if not os.path.exists(self.menuai.config.path(self.data[conf_key])):
                 return False
         return True
 
@@ -222,9 +222,9 @@ class LutronCasetaFlowHandler(ConfigFlow, domain=DOMAIN):
         try:
             bridge = Smartbridge.create_tls(
                 hostname=self.data[CONF_HOST],
-                keyfile=self.hass.config.path(self.data[CONF_KEYFILE]),
-                certfile=self.hass.config.path(self.data[CONF_CERTFILE]),
-                ca_certs=self.hass.config.path(self.data[CONF_CA_CERTS]),
+                keyfile=self.menuai.config.path(self.data[CONF_KEYFILE]),
+                certfile=self.menuai.config.path(self.data[CONF_CERTFILE]),
+                ca_certs=self.menuai.config.path(self.data[CONF_CA_CERTS]),
             )
         except ssl.SSLError:
             _LOGGER.error(

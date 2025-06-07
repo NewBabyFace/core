@@ -6,11 +6,11 @@ from typing import Any
 from aioswitcher.api import SwitcherApi
 from aioswitcher.api.messages import SwitcherBaseResponse
 
-from homeassistant.core import callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.core import callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .coordinator import SwitcherDataUpdateCoordinator
 
@@ -59,7 +59,7 @@ class SwitcherEntity(CoordinatorEntity[SwitcherDataUpdateCoordinator]):
         if error or not response or not response.successful:
             self.coordinator.last_update_success = False
             self.async_write_ha_state()
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Call api for {self.name} failed, api: '{api}', "
                 f"args: {args}, response/error: {response or error}"
             )

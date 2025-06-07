@@ -21,11 +21,11 @@ from uiprotect.data.bootstrap import ProtectDeviceRef
 from uiprotect.test_util.anonymize import random_hex
 from uiprotect.websocket import WebsocketState
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, split_entity_id
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity import EntityDescription
-from homeassistant.util import dt as dt_util
+from menuai.const import Platform
+from menuai.core import menuai, split_entity_id
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity import EntityDescription
+from menuai.util import dt as dt_util
 
 from tests.common import MockConfigEntry, async_fire_time_changed
 
@@ -58,40 +58,40 @@ def reset_objects(bootstrap: Bootstrap):
     bootstrap.chimes = {}
 
 
-async def time_changed(hass: HomeAssistant, seconds: int) -> None:
+async def time_changed(menuai: menuai, seconds: int) -> None:
     """Trigger time changed."""
     next_update = dt_util.utcnow() + timedelta(seconds)
-    async_fire_time_changed(hass, next_update)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, next_update)
+    await menuai.async_block_till_done()
 
 
 async def enable_entity(
-    hass: HomeAssistant, entry_id: str, entity_id: str
+    menuai: menuai, entry_id: str, entity_id: str
 ) -> er.RegistryEntry:
     """Enable a disabled entity."""
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
 
     updated_entity = entity_registry.async_update_entity(entity_id, disabled_by=None)
     assert not updated_entity.disabled
-    await hass.config_entries.async_reload(entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_reload(entry_id)
+    await menuai.async_block_till_done()
 
     return updated_entity
 
 
 def assert_entity_counts(
-    hass: HomeAssistant, platform: Platform, total: int, enabled: int
+    menuai: menuai, platform: Platform, total: int, enabled: int
 ) -> None:
     """Assert entity counts for a given platform."""
 
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
 
     entities = [
         e for e in entity_registry.entities if split_entity_id(e)[0] == platform.value
     ]
 
     assert len(entities) == total
-    assert len(hass.states.async_all(platform.value)) == enabled
+    assert len(menuai.states.async_all(platform.value)) == enabled
 
 
 def normalize_name(name: str) -> str:
@@ -164,7 +164,7 @@ def add_device(
 
 
 async def init_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     ufp: MockUFPFixture,
     devices: Sequence[ProtectAdoptableDeviceModel],
     regenerate_ids: bool = True,
@@ -175,12 +175,12 @@ async def init_entry(
     for device in devices:
         add_device(ufp.api.bootstrap, device, regenerate_ids)
 
-    await hass.config_entries.async_setup(ufp.entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(ufp.entry.entry_id)
+    await menuai.async_block_till_done()
 
 
 async def remove_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     ufp: MockUFPFixture,
     ufp_devices: list[ProtectAdoptableDeviceModel],
 ) -> None:
@@ -199,11 +199,11 @@ async def remove_entities(
         mock_msg.new_obj = None
         ufp.ws_msg(mock_msg)
 
-    await time_changed(hass, 30)
+    await time_changed(menuai, 30)
 
 
 async def adopt_devices(
-    hass: HomeAssistant,
+    menuai: menuai,
     ufp: MockUFPFixture,
     ufp_devices: list[ProtectAdoptableDeviceModel],
     fully_adopt: bool = False,
@@ -234,4 +234,4 @@ async def adopt_devices(
         )
         ufp.ws_msg(mock_msg)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()

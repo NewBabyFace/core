@@ -30,9 +30,9 @@ from aiohomeconnect.model.program import (
 )
 import pytest
 
-from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import (
+from menuai.components.switch import DOMAIN as SWITCH_DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_TURN_OFF,
     STATE_OFF,
@@ -41,8 +41,8 @@ from homeassistant.const import (
     STATE_UNKNOWN,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from tests.common import MockConfigEntry
 
@@ -95,7 +95,7 @@ def platforms() -> list[str]:
     indirect=["appliance"],
 )
 async def test_program_options_retrieval(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
     config_entry: MockConfigEntry,
     integration_setup: Callable[[MagicMock], Awaitable[bool]],
@@ -164,9 +164,9 @@ async def test_program_options_retrieval(
         option_entity_id.values(), options_state_stage_1, strict=True
     ):
         if state is not None:
-            assert hass.states.is_state(entity_id, state)
+            assert menuai.states.is_state(entity_id, state)
         else:
-            assert not hass.states.get(entity_id)
+            assert not menuai.states.get(entity_id)
 
     client.get_available_program = AsyncMock(
         return_value=ProgramDefinition(
@@ -220,18 +220,18 @@ async def test_program_options_retrieval(
             )
         ]
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Verify default values
     # Every time the program is updated, the available options should use the default value if existing
     for entity_id, available in zip(
         option_entity_id.values(), options_availability_stage_2, strict=True
     ):
-        assert hass.states.is_state(
+        assert menuai.states.is_state(
             entity_id, STATE_OFF if available else STATE_UNAVAILABLE
         )
     for _, entity_id in (option_without_default, option_without_constraints):
-        assert hass.states.is_state(entity_id, STATE_UNKNOWN)
+        assert menuai.states.is_state(entity_id, STATE_UNKNOWN)
 
 
 @pytest.mark.parametrize("appliance", ["Washer"], indirect=True)
@@ -249,7 +249,7 @@ async def test_program_options_retrieval(
     ],
 )
 async def test_no_options_retrieval_on_unknown_program(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
     config_entry: MockConfigEntry,
     integration_setup: Callable[[MagicMock], Awaitable[bool]],
@@ -300,7 +300,7 @@ async def test_no_options_retrieval_on_unknown_program(
             )
         ]
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert client.get_available_program.call_count == 0
 
@@ -324,7 +324,7 @@ async def test_no_options_retrieval_on_unknown_program(
     indirect=["appliance"],
 )
 async def test_program_options_retrieval_after_appliance_connection(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
     config_entry: MockConfigEntry,
     integration_setup: Callable[[MagicMock], Awaitable[bool]],
@@ -358,7 +358,7 @@ async def test_program_options_retrieval_after_appliance_connection(
     assert await integration_setup(client)
     assert config_entry.state is ConfigEntryState.LOADED
 
-    assert not hass.states.get(option_entity_id)
+    assert not menuai.states.get(option_entity_id)
 
     await client.add_events(
         [
@@ -380,9 +380,9 @@ async def test_program_options_retrieval_after_appliance_connection(
             )
         ]
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert not hass.states.get(option_entity_id)
+    assert not menuai.states.get(option_entity_id)
 
     client.get_available_program = AsyncMock(
         return_value=ProgramDefinition(
@@ -418,9 +418,9 @@ async def test_program_options_retrieval_after_appliance_connection(
             )
         ]
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(option_entity_id)
+    assert menuai.states.get(option_entity_id)
 
 
 @pytest.mark.parametrize(
@@ -444,7 +444,7 @@ async def test_program_options_retrieval_after_appliance_connection(
     ],
 )
 async def test_option_entity_functionality_exception(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
     config_entry: MockConfigEntry,
     integration_setup: Callable[[MagicMock], Awaitable[bool]],
@@ -469,7 +469,7 @@ async def test_option_entity_functionality_exception(
     assert await integration_setup(client)
     assert config_entry.state is ConfigEntryState.LOADED
 
-    assert hass.states.get(entity_id)
+    assert menuai.states.get(entity_id)
 
     if set_active_program_option_side_effect:
         client.set_active_program_option = AsyncMock(
@@ -480,7 +480,7 @@ async def test_option_entity_functionality_exception(
             side_effect=set_selected_program_option_side_effect
         )
 
-    with pytest.raises(HomeAssistantError, match=r"Error.*setting.*option.*"):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match=r"Error.*setting.*option.*"):
+        await menuai.services.async_call(
             SWITCH_DOMAIN, SERVICE_TURN_OFF, {ATTR_ENTITY_ID: entity_id}, blocking=True
         )

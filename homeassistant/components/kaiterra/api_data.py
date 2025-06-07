@@ -6,8 +6,8 @@ from logging import getLogger
 from aiohttp.client_exceptions import ClientConnectorError, ClientResponseError
 from kaiterra_async_client import AQIStandard, KaiterraAPIClient, Units
 
-from homeassistant.const import CONF_API_KEY, CONF_DEVICE_ID, CONF_DEVICES, CONF_TYPE
-from homeassistant.helpers.dispatcher import async_dispatcher_send
+from menuai.const import CONF_API_KEY, CONF_DEVICE_ID, CONF_DEVICES, CONF_TYPE
+from menuai.helpers.dispatcher import async_dispatcher_send
 
 from .const import (
     AQI_LEVEL,
@@ -25,7 +25,7 @@ POLLUTANTS = {"rpm25c": "PM2.5", "rpm10c": "PM10", "rtvoc": "TVOC", "rco2": "CO2
 class KaiterraApiData:
     """Get data from Kaiterra API."""
 
-    def __init__(self, hass, config, session):
+    def __init__(self, menuai, config, session):
         """Initialize the API data object."""
 
         api_key = config[CONF_API_KEY]
@@ -33,7 +33,7 @@ class KaiterraApiData:
         devices = config[CONF_DEVICES]
         units = config[CONF_PREFERRED_UNITS]
 
-        self._hass = hass
+        self._menuai = menuai
         self._api = KaiterraAPIClient(
             session,
             api_key=api_key,
@@ -58,7 +58,7 @@ class KaiterraApiData:
         except (ClientResponseError, ClientConnectorError, TimeoutError) as err:
             _LOGGER.debug("Couldn't fetch data from Kaiterra API: %s", err)
             self.data = {}
-            async_dispatcher_send(self._hass, DISPATCHER_KAITERRA)
+            async_dispatcher_send(self._menuai, DISPATCHER_KAITERRA)
             return
 
         _LOGGER.debug("New data retrieved: %s", data)
@@ -103,4 +103,4 @@ class KaiterraApiData:
         except TypeError as err:
             _LOGGER.error("Type error %s", err)
 
-        async_dispatcher_send(self._hass, DISPATCHER_KAITERRA)
+        async_dispatcher_send(self._menuai, DISPATCHER_KAITERRA)

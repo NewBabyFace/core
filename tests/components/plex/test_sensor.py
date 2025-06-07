@@ -8,13 +8,13 @@ import pytest
 import requests.exceptions
 import requests_mock
 
-from homeassistant.components.plex.const import PLEX_UPDATE_LIBRARY_SIGNAL
-from homeassistant.config_entries import RELOAD_AFTER_UPDATE_DELAY
-from homeassistant.const import STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.util import dt as dt_util
+from menuai.components.plex.const import PLEX_UPDATE_LIBRARY_SIGNAL
+from menuai.config_entries import RELOAD_AFTER_UPDATE_DELAY
+from menuai.const import STATE_UNAVAILABLE
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.util import dt as dt_util
 
 from .helpers import trigger_plex_update, wait_for_debouncer
 
@@ -73,7 +73,7 @@ class MockPlexTVEpisode(MockPlexMedia):
 
 
 async def test_library_sensor_values(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     caplog: pytest.LogCaptureFixture,
     setup_plex_server,
@@ -110,22 +110,22 @@ async def test_library_sensor_values(
     )
 
     mock_plex_server = await setup_plex_server()
-    await wait_for_debouncer(hass)
+    await wait_for_debouncer(menuai)
 
-    activity_sensor = hass.states.get("sensor.plex_server_1")
+    activity_sensor = menuai.states.get("sensor.plex_server_1")
     assert activity_sensor.state == "1"
 
     # Ensure sensor is created as disabled
-    assert hass.states.get("sensor.plex_server_1_library_tv_shows") is None
+    assert menuai.states.get("sensor.plex_server_1_library_tv_shows") is None
 
     # Enable sensor and validate values
     entity_registry.async_update_entity(
         entity_id="sensor.plex_server_1_library_tv_shows", disabled_by=None
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     async_fire_time_changed(
-        hass,
+        menuai,
         dt_util.utcnow() + timedelta(seconds=RELOAD_AFTER_UPDATE_DELAY + 1),
     )
 
@@ -135,9 +135,9 @@ async def test_library_sensor_values(
         return_value=media,
         __qualname__="recentlyAdded",
     ):
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    library_tv_sensor = hass.states.get("sensor.plex_server_1_library_tv_shows")
+    library_tv_sensor = menuai.states.get("sensor.plex_server_1_library_tv_shows")
     assert library_tv_sensor.state == "10"
     assert library_tv_sensor.attributes["seasons"] == 1
     assert library_tv_sensor.attributes["shows"] == 1
@@ -155,9 +155,9 @@ async def test_library_sensor_values(
     trigger_plex_update(
         mock_websocket, msgtype="status", payload=LIBRARY_UPDATE_PAYLOAD
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    library_tv_sensor = hass.states.get("sensor.plex_server_1_library_tv_shows")
+    library_tv_sensor = menuai.states.get("sensor.plex_server_1_library_tv_shows")
     assert library_tv_sensor.state == STATE_UNAVAILABLE
 
     assert "Could not update library sensor" in caplog.text
@@ -175,9 +175,9 @@ async def test_library_sensor_values(
         return_value=media,
         __qualname__="recentlyAdded",
     ):
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    library_tv_sensor = hass.states.get("sensor.plex_server_1_library_tv_shows")
+    library_tv_sensor = menuai.states.get("sensor.plex_server_1_library_tv_shows")
     assert library_tv_sensor.state == "10"
 
     # Handle library deletion
@@ -188,9 +188,9 @@ async def test_library_sensor_values(
     trigger_plex_update(
         mock_websocket, msgtype="status", payload=LIBRARY_UPDATE_PAYLOAD
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    library_tv_sensor = hass.states.get("sensor.plex_server_1_library_tv_shows")
+    library_tv_sensor = menuai.states.get("sensor.plex_server_1_library_tv_shows")
     assert library_tv_sensor.state == STATE_UNAVAILABLE
 
     # Test movie library sensor
@@ -201,10 +201,10 @@ async def test_library_sensor_values(
     entity_registry.async_update_entity(
         entity_id="sensor.plex_server_1_library_movies", disabled_by=None
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     async_fire_time_changed(
-        hass,
+        menuai,
         dt_util.utcnow() + timedelta(seconds=RELOAD_AFTER_UPDATE_DELAY + 1),
     )
 
@@ -214,9 +214,9 @@ async def test_library_sensor_values(
         return_value=media,
         __qualname__="recentlyAdded",
     ):
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    library_movies_sensor = hass.states.get("sensor.plex_server_1_library_movies")
+    library_movies_sensor = menuai.states.get("sensor.plex_server_1_library_movies")
     assert library_movies_sensor.state == "1"
     assert library_movies_sensor.attributes["last_added_item"] == "Movie 1 (2021)"
     assert library_movies_sensor.attributes["last_added_timestamp"] == str(TIMESTAMP)
@@ -229,12 +229,12 @@ async def test_library_sensor_values(
         __qualname__="recentlyAdded",
     ):
         async_dispatcher_send(
-            hass, PLEX_UPDATE_LIBRARY_SIGNAL.format(mock_plex_server.machine_identifier)
+            menuai, PLEX_UPDATE_LIBRARY_SIGNAL.format(mock_plex_server.machine_identifier)
         )
-        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=3))
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(seconds=3))
+        await menuai.async_block_till_done()
 
-    library_movies_sensor = hass.states.get("sensor.plex_server_1_library_movies")
+    library_movies_sensor = menuai.states.get("sensor.plex_server_1_library_movies")
     assert library_movies_sensor.attributes["last_added_item"] == "Clip 1"
 
     # Test music library sensor
@@ -245,10 +245,10 @@ async def test_library_sensor_values(
     entity_registry.async_update_entity(
         entity_id="sensor.plex_server_1_library_music", disabled_by=None
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     async_fire_time_changed(
-        hass,
+        menuai,
         dt_util.utcnow() + timedelta(seconds=RELOAD_AFTER_UPDATE_DELAY + 1),
     )
 
@@ -258,9 +258,9 @@ async def test_library_sensor_values(
         return_value=media,
         __qualname__="recentlyAdded",
     ):
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    library_music_sensor = hass.states.get("sensor.plex_server_1_library_music")
+    library_music_sensor = menuai.states.get("sensor.plex_server_1_library_music")
     assert library_music_sensor.state == "1"
     assert library_music_sensor.attributes["artists"] == 1
     assert library_music_sensor.attributes["albums"] == 1

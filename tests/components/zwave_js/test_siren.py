@@ -3,13 +3,13 @@
 import pytest
 from zwave_js_server.event import Event
 
-from homeassistant.components.siren import (
+from menuai.components.siren import (
     ATTR_AVAILABLE_TONES,
     ATTR_TONE,
     ATTR_VOLUME_LEVEL,
 )
-from homeassistant.const import STATE_OFF, STATE_ON, STATE_UNKNOWN, Platform
-from homeassistant.core import HomeAssistant
+from menuai.const import STATE_OFF, STATE_ON, STATE_UNKNOWN, Platform
+from menuai.core import menuai
 
 SIREN_ENTITY = "siren.indoor_siren_6_play_tone_2"
 
@@ -72,11 +72,11 @@ def platforms() -> list[str]:
 
 
 async def test_siren(
-    hass: HomeAssistant, client, aeotec_zw164_siren, integration
+    menuai: menuai, client, aeotec_zw164_siren, integration
 ) -> None:
     """Test the siren entity."""
     node = aeotec_zw164_siren
-    state = hass.states.get(SIREN_ENTITY)
+    state = menuai.states.get(SIREN_ENTITY)
 
     assert state
     assert state.state == STATE_UNKNOWN
@@ -115,7 +115,7 @@ async def test_siren(
     }
 
     # Test turn on with default
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "siren",
         "turn_on",
         {"entity_id": SIREN_ENTITY},
@@ -155,11 +155,11 @@ async def test_siren(
     )
     node.receive_event(event)
 
-    state = hass.states.get(SIREN_ENTITY)
+    state = menuai.states.get(SIREN_ENTITY)
     assert state.state == STATE_ON
 
     # Test turn on with specific tone name and volume level
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "siren",
         "turn_on",
         {
@@ -185,7 +185,7 @@ async def test_siren(
     client.async_send_command.reset_mock()
 
     # Test turn on with specific tone ID and volume level
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "siren",
         "turn_on",
         {
@@ -211,7 +211,7 @@ async def test_siren(
     client.async_send_command.reset_mock()
 
     # Test turn off
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "siren",
         "turn_off",
         {"entity_id": SIREN_ENTITY},
@@ -251,5 +251,5 @@ async def test_siren(
     )
     node.receive_event(event)
 
-    state = hass.states.get(SIREN_ENTITY)
+    state = menuai.states.get(SIREN_ENTITY)
     assert state.state == STATE_OFF

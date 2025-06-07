@@ -9,27 +9,27 @@ from evohomeasync2 import EvohomeClient
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.components.evohome.const import (
+from menuai.components.evohome.const import (
     ATTR_DURATION,
     ATTR_PERIOD,
     ATTR_SETPOINT,
     DOMAIN,
     EvoService,
 )
-from homeassistant.const import ATTR_ENTITY_ID, ATTR_MODE
-from homeassistant.core import HomeAssistant
+from menuai.const import ATTR_ENTITY_ID, ATTR_MODE
+from menuai.core import menuai
 
 
 @pytest.mark.parametrize("install", ["default"])
 async def test_service_refresh_system(
-    hass: HomeAssistant,
+    menuai: menuai,
     evohome: EvohomeClient,
 ) -> None:
     """Test Evohome's refresh_system service (for all temperature control systems)."""
 
     # EvoService.REFRESH_SYSTEM
     with patch("evohomeasync2.location.Location.update") as mock_fcn:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             EvoService.REFRESH_SYSTEM,
             {},
@@ -41,14 +41,14 @@ async def test_service_refresh_system(
 
 @pytest.mark.parametrize("install", ["default"])
 async def test_service_reset_system(
-    hass: HomeAssistant,
+    menuai: menuai,
     ctl_id: str,
 ) -> None:
     """Test Evohome's reset_system service (for a temperature control system)."""
 
     # EvoService.RESET_SYSTEM (if SZ_AUTO_WITH_RESET in modes)
     with patch("evohomeasync2.control_system.ControlSystem.set_mode") as mock_fcn:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             EvoService.RESET_SYSTEM,
             {},
@@ -60,7 +60,7 @@ async def test_service_reset_system(
 
 @pytest.mark.parametrize("install", ["default"])
 async def test_ctl_set_system_mode(
-    hass: HomeAssistant,
+    menuai: menuai,
     ctl_id: str,
     freezer: FrozenDateTimeFactory,
 ) -> None:
@@ -68,7 +68,7 @@ async def test_ctl_set_system_mode(
 
     # EvoService.SET_SYSTEM_MODE: Auto
     with patch("evohomeasync2.control_system.ControlSystem.set_mode") as mock_fcn:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             EvoService.SET_SYSTEM_MODE,
             {
@@ -83,7 +83,7 @@ async def test_ctl_set_system_mode(
 
     # EvoService.SET_SYSTEM_MODE: AutoWithEco, hours=12
     with patch("evohomeasync2.control_system.ControlSystem.set_mode") as mock_fcn:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             EvoService.SET_SYSTEM_MODE,
             {
@@ -99,7 +99,7 @@ async def test_ctl_set_system_mode(
 
     # EvoService.SET_SYSTEM_MODE: Away, days=7
     with patch("evohomeasync2.control_system.ControlSystem.set_mode") as mock_fcn:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             EvoService.SET_SYSTEM_MODE,
             {
@@ -116,14 +116,14 @@ async def test_ctl_set_system_mode(
 
 @pytest.mark.parametrize("install", ["default"])
 async def test_zone_clear_zone_override(
-    hass: HomeAssistant,
+    menuai: menuai,
     zone_id: str,
 ) -> None:
     """Test Evohome's clear_zone_override service (for a heating zone)."""
 
     # EvoZoneMode.FOLLOW_SCHEDULE
     with patch("evohomeasync2.zone.Zone.reset") as mock_fcn:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             EvoService.RESET_ZONE_OVERRIDE,
             {
@@ -137,7 +137,7 @@ async def test_zone_clear_zone_override(
 
 @pytest.mark.parametrize("install", ["default"])
 async def test_zone_set_zone_override(
-    hass: HomeAssistant,
+    menuai: menuai,
     zone_id: str,
     freezer: FrozenDateTimeFactory,
 ) -> None:
@@ -147,7 +147,7 @@ async def test_zone_set_zone_override(
 
     # EvoZoneMode.PERMANENT_OVERRIDE
     with patch("evohomeasync2.zone.Zone.set_temperature") as mock_fcn:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             EvoService.SET_ZONE_OVERRIDE,
             {
@@ -161,7 +161,7 @@ async def test_zone_set_zone_override(
 
     # EvoZoneMode.TEMPORARY_OVERRIDE
     with patch("evohomeasync2.zone.Zone.set_temperature") as mock_fcn:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             EvoService.SET_ZONE_OVERRIDE,
             {

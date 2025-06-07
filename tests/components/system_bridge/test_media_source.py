@@ -4,38 +4,38 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 from syrupy.filters import paths
 
-from homeassistant.components.media_player import BrowseError
-from homeassistant.components.media_source import (
+from menuai.components.media_player import BrowseError
+from menuai.components.media_source import (
     DOMAIN as MEDIA_SOURCE_DOMAIN,
     URI_SCHEME,
     async_browse_media,
     async_resolve_media,
 )
-from homeassistant.components.system_bridge.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.system_bridge.const import DOMAIN
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 
 
 @pytest.fixture(autouse=True)
-async def setup_component(hass: HomeAssistant) -> None:
+async def setup_component(menuai: menuai) -> None:
     """Set up component."""
     assert await async_setup_component(
-        hass,
+        menuai,
         MEDIA_SOURCE_DOMAIN,
         {},
     )
 
 
 async def test_root(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     init_integration: MockConfigEntry,
 ) -> None:
     """Test root media browsing."""
     browse_media_root = await async_browse_media(
-        hass,
+        menuai,
         f"{URI_SCHEME}{DOMAIN}",
     )
 
@@ -46,13 +46,13 @@ async def test_root(
 
 
 async def test_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     init_integration: MockConfigEntry,
 ) -> None:
     """Test browsing entry."""
     browse_media_entry = await async_browse_media(
-        hass,
+        menuai,
         f"{URI_SCHEME}{DOMAIN}/{init_integration.entry_id}",
     )
 
@@ -63,13 +63,13 @@ async def test_entry(
 
 
 async def test_directory(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     init_integration: MockConfigEntry,
 ) -> None:
     """Test browsing directory."""
     browse_media_directory = await async_browse_media(
-        hass,
+        menuai,
         f"{URI_SCHEME}{DOMAIN}/{init_integration.entry_id}~~documents",
     )
 
@@ -80,13 +80,13 @@ async def test_directory(
 
 
 async def test_subdirectory(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     init_integration: MockConfigEntry,
 ) -> None:
     """Test browsing directory."""
     browse_media_directory = await async_browse_media(
-        hass,
+        menuai,
         f"{URI_SCHEME}{DOMAIN}/{init_integration.entry_id}~~documents/testsubdirectory",
     )
 
@@ -97,13 +97,13 @@ async def test_subdirectory(
 
 
 async def test_file(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     init_integration: MockConfigEntry,
 ) -> None:
     """Test browsing file."""
     resolve_media_file = await async_resolve_media(
-        hass,
+        menuai,
         f"{URI_SCHEME}{DOMAIN}/{init_integration.entry_id}~~documents/testfile.txt~~text/plain",
         None,
     )
@@ -113,7 +113,7 @@ async def test_file(
     )
 
     resolve_media_file = await async_resolve_media(
-        hass,
+        menuai,
         f"{URI_SCHEME}{DOMAIN}/{init_integration.entry_id}~~documents/testimage.jpg~~image/jpeg",
         None,
     )
@@ -124,25 +124,25 @@ async def test_file(
 
 
 async def test_bad_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_integration: MockConfigEntry,
 ) -> None:
     """Test invalid entry raises BrowseError."""
     with pytest.raises(BrowseError):
         await async_browse_media(
-            hass,
+            menuai,
             f"{URI_SCHEME}{DOMAIN}/badentryid",
         )
 
     with pytest.raises(BrowseError):
         await async_browse_media(
-            hass,
+            menuai,
             f"{URI_SCHEME}{DOMAIN}/badentryid~~baddirectory",
         )
 
     with pytest.raises(ValueError):
         await async_resolve_media(
-            hass,
+            menuai,
             f"{URI_SCHEME}{DOMAIN}/badentryid~~baddirectory/badfile.txt~~text/plain",
             None,
         )

@@ -4,21 +4,21 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 from .const import CONF_GATEWAY_ID, COORDINATOR, COORDINATOR_LIST, DOMAIN
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: ConfigEntry
+    menuai: menuai, entry: ConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics the Tradfri platform."""
-    entry_data = hass.data[DOMAIN][entry.entry_id]
+    entry_data = menuai.data[DOMAIN][entry.entry_id]
     coordinator_data = entry_data[COORDINATOR]
 
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     device = cast(
         dr.DeviceEntry,
         device_registry.async_get_device(

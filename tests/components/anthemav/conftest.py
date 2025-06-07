@@ -5,9 +5,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from homeassistant.components.anthemav.const import DOMAIN
-from homeassistant.const import CONF_HOST, CONF_MAC, CONF_MODEL, CONF_PORT
-from homeassistant.core import HomeAssistant
+from menuai.components.anthemav.const import DOMAIN
+from menuai.const import CONF_HOST, CONF_MAC, CONF_MODEL, CONF_PORT
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -69,14 +69,14 @@ def mock_config_entry() -> MockConfigEntry:
 
 @pytest.fixture
 async def init_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_connection_create: AsyncMock,
 ) -> MockConfigEntry:
     """Set up the AnthemAv integration for testing."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     return mock_config_entry

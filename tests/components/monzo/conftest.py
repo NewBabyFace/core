@@ -6,14 +6,14 @@ from unittest.mock import AsyncMock, patch
 from monzopy.monzopy import UserAccount
 import pytest
 
-from homeassistant.components.application_credentials import (
+from menuai.components.application_credentials import (
     ClientCredential,
     async_import_client_credential,
 )
-from homeassistant.components.monzo.api import AuthenticatedMonzoAPI
-from homeassistant.components.monzo.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.monzo.api import AuthenticatedMonzoAPI
+from menuai.components.monzo.const import DOMAIN
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 
@@ -48,11 +48,11 @@ USER_ID = 12345
 
 
 @pytest.fixture(autouse=True)
-async def setup_credentials(hass: HomeAssistant) -> None:
+async def setup_credentials(menuai: menuai) -> None:
     """Fixture to setup credentials."""
-    assert await async_setup_component(hass, "application_credentials", {})
+    assert await async_setup_component(menuai, "application_credentials", {})
     await async_import_client_credential(
-        hass,
+        menuai,
         DOMAIN,
         ClientCredential(CLIENT_ID, CLIENT_SECRET, DOMAIN),
     )
@@ -66,7 +66,7 @@ def mock_expires_at() -> int:
 
 @pytest.fixture
 def polling_config_entry(expires_at: int) -> MockConfigEntry:
-    """Create Monzo entry in Home Assistant."""
+    """Create Monzo entry in MenuAI."""
     return MockConfigEntry(
         domain=DOMAIN,
         title=TITLE,
@@ -100,7 +100,7 @@ def mock_basic_monzo():
     mock.user_account = mock_user_account
 
     with patch(
-        "homeassistant.components.monzo.AuthenticatedMonzoAPI",
+        "menuai.components.monzo.AuthenticatedMonzoAPI",
         return_value=mock,
     ):
         yield mock
@@ -119,7 +119,7 @@ def mock_monzo():
     mock.user_account = mock_user_account
 
     with patch(
-        "homeassistant.components.monzo.AuthenticatedMonzoAPI",
+        "menuai.components.monzo.AuthenticatedMonzoAPI",
         return_value=mock,
     ):
         yield mock

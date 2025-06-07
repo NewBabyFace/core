@@ -1,4 +1,4 @@
-"""The tests for the hassio sensors."""
+"""The tests for the menuaiio sensors."""
 
 from datetime import timedelta
 import os
@@ -8,15 +8,15 @@ from aiohasupervisor import SupervisorError
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.hassio import DOMAIN, HASSIO_UPDATE_INTERVAL
-from homeassistant.components.hassio.const import REQUEST_REFRESH_DELAY
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai import config_entries
+from menuai.components.menuaiio import DOMAIN, menuaiIO_UPDATE_INTERVAL
+from menuai.components.menuaiio.const import REQUEST_REFRESH_DELAY
+from menuai.config_entries import ConfigEntryState
+from menuai.const import STATE_UNAVAILABLE
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from .common import MOCK_REPOSITORIES, MOCK_STORE_ADDONS
 
@@ -41,7 +41,7 @@ def mock_all(
 
 def _install_default_mocks(aioclient_mock: AiohttpClientMocker):
     """Install default mocks."""
-    aioclient_mock.post("http://127.0.0.1/homeassistant/options", json={"result": "ok"})
+    aioclient_mock.post("http://127.0.0.1/menuai/options", json={"result": "ok"})
     aioclient_mock.post("http://127.0.0.1/supervisor/options", json={"result": "ok"})
     aioclient_mock.get(
         "http://127.0.0.1/info",
@@ -49,8 +49,8 @@ def _install_default_mocks(aioclient_mock: AiohttpClientMocker):
             "result": "ok",
             "data": {
                 "supervisor": "222",
-                "homeassistant": "0.110.0",
-                "hassos": "1.2.3",
+                "menuai": "0.110.0",
+                "menuaios": "1.2.3",
             },
         },
     )
@@ -60,7 +60,7 @@ def _install_default_mocks(aioclient_mock: AiohttpClientMocker):
             "result": "ok",
             "data": {
                 "agent_version": "1.0.0",
-                "chassis": "vm",
+                "cmenuaiis": "vm",
                 "operating_system": "Debian GNU/Linux 10 (buster)",
                 "kernel": "4.19.0-6-amd64",
             },
@@ -181,42 +181,42 @@ def _install_default_mocks(aioclient_mock: AiohttpClientMocker):
     ],
 )
 async def test_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_id,
     expected,
     aioclient_mock: AiohttpClientMocker,
     entity_registry: er.EntityRegistry,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """Test hassio OS and addons sensor."""
+    """Test menuaiio OS and addons sensor."""
     config_entry = MockConfigEntry(domain=DOMAIN, data={}, unique_id=DOMAIN)
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with patch.dict(os.environ, MOCK_ENVIRON):
         result = await async_setup_component(
-            hass,
-            "hassio",
-            {"http": {"server_port": 9999, "server_host": "127.0.0.1"}, "hassio": {}},
+            menuai,
+            "menuaiio",
+            {"http": {"server_port": 9999, "server_host": "127.0.0.1"}, "menuaiio": {}},
         )
         assert result
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Verify that the entity is disabled by default.
-    assert hass.states.get(entity_id) is None
+    assert menuai.states.get(entity_id) is None
 
     # Enable the entity.
     entity_registry.async_update_entity(entity_id, disabled_by=None)
-    await hass.config_entries.async_reload(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_reload(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # There is a REQUEST_REFRESH_DELAYs cooldown on the debouncer
     async_fire_time_changed(
-        hass, dt_util.now() + timedelta(seconds=REQUEST_REFRESH_DELAY)
+        menuai, dt_util.now() + timedelta(seconds=REQUEST_REFRESH_DELAY)
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Verify that the entity have the expected state.
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == expected
 
 
@@ -232,7 +232,7 @@ async def test_sensor(
 )
 @patch.dict(os.environ, MOCK_ENVIRON)
 async def test_stats_addon_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_id,
     expected,
     aioclient_mock: AiohttpClientMocker,
@@ -243,25 +243,25 @@ async def test_stats_addon_sensor(
 ) -> None:
     """Test stats addons sensor."""
     config_entry = MockConfigEntry(domain=DOMAIN, data={}, unique_id=DOMAIN)
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     assert await async_setup_component(
-        hass,
-        "hassio",
-        {"http": {"server_port": 9999, "server_host": "127.0.0.1"}, "hassio": {}},
+        menuai,
+        "menuaiio",
+        {"http": {"server_port": 9999, "server_host": "127.0.0.1"}, "menuaiio": {}},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Verify that the entity is disabled by default.
-    assert hass.states.get(entity_id) is None
+    assert menuai.states.get(entity_id) is None
 
     aioclient_mock.clear_requests()
     _install_default_mocks(aioclient_mock)
     addon_stats.side_effect = SupervisorError
 
-    freezer.tick(HASSIO_UPDATE_INTERVAL + timedelta(seconds=1))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    freezer.tick(menuaiIO_UPDATE_INTERVAL + timedelta(seconds=1))
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     assert "Could not fetch stats" not in caplog.text
 
@@ -269,43 +269,43 @@ async def test_stats_addon_sensor(
     _install_default_mocks(aioclient_mock)
     addon_stats.side_effect = None
 
-    freezer.tick(HASSIO_UPDATE_INTERVAL + timedelta(seconds=1))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    freezer.tick(menuaiIO_UPDATE_INTERVAL + timedelta(seconds=1))
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     assert "Could not fetch stats" not in caplog.text
 
     # Enable the entity and wait for the reload to complete.
     entity_registry.async_update_entity(entity_id, disabled_by=None)
     freezer.tick(config_entries.RELOAD_AFTER_UPDATE_DELAY)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
     assert config_entry.state is ConfigEntryState.LOADED
     # Verify the entity is still enabled
     assert entity_registry.async_get(entity_id).disabled_by is None
 
     # The config entry just reloaded, so we need to wait for the next update
-    freezer.tick(HASSIO_UPDATE_INTERVAL + timedelta(seconds=1))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    freezer.tick(menuaiIO_UPDATE_INTERVAL + timedelta(seconds=1))
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    assert hass.states.get(entity_id) is not None
+    assert menuai.states.get(entity_id) is not None
 
-    freezer.tick(HASSIO_UPDATE_INTERVAL + timedelta(seconds=1))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    freezer.tick(menuaiIO_UPDATE_INTERVAL + timedelta(seconds=1))
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
     # Verify that the entity have the expected state.
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == expected
 
     aioclient_mock.clear_requests()
     _install_default_mocks(aioclient_mock)
     addon_stats.side_effect = SupervisorError
 
-    freezer.tick(HASSIO_UPDATE_INTERVAL + timedelta(seconds=1))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    freezer.tick(menuaiIO_UPDATE_INTERVAL + timedelta(seconds=1))
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_UNAVAILABLE
     assert "Could not fetch stats" in caplog.text

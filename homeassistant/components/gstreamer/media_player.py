@@ -8,8 +8,8 @@ from typing import Any
 from gsp import STATE_IDLE, STATE_PAUSED, STATE_PLAYING, GstreamerPlayer
 import voluptuous as vol
 
-from homeassistant.components import media_source
-from homeassistant.components.media_player import (
+from menuai.components import media_source
+from menuai.components.media_player import (
     PLATFORM_SCHEMA as MEDIA_PLAYER_PLATFORM_SCHEMA,
     BrowseMedia,
     MediaPlayerEntity,
@@ -18,12 +18,12 @@ from homeassistant.components.media_player import (
     MediaType,
     async_process_play_media_url,
 )
-from homeassistant.const import CONF_NAME, EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import DOMAIN as HOMEASSISTANT_DOMAIN, HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.issue_registry import IssueSeverity, create_issue
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_NAME, EVENT_menuai_STOP
+from menuai.core import DOMAIN as menuai_DOMAIN, menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.issue_registry import IssueSeverity, create_issue
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import DOMAIN
 
@@ -44,15 +44,15 @@ GSP_STATE_MAPPING = {
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the Gstreamer platform."""
     create_issue(
-        hass,
-        HOMEASSISTANT_DOMAIN,
+        menuai,
+        menuai_DOMAIN,
         f"deprecated_system_packages_yaml_integration_{DOMAIN}",
         breaks_in_ha_version="2025.12.0",
         is_fixable=False,
@@ -73,7 +73,7 @@ def setup_platform(
         """Quit the player on shutdown."""
         player.quit()
 
-    hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, _shutdown)
+    menuai.bus.listen_once(EVENT_menuai_STOP, _shutdown)
     add_entities([GstreamerDevice(player, name)])
 
 
@@ -123,7 +123,7 @@ class GstreamerDevice(MediaPlayerEntity):
         # Handle media_source
         if media_source.is_media_source_id(media_id):
             sourced_media = await media_source.async_resolve_media(
-                self.hass, media_id, self.entity_id
+                self.menuai, media_id, self.entity_id
             )
             media_id = sourced_media.url
 
@@ -131,9 +131,9 @@ class GstreamerDevice(MediaPlayerEntity):
             _LOGGER.error("Invalid media type")
             return
 
-        media_id = async_process_play_media_url(self.hass, media_id)
+        media_id = async_process_play_media_url(self.menuai, media_id)
 
-        await self.hass.async_add_executor_job(self._player.queue, media_id)
+        await self.menuai.async_add_executor_job(self._player.queue, media_id)
 
     def media_play(self) -> None:
         """Play."""
@@ -189,7 +189,7 @@ class GstreamerDevice(MediaPlayerEntity):
     ) -> BrowseMedia:
         """Implement the websocket media browsing helper."""
         return await media_source.async_browse_media(
-            self.hass,
+            self.menuai,
             media_content_id,
             content_filter=lambda item: item.media_content_type.startswith("audio/"),
         )

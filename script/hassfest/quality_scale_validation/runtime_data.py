@@ -6,9 +6,9 @@ https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/r
 import ast
 import re
 
-from homeassistant.const import Platform
-from script.hassfest import ast_parse_module
-from script.hassfest.model import Config, Integration
+from menuai.const import Platform
+from script.menuaifest import ast_parse_module
+from script.menuaifest.model import Config, Integration
 
 _ANNOTATION_MATCH = re.compile(r"^[A-Za-z][A-Za-z0-9]+ConfigEntry$")
 _FUNCTIONS: dict[str, dict[str, int]] = {

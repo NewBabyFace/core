@@ -11,7 +11,7 @@ from opendata_transport.exceptions import (
 import pytest
 from voluptuous import error as vol_er
 
-from homeassistant.components.swiss_public_transport.const import (
+from menuai.components.swiss_public_transport.const import (
     ATTR_CONFIG_ENTRY_ID,
     ATTR_LIMIT,
     CONF_DESTINATION,
@@ -21,9 +21,9 @@ from homeassistant.components.swiss_public_transport.const import (
     DOMAIN,
     SERVICE_FETCH_CONNECTIONS,
 )
-from homeassistant.components.swiss_public_transport.helper import unique_id_from_config
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
+from menuai.components.swiss_public_transport.helper import unique_id_from_config
+from menuai.core import menuai
+from menuai.exceptions import menuaiError, ServiceValidationError
 
 from . import setup_integration
 
@@ -48,7 +48,7 @@ MOCK_DATA_STEP_BASE = {
     ],
 )
 async def test_service_call_fetch_connections_success(
-    hass: HomeAssistant,
+    menuai: menuai,
     data: dict,
     config_data,
 ) -> None:
@@ -65,25 +65,25 @@ async def test_service_call_fetch_connections_success(
     )
 
     with patch(
-        "homeassistant.components.swiss_public_transport.OpendataTransport",
+        "menuai.components.swiss_public_transport.OpendataTransport",
         return_value=AsyncMock(),
     ) as mock:
         mock().connections = json.loads(
-            await async_load_fixture(hass, "connections.json", DOMAIN)
+            await async_load_fixture(menuai, "connections.json", DOMAIN)
         )[0 : data.get(ATTR_LIMIT, CONNECTIONS_COUNT) + 2]
 
-        await setup_integration(hass, config_entry)
+        await setup_integration(menuai, config_entry)
 
         data[ATTR_CONFIG_ENTRY_ID] = config_entry.entry_id
-        assert hass.services.has_service(DOMAIN, SERVICE_FETCH_CONNECTIONS)
-        response = await hass.services.async_call(
+        assert menuai.services.has_service(DOMAIN, SERVICE_FETCH_CONNECTIONS)
+        response = await menuai.services.async_call(
             domain=DOMAIN,
             service=SERVICE_FETCH_CONNECTIONS,
             service_data=data,
             blocking=True,
             return_response=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         assert response["connections"] is not None
         assert len(response["connections"]) == data.get(ATTR_LIMIT, CONNECTIONS_COUNT)
 
@@ -102,19 +102,19 @@ async def test_service_call_fetch_connections_success(
         (
             1,
             MOCK_DATA_STEP_BASE,
-            pytest.raises(HomeAssistantError),
+            pytest.raises(menuaiError),
             OpendataTransportConnectionError(),
         ),
         (
             2,
             MOCK_DATA_STEP_BASE,
-            pytest.raises(HomeAssistantError),
+            pytest.raises(menuaiError),
             OpendataTransportError(),
         ),
     ],
 )
 async def test_service_call_fetch_connections_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     limit,
     config_data,
     expected_result,
@@ -133,19 +133,19 @@ async def test_service_call_fetch_connections_error(
     )
 
     with patch(
-        "homeassistant.components.swiss_public_transport.OpendataTransport",
+        "menuai.components.swiss_public_transport.OpendataTransport",
         return_value=AsyncMock(),
     ) as mock:
         mock().connections = json.loads(
-            await async_load_fixture(hass, "connections.json", DOMAIN)
+            await async_load_fixture(menuai, "connections.json", DOMAIN)
         )
 
-        await setup_integration(hass, config_entry)
+        await setup_integration(menuai, config_entry)
 
-        assert hass.services.has_service(DOMAIN, SERVICE_FETCH_CONNECTIONS)
+        assert menuai.services.has_service(DOMAIN, SERVICE_FETCH_CONNECTIONS)
         mock().async_get_data.side_effect = raise_error
         with expected_result:
-            await hass.services.async_call(
+            await menuai.services.async_call(
                 domain=DOMAIN,
                 service=SERVICE_FETCH_CONNECTIONS,
                 service_data={
@@ -158,7 +158,7 @@ async def test_service_call_fetch_connections_error(
 
 
 async def test_service_call_load_unload(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test service call with integration error."""
 
@@ -175,17 +175,17 @@ async def test_service_call_load_unload(
     bad_entry_id = "bad_entry_id"
 
     with patch(
-        "homeassistant.components.swiss_public_transport.OpendataTransport",
+        "menuai.components.swiss_public_transport.OpendataTransport",
         return_value=AsyncMock(),
     ) as mock:
         mock().connections = json.loads(
-            await async_load_fixture(hass, "connections.json", DOMAIN)
+            await async_load_fixture(menuai, "connections.json", DOMAIN)
         )
 
-        await setup_integration(hass, config_entry)
+        await setup_integration(menuai, config_entry)
 
-        assert hass.services.has_service(DOMAIN, SERVICE_FETCH_CONNECTIONS)
-        response = await hass.services.async_call(
+        assert menuai.services.has_service(DOMAIN, SERVICE_FETCH_CONNECTIONS)
+        response = await menuai.services.async_call(
             domain=DOMAIN,
             service=SERVICE_FETCH_CONNECTIONS,
             service_data={
@@ -194,16 +194,16 @@ async def test_service_call_load_unload(
             blocking=True,
             return_response=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         assert response["connections"] is not None
 
-        await hass.config_entries.async_unload(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_unload(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
         with pytest.raises(
             ServiceValidationError, match=f"{config_entry.title} is not loaded"
         ):
-            await hass.services.async_call(
+            await menuai.services.async_call(
                 domain=DOMAIN,
                 service=SERVICE_FETCH_CONNECTIONS,
                 service_data={
@@ -217,7 +217,7 @@ async def test_service_call_load_unload(
             ServiceValidationError,
             match=f'Swiss public transport integration instance "{bad_entry_id}" not found',
         ):
-            await hass.services.async_call(
+            await menuai.services.async_call(
                 domain=DOMAIN,
                 service=SERVICE_FETCH_CONNECTIONS,
                 service_data={

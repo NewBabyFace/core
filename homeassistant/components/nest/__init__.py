@@ -23,34 +23,34 @@ from google_nest_sdm.exceptions import (
 from google_nest_sdm.traits import TraitType
 import voluptuous as vol
 
-from homeassistant.auth.permissions.const import POLICY_READ
-from homeassistant.components.camera import Image, img_util
-from homeassistant.components.http import KEY_HASS_USER
-from homeassistant.components.http.view import HomeAssistantView
-from homeassistant.const import (
+from menuai.auth.permissions.const import POLICY_READ
+from menuai.components.camera import Image, img_util
+from menuai.components.http import KEY_menuai_USER
+from menuai.components.http.view import menuaiView
+from menuai.const import (
     CONF_BINARY_SENSORS,
     CONF_CLIENT_ID,
     CONF_CLIENT_SECRET,
     CONF_MONITORED_CONDITIONS,
     CONF_SENSORS,
     CONF_STRUCTURE,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     Platform,
 )
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.exceptions import (
+from menuai.core import Event, menuai, callback
+from menuai.exceptions import (
     ConfigEntryAuthFailed,
     ConfigEntryNotReady,
-    HomeAssistantError,
+    menuaiError,
     Unauthorized,
 )
-from homeassistant.helpers import (
+from menuai.helpers import (
     config_validation as cv,
     device_registry as dr,
     entity_registry as er,
 )
-from homeassistant.helpers.entity_registry import async_entries_for_device
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers.entity_registry import async_entries_for_device
+from menuai.helpers.typing import ConfigType
 
 from . import api
 from .const import (
@@ -110,10 +110,10 @@ EVENT_MEDIA_CACHE_SIZE = 256  # number of events
 THUMBNAIL_SIZE_PX = 175
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up Nest components with dispatch between old/new flows."""
-    hass.http.register_view(NestEventMediaView(hass))
-    hass.http.register_view(NestEventMediaThumbnailView(hass))
+    menuai.http.register_view(NestEventMediaView(menuai))
+    menuai.http.register_view(NestEventMediaThumbnailView(menuai))
     return True
 
 
@@ -122,12 +122,12 @@ class SignalUpdateCallback:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_reload_cb: Callable[[], Awaitable[None]],
         config_entry: NestConfigEntry,
     ) -> None:
         """Initialize EventCallback."""
-        self._hass = hass
+        self._menuai = menuai
         self._config_reload_cb = config_reload_cb
         self._config_entry = config_entry
 
@@ -142,7 +142,7 @@ class SignalUpdateCallback:
         if not (events := event_message.resource_update_events):
             return
         _LOGGER.debug("Event Update %s", events.keys())
-        device_registry = dr.async_get(self._hass)
+        device_registry = dr.async_get(self._menuai)
         device_entry = device_registry.async_get_device(
             identifiers={(DOMAIN, device_id)}
         )
@@ -175,7 +175,7 @@ class SignalUpdateCallback:
                 message["attachment"] = attachment
             if image_event.zones:
                 message["zones"] = image_event.zones
-            self._hass.bus.async_fire(NEST_EVENT, message)
+            self._menuai.bus.async_fire(NEST_EVENT, message)
 
     def _supported_traits(self, device_id: str) -> list[str]:
         if (
@@ -187,18 +187,18 @@ class SignalUpdateCallback:
         return list(device.traits)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: NestConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: NestConfigEntry) -> bool:
     """Set up Nest from a config entry with dispatch between old/new flows."""
     if DATA_SDM not in entry.data:
-        hass.async_create_task(hass.config_entries.async_remove(entry.entry_id))
+        menuai.async_create_task(menuai.config_entries.async_remove(entry.entry_id))
         return False
 
     if entry.unique_id != entry.data[CONF_PROJECT_ID]:
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry, unique_id=entry.data[CONF_PROJECT_ID]
         )
 
-    auth = await api.new_auth(hass, entry)
+    auth = await api.new_auth(menuai, entry)
     try:
         await auth.async_get_access_token()
     except ClientResponseError as err:
@@ -208,20 +208,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: NestConfigEntry) -> bool
     except ClientError as err:
         raise ConfigEntryNotReady from err
 
-    subscriber = await api.new_subscriber(hass, entry, auth)
+    subscriber = await api.new_subscriber(menuai, entry, auth)
     if not subscriber:
         return False
     # Keep media for last N events in memory
     subscriber.cache_policy.event_cache_size = EVENT_MEDIA_CACHE_SIZE
     subscriber.cache_policy.fetch = True
     # Use disk backed event media store
-    subscriber.cache_policy.store = await async_get_media_event_store(hass, subscriber)
-    subscriber.cache_policy.transcoder = await async_get_transcoder(hass)
+    subscriber.cache_policy.store = await async_get_media_event_store(menuai, subscriber)
+    subscriber.cache_policy.transcoder = await async_get_transcoder(menuai)
 
     async def async_config_reload() -> None:
-        await hass.config_entries.async_reload(entry.entry_id)
+        await menuai.config_entries.async_reload(entry.entry_id)
 
-    update_callback = SignalUpdateCallback(hass, async_config_reload, entry)
+    update_callback = SignalUpdateCallback(menuai, async_config_reload, entry)
     subscriber.set_update_callback(update_callback.async_handle_event)
     try:
         unsub = await subscriber.start_async()
@@ -242,12 +242,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: NestConfigEntry) -> bool
         raise ConfigEntryNotReady(f"Device manager error: {err!s}") from err
 
     @callback
-    def on_hass_stop(_: Event) -> None:
-        """Close connection when hass stops."""
+    def on_menuai_stop(_: Event) -> None:
+        """Close connection when menuai stops."""
         unsub()
 
     entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, on_hass_stop)
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, on_menuai_stop)
     )
 
     entry.async_on_unload(unsub)
@@ -256,17 +256,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: NestConfigEntry) -> bool
         device_manager=device_manager,
     )
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: NestConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: NestConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
-async def async_remove_entry(hass: HomeAssistant, entry: NestConfigEntry) -> None:
+async def async_remove_entry(menuai: menuai, entry: NestConfigEntry) -> None:
     """Handle removal of pubsub subscriptions created during config flow."""
     if (
         DATA_SDM not in entry.data
@@ -279,7 +279,7 @@ async def async_remove_entry(hass: HomeAssistant, entry: NestConfigEntry) -> Non
     if (subscription_name := entry.data.get(CONF_SUBSCRIPTION_NAME)) is None:
         subscription_name = entry.data[CONF_SUBSCRIBER_ID]
     admin_client = api.new_pubsub_admin_client(
-        hass,
+        menuai,
         access_token=entry.data["token"]["access_token"],
         cloud_project_id=entry.data[CONF_CLOUD_PROJECT_ID],
     )
@@ -297,24 +297,24 @@ async def async_remove_entry(hass: HomeAssistant, entry: NestConfigEntry) -> Non
         )
 
 
-class NestEventViewBase(HomeAssistantView, ABC):
+class NestEventViewBase(menuaiView, ABC):
     """Base class for media event APIs."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize NestEventViewBase."""
-        self.hass = hass
+        self.menuai = menuai
 
     async def get(
         self, request: web.Request, device_id: str, event_token: str
     ) -> web.StreamResponse:
         """Start a GET request."""
-        user = request[KEY_HASS_USER]
-        entity_registry = er.async_get(self.hass)
+        user = request[KEY_menuai_USER]
+        entity_registry = er.async_get(self.menuai)
         for entry in async_entries_for_device(entity_registry, device_id):
             if not user.permissions.check_entity(entry.entity_id, POLICY_READ):
                 raise Unauthorized(entity_id=entry.entity_id)
 
-        devices = async_get_media_source_devices(self.hass)
+        devices = async_get_media_source_devices(self.menuai)
         if not (nest_device := devices.get(device_id)):
             return self._json_error(
                 f"No Nest Device found for '{device_id}'", HTTPStatus.NOT_FOUND
@@ -326,7 +326,7 @@ class NestEventViewBase(HomeAssistantView, ABC):
                 f"Event token was invalid '{event_token}'", HTTPStatus.NOT_FOUND
             )
         except ApiException as err:
-            raise HomeAssistantError("Unable to fetch media for event") from err
+            raise menuaiError("Unable to fetch media for event") from err
         if not media:
             return self._json_error(
                 f"No event found for event_id '{event_token}'", HTTPStatus.NOT_FOUND
@@ -379,11 +379,11 @@ class NestEventMediaThumbnailView(NestEventViewBase):
     url = "/api/nest/event_media/{device_id}/{event_token}/thumbnail"
     name = "api:nest:event_media"
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize NestEventMediaThumbnailView."""
-        super().__init__(hass)
+        super().__init__(menuai)
         self._lock = asyncio.Lock()
-        self.hass = hass
+        self.menuai = menuai
 
     async def load_media(self, nest_device: Device, event_token: str) -> Media | None:
         """Load the specified media."""

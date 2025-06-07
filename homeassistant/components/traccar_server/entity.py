@@ -6,9 +6,9 @@ from typing import Any
 
 from pytraccar import DeviceModel, GeofenceModel, PositionModel
 
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import TraccarServerCoordinator
@@ -57,13 +57,13 @@ class TraccarServerEntity(CoordinatorEntity[TraccarServerCoordinator]):
         """Return the attributes."""
         return self.coordinator.data[self.device_id]["attributes"]
 
-    async def async_added_to_hass(self) -> None:
-        """Entity added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Entity added to menuai."""
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"{DOMAIN}_{self.device_id}",
                 self.async_write_ha_state,
             )
         )
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()

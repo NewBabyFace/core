@@ -10,7 +10,7 @@ from typing import Any
 import voluptuous as vol
 from voluptuous.humanize import humanize_error
 
-import homeassistant.helpers.config_validation as cv
+import menuai.helpers.config_validation as cv
 from script.translations import upload
 
 from .model import Config, Integration
@@ -50,14 +50,14 @@ ALLOW_NAME_TRANSLATION = {
 
 REMOVED_TITLE_MSG = (
     "config.title key has been moved out of config and into the root of strings.json. "
-    "Starting Home Assistant 0.109 you only need to define this key in the root "
+    "Starting MenuAI 0.109 you only need to define this key in the root "
     "if the title needs to be different than the name of your integration in the "
     "manifest."
 )
 
 MOVED_TRANSLATIONS_DIRECTORY_MSG = (
     "The '.translations' directory has been moved, the new name is 'translations', "
-    "starting with Home Assistant 0.112 your translations will no longer "
+    "starting with MenuAI 0.112 your translations will no longer "
     "load if you do not move/rename this "
 )
 
@@ -489,7 +489,7 @@ def validate_translation_file(
         strings_schema = gen_auth_schema(config, integration)
     elif integration.domain == "onboarding":
         strings_schema = ONBOARDING_SCHEMA
-    elif integration.domain == "homeassistant_hardware":
+    elif integration.domain == "menuai_hardware":
         strings_schema = gen_ha_hardware_schema(config, integration)
     else:
         strings_schema = gen_strings_schema(config, integration)

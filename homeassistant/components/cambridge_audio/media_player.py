@@ -13,7 +13,7 @@ from aiostreammagic import (
 )
 from aiostreammagic.models import ControlBusMode
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     BrowseMedia,
     MediaPlayerDeviceClass,
     MediaPlayerEntity,
@@ -22,9 +22,9 @@ from homeassistant.components.media_player import (
     MediaType,
     RepeatMode,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import CambridgeAudioConfigEntry, media_browser
 from .const import (
@@ -64,7 +64,7 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: CambridgeAudioConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -321,7 +321,7 @@ class CambridgeAudioDevice(CambridgeAudioEntity, MediaPlayerEntity):
             CAMBRIDGE_MEDIA_TYPE_AIRABLE,
             CAMBRIDGE_MEDIA_TYPE_INTERNET_RADIO,
         }:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="unsupported_media_type",
                 translation_placeholders={"media_type": media_type},
@@ -362,5 +362,5 @@ class CambridgeAudioDevice(CambridgeAudioEntity, MediaPlayerEntity):
     ) -> BrowseMedia:
         """Implement the media browsing helper."""
         return await media_browser.async_browse_media(
-            self.hass, self.client, media_content_id, media_content_type
+            self.menuai, self.client, media_content_id, media_content_type
         )

@@ -7,13 +7,13 @@ from unittest.mock import MagicMock, call
 
 from mysensors.sensor import Sensor
 
-from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
-from homeassistant.const import ATTR_BATTERY_LEVEL
-from homeassistant.core import HomeAssistant
+from menuai.components.switch import DOMAIN as SWITCH_DOMAIN
+from menuai.const import ATTR_BATTERY_LEVEL
+from menuai.core import menuai
 
 
 async def test_relay_node(
-    hass: HomeAssistant,
+    menuai: menuai,
     relay_node: Sensor,
     receive_message: Callable[[str], None],
     transport_write: MagicMock,
@@ -21,13 +21,13 @@ async def test_relay_node(
     """Test a relay node."""
     entity_id = "switch.relay_node_1_1"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == "off"
     assert state.attributes[ATTR_BATTERY_LEVEL] == 0
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         "turn_on",
         {"entity_id": entity_id},
@@ -38,16 +38,16 @@ async def test_relay_node(
     assert transport_write.call_args == call("1;1;1;1;2;1\n")
 
     receive_message("1;1;1;0;2;1\n")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == "on"
 
     transport_write.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         "turn_off",
         {"entity_id": entity_id},
@@ -58,9 +58,9 @@ async def test_relay_node(
     assert transport_write.call_args == call("1;1;1;1;2;0\n")
 
     receive_message("1;1;1;0;2;0\n")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == "off"

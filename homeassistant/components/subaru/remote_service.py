@@ -4,7 +4,7 @@ import logging
 
 from subarulink.exceptions import SubaruException
 
-from homeassistant.exceptions import HomeAssistantError
+from menuai.exceptions import menuaiError
 
 from .const import SERVICE_UNLOCK, VEHICLE_NAME, VEHICLE_VIN
 
@@ -31,4 +31,4 @@ async def async_call_remote_service(controller, cmd, vehicle_info, arg=None):
         _LOGGER.debug("%s command successfully completed for %s", cmd, car_name)
         return
 
-    raise HomeAssistantError(f"Service {cmd} failed for {car_name}: {err_msg}")
+    raise menuaiError(f"Service {cmd} failed for {car_name}: {err_msg}")

@@ -7,9 +7,9 @@ from typing import Any
 
 from pyfibaro.fibaro_device import DeviceModel
 
-from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceEntry
+from menuai.components.diagnostics import async_redact_data
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceEntry
 
 from . import CONF_IMPORT_PLUGINS, FibaroConfigEntry
 
@@ -27,7 +27,7 @@ def _create_diagnostics_data(
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, config_entry: FibaroConfigEntry
+    menuai: menuai, config_entry: FibaroConfigEntry
 ) -> Mapping[str, Any]:
     """Return diagnostics for a config entry."""
     controller = config_entry.runtime_data
@@ -36,7 +36,7 @@ async def async_get_config_entry_diagnostics(
 
 
 async def async_get_device_diagnostics(
-    hass: HomeAssistant, config_entry: FibaroConfigEntry, device: DeviceEntry
+    menuai: menuai, config_entry: FibaroConfigEntry, device: DeviceEntry
 ) -> Mapping[str, Any]:
     """Return diagnostics for a device."""
     controller = config_entry.runtime_data

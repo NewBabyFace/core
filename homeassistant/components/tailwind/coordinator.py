@@ -9,12 +9,12 @@ from gotailwind import (
     TailwindError,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_TOKEN
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, CONF_TOKEN
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN, LOGGER
 
@@ -24,15 +24,15 @@ type TailwindConfigEntry = ConfigEntry[TailwindDataUpdateCoordinator]
 class TailwindDataUpdateCoordinator(DataUpdateCoordinator[TailwindDeviceStatus]):
     """Class to manage fetching Tailwind data."""
 
-    def __init__(self, hass: HomeAssistant, entry: TailwindConfigEntry) -> None:
+    def __init__(self, menuai: menuai, entry: TailwindConfigEntry) -> None:
         """Initialize the coordinator."""
         self.tailwind = Tailwind(
             host=entry.data[CONF_HOST],
             token=entry.data[CONF_TOKEN],
-            session=async_get_clientsession(hass),
+            session=async_get_clientsession(menuai),
         )
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=entry,
             name=f"{DOMAIN}_{entry.data[CONF_HOST]}",

@@ -27,12 +27,12 @@ from pycec.const import (
 )
 import pytest
 
-from homeassistant.components.hdmi_cec import EVENT_HDMI_CEC_UNAVAILABLE
-from homeassistant.components.media_player import (
+from menuai.components.hdmi_cec import EVENT_HDMI_CEC_UNAVAILABLE
+from menuai.components.media_player import (
     DOMAIN as MEDIA_PLAYER_DOMAIN,
     MediaPlayerEntityFeature as MPEF,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_MEDIA_NEXT_TRACK,
     SERVICE_MEDIA_PAUSE,
@@ -53,7 +53,7 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from . import MockHDMIDevice, assert_key_press_release
 from .conftest import CecEntityCreator, HDMINetworkCreator
@@ -93,7 +93,7 @@ def assert_state_fixture(request: pytest.FixtureRequest) -> AssertState:
 
 
 async def test_load_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     create_hdmi_network: HDMINetworkCreator,
     create_cec_entity: CecEntityCreator,
 ) -> None:
@@ -102,16 +102,16 @@ async def test_load_platform(
     mock_hdmi_device = MockHDMIDevice(logical_address=3)
     await create_cec_entity(hdmi_network, mock_hdmi_device)
     mock_hdmi_device.set_update_callback.assert_called_once()
-    state = hass.states.get("media_player.hdmi_3")
+    state = menuai.states.get("media_player.hdmi_3")
     assert state is not None
 
-    state = hass.states.get("switch.hdmi_3")
+    state = menuai.states.get("switch.hdmi_3")
     assert state is None
 
 
 @pytest.mark.parametrize("platform", [{}, {"platform": "switch"}])
 async def test_load_types(
-    hass: HomeAssistant,
+    menuai: menuai,
     create_hdmi_network: HDMINetworkCreator,
     create_cec_entity: CecEntityCreator,
     platform: dict[str, Any],
@@ -122,24 +122,24 @@ async def test_load_types(
     mock_hdmi_device = MockHDMIDevice(logical_address=3)
     await create_cec_entity(hdmi_network, mock_hdmi_device)
     mock_hdmi_device.set_update_callback.assert_called_once()
-    state = hass.states.get("media_player.hdmi_3")
+    state = menuai.states.get("media_player.hdmi_3")
     assert state is None
 
-    state = hass.states.get("switch.hdmi_3")
+    state = menuai.states.get("switch.hdmi_3")
     assert state is not None
 
     mock_hdmi_device = MockHDMIDevice(logical_address=4)
     await create_cec_entity(hdmi_network, mock_hdmi_device)
     mock_hdmi_device.set_update_callback.assert_called_once()
-    state = hass.states.get("media_player.hdmi_4")
+    state = menuai.states.get("media_player.hdmi_4")
     assert state is not None
 
-    state = hass.states.get("switch.hdmi_4")
+    state = menuai.states.get("switch.hdmi_4")
     assert state is None
 
 
 async def test_service_on(
-    hass: HomeAssistant,
+    menuai: menuai,
     create_hdmi_network: HDMINetworkCreator,
     create_cec_entity: CecEntityCreator,
     assert_state: AssertState,
@@ -148,25 +148,25 @@ async def test_service_on(
     hdmi_network = await create_hdmi_network({"platform": "media_player"})
     mock_hdmi_device = MockHDMIDevice(logical_address=3)
     await create_cec_entity(hdmi_network, mock_hdmi_device)
-    state = hass.states.get("media_player.hdmi_3")
+    state = menuai.states.get("media_player.hdmi_3")
     assert state.state != STATE_ON
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "media_player.hdmi_3"},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     mock_hdmi_device.turn_on.assert_called_once_with()
 
-    state = hass.states.get("media_player.hdmi_3")
+    state = menuai.states.get("media_player.hdmi_3")
     assert_state(state.state, STATE_ON)
 
 
 async def test_service_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     create_hdmi_network: HDMINetworkCreator,
     create_cec_entity: CecEntityCreator,
     assert_state: AssertState,
@@ -175,10 +175,10 @@ async def test_service_off(
     hdmi_network = await create_hdmi_network({"platform": "media_player"})
     mock_hdmi_device = MockHDMIDevice(logical_address=3)
     await create_cec_entity(hdmi_network, mock_hdmi_device)
-    state = hass.states.get("media_player.hdmi_3")
+    state = menuai.states.get("media_player.hdmi_3")
     assert state.state != STATE_OFF
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: "media_player.hdmi_3"},
@@ -187,7 +187,7 @@ async def test_service_off(
 
     mock_hdmi_device.turn_off.assert_called_once_with()
 
-    state = hass.states.get("media_player.hdmi_3")
+    state = menuai.states.get("media_player.hdmi_3")
     assert_state(state.state, STATE_OFF)
 
 
@@ -266,7 +266,7 @@ async def test_service_off(
     ],
 )
 async def test_supported_features(
-    hass: HomeAssistant,
+    menuai: menuai,
     create_hdmi_network: HDMINetworkCreator,
     create_cec_entity: CecEntityCreator,
     type_id: int,
@@ -279,7 +279,7 @@ async def test_supported_features(
     )
     await create_cec_entity(hdmi_network, mock_hdmi_device)
 
-    state = hass.states.get("media_player.hdmi_3")
+    state = menuai.states.get("media_player.hdmi_3")
     supported_features = state.attributes["supported_features"]
     for feature in expected_features:
         assert supported_features & feature
@@ -295,7 +295,7 @@ async def test_supported_features(
     ],
 )
 async def test_volume_services(
-    hass: HomeAssistant,
+    menuai: menuai,
     create_hdmi_network: HDMINetworkCreator,
     create_cec_entity: CecEntityCreator,
     service: str,
@@ -311,13 +311,13 @@ async def test_volume_services(
     if extra_data:
         data |= extra_data
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         service,
         data,
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert mock_hdmi_device.send_command.call_count == 2
     assert_key_press_release(mock_hdmi_device.send_command, dst=3, key=key)
@@ -331,7 +331,7 @@ async def test_volume_services(
     ],
 )
 async def test_track_change_services(
-    hass: HomeAssistant,
+    menuai: menuai,
     create_hdmi_network: HDMINetworkCreator,
     create_cec_entity: CecEntityCreator,
     service: str,
@@ -342,13 +342,13 @@ async def test_track_change_services(
     mock_hdmi_device = MockHDMIDevice(logical_address=3, type=TYPE_RECORDER)
     await create_cec_entity(hdmi_network, mock_hdmi_device)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         service,
         {ATTR_ENTITY_ID: "media_player.hdmi_3"},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert mock_hdmi_device.send_command.call_count == 2
     assert_key_press_release(mock_hdmi_device.send_command, dst=3, key=key)
@@ -370,7 +370,7 @@ async def test_track_change_services(
     ],
 )
 async def test_playback_services(
-    hass: HomeAssistant,
+    menuai: menuai,
     create_hdmi_network: HDMINetworkCreator,
     create_cec_entity: CecEntityCreator,
     assert_state: AssertState,
@@ -383,24 +383,24 @@ async def test_playback_services(
     mock_hdmi_device = MockHDMIDevice(logical_address=3, type=TYPE_RECORDER)
     await create_cec_entity(hdmi_network, mock_hdmi_device)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         service,
         {ATTR_ENTITY_ID: "media_player.hdmi_3"},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert mock_hdmi_device.send_command.call_count == 2
     assert_key_press_release(mock_hdmi_device.send_command, dst=3, key=key)
 
-    state = hass.states.get("media_player.hdmi_3")
+    state = menuai.states.get("media_player.hdmi_3")
     assert_state(state.state, expected_state)
 
 
 @pytest.mark.xfail(reason="PLAY feature isn't enabled")
 async def test_play_pause_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     create_hdmi_network: HDMINetworkCreator,
     create_cec_entity: CecEntityCreator,
     assert_state: AssertState,
@@ -412,27 +412,27 @@ async def test_play_pause_service(
     )
     await create_cec_entity(hdmi_network, mock_hdmi_device)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_MEDIA_PLAY_PAUSE,
         {ATTR_ENTITY_ID: "media_player.hdmi_3"},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert mock_hdmi_device.send_command.call_count == 2
     assert_key_press_release(mock_hdmi_device.send_command, dst=3, key=KEY_PAUSE)
 
-    state = hass.states.get("media_player.hdmi_3")
+    state = menuai.states.get("media_player.hdmi_3")
     assert_state(state.state, STATE_PAUSED)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_MEDIA_PLAY_PAUSE,
         {ATTR_ENTITY_ID: "media_player.hdmi_3"},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert mock_hdmi_device.send_command.call_count == 4
     assert_key_press_release(mock_hdmi_device.send_command, 1, dst=3, key=KEY_PLAY)
@@ -462,7 +462,7 @@ async def test_play_pause_service(
     ],
 )
 async def test_update_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     create_hdmi_network: HDMINetworkCreator,
     create_cec_entity: CecEntityCreator,
     type_id: int,
@@ -476,9 +476,9 @@ async def test_update_state(
 
     for att, val in update_data.items():
         setattr(mock_hdmi_device, att, val)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("media_player.hdmi_3")
+    state = menuai.states.get("media_player.hdmi_3")
     assert state.state == expected_state
 
 
@@ -513,7 +513,7 @@ async def test_update_state(
     ],
 )
 async def test_starting_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     create_hdmi_network: HDMINetworkCreator,
     create_cec_entity: CecEntityCreator,
     data: dict[str, Any],
@@ -523,7 +523,7 @@ async def test_starting_state(
     hdmi_network = await create_hdmi_network({"platform": "media_player"})
     mock_hdmi_device = MockHDMIDevice(logical_address=3, **data)
     await create_cec_entity(hdmi_network, mock_hdmi_device)
-    state = hass.states.get("media_player.hdmi_3")
+    state = menuai.states.get("media_player.hdmi_3")
     assert state.state == expected_state
 
 
@@ -531,7 +531,7 @@ async def test_starting_state(
     reason="The code only sets the state to unavailable, doesn't set the `_attr_available` to false."
 )
 async def test_unavailable_status(
-    hass: HomeAssistant,
+    menuai: menuai,
     create_hdmi_network: HDMINetworkCreator,
     create_cec_entity: CecEntityCreator,
 ) -> None:
@@ -540,7 +540,7 @@ async def test_unavailable_status(
     mock_hdmi_device = MockHDMIDevice(logical_address=3)
     await create_cec_entity(hdmi_network, mock_hdmi_device)
 
-    hass.bus.async_fire(EVENT_HDMI_CEC_UNAVAILABLE)
+    menuai.bus.async_fire(EVENT_HDMI_CEC_UNAVAILABLE)
 
-    state = hass.states.get("media_player.hdmi_3")
+    state = menuai.states.get("media_player.hdmi_3")
     assert state.state == STATE_UNAVAILABLE

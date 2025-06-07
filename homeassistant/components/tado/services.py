@@ -4,9 +4,9 @@ import logging
 
 import voluptuous as vol
 
-from homeassistant.core import HomeAssistant, ServiceCall, callback
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import selector
+from menuai.core import menuai, ServiceCall, callback
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers import selector
 
 from .const import (
     ATTR_MESSAGE,
@@ -30,7 +30,7 @@ SCHEMA_ADD_METER_READING = vol.Schema(
 
 
 @callback
-def setup_services(hass: HomeAssistant) -> None:
+def setup_services(menuai: menuai) -> None:
     """Set up the services for the Tado integration."""
 
     async def add_meter_reading(call: ServiceCall) -> None:
@@ -39,7 +39,7 @@ def setup_services(hass: HomeAssistant) -> None:
         reading: int = call.data[CONF_READING]
         _LOGGER.debug("Add meter reading %s", reading)
 
-        entry = hass.config_entries.async_get_entry(entry_id)
+        entry = menuai.config_entries.async_get_entry(entry_id)
         if entry is None:
             raise ServiceValidationError("Config entry not found")
 
@@ -47,8 +47,8 @@ def setup_services(hass: HomeAssistant) -> None:
         response: dict = await coordinator.set_meter_reading(call.data[CONF_READING])
 
         if ATTR_MESSAGE in response:
-            raise HomeAssistantError(response[ATTR_MESSAGE])
+            raise menuaiError(response[ATTR_MESSAGE])
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_ADD_METER_READING, add_meter_reading, SCHEMA_ADD_METER_READING
     )

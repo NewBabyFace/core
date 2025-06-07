@@ -15,11 +15,11 @@ from pylamarzocco.devices import LaMarzoccoMachine
 from pylamarzocco.exceptions import RequestNotSuccessful
 from pylamarzocco.models import PreBrewing, SteamBoilerLevel
 
-from homeassistant.components.select import SelectEntity, SelectEntityDescription
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.select import SelectEntity, SelectEntityDescription
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import LaMarzoccoConfigEntry
@@ -120,7 +120,7 @@ ENTITIES: tuple[LaMarzoccoSelectEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: LaMarzoccoConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -152,7 +152,7 @@ class LaMarzoccoSelectEntity(LaMarzoccoEntity, SelectEntity):
                     self.coordinator.device, option
                 )
             except RequestNotSuccessful as exc:
-                raise HomeAssistantError(
+                raise menuaiError(
                     translation_domain=DOMAIN,
                     translation_key="select_option_error",
                     translation_placeholders={

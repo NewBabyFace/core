@@ -3,9 +3,9 @@
 from syrupy.assertion import SnapshotAssertion
 from syrupy.filters import paths
 
-from homeassistant.components.sonos.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceRegistry
+from menuai.components.sonos.const import DOMAIN
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceRegistry
 
 from tests.common import MockConfigEntry
 from tests.components.diagnostics import (
@@ -16,15 +16,15 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_diagnostics_config_entry(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     async_autosetup_sonos,
     config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test diagnostics for config entry."""
 
-    result = await get_diagnostics_for_config_entry(hass, hass_client, config_entry)
+    result = await get_diagnostics_for_config_entry(menuai, menuai_client, config_entry)
 
     # Exclude items that are timing dependent.
     assert result == snapshot(
@@ -37,8 +37,8 @@ async def test_diagnostics_config_entry(
 
 
 async def test_diagnostics_device(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     device_registry: DeviceRegistry,
     async_autosetup_sonos,
     config_entry: MockConfigEntry,
@@ -52,7 +52,7 @@ async def test_diagnostics_device(
     assert device_entry is not None
 
     result = await get_diagnostics_for_device(
-        hass, hass_client, config_entry, device_entry
+        menuai, menuai_client, config_entry, device_entry
     )
 
     assert result == snapshot(

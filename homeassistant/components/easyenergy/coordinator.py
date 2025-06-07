@@ -13,11 +13,11 @@ from easyenergy import (
     Gas,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util import dt as dt_util
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.util import dt as dt_util
 
 from .const import DOMAIN, LOGGER, SCAN_INTERVAL, THRESHOLD_HOUR
 
@@ -37,17 +37,17 @@ class EasyEnergyDataUpdateCoordinator(DataUpdateCoordinator[EasyEnergyData]):
 
     config_entry: EasyEnergyConfigEntry
 
-    def __init__(self, hass: HomeAssistant, entry: EasyEnergyConfigEntry) -> None:
+    def __init__(self, menuai: menuai, entry: EasyEnergyConfigEntry) -> None:
         """Initialize global easyEnergy data updater."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             name=DOMAIN,
             update_interval=SCAN_INTERVAL,
             config_entry=entry,
         )
 
-        self.easyenergy = EasyEnergy(session=async_get_clientsession(hass))
+        self.easyenergy = EasyEnergy(session=async_get_clientsession(menuai))
 
     async def _async_update_data(self) -> EasyEnergyData:
         """Fetch data from easyEnergy."""

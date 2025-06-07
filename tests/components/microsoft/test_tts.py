@@ -7,13 +7,13 @@ from unittest.mock import patch
 from pycsspeechtts import pycsspeechtts
 import pytest
 
-from homeassistant.components import tts
-from homeassistant.components.media_player import ATTR_MEDIA_CONTENT_ID
-from homeassistant.components.microsoft.tts import SUPPORTED_LANGUAGES
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.core_config import async_process_ha_core_config
-from homeassistant.exceptions import ServiceNotFound
-from homeassistant.setup import async_setup_component
+from menuai.components import tts
+from menuai.components.media_player import ATTR_MEDIA_CONTENT_ID
+from menuai.components.microsoft.tts import SUPPORTED_LANGUAGES
+from menuai.core import menuai, ServiceCall
+from menuai.core_config import async_process_ha_core_config
+from menuai.exceptions import ServiceNotFound
+from menuai.setup import async_setup_component
 
 from tests.components.tts.common import retrieve_media
 from tests.typing import ClientSessionGenerator
@@ -25,10 +25,10 @@ def mock_tts_cache_dir_autouse(mock_tts_cache_dir: Path) -> None:
 
 
 @pytest.fixture(autouse=True)
-async def setup_internal_url(hass: HomeAssistant):
+async def setup_internal_url(menuai: menuai):
     """Set up internal url."""
     await async_process_ha_core_config(
-        hass, {"internal_url": "http://example.local:8123"}
+        menuai, {"internal_url": "http://example.local:8123"}
     )
 
 
@@ -36,26 +36,26 @@ async def setup_internal_url(hass: HomeAssistant):
 def mock_tts():
     """Mock tts."""
     with patch(
-        "homeassistant.components.microsoft.tts.pycsspeechtts.TTSTranslator"
+        "menuai.components.microsoft.tts.pycsspeechtts.TTSTranslator"
     ) as mock_tts:
         mock_tts.return_value.speak.return_value = b""
         yield mock_tts
 
 
 async def test_service_say(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     mock_tts,
     service_calls: list[ServiceCall],
 ) -> None:
     """Test service call say."""
 
     await async_setup_component(
-        hass, tts.DOMAIN, {tts.DOMAIN: {"platform": "microsoft", "api_key": ""}}
+        menuai, tts.DOMAIN, {tts.DOMAIN: {"platform": "microsoft", "api_key": ""}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         tts.DOMAIN,
         "microsoft_say",
         {
@@ -68,7 +68,7 @@ async def test_service_say(
     assert len(service_calls) == 2
     assert (
         await retrieve_media(
-            hass, hass_client, service_calls[1].data[ATTR_MEDIA_CONTENT_ID]
+            menuai, menuai_client, service_calls[1].data[ATTR_MEDIA_CONTENT_ID]
         )
         == HTTPStatus.OK
     )
@@ -89,15 +89,15 @@ async def test_service_say(
 
 
 async def test_service_say_en_gb_config(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     mock_tts,
     service_calls: list[ServiceCall],
 ) -> None:
     """Test service call say with en-gb code in the config."""
 
     await async_setup_component(
-        hass,
+        menuai,
         tts.DOMAIN,
         {
             tts.DOMAIN: {
@@ -108,9 +108,9 @@ async def test_service_say_en_gb_config(
             }
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         tts.DOMAIN,
         "microsoft_say",
         {
@@ -123,7 +123,7 @@ async def test_service_say_en_gb_config(
     assert len(service_calls) == 2
     assert (
         await retrieve_media(
-            hass, hass_client, service_calls[1].data[ATTR_MEDIA_CONTENT_ID]
+            menuai, menuai_client, service_calls[1].data[ATTR_MEDIA_CONTENT_ID]
         )
         == HTTPStatus.OK
     )
@@ -143,21 +143,21 @@ async def test_service_say_en_gb_config(
 
 
 async def test_service_say_en_gb_service(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     mock_tts,
     service_calls: list[ServiceCall],
 ) -> None:
     """Test service call say with en-gb code in the service."""
 
     await async_setup_component(
-        hass,
+        menuai,
         tts.DOMAIN,
         {tts.DOMAIN: {"platform": "microsoft", "api_key": ""}},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         tts.DOMAIN,
         "microsoft_say",
         {
@@ -172,7 +172,7 @@ async def test_service_say_en_gb_service(
     assert len(service_calls) == 2
     assert (
         await retrieve_media(
-            hass, hass_client, service_calls[1].data[ATTR_MEDIA_CONTENT_ID]
+            menuai, menuai_client, service_calls[1].data[ATTR_MEDIA_CONTENT_ID]
         )
         == HTTPStatus.OK
     )
@@ -192,15 +192,15 @@ async def test_service_say_en_gb_service(
 
 
 async def test_service_say_fa_ir_config(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     mock_tts,
     service_calls: list[ServiceCall],
 ) -> None:
     """Test service call say with fa-ir code in the config."""
 
     await async_setup_component(
-        hass,
+        menuai,
         tts.DOMAIN,
         {
             tts.DOMAIN: {
@@ -211,9 +211,9 @@ async def test_service_say_fa_ir_config(
             }
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         tts.DOMAIN,
         "microsoft_say",
         {
@@ -226,7 +226,7 @@ async def test_service_say_fa_ir_config(
     assert len(service_calls) == 2
     assert (
         await retrieve_media(
-            hass, hass_client, service_calls[1].data[ATTR_MEDIA_CONTENT_ID]
+            menuai, menuai_client, service_calls[1].data[ATTR_MEDIA_CONTENT_ID]
         )
         == HTTPStatus.OK
     )
@@ -246,8 +246,8 @@ async def test_service_say_fa_ir_config(
 
 
 async def test_service_say_fa_ir_service(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     mock_tts,
     service_calls: list[ServiceCall],
 ) -> None:
@@ -261,10 +261,10 @@ async def test_service_say_fa_ir_service(
         }
     }
 
-    await async_setup_component(hass, tts.DOMAIN, config)
-    await hass.async_block_till_done()
+    await async_setup_component(menuai, tts.DOMAIN, config)
+    await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         tts.DOMAIN,
         "microsoft_say",
         {
@@ -279,7 +279,7 @@ async def test_service_say_fa_ir_service(
     assert len(service_calls) == 2
     assert (
         await retrieve_media(
-            hass, hass_client, service_calls[1].data[ATTR_MEDIA_CONTENT_ID]
+            menuai, menuai_client, service_calls[1].data[ATTR_MEDIA_CONTENT_ID]
         )
         == HTTPStatus.OK
     )
@@ -315,17 +315,17 @@ def test_supported_languages() -> None:
     assert len(SUPPORTED_LANGUAGES) > 100
 
 
-async def test_invalid_language(hass: HomeAssistant, mock_tts) -> None:
+async def test_invalid_language(menuai: menuai, mock_tts) -> None:
     """Test setup component with invalid language."""
     await async_setup_component(
-        hass,
+        menuai,
         tts.DOMAIN,
         {tts.DOMAIN: {"platform": "microsoft", "api_key": "", "language": "en"}},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     with pytest.raises(ServiceNotFound):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             tts.DOMAIN,
             "microsoft_say",
             {
@@ -339,19 +339,19 @@ async def test_invalid_language(hass: HomeAssistant, mock_tts) -> None:
 
 
 async def test_service_say_error(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     mock_tts,
     service_calls: list[ServiceCall],
 ) -> None:
     """Test service call say with http error."""
     mock_tts.return_value.speak.side_effect = pycsspeechtts.requests.HTTPError
     await async_setup_component(
-        hass, tts.DOMAIN, {tts.DOMAIN: {"platform": "microsoft", "api_key": ""}}
+        menuai, tts.DOMAIN, {tts.DOMAIN: {"platform": "microsoft", "api_key": ""}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         tts.DOMAIN,
         "microsoft_say",
         {
@@ -364,7 +364,7 @@ async def test_service_say_error(
     assert len(service_calls) == 2
     assert (
         await retrieve_media(
-            hass, hass_client, service_calls[1].data[ATTR_MEDIA_CONTENT_ID]
+            menuai, menuai_client, service_calls[1].data[ATTR_MEDIA_CONTENT_ID]
         )
         == HTTPStatus.INTERNAL_SERVER_ERROR
     )

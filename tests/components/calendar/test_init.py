@@ -13,11 +13,11 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 import voluptuous as vol
 
-from homeassistant.components.calendar import DOMAIN, SERVICE_GET_EVENTS
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceNotSupported
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.components.calendar import DOMAIN, SERVICE_GET_EVENTS
+from menuai.core import menuai
+from menuai.exceptions import menuaiError, ServiceNotSupported
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from .conftest import MockCalendarEntity, MockConfigEntry
 
@@ -45,22 +45,22 @@ def mock_set_frozen_time(frozen_time: str | None) -> Generator[None]:
 
 @pytest.fixture(name="setup_platform", autouse=True)
 async def mock_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     set_time_zone: None,
     frozen_time: str | None,
     mock_setup_integration: None,
     config_entry: MockConfigEntry,
 ) -> None:
     """Fixture to setup platforms used in the test and fixtures are set up in the right order."""
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
 
 async def test_events_http_api(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test the calendar demo view."""
-    client = await hass_client()
+    client = await menuai_client()
     start = dt_util.now()
     end = start + timedelta(days=1)
     response = await client.get(
@@ -72,25 +72,25 @@ async def test_events_http_api(
 
 
 async def test_events_http_api_missing_fields(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test the calendar demo view."""
-    client = await hass_client()
+    client = await menuai_client()
     response = await client.get("/api/calendars/calendar.calendar_2")
     assert response.status == HTTPStatus.BAD_REQUEST
 
 
 async def test_events_http_api_error(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     test_entities: list[MockCalendarEntity],
 ) -> None:
     """Test the calendar demo view."""
-    client = await hass_client()
+    client = await menuai_client()
     start = dt_util.now()
     end = start + timedelta(days=1)
 
-    test_entities[0].async_get_events.side_effect = HomeAssistantError("Failure")
+    test_entities[0].async_get_events.side_effect = menuaiError("Failure")
 
     response = await client.get(
         f"/api/calendars/calendar.calendar_1?start={start.isoformat()}&end={end.isoformat()}"
@@ -100,10 +100,10 @@ async def test_events_http_api_error(
 
 
 async def test_events_http_api_dates_wrong_order(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test the calendar demo view."""
-    client = await hass_client()
+    client = await menuai_client()
     start = dt_util.now()
     end = start + timedelta(days=-1)
     response = await client.get(
@@ -113,10 +113,10 @@ async def test_events_http_api_dates_wrong_order(
 
 
 async def test_calendars_http_api(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test the calendar demo view."""
-    client = await hass_client()
+    client = await menuai_client()
     response = await client.get("/api/calendars")
     assert response.status == HTTPStatus.OK
     data = await response.json()
@@ -198,10 +198,10 @@ async def test_calendars_http_api(
     ],
 )
 async def test_unsupported_websocket(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, payload, code
+    menuai: menuai, menuai_ws_client: WebSocketGenerator, payload, code
 ) -> None:
     """Test unsupported websocket command."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json(
         {
             "id": 1,
@@ -214,15 +214,15 @@ async def test_unsupported_websocket(
     assert resp["error"].get("code") == code
 
 
-async def test_unsupported_create_event_service(hass: HomeAssistant) -> None:
+async def test_unsupported_create_event_service(menuai: menuai) -> None:
     """Test unsupported service call."""
-    await async_setup_component(hass, "homeassistant", {})
+    await async_setup_component(menuai, "menuai", {})
     with pytest.raises(
         ServiceNotSupported,
         match="Entity calendar.calendar_1 does not "
         "support action calendar.create_event",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             "create_event",
             {
@@ -390,7 +390,7 @@ async def test_unsupported_create_event_service(hass: HomeAssistant) -> None:
     ],
 )
 async def test_create_event_service_invalid_params(
-    hass: HomeAssistant,
+    menuai: menuai,
     date_fields: dict[str, Any],
     expected_error: type[Exception],
     error_match: str | None,
@@ -398,7 +398,7 @@ async def test_create_event_service_invalid_params(
     """Test creating an event using the create_event service."""
 
     with pytest.raises(expected_error, match=error_match):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "calendar",
             "create_event",
             {
@@ -443,7 +443,7 @@ async def test_create_event_service_invalid_params(
     ],
 )
 async def test_list_events_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     start_time: str,
     end_time: str,
     service: str,
@@ -455,7 +455,7 @@ async def test_list_events_service(
     string output values.
     """
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         DOMAIN,
         service,
         target={"entity_id": ["calendar.calendar_1"]},
@@ -489,14 +489,14 @@ async def test_list_events_service(
 )
 @pytest.mark.parametrize("frozen_time", ["2023-10-19 13:50:05"], ids=["frozen_time"])
 async def test_list_events_service_duration(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity: str,
     duration: str,
     service: str,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test listing events using a time duration."""
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         DOMAIN,
         service,
         {
@@ -509,10 +509,10 @@ async def test_list_events_service_duration(
     assert response == snapshot
 
 
-async def test_list_events_positive_duration(hass: HomeAssistant) -> None:
+async def test_list_events_positive_duration(menuai: menuai) -> None:
     """Test listing events requires a positive duration."""
     with pytest.raises(vol.Invalid, match="should be positive"):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_GET_EVENTS,
             {
@@ -524,12 +524,12 @@ async def test_list_events_positive_duration(hass: HomeAssistant) -> None:
         )
 
 
-async def test_list_events_exclusive_fields(hass: HomeAssistant) -> None:
+async def test_list_events_exclusive_fields(menuai: menuai) -> None:
     """Test listing events specifying fields that are exclusive."""
     end = dt_util.now() + timedelta(days=1)
 
     with pytest.raises(vol.Invalid, match="at most one of"):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_GET_EVENTS,
             {
@@ -542,10 +542,10 @@ async def test_list_events_exclusive_fields(hass: HomeAssistant) -> None:
         )
 
 
-async def test_list_events_missing_fields(hass: HomeAssistant) -> None:
+async def test_list_events_missing_fields(menuai: menuai) -> None:
     """Test listing events missing some required fields."""
     with pytest.raises(vol.Invalid, match="at least one of"):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_GET_EVENTS,
             {
@@ -587,14 +587,14 @@ async def test_list_events_missing_fields(hass: HomeAssistant) -> None:
     ],
 )
 async def test_list_events_service_same_dates(
-    hass: HomeAssistant,
+    menuai: menuai,
     service_data: dict[str, str],
     error_msg: str,
 ) -> None:
     """Test listing events from the service call using the same start and end time."""
 
     with pytest.raises(vol.error.MultipleInvalid, match=re.escape(error_msg)):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_GET_EVENTS,
             service_data={

@@ -8,8 +8,8 @@ import logging
 
 import voluptuous as vol
 
-from homeassistant.components import bluetooth
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.components import bluetooth
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
 
 from .const import DOMAIN
 from .coordinator import async_last_service_info
@@ -53,7 +53,7 @@ class BLEDeviceTrackerConfigFlow(ConfigFlow, domain=DOMAIN):
         """Set up by user."""
         errors: dict[str, str] = {}
 
-        if not bluetooth.async_scanner_count(self.hass, connectable=False):
+        if not bluetooth.async_scanner_count(self.menuai, connectable=False):
             return self.async_abort(reason="bluetooth_not_available")
 
         if user_input is not None:
@@ -61,7 +61,7 @@ class BLEDeviceTrackerConfigFlow(ConfigFlow, domain=DOMAIN):
 
             if not (irk_bytes := _parse_irk(irk)):
                 errors[CONF_IRK] = "irk_not_valid"
-            elif not (service_info := async_last_service_info(self.hass, irk_bytes)):
+            elif not (service_info := async_last_service_info(self.menuai, irk_bytes)):
                 errors[CONF_IRK] = "irk_not_found"
             else:
                 await self.async_set_unique_id(irk_bytes.hex())

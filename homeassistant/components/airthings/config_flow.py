@@ -8,9 +8,9 @@ from typing import Any
 import airthings
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_ID
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_ID
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import CONF_SECRET, DOMAIN
 
@@ -48,7 +48,7 @@ class AirthingsConfigFlow(ConfigFlow, domain=DOMAIN):
 
         try:
             await airthings.get_token(
-                async_get_clientsession(self.hass),
+                async_get_clientsession(self.menuai),
                 user_input[CONF_ID],
                 user_input[CONF_SECRET],
             )

@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant.components import notify
-from homeassistant.components.device_automation import InvalidDeviceAutomationConfig
-from homeassistant.const import CONF_DEVICE_ID, CONF_DOMAIN, CONF_TYPE
-from homeassistant.core import Context, HomeAssistant
-from homeassistant.exceptions import TemplateError
-from homeassistant.helpers import config_validation as cv, template
-from homeassistant.helpers.typing import ConfigType, TemplateVarsType
+from menuai.components import notify
+from menuai.components.device_automation import InvalidDeviceAutomationConfig
+from menuai.const import CONF_DEVICE_ID, CONF_DOMAIN, CONF_TYPE
+from menuai.core import Context, menuai
+from menuai.exceptions import TemplateError
+from menuai.helpers import config_validation as cv, template
+from menuai.helpers.typing import ConfigType, TemplateVarsType
 
 from .const import DOMAIN
 from .util import get_notify_service, supports_push, webhook_id_from_device_id
@@ -26,32 +26,32 @@ ACTION_SCHEMA = cv.DEVICE_ACTION_BASE_SCHEMA.extend(
 
 
 async def async_get_actions(
-    hass: HomeAssistant, device_id: str
+    menuai: menuai, device_id: str
 ) -> list[dict[str, str]]:
     """List device actions for Mobile App devices."""
-    webhook_id = webhook_id_from_device_id(hass, device_id)
+    webhook_id = webhook_id_from_device_id(menuai, device_id)
 
-    if webhook_id is None or not supports_push(hass, webhook_id):
+    if webhook_id is None or not supports_push(menuai, webhook_id):
         return []
 
     return [{CONF_DEVICE_ID: device_id, CONF_DOMAIN: DOMAIN, CONF_TYPE: "notify"}]
 
 
 async def async_call_action_from_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     variables: TemplateVarsType,
     context: Context | None,
 ) -> None:
     """Execute a device action."""
-    webhook_id = webhook_id_from_device_id(hass, config[CONF_DEVICE_ID])
+    webhook_id = webhook_id_from_device_id(menuai, config[CONF_DEVICE_ID])
 
     if webhook_id is None:
         raise InvalidDeviceAutomationConfig(
             "Unable to resolve webhook ID from the device ID"
         )
 
-    if (service_name := get_notify_service(hass, webhook_id)) is None:
+    if (service_name := get_notify_service(menuai, webhook_id)) is None:
         raise InvalidDeviceAutomationConfig(
             "Unable to find notify service for webhook ID"
         )
@@ -72,13 +72,13 @@ async def async_call_action_from_config(
                 f"Error rendering {key}: {err}"
             ) from err
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         notify.DOMAIN, service_name, service_data, blocking=True, context=context
     )
 
 
 async def async_get_action_capabilities(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> dict[str, vol.Schema]:
     """List action capabilities."""
     if config[CONF_TYPE] != "notify":

@@ -9,19 +9,19 @@ from aiohttp import ClientConnectionError
 from pydaikin.daikin_base import Appliance
 from pydaikin.factory import DaikinFactory
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_API_KEY,
     CONF_HOST,
     CONF_PASSWORD,
     CONF_UUID,
     Platform,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
-from homeassistant.util.ssl import client_context_no_verify
+from menuai.core import menuai, callback
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.device_registry import CONNECTION_NETWORK_MAC
+from menuai.util.ssl import client_context_no_verify
 
 from .const import KEY_MAC, TIMEOUT
 from .coordinator import DaikinConfigEntry, DaikinCoordinator
@@ -32,14 +32,14 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORMS = [Platform.CLIMATE, Platform.SENSOR, Platform.SWITCH]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: DaikinConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: DaikinConfigEntry) -> bool:
     """Establish connection with Daikin."""
     conf = entry.data
     # For backwards compat, set unique ID
     if entry.unique_id is None or ".local" in entry.unique_id:
-        hass.config_entries.async_update_entry(entry, unique_id=conf[KEY_MAC])
+        menuai.config_entries.async_update_entry(entry, unique_id=conf[KEY_MAC])
 
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
     host = conf[CONF_HOST]
     try:
         async with asyncio.timeout(TIMEOUT):
@@ -59,28 +59,28 @@ async def async_setup_entry(hass: HomeAssistant, entry: DaikinConfigEntry) -> bo
         _LOGGER.debug("ClientConnectionError to %s", host)
         raise ConfigEntryNotReady from err
 
-    coordinator = DaikinCoordinator(hass, entry, device)
+    coordinator = DaikinCoordinator(menuai, entry, device)
 
     await coordinator.async_config_entry_first_refresh()
 
-    await async_migrate_unique_id(hass, entry, device)
+    await async_migrate_unique_id(menuai, entry, device)
 
     entry.runtime_data = coordinator
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: DaikinConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: DaikinConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 async def async_migrate_unique_id(
-    hass: HomeAssistant, config_entry: DaikinConfigEntry, device: Appliance
+    menuai: menuai, config_entry: DaikinConfigEntry, device: Appliance
 ) -> None:
     """Migrate old entry."""
-    dev_reg = dr.async_get(hass)
-    ent_reg = er.async_get(hass)
+    dev_reg = dr.async_get(menuai)
+    ent_reg = er.async_get(menuai)
     old_unique_id = config_entry.unique_id
     new_unique_id = device.mac
     new_mac = dr.format_mac(new_unique_id)
@@ -149,11 +149,11 @@ async def async_migrate_unique_id(
             )
 
         # Migrate entities
-        await er.async_migrate_entries(hass, config_entry.entry_id, _update_unique_id)
+        await er.async_migrate_entries(menuai, config_entry.entry_id, _update_unique_id)
 
         new_data = {**config_entry.data, KEY_MAC: dr.format_mac(new_unique_id)}
 
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             config_entry, unique_id=new_unique_id, data=new_data
         )
 

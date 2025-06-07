@@ -7,9 +7,9 @@ import logging
 
 from pyvesync import VeSync
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import UPDATE_INTERVAL
 
@@ -22,13 +22,13 @@ class VeSyncDataCoordinator(DataUpdateCoordinator[None]):
     config_entry: ConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: ConfigEntry, manager: VeSync
+        self, menuai: menuai, config_entry: ConfigEntry, manager: VeSync
     ) -> None:
         """Initialize."""
         self._manager = manager
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name="VeSyncDataCoordinator",
@@ -38,7 +38,7 @@ class VeSyncDataCoordinator(DataUpdateCoordinator[None]):
     async def _async_update_data(self) -> None:
         """Fetch data from API endpoint."""
 
-        return await self.hass.async_add_executor_job(self.update_data_all)
+        return await self.menuai.async_add_executor_job(self.update_data_all)
 
     def update_data_all(self) -> None:
         """Update all the devices."""

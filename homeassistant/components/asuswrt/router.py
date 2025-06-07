@@ -9,20 +9,20 @@ from typing import Any
 
 from pyasuswrt import AsusWrtError
 
-from homeassistant.components.device_tracker import (
+from menuai.components.device_tracker import (
     CONF_CONSIDER_HOME,
     DEFAULT_CONSIDER_HOME,
     DOMAIN as TRACKER_DOMAIN,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.device_registry import DeviceInfo, format_mac
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-from homeassistant.util import dt as dt_util, slugify
+from menuai.config_entries import ConfigEntry
+from menuai.core import CALLBACK_TYPE, menuai, callback
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import entity_registry as er
+from menuai.helpers.device_registry import DeviceInfo, format_mac
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.event import async_track_time_interval
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.util import dt as dt_util, slugify
 
 from .bridge import AsusWrtBridge, WrtDevice
 from .const import (
@@ -52,9 +52,9 @@ _LOGGER = logging.getLogger(__name__)
 class AsusWrtSensorDataHandler:
     """Data handler for AsusWrt sensor."""
 
-    def __init__(self, hass: HomeAssistant, api: AsusWrtBridge) -> None:
+    def __init__(self, menuai: menuai, api: AsusWrtBridge) -> None:
         """Initialize a AsusWrt sensor data handler."""
-        self._hass = hass
+        self._menuai = menuai
         self._api = api
         self._connected_devices = 0
 
@@ -85,7 +85,7 @@ class AsusWrtSensorDataHandler:
             raise RuntimeError(f"Invalid sensor type: {sensor_type}")
 
         coordinator = DataUpdateCoordinator(
-            self._hass,
+            self._menuai,
             _LOGGER,
             name=sensor_type,
             update_method=method,
@@ -155,9 +155,9 @@ class AsusWrtDevInfo:
 class AsusWrtRouter:
     """Representation of a AsusWrt router."""
 
-    def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
+    def __init__(self, menuai: menuai, entry: ConfigEntry) -> None:
         """Initialize a AsusWrt router."""
-        self.hass = hass
+        self.menuai = menuai
         self._entry = entry
 
         self._devices: dict[str, AsusWrtDevInfo] = {}
@@ -177,7 +177,7 @@ class AsusWrtRouter:
         self._options.update(entry.options)
 
         self._api: AsusWrtBridge = AsusWrtBridge.get_bridge(
-            self.hass, dict(self._entry.data), self._options
+            self.menuai, dict(self._entry.data), self._options
         )
 
     def _migrate_entities_unique_id(self) -> None:
@@ -196,7 +196,7 @@ class AsusWrtRouter:
             "CPU": "CPU Temperature",
         }
 
-        entity_reg = er.async_get(self.hass)
+        entity_reg = er.async_get(self.menuai)
         router_entries = er.async_entries_for_config_entry(
             entity_reg, self._entry.entry_id
         )
@@ -228,7 +228,7 @@ class AsusWrtRouter:
             raise ConfigEntryNotReady
 
         # Load tracked entities from registry
-        entity_reg = er.async_get(self.hass)
+        entity_reg = er.async_get(self.menuai)
         track_entries = er.async_entries_for_config_entry(
             entity_reg, self._entry.entry_id
         )
@@ -264,7 +264,7 @@ class AsusWrtRouter:
         await self.init_sensors_coordinator()
 
         self.async_on_close(
-            async_track_time_interval(self.hass, self.update_all, SCAN_INTERVAL)
+            async_track_time_interval(self.menuai, self.update_all, SCAN_INTERVAL)
         )
 
     async def update_all(self, now: datetime | None = None) -> None:
@@ -311,9 +311,9 @@ class AsusWrtRouter:
             device.update(dev_info)
             self._devices[device_mac] = device
 
-        async_dispatcher_send(self.hass, self.signal_device_update)
+        async_dispatcher_send(self.menuai, self.signal_device_update)
         if new_device:
-            async_dispatcher_send(self.hass, self.signal_device_new)
+            async_dispatcher_send(self.menuai, self.signal_device_new)
         await self._update_unpolled_sensors()
 
     async def init_sensors_coordinator(self) -> None:
@@ -321,7 +321,7 @@ class AsusWrtRouter:
         if self._sensors_data_handler:
             return
 
-        self._sensors_data_handler = AsusWrtSensorDataHandler(self.hass, self._api)
+        self._sensors_data_handler = AsusWrtSensorDataHandler(self.menuai, self._api)
         self._sensors_data_handler.update_device_count(self._connected_devices)
 
         sensors_types = await self._api.async_get_available_sensors()

@@ -13,12 +13,12 @@ from greeclimate.discovery import Discovery, Listener
 from greeclimate.exceptions import DeviceNotBoundError, DeviceTimeoutError
 from greeclimate.network import Response
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.json import json_dumps
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util.dt import utcnow
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.json import json_dumps
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.util.dt import utcnow
 
 from .const import (
     DISCOVERY_TIMEOUT,
@@ -48,11 +48,11 @@ class DeviceDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     config_entry: GreeConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: GreeConfigEntry, device: Device
+        self, menuai: menuai, config_entry: GreeConfigEntry, device: Device
     ) -> None:
         """Initialize the data update coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=f"{DOMAIN}-{device.device_info.name}",
@@ -138,10 +138,10 @@ class DeviceDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 class DiscoveryService(Listener):
     """Discovery event handler for gree devices."""
 
-    def __init__(self, hass: HomeAssistant, entry: GreeConfigEntry) -> None:
+    def __init__(self, menuai: menuai, entry: GreeConfigEntry) -> None:
         """Initialize discovery service."""
         super().__init__()
-        self.hass = hass
+        self.menuai = menuai
         self.entry = entry
 
         self.discovery = Discovery(DISCOVERY_TIMEOUT)
@@ -164,11 +164,11 @@ class DiscoveryService(Listener):
             device.device_info.ip,
             device.device_info.port,
         )
-        coordo = DeviceDataUpdateCoordinator(self.hass, self.entry, device)
+        coordo = DeviceDataUpdateCoordinator(self.menuai, self.entry, device)
         self.entry.runtime_data.coordinators.append(coordo)
         await coordo.async_refresh()
 
-        async_dispatcher_send(self.hass, DISPATCH_DEVICE_DISCOVERED, coordo)
+        async_dispatcher_send(self.menuai, DISPATCH_DEVICE_DISCOVERED, coordo)
 
     async def device_update(self, device_info: DeviceInfo) -> None:
         """Handle updates in device information, update if ip has changed."""

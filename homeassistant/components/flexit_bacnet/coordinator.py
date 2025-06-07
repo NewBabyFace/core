@@ -9,11 +9,11 @@ import logging
 from flexit_bacnet import FlexitBACnet
 from flexit_bacnet.bacnet import DecodingError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_DEVICE_ID, CONF_IP_ADDRESS
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_DEVICE_ID, CONF_IP_ADDRESS
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN
 
@@ -27,10 +27,10 @@ class FlexitCoordinator(DataUpdateCoordinator[FlexitBACnet]):
 
     config_entry: FlexitConfigEntry
 
-    def __init__(self, hass: HomeAssistant, config_entry: FlexitConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: FlexitConfigEntry) -> None:
         """Initialize my coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=f"{DOMAIN}_{config_entry.data[CONF_DEVICE_ID]}",

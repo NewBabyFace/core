@@ -8,8 +8,8 @@ from synology_dsm.api.dsm.network import NetworkInterface
 from syrupy.assertion import SnapshotAssertion
 from syrupy.filters import props
 
-from homeassistant.components.synology_dsm.const import DOMAIN
-from homeassistant.const import (
+from menuai.components.synology_dsm.const import DOMAIN
+from menuai.const import (
     CONF_HOST,
     CONF_MAC,
     CONF_PASSWORD,
@@ -17,7 +17,7 @@ from homeassistant.const import (
     CONF_SSL,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .common import mock_dsm_information
 from .consts import HOST, MACS, PASSWORD, PORT, SERIAL, USE_SSL, USERNAME
@@ -30,7 +30,7 @@ from tests.typing import ClientSessionGenerator
 @pytest.fixture
 def mock_dsm_with_usb():
     """Mock a successful service with USB support."""
-    with patch("homeassistant.components.synology_dsm.common.SynologyDSM") as dsm:
+    with patch("menuai.components.synology_dsm.common.SynologyDSM") as dsm:
         dsm.login = AsyncMock(return_value=True)
         dsm.update = AsyncMock(return_value=True)
 
@@ -157,12 +157,12 @@ def mock_dsm_with_usb():
 
 @pytest.fixture
 async def setup_dsm_with_usb(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_dsm_with_usb: MagicMock,
 ):
     """Mock setup of synology dsm config entry with USB."""
     with patch(
-        "homeassistant.components.synology_dsm.common.SynologyDSM",
+        "menuai.components.synology_dsm.common.SynologyDSM",
         return_value=mock_dsm_with_usb,
     ):
         entry = MockConfigEntry(
@@ -177,22 +177,22 @@ async def setup_dsm_with_usb(
             },
             unique_id=SERIAL,
         )
-        entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
         yield mock_dsm_with_usb
 
 
 async def test_entry_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     setup_dsm_with_usb: MagicMock,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test diagnostics for Synology DSM config entry."""
-    config_entry = hass.config_entries.async_entries(DOMAIN)[0]
-    result = await get_diagnostics_for_config_entry(hass, hass_client, config_entry)
+    config_entry = menuai.config_entries.async_entries(DOMAIN)[0]
+    result = await get_diagnostics_for_config_entry(menuai, menuai_client, config_entry)
 
     assert result == snapshot(
         exclude=props("api_details", "created_at", "modified_at", "entry_id")

@@ -11,7 +11,7 @@ import aiohttp
 from aiohttp import hdrs
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_HEADERS,
     CONF_METHOD,
     CONF_PASSWORD,
@@ -22,19 +22,19 @@ from homeassistant.const import (
     CONF_VERIFY_SSL,
     SERVICE_RELOAD,
 )
-from homeassistant.core import (
-    HomeAssistant,
+from menuai.core import (
+    menuai,
     ServiceCall,
     ServiceResponse,
     SupportsResponse,
     callback,
 )
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.reload import async_integration_yaml_config
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util.ssl import SSLCipherList
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.reload import async_integration_yaml_config
+from menuai.helpers.typing import ConfigType
+from menuai.util.ssl import SSLCipherList
 
 DOMAIN = "rest_command"
 
@@ -71,22 +71,22 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the REST command component."""
 
     async def reload_service_handler(service: ServiceCall) -> None:
         """Remove all rest_commands and load new ones from config."""
-        conf = await async_integration_yaml_config(hass, DOMAIN)
+        conf = await async_integration_yaml_config(menuai, DOMAIN)
 
         # conf will be None if the configuration can't be parsed
         if conf is None:
             return
 
-        existing = hass.services.async_services_for_domain(DOMAIN)
+        existing = menuai.services.async_services_for_domain(DOMAIN)
         for existing_service in existing:
             if existing_service == SERVICE_RELOAD:
                 continue
-            hass.services.async_remove(DOMAIN, existing_service)
+            menuai.services.async_remove(DOMAIN, existing_service)
 
         for name, command_config in conf[DOMAIN].items():
             async_register_rest_command(name, command_config)
@@ -95,7 +95,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     def async_register_rest_command(name: str, command_config: dict[str, Any]) -> None:
         """Create service for rest command."""
         websession = async_get_clientsession(
-            hass,
+            menuai,
             command_config[CONF_VERIFY_SSL],
             ssl_cipher=(
                 SSLCipherList.INSECURE
@@ -187,7 +187,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                         else:
                             _content = await response.text()
                     except (JSONDecodeError, AttributeError) as err:
-                        raise HomeAssistantError(
+                        raise menuaiError(
                             translation_domain=DOMAIN,
                             translation_key="decoding_error",
                             translation_placeholders={
@@ -197,7 +197,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                         ) from err
 
                     except UnicodeDecodeError as err:
-                        raise HomeAssistantError(
+                        raise menuaiError(
                             translation_domain=DOMAIN,
                             translation_key="decoding_error",
                             translation_placeholders={
@@ -208,7 +208,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                     return {"content": _content, "status": response.status}
 
             except TimeoutError as err:
-                raise HomeAssistantError(
+                raise menuaiError(
                     translation_domain=DOMAIN,
                     translation_key="timeout",
                     translation_placeholders={"request_url": request_url},
@@ -216,14 +216,14 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
             except aiohttp.ClientError as err:
                 _LOGGER.error("Error fetching data: %s", err)
-                raise HomeAssistantError(
+                raise menuaiError(
                     translation_domain=DOMAIN,
                     translation_key="client_error",
                     translation_placeholders={"request_url": request_url},
                 ) from err
 
         # register services
-        hass.services.async_register(
+        menuai.services.async_register(
             DOMAIN,
             name,
             async_service_handler,
@@ -233,7 +233,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     for name, command_config in config[DOMAIN].items():
         async_register_rest_command(name, command_config)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_RELOAD, reload_service_handler, schema=vol.Schema({})
     )
 

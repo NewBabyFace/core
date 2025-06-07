@@ -6,7 +6,7 @@ from typing import Any, Final
 
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_NAME,
     CONF_PAYLOAD,
@@ -17,7 +17,7 @@ from homeassistant.const import (
     CONF_VALUE_TEMPLATE,
     CONF_VERIFY_SSL,
 )
-from homeassistant.helpers import config_validation as cv
+from menuai.helpers import config_validation as cv
 
 from .const import (
     CONF_BUFFER_SIZE,

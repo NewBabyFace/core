@@ -10,20 +10,20 @@ from chip.clusters import Objects as clusters
 from matter_server.common.errors import UpdateCheckError, UpdateError
 from matter_server.common.models import MatterSoftwareVersion, UpdateSource
 
-from homeassistant.components.update import (
+from menuai.components.update import (
     ATTR_LATEST_VERSION,
     UpdateDeviceClass,
     UpdateEntity,
     UpdateEntityDescription,
     UpdateEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import STATE_ON, Platform
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.event import async_call_later
-from homeassistant.helpers.restore_state import ExtraStoredData
+from menuai.config_entries import ConfigEntry
+from menuai.const import STATE_ON, Platform
+from menuai.core import CALLBACK_TYPE, menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.event import async_call_later
+from menuai.helpers.restore_state import ExtraStoredData
 
 from .entity import MatterEntity
 from .helpers import get_matter
@@ -58,12 +58,12 @@ class MatterUpdateExtraStoredData(ExtraStoredData):
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Matter lock from Config Entry."""
-    matter = get_matter(hass)
+    matter = get_matter(menuai)
     matter.register_platform_handler(Platform.UPDATE, async_add_entities)
 
 
@@ -133,7 +133,7 @@ class MatterUpdate(MatterEntity, UpdateEntity):
             self._attr_release_url = update_information.release_notes_url
 
         except UpdateCheckError as err:
-            raise HomeAssistantError(f"Error finding applicable update: {err}") from err
+            raise menuaiError(f"Error finding applicable update: {err}") from err
 
     async def async_release_notes(self) -> str | None:
         """Return full release notes.
@@ -164,9 +164,9 @@ class MatterUpdate(MatterEntity, UpdateEntity):
             "</ha-alert>\n\n"
         )
 
-    async def async_added_to_hass(self) -> None:
-        """Call when the entity is added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Call when the entity is added to menuai."""
+        await super().async_added_to_menuai()
 
         if state := await self.async_get_last_state():
             self._attr_latest_version = state.attributes.get(ATTR_LATEST_VERSION)
@@ -203,7 +203,7 @@ class MatterUpdate(MatterEntity, UpdateEntity):
         if not self.get_matter_attribute_value(
             clusters.OtaSoftwareUpdateRequestor.Attributes.UpdatePossible
         ):
-            raise HomeAssistantError("Device is not ready to install updates")
+            raise menuaiError("Device is not ready to install updates")
 
         software_version: str | int | None = version
         if self._software_update is not None and (
@@ -214,7 +214,7 @@ class MatterUpdate(MatterEntity, UpdateEntity):
             software_version = self._software_update.software_version
 
         if software_version is None:
-            raise HomeAssistantError("No software version specified")
+            raise menuaiError("No software version specified")
 
         self._attr_in_progress = True
         # Immediately update the progress state change to make frontend feel responsive.
@@ -226,23 +226,23 @@ class MatterUpdate(MatterEntity, UpdateEntity):
                 software_version=software_version,
             )
         except UpdateCheckError as err:
-            raise HomeAssistantError(f"Error finding applicable update: {err}") from err
+            raise menuaiError(f"Error finding applicable update: {err}") from err
         except UpdateError as err:
-            raise HomeAssistantError(f"Error updating: {err}") from err
+            raise menuaiError(f"Error updating: {err}") from err
         finally:
             # Check for updates right after the update since Matter devices
             # can have strict update paths (e.g. Eve)
             self._cancel_update = async_call_later(
-                self.hass, POLL_AFTER_INSTALL, self._async_update_future
+                self.menuai, POLL_AFTER_INSTALL, self._async_update_future
             )
 
     async def _async_update_future(self, now: datetime | None = None) -> None:
         """Request update."""
         await self.async_update()
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Entity removed."""
-        await super().async_will_remove_from_hass()
+        await super().async_will_remove_from_menuai()
         if self._cancel_update is not None:
             self._cancel_update()
 

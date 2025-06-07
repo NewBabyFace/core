@@ -7,17 +7,17 @@ import logging
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
-from homeassistant.const import EVENT_STATE_CHANGED
-from homeassistant.core import (
+from menuai.const import EVENT_STATE_CHANGED
+from menuai.core import (
     CALLBACK_TYPE,
     Event,
     EventStateChangedData,
-    HassJob,
-    HomeAssistant,
+    menuaiJob,
+    menuai,
     callback,
 )
-from homeassistant.helpers.event import async_call_later
-from homeassistant.helpers.significant_change import create_checker
+from menuai.helpers.event import async_call_later
+from menuai.helpers.significant_change import create_checker
 
 from .const import DOMAIN
 from .error import SmartHomeError
@@ -39,7 +39,7 @@ _LOGGER = logging.getLogger(__name__)
 
 @callback
 def async_enable_report_state(
-    hass: HomeAssistant, google_config: AbstractConfig
+    menuai: menuai, google_config: AbstractConfig
 ) -> CALLBACK_TYPE:
     """Enable state and notification reporting."""
     checker = None
@@ -62,21 +62,21 @@ def async_enable_report_state(
         # If things got queued up in last batch while we were reporting, schedule ourselves again
         if pending[0]:
             unsub_pending = async_call_later(
-                hass, REPORT_STATE_WINDOW, report_states_job
+                menuai, REPORT_STATE_WINDOW, report_states_job
             )
         else:
             unsub_pending = None
 
-    report_states_job = HassJob(report_states)
+    report_states_job = menuaiJob(report_states)
 
     @callback
     def _async_entity_state_filter(data: EventStateChangedData) -> bool:
         return bool(
-            hass.is_running
+            menuai.is_running
             and (new_state := data["new_state"])
             and google_config.should_expose(new_state)
             and async_get_google_entity_if_supported_cached(
-                hass, google_config, new_state
+                menuai, google_config, new_state
             )
         )
 
@@ -88,7 +88,7 @@ def async_enable_report_state(
         if TYPE_CHECKING:
             assert new_state is not None  # verified in filter
         entity = async_get_google_entity_if_supported_cached(
-            hass, google_config, new_state
+            menuai, google_config, new_state
         )
         if TYPE_CHECKING:
             assert entity is not None  # verified in filter
@@ -140,12 +140,12 @@ def async_enable_report_state(
 
         if unsub_pending is None:
             unsub_pending = async_call_later(
-                hass, REPORT_STATE_WINDOW, report_states_job
+                menuai, REPORT_STATE_WINDOW, report_states_job
             )
 
     @callback
     def extra_significant_check(
-        hass: HomeAssistant,
+        menuai: menuai,
         old_state: str,
         old_attrs: dict,
         old_extra_arg: dict,
@@ -161,9 +161,9 @@ def async_enable_report_state(
         nonlocal unsub, checker
         entities = {}
 
-        checker = await create_checker(hass, DOMAIN, extra_significant_check)
+        checker = await create_checker(menuai, DOMAIN, extra_significant_check)
 
-        for entity in async_get_entities(hass, google_config):
+        for entity in async_get_entities(menuai, google_config):
             if not entity.should_expose():
                 continue
 
@@ -186,14 +186,14 @@ def async_enable_report_state(
 
         await google_config.async_report_state_all({"devices": {"states": entities}})
 
-        unsub = hass.bus.async_listen(
+        unsub = menuai.bus.async_listen(
             EVENT_STATE_CHANGED,
             _async_entity_state_listener,
             event_filter=_async_entity_state_filter,
         )
 
     unsub = async_call_later(
-        hass, INITIAL_REPORT_DELAY, HassJob(initial_report, cancel_on_shutdown=True)
+        menuai, INITIAL_REPORT_DELAY, menuaiJob(initial_report, cancel_on_shutdown=True)
     )
 
     @callback

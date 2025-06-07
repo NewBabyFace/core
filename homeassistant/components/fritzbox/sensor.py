@@ -9,14 +9,14 @@ from typing import Final
 
 from pyfritzhome.fritzhomedevice import FritzhomeDevice
 
-from homeassistant.components.climate import PRESET_COMFORT, PRESET_ECO
-from homeassistant.components.sensor import (
+from menuai.components.climate import PRESET_COMFORT, PRESET_ECO
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     PERCENTAGE,
     EntityCategory,
     UnitOfElectricCurrent,
@@ -25,10 +25,10 @@ from homeassistant.const import (
     UnitOfPower,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
-from homeassistant.util.dt import utc_from_timestamp
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
+from menuai.util.dt import utc_from_timestamp
 
 from .coordinator import FritzboxConfigEntry
 from .entity import FritzBoxDeviceEntity
@@ -222,7 +222,7 @@ SENSOR_TYPES: Final[tuple[FritzSensorEntityDescription, ...]] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: FritzboxConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

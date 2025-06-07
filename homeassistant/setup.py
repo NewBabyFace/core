@@ -1,4 +1,4 @@
-"""All methods needed to bootstrap a Home Assistant instance."""
+"""All methods needed to bootstrap a MenuAI instance."""
 
 from __future__ import annotations
 
@@ -18,22 +18,22 @@ from . import config as conf_util, core, loader, requirements
 from .const import (
     BASE_PLATFORMS,  # noqa: F401
     EVENT_COMPONENT_LOADED,
-    EVENT_HOMEASSISTANT_START,
+    EVENT_menuai_START,
     PLATFORM_FORMAT,
 )
 from .core import (
     CALLBACK_TYPE,
-    DOMAIN as HOMEASSISTANT_DOMAIN,
+    DOMAIN as menuai_DOMAIN,
     Event,
-    HomeAssistant,
+    menuai,
     callback,
 )
-from .exceptions import DependencyError, HomeAssistantError
+from .exceptions import DependencyError, menuaiError
 from .helpers import issue_registry as ir, singleton, translation
 from .helpers.issue_registry import IssueSeverity, async_create_issue
 from .helpers.typing import ConfigType
 from .util.async_ import create_eager_task
-from .util.hass_dict import HassKey
+from .util.menuai_dict import menuaiKey
 
 current_setup_group: contextvars.ContextVar[tuple[str, str | None] | None] = (
     contextvars.ContextVar("current_setup_group", default=None)
@@ -51,30 +51,30 @@ ATTR_COMPONENT: Final = "component"
 #   being setup and the Task is the `_async_setup_component` helper.
 # - Tasks are removed from _DATA_SETUP if setup was successful, that is,
 #   the task returned True.
-_DATA_SETUP: HassKey[dict[str, asyncio.Future[bool]]] = HassKey("setup_tasks")
+_DATA_SETUP: menuaiKey[dict[str, asyncio.Future[bool]]] = menuaiKey("setup_tasks")
 
 # _DATA_SETUP_DONE is a dict, indicating components which will be setup:
 # - Events are added to _DATA_SETUP_DONE during bootstrap by
 #   async_set_domains_to_be_loaded, the key is the domain which will be loaded.
 # - Events are set and removed from _DATA_SETUP_DONE when async_setup_component
 #   is finished, regardless of if the setup was successful or not.
-_DATA_SETUP_DONE: HassKey[dict[str, asyncio.Future[bool]]] = HassKey("setup_done")
+_DATA_SETUP_DONE: menuaiKey[dict[str, asyncio.Future[bool]]] = menuaiKey("setup_done")
 
 # _DATA_SETUP_STARTED is a dict, indicating when an attempt
 # to setup a component started.
-_DATA_SETUP_STARTED: HassKey[dict[tuple[str, str | None], float]] = HassKey(
+_DATA_SETUP_STARTED: menuaiKey[dict[tuple[str, str | None], float]] = menuaiKey(
     "setup_started"
 )
 
 # _DATA_SETUP_TIME is a defaultdict, indicating how time was spent
 # setting up a component.
-_DATA_SETUP_TIME: HassKey[
+_DATA_SETUP_TIME: menuaiKey[
     defaultdict[str, defaultdict[str | None, defaultdict[SetupPhases, float]]]
-] = HassKey("setup_time")
+] = menuaiKey("setup_time")
 
-_DATA_DEPS_REQS: HassKey[set[str]] = HassKey("deps_reqs_processed")
+_DATA_DEPS_REQS: menuaiKey[set[str]] = menuaiKey("deps_reqs_processed")
 
-_DATA_PERSISTENT_ERRORS: HassKey[dict[str, str | None]] = HassKey(
+_DATA_PERSISTENT_ERRORS: menuaiKey[dict[str, str | None]] = menuaiKey(
     "bootstrap_persistent_errors"
 )
 
@@ -95,7 +95,7 @@ class EventComponentLoaded(TypedDict):
 
 @callback
 def async_notify_setup_error(
-    hass: HomeAssistant, component: str, display_link: str | None = None
+    menuai: menuai, component: str, display_link: str | None = None
 ) -> None:
     """Print a persistent notification.
 
@@ -104,8 +104,8 @@ def async_notify_setup_error(
     # pylint: disable-next=import-outside-toplevel
     from .components import persistent_notification
 
-    if (errors := hass.data.get(_DATA_PERSISTENT_ERRORS)) is None:
-        errors = hass.data[_DATA_PERSISTENT_ERRORS] = {}
+    if (errors := menuai.data.get(_DATA_PERSISTENT_ERRORS)) is None:
+        errors = menuai.data[_DATA_PERSISTENT_ERRORS] = {}
 
     errors[component] = errors.get(component) or display_link
 
@@ -119,56 +119,56 @@ def async_notify_setup_error(
     message += "\nPlease check your config and [logs](/config/logs)."
 
     persistent_notification.async_create(
-        hass, message, "Invalid config", "invalid_config"
+        menuai, message, "Invalid config", "invalid_config"
     )
 
 
 @core.callback
-def async_set_domains_to_be_loaded(hass: core.HomeAssistant, domains: set[str]) -> None:
+def async_set_domains_to_be_loaded(menuai: core.menuai, domains: set[str]) -> None:
     """Set domains that are going to be loaded from the config.
 
     This allow us to:
      - Properly handle after_dependencies.
      - Keep track of domains which will load but have not yet finished loading
     """
-    setup_done_futures = hass.data.setdefault(_DATA_SETUP_DONE, {})
-    setup_futures = hass.data.setdefault(_DATA_SETUP, {})
-    old_domains = set(setup_futures) | set(setup_done_futures) | hass.config.components
+    setup_done_futures = menuai.data.setdefault(_DATA_SETUP_DONE, {})
+    setup_futures = menuai.data.setdefault(_DATA_SETUP, {})
+    old_domains = set(setup_futures) | set(setup_done_futures) | menuai.config.components
     if overlap := old_domains & domains:
         _LOGGER.debug("Domains to be loaded %s already loaded or pending", overlap)
     setup_done_futures.update(
-        {domain: hass.loop.create_future() for domain in domains - old_domains}
+        {domain: menuai.loop.create_future() for domain in domains - old_domains}
     )
 
 
-def setup_component(hass: core.HomeAssistant, domain: str, config: ConfigType) -> bool:
+def setup_component(menuai: core.menuai, domain: str, config: ConfigType) -> bool:
     """Set up a component and all its dependencies."""
     return asyncio.run_coroutine_threadsafe(
-        async_setup_component(hass, domain, config), hass.loop
+        async_setup_component(menuai, domain, config), menuai.loop
     ).result()
 
 
 async def async_setup_component(
-    hass: core.HomeAssistant, domain: str, config: ConfigType
+    menuai: core.menuai, domain: str, config: ConfigType
 ) -> bool:
     """Set up a component and all its dependencies.
 
     This method is a coroutine.
     """
-    if domain in hass.config.components:
+    if domain in menuai.config.components:
         return True
 
-    setup_futures = hass.data.setdefault(_DATA_SETUP, {})
-    setup_done_futures = hass.data.setdefault(_DATA_SETUP_DONE, {})
+    setup_futures = menuai.data.setdefault(_DATA_SETUP, {})
+    setup_done_futures = menuai.data.setdefault(_DATA_SETUP_DONE, {})
 
     if existing_setup_future := setup_futures.get(domain):
         return await existing_setup_future
 
-    setup_future = hass.loop.create_future()
+    setup_future = menuai.loop.create_future()
     setup_futures[domain] = setup_future
 
     try:
-        result = await _async_setup_component(hass, domain, config)
+        result = await _async_setup_component(menuai, domain, config)
         setup_future.set_result(result)
         if setup_done_future := setup_done_futures.pop(domain, None):
             setup_done_future.set_result(result)
@@ -178,7 +178,7 @@ async def async_setup_component(
             futures.append(setup_done_future)
         for future in futures:
             # If the setup call is cancelled it likely means
-            # Home Assistant is shutting down so the future might
+            # MenuAI is shutting down so the future might
             # already be done which will cause this to raise
             # an InvalidStateError which is appropriate because
             # the component setup was cancelled and is in an
@@ -194,29 +194,29 @@ async def async_setup_component(
 
 
 async def _async_process_dependencies(
-    hass: core.HomeAssistant, config: ConfigType, integration: loader.Integration
+    menuai: core.menuai, config: ConfigType, integration: loader.Integration
 ) -> list[str]:
     """Ensure all dependencies are set up.
 
     Returns a list of dependencies which failed to set up.
     """
-    setup_futures = hass.data.setdefault(_DATA_SETUP, {})
+    setup_futures = menuai.data.setdefault(_DATA_SETUP, {})
 
     dependencies_tasks: dict[str, asyncio.Future[bool]] = {}
 
     for dep in integration.dependencies:
         fut = setup_futures.get(dep)
         if fut is None:
-            if dep in hass.config.components:
+            if dep in menuai.config.components:
                 continue
             fut = create_eager_task(
-                async_setup_component(hass, dep, config),
+                async_setup_component(menuai, dep, config),
                 name=f"setup {dep} as dependency of {integration.domain}",
-                loop=hass.loop,
+                loop=menuai.loop,
             )
         dependencies_tasks[dep] = fut
 
-    to_be_loaded = hass.data.get(_DATA_SETUP_DONE, {})
+    to_be_loaded = menuai.data.get(_DATA_SETUP_DONE, {})
     # We don't want to just wait for the futures from `to_be_loaded` here.
     # We want to ensure that our after_dependencies are always actually
     # scheduled to be set up, as if for whatever reason they had not been,
@@ -226,12 +226,12 @@ async def _async_process_dependencies(
             continue
         fut = setup_futures.get(dep)
         if fut is None:
-            if dep in hass.config.components:
+            if dep in menuai.config.components:
                 continue
             fut = create_eager_task(
-                async_setup_component(hass, dep, config),
+                async_setup_component(menuai, dep, config),
                 name=f"setup {dep} as after dependency of {integration.domain}",
-                loop=hass.loop,
+                loop=menuai.loop,
             )
         dependencies_tasks[dep] = fut
 
@@ -245,7 +245,7 @@ async def _async_process_dependencies(
             dependencies_tasks.keys(),
         )
 
-    async with hass.timeout.async_freeze(integration.domain):
+    async with menuai.timeout.async_freeze(integration.domain):
         results = await asyncio.gather(*dependencies_tasks.values())
 
     failed = [
@@ -263,7 +263,7 @@ async def _async_process_dependencies(
 
 
 def _log_error_setup_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     domain: str,
     integration: loader.Integration | None,
     msg: str,
@@ -277,27 +277,27 @@ def _log_error_setup_error(
         custom = "" if integration.is_built_in else "custom integration "
         link = integration.documentation
     _LOGGER.error("Setup failed for %s'%s': %s", custom, domain, msg, exc_info=exc_info)
-    async_notify_setup_error(hass, domain, link)
+    async_notify_setup_error(menuai, domain, link)
 
 
 async def _async_setup_component(
-    hass: core.HomeAssistant, domain: str, config: ConfigType
+    menuai: core.menuai, domain: str, config: ConfigType
 ) -> bool:
-    """Set up a component for Home Assistant.
+    """Set up a component for MenuAI.
 
     This method is a coroutine.
     """
     try:
-        integration = await loader.async_get_integration(hass, domain)
+        integration = await loader.async_get_integration(menuai, domain)
     except loader.IntegrationNotFound:
-        _log_error_setup_error(hass, domain, None, "Integration not found.")
-        if not hass.config.safe_mode and hass.config_entries.async_entries(domain):
+        _log_error_setup_error(menuai, domain, None, "Integration not found.")
+        if not menuai.config.safe_mode and menuai.config_entries.async_entries(domain):
             ir.async_create_issue(
-                hass,
-                HOMEASSISTANT_DOMAIN,
+                menuai,
+                menuai_DOMAIN,
                 f"integration_not_found.{domain}",
                 is_fixable=True,
-                issue_domain=HOMEASSISTANT_DOMAIN,
+                issue_domain=menuai_DOMAIN,
                 severity=IssueSeverity.ERROR,
                 translation_key="integration_not_found",
                 translation_placeholders={
@@ -307,7 +307,7 @@ async def _async_setup_component(
             )
         return False
 
-    log_error = partial(_log_error_setup_error, hass, domain, integration)
+    log_error = partial(_log_error_setup_error, menuai, domain, integration)
 
     if integration.disabled:
         log_error(f"Dependency is disabled - {integration.disabled}")
@@ -317,14 +317,14 @@ async def _async_setup_component(
 
     load_translations_task: asyncio.Task[None] | None = None
     if integration.has_translations and not translation.async_translations_loaded(
-        hass, integration_set
+        menuai, integration_set
     ):
         # For most cases we expect the translations are already
         # loaded since we try to load them in bootstrap ahead of time.
         # If for some reason the background task in bootstrap was too slow
         # or the integration was added after bootstrap, we will load them here.
         load_translations_task = create_eager_task(
-            translation.async_load_integrations(hass, integration_set), loop=hass.loop
+            translation.async_load_integrations(menuai, integration_set), loop=menuai.loop
         )
     # Validate all dependencies exist and there are no circular dependencies
     if await integration.resolve_dependencies() is None:
@@ -333,8 +333,8 @@ async def _async_setup_component(
     # Process requirements as soon as possible, so we can import the component
     # without requiring imports to be in functions.
     try:
-        await async_process_deps_reqs(hass, config, integration)
-    except HomeAssistantError as err:
+        await async_process_deps_reqs(menuai, config, integration)
+    except menuaiError as err:
         log_error(str(err))
         return False
 
@@ -347,9 +347,9 @@ async def _async_setup_component(
         return False
 
     integration_config_info = await conf_util.async_process_component_config(
-        hass, config, integration, component
+        menuai, config, integration, component
     )
-    conf_util.async_handle_component_errors(hass, integration_config_info, integration)
+    conf_util.async_handle_component_errors(menuai, integration_config_info, integration)
     processed_config = conf_util.async_drop_config_annotations(
         integration_config_info, integration
     )
@@ -357,7 +357,7 @@ async def _async_setup_component(
         if platform_exception.translation_key not in NOTIFY_FOR_TRANSLATION_KEYS:
             continue
         async_notify_setup_error(
-            hass, platform_exception.platform_path, platform_exception.integration_link
+            menuai, platform_exception.platform_path, platform_exception.integration_link
         )
     if processed_config is None:
         log_error("Invalid config.")
@@ -378,8 +378,8 @@ async def _async_setup_component(
             domain,
         )
         async_create_issue(
-            hass,
-            HOMEASSISTANT_DOMAIN,
+            menuai,
+            menuai_DOMAIN,
             f"config_entry_only_{domain}",
             is_fixable=False,
             severity=IssueSeverity.ERROR,
@@ -393,12 +393,12 @@ async def _async_setup_component(
 
     _LOGGER.info("Setting up %s", domain)
 
-    with async_start_setup(hass, integration=domain, phase=SetupPhases.SETUP):
+    with async_start_setup(menuai, integration=domain, phase=SetupPhases.SETUP):
         if hasattr(component, "PLATFORM_SCHEMA"):
             # Entity components have their own warning
             warn_task = None
         else:
-            warn_task = hass.loop.call_later(
+            warn_task = menuai.loop.call_later(
                 SLOW_SETUP_WARNING,
                 _LOGGER.warning,
                 "Setup of %s is taking over %s seconds.",
@@ -410,19 +410,19 @@ async def _async_setup_component(
         result: Any | bool = True
         try:
             if hasattr(component, "async_setup"):
-                task = component.async_setup(hass, processed_config)
+                task = component.async_setup(menuai, processed_config)
             elif hasattr(component, "setup"):
-                # This should not be replaced with hass.async_add_executor_job because
+                # This should not be replaced with menuai.async_add_executor_job because
                 # we don't want to track this task in case it blocks startup.
-                task = hass.loop.run_in_executor(
-                    None, component.setup, hass, processed_config
+                task = menuai.loop.run_in_executor(
+                    None, component.setup, menuai, processed_config
                 )
             elif not hasattr(component, "async_setup_entry"):
                 log_error("No setup or config entry setup function defined.")
                 return False
 
             if task:
-                async with hass.timeout.async_timeout(SLOW_SETUP_MAX_WAIT, domain):
+                async with menuai.timeout.async_timeout(SLOW_SETUP_MAX_WAIT, domain):
                     result = await task
         except TimeoutError:
             _LOGGER.error(
@@ -437,7 +437,7 @@ async def _async_setup_component(
         # pylint: disable-next=broad-except
         except (asyncio.CancelledError, SystemExit, Exception) as exc:
             _LOGGER.exception("Error during setup of component %s: %s", domain, exc)  # noqa: TRY401
-            async_notify_setup_error(hass, domain, integration.documentation)
+            async_notify_setup_error(menuai, domain, integration.documentation)
             return False
         finally:
             if warn_task:
@@ -459,33 +459,33 @@ async def _async_setup_component(
         # If the integration has a config_flow, wait for import flows.
         # As these are all created with eager tasks, we do not sleep here,
         # as the tasks will always be started before we reach this point.
-        await hass.config_entries.flow.async_wait_import_flow_initialized(domain)
+        await menuai.config_entries.flow.async_wait_import_flow_initialized(domain)
 
     # Add to components before the entry.async_setup
     # call to avoid a deadlock when forwarding platforms
-    hass.config.components.add(domain)
+    menuai.config.components.add(domain)
 
-    if entries := hass.config_entries.async_entries(
+    if entries := menuai.config_entries.async_entries(
         domain, include_ignore=False, include_disabled=False
     ):
         await asyncio.gather(
             *(
                 create_eager_task(
-                    entry.async_setup_locked(hass, integration=integration),
+                    entry.async_setup_locked(menuai, integration=integration),
                     name=(
                         f"config entry setup {entry.title} {entry.domain} "
                         f"{entry.entry_id}"
                     ),
-                    loop=hass.loop,
+                    loop=menuai.loop,
                 )
                 for entry in entries
             )
         )
 
     # Cleanup
-    hass.data[_DATA_SETUP].pop(domain, None)
+    menuai.data[_DATA_SETUP].pop(domain, None)
 
-    hass.bus.async_fire_internal(
+    menuai.bus.async_fire_internal(
         EVENT_COMPONENT_LOADED, EventComponentLoaded(component=domain)
     )
 
@@ -493,7 +493,7 @@ async def _async_setup_component(
 
 
 async def async_prepare_setup_platform(
-    hass: core.HomeAssistant, hass_config: ConfigType, domain: str, platform_name: str
+    menuai: core.menuai, menuai_config: ConfigType, domain: str, platform_name: str
 ) -> ModuleType | None:
     """Load a platform and makes sure dependencies are setup.
 
@@ -507,10 +507,10 @@ async def async_prepare_setup_platform(
         _LOGGER.error(
             "Unable to prepare setup for platform '%s': %s", platform_path, msg
         )
-        async_notify_setup_error(hass, platform_path)
+        async_notify_setup_error(menuai, platform_path)
 
     try:
-        integration = await loader.async_get_integration(hass, platform_name)
+        integration = await loader.async_get_integration(menuai, platform_name)
     except loader.IntegrationNotFound:
         log_error("Integration not found")
         return None
@@ -521,14 +521,14 @@ async def async_prepare_setup_platform(
     # We do this before we import the platform so the platform already knows
     # where the top level component is.
     #
-    if load_top_level_component := integration.domain not in hass.config.components:
+    if load_top_level_component := integration.domain not in menuai.config.components:
         # Process deps and reqs as soon as possible, so that requirements are
         # available when we import the platform. We only do this if the integration
-        # is not in hass.config.components yet, as we already processed them in
+        # is not in menuai.config.components yet, as we already processed them in
         # async_setup_component if it is.
         try:
-            await async_process_deps_reqs(hass, hass_config, integration)
-        except HomeAssistantError as err:
+            await async_process_deps_reqs(menuai, menuai_config, integration)
+        except menuaiError as err:
             log_error(str(err))
             return None
 
@@ -551,7 +551,7 @@ async def async_prepare_setup_platform(
         return None
 
     # Already loaded
-    if platform_path in hass.config.components:
+    if platform_path in menuai.config.components:
         return platform
 
     # Platforms cannot exist on their own, they are part of their integration.
@@ -559,7 +559,7 @@ async def async_prepare_setup_platform(
     if load_top_level_component:
         if (
             hasattr(component, "setup") or hasattr(component, "async_setup")
-        ) and not await async_setup_component(hass, integration.domain, hass_config):
+        ) and not await async_setup_component(menuai, integration.domain, menuai_config):
             log_error("Unable to set up component.")
             return None
 
@@ -567,23 +567,23 @@ async def async_prepare_setup_platform(
 
 
 async def async_process_deps_reqs(
-    hass: core.HomeAssistant, config: ConfigType, integration: loader.Integration
+    menuai: core.menuai, config: ConfigType, integration: loader.Integration
 ) -> None:
     """Process all dependencies and requirements for a module.
 
     Module is a Python module of either a component or platform.
     """
-    if (processed := hass.data.get(_DATA_DEPS_REQS)) is None:
-        processed = hass.data[_DATA_DEPS_REQS] = set()
+    if (processed := menuai.data.get(_DATA_DEPS_REQS)) is None:
+        processed = menuai.data[_DATA_DEPS_REQS] = set()
     elif integration.domain in processed:
         return
 
-    if failed_deps := await _async_process_dependencies(hass, config, integration):
+    if failed_deps := await _async_process_dependencies(menuai, config, integration):
         raise DependencyError(failed_deps)
 
-    async with hass.timeout.async_freeze(integration.domain):
+    async with menuai.timeout.async_freeze(integration.domain):
         await requirements.async_get_integration_with_requirements(
-            hass, integration.domain
+            menuai, integration.domain
         )
 
     processed.add(integration.domain)
@@ -591,29 +591,29 @@ async def async_process_deps_reqs(
 
 @core.callback
 def async_when_setup(
-    hass: core.HomeAssistant,
+    menuai: core.menuai,
     component: str,
-    when_setup_cb: Callable[[core.HomeAssistant, str], Awaitable[None]],
+    when_setup_cb: Callable[[core.menuai, str], Awaitable[None]],
 ) -> None:
     """Call a method when a component is setup."""
-    _async_when_setup(hass, component, when_setup_cb, False)
+    _async_when_setup(menuai, component, when_setup_cb, False)
 
 
 @core.callback
 def async_when_setup_or_start(
-    hass: core.HomeAssistant,
+    menuai: core.menuai,
     component: str,
-    when_setup_cb: Callable[[core.HomeAssistant, str], Awaitable[None]],
+    when_setup_cb: Callable[[core.menuai, str], Awaitable[None]],
 ) -> None:
     """Call a method when a component is setup or state is fired."""
-    _async_when_setup(hass, component, when_setup_cb, True)
+    _async_when_setup(menuai, component, when_setup_cb, True)
 
 
 @core.callback
 def _async_when_setup(
-    hass: core.HomeAssistant,
+    menuai: core.menuai,
     component: str,
-    when_setup_cb: Callable[[core.HomeAssistant, str], Awaitable[None]],
+    when_setup_cb: Callable[[core.menuai, str], Awaitable[None]],
     start_event: bool,
 ) -> None:
     """Call a method when a component is setup or the start event fires."""
@@ -621,12 +621,12 @@ def _async_when_setup(
     async def when_setup() -> None:
         """Call the callback."""
         try:
-            await when_setup_cb(hass, component)
+            await when_setup_cb(menuai, component)
         except Exception:
             _LOGGER.exception("Error handling when_setup callback for %s", component)
 
-    if component in hass.config.components:
-        hass.async_create_task_internal(
+    if component in menuai.config.components:
+        menuai.async_create_task_internal(
             when_setup(), f"when setup {component}", eager_start=True
         )
         return
@@ -645,7 +645,7 @@ def _async_when_setup(
         return event_data[ATTR_COMPONENT] == component
 
     listeners.append(
-        hass.bus.async_listen(
+        menuai.bus.async_listen(
             EVENT_COMPONENT_LOADED,
             _matched_event,
             event_filter=_async_is_component_filter,
@@ -653,14 +653,14 @@ def _async_when_setup(
     )
     if start_event:
         listeners.append(
-            hass.bus.async_listen(EVENT_HOMEASSISTANT_START, _matched_event)
+            menuai.bus.async_listen(EVENT_menuai_START, _matched_event)
         )
 
 
 @core.callback
-def async_get_loaded_integrations(hass: core.HomeAssistant) -> set[str]:
+def async_get_loaded_integrations(menuai: core.menuai) -> set[str]:
     """Return the complete list of loaded integrations."""
-    return hass.config.all_components
+    return menuai.config.all_components
 
 
 class SetupPhases(StrEnum):
@@ -691,14 +691,14 @@ class SetupPhases(StrEnum):
 
 @singleton.singleton(_DATA_SETUP_STARTED)
 def _setup_started(
-    hass: core.HomeAssistant,
+    menuai: core.menuai,
 ) -> dict[tuple[str, str | None], float]:
     """Return the setup started dict."""
     return {}
 
 
 @contextlib.contextmanager
-def async_pause_setup(hass: core.HomeAssistant, phase: SetupPhases) -> Generator[None]:
+def async_pause_setup(menuai: core.menuai, phase: SetupPhases) -> Generator[None]:
     """Keep track of time we are blocked waiting for other operations.
 
     We want to count the time we wait for importing and
@@ -706,7 +706,7 @@ def async_pause_setup(hass: core.HomeAssistant, phase: SetupPhases) -> Generator
     from the total setup time.
     """
     if not (running := current_setup_group.get()) or running not in _setup_started(
-        hass
+        menuai
     ):
         # This means we are likely in a late platform setup
         # that is running in a task so we do not want
@@ -722,7 +722,7 @@ def async_pause_setup(hass: core.HomeAssistant, phase: SetupPhases) -> Generator
         time_taken = time.monotonic() - started
         integration, group = running
         # Add negative time for the time we waited
-        _setup_times(hass)[integration][group][phase] = -time_taken
+        _setup_times(menuai)[integration][group][phase] = -time_taken
         _LOGGER.debug(
             "Adding wait for %s for %s (%s) of %.2f",
             phase,
@@ -734,7 +734,7 @@ def async_pause_setup(hass: core.HomeAssistant, phase: SetupPhases) -> Generator
 
 @singleton.singleton(_DATA_SETUP_TIME)
 def _setup_times(
-    hass: core.HomeAssistant,
+    menuai: core.menuai,
 ) -> defaultdict[str, defaultdict[str | None, defaultdict[SetupPhases, float]]]:
     """Return the setup timings default dict."""
     return defaultdict(lambda: defaultdict(lambda: defaultdict(float)))
@@ -742,14 +742,14 @@ def _setup_times(
 
 @contextlib.contextmanager
 def async_start_setup(
-    hass: core.HomeAssistant,
+    menuai: core.menuai,
     integration: str,
     phase: SetupPhases,
     group: str | None = None,
 ) -> Generator[None]:
     """Keep track of when setup starts and finishes.
 
-    :param hass: Home Assistant instance
+    :param menuai: MenuAI instance
     :param integration: The integration that is being setup
     :param phase: The phase of setup
     :param group: The group (config entry/platform instance) that is being setup
@@ -757,14 +757,14 @@ def async_start_setup(
       A group is a group of setups that run in parallel.
 
     """
-    if hass.is_stopping or hass.state is core.CoreState.running:
+    if menuai.is_stopping or menuai.state is core.CoreState.running:
         # Don't track setup times when we are shutting down or already running
         # as we present the timings as "Integration startup time", and we
         # don't want to add all the setup retry times to that.
         yield
         return
 
-    setup_started = _setup_started(hass)
+    setup_started = _setup_started(menuai)
     current = (integration, group)
     if current in setup_started:
         # We are already inside another async_start_setup, this like means we
@@ -782,7 +782,7 @@ def async_start_setup(
     finally:
         time_taken = time.monotonic() - started
         del setup_started[current]
-        group_setup_times = _setup_times(hass)[integration][group]
+        group_setup_times = _setup_times(menuai)[integration][group]
         # We may see the phase multiple times if there are multiple
         # platforms, but we only care about the longest time.
         group_setup_times[phase] = max(group_setup_times[phase], time_taken)
@@ -805,9 +805,9 @@ def async_start_setup(
 
 
 @callback
-def async_get_setup_timings(hass: core.HomeAssistant) -> dict[str, float]:
+def async_get_setup_timings(menuai: core.menuai) -> dict[str, float]:
     """Return timing data for each integration."""
-    setup_time = _setup_times(hass)
+    setup_time = _setup_times(menuai)
     domain_timings: dict[str, float] = {}
     top_level_timings: Mapping[SetupPhases, float]
     for domain, timings in setup_time.items():
@@ -828,15 +828,15 @@ def async_get_setup_timings(hass: core.HomeAssistant) -> dict[str, float]:
 
 @callback
 def async_get_domain_setup_times(
-    hass: core.HomeAssistant, domain: str
+    menuai: core.menuai, domain: str
 ) -> Mapping[str | None, dict[SetupPhases, float]]:
     """Return timing data for each integration."""
-    return _setup_times(hass).get(domain, {})
+    return _setup_times(menuai).get(domain, {})
 
 
-async def async_wait_component(hass: HomeAssistant, domain: str) -> bool:
+async def async_wait_component(menuai: menuai, domain: str) -> bool:
     """Wait until a component is set up if pending, then return if it is set up."""
-    setup_done = hass.data.get(_DATA_SETUP_DONE, {})
+    setup_done = menuai.data.get(_DATA_SETUP_DONE, {})
     if setup_future := setup_done.get(domain):
         await setup_future
-    return domain in hass.config.components
+    return domain in menuai.config.components

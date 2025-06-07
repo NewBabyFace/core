@@ -8,9 +8,9 @@ from typing import Final
 
 from jvcprojector import JvcProjector, const
 
-from homeassistant.components.select import SelectEntity, SelectEntityDescription
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.select import SelectEntity, SelectEntityDescription
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import JVCConfigEntry, JvcProjectorDataUpdateCoordinator
 from .entity import JvcProjectorEntity
@@ -38,7 +38,7 @@ SELECTS: Final[list[JvcProjectorSelectDescription]] = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: JVCConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

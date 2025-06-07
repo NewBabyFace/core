@@ -9,17 +9,17 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 from yalesmartalarmclient import UnknownError, YaleDoorManAPI, YaleSmartAlarmData
 
-from homeassistant.components.lock import DOMAIN as LOCK_DOMAIN
-from homeassistant.const import (
+from menuai.components.lock import DOMAIN as LOCK_DOMAIN
+from menuai.const import (
     ATTR_CODE,
     ATTR_ENTITY_ID,
     SERVICE_LOCK,
     SERVICE_UNLOCK,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry, snapshot_platform
 
@@ -29,14 +29,14 @@ from tests.common import MockConfigEntry, snapshot_platform
     [[Platform.LOCK]],
 )
 async def test_lock(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_config_entry: tuple[MockConfigEntry, Mock],
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test the Yale Smart Alarm lock."""
     entry = load_config_entry[0]
-    await snapshot_platform(hass, entity_registry, snapshot, entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, entry.entry_id)
 
 
 @pytest.mark.parametrize(
@@ -44,7 +44,7 @@ async def test_lock(
     [[Platform.LOCK]],
 )
 async def test_lock_service_calls(
-    hass: HomeAssistant,
+    menuai: menuai,
     get_data: YaleSmartAlarmData,
     load_config_entry: tuple[MockConfigEntry, Mock],
 ) -> None:
@@ -59,35 +59,35 @@ async def test_lock_service_calls(
     client.auth.post_authenticated = Mock(return_value={"code": "000"})
     client.lock_api = YaleDoorManAPI(client.auth)
 
-    state = hass.states.get("lock.device1")
+    state = menuai.states.get("lock.device1")
     assert state.state == "locked"
 
     with pytest.raises(ServiceValidationError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             LOCK_DOMAIN,
             SERVICE_UNLOCK,
             {ATTR_ENTITY_ID: "lock.device1"},
             blocking=True,
         )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LOCK_DOMAIN,
         SERVICE_UNLOCK,
         {ATTR_ENTITY_ID: "lock.device1", ATTR_CODE: "123456"},
         blocking=True,
     )
     client.auth.post_authenticated.assert_called_once()
-    state = hass.states.get("lock.device1")
+    state = menuai.states.get("lock.device1")
     assert state.state == "unlocked"
     client.auth.post_authenticated.reset_mock()
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LOCK_DOMAIN,
         SERVICE_LOCK,
         {ATTR_ENTITY_ID: "lock.device1", ATTR_CODE: "123456"},
         blocking=True,
     )
     client.auth.post_authenticated.assert_called_once()
-    state = hass.states.get("lock.device1")
+    state = menuai.states.get("lock.device1")
     assert state.state == "locked"
 
 
@@ -96,7 +96,7 @@ async def test_lock_service_calls(
     [[Platform.LOCK]],
 )
 async def test_lock_service_call_fails(
-    hass: HomeAssistant,
+    menuai: menuai,
     get_data: YaleSmartAlarmData,
     load_config_entry: tuple[MockConfigEntry, Mock],
 ) -> None:
@@ -111,28 +111,28 @@ async def test_lock_service_call_fails(
     client.auth.post_authenticated = Mock(side_effect=UnknownError("test_side_effect"))
     client.lock_api = YaleDoorManAPI(client.auth)
 
-    state = hass.states.get("lock.device1")
+    state = menuai.states.get("lock.device1")
     assert state.state == "locked"
 
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match="Could not set lock for Device1: test_side_effect",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             LOCK_DOMAIN,
             SERVICE_UNLOCK,
             {ATTR_ENTITY_ID: "lock.device1", ATTR_CODE: "123456"},
             blocking=True,
         )
     client.auth.post_authenticated.assert_called_once()
-    state = hass.states.get("lock.device1")
+    state = menuai.states.get("lock.device1")
     assert state.state == "locked"
     client.auth.post_authenticated.reset_mock()
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match="Could not set lock for Device1: test_side_effect",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             LOCK_DOMAIN,
             SERVICE_LOCK,
             {ATTR_ENTITY_ID: "lock.device1", ATTR_CODE: "123456"},
@@ -146,7 +146,7 @@ async def test_lock_service_call_fails(
     [[Platform.LOCK]],
 )
 async def test_lock_service_call_fails_with_incorrect_status(
-    hass: HomeAssistant,
+    menuai: menuai,
     get_data: YaleSmartAlarmData,
     load_config_entry: tuple[MockConfigEntry, Mock],
 ) -> None:
@@ -159,18 +159,18 @@ async def test_lock_service_call_fails_with_incorrect_status(
 
     client.auth.post_authenticated = Mock(return_value={"code": "FFF"})
 
-    state = hass.states.get("lock.device1")
+    state = menuai.states.get("lock.device1")
     assert state.state == "locked"
 
     with pytest.raises(
-        HomeAssistantError, match="Could not set lock, check system ready for lock"
+        menuaiError, match="Could not set lock, check system ready for lock"
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             LOCK_DOMAIN,
             SERVICE_UNLOCK,
             {ATTR_ENTITY_ID: "lock.device1", ATTR_CODE: "123456"},
             blocking=True,
         )
     client.auth.post_authenticated.assert_called_once()
-    state = hass.states.get("lock.device1")
+    state = menuai.states.get("lock.device1")
     assert state.state == "locked"

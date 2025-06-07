@@ -5,9 +5,9 @@ from unittest.mock import AsyncMock
 
 from aiohttp import ClientError
 
-from homeassistant.components.accuweather.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.accuweather.const import DOMAIN
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from . import init_integration
 
@@ -16,18 +16,18 @@ from tests.test_util.aiohttp import AiohttpClientMocker
 
 
 async def test_accuweather_system_health(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     mock_accuweather_client: AsyncMock,
 ) -> None:
     """Test AccuWeather system health."""
     aioclient_mock.get("https://dataservice.accuweather.com/", text="")
 
-    await init_integration(hass)
-    assert await async_setup_component(hass, "system_health", {})
-    await hass.async_block_till_done()
+    await init_integration(menuai)
+    assert await async_setup_component(menuai, "system_health", {})
+    await menuai.async_block_till_done()
 
-    info = await get_system_health_info(hass, DOMAIN)
+    info = await get_system_health_info(menuai, DOMAIN)
 
     for key, val in info.items():
         if asyncio.iscoroutine(val):
@@ -40,18 +40,18 @@ async def test_accuweather_system_health(
 
 
 async def test_accuweather_system_health_fail(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     mock_accuweather_client: AsyncMock,
 ) -> None:
     """Test AccuWeather system health."""
     aioclient_mock.get("https://dataservice.accuweather.com/", exc=ClientError)
 
-    await init_integration(hass)
-    assert await async_setup_component(hass, "system_health", {})
-    await hass.async_block_till_done()
+    await init_integration(menuai)
+    assert await async_setup_component(menuai, "system_health", {})
+    await menuai.async_block_till_done()
 
-    info = await get_system_health_info(hass, DOMAIN)
+    info = await get_system_health_info(menuai, DOMAIN)
 
     for key, val in info.items():
         if asyncio.iscoroutine(val):

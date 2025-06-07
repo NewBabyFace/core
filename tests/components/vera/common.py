@@ -9,14 +9,14 @@ from unittest.mock import MagicMock
 
 import pyvera as pv
 
-from homeassistant import config_entries
-from homeassistant.components.vera.const import (
+from menuai import config_entries
+from menuai.components.vera.const import (
     CONF_CONTROLLER,
     CONF_LEGACY_UNIQUE_ID,
     DOMAIN,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 
@@ -89,7 +89,7 @@ class ComponentFactory:
 
     async def configure_component(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         controller_config: ControllerConfig = None,
         controller_configs: tuple[ControllerConfig] = (),
     ) -> ComponentData:
@@ -102,14 +102,14 @@ class ComponentFactory:
         return ComponentData(
             controller_data=tuple(
                 [
-                    await self._configure_component(hass, controller_config)
+                    await self._configure_component(menuai, controller_config)
                     for controller_config in configs
                 ]
             )
         )
 
     async def _configure_component(
-        self, hass: HomeAssistant, controller_config: ControllerConfig
+        self, menuai: menuai, controller_config: ControllerConfig
     ) -> ControllerData:
         """Configure the component with specific mock data."""
         component_config = {
@@ -142,24 +142,24 @@ class ComponentFactory:
 
         self.vera_controller_class_mock.return_value = controller
 
-        hass_config = {}
+        menuai_config = {}
 
         # Setup component through config file import.
         if controller_config.config_source == ConfigSource.FILE:
-            hass_config[DOMAIN] = component_config
+            menuai_config[DOMAIN] = component_config
 
-        # Setup Home Assistant.
-        assert await async_setup_component(hass, DOMAIN, hass_config)
-        await hass.async_block_till_done()
+        # Setup MenuAI.
+        assert await async_setup_component(menuai, DOMAIN, menuai_config)
+        await menuai.async_block_till_done()
 
         # Setup component through config flow.
         if controller_config.config_source == ConfigSource.CONFIG_FLOW:
-            await hass.config_entries.flow.async_init(
+            await menuai.config_entries.flow.async_init(
                 DOMAIN,
                 context={"source": config_entries.SOURCE_USER},
                 data=component_config,
             )
-            await hass.async_block_till_done()
+            await menuai.async_block_till_done()
 
         # Setup component directly from config entry.
         if controller_config.config_source == ConfigSource.CONFIG_ENTRY:
@@ -169,10 +169,10 @@ class ComponentFactory:
                 options=controller_config.options,
                 unique_id="12345",
             )
-            entry.add_to_hass(hass)
+            entry.add_to_menuai(menuai)
 
-            await hass.config_entries.async_setup(entry.entry_id)
-            await hass.async_block_till_done()
+            await menuai.config_entries.async_setup(entry.entry_id)
+            await menuai.async_block_till_done()
 
         update_callback = (
             controller.register.call_args_list[0][0][1]

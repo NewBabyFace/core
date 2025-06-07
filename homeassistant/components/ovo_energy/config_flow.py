@@ -9,9 +9,9 @@ import aiohttp
 from ovoenergy import OVOEnergy
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import CONF_ACCOUNT, DOMAIN
 
@@ -43,7 +43,7 @@ class OVOEnergyFlowHandler(ConfigFlow, domain=DOMAIN):
         errors = {}
         if user_input is not None:
             client = OVOEnergy(
-                client_session=async_get_clientsession(self.hass),
+                client_session=async_get_clientsession(self.menuai),
             )
 
             if (custom_account := user_input.get(CONF_ACCOUNT)) is not None:
@@ -100,7 +100,7 @@ class OVOEnergyFlowHandler(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             client = OVOEnergy(
-                client_session=async_get_clientsession(self.hass),
+                client_session=async_get_clientsession(self.menuai),
             )
 
             if self.account is not None:

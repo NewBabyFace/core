@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_HVAC_MODE,
     PRESET_BOOST,
     PRESET_COMFORT,
@@ -13,15 +13,15 @@ from homeassistant.components.climate import (
     ClimateEntityFeature,
     HVACMode,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_BATTERY_LEVEL,
     ATTR_TEMPERATURE,
     PRECISION_HALVES,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
     ATTR_STATE_BATTERY_LOW,
@@ -61,7 +61,7 @@ PRESET_API_HKR_STATE_MAPPING = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: FritzboxConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -108,7 +108,7 @@ class FritzboxThermostat(FritzBoxDeviceEntity, ClimateEntity):
 
     @callback
     def async_write_ha_state(self) -> None:
-        """Write the state to the HASS state machine."""
+        """Write the state to the menuai state machine."""
         if self.data.holiday_active:
             self._attr_supported_features = ClimateEntityFeature.PRESET_MODE
             self._attr_preset_modes = [PRESET_HOLIDAY]
@@ -137,7 +137,7 @@ class FritzboxThermostat(FritzBoxDeviceEntity, ClimateEntity):
 
     async def async_set_hkr_state(self, hkr_state: str) -> None:
         """Set the state of the climate."""
-        await self.hass.async_add_executor_job(self.data.set_hkr_state, hkr_state, True)
+        await self.menuai.async_add_executor_job(self.data.set_hkr_state, hkr_state, True)
         await self.coordinator.async_refresh()
 
     async def async_set_temperature(self, **kwargs: Any) -> None:
@@ -146,7 +146,7 @@ class FritzboxThermostat(FritzBoxDeviceEntity, ClimateEntity):
         if kwargs.get(ATTR_HVAC_MODE) is HVACMode.OFF:
             await self.async_set_hkr_state("off")
         elif (target_temp := kwargs.get(ATTR_TEMPERATURE)) is not None:
-            await self.hass.async_add_executor_job(
+            await self.menuai.async_add_executor_job(
                 self.data.set_target_temperature, target_temp, True
             )
             await self.coordinator.async_refresh()
@@ -225,13 +225,13 @@ class FritzboxThermostat(FritzBoxDeviceEntity, ClimateEntity):
     def check_active_or_lock_mode(self) -> None:
         """Check if in summer/vacation mode or lock enabled."""
         if self.data.holiday_active or self.data.summer_active:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="change_settings_while_active_mode",
             )
 
         if self.data.lock:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="change_settings_while_lock_enabled",
             )

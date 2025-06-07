@@ -17,8 +17,8 @@ from pyezvizapi.exceptions import (
 from pyezvizapi.test_cam_rtsp import TestRTSPAuth
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
-from homeassistant.const import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
+from menuai.const import (
     CONF_CUSTOMIZE,
     CONF_IP_ADDRESS,
     CONF_PASSWORD,
@@ -27,7 +27,7 @@ from homeassistant.const import (
     CONF_URL,
     CONF_USERNAME,
 )
-from homeassistant.core import callback
+from menuai.core import callback
 
 from .const import (
     ATTR_SERIAL,
@@ -122,15 +122,15 @@ class EzvizConfigFlow(ConfigFlow, domain=DOMAIN):
 
         # We need to wake hibernating cameras.
         # First create EZVIZ API instance.
-        await self.hass.async_add_executor_job(ezviz_client.login)
+        await self.menuai.async_add_executor_job(ezviz_client.login)
 
         # Secondly try to wake hybernating camera.
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             ezviz_client.get_detection_sensibility, data[ATTR_SERIAL]
         )
 
         # Thirdly attempts an authenticated RTSP DESCRIBE request.
-        await self.hass.async_add_executor_job(_test_camera_rtsp_creds, data)
+        await self.menuai.async_add_executor_job(_test_camera_rtsp_creds, data)
 
         return self.async_create_entry(
             title=data[ATTR_SERIAL],
@@ -174,7 +174,7 @@ class EzvizConfigFlow(ConfigFlow, domain=DOMAIN):
                 return await self.async_step_user_custom_url()
 
             try:
-                auth_data = await self.hass.async_add_executor_job(
+                auth_data = await self.menuai.async_add_executor_job(
                     _validate_and_create_auth, user_input
                 )
 
@@ -227,7 +227,7 @@ class EzvizConfigFlow(ConfigFlow, domain=DOMAIN):
             user_input[CONF_PASSWORD] = self.password
 
             try:
-                auth_data = await self.hass.async_add_executor_job(
+                auth_data = await self.menuai.async_add_executor_job(
                     _validate_and_create_auth, user_input
                 )
 
@@ -349,7 +349,7 @@ class EzvizConfigFlow(ConfigFlow, domain=DOMAIN):
             user_input[CONF_URL] = entry.data[CONF_URL]
 
             try:
-                auth_data = await self.hass.async_add_executor_job(
+                auth_data = await self.menuai.async_add_executor_job(
                     _validate_and_create_auth, user_input
                 )
 

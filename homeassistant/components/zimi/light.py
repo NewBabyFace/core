@@ -8,9 +8,9 @@ from typing import Any
 from zcc import ControlPoint
 from zcc.device import ControlPointDevice
 
-from homeassistant.components.light import ATTR_BRIGHTNESS, ColorMode, LightEntity
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.light import ATTR_BRIGHTNESS, ColorMode, LightEntity
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import ZimiConfigEntry
 from .entity import ZimiEntity
@@ -19,7 +19,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ZimiConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

@@ -4,9 +4,9 @@ from typing import Any
 
 from pyplaato.models.device import PlaatoDevice
 
-from homeassistant.helpers import entity
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers import entity
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
 
 from .const import (
     DEVICE,
@@ -79,8 +79,8 @@ class PlaatoEntity(entity.Entity):
             return self._coordinator.last_update_success
         return True
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai."""
         if self._coordinator is not None:
             self.async_on_remove(
                 self._coordinator.async_add_listener(self.async_write_ha_state)
@@ -88,7 +88,7 @@ class PlaatoEntity(entity.Entity):
         else:
             self.async_on_remove(
                 async_dispatcher_connect(
-                    self.hass,
+                    self.menuai,
                     SENSOR_SIGNAL % (self._device_id, self._sensor_type),
                     self.async_write_ha_state,
                 )

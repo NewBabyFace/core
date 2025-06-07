@@ -6,16 +6,16 @@ from pyenphase.exceptions import EnvoyError
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.enphase_envoy.const import Platform
-from homeassistant.components.number import (
+from menuai.components.enphase_envoy.const import Platform
+from menuai.components.number import (
     ATTR_VALUE,
     DOMAIN as NUMBER_DOMAIN,
     SERVICE_SET_VALUE,
 )
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
 
 from . import setup_integration
 
@@ -29,16 +29,16 @@ from tests.common import MockConfigEntry, snapshot_platform
 )
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_number(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mock_envoy: AsyncMock,
     config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test number platform entities against snapshot."""
-    with patch("homeassistant.components.enphase_envoy.PLATFORMS", [Platform.NUMBER]):
-        await setup_integration(hass, config_entry)
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    with patch("menuai.components.enphase_envoy.PLATFORMS", [Platform.NUMBER]):
+        await setup_integration(menuai, config_entry)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
 
 @pytest.mark.parametrize(
@@ -52,14 +52,14 @@ async def test_number(
     indirect=True,
 )
 async def test_no_number(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_envoy: AsyncMock,
     config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test number platform entities are not created."""
-    with patch("homeassistant.components.enphase_envoy.PLATFORMS", [Platform.NUMBER]):
-        await setup_integration(hass, config_entry)
+    with patch("menuai.components.enphase_envoy.PLATFORMS", [Platform.NUMBER]):
+        await setup_integration(menuai, config_entry)
     assert not er.async_entries_for_config_entry(entity_registry, config_entry.entry_id)
 
 
@@ -72,7 +72,7 @@ async def test_no_number(
     indirect=["mock_envoy"],
 )
 async def test_number_operation_storage(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_envoy: AsyncMock,
     config_entry: MockConfigEntry,
     use_serial: bool,
@@ -80,15 +80,15 @@ async def test_number_operation_storage(
     test_value: float,
 ) -> None:
     """Test enphase_envoy number storage entities operation."""
-    with patch("homeassistant.components.enphase_envoy.PLATFORMS", [Platform.NUMBER]):
-        await setup_integration(hass, config_entry)
+    with patch("menuai.components.enphase_envoy.PLATFORMS", [Platform.NUMBER]):
+        await setup_integration(menuai, config_entry)
 
     test_entity = f"{Platform.NUMBER}.{use_serial}_reserve_battery_level"
 
-    assert (entity_state := hass.states.get(test_entity))
+    assert (entity_state := menuai.states.get(test_entity))
     assert float(entity_state.state) == expected_value
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         NUMBER_DOMAIN,
         SERVICE_SET_VALUE,
         {
@@ -109,7 +109,7 @@ async def test_number_operation_storage(
     indirect=["mock_envoy"],
 )
 async def test_number_operation_storage_with_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_envoy: AsyncMock,
     config_entry: MockConfigEntry,
     use_serial: bool,
@@ -117,17 +117,17 @@ async def test_number_operation_storage_with_error(
     test_value: float,
 ) -> None:
     """Test enphase_envoy number storage entities operation."""
-    with patch("homeassistant.components.enphase_envoy.PLATFORMS", [Platform.NUMBER]):
-        await setup_integration(hass, config_entry)
+    with patch("menuai.components.enphase_envoy.PLATFORMS", [Platform.NUMBER]):
+        await setup_integration(menuai, config_entry)
 
     test_entity = f"number.{use_serial}_{target}"
 
     mock_envoy.set_reserve_soc.side_effect = EnvoyError("Test")
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match=f"Failed to execute async_set_native_value for {test_entity}, host",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             NUMBER_DOMAIN,
             SERVICE_SET_VALUE,
             {
@@ -151,7 +151,7 @@ async def test_number_operation_storage_with_error(
     ],
 )
 async def test_number_operation_relays(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_envoy: AsyncMock,
     config_entry: MockConfigEntry,
     relay: str,
@@ -161,18 +161,18 @@ async def test_number_operation_relays(
     test_field: str,
 ) -> None:
     """Test enphase_envoy number relay entities operation."""
-    with patch("homeassistant.components.enphase_envoy.PLATFORMS", [Platform.NUMBER]):
-        await setup_integration(hass, config_entry)
+    with patch("menuai.components.enphase_envoy.PLATFORMS", [Platform.NUMBER]):
+        await setup_integration(menuai, config_entry)
 
     assert (dry_contact := mock_envoy.data.dry_contact_settings[relay])
     assert (name := dry_contact.load_name.lower().replace(" ", "_"))
 
     test_entity = f"number.{name}_{target}"
 
-    assert (entity_state := hass.states.get(test_entity))
+    assert (entity_state := menuai.states.get(test_entity))
     assert float(entity_state.state) == expected_value
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         NUMBER_DOMAIN,
         SERVICE_SET_VALUE,
         {
@@ -195,7 +195,7 @@ async def test_number_operation_relays(
     indirect=["mock_envoy"],
 )
 async def test_number_operation_relays_with_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_envoy: AsyncMock,
     config_entry: MockConfigEntry,
     relay: str,
@@ -203,8 +203,8 @@ async def test_number_operation_relays_with_error(
     test_value: float,
 ) -> None:
     """Test enphase_envoy number relay entities operation with error returned."""
-    with patch("homeassistant.components.enphase_envoy.PLATFORMS", [Platform.NUMBER]):
-        await setup_integration(hass, config_entry)
+    with patch("menuai.components.enphase_envoy.PLATFORMS", [Platform.NUMBER]):
+        await setup_integration(menuai, config_entry)
 
     assert (dry_contact := mock_envoy.data.dry_contact_settings[relay])
     assert (name := dry_contact.load_name.lower().replace(" ", "_"))
@@ -213,10 +213,10 @@ async def test_number_operation_relays_with_error(
 
     mock_envoy.update_dry_contact.side_effect = EnvoyError("Test")
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match=f"Failed to execute async_set_native_value for {test_entity}, host",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             NUMBER_DOMAIN,
             SERVICE_SET_VALUE,
             {

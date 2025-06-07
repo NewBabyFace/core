@@ -5,15 +5,15 @@ from unittest.mock import MagicMock
 import pytest
 from sanix.exceptions import SanixException, SanixInvalidAuthException
 
-from homeassistant.components.sanix.const import (
+from menuai.components.sanix.const import (
     CONF_SERIAL_NUMBER,
     DOMAIN,
     MANUFACTURER,
 )
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_TOKEN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_TOKEN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
@@ -21,19 +21,19 @@ CONFIG = {CONF_SERIAL_NUMBER: "1810088", CONF_TOKEN: "75868dcf8ea4c64e2063f6c4e7
 
 
 async def test_create_entry(
-    hass: HomeAssistant, mock_sanix: MagicMock, mock_setup_entry
+    menuai: menuai, mock_sanix: MagicMock, mock_setup_entry
 ) -> None:
     """Test that the user step works."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         CONFIG,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == MANUFACTURER
@@ -53,7 +53,7 @@ async def test_create_entry(
     ],
 )
 async def test_form_exceptions(
-    hass: HomeAssistant,
+    menuai: menuai,
     exception: Exception,
     error: str,
     mock_sanix: MagicMock,
@@ -61,12 +61,12 @@ async def test_form_exceptions(
 ) -> None:
     """Test Form exceptions."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
     mock_sanix.return_value.fetch_data.side_effect = exception
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         CONFIG,
     )
@@ -76,11 +76,11 @@ async def test_form_exceptions(
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": error}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         CONFIG,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "Sanix"
@@ -92,21 +92,21 @@ async def test_form_exceptions(
 
 
 async def test_duplicate_error(
-    hass: HomeAssistant, mock_sanix: MagicMock, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_sanix: MagicMock, mock_config_entry: MockConfigEntry
 ) -> None:
     """Test that errors are shown when duplicates are added."""
 
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         CONFIG,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"

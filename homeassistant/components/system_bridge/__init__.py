@@ -21,8 +21,8 @@ from systembridgemodels.open_path import OpenPath
 from systembridgemodels.open_url import OpenUrl
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_API_KEY,
     CONF_COMMAND,
     CONF_ENTITY_ID,
@@ -35,25 +35,25 @@ from homeassistant.const import (
     CONF_URL,
     Platform,
 )
-from homeassistant.core import (
-    HomeAssistant,
+from menuai.core import (
+    menuai,
     ServiceCall,
     ServiceResponse,
     SupportsResponse,
 )
-from homeassistant.exceptions import (
+from menuai.exceptions import (
     ConfigEntryAuthFailed,
     ConfigEntryNotReady,
-    HomeAssistantError,
+    menuaiError,
     ServiceValidationError,
 )
-from homeassistant.helpers import (
+from menuai.helpers import (
     config_validation as cv,
     device_registry as dr,
     discovery,
 )
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.issue_registry import IssueSeverity, async_create_issue
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.issue_registry import IssueSeverity, async_create_issue
 
 from .config_flow import SystemBridgeConfigFlow
 from .const import DATA_WAIT_TIMEOUT, DOMAIN, MODULES
@@ -92,7 +92,7 @@ POWER_COMMAND_MAP = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
 ) -> bool:
     """Set up System Bridge from a config entry."""
@@ -102,7 +102,7 @@ async def async_setup_entry(
         entry.data[CONF_HOST],
         entry.data[CONF_PORT],
         entry.data[CONF_TOKEN],
-        session=async_get_clientsession(hass),
+        session=async_get_clientsession(menuai),
     )
     supported = False
     try:
@@ -140,7 +140,7 @@ async def async_setup_entry(
     # If not supported, create an issue and raise ConfigEntryNotReady
     if not supported:
         async_create_issue(
-            hass=hass,
+            menuai=menuai,
             domain=DOMAIN,
             issue_id=f"system_bridge_{entry.entry_id}_unsupported_version",
             translation_key="unsupported_version",
@@ -158,7 +158,7 @@ async def async_setup_entry(
         )
 
     coordinator = SystemBridgeDataUpdateCoordinator(
-        hass,
+        menuai,
         _LOGGER,
         entry=entry,
     )
@@ -198,49 +198,49 @@ async def async_setup_entry(
     # Fetch initial data so we have data when entities subscribe
     await coordinator.async_config_entry_first_refresh()
 
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.entry_id] = coordinator
+    menuai.data.setdefault(DOMAIN, {})
+    menuai.data[DOMAIN][entry.entry_id] = coordinator
 
     # Set up all platforms except notify
-    await hass.config_entries.async_forward_entry_setups(
+    await menuai.config_entries.async_forward_entry_setups(
         entry, [platform for platform in PLATFORMS if platform != Platform.NOTIFY]
     )
 
     # Set up notify platform
-    hass.async_create_task(
+    menuai.async_create_task(
         discovery.async_load_platform(
-            hass,
+            menuai,
             Platform.NOTIFY,
             DOMAIN,
             {
                 CONF_NAME: f"{DOMAIN}_{coordinator.data.system.hostname}",
                 CONF_ENTITY_ID: entry.entry_id,
             },
-            hass.data[DOMAIN][entry.entry_id],
+            menuai.data[DOMAIN][entry.entry_id],
         )
     )
 
-    if hass.services.has_service(DOMAIN, SERVICE_OPEN_URL):
+    if menuai.services.has_service(DOMAIN, SERVICE_OPEN_URL):
         return True
 
     def valid_device(device: str) -> str:
         """Check device is valid."""
-        device_registry = dr.async_get(hass)
+        device_registry = dr.async_get(menuai)
         device_entry = device_registry.async_get(device)
         if device_entry is not None:
             try:
                 return next(
                     entry.entry_id
-                    for entry in hass.config_entries.async_entries(DOMAIN)
+                    for entry in menuai.config_entries.async_entries(DOMAIN)
                     if entry.entry_id in device_entry.config_entries
                 )
             except StopIteration as exception:
-                raise HomeAssistantError(
+                raise menuaiError(
                     translation_domain=DOMAIN,
                     translation_key="device_not_found",
                     translation_placeholders={"device": device},
                 ) from exception
-        raise HomeAssistantError(
+        raise menuaiError(
             translation_domain=DOMAIN,
             translation_key="device_not_found",
             translation_placeholders={"device": device},
@@ -249,7 +249,7 @@ async def async_setup_entry(
     async def handle_get_process_by_id(service_call: ServiceCall) -> ServiceResponse:
         """Handle the get process by id service call."""
         _LOGGER.debug("Get process by id: %s", service_call.data)
-        coordinator: SystemBridgeDataUpdateCoordinator = hass.data[DOMAIN][
+        coordinator: SystemBridgeDataUpdateCoordinator = menuai.data[DOMAIN][
             service_call.data[CONF_BRIDGE]
         ]
         processes: list[Process] = coordinator.data.processes
@@ -275,7 +275,7 @@ async def async_setup_entry(
     ) -> ServiceResponse:
         """Handle the get process by name service call."""
         _LOGGER.debug("Get process by name: %s", service_call.data)
-        coordinator: SystemBridgeDataUpdateCoordinator = hass.data[DOMAIN][
+        coordinator: SystemBridgeDataUpdateCoordinator = menuai.data[DOMAIN][
             service_call.data[CONF_BRIDGE]
         ]
 
@@ -295,7 +295,7 @@ async def async_setup_entry(
     async def handle_open_path(service_call: ServiceCall) -> ServiceResponse:
         """Handle the open path service call."""
         _LOGGER.debug("Open path: %s", service_call.data)
-        coordinator: SystemBridgeDataUpdateCoordinator = hass.data[DOMAIN][
+        coordinator: SystemBridgeDataUpdateCoordinator = menuai.data[DOMAIN][
             service_call.data[CONF_BRIDGE]
         ]
         response = await coordinator.websocket_client.open_path(
@@ -306,7 +306,7 @@ async def async_setup_entry(
     async def handle_power_command(service_call: ServiceCall) -> ServiceResponse:
         """Handle the power command service call."""
         _LOGGER.debug("Power command: %s", service_call.data)
-        coordinator: SystemBridgeDataUpdateCoordinator = hass.data[DOMAIN][
+        coordinator: SystemBridgeDataUpdateCoordinator = menuai.data[DOMAIN][
             service_call.data[CONF_BRIDGE]
         ]
         response = await getattr(
@@ -318,7 +318,7 @@ async def async_setup_entry(
     async def handle_open_url(service_call: ServiceCall) -> ServiceResponse:
         """Handle the open url service call."""
         _LOGGER.debug("Open URL: %s", service_call.data)
-        coordinator: SystemBridgeDataUpdateCoordinator = hass.data[DOMAIN][
+        coordinator: SystemBridgeDataUpdateCoordinator = menuai.data[DOMAIN][
             service_call.data[CONF_BRIDGE]
         ]
         response = await coordinator.websocket_client.open_url(
@@ -328,7 +328,7 @@ async def async_setup_entry(
 
     async def handle_send_keypress(service_call: ServiceCall) -> ServiceResponse:
         """Handle the send_keypress service call."""
-        coordinator: SystemBridgeDataUpdateCoordinator = hass.data[DOMAIN][
+        coordinator: SystemBridgeDataUpdateCoordinator = menuai.data[DOMAIN][
             service_call.data[CONF_BRIDGE]
         ]
         response = await coordinator.websocket_client.keyboard_keypress(
@@ -338,7 +338,7 @@ async def async_setup_entry(
 
     async def handle_send_text(service_call: ServiceCall) -> ServiceResponse:
         """Handle the send_keypress service call."""
-        coordinator: SystemBridgeDataUpdateCoordinator = hass.data[DOMAIN][
+        coordinator: SystemBridgeDataUpdateCoordinator = menuai.data[DOMAIN][
             service_call.data[CONF_BRIDGE]
         ]
         response = await coordinator.websocket_client.keyboard_text(
@@ -346,7 +346,7 @@ async def async_setup_entry(
         )
         return asdict(response)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_GET_PROCESS_BY_ID,
         handle_get_process_by_id,
@@ -359,7 +359,7 @@ async def async_setup_entry(
         supports_response=SupportsResponse.ONLY,
     )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_GET_PROCESSES_BY_NAME,
         handle_get_processes_by_name,
@@ -372,7 +372,7 @@ async def async_setup_entry(
         supports_response=SupportsResponse.ONLY,
     )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_OPEN_PATH,
         handle_open_path,
@@ -385,7 +385,7 @@ async def async_setup_entry(
         supports_response=SupportsResponse.ONLY,
     )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_POWER_COMMAND,
         handle_power_command,
@@ -398,7 +398,7 @@ async def async_setup_entry(
         supports_response=SupportsResponse.ONLY,
     )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_OPEN_URL,
         handle_open_url,
@@ -411,7 +411,7 @@ async def async_setup_entry(
         supports_response=SupportsResponse.ONLY,
     )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_SEND_KEYPRESS,
         handle_send_keypress,
@@ -424,7 +424,7 @@ async def async_setup_entry(
         supports_response=SupportsResponse.ONLY,
     )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_SEND_TEXT,
         handle_send_text,
@@ -443,13 +443,13 @@ async def async_setup_entry(
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(
+    unload_ok = await menuai.config_entries.async_unload_platforms(
         entry, [platform for platform in PLATFORMS if platform != Platform.NOTIFY]
     )
     if unload_ok:
-        coordinator: SystemBridgeDataUpdateCoordinator = hass.data[DOMAIN][
+        coordinator: SystemBridgeDataUpdateCoordinator = menuai.data[DOMAIN][
             entry.entry_id
         ]
 
@@ -458,23 +458,23 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if coordinator.unsub:
             coordinator.unsub()
 
-        del hass.data[DOMAIN][entry.entry_id]
+        del menuai.data[DOMAIN][entry.entry_id]
 
-    if not hass.data[DOMAIN]:
-        hass.services.async_remove(DOMAIN, SERVICE_OPEN_PATH)
-        hass.services.async_remove(DOMAIN, SERVICE_OPEN_URL)
-        hass.services.async_remove(DOMAIN, SERVICE_SEND_KEYPRESS)
-        hass.services.async_remove(DOMAIN, SERVICE_SEND_TEXT)
+    if not menuai.data[DOMAIN]:
+        menuai.services.async_remove(DOMAIN, SERVICE_OPEN_PATH)
+        menuai.services.async_remove(DOMAIN, SERVICE_OPEN_URL)
+        menuai.services.async_remove(DOMAIN, SERVICE_SEND_KEYPRESS)
+        menuai.services.async_remove(DOMAIN, SERVICE_SEND_TEXT)
 
     return unload_ok
 
 
-async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def async_reload_entry(menuai: menuai, entry: ConfigEntry) -> None:
     """Reload the config entry when it changed."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)
 
 
-async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+async def async_migrate_entry(menuai: menuai, config_entry: ConfigEntry) -> bool:
     """Migrate old entry."""
     _LOGGER.debug(
         "Migrating from version %s.%s",
@@ -490,7 +490,7 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
         new_data = dict(config_entry.data)
         new_data.setdefault(CONF_TOKEN, config_entry.data.get(CONF_API_KEY))
 
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             config_entry,
             data=new_data,
             minor_version=2,

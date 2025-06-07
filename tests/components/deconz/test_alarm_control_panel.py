@@ -7,11 +7,11 @@ from pydeconz.models.sensor.ancillary_control import AncillaryControlPanel
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.alarm_control_panel import (
+from menuai.components.alarm_control_panel import (
     DOMAIN as ALARM_CONTROL_PANEL_DOMAIN,
     AlarmControlPanelState,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_CODE,
     ATTR_ENTITY_ID,
     SERVICE_ALARM_ARM_AWAY,
@@ -20,8 +20,8 @@ from homeassistant.const import (
     SERVICE_ALARM_DISARM,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .conftest import ConfigEntryFactoryType, WebsocketDataType
 
@@ -94,7 +94,7 @@ from tests.test_util.aiohttp import AiohttpClientMocker
     ],
 )
 async def test_alarm_control_panel(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     aioclient_mock: AiohttpClientMocker,
     config_entry_factory: ConfigEntryFactoryType,
@@ -104,10 +104,10 @@ async def test_alarm_control_panel(
 ) -> None:
     """Test successful creation of alarm control panel entities."""
     with patch(
-        "homeassistant.components.deconz.PLATFORMS", [Platform.ALARM_CONTROL_PANEL]
+        "menuai.components.deconz.PLATFORMS", [Platform.ALARM_CONTROL_PANEL]
     ):
         config_entry = await config_entry_factory()
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
     for action, state in (
         # Event signals alarm control panel armed state
@@ -128,7 +128,7 @@ async def test_alarm_control_panel(
         (AncillaryControlPanel.NOT_READY, AlarmControlPanelState.TRIGGERED),
     ):
         await sensor_ws_data({"state": {"panel": action}})
-        assert hass.states.get("alarm_control_panel.keypad").state == state
+        assert menuai.states.get("alarm_control_panel.keypad").state == state
 
     # Verify service calls
 
@@ -144,7 +144,7 @@ async def test_alarm_control_panel(
     ):
         aioclient_mock.mock_calls.clear()
         aioclient_mock = mock_put_request(f"/alarmsystems/0/{path}")
-        await hass.services.async_call(
+        await menuai.services.async_call(
             ALARM_CONTROL_PANEL_DOMAIN,
             service,
             {ATTR_ENTITY_ID: "alarm_control_panel.keypad", ATTR_CODE: code},

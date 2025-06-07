@@ -1,15 +1,15 @@
 """Support for August buttons."""
 
-from homeassistant.components.button import ButtonEntity
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.button import ButtonEntity
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import AugustConfigEntry
 from .entity import AugustEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: AugustConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

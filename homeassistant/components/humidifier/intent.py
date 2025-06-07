@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant.const import ATTR_ENTITY_ID, ATTR_MODE, STATE_OFF
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, intent
+from menuai.const import ATTR_ENTITY_ID, ATTR_MODE, STATE_OFF
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, intent
 
 from . import (
     ATTR_AVAILABLE_MODES,
@@ -18,14 +18,14 @@ from . import (
     HumidifierEntityFeature,
 )
 
-INTENT_HUMIDITY = "HassHumidifierSetpoint"
-INTENT_MODE = "HassHumidifierMode"
+INTENT_HUMIDITY = "menuaiHumidifierSetpoint"
+INTENT_MODE = "menuaiHumidifierMode"
 
 
-async def async_setup_intents(hass: HomeAssistant) -> None:
+async def async_setup_intents(menuai: menuai) -> None:
     """Set up the humidifier intents."""
-    intent.async_register(hass, HumidityHandler())
-    intent.async_register(hass, SetModeHandler())
+    intent.async_register(menuai, HumidityHandler())
+    intent.async_register(menuai, SetModeHandler())
 
 
 class HumidityHandler(intent.IntentHandler):
@@ -40,8 +40,8 @@ class HumidityHandler(intent.IntentHandler):
     platforms = {DOMAIN}
 
     async def async_handle(self, intent_obj: intent.Intent) -> intent.IntentResponse:
-        """Handle the hass intent."""
-        hass = intent_obj.hass
+        """Handle the menuai intent."""
+        menuai = intent_obj.menuai
         slots = self.async_validate_slots(intent_obj.slots)
 
         match_constraints = intent.MatchTargetsConstraints(
@@ -49,7 +49,7 @@ class HumidityHandler(intent.IntentHandler):
             domains=[DOMAIN],
             assistant=intent_obj.assistant,
         )
-        match_result = intent.async_match_targets(hass, match_constraints)
+        match_result = intent.async_match_targets(menuai, match_constraints)
         if not match_result.is_match:
             raise intent.MatchFailedError(
                 result=match_result, constraints=match_constraints
@@ -61,7 +61,7 @@ class HumidityHandler(intent.IntentHandler):
         humidity = slots["humidity"]["value"]
 
         if state.state == STATE_OFF:
-            await hass.services.async_call(
+            await menuai.services.async_call(
                 DOMAIN, SERVICE_TURN_ON, service_data, context=intent_obj.context
             )
             speech = f"Turned {state.name} on and set humidity to {humidity}%"
@@ -69,7 +69,7 @@ class HumidityHandler(intent.IntentHandler):
             speech = f"The {state.name} is set to {humidity}%"
 
         service_data[ATTR_HUMIDITY] = humidity
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SET_HUMIDITY,
             service_data,
@@ -95,15 +95,15 @@ class SetModeHandler(intent.IntentHandler):
     platforms = {DOMAIN}
 
     async def async_handle(self, intent_obj: intent.Intent) -> intent.IntentResponse:
-        """Handle the hass intent."""
-        hass = intent_obj.hass
+        """Handle the menuai intent."""
+        menuai = intent_obj.menuai
         slots = self.async_validate_slots(intent_obj.slots)
         match_constraints = intent.MatchTargetsConstraints(
             name=slots["name"]["value"],
             domains=[DOMAIN],
             assistant=intent_obj.assistant,
         )
-        match_result = intent.async_match_targets(hass, match_constraints)
+        match_result = intent.async_match_targets(menuai, match_constraints)
         if not match_result.is_match:
             raise intent.MatchFailedError(
                 result=match_result, constraints=match_constraints
@@ -121,7 +121,7 @@ class SetModeHandler(intent.IntentHandler):
             )
 
         if state.state == STATE_OFF:
-            await hass.services.async_call(
+            await menuai.services.async_call(
                 DOMAIN,
                 SERVICE_TURN_ON,
                 service_data,
@@ -133,7 +133,7 @@ class SetModeHandler(intent.IntentHandler):
             speech = f"The mode for {state.name} is set to {mode}"
 
         service_data[ATTR_MODE] = mode
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SET_MODE,
             service_data,

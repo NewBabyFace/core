@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 import logging
 from typing import TYPE_CHECKING, Any, cast
 
-from homeassistant.components.humidifier import (
+from menuai.components.humidifier import (
     ATTR_HUMIDITY,
     MODE_AWAY,
     MODE_NORMAL,
@@ -18,13 +18,13 @@ from homeassistant.components.humidifier import (
     HumidifierEntity,
     HumidifierEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_MODE,
     CONF_NAME,
     CONF_UNIQUE_ID,
-    EVENT_HOMEASSISTANT_START,
+    EVENT_menuai_START,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
     STATE_OFF,
@@ -32,28 +32,28 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import (
-    DOMAIN as HOMEASSISTANT_DOMAIN,
+from menuai.core import (
+    DOMAIN as menuai_DOMAIN,
     Event,
     EventStateChangedData,
     EventStateReportedData,
-    HomeAssistant,
+    menuai,
     State,
     callback,
 )
-from homeassistant.helpers import condition, config_validation as cv
-from homeassistant.helpers.device import async_device_info_to_link_from_entity
-from homeassistant.helpers.entity_platform import (
+from menuai.helpers import condition, config_validation as cv
+from menuai.helpers.device import async_device_info_to_link_from_entity
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     AddEntitiesCallback,
 )
-from homeassistant.helpers.event import (
+from menuai.helpers.event import (
     async_track_state_change_event,
     async_track_state_report_event,
     async_track_time_interval,
 )
-from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.helpers.restore_state import RestoreEntity
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import (
     CONF_AWAY_FIXED,
@@ -81,7 +81,7 @@ PLATFORM_SCHEMA = HUMIDIFIER_PLATFORM_SCHEMA.extend(HYGROSTAT_SCHEMA.schema)
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -90,19 +90,19 @@ async def async_setup_platform(
     if discovery_info:
         config = discovery_info
     await _async_setup_config(
-        hass, config, config.get(CONF_UNIQUE_ID), async_add_entities
+        menuai, config, config.get(CONF_UNIQUE_ID), async_add_entities
     )
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Initialize config entry."""
 
     await _async_setup_config(
-        hass,
+        menuai,
         config_entry.options,
         config_entry.entry_id,
         async_add_entities,
@@ -116,7 +116,7 @@ def _time_period_or_none(value: Any) -> timedelta | None:
 
 
 async def _async_setup_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: Mapping[str, Any],
     unique_id: str | None,
     async_add_entities: AddEntitiesCallback | AddConfigEntryEntitiesCallback,
@@ -144,7 +144,7 @@ async def _async_setup_config(
     async_add_entities(
         [
             GenericHygrostat(
-                hass,
+                menuai,
                 name,
                 switch_entity_id,
                 sensor_entity_id,
@@ -173,7 +173,7 @@ class GenericHygrostat(HumidifierEntity, RestoreEntity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         name: str,
         switch_entity_id: str,
         sensor_entity_id: str,
@@ -196,7 +196,7 @@ class GenericHygrostat(HumidifierEntity, RestoreEntity):
         self._switch_entity_id = switch_entity_id
         self._sensor_entity_id = sensor_entity_id
         self._attr_device_info = async_device_info_to_link_from_entity(
-            hass,
+            menuai,
             switch_entity_id,
         )
         self._device_class = device_class or HumidifierDeviceClass.HUMIDIFIER
@@ -222,35 +222,35 @@ class GenericHygrostat(HumidifierEntity, RestoreEntity):
         self._attr_action = HumidifierAction.IDLE
         self._attr_unique_id = unique_id
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Run when entity about to be added."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         self.async_on_remove(
             async_track_state_change_event(
-                self.hass, self._sensor_entity_id, self._async_sensor_event
+                self.menuai, self._sensor_entity_id, self._async_sensor_event
             )
         )
         self.async_on_remove(
             async_track_state_report_event(
-                self.hass, self._sensor_entity_id, self._async_sensor_event
+                self.menuai, self._sensor_entity_id, self._async_sensor_event
             )
         )
         self.async_on_remove(
             async_track_state_change_event(
-                self.hass, self._switch_entity_id, self._async_switch_event
+                self.menuai, self._switch_entity_id, self._async_switch_event
             )
         )
         if self._keep_alive:
             self.async_on_remove(
                 async_track_time_interval(
-                    self.hass, self._async_operate, self._keep_alive
+                    self.menuai, self._async_operate, self._keep_alive
                 )
             )
 
         async def _async_startup(event: Event | None) -> None:
             """Init on startup."""
-            sensor_state = self.hass.states.get(self._sensor_entity_id)
+            sensor_state = self.menuai.states.get(self._sensor_entity_id)
             if sensor_state is None or sensor_state.state in (
                 STATE_UNKNOWN,
                 STATE_UNAVAILABLE,
@@ -263,7 +263,7 @@ class GenericHygrostat(HumidifierEntity, RestoreEntity):
 
             await self._async_sensor_update(sensor_state)
 
-        self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_START, _async_startup)
+        self.menuai.bus.async_listen_once(EVENT_menuai_START, _async_startup)
 
         if (old_state := await self.async_get_last_state()) is not None:
             if old_state.attributes.get(ATTR_MODE) == MODE_AWAY:
@@ -291,11 +291,11 @@ class GenericHygrostat(HumidifierEntity, RestoreEntity):
 
         await _async_startup(None)  # init the sensor
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Run when entity will be removed from hass."""
+    async def async_will_remove_from_menuai(self) -> None:
+        """Run when entity will be removed from menuai."""
         if self._remove_stale_tracking:
             self._remove_stale_tracking()
-        return await super().async_will_remove_from_hass()
+        return await super().async_will_remove_from_menuai()
 
     @property
     def available(self) -> bool:
@@ -417,7 +417,7 @@ class GenericHygrostat(HumidifierEntity, RestoreEntity):
                 self._remove_stale_tracking()
 
             self._remove_stale_tracking = async_track_time_interval(
-                self.hass,
+                self.menuai,
                 self._async_sensor_not_responding,
                 self._sensor_stale_duration,
             )
@@ -429,7 +429,7 @@ class GenericHygrostat(HumidifierEntity, RestoreEntity):
     async def _async_sensor_not_responding(self, now: datetime | None = None) -> None:
         """Handle sensor stale event."""
 
-        state = self.hass.states.get(self._sensor_entity_id)
+        state = self.menuai.states.get(self._sensor_entity_id)
         _LOGGER.debug(
             "Sensor has not been updated for %s",
             now - state.last_reported if now and state else "---",
@@ -506,7 +506,7 @@ class GenericHygrostat(HumidifierEntity, RestoreEntity):
                     else:
                         current_state = STATE_OFF
                     long_enough = condition.state(
-                        self.hass,
+                        self.menuai,
                         self._switch_entity_id,
                         current_state,
                         self._min_cycle_duration,
@@ -550,18 +550,18 @@ class GenericHygrostat(HumidifierEntity, RestoreEntity):
     @property
     def _is_device_active(self) -> bool:
         """If the toggleable device is currently active."""
-        return self.hass.states.is_state(self._switch_entity_id, STATE_ON)
+        return self.menuai.states.is_state(self._switch_entity_id, STATE_ON)
 
     async def _async_device_turn_on(self) -> None:
         """Turn humidifier toggleable device on."""
         data = {ATTR_ENTITY_ID: self._switch_entity_id}
-        await self.hass.services.async_call(HOMEASSISTANT_DOMAIN, SERVICE_TURN_ON, data)
+        await self.menuai.services.async_call(menuai_DOMAIN, SERVICE_TURN_ON, data)
 
     async def _async_device_turn_off(self) -> None:
         """Turn humidifier toggleable device off."""
         data = {ATTR_ENTITY_ID: self._switch_entity_id}
-        await self.hass.services.async_call(
-            HOMEASSISTANT_DOMAIN, SERVICE_TURN_OFF, data
+        await self.menuai.services.async_call(
+            menuai_DOMAIN, SERVICE_TURN_OFF, data
         )
 
     async def async_set_mode(self, mode: str) -> None:

@@ -5,14 +5,14 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import (
     CONF_LATITUDE,
     CONF_LONGITUDE,
     CONF_RADIUS,
     CONF_SCAN_INTERVAL,
 )
-from homeassistant.helpers import config_validation as cv
+from menuai.helpers import config_validation as cv
 
 from .const import (
     CONF_MINIMUM_MAGNITUDE,
@@ -57,9 +57,9 @@ class GeonetnzQuakesFlowHandler(ConfigFlow, domain=DOMAIN):
         if not user_input:
             return await self._show_form()
 
-        latitude = user_input.get(CONF_LATITUDE, self.hass.config.latitude)
+        latitude = user_input.get(CONF_LATITUDE, self.menuai.config.latitude)
         user_input[CONF_LATITUDE] = latitude
-        longitude = user_input.get(CONF_LONGITUDE, self.hass.config.longitude)
+        longitude = user_input.get(CONF_LONGITUDE, self.menuai.config.longitude)
         user_input[CONF_LONGITUDE] = longitude
 
         identifier = f"{user_input[CONF_LATITUDE]}, {user_input[CONF_LONGITUDE]}"

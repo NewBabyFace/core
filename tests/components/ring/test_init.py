@@ -6,22 +6,22 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from ring_doorbell import AuthenticationError, Ring, RingError, RingTimeout
 
-from homeassistant.components import ring
-from homeassistant.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
-from homeassistant.components.camera import DOMAIN as CAMERA_DOMAIN
-from homeassistant.components.light import DOMAIN as LIGHT_DOMAIN
-from homeassistant.components.ring import DOMAIN
-from homeassistant.components.ring.const import (
+from menuai.components import ring
+from menuai.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
+from menuai.components.camera import DOMAIN as CAMERA_DOMAIN
+from menuai.components.light import DOMAIN as LIGHT_DOMAIN
+from menuai.components.ring import DOMAIN
+from menuai.components.ring.const import (
     CONF_CONFIG_ENTRY_MINOR_VERSION,
     CONF_LISTEN_CREDENTIALS,
     SCAN_INTERVAL,
 )
-from homeassistant.components.ring.coordinator import RingConfigEntry, RingEventListener
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
-from homeassistant.const import CONF_DEVICE_ID, CONF_TOKEN, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.components.ring.coordinator import RingConfigEntry, RingEventListener
+from menuai.config_entries import SOURCE_REAUTH, ConfigEntryState
+from menuai.const import CONF_DEVICE_ID, CONF_TOKEN, CONF_USERNAME
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.setup import async_setup_component
 
 from .conftest import MOCK_HARDWARE_ID
 from .device_mocks import FRONT_DOOR_DEVICE_ID
@@ -29,13 +29,13 @@ from .device_mocks import FRONT_DOOR_DEVICE_ID
 from tests.common import MockConfigEntry, async_fire_time_changed
 
 
-async def test_setup(hass: HomeAssistant, mock_ring_client) -> None:
+async def test_setup(menuai: menuai, mock_ring_client) -> None:
     """Test the setup."""
-    await async_setup_component(hass, ring.DOMAIN, {})
+    await async_setup_component(menuai, ring.DOMAIN, {})
 
 
 async def test_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_ring_client,
     mock_added_config_entry: MockConfigEntry,
 ) -> None:
@@ -44,7 +44,7 @@ async def test_setup_entry(
 
 
 async def test_setup_entry_device_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_ring_client,
     mock_ring_devices,
     freezer: FrozenDateTimeFactory,
@@ -55,24 +55,24 @@ async def test_setup_entry_device_update(
     front_door_doorbell = mock_ring_devices.get_device(987654)
     front_door_doorbell.async_history.assert_not_called()
     freezer.tick(SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
     front_door_doorbell.async_history.assert_called_once()
 
 
 async def test_auth_failed_on_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_ring_client,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test auth failure on setup entry."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
     mock_ring_client.async_update_data.side_effect = AuthenticationError
 
-    assert not any(mock_config_entry.async_get_active_flows(hass, {SOURCE_REAUTH}))
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
-    assert any(mock_config_entry.async_get_active_flows(hass, {SOURCE_REAUTH}))
+    assert not any(mock_config_entry.async_get_active_flows(menuai, {SOURCE_REAUTH}))
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
+    assert any(mock_config_entry.async_get_active_flows(menuai, {SOURCE_REAUTH}))
     assert mock_config_entry.state is ConfigEntryState.SETUP_ERROR
 
 
@@ -91,7 +91,7 @@ async def test_auth_failed_on_setup(
     ids=["timeout-error", "other-error"],
 )
 async def test_error_on_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_ring_client,
     mock_config_entry: MockConfigEntry,
     caplog: pytest.LogCaptureFixture,
@@ -100,12 +100,12 @@ async def test_error_on_setup(
     log_msg,
 ) -> None:
     """Test non-auth errors on setup entry."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     mock_ring_client.async_update_data.side_effect = error_type
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert mock_config_entry.state is ConfigEntryState.SETUP_RETRY
 
@@ -113,31 +113,31 @@ async def test_error_on_setup(
 
 
 async def test_auth_failure_on_global_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_ring_client,
     mock_config_entry: MockConfigEntry,
     freezer: FrozenDateTimeFactory,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test authentication failure on global data update."""
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
-    assert not any(mock_config_entry.async_get_active_flows(hass, {SOURCE_REAUTH}))
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
+    assert not any(mock_config_entry.async_get_active_flows(menuai, {SOURCE_REAUTH}))
 
     mock_ring_client.async_update_devices.side_effect = AuthenticationError
 
     freezer.tick(SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     assert "Authentication failed while fetching devices data: " in caplog.text
 
-    assert any(mock_config_entry.async_get_active_flows(hass, {SOURCE_REAUTH}))
+    assert any(mock_config_entry.async_get_active_flows(menuai, {SOURCE_REAUTH}))
 
 
 async def test_auth_failure_on_device_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_ring_client,
     mock_ring_devices,
     mock_config_entry: MockConfigEntry,
@@ -145,21 +145,21 @@ async def test_auth_failure_on_device_update(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test authentication failure on device data update."""
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
-    assert not any(mock_config_entry.async_get_active_flows(hass, {SOURCE_REAUTH}))
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
+    assert not any(mock_config_entry.async_get_active_flows(menuai, {SOURCE_REAUTH}))
 
     front_door_doorbell = mock_ring_devices.get_device(987654)
     front_door_doorbell.async_history.side_effect = AuthenticationError
 
     freezer.tick(SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     assert "Authentication failed while fetching devices data: " in caplog.text
 
-    assert any(mock_config_entry.async_get_active_flows(hass, {SOURCE_REAUTH}))
+    assert any(mock_config_entry.async_get_active_flows(menuai, {SOURCE_REAUTH}))
 
 
 @pytest.mark.parametrize(
@@ -177,7 +177,7 @@ async def test_auth_failure_on_device_update(
     ids=["timeout-error", "other-error"],
 )
 async def test_error_on_global_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_ring_client,
     mock_config_entry: RingConfigEntry,
     freezer: FrozenDateTimeFactory,
@@ -186,9 +186,9 @@ async def test_error_on_global_update(
     log_msg,
 ) -> None:
     """Test non-auth errors on global data update."""
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     coordinator = mock_config_entry.runtime_data.devices_coordinator
     assert coordinator
@@ -200,8 +200,8 @@ async def test_error_on_global_update(
         mock_ring_client.async_update_devices.side_effect = error
 
         freezer.tick(SCAN_INTERVAL * 2)
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done(wait_background_tasks=True)
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done(wait_background_tasks=True)
 
         refresh_spy.assert_called()
         assert coordinator.last_exception.__cause__ == error
@@ -213,8 +213,8 @@ async def test_error_on_global_update(
         caplog.clear()
         mock_ring_client.async_update_devices.side_effect = error2
         freezer.tick(SCAN_INTERVAL * 2)
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done(wait_background_tasks=True)
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done(wait_background_tasks=True)
 
         refresh_spy.assert_called()
         assert coordinator.last_exception.__cause__ == error2
@@ -236,7 +236,7 @@ async def test_error_on_global_update(
     ids=["timeout-error", "other-error"],
 )
 async def test_error_on_device_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_ring_client,
     mock_ring_devices,
     mock_config_entry: RingConfigEntry,
@@ -246,9 +246,9 @@ async def test_error_on_device_update(
     log_msg,
 ) -> None:
     """Test non-auth errors on device update."""
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     coordinator = mock_config_entry.runtime_data.devices_coordinator
     assert coordinator
@@ -261,8 +261,8 @@ async def test_error_on_device_update(
         front_door_doorbell.async_history.side_effect = error
 
         freezer.tick(SCAN_INTERVAL * 2)
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done(wait_background_tasks=True)
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done(wait_background_tasks=True)
 
         refresh_spy.assert_called()
         assert coordinator.last_exception.__cause__ == error
@@ -274,8 +274,8 @@ async def test_error_on_device_update(
         refresh_spy.reset_mock()
         caplog.clear()
         freezer.tick(SCAN_INTERVAL * 2)
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done(wait_background_tasks=True)
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done(wait_background_tasks=True)
 
         refresh_spy.assert_called()
         assert coordinator.last_exception.__cause__ == error2
@@ -295,7 +295,7 @@ async def test_error_on_device_update(
     ],
 )
 async def test_update_unique_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     caplog: pytest.LogCaptureFixture,
     mock_ring_client,
@@ -314,7 +314,7 @@ async def test_update_unique_id(
         unique_id="foo@bar.com",
         minor_version=1,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     entity = entity_registry.async_get_or_create(
         domain=domain,
@@ -323,8 +323,8 @@ async def test_update_unique_id(
         config_entry=entry,
     )
     assert entity.unique_id == old_unique_id
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     entity_migrated = entity_registry.async_get(entity.entity_id)
     assert entity_migrated
@@ -334,7 +334,7 @@ async def test_update_unique_id(
 
 
 async def test_update_unique_id_existing(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     caplog: pytest.LogCaptureFixture,
     mock_ring_client,
@@ -351,7 +351,7 @@ async def test_update_unique_id_existing(
         unique_id="foo@bar.com",
         minor_version=1,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     entity = entity_registry.async_get_or_create(
         domain=CAMERA_DOMAIN,
@@ -367,8 +367,8 @@ async def test_update_unique_id_existing(
     )
     assert entity.unique_id == old_unique_id
     assert entity_existing.unique_id == str(old_unique_id)
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     entity_not_migrated = entity_registry.async_get(entity.entity_id)
     entity_existing = entity_registry.async_get(entity_existing.entity_id)
@@ -384,7 +384,7 @@ async def test_update_unique_id_existing(
 
 
 async def test_update_unique_id_camera_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     caplog: pytest.LogCaptureFixture,
     mock_ring_client,
@@ -401,7 +401,7 @@ async def test_update_unique_id_camera_update(
         unique_id="foo@bar.com",
         minor_version=1,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     entity = entity_registry.async_get_or_create(
         domain=CAMERA_DOMAIN,
@@ -410,8 +410,8 @@ async def test_update_unique_id_camera_update(
         config_entry=entry,
     )
     assert entity.unique_id == "123456"
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     entity_migrated = entity_registry.async_get(entity.entity_id)
     assert entity_migrated
@@ -422,7 +422,7 @@ async def test_update_unique_id_camera_update(
 
 
 async def test_token_updated(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     mock_config_entry: MockConfigEntry,
     mock_ring_client,
@@ -432,8 +432,8 @@ async def test_token_updated(
 
     This simulates the api calling the callback.
     """
-    mock_config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    mock_config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
 
     assert mock_ring_init_auth_class.call_count == 1
     token_updater = mock_ring_init_auth_class.call_args.args[2]
@@ -443,13 +443,13 @@ async def test_token_updated(
         {"access_token": "new-mock-token"}
     )
     freezer.tick(SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
     assert mock_config_entry.data[CONF_TOKEN] == {"access_token": "new-mock-token"}
 
 
 async def test_listen_token_updated(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     mock_config_entry: MockConfigEntry,
     mock_ring_client,
@@ -459,9 +459,9 @@ async def test_listen_token_updated(
 
     This simulates the api calling the callback.
     """
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
 
     assert mock_ring_event_listener_class.call_count == 1
     token_updater = mock_ring_event_listener_class.call_args.args[2]
@@ -474,7 +474,7 @@ async def test_listen_token_updated(
 
 
 async def test_no_listen_start(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     entity_registry: er.EntityRegistry,
     mock_ring_event_listener_class: type[RingEventListener],
@@ -486,7 +486,7 @@ async def test_no_listen_start(
         version=1,
         data={"username": "foo", "token": {}},
     )
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
     # Create a binary sensor entity so it is not ignored by the deprecation check
     # and the listener will start
     entity_registry.async_get_or_create(
@@ -500,8 +500,8 @@ async def test_no_listen_start(
 
     mock_ring_event_listener_class.return_value.started = False
 
-    await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert "Ring event listener failed to start after 10 seconds" in [
         record.message for record in caplog.records if record.levelname == "WARNING"
@@ -509,7 +509,7 @@ async def test_no_listen_start(
 
 
 async def test_migrate_create_device_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -525,10 +525,10 @@ async def test_migrate_create_device_id(
         version=1,
         minor_version=1,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     with patch("uuid.uuid4", return_value=MOCK_HARDWARE_ID):
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     assert entry.minor_version == CONF_CONFIG_ENTRY_MINOR_VERSION
     assert CONF_DEVICE_ID in entry.data

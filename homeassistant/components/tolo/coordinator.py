@@ -8,10 +8,10 @@ from typing import NamedTuple
 
 from tololib import ToloClient, ToloSettings, ToloStatus
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DEFAULT_RETRY_COUNT, DEFAULT_RETRY_TIMEOUT
 
@@ -30,7 +30,7 @@ class ToloSaunaUpdateCoordinator(DataUpdateCoordinator[ToloSaunaData]):
 
     config_entry: ConfigEntry
 
-    def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
+    def __init__(self, menuai: menuai, entry: ConfigEntry) -> None:
         """Initialize ToloSaunaUpdateCoordinator."""
         self.client = ToloClient(
             address=entry.data[CONF_HOST],
@@ -38,7 +38,7 @@ class ToloSaunaUpdateCoordinator(DataUpdateCoordinator[ToloSaunaData]):
             retry_count=DEFAULT_RETRY_COUNT,
         )
         super().__init__(
-            hass=hass,
+            menuai=menuai,
             logger=_LOGGER,
             config_entry=entry,
             name=f"{entry.title} ({entry.data[CONF_HOST]}) Data Update Coordinator",
@@ -46,7 +46,7 @@ class ToloSaunaUpdateCoordinator(DataUpdateCoordinator[ToloSaunaData]):
         )
 
     async def _async_update_data(self) -> ToloSaunaData:
-        return await self.hass.async_add_executor_job(self._get_tolo_sauna_data)
+        return await self.menuai.async_add_executor_job(self._get_tolo_sauna_data)
 
     def _get_tolo_sauna_data(self) -> ToloSaunaData:
         try:

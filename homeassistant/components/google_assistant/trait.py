@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 import logging
 from typing import Any
 
-from homeassistant.components import (
+from menuai.components import (
     alarm_control_panel,
     binary_sensor,
     button,
@@ -34,23 +34,23 @@ from homeassistant.components import (
     valve,
     water_heater,
 )
-from homeassistant.components.alarm_control_panel import (
+from menuai.components.alarm_control_panel import (
     AlarmControlPanelEntityFeature,
     AlarmControlPanelState,
 )
-from homeassistant.components.camera import CameraEntityFeature
-from homeassistant.components.climate import ClimateEntityFeature
-from homeassistant.components.cover import CoverEntityFeature
-from homeassistant.components.fan import FanEntityFeature
-from homeassistant.components.humidifier import HumidifierEntityFeature
-from homeassistant.components.lawn_mower import LawnMowerEntityFeature
-from homeassistant.components.light import LightEntityFeature
-from homeassistant.components.lock import LockState
-from homeassistant.components.media_player import MediaPlayerEntityFeature, MediaType
-from homeassistant.components.vacuum import VacuumEntityFeature
-from homeassistant.components.valve import ValveEntityFeature
-from homeassistant.components.water_heater import WaterHeaterEntityFeature
-from homeassistant.const import (
+from menuai.components.camera import CameraEntityFeature
+from menuai.components.climate import ClimateEntityFeature
+from menuai.components.cover import CoverEntityFeature
+from menuai.components.fan import FanEntityFeature
+from menuai.components.humidifier import HumidifierEntityFeature
+from menuai.components.lawn_mower import LawnMowerEntityFeature
+from menuai.components.light import LightEntityFeature
+from menuai.components.lock import LockState
+from menuai.components.media_player import MediaPlayerEntityFeature, MediaType
+from menuai.components.vacuum import VacuumEntityFeature
+from menuai.components.valve import ValveEntityFeature
+from menuai.components.water_heater import WaterHeaterEntityFeature
+from menuai.const import (
     ATTR_ASSUMED_STATE,
     ATTR_BATTERY_LEVEL,
     ATTR_CODE,
@@ -59,7 +59,7 @@ from homeassistant.const import (
     ATTR_MODE,
     ATTR_SUPPORTED_FEATURES,
     ATTR_TEMPERATURE,
-    CAST_APP_ID_HOMEASSISTANT_MEDIA,
+    CAST_APP_ID_menuai_MEDIA,
     SERVICE_ALARM_ARM_AWAY,
     SERVICE_ALARM_ARM_CUSTOM_BYPASS,
     SERVICE_ALARM_ARM_HOME,
@@ -78,15 +78,15 @@ from homeassistant.const import (
     STATE_UNKNOWN,
     UnitOfTemperature,
 )
-from homeassistant.core import DOMAIN as HOMEASSISTANT_DOMAIN, HomeAssistant
-from homeassistant.helpers.network import get_url
-from homeassistant.util import color as color_util, dt as dt_util
-from homeassistant.util.dt import utcnow
-from homeassistant.util.percentage import (
+from menuai.core import DOMAIN as menuai_DOMAIN, menuai
+from menuai.helpers.network import get_url
+from menuai.util import color as color_util, dt as dt_util
+from menuai.util.dt import utcnow
+from menuai.util.percentage import (
     ordered_list_item_to_percentage,
     percentage_to_ordered_list_item,
 )
-from homeassistant.util.unit_conversion import TemperatureConverter
+from menuai.util.unit_conversion import TemperatureConverter
 
 from .const import (
     CHALLENGE_FAILED_PIN_NEEDED,
@@ -285,9 +285,9 @@ class _Trait(ABC):
     def supported(domain, features, device_class, attributes):
         """Test if state is supported."""
 
-    def __init__(self, hass: HomeAssistant, state, config) -> None:
+    def __init__(self, menuai: menuai, state, config) -> None:
         """Initialize a trait for a state."""
-        self.hass = hass
+        self.menuai = menuai
         self.state = state
         self.config = config
 
@@ -353,7 +353,7 @@ class BrightnessTrait(_Trait):
     async def execute(self, command, data, params, challenge):
         """Execute a brightness command."""
         if self.state.domain == light.DOMAIN:
-            await self.hass.services.async_call(
+            await self.menuai.services.async_call(
                 light.DOMAIN,
                 light.SERVICE_TURN_ON,
                 {
@@ -399,10 +399,10 @@ class CameraStreamTrait(_Trait):
 
     async def execute(self, command, data, params, challenge):
         """Execute a get camera stream command."""
-        url = await camera.async_request_stream(self.hass, self.state.entity_id, "hls")
+        url = await camera.async_request_stream(self.menuai, self.state.entity_id, "hls")
         self.stream_info = {
-            "cameraStreamAccessUrl": f"{get_url(self.hass)}{url}",
-            "cameraStreamReceiverAppId": CAST_APP_ID_HOMEASSISTANT_MEDIA,
+            "cameraStreamAccessUrl": f"{get_url(self.menuai)}{url}",
+            "cameraStreamReceiverAppId": CAST_APP_ID_menuai_MEDIA,
         }
 
 
@@ -508,14 +508,14 @@ class OnOffTrait(_Trait):
     async def execute(self, command, data, params, challenge):
         """Execute an OnOff command."""
         if (domain := self.state.domain) == group.DOMAIN:
-            service_domain = HOMEASSISTANT_DOMAIN
+            service_domain = menuai_DOMAIN
             service = SERVICE_TURN_ON if params["on"] else SERVICE_TURN_OFF
 
         else:
             service_domain = domain
             service = SERVICE_TURN_ON if params["on"] else SERVICE_TURN_OFF
 
-        await self.hass.services.async_call(
+        await self.menuai.services.async_call(
             service_domain,
             service,
             {ATTR_ENTITY_ID: self.state.entity_id},
@@ -610,7 +610,7 @@ class ColorSettingTrait(_Trait):
                     f"Temperature should be between {min_temp} and {max_temp}",
                 )
 
-            await self.hass.services.async_call(
+            await self.menuai.services.async_call(
                 light.DOMAIN,
                 SERVICE_TURN_ON,
                 {
@@ -628,7 +628,7 @@ class ColorSettingTrait(_Trait):
                 *color_util.rgb_hex_to_rgb_list(hex_value)
             )
 
-            await self.hass.services.async_call(
+            await self.menuai.services.async_call(
                 light.DOMAIN,
                 SERVICE_TURN_ON,
                 {ATTR_ENTITY_ID: self.state.entity_id, light.ATTR_HS_COLOR: color},
@@ -641,7 +641,7 @@ class ColorSettingTrait(_Trait):
             saturation = color["saturation"] * 100
             brightness = color["value"] * 255
 
-            await self.hass.services.async_call(
+            await self.menuai.services.async_call(
                 light.DOMAIN,
                 SERVICE_TURN_ON,
                 {
@@ -692,7 +692,7 @@ class SceneTrait(_Trait):
             service = input_button.SERVICE_PRESS
 
         # Don't block for scripts or buttons, as they can be slow.
-        await self.hass.services.async_call(
+        await self.menuai.services.async_call(
             self.state.domain,
             service,
             {ATTR_ENTITY_ID: self.state.entity_id},
@@ -743,7 +743,7 @@ class DockTrait(_Trait):
             service = lawn_mower.SERVICE_DOCK
 
         if service:
-            await self.hass.services.async_call(
+            await self.menuai.services.async_call(
                 self.state.domain,
                 service,
                 {ATTR_ENTITY_ID: self.state.entity_id},
@@ -783,7 +783,7 @@ class LocatorTrait(_Trait):
                 "Silencing a Locate request is not yet supported",
             )
 
-        await self.hass.services.async_call(
+        await self.menuai.services.async_call(
             self.state.domain,
             vacuum.SERVICE_LOCATE,
             {ATTR_ENTITY_ID: self.state.entity_id},
@@ -939,7 +939,7 @@ class StartStopTrait(_Trait):
         elif command == COMMAND_PAUSE_UNPAUSE:
             service = vacuum.SERVICE_PAUSE if params["pause"] else vacuum.SERVICE_START
         if service:
-            await self.hass.services.async_call(
+            await self.menuai.services.async_call(
                 self.state.domain,
                 service,
                 {ATTR_ENTITY_ID: self.state.entity_id},
@@ -963,7 +963,7 @@ class StartStopTrait(_Trait):
                 else lawn_mower.SERVICE_START_MOWING
             )
         if service:
-            await self.hass.services.async_call(
+            await self.menuai.services.async_call(
                 self.state.domain,
                 service,
                 {ATTR_ENTITY_ID: self.state.entity_id},
@@ -980,7 +980,7 @@ class StartStopTrait(_Trait):
                     COVER_VALVE_STATES[domain]["closing"],
                     COVER_VALVE_STATES[domain]["opening"],
                 ) or self.state.attributes.get(ATTR_ASSUMED_STATE):
-                    await self.hass.services.async_call(
+                    await self.menuai.services.async_call(
                         domain,
                         SERVICE_STOP_COVER_VALVE[domain],
                         {ATTR_ENTITY_ID: self.state.entity_id},
@@ -993,7 +993,7 @@ class StartStopTrait(_Trait):
                         f"{FRIENDLY_DOMAIN[domain]} is already stopped",
                     )
             else:
-                await self.hass.services.async_call(
+                await self.menuai.services.async_call(
                     domain,
                     SERVICE_TOGGLE_COVER_VALVE[domain],
                     {ATTR_ENTITY_ID: self.state.entity_id},
@@ -1039,7 +1039,7 @@ class TemperatureControlTrait(_Trait):
         response = {}
         domain = self.state.domain
         attrs = self.state.attributes
-        unit = self.hass.config.units.temperature_unit
+        unit = self.menuai.config.units.temperature_unit
         response["temperatureUnitForUX"] = _google_temp_unit(unit)
 
         if domain == water_heater.DOMAIN:
@@ -1074,7 +1074,7 @@ class TemperatureControlTrait(_Trait):
         """Return temperature states."""
         response = {}
         domain = self.state.domain
-        unit = self.hass.config.units.temperature_unit
+        unit = self.menuai.config.units.temperature_unit
         if domain == water_heater.DOMAIN:
             target_temp = self.state.attributes[water_heater.ATTR_TEMPERATURE]
             current_temp = self.state.attributes[water_heater.ATTR_CURRENT_TEMPERATURE]
@@ -1116,7 +1116,7 @@ class TemperatureControlTrait(_Trait):
         """Execute a temperature point or mode command."""
         # All sent in temperatures are always in Celsius
         domain = self.state.domain
-        unit = self.hass.config.units.temperature_unit
+        unit = self.menuai.config.units.temperature_unit
 
         if domain == water_heater.DOMAIN and command == COMMAND_SET_TEMPERATURE:
             min_temp = self.state.attributes[water_heater.ATTR_MIN_TEMP]
@@ -1132,7 +1132,7 @@ class TemperatureControlTrait(_Trait):
                     f"Temperature should be between {min_temp} and {max_temp}",
                 )
 
-            await self.hass.services.async_call(
+            await self.menuai.services.async_call(
                 water_heater.DOMAIN,
                 water_heater.SERVICE_SET_TEMPERATURE,
                 {ATTR_ENTITY_ID: self.state.entity_id, ATTR_TEMPERATURE: temp},
@@ -1200,7 +1200,7 @@ class TemperatureSettingTrait(_Trait):
         """Return temperature point and modes attributes for a sync request."""
         response = {}
         attrs = self.state.attributes
-        unit = self.hass.config.units.temperature_unit
+        unit = self.menuai.config.units.temperature_unit
         response["thermostatTemperatureUnit"] = _google_temp_unit(unit)
 
         min_temp = round(
@@ -1243,7 +1243,7 @@ class TemperatureSettingTrait(_Trait):
         """Return temperature point and modes query attributes."""
         response: dict[str, Any] = {}
         attrs = self.state.attributes
-        unit = self.hass.config.units.temperature_unit
+        unit = self.menuai.config.units.temperature_unit
 
         operation = self.state.state
         preset = attrs.get(climate.ATTR_PRESET_MODE)
@@ -1307,7 +1307,7 @@ class TemperatureSettingTrait(_Trait):
     async def execute(self, command, data, params, challenge):
         """Execute a temperature point or mode command."""
         # All sent in temperatures are always in Celsius
-        unit = self.hass.config.units.temperature_unit
+        unit = self.menuai.config.units.temperature_unit
         min_temp = self.state.attributes[climate.ATTR_MIN_TEMP]
         max_temp = self.state.attributes[climate.ATTR_MAX_TEMP]
 
@@ -1324,7 +1324,7 @@ class TemperatureSettingTrait(_Trait):
                     f"Temperature should be between {min_temp} and {max_temp}",
                 )
 
-            await self.hass.services.async_call(
+            await self.menuai.services.async_call(
                 climate.DOMAIN,
                 climate.SERVICE_SET_TEMPERATURE,
                 {ATTR_ENTITY_ID: self.state.entity_id, ATTR_TEMPERATURE: temp},
@@ -1376,7 +1376,7 @@ class TemperatureSettingTrait(_Trait):
             else:
                 svc_data[ATTR_TEMPERATURE] = (temp_high + temp_low) / 2
 
-            await self.hass.services.async_call(
+            await self.menuai.services.async_call(
                 climate.DOMAIN,
                 climate.SERVICE_SET_TEMPERATURE,
                 svc_data,
@@ -1389,7 +1389,7 @@ class TemperatureSettingTrait(_Trait):
             supported = self.state.attributes.get(ATTR_SUPPORTED_FEATURES)
 
             if target_mode == "on":
-                await self.hass.services.async_call(
+                await self.menuai.services.async_call(
                     climate.DOMAIN,
                     SERVICE_TURN_ON,
                     {ATTR_ENTITY_ID: self.state.entity_id},
@@ -1399,7 +1399,7 @@ class TemperatureSettingTrait(_Trait):
                 return
 
             if target_mode == "off":
-                await self.hass.services.async_call(
+                await self.menuai.services.async_call(
                     climate.DOMAIN,
                     SERVICE_TURN_OFF,
                     {ATTR_ENTITY_ID: self.state.entity_id},
@@ -1409,7 +1409,7 @@ class TemperatureSettingTrait(_Trait):
                 return
 
             if target_mode in self.google_to_preset:
-                await self.hass.services.async_call(
+                await self.menuai.services.async_call(
                     climate.DOMAIN,
                     climate.SERVICE_SET_PRESET_MODE,
                     {
@@ -1421,7 +1421,7 @@ class TemperatureSettingTrait(_Trait):
                 )
                 return
 
-            await self.hass.services.async_call(
+            await self.menuai.services.async_call(
                 climate.DOMAIN,
                 climate.SERVICE_SET_HVAC_MODE,
                 {
@@ -1508,7 +1508,7 @@ class HumiditySettingTrait(_Trait):
             )
 
         if command == COMMAND_SET_HUMIDITY:
-            await self.hass.services.async_call(
+            await self.menuai.services.async_call(
                 humidifier.DOMAIN,
                 humidifier.SERVICE_SET_HUMIDITY,
                 {
@@ -1560,7 +1560,7 @@ class LockUnlockTrait(_Trait):
             _verify_pin_challenge(data, self.state, challenge)
             service = lock.SERVICE_UNLOCK
 
-        await self.hass.services.async_call(
+        await self.menuai.services.async_call(
             lock.DOMAIN,
             service,
             {ATTR_ENTITY_ID: self.state.entity_id},
@@ -1684,7 +1684,7 @@ class ArmDisArmTrait(_Trait):
             _verify_pin_challenge(data, self.state, challenge)
             service = SERVICE_ALARM_DISARM
 
-        await self.hass.services.async_call(
+        await self.menuai.services.async_call(
             alarm_control_panel.DOMAIN,
             service,
             {
@@ -1720,9 +1720,9 @@ class FanSpeedTrait(_Trait):
     name = TRAIT_FAN_SPEED
     commands = [COMMAND_SET_FAN_SPEED, COMMAND_REVERSE]
 
-    def __init__(self, hass, state, config):
+    def __init__(self, menuai, state, config):
         """Initialize a trait for a state."""
-        super().__init__(hass, state, config)
+        super().__init__(menuai, state, config)
         if state.domain == fan.DOMAIN:
             speed_count = min(
                 FAN_SPEED_MAX_SPEED_COUNT,
@@ -1815,7 +1815,7 @@ class FanSpeedTrait(_Trait):
         """Execute an SetFanSpeed command."""
         domain = self.state.domain
         if domain == climate.DOMAIN:
-            await self.hass.services.async_call(
+            await self.menuai.services.async_call(
                 climate.DOMAIN,
                 climate.SERVICE_SET_FAN_MODE,
                 {
@@ -1834,7 +1834,7 @@ class FanSpeedTrait(_Trait):
             else:
                 fan_speed_percent = params.get("fanSpeedPercent")
 
-            await self.hass.services.async_call(
+            await self.menuai.services.async_call(
                 fan.DOMAIN,
                 fan.SERVICE_SET_PERCENTAGE,
                 {
@@ -1853,7 +1853,7 @@ class FanSpeedTrait(_Trait):
             else:
                 direction = fan.DIRECTION_FORWARD
 
-            await self.hass.services.async_call(
+            await self.menuai.services.async_call(
                 fan.DOMAIN,
                 fan.SERVICE_SET_DIRECTION,
                 {ATTR_ENTITY_ID: self.state.entity_id, fan.ATTR_DIRECTION: direction},
@@ -2001,7 +2001,7 @@ class ModesTrait(_Trait):
 
         if self.state.domain == fan.DOMAIN:
             preset_mode = settings["preset mode"]
-            await self.hass.services.async_call(
+            await self.menuai.services.async_call(
                 fan.DOMAIN,
                 fan.SERVICE_SET_PRESET_MODE,
                 {
@@ -2015,7 +2015,7 @@ class ModesTrait(_Trait):
 
         if self.state.domain == input_select.DOMAIN:
             option = settings["option"]
-            await self.hass.services.async_call(
+            await self.menuai.services.async_call(
                 input_select.DOMAIN,
                 input_select.SERVICE_SELECT_OPTION,
                 {
@@ -2029,7 +2029,7 @@ class ModesTrait(_Trait):
 
         if self.state.domain == select.DOMAIN:
             option = settings["option"]
-            await self.hass.services.async_call(
+            await self.menuai.services.async_call(
                 select.DOMAIN,
                 select.SERVICE_SELECT_OPTION,
                 {
@@ -2043,7 +2043,7 @@ class ModesTrait(_Trait):
 
         if self.state.domain == humidifier.DOMAIN:
             requested_mode = settings["mode"]
-            await self.hass.services.async_call(
+            await self.menuai.services.async_call(
                 humidifier.DOMAIN,
                 humidifier.SERVICE_SET_MODE,
                 {
@@ -2057,7 +2057,7 @@ class ModesTrait(_Trait):
 
         if self.state.domain == water_heater.DOMAIN:
             requested_mode = settings["operation mode"]
-            await self.hass.services.async_call(
+            await self.menuai.services.async_call(
                 water_heater.DOMAIN,
                 water_heater.SERVICE_SET_OPERATION_MODE,
                 {
@@ -2071,7 +2071,7 @@ class ModesTrait(_Trait):
 
         if self.state.domain == light.DOMAIN:
             requested_effect = settings["effect"]
-            await self.hass.services.async_call(
+            await self.menuai.services.async_call(
                 light.DOMAIN,
                 SERVICE_TURN_ON,
                 {
@@ -2086,7 +2086,7 @@ class ModesTrait(_Trait):
         if self.state.domain == media_player.DOMAIN and (
             sound_mode := settings.get("sound mode")
         ):
-            await self.hass.services.async_call(
+            await self.menuai.services.async_call(
                 media_player.DOMAIN,
                 media_player.SERVICE_SELECT_SOUND_MODE,
                 {
@@ -2159,7 +2159,7 @@ class InputSelectorTrait(_Trait):
         if requested_source not in sources:
             raise SmartHomeError(ERR_UNSUPPORTED_INPUT, "Unsupported input")
 
-        await self.hass.services.async_call(
+        await self.menuai.services.async_call(
             media_player.DOMAIN,
             media_player.SERVICE_SELECT_SOURCE,
             {
@@ -2322,7 +2322,7 @@ class OpenCloseTrait(_Trait):
             ):
                 _verify_pin_challenge(data, self.state, challenge)
 
-            await self.hass.services.async_call(
+            await self.menuai.services.async_call(
                 domain,
                 service,
                 svc_params,
@@ -2385,7 +2385,7 @@ class VolumeTrait(_Trait):
         return response
 
     async def _set_volume_absolute(self, data, level):
-        await self.hass.services.async_call(
+        await self.menuai.services.async_call(
             media_player.DOMAIN,
             media_player.SERVICE_VOLUME_SET,
             {
@@ -2424,7 +2424,7 @@ class VolumeTrait(_Trait):
                 relative = -relative
 
             for _ in range(relative):
-                await self.hass.services.async_call(
+                await self.menuai.services.async_call(
                     media_player.DOMAIN,
                     svc,
                     {ATTR_ENTITY_ID: self.state.entity_id},
@@ -2443,7 +2443,7 @@ class VolumeTrait(_Trait):
         ):
             raise SmartHomeError(ERR_NOT_SUPPORTED, "Command not supported")
 
-        await self.hass.services.async_call(
+        await self.menuai.services.async_call(
             media_player.DOMAIN,
             media_player.SERVICE_VOLUME_MUTE,
             {
@@ -2600,7 +2600,7 @@ class TransportControlTrait(_Trait):
         else:
             raise SmartHomeError(ERR_NOT_SUPPORTED, "Command not supported")
 
-        await self.hass.services.async_call(
+        await self.menuai.services.async_call(
             media_player.DOMAIN,
             service,
             service_attrs,
@@ -2701,7 +2701,7 @@ class ChannelTrait(_Trait):
                 "Channel is not available",
             )
 
-        await self.hass.services.async_call(
+        await self.menuai.services.async_call(
             media_player.DOMAIN,
             media_player.SERVICE_PLAY_MEDIA,
             {

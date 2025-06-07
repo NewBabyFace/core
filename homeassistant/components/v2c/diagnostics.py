@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
+from menuai.components.diagnostics import async_redact_data
+from menuai.const import CONF_HOST
+from menuai.core import menuai
 
 from .coordinator import V2CConfigEntry
 
@@ -14,7 +14,7 @@ TO_REDACT = {CONF_HOST, "title"}
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: V2CConfigEntry
+    menuai: menuai, entry: V2CConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     coordinator = entry.runtime_data

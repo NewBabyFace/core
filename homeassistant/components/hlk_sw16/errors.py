@@ -1,9 +1,9 @@
 """Errors for the HLK-SW16 component."""
 
-from homeassistant.exceptions import HomeAssistantError
+from menuai.exceptions import menuaiError
 
 
-class SW16Exception(HomeAssistantError):
+class SW16Exception(menuaiError):
     """Base class for HLK-SW16 exceptions."""
 
 

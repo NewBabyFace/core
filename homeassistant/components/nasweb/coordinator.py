@@ -13,9 +13,9 @@ from aiohttp.web import Request, Response
 from webio_api import WebioAPI
 from webio_api.const import KEY_DEVICE_SERIAL, KEY_OUTPUTS, KEY_TYPE, TYPE_STATUS_UPDATE
 
-from homeassistant.core import CALLBACK_TYPE, HassJob, HomeAssistant, callback
-from homeassistant.helpers import event
-from homeassistant.helpers.update_coordinator import BaseDataUpdateCoordinatorProtocol
+from menuai.core import CALLBACK_TYPE, menuaiJob, menuai, callback
+from menuai.helpers import event
+from menuai.helpers.update_coordinator import BaseDataUpdateCoordinatorProtocol
 
 from .const import STATUS_UPDATE_MAX_TIME_INTERVAL
 
@@ -57,7 +57,7 @@ class NotificationCoordinator:
         return False
 
     async def handle_webhook_request(
-        self, hass: HomeAssistant, webhook_id: str, request: Request
+        self, menuai: menuai, webhook_id: str, request: Request
     ) -> Response | None:
         """Handle webhook request from Push API."""
         if not self.has_coordinators():
@@ -85,15 +85,15 @@ class NASwebCoordinator(BaseDataUpdateCoordinatorProtocol):
     """
 
     def __init__(
-        self, hass: HomeAssistant, webio_api: WebioAPI, name: str = "NASweb[default]"
+        self, menuai: menuai, webio_api: WebioAPI, name: str = "NASweb[default]"
     ) -> None:
         """Initialize NASweb coordinator."""
-        self._hass = hass
+        self._menuai = menuai
         self.name = name
         self.webio_api = webio_api
         self._last_update: float | None = None
         job_name = f"NASwebCoordinator[{name}]"
-        self._job = HassJob(self._handle_max_update_interval, job_name)
+        self._job = menuaiJob(self._handle_max_update_interval, job_name)
         self._unsub_last_update_check: CALLBACK_TYPE | None = None
         self._listeners: dict[CALLBACK_TYPE, tuple[CALLBACK_TYPE, object | None]] = {}
         data: dict[str, Any] = {}
@@ -128,7 +128,7 @@ class NASwebCoordinator(BaseDataUpdateCoordinatorProtocol):
     def async_set_updated_data(self, data: dict[str, Any]) -> None:
         """Update data and notify listeners."""
         self.data = data
-        self.last_update = self._hass.loop.time()
+        self.last_update = self._menuai.loop.time()
         _LOGGER.debug("Updated %s data", self.name)
         if self._listeners:
             self._schedule_last_update_check()
@@ -159,12 +159,12 @@ class NASwebCoordinator(BaseDataUpdateCoordinatorProtocol):
         to change their state to unavailable. After each status update this task is rescheduled.
         """
         self._async_unsub_last_update_check()
-        now = self._hass.loop.time()
+        now = self._menuai.loop.time()
         next_check = (
             now + timedelta(seconds=STATUS_UPDATE_MAX_TIME_INTERVAL).total_seconds()
         )
         self._unsub_last_update_check = event.async_call_at(
-            self._hass,
+            self._menuai,
             self._job,
             next_check,
         )

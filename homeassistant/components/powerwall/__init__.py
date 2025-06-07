@@ -16,15 +16,15 @@ from tesla_powerwall import (
 )
 from yarl import URL
 
-from homeassistant.components import persistent_notification
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_IP_ADDRESS, CONF_PASSWORD, Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.aiohttp_client import async_create_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util.network import is_ip_address
+from menuai.components import persistent_notification
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_IP_ADDRESS, CONF_PASSWORD, Platform
+from menuai.core import menuai, callback
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.aiohttp_client import async_create_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.util.network import is_ip_address
 
 from .const import (
     AUTH_COOKIE_KEY,
@@ -58,7 +58,7 @@ class PowerwallDataManager:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         power_wall: Powerwall,
         cookie_jar: CookieJar,
         entry: PowerwallConfigEntry,
@@ -67,7 +67,7 @@ class PowerwallDataManager:
         runtime_data: PowerwallRuntimeData,
     ) -> None:
         """Init the data manager."""
-        self.hass = hass
+        self.menuai = menuai
         self.ip_address = ip_address
         self.password = password
         self.runtime_data = runtime_data
@@ -111,7 +111,7 @@ class PowerwallDataManager:
                 # The error might include some important information
                 # about what exactly changed.
                 persistent_notification.create(
-                    self.hass, API_CHANGED_ERROR_BODY, API_CHANGED_TITLE
+                    self.menuai, API_CHANGED_ERROR_BODY, API_CHANGED_TITLE
                 )
                 self.runtime_data[POWERWALL_API_CHANGED] = True
                 raise UpdateFailed("The powerwall api has changed") from err
@@ -135,7 +135,7 @@ class PowerwallDataManager:
         """Save the auth cookie."""
         for cookie in self.cookie_jar:
             if cookie.key == AUTH_COOKIE_KEY:
-                self.hass.config_entries.async_update_entry(
+                self.menuai.config_entries.async_update_entry(
                     self.entry,
                     data={**self.entry.data, CONFIG_ENTRY_COOKIE: cookie.value},
                 )
@@ -143,7 +143,7 @@ class PowerwallDataManager:
                 break
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: PowerwallConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: PowerwallConfigEntry) -> bool:
     """Set up Tesla Powerwall from a config entry."""
     ip_address: str = entry.data[CONF_IP_ADDRESS]
 
@@ -162,7 +162,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: PowerwallConfigEntry) ->
         use_auth_cookie = True
 
     http_session = async_create_clientsession(
-        hass, verify_ssl=False, cookie_jar=cookie_jar
+        menuai, verify_ssl=False, cookie_jar=cookie_jar
     )
 
     async with AsyncExitStack() as stack:
@@ -184,7 +184,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: PowerwallConfigEntry) ->
                 # The error might include some important information about what exactly changed.
                 _LOGGER.error("The powerwall api has changed: %s", str(err))
                 persistent_notification.async_create(
-                    hass, API_CHANGED_ERROR_BODY, API_CHANGED_TITLE
+                    menuai, API_CHANGED_ERROR_BODY, API_CHANGED_TITLE
                 )
                 return False
             except AccessDeniedError as err:
@@ -201,7 +201,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: PowerwallConfigEntry) ->
 
     gateway_din = base_info.gateway_din
     if entry.unique_id is not None and is_ip_address(entry.unique_id):
-        hass.config_entries.async_update_entry(entry, unique_id=gateway_din)
+        menuai.config_entries.async_update_entry(entry, unique_id=gateway_din)
 
     runtime_data = PowerwallRuntimeData(
         api_changed=False,
@@ -211,7 +211,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: PowerwallConfigEntry) ->
     )
 
     manager = PowerwallDataManager(
-        hass,
+        menuai,
         power_wall,
         cookie_jar,
         entry,
@@ -222,7 +222,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: PowerwallConfigEntry) ->
     manager.save_auth_cookie()
 
     coordinator = DataUpdateCoordinator(
-        hass,
+        menuai,
         _LOGGER,
         config_entry=entry,
         name="Powerwall site",
@@ -237,27 +237,27 @@ async def async_setup_entry(hass: HomeAssistant, entry: PowerwallConfigEntry) ->
 
     entry.runtime_data = runtime_data
 
-    await async_migrate_entity_unique_ids(hass, entry, base_info)
+    await async_migrate_entity_unique_ids(menuai, entry, base_info)
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
 async def async_migrate_entity_unique_ids(
-    hass: HomeAssistant, entry: PowerwallConfigEntry, base_info: PowerwallBaseInfo
+    menuai: menuai, entry: PowerwallConfigEntry, base_info: PowerwallBaseInfo
 ) -> None:
     """Migrate old entity unique ids to use gateway_din."""
     old_base_unique_id = "_".join(base_info.serial_numbers)
     new_base_unique_id = base_info.gateway_din
 
-    dev_reg = dr.async_get(hass)
+    dev_reg = dr.async_get(menuai)
     if device := dev_reg.async_get_device(identifiers={(DOMAIN, old_base_unique_id)}):
         dev_reg.async_update_device(
             device.id, new_identifiers={(DOMAIN, new_base_unique_id)}
         )
 
-    ent_reg = er.async_get(hass)
+    ent_reg = er.async_get(menuai)
     for ent_entry in er.async_entries_for_config_entry(ent_reg, entry.entry_id):
         current_unique_id = ent_entry.unique_id
         if current_unique_id.startswith(old_base_unique_id):
@@ -337,7 +337,7 @@ async def _fetch_powerwall_data(power_wall: Powerwall) -> PowerwallData:
 
 @callback
 def async_last_update_was_successful(
-    hass: HomeAssistant, entry: PowerwallConfigEntry
+    menuai: menuai, entry: PowerwallConfigEntry
 ) -> bool:
     """Return True if the last update was successful."""
     return bool(
@@ -348,6 +348,6 @@ def async_last_update_was_successful(
     )
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

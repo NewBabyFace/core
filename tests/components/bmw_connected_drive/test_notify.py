@@ -8,8 +8,8 @@ from bimmer_connected.vehicle.remote_services import RemoteServices
 import pytest
 import respx
 
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
+from menuai.core import menuai
+from menuai.exceptions import menuaiError, ServiceValidationError
 
 from . import (
     REMOTE_SERVICE_EXC_TRANSLATION,
@@ -19,16 +19,16 @@ from . import (
 
 
 async def test_legacy_notify_service_simple(
-    hass: HomeAssistant,
+    menuai: menuai,
     bmw_fixture: respx.Router,
 ) -> None:
     """Test successful sending of POIs."""
 
     # Setup component
-    assert await setup_mocked_integration(hass)
+    assert await setup_mocked_integration(menuai)
 
     # Minimal required data
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "notify",
         "bmw_connected_drive_ix_xdrive50",
         {
@@ -45,7 +45,7 @@ async def test_legacy_notify_service_simple(
     bmw_fixture.reset()
 
     # Full data
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "notify",
         "bmw_connected_drive_ix_xdrive50",
         {
@@ -91,17 +91,17 @@ async def test_legacy_notify_service_simple(
     ],
 )
 async def test_service_call_invalid_input(
-    hass: HomeAssistant,
+    menuai: menuai,
     data: dict,
     exc_translation: str,
 ) -> None:
     """Test invalid inputs."""
 
     # Setup component
-    assert await setup_mocked_integration(hass)
+    assert await setup_mocked_integration(menuai)
 
     with pytest.raises(ServiceValidationError, match=exc_translation):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "notify",
             "bmw_connected_drive_ix_xdrive50",
             {
@@ -116,12 +116,12 @@ async def test_service_call_invalid_input(
 @pytest.mark.parametrize(
     ("raised", "expected"),
     [
-        (MyBMWRemoteServiceError, HomeAssistantError),
-        (MyBMWAPIError, HomeAssistantError),
+        (MyBMWRemoteServiceError, menuaiError),
+        (MyBMWAPIError, menuaiError),
     ],
 )
 async def test_service_call_fail(
-    hass: HomeAssistant,
+    menuai: menuai,
     raised: Exception,
     expected: Exception,
     monkeypatch: pytest.MonkeyPatch,
@@ -129,7 +129,7 @@ async def test_service_call_fail(
     """Test exception handling."""
 
     # Setup component
-    assert await setup_mocked_integration(hass)
+    assert await setup_mocked_integration(menuai)
 
     # Setup exception
     monkeypatch.setattr(
@@ -140,7 +140,7 @@ async def test_service_call_fail(
 
     # Test
     with pytest.raises(expected, match=REMOTE_SERVICE_EXC_TRANSLATION):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "notify",
             "bmw_connected_drive_ix_xdrive50",
             {

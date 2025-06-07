@@ -6,9 +6,9 @@ from unittest.mock import MagicMock, call, patch
 from freezegun.api import FrozenDateTimeFactory
 from georss_qld_bushfire_alert_client import QldBushfireAlertFeed
 
-from homeassistant.components import geo_location
-from homeassistant.components.geo_location import ATTR_SOURCE
-from homeassistant.components.qld_bushfire.geo_location import (
+from menuai.components import geo_location
+from menuai.components.geo_location import ATTR_SOURCE
+from menuai.components.qld_bushfire.geo_location import (
     ATTR_CATEGORY,
     ATTR_EXTERNAL_ID,
     ATTR_PUBLICATION_DATE,
@@ -16,7 +16,7 @@ from homeassistant.components.qld_bushfire.geo_location import (
     ATTR_UPDATED_DATE,
     SCAN_INTERVAL,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ATTRIBUTION,
     ATTR_FRIENDLY_NAME,
     ATTR_ICON,
@@ -26,12 +26,12 @@ from homeassistant.const import (
     CONF_LATITUDE,
     CONF_LONGITUDE,
     CONF_RADIUS,
-    EVENT_HOMEASSISTANT_START,
+    EVENT_menuai_START,
     UnitOfLength,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from tests.common import assert_setup_component, async_fire_time_changed
 
@@ -74,7 +74,7 @@ def _generate_mock_feed_entry(
     return feed_entry
 
 
-async def test_setup(hass: HomeAssistant, freezer: FrozenDateTimeFactory) -> None:
+async def test_setup(menuai: menuai, freezer: FrozenDateTimeFactory) -> None:
     """Test the general setup of the platform."""
     # Set up some mock feed entries for this test.
     mock_entry_1 = _generate_mock_feed_entry(
@@ -101,17 +101,17 @@ async def test_setup(hass: HomeAssistant, freezer: FrozenDateTimeFactory) -> Non
             [mock_entry_1, mock_entry_2, mock_entry_3],
         )
         with assert_setup_component(1, geo_location.DOMAIN):
-            assert await async_setup_component(hass, geo_location.DOMAIN, CONFIG)
-            await hass.async_block_till_done()
+            assert await async_setup_component(menuai, geo_location.DOMAIN, CONFIG)
+            await menuai.async_block_till_done()
             # Artificially trigger update.
-            hass.bus.async_fire(EVENT_HOMEASSISTANT_START)
+            menuai.bus.async_fire(EVENT_menuai_START)
             # Collect events.
-            await hass.async_block_till_done()
+            await menuai.async_block_till_done()
 
-            all_states = hass.states.async_all()
+            all_states = menuai.states.async_all()
             assert len(all_states) == 3
 
-            state = hass.states.get("geo_location.title_1")
+            state = menuai.states.get("geo_location.title_1")
             assert state is not None
             assert state.name == "Title 1"
             assert state.attributes == {
@@ -134,7 +134,7 @@ async def test_setup(hass: HomeAssistant, freezer: FrozenDateTimeFactory) -> Non
             }
             assert float(state.state) == 15.5
 
-            state = hass.states.get("geo_location.title_2")
+            state = menuai.states.get("geo_location.title_2")
             assert state is not None
             assert state.name == "Title 2"
             assert state.attributes == {
@@ -148,7 +148,7 @@ async def test_setup(hass: HomeAssistant, freezer: FrozenDateTimeFactory) -> Non
             }
             assert float(state.state) == 20.5
 
-            state = hass.states.get("geo_location.title_3")
+            state = menuai.states.get("geo_location.title_3")
             assert state is not None
             assert state.name == "Title 3"
             assert state.attributes == {
@@ -168,31 +168,31 @@ async def test_setup(hass: HomeAssistant, freezer: FrozenDateTimeFactory) -> Non
                 "OK",
                 [mock_entry_1, mock_entry_4, mock_entry_3],
             )
-            async_fire_time_changed(hass, utcnow + SCAN_INTERVAL)
-            await hass.async_block_till_done(wait_background_tasks=True)
+            async_fire_time_changed(menuai, utcnow + SCAN_INTERVAL)
+            await menuai.async_block_till_done(wait_background_tasks=True)
 
-            all_states = hass.states.async_all()
+            all_states = menuai.states.async_all()
             assert len(all_states) == 3
 
             # Simulate an update - empty data, but successful update,
             # so no changes to entities.
             mock_feed_update.return_value = "OK_NO_DATA", None
-            async_fire_time_changed(hass, utcnow + 2 * SCAN_INTERVAL)
-            await hass.async_block_till_done(wait_background_tasks=True)
+            async_fire_time_changed(menuai, utcnow + 2 * SCAN_INTERVAL)
+            await menuai.async_block_till_done(wait_background_tasks=True)
 
-            all_states = hass.states.async_all()
+            all_states = menuai.states.async_all()
             assert len(all_states) == 3
 
             # Simulate an update - empty data, removes all entities
             mock_feed_update.return_value = "ERROR", None
-            async_fire_time_changed(hass, utcnow + 3 * SCAN_INTERVAL)
-            await hass.async_block_till_done(wait_background_tasks=True)
+            async_fire_time_changed(menuai, utcnow + 3 * SCAN_INTERVAL)
+            await menuai.async_block_till_done(wait_background_tasks=True)
 
-            all_states = hass.states.async_all()
+            all_states = menuai.states.async_all()
             assert len(all_states) == 0
 
 
-async def test_setup_with_custom_location(hass: HomeAssistant) -> None:
+async def test_setup_with_custom_location(menuai: menuai) -> None:
     """Test the setup with a custom location."""
     # Set up some mock feed entries for this test.
     mock_entry_1 = _generate_mock_feed_entry(
@@ -210,16 +210,16 @@ async def test_setup_with_custom_location(hass: HomeAssistant) -> None:
 
         with assert_setup_component(1, geo_location.DOMAIN):
             assert await async_setup_component(
-                hass, geo_location.DOMAIN, CONFIG_WITH_CUSTOM_LOCATION
+                menuai, geo_location.DOMAIN, CONFIG_WITH_CUSTOM_LOCATION
             )
-            await hass.async_block_till_done()
+            await menuai.async_block_till_done()
 
             # Artificially trigger update.
-            hass.bus.async_fire(EVENT_HOMEASSISTANT_START)
+            menuai.bus.async_fire(EVENT_menuai_START)
             # Collect events.
-            await hass.async_block_till_done()
+            await menuai.async_block_till_done()
 
-            all_states = hass.states.async_all()
+            all_states = menuai.states.async_all()
             assert len(all_states) == 1
 
             assert mock_feed.call_args == call(

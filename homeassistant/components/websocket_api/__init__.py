@@ -1,13 +1,13 @@
-"""WebSocket based API for Home Assistant."""
+"""WebSocket based API for MenuAI."""
 
 from __future__ import annotations
 
 from typing import Final, cast
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType, VolSchemaType
-from homeassistant.loader import bind_hass
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType, VolSchemaType
+from menuai.loader import bind_menuai
 
 from . import commands, connection, const, decorators, http, messages  # noqa: F401
 from .connection import ActiveConnection, current_connection  # noqa: F401
@@ -47,10 +47,10 @@ DEPENDENCIES: Final[tuple[str]] = ("http",)
 CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)
 
 
-@bind_hass
+@bind_menuai
 @callback
 def async_register_command(
-    hass: HomeAssistant,
+    menuai: menuai,
     command_or_handler: str | const.WebSocketCommandHandler,
     handler: const.WebSocketCommandHandler | None = None,
     schema: VolSchemaType | None = None,
@@ -62,13 +62,13 @@ def async_register_command(
         schema = handler._ws_schema  # type: ignore[attr-defined]  # noqa: SLF001
     else:
         command = command_or_handler
-    if (handlers := hass.data.get(DOMAIN)) is None:
-        handlers = hass.data[DOMAIN] = {}
+    if (handlers := menuai.data.get(DOMAIN)) is None:
+        handlers = menuai.data[DOMAIN] = {}
     handlers[command] = (handler, schema)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Initialize the websocket API."""
-    hass.http.register_view(http.WebsocketAPIView())
-    commands.async_register_commands(hass, async_register_command)
+    menuai.http.register_view(http.WebsocketAPIView())
+    commands.async_register_commands(menuai, async_register_command)
     return True

@@ -2,7 +2,7 @@
 
 from aioimmich.albums.models import ImmichAlbum
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_API_KEY,
     CONF_HOST,
     CONF_PORT,
@@ -33,7 +33,7 @@ ALBUM_DATA = {
     "assetCount": 1,
     "assets": [],
     "createdAt": "2025-05-11T10:13:22.799Z",
-    "hasSharedLink": False,
+    "menuaiharedLink": False,
     "isActivityEnabled": False,
     "ownerId": "e7ef5713-9dab-4bd4-b899-715b0ca4379e",
     "owner": {

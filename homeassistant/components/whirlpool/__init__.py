@@ -7,11 +7,11 @@ from whirlpool.appliancesmanager import AppliancesManager
 from whirlpool.auth import AccountLockedError as WhirlpoolAccountLocked, Auth
 from whirlpool.backendselector import BackendSelector
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_PASSWORD, CONF_REGION, CONF_USERNAME, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_PASSWORD, CONF_REGION, CONF_USERNAME, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import BRANDS_CONF_MAP, CONF_BRAND, DOMAIN, REGIONS_CONF_MAP
 
@@ -22,9 +22,9 @@ PLATFORMS = [Platform.BINARY_SENSOR, Platform.CLIMATE, Platform.SENSOR]
 type WhirlpoolConfigEntry = ConfigEntry[AppliancesManager]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: WhirlpoolConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: WhirlpoolConfigEntry) -> bool:
     """Set up Whirlpool Sixth Sense from a config entry."""
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
     region = REGIONS_CONF_MAP[entry.data.get(CONF_REGION, "EU")]
     brand = BRANDS_CONF_MAP[entry.data.get(CONF_BRAND, "Whirlpool")]
     backend_selector = BackendSelector(brand, region)
@@ -54,11 +54,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: WhirlpoolConfigEntry) ->
 
     entry.runtime_data = appliances_manager
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: WhirlpoolConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: WhirlpoolConfigEntry) -> bool:
     """Unload a config entry."""
     await entry.runtime_data.disconnect()
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

@@ -2,8 +2,8 @@
 
 from unittest.mock import patch
 
-from homeassistant.components.nzbget.const import DOMAIN
-from homeassistant.const import (
+from menuai.components.nzbget.const import DOMAIN
+from menuai.const import (
     CONF_HOST,
     CONF_NAME,
     CONF_PASSWORD,
@@ -13,7 +13,7 @@ from homeassistant.const import (
     CONF_USERNAME,
     CONF_VERIFY_SSL,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -60,40 +60,40 @@ MOCK_HISTORY = [
 ]
 
 
-async def init_integration(hass: HomeAssistant) -> MockConfigEntry:
-    """Set up the NZBGet integration in Home Assistant."""
+async def init_integration(menuai: menuai) -> MockConfigEntry:
+    """Set up the NZBGet integration in MenuAI."""
     entry = MockConfigEntry(domain=DOMAIN, data=ENTRY_CONFIG, options=ENTRY_OPTIONS)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     return entry
 
 
 def _patch_async_setup_entry(return_value=True):
     return patch(
-        "homeassistant.components.nzbget.async_setup_entry",
+        "menuai.components.nzbget.async_setup_entry",
         return_value=return_value,
     )
 
 
 def _patch_history():
     return patch(
-        "homeassistant.components.nzbget.coordinator.NZBGetAPI.history",
+        "menuai.components.nzbget.coordinator.NZBGetAPI.history",
         return_value=MOCK_HISTORY,
     )
 
 
 def _patch_status():
     return patch(
-        "homeassistant.components.nzbget.coordinator.NZBGetAPI.status",
+        "menuai.components.nzbget.coordinator.NZBGetAPI.status",
         return_value=MOCK_STATUS,
     )
 
 
 def _patch_version(return_value=MOCK_VERSION):
     return patch(
-        "homeassistant.components.nzbget.coordinator.NZBGetAPI.version",
+        "menuai.components.nzbget.coordinator.NZBGetAPI.version",
         return_value=return_value,
     )

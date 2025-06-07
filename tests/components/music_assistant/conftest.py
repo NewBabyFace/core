@@ -11,8 +11,8 @@ from music_assistant_models.api import ServerInfoMessage
 from music_assistant_models.config_entries import PlayerConfig
 import pytest
 
-from homeassistant.components.music_assistant.config_flow import CONF_URL
-from homeassistant.components.music_assistant.const import DOMAIN
+from menuai.components.music_assistant.config_flow import CONF_URL
+from menuai.components.music_assistant.const import DOMAIN
 
 from tests.common import AsyncMock, MockConfigEntry, load_fixture
 
@@ -23,7 +23,7 @@ MOCK_SERVER_ID = "1234"
 def mock_get_server_info() -> Generator[AsyncMock]:
     """Mock the function to get server info."""
     with patch(
-        "homeassistant.components.music_assistant.config_flow.get_server_info"
+        "menuai.components.music_assistant.config_flow.get_server_info"
     ) as mock_get_server_info:
         mock_get_server_info.return_value = ServerInfoMessage.from_json(
             load_fixture("server_info_message.json", DOMAIN)
@@ -35,7 +35,7 @@ def mock_get_server_info() -> Generator[AsyncMock]:
 async def music_assistant_client_fixture() -> AsyncGenerator[MagicMock]:
     """Fixture for a Music Assistant client."""
     with patch(
-        "homeassistant.components.music_assistant.MusicAssistantClient", autospec=True
+        "menuai.components.music_assistant.MusicAssistantClient", autospec=True
     ) as client_class:
         client = client_class.return_value
 
@@ -59,7 +59,7 @@ async def music_assistant_client_fixture() -> AsyncGenerator[MagicMock]:
             schema_version=1,
             min_supported_schema_version=1,
             base_url="http://localhost:8095",
-            homeassistant_addon=False,
+            menuai_addon=False,
             onboard_done=True,
         )
         client.connection = MagicMock()

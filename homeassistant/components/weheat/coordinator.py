@@ -15,13 +15,13 @@ from weheat.exceptions import (
     UnauthorizedException,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_ACCESS_TOKEN
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.config_entry_oauth2_flow import OAuth2Session
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_ACCESS_TOKEN
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.config_entry_oauth2_flow import OAuth2Session
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import API_URL, DOMAIN, ENERGY_UPDATE_INTERVAL, LOG_UPDATE_INTERVAL, LOGGER
 
@@ -79,7 +79,7 @@ class WeheatDataUpdateCoordinator(DataUpdateCoordinator[HeatPump]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: WeheatConfigEntry,
         session: OAuth2Session,
         heat_pump: HeatPumpDiscovery.HeatPumpInfo,
@@ -87,14 +87,14 @@ class WeheatDataUpdateCoordinator(DataUpdateCoordinator[HeatPump]):
     ) -> None:
         """Initialize the data coordinator."""
         super().__init__(
-            hass,
+            menuai,
             config_entry=config_entry,
             logger=LOGGER,
             name=DOMAIN,
             update_interval=timedelta(seconds=LOG_UPDATE_INTERVAL * nr_of_heat_pumps),
         )
         self._heat_pump_data = HeatPump(
-            API_URL, heat_pump.uuid, async_get_clientsession(hass)
+            API_URL, heat_pump.uuid, async_get_clientsession(menuai)
         )
 
         self.session = session
@@ -122,21 +122,21 @@ class WeheatEnergyUpdateCoordinator(DataUpdateCoordinator[HeatPump]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: WeheatConfigEntry,
         session: OAuth2Session,
         heat_pump: HeatPumpDiscovery.HeatPumpInfo,
     ) -> None:
         """Initialize the data coordinator."""
         super().__init__(
-            hass,
+            menuai,
             config_entry=config_entry,
             logger=LOGGER,
             name=DOMAIN,
             update_interval=timedelta(seconds=ENERGY_UPDATE_INTERVAL),
         )
         self._heat_pump_data = HeatPump(
-            API_URL, heat_pump.uuid, async_get_clientsession(hass)
+            API_URL, heat_pump.uuid, async_get_clientsession(menuai)
         )
 
         self.session = session

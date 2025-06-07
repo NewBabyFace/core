@@ -7,12 +7,12 @@ from dataclasses import dataclass
 
 from aioguardian import Client
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_IP_ADDRESS, CONF_PORT, Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv, device_registry as dr
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.typing import ConfigType
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_IP_ADDRESS, CONF_PORT, Platform
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv, device_registry as dr
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     API_SENSOR_PAIR_DUMP,
@@ -53,13 +53,13 @@ class GuardianData:
     paired_sensor_manager: PairedSensorManager
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Elexa Guardian component."""
-    setup_services(hass)
+    setup_services(menuai)
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: GuardianConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: GuardianConfigEntry) -> bool:
     """Set up Elexa Guardian from a config entry."""
     client = Client(entry.data[CONF_IP_ADDRESS], port=entry.data[CONF_PORT])
 
@@ -86,7 +86,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: GuardianConfigEntry) -> 
     ):
         coordinator = valve_controller_coordinators[api] = (
             GuardianDataUpdateCoordinator(
-                hass,
+                menuai,
                 entry=entry,
                 client=client,
                 api_name=api,
@@ -102,7 +102,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: GuardianConfigEntry) -> 
     # Set up an object to evaluate each batch of paired sensor UIDs and add/remove
     # devices as appropriate:
     paired_sensor_manager = PairedSensorManager(
-        hass,
+        menuai,
         entry,
         client,
         api_lock,
@@ -118,14 +118,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: GuardianConfigEntry) -> 
     )
 
     # Set up all of the Guardian entity platforms:
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: GuardianConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: GuardianConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 class PairedSensorManager:
@@ -133,7 +133,7 @@ class PairedSensorManager:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entry: GuardianConfigEntry,
         client: Client,
         api_lock: asyncio.Lock,
@@ -143,7 +143,7 @@ class PairedSensorManager:
         self._api_lock = api_lock
         self._client = client
         self._entry = entry
-        self._hass = hass
+        self._menuai = menuai
         self._paired_uids: set[str] = set()
         self._sensor_pair_dump_coordinator = sensor_pair_dump_coordinator
         self.coordinators: dict[str, GuardianDataUpdateCoordinator] = {}
@@ -154,7 +154,7 @@ class PairedSensorManager:
         @callback
         def async_create_process_task() -> None:
             """Define a callback for when new paired sensor data is received."""
-            self._hass.async_create_task(self.async_process_latest_paired_sensor_uids())
+            self._menuai.async_create_task(self.async_process_latest_paired_sensor_uids())
 
         self._entry.async_on_unload(
             self._sensor_pair_dump_coordinator.async_add_listener(
@@ -169,7 +169,7 @@ class PairedSensorManager:
         self._paired_uids.add(uid)
 
         coordinator = self.coordinators[uid] = GuardianDataUpdateCoordinator(
-            self._hass,
+            self._menuai,
             entry=self._entry,
             client=self._client,
             api_name=f"{API_SENSOR_PAIRED_SENSOR_STATUS}_{uid}",
@@ -180,7 +180,7 @@ class PairedSensorManager:
         await coordinator.async_request_refresh()
 
         async_dispatcher_send(
-            self._hass,
+            self._menuai,
             SIGNAL_PAIRED_SENSOR_COORDINATOR_ADDED.format(self._entry.data[CONF_UID]),
             uid,
         )
@@ -216,7 +216,7 @@ class PairedSensorManager:
 
         # Remove the paired sensor device from the device registry (which will
         # clean up entities and the entity registry):
-        dev_reg = dr.async_get(self._hass)
+        dev_reg = dr.async_get(self._menuai)
         device = dev_reg.async_get_or_create(
             config_entry_id=self._entry.entry_id, identifiers={(DOMAIN, uid)}
         )

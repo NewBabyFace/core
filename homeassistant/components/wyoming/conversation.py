@@ -8,12 +8,12 @@ from wyoming.handle import Handled, NotHandled
 from wyoming.info import HandleProgram, IntentProgram
 from wyoming.intent import Intent, NotRecognized
 
-from homeassistant.components import conversation
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import intent
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import ulid as ulid_util
+from menuai.components import conversation
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers import intent
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import ulid as ulid_util
 
 from .const import DOMAIN
 from .data import WyomingService
@@ -24,12 +24,12 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Wyoming conversation."""
-    item: DomainDataItem = hass.data[DOMAIN][config_entry.entry_id]
+    item: DomainDataItem = menuai.data[DOMAIN][config_entry.entry_id]
     async_add_entities(
         [
             WyomingConversationEntity(config_entry, item.service),
@@ -132,7 +132,7 @@ class WyomingConversationEntity(
                             for e in recognized_intent.entities
                         }
                         intent_response = await intent.async_handle(
-                            self.hass,
+                            self.menuai,
                             DOMAIN,
                             intent_type,
                             intent_slots,

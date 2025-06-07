@@ -10,38 +10,38 @@ from aioelectricitymaps import (
 )
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.co2signal import config_flow
-from homeassistant.components.co2signal.const import DOMAIN
-from homeassistant.const import CONF_API_KEY
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.co2signal import config_flow
+from menuai.components.co2signal.const import DOMAIN
+from menuai.const import CONF_API_KEY
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
 
 @pytest.mark.usefixtures("electricity_maps")
-async def test_form_home(hass: HomeAssistant) -> None:
+async def test_form_home(menuai: menuai) -> None:
     """Test we get the form."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] is None
 
     with patch(
-        "homeassistant.components.co2signal.async_setup_entry",
+        "menuai.components.co2signal.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "location": config_flow.TYPE_USE_HOME,
                 "api_key": "api_key",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "Electricity Maps"
@@ -52,16 +52,16 @@ async def test_form_home(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("electricity_maps")
-async def test_form_coordinates(hass: HomeAssistant) -> None:
+async def test_form_coordinates(menuai: menuai) -> None:
     """Test we get the form."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] is None
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "location": config_flow.TYPE_SPECIFY_COORDINATES,
@@ -71,17 +71,17 @@ async def test_form_coordinates(hass: HomeAssistant) -> None:
     assert result2["type"] is FlowResultType.FORM
 
     with patch(
-        "homeassistant.components.co2signal.async_setup_entry",
+        "menuai.components.co2signal.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {
                 "latitude": 12.3,
                 "longitude": 45.6,
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.CREATE_ENTRY
     assert result3["title"] == "12.3, 45.6"
@@ -94,16 +94,16 @@ async def test_form_coordinates(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("electricity_maps")
-async def test_form_country(hass: HomeAssistant) -> None:
+async def test_form_country(menuai: menuai) -> None:
     """Test we get the form."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] is None
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "location": config_flow.TYPE_SPECIFY_COUNTRY,
@@ -113,16 +113,16 @@ async def test_form_country(hass: HomeAssistant) -> None:
     assert result2["type"] is FlowResultType.FORM
 
     with patch(
-        "homeassistant.components.co2signal.async_setup_entry",
+        "menuai.components.co2signal.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {
                 "country_code": "fr",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.CREATE_ENTRY
     assert result3["title"] == "fr"
@@ -147,20 +147,20 @@ async def test_form_country(hass: HomeAssistant) -> None:
     ids=["invalid auth", "generic error", "json decode error", "no data error"],
 )
 async def test_form_error_handling(
-    hass: HomeAssistant,
+    menuai: menuai,
     electricity_maps: AsyncMock,
     side_effect: Exception,
     err_code: str,
 ) -> None:
     """Test we handle expected errors."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     electricity_maps.latest_carbon_intensity_by_coordinates.side_effect = side_effect
     electricity_maps.latest_carbon_intensity_by_country_code.side_effect = side_effect
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "location": config_flow.TYPE_USE_HOME,
@@ -175,14 +175,14 @@ async def test_form_error_handling(
     electricity_maps.latest_carbon_intensity_by_coordinates.side_effect = None
     electricity_maps.latest_carbon_intensity_by_country_code.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "location": config_flow.TYPE_USE_HOME,
             "api_key": "api_key",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "Electricity Maps"
@@ -192,29 +192,29 @@ async def test_form_error_handling(
 
 
 async def test_reauth(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     electricity_maps: AsyncMock,
 ) -> None:
     """Test reauth flow."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    init_result = await config_entry.start_reauth_flow(hass)
+    init_result = await config_entry.start_reauth_flow(menuai)
 
     assert init_result["type"] is FlowResultType.FORM
     assert init_result["step_id"] == "reauth_confirm"
 
     with patch(
-        "homeassistant.components.co2signal.async_setup_entry",
+        "menuai.components.co2signal.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        configure_result = await hass.config_entries.flow.async_configure(
+        configure_result = await menuai.config_entries.flow.async_configure(
             init_result["flow_id"],
             {
                 CONF_API_KEY: "api_key2",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert configure_result["type"] is FlowResultType.ABORT
     assert configure_result["reason"] == "reauth_successful"

@@ -2,8 +2,8 @@
 
 from ipaddress import ip_address
 
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_HOST
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.const import CONF_ACCESS_TOKEN, CONF_HOST
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 AWAIR_UUID = "awair_24947"
 CLOUD_CONFIG = {CONF_ACCESS_TOKEN: "12345"}

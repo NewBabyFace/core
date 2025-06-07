@@ -9,8 +9,8 @@ from typing import Any
 import voluptuous as vol
 from yarl import URL
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_API_KEY, CONF_URL
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_API_KEY, CONF_URL
 
 from .api import (
     PterodactylAPI,
@@ -45,7 +45,7 @@ class PterodactylConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_validate_connection(self, url: str, api_key: str) -> dict[str, str]:
         """Validate the connection to the Pterodactyl server."""
         errors: dict[str, str] = {}
-        api = PterodactylAPI(self.hass, url, api_key)
+        api = PterodactylAPI(self.menuai, url, api_key)
 
         try:
             await api.async_init()

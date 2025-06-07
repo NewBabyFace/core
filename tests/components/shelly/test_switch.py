@@ -7,15 +7,15 @@ from aioshelly.const import MODEL_1PM, MODEL_GAS, MODEL_MOTION
 from aioshelly.exceptions import DeviceConnectionError, InvalidAuthError, RpcCallError
 import pytest
 
-from homeassistant.components.climate import DOMAIN as CLIMATE_DOMAIN
-from homeassistant.components.shelly.const import (
+from menuai.components.climate import DOMAIN as CLIMATE_DOMAIN
+from menuai.components.shelly.const import (
     DOMAIN,
     MODEL_WALL_DISPLAY,
     MOTION_MODELS,
 )
-from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
-from homeassistant.const import (
+from menuai.components.switch import DOMAIN as SWITCH_DOMAIN
+from menuai.config_entries import SOURCE_REAUTH, ConfigEntryState
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
@@ -23,10 +23,10 @@ from homeassistant.const import (
     STATE_ON,
     STATE_UNKNOWN,
 )
-from homeassistant.core import HomeAssistant, State
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceRegistry
-from homeassistant.helpers.entity_registry import EntityRegistry
+from menuai.core import menuai, State
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import DeviceRegistry
+from menuai.helpers.entity_registry import EntityRegistry
 
 from . import init_integration, register_device, register_entity
 
@@ -38,52 +38,52 @@ MOTION_BLOCK_ID = 3
 
 
 async def test_block_device_services(
-    hass: HomeAssistant, mock_block_device: Mock
+    menuai: menuai, mock_block_device: Mock
 ) -> None:
     """Test block device turn on/off services."""
-    await init_integration(hass, 1)
+    await init_integration(menuai, 1)
     # num_outputs is 2, device_name and channel name is used
     entity_id = "switch.test_name_channel_1"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: entity_id},
         blocking=True,
     )
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_ON
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: entity_id},
         blocking=True,
     )
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_OFF
 
 
 @pytest.mark.parametrize("model", MOTION_MODELS)
 async def test_block_motion_switch(
-    hass: HomeAssistant,
+    menuai: menuai,
     model: str,
     mock_block_device: Mock,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Test Shelly motion active turn on/off services."""
     entity_id = "switch.test_name_motion_detection"
-    await init_integration(hass, 1, sleep_period=1000, model=model)
+    await init_integration(menuai, 1, sleep_period=1000, model=model)
 
     # Make device online
     mock_block_device.mock_online()
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_ON
 
     # turn off
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: entity_id},
@@ -94,12 +94,12 @@ async def test_block_motion_switch(
 
     mock_block_device.set_shelly_motion_detection.assert_called_once_with(False)
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_OFF
 
     # turn on
     mock_block_device.set_shelly_motion_detection.reset_mock()
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: entity_id},
@@ -110,13 +110,13 @@ async def test_block_motion_switch(
 
     mock_block_device.set_shelly_motion_detection.assert_called_once_with(True)
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_ON
 
 
 @pytest.mark.parametrize("model", MOTION_MODELS)
 async def test_block_restored_motion_switch(
-    hass: HomeAssistant,
+    menuai: menuai,
     model: str,
     mock_block_device: Mock,
     device_registry: DeviceRegistry,
@@ -124,11 +124,11 @@ async def test_block_restored_motion_switch(
 ) -> None:
     """Test block restored motion active switch."""
     entry = await init_integration(
-        hass, 1, sleep_period=1000, model=model, skip_setup=True
+        menuai, 1, sleep_period=1000, model=model, skip_setup=True
     )
     device = register_device(device_registry, entry)
     entity_id = register_entity(
-        hass,
+        menuai,
         SWITCH_DOMAIN,
         "test_name_motion_detection",
         "sensor_0-motionActive",
@@ -136,26 +136,26 @@ async def test_block_restored_motion_switch(
         device_id=device.id,
     )
 
-    mock_restore_cache(hass, [State(entity_id, STATE_OFF)])
+    mock_restore_cache(menuai, [State(entity_id, STATE_OFF)])
     monkeypatch.setattr(mock_block_device, "initialized", False)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_OFF
 
     # Make device online
     monkeypatch.setattr(mock_block_device, "initialized", True)
     mock_block_device.mock_online()
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_ON
 
 
 @pytest.mark.parametrize("model", MOTION_MODELS)
 async def test_block_restored_motion_switch_no_last_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     model: str,
     mock_block_device: Mock,
     device_registry: DeviceRegistry,
@@ -163,11 +163,11 @@ async def test_block_restored_motion_switch_no_last_state(
 ) -> None:
     """Test block restored motion active switch missing last state."""
     entry = await init_integration(
-        hass, 1, sleep_period=1000, model=model, skip_setup=True
+        menuai, 1, sleep_period=1000, model=model, skip_setup=True
     )
     device = register_device(device_registry, entry)
     entity_id = register_entity(
-        hass,
+        menuai,
         SWITCH_DOMAIN,
         "test_name_motion_detection",
         "sensor_0-motionActive",
@@ -175,18 +175,18 @@ async def test_block_restored_motion_switch_no_last_state(
         device_id=device.id,
     )
     monkeypatch.setattr(mock_block_device, "initialized", False)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_UNKNOWN
 
     # Make device online
     monkeypatch.setattr(mock_block_device, "initialized", True)
     mock_block_device.mock_online()
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_ON
 
 
@@ -203,7 +203,7 @@ async def test_block_restored_motion_switch_no_last_state(
     ],
 )
 async def test_block_device_unique_ids(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: EntityRegistry,
     mock_block_device: Mock,
     monkeypatch: pytest.MonkeyPatch,
@@ -215,18 +215,18 @@ async def test_block_device_unique_ids(
     """Test block device unique_ids."""
     monkeypatch.setitem(mock_block_device.shelly, "num_outputs", 1)
     # num_outputs is 1, device name is used
-    await init_integration(hass, 1, model=model, sleep_period=sleep)
+    await init_integration(menuai, 1, model=model, sleep_period=sleep)
 
     if sleep:
         mock_block_device.mock_online()
-        await hass.async_block_till_done(wait_background_tasks=True)
+        await menuai.async_block_till_done(wait_background_tasks=True)
 
     assert (entry := entity_registry.async_get(entity))
     assert entry.unique_id == unique_id
 
 
 async def test_block_set_state_connection_error(
-    hass: HomeAssistant, mock_block_device, monkeypatch: pytest.MonkeyPatch
+    menuai: menuai, mock_block_device, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test block device set state connection error."""
     monkeypatch.setattr(
@@ -234,13 +234,13 @@ async def test_block_set_state_connection_error(
         "set_state",
         AsyncMock(side_effect=DeviceConnectionError),
     )
-    await init_integration(hass, 1)
+    await init_integration(menuai, 1)
 
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match="Device communication error occurred while calling action for switch.test_name_channel_1 of Test name",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SWITCH_DOMAIN,
             SERVICE_TURN_OFF,
             {ATTR_ENTITY_ID: "switch.test_name_channel_1"},
@@ -249,7 +249,7 @@ async def test_block_set_state_connection_error(
 
 
 async def test_block_set_state_auth_error(
-    hass: HomeAssistant, mock_block_device: Mock, monkeypatch: pytest.MonkeyPatch
+    menuai: menuai, mock_block_device: Mock, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test block device set state authentication error."""
     monkeypatch.setattr(
@@ -257,11 +257,11 @@ async def test_block_set_state_auth_error(
         "set_state",
         AsyncMock(side_effect=InvalidAuthError),
     )
-    entry = await init_integration(hass, 1)
+    entry = await init_integration(menuai, 1)
 
     assert entry.state is ConfigEntryState.LOADED
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: "switch.test_name_channel_1"},
@@ -270,7 +270,7 @@ async def test_block_set_state_auth_error(
 
     assert entry.state is ConfigEntryState.LOADED
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
 
     flow = flows[0]
@@ -283,83 +283,83 @@ async def test_block_set_state_auth_error(
 
 
 async def test_block_device_update(
-    hass: HomeAssistant, mock_block_device: Mock, monkeypatch: pytest.MonkeyPatch
+    menuai: menuai, mock_block_device: Mock, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test block device update."""
     monkeypatch.setattr(mock_block_device.blocks[RELAY_BLOCK_ID], "output", False)
-    await init_integration(hass, 1)
+    await init_integration(menuai, 1)
 
     entity_id = "switch.test_name_channel_1"
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_OFF
 
     monkeypatch.setattr(mock_block_device.blocks[RELAY_BLOCK_ID], "output", True)
     mock_block_device.mock_update()
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_ON
 
 
 async def test_block_device_no_relay_blocks(
-    hass: HomeAssistant, mock_block_device: Mock, monkeypatch: pytest.MonkeyPatch
+    menuai: menuai, mock_block_device: Mock, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test block device without relay blocks."""
     monkeypatch.setattr(mock_block_device.blocks[RELAY_BLOCK_ID], "type", "roller")
-    await init_integration(hass, 1)
-    assert hass.states.get("switch.test_name_channel_1") is None
+    await init_integration(menuai, 1)
+    assert menuai.states.get("switch.test_name_channel_1") is None
 
 
 async def test_block_device_mode_roller(
-    hass: HomeAssistant, mock_block_device: Mock, monkeypatch: pytest.MonkeyPatch
+    menuai: menuai, mock_block_device: Mock, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test block device in roller mode."""
     monkeypatch.setitem(mock_block_device.settings, "mode", "roller")
-    await init_integration(hass, 1)
-    assert hass.states.get("switch.test_name_channel_1") is None
+    await init_integration(menuai, 1)
+    assert menuai.states.get("switch.test_name_channel_1") is None
 
 
 async def test_block_device_app_type_light(
-    hass: HomeAssistant, mock_block_device: Mock, monkeypatch: pytest.MonkeyPatch
+    menuai: menuai, mock_block_device: Mock, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test block device in app type set to light mode."""
     monkeypatch.setitem(
         mock_block_device.settings["relays"][RELAY_BLOCK_ID], "appliance_type", "light"
     )
-    await init_integration(hass, 1)
-    assert hass.states.get("switch.test_name_channel_1") is None
+    await init_integration(menuai, 1)
+    assert menuai.states.get("switch.test_name_channel_1") is None
 
 
 async def test_rpc_device_services(
-    hass: HomeAssistant, mock_rpc_device: Mock, monkeypatch: pytest.MonkeyPatch
+    menuai: menuai, mock_rpc_device: Mock, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test RPC device turn on/off services."""
     monkeypatch.delitem(mock_rpc_device.status, "cover:0")
     monkeypatch.setitem(mock_rpc_device.status["sys"], "relay_in_thermostat", False)
-    await init_integration(hass, 2)
+    await init_integration(menuai, 2)
 
     entity_id = "switch.test_name_test_switch_0"
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: entity_id},
         blocking=True,
     )
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_ON
 
     monkeypatch.setitem(mock_rpc_device.status["switch:0"], "output", False)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: entity_id},
         blocking=True,
     )
     mock_rpc_device.mock_update()
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_OFF
 
 
 async def test_rpc_device_unique_ids(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_rpc_device: Mock,
     monkeypatch: pytest.MonkeyPatch,
     entity_registry: EntityRegistry,
@@ -367,22 +367,22 @@ async def test_rpc_device_unique_ids(
     """Test RPC device unique_ids."""
     monkeypatch.delitem(mock_rpc_device.status, "cover:0")
     monkeypatch.setitem(mock_rpc_device.status["sys"], "relay_in_thermostat", False)
-    await init_integration(hass, 2)
+    await init_integration(menuai, 2)
 
     assert (entry := entity_registry.async_get("switch.test_name_test_switch_0"))
     assert entry.unique_id == "123456789ABC-switch:0"
 
 
 async def test_rpc_device_switch_type_lights_mode(
-    hass: HomeAssistant, mock_rpc_device: Mock, monkeypatch: pytest.MonkeyPatch
+    menuai: menuai, mock_rpc_device: Mock, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test RPC device with switch in consumption type lights mode."""
     monkeypatch.setitem(
         mock_rpc_device.config["sys"]["ui_data"], "consumption_types", ["lights"]
     )
-    await init_integration(hass, 2)
+    await init_integration(menuai, 2)
 
-    assert hass.states.get("switch.test_switch_0") is None
+    assert menuai.states.get("switch.test_switch_0") is None
 
 
 @pytest.mark.parametrize(
@@ -399,7 +399,7 @@ async def test_rpc_device_switch_type_lights_mode(
     ],
 )
 async def test_rpc_set_state_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     exc: Exception,
     error: str,
     mock_rpc_device: Mock,
@@ -409,10 +409,10 @@ async def test_rpc_set_state_errors(
     monkeypatch.setattr(mock_rpc_device, "call_rpc", AsyncMock(side_effect=exc))
     monkeypatch.delitem(mock_rpc_device.status, "cover:0")
     monkeypatch.setitem(mock_rpc_device.status["sys"], "relay_in_thermostat", False)
-    await init_integration(hass, 2)
+    await init_integration(menuai, 2)
 
-    with pytest.raises(HomeAssistantError, match=error):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match=error):
+        await menuai.services.async_call(
             SWITCH_DOMAIN,
             SERVICE_TURN_OFF,
             {ATTR_ENTITY_ID: "switch.test_name_test_switch_0"},
@@ -421,7 +421,7 @@ async def test_rpc_set_state_errors(
 
 
 async def test_rpc_auth_error(
-    hass: HomeAssistant, mock_rpc_device: Mock, monkeypatch: pytest.MonkeyPatch
+    menuai: menuai, mock_rpc_device: Mock, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test RPC device set state authentication error."""
     monkeypatch.setattr(
@@ -431,11 +431,11 @@ async def test_rpc_auth_error(
     )
     monkeypatch.delitem(mock_rpc_device.status, "cover:0")
     monkeypatch.setitem(mock_rpc_device.status["sys"], "relay_in_thermostat", False)
-    entry = await init_integration(hass, 2)
+    entry = await init_integration(menuai, 2)
 
     assert entry.state is ConfigEntryState.LOADED
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: "switch.test_name_test_switch_0"},
@@ -444,7 +444,7 @@ async def test_rpc_auth_error(
 
     assert entry.state is ConfigEntryState.LOADED
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
 
     flow = flows[0]
@@ -457,24 +457,24 @@ async def test_rpc_auth_error(
 
 
 async def test_remove_gas_valve_switch(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_block_device: Mock,
     entity_registry: EntityRegistry,
 ) -> None:
     """Test removing deprecated switch entity for Shelly Gas Valve."""
     entity_id = register_entity(
-        hass,
+        menuai,
         SWITCH_DOMAIN,
         "test_name_valve",
         "valve_0-valve",
     )
-    await init_integration(hass, 1, MODEL_GAS)
+    await init_integration(menuai, 1, MODEL_GAS)
 
     assert entity_registry.async_get(entity_id) is None
 
 
 async def test_wall_display_relay_mode(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_rpc_device: Mock,
     entity_registry: EntityRegistry,
     monkeypatch: pytest.MonkeyPatch,
@@ -483,10 +483,10 @@ async def test_wall_display_relay_mode(
     climate_entity_id = "climate.test_name"
     switch_entity_id = "switch.test_name_test_switch_0"
 
-    config_entry = await init_integration(hass, 2, model=MODEL_WALL_DISPLAY)
+    config_entry = await init_integration(menuai, 2, model=MODEL_WALL_DISPLAY)
 
-    assert (state := hass.states.get(climate_entity_id))
-    assert len(hass.states.async_entity_ids(CLIMATE_DOMAIN)) == 1
+    assert (state := menuai.states.get(climate_entity_id))
+    assert len(menuai.states.async_entity_ids(CLIMATE_DOMAIN)) == 1
 
     new_status = deepcopy(mock_rpc_device.status)
     new_status["sys"]["relay_in_thermostat"] = False
@@ -494,18 +494,18 @@ async def test_wall_display_relay_mode(
     new_status.pop("cover:0")
     monkeypatch.setattr(mock_rpc_device, "status", new_status)
 
-    await hass.config_entries.async_reload(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_reload(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # the climate entity should be removed
 
-    assert hass.states.get(climate_entity_id) is None
-    assert len(hass.states.async_entity_ids(CLIMATE_DOMAIN)) == 0
+    assert menuai.states.get(climate_entity_id) is None
+    assert len(menuai.states.async_entity_ids(CLIMATE_DOMAIN)) == 0
 
     # the switch entity should be created
-    assert (state := hass.states.get(switch_entity_id))
+    assert (state := menuai.states.get(switch_entity_id))
     assert state.state == STATE_ON
-    assert len(hass.states.async_entity_ids(SWITCH_DOMAIN)) == 1
+    assert len(menuai.states.async_entity_ids(SWITCH_DOMAIN)) == 1
 
     assert (entry := entity_registry.async_get(switch_entity_id))
     assert entry.unique_id == "123456789ABC-switch:0"
@@ -519,7 +519,7 @@ async def test_wall_display_relay_mode(
     ],
 )
 async def test_rpc_device_virtual_switch(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: EntityRegistry,
     mock_rpc_device: Mock,
     monkeypatch: pytest.MonkeyPatch,
@@ -538,39 +538,39 @@ async def test_rpc_device_virtual_switch(
     status["boolean:200"] = {"value": True}
     monkeypatch.setattr(mock_rpc_device, "status", status)
 
-    await init_integration(hass, 3)
+    await init_integration(menuai, 3)
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_ON
 
     assert (entry := entity_registry.async_get(entity_id))
     assert entry.unique_id == "123456789ABC-boolean:200-boolean"
 
     monkeypatch.setitem(mock_rpc_device.status["boolean:200"], "value", False)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: entity_id},
         blocking=True,
     )
     mock_rpc_device.mock_update()
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_OFF
 
     monkeypatch.setitem(mock_rpc_device.status["boolean:200"], "value", True)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: entity_id},
         blocking=True,
     )
     mock_rpc_device.mock_update()
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_ON
 
 
 async def test_rpc_device_virtual_binary_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_rpc_device: Mock,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -585,13 +585,13 @@ async def test_rpc_device_virtual_binary_sensor(
 
     entity_id = "switch.test_name_boolean_200"
 
-    await init_integration(hass, 3)
+    await init_integration(menuai, 3)
 
-    assert hass.states.get(entity_id) is None
+    assert menuai.states.get(entity_id) is None
 
 
 async def test_rpc_remove_virtual_switch_when_mode_label(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: EntityRegistry,
     device_registry: DeviceRegistry,
     mock_rpc_device: Mock,
@@ -606,10 +606,10 @@ async def test_rpc_remove_virtual_switch_when_mode_label(
     status["boolean:200"] = {"value": True}
     monkeypatch.setattr(mock_rpc_device, "status", status)
 
-    config_entry = await init_integration(hass, 3, skip_setup=True)
+    config_entry = await init_integration(menuai, 3, skip_setup=True)
     device_entry = register_device(device_registry, config_entry)
     entity_id = register_entity(
-        hass,
+        menuai,
         SWITCH_DOMAIN,
         "test_name_boolean_200",
         "boolean:200-boolean",
@@ -617,23 +617,23 @@ async def test_rpc_remove_virtual_switch_when_mode_label(
         device_id=device_entry.id,
     )
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert entity_registry.async_get(entity_id) is None
 
 
 async def test_rpc_remove_virtual_switch_when_orphaned(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: EntityRegistry,
     device_registry: DeviceRegistry,
     mock_rpc_device: Mock,
 ) -> None:
     """Check whether the virtual switch will be removed if it has been removed from the device configuration."""
-    config_entry = await init_integration(hass, 3, skip_setup=True)
+    config_entry = await init_integration(menuai, 3, skip_setup=True)
     device_entry = register_device(device_registry, config_entry)
     entity_id = register_entity(
-        hass,
+        menuai,
         SWITCH_DOMAIN,
         "test_name_boolean_200",
         "boolean:200-boolean",
@@ -641,15 +641,15 @@ async def test_rpc_remove_virtual_switch_when_orphaned(
         device_id=device_entry.id,
     )
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert entity_registry.async_get(entity_id) is None
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_rpc_device_script_switch(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: EntityRegistry,
     mock_rpc_device: Mock,
     monkeypatch: pytest.MonkeyPatch,
@@ -672,16 +672,16 @@ async def test_rpc_device_script_switch(
     }
     monkeypatch.setattr(mock_rpc_device, "status", status)
 
-    await init_integration(hass, 3)
+    await init_integration(menuai, 3)
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_ON
 
     assert (entry := entity_registry.async_get(entity_id))
     assert entry.unique_id == f"123456789ABC-{key}-script"
 
     monkeypatch.setitem(mock_rpc_device.status[key], "running", False)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: entity_id},
@@ -689,11 +689,11 @@ async def test_rpc_device_script_switch(
     )
     mock_rpc_device.mock_update()
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_OFF
 
     monkeypatch.setitem(mock_rpc_device.status[key], "running", True)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: entity_id},
@@ -701,5 +701,5 @@ async def test_rpc_device_script_switch(
     )
     mock_rpc_device.mock_update()
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_ON

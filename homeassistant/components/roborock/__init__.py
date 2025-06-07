@@ -20,11 +20,11 @@ from roborock.version_1_apis.roborock_mqtt_client_v1 import RoborockMqttClientV1
 from roborock.version_a01_apis import RoborockMqttClientA01
 from roborock.web_api import RoborockApiClient
 
-from homeassistant.const import CONF_USERNAME, EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.const import CONF_USERNAME, EVENT_menuai_STOP
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import device_registry as dr
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import CONF_BASE_URL, CONF_USER_DATA, DOMAIN, PLATFORMS
 from .coordinator import (
@@ -40,7 +40,7 @@ SCAN_INTERVAL = timedelta(seconds=30)
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: RoborockConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: RoborockConfigEntry) -> bool:
     """Set up roborock from a config entry."""
 
     entry.async_on_unload(entry.add_update_listener(update_listener))
@@ -49,7 +49,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: RoborockConfigEntry) -> 
     api_client = RoborockApiClient(
         entry.data[CONF_USERNAME],
         entry.data[CONF_BASE_URL],
-        session=async_get_clientsession(hass),
+        session=async_get_clientsession(menuai),
     )
     _LOGGER.debug("Getting home data")
     try:
@@ -89,7 +89,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: RoborockConfigEntry) -> 
     # Get a Coordinator if the device is available or if we have connected to the device before
     coordinators = await asyncio.gather(
         *build_setup_functions(
-            hass,
+            menuai,
             entry,
             device_map,
             user_data,
@@ -131,16 +131,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: RoborockConfigEntry) -> 
         )
 
     entry.async_on_unload(
-        hass.bus.async_listen_once(
-            EVENT_HOMEASSISTANT_STOP,
+        menuai.bus.async_listen_once(
+            EVENT_menuai_STOP,
             on_stop,
         )
     )
     entry.runtime_data = valid_coordinators
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     device_entries = dr.async_entries_for_config_entry(
         device_registry, config_entry_id=entry.entry_id
     )
@@ -164,7 +164,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: RoborockConfigEntry) -> 
     return True
 
 
-async def async_migrate_entry(hass: HomeAssistant, entry: RoborockConfigEntry) -> bool:
+async def async_migrate_entry(menuai: menuai, entry: RoborockConfigEntry) -> bool:
     """Migrate old configuration entries to the new format."""
     _LOGGER.debug(
         "Migrating configuration from version %s.%s",
@@ -179,7 +179,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: RoborockConfigEntry) -
     if entry.minor_version == 1:
         user_data = UserData.from_dict(entry.data[CONF_USER_DATA])
         _LOGGER.debug("Updating unique id to %s", user_data.rruid)
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry,
             unique_id=user_data.rruid,
             version=1,
@@ -190,7 +190,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: RoborockConfigEntry) -
 
 
 def build_setup_functions(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: RoborockConfigEntry,
     device_map: dict[str, HomeDataDevice],
     user_data: UserData,
@@ -207,7 +207,7 @@ def build_setup_functions(
     """Create a list of setup functions that can later be called asynchronously."""
     return [
         setup_device(
-            hass,
+            menuai,
             entry,
             user_data,
             device,
@@ -220,7 +220,7 @@ def build_setup_functions(
 
 
 async def setup_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: RoborockConfigEntry,
     user_data: UserData,
     device: HomeDataDevice,
@@ -231,10 +231,10 @@ async def setup_device(
     """Set up a coordinator for a given device."""
     if device.pv == "1.0":
         return await setup_device_v1(
-            hass, entry, user_data, device, product_info, home_data_rooms, api_client
+            menuai, entry, user_data, device, product_info, home_data_rooms, api_client
         )
     if device.pv == "A01":
-        return await setup_device_a01(hass, entry, user_data, device, product_info)
+        return await setup_device_a01(menuai, entry, user_data, device, product_info)
     _LOGGER.warning(
         "Not adding device %s because its protocol version %s or category %s is not supported",
         device.duid,
@@ -245,7 +245,7 @@ async def setup_device(
 
 
 async def setup_device_v1(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: RoborockConfigEntry,
     user_data: UserData,
     device: HomeDataDevice,
@@ -254,7 +254,7 @@ async def setup_device_v1(
     api_client: RoborockApiClient,
 ) -> RoborockDataUpdateCoordinator | None:
     """Set up a device Coordinator."""
-    mqtt_client = await hass.async_add_executor_job(
+    mqtt_client = await menuai.async_add_executor_job(
         RoborockMqttClientV1, user_data, DeviceData(device, product_info.model)
     )
     try:
@@ -273,7 +273,7 @@ async def setup_device_v1(
         await mqtt_client.async_release()
         raise
     coordinator = RoborockDataUpdateCoordinator(
-        hass,
+        menuai,
         entry,
         device,
         networking,
@@ -290,8 +290,8 @@ async def setup_device_v1(
         if isinstance(coordinator.api, RoborockMqttClientV1):
             _LOGGER.warning(
                 "Not setting up %s because the we failed to get data for the first time using the online client. "
-                "Please ensure your Home Assistant instance can communicate with this device. "
-                "You may need to open firewall instances on your Home Assistant network and on your Vacuum's network",
+                "Please ensure your MenuAI instance can communicate with this device. "
+                "You may need to open firewall instances on your MenuAI network and on your Vacuum's network",
                 device.name,
             )
             # Most of the time if we fail to connect using the mqtt client, the problem is due to firewall,
@@ -314,7 +314,7 @@ async def setup_device_v1(
 
 
 async def setup_device_a01(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: RoborockConfigEntry,
     user_data: UserData,
     device: HomeDataDevice,
@@ -325,23 +325,23 @@ async def setup_device_a01(
         user_data, DeviceData(device, product_info.name), product_info.category
     )
     coord = RoborockDataUpdateCoordinatorA01(
-        hass, entry, device, product_info, mqtt_client
+        menuai, entry, device, product_info, mqtt_client
     )
     await coord.async_config_entry_first_refresh()
     return coord
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: RoborockConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: RoborockConfigEntry) -> bool:
     """Handle removal of an entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
-async def update_listener(hass: HomeAssistant, entry: RoborockConfigEntry) -> None:
+async def update_listener(menuai: menuai, entry: RoborockConfigEntry) -> None:
     """Handle options update."""
     # Reload entry to update data
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)
 
 
-async def async_remove_entry(hass: HomeAssistant, entry: RoborockConfigEntry) -> None:
+async def async_remove_entry(menuai: menuai, entry: RoborockConfigEntry) -> None:
     """Handle removal of an entry."""
-    await async_remove_map_storage(hass, entry.entry_id)
+    await async_remove_map_storage(menuai, entry.entry_id)

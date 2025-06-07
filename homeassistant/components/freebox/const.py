@@ -5,13 +5,13 @@ from __future__ import annotations
 import enum
 import socket
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 DOMAIN = "freebox"
 
 APP_DESC = {
-    "app_id": "hass",
-    "app_name": "Home Assistant",
+    "app_id": "menuai",
+    "app_name": "MenuAI",
     "app_version": "0.106",
     "device_name": socket.gethostname(),
 }

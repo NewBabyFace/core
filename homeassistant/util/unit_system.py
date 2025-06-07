@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Final
 
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     ACCUMULATED_PRECIPITATION,
     AREA,
     LENGTH,
@@ -39,7 +39,7 @@ from .unit_conversion import (
 )
 
 if TYPE_CHECKING:
-    from homeassistant.components.sensor import SensorDeviceClass
+    from menuai.components.sensor import SensorDeviceClass
 
 _CONF_UNIT_SYSTEM_IMPERIAL: Final = "imperial"
 _CONF_UNIT_SYSTEM_METRIC: Final = "metric"

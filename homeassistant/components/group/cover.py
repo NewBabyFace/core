@@ -6,7 +6,7 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     ATTR_CURRENT_POSITION,
     ATTR_CURRENT_TILT_POSITION,
     ATTR_POSITION,
@@ -17,8 +17,8 @@ from homeassistant.components.cover import (
     CoverEntityFeature,
     CoverState,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_SUPPORTED_FEATURES,
     CONF_ENTITIES,
@@ -35,13 +35,13 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import HomeAssistant, State, callback
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.entity_platform import (
+from menuai.core import menuai, State, callback
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     AddEntitiesCallback,
 )
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .entity import GroupEntity
 from .util import reduce_attribute
@@ -65,7 +65,7 @@ PLATFORM_SCHEMA = COVER_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -81,12 +81,12 @@ async def async_setup_platform(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Initialize Cover Group config entry."""
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     entities = er.async_validate_entity_ids(
         registry, config_entry.options[CONF_ENTITIES]
     )
@@ -98,7 +98,7 @@ async def async_setup_entry(
 
 @callback
 def async_create_preview_cover(
-    hass: HomeAssistant, name: str, validated_config: dict[str, Any]
+    menuai: menuai, name: str, validated_config: dict[str, Any]
 ) -> CoverGroup:
     """Create a preview sensor."""
     return CoverGroup(
@@ -180,14 +180,14 @@ class CoverGroup(GroupEntity, CoverEntity):
     async def async_open_cover(self, **kwargs: Any) -> None:
         """Move the covers up."""
         data = {ATTR_ENTITY_ID: self._covers[KEY_OPEN_CLOSE]}
-        await self.hass.services.async_call(
+        await self.menuai.services.async_call(
             COVER_DOMAIN, SERVICE_OPEN_COVER, data, blocking=True, context=self._context
         )
 
     async def async_close_cover(self, **kwargs: Any) -> None:
         """Move the covers down."""
         data = {ATTR_ENTITY_ID: self._covers[KEY_OPEN_CLOSE]}
-        await self.hass.services.async_call(
+        await self.menuai.services.async_call(
             COVER_DOMAIN,
             SERVICE_CLOSE_COVER,
             data,
@@ -198,7 +198,7 @@ class CoverGroup(GroupEntity, CoverEntity):
     async def async_stop_cover(self, **kwargs: Any) -> None:
         """Fire the stop action."""
         data = {ATTR_ENTITY_ID: self._covers[KEY_STOP]}
-        await self.hass.services.async_call(
+        await self.menuai.services.async_call(
             COVER_DOMAIN, SERVICE_STOP_COVER, data, blocking=True, context=self._context
         )
 
@@ -208,7 +208,7 @@ class CoverGroup(GroupEntity, CoverEntity):
             ATTR_ENTITY_ID: self._covers[KEY_POSITION],
             ATTR_POSITION: kwargs[ATTR_POSITION],
         }
-        await self.hass.services.async_call(
+        await self.menuai.services.async_call(
             COVER_DOMAIN,
             SERVICE_SET_COVER_POSITION,
             data,
@@ -219,7 +219,7 @@ class CoverGroup(GroupEntity, CoverEntity):
     async def async_open_cover_tilt(self, **kwargs: Any) -> None:
         """Tilt covers open."""
         data = {ATTR_ENTITY_ID: self._tilts[KEY_OPEN_CLOSE]}
-        await self.hass.services.async_call(
+        await self.menuai.services.async_call(
             COVER_DOMAIN,
             SERVICE_OPEN_COVER_TILT,
             data,
@@ -230,7 +230,7 @@ class CoverGroup(GroupEntity, CoverEntity):
     async def async_close_cover_tilt(self, **kwargs: Any) -> None:
         """Tilt covers closed."""
         data = {ATTR_ENTITY_ID: self._tilts[KEY_OPEN_CLOSE]}
-        await self.hass.services.async_call(
+        await self.menuai.services.async_call(
             COVER_DOMAIN,
             SERVICE_CLOSE_COVER_TILT,
             data,
@@ -241,7 +241,7 @@ class CoverGroup(GroupEntity, CoverEntity):
     async def async_stop_cover_tilt(self, **kwargs: Any) -> None:
         """Stop cover tilt."""
         data = {ATTR_ENTITY_ID: self._tilts[KEY_STOP]}
-        await self.hass.services.async_call(
+        await self.menuai.services.async_call(
             COVER_DOMAIN,
             SERVICE_STOP_COVER_TILT,
             data,
@@ -255,7 +255,7 @@ class CoverGroup(GroupEntity, CoverEntity):
             ATTR_ENTITY_ID: self._tilts[KEY_POSITION],
             ATTR_TILT_POSITION: kwargs[ATTR_TILT_POSITION],
         }
-        await self.hass.services.async_call(
+        await self.menuai.services.async_call(
             COVER_DOMAIN,
             SERVICE_SET_COVER_TILT_POSITION,
             data,
@@ -269,7 +269,7 @@ class CoverGroup(GroupEntity, CoverEntity):
         states = [
             state.state
             for entity_id in self._entity_ids
-            if (state := self.hass.states.get(entity_id)) is not None
+            if (state := self.menuai.states.get(entity_id)) is not None
         ]
 
         valid_state = any(
@@ -283,7 +283,7 @@ class CoverGroup(GroupEntity, CoverEntity):
         self._attr_is_closing = False
         self._attr_is_opening = False
         for entity_id in self._entity_ids:
-            if not (state := self.hass.states.get(entity_id)):
+            if not (state := self.menuai.states.get(entity_id)):
                 continue
             if state.state == CoverState.OPEN:
                 self._attr_is_closed = False
@@ -301,14 +301,14 @@ class CoverGroup(GroupEntity, CoverEntity):
             self._attr_is_closed = None
 
         position_covers = self._covers[KEY_POSITION]
-        all_position_states = [self.hass.states.get(x) for x in position_covers]
+        all_position_states = [self.menuai.states.get(x) for x in position_covers]
         position_states: list[State] = list(filter(None, all_position_states))
         self._attr_current_cover_position = reduce_attribute(
             position_states, ATTR_CURRENT_POSITION
         )
 
         tilt_covers = self._tilts[KEY_POSITION]
-        all_tilt_states = [self.hass.states.get(x) for x in tilt_covers]
+        all_tilt_states = [self.menuai.states.get(x) for x in tilt_covers]
         tilt_states: list[State] = list(filter(None, all_tilt_states))
         self._attr_current_cover_tilt_position = reduce_attribute(
             tilt_states, ATTR_CURRENT_TILT_POSITION

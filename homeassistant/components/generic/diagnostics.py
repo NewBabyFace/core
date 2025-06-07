@@ -6,10 +6,10 @@ from typing import Any
 
 import yarl
 
-from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
+from menuai.components.diagnostics import async_redact_data
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
 
 from .const import CONF_STILL_IMAGE_URL, CONF_STREAM_SOURCE
 
@@ -39,7 +39,7 @@ def redact_url(data: str) -> str:
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: ConfigEntry
+    menuai: menuai, entry: ConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     options = async_redact_data(entry.options, TO_REDACT)

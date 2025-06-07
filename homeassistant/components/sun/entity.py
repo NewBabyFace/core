@@ -8,21 +8,21 @@ from typing import Any
 
 from astral.location import Elevation, Location
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     EVENT_CORE_CONFIG_UPDATE,
     SUN_EVENT_SUNRISE,
     SUN_EVENT_SUNSET,
 )
-from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, callback
-from homeassistant.helpers import event
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.sun import (
+from menuai.core import CALLBACK_TYPE, Event, menuai, callback
+from menuai.helpers import event
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.entity import Entity
+from menuai.helpers.sun import (
     get_astral_location,
     get_location_astral_event_next,
 )
-from homeassistant.util import dt as dt_util
+from menuai.util import dt as dt_util
 
 from .const import (
     SIGNAL_EVENTS_CHANGED,
@@ -114,27 +114,27 @@ class Sun(Entity):
     rising: bool
     _next_change: datetime
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize the sun."""
-        self.hass = hass
+        self.menuai = menuai
         self.phase: str | None = None
 
         self._config_listener: CALLBACK_TYPE | None = None
         self._update_events_listener: CALLBACK_TYPE | None = None
         self._update_sun_position_listener: CALLBACK_TYPE | None = None
-        self._config_listener = self.hass.bus.async_listen(
+        self._config_listener = self.menuai.bus.async_listen(
             EVENT_CORE_CONFIG_UPDATE, self.update_location
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Update after entity has been added."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self.update_location(initial=True)
 
     @callback
     def update_location(self, _: Event | None = None, initial: bool = False) -> None:
         """Update location."""
-        location, elevation = get_astral_location(self.hass)
+        location, elevation = get_astral_location(self.menuai)
         if not initial and location == self.location:
             return
         self.location = location
@@ -251,11 +251,11 @@ class Sun(Entity):
         if self._update_sun_position_listener:
             self._update_sun_position_listener()
         self.update_sun_position()
-        async_dispatcher_send(self.hass, SIGNAL_EVENTS_CHANGED)
+        async_dispatcher_send(self.menuai, SIGNAL_EVENTS_CHANGED)
 
         # Set timer for the next solar event
         self._update_events_listener = event.async_track_point_in_utc_time(
-            self.hass, self.update_events, self._next_change
+            self.menuai, self.update_events, self._next_change
         )
         _LOGGER.debug("next time: %s", self._next_change.isoformat())
 
@@ -279,7 +279,7 @@ class Sun(Entity):
         )
         self.async_write_ha_state()
 
-        async_dispatcher_send(self.hass, SIGNAL_POSITION_CHANGED)
+        async_dispatcher_send(self.menuai, SIGNAL_POSITION_CHANGED)
 
         # Next update as per the current phase
         assert self.phase
@@ -290,5 +290,5 @@ class Sun(Entity):
             self._update_sun_position_listener = None
             return
         self._update_sun_position_listener = event.async_track_point_in_utc_time(
-            self.hass, self.update_sun_position, utc_point_in_time + delta
+            self.menuai, self.update_sun_position, utc_point_in_time + delta
         )

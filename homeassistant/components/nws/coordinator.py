@@ -9,13 +9,13 @@ from typing import TYPE_CHECKING
 from aiohttp import ClientResponseError
 from pynws import NwsNoDataError, SimpleNWS, call_with_retry
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import debounce
-from homeassistant.helpers.update_coordinator import (
+from menuai.core import menuai
+from menuai.helpers import debounce
+from menuai.helpers.update_coordinator import (
     TimestampDataUpdateCoordinator,
     UpdateFailed,
 )
-from homeassistant.util.dt import utcnow
+from menuai.util.dt import utcnow
 
 if TYPE_CHECKING:
     from . import NWSConfigEntry
@@ -39,7 +39,7 @@ class NWSObservationDataUpdateCoordinator(TimestampDataUpdateCoordinator[None]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: NWSConfigEntry,
         nws: SimpleNWS,
     ) -> None:
@@ -49,13 +49,13 @@ class NWSObservationDataUpdateCoordinator(TimestampDataUpdateCoordinator[None]):
         self.initialized: bool = False
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=f"NWS observation station {nws.station}",
             update_interval=DEFAULT_SCAN_INTERVAL,
             request_refresh_debouncer=debounce.Debouncer(
-                hass, _LOGGER, cooldown=DEBOUNCE_TIME, immediate=True
+                menuai, _LOGGER, cooldown=DEBOUNCE_TIME, immediate=True
             ),
         )
 

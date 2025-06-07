@@ -7,24 +7,24 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.util.hass_dict import HassKey
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.util.menuai_dict import menuaiKey
 
 if TYPE_CHECKING:
-    from homeassistant.components.backup import (
+    from menuai.components.backup import (
         BackupManager,
         BackupPlatformEvent,
         ManagerStateEvent,
     )
 
-DATA_BACKUP: HassKey[BackupData] = HassKey("backup_data")
-DATA_MANAGER: HassKey[BackupManager] = HassKey("backup")
+DATA_BACKUP: menuaiKey[BackupData] = menuaiKey("backup_data")
+DATA_MANAGER: menuaiKey[BackupManager] = menuaiKey("backup")
 
 
 @dataclass(slots=True)
 class BackupData:
-    """Backup data stored in hass.data."""
+    """Backup data stored in menuai.data."""
 
     backup_event_subscriptions: list[Callable[[ManagerStateEvent], None]] = field(
         default_factory=list
@@ -36,39 +36,39 @@ class BackupData:
 
 
 @callback
-def async_initialize_backup(hass: HomeAssistant) -> None:
+def async_initialize_backup(menuai: menuai) -> None:
     """Initialize backup data.
 
-    This creates the BackupData instance stored in hass.data[DATA_BACKUP] and
+    This creates the BackupData instance stored in menuai.data[DATA_BACKUP] and
     registers the basic backup websocket API which is used by frontend to subscribe
     to backup events.
     """
     # pylint: disable-next=import-outside-toplevel
-    from homeassistant.components.backup import basic_websocket
+    from menuai.components.backup import basic_websocket
 
-    hass.data[DATA_BACKUP] = BackupData()
-    basic_websocket.async_register_websocket_handlers(hass)
+    menuai.data[DATA_BACKUP] = BackupData()
+    basic_websocket.async_register_websocket_handlers(menuai)
 
 
-async def async_get_manager(hass: HomeAssistant) -> BackupManager:
+async def async_get_manager(menuai: menuai) -> BackupManager:
     """Get the backup manager instance.
 
-    Raises HomeAssistantError if the backup integration is not available.
+    Raises menuaiError if the backup integration is not available.
     """
-    if DATA_BACKUP not in hass.data:
-        raise HomeAssistantError("Backup integration is not available")
+    if DATA_BACKUP not in menuai.data:
+        raise menuaiError("Backup integration is not available")
 
-    await hass.data[DATA_BACKUP].manager_ready
-    return hass.data[DATA_MANAGER]
+    await menuai.data[DATA_BACKUP].manager_ready
+    return menuai.data[DATA_MANAGER]
 
 
 @callback
 def async_subscribe_events(
-    hass: HomeAssistant,
+    menuai: menuai,
     on_event: Callable[[ManagerStateEvent], None],
 ) -> Callable[[], None]:
     """Subscribe to backup events."""
-    backup_event_subscriptions = hass.data[DATA_BACKUP].backup_event_subscriptions
+    backup_event_subscriptions = menuai.data[DATA_BACKUP].backup_event_subscriptions
 
     def remove_subscription() -> None:
         backup_event_subscriptions.remove(on_event)
@@ -79,11 +79,11 @@ def async_subscribe_events(
 
 @callback
 def async_subscribe_platform_events(
-    hass: HomeAssistant,
+    menuai: menuai,
     on_event: Callable[[BackupPlatformEvent], None],
 ) -> Callable[[], None]:
     """Subscribe to backup platform events."""
-    backup_platform_event_subscriptions = hass.data[
+    backup_platform_event_subscriptions = menuai.data[
         DATA_BACKUP
     ].backup_platform_event_subscriptions
 

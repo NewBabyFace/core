@@ -9,20 +9,20 @@ import logging
 import dweepy
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
     SensorEntity,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_DEVICE,
     CONF_NAME,
     CONF_UNIT_OF_MEASUREMENT,
     CONF_VALUE_TEMPLATE,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -64,15 +64,15 @@ def setup_platform(
 
     dweet = DweetData(device)
 
-    add_entities([DweetSensor(hass, dweet, name, value_template, unit)], True)
+    add_entities([DweetSensor(menuai, dweet, name, value_template, unit)], True)
 
 
 class DweetSensor(SensorEntity):
     """Representation of a Dweet sensor."""
 
-    def __init__(self, hass, dweet, name, value_template, unit_of_measurement):
+    def __init__(self, menuai, dweet, name, value_template, unit_of_measurement):
         """Initialize the sensor."""
-        self.hass = hass
+        self.menuai = menuai
         self.dweet = dweet
         self._name = name
         self._value_template = value_template

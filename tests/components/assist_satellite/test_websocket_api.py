@@ -7,12 +7,12 @@ from unittest.mock import patch
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.components.assist_pipeline import PipelineStage
-from homeassistant.components.assist_satellite.websocket_api import (
+from menuai.components.assist_pipeline import PipelineStage
+from menuai.components.assist_satellite.websocket_api import (
     CONNECTION_TEST_TIMEOUT,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
 
 from . import ENTITY_ID
 from .conftest import MockAssistSatellite
@@ -22,13 +22,13 @@ from tests.typing import ClientSessionGenerator, WebSocketGenerator
 
 
 async def test_intercept_wake_word(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_components: ConfigEntry,
     entity: MockAssistSatellite,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test intercepting a wake word."""
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     await ws_client.send_json_auto_id(
         {
@@ -56,13 +56,13 @@ async def test_intercept_wake_word(
 
 
 async def test_intercept_wake_word_requires_on_device_wake_word(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_components: ConfigEntry,
     entity: MockAssistSatellite,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test intercepting a wake word fails if detection happens in HA."""
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     await ws_client.send_json_auto_id(
         {
@@ -79,7 +79,7 @@ async def test_intercept_wake_word_requires_on_device_wake_word(
 
     await entity.async_accept_pipeline_from_satellite(
         object(),  # type: ignore[arg-type]
-        # Emulate wake word processing in Home Assistant
+        # Emulate wake word processing in MenuAI
         start_stage=PipelineStage.WAKE_WORD,
     )
 
@@ -94,13 +94,13 @@ async def test_intercept_wake_word_requires_on_device_wake_word(
 
 
 async def test_intercept_wake_word_requires_wake_word_phrase(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_components: ConfigEntry,
     entity: MockAssistSatellite,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test intercepting a wake word fails if detection happens in HA."""
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     await ws_client.send_json_auto_id(
         {
@@ -132,16 +132,16 @@ async def test_intercept_wake_word_requires_wake_word_phrase(
 
 
 async def test_intercept_wake_word_require_admin(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_components: ConfigEntry,
     entity: MockAssistSatellite,
-    hass_ws_client: WebSocketGenerator,
-    hass_admin_user: MockUser,
+    menuai_ws_client: WebSocketGenerator,
+    menuai_admin_user: MockUser,
 ) -> None:
     """Test intercepting a wake word requires admin access."""
     # Remove admin permission and verify we're not allowed
-    hass_admin_user.groups = []
-    ws_client = await hass_ws_client(hass)
+    menuai_admin_user.groups = []
+    ws_client = await menuai_ws_client(menuai)
 
     await ws_client.send_json_auto_id(
         {
@@ -161,13 +161,13 @@ async def test_intercept_wake_word_require_admin(
 
 
 async def test_intercept_wake_word_invalid_satellite(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_components: ConfigEntry,
     entity: MockAssistSatellite,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test intercepting a wake word requires admin access."""
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     await ws_client.send_json_auto_id(
         {
@@ -186,13 +186,13 @@ async def test_intercept_wake_word_invalid_satellite(
 
 
 async def test_intercept_wake_word_twice(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_components: ConfigEntry,
     entity: MockAssistSatellite,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test intercepting a wake word twice cancels the previous request."""
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     await ws_client.send_json_auto_id(
         {
@@ -207,7 +207,7 @@ async def test_intercept_wake_word_twice(
     assert msg["success"]
     assert msg["result"] is None
 
-    task = hass.async_create_task(ws_client.receive_json())
+    task = menuai.async_create_task(ws_client.receive_json())
 
     await ws_client.send_json_auto_id(
         {
@@ -235,13 +235,13 @@ async def test_intercept_wake_word_twice(
 
 
 async def test_intercept_wake_word_unsubscribe(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_components: ConfigEntry,
     entity: MockAssistSatellite,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test that closing the websocket connection stops interception."""
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     await ws_client.send_json_auto_id(
         {
@@ -259,7 +259,7 @@ async def test_intercept_wake_word_unsubscribe(
             # Raises TypeError when connection is closed
             await ws_client.receive_json()
 
-    task = hass.async_create_task(receive_json())
+    task = menuai.async_create_task(receive_json())
 
     # Close connection
     await ws_client.close()
@@ -267,7 +267,7 @@ async def test_intercept_wake_word_unsubscribe(
 
     with (
         patch(
-            "homeassistant.components.assist_satellite.entity.async_pipeline_from_audio_stream",
+            "menuai.components.assist_satellite.entity.async_pipeline_from_audio_stream",
         ) as mock_pipeline_from_audio_stream,
     ):
         # Start a pipeline with a wake word
@@ -281,13 +281,13 @@ async def test_intercept_wake_word_unsubscribe(
 
 
 async def test_get_configuration(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_components: ConfigEntry,
     entity: MockAssistSatellite,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test getting satellite configuration."""
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     with (
         patch.object(entity, "_attr_pipeline_entity_id", "select.test_pipeline"),
@@ -314,13 +314,13 @@ async def test_get_configuration(
 
 
 async def test_get_configuration_not_implemented(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_components: ConfigEntry,
     entity: MockAssistSatellite,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test getting stub satellite configuration when the entity doesn't implement the method."""
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     with patch.object(
         entity, "async_get_configuration", side_effect=NotImplementedError()
@@ -345,13 +345,13 @@ async def test_get_configuration_not_implemented(
 
 
 async def test_set_wake_words(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_components: ConfigEntry,
     entity: MockAssistSatellite,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test setting active wake words."""
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     await ws_client.send_json_auto_id(
         {
@@ -376,13 +376,13 @@ async def test_set_wake_words(
 
 
 async def test_set_wake_words_exceed_maximum(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_components: ConfigEntry,
     entity: MockAssistSatellite,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test setting too many active wake words."""
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     await ws_client.send_json_auto_id(
         {
@@ -400,13 +400,13 @@ async def test_set_wake_words_exceed_maximum(
 
 
 async def test_set_wake_words_bad_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_components: ConfigEntry,
     entity: MockAssistSatellite,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test setting active wake words with a bad id."""
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     await ws_client.send_json_auto_id(
         {
@@ -424,14 +424,14 @@ async def test_set_wake_words_bad_id(
 
 
 async def test_connection_test(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_components: ConfigEntry,
     entity: MockAssistSatellite,
-    hass_ws_client: WebSocketGenerator,
-    hass_client: ClientSessionGenerator,
+    menuai_ws_client: WebSocketGenerator,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test connection test."""
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     await ws_client.send_json_auto_id(
         {
@@ -447,14 +447,14 @@ async def test_connection_test(
     assert entity.announcements[0].message == ""
     assert entity.announcements[0].preannounce_media_id is None
     announcement_media_id = entity.announcements[0].media_id
-    hass_url = "http://10.10.10.10:8123"
+    menuai_url = "http://10.10.10.10:8123"
     assert announcement_media_id.startswith(
-        f"{hass_url}/api/assist_satellite/connection_test/"
+        f"{menuai_url}/api/assist_satellite/connection_test/"
     )
 
     # Fake satellite fetches the URL
-    client = await hass_client()
-    resp = await client.get(announcement_media_id[len(hass_url) :])
+    client = await menuai_client()
+    resp = await client.get(announcement_media_id[len(menuai_url) :])
     assert resp.status == HTTPStatus.OK
 
     response = await ws_client.receive_json()
@@ -463,15 +463,15 @@ async def test_connection_test(
 
 
 async def test_connection_test_timeout(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_components: ConfigEntry,
     entity: MockAssistSatellite,
-    hass_ws_client: WebSocketGenerator,
-    hass_client: ClientSessionGenerator,
+    menuai_ws_client: WebSocketGenerator,
+    menuai_client: ClientSessionGenerator,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test connection test timeout."""
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     await ws_client.send_json_auto_id(
         {
@@ -486,9 +486,9 @@ async def test_connection_test_timeout(
     assert len(entity.announcements) == 1
     assert entity.announcements[0].message == ""
     announcement_media_id = entity.announcements[0].media_id
-    hass_url = "http://10.10.10.10:8123"
+    menuai_url = "http://10.10.10.10:8123"
     assert announcement_media_id.startswith(
-        f"{hass_url}/api/assist_satellite/connection_test/"
+        f"{menuai_url}/api/assist_satellite/connection_test/"
     )
 
     freezer.tick(CONNECTION_TEST_TIMEOUT + 1)
@@ -500,13 +500,13 @@ async def test_connection_test_timeout(
 
 
 async def test_connection_test_invalid_satellite(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_components: ConfigEntry,
     entity: MockAssistSatellite,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test connection test with unknown entity id."""
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     await ws_client.send_json_auto_id(
         {
@@ -524,13 +524,13 @@ async def test_connection_test_invalid_satellite(
 
 
 async def test_connection_test_timeout_announcement_unsupported(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_components: ConfigEntry,
     entity: MockAssistSatellite,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test connection test entity which does not support announce."""
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     # Disable announce support
     entity.supported_features = 0

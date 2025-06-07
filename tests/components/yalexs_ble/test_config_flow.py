@@ -7,17 +7,17 @@ from bleak import BleakError
 import pytest
 from yalexs_ble import AuthError, DoorStatus, LockInfo, LockState, LockStatus
 
-from homeassistant import config_entries
-from homeassistant.components.yalexs_ble.const import (
+from menuai import config_entries
+from menuai.components.yalexs_ble.const import (
     CONF_ALWAYS_CONNECTED,
     CONF_KEY,
     CONF_LOCAL_NAME,
     CONF_SLOT,
     DOMAIN,
 )
-from homeassistant.const import CONF_ADDRESS
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.const import CONF_ADDRESS
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from . import (
     LOCK_DISCOVERY_INFO_UUID_ADDRESS,
@@ -48,13 +48,13 @@ def _get_mock_push_lock():
 
 
 @pytest.mark.parametrize("slot", [0, 1, 66])
-async def test_user_step_success(hass: HomeAssistant, slot: int) -> None:
+async def test_user_step_success(menuai: menuai, slot: int) -> None:
     """Test user step success path."""
     with patch(
-        "homeassistant.components.yalexs_ble.config_flow.async_discovered_service_info",
+        "menuai.components.yalexs_ble.config_flow.async_discovered_service_info",
         return_value=[NOT_YALE_DISCOVERY_INFO, YALE_ACCESS_LOCK_DISCOVERY_INFO],
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
     assert result["type"] is FlowResultType.FORM
@@ -63,14 +63,14 @@ async def test_user_step_success(hass: HomeAssistant, slot: int) -> None:
 
     with (
         patch(
-            "homeassistant.components.yalexs_ble.config_flow.PushLock.validate",
+            "menuai.components.yalexs_ble.config_flow.PushLock.validate",
         ),
         patch(
-            "homeassistant.components.yalexs_ble.async_setup_entry",
+            "menuai.components.yalexs_ble.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_ADDRESS: YALE_ACCESS_LOCK_DISCOVERY_INFO.address,
@@ -78,7 +78,7 @@ async def test_user_step_success(hass: HomeAssistant, slot: int) -> None:
                 CONF_SLOT: slot,
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == YALE_ACCESS_LOCK_DISCOVERY_INFO.name
@@ -93,7 +93,7 @@ async def test_user_step_success(hass: HomeAssistant, slot: int) -> None:
 
 
 @pytest.mark.parametrize("slot", [0, 1, 66])
-async def test_user_step_from_ignored(hass: HomeAssistant, slot: int) -> None:
+async def test_user_step_from_ignored(menuai: menuai, slot: int) -> None:
     """Test user step replaces an ignored entry."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -101,12 +101,12 @@ async def test_user_step_from_ignored(hass: HomeAssistant, slot: int) -> None:
         unique_id=YALE_ACCESS_LOCK_DISCOVERY_INFO.address,
         source=config_entries.SOURCE_IGNORE,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     with patch(
-        "homeassistant.components.yalexs_ble.config_flow.async_discovered_service_info",
+        "menuai.components.yalexs_ble.config_flow.async_discovered_service_info",
         return_value=[NOT_YALE_DISCOVERY_INFO, YALE_ACCESS_LOCK_DISCOVERY_INFO],
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
     assert result["type"] is FlowResultType.FORM
@@ -115,14 +115,14 @@ async def test_user_step_from_ignored(hass: HomeAssistant, slot: int) -> None:
 
     with (
         patch(
-            "homeassistant.components.yalexs_ble.config_flow.PushLock.validate",
+            "menuai.components.yalexs_ble.config_flow.PushLock.validate",
         ),
         patch(
-            "homeassistant.components.yalexs_ble.async_setup_entry",
+            "menuai.components.yalexs_ble.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_ADDRESS: YALE_ACCESS_LOCK_DISCOVERY_INFO.address,
@@ -130,7 +130,7 @@ async def test_user_step_from_ignored(hass: HomeAssistant, slot: int) -> None:
                 CONF_SLOT: slot,
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == YALE_ACCESS_LOCK_DISCOVERY_INFO.name
@@ -144,20 +144,20 @@ async def test_user_step_from_ignored(hass: HomeAssistant, slot: int) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_user_step_no_devices_found(hass: HomeAssistant) -> None:
+async def test_user_step_no_devices_found(menuai: menuai) -> None:
     """Test user step with no devices found."""
     with patch(
-        "homeassistant.components.yalexs_ble.config_flow.async_discovered_service_info",
+        "menuai.components.yalexs_ble.config_flow.async_discovered_service_info",
         return_value=[NOT_YALE_DISCOVERY_INFO],
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "no_devices_found"
 
 
-async def test_user_step_no_new_devices_found(hass: HomeAssistant) -> None:
+async def test_user_step_no_new_devices_found(menuai: menuai) -> None:
     """Test user step with only existing devices found."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -169,32 +169,32 @@ async def test_user_step_no_new_devices_found(hass: HomeAssistant) -> None:
         },
         unique_id=YALE_ACCESS_LOCK_DISCOVERY_INFO.address,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     with patch(
-        "homeassistant.components.yalexs_ble.config_flow.async_discovered_service_info",
+        "menuai.components.yalexs_ble.config_flow.async_discovered_service_info",
         return_value=[YALE_ACCESS_LOCK_DISCOVERY_INFO],
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "no_devices_found"
 
 
-async def test_user_step_invalid_keys(hass: HomeAssistant) -> None:
+async def test_user_step_invalid_keys(menuai: menuai) -> None:
     """Test user step with invalid keys tried first."""
     with patch(
-        "homeassistant.components.yalexs_ble.config_flow.async_discovered_service_info",
+        "menuai.components.yalexs_ble.config_flow.async_discovered_service_info",
         return_value=[YALE_ACCESS_LOCK_DISCOVERY_INFO],
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_ADDRESS: YALE_ACCESS_LOCK_DISCOVERY_INFO.address,
@@ -206,7 +206,7 @@ async def test_user_step_invalid_keys(hass: HomeAssistant) -> None:
     assert result2["step_id"] == "user"
     assert result2["errors"] == {CONF_KEY: "invalid_key_format"}
 
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result2["flow_id"],
         {
             CONF_ADDRESS: YALE_ACCESS_LOCK_DISCOVERY_INFO.address,
@@ -218,7 +218,7 @@ async def test_user_step_invalid_keys(hass: HomeAssistant) -> None:
     assert result3["step_id"] == "user"
     assert result3["errors"] == {CONF_KEY: "invalid_key_format"}
 
-    result4 = await hass.config_entries.flow.async_configure(
+    result4 = await menuai.config_entries.flow.async_configure(
         result3["flow_id"],
         {
             CONF_ADDRESS: YALE_ACCESS_LOCK_DISCOVERY_INFO.address,
@@ -232,14 +232,14 @@ async def test_user_step_invalid_keys(hass: HomeAssistant) -> None:
 
     with (
         patch(
-            "homeassistant.components.yalexs_ble.config_flow.PushLock.validate",
+            "menuai.components.yalexs_ble.config_flow.PushLock.validate",
         ),
         patch(
-            "homeassistant.components.yalexs_ble.async_setup_entry",
+            "menuai.components.yalexs_ble.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result5 = await hass.config_entries.flow.async_configure(
+        result5 = await menuai.config_entries.flow.async_configure(
             result4["flow_id"],
             {
                 CONF_ADDRESS: YALE_ACCESS_LOCK_DISCOVERY_INFO.address,
@@ -247,7 +247,7 @@ async def test_user_step_invalid_keys(hass: HomeAssistant) -> None:
                 CONF_SLOT: 66,
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result5["type"] is FlowResultType.CREATE_ENTRY
     assert result5["title"] == YALE_ACCESS_LOCK_DISCOVERY_INFO.name
@@ -261,13 +261,13 @@ async def test_user_step_invalid_keys(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_user_step_cannot_connect(hass: HomeAssistant) -> None:
+async def test_user_step_cannot_connect(menuai: menuai) -> None:
     """Test user step and we cannot connect."""
     with patch(
-        "homeassistant.components.yalexs_ble.config_flow.async_discovered_service_info",
+        "menuai.components.yalexs_ble.config_flow.async_discovered_service_info",
         return_value=[YALE_ACCESS_LOCK_DISCOVERY_INFO],
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
     assert result["type"] is FlowResultType.FORM
@@ -275,10 +275,10 @@ async def test_user_step_cannot_connect(hass: HomeAssistant) -> None:
     assert result["errors"] == {}
 
     with patch(
-        "homeassistant.components.yalexs_ble.config_flow.PushLock.validate",
+        "menuai.components.yalexs_ble.config_flow.PushLock.validate",
         side_effect=BleakError,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_ADDRESS: YALE_ACCESS_LOCK_DISCOVERY_INFO.address,
@@ -286,7 +286,7 @@ async def test_user_step_cannot_connect(hass: HomeAssistant) -> None:
                 CONF_SLOT: 66,
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["step_id"] == "user"
@@ -294,14 +294,14 @@ async def test_user_step_cannot_connect(hass: HomeAssistant) -> None:
 
     with (
         patch(
-            "homeassistant.components.yalexs_ble.config_flow.PushLock.validate",
+            "menuai.components.yalexs_ble.config_flow.PushLock.validate",
         ),
         patch(
-            "homeassistant.components.yalexs_ble.async_setup_entry",
+            "menuai.components.yalexs_ble.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {
                 CONF_ADDRESS: YALE_ACCESS_LOCK_DISCOVERY_INFO.address,
@@ -309,7 +309,7 @@ async def test_user_step_cannot_connect(hass: HomeAssistant) -> None:
                 CONF_SLOT: 66,
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.CREATE_ENTRY
     assert result3["title"] == YALE_ACCESS_LOCK_DISCOVERY_INFO.name
@@ -323,13 +323,13 @@ async def test_user_step_cannot_connect(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_user_step_auth_exception(hass: HomeAssistant) -> None:
+async def test_user_step_auth_exception(menuai: menuai) -> None:
     """Test user step with an authentication exception."""
     with patch(
-        "homeassistant.components.yalexs_ble.config_flow.async_discovered_service_info",
+        "menuai.components.yalexs_ble.config_flow.async_discovered_service_info",
         return_value=[YALE_ACCESS_LOCK_DISCOVERY_INFO, NOT_YALE_DISCOVERY_INFO],
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
     assert result["type"] is FlowResultType.FORM
@@ -337,10 +337,10 @@ async def test_user_step_auth_exception(hass: HomeAssistant) -> None:
     assert result["errors"] == {}
 
     with patch(
-        "homeassistant.components.yalexs_ble.config_flow.PushLock.validate",
+        "menuai.components.yalexs_ble.config_flow.PushLock.validate",
         side_effect=AuthError,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_ADDRESS: YALE_ACCESS_LOCK_DISCOVERY_INFO.address,
@@ -348,7 +348,7 @@ async def test_user_step_auth_exception(hass: HomeAssistant) -> None:
                 CONF_SLOT: 66,
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["step_id"] == "user"
@@ -356,14 +356,14 @@ async def test_user_step_auth_exception(hass: HomeAssistant) -> None:
 
     with (
         patch(
-            "homeassistant.components.yalexs_ble.config_flow.PushLock.validate",
+            "menuai.components.yalexs_ble.config_flow.PushLock.validate",
         ),
         patch(
-            "homeassistant.components.yalexs_ble.async_setup_entry",
+            "menuai.components.yalexs_ble.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {
                 CONF_ADDRESS: YALE_ACCESS_LOCK_DISCOVERY_INFO.address,
@@ -371,7 +371,7 @@ async def test_user_step_auth_exception(hass: HomeAssistant) -> None:
                 CONF_SLOT: 66,
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.CREATE_ENTRY
     assert result3["title"] == YALE_ACCESS_LOCK_DISCOVERY_INFO.name
@@ -385,13 +385,13 @@ async def test_user_step_auth_exception(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_user_step_unknown_exception(hass: HomeAssistant) -> None:
+async def test_user_step_unknown_exception(menuai: menuai) -> None:
     """Test user step with an unknown exception."""
     with patch(
-        "homeassistant.components.yalexs_ble.config_flow.async_discovered_service_info",
+        "menuai.components.yalexs_ble.config_flow.async_discovered_service_info",
         return_value=[NOT_YALE_DISCOVERY_INFO, YALE_ACCESS_LOCK_DISCOVERY_INFO],
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
     assert result["type"] is FlowResultType.FORM
@@ -399,10 +399,10 @@ async def test_user_step_unknown_exception(hass: HomeAssistant) -> None:
     assert result["errors"] == {}
 
     with patch(
-        "homeassistant.components.yalexs_ble.config_flow.PushLock.validate",
+        "menuai.components.yalexs_ble.config_flow.PushLock.validate",
         side_effect=RuntimeError,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_ADDRESS: YALE_ACCESS_LOCK_DISCOVERY_INFO.address,
@@ -410,7 +410,7 @@ async def test_user_step_unknown_exception(hass: HomeAssistant) -> None:
                 CONF_SLOT: 66,
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["step_id"] == "user"
@@ -418,14 +418,14 @@ async def test_user_step_unknown_exception(hass: HomeAssistant) -> None:
 
     with (
         patch(
-            "homeassistant.components.yalexs_ble.config_flow.PushLock.validate",
+            "menuai.components.yalexs_ble.config_flow.PushLock.validate",
         ),
         patch(
-            "homeassistant.components.yalexs_ble.async_setup_entry",
+            "menuai.components.yalexs_ble.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {
                 CONF_ADDRESS: YALE_ACCESS_LOCK_DISCOVERY_INFO.address,
@@ -433,7 +433,7 @@ async def test_user_step_unknown_exception(hass: HomeAssistant) -> None:
                 CONF_SLOT: 66,
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.CREATE_ENTRY
     assert result3["title"] == YALE_ACCESS_LOCK_DISCOVERY_INFO.name
@@ -447,9 +447,9 @@ async def test_user_step_unknown_exception(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_bluetooth_step_success(hass: HomeAssistant) -> None:
+async def test_bluetooth_step_success(menuai: menuai) -> None:
     """Test bluetooth step success path."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_BLUETOOTH},
         data=YALE_ACCESS_LOCK_DISCOVERY_INFO,
@@ -460,14 +460,14 @@ async def test_bluetooth_step_success(hass: HomeAssistant) -> None:
 
     with (
         patch(
-            "homeassistant.components.yalexs_ble.config_flow.PushLock.validate",
+            "menuai.components.yalexs_ble.config_flow.PushLock.validate",
         ),
         patch(
-            "homeassistant.components.yalexs_ble.async_setup_entry",
+            "menuai.components.yalexs_ble.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_ADDRESS: YALE_ACCESS_LOCK_DISCOVERY_INFO.address,
@@ -475,7 +475,7 @@ async def test_bluetooth_step_success(hass: HomeAssistant) -> None:
                 CONF_SLOT: 66,
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == YALE_ACCESS_LOCK_DISCOVERY_INFO.name
@@ -489,13 +489,13 @@ async def test_bluetooth_step_success(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_integration_discovery_success(hass: HomeAssistant) -> None:
+async def test_integration_discovery_success(menuai: menuai) -> None:
     """Test integration discovery step success path."""
     with patch(
-        "homeassistant.components.yalexs_ble.util.async_discovered_service_info",
+        "menuai.components.yalexs_ble.util.async_discovered_service_info",
         return_value=[YALE_ACCESS_LOCK_DISCOVERY_INFO],
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_INTEGRATION_DISCOVERY},
             data={
@@ -511,14 +511,14 @@ async def test_integration_discovery_success(hass: HomeAssistant) -> None:
     assert result["errors"] is None
 
     with patch(
-        "homeassistant.components.yalexs_ble.async_setup_entry",
+        "menuai.components.yalexs_ble.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "Front Door"
@@ -532,13 +532,13 @@ async def test_integration_discovery_success(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_integration_discovery_device_not_found(hass: HomeAssistant) -> None:
+async def test_integration_discovery_device_not_found(menuai: menuai) -> None:
     """Test integration discovery when the device is not found."""
     with patch(
-        "homeassistant.components.yalexs_ble.util.async_discovered_service_info",
+        "menuai.components.yalexs_ble.util.async_discovered_service_info",
         return_value=[],
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_INTEGRATION_DISCOVERY},
             data={
@@ -554,10 +554,10 @@ async def test_integration_discovery_device_not_found(hass: HomeAssistant) -> No
 
 
 async def test_integration_discovery_takes_precedence_over_bluetooth(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test integration discovery dismisses bluetooth discovery."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_BLUETOOTH},
         data=YALE_ACCESS_LOCK_DISCOVERY_INFO,
@@ -565,16 +565,16 @@ async def test_integration_discovery_takes_precedence_over_bluetooth(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
     assert result["errors"] == {}
-    flows = list(hass.config_entries.flow._handler_progress_index[DOMAIN])
+    flows = list(menuai.config_entries.flow._handler_progress_index[DOMAIN])
     assert len(flows) == 1
     assert flows[0].unique_id == YALE_ACCESS_LOCK_DISCOVERY_INFO.address
     assert flows[0].local_name == YALE_ACCESS_LOCK_DISCOVERY_INFO.name
 
     with patch(
-        "homeassistant.components.yalexs_ble.util.async_discovered_service_info",
+        "menuai.components.yalexs_ble.util.async_discovered_service_info",
         return_value=[YALE_ACCESS_LOCK_DISCOVERY_INFO],
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_INTEGRATION_DISCOVERY},
             data={
@@ -585,7 +585,7 @@ async def test_integration_discovery_takes_precedence_over_bluetooth(
                 "serial": "M1XXX012LU",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "integration_discovery_confirm"
     assert result["errors"] is None
@@ -596,20 +596,20 @@ async def test_integration_discovery_takes_precedence_over_bluetooth(
     # flow will not
     flows = [
         flow
-        for flow in hass.config_entries.flow.async_progress()
+        for flow in menuai.config_entries.flow.async_progress()
         if flow["handler"] == DOMAIN
     ]
     assert len(flows) == 1
 
     with patch(
-        "homeassistant.components.yalexs_ble.async_setup_entry",
+        "menuai.components.yalexs_ble.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "Front Door"
@@ -623,14 +623,14 @@ async def test_integration_discovery_takes_precedence_over_bluetooth(
     assert len(mock_setup_entry.mock_calls) == 1
     flows = [
         flow
-        for flow in hass.config_entries.flow.async_progress()
+        for flow in menuai.config_entries.flow.async_progress()
         if flow["handler"] == DOMAIN
     ]
     assert len(flows) == 0
 
 
 async def test_integration_discovery_updates_key_unique_local_name(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test integration discovery updates the key with a unique local name."""
     entry = MockConfigEntry(
@@ -643,19 +643,19 @@ async def test_integration_discovery_updates_key_unique_local_name(
         },
         unique_id="61DE521B-F0BF-9F44-64D4-75BBE1738105",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with (
         patch(
-            "homeassistant.components.yalexs_ble.util.async_discovered_service_info",
+            "menuai.components.yalexs_ble.util.async_discovered_service_info",
             return_value=[LOCK_DISCOVERY_INFO_UUID_ADDRESS],
         ),
         patch(
-            "homeassistant.components.yalexs_ble.async_setup_entry",
+            "menuai.components.yalexs_ble.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_INTEGRATION_DISCOVERY},
             data={
@@ -666,7 +666,7 @@ async def test_integration_discovery_updates_key_unique_local_name(
                 "serial": "M1XXX012LU",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
     assert entry.data[CONF_KEY] == "2fd51b8621c6a139eaffbedcb846b60f"
@@ -675,7 +675,7 @@ async def test_integration_discovery_updates_key_unique_local_name(
 
 
 async def test_integration_discovery_updates_key_without_unique_local_name(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test integration discovery updates the key without a unique local name."""
     entry = MockConfigEntry(
@@ -688,13 +688,13 @@ async def test_integration_discovery_updates_key_without_unique_local_name(
         },
         unique_id=OLD_FIRMWARE_LOCK_DISCOVERY_INFO.address,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.yalexs_ble.util.async_discovered_service_info",
+        "menuai.components.yalexs_ble.util.async_discovered_service_info",
         return_value=[LOCK_DISCOVERY_INFO_UUID_ADDRESS],
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_INTEGRATION_DISCOVERY},
             data={
@@ -705,7 +705,7 @@ async def test_integration_discovery_updates_key_without_unique_local_name(
                 "serial": "M1XXX012LU",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
     assert entry.data[CONF_KEY] == "2fd51b8621c6a139eaffbedcb846b60f"
@@ -713,7 +713,7 @@ async def test_integration_discovery_updates_key_without_unique_local_name(
 
 
 async def test_integration_discovery_updates_key_duplicate_local_name(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test integration discovery updates the key with duplicate local names."""
     entry = MockConfigEntry(
@@ -726,7 +726,7 @@ async def test_integration_discovery_updates_key_duplicate_local_name(
         },
         unique_id=OLD_FIRMWARE_LOCK_DISCOVERY_INFO.address,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     entry2 = MockConfigEntry(
         domain=DOMAIN,
         data={
@@ -737,13 +737,13 @@ async def test_integration_discovery_updates_key_duplicate_local_name(
         },
         unique_id="CC:DD:CC:DD:CC:DD",
     )
-    entry2.add_to_hass(hass)
+    entry2.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.yalexs_ble.util.async_discovered_service_info",
+        "menuai.components.yalexs_ble.util.async_discovered_service_info",
         return_value=[LOCK_DISCOVERY_INFO_UUID_ADDRESS],
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_INTEGRATION_DISCOVERY},
             data={
@@ -754,7 +754,7 @@ async def test_integration_discovery_updates_key_duplicate_local_name(
                 "serial": "M1XXX012LU",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
     assert entry.data[CONF_KEY] == "2fd51b8621c6a139eaffbedcb846b60f"
@@ -765,10 +765,10 @@ async def test_integration_discovery_updates_key_duplicate_local_name(
 
 
 async def test_integration_discovery_takes_precedence_over_bluetooth_uuid_address(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test integration discovery dismisses bluetooth discovery with a uuid address."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_BLUETOOTH},
         data=LOCK_DISCOVERY_INFO_UUID_ADDRESS,
@@ -776,16 +776,16 @@ async def test_integration_discovery_takes_precedence_over_bluetooth_uuid_addres
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
     assert result["errors"] == {}
-    flows = list(hass.config_entries.flow._handler_progress_index[DOMAIN])
+    flows = list(menuai.config_entries.flow._handler_progress_index[DOMAIN])
     assert len(flows) == 1
     assert flows[0].unique_id == LOCK_DISCOVERY_INFO_UUID_ADDRESS.address
     assert flows[0].local_name == LOCK_DISCOVERY_INFO_UUID_ADDRESS.name
 
     with patch(
-        "homeassistant.components.yalexs_ble.util.async_discovered_service_info",
+        "menuai.components.yalexs_ble.util.async_discovered_service_info",
         return_value=[LOCK_DISCOVERY_INFO_UUID_ADDRESS],
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_INTEGRATION_DISCOVERY},
             data={
@@ -796,7 +796,7 @@ async def test_integration_discovery_takes_precedence_over_bluetooth_uuid_addres
                 "serial": "M1XXX012LU",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "integration_discovery_confirm"
     assert result["errors"] is None
@@ -807,20 +807,20 @@ async def test_integration_discovery_takes_precedence_over_bluetooth_uuid_addres
     # flow will not
     flows = [
         flow
-        for flow in hass.config_entries.flow.async_progress()
+        for flow in menuai.config_entries.flow.async_progress()
         if flow["handler"] == DOMAIN
     ]
     assert len(flows) == 1
 
     with patch(
-        "homeassistant.components.yalexs_ble.async_setup_entry",
+        "menuai.components.yalexs_ble.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "Front Door"
@@ -834,17 +834,17 @@ async def test_integration_discovery_takes_precedence_over_bluetooth_uuid_addres
     assert len(mock_setup_entry.mock_calls) == 1
     flows = [
         flow
-        for flow in hass.config_entries.flow.async_progress()
+        for flow in menuai.config_entries.flow.async_progress()
         if flow["handler"] == DOMAIN
     ]
     assert len(flows) == 0
 
 
 async def test_integration_discovery_takes_precedence_over_bluetooth_non_unique_local_name(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test integration discovery dismisses bluetooth discovery with a non unique local name."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_BLUETOOTH},
         data=OLD_FIRMWARE_LOCK_DISCOVERY_INFO,
@@ -852,16 +852,16 @@ async def test_integration_discovery_takes_precedence_over_bluetooth_non_unique_
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
     assert result["errors"] == {}
-    flows = list(hass.config_entries.flow._handler_progress_index[DOMAIN])
+    flows = list(menuai.config_entries.flow._handler_progress_index[DOMAIN])
     assert len(flows) == 1
     assert flows[0].unique_id == OLD_FIRMWARE_LOCK_DISCOVERY_INFO.address
     assert flows[0].local_name == OLD_FIRMWARE_LOCK_DISCOVERY_INFO.name
 
     with patch(
-        "homeassistant.components.yalexs_ble.util.async_discovered_service_info",
+        "menuai.components.yalexs_ble.util.async_discovered_service_info",
         return_value=[OLD_FIRMWARE_LOCK_DISCOVERY_INFO],
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_INTEGRATION_DISCOVERY},
             data={
@@ -872,7 +872,7 @@ async def test_integration_discovery_takes_precedence_over_bluetooth_non_unique_
                 "serial": "M1XXX012LU",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "integration_discovery_confirm"
     assert result["errors"] is None
@@ -883,24 +883,24 @@ async def test_integration_discovery_takes_precedence_over_bluetooth_non_unique_
     # flow will not
     flows = [
         flow
-        for flow in hass.config_entries.flow.async_progress()
+        for flow in menuai.config_entries.flow.async_progress()
         if flow["handler"] == DOMAIN
     ]
     assert len(flows) == 1
 
 
 async def test_user_is_setting_up_lock_and_discovery_happens_in_the_middle(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test that the user is setting up the lock and waiting for validation and the keys get discovered.
 
     In this case the integration discovery should abort and let the user continue setting up the lock.
     """
     with patch(
-        "homeassistant.components.yalexs_ble.config_flow.async_discovered_service_info",
+        "menuai.components.yalexs_ble.config_flow.async_discovered_service_info",
         return_value=[NOT_YALE_DISCOVERY_INFO, YALE_ACCESS_LOCK_DISCOVERY_INFO],
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
     assert result["type"] is FlowResultType.FORM
@@ -916,16 +916,16 @@ async def test_user_is_setting_up_lock_and_discovery_happens_in_the_middle(
 
     with (
         patch(
-            "homeassistant.components.yalexs_ble.config_flow.PushLock.validate",
+            "menuai.components.yalexs_ble.config_flow.PushLock.validate",
             side_effect=_wait_for_user_flow,
         ),
         patch(
-            "homeassistant.components.yalexs_ble.async_setup_entry",
+            "menuai.components.yalexs_ble.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
         user_flow_task = asyncio.create_task(
-            hass.config_entries.flow.async_configure(
+            menuai.config_entries.flow.async_configure(
                 result["flow_id"],
                 {
                     CONF_ADDRESS: YALE_ACCESS_LOCK_DISCOVERY_INFO.address,
@@ -937,10 +937,10 @@ async def test_user_is_setting_up_lock_and_discovery_happens_in_the_middle(
         await valdidate_started.wait()
 
         with patch(
-            "homeassistant.components.yalexs_ble.util.async_discovered_service_info",
+            "menuai.components.yalexs_ble.util.async_discovered_service_info",
             return_value=[LOCK_DISCOVERY_INFO_UUID_ADDRESS],
         ):
-            discovery_result = await hass.config_entries.flow.async_init(
+            discovery_result = await menuai.config_entries.flow.async_init(
                 DOMAIN,
                 context={"source": config_entries.SOURCE_INTEGRATION_DISCOVERY},
                 data={
@@ -951,7 +951,7 @@ async def test_user_is_setting_up_lock_and_discovery_happens_in_the_middle(
                     "serial": "M1XXX012LU",
                 },
             )
-            await hass.async_block_till_done()
+            await menuai.async_block_till_done()
         assert discovery_result["type"] is FlowResultType.ABORT
         assert discovery_result["reason"] == "already_in_progress"
 
@@ -972,7 +972,7 @@ async def test_user_is_setting_up_lock_and_discovery_happens_in_the_middle(
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_reauth(hass: HomeAssistant) -> None:
+async def test_reauth(menuai: menuai) -> None:
     """Test reauthentication."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -984,23 +984,23 @@ async def test_reauth(hass: HomeAssistant) -> None:
         },
         unique_id=YALE_ACCESS_LOCK_DISCOVERY_INFO.address,
     )
-    entry.add_to_hass(hass)
-    result = await entry.start_reauth_flow(hass)
+    entry.add_to_menuai(menuai)
+    result = await entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_validate"
 
     with patch(
-        "homeassistant.components.yalexs_ble.config_flow.PushLock.validate",
+        "menuai.components.yalexs_ble.config_flow.PushLock.validate",
         side_effect=RuntimeError,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_KEY: "2fd51b8621c6a139eaffbedcb846b60f",
                 CONF_SLOT: 66,
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["step_id"] == "reauth_validate"
@@ -1008,32 +1008,32 @@ async def test_reauth(hass: HomeAssistant) -> None:
 
     with (
         patch(
-            "homeassistant.components.yalexs_ble.config_flow.async_ble_device_from_address",
+            "menuai.components.yalexs_ble.config_flow.async_ble_device_from_address",
             return_value=YALE_ACCESS_LOCK_DISCOVERY_INFO,
         ),
         patch(
-            "homeassistant.components.yalexs_ble.config_flow.PushLock.validate",
+            "menuai.components.yalexs_ble.config_flow.PushLock.validate",
         ),
         patch(
-            "homeassistant.components.yalexs_ble.async_setup_entry",
+            "menuai.components.yalexs_ble.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {
                 CONF_KEY: "2fd51b8621c6a139eaffbedcb846b60f",
                 CONF_SLOT: 67,
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.ABORT
     assert result3["reason"] == "reauth_successful"
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_options(hass: HomeAssistant) -> None:
+async def test_options(menuai: menuai) -> None:
     """Test options."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -1045,16 +1045,16 @@ async def test_options(hass: HomeAssistant) -> None:
         },
         unique_id=YALE_ACCESS_LOCK_DISCOVERY_INFO.address,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.yalexs_ble.PushLock",
+        "menuai.components.yalexs_ble.PushLock",
         return_value=_get_mock_push_lock(),
     ):
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
-    result = await hass.config_entries.options.async_init(
+    result = await menuai.config_entries.options.async_init(
         entry.entry_id,
     )
 
@@ -1062,16 +1062,16 @@ async def test_options(hass: HomeAssistant) -> None:
     assert result["step_id"] == "device_options"
 
     with patch(
-        "homeassistant.components.yalexs_ble.async_setup_entry",
+        "menuai.components.yalexs_ble.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        result2 = await hass.config_entries.options.async_configure(
+        result2 = await menuai.config_entries.options.async_configure(
             result["flow_id"],
             {
                 CONF_ALWAYS_CONNECTED: True,
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert entry.options == {CONF_ALWAYS_CONNECTED: True}

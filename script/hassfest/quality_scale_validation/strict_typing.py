@@ -8,10 +8,10 @@ from importlib import metadata
 from pathlib import Path
 import re
 
-from script.hassfest.model import Config, Integration
+from script.menuaifest.model import Config, Integration
 
 _STRICT_TYPING_FILE = Path(".strict-typing")
-_COMPONENT_REGEX = r"homeassistant.components.([^.]+).*"
+_COMPONENT_REGEX = r"menuai.components.([^.]+).*"
 
 
 @lru_cache

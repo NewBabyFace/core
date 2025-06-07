@@ -3,14 +3,14 @@
 import pytest
 from pytest_unordered import unordered
 
-from homeassistant.components import automation
-from homeassistant.components.cover import DOMAIN, CoverEntityFeature, CoverState
-from homeassistant.components.device_automation import DeviceAutomationType
-from homeassistant.const import CONF_PLATFORM, STATE_UNAVAILABLE, EntityCategory
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.entity_registry import RegistryEntryHider
-from homeassistant.setup import async_setup_component
+from menuai.components import automation
+from menuai.components.cover import DOMAIN, CoverEntityFeature, CoverState
+from menuai.components.device_automation import DeviceAutomationType
+from menuai.const import CONF_PLATFORM, STATE_UNAVAILABLE, EntityCategory
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.entity_registry import RegistryEntryHider
+from menuai.setup import async_setup_component
 
 from .common import MockCover
 
@@ -63,7 +63,7 @@ def stub_blueprint_populate_autouse(stub_blueprint_populate: None) -> None:
     ],
 )
 async def test_get_conditions(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     set_state,
@@ -73,7 +73,7 @@ async def test_get_conditions(
 ) -> None:
     """Test we get the expected conditions from a cover."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -86,10 +86,10 @@ async def test_get_conditions(
         supported_features=features_reg,
     )
     if set_state:
-        hass.states.async_set(
+        menuai.states.async_set(
             f"{DOMAIN}.test_5678", "attributes", {"supported_features": features_state}
         )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     expected_conditions = []
     expected_conditions += [
@@ -104,7 +104,7 @@ async def test_get_conditions(
         for condition in expected_condition_types
     ]
     conditions = await async_get_device_automations(
-        hass, DeviceAutomationType.CONDITION, device_entry.id
+        menuai, DeviceAutomationType.CONDITION, device_entry.id
     )
     assert conditions == unordered(expected_conditions)
 
@@ -119,7 +119,7 @@ async def test_get_conditions(
     ],
 )
 async def test_get_conditions_hidden_auxiliary(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     hidden_by,
@@ -127,7 +127,7 @@ async def test_get_conditions_hidden_auxiliary(
 ) -> None:
     """Test we get the expected conditions from a hidden or auxiliary entity."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -153,25 +153,25 @@ async def test_get_conditions_hidden_auxiliary(
         for condition in ("is_open", "is_closed", "is_opening", "is_closing")
     ]
     conditions = await async_get_device_automations(
-        hass, DeviceAutomationType.CONDITION, device_entry.id
+        menuai, DeviceAutomationType.CONDITION, device_entry.id
     )
     assert conditions == unordered(expected_conditions)
 
 
 async def test_get_condition_capabilities(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     mock_cover_entities: list[MockCover],
 ) -> None:
     """Test we get the expected capabilities from a cover condition."""
-    setup_test_component_platform(hass, DOMAIN, mock_cover_entities)
+    setup_test_component_platform(menuai, DOMAIN, mock_cover_entities)
     ent = mock_cover_entities[0]
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
+    await menuai.async_block_till_done()
 
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -181,30 +181,30 @@ async def test_get_condition_capabilities(
     )
 
     conditions = await async_get_device_automations(
-        hass, DeviceAutomationType.CONDITION, device_entry.id
+        menuai, DeviceAutomationType.CONDITION, device_entry.id
     )
     assert len(conditions) == 4
     for condition in conditions:
         capabilities = await async_get_device_automation_capabilities(
-            hass, DeviceAutomationType.CONDITION, condition
+            menuai, DeviceAutomationType.CONDITION, condition
         )
         assert capabilities == {"extra_fields": []}
 
 
 async def test_get_condition_capabilities_legacy(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     mock_cover_entities: list[MockCover],
 ) -> None:
     """Test we get the expected capabilities from a cover condition."""
-    setup_test_component_platform(hass, DOMAIN, mock_cover_entities)
+    setup_test_component_platform(menuai, DOMAIN, mock_cover_entities)
     ent = mock_cover_entities[0]
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
+    await menuai.async_block_till_done()
 
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -214,7 +214,7 @@ async def test_get_condition_capabilities_legacy(
     )
 
     conditions = await async_get_device_automations(
-        hass, DeviceAutomationType.CONDITION, device_entry.id
+        menuai, DeviceAutomationType.CONDITION, device_entry.id
     )
     assert len(conditions) == 4
     for condition in conditions:
@@ -222,25 +222,25 @@ async def test_get_condition_capabilities_legacy(
             condition["entity_id"]
         ).entity_id
         capabilities = await async_get_device_automation_capabilities(
-            hass, DeviceAutomationType.CONDITION, condition
+            menuai, DeviceAutomationType.CONDITION, condition
         )
         assert capabilities == {"extra_fields": []}
 
 
 async def test_get_condition_capabilities_set_pos(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     mock_cover_entities: list[MockCover],
 ) -> None:
     """Test we get the expected capabilities from a cover condition."""
-    setup_test_component_platform(hass, DOMAIN, mock_cover_entities)
+    setup_test_component_platform(menuai, DOMAIN, mock_cover_entities)
     ent = mock_cover_entities[1]
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
+    await menuai.async_block_till_done()
 
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -270,12 +270,12 @@ async def test_get_condition_capabilities_set_pos(
         ]
     }
     conditions = await async_get_device_automations(
-        hass, DeviceAutomationType.CONDITION, device_entry.id
+        menuai, DeviceAutomationType.CONDITION, device_entry.id
     )
     assert len(conditions) == 5
     for condition in conditions:
         capabilities = await async_get_device_automation_capabilities(
-            hass, DeviceAutomationType.CONDITION, condition
+            menuai, DeviceAutomationType.CONDITION, condition
         )
         if condition["type"] == "is_position":
             assert capabilities == expected_capabilities
@@ -284,20 +284,20 @@ async def test_get_condition_capabilities_set_pos(
 
 
 async def test_get_condition_capabilities_set_tilt_pos(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     mock_cover_entities: list[MockCover],
 ) -> None:
     """Test we get the expected capabilities from a cover condition."""
-    setup_test_component_platform(hass, DOMAIN, mock_cover_entities)
+    setup_test_component_platform(menuai, DOMAIN, mock_cover_entities)
 
     ent = mock_cover_entities[3]
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
+    await menuai.async_block_till_done()
 
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -327,12 +327,12 @@ async def test_get_condition_capabilities_set_tilt_pos(
         ]
     }
     conditions = await async_get_device_automations(
-        hass, DeviceAutomationType.CONDITION, device_entry.id
+        menuai, DeviceAutomationType.CONDITION, device_entry.id
     )
     assert len(conditions) == 5
     for condition in conditions:
         capabilities = await async_get_device_automation_capabilities(
-            hass, DeviceAutomationType.CONDITION, condition
+            menuai, DeviceAutomationType.CONDITION, condition
         )
         if condition["type"] == "is_tilt_position":
             assert capabilities == expected_capabilities
@@ -341,14 +341,14 @@ async def test_get_condition_capabilities_set_tilt_pos(
 
 
 async def test_if_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     service_calls: list[ServiceCall],
 ) -> None:
     """Test for turn_on and turn_off conditions."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -357,10 +357,10 @@ async def test_if_state(
         DOMAIN, "test", "5678", device_id=device_entry.id
     )
 
-    hass.states.async_set(entry.entity_id, CoverState.OPEN)
+    menuai.states.async_set(entry.entity_id, CoverState.OPEN)
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -455,43 +455,43 @@ async def test_if_state(
             ]
         },
     )
-    hass.bus.async_fire("test_event1")
-    hass.bus.async_fire("test_event2")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event1")
+    menuai.bus.async_fire("test_event2")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
     assert service_calls[0].data["some"] == "is_open - event - test_event1"
 
-    hass.states.async_set(entry.entity_id, CoverState.CLOSED)
-    hass.bus.async_fire("test_event1")
-    hass.bus.async_fire("test_event2")
-    await hass.async_block_till_done()
+    menuai.states.async_set(entry.entity_id, CoverState.CLOSED)
+    menuai.bus.async_fire("test_event1")
+    menuai.bus.async_fire("test_event2")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 2
     assert service_calls[1].data["some"] == "is_closed - event - test_event2"
 
-    hass.states.async_set(entry.entity_id, CoverState.OPENING)
-    hass.bus.async_fire("test_event1")
-    hass.bus.async_fire("test_event3")
-    await hass.async_block_till_done()
+    menuai.states.async_set(entry.entity_id, CoverState.OPENING)
+    menuai.bus.async_fire("test_event1")
+    menuai.bus.async_fire("test_event3")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 3
     assert service_calls[2].data["some"] == "is_opening - event - test_event3"
 
-    hass.states.async_set(entry.entity_id, CoverState.CLOSING)
-    hass.bus.async_fire("test_event1")
-    hass.bus.async_fire("test_event4")
-    await hass.async_block_till_done()
+    menuai.states.async_set(entry.entity_id, CoverState.CLOSING)
+    menuai.bus.async_fire("test_event1")
+    menuai.bus.async_fire("test_event4")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 4
     assert service_calls[3].data["some"] == "is_closing - event - test_event4"
 
 
 async def test_if_state_legacy(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     service_calls: list[ServiceCall],
 ) -> None:
     """Test for turn_on and turn_off conditions."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -500,10 +500,10 @@ async def test_if_state_legacy(
         DOMAIN, "test", "5678", device_id=device_entry.id
     )
 
-    hass.states.async_set(entry.entity_id, CoverState.OPEN)
+    menuai.states.async_set(entry.entity_id, CoverState.OPEN)
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -532,15 +532,15 @@ async def test_if_state_legacy(
             ]
         },
     )
-    hass.bus.async_fire("test_event1")
-    hass.bus.async_fire("test_event2")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event1")
+    menuai.bus.async_fire("test_event2")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
     assert service_calls[0].data["some"] == "is_open - event - test_event1"
 
 
 async def test_if_position(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     service_calls: list[ServiceCall],
@@ -548,13 +548,13 @@ async def test_if_position(
     mock_cover_entities: list[MockCover],
 ) -> None:
     """Test for position conditions."""
-    setup_test_component_platform(hass, DOMAIN, mock_cover_entities)
+    setup_test_component_platform(menuai, DOMAIN, mock_cover_entities)
     ent = mock_cover_entities[1]
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
+    await menuai.async_block_till_done()
 
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -563,7 +563,7 @@ async def test_if_position(
     entity_registry.async_update_entity(entry.entity_id, device_id=device_entry.id)
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -655,43 +655,43 @@ async def test_if_position(
 
     caplog.clear()
 
-    hass.bus.async_fire("test_event1")
-    await hass.async_block_till_done()
-    hass.bus.async_fire("test_event2")
-    await hass.async_block_till_done()
-    hass.bus.async_fire("test_event3")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event1")
+    await menuai.async_block_till_done()
+    menuai.bus.async_fire("test_event2")
+    await menuai.async_block_till_done()
+    menuai.bus.async_fire("test_event3")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 3
     assert service_calls[0].data["some"] == "is_pos_gt_45 - event - test_event1"
     assert service_calls[1].data["some"] == "is_pos_lt_90 - event - test_event2"
     assert service_calls[2].data["some"] == "is_pos_gt_45_lt_90 - event - test_event3"
 
-    hass.states.async_set(
+    menuai.states.async_set(
         ent.entity_id, CoverState.CLOSED, attributes={"current_position": 45}
     )
-    hass.bus.async_fire("test_event1")
-    await hass.async_block_till_done()
-    hass.bus.async_fire("test_event2")
-    await hass.async_block_till_done()
-    hass.bus.async_fire("test_event3")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event1")
+    await menuai.async_block_till_done()
+    menuai.bus.async_fire("test_event2")
+    await menuai.async_block_till_done()
+    menuai.bus.async_fire("test_event3")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 5
     assert service_calls[3].data["some"] == "is_pos_not_gt_45 - event - test_event1"
     assert service_calls[4].data["some"] == "is_pos_lt_90 - event - test_event2"
 
-    hass.states.async_set(
+    menuai.states.async_set(
         ent.entity_id, CoverState.CLOSED, attributes={"current_position": 90}
     )
-    hass.bus.async_fire("test_event1")
-    hass.bus.async_fire("test_event2")
-    hass.bus.async_fire("test_event3")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event1")
+    menuai.bus.async_fire("test_event2")
+    menuai.bus.async_fire("test_event3")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 6
     assert service_calls[5].data["some"] == "is_pos_gt_45 - event - test_event1"
 
-    hass.states.async_set(ent.entity_id, STATE_UNAVAILABLE, attributes={})
-    hass.bus.async_fire("test_event1")
-    await hass.async_block_till_done()
+    menuai.states.async_set(ent.entity_id, STATE_UNAVAILABLE, attributes={})
+    menuai.bus.async_fire("test_event1")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 7
     assert service_calls[6].data["some"] == "is_pos_not_gt_45 - event - test_event1"
 
@@ -700,7 +700,7 @@ async def test_if_position(
 
 
 async def test_if_tilt_position(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     service_calls: list[ServiceCall],
@@ -708,13 +708,13 @@ async def test_if_tilt_position(
     mock_cover_entities: list[MockCover],
 ) -> None:
     """Test for tilt position conditions."""
-    setup_test_component_platform(hass, DOMAIN, mock_cover_entities)
+    setup_test_component_platform(menuai, DOMAIN, mock_cover_entities)
     ent = mock_cover_entities[3]
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
+    await menuai.async_block_till_done()
 
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -723,7 +723,7 @@ async def test_if_tilt_position(
     entity_registry.async_update_entity(entry.entity_id, device_id=device_entry.id)
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -815,45 +815,45 @@ async def test_if_tilt_position(
 
     caplog.clear()
 
-    hass.bus.async_fire("test_event1")
-    await hass.async_block_till_done()
-    hass.bus.async_fire("test_event2")
-    await hass.async_block_till_done()
-    hass.bus.async_fire("test_event3")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event1")
+    await menuai.async_block_till_done()
+    menuai.bus.async_fire("test_event2")
+    await menuai.async_block_till_done()
+    menuai.bus.async_fire("test_event3")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 3
     assert service_calls[0].data["some"] == "is_pos_gt_45 - event - test_event1"
     assert service_calls[1].data["some"] == "is_pos_lt_90 - event - test_event2"
     assert service_calls[2].data["some"] == "is_pos_gt_45_lt_90 - event - test_event3"
 
-    hass.states.async_set(
+    menuai.states.async_set(
         ent.entity_id, CoverState.CLOSED, attributes={"current_tilt_position": 45}
     )
-    hass.bus.async_fire("test_event1")
-    await hass.async_block_till_done()
-    hass.bus.async_fire("test_event2")
-    await hass.async_block_till_done()
-    hass.bus.async_fire("test_event3")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event1")
+    await menuai.async_block_till_done()
+    menuai.bus.async_fire("test_event2")
+    await menuai.async_block_till_done()
+    menuai.bus.async_fire("test_event3")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 5
     assert service_calls[3].data["some"] == "is_pos_not_gt_45 - event - test_event1"
     assert service_calls[4].data["some"] == "is_pos_lt_90 - event - test_event2"
 
-    hass.states.async_set(
+    menuai.states.async_set(
         ent.entity_id, CoverState.CLOSED, attributes={"current_tilt_position": 90}
     )
-    hass.bus.async_fire("test_event1")
-    await hass.async_block_till_done()
-    hass.bus.async_fire("test_event2")
-    await hass.async_block_till_done()
-    hass.bus.async_fire("test_event3")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event1")
+    await menuai.async_block_till_done()
+    menuai.bus.async_fire("test_event2")
+    await menuai.async_block_till_done()
+    menuai.bus.async_fire("test_event3")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 6
     assert service_calls[5].data["some"] == "is_pos_gt_45 - event - test_event1"
 
-    hass.states.async_set(ent.entity_id, STATE_UNAVAILABLE, attributes={})
-    hass.bus.async_fire("test_event1")
-    await hass.async_block_till_done()
+    menuai.states.async_set(ent.entity_id, STATE_UNAVAILABLE, attributes={})
+    menuai.bus.async_fire("test_event1")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 7
     assert service_calls[6].data["some"] == "is_pos_not_gt_45 - event - test_event1"
 

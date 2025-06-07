@@ -1,6 +1,6 @@
 """Constants for Foscam tests."""
 
-from homeassistant.components.foscam import config_flow
+from menuai.components.foscam import config_flow
 
 VALID_CONFIG = {
     config_flow.CONF_HOST: "10.0.0.2",

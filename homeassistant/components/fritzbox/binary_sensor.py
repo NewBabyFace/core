@@ -8,14 +8,14 @@ from typing import Final
 
 from pyfritzhome.fritzhomedevice import FritzhomeDevice
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import EntityCategory
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import FritzboxConfigEntry
 from .entity import FritzBoxDeviceEntity
@@ -85,7 +85,7 @@ BINARY_SENSOR_TYPES: Final[tuple[FritzBinarySensorEntityDescription, ...]] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: FritzboxConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

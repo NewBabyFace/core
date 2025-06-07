@@ -9,12 +9,12 @@ import logging
 from aio_geojson_generic_client import GenericFeedManager
 from aio_geojson_generic_client.feed_entry import GenericFeedEntry
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE, CONF_RADIUS, CONF_URL
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import aiohttp_client
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.event import async_track_time_interval
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_LATITUDE, CONF_LONGITUDE, CONF_RADIUS, CONF_URL
+from menuai.core import menuai
+from menuai.helpers import aiohttp_client
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.event import async_track_time_interval
 
 from .const import (
     DEFAULT_UPDATE_INTERVAL,
@@ -33,13 +33,13 @@ class GeoJsonFeedEntityManager:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
     ) -> None:
         """Initialize the GeoJSON Feed Manager."""
-        self._hass: HomeAssistant = hass
+        self._menuai: menuai = menuai
         self.entry_id: str = config_entry.entry_id
-        websession = aiohttp_client.async_get_clientsession(hass)
+        websession = aiohttp_client.async_get_clientsession(menuai)
         self._feed_manager: GenericFeedManager = GenericFeedManager(
             websession,
             self._generate_entity,
@@ -67,7 +67,7 @@ class GeoJsonFeedEntityManager:
 
         # Trigger updates at regular intervals.
         self._track_time_remove_callback = async_track_time_interval(
-            self._hass, update, DEFAULT_UPDATE_INTERVAL
+            self._menuai, update, DEFAULT_UPDATE_INTERVAL
         )
 
         _LOGGER.debug("Feed entity manager initialized")
@@ -93,7 +93,7 @@ class GeoJsonFeedEntityManager:
     async def _generate_entity(self, external_id: str) -> None:
         """Generate new entity."""
         async_dispatcher_send(
-            self._hass,
+            self._menuai,
             self.signal_new_entity,
             self,
             external_id,
@@ -101,8 +101,8 @@ class GeoJsonFeedEntityManager:
 
     async def _update_entity(self, external_id: str) -> None:
         """Update entity."""
-        async_dispatcher_send(self._hass, SIGNAL_UPDATE_ENTITY.format(external_id))
+        async_dispatcher_send(self._menuai, SIGNAL_UPDATE_ENTITY.format(external_id))
 
     async def _remove_entity(self, external_id: str) -> None:
         """Remove entity."""
-        async_dispatcher_send(self._hass, SIGNAL_DELETE_ENTITY.format(external_id))
+        async_dispatcher_send(self._menuai, SIGNAL_DELETE_ENTITY.format(external_id))

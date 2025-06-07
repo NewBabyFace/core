@@ -26,16 +26,16 @@ from zwave_js_server.util.node import (
     async_set_config_parameter,
 )
 
-from homeassistant.const import ATTR_AREA_ID, ATTR_DEVICE_ID, ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant, ServiceCall, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import (
+from menuai.const import ATTR_AREA_ID, ATTR_DEVICE_ID, ATTR_ENTITY_ID
+from menuai.core import menuai, ServiceCall, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import (
     config_validation as cv,
     device_registry as dr,
     entity_registry as er,
 )
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.group import expand_entity_ids
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.group import expand_entity_ids
 
 from . import const
 from .config_validation import BITMASK_SCHEMA, VALUE_SCHEMA
@@ -58,9 +58,9 @@ TARGET_VALIDATORS = {
 }
 
 
-def async_setup_services(hass: HomeAssistant) -> None:
+def async_setup_services(menuai: menuai) -> None:
     """Register integration services."""
-    services = ZWaveServices(hass, er.async_get(hass), dr.async_get(hass))
+    services = ZWaveServices(menuai, er.async_get(menuai), dr.async_get(menuai))
     services.async_register()
 
 
@@ -123,7 +123,7 @@ def raise_exceptions_from_results(
         ]
         if len(lines) > 1:
             lines.insert(0, f"{len(errors)} error(s):")
-        raise HomeAssistantError("\n".join(lines))
+        raise menuaiError("\n".join(lines))
 
 
 async def _async_invoke_cc_api(
@@ -172,17 +172,17 @@ async def _async_invoke_cc_api(
 class ZWaveServices:
     """Class that holds our services (Zwave Commands).
 
-    Services that should be published to hass.
+    Services that should be published to menuai.
     """
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         ent_reg: er.EntityRegistry,
         dev_reg: dr.DeviceRegistry,
     ) -> None:
-        """Initialize with hass object."""
-        self._hass = hass
+        """Initialize with menuai object."""
+        self._menuai = menuai
         self._ent_reg = ent_reg
         self._dev_reg = dev_reg
 
@@ -194,7 +194,7 @@ class ZWaveServices:
         def get_nodes_from_service_data(val: dict[str, Any]) -> dict[str, Any]:
             """Get nodes set from service data."""
             val[const.ATTR_NODES] = async_get_nodes_from_targets(
-                self._hass, val, self._ent_reg, self._dev_reg, _LOGGER
+                self._menuai, val, self._ent_reg, self._dev_reg, _LOGGER
             )
             return val
 
@@ -219,7 +219,7 @@ class ZWaveServices:
             if (
                 broadcast
                 and not nodes
-                and len(self._hass.config_entries.async_entries(const.DOMAIN)) > 1
+                and len(self._menuai.config_entries.async_entries(const.DOMAIN)) > 1
             ):
                 raise vol.Invalid(
                     "You must include at least one entity or device in the service call"
@@ -251,7 +251,7 @@ class ZWaveServices:
         @callback
         def validate_entities(val: dict[str, Any]) -> dict[str, Any]:
             """Validate entities exist and are from the zwave_js platform."""
-            val[ATTR_ENTITY_ID] = expand_entity_ids(self._hass, val[ATTR_ENTITY_ID])
+            val[ATTR_ENTITY_ID] = expand_entity_ids(self._menuai, val[ATTR_ENTITY_ID])
             invalid_entities = []
             for entity_id in val[ATTR_ENTITY_ID]:
                 entry = self._ent_reg.async_get(entity_id)
@@ -269,7 +269,7 @@ class ZWaveServices:
 
             return val
 
-        self._hass.services.async_register(
+        self._menuai.services.async_register(
             const.DOMAIN,
             const.SERVICE_SET_CONFIG_PARAMETER,
             self.async_set_config_parameter,
@@ -307,7 +307,7 @@ class ZWaveServices:
             ),
         )
 
-        self._hass.services.async_register(
+        self._menuai.services.async_register(
             const.DOMAIN,
             const.SERVICE_BULK_SET_PARTIAL_CONFIG_PARAMETERS,
             self.async_bulk_set_partial_config_parameters,
@@ -335,7 +335,7 @@ class ZWaveServices:
             ),
         )
 
-        self._hass.services.async_register(
+        self._menuai.services.async_register(
             const.DOMAIN,
             const.SERVICE_REFRESH_VALUE,
             self.async_poll_value,
@@ -352,7 +352,7 @@ class ZWaveServices:
             ),
         )
 
-        self._hass.services.async_register(
+        self._menuai.services.async_register(
             const.DOMAIN,
             const.SERVICE_SET_VALUE,
             self.async_set_value,
@@ -381,7 +381,7 @@ class ZWaveServices:
             ),
         )
 
-        self._hass.services.async_register(
+        self._menuai.services.async_register(
             const.DOMAIN,
             const.SERVICE_MULTICAST_SET_VALUE,
             self.async_multicast_set_value,
@@ -413,7 +413,7 @@ class ZWaveServices:
             ),
         )
 
-        self._hass.services.async_register(
+        self._menuai.services.async_register(
             const.DOMAIN,
             const.SERVICE_PING,
             self.async_ping,
@@ -429,7 +429,7 @@ class ZWaveServices:
             ),
         )
 
-        self._hass.services.async_register(
+        self._menuai.services.async_register(
             const.DOMAIN,
             const.SERVICE_INVOKE_CC_API,
             self.async_invoke_cc_api,
@@ -453,7 +453,7 @@ class ZWaveServices:
             ),
         )
 
-        self._hass.services.async_register(
+        self._menuai.services.async_register(
             const.DOMAIN,
             const.SERVICE_REFRESH_NOTIFICATIONS,
             self.async_refresh_notifications,
@@ -492,7 +492,7 @@ class ZWaveServices:
                 nodes_without_endpoints.add(node)
         nodes = nodes.difference(nodes_without_endpoints)
         if not nodes:
-            raise HomeAssistantError(
+            raise menuaiError(
                 "None of the specified nodes have the specified endpoint"
             )
         if nodes_without_endpoints and _LOGGER.isEnabledFor(logging.WARNING):
@@ -601,7 +601,7 @@ class ZWaveServices:
             entry = self._ent_reg.async_get(entity_id)
             assert entry  # Schema validation would have failed if we can't do this
             async_dispatcher_send(
-                self._hass,
+                self._menuai,
                 f"{const.DOMAIN}_{entry.unique_id}_poll_value",
                 service.data[const.ATTR_REFRESH_ALL_VALUES],
             )
@@ -702,7 +702,7 @@ class ZWaveServices:
             first_node = next(node for node in nodes)
             client = first_node.client
         except StopIteration:
-            data = self._hass.config_entries.async_entries(const.DOMAIN)[0].runtime_data
+            data = self._menuai.config_entries.async_entries(const.DOMAIN)[0].runtime_data
             client = data[const.DATA_CLIENT]
             assert client.driver
             first_node = next(
@@ -735,10 +735,10 @@ class ZWaveServices:
                 options=options,
             )
         except FailedZWaveCommand as err:
-            raise HomeAssistantError("Unable to set value via multicast") from err
+            raise menuaiError("Unable to set value via multicast") from err
 
         if result.status not in SET_VALUE_SUCCESS:
-            raise HomeAssistantError(
+            raise menuaiError(
                 "Unable to set value via multicast"
             ) from SetValueFailed(f"{result.status} {result.message}")
 
@@ -778,14 +778,14 @@ class ZWaveServices:
         endpoints: set[Endpoint] = set()
         for area_id in service.data.get(ATTR_AREA_ID, []):
             for node in async_get_nodes_from_area_id(
-                self._hass, area_id, self._ent_reg, self._dev_reg
+                self._menuai, area_id, self._ent_reg, self._dev_reg
             ):
                 endpoints.add(node.endpoints[0])
 
         for device_id in service.data.get(ATTR_DEVICE_ID, []):
             try:
                 node = async_get_node_from_device_id(
-                    self._hass, device_id, self._dev_reg
+                    self._menuai, device_id, self._dev_reg
                 )
             except ValueError as err:
                 _LOGGER.warning(err.args[0])
@@ -804,7 +804,7 @@ class ZWaveServices:
                 )
                 continue
             node = async_get_node_from_entity_id(
-                self._hass, entity_id, self._ent_reg, self._dev_reg
+                self._menuai, entity_id, self._ent_reg, self._dev_reg
             )
             if (
                 value_id := get_value_id_from_unique_id(entity_entry.unique_id)

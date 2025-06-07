@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components.zwave_js.scripts.convert_device_diagnostics_to_fixture import (
+from menuai.components.zwave_js.scripts.convert_device_diagnostics_to_fixture import (
     extract_fixture_data,
     get_fixtures_dir_path,
     load_file,
@@ -64,7 +64,7 @@ def test_main(capfd: pytest.CaptureFixture[str]) -> None:
 
     # Test dump to stdout
     args = [
-        "homeassistant/components/zwave_js/scripts/convert_device_diagnostics_to_fixture.py",
+        "menuai/components/zwave_js/scripts/convert_device_diagnostics_to_fixture.py",
         str(Path(__file__).parents[1] / "fixtures" / "device_diagnostics.json"),
     ]
     with patch.object(sys, "argv", args):
@@ -78,7 +78,7 @@ def test_main(capfd: pytest.CaptureFixture[str]) -> None:
     with (
         patch.object(sys, "argv", args),
         patch(
-            "homeassistant.components.zwave_js.scripts.convert_device_diagnostics_to_fixture.Path.write_text"
+            "menuai.components.zwave_js.scripts.convert_device_diagnostics_to_fixture.Path.write_text"
         ) as write_text_mock,
     ):
         main()

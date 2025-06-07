@@ -6,16 +6,16 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 from teslemetry_stream import Signal
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     DOMAIN as COVER_DOMAIN,
     SERVICE_CLOSE_COVER,
     SERVICE_OPEN_COVER,
     SERVICE_STOP_COVER,
     CoverState,
 )
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import assert_entities, setup_platform
 from .const import COMMAND_OK, METADATA_NOSCOPE, VEHICLE_DATA_ALT
@@ -23,20 +23,20 @@ from .const import COMMAND_OK, METADATA_NOSCOPE, VEHICLE_DATA_ALT
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_cover(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
     mock_legacy: AsyncMock,
 ) -> None:
     """Tests that the cover entities are correct."""
 
-    entry = await setup_platform(hass, [Platform.COVER])
-    assert_entities(hass, entry.entry_id, entity_registry, snapshot)
+    entry = await setup_platform(menuai, [Platform.COVER])
+    assert_entities(menuai, entry.entry_id, entity_registry, snapshot)
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_cover_alt(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
     mock_vehicle_data: AsyncMock,
@@ -45,13 +45,13 @@ async def test_cover_alt(
     """Tests that the cover entities are correct with alternate values."""
 
     mock_vehicle_data.return_value = VEHICLE_DATA_ALT
-    entry = await setup_platform(hass, [Platform.COVER])
-    assert_entities(hass, entry.entry_id, entity_registry, snapshot)
+    entry = await setup_platform(menuai, [Platform.COVER])
+    assert_entities(menuai, entry.entry_id, entity_registry, snapshot)
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_cover_noscope(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
     mock_metadata: AsyncMock,
@@ -60,17 +60,17 @@ async def test_cover_noscope(
     """Tests that the cover entities are correct without scopes."""
 
     mock_metadata.return_value = METADATA_NOSCOPE
-    entry = await setup_platform(hass, [Platform.COVER])
-    assert_entities(hass, entry.entry_id, entity_registry, snapshot)
+    entry = await setup_platform(menuai, [Platform.COVER])
+    assert_entities(menuai, entry.entry_id, entity_registry, snapshot)
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_cover_services(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Tests that the cover entities are correct."""
 
-    await setup_platform(hass, [Platform.COVER])
+    await setup_platform(menuai, [Platform.COVER])
 
     # Vent Windows
     entity_id = "cover.test_windows"
@@ -78,26 +78,26 @@ async def test_cover_services(
         "tesla_fleet_api.teslemetry.Vehicle.window_control",
         return_value=COMMAND_OK,
     ) as call:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             COVER_DOMAIN,
             SERVICE_OPEN_COVER,
             {ATTR_ENTITY_ID: [entity_id]},
             blocking=True,
         )
         call.assert_called_once()
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert state.state == CoverState.OPEN
 
         call.reset_mock()
-        await hass.services.async_call(
+        await menuai.services.async_call(
             COVER_DOMAIN,
             SERVICE_CLOSE_COVER,
             {ATTR_ENTITY_ID: ["cover.test_windows"]},
             blocking=True,
         )
         call.assert_called_once()
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert state.state == CoverState.CLOSED
 
@@ -107,14 +107,14 @@ async def test_cover_services(
         "tesla_fleet_api.teslemetry.Vehicle.charge_port_door_open",
         return_value=COMMAND_OK,
     ) as call:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             COVER_DOMAIN,
             SERVICE_OPEN_COVER,
             {ATTR_ENTITY_ID: [entity_id]},
             blocking=True,
         )
         call.assert_called_once()
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert state.state == CoverState.OPEN
 
@@ -122,14 +122,14 @@ async def test_cover_services(
         "tesla_fleet_api.teslemetry.Vehicle.charge_port_door_close",
         return_value=COMMAND_OK,
     ) as call:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             COVER_DOMAIN,
             SERVICE_CLOSE_COVER,
             {ATTR_ENTITY_ID: [entity_id]},
             blocking=True,
         )
         call.assert_called_once()
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert state.state == CoverState.CLOSED
 
@@ -139,14 +139,14 @@ async def test_cover_services(
         "tesla_fleet_api.teslemetry.Vehicle.actuate_trunk",
         return_value=COMMAND_OK,
     ) as call:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             COVER_DOMAIN,
             SERVICE_OPEN_COVER,
             {ATTR_ENTITY_ID: [entity_id]},
             blocking=True,
         )
         call.assert_called_once()
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert state.state == CoverState.OPEN
 
@@ -156,26 +156,26 @@ async def test_cover_services(
         "tesla_fleet_api.teslemetry.Vehicle.actuate_trunk",
         return_value=COMMAND_OK,
     ) as call:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             COVER_DOMAIN,
             SERVICE_OPEN_COVER,
             {ATTR_ENTITY_ID: [entity_id]},
             blocking=True,
         )
         call.assert_called_once()
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert state.state == CoverState.OPEN
 
         call.reset_mock()
-        await hass.services.async_call(
+        await menuai.services.async_call(
             COVER_DOMAIN,
             SERVICE_CLOSE_COVER,
             {ATTR_ENTITY_ID: [entity_id]},
             blocking=True,
         )
         call.assert_called_once()
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert state.state == CoverState.CLOSED
 
@@ -185,44 +185,44 @@ async def test_cover_services(
         "tesla_fleet_api.teslemetry.Vehicle.sun_roof_control",
         return_value=COMMAND_OK,
     ) as call:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             COVER_DOMAIN,
             SERVICE_OPEN_COVER,
             {ATTR_ENTITY_ID: [entity_id]},
             blocking=True,
         )
         call.assert_called_once()
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert state.state == CoverState.OPEN
 
         call.reset_mock()
-        await hass.services.async_call(
+        await menuai.services.async_call(
             COVER_DOMAIN,
             SERVICE_STOP_COVER,
             {ATTR_ENTITY_ID: [entity_id]},
             blocking=True,
         )
         call.assert_called_once()
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert state.state == CoverState.OPEN
 
         call.reset_mock()
-        await hass.services.async_call(
+        await menuai.services.async_call(
             COVER_DOMAIN,
             SERVICE_CLOSE_COVER,
             {ATTR_ENTITY_ID: [entity_id]},
             blocking=True,
         )
         call.assert_called_once()
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert state.state == CoverState.CLOSED
 
 
 async def test_cover_streaming(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
     mock_vehicle_data: AsyncMock,
@@ -230,7 +230,7 @@ async def test_cover_streaming(
 ) -> None:
     """Tests that the binary sensor entities with streaming are correct."""
 
-    entry = await setup_platform(hass, [Platform.COVER])
+    entry = await setup_platform(menuai, [Platform.COVER])
 
     # Stream update
     mock_add_listener.send(
@@ -256,11 +256,11 @@ async def test_cover_streaming(
             "createdAt": "2024-10-04T10:45:17.537Z",
         }
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Reload the entry
-    await hass.config_entries.async_reload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_reload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Assert the entities restored their values
     for entity_id in (
@@ -269,7 +269,7 @@ async def test_cover_streaming(
         "cover.test_frunk",
         "cover.test_trunk",
     ):
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state.state == snapshot(name=f"{entity_id}-closed")
 
     # Send some alternative data with everything open
@@ -296,7 +296,7 @@ async def test_cover_streaming(
             "createdAt": "2024-10-04T10:45:17.537Z",
         }
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Assert the entities get new values
     for entity_id in (
@@ -305,7 +305,7 @@ async def test_cover_streaming(
         "cover.test_frunk",
         "cover.test_trunk",
     ):
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state.state == snapshot(name=f"{entity_id}-open")
 
     # Send some alternative data with everything unknown
@@ -332,7 +332,7 @@ async def test_cover_streaming(
             "createdAt": "2024-10-04T10:45:17.537Z",
         }
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Assert the entities get UNKNOWN values
     for entity_id in (
@@ -341,5 +341,5 @@ async def test_cover_streaming(
         "cover.test_frunk",
         "cover.test_trunk",
     ):
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state.state == snapshot(name=f"{entity_id}-unknown")

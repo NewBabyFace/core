@@ -9,14 +9,14 @@ from pypaperless.exceptions import (
     PaperlessInvalidTokenError,
 )
 
-from homeassistant.const import CONF_API_KEY, CONF_URL, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import (
+from menuai.const import CONF_API_KEY, CONF_URL, Platform
+from menuai.core import menuai
+from menuai.exceptions import (
     ConfigEntryAuthFailed,
     ConfigEntryError,
     ConfigEntryNotReady,
 )
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN, LOGGER
 from .coordinator import (
@@ -29,13 +29,13 @@ from .coordinator import (
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.UPDATE]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: PaperlessConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: PaperlessConfigEntry) -> bool:
     """Set up Paperless-ngx from a config entry."""
 
-    api = await _get_paperless_api(hass, entry)
+    api = await _get_paperless_api(menuai, entry)
 
-    statistics_coordinator = PaperlessStatisticCoordinator(hass, entry, api)
-    status_coordinator = PaperlessStatusCoordinator(hass, entry, api)
+    statistics_coordinator = PaperlessStatisticCoordinator(menuai, entry, api)
+    status_coordinator = PaperlessStatusCoordinator(menuai, entry, api)
 
     await statistics_coordinator.async_config_entry_first_refresh()
 
@@ -50,18 +50,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: PaperlessConfigEntry) ->
         statistics=statistics_coordinator,
     )
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: PaperlessConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: PaperlessConfigEntry) -> bool:
     """Unload paperless-ngx config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 async def _get_paperless_api(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: PaperlessConfigEntry,
 ) -> Paperless:
     """Create and initialize paperless-ngx API."""
@@ -69,7 +69,7 @@ async def _get_paperless_api(
     api = Paperless(
         entry.data[CONF_URL],
         entry.data[CONF_API_KEY],
-        session=async_get_clientsession(hass),
+        session=async_get_clientsession(menuai),
     )
 
     try:

@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy.orm.session import Session
 
-from homeassistant.util.collection import chunked_or_all
+from menuai.util.collection import chunked_or_all
 
 from .db_schema import Events, States, StatesMeta
 from .models import DatabaseEngine

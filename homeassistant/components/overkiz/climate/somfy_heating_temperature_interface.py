@@ -6,7 +6,7 @@ from typing import Any
 
 from pyoverkiz.enums import OverkizCommand, OverkizCommandParam, OverkizState
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     PRESET_AWAY,
     PRESET_COMFORT,
     PRESET_ECO,
@@ -16,7 +16,7 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
+from menuai.const import ATTR_TEMPERATURE, UnitOfTemperature
 
 from ..coordinator import OverkizDataUpdateCoordinator
 from ..entity import OverkizEntity

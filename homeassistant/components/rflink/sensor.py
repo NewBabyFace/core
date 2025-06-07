@@ -7,14 +7,14 @@ from typing import Any
 from rflink.parser import PACKET_FIELDS, UNITS
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONCENTRATION_PARTS_PER_MILLION,
     CONF_DEVICES,
     CONF_NAME,
@@ -34,11 +34,11 @@ from homeassistant.const import (
     UnitOfTemperature,
     UnitOfVolumetricFlux,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import (
     CONF_ALIASES,
@@ -306,7 +306,7 @@ def devices_from_config(domain_config):
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -328,7 +328,7 @@ async def async_setup_platform(
         async_add_entities([device])
 
     if config[CONF_AUTOMATIC_ADD]:
-        hass.data[DATA_DEVICE_REGISTER][EVENT_KEY_SENSOR] = add_new_device
+        menuai.data[DATA_DEVICE_REGISTER][EVENT_KEY_SENSOR] = add_new_device
 
 
 class RflinkSensor(RflinkDevice, SensorEntity):
@@ -356,36 +356,36 @@ class RflinkSensor(RflinkDevice, SensorEntity):
         """Domain specific event handler."""
         self._state = event["value"]
 
-    # pylint: disable-next=hass-missing-super-call
-    async def async_added_to_hass(self) -> None:
+    # pylint: disable-next=menuai-missing-super-call
+    async def async_added_to_menuai(self) -> None:
         """Register update callback."""
         # Remove temporary bogus entity_id if added
         tmp_entity = TMP_ENTITY.format(self._device_id)
         if (
             tmp_entity
-            in self.hass.data[DATA_ENTITY_LOOKUP][EVENT_KEY_SENSOR][self._device_id]
+            in self.menuai.data[DATA_ENTITY_LOOKUP][EVENT_KEY_SENSOR][self._device_id]
         ):
-            self.hass.data[DATA_ENTITY_LOOKUP][EVENT_KEY_SENSOR][
+            self.menuai.data[DATA_ENTITY_LOOKUP][EVENT_KEY_SENSOR][
                 self._device_id
             ].remove(tmp_entity)
 
         # Register id and aliases
-        self.hass.data[DATA_ENTITY_LOOKUP][EVENT_KEY_SENSOR][self._device_id].append(
+        self.menuai.data[DATA_ENTITY_LOOKUP][EVENT_KEY_SENSOR][self._device_id].append(
             self.entity_id
         )
         if self._aliases:
             for _id in self._aliases:
-                self.hass.data[DATA_ENTITY_LOOKUP][EVENT_KEY_SENSOR][_id].append(
+                self.menuai.data[DATA_ENTITY_LOOKUP][EVENT_KEY_SENSOR][_id].append(
                     self.entity_id
                 )
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, SIGNAL_AVAILABILITY, self._availability_callback
+                self.menuai, SIGNAL_AVAILABILITY, self._availability_callback
             )
         )
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 SIGNAL_HANDLE_EVENT.format(self.entity_id),
                 self.handle_event_callback,
             )

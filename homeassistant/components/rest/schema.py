@@ -2,12 +2,12 @@
 
 import voluptuous as vol
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     DEVICE_CLASSES_SCHEMA as BINARY_SENSOR_DEVICE_CLASSES_SCHEMA,
     DOMAIN as BINARY_SENSOR_DOMAIN,
 )
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.const import (
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.const import (
     CONF_AUTHENTICATION,
     CONF_DEVICE_CLASS,
     CONF_FORCE_UPDATE,
@@ -26,14 +26,14 @@ from homeassistant.const import (
     HTTP_BASIC_AUTHENTICATION,
     HTTP_DIGEST_AUTHENTICATION,
 )
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.trigger_template_entity import (
+from menuai.helpers import config_validation as cv
+from menuai.helpers.trigger_template_entity import (
     CONF_AVAILABILITY,
     TEMPLATE_ENTITY_BASE_SCHEMA,
     TEMPLATE_SENSOR_BASE_SCHEMA,
     ValueTemplate,
 )
-from homeassistant.util.ssl import SSLCipherList
+from menuai.util.ssl import SSLCipherList
 
 from .const import (
     CONF_ENCODING,

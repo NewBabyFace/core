@@ -3,7 +3,7 @@
 import pytest
 from smarttub import SpaLight
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 
 # the light in light_zone should have initial state light_state. we will call
@@ -20,7 +20,7 @@ from homeassistant.core import HomeAssistant
 async def test_light(
     spa,
     setup_entry,
-    hass: HomeAssistant,
+    menuai: menuai,
     light_zone,
     light_state,
     service_name,
@@ -30,14 +30,14 @@ async def test_light(
     """Test light entity."""
 
     entity_id = f"light.{spa.brand}_{spa.model}_light_{light_zone}"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state is not None
     assert state.state == light_state
 
     status = await spa.get_status_full()
     light: SpaLight = next(light for light in status.lights if light.zone == light_zone)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         service_name,
         {"entity_id": entity_id, **service_params},

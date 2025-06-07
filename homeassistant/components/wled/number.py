@@ -8,10 +8,10 @@ from functools import partial
 
 from wled import Segment
 
-from homeassistant.components.number import NumberEntity, NumberEntityDescription
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.number import NumberEntity, NumberEntityDescription
+from menuai.const import EntityCategory
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import WLEDConfigEntry
 from .const import ATTR_INTENSITY, ATTR_SPEED
@@ -23,7 +23,7 @@ PARALLEL_UPDATES = 1
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: WLEDConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -141,7 +141,7 @@ def async_update_segments(
 
     new_entities: list[WLEDNumber] = []
 
-    # Process new segments, add them to Home Assistant
+    # Process new segments, add them to MenuAI
     for segment_id in segment_ids - current_ids:
         current_ids.add(segment_id)
         new_entities.extend(

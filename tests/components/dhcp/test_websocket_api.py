@@ -6,16 +6,16 @@ from unittest.mock import patch
 
 import aiodhcpwatcher
 
-from homeassistant.components.dhcp import DOMAIN
-from homeassistant.core import EVENT_HOMEASSISTANT_STARTED, HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.dhcp import DOMAIN
+from menuai.core import EVENT_menuai_STARTED, menuai
+from menuai.setup import async_setup_component
 
 from tests.typing import WebSocketGenerator
 
 
 async def test_subscribe_discovery(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test dhcp subscribe_discovery."""
     saved_callback: Callable[[aiodhcpwatcher.DHCPRequest], None] | None = None
@@ -29,16 +29,16 @@ async def test_subscribe_discovery(
         saved_callback = callback
 
     with (
-        patch("homeassistant.components.dhcp.aiodhcpwatcher.async_start", mock_start),
-        patch("homeassistant.components.dhcp.DiscoverHosts"),
+        patch("menuai.components.dhcp.aiodhcpwatcher.async_start", mock_start),
+        patch("menuai.components.dhcp.DiscoverHosts"),
     ):
-        await async_setup_component(hass, DOMAIN, {})
-        await hass.async_block_till_done()
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, DOMAIN, {})
+        await menuai.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
+        await menuai.async_block_till_done()
 
     saved_callback(aiodhcpwatcher.DHCPRequest("4.3.2.2", "happy", "44:44:33:11:23:12"))
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,

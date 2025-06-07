@@ -58,5 +58,5 @@
     "NTS": "ssdp:alive"
   },
   "ssdp_all_locations": ["http://10.10.12.34:7676/smp_7_"],
-  "x_homeassistant_matching_domains": ["samsungtv"]
+  "x_menuai_matching_domains": ["samsungtv"]
 }

@@ -8,13 +8,13 @@ from unittest.mock import AsyncMock, patch
 from aioaquacell import AquacellApiException, AuthenticationFailed
 import pytest
 
-from homeassistant.components.aquacell.const import (
+from menuai.components.aquacell.const import (
     CONF_REFRESH_TOKEN,
     CONF_REFRESH_TOKEN_CREATION_TIME,
     DOMAIN,
 )
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
 
 from . import setup_integration
 
@@ -22,41 +22,41 @@ from tests.common import MockConfigEntry
 
 
 async def test_load_unload_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_aquacell_api: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test load and unload entry."""
-    await setup_integration(hass, mock_config_entry)
-    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    await setup_integration(menuai, mock_config_entry)
+    entry = menuai.config_entries.async_entries(DOMAIN)[0]
 
     assert entry.state is ConfigEntryState.LOADED
 
-    await hass.config_entries.async_remove(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_remove(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.NOT_LOADED
 
 
 async def test_load_withoutbrand(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_aquacell_api: AsyncMock,
     mock_config_entry_without_brand: MockConfigEntry,
 ) -> None:
     """Test load entry without brand."""
-    await setup_integration(hass, mock_config_entry_without_brand)
+    await setup_integration(menuai, mock_config_entry_without_brand)
 
     assert mock_config_entry_without_brand.state is ConfigEntryState.LOADED
 
 
 async def test_coordinator_update_valid_refresh_token(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_aquacell_api: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test load and unload entry."""
-    await setup_integration(hass, mock_config_entry)
-    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    await setup_integration(menuai, mock_config_entry)
+    entry = menuai.config_entries.async_entries(DOMAIN)[0]
 
     assert entry.state is ConfigEntryState.LOADED
 
@@ -66,7 +66,7 @@ async def test_coordinator_update_valid_refresh_token(
 
 
 async def test_coordinator_update_expired_refresh_token(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_aquacell_api: AsyncMock,
     mock_config_entry_expired: MockConfigEntry,
 ) -> None:
@@ -75,12 +75,12 @@ async def test_coordinator_update_expired_refresh_token(
 
     now = datetime.now()
     with patch(
-        "homeassistant.components.aquacell.coordinator.datetime"
+        "menuai.components.aquacell.coordinator.datetime"
     ) as datetime_mock:
         datetime_mock.now.return_value = now
-        await setup_integration(hass, mock_config_entry_expired)
+        await setup_integration(menuai, mock_config_entry_expired)
 
-    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    entry = menuai.config_entries.async_entries(DOMAIN)[0]
 
     assert entry.state is ConfigEntryState.LOADED
 
@@ -100,7 +100,7 @@ async def test_coordinator_update_expired_refresh_token(
     ],
 )
 async def test_load_exceptions(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_aquacell_api: AsyncMock,
     mock_config_entry: MockConfigEntry,
     exception: Exception,
@@ -108,7 +108,7 @@ async def test_load_exceptions(
 ) -> None:
     """Test load and unload entry."""
     mock_aquacell_api.authenticate_refresh.side_effect = exception
-    await setup_integration(hass, mock_config_entry)
-    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    await setup_integration(menuai, mock_config_entry)
+    entry = menuai.config_entries.async_entries(DOMAIN)[0]
 
     assert entry.state is expected_state

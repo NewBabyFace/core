@@ -13,26 +13,26 @@ from fritzconnection import FritzConnection
 from fritzconnection.core.exceptions import FritzConnectionException
 import voluptuous as vol
 
-from homeassistant.components.device_tracker import (
+from menuai.components.device_tracker import (
     CONF_CONSIDER_HOME,
     DEFAULT_CONSIDER_HOME,
 )
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
-from homeassistant.const import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
     CONF_SSL,
     CONF_USERNAME,
 )
-from homeassistant.core import callback
-from homeassistant.helpers.service_info.ssdp import (
+from menuai.core import callback
+from menuai.helpers.service_info.ssdp import (
     ATTR_UPNP_FRIENDLY_NAME,
     ATTR_UPNP_MODEL_NAME,
     ATTR_UPNP_UDN,
     SsdpServiceInfo,
 )
-from homeassistant.helpers.typing import VolDictType
+from menuai.helpers.typing import VolDictType
 
 from .const import (
     CONF_FEATURE_DEVICE_TRACKING,
@@ -82,7 +82,7 @@ class FritzBoxToolsFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_fritz_tools_init(self) -> str | None:
         """Initialize FRITZ!Box Tools class."""
-        return await self.hass.async_add_executor_job(self.fritz_tools_init)
+        return await self.menuai.async_add_executor_job(self.fritz_tools_init)
 
     def fritz_tools_init(self) -> str | None:
         """Initialize FRITZ!Box Tools class."""
@@ -117,12 +117,12 @@ class FritzBoxToolsFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_check_configured_entry(self) -> FritzConfigEntry | None:
         """Check if entry is configured."""
-        current_host = await self.hass.async_add_executor_job(
+        current_host = await self.menuai.async_add_executor_job(
             socket.gethostbyname, self._host
         )
 
         for entry in self._async_current_entries(include_ignore=False):
-            entry_host = await self.hass.async_add_executor_job(
+            entry_host = await self.menuai.async_add_executor_job(
                 socket.gethostbyname, entry.data[CONF_HOST]
             )
             if entry_host == current_host:
@@ -175,12 +175,12 @@ class FritzBoxToolsFlowHandler(ConfigFlow, domain=DOMAIN):
             await self.async_set_unique_id(uuid)
             self._abort_if_unique_id_configured({CONF_HOST: self._host})
 
-        if self.hass.config_entries.flow.async_has_matching_flow(self):
+        if self.menuai.config_entries.flow.async_has_matching_flow(self):
             return self.async_abort(reason="already_in_progress")
 
         if entry := await self.async_check_configured_entry():
             if uuid and not entry.unique_id:
-                self.hass.config_entries.async_update_entry(entry, unique_id=uuid)
+                self.menuai.config_entries.async_update_entry(entry, unique_id=uuid)
             return self.async_abort(reason="already_configured")
 
         self.context.update(

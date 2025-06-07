@@ -2,28 +2,28 @@
 
 from unittest.mock import patch
 
-from homeassistant.components.omnilogic.const import DOMAIN
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
+from menuai.components.omnilogic.const import DOMAIN
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
 
 from .const import TELEMETRY
 
 from tests.common import MockConfigEntry
 
 
-async def init_integration(hass: HomeAssistant) -> MockConfigEntry:
+async def init_integration(menuai: menuai) -> MockConfigEntry:
     """Mock integration setup."""
     with (
         patch(
-            "homeassistant.components.omnilogic.OmniLogic.connect",
+            "menuai.components.omnilogic.OmniLogic.connect",
             return_value=True,
         ),
         patch(
-            "homeassistant.components.omnilogic.OmniLogic.get_telemetry_data",
+            "menuai.components.omnilogic.OmniLogic.get_telemetry_data",
             return_value={},
         ),
         patch(
-            "homeassistant.components.omnilogic.coordinator.OmniLogicUpdateCoordinator._async_update_data",
+            "menuai.components.omnilogic.coordinator.OmniLogicUpdateCoordinator._async_update_data",
             return_value=TELEMETRY,
         ),
     ):
@@ -32,7 +32,7 @@ async def init_integration(hass: HomeAssistant) -> MockConfigEntry:
             data={CONF_USERNAME: "test-username", CONF_PASSWORD: "test-password"},
             entry_id="6fa019921cf8e7a3f57a3c2ed001a10d",
         )
-        entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
         return entry

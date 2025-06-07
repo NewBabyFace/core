@@ -6,9 +6,9 @@ from unittest.mock import MagicMock, patch
 from pyfido.client import PyFidoError
 import pytest
 
-from homeassistant.components.fido import sensor as fido
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.fido import sensor as fido
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import assert_setup_component
 
@@ -41,9 +41,9 @@ class FidoClientMockError(FidoClientMock):
         raise PyFidoError("Fake Error")
 
 
-async def test_fido_sensor(hass: HomeAssistant) -> None:
+async def test_fido_sensor(menuai: menuai) -> None:
     """Test the Fido number sensor."""
-    with patch("homeassistant.components.fido.sensor.FidoClient", new=FidoClientMock):
+    with patch("menuai.components.fido.sensor.FidoClient", new=FidoClientMock):
         config = {
             "sensor": {
                 "platform": "fido",
@@ -54,16 +54,16 @@ async def test_fido_sensor(hass: HomeAssistant) -> None:
             }
         }
         with assert_setup_component(1):
-            await async_setup_component(hass, "sensor", config)
-            await hass.async_block_till_done()
-        state = hass.states.get("sensor.fido_1112223344_balance")
+            await async_setup_component(menuai, "sensor", config)
+            await menuai.async_block_till_done()
+        state = menuai.states.get("sensor.fido_1112223344_balance")
         assert state.state == "160.12"
         assert state.attributes.get("number") == "1112223344"
-        state = hass.states.get("sensor.fido_1112223344_data_remaining")
+        state = menuai.states.get("sensor.fido_1112223344_data_remaining")
         assert state.state == "100.33"
 
 
-async def test_error(hass: HomeAssistant, caplog: pytest.LogCaptureFixture) -> None:
+async def test_error(menuai: menuai, caplog: pytest.LogCaptureFixture) -> None:
     """Test the Fido sensor errors."""
     caplog.set_level(logging.ERROR)
 
@@ -75,6 +75,6 @@ async def test_error(hass: HomeAssistant, caplog: pytest.LogCaptureFixture) -> N
         "monitored_variables": ["balance", "data_remaining"],
     }
     fake_async_add_entities = MagicMock()
-    with patch("homeassistant.components.fido.sensor.FidoClient", FidoClientMockError):
-        await fido.async_setup_platform(hass, config, fake_async_add_entities)
+    with patch("menuai.components.fido.sensor.FidoClient", FidoClientMockError):
+        await fido.async_setup_platform(menuai, config, fake_async_add_entities)
     assert fake_async_add_entities.called is False

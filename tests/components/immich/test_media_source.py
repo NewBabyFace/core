@@ -8,22 +8,22 @@ from aiohttp import web
 from aioimmich.exceptions import ImmichError
 import pytest
 
-from homeassistant.components.immich.const import DOMAIN
-from homeassistant.components.immich.media_source import (
+from menuai.components.immich.const import DOMAIN
+from menuai.components.immich.media_source import (
     ImmichMediaSource,
     ImmichMediaView,
     async_get_media_source,
 )
-from homeassistant.components.media_player import MediaClass
-from homeassistant.components.media_source import (
+from menuai.components.media_player import MediaClass
+from menuai.components.media_source import (
     BrowseError,
     BrowseMedia,
     MediaSourceItem,
     Unresolvable,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
-from homeassistant.util.aiohttp import MockRequest, MockStreamReaderChunked
+from menuai.core import menuai
+from menuai.setup import async_setup_component
+from menuai.util.aiohttp import MockRequest, MockStreamReaderChunked
 
 from . import setup_integration
 from .const import MOCK_ALBUM_WITHOUT_ASSETS
@@ -31,11 +31,11 @@ from .const import MOCK_ALBUM_WITHOUT_ASSETS
 from tests.common import MockConfigEntry
 
 
-async def test_get_media_source(hass: HomeAssistant) -> None:
+async def test_get_media_source(menuai: menuai) -> None:
     """Test the async_get_media_source."""
-    assert await async_setup_component(hass, "media_source", {})
+    assert await async_setup_component(menuai, "media_source", {})
 
-    source = await async_get_media_source(hass)
+    source = await async_get_media_source(menuai)
     assert isinstance(source, ImmichMediaSource)
     assert source.domain == DOMAIN
 
@@ -55,13 +55,13 @@ async def test_get_media_source(hass: HomeAssistant) -> None:
     ],
 )
 async def test_resolve_media_bad_identifier(
-    hass: HomeAssistant, identifier: str, exception_msg: str
+    menuai: menuai, identifier: str, exception_msg: str
 ) -> None:
     """Test resolve_media with bad identifiers."""
-    assert await async_setup_component(hass, "media_source", {})
+    assert await async_setup_component(menuai, "media_source", {})
 
-    source = await async_get_media_source(hass)
-    item = MediaSourceItem(hass, DOMAIN, identifier, None)
+    source = await async_get_media_source(menuai)
+    item = MediaSourceItem(menuai, DOMAIN, identifier, None)
     with pytest.raises(Unresolvable, match=exception_msg):
         await source.async_resolve_media(item)
 
@@ -87,46 +87,46 @@ async def test_resolve_media_bad_identifier(
     ],
 )
 async def test_resolve_media_success(
-    hass: HomeAssistant, identifier: str, url: str, mime_type: str
+    menuai: menuai, identifier: str, url: str, mime_type: str
 ) -> None:
     """Test successful resolving an item."""
-    assert await async_setup_component(hass, "media_source", {})
+    assert await async_setup_component(menuai, "media_source", {})
 
-    source = await async_get_media_source(hass)
-    item = MediaSourceItem(hass, DOMAIN, identifier, None)
+    source = await async_get_media_source(menuai)
+    item = MediaSourceItem(menuai, DOMAIN, identifier, None)
     result = await source.async_resolve_media(item)
 
     assert result.url == url
     assert result.mime_type == mime_type
 
 
-async def test_browse_media_unconfigured(hass: HomeAssistant) -> None:
+async def test_browse_media_unconfigured(menuai: menuai) -> None:
     """Test browse_media without any devices being configured."""
-    assert await async_setup_component(hass, "media_source", {})
+    assert await async_setup_component(menuai, "media_source", {})
 
-    source = await async_get_media_source(hass)
+    source = await async_get_media_source(menuai)
     item = MediaSourceItem(
-        hass, DOMAIN, "unique_id/albums/album_id/asset_id/filename.png", None
+        menuai, DOMAIN, "unique_id/albums/album_id/asset_id/filename.png", None
     )
     with pytest.raises(BrowseError, match="Immich is not configured"):
         await source.async_browse_media(item)
 
 
 async def test_browse_media_get_root(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_immich: Mock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test browse_media returning root media sources."""
-    assert await async_setup_component(hass, "media_source", {})
+    assert await async_setup_component(menuai, "media_source", {})
 
-    with patch("homeassistant.components.immich.PLATFORMS", []):
-        await setup_integration(hass, mock_config_entry)
+    with patch("menuai.components.immich.PLATFORMS", []):
+        await setup_integration(menuai, mock_config_entry)
 
-    source = await async_get_media_source(hass)
+    source = await async_get_media_source(menuai)
 
     # get root
-    item = MediaSourceItem(hass, DOMAIN, "", None)
+    item = MediaSourceItem(menuai, DOMAIN, "", None)
     result = await source.async_browse_media(item)
 
     assert result
@@ -139,7 +139,7 @@ async def test_browse_media_get_root(
     )
 
     # get collections
-    item = MediaSourceItem(hass, DOMAIN, "e7ef5713-9dab-4bd4-b899-715b0ca4379e", None)
+    item = MediaSourceItem(menuai, DOMAIN, "e7ef5713-9dab-4bd4-b899-715b0ca4379e", None)
     result = await source.async_browse_media(item)
 
     assert result
@@ -153,19 +153,19 @@ async def test_browse_media_get_root(
 
 
 async def test_browse_media_get_albums(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_immich: Mock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test browse_media returning albums."""
-    assert await async_setup_component(hass, "media_source", {})
+    assert await async_setup_component(menuai, "media_source", {})
 
-    with patch("homeassistant.components.immich.PLATFORMS", []):
-        await setup_integration(hass, mock_config_entry)
+    with patch("menuai.components.immich.PLATFORMS", []):
+        await setup_integration(menuai, mock_config_entry)
 
-    source = await async_get_media_source(hass)
+    source = await async_get_media_source(menuai)
     item = MediaSourceItem(
-        hass, DOMAIN, "e7ef5713-9dab-4bd4-b899-715b0ca4379e|albums", None
+        menuai, DOMAIN, "e7ef5713-9dab-4bd4-b899-715b0ca4379e|albums", None
     )
     result = await source.async_browse_media(item)
 
@@ -182,15 +182,15 @@ async def test_browse_media_get_albums(
 
 
 async def test_browse_media_get_albums_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_immich: Mock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test browse_media with unknown album."""
-    assert await async_setup_component(hass, "media_source", {})
+    assert await async_setup_component(menuai, "media_source", {})
 
-    with patch("homeassistant.components.immich.PLATFORMS", []):
-        await setup_integration(hass, mock_config_entry)
+    with patch("menuai.components.immich.PLATFORMS", []):
+        await setup_integration(menuai, mock_config_entry)
 
     # exception in get_albums()
     mock_immich.albums.async_get_all_albums.side_effect = ImmichError(
@@ -202,9 +202,9 @@ async def test_browse_media_get_albums_error(
         }
     )
 
-    source = await async_get_media_source(hass)
+    source = await async_get_media_source(menuai)
 
-    item = MediaSourceItem(hass, DOMAIN, f"{mock_config_entry.unique_id}|albums", None)
+    item = MediaSourceItem(menuai, DOMAIN, f"{mock_config_entry.unique_id}|albums", None)
     result = await source.async_browse_media(item)
 
     assert result
@@ -213,22 +213,22 @@ async def test_browse_media_get_albums_error(
 
 
 async def test_browse_media_get_album_items_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_immich: Mock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test browse_media returning albums."""
-    assert await async_setup_component(hass, "media_source", {})
+    assert await async_setup_component(menuai, "media_source", {})
 
-    with patch("homeassistant.components.immich.PLATFORMS", []):
-        await setup_integration(hass, mock_config_entry)
+    with patch("menuai.components.immich.PLATFORMS", []):
+        await setup_integration(menuai, mock_config_entry)
 
-    source = await async_get_media_source(hass)
+    source = await async_get_media_source(menuai)
 
     # unknown album
     mock_immich.albums.async_get_album_info.return_value = MOCK_ALBUM_WITHOUT_ASSETS
     item = MediaSourceItem(
-        hass,
+        menuai,
         DOMAIN,
         "e7ef5713-9dab-4bd4-b899-715b0ca4379e|albums|721e1a4b-aa12-441e-8d3b-5ac7ab283bb6",
         None,
@@ -249,7 +249,7 @@ async def test_browse_media_get_album_items_error(
         }
     )
     item = MediaSourceItem(
-        hass,
+        menuai,
         DOMAIN,
         "e7ef5713-9dab-4bd4-b899-715b0ca4379e|albums|721e1a4b-aa12-441e-8d3b-5ac7ab283bb6",
         None,
@@ -262,20 +262,20 @@ async def test_browse_media_get_album_items_error(
 
 
 async def test_browse_media_get_album_items(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_immich: Mock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test browse_media returning albums."""
-    assert await async_setup_component(hass, "media_source", {})
+    assert await async_setup_component(menuai, "media_source", {})
 
-    with patch("homeassistant.components.immich.PLATFORMS", []):
-        await setup_integration(hass, mock_config_entry)
+    with patch("menuai.components.immich.PLATFORMS", []):
+        await setup_integration(menuai, mock_config_entry)
 
-    source = await async_get_media_source(hass)
+    source = await async_get_media_source(menuai)
 
     item = MediaSourceItem(
-        hass,
+        menuai,
         DOMAIN,
         "e7ef5713-9dab-4bd4-b899-715b0ca4379e|albums|721e1a4b-aa12-441e-8d3b-5ac7ab283bb6",
         None,
@@ -320,13 +320,13 @@ async def test_browse_media_get_album_items(
 
 
 async def test_media_view(
-    hass: HomeAssistant,
+    menuai: menuai,
     tmp_path: Path,
     mock_immich: Mock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test SynologyDsmMediaView returning albums."""
-    view = ImmichMediaView(hass)
+    view = ImmichMediaView(menuai)
     request = MockRequest(b"", DOMAIN)
 
     # immich noch configured
@@ -334,9 +334,9 @@ async def test_media_view(
         await view.get(request, "", "")
 
     # setup immich
-    assert await async_setup_component(hass, "media_source", {})
-    with patch("homeassistant.components.immich.PLATFORMS", []):
-        await setup_integration(hass, mock_config_entry)
+    assert await async_setup_component(menuai, "media_source", {})
+    with patch("menuai.components.immich.PLATFORMS", []):
+        await setup_integration(menuai, mock_config_entry)
 
     # wrong url (without mime type)
     with pytest.raises(web.HTTPNotFound):

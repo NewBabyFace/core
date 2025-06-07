@@ -10,7 +10,7 @@ from telegram import Bot, ChatFullInfo
 from telegram.error import BadRequest, InvalidToken, NetworkError
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_IMPORT,
     SOURCE_RECONFIGURE,
     ConfigFlow,
@@ -20,13 +20,13 @@ from homeassistant.config_entries import (
     OptionsFlow,
     SubentryFlowResult,
 )
-from homeassistant.const import CONF_API_KEY, CONF_PLATFORM, CONF_URL
-from homeassistant.core import callback
-from homeassistant.data_entry_flow import AbortFlow
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.issue_registry import IssueSeverity, async_create_issue
-from homeassistant.helpers.network import NoURLAvailableError, get_url
-from homeassistant.helpers.selector import (
+from menuai.const import CONF_API_KEY, CONF_PLATFORM, CONF_URL
+from menuai.core import callback
+from menuai.data_entry_flow import AbortFlow
+from menuai.helpers import config_validation as cv
+from menuai.helpers.issue_registry import IssueSeverity, async_create_issue
+from menuai.helpers.network import NoURLAvailableError, get_url
+from menuai.helpers.selector import (
     SelectSelector,
     SelectSelectorConfig,
     TextSelector,
@@ -267,7 +267,7 @@ class TelgramBotConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
         async_create_issue(
-            self.hass,
+            self.menuai,
             DOMAIN,
             ISSUE_DEPRECATED_YAML,
             breaks_in_ha_version="2025.12.0",
@@ -359,8 +359,8 @@ class TelgramBotConfigFlow(ConfigFlow, domain=DOMAIN):
         placeholders: dict[str, str],
     ) -> str:
         try:
-            bot = await self.hass.async_add_executor_job(
-                initialize_bot, self.hass, MappingProxyType(user_input)
+            bot = await self.menuai.async_add_executor_job(
+                initialize_bot, self.menuai, MappingProxyType(user_input)
             )
             self._bot = bot
 
@@ -459,12 +459,12 @@ class TelgramBotConfigFlow(ConfigFlow, domain=DOMAIN):
             return
         if CONF_URL not in user_input:
             try:
-                get_url(self.hass, require_ssl=True, allow_internal=False)
+                get_url(self.menuai, require_ssl=True, allow_internal=False)
             except NoURLAvailableError:
                 errors["base"] = "no_url_available"
                 description_placeholders[ERROR_FIELD] = "URL"
                 description_placeholders[ERROR_MESSAGE] = (
-                    "URL is required since you have not configured an external URL in Home Assistant"
+                    "URL is required since you have not configured an external URL in MenuAI"
                 )
                 return
 

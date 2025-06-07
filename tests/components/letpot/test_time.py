@@ -7,11 +7,11 @@ from letpot.exceptions import LetPotConnectionException, LetPotException
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.time import SERVICE_SET_VALUE
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from menuai.components.time import SERVICE_SET_VALUE
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
 
 from . import setup_integration
 
@@ -19,7 +19,7 @@ from tests.common import MockConfigEntry, snapshot_platform
 
 
 async def test_all_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mock_client: MagicMock,
     mock_device_client: MagicMock,
@@ -27,22 +27,22 @@ async def test_all_entities(
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test time entities."""
-    with patch("homeassistant.components.letpot.PLATFORMS", [Platform.TIME]):
-        await setup_integration(hass, mock_config_entry)
+    with patch("menuai.components.letpot.PLATFORMS", [Platform.TIME]):
+        await setup_integration(menuai, mock_config_entry)
 
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
 
 async def test_set_time(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_client: MagicMock,
     mock_device_client: MagicMock,
 ) -> None:
     """Test setting the time entity."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "time",
         SERVICE_SET_VALUE,
         service_data={"time": time(hour=7, minute=0)},
@@ -67,7 +67,7 @@ async def test_set_time(
     ],
 )
 async def test_time_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_client: MagicMock,
     mock_device_client: MagicMock,
@@ -75,13 +75,13 @@ async def test_time_error(
     user_error: str,
 ) -> None:
     """Test time entity exception handling."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     mock_device_client.set_light_schedule.side_effect = exception
 
-    assert hass.states.get("time.garden_light_on") is not None
-    with pytest.raises(HomeAssistantError, match=user_error):
-        await hass.services.async_call(
+    assert menuai.states.get("time.garden_light_on") is not None
+    with pytest.raises(menuaiError, match=user_error):
+        await menuai.services.async_call(
             "time",
             SERVICE_SET_VALUE,
             service_data={"time": time(hour=7, minute=0)},

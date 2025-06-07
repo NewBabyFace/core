@@ -16,10 +16,10 @@ from PyViCare.PyViCareUtils import (
 )
 from requests.exceptions import ConnectionError as RequestConnectionError
 
-from homeassistant.components.fan import FanEntity, FanEntityFeature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util.percentage import (
+from menuai.components.fan import FanEntity, FanEntityFeature
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util.percentage import (
     ordered_list_item_to_percentage,
     percentage_to_ordered_list_item,
 )
@@ -55,7 +55,7 @@ class VentilationMode(enum.StrEnum):
 
     @staticmethod
     def to_vicare_mode(mode: str | None) -> str | None:
-        """Return the mapped ViCare ventilation mode for the Home Assistant mode."""
+        """Return the mapped ViCare ventilation mode for the MenuAI mode."""
         if mode:
             try:
                 ventilation_mode = VentilationMode(mode)
@@ -67,7 +67,7 @@ class VentilationMode(enum.StrEnum):
 
     @staticmethod
     def from_vicare_mode(vicare_mode: str | None) -> str | None:
-        """Return the mapped Home Assistant mode for the ViCare ventilation mode."""
+        """Return the mapped MenuAI mode for the ViCare ventilation mode."""
         for mode in VentilationMode:
             if HA_TO_VICARE_MODE_VENTILATION.get(VentilationMode(mode)) == vicare_mode:
                 return mode
@@ -109,13 +109,13 @@ def _build_entities(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ViCareConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the ViCare fan platform."""
     async_add_entities(
-        await hass.async_add_executor_job(
+        await menuai.async_add_executor_job(
             _build_entities,
             config_entry.runtime_data.devices,
         )

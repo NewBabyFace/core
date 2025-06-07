@@ -4,8 +4,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from homeassistant.components.openhome.const import DOMAIN
-from homeassistant.components.update import (
+from menuai.components.openhome.const import DOMAIN
+from menuai.components.update import (
     ATTR_INSTALLED_VERSION,
     ATTR_LATEST_VERSION,
     ATTR_RELEASE_SUMMARY,
@@ -14,7 +14,7 @@ from homeassistant.components.update import (
     SERVICE_INSTALL,
     UpdateDeviceClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     ATTR_ENTITY_ID,
     CONF_HOST,
@@ -22,8 +22,8 @@ from homeassistant.const import (
     STATE_UNKNOWN,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from tests.common import MockConfigEntry
 
@@ -61,7 +61,7 @@ FIRMWARE_UPDATE_AVAILABLE = {
 
 
 async def setup_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     software_status: dict,
     update_firmware: AsyncMock,
 ) -> None:
@@ -70,11 +70,11 @@ async def setup_integration(
         domain=DOMAIN,
         data={CONF_HOST: "http://localhost"},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with (
-        patch("homeassistant.components.openhome.PLATFORMS", [Platform.UPDATE]),
-        patch("homeassistant.components.openhome.Device", MagicMock()) as mock_device,
+        patch("menuai.components.openhome.PLATFORMS", [Platform.UPDATE]),
+        patch("menuai.components.openhome.Device", MagicMock()) as mock_device,
     ):
         mock_device.return_value.init = AsyncMock()
         mock_device.return_value.uuid = MagicMock(return_value="uuid")
@@ -85,17 +85,17 @@ async def setup_integration(
             return_value=software_status
         )
         mock_device.return_value.update_firmware = update_firmware
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
 
-async def test_not_supported(hass: HomeAssistant) -> None:
+async def test_not_supported(menuai: menuai) -> None:
     """Ensure update entity works if service not supported."""
 
     update_firmware = AsyncMock()
-    await setup_integration(hass, None, update_firmware)
+    await setup_integration(menuai, None, update_firmware)
 
-    state = hass.states.get("update.friendly_name")
+    state = menuai.states.get("update.friendly_name")
 
     assert state
     assert state.state == STATE_UNKNOWN
@@ -107,13 +107,13 @@ async def test_not_supported(hass: HomeAssistant) -> None:
     update_firmware.assert_not_called()
 
 
-async def test_on_latest_firmware(hass: HomeAssistant) -> None:
+async def test_on_latest_firmware(menuai: menuai) -> None:
     """Test device on latest firmware."""
 
     update_firmware = AsyncMock()
-    await setup_integration(hass, LATEST_FIRMWARE_INSTALLED, update_firmware)
+    await setup_integration(menuai, LATEST_FIRMWARE_INSTALLED, update_firmware)
 
-    state = hass.states.get("update.friendly_name")
+    state = menuai.states.get("update.friendly_name")
 
     assert state
     assert state.state == STATE_UNKNOWN
@@ -125,13 +125,13 @@ async def test_on_latest_firmware(hass: HomeAssistant) -> None:
     update_firmware.assert_not_called()
 
 
-async def test_update_available(hass: HomeAssistant) -> None:
+async def test_update_available(menuai: menuai) -> None:
     """Test device has firmware update available."""
 
     update_firmware = AsyncMock()
-    await setup_integration(hass, FIRMWARE_UPDATE_AVAILABLE, update_firmware)
+    await setup_integration(menuai, FIRMWARE_UPDATE_AVAILABLE, update_firmware)
 
-    state = hass.states.get("update.friendly_name")
+    state = menuai.states.get("update.friendly_name")
 
     assert state
     assert state.state == STATE_ON
@@ -147,25 +147,25 @@ async def test_update_available(hass: HomeAssistant) -> None:
         == "Release build version 4.100.502 (07 Jun 2023 12:29:48)"
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         PLATFORM_DOMAIN,
         SERVICE_INSTALL,
         {ATTR_ENTITY_ID: "update.friendly_name"},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     update_firmware.assert_called_once()
 
 
-async def test_firmware_update_not_required(hass: HomeAssistant) -> None:
+async def test_firmware_update_not_required(menuai: menuai) -> None:
     """Ensure firmware install does nothing if up to date."""
 
     update_firmware = AsyncMock()
-    await setup_integration(hass, LATEST_FIRMWARE_INSTALLED, update_firmware)
+    await setup_integration(menuai, LATEST_FIRMWARE_INSTALLED, update_firmware)
 
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             PLATFORM_DOMAIN,
             SERVICE_INSTALL,
             {ATTR_ENTITY_ID: "update.friendly_name"},

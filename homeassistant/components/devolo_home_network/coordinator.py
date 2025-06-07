@@ -16,11 +16,11 @@ from devolo_plc_api.device_api import (
 from devolo_plc_api.exceptions.device import DevicePasswordProtected, DeviceUnavailable
 from devolo_plc_api.plcnet_api import LogicalNetwork
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers import device_registry as dr
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
     CONNECTED_PLC_DEVICES,
@@ -46,7 +46,7 @@ class DevoloDataUpdateCoordinator[_DataT](DataUpdateCoordinator[_DataT]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         logger: Logger,
         *,
         config_entry: DevoloHomeNetworkConfigEntry,
@@ -56,7 +56,7 @@ class DevoloDataUpdateCoordinator[_DataT](DataUpdateCoordinator[_DataT]):
         """Initialize global data updater."""
         self.device = config_entry.runtime_data.device
         super().__init__(
-            hass,
+            menuai,
             logger,
             config_entry=config_entry,
             name=name,
@@ -83,7 +83,7 @@ class DevoloDataUpdateCoordinator[_DataT](DataUpdateCoordinator[_DataT]):
     @callback
     def update_sw_version(self) -> None:
         """Update device registry with new firmware version, if it changed at runtime."""
-        device_registry = dr.async_get(self.hass)
+        device_registry = dr.async_get(self.menuai)
         if (
             device_entry := device_registry.async_get_device(
                 identifiers={(DOMAIN, self.device.serial_number)}
@@ -99,7 +99,7 @@ class DevoloFirmwareUpdateCoordinator(DevoloDataUpdateCoordinator[UpdateFirmware
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         logger: Logger,
         *,
         config_entry: ConfigEntry,
@@ -108,7 +108,7 @@ class DevoloFirmwareUpdateCoordinator(DevoloDataUpdateCoordinator[UpdateFirmware
     ) -> None:
         """Initialize global data updater."""
         super().__init__(
-            hass,
+            menuai,
             logger,
             config_entry=config_entry,
             name=name,
@@ -127,7 +127,7 @@ class DevoloLedSettingsGetCoordinator(DevoloDataUpdateCoordinator[bool]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         logger: Logger,
         *,
         config_entry: ConfigEntry,
@@ -136,7 +136,7 @@ class DevoloLedSettingsGetCoordinator(DevoloDataUpdateCoordinator[bool]):
     ) -> None:
         """Initialize global data updater."""
         super().__init__(
-            hass,
+            menuai,
             logger,
             config_entry=config_entry,
             name=name,
@@ -155,7 +155,7 @@ class DevoloLogicalNetworkCoordinator(DevoloDataUpdateCoordinator[LogicalNetwork
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         logger: Logger,
         *,
         config_entry: ConfigEntry,
@@ -164,7 +164,7 @@ class DevoloLogicalNetworkCoordinator(DevoloDataUpdateCoordinator[LogicalNetwork
     ) -> None:
         """Initialize global data updater."""
         super().__init__(
-            hass,
+            menuai,
             logger,
             config_entry=config_entry,
             name=name,
@@ -183,7 +183,7 @@ class DevoloUptimeGetCoordinator(DevoloDataUpdateCoordinator[int]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         logger: Logger,
         *,
         config_entry: ConfigEntry,
@@ -192,7 +192,7 @@ class DevoloUptimeGetCoordinator(DevoloDataUpdateCoordinator[int]):
     ) -> None:
         """Initialize global data updater."""
         super().__init__(
-            hass,
+            menuai,
             logger,
             config_entry=config_entry,
             name=name,
@@ -213,7 +213,7 @@ class DevoloWifiConnectedStationsGetCoordinator(
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         logger: Logger,
         *,
         config_entry: ConfigEntry,
@@ -222,7 +222,7 @@ class DevoloWifiConnectedStationsGetCoordinator(
     ) -> None:
         """Initialize global data updater."""
         super().__init__(
-            hass,
+            menuai,
             logger,
             config_entry=config_entry,
             name=name,
@@ -243,7 +243,7 @@ class DevoloWifiGuestAccessGetCoordinator(
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         logger: Logger,
         *,
         config_entry: ConfigEntry,
@@ -252,7 +252,7 @@ class DevoloWifiGuestAccessGetCoordinator(
     ) -> None:
         """Initialize global data updater."""
         super().__init__(
-            hass,
+            menuai,
             logger,
             config_entry=config_entry,
             name=name,
@@ -273,7 +273,7 @@ class DevoloWifiNeighborAPsGetCoordinator(
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         logger: Logger,
         *,
         config_entry: ConfigEntry,
@@ -282,7 +282,7 @@ class DevoloWifiNeighborAPsGetCoordinator(
     ) -> None:
         """Initialize global data updater."""
         super().__init__(
-            hass,
+            menuai,
             logger,
             config_entry=config_entry,
             name=name,

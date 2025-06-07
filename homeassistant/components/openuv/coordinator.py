@@ -7,11 +7,11 @@ from typing import Any, cast
 
 from pyopenuv.errors import InvalidApiKeyError, OpenUvError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.debounce import Debouncer
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.debounce import Debouncer
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import LOGGER
 
@@ -26,7 +26,7 @@ class OpenUvCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         *,
         entry: ConfigEntry,
         name: str,
@@ -36,13 +36,13 @@ class OpenUvCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     ) -> None:
         """Initialize."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=entry,
             name=name,
             update_method=update_method,
             request_refresh_debouncer=Debouncer(
-                hass,
+                menuai,
                 LOGGER,
                 cooldown=DEFAULT_DEBOUNCER_COOLDOWN_SECONDS,
                 immediate=True,

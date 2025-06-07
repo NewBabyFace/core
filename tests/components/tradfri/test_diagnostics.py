@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from pytradfri.device import Device
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .common import setup_integration
 
@@ -15,14 +15,14 @@ from tests.typing import ClientSessionGenerator
 
 @pytest.mark.parametrize("device", ["air_purifier"], indirect=True)
 async def test_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     device: Device,
 ) -> None:
     """Test diagnostics for config entry."""
-    config_entry = await setup_integration(hass)
+    config_entry = await setup_integration(menuai)
 
-    result = await get_diagnostics_for_config_entry(hass, hass_client, config_entry)
+    result = await get_diagnostics_for_config_entry(menuai, menuai_client, config_entry)
 
     assert isinstance(result, dict)
     assert result["gateway_version"] == "1.2.1234"

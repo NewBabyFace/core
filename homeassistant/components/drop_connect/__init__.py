@@ -5,10 +5,10 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from homeassistant.components import mqtt
-from homeassistant.components.mqtt import ReceiveMessage
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
+from menuai.components import mqtt
+from menuai.components.mqtt import ReceiveMessage
+from menuai.const import Platform
+from menuai.core import menuai, callback
 
 from .const import CONF_DATA_TOPIC, CONF_DEVICE_TYPE
 from .coordinator import DROPConfigEntry, DROPDeviceDataUpdateCoordinator
@@ -23,17 +23,17 @@ PLATFORMS: list[Platform] = [
 ]
 
 
-async def async_setup_entry(hass: HomeAssistant, config_entry: DROPConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, config_entry: DROPConfigEntry) -> bool:
     """Set up DROP from a config entry."""
 
     # Make sure MQTT integration is enabled and the client is available.
-    if not await mqtt.async_wait_for_mqtt_client(hass):
+    if not await mqtt.async_wait_for_mqtt_client(menuai):
         _LOGGER.error("MQTT integration is not available")
         return False
 
     if TYPE_CHECKING:
         assert config_entry.unique_id is not None
-    drop_data_coordinator = DROPDeviceDataUpdateCoordinator(hass, config_entry)
+    drop_data_coordinator = DROPDeviceDataUpdateCoordinator(menuai, config_entry)
 
     @callback
     def mqtt_callback(msg: ReceiveMessage) -> None:
@@ -45,7 +45,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: DROPConfigEntry) 
 
     config_entry.async_on_unload(
         await mqtt.async_subscribe(
-            hass, config_entry.data[CONF_DATA_TOPIC], mqtt_callback
+            menuai, config_entry.data[CONF_DATA_TOPIC], mqtt_callback
         )
     )
     _LOGGER.debug(
@@ -56,12 +56,12 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: DROPConfigEntry) 
     )
 
     config_entry.runtime_data = drop_data_coordinator
-    await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
     return True
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, config_entry: DROPConfigEntry
+    menuai: menuai, config_entry: DROPConfigEntry
 ) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(config_entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(config_entry, PLATFORMS)

@@ -9,7 +9,7 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.remote import (
+from menuai.components.remote import (
     ATTR_ACTIVITY,
     ATTR_DELAY_SECS,
     ATTR_DEVICE,
@@ -19,12 +19,12 @@ from homeassistant.components.remote import (
     RemoteEntity,
     RemoteEntityFeature,
 )
-from homeassistant.core import HassJob, HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.typing import VolDictType
+from menuai.core import menuaiJob, menuai, callback
+from menuai.helpers import config_validation as cv, entity_platform
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.restore_state import RestoreEntity
+from menuai.helpers.typing import VolDictType
 
 from .const import (
     ACTIVITY_POWER_OFF,
@@ -54,7 +54,7 @@ HARMONY_CHANGE_CHANNEL_SCHEMA: VolDictType = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: HarmonyConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -66,7 +66,7 @@ async def async_setup_entry(
     default_activity: str | None = entry.options.get(ATTR_ACTIVITY)
     delay_secs: float = entry.options.get(ATTR_DELAY_SECS, DEFAULT_DELAY_SECS)
 
-    harmony_conf_file = hass.config.path(f"harmony_{entry.unique_id}.conf")
+    harmony_conf_file = menuai.config.path(f"harmony_{entry.unique_id}.conf")
     device = HarmonyRemote(data, default_activity, delay_secs, harmony_conf_file)
     async_add_entities([device])
 
@@ -116,11 +116,11 @@ class HarmonyRemote(HarmonyEntity, RemoteEntity, RestoreEntity):
         self.async_on_remove(
             self._data.async_subscribe(
                 HarmonyCallback(
-                    connected=HassJob(self.async_got_connected),
-                    disconnected=HassJob(self.async_got_disconnected),
-                    config_updated=HassJob(self.async_new_config),
-                    activity_starting=HassJob(self.async_new_activity),
-                    activity_started=HassJob(self.async_new_activity_finished),
+                    connected=menuaiJob(self.async_got_connected),
+                    disconnected=menuaiJob(self.async_got_disconnected),
+                    config_updated=menuaiJob(self.async_new_config),
+                    activity_starting=menuaiJob(self.async_new_activity),
+                    activity_started=menuaiJob(self.async_new_activity_finished),
                 )
             )
         )
@@ -131,9 +131,9 @@ class HarmonyRemote(HarmonyEntity, RemoteEntity, RestoreEntity):
         self._activity_starting = None
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Complete the initialization."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         _LOGGER.debug("%s: Harmony Hub added", self._data.name)
 
@@ -142,7 +142,7 @@ class HarmonyRemote(HarmonyEntity, RemoteEntity, RestoreEntity):
 
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"{HARMONY_OPTIONS_UPDATE}-{self.unique_id}",
                 self._async_update_options,
             )
@@ -210,7 +210,7 @@ class HarmonyRemote(HarmonyEntity, RemoteEntity, RestoreEntity):
         """Call for updating the current activity."""
         _LOGGER.debug("%s: configuration has been updated", self._data.name)
         self.async_new_activity(self._data.current_activity)
-        await self.hass.async_add_executor_job(self.write_config_file)
+        await self.menuai.async_add_executor_job(self.write_config_file)
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Start an activity from the Harmony device."""
@@ -256,7 +256,7 @@ class HarmonyRemote(HarmonyEntity, RemoteEntity, RestoreEntity):
     async def sync(self) -> None:
         """Sync the Harmony device with the web service."""
         if await self._data.sync():
-            await self.hass.async_add_executor_job(self.write_config_file)
+            await self.menuai.async_add_executor_job(self.write_config_file)
 
     def write_config_file(self) -> None:
         """Write Harmony configuration file.

@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-from homeassistant.core import HomeAssistant
-from homeassistant.util import slugify
+from menuai.core import menuai
+from menuai.util import slugify
 
 from .const import CONF_SOURCE_ID, DOMAIN
 
 
-def generate_source_id(hass: HomeAssistant, name: str) -> str:
+def generate_source_id(menuai: menuai, name: str) -> str:
     """Generate a unique source ID."""
-    other_entries = hass.config_entries.async_entries(DOMAIN)
+    other_entries = menuai.config_entries.async_entries(DOMAIN)
     other_source_ids: set[str] = {
         other_source_id
         for entry in other_entries

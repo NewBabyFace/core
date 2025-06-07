@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchEntity, SwitchEntityDescription
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import GoalZeroConfigEntry
 from .entity import GoalZeroEntity
@@ -28,7 +28,7 @@ SWITCH_TYPES: tuple[SwitchEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: GoalZeroConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

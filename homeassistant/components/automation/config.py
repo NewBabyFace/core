@@ -10,10 +10,10 @@ from typing import Any
 import voluptuous as vol
 from voluptuous.humanize import humanize_error
 
-from homeassistant.components import blueprint
-from homeassistant.components.trace import TRACE_CONFIG_SCHEMA
-from homeassistant.config import config_per_platform, config_without_domain
-from homeassistant.const import (
+from menuai.components import blueprint
+from menuai.components.trace import TRACE_CONFIG_SCHEMA
+from menuai.config import config_per_platform, config_without_domain
+from menuai.const import (
     CONF_ACTION,
     CONF_ACTIONS,
     CONF_ALIAS,
@@ -25,13 +25,13 @@ from homeassistant.const import (
     CONF_TRIGGERS,
     CONF_VARIABLES,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv, script
-from homeassistant.helpers.condition import async_validate_conditions_config
-from homeassistant.helpers.trigger import async_validate_trigger_config
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util.yaml.input import UndefinedSubstitution
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv, script
+from menuai.helpers.condition import async_validate_conditions_config
+from menuai.helpers.trigger import async_validate_trigger_config
+from menuai.helpers.typing import ConfigType
+from menuai.util.yaml.input import UndefinedSubstitution
 
 from .const import (
     CONF_HIDE_ENTITY,
@@ -91,7 +91,7 @@ AUTOMATION_BLUEPRINT_SCHEMA = vol.All(
 
 
 async def _async_validate_config_item(  # noqa: C901
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     raise_on_errors: bool,
     warn_on_errors: bool,
@@ -165,7 +165,7 @@ async def _async_validate_config_item(  # noqa: C901
 
     if blueprint.is_blueprint_instance_config(config):
         uses_blueprint = True
-        blueprints = async_get_blueprints(hass)
+        blueprints = async_get_blueprints(menuai)
         try:
             blueprint_inputs = await blueprints.async_inputs_from_config(
                 _backward_compat_schema(config)
@@ -194,7 +194,7 @@ async def _async_validate_config_item(  # noqa: C901
                     err,
                 )
             if raise_on_errors:
-                raise HomeAssistantError(err) from err
+                raise menuaiError(err) from err
             return _minimal_config(ValidationStatus.FAILED_BLUEPRINT, err, config)
 
     automation_name = "Unnamed automation"
@@ -218,11 +218,11 @@ async def _async_validate_config_item(  # noqa: C901
 
     try:
         automation_config[CONF_TRIGGERS] = await async_validate_trigger_config(
-            hass, validated_config[CONF_TRIGGERS]
+            menuai, validated_config[CONF_TRIGGERS]
         )
     except (
         vol.Invalid,
-        HomeAssistantError,
+        menuaiError,
     ) as err:
         _log_invalid_automation(
             err, automation_name, "failed to setup triggers", validated_config
@@ -237,11 +237,11 @@ async def _async_validate_config_item(  # noqa: C901
     if CONF_CONDITIONS in validated_config:
         try:
             automation_config[CONF_CONDITIONS] = await async_validate_conditions_config(
-                hass, validated_config[CONF_CONDITIONS]
+                menuai, validated_config[CONF_CONDITIONS]
             )
         except (
             vol.Invalid,
-            HomeAssistantError,
+            menuaiError,
         ) as err:
             _log_invalid_automation(
                 err, automation_name, "failed to setup conditions", validated_config
@@ -258,11 +258,11 @@ async def _async_validate_config_item(  # noqa: C901
 
     try:
         automation_config[CONF_ACTIONS] = await script.async_validate_actions_config(
-            hass, validated_config[CONF_ACTIONS]
+            menuai, validated_config[CONF_ACTIONS]
         )
     except (
         vol.Invalid,
-        HomeAssistantError,
+        menuaiError,
     ) as err:
         _log_invalid_automation(
             err, automation_name, "failed to setup actions", validated_config
@@ -298,26 +298,26 @@ class AutomationConfig(dict):
 
 
 async def _try_async_validate_config_item(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: dict[str, Any],
 ) -> AutomationConfig | None:
     """Validate config item."""
     try:
-        return await _async_validate_config_item(hass, config, False, True)
-    except (vol.Invalid, HomeAssistantError):
+        return await _async_validate_config_item(menuai, config, False, True)
+    except (vol.Invalid, menuaiError):
         return None
 
 
 async def async_validate_config_item(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_key: str,
     config: dict[str, Any],
 ) -> AutomationConfig | None:
     """Validate config item, called by EditAutomationConfigView."""
-    return await _async_validate_config_item(hass, config, True, False)
+    return await _async_validate_config_item(menuai, config, True, False)
 
 
-async def async_validate_config(hass: HomeAssistant, config: ConfigType) -> ConfigType:
+async def async_validate_config(menuai: menuai, config: ConfigType) -> ConfigType:
     """Validate config."""
     # No gather here since _try_async_validate_config_item is unlikely to suspend
     # and the cost of creating many tasks is not worth the benefit.
@@ -325,7 +325,7 @@ async def async_validate_config(hass: HomeAssistant, config: ConfigType) -> Conf
         filter(
             lambda x: x is not None,
             [
-                await _try_async_validate_config_item(hass, p_config)
+                await _try_async_validate_config_item(menuai, p_config)
                 for _, p_config in config_per_platform(config, DOMAIN)
             ],
         )

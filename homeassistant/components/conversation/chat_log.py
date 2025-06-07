@@ -12,17 +12,17 @@ from typing import Any, Literal, TypedDict
 
 import voluptuous as vol
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError, TemplateError
-from homeassistant.helpers import chat_session, intent, llm, template
-from homeassistant.util.hass_dict import HassKey
-from homeassistant.util.json import JsonObjectType
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError, TemplateError
+from menuai.helpers import chat_session, intent, llm, template
+from menuai.util.menuai_dict import menuaiKey
+from menuai.util.json import JsonObjectType
 
 from . import trace
 from .const import DOMAIN
 from .models import ConversationInput, ConversationResult
 
-DATA_CHAT_LOGS: HassKey[dict[str, ChatLog]] = HassKey("conversation_chat_logs")
+DATA_CHAT_LOGS: menuaiKey[dict[str, ChatLog]] = menuaiKey("conversation_chat_logs")
 
 LOGGER = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ current_chat_log: ContextVar[ChatLog | None] = ContextVar(
 
 @contextmanager
 def async_get_chat_log(
-    hass: HomeAssistant,
+    menuai: menuai,
     session: chat_session.ChatSession,
     user_input: ConversationInput | None = None,
     *,
@@ -58,15 +58,15 @@ def async_get_chat_log(
         yield chat_log
         return
 
-    all_chat_logs = hass.data.get(DATA_CHAT_LOGS)
+    all_chat_logs = menuai.data.get(DATA_CHAT_LOGS)
     if all_chat_logs is None:
         all_chat_logs = {}
-        hass.data[DATA_CHAT_LOGS] = all_chat_logs
+        menuai.data[DATA_CHAT_LOGS] = all_chat_logs
 
     if chat_log := all_chat_logs.get(session.conversation_id):
         chat_log = replace(chat_log, content=chat_log.content.copy())
     else:
-        chat_log = ChatLog(hass, session.conversation_id)
+        chat_log = ChatLog(menuai, session.conversation_id)
 
     if chat_log_delta_listener:
         chat_log.delta_listener = chat_log_delta_listener
@@ -101,7 +101,7 @@ def async_get_chat_log(
     all_chat_logs[session.conversation_id] = chat_log
 
 
-class ConverseError(HomeAssistantError):
+class ConverseError(menuaiError):
     """Error during initialization of conversation.
 
     Will not be stored in the history.
@@ -175,7 +175,7 @@ class AssistantContentDeltaDict(TypedDict, total=False):
 class ChatLog:
     """Class holding the chat history of a specific conversation."""
 
-    hass: HomeAssistant
+    menuai: menuai
     conversation_id: str
     content: list[Content] = field(default_factory=lambda: [SystemContent(content="")])
     extra_system_prompt: str | None = None
@@ -248,7 +248,7 @@ class ChatLog:
             tool_call_tasks = {}
         for tool_input in content.tool_calls:
             if tool_input.id not in tool_call_tasks:
-                tool_call_tasks[tool_input.id] = self.hass.async_create_task(
+                tool_call_tasks[tool_input.id] = self.menuai.async_create_task(
                     self.llm_api.async_call_tool(tool_input),
                     name=f"llm_tool_{tool_input.id}",
                 )
@@ -260,7 +260,7 @@ class ChatLog:
 
             try:
                 tool_result = await tool_call_tasks[tool_input.id]
-            except (HomeAssistantError, vol.Invalid) as e:
+            except (menuaiError, vol.Invalid) as e:
                 tool_result = {"error": type(e).__name__}
                 if str(e):
                     tool_result["error_text"] = str(e)
@@ -307,7 +307,7 @@ class ChatLog:
 
                     # Start processing the tool calls as soon as we know about them
                     for tool_call in delta_tool_calls:
-                        tool_call_tasks[tool_call.id] = self.hass.async_create_task(
+                        tool_call_tasks[tool_call.id] = self.menuai.async_create_task(
                             self.llm_api.async_call_tool(tool_call),
                             name=f"llm_tool_{tool_call.id}",
                         )
@@ -363,9 +363,9 @@ class ChatLog:
         user_name: str | None = None,
     ) -> str:
         try:
-            return template.Template(prompt, self.hass).async_render(
+            return template.Template(prompt, self.menuai).async_render(
                 {
-                    "ha_name": self.hass.config.location_name,
+                    "ha_name": self.menuai.config.location_name,
                     "user_name": user_name,
                     "llm_context": llm_context,
                 },
@@ -388,7 +388,7 @@ class ChatLog:
         self,
         conversing_domain: str,
         user_input: ConversationInput,
-        user_llm_hass_api: str | list[str] | None = None,
+        user_llm_menuai_api: str | list[str] | None = None,
         user_llm_prompt: str | None = None,
     ) -> None:
         """Set the LLM system prompt."""
@@ -403,17 +403,17 @@ class ChatLog:
 
         llm_api: llm.APIInstance | None = None
 
-        if user_llm_hass_api:
+        if user_llm_menuai_api:
             try:
                 llm_api = await llm.async_get_api(
-                    self.hass,
-                    user_llm_hass_api,
+                    self.menuai,
+                    user_llm_menuai_api,
                     llm_context,
                 )
-            except HomeAssistantError as err:
+            except menuaiError as err:
                 LOGGER.error(
                     "Error getting LLM API %s for %s: %s",
-                    user_llm_hass_api,
+                    user_llm_menuai_api,
                     conversing_domain,
                     err,
                 )
@@ -423,7 +423,7 @@ class ChatLog:
                     "Error preparing LLM API",
                 )
                 raise ConverseError(
-                    f"Error getting LLM API {user_llm_hass_api}",
+                    f"Error getting LLM API {user_llm_menuai_api}",
                     conversation_id=self.conversation_id,
                     response=intent_response,
                 ) from err
@@ -434,7 +434,7 @@ class ChatLog:
             user_input.context
             and user_input.context.user_id
             and (
-                user := await self.hass.auth.async_get_user(user_input.context.user_id)
+                user := await self.menuai.auth.async_get_user(user_input.context.user_id)
             )
         ):
             user_name = user.name

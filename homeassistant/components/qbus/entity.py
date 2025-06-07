@@ -10,10 +10,10 @@ from qbusmqttapi.discovery import QbusMqttOutput
 from qbusmqttapi.factory import QbusMqttMessageFactory, QbusMqttTopicFactory
 from qbusmqttapi.state import QbusMqttState
 
-from homeassistant.components.mqtt import ReceiveMessage, client as mqtt
-from homeassistant.helpers.device_registry import DeviceInfo, format_mac
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.mqtt import ReceiveMessage, client as mqtt
+from menuai.helpers.device_registry import DeviceInfo, format_mac
+from menuai.helpers.entity import Entity
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN, MANUFACTURER
 from .coordinator import QbusControllerCoordinator
@@ -89,11 +89,11 @@ class QbusEntity(Entity, ABC):
             via_device=create_main_device_identifier(mqtt_output),
         )
 
-    async def async_added_to_hass(self) -> None:
-        """Run when entity about to be added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Run when entity about to be added to menuai."""
         self.async_on_remove(
             await mqtt.async_subscribe(
-                self.hass, self._state_topic, self._state_received
+                self.menuai, self._state_topic, self._state_received
             )
         )
 
@@ -105,4 +105,4 @@ class QbusEntity(Entity, ABC):
         request = self._message_factory.create_set_output_state_request(
             self._mqtt_output.device, state
         )
-        await mqtt.async_publish(self.hass, request.topic, request.payload)
+        await mqtt.async_publish(self.menuai, request.topic, request.payload)

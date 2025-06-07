@@ -10,9 +10,9 @@ from fritzconnection.core.exceptions import (
 from fritzconnection.lib.fritzwlan import DEFAULT_PASSWORD_LENGTH
 import voluptuous as vol
 
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers.service import async_extract_config_entry_ids
+from menuai.core import menuai, ServiceCall
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers.service import async_extract_config_entry_ids
 
 from .const import DOMAIN
 from .coordinator import FritzConfigEntry
@@ -31,11 +31,11 @@ SERVICE_SCHEMA_SET_GUEST_WIFI_PW = vol.Schema(
 
 async def _async_set_guest_wifi_password(service_call: ServiceCall) -> None:
     """Call Fritz set guest wifi password service."""
-    hass = service_call.hass
-    target_entry_ids = await async_extract_config_entry_ids(hass, service_call)
+    menuai = service_call.menuai
+    target_entry_ids = await async_extract_config_entry_ids(menuai, service_call)
     target_entries: list[FritzConfigEntry] = [
         loaded_entry
-        for loaded_entry in hass.config_entries.async_loaded_entries(DOMAIN)
+        for loaded_entry in menuai.config_entries.async_loaded_entries(DOMAIN)
         if loaded_entry.entry_id in target_entry_ids
     ]
 
@@ -55,19 +55,19 @@ async def _async_set_guest_wifi_password(service_call: ServiceCall) -> None:
                 service_call.data.get("length", DEFAULT_PASSWORD_LENGTH),
             )
         except (FritzServiceError, FritzActionError) as ex:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN, translation_key="service_parameter_unknown"
             ) from ex
         except FritzConnectionException as ex:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN, translation_key="service_not_supported"
             ) from ex
 
 
-async def async_setup_services(hass: HomeAssistant) -> None:
+async def async_setup_services(menuai: menuai) -> None:
     """Set up services for Fritz integration."""
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_SET_GUEST_WIFI_PW,
         _async_set_guest_wifi_password,

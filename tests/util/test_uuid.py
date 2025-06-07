@@ -1,8 +1,8 @@
-"""Test Home Assistant uuid util methods."""
+"""Test MenuAI uuid util methods."""
 
 import uuid
 
-from homeassistant.util import uuid as uuid_util
+from menuai.util import uuid as uuid_util
 
 
 async def test_uuid_util_random_uuid_hex() -> None:

@@ -8,14 +8,14 @@ import pytest
 from weheat.abstractions.discovery import HeatPumpDiscovery
 from weheat.abstractions.heat_pump import HeatPump
 
-from homeassistant.components.application_credentials import (
+from menuai.components.application_credentials import (
     DOMAIN as APPLICATION_CREDENTIALS,
     ClientCredential,
     async_import_client_credential,
 )
-from homeassistant.components.weheat.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.weheat.const import DOMAIN
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from .const import (
     CLIENT_ID,
@@ -30,11 +30,11 @@ from tests.common import MockConfigEntry
 
 
 @pytest.fixture(autouse=True)
-async def setup_credentials(hass: HomeAssistant) -> None:
+async def setup_credentials(menuai: menuai) -> None:
     """Fixture to setup credentials."""
-    assert await async_setup_component(hass, APPLICATION_CREDENTIALS, {})
+    assert await async_setup_component(menuai, APPLICATION_CREDENTIALS, {})
     await async_import_client_credential(
-        hass,
+        menuai,
         DOMAIN,
         ClientCredential(CLIENT_ID, CLIENT_SECRET),
     )
@@ -44,7 +44,7 @@ async def setup_credentials(hass: HomeAssistant) -> None:
 def mock_setup_entry():
     """Mock a successful setup."""
     with patch(
-        "homeassistant.components.weheat.async_setup_entry", return_value=True
+        "menuai.components.weheat.async_setup_entry", return_value=True
     ) as mock_setup:
         yield mock_setup
 
@@ -81,7 +81,7 @@ def mock_user_id() -> Generator[AsyncMock]:
     """Mock the user API call."""
     with (
         patch(
-            "homeassistant.components.weheat.config_flow.async_get_user_id_from_token",
+            "menuai.components.weheat.config_flow.async_get_user_id_from_token",
             return_value=USER_UUID_1,
         ) as user_mock,
     ):
@@ -93,7 +93,7 @@ def mock_weheat_discover(mock_heat_pump_info) -> Generator[AsyncMock]:
     """Mock an Weheat discovery."""
     with (
         patch(
-            "homeassistant.components.weheat.HeatPumpDiscovery.async_discover_active",
+            "menuai.components.weheat.HeatPumpDiscovery.async_discover_active",
             autospec=True,
         ) as mock_discover,
     ):
@@ -140,7 +140,7 @@ def mock_weheat_heat_pump(mock_weheat_heat_pump_instance) -> Generator[AsyncMock
     """Mock the coordinator HeatPump data."""
     with (
         patch(
-            "homeassistant.components.weheat.coordinator.HeatPump",
+            "menuai.components.weheat.coordinator.HeatPump",
         ) as mock_heat_pump,
     ):
         mock_heat_pump.return_value = mock_weheat_heat_pump_instance

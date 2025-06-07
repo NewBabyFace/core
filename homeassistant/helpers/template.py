@@ -1,4 +1,4 @@
-"""Template helper methods for rendering strings with Home Assistant data."""
+"""Template helper methods for rendering strings with MenuAI data."""
 
 from __future__ import annotations
 
@@ -48,21 +48,21 @@ import orjson
 from propcache.api import under_cached_property
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_LATITUDE,
     ATTR_LONGITUDE,
     ATTR_PERSONS,
     ATTR_UNIT_OF_MEASUREMENT,
-    EVENT_HOMEASSISTANT_START,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_START,
+    EVENT_menuai_STOP,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
     UnitOfLength,
 )
-from homeassistant.core import (
+from menuai.core import (
     Context,
-    HomeAssistant,
+    menuai,
     ServiceResponse,
     State,
     callback,
@@ -70,19 +70,19 @@ from homeassistant.core import (
     valid_domain,
     valid_entity_id,
 )
-from homeassistant.exceptions import TemplateError
-from homeassistant.loader import bind_hass
-from homeassistant.util import (
+from menuai.exceptions import TemplateError
+from menuai.loader import bind_menuai
+from menuai.util import (
     convert,
     dt as dt_util,
     location as location_util,
     slugify as slugify_util,
 )
-from homeassistant.util.async_ import run_callback_threadsafe
-from homeassistant.util.hass_dict import HassKey
-from homeassistant.util.json import JSON_DECODE_EXCEPTIONS, json_loads
-from homeassistant.util.read_only_dict import ReadOnlyDict
-from homeassistant.util.thread import ThreadWithException
+from menuai.util.async_ import run_callback_threadsafe
+from menuai.util.menuai_dict import menuaiKey
+from menuai.util.json import JSON_DECODE_EXCEPTIONS, json_loads
+from menuai.util.read_only_dict import ReadOnlyDict
+from menuai.util.thread import ThreadWithException
 
 from . import (
     area_registry,
@@ -107,14 +107,14 @@ _LOGGER = logging.getLogger(__name__)
 _SENTINEL = object()
 DATE_STR_FORMAT = "%Y-%m-%d %H:%M:%S"
 
-_ENVIRONMENT: HassKey[TemplateEnvironment] = HassKey("template.environment")
-_ENVIRONMENT_LIMITED: HassKey[TemplateEnvironment] = HassKey(
+_ENVIRONMENT: menuaiKey[TemplateEnvironment] = menuaiKey("template.environment")
+_ENVIRONMENT_LIMITED: menuaiKey[TemplateEnvironment] = menuaiKey(
     "template.environment_limited"
 )
-_ENVIRONMENT_STRICT: HassKey[TemplateEnvironment] = HassKey(
+_ENVIRONMENT_STRICT: menuaiKey[TemplateEnvironment] = menuaiKey(
     "template.environment_strict"
 )
-_HASS_LOADER = "template.hass_loader"
+_menuai_LOADER = "template.menuai_loader"
 
 # Match "simple" ints and floats. -1.0, 1, +5, 5.0
 _IS_NUMERIC = re.compile(r"^[+-]?(?!0\d)\d*(?:\.\d*)?$")
@@ -177,32 +177,32 @@ ORJSON_PASSTHROUGH_OPTIONS = (
 )
 
 
-def _template_state_no_collect(hass: HomeAssistant, state: State) -> TemplateState:
+def _template_state_no_collect(menuai: menuai, state: State) -> TemplateState:
     """Return a TemplateState for a state without collecting."""
     if template_state := CACHED_TEMPLATE_NO_COLLECT_LRU.get(state):
         return template_state
-    template_state = _create_template_state_no_collect(hass, state)
+    template_state = _create_template_state_no_collect(menuai, state)
     CACHED_TEMPLATE_NO_COLLECT_LRU[state] = template_state
     return template_state
 
 
-def _template_state(hass: HomeAssistant, state: State) -> TemplateState:
+def _template_state(menuai: menuai, state: State) -> TemplateState:
     """Return a TemplateState for a state that collects."""
     if template_state := CACHED_TEMPLATE_LRU.get(state):
         return template_state
-    template_state = TemplateState(hass, state)
+    template_state = TemplateState(menuai, state)
     CACHED_TEMPLATE_LRU[state] = template_state
     return template_state
 
 
-def async_setup(hass: HomeAssistant) -> bool:
+def async_setup(menuai: menuai) -> bool:
     """Set up tracking the template LRUs."""
 
     @callback
     def _async_adjust_lru_sizes(_: Any) -> None:
         """Adjust the lru cache sizes."""
         new_size = int(
-            round(hass.states.async_entity_ids_count() * ENTITY_COUNT_GROWTH_FACTOR)
+            round(menuai.states.async_entity_ids_count() * ENTITY_COUNT_GROWTH_FACTOR)
         )
         for lru in (CACHED_TEMPLATE_LRU, CACHED_TEMPLATE_NO_COLLECT_LRU):
             # There is no typing for LRU
@@ -215,34 +215,34 @@ def async_setup(hass: HomeAssistant) -> bool:
     )
 
     cancel = async_track_time_interval(
-        hass, _async_adjust_lru_sizes, timedelta(minutes=10)
+        menuai, _async_adjust_lru_sizes, timedelta(minutes=10)
     )
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_START, _async_adjust_lru_sizes)
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, callback(lambda _: cancel()))
+    menuai.bus.async_listen_once(EVENT_menuai_START, _async_adjust_lru_sizes)
+    menuai.bus.async_listen_once(EVENT_menuai_STOP, callback(lambda _: cancel()))
     return True
 
 
-@bind_hass
+@bind_menuai
 @deprecated_function(
-    "automatic setting of Template.hass introduced by HA Core PR #89242",
+    "automatic setting of Template.menuai introduced by HA Core PR #89242",
     breaks_in_ha_version="2025.10",
 )
-def attach(hass: HomeAssistant, obj: Any) -> None:
-    """Recursively attach hass to all template instances in list and dict."""
-    return _attach(hass, obj)
+def attach(menuai: menuai, obj: Any) -> None:
+    """Recursively attach menuai to all template instances in list and dict."""
+    return _attach(menuai, obj)
 
 
-def _attach(hass: HomeAssistant, obj: Any) -> None:
-    """Recursively attach hass to all template instances in list and dict."""
+def _attach(menuai: menuai, obj: Any) -> None:
+    """Recursively attach menuai to all template instances in list and dict."""
     if isinstance(obj, list):
         for child in obj:
-            _attach(hass, child)
+            _attach(menuai, child)
     elif isinstance(obj, collections.abc.Mapping):
         for child_key, child_value in obj.items():
-            _attach(hass, child_key)
-            _attach(hass, child_value)
+            _attach(menuai, child_key)
+            _attach(menuai, child_value)
     elif isinstance(obj, Template):
-        obj.hass = hass
+        obj.menuai = menuai
 
 
 def render_complex(
@@ -516,16 +516,16 @@ class Template:
         "_log_fn",
         "_renders",
         "_strict",
-        "hass",
+        "menuai",
         "is_static",
         "template",
     )
 
-    def __init__(self, template: str, hass: HomeAssistant | None = None) -> None:
+    def __init__(self, template: str, menuai: menuai | None = None) -> None:
         """Instantiate a template.
 
-        Note: A valid hass instance should always be passed in. The hass parameter
-        will be non optional in Home Assistant Core 2025.10.
+        Note: A valid menuai instance should always be passed in. The menuai parameter
+        will be non optional in MenuAI Core 2025.10.
         """
         # pylint: disable-next=import-outside-toplevel
         from .frame import ReportBehavior, report_usage
@@ -533,9 +533,9 @@ class Template:
         if not isinstance(template, str):
             raise TypeError("Expected template to be a string")
 
-        if not hass:
+        if not menuai:
             report_usage(
-                "creates a template object without passing hass",
+                "creates a template object without passing menuai",
                 core_behavior=ReportBehavior.LOG,
                 breaks_in_ha_version="2025.10",
             )
@@ -543,7 +543,7 @@ class Template:
         self.template: str = template.strip()
         self._compiled_code: CodeType | None = None
         self._compiled: jinja2.Template | None = None
-        self.hass = hass
+        self.menuai = menuai
         self.is_static = not is_template_string(template)
         self._exc_info: OptExcInfo | None = None
         self._limited: bool | None = None
@@ -554,12 +554,12 @@ class Template:
 
     @property
     def _env(self) -> TemplateEnvironment:
-        if self.hass is None:
-            return _NO_HASS_ENV
+        if self.menuai is None:
+            return _NO_menuai_ENV
         # Bypass cache if a custom log function is specified
         if self._log_fn is not None:
             return TemplateEnvironment(
-                self.hass, self._limited, self._strict, self._log_fn
+                self.menuai, self._limited, self._strict, self._log_fn
             )
         if self._limited:
             wanted_env = _ENVIRONMENT_LIMITED
@@ -567,9 +567,9 @@ class Template:
             wanted_env = _ENVIRONMENT_STRICT
         else:
             wanted_env = _ENVIRONMENT
-        if (ret := self.hass.data.get(wanted_env)) is None:
-            ret = self.hass.data[wanted_env] = TemplateEnvironment(
-                self.hass, self._limited, self._strict, self._log_fn
+        if (ret := self.menuai.data.get(wanted_env)) is None:
+            ret = self.menuai.data[wanted_env] = TemplateEnvironment(
+                self.menuai, self._limited, self._strict, self._log_fn
             )
         return ret
 
@@ -599,15 +599,15 @@ class Template:
         """Render given template.
 
         If limited is True, the template is not allowed to access any function
-        or filter depending on hass or the state machine.
+        or filter depending on menuai or the state machine.
         """
         if self.is_static:
-            if not parse_result or (self.hass and self.hass.config.legacy_templates):
+            if not parse_result or (self.menuai and self.menuai.config.legacy_templates):
                 return self.template
             return self._parse_result(self.template)
-        assert self.hass is not None, "hass variable not set on template"
+        assert self.menuai is not None, "menuai variable not set on template"
         return run_callback_threadsafe(
-            self.hass.loop,
+            self.menuai.loop,
             partial(self.async_render, variables, parse_result, limited, **kwargs),
         ).result()
 
@@ -626,12 +626,12 @@ class Template:
         This method must be run in the event loop.
 
         If limited is True, the template is not allowed to access any function
-        or filter depending on hass or the state machine.
+        or filter depending on menuai or the state machine.
         """
         self._renders += 1
 
         if self.is_static:
-            if not parse_result or (self.hass and self.hass.config.legacy_templates):
+            if not parse_result or (self.menuai and self.menuai.config.legacy_templates):
                 return self.template
             return self._parse_result(self.template)
 
@@ -652,7 +652,7 @@ class Template:
 
         render_result = render_result.strip()
 
-        if not parse_result or (self.hass and self.hass.config.legacy_templates):
+        if not parse_result or (self.menuai and self.menuai.config.legacy_templates):
             return render_result
 
         return self._parse_result(render_result)
@@ -701,7 +701,7 @@ class Template:
         finish_event = asyncio.Event()
 
         def _render_template() -> None:
-            assert self.hass is not None, "hass variable not set on template"
+            assert self.menuai is not None, "menuai variable not set on template"
             try:
                 _render_with_context(self.template, compiled, **kwargs)
             except TimeoutError:
@@ -709,7 +709,7 @@ class Template:
             except Exception:  # noqa: BLE001
                 self._exc_info = sys.exc_info()
             finally:
-                self.hass.loop.call_soon_threadsafe(finish_event.set)
+                self.menuai.loop.call_soon_threadsafe(finish_event.set)
 
         try:
             template_render_thread = ThreadWithException(target=_render_template)
@@ -735,14 +735,14 @@ class Template:
         **kwargs: Any,
     ) -> RenderInfo:
         """Render the template and collect an entity filter."""
-        if self.hass and self.hass.config.debug:
-            self.hass.verify_event_loop_thread("async_render_to_info")
+        if self.menuai and self.menuai.config.debug:
+            self.menuai.verify_event_loop_thread("async_render_to_info")
         self._renders += 1
 
         render_info = RenderInfo(self)
 
-        if not self.hass:
-            raise RuntimeError(f"hass not set while rendering {self}")
+        if not self.menuai:
+            raise RuntimeError(f"menuai not set while rendering {self}")
 
         if _render_info.get() is not None:
             raise RuntimeError(
@@ -778,7 +778,7 @@ class Template:
             return self.template
 
         return run_callback_threadsafe(
-            self.hass.loop,
+            self.menuai.loop,
             self.async_render_with_possible_json_value,
             value,
             error_value,
@@ -827,7 +827,7 @@ class Template:
                 )
             return value if error_value is _SENTINEL else error_value
 
-        if not parse_result or (self.hass and self.hass.config.legacy_templates):
+        if not parse_result or (self.menuai and self.menuai.config.legacy_templates):
             return render_result
 
         return self._parse_result(render_result)
@@ -838,10 +838,10 @@ class Template:
         strict: bool = False,
         log_fn: Callable[[int, str], None] | None = None,
     ) -> jinja2.Template:
-        """Bind a template to a specific hass instance."""
+        """Bind a template to a specific menuai instance."""
         self.ensure_valid()
 
-        assert self.hass is not None, "hass variable not set on template"
+        assert self.menuai is not None, "menuai variable not set on template"
         assert self._limited is None or self._limited == limited, (
             "can't change between limited and non limited template"
         )
@@ -870,7 +870,7 @@ class Template:
         return (
             self.__class__ == other.__class__
             and self.template == other.template
-            and self.hass == other.hass
+            and self.menuai == other.menuai
         )
 
     def __hash__(self) -> int:
@@ -883,8 +883,8 @@ class Template:
 
 
 @cache
-def _domain_states(hass: HomeAssistant, name: str) -> DomainStates:
-    return DomainStates(hass, name)
+def _domain_states(menuai: menuai, name: str) -> DomainStates:
+    return DomainStates(menuai, name)
 
 
 def _readonly(*args: Any, **kwargs: Any) -> Any:
@@ -897,16 +897,16 @@ class AllStates:
 
     __setitem__ = _readonly
     __delitem__ = _readonly
-    __slots__ = ("_hass",)
+    __slots__ = ("_menuai",)
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize all states."""
-        self._hass = hass
+        self._menuai = menuai
 
     def __getattr__(self, name):
         """Return the domain state."""
         if "." in name:
-            return _get_state_if_valid(self._hass, name)
+            return _get_state_if_valid(self._menuai, name)
 
         if name in _RESERVED_NAMES:
             return None
@@ -914,7 +914,7 @@ class AllStates:
         if not valid_domain(name):
             raise TemplateError(f"Invalid domain name '{name}'")
 
-        return _domain_states(self._hass, name)
+        return _domain_states(self._menuai, name)
 
     # Jinja will try __getitem__ first and it avoids the need
     # to call is_safe_attribute
@@ -931,12 +931,12 @@ class AllStates:
     def __iter__(self) -> Generator[TemplateState]:
         """Return all states."""
         self._collect_all()
-        return _state_generator(self._hass, None)
+        return _state_generator(self._menuai, None)
 
     def __len__(self) -> int:
         """Return number of states."""
         self._collect_all_lifecycle()
-        return self._hass.states.async_entity_ids_count()
+        return self._menuai.states.async_entity_ids_count()
 
     def __call__(
         self,
@@ -945,7 +945,7 @@ class AllStates:
         with_unit: bool = False,
     ) -> str:
         """Return the states."""
-        state = _get_state(self._hass, entity_id)
+        state = _get_state(self._menuai, entity_id)
         if state is None:
             return STATE_UNKNOWN
         if rounded is _SENTINEL:
@@ -962,13 +962,13 @@ class AllStates:
 class StateTranslated:
     """Class to represent a translated state in a template."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize all states."""
-        self._hass = hass
+        self._menuai = menuai
 
     def __call__(self, entity_id: str) -> str | None:
         """Retrieve translated state if available."""
-        state = _get_state_if_valid(self._hass, entity_id)
+        state = _get_state_if_valid(self._menuai, entity_id)
 
         if state is None:
             return STATE_UNKNOWN
@@ -976,12 +976,12 @@ class StateTranslated:
         state_value = state.state
         domain = state.domain
         device_class = state.attributes.get("device_class")
-        entry = entity_registry.async_get(self._hass).async_get(entity_id)
+        entry = entity_registry.async_get(self._menuai).async_get(entity_id)
         platform = None if entry is None else entry.platform
         translation_key = None if entry is None else entry.translation_key
 
         return async_translate_state(
-            self._hass, state_value, domain, platform, translation_key, device_class
+            self._menuai, state_value, domain, platform, translation_key, device_class
         )
 
     def __repr__(self) -> str:
@@ -992,19 +992,19 @@ class StateTranslated:
 class DomainStates:
     """Class to expose a specific HA domain as attributes."""
 
-    __slots__ = ("_domain", "_hass")
+    __slots__ = ("_domain", "_menuai")
 
     __setitem__ = _readonly
     __delitem__ = _readonly
 
-    def __init__(self, hass: HomeAssistant, domain: str) -> None:
+    def __init__(self, menuai: menuai, domain: str) -> None:
         """Initialize the domain states."""
-        self._hass = hass
+        self._menuai = menuai
         self._domain = domain
 
     def __getattr__(self, name: str) -> TemplateState | None:
         """Return the states."""
-        return _get_state_if_valid(self._hass, f"{self._domain}.{name}")
+        return _get_state_if_valid(self._menuai, f"{self._domain}.{name}")
 
     # Jinja will try __getitem__ first and it avoids the need
     # to call is_safe_attribute
@@ -1021,12 +1021,12 @@ class DomainStates:
     def __iter__(self) -> Generator[TemplateState]:
         """Return the iteration over all the states."""
         self._collect_domain()
-        return _state_generator(self._hass, self._domain)
+        return _state_generator(self._menuai, self._domain)
 
     def __len__(self) -> int:
         """Return number of states."""
         self._collect_domain_lifecycle()
-        return self._hass.states.async_entity_ids_count(self._domain)
+        return self._menuai.states.async_entity_ids_count(self._domain)
 
     def __repr__(self) -> str:
         """Representation of Domain States."""
@@ -1036,7 +1036,7 @@ class DomainStates:
 class TemplateStateBase(State):
     """Class to represent a state object in a template."""
 
-    __slots__ = ("_collect", "_entity_id", "_hass", "_state")
+    __slots__ = ("_collect", "_entity_id", "_menuai", "_state")
 
     _state: State
 
@@ -1045,9 +1045,9 @@ class TemplateStateBase(State):
 
     # Inheritance is done so functions that check against State keep working
     # pylint: disable-next=super-init-not-called
-    def __init__(self, hass: HomeAssistant, collect: bool, entity_id: str) -> None:
+    def __init__(self, menuai: menuai, collect: bool, entity_id: str) -> None:
         """Initialize template state."""
-        self._hass = hass
+        self._menuai = menuai
         self._collect = collect
         self._entity_id = entity_id
         self._cache: dict[str, Any] = {}
@@ -1142,14 +1142,14 @@ class TemplateStateBase(State):
         """Return a formatted version of the state."""
         # Import here, not at top-level, to avoid circular import
         # pylint: disable-next=import-outside-toplevel
-        from homeassistant.components.sensor import (
+        from menuai.components.sensor import (
             DOMAIN as SENSOR_DOMAIN,
             async_rounded_state,
         )
 
         self._collect_state()
         if rounded and self._state.domain == SENSOR_DOMAIN:
-            state = async_rounded_state(self._hass, self._entity_id, self._state)
+            state = async_rounded_state(self._menuai, self._entity_id, self._state)
         else:
             state = self._state.state
         if with_unit and (unit := self._state.attributes.get(ATTR_UNIT_OF_MEASUREMENT)):
@@ -1168,9 +1168,9 @@ class TemplateState(TemplateStateBase):
     __slots__ = ()
 
     # Inheritance is done so functions that check against State keep working
-    def __init__(self, hass: HomeAssistant, state: State, collect: bool = True) -> None:
+    def __init__(self, menuai: menuai, state: State, collect: bool = True) -> None:
         """Initialize template state."""
-        super().__init__(hass, collect, state.entity_id)
+        super().__init__(menuai, collect, state.entity_id)
         self._state = state
 
     def __repr__(self) -> str:
@@ -1184,14 +1184,14 @@ class TemplateStateFromEntityId(TemplateStateBase):
     __slots__ = ()
 
     def __init__(
-        self, hass: HomeAssistant, entity_id: str, collect: bool = True
+        self, menuai: menuai, entity_id: str, collect: bool = True
     ) -> None:
         """Initialize template state."""
-        super().__init__(hass, collect, entity_id)
+        super().__init__(menuai, collect, entity_id)
 
     @property
     def _state(self) -> State:  # type: ignore[override]
-        state = self._hass.states.get(self._entity_id)
+        state = self._menuai.states.get(self._entity_id)
         if not state:
             state = State(self._entity_id, STATE_UNKNOWN)
         return state
@@ -1204,16 +1204,16 @@ class TemplateStateFromEntityId(TemplateStateBase):
 _create_template_state_no_collect = partial(TemplateState, collect=False)
 
 
-def _collect_state(hass: HomeAssistant, entity_id: str) -> None:
+def _collect_state(menuai: menuai, entity_id: str) -> None:
     if (entity_collect := _render_info.get()) is not None:
         entity_collect.entities.add(entity_id)  # type: ignore[attr-defined]
 
 
 def _state_generator(
-    hass: HomeAssistant, domain: str | None
+    menuai: menuai, domain: str | None
 ) -> Generator[TemplateState]:
     """State generator for a domain or all states."""
-    states = hass.states
+    states = menuai.states
     # If domain is None, we want to iterate over all states, but making
     # a copy of the dict is expensive. So we iterate over the protected
     # _states dict instead. This is safe because we're not modifying it
@@ -1228,39 +1228,39 @@ def _state_generator(
     else:
         container = states.async_all(domain)
     for state in container:
-        yield _template_state_no_collect(hass, state)
+        yield _template_state_no_collect(menuai, state)
 
 
-def _get_state_if_valid(hass: HomeAssistant, entity_id: str) -> TemplateState | None:
-    state = hass.states.get(entity_id)
+def _get_state_if_valid(menuai: menuai, entity_id: str) -> TemplateState | None:
+    state = menuai.states.get(entity_id)
     if state is None and not valid_entity_id(entity_id):
         raise TemplateError(f"Invalid entity ID '{entity_id}'")
-    return _get_template_state_from_state(hass, entity_id, state)
+    return _get_template_state_from_state(menuai, entity_id, state)
 
 
-def _get_state(hass: HomeAssistant, entity_id: str) -> TemplateState | None:
-    return _get_template_state_from_state(hass, entity_id, hass.states.get(entity_id))
+def _get_state(menuai: menuai, entity_id: str) -> TemplateState | None:
+    return _get_template_state_from_state(menuai, entity_id, menuai.states.get(entity_id))
 
 
 def _get_template_state_from_state(
-    hass: HomeAssistant, entity_id: str, state: State | None
+    menuai: menuai, entity_id: str, state: State | None
 ) -> TemplateState | None:
     if state is None:
         # Only need to collect if none, if not none collect first actual
         # access to the state properties in the state wrapper.
-        _collect_state(hass, entity_id)
+        _collect_state(menuai, entity_id)
         return None
-    return _template_state(hass, state)
+    return _template_state(menuai, state)
 
 
 def _resolve_state(
-    hass: HomeAssistant, entity_id_or_state: Any
+    menuai: menuai, entity_id_or_state: Any
 ) -> State | TemplateState | None:
     """Return state or entity_id if given."""
     if isinstance(entity_id_or_state, State):
         return entity_id_or_state
     if isinstance(entity_id_or_state, str):
-        return _get_state(hass, entity_id_or_state)
+        return _get_state(menuai, entity_id_or_state)
     return None
 
 
@@ -1300,19 +1300,19 @@ def result_as_boolean(template_result: Any | None) -> bool:
     return forgiving_boolean(template_result, default=False)
 
 
-def expand(hass: HomeAssistant, *args: Any) -> Iterable[State]:
+def expand(menuai: menuai, *args: Any) -> Iterable[State]:
     """Expand out any groups and zones into entity states."""
     # circular import.
     from . import entity as entity_helper  # pylint: disable=import-outside-toplevel
 
     search = list(args)
     found = {}
-    sources = entity_helper.entity_sources(hass)
+    sources = entity_helper.entity_sources(menuai)
     while search:
         entity = search.pop()
         if isinstance(entity, str):
             entity_id = entity
-            if (entity := _get_state(hass, entity)) is None:
+            if (entity := _get_state(menuai, entity)) is None:
                 continue
         elif isinstance(entity, State):
             entity_id = entity.entity_id
@@ -1337,20 +1337,20 @@ def expand(hass: HomeAssistant, *args: Any) -> Iterable[State]:
             if zone_entities := entity.attributes.get(ATTR_PERSONS):
                 search += zone_entities
         else:
-            _collect_state(hass, entity_id)
+            _collect_state(menuai, entity_id)
             found[entity_id] = entity
 
     return list(found.values())
 
 
-def device_entities(hass: HomeAssistant, _device_id: str) -> Iterable[str]:
+def device_entities(menuai: menuai, _device_id: str) -> Iterable[str]:
     """Get entity ids for entities tied to a device."""
-    entity_reg = entity_registry.async_get(hass)
+    entity_reg = entity_registry.async_get(menuai)
     entries = entity_registry.async_entries_for_device(entity_reg, _device_id)
     return [entry.entity_id for entry in entries]
 
 
-def integration_entities(hass: HomeAssistant, entry_name: str) -> Iterable[str]:
+def integration_entities(menuai: menuai, entry_name: str) -> Iterable[str]:
     """Get entity ids for entities tied to an integration/domain.
 
     Provide entry_name as domain to get all entity id's for a integration/domain
@@ -1364,8 +1364,8 @@ def integration_entities(hass: HomeAssistant, entry_name: str) -> Iterable[str]:
 
     # first try if there are any config entries with a matching title
     entities: list[str] = []
-    ent_reg = entity_registry.async_get(hass)
-    for entry in hass.config_entries.async_entries():
+    ent_reg = entity_registry.async_get(menuai)
+    for entry in menuai.config_entries.async_entries():
         if entry.title != entry_name:
             continue
         entries = entity_registry.async_entries_for_config_entry(
@@ -1381,27 +1381,27 @@ def integration_entities(hass: HomeAssistant, entry_name: str) -> Iterable[str]:
 
     return [
         entity_id
-        for entity_id, info in entity_sources(hass).items()
+        for entity_id, info in entity_sources(menuai).items()
         if info["domain"] == entry_name
     ]
 
 
-def config_entry_id(hass: HomeAssistant, entity_id: str) -> str | None:
+def config_entry_id(menuai: menuai, entity_id: str) -> str | None:
     """Get an config entry ID from an entity ID."""
-    entity_reg = entity_registry.async_get(hass)
+    entity_reg = entity_registry.async_get(menuai)
     if entity := entity_reg.async_get(entity_id):
         return entity.config_entry_id
     return None
 
 
-def device_id(hass: HomeAssistant, entity_id_or_device_name: str) -> str | None:
+def device_id(menuai: menuai, entity_id_or_device_name: str) -> str | None:
     """Get a device ID from an entity ID or device name."""
-    entity_reg = entity_registry.async_get(hass)
+    entity_reg = entity_registry.async_get(menuai)
     entity = entity_reg.async_get(entity_id_or_device_name)
     if entity is not None:
         return entity.device_id
 
-    dev_reg = device_registry.async_get(hass)
+    dev_reg = device_registry.async_get(menuai)
     return next(
         (
             device_id
@@ -1413,13 +1413,13 @@ def device_id(hass: HomeAssistant, entity_id_or_device_name: str) -> str | None:
     )
 
 
-def device_name(hass: HomeAssistant, lookup_value: str) -> str | None:
+def device_name(menuai: menuai, lookup_value: str) -> str | None:
     """Get the device name from an device id, or entity id."""
-    device_reg = device_registry.async_get(hass)
+    device_reg = device_registry.async_get(menuai)
     if device := device_reg.async_get(lookup_value):
         return device.name_by_user or device.name
 
-    ent_reg = entity_registry.async_get(hass)
+    ent_reg = entity_registry.async_get(menuai)
     # Import here, not at top-level to avoid circular import
     from . import config_validation as cv  # pylint: disable=import-outside-toplevel
 
@@ -1435,15 +1435,15 @@ def device_name(hass: HomeAssistant, lookup_value: str) -> str | None:
     return None
 
 
-def device_attr(hass: HomeAssistant, device_or_entity_id: str, attr_name: str) -> Any:
+def device_attr(menuai: menuai, device_or_entity_id: str, attr_name: str) -> Any:
     """Get the device specific attribute."""
-    device_reg = device_registry.async_get(hass)
+    device_reg = device_registry.async_get(menuai)
     if not isinstance(device_or_entity_id, str):
         raise TemplateError("Must provide a device or entity ID")
     device = None
     if (
         "." in device_or_entity_id
-        and (_device_id := device_id(hass, device_or_entity_id)) is not None
+        and (_device_id := device_id(menuai, device_or_entity_id)) is not None
     ):
         device = device_reg.async_get(_device_id)
     elif "." not in device_or_entity_id:
@@ -1454,7 +1454,7 @@ def device_attr(hass: HomeAssistant, device_or_entity_id: str, attr_name: str) -
 
 
 def config_entry_attr(
-    hass: HomeAssistant, config_entry_id_: str, attr_name: str
+    menuai: menuai, config_entry_id_: str, attr_name: str
 ) -> Any:
     """Get config entry specific attribute."""
     if not isinstance(config_entry_id_, str):
@@ -1463,7 +1463,7 @@ def config_entry_attr(
     if attr_name not in ("domain", "title", "state", "source", "disabled_by"):
         raise TemplateError("Invalid config entry attribute")
 
-    config_entry = hass.config_entries.async_get_entry(config_entry_id_)
+    config_entry = menuai.config_entries.async_get_entry(config_entry_id_)
 
     if config_entry is None:
         return None
@@ -1472,36 +1472,36 @@ def config_entry_attr(
 
 
 def is_device_attr(
-    hass: HomeAssistant, device_or_entity_id: str, attr_name: str, attr_value: Any
+    menuai: menuai, device_or_entity_id: str, attr_name: str, attr_value: Any
 ) -> bool:
     """Test if a device's attribute is a specific value."""
-    return bool(device_attr(hass, device_or_entity_id, attr_name) == attr_value)
+    return bool(device_attr(menuai, device_or_entity_id, attr_name) == attr_value)
 
 
-def issues(hass: HomeAssistant) -> dict[tuple[str, str], dict[str, Any]]:
+def issues(menuai: menuai) -> dict[tuple[str, str], dict[str, Any]]:
     """Return all open issues."""
-    current_issues = issue_registry.async_get(hass).issues
+    current_issues = issue_registry.async_get(menuai).issues
     # Use JSON for safe representation
     return {k: v.to_json() for (k, v) in current_issues.items()}
 
 
-def issue(hass: HomeAssistant, domain: str, issue_id: str) -> dict[str, Any] | None:
+def issue(menuai: menuai, domain: str, issue_id: str) -> dict[str, Any] | None:
     """Get issue by domain and issue_id."""
-    result = issue_registry.async_get(hass).async_get_issue(domain, issue_id)
+    result = issue_registry.async_get(menuai).async_get_issue(domain, issue_id)
     if result:
         return result.to_json()
     return None
 
 
-def floors(hass: HomeAssistant) -> Iterable[str | None]:
+def floors(menuai: menuai) -> Iterable[str | None]:
     """Return all floors."""
-    floor_registry = fr.async_get(hass)
+    floor_registry = fr.async_get(menuai)
     return [floor.floor_id for floor in floor_registry.async_list_floors()]
 
 
-def floor_id(hass: HomeAssistant, lookup_value: Any) -> str | None:
+def floor_id(menuai: menuai, lookup_value: Any) -> str | None:
     """Get the floor ID from a floor or area name, alias, device id, or entity id."""
-    floor_registry = fr.async_get(hass)
+    floor_registry = fr.async_get(menuai)
     lookup_str = str(lookup_value)
     if floor := floor_registry.async_get_floor_by_name(lookup_str):
         return floor.floor_id
@@ -1509,22 +1509,22 @@ def floor_id(hass: HomeAssistant, lookup_value: Any) -> str | None:
     if floors_list:
         return floors_list[0].floor_id
 
-    if aid := area_id(hass, lookup_value):
-        area_reg = area_registry.async_get(hass)
+    if aid := area_id(menuai, lookup_value):
+        area_reg = area_registry.async_get(menuai)
         if area := area_reg.async_get_area(aid):
             return area.floor_id
 
     return None
 
 
-def floor_name(hass: HomeAssistant, lookup_value: str) -> str | None:
+def floor_name(menuai: menuai, lookup_value: str) -> str | None:
     """Get the floor name from a floor id."""
-    floor_registry = fr.async_get(hass)
+    floor_registry = fr.async_get(menuai)
     if floor := floor_registry.async_get_floor(lookup_value):
         return floor.name
 
-    if aid := area_id(hass, lookup_value):
-        area_reg = area_registry.async_get(hass)
+    if aid := area_id(menuai, lookup_value):
+        area_reg = area_registry.async_get(menuai)
         if (
             (area := area_reg.async_get_area(aid))
             and area.floor_id
@@ -1535,40 +1535,40 @@ def floor_name(hass: HomeAssistant, lookup_value: str) -> str | None:
     return None
 
 
-def floor_areas(hass: HomeAssistant, floor_id_or_name: str) -> Iterable[str]:
+def floor_areas(menuai: menuai, floor_id_or_name: str) -> Iterable[str]:
     """Return area IDs for a given floor ID or name."""
     _floor_id: str | None
     # If floor_name returns a value, we know the input was an ID, otherwise we
     # assume it's a name, and if it's neither, we return early
-    if floor_name(hass, floor_id_or_name) is not None:
+    if floor_name(menuai, floor_id_or_name) is not None:
         _floor_id = floor_id_or_name
     else:
-        _floor_id = floor_id(hass, floor_id_or_name)
+        _floor_id = floor_id(menuai, floor_id_or_name)
     if _floor_id is None:
         return []
 
-    area_reg = area_registry.async_get(hass)
+    area_reg = area_registry.async_get(menuai)
     entries = area_registry.async_entries_for_floor(area_reg, _floor_id)
     return [entry.id for entry in entries if entry.id]
 
 
-def floor_entities(hass: HomeAssistant, floor_id_or_name: str) -> Iterable[str]:
+def floor_entities(menuai: menuai, floor_id_or_name: str) -> Iterable[str]:
     """Return entity_ids for a given floor ID or name."""
     return [
         entity_id
-        for area_id in floor_areas(hass, floor_id_or_name)
-        for entity_id in area_entities(hass, area_id)
+        for area_id in floor_areas(menuai, floor_id_or_name)
+        for entity_id in area_entities(menuai, area_id)
     ]
 
 
-def areas(hass: HomeAssistant) -> Iterable[str | None]:
+def areas(menuai: menuai) -> Iterable[str | None]:
     """Return all areas."""
-    return list(area_registry.async_get(hass).areas)
+    return list(area_registry.async_get(menuai).areas)
 
 
-def area_id(hass: HomeAssistant, lookup_value: str) -> str | None:
+def area_id(menuai: menuai, lookup_value: str) -> str | None:
     """Get the area ID from an area name, alias, device id, or entity id."""
-    area_reg = area_registry.async_get(hass)
+    area_reg = area_registry.async_get(menuai)
     lookup_str = str(lookup_value)
     if area := area_reg.async_get_area_by_name(lookup_str):
         return area.id
@@ -1576,8 +1576,8 @@ def area_id(hass: HomeAssistant, lookup_value: str) -> str | None:
     if areas_list:
         return areas_list[0].id
 
-    ent_reg = entity_registry.async_get(hass)
-    dev_reg = device_registry.async_get(hass)
+    ent_reg = entity_registry.async_get(menuai)
+    dev_reg = device_registry.async_get(menuai)
     # Import here, not at top-level to avoid circular import
     from . import config_validation as cv  # pylint: disable=import-outside-toplevel
 
@@ -1608,14 +1608,14 @@ def _get_area_name(area_reg: area_registry.AreaRegistry, valid_area_id: str) -> 
     return area.name
 
 
-def area_name(hass: HomeAssistant, lookup_value: str) -> str | None:
+def area_name(menuai: menuai, lookup_value: str) -> str | None:
     """Get the area name from an area id, device id, or entity id."""
-    area_reg = area_registry.async_get(hass)
+    area_reg = area_registry.async_get(menuai)
     if area := area_reg.async_get_area(lookup_value):
         return area.name
 
-    dev_reg = device_registry.async_get(hass)
-    ent_reg = entity_registry.async_get(hass)
+    dev_reg = device_registry.async_get(menuai)
+    ent_reg = entity_registry.async_get(menuai)
     # Import here, not at top-level to avoid circular import
     from . import config_validation as cv  # pylint: disable=import-outside-toplevel
 
@@ -1643,23 +1643,23 @@ def area_name(hass: HomeAssistant, lookup_value: str) -> str | None:
     return None
 
 
-def area_entities(hass: HomeAssistant, area_id_or_name: str) -> Iterable[str]:
+def area_entities(menuai: menuai, area_id_or_name: str) -> Iterable[str]:
     """Return entities for a given area ID or name."""
     _area_id: str | None
     # if area_name returns a value, we know the input was an ID, otherwise we
     # assume it's a name, and if it's neither, we return early
-    if area_name(hass, area_id_or_name) is None:
-        _area_id = area_id(hass, area_id_or_name)
+    if area_name(menuai, area_id_or_name) is None:
+        _area_id = area_id(menuai, area_id_or_name)
     else:
         _area_id = area_id_or_name
     if _area_id is None:
         return []
-    ent_reg = entity_registry.async_get(hass)
+    ent_reg = entity_registry.async_get(menuai)
     entity_ids = [
         entry.entity_id
         for entry in entity_registry.async_entries_for_area(ent_reg, _area_id)
     ]
-    dev_reg = device_registry.async_get(hass)
+    dev_reg = device_registry.async_get(menuai)
     # We also need to add entities tied to a device in the area that don't themselves
     # have an area specified since they inherit the area from the device.
     entity_ids.extend(
@@ -1673,29 +1673,29 @@ def area_entities(hass: HomeAssistant, area_id_or_name: str) -> Iterable[str]:
     return entity_ids
 
 
-def area_devices(hass: HomeAssistant, area_id_or_name: str) -> Iterable[str]:
+def area_devices(menuai: menuai, area_id_or_name: str) -> Iterable[str]:
     """Return device IDs for a given area ID or name."""
     _area_id: str | None
     # if area_name returns a value, we know the input was an ID, otherwise we
     # assume it's a name, and if it's neither, we return early
-    if area_name(hass, area_id_or_name) is not None:
+    if area_name(menuai, area_id_or_name) is not None:
         _area_id = area_id_or_name
     else:
-        _area_id = area_id(hass, area_id_or_name)
+        _area_id = area_id(menuai, area_id_or_name)
     if _area_id is None:
         return []
-    dev_reg = device_registry.async_get(hass)
+    dev_reg = device_registry.async_get(menuai)
     entries = device_registry.async_entries_for_area(dev_reg, _area_id)
     return [entry.id for entry in entries]
 
 
-def labels(hass: HomeAssistant, lookup_value: Any = None) -> Iterable[str | None]:
+def labels(menuai: menuai, lookup_value: Any = None) -> Iterable[str | None]:
     """Return all labels, or those from a area ID, device ID, or entity ID."""
-    label_reg = label_registry.async_get(hass)
+    label_reg = label_registry.async_get(menuai)
     if lookup_value is None:
         return list(label_reg.labels)
 
-    ent_reg = entity_registry.async_get(hass)
+    ent_reg = entity_registry.async_get(menuai)
 
     # Import here, not at top-level to avoid circular import
     from . import config_validation as cv  # pylint: disable=import-outside-toplevel
@@ -1711,71 +1711,71 @@ def labels(hass: HomeAssistant, lookup_value: Any = None) -> Iterable[str | None
             return list(entity.labels)
 
     # Check if this could be a device ID
-    dev_reg = device_registry.async_get(hass)
+    dev_reg = device_registry.async_get(menuai)
     if device := dev_reg.async_get(lookup_value):
         return list(device.labels)
 
     # Check if this could be a area ID
-    area_reg = area_registry.async_get(hass)
+    area_reg = area_registry.async_get(menuai)
     if area := area_reg.async_get_area(lookup_value):
         return list(area.labels)
 
     return []
 
 
-def label_id(hass: HomeAssistant, lookup_value: Any) -> str | None:
+def label_id(menuai: menuai, lookup_value: Any) -> str | None:
     """Get the label ID from a label name."""
-    label_reg = label_registry.async_get(hass)
+    label_reg = label_registry.async_get(menuai)
     if label := label_reg.async_get_label_by_name(str(lookup_value)):
         return label.label_id
     return None
 
 
-def label_name(hass: HomeAssistant, lookup_value: str) -> str | None:
+def label_name(menuai: menuai, lookup_value: str) -> str | None:
     """Get the label name from a label ID."""
-    label_reg = label_registry.async_get(hass)
+    label_reg = label_registry.async_get(menuai)
     if label := label_reg.async_get_label(lookup_value):
         return label.name
     return None
 
 
-def _label_id_or_name(hass: HomeAssistant, label_id_or_name: str) -> str | None:
+def _label_id_or_name(menuai: menuai, label_id_or_name: str) -> str | None:
     """Get the label ID from a label name or ID."""
     # If label_name returns a value, we know the input was an ID, otherwise we
     # assume it's a name, and if it's neither, we return early.
-    if label_name(hass, label_id_or_name) is not None:
+    if label_name(menuai, label_id_or_name) is not None:
         return label_id_or_name
-    return label_id(hass, label_id_or_name)
+    return label_id(menuai, label_id_or_name)
 
 
-def label_areas(hass: HomeAssistant, label_id_or_name: str) -> Iterable[str]:
+def label_areas(menuai: menuai, label_id_or_name: str) -> Iterable[str]:
     """Return areas for a given label ID or name."""
-    if (_label_id := _label_id_or_name(hass, label_id_or_name)) is None:
+    if (_label_id := _label_id_or_name(menuai, label_id_or_name)) is None:
         return []
-    area_reg = area_registry.async_get(hass)
+    area_reg = area_registry.async_get(menuai)
     entries = area_registry.async_entries_for_label(area_reg, _label_id)
     return [entry.id for entry in entries]
 
 
-def label_devices(hass: HomeAssistant, label_id_or_name: str) -> Iterable[str]:
+def label_devices(menuai: menuai, label_id_or_name: str) -> Iterable[str]:
     """Return device IDs for a given label ID or name."""
-    if (_label_id := _label_id_or_name(hass, label_id_or_name)) is None:
+    if (_label_id := _label_id_or_name(menuai, label_id_or_name)) is None:
         return []
-    dev_reg = device_registry.async_get(hass)
+    dev_reg = device_registry.async_get(menuai)
     entries = device_registry.async_entries_for_label(dev_reg, _label_id)
     return [entry.id for entry in entries]
 
 
-def label_entities(hass: HomeAssistant, label_id_or_name: str) -> Iterable[str]:
+def label_entities(menuai: menuai, label_id_or_name: str) -> Iterable[str]:
     """Return entities for a given label ID or name."""
-    if (_label_id := _label_id_or_name(hass, label_id_or_name)) is None:
+    if (_label_id := _label_id_or_name(menuai, label_id_or_name)) is None:
         return []
-    ent_reg = entity_registry.async_get(hass)
+    ent_reg = entity_registry.async_get(menuai)
     entries = entity_registry.async_entries_for_label(ent_reg, _label_id)
     return [entry.entity_id for entry in entries]
 
 
-def closest(hass: HomeAssistant, *args: Any) -> State | None:
+def closest(menuai: menuai, *args: Any) -> State | None:
     """Find closest entity.
 
     Closest to home:
@@ -1799,12 +1799,12 @@ def closest(hass: HomeAssistant, *args: Any) -> State | None:
 
     """
     if len(args) == 1:
-        latitude = hass.config.latitude
-        longitude = hass.config.longitude
+        latitude = menuai.config.latitude
+        longitude = menuai.config.longitude
         entities = args[0]
 
     elif len(args) == 2:
-        point_state = _resolve_state(hass, args[0])
+        point_state = _resolve_state(menuai, args[0])
 
         if point_state is None:
             _LOGGER.warning("Closest:Unable to find state %s", args[0])
@@ -1835,20 +1835,20 @@ def closest(hass: HomeAssistant, *args: Any) -> State | None:
 
         entities = args[2]
 
-    states = expand(hass, entities)
+    states = expand(menuai, entities)
 
     # state will already be wrapped here
     return loc_helper.closest(latitude, longitude, states)
 
 
-def closest_filter(hass: HomeAssistant, *args: Any) -> State | None:
+def closest_filter(menuai: menuai, *args: Any) -> State | None:
     """Call closest as a filter. Need to reorder arguments."""
     new_args = list(args[1:])
     new_args.append(args[0])
-    return closest(hass, *new_args)
+    return closest(menuai, *new_args)
 
 
-def distance(hass: HomeAssistant, *args: Any) -> float | None:
+def distance(menuai: menuai, *args: Any) -> float | None:
     """Calculate distance.
 
     Will calculate distance from home to a point or between points.
@@ -1863,7 +1863,7 @@ def distance(hass: HomeAssistant, *args: Any) -> float | None:
         if isinstance(value, str) and not valid_entity_id(value):
             point_state = None
         else:
-            point_state = _resolve_state(hass, value)
+            point_state = _resolve_state(menuai, value)
 
         if point_state is None:
             # We expect this and next value to be lat&lng
@@ -1901,32 +1901,32 @@ def distance(hass: HomeAssistant, *args: Any) -> float | None:
         locations.append((latitude, longitude))
 
     if len(locations) == 1:
-        return hass.config.distance(*locations[0])
+        return menuai.config.distance(*locations[0])
 
-    return hass.config.units.length(
+    return menuai.config.units.length(
         location_util.distance(*locations[0] + locations[1]), UnitOfLength.METERS
     )
 
 
-def is_hidden_entity(hass: HomeAssistant, entity_id: str) -> bool:
+def is_hidden_entity(menuai: menuai, entity_id: str) -> bool:
     """Test if an entity is hidden."""
-    entity_reg = entity_registry.async_get(hass)
+    entity_reg = entity_registry.async_get(menuai)
     entry = entity_reg.async_get(entity_id)
     return entry is not None and entry.hidden
 
 
-def is_state(hass: HomeAssistant, entity_id: str, state: str | list[str]) -> bool:
+def is_state(menuai: menuai, entity_id: str, state: str | list[str]) -> bool:
     """Test if a state is a specific value."""
-    state_obj = _get_state(hass, entity_id)
+    state_obj = _get_state(menuai, entity_id)
     return state_obj is not None and (
         state_obj.state == state
         or (isinstance(state, list) and state_obj.state in state)
     )
 
 
-def is_state_attr(hass: HomeAssistant, entity_id: str, name: str, value: Any) -> bool:
+def is_state_attr(menuai: menuai, entity_id: str, name: str, value: Any) -> bool:
     """Test if a state's attribute is a specific value."""
-    if (state_obj := _get_state(hass, entity_id)) is not None:
+    if (state_obj := _get_state(menuai, entity_id)) is not None:
         attr = state_obj.attributes.get(name, _SENTINEL)
         if attr is _SENTINEL:
             return False
@@ -1934,23 +1934,23 @@ def is_state_attr(hass: HomeAssistant, entity_id: str, name: str, value: Any) ->
     return False
 
 
-def state_attr(hass: HomeAssistant, entity_id: str, name: str) -> Any:
+def state_attr(menuai: menuai, entity_id: str, name: str) -> Any:
     """Get a specific attribute from a state."""
-    if (state_obj := _get_state(hass, entity_id)) is not None:
+    if (state_obj := _get_state(menuai, entity_id)) is not None:
         return state_obj.attributes.get(name)
     return None
 
 
-def has_value(hass: HomeAssistant, entity_id: str) -> bool:
+def has_value(menuai: menuai, entity_id: str) -> bool:
     """Test if an entity has a valid value."""
-    state_obj = _get_state(hass, entity_id)
+    state_obj = _get_state(menuai, entity_id)
 
     return state_obj is not None and (
         state_obj.state not in [STATE_UNAVAILABLE, STATE_UNKNOWN]
     )
 
 
-def now(hass: HomeAssistant) -> datetime:
+def now(menuai: menuai) -> datetime:
     """Record fetching now."""
     if (render_info := _render_info.get()) is not None:
         render_info.has_time = True
@@ -1958,7 +1958,7 @@ def now(hass: HomeAssistant) -> datetime:
     return dt_util.now()
 
 
-def utcnow(hass: HomeAssistant) -> datetime:
+def utcnow(menuai: menuai) -> datetime:
     """Record fetching utcnow."""
     if (render_info := _render_info.get()) is not None:
         render_info.has_time = True
@@ -2684,7 +2684,7 @@ def random_every_time(context, values):
     return random.choice(values)
 
 
-def today_at(hass: HomeAssistant, time_str: str = "") -> datetime:
+def today_at(menuai: menuai, time_str: str = "") -> datetime:
     """Record fetching now where the time has been replaced with value."""
     if (render_info := _render_info.get()) is not None:
         render_info.has_time = True
@@ -2701,7 +2701,7 @@ def today_at(hass: HomeAssistant, time_str: str = "") -> datetime:
     return datetime.combine(today, time_today, today.tzinfo)
 
 
-def relative_time(hass: HomeAssistant, value: Any) -> Any:
+def relative_time(menuai: menuai, value: Any) -> Any:
     """Take a datetime and return its "age" as a string.
 
     The age can be in second, minute, hour, day, month or year. Only the
@@ -2728,7 +2728,7 @@ def relative_time(hass: HomeAssistant, value: Any) -> Any:
     return dt_util.get_age(value)
 
 
-def time_since(hass: HomeAssistant, value: Any | datetime, precision: int = 1) -> Any:
+def time_since(menuai: menuai, value: Any | datetime, precision: int = 1) -> Any:
     """Take a datetime and return its "age" as a string.
 
     The age can be in seconds, minutes, hours, days, months and year.
@@ -2750,7 +2750,7 @@ def time_since(hass: HomeAssistant, value: Any | datetime, precision: int = 1) -
     return dt_util.get_age(value, precision)
 
 
-def time_until(hass: HomeAssistant, value: Any | datetime, precision: int = 1) -> Any:
+def time_until(menuai: menuai, value: Any | datetime, precision: int = 1) -> Any:
     """Take a datetime and return the amount of time until that time as a string.
 
     The time until can be in seconds, minutes, hours, days, months and years.
@@ -3021,15 +3021,15 @@ def make_logging_undefined(
     return LoggingUndefined
 
 
-async def async_load_custom_templates(hass: HomeAssistant) -> None:
+async def async_load_custom_templates(menuai: menuai) -> None:
     """Load all custom jinja files under 5MiB into memory."""
-    custom_templates = await hass.async_add_executor_job(_load_custom_templates, hass)
-    _get_hass_loader(hass).sources = custom_templates
+    custom_templates = await menuai.async_add_executor_job(_load_custom_templates, menuai)
+    _get_menuai_loader(menuai).sources = custom_templates
 
 
-def _load_custom_templates(hass: HomeAssistant) -> dict[str, str]:
+def _load_custom_templates(menuai: menuai) -> dict[str, str]:
     result = {}
-    jinja_path = hass.config.path("custom_templates")
+    jinja_path = menuai.config.path("custom_templates")
     all_files = [
         item
         for item in pathlib.Path(jinja_path).rglob("*.jinja")
@@ -3042,16 +3042,16 @@ def _load_custom_templates(hass: HomeAssistant) -> dict[str, str]:
     return result
 
 
-@singleton(_HASS_LOADER)
-def _get_hass_loader(hass: HomeAssistant) -> HassLoader:
-    return HassLoader({})
+@singleton(_menuai_LOADER)
+def _get_menuai_loader(menuai: menuai) -> menuaiLoader:
+    return menuaiLoader({})
 
 
-class HassLoader(jinja2.BaseLoader):
+class menuaiLoader(jinja2.BaseLoader):
     """An in-memory jinja loader that keeps track of templates that need to be reloaded."""
 
     def __init__(self, sources: dict[str, str]) -> None:
-        """Initialize an empty HassLoader."""
+        """Initialize an empty menuaiLoader."""
         self._sources = sources
         self._reload = 0
 
@@ -3076,18 +3076,18 @@ class HassLoader(jinja2.BaseLoader):
 
 
 class TemplateEnvironment(ImmutableSandboxedEnvironment):
-    """The Home Assistant template environment."""
+    """The MenuAI template environment."""
 
     def __init__(
         self,
-        hass: HomeAssistant | None,
+        menuai: menuai | None,
         limited: bool | None = False,
         strict: bool | None = False,
         log_fn: Callable[[int, str], None] | None = None,
     ) -> None:
         """Initialise template environment."""
         super().__init__(undefined=make_logging_undefined(strict, log_fn))
-        self.hass = hass
+        self.menuai = menuai
         self.template_cache: weakref.WeakValueDictionary[
             str | jinja2.nodes.Template, CodeType | None
         ] = weakref.WeakValueDictionary()
@@ -3220,118 +3220,118 @@ class TemplateEnvironment(ImmutableSandboxedEnvironment):
         self.tests["string_like"] = _is_string_like
         self.tests["tuple"] = _is_tuple
 
-        if hass is None:
+        if menuai is None:
             return
 
-        # This environment has access to hass, attach its loader to enable imports.
-        self.loader = _get_hass_loader(hass)
+        # This environment has access to menuai, attach its loader to enable imports.
+        self.loader = _get_menuai_loader(menuai)
 
         # We mark these as a context functions to ensure they get
         # evaluated fresh with every execution, rather than executed
         # at compile time and the value stored. The context itself
-        # can be discarded, we only need to get at the hass object.
-        def hassfunction[**_P, _R](
-            func: Callable[Concatenate[HomeAssistant, _P], _R],
+        # can be discarded, we only need to get at the menuai object.
+        def menuaifunction[**_P, _R](
+            func: Callable[Concatenate[menuai, _P], _R],
             jinja_context: Callable[
                 [Callable[Concatenate[Any, _P], _R]],
                 Callable[Concatenate[Any, _P], _R],
             ] = pass_context,
         ) -> Callable[Concatenate[Any, _P], _R]:
-            """Wrap function that depend on hass."""
+            """Wrap function that depend on menuai."""
 
             @wraps(func)
             def wrapper(_: Any, *args: _P.args, **kwargs: _P.kwargs) -> _R:
-                return func(hass, *args, **kwargs)
+                return func(menuai, *args, **kwargs)
 
             return jinja_context(wrapper)
 
         # Area extensions
 
-        self.globals["areas"] = hassfunction(areas)
+        self.globals["areas"] = menuaifunction(areas)
 
-        self.globals["area_id"] = hassfunction(area_id)
+        self.globals["area_id"] = menuaifunction(area_id)
         self.filters["area_id"] = self.globals["area_id"]
 
-        self.globals["area_name"] = hassfunction(area_name)
+        self.globals["area_name"] = menuaifunction(area_name)
         self.filters["area_name"] = self.globals["area_name"]
 
-        self.globals["area_entities"] = hassfunction(area_entities)
+        self.globals["area_entities"] = menuaifunction(area_entities)
         self.filters["area_entities"] = self.globals["area_entities"]
 
-        self.globals["area_devices"] = hassfunction(area_devices)
+        self.globals["area_devices"] = menuaifunction(area_devices)
         self.filters["area_devices"] = self.globals["area_devices"]
 
         # Floor extensions
 
-        self.globals["floors"] = hassfunction(floors)
+        self.globals["floors"] = menuaifunction(floors)
         self.filters["floors"] = self.globals["floors"]
 
-        self.globals["floor_id"] = hassfunction(floor_id)
+        self.globals["floor_id"] = menuaifunction(floor_id)
         self.filters["floor_id"] = self.globals["floor_id"]
 
-        self.globals["floor_name"] = hassfunction(floor_name)
+        self.globals["floor_name"] = menuaifunction(floor_name)
         self.filters["floor_name"] = self.globals["floor_name"]
 
-        self.globals["floor_areas"] = hassfunction(floor_areas)
+        self.globals["floor_areas"] = menuaifunction(floor_areas)
         self.filters["floor_areas"] = self.globals["floor_areas"]
 
-        self.globals["floor_entities"] = hassfunction(floor_entities)
+        self.globals["floor_entities"] = menuaifunction(floor_entities)
         self.filters["floor_entities"] = self.globals["floor_entities"]
 
         # Integration extensions
 
-        self.globals["integration_entities"] = hassfunction(integration_entities)
+        self.globals["integration_entities"] = menuaifunction(integration_entities)
         self.filters["integration_entities"] = self.globals["integration_entities"]
 
         # Config entry extensions
 
-        self.globals["config_entry_attr"] = hassfunction(config_entry_attr)
+        self.globals["config_entry_attr"] = menuaifunction(config_entry_attr)
         self.filters["config_entry_attr"] = self.globals["config_entry_attr"]
 
-        self.globals["config_entry_id"] = hassfunction(config_entry_id)
+        self.globals["config_entry_id"] = menuaifunction(config_entry_id)
         self.filters["config_entry_id"] = self.globals["config_entry_id"]
 
         # Device extensions
 
-        self.globals["device_name"] = hassfunction(device_name)
+        self.globals["device_name"] = menuaifunction(device_name)
         self.filters["device_name"] = self.globals["device_name"]
 
-        self.globals["device_attr"] = hassfunction(device_attr)
+        self.globals["device_attr"] = menuaifunction(device_attr)
         self.filters["device_attr"] = self.globals["device_attr"]
 
-        self.globals["device_entities"] = hassfunction(device_entities)
+        self.globals["device_entities"] = menuaifunction(device_entities)
         self.filters["device_entities"] = self.globals["device_entities"]
 
-        self.globals["is_device_attr"] = hassfunction(is_device_attr)
-        self.tests["is_device_attr"] = hassfunction(is_device_attr, pass_eval_context)
+        self.globals["is_device_attr"] = menuaifunction(is_device_attr)
+        self.tests["is_device_attr"] = menuaifunction(is_device_attr, pass_eval_context)
 
-        self.globals["device_id"] = hassfunction(device_id)
+        self.globals["device_id"] = menuaifunction(device_id)
         self.filters["device_id"] = self.globals["device_id"]
 
         # Label extensions
 
-        self.globals["labels"] = hassfunction(labels)
+        self.globals["labels"] = menuaifunction(labels)
         self.filters["labels"] = self.globals["labels"]
 
-        self.globals["label_id"] = hassfunction(label_id)
+        self.globals["label_id"] = menuaifunction(label_id)
         self.filters["label_id"] = self.globals["label_id"]
 
-        self.globals["label_name"] = hassfunction(label_name)
+        self.globals["label_name"] = menuaifunction(label_name)
         self.filters["label_name"] = self.globals["label_name"]
 
-        self.globals["label_areas"] = hassfunction(label_areas)
+        self.globals["label_areas"] = menuaifunction(label_areas)
         self.filters["label_areas"] = self.globals["label_areas"]
 
-        self.globals["label_devices"] = hassfunction(label_devices)
+        self.globals["label_devices"] = menuaifunction(label_devices)
         self.filters["label_devices"] = self.globals["label_devices"]
 
-        self.globals["label_entities"] = hassfunction(label_entities)
+        self.globals["label_entities"] = menuaifunction(label_entities)
         self.filters["label_entities"] = self.globals["label_entities"]
 
         # Issue extensions
 
-        self.globals["issues"] = hassfunction(issues)
-        self.globals["issue"] = hassfunction(issue)
+        self.globals["issues"] = menuaifunction(issues)
+        self.globals["issue"] = menuaifunction(issue)
         self.filters["issue"] = self.globals["issue"]
 
         if limited:
@@ -3345,7 +3345,7 @@ class TemplateEnvironment(ImmutableSandboxedEnvironment):
 
                 return warn_unsupported
 
-            hass_globals = [
+            menuai_globals = [
                 "area_id",
                 "area_name",
                 "closest",
@@ -3372,7 +3372,7 @@ class TemplateEnvironment(ImmutableSandboxedEnvironment):
                 "today_at",
                 "utcnow",
             ]
-            hass_filters = [
+            menuai_filters = [
                 "area_id",
                 "area_name",
                 "closest",
@@ -3384,32 +3384,32 @@ class TemplateEnvironment(ImmutableSandboxedEnvironment):
                 "label_id",
                 "label_name",
             ]
-            hass_tests = [
+            menuai_tests = [
                 "has_value",
                 "is_hidden_entity",
                 "is_state_attr",
                 "is_state",
             ]
-            for glob in hass_globals:
+            for glob in menuai_globals:
                 self.globals[glob] = unsupported(glob)
-            for filt in hass_filters:
+            for filt in menuai_filters:
                 self.filters[filt] = unsupported(filt)
-            for test in hass_tests:
+            for test in menuai_tests:
                 self.filters[test] = unsupported(test)
             return
 
-        self.globals["closest"] = hassfunction(closest)
-        self.globals["distance"] = hassfunction(distance)
-        self.globals["expand"] = hassfunction(expand)
-        self.globals["has_value"] = hassfunction(has_value)
-        self.globals["now"] = hassfunction(now)
-        self.globals["relative_time"] = hassfunction(relative_time)
-        self.globals["time_since"] = hassfunction(time_since)
-        self.globals["time_until"] = hassfunction(time_until)
-        self.globals["today_at"] = hassfunction(today_at)
-        self.globals["utcnow"] = hassfunction(utcnow)
+        self.globals["closest"] = menuaifunction(closest)
+        self.globals["distance"] = menuaifunction(distance)
+        self.globals["expand"] = menuaifunction(expand)
+        self.globals["has_value"] = menuaifunction(has_value)
+        self.globals["now"] = menuaifunction(now)
+        self.globals["relative_time"] = menuaifunction(relative_time)
+        self.globals["time_since"] = menuaifunction(time_since)
+        self.globals["time_until"] = menuaifunction(time_until)
+        self.globals["today_at"] = menuaifunction(today_at)
+        self.globals["utcnow"] = menuaifunction(utcnow)
 
-        self.filters["closest"] = hassfunction(closest_filter)
+        self.filters["closest"] = menuaifunction(closest_filter)
         self.filters["expand"] = self.globals["expand"]
         self.filters["has_value"] = self.globals["has_value"]
         self.filters["relative_time"] = self.globals["relative_time"]
@@ -3417,27 +3417,27 @@ class TemplateEnvironment(ImmutableSandboxedEnvironment):
         self.filters["time_until"] = self.globals["time_until"]
         self.filters["today_at"] = self.globals["today_at"]
 
-        self.tests["has_value"] = hassfunction(has_value, pass_eval_context)
+        self.tests["has_value"] = menuaifunction(has_value, pass_eval_context)
 
         # Entity extensions
 
-        self.globals["is_hidden_entity"] = hassfunction(is_hidden_entity)
-        self.tests["is_hidden_entity"] = hassfunction(
+        self.globals["is_hidden_entity"] = menuaifunction(is_hidden_entity)
+        self.tests["is_hidden_entity"] = menuaifunction(
             is_hidden_entity, pass_eval_context
         )
 
         # State extensions
 
-        self.globals["is_state_attr"] = hassfunction(is_state_attr)
-        self.globals["is_state"] = hassfunction(is_state)
-        self.globals["state_attr"] = hassfunction(state_attr)
-        self.globals["state_translated"] = StateTranslated(hass)
-        self.globals["states"] = AllStates(hass)
+        self.globals["is_state_attr"] = menuaifunction(is_state_attr)
+        self.globals["is_state"] = menuaifunction(is_state)
+        self.globals["state_attr"] = menuaifunction(state_attr)
+        self.globals["state_translated"] = StateTranslated(menuai)
+        self.globals["states"] = AllStates(menuai)
         self.filters["state_attr"] = self.globals["state_attr"]
         self.filters["state_translated"] = self.globals["state_translated"]
         self.filters["states"] = self.globals["states"]
-        self.tests["is_state_attr"] = hassfunction(is_state_attr, pass_eval_context)
-        self.tests["is_state"] = hassfunction(is_state, pass_eval_context)
+        self.tests["is_state_attr"] = menuaifunction(is_state_attr, pass_eval_context)
+        self.tests["is_state"] = menuaifunction(is_state, pass_eval_context)
 
     def is_safe_callable(self, obj):
         """Test if callback is safe."""
@@ -3508,4 +3508,4 @@ class TemplateEnvironment(ImmutableSandboxedEnvironment):
         return compiled
 
 
-_NO_HASS_ENV = TemplateEnvironment(None)
+_NO_menuai_ENV = TemplateEnvironment(None)

@@ -1,10 +1,10 @@
-"""Test Home Assistant percentage conversions."""
+"""Test MenuAI percentage conversions."""
 
 import math
 
 import pytest
 
-from homeassistant.util.percentage import (
+from menuai.util.percentage import (
     ordered_list_item_to_percentage,
     percentage_to_ordered_list_item,
     percentage_to_ranged_value,

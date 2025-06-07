@@ -4,7 +4,7 @@ DEFAULT_NAME = "Rachio"
 
 DOMAIN = "rachio"
 
-CONF_CUSTOM_URL = "hass_url_override"
+CONF_CUSTOM_URL = "menuai_url_override"
 # Manual run length
 CONF_MANUAL_RUN_MINS = "manual_run_mins"
 DEFAULT_MANUAL_RUN_MINS = 10
@@ -109,4 +109,4 @@ LISTEN_EVENT_TYPES = [
     "RAIN_SENSOR_DETECTION_EVENT",
     "SCHEDULE_STATUS_EVENT",
 ]
-WEBHOOK_CONST_ID = "homeassistant.rachio:"
+WEBHOOK_CONST_ID = "menuai.rachio:"

@@ -7,10 +7,10 @@ from typing import TYPE_CHECKING
 
 from zha.application.const import ZHA_EVENT
 
-from homeassistant.components.logbook import LOGBOOK_ENTRY_MESSAGE, LOGBOOK_ENTRY_NAME
-from homeassistant.const import ATTR_COMMAND, ATTR_DEVICE_ID
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
+from menuai.components.logbook import LOGBOOK_ENTRY_MESSAGE, LOGBOOK_ENTRY_NAME
+from menuai.const import ATTR_COMMAND, ATTR_DEVICE_ID
+from menuai.core import Event, menuai, callback
+from menuai.helpers import device_registry as dr
 
 from .const import DOMAIN
 from .helpers import async_get_zha_device_proxy
@@ -21,11 +21,11 @@ if TYPE_CHECKING:
 
 @callback
 def async_describe_events(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_describe_event: Callable[[str, str, Callable[[Event], dict[str, str]]], None],
 ) -> None:
     """Describe logbook events."""
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
 
     @callback
     def async_describe_zha_event(event: Event) -> dict[str, str]:
@@ -42,7 +42,7 @@ def async_describe_events(
             if device:
                 device_name = device.name_by_user or device.name or "Unknown device"
             zha_device = async_get_zha_device_proxy(
-                hass, event.data[ATTR_DEVICE_ID]
+                menuai, event.data[ATTR_DEVICE_ID]
             ).device
         except (KeyError, AttributeError):
             pass

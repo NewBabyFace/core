@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from thinqconnect import ThinQAPIException
 
-from homeassistant.components.lg_thinq.const import CONF_CONNECT_CLIENT_ID, DOMAIN
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_COUNTRY
+from menuai.components.lg_thinq.const import CONF_CONNECT_CLIENT_ID, DOMAIN
+from menuai.const import CONF_ACCESS_TOKEN, CONF_COUNTRY
 
 from .const import MOCK_CONNECT_CLIENT_ID, MOCK_COUNTRY, MOCK_PAT, MOCK_UUID
 
@@ -49,7 +49,7 @@ def mock_config_entry() -> MockConfigEntry:
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Mock setting up a config entry."""
     with patch(
-        "homeassistant.components.lg_thinq.async_setup_entry", return_value=True
+        "menuai.components.lg_thinq.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -60,7 +60,7 @@ def mock_uuid() -> Generator[AsyncMock]:
     with (
         patch("uuid.uuid4", autospec=True, return_value=MOCK_UUID) as mock_uuid,
         patch(
-            "homeassistant.components.lg_thinq.config_flow.uuid.uuid4",
+            "menuai.components.lg_thinq.config_flow.uuid.uuid4",
             new=mock_uuid,
         ),
     ):
@@ -71,9 +71,9 @@ def mock_uuid() -> Generator[AsyncMock]:
 def mock_config_thinq_api() -> Generator[AsyncMock]:
     """Mock a thinq api."""
     with (
-        patch("homeassistant.components.lg_thinq.ThinQApi", autospec=True) as mock_api,
+        patch("menuai.components.lg_thinq.ThinQApi", autospec=True) as mock_api,
         patch(
-            "homeassistant.components.lg_thinq.config_flow.ThinQApi",
+            "menuai.components.lg_thinq.config_flow.ThinQApi",
             new=mock_api,
         ),
     ):
@@ -96,7 +96,7 @@ def mock_invalid_thinq_api(mock_config_thinq_api: AsyncMock) -> AsyncMock:
 @pytest.fixture
 def mock_thinq_api(mock_thinq_mqtt_client: None) -> Generator[AsyncMock]:
     """Mock a thinq api."""
-    with patch("homeassistant.components.lg_thinq.ThinQApi", autospec=True) as mock_api:
+    with patch("menuai.components.lg_thinq.ThinQApi", autospec=True) as mock_api:
         thinq_api = mock_api.return_value
         thinq_api.async_get_device_list.return_value = [
             load_json_object_fixture("air_conditioner/device.json", DOMAIN)
@@ -114,7 +114,7 @@ def mock_thinq_api(mock_thinq_mqtt_client: None) -> Generator[AsyncMock]:
 def mock_thinq_mqtt_client() -> Generator[None]:
     """Mock a thinq mqtt client."""
     with patch(
-        "homeassistant.components.lg_thinq.mqtt.ThinQMQTTClient",
+        "menuai.components.lg_thinq.mqtt.ThinQMQTTClient",
         autospec=True,
         return_value=True,
     ):

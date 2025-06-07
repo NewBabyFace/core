@@ -5,20 +5,20 @@ from dataclasses import dataclass
 
 from asyncarve import ArveSensProData
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
     CONCENTRATION_PARTS_PER_MILLION,
     PERCENTAGE,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import ArveConfigEntry
 from .entity import ArveDeviceEntity
@@ -83,7 +83,7 @@ SENSORS: tuple[ArveDeviceEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ArveConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

@@ -8,8 +8,8 @@ import logging
 from hole import Hole
 from hole.exceptions import HoleError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_API_KEY,
     CONF_HOST,
     CONF_LOCATION,
@@ -18,11 +18,11 @@ from homeassistant.const import (
     CONF_VERIFY_SSL,
     Platform,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.core import menuai, callback
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers import entity_registry as er
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import CONF_STATISTICS_ONLY, DOMAIN, MIN_TIME_BETWEEN_UPDATES
 
@@ -47,7 +47,7 @@ class PiHoleData:
     coordinator: DataUpdateCoordinator[None]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: PiHoleConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: PiHoleConfigEntry) -> bool:
     """Set up Pi-hole entry."""
     name = entry.data[CONF_NAME]
     host = entry.data[CONF_HOST]
@@ -60,7 +60,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: PiHoleConfigEntry) -> bo
     if CONF_STATISTICS_ONLY in entry.data:
         entry_data = entry.data.copy()
         entry_data.pop(CONF_STATISTICS_ONLY)
-        hass.config_entries.async_update_entry(entry, data=entry_data)
+        menuai.config_entries.async_update_entry(entry, data=entry_data)
 
     _LOGGER.debug("Setting up %s integration with host %s", DOMAIN, host)
 
@@ -94,9 +94,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: PiHoleConfigEntry) -> bo
 
         return None
 
-    await er.async_migrate_entries(hass, entry.entry_id, update_unique_id)
+    await er.async_migrate_entries(menuai, entry.entry_id, update_unique_id)
 
-    session = async_get_clientsession(hass, verify_tls)
+    session = async_get_clientsession(menuai, verify_tls)
     api = Hole(
         host,
         session,
@@ -116,7 +116,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: PiHoleConfigEntry) -> bo
             raise ConfigEntryAuthFailed
 
     coordinator = DataUpdateCoordinator(
-        hass,
+        menuai,
         _LOGGER,
         config_entry=entry,
         name=name,
@@ -128,11 +128,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: PiHoleConfigEntry) -> bo
 
     entry.runtime_data = PiHoleData(api, coordinator)
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload Pi-hole entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

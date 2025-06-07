@@ -4,7 +4,7 @@
   "codeowners": ["@Bre77"],
   "documentation": "https://www.home-assistant.io/integrations/splunk",
   "iot_class": "local_push",
-  "loggers": ["hass_splunk"],
+  "loggers": ["menuai_splunk"],
   "quality_scale": "legacy",
-  "requirements": ["hass-splunk==0.1.1"]
+  "requirements": ["menuai-splunk==0.1.1"]
 }

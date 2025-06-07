@@ -6,15 +6,15 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import (
+from menuai.components.switch import SwitchEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     async_get_current_platform,
 )
-from homeassistant.helpers.typing import VolDictType
+from menuai.helpers.typing import VolDictType
 
 from .const import DOMAIN
 from .coordinator import MicroBotDataUpdateCoordinator
@@ -29,12 +29,12 @@ CALIBRATE_SCHEMA: VolDictType = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up MicroBot based on a config entry."""
-    coordinator: MicroBotDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: MicroBotDataUpdateCoordinator = menuai.data[DOMAIN][entry.entry_id]
     async_add_entities([MicroBotBinarySwitch(coordinator, entry)])
     platform = async_get_current_platform()
     platform.async_register_entity_service(

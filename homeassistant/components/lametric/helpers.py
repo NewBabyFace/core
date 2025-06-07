@@ -7,9 +7,9 @@ from typing import Any, Concatenate
 
 from demetriek import LaMetricConnectionError, LaMetricError
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr
 
 from .const import DOMAIN
 from .coordinator import LaMetricDataUpdateCoordinator
@@ -35,12 +35,12 @@ def lametric_exception_handler[_LaMetricEntityT: LaMetricEntity, **_P](
         except LaMetricConnectionError as error:
             self.coordinator.last_update_success = False
             self.coordinator.async_update_listeners()
-            raise HomeAssistantError(
+            raise menuaiError(
                 "Error communicating with the LaMetric device"
             ) from error
 
         except LaMetricError as error:
-            raise HomeAssistantError(
+            raise menuaiError(
                 "Invalid response from the LaMetric device"
             ) from error
 
@@ -49,21 +49,21 @@ def lametric_exception_handler[_LaMetricEntityT: LaMetricEntity, **_P](
 
 @callback
 def async_get_coordinator_by_device_id(
-    hass: HomeAssistant, device_id: str
+    menuai: menuai, device_id: str
 ) -> LaMetricDataUpdateCoordinator:
     """Get the LaMetric coordinator for this device ID."""
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
 
     if (device_entry := device_registry.async_get(device_id)) is None:
         raise ValueError(f"Unknown LaMetric device ID: {device_id}")
 
     for entry_id in device_entry.config_entries:
         if (
-            (entry := hass.config_entries.async_get_entry(entry_id))
+            (entry := menuai.config_entries.async_get_entry(entry_id))
             and entry.domain == DOMAIN
-            and entry.entry_id in hass.data[DOMAIN]
+            and entry.entry_id in menuai.data[DOMAIN]
         ):
-            coordinator: LaMetricDataUpdateCoordinator = hass.data[DOMAIN][
+            coordinator: LaMetricDataUpdateCoordinator = menuai.data[DOMAIN][
                 entry.entry_id
             ]
             return coordinator

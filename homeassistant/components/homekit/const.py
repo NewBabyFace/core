@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from homeassistant.const import CONF_DEVICES
-from homeassistant.util.signal_type import SignalTypeFormat
+from menuai.const import CONF_DEVICES
+from menuai.util.signal_type import SignalTypeFormat
 
 # #### Misc ####
 DEBOUNCE_TIMEOUT = 0.5
@@ -112,11 +112,11 @@ SERVICE_HOMEKIT_UNPAIR = "unpair"
 
 # #### String Constants ####
 BRIDGE_MODEL = "Bridge"
-BRIDGE_NAME = "Home Assistant Bridge"
-SHORT_BRIDGE_NAME = "HASS Bridge"
-SHORT_ACCESSORY_NAME = "HASS Accessory"
+BRIDGE_NAME = "MenuAI Bridge"
+SHORT_BRIDGE_NAME = "menuai Bridge"
+SHORT_ACCESSORY_NAME = "menuai Accessory"
 BRIDGE_SERIAL_NUMBER = "homekit.bridge"
-MANUFACTURER = "Home Assistant"
+MANUFACTURER = "MenuAI"
 
 # #### Switch Types ####
 TYPE_FAUCET = "faucet"

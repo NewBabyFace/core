@@ -13,8 +13,8 @@ from jsonrpc_base.jsonrpc import ProtocolError, TransportError
 from pykodi import CannotConnectError
 import voluptuous as vol
 
-from homeassistant.components import media_source
-from homeassistant.components.media_player import (
+from menuai.components import media_source
+from menuai.components.media_player import (
     PLATFORM_SCHEMA as MEDIA_PLAYER_PLATFORM_SCHEMA,
     BrowseError,
     BrowseMedia,
@@ -24,8 +24,8 @@ from homeassistant.components.media_player import (
     MediaType,
     async_process_play_media_url,
 )
-from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import SOURCE_IMPORT, ConfigEntry
+from menuai.const import (
     ATTR_ENTITY_ID,
     CONF_DEVICE_ID,
     CONF_HOST,
@@ -37,23 +37,23 @@ from homeassistant.const import (
     CONF_TIMEOUT,
     CONF_TYPE,
     CONF_USERNAME,
-    EVENT_HOMEASSISTANT_STARTED,
+    EVENT_menuai_STARTED,
 )
-from homeassistant.core import CoreState, HomeAssistant, callback
-from homeassistant.helpers import (
+from menuai.core import CoreState, menuai, callback
+from menuai.helpers import (
     config_validation as cv,
     device_registry as dr,
     entity_platform,
 )
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import (
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     AddEntitiesCallback,
 )
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.network import is_internal_request
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType, VolDictType
-from homeassistant.util import dt as dt_util
+from menuai.helpers.event import async_track_time_interval
+from menuai.helpers.network import is_internal_request
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType, VolDictType
+from menuai.util import dt as dt_util
 
 from .browse_media import (
     build_item_response,
@@ -162,16 +162,16 @@ KODI_CALL_METHOD_SCHEMA = cv.make_entity_service_schema(
 )
 
 
-def find_matching_config_entries_for_host(hass, host):
+def find_matching_config_entries_for_host(menuai, host):
     """Search existing config entries for one matching the host."""
-    for entry in hass.config_entries.async_entries(DOMAIN):
+    for entry in menuai.config_entries.async_entries(DOMAIN):
         if entry.data[CONF_HOST] == host:
             return entry
     return None
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -182,7 +182,7 @@ async def async_setup_platform(
         return
 
     host = config[CONF_HOST]
-    if find_matching_config_entries_for_host(hass, host):
+    if find_matching_config_entries_for_host(menuai, host):
         return
 
     websocket = config.get(CONF_ENABLE_WEBSOCKET)
@@ -199,15 +199,15 @@ async def async_setup_platform(
         CONF_TIMEOUT: config.get(CONF_TIMEOUT),
     }
 
-    hass.async_create_task(
-        hass.config_entries.flow.async_init(
+    menuai.async_create_task(
+        menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": SOURCE_IMPORT}, data=entry_data
         )
     )
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -220,7 +220,7 @@ async def async_setup_entry(
         SERVICE_CALL_METHOD, KODI_CALL_METHOD_SCHEMA, "async_call_method"
     )
 
-    data = hass.data[DOMAIN][config_entry.entry_id]
+    data = menuai.data[DOMAIN][config_entry.entry_id]
     connection = data[DATA_CONNECTION]
     kodi = data[DATA_KODI]
     name = config_entry.data[CONF_NAME]
@@ -350,7 +350,7 @@ class KodiEntity(MediaPlayerEntity):
     @callback
     def async_on_key_press(self, sender, data):
         """Handle a incoming key press notification."""
-        self.hass.bus.async_fire(
+        self.menuai.bus.async_fire(
             f"{DOMAIN}_keypress",
             {
                 CONF_TYPE: "keypress",
@@ -385,7 +385,7 @@ class KodiEntity(MediaPlayerEntity):
 
         return MediaPlayerState.PLAYING
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Connect the websocket if needed."""
         if not self._connection.can_subscribe:
             return
@@ -398,18 +398,18 @@ class KodiEntity(MediaPlayerEntity):
             await self._async_connect_websocket_if_disconnected()
             self.async_on_remove(
                 async_track_time_interval(
-                    self.hass,
+                    self.menuai,
                     self._async_connect_websocket_if_disconnected,
                     WEBSOCKET_WATCHDOG_INTERVAL,
                 )
             )
 
-        # If Home Assistant is already in a running state, start the watchdog
-        # immediately, else trigger it after Home Assistant has finished starting.
-        if self.hass.state is CoreState.running:
+        # If MenuAI is already in a running state, start the watchdog
+        # immediately, else trigger it after MenuAI has finished starting.
+        if self.menuai.state is CoreState.running:
             await start_watchdog()
         else:
-            self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, start_watchdog)
+            self.menuai.bus.async_listen_once(EVENT_menuai_STARTED, start_watchdog)
 
     async def _on_ws_connected(self):
         """Call after ws is connected."""
@@ -418,7 +418,7 @@ class KodiEntity(MediaPlayerEntity):
 
         version = (await self._kodi.get_application_properties(["version"]))["version"]
         sw_version = f"{version['major']}.{version['minor']}"
-        dev_reg = dr.async_get(self.hass)
+        dev_reg = dr.async_get(self.menuai)
         device = dev_reg.async_get_device(identifiers={(DOMAIN, self.unique_id)})
         dev_reg.async_update_device(device.id, sw_version=sw_version)
         self._device_id = device.id
@@ -656,12 +656,12 @@ class KodiEntity(MediaPlayerEntity):
     async def async_turn_on(self) -> None:
         """Turn the media player on."""
         _LOGGER.debug("Firing event to turn on device")
-        self.hass.bus.async_fire(EVENT_TURN_ON, {ATTR_ENTITY_ID: self.entity_id})
+        self.menuai.bus.async_fire(EVENT_TURN_ON, {ATTR_ENTITY_ID: self.entity_id})
 
     async def async_turn_off(self) -> None:
         """Turn the media player off."""
         _LOGGER.debug("Firing event to turn off device")
-        self.hass.bus.async_fire(EVENT_TURN_OFF, {ATTR_ENTITY_ID: self.entity_id})
+        self.menuai.bus.async_fire(EVENT_TURN_OFF, {ATTR_ENTITY_ID: self.entity_id})
 
     @cmd
     async def async_volume_up(self) -> None:
@@ -726,7 +726,7 @@ class KodiEntity(MediaPlayerEntity):
         if media_source.is_media_source_id(media_id):
             media_type = MediaType.URL
             play_item = await media_source.async_resolve_media(
-                self.hass, media_id, self.entity_id
+                self.menuai, media_id, self.entity_id
             )
             media_id = play_item.url
 
@@ -758,7 +758,7 @@ class KodiEntity(MediaPlayerEntity):
                 {MAP_KODI_MEDIA_TYPES[media_type_lower]: int(media_id)}
             )
         else:
-            media_id = async_process_play_media_url(self.hass, media_id)
+            media_id = async_process_play_media_url(self.menuai, media_id)
 
             await self._kodi.play_file(media_id)
 
@@ -802,7 +802,7 @@ class KodiEntity(MediaPlayerEntity):
                 "input": {"method": method, "params": kwargs},
             }
             _LOGGER.debug("EVENT kodi_call_method_result: %s", event_data)
-            self.hass.bus.async_fire(
+            self.menuai.bus.async_fire(
                 EVENT_KODI_CALL_METHOD_RESULT, event_data=event_data
             )
         return result
@@ -925,7 +925,7 @@ class KodiEntity(MediaPlayerEntity):
         media_content_id: str | None = None,
     ) -> BrowseMedia:
         """Implement the websocket media browsing helper."""
-        is_internal = is_internal_request(self.hass)
+        is_internal = is_internal_request(self.menuai)
 
         async def _get_thumbnail_url(
             media_content_type,
@@ -943,11 +943,11 @@ class KodiEntity(MediaPlayerEntity):
             )
 
         if media_content_type in [None, "library"]:
-            return await library_payload(self.hass)
+            return await library_payload(self.menuai)
 
         if media_content_id and media_source.is_media_source_id(media_content_id):
             return await media_source.async_browse_media(
-                self.hass, media_content_id, content_filter=media_source_content_filter
+                self.menuai, media_content_id, content_filter=media_source_content_filter
             )
 
         payload = {

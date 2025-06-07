@@ -16,14 +16,14 @@ from pysiaalarm import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_PORT, CONF_PROTOCOL
-from homeassistant.core import callback
+from menuai.const import CONF_PORT, CONF_PROTOCOL
+from menuai.core import callback
 
 from .const import (
     CONF_ACCOUNT,
@@ -189,7 +189,7 @@ class SIAOptionsFlowHandler(OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Manage the SIA options."""
-        self.hub = self.hass.data[DOMAIN][self.config_entry.entry_id]
+        self.hub = self.menuai.data[DOMAIN][self.config_entry.entry_id]
         assert self.hub is not None
         assert self.hub.sia_accounts is not None
         self.accounts_todo = [a.account_id for a in self.hub.sia_accounts]

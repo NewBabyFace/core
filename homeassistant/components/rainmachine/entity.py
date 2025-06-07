@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from homeassistant.const import CONF_IP_ADDRESS, CONF_PORT
-from homeassistant.core import callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import EntityDescription
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.const import CONF_IP_ADDRESS, CONF_PORT
+from menuai.core import callback
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import EntityDescription
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from . import RainMachineConfigEntry, RainMachineData
 from .const import DATA_API_VERSIONS, DOMAIN
@@ -69,9 +69,9 @@ class RainMachineEntity(CoordinatorEntity[RainMachineDataUpdateCoordinator]):
         self.update_from_latest_data()
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai."""
+        await super().async_added_to_menuai()
         self.async_on_remove(
             self._version_coordinator.async_add_listener(
                 self._handle_coordinator_update, self.coordinator_context

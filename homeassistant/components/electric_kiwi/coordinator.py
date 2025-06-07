@@ -12,10 +12,10 @@ from electrickiwi_api import ElectricKiwiApi
 from electrickiwi_api.exceptions import ApiException, AuthException
 from electrickiwi_api.model import AccountSummary, Hop, HopIntervals
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -39,13 +39,13 @@ class ElectricKiwiAccountDataCoordinator(DataUpdateCoordinator[AccountSummary]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entry: ElectricKiwiConfigEntry,
         ek_api: ElectricKiwiApi,
     ) -> None:
         """Initialize ElectricKiwiAccountDataCoordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
             name="Electric Kiwi Account Data",
@@ -71,13 +71,13 @@ class ElectricKiwiHOPDataCoordinator(DataUpdateCoordinator[Hop]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entry: ElectricKiwiConfigEntry,
         ek_api: ElectricKiwiApi,
     ) -> None:
         """Initialize ElectricKiwiAccountDataCoordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
             # Name of the data. For logging purposes.

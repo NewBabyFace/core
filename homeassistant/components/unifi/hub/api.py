@@ -11,34 +11,34 @@ from aiohttp import CookieJar
 import aiounifi
 from aiounifi.models.configuration import Configuration
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
     CONF_USERNAME,
     CONF_VERIFY_SSL,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import aiohttp_client
+from menuai.core import menuai
+from menuai.helpers import aiohttp_client
 
 from ..const import CONF_SITE_ID, LOGGER
 from ..errors import AuthenticationRequired, CannotConnect
 
 
 async def get_unifi_api(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: Mapping[str, Any],
 ) -> aiounifi.Controller:
     """Create a aiounifi object and verify authentication."""
     ssl_context: ssl.SSLContext | Literal[False] = False
 
     if verify_ssl := config.get(CONF_VERIFY_SSL):
-        session = aiohttp_client.async_get_clientsession(hass)
+        session = aiohttp_client.async_get_clientsession(menuai)
         if isinstance(verify_ssl, str):
             ssl_context = ssl.create_default_context(cafile=verify_ssl)
     else:
         session = aiohttp_client.async_create_clientsession(
-            hass, verify_ssl=False, cookie_jar=CookieJar(unsafe=True)
+            menuai, verify_ssl=False, cookie_jar=CookieJar(unsafe=True)
         )
 
     api = aiounifi.Controller(

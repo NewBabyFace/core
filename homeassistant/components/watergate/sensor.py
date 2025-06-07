@@ -6,14 +6,14 @@ from datetime import datetime, timedelta
 from enum import StrEnum
 import logging
 
-from homeassistant.components.sensor import (
-    HomeAssistant,
+from menuai.components.sensor import (
+    menuai,
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
     EntityCategory,
     UnitOfPressure,
@@ -22,9 +22,9 @@ from homeassistant.const import (
     UnitOfVolume,
     UnitOfVolumeFlowRate,
 )
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
-from homeassistant.util import dt as dt_util
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
+from menuai.util import dt as dt_util
 
 from .coordinator import (
     WatergateAgregatedRequests,
@@ -180,7 +180,7 @@ DESCRIPTIONS: list[WatergateSensorEntityDescription] = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: WatergateConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

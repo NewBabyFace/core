@@ -6,22 +6,22 @@ from collections.abc import Callable
 from datetime import timedelta
 from typing import Any
 
-from homeassistant.components.notify import (
+from menuai.components.notify import (
     ATTR_DATA,
     ATTR_MESSAGE,
     ATTR_TITLE,
     DOMAIN as DOMAIN_NOTIFY,
 )
-from homeassistant.const import STATE_IDLE, STATE_OFF, STATE_ON
-from homeassistant.core import Event, EventStateChangedData, HassJob, HomeAssistant
-from homeassistant.exceptions import ServiceNotFound, ServiceValidationError
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.event import (
+from menuai.const import STATE_IDLE, STATE_OFF, STATE_ON
+from menuai.core import Event, EventStateChangedData, menuaiJob, menuai
+from menuai.exceptions import ServiceNotFound, ServiceValidationError
+from menuai.helpers.entity import Entity
+from menuai.helpers.event import (
     async_track_point_in_time,
     async_track_state_change_event,
 )
-from homeassistant.helpers.template import Template
-from homeassistant.util.dt import now
+from menuai.helpers.template import Template
+from menuai.util.dt import now
 
 from .const import DOMAIN, LOGGER
 
@@ -33,7 +33,7 @@ class AlertEntity(Entity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entity_id: str,
         name: str,
         watched_entity_id: str,
@@ -48,7 +48,7 @@ class AlertEntity(Entity):
         data: dict[Any, Any],
     ) -> None:
         """Initialize the alert."""
-        self.hass = hass
+        self.menuai = menuai
         self._attr_name = name
         self._alert_state = state
         self._skip_first = skip_first
@@ -71,7 +71,7 @@ class AlertEntity(Entity):
         self.entity_id = f"{DOMAIN}.{entity_id}"
 
         async_track_state_change_event(
-            hass, [watched_entity_id], self.watched_entity_change
+            menuai, [watched_entity_id], self.watched_entity_change
         )
 
     @property
@@ -125,8 +125,8 @@ class AlertEntity(Entity):
         delay = self._delay[self._next_delay]
         next_msg = now() + delay
         self._cancel = async_track_point_in_time(
-            self.hass,
-            HassJob(
+            self.menuai,
+            menuaiJob(
                 self._notify, name="Schedule notify alert", cancel_on_shutdown=True
             ),
             next_msg,
@@ -178,7 +178,7 @@ class AlertEntity(Entity):
 
         for target in self._notifiers:
             try:
-                await self.hass.services.async_call(
+                await self.menuai.services.async_call(
                     DOMAIN_NOTIFY, target, msg_payload, context=self._context
                 )
             except ServiceNotFound:

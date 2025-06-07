@@ -15,7 +15,7 @@ from aiohttp import ClientSession
 from pyasuswrt import AsusWrtError, AsusWrtHttp
 from pyasuswrt.exceptions import AsusWrtNotAvailableInfoError
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_MODE,
     CONF_PASSWORD,
@@ -23,10 +23,10 @@ from homeassistant.const import (
     CONF_PROTOCOL,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.update_coordinator import UpdateFailed
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.update_coordinator import UpdateFailed
 
 from .const import (
     CONF_DNSMASQ,
@@ -105,11 +105,11 @@ class AsusWrtBridge(ABC):
 
     @staticmethod
     def get_bridge(
-        hass: HomeAssistant, conf: dict[str, Any], options: dict[str, Any] | None = None
+        menuai: menuai, conf: dict[str, Any], options: dict[str, Any] | None = None
     ) -> AsusWrtBridge:
         """Get Bridge instance."""
         if conf[CONF_PROTOCOL] in (PROTOCOL_HTTPS, PROTOCOL_HTTP):
-            session = async_get_clientsession(hass)
+            session = async_get_clientsession(menuai)
             return AsusWrtHttpBridge(conf, session)
         return AsusWrtLegacyBridge(conf, options)
 

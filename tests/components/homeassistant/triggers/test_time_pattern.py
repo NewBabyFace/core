@@ -6,24 +6,24 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 import voluptuous as vol
 
-from homeassistant.components import automation
-from homeassistant.components.homeassistant.triggers import time_pattern
-from homeassistant.const import ATTR_ENTITY_ID, ENTITY_MATCH_ALL, SERVICE_TURN_OFF
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.components import automation
+from menuai.components.menuai.triggers import time_pattern
+from menuai.const import ATTR_ENTITY_ID, ENTITY_MATCH_ALL, SERVICE_TURN_OFF
+from menuai.core import menuai, ServiceCall
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from tests.common import async_fire_time_changed, mock_component
 
 
 @pytest.fixture(autouse=True)
-def setup_comp(hass: HomeAssistant) -> None:
+def setup_comp(menuai: menuai) -> None:
     """Initialize components."""
-    mock_component(hass, "group")
+    mock_component(menuai, "group")
 
 
 async def test_if_fires_when_hour_matches(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     service_calls: list[ServiceCall],
 ) -> None:
@@ -34,7 +34,7 @@ async def test_if_fires_when_hour_matches(
     )
     freezer.move_to(time_that_will_not_match_right_away)
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -52,12 +52,12 @@ async def test_if_fires_when_hour_matches(
         },
     )
 
-    async_fire_time_changed(hass, now.replace(year=now.year + 2, day=1, hour=0))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, now.replace(year=now.year + 2, day=1, hour=0))
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
     assert service_calls[0].data["id"] == 0
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         automation.DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: ENTITY_MATCH_ALL},
@@ -65,13 +65,13 @@ async def test_if_fires_when_hour_matches(
     )
     assert len(service_calls) == 2
 
-    async_fire_time_changed(hass, now.replace(year=now.year + 1, day=1, hour=0))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, now.replace(year=now.year + 1, day=1, hour=0))
+    await menuai.async_block_till_done()
     assert len(service_calls) == 2
 
 
 async def test_if_fires_when_minute_matches(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     service_calls: list[ServiceCall],
 ) -> None:
@@ -82,7 +82,7 @@ async def test_if_fires_when_minute_matches(
     )
     freezer.move_to(time_that_will_not_match_right_away)
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -97,14 +97,14 @@ async def test_if_fires_when_minute_matches(
         },
     )
 
-    async_fire_time_changed(hass, now.replace(year=now.year + 2, day=1, minute=0))
+    async_fire_time_changed(menuai, now.replace(year=now.year + 2, day=1, minute=0))
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
 
 
 async def test_if_fires_when_second_matches(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     service_calls: list[ServiceCall],
 ) -> None:
@@ -115,7 +115,7 @@ async def test_if_fires_when_second_matches(
     )
     freezer.move_to(time_that_will_not_match_right_away)
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -130,14 +130,14 @@ async def test_if_fires_when_second_matches(
         },
     )
 
-    async_fire_time_changed(hass, now.replace(year=now.year + 2, day=1, second=0))
+    async_fire_time_changed(menuai, now.replace(year=now.year + 2, day=1, second=0))
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
 
 
 async def test_if_fires_when_second_as_string_matches(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     service_calls: list[ServiceCall],
 ) -> None:
@@ -148,7 +148,7 @@ async def test_if_fires_when_second_as_string_matches(
     )
     freezer.move_to(time_that_will_not_match_right_away)
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -164,15 +164,15 @@ async def test_if_fires_when_second_as_string_matches(
     )
 
     async_fire_time_changed(
-        hass, time_that_will_not_match_right_away + timedelta(seconds=15)
+        menuai, time_that_will_not_match_right_away + timedelta(seconds=15)
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
 
 
 async def test_if_fires_when_all_matches(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     service_calls: list[ServiceCall],
 ) -> None:
@@ -183,7 +183,7 @@ async def test_if_fires_when_all_matches(
     )
     freezer.move_to(time_that_will_not_match_right_away)
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -199,15 +199,15 @@ async def test_if_fires_when_all_matches(
     )
 
     async_fire_time_changed(
-        hass, now.replace(year=now.year + 2, day=1, hour=1, minute=2, second=3)
+        menuai, now.replace(year=now.year + 2, day=1, hour=1, minute=2, second=3)
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
 
 
 async def test_if_fires_periodic_seconds(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     service_calls: list[ServiceCall],
 ) -> None:
@@ -218,7 +218,7 @@ async def test_if_fires_periodic_seconds(
     )
     freezer.move_to(time_that_will_not_match_right_away)
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -234,15 +234,15 @@ async def test_if_fires_periodic_seconds(
     )
 
     async_fire_time_changed(
-        hass, now.replace(year=now.year + 2, day=1, hour=0, minute=0, second=10)
+        menuai, now.replace(year=now.year + 2, day=1, hour=0, minute=0, second=10)
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) >= 1
 
 
 async def test_if_fires_periodic_minutes(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     service_calls: list[ServiceCall],
 ) -> None:
@@ -254,7 +254,7 @@ async def test_if_fires_periodic_minutes(
     )
     freezer.move_to(time_that_will_not_match_right_away)
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -270,15 +270,15 @@ async def test_if_fires_periodic_minutes(
     )
 
     async_fire_time_changed(
-        hass, now.replace(year=now.year + 2, day=1, hour=0, minute=2, second=0)
+        menuai, now.replace(year=now.year + 2, day=1, hour=0, minute=2, second=0)
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
 
 
 async def test_if_fires_periodic_hours(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     service_calls: list[ServiceCall],
 ) -> None:
@@ -289,7 +289,7 @@ async def test_if_fires_periodic_hours(
     )
     freezer.move_to(time_that_will_not_match_right_away)
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -305,15 +305,15 @@ async def test_if_fires_periodic_hours(
     )
 
     async_fire_time_changed(
-        hass, now.replace(year=now.year + 2, day=1, hour=2, minute=0, second=0)
+        menuai, now.replace(year=now.year + 2, day=1, hour=2, minute=0, second=0)
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
 
 
 async def test_default_values(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     service_calls: list[ServiceCall],
 ) -> None:
@@ -324,7 +324,7 @@ async def test_default_values(
     )
     freezer.move_to(time_that_will_not_match_right_away)
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -335,24 +335,24 @@ async def test_default_values(
     )
 
     async_fire_time_changed(
-        hass, now.replace(year=now.year + 2, day=1, hour=1, minute=2, second=0)
+        menuai, now.replace(year=now.year + 2, day=1, hour=1, minute=2, second=0)
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
 
     async_fire_time_changed(
-        hass, now.replace(year=now.year + 2, day=1, hour=1, minute=2, second=1)
+        menuai, now.replace(year=now.year + 2, day=1, hour=1, minute=2, second=1)
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
 
     async_fire_time_changed(
-        hass, now.replace(year=now.year + 2, day=1, hour=2, minute=2, second=0)
+        menuai, now.replace(year=now.year + 2, day=1, hour=2, minute=2, second=0)
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 2
 
 

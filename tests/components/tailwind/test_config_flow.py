@@ -11,13 +11,13 @@ from gotailwind import (
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.tailwind.const import DOMAIN
-from homeassistant.config_entries import SOURCE_DHCP, SOURCE_USER, SOURCE_ZEROCONF
-from homeassistant.const import CONF_HOST, CONF_TOKEN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.components.tailwind.const import DOMAIN
+from menuai.config_entries import SOURCE_DHCP, SOURCE_USER, SOURCE_ZEROCONF
+from menuai.const import CONF_HOST, CONF_TOKEN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from tests.common import MockConfigEntry
 
@@ -25,9 +25,9 @@ pytestmark = pytest.mark.usefixtures("mock_setup_entry")
 
 
 @pytest.mark.usefixtures("mock_tailwind")
-async def test_user_flow(hass: HomeAssistant) -> None:
+async def test_user_flow(menuai: menuai) -> None:
     """Test the full happy path user flow from start to finish."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
@@ -35,7 +35,7 @@ async def test_user_flow(hass: HomeAssistant) -> None:
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_HOST: "127.0.0.1",
@@ -63,7 +63,7 @@ async def test_user_flow(hass: HomeAssistant) -> None:
     ],
 )
 async def test_user_flow_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_tailwind: MagicMock,
     side_effect: Exception,
     expected_error: dict[str, str],
@@ -71,7 +71,7 @@ async def test_user_flow_errors(
     """Test we show user form on a connection error."""
     mock_tailwind.status.side_effect = side_effect
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={
@@ -85,7 +85,7 @@ async def test_user_flow_errors(
     assert result["errors"] == expected_error
 
     mock_tailwind.status.side_effect = None
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_HOST: "127.0.0.2",
@@ -104,11 +104,11 @@ async def test_user_flow_errors(
 
 
 async def test_user_flow_unsupported_firmware_version(
-    hass: HomeAssistant, mock_tailwind: MagicMock
+    menuai: menuai, mock_tailwind: MagicMock
 ) -> None:
     """Test configuration flow aborts when the firmware version is not supported."""
     mock_tailwind.status.side_effect = TailwindUnsupportedFirmwareVersionError
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={
@@ -123,16 +123,16 @@ async def test_user_flow_unsupported_firmware_version(
 
 @pytest.mark.usefixtures("mock_tailwind")
 async def test_user_flow_already_configured(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_config_entry: MockConfigEntry
 ) -> None:
     """Test configuration flow aborts when the device is already configured.
 
     Also, ensures the existing config entry is updated with the new host.
     """
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
     assert mock_config_entry.data[CONF_HOST] == "127.0.0.127"
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={
@@ -149,11 +149,11 @@ async def test_user_flow_already_configured(
 
 @pytest.mark.usefixtures("mock_tailwind")
 async def test_zeroconf_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test the zeroconf happy flow from start to finish."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -175,11 +175,11 @@ async def test_zeroconf_flow(
     assert result["step_id"] == "zeroconf_confirm"
     assert result["type"] is FlowResultType.FORM
 
-    progress = hass.config_entries.flow.async_progress()
+    progress = menuai.config_entries.flow.async_progress()
     assert len(progress) == 1
     assert progress[0].get("flow_id") == result["flow_id"]
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={CONF_TOKEN: "987654"}
     )
 
@@ -202,10 +202,10 @@ async def test_zeroconf_flow(
     ],
 )
 async def test_zeroconf_flow_abort_incompatible_properties(
-    hass: HomeAssistant, properties: dict[str, str], expected_reason: str
+    menuai: menuai, properties: dict[str, str], expected_reason: str
 ) -> None:
     """Test the zeroconf aborts when it advertises incompatible data."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -232,7 +232,7 @@ async def test_zeroconf_flow_abort_incompatible_properties(
     ],
 )
 async def test_zeroconf_flow_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_tailwind: MagicMock,
     side_effect: Exception,
     expected_error: dict[str, str],
@@ -240,7 +240,7 @@ async def test_zeroconf_flow_errors(
     """Test we show form on a error."""
     mock_tailwind.status.side_effect = side_effect
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -259,7 +259,7 @@ async def test_zeroconf_flow_errors(
         ),
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_TOKEN: "123456",
@@ -271,7 +271,7 @@ async def test_zeroconf_flow_errors(
     assert result["errors"] == expected_error
 
     mock_tailwind.status.side_effect = None
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_TOKEN: "123456",
@@ -290,17 +290,17 @@ async def test_zeroconf_flow_errors(
 
 @pytest.mark.usefixtures("mock_tailwind")
 async def test_zeroconf_flow_not_discovered_again(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test the zeroconf doesn't re-discover an existing device.
 
     Also, ensures the existing config entry is updated with the new host.
     """
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
     assert mock_config_entry.data[CONF_HOST] == "127.0.0.127"
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -326,22 +326,22 @@ async def test_zeroconf_flow_not_discovered_again(
 
 @pytest.mark.usefixtures("mock_tailwind")
 async def test_reauth_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test the reauthentication configuration flow."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
     assert mock_config_entry.data[CONF_TOKEN] == "123456"
 
-    result = await mock_config_entry.start_reauth_flow(hass)
+    result = await mock_config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_TOKEN: "987654"},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"
@@ -358,19 +358,19 @@ async def test_reauth_flow(
     ],
 )
 async def test_reauth_flow_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_tailwind: MagicMock,
     side_effect: Exception,
     expected_error: dict[str, str],
 ) -> None:
     """Test we show form on a error."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
     mock_tailwind.status.side_effect = side_effect
 
-    result = await mock_config_entry.start_reauth_flow(hass)
+    result = await mock_config_entry.start_reauth_flow(menuai)
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_TOKEN: "123456",
@@ -382,7 +382,7 @@ async def test_reauth_flow_errors(
     assert result["errors"] == expected_error
 
     mock_tailwind.status.side_effect = None
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_TOKEN: "123456",
@@ -394,14 +394,14 @@ async def test_reauth_flow_errors(
 
 
 async def test_dhcp_discovery_updates_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test DHCP discovery updates config entries."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
     assert mock_config_entry.data[CONF_HOST] == "127.0.0.127"
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_DHCP},
         data=DhcpServiceInfo(
@@ -416,12 +416,12 @@ async def test_dhcp_discovery_updates_entry(
     assert mock_config_entry.data[CONF_HOST] == "127.0.0.1"
 
 
-async def test_dhcp_discovery_ignores_unknown(hass: HomeAssistant) -> None:
+async def test_dhcp_discovery_ignores_unknown(menuai: menuai) -> None:
     """Test DHCP discovery is only used for updates.
 
     Anything else will just abort the flow.
     """
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_DHCP},
         data=DhcpServiceInfo(

@@ -2,30 +2,30 @@
 
 import pytest
 
-from homeassistant.components import media_source
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components import media_source
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 
 @pytest.fixture(autouse=True)
-async def setup_media_source(hass: HomeAssistant) -> None:
+async def setup_media_source(menuai: menuai) -> None:
     """Set up media source."""
-    assert await async_setup_component(hass, "media_source", {})
+    assert await async_setup_component(menuai, "media_source", {})
 
 
-async def test_browsing(hass: HomeAssistant, mock_image_platform) -> None:
+async def test_browsing(menuai: menuai, mock_image_platform) -> None:
     """Test browsing image media source."""
-    item = await media_source.async_browse_media(hass, "media-source://image")
+    item = await media_source.async_browse_media(menuai, "media-source://image")
     assert item is not None
     assert item.title == "Image"
     assert len(item.children) == 1
     assert item.children[0].media_content_type == "image/jpeg"
 
 
-async def test_resolving(hass: HomeAssistant, mock_image_platform) -> None:
+async def test_resolving(menuai: menuai, mock_image_platform) -> None:
     """Test resolving."""
     item = await media_source.async_resolve_media(
-        hass, "media-source://image/image.test", None
+        menuai, "media-source://image/image.test", None
     )
     assert item is not None
     assert item.url == "/api/image_proxy_stream/image.test"
@@ -33,7 +33,7 @@ async def test_resolving(hass: HomeAssistant, mock_image_platform) -> None:
 
 
 async def test_resolving_non_existing_camera(
-    hass: HomeAssistant, mock_image_platform
+    menuai: menuai, mock_image_platform
 ) -> None:
     """Test resolving."""
     with pytest.raises(
@@ -41,5 +41,5 @@ async def test_resolving_non_existing_camera(
         match="Could not resolve media item: image.non_existing",
     ):
         await media_source.async_resolve_media(
-            hass, "media-source://image/image.non_existing", None
+            menuai, "media-source://image/image.non_existing", None
         )

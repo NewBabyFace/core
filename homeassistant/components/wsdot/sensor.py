@@ -9,16 +9,16 @@ from typing import Any
 import voluptuous as vol
 from wsdot import TravelTime, WsdotTravelError, WsdotTravelTimes
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
     SensorEntity,
 )
-from homeassistant.const import CONF_API_KEY, CONF_ID, CONF_NAME, UnitOfTime
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_API_KEY, CONF_ID, CONF_NAME, UnitOfTime
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -42,14 +42,14 @@ PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the WSDOT sensor."""
     sensors = []
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
     api_key = config[CONF_API_KEY]
     wsdot_travel = WsdotTravelTimes(api_key=api_key, session=session)
     for travel_time in config[CONF_TRAVEL_TIMES]:

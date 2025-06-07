@@ -11,11 +11,11 @@ from typedmonarchmoney import TypedMonarchMoney
 from typedmonarchmoney.models import MonarchSubscription
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_EMAIL, CONF_ID, CONF_PASSWORD, CONF_TOKEN
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.selector import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_EMAIL, CONF_ID, CONF_PASSWORD, CONF_TOKEN
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.selector import (
     TextSelector,
     TextSelectorConfig,
     TextSelectorType,
@@ -49,7 +49,7 @@ STEP_MFA_DATA_SCHEMA = vol.Schema(
 
 
 async def validate_login(
-    hass: HomeAssistant,
+    menuai: menuai,
     data: dict[str, Any],
     email: str | None = None,
     password: str | None = None,
@@ -117,7 +117,7 @@ class MonarchMoneyConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             try:
                 info = await validate_login(
-                    self.hass, user_input, email=self.email, password=self.password
+                    self.menuai, user_input, email=self.email, password=self.password
                 )
             except RequireMFAException:
                 self.email = user_input[CONF_EMAIL]
@@ -149,9 +149,9 @@ class MonarchMoneyConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(menuaiError):
     """Error to indicate there is invalid auth."""
 
 
-class BadMFA(HomeAssistantError):
+class BadMFA(menuaiError):
     """Error to indicate the MFA code was bad."""

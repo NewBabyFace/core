@@ -6,11 +6,11 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from homeassistant.components.airvisual_pro.const import DOMAIN
-from homeassistant.const import CONF_IP_ADDRESS, CONF_PASSWORD
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
-from homeassistant.util.json import JsonObjectType
+from menuai.components.airvisual_pro.const import DOMAIN
+from menuai.const import CONF_IP_ADDRESS, CONF_PASSWORD
+from menuai.core import menuai
+from menuai.setup import async_setup_component
+from menuai.util.json import JsonObjectType
 
 from tests.common import MockConfigEntry, load_json_object_fixture
 
@@ -19,14 +19,14 @@ from tests.common import MockConfigEntry, load_json_object_fixture
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.airvisual_pro.async_setup_entry", return_value=True
+        "menuai.components.airvisual_pro.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
 
 @pytest.fixture(name="config_entry")
 def config_entry_fixture(
-    hass: HomeAssistant, config: dict[str, Any]
+    menuai: menuai, config: dict[str, Any]
 ) -> MockConfigEntry:
     """Define a config entry fixture."""
     entry = MockConfigEntry(
@@ -35,7 +35,7 @@ def config_entry_fixture(
         unique_id="XXXXXXX",
         data=config,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     return entry
 
 
@@ -80,17 +80,17 @@ def pro_fixture(
 
 @pytest.fixture(name="setup_airvisual_pro")
 async def setup_airvisual_pro_fixture(
-    hass: HomeAssistant, config, pro
+    menuai: menuai, config, pro
 ) -> AsyncGenerator[None]:
     """Define a fixture to set up AirVisual Pro."""
     with (
         patch(
-            "homeassistant.components.airvisual_pro.config_flow.NodeSamba",
+            "menuai.components.airvisual_pro.config_flow.NodeSamba",
             return_value=pro,
         ),
-        patch("homeassistant.components.airvisual_pro.NodeSamba", return_value=pro),
-        patch("homeassistant.components.airvisual_pro.PLATFORMS", []),
+        patch("menuai.components.airvisual_pro.NodeSamba", return_value=pro),
+        patch("menuai.components.airvisual_pro.PLATFORMS", []),
     ):
-        assert await async_setup_component(hass, DOMAIN, config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, config)
+        await menuai.async_block_till_done()
         yield

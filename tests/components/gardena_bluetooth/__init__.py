@@ -2,9 +2,9 @@
 
 from unittest.mock import patch
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.service_info.bluetooth import BluetoothServiceInfo
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers.service_info.bluetooth import BluetoothServiceInfo
 
 from tests.common import MockConfigEntry
 from tests.components.bluetooth import inject_bluetooth_service_info
@@ -69,13 +69,13 @@ UNSUPPORTED_GROUP_SERVICE_INFO = BluetoothServiceInfo(
 
 
 async def setup_entry(
-    hass: HomeAssistant, mock_entry: MockConfigEntry, platforms: list[Platform]
+    menuai: menuai, mock_entry: MockConfigEntry, platforms: list[Platform]
 ) -> None:
     """Make sure the device is available."""
 
-    inject_bluetooth_service_info(hass, WATER_TIMER_SERVICE_INFO)
+    inject_bluetooth_service_info(menuai, WATER_TIMER_SERVICE_INFO)
 
-    with patch("homeassistant.components.gardena_bluetooth.PLATFORMS", platforms):
-        mock_entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(mock_entry.entry_id)
-        await hass.async_block_till_done()
+    with patch("menuai.components.gardena_bluetooth.PLATFORMS", platforms):
+        mock_entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(mock_entry.entry_id)
+        await menuai.async_block_till_done()

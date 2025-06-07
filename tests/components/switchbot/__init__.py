@@ -2,9 +2,9 @@
 
 from unittest.mock import patch
 
-from homeassistant.components.bluetooth import BluetoothServiceInfoBleak
-from homeassistant.const import CONF_ADDRESS
-from homeassistant.core import HomeAssistant
+from menuai.components.bluetooth import BluetoothServiceInfoBleak
+from menuai.const import CONF_ADDRESS
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 from tests.components.bluetooth import generate_advertisement_data, generate_ble_device
@@ -31,18 +31,18 @@ USER_INPUT_INVALID = {
 def patch_async_setup_entry(return_value=True):
     """Patch async setup entry to return True."""
     return patch(
-        "homeassistant.components.switchbot.async_setup_entry",
+        "menuai.components.switchbot.async_setup_entry",
         return_value=return_value,
     )
 
 
-async def init_integration(hass: HomeAssistant) -> MockConfigEntry:
-    """Set up the Switchbot integration in Home Assistant."""
+async def init_integration(menuai: menuai) -> MockConfigEntry:
+    """Set up the Switchbot integration in MenuAI."""
     entry = MockConfigEntry(domain=DOMAIN, data=ENTRY_CONFIG)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     return entry
 
@@ -50,7 +50,7 @@ async def init_integration(hass: HomeAssistant) -> MockConfigEntry:
 def patch_async_ble_device_from_address(return_value: BluetoothServiceInfoBleak | None):
     """Patch async ble device from address to return a given value."""
     return patch(
-        "homeassistant.components.bluetooth.async_ble_device_from_address",
+        "menuai.components.bluetooth.async_ble_device_from_address",
         return_value=return_value,
     )
 

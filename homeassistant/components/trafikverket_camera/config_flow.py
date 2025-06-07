@@ -14,14 +14,14 @@ from pytrafikverket import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_RECONFIGURE,
     ConfigFlow,
     ConfigFlowResult,
 )
-from homeassistant.const import CONF_API_KEY, CONF_ID, CONF_LOCATION
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.selector import (
+from menuai.const import CONF_API_KEY, CONF_ID, CONF_LOCATION
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.selector import (
     SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
@@ -47,7 +47,7 @@ class TVCameraConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
         cameras: list[CameraInfoModel] | None = None
 
-        web_session = async_get_clientsession(self.hass)
+        web_session = async_get_clientsession(self.menuai)
         camera_api = TrafikverketCamera(web_session, sensor_api)
         try:
             cameras = await camera_api.async_get_cameras(location)

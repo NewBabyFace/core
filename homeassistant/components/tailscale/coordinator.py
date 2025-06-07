@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from tailscale import Device, Tailscale, TailscaleAuthenticationError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_API_KEY
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_API_KEY
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import CONF_TAILNET, DOMAIN, LOGGER, SCAN_INTERVAL
 
@@ -19,9 +19,9 @@ class TailscaleDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Device]]):
 
     config_entry: ConfigEntry
 
-    def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: ConfigEntry) -> None:
         """Initialize the Tailscale coordinator."""
-        session = async_get_clientsession(hass)
+        session = async_get_clientsession(menuai)
         self.tailscale = Tailscale(
             session=session,
             api_key=config_entry.data[CONF_API_KEY],
@@ -29,7 +29,7 @@ class TailscaleDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Device]]):
         )
 
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name=DOMAIN,

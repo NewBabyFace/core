@@ -15,18 +15,18 @@ from gotailwind import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_TOKEN
-from homeassistant.data_entry_flow import AbortFlow
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.selector import (
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_TOKEN
+from menuai.data_entry_flow import AbortFlow
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.selector import (
     TextSelector,
     TextSelectorConfig,
     TextSelectorType,
 )
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import DOMAIN, LOGGER
 
@@ -192,7 +192,7 @@ class TailwindFlowHandler(ConfigFlow, domain=DOMAIN):
         await self.async_set_unique_id(format_mac(discovery_info.macaddress))
         self._abort_if_unique_id_configured(updates={CONF_HOST: discovery_info.ip})
 
-        # This situation should never happen, as Home Assistant will only
+        # This situation should never happen, as MenuAI will only
         # send updates for existing entries. In case it does, we'll just
         # abort the flow with an unknown error.
         return self.async_abort(reason="unknown")
@@ -202,7 +202,7 @@ class TailwindFlowHandler(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Create entry."""
         tailwind = Tailwind(
-            host=host, token=token, session=async_get_clientsession(self.hass)
+            host=host, token=token, session=async_get_clientsession(self.menuai)
         )
 
         try:

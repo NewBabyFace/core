@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.select import (
+from menuai.components.select import (
     DOMAIN as SELECT_DOMAIN,
     SERVICE_SELECT_FIRST,
     SERVICE_SELECT_LAST,
@@ -13,10 +13,10 @@ from homeassistant.components.select import (
     SERVICE_SELECT_OPTION,
     SERVICE_SELECT_PREVIOUS,
 )
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import entity_registry as er
 
 from . import build_mock_node, setup_integration
 
@@ -24,12 +24,12 @@ from tests.common import MockConfigEntry, snapshot_platform
 
 
 async def setup_select(
-    hass: HomeAssistant, mock_homee: MagicMock, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_homee: MagicMock, mock_config_entry: MockConfigEntry
 ) -> None:
     """Setups the integration for select tests."""
     mock_homee.nodes = [build_mock_node("selects.json")]
     mock_homee.get_node_by_id.return_value = mock_homee.nodes[0]
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
 
 @pytest.mark.parametrize(
@@ -49,7 +49,7 @@ async def setup_select(
     ],
 )
 async def test_select_services(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_homee: MagicMock,
     mock_config_entry: MockConfigEntry,
     service: str,
@@ -57,12 +57,12 @@ async def test_select_services(
     expected: int,
 ) -> None:
     """Test the select services."""
-    await setup_select(hass, mock_homee, mock_config_entry)
+    await setup_select(menuai, mock_homee, mock_config_entry)
 
     OPTIONS = {ATTR_ENTITY_ID: "select.test_select_repeater_mode"}
     OPTIONS.update(extra_options)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SELECT_DOMAIN,
         service,
         OPTIONS,
@@ -73,15 +73,15 @@ async def test_select_services(
 
 
 async def test_select_option_service_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_homee: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test the select_option service called with invalid option."""
-    await setup_select(hass, mock_homee, mock_config_entry)
+    await setup_select(menuai, mock_homee, mock_config_entry)
 
     with pytest.raises(ServiceValidationError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SELECT_DOMAIN,
             SERVICE_SELECT_OPTION,
             {
@@ -93,14 +93,14 @@ async def test_select_option_service_error(
 
 
 async def test_select_snapshot(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_homee: MagicMock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test the select entity snapshot."""
-    with patch("homeassistant.components.homee.PLATFORMS", [Platform.SELECT]):
-        await setup_select(hass, mock_homee, mock_config_entry)
+    with patch("menuai.components.homee.PLATFORMS", [Platform.SELECT]):
+        await setup_select(menuai, mock_homee, mock_config_entry)
 
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)

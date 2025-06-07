@@ -4,8 +4,8 @@ from unittest.mock import MagicMock, Mock
 
 from nuheat.config import SCHEDULE_HOLD, SCHEDULE_RUN, SCHEDULE_TEMPORARY_HOLD
 
-from homeassistant.components.nuheat.const import CONF_SERIAL_NUMBER, DOMAIN
-from homeassistant.const import CONF_DEVICES, CONF_PASSWORD, CONF_USERNAME
+from menuai.components.nuheat.const import CONF_SERIAL_NUMBER, DOMAIN
+from menuai.const import CONF_DEVICES, CONF_PASSWORD, CONF_USERNAME
 
 MOCK_CONFIG_ENTRY = {
     CONF_USERNAME: "me",

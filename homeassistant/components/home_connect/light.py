@@ -7,7 +7,7 @@ from typing import Any, cast
 from aiohomeconnect.model import EventKey, SettingKey
 from aiohomeconnect.model.error import HomeConnectError
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_HS_COLOR,
     ATTR_RGB_COLOR,
@@ -15,10 +15,10 @@ from homeassistant.components.light import (
     LightEntity,
     LightEntityDescription,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import color as color_util
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import color as color_util
 
 from .common import setup_home_connect_entry
 from .const import BSH_AMBIENT_LIGHT_COLOR_CUSTOM_COLOR, DOMAIN
@@ -90,7 +90,7 @@ def _get_entities_for_appliance(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: HomeConnectConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -155,7 +155,7 @@ class HomeConnectLight(HomeConnectEntity, LightEntity):
                 value=True,
             )
         except HomeConnectError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="turn_on_light",
                 translation_placeholders={
@@ -174,7 +174,7 @@ class HomeConnectLight(HomeConnectEntity, LightEntity):
                         value=self._enable_custom_color_value_key,
                     )
                 except HomeConnectError as err:
-                    raise HomeAssistantError(
+                    raise menuaiError(
                         translation_domain=DOMAIN,
                         translation_key="select_light_custom_color",
                         translation_placeholders={
@@ -192,7 +192,7 @@ class HomeConnectLight(HomeConnectEntity, LightEntity):
                         value=f"#{hex_val}",
                     )
                 except HomeConnectError as err:
-                    raise HomeAssistantError(
+                    raise menuaiError(
                         translation_domain=DOMAIN,
                         translation_key="set_light_color",
                         translation_placeholders={
@@ -224,7 +224,7 @@ class HomeConnectLight(HomeConnectEntity, LightEntity):
                         value=f"#{hex_val}",
                     )
                 except HomeConnectError as err:
-                    raise HomeAssistantError(
+                    raise menuaiError(
                         translation_domain=DOMAIN,
                         translation_key="set_light_color",
                         translation_placeholders={
@@ -247,7 +247,7 @@ class HomeConnectLight(HomeConnectEntity, LightEntity):
                     value=brightness,
                 )
             except HomeConnectError as err:
-                raise HomeAssistantError(
+                raise menuaiError(
                     translation_domain=DOMAIN,
                     translation_key="set_light_brightness",
                     translation_placeholders={
@@ -265,7 +265,7 @@ class HomeConnectLight(HomeConnectEntity, LightEntity):
                 value=False,
             )
         except HomeConnectError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="turn_off_light",
                 translation_placeholders={
@@ -274,9 +274,9 @@ class HomeConnectLight(HomeConnectEntity, LightEntity):
                 },
             ) from err
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register listener."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         keys_to_listen = []
         if self._brightness_key:
             keys_to_listen.append(self._brightness_key)

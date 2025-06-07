@@ -7,21 +7,21 @@ from typing import TYPE_CHECKING
 
 from elvia import error as ElviaError
 
-from homeassistant.const import CONF_API_TOKEN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.event import async_track_time_interval
+from menuai.const import CONF_API_TOKEN
+from menuai.core import menuai
+from menuai.helpers.event import async_track_time_interval
 
 from .const import CONF_METERING_POINT_ID, LOGGER
 from .importer import ElviaImporter
 
 if TYPE_CHECKING:
-    from homeassistant.config_entries import ConfigEntry
+    from menuai.config_entries import ConfigEntry
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up Elvia from a config entry."""
     importer = ElviaImporter(
-        hass=hass,
+        menuai=menuai,
         api_token=entry.data[CONF_API_TOKEN],
         metering_point_id=entry.data[CONF_METERING_POINT_ID],
     )
@@ -41,7 +41,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     entry.async_on_unload(
         async_track_time_interval(
-            hass,
+            menuai,
             _import_meter_values,
             timedelta(minutes=60),
         )

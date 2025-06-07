@@ -4,7 +4,7 @@ import logging
 from pathlib import Path
 import shutil
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .const import DOMAIN, MAP_FILENAME_SUFFIX
 
@@ -14,8 +14,8 @@ STORAGE_PATH = f".storage/{DOMAIN}"
 MAPS_PATH = "maps"
 
 
-def _storage_path_prefix(hass: HomeAssistant, entry_id: str) -> Path:
-    return Path(hass.config.path(STORAGE_PATH)) / entry_id
+def _storage_path_prefix(menuai: menuai, entry_id: str) -> Path:
+    return Path(menuai.config.path(STORAGE_PATH)) / entry_id
 
 
 class RoborockMapStorage:
@@ -25,18 +25,18 @@ class RoborockMapStorage:
     local storage of maps for that device.
     """
 
-    def __init__(self, hass: HomeAssistant, entry_id: str, device_id_slug: str) -> None:
+    def __init__(self, menuai: menuai, entry_id: str, device_id_slug: str) -> None:
         """Initialize RoborockMapStorage."""
-        self._hass = hass
+        self._menuai = menuai
         self._path_prefix = (
-            _storage_path_prefix(hass, entry_id) / MAPS_PATH / device_id_slug
+            _storage_path_prefix(menuai, entry_id) / MAPS_PATH / device_id_slug
         )
         self._write_queue: dict[int, bytes] = {}
 
     async def async_load_map(self, map_flag: int) -> bytes | None:
         """Load maps from disk."""
         filename = self._path_prefix / f"{map_flag}{MAP_FILENAME_SUFFIX}"
-        return await self._hass.async_add_executor_job(self._load_map, filename)
+        return await self._menuai.async_add_executor_job(self._load_map, filename)
 
     def _load_map(self, filename: Path) -> bytes | None:
         """Load maps from disk."""
@@ -63,7 +63,7 @@ class RoborockMapStorage:
                 filename = self._path_prefix / f"{map_flag}{MAP_FILENAME_SUFFIX}"
                 self._save_map(filename, content)
 
-        await self._hass.async_add_executor_job(_flush_all)
+        await self._menuai.async_add_executor_job(_flush_all)
         self._write_queue.clear()
 
     def _save_map(self, filename: Path, content: bytes) -> None:
@@ -80,7 +80,7 @@ class RoborockMapStorage:
             _LOGGER.error("Unable to write map file: %s %s", filename, err)
 
 
-async def async_remove_map_storage(hass: HomeAssistant, entry_id: str) -> None:
+async def async_remove_map_storage(menuai: menuai, entry_id: str) -> None:
     """Remove all map storage  associated with a config entry."""
 
     def remove(path_prefix: Path) -> None:
@@ -90,6 +90,6 @@ async def async_remove_map_storage(hass: HomeAssistant, entry_id: str) -> None:
         except OSError as err:
             _LOGGER.error("Unable to remove map files in %s: %s", path_prefix, err)
 
-    path_prefix = _storage_path_prefix(hass, entry_id)
+    path_prefix = _storage_path_prefix(menuai, entry_id)
     _LOGGER.debug("Removing maps from disk store: %s", path_prefix)
-    await hass.async_add_executor_job(remove, path_prefix)
+    await menuai.async_add_executor_job(remove, path_prefix)

@@ -3,7 +3,7 @@
 from syrupy.assertion import SnapshotAssertion
 from syrupy.filters import props
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from . import mock_responses, setup_fronius_integration
 
@@ -13,17 +13,17 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test diagnostics."""
     mock_responses(aioclient_mock)
-    entry = await setup_fronius_integration(hass)
+    entry = await setup_fronius_integration(menuai)
 
     assert await get_diagnostics_for_config_entry(
-        hass,
-        hass_client,
+        menuai,
+        menuai_client,
         entry,
     ) == snapshot(exclude=props("created_at", "modified_at"))

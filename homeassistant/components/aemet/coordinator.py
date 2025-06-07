@@ -19,10 +19,10 @@ from aemet_opendata.exceptions import AemetError
 from aemet_opendata.helpers import dict_nested_value
 from aemet_opendata.interface import AEMET
 
-from homeassistant.components.weather import Forecast
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.components.weather import Forecast
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import CONDITIONS_MAP, DOMAIN, FORECAST_MAP
 
@@ -47,7 +47,7 @@ class WeatherUpdateCoordinator(DataUpdateCoordinator):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entry: AemetConfigEntry,
         aemet: AEMET,
     ) -> None:
@@ -55,7 +55,7 @@ class WeatherUpdateCoordinator(DataUpdateCoordinator):
         self.aemet = aemet
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
             name=DOMAIN,

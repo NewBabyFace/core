@@ -2,8 +2,8 @@
 
 import pytest
 
-from homeassistant.components.alarm_control_panel import AlarmControlPanelState
-from homeassistant.const import (
+from menuai.components.alarm_control_panel import AlarmControlPanelState
+from menuai.const import (
     SERVICE_ALARM_ARM_AWAY,
     SERVICE_ALARM_ARM_CUSTOM_BYPASS,
     SERVICE_ALARM_ARM_HOME,
@@ -12,73 +12,73 @@ from homeassistant.const import (
     SERVICE_ALARM_DISARM,
     SERVICE_ALARM_TRIGGER,
 )
-from homeassistant.core import HomeAssistant, State
-from homeassistant.helpers.state import async_reproduce_state
+from menuai.core import menuai, State
+from menuai.helpers.state import async_reproduce_state
 
 from tests.common import async_mock_service
 
 
 async def test_reproducing_states(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test reproducing Alarm control panel states."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "alarm_control_panel.entity_armed_away",
         AlarmControlPanelState.ARMED_AWAY,
         {},
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "alarm_control_panel.entity_armed_custom_bypass",
         AlarmControlPanelState.ARMED_CUSTOM_BYPASS,
         {},
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "alarm_control_panel.entity_armed_home",
         AlarmControlPanelState.ARMED_HOME,
         {},
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "alarm_control_panel.entity_armed_night",
         AlarmControlPanelState.ARMED_NIGHT,
         {},
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "alarm_control_panel.entity_armed_vacation",
         AlarmControlPanelState.ARMED_VACATION,
         {},
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "alarm_control_panel.entity_disarmed", AlarmControlPanelState.DISARMED, {}
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "alarm_control_panel.entity_triggered",
         AlarmControlPanelState.TRIGGERED,
         {},
     )
 
     arm_away_calls = async_mock_service(
-        hass, "alarm_control_panel", SERVICE_ALARM_ARM_AWAY
+        menuai, "alarm_control_panel", SERVICE_ALARM_ARM_AWAY
     )
     arm_custom_bypass_calls = async_mock_service(
-        hass, "alarm_control_panel", SERVICE_ALARM_ARM_CUSTOM_BYPASS
+        menuai, "alarm_control_panel", SERVICE_ALARM_ARM_CUSTOM_BYPASS
     )
     arm_home_calls = async_mock_service(
-        hass, "alarm_control_panel", SERVICE_ALARM_ARM_HOME
+        menuai, "alarm_control_panel", SERVICE_ALARM_ARM_HOME
     )
     arm_night_calls = async_mock_service(
-        hass, "alarm_control_panel", SERVICE_ALARM_ARM_NIGHT
+        menuai, "alarm_control_panel", SERVICE_ALARM_ARM_NIGHT
     )
     arm_vacation_calls = async_mock_service(
-        hass, "alarm_control_panel", SERVICE_ALARM_ARM_VACATION
+        menuai, "alarm_control_panel", SERVICE_ALARM_ARM_VACATION
     )
-    disarm_calls = async_mock_service(hass, "alarm_control_panel", SERVICE_ALARM_DISARM)
+    disarm_calls = async_mock_service(menuai, "alarm_control_panel", SERVICE_ALARM_DISARM)
     trigger_calls = async_mock_service(
-        hass, "alarm_control_panel", SERVICE_ALARM_TRIGGER
+        menuai, "alarm_control_panel", SERVICE_ALARM_TRIGGER
     )
 
     # These calls should do nothing as entities already in desired state
     await async_reproduce_state(
-        hass,
+        menuai,
         [
             State(
                 "alarm_control_panel.entity_armed_away",
@@ -121,7 +121,7 @@ async def test_reproducing_states(
 
     # Test invalid state is handled
     await async_reproduce_state(
-        hass, [State("alarm_control_panel.entity_triggered", "not_supported")]
+        menuai, [State("alarm_control_panel.entity_triggered", "not_supported")]
     )
 
     assert "not_supported" in caplog.text
@@ -135,7 +135,7 @@ async def test_reproducing_states(
 
     # Make sure correct services are called
     await async_reproduce_state(
-        hass,
+        menuai,
         [
             State(
                 "alarm_control_panel.entity_armed_away",

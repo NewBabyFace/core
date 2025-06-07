@@ -9,17 +9,17 @@ import uuid
 
 import pytest
 
-from homeassistant.components.rest.data import DEFAULT_TIMEOUT
-from homeassistant.components.rest.schema import DEFAULT_METHOD, DEFAULT_VERIFY_SSL
-from homeassistant.components.scrape.const import (
+from menuai.components.rest.data import DEFAULT_TIMEOUT
+from menuai.components.rest.schema import DEFAULT_METHOD, DEFAULT_VERIFY_SSL
+from menuai.components.scrape.const import (
     CONF_ENCODING,
     CONF_INDEX,
     CONF_SELECT,
     DEFAULT_ENCODING,
     DOMAIN,
 )
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import (
+from menuai.config_entries import SOURCE_USER
+from menuai.const import (
     CONF_METHOD,
     CONF_NAME,
     CONF_RESOURCE,
@@ -27,7 +27,7 @@ from homeassistant.const import (
     CONF_UNIQUE_ID,
     CONF_VERIFY_SSL,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from . import MockRestData
 
@@ -38,7 +38,7 @@ from tests.common import MockConfigEntry
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Automatically path uuid generator."""
     with patch(
-        "homeassistant.components.scrape.async_setup_entry",
+        "menuai.components.scrape.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
         yield mock_setup_entry
@@ -80,9 +80,9 @@ async def get_data_to_integration_load() -> MockRestData:
 
 @pytest.fixture(name="loaded_entry")
 async def load_integration(
-    hass: HomeAssistant, get_config: dict[str, Any], get_data: MockRestData
+    menuai: menuai, get_config: dict[str, Any], get_data: MockRestData
 ) -> MockConfigEntry:
-    """Set up the Scrape integration in Home Assistant."""
+    """Set up the Scrape integration in MenuAI."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
         source=SOURCE_USER,
@@ -90,14 +90,14 @@ async def load_integration(
         entry_id="1",
     )
 
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.rest.RestData",
+        "menuai.components.rest.RestData",
         return_value=get_data,
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     return config_entry
 
@@ -106,7 +106,7 @@ async def load_integration(
 def uuid_fixture() -> str:
     """Automatically path uuid generator."""
     with patch(
-        "homeassistant.components.scrape.config_flow.uuid.uuid1",
+        "menuai.components.scrape.config_flow.uuid.uuid1",
         return_value=uuid.UUID("3699ef88-69e6-11ed-a1eb-0242ac120002"),
     ):
         yield

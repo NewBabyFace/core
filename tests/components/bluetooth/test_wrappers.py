@@ -16,20 +16,20 @@ from habluetooth.usage import (
 )
 import pytest
 
-from homeassistant.components.bluetooth import (
+from menuai.components.bluetooth import (
     MONOTONIC_TIME,
     BaseHaRemoteScanner,
     HaBluetoothConnector,
-    HomeAssistantBluetoothManager,
+    menuaiBluetoothManager,
 )
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant
+from menuai.core import CALLBACK_TYPE, menuai
 
 from . import _get_manager, generate_advertisement_data, generate_ble_device
 
 
 @contextmanager
-def mock_shutdown(manager: HomeAssistantBluetoothManager) -> Iterator[None]:
-    """Mock shutdown of the HomeAssistantBluetoothManager."""
+def mock_shutdown(manager: menuaiBluetoothManager) -> Iterator[None]:
+    """Mock shutdown of the menuaiBluetoothManager."""
     manager.shutdown = True
     yield
     manager.shutdown = False
@@ -165,7 +165,7 @@ def mock_platform_client_that_raises_on_connect_fixture():
 
 
 def _generate_scanners_with_fake_devices(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> tuple[
     dict[str, tuple[BLEDevice, AdvertisementData]], CALLBACK_TYPE, CALLBACK_TYPE
 ]:
@@ -201,14 +201,14 @@ def _generate_scanners_with_fake_devices(
 
 @pytest.mark.usefixtures("enable_bluetooth", "two_adapters")
 async def test_test_switch_adapters_when_out_of_slots(
-    hass: HomeAssistant,
+    menuai: menuai,
     install_bleak_catcher,
     mock_platform_client,
 ) -> None:
     """Ensure we try another scanner when one runs out of slots."""
     manager = _get_manager()
     hci0_device_advs, cancel_hci0, cancel_hci1 = _generate_scanners_with_fake_devices(
-        hass
+        menuai
     )
     # hci0 has 2 slots, hci1 has 1 slot
     with (
@@ -260,14 +260,14 @@ async def test_test_switch_adapters_when_out_of_slots(
 
 @pytest.mark.usefixtures("enable_bluetooth", "two_adapters")
 async def test_release_slot_on_connect_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     install_bleak_catcher,
     mock_platform_client_that_fails_to_connect,
 ) -> None:
     """Ensure the slot gets released on connection failure."""
     manager = _get_manager()
     hci0_device_advs, cancel_hci0, cancel_hci1 = _generate_scanners_with_fake_devices(
-        hass
+        menuai
     )
     # hci0 has 2 slots, hci1 has 1 slot
     with (
@@ -288,14 +288,14 @@ async def test_release_slot_on_connect_failure(
 
 @pytest.mark.usefixtures("enable_bluetooth", "two_adapters")
 async def test_release_slot_on_connect_exception(
-    hass: HomeAssistant,
+    menuai: menuai,
     install_bleak_catcher,
     mock_platform_client_that_raises_on_connect,
 ) -> None:
     """Ensure the slot gets released on connection exception."""
     manager = _get_manager()
     hci0_device_advs, cancel_hci0, cancel_hci1 = _generate_scanners_with_fake_devices(
-        hass
+        menuai
     )
     # hci0 has 2 slots, hci1 has 1 slot
     with (
@@ -318,11 +318,11 @@ async def test_release_slot_on_connect_exception(
 
 @pytest.mark.usefixtures("enable_bluetooth", "two_adapters")
 async def test_passing_subclassed_str_as_address(
-    hass: HomeAssistant,
+    menuai: menuai,
     install_bleak_catcher,
 ) -> None:
     """Ensure the client wrapper can handle a subclassed str as the address."""
-    _, cancel_hci0, cancel_hci1 = _generate_scanners_with_fake_devices(hass)
+    _, cancel_hci0, cancel_hci1 = _generate_scanners_with_fake_devices(menuai)
 
     class SubclassedStr(str):
         __slots__ = ()
@@ -349,14 +349,14 @@ async def test_passing_subclassed_str_as_address(
 
 @pytest.mark.usefixtures("enable_bluetooth", "two_adapters")
 async def test_raise_after_shutdown(
-    hass: HomeAssistant,
+    menuai: menuai,
     install_bleak_catcher,
     mock_platform_client_that_raises_on_connect,
 ) -> None:
     """Ensure the slot gets released on connection exception."""
     manager = _get_manager()
     hci0_device_advs, cancel_hci0, cancel_hci1 = _generate_scanners_with_fake_devices(
-        hass
+        menuai
     )
     # hci0 has 2 slots, hci1 has 1 slot
     with mock_shutdown(manager):

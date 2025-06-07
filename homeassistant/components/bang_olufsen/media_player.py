@@ -40,8 +40,8 @@ from mozart_api.models import (
 from mozart_api.mozart_client import MozartClient, get_highest_resolution_artwork
 import voluptuous as vol
 
-from homeassistant.components import media_source
-from homeassistant.components.media_player import (
+from menuai.components import media_source
+from menuai.components.media_player import (
     ATTR_MEDIA_EXTRA,
     BrowseMedia,
     MediaPlayerDeviceClass,
@@ -52,22 +52,22 @@ from homeassistant.components.media_player import (
     RepeatMode,
     async_process_play_media_url,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_MODEL, Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_MODEL, Platform
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers import (
     config_validation as cv,
     device_registry as dr,
     entity_registry as er,
 )
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import (
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     async_get_current_platform,
 )
-from homeassistant.util.dt import utcnow
+from menuai.util.dt import utcnow
 
 from . import BangOlufsenConfigEntry
 from .const import (
@@ -116,7 +116,7 @@ BANG_OLUFSEN_FEATURES = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: BangOlufsenConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -225,7 +225,7 @@ class BangOlufsenMediaPlayer(BangOlufsenEntity, MediaPlayerEntity):
         # Extra state attributes for showing Beolink: peer(s), listener(s), leader and self
         self._beolink_attributes: dict[str, dict[str, dict[str, str]]] = {}
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Turn on the dispatchers."""
         await self._initialize()
 
@@ -247,7 +247,7 @@ class BangOlufsenMediaPlayer(BangOlufsenEntity, MediaPlayerEntity):
         for signal, signal_handler in signal_handlers.items():
             self.async_on_remove(
                 async_dispatcher_connect(
-                    self.hass,
+                    self.menuai,
                     f"{self._unique_id}_{signal}",
                     signal_handler,
                 )
@@ -385,8 +385,8 @@ class BangOlufsenMediaPlayer(BangOlufsenEntity, MediaPlayerEntity):
 
         self._attr_source_list = list(self._sources.values())
 
-        # HASS won't necessarily be running the first time this method is run
-        if self.hass.is_running:
+        # menuai won't necessarily be running the first time this method is run
+        if self.menuai.is_running:
             self.async_write_ha_state()
 
     async def _async_update_playback_metadata_and_beolink(
@@ -402,7 +402,7 @@ class BangOlufsenMediaPlayer(BangOlufsenEntity, MediaPlayerEntity):
     @callback
     def _async_update_playback_error(self, data: PlaybackError) -> None:
         """Show playback error."""
-        raise HomeAssistantError(data.error)
+        raise menuaiError(data.error)
 
     @callback
     def _async_update_playback_progress(self, data: PlaybackProgress) -> None:
@@ -449,7 +449,7 @@ class BangOlufsenMediaPlayer(BangOlufsenEntity, MediaPlayerEntity):
         beolink_self = await self._client.get_beolink_self()
 
         # Update device name
-        device_registry = dr.async_get(self.hass)
+        device_registry = dr.async_get(self.menuai)
         assert self.device_entry is not None
 
         device_registry.async_update_device(
@@ -490,12 +490,12 @@ class BangOlufsenMediaPlayer(BangOlufsenEntity, MediaPlayerEntity):
 
         # If the device is a listener.
         if self._remote_leader is not None:
-            # Add leader if available in Home Assistant
+            # Add leader if available in MenuAI
             leader = self._get_entity_id_from_jid(self._remote_leader.jid)
             group_members.append(
                 leader
                 if leader is not None
-                else f"leader_not_in_hass-{self._remote_leader.friendly_name}"
+                else f"leader_not_in_menuai-{self._remote_leader.friendly_name}"
             )
 
             # Add self
@@ -515,7 +515,7 @@ class BangOlufsenMediaPlayer(BangOlufsenEntity, MediaPlayerEntity):
                 # Add self
                 group_members.append(self.entity_id)
 
-                # Get the entity_ids of the listeners if available in Home Assistant
+                # Get the entity_ids of the listeners if available in MenuAI
                 group_members.extend(
                     [
                         listener
@@ -525,7 +525,7 @@ class BangOlufsenMediaPlayer(BangOlufsenEntity, MediaPlayerEntity):
                             )
                         )
                         is not None
-                        else f"listener_not_in_hass-{beolink_listener.jid}"
+                        else f"listener_not_in_menuai-{beolink_listener.jid}"
                         for beolink_listener in beolink_listeners
                     ]
                 )
@@ -551,7 +551,7 @@ class BangOlufsenMediaPlayer(BangOlufsenEntity, MediaPlayerEntity):
 
         unique_id = get_serial_number_from_jid(jid)
 
-        entity_registry = er.async_get(self.hass)
+        entity_registry = er.async_get(self.menuai)
         return entity_registry.async_get_entity_id(
             Platform.MEDIA_PLAYER, DOMAIN, unique_id
         )
@@ -559,7 +559,7 @@ class BangOlufsenMediaPlayer(BangOlufsenEntity, MediaPlayerEntity):
     def _get_beolink_jid(self, entity_id: str) -> str:
         """Get beolink JID from entity_id."""
 
-        entity_registry = er.async_get(self.hass)
+        entity_registry = er.async_get(self.menuai)
 
         # Check for valid bang_olufsen media_player entity
         entity_entry = entity_registry.async_get(entity_id)
@@ -576,7 +576,7 @@ class BangOlufsenMediaPlayer(BangOlufsenEntity, MediaPlayerEntity):
                 translation_placeholders={"entity_id": entity_id},
             )
 
-        config_entry = self.hass.config_entries.async_get_entry(
+        config_entry = self.menuai.config_entries.async_get_entry(
             entity_entry.config_entry_id
         )
         if TYPE_CHECKING:
@@ -836,14 +836,14 @@ class BangOlufsenMediaPlayer(BangOlufsenEntity, MediaPlayerEntity):
 
         if media_source.is_media_source_id(media_id):
             sourced_media = await media_source.async_resolve_media(
-                self.hass, media_id, self.entity_id
+                self.menuai, media_id, self.entity_id
             )
 
-            media_id = async_process_play_media_url(self.hass, sourced_media.url)
+            media_id = async_process_play_media_url(self.menuai, sourced_media.url)
 
             # Exit if the source uses unsupported file.
             if media_id.endswith(".m3u"):
-                raise HomeAssistantError(
+                raise menuaiError(
                     translation_domain=DOMAIN, translation_key="m3u_invalid_format"
                 )
 
@@ -949,7 +949,7 @@ class BangOlufsenMediaPlayer(BangOlufsenEntity, MediaPlayerEntity):
                     )
 
             except ApiException as error:
-                raise HomeAssistantError(
+                raise menuaiError(
                     translation_domain=DOMAIN,
                     translation_key="play_media_error",
                     translation_placeholders={
@@ -965,7 +965,7 @@ class BangOlufsenMediaPlayer(BangOlufsenEntity, MediaPlayerEntity):
     ) -> BrowseMedia:
         """Implement the WebSocket media browsing helper."""
         return await media_source.async_browse_media(
-            self.hass,
+            self.menuai,
             media_content_id,
             content_filter=lambda item: item.media_content_type.startswith("audio/"),
         )

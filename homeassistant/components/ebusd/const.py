@@ -1,7 +1,7 @@
 """Constants for ebus component."""
 
-from homeassistant.components.sensor import SensorDeviceClass
-from homeassistant.const import (
+from menuai.components.sensor import SensorDeviceClass
+from menuai.const import (
     PERCENTAGE,
     UnitOfEnergy,
     UnitOfPressure,

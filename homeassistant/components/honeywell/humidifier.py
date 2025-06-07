@@ -8,14 +8,14 @@ from typing import Any
 
 from aiosomecomfort.device import Device
 
-from homeassistant.components.humidifier import (
+from menuai.components.humidifier import (
     HumidifierDeviceClass,
     HumidifierEntity,
     HumidifierEntityDescription,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import HoneywellConfigEntry
 from .const import DOMAIN
@@ -71,7 +71,7 @@ HUMIDIFIERS: dict[str, HoneywellHumidifierEntityDescription] = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: HoneywellConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

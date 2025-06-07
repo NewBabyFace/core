@@ -7,10 +7,10 @@ from unittest.mock import MagicMock
 from matter_server.common.models import EventType
 import pytest
 
-from homeassistant.components.matter.adapter import get_clean_name
-from homeassistant.components.matter.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.components.matter.adapter import get_clean_name
+from menuai.components.matter.const import DOMAIN
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 from .common import create_node_from_fixture
 
@@ -27,7 +27,7 @@ from tests.common import MockConfigEntry
     ],
 )
 async def test_device_registry_single_node_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     name: str,
 ) -> None:
@@ -54,7 +54,7 @@ async def test_device_registry_single_node_device(
 @pytest.mark.usefixtures("matter_node")
 @pytest.mark.parametrize("node_fixture", ["on_off_plugin_unit"])
 async def test_device_registry_single_node_device_alt(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
 ) -> None:
     """Test additional device with different attribute values."""
@@ -77,7 +77,7 @@ async def test_device_registry_single_node_device_alt(
 @pytest.mark.skip("Waiting for a new test fixture")
 @pytest.mark.parametrize("node_fixture", ["fake_bridge_two_light"])
 async def test_device_registry_bridge(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
 ) -> None:
     """Test bridge devices are set up correctly with via_device."""
@@ -122,7 +122,7 @@ async def test_device_registry_bridge(
 
 @pytest.mark.usefixtures("integration")
 async def test_node_added_subscription(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
 ) -> None:
     """Test subscription to new devices work."""
@@ -135,20 +135,20 @@ async def test_node_added_subscription(
     node_added_callback = matter_client.subscribe_events.call_args.kwargs["callback"]
     node = create_node_from_fixture("onoff_light")
 
-    entity_state = hass.states.get("light.mock_onoff_light")
+    entity_state = menuai.states.get("light.mock_onoff_light")
     assert not entity_state
 
     node_added_callback(EventType.NODE_ADDED, node)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    entity_state = hass.states.get("light.mock_onoff_light")
+    entity_state = menuai.states.get("light.mock_onoff_light")
     assert entity_state
 
 
 @pytest.mark.usefixtures("matter_node")
 @pytest.mark.parametrize("node_fixture", ["air_purifier"])
 async def test_device_registry_single_node_composed_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
 ) -> None:
     """Test that a composed device within a standalone node only creates one HA device entry."""
@@ -157,12 +157,12 @@ async def test_device_registry_single_node_composed_device(
 
 @pytest.mark.usefixtures("matter_node")
 @pytest.mark.parametrize("node_fixture", ["multi_endpoint_light"])
-async def test_multi_endpoint_name(hass: HomeAssistant) -> None:
+async def test_multi_endpoint_name(menuai: menuai) -> None:
     """Test that the entity name gets postfixed if the device has multiple primary endpoints."""
-    entity_state = hass.states.get("light.inovelli_light_1")
+    entity_state = menuai.states.get("light.inovelli_light_1")
     assert entity_state
     assert entity_state.name == "Inovelli Light (1)"
-    entity_state = hass.states.get("light.inovelli_light_6")
+    entity_state = menuai.states.get("light.inovelli_light_6")
     assert entity_state
     assert entity_state.name == "Inovelli Light (6)"
 
@@ -182,7 +182,7 @@ async def test_get_clean_name() -> None:
 
 
 async def test_bad_node_not_crash_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -194,12 +194,12 @@ async def test_bad_node_not_crash_integration(
     config_entry = MockConfigEntry(
         domain="matter", data={"url": "http://mock-matter-server-url"}
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert matter_client.get_nodes.call_count == 1
-    assert hass.states.get("light.mock_onoff_light") is not None
-    assert len(hass.states.async_all("light")) == 1
+    assert menuai.states.get("light.mock_onoff_light") is not None
+    assert len(menuai.states.async_all("light")) == 1
     assert "Error setting up node" in caplog.text

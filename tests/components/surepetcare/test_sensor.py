@@ -1,7 +1,7 @@
 """Test the surepetcare sensor platform."""
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import HOUSEHOLD_ID, MOCK_FELAQUA
 
@@ -16,17 +16,17 @@ EXPECTED_ENTITY_IDS = {
 
 
 async def test_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     surepetcare,
     mock_config_entry_setup: MockConfigEntry,
 ) -> None:
     """Test the generation of unique ids."""
-    state_entity_ids = hass.states.async_entity_ids()
+    state_entity_ids = menuai.states.async_entity_ids()
 
     for entity_id, unique_id in EXPECTED_ENTITY_IDS.items():
         assert entity_id in state_entity_ids
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert state.state == "100"
         entity = entity_registry.async_get(entity_id)

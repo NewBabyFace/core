@@ -2,10 +2,10 @@
 
 import requests_mock
 
-from homeassistant import config_entries
-from homeassistant.components.starline import config_flow
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.starline import config_flow
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 TEST_APP_ID = "666"
 TEST_APP_SECRET = "appsecret"
@@ -18,7 +18,7 @@ TEST_APP_USERNAME = "sluser"
 TEST_APP_PASSWORD = "slpassword"
 
 
-async def test_flow_works(hass: HomeAssistant) -> None:
+async def test_flow_works(menuai: menuai) -> None:
     """Test that config flow works."""
     with requests_mock.Mocker() as mock:
         mock.get(
@@ -43,13 +43,13 @@ async def test_flow_works(hass: HomeAssistant) -> None:
             text='{"code": 200, "devices": [{"device_id": "123", "imei": "123", "alias": "123", "battery": "123", "ctemp": "123", "etemp": "123", "fw_version": "123", "gsm_lvl": "123", "phone": "123", "status": "1", "ts_activity": "123", "typename": "123", "balance": {}, "car_state": {}, "car_alr_state": {}, "functions": [], "position": {}}], "shared_devices": []}',
         )
 
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             config_flow.DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "auth_app"
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={
                 config_flow.CONF_APP_ID: TEST_APP_ID,
@@ -59,7 +59,7 @@ async def test_flow_works(hass: HomeAssistant) -> None:
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "auth_user"
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={
                 config_flow.CONF_USERNAME: TEST_APP_USERNAME,
@@ -70,13 +70,13 @@ async def test_flow_works(hass: HomeAssistant) -> None:
         assert result["title"] == f"Application {TEST_APP_ID}"
 
 
-async def test_step_auth_app_code_falls(hass: HomeAssistant) -> None:
+async def test_step_auth_app_code_falls(menuai: menuai) -> None:
     """Test config flow works when app auth code fails."""
     with requests_mock.Mocker() as mock:
         mock.get(
             "https://id.starline.ru/apiV3/application/getCode/", text='{"state": 0}}'
         )
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             config_flow.DOMAIN,
             context={"source": config_entries.SOURCE_USER},
             data={
@@ -89,7 +89,7 @@ async def test_step_auth_app_code_falls(hass: HomeAssistant) -> None:
         assert result["errors"] == {"base": "error_auth_app"}
 
 
-async def test_step_auth_app_token_falls(hass: HomeAssistant) -> None:
+async def test_step_auth_app_token_falls(menuai: menuai) -> None:
     """Test config flow works when app auth token fails."""
     with requests_mock.Mocker() as mock:
         mock.get(
@@ -99,7 +99,7 @@ async def test_step_auth_app_token_falls(hass: HomeAssistant) -> None:
         mock.get(
             "https://id.starline.ru/apiV3/application/getToken/", text='{"state": 0}'
         )
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             config_flow.DOMAIN,
             context={"source": config_entries.SOURCE_USER},
             data={
@@ -112,12 +112,12 @@ async def test_step_auth_app_token_falls(hass: HomeAssistant) -> None:
         assert result["errors"] == {"base": "error_auth_app"}
 
 
-async def test_step_auth_user_falls(hass: HomeAssistant) -> None:
+async def test_step_auth_user_falls(menuai: menuai) -> None:
     """Test config flow works when user fails."""
     with requests_mock.Mocker() as mock:
         mock.post("https://id.starline.ru/apiV3/user/login/", text='{"state": 0}')
         flow = config_flow.StarlineFlowHandler()
-        flow.hass = hass
+        flow.menuai = menuai
         result = await flow.async_step_auth_user(
             user_input={
                 config_flow.CONF_USERNAME: TEST_APP_USERNAME,

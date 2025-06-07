@@ -9,15 +9,15 @@ from typing import TYPE_CHECKING, Any
 
 from miio import Device as MiioDevice
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.const import CONF_DEVICE, CONF_MODEL, EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.const import CONF_DEVICE, CONF_MODEL, EntityCategory
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from . import VacuumCoordinatorDataAttributes
 from .const import (
@@ -135,7 +135,7 @@ HUMIDIFIER_MJJSQ_BINARY_SENSORS = (ATTR_NO_WATER, ATTR_WATER_TANK_DETACHED)
 
 
 def _setup_vacuum_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: XiaomiMiioConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -176,7 +176,7 @@ def _setup_vacuum_sensors(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: XiaomiMiioConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -197,7 +197,7 @@ async def async_setup_entry(
         elif model in MODELS_HUMIDIFIER_MJJSQ:
             sensors = HUMIDIFIER_MJJSQ_BINARY_SENSORS
         elif model in MODELS_VACUUM:
-            _setup_vacuum_sensors(hass, config_entry, async_add_entities)
+            _setup_vacuum_sensors(menuai, config_entry, async_add_entities)
             return
 
         for description in BINARY_SENSOR_TYPES:

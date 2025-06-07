@@ -7,14 +7,14 @@ from pyplaato.models.airlock import PlaatoAirlock
 from pyplaato.models.device import PlaatoDeviceType
 from pyplaato.models.keg import PlaatoKeg
 
-from homeassistant.components.plaato.const import (
+from menuai.components.plaato.const import (
     CONF_DEVICE_NAME,
     CONF_DEVICE_TYPE,
     CONF_USE_WEBHOOK,
     DOMAIN,
 )
-from homeassistant.const import CONF_TOKEN
-from homeassistant.core import HomeAssistant
+from menuai.const import CONF_TOKEN
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -26,16 +26,16 @@ KEG_DATA = {}
 
 @freeze_time("2024-05-24 12:00:00", tz_offset=0)
 async def init_integration(
-    hass: HomeAssistant, device_type: PlaatoDeviceType
+    menuai: menuai, device_type: PlaatoDeviceType
 ) -> MockConfigEntry:
     """Mock integration setup."""
     with (
         patch(
-            "homeassistant.components.plaato.coordinator.Plaato.get_airlock_data",
+            "menuai.components.plaato.coordinator.Plaato.get_airlock_data",
             return_value=PlaatoAirlock(AIRLOCK_DATA),
         ),
         patch(
-            "homeassistant.components.plaato.coordinator.Plaato.get_keg_data",
+            "menuai.components.plaato.coordinator.Plaato.get_keg_data",
             return_value=PlaatoKeg(KEG_DATA),
         ),
     ):
@@ -49,7 +49,7 @@ async def init_integration(
             },
             entry_id="123456",
         )
-        entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
     return entry

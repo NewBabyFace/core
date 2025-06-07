@@ -10,11 +10,11 @@ from sense_energy import (
     SenseMFARequiredException,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_TIMEOUT, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_TIMEOUT, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
     ACTIVE_UPDATE_RATE,
@@ -39,7 +39,7 @@ class SenseData:
     rt: SenseRealtimeCoordinator
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: SenseConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: SenseConfigEntry) -> bool:
     """Set up Sense from a config entry."""
 
     entry_data = entry.data
@@ -51,11 +51,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: SenseConfigEntry) -> boo
     refresh_token = entry_data.get("refresh_token", "")
     monitor_id = entry_data.get("monitor_id", "")
 
-    client_session = async_get_clientsession(hass)
+    client_session = async_get_clientsession(menuai)
 
     # Creating the AsyncSenseable object loads
     # ssl certificates which does blocking IO
-    gateway = await hass.async_add_executor_job(
+    gateway = await menuai.async_add_executor_job(
         partial(
             ASyncSenseable,
             api_timeout=timeout,
@@ -89,19 +89,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: SenseConfigEntry) -> boo
     except SENSE_WEBSOCKET_EXCEPTIONS as err:
         raise ConfigEntryNotReady(str(err) or "Error during realtime update") from err
 
-    trends_coordinator = SenseTrendCoordinator(hass, entry, gateway)
-    realtime_coordinator = SenseRealtimeCoordinator(hass, entry, gateway)
+    trends_coordinator = SenseTrendCoordinator(menuai, entry, gateway)
+    realtime_coordinator = SenseRealtimeCoordinator(menuai, entry, gateway)
 
     # This can take longer than 60s and we already know
     # sense is online since get_discovered_device_data was
     # successful so we do it later.
     entry.async_create_background_task(
-        hass,
+        menuai,
         trends_coordinator.async_request_refresh(),
         "sense.trends-coordinator-refresh",
     )
     entry.async_create_background_task(
-        hass,
+        menuai,
         realtime_coordinator.async_request_refresh(),
         "sense.realtime-coordinator-refresh",
     )
@@ -112,10 +112,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: SenseConfigEntry) -> boo
         rt=realtime_coordinator,
     )
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: SenseConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: SenseConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

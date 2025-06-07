@@ -8,15 +8,15 @@ from typing import TYPE_CHECKING
 import aiohttp
 from spotifyaio import Device, SpotifyClient, SpotifyConnectionError
 
-from homeassistant.const import CONF_ACCESS_TOKEN, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.config_entry_oauth2_flow import (
+from menuai.const import CONF_ACCESS_TOKEN, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.config_entry_oauth2_flow import (
     OAuth2Session,
     async_get_config_entry_implementation,
 )
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .browse_media import async_browse_media
 from .const import DOMAIN, LOGGER, SPOTIFY_SCOPES
@@ -39,17 +39,17 @@ __all__ = [
 ]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: SpotifyConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: SpotifyConfigEntry) -> bool:
     """Set up Spotify from a config entry."""
-    implementation = await async_get_config_entry_implementation(hass, entry)
-    session = OAuth2Session(hass, entry, implementation)
+    implementation = await async_get_config_entry_implementation(menuai, entry)
+    session = OAuth2Session(menuai, entry, implementation)
 
     try:
         await session.async_ensure_token_valid()
     except aiohttp.ClientError as err:
         raise ConfigEntryNotReady from err
 
-    spotify = SpotifyClient(async_get_clientsession(hass))
+    spotify = SpotifyClient(async_get_clientsession(menuai))
 
     spotify.authenticate(session.token[CONF_ACCESS_TOKEN])
 
@@ -62,7 +62,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: SpotifyConfigEntry) -> b
 
     spotify.refresh_token_function = _refresh_token
 
-    coordinator = SpotifyCoordinator(hass, entry, spotify)
+    coordinator = SpotifyCoordinator(menuai, entry, spotify)
 
     await coordinator.async_config_entry_first_refresh()
 
@@ -73,7 +73,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: SpotifyConfigEntry) -> b
             raise UpdateFailed from err
 
     device_coordinator: DataUpdateCoordinator[list[Device]] = DataUpdateCoordinator(
-        hass,
+        menuai,
         LOGGER,
         name=f"{entry.title} Devices",
         config_entry=entry,
@@ -87,10 +87,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: SpotifyConfigEntry) -> b
     if not set(session.token["scope"].split(" ")).issuperset(SPOTIFY_SCOPES):
         raise ConfigEntryAuthFailed
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: SpotifyConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: SpotifyConfigEntry) -> bool:
     """Unload Spotify config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

@@ -3,8 +3,8 @@
 from datetime import timedelta
 from unittest.mock import MagicMock
 
-from homeassistant.components.jellyfin.const import DOMAIN
-from homeassistant.components.media_player import (
+from menuai.components.jellyfin.const import DOMAIN
+from menuai.components.media_player import (
     ATTR_MEDIA_ALBUM_ARTIST,
     ATTR_MEDIA_ALBUM_NAME,
     ATTR_MEDIA_ARTIST,
@@ -24,16 +24,16 @@ from homeassistant.components.media_player import (
     MediaPlayerState,
     MediaType,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     ATTR_ENTITY_ID,
     ATTR_ENTITY_PICTURE,
     ATTR_FRIENDLY_NAME,
     ATTR_ICON,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.util.dt import utcnow
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.util.dt import utcnow
 
 from . import async_load_json_fixture
 
@@ -42,7 +42,7 @@ from tests.typing import WebSocketGenerator
 
 
 async def test_media_player(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     init_integration: MockConfigEntry,
@@ -50,7 +50,7 @@ async def test_media_player(
     mock_api: MagicMock,
 ) -> None:
     """Test the Jellyfin media player."""
-    state = hass.states.get("media_player.jellyfin_device")
+    state = menuai.states.get("media_player.jellyfin_device")
 
     assert state
     assert state.state == MediaPlayerState.PAUSED
@@ -75,13 +75,13 @@ async def test_media_player(
     assert entry.unique_id == "SERVER-UUID-SESSION-UUID"
 
     assert len(mock_api.sessions.mock_calls) == 1
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=10))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=10))
+    await menuai.async_block_till_done()
     assert len(mock_api.sessions.mock_calls) == 2
 
     mock_api.sessions.return_value = []
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=20))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=20))
+    await menuai.async_block_till_done()
     assert len(mock_api.sessions.mock_calls) == 3
 
     device = device_registry.async_get(entry.device_id)
@@ -97,14 +97,14 @@ async def test_media_player(
 
 
 async def test_media_player_music(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     init_integration: MockConfigEntry,
     mock_jellyfin: MagicMock,
     mock_api: MagicMock,
 ) -> None:
     """Test the Jellyfin media player."""
-    state = hass.states.get("media_player.jellyfin_device_four")
+    state = menuai.states.get("media_player.jellyfin_device_four")
 
     assert state
     assert state.state == MediaPlayerState.PLAYING
@@ -138,16 +138,16 @@ async def test_media_player_music(
 
 
 async def test_services(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_integration: MockConfigEntry,
     mock_jellyfin: MagicMock,
     mock_api: MagicMock,
 ) -> None:
     """Test Jellyfin media player services."""
-    state = hass.states.get("media_player.jellyfin_device")
+    state = menuai.states.get("media_player.jellyfin_device")
     assert state
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         "play_media",
         {
@@ -163,7 +163,7 @@ async def test_services(
         ["ITEM-UUID"],
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         "media_pause",
         {
@@ -173,7 +173,7 @@ async def test_services(
     )
     assert len(mock_api.remote_pause.mock_calls) == 1
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         "media_play",
         {
@@ -183,7 +183,7 @@ async def test_services(
     )
     assert len(mock_api.remote_unpause.mock_calls) == 1
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         "media_play_pause",
         {
@@ -193,7 +193,7 @@ async def test_services(
     )
     assert len(mock_api.remote_playpause.mock_calls) == 1
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         "media_seek",
         {
@@ -208,7 +208,7 @@ async def test_services(
         100000000,
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         "media_stop",
         {
@@ -218,7 +218,7 @@ async def test_services(
     )
     assert len(mock_api.remote_stop.mock_calls) == 1
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         "volume_set",
         {
@@ -229,7 +229,7 @@ async def test_services(
     )
     assert len(mock_api.remote_set_volume.mock_calls) == 1
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         "volume_mute",
         {
@@ -240,7 +240,7 @@ async def test_services(
     )
     assert len(mock_api.remote_mute.mock_calls) == 1
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         "volume_mute",
         {
@@ -253,14 +253,14 @@ async def test_services(
 
 
 async def test_browse_media(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     init_integration: MockConfigEntry,
     mock_jellyfin: MagicMock,
     mock_api: MagicMock,
 ) -> None:
     """Test Jellyfin browse media."""
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
 
     # browse root folder
     await client.send_json(
@@ -364,21 +364,21 @@ async def test_browse_media(
 
 
 async def test_new_client_connected(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_integration: MockConfigEntry,
     mock_jellyfin: MagicMock,
     mock_api: MagicMock,
 ) -> None:
     """Test Jellyfin media player reacts to new clients connecting."""
     mock_api.sessions.return_value = await async_load_json_fixture(
-        hass,
+        menuai,
         "sessions-new-client.json",
     )
 
     assert len(mock_api.sessions.mock_calls) == 1
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=10))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=10))
+    await menuai.async_block_till_done()
     assert len(mock_api.sessions.mock_calls) == 2
 
-    state = hass.states.get("media_player.jellyfin_device_five")
+    state = menuai.states.get("media_player.jellyfin_device_five")
     assert state

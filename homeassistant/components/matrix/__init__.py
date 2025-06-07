@@ -28,21 +28,21 @@ from nio.responses import (
 from PIL import Image
 import voluptuous as vol
 
-from homeassistant.components.notify import ATTR_DATA, ATTR_MESSAGE, ATTR_TARGET
-from homeassistant.const import (
+from menuai.components.notify import ATTR_DATA, ATTR_MESSAGE, ATTR_TARGET
+from menuai.const import (
     CONF_NAME,
     CONF_PASSWORD,
     CONF_USERNAME,
     CONF_VERIFY_SSL,
-    EVENT_HOMEASSISTANT_START,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_START,
+    EVENT_menuai_STOP,
 )
-from homeassistant.core import Event as HassEvent, HomeAssistant, ServiceCall
-from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.json import save_json
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util.json import JsonObjectType, load_json_object
+from menuai.core import Event as menuaiEvent, menuai, ServiceCall
+from menuai.exceptions import ConfigEntryAuthFailed, menuaiError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.json import save_json
+from menuai.helpers.typing import ConfigType
+from menuai.util.json import JsonObjectType, load_json_object
 
 from .const import ATTR_FORMAT, ATTR_IMAGES, CONF_ROOMS_REGEX, DOMAIN, FORMAT_HTML
 from .services import register_services
@@ -113,13 +113,13 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Matrix bot component."""
     config = config[DOMAIN]
 
-    hass.data[DOMAIN] = MatrixBot(
-        hass,
-        os.path.join(hass.config.path(), SESSION_FILE),
+    menuai.data[DOMAIN] = MatrixBot(
+        menuai,
+        os.path.join(menuai.config.path(), SESSION_FILE),
         config[CONF_HOMESERVER],
         config[CONF_VERIFY_SSL],
         config[CONF_USERNAME],
@@ -128,7 +128,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         config[CONF_COMMANDS],
     )
 
-    register_services(hass)
+    register_services(menuai)
 
     return True
 
@@ -140,7 +140,7 @@ class MatrixBot:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_file: str,
         homeserver: str,
         verify_ssl: bool,
@@ -150,7 +150,7 @@ class MatrixBot:
         commands: list[ConfigCommand],
     ) -> None:
         """Set up the client."""
-        self.hass = hass
+        self.menuai = menuai
 
         self._session_filepath = config_file
         self._access_tokens: JsonObjectType = {}
@@ -169,15 +169,15 @@ class MatrixBot:
         self._expression_commands: dict[RoomID, list[ConfigCommand]] = {}
         self._unparsed_commands = commands
 
-        async def stop_client(event: HassEvent) -> None:
-            """Run once when Home Assistant stops."""
+        async def stop_client(event: menuaiEvent) -> None:
+            """Run once when MenuAI stops."""
             if self._client is not None:
                 await self._client.close()
 
-        self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, stop_client)
+        self.menuai.bus.async_listen_once(EVENT_menuai_STOP, stop_client)
 
-        async def handle_startup(event: HassEvent) -> None:
-            """Run once when Home Assistant finished startup."""
+        async def handle_startup(event: menuaiEvent) -> None:
+            """Run once when MenuAI finished startup."""
             self._access_tokens = await self._get_auth_tokens()
             await self._login()
             await self._resolve_room_aliases(listening_rooms)
@@ -192,7 +192,7 @@ class MatrixBot:
             self._client.add_event_callback(self._handle_room_message, RoomMessageText)
 
             _LOGGER.debug("Starting sync_forever for %s", self._mx_id)
-            self.hass.async_create_background_task(
+            self.menuai.async_create_background_task(
                 self._client.sync_forever(
                     timeout=30_000,
                     loop_sleep_time=1_000,
@@ -200,7 +200,7 @@ class MatrixBot:
                 name=f"{self.__class__.__name__}: sync_forever for '{self._mx_id}'",
             )
 
-        self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_START, handle_startup)
+        self.menuai.bus.async_listen_once(EVENT_menuai_START, handle_startup)
 
     def _load_commands(self, commands: list[ConfigCommand]) -> None:
         for command in commands:
@@ -244,7 +244,7 @@ class MatrixBot:
                     "room": room_id,
                     "args": pieces[1:],
                 }
-                self.hass.bus.async_fire(EVENT_MATRIX_COMMAND, message_data)
+                self.menuai.bus.async_fire(EVENT_MATRIX_COMMAND, message_data)
 
         # After single-word commands, check all regex commands in the room.
         for command in self._expression_commands.get(room_id, []):
@@ -257,7 +257,7 @@ class MatrixBot:
                 "room": room_id,
                 "args": match.groupdict(),
             }
-            self.hass.bus.async_fire(EVENT_MATRIX_COMMAND, message_data)
+            self.menuai.bus.async_fire(EVENT_MATRIX_COMMAND, message_data)
 
     async def _resolve_room_alias(
         self, room_alias_or_id: RoomAnyID
@@ -289,7 +289,7 @@ class MatrixBot:
     async def _resolve_room_aliases(self, listening_rooms: list[RoomAnyID]) -> None:
         """Resolve any RoomAliases into RoomIDs for the purpose of client interactions."""
         resolved_rooms = [
-            self.hass.async_create_task(
+            self.menuai.async_create_task(
                 self._resolve_room_alias(room_alias_or_id), eager_start=False
             )
             for room_alias_or_id in listening_rooms
@@ -313,7 +313,7 @@ class MatrixBot:
     async def _join_rooms(self) -> None:
         """Join the Matrix rooms that we listen for commands in."""
         rooms = [
-            self.hass.async_create_task(
+            self.menuai.async_create_task(
                 self._join_room(room_id, room_alias_or_id), eager_start=False
             )
             for room_alias_or_id, room_id in self._listening_rooms.items()
@@ -323,10 +323,10 @@ class MatrixBot:
     async def _get_auth_tokens(self) -> JsonObjectType:
         """Read sorted authentication tokens from disk."""
         try:
-            return await self.hass.async_add_executor_job(
+            return await self.menuai.async_add_executor_job(
                 load_json_object, self._session_filepath
             )
-        except HomeAssistantError as ex:
+        except menuaiError as ex:
             _LOGGER.warning(
                 "Loading authentication tokens from file '%s' failed: %s",
                 self._session_filepath,
@@ -338,7 +338,7 @@ class MatrixBot:
         """Store authentication token to session and persistent storage."""
         self._access_tokens[self._mx_id] = token
 
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             save_json,
             self._session_filepath,
             self._access_tokens,
@@ -420,7 +420,7 @@ class MatrixBot:
     ) -> None:
         """Wrap _handle_room_send for multiple target_rooms."""
         await asyncio.wait(
-            self.hass.async_create_task(
+            self.menuai.async_create_task(
                 self._handle_room_send(
                     target_room=target_room,
                     message_type=message_type,
@@ -435,15 +435,15 @@ class MatrixBot:
         self, image_path: str, target_rooms: Sequence[RoomAnyID]
     ) -> None:
         """Upload an image, then send it to all target_rooms."""
-        _is_allowed_path = await self.hass.async_add_executor_job(
-            self.hass.config.is_allowed_path, image_path
+        _is_allowed_path = await self.menuai.async_add_executor_job(
+            self.menuai.config.is_allowed_path, image_path
         )
         if not _is_allowed_path:
             _LOGGER.error("Path not allowed: %s", image_path)
             return
 
         # Get required image metadata.
-        image = await self.hass.async_add_executor_job(Image.open, image_path)
+        image = await self.menuai.async_add_executor_job(Image.open, image_path)
         (width, height) = image.size
         mime_type = mimetypes.guess_type(image_path)[0]
         file_stat = await aiofiles.os.stat(image_path)
@@ -502,7 +502,7 @@ class MatrixBot:
             and len(target_rooms) > 0
         ):
             image_tasks = [
-                self.hass.async_create_task(
+                self.menuai.async_create_task(
                     self._send_image(image_path, target_rooms), eager_start=False
                 )
                 for image_path in image_paths

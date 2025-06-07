@@ -14,28 +14,28 @@ from PIL import Image, ImageDraw, UnidentifiedImageError
 import tensorflow as tf
 import voluptuous as vol
 
-from homeassistant.components.image_processing import (
+from menuai.components.image_processing import (
     CONF_CONFIDENCE,
     PLATFORM_SCHEMA as IMAGE_PROCESSING_PLATFORM_SCHEMA,
     ImageProcessingEntity,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_ENTITY_ID,
     CONF_MODEL,
     CONF_NAME,
     CONF_SOURCE,
-    EVENT_HOMEASSISTANT_START,
+    EVENT_menuai_START,
 )
-from homeassistant.core import (
-    DOMAIN as HOMEASSISTANT_DOMAIN,
-    HomeAssistant,
+from menuai.core import (
+    DOMAIN as menuai_DOMAIN,
+    menuai,
     split_entity_id,
 )
-from homeassistant.helpers import config_validation as cv, template
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.issue_registry import IssueSeverity, create_issue
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util.pil import draw_box
+from menuai.helpers import config_validation as cv, template
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.issue_registry import IssueSeverity, create_issue
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util.pil import draw_box
 
 from . import CONF_GRAPH, DOMAIN
 
@@ -109,15 +109,15 @@ def get_model_detection_function(model):
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the TensorFlow image processing platform."""
     create_issue(
-        hass,
-        HOMEASSISTANT_DOMAIN,
+        menuai,
+        menuai_DOMAIN,
         f"deprecated_system_packages_yaml_integration_{DOMAIN}",
         breaks_in_ha_version="2025.12.0",
         is_fixable=False,
@@ -131,8 +131,8 @@ def setup_platform(
     )
 
     model_config = config[CONF_MODEL]
-    model_dir = model_config.get(CONF_MODEL_DIR) or hass.config.path("tensorflow")
-    labels = model_config.get(CONF_LABELS) or hass.config.path(
+    model_dir = model_config.get(CONF_MODEL_DIR) or menuai.config.path("tensorflow")
+    labels = model_config.get(CONF_LABELS) or menuai.config.path(
         "tensorflow", "object_detection", "data", "mscoco_label_map.pbtxt"
     )
     checkpoint = os.path.join(model_config[CONF_GRAPH], "checkpoint")
@@ -176,10 +176,10 @@ def setup_platform(
             "PIL at reduced resolution"
         )
 
-    hass.data[DOMAIN] = {CONF_MODEL: None}
+    menuai.data[DOMAIN] = {CONF_MODEL: None}
 
-    def tensorflow_hass_start(_event):
-        """Set up TensorFlow model on hass start."""
+    def tensorflow_menuai_start(_event):
+        """Set up TensorFlow model on menuai start."""
         start = time.perf_counter()
 
         # Load pipeline config and build a detection model
@@ -208,9 +208,9 @@ def setup_platform(
         model(input_tensor)
 
         _LOGGER.debug("Model load took %d seconds", time.perf_counter() - start)
-        hass.data[DOMAIN][CONF_MODEL] = model
+        menuai.data[DOMAIN][CONF_MODEL] = model
 
-    hass.bus.listen_once(EVENT_HOMEASSISTANT_START, tensorflow_hass_start)
+    menuai.bus.listen_once(EVENT_menuai_START, tensorflow_menuai_start)
 
     category_index: dict[int, dict[str, Any]] = (
         label_map_util.create_category_index_from_labelmap(
@@ -348,7 +348,7 @@ class TensorFlowImageProcessor(ImageProcessingEntity):
 
     def process_image(self, image: bytes) -> None:
         """Process the image."""
-        if not (model := self.hass.data[DOMAIN][CONF_MODEL]):
+        if not (model := self.menuai.data[DOMAIN][CONF_MODEL]):
             _LOGGER.debug("Model not yet ready")
             return
 

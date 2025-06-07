@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     CONF_CONDITION,
     CONF_DEVICE_ID,
@@ -18,14 +18,14 @@ from homeassistant.const import (
     STATE_PAUSED,
     STATE_PLAYING,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import (
+from menuai.core import menuai, callback
+from menuai.helpers import (
     condition,
     config_validation as cv,
     entity_registry as er,
 )
-from homeassistant.helpers.config_validation import DEVICE_CONDITION_BASE_SCHEMA
-from homeassistant.helpers.typing import ConfigType, TemplateVarsType
+from menuai.helpers.config_validation import DEVICE_CONDITION_BASE_SCHEMA
+from menuai.helpers.typing import ConfigType, TemplateVarsType
 
 from .const import DOMAIN
 
@@ -47,10 +47,10 @@ CONDITION_SCHEMA = DEVICE_CONDITION_BASE_SCHEMA.extend(
 
 
 async def async_get_conditions(
-    hass: HomeAssistant, device_id: str
+    menuai: menuai, device_id: str
 ) -> list[dict[str, str]]:
     """List device conditions for Media player devices."""
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     conditions: list[dict[str, str]] = []
 
     # Get all the integrations entities for this device
@@ -73,7 +73,7 @@ async def async_get_conditions(
 
 @callback
 def async_condition_from_config(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> condition.ConditionCheckerType:
     """Create a function to test a device condition."""
     if config[CONF_TYPE] == "is_buffering":
@@ -89,11 +89,11 @@ def async_condition_from_config(
     else:  # is_playing
         state = STATE_PLAYING
 
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     entity_id = er.async_resolve_entity_id(registry, config[ATTR_ENTITY_ID])
 
-    def test_is_state(hass: HomeAssistant, variables: TemplateVarsType) -> bool:
+    def test_is_state(menuai: menuai, variables: TemplateVarsType) -> bool:
         """Test if an entity is a certain state."""
-        return condition.state(hass, entity_id, state)
+        return condition.state(menuai, entity_id, state)
 
     return test_is_state

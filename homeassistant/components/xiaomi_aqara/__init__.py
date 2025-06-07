@@ -6,19 +6,19 @@ import logging
 import voluptuous as vol
 from xiaomi_gateway import AsyncXiaomiGatewayMulticast, XiaomiGateway
 
-from homeassistant.components import persistent_notification
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.components import persistent_notification
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_DEVICE_ID,
     CONF_HOST,
     CONF_PORT,
     CONF_PROTOCOL,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     Platform,
 )
-from homeassistant.core import HomeAssistant, ServiceCall, callback
-from homeassistant.helpers import config_validation as cv, device_registry as dr
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai, ServiceCall, callback
+from menuai.helpers import config_validation as cv, device_registry as dr
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     CONF_INTERFACE,
@@ -71,7 +71,7 @@ SERVICE_SCHEMA_REMOVE_DEVICE = vol.Schema(
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Xiaomi component."""
 
     def play_ringtone_service(call: ServiceCall) -> None:
@@ -96,7 +96,7 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
         gateway: XiaomiGateway = call.data[ATTR_GW_MAC]
         gateway.write_to_hub(gateway.sid, join_permission="yes")
         persistent_notification.async_create(
-            hass,
+            menuai,
             (
                 "Join permission enabled for 30 seconds! "
                 "Please press the pairing button of the new device once."
@@ -110,41 +110,41 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
         gateway: XiaomiGateway = call.data[ATTR_GW_MAC]
         gateway.write_to_hub(gateway.sid, remove_device=device_id)
 
-    gateway_only_schema = _add_gateway_to_schema(hass, vol.Schema({}))
+    gateway_only_schema = _add_gateway_to_schema(menuai, vol.Schema({}))
 
-    hass.services.register(
+    menuai.services.register(
         DOMAIN,
         SERVICE_PLAY_RINGTONE,
         play_ringtone_service,
-        schema=_add_gateway_to_schema(hass, SERVICE_SCHEMA_PLAY_RINGTONE),
+        schema=_add_gateway_to_schema(menuai, SERVICE_SCHEMA_PLAY_RINGTONE),
     )
 
-    hass.services.register(
+    menuai.services.register(
         DOMAIN, SERVICE_STOP_RINGTONE, stop_ringtone_service, schema=gateway_only_schema
     )
 
-    hass.services.register(
+    menuai.services.register(
         DOMAIN, SERVICE_ADD_DEVICE, add_device_service, schema=gateway_only_schema
     )
 
-    hass.services.register(
+    menuai.services.register(
         DOMAIN,
         SERVICE_REMOVE_DEVICE,
         remove_device_service,
-        schema=_add_gateway_to_schema(hass, SERVICE_SCHEMA_REMOVE_DEVICE),
+        schema=_add_gateway_to_schema(menuai, SERVICE_SCHEMA_REMOVE_DEVICE),
     )
 
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up the xiaomi aqara components from a config entry."""
-    hass.data.setdefault(DOMAIN, {})
-    setup_lock = hass.data[DOMAIN].setdefault(KEY_SETUP_LOCK, asyncio.Lock())
-    hass.data[DOMAIN].setdefault(GATEWAYS_KEY, {})
+    menuai.data.setdefault(DOMAIN, {})
+    setup_lock = menuai.data[DOMAIN].setdefault(KEY_SETUP_LOCK, asyncio.Lock())
+    menuai.data[DOMAIN].setdefault(GATEWAYS_KEY, {})
 
     # Connect to Xiaomi Aqara Gateway
-    xiaomi_gateway = await hass.async_add_executor_job(
+    xiaomi_gateway = await menuai.async_add_executor_job(
         XiaomiGateway,
         entry.data[CONF_HOST],
         entry.data[CONF_SID],
@@ -154,14 +154,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         entry.data[CONF_PORT],
         entry.data[CONF_PROTOCOL],
     )
-    hass.data[DOMAIN][GATEWAYS_KEY][entry.entry_id] = xiaomi_gateway
+    menuai.data[DOMAIN][GATEWAYS_KEY][entry.entry_id] = xiaomi_gateway
 
     async with setup_lock:
-        if LISTENER_KEY not in hass.data[DOMAIN]:
+        if LISTENER_KEY not in menuai.data[DOMAIN]:
             multicast = AsyncXiaomiGatewayMulticast(
                 interface=entry.data[CONF_INTERFACE]
             )
-            hass.data[DOMAIN][LISTENER_KEY] = multicast
+            menuai.data[DOMAIN][LISTENER_KEY] = multicast
 
             # start listining for local pushes (only once)
             await multicast.start_listen()
@@ -173,10 +173,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 _LOGGER.debug("Shutting down Xiaomi Gateway Listener")
                 multicast.stop_listen()
 
-            unsub = hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, stop_xiaomi)
-            hass.data[DOMAIN][KEY_UNSUB_STOP] = unsub
+            unsub = menuai.bus.async_listen_once(EVENT_menuai_STOP, stop_xiaomi)
+            menuai.data[DOMAIN][KEY_UNSUB_STOP] = unsub
 
-    multicast = hass.data[DOMAIN][LISTENER_KEY]
+    multicast = menuai.data[DOMAIN][LISTENER_KEY]
     multicast.register_gateway(entry.data[CONF_HOST], xiaomi_gateway.multicast_callback)
     _LOGGER.debug(
         "Gateway with host '%s' connected, listening for broadcasts",
@@ -184,7 +184,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     assert entry.unique_id
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, entry.unique_id)},
@@ -198,51 +198,51 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     else:
         platforms = GATEWAY_PLATFORMS_NO_KEY
 
-    await hass.config_entries.async_forward_entry_setups(entry, platforms)
+    await menuai.config_entries.async_forward_entry_setups(entry, platforms)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, config_entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     if config_entry.data[CONF_KEY] is not None:
         platforms = GATEWAY_PLATFORMS
     else:
         platforms = GATEWAY_PLATFORMS_NO_KEY
 
-    unload_ok = await hass.config_entries.async_unload_platforms(
+    unload_ok = await menuai.config_entries.async_unload_platforms(
         config_entry, platforms
     )
     if unload_ok:
-        hass.data[DOMAIN][GATEWAYS_KEY].pop(config_entry.entry_id)
+        menuai.data[DOMAIN][GATEWAYS_KEY].pop(config_entry.entry_id)
 
-    if not hass.config_entries.async_loaded_entries(DOMAIN):
+    if not menuai.config_entries.async_loaded_entries(DOMAIN):
         # No gateways left, stop Xiaomi socket
-        unsub_stop = hass.data[DOMAIN].pop(KEY_UNSUB_STOP)
+        unsub_stop = menuai.data[DOMAIN].pop(KEY_UNSUB_STOP)
         unsub_stop()
-        hass.data[DOMAIN].pop(GATEWAYS_KEY)
+        menuai.data[DOMAIN].pop(GATEWAYS_KEY)
         _LOGGER.debug("Shutting down Xiaomi Gateway Listener")
-        multicast = hass.data[DOMAIN].pop(LISTENER_KEY)
+        multicast = menuai.data[DOMAIN].pop(LISTENER_KEY)
         multicast.stop_listen()
 
     return unload_ok
 
 
-def _add_gateway_to_schema(hass, schema):
+def _add_gateway_to_schema(menuai, schema):
     """Extend a voluptuous schema with a gateway validator."""
 
     def gateway(sid):
         """Convert sid to a gateway."""
         sid = str(sid).replace(":", "").lower()
 
-        for gateway in hass.data[DOMAIN][GATEWAYS_KEY].values():
+        for gateway in menuai.data[DOMAIN][GATEWAYS_KEY].values():
             if gateway.sid == sid:
                 return gateway
 
         raise vol.Invalid(f"Unknown gateway sid {sid}")
 
     kwargs = {}
-    if (xiaomi_data := hass.data.get(DOMAIN)) is not None:
+    if (xiaomi_data := menuai.data.get(DOMAIN)) is not None:
         gateways = list(xiaomi_data[GATEWAYS_KEY].values())
 
         # If the user has only 1 gateway, make it the default for services.

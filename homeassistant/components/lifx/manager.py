@@ -12,7 +12,7 @@ from aiolifx_themes.painter import ThemePainter
 from aiolifx_themes.themes import Theme, ThemeLibrary
 import voluptuous as vol
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_BRIGHTNESS_PCT,
     ATTR_COLOR_NAME,
@@ -25,10 +25,10 @@ from homeassistant.components.light import (
     VALID_BRIGHTNESS,
     VALID_BRIGHTNESS_PCT,
 )
-from homeassistant.const import ATTR_MODE
-from homeassistant.core import HomeAssistant, ServiceCall, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.service import async_extract_referenced_entity_ids
+from menuai.const import ATTR_MODE
+from menuai.core import menuai, ServiceCall, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.service import async_extract_referenced_entity_ids
 
 from .const import _ATTR_COLOR_TEMP, ATTR_THEME, DATA_LIFX_MANAGER, DOMAIN
 from .coordinator import LIFXUpdateCoordinator, Light
@@ -233,17 +233,17 @@ SERVICES_SCHEMA = {
 class LIFXManager:
     """Representation of all known LIFX entities."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize the manager."""
-        self.hass = hass
-        self.effects_conductor = aiolifx_effects.Conductor(hass.loop)
+        self.menuai = menuai
+        self.effects_conductor = aiolifx_effects.Conductor(menuai.loop)
         self.entry_id_to_entity_id: dict[str, str] = {}
 
     @callback
     def async_unload(self) -> None:
         """Release resources."""
         for service in SERVICES_SCHEMA:
-            self.hass.services.async_remove(DOMAIN, service)
+            self.menuai.services.async_remove(DOMAIN, service)
 
     @callback
     def async_register_entity(
@@ -261,17 +261,17 @@ class LIFXManager:
 
     @callback
     def async_setup(self) -> None:
-        """Register the LIFX effects as hass service calls."""
+        """Register the LIFX effects as menuai service calls."""
 
         async def service_handler(service: ServiceCall) -> None:
             """Apply a service, i.e. start an effect."""
-            referenced = async_extract_referenced_entity_ids(self.hass, service)
+            referenced = async_extract_referenced_entity_ids(self.menuai, service)
             all_referenced = referenced.referenced | referenced.indirectly_referenced
             if all_referenced:
                 await self.start_effect(all_referenced, service.service, **service.data)
 
         for service, schema in SERVICES_SCHEMA.items():
-            self.hass.services.async_register(
+            self.menuai.services.async_register(
                 DOMAIN, service, service_handler, schema=schema
             )
 
@@ -317,7 +317,7 @@ class LIFXManager:
 
         theme = self.build_theme(theme_name, palette)
 
-        await ThemePainter(self.hass.loop).paint(
+        await ThemePainter(self.menuai.loop).paint(
             theme,
             bulbs,
             duration=kwargs.get(ATTR_TRANSITION, PAINT_THEME_DEFAULT_TRANSITION),
@@ -380,7 +380,7 @@ class LIFXManager:
             period=kwargs.get(ATTR_PERIOD),
             cycles=kwargs.get(ATTR_CYCLES),
             mode=kwargs.get(ATTR_MODE),
-            hsbk=find_hsbk(self.hass, **kwargs),
+            hsbk=find_hsbk(self.menuai, **kwargs),
         )
         await self.effects_conductor.start(effect, bulbs)
 
@@ -491,7 +491,7 @@ class LIFXManager:
         coordinators: list[LIFXUpdateCoordinator] = []
         bulbs: list[Light] = []
 
-        for entry_id, coordinator in self.hass.data[DOMAIN].items():
+        for entry_id, coordinator in self.menuai.data[DOMAIN].items():
             if (
                 entry_id != DATA_LIFX_MANAGER
                 and self.entry_id_to_entity_id[entry_id] in entity_ids

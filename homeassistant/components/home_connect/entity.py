@@ -14,13 +14,13 @@ from aiohomeconnect.model.error import (
     TooManyRequestsError,
 )
 
-from homeassistant.const import STATE_UNAVAILABLE
-from homeassistant.core import callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import EntityDescription
-from homeassistant.helpers.event import async_call_later
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.const import STATE_UNAVAILABLE
+from menuai.core import callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import EntityDescription
+from menuai.helpers.event import async_call_later
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import API_DEFAULT_RETRY_AFTER, DOMAIN
 from .coordinator import HomeConnectApplianceData, HomeConnectCoordinator
@@ -127,7 +127,7 @@ class HomeConnectOptionEntity(HomeConnectEntity):
                 self.state,
             )
         except HomeConnectError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="set_option",
                 translation_placeholders=get_dict_from_home_connect_error(err),
@@ -156,7 +156,7 @@ def constraint_fetcher[_EntityT: HomeConnectEntity, **_P](
             except TooManyRequestsError as err:
                 if (retry_after := err.retry_after) is None:
                     retry_after = API_DEFAULT_RETRY_AFTER
-                async_call_later(self.hass, retry_after, handler)
+                async_call_later(self.menuai, retry_after, handler)
             except HomeConnectError as err:
                 _LOGGER.error(
                     "Error fetching constraints for %s: %s", self.entity_id, err

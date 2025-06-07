@@ -17,12 +17,12 @@ from pynordpool import (
     NordPoolResponseError,
 )
 
-from homeassistant.const import CONF_CURRENCY
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.event import async_track_point_in_utc_time
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-from homeassistant.util import dt as dt_util
+from menuai.const import CONF_CURRENCY
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.event import async_track_point_in_utc_time
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.util import dt as dt_util
 
 from .const import CONF_AREAS, DOMAIN, LOGGER
 
@@ -35,15 +35,15 @@ class NordPoolDataUpdateCoordinator(DataUpdateCoordinator[DeliveryPeriodsData]):
 
     config_entry: NordPoolConfigEntry
 
-    def __init__(self, hass: HomeAssistant, config_entry: NordPoolConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: NordPoolConfigEntry) -> None:
         """Initialize the Nord Pool coordinator."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
         )
-        self.client = NordPoolClient(session=async_get_clientsession(hass))
+        self.client = NordPoolClient(session=async_get_clientsession(menuai))
         self.unsub: Callable[[], None] | None = None
 
     def get_next_interval(self, now: datetime) -> datetime:
@@ -69,7 +69,7 @@ class NordPoolDataUpdateCoordinator(DataUpdateCoordinator[DeliveryPeriodsData]):
     async def fetch_data(self, now: datetime) -> None:
         """Fetch data from Nord Pool."""
         self.unsub = async_track_point_in_utc_time(
-            self.hass, self.fetch_data, self.get_next_interval(dt_util.utcnow())
+            self.menuai, self.fetch_data, self.get_next_interval(dt_util.utcnow())
         )
         data = await self.api_call()
         if data and data.entries:

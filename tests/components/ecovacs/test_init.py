@@ -6,11 +6,11 @@ from deebot_client.exceptions import DeebotError, InvalidAuthenticationError
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.ecovacs.const import DOMAIN
-from homeassistant.components.ecovacs.controller import EcovacsController
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.components.ecovacs.const import DOMAIN
+from menuai.components.ecovacs.controller import EcovacsController
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 from tests.common import MockConfigEntry
 
@@ -19,27 +19,27 @@ from tests.common import MockConfigEntry
     "mock_authenticator", "mock_mqtt_client", "mock_device_execute"
 )
 async def test_load_unload_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test loading and unloading the integration."""
     with patch(
-        "homeassistant.components.ecovacs.EcovacsController",
+        "menuai.components.ecovacs.EcovacsController",
         autospec=True,
     ):
-        mock_config_entry.add_to_hass(hass)
+        mock_config_entry.add_to_menuai(menuai)
 
-        await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
         assert mock_config_entry.state is ConfigEntryState.LOADED
-        assert DOMAIN not in hass.data
+        assert DOMAIN not in menuai.data
         controller = mock_config_entry.runtime_data
         assert isinstance(controller, EcovacsController)
         controller.initialize.assert_called_once()
 
-        await hass.config_entries.async_unload(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_unload(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
         controller.teardown.assert_called_once()
 
         assert mock_config_entry.state is ConfigEntryState.NOT_LOADED
@@ -49,37 +49,37 @@ async def test_load_unload_config_entry(
 def mock_api_client(mock_authenticator: Mock) -> Mock:
     """Mock the API client."""
     with patch(
-        "homeassistant.components.ecovacs.controller.ApiClient",
+        "menuai.components.ecovacs.controller.ApiClient",
         autospec=True,
     ) as mock_api_client:
         yield mock_api_client.return_value
 
 
 async def test_config_entry_not_ready(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_api_client: Mock,
 ) -> None:
     """Test the Ecovacs configuration entry not ready."""
     mock_api_client.get_devices.side_effect = DeebotError
 
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert mock_config_entry.state is ConfigEntryState.SETUP_RETRY
 
 
 async def test_invalid_auth(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_api_client: Mock,
 ) -> None:
     """Test auth error during setup."""
     mock_api_client.get_devices.side_effect = InvalidAuthenticationError
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert mock_config_entry.state is ConfigEntryState.SETUP_ERROR
 
@@ -111,11 +111,11 @@ async def test_devices_in_dr(
     ],
 )
 async def test_all_entities_loaded(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_fixture: str,
     entities: int,
 ) -> None:
     """Test that all entities are loaded together."""
-    assert hass.states.async_entity_ids_count() == entities, (
-        f"loaded entities for {device_fixture}: {hass.states.async_entity_ids()}"
+    assert menuai.states.async_entity_ids_count() == entities, (
+        f"loaded entities for {device_fixture}: {menuai.states.async_entity_ids()}"
     )

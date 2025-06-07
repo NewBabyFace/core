@@ -2,14 +2,14 @@
 
 import pytest
 
-from homeassistant.components.nws.const import ATTRIBUTION, DOMAIN
-from homeassistant.components.nws.sensor import SENSOR_TYPES
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.const import ATTR_ATTRIBUTION, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.util import slugify
-from homeassistant.util.unit_system import METRIC_SYSTEM, US_CUSTOMARY_SYSTEM
+from menuai.components.nws.const import ATTRIBUTION, DOMAIN
+from menuai.components.nws.sensor import SENSOR_TYPES
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.const import ATTR_ATTRIBUTION, STATE_UNKNOWN
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.util import slugify
+from menuai.util.unit_system import METRIC_SYSTEM, US_CUSTOMARY_SYSTEM
 
 from .const import (
     EXPECTED_FORECAST_IMPERIAL,
@@ -35,7 +35,7 @@ from tests.common import MockConfigEntry
     ],
 )
 async def test_imperial_metric(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     units,
     result_observation,
@@ -53,18 +53,18 @@ async def test_imperial_metric(
             disabled_by=None,
         )
 
-    hass.config.units = units
+    menuai.config.units = units
     entry = MockConfigEntry(
         domain=DOMAIN,
         data=NWS_CONFIG,
     )
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     for description in SENSOR_TYPES:
         assert description.name
-        state = hass.states.get(f"sensor.abc_{slugify(description.name)}")
+        state = menuai.states.get(f"sensor.abc_{slugify(description.name)}")
         assert state
         assert state.state == result_observation[description.key], (
             f"Failed for {description.key}"
@@ -74,7 +74,7 @@ async def test_imperial_metric(
 
 @pytest.mark.parametrize("values", [NONE_OBSERVATION, None])
 async def test_none_values(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_simple_nws,
     no_weather,
@@ -97,12 +97,12 @@ async def test_none_values(
         domain=DOMAIN,
         data=NWS_CONFIG,
     )
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     for description in SENSOR_TYPES:
         assert description.name
-        state = hass.states.get(f"sensor.abc_{slugify(description.name)}")
+        state = menuai.states.get(f"sensor.abc_{slugify(description.name)}")
         assert state
         assert state.state == STATE_UNKNOWN

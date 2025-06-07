@@ -6,11 +6,11 @@ from unittest.mock import patch
 from aioairq import DeviceInfo as AirQDeviceInfo
 import pytest
 
-from homeassistant.components.airq import AirQCoordinator
-from homeassistant.components.airq.const import DOMAIN
-from homeassistant.const import CONF_IP_ADDRESS, CONF_PASSWORD
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
+from menuai.components.airq import AirQCoordinator
+from menuai.components.airq.const import DOMAIN
+from menuai.const import CONF_IP_ADDRESS, CONF_PASSWORD
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
 
 from tests.common import MockConfigEntry
 
@@ -40,7 +40,7 @@ STATUS_WARMUP = {
 
 
 async def test_logging_in_coordinator_first_update_data(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test that the first AirQCoordinator._async_update_data call logs necessary setup.
 
@@ -50,7 +50,7 @@ async def test_logging_in_coordinator_first_update_data(
     as well as its being set.
     """
     caplog.set_level(logging.DEBUG)
-    coordinator = AirQCoordinator(hass, MOCKED_ENTRY)
+    coordinator = AirQCoordinator(menuai, MOCKED_ENTRY)
 
     # check that the name _is_ missing
     assert "name" not in coordinator.device_info
@@ -79,7 +79,7 @@ async def test_logging_in_coordinator_first_update_data(
 
 
 async def test_logging_in_coordinator_subsequent_update_data(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test that the second AirQCoordinator._async_update_data call has nothing to log.
 
@@ -88,7 +88,7 @@ async def test_logging_in_coordinator_subsequent_update_data(
     with the messages we want to see not being repeated.
     """
     caplog.set_level(logging.DEBUG)
-    coordinator = AirQCoordinator(hass, MOCKED_ENTRY)
+    coordinator = AirQCoordinator(menuai, MOCKED_ENTRY)
     coordinator.device_info.update(DeviceInfo(**TEST_DEVICE_INFO))
 
     with (
@@ -110,11 +110,11 @@ async def test_logging_in_coordinator_subsequent_update_data(
 
 
 async def test_logging_when_warming_up_sensor_present(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test that warming up sensors are logged."""
     caplog.set_level(logging.DEBUG)
-    coordinator = AirQCoordinator(hass, MOCKED_ENTRY)
+    coordinator = AirQCoordinator(menuai, MOCKED_ENTRY)
     with (
         patch("aioairq.AirQ.fetch_device_info", return_value=TEST_DEVICE_INFO),
         patch(

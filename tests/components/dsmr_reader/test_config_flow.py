@@ -1,14 +1,14 @@
 """Tests for the config flow."""
 
-from homeassistant.components.dsmr_reader.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.dsmr_reader.const import DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 
-async def test_user_step(hass: HomeAssistant) -> None:
+async def test_user_step(menuai: menuai) -> None:
     """Test the user step call."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
@@ -16,14 +16,14 @@ async def test_user_step(hass: HomeAssistant) -> None:
     assert result["step_id"] == "confirm"
     assert result["errors"] is None
 
-    config_result = await hass.config_entries.flow.async_configure(
+    config_result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
 
     assert config_result["type"] is FlowResultType.CREATE_ENTRY
     assert config_result["title"] == "DSMR Reader"
 
-    duplicate_result = await hass.config_entries.flow.async_init(
+    duplicate_result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 

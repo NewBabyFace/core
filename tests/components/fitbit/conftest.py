@@ -10,14 +10,14 @@ from unittest.mock import patch
 import pytest
 from requests_mock.mocker import Mocker
 
-from homeassistant.components.application_credentials import (
+from menuai.components.application_credentials import (
     ClientCredential,
     async_import_client_credential,
 )
-from homeassistant.components.fitbit.const import DOMAIN, OAUTH_SCOPES
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.fitbit.const import DOMAIN, OAUTH_SCOPES
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 
@@ -95,11 +95,11 @@ def mock_config_entry(
 
 
 @pytest.fixture
-async def setup_credentials(hass: HomeAssistant) -> None:
+async def setup_credentials(menuai: menuai) -> None:
     """Fixture to setup credentials."""
-    assert await async_setup_component(hass, "application_credentials", {})
+    assert await async_setup_component(menuai, "application_credentials", {})
     await async_import_client_credential(
-        hass,
+        menuai,
         DOMAIN,
         ClientCredential(CLIENT_ID, CLIENT_SECRET),
         FAKE_AUTH_IMPL,
@@ -140,17 +140,17 @@ def platforms() -> list[Platform]:
 
 @pytest.fixture(name="integration_setup")
 async def mock_integration_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     platforms: list[str],
 ) -> Callable[[], Awaitable[bool]]:
     """Fixture to set up the integration."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     async def run() -> bool:
-        with patch(f"homeassistant.components.{DOMAIN}.PLATFORMS", platforms):
-            result = await hass.config_entries.async_setup(config_entry.entry_id)
-            await hass.async_block_till_done()
+        with patch(f"menuai.components.{DOMAIN}.PLATFORMS", platforms):
+            result = await menuai.config_entries.async_setup(config_entry.entry_id)
+            await menuai.async_block_till_done()
         return result
 
     return run

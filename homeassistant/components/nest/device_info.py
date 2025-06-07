@@ -7,9 +7,9 @@ from collections.abc import Mapping
 from google_nest_sdm.device import Device
 from google_nest_sdm.device_traits import ConnectivityTrait, InfoTrait
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo
 
 from .const import CONNECTIVITY_TRAIT_OFFLINE, DOMAIN
 
@@ -79,21 +79,21 @@ class NestDeviceInfo:
 
 
 @callback
-def async_nest_devices(hass: HomeAssistant) -> Mapping[str, Device]:
+def async_nest_devices(menuai: menuai) -> Mapping[str, Device]:
     """Return a mapping of all nest devices for all config entries."""
     return {
         device.name: device
-        for config_entry in hass.config_entries.async_loaded_entries(DOMAIN)
+        for config_entry in menuai.config_entries.async_loaded_entries(DOMAIN)
         for device in config_entry.runtime_data.device_manager.devices.values()
     }
 
 
 @callback
-def async_nest_devices_by_device_id(hass: HomeAssistant) -> Mapping[str, Device]:
-    """Return a mapping of all nest devices by home assistant device id, for all config entries."""
-    device_registry = dr.async_get(hass)
+def async_nest_devices_by_device_id(menuai: menuai) -> Mapping[str, Device]:
+    """Return a mapping of all nest devices by MenuAI device id, for all config entries."""
+    device_registry = dr.async_get(menuai)
     devices = {}
-    for nest_device_id, device in async_nest_devices(hass).items():
+    for nest_device_id, device in async_nest_devices(menuai).items():
         if device_entry := device_registry.async_get_device(
             identifiers={(DOMAIN, nest_device_id)}
         ):

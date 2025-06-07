@@ -7,15 +7,15 @@ from typing import TYPE_CHECKING
 from aioautomower.model import MowerActivities, MowerStates, WorkArea
 import voluptuous as vol
 
-from homeassistant.components.lawn_mower import (
+from menuai.components.lawn_mower import (
     LawnMowerActivity,
     LawnMowerEntity,
     LawnMowerEntityFeature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import config_validation as cv, entity_platform
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import AutomowerConfigEntry
 from .const import DOMAIN
@@ -47,7 +47,7 @@ OVERRIDE_MODES = [MOW, PARK]
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: AutomowerConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

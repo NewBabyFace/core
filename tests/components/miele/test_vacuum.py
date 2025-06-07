@@ -7,8 +7,8 @@ from pymiele import MieleDevices
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.miele.const import DOMAIN, PROCESS_ACTION, PROGRAM_ID
-from homeassistant.components.vacuum import (
+from menuai.components.miele.const import DOMAIN, PROCESS_ACTION, PROGRAM_ID
+from menuai.components.vacuum import (
     ATTR_FAN_SPEED,
     DOMAIN as VACUUM_DOMAIN,
     SERVICE_CLEAN_SPOT,
@@ -17,10 +17,10 @@ from homeassistant.components.vacuum import (
     SERVICE_START,
     SERVICE_STOP,
 )
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
 
 from . import get_actions_callback, get_data_callback
 
@@ -41,7 +41,7 @@ pytestmark = [
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensor_states(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_miele_client: MagicMock,
     mock_config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
@@ -50,12 +50,12 @@ async def test_sensor_states(
 ) -> None:
     """Test vacuum entity setup."""
 
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_vacuum_states_api_push(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_miele_client: MagicMock,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
@@ -66,16 +66,16 @@ async def test_vacuum_states_api_push(
 
     data_callback = get_data_callback(mock_miele_client)
     await data_callback(device_fixture)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     act_file = await async_load_json_object_fixture(
-        hass, "action_push_vacuum.json", DOMAIN
+        menuai, "action_push_vacuum.json", DOMAIN
     )
     action_callback = get_actions_callback(mock_miele_client)
     await action_callback(act_file)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await snapshot_platform(hass, entity_registry, snapshot, setup_platform.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, setup_platform.entry_id)
 
 
 @pytest.mark.parametrize(
@@ -88,7 +88,7 @@ async def test_vacuum_states_api_push(
     ],
 )
 async def test_vacuum_program(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_miele_client: MagicMock,
     setup_platform: None,
     service: str,
@@ -97,7 +97,7 @@ async def test_vacuum_program(
 ) -> None:
     """Test the vacuum can be controlled."""
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TEST_PLATFORM, service, {ATTR_ENTITY_ID: ENTITY_ID}, blocking=True
     )
     mock_miele_client.send_action.assert_called_once_with(
@@ -109,7 +109,7 @@ async def test_vacuum_program(
     ("fan_speed", "expected"), [("normal", 1), ("turbo", 3), ("silent", 4)]
 )
 async def test_vacuum_fan_speed(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_miele_client: MagicMock,
     setup_platform: None,
     fan_speed: str,
@@ -117,7 +117,7 @@ async def test_vacuum_fan_speed(
 ) -> None:
     """Test the vacuum can be controlled."""
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TEST_PLATFORM,
         SERVICE_SET_FAN_SPEED,
         {ATTR_ENTITY_ID: ENTITY_ID, ATTR_FAN_SPEED: fan_speed},
@@ -136,7 +136,7 @@ async def test_vacuum_fan_speed(
     ],
 )
 async def test_api_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_miele_client: MagicMock,
     setup_platform: None,
     service: str,
@@ -145,9 +145,9 @@ async def test_api_failure(
     mock_miele_client.send_action.side_effect = ClientResponseError("test", "Test")
 
     with pytest.raises(
-        HomeAssistantError, match=f"Failed to set state for {ENTITY_ID}"
+        menuaiError, match=f"Failed to set state for {ENTITY_ID}"
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             TEST_PLATFORM, service, {ATTR_ENTITY_ID: ENTITY_ID}, blocking=True
         )
     mock_miele_client.send_action.assert_called_once()

@@ -5,31 +5,31 @@ from unittest.mock import AsyncMock
 from jvcprojector import JvcProjectorAuthError, JvcProjectorConnectError
 import pytest
 
-from homeassistant.components.jvc_projector.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_PORT
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.jvc_projector.const import DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_PORT
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from . import MOCK_HOST, MOCK_PASSWORD, MOCK_PORT
 
 from tests.common import MockConfigEntry
 
-TARGET = "homeassistant.components.jvc_projector.config_flow.JvcProjector"
+TARGET = "menuai.components.jvc_projector.config_flow.JvcProjector"
 
 
 @pytest.mark.parametrize("mock_device", [TARGET], indirect=True)
 async def test_user_config_flow_success(
-    hass: HomeAssistant, mock_device: AsyncMock
+    menuai: menuai, mock_device: AsyncMock
 ) -> None:
     """Test user config flow success."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_HOST: MOCK_HOST,
@@ -37,7 +37,7 @@ async def test_user_config_flow_success(
             CONF_PASSWORD: MOCK_PASSWORD,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert "data" in result
@@ -48,12 +48,12 @@ async def test_user_config_flow_success(
 
 @pytest.mark.parametrize("mock_device", [TARGET], indirect=True)
 async def test_user_config_flow_bad_connect_errors(
-    hass: HomeAssistant, mock_device: AsyncMock
+    menuai: menuai, mock_device: AsyncMock
 ) -> None:
     """Test errors when connection error occurs."""
     mock_device.connect.side_effect = JvcProjectorConnectError
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={CONF_HOST: MOCK_HOST, CONF_PORT: MOCK_PORT, CONF_PASSWORD: MOCK_PASSWORD},
@@ -67,7 +67,7 @@ async def test_user_config_flow_bad_connect_errors(
 
     mock_device.connect.side_effect = None
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={CONF_HOST: MOCK_HOST, CONF_PORT: MOCK_PORT, CONF_PASSWORD: MOCK_PASSWORD},
@@ -82,10 +82,10 @@ async def test_user_config_flow_bad_connect_errors(
 
 @pytest.mark.parametrize("mock_device", [TARGET], indirect=True)
 async def test_user_config_flow_device_exists_abort(
-    hass: HomeAssistant, mock_device: AsyncMock, mock_integration: MockConfigEntry
+    menuai: menuai, mock_device: AsyncMock, mock_integration: MockConfigEntry
 ) -> None:
     """Test flow aborts when device already configured."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={CONF_HOST: MOCK_HOST, CONF_PORT: MOCK_PORT, CONF_PASSWORD: MOCK_PASSWORD},
@@ -96,10 +96,10 @@ async def test_user_config_flow_device_exists_abort(
 
 @pytest.mark.parametrize("mock_device", [TARGET], indirect=True)
 async def test_user_config_flow_bad_host_errors(
-    hass: HomeAssistant, mock_device: AsyncMock
+    menuai: menuai, mock_device: AsyncMock
 ) -> None:
     """Test errors when bad host error occurs."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={CONF_HOST: "", CONF_PORT: MOCK_PORT, CONF_PASSWORD: MOCK_PASSWORD},
@@ -111,7 +111,7 @@ async def test_user_config_flow_bad_host_errors(
 
     # Finish flow with success
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={CONF_HOST: MOCK_HOST, CONF_PORT: MOCK_PORT, CONF_PASSWORD: MOCK_PASSWORD},
@@ -126,12 +126,12 @@ async def test_user_config_flow_bad_host_errors(
 
 @pytest.mark.parametrize("mock_device", [TARGET], indirect=True)
 async def test_user_config_flow_bad_auth_errors(
-    hass: HomeAssistant, mock_device: AsyncMock
+    menuai: menuai, mock_device: AsyncMock
 ) -> None:
     """Test errors when bad auth error occurs."""
     mock_device.connect.side_effect = JvcProjectorAuthError
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={CONF_HOST: MOCK_HOST, CONF_PORT: MOCK_PORT, CONF_PASSWORD: MOCK_PASSWORD},
@@ -145,7 +145,7 @@ async def test_user_config_flow_bad_auth_errors(
 
     mock_device.connect.side_effect = None
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={CONF_HOST: MOCK_HOST, CONF_PORT: MOCK_PORT, CONF_PASSWORD: MOCK_PASSWORD},
@@ -160,17 +160,17 @@ async def test_user_config_flow_bad_auth_errors(
 
 @pytest.mark.parametrize("mock_device", [TARGET], indirect=True)
 async def test_reauth_config_flow_success(
-    hass: HomeAssistant, mock_device: AsyncMock, mock_integration: MockConfigEntry
+    menuai: menuai, mock_device: AsyncMock, mock_integration: MockConfigEntry
 ) -> None:
     """Test reauth config flow success."""
-    result = await mock_integration.start_reauth_flow(hass)
+    result = await mock_integration.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={CONF_PASSWORD: MOCK_PASSWORD}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"
@@ -182,19 +182,19 @@ async def test_reauth_config_flow_success(
 
 @pytest.mark.parametrize("mock_device", [TARGET], indirect=True)
 async def test_reauth_config_flow_auth_error(
-    hass: HomeAssistant, mock_device: AsyncMock, mock_integration: MockConfigEntry
+    menuai: menuai, mock_device: AsyncMock, mock_integration: MockConfigEntry
 ) -> None:
     """Test reauth config flow when connect fails."""
     mock_device.connect.side_effect = JvcProjectorAuthError
 
-    result = await mock_integration.start_reauth_flow(hass)
+    result = await mock_integration.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={CONF_PASSWORD: MOCK_PASSWORD}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
@@ -204,14 +204,14 @@ async def test_reauth_config_flow_auth_error(
 
     mock_device.connect.side_effect = None
 
-    result = await mock_integration.start_reauth_flow(hass)
+    result = await mock_integration.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={CONF_PASSWORD: MOCK_PASSWORD}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"
@@ -223,19 +223,19 @@ async def test_reauth_config_flow_auth_error(
 
 @pytest.mark.parametrize("mock_device", [TARGET], indirect=True)
 async def test_reauth_config_flow_connect_error(
-    hass: HomeAssistant, mock_device: AsyncMock, mock_integration: MockConfigEntry
+    menuai: menuai, mock_device: AsyncMock, mock_integration: MockConfigEntry
 ) -> None:
     """Test reauth config flow when connect fails."""
     mock_device.connect.side_effect = JvcProjectorConnectError
 
-    result = await mock_integration.start_reauth_flow(hass)
+    result = await mock_integration.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={CONF_PASSWORD: MOCK_PASSWORD}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
@@ -245,14 +245,14 @@ async def test_reauth_config_flow_connect_error(
 
     mock_device.connect.side_effect = None
 
-    result = await mock_integration.start_reauth_flow(hass)
+    result = await mock_integration.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={CONF_PASSWORD: MOCK_PASSWORD}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"

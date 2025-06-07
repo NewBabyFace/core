@@ -6,21 +6,21 @@ from typing import Any
 
 import avea
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_HS_COLOR,
     ColorMode,
     LightEntity,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import PlatformNotReady
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import color as color_util
+from menuai.core import menuai
+from menuai.exceptions import PlatformNotReady
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import color as color_util
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -68,7 +68,7 @@ class AveaLight(LightEntity):
     def update(self) -> None:
         """Fetch new state data for this light.
 
-        This is the only method that should fetch new data for Home Assistant.
+        This is the only method that should fetch new data for MenuAI.
         """
         if (brightness := self._light.get_brightness()) is not None:
             self._attr_is_on = brightness != 0

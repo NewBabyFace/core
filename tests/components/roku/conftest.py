@@ -7,9 +7,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 from rokuecp import Device as RokuDevice
 
-from homeassistant.components.roku.const import DOMAIN
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
+from menuai.components.roku.const import DOMAIN
+from menuai.const import CONF_HOST
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry, async_load_fixture
 
@@ -34,13 +34,13 @@ def mock_config_entry() -> MockConfigEntry:
 @pytest.fixture
 def mock_setup_entry() -> Generator[None]:
     """Mock setting up a config entry."""
-    with patch("homeassistant.components.roku.async_setup_entry", return_value=True):
+    with patch("menuai.components.roku.async_setup_entry", return_value=True):
         yield
 
 
 @pytest.fixture
 async def mock_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     request: pytest.FixtureRequest,
 ) -> RokuDevice:
     """Return the mocked roku device."""
@@ -48,7 +48,7 @@ async def mock_device(
     if hasattr(request, "param") and request.param:
         fixture = request.param
 
-    return RokuDevice(json.loads(await async_load_fixture(hass, fixture)))
+    return RokuDevice(json.loads(await async_load_fixture(menuai, fixture)))
 
 
 @pytest.fixture
@@ -56,7 +56,7 @@ def mock_roku_config_flow(mock_device: RokuDevice) -> Generator[MagicMock]:
     """Return a mocked Roku client."""
 
     with patch(
-        "homeassistant.components.roku.config_flow.Roku", autospec=True
+        "menuai.components.roku.config_flow.Roku", autospec=True
     ) as roku_mock:
         client = roku_mock.return_value
         client.app_icon_url.side_effect = app_icon_url
@@ -69,7 +69,7 @@ def mock_roku(mock_device: RokuDevice) -> Generator[MagicMock]:
     """Return a mocked Roku client."""
 
     with patch(
-        "homeassistant.components.roku.coordinator.Roku", autospec=True
+        "menuai.components.roku.coordinator.Roku", autospec=True
     ) as roku_mock:
         client = roku_mock.return_value
         client.app_icon_url.side_effect = app_icon_url
@@ -79,18 +79,18 @@ def mock_roku(mock_device: RokuDevice) -> Generator[MagicMock]:
 
 @pytest.fixture
 async def init_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_device: RokuDevice,
     mock_roku: MagicMock,
 ) -> MockConfigEntry:
     """Set up the Roku integration for testing."""
-    mock_config_entry.add_to_hass(hass)
-    hass.config_entries.async_update_entry(
+    mock_config_entry.add_to_menuai(menuai)
+    menuai.config_entries.async_update_entry(
         mock_config_entry, unique_id=mock_device.info.serial_number
     )
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     return mock_config_entry

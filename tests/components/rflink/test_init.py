@@ -6,7 +6,7 @@ from unittest.mock import Mock
 import pytest
 from voluptuous.error import MultipleInvalid
 
-from homeassistant.components.rflink import (
+from menuai.components.rflink import (
     CONF_KEEPALIVE_IDLE,
     CONF_RECONNECT_INTERVAL,
     DATA_ENTITY_LOOKUP,
@@ -18,7 +18,7 @@ from homeassistant.components.rflink import (
     TMP_ENTITY,
     RflinkCommand,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     CONF_HOST,
     CONF_PORT,
@@ -26,14 +26,14 @@ from homeassistant.const import (
     SERVICE_STOP_COVER,
     SERVICE_TURN_OFF,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
+from menuai.setup import async_setup_component
 
 
 async def mock_rflink(
-    hass: HomeAssistant,
+    menuai: menuai,
     config,
     domain,
     monkeypatch: pytest.MonkeyPatch,
@@ -68,12 +68,12 @@ async def mock_rflink(
 
     mock_create = Mock(wraps=create_rflink_connection)
     monkeypatch.setattr(
-        "homeassistant.components.rflink.create_rflink_connection", mock_create
+        "menuai.components.rflink.create_rflink_connection", mock_create
     )
 
-    await async_setup_component(hass, "rflink", config)
-    await async_setup_component(hass, domain, config)
-    await hass.async_block_till_done()
+    await async_setup_component(menuai, "rflink", config)
+    await async_setup_component(menuai, domain, config)
+    await menuai.async_block_till_done()
 
     # hook into mock config for injecting events
     event_callback = mock_create.call_args_list[0][1]["event_callback"]
@@ -85,7 +85,7 @@ async def mock_rflink(
 
 
 async def test_version_banner(
-    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+    menuai: menuai, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test sending unknown commands doesn't cause issues."""
     # use sensor domain during testing main platform
@@ -99,7 +99,7 @@ async def test_version_banner(
     }
 
     # setup mocking rflink module
-    event_callback, _, _, _ = await mock_rflink(hass, config, domain, monkeypatch)
+    event_callback, _, _, _ = await mock_rflink(menuai, config, domain, monkeypatch)
 
     event_callback(
         {
@@ -112,7 +112,7 @@ async def test_version_banner(
 
 
 async def test_send_no_wait(
-    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+    menuai: menuai, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test command sending without ack."""
     domain = "switch"
@@ -127,18 +127,18 @@ async def test_send_no_wait(
     }
 
     # setup mocking rflink module
-    _, _, protocol, _ = await mock_rflink(hass, config, domain, monkeypatch)
+    _, _, protocol, _ = await mock_rflink(menuai, config, domain, monkeypatch)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         domain, SERVICE_TURN_OFF, {ATTR_ENTITY_ID: "switch.test"}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert protocol.send_command.call_args_list[0][0][0] == "protocol_0_0"
     assert protocol.send_command.call_args_list[0][0][1] == "off"
 
 
 async def test_cover_send_no_wait(
-    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+    menuai: menuai, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test command sending to a cover device without ack."""
     domain = "cover"
@@ -153,64 +153,64 @@ async def test_cover_send_no_wait(
     }
 
     # setup mocking rflink module
-    _, _, protocol, _ = await mock_rflink(hass, config, domain, monkeypatch)
+    _, _, protocol, _ = await mock_rflink(menuai, config, domain, monkeypatch)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         domain, SERVICE_STOP_COVER, {ATTR_ENTITY_ID: "cover.test"}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert protocol.send_command.call_args_list[0][0][0] == "RTS_0100F2_0"
     assert protocol.send_command.call_args_list[0][0][1] == "STOP"
 
 
 async def test_send_command(
-    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+    menuai: menuai, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test send_command service."""
     domain = "rflink"
     config = {"rflink": {"port": "/dev/ttyABC0"}}
 
     # setup mocking rflink module
-    _, _, protocol, _ = await mock_rflink(hass, config, domain, monkeypatch)
+    _, _, protocol, _ = await mock_rflink(menuai, config, domain, monkeypatch)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         domain,
         SERVICE_SEND_COMMAND,
         {"device_id": "newkaku_0000c6c2_1", "command": "on"},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert protocol.send_command_ack.call_args_list[0][0][0] == "newkaku_0000c6c2_1"
     assert protocol.send_command_ack.call_args_list[0][0][1] == "on"
 
 
 async def test_send_command_invalid_arguments(
-    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+    menuai: menuai, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test send_command service."""
     domain = "rflink"
     config = {"rflink": {"port": "/dev/ttyABC0"}}
 
     # setup mocking rflink module
-    _, _, protocol, _ = await mock_rflink(hass, config, domain, monkeypatch)
+    _, _, protocol, _ = await mock_rflink(menuai, config, domain, monkeypatch)
 
     # one argument missing
     with pytest.raises(MultipleInvalid):
-        await hass.services.async_call(domain, SERVICE_SEND_COMMAND, {"command": "on"})
+        await menuai.services.async_call(domain, SERVICE_SEND_COMMAND, {"command": "on"})
 
     with pytest.raises(MultipleInvalid):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             domain, SERVICE_SEND_COMMAND, {"device_id": "newkaku_0000c6c2_1"}
         )
 
     # no arguments
     with pytest.raises(MultipleInvalid):
-        await hass.services.async_call(domain, SERVICE_SEND_COMMAND, {})
+        await menuai.services.async_call(domain, SERVICE_SEND_COMMAND, {})
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert protocol.send_command_ack.call_args_list == []
 
     # bad command (no_command)
-    success = await hass.services.async_call(
+    success = await menuai.services.async_call(
         domain,
         SERVICE_SEND_COMMAND,
         {"device_id": "newkaku_0000c6c2_1", "command": "no_command"},
@@ -219,7 +219,7 @@ async def test_send_command_invalid_arguments(
 
 
 async def test_send_command_event_propagation(
-    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+    menuai: menuai, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test event propagation for send_command service."""
     domain = "light"
@@ -234,36 +234,36 @@ async def test_send_command_event_propagation(
     }
 
     # setup mocking rflink module
-    _, _, protocol, _ = await mock_rflink(hass, config, domain, monkeypatch)
+    _, _, protocol, _ = await mock_rflink(menuai, config, domain, monkeypatch)
 
     # default value = 'off'
-    assert hass.states.get(f"{domain}.test1").state == "off"
+    assert menuai.states.get(f"{domain}.test1").state == "off"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "rflink",
         SERVICE_SEND_COMMAND,
         {"device_id": "protocol_0_1", "command": "on"},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert protocol.send_command_ack.call_args_list[0][0][0] == "protocol_0_1"
     assert protocol.send_command_ack.call_args_list[0][0][1] == "on"
-    assert hass.states.get(f"{domain}.test1").state == "on"
+    assert menuai.states.get(f"{domain}.test1").state == "on"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "rflink",
         SERVICE_SEND_COMMAND,
         {"device_id": "protocol_0_1", "command": "alloff"},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert protocol.send_command_ack.call_args_list[1][0][0] == "protocol_0_1"
     assert protocol.send_command_ack.call_args_list[1][0][1] == "alloff"
-    assert hass.states.get(f"{domain}.test1").state == "off"
+    assert menuai.states.get(f"{domain}.test1").state == "off"
 
 
 async def test_reconnecting_after_disconnect(
-    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+    menuai: menuai, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """An unexpected disconnect should cause a reconnect."""
     domain = "sensor"
@@ -274,7 +274,7 @@ async def test_reconnecting_after_disconnect(
 
     # setup mocking rflink module
     _, mock_create, _, disconnect_callback = await mock_rflink(
-        hass, config, domain, monkeypatch
+        menuai, config, domain, monkeypatch
     )
 
     assert disconnect_callback, "disconnect callback not passed to rflink"
@@ -282,14 +282,14 @@ async def test_reconnecting_after_disconnect(
     # rflink initiated disconnect
     disconnect_callback(None)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # we expect 2 call, the initial and reconnect
     assert mock_create.call_count == 2
 
 
 async def test_reconnecting_after_failure(
-    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+    menuai: menuai, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A failure to reconnect should be retried."""
     domain = "sensor"
@@ -303,22 +303,22 @@ async def test_reconnecting_after_failure(
 
     # setup mocking rflink module
     _, mock_create, _, disconnect_callback = await mock_rflink(
-        hass, config, domain, monkeypatch, failures=failures
+        menuai, config, domain, monkeypatch, failures=failures
     )
 
     # rflink initiated disconnect
     disconnect_callback(None)
 
     # wait for reconnects to have happened
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # we expect 3 calls, the initial and 2 reconnects
     assert mock_create.call_count == 3
 
 
 async def test_error_when_not_connected(
-    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+    menuai: menuai, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Sending command should error when not connected."""
     domain = "switch"
@@ -337,20 +337,20 @@ async def test_error_when_not_connected(
 
     # setup mocking rflink module
     _, _, _, disconnect_callback = await mock_rflink(
-        hass, config, domain, monkeypatch, failures=failures
+        menuai, config, domain, monkeypatch, failures=failures
     )
 
     # rflink initiated disconnect
     disconnect_callback(None)
 
-    success = await hass.services.async_call(
+    success = await menuai.services.async_call(
         domain, SERVICE_TURN_OFF, {ATTR_ENTITY_ID: "switch.test"}
     )
     assert not success, "changing state should not succeed when disconnected"
 
 
 async def test_async_send_command_error(
-    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+    menuai: menuai, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Sending command should error when protocol fails."""
     domain = "rflink"
@@ -358,22 +358,22 @@ async def test_async_send_command_error(
 
     # setup mocking rflink module
     _, _, protocol, _ = await mock_rflink(
-        hass, config, domain, monkeypatch, failcommand=True
+        menuai, config, domain, monkeypatch, failcommand=True
     )
 
-    success = await hass.services.async_call(
+    success = await menuai.services.async_call(
         domain,
         SERVICE_SEND_COMMAND,
         {"device_id": "newkaku_0000c6c2_1", "command": SERVICE_TURN_OFF},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert not success, "send command should not succeed if failcommand=True"
     assert protocol.send_command_ack.call_args_list[0][0][0] == "newkaku_0000c6c2_1"
     assert protocol.send_command_ack.call_args_list[0][0][1] == SERVICE_TURN_OFF
 
 
 async def test_race_condition(
-    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+    menuai: menuai, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test race condition for unknown components."""
     domain = "light"
@@ -381,31 +381,31 @@ async def test_race_condition(
     tmp_entity = TMP_ENTITY.format("test3")
 
     # setup mocking rflink module
-    event_callback, _, _, _ = await mock_rflink(hass, config, domain, monkeypatch)
+    event_callback, _, _, _ = await mock_rflink(menuai, config, domain, monkeypatch)
 
     # test event for new unconfigured sensor
     event_callback({"id": "test3", "command": "off"})
     event_callback({"id": "test3", "command": "on"})
 
     # tmp_entity added to EVENT_KEY_COMMAND
-    assert tmp_entity in hass.data[DATA_ENTITY_LOOKUP][EVENT_KEY_COMMAND]["test3"]
+    assert tmp_entity in menuai.data[DATA_ENTITY_LOOKUP][EVENT_KEY_COMMAND]["test3"]
     # tmp_entity must no be added to EVENT_KEY_SENSOR
-    assert tmp_entity not in hass.data[DATA_ENTITY_LOOKUP][EVENT_KEY_SENSOR]["test3"]
+    assert tmp_entity not in menuai.data[DATA_ENTITY_LOOKUP][EVENT_KEY_SENSOR]["test3"]
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # test  state of new sensor
-    new_sensor = hass.states.get(f"{domain}.test3")
+    new_sensor = menuai.states.get(f"{domain}.test3")
     assert new_sensor
     assert new_sensor.state == "off"
 
     event_callback({"id": "test3", "command": "on"})
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     # tmp_entity must be deleted from EVENT_KEY_COMMAND
-    assert tmp_entity not in hass.data[DATA_ENTITY_LOOKUP][EVENT_KEY_COMMAND]["test3"]
+    assert tmp_entity not in menuai.data[DATA_ENTITY_LOOKUP][EVENT_KEY_COMMAND]["test3"]
 
     # test  state of new sensor
-    new_sensor = hass.states.get(f"{domain}.test3")
+    new_sensor = menuai.states.get(f"{domain}.test3")
     assert new_sensor
     assert new_sensor.state == "on"
 
@@ -414,12 +414,12 @@ async def test_not_connected() -> None:
     """Test Error when sending commands to a disconnected device."""
     test_device = RflinkCommand("DUMMY_DEVICE")
     RflinkCommand.set_rflink_protocol(None)
-    with pytest.raises(HomeAssistantError):
+    with pytest.raises(menuaiError):
         await test_device._async_handle_command("turn_on")
 
 
 async def test_keepalive(
-    hass: HomeAssistant,
+    menuai: menuai,
     monkeypatch: pytest.MonkeyPatch,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -435,7 +435,7 @@ async def test_keepalive(
     }
 
     # setup mocking rflink module
-    _, mock_create, _, _ = await mock_rflink(hass, config, domain, monkeypatch)
+    _, mock_create, _, _ = await mock_rflink(menuai, config, domain, monkeypatch)
 
     assert mock_create.call_args_list[0][1]["host"] == "10.10.0.1"
     assert mock_create.call_args_list[0][1]["port"] == 1234
@@ -449,7 +449,7 @@ async def test_keepalive(
 
 
 async def test_keepalive_2(
-    hass: HomeAssistant,
+    menuai: menuai,
     monkeypatch: pytest.MonkeyPatch,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -465,7 +465,7 @@ async def test_keepalive_2(
     }
 
     # setup mocking rflink module
-    _, mock_create, _, _ = await mock_rflink(hass, config, domain, monkeypatch)
+    _, mock_create, _, _ = await mock_rflink(menuai, config, domain, monkeypatch)
 
     assert mock_create.call_args_list[0][1]["host"] == "10.10.0.1"
     assert mock_create.call_args_list[0][1]["port"] == 1234
@@ -479,7 +479,7 @@ async def test_keepalive_2(
 
 
 async def test_keepalive_3(
-    hass: HomeAssistant,
+    menuai: menuai,
     monkeypatch: pytest.MonkeyPatch,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -488,7 +488,7 @@ async def test_keepalive_3(
     config = {DOMAIN: {CONF_HOST: "10.10.0.1", CONF_PORT: 1234, CONF_KEEPALIVE_IDLE: 0}}
 
     # setup mocking rflink module
-    _, mock_create, _, _ = await mock_rflink(hass, config, domain, monkeypatch)
+    _, mock_create, _, _ = await mock_rflink(menuai, config, domain, monkeypatch)
 
     assert mock_create.call_args_list[0][1]["host"] == "10.10.0.1"
     assert mock_create.call_args_list[0][1]["port"] == 1234
@@ -499,7 +499,7 @@ async def test_keepalive_3(
 
 
 async def test_default_keepalive(
-    hass: HomeAssistant,
+    menuai: menuai,
     monkeypatch: pytest.MonkeyPatch,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -508,7 +508,7 @@ async def test_default_keepalive(
     config = {DOMAIN: {CONF_HOST: "10.10.0.1", CONF_PORT: 1234}}
 
     # setup mocking rflink module
-    _, mock_create, _, _ = await mock_rflink(hass, config, domain, monkeypatch)
+    _, mock_create, _, _ = await mock_rflink(menuai, config, domain, monkeypatch)
 
     assert mock_create.call_args_list[0][1]["host"] == "10.10.0.1"
     assert mock_create.call_args_list[0][1]["port"] == 1234
@@ -520,7 +520,7 @@ async def test_default_keepalive(
 
 
 async def test_unique_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -547,7 +547,7 @@ async def test_unique_id(
     }
 
     # setup mocking rflink module
-    event_callback, _, _, _ = await mock_rflink(hass, config, DOMAIN, monkeypatch)
+    event_callback, _, _, _ = await mock_rflink(menuai, config, DOMAIN, monkeypatch)
 
     humidity_entry = entity_registry.async_get("sensor.humidity_device")
     assert humidity_entry
@@ -559,7 +559,7 @@ async def test_unique_id(
 
 
 async def test_enable_debug_logs(
-    hass: HomeAssistant,
+    menuai: menuai,
     monkeypatch: pytest.MonkeyPatch,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -569,17 +569,17 @@ async def test_enable_debug_logs(
     config = {DOMAIN: {CONF_HOST: "10.10.0.1", CONF_PORT: 1234}}
 
     # setup mocking rflink module
-    _, mock_create, _, _ = await mock_rflink(hass, config, domain, monkeypatch)
+    _, mock_create, _, _ = await mock_rflink(menuai, config, domain, monkeypatch)
 
     logging.getLogger("rflink").setLevel(logging.DEBUG)
-    hass.bus.async_fire(EVENT_LOGGING_CHANGED)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire(EVENT_LOGGING_CHANGED)
+    await menuai.async_block_till_done()
 
     assert "RFDEBUG enabled" in caplog.text
     assert "RFDEBUG disabled" not in caplog.text
 
     logging.getLogger("rflink").setLevel(logging.INFO)
-    hass.bus.async_fire(EVENT_LOGGING_CHANGED)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire(EVENT_LOGGING_CHANGED)
+    await menuai.async_block_till_done()
 
     assert "RFDEBUG disabled" in caplog.text

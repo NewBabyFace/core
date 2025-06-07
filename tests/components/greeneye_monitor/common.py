@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
-from homeassistant.components.greeneye_monitor import (
+from menuai.components.greeneye_monitor import (
     CONF_CHANNELS,
     CONF_COUNTED_QUANTITY,
     CONF_COUNTED_QUANTITY_PER_PULSE,
@@ -19,15 +19,15 @@ from homeassistant.components.greeneye_monitor import (
     CONF_VOLTAGE_SENSORS,
     DOMAIN,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_NAME,
     CONF_PORT,
     CONF_SENSORS,
     CONF_TEMPERATURE_UNIT,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.helpers.typing import ConfigType
+from menuai.setup import async_setup_component
 
 SINGLE_MONITOR_SERIAL_NUMBER = 110011
 
@@ -160,15 +160,15 @@ MULTI_MONITOR_CONFIG = {
 
 
 async def setup_greeneye_monitor_component_with_config(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> bool:
     """Set up the greeneye_monitor component with the given config. Return True if successful, False otherwise."""
     result = await async_setup_component(
-        hass,
+        menuai,
         DOMAIN,
         config,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     return result
 
@@ -243,10 +243,10 @@ def mock_monitor(serial_number: int) -> MagicMock:
 
 
 async def connect_monitor(
-    hass: HomeAssistant, monitors: AsyncMock, serial_number: int
+    menuai: menuai, monitors: AsyncMock, serial_number: int
 ) -> MagicMock:
-    """Simulate a monitor connecting to Home Assistant. Returns the mock monitor API object."""
+    """Simulate a monitor connecting to MenuAI. Returns the mock monitor API object."""
     monitor = mock_monitor(serial_number)
     monitors.add_monitor(monitor)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     return monitor

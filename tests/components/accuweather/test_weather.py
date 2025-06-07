@@ -7,16 +7,16 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.accuweather.const import UPDATE_INTERVAL_DAILY_FORECAST
-from homeassistant.components.weather import (
+from menuai.components.accuweather.const import UPDATE_INTERVAL_DAILY_FORECAST
+from menuai.components.weather import (
     ATTR_FORECAST_CONDITION,
     DOMAIN as WEATHER_DOMAIN,
     SERVICE_GET_FORECASTS,
 )
-from homeassistant.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.setup import async_setup_component
 
 from . import init_integration
 
@@ -25,27 +25,27 @@ from tests.typing import WebSocketGenerator
 
 
 async def test_weather(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
     mock_accuweather_client: AsyncMock,
 ) -> None:
     """Test states of the weather without forecast."""
-    with patch("homeassistant.components.accuweather.PLATFORMS", [Platform.WEATHER]):
-        entry = await init_integration(hass)
-    await snapshot_platform(hass, entity_registry, snapshot, entry.entry_id)
+    with patch("menuai.components.accuweather.PLATFORMS", [Platform.WEATHER]):
+        entry = await init_integration(menuai)
+    await snapshot_platform(menuai, entity_registry, snapshot, entry.entry_id)
 
 
 async def test_availability(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_accuweather_client: AsyncMock,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Ensure that we mark the entities unavailable correctly when service is offline."""
     entity_id = "weather.home"
-    await init_integration(hass)
+    await init_integration(menuai)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state != STATE_UNAVAILABLE
     assert state.state == "sunny"
@@ -53,37 +53,37 @@ async def test_availability(
     mock_accuweather_client.async_get_current_conditions.side_effect = ConnectionError
 
     freezer.tick(UPDATE_INTERVAL_DAILY_FORECAST)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_UNAVAILABLE
 
     mock_accuweather_client.async_get_current_conditions.side_effect = None
 
     freezer.tick(UPDATE_INTERVAL_DAILY_FORECAST)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state != STATE_UNAVAILABLE
     assert state.state == "sunny"
 
 
 async def test_manual_update_entity(
-    hass: HomeAssistant, mock_accuweather_client: AsyncMock
+    menuai: menuai, mock_accuweather_client: AsyncMock
 ) -> None:
-    """Test manual update entity via service homeassistant/update_entity."""
-    await init_integration(hass)
+    """Test manual update entity via service menuai/update_entity."""
+    await init_integration(menuai)
 
-    await async_setup_component(hass, "homeassistant", {})
+    await async_setup_component(menuai, "menuai", {})
 
     assert mock_accuweather_client.async_get_current_conditions.call_count == 1
 
-    await hass.services.async_call(
-        "homeassistant",
+    await menuai.services.async_call(
+        "menuai",
         "update_entity",
         {ATTR_ENTITY_ID: ["weather.home"]},
         blocking=True,
@@ -93,16 +93,16 @@ async def test_manual_update_entity(
 
 
 async def test_unsupported_condition_icon_data(
-    hass: HomeAssistant, mock_accuweather_client: AsyncMock
+    menuai: menuai, mock_accuweather_client: AsyncMock
 ) -> None:
     """Test with unsupported condition icon data."""
     mock_accuweather_client.async_get_current_conditions.return_value["WeatherIcon"] = (
         999
     )
 
-    await init_integration(hass)
+    await init_integration(menuai)
 
-    state = hass.states.get("weather.home")
+    state = menuai.states.get("weather.home")
     assert state.attributes.get(ATTR_FORECAST_CONDITION) is None
 
 
@@ -111,15 +111,15 @@ async def test_unsupported_condition_icon_data(
     [SERVICE_GET_FORECASTS],
 )
 async def test_forecast_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mock_accuweather_client: AsyncMock,
     service: str,
 ) -> None:
     """Test multiple forecast."""
-    await init_integration(hass)
+    await init_integration(menuai)
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         WEATHER_DOMAIN,
         service,
         {
@@ -133,16 +133,16 @@ async def test_forecast_service(
 
 
 async def test_forecast_subscription(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     freezer: FrozenDateTimeFactory,
     snapshot: SnapshotAssertion,
     mock_accuweather_client: AsyncMock,
 ) -> None:
     """Test multiple forecast."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
-    await init_integration(hass)
+    await init_integration(menuai)
 
     await client.send_json_auto_id(
         {
@@ -165,7 +165,7 @@ async def test_forecast_subscription(
     assert forecast1 == snapshot
 
     freezer.tick(UPDATE_INTERVAL_DAILY_FORECAST + timedelta(seconds=1))
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     msg = await client.receive_json()
 
     assert msg["id"] == subscription_id

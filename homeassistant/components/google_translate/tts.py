@@ -9,18 +9,18 @@ from typing import Any
 from gtts import gTTS, gTTSError
 import voluptuous as vol
 
-from homeassistant.components.tts import (
+from menuai.components.tts import (
     CONF_LANG,
     PLATFORM_SCHEMA as TTS_PLATFORM_SCHEMA,
     Provider,
     TextToSpeechEntity,
     TtsAudioType,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import (
     CONF_TLD,
@@ -44,16 +44,16 @@ PLATFORM_SCHEMA = TTS_PLATFORM_SCHEMA.extend(
 
 
 async def async_get_engine(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> GoogleProvider:
     """Set up Google speech component."""
-    return GoogleProvider(hass, config[CONF_LANG], config[CONF_TLD])
+    return GoogleProvider(menuai, config[CONF_LANG], config[CONF_TLD])
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -113,7 +113,7 @@ class GoogleTTSEntity(TextToSpeechEntity):
             _LOGGER.debug(
                 "Error during processing of TTS request %s", exc, exc_info=True
             )
-            raise HomeAssistantError(exc) from exc
+            raise menuaiError(exc) from exc
 
         return "mp3", mp3_data.getvalue()
 
@@ -121,9 +121,9 @@ class GoogleTTSEntity(TextToSpeechEntity):
 class GoogleProvider(Provider):
     """The Google speech API provider."""
 
-    def __init__(self, hass: HomeAssistant, lang: str, tld: str) -> None:
+    def __init__(self, menuai: menuai, lang: str, tld: str) -> None:
         """Init Google TTS service."""
-        self.hass = hass
+        self.menuai = menuai
         if lang in MAP_LANG_TLD:
             self._lang = MAP_LANG_TLD[lang].lang
             self._tld = MAP_LANG_TLD[lang].tld

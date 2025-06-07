@@ -6,14 +6,14 @@ import logging
 
 import requests
 
-from homeassistant.components.alarm_control_panel import (
+from menuai.components.alarm_control_panel import (
     AlarmControlPanelEntity,
     AlarmControlPanelEntityFeature,
     AlarmControlPanelState,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import (
     CONF_REPORT_SERVER_CODES,
@@ -38,7 +38,7 @@ STATES = {
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -48,7 +48,7 @@ def setup_platform(
         return
     device = EgardiaAlarm(
         discovery_info["name"],
-        hass.data[EGARDIA_DEVICE],
+        menuai.data[EGARDIA_DEVICE],
         discovery_info[CONF_REPORT_SERVER_ENABLED],
         discovery_info.get(CONF_REPORT_SERVER_CODES),
         discovery_info[CONF_REPORT_SERVER_PORT],
@@ -76,11 +76,11 @@ class EgardiaAlarm(AlarmControlPanelEntity):
         self._rs_codes = rs_codes
         self._rs_port = rs_port
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Add Egardiaserver callback if enabled."""
         if self._rs_enabled:
             _LOGGER.debug("Registering callback to Egardiaserver")
-            self.hass.data[EGARDIA_SERVER].register_callback(self.handle_status_event)
+            self.menuai.data[EGARDIA_SERVER].register_callback(self.handle_status_event)
 
     @property
     def should_poll(self) -> bool:

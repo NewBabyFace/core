@@ -5,9 +5,9 @@ from http import HTTPStatus
 from aiohttp import web
 import voluptuous as vol
 
-from homeassistant.components import webhook
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.components import webhook
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_LATITUDE,
     ATTR_LONGITUDE,
     ATTR_NAME,
@@ -15,12 +15,12 @@ from homeassistant.const import (
     STATE_NOT_HOME,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_entry_flow, config_validation as cv
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util import slugify
-from homeassistant.util.hass_dict import HassKey
+from menuai.core import menuai
+from menuai.helpers import config_entry_flow, config_validation as cv
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.typing import ConfigType
+from menuai.util import slugify
+from menuai.util.menuai_dict import menuaiKey
 
 from .const import DOMAIN
 
@@ -78,18 +78,18 @@ WEBHOOK_SCHEMA = vol.Schema(
     extra=vol.ALLOW_EXTRA,
 )
 
-_DATA_GEOFENCY: HassKey[list[str]] = HassKey(DOMAIN)
+_DATA_GEOFENCY: menuaiKey[list[str]] = menuaiKey(DOMAIN)
 
 
-async def async_setup(hass: HomeAssistant, hass_config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, menuai_config: ConfigType) -> bool:
     """Set up the Geofency component."""
-    mobile_beacons = hass_config.get(DOMAIN, {}).get(CONF_MOBILE_BEACONS, [])
-    hass.data[_DATA_GEOFENCY] = [slugify(beacon) for beacon in mobile_beacons]
+    mobile_beacons = menuai_config.get(DOMAIN, {}).get(CONF_MOBILE_BEACONS, [])
+    menuai.data[_DATA_GEOFENCY] = [slugify(beacon) for beacon in mobile_beacons]
     return True
 
 
 async def handle_webhook(
-    hass: HomeAssistant, webhook_id: str, request: web.Request
+    menuai: menuai, webhook_id: str, request: web.Request
 ) -> web.Response:
     """Handle incoming webhook from Geofency."""
     try:
@@ -99,8 +99,8 @@ async def handle_webhook(
             text=error.error_message, status=HTTPStatus.UNPROCESSABLE_ENTITY
         )
 
-    if _is_mobile_beacon(data, hass.data[_DATA_GEOFENCY]):
-        return _set_location(hass, data, None)
+    if _is_mobile_beacon(data, menuai.data[_DATA_GEOFENCY]):
+        return _set_location(menuai, data, None)
     if data["entry"] == LOCATION_ENTRY:
         location_name = data["name"]
     else:
@@ -109,7 +109,7 @@ async def handle_webhook(
             data[ATTR_LATITUDE] = data[ATTR_CURRENT_LATITUDE]
             data[ATTR_LONGITUDE] = data[ATTR_CURRENT_LONGITUDE]
 
-    return _set_location(hass, data, location_name)
+    return _set_location(menuai, data, location_name)
 
 
 def _is_mobile_beacon(data, mobile_beacons):
@@ -124,12 +124,12 @@ def _device_name(data):
     return data["device"]
 
 
-def _set_location(hass, data, location_name):
+def _set_location(menuai, data, location_name):
     """Fire HA event to set location."""
     device = _device_name(data)
 
     async_dispatcher_send(
-        hass,
+        menuai,
         TRACKER_UPDATE,
         device,
         (data[ATTR_LATITUDE], data[ATTR_LONGITUDE]),
@@ -140,21 +140,21 @@ def _set_location(hass, data, location_name):
     return web.Response(text=f"Setting location for {device}")
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: GeofencyConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: GeofencyConfigEntry) -> bool:
     """Configure based on config entry."""
     entry.runtime_data = set()
     webhook.async_register(
-        hass, DOMAIN, "Geofency", entry.data[CONF_WEBHOOK_ID], handle_webhook
+        menuai, DOMAIN, "Geofency", entry.data[CONF_WEBHOOK_ID], handle_webhook
     )
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: GeofencyConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: GeofencyConfigEntry) -> bool:
     """Unload a config entry."""
-    webhook.async_unregister(hass, entry.data[CONF_WEBHOOK_ID])
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    webhook.async_unregister(menuai, entry.data[CONF_WEBHOOK_ID])
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 async_remove_entry = config_entry_flow.webhook_async_remove_entry

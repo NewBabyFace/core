@@ -15,9 +15,9 @@
           "host": "The hostname or IP address of the device running your AdGuard Home."
         }
       },
-      "hassio_confirm": {
-        "title": "AdGuard Home via Home Assistant add-on",
-        "description": "Do you want to configure Home Assistant to connect to the AdGuard Home provided by the add-on: {addon}?"
+      "menuaiio_confirm": {
+        "title": "AdGuard Home via MenuAI add-on",
+        "description": "Do you want to configure MenuAI to connect to the AdGuard Home provided by the add-on: {addon}?"
       }
     },
     "error": {

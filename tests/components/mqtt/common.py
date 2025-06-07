@@ -13,29 +13,29 @@ import pytest
 import voluptuous as vol
 import yaml
 
-from homeassistant import config as module_hass_config
-from homeassistant.components import mqtt
-from homeassistant.components.mqtt import debug_info
-from homeassistant.components.mqtt.const import (
+from menuai import config as module_menuai_config
+from menuai.components import mqtt
+from menuai.components.mqtt import debug_info
+from menuai.components.mqtt.const import (
     MQTT_CONNECTION_STATE,
     SUPPORTED_COMPONENTS,
 )
-from homeassistant.components.mqtt.entity import MQTT_ATTRIBUTES_BLOCKED
-from homeassistant.components.mqtt.models import PublishPayloadType
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import (
+from menuai.components.mqtt.entity import MQTT_ATTRIBUTES_BLOCKED
+from menuai.components.mqtt.models import PublishPayloadType
+from menuai.config_entries import ConfigEntryState
+from menuai.const import (
     ATTR_ASSUMED_STATE,
     ATTR_ENTITY_ID,
     SERVICE_RELOAD,
     STATE_UNAVAILABLE,
     EntityCategory,
 )
-from homeassistant.core import HassJobType, HomeAssistant
-from homeassistant.generated.mqtt import MQTT
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import dt as dt_util
+from menuai.core import menuaiJobType, menuai
+from menuai.generated.mqtt import MQTT
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import dt as dt_util
 
 from tests.common import MockConfigEntry, async_fire_mqtt_message
 from tests.typing import MqttMockHAClientGenerator, MqttMockPahoClient
@@ -379,7 +379,7 @@ def help_custom_config(
 ) -> ConfigType:
     """Tweak a default config for parametrization.
 
-    Returns a custom config to be used as parametrization for with hass_config,
+    Returns a custom config to be used as parametrization for with menuai_config,
     based on the supplied mqtt_base_config and updated with mqtt_entity_configs.
     For each item in mqtt_entity_configs an entity instance is added to the config.
     """
@@ -396,25 +396,25 @@ def help_custom_config(
 
 
 async def help_test_availability_when_connection_lost(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator, domain: str
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator, domain: str
 ) -> None:
     """Test availability after MQTT disconnection."""
     mqtt_mock = await mqtt_mock_entry()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(f"{domain}.test")
+    state = menuai.states.get(f"{domain}.test")
     assert state and state.state != STATE_UNAVAILABLE
 
     mqtt_mock.connected = False
-    async_dispatcher_send(hass, MQTT_CONNECTION_STATE, False)
-    await hass.async_block_till_done()
+    async_dispatcher_send(menuai, MQTT_CONNECTION_STATE, False)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(f"{domain}.test")
+    state = menuai.states.get(f"{domain}.test")
     assert state and state.state == STATE_UNAVAILABLE
 
 
 async def help_test_availability_without_topic(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     domain: str,
     config: ConfigType,
@@ -422,14 +422,14 @@ async def help_test_availability_without_topic(
     """Test availability without defined availability topic."""
     assert "availability_topic" not in config[mqtt.DOMAIN][domain]
     await mqtt_mock_entry()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(f"{domain}.test")
+    state = menuai.states.get(f"{domain}.test")
     assert state and state.state != STATE_UNAVAILABLE
 
 
 async def help_test_default_availability_payload(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     domain: str,
     config: ConfigType,
@@ -445,38 +445,38 @@ async def help_test_default_availability_payload(
     config = copy.deepcopy(config)
     config[mqtt.DOMAIN][domain]["availability_topic"] = "availability-topic"
 
-    with patch("homeassistant.config.load_yaml_config_file", return_value=config):
+    with patch("menuai.config.load_yaml_config_file", return_value=config):
         await mqtt_mock_entry()
 
-    state = hass.states.get(f"{domain}.test")
+    state = menuai.states.get(f"{domain}.test")
     assert state and state.state == STATE_UNAVAILABLE
 
-    async_fire_mqtt_message(hass, "availability-topic", "online")
+    async_fire_mqtt_message(menuai, "availability-topic", "online")
 
-    state = hass.states.get(f"{domain}.test")
+    state = menuai.states.get(f"{domain}.test")
     assert state and state.state != STATE_UNAVAILABLE
     if no_assumed_state:
         assert not state.attributes.get(ATTR_ASSUMED_STATE)
 
-    async_fire_mqtt_message(hass, "availability-topic", "offline")
+    async_fire_mqtt_message(menuai, "availability-topic", "offline")
 
-    state = hass.states.get(f"{domain}.test")
+    state = menuai.states.get(f"{domain}.test")
     assert state and state.state == STATE_UNAVAILABLE
 
     if state_topic is not None and state_message is not None:
-        async_fire_mqtt_message(hass, state_topic, state_message)
+        async_fire_mqtt_message(menuai, state_topic, state_message)
 
-        state = hass.states.get(f"{domain}.test")
+        state = menuai.states.get(f"{domain}.test")
         assert state and state.state == STATE_UNAVAILABLE
 
-        async_fire_mqtt_message(hass, "availability-topic", "online")
+        async_fire_mqtt_message(menuai, "availability-topic", "online")
 
-        state = hass.states.get(f"{domain}.test")
+        state = menuai.states.get(f"{domain}.test")
         assert state and state.state != STATE_UNAVAILABLE
 
 
 async def help_test_default_availability_list_payload(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     domain: str,
     config: ConfigType,
@@ -494,50 +494,50 @@ async def help_test_default_availability_list_payload(
         {"topic": "availability-topic1"},
         {"topic": "availability-topic2"},
     ]
-    with patch("homeassistant.config.load_yaml_config_file", return_value=config):
+    with patch("menuai.config.load_yaml_config_file", return_value=config):
         await mqtt_mock_entry()
 
-    state = hass.states.get(f"{domain}.test")
+    state = menuai.states.get(f"{domain}.test")
     assert state and state.state == STATE_UNAVAILABLE
 
-    async_fire_mqtt_message(hass, "availability-topic1", "online")
+    async_fire_mqtt_message(menuai, "availability-topic1", "online")
 
-    state = hass.states.get(f"{domain}.test")
+    state = menuai.states.get(f"{domain}.test")
     assert state and state.state != STATE_UNAVAILABLE
     if no_assumed_state:
         assert not state.attributes.get(ATTR_ASSUMED_STATE)
 
-    async_fire_mqtt_message(hass, "availability-topic1", "offline")
+    async_fire_mqtt_message(menuai, "availability-topic1", "offline")
 
-    state = hass.states.get(f"{domain}.test")
+    state = menuai.states.get(f"{domain}.test")
     assert state and state.state == STATE_UNAVAILABLE
 
-    async_fire_mqtt_message(hass, "availability-topic2", "online")
+    async_fire_mqtt_message(menuai, "availability-topic2", "online")
 
-    state = hass.states.get(f"{domain}.test")
+    state = menuai.states.get(f"{domain}.test")
     assert state and state.state != STATE_UNAVAILABLE
     if no_assumed_state:
         assert not state.attributes.get(ATTR_ASSUMED_STATE)
 
-    async_fire_mqtt_message(hass, "availability-topic2", "offline")
+    async_fire_mqtt_message(menuai, "availability-topic2", "offline")
 
-    state = hass.states.get(f"{domain}.test")
+    state = menuai.states.get(f"{domain}.test")
     assert state and state.state == STATE_UNAVAILABLE
 
     if state_topic is not None and state_message is not None:
-        async_fire_mqtt_message(hass, state_topic, state_message)
+        async_fire_mqtt_message(menuai, state_topic, state_message)
 
-        state = hass.states.get(f"{domain}.test")
+        state = menuai.states.get(f"{domain}.test")
         assert state and state.state == STATE_UNAVAILABLE
 
-        async_fire_mqtt_message(hass, "availability-topic1", "online")
+        async_fire_mqtt_message(menuai, "availability-topic1", "online")
 
-        state = hass.states.get(f"{domain}.test")
+        state = menuai.states.get(f"{domain}.test")
         assert state and state.state != STATE_UNAVAILABLE
 
 
 async def help_test_default_availability_list_payload_all(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     domain: str,
     config: ConfigType,
@@ -554,51 +554,51 @@ async def help_test_default_availability_list_payload_all(
         {"topic": "availability-topic1"},
         {"topic": "availability-topic2"},
     ]
-    with patch("homeassistant.config.load_yaml_config_file", return_value=config):
+    with patch("menuai.config.load_yaml_config_file", return_value=config):
         await mqtt_mock_entry()
 
-    state = hass.states.get(f"{domain}.test")
+    state = menuai.states.get(f"{domain}.test")
     assert state and state.state == STATE_UNAVAILABLE
 
-    async_fire_mqtt_message(hass, "availability-topic1", "online")
+    async_fire_mqtt_message(menuai, "availability-topic1", "online")
 
-    state = hass.states.get(f"{domain}.test")
+    state = menuai.states.get(f"{domain}.test")
     assert state and state.state == STATE_UNAVAILABLE
     if no_assumed_state:
         assert not state.attributes.get(ATTR_ASSUMED_STATE)
 
-    async_fire_mqtt_message(hass, "availability-topic2", "online")
+    async_fire_mqtt_message(menuai, "availability-topic2", "online")
 
-    state = hass.states.get(f"{domain}.test")
+    state = menuai.states.get(f"{domain}.test")
     assert state and state.state != STATE_UNAVAILABLE
 
-    async_fire_mqtt_message(hass, "availability-topic2", "offline")
+    async_fire_mqtt_message(menuai, "availability-topic2", "offline")
 
-    state = hass.states.get(f"{domain}.test")
+    state = menuai.states.get(f"{domain}.test")
     assert state and state.state == STATE_UNAVAILABLE
     if no_assumed_state:
         assert not state.attributes.get(ATTR_ASSUMED_STATE)
 
-    async_fire_mqtt_message(hass, "availability-topic2", "online")
+    async_fire_mqtt_message(menuai, "availability-topic2", "online")
 
-    state = hass.states.get(f"{domain}.test")
+    state = menuai.states.get(f"{domain}.test")
     assert state and state.state != STATE_UNAVAILABLE
 
-    async_fire_mqtt_message(hass, "availability-topic1", "offline")
+    async_fire_mqtt_message(menuai, "availability-topic1", "offline")
 
-    state = hass.states.get(f"{domain}.test")
+    state = menuai.states.get(f"{domain}.test")
     assert state and state.state == STATE_UNAVAILABLE
     if no_assumed_state:
         assert not state.attributes.get(ATTR_ASSUMED_STATE)
 
-    async_fire_mqtt_message(hass, "availability-topic1", "online")
+    async_fire_mqtt_message(menuai, "availability-topic1", "online")
 
-    state = hass.states.get(f"{domain}.test")
+    state = menuai.states.get(f"{domain}.test")
     assert state and state.state != STATE_UNAVAILABLE
 
 
 async def help_test_default_availability_list_payload_any(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     domain: str,
     config: ConfigType,
@@ -615,46 +615,46 @@ async def help_test_default_availability_list_payload_any(
         {"topic": "availability-topic1"},
         {"topic": "availability-topic2"},
     ]
-    with patch("homeassistant.config.load_yaml_config_file", return_value=config):
+    with patch("menuai.config.load_yaml_config_file", return_value=config):
         await mqtt_mock_entry()
 
-    state = hass.states.get(f"{domain}.test")
+    state = menuai.states.get(f"{domain}.test")
     assert state and state.state == STATE_UNAVAILABLE
 
-    async_fire_mqtt_message(hass, "availability-topic1", "online")
+    async_fire_mqtt_message(menuai, "availability-topic1", "online")
 
-    state = hass.states.get(f"{domain}.test")
+    state = menuai.states.get(f"{domain}.test")
     assert state and state.state != STATE_UNAVAILABLE
     if no_assumed_state:
         assert not state.attributes.get(ATTR_ASSUMED_STATE)
 
-    async_fire_mqtt_message(hass, "availability-topic2", "online")
+    async_fire_mqtt_message(menuai, "availability-topic2", "online")
 
-    state = hass.states.get(f"{domain}.test")
+    state = menuai.states.get(f"{domain}.test")
     assert state and state.state != STATE_UNAVAILABLE
 
-    async_fire_mqtt_message(hass, "availability-topic2", "offline")
+    async_fire_mqtt_message(menuai, "availability-topic2", "offline")
 
-    state = hass.states.get(f"{domain}.test")
+    state = menuai.states.get(f"{domain}.test")
     assert state and state.state != STATE_UNAVAILABLE
     if no_assumed_state:
         assert not state.attributes.get(ATTR_ASSUMED_STATE)
 
-    async_fire_mqtt_message(hass, "availability-topic1", "offline")
+    async_fire_mqtt_message(menuai, "availability-topic1", "offline")
 
-    state = hass.states.get(f"{domain}.test")
+    state = menuai.states.get(f"{domain}.test")
     assert state and state.state == STATE_UNAVAILABLE
 
-    async_fire_mqtt_message(hass, "availability-topic1", "online")
+    async_fire_mqtt_message(menuai, "availability-topic1", "online")
 
-    state = hass.states.get(f"{domain}.test")
+    state = menuai.states.get(f"{domain}.test")
     assert state and state.state != STATE_UNAVAILABLE
     if no_assumed_state:
         assert not state.attributes.get(ATTR_ASSUMED_STATE)
 
 
 async def help_test_default_availability_list_single(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
     domain: str,
@@ -672,7 +672,7 @@ async def help_test_default_availability_list_single(
     config[mqtt.DOMAIN][domain]["availability_topic"] = "availability-topic"
 
     with (
-        patch("homeassistant.config.load_yaml_config_file", return_value=config),
+        patch("menuai.config.load_yaml_config_file", return_value=config),
         suppress(vol.MultipleInvalid),
     ):
         await mqtt_mock_entry()
@@ -684,7 +684,7 @@ async def help_test_default_availability_list_single(
 
 
 async def help_test_custom_availability_payload(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     domain: str,
     config: ConfigType,
@@ -701,38 +701,38 @@ async def help_test_custom_availability_payload(
     config[mqtt.DOMAIN][domain]["availability_topic"] = "availability-topic"
     config[mqtt.DOMAIN][domain]["payload_available"] = "good"
     config[mqtt.DOMAIN][domain]["payload_not_available"] = "nogood"
-    with patch("homeassistant.config.load_yaml_config_file", return_value=config):
+    with patch("menuai.config.load_yaml_config_file", return_value=config):
         await mqtt_mock_entry()
 
-    state = hass.states.get(f"{domain}.test")
+    state = menuai.states.get(f"{domain}.test")
     assert state and state.state == STATE_UNAVAILABLE
 
-    async_fire_mqtt_message(hass, "availability-topic", "good")
+    async_fire_mqtt_message(menuai, "availability-topic", "good")
 
-    state = hass.states.get(f"{domain}.test")
+    state = menuai.states.get(f"{domain}.test")
     assert state and state.state != STATE_UNAVAILABLE
     if no_assumed_state:
         assert not state.attributes.get(ATTR_ASSUMED_STATE)
 
-    async_fire_mqtt_message(hass, "availability-topic", "nogood")
+    async_fire_mqtt_message(menuai, "availability-topic", "nogood")
 
-    state = hass.states.get(f"{domain}.test")
+    state = menuai.states.get(f"{domain}.test")
     assert state and state.state == STATE_UNAVAILABLE
 
     if state_topic is not None and state_message is not None:
-        async_fire_mqtt_message(hass, state_topic, state_message)
+        async_fire_mqtt_message(menuai, state_topic, state_message)
 
-        state = hass.states.get(f"{domain}.test")
+        state = menuai.states.get(f"{domain}.test")
         assert state and state.state == STATE_UNAVAILABLE
 
-        async_fire_mqtt_message(hass, "availability-topic", "good")
+        async_fire_mqtt_message(menuai, "availability-topic", "good")
 
-        state = hass.states.get(f"{domain}.test")
+        state = menuai.states.get(f"{domain}.test")
         assert state and state.state != STATE_UNAVAILABLE
 
 
 async def help_test_discovery_update_availability(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     domain: str,
     config: ConfigType,
@@ -756,61 +756,61 @@ async def help_test_discovery_update_availability(
     data2 = json.dumps(config2[mqtt.DOMAIN][domain])
     data3 = json.dumps(config3[mqtt.DOMAIN][domain])
 
-    async_fire_mqtt_message(hass, f"homeassistant/{domain}/bla/config", data1)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"menuai/{domain}/bla/config", data1)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(f"{domain}.test")
+    state = menuai.states.get(f"{domain}.test")
     assert state and state.state == STATE_UNAVAILABLE
 
-    async_fire_mqtt_message(hass, "availability-topic1", "online")
-    state = hass.states.get(f"{domain}.test")
+    async_fire_mqtt_message(menuai, "availability-topic1", "online")
+    state = menuai.states.get(f"{domain}.test")
     assert state and state.state != STATE_UNAVAILABLE
 
-    async_fire_mqtt_message(hass, "availability-topic1", "offline")
-    state = hass.states.get(f"{domain}.test")
+    async_fire_mqtt_message(menuai, "availability-topic1", "offline")
+    state = menuai.states.get(f"{domain}.test")
     assert state and state.state == STATE_UNAVAILABLE
 
     # Change availability_topic
-    async_fire_mqtt_message(hass, f"homeassistant/{domain}/bla/config", data2)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"menuai/{domain}/bla/config", data2)
+    await menuai.async_block_till_done()
 
     # Verify we are no longer subscribing to the old topic
-    async_fire_mqtt_message(hass, "availability-topic1", "online")
-    state = hass.states.get(f"{domain}.test")
+    async_fire_mqtt_message(menuai, "availability-topic1", "online")
+    state = menuai.states.get(f"{domain}.test")
     assert state and state.state == STATE_UNAVAILABLE
 
     # Verify we are subscribing to the new topic
-    async_fire_mqtt_message(hass, "availability-topic2", "online")
-    state = hass.states.get(f"{domain}.test")
+    async_fire_mqtt_message(menuai, "availability-topic2", "online")
+    state = menuai.states.get(f"{domain}.test")
     assert state and state.state != STATE_UNAVAILABLE
 
     # Verify we are subscribing to the new topic
-    async_fire_mqtt_message(hass, "availability-topic3", "offline")
-    state = hass.states.get(f"{domain}.test")
+    async_fire_mqtt_message(menuai, "availability-topic3", "offline")
+    state = menuai.states.get(f"{domain}.test")
     assert state and state.state == STATE_UNAVAILABLE
 
     # Change availability_topic
-    async_fire_mqtt_message(hass, f"homeassistant/{domain}/bla/config", data3)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"menuai/{domain}/bla/config", data3)
+    await menuai.async_block_till_done()
 
     # Verify we are no longer subscribing to the old topic
-    async_fire_mqtt_message(hass, "availability-topic2", "online")
-    state = hass.states.get(f"{domain}.test")
+    async_fire_mqtt_message(menuai, "availability-topic2", "online")
+    state = menuai.states.get(f"{domain}.test")
     assert state and state.state == STATE_UNAVAILABLE
 
     # Verify we are no longer subscribing to the old topic
-    async_fire_mqtt_message(hass, "availability-topic3", "online")
-    state = hass.states.get(f"{domain}.test")
+    async_fire_mqtt_message(menuai, "availability-topic3", "online")
+    state = menuai.states.get(f"{domain}.test")
     assert state and state.state == STATE_UNAVAILABLE
 
     # Verify we are subscribing to the new topic
-    async_fire_mqtt_message(hass, "availability-topic4", "online")
-    state = hass.states.get(f"{domain}.test")
+    async_fire_mqtt_message(menuai, "availability-topic4", "online")
+    state = menuai.states.get(f"{domain}.test")
     assert state and state.state != STATE_UNAVAILABLE
 
 
 async def help_test_setting_attribute_via_mqtt_json_message(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     domain: str,
     config: ConfigType,
@@ -822,17 +822,17 @@ async def help_test_setting_attribute_via_mqtt_json_message(
     # Add JSON attributes settings to config
     config = copy.deepcopy(config)
     config[mqtt.DOMAIN][domain]["json_attributes_topic"] = "attr-topic"
-    with patch("homeassistant.config.load_yaml_config_file", return_value=config):
+    with patch("menuai.config.load_yaml_config_file", return_value=config):
         await mqtt_mock_entry()
 
-    async_fire_mqtt_message(hass, "attr-topic", '{ "val": "100" }')
-    state = hass.states.get(f"{domain}.test")
+    async_fire_mqtt_message(menuai, "attr-topic", '{ "val": "100" }')
+    state = menuai.states.get(f"{domain}.test")
 
     assert state and state.attributes.get("val") == "100"
 
 
 async def help_test_setting_blocked_attribute_via_mqtt_json_message(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     domain: str,
     config: ConfigType,
@@ -849,23 +849,23 @@ async def help_test_setting_blocked_attribute_via_mqtt_json_message(
     config = copy.deepcopy(config)
     config[mqtt.DOMAIN][domain]["json_attributes_topic"] = "attr-topic"
     data = json.dumps(config[mqtt.DOMAIN][domain])
-    async_fire_mqtt_message(hass, f"homeassistant/{domain}/bla/config", data)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"menuai/{domain}/bla/config", data)
+    await menuai.async_block_till_done()
     val = "abc123"
 
     for attr in MQTT_ATTRIBUTES_BLOCKED:
-        async_fire_mqtt_message(hass, "attr-topic", json.dumps({attr: val}))
-        state = hass.states.get(f"{domain}.test")
+        async_fire_mqtt_message(menuai, "attr-topic", json.dumps({attr: val}))
+        state = menuai.states.get(f"{domain}.test")
         assert state and state.attributes.get(attr) != val
 
     for attr in extra_blocked_attribute_list:
-        async_fire_mqtt_message(hass, "attr-topic", json.dumps({attr: val}))
-        state = hass.states.get(f"{domain}.test")
+        async_fire_mqtt_message(menuai, "attr-topic", json.dumps({attr: val}))
+        state = menuai.states.get(f"{domain}.test")
         assert state and state.attributes.get(attr) != val
 
 
 async def help_test_setting_attribute_with_template(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     domain: str,
     config: ConfigType,
@@ -880,13 +880,13 @@ async def help_test_setting_attribute_with_template(
     config[mqtt.DOMAIN][domain]["json_attributes_template"] = (
         "{{ value_json['Timer1'] | tojson }}"
     )
-    with patch("homeassistant.config.load_yaml_config_file", return_value=config):
+    with patch("menuai.config.load_yaml_config_file", return_value=config):
         await mqtt_mock_entry()
 
     async_fire_mqtt_message(
-        hass, "attr-topic", json.dumps({"Timer1": {"Arm": 0, "Time": "22:18"}})
+        menuai, "attr-topic", json.dumps({"Timer1": {"Arm": 0, "Time": "22:18"}})
     )
-    state = hass.states.get(f"{domain}.test")
+    state = menuai.states.get(f"{domain}.test")
 
     assert state is not None
     assert state.attributes.get("Arm") == 0
@@ -894,7 +894,7 @@ async def help_test_setting_attribute_with_template(
 
 
 async def help_test_update_with_json_attrs_not_dict(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
     domain: str,
@@ -907,18 +907,18 @@ async def help_test_update_with_json_attrs_not_dict(
     # Add JSON attributes settings to config
     config = copy.deepcopy(config)
     config[mqtt.DOMAIN][domain]["json_attributes_topic"] = "attr-topic"
-    with patch("homeassistant.config.load_yaml_config_file", return_value=config):
+    with patch("menuai.config.load_yaml_config_file", return_value=config):
         await mqtt_mock_entry()
 
-    async_fire_mqtt_message(hass, "attr-topic", '[ "list", "of", "things"]')
-    state = hass.states.get(f"{domain}.test")
+    async_fire_mqtt_message(menuai, "attr-topic", '[ "list", "of", "things"]')
+    state = menuai.states.get(f"{domain}.test")
 
     assert state and state.attributes.get("val") is None
     assert "JSON result was not a dictionary" in caplog.text
 
 
 async def help_test_update_with_json_attrs_bad_json(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
     domain: str,
@@ -931,18 +931,18 @@ async def help_test_update_with_json_attrs_bad_json(
     # Add JSON attributes settings to config
     config = copy.deepcopy(config)
     config[mqtt.DOMAIN][domain]["json_attributes_topic"] = "attr-topic"
-    with patch("homeassistant.config.load_yaml_config_file", return_value=config):
+    with patch("menuai.config.load_yaml_config_file", return_value=config):
         await mqtt_mock_entry()
 
-    async_fire_mqtt_message(hass, "attr-topic", "This is not JSON")
+    async_fire_mqtt_message(menuai, "attr-topic", "This is not JSON")
 
-    state = hass.states.get(f"{domain}.test")
+    state = menuai.states.get(f"{domain}.test")
     assert state and state.attributes.get("val") is None
     assert "Erroneous JSON: This is not JSON" in caplog.text
 
 
 async def help_test_discovery_update_attr(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     domain: str,
     config: ConfigType,
@@ -960,38 +960,38 @@ async def help_test_discovery_update_attr(
     data1 = json.dumps(config1[mqtt.DOMAIN][domain])
     data2 = json.dumps(config2[mqtt.DOMAIN][domain])
 
-    async_fire_mqtt_message(hass, f"homeassistant/{domain}/bla/config", data1)
-    await hass.async_block_till_done()
-    async_fire_mqtt_message(hass, "attr-topic1", '{ "val": "100" }')
-    state = hass.states.get(f"{domain}.test")
+    async_fire_mqtt_message(menuai, f"menuai/{domain}/bla/config", data1)
+    await menuai.async_block_till_done()
+    async_fire_mqtt_message(menuai, "attr-topic1", '{ "val": "100" }')
+    state = menuai.states.get(f"{domain}.test")
     assert state and state.attributes.get("val") == "100"
 
     # Change json_attributes_topic
-    async_fire_mqtt_message(hass, f"homeassistant/{domain}/bla/config", data2)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"menuai/{domain}/bla/config", data2)
+    await menuai.async_block_till_done()
 
     # Verify we are no longer subscribing to the old topic
-    async_fire_mqtt_message(hass, "attr-topic1", '{ "val": "50" }')
-    state = hass.states.get(f"{domain}.test")
+    async_fire_mqtt_message(menuai, "attr-topic1", '{ "val": "50" }')
+    state = menuai.states.get(f"{domain}.test")
     assert state and state.attributes.get("val") != "50"
 
     # Verify we are subscribing to the new topic
-    async_fire_mqtt_message(hass, "attr-topic2", '{ "val": "75" }')
-    state = hass.states.get(f"{domain}.test")
+    async_fire_mqtt_message(menuai, "attr-topic2", '{ "val": "75" }')
+    state = menuai.states.get(f"{domain}.test")
     assert state and state.attributes.get("val") == "75"
 
 
 async def help_test_unique_id(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator, domain: str
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator, domain: str
 ) -> None:
     """Test unique id option only creates one entity per unique_id."""
     await mqtt_mock_entry()
-    await hass.async_block_till_done()
-    assert len(hass.states.async_entity_ids(domain)) == 1
+    await menuai.async_block_till_done()
+    assert len(menuai.states.async_entity_ids(domain)) == 1
 
 
 async def help_test_discovery_removal(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     domain: str,
     data: str,
@@ -1001,22 +1001,22 @@ async def help_test_discovery_removal(
     This is a test helper for the MqttDiscoveryUpdate mixin.
     """
     await mqtt_mock_entry()
-    async_fire_mqtt_message(hass, f"homeassistant/{domain}/bla/config", data)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"menuai/{domain}/bla/config", data)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(f"{domain}.test")
+    state = menuai.states.get(f"{domain}.test")
     assert state is not None
     assert state.name == "test"
 
-    async_fire_mqtt_message(hass, f"homeassistant/{domain}/bla/config", "")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"menuai/{domain}/bla/config", "")
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(f"{domain}.test")
+    state = menuai.states.get(f"{domain}.test")
     assert state is None
 
 
 async def help_test_discovery_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     domain: str,
     discovery_config1: DiscoveryInfoType,
@@ -1037,18 +1037,18 @@ async def help_test_discovery_update(
     discovery_data1 = json.dumps(config1)
     discovery_data2 = json.dumps(config2)
 
-    async_fire_mqtt_message(hass, f"homeassistant/{domain}/bla/config", discovery_data1)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"menuai/{domain}/bla/config", discovery_data1)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(f"{domain}.beer")
+    state = menuai.states.get(f"{domain}.beer")
     assert state is not None
     assert state.name == "Beer"
 
     if state_data1:
         for mqtt_messages, expected_state, attributes in state_data1:
             for topic, data in mqtt_messages:
-                async_fire_mqtt_message(hass, topic, data)
-            state = hass.states.get(f"{domain}.beer")
+                async_fire_mqtt_message(menuai, topic, data)
+            state = menuai.states.get(f"{domain}.beer")
             assert state is not None
             if expected_state:
                 assert state.state == expected_state
@@ -1056,18 +1056,18 @@ async def help_test_discovery_update(
                 for attr, value in attributes:
                     assert state.attributes.get(attr) == value
 
-    async_fire_mqtt_message(hass, f"homeassistant/{domain}/bla/config", discovery_data2)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"menuai/{domain}/bla/config", discovery_data2)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(f"{domain}.beer")
+    state = menuai.states.get(f"{domain}.beer")
     assert state is not None
     assert state.name == "Milk"
 
     if state_data2:
         for mqtt_messages, expected_state, attributes in state_data2:
             for topic, data in mqtt_messages:
-                async_fire_mqtt_message(hass, topic, data)
-            state = hass.states.get(f"{domain}.beer")
+                async_fire_mqtt_message(menuai, topic, data)
+            state = menuai.states.get(f"{domain}.beer")
             assert state is not None
             if expected_state:
                 assert state.state == expected_state
@@ -1075,12 +1075,12 @@ async def help_test_discovery_update(
                 for attr, value in attributes:
                     assert state.attributes.get(attr) == value
 
-    state = hass.states.get(f"{domain}.milk")
+    state = menuai.states.get(f"{domain}.milk")
     assert state is None
 
 
 async def help_test_discovery_update_unchanged(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     domain: str,
     data1: str,
@@ -1091,21 +1091,21 @@ async def help_test_discovery_update_unchanged(
     This is a test helper for the MqttDiscoveryUpdate mixin.
     """
     await mqtt_mock_entry()
-    async_fire_mqtt_message(hass, f"homeassistant/{domain}/bla/config", data1)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"menuai/{domain}/bla/config", data1)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(f"{domain}.beer")
+    state = menuai.states.get(f"{domain}.beer")
     assert state is not None
     assert state.name == "Beer"
 
-    async_fire_mqtt_message(hass, f"homeassistant/{domain}/bla/config", data1)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"menuai/{domain}/bla/config", data1)
+    await menuai.async_block_till_done()
 
     assert not discovery_update.called
 
 
 async def help_test_discovery_broken(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     domain: str,
     data1: str,
@@ -1113,24 +1113,24 @@ async def help_test_discovery_broken(
 ) -> None:
     """Test handling of bad discovery message."""
     await mqtt_mock_entry()
-    async_fire_mqtt_message(hass, f"homeassistant/{domain}/bla/config", data1)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"menuai/{domain}/bla/config", data1)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(f"{domain}.beer")
+    state = menuai.states.get(f"{domain}.beer")
     assert state is None
 
-    async_fire_mqtt_message(hass, f"homeassistant/{domain}/bla/config", data2)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"menuai/{domain}/bla/config", data2)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(f"{domain}.milk")
+    state = menuai.states.get(f"{domain}.milk")
     assert state is not None
     assert state.name == "Milk"
-    state = hass.states.get(f"{domain}.beer")
+    state = menuai.states.get(f"{domain}.beer")
     assert state is None
 
 
 async def help_test_encoding_subscribable_topics(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     domain: str,
     config: ConfigType,
@@ -1144,7 +1144,7 @@ async def help_test_encoding_subscribable_topics(
     """Test handling of incoming encoded payload."""
 
     async def _test_encoding(
-        hass: HomeAssistant,
+        menuai: menuai,
         entity_id,
         topic,
         encoded_value,
@@ -1152,19 +1152,19 @@ async def help_test_encoding_subscribable_topics(
         init_payload_topic,
         init_payload_value,
     ) -> Any:
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
 
         if init_payload_value:
             # Sometimes a device needs to have an initialization pay load, e.g. to switch the device on.
-            async_fire_mqtt_message(hass, init_payload_topic, init_payload_value)
-            await hass.async_block_till_done()
+            async_fire_mqtt_message(menuai, init_payload_topic, init_payload_value)
+            await menuai.async_block_till_done()
 
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
 
-        async_fire_mqtt_message(hass, topic, encoded_value)
-        await hass.async_block_till_done()
+        async_fire_mqtt_message(menuai, topic, encoded_value)
+        await menuai.async_block_till_done()
 
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state is not None
 
         if attribute:
@@ -1207,22 +1207,22 @@ async def help_test_encoding_subscribable_topics(
 
     await mqtt_mock_entry()
     async_fire_mqtt_message(
-        hass, f"homeassistant/{domain}/item1/config", json.dumps(config1)
+        menuai, f"menuai/{domain}/item1/config", json.dumps(config1)
     )
     async_fire_mqtt_message(
-        hass, f"homeassistant/{domain}/item2/config", json.dumps(config2)
+        menuai, f"menuai/{domain}/item2/config", json.dumps(config2)
     )
     async_fire_mqtt_message(
-        hass, f"homeassistant/{domain}/item3/config", json.dumps(config3)
+        menuai, f"menuai/{domain}/item3/config", json.dumps(config3)
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     expected_result = attribute_value or value
 
     # test1 default encoding
     assert (
         await _test_encoding(
-            hass,
+            menuai,
             f"{domain}.test1",
             "topic/test1",
             value.encode("utf-8"),
@@ -1236,7 +1236,7 @@ async def help_test_encoding_subscribable_topics(
     # test2 alternate encoding
     assert (
         await _test_encoding(
-            hass,
+            menuai,
             f"{domain}.test2",
             "topic/test2",
             value.encode("utf-16"),
@@ -1253,7 +1253,7 @@ async def help_test_encoding_subscribable_topics(
 
     with suppress(AttributeError, TypeError, ValueError):
         result = await _test_encoding(
-            hass,
+            menuai,
             f"{domain}.test3",
             "topic/test3",
             value.encode("utf-16"),
@@ -1265,7 +1265,7 @@ async def help_test_encoding_subscribable_topics(
 
 
 async def help_test_entity_device_info_with_identifier(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     domain: str,
     config: ConfigType,
@@ -1280,11 +1280,11 @@ async def help_test_entity_device_info_with_identifier(
     config["device"] = copy.deepcopy(DEFAULT_CONFIG_DEVICE_INFO_ID)
     config["unique_id"] = "veryunique"
 
-    registry = dr.async_get(hass)
+    registry = dr.async_get(menuai)
 
     data = json.dumps(config)
-    async_fire_mqtt_message(hass, f"homeassistant/{domain}/bla/config", data)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"menuai/{domain}/bla/config", data)
+    await menuai.async_block_till_done()
 
     device = registry.async_get_device(identifiers={("mqtt", "helloworld")})
     assert device is not None
@@ -1300,7 +1300,7 @@ async def help_test_entity_device_info_with_identifier(
 
 
 async def help_test_entity_device_info_with_connection(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     domain: str,
     config: ConfigType,
@@ -1315,11 +1315,11 @@ async def help_test_entity_device_info_with_connection(
     config["device"] = copy.deepcopy(DEFAULT_CONFIG_DEVICE_INFO_MAC)
     config["unique_id"] = "veryunique"
 
-    registry = dr.async_get(hass)
+    registry = dr.async_get(menuai)
 
     data = json.dumps(config)
-    async_fire_mqtt_message(hass, f"homeassistant/{domain}/bla/config", data)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"menuai/{domain}/bla/config", data)
+    await menuai.async_block_till_done()
 
     device = registry.async_get_device(
         connections={(dr.CONNECTION_NETWORK_MAC, "02:5b:26:a8:dc:12")}
@@ -1337,7 +1337,7 @@ async def help_test_entity_device_info_with_connection(
 
 
 async def help_test_entity_device_info_remove(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     domain: str,
     config: ConfigType,
@@ -1349,19 +1349,19 @@ async def help_test_entity_device_info_remove(
     config["device"] = copy.deepcopy(DEFAULT_CONFIG_DEVICE_INFO_ID)
     config["unique_id"] = "veryunique"
 
-    dev_registry = dr.async_get(hass)
-    ent_registry = er.async_get(hass)
+    dev_registry = dr.async_get(menuai)
+    ent_registry = er.async_get(menuai)
 
     data = json.dumps(config)
-    async_fire_mqtt_message(hass, f"homeassistant/{domain}/bla/config", data)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"menuai/{domain}/bla/config", data)
+    await menuai.async_block_till_done()
 
     device = dev_registry.async_get_device(identifiers={("mqtt", "helloworld")})
     assert device is not None
     assert ent_registry.async_get_entity_id(domain, mqtt.DOMAIN, "veryunique")
 
-    async_fire_mqtt_message(hass, f"homeassistant/{domain}/bla/config", "")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"menuai/{domain}/bla/config", "")
+    await menuai.async_block_till_done()
 
     device = dev_registry.async_get_device(identifiers={("mqtt", "helloworld")})
     assert device is None
@@ -1369,7 +1369,7 @@ async def help_test_entity_device_info_remove(
 
 
 async def help_test_entity_device_info_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     domain: str,
     config: ConfigType,
@@ -1384,11 +1384,11 @@ async def help_test_entity_device_info_update(
     config["device"] = copy.deepcopy(DEFAULT_CONFIG_DEVICE_INFO_ID)
     config["unique_id"] = "veryunique"
 
-    registry = dr.async_get(hass)
+    registry = dr.async_get(menuai)
 
     data = json.dumps(config)
-    async_fire_mqtt_message(hass, f"homeassistant/{domain}/bla/config", data)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"menuai/{domain}/bla/config", data)
+    await menuai.async_block_till_done()
 
     device = registry.async_get_device(identifiers={("mqtt", "helloworld")})
     assert device is not None
@@ -1396,8 +1396,8 @@ async def help_test_entity_device_info_update(
 
     config["device"]["name"] = "Milk"
     data = json.dumps(config)
-    async_fire_mqtt_message(hass, f"homeassistant/{domain}/bla/config", data)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"menuai/{domain}/bla/config", data)
+    await menuai.async_block_till_done()
 
     device = registry.async_get_device(identifiers={("mqtt", "helloworld")})
     assert device is not None
@@ -1405,7 +1405,7 @@ async def help_test_entity_device_info_update(
 
 
 async def help_test_entity_name(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     domain: str,
     config: ConfigType,
@@ -1428,23 +1428,23 @@ async def help_test_entity_name(
         config.pop("name")
         expected_entity_name = device_class
 
-    registry = dr.async_get(hass)
+    registry = dr.async_get(menuai)
 
     data = json.dumps(config)
-    async_fire_mqtt_message(hass, f"homeassistant/{domain}/bla/config", data)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"menuai/{domain}/bla/config", data)
+    await menuai.async_block_till_done()
 
     device = registry.async_get_device({("mqtt", "helloworld")})
     assert device is not None
 
     entity_id = f"{domain}.beer_{expected_entity_name}"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state is not None
     assert state.name == f"Beer {expected_friendly_name}"
 
 
 async def help_test_entity_id_update_subscriptions(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     domain: str,
     config: ConfigType,
@@ -1461,13 +1461,13 @@ async def help_test_entity_id_update_subscriptions(
         config[mqtt.DOMAIN][domain]["state_topic"] = "test-topic"
         topics = ["avty-topic", "test-topic"]
     assert len(topics) > 0
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
 
-    with patch("homeassistant.config.load_yaml_config_file", return_value=config):
+    with patch("menuai.config.load_yaml_config_file", return_value=config):
         mqtt_mock = await mqtt_mock_entry()
     assert mqtt_mock is not None
 
-    state = hass.states.get(f"{domain}.test")
+    state = menuai.states.get(f"{domain}.test")
     assert state is not None
     assert (
         mqtt_mock.async_subscribe.call_count
@@ -1478,28 +1478,28 @@ async def help_test_entity_id_update_subscriptions(
     )
     for topic in topics:
         mqtt_mock.async_subscribe.assert_any_call(
-            topic, ANY, ANY, ANY, HassJobType.Callback
+            topic, ANY, ANY, ANY, menuaiJobType.Callback
         )
     mqtt_mock.async_subscribe.reset_mock()
 
     entity_registry.async_update_entity(
         f"{domain}.test", new_entity_id=f"{domain}.milk"
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(f"{domain}.test")
+    state = menuai.states.get(f"{domain}.test")
     assert state is None
 
-    state = hass.states.get(f"{domain}.milk")
+    state = menuai.states.get(f"{domain}.milk")
     assert state is not None
     for topic in topics:
         mqtt_mock.async_subscribe.assert_any_call(
-            topic, ANY, ANY, ANY, HassJobType.Callback
+            topic, ANY, ANY, ANY, menuaiJobType.Callback
         )
 
 
 async def help_test_entity_id_update_discovery_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     domain: str,
     config: ConfigType,
@@ -1516,37 +1516,37 @@ async def help_test_entity_id_update_discovery_update(
         config[mqtt.DOMAIN][domain]["availability_topic"] = "avty-topic"
         topic = "avty-topic"
 
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
     data = json.dumps(config[mqtt.DOMAIN][domain])
-    async_fire_mqtt_message(hass, f"homeassistant/{domain}/bla/config", data)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"menuai/{domain}/bla/config", data)
+    await menuai.async_block_till_done()
 
-    async_fire_mqtt_message(hass, topic, "online")
-    state = hass.states.get(f"{domain}.test")
+    async_fire_mqtt_message(menuai, topic, "online")
+    state = menuai.states.get(f"{domain}.test")
     assert state and state.state != STATE_UNAVAILABLE
 
-    async_fire_mqtt_message(hass, topic, "offline")
-    state = hass.states.get(f"{domain}.test")
+    async_fire_mqtt_message(menuai, topic, "offline")
+    state = menuai.states.get(f"{domain}.test")
     assert state and state.state == STATE_UNAVAILABLE
 
     entity_registry.async_update_entity(
         f"{domain}.test", new_entity_id=f"{domain}.milk"
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     config[mqtt.DOMAIN][domain]["availability_topic"] = f"{topic}_2"
     data = json.dumps(config[mqtt.DOMAIN][domain])
-    async_fire_mqtt_message(hass, f"homeassistant/{domain}/bla/config", data)
-    await hass.async_block_till_done()
-    assert len(hass.states.async_entity_ids(domain)) == 1
+    async_fire_mqtt_message(menuai, f"menuai/{domain}/bla/config", data)
+    await menuai.async_block_till_done()
+    assert len(menuai.states.async_entity_ids(domain)) == 1
 
-    async_fire_mqtt_message(hass, f"{topic}_2", "online")
-    state = hass.states.get(f"{domain}.milk")
+    async_fire_mqtt_message(menuai, f"{topic}_2", "online")
+    state = menuai.states.get(f"{domain}.milk")
     assert state and state.state != STATE_UNAVAILABLE
 
 
 async def help_test_entity_debug_info(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     domain: str,
     config: ConfigType,
@@ -1562,20 +1562,20 @@ async def help_test_entity_debug_info(
     config["unique_id"] = "veryunique"
     config["platform"] = "mqtt"
 
-    registry = dr.async_get(hass)
+    registry = dr.async_get(menuai)
 
     data = json.dumps(config)
-    async_fire_mqtt_message(hass, f"homeassistant/{domain}/bla/config", data)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"menuai/{domain}/bla/config", data)
+    await menuai.async_block_till_done()
 
     device = registry.async_get_device(identifiers={("mqtt", "helloworld")})
     assert device is not None
 
-    debug_info_data = debug_info.info_for_device(hass, device.id)
+    debug_info_data = debug_info.info_for_device(menuai, device.id)
     assert len(debug_info_data["entities"]) == 1
     assert (
         debug_info_data["entities"][0]["discovery_data"]["topic"]
-        == f"homeassistant/{domain}/bla/config"
+        == f"menuai/{domain}/bla/config"
     )
     assert debug_info_data["entities"][0]["discovery_data"]["payload"] == config
     assert len(debug_info_data["entities"][0]["subscriptions"]) == 1
@@ -1587,7 +1587,7 @@ async def help_test_entity_debug_info(
 
 
 async def help_test_entity_debug_info_max_messages(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     domain: str,
     config: ConfigType,
@@ -1602,16 +1602,16 @@ async def help_test_entity_debug_info_max_messages(
     config["device"] = copy.deepcopy(DEFAULT_CONFIG_DEVICE_INFO_ID)
     config["unique_id"] = "veryunique"
 
-    registry = dr.async_get(hass)
+    registry = dr.async_get(menuai)
 
     data = json.dumps(config)
-    async_fire_mqtt_message(hass, f"homeassistant/{domain}/bla/config", data)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"menuai/{domain}/bla/config", data)
+    await menuai.async_block_till_done()
 
     device = registry.async_get_device(identifiers={("mqtt", "helloworld")})
     assert device is not None
 
-    debug_info_data = debug_info.info_for_device(hass, device.id)
+    debug_info_data = debug_info.info_for_device(menuai, device.id)
     assert len(debug_info_data["entities"][0]["subscriptions"]) == 1
     assert {"topic": "test-topic", "messages": []} in debug_info_data["entities"][0][
         "subscriptions"
@@ -1619,9 +1619,9 @@ async def help_test_entity_debug_info_max_messages(
 
     with freeze_time(start_dt := dt_util.utcnow()):
         for i in range(debug_info.STORED_MESSAGES + 1):
-            async_fire_mqtt_message(hass, "test-topic", f"{i}")
+            async_fire_mqtt_message(menuai, "test-topic", f"{i}")
 
-        debug_info_data = debug_info.info_for_device(hass, device.id)
+        debug_info_data = debug_info.info_for_device(menuai, device.id)
 
     assert len(debug_info_data["entities"][0]["subscriptions"]) == 1
     assert (
@@ -1644,7 +1644,7 @@ async def help_test_entity_debug_info_max_messages(
 
 
 async def help_test_entity_debug_info_message(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     domain: str,
     config: ConfigType,
@@ -1681,16 +1681,16 @@ async def help_test_entity_debug_info_message(
     if state_payload is None:
         state_payload = "ON"
 
-    registry = dr.async_get(hass)
+    registry = dr.async_get(menuai)
 
     data = json.dumps(config)
-    async_fire_mqtt_message(hass, f"homeassistant/{domain}/bla/config", data)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"menuai/{domain}/bla/config", data)
+    await menuai.async_block_till_done()
 
     device = registry.async_get_device(identifiers={("mqtt", "helloworld")})
     assert device is not None
 
-    debug_info_data = debug_info.info_for_device(hass, device.id)
+    debug_info_data = debug_info.info_for_device(menuai, device.id)
 
     if state_topic is not None:
         assert len(debug_info_data["entities"][0]["subscriptions"]) >= 1
@@ -1699,9 +1699,9 @@ async def help_test_entity_debug_info_message(
         ]
 
         with freeze_time(start_dt := dt_util.utcnow()):
-            async_fire_mqtt_message(hass, str(state_topic), state_payload)
+            async_fire_mqtt_message(menuai, str(state_topic), state_payload)
 
-            debug_info_data = debug_info.info_for_device(hass, device.id)
+            debug_info_data = debug_info.info_for_device(menuai, device.id)
             assert len(debug_info_data["entities"][0]["subscriptions"]) >= 1
             assert {
                 "topic": state_topic,
@@ -1726,7 +1726,7 @@ async def help_test_entity_debug_info_message(
                 if service_parameters:
                     service_data.update(service_parameters)
 
-                await hass.services.async_call(
+                await menuai.services.async_call(
                     domain,
                     service,
                     service_data,
@@ -1748,12 +1748,12 @@ async def help_test_entity_debug_info_message(
                 }
             ]
 
-        debug_info_data = debug_info.info_for_device(hass, device.id)
+        debug_info_data = debug_info.info_for_device(menuai, device.id)
         assert debug_info_data["entities"][0]["transmitted"] == expected_transmissions
 
 
 async def help_test_entity_debug_info_remove(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     domain: str,
     config: ConfigType,
@@ -1769,20 +1769,20 @@ async def help_test_entity_debug_info_remove(
     config["unique_id"] = "veryunique"
     config["platform"] = "mqtt"
 
-    registry = dr.async_get(hass)
+    registry = dr.async_get(menuai)
 
     data = json.dumps(config)
-    async_fire_mqtt_message(hass, f"homeassistant/{domain}/bla/config", data)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"menuai/{domain}/bla/config", data)
+    await menuai.async_block_till_done()
 
     device = registry.async_get_device(identifiers={("mqtt", "helloworld")})
     assert device is not None
 
-    debug_info_data = debug_info.info_for_device(hass, device.id)
+    debug_info_data = debug_info.info_for_device(menuai, device.id)
     assert len(debug_info_data["entities"]) == 1
     assert (
         debug_info_data["entities"][0]["discovery_data"]["topic"]
-        == f"homeassistant/{domain}/bla/config"
+        == f"menuai/{domain}/bla/config"
     )
     assert debug_info_data["entities"][0]["discovery_data"]["payload"] == config
     assert len(debug_info_data["entities"][0]["subscriptions"]) == 1
@@ -1793,17 +1793,17 @@ async def help_test_entity_debug_info_remove(
     assert debug_info_data["entities"][0]["entity_id"] == f"{domain}.beer_test"
     entity_id = debug_info_data["entities"][0]["entity_id"]
 
-    async_fire_mqtt_message(hass, f"homeassistant/{domain}/bla/config", "")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"menuai/{domain}/bla/config", "")
+    await menuai.async_block_till_done()
 
-    debug_info_data = debug_info.info_for_device(hass, device.id)
+    debug_info_data = debug_info.info_for_device(menuai, device.id)
     assert len(debug_info_data["entities"]) == 0
     assert len(debug_info_data["triggers"]) == 0
-    assert entity_id not in hass.data["mqtt"].debug_info_entities
+    assert entity_id not in menuai.data["mqtt"].debug_info_entities
 
 
 async def help_test_entity_debug_info_update_entity_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     domain: str,
     config: ConfigType,
@@ -1819,20 +1819,20 @@ async def help_test_entity_debug_info_update_entity_id(
     config["unique_id"] = "veryunique"
     config["platform"] = "mqtt"
 
-    device_registry = dr.async_get(hass)
-    entity_registry = er.async_get(hass)
+    device_registry = dr.async_get(menuai)
+    entity_registry = er.async_get(menuai)
     data = json.dumps(config)
-    async_fire_mqtt_message(hass, f"homeassistant/{domain}/bla/config", data)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"menuai/{domain}/bla/config", data)
+    await menuai.async_block_till_done()
 
     device = device_registry.async_get_device(identifiers={("mqtt", "helloworld")})
     assert device is not None
 
-    debug_info_data = debug_info.info_for_device(hass, device.id)
+    debug_info_data = debug_info.info_for_device(menuai, device.id)
     assert len(debug_info_data["entities"]) == 1
     assert (
         debug_info_data["entities"][0]["discovery_data"]["topic"]
-        == f"homeassistant/{domain}/bla/config"
+        == f"menuai/{domain}/bla/config"
     )
     assert debug_info_data["entities"][0]["discovery_data"]["payload"] == config
     assert debug_info_data["entities"][0]["entity_id"] == f"{domain}.beer_test"
@@ -1845,14 +1845,14 @@ async def help_test_entity_debug_info_update_entity_id(
     entity_registry.async_update_entity(
         f"{domain}.beer_test", new_entity_id=f"{domain}.milk"
     )
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    debug_info_data = debug_info.info_for_device(hass, device.id)
+    debug_info_data = debug_info.info_for_device(menuai, device.id)
     assert len(debug_info_data["entities"]) == 1
     assert (
         debug_info_data["entities"][0]["discovery_data"]["topic"]
-        == f"homeassistant/{domain}/bla/config"
+        == f"menuai/{domain}/bla/config"
     )
     assert debug_info_data["entities"][0]["discovery_data"]["payload"] == config
     assert debug_info_data["entities"][0]["entity_id"] == f"{domain}.milk"
@@ -1861,11 +1861,11 @@ async def help_test_entity_debug_info_update_entity_id(
         "subscriptions"
     ]
     assert len(debug_info_data["triggers"]) == 0
-    assert f"{domain}.beer_test" not in hass.data["mqtt"].debug_info_entities
+    assert f"{domain}.beer_test" not in menuai.data["mqtt"].debug_info_entities
 
 
 async def help_test_entity_disabled_by_default(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     domain: str,
     config: ConfigType,
@@ -1878,36 +1878,36 @@ async def help_test_entity_disabled_by_default(
     config["enabled_by_default"] = False
     config["unique_id"] = "veryunique1"
 
-    dev_registry = dr.async_get(hass)
-    ent_registry = er.async_get(hass)
+    dev_registry = dr.async_get(menuai)
+    ent_registry = er.async_get(menuai)
 
     # Discover a disabled entity
     data = json.dumps(config)
-    async_fire_mqtt_message(hass, f"homeassistant/{domain}/bla1/config", data)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"menuai/{domain}/bla1/config", data)
+    await menuai.async_block_till_done()
     entity_id = ent_registry.async_get_entity_id(domain, mqtt.DOMAIN, "veryunique1")
-    assert entity_id is not None and hass.states.get(entity_id) is None
+    assert entity_id is not None and menuai.states.get(entity_id) is None
     assert dev_registry.async_get_device(identifiers={("mqtt", "helloworld")})
 
     # Discover an enabled entity, tied to the same device
     config["enabled_by_default"] = True
     config["unique_id"] = "veryunique2"
     data = json.dumps(config)
-    async_fire_mqtt_message(hass, f"homeassistant/{domain}/bla2/config", data)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"menuai/{domain}/bla2/config", data)
+    await menuai.async_block_till_done()
     entity_id = ent_registry.async_get_entity_id(domain, mqtt.DOMAIN, "veryunique2")
-    assert entity_id is not None and hass.states.get(entity_id) is not None
+    assert entity_id is not None and menuai.states.get(entity_id) is not None
 
     # Remove the enabled entity, both entities and the device should be removed
-    async_fire_mqtt_message(hass, f"homeassistant/{domain}/bla2/config", "")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"menuai/{domain}/bla2/config", "")
+    await menuai.async_block_till_done()
     assert not ent_registry.async_get_entity_id(domain, mqtt.DOMAIN, "veryunique1")
     assert not ent_registry.async_get_entity_id(domain, mqtt.DOMAIN, "veryunique2")
     assert not dev_registry.async_get_device(identifiers={("mqtt", "helloworld")})
 
 
 async def help_test_entity_category(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     domain: str,
     config: ConfigType,
@@ -1918,16 +1918,16 @@ async def help_test_entity_category(
     config = copy.deepcopy(config[mqtt.DOMAIN][domain])
     config["device"] = copy.deepcopy(DEFAULT_CONFIG_DEVICE_INFO_ID)
 
-    ent_registry = er.async_get(hass)
+    ent_registry = er.async_get(menuai)
 
     # Discover an entity without entity category
     unique_id = "veryunique1"
     config["unique_id"] = unique_id
     data = json.dumps(config)
-    async_fire_mqtt_message(hass, f"homeassistant/{domain}/{unique_id}/config", data)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"menuai/{domain}/{unique_id}/config", data)
+    await menuai.async_block_till_done()
     entity_id = ent_registry.async_get_entity_id(domain, mqtt.DOMAIN, unique_id)
-    assert entity_id is not None and hass.states.get(entity_id)
+    assert entity_id is not None and menuai.states.get(entity_id)
     entry = ent_registry.async_get(entity_id)
     assert entry is not None and entry.entity_category is None
 
@@ -1936,10 +1936,10 @@ async def help_test_entity_category(
     config["entity_category"] = EntityCategory.DIAGNOSTIC
     config["unique_id"] = unique_id
     data = json.dumps(config)
-    async_fire_mqtt_message(hass, f"homeassistant/{domain}/{unique_id}/config", data)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"menuai/{domain}/{unique_id}/config", data)
+    await menuai.async_block_till_done()
     entity_id = ent_registry.async_get_entity_id(domain, mqtt.DOMAIN, unique_id)
-    assert entity_id is not None and hass.states.get(entity_id)
+    assert entity_id is not None and menuai.states.get(entity_id)
     entry = ent_registry.async_get(entity_id)
     assert entry is not None and entry.entity_category == EntityCategory.DIAGNOSTIC
 
@@ -1948,13 +1948,13 @@ async def help_test_entity_category(
     config["entity_category"] = "no_such_category"
     config["unique_id"] = unique_id
     data = json.dumps(config)
-    async_fire_mqtt_message(hass, f"homeassistant/{domain}/{unique_id}/config", data)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"menuai/{domain}/{unique_id}/config", data)
+    await menuai.async_block_till_done()
     assert not ent_registry.async_get_entity_id(domain, mqtt.DOMAIN, unique_id)
 
 
 async def help_test_entity_icon_and_entity_picture(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     domain: str,
     config: ConfigType,
@@ -1965,16 +1965,16 @@ async def help_test_entity_icon_and_entity_picture(
     config = copy.deepcopy(config[mqtt.DOMAIN][domain])
     config["device"] = copy.deepcopy(DEFAULT_CONFIG_DEVICE_INFO_ID)
 
-    ent_registry = er.async_get(hass)
+    ent_registry = er.async_get(menuai)
 
     # Discover an entity without entity icon or picture
     unique_id = "veryunique1"
     config["unique_id"] = unique_id
     data = json.dumps(config)
-    async_fire_mqtt_message(hass, f"homeassistant/{domain}/{unique_id}/config", data)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"menuai/{domain}/{unique_id}/config", data)
+    await menuai.async_block_till_done()
     entity_id = ent_registry.async_get_entity_id(domain, mqtt.DOMAIN, unique_id)
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert entity_id is not None and state
     assert state.attributes.get("icon") is None
     assert state.attributes.get("entity_picture") is None
@@ -1984,10 +1984,10 @@ async def help_test_entity_icon_and_entity_picture(
     config["entity_picture"] = "https://example.com/mypicture.png"
     config["unique_id"] = unique_id
     data = json.dumps(config)
-    async_fire_mqtt_message(hass, f"homeassistant/{domain}/{unique_id}/config", data)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"menuai/{domain}/{unique_id}/config", data)
+    await menuai.async_block_till_done()
     entity_id = ent_registry.async_get_entity_id(domain, mqtt.DOMAIN, unique_id)
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert entity_id is not None and state
     assert state.attributes.get("icon") is None
     assert state.attributes.get("entity_picture") == "https://example.com/mypicture.png"
@@ -1998,17 +1998,17 @@ async def help_test_entity_icon_and_entity_picture(
     config["icon"] = "mdi:emoji-happy-outline"
     config["unique_id"] = unique_id
     data = json.dumps(config)
-    async_fire_mqtt_message(hass, f"homeassistant/{domain}/{unique_id}/config", data)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, f"menuai/{domain}/{unique_id}/config", data)
+    await menuai.async_block_till_done()
     entity_id = ent_registry.async_get_entity_id(domain, mqtt.DOMAIN, unique_id)
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert entity_id is not None and state
     assert state.attributes.get("icon") == "mdi:emoji-happy-outline"
     assert state.attributes.get("entity_picture") is None
 
 
 async def help_test_publishing_with_custom_encoding(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
     domain: str,
@@ -2058,24 +2058,24 @@ async def help_test_publishing_with_custom_encoding(
     for item, component_config in enumerate(setup_config):
         conf = json.dumps(component_config)
         async_fire_mqtt_message(
-            hass, f"homeassistant/{domain}/component_{item}/config", conf
+            menuai, f"menuai/{domain}/component_{item}/config", conf
         )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # 1) test with default encoding
-    await hass.services.async_call(
+    await menuai.services.async_call(
         domain,
         service,
         service_data["test1"],
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     mqtt_mock.async_publish.assert_any_call("cmd/test1", str(payload), 0, False)
     mqtt_mock.async_publish.reset_mock()
 
     # 2) test with utf-16 encoding
-    await hass.services.async_call(
+    await menuai.services.async_call(
         domain,
         service,
         service_data["test2"],
@@ -2087,7 +2087,7 @@ async def help_test_publishing_with_custom_encoding(
     mqtt_mock.async_publish.reset_mock()
 
     # 3) test with no encoding set should fail if payload is a string
-    await hass.services.async_call(
+    await menuai.services.async_call(
         domain,
         service,
         service_data["test3"],
@@ -2099,7 +2099,7 @@ async def help_test_publishing_with_custom_encoding(
     )
 
     # 4) test with invalid encoding set should fail
-    await hass.services.async_call(
+    await menuai.services.async_call(
         domain,
         service,
         service_data["test4"],
@@ -2114,7 +2114,7 @@ async def help_test_publishing_with_custom_encoding(
     if not template:
         return
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         domain,
         service,
         service_data["test5"],
@@ -2127,7 +2127,7 @@ async def help_test_publishing_with_custom_encoding(
 
 
 async def help_test_reload_with_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     tmp_path: Path,
     config: ConfigType,
@@ -2141,20 +2141,20 @@ async def help_test_reload_with_config(
         assert new_yaml_config_file.read_text() == new_yaml_config
         return new_yaml_config
 
-    await hass.async_add_executor_job(_write_yaml_config)
+    await menuai.async_add_executor_job(_write_yaml_config)
 
-    with patch.object(module_hass_config, "YAML_CONFIG_FILE", new_yaml_config_file):
-        await hass.services.async_call(
+    with patch.object(module_menuai_config, "YAML_CONFIG_FILE", new_yaml_config_file):
+        await menuai.services.async_call(
             "mqtt",
             SERVICE_RELOAD,
             {},
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
 
 async def help_test_reloadable(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_client_mock: MqttMockPahoClient,
     domain: str,
     config: ConfigType,
@@ -2178,14 +2178,14 @@ async def help_test_reloadable(
         version=mqtt.CONFIG_ENTRY_VERSION,
         minor_version=mqtt.CONFIG_ENTRY_MINOR_VERSION,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     mqtt_client_mock.connect.return_value = 0
-    with patch("homeassistant.config.load_yaml_config_file", return_value=old_config):
-        await hass.config_entries.async_setup(entry.entry_id)
+    with patch("menuai.config.load_yaml_config_file", return_value=old_config):
+        await menuai.config_entries.async_setup(entry.entry_id)
 
-    assert hass.states.get(f"{domain}.test_old_1")
-    assert hass.states.get(f"{domain}.test_old_2")
-    assert len(hass.states.async_all(domain)) == 2
+    assert menuai.states.get(f"{domain}.test_old_1")
+    assert menuai.states.get(f"{domain}.test_old_2")
+    assert len(menuai.states.async_all(domain)) == 2
 
     # Create temporary fixture for configuration.yaml based on the supplied config and
     # test a reload with this new config
@@ -2199,37 +2199,37 @@ async def help_test_reloadable(
     new_config = {
         mqtt.DOMAIN: {domain: [new_config_1, new_config_2, new_config_extra]},
     }
-    with patch("homeassistant.config.load_yaml_config_file", return_value=new_config):
+    with patch("menuai.config.load_yaml_config_file", return_value=new_config):
         # Reload the mqtt entry with the new config
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "mqtt",
             SERVICE_RELOAD,
             {},
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all(domain)) == 3
+    assert len(menuai.states.async_all(domain)) == 3
 
-    assert hass.states.get(f"{domain}.test_new_1")
-    assert hass.states.get(f"{domain}.test_new_2")
-    assert hass.states.get(f"{domain}.test_new_3")
+    assert menuai.states.get(f"{domain}.test_new_1")
+    assert menuai.states.get(f"{domain}.test_new_2")
+    assert menuai.states.get(f"{domain}.test_new_3")
 
 
-async def help_test_unload_config_entry(hass: HomeAssistant) -> None:
+async def help_test_unload_config_entry(menuai: menuai) -> None:
     """Test unloading the MQTT config entry."""
-    mqtt_config_entry = hass.config_entries.async_entries(mqtt.DOMAIN)[0]
+    mqtt_config_entry = menuai.config_entries.async_entries(mqtt.DOMAIN)[0]
     assert mqtt_config_entry.state is ConfigEntryState.LOADED
 
-    assert await hass.config_entries.async_unload(mqtt_config_entry.entry_id)
+    assert await menuai.config_entries.async_unload(mqtt_config_entry.entry_id)
     # work-a-round mypy bug https://github.com/python/mypy/issues/9005#issuecomment-1280985006
     updated_config_entry = mqtt_config_entry
     assert updated_config_entry.state is ConfigEntryState.NOT_LOADED
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
 async def help_test_unload_config_entry_with_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     domain: str,
     config: dict[str, dict[str, Any]],
@@ -2240,71 +2240,71 @@ async def help_test_unload_config_entry_with_platform(
     config_setup[mqtt.DOMAIN][domain]["name"] = "config_setup"
     config_name = config_setup
 
-    with patch("homeassistant.config.load_yaml_config_file", return_value=config_name):
+    with patch("menuai.config.load_yaml_config_file", return_value=config_name):
         await mqtt_mock_entry()
 
     # prepare setup through discovery
     discovery_setup = copy.deepcopy(config[mqtt.DOMAIN][domain])
     discovery_setup["name"] = "discovery_setup"
     async_fire_mqtt_message(
-        hass, f"homeassistant/{domain}/bla/config", json.dumps(discovery_setup)
+        menuai, f"menuai/{domain}/bla/config", json.dumps(discovery_setup)
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # check if both entities were setup correctly
-    config_setup_entity = hass.states.get(f"{domain}.config_setup")
+    config_setup_entity = menuai.states.get(f"{domain}.config_setup")
     assert config_setup_entity
 
-    discovery_setup_entity = hass.states.get(f"{domain}.discovery_setup")
+    discovery_setup_entity = menuai.states.get(f"{domain}.discovery_setup")
     assert discovery_setup_entity
 
-    await help_test_unload_config_entry(hass)
+    await help_test_unload_config_entry(menuai)
 
     async_fire_mqtt_message(
-        hass, f"homeassistant/{domain}/bla/config", json.dumps(discovery_setup)
+        menuai, f"menuai/{domain}/bla/config", json.dumps(discovery_setup)
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # check if both entities were unloaded correctly
-    config_setup_entity = hass.states.get(f"{domain}.{config_name}")
+    config_setup_entity = menuai.states.get(f"{domain}.{config_name}")
     assert config_setup_entity is None
 
-    discovery_setup_entity = hass.states.get(f"{domain}.discovery_setup")
+    discovery_setup_entity = menuai.states.get(f"{domain}.discovery_setup")
     assert discovery_setup_entity is None
 
 
 async def help_test_discovery_setup(
-    hass: HomeAssistant, domain: str, discovery_data_payload: str, name: str
+    menuai: menuai, domain: str, discovery_data_payload: str, name: str
 ) -> None:
     """Test setting up an MQTT entity using discovery."""
     async_fire_mqtt_message(
-        hass, f"homeassistant/{domain}/{name}/config", discovery_data_payload
+        menuai, f"menuai/{domain}/{name}/config", discovery_data_payload
     )
-    await hass.async_block_till_done()
-    state = hass.states.get(f"{domain}.{name}")
+    await menuai.async_block_till_done()
+    state = menuai.states.get(f"{domain}.{name}")
     assert state and state.state is not None
 
 
 async def help_test_skipped_async_ha_write_state(
-    hass: HomeAssistant, topic: str, payload1: str, payload2: str
+    menuai: menuai, topic: str, payload1: str, payload2: str
 ) -> None:
     """Test entity.async_ha_write_state is only called on changes."""
     with patch(
-        "homeassistant.components.mqtt.entity.MqttEntity.async_write_ha_state"
+        "menuai.components.mqtt.entity.MqttEntity.async_write_ha_state"
     ) as mock_async_ha_write_state:
         assert len(mock_async_ha_write_state.mock_calls) == 0
-        async_fire_mqtt_message(hass, topic, payload1)
-        await hass.async_block_till_done()
+        async_fire_mqtt_message(menuai, topic, payload1)
+        await menuai.async_block_till_done()
         assert len(mock_async_ha_write_state.mock_calls) == 1
 
-        async_fire_mqtt_message(hass, topic, payload1)
-        await hass.async_block_till_done()
+        async_fire_mqtt_message(menuai, topic, payload1)
+        await menuai.async_block_till_done()
         assert len(mock_async_ha_write_state.mock_calls) == 1
 
-        async_fire_mqtt_message(hass, topic, payload2)
-        await hass.async_block_till_done()
+        async_fire_mqtt_message(menuai, topic, payload2)
+        await menuai.async_block_till_done()
         assert len(mock_async_ha_write_state.mock_calls) == 2
 
-        async_fire_mqtt_message(hass, topic, payload2)
-        await hass.async_block_till_done()
+        async_fire_mqtt_message(menuai, topic, payload2)
+        await menuai.async_block_till_done()
         assert len(mock_async_ha_write_state.mock_calls) == 2

@@ -9,23 +9,23 @@ from unittest.mock import ANY, Mock, patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components import conversation
-from homeassistant.components.assist_pipeline.const import (
+from menuai.components import conversation
+from menuai.components.assist_pipeline.const import (
     DOMAIN,
     SAMPLE_CHANNELS,
     SAMPLE_RATE,
     SAMPLE_WIDTH,
 )
-from homeassistant.components.assist_pipeline.pipeline import (
+from menuai.components.assist_pipeline.pipeline import (
     DeviceAudioQueue,
     Pipeline,
     PipelineData,
     async_get_pipelines,
     async_update_pipeline,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import chat_session, device_registry as dr
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import chat_session, device_registry as dr
 
 from .conftest import (
     BYTES_ONE_SECOND,
@@ -43,7 +43,7 @@ from tests.typing import WebSocketGenerator
 def mock_chat_session_id() -> Generator[Mock]:
     """Mock the conversation ID of chat sessions."""
     with patch(
-        "homeassistant.helpers.chat_session.ulid_now", return_value="mock-ulid"
+        "menuai.helpers.chat_session.ulid_now", return_value="mock-ulid"
     ) as mock_ulid_now:
         yield mock_ulid_now
 
@@ -63,15 +63,15 @@ def mock_tts_token() -> Generator[None]:
     ],
 )
 async def test_text_only_pipeline(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     init_components,
     snapshot: SnapshotAssertion,
     extra_msg: dict[str, Any],
 ) -> None:
     """Test events from a pipeline run with text input (no STT/TTS)."""
     events = []
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json_auto_id(
         {
@@ -113,7 +113,7 @@ async def test_text_only_pipeline(
     assert msg["event"]["data"] == snapshot
     events.append(msg["event"])
 
-    pipeline_data: PipelineData = hass.data[DOMAIN]
+    pipeline_data: PipelineData = menuai.data[DOMAIN]
     pipeline_id = list(pipeline_data.pipeline_debug)[0]
     pipeline_run_id = list(pipeline_data.pipeline_debug[pipeline_id])[0]
 
@@ -130,17 +130,17 @@ async def test_text_only_pipeline(
 
 
 async def test_audio_pipeline(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     init_components,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test events from a pipeline run with audio input/output."""
     events = []
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     with patch(
-        "homeassistant.components.tts.secrets.token_urlsafe", return_value="test_token"
+        "menuai.components.tts.secrets.token_urlsafe", return_value="test_token"
     ):
         await client.send_json_auto_id(
             {
@@ -207,7 +207,7 @@ async def test_audio_pipeline(
         assert msg["event"]["data"] == snapshot
         events.append(msg["event"])
 
-        pipeline_data: PipelineData = hass.data[DOMAIN]
+        pipeline_data: PipelineData = menuai.data[DOMAIN]
         pipeline_id = list(pipeline_data.pipeline_debug)[0]
         pipeline_run_id = list(pipeline_data.pipeline_debug[pipeline_id])[0]
 
@@ -224,17 +224,17 @@ async def test_audio_pipeline(
 
 
 async def test_audio_pipeline_with_wake_word_timeout(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     init_components,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test timeout from a pipeline run with audio input/output + wake word."""
     events = []
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     with patch(
-        "homeassistant.components.tts.secrets.token_urlsafe", return_value="test_token"
+        "menuai.components.tts.secrets.token_urlsafe", return_value="test_token"
     ):
         await client.send_json_auto_id(
             {
@@ -282,17 +282,17 @@ async def test_audio_pipeline_with_wake_word_timeout(
 
 
 async def test_audio_pipeline_with_wake_word_no_timeout(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     init_components,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test events from a pipeline run with audio input/output + wake word with no timeout."""
     events = []
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     with patch(
-        "homeassistant.components.tts.secrets.token_urlsafe", return_value="test_token"
+        "menuai.components.tts.secrets.token_urlsafe", return_value="test_token"
     ):
         await client.send_json_auto_id(
             {
@@ -372,7 +372,7 @@ async def test_audio_pipeline_with_wake_word_no_timeout(
         assert msg["event"]["data"] == snapshot
         events.append(msg["event"])
 
-        pipeline_data: PipelineData = hass.data[DOMAIN]
+        pipeline_data: PipelineData = menuai.data[DOMAIN]
         pipeline_id = list(pipeline_data.pipeline_debug)[0]
         pipeline_run_id = list(pipeline_data.pipeline_debug[pipeline_id])[0]
 
@@ -389,16 +389,16 @@ async def test_audio_pipeline_with_wake_word_no_timeout(
 
 
 async def test_audio_pipeline_no_wake_word_engine(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     init_components,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test timeout from a pipeline run with audio input/output + wake word."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     with patch(
-        "homeassistant.components.wake_word.async_default_entity", return_value=None
+        "menuai.components.wake_word.async_default_entity", return_value=None
     ):
         await client.send_json_auto_id(
             {
@@ -419,21 +419,21 @@ async def test_audio_pipeline_no_wake_word_engine(
 
 
 async def test_audio_pipeline_no_wake_word_entity(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     init_components,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test timeout from a pipeline run with audio input/output + wake word."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     with (
         patch(
-            "homeassistant.components.wake_word.async_default_entity",
+            "menuai.components.wake_word.async_default_entity",
             return_value="wake_word.bad-entity-id",
         ),
         patch(
-            "homeassistant.components.wake_word.async_get_wake_word_detection_entity",
+            "menuai.components.wake_word.async_get_wake_word_detection_entity",
             return_value=None,
         ),
     ):
@@ -456,20 +456,20 @@ async def test_audio_pipeline_no_wake_word_entity(
 
 
 async def test_intent_timeout(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     init_components,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test partial pipeline run with conversation agent timeout."""
     events = []
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     async def sleepy_converse(*args, **kwargs):
         await asyncio.sleep(3600)
 
     with patch(
-        "homeassistant.components.conversation.async_converse",
+        "menuai.components.conversation.async_converse",
         new=sleepy_converse,
     ):
         await client.send_json_auto_id(
@@ -511,7 +511,7 @@ async def test_intent_timeout(
         assert msg["event"]["data"] == snapshot
         events.append(msg["event"])
 
-    pipeline_data: PipelineData = hass.data[DOMAIN]
+    pipeline_data: PipelineData = menuai.data[DOMAIN]
     pipeline_id = list(pipeline_data.pipeline_debug)[0]
     pipeline_run_id = list(pipeline_data.pipeline_debug[pipeline_id])[0]
 
@@ -528,20 +528,20 @@ async def test_intent_timeout(
 
 
 async def test_text_pipeline_timeout(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     init_components,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test text-only pipeline run with immediate timeout."""
     events = []
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     async def sleepy_run(*args, **kwargs):
         await asyncio.sleep(3600)
 
     with patch(
-        "homeassistant.components.assist_pipeline.pipeline.PipelineInput.execute",
+        "menuai.components.assist_pipeline.pipeline.PipelineInput.execute",
         new=sleepy_run,
     ):
         await client.send_json_auto_id(
@@ -564,7 +564,7 @@ async def test_text_pipeline_timeout(
         assert msg["event"]["data"] == snapshot
         events.append(msg["event"])
 
-    pipeline_data: PipelineData = hass.data[DOMAIN]
+    pipeline_data: PipelineData = menuai.data[DOMAIN]
     pipeline_id = list(pipeline_data.pipeline_debug)[0]
     pipeline_run_id = list(pipeline_data.pipeline_debug[pipeline_id])[0]
 
@@ -581,17 +581,17 @@ async def test_text_pipeline_timeout(
 
 
 async def test_intent_failed(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     init_components,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test text-only pipeline run with conversation agent error."""
     events = []
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     with patch(
-        "homeassistant.components.conversation.async_converse",
+        "menuai.components.conversation.async_converse",
         side_effect=RuntimeError,
     ):
         await client.send_json_auto_id(
@@ -632,7 +632,7 @@ async def test_intent_failed(
         assert msg["event"]["data"] == snapshot
         events.append(msg["event"])
 
-    pipeline_data: PipelineData = hass.data[DOMAIN]
+    pipeline_data: PipelineData = menuai.data[DOMAIN]
     pipeline_id = list(pipeline_data.pipeline_debug)[0]
     pipeline_run_id = list(pipeline_data.pipeline_debug[pipeline_id])[0]
 
@@ -649,20 +649,20 @@ async def test_intent_failed(
 
 
 async def test_audio_pipeline_timeout(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     init_components,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test audio pipeline run with immediate timeout."""
     events = []
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     async def sleepy_run(*args, **kwargs):
         await asyncio.sleep(3600)
 
     with patch(
-        "homeassistant.components.assist_pipeline.pipeline.PipelineInput.execute",
+        "menuai.components.assist_pipeline.pipeline.PipelineInput.execute",
         new=sleepy_run,
     ):
         await client.send_json_auto_id(
@@ -687,7 +687,7 @@ async def test_audio_pipeline_timeout(
         assert msg["event"]["data"]["code"] == "timeout"
         events.append(msg["event"])
 
-    pipeline_data: PipelineData = hass.data[DOMAIN]
+    pipeline_data: PipelineData = menuai.data[DOMAIN]
     pipeline_id = list(pipeline_data.pipeline_debug)[0]
     pipeline_run_id = list(pipeline_data.pipeline_debug[pipeline_id])[0]
 
@@ -704,17 +704,17 @@ async def test_audio_pipeline_timeout(
 
 
 async def test_stt_provider_missing(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     init_components,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test events from a pipeline run with a non-existent STT provider."""
     with patch(
-        "homeassistant.components.stt.async_get_speech_to_text_entity",
+        "menuai.components.stt.async_get_speech_to_text_entity",
         return_value=None,
     ):
-        client = await hass_ws_client(hass)
+        client = await menuai_ws_client(menuai)
 
         await client.send_json_auto_id(
             {
@@ -734,15 +734,15 @@ async def test_stt_provider_missing(
 
 
 async def test_stt_provider_bad_metadata(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     init_components,
     mock_stt_provider_entity,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test events from a pipeline run with wrong metadata."""
     with patch.object(mock_stt_provider_entity, "check_metadata", return_value=False):
-        client = await hass_ws_client(hass)
+        client = await menuai_ws_client(menuai)
 
         await client.send_json_auto_id(
             {
@@ -762,14 +762,14 @@ async def test_stt_provider_bad_metadata(
 
 
 async def test_stt_stream_failed(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     init_components,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test events from a pipeline run with a non-existent STT provider."""
     events = []
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     with patch(
         "tests.components.assist_pipeline.conftest.MockSTTProviderEntity.async_process_audio_stream",
@@ -819,7 +819,7 @@ async def test_stt_stream_failed(
         assert msg["event"]["data"] == snapshot
         events.append(msg["event"])
 
-    pipeline_data: PipelineData = hass.data[DOMAIN]
+    pipeline_data: PipelineData = menuai.data[DOMAIN]
     pipeline_id = list(pipeline_data.pipeline_debug)[0]
     pipeline_run_id = list(pipeline_data.pipeline_debug[pipeline_id])[0]
 
@@ -836,17 +836,17 @@ async def test_stt_stream_failed(
 
 
 async def test_tts_provider_missing(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     init_components,
     mock_tts_provider,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test pipeline run with text-to-speech error."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
-    pipelines = async_get_pipelines(hass)
-    await async_update_pipeline(hass, pipelines[0], tts_engine="unavailable")
+    pipelines = async_get_pipelines(menuai)
+    await async_update_pipeline(menuai, pipelines[0], tts_engine="unavailable")
 
     await client.send_json_auto_id(
         {
@@ -864,18 +864,18 @@ async def test_tts_provider_missing(
 
 
 async def test_tts_provider_bad_options(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     init_components,
     mock_tts_provider,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test pipeline run with text-to-speech error."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     with patch(
-        "homeassistant.components.tts.SpeechManager.process_options",
-        side_effect=HomeAssistantError("Language not supported"),
+        "menuai.components.tts.SpeechManager.process_options",
+        side_effect=menuaiError("Language not supported"),
     ):
         await client.send_json_auto_id(
             {
@@ -893,10 +893,10 @@ async def test_tts_provider_bad_options(
 
 
 async def test_invalid_stage_order(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, init_components
+    menuai: menuai, menuai_ws_client: WebSocketGenerator, init_components
 ) -> None:
     """Test pipeline run with invalid stage order."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json_auto_id(
         {
@@ -913,11 +913,11 @@ async def test_invalid_stage_order(
 
 
 async def test_add_pipeline(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, init_components
+    menuai: menuai, menuai_ws_client: WebSocketGenerator, init_components
 ) -> None:
     """Test we can add a pipeline."""
-    client = await hass_ws_client(hass)
-    pipeline_data: PipelineData = hass.data[DOMAIN]
+    client = await menuai_ws_client(menuai)
+    pipeline_data: PipelineData = menuai.data[DOMAIN]
     pipeline_store = pipeline_data.pipeline_store
 
     await client.send_json_auto_id(
@@ -985,11 +985,11 @@ async def test_add_pipeline(
 
 
 async def test_add_pipeline_missing_language(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, init_components
+    menuai: menuai, menuai_ws_client: WebSocketGenerator, init_components
 ) -> None:
     """Test we can't add a pipeline without specifying stt or tts language."""
-    client = await hass_ws_client(hass)
-    pipeline_data: PipelineData = hass.data[DOMAIN]
+    client = await menuai_ws_client(menuai)
+    pipeline_data: PipelineData = menuai.data[DOMAIN]
     pipeline_store = pipeline_data.pipeline_store
     assert len(pipeline_store.data) == 1
 
@@ -1035,11 +1035,11 @@ async def test_add_pipeline_missing_language(
 
 
 async def test_delete_pipeline(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, init_components
+    menuai: menuai, menuai_ws_client: WebSocketGenerator, init_components
 ) -> None:
     """Test we can delete a pipeline."""
-    client = await hass_ws_client(hass)
-    pipeline_data: PipelineData = hass.data[DOMAIN]
+    client = await menuai_ws_client(menuai)
+    pipeline_data: PipelineData = menuai.data[DOMAIN]
     pipeline_store = pipeline_data.pipeline_store
 
     await client.send_json_auto_id(
@@ -1131,11 +1131,11 @@ async def test_delete_pipeline(
 
 
 async def test_get_pipeline(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, init_components
+    menuai: menuai, menuai_ws_client: WebSocketGenerator, init_components
 ) -> None:
     """Test we can get a pipeline."""
-    client = await hass_ws_client(hass)
-    pipeline_data: PipelineData = hass.data[DOMAIN]
+    client = await menuai_ws_client(menuai)
+    pipeline_data: PipelineData = menuai.data[DOMAIN]
     pipeline_store = pipeline_data.pipeline_store
 
     await client.send_json_auto_id(
@@ -1150,7 +1150,7 @@ async def test_get_pipeline(
         "conversation_language": "en",
         "id": ANY,
         "language": "en",
-        "name": "Home Assistant",
+        "name": "MenuAI",
         "stt_engine": "stt.mock_stt",
         "stt_language": "en-US",
         "tts_engine": "tts.test",
@@ -1175,7 +1175,7 @@ async def test_get_pipeline(
         "conversation_language": "en",
         "id": ANY,
         "language": "en",
-        "name": "Home Assistant",
+        "name": "MenuAI",
         # It found these defaults
         "stt_engine": "stt.mock_stt",
         "stt_language": "en-US",
@@ -1248,10 +1248,10 @@ async def test_get_pipeline(
 
 
 async def test_list_pipelines(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, init_components
+    menuai: menuai, menuai_ws_client: WebSocketGenerator, init_components
 ) -> None:
     """Test we can list pipelines."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json_auto_id({"type": "assist_pipeline/pipeline/list"})
     msg = await client.receive_json()
@@ -1263,7 +1263,7 @@ async def test_list_pipelines(
                 "conversation_language": "en",
                 "id": ANY,
                 "language": "en",
-                "name": "Home Assistant",
+                "name": "MenuAI",
                 "stt_engine": "stt.mock_stt",
                 "stt_language": "en-US",
                 "tts_engine": "tts.test",
@@ -1279,11 +1279,11 @@ async def test_list_pipelines(
 
 
 async def test_update_pipeline(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, init_components
+    menuai: menuai, menuai_ws_client: WebSocketGenerator, init_components
 ) -> None:
     """Test we can list pipelines."""
-    client = await hass_ws_client(hass)
-    pipeline_data: PipelineData = hass.data[DOMAIN]
+    client = await menuai_ws_client(menuai)
+    pipeline_data: PipelineData = menuai.data[DOMAIN]
     pipeline_store = pipeline_data.pipeline_store
 
     await client.send_json_auto_id(
@@ -1436,11 +1436,11 @@ async def test_update_pipeline(
 
 
 async def test_set_preferred_pipeline(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, init_components
+    menuai: menuai, menuai_ws_client: WebSocketGenerator, init_components
 ) -> None:
     """Test updating the preferred pipeline."""
-    client = await hass_ws_client(hass)
-    pipeline_data: PipelineData = hass.data[DOMAIN]
+    client = await menuai_ws_client(menuai)
+    pipeline_data: PipelineData = menuai.data[DOMAIN]
     pipeline_store = pipeline_data.pipeline_store
 
     await client.send_json_auto_id(
@@ -1478,10 +1478,10 @@ async def test_set_preferred_pipeline(
 
 
 async def test_set_preferred_pipeline_wrong_id(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, init_components
+    menuai: menuai, menuai_ws_client: WebSocketGenerator, init_components
 ) -> None:
     """Test updating the preferred pipeline."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json_auto_id(
         {"type": "assist_pipeline/pipeline/set_preferred", "pipeline_id": "don_t_exist"}
@@ -1491,17 +1491,17 @@ async def test_set_preferred_pipeline_wrong_id(
 
 
 async def test_audio_pipeline_debug(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     init_components,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test debug listing events from a pipeline run with audio input/output."""
     events = []
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     with patch(
-        "homeassistant.components.tts.secrets.token_urlsafe", return_value="test_token"
+        "menuai.components.tts.secrets.token_urlsafe", return_value="test_token"
     ):
         await client.send_json_auto_id(
             {
@@ -1599,12 +1599,12 @@ async def test_audio_pipeline_debug(
 
 
 async def test_pipeline_debug_list_runs_wrong_pipeline(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     init_components,
 ) -> None:
     """Test debug listing events from a pipeline."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json_auto_id(
         {"type": "assist_pipeline/pipeline_debug/list", "pipeline_id": "blah"}
@@ -1615,12 +1615,12 @@ async def test_pipeline_debug_list_runs_wrong_pipeline(
 
 
 async def test_pipeline_debug_get_run_wrong_pipeline(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     init_components,
 ) -> None:
     """Test debug listing events from a pipeline."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json_auto_id(
         {
@@ -1638,12 +1638,12 @@ async def test_pipeline_debug_get_run_wrong_pipeline(
 
 
 async def test_pipeline_debug_get_run_wrong_pipeline_run(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     init_components,
 ) -> None:
     """Test debug listing events from a pipeline."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json_auto_id(
         {
@@ -1695,12 +1695,12 @@ async def test_pipeline_debug_get_run_wrong_pipeline_run(
 
 
 async def test_list_pipeline_languages(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     init_components,
 ) -> None:
     """Test listing pipeline languages."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json_auto_id({"type": "assist_pipeline/language/list"})
 
@@ -1711,24 +1711,24 @@ async def test_list_pipeline_languages(
 
 
 async def test_list_pipeline_languages_with_aliases(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     init_components,
 ) -> None:
     """Test listing pipeline languages using aliases."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     with (
         patch(
-            "homeassistant.components.conversation.async_get_conversation_languages",
+            "menuai.components.conversation.async_get_conversation_languages",
             return_value={"he", "nb"},
         ),
         patch(
-            "homeassistant.components.stt.async_get_speech_to_text_languages",
+            "menuai.components.stt.async_get_speech_to_text_languages",
             return_value={"he", "no"},
         ),
         patch(
-            "homeassistant.components.tts.async_get_text_to_speech_languages",
+            "menuai.components.tts.async_get_text_to_speech_languages",
             return_value={"iw", "nb"},
         ),
     ):
@@ -1741,17 +1741,17 @@ async def test_list_pipeline_languages_with_aliases(
 
 
 async def test_audio_pipeline_with_enhancements(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     init_components,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test events from a pipeline run with audio input/output."""
     events = []
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     with patch(
-        "homeassistant.components.tts.secrets.token_urlsafe", return_value="test_token"
+        "menuai.components.tts.secrets.token_urlsafe", return_value="test_token"
     ):
         await client.send_json_auto_id(
             {
@@ -1827,7 +1827,7 @@ async def test_audio_pipeline_with_enhancements(
         assert msg["event"]["data"] == snapshot
         events.append(msg["event"])
 
-        pipeline_data: PipelineData = hass.data[DOMAIN]
+        pipeline_data: PipelineData = menuai.data[DOMAIN]
         pipeline_id = list(pipeline_data.pipeline_debug)[0]
         pipeline_run_id = list(pipeline_data.pipeline_debug[pipeline_id])[0]
 
@@ -1844,15 +1844,15 @@ async def test_audio_pipeline_with_enhancements(
 
 
 async def test_wake_word_cooldown_same_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_components,
     mock_wake_word_provider_entity: MockWakeWordEntity,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test that duplicate wake word detections with the same id are blocked during the cooldown period."""
-    client_1 = await hass_ws_client(hass)
-    client_2 = await hass_ws_client(hass)
+    client_1 = await menuai_ws_client(menuai)
+    client_2 = await menuai_ws_client(menuai)
 
     await client_1.send_json_auto_id(
         {
@@ -1926,16 +1926,16 @@ async def test_wake_word_cooldown_same_id(
 
 
 async def test_wake_word_cooldown_different_ids(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_components,
     mock_wake_word_provider_entity: MockWakeWordEntity,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test that duplicate wake word detections are allowed with different ids."""
     with patch.object(mock_wake_word_provider_entity, "alternate_detections", True):
-        client_1 = await hass_ws_client(hass)
-        client_2 = await hass_ws_client(hass)
+        client_1 = await menuai_ws_client(menuai)
+        client_2 = await menuai_ws_client(menuai)
 
         await client_1.send_json_auto_id(
             {
@@ -2002,15 +2002,15 @@ async def test_wake_word_cooldown_different_ids(
 
 
 async def test_wake_word_cooldown_different_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_components,
     mock_wake_word_provider_entity: MockWakeWordEntity,
     mock_wake_word_provider_entity2: MockWakeWordEntity2,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test that duplicate wake word detections are blocked even with different wake word entities."""
-    client_pipeline = await hass_ws_client(hass)
+    client_pipeline = await menuai_ws_client(menuai)
     await client_pipeline.send_json_auto_id(
         {
             "type": "assist_pipeline/pipeline/create",
@@ -2052,8 +2052,8 @@ async def test_wake_word_cooldown_different_entities(
     pipeline_id_2 = msg["result"]["id"]
 
     # Wake word clients
-    client_1 = await hass_ws_client(hass)
-    client_2 = await hass_ws_client(hass)
+    client_1 = await menuai_ws_client(menuai)
+    client_2 = await menuai_ws_client(menuai)
 
     await client_1.send_json_auto_id(
         {
@@ -2131,15 +2131,15 @@ async def test_wake_word_cooldown_different_entities(
 
 
 async def test_device_capture(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_components,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     device_registry: dr.DeviceRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test audio capture from a satellite device."""
     entry = MockConfigEntry()
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     satellite_device = device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         connections=set(),
@@ -2153,7 +2153,7 @@ async def test_device_capture(
     ]
 
     # Start capture
-    client_capture = await hass_ws_client(hass)
+    client_capture = await menuai_ws_client(menuai)
     await client_capture.send_json_auto_id(
         {
             "type": "assist_pipeline/device/capture",
@@ -2167,7 +2167,7 @@ async def test_device_capture(
     assert msg["success"]
 
     # Run pipeline
-    client_pipeline = await hass_ws_client(hass)
+    client_pipeline = await menuai_ws_client(menuai)
     await client_pipeline.send_json_auto_id(
         {
             "type": "assist_pipeline/run",
@@ -2236,15 +2236,15 @@ async def test_device_capture(
 
 
 async def test_device_capture_override(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_components,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     device_registry: dr.DeviceRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test overriding an existing audio capture from a satellite device."""
     entry = MockConfigEntry()
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     satellite_device = device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         connections=set(),
@@ -2258,7 +2258,7 @@ async def test_device_capture_override(
     ]
 
     # Start first capture
-    client_capture_1 = await hass_ws_client(hass)
+    client_capture_1 = await menuai_ws_client(menuai)
     await client_capture_1.send_json_auto_id(
         {
             "type": "assist_pipeline/device/capture",
@@ -2272,7 +2272,7 @@ async def test_device_capture_override(
     assert msg["success"]
 
     # Run pipeline
-    client_pipeline = await hass_ws_client(hass)
+    client_pipeline = await menuai_ws_client(menuai)
     await client_pipeline.send_json_auto_id(
         {
             "type": "assist_pipeline/run",
@@ -2309,7 +2309,7 @@ async def test_device_capture_override(
     assert msg["event"]["audio"] == base64.b64encode(audio_chunks[0]).decode("ascii")
 
     # Start a new capture
-    client_capture_2 = await hass_ws_client(hass)
+    client_capture_2 = await menuai_ws_client(menuai)
     await client_capture_2.send_json_auto_id(
         {
             "type": "assist_pipeline/device/capture",
@@ -2373,15 +2373,15 @@ async def test_device_capture_override(
 
 
 async def test_device_capture_queue_full(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_components,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     device_registry: dr.DeviceRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test audio capture from a satellite device when the recording queue fills up."""
     entry = MockConfigEntry()
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     satellite_device = device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         connections=set(),
@@ -2398,12 +2398,12 @@ async def test_device_capture_queue_full(
             super().put_nowait(item)
 
     with patch(
-        "homeassistant.components.assist_pipeline.websocket_api.DeviceAudioQueue"
+        "menuai.components.assist_pipeline.websocket_api.DeviceAudioQueue"
     ) as mock:
         mock.return_value = DeviceAudioQueue(queue=FakeQueue())
 
         # Start capture
-        client_capture = await hass_ws_client(hass)
+        client_capture = await menuai_ws_client(menuai)
         await client_capture.send_json_auto_id(
             {
                 "type": "assist_pipeline/device/capture",
@@ -2417,7 +2417,7 @@ async def test_device_capture_queue_full(
         assert msg["success"]
 
     # Run pipeline
-    client_pipeline = await hass_ws_client(hass)
+    client_pipeline = await menuai_ws_client(menuai)
     await client_pipeline.send_json_auto_id(
         {
             "type": "assist_pipeline/run",
@@ -2468,14 +2468,14 @@ async def test_device_capture_queue_full(
 
 
 async def test_pipeline_empty_tts_output(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     init_components,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test events from a pipeline run with a empty text-to-speech text."""
     events = []
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json_auto_id(
         {
@@ -2518,12 +2518,12 @@ async def test_pipeline_empty_tts_output(
 
 
 async def test_pipeline_list_devices(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     assist_device,
 ) -> None:
     """Test list devices."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json_auto_id({"type": "assist_pipeline/device/list"})
     msg = await client.receive_json()
@@ -2537,15 +2537,15 @@ async def test_pipeline_list_devices(
 
 
 async def test_stt_cooldown_same_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_components,
     mock_stt_provider,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test that two speech-to-text pipelines cannot run within the cooldown period if they have the same wake word."""
-    client_1 = await hass_ws_client(hass)
-    client_2 = await hass_ws_client(hass)
+    client_1 = await menuai_ws_client(menuai)
+    client_2 = await menuai_ws_client(menuai)
 
     await client_1.send_json_auto_id(
         {
@@ -2608,15 +2608,15 @@ async def test_stt_cooldown_same_id(
 
 
 async def test_stt_cooldown_different_ids(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_components,
     mock_stt_provider,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test that two speech-to-text pipelines can run within the cooldown period if they have the different wake words."""
-    client_1 = await hass_ws_client(hass)
-    client_2 = await hass_ws_client(hass)
+    client_1 = await menuai_ws_client(menuai)
+    client_2 = await menuai_ws_client(menuai)
 
     await client_1.send_json_auto_id(
         {
@@ -2672,12 +2672,12 @@ async def test_stt_cooldown_different_ids(
 
 
 async def test_intent_progress_event(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     init_components,
 ) -> None:
     """Test intent-progress events from a pipeline are forwarded."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     orig_converse = conversation.async_converse
     expected_delta_events = [
@@ -2694,9 +2694,9 @@ async def test_intent_progress_event(
         """Mock converse method."""
         with (
             chat_session.async_get_chat_session(
-                kwargs["hass"], kwargs["conversation_id"]
+                kwargs["menuai"], kwargs["conversation_id"]
             ) as session,
-            conversation.async_get_chat_log(hass, session) as chat_log,
+            conversation.async_get_chat_log(menuai, session) as chat_log,
         ):
             async for _content in chat_log.async_add_delta_content_stream(
                 "", mock_delta_stream()
@@ -2705,7 +2705,7 @@ async def test_intent_progress_event(
 
             return await orig_converse(**kwargs)
 
-    with patch("homeassistant.components.conversation.async_converse", mock_converse):
+    with patch("menuai.components.conversation.async_converse", mock_converse):
         await client.send_json_auto_id(
             {
                 "type": "assist_pipeline/run",

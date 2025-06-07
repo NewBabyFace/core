@@ -7,11 +7,11 @@ from typing import Any
 import haffmpeg.sensor as ffmpeg_sensor
 import voluptuous as vol
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     PLATFORM_SCHEMA as BINARY_SENSOR_PLATFORM_SCHEMA,
     BinarySensorDeviceClass,
 )
-from homeassistant.components.ffmpeg import (
+from menuai.components.ffmpeg import (
     CONF_EXTRA_ARGUMENTS,
     CONF_INITIAL_STATE,
     CONF_INPUT,
@@ -19,12 +19,12 @@ from homeassistant.components.ffmpeg import (
     FFmpegManager,
     get_ffmpeg_manager,
 )
-from homeassistant.components.ffmpeg_motion.binary_sensor import FFmpegBinarySensor
-from homeassistant.const import CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.ffmpeg_motion.binary_sensor import FFmpegBinarySensor
+from menuai.const import CONF_NAME
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 CONF_PEAK = "peak"
 CONF_DURATION = "duration"
@@ -52,14 +52,14 @@ PLATFORM_SCHEMA = BINARY_SENSOR_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the FFmpeg noise binary sensor."""
-    manager = get_ffmpeg_manager(hass)
-    entity = FFmpegNoise(hass, manager, config)
+    manager = get_ffmpeg_manager(menuai)
+    entity = FFmpegNoise(menuai, manager, config)
     async_add_entities([entity])
 
 
@@ -67,7 +67,7 @@ class FFmpegNoise(FFmpegBinarySensor[ffmpeg_sensor.SensorNoise]):
     """A binary sensor which use FFmpeg for noise detection."""
 
     def __init__(
-        self, hass: HomeAssistant, manager: FFmpegManager, config: dict[str, Any]
+        self, menuai: menuai, manager: FFmpegManager, config: dict[str, Any]
     ) -> None:
         """Initialize FFmpeg noise binary sensor."""
 

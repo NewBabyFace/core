@@ -5,8 +5,8 @@ import logging
 from blebox_uniapi.error import Error
 from blebox_uniapi.feature import Feature
 
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity
 
 from .const import DOMAIN
 

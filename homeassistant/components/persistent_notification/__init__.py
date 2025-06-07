@@ -11,18 +11,18 @@ from typing import Any, Final, TypedDict
 
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, ServiceCall, callback
-from homeassistant.helpers import config_validation as cv, singleton
-from homeassistant.helpers.dispatcher import (
+from menuai.components import websocket_api
+from menuai.core import CALLBACK_TYPE, menuai, ServiceCall, callback
+from menuai.helpers import config_validation as cv, singleton
+from menuai.helpers.dispatcher import (
     async_dispatcher_connect,
     async_dispatcher_send,
 )
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.loader import bind_hass
-from homeassistant.util import dt as dt_util
-from homeassistant.util.signal_type import SignalType
-from homeassistant.util.uuid import random_uuid_hex
+from menuai.helpers.typing import ConfigType
+from menuai.loader import bind_menuai
+from menuai.util import dt as dt_util
+from menuai.util.signal_type import SignalType
+from menuai.util.uuid import random_uuid_hex
 
 DOMAIN = "persistent_notification"
 
@@ -66,42 +66,42 @@ CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)
 
 @callback
 def async_register_callback(
-    hass: HomeAssistant,
+    menuai: menuai,
     _callback: Callable[[UpdateType, dict[str, Notification]], None],
 ) -> CALLBACK_TYPE:
     """Register a callback."""
     return async_dispatcher_connect(
-        hass, SIGNAL_PERSISTENT_NOTIFICATIONS_UPDATED, _callback
+        menuai, SIGNAL_PERSISTENT_NOTIFICATIONS_UPDATED, _callback
     )
 
 
-@bind_hass
+@bind_menuai
 def create(
-    hass: HomeAssistant,
+    menuai: menuai,
     message: str,
     title: str | None = None,
     notification_id: str | None = None,
 ) -> None:
     """Generate a notification."""
-    hass.add_job(async_create, hass, message, title, notification_id)
+    menuai.add_job(async_create, menuai, message, title, notification_id)
 
 
-@bind_hass
-def dismiss(hass: HomeAssistant, notification_id: str) -> None:
+@bind_menuai
+def dismiss(menuai: menuai, notification_id: str) -> None:
     """Remove a notification."""
-    hass.add_job(async_dismiss, hass, notification_id)
+    menuai.add_job(async_dismiss, menuai, notification_id)
 
 
 @callback
-@bind_hass
+@bind_menuai
 def async_create(
-    hass: HomeAssistant,
+    menuai: menuai,
     message: str,
     title: str | None = None,
     notification_id: str | None = None,
 ) -> None:
     """Generate a notification."""
-    notifications = _async_get_or_create_notifications(hass)
+    notifications = _async_get_or_create_notifications(menuai)
     if notification_id is None:
         notification_id = random_uuid_hex()
     notifications[notification_id] = {
@@ -112,7 +112,7 @@ def async_create(
     }
 
     async_dispatcher_send(
-        hass,
+        menuai,
         SIGNAL_PERSISTENT_NOTIFICATIONS_UPDATED,
         UpdateType.ADDED,
         {notification_id: notifications[notification_id]},
@@ -121,20 +121,20 @@ def async_create(
 
 @callback
 @singleton.singleton(DOMAIN)
-def _async_get_or_create_notifications(hass: HomeAssistant) -> dict[str, Notification]:
+def _async_get_or_create_notifications(menuai: menuai) -> dict[str, Notification]:
     """Get or create notifications data."""
     return {}
 
 
 @callback
-@bind_hass
-def async_dismiss(hass: HomeAssistant, notification_id: str) -> None:
+@bind_menuai
+def async_dismiss(menuai: menuai, notification_id: str) -> None:
     """Remove a notification."""
-    notifications = _async_get_or_create_notifications(hass)
+    notifications = _async_get_or_create_notifications(menuai)
     if not (notification := notifications.pop(notification_id, None)):
         return
     async_dispatcher_send(
-        hass,
+        menuai,
         SIGNAL_PERSISTENT_NOTIFICATIONS_UPDATED,
         UpdateType.REMOVED,
         {notification_id: notification},
@@ -142,27 +142,27 @@ def async_dismiss(hass: HomeAssistant, notification_id: str) -> None:
 
 
 @callback
-def async_dismiss_all(hass: HomeAssistant) -> None:
+def async_dismiss_all(menuai: menuai) -> None:
     """Remove all notifications."""
-    notifications = _async_get_or_create_notifications(hass)
+    notifications = _async_get_or_create_notifications(menuai)
     notifications_copy = notifications.copy()
     notifications.clear()
     async_dispatcher_send(
-        hass,
+        menuai,
         SIGNAL_PERSISTENT_NOTIFICATIONS_UPDATED,
         UpdateType.REMOVED,
         notifications_copy,
     )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the persistent notification component."""
 
     @callback
     def create_service(call: ServiceCall) -> None:
         """Handle a create notification service call."""
         async_create(
-            hass,
+            menuai,
             call.data[ATTR_MESSAGE],
             call.data.get(ATTR_TITLE),
             call.data.get(ATTR_NOTIFICATION_ID),
@@ -171,14 +171,14 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     @callback
     def dismiss_service(call: ServiceCall) -> None:
         """Handle the dismiss notification service call."""
-        async_dismiss(hass, call.data[ATTR_NOTIFICATION_ID])
+        async_dismiss(menuai, call.data[ATTR_NOTIFICATION_ID])
 
     @callback
     def dismiss_all_service(call: ServiceCall) -> None:
         """Handle the dismiss all notification service call."""
-        async_dismiss_all(hass)
+        async_dismiss_all(menuai)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         "create",
         create_service,
@@ -191,14 +191,14 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         ),
     )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, "dismiss", dismiss_service, SCHEMA_SERVICE_NOTIFICATION
     )
 
-    hass.services.async_register(DOMAIN, "dismiss_all", dismiss_all_service, None)
+    menuai.services.async_register(DOMAIN, "dismiss_all", dismiss_all_service, None)
 
-    websocket_api.async_register_command(hass, websocket_get_notifications)
-    websocket_api.async_register_command(hass, websocket_subscribe_notifications)
+    websocket_api.async_register_command(menuai, websocket_get_notifications)
+    websocket_api.async_register_command(menuai, websocket_subscribe_notifications)
 
     return True
 
@@ -206,14 +206,14 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 @callback
 @websocket_api.websocket_command({vol.Required("type"): "persistent_notification/get"})
 def websocket_get_notifications(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: Mapping[str, Any],
 ) -> None:
     """Return a list of persistent_notifications."""
     connection.send_message(
         websocket_api.result_message(
-            msg["id"], list(_async_get_or_create_notifications(hass).values())
+            msg["id"], list(_async_get_or_create_notifications(menuai).values())
         )
     )
 
@@ -238,16 +238,16 @@ def _async_send_notification_update(
     {vol.Required("type"): "persistent_notification/subscribe"}
 )
 def websocket_subscribe_notifications(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: Mapping[str, Any],
 ) -> None:
     """Return a list of persistent_notifications."""
-    notifications = _async_get_or_create_notifications(hass)
+    notifications = _async_get_or_create_notifications(menuai)
     msg_id = msg["id"]
     notify_func = partial(_async_send_notification_update, connection, msg_id)
     connection.subscriptions[msg_id] = async_dispatcher_connect(
-        hass, SIGNAL_PERSISTENT_NOTIFICATIONS_UPDATED, notify_func
+        menuai, SIGNAL_PERSISTENT_NOTIFICATIONS_UPDATED, notify_func
     )
     connection.send_result(msg_id)
     notify_func(UpdateType.CURRENT, notifications)

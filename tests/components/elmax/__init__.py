@@ -1,6 +1,6 @@
 """Tests for the Elmax component."""
 
-from homeassistant.components.elmax.const import (
+from menuai.components.elmax.const import (
     CONF_ELMAX_MODE,
     CONF_ELMAX_MODE_DIRECT,
     CONF_ELMAX_MODE_DIRECT_HOST,
@@ -11,7 +11,7 @@ from homeassistant.components.elmax.const import (
     CONF_ELMAX_PANEL_PIN,
     DOMAIN,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry, load_fixture
 
@@ -38,7 +38,7 @@ MOCK_DIRECT_CERT = load_fixture("direct/cert.pem", "elmax")
 MOCK_DIRECT_FOLLOW_MDNS = True
 
 
-async def init_integration(hass: HomeAssistant) -> MockConfigEntry:
+async def init_integration(menuai: menuai) -> MockConfigEntry:
     """Mock integration setup."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -52,7 +52,7 @@ async def init_integration(hass: HomeAssistant) -> MockConfigEntry:
             CONF_ELMAX_MODE_DIRECT_SSL_CERT: MOCK_DIRECT_CERT,
         },
     )
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
     return entry

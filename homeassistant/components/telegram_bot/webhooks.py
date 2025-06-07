@@ -11,11 +11,11 @@ from telegram import Bot, Update
 from telegram.error import NetworkError, TimedOut
 from telegram.ext import ApplicationBuilder, TypeHandler
 
-from homeassistant.components.http import HomeAssistantView
-from homeassistant.const import CONF_URL
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers.network import get_url
+from menuai.components.http import menuaiView
+from menuai.const import CONF_URL
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers.network import get_url
 
 from .bot import BaseTelegramBot, TelegramBotConfigEntry
 from .const import CONF_TRUSTED_NETWORKS
@@ -28,7 +28,7 @@ SECRET_TOKEN_LENGTH = 32
 
 
 async def async_setup_platform(
-    hass: HomeAssistant, bot: Bot, config: TelegramBotConfigEntry
+    menuai: menuai, bot: Bot, config: TelegramBotConfigEntry
 ) -> BaseTelegramBot | None:
     """Set up the Telegram webhooks platform."""
 
@@ -36,16 +36,16 @@ async def async_setup_platform(
     alphabet = string.ascii_letters + string.digits + "-_"
     secret_token = "".join(secrets.choice(alphabet) for _ in range(SECRET_TOKEN_LENGTH))
 
-    pushbot = PushBot(hass, bot, config, secret_token)
+    pushbot = PushBot(menuai, bot, config, secret_token)
 
     await pushbot.start_application()
     webhook_registered = await pushbot.register_webhook()
     if not webhook_registered:
         raise ConfigEntryNotReady("Failed to register webhook with Telegram")
 
-    hass.http.register_view(
+    menuai.http.register_view(
         PushBotView(
-            hass,
+            menuai,
             bot,
             pushbot.application,
             _get_trusted_networks(config),
@@ -65,7 +65,7 @@ class PushBot(BaseTelegramBot):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         bot: Bot,
         config: TelegramBotConfigEntry,
         secret_token: str,
@@ -77,10 +77,10 @@ class PushBot(BaseTelegramBot):
         # Dumb Application that just gets our updates to our handler callback (self.handle_update)
         self.application = ApplicationBuilder().bot(bot).updater(None).build()
         self.application.add_handler(TypeHandler(Update, self.handle_update))
-        super().__init__(hass, config)
+        super().__init__(menuai, config)
 
         self.base_url = config.data.get(CONF_URL) or get_url(
-            hass, require_ssl=True, allow_internal=False
+            menuai, require_ssl=True, allow_internal=False
         )
         self.webhook_url = f"{self.base_url}{TELEGRAM_WEBHOOK_URL}"
 
@@ -148,7 +148,7 @@ class PushBot(BaseTelegramBot):
             _LOGGER.error("Failed to deregister webhook URL")
 
 
-class PushBotView(HomeAssistantView):
+class PushBotView(menuaiView):
     """View for handling webhook calls from Telegram."""
 
     requires_auth = False
@@ -157,14 +157,14 @@ class PushBotView(HomeAssistantView):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         bot: Bot,
         application,
         trusted_networks: list[IPv4Network],
         secret_token: str,
     ) -> None:
         """Initialize by storing stuff needed for setting up our webhook endpoint."""
-        self.hass = hass
+        self.menuai = menuai
         self.bot = bot
         self.application = application
         self.trusted_networks = trusted_networks

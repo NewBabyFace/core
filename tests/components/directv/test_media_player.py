@@ -8,13 +8,13 @@ from unittest.mock import patch
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.components.directv.media_player import (
+from menuai.components.directv.media_player import (
     ATTR_MEDIA_CURRENTLY_RECORDING,
     ATTR_MEDIA_RATING,
     ATTR_MEDIA_RECORDED,
     ATTR_MEDIA_START_TIME,
 )
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     ATTR_INPUT_SOURCE,
     ATTR_MEDIA_ALBUM_NAME,
     ATTR_MEDIA_ARTIST,
@@ -33,7 +33,7 @@ from homeassistant.components.media_player import (
     MediaPlayerEntityFeature,
     MediaType,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_MEDIA_NEXT_TRACK,
     SERVICE_MEDIA_PAUSE,
@@ -47,9 +47,9 @@ from homeassistant.const import (
     STATE_PLAYING,
     STATE_UNAVAILABLE,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.util import dt as dt_util
 
 from . import setup_integration
 
@@ -70,54 +70,54 @@ def mock_now() -> datetime:
     return dt_util.utcnow()
 
 
-async def async_turn_on(hass: HomeAssistant, entity_id: str | None = None) -> None:
+async def async_turn_on(menuai: menuai, entity_id: str | None = None) -> None:
     """Turn on specified media player or all."""
     data = {ATTR_ENTITY_ID: entity_id} if entity_id else {}
-    await hass.services.async_call(MP_DOMAIN, SERVICE_TURN_ON, data)
+    await menuai.services.async_call(MP_DOMAIN, SERVICE_TURN_ON, data)
 
 
-async def async_turn_off(hass: HomeAssistant, entity_id: str | None = None) -> None:
+async def async_turn_off(menuai: menuai, entity_id: str | None = None) -> None:
     """Turn off specified media player or all."""
     data = {ATTR_ENTITY_ID: entity_id} if entity_id else {}
-    await hass.services.async_call(MP_DOMAIN, SERVICE_TURN_OFF, data)
+    await menuai.services.async_call(MP_DOMAIN, SERVICE_TURN_OFF, data)
 
 
-async def async_media_pause(hass: HomeAssistant, entity_id: str | None = None) -> None:
+async def async_media_pause(menuai: menuai, entity_id: str | None = None) -> None:
     """Send the media player the command for pause."""
     data = {ATTR_ENTITY_ID: entity_id} if entity_id else {}
-    await hass.services.async_call(MP_DOMAIN, SERVICE_MEDIA_PAUSE, data)
+    await menuai.services.async_call(MP_DOMAIN, SERVICE_MEDIA_PAUSE, data)
 
 
-async def async_media_play(hass: HomeAssistant, entity_id: str | None = None) -> None:
+async def async_media_play(menuai: menuai, entity_id: str | None = None) -> None:
     """Send the media player the command for play/pause."""
     data = {ATTR_ENTITY_ID: entity_id} if entity_id else {}
-    await hass.services.async_call(MP_DOMAIN, SERVICE_MEDIA_PLAY, data)
+    await menuai.services.async_call(MP_DOMAIN, SERVICE_MEDIA_PLAY, data)
 
 
-async def async_media_stop(hass: HomeAssistant, entity_id: str | None = None) -> None:
+async def async_media_stop(menuai: menuai, entity_id: str | None = None) -> None:
     """Send the media player the command for stop."""
     data = {ATTR_ENTITY_ID: entity_id} if entity_id else {}
-    await hass.services.async_call(MP_DOMAIN, SERVICE_MEDIA_STOP, data)
+    await menuai.services.async_call(MP_DOMAIN, SERVICE_MEDIA_STOP, data)
 
 
 async def async_media_next_track(
-    hass: HomeAssistant, entity_id: str | None = None
+    menuai: menuai, entity_id: str | None = None
 ) -> None:
     """Send the media player the command for next track."""
     data = {ATTR_ENTITY_ID: entity_id} if entity_id else {}
-    await hass.services.async_call(MP_DOMAIN, SERVICE_MEDIA_NEXT_TRACK, data)
+    await menuai.services.async_call(MP_DOMAIN, SERVICE_MEDIA_NEXT_TRACK, data)
 
 
 async def async_media_previous_track(
-    hass: HomeAssistant, entity_id: str | None = None
+    menuai: menuai, entity_id: str | None = None
 ) -> None:
     """Send the media player the command for prev track."""
     data = {ATTR_ENTITY_ID: entity_id} if entity_id else {}
-    await hass.services.async_call(MP_DOMAIN, SERVICE_MEDIA_PREVIOUS_TRACK, data)
+    await menuai.services.async_call(MP_DOMAIN, SERVICE_MEDIA_PREVIOUS_TRACK, data)
 
 
 async def async_play_media(
-    hass: HomeAssistant,
+    menuai: menuai,
     media_type: str,
     media_id: str,
     entity_id: str | None = None,
@@ -132,24 +132,24 @@ async def async_play_media(
     if enqueue:
         data[ATTR_MEDIA_ENQUEUE] = enqueue
 
-    await hass.services.async_call(MP_DOMAIN, SERVICE_PLAY_MEDIA, data)
+    await menuai.services.async_call(MP_DOMAIN, SERVICE_PLAY_MEDIA, data)
 
 
-async def test_setup(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker) -> None:
+async def test_setup(menuai: menuai, aioclient_mock: AiohttpClientMocker) -> None:
     """Test setup with basic config."""
-    await setup_integration(hass, aioclient_mock)
-    assert hass.states.get(MAIN_ENTITY_ID)
-    assert hass.states.get(CLIENT_ENTITY_ID)
-    assert hass.states.get(UNAVAILABLE_ENTITY_ID)
+    await setup_integration(menuai, aioclient_mock)
+    assert menuai.states.get(MAIN_ENTITY_ID)
+    assert menuai.states.get(CLIENT_ENTITY_ID)
+    assert menuai.states.get(UNAVAILABLE_ENTITY_ID)
 
 
 async def test_unique_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
     """Test unique id."""
-    await setup_integration(hass, aioclient_mock)
+    await setup_integration(menuai, aioclient_mock)
 
     main = entity_registry.async_get(MAIN_ENTITY_ID)
     assert main.original_device_class == MediaPlayerDeviceClass.RECEIVER
@@ -165,13 +165,13 @@ async def test_unique_id(
 
 
 async def test_supported_features(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test supported features."""
-    await setup_integration(hass, aioclient_mock)
+    await setup_integration(menuai, aioclient_mock)
 
     # Features supported for main DVR
-    state = hass.states.get(MAIN_ENTITY_ID)
+    state = menuai.states.get(MAIN_ENTITY_ID)
     assert (
         state.attributes.get("supported_features")
         == MediaPlayerEntityFeature.PAUSE
@@ -185,7 +185,7 @@ async def test_supported_features(
     )
 
     # Feature supported for clients.
-    state = hass.states.get(CLIENT_ENTITY_ID)
+    state = menuai.states.get(CLIENT_ENTITY_ID)
     assert (
         state.attributes.get("supported_features")
         == MediaPlayerEntityFeature.PAUSE
@@ -198,14 +198,14 @@ async def test_supported_features(
 
 
 async def test_check_attributes(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_now: dt_util.dt.datetime,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
     """Test attributes."""
-    await setup_integration(hass, aioclient_mock)
+    await setup_integration(menuai, aioclient_mock)
 
-    state = hass.states.get(MAIN_ENTITY_ID)
+    state = menuai.states.get(MAIN_ENTITY_ID)
     assert state.state == STATE_PLAYING
 
     assert state.attributes.get(ATTR_MEDIA_CONTENT_ID) == "17016356"
@@ -224,7 +224,7 @@ async def test_check_attributes(
         2020, 3, 21, 13, 0, tzinfo=dt_util.UTC
     )
 
-    state = hass.states.get(CLIENT_ENTITY_ID)
+    state = menuai.states.get(CLIENT_ENTITY_ID)
     assert state.state == STATE_PLAYING
 
     assert state.attributes.get(ATTR_MEDIA_CONTENT_ID) == "4405732"
@@ -243,7 +243,7 @@ async def test_check_attributes(
         2010, 7, 5, 15, 0, 8, tzinfo=dt_util.UTC
     )
 
-    state = hass.states.get(MUSIC_ENTITY_ID)
+    state = menuai.states.get(MUSIC_ENTITY_ID)
     assert state.state == STATE_PLAYING
 
     assert state.attributes.get(ATTR_MEDIA_CONTENT_ID) == "76917562"
@@ -264,7 +264,7 @@ async def test_check_attributes(
         2020, 3, 21, 10, 0, 0, tzinfo=dt_util.UTC
     )
 
-    state = hass.states.get(STANDBY_ENTITY_ID)
+    state = menuai.states.get(STANDBY_ENTITY_ID)
     assert state.state == STATE_OFF
 
     assert state.attributes.get(ATTR_MEDIA_CONTENT_ID) is None
@@ -282,7 +282,7 @@ async def test_check_attributes(
     assert state.attributes.get(ATTR_MEDIA_RATING) is None
     assert not state.attributes.get(ATTR_MEDIA_RECORDED)
 
-    state = hass.states.get(RESTRICTED_ENTITY_ID)
+    state = menuai.states.get(RESTRICTED_ENTITY_ID)
     assert state.state == STATE_PLAYING
 
     assert state.attributes.get(ATTR_MEDIA_CONTENT_ID) is None
@@ -300,77 +300,77 @@ async def test_check_attributes(
     assert state.attributes.get(ATTR_MEDIA_RATING) is None
     assert not state.attributes.get(ATTR_MEDIA_RECORDED)
 
-    state = hass.states.get(UNAVAILABLE_ENTITY_ID)
+    state = menuai.states.get(UNAVAILABLE_ENTITY_ID)
     assert state.state == STATE_UNAVAILABLE
 
 
 async def test_attributes_paused(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_now: dt_util.dt.datetime,
     freezer: FrozenDateTimeFactory,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
     """Test attributes while paused."""
-    await setup_integration(hass, aioclient_mock)
+    await setup_integration(menuai, aioclient_mock)
 
-    state = hass.states.get(CLIENT_ENTITY_ID)
+    state = menuai.states.get(CLIENT_ENTITY_ID)
     last_updated = state.attributes.get(ATTR_MEDIA_POSITION_UPDATED_AT)
 
     # Test to make sure that ATTR_MEDIA_POSITION_UPDATED_AT is not
     # updated if TV is paused.
     freezer.move_to(mock_now + timedelta(minutes=5))
-    await async_media_pause(hass, CLIENT_ENTITY_ID)
-    await hass.async_block_till_done()
+    await async_media_pause(menuai, CLIENT_ENTITY_ID)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(CLIENT_ENTITY_ID)
+    state = menuai.states.get(CLIENT_ENTITY_ID)
     assert state.state == STATE_PAUSED
     assert state.attributes.get(ATTR_MEDIA_POSITION_UPDATED_AT) == last_updated
 
 
 async def test_main_services(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_now: dt_util.dt.datetime,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
     """Test the different services."""
-    await setup_integration(hass, aioclient_mock)
+    await setup_integration(menuai, aioclient_mock)
 
     with patch("directv.DIRECTV.remote") as remote_mock:
-        await async_turn_off(hass, MAIN_ENTITY_ID)
-        await hass.async_block_till_done()
+        await async_turn_off(menuai, MAIN_ENTITY_ID)
+        await menuai.async_block_till_done()
         remote_mock.assert_called_once_with("poweroff", "0")
 
     with patch("directv.DIRECTV.remote") as remote_mock:
-        await async_turn_on(hass, MAIN_ENTITY_ID)
-        await hass.async_block_till_done()
+        await async_turn_on(menuai, MAIN_ENTITY_ID)
+        await menuai.async_block_till_done()
         remote_mock.assert_called_once_with("poweron", "0")
 
     with patch("directv.DIRECTV.remote") as remote_mock:
-        await async_media_pause(hass, MAIN_ENTITY_ID)
-        await hass.async_block_till_done()
+        await async_media_pause(menuai, MAIN_ENTITY_ID)
+        await menuai.async_block_till_done()
         remote_mock.assert_called_once_with("pause", "0")
 
     with patch("directv.DIRECTV.remote") as remote_mock:
-        await async_media_play(hass, MAIN_ENTITY_ID)
-        await hass.async_block_till_done()
+        await async_media_play(menuai, MAIN_ENTITY_ID)
+        await menuai.async_block_till_done()
         remote_mock.assert_called_once_with("play", "0")
 
     with patch("directv.DIRECTV.remote") as remote_mock:
-        await async_media_next_track(hass, MAIN_ENTITY_ID)
-        await hass.async_block_till_done()
+        await async_media_next_track(menuai, MAIN_ENTITY_ID)
+        await menuai.async_block_till_done()
         remote_mock.assert_called_once_with("ffwd", "0")
 
     with patch("directv.DIRECTV.remote") as remote_mock:
-        await async_media_previous_track(hass, MAIN_ENTITY_ID)
-        await hass.async_block_till_done()
+        await async_media_previous_track(menuai, MAIN_ENTITY_ID)
+        await menuai.async_block_till_done()
         remote_mock.assert_called_once_with("rew", "0")
 
     with patch("directv.DIRECTV.remote") as remote_mock:
-        await async_media_stop(hass, MAIN_ENTITY_ID)
-        await hass.async_block_till_done()
+        await async_media_stop(menuai, MAIN_ENTITY_ID)
+        await menuai.async_block_till_done()
         remote_mock.assert_called_once_with("stop", "0")
 
     with patch("directv.DIRECTV.tune") as tune_mock:
-        await async_play_media(hass, "channel", 312, MAIN_ENTITY_ID)
-        await hass.async_block_till_done()
+        await async_play_media(menuai, "channel", 312, MAIN_ENTITY_ID)
+        await menuai.async_block_till_done()
         tune_mock.assert_called_once_with("312", "0")

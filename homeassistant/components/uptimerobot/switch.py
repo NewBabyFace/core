@@ -6,14 +6,14 @@ from typing import Any
 
 from pyuptimerobot import UptimeRobotAuthenticationException, UptimeRobotException
 
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     SwitchDeviceClass,
     SwitchEntity,
     SwitchEntityDescription,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import API_ATTR_OK, DOMAIN
 from .coordinator import UptimeRobotConfigEntry
@@ -24,7 +24,7 @@ PARALLEL_UPDATES = 1
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: UptimeRobotConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -58,17 +58,17 @@ class UptimeRobotSwitch(UptimeRobotEntity, SwitchEntity):
         try:
             response = await self.api.async_edit_monitor(**kwargs)
         except UptimeRobotAuthenticationException:
-            self.coordinator.config_entry.async_start_reauth(self.hass)
+            self.coordinator.config_entry.async_start_reauth(self.menuai)
             return
         except UptimeRobotException as exception:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="api_exception",
                 translation_placeholders={"error": repr(exception)},
             ) from exception
 
         if response.status != API_ATTR_OK:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="api_exception",
                 translation_placeholders={"error": response.error.message},

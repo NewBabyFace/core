@@ -6,16 +6,16 @@ from typing import cast
 
 from pysmartthings import Attribute, Capability, Component, DeviceEvent, SmartThings
 
-from homeassistant.components.event import EventDeviceClass, EventEntity
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.event import EventDeviceClass, EventEntity
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import FullDevice, SmartThingsConfigEntry
 from .entity import SmartThingsEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: SmartThingsConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

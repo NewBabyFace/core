@@ -1,6 +1,6 @@
 """Test version diagnostics."""
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .common import MOCK_VERSION, setup_version_integration
 
@@ -9,14 +9,14 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test diagnostic information."""
-    config_entry = await setup_version_integration(hass)
+    config_entry = await setup_version_integration(menuai)
 
     diagnostics = await get_diagnostics_for_config_entry(
-        hass, hass_client, config_entry
+        menuai, menuai_client, config_entry
     )
     assert diagnostics["entry"]["data"] == {
         "name": "",

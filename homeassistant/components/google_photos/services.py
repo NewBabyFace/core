@@ -10,15 +10,15 @@ from google_photos_library_api.exceptions import GooglePhotosApiError
 from google_photos_library_api.model import NewMediaItem, SimpleMediaItem
 import voluptuous as vol
 
-from homeassistant.const import CONF_FILENAME
-from homeassistant.core import (
-    HomeAssistant,
+from menuai.const import CONF_FILENAME
+from menuai.core import (
+    menuai,
     ServiceCall,
     ServiceResponse,
     SupportsResponse,
 )
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import config_validation as cv
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers import config_validation as cv
 
 from .const import DOMAIN, UPLOAD_SCOPE
 from .coordinator import GooglePhotosConfigEntry
@@ -38,26 +38,26 @@ CONTENT_SIZE_LIMIT = 20 * 1024 * 1024
 
 
 def _read_file_contents(
-    hass: HomeAssistant, filenames: list[str]
+    menuai: menuai, filenames: list[str]
 ) -> list[tuple[str, bytes]]:
     """Return the mime types and file contents for each file."""
     results = []
     for filename in filenames:
-        if not hass.config.is_allowed_path(filename):
-            raise HomeAssistantError(
+        if not menuai.config.is_allowed_path(filename):
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="no_access_to_path",
                 translation_placeholders={"filename": filename},
             )
         filename_path = Path(filename)
         if not filename_path.exists():
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="filename_does_not_exist",
                 translation_placeholders={"filename": filename},
             )
         if filename_path.stat().st_size > CONTENT_SIZE_LIMIT:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="file_too_large",
                 translation_placeholders={
@@ -68,7 +68,7 @@ def _read_file_contents(
             )
         mime_type, _ = mimetypes.guess_type(filename)
         if mime_type is None or not (mime_type.startswith(("image", "video"))):
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="filename_is_not_image",
                 translation_placeholders={"filename": filename},
@@ -77,13 +77,13 @@ def _read_file_contents(
     return results
 
 
-def async_setup_services(hass: HomeAssistant) -> None:
+def async_setup_services(menuai: menuai) -> None:
     """Register Google Photos services."""
 
     async def async_handle_upload(call: ServiceCall) -> ServiceResponse:
         """Generate content from text and optionally images."""
         config_entry: GooglePhotosConfigEntry | None = (
-            hass.config_entries.async_get_entry(call.data[CONF_CONFIG_ENTRY_ID])
+            menuai.config_entries.async_get_entry(call.data[CONF_CONFIG_ENTRY_ID])
         )
         if not config_entry:
             raise ServiceValidationError(
@@ -93,7 +93,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
             )
         scopes = config_entry.data["token"]["scope"].split(" ")
         if UPLOAD_SCOPE not in scopes:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="missing_upload_permission",
                 translation_placeholders={"target": DOMAIN},
@@ -101,15 +101,15 @@ def async_setup_services(hass: HomeAssistant) -> None:
         coordinator = config_entry.runtime_data
         client_api = coordinator.client
         upload_tasks = []
-        file_results = await hass.async_add_executor_job(
-            _read_file_contents, hass, call.data[CONF_FILENAME]
+        file_results = await menuai.async_add_executor_job(
+            _read_file_contents, menuai, call.data[CONF_FILENAME]
         )
 
         album = call.data[CONF_ALBUM]
         try:
             album_id = await coordinator.get_or_create_album(album)
         except GooglePhotosApiError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="create_album_error",
                 translation_placeholders={"message": str(err)},
@@ -120,7 +120,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
         try:
             upload_results = await asyncio.gather(*upload_tasks)
         except GooglePhotosApiError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="upload_error",
                 translation_placeholders={"message": str(err)},
@@ -136,7 +136,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
                 album_id=album_id,
             )
         except GooglePhotosApiError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="api_error",
                 translation_placeholders={"message": str(err)},
@@ -152,7 +152,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
             }
         return None
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         UPLOAD_SERVICE,
         async_handle_upload,

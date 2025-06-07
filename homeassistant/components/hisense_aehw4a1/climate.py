@@ -8,7 +8,7 @@ from typing import Any
 from pyaehw4a1.aehw4a1 import AehW4a1
 import pyaehw4a1.exceptions
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     FAN_AUTO,
     FAN_HIGH,
     FAN_LOW,
@@ -25,10 +25,10 @@ from homeassistant.components.climate import (
     ClimateEntityFeature,
     HVACMode,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_TEMPERATURE, PRECISION_WHOLE, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_TEMPERATURE, PRECISION_WHOLE, UnitOfTemperature
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import CONF_IP_ADDRESS, DOMAIN
 
@@ -119,14 +119,14 @@ def _build_entity(device):
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the AEH-W4A1 climate platform."""
     # Priority 1: manual config
-    if hass.data[DOMAIN].get(CONF_IP_ADDRESS):
-        devices = hass.data[DOMAIN][CONF_IP_ADDRESS]
+    if menuai.data[DOMAIN].get(CONF_IP_ADDRESS):
+        devices = menuai.data[DOMAIN][CONF_IP_ADDRESS]
     else:
         # Priority 2: scanned interfaces
         devices = await AehW4a1().discovery()

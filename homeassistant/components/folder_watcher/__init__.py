@@ -22,26 +22,26 @@ from watchdog.events import (
 )
 from watchdog.observers import Observer
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EVENT_HOMEASSISTANT_START, EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import Event, HomeAssistant
-from homeassistant.helpers.dispatcher import dispatcher_send
-from homeassistant.helpers.issue_registry import IssueSeverity, async_create_issue
+from menuai.config_entries import ConfigEntry
+from menuai.const import EVENT_menuai_START, EVENT_menuai_STOP
+from menuai.core import Event, menuai
+from menuai.helpers.dispatcher import dispatcher_send
+from menuai.helpers.issue_registry import IssueSeverity, async_create_issue
 
 from .const import CONF_FOLDER, CONF_PATTERNS, DOMAIN, PLATFORMS
 
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up Folder watcher from a config entry."""
 
     path: str = entry.options[CONF_FOLDER]
     patterns: list[str] = entry.options[CONF_PATTERNS]
-    if not hass.config.is_allowed_path(path):
+    if not menuai.config.is_allowed_path(path):
         _LOGGER.error("Folder %s is not valid or allowed", path)
         async_create_issue(
-            hass,
+            menuai,
             DOMAIN,
             f"setup_not_allowed_path_{path}",
             is_fixable=False,
@@ -55,25 +55,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             learn_more_url="https://www.home-assistant.io/docs/configuration/basic/#allowlist_external_dirs",
         )
         return False
-    await hass.async_add_executor_job(Watcher, path, patterns, hass, entry.entry_id)
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.async_add_executor_job(Watcher, path, patterns, menuai, entry.entry_id)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
 def create_event_handler(
-    patterns: list[str], hass: HomeAssistant, entry_id: str
+    patterns: list[str], menuai: menuai, entry_id: str
 ) -> EventHandler:
     """Return the Watchdog EventHandler object."""
-    return EventHandler(patterns, hass, entry_id)
+    return EventHandler(patterns, menuai, entry_id)
 
 
 class EventHandler(PatternMatchingEventHandler):
     """Class for handling Watcher events."""
 
-    def __init__(self, patterns: list[str], hass: HomeAssistant, entry_id: str) -> None:
+    def __init__(self, patterns: list[str], menuai: menuai, entry_id: str) -> None:
         """Initialise the EventHandler."""
         super().__init__(patterns=patterns)
-        self.hass = hass
+        self.menuai = menuai
         self.entry_id = entry_id
 
     def process(self, event: FileSystemEvent, moved: bool = False) -> None:
@@ -98,12 +98,12 @@ class EventHandler(PatternMatchingEventHandler):
                     "dest_folder": dest_folder,
                 }
                 fireable.update(_extra)
-            self.hass.bus.fire(
+            self.menuai.bus.fire(
                 DOMAIN,
                 fireable,
             )
             signal = f"folder_watcher-{self.entry_id}"
-            dispatcher_send(self.hass, signal, event.event_type, fireable)
+            dispatcher_send(self.menuai, signal, event.event_type, fireable)
 
     def on_modified(self, event: DirModifiedEvent | FileModifiedEvent) -> None:
         """File modified."""
@@ -130,18 +130,18 @@ class Watcher:
     """Class for starting Watchdog."""
 
     def __init__(
-        self, path: str, patterns: list[str], hass: HomeAssistant, entry_id: str
+        self, path: str, patterns: list[str], menuai: menuai, entry_id: str
     ) -> None:
         """Initialise the watchdog observer."""
         self._observer = Observer()
         self._observer.schedule(
-            create_event_handler(patterns, hass, entry_id), path, recursive=True
+            create_event_handler(patterns, menuai, entry_id), path, recursive=True
         )
-        if not hass.is_running:
-            hass.bus.listen_once(EVENT_HOMEASSISTANT_START, self.startup)
+        if not menuai.is_running:
+            menuai.bus.listen_once(EVENT_menuai_START, self.startup)
         else:
             self.startup(None)
-        hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, self.shutdown)
+        menuai.bus.listen_once(EVENT_menuai_STOP, self.shutdown)
 
     def startup(self, event: Event | None) -> None:
         """Start the watcher."""

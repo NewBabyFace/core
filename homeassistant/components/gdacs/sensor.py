@@ -9,12 +9,12 @@ from typing import Any
 
 from aio_georss_client.status_update import StatusUpdate
 
-from homeassistant.components.sensor import SensorEntity
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import dt as dt_util
+from menuai.components.sensor import SensorEntity
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import dt as dt_util
 
 from . import GdacsConfigEntry, GdacsFeedEntityManager
 from .const import DOMAIN
@@ -36,7 +36,7 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: GdacsConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -77,10 +77,10 @@ class GdacsSensor(SensorEntity):
             manufacturer="GDACS",
         )
 
-    async def async_added_to_hass(self) -> None:
-        """Call when entity is added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Call when entity is added to menuai."""
         self._remove_signal_status = async_dispatcher_connect(
-            self.hass,
+            self.menuai,
             f"gdacs_status_{self._config_entry_id}",
             self._update_status_callback,
         )
@@ -88,8 +88,8 @@ class GdacsSensor(SensorEntity):
         # First update is manual because of how the feed entity manager is updated.
         await self.async_update()
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Call when entity will be removed from hass."""
+    async def async_will_remove_from_menuai(self) -> None:
+        """Call when entity will be removed from menuai."""
         if self._remove_signal_status:
             self._remove_signal_status()
 

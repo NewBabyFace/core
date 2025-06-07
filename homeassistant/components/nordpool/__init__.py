@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import config_validation as cv, device_registry as dr
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util import dt as dt_util
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import config_validation as cv, device_registry as dr
+from menuai.helpers.typing import ConfigType
+from menuai.util import dt as dt_util
 
 from .const import CONF_AREAS, DOMAIN, LOGGER, PLATFORMS
 from .coordinator import NordPoolDataUpdateCoordinator
@@ -18,21 +18,21 @@ type NordPoolConfigEntry = ConfigEntry[NordPoolDataUpdateCoordinator]
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Nord Pool service."""
 
-    async_setup_services(hass)
+    async_setup_services(menuai)
     return True
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, config_entry: NordPoolConfigEntry
+    menuai: menuai, config_entry: NordPoolConfigEntry
 ) -> bool:
     """Set up Nord Pool from a config entry."""
 
-    await cleanup_device(hass, config_entry)
+    await cleanup_device(menuai, config_entry)
 
-    coordinator = NordPoolDataUpdateCoordinator(hass, config_entry)
+    coordinator = NordPoolDataUpdateCoordinator(menuai, config_entry)
     await coordinator.fetch_data(dt_util.utcnow())
     if not coordinator.last_update_success:
         raise ConfigEntryNotReady(
@@ -42,23 +42,23 @@ async def async_setup_entry(
         )
     config_entry.runtime_data = coordinator
 
-    await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 
     return True
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, config_entry: NordPoolConfigEntry
+    menuai: menuai, config_entry: NordPoolConfigEntry
 ) -> bool:
     """Unload Nord Pool config entry."""
-    return await hass.config_entries.async_unload_platforms(config_entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(config_entry, PLATFORMS)
 
 
 async def cleanup_device(
-    hass: HomeAssistant, config_entry: NordPoolConfigEntry
+    menuai: menuai, config_entry: NordPoolConfigEntry
 ) -> None:
     """Cleanup device and entities."""
-    device_reg = dr.async_get(hass)
+    device_reg = dr.async_get(menuai)
 
     entries = dr.async_entries_for_config_entry(device_reg, config_entry.entry_id)
     for area in config_entry.data[CONF_AREAS]:

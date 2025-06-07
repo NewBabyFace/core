@@ -2,7 +2,7 @@
 
 import pytest
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     ATTR_INPUT_SOURCE,
     ATTR_MEDIA_CONTENT_ID,
     ATTR_MEDIA_CONTENT_TYPE,
@@ -15,8 +15,8 @@ from homeassistant.components.media_player import (
     SERVICE_SELECT_SOURCE,
     MediaPlayerEntityFeature,
 )
-from homeassistant.components.media_player.reproduce_state import async_reproduce_states
-from homeassistant.const import (
+from menuai.components.media_player.reproduce_state import async_reproduce_states
+from menuai.const import (
     ATTR_SUPPORTED_FEATURES,
     SERVICE_MEDIA_PAUSE,
     SERVICE_MEDIA_PLAY,
@@ -32,7 +32,7 @@ from homeassistant.const import (
     STATE_PAUSED,
     STATE_PLAYING,
 )
-from homeassistant.core import Context, HomeAssistant, State
+from menuai.core import Context, menuai, State
 
 from tests.common import async_mock_service
 
@@ -51,30 +51,30 @@ ENTITY_2 = "media_player.test2"
         (SERVICE_MEDIA_PAUSE, STATE_PAUSED, MediaPlayerEntityFeature.PAUSE),
     ],
 )
-async def test_state(hass: HomeAssistant, service, state, supported_feature) -> None:
+async def test_state(menuai: menuai, service, state, supported_feature) -> None:
     """Test that we can turn a state into a service call."""
-    calls_1 = async_mock_service(hass, DOMAIN, service)
+    calls_1 = async_mock_service(menuai, DOMAIN, service)
     if service != SERVICE_TURN_ON:
-        async_mock_service(hass, DOMAIN, SERVICE_TURN_ON)
+        async_mock_service(menuai, DOMAIN, SERVICE_TURN_ON)
 
     # Don't support the feature won't call the service
-    hass.states.async_set(ENTITY_1, "something", {ATTR_SUPPORTED_FEATURES: 0})
-    await async_reproduce_states(hass, [State(ENTITY_1, state)])
+    menuai.states.async_set(ENTITY_1, "something", {ATTR_SUPPORTED_FEATURES: 0})
+    await async_reproduce_states(menuai, [State(ENTITY_1, state)])
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(calls_1) == 0
 
-    hass.states.async_set(
+    menuai.states.async_set(
         ENTITY_1, "something", {ATTR_SUPPORTED_FEATURES: supported_feature}
     )
-    await async_reproduce_states(hass, [State(ENTITY_1, state)])
+    await async_reproduce_states(menuai, [State(ENTITY_1, state)])
     assert len(calls_1) == 1
     assert calls_1[0].data == {"entity_id": ENTITY_1}
 
 
-async def test_turn_on_with_mode(hass: HomeAssistant) -> None:
+async def test_turn_on_with_mode(menuai: menuai) -> None:
     """Test that state with additional attributes call multiple services."""
-    hass.states.async_set(
+    menuai.states.async_set(
         ENTITY_1,
         "something",
         {
@@ -83,14 +83,14 @@ async def test_turn_on_with_mode(hass: HomeAssistant) -> None:
         },
     )
 
-    calls_1 = async_mock_service(hass, DOMAIN, SERVICE_TURN_ON)
-    calls_2 = async_mock_service(hass, DOMAIN, SERVICE_SELECT_SOUND_MODE)
+    calls_1 = async_mock_service(menuai, DOMAIN, SERVICE_TURN_ON)
+    calls_2 = async_mock_service(menuai, DOMAIN, SERVICE_SELECT_SOUND_MODE)
 
     await async_reproduce_states(
-        hass, [State(ENTITY_1, "on", {ATTR_SOUND_MODE: "dummy"})]
+        menuai, [State(ENTITY_1, "on", {ATTR_SOUND_MODE: "dummy"})]
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(calls_1) == 1
     assert calls_1[0].data == {"entity_id": ENTITY_1}
@@ -99,20 +99,20 @@ async def test_turn_on_with_mode(hass: HomeAssistant) -> None:
     assert calls_2[0].data == {"entity_id": ENTITY_1, ATTR_SOUND_MODE: "dummy"}
 
 
-async def test_multiple_same_state(hass: HomeAssistant) -> None:
+async def test_multiple_same_state(menuai: menuai) -> None:
     """Test that multiple states with same state gets calls."""
     for entity in ENTITY_1, ENTITY_2:
-        hass.states.async_set(
+        menuai.states.async_set(
             entity,
             "something",
             {ATTR_SUPPORTED_FEATURES: MediaPlayerEntityFeature.TURN_ON},
         )
 
-    calls_1 = async_mock_service(hass, DOMAIN, SERVICE_TURN_ON)
+    calls_1 = async_mock_service(menuai, DOMAIN, SERVICE_TURN_ON)
 
-    await async_reproduce_states(hass, [State(ENTITY_1, "on"), State(ENTITY_2, "on")])
+    await async_reproduce_states(menuai, [State(ENTITY_1, "on"), State(ENTITY_2, "on")])
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(calls_1) == 2
     # order is not guaranteed
@@ -120,10 +120,10 @@ async def test_multiple_same_state(hass: HomeAssistant) -> None:
     assert any(call.data == {"entity_id": "media_player.test2"} for call in calls_1)
 
 
-async def test_multiple_different_state(hass: HomeAssistant) -> None:
+async def test_multiple_different_state(menuai: menuai) -> None:
     """Test that multiple states with different state gets calls."""
     for entity in ENTITY_1, ENTITY_2:
-        hass.states.async_set(
+        menuai.states.async_set(
             entity,
             "something",
             {
@@ -132,12 +132,12 @@ async def test_multiple_different_state(hass: HomeAssistant) -> None:
             },
         )
 
-    calls_1 = async_mock_service(hass, DOMAIN, SERVICE_TURN_ON)
-    calls_2 = async_mock_service(hass, DOMAIN, SERVICE_TURN_OFF)
+    calls_1 = async_mock_service(menuai, DOMAIN, SERVICE_TURN_ON)
+    calls_2 = async_mock_service(menuai, DOMAIN, SERVICE_TURN_OFF)
 
-    await async_reproduce_states(hass, [State(ENTITY_1, "on"), State(ENTITY_2, "off")])
+    await async_reproduce_states(menuai, [State(ENTITY_1, "on"), State(ENTITY_2, "off")])
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(calls_1) == 1
     assert calls_1[0].data == {"entity_id": "media_player.test1"}
@@ -145,30 +145,30 @@ async def test_multiple_different_state(hass: HomeAssistant) -> None:
     assert calls_2[0].data == {"entity_id": "media_player.test2"}
 
 
-async def test_state_with_context(hass: HomeAssistant) -> None:
+async def test_state_with_context(menuai: menuai) -> None:
     """Test that context is forwarded."""
-    hass.states.async_set(
+    menuai.states.async_set(
         ENTITY_1,
         "something",
         {ATTR_SUPPORTED_FEATURES: MediaPlayerEntityFeature.TURN_ON},
     )
 
-    calls = async_mock_service(hass, DOMAIN, SERVICE_TURN_ON)
+    calls = async_mock_service(menuai, DOMAIN, SERVICE_TURN_ON)
 
     context = Context()
 
-    await async_reproduce_states(hass, [State(ENTITY_1, "on")], context=context)
+    await async_reproduce_states(menuai, [State(ENTITY_1, "on")], context=context)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(calls) == 1
     assert calls[0].data == {"entity_id": ENTITY_1}
     assert calls[0].context == context
 
 
-async def test_attribute_no_state(hass: HomeAssistant) -> None:
+async def test_attribute_no_state(menuai: menuai) -> None:
     """Test that no state service call is made with none state."""
-    hass.states.async_set(
+    menuai.states.async_set(
         ENTITY_1,
         "something",
         {
@@ -178,17 +178,17 @@ async def test_attribute_no_state(hass: HomeAssistant) -> None:
         },
     )
 
-    calls_1 = async_mock_service(hass, DOMAIN, SERVICE_TURN_ON)
-    calls_2 = async_mock_service(hass, DOMAIN, SERVICE_TURN_OFF)
-    calls_3 = async_mock_service(hass, DOMAIN, SERVICE_SELECT_SOUND_MODE)
+    calls_1 = async_mock_service(menuai, DOMAIN, SERVICE_TURN_ON)
+    calls_2 = async_mock_service(menuai, DOMAIN, SERVICE_TURN_OFF)
+    calls_3 = async_mock_service(menuai, DOMAIN, SERVICE_SELECT_SOUND_MODE)
 
     value = "dummy"
 
     await async_reproduce_states(
-        hass, [State(ENTITY_1, None, {ATTR_SOUND_MODE: value})]
+        menuai, [State(ENTITY_1, None, {ATTR_SOUND_MODE: value})]
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(calls_1) == 0
     assert len(calls_2) == 0
@@ -222,41 +222,41 @@ async def test_attribute_no_state(hass: HomeAssistant) -> None:
     ],
 )
 async def test_attribute(
-    hass: HomeAssistant, service, attribute, supported_feature
+    menuai: menuai, service, attribute, supported_feature
 ) -> None:
     """Test that service call is made for each attribute."""
-    hass.states.async_set(
+    menuai.states.async_set(
         ENTITY_1,
         "something",
         {ATTR_SUPPORTED_FEATURES: supported_feature},
     )
 
-    calls_1 = async_mock_service(hass, DOMAIN, service)
+    calls_1 = async_mock_service(menuai, DOMAIN, service)
 
     value = "dummy"
 
-    await async_reproduce_states(hass, [State(ENTITY_1, None, {attribute: value})])
+    await async_reproduce_states(menuai, [State(ENTITY_1, None, {attribute: value})])
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(calls_1) == 1
     assert calls_1[0].data == {"entity_id": ENTITY_1, attribute: value}
 
 
-async def test_play_media(hass: HomeAssistant) -> None:
+async def test_play_media(menuai: menuai) -> None:
     """Test playing media."""
-    hass.states.async_set(
+    menuai.states.async_set(
         ENTITY_1,
         "something",
         {ATTR_SUPPORTED_FEATURES: MediaPlayerEntityFeature.PLAY_MEDIA},
     )
-    calls_1 = async_mock_service(hass, DOMAIN, SERVICE_PLAY_MEDIA)
+    calls_1 = async_mock_service(menuai, DOMAIN, SERVICE_PLAY_MEDIA)
 
     value_1 = "dummy_1"
     value_2 = "dummy_2"
 
     await async_reproduce_states(
-        hass,
+        menuai,
         [
             State(
                 ENTITY_1,
@@ -267,7 +267,7 @@ async def test_play_media(hass: HomeAssistant) -> None:
     )
 
     await async_reproduce_states(
-        hass,
+        menuai,
         [
             State(
                 ENTITY_1,
@@ -280,7 +280,7 @@ async def test_play_media(hass: HomeAssistant) -> None:
         ],
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(calls_1) == 2
     assert calls_1[0].data == {

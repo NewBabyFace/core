@@ -6,11 +6,11 @@ from freezegun import freeze_time
 import pytest
 from zwave_js_server.event import Event
 
-from homeassistant.components.event import ATTR_EVENT_TYPE
-from homeassistant.components.zwave_js.const import ATTR_VALUE
-from homeassistant.const import STATE_UNKNOWN, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
+from menuai.components.event import ATTR_EVENT_TYPE
+from menuai.components.zwave_js.const import ATTR_VALUE
+from menuai.const import STATE_UNKNOWN, Platform
+from menuai.core import menuai
+from menuai.util import dt as dt_util
 
 BASIC_EVENT_VALUE_ENTITY = "event.honeywell_in_wall_smart_fan_control_event_value"
 CENTRAL_SCENE_ENTITY = "event.node_51_scene_002"
@@ -23,13 +23,13 @@ def platforms() -> list[str]:
 
 
 async def test_basic(
-    hass: HomeAssistant, client, fan_honeywell_39358, integration
+    menuai: menuai, client, fan_honeywell_39358, integration
 ) -> None:
     """Test the Basic CC event entity."""
     dt_util.now()
     fut = dt_util.now() + timedelta(minutes=1)
     node = fan_honeywell_39358
-    state = hass.states.get(BASIC_EVENT_VALUE_ENTITY)
+    state = menuai.states.get(BASIC_EVENT_VALUE_ENTITY)
 
     assert state
     assert state.state == STATE_UNKNOWN
@@ -62,7 +62,7 @@ async def test_basic(
     with freeze_time(fut):
         node.receive_event(event)
 
-    state = hass.states.get(BASIC_EVENT_VALUE_ENTITY)
+    state = menuai.states.get(BASIC_EVENT_VALUE_ENTITY)
 
     assert state
     assert state.state == dt_util.as_utc(fut).isoformat(timespec="milliseconds")
@@ -72,13 +72,13 @@ async def test_basic(
 
 
 async def test_central_scene(
-    hass: HomeAssistant, client, central_scene_node, integration
+    menuai: menuai, client, central_scene_node, integration
 ) -> None:
     """Test the Central Scene CC event entity."""
     dt_util.now()
     fut = dt_util.now() + timedelta(minutes=1)
     node = central_scene_node
-    state = hass.states.get(CENTRAL_SCENE_ENTITY)
+    state = menuai.states.get(CENTRAL_SCENE_ENTITY)
 
     assert state
     assert state.state == STATE_UNKNOWN
@@ -124,7 +124,7 @@ async def test_central_scene(
     with freeze_time(fut):
         node.receive_event(event)
 
-    state = hass.states.get(CENTRAL_SCENE_ENTITY)
+    state = menuai.states.get(CENTRAL_SCENE_ENTITY)
 
     assert state
     assert state.state == dt_util.as_utc(fut).isoformat(timespec="milliseconds")
@@ -174,7 +174,7 @@ async def test_central_scene(
         node.receive_event(event)
 
     # Nothing should have changed even though the time has changed
-    state = hass.states.get(CENTRAL_SCENE_ENTITY)
+    state = menuai.states.get(CENTRAL_SCENE_ENTITY)
 
     assert state
     assert state.state == dt_util.as_utc(fut).isoformat(timespec="milliseconds")

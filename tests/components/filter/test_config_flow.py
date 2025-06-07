@@ -7,8 +7,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.filter.const import (
+from menuai import config_entries
+from menuai.components.filter.const import (
     CONF_FILTER_LOWER_BOUND,
     CONF_FILTER_NAME,
     CONF_FILTER_PRECISION,
@@ -30,10 +30,10 @@ from homeassistant.components.filter.const import (
     FILTER_NAME_TIME_THROTTLE,
     TIME_SMA_LAST,
 )
-from homeassistant.components.recorder import Recorder
-from homeassistant.const import CONF_ENTITY_ID, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.recorder import Recorder
+from menuai.const import CONF_ENTITY_ID, CONF_NAME
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
@@ -113,7 +113,7 @@ from tests.common import MockConfigEntry
 )
 async def test_form(
     recorder_mock: Recorder,
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     entry_config: dict[str, Any],
     options: dict[str, Any],
@@ -121,13 +121,13 @@ async def test_form(
 ) -> None:
     """Test we get the form."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["step_id"] == "user"
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_NAME: DEFAULT_NAME,
@@ -135,12 +135,12 @@ async def test_form(
             **entry_config,
         },
     )
-    await hass.async_block_till_done()
-    result = await hass.config_entries.flow.async_configure(
+    await menuai.async_block_till_done()
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_FILTER_PRECISION: DEFAULT_PRECISION, **options},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["version"] == 1
@@ -155,16 +155,16 @@ async def test_form(
 
 
 async def test_options_flow(
-    recorder_mock: Recorder, hass: HomeAssistant, loaded_entry: MockConfigEntry
+    recorder_mock: Recorder, menuai: menuai, loaded_entry: MockConfigEntry
 ) -> None:
     """Test options flow."""
 
-    result = await hass.config_entries.options.async_init(loaded_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(loaded_entry.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "outlier"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             CONF_FILTER_WINDOW_SIZE: 2.0,
@@ -172,7 +172,7 @@ async def test_options_flow(
             CONF_FILTER_PRECISION: DEFAULT_PRECISION,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"] == {
@@ -184,27 +184,27 @@ async def test_options_flow(
         CONF_FILTER_PRECISION: DEFAULT_PRECISION,
     }
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Check the entity was updated, no new entity was created
-    assert len(hass.states.async_all()) == 2
+    assert len(menuai.states.async_all()) == 2
 
-    state = hass.states.get("sensor.filtered_sensor")
+    state = menuai.states.get("sensor.filtered_sensor")
     assert state is not None
 
 
 async def test_entry_already_exist(
-    recorder_mock: Recorder, hass: HomeAssistant, loaded_entry: MockConfigEntry
+    recorder_mock: Recorder, menuai: menuai, loaded_entry: MockConfigEntry
 ) -> None:
     """Test abort when entry already exist."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["step_id"] == "user"
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_NAME: DEFAULT_NAME,
@@ -212,8 +212,8 @@ async def test_entry_already_exist(
             CONF_FILTER_NAME: FILTER_NAME_OUTLIER,
         },
     )
-    await hass.async_block_till_done()
-    result = await hass.config_entries.flow.async_configure(
+    await menuai.async_block_till_done()
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_FILTER_WINDOW_SIZE: DEFAULT_WINDOW_SIZE,
@@ -221,7 +221,7 @@ async def test_entry_already_exist(
             CONF_FILTER_PRECISION: DEFAULT_PRECISION,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"

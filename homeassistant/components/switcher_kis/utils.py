@@ -9,8 +9,8 @@ from aioswitcher.api.remotes import SwitcherBreezeRemoteManager
 from aioswitcher.bridge import SwitcherBridge
 from aioswitcher.device import SwitcherBase
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import singleton
+from menuai.core import menuai, callback
+from menuai.helpers import singleton
 
 from .const import DISCOVERY_TIME_SEC
 
@@ -40,6 +40,6 @@ async def async_discover_devices() -> dict[str, SwitcherBase]:
 
 
 @singleton.singleton("switcher_breeze_remote_manager")
-def get_breeze_remote_manager(hass: HomeAssistant) -> SwitcherBreezeRemoteManager:
+def get_breeze_remote_manager(menuai: menuai) -> SwitcherBreezeRemoteManager:
     """Get Switcher Breeze remote manager."""
     return SwitcherBreezeRemoteManager()

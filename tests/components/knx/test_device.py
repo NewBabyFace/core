@@ -2,13 +2,13 @@
 
 from typing import Any
 
-from homeassistant.components.knx.const import DOMAIN
-from homeassistant.components.knx.storage.config_store import (
+from menuai.components.knx.const import DOMAIN
+from menuai.components.knx.storage.config_store import (
     STORAGE_KEY as KNX_CONFIG_STORAGE_KEY,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.setup import async_setup_component
 
 from .conftest import KNXTestKit
 
@@ -16,14 +16,14 @@ from tests.typing import WebSocketGenerator
 
 
 async def test_create_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXTestKit,
     device_registry: dr.DeviceRegistry,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test device creation."""
     await knx.setup_integration()
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json_auto_id(
         {
@@ -45,22 +45,22 @@ async def test_create_device(
 
 
 async def test_remove_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXTestKit,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
-    hass_ws_client: WebSocketGenerator,
-    hass_storage: dict[str, Any],
+    menuai_ws_client: WebSocketGenerator,
+    menuai_storage: dict[str, Any],
 ) -> None:
     """Test device removal."""
-    assert await async_setup_component(hass, "config", {})
+    assert await async_setup_component(menuai, "config", {})
     await knx.setup_integration(config_store_fixture="config_store_light_switch.json")
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await knx.assert_read("1/0/21", response=True, ignore_order=True)  # test light
     await knx.assert_read("1/0/45", response=True, ignore_order=True)  # test switch
 
-    assert hass_storage[KNX_CONFIG_STORAGE_KEY]["data"]["entities"].get("switch")
+    assert menuai_storage[KNX_CONFIG_STORAGE_KEY]["data"]["entities"].get("switch")
     test_device = device_registry.async_get_device(
         {(DOMAIN, "knx_vdev_4c80a564f5fe5da701ed293966d6384d")}
     )
@@ -74,4 +74,4 @@ async def test_remove_device(
         {(DOMAIN, "knx_vdev_4c80a564f5fe5da701ed293966d6384d")}
     )
     assert not entity_registry.entities.get_entries_for_device_id(device_id)
-    assert not hass_storage[KNX_CONFIG_STORAGE_KEY]["data"]["entities"].get("switch")
+    assert not menuai_storage[KNX_CONFIG_STORAGE_KEY]["data"]["entities"].get("switch")

@@ -6,11 +6,11 @@ from pyopnsense import diagnostics
 from pyopnsense.exceptions import APIException
 import voluptuous as vol
 
-from homeassistant.const import CONF_API_KEY, CONF_URL, CONF_VERIFY_SSL, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.discovery import load_platform
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import CONF_API_KEY, CONF_URL, CONF_VERIFY_SSL, Platform
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.discovery import load_platform
+from menuai.helpers.typing import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the opnsense component."""
 
     conf = config[DOMAIN]
@@ -71,10 +71,10 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
                 )
                 return False
 
-    hass.data[OPNSENSE_DATA] = {
+    menuai.data[OPNSENSE_DATA] = {
         "interfaces": interfaces_client,
         CONF_TRACKER_INTERFACE: tracker_interfaces,
     }
 
-    load_platform(hass, Platform.DEVICE_TRACKER, DOMAIN, tracker_interfaces, config)
+    load_platform(menuai, Platform.DEVICE_TRACKER, DOMAIN, tracker_interfaces, config)
     return True

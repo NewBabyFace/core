@@ -3,7 +3,7 @@
 from unittest.mock import AsyncMock, Mock, patch
 from uuid import uuid4
 
-from homeassistant.components.emulated_roku.binding import (
+from menuai.components.emulated_roku.binding import (
     ATTR_APP_ID,
     ATTR_COMMAND_TYPE,
     ATTR_KEY,
@@ -15,15 +15,15 @@ from homeassistant.components.emulated_roku.binding import (
     ROKU_COMMAND_LAUNCH,
     EmulatedRoku,
 )
-from homeassistant.core import Event, HomeAssistant
+from menuai.core import Event, menuai
 
 
-async def test_events_fired_properly(hass: HomeAssistant) -> None:
+async def test_events_fired_properly(menuai: menuai) -> None:
     """Test that events are fired correctly."""
     random_name = uuid4().hex
     # Note that this test is accessing the internal EmulatedRoku class
     # and should be refactored in the future not to do so.
-    binding = EmulatedRoku(hass, "x", random_name, "1.2.3.4", 8060, None, None, None)
+    binding = EmulatedRoku(menuai, "x", random_name, "1.2.3.4", 8060, None, None, None)
 
     events = []
     roku_event_handler = None
@@ -48,9 +48,9 @@ async def test_events_fired_properly(hass: HomeAssistant) -> None:
             events.append(event)
 
     with patch(
-        "homeassistant.components.emulated_roku.binding.EmulatedRokuServer", instantiate
+        "menuai.components.emulated_roku.binding.EmulatedRokuServer", instantiate
     ):
-        hass.bus.async_listen(EVENT_ROKU_COMMAND, listener)
+        menuai.bus.async_listen(EVENT_ROKU_COMMAND, listener)
 
         assert await binding.setup() is True
 
@@ -61,7 +61,7 @@ async def test_events_fired_properly(hass: HomeAssistant) -> None:
         roku_event_handler.on_keypress(random_name, "C")
         roku_event_handler.launch(random_name, "1")
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(events) == 4
 

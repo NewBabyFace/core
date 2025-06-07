@@ -4,8 +4,8 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 from syrupy.filters import props
 
-from homeassistant.const import CONF_USERNAME
-from homeassistant.core import HomeAssistant
+from menuai.const import CONF_USERNAME
+from menuai.core import menuai
 
 from .const import VALID_ENTRY_DATA_CLOUD, VALID_ENTRY_DATA_SELF_HOSTED
 
@@ -20,12 +20,12 @@ from tests.typing import ClientSessionGenerator
     ids=lambda data: data[CONF_USERNAME],
 )
 async def test_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     init_integration: MockConfigEntry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test diagnostics."""
     assert await get_diagnostics_for_config_entry(
-        hass, hass_client, init_integration
+        menuai, menuai_client, init_integration
     ) == snapshot(exclude=props("entry_id", "created_at", "modified_at"))

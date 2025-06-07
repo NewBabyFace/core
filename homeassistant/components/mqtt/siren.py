@@ -8,8 +8,8 @@ from typing import Any, cast
 
 import voluptuous as vol
 
-from homeassistant.components import siren
-from homeassistant.components.siren import (
+from menuai.components import siren
+from menuai.components.siren import (
     ATTR_AVAILABLE_TONES,
     ATTR_DURATION,
     ATTR_TONE,
@@ -20,21 +20,21 @@ from homeassistant.components.siren import (
     SirenTurnOnServiceParameters,
     process_turn_on_params,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_NAME,
     CONF_OPTIMISTIC,
     CONF_PAYLOAD_OFF,
     CONF_PAYLOAD_ON,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.json import json_dumps
-from homeassistant.helpers.service_info.mqtt import ReceivePayloadType
-from homeassistant.helpers.template import Template
-from homeassistant.helpers.typing import ConfigType, TemplateVarsType, VolSchemaType
-from homeassistant.util.json import JSON_DECODE_EXCEPTIONS, json_loads_object
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.json import json_dumps
+from menuai.helpers.service_info.mqtt import ReceivePayloadType
+from menuai.helpers.template import Template
+from menuai.helpers.typing import ConfigType, TemplateVarsType, VolSchemaType
+from menuai.util.json import JSON_DECODE_EXCEPTIONS, json_loads_object
 
 from . import subscription
 from .config import MQTT_RW_SCHEMA
@@ -111,13 +111,13 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up MQTT siren through YAML and through MQTT discovery."""
     async_setup_entity_entry_helper(
-        hass,
+        menuai,
         config_entry,
         MqttSiren,
         siren.DOMAIN,
@@ -271,7 +271,7 @@ class MqttSiren(MqttEntity, SirenEntity):
 
     async def _subscribe_topics(self) -> None:
         """(Re)Subscribe to topics."""
-        subscription.async_subscribe_topics_internal(self.hass, self._sub_state)
+        subscription.async_subscribe_topics_internal(self.menuai, self._sub_state)
 
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:

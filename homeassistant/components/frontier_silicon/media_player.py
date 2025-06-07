@@ -12,7 +12,7 @@ from afsapi import (
     PlayState,
 )
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     BrowseError,
     BrowseMedia,
     MediaPlayerEntity,
@@ -20,9 +20,9 @@ from homeassistant.components.media_player import (
     MediaPlayerState,
     MediaType,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import FrontierSiliconConfigEntry
 from .browse_media import browse_node, browse_top_level
@@ -32,7 +32,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: FrontierSiliconConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

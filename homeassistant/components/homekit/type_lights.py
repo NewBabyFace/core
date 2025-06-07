@@ -8,7 +8,7 @@ from typing import Any
 
 from pyhap.const import CATEGORY_LIGHTBULB
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_BRIGHTNESS_PCT,
     ATTR_COLOR_MODE,
@@ -26,15 +26,15 @@ from homeassistant.components.light import (
     color_supported,
     color_temp_supported,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
     STATE_ON,
 )
-from homeassistant.core import CALLBACK_TYPE, State, callback
-from homeassistant.helpers.event import async_call_later
-from homeassistant.util.color import (
+from menuai.core import CALLBACK_TYPE, State, callback
+from menuai.helpers.event import async_call_later
+from menuai.util.color import (
     color_temperature_kelvin_to_mired,
     color_temperature_mired_to_kelvin,
     color_temperature_to_hs,
@@ -86,7 +86,7 @@ class Light(HomeAccessory):
         self._event_timer: CALLBACK_TYPE | None = None
         self._pending_events: dict[str, Any] = {}
 
-        state = self.hass.states.get(self.entity_id)
+        state = self.menuai.states.get(self.entity_id)
         assert state
         attributes = state.attributes
         self.color_modes = color_modes = (
@@ -162,7 +162,7 @@ class Light(HomeAccessory):
         if self._event_timer:
             self._event_timer()
         self._event_timer = async_call_later(
-            self.hass, CHANGE_COALESCE_TIME_WINDOW, self._async_send_events
+            self.menuai, CHANGE_COALESCE_TIME_WINDOW, self._async_send_events
         )
 
     @callback
@@ -262,7 +262,7 @@ class Light(HomeAccessory):
             and isinstance(brightness, (int, float))
         ):
             brightness = round(brightness / 255 * 100, 0)
-            # The homeassistant component might report its brightness as 0 but is
+            # The menuai component might report its brightness as 0 but is
             # not off. But 0 is a special value in homekit. When you turn on a
             # homekit accessory it will try to restore the last brightness state
             # which will be the last value saved by char_brightness.set_value.

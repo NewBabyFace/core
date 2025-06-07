@@ -1,9 +1,9 @@
 """Errors for the Konnected component."""
 
-from homeassistant.exceptions import HomeAssistantError
+from menuai.exceptions import menuaiError
 
 
-class KonnectedException(HomeAssistantError):
+class KonnectedException(menuaiError):
     """Base class for Konnected exceptions."""
 
 

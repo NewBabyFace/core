@@ -6,13 +6,13 @@ import logging
 
 import voluptuous as vol
 
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import Event, HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.json import ExtendedJSONEncoder
-from homeassistant.helpers.storage import Store
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import EVENT_menuai_STOP
+from menuai.core import Event, menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.json import ExtendedJSONEncoder
+from menuai.helpers.storage import Store
+from menuai.helpers.typing import ConfigType
 
 from . import websocket_api
 from .const import (
@@ -45,14 +45,14 @@ __all__ = [
 ]
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Initialize the trace integration."""
-    hass.data[DATA_TRACE] = {}
-    websocket_api.async_setup(hass)
+    menuai.data[DATA_TRACE] = {}
+    websocket_api.async_setup(menuai)
     store = Store[dict[str, list]](
-        hass, STORAGE_VERSION, STORAGE_KEY, encoder=ExtendedJSONEncoder
+        menuai, STORAGE_VERSION, STORAGE_KEY, encoder=ExtendedJSONEncoder
     )
-    hass.data[DATA_TRACE_STORE] = store
+    menuai.data[DATA_TRACE_STORE] = store
 
     async def _async_store_traces_at_stop(_: Event) -> None:
         """Save traces to storage."""
@@ -61,13 +61,13 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             await store.async_save(
                 {
                     key: list(traces.values())
-                    for key, traces in hass.data[DATA_TRACE].items()
+                    for key, traces in menuai.data[DATA_TRACE].items()
                 }
             )
-        except HomeAssistantError as exc:
+        except menuaiError as exc:
             _LOGGER.error("Error storing traces", exc_info=exc)
 
-    # Store traces when stopping hass
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _async_store_traces_at_stop)
+    # Store traces when stopping menuai
+    menuai.bus.async_listen_once(EVENT_menuai_STOP, _async_store_traces_at_stop)
 
     return True

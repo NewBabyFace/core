@@ -8,13 +8,13 @@ import datetime
 import logging
 from typing import Any, Final, cast
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     PERCENTAGE,
     EntityCategory,
     UnitOfLength,
@@ -22,11 +22,11 @@ from homeassistant.const import (
     UnitOfTime,
     UnitOfVolume,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.icon import icon_for_battery_level
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.icon import icon_for_battery_level
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .api import FitbitApi
 from .const import ATTRIBUTION, BATTERY_LEVELS, DOMAIN, FitbitScope, FitbitUnitSystem
@@ -522,7 +522,7 @@ FITBIT_RESOURCE_BATTERY_LEVEL = FitbitSensorEntityDescription(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: FitbitConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -630,16 +630,16 @@ class FitbitSensor(SensorEntity):
             )
         except FitbitAuthException:
             self._attr_available = False
-            self.config_entry.async_start_reauth(self.hass)
+            self.config_entry.async_start_reauth(self.menuai)
         except FitbitApiException:
             self._attr_available = False
         else:
             self._attr_available = True
             self._attr_native_value = self.entity_description.value_fn(result)
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai."""
+        await super().async_added_to_menuai()
 
         # We do not ask for an update with async_add_entities()
         # because it will update disabled entities.
@@ -689,9 +689,9 @@ class FitbitBatterySensor(CoordinatorEntity[FitbitDeviceCoordinator], SensorEnti
             "type": self.device.type.lower() if self.device.type is not None else None,
         }
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass update state from existing coordinator data."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai update state from existing coordinator data."""
+        await super().async_added_to_menuai()
         self._handle_coordinator_update()
 
     @callback
@@ -728,9 +728,9 @@ class FitbitBatteryLevelSensor(
             model=device.device_version,
         )
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass update state from existing coordinator data."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai update state from existing coordinator data."""
+        await super().async_added_to_menuai()
         self._handle_coordinator_update()
 
     @callback

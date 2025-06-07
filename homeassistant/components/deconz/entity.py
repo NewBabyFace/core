@@ -8,10 +8,10 @@ from pydeconz.models.light import LightBase as PydeconzLightBase
 from pydeconz.models.scene import Scene as PydeconzScene
 from pydeconz.models.sensor import SensorBase as PydeconzSensorBase
 
-from homeassistant.core import callback
-from homeassistant.helpers.device_registry import CONNECTION_ZIGBEE, DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import Entity
+from menuai.core import callback
+from menuai.helpers.device_registry import CONNECTION_ZIGBEE, DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity import Entity
 
 from .const import DOMAIN
 from .hub import DeconzHub
@@ -97,19 +97,19 @@ class DeconzDevice[_DeviceT: _DeviceType](DeconzBase[_DeviceT], Entity):
         if self._update_keys is not None:
             self._update_keys |= {"reachable"}
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to device events."""
         self._device.register_callback(self.async_update_callback)
         self.hub.deconz_ids[self.entity_id] = self._device.deconz_id
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 self.hub.signal_reachable,
                 self.async_update_connection_state,
             )
         )
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Disconnect device object when removed."""
         self._device.remove_callback(self.async_update_callback)
         del self.hub.deconz_ids[self.entity_id]

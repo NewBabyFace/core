@@ -5,13 +5,13 @@ from __future__ import annotations
 from collections.abc import Mapping
 import logging
 
-from homeassistant.components import bluetooth
-from homeassistant.components.device_tracker import SourceType
-from homeassistant.components.device_tracker.config_entry import BaseTrackerEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import STATE_HOME, STATE_NOT_HOME
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components import bluetooth
+from menuai.components.device_tracker import SourceType
+from menuai.components.device_tracker.config_entry import BaseTrackerEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import STATE_HOME, STATE_NOT_HOME
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .entity import BasePrivateDeviceEntity
 
@@ -19,7 +19,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

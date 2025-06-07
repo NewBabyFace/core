@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from datetime import timedelta
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, device_registry as dr
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, device_registry as dr
+from menuai.helpers.typing import ConfigType
 
 from . import services
 from .const import DOMAIN
@@ -20,20 +20,20 @@ MIN_UPDATE_SOURCES = timedelta(seconds=1)
 CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the HEOS component."""
-    services.register(hass)
+    services.register(menuai)
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: HeosConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: HeosConfigEntry) -> bool:
     """Initialize config entry which represents the HEOS controller."""
     # For backwards compat
     if entry.unique_id is None:
-        hass.config_entries.async_update_entry(entry, unique_id=DOMAIN)
+        menuai.config_entries.async_update_entry(entry, unique_id=DOMAIN)
 
     # Migrate non-string device identifiers.
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     for device in device_registry.devices.get_devices_for_config_entry_id(
         entry.entry_id
     ):
@@ -57,22 +57,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: HeosConfigEntry) -> bool
                 device_registry.async_remove_device(device.id)
             break
 
-    coordinator = HeosCoordinator(hass, entry)
+    coordinator = HeosCoordinator(menuai, entry)
     await coordinator.async_setup()
     entry.runtime_data = coordinator
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: HeosConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: HeosConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 async def async_remove_config_entry_device(
-    hass: HomeAssistant, entry: HeosConfigEntry, device: dr.DeviceEntry
+    menuai: menuai, entry: HeosConfigEntry, device: dr.DeviceEntry
 ) -> bool:
     """Remove config entry from device if no longer present."""
     return not any(

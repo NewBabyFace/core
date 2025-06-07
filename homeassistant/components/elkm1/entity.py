@@ -10,10 +10,10 @@ from typing import Any
 from elkm1_lib.elements import Element
 from elkm1_lib.elk import Elk
 
-from homeassistant.const import ATTR_CONNECTIONS
-from homeassistant.core import callback
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
-from homeassistant.helpers.entity import Entity
+from menuai.const import ATTR_CONNECTIONS
+from menuai.core import callback
+from menuai.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
+from menuai.helpers.entity import Entity
 
 from .const import DOMAIN
 from .models import ELKM1Data
@@ -112,7 +112,7 @@ class ElkEntity(Entity):
         self._element_changed(element, changeset)
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callback for ElkM1 changes and update entity state."""
         self._element.add_callback(self._element_callback)
         self._element_changed(self._element, {})

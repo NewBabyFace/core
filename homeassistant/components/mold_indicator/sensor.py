@@ -9,15 +9,15 @@ from typing import TYPE_CHECKING, Any
 
 import voluptuous as vol
 
-from homeassistant import util
-from homeassistant.components.sensor import (
+from menuai import util
+from menuai.components.sensor import (
     PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
     SensorDeviceClass,
     SensorEntity,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_UNIT_OF_MEASUREMENT,
     CONF_NAME,
     CONF_UNIQUE_ID,
@@ -26,24 +26,24 @@ from homeassistant.const import (
     STATE_UNKNOWN,
     UnitOfTemperature,
 )
-from homeassistant.core import (
+from menuai.core import (
     CALLBACK_TYPE,
     Event,
     EventStateChangedData,
-    HomeAssistant,
+    menuai,
     State,
     callback,
 )
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.device import async_device_info_to_link_from_entity
-from homeassistant.helpers.entity_platform import (
+from menuai.helpers import config_validation as cv
+from menuai.helpers.device import async_device_info_to_link_from_entity
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     AddEntitiesCallback,
 )
-from homeassistant.helpers.event import async_track_state_change_event
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util.unit_conversion import TemperatureConverter
-from homeassistant.util.unit_system import METRIC_SYSTEM
+from menuai.helpers.event import async_track_state_change_event
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util.unit_conversion import TemperatureConverter
+from menuai.util.unit_system import METRIC_SYSTEM
 
 from .const import (
     CONF_CALIBRATION_FACTOR,
@@ -75,7 +75,7 @@ PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -91,9 +91,9 @@ async def async_setup_platform(
     async_add_entities(
         [
             MoldIndicator(
-                hass,
+                menuai,
                 name,
-                hass.config.units is METRIC_SYSTEM,
+                menuai.config.units is METRIC_SYSTEM,
                 indoor_temp_sensor,
                 outdoor_temp_sensor,
                 indoor_humidity_sensor,
@@ -106,7 +106,7 @@ async def async_setup_platform(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -120,9 +120,9 @@ async def async_setup_entry(
     async_add_entities(
         [
             MoldIndicator(
-                hass,
+                menuai,
                 name,
-                hass.config.units is METRIC_SYSTEM,
+                menuai.config.units is METRIC_SYSTEM,
                 indoor_temp_sensor,
                 outdoor_temp_sensor,
                 indoor_humidity_sensor,
@@ -144,7 +144,7 @@ class MoldIndicator(SensorEntity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         name: str,
         is_metric: bool,
         indoor_temp_sensor: str,
@@ -174,7 +174,7 @@ class MoldIndicator(SensorEntity):
         self._crit_temp: float | None = None
         if indoor_humidity_sensor:
             self._attr_device_info = async_device_info_to_link_from_entity(
-                hass,
+                menuai,
                 indoor_humidity_sensor,
             )
         self._preview_callback: Callable[[str, Mapping[str, Any]], None] | None = None
@@ -202,8 +202,8 @@ class MoldIndicator(SensorEntity):
         self._async_setup_sensor()
         return self._call_on_remove_callbacks
 
-    async def async_added_to_hass(self) -> None:
-        """Run when entity about to be added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Run when entity about to be added to menuai."""
         self._async_setup_sensor()
 
     @callback
@@ -241,13 +241,13 @@ class MoldIndicator(SensorEntity):
             _LOGGER.debug("Startup for %s", self.entity_id)
 
             async_track_state_change_event(
-                self.hass, list(self._entities), mold_indicator_sensors_state_listener
+                self.menuai, list(self._entities), mold_indicator_sensors_state_listener
             )
 
             # Read initial state
-            indoor_temp = self.hass.states.get(self._indoor_temp_sensor)
-            outdoor_temp = self.hass.states.get(self._outdoor_temp_sensor)
-            indoor_hum = self.hass.states.get(self._indoor_humidity_sensor)
+            indoor_temp = self.menuai.states.get(self._indoor_temp_sensor)
+            outdoor_temp = self.menuai.states.get(self._outdoor_temp_sensor)
+            indoor_hum = self.menuai.states.get(self._indoor_humidity_sensor)
 
             schedule_update = self._update_sensor(
                 self._indoor_temp_sensor, None, indoor_temp

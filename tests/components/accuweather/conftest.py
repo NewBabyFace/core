@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from homeassistant.components.accuweather.const import DOMAIN
+from menuai.components.accuweather.const import DOMAIN
 
 from tests.common import load_json_array_fixture, load_json_object_fixture
 
@@ -19,10 +19,10 @@ def mock_accuweather_client() -> Generator[AsyncMock]:
 
     with (
         patch(
-            "homeassistant.components.accuweather.AccuWeather", autospec=True
+            "menuai.components.accuweather.AccuWeather", autospec=True
         ) as mock_client,
         patch(
-            "homeassistant.components.accuweather.config_flow.AccuWeather",
+            "menuai.components.accuweather.config_flow.AccuWeather",
             new=mock_client,
         ),
     ):

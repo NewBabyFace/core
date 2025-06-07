@@ -5,21 +5,21 @@ from unittest.mock import patch
 import pytest
 from voluptuous.error import Invalid
 
-from homeassistant.components.notify import DOMAIN as NOTIFY_DOMAIN
-from homeassistant.core import HomeAssistant
+from menuai.components.notify import DOMAIN as NOTIFY_DOMAIN
+from menuai.core import menuai
 
 from .conftest import BUILD, ComponentSetup
 
 
 async def test_notify(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: ComponentSetup,
 ) -> None:
     """Test service call draft email."""
     await setup_integration()
 
     with patch(BUILD) as mock_client:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             NOTIFY_DOMAIN,
             "example_gmail_com",
             {
@@ -32,7 +32,7 @@ async def test_notify(
     assert len(mock_client.mock_calls) == 5
 
     with patch(BUILD) as mock_client:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             NOTIFY_DOMAIN,
             "example_gmail_com",
             {
@@ -47,14 +47,14 @@ async def test_notify(
 
 
 async def test_notify_voluptuous_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: ComponentSetup,
 ) -> None:
     """Test voluptuous error thrown when drafting email."""
     await setup_integration()
 
     with pytest.raises(ValueError) as ex:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             NOTIFY_DOMAIN,
             "example_gmail_com",
             {
@@ -66,7 +66,7 @@ async def test_notify_voluptuous_error(
     assert ex.match("recipient address required")
 
     with pytest.raises(Invalid) as ex:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             NOTIFY_DOMAIN,
             "example_gmail_com",
             {

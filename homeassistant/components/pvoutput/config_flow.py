@@ -8,17 +8,17 @@ from typing import Any
 from pvo import PVOutput, PVOutputAuthenticationError, PVOutputError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_API_KEY
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_API_KEY
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import CONF_SYSTEM_ID, DOMAIN, LOGGER
 
 
-async def validate_input(hass: HomeAssistant, *, api_key: str, system_id: int) -> None:
+async def validate_input(menuai: menuai, *, api_key: str, system_id: int) -> None:
     """Try using the give system id & api key against the PVOutput API."""
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
     pvoutput = PVOutput(
         session=session,
         api_key=api_key,
@@ -43,7 +43,7 @@ class PVOutputFlowHandler(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             try:
                 await validate_input(
-                    self.hass,
+                    self.menuai,
                     api_key=user_input[CONF_API_KEY],
                     system_id=user_input[CONF_SYSTEM_ID],
                 )
@@ -99,7 +99,7 @@ class PVOutputFlowHandler(ConfigFlow, domain=DOMAIN):
             reauth_entry = self._get_reauth_entry()
             try:
                 await validate_input(
-                    self.hass,
+                    self.menuai,
                     api_key=user_input[CONF_API_KEY],
                     system_id=reauth_entry.data[CONF_SYSTEM_ID],
                 )

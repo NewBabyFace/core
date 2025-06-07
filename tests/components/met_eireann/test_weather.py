@@ -6,60 +6,60 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.met_eireann import UPDATE_INTERVAL
-from homeassistant.components.met_eireann.const import DOMAIN
-from homeassistant.components.weather import (
+from menuai.components.met_eireann import UPDATE_INTERVAL
+from menuai.components.met_eireann.const import DOMAIN
+from menuai.components.weather import (
     DOMAIN as WEATHER_DOMAIN,
     SERVICE_GET_FORECASTS,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry
 from tests.typing import WebSocketGenerator
 
 
-async def setup_config_entry(hass: HomeAssistant) -> ConfigEntry:
+async def setup_config_entry(menuai: menuai) -> ConfigEntry:
     """Create a mock configuration for testing."""
     mock_data = MockConfigEntry(
         domain=DOMAIN,
         data={"name": "Somewhere", "latitude": 10, "longitude": 20, "elevation": 0},
     )
-    mock_data.add_to_hass(hass)
+    mock_data.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_data.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_data.entry_id)
+    await menuai.async_block_till_done()
     return mock_data
 
 
 async def test_new_config_entry(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, mock_weather
+    menuai: menuai, entity_registry: er.EntityRegistry, mock_weather
 ) -> None:
     """Test the expected entities are created."""
-    await setup_config_entry(hass)
-    assert len(hass.states.async_entity_ids("weather")) == 1
+    await setup_config_entry(menuai)
+    assert len(menuai.states.async_entity_ids("weather")) == 1
 
-    entry = hass.config_entries.async_entries()[0]
+    entry = menuai.config_entries.async_entries()[0]
     assert len(er.async_entries_for_config_entry(entity_registry, entry.entry_id)) == 1
 
 
-async def test_weather(hass: HomeAssistant, mock_weather) -> None:
+async def test_weather(menuai: menuai, mock_weather) -> None:
     """Test weather entity."""
-    await setup_config_entry(hass)
-    assert len(hass.states.async_entity_ids("weather")) == 1
+    await setup_config_entry(menuai)
+    assert len(menuai.states.async_entity_ids("weather")) == 1
     assert len(mock_weather.mock_calls) == 4
 
     # Test we do not track config
-    await hass.config.async_update(latitude=10, longitude=20)
-    await hass.async_block_till_done()
+    await menuai.config.async_update(latitude=10, longitude=20)
+    await menuai.async_block_till_done()
 
     assert len(mock_weather.mock_calls) == 4
 
-    entry = hass.config_entries.async_entries()[0]
-    await hass.config_entries.async_remove(entry.entry_id)
-    await hass.async_block_till_done()
-    assert len(hass.states.async_entity_ids("weather")) == 0
+    entry = menuai.config_entries.async_entries()[0]
+    await menuai.config_entries.async_remove(entry.entry_id)
+    await menuai.async_block_till_done()
+    assert len(menuai.states.async_entity_ids("weather")) == 0
 
 
 @pytest.mark.parametrize(
@@ -67,7 +67,7 @@ async def test_weather(hass: HomeAssistant, mock_weather) -> None:
     [SERVICE_GET_FORECASTS],
 )
 async def test_forecast_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_weather,
     snapshot: SnapshotAssertion,
     service: str,
@@ -86,11 +86,11 @@ async def test_forecast_service(
         },
     ]
 
-    await setup_config_entry(hass)
-    assert len(hass.states.async_entity_ids("weather")) == 1
-    entity_id = hass.states.async_entity_ids("weather")[0]
+    await setup_config_entry(menuai)
+    assert len(menuai.states.async_entity_ids("weather")) == 1
+    entity_id = menuai.states.async_entity_ids("weather")[0]
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         WEATHER_DOMAIN,
         service,
         {
@@ -102,7 +102,7 @@ async def test_forecast_service(
     )
     assert response == snapshot
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         WEATHER_DOMAIN,
         service,
         {
@@ -117,15 +117,15 @@ async def test_forecast_service(
 
 @pytest.mark.parametrize("forecast_type", ["daily", "hourly"])
 async def test_forecast_subscription(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     freezer: FrozenDateTimeFactory,
     mock_weather,
     snapshot: SnapshotAssertion,
     forecast_type: str,
 ) -> None:
     """Test multiple forecast."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     mock_weather.get_forecast.return_value = [
         {
@@ -140,9 +140,9 @@ async def test_forecast_subscription(
         },
     ]
 
-    await setup_config_entry(hass)
-    assert len(hass.states.async_entity_ids("weather")) == 1
-    entity_id = hass.states.async_entity_ids("weather")[0]
+    await setup_config_entry(menuai)
+    assert len(menuai.states.async_entity_ids("weather")) == 1
+    entity_id = menuai.states.async_entity_ids("weather")[0]
 
     await client.send_json_auto_id(
         {
@@ -177,7 +177,7 @@ async def test_forecast_subscription(
     ]
 
     freezer.tick(UPDATE_INTERVAL + datetime.timedelta(seconds=1))
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     msg = await client.receive_json()
 
     assert msg["id"] == subscription_id

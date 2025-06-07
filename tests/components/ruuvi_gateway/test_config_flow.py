@@ -5,11 +5,11 @@ from unittest.mock import patch
 from aioruuvigateway.excs import CannotConnect, InvalidAuth
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.ruuvi_gateway.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai import config_entries
+from menuai.components.ruuvi_gateway.const import DOMAIN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
 
 from .consts import (
     BASE_DATA,
@@ -43,9 +43,9 @@ DHCP_DATA = {**BASE_DATA, "host": DHCP_IP}
     ],
     ids=["user", "dhcp"],
 )
-async def test_ok_setup(hass: HomeAssistant, init_data, init_context, entry) -> None:
+async def test_ok_setup(menuai: menuai, init_data, init_context, entry) -> None:
     """Test we get the form."""
-    init_result = await hass.config_entries.flow.async_init(
+    init_result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         data=init_data,
         context=init_context,
@@ -56,11 +56,11 @@ async def test_ok_setup(hass: HomeAssistant, init_data, init_context, entry) -> 
 
     # Check that we can finalize setup
     with patch_gateway_ok(), patch_setup_entry_ok() as mock_setup_entry:
-        config_result = await hass.config_entries.flow.async_configure(
+        config_result = await menuai.config_entries.flow.async_configure(
             init_result["flow_id"],
             entry,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     assert config_result["type"] is FlowResultType.CREATE_ENTRY
     assert config_result["title"] == EXPECTED_TITLE
     assert config_result["data"] == entry
@@ -68,14 +68,14 @@ async def test_ok_setup(hass: HomeAssistant, init_data, init_context, entry) -> 
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_form_invalid_auth(hass: HomeAssistant) -> None:
+async def test_form_invalid_auth(menuai: menuai) -> None:
     """Test we handle invalid auth."""
-    init_result = await hass.config_entries.flow.async_init(
+    init_result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     with patch(GET_GATEWAY_HISTORY_DATA, side_effect=InvalidAuth):
-        config_result = await hass.config_entries.flow.async_configure(
+        config_result = await menuai.config_entries.flow.async_configure(
             init_result["flow_id"],
             BASE_DATA,
         )
@@ -85,11 +85,11 @@ async def test_form_invalid_auth(hass: HomeAssistant) -> None:
 
     # Check that we still can finalize setup
     with patch_gateway_ok(), patch_setup_entry_ok() as mock_setup_entry:
-        config_result = await hass.config_entries.flow.async_configure(
+        config_result = await menuai.config_entries.flow.async_configure(
             init_result["flow_id"],
             BASE_DATA,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     assert config_result["type"] is FlowResultType.CREATE_ENTRY
     assert config_result["title"] == EXPECTED_TITLE
     assert config_result["data"] == BASE_DATA
@@ -97,14 +97,14 @@ async def test_form_invalid_auth(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_form_cannot_connect(hass: HomeAssistant) -> None:
+async def test_form_cannot_connect(menuai: menuai) -> None:
     """Test we handle cannot connect error."""
-    init_result = await hass.config_entries.flow.async_init(
+    init_result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     with patch(GET_GATEWAY_HISTORY_DATA, side_effect=CannotConnect):
-        config_result = await hass.config_entries.flow.async_configure(
+        config_result = await menuai.config_entries.flow.async_configure(
             init_result["flow_id"],
             BASE_DATA,
         )
@@ -114,11 +114,11 @@ async def test_form_cannot_connect(hass: HomeAssistant) -> None:
 
     # Check that we still can finalize setup
     with patch_gateway_ok(), patch_setup_entry_ok() as mock_setup_entry:
-        config_result = await hass.config_entries.flow.async_configure(
+        config_result = await menuai.config_entries.flow.async_configure(
             init_result["flow_id"],
             BASE_DATA,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     assert config_result["type"] is FlowResultType.CREATE_ENTRY
     assert config_result["title"] == EXPECTED_TITLE
     assert config_result["data"] == BASE_DATA
@@ -126,14 +126,14 @@ async def test_form_cannot_connect(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_form_unexpected(hass: HomeAssistant) -> None:
+async def test_form_unexpected(menuai: menuai) -> None:
     """Test we handle unexpected errors."""
-    init_result = await hass.config_entries.flow.async_init(
+    init_result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     with patch(GET_GATEWAY_HISTORY_DATA, side_effect=MemoryError):
-        config_result = await hass.config_entries.flow.async_configure(
+        config_result = await menuai.config_entries.flow.async_configure(
             init_result["flow_id"],
             BASE_DATA,
         )
@@ -143,11 +143,11 @@ async def test_form_unexpected(hass: HomeAssistant) -> None:
 
     # Check that we still can finalize setup
     with patch_gateway_ok(), patch_setup_entry_ok() as mock_setup_entry:
-        config_result = await hass.config_entries.flow.async_configure(
+        config_result = await menuai.config_entries.flow.async_configure(
             init_result["flow_id"],
             BASE_DATA,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     assert config_result["type"] is FlowResultType.CREATE_ENTRY
     assert config_result["title"] == EXPECTED_TITLE
     assert config_result["data"] == BASE_DATA

@@ -7,8 +7,8 @@ import aprslib
 from aprslib import IS
 import pytest
 
-from homeassistant.components.aprs import device_tracker
-from homeassistant.core import HomeAssistant
+from menuai.components.aprs import device_tracker
+from menuai.core import menuai
 
 DEFAULT_PORT = 14580
 
@@ -333,10 +333,10 @@ def test_aprs_listener_rx_msg_object(mock_ais: MagicMock) -> None:
     )
 
 
-async def test_setup_scanner(hass: HomeAssistant) -> None:
+async def test_setup_scanner(menuai: menuai) -> None:
     """Test setup_scanner."""
     with patch(
-        "homeassistant.components.aprs.device_tracker.AprsListenerThread"
+        "menuai.components.aprs.device_tracker.AprsListenerThread"
     ) as listener:
         config = {
             "username": TEST_CALLSIGN,
@@ -347,8 +347,8 @@ async def test_setup_scanner(hass: HomeAssistant) -> None:
         }
 
         see = Mock()
-        res = await hass.async_add_executor_job(
-            device_tracker.setup_scanner, hass, config, see
+        res = await menuai.async_add_executor_job(
+            device_tracker.setup_scanner, menuai, config, see
         )
 
         assert res
@@ -357,7 +357,7 @@ async def test_setup_scanner(hass: HomeAssistant) -> None:
         )
 
 
-async def test_setup_scanner_timeout(hass: HomeAssistant) -> None:
+async def test_setup_scanner_timeout(menuai: menuai) -> None:
     """Test setup_scanner failure from timeout."""
     with patch.object(IS, "connect", side_effect=TimeoutError):
         config = {
@@ -369,6 +369,6 @@ async def test_setup_scanner_timeout(hass: HomeAssistant) -> None:
         }
 
         see = Mock()
-        assert not await hass.async_add_executor_job(
-            device_tracker.setup_scanner, hass, config, see
+        assert not await menuai.async_add_executor_job(
+            device_tracker.setup_scanner, menuai, config, see
         )

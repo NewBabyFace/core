@@ -8,16 +8,16 @@ from typing import TYPE_CHECKING
 import pyotgw.vars as gw_vars
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     ATTR_DATE,
     ATTR_ID,
     ATTR_MODE,
     ATTR_TEMPERATURE,
     ATTR_TIME,
 )
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import config_validation as cv
+from menuai.core import menuai, ServiceCall
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import config_validation as cv
 
 from .const import (
     ATTR_CH_OVRD,
@@ -50,7 +50,7 @@ if TYPE_CHECKING:
 def _get_gateway(call: ServiceCall) -> OpenThermGatewayHub:
     gw_id: str = call.data[ATTR_GW_ID]
     gw_hub: OpenThermGatewayHub | None = (
-        call.hass.data.get(DATA_OPENTHERM_GW, {}).get(DATA_GATEWAYS, {}).get(gw_id)
+        call.menuai.data.get(DATA_OPENTHERM_GW, {}).get(DATA_GATEWAYS, {}).get(gw_id)
     )
     if gw_hub is None:
         raise ServiceValidationError(
@@ -61,7 +61,7 @@ def _get_gateway(call: ServiceCall) -> OpenThermGatewayHub:
     return gw_hub
 
 
-def async_setup_services(hass: HomeAssistant) -> None:
+def async_setup_services(menuai: menuai) -> None:
     """Register services for the component."""
     service_reset_schema = vol.Schema({vol.Required(ATTR_GW_ID): vol.All(cv.string)})
     service_set_central_heating_ovrd_schema = vol.Schema(
@@ -165,7 +165,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
         mode_rst = gw_vars.OTGW_MODE_RESET
         await gw_hub.gateway.set_mode(mode_rst)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_RESET_GATEWAY, reset_gateway, service_reset_schema
     )
 
@@ -174,7 +174,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
         gw_hub = _get_gateway(call)
         await gw_hub.gateway.set_ch_enable_bit(1 if call.data[ATTR_CH_OVRD] else 0)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_SET_CH_OVRD,
         set_ch_ovrd,
@@ -186,7 +186,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
         gw_hub = _get_gateway(call)
         await gw_hub.gateway.set_control_setpoint(call.data[ATTR_TEMPERATURE])
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_SET_CONTROL_SETPOINT,
         set_control_setpoint,
@@ -198,7 +198,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
         gw_hub = _get_gateway(call)
         await gw_hub.gateway.set_hot_water_ovrd(call.data[ATTR_DHW_OVRD])
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_SET_HOT_WATER_OVRD,
         set_dhw_ovrd,
@@ -210,7 +210,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
         gw_hub = _get_gateway(call)
         await gw_hub.gateway.set_dhw_setpoint(call.data[ATTR_TEMPERATURE])
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_SET_HOT_WATER_SETPOINT,
         set_dhw_setpoint,
@@ -224,7 +224,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
         attr_time = call.data[ATTR_TIME]
         await gw_hub.gateway.set_clock(datetime.combine(attr_date, attr_time))
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_SET_CLOCK, set_device_clock, service_set_clock_schema
     )
 
@@ -235,7 +235,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
         gpio_mode = call.data[ATTR_MODE]
         await gw_hub.gateway.set_gpio_mode(gpio_id, gpio_mode)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_SET_GPIO_MODE, set_gpio_mode, service_set_gpio_mode_schema
     )
 
@@ -246,7 +246,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
         led_mode = call.data[ATTR_MODE]
         await gw_hub.gateway.set_led_mode(led_id, led_mode)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_SET_LED_MODE, set_led_mode, service_set_led_mode_schema
     )
 
@@ -259,7 +259,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
             level = "-"
         await gw_hub.gateway.set_max_relative_mod(level)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_SET_MAX_MOD, set_max_mod, service_set_max_mod_schema
     )
 
@@ -268,7 +268,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
         gw_hub = _get_gateway(call)
         await gw_hub.gateway.set_outside_temp(call.data[ATTR_TEMPERATURE])
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_SET_OAT, set_outside_temp, service_set_oat_schema
     )
 
@@ -277,7 +277,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
         gw_hub = _get_gateway(call)
         await gw_hub.gateway.set_setback_temp(call.data[ATTR_TEMPERATURE])
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_SET_SB_TEMP, set_setback_temp, service_set_sb_temp_schema
     )
 
@@ -288,7 +288,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
         transp_arg = call.data[ATTR_TRANSP_ARG]
         await gw_hub.gateway.send_transparent_command(transp_cmd, transp_arg)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_SEND_TRANSP_CMD,
         send_transparent_cmd,

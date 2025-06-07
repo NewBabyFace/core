@@ -2,20 +2,20 @@
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import (
-    HomeAssistant,
+from menuai.config_entries import ConfigEntryState
+from menuai.core import (
+    menuai,
     ServiceCall,
     ServiceResponse,
     SupportsResponse,
 )
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers.selector import (
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers.selector import (
     NumberSelector,
     NumberSelectorConfig,
     NumberSelectorMode,
 )
-from homeassistant.helpers.update_coordinator import UpdateFailed
+from menuai.helpers.update_coordinator import UpdateFailed
 
 from .const import (
     ATTR_CONFIG_ENTRY_ID,
@@ -40,10 +40,10 @@ SERVICE_FETCH_CONNECTIONS_SCHEMA = vol.Schema(
 
 
 def async_get_entry(
-    hass: HomeAssistant, config_entry_id: str
+    menuai: menuai, config_entry_id: str
 ) -> SwissPublicTransportConfigEntry:
     """Get the Swiss public transport config entry."""
-    if not (entry := hass.config_entries.async_get_entry(config_entry_id)):
+    if not (entry := menuai.config_entries.async_get_entry(config_entry_id)):
         raise ServiceValidationError(
             translation_domain=DOMAIN,
             translation_key="config_entry_not_found",
@@ -58,14 +58,14 @@ def async_get_entry(
     return entry
 
 
-def setup_services(hass: HomeAssistant) -> None:
+def setup_services(menuai: menuai) -> None:
     """Set up the services for the Swiss public transport integration."""
 
     async def async_fetch_connections(
         call: ServiceCall,
     ) -> ServiceResponse:
         """Fetch a set of connections."""
-        config_entry = async_get_entry(hass, call.data[ATTR_CONFIG_ENTRY_ID])
+        config_entry = async_get_entry(menuai, call.data[ATTR_CONFIG_ENTRY_ID])
 
         limit = call.data.get(ATTR_LIMIT) or CONNECTIONS_COUNT
         try:
@@ -73,7 +73,7 @@ def setup_services(hass: HomeAssistant) -> None:
                 limit=int(limit)
             )
         except UpdateFailed as e:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="cannot_connect",
                 translation_placeholders={
@@ -82,7 +82,7 @@ def setup_services(hass: HomeAssistant) -> None:
             ) from e
         return {"connections": connections}
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_FETCH_CONNECTIONS,
         async_fetch_connections,

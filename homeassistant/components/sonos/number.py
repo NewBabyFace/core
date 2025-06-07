@@ -5,12 +5,12 @@ from __future__ import annotations
 import logging
 from typing import cast
 
-from homeassistant.components.number import NumberEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.number import NumberEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import SONOS_CREATE_LEVELS
 from .entity import SonosEntity
@@ -68,7 +68,7 @@ LEVEL_FROM_NUMBER = {"balance": _balance_from_number}
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -85,7 +85,7 @@ async def async_setup_entry(
     async def _async_create_entities(speaker: SonosSpeaker) -> None:
         entities = []
 
-        available_features = await hass.async_add_executor_job(
+        available_features = await menuai.async_add_executor_job(
             available_soco_attributes, speaker
         )
 
@@ -97,7 +97,7 @@ async def async_setup_entry(
         async_add_entities(entities)
 
     config_entry.async_on_unload(
-        async_dispatcher_connect(hass, SONOS_CREATE_LEVELS, _async_create_entities)
+        async_dispatcher_connect(menuai, SONOS_CREATE_LEVELS, _async_create_entities)
     )
 
 
@@ -118,7 +118,7 @@ class SonosLevelEntity(SonosEntity, NumberEntity):
 
     async def _async_fallback_poll(self) -> None:
         """Poll the value if subscriptions are not working."""
-        await self.hass.async_add_executor_job(self.poll_state)
+        await self.menuai.async_add_executor_job(self.poll_state)
 
     @soco_error()
     def poll_state(self) -> None:

@@ -1,4 +1,4 @@
-"""Home Assistant component for accessing the Wallbox Portal API. The switch component creates a switch entity."""
+"""MenuAI component for accessing the Wallbox Portal API. The switch component creates a switch entity."""
 
 from __future__ import annotations
 
@@ -7,11 +7,11 @@ from dataclasses import dataclass
 
 from requests import HTTPError
 
-from homeassistant.components.select import SelectEntity, SelectEntityDescription
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.select import SelectEntity, SelectEntityDescription
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
     CHARGER_DATA_KEY,
@@ -57,12 +57,12 @@ SELECT_TYPES: dict[str, WallboxSelectEntityDescription] = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Create wallbox select entities in HASS."""
-    coordinator: WallboxCoordinator = hass.data[DOMAIN][entry.entry_id]
+    """Create wallbox select entities in menuai."""
+    coordinator: WallboxCoordinator = menuai.data[DOMAIN][entry.entry_id]
 
     async_add_entities(
         WallboxSelect(coordinator, description)
@@ -99,7 +99,7 @@ class WallboxSelect(WallboxEntity, SelectEntity):
         try:
             await self.entity_description.select_option_fn(self.coordinator, option)
         except (ConnectionError, HTTPError) as e:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_key="api_failed", translation_domain=DOMAIN
             ) from e
         await self.coordinator.async_request_refresh()

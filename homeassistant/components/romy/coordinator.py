@@ -2,9 +2,9 @@
 
 from romy import RomyRobot
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN, LOGGER, UPDATE_INTERVAL
 
@@ -15,17 +15,17 @@ class RomyVacuumCoordinator(DataUpdateCoordinator[None]):
     config_entry: ConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: ConfigEntry, romy: RomyRobot
+        self, menuai: menuai, config_entry: ConfigEntry, romy: RomyRobot
     ) -> None:
         """Initialize."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
             update_interval=UPDATE_INTERVAL,
         )
-        self.hass = hass
+        self.menuai = menuai
         self.romy = romy
 
     async def _async_update_data(self) -> None:

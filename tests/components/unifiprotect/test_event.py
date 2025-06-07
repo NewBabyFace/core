@@ -7,14 +7,14 @@ from unittest.mock import Mock
 
 from uiprotect.data import Camera, Event, EventType, ModelType, SmartDetectObjectType
 
-from homeassistant.components.unifiprotect.const import (
+from menuai.components.unifiprotect.const import (
     ATTR_EVENT_ID,
     DEFAULT_ATTRIBUTION,
 )
-from homeassistant.components.unifiprotect.event import EVENT_DESCRIPTIONS
-from homeassistant.const import ATTR_ATTRIBUTION, Platform
-from homeassistant.core import Event as HAEvent, HomeAssistant, callback
-from homeassistant.helpers.event import async_track_state_change_event
+from menuai.components.unifiprotect.event import EVENT_DESCRIPTIONS
+from menuai.const import ATTR_ATTRIBUTION, Platform
+from menuai.core import Event as HAEvent, menuai, callback
+from menuai.helpers.event import async_track_state_change_event
 
 from .utils import (
     MockUFPFixture,
@@ -27,21 +27,21 @@ from .utils import (
 
 
 async def test_camera_remove(
-    hass: HomeAssistant, ufp: MockUFPFixture, doorbell: Camera, unadopted_camera: Camera
+    menuai: menuai, ufp: MockUFPFixture, doorbell: Camera, unadopted_camera: Camera
 ) -> None:
     """Test removing and re-adding a camera device."""
 
     ufp.api.bootstrap.nvr.system_info.ustorage = None
-    await init_entry(hass, ufp, [doorbell, unadopted_camera])
-    assert_entity_counts(hass, Platform.EVENT, 3, 3)
-    await remove_entities(hass, ufp, [doorbell, unadopted_camera])
-    assert_entity_counts(hass, Platform.EVENT, 0, 0)
-    await adopt_devices(hass, ufp, [doorbell, unadopted_camera])
-    assert_entity_counts(hass, Platform.EVENT, 3, 3)
+    await init_entry(menuai, ufp, [doorbell, unadopted_camera])
+    assert_entity_counts(menuai, Platform.EVENT, 3, 3)
+    await remove_entities(menuai, ufp, [doorbell, unadopted_camera])
+    assert_entity_counts(menuai, Platform.EVENT, 0, 0)
+    await adopt_devices(menuai, ufp, [doorbell, unadopted_camera])
+    assert_entity_counts(menuai, Platform.EVENT, 3, 3)
 
 
 async def test_doorbell_ring(
-    hass: HomeAssistant,
+    menuai: menuai,
     ufp: MockUFPFixture,
     doorbell: Camera,
     unadopted_camera: Camera,
@@ -49,8 +49,8 @@ async def test_doorbell_ring(
 ) -> None:
     """Test a doorbell ring event."""
 
-    await init_entry(hass, ufp, [doorbell, unadopted_camera])
-    assert_entity_counts(hass, Platform.EVENT, 3, 3)
+    await init_entry(menuai, ufp, [doorbell, unadopted_camera])
+    assert_entity_counts(menuai, Platform.EVENT, 3, 3)
     events: list[HAEvent] = []
 
     @callback
@@ -61,7 +61,7 @@ async def test_doorbell_ring(
         Platform.EVENT, doorbell, EVENT_DESCRIPTIONS[0]
     )
 
-    unsub = async_track_state_change_event(hass, entity_id, _capture_event)
+    unsub = async_track_state_change_event(menuai, entity_id, _capture_event)
     event = Event(
         model=ModelType.EVENT,
         id="test_event_id",
@@ -85,7 +85,7 @@ async def test_doorbell_ring(
     mock_msg.new_obj = event
     ufp.ws_msg(mock_msg)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(events) == 1
     state = events[0].data["new_state"]
@@ -116,10 +116,10 @@ async def test_doorbell_ring(
     mock_msg.new_obj = event
     ufp.ws_msg(mock_msg)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Event is already seen and has end, should now be off
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == timestamp
 
@@ -146,16 +146,16 @@ async def test_doorbell_ring(
     mock_msg.new_obj = event
 
     ufp.ws_msg(mock_msg)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == timestamp
     unsub()
 
 
 async def test_doorbell_nfc_scanned(
-    hass: HomeAssistant,
+    menuai: menuai,
     ufp: MockUFPFixture,
     doorbell: Camera,
     unadopted_camera: Camera,
@@ -163,8 +163,8 @@ async def test_doorbell_nfc_scanned(
 ) -> None:
     """Test a doorbell NFC scanned event."""
 
-    await init_entry(hass, ufp, [doorbell, unadopted_camera])
-    assert_entity_counts(hass, Platform.EVENT, 3, 3)
+    await init_entry(menuai, ufp, [doorbell, unadopted_camera])
+    assert_entity_counts(menuai, Platform.EVENT, 3, 3)
     events: list[HAEvent] = []
 
     @callback
@@ -179,7 +179,7 @@ async def test_doorbell_nfc_scanned(
     test_user_full_name = "Test User"
     test_nfc_id = "test_nfc_id"
 
-    unsub = async_track_state_change_event(hass, entity_id, _capture_event)
+    unsub = async_track_state_change_event(menuai, entity_id, _capture_event)
     event = Event(
         model=ModelType.EVENT,
         id="test_event_id",
@@ -216,7 +216,7 @@ async def test_doorbell_nfc_scanned(
     mock_msg.new_obj = event
     ufp.ws_msg(mock_msg)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(events) == 1
     state = events[0].data["new_state"]
@@ -230,7 +230,7 @@ async def test_doorbell_nfc_scanned(
 
 
 async def test_doorbell_nfc_scanned_ulpusr_deactivated(
-    hass: HomeAssistant,
+    menuai: menuai,
     ufp: MockUFPFixture,
     doorbell: Camera,
     unadopted_camera: Camera,
@@ -238,8 +238,8 @@ async def test_doorbell_nfc_scanned_ulpusr_deactivated(
 ) -> None:
     """Test a doorbell NFC scanned event."""
 
-    await init_entry(hass, ufp, [doorbell, unadopted_camera])
-    assert_entity_counts(hass, Platform.EVENT, 3, 3)
+    await init_entry(menuai, ufp, [doorbell, unadopted_camera])
+    assert_entity_counts(menuai, Platform.EVENT, 3, 3)
     events: list[HAEvent] = []
 
     @callback
@@ -254,7 +254,7 @@ async def test_doorbell_nfc_scanned_ulpusr_deactivated(
     test_user_full_name = "Test User"
     test_nfc_id = "test_nfc_id"
 
-    unsub = async_track_state_change_event(hass, entity_id, _capture_event)
+    unsub = async_track_state_change_event(menuai, entity_id, _capture_event)
     event = Event(
         model=ModelType.EVENT,
         id="test_event_id",
@@ -291,7 +291,7 @@ async def test_doorbell_nfc_scanned_ulpusr_deactivated(
     mock_msg.new_obj = event
     ufp.ws_msg(mock_msg)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(events) == 1
     state = events[0].data["new_state"]
@@ -306,7 +306,7 @@ async def test_doorbell_nfc_scanned_ulpusr_deactivated(
 
 
 async def test_doorbell_nfc_scanned_no_ulpusr(
-    hass: HomeAssistant,
+    menuai: menuai,
     ufp: MockUFPFixture,
     doorbell: Camera,
     unadopted_camera: Camera,
@@ -314,8 +314,8 @@ async def test_doorbell_nfc_scanned_no_ulpusr(
 ) -> None:
     """Test a doorbell NFC scanned event."""
 
-    await init_entry(hass, ufp, [doorbell, unadopted_camera])
-    assert_entity_counts(hass, Platform.EVENT, 3, 3)
+    await init_entry(menuai, ufp, [doorbell, unadopted_camera])
+    assert_entity_counts(menuai, Platform.EVENT, 3, 3)
     events: list[HAEvent] = []
 
     @callback
@@ -329,7 +329,7 @@ async def test_doorbell_nfc_scanned_no_ulpusr(
     ulp_id = "ulp_id"
     test_nfc_id = "test_nfc_id"
 
-    unsub = async_track_state_change_event(hass, entity_id, _capture_event)
+    unsub = async_track_state_change_event(menuai, entity_id, _capture_event)
     event = Event(
         model=ModelType.EVENT,
         id="test_event_id",
@@ -360,7 +360,7 @@ async def test_doorbell_nfc_scanned_no_ulpusr(
     mock_msg.new_obj = event
     ufp.ws_msg(mock_msg)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(events) == 1
     state = events[0].data["new_state"]
@@ -374,7 +374,7 @@ async def test_doorbell_nfc_scanned_no_ulpusr(
 
 
 async def test_doorbell_nfc_scanned_no_keyring(
-    hass: HomeAssistant,
+    menuai: menuai,
     ufp: MockUFPFixture,
     doorbell: Camera,
     unadopted_camera: Camera,
@@ -382,8 +382,8 @@ async def test_doorbell_nfc_scanned_no_keyring(
 ) -> None:
     """Test a doorbell NFC scanned event."""
 
-    await init_entry(hass, ufp, [doorbell, unadopted_camera])
-    assert_entity_counts(hass, Platform.EVENT, 3, 3)
+    await init_entry(menuai, ufp, [doorbell, unadopted_camera])
+    assert_entity_counts(menuai, Platform.EVENT, 3, 3)
     events: list[HAEvent] = []
 
     @callback
@@ -396,7 +396,7 @@ async def test_doorbell_nfc_scanned_no_keyring(
 
     test_nfc_id = "test_nfc_id"
 
-    unsub = async_track_state_change_event(hass, entity_id, _capture_event)
+    unsub = async_track_state_change_event(menuai, entity_id, _capture_event)
     event = Event(
         model=ModelType.EVENT,
         id="test_event_id",
@@ -421,7 +421,7 @@ async def test_doorbell_nfc_scanned_no_keyring(
     mock_msg.new_obj = event
     ufp.ws_msg(mock_msg)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(events) == 1
     state = events[0].data["new_state"]
@@ -435,7 +435,7 @@ async def test_doorbell_nfc_scanned_no_keyring(
 
 
 async def test_doorbell_fingerprint_identified(
-    hass: HomeAssistant,
+    menuai: menuai,
     ufp: MockUFPFixture,
     doorbell: Camera,
     unadopted_camera: Camera,
@@ -443,8 +443,8 @@ async def test_doorbell_fingerprint_identified(
 ) -> None:
     """Test a doorbell fingerprint identified event."""
 
-    await init_entry(hass, ufp, [doorbell, unadopted_camera])
-    assert_entity_counts(hass, Platform.EVENT, 3, 3)
+    await init_entry(menuai, ufp, [doorbell, unadopted_camera])
+    assert_entity_counts(menuai, Platform.EVENT, 3, 3)
     events: list[HAEvent] = []
 
     @callback
@@ -458,7 +458,7 @@ async def test_doorbell_fingerprint_identified(
     ulp_id = "ulp_id"
     test_user_full_name = "Test User"
 
-    unsub = async_track_state_change_event(hass, entity_id, _capture_event)
+    unsub = async_track_state_change_event(menuai, entity_id, _capture_event)
     event = Event(
         model=ModelType.EVENT,
         id="test_event_id",
@@ -489,7 +489,7 @@ async def test_doorbell_fingerprint_identified(
     mock_msg.new_obj = event
     ufp.ws_msg(mock_msg)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(events) == 1
     state = events[0].data["new_state"]
@@ -503,7 +503,7 @@ async def test_doorbell_fingerprint_identified(
 
 
 async def test_doorbell_fingerprint_identified_user_deactivated(
-    hass: HomeAssistant,
+    menuai: menuai,
     ufp: MockUFPFixture,
     doorbell: Camera,
     unadopted_camera: Camera,
@@ -511,8 +511,8 @@ async def test_doorbell_fingerprint_identified_user_deactivated(
 ) -> None:
     """Test a doorbell fingerprint identified event."""
 
-    await init_entry(hass, ufp, [doorbell, unadopted_camera])
-    assert_entity_counts(hass, Platform.EVENT, 3, 3)
+    await init_entry(menuai, ufp, [doorbell, unadopted_camera])
+    assert_entity_counts(menuai, Platform.EVENT, 3, 3)
     events: list[HAEvent] = []
 
     @callback
@@ -526,7 +526,7 @@ async def test_doorbell_fingerprint_identified_user_deactivated(
     ulp_id = "ulp_id"
     test_user_full_name = "Test User"
 
-    unsub = async_track_state_change_event(hass, entity_id, _capture_event)
+    unsub = async_track_state_change_event(menuai, entity_id, _capture_event)
     event = Event(
         model=ModelType.EVENT,
         id="test_event_id",
@@ -557,7 +557,7 @@ async def test_doorbell_fingerprint_identified_user_deactivated(
     mock_msg.new_obj = event
     ufp.ws_msg(mock_msg)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(events) == 1
     state = events[0].data["new_state"]
@@ -572,7 +572,7 @@ async def test_doorbell_fingerprint_identified_user_deactivated(
 
 
 async def test_doorbell_fingerprint_identified_no_user(
-    hass: HomeAssistant,
+    menuai: menuai,
     ufp: MockUFPFixture,
     doorbell: Camera,
     unadopted_camera: Camera,
@@ -580,8 +580,8 @@ async def test_doorbell_fingerprint_identified_no_user(
 ) -> None:
     """Test a doorbell fingerprint identified event."""
 
-    await init_entry(hass, ufp, [doorbell, unadopted_camera])
-    assert_entity_counts(hass, Platform.EVENT, 3, 3)
+    await init_entry(menuai, ufp, [doorbell, unadopted_camera])
+    assert_entity_counts(menuai, Platform.EVENT, 3, 3)
     events: list[HAEvent] = []
 
     @callback
@@ -594,7 +594,7 @@ async def test_doorbell_fingerprint_identified_no_user(
 
     ulp_id = "ulp_id"
 
-    unsub = async_track_state_change_event(hass, entity_id, _capture_event)
+    unsub = async_track_state_change_event(menuai, entity_id, _capture_event)
     event = Event(
         model=ModelType.EVENT,
         id="test_event_id",
@@ -619,7 +619,7 @@ async def test_doorbell_fingerprint_identified_no_user(
     mock_msg.new_obj = event
     ufp.ws_msg(mock_msg)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(events) == 1
     state = events[0].data["new_state"]
@@ -633,7 +633,7 @@ async def test_doorbell_fingerprint_identified_no_user(
 
 
 async def test_doorbell_fingerprint_not_identified(
-    hass: HomeAssistant,
+    menuai: menuai,
     ufp: MockUFPFixture,
     doorbell: Camera,
     unadopted_camera: Camera,
@@ -641,8 +641,8 @@ async def test_doorbell_fingerprint_not_identified(
 ) -> None:
     """Test a doorbell fingerprint identified event."""
 
-    await init_entry(hass, ufp, [doorbell, unadopted_camera])
-    assert_entity_counts(hass, Platform.EVENT, 3, 3)
+    await init_entry(menuai, ufp, [doorbell, unadopted_camera])
+    assert_entity_counts(menuai, Platform.EVENT, 3, 3)
     events: list[HAEvent] = []
 
     @callback
@@ -653,7 +653,7 @@ async def test_doorbell_fingerprint_not_identified(
         Platform.EVENT, doorbell, EVENT_DESCRIPTIONS[2]
     )
 
-    unsub = async_track_state_change_event(hass, entity_id, _capture_event)
+    unsub = async_track_state_change_event(menuai, entity_id, _capture_event)
     event = Event(
         model=ModelType.EVENT,
         id="test_event_id",
@@ -678,7 +678,7 @@ async def test_doorbell_fingerprint_not_identified(
     mock_msg.new_obj = event
     ufp.ws_msg(mock_msg)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(events) == 1
     state = events[0].data["new_state"]

@@ -1,6 +1,6 @@
 """Test against characteristics captured from a eufycam."""
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from ..common import (
     HUB_TEST_ACCESSORY_ID,
@@ -12,13 +12,13 @@ from ..common import (
 )
 
 
-async def test_eufycam_setup(hass: HomeAssistant) -> None:
+async def test_eufycam_setup(menuai: menuai) -> None:
     """Test that a eufycam can be correctly setup in HA."""
-    accessories = await setup_accessories_from_file(hass, "anker_eufycam.json")
-    await setup_test_accessories(hass, accessories)
+    accessories = await setup_accessories_from_file(menuai, "anker_eufycam.json")
+    await setup_test_accessories(menuai, accessories)
 
     await assert_devices_and_entities_created(
-        hass,
+        menuai,
         DeviceTestInfo(
             unique_id=HUB_TEST_ACCESSORY_ID,
             name="eufy HomeBase2-0AAA",
@@ -54,7 +54,7 @@ async def test_eufycam_setup(hass: HomeAssistant) -> None:
     # There are multiple rtsp services, we only want to create 1
     # camera entity per accessory, not 1 camera per service.
     cameras_count = 0
-    for state in hass.states.async_all():
+    for state in menuai.states.async_all():
         if state.entity_id.startswith("camera."):
             cameras_count += 1
     assert cameras_count == 3

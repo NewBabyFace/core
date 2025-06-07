@@ -12,7 +12,7 @@ from soco.data_structures import DidlFavorite
 from soco.events_base import Event as SonosEvent
 from soco.exceptions import SoCoException
 
-from homeassistant.helpers.dispatcher import async_dispatcher_send, dispatcher_send
+from menuai.helpers.dispatcher import async_dispatcher_send, dispatcher_send
 
 from .const import SONOS_CREATE_FAVORITES_SENSOR, SONOS_FAVORITES_UPDATED
 from .helpers import soco_error
@@ -41,7 +41,7 @@ class SonosFavorites(SonosHouseholdCoordinator):
     def setup(self, soco: SoCo) -> None:
         """Override to send a signal on base class setup completion."""
         super().setup(soco)
-        dispatcher_send(self.hass, SONOS_CREATE_FAVORITES_SENSOR, self)
+        dispatcher_send(self.menuai, SONOS_CREATE_FAVORITES_SENSOR, self)
 
     @property
     def count(self) -> int:
@@ -56,14 +56,14 @@ class SonosFavorites(SonosHouseholdCoordinator):
         self, soco: SoCo, update_id: int | None = None
     ) -> None:
         """Update the cache and update entities."""
-        updated = await self.hass.async_add_executor_job(
+        updated = await self.menuai.async_add_executor_job(
             self.update_cache, soco, update_id
         )
         if not updated:
             return
 
         async_dispatcher_send(
-            self.hass, f"{SONOS_FAVORITES_UPDATED}-{self.household_id}"
+            self.menuai, f"{SONOS_FAVORITES_UPDATED}-{self.household_id}"
         )
 
     async def async_process_event(

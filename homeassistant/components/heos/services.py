@@ -7,16 +7,16 @@ from typing import Final
 from pyheos import CommandAuthenticationError, Heos, HeosError
 import voluptuous as vol
 
-from homeassistant.components.media_player import ATTR_MEDIA_VOLUME_LEVEL
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import (
+from menuai.components.media_player import ATTR_MEDIA_VOLUME_LEVEL
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai, ServiceCall, SupportsResponse
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers import (
     config_validation as cv,
     entity_platform,
     issue_registry as ir,
 )
-from homeassistant.helpers.typing import VolDictType, VolSchemaType
+from menuai.helpers.typing import VolDictType, VolSchemaType
 
 from .const import (
     ATTR_DESTINATION_POSITION,
@@ -44,15 +44,15 @@ HEOS_SIGN_IN_SCHEMA = vol.Schema(
 HEOS_SIGN_OUT_SCHEMA = vol.Schema({})
 
 
-def register(hass: HomeAssistant) -> None:
+def register(menuai: menuai) -> None:
     """Register HEOS services."""
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_SIGN_IN,
         _sign_in_handler,
         schema=HEOS_SIGN_IN_SCHEMA,
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_SIGN_OUT,
         _sign_out_handler,
@@ -129,13 +129,13 @@ def register_media_player_services() -> None:
         service.async_register(platform)
 
 
-def _get_controller(hass: HomeAssistant) -> Heos:
+def _get_controller(menuai: menuai) -> Heos:
     """Get the HEOS controller instance."""
     _LOGGER.warning(
         "Actions 'heos.sign_in' and 'heos.sign_out' are deprecated and will be removed in the 2025.8.0 release"
     )
     ir.async_create_issue(
-        hass,
+        menuai,
         DOMAIN,
         "sign_in_out_deprecated",
         breaks_in_ha_version="2025.8.0",
@@ -145,11 +145,11 @@ def _get_controller(hass: HomeAssistant) -> Heos:
     )
 
     entry: HeosConfigEntry | None = (
-        hass.config_entries.async_entry_for_domain_unique_id(DOMAIN, DOMAIN)
+        menuai.config_entries.async_entry_for_domain_unique_id(DOMAIN, DOMAIN)
     )
 
     if not entry or not entry.state == ConfigEntryState.LOADED:
-        raise HomeAssistantError(
+        raise menuaiError(
             translation_domain=DOMAIN, translation_key="integration_not_loaded"
         )
     return entry.runtime_data.heos
@@ -157,7 +157,7 @@ def _get_controller(hass: HomeAssistant) -> Heos:
 
 async def _sign_in_handler(service: ServiceCall) -> None:
     """Sign in to the HEOS account."""
-    controller = _get_controller(service.hass)
+    controller = _get_controller(service.menuai)
     username = service.data[ATTR_USERNAME]
     password = service.data[ATTR_PASSWORD]
     try:
@@ -167,7 +167,7 @@ async def _sign_in_handler(service: ServiceCall) -> None:
             translation_domain=DOMAIN, translation_key="sign_in_auth_error"
         ) from err
     except HeosError as err:
-        raise HomeAssistantError(
+        raise menuaiError(
             translation_domain=DOMAIN,
             translation_key="sign_in_error",
             translation_placeholders={"error": str(err)},
@@ -176,11 +176,11 @@ async def _sign_in_handler(service: ServiceCall) -> None:
 
 async def _sign_out_handler(service: ServiceCall) -> None:
     """Sign out of the HEOS account."""
-    controller = _get_controller(service.hass)
+    controller = _get_controller(service.menuai)
     try:
         await controller.sign_out()
     except HeosError as err:
-        raise HomeAssistantError(
+        raise menuaiError(
             translation_domain=DOMAIN,
             translation_key="sign_out_error",
             translation_placeholders={"error": str(err)},

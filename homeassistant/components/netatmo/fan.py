@@ -7,11 +7,11 @@ from typing import Final
 
 from pyatmo import modules as NaModules
 
-from homeassistant.components.fan import FanEntity, FanEntityFeature
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.fan import FanEntity, FanEntityFeature
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import CONF_URL_CONTROL, NETATMO_CREATE_FAN
 from .data_handler import HOME, SIGNAL_NAME, NetatmoDevice
@@ -26,7 +26,7 @@ PRESETS = {v: k for k, v in PRESET_MAPPING.items()}
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -39,7 +39,7 @@ async def async_setup_entry(
         async_add_entities([entity])
 
     entry.async_on_unload(
-        async_dispatcher_connect(hass, NETATMO_CREATE_FAN, _create_entity)
+        async_dispatcher_connect(menuai, NETATMO_CREATE_FAN, _create_entity)
     )
 
 

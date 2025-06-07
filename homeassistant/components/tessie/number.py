@@ -10,21 +10,21 @@ from typing import Any
 from tesla_fleet_api.tessie import EnergySite
 from tessie_api import set_charge_limit, set_charging_amps, set_speed_limit
 
-from homeassistant.components.number import (
+from menuai.components.number import (
     NumberDeviceClass,
     NumberEntity,
     NumberEntityDescription,
     NumberMode,
 )
-from homeassistant.const import (
+from menuai.const import (
     PERCENTAGE,
     PRECISION_WHOLE,
     UnitOfElectricCurrent,
     UnitOfSpeed,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.icon import icon_for_battery_level
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.icon import icon_for_battery_level
 
 from . import TessieConfigEntry
 from .entity import TessieEnergyEntity, TessieEntity
@@ -109,7 +109,7 @@ ENERGY_INFO_DESCRIPTIONS: tuple[TessieNumberBatteryEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: TessieConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

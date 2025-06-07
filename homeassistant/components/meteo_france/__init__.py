@@ -9,12 +9,12 @@ from meteofrance_api.model import CurrentPhenomenons, Forecast, Rain
 from requests import RequestException
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_LATITUDE, CONF_LONGITUDE
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import config_validation as cv
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
     CONF_CITY,
@@ -35,9 +35,9 @@ SCAN_INTERVAL = timedelta(minutes=15)
 CITY_SCHEMA = vol.Schema({vol.Required(CONF_CITY): cv.string})
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up an Meteo-France account from a config entry."""
-    hass.data.setdefault(DOMAIN, {})
+    menuai.data.setdefault(DOMAIN, {})
 
     client = MeteoFranceClient()
     latitude = entry.data[CONF_LATITUDE]
@@ -45,23 +45,23 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     async def _async_update_data_forecast_forecast() -> Forecast:
         """Fetch data from API endpoint."""
-        return await hass.async_add_executor_job(
+        return await menuai.async_add_executor_job(
             client.get_forecast, latitude, longitude
         )
 
     async def _async_update_data_rain() -> Rain:
         """Fetch data from API endpoint."""
-        return await hass.async_add_executor_job(client.get_rain, latitude, longitude)
+        return await menuai.async_add_executor_job(client.get_rain, latitude, longitude)
 
     async def _async_update_data_alert() -> CurrentPhenomenons:
         """Fetch data from API endpoint."""
         assert isinstance(department, str)
-        return await hass.async_add_executor_job(
+        return await menuai.async_add_executor_job(
             client.get_warning_current_phenomenons, department, 0, True
         )
 
     coordinator_forecast = DataUpdateCoordinator(
-        hass,
+        menuai,
         _LOGGER,
         name=f"Météo-France forecast for city {entry.title}",
         update_method=_async_update_data_forecast_forecast,
@@ -78,7 +78,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Check rain forecast.
     coordinator_rain = DataUpdateCoordinator(
-        hass,
+        menuai,
         _LOGGER,
         name=f"Météo-France rain for city {entry.title}",
         update_method=_async_update_data_rain,
@@ -99,9 +99,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         department,
     )
     if department is not None and is_valid_warning_department(department):
-        if not hass.data[DOMAIN].get(department):
+        if not menuai.data[DOMAIN].get(department):
             coordinator_alert = DataUpdateCoordinator(
-                hass,
+                menuai,
                 _LOGGER,
                 name=f"Météo-France alert for department {department}",
                 update_method=_async_update_data_alert,
@@ -111,7 +111,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             await coordinator_alert.async_refresh()
 
             if coordinator_alert.last_update_success:
-                hass.data[DOMAIN][department] = True
+                menuai.data[DOMAIN][department] = True
         else:
             _LOGGER.warning(
                 (
@@ -132,27 +132,27 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     undo_listener = entry.add_update_listener(_async_update_listener)
 
-    hass.data[DOMAIN][entry.entry_id] = {
+    menuai.data[DOMAIN][entry.entry_id] = {
         UNDO_UPDATE_LISTENER: undo_listener,
         COORDINATOR_FORECAST: coordinator_forecast,
     }
     if coordinator_rain and coordinator_rain.last_update_success:
-        hass.data[DOMAIN][entry.entry_id][COORDINATOR_RAIN] = coordinator_rain
+        menuai.data[DOMAIN][entry.entry_id][COORDINATOR_RAIN] = coordinator_rain
     if coordinator_alert and coordinator_alert.last_update_success:
-        hass.data[DOMAIN][entry.entry_id][COORDINATOR_ALERT] = coordinator_alert
+        menuai.data[DOMAIN][entry.entry_id][COORDINATOR_ALERT] = coordinator_alert
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    if hass.data[DOMAIN][entry.entry_id][COORDINATOR_ALERT]:
-        department = hass.data[DOMAIN][entry.entry_id][
+    if menuai.data[DOMAIN][entry.entry_id][COORDINATOR_ALERT]:
+        department = menuai.data[DOMAIN][entry.entry_id][
             COORDINATOR_FORECAST
         ].data.position.get("dept")
-        hass.data[DOMAIN][department] = False
+        menuai.data[DOMAIN][department] = False
         _LOGGER.debug(
             (
                 "Weather alert for depatment %s unloaded and released. It can be added"
@@ -161,16 +161,16 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             department,
         )
 
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        hass.data[DOMAIN][entry.entry_id][UNDO_UPDATE_LISTENER]()
-        hass.data[DOMAIN].pop(entry.entry_id)
-        if not hass.data[DOMAIN]:
-            hass.data.pop(DOMAIN)
+        menuai.data[DOMAIN][entry.entry_id][UNDO_UPDATE_LISTENER]()
+        menuai.data[DOMAIN].pop(entry.entry_id)
+        if not menuai.data[DOMAIN]:
+            menuai.data.pop(DOMAIN)
 
     return unload_ok
 
 
-async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def _async_update_listener(menuai: menuai, entry: ConfigEntry) -> None:
     """Handle options update."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)

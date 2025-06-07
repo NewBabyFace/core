@@ -8,12 +8,12 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 from syrupy.filters import props
 
-from homeassistant.components.tag import DOMAIN, _create_entry, async_scan_tag
-from homeassistant.const import CONF_NAME, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import collection, entity_registry as er
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.components.tag import DOMAIN, _create_entry, async_scan_tag
+from menuai.const import CONF_NAME, STATE_UNKNOWN
+from menuai.core import menuai
+from menuai.helpers import collection, entity_registry as er
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from . import TEST_DEVICE_ID, TEST_TAG_ID, TEST_TAG_ID_2, TEST_TAG_NAME, TEST_TAG_NAME_2
 
@@ -22,12 +22,12 @@ from tests.typing import WebSocketGenerator
 
 
 @pytest.fixture
-def storage_setup(hass: HomeAssistant, hass_storage: dict[str, Any]):
+def storage_setup(menuai: menuai, menuai_storage: dict[str, Any]):
     """Storage setup."""
 
     async def _storage(items=None):
         if items is None:
-            hass_storage[DOMAIN] = {
+            menuai_storage[DOMAIN] = {
                 "key": DOMAIN,
                 "version": 1,
                 "minor_version": 2,
@@ -43,23 +43,23 @@ def storage_setup(hass: HomeAssistant, hass_storage: dict[str, Any]):
                 },
             }
         else:
-            hass_storage[DOMAIN] = items
-        entity_registry = er.async_get(hass)
+            menuai_storage[DOMAIN] = items
+        entity_registry = er.async_get(menuai)
         _create_entry(entity_registry, TEST_TAG_ID, TEST_TAG_NAME)
         _create_entry(entity_registry, TEST_TAG_ID_2, TEST_TAG_NAME_2)
         config = {DOMAIN: {}}
-        return await async_setup_component(hass, DOMAIN, config)
+        return await async_setup_component(menuai, DOMAIN, config)
 
     return _storage
 
 
 @pytest.fixture
-def storage_setup_1_1(hass: HomeAssistant, hass_storage: dict[str, Any]):
+def storage_setup_1_1(menuai: menuai, menuai_storage: dict[str, Any]):
     """Storage version 1.1 setup."""
 
     async def _storage(items=None):
         if items is None:
-            hass_storage[DOMAIN] = {
+            menuai_storage[DOMAIN] = {
                 "key": DOMAIN,
                 "version": 1,
                 "minor_version": 1,
@@ -74,25 +74,25 @@ def storage_setup_1_1(hass: HomeAssistant, hass_storage: dict[str, Any]):
                 },
             }
         else:
-            hass_storage[DOMAIN] = items
+            menuai_storage[DOMAIN] = items
         config = {DOMAIN: {}}
-        return await async_setup_component(hass, DOMAIN, config)
+        return await async_setup_component(menuai, DOMAIN, config)
 
     return _storage
 
 
 async def test_migration(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     storage_setup_1_1,
     freezer: FrozenDateTimeFactory,
-    hass_storage: dict[str, Any],
+    menuai_storage: dict[str, Any],
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test migrating tag store."""
     assert await storage_setup_1_1()
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     freezer.move_to("2024-02-29 13:00")
 
@@ -102,7 +102,7 @@ async def test_migration(
     assert resp["result"] == [{"id": TEST_TAG_ID, "name": "test tag name"}]
 
     # Scan a new tag
-    await async_scan_tag(hass, "new tag", "some_scanner")
+    await async_scan_tag(menuai, "new tag", "some_scanner")
 
     # Add a new tag through WS
     await client.send_json_auto_id(
@@ -118,18 +118,18 @@ async def test_migration(
 
     # Trigger store
     freezer.tick(11)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
-    assert hass_storage[DOMAIN] == snapshot
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
+    assert menuai_storage[DOMAIN] == snapshot
 
 
 async def test_ws_list(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, storage_setup
+    menuai: menuai, menuai_ws_client: WebSocketGenerator, storage_setup
 ) -> None:
     """Test listing tags via WS."""
     assert await storage_setup()
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json_auto_id({"type": f"{DOMAIN}/list"})
     resp = await client.receive_json()
@@ -141,13 +141,13 @@ async def test_ws_list(
 
 
 async def test_ws_update(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, storage_setup
+    menuai: menuai, menuai_ws_client: WebSocketGenerator, storage_setup
 ) -> None:
     """Test listing tags via WS."""
     assert await storage_setup()
-    await async_scan_tag(hass, "test tag", "some_scanner")
+    await async_scan_tag(menuai, "test tag", "some_scanner")
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json_auto_id(
         {
@@ -163,17 +163,17 @@ async def test_ws_update(
 
 
 async def test_tag_scanned(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     freezer: FrozenDateTimeFactory,
-    hass_storage: dict[str, Any],
+    menuai_storage: dict[str, Any],
     storage_setup,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test scanning tags."""
     assert await storage_setup()
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json_auto_id({"type": f"{DOMAIN}/list"})
     resp = await client.receive_json()
@@ -188,7 +188,7 @@ async def test_tag_scanned(
 
     now = dt_util.utcnow()
     freezer.move_to(now)
-    await async_scan_tag(hass, "new tag", "some_scanner")
+    await async_scan_tag(menuai, "new tag", "some_scanner")
 
     await client.send_json_auto_id({"type": f"{DOMAIN}/list"})
     resp = await client.receive_json()
@@ -210,9 +210,9 @@ async def test_tag_scanned(
 
     # Trigger store
     freezer.tick(11)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
-    assert hass_storage[DOMAIN] == snapshot(exclude=props("last_scanned"))
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
+    assert menuai_storage[DOMAIN] == snapshot(exclude=props("last_scanned"))
 
 
 def track_changes(coll: collection.ObservableCollection):
@@ -228,12 +228,12 @@ def track_changes(coll: collection.ObservableCollection):
 
 
 async def test_tag_id_exists(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, storage_setup
+    menuai: menuai, menuai_ws_client: WebSocketGenerator, storage_setup
 ) -> None:
     """Test scanning tags."""
     assert await storage_setup()
-    changes = track_changes(hass.data[DOMAIN])
-    client = await hass_ws_client(hass)
+    changes = track_changes(menuai.data[DOMAIN])
+    client = await menuai_ws_client(menuai)
 
     await client.send_json_auto_id({"type": f"{DOMAIN}/create", "tag_id": TEST_TAG_ID})
     response = await client.receive_json()
@@ -243,25 +243,25 @@ async def test_tag_id_exists(
 
 
 async def test_entity(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     freezer: FrozenDateTimeFactory,
     storage_setup,
 ) -> None:
     """Test tag entity."""
     assert await storage_setup()
 
-    await hass_ws_client(hass)
+    await menuai_ws_client(menuai)
 
-    entity = hass.states.get("tag.test_tag_name")
+    entity = menuai.states.get("tag.test_tag_name")
     assert entity
     assert entity.state == STATE_UNKNOWN
 
     now = dt_util.utcnow()
     freezer.move_to(now)
-    await async_scan_tag(hass, TEST_TAG_ID, TEST_DEVICE_ID)
+    await async_scan_tag(menuai, TEST_TAG_ID, TEST_DEVICE_ID)
 
-    entity = hass.states.get("tag.test_tag_name")
+    entity = menuai.states.get("tag.test_tag_name")
     assert entity
     assert entity.state == now.isoformat(timespec="milliseconds")
     assert entity.attributes == {
@@ -270,15 +270,15 @@ async def test_entity(
         "friendly_name": "test tag name",
     }
 
-    entity = hass.states.get("tag.test_tag_name_2")
+    entity = menuai.states.get("tag.test_tag_name_2")
     assert entity
     assert entity.state == STATE_UNKNOWN
 
 
 async def test_entity_created_and_removed(
     caplog: pytest.LogCaptureFixture,
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     freezer: FrozenDateTimeFactory,
     storage_setup,
     entity_registry: er.EntityRegistry,
@@ -287,7 +287,7 @@ async def test_entity_created_and_removed(
     caplog.at_level(logging.DEBUG)
     assert await storage_setup()
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json_auto_id(
         {
@@ -303,11 +303,11 @@ async def test_entity_created_and_removed(
     assert item["id"] == "1234567890"
     assert item["name"] == "Kitchen tag"
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     er_entity = entity_registry.async_get("tag.kitchen_tag")
     assert er_entity.name == "Kitchen tag"
 
-    entity = hass.states.get("tag.kitchen_tag")
+    entity = menuai.states.get("tag.kitchen_tag")
     assert entity
     assert entity.state == STATE_UNKNOWN
     entity_id = entity.entity_id
@@ -315,9 +315,9 @@ async def test_entity_created_and_removed(
 
     now = dt_util.utcnow()
     freezer.move_to(now)
-    await async_scan_tag(hass, "1234567890", TEST_DEVICE_ID)
+    await async_scan_tag(menuai, "1234567890", TEST_DEVICE_ID)
 
-    entity = hass.states.get("tag.kitchen_tag")
+    entity = menuai.states.get("tag.kitchen_tag")
     assert entity
     assert entity.state == now.isoformat(timespec="milliseconds")
 
@@ -330,6 +330,6 @@ async def test_entity_created_and_removed(
     resp = await client.receive_json()
     assert resp["success"]
 
-    entity = hass.states.get("tag.kitchen_tag")
+    entity = menuai.states.get("tag.kitchen_tag")
     assert not entity
     assert not entity_registry.async_get(entity_id)

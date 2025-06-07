@@ -12,19 +12,19 @@ from typing import Any
 from pilight import pilight
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_PORT,
     CONF_PROTOCOL,
     CONF_WHITELIST,
-    EVENT_HOMEASSISTANT_START,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_START,
+    EVENT_menuai_STOP,
 )
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.event import track_point_in_utc_time
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import config_validation as cv
+from menuai.helpers.event import track_point_in_utc_time
+from menuai.helpers.typing import ConfigType
+from menuai.util import dt as dt_util
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -64,12 +64,12 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Pilight component."""
 
     host = config[DOMAIN][CONF_HOST]
     port = config[DOMAIN][CONF_PORT]
-    send_throttler = CallRateDelayThrottle(hass, config[DOMAIN][CONF_SEND_DELAY])
+    send_throttler = CallRateDelayThrottle(menuai, config[DOMAIN][CONF_SEND_DELAY])
 
     try:
         pilight_client = pilight.Client(host=host, port=port)
@@ -78,16 +78,16 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
         return False
 
     def start_pilight_client(_):
-        """Run when Home Assistant starts."""
+        """Run when MenuAI starts."""
         pilight_client.start()
 
-    hass.bus.listen_once(EVENT_HOMEASSISTANT_START, start_pilight_client)
+    menuai.bus.listen_once(EVENT_menuai_START, start_pilight_client)
 
     def stop_pilight_client(_):
-        """Run once when Home Assistant stops."""
+        """Run once when MenuAI stops."""
         pilight_client.stop()
 
-    hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, stop_pilight_client)
+    menuai.bus.listen_once(EVENT_menuai_STOP, stop_pilight_client)
 
     @send_throttler.limited
     def send_code(call: ServiceCall) -> None:
@@ -101,7 +101,7 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
         except OSError:
             _LOGGER.error("Pilight send failed for %s", str(message_data))
 
-    hass.services.register(DOMAIN, SERVICE_NAME, send_code, schema=RF_CODE_SCHEMA)
+    menuai.services.register(DOMAIN, SERVICE_NAME, send_code, schema=RF_CODE_SCHEMA)
 
     # Publish received codes on the HA event bus
     # A whitelist of codes to be published in the event bus
@@ -117,7 +117,7 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
         # No whitelist defined or data matches whitelist, put data on event bus
         if not whitelist or all(str(data[key]) in whitelist[key] for key in whitelist):
-            hass.bus.fire(EVENT, data)
+            menuai.bus.fire(EVENT, data)
 
     pilight_client.set_callback(handle_received_code)
 
@@ -136,14 +136,14 @@ class CallRateDelayThrottle:
     it should not block the mainloop.
     """
 
-    def __init__(self, hass: HomeAssistant, delay_seconds: float) -> None:
+    def __init__(self, menuai: menuai, delay_seconds: float) -> None:
         """Initialize the delay handler."""
         self._delay = timedelta(seconds=max(0.0, delay_seconds))
         self._queue: list[Callable[[Any], None]] = []
         self._active = False
         self._lock = threading.Lock()
         self._next_ts = dt_util.utcnow()
-        self._schedule = functools.partial(track_point_in_utc_time, hass)
+        self._schedule = functools.partial(track_point_in_utc_time, menuai)
 
     def limited[**_P](self, method: Callable[_P, Any]) -> Callable[_P, None]:
         """Decorate to delay calls on a certain method."""

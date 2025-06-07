@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock
 
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from . import setup_integration
 from .const import ENTITY_ID
@@ -14,16 +14,16 @@ from tests.typing import WebSocketGenerator
 
 
 async def test_browse_media_root(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_stream_magic_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test the root browse page."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -37,16 +37,16 @@ async def test_browse_media_root(
 
 
 async def test_browse_presets(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_stream_magic_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test the presets browse page."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,

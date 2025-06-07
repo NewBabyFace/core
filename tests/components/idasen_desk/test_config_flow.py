@@ -6,24 +6,24 @@ from bleak.exc import BleakError
 from idasen_ha.errors import AuthFailedError
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.idasen_desk.const import DOMAIN
-from homeassistant.const import CONF_ADDRESS
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.idasen_desk.const import DOMAIN
+from menuai.const import CONF_ADDRESS
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from . import IDASEN_DISCOVERY_INFO, NOT_IDASEN_DISCOVERY_INFO
 
 from tests.common import MockConfigEntry
 
 
-async def test_user_step_success(hass: HomeAssistant, mock_desk_api: MagicMock) -> None:
+async def test_user_step_success(menuai: menuai, mock_desk_api: MagicMock) -> None:
     """Test user step success path."""
     with patch(
-        "homeassistant.components.idasen_desk.config_flow.async_discovered_service_info",
+        "menuai.components.idasen_desk.config_flow.async_discovered_service_info",
         return_value=[NOT_IDASEN_DISCOVERY_INFO, IDASEN_DISCOVERY_INFO],
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
     assert result["type"] is FlowResultType.FORM
@@ -31,15 +31,15 @@ async def test_user_step_success(hass: HomeAssistant, mock_desk_api: MagicMock) 
     assert result["errors"] == {}
 
     with patch(
-        "homeassistant.components.idasen_desk.async_setup_entry", return_value=True
+        "menuai.components.idasen_desk.async_setup_entry", return_value=True
     ) as mock_setup_entry:
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_ADDRESS: IDASEN_DISCOVERY_INFO.address,
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == IDASEN_DISCOVERY_INFO.name
@@ -51,7 +51,7 @@ async def test_user_step_success(hass: HomeAssistant, mock_desk_api: MagicMock) 
 
 
 async def test_user_step_replaces_ignored_device(
-    hass: HomeAssistant, mock_desk_api: MagicMock
+    menuai: menuai, mock_desk_api: MagicMock
 ) -> None:
     """Test user step replaces ignored devices."""
     entry = MockConfigEntry(
@@ -60,13 +60,13 @@ async def test_user_step_replaces_ignored_device(
         source=config_entries.SOURCE_IGNORE,
         data={CONF_ADDRESS: IDASEN_DISCOVERY_INFO.address},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.idasen_desk.config_flow.async_discovered_service_info",
+        "menuai.components.idasen_desk.config_flow.async_discovered_service_info",
         return_value=[NOT_IDASEN_DISCOVERY_INFO, IDASEN_DISCOVERY_INFO],
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
     assert result["type"] is FlowResultType.FORM
@@ -74,15 +74,15 @@ async def test_user_step_replaces_ignored_device(
     assert result["errors"] == {}
 
     with patch(
-        "homeassistant.components.idasen_desk.async_setup_entry", return_value=True
+        "menuai.components.idasen_desk.async_setup_entry", return_value=True
     ) as mock_setup_entry:
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_ADDRESS: IDASEN_DISCOVERY_INFO.address,
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == IDASEN_DISCOVERY_INFO.name
@@ -93,20 +93,20 @@ async def test_user_step_replaces_ignored_device(
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_user_step_no_devices_found(hass: HomeAssistant) -> None:
+async def test_user_step_no_devices_found(menuai: menuai) -> None:
     """Test user step with no devices found."""
     with patch(
-        "homeassistant.components.idasen_desk.config_flow.async_discovered_service_info",
+        "menuai.components.idasen_desk.config_flow.async_discovered_service_info",
         return_value=[NOT_IDASEN_DISCOVERY_INFO],
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "no_devices_found"
 
 
-async def test_user_step_no_new_devices_found(hass: HomeAssistant) -> None:
+async def test_user_step_no_new_devices_found(menuai: menuai) -> None:
     """Test user step with only existing devices found."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -115,12 +115,12 @@ async def test_user_step_no_new_devices_found(hass: HomeAssistant) -> None:
         },
         unique_id=IDASEN_DISCOVERY_INFO.address,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     with patch(
-        "homeassistant.components.idasen_desk.config_flow.async_discovered_service_info",
+        "menuai.components.idasen_desk.config_flow.async_discovered_service_info",
         return_value=[IDASEN_DISCOVERY_INFO],
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
     assert result["type"] is FlowResultType.ABORT
@@ -137,17 +137,17 @@ async def test_user_step_no_new_devices_found(hass: HomeAssistant) -> None:
     ],
 )
 async def test_user_step_cannot_connect(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_desk_api: MagicMock,
     exception: Exception,
     expected_error: str,
 ) -> None:
     """Test user step with a cannot connect error."""
     with patch(
-        "homeassistant.components.idasen_desk.config_flow.async_discovered_service_info",
+        "menuai.components.idasen_desk.config_flow.async_discovered_service_info",
         return_value=[IDASEN_DISCOVERY_INFO],
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
     assert result["type"] is FlowResultType.FORM
@@ -157,13 +157,13 @@ async def test_user_step_cannot_connect(
     default_connect_side_effect = mock_desk_api.connect.side_effect
     mock_desk_api.connect.side_effect = exception
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_ADDRESS: IDASEN_DISCOVERY_INFO.address,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["step_id"] == "user"
@@ -171,16 +171,16 @@ async def test_user_step_cannot_connect(
 
     mock_desk_api.connect.side_effect = default_connect_side_effect
     with patch(
-        "homeassistant.components.idasen_desk.async_setup_entry",
+        "menuai.components.idasen_desk.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {
                 CONF_ADDRESS: IDASEN_DISCOVERY_INFO.address,
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.CREATE_ENTRY
     assert result3["title"] == IDASEN_DISCOVERY_INFO.name
@@ -192,10 +192,10 @@ async def test_user_step_cannot_connect(
 
 
 async def test_bluetooth_step_success(
-    hass: HomeAssistant, mock_desk_api: MagicMock
+    menuai: menuai, mock_desk_api: MagicMock
 ) -> None:
     """Test bluetooth step success path."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_BLUETOOTH},
         data=IDASEN_DISCOVERY_INFO,
@@ -205,16 +205,16 @@ async def test_bluetooth_step_success(
     assert result["errors"] == {}
 
     with patch(
-        "homeassistant.components.idasen_desk.async_setup_entry",
+        "menuai.components.idasen_desk.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_ADDRESS: IDASEN_DISCOVERY_INFO.address,
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == IDASEN_DISCOVERY_INFO.name

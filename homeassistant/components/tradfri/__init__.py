@@ -10,16 +10,16 @@ from pytradfri.api.aiocoap_api import APIFactory
 from pytradfri.command import Command
 from pytradfri.device import Device
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, EVENT_HOMEASSISTANT_STOP, Platform
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.dispatcher import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, EVENT_menuai_STOP, Platform
+from menuai.core import Event, menuai, callback
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import device_registry as dr
+from menuai.helpers.dispatcher import (
     async_dispatcher_connect,
     async_dispatcher_send,
 )
-from homeassistant.helpers.event import async_track_time_interval
+from menuai.helpers.event import async_track_time_interval
 
 from .const import (
     CONF_GATEWAY_ID,
@@ -46,12 +46,12 @@ TIMEOUT_API = 30
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
 ) -> bool:
     """Create a gateway."""
     tradfri_data: dict[str, Any] = {}
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = tradfri_data
+    menuai.data.setdefault(DOMAIN, {})[entry.entry_id] = tradfri_data
 
     factory = await APIFactory.init(
         entry.data[CONF_HOST],
@@ -60,13 +60,13 @@ async def async_setup_entry(
     )
     tradfri_data[FACTORY] = factory  # Used for async_unload_entry
 
-    async def on_hass_stop(event: Event) -> None:
-        """Close connection when hass stops."""
+    async def on_menuai_stop(event: Event) -> None:
+        """Close connection when menuai stops."""
         await factory.shutdown()
 
     # Setup listeners
     entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, on_hass_stop)
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, on_menuai_stop)
     )
 
     api = factory.request
@@ -83,7 +83,7 @@ async def async_setup_entry(
         await factory.shutdown()
         raise ConfigEntryNotReady from exc
 
-    dev_reg = dr.async_get(hass)
+    dev_reg = dr.async_get(menuai)
     dev_reg.async_get_or_create(
         config_entry_id=entry.entry_id,
         connections=set(),
@@ -95,7 +95,7 @@ async def async_setup_entry(
         sw_version=gateway_info.firmware_version,
     )
 
-    remove_stale_devices(hass, entry, devices)
+    remove_stale_devices(menuai, entry, devices)
 
     # Setup the device coordinators
     coordinator_data = {
@@ -106,19 +106,19 @@ async def async_setup_entry(
 
     for device in devices:
         coordinator = TradfriDeviceDataUpdateCoordinator(
-            hass=hass, config_entry=entry, api=api, device=device
+            menuai=menuai, config_entry=entry, api=api, device=device
         )
         await coordinator.async_config_entry_first_refresh()
 
         entry.async_on_unload(
-            async_dispatcher_connect(hass, SIGNAL_GW, coordinator.set_hub_available)
+            async_dispatcher_connect(menuai, SIGNAL_GW, coordinator.set_hub_available)
         )
         coordinator_data[COORDINATOR_LIST].append(coordinator)
 
     tradfri_data[COORDINATOR] = coordinator_data
 
     async def async_keep_alive(now: datetime) -> None:
-        if hass.is_stopping:
+        if menuai.is_stopping:
             return
 
         gw_status = True
@@ -128,22 +128,22 @@ async def async_setup_entry(
             LOGGER.error("Keep-alive failed")
             gw_status = False
 
-        async_dispatcher_send(hass, SIGNAL_GW, gw_status)
+        async_dispatcher_send(menuai, SIGNAL_GW, gw_status)
 
     entry.async_on_unload(
-        async_track_time_interval(hass, async_keep_alive, timedelta(seconds=60))
+        async_track_time_interval(menuai, async_keep_alive, timedelta(seconds=60))
     )
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        tradfri_data = hass.data[DOMAIN].pop(entry.entry_id)
+        tradfri_data = menuai.data[DOMAIN].pop(entry.entry_id)
         factory = tradfri_data[FACTORY]
         await factory.shutdown()
 
@@ -152,10 +152,10 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 @callback
 def remove_stale_devices(
-    hass: HomeAssistant, config_entry: ConfigEntry, devices: list[Device]
+    menuai: menuai, config_entry: ConfigEntry, devices: list[Device]
 ) -> None:
     """Remove stale devices from device registry."""
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     device_entries = dr.async_entries_for_config_entry(
         device_registry, config_entry.entry_id
     )
@@ -192,7 +192,7 @@ def remove_stale_devices(
             )
 
 
-async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+async def async_migrate_entry(menuai: menuai, config_entry: ConfigEntry) -> bool:
     """Migrate old entry."""
     LOGGER.debug(
         "Migrating Tradfri configuration from version %s.%s",
@@ -206,9 +206,9 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
 
     if config_entry.version == 1:
         # Migrate to version 2
-        migrate_config_entry_and_identifiers(hass, config_entry)
+        migrate_config_entry_and_identifiers(menuai, config_entry)
 
-        hass.config_entries.async_update_entry(config_entry, version=2)
+        menuai.config_entries.async_update_entry(config_entry, version=2)
 
     LOGGER.debug(
         "Migration to Tradfri configuration version %s.%s successful",
@@ -220,14 +220,14 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
 
 
 def migrate_config_entry_and_identifiers(
-    hass: HomeAssistant, config_entry: ConfigEntry
+    menuai: menuai, config_entry: ConfigEntry
 ) -> None:
     """Migrate old non-unique identifiers to new unique identifiers."""
 
     related_device_flag: bool
     device_id: str
 
-    device_reg = dr.async_get(hass)
+    device_reg = dr.async_get(menuai)
     # Get all devices associated to contextual gateway config_entry
     # and loop through list of devices.
     for device in dr.async_entries_for_config_entry(device_reg, config_entry.entry_id):
@@ -261,7 +261,7 @@ def migrate_config_entry_and_identifiers(
                 continue
 
             # Check that the 'other' config entry is also a tradfri config entry
-            other_entry = hass.config_entries.async_get_entry(config_entry_id)
+            other_entry = menuai.config_entries.async_get_entry(config_entry_id)
 
             if other_entry is None or other_entry.domain != DOMAIN:
                 continue

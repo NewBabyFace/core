@@ -10,14 +10,14 @@ from urllib.parse import ParseResult, urljoin, urlparse
 import aiohttp
 import aiohttp.client_exceptions
 
-from homeassistant.core import HomeAssistant
-from homeassistant.util.network import is_local
+from menuai.core import menuai
+from menuai.util.network import is_local
 
 _LOGGER = logging.getLogger(__name__)
 
 
 async def verify_redirect_uri(
-    hass: HomeAssistant, client_id: str, redirect_uri: str
+    menuai: menuai, client_id: str, redirect_uri: str
 ) -> bool:
     """Verify that the client and redirect uri match."""
     try:
@@ -40,20 +40,20 @@ async def verify_redirect_uri(
     # without being connected to the internet.
     if (
         client_id == "https://home-assistant.io/iOS"
-        and redirect_uri == "homeassistant://auth-callback"
+        and redirect_uri == "menuai://auth-callback"
     ):
         return True
 
     if client_id == "https://home-assistant.io/android" and redirect_uri in (
-        "homeassistant://auth-callback",
-        "https://wear.googleapis.com/3p_auth/io.homeassistant.companion.android",
-        "https://wear.googleapis-cn.com/3p_auth/io.homeassistant.companion.android",
+        "menuai://auth-callback",
+        "https://wear.googleapis.com/3p_auth/io.menuai.companion.android",
+        "https://wear.googleapis-cn.com/3p_auth/io.menuai.companion.android",
     ):
         return True
 
     # IndieAuth 4.2.2 allows for redirect_uri to be on different domain
     # but needs to be specified in link tag when fetching `client_id`.
-    redirect_uris = await fetch_redirect_uris(hass, client_id)
+    redirect_uris = await fetch_redirect_uris(menuai, client_id)
     return redirect_uri in redirect_uris
 
 
@@ -77,7 +77,7 @@ class LinkTagParser(HTMLParser):
             self.found.append(attributes.get("href"))
 
 
-async def fetch_redirect_uris(hass: HomeAssistant, url: str) -> list[str]:
+async def fetch_redirect_uris(menuai: menuai, url: str) -> list[str]:
     """Find link tag with redirect_uri values.
 
     IndieAuth 4.2.2

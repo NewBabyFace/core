@@ -6,7 +6,7 @@ from dataclasses import asdict, dataclass
 from enum import StrEnum
 from typing import Any, Self
 
-from homeassistant.exceptions import HomeAssistantError
+from menuai.exceptions import menuaiError
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -37,8 +37,8 @@ class BaseBackup:
     database_included: bool
     extra_metadata: dict[str, bool | str]
     folders: list[Folder]
-    homeassistant_included: bool
-    homeassistant_version: str | None  # None if homeassistant_included is False
+    menuai_included: bool
+    menuai_version: str | None  # None if menuai_included is False
     name: str
 
 
@@ -63,15 +63,15 @@ class AgentBackup(BaseBackup):
             database_included=data["database_included"],
             extra_metadata=data["extra_metadata"],
             folders=[Folder(folder) for folder in data["folders"]],
-            homeassistant_included=data["homeassistant_included"],
-            homeassistant_version=data["homeassistant_version"],
+            menuai_included=data["menuai_included"],
+            menuai_version=data["menuai_version"],
             name=data["name"],
             protected=data["protected"],
             size=data["size"],
         )
 
 
-class BackupError(HomeAssistantError):
+class BackupError(menuaiError):
     """Base class for backup errors."""
 
     error_code = "unknown"

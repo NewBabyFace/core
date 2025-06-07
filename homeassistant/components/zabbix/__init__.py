@@ -15,28 +15,28 @@ import voluptuous as vol
 from zabbix_utils import ItemValue, Sender, ZabbixAPI
 from zabbix_utils.exceptions import APIRequestError
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PATH,
     CONF_SSL,
     CONF_USERNAME,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     EVENT_STATE_CHANGED,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import Event, EventStateChangedData, HomeAssistant, callback
-from homeassistant.helpers import (
+from menuai.core import Event, EventStateChangedData, menuai, callback
+from menuai.helpers import (
     config_validation as cv,
     event as event_helper,
     state as state_helper,
 )
-from homeassistant.helpers.entityfilter import (
+from menuai.helpers.entityfilter import (
     INCLUDE_EXCLUDE_BASE_FILTER_SCHEMA,
     convert_include_exclude_filter,
 )
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers.typing import ConfigType
 
 from .const import DOMAIN
 
@@ -74,7 +74,7 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Zabbix component."""
 
     conf = config[DOMAIN]
@@ -99,13 +99,13 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
         zapi = None
         _LOGGER.error(RETRY_MESSAGE, http_error)
         event_helper.call_later(
-            hass,
+            menuai,
             RETRY_INTERVAL,
-            lambda _: setup(hass, config),  # type: ignore[arg-type,return-value]
+            lambda _: setup(menuai, config),  # type: ignore[arg-type,return-value]
         )
         return True
 
-    hass.data[DOMAIN] = zapi
+    menuai.data[DOMAIN] = zapi
 
     def event_to_metrics(
         event: Event, float_keys: set[str], string_keys: set[str]
@@ -152,13 +152,13 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
             floats_discovery = [{"{#KEY}": float_key} for float_key in float_keys]
             metric = ItemValue(
                 publish_states_host,
-                "homeassistant.floats_discovery",
+                "menuai.floats_discovery",
                 json.dumps(floats_discovery),
             )
             metrics.append(metric)
         for key, value in floats.items():
             metric = ItemValue(
-                publish_states_host, f"homeassistant.float[{key}]", value
+                publish_states_host, f"menuai.float[{key}]", value
             )
             metrics.append(metric)
 
@@ -168,7 +168,7 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
     if publish_states_host:
         zabbix_sender = Sender(server=conf[CONF_HOST], port=DEFAULT_SENDER_PORT)
         instance = ZabbixThread(zabbix_sender, event_to_metrics)
-        instance.setup(hass)
+        instance.setup(menuai)
 
     return True
 
@@ -193,10 +193,10 @@ class ZabbixThread(threading.Thread):
         self.float_keys: set[str] = set()
         self.string_keys: set[str] = set()
 
-    def setup(self, hass: HomeAssistant) -> None:
+    def setup(self, menuai: menuai) -> None:
         """Set up the thread and start it."""
-        hass.bus.listen(EVENT_STATE_CHANGED, self._event_listener)
-        hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, self._shutdown)
+        menuai.bus.listen(EVENT_STATE_CHANGED, self._event_listener)
+        menuai.bus.listen_once(EVENT_menuai_STOP, self._shutdown)
         self.start()
         _LOGGER.debug("Started publishing state changes to Zabbix")
 

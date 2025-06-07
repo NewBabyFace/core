@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
-from homeassistant.components.dnsip.const import (
+from menuai.components.dnsip.const import (
     CONF_HOSTNAME,
     CONF_IPV4,
     CONF_IPV6,
@@ -14,16 +14,16 @@ from homeassistant.components.dnsip.const import (
     DEFAULT_PORT,
     DOMAIN,
 )
-from homeassistant.config_entries import SOURCE_USER, ConfigEntryState
-from homeassistant.const import CONF_NAME, CONF_PORT
-from homeassistant.core import HomeAssistant
+from menuai.config_entries import SOURCE_USER, ConfigEntryState
+from menuai.const import CONF_NAME, CONF_PORT
+from menuai.core import menuai
 
 from . import RetrieveDNS
 
 from tests.common import MockConfigEntry
 
 
-async def test_load_unload_entry(hass: HomeAssistant) -> None:
+async def test_load_unload_entry(menuai: menuai) -> None:
     """Test load and unload an entry."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -43,23 +43,23 @@ async def test_load_unload_entry(hass: HomeAssistant) -> None:
         entry_id="1",
         unique_id="home-assistant.io",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.dnsip.config_flow.aiodns.DNSResolver",
+        "menuai.components.dnsip.config_flow.aiodns.DNSResolver",
         return_value=RetrieveDNS(),
     ):
-        await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.LOADED
-    assert await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
     assert entry.state is ConfigEntryState.NOT_LOADED
 
 
 async def test_port_migration(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test migration of the config entry from no ports to with ports."""
 
@@ -81,14 +81,14 @@ async def test_port_migration(
         version=1,
         minor_version=1,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.dnsip.sensor.aiodns.DNSResolver",
+        "menuai.components.dnsip.sensor.aiodns.DNSResolver",
         return_value=RetrieveDNS(),
     ):
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     assert entry.version == 1
     assert entry.minor_version == 2
@@ -97,7 +97,7 @@ async def test_port_migration(
     assert entry.state is ConfigEntryState.LOADED
 
 
-async def test_migrate_error_from_future(hass: HomeAssistant) -> None:
+async def test_migrate_error_from_future(menuai: menuai) -> None:
     """Test a future version isn't migrated."""
 
     entry = MockConfigEntry(
@@ -119,14 +119,14 @@ async def test_migrate_error_from_future(hass: HomeAssistant) -> None:
         version=2,
         minor_version=1,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.dnsip.sensor.aiodns.DNSResolver",
+        "menuai.components.dnsip.sensor.aiodns.DNSResolver",
         return_value=RetrieveDNS(),
     ):
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
-    entry = hass.config_entries.async_get_entry(entry.entry_id)
+    entry = menuai.config_entries.async_get_entry(entry.entry_id)
     assert entry.state is ConfigEntryState.MIGRATION_ERROR

@@ -6,11 +6,11 @@ from typing import Any
 
 from refoss_ha.controller.toggle import ToggleXMix
 
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .bridge import RefossDataUpdateCoordinator
 from .const import _LOGGER, COORDINATORS, DISPATCH_DEVICE_DISCOVERED, DOMAIN
@@ -18,7 +18,7 @@ from .entity import RefossEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -39,11 +39,11 @@ async def async_setup_entry(
         async_add_entities(new_entities)
         _LOGGER.debug("Device %s add switch entity success", device.dev_name)
 
-    for coordinator in hass.data[DOMAIN][COORDINATORS]:
+    for coordinator in menuai.data[DOMAIN][COORDINATORS]:
         init_device(coordinator)
 
     config_entry.async_on_unload(
-        async_dispatcher_connect(hass, DISPATCH_DEVICE_DISCOVERED, init_device)
+        async_dispatcher_connect(menuai, DISPATCH_DEVICE_DISCOVERED, init_device)
     )
 
 

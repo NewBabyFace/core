@@ -6,17 +6,17 @@ from typing import Any
 
 from bsblan import BSBLANError
 
-from homeassistant.components.water_heater import (
+from menuai.components.water_heater import (
     STATE_ECO,
     STATE_OFF,
     WaterHeaterEntity,
     WaterHeaterEntityFeature,
 )
-from homeassistant.const import ATTR_TEMPERATURE, STATE_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import ATTR_TEMPERATURE, STATE_ON
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import BSBLanConfigEntry, BSBLanData
 from .const import DOMAIN
@@ -35,7 +35,7 @@ OPERATION_MODES_REVERSE = {v: k for k, v in OPERATION_MODES.items()}
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: BSBLanConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -86,7 +86,7 @@ class BSBLANWaterHeater(BSBLanEntity, WaterHeaterEntity):
         try:
             await self.coordinator.client.set_hot_water(nominal_setpoint=temperature)
         except BSBLANError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="set_temperature_error",
             ) from err
@@ -99,7 +99,7 @@ class BSBLANWaterHeater(BSBLanEntity, WaterHeaterEntity):
         try:
             await self.coordinator.client.set_hot_water(operating_mode=bsblan_mode)
         except BSBLANError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="set_operation_mode_error",
             ) from err

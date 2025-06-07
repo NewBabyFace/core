@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pyhomeworks.pyhomeworks import Homeworks
 
-from homeassistant.helpers.entity import Entity
+from menuai.helpers.entity import Entity
 
 from .util import calculate_unique_id
 

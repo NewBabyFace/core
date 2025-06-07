@@ -2,17 +2,17 @@
 
 import pytest
 
-from homeassistant.components.select import (
+from menuai.components.select import (
     ATTR_OPTION,
     DOMAIN as SELECT_DOMAIN,
     SERVICE_SELECT_OPTION,
 )
-from homeassistant.components.vesync.const import HUMIDIFIER_NIGHT_LIGHT_LEVEL_DIM
-from homeassistant.components.vesync.select import (
+from menuai.components.vesync.const import HUMIDIFIER_NIGHT_LIGHT_LEVEL_DIM
+from menuai.components.vesync.select import (
     HA_TO_VS_HUMIDIFIER_NIGHT_LIGHT_LEVEL_MAP,
 )
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
 
 from .common import ENTITY_HUMIDIFIER_300S_NIGHT_LIGHT_SELECT
 
@@ -21,11 +21,11 @@ from .common import ENTITY_HUMIDIFIER_300S_NIGHT_LIGHT_SELECT
     "install_humidifier_device", ["humidifier_300s"], indirect=True
 )
 async def test_humidifier_set_nightlight_level(
-    hass: HomeAssistant, manager, humidifier_300s, install_humidifier_device
+    menuai: menuai, manager, humidifier_300s, install_humidifier_device
 ) -> None:
     """Test set of humidifier night light level."""
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SELECT_DOMAIN,
         SERVICE_SELECT_OPTION,
         {
@@ -47,12 +47,12 @@ async def test_humidifier_set_nightlight_level(
     "install_humidifier_device", ["humidifier_300s"], indirect=True
 )
 async def test_humidifier_nightlight_level(
-    hass: HomeAssistant, install_humidifier_device
+    menuai: menuai, install_humidifier_device
 ) -> None:
     """Test the state of humidifier night light level select entity."""
 
     # The mocked device has night_light_brightness=50 which is "dim"
     assert (
-        hass.states.get(ENTITY_HUMIDIFIER_300S_NIGHT_LIGHT_SELECT).state
+        menuai.states.get(ENTITY_HUMIDIFIER_300S_NIGHT_LIGHT_SELECT).state
         == HUMIDIFIER_NIGHT_LIGHT_LEVEL_DIM
     )

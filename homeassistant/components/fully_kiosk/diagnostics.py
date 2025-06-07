@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.components.diagnostics import async_redact_data
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 from . import FullyKioskConfigEntry
 
@@ -56,7 +56,7 @@ SETTINGS_TO_REDACT = {
 
 
 async def async_get_device_diagnostics(
-    hass: HomeAssistant, entry: FullyKioskConfigEntry, device: dr.DeviceEntry
+    menuai: menuai, entry: FullyKioskConfigEntry, device: dr.DeviceEntry
 ) -> dict[str, Any]:
     """Return device diagnostics."""
     coordinator = entry.runtime_data

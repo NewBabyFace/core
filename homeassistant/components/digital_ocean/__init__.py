@@ -6,11 +6,11 @@ import logging
 import digitalocean
 import voluptuous as vol
 
-from homeassistant.const import CONF_ACCESS_TOKEN, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util import Throttle
+from menuai.const import CONF_ACCESS_TOKEN, Platform
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType
+from menuai.util import Throttle
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -40,7 +40,7 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Digital Ocean component."""
 
     conf = config[DOMAIN]
@@ -56,7 +56,7 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
         _LOGGER.error("API token not valid for authentication")
         return False
 
-    hass.data[DATA_DIGITAL_OCEAN] = digital
+    menuai.data[DATA_DIGITAL_OCEAN] = digital
 
     return True
 

@@ -6,9 +6,9 @@ from unittest.mock import patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .common import (
     TEST_DATA_ALERT,
@@ -53,7 +53,7 @@ from tests.typing import MqttMockHAClient
 @pytest.fixture(autouse=True)
 def only_sensor_platform() -> Generator[None]:
     """Only setup the DROP sensor platform."""
-    with patch("homeassistant.components.drop_connect.PLATFORMS", [Platform.SENSOR]):
+    with patch("menuai.components.drop_connect.PLATFORMS", [Platform.SENSOR]):
         yield
 
 
@@ -116,7 +116,7 @@ def only_sensor_platform() -> Generator[None]:
     ],
 )
 async def test_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock: MqttMockHAClient,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
@@ -126,16 +126,16 @@ async def test_sensors(
     data: str,
 ) -> None:
     """Test DROP sensors."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
-    help_assert_entries(hass, entity_registry, snapshot, config_entry, "init", True)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
+    help_assert_entries(menuai, entity_registry, snapshot, config_entry, "init", True)
 
-    async_fire_mqtt_message(hass, topic, reset)
-    await hass.async_block_till_done()
-    help_assert_entries(hass, entity_registry, snapshot, config_entry, "reset")
+    async_fire_mqtt_message(menuai, topic, reset)
+    await menuai.async_block_till_done()
+    help_assert_entries(menuai, entity_registry, snapshot, config_entry, "reset")
 
-    async_fire_mqtt_message(hass, topic, data)
-    await hass.async_block_till_done()
-    help_assert_entries(hass, entity_registry, snapshot, config_entry, "data")
+    async_fire_mqtt_message(menuai, topic, data)
+    await menuai.async_block_till_done()
+    help_assert_entries(menuai, entity_registry, snapshot, config_entry, "data")

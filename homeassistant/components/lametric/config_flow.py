@@ -23,13 +23,13 @@ from demetriek import (
 import voluptuous as vol
 from yarl import URL
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlowResult
-from homeassistant.const import CONF_API_KEY, CONF_DEVICE, CONF_HOST, CONF_MAC
-from homeassistant.data_entry_flow import AbortFlow
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.config_entry_oauth2_flow import AbstractOAuth2FlowHandler
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.selector import (
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlowResult
+from menuai.const import CONF_API_KEY, CONF_DEVICE, CONF_HOST, CONF_MAC
+from menuai.data_entry_flow import AbortFlow
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.config_entry_oauth2_flow import AbstractOAuth2FlowHandler
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.selector import (
     SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
@@ -38,13 +38,13 @@ from homeassistant.helpers.selector import (
     TextSelectorConfig,
     TextSelectorType,
 )
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
-from homeassistant.helpers.service_info.ssdp import (
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.helpers.service_info.ssdp import (
     ATTR_UPNP_FRIENDLY_NAME,
     ATTR_UPNP_SERIAL,
     SsdpServiceInfo,
 )
-from homeassistant.util.network import is_link_local
+from menuai.util.network import is_link_local
 
 from .const import DOMAIN, LOGGER
 
@@ -173,7 +173,7 @@ class LaMetricFlowHandler(AbstractOAuth2FlowHandler, domain=DOMAIN):
         """Fetch information about devices from the cloud."""
         lametric = LaMetricCloud(
             token=data["token"]["access_token"],
-            session=async_get_clientsession(self.hass),
+            session=async_get_clientsession(self.menuai),
         )
         self.devices = {
             device.serial_number: device
@@ -243,7 +243,7 @@ class LaMetricFlowHandler(AbstractOAuth2FlowHandler, domain=DOMAIN):
         lametric = LaMetricDevice(
             host=host,
             api_key=api_key,
-            session=async_get_clientsession(self.hass),
+            session=async_get_clientsession(self.menuai),
         )
 
         device = await lametric.device()
@@ -267,7 +267,7 @@ class LaMetricFlowHandler(AbstractOAuth2FlowHandler, domain=DOMAIN):
                 icon_type=NotificationIconType.INFO,
                 model=Model(
                     cycles=2,
-                    frames=[Simple(text="Connected to Home Assistant!", icon=7956)],
+                    frames=[Simple(text="Connected to MenuAI!", icon=7956)],
                     sound=notify_sound,
                 ),
             )
@@ -298,12 +298,12 @@ class LaMetricFlowHandler(AbstractOAuth2FlowHandler, domain=DOMAIN):
         mac = format_mac(discovery_info.macaddress)
         for entry in self._async_current_entries():
             if format_mac(entry.data[CONF_MAC]) == mac:
-                self.hass.config_entries.async_update_entry(
+                self.menuai.config_entries.async_update_entry(
                     entry,
                     data=entry.data | {CONF_HOST: discovery_info.ip},
                 )
-                self.hass.async_create_task(
-                    self.hass.config_entries.async_reload(entry.entry_id)
+                self.menuai.async_create_task(
+                    self.menuai.config_entries.async_reload(entry.entry_id)
                 )
                 return self.async_abort(reason="already_configured")
 

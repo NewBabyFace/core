@@ -17,14 +17,14 @@ from renson_endura_delta.field_enum import (
 )
 from renson_endura_delta.renson import RensonVentilation
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import EntityCategory
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import RensonCoordinator
@@ -84,14 +84,14 @@ BINARY_SENSORS: tuple[RensonBinarySensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Call the Renson integration to setup."""
 
-    api: RensonVentilation = hass.data[DOMAIN][config_entry.entry_id].api
-    coordinator: RensonCoordinator = hass.data[DOMAIN][
+    api: RensonVentilation = menuai.data[DOMAIN][config_entry.entry_id].api
+    coordinator: RensonCoordinator = menuai.data[DOMAIN][
         config_entry.entry_id
     ].coordinator
 

@@ -7,16 +7,16 @@ from typing import Any
 
 from lektricowifi import Device, DeviceConnectionError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_HW_VERSION,
     ATTR_SERIAL_NUMBER,
     CONF_HOST,
     CONF_TYPE,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.httpx_client import get_async_client
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.core import menuai
+from menuai.helpers.httpx_client import get_async_client
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import LOGGER
 
@@ -30,10 +30,10 @@ class LektricoDeviceDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]])
 
     config_entry: LektricoConfigEntry
 
-    def __init__(self, hass: HomeAssistant, config_entry: LektricoConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: LektricoConfigEntry) -> None:
         """Initialize a Lektrico Device."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name=f"{config_entry.data[CONF_TYPE]}_{config_entry.data[ATTR_SERIAL_NUMBER]}",
@@ -41,7 +41,7 @@ class LektricoDeviceDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]])
         )
         self.device = Device(
             self.config_entry.data[CONF_HOST],
-            asyncClient=get_async_client(hass),
+            asyncClient=get_async_client(menuai),
         )
         self.serial_number: str = self.config_entry.data[ATTR_SERIAL_NUMBER]
         self.board_revision: str = self.config_entry.data[ATTR_HW_VERSION]

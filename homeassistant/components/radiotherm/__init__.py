@@ -8,10 +8,10 @@ from urllib.error import URLError
 
 from radiotherm.validate import RadiothermTstatError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
 
 from .const import DOMAIN
 from .coordinator import RadioThermUpdateCoordinator
@@ -38,12 +38,12 @@ async def _async_call_or_raise_not_ready[_T](
         raise ConfigEntryNotReady(msg) from ex
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up Radio Thermostat from a config entry."""
     host = entry.data[CONF_HOST]
-    init_coro = async_get_init_data(hass, host)
+    init_coro = async_get_init_data(menuai, host)
     init_data = await _async_call_or_raise_not_ready(init_coro, host)
-    coordinator = RadioThermUpdateCoordinator(hass, entry, init_data)
+    coordinator = RadioThermUpdateCoordinator(menuai, entry, init_data)
     await coordinator.async_config_entry_first_refresh()
 
     # Only set the time if the thermostat is
@@ -51,24 +51,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # clears the hold for some strange design
     # choice
     if not coordinator.data.tstat["hold"]:
-        time_coro = async_set_time(hass, init_data.tstat)
+        time_coro = async_set_time(menuai, init_data.tstat)
         await _async_call_or_raise_not_ready(time_coro, host)
 
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    menuai.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
 
     return True
 
 
-async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def _async_update_listener(menuai: menuai, entry: ConfigEntry) -> None:
     """Handle options update."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        hass.data[DOMAIN].pop(entry.entry_id)
+    if unload_ok := await menuai.config_entries.async_unload_platforms(entry, PLATFORMS):
+        menuai.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok

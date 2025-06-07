@@ -7,15 +7,15 @@ from typing import Any
 import pysesame2
 import voluptuous as vol
 
-from homeassistant.components.lock import (
+from menuai.components.lock import (
     PLATFORM_SCHEMA as LOCK_PLATFORM_SCHEMA,
     LockEntity,
 )
-from homeassistant.const import ATTR_BATTERY_LEVEL, ATTR_DEVICE_ID, CONF_API_KEY
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import ATTR_BATTERY_LEVEL, ATTR_DEVICE_ID, CONF_API_KEY
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 ATTR_SERIAL_NO = "serial"
 
@@ -23,7 +23,7 @@ PLATFORM_SCHEMA = LOCK_PLATFORM_SCHEMA.extend({vol.Required(CONF_API_KEY): cv.st
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,

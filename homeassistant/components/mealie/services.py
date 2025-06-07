@@ -12,16 +12,16 @@ from aiomealie import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import ATTR_DATE
-from homeassistant.core import (
-    HomeAssistant,
+from menuai.config_entries import ConfigEntryState
+from menuai.const import ATTR_DATE
+from menuai.core import (
+    menuai,
     ServiceCall,
     ServiceResponse,
     SupportsResponse,
 )
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import config_validation as cv
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers import config_validation as cv
 
 from .const import (
     ATTR_CONFIG_ENTRY_ID,
@@ -98,9 +98,9 @@ SERVICE_SET_MEALPLAN_SCHEMA = vol.Any(
 )
 
 
-def async_get_entry(hass: HomeAssistant, config_entry_id: str) -> MealieConfigEntry:
+def async_get_entry(menuai: menuai, config_entry_id: str) -> MealieConfigEntry:
     """Get the Mealie config entry."""
-    if not (entry := hass.config_entries.async_get_entry(config_entry_id)):
+    if not (entry := menuai.config_entries.async_get_entry(config_entry_id)):
         raise ServiceValidationError(
             translation_domain=DOMAIN,
             translation_key="integration_not_found",
@@ -115,12 +115,12 @@ def async_get_entry(hass: HomeAssistant, config_entry_id: str) -> MealieConfigEn
     return cast(MealieConfigEntry, entry)
 
 
-def setup_services(hass: HomeAssistant) -> None:
+def setup_services(menuai: menuai) -> None:
     """Set up the services for the Mealie integration."""
 
     async def async_get_mealplan(call: ServiceCall) -> ServiceResponse:
         """Get the mealplan for a specific range."""
-        entry = async_get_entry(hass, call.data[ATTR_CONFIG_ENTRY_ID])
+        entry = async_get_entry(menuai, call.data[ATTR_CONFIG_ENTRY_ID])
         start_date = call.data.get(ATTR_START_DATE, date.today())
         end_date = call.data.get(ATTR_END_DATE, date.today())
         if end_date < start_date:
@@ -132,7 +132,7 @@ def setup_services(hass: HomeAssistant) -> None:
         try:
             mealplans = await client.get_mealplans(start_date, end_date)
         except MealieConnectionError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="connection_error",
             ) from err
@@ -140,13 +140,13 @@ def setup_services(hass: HomeAssistant) -> None:
 
     async def async_get_recipe(call: ServiceCall) -> ServiceResponse:
         """Get a recipe."""
-        entry = async_get_entry(hass, call.data[ATTR_CONFIG_ENTRY_ID])
+        entry = async_get_entry(menuai, call.data[ATTR_CONFIG_ENTRY_ID])
         recipe_id = call.data[ATTR_RECIPE_ID]
         client = entry.runtime_data.client
         try:
             recipe = await client.get_recipe(recipe_id)
         except MealieConnectionError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="connection_error",
             ) from err
@@ -160,7 +160,7 @@ def setup_services(hass: HomeAssistant) -> None:
 
     async def async_import_recipe(call: ServiceCall) -> ServiceResponse:
         """Import a recipe."""
-        entry = async_get_entry(hass, call.data[ATTR_CONFIG_ENTRY_ID])
+        entry = async_get_entry(menuai, call.data[ATTR_CONFIG_ENTRY_ID])
         url = call.data[ATTR_URL]
         include_tags = call.data.get(ATTR_INCLUDE_TAGS, False)
         client = entry.runtime_data.client
@@ -172,7 +172,7 @@ def setup_services(hass: HomeAssistant) -> None:
                 translation_key="could_not_import_recipe",
             ) from err
         except MealieConnectionError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="connection_error",
             ) from err
@@ -182,14 +182,14 @@ def setup_services(hass: HomeAssistant) -> None:
 
     async def async_set_random_mealplan(call: ServiceCall) -> ServiceResponse:
         """Set a random mealplan."""
-        entry = async_get_entry(hass, call.data[ATTR_CONFIG_ENTRY_ID])
+        entry = async_get_entry(menuai, call.data[ATTR_CONFIG_ENTRY_ID])
         mealplan_date = call.data[ATTR_DATE]
         entry_type = MealplanEntryType(call.data[ATTR_ENTRY_TYPE])
         client = entry.runtime_data.client
         try:
             mealplan = await client.random_mealplan(mealplan_date, entry_type)
         except MealieConnectionError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="connection_error",
             ) from err
@@ -199,7 +199,7 @@ def setup_services(hass: HomeAssistant) -> None:
 
     async def async_set_mealplan(call: ServiceCall) -> ServiceResponse:
         """Set a mealplan."""
-        entry = async_get_entry(hass, call.data[ATTR_CONFIG_ENTRY_ID])
+        entry = async_get_entry(menuai, call.data[ATTR_CONFIG_ENTRY_ID])
         mealplan_date = call.data[ATTR_DATE]
         entry_type = MealplanEntryType(call.data[ATTR_ENTRY_TYPE])
         client = entry.runtime_data.client
@@ -212,7 +212,7 @@ def setup_services(hass: HomeAssistant) -> None:
                 note_text=call.data.get(ATTR_NOTE_TEXT),
             )
         except MealieConnectionError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="connection_error",
             ) from err
@@ -220,35 +220,35 @@ def setup_services(hass: HomeAssistant) -> None:
             return {"mealplan": asdict(mealplan)}
         return None
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_GET_MEALPLAN,
         async_get_mealplan,
         schema=SERVICE_GET_MEALPLAN_SCHEMA,
         supports_response=SupportsResponse.ONLY,
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_GET_RECIPE,
         async_get_recipe,
         schema=SERVICE_GET_RECIPE_SCHEMA,
         supports_response=SupportsResponse.ONLY,
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_IMPORT_RECIPE,
         async_import_recipe,
         schema=SERVICE_IMPORT_RECIPE_SCHEMA,
         supports_response=SupportsResponse.OPTIONAL,
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_SET_RANDOM_MEALPLAN,
         async_set_random_mealplan,
         schema=SERVICE_SET_RANDOM_MEALPLAN_SCHEMA,
         supports_response=SupportsResponse.OPTIONAL,
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_SET_MEALPLAN,
         async_set_mealplan,

@@ -6,11 +6,11 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from homeassistant.components.guardian import CONF_UID, DOMAIN
-from homeassistant.const import CONF_IP_ADDRESS, CONF_PORT
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
-from homeassistant.util.json import JsonObjectType
+from menuai.components.guardian import CONF_UID, DOMAIN
+from menuai.const import CONF_IP_ADDRESS, CONF_PORT
+from menuai.core import menuai
+from menuai.setup import async_setup_component
+from menuai.util.json import JsonObjectType
 
 from tests.common import MockConfigEntry, load_json_object_fixture
 
@@ -19,14 +19,14 @@ from tests.common import MockConfigEntry, load_json_object_fixture
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.guardian.async_setup_entry", return_value=True
+        "menuai.components.guardian.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
 
 @pytest.fixture(name="config_entry")
 def config_entry_fixture(
-    hass: HomeAssistant, config: dict[str, Any], unique_id: str
+    menuai: menuai, config: dict[str, Any], unique_id: str
 ) -> MockConfigEntry:
     """Define a config entry fixture."""
     entry = MockConfigEntry(
@@ -34,7 +34,7 @@ def config_entry_fixture(
         unique_id=unique_id,
         data={CONF_UID: "3456", **config},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     return entry
 
 
@@ -99,7 +99,7 @@ def data_wifi_status_fixture() -> JsonObjectType:
 
 @pytest.fixture(name="setup_guardian")
 async def setup_guardian_fixture(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: dict[str, Any],
     data_sensor_pair_dump: JsonObjectType,
     data_sensor_pair_sensor: JsonObjectType,
@@ -149,12 +149,12 @@ async def setup_guardian_fixture(
             "aioguardian.client.Client.disconnect",
         ),
         patch(
-            "homeassistant.components.guardian.PLATFORMS",
+            "menuai.components.guardian.PLATFORMS",
             [],
         ),
     ):
-        assert await async_setup_component(hass, DOMAIN, config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, config)
+        await menuai.async_block_till_done()
         yield
 
 

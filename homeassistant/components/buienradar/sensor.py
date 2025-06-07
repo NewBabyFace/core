@@ -22,13 +22,13 @@ from buienradar.constants import (
     WINDSPEED,
 )
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ATTRIBUTION,
     CONF_LATITUDE,
     CONF_LONGITUDE,
@@ -44,9 +44,9 @@ from homeassistant.const import (
     UnitOfTemperature,
     UnitOfVolumetricFlux,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import dt as dt_util
 
 from . import BuienRadarConfigEntry
 from .const import (
@@ -696,7 +696,7 @@ SENSOR_TYPES: tuple[SensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: BuienRadarConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -704,15 +704,15 @@ async def async_setup_entry(
     config = entry.data
     options = entry.options
 
-    latitude = config.get(CONF_LATITUDE, hass.config.latitude)
-    longitude = config.get(CONF_LONGITUDE, hass.config.longitude)
+    latitude = config.get(CONF_LATITUDE, menuai.config.latitude)
+    longitude = config.get(CONF_LONGITUDE, menuai.config.longitude)
 
     timeframe = options.get(
         CONF_TIMEFRAME, config.get(CONF_TIMEFRAME, DEFAULT_TIMEFRAME)
     )
 
     if None in (latitude, longitude):
-        _LOGGER.error("Latitude or longitude not set in Home Assistant config")
+        _LOGGER.error("Latitude or longitude not set in MenuAI config")
         return
 
     coordinates = {CONF_LATITUDE: float(latitude), CONF_LONGITUDE: float(longitude)}
@@ -730,7 +730,7 @@ async def async_setup_entry(
     ]
 
     # create weather data:
-    data = BrData(hass, coordinates, timeframe, entities)
+    data = BrData(menuai, coordinates, timeframe, entities)
     entry.runtime_data[Platform.SENSOR] = data
     await data.async_update()
 
@@ -764,8 +764,8 @@ class BrSensor(SensorEntity):
         if description.key.startswith(PRECIPITATION_FORECAST):
             self._timeframe = None
 
-    async def async_added_to_hass(self) -> None:
-        """Handle entity being added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Handle entity being added to menuai."""
         if self._data is None:
             return
         self._update()
@@ -774,7 +774,7 @@ class BrSensor(SensorEntity):
     def data_updated(self, data: BrData):
         """Handle data update."""
         self._data = data
-        if not self.hass:
+        if not self.menuai:
             return
         self._update()
 
@@ -835,7 +835,7 @@ class BrSensor(SensorEntity):
                 return False
 
             if sensor_type.startswith(WINDSPEED):
-                # hass wants windspeeds in km/h not m/s, so convert:
+                # menuai wants windspeeds in km/h not m/s, so convert:
                 try:
                     self._attr_native_value = data.get(FORECAST)[fcday].get(
                         sensor_type[:-3]
@@ -891,14 +891,14 @@ class BrSensor(SensorEntity):
             return True
 
         if sensor_type in [WINDSPEED, WINDGUST]:
-            # hass wants windspeeds in km/h not m/s, so convert:
+            # menuai wants windspeeds in km/h not m/s, so convert:
             self._attr_native_value = data.get(sensor_type)
             if self.state is not None:
                 self._attr_native_value = round(data.get(sensor_type) * 3.6, 1)
             return True
 
         if sensor_type == VISIBILITY:
-            # hass wants visibility in km (not m), so convert:
+            # menuai wants visibility in km (not m), so convert:
             self._attr_native_value = data.get(sensor_type)
             if self.state is not None:
                 self._attr_native_value = round(self.state / 1000, 1)

@@ -4,20 +4,20 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import intent
+from menuai.core import menuai
+from menuai.helpers import intent
 
 from . import TodoItem, TodoItemStatus, TodoListEntity
 from .const import DATA_COMPONENT, DOMAIN
 
-INTENT_LIST_ADD_ITEM = "HassListAddItem"
-INTENT_LIST_COMPLETE_ITEM = "HassListCompleteItem"
+INTENT_LIST_ADD_ITEM = "menuaiListAddItem"
+INTENT_LIST_COMPLETE_ITEM = "menuaiListCompleteItem"
 
 
-async def async_setup_intents(hass: HomeAssistant) -> None:
+async def async_setup_intents(menuai: menuai) -> None:
     """Set up the todo intents."""
-    intent.async_register(hass, ListAddItemIntent())
-    intent.async_register(hass, ListCompleteItemIntent())
+    intent.async_register(menuai, ListAddItemIntent())
+    intent.async_register(menuai, ListCompleteItemIntent())
 
 
 class ListAddItemIntent(intent.IntentHandler):
@@ -33,7 +33,7 @@ class ListAddItemIntent(intent.IntentHandler):
 
     async def async_handle(self, intent_obj: intent.Intent) -> intent.IntentResponse:
         """Handle the intent."""
-        hass = intent_obj.hass
+        menuai = intent_obj.menuai
 
         slots = self.async_validate_slots(intent_obj.slots)
         item = slots["item"]["value"].strip()
@@ -45,13 +45,13 @@ class ListAddItemIntent(intent.IntentHandler):
         match_constraints = intent.MatchTargetsConstraints(
             name=list_name, domains=[DOMAIN], assistant=intent_obj.assistant
         )
-        match_result = intent.async_match_targets(hass, match_constraints)
+        match_result = intent.async_match_targets(menuai, match_constraints)
         if not match_result.is_match:
             raise intent.MatchFailedError(
                 result=match_result, constraints=match_constraints
             )
 
-        target_list = hass.data[DATA_COMPONENT].get_entity(
+        target_list = menuai.data[DATA_COMPONENT].get_entity(
             match_result.states[0].entity_id
         )
         if target_list is None:
@@ -91,7 +91,7 @@ class ListCompleteItemIntent(intent.IntentHandler):
 
     async def async_handle(self, intent_obj: intent.Intent) -> intent.IntentResponse:
         """Handle the intent."""
-        hass = intent_obj.hass
+        menuai = intent_obj.menuai
 
         slots = self.async_validate_slots(intent_obj.slots)
         item = slots["item"]["value"]
@@ -103,13 +103,13 @@ class ListCompleteItemIntent(intent.IntentHandler):
         match_constraints = intent.MatchTargetsConstraints(
             name=list_name, domains=[DOMAIN], assistant=intent_obj.assistant
         )
-        match_result = intent.async_match_targets(hass, match_constraints)
+        match_result = intent.async_match_targets(menuai, match_constraints)
         if not match_result.is_match:
             raise intent.MatchFailedError(
                 result=match_result, constraints=match_constraints
             )
 
-        target_list = hass.data[DATA_COMPONENT].get_entity(
+        target_list = menuai.data[DATA_COMPONENT].get_entity(
             match_result.states[0].entity_id
         )
         if target_list is None:

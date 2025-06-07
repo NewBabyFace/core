@@ -11,13 +11,13 @@ from pydeconz.interfaces.api_handlers import APIHandler, GroupedAPIHandler
 from pydeconz.interfaces.groups import GroupHandler
 from pydeconz.models.event import EventType
 
-from homeassistant.config_entries import SOURCE_HASSIO
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
-from homeassistant.helpers.dispatcher import async_dispatcher_send
+from menuai.config_entries import SOURCE_menuaiIO
+from menuai.core import Event, menuai, callback
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.device_registry import CONNECTION_NETWORK_MAC
+from menuai.helpers.dispatcher import async_dispatcher_send
 
-from ..const import CONF_MASTER_GATEWAY, DOMAIN, HASSIO_CONFIGURATION_URL, PLATFORMS
+from ..const import CONF_MASTER_GATEWAY, DOMAIN, menuaiIO_CONFIGURATION_URL, PLATFORMS
 from .config import DeconzConfig
 
 if TYPE_CHECKING:
@@ -63,10 +63,10 @@ class DeconzHub:
     """Manages a single deCONZ gateway."""
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: DeconzConfigEntry, api: DeconzSession
+        self, menuai: menuai, config_entry: DeconzConfigEntry, api: DeconzSession
     ) -> None:
         """Initialize the system."""
-        self.hass = hass
+        self.menuai = menuai
         self.config = DeconzConfig.from_config_entry(config_entry)
         self.config_entry = config_entry
         self.api = api
@@ -165,14 +165,14 @@ class DeconzHub:
         """Handle signals of gateway connection status."""
         self.available = available
         self.ignore_state_updates = False
-        async_dispatcher_send(self.hass, self.signal_reachable)
+        async_dispatcher_send(self.menuai, self.signal_reachable)
 
     async def async_update_device_registry(self) -> None:
         """Update device registry."""
         if self.api.config.mac is None:
             return
 
-        device_registry = dr.async_get(self.hass)
+        device_registry = dr.async_get(self.menuai)
 
         # Host device
         device_registry.async_get_or_create(
@@ -182,8 +182,8 @@ class DeconzHub:
 
         # Gateway service
         configuration_url = f"http://{self.config.host}:{self.config.port}"
-        if self.config_entry.source == SOURCE_HASSIO:
-            configuration_url = HASSIO_CONFIGURATION_URL
+        if self.config_entry.source == SOURCE_menuaiIO:
+            configuration_url = menuaiIO_CONFIGURATION_URL
         device_registry.async_get_or_create(
             config_entry_id=self.config_entry.entry_id,
             configuration_url=configuration_url,
@@ -198,7 +198,7 @@ class DeconzHub:
 
     @staticmethod
     async def async_config_entry_updated(
-        hass: HomeAssistant, config_entry: DeconzConfigEntry
+        menuai: menuai, config_entry: DeconzConfigEntry
     ) -> None:
         """Handle signals of config entry being updated.
 
@@ -252,7 +252,7 @@ class DeconzHub:
 
         # Remove entities based on above categories
 
-        entity_registry = er.async_get(self.hass)
+        entity_registry = er.async_get(self.menuai)
 
         # Copy the ids since calling async_remove will modify the dict
         # and will cause a runtime error because the dict size changes
@@ -262,7 +262,7 @@ class DeconzHub:
                 entity_id
             ):
                 # Removing an entity from the entity registry will also remove them
-                # from Home Assistant
+                # from MenuAI
                 entity_registry.async_remove(entity_id)
 
     @callback
@@ -278,7 +278,7 @@ class DeconzHub:
         self.api.connection_status_callback = None
         self.api.close()
 
-        await self.hass.config_entries.async_unload_platforms(
+        await self.menuai.config_entries.async_unload_platforms(
             self.config_entry, PLATFORMS
         )
 

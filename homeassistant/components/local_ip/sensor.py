@@ -1,17 +1,17 @@
 """Sensor platform for local_ip."""
 
-from homeassistant.components.network import async_get_source_ip
-from homeassistant.components.sensor import SensorEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.network import async_get_source_ip
+from menuai.components.sensor import SensorEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_NAME
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import SENSOR
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -32,4 +32,4 @@ class IPSensor(SensorEntity):
 
     async def async_update(self) -> None:
         """Fetch new state data for the sensor."""
-        self._attr_native_value = await async_get_source_ip(self.hass)
+        self._attr_native_value = await async_get_source_ip(self.menuai)

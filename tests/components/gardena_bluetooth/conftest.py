@@ -11,10 +11,10 @@ from gardena_bluetooth.exceptions import CharacteristicNotFound
 from gardena_bluetooth.parse import Characteristic
 import pytest
 
-from homeassistant.components.gardena_bluetooth.const import DOMAIN
-from homeassistant.components.gardena_bluetooth.coordinator import SCAN_INTERVAL
-from homeassistant.const import CONF_ADDRESS
-from homeassistant.core import HomeAssistant
+from menuai.components.gardena_bluetooth.const import DOMAIN
+from menuai.components.gardena_bluetooth.coordinator import SCAN_INTERVAL
+from menuai.const import CONF_ADDRESS
+from menuai.core import menuai
 
 from . import WATER_TIMER_SERVICE_INFO
 
@@ -23,7 +23,7 @@ from tests.common import MockConfigEntry, async_fire_time_changed
 
 @pytest.fixture
 def mock_entry():
-    """Create hass config fixture."""
+    """Create menuai config fixture."""
     return MockConfigEntry(
         domain=DOMAIN, data={CONF_ADDRESS: WATER_TIMER_SERVICE_INFO.address}
     )
@@ -33,7 +33,7 @@ def mock_entry():
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.gardena_bluetooth.async_setup_entry",
+        "menuai.components.gardena_bluetooth.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
         yield mock_setup_entry
@@ -50,7 +50,7 @@ def mock_read_char_raw():
 
 @pytest.fixture
 async def scan_step(
-    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+    menuai: menuai, freezer: FrozenDateTimeFactory
 ) -> Callable[[], Coroutine[Any, Any, None]]:
     """Step system time forward."""
 
@@ -59,8 +59,8 @@ async def scan_step(
     async def delay() -> None:
         """Trigger delay in system."""
         freezer.tick(delta=SCAN_INTERVAL)
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done()
 
     return delay
 
@@ -103,10 +103,10 @@ def mock_client(
 
     with (
         patch(
-            "homeassistant.components.gardena_bluetooth.config_flow.Client",
+            "menuai.components.gardena_bluetooth.config_flow.Client",
             return_value=client,
         ),
-        patch("homeassistant.components.gardena_bluetooth.Client", return_value=client),
+        patch("menuai.components.gardena_bluetooth.Client", return_value=client),
     ):
         yield client
 

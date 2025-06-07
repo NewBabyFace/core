@@ -6,13 +6,13 @@ from dataclasses import dataclass
 
 from regenmaschine.errors import RainMachineError
 
-from homeassistant.components.select import SelectEntity, SelectEntityDescription
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util.unit_system import US_CUSTOMARY_SYSTEM, UnitSystem
+from menuai.components.select import SelectEntity, SelectEntityDescription
+from menuai.config_entries import ConfigEntry
+from menuai.const import EntityCategory
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util.unit_system import US_CUSTOMARY_SYSTEM, UnitSystem
 
 from . import RainMachineConfigEntry, RainMachineData
 from .const import DATA_RESTRICTIONS_UNIVERSAL
@@ -81,7 +81,7 @@ SELECT_DESCRIPTIONS = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: RainMachineConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -93,7 +93,7 @@ async def async_setup_entry(
     }
 
     async_add_entities(
-        entity_map[description.key](entry, data, description, hass.config.units)
+        entity_map[description.key](entry, data, description, menuai.config.units)
         for description in SELECT_DESCRIPTIONS
         if (
             (coordinator := data.coordinators[description.api_category]) is not None
@@ -138,7 +138,7 @@ class FreezeProtectionTemperatureSelect(RainMachineEntity, SelectEntity):
                 {self.entity_description.data_key: self._label_to_api_value_map[option]}
             )
         except RainMachineError as err:
-            raise HomeAssistantError(f"Error while setting {self.name}: {err}") from err
+            raise menuaiError(f"Error while setting {self.name}: {err}") from err
 
     @callback
     def update_from_latest_data(self) -> None:

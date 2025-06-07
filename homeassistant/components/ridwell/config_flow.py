@@ -9,9 +9,9 @@ from aioridwell import async_get_client
 from aioridwell.errors import InvalidCredentialsError, RidwellError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.helpers import aiohttp_client, config_validation as cv
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.helpers import aiohttp_client, config_validation as cv
 
 from .const import DOMAIN, LOGGER
 
@@ -44,7 +44,7 @@ class RidwellConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Validate input credentials and proceed accordingly."""
         errors = {}
-        session = aiohttp_client.async_get_clientsession(self.hass)
+        session = aiohttp_client.async_get_clientsession(self.menuai)
 
         if TYPE_CHECKING:
             assert self._password
@@ -67,12 +67,12 @@ class RidwellConfigFlow(ConfigFlow, domain=DOMAIN):
             )
 
         if existing_entry := await self.async_set_unique_id(self._username):
-            self.hass.config_entries.async_update_entry(
+            self.menuai.config_entries.async_update_entry(
                 existing_entry,
                 data={**existing_entry.data, CONF_PASSWORD: self._password},
             )
-            self.hass.async_create_task(
-                self.hass.config_entries.async_reload(existing_entry.entry_id)
+            self.menuai.async_create_task(
+                self.menuai.config_entries.async_reload(existing_entry.entry_id)
             )
             return self.async_abort(reason="reauth_successful")
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from homeassistant.const import WEEKDAYS, Platform
+from menuai.const import WEEKDAYS, Platform
 
 LOGGER = logging.getLogger(__package__)
 

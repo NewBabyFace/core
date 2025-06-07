@@ -17,9 +17,9 @@ from aioairzone_cloud.const import (
 from syrupy.assertion import SnapshotAssertion
 from syrupy.filters import props
 
-from homeassistant.components.airzone_cloud.const import DOMAIN
-from homeassistant.const import CONF_ID
-from homeassistant.core import HomeAssistant
+from menuai.components.airzone_cloud.const import DOMAIN
+from menuai.const import CONF_ID
+from menuai.core import menuai
 
 from .util import CONFIG, WS_ID, WS_ID_AIDOO, WS_ID_AIDOO_PRO, async_init_integration
 
@@ -99,17 +99,17 @@ RAW_DATA_MOCK = {
 
 
 async def test_config_entry_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test config entry diagnostics."""
-    await async_init_integration(hass)
+    await async_init_integration(menuai)
 
-    config_entry = hass.config_entries.async_entries(DOMAIN)[0]
+    config_entry = menuai.config_entries.async_entries(DOMAIN)[0]
     with patch(
-        "homeassistant.components.airzone_cloud.AirzoneCloudApi.raw_data",
+        "menuai.components.airzone_cloud.AirzoneCloudApi.raw_data",
         return_value=RAW_DATA_MOCK,
     ):
-        result = await get_diagnostics_for_config_entry(hass, hass_client, config_entry)
+        result = await get_diagnostics_for_config_entry(menuai, menuai_client, config_entry)
         assert result == snapshot(exclude=props("created_at", "modified_at"))

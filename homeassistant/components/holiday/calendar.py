@@ -6,14 +6,14 @@ from datetime import datetime, timedelta
 
 from holidays import PUBLIC, HolidayBase, country_holidays
 
-from homeassistant.components.calendar import CalendarEntity, CalendarEvent
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_COUNTRY
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.event import async_track_point_in_utc_time
-from homeassistant.util import dt as dt_util
+from menuai.components.calendar import CalendarEntity, CalendarEvent
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_COUNTRY
+from menuai.core import CALLBACK_TYPE, menuai, callback
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.event import async_track_point_in_utc_time
+from menuai.util import dt as dt_util
 
 from .const import CONF_CATEGORIES, CONF_PROVINCE, DOMAIN
 
@@ -67,7 +67,7 @@ def _get_obj_holidays_and_language(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -75,9 +75,9 @@ async def async_setup_entry(
     country: str = config_entry.data[CONF_COUNTRY]
     province: str | None = config_entry.data.get(CONF_PROVINCE)
     categories: list[str] | None = config_entry.options.get(CONF_CATEGORIES)
-    language = hass.config.language
+    language = menuai.config.language
 
-    obj_holidays, language = await hass.async_add_executor_job(
+    obj_holidays, language = await menuai.async_add_executor_job(
         _get_obj_holidays_and_language, country, province, language, categories
     )
 
@@ -140,7 +140,7 @@ class HolidayCalendarEntity(CalendarEntity):
         now = dt_util.now()
         self._attr_event = self.update_event(now)
         self.unsub = async_track_point_in_utc_time(
-            self.hass, self.point_in_time_listener, self.get_next_interval(now)
+            self.menuai, self.point_in_time_listener, self.get_next_interval(now)
         )
 
     @callback
@@ -149,7 +149,7 @@ class HolidayCalendarEntity(CalendarEntity):
         self._update_state_and_setup_listener()
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Set up first update."""
         self._update_state_and_setup_listener()
 
@@ -179,7 +179,7 @@ class HolidayCalendarEntity(CalendarEntity):
         return self._attr_event
 
     async def async_get_events(
-        self, hass: HomeAssistant, start_date: datetime, end_date: datetime
+        self, menuai: menuai, start_date: datetime, end_date: datetime
     ) -> list[CalendarEvent]:
         """Get all events in a specific time frame."""
         obj_holidays = country_holidays(

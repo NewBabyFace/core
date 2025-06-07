@@ -7,11 +7,11 @@ import logging
 
 from requests.exceptions import RequestException
 
-from homeassistant.components.image import ImageEntity
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import dt as dt_util, slugify
+from menuai.components.image import ImageEntity
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import dt as dt_util, slugify
 
 from .coordinator import AvmWrapper, FritzConfigEntry
 from .entity import FritzBoxBaseEntity
@@ -23,21 +23,21 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: FritzConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up guest WiFi QR code for device."""
     avm_wrapper = entry.runtime_data
 
-    guest_wifi_info = await hass.async_add_executor_job(
+    guest_wifi_info = await menuai.async_add_executor_job(
         avm_wrapper.fritz_guest_wifi.get_info
     )
 
     async_add_entities(
         [
             FritzGuestWifiQRImage(
-                hass, avm_wrapper, entry.title, guest_wifi_info["NewSSID"]
+                menuai, avm_wrapper, entry.title, guest_wifi_info["NewSSID"]
             )
         ]
     )
@@ -53,7 +53,7 @@ class FritzGuestWifiQRImage(FritzBoxBaseEntity, ImageEntity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         avm_wrapper: AvmWrapper,
         device_friendly_name: str,
         ssid: str,
@@ -63,11 +63,11 @@ class FritzGuestWifiQRImage(FritzBoxBaseEntity, ImageEntity):
         self._attr_unique_id = slugify(f"{avm_wrapper.unique_id}-{ssid}-qr-code")
         self._current_qr_bytes: bytes | None = None
         super().__init__(avm_wrapper, device_friendly_name)
-        ImageEntity.__init__(self, hass)
+        ImageEntity.__init__(self, menuai)
 
     async def _fetch_image(self) -> bytes:
         """Fetch the QR code from the Fritz!Box."""
-        qr_stream: BytesIO = await self.hass.async_add_executor_job(
+        qr_stream: BytesIO = await self.menuai.async_add_executor_job(
             self._avm_wrapper.fritz_guest_wifi.get_wifi_qr_code, "png"
         )
         qr_bytes = qr_stream.getvalue()
@@ -75,7 +75,7 @@ class FritzGuestWifiQRImage(FritzBoxBaseEntity, ImageEntity):
 
         return qr_bytes
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Fetch and set initial data and state."""
         self._current_qr_bytes = await self._fetch_image()
         self._attr_image_last_updated = dt_util.utcnow()

@@ -2,7 +2,7 @@
 
 import tomllib
 
-from homeassistant.const import REQUIRED_PYTHON_VER, __version__
+from menuai.const import REQUIRED_PYTHON_VER, __version__
 
 from .model import Config, Integration
 

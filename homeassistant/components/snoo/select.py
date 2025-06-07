@@ -9,10 +9,10 @@ from python_snoo.containers import SnooData, SnooDevice, SnooLevels
 from python_snoo.exceptions import SnooCommandException
 from python_snoo.snoo import Snoo
 
-from homeassistant.components.select import SelectEntity, SelectEntityDescription
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.select import SelectEntity, SelectEntityDescription
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import SnooConfigEntry
@@ -41,7 +41,7 @@ SELECT_DESCRIPTIONS: list[SnooSelectEntityDescription] = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: SnooConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -71,7 +71,7 @@ class SnooSelect(SnooDescriptionEntity, SelectEntity):
                 self.coordinator.snoo, self.device, option
             )
         except SnooCommandException as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="select_failed",
                 translation_placeholders={"name": str(self.name), "option": option},

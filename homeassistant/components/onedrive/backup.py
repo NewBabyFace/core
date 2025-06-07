@@ -21,15 +21,15 @@ from onedrive_personal_sdk.exceptions import (
 from onedrive_personal_sdk.models.items import ItemUpdate
 from onedrive_personal_sdk.models.upload import FileInfo
 
-from homeassistant.components.backup import (
+from menuai.components.backup import (
     AgentBackup,
     BackupAgent,
     BackupAgentError,
     BackupNotFound,
     suggested_filename,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.core import menuai, callback
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import CONF_DELETE_PERMANENTLY, DATA_BACKUP_AGENT_LISTENERS, DOMAIN
 from .coordinator import OneDriveConfigEntry
@@ -42,31 +42,31 @@ CACHE_TTL = 300
 
 
 async def async_get_backup_agents(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> list[BackupAgent]:
     """Return a list of backup agents."""
-    entries: list[OneDriveConfigEntry] = hass.config_entries.async_loaded_entries(
+    entries: list[OneDriveConfigEntry] = menuai.config_entries.async_loaded_entries(
         DOMAIN
     )
-    return [OneDriveBackupAgent(hass, entry) for entry in entries]
+    return [OneDriveBackupAgent(menuai, entry) for entry in entries]
 
 
 @callback
 def async_register_backup_agents_listener(
-    hass: HomeAssistant,
+    menuai: menuai,
     *,
     listener: Callable[[], None],
     **kwargs: Any,
 ) -> Callable[[], None]:
     """Register a listener to be called when agents are added or removed."""
-    hass.data.setdefault(DATA_BACKUP_AGENT_LISTENERS, []).append(listener)
+    menuai.data.setdefault(DATA_BACKUP_AGENT_LISTENERS, []).append(listener)
 
     @callback
     def remove_listener() -> None:
         """Remove the listener."""
-        hass.data[DATA_BACKUP_AGENT_LISTENERS].remove(listener)
-        if not hass.data[DATA_BACKUP_AGENT_LISTENERS]:
-            del hass.data[DATA_BACKUP_AGENT_LISTENERS]
+        menuai.data[DATA_BACKUP_AGENT_LISTENERS].remove(listener)
+        if not menuai.data[DATA_BACKUP_AGENT_LISTENERS]:
+            del menuai.data[DATA_BACKUP_AGENT_LISTENERS]
 
     return remove_listener
 
@@ -83,7 +83,7 @@ def handle_backup_errors[_R, **P](
         try:
             return await func(self, *args, **kwargs)
         except AuthenticationError as err:
-            self._entry.async_start_reauth(self._hass)
+            self._entry.async_start_reauth(self._menuai)
             raise BackupAgentError("Authentication error") from err
         except OneDriveException as err:
             _LOGGER.error(
@@ -117,10 +117,10 @@ class OneDriveBackupAgent(BackupAgent):
 
     domain = DOMAIN
 
-    def __init__(self, hass: HomeAssistant, entry: OneDriveConfigEntry) -> None:
+    def __init__(self, menuai: menuai, entry: OneDriveConfigEntry) -> None:
         """Initialize the OneDrive backup agent."""
         super().__init__()
-        self._hass = hass
+        self._menuai = menuai
         self._entry = entry
         self._client = entry.runtime_data.client
         self._token_function = entry.runtime_data.token_function
@@ -163,7 +163,7 @@ class OneDriveBackupAgent(BackupAgent):
         )
         try:
             backup_file = await LargeFileUploadClient.upload(
-                self._token_function, file, session=async_get_clientsession(self._hass)
+                self._token_function, file, session=async_get_clientsession(self._menuai)
             )
         except HashMismatchError as err:
             raise BackupAgentError(

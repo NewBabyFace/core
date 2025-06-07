@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from homeassistant.components.sensor import SensorEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_QUOTE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.components.sensor import SensorEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_QUOTE
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import OpenexchangeratesCoordinator
@@ -17,13 +17,13 @@ ATTRIBUTION = "Data provided by openexchangerates.org"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Open Exchange Rates sensor."""
     quote: str = config_entry.data.get(CONF_QUOTE, "EUR")
-    coordinator = hass.data[DOMAIN][config_entry.entry_id]
+    coordinator = menuai.data[DOMAIN][config_entry.entry_id]
 
     async_add_entities(
         OpenexchangeratesSensor(

@@ -20,17 +20,17 @@ from sqlalchemy.exc import (
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from homeassistant.components import persistent_notification as pn, recorder
-from homeassistant.components.recorder import db_schema, migration
-from homeassistant.components.recorder.db_schema import (
+from menuai.components import persistent_notification as pn, recorder
+from menuai.components.recorder import db_schema, migration
+from menuai.components.recorder.db_schema import (
     SCHEMA_VERSION,
     Events,
     RecorderRuns,
     States,
 )
-from homeassistant.components.recorder.util import session_scope
-from homeassistant.core import HomeAssistant, State
-from homeassistant.util import dt as dt_util
+from menuai.components.recorder.util import session_scope
+from menuai.core import menuai, State
+from menuai.util import dt as dt_util
 
 from .common import async_wait_recorder, async_wait_recording_done, create_engine_test
 from .conftest import InstrumentedMigration
@@ -40,15 +40,15 @@ from tests.typing import RecorderInstanceContextManager, RecorderInstanceGenerat
 
 
 @pytest.fixture
-async def mock_recorder_before_hass(
+async def mock_recorder_before_menuai(
     async_test_recorder: RecorderInstanceContextManager,
 ) -> None:
     """Set up recorder."""
 
 
-def _get_native_states(hass: HomeAssistant, entity_id: str) -> list[State]:
-    with session_scope(hass=hass, read_only=True) as session:
-        instance = recorder.get_instance(hass)
+def _get_native_states(menuai: menuai, entity_id: str) -> list[State]:
+    with session_scope(menuai=menuai, read_only=True) as session:
+        instance = recorder.get_instance(menuai)
         metadata_id = instance.states_meta_manager.get(entity_id, session, True)
         states = []
         for dbstate in session.query(States).filter(States.metadata_id == metadata_id):
@@ -58,40 +58,40 @@ def _get_native_states(hass: HomeAssistant, entity_id: str) -> list[State]:
 
 
 async def test_schema_update_calls(
-    hass: HomeAssistant, async_setup_recorder_instance: RecorderInstanceGenerator
+    menuai: menuai, async_setup_recorder_instance: RecorderInstanceGenerator
 ) -> None:
     """Test that schema migrations occur in correct order."""
-    assert recorder.util.async_migration_in_progress(hass) is False
+    assert recorder.util.async_migration_in_progress(menuai) is False
 
     with (
         patch(
-            "homeassistant.components.recorder.core.create_engine",
+            "menuai.components.recorder.core.create_engine",
             new=create_engine_test,
         ),
         patch(
-            "homeassistant.components.recorder.migration._apply_update",
+            "menuai.components.recorder.migration._apply_update",
             wraps=migration._apply_update,
         ) as update,
         patch(
-            "homeassistant.components.recorder.migration._migrate_schema",
+            "menuai.components.recorder.migration._migrate_schema",
             wraps=migration._migrate_schema,
         ) as migrate_schema,
     ):
-        await async_setup_recorder_instance(hass)
-        await async_wait_recording_done(hass)
+        await async_setup_recorder_instance(menuai)
+        await async_wait_recording_done(menuai)
 
-    assert recorder.util.async_migration_in_progress(hass) is False
-    instance = recorder.get_instance(hass)
+    assert recorder.util.async_migration_in_progress(menuai) is False
+    instance = recorder.get_instance(menuai)
     engine = instance.engine
     session_maker = instance.get_session
     assert update.mock_calls == [
-        call(instance, hass, engine, session_maker, version + 1, 0)
+        call(instance, menuai, engine, session_maker, version + 1, 0)
         for version in range(db_schema.SCHEMA_VERSION)
     ]
     assert migrate_schema.mock_calls == [
         call(
             instance,
-            hass,
+            menuai,
             engine,
             session_maker,
             migration.SchemaValidationStatus(
@@ -106,7 +106,7 @@ async def test_schema_update_calls(
         ),
         call(
             instance,
-            hass,
+            menuai,
             engine,
             session_maker,
             migration.SchemaValidationStatus(
@@ -123,7 +123,7 @@ async def test_schema_update_calls(
 
 
 async def test_migration_in_progress(
-    hass: HomeAssistant,
+    menuai: menuai,
     recorder_db_url: str,
     async_setup_recorder_instance: RecorderInstanceGenerator,
     instrument_migration: InstrumentedMigration,
@@ -137,26 +137,26 @@ async def test_migration_in_progress(
         # in normal operation.
         return
 
-    assert recorder.util.async_migration_in_progress(hass) is False
+    assert recorder.util.async_migration_in_progress(menuai) is False
 
     with (
         patch(
-            "homeassistant.components.recorder.core.create_engine",
+            "menuai.components.recorder.core.create_engine",
             new=create_engine_test,
         ),
     ):
         await async_setup_recorder_instance(
-            hass, wait_recorder=False, wait_recorder_setup=False
+            menuai, wait_recorder=False, wait_recorder_setup=False
         )
-        await hass.async_add_executor_job(instrument_migration.migration_started.wait)
-        assert recorder.util.async_migration_in_progress(hass) is True
+        await menuai.async_add_executor_job(instrument_migration.migration_started.wait)
+        assert recorder.util.async_migration_in_progress(menuai) is True
 
         # Let migration finish
         instrument_migration.migration_stall.set()
-        await async_wait_recording_done(hass)
+        await async_wait_recording_done(menuai)
 
-    assert recorder.util.async_migration_in_progress(hass) is False
-    assert recorder.get_instance(hass).schema_version == SCHEMA_VERSION
+    assert recorder.util.async_migration_in_progress(menuai) is False
+    assert recorder.get_instance(menuai).schema_version == SCHEMA_VERSION
 
 
 @pytest.mark.parametrize(
@@ -172,7 +172,7 @@ async def test_migration_in_progress(
     ],
 )
 async def test_database_migration_failed(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_setup_recorder_instance: RecorderInstanceGenerator,
     func_to_patch: str,
     expected_setup_result: bool,
@@ -180,36 +180,36 @@ async def test_database_migration_failed(
     expected_pn_dismiss: int,
 ) -> None:
     """Test we notify if the migration fails."""
-    assert recorder.util.async_migration_in_progress(hass) is False
+    assert recorder.util.async_migration_in_progress(menuai) is False
 
     with (
         patch(
-            "homeassistant.components.recorder.core.create_engine",
+            "menuai.components.recorder.core.create_engine",
             new=create_engine_test,
         ),
         patch(
-            f"homeassistant.components.recorder.migration.{func_to_patch}",
+            f"menuai.components.recorder.migration.{func_to_patch}",
             side_effect=ValueError,
         ),
         patch(
-            "homeassistant.components.persistent_notification.create",
+            "menuai.components.persistent_notification.create",
             side_effect=pn.create,
         ) as mock_create,
         patch(
-            "homeassistant.components.persistent_notification.dismiss",
+            "menuai.components.persistent_notification.dismiss",
             side_effect=pn.dismiss,
         ) as mock_dismiss,
     ):
         await async_setup_recorder_instance(
-            hass, wait_recorder=False, expected_setup_result=expected_setup_result
+            menuai, wait_recorder=False, expected_setup_result=expected_setup_result
         )
-        hass.states.async_set("my.entity", "on", {})
-        hass.states.async_set("my.entity", "off", {})
-        await hass.async_block_till_done()
-        await hass.async_add_executor_job(recorder.get_instance(hass).join)
-        await hass.async_block_till_done()
+        menuai.states.async_set("my.entity", "on", {})
+        menuai.states.async_set("my.entity", "off", {})
+        await menuai.async_block_till_done()
+        await menuai.async_add_executor_job(recorder.get_instance(menuai).join)
+        await menuai.async_block_till_done()
 
-    assert recorder.util.async_migration_in_progress(hass) is False
+    assert recorder.util.async_migration_in_progress(menuai) is False
     assert len(mock_create.mock_calls) == expected_pn_create
     assert len(mock_dismiss.mock_calls) == expected_pn_dismiss
 
@@ -224,17 +224,17 @@ async def test_database_migration_failed(
     ),
     [
         # Test error handling in _update_states_table_with_foreign_key_options
-        (11, "homeassistant.components.recorder.migration.DropConstraint", False, 1, 0),
+        (11, "menuai.components.recorder.migration.DropConstraint", False, 1, 0),
         # Test error handling in _modify_columns
         (12, "sqlalchemy.engine.base.Connection.execute", False, 1, 0),
         # Test error handling in _drop_foreign_key_constraints
-        (46, "homeassistant.components.recorder.migration.DropConstraint", False, 2, 1),
+        (46, "menuai.components.recorder.migration.DropConstraint", False, 2, 1),
     ],
 )
 @pytest.mark.skip_on_db_engine(["sqlite"])
 @pytest.mark.usefixtures("skip_by_db_engine")
 async def test_database_migration_failed_non_sqlite(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_setup_recorder_instance: RecorderInstanceGenerator,
     instrument_migration: InstrumentedMigration,
     patch_version: int,
@@ -244,31 +244,31 @@ async def test_database_migration_failed_non_sqlite(
     expected_pn_dismiss: int,
 ) -> None:
     """Test we notify if the migration fails."""
-    assert recorder.util.async_migration_in_progress(hass) is False
+    assert recorder.util.async_migration_in_progress(menuai) is False
     instrument_migration.stall_on_schema_version = patch_version
 
     with (
         patch(
-            "homeassistant.components.recorder.core.create_engine",
+            "menuai.components.recorder.core.create_engine",
             new=create_engine_test,
         ),
         patch(
-            "homeassistant.components.persistent_notification.create",
+            "menuai.components.persistent_notification.create",
             side_effect=pn.create,
         ) as mock_create,
         patch(
-            "homeassistant.components.persistent_notification.dismiss",
+            "menuai.components.persistent_notification.dismiss",
             side_effect=pn.dismiss,
         ) as mock_dismiss,
     ):
         await async_setup_recorder_instance(
-            hass,
+            menuai,
             wait_recorder=False,
             wait_recorder_setup=False,
             expected_setup_result=expected_setup_result,
         )
         # Wait for migration to reach the schema version we want to break
-        await hass.async_add_executor_job(
+        await menuai.async_add_executor_job(
             instrument_migration.apply_update_stalled.wait
         )
 
@@ -280,14 +280,14 @@ async def test_database_migration_failed_non_sqlite(
             ),
         ):
             instrument_migration.migration_stall.set()
-            hass.states.async_set("my.entity", "on", {})
-            hass.states.async_set("my.entity", "off", {})
-            await hass.async_block_till_done()
-            await hass.async_add_executor_job(recorder.get_instance(hass).join)
-            await hass.async_block_till_done()
+            menuai.states.async_set("my.entity", "on", {})
+            menuai.states.async_set("my.entity", "off", {})
+            await menuai.async_block_till_done()
+            await menuai.async_add_executor_job(recorder.get_instance(menuai).join)
+            await menuai.async_block_till_done()
 
     assert instrument_migration.apply_update_version == patch_version
-    assert recorder.util.async_migration_in_progress(hass) is False
+    assert recorder.util.async_migration_in_progress(menuai) is False
     assert len(mock_create.mock_calls) == expected_pn_create
     assert len(mock_dismiss.mock_calls) == expected_pn_dismiss
 
@@ -295,7 +295,7 @@ async def test_database_migration_failed_non_sqlite(
 @pytest.mark.skip_on_db_engine(["mysql", "postgresql"])
 @pytest.mark.usefixtures("skip_by_db_engine")
 async def test_live_database_migration_encounters_corruption(
-    hass: HomeAssistant,
+    menuai: menuai,
     recorder_db_url: str,
     async_setup_recorder_instance: RecorderInstanceGenerator,
 ) -> None:
@@ -305,7 +305,7 @@ async def test_live_database_migration_encounters_corruption(
     with SQLite.
     """
 
-    assert recorder.util.async_migration_in_progress(hass) is False
+    assert recorder.util.async_migration_in_progress(menuai) is False
 
     sqlite3_exception = DatabaseError("statement", {}, [])
     sqlite3_exception.__cause__ = sqlite3.DatabaseError(
@@ -314,28 +314,28 @@ async def test_live_database_migration_encounters_corruption(
 
     with (
         patch(
-            "homeassistant.components.recorder.migration._schema_is_current",
+            "menuai.components.recorder.migration._schema_is_current",
             side_effect=[False],
         ),
         patch(
-            "homeassistant.components.recorder.migration.migrate_schema_live",
+            "menuai.components.recorder.migration.migrate_schema_live",
             side_effect=sqlite3_exception,
         ),
         patch(
-            "homeassistant.components.recorder.core.move_away_broken_database"
+            "menuai.components.recorder.core.move_away_broken_database"
         ) as move_away,
         patch(
-            "homeassistant.components.recorder.core.Recorder._setup_run",
+            "menuai.components.recorder.core.Recorder._setup_run",
             autospec=True,
             wraps=recorder.Recorder._setup_run,
         ) as setup_run,
     ):
-        await async_setup_recorder_instance(hass)
-        hass.states.async_set("my.entity", "on", {})
-        hass.states.async_set("my.entity", "off", {})
-        await async_wait_recording_done(hass)
+        await async_setup_recorder_instance(menuai)
+        menuai.states.async_set("my.entity", "on", {})
+        menuai.states.async_set("my.entity", "off", {})
+        await async_wait_recording_done(menuai)
 
-    assert recorder.util.async_migration_in_progress(hass) is False
+    assert recorder.util.async_migration_in_progress(menuai) is False
     move_away.assert_called_once()
     setup_run.assert_called_once()
 
@@ -343,7 +343,7 @@ async def test_live_database_migration_encounters_corruption(
 @pytest.mark.skip_on_db_engine(["mysql", "postgresql"])
 @pytest.mark.usefixtures("skip_by_db_engine")
 async def test_non_live_database_migration_encounters_corruption(
-    hass: HomeAssistant,
+    menuai: menuai,
     recorder_db_url: str,
     async_setup_recorder_instance: RecorderInstanceGenerator,
 ) -> None:
@@ -353,7 +353,7 @@ async def test_non_live_database_migration_encounters_corruption(
     with SQLite.
     """
 
-    assert recorder.util.async_migration_in_progress(hass) is False
+    assert recorder.util.async_migration_in_progress(menuai) is False
 
     sqlite3_exception = DatabaseError("statement", {}, [])
     sqlite3_exception.__cause__ = sqlite3.DatabaseError(
@@ -362,31 +362,31 @@ async def test_non_live_database_migration_encounters_corruption(
 
     with (
         patch(
-            "homeassistant.components.recorder.migration._schema_is_current",
+            "menuai.components.recorder.migration._schema_is_current",
             side_effect=[False],
         ),
         patch(
-            "homeassistant.components.recorder.migration.migrate_schema_live",
+            "menuai.components.recorder.migration.migrate_schema_live",
         ) as migrate_schema_live,
         patch(
-            "homeassistant.components.recorder.migration.migrate_schema_non_live",
+            "menuai.components.recorder.migration.migrate_schema_non_live",
             side_effect=sqlite3_exception,
         ),
         patch(
-            "homeassistant.components.recorder.core.move_away_broken_database"
+            "menuai.components.recorder.core.move_away_broken_database"
         ) as move_away,
         patch(
-            "homeassistant.components.recorder.core.Recorder._setup_run",
+            "menuai.components.recorder.core.Recorder._setup_run",
             autospec=True,
             wraps=recorder.Recorder._setup_run,
         ) as setup_run,
     ):
-        await async_setup_recorder_instance(hass)
-        hass.states.async_set("my.entity", "on", {})
-        hass.states.async_set("my.entity", "off", {})
-        await async_wait_recording_done(hass)
+        await async_setup_recorder_instance(menuai)
+        menuai.states.async_set("my.entity", "on", {})
+        menuai.states.async_set("my.entity", "off", {})
+        await async_wait_recording_done(menuai)
 
-    assert recorder.util.async_migration_in_progress(hass) is False
+    assert recorder.util.async_migration_in_progress(menuai) is False
     move_away.assert_called_once()
     migrate_schema_live.assert_not_called()
     setup_run.assert_called_once()
@@ -406,7 +406,7 @@ async def test_non_live_database_migration_encounters_corruption(
     ],
 )
 async def test_database_migration_encounters_corruption_not_sqlite(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_setup_recorder_instance: RecorderInstanceGenerator,
     live_migration: bool,
     func_to_patch: str,
@@ -415,99 +415,99 @@ async def test_database_migration_encounters_corruption_not_sqlite(
     expected_pn_dismiss: int,
 ) -> None:
     """Test we fail on database error when we cannot recover."""
-    assert recorder.util.async_migration_in_progress(hass) is False
+    assert recorder.util.async_migration_in_progress(menuai) is False
 
     with (
         patch(
-            "homeassistant.components.recorder.migration._schema_is_current",
+            "menuai.components.recorder.migration._schema_is_current",
             side_effect=[False],
         ),
         patch(
-            f"homeassistant.components.recorder.migration.{func_to_patch}",
+            f"menuai.components.recorder.migration.{func_to_patch}",
             side_effect=DatabaseError("statement", {}, []),
         ),
         patch(
-            "homeassistant.components.recorder.core.move_away_broken_database"
+            "menuai.components.recorder.core.move_away_broken_database"
         ) as move_away,
         patch(
-            "homeassistant.components.persistent_notification.create",
+            "menuai.components.persistent_notification.create",
             side_effect=pn.create,
         ) as mock_create,
         patch(
-            "homeassistant.components.persistent_notification.dismiss",
+            "menuai.components.persistent_notification.dismiss",
             side_effect=pn.dismiss,
         ) as mock_dismiss,
         patch(
-            "homeassistant.components.recorder.core.migration.live_migration",
+            "menuai.components.recorder.core.migration.live_migration",
             return_value=live_migration,
         ),
     ):
         await async_setup_recorder_instance(
-            hass, wait_recorder=False, expected_setup_result=expected_setup_result
+            menuai, wait_recorder=False, expected_setup_result=expected_setup_result
         )
-        hass.states.async_set("my.entity", "on", {})
-        hass.states.async_set("my.entity", "off", {})
-        await hass.async_block_till_done()
-        await hass.async_add_executor_job(recorder.get_instance(hass).join)
-        await hass.async_block_till_done()
+        menuai.states.async_set("my.entity", "on", {})
+        menuai.states.async_set("my.entity", "off", {})
+        await menuai.async_block_till_done()
+        await menuai.async_add_executor_job(recorder.get_instance(menuai).join)
+        await menuai.async_block_till_done()
 
-    assert recorder.util.async_migration_in_progress(hass) is False
+    assert recorder.util.async_migration_in_progress(menuai) is False
     assert not move_away.called
     assert len(mock_create.mock_calls) == expected_pn_create
     assert len(mock_dismiss.mock_calls) == expected_pn_dismiss
 
 
 async def test_events_during_migration_are_queued(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_setup_recorder_instance: RecorderInstanceGenerator,
     instrument_migration: InstrumentedMigration,
 ) -> None:
     """Test that events during migration are queued."""
 
-    assert recorder.util.async_migration_in_progress(hass) is False
+    assert recorder.util.async_migration_in_progress(menuai) is False
 
     with (
         patch(
-            "homeassistant.components.recorder.core.create_engine",
+            "menuai.components.recorder.core.create_engine",
             new=create_engine_test,
         ),
     ):
         await async_setup_recorder_instance(
-            hass, {"commit_interval": 0}, wait_recorder=False, wait_recorder_setup=False
+            menuai, {"commit_interval": 0}, wait_recorder=False, wait_recorder_setup=False
         )
-        await hass.async_add_executor_job(instrument_migration.migration_started.wait)
-        assert recorder.util.async_migration_in_progress(hass) is True
-        hass.states.async_set("my.entity", "on", {})
-        hass.states.async_set("my.entity", "off", {})
-        await hass.async_block_till_done()
-        async_fire_time_changed(hass, dt_util.utcnow() + datetime.timedelta(hours=2))
-        await hass.async_block_till_done()
-        async_fire_time_changed(hass, dt_util.utcnow() + datetime.timedelta(hours=4))
+        await menuai.async_add_executor_job(instrument_migration.migration_started.wait)
+        assert recorder.util.async_migration_in_progress(menuai) is True
+        menuai.states.async_set("my.entity", "on", {})
+        menuai.states.async_set("my.entity", "off", {})
+        await menuai.async_block_till_done()
+        async_fire_time_changed(menuai, dt_util.utcnow() + datetime.timedelta(hours=2))
+        await menuai.async_block_till_done()
+        async_fire_time_changed(menuai, dt_util.utcnow() + datetime.timedelta(hours=4))
 
         # Let migration finish
         instrument_migration.migration_stall.set()
-        await recorder.get_instance(hass).async_recorder_ready.wait()
-        await async_wait_recording_done(hass)
+        await recorder.get_instance(menuai).async_recorder_ready.wait()
+        await async_wait_recording_done(menuai)
 
-    assert recorder.util.async_migration_in_progress(hass) is False
-    db_states = await recorder.get_instance(hass).async_add_executor_job(
-        _get_native_states, hass, "my.entity"
+    assert recorder.util.async_migration_in_progress(menuai) is False
+    db_states = await recorder.get_instance(menuai).async_add_executor_job(
+        _get_native_states, menuai, "my.entity"
     )
     assert len(db_states) == 2
 
 
 async def test_events_during_migration_queue_exhausted(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_setup_recorder_instance: RecorderInstanceGenerator,
     instrument_migration: InstrumentedMigration,
 ) -> None:
     """Test that events during migration takes so long the queue is exhausted."""
 
-    assert recorder.util.async_migration_in_progress(hass) is False
+    assert recorder.util.async_migration_in_progress(menuai) is False
 
     with (
         patch(
-            "homeassistant.components.recorder.core.create_engine",
+            "menuai.components.recorder.core.create_engine",
             new=create_engine_test,
         ),
         patch.object(recorder.core, "MAX_QUEUE_BACKLOG_MIN_VALUE", 1),
@@ -516,32 +516,32 @@ async def test_events_during_migration_queue_exhausted(
         ),
     ):
         await async_setup_recorder_instance(
-            hass, {"commit_interval": 0}, wait_recorder=False, wait_recorder_setup=False
+            menuai, {"commit_interval": 0}, wait_recorder=False, wait_recorder_setup=False
         )
-        await hass.async_add_executor_job(instrument_migration.migration_started.wait)
-        assert recorder.util.async_migration_in_progress(hass) is True
-        hass.states.async_set("my.entity", "on", {})
-        await hass.async_block_till_done()
-        async_fire_time_changed(hass, dt_util.utcnow() + datetime.timedelta(hours=2))
-        await hass.async_block_till_done()
-        async_fire_time_changed(hass, dt_util.utcnow() + datetime.timedelta(hours=4))
-        await hass.async_block_till_done()
-        hass.states.async_set("my.entity", "off", {})
+        await menuai.async_add_executor_job(instrument_migration.migration_started.wait)
+        assert recorder.util.async_migration_in_progress(menuai) is True
+        menuai.states.async_set("my.entity", "on", {})
+        await menuai.async_block_till_done()
+        async_fire_time_changed(menuai, dt_util.utcnow() + datetime.timedelta(hours=2))
+        await menuai.async_block_till_done()
+        async_fire_time_changed(menuai, dt_util.utcnow() + datetime.timedelta(hours=4))
+        await menuai.async_block_till_done()
+        menuai.states.async_set("my.entity", "off", {})
 
         # Let migration finish
         instrument_migration.migration_stall.set()
-        await recorder.get_instance(hass).async_recorder_ready.wait()
-        await async_wait_recording_done(hass)
+        await recorder.get_instance(menuai).async_recorder_ready.wait()
+        await async_wait_recording_done(menuai)
 
-    assert recorder.util.async_migration_in_progress(hass) is False
-    db_states = await recorder.get_instance(hass).async_add_executor_job(
-        _get_native_states, hass, "my.entity"
+    assert recorder.util.async_migration_in_progress(menuai) is False
+    db_states = await recorder.get_instance(menuai).async_add_executor_job(
+        _get_native_states, menuai, "my.entity"
     )
     assert len(db_states) == 1
-    hass.states.async_set("my.entity", "on", {})
-    await async_wait_recording_done(hass)
-    db_states = await recorder.get_instance(hass).async_add_executor_job(
-        _get_native_states, hass, "my.entity"
+    menuai.states.async_set("my.entity", "on", {})
+    await async_wait_recording_done(menuai)
+    db_states = await recorder.get_instance(menuai).async_add_executor_job(
+        _get_native_states, menuai, "my.entity"
     )
     assert len(db_states) == 2
 
@@ -559,7 +559,7 @@ async def test_events_during_migration_queue_exhausted(
     ],
 )
 async def test_schema_migrate(
-    hass: HomeAssistant,
+    menuai: menuai,
     recorder_db_url: str,
     async_setup_recorder_instance: RecorderInstanceGenerator,
     instrument_migration: InstrumentedMigration,
@@ -612,52 +612,52 @@ async def test_schema_migrate(
 
     with (
         patch(
-            "homeassistant.components.recorder.core.create_engine",
+            "menuai.components.recorder.core.create_engine",
             new=_create_engine_test,
         ),
         patch(
-            "homeassistant.components.recorder.Recorder._setup_run",
+            "menuai.components.recorder.Recorder._setup_run",
             side_effect=_mock_setup_run,
             autospec=True,
         ) as setup_run,
-        patch("homeassistant.components.recorder.util.time.sleep"),
+        patch("menuai.components.recorder.util.time.sleep"),
         patch(
-            "homeassistant.components.recorder.migration._create_index",
+            "menuai.components.recorder.migration._create_index",
             wraps=_sometimes_failing_create_index,
         ),
         patch(
-            "homeassistant.components.recorder.Recorder._process_state_changed_event_into_session",
+            "menuai.components.recorder.Recorder._process_state_changed_event_into_session",
         ),
         patch(
-            "homeassistant.components.recorder.Recorder._process_non_state_changed_event_into_session",
+            "menuai.components.recorder.Recorder._process_non_state_changed_event_into_session",
         ),
         patch(
-            "homeassistant.components.recorder.Recorder._pre_process_startup_events",
+            "menuai.components.recorder.Recorder._pre_process_startup_events",
         ),
     ):
         await async_setup_recorder_instance(
-            hass, wait_recorder=False, wait_recorder_setup=live
+            menuai, wait_recorder=False, wait_recorder_setup=live
         )
-        await hass.async_add_executor_job(instrument_migration.migration_started.wait)
-        assert recorder.util.async_migration_in_progress(hass) is True
-        await async_wait_recorder(hass)
+        await menuai.async_add_executor_job(instrument_migration.migration_started.wait)
+        assert recorder.util.async_migration_in_progress(menuai) is True
+        await async_wait_recorder(menuai)
 
-        assert recorder.util.async_migration_in_progress(hass) is True
-        assert recorder.util.async_migration_is_live(hass) == live
+        assert recorder.util.async_migration_in_progress(menuai) is True
+        assert recorder.util.async_migration_is_live(menuai) == live
         instrument_migration.migration_stall.set()
-        await hass.async_block_till_done()
-        await hass.async_add_executor_job(instrument_migration.live_migration_done.wait)
-        await async_wait_recording_done(hass)
+        await menuai.async_block_till_done()
+        await menuai.async_add_executor_job(instrument_migration.live_migration_done.wait)
+        await async_wait_recording_done(menuai)
         assert instrument_migration.migration_version == db_schema.SCHEMA_VERSION
         assert setup_run.called
-        assert recorder.util.async_migration_in_progress(hass) is not True
+        assert recorder.util.async_migration_in_progress(menuai) is not True
         assert instrument_migration.apply_update_mock.called
 
 
-def test_invalid_update(hass: HomeAssistant) -> None:
+def test_invalid_update(menuai: menuai) -> None:
     """Test that an invalid new version raises an exception."""
     with pytest.raises(ValueError):
-        migration._apply_update(Mock(), hass, Mock(), Mock(), -1, 0)
+        migration._apply_update(Mock(), menuai, Mock(), Mock(), -1, 0)
 
 
 @pytest.mark.parametrize(
@@ -734,7 +734,7 @@ def test_forgiving_drop_index(
 
         with (
             patch(
-                "homeassistant.components.recorder.migration.get_index_by_name",
+                "menuai.components.recorder.migration.get_index_by_name",
                 return_value="ix_states_context_id_bin",
             ),
             patch.object(
@@ -749,7 +749,7 @@ def test_forgiving_drop_index(
         caplog.clear()
         with (
             patch(
-                "homeassistant.components.recorder.migration.get_index_by_name",
+                "menuai.components.recorder.migration.get_index_by_name",
                 return_value="ix_states_context_id_bin",
             ),
             patch.object(
@@ -785,7 +785,7 @@ def test_forgiving_add_index_with_other_db_types(
     type(mocked_table).indexes = PropertyMock(return_value=[mocked_index])
 
     with patch(
-        "homeassistant.components.recorder.migration.Table", return_value=mocked_table
+        "menuai.components.recorder.migration.Table", return_value=mocked_table
     ):
         migration._create_index(Mock(), Mock(), "states", "ix_states_context_id")
 
@@ -1266,7 +1266,7 @@ def test_drop_duplicated_foreign_key_constraints(recorder_db_url: str) -> None:
     inspector.get_foreign_keys = Mock(name="get_foreign_keys", return_value=[])
     with (
         patch(
-            "homeassistant.components.recorder.migration.sqlalchemy.inspect",
+            "menuai.components.recorder.migration.sqlalchemy.inspect",
             return_value=inspector,
         ),
         Session(engine) as session,

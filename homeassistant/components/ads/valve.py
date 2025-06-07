@@ -5,18 +5,18 @@ from __future__ import annotations
 import pyads
 import voluptuous as vol
 
-from homeassistant.components.valve import (
+from menuai.components.valve import (
     DEVICE_CLASSES_SCHEMA as VALVE_DEVICE_CLASSES_SCHEMA,
     PLATFORM_SCHEMA as VALVE_PLATFORM_SCHEMA,
     ValveDeviceClass,
     ValveEntity,
     ValveEntityFeature,
 )
-from homeassistant.const import CONF_DEVICE_CLASS, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_DEVICE_CLASS, CONF_NAME
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import CONF_ADS_VAR, DATA_ADS
 from .entity import AdsEntity
@@ -34,13 +34,13 @@ PLATFORM_SCHEMA = VALVE_PLATFORM_SCHEMA.extend(
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up an ADS valve device."""
-    ads_hub = hass.data[DATA_ADS]
+    ads_hub = menuai.data[DATA_ADS]
 
     ads_var: str = config[CONF_ADS_VAR]
     name: str = config[CONF_NAME]
@@ -69,7 +69,7 @@ class AdsValve(AdsEntity, ValveEntity):
         self._attr_reports_position = False
         self._attr_is_closed = True
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register device notification."""
         await self.async_initialize_device(self._ads_var, pyads.PLCTYPE_BOOL)
 

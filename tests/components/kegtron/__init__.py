@@ -1,6 +1,6 @@
 """Tests for the Kegtron integration."""
 
-from homeassistant.helpers.service_info.bluetooth import BluetoothServiceInfo
+from menuai.helpers.service_info.bluetooth import BluetoothServiceInfo
 
 NOT_KEGTRON_SERVICE_INFO = BluetoothServiceInfo(
     name="Not it",

@@ -6,11 +6,11 @@ from aiohttp.web_exceptions import HTTPException
 from apyosoenergyapi import OSOEnergy
 from apyosoenergyapi.helper.osoenergy_exceptions import OSOEnergyReauthRequired
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_API_KEY, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import aiohttp_client
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_API_KEY, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import aiohttp_client
 
 from .const import DOMAIN
 
@@ -26,15 +26,15 @@ PLATFORM_LOOKUP = {
 }
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up OSO Energy from a config entry."""
     subscription_key = entry.data[CONF_API_KEY]
-    websession = aiohttp_client.async_get_clientsession(hass)
+    websession = aiohttp_client.async_get_clientsession(menuai)
     osoenergy = OSOEnergy(subscription_key, websession)
 
     osoenergy_config = dict(entry.data)
 
-    hass.data.setdefault(DOMAIN, {})
+    menuai.data.setdefault(DOMAIN, {})
 
     try:
         devices: Any = await osoenergy.session.start_session(osoenergy_config)
@@ -43,7 +43,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except OSOEnergyReauthRequired as err:
         raise ConfigEntryAuthFailed from err
 
-    hass.data[DOMAIN][entry.entry_id] = osoenergy
+    menuai.data[DOMAIN][entry.entry_id] = osoenergy
 
     platforms = set()
     for ha_type, oso_type in PLATFORM_LOOKUP.items():
@@ -51,14 +51,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if device_list:
             platforms.add(ha_type)
     if platforms:
-        await hass.config_entries.async_forward_entry_setups(entry, platforms)
+        await menuai.config_entries.async_forward_entry_setups(entry, platforms)
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id)
+        menuai.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok

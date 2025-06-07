@@ -9,12 +9,12 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-from homeassistant.components import google_pubsub
-from homeassistant.components.google_pubsub import DateTimeJSONEncoder as victim
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components import google_pubsub
+from menuai.components.google_pubsub import DateTimeJSONEncoder as victim
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
-GOOGLE_PUBSUB_PATH = "homeassistant.components.google_pubsub"
+GOOGLE_PUBSUB_PATH = "menuai.components.google_pubsub"
 
 
 @dataclass
@@ -69,7 +69,7 @@ def mock_json(monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
 
-async def test_minimal_config(hass: HomeAssistant, mock_client) -> None:
+async def test_minimal_config(menuai: menuai, mock_client) -> None:
     """Test the minimal config and defaults of component."""
     config = {
         google_pubsub.DOMAIN: {
@@ -79,15 +79,15 @@ async def test_minimal_config(hass: HomeAssistant, mock_client) -> None:
             "filter": {},
         }
     }
-    assert await async_setup_component(hass, google_pubsub.DOMAIN, config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, google_pubsub.DOMAIN, config)
+    await menuai.async_block_till_done()
     assert mock_client.from_service_account_json.call_count == 1
     assert mock_client.from_service_account_json.call_args[0][0] == os.path.join(
-        hass.config.config_dir, "creds"
+        menuai.config.config_dir, "creds"
     )
 
 
-async def test_full_config(hass: HomeAssistant, mock_client) -> None:
+async def test_full_config(menuai: menuai, mock_client) -> None:
     """Test the full config of the component."""
     config = {
         google_pubsub.DOMAIN: {
@@ -104,15 +104,15 @@ async def test_full_config(hass: HomeAssistant, mock_client) -> None:
             },
         }
     }
-    assert await async_setup_component(hass, google_pubsub.DOMAIN, config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, google_pubsub.DOMAIN, config)
+    await menuai.async_block_till_done()
     assert mock_client.from_service_account_json.call_count == 1
     assert mock_client.from_service_account_json.call_args[0][0] == os.path.join(
-        hass.config.config_dir, "creds"
+        menuai.config.config_dir, "creds"
     )
 
 
-async def _setup(hass: HomeAssistant, filter_config: dict[str, Any]) -> None:
+async def _setup(menuai: menuai, filter_config: dict[str, Any]) -> None:
     """Shared set up for filtering tests."""
     config = {
         google_pubsub.DOMAIN: {
@@ -122,14 +122,14 @@ async def _setup(hass: HomeAssistant, filter_config: dict[str, Any]) -> None:
             "filter": filter_config,
         }
     }
-    assert await async_setup_component(hass, google_pubsub.DOMAIN, config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, google_pubsub.DOMAIN, config)
+    await menuai.async_block_till_done()
 
 
-async def test_allowlist(hass: HomeAssistant, mock_client) -> None:
+async def test_allowlist(menuai: menuai, mock_client) -> None:
     """Test an allowlist only config."""
     await _setup(
-        hass,
+        menuai,
         {
             "include_domains": ["light"],
             "include_entity_globs": ["sensor.included_*"],
@@ -148,18 +148,18 @@ async def test_allowlist(hass: HomeAssistant, mock_client) -> None:
     ]
 
     for test in tests:
-        hass.states.async_set(test.id, "on")
-        await hass.async_block_till_done()
+        menuai.states.async_set(test.id, "on")
+        await menuai.async_block_till_done()
 
         was_called = publish_client.publish.call_count == 1
         assert test.should_pass == was_called
         publish_client.publish.reset_mock()
 
 
-async def test_denylist(hass: HomeAssistant, mock_client) -> None:
+async def test_denylist(menuai: menuai, mock_client) -> None:
     """Test a denylist only config."""
     await _setup(
-        hass,
+        menuai,
         {
             "exclude_domains": ["climate"],
             "exclude_entity_globs": ["sensor.excluded_*"],
@@ -178,18 +178,18 @@ async def test_denylist(hass: HomeAssistant, mock_client) -> None:
     ]
 
     for test in tests:
-        hass.states.async_set(test.id, "on")
-        await hass.async_block_till_done()
+        menuai.states.async_set(test.id, "on")
+        await menuai.async_block_till_done()
 
         was_called = publish_client.publish.call_count == 1
         assert test.should_pass == was_called
         publish_client.publish.reset_mock()
 
 
-async def test_filtered_allowlist(hass: HomeAssistant, mock_client) -> None:
+async def test_filtered_allowlist(menuai: menuai, mock_client) -> None:
     """Test an allowlist config with a filtering denylist."""
     await _setup(
-        hass,
+        menuai,
         {
             "include_domains": ["light"],
             "include_entity_globs": ["*.included_*"],
@@ -209,18 +209,18 @@ async def test_filtered_allowlist(hass: HomeAssistant, mock_client) -> None:
     ]
 
     for test in tests:
-        hass.states.async_set(test.id, "not blank")
-        await hass.async_block_till_done()
+        menuai.states.async_set(test.id, "not blank")
+        await menuai.async_block_till_done()
 
         was_called = publish_client.publish.call_count == 1
         assert test.should_pass == was_called
         publish_client.publish.reset_mock()
 
 
-async def test_filtered_denylist(hass: HomeAssistant, mock_client) -> None:
+async def test_filtered_denylist(menuai: menuai, mock_client) -> None:
     """Test a denylist config with a filtering allowlist."""
     await _setup(
-        hass,
+        menuai,
         {
             "include_entities": ["climate.included", "sensor.excluded_test"],
             "exclude_domains": ["climate"],
@@ -240,8 +240,8 @@ async def test_filtered_denylist(hass: HomeAssistant, mock_client) -> None:
     ]
 
     for test in tests:
-        hass.states.async_set(test.id, "not blank")
-        await hass.async_block_till_done()
+        menuai.states.async_set(test.id, "not blank")
+        await menuai.async_block_till_done()
 
         was_called = publish_client.publish.call_count == 1
         assert test.should_pass == was_called

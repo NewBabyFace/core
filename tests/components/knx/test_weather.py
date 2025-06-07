@@ -1,19 +1,19 @@
 """Test KNX weather."""
 
-from homeassistant.components.knx.schema import WeatherSchema
-from homeassistant.components.weather import (
+from menuai.components.knx.schema import WeatherSchema
+from menuai.components.weather import (
     ATTR_CONDITION_EXCEPTIONAL,
     ATTR_CONDITION_RAINY,
     ATTR_CONDITION_SUNNY,
     ATTR_CONDITION_WINDY,
 )
-from homeassistant.const import CONF_NAME
-from homeassistant.core import HomeAssistant
+from menuai.const import CONF_NAME
+from menuai.core import menuai
 
 from .conftest import KNXTestKit
 
 
-async def test_weather(hass: HomeAssistant, knx: KNXTestKit) -> None:
+async def test_weather(menuai: menuai, knx: KNXTestKit) -> None:
     """Test KNX weather."""
 
     await knx.setup_integration(
@@ -36,7 +36,7 @@ async def test_weather(hass: HomeAssistant, knx: KNXTestKit) -> None:
             }
         }
     )
-    state = hass.states.get("weather.test")
+    state = menuai.states.get("weather.test")
     assert state.state is ATTR_CONDITION_EXCEPTIONAL
 
     # StateUpdater initialize states
@@ -82,7 +82,7 @@ async def test_weather(hass: HomeAssistant, knx: KNXTestKit) -> None:
     await knx.receive_response("1/1/4", (0, 40))
 
     # verify state
-    state = hass.states.get("weather.test")
+    state = menuai.states.get("weather.test")
     assert state.attributes["temperature"] == 0.4
     assert state.attributes["wind_bearing"] == 270
     assert state.attributes["wind_speed"] == 1.44
@@ -91,11 +91,11 @@ async def test_weather(hass: HomeAssistant, knx: KNXTestKit) -> None:
 
     # update from KNX - set rain alarm
     await knx.receive_write("1/1/2", True)
-    state = hass.states.get("weather.test")
+    state = menuai.states.get("weather.test")
     assert state.state is ATTR_CONDITION_RAINY
 
     # update from KNX - set wind alarm
     await knx.receive_write("1/1/2", False)
     await knx.receive_write("1/1/1", True)
-    state = hass.states.get("weather.test")
+    state = menuai.states.get("weather.test")
     assert state.state is ATTR_CONDITION_WINDY

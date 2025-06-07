@@ -5,14 +5,14 @@ from __future__ import annotations
 from typing import Any
 import uuid
 
-from homeassistant.components.scene import (
+from menuai.components.scene import (
     DOMAIN as SCENE_DOMAIN,
     PLATFORM_SCHEMA as SCENE_PLATFORM_SCHEMA,
 )
-from homeassistant.config import SCENE_CONFIG_PATH
-from homeassistant.const import CONF_ID, SERVICE_RELOAD
-from homeassistant.core import DOMAIN as HOMEASSISTANT_DOMAIN, HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv, entity_registry as er
+from menuai.config import SCENE_CONFIG_PATH
+from menuai.const import CONF_ID, SERVICE_RELOAD
+from menuai.core import DOMAIN as menuai_DOMAIN, menuai, callback
+from menuai.helpers import config_validation as cv, entity_registry as er
 
 from .const import ACTION_DELETE
 from .view import EditIdBasedConfigView
@@ -21,19 +21,19 @@ PLATFORM_SCHEMA = SCENE_PLATFORM_SCHEMA
 
 
 @callback
-def async_setup(hass: HomeAssistant) -> bool:
+def async_setup(menuai: menuai) -> bool:
     """Set up the Scene config API."""
 
     async def hook(action: str, config_key: str) -> None:
         """post_write_hook for Config View that reloads scenes."""
         if action != ACTION_DELETE:
-            await hass.services.async_call(SCENE_DOMAIN, SERVICE_RELOAD)
+            await menuai.services.async_call(SCENE_DOMAIN, SERVICE_RELOAD)
             return
 
-        ent_reg = er.async_get(hass)
+        ent_reg = er.async_get(menuai)
 
         entity_id = ent_reg.async_get_entity_id(
-            SCENE_DOMAIN, HOMEASSISTANT_DOMAIN, config_key
+            SCENE_DOMAIN, menuai_DOMAIN, config_key
         )
 
         if entity_id is None:
@@ -41,7 +41,7 @@ def async_setup(hass: HomeAssistant) -> bool:
 
         ent_reg.async_remove(entity_id)
 
-    hass.http.register_view(
+    menuai.http.register_view(
         EditSceneConfigView(
             SCENE_DOMAIN,
             "config",
@@ -59,7 +59,7 @@ class EditSceneConfigView(EditIdBasedConfigView):
 
     def _write_value(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         data: list[dict[str, Any]],
         config_key: str,
         new_value: dict[str, Any],

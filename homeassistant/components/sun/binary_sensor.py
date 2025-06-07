@@ -5,16 +5,16 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     DOMAIN as BINARY_SENSOR_DOMAIN,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN, SIGNAL_EVENTS_CHANGED
 from .entity import Sun, SunConfigEntry
@@ -42,7 +42,7 @@ BINARY_SENSOR_TYPES: tuple[SunBinarySensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: SunConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -88,12 +88,12 @@ class SunBinarySensor(BinarySensorEntity):
         """Return value of binary sensor."""
         return self.entity_description.value_fn(self.sun)
 
-    async def async_added_to_hass(self) -> None:
-        """Register signal listener when added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Register signal listener when added to menuai."""
+        await super().async_added_to_menuai()
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 self.entity_description.signal,
                 self.async_write_ha_state,
             )

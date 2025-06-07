@@ -61,21 +61,21 @@ from zwave_js_server.model.utils import (
 from zwave_js_server.model.value import ConfigurationValueFormat
 from zwave_js_server.util.node import async_set_config_parameter
 
-from homeassistant.components import websocket_api
-from homeassistant.components.http import KEY_HASS, HomeAssistantView, require_admin
-from homeassistant.components.websocket_api import (
+from menuai.components import websocket_api
+from menuai.components.http import KEY_menuai, menuaiView, require_admin
+from menuai.components.websocket_api import (
     ERR_INVALID_FORMAT,
     ERR_NOT_FOUND,
     ERR_NOT_SUPPORTED,
     ERR_UNKNOWN_ERROR,
     ActiveConnection,
 )
-from homeassistant.config_entries import ConfigEntry, ConfigEntryState
-from homeassistant.const import CONF_URL
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv, device_registry as dr
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from menuai.config_entries import ConfigEntry, ConfigEntryState
+from menuai.const import CONF_URL
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv, device_registry as dr
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.dispatcher import async_dispatcher_connect
 
 from .config_validation import BITMASK_SCHEMA
 from .const import (
@@ -250,13 +250,13 @@ QR_CODE_STRING_SCHEMA = vol.All(str, vol.Length(min=MINIMUM_QR_STRING_LENGTH))
 
 
 async def _async_get_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     entry_id: str,
 ) -> tuple[ConfigEntry, Client, Driver] | tuple[None, None, None]:
     """Get config entry and client from message data."""
-    entry = hass.config_entries.async_get_entry(entry_id)
+    entry = menuai.config_entries.async_get_entry(entry_id)
     if entry is None:
         connection.send_error(
             msg[ID], ERR_NOT_FOUND, f"Config entry {entry_id} not found"
@@ -284,37 +284,37 @@ async def _async_get_entry(
 
 def async_get_entry(
     orig_func: Callable[
-        [HomeAssistant, ActiveConnection, dict[str, Any], ConfigEntry, Client, Driver],
+        [menuai, ActiveConnection, dict[str, Any], ConfigEntry, Client, Driver],
         Coroutine[Any, Any, None],
     ],
 ) -> Callable[
-    [HomeAssistant, ActiveConnection, dict[str, Any]], Coroutine[Any, Any, None]
+    [menuai, ActiveConnection, dict[str, Any]], Coroutine[Any, Any, None]
 ]:
     """Decorate async function to get entry."""
 
     @wraps(orig_func)
     async def async_get_entry_func(
-        hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+        menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
     ) -> None:
         """Provide user specific data and store to function."""
         entry, client, driver = await _async_get_entry(
-            hass, connection, msg, msg[ENTRY_ID]
+            menuai, connection, msg, msg[ENTRY_ID]
         )
 
         if not entry or not client or not driver:
             return
 
-        await orig_func(hass, connection, msg, entry, client, driver)
+        await orig_func(menuai, connection, msg, entry, client, driver)
 
     return async_get_entry_func
 
 
 async def _async_get_node(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict, device_id: str
+    menuai: menuai, connection: ActiveConnection, msg: dict, device_id: str
 ) -> Node | None:
     """Get node from message data."""
     try:
-        node = async_get_node_from_device_id(hass, device_id)
+        node = async_get_node_from_device_id(menuai, device_id)
     except ValueError as err:
         error_code = ERR_NOT_FOUND
         if "loaded" in err.args[0]:
@@ -326,41 +326,41 @@ async def _async_get_node(
 
 def async_get_node(
     orig_func: Callable[
-        [HomeAssistant, ActiveConnection, dict[str, Any], Node],
+        [menuai, ActiveConnection, dict[str, Any], Node],
         Coroutine[Any, Any, None],
     ],
 ) -> Callable[
-    [HomeAssistant, ActiveConnection, dict[str, Any]], Coroutine[Any, Any, None]
+    [menuai, ActiveConnection, dict[str, Any]], Coroutine[Any, Any, None]
 ]:
     """Decorate async function to get node."""
 
     @wraps(orig_func)
     async def async_get_node_func(
-        hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+        menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
     ) -> None:
         """Provide user specific data and store to function."""
-        node = await _async_get_node(hass, connection, msg, msg[DEVICE_ID])
+        node = await _async_get_node(menuai, connection, msg, msg[DEVICE_ID])
         if not node:
             return
-        await orig_func(hass, connection, msg, node)
+        await orig_func(menuai, connection, msg, node)
 
     return async_get_node_func
 
 
 def async_handle_failed_command[**_P](
     orig_func: Callable[
-        Concatenate[HomeAssistant, ActiveConnection, dict[str, Any], _P],
+        Concatenate[menuai, ActiveConnection, dict[str, Any], _P],
         Coroutine[Any, Any, None],
     ],
 ) -> Callable[
-    Concatenate[HomeAssistant, ActiveConnection, dict[str, Any], _P],
+    Concatenate[menuai, ActiveConnection, dict[str, Any], _P],
     Coroutine[Any, Any, None],
 ]:
     """Decorate async function to handle FailedCommand and send relevant error."""
 
     @wraps(orig_func)
     async def async_handle_failed_command_func(
-        hass: HomeAssistant,
+        menuai: menuai,
         connection: ActiveConnection,
         msg: dict[str, Any],
         *args: _P.args,
@@ -368,7 +368,7 @@ def async_handle_failed_command[**_P](
     ) -> None:
         """Handle FailedCommand within function and send relevant error."""
         try:
-            await orig_func(hass, connection, msg, *args, **kwargs)
+            await orig_func(menuai, connection, msg, *args, **kwargs)
         except FailedCommand as err:
             # Unsubscribe to callbacks
             if unsubs := msg.get(DATA_UNSUBSCRIBE):
@@ -398,79 +398,79 @@ def node_status(node: Node) -> dict[str, Any]:
 
 
 @callback
-def async_register_api(hass: HomeAssistant) -> None:
+def async_register_api(menuai: menuai) -> None:
     """Register all of our api endpoints."""
-    websocket_api.async_register_command(hass, websocket_network_status)
-    websocket_api.async_register_command(hass, websocket_subscribe_node_status)
-    websocket_api.async_register_command(hass, websocket_node_status)
-    websocket_api.async_register_command(hass, websocket_node_metadata)
-    websocket_api.async_register_command(hass, websocket_node_alerts)
-    websocket_api.async_register_command(hass, websocket_add_node)
-    websocket_api.async_register_command(hass, websocket_cancel_secure_bootstrap_s2)
-    websocket_api.async_register_command(hass, websocket_subscribe_s2_inclusion)
-    websocket_api.async_register_command(hass, websocket_grant_security_classes)
-    websocket_api.async_register_command(hass, websocket_validate_dsk_and_enter_pin)
-    websocket_api.async_register_command(hass, websocket_subscribe_new_devices)
-    websocket_api.async_register_command(hass, websocket_provision_smart_start_node)
-    websocket_api.async_register_command(hass, websocket_unprovision_smart_start_node)
-    websocket_api.async_register_command(hass, websocket_get_provisioning_entries)
-    websocket_api.async_register_command(hass, websocket_parse_qr_code_string)
+    websocket_api.async_register_command(menuai, websocket_network_status)
+    websocket_api.async_register_command(menuai, websocket_subscribe_node_status)
+    websocket_api.async_register_command(menuai, websocket_node_status)
+    websocket_api.async_register_command(menuai, websocket_node_metadata)
+    websocket_api.async_register_command(menuai, websocket_node_alerts)
+    websocket_api.async_register_command(menuai, websocket_add_node)
+    websocket_api.async_register_command(menuai, websocket_cancel_secure_bootstrap_s2)
+    websocket_api.async_register_command(menuai, websocket_subscribe_s2_inclusion)
+    websocket_api.async_register_command(menuai, websocket_grant_security_classes)
+    websocket_api.async_register_command(menuai, websocket_validate_dsk_and_enter_pin)
+    websocket_api.async_register_command(menuai, websocket_subscribe_new_devices)
+    websocket_api.async_register_command(menuai, websocket_provision_smart_start_node)
+    websocket_api.async_register_command(menuai, websocket_unprovision_smart_start_node)
+    websocket_api.async_register_command(menuai, websocket_get_provisioning_entries)
+    websocket_api.async_register_command(menuai, websocket_parse_qr_code_string)
     websocket_api.async_register_command(
-        hass, websocket_try_parse_dsk_from_qr_code_string
+        menuai, websocket_try_parse_dsk_from_qr_code_string
     )
-    websocket_api.async_register_command(hass, websocket_lookup_device)
-    websocket_api.async_register_command(hass, websocket_supports_feature)
-    websocket_api.async_register_command(hass, websocket_stop_inclusion)
-    websocket_api.async_register_command(hass, websocket_stop_exclusion)
-    websocket_api.async_register_command(hass, websocket_remove_node)
-    websocket_api.async_register_command(hass, websocket_remove_failed_node)
-    websocket_api.async_register_command(hass, websocket_replace_failed_node)
-    websocket_api.async_register_command(hass, websocket_begin_rebuilding_routes)
+    websocket_api.async_register_command(menuai, websocket_lookup_device)
+    websocket_api.async_register_command(menuai, websocket_supports_feature)
+    websocket_api.async_register_command(menuai, websocket_stop_inclusion)
+    websocket_api.async_register_command(menuai, websocket_stop_exclusion)
+    websocket_api.async_register_command(menuai, websocket_remove_node)
+    websocket_api.async_register_command(menuai, websocket_remove_failed_node)
+    websocket_api.async_register_command(menuai, websocket_replace_failed_node)
+    websocket_api.async_register_command(menuai, websocket_begin_rebuilding_routes)
     websocket_api.async_register_command(
-        hass, websocket_subscribe_rebuild_routes_progress
+        menuai, websocket_subscribe_rebuild_routes_progress
     )
-    websocket_api.async_register_command(hass, websocket_stop_rebuilding_routes)
-    websocket_api.async_register_command(hass, websocket_refresh_node_info)
-    websocket_api.async_register_command(hass, websocket_refresh_node_values)
-    websocket_api.async_register_command(hass, websocket_refresh_node_cc_values)
-    websocket_api.async_register_command(hass, websocket_rebuild_node_routes)
-    websocket_api.async_register_command(hass, websocket_set_config_parameter)
-    websocket_api.async_register_command(hass, websocket_get_config_parameters)
-    websocket_api.async_register_command(hass, websocket_get_raw_config_parameter)
-    websocket_api.async_register_command(hass, websocket_set_raw_config_parameter)
-    websocket_api.async_register_command(hass, websocket_subscribe_log_updates)
-    websocket_api.async_register_command(hass, websocket_update_log_config)
-    websocket_api.async_register_command(hass, websocket_get_log_config)
+    websocket_api.async_register_command(menuai, websocket_stop_rebuilding_routes)
+    websocket_api.async_register_command(menuai, websocket_refresh_node_info)
+    websocket_api.async_register_command(menuai, websocket_refresh_node_values)
+    websocket_api.async_register_command(menuai, websocket_refresh_node_cc_values)
+    websocket_api.async_register_command(menuai, websocket_rebuild_node_routes)
+    websocket_api.async_register_command(menuai, websocket_set_config_parameter)
+    websocket_api.async_register_command(menuai, websocket_get_config_parameters)
+    websocket_api.async_register_command(menuai, websocket_get_raw_config_parameter)
+    websocket_api.async_register_command(menuai, websocket_set_raw_config_parameter)
+    websocket_api.async_register_command(menuai, websocket_subscribe_log_updates)
+    websocket_api.async_register_command(menuai, websocket_update_log_config)
+    websocket_api.async_register_command(menuai, websocket_get_log_config)
     websocket_api.async_register_command(
-        hass, websocket_update_data_collection_preference
+        menuai, websocket_update_data_collection_preference
     )
-    websocket_api.async_register_command(hass, websocket_data_collection_status)
-    websocket_api.async_register_command(hass, websocket_abort_firmware_update)
+    websocket_api.async_register_command(menuai, websocket_data_collection_status)
+    websocket_api.async_register_command(menuai, websocket_abort_firmware_update)
     websocket_api.async_register_command(
-        hass, websocket_is_node_firmware_update_in_progress
-    )
-    websocket_api.async_register_command(
-        hass, websocket_subscribe_firmware_update_status
+        menuai, websocket_is_node_firmware_update_in_progress
     )
     websocket_api.async_register_command(
-        hass, websocket_get_node_firmware_update_capabilities
+        menuai, websocket_subscribe_firmware_update_status
     )
     websocket_api.async_register_command(
-        hass, websocket_is_any_ota_firmware_update_in_progress
+        menuai, websocket_get_node_firmware_update_capabilities
     )
-    websocket_api.async_register_command(hass, websocket_check_for_config_updates)
-    websocket_api.async_register_command(hass, websocket_install_config_update)
     websocket_api.async_register_command(
-        hass, websocket_subscribe_controller_statistics
+        menuai, websocket_is_any_ota_firmware_update_in_progress
     )
-    websocket_api.async_register_command(hass, websocket_subscribe_node_statistics)
-    websocket_api.async_register_command(hass, websocket_hard_reset_controller)
-    websocket_api.async_register_command(hass, websocket_node_capabilities)
-    websocket_api.async_register_command(hass, websocket_invoke_cc_api)
-    websocket_api.async_register_command(hass, websocket_get_integration_settings)
-    websocket_api.async_register_command(hass, websocket_backup_nvm)
-    websocket_api.async_register_command(hass, websocket_restore_nvm)
-    hass.http.register_view(FirmwareUploadView(dr.async_get(hass)))
+    websocket_api.async_register_command(menuai, websocket_check_for_config_updates)
+    websocket_api.async_register_command(menuai, websocket_install_config_update)
+    websocket_api.async_register_command(
+        menuai, websocket_subscribe_controller_statistics
+    )
+    websocket_api.async_register_command(menuai, websocket_subscribe_node_statistics)
+    websocket_api.async_register_command(menuai, websocket_hard_reset_controller)
+    websocket_api.async_register_command(menuai, websocket_node_capabilities)
+    websocket_api.async_register_command(menuai, websocket_invoke_cc_api)
+    websocket_api.async_register_command(menuai, websocket_get_integration_settings)
+    websocket_api.async_register_command(menuai, websocket_backup_nvm)
+    websocket_api.async_register_command(menuai, websocket_restore_nvm)
+    menuai.http.register_view(FirmwareUploadView(dr.async_get(menuai)))
 
 
 @websocket_api.require_admin
@@ -483,15 +483,15 @@ def async_register_api(hass: HomeAssistant) -> None:
 )
 @websocket_api.async_response
 async def websocket_network_status(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Get the status of the Z-Wave JS network."""
     if ENTRY_ID in msg:
-        _, client, driver = await _async_get_entry(hass, connection, msg, msg[ENTRY_ID])
+        _, client, driver = await _async_get_entry(menuai, connection, msg, msg[ENTRY_ID])
         if not client or not driver:
             return
     elif DEVICE_ID in msg:
-        node = await _async_get_node(hass, connection, msg, msg[DEVICE_ID])
+        node = await _async_get_node(menuai, connection, msg, msg[DEVICE_ID])
         if not node:
             return
         client = node.client
@@ -557,7 +557,7 @@ async def websocket_network_status(
 @websocket_api.async_response
 @async_get_node
 async def websocket_subscribe_node_status(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     node: Node,
@@ -598,7 +598,7 @@ async def websocket_subscribe_node_status(
 @websocket_api.async_response
 @async_get_node
 async def websocket_node_status(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     node: Node,
@@ -616,7 +616,7 @@ async def websocket_node_status(
 @websocket_api.async_response
 @async_get_node
 async def websocket_node_metadata(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     node: Node,
@@ -645,17 +645,17 @@ async def websocket_node_metadata(
 )
 @websocket_api.async_response
 async def websocket_node_alerts(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Get the alerts for a Z-Wave JS node."""
     try:
-        node = async_get_node_from_device_id(hass, msg[DEVICE_ID])
+        node = async_get_node_from_device_id(menuai, msg[DEVICE_ID])
     except ValueError as err:
         if "can't be found" in err.args[0]:
             provisioning_entry = await async_get_provisioning_entry_from_device_id(
-                hass, msg[DEVICE_ID]
+                menuai, msg[DEVICE_ID]
             )
             if provisioning_entry:
                 connection.send_result(
@@ -723,7 +723,7 @@ async def websocket_node_alerts(
 @async_handle_failed_command
 @async_get_entry
 async def websocket_add_node(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     entry: ConfigEntry,
@@ -849,7 +849,7 @@ async def websocket_add_node(
         controller.on("node found", node_found),
         controller.on("node added", node_added),
         async_dispatcher_connect(
-            hass, EVENT_DEVICE_ADDED_TO_REGISTRY, device_registered
+            menuai, EVENT_DEVICE_ADDED_TO_REGISTRY, device_registered
         ),
     ]
     msg[DATA_UNSUBSCRIBE] = unsubs
@@ -900,7 +900,7 @@ async def websocket_add_node(
 @async_handle_failed_command
 @async_get_entry
 async def websocket_cancel_secure_bootstrap_s2(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     entry: ConfigEntry,
@@ -923,7 +923,7 @@ async def websocket_cancel_secure_bootstrap_s2(
 @async_handle_failed_command
 @async_get_entry
 async def websocket_subscribe_s2_inclusion(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     entry: ConfigEntry,
@@ -948,7 +948,7 @@ async def websocket_subscribe_s2_inclusion(
     @callback
     def handle_requested_grant(event: dict) -> None:
         """Accept the requested security classes without user interaction."""
-        hass.async_create_task(
+        menuai.async_create_task(
             driver.controller.async_grant_security_classes(event["requested_grant"])
         )
 
@@ -976,7 +976,7 @@ async def websocket_subscribe_s2_inclusion(
 @async_handle_failed_command
 @async_get_entry
 async def websocket_grant_security_classes(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     entry: ConfigEntry,
@@ -1004,7 +1004,7 @@ async def websocket_grant_security_classes(
 @async_handle_failed_command
 @async_get_entry
 async def websocket_validate_dsk_and_enter_pin(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     entry: ConfigEntry,
@@ -1025,7 +1025,7 @@ async def websocket_validate_dsk_and_enter_pin(
 )
 @websocket_api.async_response
 async def websocket_subscribe_new_devices(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
@@ -1053,7 +1053,7 @@ async def websocket_subscribe_new_devices(
     connection.subscriptions[msg["id"]] = async_cleanup
     msg[DATA_UNSUBSCRIBE] = unsubs = [
         async_dispatcher_connect(
-            hass, EVENT_DEVICE_ADDED_TO_REGISTRY, device_registered
+            menuai, EVENT_DEVICE_ADDED_TO_REGISTRY, device_registered
         ),
     ]
     connection.send_result(msg[ID])
@@ -1074,7 +1074,7 @@ async def websocket_subscribe_new_devices(
 @async_handle_failed_command
 @async_get_entry
 async def websocket_provision_smart_start_node(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     entry: ConfigEntry,
@@ -1103,7 +1103,7 @@ async def websocket_provision_smart_start_node(
     device = None
     # Create an empty device if device_name is provided
     if device_name := msg.get(DEVICE_NAME):
-        dev_reg = dr.async_get(hass)
+        dev_reg = dr.async_get(menuai)
 
         # Create a unique device identifier using the DSK
         device_identifier = (DOMAIN, f"provision_{qr_info.dsk}")
@@ -1159,7 +1159,7 @@ async def websocket_provision_smart_start_node(
 @async_handle_failed_command
 @async_get_entry
 async def websocket_unprovision_smart_start_node(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     entry: ConfigEntry,
@@ -1187,7 +1187,7 @@ async def websocket_unprovision_smart_start_node(
     ):
         device_identifier = (DOMAIN, f"provision_{provisioning_entry.dsk}")
         device_id = provisioning_entry.additional_properties["device_id"]
-        dev_reg = dr.async_get(hass)
+        dev_reg = dr.async_get(menuai)
         device = dev_reg.async_get(device_id)
         if device and device.identifiers == {device_identifier}:
             # Only remove the device if nothing else has claimed it
@@ -1209,7 +1209,7 @@ async def websocket_unprovision_smart_start_node(
 @async_handle_failed_command
 @async_get_entry
 async def websocket_get_provisioning_entries(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     entry: ConfigEntry,
@@ -1233,7 +1233,7 @@ async def websocket_get_provisioning_entries(
 @async_handle_failed_command
 @async_get_entry
 async def websocket_parse_qr_code_string(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     entry: ConfigEntry,
@@ -1259,7 +1259,7 @@ async def websocket_parse_qr_code_string(
 @async_handle_failed_command
 @async_get_entry
 async def websocket_try_parse_dsk_from_qr_code_string(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     entry: ConfigEntry,
@@ -1288,7 +1288,7 @@ async def websocket_try_parse_dsk_from_qr_code_string(
 @async_handle_failed_command
 @async_get_entry
 async def websocket_lookup_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     entry: ConfigEntry,
@@ -1320,7 +1320,7 @@ async def websocket_lookup_device(
 @async_handle_failed_command
 @async_get_entry
 async def websocket_supports_feature(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     entry: ConfigEntry,
@@ -1346,7 +1346,7 @@ async def websocket_supports_feature(
 @async_handle_failed_command
 @async_get_entry
 async def websocket_stop_inclusion(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     entry: ConfigEntry,
@@ -1373,7 +1373,7 @@ async def websocket_stop_inclusion(
 @async_handle_failed_command
 @async_get_entry
 async def websocket_stop_exclusion(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     entry: ConfigEntry,
@@ -1401,7 +1401,7 @@ async def websocket_stop_exclusion(
 @async_handle_failed_command
 @async_get_entry
 async def websocket_remove_node(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     entry: ConfigEntry,
@@ -1481,7 +1481,7 @@ async def websocket_remove_node(
 @async_handle_failed_command
 @async_get_node
 async def websocket_replace_failed_node(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     node: Node,
@@ -1608,7 +1608,7 @@ async def websocket_replace_failed_node(
         controller.on("node found", node_found),
         controller.on("node added", node_added),
         async_dispatcher_connect(
-            hass, EVENT_DEVICE_ADDED_TO_REGISTRY, device_registered
+            menuai, EVENT_DEVICE_ADDED_TO_REGISTRY, device_registered
         ),
     ]
     msg[DATA_UNSUBSCRIBE] = unsubs
@@ -1645,7 +1645,7 @@ async def websocket_replace_failed_node(
 @async_handle_failed_command
 @async_get_node
 async def websocket_remove_failed_node(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     node: Node,
@@ -1689,7 +1689,7 @@ async def websocket_remove_failed_node(
 @async_handle_failed_command
 @async_get_entry
 async def websocket_begin_rebuilding_routes(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     entry: ConfigEntry,
@@ -1716,7 +1716,7 @@ async def websocket_begin_rebuilding_routes(
 @websocket_api.async_response
 @async_get_entry
 async def websocket_subscribe_rebuild_routes_progress(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     entry: ConfigEntry,
@@ -1769,7 +1769,7 @@ async def websocket_subscribe_rebuild_routes_progress(
 @async_handle_failed_command
 @async_get_entry
 async def websocket_stop_rebuilding_routes(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     entry: ConfigEntry,
@@ -1796,7 +1796,7 @@ async def websocket_stop_rebuilding_routes(
 @async_handle_failed_command
 @async_get_node
 async def websocket_rebuild_node_routes(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     node: Node,
@@ -1824,7 +1824,7 @@ async def websocket_rebuild_node_routes(
 @async_handle_failed_command
 @async_get_node
 async def websocket_refresh_node_info(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     node: Node,
@@ -1874,7 +1874,7 @@ async def websocket_refresh_node_info(
 @async_handle_failed_command
 @async_get_node
 async def websocket_refresh_node_values(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     node: Node,
@@ -1896,7 +1896,7 @@ async def websocket_refresh_node_values(
 @async_handle_failed_command
 @async_get_node
 async def websocket_refresh_node_cc_values(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     node: Node,
@@ -1931,7 +1931,7 @@ async def websocket_refresh_node_cc_values(
 @async_handle_failed_command
 @async_get_node
 async def websocket_set_config_parameter(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     node: Node,
@@ -1979,7 +1979,7 @@ async def websocket_set_config_parameter(
 @websocket_api.async_response
 @async_get_node
 async def websocket_get_config_parameters(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any], node: Node
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any], node: Node
 ) -> None:
     """Get a list of configuration parameters for a Z-Wave node."""
     values = node.get_configuration_values()
@@ -2028,7 +2028,7 @@ async def websocket_get_config_parameters(
 @async_handle_failed_command
 @async_get_node
 async def websocket_set_raw_config_parameter(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     node: Node,
@@ -2061,7 +2061,7 @@ async def websocket_set_raw_config_parameter(
 @async_handle_failed_command
 @async_get_node
 async def websocket_get_raw_config_parameter(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     node: Node,
@@ -2097,7 +2097,7 @@ def filename_is_present_if_logging_to_file(obj: dict) -> dict:
 @async_handle_failed_command
 @async_get_entry
 async def websocket_subscribe_log_updates(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     entry: ConfigEntry,
@@ -2109,7 +2109,7 @@ async def websocket_subscribe_log_updates(
     @callback
     def async_cleanup() -> None:
         """Remove signal listeners."""
-        hass.async_create_task(client.async_stop_listening_logs())
+        menuai.async_create_task(client.async_stop_listening_logs())
         for unsub in unsubs:
             unsub()
 
@@ -2184,7 +2184,7 @@ async def websocket_subscribe_log_updates(
 @async_handle_failed_command
 @async_get_entry
 async def websocket_update_log_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     entry: ConfigEntry,
@@ -2208,7 +2208,7 @@ async def websocket_update_log_config(
 @websocket_api.async_response
 @async_get_entry
 async def websocket_get_log_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     entry: ConfigEntry,
@@ -2235,7 +2235,7 @@ async def websocket_get_log_config(
 @async_handle_failed_command
 @async_get_entry
 async def websocket_update_data_collection_preference(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     entry: ConfigEntry,
@@ -2247,7 +2247,7 @@ async def websocket_update_data_collection_preference(
     if entry.data.get(CONF_DATA_COLLECTION_OPTED_IN) != opted_in:
         new_data = entry.data.copy()
         new_data[CONF_DATA_COLLECTION_OPTED_IN] = opted_in
-        hass.config_entries.async_update_entry(entry, data=new_data)
+        menuai.config_entries.async_update_entry(entry, data=new_data)
 
     if opted_in:
         await async_enable_statistics(driver)
@@ -2270,7 +2270,7 @@ async def websocket_update_data_collection_preference(
 @async_handle_failed_command
 @async_get_entry
 async def websocket_data_collection_status(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     entry: ConfigEntry,
@@ -2297,7 +2297,7 @@ async def websocket_data_collection_status(
 @async_handle_failed_command
 @async_get_node
 async def websocket_abort_firmware_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     node: Node,
@@ -2318,7 +2318,7 @@ async def websocket_abort_firmware_update(
 @async_handle_failed_command
 @async_get_node
 async def websocket_is_node_firmware_update_in_progress(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     node: Node,
@@ -2363,7 +2363,7 @@ def _get_controller_firmware_update_progress_dict(
 @websocket_api.async_response
 @async_get_node
 async def websocket_subscribe_firmware_update_status(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     node: Node,
@@ -2486,7 +2486,7 @@ async def websocket_subscribe_firmware_update_status(
 @async_handle_failed_command
 @async_get_node
 async def websocket_get_node_firmware_update_capabilities(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     node: Node,
@@ -2507,7 +2507,7 @@ async def websocket_get_node_firmware_update_capabilities(
 @async_handle_failed_command
 @async_get_entry
 async def websocket_is_any_ota_firmware_update_in_progress(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     entry: ConfigEntry,
@@ -2520,7 +2520,7 @@ async def websocket_is_any_ota_firmware_update_in_progress(
     )
 
 
-class FirmwareUploadView(HomeAssistantView):
+class FirmwareUploadView(menuaiView):
     """View to upload firmware."""
 
     url = r"/api/zwave_js/firmware/upload/{device_id}"
@@ -2534,10 +2534,10 @@ class FirmwareUploadView(HomeAssistantView):
     @require_admin
     async def post(self, request: web.Request, device_id: str) -> web.Response:
         """Handle upload."""
-        hass = request.app[KEY_HASS]
+        menuai = request.app[KEY_menuai]
 
         try:
-            node = async_get_node_from_device_id(hass, device_id, self._dev_reg)
+            node = async_get_node_from_device_id(menuai, device_id, self._dev_reg)
         except ValueError as err:
             if "not loaded" in err.args[0]:
                 raise web_exceptions.HTTPBadRequest from err
@@ -2563,9 +2563,9 @@ class FirmwareUploadView(HomeAssistantView):
                     node.client.ws_server_url,
                     ControllerFirmwareUpdateData(
                         uploaded_file.filename,
-                        await hass.async_add_executor_job(uploaded_file.file.read),
+                        await menuai.async_add_executor_job(uploaded_file.file.read),
                     ),
-                    async_get_clientsession(hass),
+                    async_get_clientsession(menuai),
                     additional_user_agent_components=USER_AGENT,
                 )
             else:
@@ -2578,11 +2578,11 @@ class FirmwareUploadView(HomeAssistantView):
                     [
                         NodeFirmwareUpdateData(
                             uploaded_file.filename,
-                            await hass.async_add_executor_job(uploaded_file.file.read),
+                            await menuai.async_add_executor_job(uploaded_file.file.read),
                             firmware_target=firmware_target,
                         )
                     ],
-                    async_get_clientsession(hass),
+                    async_get_clientsession(menuai),
                     additional_user_agent_components=USER_AGENT,
                 )
         except BaseZwaveJSServerError as err:
@@ -2602,7 +2602,7 @@ class FirmwareUploadView(HomeAssistantView):
 @async_handle_failed_command
 @async_get_entry
 async def websocket_check_for_config_updates(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     entry: ConfigEntry,
@@ -2631,7 +2631,7 @@ async def websocket_check_for_config_updates(
 @async_handle_failed_command
 @async_get_entry
 async def websocket_install_config_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     entry: ConfigEntry,
@@ -2670,7 +2670,7 @@ def _get_controller_statistics_dict(
 @websocket_api.async_response
 @async_get_entry
 async def websocket_subscribe_controller_statistics(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     entry: ConfigEntry,
@@ -2720,10 +2720,10 @@ async def websocket_subscribe_controller_statistics(
 
 
 def _get_node_statistics_dict(
-    hass: HomeAssistant, statistics: NodeStatistics
+    menuai: menuai, statistics: NodeStatistics
 ) -> dict[str, Any]:
     """Get dictionary of node statistics."""
-    dev_reg = dr.async_get(hass)
+    dev_reg = dr.async_get(menuai)
 
     def _convert_node_to_device_id(node: Node) -> str:
         """Convert a node to a device id."""
@@ -2767,7 +2767,7 @@ def _get_node_statistics_dict(
 @websocket_api.async_response
 @async_get_node
 async def websocket_subscribe_node_statistics(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     node: Node,
@@ -2790,7 +2790,7 @@ async def websocket_subscribe_node_statistics(
                     "event": event["event"],
                     "source": "node",
                     "node_id": node.node_id,
-                    **_get_node_statistics_dict(hass, statistics),
+                    **_get_node_statistics_dict(menuai, statistics),
                 },
             )
         )
@@ -2806,7 +2806,7 @@ async def websocket_subscribe_node_statistics(
                 "event": "statistics updated",
                 "source": "node",
                 "nodeId": node.node_id,
-                **_get_node_statistics_dict(hass, node.statistics),
+                **_get_node_statistics_dict(menuai, node.statistics),
             },
         )
     )
@@ -2823,7 +2823,7 @@ async def websocket_subscribe_node_statistics(
 @async_handle_failed_command
 @async_get_entry
 async def websocket_hard_reset_controller(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     entry: ConfigEntry,
@@ -2856,7 +2856,7 @@ async def websocket_hard_reset_controller(
 
     msg[DATA_UNSUBSCRIBE] = unsubs = [
         async_dispatcher_connect(
-            hass, EVENT_DEVICE_ADDED_TO_REGISTRY, _handle_device_added
+            menuai, EVENT_DEVICE_ADDED_TO_REGISTRY, _handle_device_added
         ),
         driver.once("driver ready", set_driver_ready),
     ]
@@ -2873,7 +2873,7 @@ async def websocket_hard_reset_controller(
     # The client state will be refreshed by reloading the config entry,
     # after the unique id of the config entry has been updated.
     try:
-        version_info = await async_get_version_info(hass, entry.data[CONF_URL])
+        version_info = await async_get_version_info(menuai, entry.data[CONF_URL])
     except CannotConnect:
         # Just log this error, as there's nothing to do about it here.
         # The stale unique id needs to be handled by a repair flow,
@@ -2883,10 +2883,10 @@ async def websocket_hard_reset_controller(
             "unique id with new home id, after controller reset"
         )
     else:
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry, unique_id=str(version_info.home_id)
         )
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)
 
 
 @websocket_api.websocket_command(
@@ -2899,7 +2899,7 @@ async def websocket_hard_reset_controller(
 @async_handle_failed_command
 @async_get_node
 async def websocket_node_capabilities(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     node: Node,
@@ -2937,7 +2937,7 @@ async def websocket_node_capabilities(
 @async_handle_failed_command
 @async_get_node
 async def websocket_invoke_cc_api(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     node: Node,
@@ -2975,7 +2975,7 @@ async def websocket_invoke_cc_api(
     }
 )
 def websocket_get_integration_settings(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
@@ -2984,7 +2984,7 @@ def websocket_get_integration_settings(
         msg[ID],
         {
             # list explicitly to avoid leaking other keys and to set default
-            CONF_INSTALLER_MODE: hass.data[DOMAIN].get(CONF_INSTALLER_MODE, False),
+            CONF_INSTALLER_MODE: menuai.data[DOMAIN].get(CONF_INSTALLER_MODE, False),
         },
     )
 
@@ -3000,7 +3000,7 @@ def websocket_get_integration_settings(
 @async_handle_failed_command
 @async_get_entry
 async def websocket_backup_nvm(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     entry: ConfigEntry,
@@ -3062,7 +3062,7 @@ async def websocket_backup_nvm(
 @async_handle_failed_command
 @async_get_entry
 async def websocket_restore_nvm(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     entry: ConfigEntry,
@@ -3120,7 +3120,7 @@ async def websocket_restore_nvm(
     # The client state will be refreshed by reloading the config entry,
     # after the unique id of the config entry has been updated.
     try:
-        version_info = await async_get_version_info(hass, entry.data[CONF_URL])
+        version_info = await async_get_version_info(menuai, entry.data[CONF_URL])
     except CannotConnect:
         # Just log this error, as there's nothing to do about it here.
         # The stale unique id needs to be handled by a repair flow,
@@ -3130,11 +3130,11 @@ async def websocket_restore_nvm(
             "unique id with new home id, after controller NVM restore"
         )
     else:
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry, unique_id=str(version_info.home_id)
         )
 
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)
 
     connection.send_message(
         websocket_api.event_message(

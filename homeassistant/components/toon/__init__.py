@@ -2,21 +2,21 @@
 
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import SOURCE_IMPORT, ConfigEntry
+from menuai.const import (
     CONF_CLIENT_ID,
     CONF_CLIENT_SECRET,
     CONF_SCAN_INTERVAL,
-    EVENT_HOMEASSISTANT_STARTED,
+    EVENT_menuai_STARTED,
     Platform,
 )
-from homeassistant.core import CoreState, HomeAssistant
-from homeassistant.helpers import config_validation as cv, device_registry as dr
-from homeassistant.helpers.config_entry_oauth2_flow import (
+from menuai.core import CoreState, menuai
+from menuai.helpers import config_validation as cv, device_registry as dr
+from menuai.helpers.config_entry_oauth2_flow import (
     OAuth2Session,
     async_get_config_entry_implementation,
 )
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers.typing import ConfigType
 
 from .const import CONF_AGREEMENT_ID, CONF_MIGRATE, DEFAULT_SCAN_INTERVAL, DOMAIN
 from .coordinator import ToonDataUpdateCoordinator
@@ -49,31 +49,31 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Toon components."""
     if DOMAIN not in config:
         return True
 
     register_oauth2_implementations(
-        hass, config[DOMAIN][CONF_CLIENT_ID], config[DOMAIN][CONF_CLIENT_SECRET]
+        menuai, config[DOMAIN][CONF_CLIENT_ID], config[DOMAIN][CONF_CLIENT_SECRET]
     )
 
-    hass.async_create_task(
-        hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_IMPORT})
+    menuai.async_create_task(
+        menuai.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_IMPORT})
     )
 
     return True
 
 
-async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_migrate_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Handle migration of a previous version config entry."""
     if entry.version == 1:
         # There is no usable data in version 1 anymore.
         # The integration switched to OAuth and because of this, uses
         # different unique identifiers as well.
         # Force this by removing the existing entry and trigger a new flow.
-        hass.async_create_task(
-            hass.config_entries.flow.async_init(
+        menuai.async_create_task(
+            menuai.config_entries.flow.async_init(
                 DOMAIN,
                 context={"source": SOURCE_IMPORT},
                 data={CONF_MIGRATE: entry.entry_id},
@@ -84,22 +84,22 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up Toon from a config entry."""
-    implementation = await async_get_config_entry_implementation(hass, entry)
-    session = OAuth2Session(hass, entry, implementation)
+    implementation = await async_get_config_entry_implementation(menuai, entry)
+    session = OAuth2Session(menuai, entry, implementation)
 
-    coordinator = ToonDataUpdateCoordinator(hass, entry, session)
+    coordinator = ToonDataUpdateCoordinator(menuai, entry, session)
     await coordinator.toon.activate_agreement(
         agreement_id=entry.data[CONF_AGREEMENT_ID]
     )
     await coordinator.async_config_entry_first_refresh()
 
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.entry_id] = coordinator
+    menuai.data.setdefault(DOMAIN, {})
+    menuai.data[DOMAIN][entry.entry_id] = coordinator
 
     # Register device for the Meter Adapter, since it will have no entities.
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={
@@ -115,31 +115,31 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     # Spin up the platforms
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    # If Home Assistant is already in a running state, register the webhook
-    # immediately, else trigger it after Home Assistant has finished starting.
-    if hass.state is CoreState.running:
+    # If MenuAI is already in a running state, register the webhook
+    # immediately, else trigger it after MenuAI has finished starting.
+    if menuai.state is CoreState.running:
         await coordinator.register_webhook()
     else:
-        hass.bus.async_listen_once(
-            EVENT_HOMEASSISTANT_STARTED, coordinator.register_webhook
+        menuai.bus.async_listen_once(
+            EVENT_menuai_STARTED, coordinator.register_webhook
         )
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload Toon config entry."""
 
     # Remove webhooks registration
-    await hass.data[DOMAIN][entry.entry_id].unregister_webhook()
+    await menuai.data[DOMAIN][entry.entry_id].unregister_webhook()
 
     # Unload entities for this entry/device.
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
     # Cleanup
     if unload_ok:
-        del hass.data[DOMAIN][entry.entry_id]
+        del menuai.data[DOMAIN][entry.entry_id]
 
     return unload_ok

@@ -6,9 +6,9 @@ from typing import Any
 
 from microBeesPy import MicroBees, MicroBeesException
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlowResult
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_TOKEN
-from homeassistant.helpers import aiohttp_client, config_entry_oauth2_flow
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlowResult
+from menuai.const import CONF_ACCESS_TOKEN, CONF_TOKEN
+from menuai.helpers import aiohttp_client, config_entry_oauth2_flow
 
 from .const import DOMAIN
 
@@ -35,7 +35,7 @@ class OAuth2FlowHandler(
         """Create an oauth config entry or update existing entry for reauth."""
 
         microbees = MicroBees(
-            session=aiohttp_client.async_get_clientsession(self.hass),
+            session=aiohttp_client.async_get_clientsession(self.menuai),
             token=data[CONF_TOKEN][CONF_ACCESS_TOKEN],
         )
 

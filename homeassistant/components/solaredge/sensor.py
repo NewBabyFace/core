@@ -7,17 +7,17 @@ from typing import Any
 
 from aiosolaredge import SolarEdge
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import PERCENTAGE, UnitOfEnergy, UnitOfPower
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import (
+from menuai.const import PERCENTAGE, UnitOfEnergy, UnitOfPower
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
 )
@@ -199,14 +199,14 @@ SENSOR_TYPES = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: SolarEdgeConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Add an solarEdge entry."""
-    # Add the needed sensors to hass
+    # Add the needed sensors to menuai
     api = entry.runtime_data[DATA_API_CLIENT]
-    sensor_factory = SolarEdgeSensorFactory(hass, entry, entry.data[CONF_SITE_ID], api)
+    sensor_factory = SolarEdgeSensorFactory(menuai, entry, entry.data[CONF_SITE_ID], api)
     for service in sensor_factory.all_services:
         service.async_setup()
         await service.coordinator.async_refresh()
@@ -224,18 +224,18 @@ class SolarEdgeSensorFactory:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: SolarEdgeConfigEntry,
         site_id: str,
         api: SolarEdge,
     ) -> None:
         """Initialize the factory."""
 
-        details = SolarEdgeDetailsDataService(hass, config_entry, api, site_id)
-        overview = SolarEdgeOverviewDataService(hass, config_entry, api, site_id)
-        inventory = SolarEdgeInventoryDataService(hass, config_entry, api, site_id)
-        flow = SolarEdgePowerFlowDataService(hass, config_entry, api, site_id)
-        energy = SolarEdgeEnergyDetailsService(hass, config_entry, api, site_id)
+        details = SolarEdgeDetailsDataService(menuai, config_entry, api, site_id)
+        overview = SolarEdgeOverviewDataService(menuai, config_entry, api, site_id)
+        inventory = SolarEdgeInventoryDataService(menuai, config_entry, api, site_id)
+        flow = SolarEdgePowerFlowDataService(menuai, config_entry, api, site_id)
+        energy = SolarEdgeEnergyDetailsService(menuai, config_entry, api, site_id)
 
         self.all_services = (details, overview, inventory, flow, energy)
 

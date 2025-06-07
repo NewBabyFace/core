@@ -6,9 +6,9 @@ from typing import Any, cast
 
 import voluptuous as vol
 
-from homeassistant.components.binary_sensor import BinarySensorDeviceClass
-from homeassistant.components.sensor import DEVICE_CLASS_UNITS, SensorDeviceClass
-from homeassistant.const import (
+from menuai.components.binary_sensor import BinarySensorDeviceClass
+from menuai.components.sensor import DEVICE_CLASS_UNITS, SensorDeviceClass
+from menuai.const import (
     CONF_DEVICE_CLASS,
     CONF_MAXIMUM,
     CONF_MINIMUM,
@@ -16,15 +16,15 @@ from homeassistant.const import (
     CONF_UNIT_OF_MEASUREMENT,
     Platform,
 )
-from homeassistant.core import callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.schema_config_entry_flow import (
+from menuai.core import callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.schema_config_entry_flow import (
     SchemaCommonFlowHandler,
     SchemaConfigFlowHandler,
     SchemaFlowFormStep,
     SchemaFlowMenuStep,
 )
-from homeassistant.helpers.selector import (
+from menuai.helpers.selector import (
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,

@@ -5,12 +5,12 @@ from unittest.mock import Mock
 import aiohue
 from freezegun.api import FrozenDateTimeFactory
 
-from homeassistant.components import hue
-from homeassistant.components.hue.const import ATTR_HUE_EVENT
-from homeassistant.components.hue.v1 import sensor_base
-from homeassistant.const import EntityCategory, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.components import hue
+from menuai.components.hue.const import ATTR_HUE_EVENT
+from menuai.components.hue.v1 import sensor_base
+from menuai.const import EntityCategory, Platform
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from .conftest import create_mock_bridge, setup_platform
 
@@ -282,21 +282,21 @@ SENSOR_RESPONSE = {
 }
 
 
-async def test_no_sensors(hass: HomeAssistant, mock_bridge_v1: Mock) -> None:
+async def test_no_sensors(menuai: menuai, mock_bridge_v1: Mock) -> None:
     """Test the update_items function when no sensors are found."""
     mock_bridge_v1.mock_sensor_responses.append({})
     await setup_platform(
-        hass, mock_bridge_v1, [Platform.BINARY_SENSOR, Platform.SENSOR]
+        menuai, mock_bridge_v1, [Platform.BINARY_SENSOR, Platform.SENSOR]
     )
     assert len(mock_bridge_v1.mock_requests) == 1
-    assert len(hass.states.async_all()) == 0
+    assert len(menuai.states.async_all()) == 0
 
 
 async def test_sensors_with_multiple_bridges(
-    hass: HomeAssistant, mock_bridge_v1: Mock
+    menuai: menuai, mock_bridge_v1: Mock
 ) -> None:
     """Test the update_items function with some sensors."""
-    mock_bridge_2 = create_mock_bridge(hass, api_version=1)
+    mock_bridge_2 = create_mock_bridge(menuai, api_version=1)
     mock_bridge_2.mock_sensor_responses.append(
         {
             "1": PRESENCE_SENSOR_3_PRESENT,
@@ -306,33 +306,33 @@ async def test_sensors_with_multiple_bridges(
     )
     mock_bridge_v1.mock_sensor_responses.append(SENSOR_RESPONSE)
     await setup_platform(
-        hass, mock_bridge_v1, [Platform.BINARY_SENSOR, Platform.SENSOR]
+        menuai, mock_bridge_v1, [Platform.BINARY_SENSOR, Platform.SENSOR]
     )
     await setup_platform(
-        hass, mock_bridge_2, [Platform.BINARY_SENSOR, Platform.SENSOR], "mock-bridge-2"
+        menuai, mock_bridge_2, [Platform.BINARY_SENSOR, Platform.SENSOR], "mock-bridge-2"
     )
 
     assert len(mock_bridge_v1.mock_requests) == 1
     assert len(mock_bridge_2.mock_requests) == 1
     # 3 "physical" sensors with 3 virtual sensors each + 1 battery sensor
-    assert len(hass.states.async_all()) == 10
+    assert len(menuai.states.async_all()) == 10
 
 
 async def test_sensors(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, mock_bridge_v1: Mock
+    menuai: menuai, entity_registry: er.EntityRegistry, mock_bridge_v1: Mock
 ) -> None:
     """Test the update_items function with some sensors."""
     mock_bridge_v1.mock_sensor_responses.append(SENSOR_RESPONSE)
     await setup_platform(
-        hass, mock_bridge_v1, [Platform.BINARY_SENSOR, Platform.SENSOR]
+        menuai, mock_bridge_v1, [Platform.BINARY_SENSOR, Platform.SENSOR]
     )
     assert len(mock_bridge_v1.mock_requests) == 1
     # 2 "physical" sensors with 3 virtual sensors each
-    assert len(hass.states.async_all()) == 7
+    assert len(menuai.states.async_all()) == 7
 
-    presence_sensor_1 = hass.states.get("binary_sensor.living_room_sensor_motion")
-    light_level_sensor_1 = hass.states.get("sensor.living_room_sensor_light_level")
-    temperature_sensor_1 = hass.states.get("sensor.living_room_sensor_temperature")
+    presence_sensor_1 = menuai.states.get("binary_sensor.living_room_sensor_motion")
+    light_level_sensor_1 = menuai.states.get("sensor.living_room_sensor_light_level")
+    temperature_sensor_1 = menuai.states.get("sensor.living_room_sensor_temperature")
     assert presence_sensor_1 is not None
     assert presence_sensor_1.state == "on"
     assert light_level_sensor_1 is not None
@@ -342,9 +342,9 @@ async def test_sensors(
     assert temperature_sensor_1.state == "17.75"
     assert temperature_sensor_1.name == "Living room sensor temperature"
 
-    presence_sensor_2 = hass.states.get("binary_sensor.kitchen_sensor_motion")
-    light_level_sensor_2 = hass.states.get("sensor.kitchen_sensor_light_level")
-    temperature_sensor_2 = hass.states.get("sensor.kitchen_sensor_temperature")
+    presence_sensor_2 = menuai.states.get("binary_sensor.kitchen_sensor_motion")
+    light_level_sensor_2 = menuai.states.get("sensor.kitchen_sensor_light_level")
+    temperature_sensor_2 = menuai.states.get("sensor.kitchen_sensor_temperature")
     assert presence_sensor_2 is not None
     assert presence_sensor_2.state == "off"
     assert light_level_sensor_2 is not None
@@ -354,7 +354,7 @@ async def test_sensors(
     assert temperature_sensor_2.state == "18.75"
     assert temperature_sensor_2.name == "Kitchen sensor temperature"
 
-    battery_remote_1 = hass.states.get("sensor.hue_dimmer_switch_1_battery_level")
+    battery_remote_1 = menuai.states.get("sensor.hue_dimmer_switch_1_battery_level")
     assert battery_remote_1 is not None
     assert battery_remote_1.state == "100"
     assert battery_remote_1.name == "Hue dimmer switch 1 battery level"
@@ -367,28 +367,28 @@ async def test_sensors(
     )
 
 
-async def test_unsupported_sensors(hass: HomeAssistant, mock_bridge_v1: Mock) -> None:
+async def test_unsupported_sensors(menuai: menuai, mock_bridge_v1: Mock) -> None:
     """Test that unsupported sensors don't get added and don't fail."""
     response_with_unsupported = dict(SENSOR_RESPONSE)
     response_with_unsupported["7"] = UNSUPPORTED_SENSOR
     mock_bridge_v1.mock_sensor_responses.append(response_with_unsupported)
     await setup_platform(
-        hass, mock_bridge_v1, [Platform.BINARY_SENSOR, Platform.SENSOR]
+        menuai, mock_bridge_v1, [Platform.BINARY_SENSOR, Platform.SENSOR]
     )
     assert len(mock_bridge_v1.mock_requests) == 1
     # 2 "physical" sensors with 3 virtual sensors each + 1 battery sensor
-    assert len(hass.states.async_all()) == 7
+    assert len(menuai.states.async_all()) == 7
 
 
-async def test_new_sensor_discovered(hass: HomeAssistant, mock_bridge_v1: Mock) -> None:
+async def test_new_sensor_discovered(menuai: menuai, mock_bridge_v1: Mock) -> None:
     """Test if 2nd update has a new sensor."""
     mock_bridge_v1.mock_sensor_responses.append(SENSOR_RESPONSE)
 
     await setup_platform(
-        hass, mock_bridge_v1, [Platform.BINARY_SENSOR, Platform.SENSOR]
+        menuai, mock_bridge_v1, [Platform.BINARY_SENSOR, Platform.SENSOR]
     )
     assert len(mock_bridge_v1.mock_requests) == 1
-    assert len(hass.states.async_all()) == 7
+    assert len(menuai.states.async_all()) == 7
 
     new_sensor_response = dict(SENSOR_RESPONSE)
     new_sensor_response.update(
@@ -403,28 +403,28 @@ async def test_new_sensor_discovered(hass: HomeAssistant, mock_bridge_v1: Mock) 
 
     # Force updates to run again
     await mock_bridge_v1.sensor_manager.coordinator.async_refresh()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(mock_bridge_v1.mock_requests) == 2
-    assert len(hass.states.async_all()) == 10
+    assert len(menuai.states.async_all()) == 10
 
-    presence = hass.states.get("binary_sensor.bedroom_sensor_motion")
+    presence = menuai.states.get("binary_sensor.bedroom_sensor_motion")
     assert presence is not None
     assert presence.state == "on"
-    temperature = hass.states.get("sensor.bedroom_sensor_temperature")
+    temperature = menuai.states.get("sensor.bedroom_sensor_temperature")
     assert temperature is not None
     assert temperature.state == "17.75"
 
 
-async def test_sensor_removed(hass: HomeAssistant, mock_bridge_v1: Mock) -> None:
+async def test_sensor_removed(menuai: menuai, mock_bridge_v1: Mock) -> None:
     """Test if 2nd update has removed sensor."""
     mock_bridge_v1.mock_sensor_responses.append(SENSOR_RESPONSE)
 
     await setup_platform(
-        hass, mock_bridge_v1, [Platform.BINARY_SENSOR, Platform.SENSOR]
+        menuai, mock_bridge_v1, [Platform.BINARY_SENSOR, Platform.SENSOR]
     )
     assert len(mock_bridge_v1.mock_requests) == 1
-    assert len(hass.states.async_all()) == 7
+    assert len(menuai.states.async_all()) == 7
 
     mock_bridge_v1.mock_sensor_responses.clear()
     keys = ("1", "2", "3")
@@ -434,41 +434,41 @@ async def test_sensor_removed(hass: HomeAssistant, mock_bridge_v1: Mock) -> None
     await mock_bridge_v1.sensor_manager.coordinator.async_refresh()
 
     # To flush out the service call to update the group
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(mock_bridge_v1.mock_requests) == 2
-    assert len(hass.states.async_all()) == 3
+    assert len(menuai.states.async_all()) == 3
 
-    sensor = hass.states.get("binary_sensor.living_room_sensor_motion")
+    sensor = menuai.states.get("binary_sensor.living_room_sensor_motion")
     assert sensor is not None
 
-    removed_sensor = hass.states.get("binary_sensor.kitchen_sensor_motion")
+    removed_sensor = menuai.states.get("binary_sensor.kitchen_sensor_motion")
     assert removed_sensor is None
 
 
-async def test_update_timeout(hass: HomeAssistant, mock_bridge_v1: Mock) -> None:
+async def test_update_timeout(menuai: menuai, mock_bridge_v1: Mock) -> None:
     """Test bridge marked as not available if timeout error during update."""
     mock_bridge_v1.api.sensors.update = Mock(side_effect=TimeoutError)
     await setup_platform(
-        hass, mock_bridge_v1, [Platform.BINARY_SENSOR, Platform.SENSOR]
+        menuai, mock_bridge_v1, [Platform.BINARY_SENSOR, Platform.SENSOR]
     )
     assert len(mock_bridge_v1.mock_requests) == 0
-    assert len(hass.states.async_all()) == 0
+    assert len(menuai.states.async_all()) == 0
 
 
-async def test_update_unauthorized(hass: HomeAssistant, mock_bridge_v1: Mock) -> None:
+async def test_update_unauthorized(menuai: menuai, mock_bridge_v1: Mock) -> None:
     """Test bridge marked as not authorized if unauthorized during update."""
     mock_bridge_v1.api.sensors.update = Mock(side_effect=aiohue.Unauthorized)
     await setup_platform(
-        hass, mock_bridge_v1, [Platform.BINARY_SENSOR, Platform.SENSOR]
+        menuai, mock_bridge_v1, [Platform.BINARY_SENSOR, Platform.SENSOR]
     )
     assert len(mock_bridge_v1.mock_requests) == 0
-    assert len(hass.states.async_all()) == 0
+    assert len(menuai.states.async_all()) == 0
     assert len(mock_bridge_v1.handle_unauthorized_error.mock_calls) == 1
 
 
 async def test_hue_events(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     mock_bridge_v1: Mock,
     device_registry: dr.DeviceRegistry,
@@ -476,13 +476,13 @@ async def test_hue_events(
     """Test that hue remotes fire events when pressed."""
     mock_bridge_v1.mock_sensor_responses.append(SENSOR_RESPONSE)
 
-    events = async_capture_events(hass, ATTR_HUE_EVENT)
+    events = async_capture_events(menuai, ATTR_HUE_EVENT)
 
     await setup_platform(
-        hass, mock_bridge_v1, [Platform.BINARY_SENSOR, Platform.SENSOR]
+        menuai, mock_bridge_v1, [Platform.BINARY_SENSOR, Platform.SENSOR]
     )
     assert len(mock_bridge_v1.mock_requests) == 1
-    assert len(hass.states.async_all()) == 7
+    assert len(menuai.states.async_all()) == 7
     assert len(events) == 0
 
     hue_tap_device = device_registry.async_get_device(
@@ -502,11 +502,11 @@ async def test_hue_events(
 
     # Force updates to run again
     freezer.tick(sensor_base.SensorManager.SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     assert len(mock_bridge_v1.mock_requests) == 2
-    assert len(hass.states.async_all()) == 7
+    assert len(menuai.states.async_all()) == 7
     assert len(events) == 1
     assert events[-1].data == {
         "device_id": hue_tap_device.id,
@@ -530,11 +530,11 @@ async def test_hue_events(
 
     # Force updates to run again
     freezer.tick(sensor_base.SensorManager.SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     assert len(mock_bridge_v1.mock_requests) == 3
-    assert len(hass.states.async_all()) == 7
+    assert len(menuai.states.async_all()) == 7
     assert len(events) == 2
     assert events[-1].data == {
         "device_id": hue_dimmer_device.id,
@@ -555,11 +555,11 @@ async def test_hue_events(
 
     # Force updates to run again
     freezer.tick(sensor_base.SensorManager.SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     assert len(mock_bridge_v1.mock_requests) == 4
-    assert len(hass.states.async_all()) == 7
+    assert len(menuai.states.async_all()) == 7
     assert len(events) == 2
 
     # Add a new remote. In discovery the new event is registered **but not fired**
@@ -599,11 +599,11 @@ async def test_hue_events(
 
     # Force updates to run again
     freezer.tick(sensor_base.SensorManager.SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     assert len(mock_bridge_v1.mock_requests) == 5
-    assert len(hass.states.async_all()) == 8
+    assert len(menuai.states.async_all()) == 8
     assert len(events) == 2
 
     # A new press fires the event
@@ -612,15 +612,15 @@ async def test_hue_events(
 
     # Force updates to run again
     freezer.tick(sensor_base.SensorManager.SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     hue_aurora_device = device_registry.async_get_device(
         identifiers={(hue.DOMAIN, "ff:ff:00:0f:e7:fd:bc:b7")}
     )
 
     assert len(mock_bridge_v1.mock_requests) == 6
-    assert len(hass.states.async_all()) == 8
+    assert len(menuai.states.async_all()) == 8
     assert len(events) == 3
     assert events[-1].data == {
         "device_id": hue_aurora_device.id,

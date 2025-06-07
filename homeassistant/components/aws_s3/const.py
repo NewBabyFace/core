@@ -3,7 +3,7 @@
 from collections.abc import Callable
 from typing import Final
 
-from homeassistant.util.hass_dict import HassKey
+from menuai.util.menuai_dict import menuaiKey
 
 DOMAIN: Final = "aws_s3"
 
@@ -15,7 +15,7 @@ CONF_BUCKET = "bucket"
 AWS_DOMAIN = "amazonaws.com"
 DEFAULT_ENDPOINT_URL = f"https://s3.eu-central-1.{AWS_DOMAIN}/"
 
-DATA_BACKUP_AGENT_LISTENERS: HassKey[list[Callable[[], None]]] = HassKey(
+DATA_BACKUP_AGENT_LISTENERS: menuaiKey[list[Callable[[], None]]] = menuaiKey(
     f"{DOMAIN}.backup_agent_listeners"
 )
 

@@ -9,19 +9,19 @@ from typing import Any, Literal
 from aiokafka import AIOKafkaProducer
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_IP_ADDRESS,
     CONF_PASSWORD,
     CONF_PORT,
     CONF_USERNAME,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     EVENT_STATE_CHANGED,
 )
-from homeassistant.core import Event, EventStateChangedData, HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entityfilter import FILTER_SCHEMA, EntityFilter
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util import ssl as ssl_util
+from menuai.core import Event, EventStateChangedData, menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entityfilter import FILTER_SCHEMA, EntityFilter
+from menuai.helpers.typing import ConfigType
+from menuai.util import ssl as ssl_util
 
 DOMAIN = "apache_kafka"
 
@@ -49,12 +49,12 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Activate the Apache Kafka integration."""
     conf = config[DOMAIN]
 
     kafka = KafkaManager(
-        hass,
+        menuai,
         conf[CONF_IP_ADDRESS],
         conf[CONF_PORT],
         conf[CONF_TOPIC],
@@ -64,7 +64,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         conf.get(CONF_PASSWORD),
     )
 
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, kafka.shutdown)
+    menuai.bus.async_listen_once(EVENT_menuai_STOP, kafka.shutdown)
 
     await kafka.start()
 
@@ -89,7 +89,7 @@ class KafkaManager:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         ip_address: str,
         port: int,
         topic: str,
@@ -101,7 +101,7 @@ class KafkaManager:
         """Initialize."""
         self._encoder = DateTimeJSONEncoder()
         self._entities_filter = entities_filter
-        self._hass = hass
+        self._menuai = menuai
         ssl_context = ssl_util.client_context()
         self._producer = AIOKafkaProducer(
             bootstrap_servers=f"{ip_address}:{port}",
@@ -130,7 +130,7 @@ class KafkaManager:
 
     async def start(self) -> None:
         """Start the Kafka manager."""
-        self._hass.bus.async_listen(EVENT_STATE_CHANGED, self.write)
+        self._menuai.bus.async_listen(EVENT_STATE_CHANGED, self.write)
         await self._producer.start()
 
     async def shutdown(self, _: Event) -> None:

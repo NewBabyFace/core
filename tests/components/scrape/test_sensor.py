@@ -8,7 +8,7 @@ from unittest.mock import patch
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.components.scrape.const import (
+from menuai.components.scrape.const import (
     CONF_ENCODING,
     CONF_INDEX,
     CONF_SELECT,
@@ -16,13 +16,13 @@ from homeassistant.components.scrape.const import (
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_VERIFY_SSL,
 )
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     CONF_STATE_CLASS,
     DOMAIN as SENSOR_DOMAIN,
     SensorDeviceClass,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_DEVICE_CLASS,
     CONF_ICON,
     CONF_METHOD,
@@ -37,14 +37,14 @@ from homeassistant.const import (
     STATE_UNKNOWN,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.trigger_template_entity import (
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.helpers.trigger_template_entity import (
     CONF_AVAILABILITY,
     CONF_PICTURE,
 )
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from . import MockRestData, return_integration_config
 
@@ -53,7 +53,7 @@ from tests.common import MockConfigEntry, async_fire_time_changed
 DOMAIN = "scrape"
 
 
-async def test_scrape_sensor(hass: HomeAssistant) -> None:
+async def test_scrape_sensor(menuai: menuai) -> None:
     """Test Scrape sensor minimal."""
     config = {
         DOMAIN: [
@@ -65,17 +65,17 @@ async def test_scrape_sensor(hass: HomeAssistant) -> None:
 
     mocker = MockRestData("test_scrape_sensor")
     with patch(
-        "homeassistant.components.rest.RestData",
+        "menuai.components.rest.RestData",
         return_value=mocker,
     ):
-        assert await async_setup_component(hass, DOMAIN, config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, config)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.ha_version")
+    state = menuai.states.get("sensor.ha_version")
     assert state.state == "Current Version: 2021.12.10"
 
 
-async def test_scrape_sensor_value_template(hass: HomeAssistant) -> None:
+async def test_scrape_sensor_value_template(menuai: menuai) -> None:
     """Test Scrape sensor with value template."""
     config = {
         DOMAIN: [
@@ -93,17 +93,17 @@ async def test_scrape_sensor_value_template(hass: HomeAssistant) -> None:
 
     mocker = MockRestData("test_scrape_sensor")
     with patch(
-        "homeassistant.components.rest.RestData",
+        "menuai.components.rest.RestData",
         return_value=mocker,
     ):
-        assert await async_setup_component(hass, DOMAIN, config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, config)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.ha_version")
+    state = menuai.states.get("sensor.ha_version")
     assert state.state == "2021.12.10"
 
 
-async def test_scrape_uom_and_classes(hass: HomeAssistant) -> None:
+async def test_scrape_uom_and_classes(menuai: menuai) -> None:
     """Test Scrape sensor for unit of measurement, device class and state class."""
     config = {
         DOMAIN: [
@@ -124,13 +124,13 @@ async def test_scrape_uom_and_classes(hass: HomeAssistant) -> None:
 
     mocker = MockRestData("test_scrape_uom_and_classes")
     with patch(
-        "homeassistant.components.rest.RestData",
+        "menuai.components.rest.RestData",
         return_value=mocker,
     ):
-        assert await async_setup_component(hass, DOMAIN, config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, config)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.current_temp")
+    state = menuai.states.get("sensor.current_temp")
     assert state.state == "22.1"
     assert state.attributes[CONF_UNIT_OF_MEASUREMENT] == UnitOfTemperature.CELSIUS
     assert state.attributes[CONF_DEVICE_CLASS] == SensorDeviceClass.TEMPERATURE
@@ -138,7 +138,7 @@ async def test_scrape_uom_and_classes(hass: HomeAssistant) -> None:
 
 
 async def test_scrape_unique_id(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test Scrape sensor for unique id."""
     config = {
@@ -156,13 +156,13 @@ async def test_scrape_unique_id(
 
     mocker = MockRestData("test_scrape_uom_and_classes")
     with patch(
-        "homeassistant.components.rest.RestData",
+        "menuai.components.rest.RestData",
         return_value=mocker,
     ):
-        assert await async_setup_component(hass, DOMAIN, config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, config)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.current_temp")
+    state = menuai.states.get("sensor.current_temp")
     assert state.state == "22.1"
 
     entry = entity_registry.async_get("sensor.current_temp")
@@ -170,7 +170,7 @@ async def test_scrape_unique_id(
     assert entry.unique_id == "very_unique_id"
 
 
-async def test_scrape_sensor_authentication(hass: HomeAssistant) -> None:
+async def test_scrape_sensor_authentication(menuai: menuai) -> None:
     """Test Scrape sensor with authentication."""
     config = {
         DOMAIN: [
@@ -200,20 +200,20 @@ async def test_scrape_sensor_authentication(hass: HomeAssistant) -> None:
 
     mocker = MockRestData("test_scrape_sensor_authentication")
     with patch(
-        "homeassistant.components.rest.RestData",
+        "menuai.components.rest.RestData",
         return_value=mocker,
     ):
-        assert await async_setup_component(hass, DOMAIN, config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, config)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.auth_page")
+    state = menuai.states.get("sensor.auth_page")
     assert state.state == "secret text"
-    state2 = hass.states.get("sensor.auth_page2")
+    state2 = menuai.states.get("sensor.auth_page2")
     assert state2.state == "secret text"
 
 
 async def test_scrape_sensor_no_data(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test Scrape sensor fails on no data."""
     config = {
@@ -224,19 +224,19 @@ async def test_scrape_sensor_no_data(
 
     mocker = MockRestData("test_scrape_sensor_no_data")
     with patch(
-        "homeassistant.components.rest.RestData",
+        "menuai.components.rest.RestData",
         return_value=mocker,
     ):
-        assert await async_setup_component(hass, DOMAIN, config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, config)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.ha_version")
+    state = menuai.states.get("sensor.ha_version")
     assert state is None
 
     assert "Platform scrape not ready yet" in caplog.text
 
 
-async def test_scrape_sensor_no_data_refresh(hass: HomeAssistant) -> None:
+async def test_scrape_sensor_no_data_refresh(menuai: menuai) -> None:
     """Test Scrape sensor no data on refresh."""
     config = {
         DOMAIN: [
@@ -248,26 +248,26 @@ async def test_scrape_sensor_no_data_refresh(hass: HomeAssistant) -> None:
 
     mocker = MockRestData("test_scrape_sensor")
     with patch(
-        "homeassistant.components.rest.RestData",
+        "menuai.components.rest.RestData",
         return_value=mocker,
     ):
-        assert await async_setup_component(hass, DOMAIN, config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, config)
+        await menuai.async_block_till_done()
 
-        state = hass.states.get("sensor.ha_version")
+        state = menuai.states.get("sensor.ha_version")
         assert state
         assert state.state == "Current Version: 2021.12.10"
 
         mocker.payload = "test_scrape_sensor_no_data"
-        async_fire_time_changed(hass, dt_util.utcnow() + DEFAULT_SCAN_INTERVAL)
-        await hass.async_block_till_done(wait_background_tasks=True)
+        async_fire_time_changed(menuai, dt_util.utcnow() + DEFAULT_SCAN_INTERVAL)
+        await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get("sensor.ha_version")
+    state = menuai.states.get("sensor.ha_version")
     assert state is not None
     assert state.state == STATE_UNAVAILABLE
 
 
-async def test_scrape_sensor_attribute_and_tag(hass: HomeAssistant) -> None:
+async def test_scrape_sensor_attribute_and_tag(menuai: menuai) -> None:
     """Test Scrape sensor with attribute and tag."""
     config = {
         DOMAIN: [
@@ -287,19 +287,19 @@ async def test_scrape_sensor_attribute_and_tag(hass: HomeAssistant) -> None:
 
     mocker = MockRestData("test_scrape_sensor")
     with patch(
-        "homeassistant.components.rest.RestData",
+        "menuai.components.rest.RestData",
         return_value=mocker,
     ):
-        assert await async_setup_component(hass, DOMAIN, config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, config)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.ha_class")
+    state = menuai.states.get("sensor.ha_class")
     assert state.state == "['links']"
-    state2 = hass.states.get("sensor.ha_template")
+    state2 = menuai.states.get("sensor.ha_template")
     assert state2.state == "Trying to get"
 
 
-async def test_scrape_sensor_device_date(hass: HomeAssistant) -> None:
+async def test_scrape_sensor_device_date(menuai: menuai) -> None:
     """Test Scrape sensor with a device of type DATE."""
     config = {
         DOMAIN: [
@@ -318,17 +318,17 @@ async def test_scrape_sensor_device_date(hass: HomeAssistant) -> None:
 
     mocker = MockRestData("test_scrape_sensor")
     with patch(
-        "homeassistant.components.rest.RestData",
+        "menuai.components.rest.RestData",
         return_value=mocker,
     ):
-        assert await async_setup_component(hass, DOMAIN, config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, config)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.ha_date")
+    state = menuai.states.get("sensor.ha_date")
     assert state.state == "2022-01-17"
 
 
-async def test_scrape_sensor_device_date_errors(hass: HomeAssistant) -> None:
+async def test_scrape_sensor_device_date_errors(menuai: menuai) -> None:
     """Test Scrape sensor with a device of type DATE."""
     config = {
         DOMAIN: [
@@ -346,17 +346,17 @@ async def test_scrape_sensor_device_date_errors(hass: HomeAssistant) -> None:
 
     mocker = MockRestData("test_scrape_sensor")
     with patch(
-        "homeassistant.components.rest.RestData",
+        "menuai.components.rest.RestData",
         return_value=mocker,
     ):
-        assert await async_setup_component(hass, DOMAIN, config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, config)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.ha_date")
+    state = menuai.states.get("sensor.ha_date")
     assert state.state == STATE_UNKNOWN
 
 
-async def test_scrape_sensor_device_timestamp(hass: HomeAssistant) -> None:
+async def test_scrape_sensor_device_timestamp(menuai: menuai) -> None:
     """Test Scrape sensor with a device of type TIMESTAMP."""
     config = {
         DOMAIN: [
@@ -374,17 +374,17 @@ async def test_scrape_sensor_device_timestamp(hass: HomeAssistant) -> None:
 
     mocker = MockRestData("test_scrape_sensor")
     with patch(
-        "homeassistant.components.rest.RestData",
+        "menuai.components.rest.RestData",
         return_value=mocker,
     ):
-        assert await async_setup_component(hass, DOMAIN, config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, config)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.ha_timestamp")
+    state = menuai.states.get("sensor.ha_timestamp")
     assert state.state == "2022-12-22T13:15:30+00:00"
 
 
-async def test_scrape_sensor_device_timestamp_error(hass: HomeAssistant) -> None:
+async def test_scrape_sensor_device_timestamp_error(menuai: menuai) -> None:
     """Test Scrape sensor with a device of type TIMESTAMP."""
     config = {
         DOMAIN: [
@@ -402,17 +402,17 @@ async def test_scrape_sensor_device_timestamp_error(hass: HomeAssistant) -> None
 
     mocker = MockRestData("test_scrape_sensor")
     with patch(
-        "homeassistant.components.rest.RestData",
+        "menuai.components.rest.RestData",
         return_value=mocker,
     ):
-        assert await async_setup_component(hass, DOMAIN, config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, config)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.ha_timestamp")
+    state = menuai.states.get("sensor.ha_timestamp")
     assert state.state == STATE_UNKNOWN
 
 
-async def test_scrape_sensor_errors(hass: HomeAssistant) -> None:
+async def test_scrape_sensor_errors(menuai: menuai) -> None:
     """Test Scrape sensor handle errors."""
     config = {
         DOMAIN: [
@@ -436,20 +436,20 @@ async def test_scrape_sensor_errors(hass: HomeAssistant) -> None:
 
     mocker = MockRestData("test_scrape_sensor")
     with patch(
-        "homeassistant.components.rest.RestData",
+        "menuai.components.rest.RestData",
         return_value=mocker,
     ):
-        assert await async_setup_component(hass, DOMAIN, config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, config)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.ha_class")
+    state = menuai.states.get("sensor.ha_class")
     assert state.state == STATE_UNAVAILABLE
-    state2 = hass.states.get("sensor.ha_class2")
+    state2 = menuai.states.get("sensor.ha_class2")
     assert state2.state == STATE_UNAVAILABLE
 
 
 async def test_scrape_sensor_unique_id(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test Scrape sensor with unique_id."""
     config = {
@@ -468,13 +468,13 @@ async def test_scrape_sensor_unique_id(
 
     mocker = MockRestData("test_scrape_sensor")
     with patch(
-        "homeassistant.components.rest.RestData",
+        "menuai.components.rest.RestData",
         return_value=mocker,
     ):
-        assert await async_setup_component(hass, DOMAIN, config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, config)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.ha_version")
+    state = menuai.states.get("sensor.ha_version")
     assert state.state == "Current Version: 2021.12.10"
 
     entity = entity_registry.async_get("sensor.ha_version")
@@ -483,13 +483,13 @@ async def test_scrape_sensor_unique_id(
 
 
 async def test_setup_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     loaded_entry: MockConfigEntry,
 ) -> None:
     """Test setup from config entry."""
 
-    state = hass.states.get("sensor.current_version")
+    state = menuai.states.get("sensor.current_version")
     assert state.state == "Current Version: 2021.12.10"
 
     entity = entity_registry.async_get("sensor.current_version")
@@ -497,12 +497,12 @@ async def test_setup_config_entry(
     assert entity.unique_id == "3699ef88-69e6-11ed-a1eb-0242ac120002"
 
 
-async def test_templates_with_yaml(hass: HomeAssistant) -> None:
+async def test_templates_with_yaml(menuai: menuai) -> None:
     """Test the Scrape sensor from yaml config with templates."""
 
-    hass.states.async_set("sensor.input1", "on")
-    hass.states.async_set("sensor.input2", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.input1", "on")
+    menuai.states.async_set("sensor.input2", "on")
+    await menuai.async_block_till_done()
 
     config = {
         DOMAIN: [
@@ -524,54 +524,54 @@ async def test_templates_with_yaml(hass: HomeAssistant) -> None:
 
     mocker = MockRestData("test_scrape_sensor")
     with patch(
-        "homeassistant.components.rest.RestData",
+        "menuai.components.rest.RestData",
         return_value=mocker,
     ):
-        assert await async_setup_component(hass, DOMAIN, config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, config)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.get_values_with_template")
+    state = menuai.states.get("sensor.get_values_with_template")
     assert state.state == "Current Version: 2021.12.10"
     assert state.attributes[CONF_ICON] == "mdi:on"
     assert state.attributes["entity_picture"] == "/local/picture1.jpg"
 
-    hass.states.async_set("sensor.input1", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.input1", "off")
+    await menuai.async_block_till_done()
 
     async_fire_time_changed(
-        hass,
+        menuai,
         dt_util.utcnow() + timedelta(minutes=10),
     )
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get("sensor.get_values_with_template")
+    state = menuai.states.get("sensor.get_values_with_template")
     assert state.state == "Current Version: 2021.12.10"
     assert state.attributes[CONF_ICON] == "mdi:off"
     assert state.attributes["entity_picture"] == "/local/picture2.jpg"
 
-    hass.states.async_set("sensor.input2", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.input2", "off")
+    await menuai.async_block_till_done()
 
     async_fire_time_changed(
-        hass,
+        menuai,
         dt_util.utcnow() + timedelta(minutes=20),
     )
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get("sensor.get_values_with_template")
+    state = menuai.states.get("sensor.get_values_with_template")
     assert state.state == STATE_UNAVAILABLE
 
-    hass.states.async_set("sensor.input1", "on")
-    hass.states.async_set("sensor.input2", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.input1", "on")
+    menuai.states.async_set("sensor.input2", "on")
+    await menuai.async_block_till_done()
 
     async_fire_time_changed(
-        hass,
+        menuai,
         dt_util.utcnow() + timedelta(minutes=30),
     )
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get("sensor.get_values_with_template")
+    state = menuai.states.get("sensor.get_values_with_template")
     assert state.state == "Current Version: 2021.12.10"
     assert state.attributes[CONF_ICON] == "mdi:on"
     assert state.attributes["entity_picture"] == "/local/picture1.jpg"
@@ -602,37 +602,37 @@ async def test_templates_with_yaml(hass: HomeAssistant) -> None:
     ],
 )
 async def test_availability(
-    hass: HomeAssistant,
+    menuai: menuai,
     loaded_entry: MockConfigEntry,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test availability when setup from config entry."""
 
-    hass.states.async_set("sensor.input1", "on")
+    menuai.states.async_set("sensor.input1", "on")
     freezer.tick(timedelta(minutes=10))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get("sensor.current_version")
+    state = menuai.states.get("sensor.current_version")
     assert state.state == "2021.12.10"
     assert state.attributes["icon"] == "mdi:on"
     assert state.attributes["entity_picture"] == "on.jpg"
 
-    hass.states.async_set("sensor.input1", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.input1", "off")
+    await menuai.async_block_till_done()
 
     freezer.tick(timedelta(minutes=10))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get("sensor.current_version")
+    state = menuai.states.get("sensor.current_version")
     assert state.state == STATE_UNAVAILABLE
     assert "icon" not in state.attributes
     assert "entity_picture" not in state.attributes
 
 
 async def test_template_render_with_availability_syntax_error(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test availability template render with syntax errors."""
     config = {
@@ -653,13 +653,13 @@ async def test_template_render_with_availability_syntax_error(
 
     mocker = MockRestData("test_scrape_sensor")
     with patch(
-        "homeassistant.components.rest.RestData",
+        "menuai.components.rest.RestData",
         return_value=mocker,
     ):
-        assert await async_setup_component(hass, DOMAIN, config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, config)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.current_version")
+    state = menuai.states.get("sensor.current_version")
     assert state.state == "2021.12.10"
 
     assert (
@@ -669,7 +669,7 @@ async def test_template_render_with_availability_syntax_error(
 
 
 async def test_availability_blocks_value_template(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test availability blocks value_template from rendering."""
@@ -690,30 +690,30 @@ async def test_availability_blocks_value_template(
         ]
     }
 
-    hass.states.async_set("sensor.input1", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.input1", "off")
+    await menuai.async_block_till_done()
 
     mocker = MockRestData("test_scrape_sensor")
     with patch(
-        "homeassistant.components.rest.RestData",
+        "menuai.components.rest.RestData",
         return_value=mocker,
     ):
-        assert await async_setup_component(hass, DOMAIN, config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, config)
+        await menuai.async_block_till_done()
 
     assert error not in caplog.text
 
-    state = hass.states.get("sensor.current_version")
+    state = menuai.states.get("sensor.current_version")
     assert state
     assert state.state == STATE_UNAVAILABLE
 
-    hass.states.async_set("sensor.input1", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.input1", "on")
+    await menuai.async_block_till_done()
 
     async_fire_time_changed(
-        hass,
+        menuai,
         dt_util.utcnow() + timedelta(minutes=10),
     )
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     assert error in caplog.text

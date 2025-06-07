@@ -7,14 +7,14 @@ from datetime import date
 
 from twentemilieu import WasteType
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
 )
-from homeassistant.const import CONF_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import CONF_ID
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import TwenteMilieuConfigEntry
@@ -63,7 +63,7 @@ SENSORS: tuple[TwenteMilieuSensorDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: TwenteMilieuConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

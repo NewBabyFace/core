@@ -9,13 +9,13 @@ from unittest.mock import ANY, AsyncMock, Mock
 import pytest
 import voluptuous as vol
 
-from homeassistant import data_entry_flow
-from homeassistant.components.repairs import RepairsFlow
-from homeassistant.components.repairs.const import DOMAIN
-from homeassistant.const import __version__ as ha_version
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import issue_registry as ir
-from homeassistant.setup import async_setup_component
+from menuai import data_entry_flow
+from menuai.components.repairs import RepairsFlow
+from menuai.components.repairs.const import DOMAIN
+from menuai.const import __version__ as ha_version
+from menuai.core import menuai
+from menuai.helpers import issue_registry as ir
+from menuai.setup import async_setup_component
 
 from tests.common import MockUser, mock_platform
 from tests.typing import (
@@ -39,7 +39,7 @@ DEFAULT_ISSUES = [
 
 
 async def create_issues(
-    hass: HomeAssistant,
+    menuai: menuai,
     ws_client: MockHAClientWebSocket,
     issues: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
@@ -60,7 +60,7 @@ async def create_issues(
 
     for issue in issues:
         ir.async_create_issue(
-            hass,
+            menuai,
             issue["domain"],
             issue["issue_id"],
             breaks_in_ha_version=issue["breaks_in_ha_version"],
@@ -123,12 +123,12 @@ class MockFixFlowAbort(RepairsFlow):
 
 
 @pytest.fixture(autouse=True)
-async def mock_repairs_integration(hass: HomeAssistant) -> None:
+async def mock_repairs_integration(menuai: menuai) -> None:
     """Mock a repairs integration."""
-    hass.config.components.add("fake_integration")
+    menuai.config.components.add("fake_integration")
 
     def async_create_fix_flow(
-        hass: HomeAssistant,
+        menuai: menuai,
         issue_id: str,
         data: dict[str, str | int | float | None] | None,
     ) -> RepairsFlow:
@@ -140,12 +140,12 @@ async def mock_repairs_integration(hass: HomeAssistant) -> None:
         return MockFixFlow()
 
     mock_platform(
-        hass,
+        menuai,
         "fake_integration.repairs",
         Mock(async_create_fix_flow=AsyncMock(wraps=async_create_fix_flow)),
     )
     mock_platform(
-        hass,
+        menuai,
         "integration_without_repairs.repairs",
         Mock(spec=[]),
     )
@@ -153,14 +153,14 @@ async def mock_repairs_integration(hass: HomeAssistant) -> None:
 
 @pytest.mark.parametrize("ignore_translations_for_mock_domains", ["fake_integration"])
 async def test_dismiss_issue(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test we can dismiss an issue."""
-    assert await async_setup_component(hass, DOMAIN, {})
+    assert await async_setup_component(menuai, DOMAIN, {})
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
-    issues = await create_issues(hass, client)
+    issues = await create_issues(menuai, client)
 
     await client.send_json(
         {
@@ -237,18 +237,18 @@ async def test_dismiss_issue(
 
 @pytest.mark.parametrize("ignore_translations_for_mock_domains", ["fake_integration"])
 async def test_fix_non_existing_issue(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test trying to fix an issue that doesn't exist."""
-    assert await async_setup_component(hass, "http", {})
-    assert await async_setup_component(hass, DOMAIN, {})
+    assert await async_setup_component(menuai, "http", {})
+    assert await async_setup_component(menuai, DOMAIN, {})
 
-    ws_client = await hass_ws_client(hass)
-    client = await hass_client()
+    ws_client = await menuai_ws_client(menuai)
+    client = await menuai_client()
 
-    issues = await create_issues(hass, ws_client)
+    issues = await create_issues(menuai, ws_client)
 
     url = "/api/repairs/issues/fix"
     resp = await client.post(
@@ -300,19 +300,19 @@ async def test_fix_non_existing_issue(
     ],
 )
 async def test_fix_issue(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
+    menuai_ws_client: WebSocketGenerator,
     domain,
     step,
     description_placeholders,
 ) -> None:
     """Test we can fix an issue."""
-    assert await async_setup_component(hass, "http", {})
-    assert await async_setup_component(hass, DOMAIN, {})
+    assert await async_setup_component(menuai, "http", {})
+    assert await async_setup_component(menuai, DOMAIN, {})
 
-    ws_client = await hass_ws_client(hass)
-    client = await hass_client()
+    ws_client = await menuai_ws_client(menuai)
+    client = await menuai_client()
 
     issues = [
         {
@@ -322,7 +322,7 @@ async def test_fix_issue(
             "issue_id": "issue_2",
         }
     ]
-    await create_issues(hass, ws_client, issues=issues)
+    await create_issues(menuai, ws_client, issues=issues)
 
     url = "/api/repairs/issues/fix"
     resp = await client.post(url, json={"handler": domain, "issue_id": "issue_2"})
@@ -374,15 +374,15 @@ async def test_fix_issue(
 
 
 async def test_fix_issue_unauth(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator, hass_admin_user: MockUser
+    menuai: menuai, menuai_client: ClientSessionGenerator, menuai_admin_user: MockUser
 ) -> None:
     """Test we can't query the result if not authorized."""
-    assert await async_setup_component(hass, "http", {})
-    assert await async_setup_component(hass, DOMAIN, {})
+    assert await async_setup_component(menuai, "http", {})
+    assert await async_setup_component(menuai, DOMAIN, {})
 
-    hass_admin_user.groups = []
+    menuai_admin_user.groups = []
 
-    client = await hass_client()
+    client = await menuai_client()
 
     url = "/api/repairs/issues/fix"
     resp = await client.post(
@@ -394,19 +394,19 @@ async def test_fix_issue_unauth(
 
 @pytest.mark.parametrize("ignore_translations_for_mock_domains", ["fake_integration"])
 async def test_get_progress_unauth(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
-    hass_ws_client: WebSocketGenerator,
-    hass_admin_user: MockUser,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
+    menuai_ws_client: WebSocketGenerator,
+    menuai_admin_user: MockUser,
 ) -> None:
     """Test we can't fix an issue if not authorized."""
-    assert await async_setup_component(hass, "http", {})
-    assert await async_setup_component(hass, DOMAIN, {})
+    assert await async_setup_component(menuai, "http", {})
+    assert await async_setup_component(menuai, DOMAIN, {})
 
-    ws_client = await hass_ws_client(hass)
-    client = await hass_client()
+    ws_client = await menuai_ws_client(menuai)
+    client = await menuai_client()
 
-    await create_issues(hass, ws_client)
+    await create_issues(menuai, ws_client)
 
     url = "/api/repairs/issues/fix"
     resp = await client.post(
@@ -416,7 +416,7 @@ async def test_get_progress_unauth(
     data = await resp.json()
     flow_id = data["flow_id"]
 
-    hass_admin_user.groups = []
+    menuai_admin_user.groups = []
 
     url = f"/api/repairs/issues/fix/{flow_id}"
     # Test we can't get the status of the flow
@@ -426,19 +426,19 @@ async def test_get_progress_unauth(
 
 @pytest.mark.parametrize("ignore_translations_for_mock_domains", ["fake_integration"])
 async def test_step_unauth(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
-    hass_ws_client: WebSocketGenerator,
-    hass_admin_user: MockUser,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
+    menuai_ws_client: WebSocketGenerator,
+    menuai_admin_user: MockUser,
 ) -> None:
     """Test we can't fix an issue if not authorized."""
-    assert await async_setup_component(hass, "http", {})
-    assert await async_setup_component(hass, DOMAIN, {})
+    assert await async_setup_component(menuai, "http", {})
+    assert await async_setup_component(menuai, DOMAIN, {})
 
-    ws_client = await hass_ws_client(hass)
-    client = await hass_client()
+    ws_client = await menuai_ws_client(menuai)
+    client = await menuai_client()
 
-    await create_issues(hass, ws_client)
+    await create_issues(menuai, ws_client)
 
     url = "/api/repairs/issues/fix"
     resp = await client.post(
@@ -448,7 +448,7 @@ async def test_step_unauth(
     data = await resp.json()
     flow_id = data["flow_id"]
 
-    hass_admin_user.groups = []
+    menuai_admin_user.groups = []
 
     url = f"/api/repairs/issues/fix/{flow_id}"
     # Test we can't get the status of the flow
@@ -459,14 +459,14 @@ async def test_step_unauth(
 @pytest.mark.parametrize("ignore_translations_for_mock_domains", ["test"])
 @pytest.mark.freeze_time("2022-07-19 07:53:05")
 async def test_list_issues(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test we can list issues."""
 
     # Add an inactive issue, this should not be exposed in the list
-    hass_storage[ir.STORAGE_KEY] = {
+    menuai_storage[ir.STORAGE_KEY] = {
         "version": ir.STORAGE_VERSION_MAJOR,
         "data": {
             "issues": [
@@ -482,9 +482,9 @@ async def test_list_issues(
         },
     }
 
-    assert await async_setup_component(hass, DOMAIN, {})
+    assert await async_setup_component(menuai, DOMAIN, {})
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json({"id": 1, "type": "repairs/list_issues"})
     msg = await client.receive_json()
@@ -519,7 +519,7 @@ async def test_list_issues(
 
     for issue in issues:
         ir.async_create_issue(
-            hass,
+            menuai,
             issue["domain"],
             issue["issue_id"],
             breaks_in_ha_version=issue["breaks_in_ha_version"],
@@ -550,19 +550,19 @@ async def test_list_issues(
 
 @pytest.mark.parametrize("ignore_translations_for_mock_domains", ["fake_integration"])
 async def test_fix_issue_aborted(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test we can fix an issue."""
-    assert await async_setup_component(hass, "http", {})
-    assert await async_setup_component(hass, DOMAIN, {})
+    assert await async_setup_component(menuai, "http", {})
+    assert await async_setup_component(menuai, DOMAIN, {})
 
-    ws_client = await hass_ws_client(hass)
-    client = await hass_client()
+    ws_client = await menuai_ws_client(menuai)
+    client = await menuai_client()
 
     await create_issues(
-        hass,
+        menuai,
         ws_client,
         issues=[
             {
@@ -613,13 +613,13 @@ async def test_fix_issue_aborted(
 @pytest.mark.parametrize("ignore_translations_for_mock_domains", ["test"])
 @pytest.mark.freeze_time("2022-07-19 07:53:05")
 async def test_get_issue_data(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test we can get issue data."""
 
-    assert await async_setup_component(hass, DOMAIN, {})
+    assert await async_setup_component(menuai, DOMAIN, {})
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     issues = [
         {
@@ -650,7 +650,7 @@ async def test_get_issue_data(
 
     for issue in issues:
         ir.async_create_issue(
-            hass,
+            menuai,
             issue["domain"],
             issue["issue_id"],
             breaks_in_ha_version=issue["breaks_in_ha_version"],

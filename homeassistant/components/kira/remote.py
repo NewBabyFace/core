@@ -6,11 +6,11 @@ from collections.abc import Iterable
 import logging
 from typing import Any
 
-from homeassistant.components import remote
-from homeassistant.const import CONF_DEVICE, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components import remote
+from menuai.const import CONF_DEVICE, CONF_NAME
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import CONF_REMOTE, DOMAIN
 
@@ -18,7 +18,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -28,7 +28,7 @@ def setup_platform(
         name = discovery_info.get(CONF_NAME)
         device = discovery_info.get(CONF_DEVICE)
 
-        kira = hass.data[DOMAIN][CONF_REMOTE][name]
+        kira = menuai.data[DOMAIN][CONF_REMOTE][name]
         add_entities([KiraRemote(device, kira)])
 
 

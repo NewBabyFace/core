@@ -4,15 +4,15 @@ import logging
 
 import pytest
 
-from homeassistant.components import automation, zone
-from homeassistant.const import (
+from menuai.components import automation, zone
+from menuai.const import (
     ATTR_ENTITY_ID,
     ENTITY_MATCH_ALL,
     SERVICE_TURN_OFF,
     STATE_UNAVAILABLE,
 )
-from homeassistant.core import Context, HomeAssistant, ServiceCall
-from homeassistant.setup import async_setup_component
+from menuai.core import Context, menuai, ServiceCall
+from menuai.setup import async_setup_component
 
 from tests.common import async_mock_service, mock_component
 
@@ -23,17 +23,17 @@ def stub_blueprint_populate_autouse(stub_blueprint_populate: None) -> None:
 
 
 @pytest.fixture
-def calls(hass: HomeAssistant) -> list[ServiceCall]:
+def calls(menuai: menuai) -> list[ServiceCall]:
     """Track calls to a mock service."""
-    return async_mock_service(hass, "test", "automation")
+    return async_mock_service(menuai, "test", "automation")
 
 
 @pytest.fixture(autouse=True)
-async def setup_comp(hass: HomeAssistant) -> None:
+async def setup_comp(menuai: menuai) -> None:
     """Initialize components."""
-    mock_component(hass, "group")
+    mock_component(menuai, "group")
     await async_setup_component(
-        hass,
+        menuai,
         zone.DOMAIN,
         {
             "zone": {
@@ -47,19 +47,19 @@ async def setup_comp(hass: HomeAssistant) -> None:
 
 
 async def test_if_fires_on_zone_enter(
-    hass: HomeAssistant, service_calls: list[ServiceCall]
+    menuai: menuai, service_calls: list[ServiceCall]
 ) -> None:
     """Test for firing on zone enter."""
     context = Context()
-    hass.states.async_set(
+    menuai.states.async_set(
         "geo_location.entity",
         "hello",
         {"latitude": 32.881011, "longitude": -117.234758, "source": "test_source"},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -86,13 +86,13 @@ async def test_if_fires_on_zone_enter(
         },
     )
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "geo_location.entity",
         "hello",
         {"latitude": 32.880586, "longitude": -117.237564},
         context=context,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(service_calls) == 1
     assert service_calls[0].context.parent_id == context.id
@@ -102,14 +102,14 @@ async def test_if_fires_on_zone_enter(
     )
 
     # Set out of zone again so we can trigger call
-    hass.states.async_set(
+    menuai.states.async_set(
         "geo_location.entity",
         "hello",
         {"latitude": 32.881011, "longitude": -117.234758},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         automation.DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: ENTITY_MATCH_ALL},
@@ -118,29 +118,29 @@ async def test_if_fires_on_zone_enter(
 
     assert len(service_calls) == 2
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "geo_location.entity",
         "hello",
         {"latitude": 32.880586, "longitude": -117.237564},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(service_calls) == 2
 
 
 async def test_if_not_fires_for_enter_on_zone_leave(
-    hass: HomeAssistant, service_calls: list[ServiceCall]
+    menuai: menuai, service_calls: list[ServiceCall]
 ) -> None:
     """Test for not firing on zone leave."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "geo_location.entity",
         "hello",
         {"latitude": 32.880586, "longitude": -117.237564, "source": "test_source"},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -155,29 +155,29 @@ async def test_if_not_fires_for_enter_on_zone_leave(
         },
     )
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "geo_location.entity",
         "hello",
         {"latitude": 32.881011, "longitude": -117.234758},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(service_calls) == 0
 
 
 async def test_if_fires_on_zone_leave(
-    hass: HomeAssistant, service_calls: list[ServiceCall]
+    menuai: menuai, service_calls: list[ServiceCall]
 ) -> None:
     """Test for firing on zone leave."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "geo_location.entity",
         "hello",
         {"latitude": 32.880586, "longitude": -117.237564, "source": "test_source"},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -192,29 +192,29 @@ async def test_if_fires_on_zone_leave(
         },
     )
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "geo_location.entity",
         "hello",
         {"latitude": 32.881011, "longitude": -117.234758, "source": "test_source"},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(service_calls) == 1
 
 
 async def test_if_fires_on_zone_leave_2(
-    hass: HomeAssistant, service_calls: list[ServiceCall]
+    menuai: menuai, service_calls: list[ServiceCall]
 ) -> None:
     """Test for firing on zone leave for unavailable entity."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "geo_location.entity",
         "hello",
         {"latitude": 32.880586, "longitude": -117.237564, "source": "test_source"},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -229,29 +229,29 @@ async def test_if_fires_on_zone_leave_2(
         },
     )
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "geo_location.entity",
         STATE_UNAVAILABLE,
         {"source": "test_source"},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(service_calls) == 0
 
 
 async def test_if_not_fires_for_leave_on_zone_enter(
-    hass: HomeAssistant, service_calls: list[ServiceCall]
+    menuai: menuai, service_calls: list[ServiceCall]
 ) -> None:
     """Test for not firing on zone enter."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "geo_location.entity",
         "hello",
         {"latitude": 32.881011, "longitude": -117.234758, "source": "test_source"},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -266,22 +266,22 @@ async def test_if_not_fires_for_leave_on_zone_enter(
         },
     )
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "geo_location.entity",
         "hello",
         {"latitude": 32.880586, "longitude": -117.237564},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(service_calls) == 0
 
 
 async def test_if_fires_on_zone_appear(
-    hass: HomeAssistant, service_calls: list[ServiceCall]
+    menuai: menuai, service_calls: list[ServiceCall]
 ) -> None:
     """Test for firing if entity appears in zone."""
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -309,13 +309,13 @@ async def test_if_fires_on_zone_appear(
 
     # Entity appears in zone without previously existing outside the zone.
     context = Context()
-    hass.states.async_set(
+    menuai.states.async_set(
         "geo_location.entity",
         "hello",
         {"latitude": 32.880586, "longitude": -117.237564, "source": "test_source"},
         context=context,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(service_calls) == 1
     assert service_calls[0].context.parent_id == context.id
@@ -326,11 +326,11 @@ async def test_if_fires_on_zone_appear(
 
 
 async def test_if_fires_on_zone_appear_2(
-    hass: HomeAssistant, service_calls: list[ServiceCall]
+    menuai: menuai, service_calls: list[ServiceCall]
 ) -> None:
     """Test for firing if entity appears in zone."""
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -358,21 +358,21 @@ async def test_if_fires_on_zone_appear_2(
 
     # Entity appears in zone without previously existing outside the zone.
     context = Context()
-    hass.states.async_set(
+    menuai.states.async_set(
         "geo_location.entity",
         "goodbye",
         {"latitude": 32.881011, "longitude": -117.234758, "source": "test_source"},
         context=context,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "geo_location.entity",
         "hello",
         {"latitude": 32.880586, "longitude": -117.237564, "source": "test_source"},
         context=context,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(service_calls) == 1
     assert service_calls[0].context.parent_id == context.id
@@ -383,18 +383,18 @@ async def test_if_fires_on_zone_appear_2(
 
 
 async def test_if_fires_on_zone_disappear(
-    hass: HomeAssistant, service_calls: list[ServiceCall]
+    menuai: menuai, service_calls: list[ServiceCall]
 ) -> None:
     """Test for firing if entity disappears from zone."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "geo_location.entity",
         "hello",
         {"latitude": 32.880586, "longitude": -117.237564, "source": "test_source"},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -421,8 +421,8 @@ async def test_if_fires_on_zone_disappear(
     )
 
     # Entity disappears from zone without new coordinates outside the zone.
-    hass.states.async_remove("geo_location.entity")
-    await hass.async_block_till_done()
+    menuai.states.async_remove("geo_location.entity")
+    await menuai.async_block_till_done()
 
     assert len(service_calls) == 1
     assert (
@@ -432,23 +432,23 @@ async def test_if_fires_on_zone_disappear(
 
 
 async def test_zone_undefined(
-    hass: HomeAssistant,
+    menuai: menuai,
     service_calls: list[ServiceCall],
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test for undefined zone."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "geo_location.entity",
         "hello",
         {"latitude": 32.880586, "longitude": -117.237564, "source": "test_source"},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     caplog.set_level(logging.WARNING)
 
     zone_does_not_exist = "zone.does_not_exist"
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -463,12 +463,12 @@ async def test_zone_undefined(
         },
     )
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "geo_location.entity",
         "hello",
         {"latitude": 32.881011, "longitude": -117.234758, "source": "test_source"},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(service_calls) == 0
 

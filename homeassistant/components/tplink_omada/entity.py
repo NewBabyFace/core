@@ -4,8 +4,8 @@ from typing import Any
 
 from tplink_omada_client.devices import OmadaDevice
 
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.helpers import device_registry as dr
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import OmadaCoordinator

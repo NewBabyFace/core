@@ -4,14 +4,14 @@ from __future__ import annotations
 
 from typing import Final
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import (
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
 )
@@ -22,14 +22,14 @@ PARALLEL_UPDATES: Final = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up binary sensor for PECO."""
-    if "smart_meter" not in hass.data[DOMAIN][config_entry.entry_id]:
+    if "smart_meter" not in menuai.data[DOMAIN][config_entry.entry_id]:
         return
-    coordinator: DataUpdateCoordinator[bool] = hass.data[DOMAIN][config_entry.entry_id][
+    coordinator: DataUpdateCoordinator[bool] = menuai.data[DOMAIN][config_entry.entry_id][
         "smart_meter"
     ]
 

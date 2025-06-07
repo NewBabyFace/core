@@ -12,12 +12,12 @@ from uiprotect.data import (
     StateType,
 )
 
-from homeassistant.components.camera import Camera, CameraEntityFeature
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import issue_registry as ir
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.issue_registry import IssueSeverity
+from menuai.components.camera import Camera, CameraEntityFeature
+from menuai.core import menuai, callback
+from menuai.helpers import issue_registry as ir
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.issue_registry import IssueSeverity
 
 from .const import (
     ATTR_BITRATE,
@@ -36,7 +36,7 @@ _LOGGER = logging.getLogger(__name__)
 
 @callback
 def _create_rtsp_repair(
-    hass: HomeAssistant, entry: UFPConfigEntry, data: ProtectData, camera: UFPCamera
+    menuai: menuai, entry: UFPConfigEntry, data: ProtectData, camera: UFPCamera
 ) -> None:
     edit_key = "readonly"
     if camera.can_write(data.api.bootstrap.auth_user):
@@ -46,7 +46,7 @@ def _create_rtsp_repair(
     issue_key = f"rtsp_disabled_{camera.id}"
 
     ir.async_create_issue(
-        hass,
+        menuai,
         DOMAIN,
         issue_key,
         is_fixable=True,
@@ -61,7 +61,7 @@ def _create_rtsp_repair(
 
 @callback
 def _get_camera_channels(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: UFPConfigEntry,
     data: ProtectData,
     ufp_device: UFPCamera | None = None,
@@ -91,14 +91,14 @@ def _get_camera_channels(
 
         # no RTSP enabled use first channel with no stream
         if is_default and not camera.is_third_party_camera:
-            _create_rtsp_repair(hass, entry, data, camera)
+            _create_rtsp_repair(menuai, entry, data, camera)
             yield camera, camera.channels[0], True
         else:
-            ir.async_delete_issue(hass, DOMAIN, f"rtsp_disabled_{camera.id}")
+            ir.async_delete_issue(menuai, DOMAIN, f"rtsp_disabled_{camera.id}")
 
 
 def _async_camera_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: UFPConfigEntry,
     data: ProtectData,
     ufp_device: UFPCamera | None = None,
@@ -106,7 +106,7 @@ def _async_camera_entities(
     disable_stream = data.disable_stream
     entities: list[ProtectDeviceEntity] = []
     for camera, channel, is_default in _get_camera_channels(
-        hass, entry, data, ufp_device
+        menuai, entry, data, ufp_device
     ):
         # do not enable streaming for package camera
         # 2 FPS causes a lot of buferring
@@ -136,7 +136,7 @@ def _async_camera_entities(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: UFPConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -147,13 +147,13 @@ async def async_setup_entry(
     def _add_new_device(device: ProtectAdoptableDeviceModel) -> None:
         if not isinstance(device, UFPCamera):
             return
-        async_add_entities(_async_camera_entities(hass, entry, data, ufp_device=device))
+        async_add_entities(_async_camera_entities(menuai, entry, data, ufp_device=device))
 
     data.async_subscribe_adopt(_add_new_device)
     entry.async_on_unload(
-        async_dispatcher_connect(hass, data.channels_signal, _add_new_device)
+        async_dispatcher_connect(menuai, data.channels_signal, _add_new_device)
     )
-    async_add_entities(_async_camera_entities(hass, entry, data))
+    async_add_entities(_async_camera_entities(menuai, entry, data))
 
 
 _DISABLE_FEATURE = CameraEntityFeature(0)
@@ -197,9 +197,9 @@ class ProtectCamera(ProtectDeviceEntity, Camera):
         # only the default (first) channel is enabled by default
         self._attr_entity_registry_enabled_default = is_default and secure
         # Set the stream source before finishing the init
-        # because async_added_to_hass is too late and camera
-        # integration uses async_internal_added_to_hass to access
-        # the stream source which is called before async_added_to_hass
+        # because async_added_to_menuai is too late and camera
+        # integration uses async_internal_added_to_menuai to access
+        # the stream source which is called before async_added_to_menuai
         self._async_set_stream_source()
 
     @callback

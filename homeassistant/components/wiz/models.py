@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 from pywizlight import wizlight
 
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 
 @dataclass

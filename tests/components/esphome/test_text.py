@@ -4,19 +4,19 @@ from unittest.mock import call
 
 from aioesphomeapi import APIClient, TextInfo, TextMode as ESPHomeTextMode, TextState
 
-from homeassistant.components.text import (
+from menuai.components.text import (
     ATTR_VALUE,
     DOMAIN as TEXT_DOMAIN,
     SERVICE_SET_VALUE,
 )
-from homeassistant.const import ATTR_ENTITY_ID, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
+from menuai.const import ATTR_ENTITY_ID, STATE_UNKNOWN
+from menuai.core import menuai
 
 from .conftest import MockGenericDeviceEntryType
 
 
 async def test_generic_text_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -41,11 +41,11 @@ async def test_generic_text_entity(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("text.test_mytext")
+    state = menuai.states.get("text.test_mytext")
     assert state is not None
     assert state.state == "hello world"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TEXT_DOMAIN,
         SERVICE_SET_VALUE,
         {ATTR_ENTITY_ID: "text.test_mytext", ATTR_VALUE: "goodbye"},
@@ -56,7 +56,7 @@ async def test_generic_text_entity(
 
 
 async def test_generic_text_entity_no_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -81,13 +81,13 @@ async def test_generic_text_entity_no_state(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("text.test_mytext")
+    state = menuai.states.get("text.test_mytext")
     assert state is not None
     assert state.state == STATE_UNKNOWN
 
 
 async def test_generic_text_entity_missing_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -112,6 +112,6 @@ async def test_generic_text_entity_missing_state(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("text.test_mytext")
+    state = menuai.states.get("text.test_mytext")
     assert state is not None
     assert state.state == STATE_UNKNOWN

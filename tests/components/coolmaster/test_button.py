@@ -2,22 +2,22 @@
 
 from __future__ import annotations
 
-from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
+from menuai.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
 
 
 async def test_button(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
 ) -> None:
     """Test the Coolmaster button."""
-    assert hass.states.get("binary_sensor.l1_101_clean_filter").state == "on"
+    assert menuai.states.get("binary_sensor.l1_101_clean_filter").state == "on"
 
-    button = hass.states.get("button.l1_101_reset_filter")
+    button = menuai.states.get("button.l1_101_reset_filter")
     assert button is not None
-    await hass.services.async_call(
+    await menuai.services.async_call(
         BUTTON_DOMAIN,
         SERVICE_PRESS,
         {
@@ -25,6 +25,6 @@ async def test_button(
         },
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("binary_sensor.l1_101_clean_filter").state == "off"
+    assert menuai.states.get("binary_sensor.l1_101_clean_filter").state == "off"

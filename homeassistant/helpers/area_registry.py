@@ -9,11 +9,11 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Literal, TypedDict
 
-from homeassistant.const import ATTR_DEVICE_CLASS
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.util.dt import utc_from_timestamp, utcnow
-from homeassistant.util.event_type import EventType
-from homeassistant.util.hass_dict import HassKey
+from menuai.const import ATTR_DEVICE_CLASS
+from menuai.core import menuai, callback
+from menuai.util.dt import utc_from_timestamp, utcnow
+from menuai.util.event_type import EventType
+from menuai.util.menuai_dict import menuaiKey
 
 from . import device_registry as dr, entity_registry as er
 from .json import json_bytes, json_fragment
@@ -34,7 +34,7 @@ else:
     from propcache.api import under_cached_property
 
 
-DATA_REGISTRY: HassKey[AreaRegistry] = HassKey("area_registry")
+DATA_REGISTRY: menuaiKey[AreaRegistry] = menuaiKey("area_registry")
 EVENT_AREA_REGISTRY_UPDATED: EventType[EventAreaRegistryUpdatedData] = EventType(
     "area_registry_updated"
 )
@@ -222,11 +222,11 @@ class AreaRegistry(BaseRegistry[AreasRegistryStoreData]):
     areas: AreaRegistryItems
     _area_data: dict[str, AreaEntry]
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize the area registry."""
-        self.hass = hass
+        self.menuai = menuai
         self._store = AreaRegistryStore(
-            hass,
+            menuai,
             STORAGE_VERSION_MAJOR,
             STORAGE_KEY,
             atomic_writes=True,
@@ -283,7 +283,7 @@ class AreaRegistry(BaseRegistry[AreasRegistryStoreData]):
     ) -> AreaEntry:
         """Create a new area."""
 
-        self.hass.verify_event_loop_thread("area_registry.async_create")
+        self.menuai.verify_event_loop_thread("area_registry.async_create")
 
         if area := self.async_get_area_by_name(name):
             raise ValueError(
@@ -291,10 +291,10 @@ class AreaRegistry(BaseRegistry[AreasRegistryStoreData]):
             )
 
         if humidity_entity_id is not None:
-            _validate_humidity_entity(self.hass, humidity_entity_id)
+            _validate_humidity_entity(self.menuai, humidity_entity_id)
 
         if temperature_entity_id is not None:
-            _validate_temperature_entity(self.hass, temperature_entity_id)
+            _validate_temperature_entity(self.menuai, temperature_entity_id)
 
         area = AreaEntry(
             aliases=aliases or set(),
@@ -311,7 +311,7 @@ class AreaRegistry(BaseRegistry[AreasRegistryStoreData]):
         self.areas[area_id] = area
         self.async_schedule_save()
 
-        self.hass.bus.async_fire_internal(
+        self.menuai.bus.async_fire_internal(
             EVENT_AREA_REGISTRY_UPDATED,
             EventAreaRegistryUpdatedData(action="create", area_id=area_id),
         )
@@ -320,15 +320,15 @@ class AreaRegistry(BaseRegistry[AreasRegistryStoreData]):
     @callback
     def async_delete(self, area_id: str) -> None:
         """Delete area."""
-        self.hass.verify_event_loop_thread("area_registry.async_delete")
-        device_registry = dr.async_get(self.hass)
-        entity_registry = er.async_get(self.hass)
+        self.menuai.verify_event_loop_thread("area_registry.async_delete")
+        device_registry = dr.async_get(self.menuai)
+        entity_registry = er.async_get(self.menuai)
         device_registry.async_clear_area_id(area_id)
         entity_registry.async_clear_area_id(area_id)
 
         del self.areas[area_id]
 
-        self.hass.bus.async_fire_internal(
+        self.menuai.bus.async_fire_internal(
             EVENT_AREA_REGISTRY_UPDATED,
             EventAreaRegistryUpdatedData(action="remove", area_id=area_id),
         )
@@ -365,7 +365,7 @@ class AreaRegistry(BaseRegistry[AreasRegistryStoreData]):
         # an event even if nothing has changed we cannot use async_fire_internal
         # here because we do not know if the thread safety check already
         # happened or not in _async_update.
-        self.hass.bus.async_fire(
+        self.menuai.bus.async_fire(
             EVENT_AREA_REGISTRY_UPDATED,
             EventAreaRegistryUpdatedData(action="update", area_id=area_id),
         )
@@ -403,10 +403,10 @@ class AreaRegistry(BaseRegistry[AreasRegistryStoreData]):
         }
 
         if "humidity_entity_id" in new_values and humidity_entity_id is not None:
-            _validate_humidity_entity(self.hass, new_values["humidity_entity_id"])
+            _validate_humidity_entity(self.menuai, new_values["humidity_entity_id"])
 
         if "temperature_entity_id" in new_values and temperature_entity_id is not None:
-            _validate_temperature_entity(self.hass, new_values["temperature_entity_id"])
+            _validate_temperature_entity(self.menuai, new_values["temperature_entity_id"])
 
         if name is not UNDEFINED and name != old.name:
             new_values["name"] = name
@@ -416,7 +416,7 @@ class AreaRegistry(BaseRegistry[AreasRegistryStoreData]):
 
         new_values["modified_at"] = utcnow()
 
-        self.hass.verify_event_loop_thread("area_registry.async_update")
+        self.menuai.verify_event_loop_thread("area_registry.async_update")
         new = self.areas[area_id] = dataclasses.replace(old, **new_values)
 
         self.async_schedule_save()
@@ -496,7 +496,7 @@ class AreaRegistry(BaseRegistry[AreasRegistryStoreData]):
             for area in self.areas.get_areas_for_floor(floor_id):
                 self.async_update(area.id, floor_id=None)
 
-        self.hass.bus.async_listen(
+        self.menuai.bus.async_listen(
             event_type=fr.EVENT_FLOOR_REGISTRY_UPDATED,
             event_filter=_removed_from_registry_filter,
             listener=_handle_floor_registry_update,
@@ -509,7 +509,7 @@ class AreaRegistry(BaseRegistry[AreasRegistryStoreData]):
             for area in self.areas.get_areas_for_label(label_id):
                 self.async_update(area.id, labels=area.labels - {label_id})
 
-        self.hass.bus.async_listen(
+        self.menuai.bus.async_listen(
             event_type=lr.EVENT_LABEL_REGISTRY_UPDATED,
             event_filter=_removed_from_registry_filter,
             listener=_handle_label_registry_update,
@@ -518,15 +518,15 @@ class AreaRegistry(BaseRegistry[AreasRegistryStoreData]):
 
 @callback
 @singleton(DATA_REGISTRY)
-def async_get(hass: HomeAssistant) -> AreaRegistry:
+def async_get(menuai: menuai) -> AreaRegistry:
     """Get area registry."""
-    return AreaRegistry(hass)
+    return AreaRegistry(menuai)
 
 
-async def async_load(hass: HomeAssistant) -> None:
+async def async_load(menuai: menuai) -> None:
     """Load area registry."""
-    assert DATA_REGISTRY not in hass.data
-    await async_get(hass).async_load()
+    assert DATA_REGISTRY not in menuai.data
+    await async_get(menuai).async_load()
 
 
 @callback
@@ -541,12 +541,12 @@ def async_entries_for_label(registry: AreaRegistry, label_id: str) -> list[AreaE
     return registry.areas.get_areas_for_label(label_id)
 
 
-def _validate_temperature_entity(hass: HomeAssistant, entity_id: str) -> None:
+def _validate_temperature_entity(menuai: menuai, entity_id: str) -> None:
     """Validate temperature entity."""
     # pylint: disable=import-outside-toplevel
-    from homeassistant.components.sensor import SensorDeviceClass
+    from menuai.components.sensor import SensorDeviceClass
 
-    if not (state := hass.states.get(entity_id)):
+    if not (state := menuai.states.get(entity_id)):
         raise ValueError(f"Entity {entity_id} does not exist")
 
     if (
@@ -556,12 +556,12 @@ def _validate_temperature_entity(hass: HomeAssistant, entity_id: str) -> None:
         raise ValueError(f"Entity {entity_id} is not a temperature sensor")
 
 
-def _validate_humidity_entity(hass: HomeAssistant, entity_id: str) -> None:
+def _validate_humidity_entity(menuai: menuai, entity_id: str) -> None:
     """Validate humidity entity."""
     # pylint: disable=import-outside-toplevel
-    from homeassistant.components.sensor import SensorDeviceClass
+    from menuai.components.sensor import SensorDeviceClass
 
-    if not (state := hass.states.get(entity_id)):
+    if not (state := menuai.states.get(entity_id)):
         raise ValueError(f"Entity {entity_id} does not exist")
 
     if (

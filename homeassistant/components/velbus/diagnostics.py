@@ -7,13 +7,13 @@ from typing import Any
 from velbusaio.channels import Channel as VelbusChannel
 from velbusaio.module import Module as VelbusModule
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from . import VelbusConfigEntry
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: VelbusConfigEntry
+    menuai: menuai, entry: VelbusConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     controller = entry.runtime_data.controller

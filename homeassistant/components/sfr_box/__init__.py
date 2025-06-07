@@ -8,21 +8,21 @@ from typing import TYPE_CHECKING
 from sfrbox_api.bridge import SFRBox
 from sfrbox_api.exceptions import SFRBoxAuthenticationError, SFRBoxError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.httpx_client import get_async_client
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import device_registry as dr
+from menuai.helpers.httpx_client import get_async_client
 
 from .const import DOMAIN, PLATFORMS, PLATFORMS_WITH_AUTH
 from .coordinator import SFRDataUpdateCoordinator
 from .models import DomainData
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up SFR box as config entry."""
-    box = SFRBox(ip=entry.data[CONF_HOST], client=get_async_client(hass))
+    box = SFRBox(ip=entry.data[CONF_HOST], client=get_async_client(menuai))
     platforms = PLATFORMS
     if (username := entry.data.get(CONF_USERNAME)) and (
         password := entry.data.get(CONF_PASSWORD)
@@ -38,16 +38,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     data = DomainData(
         box=box,
         dsl=SFRDataUpdateCoordinator(
-            hass, entry, box, "dsl", lambda b: b.dsl_get_info()
+            menuai, entry, box, "dsl", lambda b: b.dsl_get_info()
         ),
         ftth=SFRDataUpdateCoordinator(
-            hass, entry, box, "ftth", lambda b: b.ftth_get_info()
+            menuai, entry, box, "ftth", lambda b: b.ftth_get_info()
         ),
         system=SFRDataUpdateCoordinator(
-            hass, entry, box, "system", lambda b: b.system_get_info()
+            menuai, entry, box, "system", lambda b: b.system_get_info()
         ),
         wan=SFRDataUpdateCoordinator(
-            hass, entry, box, "wan", lambda b: b.wan_get_info()
+            menuai, entry, box, "wan", lambda b: b.wan_get_info()
         ),
     )
     # Preload system information
@@ -64,9 +64,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         tasks.append(data.ftth.async_config_entry_first_refresh())
     await asyncio.gather(*tasks)
 
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = data
+    menuai.data.setdefault(DOMAIN, {})[entry.entry_id] = data
 
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, system_info.mac_addr)},
@@ -77,13 +77,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         configuration_url=f"http://{entry.data[CONF_HOST]}",
     )
 
-    await hass.config_entries.async_forward_entry_setups(entry, platforms)
+    await menuai.config_entries.async_forward_entry_setups(entry, platforms)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        hass.data[DOMAIN].pop(entry.entry_id)
+    if unload_ok := await menuai.config_entries.async_unload_platforms(entry, PLATFORMS):
+        menuai.data[DOMAIN].pop(entry.entry_id)
     return unload_ok

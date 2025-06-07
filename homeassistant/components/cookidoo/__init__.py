@@ -6,9 +6,9 @@ import logging
 
 from cookidoo_api import CookidooAuthException, CookidooRequestException
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from .const import DOMAIN
 from .coordinator import CookidooConfigEntry, CookidooDataUpdateCoordinator
@@ -19,35 +19,35 @@ PLATFORMS: list[Platform] = [Platform.BUTTON, Platform.SENSOR, Platform.TODO]
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: CookidooConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: CookidooConfigEntry) -> bool:
     """Set up Cookidoo from a config entry."""
 
     coordinator = CookidooDataUpdateCoordinator(
-        hass, await cookidoo_from_config_entry(hass, entry), entry
+        menuai, await cookidoo_from_config_entry(menuai, entry), entry
     )
     await coordinator.async_config_entry_first_refresh()
 
     entry.runtime_data = coordinator
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: CookidooConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: CookidooConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 async def async_migrate_entry(
-    hass: HomeAssistant, config_entry: CookidooConfigEntry
+    menuai: menuai, config_entry: CookidooConfigEntry
 ) -> bool:
     """Migrate config entry."""
     _LOGGER.debug("Migrating from version %s", config_entry.version)
 
     if config_entry.version == 1 and config_entry.minor_version == 1:
         # Add the unique uuid
-        cookidoo = await cookidoo_from_config_entry(hass, config_entry)
+        cookidoo = await cookidoo_from_config_entry(menuai, config_entry)
 
         try:
             auth_data = await cookidoo.login()
@@ -60,8 +60,8 @@ async def async_migrate_entry(
 
         unique_id = auth_data.sub
 
-        device_registry = dr.async_get(hass)
-        entity_registry = er.async_get(hass)
+        device_registry = dr.async_get(menuai)
+        entity_registry = er.async_get(menuai)
         device_entries = dr.async_entries_for_config_entry(
             device_registry, config_entry_id=config_entry.entry_id
         )
@@ -79,7 +79,7 @@ async def async_migrate_entry(
                 new_unique_id=ent.unique_id.replace(ent.config_entry_id, unique_id),
             )
 
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             config_entry, unique_id=auth_data.sub, minor_version=2
         )
 

@@ -5,10 +5,10 @@ import threading
 
 import pychromecast
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.dispatcher import dispatcher_send
+from menuai.config_entries import ConfigEntry
+from menuai.const import EVENT_menuai_STOP
+from menuai.core import menuai
+from menuai.helpers.dispatcher import dispatcher_send
 
 from .const import (
     CAST_BROWSER_KEY,
@@ -23,7 +23,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def discover_chromecast(
-    hass: HomeAssistant, cast_info: pychromecast.models.CastInfo
+    menuai: menuai, cast_info: pychromecast.models.CastInfo
 ) -> None:
     """Discover a Chromecast."""
 
@@ -35,25 +35,25 @@ def discover_chromecast(
         _LOGGER.error("Discovered chromecast without uuid %s", info)
         return
 
-    info = info.fill_out_missing_chromecast_info(hass)
+    info = info.fill_out_missing_chromecast_info(menuai)
     _LOGGER.debug("Discovered new or updated chromecast %s", info)
 
-    dispatcher_send(hass, SIGNAL_CAST_DISCOVERED, info)
+    dispatcher_send(menuai, SIGNAL_CAST_DISCOVERED, info)
 
 
-def _remove_chromecast(hass: HomeAssistant, info: ChromecastInfo) -> None:
+def _remove_chromecast(menuai: menuai, info: ChromecastInfo) -> None:
     # Removed chromecast
     _LOGGER.debug("Removed chromecast %s", info)
 
-    dispatcher_send(hass, SIGNAL_CAST_REMOVED, info)
+    dispatcher_send(menuai, SIGNAL_CAST_REMOVED, info)
 
 
-def setup_internal_discovery(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+def setup_internal_discovery(menuai: menuai, config_entry: ConfigEntry) -> None:
     """Set up the pychromecast internal discovery."""
-    if INTERNAL_DISCOVERY_RUNNING_KEY not in hass.data:
-        hass.data[INTERNAL_DISCOVERY_RUNNING_KEY] = threading.Lock()
+    if INTERNAL_DISCOVERY_RUNNING_KEY not in menuai.data:
+        menuai.data[INTERNAL_DISCOVERY_RUNNING_KEY] = threading.Lock()
 
-    if not hass.data[INTERNAL_DISCOVERY_RUNNING_KEY].acquire(blocking=False):
+    if not menuai.data[INTERNAL_DISCOVERY_RUNNING_KEY].acquire(blocking=False):
         # Internal discovery is already running
         return
 
@@ -62,16 +62,16 @@ def setup_internal_discovery(hass: HomeAssistant, config_entry: ConfigEntry) -> 
 
         def add_cast(self, uuid, _):
             """Handle zeroconf discovery of a new chromecast."""
-            discover_chromecast(hass, browser.devices[uuid])
+            discover_chromecast(menuai, browser.devices[uuid])
 
         def update_cast(self, uuid, _):
             """Handle zeroconf discovery of an updated chromecast."""
-            discover_chromecast(hass, browser.devices[uuid])
+            discover_chromecast(menuai, browser.devices[uuid])
 
         def remove_cast(self, uuid, service, cast_info):
             """Handle zeroconf discovery of a removed chromecast."""
             _remove_chromecast(
-                hass,
+                menuai,
                 ChromecastInfo(
                     cast_info=cast_info,
                 ),
@@ -83,21 +83,21 @@ def setup_internal_discovery(hass: HomeAssistant, config_entry: ConfigEntry) -> 
         ChromeCastZeroconf.get_zeroconf(),
         config_entry.data.get(CONF_KNOWN_HOSTS),
     )
-    hass.data[CAST_BROWSER_KEY] = browser
+    menuai.data[CAST_BROWSER_KEY] = browser
     browser.start_discovery()
 
     def stop_discovery(event):
         """Stop discovery of new chromecasts."""
         _LOGGER.debug("Stopping internal pychromecast discovery")
         browser.stop_discovery()
-        hass.data[INTERNAL_DISCOVERY_RUNNING_KEY].release()
+        menuai.data[INTERNAL_DISCOVERY_RUNNING_KEY].release()
 
-    hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, stop_discovery)
+    menuai.bus.listen_once(EVENT_menuai_STOP, stop_discovery)
 
     config_entry.add_update_listener(config_entry_updated)
 
 
-async def config_entry_updated(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+async def config_entry_updated(menuai: menuai, config_entry: ConfigEntry) -> None:
     """Handle config entry being updated."""
-    browser = hass.data[CAST_BROWSER_KEY]
+    browser = menuai.data[CAST_BROWSER_KEY]
     browser.host_browser.update_hosts(config_entry.data.get(CONF_KNOWN_HOSTS))

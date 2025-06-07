@@ -8,11 +8,11 @@ from unittest.mock import call, patch
 import pytest
 import voluptuous as vol
 
-from homeassistant.components import mqtt, water_heater
-from homeassistant.components.mqtt.water_heater import (
+from menuai.components import mqtt, water_heater
+from menuai.components.mqtt.water_heater import (
     MQTT_WATER_HEATER_ATTRIBUTES_BLOCKED,
 )
-from homeassistant.components.water_heater import (
+from menuai.components.water_heater import (
     ATTR_CURRENT_TEMPERATURE,
     ATTR_OPERATION_MODE,
     DEFAULT_MAX_TEMP,
@@ -25,15 +25,15 @@ from homeassistant.components.water_heater import (
     STATE_PERFORMANCE,
     WaterHeaterEntityFeature,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_TEMPERATURE,
     STATE_OFF,
     STATE_UNKNOWN,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.util.unit_conversion import TemperatureConverter
-from homeassistant.util.unit_system import (
+from menuai.core import menuai
+from menuai.util.unit_conversion import TemperatureConverter
+from menuai.util.unit_system import (
     METRIC_SYSTEM,
     US_CUSTOMARY_SYSTEM,
     UnitSystem,
@@ -106,14 +106,14 @@ DEFAULT_CONFIG = {
 }
 
 
-@pytest.mark.parametrize("hass_config", [DEFAULT_CONFIG])
+@pytest.mark.parametrize("menuai_config", [DEFAULT_CONFIG])
 async def test_setup_params(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test the initial parameters."""
     await mqtt_mock_entry()
 
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    state = menuai.states.get(ENTITY_WATER_HEATER)
 
     assert state.attributes.get("temperature") == _DEFAULT_MIN_TEMP_CELSIUS
     assert state.state == "off"
@@ -122,14 +122,14 @@ async def test_setup_params(
     assert state.attributes.get("max_temp") == _DEFAULT_MAX_TEMP_CELSIUS
 
 
-@pytest.mark.parametrize("hass_config", [DEFAULT_CONFIG])
+@pytest.mark.parametrize("menuai_config", [DEFAULT_CONFIG])
 async def test_supported_features(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test the supported_features."""
     await mqtt_mock_entry()
 
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     support = (
         WaterHeaterEntityFeature.TARGET_TEMPERATURE
         | WaterHeaterEntityFeature.OPERATION_MODE
@@ -138,14 +138,14 @@ async def test_supported_features(
     assert state.attributes.get("supported_features") == support
 
 
-@pytest.mark.parametrize("hass_config", [DEFAULT_CONFIG])
+@pytest.mark.parametrize("menuai_config", [DEFAULT_CONFIG])
 async def test_get_operation_modes(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test that the operation list returns the correct modes."""
     await mqtt_mock_entry()
 
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.attributes.get("operation_list") == [
         STATE_ECO,
         STATE_ELECTRIC,
@@ -157,41 +157,41 @@ async def test_get_operation_modes(
     ]
 
 
-@pytest.mark.parametrize("hass_config", [DEFAULT_CONFIG])
+@pytest.mark.parametrize("menuai_config", [DEFAULT_CONFIG])
 async def test_set_operation_mode_bad_attr_and_state(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test setting operation mode without required attribute."""
     await mqtt_mock_entry()
 
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.state == "off"
     with pytest.raises(vol.Invalid) as excinfo:
-        await common.async_set_operation_mode(hass, None, ENTITY_WATER_HEATER)  # type:ignore[arg-type]
+        await common.async_set_operation_mode(menuai, None, ENTITY_WATER_HEATER)  # type:ignore[arg-type]
     assert "string value is None for dictionary value @ data['operation_mode']" in str(
         excinfo.value
     )
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.state == "off"
 
 
-@pytest.mark.parametrize("hass_config", [DEFAULT_CONFIG])
+@pytest.mark.parametrize("menuai_config", [DEFAULT_CONFIG])
 async def test_set_operation(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test setting of new operation mode."""
     mqtt_mock = await mqtt_mock_entry()
 
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.state == "off"
-    await common.async_set_operation_mode(hass, "eco", ENTITY_WATER_HEATER)
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    await common.async_set_operation_mode(menuai, "eco", ENTITY_WATER_HEATER)
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.state == "eco"
     mqtt_mock.async_publish.assert_called_once_with("mode-topic", "eco", 0, False)
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         help_custom_config(
             water_heater.DOMAIN,
@@ -201,40 +201,40 @@ async def test_set_operation(
     ],
 )
 async def test_set_operation_pessimistic(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test setting operation mode in pessimistic mode."""
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     await mqtt_mock_entry()
 
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.state == STATE_UNKNOWN
 
-    await common.async_set_operation_mode(hass, "eco", ENTITY_WATER_HEATER)
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    await common.async_set_operation_mode(menuai, "eco", ENTITY_WATER_HEATER)
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.state == "unknown"
 
-    async_fire_mqtt_message(hass, "mode-state", "eco")
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    async_fire_mqtt_message(menuai, "mode-state", "eco")
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.state == "eco"
 
-    async_fire_mqtt_message(hass, "mode-state", "bogus mode")
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    async_fire_mqtt_message(menuai, "mode-state", "bogus mode")
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.state == "eco"
 
     # Empty state ignored
-    async_fire_mqtt_message(hass, "mode-state", "")
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    async_fire_mqtt_message(menuai, "mode-state", "")
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.state == "eco"
 
     # Test None payload
-    async_fire_mqtt_message(hass, "mode-state", "None")
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    async_fire_mqtt_message(menuai, "mode-state", "None")
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.state == STATE_UNKNOWN
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         help_custom_config(
             water_heater.DOMAIN,
@@ -249,29 +249,29 @@ async def test_set_operation_pessimistic(
     ],
 )
 async def test_set_operation_optimistic(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test setting operation mode in optimistic mode."""
     await mqtt_mock_entry()
 
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.state == "off"
 
-    await common.async_set_operation_mode(hass, "electric", ENTITY_WATER_HEATER)
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    await common.async_set_operation_mode(menuai, "electric", ENTITY_WATER_HEATER)
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.state == "electric"
 
-    async_fire_mqtt_message(hass, "mode-state", "performance")
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    async_fire_mqtt_message(menuai, "mode-state", "performance")
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.state == "performance"
 
-    async_fire_mqtt_message(hass, "mode-state", "bogus mode")
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    async_fire_mqtt_message(menuai, "mode-state", "bogus mode")
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.state == "performance"
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         help_custom_config(
             water_heater.DOMAIN,
@@ -281,37 +281,37 @@ async def test_set_operation_optimistic(
     ],
 )
 async def test_set_operation_with_power_command(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test setting of new operation mode with power command enabled."""
     mqtt_mock = await mqtt_mock_entry()
 
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.state == "off"
-    await common.async_set_operation_mode(hass, "electric", ENTITY_WATER_HEATER)
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    await common.async_set_operation_mode(menuai, "electric", ENTITY_WATER_HEATER)
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.state == "electric"
     mqtt_mock.async_publish.assert_has_calls([call("mode-topic", "electric", 0, False)])
     mqtt_mock.async_publish.reset_mock()
 
-    await common.async_set_operation_mode(hass, "off", ENTITY_WATER_HEATER)
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    await common.async_set_operation_mode(menuai, "off", ENTITY_WATER_HEATER)
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.state == "off"
     mqtt_mock.async_publish.assert_has_calls([call("mode-topic", "off", 0, False)])
     mqtt_mock.async_publish.reset_mock()
 
-    await common.async_turn_on(hass, ENTITY_WATER_HEATER)
+    await common.async_turn_on(menuai, ENTITY_WATER_HEATER)
     # the water heater is not updated optimistically as this is not supported
     mqtt_mock.async_publish.assert_has_calls([call("power-command", "ON", 0, False)])
     mqtt_mock.async_publish.reset_mock()
 
-    await common.async_turn_off(hass, ENTITY_WATER_HEATER)
+    await common.async_turn_off(menuai, ENTITY_WATER_HEATER)
     mqtt_mock.async_publish.assert_has_calls([call("power-command", "OFF", 0, False)])
     mqtt_mock.async_publish.reset_mock()
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         help_custom_config(
             water_heater.DOMAIN,
@@ -321,60 +321,60 @@ async def test_set_operation_with_power_command(
     ],
 )
 async def test_turn_on_and_off_optimistic_with_power_command(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test setting of turn on/off with power command enabled."""
     mqtt_mock = await mqtt_mock_entry()
 
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.state == "off"
-    await common.async_set_operation_mode(hass, "electric", ENTITY_WATER_HEATER)
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    await common.async_set_operation_mode(menuai, "electric", ENTITY_WATER_HEATER)
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.state == "electric"
     mqtt_mock.async_publish.assert_has_calls([call("mode-topic", "electric", 0, False)])
     mqtt_mock.async_publish.reset_mock()
-    await common.async_set_operation_mode(hass, "off", ENTITY_WATER_HEATER)
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    await common.async_set_operation_mode(menuai, "off", ENTITY_WATER_HEATER)
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.state == "off"
 
-    await common.async_turn_on(hass, ENTITY_WATER_HEATER)
+    await common.async_turn_on(menuai, ENTITY_WATER_HEATER)
     # the water heater is not updated optimistically as this is not supported
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.state == "off"
     mqtt_mock.async_publish.assert_has_calls([call("power-command", "ON", 0, False)])
     mqtt_mock.async_publish.reset_mock()
 
-    await common.async_set_operation_mode(hass, "gas", ENTITY_WATER_HEATER)
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    await common.async_set_operation_mode(menuai, "gas", ENTITY_WATER_HEATER)
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.state == "gas"
-    await common.async_turn_off(hass, ENTITY_WATER_HEATER)
+    await common.async_turn_off(menuai, ENTITY_WATER_HEATER)
     # the water heater is not updated optimistically as this is not supported
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.state == "gas"
     mqtt_mock.async_publish.assert_has_calls([call("power-command", "OFF", 0, False)])
     mqtt_mock.async_publish.reset_mock()
 
 
-@pytest.mark.parametrize("hass_config", [DEFAULT_CONFIG])
+@pytest.mark.parametrize("menuai_config", [DEFAULT_CONFIG])
 async def test_set_target_temperature(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test setting the target temperature."""
     mqtt_mock = await mqtt_mock_entry()
 
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.attributes.get("temperature") == _DEFAULT_MIN_TEMP_CELSIUS
-    await common.async_set_operation_mode(hass, "performance", ENTITY_WATER_HEATER)
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    await common.async_set_operation_mode(menuai, "performance", ENTITY_WATER_HEATER)
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.state == "performance"
     mqtt_mock.async_publish.assert_called_once_with(
         "mode-topic", "performance", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
     await common.async_set_temperature(
-        hass, temperature=50, entity_id=ENTITY_WATER_HEATER
+        menuai, temperature=50, entity_id=ENTITY_WATER_HEATER
     )
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.attributes.get("temperature") == 50
     mqtt_mock.async_publish.assert_called_once_with(
         "temperature-topic", "50.0", 0, False
@@ -383,9 +383,9 @@ async def test_set_target_temperature(
     # also test directly supplying the operation mode to set_temperature
     mqtt_mock.async_publish.reset_mock()
     await common.async_set_temperature(
-        hass, temperature=47, operation_mode="eco", entity_id=ENTITY_WATER_HEATER
+        menuai, temperature=47, operation_mode="eco", entity_id=ENTITY_WATER_HEATER
     )
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.state == "eco"
     assert state.attributes.get("temperature") == 47
     mqtt_mock.async_publish.assert_has_calls(
@@ -397,7 +397,7 @@ async def test_set_target_temperature(
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         help_custom_config(
             water_heater.DOMAIN,
@@ -407,31 +407,31 @@ async def test_set_target_temperature(
     ],
 )
 async def test_set_target_temperature_pessimistic(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test setting the target temperature."""
     await mqtt_mock_entry()
 
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.attributes.get("temperature") is None
-    await common.async_set_operation_mode(hass, "performance", ENTITY_WATER_HEATER)
+    await common.async_set_operation_mode(menuai, "performance", ENTITY_WATER_HEATER)
     await common.async_set_temperature(
-        hass, temperature=60, entity_id=ENTITY_WATER_HEATER
+        menuai, temperature=60, entity_id=ENTITY_WATER_HEATER
     )
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.attributes.get("temperature") is None
 
-    async_fire_mqtt_message(hass, "temperature-state", "1701")
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    async_fire_mqtt_message(menuai, "temperature-state", "1701")
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.attributes.get("temperature") == 1701
 
-    async_fire_mqtt_message(hass, "temperature-state", "not a number")
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    async_fire_mqtt_message(menuai, "temperature-state", "not a number")
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.attributes.get("temperature") == 1701
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         help_custom_config(
             water_heater.DOMAIN,
@@ -441,31 +441,31 @@ async def test_set_target_temperature_pessimistic(
     ],
 )
 async def test_set_target_temperature_optimistic(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test setting the target temperature optimistic."""
     await mqtt_mock_entry()
 
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.attributes.get("temperature") == _DEFAULT_MIN_TEMP_CELSIUS
-    await common.async_set_operation_mode(hass, "performance", ENTITY_WATER_HEATER)
+    await common.async_set_operation_mode(menuai, "performance", ENTITY_WATER_HEATER)
     await common.async_set_temperature(
-        hass, temperature=55, entity_id=ENTITY_WATER_HEATER
+        menuai, temperature=55, entity_id=ENTITY_WATER_HEATER
     )
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.attributes.get("temperature") == 55
 
-    async_fire_mqtt_message(hass, "temperature-state", "49")
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    async_fire_mqtt_message(menuai, "temperature-state", "49")
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.attributes.get("temperature") == 49
 
-    async_fire_mqtt_message(hass, "temperature-state", "not a number")
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    async_fire_mqtt_message(menuai, "temperature-state", "not a number")
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.attributes.get("temperature") == 49
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         help_custom_config(
             water_heater.DOMAIN,
@@ -475,19 +475,19 @@ async def test_set_target_temperature_optimistic(
     ],
 )
 async def test_receive_mqtt_temperature(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test getting the current temperature via MQTT."""
     await mqtt_mock_entry()
 
-    async_fire_mqtt_message(hass, "current_temperature", "53")
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    async_fire_mqtt_message(menuai, "current_temperature", "53")
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.attributes.get("current_temperature") == 53
 
-    async_fire_mqtt_message(hass, "current_temperature", "")
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    async_fire_mqtt_message(menuai, "current_temperature", "")
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert (
         "Invalid empty payload for attribute _attr_current_temperature, ignoring update"
         in caplog.text
@@ -495,46 +495,46 @@ async def test_receive_mqtt_temperature(
     assert state.attributes.get("current_temperature") == 53
 
 
-@pytest.mark.parametrize("hass_config", [DEFAULT_CONFIG])
+@pytest.mark.parametrize("menuai_config", [DEFAULT_CONFIG])
 async def test_availability_when_connection_lost(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test availability after MQTT disconnection."""
     await help_test_availability_when_connection_lost(
-        hass, mqtt_mock_entry, water_heater.DOMAIN
+        menuai, mqtt_mock_entry, water_heater.DOMAIN
     )
 
 
-@pytest.mark.parametrize("hass_config", [DEFAULT_CONFIG])
+@pytest.mark.parametrize("menuai_config", [DEFAULT_CONFIG])
 async def test_availability_without_topic(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test availability without defined availability topic."""
     await help_test_availability_without_topic(
-        hass, mqtt_mock_entry, water_heater.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, water_heater.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_default_availability_payload(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test availability by default payload with defined topic."""
     await help_test_default_availability_payload(
-        hass, mqtt_mock_entry, water_heater.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, water_heater.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_custom_availability_payload(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test availability by custom payload with defined topic."""
     await help_test_custom_availability_payload(
-        hass, mqtt_mock_entry, water_heater.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, water_heater.DOMAIN, DEFAULT_CONFIG
     )
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -556,7 +556,7 @@ async def test_custom_availability_payload(
     ],
 )
 async def test_get_with_templates(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -564,42 +564,42 @@ async def test_get_with_templates(
     await mqtt_mock_entry()
 
     # Operation Mode
-    state = hass.states.get(ENTITY_WATER_HEATER)
-    async_fire_mqtt_message(hass, "mode-state", '{"attribute": "eco"}')
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    state = menuai.states.get(ENTITY_WATER_HEATER)
+    async_fire_mqtt_message(menuai, "mode-state", '{"attribute": "eco"}')
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.state == "eco"
 
     # Temperature - with valid value
     assert state.attributes.get("temperature") is None
-    async_fire_mqtt_message(hass, "temperature-state", '"1031"')
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    async_fire_mqtt_message(menuai, "temperature-state", '"1031"')
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.attributes.get("temperature") == 1031
 
     # Temperature - with invalid value
-    async_fire_mqtt_message(hass, "temperature-state", '"-INVALID-"')
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    async_fire_mqtt_message(menuai, "temperature-state", '"-INVALID-"')
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     # make sure, the invalid value gets logged...
     assert "Could not parse temperature_state_template from -INVALID-" in caplog.text
     # ... but the actual value stays unchanged.
     assert state.attributes.get("temperature") == 1031
 
     # Temperature - with JSON null value
-    async_fire_mqtt_message(hass, "temperature-state", "null")
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    async_fire_mqtt_message(menuai, "temperature-state", "null")
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.attributes.get("temperature") is None
 
     # Current temperature
-    async_fire_mqtt_message(hass, "current-temperature", '"74656"')
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    async_fire_mqtt_message(menuai, "current-temperature", '"74656"')
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.attributes.get("current_temperature") == 74656
     # Test resetting the current temperature using a JSON null value
-    async_fire_mqtt_message(hass, "current-temperature", "null")
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    async_fire_mqtt_message(menuai, "current-temperature", "null")
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.attributes.get("current_temperature") is None
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -618,51 +618,51 @@ async def test_get_with_templates(
     ],
 )
 async def test_set_and_templates(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test setting various attributes with templates."""
     mqtt_mock = await mqtt_mock_entry()
 
     # Mode
-    await common.async_set_operation_mode(hass, "heat_pump", ENTITY_WATER_HEATER)
+    await common.async_set_operation_mode(menuai, "heat_pump", ENTITY_WATER_HEATER)
     mqtt_mock.async_publish.assert_called_once_with(
         "mode-topic", "mode: heat_pump", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.state == "heat_pump"
 
     # Temperature
     await common.async_set_temperature(
-        hass, temperature=107, entity_id=ENTITY_WATER_HEATER
+        menuai, temperature=107, entity_id=ENTITY_WATER_HEATER
     )
     mqtt_mock.async_publish.assert_called_once_with(
         "temperature-topic", "temp: 107.0", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.attributes.get("temperature") == 107
 
     # Power
-    await common.async_turn_on(hass, entity_id=ENTITY_WATER_HEATER)
+    await common.async_turn_on(menuai, entity_id=ENTITY_WATER_HEATER)
     mqtt_mock.async_publish.assert_called_once_with("power-topic", "pwr: ON", 0, False)
     mqtt_mock.async_publish.reset_mock()
-    await common.async_turn_off(hass, entity_id=ENTITY_WATER_HEATER)
+    await common.async_turn_off(menuai, entity_id=ENTITY_WATER_HEATER)
     mqtt_mock.async_publish.assert_called_once_with("power-topic", "pwr: OFF", 0, False)
     mqtt_mock.async_publish.reset_mock()
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [help_custom_config(water_heater.DOMAIN, DEFAULT_CONFIG, ({"min_temp": 70},))],
 )
 async def test_min_temp_custom(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test a custom min temp."""
     await mqtt_mock_entry()
 
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     min_temp = state.attributes.get("min_temp")
 
     assert isinstance(min_temp, float)
@@ -670,16 +670,16 @@ async def test_min_temp_custom(
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [help_custom_config(water_heater.DOMAIN, DEFAULT_CONFIG, ({"max_temp": 220},))],
 )
 async def test_max_temp_custom(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test a custom max temp."""
     await mqtt_mock_entry()
 
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     max_temp = state.attributes.get("max_temp")
 
     assert isinstance(max_temp, float)
@@ -687,7 +687,7 @@ async def test_max_temp_custom(
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         help_custom_config(
             water_heater.DOMAIN,
@@ -702,24 +702,24 @@ async def test_max_temp_custom(
     ],
 )
 async def test_temperature_unit(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test that setting temperature unit converts temperature values."""
     await mqtt_mock_entry()
 
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.attributes.get("temperature") == _DEFAULT_MIN_TEMP_CELSIUS
     assert state.attributes.get("min_temp") == _DEFAULT_MIN_TEMP_CELSIUS
     assert state.attributes.get("max_temp") == _DEFAULT_MAX_TEMP_CELSIUS
 
-    async_fire_mqtt_message(hass, "current_temperature", "127")
+    async_fire_mqtt_message(menuai, "current_temperature", "127")
 
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.attributes.get("current_temperature") == 52.8
 
 
 @pytest.mark.parametrize(
-    ("hass_config", "units", "initial", "min_temp", "max_temp", "current"),
+    ("menuai_config", "units", "initial", "min_temp", "max_temp", "current"),
     [
         (
             help_custom_config(
@@ -758,7 +758,7 @@ async def test_temperature_unit(
     ],
 )
 async def test_alt_temperature_unit(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     units: UnitSystem,
     initial: float,
@@ -767,35 +767,35 @@ async def test_alt_temperature_unit(
     current: float,
 ) -> None:
     """Test deriving the systems temperature unit."""
-    hass.config.units = units
+    menuai.config.units = units
     await mqtt_mock_entry()
 
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.attributes.get("temperature") == initial
     assert state.attributes.get("min_temp") == min_temp
     assert state.attributes.get("max_temp") == max_temp
 
-    async_fire_mqtt_message(hass, "current_temperature", "120")
+    async_fire_mqtt_message(menuai, "current_temperature", "120")
 
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.attributes.get("current_temperature") == current
 
 
 async def test_setting_attribute_via_mqtt_json_message(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test the setting of attribute via MQTT with JSON payload."""
     await help_test_setting_attribute_via_mqtt_json_message(
-        hass, mqtt_mock_entry, water_heater.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, water_heater.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_setting_blocked_attribute_via_mqtt_json_message(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test the setting of attribute via MQTT with JSON payload."""
     await help_test_setting_blocked_attribute_via_mqtt_json_message(
-        hass,
+        menuai,
         mqtt_mock_entry,
         water_heater.DOMAIN,
         DEFAULT_CONFIG,
@@ -804,47 +804,47 @@ async def test_setting_blocked_attribute_via_mqtt_json_message(
 
 
 async def test_setting_attribute_with_template(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test the setting of attribute via MQTT with JSON payload."""
     await help_test_setting_attribute_with_template(
-        hass, mqtt_mock_entry, water_heater.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, water_heater.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_update_with_json_attrs_not_dict(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test attributes get extracted from a JSON result."""
     await help_test_update_with_json_attrs_not_dict(
-        hass, mqtt_mock_entry, caplog, water_heater.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, caplog, water_heater.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_update_with_json_attrs_bad_json(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test attributes get extracted from a JSON result."""
     await help_test_update_with_json_attrs_bad_json(
-        hass, mqtt_mock_entry, caplog, water_heater.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, caplog, water_heater.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_discovery_update_attr(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test update of discovered MQTTAttributes."""
     await help_test_discovery_update_attr(
-        hass, mqtt_mock_entry, water_heater.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, water_heater.DOMAIN, DEFAULT_CONFIG
     )
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -867,10 +867,10 @@ async def test_discovery_update_attr(
     ],
 )
 async def test_unique_id(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test unique id option only creates one water heater per unique_id."""
-    await help_test_unique_id(hass, mqtt_mock_entry, water_heater.DOMAIN)
+    await help_test_unique_id(menuai, mqtt_mock_entry, water_heater.DOMAIN)
 
 
 @pytest.mark.parametrize(
@@ -882,7 +882,7 @@ async def test_unique_id(
     ],
 )
 async def test_encoding_subscribable_topics(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     topic: str,
     value: str,
@@ -892,7 +892,7 @@ async def test_encoding_subscribable_topics(
     """Test handling of incoming encoded payload."""
     config = copy.deepcopy(DEFAULT_CONFIG[mqtt.DOMAIN][water_heater.DOMAIN])
     await help_test_encoding_subscribable_topics(
-        hass,
+        menuai,
         mqtt_mock_entry,
         water_heater.DOMAIN,
         config,
@@ -904,87 +904,87 @@ async def test_encoding_subscribable_topics(
 
 
 async def test_discovery_removal_water_heater(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test removal of discovered water heater."""
     data = json.dumps(DEFAULT_CONFIG[mqtt.DOMAIN][water_heater.DOMAIN])
-    await help_test_discovery_removal(hass, mqtt_mock_entry, water_heater.DOMAIN, data)
+    await help_test_discovery_removal(menuai, mqtt_mock_entry, water_heater.DOMAIN, data)
 
 
 async def test_discovery_update_water_heater(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test update of discovered water heater."""
     config1 = {"name": "Beer"}
     config2 = {"name": "Milk"}
     await help_test_discovery_update(
-        hass, mqtt_mock_entry, water_heater.DOMAIN, config1, config2
+        menuai, mqtt_mock_entry, water_heater.DOMAIN, config1, config2
     )
 
 
 async def test_discovery_update_unchanged_water_heater(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test update of discovered water heater."""
     data1 = '{ "name": "Beer" }'
     with patch(
-        "homeassistant.components.mqtt.water_heater.MqttWaterHeater.discovery_update"
+        "menuai.components.mqtt.water_heater.MqttWaterHeater.discovery_update"
     ) as discovery_update:
         await help_test_discovery_update_unchanged(
-            hass, mqtt_mock_entry, water_heater.DOMAIN, data1, discovery_update
+            menuai, mqtt_mock_entry, water_heater.DOMAIN, data1, discovery_update
         )
 
 
 @pytest.mark.no_fail_on_log_exception
 async def test_discovery_broken(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test handling of bad discovery message."""
     data1 = '{ "name": "Beer", "mode_command_topic": "test_topic#" }'
     data2 = '{ "name": "Milk", "mode_command_topic": "test_topic" }'
     await help_test_discovery_broken(
-        hass, mqtt_mock_entry, water_heater.DOMAIN, data1, data2
+        menuai, mqtt_mock_entry, water_heater.DOMAIN, data1, data2
     )
 
 
 async def test_entity_device_info_with_connection(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test MQTT water heater device registry integration."""
     await help_test_entity_device_info_with_connection(
-        hass, mqtt_mock_entry, water_heater.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, water_heater.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_entity_device_info_with_identifier(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test MQTT water heater device registry integration."""
     await help_test_entity_device_info_with_identifier(
-        hass, mqtt_mock_entry, water_heater.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, water_heater.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_entity_device_info_update(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test device registry update."""
     await help_test_entity_device_info_update(
-        hass, mqtt_mock_entry, water_heater.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, water_heater.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_entity_device_info_remove(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test device registry remove."""
     await help_test_entity_device_info_remove(
-        hass, mqtt_mock_entry, water_heater.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, water_heater.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_entity_id_update_subscriptions(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test MQTT subscriptions are managed when entity_id is updated."""
     config = {
@@ -997,21 +997,21 @@ async def test_entity_id_update_subscriptions(
         }
     }
     await help_test_entity_id_update_subscriptions(
-        hass, mqtt_mock_entry, water_heater.DOMAIN, config, ["test-topic", "avty-topic"]
+        menuai, mqtt_mock_entry, water_heater.DOMAIN, config, ["test-topic", "avty-topic"]
     )
 
 
 async def test_entity_id_update_discovery_update(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test MQTT discovery update when entity_id is updated."""
     await help_test_entity_id_update_discovery_update(
-        hass, mqtt_mock_entry, water_heater.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, water_heater.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_entity_debug_info_message(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test MQTT debug info."""
     config = {
@@ -1024,7 +1024,7 @@ async def test_entity_debug_info_message(
         }
     }
     await help_test_entity_debug_info_message(
-        hass,
+        menuai,
         mqtt_mock_entry,
         water_heater.DOMAIN,
         config,
@@ -1036,53 +1036,53 @@ async def test_entity_debug_info_message(
     )
 
 
-@pytest.mark.parametrize("hass_config", [DEFAULT_CONFIG])
+@pytest.mark.parametrize("menuai_config", [DEFAULT_CONFIG])
 async def test_precision_default(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test that setting precision to tenths works as intended."""
     mqtt_mock = await mqtt_mock_entry()
 
     await common.async_set_temperature(
-        hass, temperature=23.67, entity_id=ENTITY_WATER_HEATER
+        menuai, temperature=23.67, entity_id=ENTITY_WATER_HEATER
     )
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.attributes.get("temperature") == 23.7
     mqtt_mock.async_publish.reset_mock()
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [help_custom_config(water_heater.DOMAIN, DEFAULT_CONFIG, ({"precision": 0.5},))],
 )
 async def test_precision_halves(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test that setting precision to halves works as intended."""
     mqtt_mock = await mqtt_mock_entry()
 
     await common.async_set_temperature(
-        hass, temperature=23.67, entity_id=ENTITY_WATER_HEATER
+        menuai, temperature=23.67, entity_id=ENTITY_WATER_HEATER
     )
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.attributes.get("temperature") == 23.5
     mqtt_mock.async_publish.reset_mock()
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [help_custom_config(water_heater.DOMAIN, DEFAULT_CONFIG, ({"precision": 1.0},))],
 )
 async def test_precision_whole(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test that setting precision to whole works as intended."""
     mqtt_mock = await mqtt_mock_entry()
 
     await common.async_set_temperature(
-        hass, temperature=23.67, entity_id=ENTITY_WATER_HEATER
+        menuai, temperature=23.67, entity_id=ENTITY_WATER_HEATER
     )
-    state = hass.states.get(ENTITY_WATER_HEATER)
+    state = menuai.states.get(ENTITY_WATER_HEATER)
     assert state.attributes.get("temperature") == 24.0
     mqtt_mock.async_publish.reset_mock()
 
@@ -1121,7 +1121,7 @@ async def test_precision_whole(
     ],
 )
 async def test_publishing_with_custom_encoding(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
     service: str,
@@ -1135,7 +1135,7 @@ async def test_publishing_with_custom_encoding(
     config = copy.deepcopy(DEFAULT_CONFIG)
 
     await help_test_publishing_with_custom_encoding(
-        hass,
+        menuai,
         mqtt_mock_entry,
         caplog,
         domain,
@@ -1149,42 +1149,42 @@ async def test_publishing_with_custom_encoding(
 
 
 async def test_reloadable(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_client_mock: MqttMockPahoClient,
 ) -> None:
     """Test reloading the MQTT platform."""
     domain = water_heater.DOMAIN
     config = DEFAULT_CONFIG
-    await help_test_reloadable(hass, mqtt_client_mock, domain, config)
+    await help_test_reloadable(menuai, mqtt_client_mock, domain, config)
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [DEFAULT_CONFIG, {"mqtt": [DEFAULT_CONFIG["mqtt"]]}],
     ids=["platform_key", "listed"],
 )
 async def test_setup_manual_entity_from_yaml(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test setup manual configured MQTT entity."""
     await mqtt_mock_entry()
     platform = water_heater.DOMAIN
-    assert hass.states.get(f"{platform}.test")
+    assert menuai.states.get(f"{platform}.test")
 
 
 async def test_unload_entry(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test unloading the config entry."""
     domain = water_heater.DOMAIN
     config = DEFAULT_CONFIG
     await help_test_unload_config_entry_with_platform(
-        hass, mqtt_mock_entry, domain, config
+        menuai, mqtt_mock_entry, domain, config
     )
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         help_custom_config(
             water_heater.DOMAIN,
@@ -1212,7 +1212,7 @@ async def test_unload_entry(
     ],
 )
 async def test_skipped_async_ha_write_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     topic: str,
     payload1: str,
@@ -1220,11 +1220,11 @@ async def test_skipped_async_ha_write_state(
 ) -> None:
     """Test a write state command is only called when there is change."""
     await mqtt_mock_entry()
-    await help_test_skipped_async_ha_write_state(hass, topic, payload1, payload2)
+    await help_test_skipped_async_ha_write_state(menuai, topic, payload1, payload2)
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         help_custom_config(
             water_heater.DOMAIN,
@@ -1242,13 +1242,13 @@ async def test_skipped_async_ha_write_state(
     ids=["value_template", "mode_state_template"],
 )
 async def test_value_template_fails(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test the rendering of MQTT value template fails."""
     await mqtt_mock_entry()
-    async_fire_mqtt_message(hass, "test-topic", '{"some_var": null }')
+    async_fire_mqtt_message(menuai, "test-topic", '{"some_var": null }')
     assert (
         "TypeError: unsupported operand type(s) for *: 'NoneType' and 'int' rendering template"
         in caplog.text

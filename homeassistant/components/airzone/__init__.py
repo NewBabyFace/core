@@ -15,9 +15,9 @@ from aioairzone.const import (
 )
 from aioairzone.localapi import AirzoneLocalApi, ConnectionOptions
 
-from homeassistant.const import CONF_HOST, CONF_ID, CONF_PORT, Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import (
+from menuai.const import CONF_HOST, CONF_ID, CONF_PORT, Platform
+from menuai.core import menuai, callback
+from menuai.helpers import (
     aiohttp_client,
     device_registry as dr,
     entity_registry as er,
@@ -39,7 +39,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def _async_migrate_unique_ids(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: AirzoneConfigEntry,
     coordinator: AirzoneUpdateCoordinator,
 ) -> None:
@@ -73,12 +73,12 @@ async def _async_migrate_unique_ids(
         updates: dict[str, Any] = {
             "unique_id": dr.format_mac(mac),
         }
-        hass.config_entries.async_update_entry(entry, **updates)
+        menuai.config_entries.async_update_entry(entry, **updates)
 
-        await er.async_migrate_entries(hass, entry.entry_id, _async_migrator)
+        await er.async_migrate_entries(menuai, entry.entry_id, _async_migrator)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: AirzoneConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: AirzoneConfigEntry) -> bool:
     """Set up Airzone from a config entry."""
     options = ConnectionOptions(
         entry.data[CONF_HOST],
@@ -86,14 +86,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: AirzoneConfigEntry) -> b
         entry.data[CONF_ID],
     )
 
-    airzone = AirzoneLocalApi(aiohttp_client.async_get_clientsession(hass), options)
-    coordinator = AirzoneUpdateCoordinator(hass, entry, airzone)
+    airzone = AirzoneLocalApi(aiohttp_client.async_get_clientsession(menuai), options)
+    coordinator = AirzoneUpdateCoordinator(menuai, entry, airzone)
     await coordinator.async_config_entry_first_refresh()
-    await _async_migrate_unique_ids(hass, entry, coordinator)
+    await _async_migrate_unique_ids(menuai, entry, coordinator)
 
     entry.runtime_data = coordinator
 
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
 
     ws_data: dict[str, Any] | None = coordinator.data.get(AZD_WEBSERVER)
     if ws_data is not None:
@@ -109,24 +109,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: AirzoneConfigEntry) -> b
             sw_version=ws_data.get(AZD_FIRMWARE),
         )
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: AirzoneConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: AirzoneConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
-async def async_migrate_entry(hass: HomeAssistant, entry: AirzoneConfigEntry) -> bool:
+async def async_migrate_entry(menuai: menuai, entry: AirzoneConfigEntry) -> bool:
     """Migrate an old entry."""
     if entry.version == 1 and entry.minor_version < 2:
         # Add missing CONF_ID
         system_id = entry.data.get(CONF_ID, DEFAULT_SYSTEM_ID)
         new_data = entry.data.copy()
         new_data[CONF_ID] = system_id
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry,
             data=new_data,
             minor_version=2,

@@ -8,10 +8,10 @@ from typing import Any
 
 from epicstore_api import EpicGamesStoreAPI
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_COUNTRY, CONF_LANGUAGE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_COUNTRY, CONF_LANGUAGE
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN, CalendarType
 from .helper import format_game_data
@@ -28,7 +28,7 @@ class EGSCalendarUpdateCoordinator(
 ):
     """Class to manage fetching data from the Epic Game Store."""
 
-    def __init__(self, hass: HomeAssistant, entry: EGSConfigEntry) -> None:
+    def __init__(self, menuai: menuai, entry: EGSConfigEntry) -> None:
         """Initialize."""
         self._api = EpicGamesStoreAPI(
             entry.data[CONF_LANGUAGE],
@@ -37,7 +37,7 @@ class EGSCalendarUpdateCoordinator(
         self.language = entry.data[CONF_LANGUAGE]
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
             name=DOMAIN,
@@ -46,7 +46,7 @@ class EGSCalendarUpdateCoordinator(
 
     async def _async_update_data(self) -> dict[str, list[dict[str, Any]]]:
         """Update data via library."""
-        raw_data = await self.hass.async_add_executor_job(self._api.get_free_games)
+        raw_data = await self.menuai.async_add_executor_job(self._api.get_free_games)
         _LOGGER.debug(raw_data)
         data = raw_data["data"]["Catalog"]["searchStore"]["elements"]
 

@@ -6,23 +6,23 @@ from dataclasses import dataclass
 
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_MONITORED_CONDITIONS,
     PERCENTAGE,
     UnitOfPower,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import DOMAIN, UPDATE_TOPIC, AquaLogicProcessor
 
@@ -114,13 +114,13 @@ PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the sensor platform."""
-    processor: AquaLogicProcessor = hass.data[DOMAIN]
+    processor: AquaLogicProcessor = menuai.data[DOMAIN]
     monitored_conditions = config[CONF_MONITORED_CONDITIONS]
 
     entities = [
@@ -148,11 +148,11 @@ class AquaLogicSensor(SensorEntity):
         self._processor = processor
         self._attr_name = f"AquaLogic {description.name}"
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, UPDATE_TOPIC, self.async_update_callback
+                self.menuai, UPDATE_TOPIC, self.async_update_callback
             )
         )
 

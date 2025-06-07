@@ -1,4 +1,4 @@
-"""Constants for the Homeassistant Analytics integration."""
+"""Constants for the menuai Analytics integration."""
 
 import logging
 

@@ -5,12 +5,12 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from homeassistant.components.hddtemp import DOMAIN
-from homeassistant.components.sensor import DOMAIN as PLATFORM_DOMAIN
-from homeassistant.const import UnitOfTemperature
-from homeassistant.core import DOMAIN as HOMEASSISTANT_DOMAIN, HomeAssistant
-from homeassistant.helpers import issue_registry as ir
-from homeassistant.setup import async_setup_component
+from menuai.components.hddtemp import DOMAIN
+from menuai.components.sensor import DOMAIN as PLATFORM_DOMAIN
+from menuai.const import UnitOfTemperature
+from menuai.core import DOMAIN as menuai_DOMAIN, menuai
+from menuai.helpers import issue_registry as ir
+from menuai.setup import async_setup_component
 
 VALID_CONFIG_MINIMAL = {"sensor": {"platform": "hddtemp"}}
 
@@ -88,17 +88,17 @@ class TelnetMock:
 @pytest.fixture
 def telnetmock():
     """Mock telnet."""
-    with patch("homeassistant.components.hddtemp.sensor.Telnet", new=TelnetMock):
+    with patch("menuai.components.hddtemp.sensor.Telnet", new=TelnetMock):
         yield
 
 
-async def test_hddtemp_min_config(hass: HomeAssistant, telnetmock) -> None:
+async def test_hddtemp_min_config(menuai: menuai, telnetmock) -> None:
     """Test minimal hddtemp configuration."""
-    assert await async_setup_component(hass, "sensor", VALID_CONFIG_MINIMAL)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", VALID_CONFIG_MINIMAL)
+    await menuai.async_block_till_done()
 
-    entity_id = hass.states.async_all()[0].entity_id
-    state = hass.states.get(entity_id)
+    entity_id = menuai.states.async_all()[0].entity_id
+    state = menuai.states.get(entity_id)
 
     reference = REFERENCE[state.attributes.get("device")]
 
@@ -113,25 +113,25 @@ async def test_hddtemp_min_config(hass: HomeAssistant, telnetmock) -> None:
     )
 
 
-async def test_hddtemp_rename_config(hass: HomeAssistant, telnetmock) -> None:
+async def test_hddtemp_rename_config(menuai: menuai, telnetmock) -> None:
     """Test hddtemp configuration with different name."""
-    assert await async_setup_component(hass, "sensor", VALID_CONFIG_NAME)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", VALID_CONFIG_NAME)
+    await menuai.async_block_till_done()
 
-    entity_id = hass.states.async_all()[0].entity_id
-    state = hass.states.get(entity_id)
+    entity_id = menuai.states.async_all()[0].entity_id
+    state = menuai.states.get(entity_id)
 
     reference = REFERENCE[state.attributes.get("device")]
 
     assert state.attributes.get("friendly_name") == f"FooBar {reference['device']}"
 
 
-async def test_hddtemp_one_disk(hass: HomeAssistant, telnetmock) -> None:
+async def test_hddtemp_one_disk(menuai: menuai, telnetmock) -> None:
     """Test hddtemp one disk configuration."""
-    assert await async_setup_component(hass, "sensor", VALID_CONFIG_ONE_DISK)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", VALID_CONFIG_ONE_DISK)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.hd_temperature_dev_sdd1")
+    state = menuai.states.get("sensor.hd_temperature_dev_sdd1")
 
     reference = REFERENCE[state.attributes.get("device")]
 
@@ -146,27 +146,27 @@ async def test_hddtemp_one_disk(hass: HomeAssistant, telnetmock) -> None:
     )
 
 
-async def test_hddtemp_wrong_disk(hass: HomeAssistant, telnetmock) -> None:
+async def test_hddtemp_wrong_disk(menuai: menuai, telnetmock) -> None:
     """Test hddtemp wrong disk configuration."""
-    assert await async_setup_component(hass, "sensor", VALID_CONFIG_WRONG_DISK)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", VALID_CONFIG_WRONG_DISK)
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == 1
-    state = hass.states.get("sensor.hd_temperature_dev_sdx1")
+    assert len(menuai.states.async_all()) == 1
+    state = menuai.states.get("sensor.hd_temperature_dev_sdx1")
     assert state.attributes.get("friendly_name") == "HD Temperature /dev/sdx1"
 
 
-async def test_hddtemp_multiple_disks(hass: HomeAssistant, telnetmock) -> None:
+async def test_hddtemp_multiple_disks(menuai: menuai, telnetmock) -> None:
     """Test hddtemp multiple disk configuration."""
-    assert await async_setup_component(hass, "sensor", VALID_CONFIG_MULTIPLE_DISKS)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", VALID_CONFIG_MULTIPLE_DISKS)
+    await menuai.async_block_till_done()
 
     for sensor in (
         "sensor.hd_temperature_dev_sda1",
         "sensor.hd_temperature_dev_sdb1",
         "sensor.hd_temperature_dev_sdc1",
     ):
-        state = hass.states.get(sensor)
+        state = menuai.states.get(sensor)
 
         reference = REFERENCE[state.attributes.get("device")]
 
@@ -183,29 +183,29 @@ async def test_hddtemp_multiple_disks(hass: HomeAssistant, telnetmock) -> None:
         )
 
 
-async def test_hddtemp_host_refused(hass: HomeAssistant, telnetmock) -> None:
+async def test_hddtemp_host_refused(menuai: menuai, telnetmock) -> None:
     """Test hddtemp if host is refused."""
-    assert await async_setup_component(hass, "sensor", VALID_CONFIG_HOST_REFUSED)
-    await hass.async_block_till_done()
-    assert len(hass.states.async_all()) == 0
+    assert await async_setup_component(menuai, "sensor", VALID_CONFIG_HOST_REFUSED)
+    await menuai.async_block_till_done()
+    assert len(menuai.states.async_all()) == 0
 
 
-async def test_hddtemp_host_unreachable(hass: HomeAssistant, telnetmock) -> None:
+async def test_hddtemp_host_unreachable(menuai: menuai, telnetmock) -> None:
     """Test hddtemp if host unreachable."""
-    assert await async_setup_component(hass, "sensor", VALID_CONFIG_HOST_UNREACHABLE)
-    await hass.async_block_till_done()
-    assert len(hass.states.async_all()) == 0
+    assert await async_setup_component(menuai, "sensor", VALID_CONFIG_HOST_UNREACHABLE)
+    await menuai.async_block_till_done()
+    assert len(menuai.states.async_all()) == 0
 
 
 @patch.dict("sys.modules", gsp=Mock())
 async def test_repair_issue_is_created(
-    hass: HomeAssistant,
+    menuai: menuai,
     issue_registry: ir.IssueRegistry,
 ) -> None:
     """Test repair issue is created."""
-    assert await async_setup_component(hass, PLATFORM_DOMAIN, VALID_CONFIG_MINIMAL)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, PLATFORM_DOMAIN, VALID_CONFIG_MINIMAL)
+    await menuai.async_block_till_done()
     assert (
-        HOMEASSISTANT_DOMAIN,
+        menuai_DOMAIN,
         f"deprecated_system_packages_yaml_integration_{DOMAIN}",
     ) in issue_registry.issues

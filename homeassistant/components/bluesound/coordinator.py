@@ -12,9 +12,9 @@ import logging
 from pyblu import Input, Player, Preset, Status, SyncStatus
 from pyblu.errors import PlayerUnreachableError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -62,7 +62,7 @@ class BluesoundCoordinator(DataUpdateCoordinator[BluesoundData]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: BluesoundConfigEntry,
         player: Player,
         sync_status: SyncStatus,
@@ -72,7 +72,7 @@ class BluesoundCoordinator(DataUpdateCoordinator[BluesoundData]):
         self._inital_sync_status = sync_status
 
         super().__init__(
-            hass,
+            menuai,
             logger=_LOGGER,
             config_entry=config_entry,
             name=sync_status.name,
@@ -92,19 +92,19 @@ class BluesoundCoordinator(DataUpdateCoordinator[BluesoundData]):
             )
         )
 
-        status_loop_task = self.hass.async_create_background_task(
+        status_loop_task = self.menuai.async_create_background_task(
             self._poll_status_loop(),
             name=f"bluesound.poll_status_loop_{self.data.sync_status.id}",
         )
         self.config_entry.async_on_unload(cancel_task(status_loop_task))
 
-        sync_status_loop_task = self.hass.async_create_background_task(
+        sync_status_loop_task = self.menuai.async_create_background_task(
             self._poll_sync_status_loop(),
             name=f"bluesound.poll_sync_status_loop_{self.data.sync_status.id}",
         )
         self.config_entry.async_on_unload(cancel_task(sync_status_loop_task))
 
-        presets_and_inputs_loop_task = self.hass.async_create_background_task(
+        presets_and_inputs_loop_task = self.menuai.async_create_background_task(
             self._poll_presets_and_inputs_loop(),
             name=f"bluesound.poll_presets_and_inputs_loop_{self.data.sync_status.id}",
         )

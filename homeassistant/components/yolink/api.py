@@ -1,10 +1,10 @@
-"""API for yolink bound to Home Assistant OAuth."""
+"""API for yolink bound to MenuAI OAuth."""
 
 from aiohttp import ClientSession
 from yolink.auth_mgr import YoLinkAuthMgr
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_entry_oauth2_flow
+from menuai.core import menuai
+from menuai.helpers import config_entry_oauth2_flow
 
 
 class ConfigEntryAuth(YoLinkAuthMgr):
@@ -12,12 +12,12 @@ class ConfigEntryAuth(YoLinkAuthMgr):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         websession: ClientSession,
         oauth2Session: config_entry_oauth2_flow.OAuth2Session,
     ) -> None:
         """Initialize yolink Auth."""
-        self.hass = hass
+        self.menuai = menuai
         self.oauth_session = oauth2Session
         super().__init__(websession)
 

@@ -8,10 +8,10 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Literal, TypedDict
 
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.util.dt import utc_from_timestamp, utcnow
-from homeassistant.util.event_type import EventType
-from homeassistant.util.hass_dict import HassKey
+from menuai.core import Event, menuai, callback
+from menuai.util.dt import utc_from_timestamp, utcnow
+from menuai.util.event_type import EventType
+from menuai.util.menuai_dict import menuaiKey
 
 from .normalized_name_base_registry import (
     NormalizedNameBaseRegistryEntry,
@@ -22,7 +22,7 @@ from .singleton import singleton
 from .storage import Store
 from .typing import UNDEFINED, UndefinedType
 
-DATA_REGISTRY: HassKey[LabelRegistry] = HassKey("label_registry")
+DATA_REGISTRY: menuaiKey[LabelRegistry] = menuaiKey("label_registry")
 EVENT_LABEL_REGISTRY_UPDATED: EventType[EventLabelRegistryUpdatedData] = EventType(
     "label_registry_updated"
 )
@@ -98,11 +98,11 @@ class LabelRegistry(BaseRegistry[LabelRegistryStoreData]):
     labels: NormalizedNameBaseRegistryItems[LabelEntry]
     _label_data: dict[str, LabelEntry]
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize the label registry."""
-        self.hass = hass
+        self.menuai = menuai
         self._store = LabelRegistryStore(
-            hass,
+            menuai,
             STORAGE_VERSION_MAJOR,
             STORAGE_KEY,
             atomic_writes=True,
@@ -142,7 +142,7 @@ class LabelRegistry(BaseRegistry[LabelRegistryStoreData]):
         description: str | None = None,
     ) -> LabelEntry:
         """Create a new label."""
-        self.hass.verify_event_loop_thread("label_registry.async_create")
+        self.menuai.verify_event_loop_thread("label_registry.async_create")
 
         if label := self.async_get_label_by_name(name):
             raise ValueError(
@@ -160,7 +160,7 @@ class LabelRegistry(BaseRegistry[LabelRegistryStoreData]):
         self.labels[label_id] = label
         self.async_schedule_save()
 
-        self.hass.bus.async_fire_internal(
+        self.menuai.bus.async_fire_internal(
             EVENT_LABEL_REGISTRY_UPDATED,
             EventLabelRegistryUpdatedData(action="create", label_id=label_id),
         )
@@ -169,9 +169,9 @@ class LabelRegistry(BaseRegistry[LabelRegistryStoreData]):
     @callback
     def async_delete(self, label_id: str) -> None:
         """Delete label."""
-        self.hass.verify_event_loop_thread("label_registry.async_delete")
+        self.menuai.verify_event_loop_thread("label_registry.async_delete")
         del self.labels[label_id]
-        self.hass.bus.async_fire_internal(
+        self.menuai.bus.async_fire_internal(
             EVENT_LABEL_REGISTRY_UPDATED,
             EventLabelRegistryUpdatedData(
                 action="remove",
@@ -210,11 +210,11 @@ class LabelRegistry(BaseRegistry[LabelRegistryStoreData]):
 
         changes["modified_at"] = utcnow()
 
-        self.hass.verify_event_loop_thread("label_registry.async_update")
+        self.menuai.verify_event_loop_thread("label_registry.async_update")
         new = self.labels[label_id] = dataclasses.replace(old, **changes)
 
         self.async_schedule_save()
-        self.hass.bus.async_fire_internal(
+        self.menuai.bus.async_fire_internal(
             EVENT_LABEL_REGISTRY_UPDATED,
             EventLabelRegistryUpdatedData(
                 action="update",
@@ -265,12 +265,12 @@ class LabelRegistry(BaseRegistry[LabelRegistryStoreData]):
 
 @callback
 @singleton(DATA_REGISTRY)
-def async_get(hass: HomeAssistant) -> LabelRegistry:
+def async_get(menuai: menuai) -> LabelRegistry:
     """Get label registry."""
-    return LabelRegistry(hass)
+    return LabelRegistry(menuai)
 
 
-async def async_load(hass: HomeAssistant) -> None:
+async def async_load(menuai: menuai) -> None:
     """Load label registry."""
-    assert DATA_REGISTRY not in hass.data
-    await async_get(hass).async_load()
+    assert DATA_REGISTRY not in menuai.data
+    await async_get(menuai).async_load()

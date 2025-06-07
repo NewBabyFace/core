@@ -12,11 +12,11 @@ from roborock.command_cache import CacheableAttribute
 from roborock.exceptions import RoborockException
 from roborock.version_1_apis.roborock_client_v1 import AttributeCache
 
-from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchEntity, SwitchEntityDescription
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import RoborockConfigEntry, RoborockDataUpdateCoordinator
@@ -103,7 +103,7 @@ SWITCH_DESCRIPTIONS: list[RoborockSwitchDescription] = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: RoborockConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -168,7 +168,7 @@ class RoborockSwitch(RoborockEntityV1, SwitchEntity):
                 self.get_cache(self.entity_description.cache_key), False
             )
         except RoborockException as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="update_options_failed",
             ) from err
@@ -180,7 +180,7 @@ class RoborockSwitch(RoborockEntityV1, SwitchEntity):
                 self.get_cache(self.entity_description.cache_key), True
             )
         except RoborockException as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="update_options_failed",
             ) from err

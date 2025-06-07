@@ -6,9 +6,9 @@ from aiohomekit.model import Accessory
 from aiohomekit.model.characteristics import CharacteristicsTypes
 from aiohomekit.model.services import ServicesTypes
 
-from homeassistant.components.binary_sensor import BinarySensorDeviceClass
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.binary_sensor import BinarySensorDeviceClass
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .common import setup_test_component
 
@@ -22,11 +22,11 @@ def create_motion_sensor_service(accessory: Accessory) -> None:
 
 
 async def test_motion_sensor_read_state(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can read the state of a HomeKit motion sensor accessory."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_motion_sensor_service
+        menuai, get_next_aid(), create_motion_sensor_service
     )
 
     await helper.async_update(
@@ -53,11 +53,11 @@ def create_contact_sensor_service(accessory: Accessory) -> None:
 
 
 async def test_contact_sensor_read_state(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can read the state of a HomeKit contact accessory."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_contact_sensor_service
+        menuai, get_next_aid(), create_contact_sensor_service
     )
 
     await helper.async_update(
@@ -84,11 +84,11 @@ def create_smoke_sensor_service(accessory: Accessory) -> None:
 
 
 async def test_smoke_sensor_read_state(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can read the state of a HomeKit contact accessory."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_smoke_sensor_service
+        menuai, get_next_aid(), create_smoke_sensor_service
     )
 
     await helper.async_update(
@@ -115,11 +115,11 @@ def create_carbon_monoxide_sensor_service(accessory: Accessory) -> None:
 
 
 async def test_carbon_monoxide_sensor_read_state(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can read the state of a HomeKit contact accessory."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_carbon_monoxide_sensor_service
+        menuai, get_next_aid(), create_carbon_monoxide_sensor_service
     )
 
     await helper.async_update(
@@ -148,11 +148,11 @@ def create_occupancy_sensor_service(accessory: Accessory) -> None:
 
 
 async def test_occupancy_sensor_read_state(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can read the state of a HomeKit occupancy sensor accessory."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_occupancy_sensor_service
+        menuai, get_next_aid(), create_occupancy_sensor_service
     )
 
     await helper.async_update(
@@ -179,11 +179,11 @@ def create_leak_sensor_service(accessory: Accessory) -> None:
 
 
 async def test_leak_sensor_read_state(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can read the state of a HomeKit leak sensor accessory."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_leak_sensor_service
+        menuai, get_next_aid(), create_leak_sensor_service
     )
 
     await helper.async_update(
@@ -202,7 +202,7 @@ async def test_leak_sensor_read_state(
 
 
 async def test_migrate_unique_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     get_next_aid: Callable[[], int],
 ) -> None:
@@ -213,7 +213,7 @@ async def test_migrate_unique_id(
         "homekit_controller",
         f"homekit-00:00:00:00:00:00-{aid}-8",
     )
-    await setup_test_component(hass, aid, create_leak_sensor_service)
+    await setup_test_component(menuai, aid, create_leak_sensor_service)
 
     assert (
         entity_registry.async_get(binary_sensor_entry.entity_id).unique_id

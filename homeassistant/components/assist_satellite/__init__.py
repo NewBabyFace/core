@@ -5,12 +5,12 @@ from pathlib import Path
 
 import voluptuous as vol
 
-from homeassistant.components.http import StaticPathConfig
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.typing import ConfigType
+from menuai.components.http import StaticPathConfig
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.typing import ConfigType
 
 from .connection_test import ConnectionTestView
 from .const import (
@@ -47,9 +47,9 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORM_SCHEMA_BASE = cv.PLATFORM_SCHEMA_BASE
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
-    component = hass.data[DATA_COMPONENT] = EntityComponent[AssistSatelliteEntity](
-        _LOGGER, DOMAIN, hass
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
+    component = menuai.data[DATA_COMPONENT] = EntityComponent[AssistSatelliteEntity](
+        _LOGGER, DOMAIN, menuai
     )
     await component.async_setup(config)
 
@@ -86,12 +86,12 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         "async_internal_start_conversation",
         [AssistSatelliteEntityFeature.START_CONVERSATION],
     )
-    hass.data[CONNECTION_TEST_DATA] = {}
-    async_register_websocket_api(hass)
-    hass.http.register_view(ConnectionTestView())
+    menuai.data[CONNECTION_TEST_DATA] = {}
+    async_register_websocket_api(menuai)
+    menuai.http.register_view(ConnectionTestView())
 
     # Default preannounce sound
-    await hass.http.async_register_static_paths(
+    await menuai.http.async_register_static_paths(
         [
             StaticPathConfig(
                 PREANNOUNCE_URL, str(Path(__file__).parent / PREANNOUNCE_FILENAME)
@@ -102,11 +102,11 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up a config entry."""
-    return await hass.data[DATA_COMPONENT].async_setup_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_setup_entry(entry)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.data[DATA_COMPONENT].async_unload_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_unload_entry(entry)

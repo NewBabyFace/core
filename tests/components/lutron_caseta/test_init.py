@@ -4,9 +4,9 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components import lutron_caseta
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
+from menuai.components import lutron_caseta
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
 
 from . import MockBridge, async_setup_integration, make_mock_entry
 
@@ -19,7 +19,7 @@ from . import MockBridge, async_setup_integration, make_mock_entry
     ],
 )
 async def test_timeout_during_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     constant: str,
     message: str,
@@ -28,10 +28,10 @@ async def test_timeout_during_setup(
 ) -> None:
     """Test a timeout during setup."""
     mock_entry = make_mock_entry()
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
     with patch.object(lutron_caseta, constant, 0.001):
         await async_setup_integration(
-            hass,
+            menuai,
             MockBridge,
             config_entry_id=mock_entry.entry_id,
             timeout_during_connect=timeout_during_connect,
@@ -42,13 +42,13 @@ async def test_timeout_during_setup(
 
 
 async def test_cannot_connect(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test failing to connect."""
     mock_entry = make_mock_entry()
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
     await async_setup_integration(
-        hass, MockBridge, config_entry_id=mock_entry.entry_id, can_connect=False
+        menuai, MockBridge, config_entry_id=mock_entry.entry_id, can_connect=False
     )
     assert mock_entry.state is ConfigEntryState.SETUP_RETRY
     assert "Connection failed to 1.1.1.1" in caplog.text

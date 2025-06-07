@@ -6,34 +6,34 @@ from unittest.mock import AsyncMock
 from bring_api import BringNotificationType, BringRequestException
 import pytest
 
-from homeassistant.components.bring.const import (
+from menuai.components.bring.const import (
     ATTR_ITEM_NAME,
     ATTR_NOTIFICATION_TYPE,
     DOMAIN,
     SERVICE_PUSH_NOTIFICATION,
 )
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.config_entries import ConfigEntryState
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from tests.common import MockConfigEntry
 
 
 async def test_send_notification(
-    hass: HomeAssistant,
+    menuai: menuai,
     bring_config_entry: MockConfigEntry,
     mock_bring_client: AsyncMock,
 ) -> None:
     """Test send bring push notification."""
 
-    bring_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(bring_config_entry.entry_id)
-    await hass.async_block_till_done()
+    bring_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(bring_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert bring_config_entry.state is ConfigEntryState.LOADED
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_PUSH_NOTIFICATION,
         service_data={
@@ -51,23 +51,23 @@ async def test_send_notification(
 
 
 async def test_send_notification_exception(
-    hass: HomeAssistant,
+    menuai: menuai,
     bring_config_entry: MockConfigEntry,
     mock_bring_client: AsyncMock,
 ) -> None:
     """Test send bring push notification with exception."""
 
-    bring_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(bring_config_entry.entry_id)
-    await hass.async_block_till_done()
+    bring_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(bring_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert bring_config_entry.state is ConfigEntryState.LOADED
     mock_bring_client.notify.side_effect = BringRequestException
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match="Failed to send push notification for Bring! due to a connection error, try again later",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_PUSH_NOTIFICATION,
             service_data={
@@ -79,25 +79,25 @@ async def test_send_notification_exception(
 
 
 async def test_send_notification_service_validation_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     bring_config_entry: MockConfigEntry,
     mock_bring_client: AsyncMock,
 ) -> None:
     """Test send bring push notification."""
 
-    bring_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(bring_config_entry.entry_id)
-    await hass.async_block_till_done()
+    bring_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(bring_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert bring_config_entry.state is ConfigEntryState.LOADED
     mock_bring_client.notify.side_effect = ValueError
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match=re.escape(
             "This action requires field item, please enter a valid value for item"
         ),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_PUSH_NOTIFICATION,
             service_data={ATTR_NOTIFICATION_TYPE: "URGENT_MESSAGE", ATTR_ITEM_NAME: ""},

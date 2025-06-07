@@ -8,15 +8,15 @@ from typing import Any, Generic
 
 from aiopyarr import LidarrQueue, LidarrQueueItem, LidarrRootFolder
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import UnitOfInformation
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import UnitOfInformation
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import BYTE_SIZES
 from .coordinator import LidarrConfigEntry, LidarrDataUpdateCoordinator, T
@@ -112,7 +112,7 @@ SENSOR_TYPES: dict[str, LidarrSensorEntityDescription[Any]] = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: LidarrConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

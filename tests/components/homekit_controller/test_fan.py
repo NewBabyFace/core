@@ -6,8 +6,8 @@ from aiohomekit.model import Accessory
 from aiohomekit.model.characteristics import CharacteristicsTypes
 from aiohomekit.model.services import ServicesTypes
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .common import setup_test_component
 
@@ -135,10 +135,10 @@ def create_air_purifier_service(accessory: Accessory) -> None:
 
 
 async def test_fan_read_state(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can read the state of a HomeKit fan accessory."""
-    helper = await setup_test_component(hass, get_next_aid(), create_fan_service)
+    helper = await setup_test_component(menuai, get_next_aid(), create_fan_service)
 
     state = await helper.async_update(
         ServicesTypes.FAN, {CharacteristicsTypes.ON: False}
@@ -151,11 +151,11 @@ async def test_fan_read_state(
     assert state.state == "on"
 
 
-async def test_turn_on(hass: HomeAssistant, get_next_aid: Callable[[], int]) -> None:
+async def test_turn_on(menuai: menuai, get_next_aid: Callable[[], int]) -> None:
     """Test that we can turn a fan on."""
-    helper = await setup_test_component(hass, get_next_aid(), create_fan_service)
+    helper = await setup_test_component(menuai, get_next_aid(), create_fan_service)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "turn_on",
         {"entity_id": "fan.testdevice", "percentage": 100},
@@ -169,7 +169,7 @@ async def test_turn_on(hass: HomeAssistant, get_next_aid: Callable[[], int]) -> 
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "turn_on",
         {"entity_id": "fan.testdevice", "percentage": 66},
@@ -183,7 +183,7 @@ async def test_turn_on(hass: HomeAssistant, get_next_aid: Callable[[], int]) -> 
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "turn_on",
         {"entity_id": "fan.testdevice", "percentage": 33},
@@ -199,14 +199,14 @@ async def test_turn_on(hass: HomeAssistant, get_next_aid: Callable[[], int]) -> 
 
 
 async def test_turn_on_off_without_rotation_speed(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can turn a fan on."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_fanv2_service_without_rotation_speed
+        menuai, get_next_aid(), create_fanv2_service_without_rotation_speed
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "turn_on",
         {"entity_id": "fan.testdevice"},
@@ -219,7 +219,7 @@ async def test_turn_on_off_without_rotation_speed(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "turn_off",
         {"entity_id": "fan.testdevice"},
@@ -233,13 +233,13 @@ async def test_turn_on_off_without_rotation_speed(
     )
 
 
-async def test_turn_off(hass: HomeAssistant, get_next_aid: Callable[[], int]) -> None:
+async def test_turn_off(menuai: menuai, get_next_aid: Callable[[], int]) -> None:
     """Test that we can turn a fan off."""
-    helper = await setup_test_component(hass, get_next_aid(), create_fan_service)
+    helper = await setup_test_component(menuai, get_next_aid(), create_fan_service)
 
     await helper.async_update(ServicesTypes.FAN, {CharacteristicsTypes.ON: 1})
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "turn_off",
         {"entity_id": "fan.testdevice"},
@@ -253,13 +253,13 @@ async def test_turn_off(hass: HomeAssistant, get_next_aid: Callable[[], int]) ->
     )
 
 
-async def test_set_speed(hass: HomeAssistant, get_next_aid: Callable[[], int]) -> None:
+async def test_set_speed(menuai: menuai, get_next_aid: Callable[[], int]) -> None:
     """Test that we set fan speed."""
-    helper = await setup_test_component(hass, get_next_aid(), create_fan_service)
+    helper = await setup_test_component(menuai, get_next_aid(), create_fan_service)
 
     await helper.async_update(ServicesTypes.FAN, {CharacteristicsTypes.ON: 1})
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "set_percentage",
         {"entity_id": "fan.testdevice", "percentage": 100},
@@ -272,7 +272,7 @@ async def test_set_speed(hass: HomeAssistant, get_next_aid: Callable[[], int]) -
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "set_percentage",
         {"entity_id": "fan.testdevice", "percentage": 66},
@@ -285,7 +285,7 @@ async def test_set_speed(hass: HomeAssistant, get_next_aid: Callable[[], int]) -
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "set_percentage",
         {"entity_id": "fan.testdevice", "percentage": 33},
@@ -298,7 +298,7 @@ async def test_set_speed(hass: HomeAssistant, get_next_aid: Callable[[], int]) -
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "set_percentage",
         {"entity_id": "fan.testdevice", "percentage": 0},
@@ -313,14 +313,14 @@ async def test_set_speed(hass: HomeAssistant, get_next_aid: Callable[[], int]) -
 
 
 async def test_set_percentage(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we set fan speed by percentage."""
-    helper = await setup_test_component(hass, get_next_aid(), create_fan_service)
+    helper = await setup_test_component(menuai, get_next_aid(), create_fan_service)
 
     await helper.async_update(ServicesTypes.FAN, {CharacteristicsTypes.ON: 1})
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "set_percentage",
         {"entity_id": "fan.testdevice", "percentage": 66},
@@ -333,7 +333,7 @@ async def test_set_percentage(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "set_percentage",
         {"entity_id": "fan.testdevice", "percentage": 0},
@@ -347,9 +347,9 @@ async def test_set_percentage(
     )
 
 
-async def test_speed_read(hass: HomeAssistant, get_next_aid: Callable[[], int]) -> None:
+async def test_speed_read(menuai: menuai, get_next_aid: Callable[[], int]) -> None:
     """Test that we can read a fans oscillation."""
-    helper = await setup_test_component(hass, get_next_aid(), create_fan_service)
+    helper = await setup_test_component(menuai, get_next_aid(), create_fan_service)
 
     state = await helper.async_update(
         ServicesTypes.FAN,
@@ -388,12 +388,12 @@ async def test_speed_read(hass: HomeAssistant, get_next_aid: Callable[[], int]) 
 
 
 async def test_set_direction(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can set fan spin direction."""
-    helper = await setup_test_component(hass, get_next_aid(), create_fan_service)
+    helper = await setup_test_component(menuai, get_next_aid(), create_fan_service)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "set_direction",
         {"entity_id": "fan.testdevice", "direction": "reverse"},
@@ -406,7 +406,7 @@ async def test_set_direction(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "set_direction",
         {"entity_id": "fan.testdevice", "direction": "forward"},
@@ -421,10 +421,10 @@ async def test_set_direction(
 
 
 async def test_direction_read(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can read a fans oscillation."""
-    helper = await setup_test_component(hass, get_next_aid(), create_fan_service)
+    helper = await setup_test_component(menuai, get_next_aid(), create_fan_service)
 
     state = await helper.async_update(
         ServicesTypes.FAN, {CharacteristicsTypes.ROTATION_DIRECTION: 0}
@@ -438,10 +438,10 @@ async def test_direction_read(
 
 
 async def test_fanv2_read_state(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can read the state of a HomeKit fan accessory."""
-    helper = await setup_test_component(hass, get_next_aid(), create_fanv2_service)
+    helper = await setup_test_component(menuai, get_next_aid(), create_fanv2_service)
 
     state = await helper.async_update(
         ServicesTypes.FAN_V2, {CharacteristicsTypes.ACTIVE: False}
@@ -454,11 +454,11 @@ async def test_fanv2_read_state(
     assert state.state == "on"
 
 
-async def test_v2_turn_on(hass: HomeAssistant, get_next_aid: Callable[[], int]) -> None:
+async def test_v2_turn_on(menuai: menuai, get_next_aid: Callable[[], int]) -> None:
     """Test that we can turn a fan on."""
-    helper = await setup_test_component(hass, get_next_aid(), create_fanv2_service)
+    helper = await setup_test_component(menuai, get_next_aid(), create_fanv2_service)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "turn_on",
         {"entity_id": "fan.testdevice", "percentage": 100},
@@ -472,7 +472,7 @@ async def test_v2_turn_on(hass: HomeAssistant, get_next_aid: Callable[[], int]) 
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "turn_on",
         {"entity_id": "fan.testdevice", "percentage": 66},
@@ -486,7 +486,7 @@ async def test_v2_turn_on(hass: HomeAssistant, get_next_aid: Callable[[], int]) 
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "turn_on",
         {"entity_id": "fan.testdevice", "percentage": 33},
@@ -500,7 +500,7 @@ async def test_v2_turn_on(hass: HomeAssistant, get_next_aid: Callable[[], int]) 
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "turn_off",
         {"entity_id": "fan.testdevice"},
@@ -514,7 +514,7 @@ async def test_v2_turn_on(hass: HomeAssistant, get_next_aid: Callable[[], int]) 
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "turn_on",
         {"entity_id": "fan.testdevice"},
@@ -530,14 +530,14 @@ async def test_v2_turn_on(hass: HomeAssistant, get_next_aid: Callable[[], int]) 
 
 
 async def test_v2_turn_off(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can turn a fan off."""
-    helper = await setup_test_component(hass, get_next_aid(), create_fanv2_service)
+    helper = await setup_test_component(menuai, get_next_aid(), create_fanv2_service)
 
     await helper.async_update(ServicesTypes.FAN_V2, {CharacteristicsTypes.ACTIVE: 1})
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "turn_off",
         {"entity_id": "fan.testdevice"},
@@ -552,14 +552,14 @@ async def test_v2_turn_off(
 
 
 async def test_v2_set_speed(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we set fan speed."""
-    helper = await setup_test_component(hass, get_next_aid(), create_fanv2_service)
+    helper = await setup_test_component(menuai, get_next_aid(), create_fanv2_service)
 
     await helper.async_update(ServicesTypes.FAN_V2, {CharacteristicsTypes.ACTIVE: 1})
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "set_percentage",
         {"entity_id": "fan.testdevice", "percentage": 100},
@@ -572,7 +572,7 @@ async def test_v2_set_speed(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "set_percentage",
         {"entity_id": "fan.testdevice", "percentage": 66},
@@ -585,7 +585,7 @@ async def test_v2_set_speed(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "set_percentage",
         {"entity_id": "fan.testdevice", "percentage": 33},
@@ -598,7 +598,7 @@ async def test_v2_set_speed(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "set_percentage",
         {"entity_id": "fan.testdevice", "percentage": 0},
@@ -613,14 +613,14 @@ async def test_v2_set_speed(
 
 
 async def test_v2_set_percentage(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we set fan speed by percentage."""
-    helper = await setup_test_component(hass, get_next_aid(), create_fanv2_service)
+    helper = await setup_test_component(menuai, get_next_aid(), create_fanv2_service)
 
     await helper.async_update(ServicesTypes.FAN_V2, {CharacteristicsTypes.ACTIVE: 1})
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "set_percentage",
         {"entity_id": "fan.testdevice", "percentage": 66},
@@ -633,7 +633,7 @@ async def test_v2_set_percentage(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "set_percentage",
         {"entity_id": "fan.testdevice", "percentage": 0},
@@ -648,16 +648,16 @@ async def test_v2_set_percentage(
 
 
 async def test_fanv2_set_preset_mode(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we set preset mode when target state is available."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_fanv2_service_with_target_state
+        menuai, get_next_aid(), create_fanv2_service_with_target_state
     )
 
     await helper.async_update(ServicesTypes.FAN_V2, {CharacteristicsTypes.ACTIVE: 1})
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "set_percentage",
         {"entity_id": "fan.testdevice", "percentage": 100},
@@ -670,7 +670,7 @@ async def test_fanv2_set_preset_mode(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "set_preset_mode",
         {"entity_id": "fan.testdevice", "preset_mode": "auto"},
@@ -683,7 +683,7 @@ async def test_fanv2_set_preset_mode(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "set_percentage",
         {"entity_id": "fan.testdevice", "percentage": 33},
@@ -697,7 +697,7 @@ async def test_fanv2_set_preset_mode(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "turn_on",
         {"entity_id": "fan.testdevice", "preset_mode": "auto"},
@@ -712,16 +712,16 @@ async def test_fanv2_set_preset_mode(
 
 
 async def test_v2_set_percentage_with_min_step(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we set fan speed by percentage."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_fanv2_service_with_min_step
+        menuai, get_next_aid(), create_fanv2_service_with_min_step
     )
 
     await helper.async_update(ServicesTypes.FAN_V2, {CharacteristicsTypes.ACTIVE: 1})
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "set_percentage",
         {"entity_id": "fan.testdevice", "percentage": 66},
@@ -734,7 +734,7 @@ async def test_v2_set_percentage_with_min_step(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "set_percentage",
         {"entity_id": "fan.testdevice", "percentage": 0},
@@ -749,10 +749,10 @@ async def test_v2_set_percentage_with_min_step(
 
 
 async def test_v2_speed_read(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can read a fans oscillation."""
-    helper = await setup_test_component(hass, get_next_aid(), create_fanv2_service)
+    helper = await setup_test_component(menuai, get_next_aid(), create_fanv2_service)
 
     state = await helper.async_update(
         ServicesTypes.FAN_V2,
@@ -790,12 +790,12 @@ async def test_v2_speed_read(
 
 
 async def test_v2_set_direction(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can set fan spin direction."""
-    helper = await setup_test_component(hass, get_next_aid(), create_fanv2_service)
+    helper = await setup_test_component(menuai, get_next_aid(), create_fanv2_service)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "set_direction",
         {"entity_id": "fan.testdevice", "direction": "reverse"},
@@ -808,7 +808,7 @@ async def test_v2_set_direction(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "set_direction",
         {"entity_id": "fan.testdevice", "direction": "forward"},
@@ -823,10 +823,10 @@ async def test_v2_set_direction(
 
 
 async def test_v2_direction_read(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can read a fans oscillation."""
-    helper = await setup_test_component(hass, get_next_aid(), create_fanv2_service)
+    helper = await setup_test_component(menuai, get_next_aid(), create_fanv2_service)
 
     state = await helper.async_update(
         ServicesTypes.FAN_V2, {CharacteristicsTypes.ROTATION_DIRECTION: 0}
@@ -840,12 +840,12 @@ async def test_v2_direction_read(
 
 
 async def test_v2_oscillate(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can control a fans oscillation."""
-    helper = await setup_test_component(hass, get_next_aid(), create_fanv2_service)
+    helper = await setup_test_component(menuai, get_next_aid(), create_fanv2_service)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "oscillate",
         {"entity_id": "fan.testdevice", "oscillating": True},
@@ -858,7 +858,7 @@ async def test_v2_oscillate(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "oscillate",
         {"entity_id": "fan.testdevice", "oscillating": False},
@@ -873,10 +873,10 @@ async def test_v2_oscillate(
 
 
 async def test_v2_oscillate_read(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can read a fans oscillation."""
-    helper = await setup_test_component(hass, get_next_aid(), create_fanv2_service)
+    helper = await setup_test_component(menuai, get_next_aid(), create_fanv2_service)
 
     state = await helper.async_update(
         ServicesTypes.FAN_V2, {CharacteristicsTypes.SWING_MODE: 0}
@@ -890,16 +890,16 @@ async def test_v2_oscillate_read(
 
 
 async def test_v2_set_percentage_non_standard_rotation_range(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we set fan speed with a non-standard rotation range."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_fanv2_service_non_standard_rotation_range
+        menuai, get_next_aid(), create_fanv2_service_non_standard_rotation_range
     )
 
     await helper.async_update(ServicesTypes.FAN_V2, {CharacteristicsTypes.ACTIVE: 1})
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "set_percentage",
         {"entity_id": "fan.testdevice", "percentage": 100},
@@ -912,7 +912,7 @@ async def test_v2_set_percentage_non_standard_rotation_range(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "set_percentage",
         {"entity_id": "fan.testdevice", "percentage": 66},
@@ -925,7 +925,7 @@ async def test_v2_set_percentage_non_standard_rotation_range(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "set_percentage",
         {"entity_id": "fan.testdevice", "percentage": 33},
@@ -938,7 +938,7 @@ async def test_v2_set_percentage_non_standard_rotation_range(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "set_percentage",
         {"entity_id": "fan.testdevice", "percentage": 0},
@@ -953,14 +953,14 @@ async def test_v2_set_percentage_non_standard_rotation_range(
 
 
 async def test_air_purifier_turn_on(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can turn on an air purifier."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_air_purifier_service
+        menuai, get_next_aid(), create_air_purifier_service
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "turn_on",
         {"entity_id": "fan.testdevice", "percentage": 100},
@@ -974,7 +974,7 @@ async def test_air_purifier_turn_on(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "turn_on",
         {"entity_id": "fan.testdevice", "percentage": 66},
@@ -988,7 +988,7 @@ async def test_air_purifier_turn_on(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "turn_on",
         {"entity_id": "fan.testdevice", "percentage": 33},
@@ -1002,7 +1002,7 @@ async def test_air_purifier_turn_on(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "turn_off",
         {"entity_id": "fan.testdevice"},
@@ -1016,7 +1016,7 @@ async def test_air_purifier_turn_on(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "turn_on",
         {"entity_id": "fan.testdevice"},
@@ -1032,18 +1032,18 @@ async def test_air_purifier_turn_on(
 
 
 async def test_air_purifier_turn_off(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we can turn an air purifier fan off."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_air_purifier_service
+        menuai, get_next_aid(), create_air_purifier_service
     )
 
     await helper.async_update(
         ServicesTypes.AIR_PURIFIER, {CharacteristicsTypes.ACTIVE: 1}
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "turn_off",
         {"entity_id": "fan.testdevice"},
@@ -1058,18 +1058,18 @@ async def test_air_purifier_turn_off(
 
 
 async def test_air_purifier_set_speed(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we set air purifier fan speed."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_air_purifier_service
+        menuai, get_next_aid(), create_air_purifier_service
     )
 
     await helper.async_update(
         ServicesTypes.AIR_PURIFIER, {CharacteristicsTypes.ACTIVE: 1}
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "set_percentage",
         {"entity_id": "fan.testdevice", "percentage": 100},
@@ -1082,7 +1082,7 @@ async def test_air_purifier_set_speed(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "set_percentage",
         {"entity_id": "fan.testdevice", "percentage": 66},
@@ -1095,7 +1095,7 @@ async def test_air_purifier_set_speed(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "set_percentage",
         {"entity_id": "fan.testdevice", "percentage": 33},
@@ -1108,7 +1108,7 @@ async def test_air_purifier_set_speed(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "set_percentage",
         {"entity_id": "fan.testdevice", "percentage": 0},
@@ -1123,18 +1123,18 @@ async def test_air_purifier_set_speed(
 
 
 async def test_air_purifier_set_percentage(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we set air purifier fan speed by percentage."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_air_purifier_service
+        menuai, get_next_aid(), create_air_purifier_service
     )
 
     await helper.async_update(
         ServicesTypes.AIR_PURIFIER, {CharacteristicsTypes.ACTIVE: 1}
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "set_percentage",
         {"entity_id": "fan.testdevice", "percentage": 75},
@@ -1147,7 +1147,7 @@ async def test_air_purifier_set_percentage(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "set_percentage",
         {"entity_id": "fan.testdevice", "percentage": 0},
@@ -1162,18 +1162,18 @@ async def test_air_purifier_set_percentage(
 
 
 async def test_air_purifier_set_preset_mode(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we set preset mode when target state is available."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_air_purifier_service
+        menuai, get_next_aid(), create_air_purifier_service
     )
 
     await helper.async_update(
         ServicesTypes.AIR_PURIFIER, {CharacteristicsTypes.ACTIVE: 1}
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "set_percentage",
         {"entity_id": "fan.testdevice", "percentage": 100},
@@ -1186,7 +1186,7 @@ async def test_air_purifier_set_preset_mode(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "set_preset_mode",
         {"entity_id": "fan.testdevice", "preset_mode": "auto"},
@@ -1199,7 +1199,7 @@ async def test_air_purifier_set_preset_mode(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "set_percentage",
         {"entity_id": "fan.testdevice", "percentage": 33},
@@ -1213,7 +1213,7 @@ async def test_air_purifier_set_preset_mode(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "fan",
         "turn_on",
         {"entity_id": "fan.testdevice", "preset_mode": "auto"},
@@ -1228,7 +1228,7 @@ async def test_air_purifier_set_preset_mode(
 
 
 async def test_migrate_unique_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     get_next_aid: Callable[[], int],
 ) -> None:
@@ -1240,7 +1240,7 @@ async def test_migrate_unique_id(
         f"homekit-00:00:00:00:00:00-{aid}-8",
     )
     await setup_test_component(
-        hass, aid, create_fanv2_service_non_standard_rotation_range
+        menuai, aid, create_fanv2_service_non_standard_rotation_range
     )
 
     assert (

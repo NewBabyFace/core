@@ -4,15 +4,15 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from homeassistant.components.roku.const import DOMAIN
-from homeassistant.const import (
+from menuai.components.roku.const import DOMAIN
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     ATTR_FRIENDLY_NAME,
     STATE_UNKNOWN,
     EntityCategory,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from . import UPNP_SERIAL
 
@@ -20,13 +20,13 @@ from tests.common import MockConfigEntry
 
 
 async def test_roku_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     init_integration: MockConfigEntry,
 ) -> None:
     """Test the Roku sensors."""
-    state = hass.states.get("sensor.my_roku_3_active_app")
+    state = menuai.states.get("sensor.my_roku_3_active_app")
     entry = entity_registry.async_get("sensor.my_roku_3_active_app")
     assert entry
     assert state
@@ -36,7 +36,7 @@ async def test_roku_sensors(
     assert state.attributes.get(ATTR_FRIENDLY_NAME) == "My Roku 3 Active app"
     assert ATTR_DEVICE_CLASS not in state.attributes
 
-    state = hass.states.get("sensor.my_roku_3_active_app_id")
+    state = menuai.states.get("sensor.my_roku_3_active_app_id")
     entry = entity_registry.async_get("sensor.my_roku_3_active_app_id")
     assert entry
     assert state
@@ -65,14 +65,14 @@ async def test_roku_sensors(
 
 @pytest.mark.parametrize("mock_device", ["roku/rokutv-7820x.json"], indirect=True)
 async def test_rokutv_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     init_integration: MockConfigEntry,
     mock_roku: MagicMock,
 ) -> None:
     """Test the Roku TV sensors."""
-    state = hass.states.get("sensor.58_onn_roku_tv_active_app")
+    state = menuai.states.get("sensor.58_onn_roku_tv_active_app")
     entry = entity_registry.async_get("sensor.58_onn_roku_tv_active_app")
     assert entry
     assert state
@@ -82,7 +82,7 @@ async def test_rokutv_sensors(
     assert state.attributes.get(ATTR_FRIENDLY_NAME) == '58" Onn Roku TV Active app'
     assert ATTR_DEVICE_CLASS not in state.attributes
 
-    state = hass.states.get("sensor.58_onn_roku_tv_active_app_id")
+    state = menuai.states.get("sensor.58_onn_roku_tv_active_app_id")
     entry = entity_registry.async_get("sensor.58_onn_roku_tv_active_app_id")
     assert entry
     assert state

@@ -8,14 +8,14 @@ import logging
 
 from pyvesync.vesyncbasedevice import VeSyncBaseDevice
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
     PERCENTAGE,
     EntityCategory,
@@ -23,10 +23,10 @@ from homeassistant.const import (
     UnitOfEnergy,
     UnitOfPower,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
 
 from .common import is_humidifier
 from .const import (
@@ -65,7 +65,7 @@ def sku_supported(device, supported):
 
 
 def ha_dev_type(device):
-    """Get the homeassistant device_type for a given device."""
+    """Get the menuai device_type for a given device."""
     return DEV_TYPE_TO_HA.get(device.device_type)
 
 
@@ -192,13 +192,13 @@ SENSORS: tuple[VeSyncSensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up switches."""
 
-    coordinator = hass.data[DOMAIN][VS_COORDINATOR]
+    coordinator = menuai.data[DOMAIN][VS_COORDINATOR]
 
     @callback
     def discover(devices):
@@ -206,10 +206,10 @@ async def async_setup_entry(
         _setup_entities(devices, async_add_entities, coordinator)
 
     config_entry.async_on_unload(
-        async_dispatcher_connect(hass, VS_DISCOVERY.format(VS_DEVICES), discover)
+        async_dispatcher_connect(menuai, VS_DISCOVERY.format(VS_DEVICES), discover)
     )
 
-    _setup_entities(hass.data[DOMAIN][VS_DEVICES], async_add_entities, coordinator)
+    _setup_entities(menuai.data[DOMAIN][VS_DEVICES], async_add_entities, coordinator)
 
 
 @callback

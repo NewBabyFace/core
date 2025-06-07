@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from homeassistant.components.air_quality import AirQualityEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.air_quality import AirQualityEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -22,7 +22,7 @@ async def async_setup_entry(
 class DemoAirQuality(AirQualityEntity):
     """Representation of Air Quality data."""
 
-    _attr_attribution = "Powered by Home Assistant"
+    _attr_attribution = "Powered by MenuAI"
     _attr_should_poll = False
 
     def __init__(self, name: str, pm_2_5: int, pm_10: int, n2o: int | None) -> None:

@@ -2,17 +2,17 @@
 
 from unittest.mock import patch
 
-from homeassistant.components.color_extractor.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.color_extractor.const import DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
 
-async def test_full_user_flow(hass: HomeAssistant) -> None:
+async def test_full_user_flow(menuai: menuai) -> None:
     """Test the full user configuration flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
@@ -20,10 +20,10 @@ async def test_full_user_flow(hass: HomeAssistant) -> None:
     assert result.get("step_id") == "user"
 
     with patch(
-        "homeassistant.components.color_extractor.async_setup_entry",
+        "menuai.components.color_extractor.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={},
         )
@@ -35,13 +35,13 @@ async def test_full_user_flow(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_single_instance_allowed(hass: HomeAssistant) -> None:
+async def test_single_instance_allowed(menuai: menuai) -> None:
     """Test we abort if already setup."""
     mock_config_entry = MockConfigEntry(domain=DOMAIN)
 
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}, data={}
     )
 

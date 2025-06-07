@@ -15,14 +15,14 @@ from onedrive_personal_sdk.models.items import AppRoot, Drive, File, Folder, Ite
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.onedrive.const import (
+from menuai.components.onedrive.const import (
     CONF_FOLDER_ID,
     CONF_FOLDER_NAME,
     DOMAIN,
 )
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, issue_registry as ir
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, issue_registry as ir
 
 from . import setup_integration
 from .const import BACKUP_METADATA, INSTANCE_ID
@@ -31,13 +31,13 @@ from tests.common import MockConfigEntry
 
 
 async def test_load_unload_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_onedrive_client_init: MagicMock,
     mock_onedrive_client: MagicMock,
 ) -> None:
     """Test loading and unloading the integration."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     # Ensure the token callback is set up correctly
     token_callback = mock_onedrive_client_init.call_args[0][0]
@@ -49,8 +49,8 @@ async def test_load_unload_config_entry(
 
     assert mock_config_entry.state is ConfigEntryState.LOADED
 
-    await hass.config_entries.async_unload(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert mock_config_entry.state is ConfigEntryState.NOT_LOADED
 
@@ -63,7 +63,7 @@ async def test_load_unload_config_entry(
     ],
 )
 async def test_approot_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_onedrive_client: MagicMock,
     side_effect: Exception,
@@ -71,25 +71,25 @@ async def test_approot_errors(
 ) -> None:
     """Test errors during approot retrieval."""
     mock_onedrive_client.get_approot.side_effect = side_effect
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
     assert mock_config_entry.state is state
 
 
 async def test_get_integration_folder_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_onedrive_client: MagicMock,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test faulty integration folder retrieval."""
     mock_onedrive_client.get_drive_item.side_effect = OneDriveException()
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
     assert mock_config_entry.state is ConfigEntryState.SETUP_RETRY
     assert "Failed to get backups_123 folder" in caplog.text
 
 
 async def test_get_integration_folder_creation(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_onedrive_client: MagicMock,
     mock_approot: AppRoot,
@@ -98,7 +98,7 @@ async def test_get_integration_folder_creation(
     """Test faulty integration folder creation."""
     folder_name = copy(mock_config_entry.data[CONF_FOLDER_NAME])
     mock_onedrive_client.get_drive_item.side_effect = NotFoundError(404, "Not found")
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     assert mock_config_entry.state is ConfigEntryState.LOADED
     mock_onedrive_client.create_folder.assert_called_once_with(
@@ -111,7 +111,7 @@ async def test_get_integration_folder_creation(
 
 
 async def test_get_integration_folder_creation_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_onedrive_client: MagicMock,
     caplog: pytest.LogCaptureFixture,
@@ -119,22 +119,22 @@ async def test_get_integration_folder_creation_error(
     """Test faulty integration folder creation error."""
     mock_onedrive_client.get_drive_item.side_effect = NotFoundError(404, "Not found")
     mock_onedrive_client.create_folder.side_effect = OneDriveException()
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     assert mock_config_entry.state is ConfigEntryState.SETUP_RETRY
     assert "Failed to get backups_123 folder" in caplog.text
 
 
 async def test_update_instance_id_description(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_onedrive_client: MagicMock,
     mock_folder: Folder,
 ) -> None:
     """Test we write the instance id to the folder."""
     mock_folder.description = ""
-    await setup_integration(hass, mock_config_entry)
-    await hass.async_block_till_done()
+    await setup_integration(menuai, mock_config_entry)
+    await menuai.async_block_till_done()
 
     mock_onedrive_client.update_drive_item.assert_called_with(
         mock_folder.id, ItemUpdate(description=INSTANCE_ID)
@@ -142,7 +142,7 @@ async def test_update_instance_id_description(
 
 
 async def test_migrate_metadata_files(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_onedrive_client: MagicMock,
     mock_backup_file: File,
@@ -151,8 +151,8 @@ async def test_migrate_metadata_files(
     mock_backup_file.description = escape(
         dumps({**BACKUP_METADATA, "metadata_version": 1})
     )
-    await setup_integration(hass, mock_config_entry)
-    await hass.async_block_till_done()
+    await setup_integration(menuai, mock_config_entry)
+    await menuai.async_block_till_done()
 
     mock_onedrive_client.upload_file.assert_called_once()
     assert mock_onedrive_client.update_drive_item.call_count == 2
@@ -160,31 +160,31 @@ async def test_migrate_metadata_files(
 
 
 async def test_migrate_metadata_files_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_onedrive_client: MagicMock,
 ) -> None:
     """Test migration of metadata files errors."""
     mock_onedrive_client.list_drive_items.side_effect = OneDriveException()
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     assert mock_config_entry.state is ConfigEntryState.SETUP_RETRY
 
 
 async def test_auth_error_during_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_onedrive_client: MagicMock,
 ) -> None:
     """Test auth error during update."""
     mock_onedrive_client.get_drive.side_effect = AuthenticationError(403, "Auth failed")
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     assert mock_config_entry.state is ConfigEntryState.SETUP_ERROR
 
 
 async def test_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     device_registry: dr.DeviceRegistry,
     snapshot: SnapshotAssertion,
@@ -192,7 +192,7 @@ async def test_device(
 ) -> None:
     """Test the device."""
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     device = device_registry.async_get_device({(DOMAIN, mock_drive.id)})
     assert device
@@ -215,7 +215,7 @@ async def test_device(
     ],
 )
 async def test_data_cap_issues(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_onedrive_client: MagicMock,
     mock_drive: Drive,
@@ -227,15 +227,15 @@ async def test_data_cap_issues(
     assert mock_drive.quota
     mock_drive.quota.state = drive_state
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    issue_registry = ir.async_get(hass)
+    issue_registry = ir.async_get(menuai)
     issue = issue_registry.async_get_issue(DOMAIN, issue_key)
     assert (issue is not None) == issue_exists
 
 
 async def test_1_1_to_1_2_migration(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_folder: Folder,
 ) -> None:
@@ -250,14 +250,14 @@ async def test_1_1_to_1_2_migration(
         },
     )
 
-    await setup_integration(hass, old_config_entry)
+    await setup_integration(menuai, old_config_entry)
     assert old_config_entry.data[CONF_FOLDER_ID] == mock_folder.id
     assert old_config_entry.data[CONF_FOLDER_NAME] == mock_folder.name
     assert old_config_entry.minor_version == 2
 
 
 async def test_1_1_to_1_2_migration_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_onedrive_client: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
@@ -275,13 +275,13 @@ async def test_1_1_to_1_2_migration_failure(
     # will always 404 after migration, because of dummy id
     mock_onedrive_client.get_drive_item.side_effect = NotFoundError(404, "Not found")
 
-    await setup_integration(hass, old_config_entry)
+    await setup_integration(menuai, old_config_entry)
     assert old_config_entry.state is ConfigEntryState.MIGRATION_ERROR
     assert old_config_entry.minor_version == 1
 
 
 async def test_migration_guard_against_major_downgrade(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test migration guards against major downgrades."""
@@ -296,5 +296,5 @@ async def test_migration_guard_against_major_downgrade(
         version=2,
     )
 
-    await setup_integration(hass, old_config_entry)
+    await setup_integration(menuai, old_config_entry)
     assert old_config_entry.state is ConfigEntryState.MIGRATION_ERROR

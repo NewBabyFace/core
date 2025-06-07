@@ -11,8 +11,8 @@ from telegram import Bot
 from telegram.error import InvalidToken, TelegramError
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_IMPORT
-from homeassistant.const import (
+from menuai.config_entries import SOURCE_IMPORT
+from menuai.const import (
     ATTR_LATITUDE,
     ATTR_LONGITUDE,
     CONF_API_KEY,
@@ -20,19 +20,19 @@ from homeassistant.const import (
     CONF_SOURCE,
     CONF_URL,
 )
-from homeassistant.core import (
-    HomeAssistant,
+from menuai.core import (
+    menuai,
     ServiceCall,
     ServiceResponse,
     SupportsResponse,
 )
-from homeassistant.exceptions import (
+from menuai.exceptions import (
     ConfigEntryAuthFailed,
     ConfigEntryNotReady,
     ServiceValidationError,
 )
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType
 
 from . import broadcast, polling, webhooks
 from .bot import TelegramBotConfigEntry, TelegramNotificationService, initialize_bot
@@ -276,7 +276,7 @@ MODULES: dict[str, ModuleType] = {
 }
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Telegram bot component."""
 
     # import the last YAML config since existing behavior only works with the last config
@@ -290,8 +290,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             if trusted_networks
             else []
         )
-        hass.async_create_task(
-            hass.config_entries.flow.async_init(
+        menuai.async_create_task(
+            menuai.config_entries.flow.async_init(
                 DOMAIN,
                 context={CONF_SOURCE: SOURCE_IMPORT},
                 data={
@@ -317,11 +317,11 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         config_entry_id: str | None = service.data.get(CONF_CONFIG_ENTRY_ID)
         config_entry: TelegramBotConfigEntry | None = None
         if config_entry_id:
-            config_entry = hass.config_entries.async_get_known_entry(config_entry_id)
+            config_entry = menuai.config_entries.async_get_known_entry(config_entry_id)
 
         else:
             config_entries: list[TelegramBotConfigEntry] = (
-                service.hass.config_entries.async_entries(DOMAIN)
+                service.menuai.config_entries.async_entries(DOMAIN)
             )
 
             if len(config_entries) == 1:
@@ -404,7 +404,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         ]:
             supports_response = SupportsResponse.OPTIONAL
 
-        hass.services.async_register(
+        menuai.services.async_register(
             DOMAIN,
             service_notif,
             async_send_telegram_message,
@@ -415,9 +415,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: TelegramBotConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: TelegramBotConfigEntry) -> bool:
     """Create the Telegram bot from config entry."""
-    bot: Bot = await hass.async_add_executor_job(initialize_bot, hass, entry.data)
+    bot: Bot = await menuai.async_add_executor_job(initialize_bot, menuai, entry.data)
     try:
         await bot.get_me()
     except InvalidToken as err:
@@ -429,14 +429,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: TelegramBotConfigEntry) 
 
     _LOGGER.debug("Setting up %s.%s", DOMAIN, p_type)
     try:
-        receiver_service = await MODULES[p_type].async_setup_platform(hass, bot, entry)
+        receiver_service = await MODULES[p_type].async_setup_platform(menuai, bot, entry)
     except Exception:
         _LOGGER.exception("Error setting up Telegram bot %s", p_type)
         await bot.shutdown()
         return False
 
     notify_service = TelegramNotificationService(
-        hass, receiver_service, bot, entry, entry.options[ATTR_PARSER]
+        menuai, receiver_service, bot, entry, entry.options[ATTR_PARSER]
     )
     entry.runtime_data = notify_service
 
@@ -445,13 +445,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: TelegramBotConfigEntry) 
     return True
 
 
-async def update_listener(hass: HomeAssistant, entry: TelegramBotConfigEntry) -> None:
+async def update_listener(menuai: menuai, entry: TelegramBotConfigEntry) -> None:
     """Handle options update."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, entry: TelegramBotConfigEntry
+    menuai: menuai, entry: TelegramBotConfigEntry
 ) -> bool:
     """Unload Telegram app."""
     # broadcast platform has no app

@@ -4,14 +4,14 @@ from unittest.mock import MagicMock, PropertyMock, patch
 
 from canary.model import SensorType
 
-from homeassistant.components.canary.const import (
+from menuai.components.canary.const import (
     CONF_FFMPEG_ARGUMENTS,
     DEFAULT_FFMPEG_ARGUMENTS,
     DEFAULT_TIMEOUT,
     DOMAIN,
 )
-from homeassistant.const import CONF_PASSWORD, CONF_TIMEOUT, CONF_USERNAME
-from homeassistant.core import HomeAssistant
+from menuai.const import CONF_PASSWORD, CONF_TIMEOUT, CONF_USERNAME
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -39,23 +39,23 @@ YAML_CONFIG = {
 
 def _patch_async_setup_entry(return_value=True):
     return patch(
-        "homeassistant.components.canary.async_setup_entry",
+        "menuai.components.canary.async_setup_entry",
         return_value=return_value,
     )
 
 
 async def init_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     *,
     skip_entry_setup: bool = False,
 ) -> MockConfigEntry:
-    """Set up the Canary integration in Home Assistant."""
+    """Set up the Canary integration in MenuAI."""
     entry = MockConfigEntry(domain=DOMAIN, data=ENTRY_CONFIG, options=ENTRY_OPTIONS)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     if not skip_entry_setup:
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     return entry
 

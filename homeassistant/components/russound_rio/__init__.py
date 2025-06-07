@@ -5,10 +5,10 @@ import logging
 from aiorussound import RussoundClient, RussoundTcpConnectionHandler
 from aiorussound.models import CallbackType
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PORT, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, CONF_PORT, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
 
 from .const import DOMAIN, RUSSOUND_RIO_EXCEPTIONS
 
@@ -19,7 +19,7 @@ _LOGGER = logging.getLogger(__name__)
 type RussoundConfigEntry = ConfigEntry[RussoundClient]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: RussoundConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: RussoundConfigEntry) -> bool:
     """Set up a config entry."""
 
     host = entry.data[CONF_HOST]
@@ -52,14 +52,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: RussoundConfigEntry) -> 
         ) from err
     entry.runtime_data = client
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: RussoundConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: RussoundConfigEntry) -> bool:
     """Unload a config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+    if unload_ok := await menuai.config_entries.async_unload_platforms(entry, PLATFORMS):
         await entry.runtime_data.disconnect()
 
     return unload_ok

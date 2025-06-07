@@ -12,8 +12,8 @@ from uuid import UUID
 
 from pyhap.util import uuid_to_hap_type
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.storage import Store
+from menuai.core import menuai, callback
+from menuai.helpers.storage import Store
 
 from .util import get_iid_storage_filename_for_entry_id
 
@@ -67,9 +67,9 @@ class AccessoryIIDStorage:
     persist over reboots.
     """
 
-    def __init__(self, hass: HomeAssistant, entry_id: str) -> None:
+    def __init__(self, menuai: menuai, entry_id: str) -> None:
         """Create a new iid store."""
-        self.hass = hass
+        self.menuai = menuai
         self.allocations: dict[str, dict[str, int]] = {}
         self.allocated_iids: dict[str, list[int]] = {}
         self.entry_id = entry_id
@@ -78,7 +78,7 @@ class AccessoryIIDStorage:
     async def async_initialize(self) -> None:
         """Load the latest IID data."""
         iid_store = get_iid_storage_filename_for_entry_id(self.entry_id)
-        self.store = IIDStorage(self.hass, IID_MANAGER_STORAGE_VERSION, iid_store)
+        self.store = IIDStorage(self.menuai, IID_MANAGER_STORAGE_VERSION, iid_store)
 
         if not (raw_storage := await self.store.async_load()):
             # There is no data about iid allocations yet

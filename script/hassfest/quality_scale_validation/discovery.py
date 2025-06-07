@@ -5,8 +5,8 @@ https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/d
 
 import ast
 
-from script.hassfest import ast_parse_module
-from script.hassfest.model import Config, Integration
+from script.menuaifest import ast_parse_module
+from script.menuaifest.model import Config, Integration
 
 MANIFEST_KEYS = [
     "bluetooth",
@@ -21,7 +21,7 @@ CONFIG_FLOW_STEPS = {
     "async_step_bluetooth",
     "async_step_discovery",
     "async_step_dhcp",
-    "async_step_hassio",
+    "async_step_menuaiio",
     "async_step_homekit",
     "async_step_mqtt",
     "async_step_ssdp",

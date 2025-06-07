@@ -9,7 +9,7 @@ from pyflick import FlickAPI
 from pyflick.authentication import SimpleFlickAuth
 from pyflick.const import DEFAULT_CLIENT_ID, DEFAULT_CLIENT_SECRET
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_ACCESS_TOKEN,
     CONF_CLIENT_ID,
     CONF_CLIENT_SECRET,
@@ -17,8 +17,8 @@ from homeassistant.const import (
     CONF_USERNAME,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import aiohttp_client
+from menuai.core import menuai
+from menuai.helpers import aiohttp_client
 
 from .const import CONF_ACCOUNT_ID, CONF_SUPPLY_NODE_REF, CONF_TOKEN_EXPIRY
 from .coordinator import FlickConfigEntry, FlickElectricDataCoordinator
@@ -30,28 +30,28 @@ CONF_ID_TOKEN = "id_token"
 PLATFORMS = [Platform.SENSOR]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: FlickConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: FlickConfigEntry) -> bool:
     """Set up Flick Electric from a config entry."""
-    auth = HassFlickAuth(hass, entry)
+    auth = menuaiFlickAuth(menuai, entry)
 
-    coordinator = FlickElectricDataCoordinator(hass, entry, FlickAPI(auth))
+    coordinator = FlickElectricDataCoordinator(menuai, entry, FlickAPI(auth))
 
     await coordinator.async_config_entry_first_refresh()
 
     entry.runtime_data = coordinator
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: FlickConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: FlickConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 async def async_migrate_entry(
-    hass: HomeAssistant, config_entry: FlickConfigEntry
+    menuai: menuai, config_entry: FlickConfigEntry
 ) -> bool:
     """Migrate old entry."""
     _LOGGER.debug(
@@ -64,7 +64,7 @@ async def async_migrate_entry(
         return False
 
     if config_entry.version == 1:
-        api = FlickAPI(HassFlickAuth(hass, config_entry))
+        api = FlickAPI(menuaiFlickAuth(menuai, config_entry))
 
         accounts = await api.getCustomerAccounts()
         active_accounts = [
@@ -78,7 +78,7 @@ async def async_migrate_entry(
             new_data = {**config_entry.data}
             new_data[CONF_ACCOUNT_ID] = account["id"]
             new_data[CONF_SUPPLY_NODE_REF] = account["main_consumer"]["supply_node_ref"]
-            hass.config_entries.async_update_entry(
+            menuai.config_entries.async_update_entry(
                 config_entry,
                 title=account["address"],
                 unique_id=account["id"],
@@ -87,26 +87,26 @@ async def async_migrate_entry(
             )
             return True
 
-        config_entry.async_start_reauth(hass, data={**config_entry.data})
+        config_entry.async_start_reauth(menuai, data={**config_entry.data})
         return False
 
     return True
 
 
-class HassFlickAuth(SimpleFlickAuth):
-    """Implementation of AbstractFlickAuth based on a Home Assistant entity config."""
+class menuaiFlickAuth(SimpleFlickAuth):
+    """Implementation of AbstractFlickAuth based on a MenuAI entity config."""
 
-    def __init__(self, hass: HomeAssistant, entry: FlickConfigEntry) -> None:
-        """Flick authentication based on a Home Assistant entity config."""
+    def __init__(self, menuai: menuai, entry: FlickConfigEntry) -> None:
+        """Flick authentication based on a MenuAI entity config."""
         super().__init__(
             username=entry.data[CONF_USERNAME],
             password=entry.data[CONF_PASSWORD],
             client_id=entry.data.get(CONF_CLIENT_ID, DEFAULT_CLIENT_ID),
             client_secret=entry.data.get(CONF_CLIENT_SECRET, DEFAULT_CLIENT_SECRET),
-            websession=aiohttp_client.async_get_clientsession(hass),
+            websession=aiohttp_client.async_get_clientsession(menuai),
         )
         self._entry = entry
-        self._hass = hass
+        self._menuai = menuai
 
     async def _get_entry_token(self) -> dict[str, Any]:
         # No token saved, generate one
@@ -136,7 +136,7 @@ class HassFlickAuth(SimpleFlickAuth):
             token[CONF_ID_TOKEN], options={"verify_signature": False}
         )
 
-        self._hass.config_entries.async_update_entry(
+        self._menuai.config_entries.async_update_entry(
             self._entry,
             data={
                 **self._entry.data,
@@ -146,7 +146,7 @@ class HassFlickAuth(SimpleFlickAuth):
         )
 
     async def async_get_access_token(self):
-        """Get Access Token from HASS Storage."""
+        """Get Access Token from menuai Storage."""
         token = await self._get_entry_token()
 
         return token[CONF_ID_TOKEN]

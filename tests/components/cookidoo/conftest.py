@@ -13,8 +13,8 @@ from cookidoo_api import (
 )
 import pytest
 
-from homeassistant.components.cookidoo.const import DOMAIN
-from homeassistant.const import CONF_COUNTRY, CONF_EMAIL, CONF_LANGUAGE, CONF_PASSWORD
+from menuai.components.cookidoo.const import DOMAIN
+from menuai.const import CONF_COUNTRY, CONF_EMAIL, CONF_LANGUAGE, CONF_PASSWORD
 
 from tests.common import MockConfigEntry, load_json_object_fixture
 
@@ -30,7 +30,7 @@ TEST_UUID = "sub_uuid"
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.cookidoo.async_setup_entry", return_value=True
+        "menuai.components.cookidoo.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -39,7 +39,7 @@ def mock_setup_entry() -> Generator[AsyncMock]:
 def mock_cookidoo_client() -> Generator[AsyncMock]:
     """Mock a Cookidoo client."""
     with patch(
-        "homeassistant.components.cookidoo.helpers.Cookidoo",
+        "menuai.components.cookidoo.helpers.Cookidoo",
         autospec=True,
     ) as mock_client:
         client = mock_client.return_value

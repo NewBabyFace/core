@@ -2,23 +2,23 @@
 
 from unittest.mock import AsyncMock, Mock, patch
 
-from homeassistant.components import emulated_roku
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components import emulated_roku
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 
-async def test_config_required_fields(hass: HomeAssistant) -> None:
+async def test_config_required_fields(menuai: menuai) -> None:
     """Test that configuration is successful with required fields."""
     with (
         patch.object(emulated_roku, "configured_servers", return_value=[]),
         patch(
-            "homeassistant.components.emulated_roku.binding.EmulatedRokuServer",
+            "menuai.components.emulated_roku.binding.EmulatedRokuServer",
             return_value=Mock(start=AsyncMock(), close=AsyncMock()),
         ),
     ):
         assert (
             await async_setup_component(
-                hass,
+                menuai,
                 emulated_roku.DOMAIN,
                 {
                     emulated_roku.DOMAIN: {
@@ -35,11 +35,11 @@ async def test_config_required_fields(hass: HomeAssistant) -> None:
         )
 
 
-async def test_config_already_registered_not_configured(hass: HomeAssistant) -> None:
+async def test_config_already_registered_not_configured(menuai: menuai) -> None:
     """Test that an already registered name causes the entry to be ignored."""
     with (
         patch(
-            "homeassistant.components.emulated_roku.binding.EmulatedRokuServer",
+            "menuai.components.emulated_roku.binding.EmulatedRokuServer",
             return_value=Mock(start=AsyncMock(), close=AsyncMock()),
         ) as instantiate,
         patch.object(
@@ -48,7 +48,7 @@ async def test_config_already_registered_not_configured(hass: HomeAssistant) -> 
     ):
         assert (
             await async_setup_component(
-                hass,
+                menuai,
                 emulated_roku.DOMAIN,
                 {
                     emulated_roku.DOMAIN: {
@@ -67,7 +67,7 @@ async def test_config_already_registered_not_configured(hass: HomeAssistant) -> 
     assert len(instantiate.mock_calls) == 0
 
 
-async def test_setup_entry_successful(hass: HomeAssistant) -> None:
+async def test_setup_entry_successful(menuai: menuai) -> None:
     """Test setup entry is successful."""
     entry = Mock()
     entry.data = {
@@ -80,15 +80,15 @@ async def test_setup_entry_successful(hass: HomeAssistant) -> None:
     }
 
     with patch(
-        "homeassistant.components.emulated_roku.binding.EmulatedRokuServer",
+        "menuai.components.emulated_roku.binding.EmulatedRokuServer",
         return_value=Mock(start=AsyncMock(), close=AsyncMock()),
     ) as instantiate:
-        assert await emulated_roku.async_setup_entry(hass, entry) is True
+        assert await emulated_roku.async_setup_entry(menuai, entry) is True
 
     assert len(instantiate.mock_calls) == 1
 
 
-async def test_unload_entry(hass: HomeAssistant) -> None:
+async def test_unload_entry(menuai: menuai) -> None:
     """Test being able to unload an entry."""
     entry = Mock()
     entry.data = {
@@ -98,11 +98,11 @@ async def test_unload_entry(hass: HomeAssistant) -> None:
     }
 
     with patch(
-        "homeassistant.components.emulated_roku.binding.EmulatedRokuServer",
+        "menuai.components.emulated_roku.binding.EmulatedRokuServer",
         return_value=Mock(start=AsyncMock(), close=AsyncMock()),
     ):
-        assert await emulated_roku.async_setup_entry(hass, entry) is True
+        assert await emulated_roku.async_setup_entry(menuai, entry) is True
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert await emulated_roku.async_unload_entry(hass, entry)
+    assert await emulated_roku.async_unload_entry(menuai, entry)

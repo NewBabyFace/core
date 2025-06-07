@@ -6,15 +6,15 @@ import logging
 
 import voluptuous as vol
 
-from homeassistant.components import mqtt
-from homeassistant.core import (
-    DOMAIN as HOMEASSISTANT_DOMAIN,
-    HomeAssistant,
+from menuai.components import mqtt
+from menuai.core import (
+    DOMAIN as menuai_DOMAIN,
+    menuai,
     ServiceCall,
 )
-from homeassistant.helpers import config_validation as cv, intent
-from homeassistant.helpers.issue_registry import IssueSeverity, async_create_issue
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers import config_validation as cv, intent
+from menuai.helpers.issue_registry import IssueSeverity, async_create_issue
+from menuai.helpers.typing import ConfigType
 
 DOMAIN = "snips"
 CONF_INTENTS = "intents"
@@ -94,11 +94,11 @@ SERVICE_SCHEMA_FEEDBACK = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Activate Snips component."""
     async_create_issue(
-        hass,
-        HOMEASSISTANT_DOMAIN,
+        menuai,
+        menuai_DOMAIN,
         f"deprecated_system_packages_yaml_integration_{DOMAIN}",
         breaks_in_ha_version="2025.12.0",
         is_fixable=False,
@@ -112,7 +112,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     )
 
     # Make sure MQTT integration is enabled and the client is available
-    if not await mqtt.async_wait_for_mqtt_client(hass):
+    if not await mqtt.async_wait_for_mqtt_client(menuai):
         _LOGGER.error("MQTT integration is not available")
         return False
 
@@ -122,8 +122,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         topic = FEEDBACK_ON_TOPIC if state else FEEDBACK_OFF_TOPIC
         for site_id in site_ids:
             payload = json.dumps({"siteId": site_id})
-            await mqtt.async_publish(hass, FEEDBACK_ON_TOPIC, "", qos=0, retain=False)
-            await mqtt.async_publish(hass, topic, payload, qos=int(state), retain=state)
+            await mqtt.async_publish(menuai, FEEDBACK_ON_TOPIC, "", qos=0, retain=False)
+            await mqtt.async_publish(menuai, topic, payload, qos=int(state), retain=state)
 
     if CONF_FEEDBACK in config[DOMAIN]:
         await async_set_feedback(None, config[DOMAIN][CONF_FEEDBACK])
@@ -166,7 +166,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
         try:
             intent_response = await intent.async_handle(
-                hass, DOMAIN, intent_type, slots, request["input"]
+                menuai, DOMAIN, intent_type, slots, request["input"]
             )
             notification = {"sessionId": request.get("sessionId", "default")}
 
@@ -175,7 +175,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
             _LOGGER.debug("send_response %s", json.dumps(notification))
             await mqtt.async_publish(
-                hass, "hermes/dialogueManager/endSession", json.dumps(notification)
+                menuai, "hermes/dialogueManager/endSession", json.dumps(notification)
             )
         except intent.UnknownIntent:
             _LOGGER.warning(
@@ -184,7 +184,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         except intent.IntentError:
             _LOGGER.exception("Error while handling intent: %s", intent_type)
 
-    await mqtt.async_subscribe(hass, INTENT_TOPIC, message_received)
+    await mqtt.async_subscribe(menuai, INTENT_TOPIC, message_received)
 
     async def snips_say(call: ServiceCall) -> None:
         """Send a Snips notification message."""
@@ -194,7 +194,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             "init": {"type": "notification", "text": call.data.get(ATTR_TEXT)},
         }
         await mqtt.async_publish(
-            hass, "hermes/dialogueManager/startSession", json.dumps(notification)
+            menuai, "hermes/dialogueManager/startSession", json.dumps(notification)
         )
 
     async def snips_say_action(call: ServiceCall) -> None:
@@ -210,7 +210,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             },
         }
         await mqtt.async_publish(
-            hass, "hermes/dialogueManager/startSession", json.dumps(notification)
+            menuai, "hermes/dialogueManager/startSession", json.dumps(notification)
         )
 
     async def feedback_on(call: ServiceCall) -> None:
@@ -221,16 +221,16 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         """Turn feedback sounds off."""
         await async_set_feedback(call.data.get(ATTR_SITE_ID), False)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_SAY, snips_say, schema=SERVICE_SCHEMA_SAY
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_SAY_ACTION, snips_say_action, schema=SERVICE_SCHEMA_SAY_ACTION
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_FEEDBACK_ON, feedback_on, schema=SERVICE_SCHEMA_FEEDBACK
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_FEEDBACK_OFF, feedback_off, schema=SERVICE_SCHEMA_FEEDBACK
     )
 

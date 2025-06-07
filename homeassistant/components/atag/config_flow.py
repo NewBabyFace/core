@@ -5,9 +5,9 @@ from typing import Any
 import pyatag
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_PORT
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from . import DOMAIN
 
@@ -30,7 +30,7 @@ class AtagConfigFlow(ConfigFlow, domain=DOMAIN):
         if not user_input:
             return await self._show_form()
 
-        atag = pyatag.AtagOne(session=async_get_clientsession(self.hass), **user_input)
+        atag = pyatag.AtagOne(session=async_get_clientsession(self.menuai), **user_input)
         try:
             await atag.update()
 

@@ -9,15 +9,15 @@ from pydeconz.models.sensor.ancillary_control import (
     AncillaryControlPanel,
 )
 
-from homeassistant.components.alarm_control_panel import (
+from menuai.components.alarm_control_panel import (
     DOMAIN as ALARM_CONTROl_PANEL_DOMAIN,
     AlarmControlPanelEntity,
     AlarmControlPanelEntityFeature,
     AlarmControlPanelState,
     CodeFormat,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import DeconzConfigEntry
 from .entity import DeconzDevice
@@ -46,7 +46,7 @@ def get_alarm_system_id_for_unique_id(hub: DeconzHub, unique_id: str) -> str | N
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: DeconzConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

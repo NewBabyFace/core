@@ -9,8 +9,8 @@ from typing import TYPE_CHECKING
 
 from axis.models.event import Event, EventOperation, EventTopic
 
-from homeassistant.core import callback
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from menuai.core import callback
+from menuai.helpers.entity_platform import AddEntitiesCallback
 
 from ..entity import AxisEventDescription, AxisEventEntity
 

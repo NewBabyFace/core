@@ -5,8 +5,8 @@ from unittest.mock import MagicMock
 from demetriek import LaMetricConnectionError, LaMetricError
 import pytest
 
-from homeassistant.components.lametric.const import DOMAIN
-from homeassistant.components.number import (
+from menuai.components.lametric.const import DOMAIN
+from menuai.components.number import (
     ATTR_MAX,
     ATTR_MIN,
     ATTR_STEP,
@@ -14,7 +14,7 @@ from homeassistant.components.number import (
     DOMAIN as NUMBER_DOMAIN,
     SERVICE_SET_VALUE,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     ATTR_ENTITY_ID,
     ATTR_FRIENDLY_NAME,
@@ -23,21 +23,21 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     EntityCategory,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 pytestmark = pytest.mark.usefixtures("init_integration")
 
 
 async def test_brightness(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_lametric: MagicMock,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test the LaMetric display brightness controls."""
-    state = hass.states.get("number.frenck_s_lametric_brightness")
+    state = menuai.states.get("number.frenck_s_lametric_brightness")
     assert state
     assert state.attributes.get(ATTR_DEVICE_CLASS) is None
     assert state.attributes.get(ATTR_FRIENDLY_NAME) == "Frenck's LaMetric Brightness"
@@ -65,7 +65,7 @@ async def test_brightness(
     assert device.serial_number == "SA110405124500W00BS9"
     assert device.sw_version == "2.2.2"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         NUMBER_DOMAIN,
         SERVICE_SET_VALUE,
         {
@@ -74,20 +74,20 @@ async def test_brightness(
         },
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(mock_lametric.display.mock_calls) == 1
     mock_lametric.display.assert_called_once_with(brightness=21)
 
 
 async def test_volume(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_lametric: MagicMock,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test the LaMetric volume controls."""
-    state = hass.states.get("number.frenck_s_lametric_volume")
+    state = menuai.states.get("number.frenck_s_lametric_volume")
     assert state
     assert state.attributes.get(ATTR_DEVICE_CLASS) is None
     assert state.attributes.get(ATTR_FRIENDLY_NAME) == "Frenck's LaMetric Volume"
@@ -113,7 +113,7 @@ async def test_volume(
     assert device.name == "Frenck's LaMetric"
     assert device.sw_version == "2.2.2"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         NUMBER_DOMAIN,
         SERVICE_SET_VALUE,
         {
@@ -122,27 +122,27 @@ async def test_volume(
         },
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(mock_lametric.audio.mock_calls) == 1
     mock_lametric.audio.assert_called_once_with(volume=42)
 
 
 async def test_number_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_lametric: MagicMock,
 ) -> None:
     """Test error handling of the LaMetric numbers."""
     mock_lametric.audio.side_effect = LaMetricError
 
-    state = hass.states.get("number.frenck_s_lametric_volume")
+    state = menuai.states.get("number.frenck_s_lametric_volume")
     assert state
     assert state.state == "100"
 
     with pytest.raises(
-        HomeAssistantError, match="Invalid response from the LaMetric device"
+        menuaiError, match="Invalid response from the LaMetric device"
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             NUMBER_DOMAIN,
             SERVICE_SET_VALUE,
             {
@@ -152,26 +152,26 @@ async def test_number_error(
             blocking=True,
         )
 
-    state = hass.states.get("number.frenck_s_lametric_volume")
+    state = menuai.states.get("number.frenck_s_lametric_volume")
     assert state
     assert state.state == "100"
 
 
 async def test_number_connection_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_lametric: MagicMock,
 ) -> None:
     """Test connection error handling of the LaMetric numbers."""
     mock_lametric.audio.side_effect = LaMetricConnectionError
 
-    state = hass.states.get("number.frenck_s_lametric_volume")
+    state = menuai.states.get("number.frenck_s_lametric_volume")
     assert state
     assert state.state == "100"
 
     with pytest.raises(
-        HomeAssistantError, match="Error communicating with the LaMetric device"
+        menuaiError, match="Error communicating with the LaMetric device"
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             NUMBER_DOMAIN,
             SERVICE_SET_VALUE,
             {
@@ -181,18 +181,18 @@ async def test_number_connection_error(
             blocking=True,
         )
 
-    state = hass.states.get("number.frenck_s_lametric_volume")
+    state = menuai.states.get("number.frenck_s_lametric_volume")
     assert state
     assert state.state == STATE_UNAVAILABLE
 
 
 @pytest.mark.parametrize("device_fixture", ["computer_powered"])
 async def test_computer_powered_devices(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_lametric: MagicMock,
 ) -> None:
     """Test Brightness is properly limited for computer powered devices."""
-    state = hass.states.get("number.time_brightness")
+    state = menuai.states.get("number.time_brightness")
     assert state
     assert state.state == "75"
     assert state.attributes[ATTR_MIN] == 2

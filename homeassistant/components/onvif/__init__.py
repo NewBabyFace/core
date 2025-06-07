@@ -10,18 +10,18 @@ from onvif.exceptions import ONVIFError
 from onvif.util import is_auth_error, stringify_onvif_error
 from zeep.exceptions import Fault, TransportError
 
-from homeassistant.components.ffmpeg import CONF_EXTRA_ARGUMENTS
-from homeassistant.components.stream import CONF_RTSP_TRANSPORT, RTSP_TRANSPORTS
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
-    EVENT_HOMEASSISTANT_STOP,
+from menuai.components.ffmpeg import CONF_EXTRA_ARGUMENTS
+from menuai.components.stream import CONF_RTSP_TRANSPORT, RTSP_TRANSPORTS
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
+    EVENT_menuai_STOP,
     HTTP_BASIC_AUTHENTICATION,
     HTTP_DIGEST_AUTHENTICATION,
     Platform,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai, callback
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import entity_registry as er
 
 from .const import (
     CONF_ENABLE_WEBHOOKS,
@@ -35,20 +35,20 @@ from .device import ONVIFDevice
 LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up ONVIF from a config entry."""
-    if DOMAIN not in hass.data:
-        hass.data[DOMAIN] = {}
+    if DOMAIN not in menuai.data:
+        menuai.data[DOMAIN] = {}
 
     if not entry.options:
-        await async_populate_options(hass, entry)
+        await async_populate_options(menuai, entry)
 
-    device = ONVIFDevice(hass, entry)
+    device = ONVIFDevice(menuai, entry)
 
     try:
         await device.async_setup()
         if not entry.data.get(CONF_SNAPSHOT_AUTH):
-            await async_populate_snapshot_auth(hass, device, entry)
+            await async_populate_snapshot_auth(menuai, device, entry)
     except RequestError as err:
         await device.device.close()
         raise ConfigEntryNotReady(
@@ -90,7 +90,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if not device.available:
         raise ConfigEntryNotReady
 
-    hass.data[DOMAIN][entry.unique_id] = device
+    menuai.data[DOMAIN][entry.unique_id] = device
 
     device.platforms = [Platform.BUTTON, Platform.CAMERA]
 
@@ -100,21 +100,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if device.capabilities.imaging:
         device.platforms += [Platform.SWITCH]
 
-    _async_migrate_camera_entities_unique_ids(hass, entry, device)
+    _async_migrate_camera_entities_unique_ids(menuai, entry, device)
 
-    await hass.config_entries.async_forward_entry_setups(entry, device.platforms)
+    await menuai.config_entries.async_forward_entry_setups(entry, device.platforms)
 
     entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, device.async_stop)
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, device.async_stop)
     )
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
 
-    device: ONVIFDevice = hass.data[DOMAIN][entry.unique_id]
+    device: ONVIFDevice = menuai.data[DOMAIN][entry.unique_id]
 
     if device.capabilities.events and device.events.started:
         try:
@@ -122,7 +122,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         except (ONVIFError, Fault, RequestError, TransportError):
             LOGGER.warning("Error while stopping events: %s", device.name)
 
-    return await hass.config_entries.async_unload_platforms(entry, device.platforms)
+    return await menuai.config_entries.async_unload_platforms(entry, device.platforms)
 
 
 async def _get_snapshot_auth(device: ONVIFDevice) -> str | None:
@@ -140,16 +140,16 @@ async def _get_snapshot_auth(device: ONVIFDevice) -> str | None:
 
 
 async def async_populate_snapshot_auth(
-    hass: HomeAssistant, device: ONVIFDevice, entry: ConfigEntry
+    menuai: menuai, device: ONVIFDevice, entry: ConfigEntry
 ) -> None:
     """Check if digest auth for snapshots is possible."""
     if auth := await _get_snapshot_auth(device):
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry, data={**entry.data, CONF_SNAPSHOT_AUTH: auth}
         )
 
 
-async def async_populate_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def async_populate_options(menuai: menuai, entry: ConfigEntry) -> None:
     """Populate default options for device."""
     options = {
         CONF_EXTRA_ARGUMENTS: DEFAULT_ARGUMENTS,
@@ -157,15 +157,15 @@ async def async_populate_options(hass: HomeAssistant, entry: ConfigEntry) -> Non
         CONF_ENABLE_WEBHOOKS: DEFAULT_ENABLE_WEBHOOKS,
     }
 
-    hass.config_entries.async_update_entry(entry, options=options)
+    menuai.config_entries.async_update_entry(entry, options=options)
 
 
 @callback
 def _async_migrate_camera_entities_unique_ids(
-    hass: HomeAssistant, config_entry: ConfigEntry, device: ONVIFDevice
+    menuai: menuai, config_entry: ConfigEntry, device: ONVIFDevice
 ) -> None:
     """Migrate unique ids of camera entities from profile index to profile token."""
-    entity_reg = er.async_get(hass)
+    entity_reg = er.async_get(menuai)
     entities: list[er.RegistryEntry] = er.async_entries_for_config_entry(
         entity_reg, config_entry.entry_id
     )

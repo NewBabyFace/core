@@ -5,8 +5,8 @@ from unittest.mock import Mock
 
 import pytest
 
-from homeassistant.components.assist_pipeline import PipelineEvent
-from homeassistant.components.assist_satellite import (
+from menuai.components.assist_pipeline import PipelineEvent
+from menuai.components.assist_satellite import (
     DOMAIN,
     AssistSatelliteAnnouncement,
     AssistSatelliteConfiguration,
@@ -14,12 +14,12 @@ from homeassistant.components.assist_satellite import (
     AssistSatelliteEntityFeature,
     AssistSatelliteWakeWord,
 )
-from homeassistant.config_entries import ConfigEntry, ConfigFlow
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity import DeviceInfo
-from homeassistant.setup import async_setup_component
-from homeassistant.util.ulid import ulid_hex
+from menuai.config_entries import ConfigEntry, ConfigFlow
+from menuai.const import Platform
+from menuai.core import menuai, callback
+from menuai.helpers.entity import DeviceInfo
+from menuai.setup import async_setup_component
+from menuai.util.ulid import ulid_hex
 
 from tests.common import (
     MockConfigEntry,
@@ -123,44 +123,44 @@ def entity_no_features() -> MockAssistSatellite:
 
 
 @pytest.fixture
-def config_entry(hass: HomeAssistant) -> ConfigEntry:
+def config_entry(menuai: menuai) -> ConfigEntry:
     """Mock config entry."""
     entry = MockConfigEntry(domain=TEST_DOMAIN)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     return entry
 
 
 @pytest.fixture
 async def init_components(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     entity: MockAssistSatellite,
     entity2: MockAssistSatellite,
     entity_no_features: MockAssistSatellite,
 ) -> None:
     """Initialize components."""
-    assert await async_setup_component(hass, "homeassistant", {})
+    assert await async_setup_component(menuai, "menuai", {})
 
     async def async_setup_entry_init(
-        hass: HomeAssistant, config_entry: ConfigEntry
+        menuai: menuai, config_entry: ConfigEntry
     ) -> bool:
         """Set up test config entry."""
-        await hass.config_entries.async_forward_entry_setups(
+        await menuai.config_entries.async_forward_entry_setups(
             config_entry, [Platform.ASSIST_SATELLITE]
         )
         return True
 
     async def async_unload_entry_init(
-        hass: HomeAssistant, config_entry: ConfigEntry
+        menuai: menuai, config_entry: ConfigEntry
     ) -> bool:
         """Unload test config entry."""
-        await hass.config_entries.async_forward_entry_unload(
+        await menuai.config_entries.async_forward_entry_unload(
             config_entry, Platform.ASSIST_SATELLITE
         )
         return True
 
     mock_integration(
-        hass,
+        menuai,
         MockModule(
             TEST_DOMAIN,
             async_setup_entry=async_setup_entry_init,
@@ -168,12 +168,12 @@ async def init_components(
         ),
     )
     setup_test_component_platform(
-        hass, DOMAIN, [entity, entity2, entity_no_features], from_config_entry=True
+        menuai, DOMAIN, [entity, entity2, entity_no_features], from_config_entry=True
     )
-    mock_platform(hass, f"{TEST_DOMAIN}.config_flow", Mock())
+    mock_platform(menuai, f"{TEST_DOMAIN}.config_flow", Mock())
 
     with mock_config_flow(TEST_DOMAIN, ConfigFlow):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     return config_entry

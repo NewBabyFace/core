@@ -3,7 +3,7 @@
 from datetime import timedelta
 import logging
 
-from homeassistant.components.alarm_control_panel import AlarmControlPanelState
+from menuai.components.alarm_control_panel import AlarmControlPanelState
 
 DOMAIN = "verisure"
 

@@ -7,14 +7,14 @@ from aiohomekit.model.characteristics.const import InputEventValues
 from aiohomekit.model.services import Service, ServicesTypes
 from aiohomekit.utils import clamp_enum_to_char
 
-from homeassistant.components.event import (
+from menuai.components.event import (
     EventDeviceClass,
     EventEntity,
     EventEntityDescription,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import KNOWN_DEVICES
 from .connection import HKDevice
@@ -61,9 +61,9 @@ class HomeKitEventEntity(BaseCharacteristicEntity, EventEntity):
         """Define the homekit characteristics the entity cares about."""
         return [CharacteristicsTypes.INPUT_EVENT]
 
-    async def async_added_to_hass(self) -> None:
-        """Entity added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Entity added to menuai."""
+        await super().async_added_to_menuai()
 
         self.async_on_remove(
             self._accessory.async_subscribe(
@@ -84,13 +84,13 @@ class HomeKitEventEntity(BaseCharacteristicEntity, EventEntity):
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Homekit event."""
     hkid: str = config_entry.data["AccessoryPairingID"]
-    conn: HKDevice = hass.data[KNOWN_DEVICES][hkid]
+    conn: HKDevice = menuai.data[KNOWN_DEVICES][hkid]
 
     @callback
     def async_add_service(service: Service) -> bool:

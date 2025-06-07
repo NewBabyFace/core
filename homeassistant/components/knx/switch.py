@@ -6,9 +6,9 @@ from typing import Any
 
 from xknx.devices import Switch as XknxSwitch
 
-from homeassistant import config_entries
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.const import (
+from menuai import config_entries
+from menuai.components.switch import SwitchEntity
+from menuai.const import (
     CONF_DEVICE_CLASS,
     CONF_ENTITY_CATEGORY,
     CONF_NAME,
@@ -17,13 +17,13 @@ from homeassistant.const import (
     STATE_UNKNOWN,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import (
+from menuai.core import menuai
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     async_get_current_platform,
 )
-from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers.restore_state import RestoreEntity
+from menuai.helpers.typing import ConfigType
 
 from . import KNXModule
 from .const import (
@@ -46,12 +46,12 @@ from .storage.const import (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: config_entries.ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up switch(es) for KNX platform."""
-    knx_module = hass.data[KNX_MODULE_KEY]
+    knx_module = menuai.data[KNX_MODULE_KEY]
     platform = async_get_current_platform()
     knx_module.config_store.add_platform(
         platform=Platform.SWITCH,
@@ -82,9 +82,9 @@ class _KnxSwitch(SwitchEntity, RestoreEntity):
 
     _device: XknxSwitch
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Restore last state."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         if not self._device.switch.readable and (
             last_state := await self.async_get_last_state()
         ):

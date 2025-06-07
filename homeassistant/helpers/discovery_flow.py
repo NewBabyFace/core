@@ -6,17 +6,17 @@ from collections.abc import Coroutine
 import dataclasses
 from typing import TYPE_CHECKING, Any, NamedTuple, Self
 
-from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
-from homeassistant.core import CoreState, Event, HomeAssistant, callback
-from homeassistant.loader import bind_hass
-from homeassistant.util.async_ import gather_with_limited_concurrency
-from homeassistant.util.hass_dict import HassKey
+from menuai.const import EVENT_menuai_STARTED
+from menuai.core import CoreState, Event, menuai, callback
+from menuai.loader import bind_menuai
+from menuai.util.async_ import gather_with_limited_concurrency
+from menuai.util.menuai_dict import menuaiKey
 
 if TYPE_CHECKING:
-    from homeassistant.config_entries import ConfigFlowContext, ConfigFlowResult
+    from menuai.config_entries import ConfigFlowContext, ConfigFlowResult
 
 FLOW_INIT_LIMIT = 20
-DISCOVERY_FLOW_DISPATCHER: HassKey[FlowDispatcher] = HassKey(
+DISCOVERY_FLOW_DISPATCHER: menuaiKey[FlowDispatcher] = menuaiKey(
     "discovery_flow_dispatcher"
 )
 
@@ -37,10 +37,10 @@ class DiscoveryKey:
         return cls(domain=json_dict["domain"], key=key, version=json_dict["version"])
 
 
-@bind_hass
+@bind_menuai
 @callback
 def async_create_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     domain: str,
     context: ConfigFlowContext,
     data: Any,
@@ -49,18 +49,18 @@ def async_create_flow(
 ) -> None:
     """Create a discovery flow."""
     dispatcher: FlowDispatcher | None = None
-    if DISCOVERY_FLOW_DISPATCHER in hass.data:
-        dispatcher = hass.data[DISCOVERY_FLOW_DISPATCHER]
-    elif hass.state is not CoreState.running:
-        dispatcher = hass.data[DISCOVERY_FLOW_DISPATCHER] = FlowDispatcher(hass)
+    if DISCOVERY_FLOW_DISPATCHER in menuai.data:
+        dispatcher = menuai.data[DISCOVERY_FLOW_DISPATCHER]
+    elif menuai.state is not CoreState.running:
+        dispatcher = menuai.data[DISCOVERY_FLOW_DISPATCHER] = FlowDispatcher(menuai)
         dispatcher.async_setup()
 
     if discovery_key:
         context = context | {"discovery_key": discovery_key}
 
     if not dispatcher or dispatcher.started:
-        if init_coro := _async_init_flow(hass, domain, context, data):
-            hass.async_create_background_task(
+        if init_coro := _async_init_flow(menuai, domain, context, data):
+            menuai.async_create_background_task(
                 init_coro, f"discovery flow {domain} {context}", eager_start=True
             )
         return
@@ -70,7 +70,7 @@ def async_create_flow(
 
 @callback
 def _async_init_flow(
-    hass: HomeAssistant, domain: str, context: ConfigFlowContext, data: Any
+    menuai: menuai, domain: str, context: ConfigFlowContext, data: Any
 ) -> Coroutine[None, None, ConfigFlowResult] | None:
     """Create a discovery flow."""
     # Avoid spawning flows that have the same initial discovery data
@@ -78,14 +78,14 @@ def _async_init_flow(
     # which can overload devices since zeroconf/ssdp updates can happen
     # multiple times in the same minute
     if (
-        hass.config_entries.flow.async_has_matching_discovery_flow(
+        menuai.config_entries.flow.async_has_matching_discovery_flow(
             domain, context, data
         )
-        or hass.is_stopping
+        or menuai.is_stopping
     ):
         return None
 
-    return hass.config_entries.flow.async_init(domain, context=context, data=data)
+    return menuai.config_entries.flow.async_init(domain, context=context, data=data)
 
 
 class PendingFlowKey(NamedTuple):
@@ -105,16 +105,16 @@ class PendingFlowValue(NamedTuple):
 class FlowDispatcher:
     """Dispatch discovery flows."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Init the discovery dispatcher."""
-        self.hass = hass
+        self.menuai = menuai
         self.started = False
         self.pending_flows: dict[PendingFlowKey, list[PendingFlowValue]] = {}
 
     @callback
     def async_setup(self) -> None:
         """Set up the flow disptcher."""
-        self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, self._async_start)
+        self.menuai.bus.async_listen_once(EVENT_menuai_STARTED, self._async_start)
 
     async def _async_start(self, event: Event) -> None:
         """Start processing pending flows."""
@@ -127,7 +127,7 @@ class FlowDispatcher:
             for flow_values in flows
             if (
                 init_coro := _async_init_flow(
-                    self.hass,
+                    self.menuai,
                     flow_key.domain,
                     flow_values.context,
                     flow_values.data,

@@ -8,15 +8,15 @@ from pypck.lcn_defs import Var, VarValue
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components import automation, script
-from homeassistant.components.automation import automations_with_entity
-from homeassistant.components.lcn import DOMAIN
-from homeassistant.components.lcn.helpers import get_device_connection
-from homeassistant.components.script import scripts_with_entity
-from homeassistant.const import STATE_OFF, STATE_ON, STATE_UNAVAILABLE, Platform
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import entity_registry as er, issue_registry as ir
-from homeassistant.setup import async_setup_component
+from menuai.components import automation, script
+from menuai.components.automation import automations_with_entity
+from menuai.components.lcn import DOMAIN
+from menuai.components.lcn.helpers import get_device_connection
+from menuai.components.script import scripts_with_entity
+from menuai.const import STATE_OFF, STATE_ON, STATE_UNAVAILABLE, Platform
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import entity_registry as er, issue_registry as ir
+from menuai.setup import async_setup_component
 
 from .conftest import MockConfigEntry, init_integration
 
@@ -28,63 +28,63 @@ BINARY_SENSOR_KEYLOCK = "binary_sensor.testmodule_sensor_keylock"
 
 
 async def test_setup_lcn_binary_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test the setup of binary sensor."""
-    with patch("homeassistant.components.lcn.PLATFORMS", [Platform.BINARY_SENSOR]):
-        await init_integration(hass, entry)
+    with patch("menuai.components.lcn.PLATFORMS", [Platform.BINARY_SENSOR]):
+        await init_integration(menuai, entry)
 
-    await snapshot_platform(hass, entity_registry, snapshot, entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, entry.entry_id)
 
 
 async def test_pushed_lock_setpoint_status_change(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: MockConfigEntry,
 ) -> None:
     """Test the lock setpoint sensor changes its state on status received."""
-    await init_integration(hass, entry)
+    await init_integration(menuai, entry)
 
-    device_connection = get_device_connection(hass, (0, 7, False), entry)
+    device_connection = get_device_connection(menuai, (0, 7, False), entry)
     address = LcnAddr(0, 7, False)
 
     # push status lock setpoint
     inp = ModStatusVar(address, Var.R1VARSETPOINT, VarValue(0x8000))
     await device_connection.async_process_input(inp)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(BINARY_SENSOR_LOCKREGULATOR1)
+    state = menuai.states.get(BINARY_SENSOR_LOCKREGULATOR1)
     assert state is not None
     assert state.state == STATE_ON
 
     # push status unlock setpoint
     inp = ModStatusVar(address, Var.R1VARSETPOINT, VarValue(0x7FFF))
     await device_connection.async_process_input(inp)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(BINARY_SENSOR_LOCKREGULATOR1)
+    state = menuai.states.get(BINARY_SENSOR_LOCKREGULATOR1)
     assert state is not None
     assert state.state == STATE_OFF
 
 
 async def test_pushed_binsensor_status_change(
-    hass: HomeAssistant, entry: MockConfigEntry
+    menuai: menuai, entry: MockConfigEntry
 ) -> None:
     """Test the binary port sensor changes its state on status received."""
-    await init_integration(hass, entry)
+    await init_integration(menuai, entry)
 
-    device_connection = get_device_connection(hass, (0, 7, False), entry)
+    device_connection = get_device_connection(menuai, (0, 7, False), entry)
     address = LcnAddr(0, 7, False)
     states = [False] * 8
 
     # push status binary port "off"
     inp = ModStatusBinSensors(address, states)
     await device_connection.async_process_input(inp)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(BINARY_SENSOR_SENSOR1)
+    state = menuai.states.get(BINARY_SENSOR_SENSOR1)
     assert state is not None
     assert state.state == STATE_OFF
 
@@ -92,29 +92,29 @@ async def test_pushed_binsensor_status_change(
     states[0] = True
     inp = ModStatusBinSensors(address, states)
     await device_connection.async_process_input(inp)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(BINARY_SENSOR_SENSOR1)
+    state = menuai.states.get(BINARY_SENSOR_SENSOR1)
     assert state is not None
     assert state.state == STATE_ON
 
 
 async def test_pushed_keylock_status_change(
-    hass: HomeAssistant, entry: MockConfigEntry
+    menuai: menuai, entry: MockConfigEntry
 ) -> None:
     """Test the keylock sensor changes its state on status received."""
-    await init_integration(hass, entry)
+    await init_integration(menuai, entry)
 
-    device_connection = get_device_connection(hass, (0, 7, False), entry)
+    device_connection = get_device_connection(menuai, (0, 7, False), entry)
     address = LcnAddr(0, 7, False)
     states = [[False] * 8 for i in range(4)]
 
     # push status keylock "off"
     inp = ModStatusKeyLocks(address, states)
     await device_connection.async_process_input(inp)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(BINARY_SENSOR_KEYLOCK)
+    state = menuai.states.get(BINARY_SENSOR_KEYLOCK)
     assert state is not None
     assert state.state == STATE_OFF
 
@@ -122,21 +122,21 @@ async def test_pushed_keylock_status_change(
     states[0][4] = True
     inp = ModStatusKeyLocks(address, states)
     await device_connection.async_process_input(inp)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(BINARY_SENSOR_KEYLOCK)
+    state = menuai.states.get(BINARY_SENSOR_KEYLOCK)
     assert state is not None
     assert state.state == STATE_ON
 
 
-async def test_unload_config_entry(hass: HomeAssistant, entry: MockConfigEntry) -> None:
+async def test_unload_config_entry(menuai: menuai, entry: MockConfigEntry) -> None:
     """Test the binary sensor is removed when the config entry is unloaded."""
-    await init_integration(hass, entry)
+    await init_integration(menuai, entry)
 
-    await hass.config_entries.async_unload(entry.entry_id)
-    assert hass.states.get(BINARY_SENSOR_LOCKREGULATOR1).state == STATE_UNAVAILABLE
-    assert hass.states.get(BINARY_SENSOR_SENSOR1).state == STATE_UNAVAILABLE
-    assert hass.states.get(BINARY_SENSOR_KEYLOCK).state == STATE_UNAVAILABLE
+    await menuai.config_entries.async_unload(entry.entry_id)
+    assert menuai.states.get(BINARY_SENSOR_LOCKREGULATOR1).state == STATE_UNAVAILABLE
+    assert menuai.states.get(BINARY_SENSOR_SENSOR1).state == STATE_UNAVAILABLE
+    assert menuai.states.get(BINARY_SENSOR_KEYLOCK).state == STATE_UNAVAILABLE
 
 
 @pytest.mark.parametrize(
@@ -147,7 +147,7 @@ async def test_unload_config_entry(hass: HomeAssistant, entry: MockConfigEntry) 
     ],
 )
 async def test_create_issue(
-    hass: HomeAssistant,
+    menuai: menuai,
     service_calls: list[ServiceCall],
     issue_registry: ir.IssueRegistry,
     entry: MockConfigEntry,
@@ -155,7 +155,7 @@ async def test_create_issue(
 ) -> None:
     """Test we create an issue when an automation or script is using a deprecated entity."""
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -167,7 +167,7 @@ async def test_create_issue(
     )
 
     assert await async_setup_component(
-        hass,
+        menuai,
         script.DOMAIN,
         {
             script.DOMAIN: {
@@ -182,10 +182,10 @@ async def test_create_issue(
         },
     )
 
-    await init_integration(hass, entry)
+    await init_integration(menuai, entry)
 
-    assert automations_with_entity(hass, entity_id)[0] == "automation.test"
-    assert scripts_with_entity(hass, entity_id)[0] == "script.test"
+    assert automations_with_entity(menuai, entity_id)[0] == "automation.test"
+    assert scripts_with_entity(menuai, entity_id)[0] == "script.test"
 
     assert issue_registry.async_get_issue(
         DOMAIN, f"deprecated_binary_sensor_{entity_id}"

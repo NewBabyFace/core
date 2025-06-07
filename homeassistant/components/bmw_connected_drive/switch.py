@@ -9,10 +9,10 @@ from bimmer_connected.models import MyBMWAPIError
 from bimmer_connected.vehicle import MyBMWVehicle
 from bimmer_connected.vehicle.fuel_and_battery import ChargingState
 
-from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchEntity, SwitchEntityDescription
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import DOMAIN, BMWConfigEntry
 from .coordinator import BMWDataUpdateCoordinator
@@ -64,7 +64,7 @@ NUMBER_TYPES: list[BMWSwitchEntityDescription] = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: BMWConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -111,7 +111,7 @@ class BMWSwitch(BMWBaseEntity, SwitchEntity):
         try:
             await self.entity_description.remote_service_on(self.vehicle)
         except MyBMWAPIError as ex:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="remote_service_error",
                 translation_placeholders={"exception": str(ex)},
@@ -123,7 +123,7 @@ class BMWSwitch(BMWBaseEntity, SwitchEntity):
         try:
             await self.entity_description.remote_service_off(self.vehicle)
         except MyBMWAPIError as ex:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="remote_service_error",
                 translation_placeholders={"exception": str(ex)},

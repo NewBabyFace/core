@@ -134,7 +134,7 @@
   "selector": {
     "color_name": {
       "options": {
-        "homeassistant": "Home Assistant",
+        "menuai": "MenuAI",
         "aliceblue": "Alice blue",
         "antiquewhite": "Antique white",
         "aqua": "Aqua",

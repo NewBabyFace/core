@@ -18,11 +18,11 @@ from tplink_omada_client.exceptions import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME, CONF_VERIFY_SSL
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import selector
-from homeassistant.helpers.aiohttp_client import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME, CONF_VERIFY_SSL
+from menuai.core import menuai
+from menuai.helpers import selector
+from menuai.helpers.aiohttp_client import (
     async_create_clientsession,
     async_get_clientsession,
 )
@@ -44,7 +44,7 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
 
 
 async def create_omada_client(
-    hass: HomeAssistant, data: Mapping[str, Any]
+    menuai: menuai, data: Mapping[str, Any]
 ) -> OmadaClient:
     """Create a TP-Link Omada client API for the given config entry."""
 
@@ -61,10 +61,10 @@ async def create_omada_client(
     ):
         # TP-Link API uses cookies for login session, so an unsafe cookie jar is required for IP addresses
         websession = async_create_clientsession(
-            hass, cookie_jar=CookieJar(unsafe=True), verify_ssl=verify_ssl
+            menuai, cookie_jar=CookieJar(unsafe=True), verify_ssl=verify_ssl
         )
     else:
-        websession = async_get_clientsession(hass, verify_ssl=verify_ssl)
+        websession = async_get_clientsession(menuai, verify_ssl=verify_ssl)
 
     username = data[CONF_USERNAME]
     password = data[CONF_PASSWORD]
@@ -80,10 +80,10 @@ class HubInfo(NamedTuple):
     sites: list[OmadaSite]
 
 
-async def _validate_input(hass: HomeAssistant, data: dict[str, Any]) -> HubInfo:
+async def _validate_input(menuai: menuai, data: dict[str, Any]) -> HubInfo:
     """Validate the user input allows us to connect."""
 
-    client = await create_omada_client(hass, data)
+    client = await create_omada_client(menuai, data)
     controller_id = await client.login()
     name = await client.get_controller_name()
     sites = await client.get_sites()
@@ -197,7 +197,7 @@ class TpLinkOmadaConfigFlow(ConfigFlow, domain=DOMAIN):
         self, data: dict[str, Any], errors: dict[str, str]
     ) -> HubInfo | None:
         try:
-            info = await _validate_input(self.hass, data)
+            info = await _validate_input(self.menuai, data)
             if len(info.sites) > 0:
                 return info
             errors["base"] = "no_sites_found"

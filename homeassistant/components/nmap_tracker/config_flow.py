@@ -7,23 +7,23 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components import network
-from homeassistant.components.device_tracker import (
+from menuai.components import network
+from menuai.components.device_tracker import (
     CONF_CONSIDER_HOME,
     CONF_SCAN_INTERVAL,
     DEFAULT_CONSIDER_HOME,
 )
-from homeassistant.components.network import MDNS_TARGET_IP
-from homeassistant.config_entries import (
+from menuai.components.network import MDNS_TARGET_IP
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_EXCLUDE, CONF_HOSTS
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import VolDictType
+from menuai.const import CONF_EXCLUDE, CONF_HOSTS
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import VolDictType
 
 from .const import (
     CONF_HOME_INTERVAL,
@@ -38,13 +38,13 @@ MAX_CONSIDER_HOME = MAX_SCAN_INTERVAL * 6
 DEFAULT_NETWORK_PREFIX = 24
 
 
-async def async_get_network(hass: HomeAssistant) -> str:
+async def async_get_network(menuai: menuai) -> str:
     """Search adapters for the network."""
     # We want the local ip that is most likely to be
     # on the LAN and not the WAN so we use MDNS_TARGET_IP
-    local_ip = await network.async_get_source_ip(hass, MDNS_TARGET_IP)
+    local_ip = await network.async_get_source_ip(menuai, MDNS_TARGET_IP)
     network_prefix = DEFAULT_NETWORK_PREFIX
-    for adapter in await network.async_get_adapters(hass):
+    for adapter in await network.async_get_adapters(menuai):
         for ipv4 in adapter["ipv4"]:
             if ipv4["address"] == local_ip:
                 network_prefix = ipv4["network_prefix"]
@@ -105,11 +105,11 @@ def normalize_input(user_input: dict[str, Any]) -> dict[str, str]:
 
 
 async def _async_build_schema_with_user_input(
-    hass: HomeAssistant, user_input: dict[str, Any], include_options: bool
+    menuai: menuai, user_input: dict[str, Any], include_options: bool
 ) -> vol.Schema:
-    hosts = user_input.get(CONF_HOSTS, await async_get_network(hass))
+    hosts = user_input.get(CONF_HOSTS, await async_get_network(menuai))
     exclude = user_input.get(
-        CONF_EXCLUDE, await network.async_get_source_ip(hass, MDNS_TARGET_IP)
+        CONF_EXCLUDE, await network.async_get_source_ip(menuai, MDNS_TARGET_IP)
     )
     schema: VolDictType = {
         vol.Required(CONF_HOSTS, default=hosts): str,
@@ -162,7 +162,7 @@ class OptionsFlowHandler(OptionsFlow):
         return self.async_show_form(
             step_id="init",
             data_schema=await _async_build_schema_with_user_input(
-                self.hass, self.options, True
+                self.menuai, self.options, True
             ),
             errors=errors,
         )
@@ -199,7 +199,7 @@ class NmapTrackerConfigFlow(ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="user",
             data_schema=await _async_build_schema_with_user_input(
-                self.hass, self.options, False
+                self.menuai, self.options, False
             ),
             errors=errors,
         )

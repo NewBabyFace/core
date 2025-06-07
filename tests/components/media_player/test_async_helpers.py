@@ -2,8 +2,8 @@
 
 import pytest
 
-from homeassistant.components import media_player as mp
-from homeassistant.const import (
+from menuai.components import media_player as mp
+from menuai.const import (
     STATE_IDLE,
     STATE_OFF,
     STATE_ON,
@@ -11,15 +11,15 @@ from homeassistant.const import (
     STATE_PLAYING,
     STATE_STANDBY,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 
 class SimpleMediaPlayer(mp.MediaPlayerEntity):
     """Media player test class."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize the test media player."""
-        self.hass = hass
+        self.menuai = menuai
         self._volume = 0
         self._state = STATE_OFF
 
@@ -115,9 +115,9 @@ class DescrMediaPlayer(SimpleMediaPlayer):
 
 
 @pytest.fixture(params=[ExtendedMediaPlayer, SimpleMediaPlayer])
-def player(hass: HomeAssistant, request: pytest.FixtureRequest) -> mp.MediaPlayerEntity:
+def player(menuai: menuai, request: pytest.FixtureRequest) -> mp.MediaPlayerEntity:
     """Return a media player."""
-    return request.param(hass)
+    return request.param(menuai)
 
 
 @pytest.mark.parametrize(
@@ -130,10 +130,10 @@ def player(hass: HomeAssistant, request: pytest.FixtureRequest) -> mp.MediaPlaye
     ],
 )
 async def test_volume_up(
-    hass: HomeAssistant, player_class: type[mp.MediaPlayerEntity], volume_step: float
+    menuai: menuai, player_class: type[mp.MediaPlayerEntity], volume_step: float
 ) -> None:
     """Test the volume_up and set volume methods."""
-    player = player_class(hass)
+    player = player_class(menuai)
     assert player.volume_level == 0
     await player.async_set_volume_level(0.5)
     assert player.volume_level == 0.5
@@ -151,10 +151,10 @@ async def test_volume_up(
     ],
 )
 async def test_volume_down(
-    hass: HomeAssistant, player_class: type[mp.MediaPlayerEntity], volume_step: float
+    menuai: menuai, player_class: type[mp.MediaPlayerEntity], volume_step: float
 ) -> None:
     """Test the volume_down and set volume methods."""
-    player = player_class(hass)
+    player = player_class(menuai)
     assert player.volume_level == 0
     await player.async_set_volume_level(0.5)
     assert player.volume_level == 0.5

@@ -35,7 +35,7 @@ from pyinsteon.groups import (
     TEST_SENSOR,
 )
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 DOMAIN = "insteon"
 

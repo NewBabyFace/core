@@ -7,11 +7,11 @@ from unittest.mock import MagicMock, create_autospec, patch
 import pytest
 import pywemo
 
-from homeassistant.components.wemo import CONF_DISCOVERY, CONF_STATIC
-from homeassistant.components.wemo.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.components.wemo import CONF_DISCOVERY, CONF_STATIC
+from menuai.components.wemo.const import DOMAIN
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.setup import async_setup_component
 
 MOCK_HOST = "127.0.0.1"
 MOCK_PORT = 50000
@@ -121,11 +121,11 @@ def wemo_entity_suffix_fixture() -> str:
 
 
 async def async_create_wemo_entity(
-    hass: HomeAssistant, pywemo_device: pywemo.WeMoDevice, wemo_entity_suffix: str
+    menuai: menuai, pywemo_device: pywemo.WeMoDevice, wemo_entity_suffix: str
 ) -> er.RegistryEntry | None:
-    """Create a hass entity for a wemo device."""
+    """Create a menuai entity for a wemo device."""
     assert await async_setup_component(
-        hass,
+        menuai,
         DOMAIN,
         {
             DOMAIN: {
@@ -134,9 +134,9 @@ async def async_create_wemo_entity(
             },
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
     for entry in entity_registry.entities.values():
         if entry.entity_id.endswith(wemo_entity_suffix or pywemo_device.name.lower()):
             return entry
@@ -146,15 +146,15 @@ async def async_create_wemo_entity(
 
 @pytest.fixture(name="wemo_entity")
 async def async_wemo_entity_fixture(
-    hass: HomeAssistant, pywemo_device: pywemo.WeMoDevice, wemo_entity_suffix: str
+    menuai: menuai, pywemo_device: pywemo.WeMoDevice, wemo_entity_suffix: str
 ) -> er.RegistryEntry | None:
-    """Fixture for a Wemo entity in hass."""
-    return await async_create_wemo_entity(hass, pywemo_device, wemo_entity_suffix)
+    """Fixture for a Wemo entity in menuai."""
+    return await async_create_wemo_entity(menuai, pywemo_device, wemo_entity_suffix)
 
 
 @pytest.fixture(name="wemo_dli_entity")
 async def async_wemo_dli_entity_fixture(
-    hass: HomeAssistant, pywemo_dli_device: pywemo.WeMoDevice, wemo_entity_suffix: str
+    menuai: menuai, pywemo_dli_device: pywemo.WeMoDevice, wemo_entity_suffix: str
 ) -> er.RegistryEntry | None:
-    """Fixture for a Wemo entity in hass."""
-    return await async_create_wemo_entity(hass, pywemo_dli_device, wemo_entity_suffix)
+    """Fixture for a Wemo entity in menuai."""
+    return await async_create_wemo_entity(menuai, pywemo_dli_device, wemo_entity_suffix)

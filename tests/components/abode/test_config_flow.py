@@ -10,25 +10,25 @@ from jaraco.abode.helpers.errors import MFA_CODE_REQUIRED
 import pytest
 from requests.exceptions import ConnectTimeout
 
-from homeassistant.components.abode.const import CONF_POLLING, DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.abode.const import CONF_POLLING, DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
 pytestmark = pytest.mark.usefixtures("mock_setup_entry")
 
 
-async def test_one_config_allowed(hass: HomeAssistant) -> None:
+async def test_one_config_allowed(menuai: menuai) -> None:
     """Test that only one Abode configuration is allowed."""
     MockConfigEntry(
         domain=DOMAIN,
         data={CONF_USERNAME: "user@email.com", CONF_PASSWORD: "password"},
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
@@ -36,9 +36,9 @@ async def test_one_config_allowed(hass: HomeAssistant) -> None:
     assert result["reason"] == "single_instance_allowed"
 
 
-async def test_user_flow(hass: HomeAssistant) -> None:
+async def test_user_flow(menuai: menuai) -> None:
     """Test user flow, with various errors."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -46,12 +46,12 @@ async def test_user_flow(hass: HomeAssistant) -> None:
 
     # Test that invalid credentials throws an error.
     with patch(
-        "homeassistant.components.abode.config_flow.Abode",
+        "menuai.components.abode.config_flow.Abode",
         side_effect=AbodeAuthenticationException(
             (HTTPStatus.BAD_REQUEST, "auth error")
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={CONF_USERNAME: "user@email.com", CONF_PASSWORD: "password"},
         )
@@ -61,12 +61,12 @@ async def test_user_flow(hass: HomeAssistant) -> None:
 
     # Test other than invalid credentials throws an error.
     with patch(
-        "homeassistant.components.abode.config_flow.Abode",
+        "menuai.components.abode.config_flow.Abode",
         side_effect=AbodeAuthenticationException(
             (HTTPStatus.INTERNAL_SERVER_ERROR, "connection error")
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={CONF_USERNAME: "user@email.com", CONF_PASSWORD: "password"},
         )
@@ -76,10 +76,10 @@ async def test_user_flow(hass: HomeAssistant) -> None:
 
     # Test login throws an error if connection times out.
     with patch(
-        "homeassistant.components.abode.config_flow.Abode",
+        "menuai.components.abode.config_flow.Abode",
         side_effect=ConnectTimeout,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={CONF_USERNAME: "user@email.com", CONF_PASSWORD: "password"},
         )
@@ -88,12 +88,12 @@ async def test_user_flow(hass: HomeAssistant) -> None:
     assert result["errors"] == {"base": "cannot_connect"}
 
     # Test success
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
-    with patch("homeassistant.components.abode.config_flow.Abode"):
-        result = await hass.config_entries.flow.async_configure(
+    with patch("menuai.components.abode.config_flow.Abode"):
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={CONF_USERNAME: "user@email.com", CONF_PASSWORD: "password"},
         )
@@ -107,18 +107,18 @@ async def test_user_flow(hass: HomeAssistant) -> None:
     }
 
 
-async def test_step_mfa(hass: HomeAssistant) -> None:
+async def test_step_mfa(menuai: menuai) -> None:
     """Test that the MFA step works."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
     with patch(
-        "homeassistant.components.abode.config_flow.Abode",
+        "menuai.components.abode.config_flow.Abode",
         side_effect=AbodeAuthenticationException(MFA_CODE_REQUIRED),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={CONF_USERNAME: "user@email.com", CONF_PASSWORD: "password"},
         )
@@ -127,12 +127,12 @@ async def test_step_mfa(hass: HomeAssistant) -> None:
     assert result["step_id"] == "mfa"
 
     with patch(
-        "homeassistant.components.abode.config_flow.Abode",
+        "menuai.components.abode.config_flow.Abode",
         side_effect=AbodeAuthenticationException(
             (HTTPStatus.BAD_REQUEST, "invalid mfa")
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={"mfa_code": "123456"}
         )
 
@@ -140,8 +140,8 @@ async def test_step_mfa(hass: HomeAssistant) -> None:
     assert result["step_id"] == "mfa"
     assert result["errors"] == {"base": "invalid_mfa_code"}
 
-    with patch("homeassistant.components.abode.config_flow.Abode"):
-        result = await hass.config_entries.flow.async_configure(
+    with patch("menuai.components.abode.config_flow.Abode"):
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={"mfa_code": "123456"}
         )
 
@@ -154,24 +154,24 @@ async def test_step_mfa(hass: HomeAssistant) -> None:
     }
 
 
-async def test_step_reauth(hass: HomeAssistant) -> None:
+async def test_step_reauth(menuai: menuai) -> None:
     """Test the reauth flow."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         unique_id="user@email.com",
         data={CONF_USERNAME: "user@email.com", CONF_PASSWORD: "password"},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await entry.start_reauth_flow(hass)
+    result = await entry.start_reauth_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
     with (
-        patch("homeassistant.components.abode.config_flow.Abode"),
+        patch("menuai.components.abode.config_flow.Abode"),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={
                 CONF_USERNAME: "user@email.com",
@@ -182,5 +182,5 @@ async def test_step_reauth(hass: HomeAssistant) -> None:
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"
 
-    assert len(hass.config_entries.async_entries()) == 1
+    assert len(menuai.config_entries.async_entries()) == 1
     assert entry.data[CONF_PASSWORD] == "new_password"

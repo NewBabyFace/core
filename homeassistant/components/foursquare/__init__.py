@@ -7,11 +7,11 @@ from aiohttp import web
 import requests
 import voluptuous as vol
 
-from homeassistant.components.http import KEY_HASS, HomeAssistantView
-from homeassistant.const import CONF_ACCESS_TOKEN
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
+from menuai.components.http import KEY_menuai, menuaiView
+from menuai.const import CONF_ACCESS_TOKEN
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -51,7 +51,7 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Foursquare component."""
     config = config[DOMAIN]
 
@@ -67,19 +67,19 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
                 response.reason,
             )
 
-        hass.bus.fire(EVENT_CHECKIN, {"text": response.text})
+        menuai.bus.fire(EVENT_CHECKIN, {"text": response.text})
 
-    # Register our service with Home Assistant.
-    hass.services.register(
+    # Register our service with MenuAI.
+    menuai.services.register(
         DOMAIN, "checkin", checkin_user, schema=CHECKIN_SERVICE_SCHEMA
     )
 
-    hass.http.register_view(FoursquarePushReceiver(config[CONF_PUSH_SECRET]))
+    menuai.http.register_view(FoursquarePushReceiver(config[CONF_PUSH_SECRET]))
 
     return True
 
 
-class FoursquarePushReceiver(HomeAssistantView):
+class FoursquarePushReceiver(menuaiView):
     """Handle pushes from the Foursquare API."""
 
     requires_auth = False
@@ -107,5 +107,5 @@ class FoursquarePushReceiver(HomeAssistantView):
             )
             return self.json_message("Incorrect secret", HTTPStatus.BAD_REQUEST)
 
-        request.app[KEY_HASS].bus.async_fire(EVENT_PUSH, data)
+        request.app[KEY_menuai].bus.async_fire(EVENT_PUSH, data)
         return None

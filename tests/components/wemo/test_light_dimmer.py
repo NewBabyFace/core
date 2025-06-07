@@ -3,14 +3,14 @@
 import pytest
 from pywemo.exceptions import ActionException
 
-from homeassistant.components.homeassistant import (
+from menuai.components.menuai import (
     DOMAIN as HA_DOMAIN,
     SERVICE_UPDATE_ENTITY,
 )
-from homeassistant.components.light import ATTR_BRIGHTNESS, DOMAIN as LIGHT_DOMAIN
-from homeassistant.const import ATTR_ENTITY_ID, SERVICE_TURN_ON, STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.light import ATTR_BRIGHTNESS, DOMAIN as LIGHT_DOMAIN
+from menuai.const import ATTR_ENTITY_ID, SERVICE_TURN_ON, STATE_OFF, STATE_ON
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from . import entity_test_helpers
 
@@ -36,23 +36,23 @@ test_async_update_locked_callback_and_update = (
 
 
 async def test_available_after_update(
-    hass: HomeAssistant, pywemo_registry, pywemo_device, wemo_entity
+    menuai: menuai, pywemo_registry, pywemo_device, wemo_entity
 ) -> None:
     """Test the availability when an On call fails and after an update."""
     pywemo_device.on.side_effect = ActionException
     pywemo_device.get_state.return_value = 1
     await entity_test_helpers.test_avaliable_after_update(
-        hass, pywemo_registry, pywemo_device, wemo_entity, LIGHT_DOMAIN
+        menuai, pywemo_registry, pywemo_device, wemo_entity, LIGHT_DOMAIN
     )
 
 
-async def test_turn_off_state(hass: HomeAssistant, wemo_entity) -> None:
+async def test_turn_off_state(menuai: menuai, wemo_entity) -> None:
     """Test that the device state is updated after turning off."""
-    await entity_test_helpers.test_turn_off_state(hass, wemo_entity, LIGHT_DOMAIN)
+    await entity_test_helpers.test_turn_off_state(menuai, wemo_entity, LIGHT_DOMAIN)
 
 
 async def test_turn_on_brightness(
-    hass: HomeAssistant, pywemo_device, wemo_entity
+    menuai: menuai, pywemo_device, wemo_entity
 ) -> None:
     """Test setting the brightness value of the light."""
     brightness = 0
@@ -67,7 +67,7 @@ async def test_turn_on_brightness(
     pywemo_device.get_brightness.side_effect = lambda: brightness
     pywemo_device.set_brightness.side_effect = set_brightness
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: [wemo_entity.entity_id], ATTR_BRIGHTNESS: 204},
@@ -75,50 +75,50 @@ async def test_turn_on_brightness(
     )
 
     pywemo_device.set_brightness.assert_called_once_with(80)
-    states = hass.states.get(wemo_entity.entity_id)
+    states = menuai.states.get(wemo_entity.entity_id)
     assert states.state == STATE_ON
     assert states.attributes[ATTR_BRIGHTNESS] == 204
 
 
 async def test_light_registry_state_callback(
-    hass: HomeAssistant, pywemo_registry, pywemo_device, wemo_entity
+    menuai: menuai, pywemo_registry, pywemo_device, wemo_entity
 ) -> None:
     """Verify that the light receives state updates from the registry."""
     # On state.
     pywemo_device.get_state.return_value = 1
     pywemo_registry.callbacks[pywemo_device.name](pywemo_device, "", "")
-    await hass.async_block_till_done()
-    assert hass.states.get(wemo_entity.entity_id).state == STATE_ON
+    await menuai.async_block_till_done()
+    assert menuai.states.get(wemo_entity.entity_id).state == STATE_ON
 
     # Off state.
     pywemo_device.get_state.return_value = 0
     pywemo_registry.callbacks[pywemo_device.name](pywemo_device, "", "")
-    await hass.async_block_till_done()
-    assert hass.states.get(wemo_entity.entity_id).state == STATE_OFF
+    await menuai.async_block_till_done()
+    assert menuai.states.get(wemo_entity.entity_id).state == STATE_OFF
 
 
 async def test_light_update_entity(
-    hass: HomeAssistant, pywemo_registry, pywemo_device, wemo_entity
+    menuai: menuai, pywemo_registry, pywemo_device, wemo_entity
 ) -> None:
     """Verify that the light performs state updates."""
-    await async_setup_component(hass, HA_DOMAIN, {})
+    await async_setup_component(menuai, HA_DOMAIN, {})
 
     # On state.
     pywemo_device.get_state.return_value = 1
-    await hass.services.async_call(
+    await menuai.services.async_call(
         HA_DOMAIN,
         SERVICE_UPDATE_ENTITY,
         {ATTR_ENTITY_ID: [wemo_entity.entity_id]},
         blocking=True,
     )
-    assert hass.states.get(wemo_entity.entity_id).state == STATE_ON
+    assert menuai.states.get(wemo_entity.entity_id).state == STATE_ON
 
     # Off state.
     pywemo_device.get_state.return_value = 0
-    await hass.services.async_call(
+    await menuai.services.async_call(
         HA_DOMAIN,
         SERVICE_UPDATE_ENTITY,
         {ATTR_ENTITY_ID: [wemo_entity.entity_id]},
         blocking=True,
     )
-    assert hass.states.get(wemo_entity.entity_id).state == STATE_OFF
+    assert menuai.states.get(wemo_entity.entity_id).state == STATE_OFF

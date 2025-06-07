@@ -5,9 +5,9 @@ from unittest.mock import patch
 
 from aemet_opendata.const import ATTR_BYTES, ATTR_DATA, ATTR_TIMESTAMP, ATTR_TYPE
 
-from homeassistant.components.aemet.const import CONF_RADAR_UPDATES, DOMAIN
-from homeassistant.const import CONF_API_KEY, CONF_LATITUDE, CONF_LONGITUDE, CONF_NAME
-from homeassistant.core import HomeAssistant
+from menuai.components.aemet.const import CONF_RADAR_UPDATES, DOMAIN
+from menuai.const import CONF_API_KEY, CONF_LATITUDE, CONF_LONGITUDE, CONF_NAME
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry, load_json_value_fixture
 
@@ -67,8 +67,8 @@ def mock_api_call(cmd: str, fetch_data: bool = False) -> dict[str, Any]:
     return {}
 
 
-async def async_init_integration(hass: HomeAssistant):
-    """Set up the AEMET OpenData integration in Home Assistant."""
+async def async_init_integration(menuai: menuai):
+    """Set up the AEMET OpenData integration in MenuAI."""
 
     config_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -84,11 +84,11 @@ async def async_init_integration(hass: HomeAssistant):
             CONF_RADAR_UPDATES: True,
         },
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.aemet.AEMET.api_call",
+        "menuai.components.aemet.AEMET.api_call",
         side_effect=mock_api_call,
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()

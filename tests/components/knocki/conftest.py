@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock, patch
 from knocki import TokenResponse, Trigger
 import pytest
 
-from homeassistant.components.knocki.const import DOMAIN
-from homeassistant.const import CONF_TOKEN
+from menuai.components.knocki.const import DOMAIN
+from menuai.const import CONF_TOKEN
 
 from tests.common import MockConfigEntry, load_json_array_fixture
 
@@ -16,7 +16,7 @@ from tests.common import MockConfigEntry, load_json_array_fixture
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.knocki.async_setup_entry",
+        "menuai.components.knocki.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
         yield mock_setup_entry
@@ -27,11 +27,11 @@ def mock_knocki_client() -> Generator[AsyncMock]:
     """Mock a Knocki client."""
     with (
         patch(
-            "homeassistant.components.knocki.KnockiClient",
+            "menuai.components.knocki.KnockiClient",
             autospec=True,
         ) as mock_client,
         patch(
-            "homeassistant.components.knocki.config_flow.KnockiClient",
+            "menuai.components.knocki.config_flow.KnockiClient",
             new=mock_client,
         ),
     ):

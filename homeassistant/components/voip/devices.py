@@ -8,9 +8,9 @@ from typing import Any
 
 from voip_utils import CallInfo, VoipDatagramProtocol
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.config_entries import ConfigEntry
+from menuai.core import Event, menuai, callback
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from .const import DOMAIN
 
@@ -41,9 +41,9 @@ class VoIPDevice:
         return lambda: self.update_listeners.remove(listener)
 
     @callback
-    def async_allow_call(self, hass: HomeAssistant) -> bool:
+    def async_allow_call(self, menuai: menuai) -> bool:
         """Return if call is allowed."""
-        ent_reg = er.async_get(hass)
+        ent_reg = er.async_get(menuai)
 
         allowed_call_entity_id = ent_reg.async_get_entity_id(
             "switch", DOMAIN, f"{self.voip_id}-allow_call"
@@ -53,19 +53,19 @@ class VoIPDevice:
         if allowed_call_entity_id is None:
             return False
 
-        if state := hass.states.get(allowed_call_entity_id):
+        if state := menuai.states.get(allowed_call_entity_id):
             return state.state == "on"
 
         return False
 
-    def get_pipeline_entity_id(self, hass: HomeAssistant) -> str | None:
+    def get_pipeline_entity_id(self, menuai: menuai) -> str | None:
         """Return entity id for pipeline select."""
-        ent_reg = er.async_get(hass)
+        ent_reg = er.async_get(menuai)
         return ent_reg.async_get_entity_id("select", DOMAIN, f"{self.voip_id}-pipeline")
 
-    def get_vad_sensitivity_entity_id(self, hass: HomeAssistant) -> str | None:
+    def get_vad_sensitivity_entity_id(self, menuai: menuai) -> str | None:
         """Return entity id for VAD sensitivity."""
-        ent_reg = er.async_get(hass)
+        ent_reg = er.async_get(menuai)
         return ent_reg.async_get_entity_id(
             "select", DOMAIN, f"{self.voip_id}-vad_sensitivity"
         )
@@ -74,9 +74,9 @@ class VoIPDevice:
 class VoIPDevices:
     """Class to store devices."""
 
-    def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: ConfigEntry) -> None:
         """Initialize VoIP devices."""
-        self.hass = hass
+        self.menuai = menuai
         self.config_entry = config_entry
         self._new_device_listeners: list[Callable[[VoIPDevice], None]] = []
         self.devices: dict[str, VoIPDevice] = {}
@@ -85,7 +85,7 @@ class VoIPDevices:
     def async_setup(self) -> None:
         """Set up devices."""
         for device in dr.async_entries_for_config_entry(
-            dr.async_get(self.hass), self.config_entry.entry_id
+            dr.async_get(self.menuai), self.config_entry.entry_id
         ):
             voip_id = next(
                 (item[1] for item in device.identifiers if item[0] == DOMAIN), None
@@ -108,7 +108,7 @@ class VoIPDevices:
             }
 
         self.config_entry.async_on_unload(
-            self.hass.bus.async_listen(
+            self.menuai.bus.async_listen(
                 dr.EVENT_DEVICE_REGISTRY_UPDATED,
                 async_device_removed,
                 callback(lambda event_data: event_data["action"] == "remove"),
@@ -136,7 +136,7 @@ class VoIPDevices:
             model = user_agent if user_agent else None
             fw_version = None
 
-        dev_reg = dr.async_get(self.hass)
+        dev_reg = dr.async_get(self.menuai)
         if call_info.caller_endpoint is None:
             raise RuntimeError("Could not identify VOIP caller")
         voip_id = call_info.caller_endpoint.uri
@@ -166,9 +166,9 @@ class VoIPDevices:
                     }
 
                 self.config_entry.async_create_task(
-                    self.hass,
+                    self.menuai,
                     er.async_migrate_entries(
-                        self.hass, self.config_entry.entry_id, entity_migrator
+                        self.menuai, self.config_entry.entry_id, entity_migrator
                     ),
                     f"voip migrating entities {voip_id}",
                 )

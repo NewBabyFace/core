@@ -20,14 +20,14 @@ from wolf_comm.models import (
     Temperature,
 )
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     PERCENTAGE,
     REVOLUTIONS_PER_MINUTE,
     UnitOfEnergy,
@@ -38,10 +38,10 @@ from homeassistant.const import (
     UnitOfTime,
     UnitOfVolumeFlowRate,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import COORDINATOR, DEVICE_ID, DOMAIN, MANUFACTURER, PARAMETERS, STATES
 
@@ -131,14 +131,14 @@ SENSOR_DESCRIPTIONS = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up all entries for Wolf Platform."""
-    coordinator = hass.data[DOMAIN][config_entry.entry_id][COORDINATOR]
-    parameters = hass.data[DOMAIN][config_entry.entry_id][PARAMETERS]
-    device_id = hass.data[DOMAIN][config_entry.entry_id][DEVICE_ID]
+    coordinator = menuai.data[DOMAIN][config_entry.entry_id][COORDINATOR]
+    parameters = menuai.data[DOMAIN][config_entry.entry_id][PARAMETERS]
+    device_id = menuai.data[DOMAIN][config_entry.entry_id][DEVICE_ID]
 
     entities: list[WolfLinkSensor] = [
         WolfLinkSensor(coordinator, parameter, device_id, description)

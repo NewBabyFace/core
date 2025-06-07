@@ -7,28 +7,28 @@ from freezegun.api import FrozenDateTimeFactory
 from pyloadapi.exceptions import CannotConnect, InvalidAuth, ParserError
 import pytest
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
-from homeassistant.const import CONF_PATH, CONF_URL
-from homeassistant.core import HomeAssistant
+from menuai.config_entries import SOURCE_REAUTH, ConfigEntryState
+from menuai.const import CONF_PATH, CONF_URL
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry, async_fire_time_changed
 
 
 async def test_entry_setup_unload(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_pyloadapi: MagicMock,
 ) -> None:
     """Test integration setup and unload."""
 
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
-    await hass.config_entries.async_unload(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.NOT_LOADED
 
@@ -38,46 +38,46 @@ async def test_entry_setup_unload(
     [CannotConnect, ParserError],
 )
 async def test_config_entry_setup_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_pyloadapi: MagicMock,
     side_effect: Exception,
 ) -> None:
     """Test config entry not ready."""
     mock_pyloadapi.login.side_effect = side_effect
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.SETUP_RETRY
 
 
 async def test_config_entry_setup_invalid_auth(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_pyloadapi: MagicMock,
 ) -> None:
     """Test config entry authentication."""
     mock_pyloadapi.login.side_effect = InvalidAuth
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.SETUP_ERROR
 
-    assert any(config_entry.async_get_active_flows(hass, {SOURCE_REAUTH}))
+    assert any(config_entry.async_get_active_flows(menuai, {SOURCE_REAUTH}))
 
 
 async def test_coordinator_update_invalid_auth(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_pyloadapi: MagicMock,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test coordinator authentication."""
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
@@ -85,24 +85,24 @@ async def test_coordinator_update_invalid_auth(
     mock_pyloadapi.get_status.side_effect = InvalidAuth
 
     freezer.tick(timedelta(seconds=20))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    assert any(config_entry.async_get_active_flows(hass, {SOURCE_REAUTH}))
+    assert any(config_entry.async_get_active_flows(menuai, {SOURCE_REAUTH}))
 
 
 @pytest.mark.usefixtures("mock_pyloadapi")
 async def test_migration(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry_migrate: MockConfigEntry,
 ) -> None:
     """Test config entry migration."""
 
-    config_entry_migrate.add_to_hass(hass)
+    config_entry_migrate.add_to_menuai(menuai)
     assert config_entry_migrate.data.get(CONF_PATH) is None
 
-    await hass.config_entries.async_setup(config_entry_migrate.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry_migrate.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry_migrate.state is ConfigEntryState.LOADED
     assert config_entry_migrate.version == 1

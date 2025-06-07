@@ -1,17 +1,17 @@
 """Test the qBittorrent helpers."""
 
-from homeassistant.components.qbittorrent.helpers import (
+from menuai.components.qbittorrent.helpers import (
     format_progress,
     format_torrent,
     format_torrents,
     format_unix_timestamp,
     seconds_to_hhmmss,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 
 async def test_seconds_to_hhmmss(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test the seconds_to_hhmmss function."""
     assert seconds_to_hhmmss(8640000) == "None"
@@ -19,21 +19,21 @@ async def test_seconds_to_hhmmss(
 
 
 async def test_format_unix_timestamp(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test the format_unix_timestamp function."""
     assert format_unix_timestamp(1640995200) == "2022-01-01T00:00:00+00:00"
 
 
 async def test_format_progress(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test the format_progress function."""
     assert format_progress({"progress": 0.5}) == "50.00"
 
 
 async def test_format_torrents(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test the format_torrents function."""
     torrents_data = [
@@ -82,7 +82,7 @@ async def test_format_torrents(
 
 
 async def test_format_torrent(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test the format_torrent function."""
     torrent_data = {

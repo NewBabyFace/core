@@ -30,7 +30,7 @@
       - light.ColorMode.RGBWW
 
 .named_colors: &named_colors
-  - "homeassistant"
+  - "menuai"
   - "aliceblue"
   - "antiquewhite"
   - "aqua"

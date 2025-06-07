@@ -5,9 +5,9 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from homeassistant.components.blueprint import BLUEPRINT_SCHEMA, errors, models
-from homeassistant.core import HomeAssistant
-from homeassistant.util.yaml import Input
+from menuai.components.blueprint import BLUEPRINT_SCHEMA, errors, models
+from menuai.core import menuai
+from menuai.util.yaml import Input
 
 
 @pytest.fixture
@@ -62,10 +62,10 @@ def blueprint_2(request: pytest.FixtureRequest) -> models.Blueprint:
 
 
 @pytest.fixture
-def domain_bps(hass: HomeAssistant) -> models.DomainBlueprints:
+def domain_bps(menuai: menuai) -> models.DomainBlueprints:
     """Domain blueprints fixture."""
     return models.DomainBlueprints(
-        hass,
+        menuai,
         "automation",
         logging.getLogger(__name__),
         None,
@@ -151,11 +151,11 @@ def test_blueprint_validate() -> None:
             "blueprint": {
                 "name": "Hello",
                 "domain": "automation",
-                "homeassistant": {"min_version": "100000.0.0"},
+                "menuai": {"min_version": "100000.0.0"},
             },
         },
         schema=BLUEPRINT_SCHEMA,
-    ).validate() == ["Requires at least Home Assistant 100000.0.0"]
+    ).validate() == ["Requires at least MenuAI 100000.0.0"]
 
 
 def test_blueprint_inputs(blueprint_2: models.Blueprint) -> None:
@@ -227,20 +227,20 @@ def test_blueprint_inputs_override_default(blueprint_2: models.Blueprint) -> Non
 
 
 async def test_domain_blueprints_get_blueprint_errors(
-    hass: HomeAssistant, domain_bps: models.DomainBlueprints
+    menuai: menuai, domain_bps: models.DomainBlueprints
 ) -> None:
     """Test domain blueprints."""
-    assert hass.data["blueprint"]["automation"] is domain_bps
+    assert menuai.data["blueprint"]["automation"] is domain_bps
 
     with (
         pytest.raises(errors.FailedToLoad),
-        patch("homeassistant.util.yaml.load_yaml", side_effect=FileNotFoundError),
+        patch("menuai.util.yaml.load_yaml", side_effect=FileNotFoundError),
     ):
         await domain_bps.async_get_blueprint("non-existing-path")
 
     with (
         patch(
-            "homeassistant.util.yaml.load_yaml", return_value={"blueprint": "invalid"}
+            "menuai.util.yaml.load_yaml", return_value={"blueprint": "invalid"}
         ),
         pytest.raises(errors.FailedToLoad),
     ):

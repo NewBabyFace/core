@@ -10,17 +10,17 @@ from aiohttp import CookieJar
 from pybravia import BraviaAuthError, BraviaClient, BraviaError, BraviaNotSupported
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_CLIENT_ID, CONF_HOST, CONF_MAC, CONF_NAME, CONF_PIN
-from homeassistant.helpers import instance_id
-from homeassistant.helpers.aiohttp_client import async_create_clientsession
-from homeassistant.helpers.service_info.ssdp import (
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_CLIENT_ID, CONF_HOST, CONF_MAC, CONF_NAME, CONF_PIN
+from menuai.helpers import instance_id
+from menuai.helpers.aiohttp_client import async_create_clientsession
+from menuai.helpers.service_info.ssdp import (
     ATTR_UPNP_FRIENDLY_NAME,
     ATTR_UPNP_MODEL_NAME,
     ATTR_UPNP_UDN,
     SsdpServiceInfo,
 )
-from homeassistant.util.network import is_host_valid
+from menuai.util.network import is_host_valid
 
 from .const import (
     ATTR_CID,
@@ -47,14 +47,14 @@ class BraviaTVConfigFlow(ConfigFlow, domain=DOMAIN):
         """Create Bravia TV client from config."""
         host = self.device_config[CONF_HOST]
         session = async_create_clientsession(
-            self.hass,
+            self.menuai,
             cookie_jar=CookieJar(unsafe=True, quote_cookie=False),
         )
         self.client = BraviaClient(host=host, session=session)
 
     async def gen_instance_ids(self) -> tuple[str, str]:
         """Generate client_id and nickname."""
-        uuid = await instance_id.async_get(self.hass)
+        uuid = await instance_id.async_get(self.menuai)
         return uuid, f"{NICKNAME_PREFIX} {uuid[:6]}"
 
     async def async_connect_device(self) -> None:

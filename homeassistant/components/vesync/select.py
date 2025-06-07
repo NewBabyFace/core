@@ -6,11 +6,11 @@ import logging
 
 from pyvesync.vesyncbasedevice import VeSyncBaseDevice
 
-from homeassistant.components.select import SelectEntity, SelectEntityDescription
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.select import SelectEntity, SelectEntityDescription
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .common import rgetattr
 from .const import (
@@ -90,13 +90,13 @@ SELECT_DESCRIPTIONS: list[VeSyncSelectEntityDescription] = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up select entities."""
 
-    coordinator = hass.data[DOMAIN][VS_COORDINATOR]
+    coordinator = menuai.data[DOMAIN][VS_COORDINATOR]
 
     @callback
     def discover(devices):
@@ -104,10 +104,10 @@ async def async_setup_entry(
         _setup_entities(devices, async_add_entities, coordinator)
 
     config_entry.async_on_unload(
-        async_dispatcher_connect(hass, VS_DISCOVERY.format(VS_DEVICES), discover)
+        async_dispatcher_connect(menuai, VS_DISCOVERY.format(VS_DEVICES), discover)
     )
 
-    _setup_entities(hass.data[DOMAIN][VS_DEVICES], async_add_entities, coordinator)
+    _setup_entities(menuai.data[DOMAIN][VS_DEVICES], async_add_entities, coordinator)
 
 
 @callback
@@ -149,7 +149,7 @@ class VeSyncSelectEntity(VeSyncBaseEntity, SelectEntity):
 
     async def async_select_option(self, option: str) -> None:
         """Set an option."""
-        if await self.hass.async_add_executor_job(
+        if await self.menuai.async_add_executor_job(
             self.entity_description.select_option_fn, self.device, option
         ):
             await self.coordinator.async_request_refresh()

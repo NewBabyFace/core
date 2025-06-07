@@ -2,14 +2,14 @@
 
 import pytest
 
-from homeassistant.components.google_travel_time.const import (
+from menuai.components.google_travel_time.const import (
     ARRIVAL_TIME,
     CONF_TIME,
     CONF_TIME_TYPE,
     DOMAIN,
 )
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
 
 from .const import DEFAULT_OPTIONS, MOCK_CONFIG
 
@@ -28,7 +28,7 @@ from tests.common import MockConfigEntry
 )
 @pytest.mark.usefixtures("routes_mock", "mock_setup_entry")
 async def test_migrate_entry_v1_v2(
-    hass: HomeAssistant,
+    menuai: menuai,
     v1: str,
     v2: str | None,
 ) -> None:
@@ -43,11 +43,11 @@ async def test_migrate_entry_v1_v2(
             CONF_TIME: v1,
         },
     )
-    mock_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    updated_entry = hass.config_entries.async_get_entry(mock_entry.entry_id)
+    updated_entry = menuai.config_entries.async_get_entry(mock_entry.entry_id)
 
     assert updated_entry.state is ConfigEntryState.LOADED
     assert updated_entry.version == 2
@@ -56,7 +56,7 @@ async def test_migrate_entry_v1_v2(
 
 @pytest.mark.usefixtures("routes_mock", "mock_setup_entry")
 async def test_migrate_entry_v1_v2_invalid_time(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test successful migration of entry data."""
@@ -70,11 +70,11 @@ async def test_migrate_entry_v1_v2_invalid_time(
             CONF_TIME: "invalid",
         },
     )
-    mock_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    updated_entry = hass.config_entries.async_get_entry(mock_entry.entry_id)
+    updated_entry = menuai.config_entries.async_get_entry(mock_entry.entry_id)
 
     assert updated_entry.state is ConfigEntryState.LOADED
     assert updated_entry.version == 2

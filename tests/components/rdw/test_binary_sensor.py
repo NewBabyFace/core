@@ -1,22 +1,22 @@
 """Tests for the sensors provided by the RDW integration."""
 
-from homeassistant.components.binary_sensor import BinarySensorDeviceClass
-from homeassistant.components.rdw.const import DOMAIN
-from homeassistant.const import ATTR_DEVICE_CLASS, ATTR_FRIENDLY_NAME, ATTR_ICON
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.components.binary_sensor import BinarySensorDeviceClass
+from menuai.components.rdw.const import DOMAIN
+from menuai.const import ATTR_DEVICE_CLASS, ATTR_FRIENDLY_NAME, ATTR_ICON
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from tests.common import MockConfigEntry
 
 
 async def test_vehicle_binary_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     init_integration: MockConfigEntry,
 ) -> None:
     """Test the RDW vehicle binary sensors."""
-    state = hass.states.get("binary_sensor.skoda_11zkz3_liability_insured")
+    state = menuai.states.get("binary_sensor.skoda_11zkz3_liability_insured")
     entry = entity_registry.async_get("binary_sensor.skoda_11zkz3_liability_insured")
     assert entry
     assert state
@@ -25,7 +25,7 @@ async def test_vehicle_binary_sensors(
     assert state.attributes.get(ATTR_FRIENDLY_NAME) == "Skoda 11ZKZ3 Liability insured"
     assert ATTR_DEVICE_CLASS not in state.attributes
 
-    state = hass.states.get("binary_sensor.skoda_11zkz3_pending_recall")
+    state = menuai.states.get("binary_sensor.skoda_11zkz3_pending_recall")
     entry = entity_registry.async_get("binary_sensor.skoda_11zkz3_pending_recall")
     assert entry
     assert state

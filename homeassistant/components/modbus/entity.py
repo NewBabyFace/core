@@ -10,7 +10,7 @@ import logging
 import struct
 from typing import Any, cast
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_ADDRESS,
     CONF_COMMAND_OFF,
     CONF_COMMAND_ON,
@@ -26,11 +26,11 @@ from homeassistant.const import (
     STATE_OFF,
     STATE_ON,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import Entity, ToggleEntity
-from homeassistant.helpers.event import async_call_later, async_track_time_interval
-from homeassistant.helpers.restore_state import RestoreEntity
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity import Entity, ToggleEntity
+from menuai.helpers.event import async_call_later, async_track_time_interval
+from menuai.helpers.restore_state import RestoreEntity
 
 from .const import (
     CALL_TYPE_COIL,
@@ -80,7 +80,7 @@ class BasePlatform(Entity):
     _attr_unit_of_measurement = None
 
     def __init__(
-        self, hass: HomeAssistant, hub: ModbusHub, entry: dict[str, Any]
+        self, menuai: menuai, hub: ModbusHub, entry: dict[str, Any]
     ) -> None:
         """Initialize the Modbus binary sensor."""
 
@@ -143,7 +143,7 @@ class BasePlatform(Entity):
         self._async_schedule_future_update(0.1)
         if self._scan_interval > 0:
             self._cancel_timer = async_track_time_interval(
-                self.hass,
+                self.menuai,
                 self._async_update_if_not_in_progress,
                 timedelta(seconds=self._scan_interval),
             )
@@ -155,7 +155,7 @@ class BasePlatform(Entity):
         """Schedule an update in the future."""
         self._async_cancel_future_pending_update()
         self._cancel_call = async_call_later(
-            self.hass, delay, self._async_update_if_not_in_progress
+            self.menuai, delay, self._async_update_if_not_in_progress
         )
 
     @callback
@@ -179,23 +179,23 @@ class BasePlatform(Entity):
         self._attr_available = False
         self.async_write_ha_state()
 
-    async def async_base_added_to_hass(self) -> None:
+    async def async_base_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
         self.async_run()
         self.async_on_remove(
-            async_dispatcher_connect(self.hass, SIGNAL_STOP_ENTITY, self.async_hold)
+            async_dispatcher_connect(self.menuai, SIGNAL_STOP_ENTITY, self.async_hold)
         )
         self.async_on_remove(
-            async_dispatcher_connect(self.hass, SIGNAL_START_ENTITY, self.async_run)
+            async_dispatcher_connect(self.menuai, SIGNAL_START_ENTITY, self.async_run)
         )
 
 
 class BaseStructPlatform(BasePlatform, RestoreEntity):
     """Base class representing a sensor/climate."""
 
-    def __init__(self, hass: HomeAssistant, hub: ModbusHub, config: dict) -> None:
+    def __init__(self, menuai: menuai, hub: ModbusHub, config: dict) -> None:
         """Initialize the switch."""
-        super().__init__(hass, hub, config)
+        super().__init__(menuai, hub, config)
         self._swap = config[CONF_SWAP]
         self._data_type = config[CONF_DATA_TYPE]
         self._structure: str = config[CONF_STRUCTURE]
@@ -298,10 +298,10 @@ class BaseStructPlatform(BasePlatform, RestoreEntity):
 class BaseSwitch(BasePlatform, ToggleEntity, RestoreEntity):
     """Base class representing a Modbus switch."""
 
-    def __init__(self, hass: HomeAssistant, hub: ModbusHub, config: dict) -> None:
+    def __init__(self, menuai: menuai, hub: ModbusHub, config: dict) -> None:
         """Initialize the switch."""
         config[CONF_INPUT_TYPE] = ""
-        super().__init__(hass, hub, config)
+        super().__init__(menuai, hub, config)
         self._attr_is_on = False
         convert = {
             CALL_TYPE_REGISTER_HOLDING: (
@@ -344,15 +344,15 @@ class BaseSwitch(BasePlatform, ToggleEntity, RestoreEntity):
         else:
             self._verify_active = False
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
-        await self.async_base_added_to_hass()
+        await self.async_base_added_to_menuai()
         if state := await self.async_get_last_state():
             if state.state == STATE_ON:
                 self._attr_is_on = True
             elif state.state == STATE_OFF:
                 self._attr_is_on = False
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
     async def async_turn(self, command: int) -> None:
         """Evaluate switch result."""

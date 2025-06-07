@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.light import ATTR_BRIGHTNESS, DOMAIN as LIGHT_DOMAIN
-from homeassistant.const import (
+from menuai.components.light import ATTR_BRIGHTNESS, DOMAIN as LIGHT_DOMAIN
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
@@ -15,8 +15,8 @@ from homeassistant.const import (
     STATE_ON,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import find_update_callback, setup_integration
 
@@ -24,7 +24,7 @@ from tests.common import MockConfigEntry, snapshot_platform
 
 
 async def test_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mock_niko_home_control_connection: AsyncMock,
     mock_config_entry: MockConfigEntry,
@@ -32,11 +32,11 @@ async def test_entities(
 ) -> None:
     """Test all entities."""
     with patch(
-        "homeassistant.components.niko_home_control.PLATFORMS", [Platform.LIGHT]
+        "menuai.components.niko_home_control.PLATFORMS", [Platform.LIGHT]
     ):
-        await setup_integration(hass, mock_config_entry)
+        await setup_integration(menuai, mock_config_entry)
 
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
 
 @pytest.mark.parametrize(
@@ -51,7 +51,7 @@ async def test_entities(
     ],
 )
 async def test_turning_on(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_niko_home_control_connection: AsyncMock,
     mock_config_entry: MockConfigEntry,
     light_id: int,
@@ -59,9 +59,9 @@ async def test_turning_on(
     set_brightness: int,
 ) -> None:
     """Test turning on the light."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         data,
@@ -80,16 +80,16 @@ async def test_turning_on(
     ],
 )
 async def test_turning_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_niko_home_control_connection: AsyncMock,
     mock_config_entry: MockConfigEntry,
     light_id: int,
     entity_id: str,
 ) -> None:
     """Test turning on the light."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: entity_id},
@@ -101,36 +101,36 @@ async def test_turning_off(
 
 
 async def test_updating(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_niko_home_control_connection: AsyncMock,
     mock_config_entry: MockConfigEntry,
     light: AsyncMock,
     dimmable_light: AsyncMock,
 ) -> None:
     """Test turning on the light."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    assert hass.states.get("light.light").state == STATE_ON
+    assert menuai.states.get("light.light").state == STATE_ON
 
     light.state = 0
     await find_update_callback(mock_niko_home_control_connection, 1)(0)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("light.light").state == STATE_OFF
+    assert menuai.states.get("light.light").state == STATE_OFF
 
-    assert hass.states.get("light.dimmable_light").state == STATE_ON
-    assert hass.states.get("light.dimmable_light").attributes[ATTR_BRIGHTNESS] == 255
+    assert menuai.states.get("light.dimmable_light").state == STATE_ON
+    assert menuai.states.get("light.dimmable_light").attributes[ATTR_BRIGHTNESS] == 255
 
     dimmable_light.state = 204
     await find_update_callback(mock_niko_home_control_connection, 2)(204)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("light.dimmable_light").state == STATE_ON
-    assert hass.states.get("light.dimmable_light").attributes[ATTR_BRIGHTNESS] == 204
+    assert menuai.states.get("light.dimmable_light").state == STATE_ON
+    assert menuai.states.get("light.dimmable_light").attributes[ATTR_BRIGHTNESS] == 204
 
     dimmable_light.state = 0
     await find_update_callback(mock_niko_home_control_connection, 2)(0)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("light.dimmable_light").state == STATE_OFF
-    assert hass.states.get("light.dimmable_light").attributes[ATTR_BRIGHTNESS] is None
+    assert menuai.states.get("light.dimmable_light").state == STATE_OFF
+    assert menuai.states.get("light.dimmable_light").attributes[ATTR_BRIGHTNESS] is None

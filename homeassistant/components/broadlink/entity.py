@@ -1,8 +1,8 @@
 """Broadlink entities."""
 
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity
 
 from .const import DOMAIN
 
@@ -17,8 +17,8 @@ class BroadlinkEntity(Entity):
         self._device = device
         self._coordinator = device.update_manager.coordinator
 
-    async def async_added_to_hass(self) -> None:
-        """Call when the entity is added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Call when the entity is added to menuai."""
         self.async_on_remove(self._coordinator.async_add_listener(self._recv_data))
         if self._coordinator.data:
             self._update_state(self._coordinator.data)

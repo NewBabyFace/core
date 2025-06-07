@@ -4,7 +4,7 @@ from typing import Any
 
 from py_aosmith.models import OperationMode as AOSmithOperationMode
 
-from homeassistant.components.water_heater import (
+from menuai.components.water_heater import (
     STATE_ECO,
     STATE_ELECTRIC,
     STATE_HEAT_PUMP,
@@ -12,10 +12,10 @@ from homeassistant.components.water_heater import (
     WaterHeaterEntity,
     WaterHeaterEntityFeature,
 )
-from homeassistant.const import UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import UnitOfTemperature
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import AOSmithConfigEntry, AOSmithStatusCoordinator
 from .entity import AOSmithStatusEntity
@@ -43,7 +43,7 @@ DEFAULT_OPERATION_MODE_PRIORITY = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: AOSmithConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -127,7 +127,7 @@ class AOSmithWaterHeaterEntity(AOSmithStatusEntity, WaterHeaterEntity):
     async def async_set_operation_mode(self, operation_mode: str) -> None:
         """Set new target operation mode."""
         if operation_mode not in self.operation_list:
-            raise HomeAssistantError("Operation mode not supported")
+            raise menuaiError("Operation mode not supported")
 
         aosmith_mode = MODE_HA_TO_AOSMITH.get(operation_mode)
         if aosmith_mode is not None:

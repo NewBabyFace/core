@@ -4,13 +4,13 @@ All containing methods are legacy helpers that should not be used by new
 components. Instead call the service directly.
 """
 
-from homeassistant.components.alarm_control_panel import (
+from menuai.components.alarm_control_panel import (
     DOMAIN,
     AlarmControlPanelEntity,
     AlarmControlPanelEntityFeature,
     AlarmControlPanelState,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_CODE,
     ATTR_ENTITY_ID,
     ENTITY_MATCH_ALL,
@@ -22,13 +22,13 @@ from homeassistant.const import (
     SERVICE_ALARM_DISARM,
     SERVICE_ALARM_TRIGGER,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from tests.common import MockEntity
 
 
 async def async_alarm_disarm(
-    hass: HomeAssistant, code: str | None = None, entity_id: str = ENTITY_MATCH_ALL
+    menuai: menuai, code: str | None = None, entity_id: str = ENTITY_MATCH_ALL
 ) -> None:
     """Send the alarm the command for disarm."""
     data = {}
@@ -37,11 +37,11 @@ async def async_alarm_disarm(
     if entity_id:
         data[ATTR_ENTITY_ID] = entity_id
 
-    await hass.services.async_call(DOMAIN, SERVICE_ALARM_DISARM, data, blocking=True)
+    await menuai.services.async_call(DOMAIN, SERVICE_ALARM_DISARM, data, blocking=True)
 
 
 async def async_alarm_arm_home(
-    hass: HomeAssistant, code: str | None = None, entity_id: str = ENTITY_MATCH_ALL
+    menuai: menuai, code: str | None = None, entity_id: str = ENTITY_MATCH_ALL
 ) -> None:
     """Send the alarm the command for disarm."""
     data = {}
@@ -50,11 +50,11 @@ async def async_alarm_arm_home(
     if entity_id:
         data[ATTR_ENTITY_ID] = entity_id
 
-    await hass.services.async_call(DOMAIN, SERVICE_ALARM_ARM_HOME, data, blocking=True)
+    await menuai.services.async_call(DOMAIN, SERVICE_ALARM_ARM_HOME, data, blocking=True)
 
 
 async def async_alarm_arm_away(
-    hass: HomeAssistant, code: str | None = None, entity_id: str = ENTITY_MATCH_ALL
+    menuai: menuai, code: str | None = None, entity_id: str = ENTITY_MATCH_ALL
 ) -> None:
     """Send the alarm the command for disarm."""
     data = {}
@@ -63,11 +63,11 @@ async def async_alarm_arm_away(
     if entity_id:
         data[ATTR_ENTITY_ID] = entity_id
 
-    await hass.services.async_call(DOMAIN, SERVICE_ALARM_ARM_AWAY, data, blocking=True)
+    await menuai.services.async_call(DOMAIN, SERVICE_ALARM_ARM_AWAY, data, blocking=True)
 
 
 async def async_alarm_arm_night(
-    hass: HomeAssistant, code: str | None = None, entity_id: str = ENTITY_MATCH_ALL
+    menuai: menuai, code: str | None = None, entity_id: str = ENTITY_MATCH_ALL
 ) -> None:
     """Send the alarm the command for disarm."""
     data = {}
@@ -76,11 +76,11 @@ async def async_alarm_arm_night(
     if entity_id:
         data[ATTR_ENTITY_ID] = entity_id
 
-    await hass.services.async_call(DOMAIN, SERVICE_ALARM_ARM_NIGHT, data, blocking=True)
+    await menuai.services.async_call(DOMAIN, SERVICE_ALARM_ARM_NIGHT, data, blocking=True)
 
 
 async def async_alarm_arm_vacation(
-    hass: HomeAssistant, code: str | None = None, entity_id: str = ENTITY_MATCH_ALL
+    menuai: menuai, code: str | None = None, entity_id: str = ENTITY_MATCH_ALL
 ) -> None:
     """Send the alarm the command for vacation mode."""
     data = {}
@@ -89,13 +89,13 @@ async def async_alarm_arm_vacation(
     if entity_id:
         data[ATTR_ENTITY_ID] = entity_id
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN, SERVICE_ALARM_ARM_VACATION, data, blocking=True
     )
 
 
 async def async_alarm_trigger(
-    hass: HomeAssistant, code: str | None = None, entity_id: str = ENTITY_MATCH_ALL
+    menuai: menuai, code: str | None = None, entity_id: str = ENTITY_MATCH_ALL
 ) -> None:
     """Send the alarm the command for disarm."""
     data = {}
@@ -104,11 +104,11 @@ async def async_alarm_trigger(
     if entity_id:
         data[ATTR_ENTITY_ID] = entity_id
 
-    await hass.services.async_call(DOMAIN, SERVICE_ALARM_TRIGGER, data, blocking=True)
+    await menuai.services.async_call(DOMAIN, SERVICE_ALARM_TRIGGER, data, blocking=True)
 
 
 async def async_alarm_arm_custom_bypass(
-    hass: HomeAssistant, code: str | None = None, entity_id: str = ENTITY_MATCH_ALL
+    menuai: menuai, code: str | None = None, entity_id: str = ENTITY_MATCH_ALL
 ) -> None:
     """Send the alarm the command for disarm."""
     data = {}
@@ -117,7 +117,7 @@ async def async_alarm_arm_custom_bypass(
     if entity_id:
         data[ATTR_ENTITY_ID] = entity_id
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN, SERVICE_ALARM_ARM_CUSTOM_BYPASS, data, blocking=True
     )
 

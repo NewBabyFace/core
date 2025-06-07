@@ -17,14 +17,14 @@ from aiohttp.hdrs import CONTENT_TYPE, USER_AGENT
 from aiohttp.web_exceptions import HTTPBadGateway, HTTPGatewayTimeout
 from aiohttp_asyncmdnsresolver.api import AsyncDualMDNSResolver
 
-from homeassistant import config_entries
-from homeassistant.components import zeroconf
-from homeassistant.const import APPLICATION_NAME, EVENT_HOMEASSISTANT_CLOSE, __version__
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.loader import bind_hass
-from homeassistant.util import ssl as ssl_util
-from homeassistant.util.hass_dict import HassKey
-from homeassistant.util.json import json_loads
+from menuai import config_entries
+from menuai.components import zeroconf
+from menuai.const import APPLICATION_NAME, EVENT_menuai_CLOSE, __version__
+from menuai.core import Event, menuai, callback
+from menuai.loader import bind_menuai
+from menuai.util import ssl as ssl_util
+from menuai.util.menuai_dict import menuaiKey
+from menuai.util.json import json_loads
 
 from .frame import warn_use
 from .json import json_dumps
@@ -34,13 +34,13 @@ if TYPE_CHECKING:
     from aiohttp.typedefs import JSONDecoder
 
 
-DATA_CONNECTOR: HassKey[dict[tuple[bool, int, str], aiohttp.BaseConnector]] = HassKey(
+DATA_CONNECTOR: menuaiKey[dict[tuple[bool, int, str], aiohttp.BaseConnector]] = menuaiKey(
     "aiohttp_connector"
 )
-DATA_CLIENTSESSION: HassKey[dict[tuple[bool, int, str], aiohttp.ClientSession]] = (
-    HassKey("aiohttp_clientsession")
+DATA_CLIENTSESSION: menuaiKey[dict[tuple[bool, int, str], aiohttp.ClientSession]] = (
+    menuaiKey("aiohttp_clientsession")
 )
-DATA_RESOLVER: HassKey[HassAsyncDNSResolver] = HassKey("aiohttp_resolver")
+DATA_RESOLVER: menuaiKey[menuaiAsyncDNSResolver] = menuaiKey("aiohttp_resolver")
 
 SERVER_SOFTWARE = (
     f"{APPLICATION_NAME}/{__version__} "
@@ -55,7 +55,7 @@ ENABLE_CLEANUP_CLOSED = (3, 13, 0) <= sys.version_info < (
 # Cleanup closed is no longer needed after https://github.com/python/cpython/pull/118960
 # which first appeared in Python 3.12.7 and 3.13.1
 
-WARN_CLOSE_MSG = "closes the Home Assistant aiohttp session"
+WARN_CLOSE_MSG = "closes the MenuAI aiohttp session"
 
 #
 # The default connection limit of 100 meant that you could only have
@@ -72,11 +72,11 @@ MAXIMUM_CONNECTIONS = 4096
 MAXIMUM_CONNECTIONS_PER_HOST = 100
 
 
-class HassAsyncDNSResolver(AsyncDualMDNSResolver):
-    """Home Assistant AsyncDNSResolver.
+class menuaiAsyncDNSResolver(AsyncDualMDNSResolver):
+    """MenuAI AsyncDNSResolver.
 
     This is a wrapper around the AsyncDualMDNSResolver to only
-    close the resolver when the Home Assistant instance is closed.
+    close the resolver when the MenuAI instance is closed.
     """
 
     async def real_close(self) -> None:
@@ -87,7 +87,7 @@ class HassAsyncDNSResolver(AsyncDualMDNSResolver):
         """Close the resolver."""
 
 
-class HassClientResponse(aiohttp.ClientResponse):
+class menuaiClientResponse(aiohttp.ClientResponse):
     """aiohttp.ClientResponse with a json method that uses json_loads by default."""
 
     async def json(
@@ -126,9 +126,9 @@ class ChunkAsyncStreamIterator:
 
 
 @callback
-@bind_hass
+@bind_menuai
 def async_get_clientsession(
-    hass: HomeAssistant,
+    menuai: menuai,
     verify_ssl: bool = True,
     family: socket.AddressFamily = socket.AF_UNSPEC,
     ssl_cipher: ssl_util.SSLCipherList = ssl_util.SSLCipherList.PYTHON_DEFAULT,
@@ -138,11 +138,11 @@ def async_get_clientsession(
     This method must be run in the event loop.
     """
     session_key = _make_key(verify_ssl, family, ssl_cipher)
-    sessions = hass.data.setdefault(DATA_CLIENTSESSION, {})
+    sessions = menuai.data.setdefault(DATA_CLIENTSESSION, {})
 
     if session_key not in sessions:
         session = _async_create_clientsession(
-            hass,
+            menuai,
             verify_ssl,
             auto_cleanup_method=_async_register_default_clientsession_shutdown,
             family=family,
@@ -156,9 +156,9 @@ def async_get_clientsession(
 
 
 @callback
-@bind_hass
+@bind_menuai
 def async_create_clientsession(
-    hass: HomeAssistant,
+    menuai: menuai,
     verify_ssl: bool = True,
     auto_cleanup: bool = True,
     family: socket.AddressFamily = socket.AF_UNSPEC,
@@ -169,7 +169,7 @@ def async_create_clientsession(
 
     If auto_cleanup is False, you need to call detach() after the session
     returned is no longer used. Default is True, the session will be
-    automatically detached on homeassistant_stop or when being created
+    automatically detached on menuai_stop or when being created
     in config entry setup, the config entry is unloaded.
 
     This method must be run in the event loop.
@@ -179,7 +179,7 @@ def async_create_clientsession(
         auto_cleanup_method = _async_register_clientsession_shutdown
 
     return _async_create_clientsession(
-        hass,
+        menuai,
         verify_ssl,
         auto_cleanup_method=auto_cleanup_method,
         family=family,
@@ -190,9 +190,9 @@ def async_create_clientsession(
 
 @callback
 def _async_create_clientsession(
-    hass: HomeAssistant,
+    menuai: menuai,
     verify_ssl: bool = True,
-    auto_cleanup_method: Callable[[HomeAssistant, aiohttp.ClientSession], None]
+    auto_cleanup_method: Callable[[menuai, aiohttp.ClientSession], None]
     | None = None,
     family: socket.AddressFamily = socket.AF_UNSPEC,
     ssl_cipher: ssl_util.SSLCipherList = ssl_util.SSLCipherList.PYTHON_DEFAULT,
@@ -200,13 +200,13 @@ def _async_create_clientsession(
 ) -> aiohttp.ClientSession:
     """Create a new ClientSession with kwargs, i.e. for cookies."""
     clientsession = aiohttp.ClientSession(
-        connector=_async_get_connector(hass, verify_ssl, family, ssl_cipher),
+        connector=_async_get_connector(menuai, verify_ssl, family, ssl_cipher),
         json_serialize=json_dumps,
-        response_class=HassClientResponse,
+        response_class=menuaiClientResponse,
         **kwargs,
     )
     # Prevent packages accidentally overriding our default headers
-    # It's important that we identify as Home Assistant
+    # It's important that we identify as MenuAI
     # If a package requires a different user agent, override it by passing a headers
     # dictionary to the request method.
     clientsession._default_headers = MappingProxyType(  # type: ignore[assignment]  # noqa: SLF001
@@ -219,14 +219,14 @@ def _async_create_clientsession(
     )
 
     if auto_cleanup_method:
-        auto_cleanup_method(hass, clientsession)
+        auto_cleanup_method(menuai, clientsession)
 
     return clientsession
 
 
-@bind_hass
+@bind_menuai
 async def async_aiohttp_proxy_web(
-    hass: HomeAssistant,
+    menuai: menuai,
     request: web.BaseRequest,
     web_coro: Awaitable[aiohttp.ClientResponse],
     buffer_size: int = 102400,
@@ -251,15 +251,15 @@ async def async_aiohttp_proxy_web(
 
     try:
         return await async_aiohttp_proxy_stream(
-            hass, request, req.content, req.headers.get(CONTENT_TYPE)
+            menuai, request, req.content, req.headers.get(CONTENT_TYPE)
         )
     finally:
         req.close()
 
 
-@bind_hass
+@bind_menuai
 async def async_aiohttp_proxy_stream(
-    hass: HomeAssistant,
+    menuai: menuai,
     request: web.BaseRequest,
     stream: aiohttp.StreamReader,
     content_type: str | None,
@@ -274,7 +274,7 @@ async def async_aiohttp_proxy_stream(
 
     # Suppressing something went wrong fetching data, closed connection
     with suppress(TimeoutError, aiohttp.ClientError):
-        while hass.is_running:
+        while menuai.is_running:
             async with asyncio.timeout(timeout):
                 data = await stream.read(buffer_size)
 
@@ -287,9 +287,9 @@ async def async_aiohttp_proxy_stream(
 
 @callback
 def _async_register_clientsession_shutdown(
-    hass: HomeAssistant, clientsession: aiohttp.ClientSession
+    menuai: menuai, clientsession: aiohttp.ClientSession
 ) -> None:
-    """Register ClientSession close on Home Assistant shutdown or config entry unload.
+    """Register ClientSession close on MenuAI shutdown or config entry unload.
 
     This method must be run in the event loop.
     """
@@ -299,8 +299,8 @@ def _async_register_clientsession_shutdown(
         """Close websession."""
         clientsession.detach()
 
-    unsub = hass.bus.async_listen_once(
-        EVENT_HOMEASSISTANT_CLOSE, _async_close_websession
+    unsub = menuai.bus.async_listen_once(
+        EVENT_menuai_CLOSE, _async_close_websession
     )
 
     if not (config_entry := config_entries.current_entry.get()):
@@ -312,9 +312,9 @@ def _async_register_clientsession_shutdown(
 
 @callback
 def _async_register_default_clientsession_shutdown(
-    hass: HomeAssistant, clientsession: aiohttp.ClientSession
+    menuai: menuai, clientsession: aiohttp.ClientSession
 ) -> None:
-    """Register default ClientSession close on Home Assistant shutdown.
+    """Register default ClientSession close on MenuAI shutdown.
 
     This method must be run in the event loop.
     """
@@ -324,7 +324,7 @@ def _async_register_default_clientsession_shutdown(
         """Close websession."""
         clientsession.detach()
 
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_CLOSE, _async_close_websession)
+    menuai.bus.async_listen_once(EVENT_menuai_CLOSE, _async_close_websession)
 
 
 @callback
@@ -337,13 +337,13 @@ def _make_key(
     return (verify_ssl, family, ssl_cipher)
 
 
-class HomeAssistantTCPConnector(aiohttp.TCPConnector):
-    """Home Assistant TCP Connector.
+class menuaiTCPConnector(aiohttp.TCPConnector):
+    """MenuAI TCP Connector.
 
     Same as aiohttp.TCPConnector but with a longer cleanup_closed timeout.
 
     By default the cleanup_closed timeout is 2 seconds. This is too short
-    for Home Assistant since we churn through a lot of connections. We set
+    for MenuAI since we churn through a lot of connections. We set
     it to 60 seconds to reduce the overhead of aborting TLS connections
     that are likely already closed.
     """
@@ -354,7 +354,7 @@ class HomeAssistantTCPConnector(aiohttp.TCPConnector):
 
 @callback
 def _async_get_connector(
-    hass: HomeAssistant,
+    menuai: menuai,
     verify_ssl: bool = True,
     family: socket.AddressFamily = socket.AF_UNSPEC,
     ssl_cipher: ssl_util.SSLCipherList = ssl_util.SSLCipherList.PYTHON_DEFAULT,
@@ -364,7 +364,7 @@ def _async_get_connector(
     This method must be run in the event loop.
     """
     connector_key = _make_key(verify_ssl, family, ssl_cipher)
-    connectors = hass.data.setdefault(DATA_CONNECTOR, {})
+    connectors = menuai.data.setdefault(DATA_CONNECTOR, {})
 
     if connector_key in connectors:
         return connectors[connector_key]
@@ -374,13 +374,13 @@ def _async_get_connector(
     else:
         ssl_context = ssl_util.client_context_no_verify(ssl_cipher)
 
-    connector = HomeAssistantTCPConnector(
+    connector = menuaiTCPConnector(
         family=family,
         enable_cleanup_closed=ENABLE_CLEANUP_CLOSED,
         ssl=ssl_context,
         limit=MAXIMUM_CONNECTIONS,
         limit_per_host=MAXIMUM_CONNECTIONS_PER_HOST,
-        resolver=_async_get_or_create_resolver(hass),
+        resolver=_async_get_or_create_resolver(menuai),
     )
     connectors[connector_key] = connector
 
@@ -388,24 +388,24 @@ def _async_get_connector(
         """Close connector pool."""
         await connector.close()
 
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_CLOSE, _async_close_connector)
+    menuai.bus.async_listen_once(EVENT_menuai_CLOSE, _async_close_connector)
 
     return connector
 
 
 @singleton(DATA_RESOLVER)
 @callback
-def _async_get_or_create_resolver(hass: HomeAssistant) -> HassAsyncDNSResolver:
-    """Return the HassAsyncDNSResolver."""
-    resolver = _async_make_resolver(hass)
+def _async_get_or_create_resolver(menuai: menuai) -> menuaiAsyncDNSResolver:
+    """Return the menuaiAsyncDNSResolver."""
+    resolver = _async_make_resolver(menuai)
 
     async def _async_close_resolver(event: Event) -> None:
         await resolver.real_close()
 
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_CLOSE, _async_close_resolver)
+    menuai.bus.async_listen_once(EVENT_menuai_CLOSE, _async_close_resolver)
     return resolver
 
 
 @callback
-def _async_make_resolver(hass: HomeAssistant) -> HassAsyncDNSResolver:
-    return HassAsyncDNSResolver(async_zeroconf=zeroconf.async_get_async_zeroconf(hass))
+def _async_make_resolver(menuai: menuai) -> menuaiAsyncDNSResolver:
+    return menuaiAsyncDNSResolver(async_zeroconf=zeroconf.async_get_async_zeroconf(menuai))

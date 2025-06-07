@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from switchbot.devices.device import SwitchbotOperationError
 
-from homeassistant.components.humidifier import (
+from menuai.components.humidifier import (
     ATTR_HUMIDITY,
     ATTR_MODE,
     DOMAIN as HUMIDIFIER_DOMAIN,
@@ -17,9 +17,9 @@ from homeassistant.components.humidifier import (
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
 )
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from . import HUMIDIFIER_SERVICE_INFO
 
@@ -68,7 +68,7 @@ from tests.components.bluetooth import inject_bluetooth_service_info
     ],
 )
 async def test_humidifier_services(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_entry_factory: Callable[[str], MockConfigEntry],
     service: str,
     service_data: dict,
@@ -76,38 +76,38 @@ async def test_humidifier_services(
     expected_args: tuple,
 ) -> None:
     """Test all humidifier services with proper parameters."""
-    inject_bluetooth_service_info(hass, HUMIDIFIER_SERVICE_INFO)
+    inject_bluetooth_service_info(menuai, HUMIDIFIER_SERVICE_INFO)
 
     entry = mock_entry_factory(sensor_type="humidifier")
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     entity_id = "humidifier.test_name"
 
     with (
         patch(
-            "homeassistant.components.switchbot.humidifier.switchbot.SwitchbotHumidifier.set_level",
+            "menuai.components.switchbot.humidifier.switchbot.SwitchbotHumidifier.set_level",
             new=AsyncMock(return_value=True),
         ) as mock_set_humidity_level,
         patch(
-            "homeassistant.components.switchbot.humidifier.switchbot.SwitchbotHumidifier.async_set_auto",
+            "menuai.components.switchbot.humidifier.switchbot.SwitchbotHumidifier.async_set_auto",
             new=AsyncMock(return_value=True),
         ) as mock_set_auto_mode,
         patch(
-            "homeassistant.components.switchbot.humidifier.switchbot.SwitchbotHumidifier.async_set_manual",
+            "menuai.components.switchbot.humidifier.switchbot.SwitchbotHumidifier.async_set_manual",
             new=AsyncMock(return_value=True),
         ) as mock_set_manual_mode,
         patch(
-            "homeassistant.components.switchbot.humidifier.switchbot.SwitchbotHumidifier.turn_off",
+            "menuai.components.switchbot.humidifier.switchbot.SwitchbotHumidifier.turn_off",
             new=AsyncMock(return_value=True),
         ) as mock_turn_off,
         patch(
-            "homeassistant.components.switchbot.humidifier.switchbot.SwitchbotHumidifier.turn_on",
+            "menuai.components.switchbot.humidifier.switchbot.SwitchbotHumidifier.turn_on",
             new=AsyncMock(return_value=True),
         ) as mock_turn_on,
     ):
-        assert await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             HUMIDIFIER_DOMAIN,
             service,
             {**service_data, ATTR_ENTITY_ID: entity_id},
@@ -145,7 +145,7 @@ async def test_humidifier_services(
     ],
 )
 async def test_exception_handling_humidifier_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_entry_factory: Callable[[str], MockConfigEntry],
     service: str,
     service_data: dict,
@@ -154,20 +154,20 @@ async def test_exception_handling_humidifier_service(
     error_message: str,
 ) -> None:
     """Test exception handling for humidifier service with exception."""
-    inject_bluetooth_service_info(hass, HUMIDIFIER_SERVICE_INFO)
+    inject_bluetooth_service_info(menuai, HUMIDIFIER_SERVICE_INFO)
 
     entry = mock_entry_factory(sensor_type="humidifier")
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     entity_id = "humidifier.test_name"
 
-    patch_target = f"homeassistant.components.switchbot.humidifier.switchbot.SwitchbotHumidifier.{mock_method}"
+    patch_target = f"menuai.components.switchbot.humidifier.switchbot.SwitchbotHumidifier.{mock_method}"
 
     with patch(patch_target, new=AsyncMock(side_effect=exception)):
-        assert await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
-        with pytest.raises(HomeAssistantError, match=error_message):
-            await hass.services.async_call(
+        with pytest.raises(menuaiError, match=error_message):
+            await menuai.services.async_call(
                 HUMIDIFIER_DOMAIN,
                 service,
                 {**service_data, ATTR_ENTITY_ID: entity_id},

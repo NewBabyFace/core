@@ -9,9 +9,9 @@ import dns.rdata
 import dns.rdataclass
 import dns.rdatatype
 
-from homeassistant.const import CONF_ADDRESS, CONF_HOST, CONF_PORT, Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.const import CONF_ADDRESS, CONF_HOST, CONF_PORT, Platform
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from .api import MinecraftServer, MinecraftServerAddressError, MinecraftServerType
 from .const import DOMAIN, KEY_LATENCY, KEY_MOTD
@@ -30,33 +30,33 @@ def load_dnspython_rdata_classes() -> None:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: MinecraftServerConfigEntry
+    menuai: menuai, entry: MinecraftServerConfigEntry
 ) -> bool:
     """Set up Minecraft Server from a config entry."""
 
     # Workaround to avoid blocking imports from dnspython (https://github.com/rthalley/dnspython/issues/1083)
-    await hass.async_add_executor_job(load_dnspython_rdata_classes)
+    await menuai.async_add_executor_job(load_dnspython_rdata_classes)
 
     # Create coordinator instance and store it.
-    coordinator = MinecraftServerCoordinator(hass, entry)
+    coordinator = MinecraftServerCoordinator(menuai, entry)
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
 
     # Set up platforms.
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, config_entry: MinecraftServerConfigEntry
+    menuai: menuai, config_entry: MinecraftServerConfigEntry
 ) -> bool:
     """Unload Minecraft Server config entry."""
-    return await hass.config_entries.async_unload_platforms(config_entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(config_entry, PLATFORMS)
 
 
 async def async_migrate_entry(
-    hass: HomeAssistant, config_entry: MinecraftServerConfigEntry
+    menuai: menuai, config_entry: MinecraftServerConfigEntry
 ) -> bool:
     """Migrate old config entry to a new format."""
 
@@ -70,13 +70,13 @@ async def async_migrate_entry(
 
         # Migrate config entry.
         _LOGGER.debug("Migrating config entry. Resetting unique ID: %s", old_unique_id)
-        hass.config_entries.async_update_entry(config_entry, unique_id=None, version=2)
+        menuai.config_entries.async_update_entry(config_entry, unique_id=None, version=2)
 
         # Migrate device.
-        await _async_migrate_device_identifiers(hass, config_entry, old_unique_id)
+        await _async_migrate_device_identifiers(menuai, config_entry, old_unique_id)
 
         # Migrate entities.
-        await er.async_migrate_entries(hass, config_entry_id, _migrate_entity_unique_id)
+        await er.async_migrate_entries(menuai, config_entry_id, _migrate_entity_unique_id)
 
         _LOGGER.debug("Migration to version 2 successful")
 
@@ -88,7 +88,7 @@ async def async_migrate_entry(
 
         # Migrate config entry.
         address = config_data[CONF_HOST]
-        api = MinecraftServer(hass, MinecraftServerType.JAVA_EDITION, address)
+        api = MinecraftServer(menuai, MinecraftServerType.JAVA_EDITION, address)
 
         try:
             await api.async_initialize()
@@ -102,7 +102,7 @@ async def async_migrate_entry(
 
         if not host_only_lookup_success:
             address = f"{config_data[CONF_HOST]}:{config_data[CONF_PORT]}"
-            api = MinecraftServer(hass, MinecraftServerType.JAVA_EDITION, address)
+            api = MinecraftServer(menuai, MinecraftServerType.JAVA_EDITION, address)
 
             try:
                 await api.async_initialize()
@@ -123,7 +123,7 @@ async def async_migrate_entry(
         new_data[CONF_ADDRESS] = address
         del new_data[CONF_HOST]
         del new_data[CONF_PORT]
-        hass.config_entries.async_update_entry(config_entry, data=new_data, version=3)
+        menuai.config_entries.async_update_entry(config_entry, data=new_data, version=3)
 
         _LOGGER.debug("Migration to version 3 successful")
 
@@ -131,12 +131,12 @@ async def async_migrate_entry(
 
 
 async def _async_migrate_device_identifiers(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MinecraftServerConfigEntry,
     old_unique_id: str | None,
 ) -> None:
     """Migrate the device identifiers to the new format."""
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     device_entry_found = False
     for device_entry in dr.async_entries_for_config_entry(
         device_registry, config_entry.entry_id

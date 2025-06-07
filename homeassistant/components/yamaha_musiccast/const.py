@@ -2,8 +2,8 @@
 
 from aiomusiccast.capabilities import EntityType
 
-from homeassistant.components.media_player import MediaClass, RepeatMode
-from homeassistant.const import EntityCategory
+from menuai.components.media_player import MediaClass, RepeatMode
+from menuai.const import EntityCategory
 
 DOMAIN = "yamaha_musiccast"
 

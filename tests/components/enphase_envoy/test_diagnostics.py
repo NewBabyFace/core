@@ -7,12 +7,12 @@ from pyenphase.exceptions import EnvoyError
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.enphase_envoy.const import (
+from menuai.components.enphase_envoy.const import (
     DOMAIN,
     OPTION_DIAGNOSTICS_INCLUDE_FIXTURES,
 )
-from homeassistant.components.enphase_envoy.coordinator import MAC_VERIFICATION_DELAY
-from homeassistant.core import HomeAssistant
+from menuai.components.enphase_envoy.coordinator import MAC_VERIFICATION_DELAY
+from menuai.core import menuai
 
 from . import setup_integration
 
@@ -39,21 +39,21 @@ def limit_diagnostic_attrs(prop, path) -> bool:
 
 
 async def test_entry_diagnostics(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     mock_envoy: AsyncMock,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test config entry diagnostics."""
-    await setup_integration(hass, config_entry)
+    await setup_integration(menuai, config_entry)
     assert await get_diagnostics_for_config_entry(
-        hass, hass_client, config_entry
+        menuai, menuai_client, config_entry
     ) == snapshot(exclude=limit_diagnostic_attrs)
 
 
 @pytest.fixture(name="config_entry_options")
-def config_entry_options_fixture(hass: HomeAssistant, config: dict[str, str]):
+def config_entry_options_fixture(menuai: menuai, config: dict[str, str]):
     """Define a config entry fixture."""
     return MockConfigEntry(
         domain=DOMAIN,
@@ -66,50 +66,50 @@ def config_entry_options_fixture(hass: HomeAssistant, config: dict[str, str]):
 
 
 async def test_entry_diagnostics_with_fixtures(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     config_entry_options: MockConfigEntry,
     mock_envoy: AsyncMock,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test config entry diagnostics."""
-    await setup_integration(hass, config_entry_options)
+    await setup_integration(menuai, config_entry_options)
     assert await get_diagnostics_for_config_entry(
-        hass, hass_client, config_entry_options
+        menuai, menuai_client, config_entry_options
     ) == snapshot(exclude=limit_diagnostic_attrs)
 
 
 async def test_entry_diagnostics_with_fixtures_with_error(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     config_entry_options: MockConfigEntry,
     snapshot: SnapshotAssertion,
     mock_envoy: AsyncMock,
 ) -> None:
     """Test config entry diagnostics."""
-    await setup_integration(hass, config_entry_options)
+    await setup_integration(menuai, config_entry_options)
     mock_envoy.request.side_effect = EnvoyError("Test")
     assert await get_diagnostics_for_config_entry(
-        hass, hass_client, config_entry_options
+        menuai, menuai_client, config_entry_options
     ) == snapshot(exclude=limit_diagnostic_attrs)
 
 
 async def test_entry_diagnostics_with_interface_information(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
     mock_envoy: AsyncMock,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test config entry diagnostics including interface data."""
-    await setup_integration(hass, config_entry)
+    await setup_integration(menuai, config_entry)
 
     # move time forward so interface information is collected
     freezer.tick(MAC_VERIFICATION_DELAY)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     assert await get_diagnostics_for_config_entry(
-        hass, hass_client, config_entry
+        menuai, menuai_client, config_entry
     ) == snapshot(exclude=limit_diagnostic_attrs)

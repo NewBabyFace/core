@@ -8,16 +8,16 @@ from typing import Any
 
 from google_drive_api.exceptions import GoogleDriveApiError
 
-from homeassistant.components.backup import (
+from menuai.components.backup import (
     AgentBackup,
     BackupAgent,
     BackupAgentError,
     BackupNotFound,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.aiohttp_client import ChunkAsyncStreamIterator
-from homeassistant.util import slugify
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.aiohttp_client import ChunkAsyncStreamIterator
+from menuai.util import slugify
 
 from . import DATA_BACKUP_AGENT_LISTENERS, GoogleDriveConfigEntry
 from .const import DOMAIN
@@ -26,17 +26,17 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_get_backup_agents(
-    hass: HomeAssistant,
+    menuai: menuai,
     **kwargs: Any,
 ) -> list[BackupAgent]:
     """Return a list of backup agents."""
-    entries = hass.config_entries.async_loaded_entries(DOMAIN)
+    entries = menuai.config_entries.async_loaded_entries(DOMAIN)
     return [GoogleDriveBackupAgent(entry) for entry in entries]
 
 
 @callback
 def async_register_backup_agents_listener(
-    hass: HomeAssistant,
+    menuai: menuai,
     *,
     listener: Callable[[], None],
     **kwargs: Any,
@@ -45,14 +45,14 @@ def async_register_backup_agents_listener(
 
     :return: A function to unregister the listener.
     """
-    hass.data.setdefault(DATA_BACKUP_AGENT_LISTENERS, []).append(listener)
+    menuai.data.setdefault(DATA_BACKUP_AGENT_LISTENERS, []).append(listener)
 
     @callback
     def remove_listener() -> None:
         """Remove the listener."""
-        hass.data[DATA_BACKUP_AGENT_LISTENERS].remove(listener)
-        if not hass.data[DATA_BACKUP_AGENT_LISTENERS]:
-            del hass.data[DATA_BACKUP_AGENT_LISTENERS]
+        menuai.data[DATA_BACKUP_AGENT_LISTENERS].remove(listener)
+        if not menuai.data[DATA_BACKUP_AGENT_LISTENERS]:
+            del menuai.data[DATA_BACKUP_AGENT_LISTENERS]
 
     return remove_listener
 
@@ -84,14 +84,14 @@ class GoogleDriveBackupAgent(BackupAgent):
         """
         try:
             await self._client.async_upload_backup(open_stream, backup)
-        except (GoogleDriveApiError, HomeAssistantError, TimeoutError) as err:
+        except (GoogleDriveApiError, menuaiError, TimeoutError) as err:
             raise BackupAgentError(f"Failed to upload backup: {err}") from err
 
     async def async_list_backups(self, **kwargs: Any) -> list[AgentBackup]:
         """List backups."""
         try:
             return await self._client.async_list_backups()
-        except (GoogleDriveApiError, HomeAssistantError, TimeoutError) as err:
+        except (GoogleDriveApiError, menuaiError, TimeoutError) as err:
             raise BackupAgentError(f"Failed to list backups: {err}") from err
 
     async def async_get_backup(
@@ -123,7 +123,7 @@ class GoogleDriveBackupAgent(BackupAgent):
                 _LOGGER.debug("Downloading file_id: %s", file_id)
                 stream = await self._client.async_download(file_id)
                 return ChunkAsyncStreamIterator(stream)
-        except (GoogleDriveApiError, HomeAssistantError, TimeoutError) as err:
+        except (GoogleDriveApiError, menuaiError, TimeoutError) as err:
             raise BackupAgentError(f"Failed to download backup: {err}") from err
         raise BackupNotFound(f"Backup {backup_id} not found")
 
@@ -144,6 +144,6 @@ class GoogleDriveBackupAgent(BackupAgent):
                 await self._client.async_delete(file_id)
                 _LOGGER.debug("Deleted backup_id: %s", backup_id)
                 return
-        except (GoogleDriveApiError, HomeAssistantError, TimeoutError) as err:
+        except (GoogleDriveApiError, menuaiError, TimeoutError) as err:
             raise BackupAgentError(f"Failed to delete backup: {err}") from err
         raise BackupNotFound(f"Backup {backup_id} not found")

@@ -10,7 +10,7 @@ from habluetooth.usage import (
 from habluetooth.wrappers import HaBleakClientWrapper, HaBleakScannerWrapper
 import pytest
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from . import generate_ble_device
 
@@ -23,7 +23,7 @@ MOCK_BLE_DEVICE = generate_ble_device(
 )
 
 
-async def test_multiple_bleak_scanner_instances(hass: HomeAssistant) -> None:
+async def test_multiple_bleak_scanner_instances(menuai: menuai) -> None:
     """Test creating multiple BleakScanners without an integration."""
     install_multiple_bleak_catcher()
 
@@ -40,7 +40,7 @@ async def test_multiple_bleak_scanner_instances(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("enable_bluetooth")
-async def test_wrapping_bleak_client(hass: HomeAssistant) -> None:
+async def test_wrapping_bleak_client(menuai: menuai) -> None:
     """Test we wrap BleakClient."""
     install_multiple_bleak_catcher()
 

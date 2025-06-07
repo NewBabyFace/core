@@ -4,19 +4,19 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_TARGET_TEMP_HIGH,
     ATTR_TARGET_TEMP_LOW,
     ClimateEntity,
     ClimateEntityFeature,
     HVACMode,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_TEMPERATURE, Platform, UnitOfTemperature
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util.unit_system import METRIC_SYSTEM
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_TEMPERATURE, Platform, UnitOfTemperature
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util.unit_system import METRIC_SYSTEM
 
 from . import setup_mysensors_platform
 from .const import MYSENSORS_DISCOVERY, DiscoveryInfo
@@ -40,7 +40,7 @@ OPERATION_LIST = [HVACMode.OFF, HVACMode.AUTO, HVACMode.COOL, HVACMode.HEAT]
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -49,7 +49,7 @@ async def async_setup_entry(
     async def async_discover(discovery_info: DiscoveryInfo) -> None:
         """Discover and add a MySensors climate."""
         setup_mysensors_platform(
-            hass,
+            menuai,
             Platform.CLIMATE,
             discovery_info,
             MySensorsHVAC,
@@ -58,7 +58,7 @@ async def async_setup_entry(
 
     config_entry.async_on_unload(
         async_dispatcher_connect(
-            hass,
+            menuai,
             MYSENSORS_DISCOVERY.format(config_entry.entry_id, Platform.CLIMATE),
             async_discover,
         ),
@@ -94,7 +94,7 @@ class MySensorsHVAC(MySensorsChildEntity, ClimateEntity):
         """Return the unit of measurement."""
         return (
             UnitOfTemperature.CELSIUS
-            if self.hass.config.units is METRIC_SYSTEM
+            if self.menuai.config.units is METRIC_SYSTEM
             else UnitOfTemperature.FAHRENHEIT
         )
 

@@ -7,7 +7,7 @@ from collections.abc import Iterable
 import logging
 from typing import Any
 
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_TEMPERATURE,
     SERVICE_TURN_OFF,
@@ -15,7 +15,7 @@ from homeassistant.const import (
     STATE_OFF,
     STATE_ON,
 )
-from homeassistant.core import Context, HomeAssistant, State
+from menuai.core import Context, menuai, State
 
 from . import (
     ATTR_AWAY_MODE,
@@ -47,14 +47,14 @@ VALID_STATES = {
 
 
 async def _async_reproduce_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     state: State,
     *,
     context: Context | None = None,
     reproduce_options: dict[str, Any] | None = None,
 ) -> None:
     """Reproduce a single state."""
-    if (cur_state := hass.states.get(state.entity_id)) is None:
+    if (cur_state := menuai.states.get(state.entity_id)) is None:
         _LOGGER.warning("Unable to find entity %s", state.entity_id)
         return
 
@@ -85,7 +85,7 @@ async def _async_reproduce_state(
             service = SERVICE_SET_OPERATION_MODE
             service_data[ATTR_OPERATION_MODE] = state.state
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN, service, service_data, context=context, blocking=True
         )
 
@@ -94,7 +94,7 @@ async def _async_reproduce_state(
         != cur_state.attributes.get(ATTR_TEMPERATURE)
         and state.attributes.get(ATTR_TEMPERATURE) is not None
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SET_TEMPERATURE,
             {
@@ -109,7 +109,7 @@ async def _async_reproduce_state(
         state.attributes.get(ATTR_AWAY_MODE) != cur_state.attributes.get(ATTR_AWAY_MODE)
         and state.attributes.get(ATTR_AWAY_MODE) is not None
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SET_AWAY_MODE,
             {
@@ -122,7 +122,7 @@ async def _async_reproduce_state(
 
 
 async def async_reproduce_states(
-    hass: HomeAssistant,
+    menuai: menuai,
     states: Iterable[State],
     *,
     context: Context | None = None,
@@ -132,7 +132,7 @@ async def async_reproduce_states(
     await asyncio.gather(
         *(
             _async_reproduce_state(
-                hass, state, context=context, reproduce_options=reproduce_options
+                menuai, state, context=context, reproduce_options=reproduce_options
             )
             for state in states
         )

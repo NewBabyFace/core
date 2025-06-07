@@ -8,18 +8,18 @@ from energyflip import (
     EnergyFlipUnauthenticatedException,
 )
 
-from homeassistant import config_entries
-from homeassistant.components.huisbaasje.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.huisbaasje.const import DOMAIN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
 
-async def test_form(hass: HomeAssistant) -> None:
+async def test_form(menuai: menuai) -> None:
     """Test we get the form."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -37,18 +37,18 @@ async def test_form(hass: HomeAssistant) -> None:
             return_value="test-id",
         ) as mock_get_user_id,
         patch(
-            "homeassistant.components.huisbaasje.async_setup_entry",
+            "menuai.components.huisbaasje.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        form_result = await hass.config_entries.flow.async_configure(
+        form_result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "username": "test-username",
                 "password": "test-password",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert form_result["type"] is FlowResultType.CREATE_ENTRY
     assert form_result["title"] == "test-username"
@@ -63,9 +63,9 @@ async def test_form(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_form_invalid_auth(hass: HomeAssistant) -> None:
+async def test_form_invalid_auth(menuai: menuai) -> None:
     """Test we handle invalid auth."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -73,7 +73,7 @@ async def test_form_invalid_auth(hass: HomeAssistant) -> None:
         "energyflip.EnergyFlip.authenticate",
         side_effect=EnergyFlipException,
     ):
-        form_result = await hass.config_entries.flow.async_configure(
+        form_result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "username": "test-username",
@@ -85,9 +85,9 @@ async def test_form_invalid_auth(hass: HomeAssistant) -> None:
     assert form_result["errors"] == {"base": "invalid_auth"}
 
 
-async def test_form_authenticate_cannot_connect(hass: HomeAssistant) -> None:
+async def test_form_authenticate_cannot_connect(menuai: menuai) -> None:
     """Test we handle cannot connect error in authenticate."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -95,7 +95,7 @@ async def test_form_authenticate_cannot_connect(hass: HomeAssistant) -> None:
         "energyflip.EnergyFlip.authenticate",
         side_effect=EnergyFlipConnectionException,
     ):
-        form_result = await hass.config_entries.flow.async_configure(
+        form_result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "username": "test-username",
@@ -107,9 +107,9 @@ async def test_form_authenticate_cannot_connect(hass: HomeAssistant) -> None:
     assert form_result["errors"] == {"base": "cannot_connect"}
 
 
-async def test_form_authenticate_unknown_error(hass: HomeAssistant) -> None:
+async def test_form_authenticate_unknown_error(menuai: menuai) -> None:
     """Test we handle an unknown error in authenticate."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -117,7 +117,7 @@ async def test_form_authenticate_unknown_error(hass: HomeAssistant) -> None:
         "energyflip.EnergyFlip.authenticate",
         side_effect=Exception,
     ):
-        form_result = await hass.config_entries.flow.async_configure(
+        form_result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "username": "test-username",
@@ -129,9 +129,9 @@ async def test_form_authenticate_unknown_error(hass: HomeAssistant) -> None:
     assert form_result["errors"] == {"base": "unknown"}
 
 
-async def test_form_customer_overview_cannot_connect(hass: HomeAssistant) -> None:
+async def test_form_customer_overview_cannot_connect(menuai: menuai) -> None:
     """Test we handle cannot connect error in customer_overview."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -142,7 +142,7 @@ async def test_form_customer_overview_cannot_connect(hass: HomeAssistant) -> Non
             side_effect=EnergyFlipConnectionException,
         ),
     ):
-        form_result = await hass.config_entries.flow.async_configure(
+        form_result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "username": "test-username",
@@ -154,9 +154,9 @@ async def test_form_customer_overview_cannot_connect(hass: HomeAssistant) -> Non
     assert form_result["errors"] == {"base": "cannot_connect"}
 
 
-async def test_form_customer_overview_authentication_error(hass: HomeAssistant) -> None:
+async def test_form_customer_overview_authentication_error(menuai: menuai) -> None:
     """Test we handle an unknown error in customer_overview."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -167,7 +167,7 @@ async def test_form_customer_overview_authentication_error(hass: HomeAssistant) 
             side_effect=EnergyFlipUnauthenticatedException,
         ),
     ):
-        form_result = await hass.config_entries.flow.async_configure(
+        form_result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "username": "test-username",
@@ -179,9 +179,9 @@ async def test_form_customer_overview_authentication_error(hass: HomeAssistant) 
     assert form_result["errors"] == {"base": "invalid_auth"}
 
 
-async def test_form_customer_overview_unknown_error(hass: HomeAssistant) -> None:
+async def test_form_customer_overview_unknown_error(menuai: menuai) -> None:
     """Test we handle an unknown error in customer_overview."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -192,7 +192,7 @@ async def test_form_customer_overview_unknown_error(hass: HomeAssistant) -> None
             side_effect=Exception,
         ),
     ):
-        form_result = await hass.config_entries.flow.async_configure(
+        form_result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "username": "test-username",
@@ -204,7 +204,7 @@ async def test_form_customer_overview_unknown_error(hass: HomeAssistant) -> None
     assert form_result["errors"] == {"base": "unknown"}
 
 
-async def test_form_entry_exists(hass: HomeAssistant) -> None:
+async def test_form_entry_exists(menuai: menuai) -> None:
     """Test we handle an already existing entry."""
     MockConfigEntry(
         unique_id="test-id",
@@ -215,9 +215,9 @@ async def test_form_entry_exists(hass: HomeAssistant) -> None:
             "password": "test-password",
         },
         title="test-username",
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -229,11 +229,11 @@ async def test_form_entry_exists(hass: HomeAssistant) -> None:
             return_value="test-id",
         ),
         patch(
-            "homeassistant.components.huisbaasje.async_setup_entry",
+            "menuai.components.huisbaasje.async_setup_entry",
             return_value=True,
         ),
     ):
-        form_result = await hass.config_entries.flow.async_configure(
+        form_result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "username": "test-username",

@@ -8,9 +8,9 @@ from unittest.mock import AsyncMock, Mock, patch
 from aioridwell.model import EventState, RidwellPickup, RidwellPickupEvent
 import pytest
 
-from homeassistant.components.ridwell.const import DOMAIN
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
+from menuai.components.ridwell.const import DOMAIN
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -59,7 +59,7 @@ def client_fixture(account: Mock) -> Mock:
 
 @pytest.fixture(name="config_entry")
 def config_entry_fixture(
-    hass: HomeAssistant, config: dict[str, Any]
+    menuai: menuai, config: dict[str, Any]
 ) -> MockConfigEntry:
     """Define a config entry fixture."""
     entry = MockConfigEntry(
@@ -68,7 +68,7 @@ def config_entry_fixture(
         data=config,
         entry_id="11554ec901379b9cc8f5a6c1d11ce978",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     return entry
 
 
@@ -86,11 +86,11 @@ def mock_aioridwell_fixture(client: Mock, config: dict[str, Any]) -> Generator[N
     """Define a fixture to patch aioridwell."""
     with (
         patch(
-            "homeassistant.components.ridwell.config_flow.async_get_client",
+            "menuai.components.ridwell.config_flow.async_get_client",
             return_value=client,
         ),
         patch(
-            "homeassistant.components.ridwell.coordinator.async_get_client",
+            "menuai.components.ridwell.coordinator.async_get_client",
             return_value=client,
         ),
     ):
@@ -99,8 +99,8 @@ def mock_aioridwell_fixture(client: Mock, config: dict[str, Any]) -> Generator[N
 
 @pytest.fixture(name="setup_config_entry")
 async def setup_config_entry_fixture(
-    hass: HomeAssistant, config_entry: MockConfigEntry, mock_aioridwell: None
+    menuai: menuai, config_entry: MockConfigEntry, mock_aioridwell: None
 ) -> None:
     """Define a fixture to set up ridwell."""
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()

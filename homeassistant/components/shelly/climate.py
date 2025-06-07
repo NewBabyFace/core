@@ -10,7 +10,7 @@ from aioshelly.block_device import Block
 from aioshelly.const import BLU_TRV_IDENTIFIER, RPC_GENERATIONS
 from aioshelly.exceptions import DeviceConnectionError, InvalidAuthError
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     DOMAIN as CLIMATE_DOMAIN,
     PRESET_NONE,
     ClimateEntity,
@@ -18,16 +18,16 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
-from homeassistant.core import HomeAssistant, State, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er, issue_registry as ir
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.entity_registry import RegistryEntry
-from homeassistant.helpers.restore_state import ExtraStoredData, RestoreEntity
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.util.unit_conversion import TemperatureConverter
-from homeassistant.util.unit_system import US_CUSTOMARY_SYSTEM
+from menuai.const import ATTR_TEMPERATURE, UnitOfTemperature
+from menuai.core import menuai, State, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er, issue_registry as ir
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.entity_registry import RegistryEntry
+from menuai.helpers.restore_state import ExtraStoredData, RestoreEntity
+from menuai.helpers.update_coordinator import CoordinatorEntity
+from menuai.util.unit_conversion import TemperatureConverter
+from menuai.util.unit_system import US_CUSTOMARY_SYSTEM
 
 from .const import (
     BLU_TRV_TEMPERATURE_SETTINGS,
@@ -53,13 +53,13 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ShellyConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up climate device."""
     if get_device_entry_gen(config_entry) in RPC_GENERATIONS:
-        async_setup_rpc_entry(hass, config_entry, async_add_entities)
+        async_setup_rpc_entry(menuai, config_entry, async_add_entities)
         return
 
     coordinator = config_entry.runtime_data.block
@@ -68,7 +68,7 @@ async def async_setup_entry(
         async_setup_climate_entities(async_add_entities, coordinator)
     else:
         async_restore_climate_entities(
-            hass, config_entry, async_add_entities, coordinator
+            menuai, config_entry, async_add_entities, coordinator
         )
 
 
@@ -99,14 +99,14 @@ def async_setup_climate_entities(
 
 @callback
 def async_restore_climate_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ShellyConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
     coordinator: ShellyBlockCoordinator,
 ) -> None:
     """Restore sleeping climate devices."""
 
-    ent_reg = er.async_get(hass)
+    ent_reg = er.async_get(menuai)
     entries = er.async_entries_for_config_entry(ent_reg, config_entry.entry_id)
 
     for entry in entries:
@@ -121,7 +121,7 @@ def async_restore_climate_entities(
 
 @callback
 def async_setup_rpc_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ShellyConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -143,7 +143,7 @@ def async_setup_rpc_entry(
             # Wall Display relay is used as the thermostat actuator,
             # we need to remove a switch entity
             unique_id = f"{coordinator.mac}-switch:{id_}"
-            async_remove_shelly_entity(hass, "switch", unique_id)
+            async_remove_shelly_entity(menuai, "switch", unique_id)
 
     if climate_ids:
         async_add_entities(RpcClimate(coordinator, id_) for id_ in climate_ids)
@@ -237,7 +237,7 @@ class BlockSleepingClimate(
         # The restored value can be in Fahrenheit so we have to convert it to Celsius
         # because we use this unit internally in integration.
         target_temp = self.last_state_attributes.get("temperature")
-        if self.hass.config.units is US_CUSTOMARY_SYSTEM and target_temp:
+        if self.menuai.config.units is US_CUSTOMARY_SYSTEM and target_temp:
             return TemperatureConverter.convert(
                 cast(float, target_temp),
                 UnitOfTemperature.FAHRENHEIT,
@@ -253,7 +253,7 @@ class BlockSleepingClimate(
         # The restored value can be in Fahrenheit so we have to convert it to Celsius
         # because we use this unit internally in integration.
         current_temp = self.last_state_attributes.get("current_temperature")
-        if self.hass.config.units is US_CUSTOMARY_SYSTEM and current_temp:
+        if self.menuai.config.units is US_CUSTOMARY_SYSTEM and current_temp:
             return TemperatureConverter.convert(
                 cast(float, current_temp),
                 UnitOfTemperature.FAHRENHEIT,
@@ -323,7 +323,7 @@ class BlockSleepingClimate(
             )
         except DeviceConnectionError as err:
             self.coordinator.last_update_success = False
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="device_communication_action_error",
                 translation_placeholders={
@@ -382,7 +382,7 @@ class BlockSleepingClimate(
                 schedule=1, schedule_profile=f"{preset_index}"
             )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
         LOGGER.info("Restoring entity %s", self.name)
 
@@ -398,7 +398,7 @@ class BlockSleepingClimate(
         if last_extra_data is not None:
             self._last_target_temp = last_extra_data.as_dict()["last_target_temp"]
 
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -409,7 +409,7 @@ class BlockSleepingClimate(
 
         if self.coordinator.device.status.get("calibrated") is False:
             ir.async_create_issue(
-                self.hass,
+                self.menuai,
                 DOMAIN,
                 NOT_CALIBRATED_ISSUE_ID.format(unique=self.coordinator.mac),
                 is_fixable=False,
@@ -423,7 +423,7 @@ class BlockSleepingClimate(
             )
         else:
             ir.async_delete_issue(
-                self.hass,
+                self.menuai,
                 DOMAIN,
                 NOT_CALIBRATED_ISSUE_ID.format(unique=self.coordinator.mac),
             )
@@ -449,7 +449,7 @@ class BlockSleepingClimate(
                     ]["schedule_profile_names"],
                 ]
             except InvalidAuthError:
-                self.hass.async_create_task(
+                self.menuai.async_create_task(
                     self.coordinator.async_shutdown_device_and_start_reauth(),
                     eager_start=True,
                 )

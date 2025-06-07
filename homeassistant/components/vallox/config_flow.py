@@ -8,11 +8,11 @@ from typing import Any
 from vallox_websocket_api import Vallox, ValloxApiException
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.util.network import is_ip_address
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_NAME
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.util.network import is_ip_address
 
 from .const import DEFAULT_NAME, DOMAIN
 
@@ -25,7 +25,7 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def validate_host(hass: HomeAssistant, host: str) -> None:
+async def validate_host(menuai: menuai, host: str) -> None:
     """Validate that the user input allows us to connect."""
 
     if not is_ip_address(host):
@@ -57,7 +57,7 @@ class ValloxConfigFlow(ConfigFlow, domain=DOMAIN):
         self._async_abort_entries_match({CONF_HOST: host})
 
         try:
-            await validate_host(self.hass, host)
+            await validate_host(self.menuai, host)
         except InvalidHost:
             errors[CONF_HOST] = "invalid_host"
         except ValloxApiException:
@@ -103,7 +103,7 @@ class ValloxConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         try:
-            await validate_host(self.hass, updated_host)
+            await validate_host(self.menuai, updated_host)
         except InvalidHost:
             errors[CONF_HOST] = "invalid_host"
         except ValloxApiException:
@@ -125,5 +125,5 @@ class ValloxConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class InvalidHost(HomeAssistantError):
+class InvalidHost(menuaiError):
     """Error to indicate an invalid host was input."""

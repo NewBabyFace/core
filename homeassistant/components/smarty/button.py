@@ -9,9 +9,9 @@ from typing import Any
 
 from pysmarty2 import Smarty
 
-from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.button import ButtonEntity, ButtonEntityDescription
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import SmartyConfigEntry, SmartyCoordinator
 from .entity import SmartyEntity
@@ -36,7 +36,7 @@ ENTITIES: tuple[SmartyButtonDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: SmartyConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -68,7 +68,7 @@ class SmartyButton(SmartyEntity, ButtonEntity):
 
     async def async_press(self, **kwargs: Any) -> None:
         """Press the button."""
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             self.entity_description.press_fn, self.coordinator.client
         )
         await self.coordinator.async_refresh()

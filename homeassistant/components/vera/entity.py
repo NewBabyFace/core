@@ -7,15 +7,15 @@ from typing import Any
 
 import pyvera as veraApi
 
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ARMED,
     ATTR_BATTERY_LEVEL,
     ATTR_LAST_TRIP_TIME,
     ATTR_TRIPPED,
 )
-from homeassistant.helpers.entity import Entity
-from homeassistant.util import slugify
-from homeassistant.util.dt import utc_from_timestamp
+from menuai.helpers.entity import Entity
+from menuai.util import slugify
+from menuai.util.dt import utc_from_timestamp
 
 from .common import ControllerData
 from .const import CONF_LEGACY_UNIQUE_ID, VERA_ID_FORMAT
@@ -44,7 +44,7 @@ class VeraEntity[_DeviceTypeT: veraApi.VeraDevice](Entity):
         else:
             self._unique_id = f"vera_{controller_data.config_entry.unique_id}_{self.vera_device.vera_device_id}"
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to updates."""
         self.controller.register(self.vera_device, self._update_callback)
 

@@ -5,20 +5,20 @@ from __future__ import annotations
 import enum
 import logging
 
-from homeassistant.components.homeassistant_hardware.util import (
+from menuai.components.menuai_hardware.util import (
     ApplicationType,
     probe_silabs_firmware_type,
 )
-from homeassistant.components.homeassistant_sky_connect import (
+from menuai.components.menuai_sky_connect import (
     hardware as skyconnect_hardware,
 )
-from homeassistant.components.homeassistant_yellow import (
+from menuai.components.menuai_yellow import (
     RADIO_DEVICE as YELLOW_RADIO_DEVICE,
     hardware as yellow_hardware,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import issue_registry as ir
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import issue_registry as ir
 
 from ..const import DOMAIN
 
@@ -40,24 +40,24 @@ class HardwareType(enum.StrEnum):
 ISSUE_WRONG_SILABS_FIRMWARE_INSTALLED = "wrong_silabs_firmware_installed"
 
 
-def _detect_radio_hardware(hass: HomeAssistant, device: str) -> HardwareType:
+def _detect_radio_hardware(menuai: menuai, device: str) -> HardwareType:
     """Identify the radio hardware with the given serial port."""
     try:
-        yellow_hardware.async_info(hass)
-    except HomeAssistantError:
+        yellow_hardware.async_info(menuai)
+    except menuaiError:
         pass
     else:
         if device == YELLOW_RADIO_DEVICE:
             return HardwareType.YELLOW
 
     try:
-        info = skyconnect_hardware.async_info(hass)
-    except HomeAssistantError:
+        info = skyconnect_hardware.async_info(menuai)
+    except menuaiError:
         pass
     else:
         for hardware_info in info:
             for entry_id in hardware_info.config_entries or []:
-                entry = hass.config_entries.async_get_entry(entry_id)
+                entry = menuai.config_entries.async_get_entry(entry_id)
 
                 if entry is not None and entry.data["device"] == device:
                     return HardwareType.SKYCONNECT
@@ -65,7 +65,7 @@ def _detect_radio_hardware(hass: HomeAssistant, device: str) -> HardwareType:
     return HardwareType.OTHER
 
 
-async def warn_on_wrong_silabs_firmware(hass: HomeAssistant, device: str) -> bool:
+async def warn_on_wrong_silabs_firmware(menuai: menuai, device: str) -> bool:
     """Create a repair issue if the wrong type of SiLabs firmware is detected."""
     # Only consider actual serial ports
     if device.startswith("socket://"):
@@ -82,9 +82,9 @@ async def warn_on_wrong_silabs_firmware(hass: HomeAssistant, device: str) -> boo
         # reconnect, it should work
         raise AlreadyRunningEZSP
 
-    hardware_type = _detect_radio_hardware(hass, device)
+    hardware_type = _detect_radio_hardware(menuai, device)
     ir.async_create_issue(
-        hass,
+        menuai,
         domain=DOMAIN,
         issue_id=ISSUE_WRONG_SILABS_FIRMWARE_INSTALLED,
         is_fixable=False,

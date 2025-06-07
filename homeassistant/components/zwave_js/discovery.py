@@ -1,4 +1,4 @@
-"""Map Z-Wave nodes and values to Home Assistant entities."""
+"""Map Z-Wave nodes and values to MenuAI entities."""
 
 from __future__ import annotations
 
@@ -51,9 +51,9 @@ from zwave_js_server.model.value import (
     Value as ZwaveValue,
 )
 
-from homeassistant.const import EntityCategory, Platform
-from homeassistant.core import callback
-from homeassistant.helpers.device_registry import DeviceEntry
+from menuai.const import EntityCategory, Platform
+from menuai.core import callback
+from menuai.helpers.device_registry import DeviceEntry
 
 from .const import COVER_POSITION_PROPERTY_KEYS, COVER_TILT_PROPERTY_KEYS, LOGGER
 from .discovery_data_template import (
@@ -118,7 +118,7 @@ class ZwaveDiscoveryInfo:
     # bool to specify whether state is assumed and events should be fired on value
     # update
     assumed_state: bool
-    # the home assistant platform for which an entity should be created
+    # the MenuAI platform for which an entity should be created
     platform: Platform
     # helper data to use in platform setup
     platform_data: Any
@@ -178,7 +178,7 @@ class ZWaveDiscoverySchema:
     https://github.com/zwave-js/specs/tree/master
     """
 
-    # specify the hass platform for which this scheme applies (e.g. light, sensor)
+    # specify the menuai platform for which this scheme applies (e.g. light, sensor)
     platform: Platform
     # primary value belonging to this discovery scheme
     primary_value: ZWaveValueDiscoverySchema

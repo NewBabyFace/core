@@ -35,9 +35,9 @@ TEST_BORDER_AGENT_ID_2 = bytes.fromhex("230C6A1AC57F6F4BE262ACF32E5EF52D")
 
 COPROCESSOR_VERSION = "OPENTHREAD/thread-reference-20200818-1740-g33cc75ed3; NRF52840; Jun 2 2022 14:25:49"
 
-ROUTER_DISCOVERY_HASS = {
+ROUTER_DISCOVERY_menuai = {
     "type_": "_meshcop._udp.local.",
-    "name": "HomeAssistant OpenThreadBorderRouter #0BBF._meshcop._udp.local.",
+    "name": "menuai OpenThreadBorderRouter #0BBF._meshcop._udp.local.",
     "addresses": [b"\xc0\xa8\x00s"],
     "port": 49153,
     "weight": 0,
@@ -46,7 +46,7 @@ ROUTER_DISCOVERY_HASS = {
     "properties": {
         b"rv": b"1",
         b"id": b"#\x0cj\x1a\xc5\x7foK\xe2b\xac\xf3.^\xf5,",
-        b"vn": b"HomeAssistant",
+        b"vn": b"menuai",
         b"mn": b"OpenThreadBorderRouter",
         b"nn": b"OpenThread HC",
         b"xp": b"\xe6\x0f\xc7\xc1\x86!,\xe5",

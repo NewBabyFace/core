@@ -14,7 +14,7 @@ from pyoverkiz.enums import (
     UIWidget,
 )
 
-from homeassistant.const import (
+from menuai.const import (
     CONCENTRATION_PARTS_PER_BILLION,
     CONCENTRATION_PARTS_PER_MILLION,
     DEGREE,
@@ -69,7 +69,7 @@ IGNORED_OVERKIZ_DEVICES: list[UIClass | UIWidget] = [
     UIClass.POD,
 ]
 
-# Used to map the Somfy widget and ui_class to the Home Assistant platform
+# Used to map the Somfy widget and ui_class to the MenuAI platform
 OVERKIZ_DEVICE_TO_PLATFORM: dict[UIClass | UIWidget, Platform | None] = {
     UIClass.ADJUSTABLE_SLATS_ROLLER_SHUTTER: Platform.COVER,
     UIClass.AWNING: Platform.COVER,
@@ -121,7 +121,7 @@ OVERKIZ_DEVICE_TO_PLATFORM: dict[UIClass | UIWidget, Platform | None] = {
     UIWidget.VALVE_HEATING_TEMPERATURE_INTERFACE: Platform.CLIMATE,  # widgetName, uiClass is HeatingSystem (not supported)
 }
 
-# Map Overkiz camelCase to Home Assistant snake_case for translation
+# Map Overkiz camelCase to MenuAI snake_case for translation
 OVERKIZ_STATE_TO_TRANSLATION: dict[str, str] = {
     OverkizCommandParam.EXTERNAL_GATEWAY: "external_gateway",
     OverkizCommandParam.LOCAL_USER: "local_user",

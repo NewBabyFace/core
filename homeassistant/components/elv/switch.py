@@ -8,11 +8,11 @@ from typing import Any
 import pypca
 from serial import SerialException
 
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.switch import SwitchEntity
+from menuai.const import EVENT_menuai_STOP
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -20,7 +20,7 @@ DEFAULT_NAME = "PCA 301"
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -43,7 +43,7 @@ def setup_platform(
         _LOGGER.warning("Unable to open serial port: %s", exc)
         return
 
-    hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, pca.close)
+    menuai.bus.listen_once(EVENT_menuai_STOP, pca.close)
 
     pca.start_scan()
 

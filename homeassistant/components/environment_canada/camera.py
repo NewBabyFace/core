@@ -5,14 +5,14 @@ from __future__ import annotations
 from env_canada import ECRadar
 import voluptuous as vol
 
-from homeassistant.components.camera import Camera
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import (
+from menuai.components.camera import Camera
+from menuai.core import menuai
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     async_get_current_platform,
 )
-from homeassistant.helpers.typing import VolDictType
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.helpers.typing import VolDictType
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import ATTR_OBSERVATION_TIME
 from .coordinator import ECConfigEntry, ECDataUpdateCoordinator
@@ -24,7 +24,7 @@ SET_RADAR_TYPE_SCHEMA: VolDictType = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ECConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

@@ -6,9 +6,9 @@ from typing import Any
 
 from pysabnzbd import SabnzbdApi, SabnzbdApiException
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ class SabnzbdUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: SabnzbdConfigEntry,
         sab_api: SabnzbdApi,
     ) -> None:
@@ -30,7 +30,7 @@ class SabnzbdUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.sab_api = sab_api
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name="SABnzbd",

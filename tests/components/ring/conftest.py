@@ -7,10 +7,10 @@ from unittest.mock import AsyncMock, Mock, create_autospec, patch
 import pytest
 import ring_doorbell
 
-from homeassistant.components.ring import DOMAIN
-from homeassistant.components.ring.const import CONF_CONFIG_ENTRY_MINOR_VERSION
-from homeassistant.const import CONF_DEVICE_ID, CONF_USERNAME
-from homeassistant.core import HomeAssistant
+from menuai.components.ring import DOMAIN
+from menuai.components.ring.const import CONF_CONFIG_ENTRY_MINOR_VERSION
+from menuai.const import CONF_DEVICE_ID, CONF_USERNAME
+from menuai.core import menuai
 
 from .device_mocks import get_devices_data, get_mock_devices
 
@@ -24,7 +24,7 @@ MOCK_HARDWARE_ID = "foo-bar"
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.ring.async_setup_entry", return_value=True
+        "menuai.components.ring.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -32,7 +32,7 @@ def mock_setup_entry() -> Generator[AsyncMock]:
 @pytest.fixture
 def mock_ring_init_auth_class():
     """Mock ring_doorbell.Auth in init and return the mock class."""
-    with patch("homeassistant.components.ring.Auth", autospec=True) as mock_ring_auth:
+    with patch("menuai.components.ring.Auth", autospec=True) as mock_ring_auth:
         mock_ring_auth.return_value.async_fetch_token.return_value = {
             "access_token": "mock-token"
         }
@@ -43,7 +43,7 @@ def mock_ring_init_auth_class():
 def mock_ring_auth():
     """Mock ring_doorbell.Auth."""
     with patch(
-        "homeassistant.components.ring.config_flow.Auth", autospec=True
+        "menuai.components.ring.config_flow.Auth", autospec=True
     ) as mock_ring_auth:
         mock_ring_auth.return_value.async_fetch_token.return_value = {
             "access_token": "mock-token"
@@ -108,7 +108,7 @@ def mock_ring_client(mock_ring_auth, mock_ring_devices):
     mock_client.return_value.devices.return_value = mock_ring_devices
     mock_client.return_value.active_alerts.return_value = []
 
-    with patch("homeassistant.components.ring.Ring", new=mock_client):
+    with patch("menuai.components.ring.Ring", new=mock_client):
         yield mock_client.return_value
 
 
@@ -131,15 +131,15 @@ def mock_config_entry() -> MockConfigEntry:
 
 @pytest.fixture
 async def mock_added_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_ring_auth: Mock,
     mock_ring_client: Mock,
 ) -> MockConfigEntry:
     """Mock ConfigEntry that's been added to HA."""
-    mock_config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
     return mock_config_entry
 
 
@@ -148,7 +148,7 @@ def mock_ring_event_listener_class():
     """Fixture to mock the ring event listener."""
 
     with patch(
-        "homeassistant.components.ring.coordinator.RingEventListener", autospec=True
+        "menuai.components.ring.coordinator.RingEventListener", autospec=True
     ) as mock_ring_listener:
         mock_ring_listener.return_value.started = True
         yield mock_ring_listener

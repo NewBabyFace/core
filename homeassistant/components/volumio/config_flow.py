@@ -8,12 +8,12 @@ from typing import Any
 from pyvolumio import CannotConnectError, Volumio
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_ID, CONF_NAME, CONF_PORT
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_ID, CONF_NAME, CONF_PORT
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import DOMAIN
 
@@ -25,9 +25,9 @@ DATA_SCHEMA = vol.Schema(
 )
 
 
-async def validate_input(hass: HomeAssistant, host: str, port: int) -> dict[str, Any]:
+async def validate_input(menuai: menuai, host: str, port: int) -> dict[str, Any]:
     """Validate the user input allows us to connect."""
-    volumio = Volumio(host, port, async_get_clientsession(hass))
+    volumio = Volumio(host, port, async_get_clientsession(menuai))
 
     try:
         return await volumio.get_system_info()
@@ -77,7 +77,7 @@ class VolumioConfigFlow(ConfigFlow, domain=DOMAIN):
             self._host = user_input[CONF_HOST]
             self._port = user_input[CONF_PORT]
             try:
-                info = await validate_input(self.hass, self._host, self._port)
+                info = await validate_input(self.menuai, self._host, self._port)
             except CannotConnect:
                 errors["base"] = "cannot_connect"
             except Exception:
@@ -115,7 +115,7 @@ class VolumioConfigFlow(ConfigFlow, domain=DOMAIN):
         """Handle user-confirmation of discovered node."""
         if user_input is not None:
             try:
-                await validate_input(self.hass, self._host, self._port)
+                await validate_input(self.menuai, self._host, self._port)
                 return self._async_get_entry()
             except CannotConnect:
                 return self.async_abort(reason="cannot_connect")
@@ -125,5 +125,5 @@ class VolumioConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""

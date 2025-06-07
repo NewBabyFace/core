@@ -10,12 +10,12 @@ from aioairzone.exceptions import AirzoneError, InvalidSystem
 from aioairzone.localapi import AirzoneLocalApi, ConnectionOptions
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_ID, CONF_PORT
-from homeassistant.data_entry_flow import AbortFlow
-from homeassistant.helpers import aiohttp_client
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_ID, CONF_PORT
+from menuai.data_entry_flow import AbortFlow
+from menuai.helpers import aiohttp_client
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
 
 from .const import DOMAIN
 
@@ -60,7 +60,7 @@ class AirZoneConfigFlow(ConfigFlow, domain=DOMAIN):
             self._async_abort_entries_match(user_input)
 
             airzone = AirzoneLocalApi(
-                aiohttp_client.async_get_clientsession(self.hass),
+                aiohttp_client.async_get_clientsession(self.menuai),
                 ConnectionOptions(
                     user_input[CONF_HOST],
                     user_input[CONF_PORT],
@@ -117,7 +117,7 @@ class AirZoneConfigFlow(ConfigFlow, domain=DOMAIN):
 
         options = ConnectionOptions(self._discovered_ip)
         airzone = AirzoneLocalApi(
-            aiohttp_client.async_get_clientsession(self.hass), options
+            aiohttp_client.async_get_clientsession(self.menuai), options
         )
         try:
             await airzone.get_version()
@@ -138,7 +138,7 @@ class AirZoneConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             airzone = AirzoneLocalApi(
-                aiohttp_client.async_get_clientsession(self.hass),
+                aiohttp_client.async_get_clientsession(self.menuai),
                 ConnectionOptions(
                     self._discovered_ip,
                     user_input[CONF_PORT],

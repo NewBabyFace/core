@@ -4,22 +4,22 @@ from collections.abc import Callable, Mapping
 import logging
 from typing import TYPE_CHECKING, Any, cast
 
-from homeassistant.components.blueprint import CONF_USE_BLUEPRINT
-from homeassistant.const import (
+from menuai.components.blueprint import CONF_USE_BLUEPRINT
+from menuai.const import (
     CONF_ACTIONS,
     CONF_CONDITIONS,
     CONF_PATH,
     CONF_TRIGGERS,
     CONF_VARIABLES,
-    EVENT_HOMEASSISTANT_START,
+    EVENT_menuai_START,
 )
-from homeassistant.core import Context, CoreState, Event, HomeAssistant, callback
-from homeassistant.helpers import condition, discovery, trigger as trigger_helper
-from homeassistant.helpers.script import Script
-from homeassistant.helpers.script_variables import ScriptVariables
-from homeassistant.helpers.trace import trace_get
-from homeassistant.helpers.typing import ConfigType, TemplateVarsType
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.core import Context, CoreState, Event, menuai, callback
+from menuai.helpers import condition, discovery, trigger as trigger_helper
+from menuai.helpers.script import Script
+from menuai.helpers.script_variables import ScriptVariables
+from menuai.helpers.trace import trace_get
+from menuai.helpers.typing import ConfigType, TemplateVarsType
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN, PLATFORMS
 
@@ -31,10 +31,10 @@ class TriggerUpdateCoordinator(DataUpdateCoordinator):
 
     REMOVE_TRIGGER = object()
 
-    def __init__(self, hass: HomeAssistant, config: ConfigType) -> None:
+    def __init__(self, menuai: menuai, config: ConfigType) -> None:
         """Instantiate trigger data."""
         super().__init__(
-            hass, _LOGGER, config_entry=None, name="Trigger Update Coordinator"
+            menuai, _LOGGER, config_entry=None, name="Trigger Update Coordinator"
         )
         self.config = config
         self._cond_func: Callable[[Mapping[str, Any] | None], bool] | None = None
@@ -67,24 +67,24 @@ class TriggerUpdateCoordinator(DataUpdateCoordinator):
         if self._unsub_trigger:
             self._unsub_trigger()
 
-    async def async_setup(self, hass_config: ConfigType) -> None:
+    async def async_setup(self, menuai_config: ConfigType) -> None:
         """Set up the trigger and create entities."""
-        if self.hass.state is CoreState.running:
+        if self.menuai.state is CoreState.running:
             await self._attach_triggers()
         else:
-            self._unsub_start = self.hass.bus.async_listen_once(
-                EVENT_HOMEASSISTANT_START, self._attach_triggers
+            self._unsub_start = self.menuai.bus.async_listen_once(
+                EVENT_menuai_START, self._attach_triggers
             )
 
         for platform_domain in PLATFORMS:
             if platform_domain in self.config:
-                self.hass.async_create_task(
+                self.menuai.async_create_task(
                     discovery.async_load_platform(
-                        self.hass,
+                        self.menuai,
                         platform_domain,
                         DOMAIN,
                         {"coordinator": self, "entities": self.config[platform_domain]},
-                        hass_config,
+                        menuai_config,
                     ),
                     eager_start=True,
                 )
@@ -93,7 +93,7 @@ class TriggerUpdateCoordinator(DataUpdateCoordinator):
         """Attach the triggers."""
         if CONF_ACTIONS in self.config:
             self._script = Script(
-                self.hass,
+                self.menuai,
                 self.config[CONF_ACTIONS],
                 self.name,
                 DOMAIN,
@@ -101,7 +101,7 @@ class TriggerUpdateCoordinator(DataUpdateCoordinator):
 
         if CONF_CONDITIONS in self.config:
             self._cond_func = await condition.async_conditions_from_config(
-                self.hass, self.config[CONF_CONDITIONS], _LOGGER, "template entity"
+                self.menuai, self.config[CONF_CONDITIONS], _LOGGER, "template entity"
             )
 
         if start_event is not None:
@@ -113,7 +113,7 @@ class TriggerUpdateCoordinator(DataUpdateCoordinator):
             action = self._handle_triggered
 
         self._unsub_trigger = await trigger_helper.async_initialize_triggers(
-            self.hass,
+            self.menuai,
             self.config[CONF_TRIGGERS],
             action,
             DOMAIN,
@@ -127,7 +127,7 @@ class TriggerUpdateCoordinator(DataUpdateCoordinator):
     ) -> None:
         # Render run variables after the trigger, before checking conditions.
         if self._run_variables:
-            run_variables = self._run_variables.async_render(self.hass, run_variables)
+            run_variables = self._run_variables.async_render(self.menuai, run_variables)
 
         if not self._check_condition(run_variables):
             return
@@ -145,7 +145,7 @@ class TriggerUpdateCoordinator(DataUpdateCoordinator):
         self, run_variables: TemplateVarsType, context: Context | None = None
     ) -> None:
         if self._run_variables:
-            run_variables = self._run_variables.async_render(self.hass, run_variables)
+            run_variables = self._run_variables.async_render(self.menuai, run_variables)
 
         if not self._check_condition(run_variables):
             return

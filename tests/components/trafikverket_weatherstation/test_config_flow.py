@@ -11,10 +11,10 @@ from pytrafikverket.exceptions import (
     NoWeatherStationFound,
 )
 
-from homeassistant import config_entries
-from homeassistant.const import CONF_API_KEY
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.const import CONF_API_KEY
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
@@ -22,10 +22,10 @@ DOMAIN = "trafikverket_weatherstation"
 CONF_STATION = "station"
 
 
-async def test_form(hass: HomeAssistant) -> None:
+async def test_form(menuai: menuai) -> None:
     """Test we get the form."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -33,21 +33,21 @@ async def test_form(hass: HomeAssistant) -> None:
 
     with (
         patch(
-            "homeassistant.components.trafikverket_weatherstation.config_flow.TrafikverketWeather.async_get_weather",
+            "menuai.components.trafikverket_weatherstation.config_flow.TrafikverketWeather.async_get_weather",
         ),
         patch(
-            "homeassistant.components.trafikverket_weatherstation.async_setup_entry",
+            "menuai.components.trafikverket_weatherstation.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_API_KEY: "1234567890",
                 CONF_STATION: "Vallby",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "Vallby"
@@ -80,10 +80,10 @@ async def test_form(hass: HomeAssistant) -> None:
     ],
 )
 async def test_flow_fails(
-    hass: HomeAssistant, side_effect: Exception, base_error: str
+    menuai: menuai, side_effect: Exception, base_error: str
 ) -> None:
     """Test config flow errors."""
-    result4 = await hass.config_entries.flow.async_init(
+    result4 = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -91,10 +91,10 @@ async def test_flow_fails(
     assert result4["step_id"] == config_entries.SOURCE_USER
 
     with patch(
-        "homeassistant.components.trafikverket_weatherstation.config_flow.TrafikverketWeather.async_get_weather",
+        "menuai.components.trafikverket_weatherstation.config_flow.TrafikverketWeather.async_get_weather",
         side_effect=side_effect(),
     ):
-        result4 = await hass.config_entries.flow.async_configure(
+        result4 = await menuai.config_entries.flow.async_configure(
             result4["flow_id"],
             user_input={
                 CONF_API_KEY: "1234567890",
@@ -105,7 +105,7 @@ async def test_flow_fails(
     assert result4["errors"] == {"base": base_error}
 
 
-async def test_reauth_flow(hass: HomeAssistant) -> None:
+async def test_reauth_flow(menuai: menuai) -> None:
     """Test a reauthentication flow."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -114,27 +114,27 @@ async def test_reauth_flow(hass: HomeAssistant) -> None:
             CONF_STATION: "Vallby",
         },
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await entry.start_reauth_flow(hass)
+    result = await entry.start_reauth_flow(menuai)
     assert result["step_id"] == "reauth_confirm"
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
     with (
         patch(
-            "homeassistant.components.trafikverket_weatherstation.config_flow.TrafikverketWeather.async_get_weather",
+            "menuai.components.trafikverket_weatherstation.config_flow.TrafikverketWeather.async_get_weather",
         ),
         patch(
-            "homeassistant.components.trafikverket_weatherstation.async_setup_entry",
+            "menuai.components.trafikverket_weatherstation.async_setup_entry",
             return_value=True,
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_API_KEY: "1234567891"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"
@@ -163,7 +163,7 @@ async def test_reauth_flow(hass: HomeAssistant) -> None:
     ],
 )
 async def test_reauth_flow_fails(
-    hass: HomeAssistant, side_effect: Exception, base_error: str
+    menuai: menuai, side_effect: Exception, base_error: str
 ) -> None:
     """Test a reauthentication flow."""
     entry = MockConfigEntry(
@@ -173,28 +173,28 @@ async def test_reauth_flow_fails(
             CONF_STATION: "Vallby",
         },
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await entry.start_reauth_flow(hass)
+    result = await entry.start_reauth_flow(menuai)
     assert result["step_id"] == "reauth_confirm"
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
     with patch(
-        "homeassistant.components.trafikverket_weatherstation.config_flow.TrafikverketWeather.async_get_weather",
+        "menuai.components.trafikverket_weatherstation.config_flow.TrafikverketWeather.async_get_weather",
         side_effect=side_effect(),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_API_KEY: "1234567891"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": base_error}
 
 
-async def test_reconfigure_flow(hass: HomeAssistant) -> None:
+async def test_reconfigure_flow(menuai: menuai) -> None:
     """Test a reconfigure flow."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -203,27 +203,27 @@ async def test_reconfigure_flow(hass: HomeAssistant) -> None:
             CONF_STATION: "Vallby",
         },
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
     assert result["step_id"] == "reconfigure"
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
     with (
         patch(
-            "homeassistant.components.trafikverket_weatherstation.config_flow.TrafikverketWeather.async_get_weather",
+            "menuai.components.trafikverket_weatherstation.config_flow.TrafikverketWeather.async_get_weather",
         ),
         patch(
-            "homeassistant.components.trafikverket_weatherstation.async_setup_entry",
+            "menuai.components.trafikverket_weatherstation.async_setup_entry",
             return_value=True,
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_API_KEY: "1234567891", CONF_STATION: "Vallby_new"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reconfigure_successful"
@@ -252,7 +252,7 @@ async def test_reconfigure_flow(hass: HomeAssistant) -> None:
     ],
 )
 async def test_reconfigure_flow_fails(
-    hass: HomeAssistant, side_effect: Exception, base_error: str
+    menuai: menuai, side_effect: Exception, base_error: str
 ) -> None:
     """Test a reauthentication flow."""
     entry = MockConfigEntry(
@@ -262,40 +262,40 @@ async def test_reconfigure_flow_fails(
             CONF_STATION: "Vallby",
         },
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
     assert result["step_id"] == "reconfigure"
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
     with patch(
-        "homeassistant.components.trafikverket_weatherstation.config_flow.TrafikverketWeather.async_get_weather",
+        "menuai.components.trafikverket_weatherstation.config_flow.TrafikverketWeather.async_get_weather",
         side_effect=side_effect(),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_API_KEY: "1234567891", CONF_STATION: "Vallby_new"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": base_error}
 
     with (
         patch(
-            "homeassistant.components.trafikverket_weatherstation.config_flow.TrafikverketWeather.async_get_weather",
+            "menuai.components.trafikverket_weatherstation.config_flow.TrafikverketWeather.async_get_weather",
         ),
         patch(
-            "homeassistant.components.trafikverket_weatherstation.async_setup_entry",
+            "menuai.components.trafikverket_weatherstation.async_setup_entry",
             return_value=True,
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_API_KEY: "1234567891", CONF_STATION: "Vallby_new"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reconfigure_successful"

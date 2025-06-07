@@ -6,8 +6,8 @@ from aioairzone.const import RAW_HVAC, RAW_VERSION, RAW_WEBSERVER
 from syrupy.assertion import SnapshotAssertion
 from syrupy.filters import props
 
-from homeassistant.components.airzone.const import DOMAIN
-from homeassistant.core import HomeAssistant
+from menuai.components.airzone.const import DOMAIN
+from menuai.core import menuai
 
 from .util import (
     HVAC_MOCK,
@@ -21,21 +21,21 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_config_entry_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test config entry diagnostics."""
-    await async_init_integration(hass)
+    await async_init_integration(menuai)
 
-    config_entry = hass.config_entries.async_entries(DOMAIN)[0]
+    config_entry = menuai.config_entries.async_entries(DOMAIN)[0]
     with patch(
-        "homeassistant.components.airzone.AirzoneLocalApi.raw_data",
+        "menuai.components.airzone.AirzoneLocalApi.raw_data",
         return_value={
             RAW_HVAC: HVAC_MOCK,
             RAW_VERSION: HVAC_VERSION_MOCK,
             RAW_WEBSERVER: HVAC_WEBSERVER_MOCK,
         },
     ):
-        result = await get_diagnostics_for_config_entry(hass, hass_client, config_entry)
+        result = await get_diagnostics_for_config_entry(menuai, menuai_client, config_entry)
         assert result == snapshot(exclude=props("created_at", "modified_at"))

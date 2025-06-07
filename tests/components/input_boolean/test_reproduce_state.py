@@ -1,14 +1,14 @@
 """Test reproduce state for input boolean."""
 
-from homeassistant.core import HomeAssistant, State
-from homeassistant.helpers.state import async_reproduce_state
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai, State
+from menuai.helpers.state import async_reproduce_state
+from menuai.setup import async_setup_component
 
 
-async def test_reproducing_states(hass: HomeAssistant) -> None:
+async def test_reproducing_states(menuai: menuai) -> None:
     """Test reproducing input_boolean states."""
     assert await async_setup_component(
-        hass,
+        menuai,
         "input_boolean",
         {
             "input_boolean": {
@@ -18,7 +18,7 @@ async def test_reproducing_states(hass: HomeAssistant) -> None:
         },
     )
     await async_reproduce_state(
-        hass,
+        menuai,
         [
             State("input_boolean.initial_on", "off"),
             State("input_boolean.initial_off", "on"),
@@ -26,11 +26,11 @@ async def test_reproducing_states(hass: HomeAssistant) -> None:
             State("input_boolean.non_existing", "on"),
         ],
     )
-    assert hass.states.get("input_boolean.initial_off").state == "on"
-    assert hass.states.get("input_boolean.initial_on").state == "off"
+    assert menuai.states.get("input_boolean.initial_off").state == "on"
+    assert menuai.states.get("input_boolean.initial_on").state == "off"
 
     await async_reproduce_state(
-        hass,
+        menuai,
         [
             # Test invalid state
             State("input_boolean.initial_on", "invalid_state"),
@@ -39,5 +39,5 @@ async def test_reproducing_states(hass: HomeAssistant) -> None:
         ],
     )
 
-    assert hass.states.get("input_boolean.initial_on").state == "off"
-    assert hass.states.get("input_boolean.initial_off").state == "on"
+    assert menuai.states.get("input_boolean.initial_on").state == "off"
+    assert menuai.states.get("input_boolean.initial_off").state == "on"

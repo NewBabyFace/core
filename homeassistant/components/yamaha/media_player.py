@@ -10,19 +10,19 @@ import rxv
 from rxv import RXV
 import voluptuous as vol
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     PLATFORM_SCHEMA as MEDIA_PLAYER_PLATFORM_SCHEMA,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
     MediaType,
 )
-from homeassistant.const import CONF_HOST, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import PlatformNotReady
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_HOST, CONF_NAME
+from menuai.core import menuai
+from menuai.exceptions import PlatformNotReady
+from menuai.helpers import config_validation as cv, entity_platform
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import (
     CURSOR_TYPE_DOWN,
@@ -137,7 +137,7 @@ def _discovery(config_info: YamahaConfigInfo) -> list[RXV]:
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -146,14 +146,14 @@ async def async_setup_platform(
     # Keep track of configured receivers so that we don't end up
     # discovering a receiver dynamically that we have static config
     # for. Map each device from its zone_id .
-    known_zones = hass.data.setdefault(DOMAIN, {KNOWN_ZONES: set()})[KNOWN_ZONES]
+    known_zones = menuai.data.setdefault(DOMAIN, {KNOWN_ZONES: set()})[KNOWN_ZONES]
     _LOGGER.debug("Known receiver zones: %s", known_zones)
 
     # Get the Infos for configuration from config (YAML) or Discovery
     config_info = YamahaConfigInfo(config=config, discovery_info=discovery_info)
     # Async check if the Receivers are there in the network
     try:
-        zone_ctrls = await hass.async_add_executor_job(_discovery, config_info)
+        zone_ctrls = await menuai.async_add_executor_job(_discovery, config_info)
     except requests.exceptions.ConnectionError as ex:
         raise PlatformNotReady(f"Issue while connecting to {config_info.name}") from ex
 

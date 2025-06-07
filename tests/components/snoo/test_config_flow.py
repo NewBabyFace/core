@@ -5,27 +5,27 @@ from unittest.mock import AsyncMock
 import pytest
 from python_snoo.exceptions import InvalidSnooAuth, SnooAuthException
 
-from homeassistant import config_entries
-from homeassistant.components.snoo.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.snoo.const import DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from . import create_entry
 
 
 async def test_config_flow_success(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock, bypass_api: AsyncMock
+    menuai: menuai, mock_setup_entry: AsyncMock, bypass_api: AsyncMock
 ) -> None:
     """Test we create the entry successfully."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_USERNAME: "test-username",
@@ -52,19 +52,19 @@ async def test_config_flow_success(
     ],
 )
 async def test_form_auth_issues(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     bypass_api: AsyncMock,
     exception,
     error_msg,
 ) -> None:
     """Test we handle invalid auth."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     # Set Authorize to fail.
     bypass_api.authorize.side_effect = exception
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_USERNAME: "test-username",
@@ -75,7 +75,7 @@ async def test_form_auth_issues(
     assert result["type"] == FlowResultType.FORM
     assert result["errors"] == {"base": error_msg}
     bypass_api.authorize.side_effect = None
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_USERNAME: "test-username",
@@ -93,17 +93,17 @@ async def test_form_auth_issues(
 
 
 async def test_account_already_configured(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock, bypass_api: AsyncMock
+    menuai: menuai, mock_setup_entry: AsyncMock, bypass_api: AsyncMock
 ) -> None:
     """Ensure we abort if the config flow already exists."""
-    create_entry(hass)
-    result = await hass.config_entries.flow.async_init(
+    create_entry(menuai)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_USERNAME: "test-username",

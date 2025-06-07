@@ -10,9 +10,9 @@ from imgw_pib import ImgwPib
 from imgw_pib.exceptions import ApiError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.selector import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.selector import (
     SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
@@ -35,7 +35,7 @@ class ImgwPibFlowHandler(ConfigFlow, domain=DOMAIN):
         """Handle the initial step."""
         errors: dict[str, str] = {}
 
-        client_session = async_get_clientsession(self.hass)
+        client_session = async_get_clientsession(self.menuai)
 
         if user_input is not None:
             station_id = user_input[CONF_STATION_ID]

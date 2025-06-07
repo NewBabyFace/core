@@ -4,31 +4,31 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.utility_meter.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai import config_entries
+from menuai.components.utility_meter.const import DOMAIN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from tests.common import MockConfigEntry, get_schema_suggested_value
 
 
 @pytest.mark.parametrize("platform", ["sensor"])
-async def test_config_flow(hass: HomeAssistant, platform) -> None:
+async def test_config_flow(menuai: menuai, platform) -> None:
     """Test the config flow."""
     input_sensor_entity_id = "sensor.input"
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] is None
 
     with patch(
-        "homeassistant.components.utility_meter.async_setup_entry",
+        "menuai.components.utility_meter.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "cycle": "monthly",
@@ -38,7 +38,7 @@ async def test_config_flow(hass: HomeAssistant, platform) -> None:
                 "tariffs": [],
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "Electricity meter"
@@ -56,7 +56,7 @@ async def test_config_flow(hass: HomeAssistant, platform) -> None:
     }
     assert len(mock_setup_entry.mock_calls) == 1
 
-    config_entry = hass.config_entries.async_entries(DOMAIN)[0]
+    config_entry = menuai.config_entries.async_entries(DOMAIN)[0]
     assert config_entry.data == {}
     assert config_entry.options == {
         "cycle": "monthly",
@@ -72,17 +72,17 @@ async def test_config_flow(hass: HomeAssistant, platform) -> None:
     assert config_entry.title == "Electricity meter"
 
 
-async def test_tariffs(hass: HomeAssistant) -> None:
+async def test_tariffs(menuai: menuai) -> None:
     """Test tariffs."""
     input_sensor_entity_id = "sensor.input"
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] is None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "cycle": "monthly",
@@ -92,7 +92,7 @@ async def test_tariffs(hass: HomeAssistant) -> None:
             "tariffs": ["cat", "dog", "horse", "cow"],
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "Electricity meter"
@@ -109,7 +109,7 @@ async def test_tariffs(hass: HomeAssistant) -> None:
         "tariffs": ["cat", "dog", "horse", "cow"],
     }
 
-    config_entry = hass.config_entries.async_entries(DOMAIN)[0]
+    config_entry = menuai.config_entries.async_entries(DOMAIN)[0]
     assert config_entry.data == {}
     assert config_entry.options == {
         "cycle": "monthly",
@@ -124,13 +124,13 @@ async def test_tariffs(hass: HomeAssistant) -> None:
     }
     assert config_entry.title == "Electricity meter"
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] is None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "cycle": "monthly",
@@ -140,23 +140,23 @@ async def test_tariffs(hass: HomeAssistant) -> None:
             "tariffs": ["cat", "cat", "cat", "cat"],
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"]["base"] == "tariffs_not_unique"
 
 
-async def test_non_periodically_resetting(hass: HomeAssistant) -> None:
+async def test_non_periodically_resetting(menuai: menuai) -> None:
     """Test periodically resetting."""
     input_sensor_entity_id = "sensor.input"
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] is None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "cycle": "monthly",
@@ -167,7 +167,7 @@ async def test_non_periodically_resetting(hass: HomeAssistant) -> None:
             "tariffs": [],
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "Electricity meter"
@@ -184,7 +184,7 @@ async def test_non_periodically_resetting(hass: HomeAssistant) -> None:
         "tariffs": [],
     }
 
-    config_entry = hass.config_entries.async_entries(DOMAIN)[0]
+    config_entry = menuai.config_entries.async_entries(DOMAIN)[0]
     assert config_entry.data == {}
     assert config_entry.options == {
         "cycle": "monthly",
@@ -199,17 +199,17 @@ async def test_non_periodically_resetting(hass: HomeAssistant) -> None:
     }
 
 
-async def test_always_available(hass: HomeAssistant) -> None:
+async def test_always_available(menuai: menuai) -> None:
     """Test sensor always available."""
     input_sensor_entity_id = "sensor.input"
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] is None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "cycle": "monthly",
@@ -221,7 +221,7 @@ async def test_always_available(hass: HomeAssistant) -> None:
             "always_available": True,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "Electricity meter"
@@ -238,7 +238,7 @@ async def test_always_available(hass: HomeAssistant) -> None:
         "tariffs": [],
     }
 
-    config_entry = hass.config_entries.async_entries(DOMAIN)[0]
+    config_entry = menuai.config_entries.async_entries(DOMAIN)[0]
     assert config_entry.data == {}
     assert config_entry.options == {
         "cycle": "monthly",
@@ -253,7 +253,7 @@ async def test_always_available(hass: HomeAssistant) -> None:
     }
 
 
-async def test_options(hass: HomeAssistant) -> None:
+async def test_options(menuai: menuai) -> None:
     """Test reconfiguring."""
     input_sensor1_entity_id = "sensor.input1"
     input_sensor2_entity_id = "sensor.input2"
@@ -274,18 +274,18 @@ async def test_options(hass: HomeAssistant) -> None:
         },
         title="Electricity meter",
     )
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
     schema = result["data_schema"].schema
     assert get_schema_suggested_value(schema, "source") == input_sensor1_entity_id
     assert get_schema_suggested_value(schema, "periodically_resetting") is True
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "source": input_sensor2_entity_id,
@@ -320,18 +320,18 @@ async def test_options(hass: HomeAssistant) -> None:
     assert config_entry.title == "Electricity meter"
 
     # Check config entry is reloaded with new options
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
 async def test_change_device_source(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test remove the device registry configuration entry when the source entity changes."""
     # Configure source entity 1 (with a linked device)
     source_config_entry_1 = MockConfigEntry()
-    source_config_entry_1.add_to_hass(hass)
+    source_config_entry_1.add_to_menuai(menuai)
     source_device_entry_1 = device_registry.async_get_or_create(
         config_entry_id=source_config_entry_1.entry_id,
         identifiers={("sensor", "identifier_test1")},
@@ -347,7 +347,7 @@ async def test_change_device_source(
 
     # Configure source entity 2 (with a linked device)
     source_config_entry_2 = MockConfigEntry()
-    source_config_entry_2.add_to_hass(hass)
+    source_config_entry_2.add_to_menuai(menuai)
     source_device_entry_2 = device_registry.async_get_or_create(
         config_entry_id=source_config_entry_2.entry_id,
         identifiers={("sensor", "identifier_test2")},
@@ -363,7 +363,7 @@ async def test_change_device_source(
 
     # Configure source entity 3 (without a device)
     source_config_entry_3 = MockConfigEntry()
-    source_config_entry_3.add_to_hass(hass)
+    source_config_entry_3.add_to_menuai(menuai)
     source_entity_3 = entity_registry.async_get_or_create(
         "sensor",
         "test",
@@ -371,7 +371,7 @@ async def test_change_device_source(
         config_entry=source_config_entry_3,
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     input_sensor_entity_id_1 = "sensor.test_source1"
     input_sensor_entity_id_2 = "sensor.test_source2"
@@ -399,9 +399,9 @@ async def test_change_device_source(
         },
         title="Energy",
     )
-    utility_meter_config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(utility_meter_config_entry.entry_id)
-    await hass.async_block_till_done()
+    utility_meter_config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(utility_meter_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Confirm that the configuration entry has been added to the source entity 1 (current) device registry
     current_device = device_registry.async_get(
@@ -413,11 +413,11 @@ async def test_change_device_source(
     previous_entity_source = source_entity_1
     current_entity_source = source_entity_2
 
-    result = await hass.config_entries.options.async_init(
+    result = await menuai.config_entries.options.async_init(
         utility_meter_config_entry.entry_id
     )
     assert result["type"] is FlowResultType.FORM
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "periodically_resetting": True,
@@ -425,7 +425,7 @@ async def test_change_device_source(
         },
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Confirm that the configuration entry has been removed from the source entity 1 (previous) device registry
     previous_device = device_registry.async_get(
@@ -443,11 +443,11 @@ async def test_change_device_source(
     previous_entity_source = source_entity_2
     current_entity_source = source_entity_3
 
-    result = await hass.config_entries.options.async_init(
+    result = await menuai.config_entries.options.async_init(
         utility_meter_config_entry.entry_id
     )
     assert result["type"] is FlowResultType.FORM
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "periodically_resetting": True,
@@ -455,7 +455,7 @@ async def test_change_device_source(
         },
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Confirm that the configuration entry has been removed from the source entity 2 (previous) device registry
     previous_device = device_registry.async_get(
@@ -475,11 +475,11 @@ async def test_change_device_source(
     previous_entity_source = source_entity_3
     current_entity_source = source_entity_2
 
-    result = await hass.config_entries.options.async_init(
+    result = await menuai.config_entries.options.async_init(
         utility_meter_config_entry.entry_id
     )
     assert result["type"] is FlowResultType.FORM
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "periodically_resetting": True,
@@ -487,7 +487,7 @@ async def test_change_device_source(
         },
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Confirm that the configuration entry has been added to the source entity 2 (current) device registry
     current_device = device_registry.async_get(

@@ -2,7 +2,7 @@
 
 from elevenlabs.types import LanguageResponse, Model, Voice
 
-from homeassistant.components.elevenlabs.const import DEFAULT_MODEL
+from menuai.components.elevenlabs.const import DEFAULT_MODEL
 
 MOCK_VOICES = [
     Voice(

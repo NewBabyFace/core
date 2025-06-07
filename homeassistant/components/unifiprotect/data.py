@@ -23,14 +23,14 @@ from uiprotect.exceptions import ClientError, NotAuthorized
 from uiprotect.utils import log_event
 from uiprotect.websocket import WebsocketState
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.dispatcher import (
+from menuai.config_entries import ConfigEntry
+from menuai.core import CALLBACK_TYPE, menuai, callback
+from menuai.helpers import device_registry as dr
+from menuai.helpers.dispatcher import (
     async_dispatcher_connect,
     async_dispatcher_send,
 )
-from homeassistant.helpers.event import async_track_time_interval
+from menuai.helpers.event import async_track_time_interval
 
 from .const import (
     AUTH_RETRIES,
@@ -52,7 +52,7 @@ type UFPConfigEntry = ConfigEntry[ProtectData]
 
 @callback
 def async_last_update_was_successful(
-    hass: HomeAssistant, entry: UFPConfigEntry
+    menuai: menuai, entry: UFPConfigEntry
 ) -> bool:
     """Check if the last update was successful for a config entry."""
     return hasattr(entry, "runtime_data") and entry.runtime_data.last_update_success
@@ -69,14 +69,14 @@ class ProtectData:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         protect: ProtectApiClient,
         update_interval: timedelta,
         entry: UFPConfigEntry,
     ) -> None:
         """Initialize an subscriber."""
         self._entry = entry
-        self._hass = hass
+        self._menuai = menuai
         self._update_interval = update_interval
         self._subscriptions: defaultdict[
             str, set[Callable[[ProtectDeviceType], None]]
@@ -106,7 +106,7 @@ class ProtectData:
     ) -> None:
         """Add an callback for on device adopt."""
         self._entry.async_on_unload(
-            async_dispatcher_connect(self._hass, self.adopt_signal, add_callback)
+            async_dispatcher_connect(self._menuai, self.adopt_signal, add_callback)
         )
 
     def get_by_types(
@@ -136,7 +136,7 @@ class ProtectData:
             api.subscribe_websocket_state(self._async_websocket_state_changed),
             api.subscribe_websocket(self._async_process_ws_message),
             async_track_time_interval(
-                self._hass, self._async_poll, self._update_interval
+                self._menuai, self._async_poll, self._update_interval
             ),
         ]
 
@@ -187,7 +187,7 @@ class ProtectData:
             else:
                 await self.async_stop()
                 _LOGGER.exception("Reauthentication required")
-                self._entry.async_start_reauth(self._hass)
+                self._entry.async_start_reauth(self._menuai)
             self._async_update_change(False, exception=ex)
         except ClientError as ex:
             self._async_update_change(False, exception=ex)
@@ -208,14 +208,14 @@ class ProtectData:
     def _async_add_device(self, device: ProtectAdoptableDeviceModel) -> None:
         if device.is_adopted_by_us:
             _LOGGER.debug("Device adopted: %s", device.id)
-            async_dispatcher_send(self._hass, self.adopt_signal, device)
+            async_dispatcher_send(self._menuai, self.adopt_signal, device)
         else:
             _LOGGER.debug("New device detected: %s", device.id)
-            async_dispatcher_send(self._hass, self.add_signal, device)
+            async_dispatcher_send(self._menuai, self.add_signal, device)
 
     @callback
     def _async_remove_device(self, device: ProtectAdoptableDeviceModel) -> None:
-        registry = dr.async_get(self._hass)
+        registry = dr.async_get(self._menuai)
         device_entry = registry.async_get_device(
             connections={(dr.CONNECTION_NETWORK_MAC, device.mac)}
         )
@@ -236,7 +236,7 @@ class ProtectData:
             and "channels" in changed_data
         ):
             self._pending_camera_ids.remove(device.id)
-            async_dispatcher_send(self._hass, self.channels_signal, device)
+            async_dispatcher_send(self._menuai, self.channels_signal, device)
 
         # trigger update for all Cameras with LCD screens when NVR Doorbell settings updates
         if "doorbell_settings" in changed_data:
@@ -280,7 +280,7 @@ class ProtectData:
         if model_type is ModelType.LIVEVIEW and len(self.api.bootstrap.viewers) > 0:
             # alert user viewport needs restart so voice clients can get new options
             _LOGGER.warning(
-                "Liveviews updated. Restart Home Assistant to update Viewport select"
+                "Liveviews updated. Restart MenuAI to update Viewport select"
                 " options"
             )
             return
@@ -305,7 +305,7 @@ class ProtectData:
     def _async_poll(self, now: datetime) -> None:
         """Poll the Protect API."""
         self._entry.async_create_background_task(
-            self._hass,
+            self._menuai,
             self.async_refresh(),
             name=f"{DOMAIN} {self._entry.title} refresh",
             eager_start=True,
@@ -341,14 +341,14 @@ class ProtectData:
 
 @callback
 def async_ufp_instance_for_config_entry_ids(
-    hass: HomeAssistant, config_entry_ids: set[str]
+    menuai: menuai, config_entry_ids: set[str]
 ) -> ProtectApiClient | None:
     """Find the UFP instance for the config entry ids."""
     return next(
         iter(
             entry.runtime_data.api
             for entry_id in config_entry_ids
-            if (entry := hass.config_entries.async_get_entry(entry_id))
+            if (entry := menuai.config_entries.async_get_entry(entry_id))
             and entry.domain == DOMAIN
             and hasattr(entry, "runtime_data")
         ),
@@ -357,13 +357,13 @@ def async_ufp_instance_for_config_entry_ids(
 
 
 @callback
-def async_get_ufp_entries(hass: HomeAssistant) -> list[UFPConfigEntry]:
+def async_get_ufp_entries(menuai: menuai) -> list[UFPConfigEntry]:
     """Get all the UFP entries."""
     return cast(
         list[UFPConfigEntry],
         [
             entry
-            for entry in hass.config_entries.async_entries(
+            for entry in menuai.config_entries.async_entries(
                 DOMAIN, include_ignore=True, include_disabled=True
             )
             if hasattr(entry, "runtime_data")
@@ -372,12 +372,12 @@ def async_get_ufp_entries(hass: HomeAssistant) -> list[UFPConfigEntry]:
 
 
 @callback
-def async_get_data_for_nvr_id(hass: HomeAssistant, nvr_id: str) -> ProtectData | None:
+def async_get_data_for_nvr_id(menuai: menuai, nvr_id: str) -> ProtectData | None:
     """Find the ProtectData instance for the NVR id."""
     return next(
         iter(
             entry.runtime_data
-            for entry in async_get_ufp_entries(hass)
+            for entry in async_get_ufp_entries(menuai)
             if entry.runtime_data.api.bootstrap.nvr.id == nvr_id
         ),
         None,
@@ -386,10 +386,10 @@ def async_get_data_for_nvr_id(hass: HomeAssistant, nvr_id: str) -> ProtectData |
 
 @callback
 def async_get_data_for_entry_id(
-    hass: HomeAssistant, entry_id: str
+    menuai: menuai, entry_id: str
 ) -> ProtectData | None:
     """Find the ProtectData instance for a config entry id."""
-    if (entry := hass.config_entries.async_get_entry(entry_id)) and hasattr(
+    if (entry := menuai.config_entries.async_get_entry(entry_id)) and hasattr(
         entry, "runtime_data"
     ):
         entry = cast(UFPConfigEntry, entry)

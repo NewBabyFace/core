@@ -6,12 +6,12 @@ from pyvizio.const import (
 )
 import voluptuous as vol
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     MediaPlayerDeviceClass,
     MediaPlayerEntityFeature,
 )
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import VolDictType
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import VolDictType
 
 SERVICE_UPDATE_SETTING = "update_setting"
 

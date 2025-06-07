@@ -2,11 +2,11 @@
 
 from typing import Any
 
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import MicroBeesUpdateCoordinator
@@ -17,12 +17,12 @@ SWITCH_PRODUCT_IDS = {25, 26, 27, 35, 38, 46, 63, 64, 65, 86}
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Config entry."""
-    coordinator = hass.data[DOMAIN][entry.entry_id].coordinator
+    coordinator = menuai.data[DOMAIN][entry.entry_id].coordinator
 
     async_add_entities(
         MBSwitch(coordinator, bee_id, switch.id)
@@ -59,7 +59,7 @@ class MBSwitch(MicroBeesActuatorEntity, SwitchEntity):
         """Turn on the switch."""
         send_command = await self.coordinator.microbees.sendCommand(self.actuator_id, 1)
         if not send_command:
-            raise HomeAssistantError(f"Failed to turn on {self.name}")
+            raise menuaiError(f"Failed to turn on {self.name}")
 
         self.actuator.value = True
         self.async_write_ha_state()
@@ -68,7 +68,7 @@ class MBSwitch(MicroBeesActuatorEntity, SwitchEntity):
         """Turn off the switch."""
         send_command = await self.coordinator.microbees.sendCommand(self.actuator_id, 0)
         if not send_command:
-            raise HomeAssistantError(f"Failed to turn off {self.name}")
+            raise menuaiError(f"Failed to turn off {self.name}")
 
         self.actuator.value = False
         self.async_write_ha_state()

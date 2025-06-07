@@ -9,13 +9,13 @@ from motionblindsble.const import MotionSpeedLevel
 from motionblindsble.device import MotionDevice
 import pytest
 
-from homeassistant.components.motionblinds_ble.const import ATTR_SPEED
-from homeassistant.components.select import (
+from menuai.components.motionblinds_ble.const import ATTR_SPEED
+from menuai.components.select import (
     DOMAIN as SELECT_DOMAIN,
     SERVICE_SELECT_OPTION,
 )
-from homeassistant.const import ATTR_ENTITY_ID, ATTR_OPTION
-from homeassistant.core import HomeAssistant
+from menuai.const import ATTR_ENTITY_ID, ATTR_OPTION
+from menuai.core import menuai
 
 from . import setup_integration
 
@@ -24,7 +24,7 @@ from tests.common import MockConfigEntry
 
 @pytest.mark.parametrize(("select", "args"), [(ATTR_SPEED, MotionSpeedLevel.HIGH)])
 async def test_select(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_motion_device: Mock,
     name: str,
@@ -33,9 +33,9 @@ async def test_select(
 ) -> None:
     """Test select."""
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SELECT_DOMAIN,
         SERVICE_SELECT_OPTION,
         {
@@ -58,7 +58,7 @@ async def test_select(
     ],
 )
 async def test_select_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_motion_device: Mock,
     name: str,
@@ -68,9 +68,9 @@ async def test_select_update(
 ) -> None:
     """Test select state update."""
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     update_func = register_callback(mock_motion_device).call_args[0][0]
 
     update_func(value)
-    assert hass.states.get(f"select.{name}_{select}").state == str(value.value)
+    assert menuai.states.get(f"select.{name}_{select}").state == str(value.value)

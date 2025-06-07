@@ -12,15 +12,15 @@ from aiohttp import ClientError, ClientResponseError
 from aiohttp.web import Request, Response
 import jwt
 
-from homeassistant.components import webhook
-from homeassistant.components.http import KEY_HASS, HomeAssistantView
-from homeassistant.const import CLOUD_NEVER_EXPOSED_ENTITIES
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.storage import STORAGE_DIR, Store
-from homeassistant.util import dt as dt_util, json as json_util
+from menuai.components import webhook
+from menuai.components.http import KEY_menuai, menuaiView
+from menuai.const import CLOUD_NEVER_EXPOSED_ENTITIES
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.storage import STORAGE_DIR, Store
+from menuai.util import dt as dt_util, json as json_util
 
 from .const import (
     CONF_CLIENT_EMAIL,
@@ -62,7 +62,7 @@ def _get_homegraph_jwt(time, iss, key):
 
 
 async def _get_homegraph_token(
-    hass: HomeAssistant, jwt_signed: str
+    menuai: menuai, jwt_signed: str
 ) -> dict[str, Any] | list[Any] | Any:
     headers = {
         "Authorization": f"Bearer {jwt_signed}",
@@ -73,7 +73,7 @@ async def _get_homegraph_token(
         "assertion": jwt_signed,
     }
 
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
     async with session.post(HOMEGRAPH_TOKEN_URL, headers=headers, data=data) as res:
         res.raise_for_status()
         return await res.json()
@@ -84,9 +84,9 @@ class GoogleConfig(AbstractConfig):
 
     _store: GoogleConfigStore
 
-    def __init__(self, hass, config):
+    def __init__(self, menuai, config):
         """Initialize the config."""
-        super().__init__(hass)
+        super().__init__(menuai)
         self._config = config
         self._access_token = None
         self._access_token_renew = None
@@ -94,7 +94,7 @@ class GoogleConfig(AbstractConfig):
     async def async_initialize(self):
         """Perform async initialization of config."""
         # We need to initialize the store before calling super
-        self._store = GoogleConfigStore(self.hass)
+        self._store = GoogleConfigStore(self.menuai)
         await self._store.async_initialize()
 
         await super().async_initialize()
@@ -122,7 +122,7 @@ class GoogleConfig(AbstractConfig):
         return self._config.get(CONF_REPORT_STATE)
 
     def get_local_user_id(self, webhook_id):
-        """Map webhook ID to a Home Assistant user ID.
+        """Map webhook ID to a MenuAI user ID.
 
         Any action initiated by Google Assistant via the local SDK will be attributed
         to the returned user ID.
@@ -130,7 +130,7 @@ class GoogleConfig(AbstractConfig):
         Return None if no user id is found for the webhook_id.
         """
         # Note: The manually setup Google Assistant currently returns the Google agent
-        # user ID instead of a valid Home Assistant user ID
+        # user ID instead of a valid MenuAI user ID
         found_agent_user_id = None
         for agent_user_id, agent_user_data in self._store.agent_user_ids.items():
             if agent_user_data[STORE_GOOGLE_LOCAL_WEBHOOK_ID] == webhook_id:
@@ -172,7 +172,7 @@ class GoogleConfig(AbstractConfig):
         if state.entity_id in CLOUD_NEVER_EXPOSED_ENTITIES:
             return False
 
-        entity_registry = er.async_get(self.hass)
+        entity_registry = er.async_get(self.menuai)
         registry_entry = entity_registry.async_get(state.entity_id)
         if registry_entry:
             auxiliary_entity = (
@@ -242,7 +242,7 @@ class GoogleConfig(AbstractConfig):
         now = dt_util.utcnow()
         if not self._access_token or now > self._access_token_renew or force:
             token = await _get_homegraph_token(
-                self.hass,
+                self.menuai,
                 _get_homegraph_jwt(
                     now,
                     self._config[CONF_SERVICE_ACCOUNT][CONF_CLIENT_EMAIL],
@@ -254,7 +254,7 @@ class GoogleConfig(AbstractConfig):
 
     async def async_call_homegraph_api(self, url, data):
         """Call a homegraph api with authentication."""
-        session = async_get_clientsession(self.hass)
+        session = async_get_clientsession(self.menuai)
 
         async def _call():
             headers = {
@@ -309,11 +309,11 @@ class GoogleConfigStore:
     _STORAGE_KEY = DOMAIN
     _data: dict[str, Any]
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize a configuration store."""
-        self._hass = hass
+        self._menuai = menuai
         self._store: Store[dict[str, Any]] = Store(
-            hass,
+            menuai,
             self._STORAGE_VERSION,
             self._STORAGE_KEY,
             minor_version=self._STORAGE_VERSION_MINOR,
@@ -366,7 +366,7 @@ class GoogleConfigStore:
             self._store.async_delay_save(lambda: self._data, 1.0)
 
 
-class GoogleAssistantView(HomeAssistantView):
+class GoogleAssistantView(menuaiView):
     """Handle Google Assistant requests."""
 
     url = GOOGLE_ASSISTANT_API_ENDPOINT
@@ -381,25 +381,25 @@ class GoogleAssistantView(HomeAssistantView):
         """Handle Google Assistant requests."""
         message: dict = await request.json()
         result = await async_handle_message(
-            request.app[KEY_HASS],
+            request.app[KEY_menuai],
             self.config,
-            request["hass_user"].id,
-            request["hass_user"].id,
+            request["menuai_user"].id,
+            request["menuai_user"].id,
             message,
             SOURCE_CLOUD,
         )
         return self.json(result)
 
 
-async def async_get_users(hass: HomeAssistant) -> list[str]:
+async def async_get_users(menuai: menuai) -> list[str]:
     """Return stored users.
 
     This is called by the cloud integration to import from the previously shared store.
     """
-    path = hass.config.path(STORAGE_DIR, GoogleConfigStore._STORAGE_KEY)  # noqa: SLF001
+    path = menuai.config.path(STORAGE_DIR, GoogleConfigStore._STORAGE_KEY)  # noqa: SLF001
     try:
-        store_data = await hass.async_add_executor_job(json_util.load_json, path)
-    except HomeAssistantError:
+        store_data = await menuai.async_add_executor_job(json_util.load_json, path)
+    except menuaiError:
         return []
 
     if (

@@ -1,6 +1,6 @@
 """Tests for the tilt_ble integration."""
 
-from homeassistant.helpers.service_info.bluetooth import BluetoothServiceInfo
+from menuai.helpers.service_info.bluetooth import BluetoothServiceInfo
 
 NOT_TILT_SERVICE_INFO = BluetoothServiceInfo(
     name="Not it",

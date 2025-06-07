@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.bluetooth import async_scanner_by_source
-from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.const import CONF_PASSWORD
-from homeassistant.core import HomeAssistant
+from menuai.components.bluetooth import async_scanner_by_source
+from menuai.components.diagnostics import async_redact_data
+from menuai.const import CONF_PASSWORD
+from menuai.core import menuai
 
 from . import CONF_NOISE_PSK
 from .const import CONF_DEVICE_NAME
@@ -25,7 +25,7 @@ CONFIGURED_DEVICE_KEYS = (
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, config_entry: ESPHomeConfigEntry
+    menuai: menuai, config_entry: ESPHomeConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     diag: dict[str, Any] = {}
@@ -46,7 +46,7 @@ async def async_get_config_entry_diagnostics(
         and (
             scanner_mac := device_info.bluetooth_mac_address or device_info.mac_address
         )
-        and (scanner := async_scanner_by_source(hass, scanner_mac.upper()))
+        and (scanner := async_scanner_by_source(menuai, scanner_mac.upper()))
         and (bluetooth_device := entry_data.bluetooth_device)
     ):
         diag["bluetooth"] = {
@@ -58,7 +58,7 @@ async def async_get_config_entry_diagnostics(
 
     diag_dashboard: dict[str, Any] = {"configured": False}
     diag["dashboard"] = diag_dashboard
-    if dashboard := async_get_dashboard(hass):
+    if dashboard := async_get_dashboard(menuai):
         diag_dashboard["configured"] = True
         diag_dashboard["supports_update"] = dashboard.supports_update
         diag_dashboard["last_update_success"] = dashboard.last_update_success

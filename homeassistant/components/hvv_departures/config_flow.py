@@ -9,10 +9,10 @@ from pygti.auth import GTI_DEFAULT_HOST
 from pygti.exceptions import CannotConnect, InvalidAuth
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
-from homeassistant.const import CONF_HOST, CONF_OFFSET, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import callback
-from homeassistant.helpers import aiohttp_client, config_validation as cv
+from menuai.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
+from menuai.const import CONF_HOST, CONF_OFFSET, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import callback
+from menuai.helpers import aiohttp_client, config_validation as cv
 
 from .const import CONF_FILTER, CONF_REAL_TIME, CONF_STATION, DOMAIN
 from .hub import GTIHub, HVVConfigEntry
@@ -57,7 +57,7 @@ class HVVDeparturesConfigFlow(ConfigFlow, domain=DOMAIN):
         errors = {}
 
         if user_input is not None:
-            session = aiohttp_client.async_get_clientsession(self.hass)
+            session = aiohttp_client.async_get_clientsession(self.menuai)
             self.hub = GTIHub(
                 user_input[CONF_HOST],
                 user_input[CONF_USERNAME],

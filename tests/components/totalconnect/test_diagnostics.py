@@ -1,7 +1,7 @@
 """Test TotalConnect diagnostics."""
 
-from homeassistant.components.diagnostics import REDACTED
-from homeassistant.core import HomeAssistant
+from menuai.components.diagnostics import REDACTED
+from menuai.core import menuai
 
 from .common import LOCATION_ID, init_integration
 
@@ -10,12 +10,12 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_entry_diagnostics(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test config entry diagnostics."""
-    entry = await init_integration(hass)
+    entry = await init_integration(menuai)
 
-    result = await get_diagnostics_for_config_entry(hass, hass_client, entry)
+    result = await get_diagnostics_for_config_entry(menuai, menuai_client, entry)
 
     client = result["client"]
     assert client["invalid_credentials"] is False

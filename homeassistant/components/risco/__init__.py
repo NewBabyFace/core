@@ -10,8 +10,8 @@ from typing import Any
 from pyrisco import CannotConnectError, RiscoCloud, RiscoLocal, UnauthorizedError
 from pyrisco.common import Partition, System, Zone
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PIN,
@@ -20,10 +20,10 @@ from homeassistant.const import (
     CONF_USERNAME,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.dispatcher import async_dispatcher_send
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.dispatcher import async_dispatcher_send
 
 from .const import (
     CONF_CONCURRENCY,
@@ -63,15 +63,15 @@ def zone_update_signal(zone_id: int) -> str:
     return f"risco_zone_update_{zone_id}"
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up Risco from a config entry."""
     if is_local(entry):
-        return await _async_setup_local_entry(hass, entry)
+        return await _async_setup_local_entry(menuai, entry)
 
-    return await _async_setup_cloud_entry(hass, entry)
+    return await _async_setup_cloud_entry(menuai, entry)
 
 
-async def _async_setup_local_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def _async_setup_local_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     data = entry.data
     concurrency = entry.options.get(CONF_CONCURRENCY, DEFAULT_CONCURRENCY)
     risco = RiscoLocal(
@@ -88,9 +88,9 @@ async def _async_setup_local_entry(hass: HomeAssistant, entry: ConfigEntry) -> b
 
     async def _error(error: Exception) -> None:
         _LOGGER.error("Error in Risco library", exc_info=error)
-        if isinstance(error, ConnectionResetError) and not hass.is_stopping:
+        if isinstance(error, ConnectionResetError) and not menuai.is_stopping:
             _LOGGER.debug("Disconnected from panel. Reloading integration")
-            hass.async_create_task(hass.config_entries.async_reload(entry.entry_id))
+            menuai.async_create_task(menuai.config_entries.async_reload(entry.entry_id))
 
     entry.async_on_unload(risco.add_error_handler(_error))
 
@@ -105,7 +105,7 @@ async def _async_setup_local_entry(hass: HomeAssistant, entry: ConfigEntry) -> b
 
     async def _zone(zone_id: int, zone: Zone) -> None:
         _LOGGER.debug("Risco zone update for %d", zone_id)
-        async_dispatcher_send(hass, zone_update_signal(zone_id))
+        async_dispatcher_send(menuai, zone_update_signal(zone_id))
 
     entry.async_on_unload(risco.add_zone_handler(_zone))
 
@@ -119,60 +119,60 @@ async def _async_setup_local_entry(hass: HomeAssistant, entry: ConfigEntry) -> b
 
     async def _system(system: System) -> None:
         _LOGGER.debug("Risco system update")
-        async_dispatcher_send(hass, SYSTEM_UPDATE_SIGNAL)
+        async_dispatcher_send(menuai, SYSTEM_UPDATE_SIGNAL)
 
     entry.async_on_unload(risco.add_system_handler(_system))
 
     entry.async_on_unload(entry.add_update_listener(_update_listener))
 
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.entry_id] = local_data
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    menuai.data.setdefault(DOMAIN, {})
+    menuai.data[DOMAIN][entry.entry_id] = local_data
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def _async_setup_cloud_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def _async_setup_cloud_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     data = entry.data
     risco = RiscoCloud(data[CONF_USERNAME], data[CONF_PASSWORD], data[CONF_PIN])
     try:
-        await risco.login(async_get_clientsession(hass))
+        await risco.login(async_get_clientsession(menuai))
     except CannotConnectError as error:
         raise ConfigEntryNotReady from error
     except UnauthorizedError as error:
         raise ConfigEntryAuthFailed from error
 
-    coordinator = RiscoDataUpdateCoordinator(hass, entry, risco)
+    coordinator = RiscoDataUpdateCoordinator(menuai, entry, risco)
     await coordinator.async_config_entry_first_refresh()
-    events_coordinator = RiscoEventsDataUpdateCoordinator(hass, entry, risco)
+    events_coordinator = RiscoEventsDataUpdateCoordinator(menuai, entry, risco)
 
     entry.async_on_unload(entry.add_update_listener(_update_listener))
 
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.entry_id] = {
+    menuai.data.setdefault(DOMAIN, {})
+    menuai.data[DOMAIN][entry.entry_id] = {
         DATA_COORDINATOR: coordinator,
         EVENTS_COORDINATOR: events_coordinator,
     }
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     await events_coordinator.async_refresh()
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
         if is_local(entry):
-            local_data: LocalData = hass.data[DOMAIN][entry.entry_id]
+            local_data: LocalData = menuai.data[DOMAIN][entry.entry_id]
             await local_data.system.disconnect()
 
-        hass.data[DOMAIN].pop(entry.entry_id)
+        menuai.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok
 
 
-async def _update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def _update_listener(menuai: menuai, entry: ConfigEntry) -> None:
     """Handle options update."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)

@@ -7,18 +7,18 @@ from unittest.mock import patch
 from syrupy.assertion import SnapshotAssertion
 from wyoming.asr import Transcript
 
-from homeassistant.components import stt
-from homeassistant.core import HomeAssistant
+from menuai.components import stt
+from menuai.core import menuai
 
 from . import MockAsyncTcpClient
 
 
-async def test_support(hass: HomeAssistant, init_wyoming_stt) -> None:
+async def test_support(menuai: menuai, init_wyoming_stt) -> None:
     """Test supported properties."""
-    state = hass.states.get("stt.test_asr")
+    state = menuai.states.get("stt.test_asr")
     assert state is not None
 
-    entity = stt.async_get_speech_to_text_entity(hass, "stt.test_asr")
+    entity = stt.async_get_speech_to_text_entity(menuai, "stt.test_asr")
     assert entity is not None
 
     assert entity.supported_languages == ["en-US"]
@@ -30,10 +30,10 @@ async def test_support(hass: HomeAssistant, init_wyoming_stt) -> None:
 
 
 async def test_streaming_audio(
-    hass: HomeAssistant, init_wyoming_stt, metadata, snapshot: SnapshotAssertion
+    menuai: menuai, init_wyoming_stt, metadata, snapshot: SnapshotAssertion
 ) -> None:
     """Test streaming audio."""
-    entity = stt.async_get_speech_to_text_entity(hass, "stt.test_asr")
+    entity = stt.async_get_speech_to_text_entity(menuai, "stt.test_asr")
     assert entity is not None
 
     async def audio_stream():
@@ -41,7 +41,7 @@ async def test_streaming_audio(
         yield "chunk2"
 
     with patch(
-        "homeassistant.components.wyoming.stt.AsyncTcpClient",
+        "menuai.components.wyoming.stt.AsyncTcpClient",
         MockAsyncTcpClient([Transcript(text="Hello world").event()]),
     ) as mock_client:
         result = await entity.async_process_audio_stream(metadata, audio_stream())
@@ -52,17 +52,17 @@ async def test_streaming_audio(
 
 
 async def test_streaming_audio_connection_lost(
-    hass: HomeAssistant, init_wyoming_stt, metadata
+    menuai: menuai, init_wyoming_stt, metadata
 ) -> None:
     """Test streaming audio and losing connection."""
-    entity = stt.async_get_speech_to_text_entity(hass, "stt.test_asr")
+    entity = stt.async_get_speech_to_text_entity(menuai, "stt.test_asr")
     assert entity is not None
 
     async def audio_stream():
         yield "chunk1"
 
     with patch(
-        "homeassistant.components.wyoming.stt.AsyncTcpClient",
+        "menuai.components.wyoming.stt.AsyncTcpClient",
         MockAsyncTcpClient([None]),
     ):
         result = await entity.async_process_audio_stream(metadata, audio_stream())
@@ -72,10 +72,10 @@ async def test_streaming_audio_connection_lost(
 
 
 async def test_streaming_audio_oserror(
-    hass: HomeAssistant, init_wyoming_stt, metadata
+    menuai: menuai, init_wyoming_stt, metadata
 ) -> None:
     """Test streaming audio and error raising."""
-    entity = stt.async_get_speech_to_text_entity(hass, "stt.test_asr")
+    entity = stt.async_get_speech_to_text_entity(menuai, "stt.test_asr")
     assert entity is not None
 
     async def audio_stream():
@@ -85,7 +85,7 @@ async def test_streaming_audio_oserror(
 
     with (
         patch(
-            "homeassistant.components.wyoming.stt.AsyncTcpClient",
+            "menuai.components.wyoming.stt.AsyncTcpClient",
             mock_client,
         ),
         patch.object(mock_client, "read_event", side_effect=OSError("Boom!")),

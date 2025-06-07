@@ -7,17 +7,17 @@ from pysmartthings.models import HealthStatus
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.lock import DOMAIN as LOCK_DOMAIN, LockState
-from homeassistant.components.smartthings.const import MAIN
-from homeassistant.const import (
+from menuai.components.lock import DOMAIN as LOCK_DOMAIN, LockState
+from menuai.components.smartthings.const import MAIN
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_LOCK,
     SERVICE_UNLOCK,
     STATE_UNAVAILABLE,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import (
     setup_integration,
@@ -30,16 +30,16 @@ from tests.common import MockConfigEntry
 
 
 async def test_all_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test all entities."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    snapshot_smartthings_entities(hass, entity_registry, snapshot, Platform.LOCK)
+    snapshot_smartthings_entities(menuai, entity_registry, snapshot, Platform.LOCK)
 
 
 @pytest.mark.parametrize("device_fixture", ["yale_push_button_deadbolt_lock"])
@@ -51,16 +51,16 @@ async def test_all_entities(
     ],
 )
 async def test_lock_unlock(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
     action: str,
     command: Command,
 ) -> None:
     """Test lock and unlock command."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LOCK_DOMAIN,
         action,
         {ATTR_ENTITY_ID: "lock.basement_door_lock"},
@@ -76,17 +76,17 @@ async def test_lock_unlock(
 
 @pytest.mark.parametrize("device_fixture", ["yale_push_button_deadbolt_lock"])
 async def test_state_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test state update."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    assert hass.states.get("lock.basement_door_lock").state == LockState.LOCKED
+    assert menuai.states.get("lock.basement_door_lock").state == LockState.LOCKED
 
     await trigger_update(
-        hass,
+        menuai,
         devices,
         "a9f587c5-5d8b-4273-8907-e7f609af5158",
         Capability.LOCK,
@@ -94,39 +94,39 @@ async def test_state_update(
         "open",
     )
 
-    assert hass.states.get("lock.basement_door_lock").state == LockState.UNLOCKED
+    assert menuai.states.get("lock.basement_door_lock").state == LockState.UNLOCKED
 
 
 @pytest.mark.parametrize("device_fixture", ["yale_push_button_deadbolt_lock"])
 async def test_availability(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test availability."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    assert hass.states.get("lock.basement_door_lock").state == LockState.LOCKED
-
-    await trigger_health_update(
-        hass, devices, "a9f587c5-5d8b-4273-8907-e7f609af5158", HealthStatus.OFFLINE
-    )
-
-    assert hass.states.get("lock.basement_door_lock").state == STATE_UNAVAILABLE
+    assert menuai.states.get("lock.basement_door_lock").state == LockState.LOCKED
 
     await trigger_health_update(
-        hass, devices, "a9f587c5-5d8b-4273-8907-e7f609af5158", HealthStatus.ONLINE
+        menuai, devices, "a9f587c5-5d8b-4273-8907-e7f609af5158", HealthStatus.OFFLINE
     )
 
-    assert hass.states.get("lock.basement_door_lock").state == LockState.LOCKED
+    assert menuai.states.get("lock.basement_door_lock").state == STATE_UNAVAILABLE
+
+    await trigger_health_update(
+        menuai, devices, "a9f587c5-5d8b-4273-8907-e7f609af5158", HealthStatus.ONLINE
+    )
+
+    assert menuai.states.get("lock.basement_door_lock").state == LockState.LOCKED
 
 
 @pytest.mark.parametrize("device_fixture", ["yale_push_button_deadbolt_lock"])
 async def test_availability_at_start(
-    hass: HomeAssistant,
+    menuai: menuai,
     unavailable_device: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test unavailable at boot."""
-    await setup_integration(hass, mock_config_entry)
-    assert hass.states.get("lock.basement_door_lock").state == STATE_UNAVAILABLE
+    await setup_integration(menuai, mock_config_entry)
+    assert menuai.states.get("lock.basement_door_lock").state == STATE_UNAVAILABLE

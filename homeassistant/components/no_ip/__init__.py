@@ -9,15 +9,15 @@ import aiohttp
 from aiohttp.hdrs import AUTHORIZATION, USER_AGENT
 import voluptuous as vol
 
-from homeassistant.const import CONF_DOMAIN, CONF_PASSWORD, CONF_TIMEOUT, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import (
+from menuai.const import CONF_DOMAIN, CONF_PASSWORD, CONF_TIMEOUT, CONF_USERNAME
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import (
     SERVER_SOFTWARE,
     async_get_clientsession,
 )
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers.event import async_track_time_interval
+from menuai.helpers.typing import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -57,7 +57,7 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Initialize the NO-IP component."""
     domain = config[DOMAIN].get(CONF_DOMAIN)
     user = config[DOMAIN].get(CONF_USERNAME)
@@ -66,24 +66,24 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     auth_str = base64.b64encode(f"{user}:{password}".encode())
 
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
 
-    result = await _update_no_ip(hass, session, domain, auth_str, timeout)
+    result = await _update_no_ip(menuai, session, domain, auth_str, timeout)
 
     if not result:
         return False
 
     async def update_domain_interval(now: datetime) -> None:
         """Update the NO-IP entry."""
-        await _update_no_ip(hass, session, domain, auth_str, timeout)
+        await _update_no_ip(menuai, session, domain, auth_str, timeout)
 
-    async_track_time_interval(hass, update_domain_interval, INTERVAL)
+    async_track_time_interval(menuai, update_domain_interval, INTERVAL)
 
     return True
 
 
 async def _update_no_ip(
-    hass: HomeAssistant,
+    menuai: menuai,
     session: aiohttp.ClientSession,
     domain: str,
     auth_str: bytes,

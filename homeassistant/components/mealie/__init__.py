@@ -4,17 +4,17 @@ from __future__ import annotations
 
 from aiomealie import MealieAuthenticationError, MealieClient, MealieError
 
-from homeassistant.const import CONF_API_TOKEN, CONF_HOST, CONF_VERIFY_SSL, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import (
+from menuai.const import CONF_API_TOKEN, CONF_HOST, CONF_VERIFY_SSL, Platform
+from menuai.core import menuai
+from menuai.exceptions import (
     ConfigEntryAuthFailed,
     ConfigEntryError,
     ConfigEntryNotReady,
 )
-from homeassistant.helpers import config_validation as cv, device_registry as dr
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.device_registry import DeviceEntryType
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers import config_validation as cv, device_registry as dr
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.device_registry import DeviceEntryType
+from menuai.helpers.typing import ConfigType
 
 from .const import DOMAIN, LOGGER, MIN_REQUIRED_MEALIE_VERSION
 from .coordinator import (
@@ -32,19 +32,19 @@ PLATFORMS: list[Platform] = [Platform.CALENDAR, Platform.SENSOR, Platform.TODO]
 CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Mealie component."""
-    setup_services(hass)
+    setup_services(menuai)
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: MealieConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: MealieConfigEntry) -> bool:
     """Set up Mealie from a config entry."""
     client = MealieClient(
         entry.data[CONF_HOST],
         token=entry.data[CONF_API_TOKEN],
         session=async_get_clientsession(
-            hass, verify_ssl=entry.data.get(CONF_VERIFY_SSL, True)
+            menuai, verify_ssl=entry.data.get(CONF_VERIFY_SSL, True)
         ),
     )
     try:
@@ -78,7 +78,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: MealieConfigEntry) -> bo
         )
 
     assert entry.unique_id
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, entry.unique_id)},
@@ -86,9 +86,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: MealieConfigEntry) -> bo
         sw_version=about.version,
     )
 
-    mealplan_coordinator = MealieMealplanCoordinator(hass, entry, client)
-    shoppinglist_coordinator = MealieShoppingListCoordinator(hass, entry, client)
-    statistics_coordinator = MealieStatisticsCoordinator(hass, entry, client)
+    mealplan_coordinator = MealieMealplanCoordinator(menuai, entry, client)
+    shoppinglist_coordinator = MealieShoppingListCoordinator(menuai, entry, client)
+    statistics_coordinator = MealieStatisticsCoordinator(menuai, entry, client)
 
     await mealplan_coordinator.async_config_entry_first_refresh()
     await shoppinglist_coordinator.async_config_entry_first_refresh()
@@ -98,11 +98,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: MealieConfigEntry) -> bo
         client, mealplan_coordinator, shoppinglist_coordinator, statistics_coordinator
     )
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: MealieConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: MealieConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

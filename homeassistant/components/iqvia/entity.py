@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from homeassistant.core import callback
-from homeassistant.helpers.entity import EntityDescription
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.core import callback
+from menuai.helpers.entity import EntityDescription
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import CONF_ZIP_CODE, TYPE_ALLERGY_FORECAST, TYPE_ALLERGY_OUTLOOK
 from .coordinator import IqviaConfigEntry, IqviaUpdateCoordinator
@@ -38,9 +38,9 @@ class IQVIAEntity(CoordinatorEntity[IqviaUpdateCoordinator]):
         self.update_from_latest_data()
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         if self.entity_description.key == TYPE_ALLERGY_FORECAST:
             self.async_on_remove(

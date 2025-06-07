@@ -1,12 +1,12 @@
-"""Home Assistant Hardware integration helpers."""
+"""MenuAI Hardware integration helpers."""
 
 from collections import defaultdict
 from collections.abc import AsyncIterator, Awaitable, Callable
 import logging
 from typing import Protocol
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback as hass_callback
+from menuai.config_entries import ConfigEntry
+from menuai.core import CALLBACK_TYPE, menuai, callback as menuai_callback
 
 from . import DATA_COMPONENT
 from .util import FirmwareInfo
@@ -15,22 +15,22 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class SyncHardwareFirmwareInfoModule(Protocol):
-    """Protocol type for Home Assistant Hardware firmware info platform modules."""
+    """Protocol type for MenuAI Hardware firmware info platform modules."""
 
     def get_firmware_info(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entry: ConfigEntry,
     ) -> FirmwareInfo | None:
         """Return radio firmware information for the config entry, synchronously."""
 
 
 class AsyncHardwareFirmwareInfoModule(Protocol):
-    """Protocol type for Home Assistant Hardware firmware info platform modules."""
+    """Protocol type for MenuAI Hardware firmware info platform modules."""
 
     async def async_get_firmware_info(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entry: ConfigEntry,
     ) -> FirmwareInfo | None:
         """Return radio firmware information for the config entry, asynchronously."""
@@ -44,9 +44,9 @@ type HardwareFirmwareInfoModule = (
 class HardwareInfoDispatcher:
     """Central dispatcher for hardware/firmware information."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize the dispatcher."""
-        self.hass = hass
+        self.menuai = menuai
         self._providers: dict[str, HardwareFirmwareInfoModule] = {}
         self._notification_callbacks: defaultdict[
             str, set[Callable[[FirmwareInfo], None]]
@@ -74,7 +74,7 @@ class HardwareInfoDispatcher:
         """Register a firmware info notification callback."""
         self._notification_callbacks[device].add(callback)
 
-        @hass_callback
+        @menuai_callback
         def async_remove_callback() -> None:
             self._notification_callbacks[device].discard(callback)
 
@@ -99,15 +99,15 @@ class HardwareInfoDispatcher:
     async def iter_firmware_info(self) -> AsyncIterator[FirmwareInfo]:
         """Iterate over all firmware information for all hardware."""
         for domain, fw_info_module in self._providers.items():
-            for config_entry in self.hass.config_entries.async_entries(domain):
+            for config_entry in self.menuai.config_entries.async_entries(domain):
                 try:
                     if hasattr(fw_info_module, "get_firmware_info"):
                         fw_info = fw_info_module.get_firmware_info(
-                            self.hass, config_entry
+                            self.menuai, config_entry
                         )
                     else:
                         fw_info = await fw_info_module.async_get_firmware_info(
-                            self.hass, config_entry
+                            self.menuai, config_entry
                         )
                 except Exception:
                     _LOGGER.exception(
@@ -119,25 +119,25 @@ class HardwareInfoDispatcher:
                     yield fw_info
 
 
-@hass_callback
+@menuai_callback
 def async_register_firmware_info_provider(
-    hass: HomeAssistant, domain: str, platform: HardwareFirmwareInfoModule
+    menuai: menuai, domain: str, platform: HardwareFirmwareInfoModule
 ) -> None:
     """Register a firmware info provider."""
-    return hass.data[DATA_COMPONENT].register_firmware_info_provider(domain, platform)
+    return menuai.data[DATA_COMPONENT].register_firmware_info_provider(domain, platform)
 
 
-@hass_callback
+@menuai_callback
 def async_register_firmware_info_callback(
-    hass: HomeAssistant, device: str, callback: Callable[[FirmwareInfo], None]
+    menuai: menuai, device: str, callback: Callable[[FirmwareInfo], None]
 ) -> CALLBACK_TYPE:
     """Register a firmware info provider."""
-    return hass.data[DATA_COMPONENT].register_firmware_info_callback(device, callback)
+    return menuai.data[DATA_COMPONENT].register_firmware_info_callback(device, callback)
 
 
-@hass_callback
+@menuai_callback
 def async_notify_firmware_info(
-    hass: HomeAssistant, domain: str, firmware_info: FirmwareInfo
+    menuai: menuai, domain: str, firmware_info: FirmwareInfo
 ) -> Awaitable[None]:
     """Notify the dispatcher of new firmware information."""
-    return hass.data[DATA_COMPONENT].notify_firmware_info(domain, firmware_info)
+    return menuai.data[DATA_COMPONENT].notify_firmware_info(domain, firmware_info)

@@ -9,8 +9,8 @@ from pysmarlaapi.classes import AuthToken
 from pysmarlaapi.federwiege.classes import Property, Service
 import pytest
 
-from homeassistant.components.smarla.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER
+from menuai.components.smarla.const import DOMAIN
+from menuai.config_entries import SOURCE_USER
 
 from .const import MOCK_ACCESS_TOKEN_JSON, MOCK_SERIAL_NUMBER, MOCK_USER_INPUT
 
@@ -31,7 +31,7 @@ def mock_config_entry() -> MockConfigEntry:
 @pytest.fixture
 def mock_setup_entry() -> Generator:
     """Override async_setup_entry."""
-    with patch("homeassistant.components.smarla.async_setup_entry", return_value=True):
+    with patch("menuai.components.smarla.async_setup_entry", return_value=True):
         yield
 
 
@@ -40,10 +40,10 @@ def mock_connection() -> Generator[MagicMock]:
     """Patch Connection object."""
     with (
         patch(
-            "homeassistant.components.smarla.config_flow.Connection", autospec=True
+            "menuai.components.smarla.config_flow.Connection", autospec=True
         ) as mock_connection,
         patch(
-            "homeassistant.components.smarla.Connection",
+            "menuai.components.smarla.Connection",
             mock_connection,
         ),
     ):
@@ -57,7 +57,7 @@ def mock_connection() -> Generator[MagicMock]:
 def mock_federwiege(mock_connection: MagicMock) -> Generator[MagicMock]:
     """Mock the Federwiege instance."""
     with patch(
-        "homeassistant.components.smarla.Federwiege", autospec=True
+        "menuai.components.smarla.Federwiege", autospec=True
     ) as mock_federwiege:
         federwiege = mock_federwiege.return_value
         federwiege.serial_number = MOCK_SERIAL_NUMBER

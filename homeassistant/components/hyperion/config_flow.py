@@ -12,14 +12,14 @@ from urllib.parse import urlparse
 from hyperion import client, const
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_REAUTH,
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_BASE,
     CONF_HOST,
     CONF_ID,
@@ -27,9 +27,9 @@ from homeassistant.const import (
     CONF_SOURCE,
     CONF_TOKEN,
 )
-from homeassistant.core import callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.service_info.ssdp import ATTR_UPNP_SERIAL, SsdpServiceInfo
+from menuai.core import callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.service_info.ssdp import ATTR_UPNP_SERIAL, SsdpServiceInfo
 
 from . import create_hyperion_client
 from .const import (
@@ -100,7 +100,7 @@ _LOGGER.setLevel(logging.DEBUG)
 # of the box. This config flow needs two port numbers from the Hyperion instance, the
 # JSON port (for the API) and the UI port (for the user to approve dynamically created
 # auth tokens). With Zeroconf the port numbers for both are in different Zeroconf
-# entries, and as Home Assistant only passes a single entry into the config flow, we can
+# entries, and as MenuAI only passes a single entry into the config flow, we can
 # only conveniently 'see' one port or the other (which means we need to guess one port
 # number). With SSDP, we get the combined block including both port numbers, so SSDP is
 # the favored discovery implementation.
@@ -271,7 +271,7 @@ class HyperionConfigFlow(ConfigFlow, domain=DOMAIN):
                 auth_resp = await hyperion_client.async_request_token(
                     comment=DEFAULT_ORIGIN, id=auth_id
                 )
-            await self.hass.config_entries.flow.async_configure(
+            await self.menuai.config_entries.flow.async_configure(
                 flow_id=self.flow_id, user_input=auth_resp
             )
 
@@ -345,7 +345,7 @@ class HyperionConfigFlow(ConfigFlow, domain=DOMAIN):
         # wait on the response (which includes the user needing to visit the Hyperion
         # UI to approve the request for a new token).
         assert self._auth_id is not None
-        self._request_token_task = self.hass.async_create_task(
+        self._request_token_task = self.menuai.async_create_task(
             self._request_token_task_func(self._auth_id), eager_start=False
         )
         return self.async_external_step(

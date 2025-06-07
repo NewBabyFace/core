@@ -4,10 +4,10 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from homeassistant.components.kaleidescape.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.components.kaleidescape.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 from . import MOCK_SERIAL
 
@@ -15,7 +15,7 @@ from tests.common import MockConfigEntry
 
 
 async def test_unload_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_device: MagicMock,
     mock_integration: MockConfigEntry,
 ) -> None:
@@ -25,24 +25,24 @@ async def test_unload_config_entry(
     assert mock_device.connect.call_count == 1
     assert mock_device.disconnect.call_count == 0
 
-    await hass.config_entries.async_unload(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert mock_device.disconnect.call_count == 1
-    assert mock_config_entry.entry_id not in hass.data[DOMAIN]
+    assert mock_config_entry.entry_id not in menuai.data[DOMAIN]
 
 
 async def test_config_entry_not_ready(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_device: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test config entry not ready."""
     mock_device.connect.side_effect = ConnectionError
 
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert mock_config_entry.state is ConfigEntryState.SETUP_RETRY
 

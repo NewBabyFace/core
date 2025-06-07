@@ -4,31 +4,31 @@ from unittest.mock import ANY, call, patch
 
 import pytest
 
-from homeassistant.components import logentries
-from homeassistant.const import STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components import logentries
+from menuai.const import STATE_OFF, STATE_ON
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 
-async def test_setup_config_full(hass: HomeAssistant) -> None:
+async def test_setup_config_full(menuai: menuai) -> None:
     """Test setup with all data."""
     config = {"logentries": {"token": "secret"}}
-    assert await async_setup_component(hass, logentries.DOMAIN, config)
+    assert await async_setup_component(menuai, logentries.DOMAIN, config)
 
-    with patch("homeassistant.components.logentries.requests.post") as mock_post:
-        hass.states.async_set("fake.entity", STATE_ON)
-        await hass.async_block_till_done()
+    with patch("menuai.components.logentries.requests.post") as mock_post:
+        menuai.states.async_set("fake.entity", STATE_ON)
+        await menuai.async_block_till_done()
         assert len(mock_post.mock_calls) == 1
 
 
-async def test_setup_config_defaults(hass: HomeAssistant) -> None:
+async def test_setup_config_defaults(menuai: menuai) -> None:
     """Test setup with defaults."""
     config = {"logentries": {"token": "token"}}
-    assert await async_setup_component(hass, logentries.DOMAIN, config)
+    assert await async_setup_component(menuai, logentries.DOMAIN, config)
 
-    with patch("homeassistant.components.logentries.requests.post") as mock_post:
-        hass.states.async_set("fake.entity", STATE_ON)
-        await hass.async_block_till_done()
+    with patch("menuai.components.logentries.requests.post") as mock_post:
+        menuai.states.async_set("fake.entity", STATE_ON)
+        await menuai.async_block_till_done()
         assert len(mock_post.mock_calls) == 1
 
 
@@ -46,13 +46,13 @@ def mock_requests():
         yield mock_requests
 
 
-async def test_event_listener(hass: HomeAssistant, mock_dump, mock_requests) -> None:
+async def test_event_listener(menuai: menuai, mock_dump, mock_requests) -> None:
     """Test event listener."""
     mock_dump.side_effect = lambda x: x
     mock_post = mock_requests.post
     mock_requests.exceptions.RequestException = Exception
     config = {"logentries": {"token": "token"}}
-    assert await async_setup_component(hass, logentries.DOMAIN, config)
+    assert await async_setup_component(menuai, logentries.DOMAIN, config)
 
     valid = {"1": 1, "1.0": 1.0, STATE_ON: 1, STATE_OFF: 0, "foo": "foo"}
     for in_, out in valid.items():
@@ -68,8 +68,8 @@ async def test_event_listener(hass: HomeAssistant, mock_dump, mock_requests) -> 
                 }
             ],
         }
-        hass.states.async_set("fake.entity", in_)
-        await hass.async_block_till_done()
+        menuai.states.async_set("fake.entity", in_)
+        await menuai.async_block_till_done()
         assert mock_post.call_count == 1
         assert mock_post.call_args == call(payload["host"], data=payload, timeout=10)
         mock_post.reset_mock()

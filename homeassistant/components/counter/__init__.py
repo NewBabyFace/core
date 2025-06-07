@@ -7,7 +7,7 @@ from typing import Any, Self
 
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     ATTR_EDITABLE,
     CONF_ICON,
     CONF_ID,
@@ -15,12 +15,12 @@ from homeassistant.const import (
     CONF_MINIMUM,
     CONF_NAME,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import collection, config_validation as cv
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.storage import Store
-from homeassistant.helpers.typing import ConfigType, VolDictType
+from menuai.core import menuai, callback
+from menuai.helpers import collection, config_validation as cv
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.restore_state import RestoreEntity
+from menuai.helpers.storage import Store
+from menuai.helpers.typing import ConfigType, VolDictType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -92,24 +92,24 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the counters."""
-    component = EntityComponent[Counter](_LOGGER, DOMAIN, hass)
+    component = EntityComponent[Counter](_LOGGER, DOMAIN, menuai)
     id_manager = collection.IDManager()
 
     yaml_collection = collection.YamlCollection(
         logging.getLogger(f"{__name__}.yaml_collection"), id_manager
     )
     collection.sync_entity_lifecycle(
-        hass, DOMAIN, DOMAIN, component, yaml_collection, Counter
+        menuai, DOMAIN, DOMAIN, component, yaml_collection, Counter
     )
 
     storage_collection = CounterStorageCollection(
-        Store(hass, STORAGE_VERSION, STORAGE_KEY),
+        Store(menuai, STORAGE_VERSION, STORAGE_KEY),
         id_manager,
     )
     collection.sync_entity_lifecycle(
-        hass, DOMAIN, DOMAIN, component, storage_collection, Counter
+        menuai, DOMAIN, DOMAIN, component, storage_collection, Counter
     )
 
     await yaml_collection.async_load(
@@ -119,7 +119,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     collection.DictStorageCollectionWebsocket(
         storage_collection, DOMAIN, DOMAIN, STORAGE_FIELDS, STORAGE_FIELDS
-    ).async_setup(hass)
+    ).async_setup(menuai)
 
     component.async_register_entity_service(SERVICE_INCREMENT, None, "async_increment")
     component.async_register_entity_service(SERVICE_DECREMENT, None, "async_decrement")
@@ -222,9 +222,9 @@ class Counter(collection.CollectionEntity, RestoreEntity):
 
         return state
 
-    async def async_added_to_hass(self) -> None:
-        """Call when entity about to be added to Home Assistant."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Call when entity about to be added to MenuAI."""
+        await super().async_added_to_menuai()
         # __init__ will set self._state to self._initial, only override
         # if needed.
         if (

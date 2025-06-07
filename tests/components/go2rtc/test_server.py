@@ -8,9 +8,9 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
-from homeassistant.components.go2rtc.server import Server
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.components.go2rtc.server import Server
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 TEST_BINARY = "/bin/go2rtc"
 
@@ -22,16 +22,16 @@ def enable_ui() -> bool:
 
 
 @pytest.fixture
-def server(hass: HomeAssistant, enable_ui: bool) -> Server:
+def server(menuai: menuai, enable_ui: bool) -> Server:
     """Fixture to initialize the Server."""
-    return Server(hass, binary=TEST_BINARY, enable_ui=enable_ui)
+    return Server(menuai, binary=TEST_BINARY, enable_ui=enable_ui)
 
 
 @pytest.fixture
 def mock_tempfile() -> Generator[Mock]:
     """Fixture to mock NamedTemporaryFile."""
     with patch(
-        "homeassistant.components.go2rtc.server.NamedTemporaryFile", autospec=True
+        "menuai.components.go2rtc.server.NamedTemporaryFile", autospec=True
     ) as mock_tempfile:
         file = mock_tempfile.return_value.__enter__.return_value
         file.name = "test.yaml"
@@ -48,7 +48,7 @@ def _assert_server_output_logged(
     for entry in server_stdout:
         assert (
             (
-                "homeassistant.components.go2rtc.server",
+                "menuai.components.go2rtc.server",
                 loglevel,
                 entry,
             )
@@ -105,7 +105,7 @@ async def test_server_run_success(
 
     # Verify that the config file was written
     mock_tempfile.write.assert_called_once_with(
-        f"""# This file is managed by Home Assistant
+        f"""# This file is managed by MenuAI
 # Do not edit it manually
 
 api:
@@ -144,7 +144,7 @@ async def test_server_timeout_on_stop(
     # Simulate timeout
     mock_create_subprocess.return_value.wait.side_effect = sleep
 
-    with patch("homeassistant.components.go2rtc.server._TERMINATE_TIMEOUT", new=0.1):
+    with patch("menuai.components.go2rtc.server._TERMINATE_TIMEOUT", new=0.1):
         await server.stop()
 
     # Ensure terminate and kill were called due to timeout
@@ -170,8 +170,8 @@ async def test_server_failed_to_start(
 ) -> None:
     """Test server, where an exception is raised if the expected log entry was not received until the timeout."""
     with (
-        patch("homeassistant.components.go2rtc.server._SETUP_TIMEOUT", new=0.1),
-        pytest.raises(HomeAssistantError, match="Go2rtc server didn't start correctly"),
+        patch("menuai.components.go2rtc.server._SETUP_TIMEOUT", new=0.1),
+        pytest.raises(menuaiError, match="Go2rtc server didn't start correctly"),
     ):
         await server.start()
 
@@ -180,7 +180,7 @@ async def test_server_failed_to_start(
     assert_server_output_logged(server_stdout, caplog, logging.WARNING)
 
     assert (
-        "homeassistant.components.go2rtc.server",
+        "menuai.components.go2rtc.server",
         logging.ERROR,
         "Go2rtc server didn't start correctly",
     ) in caplog.record_tuples
@@ -225,9 +225,9 @@ async def test_server_failed_to_start(
         )
     ],
 )
-@patch("homeassistant.components.go2rtc.server._RESPAWN_COOLDOWN", 0)
+@patch("menuai.components.go2rtc.server._RESPAWN_COOLDOWN", 0)
 async def test_log_level_mapping(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_create_subprocess: MagicMock,
     server_stdout: list[str],
     rest_client: AsyncMock,
@@ -246,28 +246,28 @@ async def test_log_level_mapping(
     await server.start()
 
     await asyncio.sleep(0.1)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Verify go2rtc binary stdout was logged with default level
     for i, entry in enumerate(server_stdout):
         assert (
-            "homeassistant.components.go2rtc.server",
+            "menuai.components.go2rtc.server",
             expected_loglevel[i],
             entry,
         ) in caplog.record_tuples
 
     evt.set()
     await asyncio.sleep(0.1)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert_server_output_logged(server_stdout, caplog, logging.WARNING)
 
     await server.stop()
 
 
-@patch("homeassistant.components.go2rtc.server._RESPAWN_COOLDOWN", 0)
+@patch("menuai.components.go2rtc.server._RESPAWN_COOLDOWN", 0)
 async def test_server_restart_process_exit(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_create_subprocess: AsyncMock,
     server_stdout: list[str],
     rest_client: AsyncMock,
@@ -287,7 +287,7 @@ async def test_server_restart_process_exit(
     mock_create_subprocess.reset_mock()
 
     await asyncio.sleep(0.1)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     mock_create_subprocess.assert_not_awaited()
 
     # Verify go2rtc binary stdout was not yet logged with warning level
@@ -303,9 +303,9 @@ async def test_server_restart_process_exit(
     await server.stop()
 
 
-@patch("homeassistant.components.go2rtc.server._RESPAWN_COOLDOWN", 0)
+@patch("menuai.components.go2rtc.server._RESPAWN_COOLDOWN", 0)
 async def test_server_restart_process_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_create_subprocess: AsyncMock,
     server_stdout: list[str],
     rest_client: AsyncMock,
@@ -323,7 +323,7 @@ async def test_server_restart_process_error(
     assert_server_output_not_logged(server_stdout, caplog, logging.WARNING)
 
     await asyncio.sleep(0.1)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     mock_create_subprocess.assert_awaited_once()
 
     # Verify go2rtc binary stdout was logged with warning level
@@ -332,9 +332,9 @@ async def test_server_restart_process_error(
     await server.stop()
 
 
-@patch("homeassistant.components.go2rtc.server._RESPAWN_COOLDOWN", 0)
+@patch("menuai.components.go2rtc.server._RESPAWN_COOLDOWN", 0)
 async def test_server_restart_api_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_create_subprocess: AsyncMock,
     server_stdout: list[str],
     rest_client: AsyncMock,
@@ -352,7 +352,7 @@ async def test_server_restart_api_error(
     assert_server_output_not_logged(server_stdout, caplog, logging.WARNING)
 
     await asyncio.sleep(0.1)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     mock_create_subprocess.assert_awaited_once()
 
     # Verify go2rtc binary stdout was logged with warning level
@@ -361,9 +361,9 @@ async def test_server_restart_api_error(
     await server.stop()
 
 
-@patch("homeassistant.components.go2rtc.server._RESPAWN_COOLDOWN", 0)
+@patch("menuai.components.go2rtc.server._RESPAWN_COOLDOWN", 0)
 async def test_server_restart_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_create_subprocess: AsyncMock,
     server_stdout: list[str],
     rest_client: AsyncMock,
@@ -382,7 +382,7 @@ async def test_server_restart_error(
     assert_server_output_not_logged(server_stdout, caplog, logging.WARNING)
 
     await asyncio.sleep(0.1)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     mock_create_subprocess.assert_awaited_once()
 
     # Verify go2rtc binary stdout was logged with warning level

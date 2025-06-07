@@ -4,16 +4,16 @@ from typing import Any
 
 from pypalazzetti.exceptions import CommunicationError, ValidationError
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ClimateEntity,
     ClimateEntityFeature,
     HVACAction,
     HVACMode,
 )
-from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import ATTR_TEMPERATURE, UnitOfTemperature
+from menuai.core import menuai
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN, FAN_AUTO, FAN_HIGH, FAN_MODES
 from .coordinator import PalazzettiConfigEntry, PalazzettiDataUpdateCoordinator
@@ -21,7 +21,7 @@ from .entity import PalazzettiEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: PalazzettiConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -80,7 +80,7 @@ class PalazzettiClimateEntity(PalazzettiEntity, ClimateEntity):
         try:
             await self.coordinator.client.set_on(hvac_mode != HVACMode.OFF)
         except CommunicationError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN, translation_key="cannot_connect"
             ) from err
         except ValidationError as err:
@@ -105,7 +105,7 @@ class PalazzettiClimateEntity(PalazzettiEntity, ClimateEntity):
         try:
             await self.coordinator.client.set_target_temperature(temperature)
         except CommunicationError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN, translation_key="cannot_connect"
             ) from err
         except ValidationError as err:
@@ -134,7 +134,7 @@ class PalazzettiClimateEntity(PalazzettiEntity, ClimateEntity):
             else:
                 await self.coordinator.client.set_fan_speed(FAN_MODES.index(fan_mode))
         except CommunicationError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN, translation_key="cannot_connect"
             ) from err
         except ValidationError as err:

@@ -20,11 +20,11 @@ from improv_ble_client import (
 )
 import voluptuous as vol
 
-from homeassistant.components import bluetooth
-from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_ADDRESS
-from homeassistant.core import callback
-from homeassistant.data_entry_flow import AbortFlow
+from menuai.components import bluetooth
+from menuai.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_ADDRESS
+from menuai.core import callback
+from menuai.data_entry_flow import AbortFlow
 
 from .const import DOMAIN
 
@@ -83,7 +83,7 @@ class ImprovBLEConfigFlow(ConfigFlow, domain=DOMAIN):
             self._discovery_info = self._discovered_devices[address]
             return await self.async_step_start_improv()
 
-        for discovery in bluetooth.async_discovered_service_info(self.hass):
+        for discovery in bluetooth.async_discovered_service_info(self.menuai):
             if discovery.address in self._discovered_devices or not device_filter(
                 discovery.advertisement
             ):
@@ -161,7 +161,7 @@ class ImprovBLEConfigFlow(ConfigFlow, domain=DOMAIN):
         try:
             self._abort_if_provisioned()
         except AbortFlow:
-            self.hass.config_entries.flow.async_abort(self.flow_id)
+            self.menuai.config_entries.flow.async_abort(self.flow_id)
 
     def _unregister_bluetooth_callback(self) -> None:
         """Unregister bluetooth callbacks."""
@@ -181,7 +181,7 @@ class ImprovBLEConfigFlow(ConfigFlow, domain=DOMAIN):
         self._abort_if_provisioned()
 
         self._remove_bluetooth_callback = bluetooth.async_register_callback(
-            self.hass,
+            self.menuai,
             self._async_update_ble,
             bluetooth.BluetoothCallbackMatcher(
                 {bluetooth.match.ADDRESS: discovery_info.address}
@@ -324,7 +324,7 @@ class ImprovBLEConfigFlow(ConfigFlow, domain=DOMAIN):
                         flow["flow_id"] != self.flow_id
                         and self.unique_id == flow_unique_id
                     ):
-                        self.hass.config_entries.flow.async_abort(flow["flow_id"])
+                        self.menuai.config_entries.flow.async_abort(flow["flow_id"])
                 if redirect_url:
                     self._provision_result = self.async_abort(
                         reason="provision_successful_url",
@@ -339,7 +339,7 @@ class ImprovBLEConfigFlow(ConfigFlow, domain=DOMAIN):
             return
 
         if not self._provision_task:
-            self._provision_task = self.hass.async_create_task(
+            self._provision_task = self.menuai.async_create_task(
                 _do_provision(), eager_start=False
             )
 
@@ -371,7 +371,7 @@ class ImprovBLEConfigFlow(ConfigFlow, domain=DOMAIN):
             for entry in current_entries:
                 if entry.unique_id == address:
                     _LOGGER.debug("Removing ignored entry: %s", entry)
-                    await self.hass.config_entries.async_remove(entry.entry_id)
+                    await self.menuai.config_entries.async_remove(entry.entry_id)
                     break
         self._provision_result = None
         return result
@@ -399,7 +399,7 @@ class ImprovBLEConfigFlow(ConfigFlow, domain=DOMAIN):
             except AbortFlow as err:
                 return self.async_abort(reason=err.reason)
 
-            self._authorize_task = self.hass.async_create_task(
+            self._authorize_task = self.menuai.async_create_task(
                 authorized_event.wait(), eager_start=False
             )
 

@@ -7,8 +7,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from geniushubclient import GeniusDevice, GeniusZone
 import pytest
 
-from homeassistant.components.geniushub.const import DOMAIN
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_TOKEN, CONF_USERNAME
+from menuai.components.geniushub.const import DOMAIN
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_TOKEN, CONF_USERNAME
 
 from tests.common import MockConfigEntry, load_json_array_fixture
 
@@ -17,7 +17,7 @@ from tests.common import MockConfigEntry, load_json_array_fixture
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.geniushub.async_setup_entry",
+        "menuai.components.geniushub.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
         yield mock_setup_entry
@@ -27,7 +27,7 @@ def mock_setup_entry() -> Generator[AsyncMock]:
 def mock_geniushub_client() -> Generator[AsyncMock]:
     """Mock a GeniusHub client."""
     with patch(
-        "homeassistant.components.geniushub.config_flow.GeniusService",
+        "menuai.components.geniushub.config_flow.GeniusService",
         autospec=True,
     ) as mock_client:
         client = mock_client.return_value
@@ -57,7 +57,7 @@ def mock_geniushub_cloud(
 ) -> Generator[MagicMock]:
     """Mock a GeniusHub."""
     with patch(
-        "homeassistant.components.geniushub.GeniusHub",
+        "menuai.components.geniushub.GeniusHub",
         autospec=True,
     ) as mock_client:
         client = mock_client.return_value

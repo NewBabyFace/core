@@ -12,19 +12,19 @@ from motioneye_client.client import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_REAUTH,
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_URL, CONF_WEBHOOK_ID
-from homeassistant.core import callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.service_info.hassio import HassioServiceInfo
-from homeassistant.helpers.typing import VolDictType
+from menuai.const import CONF_URL, CONF_WEBHOOK_ID
+from menuai.core import callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.service_info.menuaiio import menuaiioServiceInfo
+from menuai.helpers.typing import VolDictType
 
 from . import create_motioneye_client
 from .const import (
@@ -45,7 +45,7 @@ class MotionEyeConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for motionEye."""
 
     VERSION = 1
-    _hassio_discovery: dict[str, Any] | None = None
+    _menuaiio_discovery: dict[str, Any] | None = None
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -57,7 +57,7 @@ class MotionEyeConfigFlow(ConfigFlow, domain=DOMAIN):
         ) -> ConfigFlowResult:
             """Show the form to the user."""
             url_schema: VolDictType = {}
-            if not self._hassio_discovery:
+            if not self._menuaiio_discovery:
                 # Only ask for URL when not discovered
                 url_schema[
                     vol.Required(CONF_URL, default=user_input.get(CONF_URL, ""))
@@ -94,9 +94,9 @@ class MotionEyeConfigFlow(ConfigFlow, domain=DOMAIN):
                 return _get_form(self._get_reauth_entry().data)
             return _get_form({})
 
-        if self._hassio_discovery:
+        if self._menuaiio_discovery:
             # In case of Supervisor discovery, use pushed URL
-            user_input[CONF_URL] = self._hassio_discovery[CONF_URL]
+            user_input[CONF_URL] = self._menuaiio_discovery[CONF_URL]
 
         try:
             # Cannot use cv.url validation in the schema itself, so
@@ -111,7 +111,7 @@ class MotionEyeConfigFlow(ConfigFlow, domain=DOMAIN):
             admin_password=user_input.get(CONF_ADMIN_PASSWORD),
             surveillance_username=user_input.get(CONF_SURVEILLANCE_USERNAME),
             surveillance_password=user_input.get(CONF_SURVEILLANCE_PASSWORD),
-            session=async_get_clientsession(self.hass),
+            session=async_get_clientsession(self.menuai),
         )
 
         errors = {}
@@ -142,7 +142,7 @@ class MotionEyeConfigFlow(ConfigFlow, domain=DOMAIN):
         self._async_abort_entries_match({CONF_URL: user_input[CONF_URL]})
 
         title = user_input[CONF_URL]
-        if self._hassio_discovery:
+        if self._menuaiio_discovery:
             title = "Add-on"
 
         return self.async_create_entry(
@@ -156,23 +156,23 @@ class MotionEyeConfigFlow(ConfigFlow, domain=DOMAIN):
         """Handle a reauthentication flow."""
         return await self.async_step_user()
 
-    async def async_step_hassio(
-        self, discovery_info: HassioServiceInfo
+    async def async_step_menuaiio(
+        self, discovery_info: menuaiioServiceInfo
     ) -> ConfigFlowResult:
         """Handle Supervisor discovery."""
-        self._hassio_discovery = discovery_info.config
+        self._menuaiio_discovery = discovery_info.config
         await self._async_handle_discovery_without_unique_id()
 
-        return await self.async_step_hassio_confirm()
+        return await self.async_step_menuaiio_confirm()
 
-    async def async_step_hassio_confirm(
+    async def async_step_menuaiio_confirm(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Confirm Supervisor discovery."""
-        if user_input is None and self._hassio_discovery is not None:
+        if user_input is None and self._menuaiio_discovery is not None:
             return self.async_show_form(
-                step_id="hassio_confirm",
-                description_placeholders={"addon": self._hassio_discovery["addon"]},
+                step_id="menuaiio_confirm",
+                description_placeholders={"addon": self._menuaiio_discovery["addon"]},
             )
 
         return await self.async_step_user()

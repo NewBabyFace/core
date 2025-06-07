@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 from webrtc_models import RTCIceCandidate, RTCIceCandidateInit, RTCIceServer
 
-from homeassistant.components.camera import (
+from menuai.components.camera import (
     DATA_ICE_SERVERS,
     Camera,
     CameraWebRTCProvider,
@@ -21,10 +21,10 @@ from homeassistant.components.camera import (
     async_register_webrtc_provider,
     get_camera_from_entity_id,
 )
-from homeassistant.components.websocket_api import TYPE_RESULT
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.core_config import async_process_ha_core_config
-from homeassistant.setup import async_setup_component
+from menuai.components.websocket_api import TYPE_RESULT
+from menuai.core import menuai, callback
+from menuai.core_config import async_process_ha_core_config
+from menuai.setup import async_setup_component
 
 from .common import STREAM_SOURCE, WEBRTC_ANSWER, SomeTestProvider
 
@@ -46,15 +46,15 @@ class Go2RTCProvider(SomeTestProvider):
 
 @pytest.mark.usefixtures("mock_camera", "mock_stream_source")
 async def test_async_register_webrtc_provider(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test registering a WebRTC provider."""
-    camera = get_camera_from_entity_id(hass, "camera.demo_camera")
+    camera = get_camera_from_entity_id(menuai, "camera.demo_camera")
     assert camera.camera_capabilities.frontend_stream_types == {StreamType.HLS}
 
     provider = SomeTestProvider()
-    unregister = async_register_webrtc_provider(hass, provider)
-    await hass.async_block_till_done()
+    unregister = async_register_webrtc_provider(menuai, provider)
+    await menuai.async_block_till_done()
 
     assert camera.camera_capabilities.frontend_stream_types == {
         StreamType.HLS,
@@ -78,36 +78,36 @@ async def test_async_register_webrtc_provider(
     }
 
     unregister()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert camera.camera_capabilities.frontend_stream_types == {StreamType.HLS}
 
 
 @pytest.mark.usefixtures("mock_camera", "mock_stream_source")
 async def test_async_register_webrtc_provider_twice(
-    hass: HomeAssistant,
+    menuai: menuai,
     register_test_provider: SomeTestProvider,
 ) -> None:
     """Test registering a WebRTC provider twice should raise."""
     with pytest.raises(ValueError, match="Provider already registered"):
-        async_register_webrtc_provider(hass, register_test_provider)
+        async_register_webrtc_provider(menuai, register_test_provider)
 
 
 async def test_async_register_webrtc_provider_camera_not_loaded(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test registering a WebRTC provider when camera is not loaded."""
     with pytest.raises(ValueError, match="Unexpected state, camera not loaded"):
-        async_register_webrtc_provider(hass, SomeTestProvider())
+        async_register_webrtc_provider(menuai, SomeTestProvider())
 
 
 @pytest.mark.usefixtures("mock_test_webrtc_cameras")
 async def test_async_register_ice_server(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test registering an ICE server."""
     # Clear any existing ICE servers
-    hass.data[DATA_ICE_SERVERS].clear()
+    menuai.data[DATA_ICE_SERVERS].clear()
 
     called = 0
 
@@ -120,10 +120,10 @@ async def test_async_register_ice_server(
             RTCIceServer(urls="turn:example.com"),
         ]
 
-    unregister = async_register_ice_servers(hass, get_ice_servers)
+    unregister = async_register_ice_servers(menuai, get_ice_servers)
     assert not called
 
-    camera = get_camera_from_entity_id(hass, "camera.async")
+    camera = get_camera_from_entity_id(menuai, "camera.async")
     config = camera.async_get_webrtc_client_configuration()
 
     assert config.configuration.ice_servers == [
@@ -147,7 +147,7 @@ async def test_async_register_ice_server(
             )
         ]
 
-    unregister_2 = async_register_ice_servers(hass, get_ice_servers_2)
+    unregister_2 = async_register_ice_servers(menuai, get_ice_servers_2)
 
     config = camera.async_get_webrtc_client_configuration()
     assert config.configuration.ice_servers == [
@@ -186,12 +186,12 @@ async def test_async_register_ice_server(
 
 @pytest.mark.usefixtures("mock_test_webrtc_cameras")
 async def test_ws_get_client_config(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test get WebRTC client config."""
-    await async_setup_component(hass, "camera", {})
+    await async_setup_component(menuai, "camera", {})
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json_auto_id(
         {"type": "camera/webrtc/get_client_config", "entity_id": "camera.async"}
     )
@@ -223,7 +223,7 @@ async def test_ws_get_client_config(
             )
         ]
 
-    async_register_ice_servers(hass, get_ice_server)
+    async_register_ice_servers(menuai, get_ice_server)
 
     await client.send_json_auto_id(
         {"type": "camera/webrtc/get_client_config", "entity_id": "camera.async"}
@@ -254,17 +254,17 @@ async def test_ws_get_client_config(
 
 @pytest.mark.usefixtures("mock_test_webrtc_cameras")
 async def test_ws_get_client_config_custom_config(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test get WebRTC client config."""
     await async_process_ha_core_config(
-        hass,
+        menuai,
         {"webrtc": {"ice_servers": [{"url": "stun:custom_stun_server:3478"}]}},
     )
 
-    await async_setup_component(hass, "camera", {})
+    await async_setup_component(menuai, "camera", {})
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json_auto_id(
         {"type": "camera/webrtc/get_client_config", "entity_id": "camera.async"}
     )
@@ -280,12 +280,12 @@ async def test_ws_get_client_config_custom_config(
 
 @pytest.mark.usefixtures("mock_camera")
 async def test_ws_get_client_config_no_rtc_camera(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test get WebRTC client config."""
-    await async_setup_component(hass, "camera", {})
+    await async_setup_component(menuai, "camera", {})
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json_auto_id(
         {"type": "camera/webrtc/get_client_config", "entity_id": "camera.demo_camera"}
     )
@@ -309,10 +309,10 @@ async def provide_webrtc_answer(stream_source: str, offer: str, stream_id: str) 
 
 @pytest.mark.usefixtures("mock_test_webrtc_cameras")
 async def test_websocket_webrtc_offer(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test initiating a WebRTC stream with offer and answer."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json_auto_id(
         {
             "type": "camera/webrtc/offer",
@@ -356,14 +356,14 @@ async def test_websocket_webrtc_offer(
 )
 @pytest.mark.usefixtures("mock_stream_source", "mock_camera")
 async def test_websocket_webrtc_offer_webrtc_provider_deprecated(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     register_test_provider: SomeTestProvider,
 ) -> None:
     """Test initiating a WebRTC stream with a webrtc provider with the deprecated class."""
     await _test_websocket_webrtc_offer_webrtc_provider(
-        hass,
-        hass_ws_client,
+        menuai,
+        menuai_ws_client,
         register_test_provider,
         WebRTCCandidate(RTCIceCandidate("candidate")),
         {"type": "candidate", "candidate": {"candidate": "candidate"}},
@@ -390,16 +390,16 @@ async def test_websocket_webrtc_offer_webrtc_provider_deprecated(
 )
 @pytest.mark.usefixtures("mock_stream_source", "mock_camera")
 async def test_websocket_webrtc_offer_webrtc_provider(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     register_test_provider: SomeTestProvider,
     message: WebRTCMessage,
     expected_frontend_message: dict[str, Any],
 ) -> None:
     """Test initiating a WebRTC stream with a webrtc provider."""
     await _test_websocket_webrtc_offer_webrtc_provider(
-        hass,
-        hass_ws_client,
+        menuai,
+        menuai_ws_client,
         register_test_provider,
         message,
         expected_frontend_message,
@@ -407,14 +407,14 @@ async def test_websocket_webrtc_offer_webrtc_provider(
 
 
 async def _test_websocket_webrtc_offer_webrtc_provider(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     register_test_provider: SomeTestProvider,
     message: WebRTCMessage,
     expected_frontend_message: dict[str, Any],
 ) -> None:
     """Test initiating a WebRTC stream with a webrtc provider."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     with (
         patch.object(
             register_test_provider, "async_handle_async_webrtc_offer", autospec=True
@@ -467,11 +467,11 @@ async def _test_websocket_webrtc_offer_webrtc_provider(
 
 
 async def test_websocket_webrtc_offer_invalid_entity(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test WebRTC with a camera entity that does not exist."""
-    await async_setup_component(hass, "camera", {})
-    client = await hass_ws_client(hass)
+    await async_setup_component(menuai, "camera", {})
+    client = await menuai_ws_client(menuai)
     await client.send_json_auto_id(
         {
             "type": "camera/webrtc/offer",
@@ -491,10 +491,10 @@ async def test_websocket_webrtc_offer_invalid_entity(
 
 @pytest.mark.usefixtures("mock_test_webrtc_cameras")
 async def test_websocket_webrtc_offer_missing_offer(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test WebRTC stream with missing required fields."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json_auto_id(
         {
             "type": "camera/webrtc/offer",
@@ -510,10 +510,10 @@ async def test_websocket_webrtc_offer_missing_offer(
 
 @pytest.mark.usefixtures("mock_camera")
 async def test_websocket_webrtc_offer_invalid_stream_type(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test WebRTC initiating for a camera with a different stream_type."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json_auto_id(
         {
             "type": "camera/webrtc/offer",
@@ -535,7 +535,7 @@ async def test_websocket_webrtc_offer_invalid_stream_type(
 async def mock_hls_stream_source_fixture() -> AsyncGenerator[AsyncMock]:
     """Fixture to create an HLS stream source."""
     with patch(
-        "homeassistant.components.camera.Camera.stream_source",
+        "menuai.components.camera.Camera.stream_source",
         return_value=HLS_STREAM_SOURCE,
     ) as mock_hls_stream_source:
         yield mock_hls_stream_source
@@ -561,16 +561,16 @@ async def mock_hls_stream_source_fixture() -> AsyncGenerator[AsyncMock]:
 )
 @pytest.mark.usefixtures("mock_test_webrtc_cameras")
 async def test_ws_webrtc_candidate(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     frontend_candidate: dict[str, Any],
     expected_candidate: RTCIceCandidateInit,
 ) -> None:
     """Test ws webrtc candidate command."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     session_id = "session_id"
     with patch.object(
-        get_camera_from_entity_id(hass, "camera.async"), "async_on_webrtc_candidate"
+        get_camera_from_entity_id(menuai, "camera.async"), "async_on_webrtc_candidate"
     ) as mock_on_webrtc_candidate:
         await client.send_json_auto_id(
             {
@@ -611,14 +611,14 @@ async def test_ws_webrtc_candidate(
 )
 @pytest.mark.usefixtures("mock_test_webrtc_cameras")
 async def test_ws_webrtc_candidate_invalid_candidate_message(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     message: dict,
     expected_error_msg: str,
 ) -> None:
     """Test ws WebRTC candidate command for a camera with a different stream_type."""
-    client = await hass_ws_client(hass)
-    with patch("homeassistant.components.camera.Camera.async_on_webrtc_candidate"):
+    client = await menuai_ws_client(menuai)
+    with patch("menuai.components.camera.Camera.async_on_webrtc_candidate"):
         await client.send_json_auto_id(
             {
                 "type": "camera/webrtc/candidate",
@@ -639,10 +639,10 @@ async def test_ws_webrtc_candidate_invalid_candidate_message(
 
 @pytest.mark.usefixtures("mock_test_webrtc_cameras")
 async def test_ws_webrtc_candidate_not_supported(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test ws webrtc candidate command is raising if not supported."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json_auto_id(
         {
             "type": "camera/webrtc/candidate",
@@ -662,15 +662,15 @@ async def test_ws_webrtc_candidate_not_supported(
 
 @pytest.mark.usefixtures("mock_camera", "mock_stream_source")
 async def test_ws_webrtc_candidate_webrtc_provider(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     register_test_provider: SomeTestProvider,
 ) -> None:
     """Test ws webrtc candidate command with WebRTC provider."""
     with patch.object(
         register_test_provider, "async_on_webrtc_candidate"
     ) as mock_on_webrtc_candidate:
-        client = await hass_ws_client(hass)
+        client = await menuai_ws_client(menuai)
         session_id = "session_id"
         candidate = "candidate"
         await client.send_json_auto_id(
@@ -690,11 +690,11 @@ async def test_ws_webrtc_candidate_webrtc_provider(
 
 
 async def test_ws_webrtc_candidate_invalid_entity(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test ws WebRTC candidate command with a camera entity that does not exist."""
-    await async_setup_component(hass, "camera", {})
-    client = await hass_ws_client(hass)
+    await async_setup_component(menuai, "camera", {})
+    client = await menuai_ws_client(menuai)
     await client.send_json_auto_id(
         {
             "type": "camera/webrtc/candidate",
@@ -715,10 +715,10 @@ async def test_ws_webrtc_candidate_invalid_entity(
 
 @pytest.mark.usefixtures("mock_test_webrtc_cameras")
 async def test_ws_webrtc_canidate_missing_candidate(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test ws WebRTC candidate command with missing required fields."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json_auto_id(
         {
             "type": "camera/webrtc/candidate",
@@ -735,10 +735,10 @@ async def test_ws_webrtc_canidate_missing_candidate(
 
 @pytest.mark.usefixtures("mock_camera")
 async def test_ws_webrtc_candidate_invalid_stream_type(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test ws WebRTC candidate command for a camera with a different stream_type."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json_auto_id(
         {
             "type": "camera/webrtc/candidate",
@@ -757,7 +757,7 @@ async def test_ws_webrtc_candidate_invalid_stream_type(
     }
 
 
-async def test_webrtc_provider_optional_interface(hass: HomeAssistant) -> None:
+async def test_webrtc_provider_optional_interface(menuai: menuai) -> None:
     """Test optional interface for WebRTC provider."""
 
     class OnlyRequiredInterfaceProvider(CameraWebRTCProvider):

@@ -10,13 +10,13 @@ from habiticalib import HabiticaUserResponse, Skill
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
-from homeassistant.components.habitica.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import entity_registry as er
+from menuai.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
+from menuai.components.habitica.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE, Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers import entity_registry as er
 
 from .conftest import ERROR_BAD_REQUEST, ERROR_NOT_AUTHORIZED, ERROR_TOO_MANY_REQUESTS
 
@@ -32,7 +32,7 @@ from tests.common import (
 def button_only() -> Generator[None]:
     """Enable only the button platform."""
     with patch(
-        "homeassistant.components.habitica.PLATFORMS",
+        "menuai.components.habitica.PLATFORMS",
         [Platform.BUTTON],
     ):
         yield
@@ -48,7 +48,7 @@ def button_only() -> Generator[None]:
     ],
 )
 async def test_buttons(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
     snapshot: SnapshotAssertion,
@@ -58,15 +58,15 @@ async def test_buttons(
     """Test button entities."""
 
     habitica.get_user.return_value = HabiticaUserResponse.from_json(
-        await async_load_fixture(hass, f"{fixture}.json", DOMAIN)
+        await async_load_fixture(menuai, f"{fixture}.json", DOMAIN)
     )
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
 
 @pytest.mark.parametrize(
@@ -156,7 +156,7 @@ async def test_buttons(
     ],
 )
 async def test_button_press(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
     entity_id: str,
@@ -167,18 +167,18 @@ async def test_button_press(
     """Test button press method."""
 
     habitica.get_user.return_value = HabiticaUserResponse.from_json(
-        await async_load_fixture(hass, f"{fixture}.json", DOMAIN)
+        await async_load_fixture(menuai, f"{fixture}.json", DOMAIN)
     )
 
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
     mocked = getattr(habitica, call_func)
     mocked.reset_mock()
-    await hass.services.async_call(
+    await menuai.services.async_call(
         BUTTON_DOMAIN,
         SERVICE_PRESS,
         {ATTR_ENTITY_ID: entity_id},
@@ -217,12 +217,12 @@ async def test_button_press(
         (
             ERROR_TOO_MANY_REQUESTS,
             "Rate limit exceeded, try again in 5 seconds",
-            HomeAssistantError,
+            menuaiError,
         ),
         (
             ERROR_BAD_REQUEST,
             "Unable to connect to Habitica: reason",
-            HomeAssistantError,
+            menuaiError,
         ),
         (
             ERROR_NOT_AUTHORIZED,
@@ -232,12 +232,12 @@ async def test_button_press(
         (
             ClientError,
             "Unable to connect to Habitica: ",
-            HomeAssistantError,
+            menuaiError,
         ),
     ],
 )
 async def test_button_press_exceptions(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
     entity_id: str,
@@ -248,9 +248,9 @@ async def test_button_press_exceptions(
 ) -> None:
     """Test button press exceptions."""
 
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
@@ -258,7 +258,7 @@ async def test_button_press_exceptions(
     func.side_effect = raise_exception
 
     with pytest.raises(expected_exception, match=msg):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             BUTTON_DOMAIN,
             SERVICE_PRESS,
             {ATTR_ENTITY_ID: entity_id},
@@ -312,7 +312,7 @@ async def test_button_press_exceptions(
     ],
 )
 async def test_button_unavailable(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
     fixture: str,
@@ -321,22 +321,22 @@ async def test_button_unavailable(
     """Test buttons are unavailable if conditions are not met."""
 
     habitica.get_user.return_value = HabiticaUserResponse.from_json(
-        await async_load_fixture(hass, f"{fixture}.json", DOMAIN)
+        await async_load_fixture(menuai, f"{fixture}.json", DOMAIN)
     )
 
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
     for entity_id in entity_ids:
-        assert (state := hass.states.get(entity_id))
+        assert (state := menuai.states.get(entity_id))
         assert state.state == STATE_UNAVAILABLE
 
 
 async def test_class_change(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     habitica: AsyncMock,
     freezer: FrozenDateTimeFactory,
@@ -355,26 +355,26 @@ async def test_class_change(
     ]
 
     habitica.get_user.return_value = HabiticaUserResponse.from_json(
-        await async_load_fixture(hass, "wizard_fixture.json", DOMAIN)
+        await async_load_fixture(menuai, "wizard_fixture.json", DOMAIN)
     )
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
     for skill in mage_skills:
-        assert hass.states.get(skill)
+        assert menuai.states.get(skill)
 
     habitica.get_user.return_value = HabiticaUserResponse.from_json(
-        await async_load_fixture(hass, "healer_fixture.json", DOMAIN)
+        await async_load_fixture(menuai, "healer_fixture.json", DOMAIN)
     )
     freezer.tick(timedelta(seconds=60))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     for skill in mage_skills:
-        assert not hass.states.get(skill)
+        assert not menuai.states.get(skill)
 
     for skill in healer_skills:
-        assert hass.states.get(skill)
+        assert menuai.states.get(skill)

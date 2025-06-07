@@ -10,21 +10,21 @@ from typing import Any, Final, TypedDict, final
 
 import voluptuous as vol
 
-from homeassistant.components.camera import async_get_image
-from homeassistant.const import (
+from menuai.components.camera import async_get_image
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_NAME,
     CONF_ENTITY_ID,
     CONF_NAME,
     CONF_SOURCE,
 )
-from homeassistant.core import HomeAssistant, ServiceCall, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.config_validation import make_entity_service_schema
-from homeassistant.helpers.entity import Entity, EntityDescription
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai, ServiceCall, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.config_validation import make_entity_service_schema
+from menuai.helpers.entity import Entity, EntityDescription
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.typing import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -92,10 +92,10 @@ class FaceInformation(TypedDict, total=False):
     entity_id: str
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the image processing."""
     component = EntityComponent[ImageProcessingEntity](
-        _LOGGER, DOMAIN, hass, SCAN_INTERVAL
+        _LOGGER, DOMAIN, menuai, SCAN_INTERVAL
     )
 
     await component.async_setup(config)
@@ -112,7 +112,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         if update_tasks:
             await asyncio.wait(update_tasks)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_SCAN, async_scan_service, schema=make_entity_service_schema({})
     )
 
@@ -169,7 +169,7 @@ class ImageProcessingEntity(Entity):
 
     async def async_process_image(self, image: bytes) -> None:
         """Process image."""
-        return await self.hass.async_add_executor_job(self.process_image, image)
+        return await self.menuai.async_add_executor_job(self.process_image, image)
 
     async def async_update(self) -> None:
         """Update image and process it.
@@ -184,9 +184,9 @@ class ImageProcessingEntity(Entity):
 
         try:
             image = await async_get_image(
-                self.hass, self.camera_entity, timeout=self.timeout
+                self.menuai, self.camera_entity, timeout=self.timeout
             )
-        except HomeAssistantError as err:
+        except menuaiError as err:
             _LOGGER.error("Error on receive image from entity: %s", err)
             return
 
@@ -236,7 +236,7 @@ class ImageProcessingFaceEntity(ImageProcessingEntity):
 
     def process_faces(self, faces: list[FaceInformation], total: int) -> None:
         """Send event with detected faces and store data."""
-        self.hass.loop.call_soon_threadsafe(self.async_process_faces, faces, total)
+        self.menuai.loop.call_soon_threadsafe(self.async_process_faces, faces, total)
 
     @callback
     def async_process_faces(self, faces: list[FaceInformation], total: int) -> None:
@@ -266,7 +266,7 @@ class ImageProcessingFaceEntity(ImageProcessingEntity):
                 continue
 
             face.update({ATTR_ENTITY_ID: self.entity_id})
-            self.hass.bus.async_fire(EVENT_DETECT_FACE, face)
+            self.menuai.bus.async_fire(EVENT_DETECT_FACE, face)
 
         # Update entity store
         self.faces = faces

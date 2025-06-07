@@ -7,27 +7,27 @@ import logging
 from pyemby import EmbyServer
 import voluptuous as vol
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     PLATFORM_SCHEMA as MEDIA_PLAYER_PLATFORM_SCHEMA,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
     MediaType,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_API_KEY,
     CONF_HOST,
     CONF_PORT,
     CONF_SSL,
     DEVICE_DEFAULT_NAME,
-    EVENT_HOMEASSISTANT_START,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_START,
+    EVENT_menuai_STOP,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import dt as dt_util
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -58,7 +58,7 @@ PLATFORM_SCHEMA = MEDIA_PLAYER_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -75,7 +75,7 @@ async def async_setup_platform(
 
     _LOGGER.debug("Setting up Emby server at: %s:%s", host, port)
 
-    emby = EmbyServer(host, key, port, ssl, hass.loop)
+    emby = EmbyServer(host, key, port, ssl, menuai.loop)
 
     active_emby_devices: dict[str, EmbyDevice] = {}
     inactive_emby_devices: dict[str, EmbyDevice] = {}
@@ -126,8 +126,8 @@ async def async_setup_platform(
     emby.add_new_devices_callback(device_update_callback)
     emby.add_stale_devices_callback(device_removal_callback)
 
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_START, start_emby)
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, stop_emby)
+    menuai.bus.async_listen_once(EVENT_menuai_START, start_emby)
+    menuai.bus.async_listen_once(EVENT_menuai_STOP, stop_emby)
 
 
 class EmbyDevice(MediaPlayerEntity):
@@ -147,7 +147,7 @@ class EmbyDevice(MediaPlayerEntity):
 
         self._attr_unique_id = device_id
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callback."""
         self.emby.add_update_callback(self.async_update_callback, self.device_id)
 
@@ -239,7 +239,7 @@ class EmbyDevice(MediaPlayerEntity):
     def media_position_updated_at(self):
         """When was the position of the current playing media valid.
 
-        Returns value from homeassistant.util.dt.utcnow().
+        Returns value from menuai.util.dt.utcnow().
         """
         return self.media_status_received
 

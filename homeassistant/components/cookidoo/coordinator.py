@@ -17,11 +17,11 @@ from cookidoo_api import (
     CookidooUserInfo,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_EMAIL
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_EMAIL
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN
 
@@ -46,11 +46,11 @@ class CookidooDataUpdateCoordinator(DataUpdateCoordinator[CookidooData]):
     user: CookidooUserInfo
 
     def __init__(
-        self, hass: HomeAssistant, cookidoo: Cookidoo, entry: CookidooConfigEntry
+        self, menuai: menuai, cookidoo: Cookidoo, entry: CookidooConfigEntry
     ) -> None:
         """Initialize the Cookidoo data coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             name=DOMAIN,
             update_interval=timedelta(seconds=90),

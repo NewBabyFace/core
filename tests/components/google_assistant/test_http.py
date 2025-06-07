@@ -12,8 +12,8 @@ from uuid import uuid4
 import py
 import pytest
 
-from homeassistant.components.google_assistant import GOOGLE_ASSISTANT_SCHEMA
-from homeassistant.components.google_assistant.const import (
+from menuai.components.google_assistant import GOOGLE_ASSISTANT_SCHEMA
+from menuai.components.google_assistant.const import (
     DOMAIN,
     EVENT_COMMAND_RECEIVED,
     HOMEGRAPH_TOKEN_URL,
@@ -21,17 +21,17 @@ from homeassistant.components.google_assistant.const import (
     STORE_AGENT_USER_IDS,
     STORE_GOOGLE_LOCAL_WEBHOOK_ID,
 )
-from homeassistant.components.google_assistant.http import (
+from menuai.components.google_assistant.http import (
     GoogleConfig,
     GoogleConfigStore,
     _get_homegraph_jwt,
     _get_homegraph_token,
     async_get_users,
 )
-from homeassistant.const import CLOUD_NEVER_EXPOSED_ENTITIES
-from homeassistant.core import HomeAssistant, State
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.const import CLOUD_NEVER_EXPOSED_ENTITIES
+from menuai.core import menuai, State
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from tests.common import (
     async_capture_events,
@@ -60,7 +60,7 @@ MOCK_HEADER = {
 }
 
 
-async def test_get_jwt(hass: HomeAssistant) -> None:
+async def test_get_jwt(menuai: menuai) -> None:
     """Test signing of key."""
 
     jwt = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJkdW1teUBkdW1teS5pYW0uZ3NlcnZpY2VhY2NvdW50LmNvbSIsInNjb3BlIjoiaHR0cHM6Ly93d3cuZ29vZ2xlYXBpcy5jb20vYXV0aC9ob21lZ3JhcGgiLCJhdWQiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20vby9vYXV0aDIvdG9rZW4iLCJpYXQiOjE1NzEwMTEyMDAsImV4cCI6MTU3MTAxNDgwMH0.akHbMhOflXdIDHVvUVwO0AoJONVOPUdCghN6hAdVz4gxjarrQeGYc_Qn2r84bEvCU7t6EvimKKr0fyupyzBAzfvKULs5mTHO3h2CwSgvOBMv8LnILboJmbO4JcgdnRV7d9G3ktQs7wWSCXJsI5i5jUr1Wfi9zWwxn2ebaAAgrp8"
@@ -73,7 +73,7 @@ async def test_get_jwt(hass: HomeAssistant) -> None:
 
 
 async def test_get_access_token(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test the function to get access token."""
     jwt = "dummyjwt"
@@ -84,7 +84,7 @@ async def test_get_access_token(
         json={"access_token": "1234", "expires_in": 3600},
     )
 
-    await _get_homegraph_token(hass, jwt)
+    await _get_homegraph_token(menuai, jwt)
     assert aioclient_mock.call_count == 1
     assert aioclient_mock.mock_calls[0][3] == {
         "Authorization": f"Bearer {jwt}",
@@ -92,23 +92,23 @@ async def test_get_access_token(
     }
 
 
-async def test_update_access_token(hass: HomeAssistant) -> None:
+async def test_update_access_token(menuai: menuai) -> None:
     """Test the function to update access token when expired."""
     jwt = "dummyjwt"
 
-    config = GoogleConfig(hass, DUMMY_CONFIG)
+    config = GoogleConfig(menuai, DUMMY_CONFIG)
     await config.async_initialize()
 
     base_time = datetime(2019, 10, 14, tzinfo=UTC)
     with (
         patch(
-            "homeassistant.components.google_assistant.http._get_homegraph_token"
+            "menuai.components.google_assistant.http._get_homegraph_token"
         ) as mock_get_token,
         patch(
-            "homeassistant.components.google_assistant.http._get_homegraph_jwt"
+            "menuai.components.google_assistant.http._get_homegraph_jwt"
         ) as mock_get_jwt,
         patch(
-            "homeassistant.core.dt_util.utcnow",
+            "menuai.core.dt_util.utcnow",
         ) as mock_utcnow,
     ):
         mock_utcnow.return_value = base_time
@@ -132,17 +132,17 @@ async def test_update_access_token(hass: HomeAssistant) -> None:
 
 
 async def test_call_homegraph_api(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
-    hass_storage: dict[str, Any],
+    menuai_storage: dict[str, Any],
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test the function to call the homegraph api."""
-    config = GoogleConfig(hass, DUMMY_CONFIG)
+    config = GoogleConfig(menuai, DUMMY_CONFIG)
     await config.async_initialize()
 
     with patch(
-        "homeassistant.components.google_assistant.http._get_homegraph_token"
+        "menuai.components.google_assistant.http._get_homegraph_token"
     ) as mock_get_token:
         mock_get_token.return_value = MOCK_TOKEN
 
@@ -160,16 +160,16 @@ async def test_call_homegraph_api(
 
 
 async def test_call_homegraph_api_retry(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
-    hass_storage: dict[str, Any],
+    menuai_storage: dict[str, Any],
 ) -> None:
     """Test the that the calls get retried with new token on 401."""
-    config = GoogleConfig(hass, DUMMY_CONFIG)
+    config = GoogleConfig(menuai, DUMMY_CONFIG)
     await config.async_initialize()
 
     with patch(
-        "homeassistant.components.google_assistant.http._get_homegraph_token"
+        "menuai.components.google_assistant.http._get_homegraph_token"
     ) as mock_get_token:
         mock_get_token.return_value = MOCK_TOKEN
 
@@ -189,13 +189,13 @@ async def test_call_homegraph_api_retry(
 
 
 async def test_report_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
-    hass_storage: dict[str, Any],
+    menuai_storage: dict[str, Any],
 ) -> None:
     """Test the report state function."""
     agent_user_id = "user"
-    config = GoogleConfig(hass, DUMMY_CONFIG)
+    config = GoogleConfig(menuai, DUMMY_CONFIG)
     await config.async_initialize()
 
     await config.async_connect_agent_user(agent_user_id)
@@ -203,7 +203,7 @@ async def test_report_state(
 
     with patch.object(config, "async_call_homegraph_api"):
         # Wait for google_assistant.helpers.async_initialize.sync_google to be called
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     with patch.object(config, "async_call_homegraph_api") as mock_call:
         await config.async_report_state(message, agent_user_id)
@@ -214,13 +214,13 @@ async def test_report_state(
 
 
 async def test_report_event(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
-    hass_storage: dict[str, Any],
+    menuai_storage: dict[str, Any],
 ) -> None:
     """Test the report event function."""
     agent_user_id = "user"
-    config = GoogleConfig(hass, DUMMY_CONFIG)
+    config = GoogleConfig(menuai, DUMMY_CONFIG)
     await config.async_initialize()
 
     await config.async_connect_agent_user(agent_user_id)
@@ -228,7 +228,7 @@ async def test_report_event(
 
     with patch.object(config, "async_call_homegraph_api"):
         # Wait for google_assistant.helpers.async_initialize.sync_google to be called
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     event_id = uuid4().hex
     with patch.object(config, "async_call_homegraph_api") as mock_call:
@@ -246,15 +246,15 @@ async def test_report_event(
 
 
 async def test_google_config_local_fulfillment(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
-    hass_storage: dict[str, Any],
+    menuai_storage: dict[str, Any],
 ) -> None:
     """Test the google config for local fulfillment."""
     agent_user_id = "user"
     local_webhook_id = "webhook"
 
-    hass_storage["google_assistant"] = {
+    menuai_storage["google_assistant"] = {
         "version": 1,
         "minor_version": 1,
         "key": "google_assistant",
@@ -267,19 +267,19 @@ async def test_google_config_local_fulfillment(
         },
     }
 
-    config = GoogleConfig(hass, DUMMY_CONFIG)
+    config = GoogleConfig(menuai, DUMMY_CONFIG)
     await config.async_initialize()
 
     with patch.object(config, "async_call_homegraph_api"):
         # Wait for google_assistant.helpers.async_initialize.sync_google to be called
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert config.get_local_webhook_id(agent_user_id) == local_webhook_id
     assert config.get_local_user_id(local_webhook_id) == agent_user_id
     assert config.get_local_user_id("INCORRECT") is None
 
 
-async def test_secure_device_pin_config(hass: HomeAssistant) -> None:
+async def test_secure_device_pin_config(menuai: menuai) -> None:
     """Test the setting of the secure device pin configuration."""
     secure_pin = "TEST"
     secure_config = GOOGLE_ASSISTANT_SCHEMA(
@@ -292,19 +292,19 @@ async def test_secure_device_pin_config(hass: HomeAssistant) -> None:
             "secure_devices_pin": secure_pin,
         }
     )
-    config = GoogleConfig(hass, secure_config)
+    config = GoogleConfig(menuai, secure_config)
 
     assert config.secure_devices_pin == secure_pin
 
 
-async def test_should_expose(hass: HomeAssistant) -> None:
+async def test_should_expose(menuai: menuai) -> None:
     """Test the google config should expose method."""
-    config = GoogleConfig(hass, DUMMY_CONFIG)
+    config = GoogleConfig(menuai, DUMMY_CONFIG)
     await config.async_initialize()
 
     with patch.object(config, "async_call_homegraph_api"):
         # Wait for google_assistant.helpers.async_initialize.sync_google to be called
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert (
         config.should_expose(State(DOMAIN + ".mock", "mock", {"view": "not None"}))
@@ -313,24 +313,24 @@ async def test_should_expose(hass: HomeAssistant) -> None:
 
     with patch.object(config, "async_call_homegraph_api"):
         # Wait for google_assistant.helpers.async_initialize.sync_google to be called
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert config.should_expose(State(CLOUD_NEVER_EXPOSED_ENTITIES[0], "mock")) is False
 
 
-async def test_missing_service_account(hass: HomeAssistant) -> None:
+async def test_missing_service_account(menuai: menuai) -> None:
     """Test the google config _async_request_sync_devices."""
     incorrect_config = GOOGLE_ASSISTANT_SCHEMA(
         {
             "project_id": "1234",
         }
     )
-    config = GoogleConfig(hass, incorrect_config)
+    config = GoogleConfig(menuai, incorrect_config)
     await config.async_initialize()
 
     with patch.object(config, "async_call_homegraph_api"):
         # Wait for google_assistant.helpers.async_initialize.sync_google to be called
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert (
         await config._async_request_sync_devices("mock")
@@ -342,19 +342,19 @@ async def test_missing_service_account(hass: HomeAssistant) -> None:
 
 
 async def test_async_enable_local_sdk(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
-    hass_storage: dict[str, Any],
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
+    menuai_storage: dict[str, Any],
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test the google config enable and disable local sdk."""
-    command_events = async_capture_events(hass, EVENT_COMMAND_RECEIVED)
-    turn_on_calls = async_mock_service(hass, "light", "turn_on")
-    hass.states.async_set("light.ceiling_lights", "off")
+    command_events = async_capture_events(menuai, EVENT_COMMAND_RECEIVED)
+    turn_on_calls = async_mock_service(menuai, "light", "turn_on")
+    menuai.states.async_set("light.ceiling_lights", "off")
 
-    assert await async_setup_component(hass, "webhook", {})
+    assert await async_setup_component(menuai, "webhook", {})
 
-    hass_storage["google_assistant"] = {
+    menuai_storage["google_assistant"] = {
         "version": 1,
         "minor_version": 1,
         "key": "google_assistant",
@@ -366,16 +366,16 @@ async def test_async_enable_local_sdk(
             },
         },
     }
-    config = GoogleConfig(hass, DUMMY_CONFIG)
+    config = GoogleConfig(menuai, DUMMY_CONFIG)
     await config.async_initialize()
 
     with patch.object(config, "async_call_homegraph_api"):
         # Wait for google_assistant.helpers.async_initialize.sync_google to be called
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert config.is_local_sdk_active is True
 
-    client = await hass_client()
+    client = await menuai_client()
 
     resp = await client.post(
         "/api/webhook/mock_webhook_id",
@@ -489,11 +489,11 @@ async def test_async_enable_local_sdk(
 
 
 async def test_agent_user_id_storage(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
+    menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
     """Test a disconnect message."""
 
-    hass_storage["google_assistant"] = {
+    menuai_storage["google_assistant"] = {
         "version": 1,
         "minor_version": 1,
         "key": "google_assistant",
@@ -506,10 +506,10 @@ async def test_agent_user_id_storage(
         },
     }
 
-    store = GoogleConfigStore(hass)
+    store = GoogleConfigStore(menuai)
     await store.async_initialize()
 
-    assert hass_storage["google_assistant"] == {
+    assert menuai_storage["google_assistant"] == {
         "version": 1,
         "minor_version": 2,
         "key": "google_assistant",
@@ -523,11 +523,11 @@ async def test_agent_user_id_storage(
     }
 
     async def _check_after_delay(data):
-        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=2))
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(seconds=2))
+        await menuai.async_block_till_done()
 
         assert (
-            list(hass_storage["google_assistant"]["data"]["agent_user_ids"].keys())
+            list(menuai_storage["google_assistant"]["data"]["agent_user_ids"].keys())
             == data
         )
 
@@ -537,7 +537,7 @@ async def test_agent_user_id_storage(
     store.pop_agent_user_id("agent_1")
     await _check_after_delay(["agent_2"])
 
-    hass_storage["google_assistant"] = {
+    menuai_storage["google_assistant"] = {
         "version": 1,
         "minor_version": 2,
         "key": "google_assistant",
@@ -545,18 +545,18 @@ async def test_agent_user_id_storage(
             "agent_user_ids": {"agent_1": {}},
         },
     }
-    store = GoogleConfigStore(hass)
+    store = GoogleConfigStore(menuai)
     await store.async_initialize()
 
     assert (
         STORE_GOOGLE_LOCAL_WEBHOOK_ID
-        in hass_storage["google_assistant"]["data"]["agent_user_ids"]["agent_1"]
+        in menuai_storage["google_assistant"]["data"]["agent_user_ids"]["agent_1"]
     )
 
 
-async def test_async_get_users_no_store(hass: HomeAssistant) -> None:
+async def test_async_get_users_no_store(menuai: menuai) -> None:
     """Test async_get_users when there is no store."""
-    assert await async_get_users(hass) == []
+    assert await async_get_users(menuai) == []
 
 
 async def test_async_get_users_from_store(tmpdir: py.path.local) -> None:
@@ -564,21 +564,21 @@ async def test_async_get_users_from_store(tmpdir: py.path.local) -> None:
 
     This test ensures we can load from data saved by GoogleConfigStore.
     """
-    async with async_test_home_assistant() as hass:
-        hass.config.config_dir = await hass.async_add_executor_job(
+    async with async_test_home_assistant() as menuai:
+        menuai.config.config_dir = await menuai.async_add_executor_job(
             tmpdir.mkdir, "temp_storage"
         )
 
-        store = GoogleConfigStore(hass)
+        store = GoogleConfigStore(menuai)
         await store.async_initialize()
 
         store.add_agent_user_id("agent_1")
-        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=2))
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(seconds=2))
+        await menuai.async_block_till_done()
 
-        assert await async_get_users(hass) == ["agent_1"]
+        assert await async_get_users(menuai) == ["agent_1"]
 
-        await hass.async_stop()
+        await menuai.async_stop()
 
 
 VALID_STORE_DATA = json.dumps(
@@ -650,13 +650,13 @@ async def test_async_get_users(
     tmpdir: py.path.local, store_data: str, expected_users: list[str]
 ) -> None:
     """Test async_get_users from stored JSON data."""
-    async with async_test_home_assistant() as hass:
-        hass.config.config_dir = await hass.async_add_executor_job(
+    async with async_test_home_assistant() as menuai:
+        menuai.config.config_dir = await menuai.async_add_executor_job(
             tmpdir.mkdir, "temp_storage"
         )
-        path = hass.config.config_dir / ".storage" / GoogleConfigStore._STORAGE_KEY
+        path = menuai.config.config_dir / ".storage" / GoogleConfigStore._STORAGE_KEY
         os.makedirs(os.path.dirname(path), exist_ok=True)
-        await hass.async_add_executor_job(Path(path).write_text, store_data)
-        assert await async_get_users(hass) == expected_users
+        await menuai.async_add_executor_job(Path(path).write_text, store_data)
+        assert await async_get_users(menuai) == expected_users
 
-        await hass.async_stop()
+        await menuai.async_stop()

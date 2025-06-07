@@ -10,9 +10,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from homeassistant.config_entries import ConfigFlow
-from homeassistant.core import HomeAssistant
-from homeassistant.core_config import async_process_ha_core_config
+from menuai.config_entries import ConfigFlow
+from menuai.core import menuai
+from menuai.core_config import async_process_ha_core_config
 
 from .common import (
     DEFAULT_LANG,
@@ -51,19 +51,19 @@ def tts_mutagen_mock_fixture_autouse(tts_mutagen_mock: MagicMock) -> None:
 
 
 @pytest.fixture(autouse=True)
-async def internal_url_mock(hass: HomeAssistant) -> None:
+async def internal_url_mock(menuai: menuai) -> None:
     """Mock internal URL of the instance."""
     await async_process_ha_core_config(
-        hass,
+        menuai,
         {"internal_url": "http://example.local:8123"},
     )
 
 
 @pytest.fixture
-async def mock_tts(hass: HomeAssistant, mock_provider) -> None:
+async def mock_tts(menuai: menuai, mock_provider) -> None:
     """Mock TTS."""
-    mock_integration(hass, MockModule(domain="test"))
-    mock_platform(hass, "test.tts", MockTTS(mock_provider))
+    mock_integration(menuai, MockModule(domain="test"))
+    mock_platform(menuai, "test.tts", MockTTS(mock_provider))
 
 
 @pytest.fixture
@@ -90,11 +90,11 @@ def config_flow_test_domain_fixture() -> Iterable[str]:
 
 @pytest.fixture(autouse=True)
 def config_flow_fixture(
-    hass: HomeAssistant, config_flow_test_domains: Iterable[str]
+    menuai: menuai, config_flow_test_domains: Iterable[str]
 ) -> Generator[None]:
     """Mock config flow."""
     for domain in config_flow_test_domains:
-        mock_platform(hass, f"{domain}.config_flow")
+        mock_platform(menuai, f"{domain}.config_flow")
 
     with ExitStack() as stack:
         for domain in config_flow_test_domains:
@@ -104,15 +104,15 @@ def config_flow_fixture(
 
 @pytest.fixture(name="setup")
 async def setup_fixture(
-    hass: HomeAssistant,
+    menuai: menuai,
     request: pytest.FixtureRequest,
     mock_provider: MockTTSProvider,
     mock_tts_entity: MockTTSEntity,
 ) -> None:
     """Set up the test environment."""
     if request.param == "mock_setup":
-        await mock_setup(hass, mock_provider)
+        await mock_setup(menuai, mock_provider)
     elif request.param == "mock_config_entry_setup":
-        await mock_config_entry_setup(hass, mock_tts_entity)
+        await mock_config_entry_setup(menuai, mock_tts_entity)
     else:
         raise RuntimeError("Invalid setup fixture")

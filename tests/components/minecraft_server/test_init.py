@@ -5,13 +5,13 @@ from unittest.mock import patch
 from mcstatus import JavaServer
 import pytest
 
-from homeassistant.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
-from homeassistant.components.minecraft_server.const import DOMAIN
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_ADDRESS, CONF_HOST, CONF_NAME, CONF_PORT
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
+from menuai.components.minecraft_server.const import DOMAIN
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.const import CONF_ADDRESS, CONF_HOST, CONF_NAME, CONF_PORT
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from .const import (
     TEST_ADDRESS,
@@ -55,9 +55,9 @@ def v1_mock_config_entry() -> MockConfigEntry:
     )
 
 
-def create_v1_mock_device_entry(hass: HomeAssistant, config_entry_id: str) -> str:
+def create_v1_mock_device_entry(menuai: menuai, config_entry_id: str) -> str:
     """Create mock device entry with version 1."""
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     device_entry_v1 = device_registry.async_get_or_create(
         config_entry_id=config_entry_id,
         identifiers={(DOMAIN, TEST_UNIQUE_ID)},
@@ -71,12 +71,12 @@ def create_v1_mock_device_entry(hass: HomeAssistant, config_entry_id: str) -> st
 
 
 def create_v1_mock_sensor_entity_entries(
-    hass: HomeAssistant, config_entry_id: str, device_entry_id: str
+    menuai: menuai, config_entry_id: str, device_entry_id: str
 ) -> list[dict]:
     """Create mock sensor entity entries with version 1."""
     sensor_entity_id_key_mapping_list = []
-    config_entry = hass.config_entries.async_get_entry(config_entry_id)
-    entity_registry = er.async_get(hass)
+    config_entry = menuai.config_entries.async_get_entry(config_entry_id)
+    entity_registry = er.async_get(menuai)
 
     for sensor_key in SENSOR_KEYS:
         entity_unique_id = f"{TEST_UNIQUE_ID}-{sensor_key['v1']}"
@@ -96,11 +96,11 @@ def create_v1_mock_sensor_entity_entries(
 
 
 def create_v1_mock_binary_sensor_entity_entry(
-    hass: HomeAssistant, config_entry_id: str, device_entry_id: str
+    menuai: menuai, config_entry_id: str, device_entry_id: str
 ) -> dict:
     """Create mock binary sensor entity entry with version 1."""
-    config_entry = hass.config_entries.async_get_entry(config_entry_id)
-    entity_registry = er.async_get(hass)
+    config_entry = menuai.config_entries.async_get_entry(config_entry_id)
+    entity_registry = er.async_get(menuai)
     entity_unique_id = f"{TEST_UNIQUE_ID}-{BINARY_SENSOR_KEYS['v1']}"
     entity_entry = entity_registry.async_get_or_create(
         BINARY_SENSOR_DOMAIN,
@@ -117,112 +117,112 @@ def create_v1_mock_binary_sensor_entity_entry(
 
 
 async def test_setup_and_unload_entry(
-    hass: HomeAssistant, java_mock_config_entry: MockConfigEntry
+    menuai: menuai, java_mock_config_entry: MockConfigEntry
 ) -> None:
     """Test successful entry setup and unload."""
-    java_mock_config_entry.add_to_hass(hass)
+    java_mock_config_entry.add_to_menuai(menuai)
 
     with (
         patch(
-            "homeassistant.components.minecraft_server.api.JavaServer.async_lookup",
+            "menuai.components.minecraft_server.api.JavaServer.async_lookup",
             return_value=JavaServer(host=TEST_HOST, port=TEST_PORT),
         ),
         patch(
-            "homeassistant.components.minecraft_server.api.JavaServer.async_status",
+            "menuai.components.minecraft_server.api.JavaServer.async_status",
             return_value=TEST_JAVA_STATUS_RESPONSE,
         ),
     ):
-        assert await hass.config_entries.async_setup(java_mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(java_mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
         assert java_mock_config_entry.state is ConfigEntryState.LOADED
 
-    assert await hass.config_entries.async_unload(java_mock_config_entry.entry_id)
-    await hass.async_block_till_done()
-    assert not hass.data.get(DOMAIN)
+    assert await menuai.config_entries.async_unload(java_mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
+    assert not menuai.data.get(DOMAIN)
     assert java_mock_config_entry.state is ConfigEntryState.NOT_LOADED
 
 
 async def test_setup_entry_lookup_failure(
-    hass: HomeAssistant, java_mock_config_entry: MockConfigEntry
+    menuai: menuai, java_mock_config_entry: MockConfigEntry
 ) -> None:
     """Test lookup failure in entry setup."""
-    java_mock_config_entry.add_to_hass(hass)
+    java_mock_config_entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.minecraft_server.api.JavaServer.async_lookup",
+        "menuai.components.minecraft_server.api.JavaServer.async_lookup",
         side_effect=ValueError,
     ):
-        assert not await hass.config_entries.async_setup(
+        assert not await menuai.config_entries.async_setup(
             java_mock_config_entry.entry_id
         )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert java_mock_config_entry.state is ConfigEntryState.SETUP_RETRY
 
 
 async def test_setup_entry_init_failure(
-    hass: HomeAssistant, java_mock_config_entry: MockConfigEntry
+    menuai: menuai, java_mock_config_entry: MockConfigEntry
 ) -> None:
     """Test init failure in entry setup."""
-    java_mock_config_entry.add_to_hass(hass)
+    java_mock_config_entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.minecraft_server.api.MinecraftServer.async_initialize",
+        "menuai.components.minecraft_server.api.MinecraftServer.async_initialize",
         side_effect=None,
     ):
-        assert not await hass.config_entries.async_setup(
+        assert not await menuai.config_entries.async_setup(
             java_mock_config_entry.entry_id
         )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert java_mock_config_entry.state is ConfigEntryState.SETUP_RETRY
 
 
 async def test_setup_entry_not_ready(
-    hass: HomeAssistant, java_mock_config_entry: MockConfigEntry
+    menuai: menuai, java_mock_config_entry: MockConfigEntry
 ) -> None:
     """Test entry setup not ready."""
-    java_mock_config_entry.add_to_hass(hass)
+    java_mock_config_entry.add_to_menuai(menuai)
 
     with (
         patch(
-            "homeassistant.components.minecraft_server.api.JavaServer.async_lookup",
+            "menuai.components.minecraft_server.api.JavaServer.async_lookup",
             return_value=JavaServer(host=TEST_HOST, port=TEST_PORT),
         ),
         patch(
-            "homeassistant.components.minecraft_server.api.JavaServer.async_status",
+            "menuai.components.minecraft_server.api.JavaServer.async_status",
             return_value=OSError,
         ),
     ):
-        assert not await hass.config_entries.async_setup(
+        assert not await menuai.config_entries.async_setup(
             java_mock_config_entry.entry_id
         )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert java_mock_config_entry.state is ConfigEntryState.SETUP_RETRY
 
 
 async def test_entry_migration(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     v1_mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test entry migration from version 1 to 3, where host and port is required for the connection to the server."""
-    v1_mock_config_entry.add_to_hass(hass)
+    v1_mock_config_entry.add_to_menuai(menuai)
 
-    device_entry_id = create_v1_mock_device_entry(hass, v1_mock_config_entry.entry_id)
+    device_entry_id = create_v1_mock_device_entry(menuai, v1_mock_config_entry.entry_id)
     sensor_entity_id_key_mapping_list = create_v1_mock_sensor_entity_entries(
-        hass, v1_mock_config_entry.entry_id, device_entry_id
+        menuai, v1_mock_config_entry.entry_id, device_entry_id
     )
     binary_sensor_entity_id_key_mapping = create_v1_mock_binary_sensor_entity_entry(
-        hass, v1_mock_config_entry.entry_id, device_entry_id
+        menuai, v1_mock_config_entry.entry_id, device_entry_id
     )
 
     # Trigger migration.
     with (
         patch(
-            "homeassistant.components.minecraft_server.api.JavaServer.async_lookup",
+            "menuai.components.minecraft_server.api.JavaServer.async_lookup",
             side_effect=[
                 ValueError,  # async_migrate_entry
                 JavaServer(host=TEST_HOST, port=TEST_PORT),  # async_migrate_entry
@@ -230,12 +230,12 @@ async def test_entry_migration(
             ],
         ),
         patch(
-            "homeassistant.components.minecraft_server.api.JavaServer.async_status",
+            "menuai.components.minecraft_server.api.JavaServer.async_status",
             return_value=TEST_JAVA_STATUS_RESPONSE,
         ),
     ):
-        assert await hass.config_entries.async_setup(v1_mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(v1_mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     migrated_config_entry = v1_mock_config_entry
 
@@ -271,32 +271,32 @@ async def test_entry_migration(
 
 
 async def test_entry_migration_host_only(
-    hass: HomeAssistant, v1_mock_config_entry: MockConfigEntry
+    menuai: menuai, v1_mock_config_entry: MockConfigEntry
 ) -> None:
     """Test entry migration from version 1 to 3, where host alone is sufficient for the connection to the server."""
-    v1_mock_config_entry.add_to_hass(hass)
+    v1_mock_config_entry.add_to_menuai(menuai)
 
-    device_entry_id = create_v1_mock_device_entry(hass, v1_mock_config_entry.entry_id)
+    device_entry_id = create_v1_mock_device_entry(menuai, v1_mock_config_entry.entry_id)
     create_v1_mock_sensor_entity_entries(
-        hass, v1_mock_config_entry.entry_id, device_entry_id
+        menuai, v1_mock_config_entry.entry_id, device_entry_id
     )
     create_v1_mock_binary_sensor_entity_entry(
-        hass, v1_mock_config_entry.entry_id, device_entry_id
+        menuai, v1_mock_config_entry.entry_id, device_entry_id
     )
 
     # Trigger migration.
     with (
         patch(
-            "homeassistant.components.minecraft_server.api.JavaServer.async_lookup",
+            "menuai.components.minecraft_server.api.JavaServer.async_lookup",
             return_value=JavaServer(host=TEST_HOST, port=TEST_PORT),
         ),
         patch(
-            "homeassistant.components.minecraft_server.api.JavaServer.async_status",
+            "menuai.components.minecraft_server.api.JavaServer.async_status",
             return_value=TEST_JAVA_STATUS_RESPONSE,
         ),
     ):
-        assert await hass.config_entries.async_setup(v1_mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(v1_mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     # Test migrated config entry.
     assert v1_mock_config_entry.unique_id is None
@@ -309,29 +309,29 @@ async def test_entry_migration_host_only(
 
 
 async def test_entry_migration_v3_failure(
-    hass: HomeAssistant, v1_mock_config_entry: MockConfigEntry
+    menuai: menuai, v1_mock_config_entry: MockConfigEntry
 ) -> None:
     """Test failed entry migration from version 2 to 3."""
-    v1_mock_config_entry.add_to_hass(hass)
+    v1_mock_config_entry.add_to_menuai(menuai)
 
-    device_entry_id = create_v1_mock_device_entry(hass, v1_mock_config_entry.entry_id)
+    device_entry_id = create_v1_mock_device_entry(menuai, v1_mock_config_entry.entry_id)
     create_v1_mock_sensor_entity_entries(
-        hass, v1_mock_config_entry.entry_id, device_entry_id
+        menuai, v1_mock_config_entry.entry_id, device_entry_id
     )
     create_v1_mock_binary_sensor_entity_entry(
-        hass, v1_mock_config_entry.entry_id, device_entry_id
+        menuai, v1_mock_config_entry.entry_id, device_entry_id
     )
 
     # Trigger migration.
     with patch(
-        "homeassistant.components.minecraft_server.api.JavaServer.async_lookup",
+        "menuai.components.minecraft_server.api.JavaServer.async_lookup",
         side_effect=[
             ValueError,  # async_migrate_entry
             ValueError,  # async_migrate_entry
         ],
     ):
-        assert not await hass.config_entries.async_setup(v1_mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert not await menuai.config_entries.async_setup(v1_mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     # Test config entry.
     assert v1_mock_config_entry.version == 2

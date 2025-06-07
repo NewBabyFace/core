@@ -10,16 +10,16 @@ from libpyfoscam.foscam import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import (
     CONF_HOST,
     CONF_NAME,
     CONF_PASSWORD,
     CONF_PORT,
     CONF_USERNAME,
 )
-from homeassistant.data_entry_flow import AbortFlow
-from homeassistant.exceptions import HomeAssistantError
+from menuai.data_entry_flow import AbortFlow
+from menuai.exceptions import menuaiError
 
 from .const import CONF_RTSP_PORT, CONF_STREAM, DOMAIN, LOGGER
 
@@ -64,7 +64,7 @@ class FoscamConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
         # Validate data by sending a request to the camera
-        ret, _ = await self.hass.async_add_executor_job(camera.get_product_all_info)
+        ret, _ = await self.menuai.async_add_executor_job(camera.get_product_all_info)
 
         if ret == ERROR_FOSCAM_UNAVAILABLE:
             raise CannotConnect
@@ -82,7 +82,7 @@ class FoscamConfigFlow(ConfigFlow, domain=DOMAIN):
             raise InvalidResponse
 
         # Try to get camera name (only possible with admin account)
-        ret, response = await self.hass.async_add_executor_job(camera.get_dev_info)
+        ret, response = await self.menuai.async_add_executor_job(camera.get_dev_info)
 
         dev_name = response.get(
             "devName", f"Foscam {data[CONF_HOST]}:{data[CONF_PORT]}"
@@ -123,13 +123,13 @@ class FoscamConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(menuaiError):
     """Error to indicate there is invalid auth."""
 
 
-class InvalidResponse(HomeAssistantError):
+class InvalidResponse(menuaiError):
     """Error to indicate there is invalid response."""

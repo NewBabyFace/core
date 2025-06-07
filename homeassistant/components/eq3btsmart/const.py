@@ -4,7 +4,7 @@ from enum import Enum
 
 from eq3btsmart.const import OperationMode
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     PRESET_AWAY,
     PRESET_BOOST,
     PRESET_COMFORT,

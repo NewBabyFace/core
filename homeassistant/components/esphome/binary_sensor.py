@@ -6,12 +6,12 @@ from functools import partial
 
 from aioesphomeapi import BinarySensorInfo, BinarySensorState, EntityInfo
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
-from homeassistant.core import callback
-from homeassistant.util.enum import try_parse_enum
+from menuai.core import callback
+from menuai.util.enum import try_parse_enum
 
 from .entity import EsphomeEntity, platform_async_setup_entry
 

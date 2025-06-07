@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from unittest.mock import Mock, patch
 
-from homeassistant.components.lock import DOMAIN as LOCK_DOMAIN
-from homeassistant.components.yale_smart_alarm.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER, ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.lock import DOMAIN as LOCK_DOMAIN
+from menuai.components.yale_smart_alarm.const import DOMAIN
+from menuai.config_entries import SOURCE_USER, ConfigEntryState
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .conftest import ENTRY_CONFIG, OPTIONS_CONFIG
 
@@ -16,7 +16,7 @@ from tests.common import MockConfigEntry
 
 
 async def test_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     get_client: Mock,
 ) -> None:
     """Test setup entry."""
@@ -31,23 +31,23 @@ async def test_setup_entry(
         version=2,
         minor_version=2,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.yale_smart_alarm.coordinator.YaleSmartAlarmClient",
+        "menuai.components.yale_smart_alarm.coordinator.YaleSmartAlarmClient",
         return_value=get_client,
     ):
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.LOADED
 
-    await hass.config_entries.async_unload(entry.entry_id)
+    await menuai.config_entries.async_unload(entry.entry_id)
     assert entry.state is ConfigEntryState.NOT_LOADED
 
 
 async def test_migrate_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     get_client: Mock,
     entity_registry: er.EntityRegistry,
 ) -> None:
@@ -70,7 +70,7 @@ async def test_migrate_entry(
         version=1,
         minor_version=1,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     lock = entity_registry.async_get_or_create(
         LOCK_DOMAIN,
         DOMAIN,
@@ -81,11 +81,11 @@ async def test_migrate_entry(
     )
 
     with patch(
-        "homeassistant.components.yale_smart_alarm.coordinator.YaleSmartAlarmClient",
+        "menuai.components.yale_smart_alarm.coordinator.YaleSmartAlarmClient",
         return_value=get_client,
     ):
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.LOADED
     assert entry.version == 2

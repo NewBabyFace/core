@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA
-from homeassistant.components.homeassistant.triggers import (
+from menuai.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA
+from menuai.components.menuai.triggers import (
     numeric_state as numeric_state_trigger,
     state as state_trigger,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_ABOVE,
     CONF_BELOW,
     CONF_DEVICE_ID,
@@ -20,10 +20,10 @@ from homeassistant.const import (
     CONF_TYPE,
     PERCENTAGE,
 )
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import CALLBACK_TYPE, menuai
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.trigger import TriggerActionType, TriggerInfo
+from menuai.helpers.typing import ConfigType
 
 from . import DOMAIN, const
 
@@ -61,10 +61,10 @@ TRIGGER_SCHEMA = vol.Any(HVAC_MODE_TRIGGER_SCHEMA, CURRENT_TRIGGER_SCHEMA)
 
 
 async def async_get_triggers(
-    hass: HomeAssistant, device_id: str
+    menuai: menuai, device_id: str
 ) -> list[dict[str, str]]:
     """List device triggers for Climate devices."""
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     triggers = []
 
     # Get all the integrations entities for this device
@@ -72,7 +72,7 @@ async def async_get_triggers(
         if entry.domain != DOMAIN:
             continue
 
-        state = hass.states.get(entry.entity_id)
+        state = menuai.states.get(entry.entity_id)
 
         # Add triggers for each entity that belongs to this integration
         base_trigger = {
@@ -109,7 +109,7 @@ async def async_get_triggers(
 
 
 async def async_attach_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     action: TriggerActionType,
     trigger_info: TriggerInfo,
@@ -129,10 +129,10 @@ async def async_attach_trigger(
         if CONF_FOR in config:
             state_config[CONF_FOR] = config[CONF_FOR]
         state_config = await state_trigger.async_validate_trigger_config(
-            hass, state_config
+            menuai, state_config
         )
         return await state_trigger.async_attach_trigger(
-            hass, state_config, action, trigger_info, platform_type="device"
+            menuai, state_config, action, trigger_info, platform_type="device"
         )
 
     numeric_state_config = {
@@ -157,15 +157,15 @@ async def async_attach_trigger(
         numeric_state_config[CONF_FOR] = config[CONF_FOR]
 
     numeric_state_config = await numeric_state_trigger.async_validate_trigger_config(
-        hass, numeric_state_config
+        menuai, numeric_state_config
     )
     return await numeric_state_trigger.async_attach_trigger(
-        hass, numeric_state_config, action, trigger_info, platform_type="device"
+        menuai, numeric_state_config, action, trigger_info, platform_type="device"
     )
 
 
 async def async_get_trigger_capabilities(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> dict[str, vol.Schema]:
     """List trigger capabilities."""
     trigger_type = config[CONF_TYPE]
@@ -184,7 +184,7 @@ async def async_get_trigger_capabilities(
         }
 
     if trigger_type == "current_temperature_changed":
-        unit_of_measurement: str = hass.config.units.temperature_unit
+        unit_of_measurement: str = menuai.config.units.temperature_unit
     else:
         unit_of_measurement = PERCENTAGE
 

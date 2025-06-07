@@ -6,16 +6,16 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.core import HomeAssistant, callback
+from menuai.components import websocket_api
+from menuai.core import menuai, callback
 
 from .const import DEVICE_CLASS_UNITS, UNIT_CONVERTERS
 
 
 @callback
-def async_setup(hass: HomeAssistant) -> None:
+def async_setup(menuai: menuai) -> None:
     """Set up the number websocket API."""
-    websocket_api.async_register_command(hass, ws_device_class_units)
+    websocket_api.async_register_command(menuai, ws_device_class_units)
 
 
 @callback
@@ -26,7 +26,7 @@ def async_setup(hass: HomeAssistant) -> None:
     }
 )
 def ws_device_class_units(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Return supported units for a device class."""
     device_class = msg["device_class"]

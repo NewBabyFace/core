@@ -7,9 +7,9 @@ from freezegun import freeze_time
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.integration.const import DOMAIN
-from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
-from homeassistant.const import (
+from menuai.components.integration.const import DOMAIN
+from menuai.components.sensor import SensorDeviceClass, SensorStateClass
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     ATTR_UNIT_OF_MEASUREMENT,
     STATE_UNAVAILABLE,
@@ -21,14 +21,14 @@ from homeassistant.const import (
     UnitOfTime,
     UnitOfVolumeFlowRate,
 )
-from homeassistant.core import HomeAssistant, State
-from homeassistant.helpers import (
+from menuai.core import menuai, State
+from menuai.helpers import (
     condition,
     device_registry as dr,
     entity_registry as er,
 )
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from tests.common import (
     MockConfigEntry,
@@ -53,7 +53,7 @@ DEFAULT_MAX_SUB_INTERVAL = {"minutes": 1}
     ],
 )
 async def test_initial_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     unit_of_measurement: str,
     device_class: SensorDeviceClass,
     unit_time: str,
@@ -71,8 +71,8 @@ async def test_initial_state(
         }
     }
 
-    assert await async_setup_component(hass, "sensor", config)
-    hass.states.async_set(
+    assert await async_setup_component(menuai, "sensor", config)
+    menuai.states.async_set(
         "sensor.source",
         "1",
         {
@@ -80,13 +80,13 @@ async def test_initial_state(
             ATTR_UNIT_OF_MEASUREMENT: unit_of_measurement,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("sensor.integration") == snapshot
+    assert menuai.states.get("sensor.integration") == snapshot
 
 
 @pytest.mark.parametrize("method", ["trapezoidal", "left", "right"])
-async def test_state(hass: HomeAssistant, method) -> None:
+async def test_state(menuai: menuai, method) -> None:
     """Test integration sensor state."""
     config = {
         "sensor": {
@@ -98,10 +98,10 @@ async def test_state(hass: HomeAssistant, method) -> None:
         }
     }
 
-    assert await async_setup_component(hass, "sensor", config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", config)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.integration")
+    state = menuai.states.get("sensor.integration")
     assert state is not None
     assert state.attributes.get("state_class") is SensorStateClass.TOTAL
     assert "device_class" not in state.attributes
@@ -109,23 +109,23 @@ async def test_state(hass: HomeAssistant, method) -> None:
     now = dt_util.utcnow()
     with freeze_time(now):
         entity_id = config["sensor"]["source"]
-        hass.states.async_set(
+        menuai.states.async_set(
             entity_id,
             1,
             {
                 ATTR_UNIT_OF_MEASUREMENT: UnitOfPower.KILO_WATT,
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.integration")
+    state = menuai.states.get("sensor.integration")
     assert state is not None
     assert state.attributes.get("state_class") is SensorStateClass.TOTAL
     assert "device_class" not in state.attributes
 
     now += timedelta(seconds=3600)
     with freeze_time(now):
-        hass.states.async_set(
+        menuai.states.async_set(
             entity_id,
             1,
             {
@@ -134,9 +134,9 @@ async def test_state(hass: HomeAssistant, method) -> None:
             },
             force_update=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.integration")
+    state = menuai.states.get("sensor.integration")
     assert state is not None
 
     # Testing a power sensor at 1 KiloWatts for 1hour = 1kWh
@@ -149,7 +149,7 @@ async def test_state(hass: HomeAssistant, method) -> None:
     # 1 hour after last update, power sensor is unavailable
     now += timedelta(seconds=3600)
     with freeze_time(now):
-        hass.states.async_set(
+        menuai.states.async_set(
             entity_id,
             STATE_UNAVAILABLE,
             {
@@ -158,15 +158,15 @@ async def test_state(hass: HomeAssistant, method) -> None:
             },
             force_update=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.integration")
+    state = menuai.states.get("sensor.integration")
     assert state.state == STATE_UNAVAILABLE
 
     # 1 hour after last update, power sensor is back to normal at 2 KiloWatts and stays for 1 hour += 2kWh
     now += timedelta(seconds=3600)
     with freeze_time(now):
-        hass.states.async_set(
+        menuai.states.async_set(
             entity_id,
             2,
             {
@@ -175,8 +175,8 @@ async def test_state(hass: HomeAssistant, method) -> None:
             },
             force_update=True,
         )
-        await hass.async_block_till_done()
-    state = hass.states.get("sensor.integration")
+        await menuai.async_block_till_done()
+    state = menuai.states.get("sensor.integration")
     assert (
         round(float(state.state), config["sensor"]["round"]) == 3.0
         if method == "right"
@@ -185,7 +185,7 @@ async def test_state(hass: HomeAssistant, method) -> None:
 
     now += timedelta(seconds=3600)
     with freeze_time(now):
-        hass.states.async_set(
+        menuai.states.async_set(
             entity_id,
             2,
             {
@@ -194,8 +194,8 @@ async def test_state(hass: HomeAssistant, method) -> None:
             },
             force_update=True,
         )
-        await hass.async_block_till_done()
-    state = hass.states.get("sensor.integration")
+        await menuai.async_block_till_done()
+    state = menuai.states.get("sensor.integration")
     assert (
         round(float(state.state), config["sensor"]["round"]) == 5.0
         if method == "right"
@@ -203,10 +203,10 @@ async def test_state(hass: HomeAssistant, method) -> None:
     )
 
 
-async def test_restore_state(hass: HomeAssistant) -> None:
+async def test_restore_state(menuai: menuai) -> None:
     """Test integration sensor state is restored correctly."""
     mock_restore_cache_with_extra_data(
-        hass,
+        menuai,
         [
             (
                 State(
@@ -235,10 +235,10 @@ async def test_restore_state(hass: HomeAssistant) -> None:
         }
     }
 
-    assert await async_setup_component(hass, "sensor", config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", config)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.integration")
+    state = menuai.states.get("sensor.integration")
     assert state
     assert state.state == "100.00"
 
@@ -259,10 +259,10 @@ async def test_restore_state(hass: HomeAssistant) -> None:
         },
     ],
 )
-async def test_restore_state_failed(hass: HomeAssistant, extra_attributes) -> None:
+async def test_restore_state_failed(menuai: menuai, extra_attributes) -> None:
     """Test integration sensor state is restored correctly."""
     mock_restore_cache_with_extra_data(
-        hass,
+        menuai,
         [
             (
                 State(
@@ -286,10 +286,10 @@ async def test_restore_state_failed(hass: HomeAssistant, extra_attributes) -> No
         }
     }
 
-    assert await async_setup_component(hass, "sensor", config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", config)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.integration")
+    state = menuai.states.get("sensor.integration")
     assert state
     assert state.state == STATE_UNKNOWN
 
@@ -308,7 +308,7 @@ async def test_restore_state_failed(hass: HomeAssistant, extra_attributes) -> No
     ],
 )
 async def test_trapezoidal(
-    hass: HomeAssistant,
+    menuai: menuai,
     sequence: tuple[tuple[float, float, float], ...],
     force_update: bool,
 ) -> None:
@@ -322,25 +322,25 @@ async def test_trapezoidal(
         }
     }
 
-    assert await async_setup_component(hass, "sensor", config)
+    assert await async_setup_component(menuai, "sensor", config)
 
     entity_id = config["sensor"]["source"]
-    hass.states.async_set(entity_id, 0, {})
-    await hass.async_block_till_done()
+    menuai.states.async_set(entity_id, 0, {})
+    await menuai.async_block_till_done()
 
     start_time = dt_util.utcnow()
     with freeze_time(start_time) as freezer:
         # Testing a power sensor with non-monotonic intervals and values
         for time, value, expected in sequence:
             freezer.move_to(start_time + timedelta(minutes=time))
-            hass.states.async_set(
+            menuai.states.async_set(
                 entity_id,
                 value,
                 {ATTR_UNIT_OF_MEASUREMENT: UnitOfPower.KILO_WATT},
                 force_update=force_update,
             )
-            await hass.async_block_till_done()
-            state = hass.states.get("sensor.integration")
+            await menuai.async_block_till_done()
+            state = menuai.states.get("sensor.integration")
             assert round(float(state.state), config["sensor"]["round"]) == expected
 
     assert state.attributes.get("unit_of_measurement") == UnitOfEnergy.KILO_WATT_HOUR
@@ -360,7 +360,7 @@ async def test_trapezoidal(
     ],
 )
 async def test_left(
-    hass: HomeAssistant,
+    menuai: menuai,
     sequence: tuple[tuple[float, float, float], ...],
     force_update: bool,
 ) -> None:
@@ -375,27 +375,27 @@ async def test_left(
         }
     }
 
-    assert await async_setup_component(hass, "sensor", config)
+    assert await async_setup_component(menuai, "sensor", config)
 
     entity_id = config["sensor"]["source"]
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id, 0, {ATTR_UNIT_OF_MEASUREMENT: UnitOfPower.KILO_WATT}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Testing a power sensor with non-monotonic intervals and values
     start_time = dt_util.utcnow()
     with freeze_time(start_time) as freezer:
         for time, value, expected in sequence:
             freezer.move_to(start_time + timedelta(minutes=time))
-            hass.states.async_set(
+            menuai.states.async_set(
                 entity_id,
                 value,
                 {ATTR_UNIT_OF_MEASUREMENT: UnitOfPower.KILO_WATT},
                 force_update=force_update,
             )
-            await hass.async_block_till_done()
-            state = hass.states.get("sensor.integration")
+            await menuai.async_block_till_done()
+            state = menuai.states.get("sensor.integration")
             assert round(float(state.state), config["sensor"]["round"]) == expected
 
     assert state.attributes.get("unit_of_measurement") == UnitOfEnergy.KILO_WATT_HOUR
@@ -415,7 +415,7 @@ async def test_left(
     ],
 )
 async def test_right(
-    hass: HomeAssistant,
+    menuai: menuai,
     sequence: tuple[tuple[float, float, float], ...],
     force_update: bool,
 ) -> None:
@@ -430,33 +430,33 @@ async def test_right(
         }
     }
 
-    assert await async_setup_component(hass, "sensor", config)
+    assert await async_setup_component(menuai, "sensor", config)
 
     entity_id = config["sensor"]["source"]
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id, 0, {ATTR_UNIT_OF_MEASUREMENT: UnitOfPower.KILO_WATT}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Testing a power sensor with non-monotonic intervals and values
     start_time = dt_util.utcnow()
     with freeze_time(start_time) as freezer:
         for time, value, expected in sequence:
             freezer.move_to(start_time + timedelta(minutes=time))
-            hass.states.async_set(
+            menuai.states.async_set(
                 entity_id,
                 value,
                 {ATTR_UNIT_OF_MEASUREMENT: UnitOfPower.KILO_WATT},
                 force_update=force_update,
             )
-            await hass.async_block_till_done()
-            state = hass.states.get("sensor.integration")
+            await menuai.async_block_till_done()
+            state = menuai.states.get("sensor.integration")
             assert round(float(state.state), config["sensor"]["round"]) == expected
 
     assert state.attributes.get("unit_of_measurement") == UnitOfEnergy.KILO_WATT_HOUR
 
 
-async def test_prefix(hass: HomeAssistant) -> None:
+async def test_prefix(menuai: menuai) -> None:
     """Test integration sensor state using a power source."""
     config = {
         "sensor": {
@@ -468,23 +468,23 @@ async def test_prefix(hass: HomeAssistant) -> None:
         }
     }
 
-    assert await async_setup_component(hass, "sensor", config)
+    assert await async_setup_component(menuai, "sensor", config)
 
     entity_id = config["sensor"]["source"]
-    hass.states.async_set(entity_id, 1000, {"unit_of_measurement": UnitOfPower.WATT})
-    await hass.async_block_till_done()
+    menuai.states.async_set(entity_id, 1000, {"unit_of_measurement": UnitOfPower.WATT})
+    await menuai.async_block_till_done()
 
     now = dt_util.utcnow() + timedelta(seconds=3600)
     with freeze_time(now):
-        hass.states.async_set(
+        menuai.states.async_set(
             entity_id,
             1000,
             {"unit_of_measurement": UnitOfPower.WATT},
             force_update=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.integration")
+    state = menuai.states.get("sensor.integration")
     assert state is not None
 
     # Testing a power sensor at 1000 Watts for 1hour = 1kWh
@@ -492,7 +492,7 @@ async def test_prefix(hass: HomeAssistant) -> None:
     assert state.attributes.get("unit_of_measurement") == UnitOfEnergy.KILO_WATT_HOUR
 
 
-async def test_suffix(hass: HomeAssistant) -> None:
+async def test_suffix(menuai: menuai) -> None:
     """Test integration sensor state using a network counter source."""
     config = {
         "sensor": {
@@ -505,25 +505,25 @@ async def test_suffix(hass: HomeAssistant) -> None:
         }
     }
 
-    assert await async_setup_component(hass, "sensor", config)
+    assert await async_setup_component(menuai, "sensor", config)
 
     entity_id = config["sensor"]["source"]
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id, 1000, {ATTR_UNIT_OF_MEASUREMENT: UnitOfDataRate.BYTES_PER_SECOND}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     now = dt_util.utcnow() + timedelta(seconds=10)
     with freeze_time(now):
-        hass.states.async_set(
+        menuai.states.async_set(
             entity_id,
             1000,
             {ATTR_UNIT_OF_MEASUREMENT: UnitOfDataRate.BYTES_PER_SECOND},
             force_update=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.integration")
+    state = menuai.states.get("sensor.integration")
     assert state is not None
 
     # Testing a network speed sensor at 1000 bytes/s over 10s  = 10kbytes
@@ -531,7 +531,7 @@ async def test_suffix(hass: HomeAssistant) -> None:
     assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == UnitOfInformation.KILOBYTES
 
 
-async def test_suffix_2(hass: HomeAssistant) -> None:
+async def test_suffix_2(menuai: menuai) -> None:
     """Test integration sensor state."""
     config = {
         "sensor": {
@@ -543,23 +543,23 @@ async def test_suffix_2(hass: HomeAssistant) -> None:
         }
     }
 
-    assert await async_setup_component(hass, "sensor", config)
+    assert await async_setup_component(menuai, "sensor", config)
 
     entity_id = config["sensor"]["source"]
-    hass.states.async_set(entity_id, 1000, {ATTR_UNIT_OF_MEASUREMENT: "m³/h"})
-    await hass.async_block_till_done()
+    menuai.states.async_set(entity_id, 1000, {ATTR_UNIT_OF_MEASUREMENT: "m³/h"})
+    await menuai.async_block_till_done()
 
     now = dt_util.utcnow() + timedelta(hours=1)
     with freeze_time(now):
-        hass.states.async_set(
+        menuai.states.async_set(
             entity_id,
             1000,
             {ATTR_UNIT_OF_MEASUREMENT: "m³/h"},
             force_update=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.integration")
+    state = menuai.states.get("sensor.integration")
     assert state is not None
 
     # Testing a flow sensor at 1000 m³/h over 1h = 1000 m³
@@ -567,7 +567,7 @@ async def test_suffix_2(hass: HomeAssistant) -> None:
     assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == "m³"
 
 
-async def test_units(hass: HomeAssistant) -> None:
+async def test_units(menuai: menuai) -> None:
     """Test integration sensor units using a power source."""
     config = {
         "sensor": {
@@ -577,21 +577,21 @@ async def test_units(hass: HomeAssistant) -> None:
         }
     }
 
-    assert await async_setup_component(hass, "sensor", config)
+    assert await async_setup_component(menuai, "sensor", config)
 
     entity_id = config["sensor"]["source"]
     # This replicates the current sequence when HA starts up in a real runtime
     # by updating the base sensor state before the base sensor's units
     # or state have been correctly populated.  Those interim updates
     # include states of None and Unknown
-    hass.states.async_set(entity_id, 100, {"unit_of_measurement": None})
-    await hass.async_block_till_done()
-    hass.states.async_set(entity_id, 200, {"unit_of_measurement": None})
-    await hass.async_block_till_done()
-    hass.states.async_set(entity_id, 300, {"unit_of_measurement": UnitOfPower.WATT})
-    await hass.async_block_till_done()
+    menuai.states.async_set(entity_id, 100, {"unit_of_measurement": None})
+    await menuai.async_block_till_done()
+    menuai.states.async_set(entity_id, 200, {"unit_of_measurement": None})
+    await menuai.async_block_till_done()
+    menuai.states.async_set(entity_id, 300, {"unit_of_measurement": UnitOfPower.WATT})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.integration")
+    state = menuai.states.get("sensor.integration")
     assert state is not None
 
     # Testing the sensor ignored the source sensor's units until
@@ -600,23 +600,23 @@ async def test_units(hass: HomeAssistant) -> None:
 
     # When source state goes to None / Unknown, expect an early exit without
     # changes to the state or unit_of_measurement
-    hass.states.async_set(entity_id, None, {"unit_of_measurement": UnitOfPower.WATT})
-    await hass.async_block_till_done()
+    menuai.states.async_set(entity_id, None, {"unit_of_measurement": UnitOfPower.WATT})
+    await menuai.async_block_till_done()
 
-    new_state = hass.states.get("sensor.integration")
+    new_state = menuai.states.get("sensor.integration")
     assert state == new_state
     assert state.attributes.get("unit_of_measurement") == UnitOfEnergy.WATT_HOUR
 
     # When source state goes to unavailable, expect sensor to also become unavailable
-    hass.states.async_set(entity_id, STATE_UNAVAILABLE, None)
-    await hass.async_block_till_done()
+    menuai.states.async_set(entity_id, STATE_UNAVAILABLE, None)
+    await menuai.async_block_till_done()
 
-    new_state = hass.states.get("sensor.integration")
+    new_state = menuai.states.get("sensor.integration")
     assert new_state.state == STATE_UNAVAILABLE
 
 
 @pytest.mark.parametrize("method", ["trapezoidal", "left", "right"])
-async def test_device_class(hass: HomeAssistant, method) -> None:
+async def test_device_class(menuai: menuai, method) -> None:
     """Test integration sensor units using a power source."""
     config = {
         "sensor": {
@@ -627,28 +627,28 @@ async def test_device_class(hass: HomeAssistant, method) -> None:
         }
     }
 
-    assert await async_setup_component(hass, "sensor", config)
+    assert await async_setup_component(menuai, "sensor", config)
 
     entity_id = config["sensor"]["source"]
     # This replicates the current sequence when HA starts up in a real runtime
     # by updating the base sensor state before the base sensor's units
     # or state have been correctly populated.  Those interim updates
     # include states of None and Unknown
-    hass.states.async_set(entity_id, STATE_UNKNOWN, {})
-    await hass.async_block_till_done()
-    hass.states.async_set(
+    menuai.states.async_set(entity_id, STATE_UNKNOWN, {})
+    await menuai.async_block_till_done()
+    menuai.states.async_set(
         entity_id, 100, {"device_class": None, "unit_of_measurement": None}
     )
-    await hass.async_block_till_done()
-    hass.states.async_set(
+    await menuai.async_block_till_done()
+    menuai.states.async_set(
         entity_id, 200, {"device_class": None, "unit_of_measurement": None}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.integration")
+    state = menuai.states.get("sensor.integration")
     assert "device_class" not in state.attributes
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         300,
         {
@@ -657,9 +657,9 @@ async def test_device_class(hass: HomeAssistant, method) -> None:
         },
         force_update=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.integration")
+    state = menuai.states.get("sensor.integration")
     assert state is not None
     # Testing the sensor ignored the source sensor's device class until
     # it became valid
@@ -675,7 +675,7 @@ async def test_device_class(hass: HomeAssistant, method) -> None:
     ],
 )
 async def test_calc_errors(
-    hass: HomeAssistant, method: str, expected_states: list[str]
+    menuai: menuai, method: str, expected_states: list[str]
 ) -> None:
     """Test integration sensor units using a power source."""
     config = {
@@ -687,17 +687,17 @@ async def test_calc_errors(
         }
     }
 
-    assert await async_setup_component(hass, "sensor", config)
+    assert await async_setup_component(menuai, "sensor", config)
 
     entity_id = config["sensor"]["source"]
 
     now = dt_util.utcnow()
-    hass.states.async_set(entity_id, None, {})
-    await hass.async_block_till_done()
+    menuai.states.async_set(entity_id, None, {})
+    await menuai.async_block_till_done()
 
     # With the source sensor in a None state, the Reimann sensor should be
     # unknown
-    state = hass.states.get("sensor.integration")
+    state = menuai.states.get("sensor.integration")
     assert state is not None
     assert state.state == STATE_UNKNOWN
 
@@ -705,11 +705,11 @@ async def test_calc_errors(
     # not change the value of the Reimann sensor, unless the method used is "right".
     now += timedelta(seconds=3600)
     with freeze_time(now):
-        hass.states.async_set(entity_id, 0, {"device_class": None})
-        await hass.async_block_till_done()
-    await hass.async_block_till_done()
+        menuai.states.async_set(entity_id, 0, {"device_class": None})
+        await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.integration")
+    state = menuai.states.get("sensor.integration")
     assert state is not None
     assert state.state == expected_states[0]
 
@@ -717,34 +717,34 @@ async def test_calc_errors(
     # should have a zero (known) value.
     now += timedelta(seconds=3600)
     with freeze_time(now):
-        hass.states.async_set(entity_id, 1, {"device_class": None})
-        await hass.async_block_till_done()
-    await hass.async_block_till_done()
+        menuai.states.async_set(entity_id, 1, {"device_class": None})
+        await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.integration")
+    state = menuai.states.get("sensor.integration")
     assert state is not None
     assert state.state == expected_states[1]
 
     # Set the source sensor back to a non numeric state
     now += timedelta(seconds=3600)
     with freeze_time(now):
-        hass.states.async_set(entity_id, "unexpected", {"device_class": None})
-        await hass.async_block_till_done()
-    await hass.async_block_till_done()
+        menuai.states.async_set(entity_id, "unexpected", {"device_class": None})
+        await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.integration")
+    state = menuai.states.get("sensor.integration")
     assert state is not None
     assert state.state == expected_states[2]
 
 
 async def test_device_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test for source entity device for Riemann sum integral."""
     source_config_entry = MockConfigEntry()
-    source_config_entry.add_to_hass(hass)
+    source_config_entry.add_to_menuai(menuai)
     source_device_entry = device_registry.async_get_or_create(
         config_entry_id=source_config_entry.entry_id,
         identifiers={("sensor", "identifier_test")},
@@ -757,7 +757,7 @@ async def test_device_id(
         config_entry=source_config_entry,
         device_id=source_device_entry.id,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert entity_registry.async_get("sensor.test_source") is not None
 
     integration_config_entry = MockConfigEntry(
@@ -774,10 +774,10 @@ async def test_device_id(
         title="Integration",
     )
 
-    integration_config_entry.add_to_hass(hass)
+    integration_config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(integration_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(integration_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     integration_entity = entity_registry.async_get("sensor.integration")
     assert integration_entity is not None
@@ -797,16 +797,16 @@ def _integral_sensor_config(max_sub_interval: dict[str, int] | None) -> dict[str
 
 
 async def _setup_integral_sensor(
-    hass: HomeAssistant, max_sub_interval: dict[str, int] | None
+    menuai: menuai, max_sub_interval: dict[str, int] | None
 ) -> None:
     await async_setup_component(
-        hass, "sensor", _integral_sensor_config(max_sub_interval=max_sub_interval)
+        menuai, "sensor", _integral_sensor_config(max_sub_interval=max_sub_interval)
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
-async def _update_source_sensor(hass: HomeAssistant, value: int | str) -> None:
-    hass.states.async_set(
+async def _update_source_sensor(menuai: menuai, value: int | str) -> None:
+    menuai.states.async_set(
         _integral_sensor_config(max_sub_interval=DEFAULT_MAX_SUB_INTERVAL)["sensor"][
             "source"
         ],
@@ -814,149 +814,149 @@ async def _update_source_sensor(hass: HomeAssistant, value: int | str) -> None:
         {ATTR_UNIT_OF_MEASUREMENT: UnitOfPower.KILO_WATT},
         force_update=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
 async def test_on_valid_source_expect_update_on_time(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test whether time based integration updates the integral on a valid source."""
     start_time = dt_util.utcnow()
 
     with freeze_time(start_time) as freezer:
-        await _setup_integral_sensor(hass, max_sub_interval=DEFAULT_MAX_SUB_INTERVAL)
-        await _update_source_sensor(hass, 100)
-        state_before_max_sub_interval_exceeded = hass.states.get("sensor.integration")
+        await _setup_integral_sensor(menuai, max_sub_interval=DEFAULT_MAX_SUB_INTERVAL)
+        await _update_source_sensor(menuai, 100)
+        state_before_max_sub_interval_exceeded = menuai.states.get("sensor.integration")
 
         freezer.tick(61)
-        async_fire_time_changed(hass, dt_util.now())
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, dt_util.now())
+        await menuai.async_block_till_done()
 
-        state = hass.states.get("sensor.integration")
+        state = menuai.states.get("sensor.integration")
         assert (
-            condition.async_numeric_state(hass, state_before_max_sub_interval_exceeded)
+            condition.async_numeric_state(menuai, state_before_max_sub_interval_exceeded)
             is False
         )
         assert state_before_max_sub_interval_exceeded.state != state.state
-        assert condition.async_numeric_state(hass, state) is True
+        assert condition.async_numeric_state(menuai, state) is True
         assert float(state.state) > 1.69  # approximately 100 * 61 / 3600
         assert float(state.state) < 1.8
 
 
 async def test_on_0_source_expect_0_and_update_when_source_gets_positive(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test whether time based integration updates the integral on a valid zero source."""
     start_time = dt_util.utcnow()
 
     with freeze_time(start_time) as freezer:
-        await _setup_integral_sensor(hass, max_sub_interval=DEFAULT_MAX_SUB_INTERVAL)
-        await _update_source_sensor(hass, 0)
-        await hass.async_block_till_done()
+        await _setup_integral_sensor(menuai, max_sub_interval=DEFAULT_MAX_SUB_INTERVAL)
+        await _update_source_sensor(menuai, 0)
+        await menuai.async_block_till_done()
 
         # wait one minute and one second
         freezer.tick(61)
-        async_fire_time_changed(hass, dt_util.now())
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, dt_util.now())
+        await menuai.async_block_till_done()
 
-        state = hass.states.get("sensor.integration")
+        state = menuai.states.get("sensor.integration")
 
-        assert condition.async_numeric_state(hass, state) is True
+        assert condition.async_numeric_state(menuai, state) is True
         assert float(state.state) == 0  # integral is 0 after integration of 0
 
         # wait one second and update state
         freezer.tick(1)
-        async_fire_time_changed(hass, dt_util.now())
-        await _update_source_sensor(hass, 100)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, dt_util.now())
+        await _update_source_sensor(menuai, 100)
+        await menuai.async_block_till_done()
 
-        state = hass.states.get("sensor.integration")
+        state = menuai.states.get("sensor.integration")
 
         # approx 100*1/3600 (right method after 1 second since last integration)
         assert 0.027 < float(state.state) < 0.029
 
 
 async def test_on_unvailable_source_expect_no_update_on_time(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test whether time based integration handles unavailability of the source properly."""
 
     start_time = dt_util.utcnow()
     with freeze_time(start_time) as freezer:
-        await _setup_integral_sensor(hass, max_sub_interval=DEFAULT_MAX_SUB_INTERVAL)
-        await _update_source_sensor(hass, 100)
+        await _setup_integral_sensor(menuai, max_sub_interval=DEFAULT_MAX_SUB_INTERVAL)
+        await _update_source_sensor(menuai, 100)
         freezer.tick(61)
-        async_fire_time_changed(hass, dt_util.now())
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, dt_util.now())
+        await menuai.async_block_till_done()
 
-        state = hass.states.get("sensor.integration")
-        assert condition.async_numeric_state(hass, state) is True
+        state = menuai.states.get("sensor.integration")
+        assert condition.async_numeric_state(menuai, state) is True
 
-        await _update_source_sensor(hass, STATE_UNAVAILABLE)
-        await hass.async_block_till_done()
+        await _update_source_sensor(menuai, STATE_UNAVAILABLE)
+        await menuai.async_block_till_done()
 
         freezer.tick(61)
-        async_fire_time_changed(hass, dt_util.now())
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, dt_util.now())
+        await menuai.async_block_till_done()
 
-        state = hass.states.get("sensor.integration")
-        assert condition.state(hass, state, STATE_UNAVAILABLE) is True
+        state = menuai.states.get("sensor.integration")
+        assert condition.state(menuai, state, STATE_UNAVAILABLE) is True
 
 
 async def test_on_statechanges_source_expect_no_update_on_time(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test whether state changes cancel time based integration."""
 
     start_time = dt_util.utcnow()
     with freeze_time(start_time) as freezer:
-        await _setup_integral_sensor(hass, max_sub_interval=DEFAULT_MAX_SUB_INTERVAL)
-        await _update_source_sensor(hass, 100)
+        await _setup_integral_sensor(menuai, max_sub_interval=DEFAULT_MAX_SUB_INTERVAL)
+        await _update_source_sensor(menuai, 100)
 
         freezer.tick(30)
-        await hass.async_block_till_done()
-        await _update_source_sensor(hass, 101)
+        await menuai.async_block_till_done()
+        await _update_source_sensor(menuai, 101)
 
-        state_after_30s = hass.states.get("sensor.integration")
-        assert condition.async_numeric_state(hass, state_after_30s) is True
+        state_after_30s = menuai.states.get("sensor.integration")
+        assert condition.async_numeric_state(menuai, state_after_30s) is True
 
         freezer.tick(35)
-        async_fire_time_changed(hass, dt_util.now())
-        await hass.async_block_till_done()
-        state_after_65s = hass.states.get("sensor.integration")
+        async_fire_time_changed(menuai, dt_util.now())
+        await menuai.async_block_till_done()
+        state_after_65s = menuai.states.get("sensor.integration")
         assert (dt_util.now() - start_time).total_seconds() > 60
         # No state change because the timer was cancelled because of an update after 30s
         assert state_after_65s == state_after_30s
 
         freezer.tick(35)
-        async_fire_time_changed(hass, dt_util.now())
-        await hass.async_block_till_done()
-        state_after_105s = hass.states.get("sensor.integration")
+        async_fire_time_changed(menuai, dt_util.now())
+        await menuai.async_block_till_done()
+        state_after_105s = menuai.states.get("sensor.integration")
         # Update based on time
         assert float(state_after_105s.state) > float(state_after_65s.state)
 
 
 async def test_on_no_max_sub_interval_expect_no_timebased_updates(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test whether integratal is not updated by time when max_sub_interval is not configured."""
 
     start_time = dt_util.utcnow()
     with freeze_time(start_time) as freezer:
-        await _setup_integral_sensor(hass, max_sub_interval=None)
-        await _update_source_sensor(hass, 100)
-        await hass.async_block_till_done()
-        await _update_source_sensor(hass, 101)
-        await hass.async_block_till_done()
+        await _setup_integral_sensor(menuai, max_sub_interval=None)
+        await _update_source_sensor(menuai, 100)
+        await menuai.async_block_till_done()
+        await _update_source_sensor(menuai, 101)
+        await menuai.async_block_till_done()
 
-        state_after_last_state_change = hass.states.get("sensor.integration")
+        state_after_last_state_change = menuai.states.get("sensor.integration")
 
         assert (
-            condition.async_numeric_state(hass, state_after_last_state_change) is True
+            condition.async_numeric_state(menuai, state_after_last_state_change) is True
         )
 
         freezer.tick(100)
-        async_fire_time_changed(hass, dt_util.now())
-        await hass.async_block_till_done()
-        state_after_100s = hass.states.get("sensor.integration")
+        async_fire_time_changed(menuai, dt_util.now())
+        await menuai.async_block_till_done()
+        state_after_100s = menuai.states.get("sensor.integration")
         assert state_after_100s == state_after_last_state_change

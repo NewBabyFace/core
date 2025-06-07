@@ -19,11 +19,11 @@ from habluetooth import (
 )
 from home_assistant_bluetooth import BluetoothServiceInfoBleak
 
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback as hass_callback
-from homeassistant.helpers.singleton import singleton
+from menuai.core import CALLBACK_TYPE, menuai, callback as menuai_callback
+from menuai.helpers.singleton import singleton
 
 from .const import DATA_MANAGER
-from .manager import HomeAssistantBluetoothManager
+from .manager import menuaiBluetoothManager
 from .match import BluetoothCallbackMatcher
 from .models import BluetoothCallback, BluetoothChange, ProcessAdvertisementCallback
 
@@ -32,13 +32,13 @@ if TYPE_CHECKING:
 
 
 @singleton(DATA_MANAGER)
-def _get_manager(hass: HomeAssistant) -> HomeAssistantBluetoothManager:
+def _get_manager(menuai: menuai) -> menuaiBluetoothManager:
     """Get the bluetooth manager."""
-    return cast(HomeAssistantBluetoothManager, get_manager())
+    return cast(menuaiBluetoothManager, get_manager())
 
 
-@hass_callback
-def async_get_scanner(hass: HomeAssistant) -> HaBleakScannerWrapper:
+@menuai_callback
+def async_get_scanner(menuai: menuai) -> HaBleakScannerWrapper:
     """Return a HaBleakScannerWrapper.
 
     This is a wrapper around our BleakScanner singleton that allows
@@ -47,8 +47,8 @@ def async_get_scanner(hass: HomeAssistant) -> HaBleakScannerWrapper:
     return HaBleakScannerWrapper()
 
 
-@hass_callback
-def async_scanner_by_source(hass: HomeAssistant, source: str) -> BaseHaScanner | None:
+@menuai_callback
+def async_scanner_by_source(menuai: menuai, source: str) -> BaseHaScanner | None:
     """Return a scanner for a given source.
 
     This method is only intended to be used by integrations that implement
@@ -57,58 +57,58 @@ def async_scanner_by_source(hass: HomeAssistant, source: str) -> BaseHaScanner |
     It is not intended to be used by integrations that need to interact
     with a device.
     """
-    return _get_manager(hass).async_scanner_by_source(source)
+    return _get_manager(menuai).async_scanner_by_source(source)
 
 
-@hass_callback
-def async_scanner_count(hass: HomeAssistant, connectable: bool = True) -> int:
+@menuai_callback
+def async_scanner_count(menuai: menuai, connectable: bool = True) -> int:
     """Return the number of scanners currently in use."""
-    return _get_manager(hass).async_scanner_count(connectable)
+    return _get_manager(menuai).async_scanner_count(connectable)
 
 
-@hass_callback
+@menuai_callback
 def async_discovered_service_info(
-    hass: HomeAssistant, connectable: bool = True
+    menuai: menuai, connectable: bool = True
 ) -> Iterable[BluetoothServiceInfoBleak]:
     """Return the discovered devices list."""
-    return _get_manager(hass).async_discovered_service_info(connectable)
+    return _get_manager(menuai).async_discovered_service_info(connectable)
 
 
-@hass_callback
+@menuai_callback
 def async_last_service_info(
-    hass: HomeAssistant, address: str, connectable: bool = True
+    menuai: menuai, address: str, connectable: bool = True
 ) -> BluetoothServiceInfoBleak | None:
     """Return the last service info for an address."""
-    return _get_manager(hass).async_last_service_info(address, connectable)
+    return _get_manager(menuai).async_last_service_info(address, connectable)
 
 
-@hass_callback
+@menuai_callback
 def async_ble_device_from_address(
-    hass: HomeAssistant, address: str, connectable: bool = True
+    menuai: menuai, address: str, connectable: bool = True
 ) -> BLEDevice | None:
     """Return BLEDevice for an address if its present."""
-    return _get_manager(hass).async_ble_device_from_address(address, connectable)
+    return _get_manager(menuai).async_ble_device_from_address(address, connectable)
 
 
-@hass_callback
+@menuai_callback
 def async_scanner_devices_by_address(
-    hass: HomeAssistant, address: str, connectable: bool = True
+    menuai: menuai, address: str, connectable: bool = True
 ) -> list[BluetoothScannerDevice]:
     """Return all discovered BluetoothScannerDevice for an address."""
-    return _get_manager(hass).async_scanner_devices_by_address(address, connectable)
+    return _get_manager(menuai).async_scanner_devices_by_address(address, connectable)
 
 
-@hass_callback
+@menuai_callback
 def async_address_present(
-    hass: HomeAssistant, address: str, connectable: bool = True
+    menuai: menuai, address: str, connectable: bool = True
 ) -> bool:
     """Check if an address is present in the bluetooth device list."""
-    return _get_manager(hass).async_address_present(address, connectable)
+    return _get_manager(menuai).async_address_present(address, connectable)
 
 
-@hass_callback
+@menuai_callback
 def async_register_callback(
-    hass: HomeAssistant,
+    menuai: menuai,
     callback: BluetoothCallback,
     match_dict: BluetoothCallbackMatcher | None,
     mode: BluetoothScanningMode,
@@ -122,27 +122,27 @@ def async_register_callback(
 
     Returns a callback that can be used to cancel the registration.
     """
-    return _get_manager(hass).async_register_callback(callback, match_dict)
+    return _get_manager(menuai).async_register_callback(callback, match_dict)
 
 
 async def async_process_advertisements(
-    hass: HomeAssistant,
+    menuai: menuai,
     callback: ProcessAdvertisementCallback,
     match_dict: BluetoothCallbackMatcher,
     mode: BluetoothScanningMode,
     timeout: int,
 ) -> BluetoothServiceInfoBleak:
     """Process advertisements until callback returns true or timeout expires."""
-    done: Future[BluetoothServiceInfoBleak] = hass.loop.create_future()
+    done: Future[BluetoothServiceInfoBleak] = menuai.loop.create_future()
 
-    @hass_callback
+    @menuai_callback
     def _async_discovered_device(
         service_info: BluetoothServiceInfoBleak, change: BluetoothChange
     ) -> None:
         if not done.done() and callback(service_info):
             done.set_result(service_info)
 
-    unload = _get_manager(hass).async_register_callback(
+    unload = _get_manager(menuai).async_register_callback(
         _async_discovered_device, match_dict
     )
 
@@ -153,9 +153,9 @@ async def async_process_advertisements(
         unload()
 
 
-@hass_callback
+@menuai_callback
 def async_track_unavailable(
-    hass: HomeAssistant,
+    menuai: menuai,
     callback: Callable[[BluetoothServiceInfoBleak], None],
     address: str,
     connectable: bool = True,
@@ -164,18 +164,18 @@ def async_track_unavailable(
 
     Returns a callback that can be used to cancel the registration.
     """
-    return _get_manager(hass).async_track_unavailable(callback, address, connectable)
+    return _get_manager(menuai).async_track_unavailable(callback, address, connectable)
 
 
-@hass_callback
-def async_rediscover_address(hass: HomeAssistant, address: str) -> None:
+@menuai_callback
+def async_rediscover_address(menuai: menuai, address: str) -> None:
     """Trigger discovery of devices which have already been seen."""
-    _get_manager(hass).async_rediscover_address(address)
+    _get_manager(menuai).async_rediscover_address(address)
 
 
-@hass_callback
+@menuai_callback
 def async_register_scanner(
-    hass: HomeAssistant,
+    menuai: menuai,
     scanner: BaseHaScanner,
     connection_slots: int | None = None,
     source_domain: str | None = None,
@@ -184,7 +184,7 @@ def async_register_scanner(
     source_device_id: str | None = None,
 ) -> CALLBACK_TYPE:
     """Register a BleakScanner."""
-    return _get_manager(hass).async_register_hass_scanner(
+    return _get_manager(menuai).async_register_menuai_scanner(
         scanner,
         connection_slots,
         source_domain,
@@ -194,39 +194,39 @@ def async_register_scanner(
     )
 
 
-@hass_callback
-def async_remove_scanner(hass: HomeAssistant, source: str) -> None:
+@menuai_callback
+def async_remove_scanner(menuai: menuai, source: str) -> None:
     """Permanently remove a BleakScanner by source address."""
-    return _get_manager(hass).async_remove_scanner(source)
+    return _get_manager(menuai).async_remove_scanner(source)
 
 
-@hass_callback
+@menuai_callback
 def async_get_advertisement_callback(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> Callable[[BluetoothServiceInfoBleak], None]:
     """Get the advertisement callback."""
-    return _get_manager(hass).scanner_adv_received
+    return _get_manager(menuai).scanner_adv_received
 
 
-@hass_callback
+@menuai_callback
 def async_get_learned_advertising_interval(
-    hass: HomeAssistant, address: str
+    menuai: menuai, address: str
 ) -> float | None:
     """Get the learned advertising interval for a MAC address."""
-    return _get_manager(hass).async_get_learned_advertising_interval(address)
+    return _get_manager(menuai).async_get_learned_advertising_interval(address)
 
 
-@hass_callback
+@menuai_callback
 def async_get_fallback_availability_interval(
-    hass: HomeAssistant, address: str
+    menuai: menuai, address: str
 ) -> float | None:
     """Get the fallback availability timeout for a MAC address."""
-    return _get_manager(hass).async_get_fallback_availability_interval(address)
+    return _get_manager(menuai).async_get_fallback_availability_interval(address)
 
 
-@hass_callback
+@menuai_callback
 def async_set_fallback_availability_interval(
-    hass: HomeAssistant, address: str, interval: float
+    menuai: menuai, address: str, interval: float
 ) -> None:
     """Override the fallback availability timeout for a MAC address."""
-    _get_manager(hass).async_set_fallback_availability_interval(address, interval)
+    _get_manager(menuai).async_set_fallback_availability_interval(address, interval)

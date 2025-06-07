@@ -11,7 +11,7 @@ from google.api_core.retry import AsyncRetry
 from google.cloud import texttospeech
 import voluptuous as vol
 
-from homeassistant.components.tts import (
+from menuai.components.tts import (
     CONF_LANG,
     PLATFORM_SCHEMA as TTS_PLATFORM_SCHEMA,
     Provider,
@@ -19,11 +19,11 @@ from homeassistant.components.tts import (
     TtsAudioType,
     Voice,
 )
-from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.config_entries import SOURCE_IMPORT, ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import (
     CONF_ENCODING,
@@ -50,13 +50,13 @@ PLATFORM_SCHEMA = TTS_PLATFORM_SCHEMA.extend(tts_platform_schema().schema)
 
 
 async def async_get_engine(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> Provider | None:
     """Set up Google Cloud TTS component."""
     if key_file := config.get(CONF_KEY_FILE):
-        key_file = hass.config.path(key_file)
+        key_file = menuai.config.path(key_file)
         if not Path(key_file).is_file():
             _LOGGER.error("File %s doesn't exist", key_file)
             return None
@@ -64,10 +64,10 @@ async def async_get_engine(
         client = texttospeech.TextToSpeechAsyncClient.from_service_account_file(
             key_file
         )
-        if not hass.config_entries.async_entries(DOMAIN):
+        if not menuai.config_entries.async_entries(DOMAIN):
             _LOGGER.debug("Creating config entry by importing: %s", config)
-            hass.async_create_task(
-                hass.config_entries.flow.async_init(
+            menuai.async_create_task(
+                menuai.config_entries.flow.async_init(
                     DOMAIN, context={"source": SOURCE_IMPORT}, data=config
                 )
             )
@@ -87,7 +87,7 @@ async def async_get_engine(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -103,7 +103,7 @@ async def async_setup_entry(
     except GoogleAPIError as err:
         _LOGGER.error("Error from calling list_voices: %s", err)
         if isinstance(err, Unauthenticated):
-            config_entry.async_start_reauth(hass)
+            config_entry.async_start_reauth(menuai)
         return
     options_schema = tts_options_schema(dict(config_entry.options), voices)
     language = config_entry.options.get(CONF_LANG, DEFAULT_LANG)
@@ -264,7 +264,7 @@ class GoogleCloudTTSEntity(BaseGoogleCloudProvider, TextToSpeechEntity):
         except GoogleAPIError as err:
             _LOGGER.error("Error occurred during Google Cloud TTS call: %s", err)
             if isinstance(err, Unauthenticated):
-                self._entry.async_start_reauth(self.hass)
+                self._entry.async_start_reauth(self.menuai)
             return None, None
 
 

@@ -7,9 +7,9 @@ from datetime import timedelta
 import logging
 import time
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import NEVER_TIME, POLLING_FALLBACK_SECONDS
 
@@ -48,7 +48,7 @@ class LookinDataUpdateCoordinator[_DataT](DataUpdateCoordinator[_DataT]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         push_coordinator: LookinPushCoordinator,
         name: str,
@@ -58,7 +58,7 @@ class LookinDataUpdateCoordinator[_DataT](DataUpdateCoordinator[_DataT]):
         """Initialize DataUpdateCoordinator to gather data for specific device."""
         self.push_coordinator = push_coordinator
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=name,

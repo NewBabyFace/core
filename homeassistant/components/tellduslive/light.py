@@ -3,12 +3,12 @@
 import logging
 from typing import Any
 
-from homeassistant.components import light
-from homeassistant.components.light import ATTR_BRIGHTNESS, ColorMode, LightEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components import light
+from menuai.components.light import ATTR_BRIGHTNESS, ColorMode, LightEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN, TELLDUS_DISCOVERY_NEW
 from .entity import TelldusLiveEntity
@@ -17,7 +17,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -25,11 +25,11 @@ async def async_setup_entry(
 
     async def async_discover_light(device_id):
         """Discover and add a discovered sensor."""
-        client = hass.data[DOMAIN]
+        client = menuai.data[DOMAIN]
         async_add_entities([TelldusLiveLight(client, device_id)])
 
     async_dispatcher_connect(
-        hass,
+        menuai,
         TELLDUS_DISCOVERY_NEW.format(light.DOMAIN, DOMAIN),
         async_discover_light,
     )

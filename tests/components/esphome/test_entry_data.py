@@ -7,16 +7,16 @@ from aioesphomeapi import (
     SensorState,
 )
 
-from homeassistant.components.esphome import DOMAIN
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.esphome import DOMAIN
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .conftest import MockGenericDeviceEntryType
 
 
 async def test_migrate_entity_unique_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
@@ -47,7 +47,7 @@ async def test_migrate_entity_unique_id(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("sensor.old_sensor")
+    state = menuai.states.get("sensor.old_sensor")
     assert state is not None
     assert state.state == "50"
     entry = entity_registry.async_get("sensor.old_sensor")
@@ -59,7 +59,7 @@ async def test_migrate_entity_unique_id(
 
 
 async def test_migrate_entity_unique_id_downgrade_upgrade(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
@@ -97,7 +97,7 @@ async def test_migrate_entity_unique_id_downgrade_upgrade(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("sensor.new_sensor")
+    state = menuai.states.get("sensor.new_sensor")
     assert state is not None
     assert state.state == "50"
     entry = entity_registry.async_get("sensor.new_sensor")

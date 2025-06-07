@@ -14,21 +14,21 @@ from typing import TYPE_CHECKING, Any, Literal, TypedDict
 import attr
 from yarl import URL
 
-from homeassistant.const import EVENT_HOMEASSISTANT_STARTED, EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import (
+from menuai.const import EVENT_menuai_STARTED, EVENT_menuai_STOP
+from menuai.core import (
     Event,
-    HomeAssistant,
+    menuai,
     ReleaseChannel,
     callback,
     get_release_channel,
 )
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.loader import async_suggest_report_issue
-from homeassistant.util import uuid as uuid_util
-from homeassistant.util.dt import utc_from_timestamp, utcnow
-from homeassistant.util.event_type import EventType
-from homeassistant.util.hass_dict import HassKey
-from homeassistant.util.json import format_unserializable_data
+from menuai.exceptions import menuaiError
+from menuai.loader import async_suggest_report_issue
+from menuai.util import uuid as uuid_util
+from menuai.util.dt import utc_from_timestamp, utcnow
+from menuai.util.event_type import EventType
+from menuai.util.menuai_dict import menuaiKey
+from menuai.util.json import format_unserializable_data
 
 from . import storage, translation
 from .debounce import Debouncer
@@ -42,7 +42,7 @@ if TYPE_CHECKING:
     # mypy cannot workout _cache Protocol with attrs
     from propcache.api import cached_property as under_cached_property
 
-    from homeassistant.config_entries import ConfigEntry
+    from menuai.config_entries import ConfigEntry
 
     from . import entity_registry
 else:
@@ -50,7 +50,7 @@ else:
 
 _LOGGER = logging.getLogger(__name__)
 
-DATA_REGISTRY: HassKey[DeviceRegistry] = HassKey("device_registry")
+DATA_REGISTRY: menuaiKey[DeviceRegistry] = menuaiKey("device_registry")
 EVENT_DEVICE_REGISTRY_UPDATED: EventType[EventDeviceRegistryUpdatedData] = EventType(
     "device_registry_updated"
 )
@@ -69,7 +69,7 @@ ORPHANED_DEVICE_KEEP_SECONDS = 86400 * 30
 
 RUNTIME_ONLY_ATTRS = {"suggested_area"}
 
-CONFIGURATION_URL_SCHEMES = {"http", "https", "homeassistant"}
+CONFIGURATION_URL_SCHEMES = {"http", "https", "menuai"}
 
 
 class DeviceEntryDisabler(StrEnum):
@@ -171,7 +171,7 @@ class DeviceEntryType(StrEnum):
     SERVICE = "service"
 
 
-class DeviceInfoError(HomeAssistantError):
+class DeviceInfoError(menuaiError):
     """Raised when device info is invalid."""
 
     def __init__(self, domain: str, device_info: DeviceInfo, message: str) -> None:
@@ -183,7 +183,7 @@ class DeviceInfoError(HomeAssistantError):
         self.domain = domain
 
 
-class DeviceCollisionError(HomeAssistantError):
+class DeviceCollisionError(menuaiError):
     """Raised when a device collision is detected."""
 
 
@@ -682,11 +682,11 @@ class DeviceRegistry(BaseRegistry[dict[str, list[dict[str, Any]]]]):
     deleted_devices: DeviceRegistryItems[DeletedDeviceEntry]
     _device_data: dict[str, DeviceEntry]
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize the device registry."""
-        self.hass = hass
+        self.menuai = menuai
         self._store = DeviceRegistryStore(
-            hass,
+            menuai,
             STORAGE_VERSION_MAJOR,
             STORAGE_KEY,
             atomic_writes=True,
@@ -722,9 +722,9 @@ class DeviceRegistry(BaseRegistry[dict[str, list[dict[str, Any]]]]):
             return name.format(**translation_placeholders)
         except KeyError as err:
             if get_release_channel() is not ReleaseChannel.STABLE:
-                raise HomeAssistantError(f"Missing placeholder {err}") from err
+                raise menuaiError(f"Missing placeholder {err}") from err
             report_issue = async_suggest_report_issue(
-                self.hass, integration_domain=domain
+                self.menuai, integration_domain=domain
             )
             _LOGGER.warning(
                 (
@@ -771,9 +771,9 @@ class DeviceRegistry(BaseRegistry[dict[str, list[dict[str, Any]]]]):
         if configuration_url is not UNDEFINED:
             configuration_url = _validate_configuration_url(configuration_url)
 
-        config_entry = self.hass.config_entries.async_get_entry(config_entry_id)
+        config_entry = self.menuai.config_entries.async_get_entry(config_entry_id)
         if config_entry is None:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Can't link device to unknown config entry {config_entry_id}"
             )
 
@@ -782,7 +782,7 @@ class DeviceRegistry(BaseRegistry[dict[str, list[dict[str, Any]]]]):
                 f"component.{config_entry.domain}.device.{translation_key}.name"
             )
             translations = translation.async_get_cached_translations(
-                self.hass, self.hass.config.language, "device", config_entry.domain
+                self.menuai, self.menuai.config.language, "device", config_entry.domain
             )
             translated_name = translations.get(full_translation_key, translation_key)
             name = self._substitute_name_placeholders(
@@ -945,17 +945,17 @@ class DeviceRegistry(BaseRegistry[dict[str, list[dict[str, Any]]]]):
 
         if add_config_entry_id is not UNDEFINED:
             if (
-                add_config_entry := self.hass.config_entries.async_get_entry(
+                add_config_entry := self.menuai.config_entries.async_get_entry(
                     add_config_entry_id
                 )
             ) is None:
-                raise HomeAssistantError(
+                raise menuaiError(
                     f"Can't link device to unknown config entry {add_config_entry_id}"
                 )
 
         if add_config_subentry_id is not UNDEFINED:
             if add_config_entry_id is UNDEFINED:
-                raise HomeAssistantError(
+                raise menuaiError(
                     "Can't add config subentry without specifying config entry"
                 )
             if (
@@ -964,7 +964,7 @@ class DeviceRegistry(BaseRegistry[dict[str, list[dict[str, Any]]]]):
                 # raise above if that happens
                 and add_config_subentry_id not in add_config_entry.subentries  # type: ignore[union-attr]
             ):
-                raise HomeAssistantError(
+                raise menuaiError(
                     f"Config entry {add_config_entry_id} has no subentry {add_config_subentry_id}"
                 )
 
@@ -972,22 +972,22 @@ class DeviceRegistry(BaseRegistry[dict[str, list[dict[str, Any]]]]):
             remove_config_subentry_id is not UNDEFINED
             and remove_config_entry_id is UNDEFINED
         ):
-            raise HomeAssistantError(
+            raise menuaiError(
                 "Can't remove config subentry without specifying config entry"
             )
 
         if not new_connections and not new_identifiers:
-            raise HomeAssistantError(
+            raise menuaiError(
                 "A device must have at least one of identifiers or connections"
             )
 
         if merge_connections is not UNDEFINED and new_connections is not UNDEFINED:
-            raise HomeAssistantError(
+            raise menuaiError(
                 "Cannot define both merge_connections and new_connections"
             )
 
         if merge_identifiers is not UNDEFINED and new_identifiers is not UNDEFINED:
-            raise HomeAssistantError(
+            raise menuaiError(
                 "Cannot define both merge_identifiers and new_identifiers"
             )
 
@@ -1002,7 +1002,7 @@ class DeviceRegistry(BaseRegistry[dict[str, list[dict[str, Any]]]]):
             # pylint: disable-next=import-outside-toplevel
             from . import area_registry as ar
 
-            area = ar.async_get(self.hass).async_get_or_create(suggested_area)
+            area = ar.async_get(self.menuai).async_get_or_create(suggested_area)
             area_id = area.id
 
         if add_config_entry_id is not UNDEFINED:
@@ -1018,7 +1018,7 @@ class DeviceRegistry(BaseRegistry[dict[str, list[dict[str, Any]]]]):
                 if (
                     primary_entry_id is None
                     or not (
-                        primary_entry := self.hass.config_entries.async_get_entry(
+                        primary_entry := self.menuai.config_entries.async_get_entry(
                             primary_entry_id
                         )
                     )
@@ -1153,7 +1153,7 @@ class DeviceRegistry(BaseRegistry[dict[str, list[dict[str, Any]]]]):
             # Change modified_at if we are changing something that we store
             new_values["modified_at"] = utcnow()
 
-        self.hass.verify_event_loop_thread("device_registry.async_update_device")
+        self.menuai.verify_event_loop_thread("device_registry.async_update_device")
         new = attr.evolve(old, **new_values)
         self.devices[device_id] = new
 
@@ -1181,7 +1181,7 @@ class DeviceRegistry(BaseRegistry[dict[str, list[dict[str, Any]]]]):
         else:
             data = {"action": "update", "device_id": new.id, "changes": old_values}
 
-        self.hass.bus.async_fire_internal(EVENT_DEVICE_REGISTRY_UPDATED, data)
+        self.menuai.bus.async_fire_internal(EVENT_DEVICE_REGISTRY_UPDATED, data)
 
         return new
 
@@ -1235,7 +1235,7 @@ class DeviceRegistry(BaseRegistry[dict[str, list[dict[str, Any]]]]):
     @callback
     def async_remove_device(self, device_id: str) -> None:
         """Remove a device from the device registry."""
-        self.hass.verify_event_loop_thread("device_registry.async_remove_device")
+        self.menuai.verify_event_loop_thread("device_registry.async_remove_device")
         device = self.devices.pop(device_id)
         self.deleted_devices[device_id] = DeletedDeviceEntry(
             config_entries=device.config_entries,
@@ -1250,7 +1250,7 @@ class DeviceRegistry(BaseRegistry[dict[str, list[dict[str, Any]]]]):
         for other_device in list(self.devices.values()):
             if other_device.via_device_id == device_id:
                 self.async_update_device(other_device.id, via_device_id=None)
-        self.hass.bus.async_fire_internal(
+        self.menuai.bus.async_fire_internal(
             EVENT_DEVICE_REGISTRY_UPDATED,
             _EventDeviceRegistryUpdatedData_CreateRemove(
                 action="remove", device_id=device_id
@@ -1260,7 +1260,7 @@ class DeviceRegistry(BaseRegistry[dict[str, list[dict[str, Any]]]]):
 
     async def async_load(self) -> None:
         """Load the device registry."""
-        async_setup_cleanup(self.hass, self)
+        async_setup_cleanup(self.menuai, self)
 
         data = await self._store.async_load()
 
@@ -1458,15 +1458,15 @@ class DeviceRegistry(BaseRegistry[dict[str, list[dict[str, Any]]]]):
 
 @callback
 @singleton(DATA_REGISTRY)
-def async_get(hass: HomeAssistant) -> DeviceRegistry:
+def async_get(menuai: menuai) -> DeviceRegistry:
     """Get device registry."""
-    return DeviceRegistry(hass)
+    return DeviceRegistry(menuai)
 
 
-async def async_load(hass: HomeAssistant) -> None:
+async def async_load(menuai: menuai) -> None:
     """Load device registry."""
-    assert DATA_REGISTRY not in hass.data
-    await async_get(hass).async_load()
+    assert DATA_REGISTRY not in menuai.data
+    await async_get(menuai).async_load()
 
 
 @callback
@@ -1515,7 +1515,7 @@ def async_config_entry_disabled_by_changed(
 
     enabled_config_entries = {
         entry.entry_id
-        for entry in registry.hass.config_entries.async_entries()
+        for entry in registry.menuai.config_entries.async_entries()
         if not entry.disabled_by
     }
 
@@ -1534,13 +1534,13 @@ def async_config_entry_disabled_by_changed(
 
 @callback
 def async_cleanup(
-    hass: HomeAssistant,
+    menuai: menuai,
     dev_reg: DeviceRegistry,
     ent_reg: entity_registry.EntityRegistry,
 ) -> None:
     """Clean up device registry."""
     # Find all devices that are referenced by a config_entry.
-    config_entry_ids = set(hass.config_entries.async_entry_ids())
+    config_entry_ids = set(menuai.config_entries.async_entry_ids())
     references_config_entries = {
         device.id
         for device in dev_reg.devices.values()
@@ -1575,7 +1575,7 @@ def async_cleanup(
 
 
 @callback
-def async_setup_cleanup(hass: HomeAssistant, dev_reg: DeviceRegistry) -> None:
+def async_setup_cleanup(menuai: menuai, dev_reg: DeviceRegistry) -> None:
     """Clean up device registry when entities removed."""
     # pylint: disable-next=import-outside-toplevel
     from . import entity_registry, label_registry as lr
@@ -1592,7 +1592,7 @@ def async_setup_cleanup(hass: HomeAssistant, dev_reg: DeviceRegistry) -> None:
         """Update devices that have a label that has been removed."""
         dev_reg.async_clear_label_id(event.data["label_id"])
 
-    hass.bus.async_listen(
+    menuai.bus.async_listen(
         event_type=lr.EVENT_LABEL_REGISTRY_UPDATED,
         event_filter=_label_removed_from_registry_filter,
         listener=_handle_label_registry_update,
@@ -1601,11 +1601,11 @@ def async_setup_cleanup(hass: HomeAssistant, dev_reg: DeviceRegistry) -> None:
     @callback
     def _async_cleanup() -> None:
         """Cleanup."""
-        ent_reg = entity_registry.async_get(hass)
-        async_cleanup(hass, dev_reg, ent_reg)
+        ent_reg = entity_registry.async_get(menuai)
+        async_cleanup(menuai, dev_reg, ent_reg)
 
     debounced_cleanup: Debouncer[None] = Debouncer(
-        hass, _LOGGER, cooldown=CLEANUP_DELAY, immediate=False, function=_async_cleanup
+        menuai, _LOGGER, cooldown=CLEANUP_DELAY, immediate=False, function=_async_cleanup
     )
 
     @callback
@@ -1630,13 +1630,13 @@ def async_setup_cleanup(hass: HomeAssistant, dev_reg: DeviceRegistry) -> None:
 
     def _async_listen_for_cleanup() -> None:
         """Listen for entity registry changes."""
-        hass.bus.async_listen(
+        menuai.bus.async_listen(
             entity_registry.EVENT_ENTITY_REGISTRY_UPDATED,
             _async_entity_registry_changed,
             event_filter=entity_registry_changed_filter,
         )
 
-    if hass.is_running:
+    if menuai.is_running:
         _async_listen_for_cleanup()
         return
 
@@ -1645,14 +1645,14 @@ def async_setup_cleanup(hass: HomeAssistant, dev_reg: DeviceRegistry) -> None:
         _async_listen_for_cleanup()
         await debounced_cleanup.async_call()
 
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, startup_clean)
+    menuai.bus.async_listen_once(EVENT_menuai_STARTED, startup_clean)
 
     @callback
-    def _on_homeassistant_stop(event: Event) -> None:
+    def _on_menuai_stop(event: Event) -> None:
         """Cancel debounced cleanup."""
         debounced_cleanup.async_cancel()
 
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _on_homeassistant_stop)
+    menuai.bus.async_listen_once(EVENT_menuai_STOP, _on_menuai_stop)
 
 
 def _normalize_connections(connections: set[tuple[str, str]]) -> set[tuple[str, str]]:

@@ -16,8 +16,8 @@ from sqlalchemy.pool import (
     StaticPool,
 )
 
-from homeassistant.helpers.frame import ReportBehavior, report_usage
-from homeassistant.util.loop import raise_for_blocking_call
+from menuai.helpers.frame import ReportBehavior, report_usage
+from menuai.util.loop import raise_for_blocking_call
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -28,7 +28,7 @@ DEBUG_MUTEX_POOL_TRACE = False
 POOL_SIZE = 5
 
 ADVISE_MSG = (
-    "Use homeassistant.components.recorder.get_instance(hass).async_add_executor_job()"
+    "Use menuai.components.recorder.get_instance(menuai).async_add_executor_job()"
 )
 
 

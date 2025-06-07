@@ -9,7 +9,7 @@ import logging
 
 import aiohttp
 
-from homeassistant.components.notify import (
+from menuai.components.notify import (
     ATTR_DATA,
     ATTR_MESSAGE,
     ATTR_TARGET,
@@ -17,11 +17,11 @@ from homeassistant.components.notify import (
     ATTR_TITLE_DEFAULT,
     BaseNotificationService,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import dt as dt_util
 
 from .const import (
     ATTR_APP_DATA,
@@ -47,12 +47,12 @@ from .util import supports_push
 _LOGGER = logging.getLogger(__name__)
 
 
-def push_registrations(hass):
+def push_registrations(menuai):
     """Return a dictionary of push enabled registrations."""
     targets = {}
 
-    for webhook_id, entry in hass.data[DOMAIN][DATA_CONFIG_ENTRIES].items():
-        if not supports_push(hass, webhook_id):
+    for webhook_id, entry in menuai.data[DOMAIN][DATA_CONFIG_ENTRIES].items():
+        if not supports_push(menuai, webhook_id):
             continue
 
         targets[entry.data[ATTR_DEVICE_NAME]] = webhook_id
@@ -60,7 +60,7 @@ def push_registrations(hass):
     return targets
 
 
-def log_rate_limits(hass, device_name, resp, level=logging.INFO):
+def log_rate_limits(menuai, device_name, resp, level=logging.INFO):
     """Output rate limit log line at given level."""
     if ATTR_PUSH_RATE_LIMITS not in resp:
         return
@@ -85,26 +85,26 @@ def log_rate_limits(hass, device_name, resp, level=logging.INFO):
 
 
 async def async_get_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> MobileAppNotificationService:
     """Get the mobile_app notification service."""
-    service = hass.data[DOMAIN][DATA_NOTIFY] = MobileAppNotificationService(hass)
+    service = menuai.data[DOMAIN][DATA_NOTIFY] = MobileAppNotificationService(menuai)
     return service
 
 
 class MobileAppNotificationService(BaseNotificationService):
     """Implement the notification service for mobile_app."""
 
-    def __init__(self, hass):
+    def __init__(self, menuai):
         """Initialize the service."""
-        self._hass = hass
+        self._menuai = menuai
 
     @property
     def targets(self):
         """Return a dictionary of registered targets."""
-        return push_registrations(self.hass)
+        return push_registrations(self.menuai)
 
     async def async_send_message(self, message="", **kwargs):
         """Send a message to the Lambda APNS gateway."""
@@ -118,15 +118,15 @@ class MobileAppNotificationService(BaseNotificationService):
             data[ATTR_TITLE] = kwargs.get(ATTR_TITLE)
 
         if not (targets := kwargs.get(ATTR_TARGET)):
-            targets = push_registrations(self.hass).values()
+            targets = push_registrations(self.menuai).values()
 
         if kwargs.get(ATTR_DATA) is not None:
             data[ATTR_DATA] = kwargs.get(ATTR_DATA)
 
-        local_push_channels = self.hass.data[DOMAIN][DATA_PUSH_CHANNEL]
+        local_push_channels = self.menuai.data[DOMAIN][DATA_PUSH_CHANNEL]
 
         for target in targets:
-            registration = self.hass.data[DOMAIN][DATA_CONFIG_ENTRIES][target].data
+            registration = self.menuai.data[DOMAIN][DATA_CONFIG_ENTRIES][target].data
 
             if target in local_push_channels:
                 local_push_channels[target].async_send_notification(
@@ -139,7 +139,7 @@ class MobileAppNotificationService(BaseNotificationService):
 
             # Test if local push only.
             if ATTR_PUSH_URL not in registration[ATTR_APP_DATA]:
-                raise HomeAssistantError(
+                raise menuaiError(
                     "Device not connected to local push notifications"
                 )
 
@@ -166,7 +166,7 @@ class MobileAppNotificationService(BaseNotificationService):
 
         try:
             async with asyncio.timeout(10):
-                response = await async_get_clientsession(self._hass).post(
+                response = await async_get_clientsession(self._menuai).post(
                     push_url, json=target_data
                 )
                 result = await response.json()
@@ -176,7 +176,7 @@ class MobileAppNotificationService(BaseNotificationService):
                 HTTPStatus.CREATED,
                 HTTPStatus.ACCEPTED,
             ):
-                log_rate_limits(self.hass, registration[ATTR_DEVICE_NAME], result)
+                log_rate_limits(self.menuai, registration[ATTR_DEVICE_NAME], result)
                 return
 
             fallback_error = result.get("errorMessage", "Unknown error")
@@ -188,12 +188,12 @@ class MobileAppNotificationService(BaseNotificationService):
             if "message" in result:
                 if message[-1] not in [".", "?", "!"]:
                     message += "."
-                message += " This message is generated externally to Home Assistant."
+                message += " This message is generated externally to MenuAI."
 
             if response.status == HTTPStatus.TOO_MANY_REQUESTS:
                 _LOGGER.warning(message)
                 log_rate_limits(
-                    self.hass, registration[ATTR_DEVICE_NAME], result, logging.WARNING
+                    self.menuai, registration[ATTR_DEVICE_NAME], result, logging.WARNING
                 )
             else:
                 _LOGGER.error(message)

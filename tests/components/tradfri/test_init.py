@@ -5,11 +5,11 @@ from unittest.mock import MagicMock
 from pytradfri.const import ATTR_FIRMWARE_VERSION, ATTR_GATEWAY_ID
 from pytradfri.gateway import Gateway
 
-from homeassistant.components import tradfri
-from homeassistant.components.tradfri.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.setup import async_setup_component
+from menuai.components import tradfri
+from menuai.components.tradfri.const import DOMAIN
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.setup import async_setup_component
 
 from . import GATEWAY_ID, GATEWAY_ID1, GATEWAY_ID2
 from .common import CommandStore
@@ -18,7 +18,7 @@ from tests.common import MockConfigEntry, async_load_json_object_fixture
 
 
 async def test_entry_setup_unload(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry, mock_api_factory: MagicMock
+    menuai: menuai, device_registry: dr.DeviceRegistry, mock_api_factory: MagicMock
 ) -> None:
     """Test config entry setup and unload."""
     config_entry = MockConfigEntry(
@@ -31,9 +31,9 @@ async def test_entry_setup_unload(
         },
     )
 
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     device_entries = dr.async_entries_for_config_entry(
         device_registry, config_entry.entry_id
@@ -48,13 +48,13 @@ async def test_entry_setup_unload(
     assert device_entry.name == "Gateway"
     assert device_entry.model == "E1526"
 
-    assert await hass.config_entries.async_unload(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_unload(config_entry.entry_id)
+    await menuai.async_block_till_done()
     assert mock_api_factory.shutdown.call_count == 1
 
 
 async def test_remove_stale_devices(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
 ) -> None:
     """Test remove stale device registry entries."""
@@ -68,7 +68,7 @@ async def test_remove_stale_devices(
         },
     )
 
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         identifiers={(tradfri.DOMAIN, "stale_device_id")},
@@ -82,8 +82,8 @@ async def test_remove_stale_devices(
     device_entry = device_entries[0]
     assert device_entry.identifiers == {(tradfri.DOMAIN, "stale_device_id")}
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     device_entries = dr.async_entries_for_config_entry(
         device_registry, config_entry.entry_id
@@ -101,7 +101,7 @@ async def test_remove_stale_devices(
 
 
 async def test_migrate_config_entry_and_identifiers(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     command_store: CommandStore,
 ) -> None:
@@ -118,9 +118,9 @@ async def test_migrate_config_entry_and_identifiers(
 
     gateway1 = mock_gateway_fixture(command_store, GATEWAY_ID1)
     command_store.register_device(
-        gateway1, await async_load_json_object_fixture(hass, "bulb_w.json", DOMAIN)
+        gateway1, await async_load_json_object_fixture(menuai, "bulb_w.json", DOMAIN)
     )
-    config_entry1.add_to_hass(hass)
+    config_entry1.add_to_menuai(menuai)
 
     config_entry2 = MockConfigEntry(
         domain=tradfri.DOMAIN,
@@ -132,14 +132,14 @@ async def test_migrate_config_entry_and_identifiers(
         },
     )
 
-    config_entry2.add_to_hass(hass)
+    config_entry2.add_to_menuai(menuai)
 
     # Add non-tradfri config entry for use in testing negation logic
     config_entry3 = MockConfigEntry(
         domain="test_domain",
     )
 
-    config_entry3.add_to_hass(hass)
+    config_entry3.add_to_menuai(menuai)
 
     # Create gateway device for config entry 1
     gateway1_device = device_registry.async_get_or_create(
@@ -187,8 +187,8 @@ async def test_migrate_config_entry_and_identifiers(
     )
 
     # Set up all tradfri config entries.
-    await async_setup_component(hass, DOMAIN, {})
-    await hass.async_block_till_done()
+    await async_setup_component(menuai, DOMAIN, {})
+    await menuai.async_block_till_done()
 
     # Validate that gateway 1 bulb 1 is still the same device entry
     # This inherently also validates that the device's identifiers

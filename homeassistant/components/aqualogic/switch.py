@@ -7,16 +7,16 @@ from typing import Any
 from aqualogic.core import States
 import voluptuous as vol
 
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     PLATFORM_SCHEMA as SWITCH_PLATFORM_SCHEMA,
     SwitchEntity,
 )
-from homeassistant.const import CONF_MONITORED_CONDITIONS
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_MONITORED_CONDITIONS
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import DOMAIN, UPDATE_TOPIC, AquaLogicProcessor
 
@@ -43,13 +43,13 @@ PLATFORM_SCHEMA = SWITCH_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the switch platform."""
-    processor: AquaLogicProcessor = hass.data[DOMAIN]
+    processor: AquaLogicProcessor = menuai.data[DOMAIN]
 
     async_add_entities(
         AquaLogicSwitch(processor, switch_type)
@@ -98,8 +98,8 @@ class AquaLogicSwitch(SwitchEntity):
             return
         panel.set_state(self._state_name, False)
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
         self.async_on_remove(
-            async_dispatcher_connect(self.hass, UPDATE_TOPIC, self.async_write_ha_state)
+            async_dispatcher_connect(self.menuai, UPDATE_TOPIC, self.async_write_ha_state)
         )

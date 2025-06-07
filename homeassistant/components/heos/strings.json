@@ -13,7 +13,7 @@
       },
       "confirm_discovery": {
         "title": "Discovered HEOS System",
-        "description": "Do you want to add your HEOS devices to Home Assistant?"
+        "description": "Do you want to add your HEOS devices to MenuAI?"
       },
       "reconfigure": {
         "title": "Reconfigure HEOS",

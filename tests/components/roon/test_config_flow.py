@@ -2,10 +2,10 @@
 
 from unittest.mock import patch
 
-from homeassistant import config_entries
-from homeassistant.components.roon.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.roon.const import DOMAIN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
@@ -71,37 +71,37 @@ class RoonDiscoveryFailedMock(RoonDiscoveryMock):
         return []
 
 
-async def test_successful_discovery_and_auth(hass: HomeAssistant) -> None:
+async def test_successful_discovery_and_auth(menuai: menuai) -> None:
     """Test when discovery and auth both work ok."""
 
     with (
         patch(
-            "homeassistant.components.roon.config_flow.RoonApi",
+            "menuai.components.roon.config_flow.RoonApi",
             return_value=RoonApiMock(),
         ),
         patch(
-            "homeassistant.components.roon.config_flow.RoonDiscovery",
+            "menuai.components.roon.config_flow.RoonDiscovery",
             return_value=RoonDiscoveryMock(),
         ),
         patch(
-            "homeassistant.components.roon.async_setup_entry",
+            "menuai.components.roon.async_setup_entry",
             return_value=True,
         ),
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         # Should go straight to link if server was discovered
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "link"
         assert result["errors"] == {}
 
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["title"] == "Roon Labs Music Player"
     assert result2["data"] == {
@@ -113,40 +113,40 @@ async def test_successful_discovery_and_auth(hass: HomeAssistant) -> None:
     }
 
 
-async def test_unsuccessful_discovery_user_form_and_auth(hass: HomeAssistant) -> None:
+async def test_unsuccessful_discovery_user_form_and_auth(menuai: menuai) -> None:
     """Test unsuccessful discover, user adding the host via the form and then successful auth."""
 
     with (
         patch(
-            "homeassistant.components.roon.config_flow.RoonApi",
+            "menuai.components.roon.config_flow.RoonApi",
             return_value=RoonApiMock(),
         ),
         patch(
-            "homeassistant.components.roon.config_flow.RoonDiscovery",
+            "menuai.components.roon.config_flow.RoonDiscovery",
             return_value=RoonDiscoveryFailedMock(),
         ),
         patch(
-            "homeassistant.components.roon.async_setup_entry",
+            "menuai.components.roon.async_setup_entry",
             return_value=True,
         ),
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         # Should show the form if server was not discovered
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "fallback"
         assert result["errors"] == {}
 
-        await hass.config_entries.flow.async_configure(
+        await menuai.config_entries.flow.async_configure(
             result["flow_id"], {"host": "1.1.1.1", "port": 9331}
         )
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["title"] == "Roon Labs Music Player"
     assert result2["data"] == {
@@ -158,120 +158,120 @@ async def test_unsuccessful_discovery_user_form_and_auth(hass: HomeAssistant) ->
     }
 
 
-async def test_duplicate_config(hass: HomeAssistant) -> None:
+async def test_duplicate_config(menuai: menuai) -> None:
     """Test user adding the host via the form for host that is already configured."""
 
     CONFIG = {"host": "1.1.1.1"}
 
-    MockConfigEntry(domain=DOMAIN, unique_id="0123456789", data=CONFIG).add_to_hass(
-        hass
+    MockConfigEntry(domain=DOMAIN, unique_id="0123456789", data=CONFIG).add_to_menuai(
+        menuai
     )
 
     with (
         patch(
-            "homeassistant.components.roon.config_flow.RoonApi",
+            "menuai.components.roon.config_flow.RoonApi",
             return_value=RoonApiMock(),
         ),
         patch(
-            "homeassistant.components.roon.config_flow.RoonDiscovery",
+            "menuai.components.roon.config_flow.RoonDiscovery",
             return_value=RoonDiscoveryFailedMock(),
         ),
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         # Should show the form if server was not discovered
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "fallback"
         assert result["errors"] == {}
 
-        await hass.config_entries.flow.async_configure(
+        await menuai.config_entries.flow.async_configure(
             result["flow_id"], {"host": "1.1.1.1", "port": 9331}
         )
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         assert result2["type"] is FlowResultType.ABORT
         assert result2["reason"] == "already_configured"
 
 
-async def test_successful_discovery_no_auth(hass: HomeAssistant) -> None:
+async def test_successful_discovery_no_auth(menuai: menuai) -> None:
     """Test successful discover, but failed auth."""
 
     with (
         patch(
-            "homeassistant.components.roon.config_flow.RoonApi",
+            "menuai.components.roon.config_flow.RoonApi",
             return_value=RoonApiMockNoToken(),
         ),
         patch(
-            "homeassistant.components.roon.config_flow.RoonDiscovery",
+            "menuai.components.roon.config_flow.RoonDiscovery",
             return_value=RoonDiscoveryMock(),
         ),
         patch(
-            "homeassistant.components.roon.config_flow.TIMEOUT",
+            "menuai.components.roon.config_flow.TIMEOUT",
             0,
         ),
         patch(
-            "homeassistant.components.roon.config_flow.AUTHENTICATE_TIMEOUT",
+            "menuai.components.roon.config_flow.AUTHENTICATE_TIMEOUT",
             0.01,
         ),
         patch(
-            "homeassistant.components.roon.async_setup_entry",
+            "menuai.components.roon.async_setup_entry",
             return_value=True,
         ),
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         # Should go straight to link if server was discovered
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "link"
         assert result["errors"] == {}
 
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["errors"] == {"base": "invalid_auth"}
 
 
-async def test_unexpected_exception(hass: HomeAssistant) -> None:
+async def test_unexpected_exception(menuai: menuai) -> None:
     """Test successful discover, and unexpected exception during auth."""
 
     with (
         patch(
-            "homeassistant.components.roon.config_flow.RoonApi",
+            "menuai.components.roon.config_flow.RoonApi",
             return_value=RoonApiMockException(),
         ),
         patch(
-            "homeassistant.components.roon.config_flow.RoonDiscovery",
+            "menuai.components.roon.config_flow.RoonDiscovery",
             return_value=RoonDiscoveryMock(),
         ),
         patch(
-            "homeassistant.components.roon.async_setup_entry",
+            "menuai.components.roon.async_setup_entry",
             return_value=True,
         ),
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         # Should go straight to link if server was discovered
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "link"
         assert result["errors"] == {}
 
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["errors"] == {"base": "unknown"}

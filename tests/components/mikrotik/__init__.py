@@ -5,14 +5,14 @@ from __future__ import annotations
 from typing import Any
 from unittest.mock import patch
 
-from homeassistant.components import mikrotik
-from homeassistant.components.mikrotik.const import (
+from menuai.components import mikrotik
+from menuai.components.mikrotik.const import (
     CONF_ARP_PING,
     CONF_DETECTION_TIME,
     CONF_FORCE_DHCP,
     DEFAULT_DETECTION_TIME,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_NAME,
     CONF_PASSWORD,
@@ -20,7 +20,7 @@ from homeassistant.const import (
     CONF_USERNAME,
     CONF_VERIFY_SSL,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -168,7 +168,7 @@ ARP_DATA = [
 ]
 
 
-async def setup_mikrotik_entry(hass: HomeAssistant, **kwargs: Any) -> None:
+async def setup_mikrotik_entry(menuai: menuai, **kwargs: Any) -> None:
     """Set up Mikrotik integration successfully."""
     support_wireless: bool = kwargs.get("support_wireless", True)
     support_wifiwave2: bool = kwargs.get("support_wifiwave2", False)
@@ -206,11 +206,11 @@ async def setup_mikrotik_entry(hass: HomeAssistant, **kwargs: Any) -> None:
     config_entry = MockConfigEntry(
         domain=mikrotik.DOMAIN, data=MOCK_DATA, options=options
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with (
         patch("librouteros.connect"),
         patch.object(mikrotik.coordinator.MikrotikData, "command", new=mock_command),
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()

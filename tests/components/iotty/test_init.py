@@ -2,31 +2,31 @@
 
 from unittest.mock import MagicMock
 
-from homeassistant.components.iotty.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_entry_oauth2_flow
+from menuai.components.iotty.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
+from menuai.helpers import config_entry_oauth2_flow
 
 from tests.common import MockConfigEntry
 
 
 async def test_load_unload_coordinator_called(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_coordinator: MagicMock,
     local_oauth_impl,
 ) -> None:
     """Test the configuration entry loading/unloading."""
 
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
     assert mock_config_entry.data["auth_implementation"] is not None
 
     config_entry_oauth2_flow.async_register_implementation(
-        hass, DOMAIN, local_oauth_impl
+        menuai, DOMAIN, local_oauth_impl
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
     mock_coordinator.assert_called_once()
 
     assert mock_config_entry.state is ConfigEntryState.LOADED
@@ -34,15 +34,15 @@ async def test_load_unload_coordinator_called(
     name, _, _ = method_call
     assert name == "().async_config_entry_first_refresh"
 
-    await hass.config_entries.async_unload(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert not hass.data.get(DOMAIN)
+    assert not menuai.data.get(DOMAIN)
     assert mock_config_entry.state is ConfigEntryState.NOT_LOADED
 
 
 async def test_load_unload_iottyproxy_called(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_iotty: MagicMock,
     local_oauth_impl,
@@ -50,15 +50,15 @@ async def test_load_unload_iottyproxy_called(
 ) -> None:
     """Test the configuration entry loading/unloading."""
 
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
     assert mock_config_entry.data["auth_implementation"] is not None
 
     config_entry_oauth2_flow.async_register_implementation(
-        hass, DOMAIN, local_oauth_impl
+        menuai, DOMAIN, local_oauth_impl
     )
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
     mock_iotty.assert_called_once()
 
     assert mock_config_entry.state is ConfigEntryState.LOADED
@@ -66,8 +66,8 @@ async def test_load_unload_iottyproxy_called(
     name, _, _ = method_call
     assert name == "().get_devices"
 
-    await hass.config_entries.async_unload(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert not hass.data.get(DOMAIN)
+    assert not menuai.data.get(DOMAIN)
     assert mock_config_entry.state is ConfigEntryState.NOT_LOADED

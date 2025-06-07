@@ -5,21 +5,21 @@ from __future__ import annotations
 from pyfibaro.fibaro_device import DeviceModel, SceneEvent
 from pyfibaro.fibaro_state_resolver import FibaroEvent
 
-from homeassistant.components.event import (
+from menuai.components.event import (
     ENTITY_ID_FORMAT,
     EventDeviceClass,
     EventEntity,
 )
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import FibaroConfigEntry
 from .entity import FibaroEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: FibaroConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -55,9 +55,9 @@ class FibaroEventEntity(FibaroEntity, EventEntity):
         self._attr_event_types = scene_event.key_event_types
         self._attr_unique_id = f"{fibaro_device.unique_id_str}.{key_id}"
 
-    async def async_added_to_hass(self) -> None:
-        """Call when entity is added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Call when entity is added to menuai."""
+        await super().async_added_to_menuai()
 
         # Register event callback
         self.async_on_remove(

@@ -12,23 +12,23 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from sqlalchemy.exc import SQLAlchemyError
 
-from homeassistant.components.recorder import Recorder
-from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
-from homeassistant.components.sql.const import CONF_QUERY, DOMAIN
-from homeassistant.components.sql.sensor import _generate_lambda_stmt
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import (
+from menuai.components.recorder import Recorder
+from menuai.components.sensor import SensorDeviceClass, SensorStateClass
+from menuai.components.sql.const import CONF_QUERY, DOMAIN
+from menuai.components.sql.sensor import _generate_lambda_stmt
+from menuai.config_entries import SOURCE_USER
+from menuai.const import (
     CONF_ICON,
     CONF_UNIQUE_ID,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
     UnitOfInformation,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import issue_registry as ir
-from homeassistant.helpers.entity_platform import async_get_platforms
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.helpers import issue_registry as ir
+from menuai.helpers.entity_platform import async_get_platforms
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from . import (
     YAML_CONFIG,
@@ -44,7 +44,7 @@ from . import (
 from tests.common import MockConfigEntry, async_fire_time_changed
 
 
-async def test_query_basic(recorder_mock: Recorder, hass: HomeAssistant) -> None:
+async def test_query_basic(recorder_mock: Recorder, menuai: menuai) -> None:
     """Test the SQL sensor."""
     config = {
         "db_url": "sqlite://",
@@ -53,14 +53,14 @@ async def test_query_basic(recorder_mock: Recorder, hass: HomeAssistant) -> None
         "name": "Select value SQL query",
         "unique_id": "very_unique_id",
     }
-    await init_integration(hass, config)
+    await init_integration(menuai, config)
 
-    state = hass.states.get("sensor.select_value_sql_query")
+    state = menuai.states.get("sensor.select_value_sql_query")
     assert state.state == "5"
     assert state.attributes["value"] == 5
 
 
-async def test_query_cte(recorder_mock: Recorder, hass: HomeAssistant) -> None:
+async def test_query_cte(recorder_mock: Recorder, menuai: menuai) -> None:
     """Test the SQL sensor with CTE."""
     config = {
         "db_url": "sqlite://",
@@ -69,15 +69,15 @@ async def test_query_cte(recorder_mock: Recorder, hass: HomeAssistant) -> None:
         "name": "Select value SQL query CTE",
         "unique_id": "very_unique_id",
     }
-    await init_integration(hass, config)
+    await init_integration(menuai, config)
 
-    state = hass.states.get("sensor.select_value_sql_query_cte")
+    state = menuai.states.get("sensor.select_value_sql_query_cte")
     assert state.state == "10"
     assert state.attributes["state"] == 10
 
 
 async def test_query_value_template(
-    recorder_mock: Recorder, hass: HomeAssistant
+    recorder_mock: Recorder, menuai: menuai
 ) -> None:
     """Test the SQL sensor."""
     config = {
@@ -87,14 +87,14 @@ async def test_query_value_template(
         "name": "count_tables",
         "value_template": "{{ value | int }}",
     }
-    await init_integration(hass, config)
+    await init_integration(menuai, config)
 
-    state = hass.states.get("sensor.count_tables")
+    state = menuai.states.get("sensor.count_tables")
     assert state.state == "5"
 
 
 async def test_query_value_template_invalid(
-    recorder_mock: Recorder, hass: HomeAssistant
+    recorder_mock: Recorder, menuai: menuai
 ) -> None:
     """Test the SQL sensor."""
     config = {
@@ -104,13 +104,13 @@ async def test_query_value_template_invalid(
         "name": "count_tables",
         "value_template": "{{ value | dontwork }}",
     }
-    await init_integration(hass, config)
+    await init_integration(menuai, config)
 
-    state = hass.states.get("sensor.count_tables")
+    state = menuai.states.get("sensor.count_tables")
     assert state.state == "5.01"
 
 
-async def test_query_limit(recorder_mock: Recorder, hass: HomeAssistant) -> None:
+async def test_query_limit(recorder_mock: Recorder, menuai: menuai) -> None:
     """Test the SQL sensor with a query containing 'LIMIT' in lowercase."""
     config = {
         "db_url": "sqlite://",
@@ -118,15 +118,15 @@ async def test_query_limit(recorder_mock: Recorder, hass: HomeAssistant) -> None
         "column": "value",
         "name": "Select value SQL query",
     }
-    await init_integration(hass, config)
+    await init_integration(menuai, config)
 
-    state = hass.states.get("sensor.select_value_sql_query")
+    state = menuai.states.get("sensor.select_value_sql_query")
     assert state.state == "5"
     assert state.attributes["value"] == 5
 
 
 async def test_query_no_value(
-    recorder_mock: Recorder, hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    recorder_mock: Recorder, menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test the SQL sensor with a query that returns no value."""
     config = {
@@ -135,9 +135,9 @@ async def test_query_no_value(
         "column": "value",
         "name": "count_tables",
     }
-    await init_integration(hass, config)
+    await init_integration(menuai, config)
 
-    state = hass.states.get("sensor.count_tables")
+    state = menuai.states.get("sensor.count_tables")
     assert state.state == STATE_UNKNOWN
 
     text = "SELECT 5 as value where 1=2 LIMIT 1; returned no results"
@@ -146,7 +146,7 @@ async def test_query_no_value(
 
 async def test_query_on_disk_sqlite_no_result(
     recorder_mock: Recorder,
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     tmp_path: Path,
 ) -> None:
@@ -161,7 +161,7 @@ async def test_query_on_disk_sqlite_no_result(
         conn.commit()
         conn.close()
 
-    await hass.async_add_executor_job(make_test_db)
+    await menuai.async_add_executor_job(make_test_db)
 
     config = {
         "db_url": db_path_str,
@@ -169,9 +169,9 @@ async def test_query_on_disk_sqlite_no_result(
         "column": "value",
         "name": "count_users",
     }
-    await init_integration(hass, config)
+    await init_integration(menuai, config)
 
-    state = hass.states.get("sensor.count_users")
+    state = menuai.states.get("sensor.count_users")
     assert state.state == STATE_UNKNOWN
 
     text = "SELECT value from users LIMIT 1; returned no results"
@@ -182,20 +182,20 @@ async def test_query_on_disk_sqlite_no_result(
     ("url", "expected_patterns", "not_expected_patterns"),
     [
         (
-            "sqlite://homeassistant:hunter2@homeassistant.local",
-            ["sqlite://****:****@homeassistant.local"],
-            ["sqlite://homeassistant:hunter2@homeassistant.local"],
+            "sqlite://menuai:hunter2@menuai.local",
+            ["sqlite://****:****@menuai.local"],
+            ["sqlite://menuai:hunter2@menuai.local"],
         ),
         (
-            "sqlite://homeassistant.local",
-            ["sqlite://homeassistant.local"],
+            "sqlite://menuai.local",
+            ["sqlite://menuai.local"],
             [],
         ),
     ],
 )
 async def test_invalid_url_setup(
     recorder_mock: Recorder,
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     url: str,
     expected_patterns: str,
@@ -216,14 +216,14 @@ async def test_invalid_url_setup(
         entry_id="1",
     )
 
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.sql.sensor.sqlalchemy.create_engine",
+        "menuai.components.sql.sensor.sqlalchemy.create_engine",
         side_effect=SQLAlchemyError(url),
     ):
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     for pattern in not_expected_patterns:
         assert pattern not in caplog.text
@@ -233,7 +233,7 @@ async def test_invalid_url_setup(
 
 async def test_invalid_url_on_update(
     recorder_mock: Recorder,
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test invalid db url with redacted credentials on retry."""
@@ -249,95 +249,95 @@ async def test_invalid_url_on_update(
 
         def execute(self, query: Any) -> None:
             """Execute the query."""
-            raise SQLAlchemyError("sqlite://homeassistant:hunter2@homeassistant.local")
+            raise SQLAlchemyError("sqlite://menuai:hunter2@menuai.local")
 
     with patch(
-        "homeassistant.components.sql.sensor.scoped_session",
+        "menuai.components.sql.sensor.scoped_session",
         return_value=MockSession,
     ):
-        await init_integration(hass, config)
+        await init_integration(menuai, config)
         async_fire_time_changed(
-            hass,
+            menuai,
             dt_util.utcnow() + timedelta(minutes=1),
         )
-        await hass.async_block_till_done(wait_background_tasks=True)
+        await menuai.async_block_till_done(wait_background_tasks=True)
 
-    assert "sqlite://****:****@homeassistant.local" in caplog.text
+    assert "sqlite://****:****@menuai.local" in caplog.text
 
 
-async def test_query_from_yaml(recorder_mock: Recorder, hass: HomeAssistant) -> None:
+async def test_query_from_yaml(recorder_mock: Recorder, menuai: menuai) -> None:
     """Test the SQL sensor from yaml config."""
 
-    assert await async_setup_component(hass, DOMAIN, YAML_CONFIG)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, YAML_CONFIG)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.get_value")
+    state = menuai.states.get("sensor.get_value")
     assert state.state == "5"
 
 
 async def test_templates_with_yaml(
-    recorder_mock: Recorder, hass: HomeAssistant
+    recorder_mock: Recorder, menuai: menuai
 ) -> None:
     """Test the SQL sensor from yaml config with templates."""
 
-    hass.states.async_set("sensor.input1", "on")
-    hass.states.async_set("sensor.input2", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.input1", "on")
+    menuai.states.async_set("sensor.input2", "on")
+    await menuai.async_block_till_done()
 
-    assert await async_setup_component(hass, DOMAIN, YAML_CONFIG_ALL_TEMPLATES)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, YAML_CONFIG_ALL_TEMPLATES)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.get_values_with_template")
+    state = menuai.states.get("sensor.get_values_with_template")
     assert state.state == "5"
     assert state.attributes[CONF_ICON] == "mdi:on"
     assert state.attributes["entity_picture"] == "/local/picture1.jpg"
 
-    hass.states.async_set("sensor.input1", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.input1", "off")
+    await menuai.async_block_till_done()
 
     async_fire_time_changed(
-        hass,
+        menuai,
         dt_util.utcnow() + timedelta(minutes=1),
     )
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get("sensor.get_values_with_template")
+    state = menuai.states.get("sensor.get_values_with_template")
     assert state.state == "5"
     assert state.attributes[CONF_ICON] == "mdi:off"
     assert state.attributes["entity_picture"] == "/local/picture2.jpg"
 
-    hass.states.async_set("sensor.input2", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.input2", "off")
+    await menuai.async_block_till_done()
 
     async_fire_time_changed(
-        hass,
+        menuai,
         dt_util.utcnow() + timedelta(minutes=2),
     )
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get("sensor.get_values_with_template")
+    state = menuai.states.get("sensor.get_values_with_template")
     assert state.state == STATE_UNAVAILABLE
     assert CONF_ICON not in state.attributes
     assert "entity_picture" not in state.attributes
 
-    hass.states.async_set("sensor.input1", "on")
-    hass.states.async_set("sensor.input2", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.input1", "on")
+    menuai.states.async_set("sensor.input2", "on")
+    await menuai.async_block_till_done()
 
     async_fire_time_changed(
-        hass,
+        menuai,
         dt_util.utcnow() + timedelta(minutes=3),
     )
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get("sensor.get_values_with_template")
+    state = menuai.states.get("sensor.get_values_with_template")
     assert state.state == "5"
     assert state.attributes[CONF_ICON] == "mdi:on"
     assert state.attributes["entity_picture"] == "/local/picture1.jpg"
 
 
 async def test_config_from_old_yaml(
-    recorder_mock: Recorder, hass: HomeAssistant
+    recorder_mock: Recorder, menuai: menuai
 ) -> None:
     """Test the SQL sensor from old yaml config does not create any entity."""
     config = {
@@ -353,10 +353,10 @@ async def test_config_from_old_yaml(
             ],
         }
     }
-    assert await async_setup_component(hass, "sensor", config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", config)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.count_tables")
+    state = menuai.states.get("sensor.count_tables")
     assert not state
 
 
@@ -364,20 +364,20 @@ async def test_config_from_old_yaml(
     ("url", "expected_patterns", "not_expected_patterns"),
     [
         (
-            "sqlite://homeassistant:hunter2@homeassistant.local",
-            ["sqlite://****:****@homeassistant.local"],
-            ["sqlite://homeassistant:hunter2@homeassistant.local"],
+            "sqlite://menuai:hunter2@menuai.local",
+            ["sqlite://****:****@menuai.local"],
+            ["sqlite://menuai:hunter2@menuai.local"],
         ),
         (
-            "sqlite://homeassistant.local",
-            ["sqlite://homeassistant.local"],
+            "sqlite://menuai.local",
+            ["sqlite://menuai.local"],
             [],
         ),
     ],
 )
 async def test_invalid_url_setup_from_yaml(
     recorder_mock: Recorder,
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     url: str,
     expected_patterns: str,
@@ -394,11 +394,11 @@ async def test_invalid_url_setup_from_yaml(
     }
 
     with patch(
-        "homeassistant.components.sql.sensor.sqlalchemy.create_engine",
+        "menuai.components.sql.sensor.sqlalchemy.create_engine",
         side_effect=SQLAlchemyError(url),
     ):
-        assert await async_setup_component(hass, DOMAIN, config)
-    await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, config)
+    await menuai.async_block_till_done()
 
     for pattern in not_expected_patterns:
         assert pattern not in caplog.text
@@ -407,14 +407,14 @@ async def test_invalid_url_setup_from_yaml(
 
 
 async def test_attributes_from_yaml_setup(
-    recorder_mock: Recorder, hass: HomeAssistant
+    recorder_mock: Recorder, menuai: menuai
 ) -> None:
     """Test attributes from yaml config."""
 
-    assert await async_setup_component(hass, DOMAIN, YAML_CONFIG)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, YAML_CONFIG)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.get_value")
+    state = menuai.states.get("sensor.get_value")
 
     assert state.state == "5"
     assert state.attributes["device_class"] == SensorDeviceClass.DATA_SIZE
@@ -423,30 +423,30 @@ async def test_attributes_from_yaml_setup(
 
 
 async def test_binary_data_from_yaml_setup(
-    recorder_mock: Recorder, hass: HomeAssistant
+    recorder_mock: Recorder, menuai: menuai
 ) -> None:
     """Test binary data from yaml config."""
 
-    assert await async_setup_component(hass, DOMAIN, YAML_CONFIG_BINARY)
-    await hass.async_block_till_done()
-    state = hass.states.get("sensor.get_binary_value")
+    assert await async_setup_component(menuai, DOMAIN, YAML_CONFIG_BINARY)
+    await menuai.async_block_till_done()
+    state = menuai.states.get("sensor.get_binary_value")
     assert state.state == "0xd34324324230392032"
     assert state.attributes["test_attr"] == "0xd343aa"
 
 
 async def test_issue_when_using_old_query(
     recorder_mock: Recorder,
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     issue_registry: ir.IssueRegistry,
 ) -> None:
     """Test we create an issue for an old query that will do a full table scan."""
 
-    assert await async_setup_component(hass, DOMAIN, YAML_CONFIG_FULL_TABLE_SCAN)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, YAML_CONFIG_FULL_TABLE_SCAN)
+    await menuai.async_block_till_done()
     assert "Query contains entity_id but does not reference states_meta" in caplog.text
 
-    assert not hass.states.async_all()
+    assert not menuai.states.async_all()
 
     config = YAML_CONFIG_FULL_TABLE_SCAN["sql"]
 
@@ -467,18 +467,18 @@ async def test_issue_when_using_old_query(
 )
 async def test_issue_when_using_old_query_without_unique_id(
     recorder_mock: Recorder,
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     yaml_config: dict[str, Any],
     issue_registry: ir.IssueRegistry,
 ) -> None:
     """Test we create an issue for an old query that will do a full table scan."""
 
-    assert await async_setup_component(hass, DOMAIN, yaml_config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, yaml_config)
+    await menuai.async_block_till_done()
     assert "Query contains entity_id but does not reference states_meta" in caplog.text
 
-    assert not hass.states.async_all()
+    assert not menuai.states.async_all()
 
     config = yaml_config["sql"]
     query = config[CONF_QUERY]
@@ -490,30 +490,30 @@ async def test_issue_when_using_old_query_without_unique_id(
 
 
 async def test_no_issue_when_view_has_the_text_entity_id_in_it(
-    recorder_mock: Recorder, hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    recorder_mock: Recorder, menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test we do not trigger the full table scan issue for a custom view."""
 
     with patch(
-        "homeassistant.components.sql.sensor.scoped_session",
+        "menuai.components.sql.sensor.scoped_session",
     ):
         await init_integration(
-            hass, YAML_CONFIG_WITH_VIEW_THAT_CONTAINS_ENTITY_ID["sql"]
+            menuai, YAML_CONFIG_WITH_VIEW_THAT_CONTAINS_ENTITY_ID["sql"]
         )
         async_fire_time_changed(
-            hass,
+            menuai,
             dt_util.utcnow() + timedelta(minutes=1),
         )
-        await hass.async_block_till_done(wait_background_tasks=True)
+        await menuai.async_block_till_done(wait_background_tasks=True)
 
     assert (
         "Query contains entity_id but does not reference states_meta" not in caplog.text
     )
-    assert hass.states.get("sensor.get_entity_id") is not None
+    assert menuai.states.get("sensor.get_entity_id") is not None
 
 
 async def test_multiple_sensors_using_same_db(
-    recorder_mock: Recorder, hass: HomeAssistant
+    recorder_mock: Recorder, menuai: menuai
 ) -> None:
     """Test multiple sensors using the same db."""
     config = {
@@ -528,23 +528,23 @@ async def test_multiple_sensors_using_same_db(
         "column": "value",
         "name": "Select value SQL query 2",
     }
-    await init_integration(hass, config)
-    await init_integration(hass, config2, entry_id="2")
+    await init_integration(menuai, config)
+    await init_integration(menuai, config2, entry_id="2")
 
-    state = hass.states.get("sensor.select_value_sql_query")
+    state = menuai.states.get("sensor.select_value_sql_query")
     assert state.state == "5"
     assert state.attributes["value"] == 5
 
-    state = hass.states.get("sensor.select_value_sql_query_2")
+    state = menuai.states.get("sensor.select_value_sql_query_2")
     assert state.state == "5"
     assert state.attributes["value"] == 5
 
     with patch("sqlalchemy.engine.base.Engine.dispose"):
-        await hass.async_stop()
+        await menuai.async_stop()
 
 
 async def test_engine_is_disposed_at_stop(
-    recorder_mock: Recorder, hass: HomeAssistant
+    recorder_mock: Recorder, menuai: menuai
 ) -> None:
     """Test we dispose of the engine at stop."""
     config = {
@@ -553,25 +553,25 @@ async def test_engine_is_disposed_at_stop(
         "column": "value",
         "name": "Select value SQL query",
     }
-    await init_integration(hass, config)
+    await init_integration(menuai, config)
 
-    state = hass.states.get("sensor.select_value_sql_query")
+    state = menuai.states.get("sensor.select_value_sql_query")
     assert state.state == "5"
     assert state.attributes["value"] == 5
 
     with patch("sqlalchemy.engine.base.Engine.dispose") as mock_engine_dispose:
-        await hass.async_stop()
+        await menuai.async_stop()
 
     assert mock_engine_dispose.call_count == 2
 
 
 async def test_attributes_from_entry_config(
-    recorder_mock: Recorder, hass: HomeAssistant
+    recorder_mock: Recorder, menuai: menuai
 ) -> None:
     """Test attributes from entry config."""
 
     await init_integration(
-        hass,
+        menuai,
         config={
             "name": "Get Value - With",
             "query": "SELECT 5 as value",
@@ -583,7 +583,7 @@ async def test_attributes_from_entry_config(
         entry_id="8693d4782ced4fb1ecca4743f29ab8f1",
     )
 
-    state = hass.states.get("sensor.get_value_with")
+    state = menuai.states.get("sensor.get_value_with")
     assert state.state == "5"
     assert state.attributes["value"] == 5
     assert state.attributes["unit_of_measurement"] == "MiB"
@@ -591,7 +591,7 @@ async def test_attributes_from_entry_config(
     assert state.attributes["state_class"] == SensorStateClass.TOTAL
 
     await init_integration(
-        hass,
+        menuai,
         config={
             "name": "Get Value - Without",
             "query": "SELECT 5 as value",
@@ -601,7 +601,7 @@ async def test_attributes_from_entry_config(
         entry_id="7aec7cd8045fba4778bb0621469e3cd9",
     )
 
-    state = hass.states.get("sensor.get_value_without")
+    state = menuai.states.get("sensor.get_value_without")
     assert state.state == "5"
     assert state.attributes["value"] == 5
     assert state.attributes["unit_of_measurement"] == "MiB"
@@ -611,7 +611,7 @@ async def test_attributes_from_entry_config(
 
 async def test_query_recover_from_rollback(
     recorder_mock: Recorder,
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -623,11 +623,11 @@ async def test_query_recover_from_rollback(
         "name": "Select value SQL query",
         "unique_id": "very_unique_id",
     }
-    await init_integration(hass, config)
-    platforms = async_get_platforms(hass, "sql")
+    await init_integration(menuai, config)
+    platforms = async_get_platforms(menuai, "sql")
     sql_entity = platforms[0].entities["sensor.select_value_sql_query"]
 
-    state = hass.states.get("sensor.select_value_sql_query")
+    state = menuai.states.get("sensor.select_value_sql_query")
     assert state.state == "5"
     assert state.attributes["value"] == 5
 
@@ -637,35 +637,35 @@ async def test_query_recover_from_rollback(
         _generate_lambda_stmt("Faulty syntax create operational issue"),
     ):
         freezer.tick(timedelta(minutes=1))
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done(wait_background_tasks=True)
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done(wait_background_tasks=True)
         assert "sqlite3.OperationalError" in caplog.text
 
-    state = hass.states.get("sensor.select_value_sql_query")
+    state = menuai.states.get("sensor.select_value_sql_query")
     assert state.state == "5"
     assert state.attributes.get("value") is None
 
     freezer.tick(timedelta(minutes=1))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get("sensor.select_value_sql_query")
+    state = menuai.states.get("sensor.select_value_sql_query")
     assert state.state == "5"
     assert state.attributes.get("value") == 5
 
 
-async def test_setup_without_recorder(hass: HomeAssistant) -> None:
+async def test_setup_without_recorder(menuai: menuai) -> None:
     """Test the SQL sensor without recorder."""
 
-    assert await async_setup_component(hass, DOMAIN, YAML_CONFIG)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, YAML_CONFIG)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.get_value")
+    state = menuai.states.get("sensor.get_value")
     assert state.state == "5"
 
 
 async def test_availability_blocks_value_template(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test availability blocks value_template from rendering."""
@@ -674,25 +674,25 @@ async def test_availability_blocks_value_template(
     config["sql"]["value_template"] = "{{ x - 0 }}"
     config["sql"]["availability"] = '{{ states("sensor.input1")=="on" }}'
 
-    hass.states.async_set("sensor.input1", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.input1", "off")
+    await menuai.async_block_till_done()
 
-    assert await async_setup_component(hass, DOMAIN, config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, config)
+    await menuai.async_block_till_done()
 
     assert error not in caplog.text
 
-    state = hass.states.get("sensor.get_value")
+    state = menuai.states.get("sensor.get_value")
     assert state
     assert state.state == STATE_UNAVAILABLE
 
-    hass.states.async_set("sensor.input1", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.input1", "on")
+    await menuai.async_block_till_done()
 
     async_fire_time_changed(
-        hass,
+        menuai,
         dt_util.utcnow() + timedelta(minutes=1),
     )
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     assert error in caplog.text

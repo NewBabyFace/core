@@ -7,16 +7,16 @@ from unittest.mock import Mock
 
 from uiprotect.data import Camera, Event, EventType, ModelType
 
-from homeassistant.components.recorder import Recorder
-from homeassistant.components.recorder.history import get_significant_states
-from homeassistant.components.unifiprotect.binary_sensor import EVENT_SENSORS
-from homeassistant.components.unifiprotect.const import (
+from menuai.components.recorder import Recorder
+from menuai.components.recorder.history import get_significant_states
+from menuai.components.unifiprotect.binary_sensor import EVENT_SENSORS
+from menuai.components.unifiprotect.const import (
     ATTR_EVENT_ID,
     ATTR_EVENT_SCORE,
     DEFAULT_ATTRIBUTION,
 )
-from homeassistant.const import ATTR_ATTRIBUTION, ATTR_FRIENDLY_NAME, STATE_ON, Platform
-from homeassistant.core import HomeAssistant
+from menuai.const import ATTR_ATTRIBUTION, ATTR_FRIENDLY_NAME, STATE_ON, Platform
+from menuai.core import menuai
 
 from .utils import MockUFPFixture, ids_from_device_description, init_entry
 
@@ -25,7 +25,7 @@ from tests.components.recorder.common import async_wait_recording_done
 
 async def test_exclude_attributes(
     recorder_mock: Recorder,
-    hass: HomeAssistant,
+    menuai: menuai,
     ufp: MockUFPFixture,
     doorbell: Camera,
     unadopted_camera: Camera,
@@ -33,7 +33,7 @@ async def test_exclude_attributes(
 ) -> None:
     """Test binary_sensor has event_id and event_score excluded from recording."""
     now = fixed_now
-    await init_entry(hass, ufp, [doorbell, unadopted_camera])
+    await init_entry(menuai, ufp, [doorbell, unadopted_camera])
 
     _, entity_id = ids_from_device_description(
         Platform.BINARY_SENSOR, doorbell, EVENT_SENSORS[1]
@@ -62,17 +62,17 @@ async def test_exclude_attributes(
     ufp.api.bootstrap.cameras = {new_camera.id: new_camera}
     ufp.api.bootstrap.events = {event.id: event}
     ufp.ws_msg(mock_msg)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_ON
     assert state.attributes[ATTR_ATTRIBUTION] == DEFAULT_ATTRIBUTION
     assert state.attributes[ATTR_EVENT_SCORE] == 100
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    states = await hass.async_add_executor_job(
-        get_significant_states, hass, now, None, hass.states.async_entity_ids()
+    states = await menuai.async_add_executor_job(
+        get_significant_states, menuai, now, None, menuai.states.async_entity_ids()
     )
     assert len(states) >= 1
     for entity_states in states.values():

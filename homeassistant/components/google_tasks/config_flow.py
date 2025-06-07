@@ -9,9 +9,9 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import HttpRequest
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlowResult
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_TOKEN
-from homeassistant.helpers import config_entry_oauth2_flow
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlowResult
+from menuai.const import CONF_ACCESS_TOKEN, CONF_TOKEN
+from menuai.helpers import config_entry_oauth2_flow
 
 from .const import DOMAIN, OAUTH2_SCOPES
 
@@ -48,7 +48,7 @@ class OAuth2FlowHandler(
                 credentials=credentials,
             )
             user_resource_cmd: HttpRequest = user_resource.userinfo().get()
-            user_resource_info = await self.hass.async_add_executor_job(
+            user_resource_info = await self.menuai.async_add_executor_job(
                 user_resource_cmd.execute
             )
             resource = build(
@@ -57,7 +57,7 @@ class OAuth2FlowHandler(
                 credentials=credentials,
             )
             cmd: HttpRequest = resource.tasklists().list()
-            await self.hass.async_add_executor_job(cmd.execute)
+            await self.menuai.async_add_executor_job(cmd.execute)
         except HttpError as ex:
             error = ex.reason
             return self.async_abort(

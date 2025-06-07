@@ -5,12 +5,12 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.lock import LockEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import SERVICE_LOCK, SERVICE_UNLOCK
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_platform
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.lock import LockEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import SERVICE_LOCK, SERVICE_UNLOCK
+from menuai.core import menuai
+from menuai.helpers import entity_platform
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import DOMAIN, get_device_info
 from .const import (
@@ -30,12 +30,12 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Subaru locks by config_entry."""
-    entry = hass.data[DOMAIN][config_entry.entry_id]
+    entry = menuai.data[DOMAIN][config_entry.entry_id]
     controller = entry[ENTRY_CONTROLLER]
     vehicle_info = entry[ENTRY_VEHICLES]
     async_add_entities(

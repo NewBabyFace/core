@@ -7,12 +7,12 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.const import CONF_PLATFORM
-from homeassistant.core import CALLBACK_TYPE, HassJob, HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.event import async_track_time_change
-from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import CONF_PLATFORM
+from menuai.core import CALLBACK_TYPE, menuaiJob, menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.event import async_track_time_change
+from menuai.helpers.trigger import TriggerActionType, TriggerInfo
+from menuai.helpers.typing import ConfigType
 
 CONF_HOURS = "hours"
 CONF_MINUTES = "minutes"
@@ -64,7 +64,7 @@ TRIGGER_SCHEMA = vol.All(
 
 
 async def async_attach_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     action: TriggerActionType,
     trigger_info: TriggerInfo,
@@ -74,7 +74,7 @@ async def async_attach_trigger(
     hours = config.get(CONF_HOURS)
     minutes = config.get(CONF_MINUTES)
     seconds = config.get(CONF_SECONDS)
-    job = HassJob(action, f"time pattern trigger {trigger_info}")
+    job = menuaiJob(action, f"time pattern trigger {trigger_info}")
 
     # If larger units are specified, default the smaller units to zero
     if minutes is None and hours is not None:
@@ -85,7 +85,7 @@ async def async_attach_trigger(
     @callback
     def time_automation_listener(now: datetime) -> None:
         """Listen for time changes and calls action."""
-        hass.async_run_hass_job(
+        menuai.async_run_menuai_job(
             job,
             {
                 "trigger": {
@@ -98,5 +98,5 @@ async def async_attach_trigger(
         )
 
     return async_track_time_change(
-        hass, time_automation_listener, hour=hours, minute=minutes, second=seconds
+        menuai, time_automation_listener, hour=hours, minute=minutes, second=seconds
     )

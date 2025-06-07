@@ -6,7 +6,7 @@ import logging
 
 from zcc import ControlPoint, ControlPointDescription
 
-from homeassistant.exceptions import ConfigEntryNotReady
+from menuai.exceptions import ConfigEntryNotReady
 
 _LOGGER = logging.getLogger(__name__)
 

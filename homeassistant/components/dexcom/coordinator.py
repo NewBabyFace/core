@@ -5,9 +5,9 @@ import logging
 
 from pydexcom import Dexcom, GlucoseReading
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN
 
@@ -23,13 +23,13 @@ class DexcomCoordinator(DataUpdateCoordinator[GlucoseReading]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entry: DexcomConfigEntry,
         dexcom: Dexcom,
     ) -> None:
         """Initialize the coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
             name=DOMAIN,
@@ -39,6 +39,6 @@ class DexcomCoordinator(DataUpdateCoordinator[GlucoseReading]):
 
     async def _async_update_data(self) -> GlucoseReading:
         """Fetch data from API endpoint."""
-        return await self.hass.async_add_executor_job(
+        return await self.menuai.async_add_executor_job(
             self.dexcom.get_current_glucose_reading
         )

@@ -7,33 +7,33 @@ from unittest.mock import patch
 import pytest
 import voluptuous as vol
 
-from homeassistant.components.wake_on_lan import DOMAIN, SERVICE_SEND_MAGIC_PACKET
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.wake_on_lan import DOMAIN, SERVICE_SEND_MAGIC_PACKET
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 
 
-async def test_unload_entry(hass: HomeAssistant, loaded_entry: MockConfigEntry) -> None:
+async def test_unload_entry(menuai: menuai, loaded_entry: MockConfigEntry) -> None:
     """Test unload an entry."""
 
     assert loaded_entry.state is ConfigEntryState.LOADED
-    assert await hass.config_entries.async_unload(loaded_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_unload(loaded_entry.entry_id)
+    await menuai.async_block_till_done()
     assert loaded_entry.state is ConfigEntryState.NOT_LOADED
 
 
-async def test_send_magic_packet(hass: HomeAssistant) -> None:
+async def test_send_magic_packet(menuai: menuai) -> None:
     """Test of send magic packet service call."""
-    with patch("homeassistant.components.wake_on_lan.wakeonlan") as mocked_wakeonlan:
+    with patch("menuai.components.wake_on_lan.wakeonlan") as mocked_wakeonlan:
         mac = "aa:bb:cc:dd:ee:ff"
         bc_ip = "192.168.255.255"
         bc_port = 999
 
-        await async_setup_component(hass, DOMAIN, {})
+        await async_setup_component(menuai, DOMAIN, {})
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SEND_MAGIC_PACKET,
             {"mac": mac, "broadcast_address": bc_ip, "broadcast_port": bc_port},
@@ -44,7 +44,7 @@ async def test_send_magic_packet(hass: HomeAssistant) -> None:
         assert mocked_wakeonlan.mock_calls[-1][2]["ip_address"] == bc_ip
         assert mocked_wakeonlan.mock_calls[-1][2]["port"] == bc_port
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SEND_MAGIC_PACKET,
             {"mac": mac, "broadcast_address": bc_ip},
@@ -55,7 +55,7 @@ async def test_send_magic_packet(hass: HomeAssistant) -> None:
         assert mocked_wakeonlan.mock_calls[-1][2]["ip_address"] == bc_ip
         assert "port" not in mocked_wakeonlan.mock_calls[-1][2]
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SEND_MAGIC_PACKET,
             {"mac": mac, "broadcast_port": bc_port},
@@ -67,7 +67,7 @@ async def test_send_magic_packet(hass: HomeAssistant) -> None:
         assert "ip_address" not in mocked_wakeonlan.mock_calls[-1][2]
 
         with pytest.raises(vol.Invalid):
-            await hass.services.async_call(
+            await menuai.services.async_call(
                 DOMAIN,
                 SERVICE_SEND_MAGIC_PACKET,
                 {"broadcast_address": bc_ip},
@@ -75,7 +75,7 @@ async def test_send_magic_packet(hass: HomeAssistant) -> None:
             )
         assert len(mocked_wakeonlan.mock_calls) == 3
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN, SERVICE_SEND_MAGIC_PACKET, {"mac": mac}, blocking=True
         )
         assert len(mocked_wakeonlan.mock_calls) == 4

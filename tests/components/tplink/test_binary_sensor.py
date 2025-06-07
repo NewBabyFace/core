@@ -4,12 +4,12 @@ from kasa import Feature
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.tplink.binary_sensor import BINARY_SENSOR_DESCRIPTIONS
-from homeassistant.components.tplink.const import DOMAIN
-from homeassistant.components.tplink.entity import EXCLUDED_FEATURES
-from homeassistant.const import CONF_HOST, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.components.tplink.binary_sensor import BINARY_SENSOR_DESCRIPTIONS
+from menuai.components.tplink.const import DOMAIN
+from menuai.components.tplink.entity import EXCLUDED_FEATURES
+from menuai.const import CONF_HOST, Platform
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from . import (
     _mocked_device,
@@ -38,7 +38,7 @@ def mocked_feature_binary_sensor() -> Feature:
 
 
 async def test_states(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
@@ -50,18 +50,18 @@ async def test_states(
     device = _mocked_device(alias="my_device", features=features)
 
     await setup_platform_for_device(
-        hass, mock_config_entry, Platform.BINARY_SENSOR, device
+        menuai, mock_config_entry, Platform.BINARY_SENSOR, device
     )
     await snapshot_platform(
-        hass, entity_registry, device_registry, snapshot, mock_config_entry.entry_id
+        menuai, entity_registry, device_registry, snapshot, mock_config_entry.entry_id
     )
 
     for excluded in EXCLUDED_FEATURES:
-        assert hass.states.get(f"sensor.my_device_{excluded}") is None
+        assert menuai.states.get(f"sensor.my_device_{excluded}") is None
 
 
 async def test_binary_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mocked_feature_binary_sensor: Feature,
 ) -> None:
@@ -70,12 +70,12 @@ async def test_binary_sensor(
     already_migrated_config_entry = MockConfigEntry(
         domain=DOMAIN, data={CONF_HOST: "127.0.0.1"}, unique_id=MAC_ADDRESS
     )
-    already_migrated_config_entry.add_to_hass(hass)
+    already_migrated_config_entry.add_to_menuai(menuai)
 
     plug = _mocked_device(alias="my_plug", features=[mocked_feature])
     with _patch_discovery(device=plug), _patch_connect(device=plug):
-        await hass.config_entries.async_setup(already_migrated_config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(already_migrated_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     # The entity_id is based on standard name from core.
     entity_id = "binary_sensor.my_plug_overheated"
@@ -85,7 +85,7 @@ async def test_binary_sensor(
 
 
 async def test_binary_sensor_children(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
     mocked_feature_binary_sensor: Feature,
@@ -95,15 +95,15 @@ async def test_binary_sensor_children(
     already_migrated_config_entry = MockConfigEntry(
         domain=DOMAIN, data={CONF_HOST: "127.0.0.1"}, unique_id=MAC_ADDRESS
     )
-    already_migrated_config_entry.add_to_hass(hass)
+    already_migrated_config_entry.add_to_menuai(menuai)
     plug = _mocked_device(
         alias="my_plug",
         features=[mocked_feature],
         children=_mocked_strip_children(features=[mocked_feature]),
     )
     with _patch_discovery(device=plug), _patch_connect(device=plug):
-        await hass.config_entries.async_setup(already_migrated_config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(already_migrated_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     entity_id = "binary_sensor.my_plug_overheated"
     entity = entity_registry.async_get(entity_id)

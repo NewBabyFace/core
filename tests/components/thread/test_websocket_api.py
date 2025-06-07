@@ -4,30 +4,30 @@ from unittest.mock import ANY, AsyncMock, MagicMock
 
 from zeroconf.asyncio import AsyncServiceInfo
 
-from homeassistant.components.thread import dataset_store, discovery
-from homeassistant.components.thread.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.thread import dataset_store, discovery
+from menuai.components.thread.const import DOMAIN
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from . import (
     DATASET_1,
     DATASET_2,
     DATASET_3,
     ROUTER_DISCOVERY_GOOGLE_1,
-    ROUTER_DISCOVERY_HASS,
+    ROUTER_DISCOVERY_menuai,
 )
 
 from tests.typing import WebSocketGenerator
 
 
 async def test_add_dataset(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test we can add a dataset."""
-    assert await async_setup_component(hass, DOMAIN, {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {})
+    await menuai.async_block_till_done()
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json(
         {"id": 1, "type": "thread/add_dataset_tlv", "source": "test", "tlv": DATASET_1}
@@ -36,7 +36,7 @@ async def test_add_dataset(
     assert msg["success"]
     assert msg["result"] is None
 
-    store = await dataset_store.async_get_store(hass)
+    store = await dataset_store.async_get_store(menuai)
     assert len(store.datasets) == 1
     dataset = next(iter(store.datasets.values()))
     assert dataset.source == "test"
@@ -44,13 +44,13 @@ async def test_add_dataset(
 
 
 async def test_add_invalid_dataset(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test adding an invalid dataset."""
-    assert await async_setup_component(hass, DOMAIN, {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {})
+    await menuai.async_block_till_done()
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json(
         {"id": 1, "type": "thread/add_dataset_tlv", "source": "test", "tlv": "DEADBEEF"}
@@ -61,13 +61,13 @@ async def test_add_invalid_dataset(
 
 
 async def test_delete_dataset(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test we can delete a dataset."""
-    assert await async_setup_component(hass, DOMAIN, {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {})
+    await menuai.async_block_till_done()
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json_auto_id(
         {"type": "thread/add_dataset_tlv", "source": "test", "tlv": DATASET_1}
@@ -128,13 +128,13 @@ async def test_delete_dataset(
 
 
 async def test_list_get_dataset(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test list and get datasets."""
-    assert await async_setup_component(hass, DOMAIN, {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {})
+    await menuai.async_block_till_done()
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json({"id": 1, "type": "thread/list_datasets"})
     msg = await client.receive_json()
@@ -147,9 +147,9 @@ async def test_list_get_dataset(
         {"source": "🎅", "tlv": DATASET_3},
     ]
     for dataset in datasets:
-        await dataset_store.async_add_dataset(hass, dataset["source"], dataset["tlv"])
+        await dataset_store.async_add_dataset(menuai, dataset["source"], dataset["tlv"])
 
-    store = await dataset_store.async_get_store(hass)
+    store = await dataset_store.async_get_store(menuai)
     dataset_id = list(store.datasets.values())[0].id
     store.preferred_dataset = dataset_id
 
@@ -183,7 +183,7 @@ async def test_list_get_dataset(
                 "created": dataset_2.created.isoformat(),
                 "dataset_id": dataset_2.id,
                 "extended_pan_id": "1111111122222233",
-                "network_name": "HomeAssistant!",
+                "network_name": "menuai!",
                 "pan_id": "1234",
                 "preferred": False,
                 "preferred_border_agent_id": None,
@@ -221,13 +221,13 @@ async def test_list_get_dataset(
 
 
 async def test_set_preferred_border_agent(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test setting the preferred border agent ID."""
-    assert await async_setup_component(hass, DOMAIN, {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {})
+    await menuai.async_block_till_done()
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json_auto_id(
         {"type": "thread/add_dataset_tlv", "source": "test", "tlv": DATASET_1}
@@ -265,11 +265,11 @@ async def test_set_preferred_border_agent(
 
 
 async def test_set_preferred_dataset(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test we set a dataset as default."""
-    assert await async_setup_component(hass, DOMAIN, {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {})
+    await menuai.async_block_till_done()
 
     datasets = [
         {"source": "Google", "tlv": DATASET_1},
@@ -277,15 +277,15 @@ async def test_set_preferred_dataset(
         {"source": "🎅", "tlv": DATASET_3},
     ]
     for dataset in datasets:
-        await dataset_store.async_add_dataset(hass, dataset["source"], dataset["tlv"])
+        await dataset_store.async_add_dataset(menuai, dataset["source"], dataset["tlv"])
 
-    store = await dataset_store.async_get_store(hass)
+    store = await dataset_store.async_get_store(menuai)
 
     for dataset in store.datasets.values():
         if dataset.source == "🎅":
             dataset_3 = dataset
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json(
         {"id": 1, "type": "thread/set_preferred_dataset", "dataset_id": dataset_3.id}
@@ -294,18 +294,18 @@ async def test_set_preferred_dataset(
     assert msg["success"]
     assert msg["result"] is None
 
-    store = await dataset_store.async_get_store(hass)
+    store = await dataset_store.async_get_store(menuai)
     assert store.preferred_dataset == dataset_3.id
 
 
 async def test_set_preferred_dataset_wrong_id(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test we set a dataset as default."""
-    assert await async_setup_component(hass, DOMAIN, {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {})
+    await menuai.async_block_till_done()
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json(
         {"id": 1, "type": "thread/set_preferred_dataset", "dataset_id": "don_t_exist"}
@@ -315,8 +315,8 @@ async def test_set_preferred_dataset_wrong_id(
 
 
 async def test_discover_routers(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     mock_async_zeroconf: MagicMock,
 ) -> None:
     """Test discovering thread routers."""
@@ -324,10 +324,10 @@ async def test_discover_routers(
     mock_async_zeroconf.async_remove_service_listener = AsyncMock()
     mock_async_zeroconf.async_get_service_info = AsyncMock()
 
-    assert await async_setup_component(hass, DOMAIN, {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {})
+    await menuai.async_block_till_done()
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     # Subscribe
     await client.send_json({"id": 1, "type": "thread/discover_routers"})
@@ -344,19 +344,19 @@ async def test_discover_routers(
 
     # Discover a service
     mock_async_zeroconf.async_get_service_info.return_value = AsyncServiceInfo(
-        **ROUTER_DISCOVERY_HASS
+        **ROUTER_DISCOVERY_menuai
     )
     listener.add_service(
-        None, ROUTER_DISCOVERY_HASS["type_"], ROUTER_DISCOVERY_HASS["name"]
+        None, ROUTER_DISCOVERY_menuai["type_"], ROUTER_DISCOVERY_menuai["name"]
     )
     msg = await client.receive_json()
     assert msg == {
         "event": {
             "data": {
-                "instance_name": "HomeAssistant OpenThreadBorderRouter #0BBF",
+                "instance_name": "menuai OpenThreadBorderRouter #0BBF",
                 "addresses": ["192.168.0.115"],
                 "border_agent_id": "230c6a1ac57f6f4be262acf32e5ef52c",
-                "brand": "homeassistant",
+                "brand": "menuai",
                 "extended_address": "aeeb2f594b570bbf",
                 "extended_pan_id": "e60fc7c186212ce5",
                 "model_name": "OpenThreadBorderRouter",
@@ -364,7 +364,7 @@ async def test_discover_routers(
                 "server": "core-silabs-multiprotocol.local.",
                 "thread_version": "1.3.0",
                 "unconfigured": None,
-                "vendor_name": "HomeAssistant",
+                "vendor_name": "menuai",
             },
             "key": "aeeb2f594b570bbf",
             "type": "router_discovered",
@@ -406,7 +406,7 @@ async def test_discover_routers(
 
     # Remove a service
     listener.remove_service(
-        None, ROUTER_DISCOVERY_HASS["type_"], ROUTER_DISCOVERY_HASS["name"]
+        None, ROUTER_DISCOVERY_menuai["type_"], ROUTER_DISCOVERY_menuai["name"]
     )
     msg = await client.receive_json()
     assert msg == {

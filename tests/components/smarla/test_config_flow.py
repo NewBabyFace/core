@@ -2,10 +2,10 @@
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from homeassistant.components.smarla.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.smarla.const import DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from .const import MOCK_SERIAL_NUMBER, MOCK_USER_INPUT
 
@@ -13,10 +13,10 @@ from tests.common import MockConfigEntry
 
 
 async def test_config_flow(
-    hass: HomeAssistant, mock_setup_entry, mock_connection: MagicMock
+    menuai: menuai, mock_setup_entry, mock_connection: MagicMock
 ) -> None:
     """Test creating a config entry."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
@@ -24,7 +24,7 @@ async def test_config_flow(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=MOCK_USER_INPUT,
     )
@@ -36,13 +36,13 @@ async def test_config_flow(
 
 
 async def test_malformed_token(
-    hass: HomeAssistant, mock_setup_entry, mock_connection: MagicMock
+    menuai: menuai, mock_setup_entry, mock_connection: MagicMock
 ) -> None:
     """Test we show user form on malformed token input."""
     with patch(
-        "homeassistant.components.smarla.config_flow.Connection", side_effect=ValueError
+        "menuai.components.smarla.config_flow.Connection", side_effect=ValueError
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": SOURCE_USER},
             data=MOCK_USER_INPUT,
@@ -52,7 +52,7 @@ async def test_malformed_token(
     assert result["step_id"] == "user"
     assert result["errors"] == {"base": "malformed_token"}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=MOCK_USER_INPUT,
     )
@@ -61,13 +61,13 @@ async def test_malformed_token(
 
 
 async def test_invalid_auth(
-    hass: HomeAssistant, mock_setup_entry, mock_connection: MagicMock
+    menuai: menuai, mock_setup_entry, mock_connection: MagicMock
 ) -> None:
     """Test we show user form on invalid auth."""
     with patch.object(
         mock_connection, "refresh_token", new=AsyncMock(return_value=False)
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": SOURCE_USER},
             data=MOCK_USER_INPUT,
@@ -77,7 +77,7 @@ async def test_invalid_auth(
     assert result["step_id"] == "user"
     assert result["errors"] == {"base": "invalid_auth"}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=MOCK_USER_INPUT,
     )
@@ -86,12 +86,12 @@ async def test_invalid_auth(
 
 
 async def test_device_exists_abort(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry, mock_connection: MagicMock
+    menuai: menuai, mock_config_entry: MockConfigEntry, mock_connection: MagicMock
 ) -> None:
     """Test we abort config flow if Smarla device already configured."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data=MOCK_USER_INPUT,
@@ -99,4 +99,4 @@ async def test_device_exists_abort(
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1

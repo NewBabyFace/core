@@ -27,7 +27,7 @@ from aemet_opendata.const import (
     AOD_WIND_SPEED_MAX,
 )
 
-from homeassistant.components.weather import (
+from menuai.components.weather import (
     ATTR_CONDITION_CLEAR_NIGHT,
     ATTR_CONDITION_CLOUDY,
     ATTR_CONDITION_FOG,
@@ -48,7 +48,7 @@ from homeassistant.components.weather import (
     ATTR_FORECAST_TIME,
     ATTR_FORECAST_WIND_BEARING,
 )
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 ATTRIBUTION = "Powered by AEMET OpenData"
 CONF_RADAR_UPDATES = "radar_updates"

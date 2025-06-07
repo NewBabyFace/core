@@ -5,9 +5,9 @@ from unittest.mock import patch
 from peco import AlertResults, OutageResults
 import pytest
 
-from homeassistant.components.peco.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
+from menuai.components.peco.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -26,13 +26,13 @@ INVALID_COUNTY_DATA = {"county": "INVALID"}
     ],
 )
 async def test_sensor_available(
-    hass: HomeAssistant, sensor: str, expected: str
+    menuai: menuai, sensor: str, expected: str
 ) -> None:
     """Test that the sensors are working."""
     # Totals Test
 
     config_entry = MockConfigEntry(domain=DOMAIN, data=MOCK_ENTRY_DATA)
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with (
         patch(
@@ -51,15 +51,15 @@ async def test_sensor_available(
             ),
         ),
     ):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
-    assert hass.data[DOMAIN]
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
+    assert menuai.data[DOMAIN]
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     assert config_entry.state is ConfigEntryState.LOADED
 
-    sensor_entity = hass.states.get(f"sensor.total_{sensor}")
+    sensor_entity = menuai.states.get(f"sensor.total_{sensor}")
     assert sensor_entity is not None
     assert sensor_entity.state != "unavailable"
     assert sensor_entity.state == expected
@@ -67,7 +67,7 @@ async def test_sensor_available(
     # County Test
 
     config_entry = MockConfigEntry(domain=DOMAIN, data=COUNTY_ENTRY_DATA)
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with (
         patch(
@@ -86,14 +86,14 @@ async def test_sensor_available(
             ),
         ),
     ):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 2
     assert config_entry.state is ConfigEntryState.LOADED
 
-    sensor_entity = hass.states.get(f"sensor.bucks_{sensor}")
+    sensor_entity = menuai.states.get(f"sensor.bucks_{sensor}")
     assert sensor_entity is not None
     assert sensor_entity.state != "unavailable"
     assert sensor_entity.state == expected

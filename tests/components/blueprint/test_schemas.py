@@ -5,7 +5,7 @@ import logging
 import pytest
 import voluptuous as vol
 
-from homeassistant.components.blueprint import schemas
+from menuai.components.blueprint import schemas
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -47,7 +47,7 @@ _LOGGER = logging.getLogger(__name__)
             "blueprint": {
                 "name": "Test Name",
                 "domain": "automation",
-                "homeassistant": {
+                "menuai": {
                     "min_version": "1000000.0.0",
                 },
             }
@@ -107,7 +107,7 @@ def test_blueprint_schema(blueprint) -> None:
             "blueprint": {
                 "name": "Test Name",
                 "domain": "automation",
-                "homeassistant": {
+                "menuai": {
                     "min_version": "1000000.invalid.0",
                 },
             }

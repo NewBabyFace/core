@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant.components.light import PLATFORM_SCHEMA as LIGHT_PLATFORM_SCHEMA
-from homeassistant.const import CONF_DEVICES, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, issue_registry as ir
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.light import PLATFORM_SCHEMA as LIGHT_PLATFORM_SCHEMA
+from menuai.const import CONF_DEVICES, CONF_NAME
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, issue_registry as ir
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 DEVICE_SCHEMA = vol.Schema({vol.Optional(CONF_NAME): cv.string})
 DOMAIN = "zengge"
@@ -20,14 +20,14 @@ PLATFORM_SCHEMA = LIGHT_PLATFORM_SCHEMA.extend(
 
 
 def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the Zengge platform."""
     ir.async_create_issue(
-        hass,
+        menuai,
         DOMAIN,
         DOMAIN,
         is_fixable=False,

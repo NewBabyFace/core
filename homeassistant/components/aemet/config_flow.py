@@ -8,11 +8,11 @@ from aemet_opendata.exceptions import AuthError
 from aemet_opendata.interface import AEMET, ConnectionOptions
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_API_KEY, CONF_LATITUDE, CONF_LONGITUDE, CONF_NAME
-from homeassistant.core import callback
-from homeassistant.helpers import aiohttp_client, config_validation as cv
-from homeassistant.helpers.schema_config_entry_flow import (
+from menuai.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_API_KEY, CONF_LATITUDE, CONF_LONGITUDE, CONF_NAME
+from menuai.core import callback
+from menuai.helpers import aiohttp_client, config_validation as cv
+from menuai.helpers.schema_config_entry_flow import (
     SchemaFlowFormStep,
     SchemaOptionsFlowHandler,
 )
@@ -47,7 +47,7 @@ class AemetConfigFlow(ConfigFlow, domain=DOMAIN):
             self._abort_if_unique_id_configured()
 
             options = ConnectionOptions(user_input[CONF_API_KEY])
-            aemet = AEMET(aiohttp_client.async_get_clientsession(self.hass), options)
+            aemet = AEMET(aiohttp_client.async_get_clientsession(self.menuai), options)
             try:
                 await aemet.select_coordinates(latitude, longitude)
             except AuthError:
@@ -63,10 +63,10 @@ class AemetConfigFlow(ConfigFlow, domain=DOMAIN):
                 vol.Required(CONF_API_KEY): str,
                 vol.Optional(CONF_NAME, default=DEFAULT_NAME): str,
                 vol.Optional(
-                    CONF_LATITUDE, default=self.hass.config.latitude
+                    CONF_LATITUDE, default=self.menuai.config.latitude
                 ): cv.latitude,
                 vol.Optional(
-                    CONF_LONGITUDE, default=self.hass.config.longitude
+                    CONF_LONGITUDE, default=self.menuai.config.longitude
                 ): cv.longitude,
             }
         )

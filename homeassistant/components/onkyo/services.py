@@ -6,18 +6,18 @@ from typing import TYPE_CHECKING
 
 import voluptuous as vol
 
-from homeassistant.components.media_player import DOMAIN as MEDIA_PLAYER_DOMAIN
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv
-from homeassistant.util.hass_dict import HassKey
+from menuai.components.media_player import DOMAIN as MEDIA_PLAYER_DOMAIN
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import config_validation as cv
+from menuai.util.menuai_dict import menuaiKey
 
 from .const import DOMAIN
 
 if TYPE_CHECKING:
     from .media_player import OnkyoMediaPlayer
 
-DATA_MP_ENTITIES: HassKey[dict[str, dict[str, OnkyoMediaPlayer]]] = HassKey(DOMAIN)
+DATA_MP_ENTITIES: menuaiKey[dict[str, dict[str, OnkyoMediaPlayer]]] = menuaiKey(DOMAIN)
 
 ATTR_HDMI_OUTPUT = "hdmi_output"
 ACCEPTED_VALUES = [
@@ -40,17 +40,17 @@ ONKYO_SELECT_OUTPUT_SCHEMA = vol.Schema(
 SERVICE_SELECT_HDMI_OUTPUT = "onkyo_select_hdmi_output"
 
 
-def async_setup_services(hass: HomeAssistant) -> None:
+def async_setup_services(menuai: menuai) -> None:
     """Register Onkyo services."""
 
-    hass.data.setdefault(DATA_MP_ENTITIES, {})
+    menuai.data.setdefault(DATA_MP_ENTITIES, {})
 
     async def async_service_handle(service: ServiceCall) -> None:
         """Handle for services."""
         entity_ids = service.data[ATTR_ENTITY_ID]
 
         targets: list[OnkyoMediaPlayer] = []
-        for receiver_entities in hass.data[DATA_MP_ENTITIES].values():
+        for receiver_entities in menuai.data[DATA_MP_ENTITIES].values():
             targets.extend(
                 entity
                 for entity in receiver_entities.values()
@@ -61,7 +61,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
             if service.service == SERVICE_SELECT_HDMI_OUTPUT:
                 await target.async_select_output(service.data[ATTR_HDMI_OUTPUT])
 
-    hass.services.async_register(
+    menuai.services.async_register(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_SELECT_HDMI_OUTPUT,
         async_service_handle,

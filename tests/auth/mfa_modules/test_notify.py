@@ -3,11 +3,11 @@
 import asyncio
 from unittest.mock import patch
 
-from homeassistant import data_entry_flow
-from homeassistant.auth import auth_manager_from_config, models as auth_models
-from homeassistant.auth.mfa_modules import auth_mfa_module_from_config
-from homeassistant.components.notify import NOTIFY_SERVICE_SCHEMA
-from homeassistant.core import HomeAssistant
+from menuai import data_entry_flow
+from menuai.auth import auth_manager_from_config, models as auth_models
+from menuai.auth.mfa_modules import auth_mfa_module_from_config
+from menuai.components.notify import NOTIFY_SERVICE_SCHEMA
+from menuai.core import menuai
 
 from tests.common import MockUser, async_mock_service
 
@@ -15,18 +15,18 @@ MOCK_CODE = "123456"
 MOCK_CODE_2 = "654321"
 
 
-async def test_validating_mfa(hass: HomeAssistant) -> None:
+async def test_validating_mfa(menuai: menuai) -> None:
     """Test validating mfa code."""
-    notify_auth_module = await auth_mfa_module_from_config(hass, {"type": "notify"})
+    notify_auth_module = await auth_mfa_module_from_config(menuai, {"type": "notify"})
     await notify_auth_module.async_setup_user("test-user", {"notify_service": "dummy"})
 
     with patch("pyotp.HOTP.verify", return_value=True):
         assert await notify_auth_module.async_validate("test-user", {"code": MOCK_CODE})
 
 
-async def test_validating_mfa_invalid_code(hass: HomeAssistant) -> None:
+async def test_validating_mfa_invalid_code(menuai: menuai) -> None:
     """Test validating an invalid mfa code."""
-    notify_auth_module = await auth_mfa_module_from_config(hass, {"type": "notify"})
+    notify_auth_module = await auth_mfa_module_from_config(menuai, {"type": "notify"})
     await notify_auth_module.async_setup_user("test-user", {"notify_service": "dummy"})
 
     with patch("pyotp.HOTP.verify", return_value=False):
@@ -36,9 +36,9 @@ async def test_validating_mfa_invalid_code(hass: HomeAssistant) -> None:
         )
 
 
-async def test_validating_mfa_invalid_user(hass: HomeAssistant) -> None:
+async def test_validating_mfa_invalid_user(menuai: menuai) -> None:
     """Test validating an mfa code with invalid user."""
-    notify_auth_module = await auth_mfa_module_from_config(hass, {"type": "notify"})
+    notify_auth_module = await auth_mfa_module_from_config(menuai, {"type": "notify"})
     await notify_auth_module.async_setup_user("test-user", {"notify_service": "dummy"})
 
     assert (
@@ -47,13 +47,13 @@ async def test_validating_mfa_invalid_user(hass: HomeAssistant) -> None:
     )
 
 
-async def test_validating_mfa_counter(hass: HomeAssistant) -> None:
+async def test_validating_mfa_counter(menuai: menuai) -> None:
     """Test counter will move only after generate code."""
-    notify_auth_module = await auth_mfa_module_from_config(hass, {"type": "notify"})
+    notify_auth_module = await auth_mfa_module_from_config(menuai, {"type": "notify"})
     await notify_auth_module.async_setup_user(
         "test-user", {"counter": 0, "notify_service": "dummy"}
     )
-    async_mock_service(hass, "notify", "dummy")
+    async_mock_service(menuai, "notify", "dummy")
 
     assert notify_auth_module._user_settings
     notify_setting = list(notify_auth_module._user_settings.values())[0]
@@ -83,9 +83,9 @@ async def test_validating_mfa_counter(hass: HomeAssistant) -> None:
     assert after_generate_count == notify_setting.counter
 
 
-async def test_setup_depose_user(hass: HomeAssistant) -> None:
+async def test_setup_depose_user(menuai: menuai) -> None:
     """Test set up and despose user."""
-    notify_auth_module = await auth_mfa_module_from_config(hass, {"type": "notify"})
+    notify_auth_module = await auth_mfa_module_from_config(menuai, {"type": "notify"})
     await notify_auth_module.async_setup_user("test-user", {})
     assert len(notify_auth_module._user_settings) == 1
     await notify_auth_module.async_setup_user("test-user", {})
@@ -98,10 +98,10 @@ async def test_setup_depose_user(hass: HomeAssistant) -> None:
     assert len(notify_auth_module._user_settings) == 1
 
 
-async def test_login_flow_validates_mfa(hass: HomeAssistant) -> None:
+async def test_login_flow_validates_mfa(menuai: menuai) -> None:
     """Test login flow with mfa enabled."""
-    hass.auth = await auth_manager_from_config(
-        hass,
+    menuai.auth = await auth_manager_from_config(
+        menuai,
         [
             {
                 "type": "insecure_example",
@@ -112,8 +112,8 @@ async def test_login_flow_validates_mfa(hass: HomeAssistant) -> None:
     )
     user = MockUser(
         id="mock-user", is_owner=False, is_active=False, name="Paulus"
-    ).add_to_auth_manager(hass.auth)
-    await hass.auth.async_link_user(
+    ).add_to_auth_manager(menuai.auth)
+    await menuai.auth.async_link_user(
         user,
         auth_models.Credentials(
             id="mock-id",
@@ -125,32 +125,32 @@ async def test_login_flow_validates_mfa(hass: HomeAssistant) -> None:
     )
 
     notify_calls = async_mock_service(
-        hass, "notify", "test-notify", NOTIFY_SERVICE_SCHEMA
+        menuai, "notify", "test-notify", NOTIFY_SERVICE_SCHEMA
     )
 
-    await hass.auth.async_enable_user_mfa(
+    await menuai.auth.async_enable_user_mfa(
         user, "notify", {"notify_service": "test-notify"}
     )
 
-    provider = hass.auth.auth_providers[0]
+    provider = menuai.auth.auth_providers[0]
 
-    result = await hass.auth.login_flow.async_init((provider.type, provider.id))
+    result = await menuai.auth.login_flow.async_init((provider.type, provider.id))
     assert result["type"] == data_entry_flow.FlowResultType.FORM
 
-    result = await hass.auth.login_flow.async_configure(
+    result = await menuai.auth.login_flow.async_configure(
         result["flow_id"], {"username": "incorrect-user", "password": "test-pass"}
     )
     assert result["type"] == data_entry_flow.FlowResultType.FORM
     assert result["errors"]["base"] == "invalid_auth"
 
-    result = await hass.auth.login_flow.async_configure(
+    result = await menuai.auth.login_flow.async_configure(
         result["flow_id"], {"username": "test-user", "password": "incorrect-pass"}
     )
     assert result["type"] == data_entry_flow.FlowResultType.FORM
     assert result["errors"]["base"] == "invalid_auth"
 
     with patch("pyotp.HOTP.at", return_value=MOCK_CODE):
-        result = await hass.auth.login_flow.async_configure(
+        result = await menuai.auth.login_flow.async_configure(
             result["flow_id"], {"username": "test-user", "password": "test-pass"}
         )
         assert result["type"] == data_entry_flow.FlowResultType.FORM
@@ -158,7 +158,7 @@ async def test_login_flow_validates_mfa(hass: HomeAssistant) -> None:
         assert result["data_schema"].schema.get("code") is str
 
     # wait service call finished
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(notify_calls) == 1
     notify_call = notify_calls[0]
@@ -168,7 +168,7 @@ async def test_login_flow_validates_mfa(hass: HomeAssistant) -> None:
     assert MOCK_CODE in message
 
     with patch("pyotp.HOTP.verify", return_value=False):
-        result = await hass.auth.login_flow.async_configure(
+        result = await menuai.auth.login_flow.async_configure(
             result["flow_id"], {"code": "invalid-code"}
         )
         assert result["type"] == data_entry_flow.FlowResultType.FORM
@@ -176,7 +176,7 @@ async def test_login_flow_validates_mfa(hass: HomeAssistant) -> None:
         assert result["errors"]["base"] == "invalid_code"
 
     # wait service call finished
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # would not send new code, allow user retry
     assert len(notify_calls) == 1
@@ -186,7 +186,7 @@ async def test_login_flow_validates_mfa(hass: HomeAssistant) -> None:
         patch("pyotp.HOTP.verify", return_value=False),
         patch("pyotp.HOTP.at", return_value=MOCK_CODE_2),
     ):
-        result = await hass.auth.login_flow.async_configure(
+        result = await menuai.auth.login_flow.async_configure(
             result["flow_id"], {"code": "invalid-code"}
         )
         assert result["type"] == data_entry_flow.FlowResultType.FORM
@@ -194,21 +194,21 @@ async def test_login_flow_validates_mfa(hass: HomeAssistant) -> None:
         assert result["errors"]["base"] == "invalid_code"
 
         # after the 3rd failure, flow abort
-        result = await hass.auth.login_flow.async_configure(
+        result = await menuai.auth.login_flow.async_configure(
             result["flow_id"], {"code": "invalid-code"}
         )
         assert result["type"] == data_entry_flow.FlowResultType.ABORT
         assert result["reason"] == "too_many_retry"
 
     # wait service call finished
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # restart login
-    result = await hass.auth.login_flow.async_init((provider.type, provider.id))
+    result = await menuai.auth.login_flow.async_init((provider.type, provider.id))
     assert result["type"] == data_entry_flow.FlowResultType.FORM
 
     with patch("pyotp.HOTP.at", return_value=MOCK_CODE):
-        result = await hass.auth.login_flow.async_configure(
+        result = await menuai.auth.login_flow.async_configure(
             result["flow_id"], {"username": "test-user", "password": "test-pass"}
         )
         assert result["type"] == data_entry_flow.FlowResultType.FORM
@@ -216,7 +216,7 @@ async def test_login_flow_validates_mfa(hass: HomeAssistant) -> None:
         assert result["data_schema"].schema.get("code") is str
 
     # wait service call finished
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(notify_calls) == 2
     notify_call = notify_calls[1]
@@ -226,18 +226,18 @@ async def test_login_flow_validates_mfa(hass: HomeAssistant) -> None:
     assert MOCK_CODE in message
 
     with patch("pyotp.HOTP.verify", return_value=True):
-        result = await hass.auth.login_flow.async_configure(
+        result = await menuai.auth.login_flow.async_configure(
             result["flow_id"], {"code": MOCK_CODE}
         )
         assert result["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
         assert result["data"].id == "mock-id"
 
 
-async def test_setup_user_notify_service(hass: HomeAssistant) -> None:
+async def test_setup_user_notify_service(menuai: menuai) -> None:
     """Test allow select notify service during mfa setup."""
-    notify_calls = async_mock_service(hass, "notify", "test1", NOTIFY_SERVICE_SCHEMA)
-    async_mock_service(hass, "notify", "test2", NOTIFY_SERVICE_SCHEMA)
-    notify_auth_module = await auth_mfa_module_from_config(hass, {"type": "notify"})
+    notify_calls = async_mock_service(menuai, "notify", "test1", NOTIFY_SERVICE_SCHEMA)
+    async_mock_service(menuai, "notify", "test2", NOTIFY_SERVICE_SCHEMA)
+    notify_auth_module = await auth_mfa_module_from_config(menuai, {"type": "notify"})
 
     services = notify_auth_module.aync_get_available_notify_services()
     assert services == ["test1", "test2"]
@@ -255,7 +255,7 @@ async def test_setup_user_notify_service(hass: HomeAssistant) -> None:
         assert step["step_id"] == "setup"
 
     # wait service call finished
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(notify_calls) == 1
     notify_call = notify_calls[0]
@@ -271,7 +271,7 @@ async def test_setup_user_notify_service(hass: HomeAssistant) -> None:
         assert step["errors"]["base"] == "invalid_code"
 
     # wait service call finished
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(notify_calls) == 2
     notify_call = notify_calls[1]
@@ -285,30 +285,30 @@ async def test_setup_user_notify_service(hass: HomeAssistant) -> None:
         assert step["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
 
 
-async def test_include_exclude_config(hass: HomeAssistant) -> None:
+async def test_include_exclude_config(menuai: menuai) -> None:
     """Test allow include exclude config."""
-    async_mock_service(hass, "notify", "include1", NOTIFY_SERVICE_SCHEMA)
-    async_mock_service(hass, "notify", "include2", NOTIFY_SERVICE_SCHEMA)
-    async_mock_service(hass, "notify", "exclude1", NOTIFY_SERVICE_SCHEMA)
-    async_mock_service(hass, "notify", "exclude2", NOTIFY_SERVICE_SCHEMA)
-    async_mock_service(hass, "other", "include3", NOTIFY_SERVICE_SCHEMA)
-    async_mock_service(hass, "other", "exclude3", NOTIFY_SERVICE_SCHEMA)
+    async_mock_service(menuai, "notify", "include1", NOTIFY_SERVICE_SCHEMA)
+    async_mock_service(menuai, "notify", "include2", NOTIFY_SERVICE_SCHEMA)
+    async_mock_service(menuai, "notify", "exclude1", NOTIFY_SERVICE_SCHEMA)
+    async_mock_service(menuai, "notify", "exclude2", NOTIFY_SERVICE_SCHEMA)
+    async_mock_service(menuai, "other", "include3", NOTIFY_SERVICE_SCHEMA)
+    async_mock_service(menuai, "other", "exclude3", NOTIFY_SERVICE_SCHEMA)
 
     notify_auth_module = await auth_mfa_module_from_config(
-        hass, {"type": "notify", "exclude": ["exclude1", "exclude2", "exclude3"]}
+        menuai, {"type": "notify", "exclude": ["exclude1", "exclude2", "exclude3"]}
     )
     services = notify_auth_module.aync_get_available_notify_services()
     assert services == ["include1", "include2"]
 
     notify_auth_module = await auth_mfa_module_from_config(
-        hass, {"type": "notify", "include": ["include1", "include2", "include3"]}
+        menuai, {"type": "notify", "include": ["include1", "include2", "include3"]}
     )
     services = notify_auth_module.aync_get_available_notify_services()
     assert services == ["include1", "include2"]
 
     # exclude has high priority than include
     notify_auth_module = await auth_mfa_module_from_config(
-        hass,
+        menuai,
         {
             "type": "notify",
             "include": ["include1", "include2", "include3"],
@@ -319,11 +319,11 @@ async def test_include_exclude_config(hass: HomeAssistant) -> None:
     assert services == ["include1"]
 
 
-async def test_setup_user_no_notify_service(hass: HomeAssistant) -> None:
+async def test_setup_user_no_notify_service(menuai: menuai) -> None:
     """Test setup flow abort if there is no available notify service."""
-    async_mock_service(hass, "notify", "test1", NOTIFY_SERVICE_SCHEMA)
+    async_mock_service(menuai, "notify", "test1", NOTIFY_SERVICE_SCHEMA)
     notify_auth_module = await auth_mfa_module_from_config(
-        hass, {"type": "notify", "exclude": "test1"}
+        menuai, {"type": "notify", "exclude": "test1"}
     )
 
     services = notify_auth_module.aync_get_available_notify_services()
@@ -335,10 +335,10 @@ async def test_setup_user_no_notify_service(hass: HomeAssistant) -> None:
     assert step["reason"] == "no_available_service"
 
 
-async def test_not_raise_exception_when_service_not_exist(hass: HomeAssistant) -> None:
+async def test_not_raise_exception_when_service_not_exist(menuai: menuai) -> None:
     """Test login flow will not raise exception when notify service error."""
-    hass.auth = await auth_manager_from_config(
-        hass,
+    menuai.auth = await auth_manager_from_config(
+        menuai,
         [
             {
                 "type": "insecure_example",
@@ -349,8 +349,8 @@ async def test_not_raise_exception_when_service_not_exist(hass: HomeAssistant) -
     )
     user = MockUser(
         id="mock-user", is_owner=False, is_active=False, name="Paulus"
-    ).add_to_auth_manager(hass.auth)
-    await hass.auth.async_link_user(
+    ).add_to_auth_manager(menuai.auth)
+    await menuai.auth.async_link_user(
         user,
         auth_models.Credentials(
             id="mock-id",
@@ -361,38 +361,38 @@ async def test_not_raise_exception_when_service_not_exist(hass: HomeAssistant) -
         ),
     )
 
-    await hass.auth.async_enable_user_mfa(
+    await menuai.auth.async_enable_user_mfa(
         user, "notify", {"notify_service": "invalid-notify"}
     )
 
-    provider = hass.auth.auth_providers[0]
+    provider = menuai.auth.auth_providers[0]
 
-    result = await hass.auth.login_flow.async_init((provider.type, provider.id))
+    result = await menuai.auth.login_flow.async_init((provider.type, provider.id))
     assert result["type"] == data_entry_flow.FlowResultType.FORM
 
     with patch("pyotp.HOTP.at", return_value=MOCK_CODE):
-        result = await hass.auth.login_flow.async_configure(
+        result = await menuai.auth.login_flow.async_configure(
             result["flow_id"], {"username": "test-user", "password": "test-pass"}
         )
         assert result["type"] == data_entry_flow.FlowResultType.ABORT
         assert result["reason"] == "unknown_error"
 
     # wait service call finished
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
-async def test_race_condition_in_data_loading(hass: HomeAssistant) -> None:
+async def test_race_condition_in_data_loading(menuai: menuai) -> None:
     """Test race condition in the data loading."""
     counter = 0
 
     async def mock_load(_):
-        """Mock homeassistant.helpers.storage.Store.async_load."""
+        """Mock menuai.helpers.storage.Store.async_load."""
         nonlocal counter
         counter += 1
         await asyncio.sleep(0)
 
-    notify_auth_module = await auth_mfa_module_from_config(hass, {"type": "notify"})
-    with patch("homeassistant.helpers.storage.Store.async_load", new=mock_load):
+    notify_auth_module = await auth_mfa_module_from_config(menuai, {"type": "notify"})
+    with patch("menuai.helpers.storage.Store.async_load", new=mock_load):
         task1 = notify_auth_module.async_validate("user", {"code": "value"})
         task2 = notify_auth_module.async_validate("user", {"code": "value"})
         results = await asyncio.gather(task1, task2, return_exceptions=True)

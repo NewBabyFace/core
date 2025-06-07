@@ -7,14 +7,14 @@ from typing import Any, Final
 
 from aioairzone.const import API_ON, AZD_ON, AZD_ZONES
 
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     SwitchDeviceClass,
     SwitchEntity,
     SwitchEntityDescription,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import AirzoneConfigEntry, AirzoneUpdateCoordinator
 from .entity import AirzoneEntity, AirzoneZoneEntity
@@ -37,7 +37,7 @@ ZONE_SWITCH_TYPES: Final[tuple[AirzoneSwitchDescription, ...]] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: AirzoneConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

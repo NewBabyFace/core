@@ -9,9 +9,9 @@ from aiohttp import ClientResponseError
 from pyrituals import Account, AuthenticationException
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_EMAIL, CONF_PASSWORD
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import ACCOUNT_HASH, DOMAIN
 
@@ -39,7 +39,7 @@ class RitualsPerfumeGenieConfigFlow(ConfigFlow, domain=DOMAIN):
 
         errors = {}
 
-        session = async_get_clientsession(self.hass)
+        session = async_get_clientsession(self.menuai)
         account = Account(user_input[CONF_EMAIL], user_input[CONF_PASSWORD], session)
 
         try:

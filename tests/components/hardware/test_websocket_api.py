@@ -7,21 +7,21 @@ from unittest.mock import patch
 from freezegun.api import FrozenDateTimeFactory
 import psutil_home_assistant as ha_psutil
 
-from homeassistant.components.hardware.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.components.hardware.const import DOMAIN
+from menuai.core import menuai
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from tests.typing import WebSocketGenerator
 
 
 async def test_board_info(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test we can get the board info."""
-    assert await async_setup_component(hass, DOMAIN, {})
+    assert await async_setup_component(menuai, DOMAIN, {})
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json({"id": 1, "type": "hardware/info"})
     msg = await client.receive_json()
@@ -35,8 +35,8 @@ TEST_TIME_ADVANCE_INTERVAL = datetime.timedelta(seconds=5 + 1)
 
 
 async def test_system_status_subscription(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test websocket system status subscription."""
@@ -50,12 +50,12 @@ async def test_system_status_subscription(
         return mock_psutil
 
     with patch(
-        "homeassistant.components.hardware.ha_psutil.PsutilWrapper",
+        "menuai.components.hardware.ha_psutil.PsutilWrapper",
         wraps=create_mock_psutil,
     ):
-        assert await async_setup_component(hass, DOMAIN, {})
+        assert await async_setup_component(menuai, DOMAIN, {})
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json({"id": 1, "type": "hardware/subscribe_system_status"})
     response = await client.receive_json()
@@ -77,8 +77,8 @@ async def test_system_status_subscription(
         ),
     ):
         freezer.tick(TEST_TIME_ADVANCE_INTERVAL)
-        await hass.async_block_till_done()
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
+        await menuai.async_block_till_done()
 
     response = await client.receive_json()
     assert response["event"] == {
@@ -99,6 +99,6 @@ async def test_system_status_subscription(
         patch.object(mock_psutil.psutil, "virtual_memory") as vmem_mock,
     ):
         freezer.tick(TEST_TIME_ADVANCE_INTERVAL)
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         cpu_mock.assert_not_called()
         vmem_mock.assert_not_called()

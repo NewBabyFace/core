@@ -13,18 +13,18 @@ from freezegun.api import freeze_time
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.notify import (
+from menuai.components.notify import (
     ATTR_MESSAGE,
     ATTR_TITLE,
     DOMAIN as NOTIFY_DOMAIN,
     SERVICE_SEND_MESSAGE,
 )
-from homeassistant.components.ntfy.const import DOMAIN
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
-from homeassistant.const import ATTR_ENTITY_ID, STATE_UNKNOWN, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from menuai.components.ntfy.const import DOMAIN
+from menuai.config_entries import SOURCE_REAUTH, ConfigEntryState
+from menuai.const import ATTR_ENTITY_ID, STATE_UNKNOWN, Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
 
 from tests.common import AsyncMock, MockConfigEntry, snapshot_platform
 
@@ -33,7 +33,7 @@ from tests.common import AsyncMock, MockConfigEntry, snapshot_platform
 async def notify_only() -> AsyncGenerator[None]:
     """Enable only the notify platform."""
     with patch(
-        "homeassistant.components.ntfy.PLATFORMS",
+        "menuai.components.ntfy.PLATFORMS",
         [Platform.NOTIFY],
     ):
         yield
@@ -41,41 +41,41 @@ async def notify_only() -> AsyncGenerator[None]:
 
 @pytest.mark.usefixtures("mock_aiontfy")
 async def test_notify_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test setup of the ntfy notify platform."""
 
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
 
 @freeze_time("2025-01-09T12:00:00+00:00")
 async def test_send_message(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_aiontfy: AsyncMock,
 ) -> None:
     """Test publishing ntfy message."""
 
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
-    state = hass.states.get("notify.mytopic")
+    state = menuai.states.get("notify.mytopic")
     assert state
     assert state.state == STATE_UNKNOWN
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         NOTIFY_DOMAIN,
         SERVICE_SEND_MESSAGE,
         {
@@ -86,7 +86,7 @@ async def test_send_message(
         blocking=True,
     )
 
-    state = hass.states.get("notify.mytopic")
+    state = menuai.states.get("notify.mytopic")
     assert state
     assert state.state == "2025-01-09T12:00:00+00:00"
 
@@ -113,7 +113,7 @@ async def test_send_message(
     ],
 )
 async def test_send_message_exception(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_aiontfy: AsyncMock,
     exception: Exception,
@@ -121,16 +121,16 @@ async def test_send_message_exception(
 ) -> None:
     """Test publish message exceptions."""
 
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
     mock_aiontfy.publish.side_effect = exception
 
-    with pytest.raises(HomeAssistantError, match=error_msg):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match=error_msg):
+        await menuai.services.async_call(
             NOTIFY_DOMAIN,
             SERVICE_SEND_MESSAGE,
             {
@@ -147,15 +147,15 @@ async def test_send_message_exception(
 
 
 async def test_send_message_reauth_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_aiontfy: AsyncMock,
 ) -> None:
     """Test unauthorized exception initiates reauth flow."""
 
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
@@ -163,8 +163,8 @@ async def test_send_message_reauth_flow(
         NtfyUnauthorizedAuthenticationError(40101, 401, "unauthorized"),
     )
 
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             NOTIFY_DOMAIN,
             SERVICE_SEND_MESSAGE,
             {
@@ -175,7 +175,7 @@ async def test_send_message_reauth_flow(
             blocking=True,
         )
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
 
     flow = flows[0]

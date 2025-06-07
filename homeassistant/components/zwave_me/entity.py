@@ -2,10 +2,10 @@
 
 from zwave_me_ws import ZWaveMeData
 
-from homeassistant.core import callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import Entity
+from menuai.core import callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity import Entity
 
 from .const import DOMAIN
 
@@ -34,40 +34,40 @@ class ZWaveMeEntity(Entity):
             suggested_area=self.device.locationName,
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Connect to an updater."""
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, f"ZWAVE_ME_INFO_{self.device.id}", self.get_new_data
+                self.menuai, f"ZWAVE_ME_INFO_{self.device.id}", self.get_new_data
             )
         )
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"ZWAVE_ME_UNAVAILABLE_{self.device.id}",
                 self.set_unavailable_status,
             )
         )
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, f"ZWAVE_ME_DESTROY_{self.device.id}", self.delete_entity
+                self.menuai, f"ZWAVE_ME_DESTROY_{self.device.id}", self.delete_entity
             )
         )
 
     @callback
     def get_new_data(self, new_data: ZWaveMeData) -> None:
-        """Update info in the HAss."""
+        """Update info in the menuai."""
         self.device = new_data
         self._attr_available = not new_data.isFailed
         self.async_write_ha_state()
 
     @callback
     def set_unavailable_status(self):
-        """Update status in the HAss."""
+        """Update status in the menuai."""
         self._attr_available = False
         self.async_write_ha_state()
 
     @callback
     def delete_entity(self) -> None:
         """Remove this entity."""
-        self.hass.async_create_task(self.async_remove(force_remove=True))
+        self.menuai.async_create_task(self.async_remove(force_remove=True))

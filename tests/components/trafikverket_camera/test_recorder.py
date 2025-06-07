@@ -5,11 +5,11 @@ from __future__ import annotations
 import pytest
 from pytrafikverket import CameraInfoModel
 
-from homeassistant.components.recorder import Recorder
-from homeassistant.components.recorder.history import get_significant_states
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
+from menuai.components.recorder import Recorder
+from menuai.components.recorder.history import get_significant_states
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.util import dt as dt_util
 
 from tests.components.recorder.common import async_wait_recording_done
 from tests.test_util.aiohttp import AiohttpClientMocker
@@ -18,26 +18,26 @@ from tests.test_util.aiohttp import AiohttpClientMocker
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_exclude_attributes(
     recorder_mock: Recorder,
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
     monkeypatch: pytest.MonkeyPatch,
     aioclient_mock: AiohttpClientMocker,
     get_camera: CameraInfoModel,
 ) -> None:
     """Test camera has description and location excluded from recording."""
-    state1 = hass.states.get("camera.test_camera")
+    state1 = menuai.states.get("camera.test_camera")
     assert state1.state == "idle"
     assert state1.attributes["description"] == "Test Camera for testing"
     assert state1.attributes["location"] == "Test location"
     assert state1.attributes["type"] == "Road"
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    states = await hass.async_add_executor_job(
+    states = await menuai.async_add_executor_job(
         get_significant_states,
-        hass,
+        menuai,
         dt_util.now(),
         None,
-        hass.states.async_entity_ids(),
+        menuai.states.async_entity_ids(),
     )
     assert len(states) == 8
     assert states.get("camera.test_camera")

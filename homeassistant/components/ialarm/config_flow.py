@@ -6,9 +6,9 @@ from typing import Any
 from pyialarm import IAlarm
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.core import HomeAssistant
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_PORT
+from menuai.core import menuai
 
 from .const import DEFAULT_PORT, DOMAIN
 
@@ -22,9 +22,9 @@ DATA_SCHEMA = vol.Schema(
 )
 
 
-async def _get_device_mac(hass: HomeAssistant, host, port):
+async def _get_device_mac(menuai: menuai, host, port):
     ialarm = IAlarm(host, port)
-    return await hass.async_add_executor_job(ialarm.get_mac)
+    return await menuai.async_add_executor_job(ialarm.get_mac)
 
 
 class IAlarmConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -48,7 +48,7 @@ class IAlarmConfigFlow(ConfigFlow, domain=DOMAIN):
         try:
             # If we are able to get the MAC address, we are able to establish
             # a connection to the device.
-            mac = await _get_device_mac(self.hass, host, port)
+            mac = await _get_device_mac(self.menuai, host, port)
         except ConnectionError:
             errors["base"] = "cannot_connect"
         except Exception:

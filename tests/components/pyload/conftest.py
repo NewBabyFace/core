@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from pyloadapi.types import LoginResponse, StatusServerResponse
 import pytest
 
-from homeassistant.components.pyload.const import DEFAULT_NAME, DOMAIN
-from homeassistant.const import (
+from menuai.components.pyload.const import DEFAULT_NAME, DOMAIN
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
@@ -43,7 +43,7 @@ NEW_INPUT = {
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.pyload.async_setup_entry", return_value=True
+        "menuai.components.pyload.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -53,9 +53,9 @@ def mock_pyloadapi() -> Generator[MagicMock]:
     """Mock PyLoadAPI."""
     with (
         patch(
-            "homeassistant.components.pyload.PyLoadAPI", autospec=True
+            "menuai.components.pyload.PyLoadAPI", autospec=True
         ) as mock_client,
-        patch("homeassistant.components.pyload.config_flow.PyLoadAPI", new=mock_client),
+        patch("menuai.components.pyload.config_flow.PyLoadAPI", new=mock_client),
     ):
         client = mock_client.return_value
         client.username = "username"

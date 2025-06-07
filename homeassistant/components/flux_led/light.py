@@ -11,7 +11,7 @@ from flux_led.protocol import MusicMode
 from flux_led.utils import rgbcw_brightness, rgbcw_to_rgbwc, rgbw_brightness
 import voluptuous as vol
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_TEMP_KELVIN,
     ATTR_EFFECT,
@@ -22,12 +22,12 @@ from homeassistant.components.light import (
     LightEntity,
     LightEntityFeature,
 )
-from homeassistant.const import CONF_EFFECT
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import VolDictType
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.const import CONF_EFFECT
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv, entity_platform
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import VolDictType
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
     CONF_COLORS,
@@ -48,8 +48,8 @@ from .coordinator import FluxLedConfigEntry, FluxLedUpdateCoordinator
 from .entity import FluxOnOffEntity
 from .util import (
     _effect_brightness,
-    _flux_color_mode_to_hass,
-    _hass_color_modes,
+    _flux_color_mode_to_menuai,
+    _menuai_color_modes,
     _min_rgb_brightness,
     _min_rgbw_brightness,
     _min_rgbwc_brightness,
@@ -131,7 +131,7 @@ SET_ZONES_DICT: VolDictType = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: FluxLedConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -200,7 +200,7 @@ class FluxLight(
         super().__init__(coordinator, base_unique_id, None)
         self._attr_min_color_temp_kelvin = self._device.min_temp
         self._attr_max_color_temp_kelvin = self._device.max_temp
-        self._attr_supported_color_modes = _hass_color_modes(self._device)
+        self._attr_supported_color_modes = _menuai_color_modes(self._device)
         custom_effects: list[str] = []
         if custom_effect_colors:
             custom_effects.append(EFFECT_CUSTOM)
@@ -237,7 +237,7 @@ class FluxLight(
     @property
     def color_mode(self) -> str:
         """Return the color mode of the light."""
-        return _flux_color_mode_to_hass(
+        return _flux_color_mode_to_menuai(
             self._device.color_mode, self._device.color_modes
         )
 

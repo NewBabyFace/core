@@ -6,9 +6,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from pypalazzetti.temperature import TemperatureDefinition, TemperatureDescriptionKey
 import pytest
 
-from homeassistant.components.palazzetti.const import DOMAIN
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
+from menuai.components.palazzetti.const import DOMAIN
+from menuai.const import CONF_HOST
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -17,7 +17,7 @@ from tests.common import MockConfigEntry
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.palazzetti.async_setup_entry",
+        "menuai.components.palazzetti.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
         yield mock_setup_entry
@@ -39,11 +39,11 @@ def mock_palazzetti_client() -> Generator[AsyncMock]:
     """Return a mocked PalazzettiClient."""
     with (
         patch(
-            "homeassistant.components.palazzetti.coordinator.PalazzettiClient",
+            "menuai.components.palazzetti.coordinator.PalazzettiClient",
             autospec=True,
         ) as client,
         patch(
-            "homeassistant.components.palazzetti.config_flow.PalazzettiClient",
+            "menuai.components.palazzetti.config_flow.PalazzettiClient",
             new=client,
         ),
     ):
@@ -131,13 +131,13 @@ def mock_palazzetti_client() -> Generator[AsyncMock]:
 
 @pytest.fixture
 async def init_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_palazzetti_client: MagicMock,
 ) -> MockConfigEntry:
     """Set up the Palazzetti integration for testing."""
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     return mock_config_entry

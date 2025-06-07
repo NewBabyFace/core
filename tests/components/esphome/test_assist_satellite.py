@@ -21,30 +21,30 @@ from aioesphomeapi import (
 )
 import pytest
 
-from homeassistant.components import (
+from menuai.components import (
     assist_pipeline,
     assist_satellite,
     conversation,
     tts,
 )
-from homeassistant.components.assist_pipeline import PipelineEvent, PipelineEventType
-from homeassistant.components.assist_satellite import (
+from menuai.components.assist_pipeline import PipelineEvent, PipelineEventType
+from menuai.components.assist_satellite import (
     AssistSatelliteConfiguration,
     AssistSatelliteEntityFeature,
     AssistSatelliteWakeWord,
 )
 
-# pylint: disable-next=hass-component-root-import
-from homeassistant.components.assist_satellite.entity import AssistSatelliteState
-from homeassistant.components.esphome.assist_satellite import VoiceAssistantUDPServer
-from homeassistant.components.select import (
+# pylint: disable-next=menuai-component-root-import
+from menuai.components.assist_satellite.entity import AssistSatelliteState
+from menuai.components.esphome.assist_satellite import VoiceAssistantUDPServer
+from menuai.components.select import (
     DOMAIN as SELECT_DOMAIN,
     SERVICE_SELECT_OPTION,
 )
-from homeassistant.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, intent as intent_helper
-from homeassistant.helpers.network import get_url
+from menuai.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, intent as intent_helper
+from menuai.helpers.network import get_url
 
 from .common import get_satellite_entity
 from .conftest import MockESPHomeDeviceType
@@ -66,7 +66,7 @@ def mock_wav() -> bytes:
 
 
 async def test_no_satellite_without_voice_assistant(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_esphome_device: MockESPHomeDeviceType,
 ) -> None:
@@ -75,14 +75,14 @@ async def test_no_satellite_without_voice_assistant(
         mock_client=mock_client,
         device_info={},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # No satellite entity should be created
-    assert get_satellite_entity(hass, mock_device.device_info.mac_address) is None
+    assert get_satellite_entity(menuai, mock_device.device_info.mac_address) is None
 
 
 async def test_pipeline_api_audio(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mock_client: APIClient,
     mock_esphome_device: MockESPHomeDeviceType,
@@ -99,12 +99,12 @@ async def test_pipeline_api_audio(
             | VoiceAssistantFeature.API_AUDIO
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     dev = device_registry.async_get_device(
         connections={(dr.CONNECTION_NETWORK_MAC, mock_device.entry.unique_id)}
     )
 
-    satellite = get_satellite_entity(hass, mock_device.device_info.mac_address)
+    satellite = get_satellite_entity(menuai, mock_device.device_info.mac_address)
     assert satellite is not None
 
     # Block TTS streaming until we're ready.
@@ -226,7 +226,7 @@ async def test_pipeline_api_audio(
                 type=PipelineEventType.INTENT_START,
                 data={
                     "engine": "test-intent-engine",
-                    "language": hass.config.language,
+                    "language": menuai.config.language,
                     "intent_input": "test-intent-text",
                     "conversation_id": conversation_id,
                     "device_id": device_id,
@@ -266,7 +266,7 @@ async def test_pipeline_api_audio(
                 type=PipelineEventType.TTS_START,
                 data={
                     "engine": "test-stt-engine",
-                    "language": hass.config.language,
+                    "language": menuai.config.language,
                     "voice": "test-voice",
                     "tts_input": "test-tts-text",
                 },
@@ -280,7 +280,7 @@ async def test_pipeline_api_audio(
         assert satellite.state == AssistSatelliteState.RESPONDING
 
         # Should return mock_wav audio
-        mock_tts_result_stream = MockResultStream(hass, "wav", mock_wav)
+        mock_tts_result_stream = MockResultStream(menuai, "wav", mock_wav)
         event_callback(
             PipelineEvent(
                 type=PipelineEventType.TTS_END,
@@ -295,7 +295,7 @@ async def test_pipeline_api_audio(
         )
         assert mock_client.send_voice_assistant_event.call_args_list[-1].args == (
             VoiceAssistantEventType.VOICE_ASSISTANT_TTS_END,
-            {"url": get_url(hass) + mock_tts_result_stream.url},
+            {"url": get_url(menuai) + mock_tts_result_stream.url},
         )
 
         event_callback(
@@ -312,7 +312,7 @@ async def test_pipeline_api_audio(
         )
         assert mock_client.send_voice_assistant_event.call_args_list[-1].args == (
             VoiceAssistantEventType.VOICE_ASSISTANT_RUN_START,
-            {"url": get_url(hass) + mock_tts_result_stream.url},
+            {"url": get_url(menuai) + mock_tts_result_stream.url},
         )
 
         event_callback(PipelineEvent(type=PipelineEventType.RUN_END))
@@ -340,7 +340,7 @@ async def test_pipeline_api_audio(
 
     with (
         patch(
-            "homeassistant.components.assist_satellite.entity.async_pipeline_from_audio_stream",
+            "menuai.components.assist_satellite.entity.async_pipeline_from_audio_stream",
             new=async_pipeline_from_audio_stream,
         ),
         patch.object(satellite, "handle_pipeline_finished", handle_pipeline_finished),
@@ -386,7 +386,7 @@ async def test_pipeline_api_audio(
 
 @pytest.mark.usefixtures("socket_enabled")
 async def test_pipeline_udp_audio(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_esphome_device: MockESPHomeDeviceType,
     mock_wav: bytes,
@@ -405,9 +405,9 @@ async def test_pipeline_udp_audio(
             | VoiceAssistantFeature.SPEAKER
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    satellite = get_satellite_entity(hass, mock_device.device_info.mac_address)
+    satellite = get_satellite_entity(menuai, mock_device.device_info.mac_address)
     assert satellite is not None
 
     mic_audio_event = asyncio.Event()
@@ -446,7 +446,7 @@ async def test_pipeline_udp_audio(
                 type=PipelineEventType.INTENT_START,
                 data={
                     "engine": "test-intent-engine",
-                    "language": hass.config.language,
+                    "language": menuai.config.language,
                     "intent_input": "test-intent-text",
                     "conversation_id": conversation_id,
                     "device_id": device_id,
@@ -472,7 +472,7 @@ async def test_pipeline_udp_audio(
                 type=PipelineEventType.TTS_START,
                 data={
                     "engine": "test-stt-engine",
-                    "language": hass.config.language,
+                    "language": menuai.config.language,
                     "voice": "test-voice",
                     "tts_input": "test-tts-text",
                 },
@@ -480,7 +480,7 @@ async def test_pipeline_udp_audio(
         )
 
         # Should return mock_wav audio
-        mock_tts_result_stream = MockResultStream(hass, "wav", mock_wav)
+        mock_tts_result_stream = MockResultStream(menuai, "wav", mock_wav)
         event_callback(
             PipelineEvent(
                 type=PipelineEventType.TTS_END,
@@ -523,7 +523,7 @@ async def test_pipeline_udp_audio(
 
     with (
         patch(
-            "homeassistant.components.assist_satellite.entity.async_pipeline_from_audio_stream",
+            "menuai.components.assist_satellite.entity.async_pipeline_from_audio_stream",
             new=async_pipeline_from_audio_stream,
         ),
         patch.object(satellite, "handle_pipeline_finished", handle_pipeline_finished),
@@ -593,7 +593,7 @@ async def test_udp_errors() -> None:
 
 
 async def test_pipeline_media_player(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_esphome_device: MockESPHomeDeviceType,
     mock_wav: bytes,
@@ -612,9 +612,9 @@ async def test_pipeline_media_player(
             | VoiceAssistantFeature.API_AUDIO
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    satellite = get_satellite_entity(hass, mock_device.device_info.mac_address)
+    satellite = get_satellite_entity(menuai, mock_device.device_info.mac_address)
     assert satellite is not None
 
     async def async_pipeline_from_audio_stream(*args, device_id, **kwargs):
@@ -646,7 +646,7 @@ async def test_pipeline_media_player(
                 type=PipelineEventType.INTENT_START,
                 data={
                     "engine": "test-intent-engine",
-                    "language": hass.config.language,
+                    "language": menuai.config.language,
                     "intent_input": "test-intent-text",
                     "conversation_id": conversation_id,
                     "device_id": device_id,
@@ -672,7 +672,7 @@ async def test_pipeline_media_player(
                 type=PipelineEventType.TTS_START,
                 data={
                     "engine": "test-stt-engine",
-                    "language": hass.config.language,
+                    "language": menuai.config.language,
                     "voice": "test-voice",
                     "tts_input": "test-tts-text",
                 },
@@ -680,7 +680,7 @@ async def test_pipeline_media_player(
         )
 
         # Should return mock_wav audio
-        mock_tts_result_stream = MockResultStream(hass, "wav", mock_wav)
+        mock_tts_result_stream = MockResultStream(menuai, "wav", mock_wav)
         event_callback(
             PipelineEvent(
                 type=PipelineEventType.TTS_END,
@@ -712,7 +712,7 @@ async def test_pipeline_media_player(
 
     with (
         patch(
-            "homeassistant.components.assist_satellite.entity.async_pipeline_from_audio_stream",
+            "menuai.components.assist_satellite.entity.async_pipeline_from_audio_stream",
             new=async_pipeline_from_audio_stream,
         ),
         patch.object(satellite, "handle_pipeline_finished", handle_pipeline_finished),
@@ -741,7 +741,7 @@ async def test_pipeline_media_player(
 
 
 async def test_timer_events(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mock_client: APIClient,
     mock_esphome_device: MockESPHomeDeviceType,
@@ -755,14 +755,14 @@ async def test_timer_events(
             | VoiceAssistantFeature.TIMERS
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     dev = device_registry.async_get_device(
         connections={(dr.CONNECTION_NETWORK_MAC, mock_device.entry.unique_id)}
     )
 
     total_seconds = (1 * 60 * 60) + (2 * 60) + 3
     await intent_helper.async_handle(
-        hass,
+        menuai,
         "test",
         intent_helper.INTENT_START_TIMER,
         {
@@ -788,7 +788,7 @@ async def test_timer_events(
 
     total_seconds += 5 * 60
     await intent_helper.async_handle(
-        hass,
+        menuai,
         "test",
         intent_helper.INTENT_INCREASE_TIMER,
         {
@@ -809,7 +809,7 @@ async def test_timer_events(
 
 
 async def test_unknown_timer_event(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mock_client: APIClient,
     mock_esphome_device: MockESPHomeDeviceType,
@@ -823,7 +823,7 @@ async def test_unknown_timer_event(
             | VoiceAssistantFeature.TIMERS
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert mock_device.entry.unique_id is not None
     dev = device_registry.async_get_device(
         connections={(dr.CONNECTION_NETWORK_MAC, mock_device.entry.unique_id)}
@@ -831,11 +831,11 @@ async def test_unknown_timer_event(
     assert dev is not None
 
     with patch(
-        "homeassistant.components.esphome.assist_satellite._TIMER_EVENT_TYPES.from_hass",
+        "menuai.components.esphome.assist_satellite._TIMER_EVENT_TYPES.from_menuai",
         side_effect=KeyError,
     ):
         await intent_helper.async_handle(
-            hass,
+            menuai,
             "test",
             intent_helper.INTENT_START_TIMER,
             {
@@ -851,7 +851,7 @@ async def test_unknown_timer_event(
 
 
 async def test_streaming_tts_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_esphome_device: MockESPHomeDeviceType,
     mock_wav: bytes,
@@ -863,19 +863,19 @@ async def test_streaming_tts_errors(
             "voice_assistant_feature_flags": VoiceAssistantFeature.VOICE_ASSISTANT
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    satellite = get_satellite_entity(hass, mock_device.device_info.mac_address)
+    satellite = get_satellite_entity(menuai, mock_device.device_info.mac_address)
     assert satellite is not None
 
     # Should not stream if not running
     satellite._is_running = False
-    await satellite._stream_tts_audio(MockResultStream(hass, "wav", mock_wav))
+    await satellite._stream_tts_audio(MockResultStream(menuai, "wav", mock_wav))
     mock_client.send_voice_assistant_audio.assert_not_called()
     satellite._is_running = True
 
     # Should only stream WAV
-    await satellite._stream_tts_audio(MockResultStream(hass, "mp3", b""))
+    await satellite._stream_tts_audio(MockResultStream(menuai, "mp3", b""))
     mock_client.send_voice_assistant_audio.assert_not_called()
 
     # Needs to be the correct sample rate, etc.
@@ -886,7 +886,7 @@ async def test_streaming_tts_errors(
             wav_file.setnchannels(1)
             wav_file.writeframes(b"test-wav")
 
-        mock_tts_result_stream = MockResultStream(hass, "wav", wav_io.getvalue())
+        mock_tts_result_stream = MockResultStream(menuai, "wav", wav_io.getvalue())
 
     await satellite._stream_tts_audio(mock_tts_result_stream)
     mock_client.send_voice_assistant_audio.assert_not_called()
@@ -894,7 +894,7 @@ async def test_streaming_tts_errors(
     # Check that TTS_STREAM_* events still get sent after cancel
     media_fetched = asyncio.Event()
 
-    mock_tts_result_stream = MockResultStream(hass, "wav", b"")
+    mock_tts_result_stream = MockResultStream(menuai, "wav", b"")
 
     async def async_stream_result_slowly():
         media_fetched.set()
@@ -930,7 +930,7 @@ async def test_streaming_tts_errors(
 
 
 async def test_tts_format_from_media_player(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_esphome_device: MockESPHomeDeviceType,
 ) -> None:
@@ -969,13 +969,13 @@ async def test_tts_format_from_media_player(
             "voice_assistant_feature_flags": VoiceAssistantFeature.VOICE_ASSISTANT
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    satellite = get_satellite_entity(hass, mock_device.device_info.mac_address)
+    satellite = get_satellite_entity(menuai, mock_device.device_info.mac_address)
     assert satellite is not None
 
     with patch(
-        "homeassistant.components.assist_satellite.entity.async_pipeline_from_audio_stream",
+        "menuai.components.assist_satellite.entity.async_pipeline_from_audio_stream",
     ) as mock_pipeline_from_audio_stream:
         await satellite.handle_pipeline_start(
             conversation_id="",
@@ -997,7 +997,7 @@ async def test_tts_format_from_media_player(
 
 
 async def test_tts_minimal_format_from_media_player(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_esphome_device: MockESPHomeDeviceType,
 ) -> None:
@@ -1036,13 +1036,13 @@ async def test_tts_minimal_format_from_media_player(
             "voice_assistant_feature_flags": VoiceAssistantFeature.VOICE_ASSISTANT
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    satellite = get_satellite_entity(hass, mock_device.device_info.mac_address)
+    satellite = get_satellite_entity(menuai, mock_device.device_info.mac_address)
     assert satellite is not None
 
     with patch(
-        "homeassistant.components.assist_satellite.entity.async_pipeline_from_audio_stream",
+        "menuai.components.assist_satellite.entity.async_pipeline_from_audio_stream",
     ) as mock_pipeline_from_audio_stream:
         await satellite.handle_pipeline_start(
             conversation_id="",
@@ -1061,7 +1061,7 @@ async def test_tts_minimal_format_from_media_player(
 
 
 async def test_announce_message(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_esphome_device: MockESPHomeDeviceType,
 ) -> None:
@@ -1075,9 +1075,9 @@ async def test_announce_message(
             | VoiceAssistantFeature.ANNOUNCE
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    satellite = get_satellite_entity(hass, mock_device.device_info.mac_address)
+    satellite = get_satellite_entity(menuai, mock_device.device_info.mac_address)
     assert satellite is not None
 
     done = asyncio.Event()
@@ -1099,16 +1099,16 @@ async def test_announce_message(
 
     with (
         patch(
-            "homeassistant.components.tts.generate_media_source_id",
+            "menuai.components.tts.generate_media_source_id",
             return_value="media-source://bla",
         ),
         patch(
-            "homeassistant.components.tts.async_resolve_engine",
+            "menuai.components.tts.async_resolve_engine",
             return_value="tts.cloud_tts",
         ),
         patch(
-            "homeassistant.components.tts.async_create_stream",
-            return_value=MockResultStream(hass, "wav", b""),
+            "menuai.components.tts.async_create_stream",
+            return_value=MockResultStream(menuai, "wav", b""),
         ),
         patch.object(
             mock_client,
@@ -1117,7 +1117,7 @@ async def test_announce_message(
         ),
     ):
         async with asyncio.timeout(1):
-            await hass.services.async_call(
+            await menuai.services.async_call(
                 assist_satellite.DOMAIN,
                 "announce",
                 {
@@ -1132,7 +1132,7 @@ async def test_announce_message(
 
 
 async def test_announce_media_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_esphome_device: MockESPHomeDeviceType,
     device_registry: dr.DeviceRegistry,
@@ -1167,13 +1167,13 @@ async def test_announce_media_id(
             | VoiceAssistantFeature.ANNOUNCE
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     dev = device_registry.async_get_device(
         connections={(dr.CONNECTION_NETWORK_MAC, mock_device.entry.unique_id)}
     )
 
-    satellite = get_satellite_entity(hass, mock_device.device_info.mac_address)
+    satellite = get_satellite_entity(menuai, mock_device.device_info.mac_address)
     assert satellite is not None
 
     done = asyncio.Event()
@@ -1199,12 +1199,12 @@ async def test_announce_media_id(
             new=send_voice_assistant_announcement_await_response,
         ),
         patch(
-            "homeassistant.components.esphome.assist_satellite.async_create_proxy_url",
+            "menuai.components.esphome.assist_satellite.async_create_proxy_url",
             return_value="https://www.home-assistant.io/proxied.flac",
         ) as mock_async_create_proxy_url,
     ):
         async with asyncio.timeout(1):
-            await hass.services.async_call(
+            await menuai.services.async_call(
                 assist_satellite.DOMAIN,
                 "announce",
                 {
@@ -1218,7 +1218,7 @@ async def test_announce_media_id(
             assert satellite.state == AssistSatelliteState.IDLE
 
         mock_async_create_proxy_url.assert_called_once_with(
-            hass=hass,
+            menuai=menuai,
             device_id=dev.id,
             media_url="https://www.home-assistant.io/resolved.mp3",
             media_format="flac",
@@ -1229,7 +1229,7 @@ async def test_announce_media_id(
 
 
 async def test_announce_message_with_preannounce(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_esphome_device: MockESPHomeDeviceType,
 ) -> None:
@@ -1243,9 +1243,9 @@ async def test_announce_message_with_preannounce(
             | VoiceAssistantFeature.ANNOUNCE
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    satellite = get_satellite_entity(hass, mock_device.device_info.mac_address)
+    satellite = get_satellite_entity(menuai, mock_device.device_info.mac_address)
     assert satellite is not None
 
     done = asyncio.Event()
@@ -1267,16 +1267,16 @@ async def test_announce_message_with_preannounce(
 
     with (
         patch(
-            "homeassistant.components.tts.generate_media_source_id",
+            "menuai.components.tts.generate_media_source_id",
             return_value="media-source://bla",
         ),
         patch(
-            "homeassistant.components.tts.async_resolve_engine",
+            "menuai.components.tts.async_resolve_engine",
             return_value="tts.cloud_tts",
         ),
         patch(
-            "homeassistant.components.tts.async_create_stream",
-            return_value=MockResultStream(hass, "wav", b""),
+            "menuai.components.tts.async_create_stream",
+            return_value=MockResultStream(menuai, "wav", b""),
         ),
         patch.object(
             mock_client,
@@ -1285,7 +1285,7 @@ async def test_announce_message_with_preannounce(
         ),
     ):
         async with asyncio.timeout(1):
-            await hass.services.async_call(
+            await menuai.services.async_call(
                 assist_satellite.DOMAIN,
                 "announce",
                 {
@@ -1300,7 +1300,7 @@ async def test_announce_message_with_preannounce(
 
 
 async def test_non_default_supported_features(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_esphome_device: MockESPHomeDeviceType,
 ) -> None:
@@ -1311,9 +1311,9 @@ async def test_non_default_supported_features(
             "voice_assistant_feature_flags": VoiceAssistantFeature.VOICE_ASSISTANT
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    satellite = get_satellite_entity(hass, mock_device.device_info.mac_address)
+    satellite = get_satellite_entity(menuai, mock_device.device_info.mac_address)
     assert satellite is not None
 
     assert not (
@@ -1323,7 +1323,7 @@ async def test_non_default_supported_features(
 
 
 async def test_start_conversation_message(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_esphome_device: MockESPHomeDeviceType,
 ) -> None:
@@ -1338,9 +1338,9 @@ async def test_start_conversation_message(
             | VoiceAssistantFeature.START_CONVERSATION
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    satellite = get_satellite_entity(hass, mock_device.device_info.mac_address)
+    satellite = get_satellite_entity(menuai, mock_device.device_info.mac_address)
     assert satellite is not None
 
     pipeline = assist_pipeline.Pipeline(
@@ -1376,16 +1376,16 @@ async def test_start_conversation_message(
 
     with (
         patch(
-            "homeassistant.components.tts.generate_media_source_id",
+            "menuai.components.tts.generate_media_source_id",
             return_value="media-source://bla",
         ),
         patch(
-            "homeassistant.components.tts.async_resolve_engine",
+            "menuai.components.tts.async_resolve_engine",
             return_value="tts.cloud_tts",
         ),
         patch(
-            "homeassistant.components.tts.async_create_stream",
-            return_value=MockResultStream(hass, "wav", b""),
+            "menuai.components.tts.async_create_stream",
+            return_value=MockResultStream(menuai, "wav", b""),
         ),
         patch.object(
             mock_client,
@@ -1393,12 +1393,12 @@ async def test_start_conversation_message(
             new=send_voice_assistant_announcement_await_response,
         ),
         patch(
-            "homeassistant.components.assist_satellite.entity.async_get_pipeline",
+            "menuai.components.assist_satellite.entity.async_get_pipeline",
             return_value=pipeline,
         ),
     ):
         async with asyncio.timeout(1):
-            await hass.services.async_call(
+            await menuai.services.async_call(
                 assist_satellite.DOMAIN,
                 "start_conversation",
                 {
@@ -1413,7 +1413,7 @@ async def test_start_conversation_message(
 
 
 async def test_start_conversation_media_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_esphome_device: MockESPHomeDeviceType,
     device_registry: dr.DeviceRegistry,
@@ -1449,13 +1449,13 @@ async def test_start_conversation_media_id(
             | VoiceAssistantFeature.START_CONVERSATION
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     dev = device_registry.async_get_device(
         connections={(dr.CONNECTION_NETWORK_MAC, mock_device.entry.unique_id)}
     )
 
-    satellite = get_satellite_entity(hass, mock_device.device_info.mac_address)
+    satellite = get_satellite_entity(menuai, mock_device.device_info.mac_address)
     assert satellite is not None
 
     pipeline = assist_pipeline.Pipeline(
@@ -1495,16 +1495,16 @@ async def test_start_conversation_media_id(
             new=send_voice_assistant_announcement_await_response,
         ),
         patch(
-            "homeassistant.components.esphome.assist_satellite.async_create_proxy_url",
+            "menuai.components.esphome.assist_satellite.async_create_proxy_url",
             return_value="https://www.home-assistant.io/proxied.flac",
         ) as mock_async_create_proxy_url,
         patch(
-            "homeassistant.components.assist_satellite.entity.async_get_pipeline",
+            "menuai.components.assist_satellite.entity.async_get_pipeline",
             return_value=pipeline,
         ),
     ):
         async with asyncio.timeout(1):
-            await hass.services.async_call(
+            await menuai.services.async_call(
                 assist_satellite.DOMAIN,
                 "start_conversation",
                 {
@@ -1518,7 +1518,7 @@ async def test_start_conversation_media_id(
             assert satellite.state == AssistSatelliteState.IDLE
 
         mock_async_create_proxy_url.assert_called_once_with(
-            hass=hass,
+            menuai=menuai,
             device_id=dev.id,
             media_url="https://www.home-assistant.io/resolved.mp3",
             media_format="flac",
@@ -1529,7 +1529,7 @@ async def test_start_conversation_media_id(
 
 
 async def test_start_conversation_message_with_preannounce(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_esphome_device: MockESPHomeDeviceType,
 ) -> None:
@@ -1544,9 +1544,9 @@ async def test_start_conversation_message_with_preannounce(
             | VoiceAssistantFeature.START_CONVERSATION
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    satellite = get_satellite_entity(hass, mock_device.device_info.mac_address)
+    satellite = get_satellite_entity(menuai, mock_device.device_info.mac_address)
     assert satellite is not None
 
     pipeline = assist_pipeline.Pipeline(
@@ -1582,16 +1582,16 @@ async def test_start_conversation_message_with_preannounce(
 
     with (
         patch(
-            "homeassistant.components.tts.generate_media_source_id",
+            "menuai.components.tts.generate_media_source_id",
             return_value="media-source://bla",
         ),
         patch(
-            "homeassistant.components.tts.async_resolve_engine",
+            "menuai.components.tts.async_resolve_engine",
             return_value="tts.cloud_tts",
         ),
         patch(
-            "homeassistant.components.tts.async_create_stream",
-            return_value=MockResultStream(hass, "wav", b""),
+            "menuai.components.tts.async_create_stream",
+            return_value=MockResultStream(menuai, "wav", b""),
         ),
         patch.object(
             mock_client,
@@ -1599,12 +1599,12 @@ async def test_start_conversation_message_with_preannounce(
             new=send_voice_assistant_announcement_await_response,
         ),
         patch(
-            "homeassistant.components.assist_satellite.entity.async_get_pipeline",
+            "menuai.components.assist_satellite.entity.async_get_pipeline",
             return_value=pipeline,
         ),
     ):
         async with asyncio.timeout(1):
-            await hass.services.async_call(
+            await menuai.services.async_call(
                 assist_satellite.DOMAIN,
                 "start_conversation",
                 {
@@ -1619,7 +1619,7 @@ async def test_start_conversation_message_with_preannounce(
 
 
 async def test_satellite_unloaded_on_disconnect(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_esphome_device: MockESPHomeDeviceType,
 ) -> None:
@@ -1630,25 +1630,25 @@ async def test_satellite_unloaded_on_disconnect(
             "voice_assistant_feature_flags": VoiceAssistantFeature.VOICE_ASSISTANT
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    satellite = get_satellite_entity(hass, mock_device.device_info.mac_address)
+    satellite = get_satellite_entity(menuai, mock_device.device_info.mac_address)
     assert satellite is not None
 
-    state = hass.states.get(satellite.entity_id)
+    state = menuai.states.get(satellite.entity_id)
     assert state is not None
     assert state.state != STATE_UNAVAILABLE
 
     # Device will be unavailable after disconnect
     await mock_device.mock_disconnect(True)
 
-    state = hass.states.get(satellite.entity_id)
+    state = menuai.states.get(satellite.entity_id)
     assert state is not None
     assert state.state == STATE_UNAVAILABLE
 
 
 async def test_pipeline_abort(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_esphome_device: MockESPHomeDeviceType,
 ) -> None:
@@ -1660,9 +1660,9 @@ async def test_pipeline_abort(
             | VoiceAssistantFeature.API_AUDIO
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    satellite = get_satellite_entity(hass, mock_device.device_info.mac_address)
+    satellite = get_satellite_entity(menuai, mock_device.device_info.mac_address)
     assert satellite is not None
 
     chunks = []
@@ -1690,7 +1690,7 @@ async def test_pipeline_abort(
 
     with (
         patch(
-            "homeassistant.components.assist_satellite.entity.async_pipeline_from_audio_stream",
+            "menuai.components.assist_satellite.entity.async_pipeline_from_audio_stream",
             new=async_pipeline_from_audio_stream,
         ),
         patch.object(satellite, "handle_pipeline_finished", handle_pipeline_finished),
@@ -1719,7 +1719,7 @@ async def test_pipeline_abort(
 
 
 async def test_get_set_configuration(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_esphome_device: MockESPHomeDeviceType,
 ) -> None:
@@ -1741,9 +1741,9 @@ async def test_get_set_configuration(
             | VoiceAssistantFeature.ANNOUNCE
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    satellite = get_satellite_entity(hass, mock_device.device_info.mac_address)
+    satellite = get_satellite_entity(menuai, mock_device.device_info.mac_address)
     assert satellite is not None
 
     # HA should have been updated
@@ -1766,7 +1766,7 @@ async def test_get_set_configuration(
 
 
 async def test_wake_word_select(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_esphome_device: MockESPHomeDeviceType,
 ) -> None:
@@ -1799,27 +1799,27 @@ async def test_wake_word_select(
             | VoiceAssistantFeature.ANNOUNCE
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    satellite = get_satellite_entity(hass, mock_device.device_info.mac_address)
+    satellite = get_satellite_entity(menuai, mock_device.device_info.mac_address)
     assert satellite is not None
     assert satellite.async_get_configuration().active_wake_words == ["hey_jarvis"]
 
     # Active wake word should be selected
-    state = hass.states.get("select.test_wake_word")
+    state = menuai.states.get("select.test_wake_word")
     assert state is not None
     assert state.state == "Hey Jarvis"
 
     # Changing the select should set the active wake word
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SELECT_DOMAIN,
         SERVICE_SELECT_OPTION,
         {ATTR_ENTITY_ID: "select.test_wake_word", "option": "Okay Nabu"},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("select.test_wake_word")
+    state = menuai.states.get("select.test_wake_word")
     assert state is not None
     assert state.state == "Okay Nabu"
 

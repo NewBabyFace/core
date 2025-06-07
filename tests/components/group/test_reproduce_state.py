@@ -3,11 +3,11 @@
 from asyncio import Future
 from unittest.mock import ANY, patch
 
-from homeassistant.components.group.reproduce_state import async_reproduce_states
-from homeassistant.core import Context, HomeAssistant, State
+from menuai.components.group.reproduce_state import async_reproduce_states
+from menuai.core import Context, menuai, State
 
 
-async def test_reproduce_group(hass: HomeAssistant) -> None:
+async def test_reproduce_group(menuai: menuai) -> None:
     """Test reproduce_state with group."""
     context = Context()
 
@@ -23,26 +23,26 @@ async def test_reproduce_group(hass: HomeAssistant) -> None:
         )
 
     with patch(
-        "homeassistant.components.group.reproduce_state.async_reproduce_state"
+        "menuai.components.group.reproduce_state.async_reproduce_state"
     ) as fun:
         fun.return_value = Future()
         fun.return_value.set_result(None)
 
-        hass.states.async_set(
+        menuai.states.async_set(
             "group.test",
             "off",
             {"entity_id": ["light.test1", "light.test2", "switch.test1"]},
         )
-        hass.states.async_set("light.test1", "off")
-        hass.states.async_set("light.test2", "off")
-        hass.states.async_set("switch.test1", "off")
+        menuai.states.async_set("light.test1", "off")
+        menuai.states.async_set("light.test2", "off")
+        menuai.states.async_set("switch.test1", "off")
 
         state = State("group.test", "on")
 
-        await async_reproduce_states(hass, [state], context=context)
+        await async_reproduce_states(menuai, [state], context=context)
 
         fun.assert_called_once_with(
-            hass,
+            menuai,
             ANY,
             context=context,
             reproduce_options=None,

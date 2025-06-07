@@ -7,8 +7,8 @@ from functools import lru_cache
 import re
 from typing import Any
 
-from homeassistant.const import MAX_EXPECTED_ENTITY_IDS
-from homeassistant.core import split_entity_id
+from menuai.const import MAX_EXPECTED_ENTITY_IDS
+from menuai.core import split_entity_id
 
 
 class EntityValues:

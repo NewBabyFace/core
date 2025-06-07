@@ -1,18 +1,18 @@
-"""Component to configure Home Assistant via an API."""
+"""Component to configure MenuAI via an API."""
 
 from __future__ import annotations
 
-from homeassistant.components import frontend
-from homeassistant.const import EVENT_COMPONENT_LOADED
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.setup import EventComponentLoaded
+from menuai.components import frontend
+from menuai.const import EVENT_COMPONENT_LOADED
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType
+from menuai.setup import EventComponentLoaded
 
 from . import (
     area_registry,
     auth,
-    auth_provider_homeassistant,
+    auth_provider_menuai,
     automation,
     category_registry,
     config_entries,
@@ -29,7 +29,7 @@ from .const import DOMAIN
 SECTIONS = (
     area_registry,
     auth,
-    auth_provider_homeassistant,
+    auth_provider_menuai,
     automation,
     category_registry,
     config_entries,
@@ -46,17 +46,17 @@ SECTIONS = (
 CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the config component."""
     frontend.async_register_built_in_panel(
-        hass, "config", "config", "hass:cog", require_admin=True
+        menuai, "config", "config", "menuai:cog", require_admin=True
     )
 
     for panel in SECTIONS:
-        if panel.async_setup(hass):
+        if panel.async_setup(menuai):
             name = panel.__name__.split(".")[-1]
             key = f"{DOMAIN}.{name}"
-            hass.bus.async_fire(
+            menuai.bus.async_fire(
                 EVENT_COMPONENT_LOADED, EventComponentLoaded(component=key)
             )
 

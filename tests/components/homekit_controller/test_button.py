@@ -6,8 +6,8 @@ from aiohomekit.model import Accessory
 from aiohomekit.model.characteristics import CharacteristicsTypes
 from aiohomekit.model.services import Service, ServicesTypes
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .common import Helper, setup_test_component
 
@@ -43,23 +43,23 @@ def create_switch_with_ecobee_clear_hold_button(accessory: Accessory) -> Service
 
 
 async def test_press_button(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test a switch service that has a button characteristic is correctly handled."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_switch_with_setup_button
+        menuai, get_next_aid(), create_switch_with_setup_button
     )
 
     # Helper will be for the primary entity, which is the outlet. Make a helper for the button.
     button = Helper(
-        hass,
+        menuai,
         "button.testdevice_setup",
         helper.pairing,
         helper.accessory,
         helper.config_entry,
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "button",
         "press",
         {"entity_id": "button.testdevice_setup"},
@@ -74,23 +74,23 @@ async def test_press_button(
 
 
 async def test_ecobee_clear_hold_press_button(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test ecobee clear hold button characteristic is correctly handled."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_switch_with_ecobee_clear_hold_button
+        menuai, get_next_aid(), create_switch_with_ecobee_clear_hold_button
     )
 
     # Helper will be for the primary entity, which is the outlet. Make a helper for the button.
     clear_hold = Helper(
-        hass,
+        menuai,
         "button.testdevice_clear_hold",
         helper.pairing,
         helper.accessory,
         helper.config_entry,
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "button",
         "press",
         {"entity_id": "button.testdevice_clear_hold"},
@@ -105,7 +105,7 @@ async def test_ecobee_clear_hold_press_button(
 
 
 async def test_migrate_unique_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     get_next_aid: Callable[[], int],
 ) -> None:
@@ -116,7 +116,7 @@ async def test_migrate_unique_id(
         "homekit_controller",
         f"homekit-0001-aid:{aid}-sid:1-cid:2",
     )
-    await setup_test_component(hass, aid, create_switch_with_ecobee_clear_hold_button)
+    await setup_test_component(menuai, aid, create_switch_with_ecobee_clear_hold_button)
     assert (
         entity_registry.async_get(button_entry.entity_id).unique_id
         == f"00:00:00:00:00:00_{aid}_1_2"

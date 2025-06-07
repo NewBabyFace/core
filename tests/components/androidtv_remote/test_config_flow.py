@@ -5,35 +5,35 @@ from unittest.mock import AsyncMock, MagicMock
 
 from androidtvremote2 import CannotConnect, ConnectionClosed, InvalidAuth
 
-from homeassistant import config_entries
-from homeassistant.components.androidtv_remote.config_flow import (
+from menuai import config_entries
+from menuai.components.androidtv_remote.config_flow import (
     APPS_NEW_ID,
     CONF_APP_DELETE,
     CONF_APP_ID,
 )
-from homeassistant.components.androidtv_remote.const import (
+from menuai.components.androidtv_remote.const import (
     CONF_APP_ICON,
     CONF_APP_NAME,
     CONF_APPS,
     CONF_ENABLE_IME,
     DOMAIN,
 )
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from tests.common import MockConfigEntry
 
 
 async def test_user_flow_success(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_unload_entry: AsyncMock,
     mock_api: MagicMock,
 ) -> None:
     """Test the full user flow from start to finish without any exceptions."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -51,7 +51,7 @@ async def test_user_flow_success(
     mock_api.async_generate_cert_if_missing = AsyncMock(return_value=True)
     mock_api.async_start_pairing = AsyncMock(return_value=None)
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"host": host}
     )
 
@@ -65,7 +65,7 @@ async def test_user_flow_success(
 
     mock_api.async_finish_pairing = AsyncMock(return_value=None)
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"pin": pin}
     )
 
@@ -77,13 +77,13 @@ async def test_user_flow_success(
 
     mock_api.async_finish_pairing.assert_called_with(pin)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(mock_unload_entry.mock_calls) == 0
     assert len(mock_setup_entry.mock_calls) == 1
 
 
 async def test_user_flow_cannot_connect(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_unload_entry: AsyncMock,
     mock_api: MagicMock,
@@ -93,7 +93,7 @@ async def test_user_flow_cannot_connect(
     This is when the user entered an invalid IP address so we stay
     in the user step allowing the user to enter a different host.
     """
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -106,7 +106,7 @@ async def test_user_flow_cannot_connect(
     mock_api.async_generate_cert_if_missing = AsyncMock(return_value=True)
     mock_api.async_get_name_and_mac = AsyncMock(side_effect=CannotConnect())
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"host": host}
     )
 
@@ -119,13 +119,13 @@ async def test_user_flow_cannot_connect(
     mock_api.async_get_name_and_mac.assert_called()
     mock_api.async_start_pairing.assert_not_called()
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(mock_unload_entry.mock_calls) == 0
     assert len(mock_setup_entry.mock_calls) == 0
 
 
 async def test_user_flow_pairing_invalid_auth(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_unload_entry: AsyncMock,
     mock_api: MagicMock,
@@ -135,7 +135,7 @@ async def test_user_flow_pairing_invalid_auth(
     This is when the user entered an invalid PIN. We stay in the pair step
     allowing the user to enter a different PIN.
     """
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -152,7 +152,7 @@ async def test_user_flow_pairing_invalid_auth(
     mock_api.async_generate_cert_if_missing = AsyncMock(return_value=True)
     mock_api.async_start_pairing = AsyncMock(return_value=None)
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"host": host}
     )
 
@@ -166,7 +166,7 @@ async def test_user_flow_pairing_invalid_auth(
 
     mock_api.async_finish_pairing = AsyncMock(side_effect=InvalidAuth())
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"pin": pin}
     )
 
@@ -181,13 +181,13 @@ async def test_user_flow_pairing_invalid_auth(
     assert mock_api.async_start_pairing.call_count == 1
     assert mock_api.async_finish_pairing.call_count == 1
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(mock_unload_entry.mock_calls) == 0
     assert len(mock_setup_entry.mock_calls) == 0
 
 
 async def test_user_flow_pairing_connection_closed(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_unload_entry: AsyncMock,
     mock_api: MagicMock,
@@ -197,7 +197,7 @@ async def test_user_flow_pairing_connection_closed(
     This is when the user canceled pairing on the Android TV itself before calling async_finish_pairing.
     We call async_start_pairing again which succeeds and we have a chance to enter a new PIN.
     """
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -214,7 +214,7 @@ async def test_user_flow_pairing_connection_closed(
     mock_api.async_generate_cert_if_missing = AsyncMock(return_value=True)
     mock_api.async_start_pairing = AsyncMock(return_value=None)
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"host": host}
     )
 
@@ -228,7 +228,7 @@ async def test_user_flow_pairing_connection_closed(
 
     mock_api.async_finish_pairing = AsyncMock(side_effect=ConnectionClosed())
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"pin": pin}
     )
 
@@ -243,13 +243,13 @@ async def test_user_flow_pairing_connection_closed(
     assert mock_api.async_start_pairing.call_count == 2
     assert mock_api.async_finish_pairing.call_count == 1
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(mock_unload_entry.mock_calls) == 0
     assert len(mock_setup_entry.mock_calls) == 0
 
 
 async def test_user_flow_pairing_connection_closed_followed_by_cannot_connect(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_unload_entry: AsyncMock,
     mock_api: MagicMock,
@@ -259,7 +259,7 @@ async def test_user_flow_pairing_connection_closed_followed_by_cannot_connect(
     This is when the user unplugs the Android TV before calling async_finish_pairing.
     We call async_start_pairing again which fails with CannotConnect so we abort.
     """
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -276,7 +276,7 @@ async def test_user_flow_pairing_connection_closed_followed_by_cannot_connect(
     mock_api.async_generate_cert_if_missing = AsyncMock(return_value=True)
     mock_api.async_start_pairing = AsyncMock(side_effect=[None, CannotConnect()])
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"host": host}
     )
 
@@ -290,7 +290,7 @@ async def test_user_flow_pairing_connection_closed_followed_by_cannot_connect(
 
     mock_api.async_finish_pairing = AsyncMock(side_effect=ConnectionClosed())
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"pin": pin}
     )
 
@@ -303,13 +303,13 @@ async def test_user_flow_pairing_connection_closed_followed_by_cannot_connect(
     assert mock_api.async_start_pairing.call_count == 2
     assert mock_api.async_finish_pairing.call_count == 1
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(mock_unload_entry.mock_calls) == 0
     assert len(mock_setup_entry.mock_calls) == 0
 
 
 async def test_user_flow_already_configured_host_changed_reloads_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_unload_entry: AsyncMock,
     mock_api: MagicMock,
@@ -334,10 +334,10 @@ async def test_user_flow_already_configured_host_changed_reloads_entry(
         unique_id=unique_id,
         state=ConfigEntryState.LOADED,
     )
-    mock_config_entry.add_to_hass(hass)
-    hass.config.components.add(DOMAIN)
+    mock_config_entry.add_to_menuai(menuai)
+    menuai.config.components.add(DOMAIN)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -348,7 +348,7 @@ async def test_user_flow_already_configured_host_changed_reloads_entry(
     mock_api.async_generate_cert_if_missing = AsyncMock(return_value=True)
     mock_api.async_get_name_and_mac = AsyncMock(return_value=(name, mac))
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"host": host}
     )
 
@@ -359,10 +359,10 @@ async def test_user_flow_already_configured_host_changed_reloads_entry(
     mock_api.async_get_name_and_mac.assert_called()
     mock_api.async_start_pairing.assert_not_called()
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(mock_unload_entry.mock_calls) == 1
     assert len(mock_setup_entry.mock_calls) == 1
-    assert hass.config_entries.async_entries(DOMAIN)[0].data == {
+    assert menuai.config_entries.async_entries(DOMAIN)[0].data == {
         "host": host,
         "name": name_existing,
         "mac": mac,
@@ -370,7 +370,7 @@ async def test_user_flow_already_configured_host_changed_reloads_entry(
 
 
 async def test_user_flow_already_configured_host_not_changed_no_reload_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_unload_entry: AsyncMock,
     mock_api: MagicMock,
@@ -394,9 +394,9 @@ async def test_user_flow_already_configured_host_not_changed_no_reload_entry(
         unique_id=unique_id,
         state=ConfigEntryState.LOADED,
     )
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -407,7 +407,7 @@ async def test_user_flow_already_configured_host_not_changed_no_reload_entry(
     mock_api.async_generate_cert_if_missing = AsyncMock(return_value=True)
     mock_api.async_get_name_and_mac = AsyncMock(return_value=(name, mac))
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"host": host}
     )
 
@@ -418,10 +418,10 @@ async def test_user_flow_already_configured_host_not_changed_no_reload_entry(
     mock_api.async_get_name_and_mac.assert_called()
     mock_api.async_start_pairing.assert_not_called()
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(mock_unload_entry.mock_calls) == 0
     assert len(mock_setup_entry.mock_calls) == 0
-    assert hass.config_entries.async_entries(DOMAIN)[0].data == {
+    assert menuai.config_entries.async_entries(DOMAIN)[0].data == {
         "host": host,
         "name": name_existing,
         "mac": mac,
@@ -429,7 +429,7 @@ async def test_user_flow_already_configured_host_not_changed_no_reload_entry(
 
 
 async def test_zeroconf_flow_success(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_unload_entry: AsyncMock,
     mock_api: MagicMock,
@@ -441,7 +441,7 @@ async def test_zeroconf_flow_success(
     unique_id = "1a:2b:3c:4d:5e:6f"
     pin = "123456"
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -458,7 +458,7 @@ async def test_zeroconf_flow_success(
     assert result["step_id"] == "zeroconf_confirm"
     assert not result["data_schema"]
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
     result = flows[0]
     assert result["step_id"] == "zeroconf_confirm"
@@ -469,7 +469,7 @@ async def test_zeroconf_flow_success(
     mock_api.async_generate_cert_if_missing = AsyncMock(return_value=True)
     mock_api.async_start_pairing = AsyncMock(return_value=None)
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
 
@@ -483,7 +483,7 @@ async def test_zeroconf_flow_success(
 
     mock_api.async_finish_pairing = AsyncMock(return_value=None)
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"pin": pin}
     )
 
@@ -499,13 +499,13 @@ async def test_zeroconf_flow_success(
 
     mock_api.async_finish_pairing.assert_called_with(pin)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(mock_unload_entry.mock_calls) == 0
     assert len(mock_setup_entry.mock_calls) == 1
 
 
 async def test_zeroconf_flow_cannot_connect(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_unload_entry: AsyncMock,
     mock_api: MagicMock,
@@ -519,7 +519,7 @@ async def test_zeroconf_flow_cannot_connect(
     name = "My Android TV"
     mac = "1A:2B:3C:4D:5E:6F"
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -539,7 +539,7 @@ async def test_zeroconf_flow_cannot_connect(
     mock_api.async_generate_cert_if_missing = AsyncMock(return_value=True)
     mock_api.async_start_pairing = AsyncMock(side_effect=CannotConnect())
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
 
@@ -549,13 +549,13 @@ async def test_zeroconf_flow_cannot_connect(
     mock_api.async_generate_cert_if_missing.assert_called()
     mock_api.async_start_pairing.assert_called()
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(mock_unload_entry.mock_calls) == 0
     assert len(mock_setup_entry.mock_calls) == 0
 
 
 async def test_zeroconf_flow_pairing_invalid_auth(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_unload_entry: AsyncMock,
     mock_api: MagicMock,
@@ -570,7 +570,7 @@ async def test_zeroconf_flow_pairing_invalid_auth(
     mac = "1A:2B:3C:4D:5E:6F"
     pin = "123456"
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -590,7 +590,7 @@ async def test_zeroconf_flow_pairing_invalid_auth(
     mock_api.async_generate_cert_if_missing = AsyncMock(return_value=True)
     mock_api.async_start_pairing = AsyncMock(return_value=None)
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
 
@@ -604,7 +604,7 @@ async def test_zeroconf_flow_pairing_invalid_auth(
 
     mock_api.async_finish_pairing = AsyncMock(side_effect=InvalidAuth())
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"pin": pin}
     )
 
@@ -619,13 +619,13 @@ async def test_zeroconf_flow_pairing_invalid_auth(
     assert mock_api.async_start_pairing.call_count == 1
     assert mock_api.async_finish_pairing.call_count == 1
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(mock_unload_entry.mock_calls) == 0
     assert len(mock_setup_entry.mock_calls) == 0
 
 
 async def test_zeroconf_flow_already_configured_host_changed_reloads_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_unload_entry: AsyncMock,
     mock_api: MagicMock,
@@ -651,10 +651,10 @@ async def test_zeroconf_flow_already_configured_host_changed_reloads_entry(
         unique_id=unique_id,
         state=ConfigEntryState.LOADED,
     )
-    mock_config_entry.add_to_hass(hass)
-    hass.config.components.add(DOMAIN)
+    mock_config_entry.add_to_menuai(menuai)
+    menuai.config.components.add(DOMAIN)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -670,8 +670,8 @@ async def test_zeroconf_flow_already_configured_host_changed_reloads_entry(
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
 
-    await hass.async_block_till_done()
-    assert hass.config_entries.async_entries(DOMAIN)[0].data == {
+    await menuai.async_block_till_done()
+    assert menuai.config_entries.async_entries(DOMAIN)[0].data == {
         "host": host,
         "name": name,
         "mac": mac,
@@ -681,7 +681,7 @@ async def test_zeroconf_flow_already_configured_host_changed_reloads_entry(
 
 
 async def test_zeroconf_flow_already_configured_host_not_changed_no_reload_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_unload_entry: AsyncMock,
     mock_api: MagicMock,
@@ -705,9 +705,9 @@ async def test_zeroconf_flow_already_configured_host_not_changed_no_reload_entry
         unique_id=unique_id,
         state=ConfigEntryState.LOADED,
     )
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -723,8 +723,8 @@ async def test_zeroconf_flow_already_configured_host_not_changed_no_reload_entry
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
 
-    await hass.async_block_till_done()
-    assert hass.config_entries.async_entries(DOMAIN)[0].data == {
+    await menuai.async_block_till_done()
+    assert menuai.config_entries.async_entries(DOMAIN)[0].data == {
         "host": host,
         "name": name,
         "mac": mac,
@@ -734,13 +734,13 @@ async def test_zeroconf_flow_already_configured_host_not_changed_no_reload_entry
 
 
 async def test_zeroconf_flow_abort_if_mac_is_missing(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test when mac is missing in the zeroconf discovery we abort."""
     host = "1.2.3.4"
     name = "My Android TV"
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -758,7 +758,7 @@ async def test_zeroconf_flow_abort_if_mac_is_missing(
 
 
 async def test_zeroconf_flow_already_configured_zeroconf_has_multiple_invalid_ip_addresses(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_unload_entry: AsyncMock,
     mock_api: MagicMock,
@@ -782,9 +782,9 @@ async def test_zeroconf_flow_already_configured_zeroconf_has_multiple_invalid_ip
         unique_id=unique_id,
         state=ConfigEntryState.LOADED,
     )
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -800,8 +800,8 @@ async def test_zeroconf_flow_already_configured_zeroconf_has_multiple_invalid_ip
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
 
-    await hass.async_block_till_done()
-    assert hass.config_entries.async_entries(DOMAIN)[0].data == {
+    await menuai.async_block_till_done()
+    assert menuai.config_entries.async_entries(DOMAIN)[0].data == {
         "host": host,
         "name": name,
         "mac": mac,
@@ -811,7 +811,7 @@ async def test_zeroconf_flow_already_configured_zeroconf_has_multiple_invalid_ip
 
 
 async def test_reauth_flow_success(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_unload_entry: AsyncMock,
     mock_api: MagicMock,
@@ -834,13 +834,13 @@ async def test_reauth_flow_success(
         unique_id=unique_id,
         state=ConfigEntryState.LOADED,
     )
-    mock_config_entry.add_to_hass(hass)
-    hass.config.components.add(DOMAIN)
+    mock_config_entry.add_to_menuai(menuai)
+    menuai.config.components.add(DOMAIN)
 
-    mock_config_entry.async_start_reauth(hass)
-    await hass.async_block_till_done()
+    mock_config_entry.async_start_reauth(menuai)
+    await menuai.async_block_till_done()
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
     result = flows[0]
     assert result["step_id"] == "reauth_confirm"
@@ -851,7 +851,7 @@ async def test_reauth_flow_success(
     mock_api.async_generate_cert_if_missing = AsyncMock(return_value=True)
     mock_api.async_start_pairing = AsyncMock(return_value=None)
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "pair"
     assert "pin" in result["data_schema"].schema
@@ -863,7 +863,7 @@ async def test_reauth_flow_success(
 
     mock_api.async_finish_pairing = AsyncMock(return_value=None)
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"pin": pin}
     )
     assert result["type"] is FlowResultType.ABORT
@@ -871,8 +871,8 @@ async def test_reauth_flow_success(
 
     mock_api.async_finish_pairing.assert_called_with(pin)
 
-    await hass.async_block_till_done()
-    assert hass.config_entries.async_entries(DOMAIN)[0].data == {
+    await menuai.async_block_till_done()
+    assert menuai.config_entries.async_entries(DOMAIN)[0].data == {
         "host": host,
         "name": name,
         "mac": mac,
@@ -882,7 +882,7 @@ async def test_reauth_flow_success(
 
 
 async def test_reauth_flow_cannot_connect(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_unload_entry: AsyncMock,
     mock_api: MagicMock,
@@ -904,12 +904,12 @@ async def test_reauth_flow_cannot_connect(
         unique_id=unique_id,
         state=ConfigEntryState.LOADED,
     )
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    mock_config_entry.async_start_reauth(hass)
-    await hass.async_block_till_done()
+    mock_config_entry.async_start_reauth(menuai)
+    await menuai.async_block_till_done()
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
     result = flows[0]
     assert result["step_id"] == "reauth_confirm"
@@ -920,7 +920,7 @@ async def test_reauth_flow_cannot_connect(
     mock_api.async_generate_cert_if_missing = AsyncMock(return_value=True)
     mock_api.async_start_pairing = AsyncMock(side_effect=CannotConnect())
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
     assert result["errors"] == {"base": "cannot_connect"}
@@ -929,69 +929,69 @@ async def test_reauth_flow_cannot_connect(
     mock_api.async_generate_cert_if_missing.assert_called()
     mock_api.async_start_pairing.assert_called()
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(mock_unload_entry.mock_calls) == 0
     assert len(mock_setup_entry.mock_calls) == 0
 
 
 async def test_options_flow(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry, mock_api: MagicMock
+    menuai: menuai, mock_config_entry: MockConfigEntry, mock_api: MagicMock
 ) -> None:
     """Test options flow."""
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert mock_api.disconnect.call_count == 0
     assert mock_api.async_connect.call_count == 1
 
     # Trigger options flow, first time
-    result = await hass.config_entries.options.async_init(mock_config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(mock_config_entry.entry_id)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
     data_schema = result["data_schema"].schema
     assert set(data_schema) == {CONF_APPS, CONF_ENABLE_IME}
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={CONF_ENABLE_IME: False},
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert mock_config_entry.options == {CONF_ENABLE_IME: False}
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert mock_api.disconnect.call_count == 1
     assert mock_api.async_connect.call_count == 2
 
     # Trigger options flow, second time, no change, doesn't reload
-    result = await hass.config_entries.options.async_init(mock_config_entry.entry_id)
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_init(mock_config_entry.entry_id)
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={CONF_ENABLE_IME: False},
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert mock_config_entry.options == {CONF_ENABLE_IME: False}
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert mock_api.disconnect.call_count == 1
     assert mock_api.async_connect.call_count == 2
 
     # Trigger options flow, third time, change, reloads
-    result = await hass.config_entries.options.async_init(mock_config_entry.entry_id)
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_init(mock_config_entry.entry_id)
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={CONF_ENABLE_IME: True},
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert mock_config_entry.options == {CONF_ENABLE_IME: True}
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert mock_api.disconnect.call_count == 2
     assert mock_api.async_connect.call_count == 3
 
     # test app form with new app
-    result = await hass.config_entries.options.async_init(mock_config_entry.entry_id)
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_init(mock_config_entry.entry_id)
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             CONF_APPS: APPS_NEW_ID,
@@ -1001,7 +1001,7 @@ async def test_options_flow(
     assert result["step_id"] == "apps"
 
     # test save value for new app
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             CONF_APP_ID: "app1",
@@ -1013,7 +1013,7 @@ async def test_options_flow(
     assert result["step_id"] == "init"
 
     # test app form with existing app
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             CONF_APPS: "app1",
@@ -1023,7 +1023,7 @@ async def test_options_flow(
     assert result["step_id"] == "apps"
 
     # test change value in apps form
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             CONF_APP_NAME: "Application1",
@@ -1033,7 +1033,7 @@ async def test_options_flow(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"], user_input={}
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -1041,11 +1041,11 @@ async def test_options_flow(
         CONF_APPS: {"app1": {CONF_APP_NAME: "Application1", CONF_APP_ICON: "Icon1"}},
         CONF_ENABLE_IME: True,
     }
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # test app form for delete
-    result = await hass.config_entries.options.async_init(mock_config_entry.entry_id)
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_init(mock_config_entry.entry_id)
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             CONF_APPS: "app1",
@@ -1055,7 +1055,7 @@ async def test_options_flow(
     assert result["step_id"] == "apps"
 
     # test delete app1
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             CONF_APP_DELETE: True,
@@ -1064,7 +1064,7 @@ async def test_options_flow(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"], user_input={}
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY

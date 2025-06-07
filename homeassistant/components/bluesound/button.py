@@ -8,16 +8,16 @@ from typing import TYPE_CHECKING
 
 from pyblu import Player
 
-from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
-from homeassistant.const import CONF_PORT
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import (
+from menuai.components.button import ButtonEntity, ButtonEntityDescription
+from menuai.const import CONF_PORT
+from menuai.core import menuai
+from menuai.helpers.device_registry import (
     CONNECTION_NETWORK_MAC,
     DeviceInfo,
     format_mac,
 )
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import BluesoundCoordinator
@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: BluesoundConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

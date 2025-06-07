@@ -5,15 +5,15 @@ from dataclasses import dataclass
 
 from aiotedee import TedeeLock
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfTime
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import PERCENTAGE, EntityCategory, UnitOfTime
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import TedeeConfigEntry
 from .entity import TedeeDescriptionEntity
@@ -51,7 +51,7 @@ ENTITIES: tuple[TedeeSensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: TedeeConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

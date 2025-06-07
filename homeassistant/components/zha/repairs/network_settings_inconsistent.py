@@ -7,11 +7,11 @@ from typing import Any
 
 from zigpy.backups import NetworkBackup
 
-from homeassistant.components.repairs import RepairsFlow
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResult
-from homeassistant.helpers import issue_registry as ir
+from menuai.components.repairs import RepairsFlow
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResult
+from menuai.helpers import issue_registry as ir
 
 from ..const import DOMAIN
 from ..radio_manager import ZhaRadioManager
@@ -83,7 +83,7 @@ def _format_settings_diff(old_state: NetworkBackup, new_state: NetworkBackup) ->
 
 
 async def warn_on_inconsistent_network_settings(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     old_state: NetworkBackup,
     new_state: NetworkBackup,
@@ -91,7 +91,7 @@ async def warn_on_inconsistent_network_settings(
     """Create a repair if the network settings are inconsistent with the last backup."""
 
     ir.async_create_issue(
-        hass,
+        menuai,
         domain=DOMAIN,
         issue_id=ISSUE_INCONSISTENT_NETWORK_SETTINGS,
         is_fixable=True,
@@ -108,17 +108,17 @@ async def warn_on_inconsistent_network_settings(
 class NetworkSettingsInconsistentFlow(RepairsFlow):
     """Handler for an issue fixing flow."""
 
-    def __init__(self, hass: HomeAssistant, data: dict[str, Any]) -> None:
+    def __init__(self, menuai: menuai, data: dict[str, Any]) -> None:
         """Initialize the flow."""
-        self.hass = hass
+        self.menuai = menuai
         self._old_state = NetworkBackup.from_dict(data["old_state"])
         self._new_state = NetworkBackup.from_dict(data["new_state"])
 
         self._entry_id: str = data["config_entry_id"]
 
-        config_entry = self.hass.config_entries.async_get_entry(self._entry_id)
+        config_entry = self.menuai.config_entries.async_get_entry(self._entry_id)
         assert config_entry is not None
-        self._radio_mgr = ZhaRadioManager.from_config_entry(self.hass, config_entry)
+        self._radio_mgr = ZhaRadioManager.from_config_entry(self.menuai, config_entry)
 
     async def async_step_init(
         self, user_input: dict[str, str] | None = None
@@ -139,7 +139,7 @@ class NetworkSettingsInconsistentFlow(RepairsFlow):
         async with self._radio_mgr.connect_zigpy_app() as app:
             app.backups.add_backup(self._new_state)
 
-        await self.hass.config_entries.async_reload(self._entry_id)
+        await self.menuai.config_entries.async_reload(self._entry_id)
         return self.async_create_entry(title="", data={})
 
     async def async_step_restore_old_settings(
@@ -148,5 +148,5 @@ class NetworkSettingsInconsistentFlow(RepairsFlow):
         """Step to restore the most recent backup."""
         await self._radio_mgr.restore_backup(self._old_state)
 
-        await self.hass.config_entries.async_reload(self._entry_id)
+        await self.menuai.config_entries.async_reload(self._entry_id)
         return self.async_create_entry(title="", data={})

@@ -8,14 +8,14 @@ from unittest.mock import call
 from bond_async import Action, DeviceType, Direction
 import pytest
 
-from homeassistant import core
-from homeassistant.components import fan
-from homeassistant.components.bond.const import (
+from menuai import core
+from menuai.components import fan
+from menuai.components.bond.const import (
     DOMAIN,
     SERVICE_SET_FAN_SPEED_TRACKED_STATE,
 )
-from homeassistant.components.bond.fan import PRESET_MODE_BREEZE
-from homeassistant.components.fan import (
+from menuai.components.bond.fan import PRESET_MODE_BREEZE
+from menuai.components.fan import (
     ATTR_DIRECTION,
     ATTR_PERCENTAGE,
     ATTR_PRESET_MODE,
@@ -29,16 +29,16 @@ from homeassistant.components.fan import (
     FanEntityFeature,
     NotValidPresetModeError,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_SUPPORTED_FEATURES,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.util import utcnow
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.util import utcnow
 
 from .common import (
     ceiling_fan,
@@ -62,7 +62,7 @@ def ceiling_fan_with_breeze(name: str):
 
 
 async def turn_fan_on(
-    hass: core.HomeAssistant,
+    menuai: core.menuai,
     fan_id: str,
     percentage: int | None = None,
     preset_mode: str | None = None,
@@ -73,23 +73,23 @@ async def turn_fan_on(
         service_data[fan.ATTR_PRESET_MODE] = preset_mode
     if percentage is not None:
         service_data[fan.ATTR_PERCENTAGE] = percentage
-    await hass.services.async_call(
+    await menuai.services.async_call(
         FAN_DOMAIN,
         SERVICE_TURN_ON,
         service_data=service_data,
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
 async def test_entity_registry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
 ) -> None:
     """Tests that the devices are registered in the entity registry."""
     await setup_platform(
-        hass,
+        menuai,
         FAN_DOMAIN,
         ceiling_fan("name-1"),
         bond_version={"bondid": "test-hub-id"},
@@ -103,10 +103,10 @@ async def test_entity_registry(
     assert device.configuration_url == "http://some host"
 
 
-async def test_non_standard_speed_list(hass: HomeAssistant) -> None:
+async def test_non_standard_speed_list(menuai: menuai) -> None:
     """Tests that the device is registered with custom speed list if number of supported speeds differs form 3."""
     await setup_platform(
-        hass,
+        menuai,
         FAN_DOMAIN,
         ceiling_fan("name-1"),
         bond_device_id="test-device-id",
@@ -115,28 +115,28 @@ async def test_non_standard_speed_list(hass: HomeAssistant) -> None:
 
     with patch_bond_device_state():
         with patch_bond_action() as mock_set_speed_low:
-            await turn_fan_on(hass, "fan.name_1", percentage=100 / 6 * 2)
+            await turn_fan_on(menuai, "fan.name_1", percentage=100 / 6 * 2)
         mock_set_speed_low.assert_called_once_with(
             "test-device-id", Action.set_speed(2)
         )
 
         with patch_bond_action() as mock_set_speed_medium:
-            await turn_fan_on(hass, "fan.name_1", percentage=100 / 6 * 4)
+            await turn_fan_on(menuai, "fan.name_1", percentage=100 / 6 * 4)
         mock_set_speed_medium.assert_called_once_with(
             "test-device-id", Action.set_speed(4)
         )
 
         with patch_bond_action() as mock_set_speed_high:
-            await turn_fan_on(hass, "fan.name_1", percentage=100)
+            await turn_fan_on(menuai, "fan.name_1", percentage=100)
         mock_set_speed_high.assert_called_once_with(
             "test-device-id", Action.set_speed(6)
         )
 
 
-async def test_fan_speed_with_no_max_speed(hass: HomeAssistant) -> None:
+async def test_fan_speed_with_no_max_speed(menuai: menuai) -> None:
     """Tests that fans without max speed (increase/decrease controls) map speed to HA standard."""
     await setup_platform(
-        hass,
+        menuai,
         FAN_DOMAIN,
         ceiling_fan("name-1"),
         bond_device_id="test-device-id",
@@ -144,49 +144,49 @@ async def test_fan_speed_with_no_max_speed(hass: HomeAssistant) -> None:
         state={"power": 1, "speed": 14},
     )
 
-    assert hass.states.get("fan.name_1").attributes["percentage"] == 100
+    assert menuai.states.get("fan.name_1").attributes["percentage"] == 100
 
 
-async def test_turn_on_fan_with_speed(hass: HomeAssistant) -> None:
+async def test_turn_on_fan_with_speed(menuai: menuai) -> None:
     """Tests that turn on command delegates to set speed API."""
     await setup_platform(
-        hass, FAN_DOMAIN, ceiling_fan("name-1"), bond_device_id="test-device-id"
+        menuai, FAN_DOMAIN, ceiling_fan("name-1"), bond_device_id="test-device-id"
     )
 
     with patch_bond_action() as mock_set_speed, patch_bond_device_state():
-        await turn_fan_on(hass, "fan.name_1", percentage=1)
+        await turn_fan_on(menuai, "fan.name_1", percentage=1)
 
     mock_set_speed.assert_called_with("test-device-id", Action.set_speed(1))
 
 
-async def test_turn_on_fan_with_percentage_3_speeds(hass: HomeAssistant) -> None:
+async def test_turn_on_fan_with_percentage_3_speeds(menuai: menuai) -> None:
     """Tests that turn on command delegates to set speed API."""
     await setup_platform(
-        hass, FAN_DOMAIN, ceiling_fan("name-1"), bond_device_id="test-device-id"
+        menuai, FAN_DOMAIN, ceiling_fan("name-1"), bond_device_id="test-device-id"
     )
 
     with patch_bond_action() as mock_set_speed, patch_bond_device_state():
-        await turn_fan_on(hass, "fan.name_1", percentage=10)
+        await turn_fan_on(menuai, "fan.name_1", percentage=10)
 
     mock_set_speed.assert_called_with("test-device-id", Action.set_speed(1))
 
     mock_set_speed.reset_mock()
     with patch_bond_action() as mock_set_speed, patch_bond_device_state():
-        await turn_fan_on(hass, "fan.name_1", percentage=50)
+        await turn_fan_on(menuai, "fan.name_1", percentage=50)
 
     mock_set_speed.assert_called_with("test-device-id", Action.set_speed(2))
 
     mock_set_speed.reset_mock()
     with patch_bond_action() as mock_set_speed, patch_bond_device_state():
-        await turn_fan_on(hass, "fan.name_1", percentage=100)
+        await turn_fan_on(menuai, "fan.name_1", percentage=100)
 
     mock_set_speed.assert_called_with("test-device-id", Action.set_speed(3))
 
 
-async def test_turn_on_fan_with_percentage_6_speeds(hass: HomeAssistant) -> None:
+async def test_turn_on_fan_with_percentage_6_speeds(menuai: menuai) -> None:
     """Tests that turn on command delegates to set speed API."""
     await setup_platform(
-        hass,
+        menuai,
         FAN_DOMAIN,
         ceiling_fan("name-1"),
         bond_device_id="test-device-id",
@@ -194,43 +194,43 @@ async def test_turn_on_fan_with_percentage_6_speeds(hass: HomeAssistant) -> None
     )
 
     with patch_bond_action() as mock_set_speed, patch_bond_device_state():
-        await turn_fan_on(hass, "fan.name_1", percentage=10)
+        await turn_fan_on(menuai, "fan.name_1", percentage=10)
 
     mock_set_speed.assert_called_with("test-device-id", Action.set_speed(1))
 
     mock_set_speed.reset_mock()
     with patch_bond_action() as mock_set_speed, patch_bond_device_state():
-        await turn_fan_on(hass, "fan.name_1", percentage=50)
+        await turn_fan_on(menuai, "fan.name_1", percentage=50)
 
     mock_set_speed.assert_called_with("test-device-id", Action.set_speed(3))
 
     mock_set_speed.reset_mock()
     with patch_bond_action() as mock_set_speed, patch_bond_device_state():
-        await turn_fan_on(hass, "fan.name_1", percentage=100)
+        await turn_fan_on(menuai, "fan.name_1", percentage=100)
 
     mock_set_speed.assert_called_with("test-device-id", Action.set_speed(6))
 
 
-async def test_turn_on_fan_preset_mode(hass: HomeAssistant) -> None:
+async def test_turn_on_fan_preset_mode(menuai: menuai) -> None:
     """Tests that turn on command delegates to breeze on API."""
     await setup_platform(
-        hass,
+        menuai,
         FAN_DOMAIN,
         ceiling_fan_with_breeze("name-1"),
         bond_device_id="test-device-id",
         props={"max_speed": 6},
     )
-    state = hass.states.get("fan.name_1")
+    state = menuai.states.get("fan.name_1")
     assert state.attributes[ATTR_PRESET_MODES] == [PRESET_MODE_BREEZE]
     assert state.attributes[ATTR_SUPPORTED_FEATURES] & FanEntityFeature.PRESET_MODE
 
     with patch_bond_action() as mock_set_preset_mode, patch_bond_device_state():
-        await turn_fan_on(hass, "fan.name_1", preset_mode=PRESET_MODE_BREEZE)
+        await turn_fan_on(menuai, "fan.name_1", preset_mode=PRESET_MODE_BREEZE)
 
     mock_set_preset_mode.assert_called_with("test-device-id", Action(Action.BREEZE_ON))
 
     with patch_bond_action() as mock_set_preset_mode, patch_bond_device_state():
-        await hass.services.async_call(
+        await menuai.services.async_call(
             FAN_DOMAIN,
             SERVICE_SET_PRESET_MODE,
             service_data={
@@ -243,10 +243,10 @@ async def test_turn_on_fan_preset_mode(hass: HomeAssistant) -> None:
     mock_set_preset_mode.assert_called_with("test-device-id", Action(Action.BREEZE_ON))
 
 
-async def test_turn_on_fan_preset_mode_not_supported(hass: HomeAssistant) -> None:
+async def test_turn_on_fan_preset_mode_not_supported(menuai: menuai) -> None:
     """Tests calling breeze mode on a fan that does not support it raises."""
     await setup_platform(
-        hass,
+        menuai,
         FAN_DOMAIN,
         ceiling_fan("name-1"),
         bond_device_id="test-device-id",
@@ -258,14 +258,14 @@ async def test_turn_on_fan_preset_mode_not_supported(hass: HomeAssistant) -> Non
         patch_bond_device_state(),
         pytest.raises(NotValidPresetModeError),
     ):
-        await turn_fan_on(hass, "fan.name_1", preset_mode=PRESET_MODE_BREEZE)
+        await turn_fan_on(menuai, "fan.name_1", preset_mode=PRESET_MODE_BREEZE)
 
     with (
         patch_bond_action(),
         patch_bond_device_state(),
         pytest.raises(NotValidPresetModeError),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             FAN_DOMAIN,
             SERVICE_SET_PRESET_MODE,
             service_data={
@@ -276,10 +276,10 @@ async def test_turn_on_fan_preset_mode_not_supported(hass: HomeAssistant) -> Non
         )
 
 
-async def test_turn_on_fan_with_off_with_breeze(hass: HomeAssistant) -> None:
+async def test_turn_on_fan_with_off_with_breeze(menuai: menuai) -> None:
     """Tests that turn off command delegates to turn off API."""
     await setup_platform(
-        hass,
+        menuai,
         FAN_DOMAIN,
         ceiling_fan_with_breeze("name-1"),
         bond_device_id="test-device-id",
@@ -287,11 +287,11 @@ async def test_turn_on_fan_with_off_with_breeze(hass: HomeAssistant) -> None:
     )
 
     assert (
-        hass.states.get("fan.name_1").attributes[ATTR_PRESET_MODE] == PRESET_MODE_BREEZE
+        menuai.states.get("fan.name_1").attributes[ATTR_PRESET_MODE] == PRESET_MODE_BREEZE
     )
 
     with patch_bond_action() as mock_actions, patch_bond_device_state():
-        await turn_fan_on(hass, "fan.name_1", percentage=0)
+        await turn_fan_on(menuai, "fan.name_1", percentage=0)
 
     assert mock_actions.mock_calls == [
         call("test-device-id", Action(Action.BREEZE_OFF)),
@@ -299,98 +299,98 @@ async def test_turn_on_fan_with_off_with_breeze(hass: HomeAssistant) -> None:
     ]
 
 
-async def test_turn_on_fan_without_speed(hass: HomeAssistant) -> None:
+async def test_turn_on_fan_without_speed(menuai: menuai) -> None:
     """Tests that turn on command delegates to turn on API."""
     await setup_platform(
-        hass, FAN_DOMAIN, ceiling_fan("name-1"), bond_device_id="test-device-id"
+        menuai, FAN_DOMAIN, ceiling_fan("name-1"), bond_device_id="test-device-id"
     )
 
     with patch_bond_action() as mock_turn_on, patch_bond_device_state():
-        await turn_fan_on(hass, "fan.name_1")
+        await turn_fan_on(menuai, "fan.name_1")
 
     mock_turn_on.assert_called_with("test-device-id", Action.turn_on())
 
 
-async def test_turn_on_fan_with_off_percentage(hass: HomeAssistant) -> None:
+async def test_turn_on_fan_with_off_percentage(menuai: menuai) -> None:
     """Tests that turn off command delegates to turn off API."""
     await setup_platform(
-        hass, FAN_DOMAIN, ceiling_fan("name-1"), bond_device_id="test-device-id"
+        menuai, FAN_DOMAIN, ceiling_fan("name-1"), bond_device_id="test-device-id"
     )
 
     with patch_bond_action() as mock_turn_off, patch_bond_device_state():
-        await turn_fan_on(hass, "fan.name_1", percentage=0)
+        await turn_fan_on(menuai, "fan.name_1", percentage=0)
 
     mock_turn_off.assert_called_with("test-device-id", Action.turn_off())
 
 
-async def test_set_speed_off(hass: HomeAssistant) -> None:
+async def test_set_speed_off(menuai: menuai) -> None:
     """Tests that set_speed(off) command delegates to turn off API."""
     await setup_platform(
-        hass, FAN_DOMAIN, ceiling_fan("name-1"), bond_device_id="test-device-id"
+        menuai, FAN_DOMAIN, ceiling_fan("name-1"), bond_device_id="test-device-id"
     )
 
     with patch_bond_action() as mock_turn_off, patch_bond_device_state():
-        await hass.services.async_call(
+        await menuai.services.async_call(
             FAN_DOMAIN,
             SERVICE_SET_PERCENTAGE,
             service_data={ATTR_ENTITY_ID: "fan.name_1", ATTR_PERCENTAGE: 0},
             blocking=True,
         )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     mock_turn_off.assert_called_with("test-device-id", Action.turn_off())
 
 
-async def test_turn_off_fan(hass: HomeAssistant) -> None:
+async def test_turn_off_fan(menuai: menuai) -> None:
     """Tests that turn off command delegates to API."""
     await setup_platform(
-        hass, FAN_DOMAIN, ceiling_fan("name-1"), bond_device_id="test-device-id"
+        menuai, FAN_DOMAIN, ceiling_fan("name-1"), bond_device_id="test-device-id"
     )
 
     with patch_bond_action() as mock_turn_off, patch_bond_device_state():
-        await hass.services.async_call(
+        await menuai.services.async_call(
             FAN_DOMAIN,
             SERVICE_TURN_OFF,
             {ATTR_ENTITY_ID: "fan.name_1"},
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     mock_turn_off.assert_called_once_with("test-device-id", Action.turn_off())
 
 
-async def test_set_speed_belief_speed_zero(hass: HomeAssistant) -> None:
+async def test_set_speed_belief_speed_zero(menuai: menuai) -> None:
     """Tests that set power belief service delegates to API."""
     await setup_platform(
-        hass, FAN_DOMAIN, ceiling_fan("name-1"), bond_device_id="test-device-id"
+        menuai, FAN_DOMAIN, ceiling_fan("name-1"), bond_device_id="test-device-id"
     )
 
     with patch_bond_action() as mock_action, patch_bond_device_state():
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SET_FAN_SPEED_TRACKED_STATE,
             {ATTR_ENTITY_ID: "fan.name_1", "speed": 0},
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     mock_action.assert_called_once_with(
         "test-device-id", Action.set_power_state_belief(False)
     )
 
 
-async def test_set_speed_belief_speed_api_error(hass: HomeAssistant) -> None:
+async def test_set_speed_belief_speed_api_error(menuai: menuai) -> None:
     """Tests that set power belief service delegates to API."""
     await setup_platform(
-        hass, FAN_DOMAIN, ceiling_fan("name-1"), bond_device_id="test-device-id"
+        menuai, FAN_DOMAIN, ceiling_fan("name-1"), bond_device_id="test-device-id"
     )
 
     with (
-        pytest.raises(HomeAssistantError),
+        pytest.raises(menuaiError),
         patch_bond_action_returns_clientresponseerror(),
         patch_bond_device_state(),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SET_FAN_SPEED_TRACKED_STATE,
             {ATTR_ENTITY_ID: "fan.name_1", "speed": 100},
@@ -398,104 +398,104 @@ async def test_set_speed_belief_speed_api_error(hass: HomeAssistant) -> None:
         )
 
 
-async def test_set_speed_belief_speed_100(hass: HomeAssistant) -> None:
+async def test_set_speed_belief_speed_100(menuai: menuai) -> None:
     """Tests that set power belief service delegates to API."""
     await setup_platform(
-        hass, FAN_DOMAIN, ceiling_fan("name-1"), bond_device_id="test-device-id"
+        menuai, FAN_DOMAIN, ceiling_fan("name-1"), bond_device_id="test-device-id"
     )
 
     with patch_bond_action() as mock_action, patch_bond_device_state():
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SET_FAN_SPEED_TRACKED_STATE,
             {ATTR_ENTITY_ID: "fan.name_1", "speed": 100},
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     mock_action.assert_any_call("test-device-id", Action.set_power_state_belief(True))
     mock_action.assert_called_with("test-device-id", Action.set_speed_belief(3))
 
 
-async def test_update_reports_fan_on(hass: HomeAssistant) -> None:
+async def test_update_reports_fan_on(menuai: menuai) -> None:
     """Tests that update command sets correct state when Bond API reports fan power is on."""
-    await setup_platform(hass, FAN_DOMAIN, ceiling_fan("name-1"))
+    await setup_platform(menuai, FAN_DOMAIN, ceiling_fan("name-1"))
 
     with patch_bond_device_state(return_value={"power": 1, "speed": 1}):
-        async_fire_time_changed(hass, utcnow() + timedelta(seconds=30))
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, utcnow() + timedelta(seconds=30))
+        await menuai.async_block_till_done()
 
-    assert hass.states.get("fan.name_1").state == "on"
+    assert menuai.states.get("fan.name_1").state == "on"
 
 
-async def test_update_reports_fan_off(hass: HomeAssistant) -> None:
+async def test_update_reports_fan_off(menuai: menuai) -> None:
     """Tests that update command sets correct state when Bond API reports fan power is off."""
-    await setup_platform(hass, FAN_DOMAIN, ceiling_fan("name-1"))
+    await setup_platform(menuai, FAN_DOMAIN, ceiling_fan("name-1"))
 
     with patch_bond_device_state(return_value={"power": 0, "speed": 1}):
-        async_fire_time_changed(hass, utcnow() + timedelta(seconds=30))
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, utcnow() + timedelta(seconds=30))
+        await menuai.async_block_till_done()
 
-    assert hass.states.get("fan.name_1").state == "off"
+    assert menuai.states.get("fan.name_1").state == "off"
 
 
-async def test_update_reports_direction_forward(hass: HomeAssistant) -> None:
+async def test_update_reports_direction_forward(menuai: menuai) -> None:
     """Tests that update command sets correct direction when Bond API reports fan direction is forward."""
-    await setup_platform(hass, FAN_DOMAIN, ceiling_fan("name-1"))
+    await setup_platform(menuai, FAN_DOMAIN, ceiling_fan("name-1"))
 
     with patch_bond_device_state(return_value={"direction": Direction.FORWARD}):
-        async_fire_time_changed(hass, utcnow() + timedelta(seconds=30))
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, utcnow() + timedelta(seconds=30))
+        await menuai.async_block_till_done()
 
-    assert hass.states.get("fan.name_1").attributes[ATTR_DIRECTION] == DIRECTION_FORWARD
+    assert menuai.states.get("fan.name_1").attributes[ATTR_DIRECTION] == DIRECTION_FORWARD
 
 
-async def test_update_reports_direction_reverse(hass: HomeAssistant) -> None:
+async def test_update_reports_direction_reverse(menuai: menuai) -> None:
     """Tests that update command sets correct direction when Bond API reports fan direction is reverse."""
-    await setup_platform(hass, FAN_DOMAIN, ceiling_fan("name-1"))
+    await setup_platform(menuai, FAN_DOMAIN, ceiling_fan("name-1"))
 
     with patch_bond_device_state(return_value={"direction": Direction.REVERSE}):
-        async_fire_time_changed(hass, utcnow() + timedelta(seconds=30))
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, utcnow() + timedelta(seconds=30))
+        await menuai.async_block_till_done()
 
-    assert hass.states.get("fan.name_1").attributes[ATTR_DIRECTION] == DIRECTION_REVERSE
+    assert menuai.states.get("fan.name_1").attributes[ATTR_DIRECTION] == DIRECTION_REVERSE
 
 
-async def test_set_fan_direction(hass: HomeAssistant) -> None:
+async def test_set_fan_direction(menuai: menuai) -> None:
     """Tests that set direction command delegates to API."""
     await setup_platform(
-        hass, FAN_DOMAIN, ceiling_fan("name-1"), bond_device_id="test-device-id"
+        menuai, FAN_DOMAIN, ceiling_fan("name-1"), bond_device_id="test-device-id"
     )
 
     with patch_bond_action() as mock_set_direction, patch_bond_device_state():
-        await hass.services.async_call(
+        await menuai.services.async_call(
             FAN_DOMAIN,
             SERVICE_SET_DIRECTION,
             {ATTR_ENTITY_ID: "fan.name_1", ATTR_DIRECTION: DIRECTION_FORWARD},
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     mock_set_direction.assert_called_once_with(
         "test-device-id", Action.set_direction(Direction.FORWARD)
     )
 
 
-async def test_fan_available(hass: HomeAssistant) -> None:
+async def test_fan_available(menuai: menuai) -> None:
     """Tests that available state is updated based on API errors."""
     await help_test_entity_available(
-        hass, FAN_DOMAIN, ceiling_fan("name-1"), "fan.name_1"
+        menuai, FAN_DOMAIN, ceiling_fan("name-1"), "fan.name_1"
     )
 
 
 async def test_setup_smart_by_bond_fan(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
 ) -> None:
     """Test setting up a fan without a hub."""
     config_entry = await setup_platform(
-        hass,
+        menuai,
         FAN_DOMAIN,
         ceiling_fan("name-1"),
         bond_device_id="test-device-id",
@@ -506,7 +506,7 @@ async def test_setup_smart_by_bond_fan(
             "mcu_ver": "test-hw-version",
         },
     )
-    assert hass.states.get("fan.name_1") is not None
+    assert menuai.states.get("fan.name_1") is not None
     entry = entity_registry.async_get("fan.name_1")
     assert entry.device_id is not None
     device = device_registry.async_get(entry.device_id)
@@ -515,18 +515,18 @@ async def test_setup_smart_by_bond_fan(
     assert device.manufacturer == "Olibra"
     assert device.identifiers == {("bond", "KXXX12345", "test-device-id")}
     assert device.hw_version == "test-hw-version"
-    await hass.config_entries.async_unload(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
 
 async def test_setup_hub_template_fan(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
 ) -> None:
     """Test setting up a fan on a hub created from a template."""
     config_entry = await setup_platform(
-        hass,
+        menuai,
         FAN_DOMAIN,
         {**ceiling_fan("name-1"), "template": "test-template"},
         bond_device_id="test-device-id",
@@ -538,7 +538,7 @@ async def test_setup_hub_template_fan(
             "mcu_ver": "test-hw-version",
         },
     )
-    assert hass.states.get("fan.name_1") is not None
+    assert menuai.states.get("fan.name_1") is not None
     entry = entity_registry.async_get("fan.name_1")
     assert entry.device_id is not None
     device = device_registry.async_get(entry.device_id)
@@ -548,5 +548,5 @@ async def test_setup_hub_template_fan(
     assert device.manufacturer == "Olibra"
     assert device.identifiers == {("bond", "ZXXX12345", "test-device-id")}
     assert device.hw_version is None
-    await hass.config_entries.async_unload(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(config_entry.entry_id)
+    await menuai.async_block_till_done()

@@ -5,15 +5,15 @@ from unittest.mock import patch
 
 from freezegun import freeze_time
 
-from homeassistant.components.geo_json_events.const import (
+from menuai.components.geo_json_events.const import (
     ATTR_EXTERNAL_ID,
     DEFAULT_UPDATE_INTERVAL,
 )
-from homeassistant.components.geo_location import (
+from menuai.components.geo_location import (
     ATTR_SOURCE,
     DOMAIN as GEO_LOCATION_DOMAIN,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_FRIENDLY_NAME,
     ATTR_LATITUDE,
     ATTR_LONGITUDE,
@@ -24,9 +24,9 @@ from homeassistant.const import (
     CONF_URL,
     UnitOfLength,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.util import dt as dt_util
 
 from . import _generate_mock_feed_entry
 from .conftest import URL
@@ -46,12 +46,12 @@ CONFIG_LEGACY = {
 
 
 async def test_entity_lifecycle(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test entity lifecycle.."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     # Set up a mock feed entries for this test.
     mock_entry_1 = _generate_mock_feed_entry(
         "1234",
@@ -74,14 +74,14 @@ async def test_entity_lifecycle(
         mock_feed_update.return_value = "OK", [mock_entry_1, mock_entry_2, mock_entry_3]
 
         # Load config entry.
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
         # 3 geolocation and 1 sensor entities
-        assert len(hass.states.async_entity_ids(GEO_LOCATION_DOMAIN)) == 3
+        assert len(menuai.states.async_entity_ids(GEO_LOCATION_DOMAIN)) == 3
         assert len(entity_registry.entities) == 3
 
-        state = hass.states.get(f"{GEO_LOCATION_DOMAIN}.properties_1")
+        state = menuai.states.get(f"{GEO_LOCATION_DOMAIN}.properties_1")
         assert state is not None
         assert state.name == "Properties 1"
         assert state.attributes == {
@@ -94,7 +94,7 @@ async def test_entity_lifecycle(
         }
         assert round(abs(float(state.state) - 15.5), 7) == 0
 
-        state = hass.states.get(f"{GEO_LOCATION_DOMAIN}.271310188")
+        state = menuai.states.get(f"{GEO_LOCATION_DOMAIN}.271310188")
         assert state is not None
         assert state.name == "271310188"
         assert state.attributes == {
@@ -107,7 +107,7 @@ async def test_entity_lifecycle(
         }
         assert round(abs(float(state.state) - 20.5), 7) == 0
 
-        state = hass.states.get(f"{GEO_LOCATION_DOMAIN}.title_3")
+        state = menuai.states.get(f"{GEO_LOCATION_DOMAIN}.title_3")
         assert state is not None
         assert state.name == "Title 3"
         assert state.attributes == {
@@ -126,22 +126,22 @@ async def test_entity_lifecycle(
             "OK",
             [mock_entry_1, mock_entry_4, mock_entry_3],
         )
-        async_fire_time_changed(hass, utcnow + DEFAULT_UPDATE_INTERVAL)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, utcnow + DEFAULT_UPDATE_INTERVAL)
+        await menuai.async_block_till_done()
 
-        assert len(hass.states.async_entity_ids(GEO_LOCATION_DOMAIN)) == 3
+        assert len(menuai.states.async_entity_ids(GEO_LOCATION_DOMAIN)) == 3
 
         # Simulate an update - empty data, but successful update,
         # so no changes to entities.
         mock_feed_update.return_value = "OK_NO_DATA", None
-        async_fire_time_changed(hass, utcnow + 2 * DEFAULT_UPDATE_INTERVAL)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, utcnow + 2 * DEFAULT_UPDATE_INTERVAL)
+        await menuai.async_block_till_done()
 
-        assert len(hass.states.async_entity_ids(GEO_LOCATION_DOMAIN)) == 3
+        assert len(menuai.states.async_entity_ids(GEO_LOCATION_DOMAIN)) == 3
 
         # Simulate an update - empty data, removes all entities
         mock_feed_update.return_value = "ERROR", None
-        async_fire_time_changed(hass, utcnow + 3 * DEFAULT_UPDATE_INTERVAL)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, utcnow + 3 * DEFAULT_UPDATE_INTERVAL)
+        await menuai.async_block_till_done()
 
-        assert len(hass.states.async_entity_ids(GEO_LOCATION_DOMAIN)) == 0
+        assert len(menuai.states.async_entity_ids(GEO_LOCATION_DOMAIN)) == 0

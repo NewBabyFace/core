@@ -25,8 +25,8 @@ from pyheos import (
 )
 from pyheos.util import mediauri as heos_source
 
-from homeassistant.components import media_source
-from homeassistant.components.media_player import (
+from menuai.components import media_source
+from menuai.components.media_player import (
     ATTR_MEDIA_ENQUEUE,
     BrowseError,
     BrowseMedia,
@@ -39,15 +39,15 @@ from homeassistant.components.media_player import (
     RepeatMode,
     async_process_play_media_url,
 )
-from homeassistant.components.media_source import BrowseMediaSource
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, ServiceResponse, callback
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.util.dt import utcnow
+from menuai.components.media_source import BrowseMediaSource
+from menuai.const import Platform
+from menuai.core import menuai, ServiceResponse, callback
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers import entity_registry as er
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
+from menuai.util.dt import utcnow
 
 from . import services
 from .const import DOMAIN
@@ -117,7 +117,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: HeosConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -142,7 +142,7 @@ type _ReturnFuncType[**_P, _R] = Callable[_P, Coroutine[Any, Any, _R]]
 def catch_action_error[**_P, _R](
     action: str,
 ) -> Callable[[_FuncType[_P, _R]], _ReturnFuncType[_P, _R]]:
-    """Return decorator that catches errors and raises HomeAssistantError."""
+    """Return decorator that catches errors and raises menuaiError."""
 
     def decorator(func: _FuncType[_P, _R]) -> _ReturnFuncType[_P, _R]:
         @wraps(func)
@@ -150,7 +150,7 @@ def catch_action_error[**_P, _R](
             try:
                 return await func(*args, **kwargs)
             except (HeosError, ValueError) as ex:
-                raise HomeAssistantError(
+                raise menuaiError(
                     translation_domain=DOMAIN,
                     translation_key="action_error",
                     translation_placeholders={"action": action, "error": str(ex)},
@@ -209,7 +209,7 @@ class HeosMediaPlayer(CoordinatorEntity[HeosCoordinator], MediaPlayerEntity):
             return None
         player_ids = [group.lead_player_id, *group.member_player_ids]
         # Resolve player_ids to entity_ids
-        entity_registry = er.async_get(self.hass)
+        entity_registry = er.async_get(self.menuai)
         entity_ids = [
             entity_id
             for member_id in player_ids
@@ -241,12 +241,12 @@ class HeosMediaPlayer(CoordinatorEntity[HeosCoordinator], MediaPlayerEntity):
                 | MediaPlayerEntityFeature.SHUFFLE_SET
             )
 
-    async def async_added_to_hass(self) -> None:
-        """Device added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Device added to menuai."""
         # Update state when attributes of the player change
         self._update_attributes()
         self.async_on_remove(self._player.add_on_player_event(self._player_update))
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
     @catch_action_error("get queue")
     async def async_get_queue(self) -> ServiceResponse:
@@ -307,12 +307,12 @@ class HeosMediaPlayer(CoordinatorEntity[HeosCoordinator], MediaPlayerEntity):
         if media_source.is_media_source_id(media_id):
             media_type = MediaType.URL
             play_item = await media_source.async_resolve_media(
-                self.hass, media_id, self.entity_id
+                self.menuai, media_id, self.entity_id
             )
             media_id = play_item.url
 
         if media_type in {MediaType.URL, MediaType.MUSIC}:
-            media_id = async_process_play_media_url(self.hass, media_id)
+            media_id = async_process_play_media_url(self.menuai, media_id)
 
             await self._player.play_url(media_id)
             return
@@ -441,7 +441,7 @@ class HeosMediaPlayer(CoordinatorEntity[HeosCoordinator], MediaPlayerEntity):
         """Join `group_members` as a player group with the current player."""
         player_ids: list[int] = [self._player.player_id]
         # Resolve entity_ids to player_ids
-        entity_registry = er.async_get(self.hass)
+        entity_registry = er.async_get(self.menuai)
         for entity_id in group_members:
             entity_entry = entity_registry.async_get(entity_id)
             if entity_entry is None:
@@ -629,7 +629,7 @@ class HeosMediaPlayer(CoordinatorEntity[HeosCoordinator], MediaPlayerEntity):
     ) -> BrowseMediaSource:
         """Browse a media source item."""
         return await media_source.async_browse_media(
-            self.hass,
+            self.menuai,
             media_content_id,
             content_filter=lambda item: item.media_content_type.startswith("audio/"),
         )

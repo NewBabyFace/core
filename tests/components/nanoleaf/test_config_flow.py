@@ -8,13 +8,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from aionanoleaf import InvalidToken, Unauthorized, Unavailable
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.nanoleaf.const import DOMAIN
-from homeassistant.const import CONF_HOST, CONF_TOKEN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.ssdp import SsdpServiceInfo
-from homeassistant.helpers.service_info.zeroconf import (
+from menuai import config_entries
+from menuai.components.nanoleaf.const import DOMAIN
+from menuai.const import CONF_HOST, CONF_TOKEN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.ssdp import SsdpServiceInfo
+from menuai.helpers.service_info.zeroconf import (
     ATTR_PROPERTIES_ID,
     ZeroconfServiceInfo,
 )
@@ -45,16 +45,16 @@ def _mock_nanoleaf(
     return nanoleaf
 
 
-async def test_user_unavailable_user_step_link_step(hass: HomeAssistant) -> None:
+async def test_user_unavailable_user_step_link_step(menuai: menuai) -> None:
     """Test we handle Unavailable in user and link step."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     with patch(
-        "homeassistant.components.nanoleaf.config_flow.Nanoleaf.authorize",
+        "menuai.components.nanoleaf.config_flow.Nanoleaf.authorize",
         side_effect=Unavailable,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_HOST: TEST_HOST,
@@ -66,10 +66,10 @@ async def test_user_unavailable_user_step_link_step(hass: HomeAssistant) -> None
     assert not result2["last_step"]
 
     with patch(
-        "homeassistant.components.nanoleaf.config_flow.Nanoleaf.authorize",
+        "menuai.components.nanoleaf.config_flow.Nanoleaf.authorize",
         return_value=None,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_HOST: TEST_HOST,
@@ -79,10 +79,10 @@ async def test_user_unavailable_user_step_link_step(hass: HomeAssistant) -> None
     assert result2["step_id"] == "link"
 
     with patch(
-        "homeassistant.components.nanoleaf.config_flow.Nanoleaf.authorize",
+        "menuai.components.nanoleaf.config_flow.Nanoleaf.authorize",
         side_effect=Unavailable,
     ):
-        result3 = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+        result3 = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
     assert result3["type"] is FlowResultType.ABORT
     assert result3["reason"] == "cannot_connect"
 
@@ -96,16 +96,16 @@ async def test_user_unavailable_user_step_link_step(hass: HomeAssistant) -> None
     ],
 )
 async def test_user_error_setup_finish(
-    hass: HomeAssistant, error: Exception, reason: str
+    menuai: menuai, error: Exception, reason: str
 ) -> None:
     """Test abort flow if on error in setup_finish."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     with patch(
-        "homeassistant.components.nanoleaf.config_flow.Nanoleaf.authorize",
+        "menuai.components.nanoleaf.config_flow.Nanoleaf.authorize",
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_HOST: TEST_HOST,
@@ -116,32 +116,32 @@ async def test_user_error_setup_finish(
 
     with (
         patch(
-            "homeassistant.components.nanoleaf.config_flow.Nanoleaf.authorize",
+            "menuai.components.nanoleaf.config_flow.Nanoleaf.authorize",
         ),
         patch(
-            "homeassistant.components.nanoleaf.config_flow.Nanoleaf.get_info",
+            "menuai.components.nanoleaf.config_flow.Nanoleaf.get_info",
             side_effect=error,
         ),
     ):
-        result3 = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+        result3 = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
     assert result3["type"] is FlowResultType.ABORT
     assert result3["reason"] == reason
 
 
 async def test_user_not_authorizing_new_tokens_user_step_link_step(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test we handle NotAuthorizingNewTokens in user step and link step."""
     with (
         patch(
-            "homeassistant.components.nanoleaf.config_flow.Nanoleaf",
+            "menuai.components.nanoleaf.config_flow.Nanoleaf",
             return_value=_mock_nanoleaf(authorize_error=Unauthorized()),
         ) as mock_nanoleaf,
         patch(
-            "homeassistant.components.nanoleaf.async_setup_entry", return_value=True
+            "menuai.components.nanoleaf.async_setup_entry", return_value=True
         ) as mock_setup_entry,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
         assert result["type"] is FlowResultType.FORM
@@ -149,7 +149,7 @@ async def test_user_not_authorizing_new_tokens_user_step_link_step(
         assert result["step_id"] == "user"
         assert not result["last_step"]
 
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_HOST: TEST_HOST,
@@ -159,39 +159,39 @@ async def test_user_not_authorizing_new_tokens_user_step_link_step(
         assert result2["errors"] is None
         assert result2["step_id"] == "link"
 
-        result3 = await hass.config_entries.flow.async_configure(result["flow_id"])
+        result3 = await menuai.config_entries.flow.async_configure(result["flow_id"])
         assert result3["type"] is FlowResultType.FORM
         assert result3["errors"] is None
         assert result3["step_id"] == "link"
 
-        result4 = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+        result4 = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
         assert result4["type"] is FlowResultType.FORM
         assert result4["errors"] == {"base": "not_allowing_new_tokens"}
         assert result4["step_id"] == "link"
 
         mock_nanoleaf.return_value.authorize.side_effect = None
 
-        result5 = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+        result5 = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
         assert result5["type"] is FlowResultType.CREATE_ENTRY
         assert result5["title"] == TEST_NAME
         assert result5["data"] == {
             CONF_HOST: TEST_HOST,
             CONF_TOKEN: TEST_TOKEN,
         }
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_user_exception_user_step(hass: HomeAssistant) -> None:
+async def test_user_exception_user_step(menuai: menuai) -> None:
     """Test we handle Exception errors in user step."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     with patch(
-        "homeassistant.components.nanoleaf.config_flow.Nanoleaf",
+        "menuai.components.nanoleaf.config_flow.Nanoleaf",
         return_value=_mock_nanoleaf(authorize_error=Exception()),
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_HOST: TEST_HOST,
@@ -203,10 +203,10 @@ async def test_user_exception_user_step(hass: HomeAssistant) -> None:
     assert not result2["last_step"]
 
     with patch(
-        "homeassistant.components.nanoleaf.config_flow.Nanoleaf",
+        "menuai.components.nanoleaf.config_flow.Nanoleaf",
         return_value=_mock_nanoleaf(),
     ) as mock_nanoleaf:
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_HOST: TEST_HOST,
@@ -216,14 +216,14 @@ async def test_user_exception_user_step(hass: HomeAssistant) -> None:
 
         mock_nanoleaf.return_value.authorize.side_effect = Exception()
 
-        result4 = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+        result4 = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
         assert result4["type"] is FlowResultType.FORM
         assert result4["step_id"] == "link"
         assert result4["errors"] == {"base": "unknown"}
 
         mock_nanoleaf.return_value.authorize.side_effect = None
         mock_nanoleaf.return_value.get_info.side_effect = Exception()
-        result5 = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+        result5 = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
     assert result5["type"] is FlowResultType.ABORT
     assert result5["reason"] == "unknown"
 
@@ -237,19 +237,19 @@ async def test_user_exception_user_step(hass: HomeAssistant) -> None:
     ],
 )
 async def test_discovery_link_unavailable(
-    hass: HomeAssistant, source: type, type_in_discovery_info: str
+    menuai: menuai, source: type, type_in_discovery_info: str
 ) -> None:
     """Test discovery and abort if device is unavailable."""
     with (
         patch(
-            "homeassistant.components.nanoleaf.config_flow.Nanoleaf.get_info",
+            "menuai.components.nanoleaf.config_flow.Nanoleaf.get_info",
         ),
         patch(
-            "homeassistant.components.nanoleaf.config_flow.load_json_object",
+            "menuai.components.nanoleaf.config_flow.load_json_object",
             return_value={},
         ),
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": source},
             data=ZeroconfServiceInfo(
@@ -267,45 +267,45 @@ async def test_discovery_link_unavailable(
 
     context = next(
         flow["context"]
-        for flow in hass.config_entries.flow.async_progress()
+        for flow in menuai.config_entries.flow.async_progress()
         if flow["flow_id"] == result["flow_id"]
     )
     assert context["title_placeholders"] == {"name": TEST_NAME}
     assert context["unique_id"] == TEST_NAME
 
     with patch(
-        "homeassistant.components.nanoleaf.config_flow.Nanoleaf.authorize",
+        "menuai.components.nanoleaf.config_flow.Nanoleaf.authorize",
         side_effect=Unavailable,
     ):
-        result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "cannot_connect"
 
 
-async def test_reauth(hass: HomeAssistant) -> None:
+async def test_reauth(menuai: menuai) -> None:
     """Test Nanoleaf reauth flow."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         unique_id=TEST_NAME,
         data={CONF_HOST: TEST_HOST, CONF_TOKEN: TEST_OTHER_TOKEN},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with (
         patch(
-            "homeassistant.components.nanoleaf.config_flow.Nanoleaf",
+            "menuai.components.nanoleaf.config_flow.Nanoleaf",
             return_value=_mock_nanoleaf(),
         ),
         patch(
-            "homeassistant.components.nanoleaf.async_setup_entry",
+            "menuai.components.nanoleaf.async_setup_entry",
             return_value=True,
         ),
     ):
-        result = await entry.start_reauth_flow(hass)
+        result = await entry.start_reauth_flow(menuai)
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "link"
 
-        result2 = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+        result2 = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
     assert result2["type"] is FlowResultType.ABORT
     assert result2["reason"] == "reauth_successful"
 
@@ -350,7 +350,7 @@ async def test_reauth(hass: HomeAssistant) -> None:
     ],
 )
 async def test_import_discovery_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     source: str,
     type_in_discovery: str,
     nanoleaf_conf_file: dict[str, dict[str, str]],
@@ -365,27 +365,27 @@ async def test_import_discovery_integration(
     """
     with (
         patch(
-            "homeassistant.components.nanoleaf.config_flow.load_json_object",
+            "menuai.components.nanoleaf.config_flow.load_json_object",
             return_value=dict(nanoleaf_conf_file),
         ),
         patch(
-            "homeassistant.components.nanoleaf.config_flow.Nanoleaf",
+            "menuai.components.nanoleaf.config_flow.Nanoleaf",
             return_value=_mock_nanoleaf(TEST_HOST, TEST_TOKEN),
         ),
         patch(
-            "homeassistant.components.nanoleaf.config_flow.save_json",
+            "menuai.components.nanoleaf.config_flow.save_json",
             return_value=None,
         ) as mock_save_json,
         patch(
-            "homeassistant.components.nanoleaf.config_flow.os.remove",
+            "menuai.components.nanoleaf.config_flow.os.remove",
             return_value=None,
         ) as mock_remove,
         patch(
-            "homeassistant.components.nanoleaf.async_setup_entry",
+            "menuai.components.nanoleaf.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": source},
             data=ZeroconfServiceInfo(
@@ -398,7 +398,7 @@ async def test_import_discovery_integration(
                 type=type_in_discovery,
             ),
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == TEST_NAME
@@ -417,23 +417,23 @@ async def test_import_discovery_integration(
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_ssdp_discovery(hass: HomeAssistant) -> None:
+async def test_ssdp_discovery(menuai: menuai) -> None:
     """Test SSDP discovery."""
     with (
         patch(
-            "homeassistant.components.nanoleaf.config_flow.load_json_object",
+            "menuai.components.nanoleaf.config_flow.load_json_object",
             return_value={},
         ),
         patch(
-            "homeassistant.components.nanoleaf.config_flow.Nanoleaf",
+            "menuai.components.nanoleaf.config_flow.Nanoleaf",
             return_value=_mock_nanoleaf(TEST_HOST, TEST_TOKEN),
         ),
         patch(
-            "homeassistant.components.nanoleaf.async_setup_entry",
+            "menuai.components.nanoleaf.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_SSDP},
             data=SsdpServiceInfo(
@@ -452,8 +452,8 @@ async def test_ssdp_discovery(hass: HomeAssistant) -> None:
         assert result["errors"] is None
         assert result["step_id"] == "link"
 
-        result2 = await hass.config_entries.flow.async_configure(result["flow_id"], {})
-        await hass.async_block_till_done()
+        result2 = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == TEST_NAME

@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-from homeassistant.components.generic_thermostat.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.components.generic_thermostat.const import DOMAIN
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from tests.common import MockConfigEntry
 
 
 async def test_device_cleaning(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
@@ -18,7 +18,7 @@ async def test_device_cleaning(
 
     # Source entity device config entry
     source_config_entry = MockConfigEntry()
-    source_config_entry.add_to_hass(hass)
+    source_config_entry.add_to_menuai(menuai)
 
     # Device entry of the source entity
     source_device1_entry = device_registry.async_get_or_create(
@@ -35,7 +35,7 @@ async def test_device_cleaning(
         config_entry=source_config_entry,
         device_id=source_device1_entry.id,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert entity_registry.async_get("switch.test_source") is not None
 
     # Configure the configuration entry for helper
@@ -52,9 +52,9 @@ async def test_device_cleaning(
         },
         title="Test",
     )
-    helper_config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(helper_config_entry.entry_id)
-    await hass.async_block_till_done()
+    helper_config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(helper_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Confirm the link between the source entity device and the helper entity
     helper_entity = entity_registry.async_get("climate.test")
@@ -72,7 +72,7 @@ async def test_device_cleaning(
         identifiers={("sensor", "identifier_test3")},
         connections={("mac", "30:31:32:33:34:03")},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Before reloading the config entry, 3 devices are expected to be linked
     devices_before_reload = device_registry.devices.get_devices_for_config_entry_id(
@@ -81,8 +81,8 @@ async def test_device_cleaning(
     assert len(devices_before_reload) == 3
 
     # Config entry reload
-    await hass.config_entries.async_reload(helper_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_reload(helper_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Confirm the link between the source entity device and the helper entity
     helper_entity = entity_registry.async_get("climate.test")

@@ -6,9 +6,9 @@ import logging
 
 from govee_local_api import GoveeController, GoveeDevice
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
     CONF_DISCOVERY_INTERVAL_DEFAULT,
@@ -29,11 +29,11 @@ class GoveeLocalApiCoordinator(DataUpdateCoordinator[list[GoveeDevice]]):
     config_entry: GoveeLocalConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: GoveeLocalConfigEntry
+        self, menuai: menuai, config_entry: GoveeLocalConfigEntry
     ) -> None:
         """Initialize my coordinator."""
         super().__init__(
-            hass=hass,
+            menuai=menuai,
             logger=_LOGGER,
             config_entry=config_entry,
             name="GoveeLightLocalApi",
@@ -41,7 +41,7 @@ class GoveeLocalApiCoordinator(DataUpdateCoordinator[list[GoveeDevice]]):
         )
 
         self._controller = GoveeController(
-            loop=hass.loop,
+            loop=menuai.loop,
             logger=_LOGGER,
             broadcast_address=CONF_MULTICAST_ADDRESS_DEFAULT,
             broadcast_port=CONF_TARGET_PORT_DEFAULT,

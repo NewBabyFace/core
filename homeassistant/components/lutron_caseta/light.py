@@ -9,7 +9,7 @@ from pylutron_caseta.color_value import (
     WarmCoolColorValue,
 )
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_TEMP_KELVIN,
     ATTR_HS_COLOR,
@@ -20,9 +20,9 @@ from homeassistant.components.light import (
     LightEntity,
     LightEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
     DEVICE_TYPE_COLOR_TUNE,
@@ -54,17 +54,17 @@ WARM_DEVICE_TYPES = {
 
 
 def to_lutron_level(level):
-    """Convert the given Home Assistant light level (0-255) to Lutron (0-100)."""
+    """Convert the given MenuAI light level (0-255) to Lutron (0-100)."""
     return int(round((level * 100) / 255))
 
 
-def to_hass_level(level):
-    """Convert the given Lutron (0-100) light level to Home Assistant (0-255)."""
+def to_menuai_level(level):
+    """Convert the given Lutron (0-100) light level to MenuAI (0-255)."""
     return int((level * 255) // 100)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -139,7 +139,7 @@ class LutronCasetaLight(LutronCasetaUpdatableEntity, LightEntity):
     @property
     def brightness(self) -> int:
         """Return the brightness of the light."""
-        return to_hass_level(self._device["current_state"])
+        return to_menuai_level(self._device["current_state"])
 
     async def _async_set_brightness(
         self, brightness: int | None, color_value: LutronColorMode | None, **kwargs: Any

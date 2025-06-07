@@ -1,6 +1,6 @@
 """Constants for the Wake-On-LAN component."""
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 DOMAIN = "wake_on_lan"
 PLATFORMS = [Platform.BUTTON]

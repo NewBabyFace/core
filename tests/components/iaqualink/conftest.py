@@ -8,8 +8,8 @@ from iaqualink.device import AqualinkDevice
 from iaqualink.system import AqualinkSystem
 import pytest
 
-from homeassistant.components.iaqualink import DOMAIN
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.components.iaqualink import DOMAIN
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
 
 from tests.common import MockConfigEntry
 
@@ -78,13 +78,13 @@ def get_aqualink_device(system, name, cls=None, data=None):
 
 @pytest.fixture(name="config_data")
 def config_data_fixture():
-    """Create hass config fixture."""
+    """Create menuai config fixture."""
     return MOCK_DATA
 
 
 @pytest.fixture(name="config")
 def config_fixture():
-    """Create hass config fixture."""
+    """Create menuai config fixture."""
     return {DOMAIN: MOCK_DATA}
 
 

@@ -4,7 +4,7 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 from syrupy.filters import props
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from . import init_integration
 
@@ -15,14 +15,14 @@ from tests.typing import ClientSessionGenerator
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_entry_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test config entry diagnostics."""
-    await init_integration(hass, config_entry)
+    await init_integration(menuai, config_entry)
 
-    result = await get_diagnostics_for_config_entry(hass, hass_client, config_entry)
+    result = await get_diagnostics_for_config_entry(menuai, menuai_client, config_entry)
 
     assert result == snapshot(exclude=props("created_at", "modified_at", "entry_id"))

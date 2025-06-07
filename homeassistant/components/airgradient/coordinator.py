@@ -7,10 +7,10 @@ from datetime import timedelta
 
 from airgradient import AirGradientClient, AirGradientError, Config, Measures
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN, LOGGER
 
@@ -33,13 +33,13 @@ class AirGradientCoordinator(DataUpdateCoordinator[AirGradientData]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: AirGradientConfigEntry,
         client: AirGradientClient,
     ) -> None:
         """Initialize coordinator."""
         super().__init__(
-            hass,
+            menuai,
             logger=LOGGER,
             config_entry=config_entry,
             name=f"AirGradient {client.host}",
@@ -66,7 +66,7 @@ class AirGradientCoordinator(DataUpdateCoordinator[AirGradientData]):
                 translation_placeholders={"error": str(error)},
             ) from error
         if measures.firmware_version != self._current_version:
-            device_registry = dr.async_get(self.hass)
+            device_registry = dr.async_get(self.menuai)
             device_entry = device_registry.async_get_device(
                 identifiers={(DOMAIN, self.serial_number)}
             )

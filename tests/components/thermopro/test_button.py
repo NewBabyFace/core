@@ -6,12 +6,12 @@ import time
 import pytest
 from thermopro_ble import ThermoProDevice
 
-from homeassistant.components.bluetooth import (
+from menuai.components.bluetooth import (
     FALLBACK_MAXIMUM_STALE_ADVERTISEMENT_SECONDS,
 )
-from homeassistant.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
+from menuai.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE, STATE_UNKNOWN
+from menuai.core import menuai
+from menuai.util import dt as dt_util
 
 from . import TP357_SERVICE_INFO, TP358_SERVICE_INFO
 
@@ -24,38 +24,38 @@ from tests.components.bluetooth import (
 
 
 @pytest.mark.usefixtures("setup_thermopro")
-async def test_buttons_tp357(hass: HomeAssistant) -> None:
+async def test_buttons_tp357(menuai: menuai) -> None:
     """Test setting up creates the sensors."""
-    assert not hass.states.async_all()
-    assert not hass.states.get("button.tp358_4221_set_date_time")
-    inject_bluetooth_service_info(hass, TP357_SERVICE_INFO)
-    await hass.async_block_till_done()
-    assert not hass.states.get("button.tp358_4221_set_date_time")
+    assert not menuai.states.async_all()
+    assert not menuai.states.get("button.tp358_4221_set_date_time")
+    inject_bluetooth_service_info(menuai, TP357_SERVICE_INFO)
+    await menuai.async_block_till_done()
+    assert not menuai.states.get("button.tp358_4221_set_date_time")
 
 
 @pytest.mark.usefixtures("setup_thermopro")
-async def test_buttons_tp358_discovery(hass: HomeAssistant) -> None:
+async def test_buttons_tp358_discovery(menuai: menuai) -> None:
     """Test discovery of device with button."""
-    assert not hass.states.async_all()
-    assert not hass.states.get("button.tp358_4221_set_date_time")
-    inject_bluetooth_service_info(hass, TP358_SERVICE_INFO)
-    await hass.async_block_till_done()
+    assert not menuai.states.async_all()
+    assert not menuai.states.get("button.tp358_4221_set_date_time")
+    inject_bluetooth_service_info(menuai, TP358_SERVICE_INFO)
+    await menuai.async_block_till_done()
 
-    button = hass.states.get("button.tp358_4221_set_date_time")
+    button = menuai.states.get("button.tp358_4221_set_date_time")
     assert button is not None
     assert button.state == STATE_UNKNOWN
 
 
 @pytest.mark.usefixtures("setup_thermopro")
-async def test_buttons_tp358_unavailable(hass: HomeAssistant) -> None:
+async def test_buttons_tp358_unavailable(menuai: menuai) -> None:
     """Test tp358 set date&time button goes to unavailability."""
     start_monotonic = time.monotonic()
-    assert not hass.states.async_all()
-    assert not hass.states.get("button.tp358_4221_set_date_time")
-    inject_bluetooth_service_info(hass, TP358_SERVICE_INFO)
-    await hass.async_block_till_done()
+    assert not menuai.states.async_all()
+    assert not menuai.states.get("button.tp358_4221_set_date_time")
+    inject_bluetooth_service_info(menuai, TP358_SERVICE_INFO)
+    await menuai.async_block_till_done()
 
-    button = hass.states.get("button.tp358_4221_set_date_time")
+    button = menuai.states.get("button.tp358_4221_set_date_time")
     assert button is not None
     assert button.state == STATE_UNKNOWN
 
@@ -64,27 +64,27 @@ async def test_buttons_tp358_unavailable(hass: HomeAssistant) -> None:
 
     with patch_bluetooth_time(monotonic_now), patch_all_discovered_devices([]):
         async_fire_time_changed(
-            hass,
+            menuai,
             dt_util.utcnow()
             + timedelta(seconds=FALLBACK_MAXIMUM_STALE_ADVERTISEMENT_SECONDS + 15),
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    button = hass.states.get("button.tp358_4221_set_date_time")
+    button = menuai.states.get("button.tp358_4221_set_date_time")
 
     assert button.state == STATE_UNAVAILABLE
 
 
 @pytest.mark.usefixtures("setup_thermopro")
-async def test_buttons_tp358_reavailable(hass: HomeAssistant) -> None:
+async def test_buttons_tp358_reavailable(menuai: menuai) -> None:
     """Test TP358/TP393 set date&time button goes to unavailablity and recovers."""
     start_monotonic = time.monotonic()
-    assert not hass.states.async_all()
-    assert not hass.states.get("button.tp358_4221_set_date_time")
-    inject_bluetooth_service_info(hass, TP358_SERVICE_INFO)
-    await hass.async_block_till_done()
+    assert not menuai.states.async_all()
+    assert not menuai.states.get("button.tp358_4221_set_date_time")
+    inject_bluetooth_service_info(menuai, TP358_SERVICE_INFO)
+    await menuai.async_block_till_done()
 
-    button = hass.states.get("button.tp358_4221_set_date_time")
+    button = menuai.states.get("button.tp358_4221_set_date_time")
     assert button is not None
     assert button.state == STATE_UNKNOWN
 
@@ -93,36 +93,36 @@ async def test_buttons_tp358_reavailable(hass: HomeAssistant) -> None:
 
     with patch_bluetooth_time(monotonic_now), patch_all_discovered_devices([]):
         async_fire_time_changed(
-            hass,
+            menuai,
             dt_util.utcnow()
             + timedelta(seconds=FALLBACK_MAXIMUM_STALE_ADVERTISEMENT_SECONDS + 15),
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-        button = hass.states.get("button.tp358_4221_set_date_time")
+        button = menuai.states.get("button.tp358_4221_set_date_time")
 
         assert button.state == STATE_UNAVAILABLE
 
-        inject_bluetooth_service_info(hass, TP358_SERVICE_INFO)
-        await hass.async_block_till_done()
+        inject_bluetooth_service_info(menuai, TP358_SERVICE_INFO)
+        await menuai.async_block_till_done()
 
-        button = hass.states.get("button.tp358_4221_set_date_time")
+        button = menuai.states.get("button.tp358_4221_set_date_time")
 
         assert button.state == STATE_UNKNOWN
 
 
 @pytest.mark.usefixtures("setup_thermopro")
 async def test_buttons_tp358_press(
-    hass: HomeAssistant, mock_now: datetime, mock_thermoprodevice: ThermoProDevice
+    menuai: menuai, mock_now: datetime, mock_thermoprodevice: ThermoProDevice
 ) -> None:
     """Test TP358/TP393 set date&time button press."""
-    assert not hass.states.async_all()
-    assert not hass.states.get("button.tp358_4221_set_date_time")
-    inject_bluetooth_service_info(hass, TP358_SERVICE_INFO)
-    await hass.async_block_till_done()
-    assert hass.states.get("button.tp358_4221_set_date_time")
+    assert not menuai.states.async_all()
+    assert not menuai.states.get("button.tp358_4221_set_date_time")
+    inject_bluetooth_service_info(menuai, TP358_SERVICE_INFO)
+    await menuai.async_block_till_done()
+    assert menuai.states.get("button.tp358_4221_set_date_time")
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "button",
         "press",
         {ATTR_ENTITY_ID: "button.tp358_4221_set_date_time"},
@@ -131,5 +131,5 @@ async def test_buttons_tp358_press(
 
     mock_thermoprodevice.set_datetime.assert_awaited_once_with(mock_now, am_pm=False)
 
-    button_state = hass.states.get("button.tp358_4221_set_date_time")
+    button_state = menuai.states.get("button.tp358_4221_set_date_time")
     assert button_state.state != STATE_UNKNOWN

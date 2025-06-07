@@ -2,7 +2,7 @@
 adr_0007_1:
   - host: blah.com
 
-homeassistant:
+menuai:
   packages:
     pack_1:
       # This is correct, but root config is wrong

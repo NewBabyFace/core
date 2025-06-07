@@ -12,11 +12,11 @@ from gspread.exceptions import APIError
 from gspread.utils import ValueInputOption
 import voluptuous as vol
 
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_TOKEN
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.selector import ConfigEntrySelector
+from menuai.const import CONF_ACCESS_TOKEN, CONF_TOKEN
+from menuai.core import menuai, ServiceCall
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.selector import ConfigEntrySelector
 
 from .const import DOMAIN
 
@@ -44,10 +44,10 @@ def _append_to_sheet(call: ServiceCall, entry: GoogleSheetsConfigEntry) -> None:
     try:
         sheet = service.open_by_key(entry.unique_id)
     except RefreshError:
-        entry.async_start_reauth(call.hass)
+        entry.async_start_reauth(call.menuai)
         raise
     except APIError as ex:
-        raise HomeAssistantError("Failed to write data") from ex
+        raise menuaiError("Failed to write data") from ex
 
     worksheet = sheet.worksheet(call.data.get(WORKSHEET, sheet.sheet1.title))
     columns: list[str] = next(iter(worksheet.get_values("A1:ZZ1")), [])
@@ -67,19 +67,19 @@ def _append_to_sheet(call: ServiceCall, entry: GoogleSheetsConfigEntry) -> None:
 
 async def _async_append_to_sheet(call: ServiceCall) -> None:
     """Append new line of data to a Google Sheets document."""
-    entry: GoogleSheetsConfigEntry | None = call.hass.config_entries.async_get_entry(
+    entry: GoogleSheetsConfigEntry | None = call.menuai.config_entries.async_get_entry(
         call.data[DATA_CONFIG_ENTRY]
     )
     if not entry or not hasattr(entry, "runtime_data"):
         raise ValueError(f"Invalid config entry: {call.data[DATA_CONFIG_ENTRY]}")
     await entry.runtime_data.async_ensure_token_valid()
-    await call.hass.async_add_executor_job(_append_to_sheet, call, entry)
+    await call.menuai.async_add_executor_job(_append_to_sheet, call, entry)
 
 
-def async_setup_services(hass: HomeAssistant) -> None:
+def async_setup_services(menuai: menuai) -> None:
     """Add the services for Google Sheets."""
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_APPEND_SHEET,
         _async_append_to_sheet,

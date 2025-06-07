@@ -17,7 +17,7 @@ from xbox.webapi.api.provider.smartglass.models import (
     InstalledPackagesList,
 )
 
-from homeassistant.components.media_player import BrowseMedia, MediaClass, MediaType
+from menuai.components.media_player import BrowseMedia, MediaClass, MediaType
 
 
 class MediaTypeDetails(NamedTuple):

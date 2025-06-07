@@ -9,10 +9,10 @@ from typing import Any
 from asyncsleepiq import AsyncSleepIQ, SleepIQLoginException, SleepIQTimeoutException
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN
 
@@ -32,7 +32,7 @@ class SleepIQFlowHandler(ConfigFlow, domain=DOMAIN):
         await self.async_set_unique_id(import_data[CONF_USERNAME].lower())
         self._abort_if_unique_id_configured()
 
-        if error := await try_connection(self.hass, import_data):
+        if error := await try_connection(self.menuai, import_data):
             _LOGGER.error("Could not authenticate with SleepIQ server: %s", error)
             return self.async_abort(reason=error)
 
@@ -51,7 +51,7 @@ class SleepIQFlowHandler(ConfigFlow, domain=DOMAIN):
             await self.async_set_unique_id(user_input[CONF_USERNAME].lower())
             self._abort_if_unique_id_configured()
 
-            if error := await try_connection(self.hass, user_input):
+            if error := await try_connection(self.menuai, user_input):
                 errors["base"] = error
             else:
                 return self.async_create_entry(
@@ -95,7 +95,7 @@ class SleepIQFlowHandler(ConfigFlow, domain=DOMAIN):
                 CONF_PASSWORD: user_input[CONF_PASSWORD],
             }
 
-            if not (error := await try_connection(self.hass, data)):
+            if not (error := await try_connection(self.menuai, data)):
                 return self.async_update_reload_and_abort(reauth_entry, data=data)
             errors["base"] = error
 
@@ -109,10 +109,10 @@ class SleepIQFlowHandler(ConfigFlow, domain=DOMAIN):
         )
 
 
-async def try_connection(hass: HomeAssistant, user_input: dict[str, Any]) -> str | None:
+async def try_connection(menuai: menuai, user_input: dict[str, Any]) -> str | None:
     """Test if the given credentials can successfully login to SleepIQ."""
 
-    client_session = async_get_clientsession(hass)
+    client_session = async_get_clientsession(menuai)
 
     gateway = AsyncSleepIQ(client_session=client_session)
     try:

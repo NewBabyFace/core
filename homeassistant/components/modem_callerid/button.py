@@ -4,23 +4,23 @@ from __future__ import annotations
 
 from phone_modem import PhoneModem
 
-from homeassistant.components.button import ButtonEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_DEVICE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.button import ButtonEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_DEVICE
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DATA_KEY_API, DOMAIN
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Modem Caller ID sensor."""
-    api = hass.data[DOMAIN][entry.entry_id][DATA_KEY_API]
+    api = menuai.data[DOMAIN][entry.entry_id][DATA_KEY_API]
     async_add_entities(
         [
             PhoneModemButton(

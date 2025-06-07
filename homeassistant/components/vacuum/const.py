@@ -5,7 +5,7 @@ from __future__ import annotations
 from enum import StrEnum
 from functools import partial
 
-from homeassistant.helpers.deprecation import (
+from menuai.helpers.deprecation import (
     DeprecatedConstantEnum,
     all_with_deprecated_constants,
     check_if_deprecated_constant,
@@ -26,7 +26,7 @@ class VacuumActivity(StrEnum):
     ERROR = "error"
 
 
-# These STATE_* constants are deprecated as of Home Assistant 2025.1.
+# These STATE_* constants are deprecated as of MenuAI 2025.1.
 # Please use the VacuumActivity enum instead.
 _DEPRECATED_STATE_CLEANING = DeprecatedConstantEnum(VacuumActivity.CLEANING, "2026.1")
 _DEPRECATED_STATE_DOCKED = DeprecatedConstantEnum(VacuumActivity.DOCKED, "2026.1")

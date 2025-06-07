@@ -10,9 +10,9 @@ from python_snoo.exceptions import InvalidSnooAuth, SnooAuthException
 from python_snoo.snoo import Snoo
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN
 
@@ -40,7 +40,7 @@ class SnooConfigFlow(ConfigFlow, domain=DOMAIN):
             hub = Snoo(
                 email=user_input[CONF_USERNAME],
                 password=user_input[CONF_PASSWORD],
-                clientsession=async_get_clientsession(self.hass),
+                clientsession=async_get_clientsession(self.menuai),
             )
 
             try:

@@ -8,8 +8,8 @@ from typing import Any
 from pyfireservicerota import FireServiceRota, InvalidAuthError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_PASSWORD, CONF_TOKEN, CONF_URL, CONF_USERNAME
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_PASSWORD, CONF_TOKEN, CONF_URL, CONF_USERNAME
 
 from .const import DOMAIN, URL_LIST
 
@@ -70,7 +70,7 @@ class FireServiceRotaFlowHandler(ConfigFlow, domain=DOMAIN):
         )
 
         try:
-            token_info = await self.hass.async_add_executor_job(self.api.request_tokens)
+            token_info = await self.menuai.async_add_executor_job(self.api.request_tokens)
         except InvalidAuthError:
             self.api = None
             return self.async_show_form(
@@ -90,8 +90,8 @@ class FireServiceRotaFlowHandler(ConfigFlow, domain=DOMAIN):
             return self.async_create_entry(title=self._username, data=data)
 
         entry = await self.async_set_unique_id(self.unique_id)
-        self.hass.config_entries.async_update_entry(entry, data=data)
-        await self.hass.config_entries.async_reload(entry.entry_id)
+        self.menuai.config_entries.async_update_entry(entry, data=data)
+        await self.menuai.config_entries.async_reload(entry.entry_id)
         return self.async_abort(reason="reauth_successful")
 
     def _show_setup_form(self, user_input=None, errors=None, step_id="user"):

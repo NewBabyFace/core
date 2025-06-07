@@ -7,13 +7,13 @@ from httpx import RequestError
 from wolf_comm.token_auth import InvalidAuth
 from wolf_comm.wolf_client import FetchFailed, ParameterReadError, WolfClient
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.httpx_client import get_async_client
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_PASSWORD, CONF_USERNAME, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import device_registry as dr
+from menuai.helpers.httpx_client import get_async_client
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
     COORDINATOR,
@@ -29,7 +29,7 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORMS = [Platform.SENSOR]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up Wolf SmartSet Service from a config entry."""
 
     username = entry.data[CONF_USERNAME]
@@ -48,7 +48,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     wolf_client = WolfClient(
         username,
         password,
-        client=get_async_client(hass=hass, verify_ssl=False),
+        client=get_async_client(menuai=menuai, verify_ssl=False),
     )
 
     parameters = await fetch_parameters_init(wolf_client, gateway_id, device_id)
@@ -65,7 +65,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 )
             if refetch_parameters:
                 parameters = await fetch_parameters(wolf_client, gateway_id, device_id)
-                hass.data[DOMAIN][entry.entry_id][PARAMETERS] = parameters
+                menuai.data[DOMAIN][entry.entry_id][PARAMETERS] = parameters
                 refetch_parameters = False
             values = {
                 v.value_id: v.value
@@ -98,7 +98,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             raise UpdateFailed("Invalid authentication during update.") from exception
 
     coordinator = DataUpdateCoordinator(
-        hass,
+        menuai,
         _LOGGER,
         config_entry=entry,
         name=DOMAIN,
@@ -108,35 +108,35 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await coordinator.async_refresh()
 
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.entry_id] = {}
-    hass.data[DOMAIN][entry.entry_id][PARAMETERS] = parameters
-    hass.data[DOMAIN][entry.entry_id][COORDINATOR] = coordinator
-    hass.data[DOMAIN][entry.entry_id][DEVICE_ID] = device_id
+    menuai.data.setdefault(DOMAIN, {})
+    menuai.data[DOMAIN][entry.entry_id] = {}
+    menuai.data[DOMAIN][entry.entry_id][PARAMETERS] = parameters
+    menuai.data[DOMAIN][entry.entry_id][COORDINATOR] = coordinator
+    menuai.data[DOMAIN][entry.entry_id][DEVICE_ID] = device_id
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id)
+        menuai.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok
 
 
-async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_migrate_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Migrate old entry."""
     # convert unique_id to string
     if entry.version == 1 and entry.minor_version == 1:
         if isinstance(entry.unique_id, int):
-            hass.config_entries.async_update_entry(
+            menuai.config_entries.async_update_entry(
                 entry, unique_id=str(entry.unique_id)
             )
-            device_registry = dr.async_get(hass)
+            device_registry = dr.async_get(menuai)
             for device in dr.async_entries_for_config_entry(
                 device_registry, entry.entry_id
             ):
@@ -149,7 +149,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 device_registry.async_update_device(
                     device.id, new_identifiers=new_identifiers
                 )
-        hass.config_entries.async_update_entry(entry, minor_version=2)
+        menuai.config_entries.async_update_entry(entry, minor_version=2)
 
     return True
 

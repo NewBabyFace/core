@@ -7,21 +7,21 @@ from typing import Any, cast
 from adax import Adax
 from adax_local import Adax as AdaxLocal
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ClimateEntity,
     ClimateEntityFeature,
     HVACMode,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_TEMPERATURE,
     CONF_UNIQUE_ID,
     PRECISION_WHOLE,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from . import AdaxConfigEntry
 from .const import CONNECTION_TYPE, DOMAIN, LOCAL
@@ -29,7 +29,7 @@ from .coordinator import AdaxCloudCoordinator, AdaxLocalCoordinator
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: AdaxConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

@@ -1,4 +1,4 @@
-"""Alexa configuration for Home Assistant Cloud."""
+"""Alexa configuration for MenuAI Cloud."""
 
 from __future__ import annotations
 
@@ -11,34 +11,34 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 import aiohttp
-from hass_nabucasa import Cloud, cloud_api
+from menuai_nabucasa import Cloud, cloud_api
 from yarl import URL
 
-from homeassistant.components import persistent_notification
-from homeassistant.components.alexa import (
+from menuai.components import persistent_notification
+from menuai.components.alexa import (
     DOMAIN as ALEXA_DOMAIN,
     config as alexa_config,
     entities as alexa_entities,
     errors as alexa_errors,
     state_report as alexa_state_report,
 )
-from homeassistant.components.binary_sensor import BinarySensorDeviceClass
-from homeassistant.components.homeassistant.exposed_entities import (
+from menuai.components.binary_sensor import BinarySensorDeviceClass
+from menuai.components.menuai.exposed_entities import (
     async_expose_entity,
     async_get_assistant_settings,
     async_listen_entity_updates,
     async_should_expose,
 )
-from homeassistant.components.sensor import SensorDeviceClass
-from homeassistant.const import CLOUD_NEVER_EXPOSED_ENTITIES
-from homeassistant.core import Event, HomeAssistant, callback, split_entity_id
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er, start
-from homeassistant.helpers.entity import get_device_class
-from homeassistant.helpers.entityfilter import EntityFilter
-from homeassistant.helpers.event import async_call_later
-from homeassistant.setup import async_setup_component
-from homeassistant.util.dt import utcnow
+from menuai.components.sensor import SensorDeviceClass
+from menuai.const import CLOUD_NEVER_EXPOSED_ENTITIES
+from menuai.core import Event, menuai, callback, split_entity_id
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er, start
+from menuai.helpers.entity import get_device_class
+from menuai.helpers.entityfilter import EntityFilter
+from menuai.helpers.event import async_call_later
+from menuai.setup import async_setup_component
+from menuai.util.dt import utcnow
 
 from .const import (
     CONF_ENTITY_CONFIG,
@@ -102,7 +102,7 @@ SUPPORTED_SENSOR_DEVICE_CLASSES = {
 }
 
 
-def entity_supported(hass: HomeAssistant, entity_id: str) -> bool:
+def entity_supported(menuai: menuai, entity_id: str) -> bool:
     """Return if the entity is supported.
 
     This is called when migrating from legacy config format to avoid exposing
@@ -113,8 +113,8 @@ def entity_supported(hass: HomeAssistant, entity_id: str) -> bool:
         return True
 
     try:
-        device_class = get_device_class(hass, entity_id)
-    except HomeAssistantError:
+        device_class = get_device_class(menuai, entity_id)
+    except menuaiError:
         # The entity no longer exists
         return False
     if (
@@ -134,21 +134,21 @@ class CloudAlexaConfig(alexa_config.AbstractConfig):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config: dict,
         cloud_user: str,
         prefs: CloudPreferences,
         cloud: Cloud[CloudClient],
     ) -> None:
         """Initialize the Alexa config."""
-        super().__init__(hass)
+        super().__init__(menuai)
         self._config = config
         self._cloud_user = cloud_user
         self._prefs = prefs
         self._cloud = cloud
         self._token = None
         self._token_valid: datetime | None = None
-        self._cur_entity_prefs = async_get_assistant_settings(hass, CLOUD_ALEXA)
+        self._cur_entity_prefs = async_get_assistant_settings(menuai, CLOUD_ALEXA)
         self._alexa_sync_unsub: Callable[[], None] | None = None
         self._endpoint: str | URL | None = None
 
@@ -206,11 +206,11 @@ class CloudAlexaConfig(alexa_config.AbstractConfig):
             return
 
         for entity_id in {
-            *self.hass.states.async_entity_ids(),
+            *self.menuai.states.async_entity_ids(),
             *self._prefs.alexa_entity_configs,
         }:
             async_expose_entity(
-                self.hass,
+                self.menuai,
                 CLOUD_ALEXA,
                 entity_id,
                 self._should_expose_legacy(entity_id),
@@ -220,7 +220,7 @@ class CloudAlexaConfig(alexa_config.AbstractConfig):
         """Initialize the Alexa config."""
         await super().async_initialize()
 
-        async def on_hass_started(hass: HomeAssistant) -> None:
+        async def on_menuai_started(menuai: menuai) -> None:
             if self._prefs.alexa_settings_version != ALEXA_SETTINGS_VERSION:
                 _LOGGER.info(
                     "Start migration of Alexa settings from v%s to v%s",
@@ -233,7 +233,7 @@ class CloudAlexaConfig(alexa_config.AbstractConfig):
                     and not any(
                         settings.get("should_expose", False)
                         for settings in async_get_assistant_settings(
-                            hass, CLOUD_ALEXA
+                            menuai, CLOUD_ALEXA
                         ).values()
                     )
                 ):
@@ -249,22 +249,22 @@ class CloudAlexaConfig(alexa_config.AbstractConfig):
                 )
             self._on_deinitialize.append(
                 async_listen_entity_updates(
-                    self.hass, CLOUD_ALEXA, self._async_exposed_entities_updated
+                    self.menuai, CLOUD_ALEXA, self._async_exposed_entities_updated
                 )
             )
 
-        async def on_hass_start(hass: HomeAssistant) -> None:
-            if self.enabled and ALEXA_DOMAIN not in self.hass.config.components:
-                await async_setup_component(self.hass, ALEXA_DOMAIN, {})
+        async def on_menuai_start(menuai: menuai) -> None:
+            if self.enabled and ALEXA_DOMAIN not in self.menuai.config.components:
+                await async_setup_component(self.menuai, ALEXA_DOMAIN, {})
 
-        self._on_deinitialize.append(start.async_at_start(self.hass, on_hass_start))
-        self._on_deinitialize.append(start.async_at_started(self.hass, on_hass_started))
+        self._on_deinitialize.append(start.async_at_start(self.menuai, on_menuai_start))
+        self._on_deinitialize.append(start.async_at_started(self.menuai, on_menuai_started))
 
         self._on_deinitialize.append(
             self._prefs.async_listen_updates(self._async_prefs_updated)
         )
         self._on_deinitialize.append(
-            self.hass.bus.async_listen(
+            self.menuai.bus.async_listen(
                 er.EVENT_ENTITY_REGISTRY_UPDATED,
                 self._handle_entity_registry_updated,
             )
@@ -281,7 +281,7 @@ class CloudAlexaConfig(alexa_config.AbstractConfig):
         if entity_expose is not None:
             return entity_expose
 
-        entity_registry = er.async_get(self.hass)
+        entity_registry = er.async_get(self.menuai)
         if registry_entry := entity_registry.async_get(entity_id):
             auxiliary_entity = (
                 registry_entry.entity_category is not None
@@ -292,12 +292,12 @@ class CloudAlexaConfig(alexa_config.AbstractConfig):
 
         # Backwards compat
         if (default_expose := self._prefs.alexa_default_expose) is None:
-            return not auxiliary_entity and entity_supported(self.hass, entity_id)
+            return not auxiliary_entity and entity_supported(self.menuai, entity_id)
 
         return (
             not auxiliary_entity
             and split_entity_id(entity_id)[0] in default_expose
-            and entity_supported(self.hass, entity_id)
+            and entity_supported(self.menuai, entity_id)
         )
 
     @callback
@@ -309,7 +309,7 @@ class CloudAlexaConfig(alexa_config.AbstractConfig):
                 return False
             return entity_filter(entity_id)
 
-        return async_should_expose(self.hass, CLOUD_ALEXA, entity_id)
+        return async_should_expose(self.menuai, CLOUD_ALEXA, entity_id)
 
     @callback
     def async_invalidate_access_token(self) -> None:
@@ -328,7 +328,7 @@ class CloudAlexaConfig(alexa_config.AbstractConfig):
             if body["reason"] in ("RefreshTokenNotFound", "UnknownRegion"):
                 if self.should_report_state:
                     persistent_notification.async_create(
-                        self.hass,
+                        self.menuai,
                         (
                             "There was an error reporting state to Alexa"
                             f" ({body['reason']}). Please re-link your Alexa skill via"
@@ -360,11 +360,11 @@ class CloudAlexaConfig(alexa_config.AbstractConfig):
         updated_prefs = prefs.last_updated
 
         if (
-            ALEXA_DOMAIN not in self.hass.config.components
+            ALEXA_DOMAIN not in self.menuai.config.components
             and self.enabled
-            and self.hass.is_running
+            and self.menuai.is_running
         ):
-            await async_setup_component(self.hass, ALEXA_DOMAIN, {})
+            await async_setup_component(self.menuai, ALEXA_DOMAIN, {})
 
         if self.should_report_state != self.is_reporting_states:
             if self.should_report_state:
@@ -400,14 +400,14 @@ class CloudAlexaConfig(alexa_config.AbstractConfig):
             self._alexa_sync_unsub()
 
         self._alexa_sync_unsub = async_call_later(
-            self.hass, SYNC_DELAY, self._sync_prefs
+            self.menuai, SYNC_DELAY, self._sync_prefs
         )
 
     async def _sync_prefs(self, _now: datetime) -> None:
         """Sync the updated preferences to Alexa."""
         self._alexa_sync_unsub = None
         old_prefs = self._cur_entity_prefs
-        new_prefs = async_get_assistant_settings(self.hass, CLOUD_ALEXA)
+        new_prefs = async_get_assistant_settings(self.menuai, CLOUD_ALEXA)
 
         seen = set()
         to_update = []
@@ -467,7 +467,7 @@ class CloudAlexaConfig(alexa_config.AbstractConfig):
 
         is_enabled = self.enabled
 
-        for entity in alexa_entities.async_get_entities(self.hass, self):
+        for entity in alexa_entities.async_get_entities(self.menuai, self):
             if is_enabled and self.should_expose(entity.entity_id):
                 to_update.append(entity.entity_id)
             else:
@@ -492,7 +492,7 @@ class CloudAlexaConfig(alexa_config.AbstractConfig):
             tasks.append(
                 asyncio.create_task(
                     alexa_state_report.async_send_add_or_update_message(
-                        self.hass, self, to_update
+                        self.menuai, self, to_update
                     )
                 )
             )
@@ -501,7 +501,7 @@ class CloudAlexaConfig(alexa_config.AbstractConfig):
             tasks.append(
                 asyncio.create_task(
                     alexa_state_report.async_send_delete_message(
-                        self.hass, self, to_remove
+                        self.menuai, self, to_remove
                     )
                 )
             )

@@ -9,22 +9,22 @@ from python_opensky import OpenSky
 from python_opensky.exceptions import OpenSkyUnauthenticatedError
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_LATITUDE,
     CONF_LONGITUDE,
     CONF_PASSWORD,
     CONF_RADIUS,
     CONF_USERNAME,
 )
-from homeassistant.core import callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.core import callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
     CONF_ALTITUDE,
@@ -74,8 +74,8 @@ class OpenSkyConfigFlowHandler(ConfigFlow, domain=DOMAIN):
                     }
                 ),
                 {
-                    CONF_LATITUDE: self.hass.config.latitude,
-                    CONF_LONGITUDE: self.hass.config.longitude,
+                    CONF_LATITUDE: self.menuai.config.latitude,
+                    CONF_LONGITUDE: self.menuai.config.longitude,
                     CONF_ALTITUDE: DEFAULT_ALTITUDE,
                 },
             ),
@@ -99,7 +99,7 @@ class OpenSkyOptionsFlowHandler(OptionsFlow):
             if user_input[CONF_CONTRIBUTING_USER] and not authentication:
                 errors["base"] = "no_authentication"
             if authentication and not errors:
-                opensky = OpenSky(session=async_get_clientsession(self.hass))
+                opensky = OpenSky(session=async_get_clientsession(self.menuai))
                 try:
                     await opensky.authenticate(
                         BasicAuth(

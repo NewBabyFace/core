@@ -10,19 +10,19 @@ from androidtv.constants import APPS, KEYS
 from androidtv.setup_async import AndroidTVAsync, FireTVAsync
 import voluptuous as vol
 
-from homeassistant.components import persistent_notification
-from homeassistant.components.media_player import (
+from menuai.components import persistent_notification
+from menuai.components.media_player import (
     MediaPlayerDeviceClass,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
 )
-from homeassistant.const import ATTR_COMMAND
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util.dt import utcnow
+from menuai.const import ATTR_COMMAND
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, entity_platform
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util.dt import utcnow
 
 from . import AndroidTVConfigEntry
 from .const import (
@@ -63,7 +63,7 @@ ANDROIDTV_STATES = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: AndroidTVConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -167,13 +167,13 @@ class ADBDevice(AndroidTVEntity, MediaPlayerEntity):
         self.turn_off_command = options.get(CONF_TURN_OFF_COMMAND)
         self.turn_on_command = options.get(CONF_TURN_ON_COMMAND)
 
-    async def async_added_to_hass(self) -> None:
-        """Set config parameter when add to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Set config parameter when add to menuai."""
+        await super().async_added_to_menuai()
         self._process_config()
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"{SIGNAL_CONFIG_ENTITY}_{self._entry_id}",
                 self._process_config,
             )
@@ -313,7 +313,7 @@ class ADBDevice(AndroidTVEntity, MediaPlayerEntity):
                 f" {self.entity_id}: '{output}'"
             )
             persistent_notification.async_create(
-                self.hass,
+                self.menuai,
                 msg,
                 title="Android Debug Bridge",
             )
@@ -321,8 +321,8 @@ class ADBDevice(AndroidTVEntity, MediaPlayerEntity):
 
     @adb_decorator()
     async def service_download(self, device_path: str, local_path: str) -> None:
-        """Download a file from your Android / Fire TV device to your Home Assistant instance."""
-        if not self.hass.config.is_allowed_path(local_path):
+        """Download a file from your Android / Fire TV device to your MenuAI instance."""
+        if not self.menuai.config.is_allowed_path(local_path):
             _LOGGER.warning("'%s' is not secure to load data from!", local_path)
             return
 
@@ -330,8 +330,8 @@ class ADBDevice(AndroidTVEntity, MediaPlayerEntity):
 
     @adb_decorator()
     async def service_upload(self, device_path: str, local_path: str) -> None:
-        """Upload a file from your Home Assistant instance to an Android / Fire TV device."""
-        if not self.hass.config.is_allowed_path(local_path):
+        """Upload a file from your MenuAI instance to an Android / Fire TV device."""
+        if not self.menuai.config.is_allowed_path(local_path):
             _LOGGER.warning("'%s' is not secure to load data from!", local_path)
             return
 

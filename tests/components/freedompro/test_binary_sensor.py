@@ -5,10 +5,10 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.const import STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.util.dt import utcnow
+from menuai.const import STATE_OFF, STATE_ON
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.util.dt import utcnow
 
 from .conftest import get_states_response_for_uid
 
@@ -45,7 +45,7 @@ from tests.common import MockConfigEntry, async_fire_time_changed
     ],
 )
 async def test_binary_sensor_get_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
     init_integration: MockConfigEntry,
@@ -63,7 +63,7 @@ async def test_binary_sensor_get_state(
     assert device.name == name
     assert device.model == model
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.attributes.get("friendly_name") == name
 
@@ -74,13 +74,13 @@ async def test_binary_sensor_get_state(
     assert state.state == STATE_OFF
 
     with patch(
-        "homeassistant.components.freedompro.coordinator.get_states",
+        "menuai.components.freedompro.coordinator.get_states",
         return_value=[],
     ):
-        async_fire_time_changed(hass, utcnow() + timedelta(hours=2))
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, utcnow() + timedelta(hours=2))
+        await menuai.async_block_till_done()
 
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert state.attributes.get("friendly_name") == name
 
@@ -100,13 +100,13 @@ async def test_binary_sensor_get_state(
     elif states_response[0]["type"] == "contactSensor":
         states_response[0]["state"]["contactSensorState"] = True
     with patch(
-        "homeassistant.components.freedompro.coordinator.get_states",
+        "menuai.components.freedompro.coordinator.get_states",
         return_value=states_response,
     ):
-        async_fire_time_changed(hass, utcnow() + timedelta(hours=2))
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, utcnow() + timedelta(hours=2))
+        await menuai.async_block_till_done()
 
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert state.attributes.get("friendly_name") == name
 

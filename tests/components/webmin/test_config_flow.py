@@ -9,11 +9,11 @@ from xmlrpc.client import Fault
 from aiohttp.client_exceptions import ClientConnectionError, ClientResponseError
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.webmin.const import DOMAIN
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.webmin.const import DOMAIN
+from menuai.const import CONF_HOST
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from .conftest import TEST_USER_INPUT
 
@@ -23,9 +23,9 @@ pytestmark = pytest.mark.usefixtures("mock_setup_entry")
 
 
 @pytest.fixture
-async def user_flow(hass: HomeAssistant) -> str:
+async def user_flow(menuai: menuai) -> str:
     """Return a user-initiated flow after filling in host info."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -37,17 +37,17 @@ async def user_flow(hass: HomeAssistant) -> str:
     "fixture", ["webmin_update_without_mac.json", "webmin_update.json"]
 )
 async def test_form_user(
-    hass: HomeAssistant, user_flow: str, mock_setup_entry: AsyncMock, fixture: str
+    menuai: menuai, user_flow: str, mock_setup_entry: AsyncMock, fixture: str
 ) -> None:
     """Test a successful user initiated flow."""
     with patch(
-        "homeassistant.components.webmin.helpers.WebminInstance.update",
-        return_value=await async_load_json_object_fixture(hass, fixture, DOMAIN),
+        "menuai.components.webmin.helpers.WebminInstance.update",
+        return_value=await async_load_json_object_fixture(menuai, fixture, DOMAIN),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             user_flow, TEST_USER_INPUT
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == TEST_USER_INPUT[CONF_HOST]
     assert result["options"] == TEST_USER_INPUT
@@ -79,14 +79,14 @@ async def test_form_user(
     ],
 )
 async def test_form_user_errors(
-    hass: HomeAssistant, user_flow: str, exception: Exception, error_type: str
+    menuai: menuai, user_flow: str, exception: Exception, error_type: str
 ) -> None:
     """Test we handle errors."""
     with patch(
-        "homeassistant.components.webmin.helpers.WebminInstance.update",
+        "menuai.components.webmin.helpers.WebminInstance.update",
         side_effect=exception,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             user_flow, TEST_USER_INPUT
         )
 
@@ -95,12 +95,12 @@ async def test_form_user_errors(
     assert result["errors"] == {"base": error_type}
 
     with patch(
-        "homeassistant.components.webmin.helpers.WebminInstance.update",
+        "menuai.components.webmin.helpers.WebminInstance.update",
         return_value=await async_load_json_object_fixture(
-            hass, "webmin_update.json", DOMAIN
+            menuai, "webmin_update.json", DOMAIN
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], TEST_USER_INPUT
         )
 
@@ -110,39 +110,39 @@ async def test_form_user_errors(
 
 
 async def test_duplicate_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     user_flow: str,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test a successful user initiated flow."""
     with patch(
-        "homeassistant.components.webmin.helpers.WebminInstance.update",
+        "menuai.components.webmin.helpers.WebminInstance.update",
         return_value=await async_load_json_object_fixture(
-            hass, "webmin_update.json", DOMAIN
+            menuai, "webmin_update.json", DOMAIN
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             user_flow, TEST_USER_INPUT
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == TEST_USER_INPUT[CONF_HOST]
     assert result["options"] == TEST_USER_INPUT
 
     with patch(
-        "homeassistant.components.webmin.helpers.WebminInstance.update",
+        "menuai.components.webmin.helpers.WebminInstance.update",
         return_value=await async_load_json_object_fixture(
-            hass, "webmin_update.json", DOMAIN
+            menuai, "webmin_update.json", DOMAIN
         ),
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], TEST_USER_INPUT
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"

@@ -8,7 +8,7 @@ from typing import Any
 
 import requests
 
-from homeassistant.components.notify import (
+from menuai.components.notify import (
     ATTR_DATA,
     ATTR_MESSAGE,
     ATTR_TARGET,
@@ -16,9 +16,9 @@ from homeassistant.components.notify import (
     ATTR_TITLE_DEFAULT,
     BaseNotificationService,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import dt as dt_util
 
 from . import device_name_for_push_id, devices_with_push, enabled_push_ids
 
@@ -28,7 +28,7 @@ PUSH_URL = "https://ios-push.home-assistant.io/push"
 
 
 def log_rate_limits(
-    hass: HomeAssistant, target: str, resp: dict[str, Any], level: int = 20
+    menuai: menuai, target: str, resp: dict[str, Any], level: int = 20
 ) -> None:
     """Output rate limit log line at given level."""
     rate_limits = resp["rateLimits"]
@@ -42,7 +42,7 @@ def log_rate_limits(
     _LOGGER.log(
         level,
         rate_limit_msg,
-        device_name_for_push_id(hass, target),
+        device_name_for_push_id(menuai, target),
         rate_limits["successful"],
         rate_limits["maximum"],
         rate_limits["errors"],
@@ -51,16 +51,16 @@ def log_rate_limits(
 
 
 def get_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> iOSNotificationService | None:
     """Get the iOS notification service."""
-    if "ios.notify" not in hass.config.components:
+    if "ios.notify" not in menuai.config.components:
         # Need this to enable requirements checking in the app.
-        hass.config.components.add("ios.notify")
+        menuai.config.components.add("ios.notify")
 
-    if not devices_with_push(hass):
+    if not devices_with_push(menuai):
         return None
 
     return iOSNotificationService()
@@ -75,7 +75,7 @@ class iOSNotificationService(BaseNotificationService):
     @property
     def targets(self) -> dict[str, str]:
         """Return a dictionary of registered targets."""
-        return devices_with_push(self.hass)
+        return devices_with_push(self.menuai)
 
     def send_message(self, message: str = "", **kwargs: Any) -> None:
         """Send a message to the Lambda APNS gateway."""
@@ -89,13 +89,13 @@ class iOSNotificationService(BaseNotificationService):
             data[ATTR_TITLE] = kwargs.get(ATTR_TITLE)
 
         if not (targets := kwargs.get(ATTR_TARGET)):
-            targets = enabled_push_ids(self.hass)
+            targets = enabled_push_ids(self.menuai)
 
         if kwargs.get(ATTR_DATA) is not None:
             data[ATTR_DATA] = kwargs.get(ATTR_DATA)
 
         for target in targets:
-            if target not in enabled_push_ids(self.hass):
+            if target not in enabled_push_ids(self.menuai):
                 _LOGGER.error("The target (%s) does not exist in .ios.conf", targets)
                 return
 
@@ -111,8 +111,8 @@ class iOSNotificationService(BaseNotificationService):
                 message = req.json().get("message", fallback_message)
                 if req.status_code == HTTPStatus.TOO_MANY_REQUESTS:
                     _LOGGER.warning(message)
-                    log_rate_limits(self.hass, target, req.json(), 30)
+                    log_rate_limits(self.menuai, target, req.json(), 30)
                 else:
                     _LOGGER.error(message)
             else:
-                log_rate_limits(self.hass, target, req.json())
+                log_rate_limits(self.menuai, target, req.json())

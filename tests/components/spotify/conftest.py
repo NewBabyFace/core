@@ -26,13 +26,13 @@ from spotifyaio.models import (
     UserProfile,
 )
 
-from homeassistant.components.application_credentials import (
+from menuai.components.application_credentials import (
     ClientCredential,
     async_import_client_credential,
 )
-from homeassistant.components.spotify.const import DOMAIN, SPOTIFY_SCOPES
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.spotify.const import DOMAIN, SPOTIFY_SCOPES
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry, load_fixture
 
@@ -47,7 +47,7 @@ def mock_expires_at() -> int:
 
 @pytest.fixture
 def mock_config_entry(expires_at: int) -> MockConfigEntry:
-    """Create Spotify entry in Home Assistant."""
+    """Create Spotify entry in MenuAI."""
     return MockConfigEntry(
         domain=DOMAIN,
         title="spotify_1",
@@ -68,11 +68,11 @@ def mock_config_entry(expires_at: int) -> MockConfigEntry:
 
 
 @pytest.fixture
-async def setup_credentials(hass: HomeAssistant) -> None:
+async def setup_credentials(menuai: menuai) -> None:
     """Fixture to setup credentials."""
-    assert await async_setup_component(hass, "application_credentials", {})
+    assert await async_setup_component(menuai, "application_credentials", {})
     await async_import_client_credential(
-        hass,
+        menuai,
         DOMAIN,
         ClientCredential("CLIENT_ID", "CLIENT_SECRET"),
         DOMAIN,
@@ -82,7 +82,7 @@ async def setup_credentials(hass: HomeAssistant) -> None:
 @pytest.fixture(autouse=True)
 async def patch_sleep() -> Generator[AsyncMock]:
     """Fixture to setup credentials."""
-    with patch("homeassistant.components.spotify.media_player.AFTER_REQUEST_SLEEP", 0):
+    with patch("menuai.components.spotify.media_player.AFTER_REQUEST_SLEEP", 0):
         yield
 
 
@@ -91,10 +91,10 @@ def mock_spotify() -> Generator[AsyncMock]:
     """Mock the Spotify API."""
     with (
         patch(
-            "homeassistant.components.spotify.SpotifyClient", autospec=True
+            "menuai.components.spotify.SpotifyClient", autospec=True
         ) as spotify_mock,
         patch(
-            "homeassistant.components.spotify.config_flow.SpotifyClient",
+            "menuai.components.spotify.config_flow.SpotifyClient",
             new=spotify_mock,
         ),
     ):

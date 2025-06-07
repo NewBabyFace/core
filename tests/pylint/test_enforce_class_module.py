@@ -1,4 +1,4 @@
-"""Tests for pylint hass_enforce_class_module plugin."""
+"""Tests for pylint menuai_enforce_class_module plugin."""
 
 from __future__ import annotations
 
@@ -44,8 +44,8 @@ from . import assert_adds_messages, assert_no_messages
 @pytest.mark.parametrize(
     "path",
     [
-        "homeassistant.components.pylint_test.coordinator",
-        "homeassistant.components.pylint_test.coordinator.my_coordinator",
+        "menuai.components.pylint_test.coordinator",
+        "menuai.components.pylint_test.coordinator.my_coordinator",
     ],
 )
 def test_enforce_class_module_good(
@@ -66,10 +66,10 @@ def test_enforce_class_module_good(
 @pytest.mark.parametrize(
     "path",
     [
-        "homeassistant.components.sensor",
-        "homeassistant.components.sensor.entity",
-        "homeassistant.components.pylint_test.sensor",
-        "homeassistant.components.pylint_test.sensor.entity",
+        "menuai.components.sensor",
+        "menuai.components.sensor.entity",
+        "menuai.components.pylint_test.sensor",
+        "menuai.components.pylint_test.sensor.entity",
     ],
 )
 def test_enforce_class_platform_good(
@@ -102,10 +102,10 @@ def test_enforce_class_platform_good(
 @pytest.mark.parametrize(
     "path",
     [
-        "homeassistant.components.pylint_test",
-        "homeassistant.components.pylint_test.my_coordinator",
-        "homeassistant.components.pylint_test.coordinator_other",
-        "homeassistant.components.pylint_test.sensor",
+        "menuai.components.pylint_test",
+        "menuai.components.pylint_test.my_coordinator",
+        "menuai.components.pylint_test.coordinator_other",
+        "menuai.components.pylint_test.sensor",
     ],
 )
 def test_enforce_class_module_bad_simple(
@@ -136,7 +136,7 @@ def test_enforce_class_module_bad_simple(
     with assert_adds_messages(
         linter,
         MessageTest(
-            msg_id="hass-enforce-class-module",
+            msg_id="menuai-enforce-class-module",
             line=5,
             node=root_node.body[1],
             args=("DataUpdateCoordinator", "coordinator"),
@@ -146,7 +146,7 @@ def test_enforce_class_module_bad_simple(
             end_col_offset=21,
         ),
         MessageTest(
-            msg_id="hass-enforce-class-module",
+            msg_id="menuai-enforce-class-module",
             line=11,
             node=root_node.body[3],
             args=("CoordinatorEntity", "entity"),
@@ -162,10 +162,10 @@ def test_enforce_class_module_bad_simple(
 @pytest.mark.parametrize(
     "path",
     [
-        "homeassistant.components.pylint_test",
-        "homeassistant.components.pylint_test.my_coordinator",
-        "homeassistant.components.pylint_test.coordinator_other",
-        "homeassistant.components.pylint_test.sensor",
+        "menuai.components.pylint_test",
+        "menuai.components.pylint_test.my_coordinator",
+        "menuai.components.pylint_test.coordinator_other",
+        "menuai.components.pylint_test.sensor",
     ],
 )
 def test_enforce_class_module_bad_nested(
@@ -193,7 +193,7 @@ def test_enforce_class_module_bad_nested(
     with assert_adds_messages(
         linter,
         MessageTest(
-            msg_id="hass-enforce-class-module",
+            msg_id="menuai-enforce-class-module",
             line=5,
             node=root_node.body[1],
             args=("DataUpdateCoordinator", "coordinator"),
@@ -203,7 +203,7 @@ def test_enforce_class_module_bad_nested(
             end_col_offset=21,
         ),
         MessageTest(
-            msg_id="hass-enforce-class-module",
+            msg_id="menuai-enforce-class-module",
             line=8,
             node=root_node.body[2],
             args=("DataUpdateCoordinator", "coordinator"),
@@ -219,9 +219,9 @@ def test_enforce_class_module_bad_nested(
 @pytest.mark.parametrize(
     "path",
     [
-        "homeassistant.components.sensor",
-        "homeassistant.components.sensor.entity",
-        "homeassistant.components.pylint_test.entity",
+        "menuai.components.sensor",
+        "menuai.components.sensor.entity",
+        "menuai.components.pylint_test.entity",
     ],
 )
 def test_enforce_entity_good(
@@ -248,9 +248,9 @@ def test_enforce_entity_good(
 @pytest.mark.parametrize(
     "path",
     [
-        "homeassistant.components.pylint_test",
-        "homeassistant.components.pylint_test.select",
-        "homeassistant.components.pylint_test.select.entity",
+        "menuai.components.pylint_test",
+        "menuai.components.pylint_test.select",
+        "menuai.components.pylint_test.select.entity",
     ],
 )
 def test_enforce_entity_bad(
@@ -273,7 +273,7 @@ def test_enforce_entity_bad(
     with assert_adds_messages(
         linter,
         MessageTest(
-            msg_id="hass-enforce-class-module",
+            msg_id="menuai-enforce-class-module",
             line=5,
             node=root_node.body[1],
             args=("Entity", "entity"),

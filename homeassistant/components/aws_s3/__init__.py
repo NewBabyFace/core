@@ -9,9 +9,9 @@ from aiobotocore.client import AioBaseClient as S3Client
 from aiobotocore.session import AioSession
 from botocore.exceptions import ClientError, ConnectionError, ParamValidationError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryError, ConfigEntryNotReady
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryError, ConfigEntryNotReady
 
 from .const import (
     CONF_ACCESS_KEY_ID,
@@ -28,7 +28,7 @@ type S3ConfigEntry = ConfigEntry[S3Client]
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: S3ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: S3ConfigEntry) -> bool:
     """Set up S3 from a config entry."""
 
     data = cast(dict, entry.data)
@@ -67,7 +67,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: S3ConfigEntry) -> bool:
     entry.runtime_data = client
 
     def notify_backup_listeners() -> None:
-        for listener in hass.data.get(DATA_BACKUP_AGENT_LISTENERS, []):
+        for listener in menuai.data.get(DATA_BACKUP_AGENT_LISTENERS, []):
             listener()
 
     entry.async_on_unload(entry.async_on_state_change(notify_backup_listeners))
@@ -75,7 +75,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: S3ConfigEntry) -> bool:
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: S3ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: S3ConfigEntry) -> bool:
     """Unload a config entry."""
     client = entry.runtime_data
     await client.__aexit__(None, None, None)

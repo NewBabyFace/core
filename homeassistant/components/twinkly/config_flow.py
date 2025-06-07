@@ -9,10 +9,10 @@ from aiohttp import ClientError
 from ttls.client import Twinkly
 from voluptuous import Required, Schema
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_ID, CONF_MODEL, CONF_NAME
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_ID, CONF_MODEL, CONF_NAME
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
 
 from .const import DEV_ID, DEV_MODEL, DEV_NAME, DOMAIN
 
@@ -41,7 +41,7 @@ class TwinklyConfigFlow(ConfigFlow, domain=DOMAIN):
         if host is not None:
             try:
                 device_info = await Twinkly(
-                    host, async_get_clientsession(self.hass)
+                    host, async_get_clientsession(self.menuai)
                 ).get_details()
             except (TimeoutError, ClientError):
                 errors[CONF_HOST] = "cannot_connect"
@@ -63,7 +63,7 @@ class TwinklyConfigFlow(ConfigFlow, domain=DOMAIN):
         """Handle dhcp discovery for twinkly."""
         self._async_abort_entries_match({CONF_HOST: discovery_info.ip})
         device_info = await Twinkly(
-            discovery_info.ip, async_get_clientsession(self.hass)
+            discovery_info.ip, async_get_clientsession(self.menuai)
         ).get_details()
         await self.async_set_unique_id(device_info["mac"])
         self._abort_if_unique_id_configured(updates={CONF_HOST: discovery_info.ip})

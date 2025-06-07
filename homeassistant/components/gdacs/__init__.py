@@ -10,20 +10,20 @@ from aio_georss_client.status_update import StatusUpdate
 from aio_georss_gdacs import GdacsFeedManager
 from aio_georss_gdacs.feed_entry import FeedEntry
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_LATITUDE,
     CONF_LONGITUDE,
     CONF_RADIUS,
     CONF_SCAN_INTERVAL,
     UnitOfLength,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import aiohttp_client
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.util.unit_conversion import DistanceConverter
-from homeassistant.util.unit_system import US_CUSTOMARY_SYSTEM
+from menuai.core import menuai, callback
+from menuai.helpers import aiohttp_client
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.event import async_track_time_interval
+from menuai.util.unit_conversion import DistanceConverter
+from menuai.util.unit_system import US_CUSTOMARY_SYSTEM
 
 from .const import CONF_CATEGORIES, DEFAULT_SCAN_INTERVAL, PLATFORMS  # noqa: F401
 
@@ -33,43 +33,43 @@ type GdacsConfigEntry = ConfigEntry[GdacsFeedEntityManager]
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, config_entry: GdacsConfigEntry
+    menuai: menuai, config_entry: GdacsConfigEntry
 ) -> bool:
     """Set up the GDACS component as config entry."""
     radius = config_entry.data[CONF_RADIUS]
-    if hass.config.units is US_CUSTOMARY_SYSTEM:
+    if menuai.config.units is US_CUSTOMARY_SYSTEM:
         radius = DistanceConverter.convert(
             radius, UnitOfLength.MILES, UnitOfLength.KILOMETERS
         )
     # Create feed entity manager for all platforms.
-    manager = GdacsFeedEntityManager(hass, config_entry, radius)
+    manager = GdacsFeedEntityManager(menuai, config_entry, radius)
     config_entry.runtime_data = manager
     _LOGGER.debug("Feed entity manager added for %s", config_entry.entry_id)
     await manager.async_init()
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: GdacsConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: GdacsConfigEntry) -> bool:
     """Unload an GDACS component config entry."""
     await entry.runtime_data.async_stop()
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 class GdacsFeedEntityManager:
     """Feed Entity Manager for GDACS feed."""
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: GdacsConfigEntry, radius_in_km: float
+        self, menuai: menuai, config_entry: GdacsConfigEntry, radius_in_km: float
     ) -> None:
         """Initialize the Feed Entity Manager."""
-        self._hass = hass
+        self._menuai = menuai
         self._config_entry = config_entry
         coordinates = (
             config_entry.data[CONF_LATITUDE],
             config_entry.data[CONF_LONGITUDE],
         )
         categories = config_entry.data[CONF_CATEGORIES]
-        websession = aiohttp_client.async_get_clientsession(hass)
+        websession = aiohttp_client.async_get_clientsession(menuai)
         self._feed_manager = GdacsFeedManager(
             websession,
             self._generate_entity,
@@ -89,7 +89,7 @@ class GdacsFeedEntityManager:
     async def async_init(self) -> None:
         """Schedule initial and regular updates based on configured time interval."""
 
-        await self._hass.config_entries.async_forward_entry_setups(
+        await self._menuai.config_entries.async_forward_entry_setups(
             self._config_entry, PLATFORMS
         )
 
@@ -99,7 +99,7 @@ class GdacsFeedEntityManager:
 
         # Trigger updates at regular intervals.
         self._track_time_remove_callback = async_track_time_interval(
-            self._hass, update, self._scan_interval
+            self._menuai, update, self._scan_interval
         )
 
         _LOGGER.debug("Feed entity manager initialized")
@@ -134,7 +134,7 @@ class GdacsFeedEntityManager:
     async def _generate_entity(self, external_id: str) -> None:
         """Generate new entity."""
         async_dispatcher_send(
-            self._hass,
+            self._menuai,
             self.async_event_new_entity(),
             self,
             self._config_entry.unique_id,
@@ -143,14 +143,14 @@ class GdacsFeedEntityManager:
 
     async def _update_entity(self, external_id: str) -> None:
         """Update entity."""
-        async_dispatcher_send(self._hass, f"gdacs_update_{external_id}")
+        async_dispatcher_send(self._menuai, f"gdacs_update_{external_id}")
 
     async def _remove_entity(self, external_id: str) -> None:
         """Remove entity."""
-        async_dispatcher_send(self._hass, f"gdacs_delete_{external_id}")
+        async_dispatcher_send(self._menuai, f"gdacs_delete_{external_id}")
 
     async def _status_update(self, status_info: StatusUpdate) -> None:
         """Propagate status update."""
         _LOGGER.debug("Status update received: %s", status_info)
         self._status_info = status_info
-        async_dispatcher_send(self._hass, f"gdacs_status_{self._config_entry_id}")
+        async_dispatcher_send(self._menuai, f"gdacs_status_{self._config_entry_id}")

@@ -2,7 +2,7 @@
 
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .mocks import (
     _create_yale_api_with_devices,
@@ -15,17 +15,17 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test generating diagnostics for a config entry."""
     lock_one = await _mock_lock_from_fixture(
-        hass, "get_lock.online_with_doorsense.json"
+        menuai, "get_lock.online_with_doorsense.json"
     )
-    doorbell_one = await _mock_doorbell_from_fixture(hass, "get_doorbell.json")
+    doorbell_one = await _mock_doorbell_from_fixture(menuai, "get_doorbell.json")
 
-    entry, _, _ = await _create_yale_api_with_devices(hass, [lock_one, doorbell_one])
-    diag = await get_diagnostics_for_config_entry(hass, hass_client, entry)
+    entry, _, _ = await _create_yale_api_with_devices(menuai, [lock_one, doorbell_one])
+    diag = await get_diagnostics_for_config_entry(menuai, menuai_client, entry)
 
     assert diag == snapshot

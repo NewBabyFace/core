@@ -8,25 +8,25 @@ from datetime import date, datetime
 from decimal import Decimal
 import logging
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     RestoreSensor,
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     PERCENTAGE,
     EntityCategory,
     UnitOfDataRate,
     UnitOfInformation,
     UnitOfTime,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
     DOMAIN,
@@ -274,17 +274,17 @@ SENSOR_LINK_TYPES = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up device tracker for Netgear component."""
-    router = hass.data[DOMAIN][entry.entry_id][KEY_ROUTER]
-    coordinator = hass.data[DOMAIN][entry.entry_id][KEY_COORDINATOR]
-    coordinator_traffic = hass.data[DOMAIN][entry.entry_id][KEY_COORDINATOR_TRAFFIC]
-    coordinator_speed = hass.data[DOMAIN][entry.entry_id][KEY_COORDINATOR_SPEED]
-    coordinator_utilization = hass.data[DOMAIN][entry.entry_id][KEY_COORDINATOR_UTIL]
-    coordinator_link = hass.data[DOMAIN][entry.entry_id][KEY_COORDINATOR_LINK]
+    router = menuai.data[DOMAIN][entry.entry_id][KEY_ROUTER]
+    coordinator = menuai.data[DOMAIN][entry.entry_id][KEY_COORDINATOR]
+    coordinator_traffic = menuai.data[DOMAIN][entry.entry_id][KEY_COORDINATOR_TRAFFIC]
+    coordinator_speed = menuai.data[DOMAIN][entry.entry_id][KEY_COORDINATOR_SPEED]
+    coordinator_utilization = menuai.data[DOMAIN][entry.entry_id][KEY_COORDINATOR_UTIL]
+    coordinator_link = menuai.data[DOMAIN][entry.entry_id][KEY_COORDINATOR_LINK]
 
     async_add_entities(
         NetgearRouterSensorEntity(coordinator, router, description)
@@ -390,9 +390,9 @@ class NetgearRouterSensorEntity(NetgearRouterCoordinatorEntity, RestoreSensor):
         """Return the state of the sensor."""
         return self._value
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         if self.coordinator.data is None:
             sensor_data = await self.async_get_last_sensor_data()
             if sensor_data is not None:

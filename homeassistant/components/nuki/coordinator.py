@@ -12,11 +12,11 @@ from pynuki.bridge import InvalidCredentialsException
 from pynuki.device import NukiDevice
 from requests.exceptions import RequestException
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN, ERROR_STATES
 from .helpers import parse_id
@@ -33,7 +33,7 @@ class NukiCoordinator(DataUpdateCoordinator[None]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         bridge: NukiBridge,
         locks: list[NukiLock],
@@ -41,7 +41,7 @@ class NukiCoordinator(DataUpdateCoordinator[None]):
     ) -> None:
         """Initialize my coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name="nuki devices",
@@ -62,7 +62,7 @@ class NukiCoordinator(DataUpdateCoordinator[None]):
             # Note: TimeoutError and aiohttp.ClientError are already
             # handled by the data update coordinator.
             async with asyncio.timeout(10):
-                events = await self.hass.async_add_executor_job(
+                events = await self.menuai.async_add_executor_job(
                     self.update_devices, self.locks + self.openers
                 )
         except InvalidCredentialsException as err:
@@ -70,7 +70,7 @@ class NukiCoordinator(DataUpdateCoordinator[None]):
         except RequestException as err:
             raise UpdateFailed(f"Error communicating with Bridge: {err}") from err
 
-        ent_reg = er.async_get(self.hass)
+        ent_reg = er.async_get(self.menuai)
         for event, device_ids in events.items():
             for device_id in device_ids:
                 entity_id = ent_reg.async_get_entity_id(
@@ -80,7 +80,7 @@ class NukiCoordinator(DataUpdateCoordinator[None]):
                     "entity_id": entity_id,
                     "type": event,
                 }
-                self.hass.bus.async_fire("nuki_event", event_data)
+                self.menuai.bus.async_fire("nuki_event", event_data)
 
     def update_devices(self, devices: list[NukiDevice]) -> dict[str, set[str]]:
         """Update the Nuki devices.

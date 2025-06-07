@@ -10,11 +10,11 @@ import os
 from google.cloud.pubsub_v1 import PublisherClient
 import voluptuous as vol
 
-from homeassistant.const import EVENT_STATE_CHANGED, STATE_UNAVAILABLE, STATE_UNKNOWN
-from homeassistant.core import Event, EventStateChangedData, HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entityfilter import FILTER_SCHEMA
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import EVENT_STATE_CHANGED, STATE_UNAVAILABLE, STATE_UNKNOWN
+from menuai.core import Event, EventStateChangedData, menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entityfilter import FILTER_SCHEMA
+from menuai.helpers.typing import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -40,12 +40,12 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def setup(hass: HomeAssistant, yaml_config: ConfigType) -> bool:
+def setup(menuai: menuai, yaml_config: ConfigType) -> bool:
     """Activate Google Pub/Sub component."""
     config = yaml_config[DOMAIN]
     project_id = config[CONF_PROJECT_ID]
     topic_name = config[CONF_TOPIC_NAME]
-    service_principal_path = hass.config.path(config[CONF_SERVICE_PRINCIPAL])
+    service_principal_path = menuai.config.path(config[CONF_SERVICE_PRINCIPAL])
 
     if not os.path.isfile(service_principal_path):
         _LOGGER.error("Path to credentials file cannot be found")
@@ -74,7 +74,7 @@ def setup(hass: HomeAssistant, yaml_config: ConfigType) -> bool:
 
         publisher.publish(topic_path, data=data)
 
-    hass.bus.listen(EVENT_STATE_CHANGED, send_to_pubsub)
+    menuai.bus.listen(EVENT_STATE_CHANGED, send_to_pubsub)
 
     return True
 

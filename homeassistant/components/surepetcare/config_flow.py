@@ -10,9 +10,9 @@ import surepy
 from surepy.exceptions import SurePetcareAuthenticationError, SurePetcareError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_PASSWORD, CONF_TOKEN, CONF_USERNAME
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_PASSWORD, CONF_TOKEN, CONF_USERNAME
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN, SURE_API_TIMEOUT
 
@@ -42,7 +42,7 @@ class SurePetCareConfigFlow(ConfigFlow, domain=DOMAIN):
                 user_input[CONF_PASSWORD],
                 auth_token=None,
                 api_timeout=SURE_API_TIMEOUT,
-                session=async_get_clientsession(self.hass),
+                session=async_get_clientsession(self.menuai),
             )
             try:
                 token = await client.sac.get_token()
@@ -84,7 +84,7 @@ class SurePetCareConfigFlow(ConfigFlow, domain=DOMAIN):
                 user_input[CONF_PASSWORD],
                 auth_token=None,
                 api_timeout=SURE_API_TIMEOUT,
-                session=async_get_clientsession(self.hass),
+                session=async_get_clientsession(self.menuai),
             )
             try:
                 token = await client.sac.get_token()

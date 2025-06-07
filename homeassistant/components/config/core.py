@@ -1,4 +1,4 @@
-"""Component to interact with Hassbian tools."""
+"""Component to interact with menuaibian tools."""
 
 from __future__ import annotations
 
@@ -7,26 +7,26 @@ from typing import Any
 from aiohttp import web
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.components.http import KEY_HASS, HomeAssistantView, require_admin
-from homeassistant.components.sensor import async_update_suggested_units
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import check_config, config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.util import location as location_util, unit_system
+from menuai.components import websocket_api
+from menuai.components.http import KEY_menuai, menuaiView, require_admin
+from menuai.components.sensor import async_update_suggested_units
+from menuai.core import menuai, callback
+from menuai.helpers import check_config, config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.util import location as location_util, unit_system
 
 
 @callback
-def async_setup(hass: HomeAssistant) -> bool:
-    """Set up the Hassbian config."""
-    hass.http.register_view(CheckConfigView)
-    websocket_api.async_register_command(hass, websocket_update_config)
-    websocket_api.async_register_command(hass, websocket_detect_config)
+def async_setup(menuai: menuai) -> bool:
+    """Set up the menuaibian config."""
+    menuai.http.register_view(CheckConfigView)
+    websocket_api.async_register_command(menuai, websocket_update_config)
+    websocket_api.async_register_command(menuai, websocket_detect_config)
     return True
 
 
-class CheckConfigView(HomeAssistantView):
-    """Hassbian packages endpoint."""
+class CheckConfigView(menuaiView):
+    """menuaibian packages endpoint."""
 
     url = "/api/config/core/check_config"
     name = "api:config:core:check_config"
@@ -35,7 +35,7 @@ class CheckConfigView(HomeAssistantView):
     async def post(self, request: web.Request) -> web.Response:
         """Validate configuration and return results."""
 
-        res = await check_config.async_check_ha_config_file(request.app[KEY_HASS])
+        res = await check_config.async_check_ha_config_file(request.app[KEY_menuai])
 
         state = "invalid" if res.errors else "valid"
 
@@ -69,7 +69,7 @@ class CheckConfigView(HomeAssistantView):
 )
 @websocket_api.async_response
 async def websocket_update_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
@@ -81,9 +81,9 @@ async def websocket_update_config(
     update_units = data.pop("update_units", False)
 
     try:
-        await hass.config.async_update(**data)
+        await menuai.config.async_update(**data)
         if update_units:
-            async_update_suggested_units(hass)
+            async_update_suggested_units(menuai)
         connection.send_result(msg["id"])
     except ValueError as err:
         connection.send_error(msg["id"], "invalid_info", str(err))
@@ -93,12 +93,12 @@ async def websocket_update_config(
 @websocket_api.websocket_command({"type": "config/core/detect"})
 @websocket_api.async_response
 async def websocket_detect_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Detect core config."""
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
     location_info = await location_util.async_detect_location_info(session)
 
     info: dict[str, Any] = {}

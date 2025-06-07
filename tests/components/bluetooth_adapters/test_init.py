@@ -1,10 +1,10 @@
 """Test the Bluetooth Adapters setup."""
 
-from homeassistant.components.bluetooth_adapters import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.bluetooth_adapters import DOMAIN
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 
-async def test_setup(hass: HomeAssistant) -> None:
+async def test_setup(menuai: menuai) -> None:
     """Ensure we can setup."""
-    assert await async_setup_component(hass, DOMAIN, {})
+    assert await async_setup_component(menuai, DOMAIN, {})

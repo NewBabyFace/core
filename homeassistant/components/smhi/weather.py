@@ -7,7 +7,7 @@ from typing import Any, Final
 
 from pysmhi import SMHIForecast
 
-from homeassistant.components.weather import (
+from menuai.components.weather import (
     ATTR_CONDITION_CLEAR_NIGHT,
     ATTR_CONDITION_CLOUDY,
     ATTR_CONDITION_EXCEPTIONAL,
@@ -38,7 +38,7 @@ from homeassistant.components.weather import (
     SingleCoordinatorWeatherEntity,
     WeatherEntityFeature,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_LATITUDE,
     CONF_LOCATION,
     CONF_LONGITUDE,
@@ -48,9 +48,9 @@ from homeassistant.const import (
     UnitOfSpeed,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import sun
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.helpers import sun
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import ATTR_SMHI_THUNDER_PROBABILITY, ENTITY_ID_SENSOR_FORMAT
 from .coordinator import SMHIConfigEntry
@@ -81,7 +81,7 @@ CONDITION_MAP = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: SMHIConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -125,7 +125,7 @@ class SmhiWeather(SmhiWeatherBaseEntity, SingleCoordinatorWeatherEntity):
             self._attr_cloud_coverage = daily_data[0]["total_cloud"]
             self._attr_condition = CONDITION_MAP.get(daily_data[0]["symbol"])
             if self._attr_condition == ATTR_CONDITION_SUNNY and not sun.is_up(
-                self.coordinator.hass
+                self.coordinator.menuai
             ):
                 self._attr_condition = ATTR_CONDITION_CLEAR_NIGHT
 
@@ -156,7 +156,7 @@ class SmhiWeather(SmhiWeatherBaseEntity, SingleCoordinatorWeatherEntity):
         for forecast in forecast_data[1:]:
             condition = CONDITION_MAP.get(forecast["symbol"])
             if condition == ATTR_CONDITION_SUNNY and not sun.is_up(
-                self.hass, forecast["valid_time"]
+                self.menuai, forecast["valid_time"]
             ):
                 condition = ATTR_CONDITION_CLEAR_NIGHT
 

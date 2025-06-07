@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from homeassistant.components.ituran.const import (
+from menuai.components.ituran.const import (
     CONF_ID_OR_PASSPORT,
     CONF_MOBILE_ID,
     CONF_PHONE_NUMBER,

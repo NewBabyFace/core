@@ -5,10 +5,10 @@ from __future__ import annotations
 from collections.abc import AsyncIterable
 import logging
 
-from hass_nabucasa import Cloud
-from hass_nabucasa.voice import STT_LANGUAGES, VoiceError
+from menuai_nabucasa import Cloud
+from menuai_nabucasa.voice import STT_LANGUAGES, VoiceError
 
-from homeassistant.components.stt import (
+from menuai.components.stt import (
     AudioBitRates,
     AudioChannels,
     AudioCodecs,
@@ -19,11 +19,11 @@ from homeassistant.components.stt import (
     SpeechResultState,
     SpeechToTextEntity,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.setup import async_when_setup
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.setup import async_when_setup
 
 from .assist_pipeline import async_migrate_cloud_pipeline_engine
 from .client import CloudClient
@@ -33,21 +33,21 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Set up Home Assistant Cloud speech platform via config entry."""
-    stt_platform_loaded = hass.data[DATA_PLATFORMS_SETUP][Platform.STT]
+    """Set up MenuAI Cloud speech platform via config entry."""
+    stt_platform_loaded = menuai.data[DATA_PLATFORMS_SETUP][Platform.STT]
     stt_platform_loaded.set()
-    cloud = hass.data[DATA_CLOUD]
+    cloud = menuai.data[DATA_CLOUD]
     async_add_entities([CloudProviderEntity(cloud)])
 
 
 class CloudProviderEntity(SpeechToTextEntity):
-    """Home Assistant Cloud speech API provider."""
+    """MenuAI Cloud speech API provider."""
 
-    _attr_name = "Home Assistant Cloud"
+    _attr_name = "MenuAI Cloud"
     _attr_unique_id = STT_ENTITY_UNIQUE_ID
 
     def __init__(self, cloud: Cloud[CloudClient]) -> None:
@@ -84,20 +84,20 @@ class CloudProviderEntity(SpeechToTextEntity):
         """Return a list of supported channels."""
         return [AudioChannels.CHANNEL_MONO]
 
-    async def async_added_to_hass(self) -> None:
-        """Run when entity is about to be added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Run when entity is about to be added to menuai."""
 
-        async def pipeline_setup(hass: HomeAssistant, _comp: str) -> None:
+        async def pipeline_setup(menuai: menuai, _comp: str) -> None:
             """When assist_pipeline is set up."""
             assert self.platform.config_entry
             self.platform.config_entry.async_create_task(
-                hass,
+                menuai,
                 async_migrate_cloud_pipeline_engine(
-                    self.hass, platform=Platform.STT, engine_id=self.entity_id
+                    self.menuai, platform=Platform.STT, engine_id=self.entity_id
                 ),
             )
 
-        async_when_setup(self.hass, "assist_pipeline", pipeline_setup)
+        async_when_setup(self.menuai, "assist_pipeline", pipeline_setup)
 
     async def async_process_audio_stream(
         self, metadata: SpeechMetadata, stream: AsyncIterable[bytes]

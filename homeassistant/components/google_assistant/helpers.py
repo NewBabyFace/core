@@ -16,25 +16,25 @@ from aiohttp.web import json_response
 from awesomeversion import AwesomeVersion
 from yarl import URL
 
-from homeassistant.components import webhook
-from homeassistant.const import (
+from menuai.components import webhook
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     ATTR_SUPPORTED_FEATURES,
     CLOUD_NEVER_EXPOSED_ENTITIES,
     CONF_NAME,
     STATE_UNAVAILABLE,
 )
-from homeassistant.core import CALLBACK_TYPE, Context, HomeAssistant, State, callback
-from homeassistant.helpers import (
+from menuai.core import CALLBACK_TYPE, Context, menuai, State, callback
+from menuai.helpers import (
     area_registry as ar,
     device_registry as dr,
     entity_registry as er,
     start,
 )
-from homeassistant.helpers.event import async_call_later
-from homeassistant.helpers.network import get_url
-from homeassistant.helpers.redact import partial_redact
-from homeassistant.util.dt import utcnow
+from menuai.helpers.event import async_call_later
+from menuai.helpers.network import get_url
+from menuai.helpers.redact import partial_redact
+from menuai.util.dt import utcnow
 
 from . import trait
 from .const import (
@@ -58,16 +58,16 @@ LOCAL_SDK_MIN_VERSION = AwesomeVersion("2.1.5")
 
 @callback
 def _get_registry_entries(
-    hass: HomeAssistant, entity_id: str
+    menuai: menuai, entity_id: str
 ) -> tuple[
     er.RegistryEntry | None,
     dr.DeviceEntry | None,
     ar.AreaEntry | None,
 ]:
     """Get registry entries."""
-    ent_reg = er.async_get(hass)
-    dev_reg = dr.async_get(hass)
-    area_reg = ar.async_get(hass)
+    ent_reg = er.async_get(menuai)
+    dev_reg = dr.async_get(menuai)
+    area_reg = ar.async_get(menuai)
 
     if (entity_entry := ent_reg.async_get(entity_id)) and entity_entry.device_id:
         device_entry = dev_reg.devices.get(entity_entry.device_id)
@@ -94,9 +94,9 @@ class AbstractConfig(ABC):
 
     _unsub_report_state: Callable[[], None] | None = None
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize abstract config."""
-        self.hass = hass
+        self.menuai = menuai
         self._google_sync_unsub: dict[str, CALLBACK_TYPE] = {}
         self._local_sdk_active = False
         self._local_last_active: datetime | None = None
@@ -113,7 +113,7 @@ class AbstractConfig(ABC):
             """Sync entities to Google."""
             await self.async_sync_entities_all()
 
-        self._on_deinitialize.append(start.async_at_start(self.hass, sync_google))
+        self._on_deinitialize.append(start.async_at_start(self.menuai, sync_google))
 
     @callback
     def async_deinitialize(self) -> None:
@@ -163,7 +163,7 @@ class AbstractConfig(ABC):
 
     @abstractmethod
     def get_local_user_id(self, webhook_id):
-        """Map webhook ID to a Home Assistant user ID.
+        """Map webhook ID to a MenuAI user ID.
 
         Any action initiated by Google Assistant via the local SDK will be attributed
         to the returned user ID.
@@ -216,7 +216,7 @@ class AbstractConfig(ABC):
         from .report_state import async_enable_report_state
 
         if self._unsub_report_state is None:
-            self._unsub_report_state = async_enable_report_state(self.hass, self)
+            self._unsub_report_state = async_enable_report_state(self.menuai, self)
 
     @callback
     def async_disable_report_state(self) -> None:
@@ -286,7 +286,7 @@ class AbstractConfig(ABC):
         self._google_sync_unsub.pop(agent_user_id, lambda: None)()
 
         self._google_sync_unsub[agent_user_id] = async_call_later(
-            self.hass, SYNC_DELAY, _schedule_callback
+            self.menuai, SYNC_DELAY, _schedule_callback
         )
 
     @callback
@@ -332,7 +332,7 @@ class AbstractConfig(ABC):
         setup_webhook_ids = []
 
         # Don't enable local SDK if ssl is enabled
-        if self.hass.config.api and self.hass.config.api.use_ssl:
+        if self.menuai.config.api and self.menuai.config.api.use_ssl:
             self._local_sdk_active = False
             return
 
@@ -348,7 +348,7 @@ class AbstractConfig(ABC):
             )
             try:
                 webhook.async_register(
-                    self.hass,
+                    self.menuai,
                     DOMAIN,
                     "Local Support for " + user_agent_id,
                     webhook_id,
@@ -370,7 +370,7 @@ class AbstractConfig(ABC):
                 "Local fulfillment failed to setup, falling back to cloud fulfillment"
             )
             for setup_webhook_id in setup_webhook_ids:
-                webhook.async_unregister(self.hass, setup_webhook_id)
+                webhook.async_unregister(self.menuai, setup_webhook_id)
 
         self._local_sdk_active = setup_successful
 
@@ -388,11 +388,11 @@ class AbstractConfig(ABC):
                 partial_redact(webhook_id),
                 partial_redact(agent_user_id),
             )
-            webhook.async_unregister(self.hass, webhook_id)
+            webhook.async_unregister(self.menuai, webhook_id)
 
         self._local_sdk_active = False
 
-    async def _handle_local_webhook(self, hass, webhook_id, request):
+    async def _handle_local_webhook(self, menuai, webhook_id, request):
         """Handle an incoming local SDK message."""
         # Circular dep
         # pylint: disable-next=import-outside-toplevel
@@ -438,7 +438,7 @@ class AbstractConfig(ABC):
                 partial_redact(webhook_id),
                 pprint.pformat(async_redact_msg(payload, agent_user_id)),
             )
-            webhook.async_unregister(self.hass, webhook_id)
+            webhook.async_unregister(self.menuai, webhook_id)
             return None
 
         if not self.enabled:
@@ -447,7 +447,7 @@ class AbstractConfig(ABC):
             )
 
         result = await smart_home.async_handle_message(
-            self.hass,
+            self.menuai,
             self,
             agent_user_id,
             self.get_local_user_id(webhook_id),
@@ -521,13 +521,13 @@ def supported_traits_for_state(state: State) -> list[type[trait._Trait]]:
 class GoogleEntity:
     """Adaptation of Entity expressed in Google's terms."""
 
-    __slots__ = ("_traits", "config", "entity_id", "hass", "state")
+    __slots__ = ("_traits", "config", "entity_id", "menuai", "state")
 
     def __init__(
-        self, hass: HomeAssistant, config: AbstractConfig, state: State
+        self, menuai: menuai, config: AbstractConfig, state: State
     ) -> None:
         """Initialize a Google entity."""
-        self.hass = hass
+        self.menuai = menuai
         self.config = config
         self.state = state
         self.entity_id = state.entity_id
@@ -544,7 +544,7 @@ class GoogleEntity:
             return self._traits
         state = self.state
         self._traits = [
-            Trait(self.hass, state, self.config)
+            Trait(self.menuai, state, self.config)
             for Trait in supported_traits_for_state(state)
         ]
         return self._traits
@@ -603,7 +603,7 @@ class GoogleEntity:
 
         # Find entity/device/area registry entries
         entity_entry, device_entry, area_entry = _get_registry_entries(
-            self.hass, self.entity_id
+            self.menuai, self.entity_id
         )
 
         # Build the device info
@@ -630,7 +630,7 @@ class GoogleEntity:
             device["otherDeviceIds"] = [{"deviceId": self.entity_id}]
             device["customData"] = {
                 "webhookId": self.config.get_local_webhook_id(agent_user_id),
-                "httpPort": URL(get_url(self.hass, allow_external=False)).port,
+                "httpPort": URL(get_url(self.menuai, allow_external=False)).port,
                 "uuid": instance_uuid,
             }
 
@@ -652,16 +652,16 @@ class GoogleEntity:
             return device
 
         # Add Matter info
-        if "matter" in self.hass.config.components and any(
+        if "matter" in self.menuai.config.components and any(
             x for x in device_entry.identifiers if x[0] == "matter"
         ):
             # pylint: disable-next=import-outside-toplevel
-            from homeassistant.components.matter import get_matter_device_info
+            from menuai.components.matter import get_matter_device_info
 
             # Import matter can block the event loop for multiple seconds
             # so we import it here to avoid blocking the event loop during
             # setup since google_assistant is imported from cloud.
-            if matter_info := get_matter_device_info(self.hass, device_entry.id):
+            if matter_info := get_matter_device_info(self.menuai, device_entry.id):
                 device["matterUniqueId"] = matter_info["unique_id"]
                 device["matterOriginalVendorId"] = matter_info["vendor_id"]
                 device["matterOriginalProductId"] = matter_info["product_id"]
@@ -737,8 +737,8 @@ class GoogleEntity:
 
     @callback
     def async_update(self):
-        """Update the entity with latest info from Home Assistant."""
-        self.state = self.hass.states.get(self.entity_id)
+        """Update the entity with latest info from MenuAI."""
+        self.state = self.menuai.states.get(self.entity_id)
 
         if self._traits is None:
             return
@@ -759,7 +759,7 @@ def deep_update(target, source):
 
 @callback
 def async_get_google_entity_if_supported_cached(
-    hass: HomeAssistant, config: AbstractConfig, state: State
+    menuai: menuai, config: AbstractConfig, state: State
 ) -> GoogleEntity | None:
     """Return a GoogleEntity if entity is supported checking the cache first.
 
@@ -772,21 +772,21 @@ def async_get_google_entity_if_supported_cached(
     if result := is_supported_cache.get(entity_id):
         cached_features, supported = result
         if cached_features == features:
-            return GoogleEntity(hass, config, state) if supported else None
+            return GoogleEntity(menuai, config, state) if supported else None
     # Cache miss, check if entity is supported
-    return async_get_google_entity_if_supported(hass, config, state)
+    return async_get_google_entity_if_supported(menuai, config, state)
 
 
 @callback
 def async_get_google_entity_if_supported(
-    hass: HomeAssistant, config: AbstractConfig, state: State
+    menuai: menuai, config: AbstractConfig, state: State
 ) -> GoogleEntity | None:
     """Return a GoogleEntity if entity is supported.
 
     This function will update the cache, but it does not check the cache first.
     """
     features: int | None = state.attributes.get(ATTR_SUPPORTED_FEATURES)
-    entity = GoogleEntity(hass, config, state)
+    entity = GoogleEntity(menuai, config, state)
     is_supported = bool(entity.traits())
     config.is_supported_cache[state.entity_id] = (features, is_supported)
     return entity if is_supported else None
@@ -794,12 +794,12 @@ def async_get_google_entity_if_supported(
 
 @callback
 def async_get_entities(
-    hass: HomeAssistant, config: AbstractConfig
+    menuai: menuai, config: AbstractConfig
 ) -> list[GoogleEntity]:
     """Return all entities that are supported by Google."""
     entities: list[GoogleEntity] = []
     is_supported_cache = config.is_supported_cache
-    for state in hass.states.async_all():
+    for state in menuai.states.async_all():
         entity_id = state.entity_id
         if entity_id in CLOUD_NEVER_EXPOSED_ENTITIES:
             continue
@@ -811,10 +811,10 @@ def async_get_entities(
             cached_features, supported = result
             if cached_features == features:
                 if supported:
-                    entities.append(GoogleEntity(hass, config, state))
+                    entities.append(GoogleEntity(menuai, config, state))
                 continue
             # Cached features don't match, fall through to check
             # if the entity is supported and update the cache.
-        if entity := async_get_google_entity_if_supported(hass, config, state):
+        if entity := async_get_google_entity_if_supported(menuai, config, state):
             entities.append(entity)
     return entities

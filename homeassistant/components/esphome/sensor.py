@@ -15,15 +15,15 @@ from aioesphomeapi import (
 )
 from aioesphomeapi.model import LastResetType
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorStateClass,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import dt as dt_util
-from homeassistant.util.enum import try_parse_enum
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import dt as dt_util
+from menuai.util.enum import try_parse_enum
 
 from .entity import EsphomeEntity, platform_async_setup_entry
 from .entry_data import ESPHomeConfigEntry
@@ -33,13 +33,13 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ESPHomeConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up esphome sensors based on a config entry."""
     await platform_async_setup_entry(
-        hass,
+        menuai,
         entry,
         async_add_entities,
         info_type=SensorInfo,
@@ -47,7 +47,7 @@ async def async_setup_entry(
         state_type=SensorState,
     )
     await platform_async_setup_entry(
-        hass,
+        menuai,
         entry,
         async_add_entities,
         info_type=TextSensorInfo,

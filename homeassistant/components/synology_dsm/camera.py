@@ -11,15 +11,15 @@ from synology_dsm.exceptions import (
     SynologyDSMRequestException,
 )
 
-from homeassistant.components.camera import (
+from menuai.components.camera import (
     Camera,
     CameraEntityDescription,
     CameraEntityFeature,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import SynoApi
 from .const import (
@@ -44,7 +44,7 @@ class SynologyDSMCameraEntityDescription(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: SynologyDSMConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -132,16 +132,16 @@ class SynoDSMCamera(SynologyDSMBaseEntity[SynologyDSMCameraUpdateCoordinator], C
         assert self.platform.config_entry
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"{SIGNAL_CAMERA_SOURCE_CHANGED}_{self.platform.config_entry.entry_id}_{self.camera_data.id}",
                 _handle_signal,
             )
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to signal."""
         self._listen_source_updates()
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
     async def async_camera_image(
         self, width: int | None = None, height: int | None = None

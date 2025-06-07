@@ -7,10 +7,10 @@ from pyinsteon.address import Address
 from pyinsteon.constants import DeviceAction
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.dispatcher import async_dispatcher_send
+from menuai.components import websocket_api
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr
+from menuai.helpers.dispatcher import async_dispatcher_send
 
 from ..const import (
     DEVICE_ADDRESS,
@@ -61,12 +61,12 @@ def notify_device_not_found(connection, msg, text):
 @websocket_api.require_admin
 @websocket_api.async_response
 async def websocket_get_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.connection.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Get an Insteon device."""
-    dev_registry = dr.async_get(hass)
+    dev_registry = dr.async_get(menuai)
     if not (ha_device := dev_registry.async_get(msg[DEVICE_ID])):
         notify_device_not_found(connection, msg, HA_DEVICE_NOT_FOUND)
         return
@@ -93,7 +93,7 @@ async def websocket_get_device(
 @websocket_api.require_admin
 @websocket_api.async_response
 async def websocket_add_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.connection.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
@@ -129,7 +129,7 @@ async def websocket_add_device(
 @websocket_api.require_admin
 @websocket_api.async_response
 async def websocket_cancel_add_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.connection.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
@@ -148,7 +148,7 @@ async def websocket_cancel_add_device(
 @websocket_api.require_admin
 @websocket_api.async_response
 async def websocket_remove_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.connection.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
@@ -159,14 +159,14 @@ async def websocket_remove_device(
     if address.startswith("X10"):
         _, housecode, unitcode = address.split(".")
         unitcode = int(unitcode)
-        async_dispatcher_send(hass, SIGNAL_REMOVE_X10_DEVICE, housecode, unitcode)
-        remove_x10_device(hass, housecode, unitcode)
+        async_dispatcher_send(menuai, SIGNAL_REMOVE_X10_DEVICE, housecode, unitcode)
+        remove_x10_device(menuai, housecode, unitcode)
     else:
         address = Address(address)
-        remove_device_override(hass, address)
-        async_dispatcher_send(hass, SIGNAL_REMOVE_HA_DEVICE, address)
+        remove_device_override(menuai, address)
+        async_dispatcher_send(menuai, SIGNAL_REMOVE_HA_DEVICE, address)
         async_dispatcher_send(
-            hass, SIGNAL_REMOVE_INSTEON_DEVICE, address, remove_all_refs
+            menuai, SIGNAL_REMOVE_INSTEON_DEVICE, address, remove_all_refs
         )
 
     connection.send_result(msg[ID])
@@ -181,14 +181,14 @@ async def websocket_remove_device(
 @websocket_api.require_admin
 @websocket_api.async_response
 async def websocket_add_x10_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.connection.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Get the schema for the X10 devices configuration."""
     x10_device = msg[X10_DEVICE]
     try:
-        add_x10_device(hass, x10_device)
+        add_x10_device(menuai, x10_device)
     except ValueError:
         connection.send_error(msg[ID], code="duplicate", message="Duplicate X10 device")
         return

@@ -1,25 +1,25 @@
-"""Support for Home Assistant iOS app sensors."""
+"""Support for MenuAI iOS app sensors."""
 
 from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import PERCENTAGE
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import PERCENTAGE
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     AddEntitiesCallback,
 )
-from homeassistant.helpers.icon import icon_for_battery_level
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.helpers.icon import icon_for_battery_level
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import devices
 from .const import (
@@ -55,7 +55,7 @@ DEFAULT_ICON_STATE = "mdi:power-plug"
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -65,14 +65,14 @@ def setup_platform(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up iOS from a config entry."""
     async_add_entities(
         IOSSensor(device_name, device, description)
-        for device_name, device in devices(hass).items()
+        for device_name, device in devices(menuai).items()
         for description in SENSOR_TYPES
     )
 
@@ -157,12 +157,12 @@ class IOSSensor(SensorEntity):
         ]
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
-        """Handle addition to hass: register to dispatch."""
+    async def async_added_to_menuai(self) -> None:
+        """Handle addition to menuai: register to dispatch."""
         self._attr_native_value = self._device[ATTR_BATTERY][
             self.entity_description.key
         ]
         device_id = self._device[ATTR_DEVICE_ID]
         self.async_on_remove(
-            async_dispatcher_connect(self.hass, f"{DOMAIN}.{device_id}", self._update)
+            async_dispatcher_connect(self.menuai, f"{DOMAIN}.{device_id}", self._update)
         )

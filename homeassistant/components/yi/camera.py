@@ -8,13 +8,13 @@ from aioftp import Client, StatusCodeError
 from haffmpeg.camera import CameraMjpeg
 import voluptuous as vol
 
-from homeassistant.components import ffmpeg
-from homeassistant.components.camera import (
+from menuai.components import ffmpeg
+from menuai.components.camera import (
     PLATFORM_SCHEMA as CAMERA_PLATFORM_SCHEMA,
     Camera,
 )
-from homeassistant.components.ffmpeg import get_ffmpeg_manager
-from homeassistant.const import (
+from menuai.components.ffmpeg import get_ffmpeg_manager
+from menuai.const import (
     CONF_HOST,
     CONF_NAME,
     CONF_PASSWORD,
@@ -22,12 +22,12 @@ from homeassistant.const import (
     CONF_PORT,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import PlatformNotReady
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_aiohttp_proxy_stream
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai
+from menuai.exceptions import PlatformNotReady
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_aiohttp_proxy_stream
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -54,13 +54,13 @@ PLATFORM_SCHEMA = CAMERA_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up a Yi Camera."""
-    async_add_entities([YiCamera(hass, config)], True)
+    async_add_entities([YiCamera(menuai, config)], True)
 
 
 class YiCamera(Camera):
@@ -68,13 +68,13 @@ class YiCamera(Camera):
 
     _attr_brand = DEFAULT_BRAND
 
-    def __init__(self, hass: HomeAssistant, config: ConfigType) -> None:
+    def __init__(self, menuai: menuai, config: ConfigType) -> None:
         """Initialize."""
         super().__init__()
         self._extra_arguments = config.get(CONF_FFMPEG_ARGUMENTS)
         self._last_image: bytes | None = None
         self._last_url = None
-        self._manager = get_ffmpeg_manager(hass)
+        self._manager = get_ffmpeg_manager(menuai)
         self._attr_name = config[CONF_NAME]
         self.host = config[CONF_HOST]
         self.port = config[CONF_PORT]
@@ -125,7 +125,7 @@ class YiCamera(Camera):
         url = await self._get_latest_video_url()
         if url and url != self._last_url:
             self._last_image = await ffmpeg.async_get_image(
-                self.hass,
+                self.menuai,
                 url,
                 extra_cmd=self._extra_arguments,
                 width=width,
@@ -146,7 +146,7 @@ class YiCamera(Camera):
         try:
             stream_reader = await stream.get_reader()
             return await async_aiohttp_proxy_stream(
-                self.hass,
+                self.menuai,
                 request,
                 stream_reader,
                 self._manager.ffmpeg_stream_content_type,

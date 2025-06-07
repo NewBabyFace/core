@@ -6,14 +6,14 @@ from typing import TYPE_CHECKING
 
 import pysma
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     PERCENTAGE,
     EntityCategory,
     UnitOfApparentPower,
@@ -25,11 +25,11 @@ from homeassistant.const import (
     UnitOfReactivePower,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
-from homeassistant.helpers.update_coordinator import (
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
+from menuai.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
 )
@@ -836,12 +836,12 @@ SENSOR_ENTITIES: dict[str, SensorEntityDescription] = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up SMA sensors."""
-    sma_data = hass.data[DOMAIN][config_entry.entry_id]
+    sma_data = menuai.data[DOMAIN][config_entry.entry_id]
 
     coordinator = sma_data[PYSMA_COORDINATOR]
     used_sensors = sma_data[PYSMA_SENSORS]
@@ -888,7 +888,7 @@ class SMAsensor(CoordinatorEntity, SensorEntity):
         )
 
         # Set sensor enabled to False.
-        # Will be enabled by async_added_to_hass if actually used.
+        # Will be enabled by async_added_to_menuai if actually used.
         self._sensor.enabled = False
 
     @property
@@ -906,12 +906,12 @@ class SMAsensor(CoordinatorEntity, SensorEntity):
         """Return the state of the sensor."""
         return self._sensor.value
 
-    async def async_added_to_hass(self) -> None:
-        """Run when entity about to be added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Run when entity about to be added to menuai."""
+        await super().async_added_to_menuai()
         self._sensor.enabled = True
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Run when entity will be removed from hass."""
-        await super().async_will_remove_from_hass()
+    async def async_will_remove_from_menuai(self) -> None:
+        """Run when entity will be removed from menuai."""
+        await super().async_will_remove_from_menuai()
         self._sensor.enabled = False

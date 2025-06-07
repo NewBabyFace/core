@@ -4,16 +4,16 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.switch import SwitchEntity
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import AVAILABLE_PUMPS, DATA_ECOAL_BOILER
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -21,7 +21,7 @@ def setup_platform(
     """Set up switches based on ecoal interface."""
     if discovery_info is None:
         return
-    ecoal_contr = hass.data[DATA_ECOAL_BOILER]
+    ecoal_contr = menuai.data[DATA_ECOAL_BOILER]
     switches = []
     for pump_id in discovery_info:
         name = AVAILABLE_PUMPS[pump_id]
@@ -50,7 +50,7 @@ class EcoalSwitch(SwitchEntity):
     def update(self) -> None:
         """Fetch new state data for the sensor.
 
-        This is the only method that should fetch new data for Home Assistant.
+        This is the only method that should fetch new data for MenuAI.
         """
         status = self._ecoal_contr.get_cached_status()
         self._attr_is_on = getattr(status, self._state_attr)

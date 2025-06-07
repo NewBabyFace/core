@@ -4,8 +4,8 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.components.light.conftest import mock_light_profiles  # noqa: F401
 
@@ -16,21 +16,21 @@ def stub_blueprint_populate_autouse(stub_blueprint_populate: None) -> None:
 
 
 @pytest.fixture(autouse=True)
-async def setup_homeassistant(hass: HomeAssistant):
-    """Set up the homeassistant integration."""
-    await async_setup_component(hass, "homeassistant", {})
+async def setup_menuai(menuai: menuai):
+    """Set up the menuai integration."""
+    await async_setup_component(menuai, "menuai", {})
 
 
 @pytest.fixture
-def disable_platforms(hass: HomeAssistant) -> None:
+def disable_platforms(menuai: menuai) -> None:
     """Disable platforms to speed up tests."""
     with (
         patch(
-            "homeassistant.components.demo.COMPONENTS_WITH_CONFIG_ENTRY_DEMO_PLATFORM",
+            "menuai.components.demo.COMPONENTS_WITH_CONFIG_ENTRY_DEMO_PLATFORM",
             [],
         ),
         patch(
-            "homeassistant.components.demo.COMPONENTS_WITH_DEMO_PLATFORM",
+            "menuai.components.demo.COMPONENTS_WITH_DEMO_PLATFORM",
             [],
         ),
     ):

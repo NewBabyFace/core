@@ -6,23 +6,23 @@ from collections.abc import Awaitable, Callable
 import logging
 from typing import TYPE_CHECKING, Any, cast
 
-from homeassistant import config_entries
-from homeassistant.components import onboarding
-from homeassistant.core import HomeAssistant
+from menuai import config_entries
+from menuai.components import onboarding
+from menuai.core import menuai
 
 from .typing import DiscoveryInfoType
 
 if TYPE_CHECKING:
     import asyncio
 
-    from homeassistant.components.bluetooth import BluetoothServiceInfoBleak
+    from menuai.components.bluetooth import BluetoothServiceInfoBleak
 
     from .service_info.dhcp import DhcpServiceInfo
     from .service_info.mqtt import MqttServiceInfo
     from .service_info.ssdp import SsdpServiceInfo
     from .service_info.zeroconf import ZeroconfServiceInfo
 
-type DiscoveryFunctionType[_R] = Callable[[HomeAssistant], _R]
+type DiscoveryFunctionType[_R] = Callable[[menuai], _R]
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -58,7 +58,7 @@ class DiscoveryFlowHandler[_R: Awaitable[bool] | bool](config_entries.ConfigFlow
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.ConfigFlowResult:
         """Confirm setup."""
-        if user_input is None and onboarding.async_is_onboarded(self.hass):
+        if user_input is None and onboarding.async_is_onboarded(self.menuai):
             self._set_confirm_only()
             return self.async_show_form(step_id="confirm")
 
@@ -67,7 +67,7 @@ class DiscoveryFlowHandler[_R: Awaitable[bool] | bool](config_entries.ConfigFlow
             in_progress = self._async_in_progress()
 
             if not (has_devices := bool(in_progress)):
-                discovery_result = self._discovery_function(self.hass)
+                discovery_result = self._discovery_function(self.menuai)
                 if isinstance(discovery_result, bool):
                     has_devices = discovery_result
                 else:
@@ -78,7 +78,7 @@ class DiscoveryFlowHandler[_R: Awaitable[bool] | bool](config_entries.ConfigFlow
 
             # Cancel the discovered one.
             for flow in in_progress:
-                self.hass.config_entries.flow.async_abort(flow["flow_id"])
+                self.menuai.config_entries.flow.async_abort(flow["flow_id"])
 
         if self._async_current_entries():
             return self.async_abort(reason="single_instance_allowed")
@@ -172,7 +172,7 @@ class DiscoveryFlowHandler[_R: Awaitable[bool] | bool](config_entries.ConfigFlow
         # Cancel other flows.
         in_progress = self._async_in_progress()
         for flow in in_progress:
-            self.hass.config_entries.flow.async_abort(flow["flow_id"])
+            self.menuai.config_entries.flow.async_abort(flow["flow_id"])
 
         return self.async_create_entry(title=self._title, data={})
 
@@ -223,7 +223,7 @@ class WebhookFlowHandler(config_entries.ConfigFlow):
 
         # Local import to be sure cloud is loaded and setup
         # pylint: disable-next=import-outside-toplevel
-        from homeassistant.components.cloud import (
+        from menuai.components.cloud import (
             async_active_subscription,
             async_create_cloudhook,
             async_is_connected,
@@ -231,23 +231,23 @@ class WebhookFlowHandler(config_entries.ConfigFlow):
 
         # Local import to be sure webhook is loaded and setup
         # pylint: disable-next=import-outside-toplevel
-        from homeassistant.components.webhook import (
+        from menuai.components.webhook import (
             async_generate_id,
             async_generate_url,
         )
 
         webhook_id = async_generate_id()
 
-        if "cloud" in self.hass.config.components and async_active_subscription(
-            self.hass
+        if "cloud" in self.menuai.config.components and async_active_subscription(
+            self.menuai
         ):
-            if not async_is_connected(self.hass):
+            if not async_is_connected(self.menuai):
                 return self.async_abort(reason="cloud_not_connected")
 
-            webhook_url = await async_create_cloudhook(self.hass, webhook_id)
+            webhook_url = await async_create_cloudhook(self.menuai, webhook_id)
             cloudhook = True
         else:
-            webhook_url = async_generate_url(self.hass, webhook_id)
+            webhook_url = async_generate_url(self.menuai, webhook_id)
             cloudhook = False
 
         self._description_placeholder["webhook_url"] = webhook_url
@@ -274,14 +274,14 @@ def register_webhook_flow(
 
 
 async def webhook_async_remove_entry(
-    hass: HomeAssistant, entry: config_entries.ConfigEntry
+    menuai: menuai, entry: config_entries.ConfigEntry
 ) -> None:
     """Remove a webhook config entry."""
-    if not entry.data.get("cloudhook") or "cloud" not in hass.config.components:
+    if not entry.data.get("cloudhook") or "cloud" not in menuai.config.components:
         return
 
     # Local import to be sure cloud is loaded and setup
     # pylint: disable-next=import-outside-toplevel
-    from homeassistant.components.cloud import async_delete_cloudhook
+    from menuai.components.cloud import async_delete_cloudhook
 
-    await async_delete_cloudhook(hass, entry.data["webhook_id"])
+    await async_delete_cloudhook(menuai, entry.data["webhook_id"])

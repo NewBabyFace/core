@@ -13,22 +13,22 @@ from typing import TYPE_CHECKING, Any, Self, final
 from propcache.api import cached_property
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_MODE, CONF_UNIT_OF_MEASUREMENT, UnitOfTemperature
-from homeassistant.core import (
-    HomeAssistant,
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_MODE, CONF_UNIT_OF_MEASUREMENT, UnitOfTemperature
+from menuai.core import (
+    menuai,
     ServiceCall,
-    async_get_hass_or_none,
+    async_get_menuai_or_none,
     callback,
 )
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity import Entity, EntityDescription
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.restore_state import ExtraStoredData, RestoreEntity
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.loader import async_suggest_report_issue
-from homeassistant.util.hass_dict import HassKey
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity import Entity, EntityDescription
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.restore_state import ExtraStoredData, RestoreEntity
+from menuai.helpers.typing import ConfigType
+from menuai.loader import async_suggest_report_issue
+from menuai.util.menuai_dict import menuaiKey
 
 from .const import (  # noqa: F401
     ATTR_MAX,
@@ -50,7 +50,7 @@ from .websocket_api import async_setup as async_setup_ws_api
 
 _LOGGER = logging.getLogger(__name__)
 
-DATA_COMPONENT: HassKey[EntityComponent[NumberEntity]] = HassKey(DOMAIN)
+DATA_COMPONENT: menuaiKey[EntityComponent[NumberEntity]] = menuaiKey(DOMAIN)
 ENTITY_ID_FORMAT = DOMAIN + ".{}"
 PLATFORM_SCHEMA = cv.PLATFORM_SCHEMA
 PLATFORM_SCHEMA_BASE = cv.PLATFORM_SCHEMA_BASE
@@ -81,12 +81,12 @@ __all__ = [
 # mypy: disallow-any-generics
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up Number entities."""
-    component = hass.data[DATA_COMPONENT] = EntityComponent[NumberEntity](
-        _LOGGER, DOMAIN, hass, SCAN_INTERVAL
+    component = menuai.data[DATA_COMPONENT] = EntityComponent[NumberEntity](
+        _LOGGER, DOMAIN, menuai, SCAN_INTERVAL
     )
-    async_setup_ws_api(hass)
+    async_setup_ws_api(menuai)
     await component.async_setup(config)
 
     component.async_register_entity_service(
@@ -124,14 +124,14 @@ async def async_set_value(entity: NumberEntity, service_call: ServiceCall) -> No
         await entity.async_set_value(value)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up a config entry."""
-    return await hass.data[DATA_COMPONENT].async_setup_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_setup_entry(entry)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.data[DATA_COMPONENT].async_unload_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_unload_entry(entry)
 
 
 class NumberEntityDescription(EntityDescription, frozen_or_thawed=True):
@@ -218,22 +218,22 @@ class NumberEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
             )
         ):
             report_issue = async_suggest_report_issue(
-                async_get_hass_or_none(), module=cls.__module__
+                async_get_menuai_or_none(), module=cls.__module__
             )
             _LOGGER.warning(
                 (
                     "%s::%s is overriding deprecated methods on an instance of "
                     "NumberEntity, this is not valid and will be unsupported "
-                    "from Home Assistant 2022.10. Please %s"
+                    "from MenuAI 2022.10. Please %s"
                 ),
                 cls.__module__,
                 cls.__name__,
                 report_issue,
             )
 
-    async def async_internal_added_to_hass(self) -> None:
-        """Call when the number entity is added to hass."""
-        await super().async_internal_added_to_hass()
+    async def async_internal_added_to_menuai(self) -> None:
+        """Call when the number entity is added to menuai."""
+        await super().async_internal_added_to_menuai()
         if not self.registry_entry:
             return
         self.async_registry_entry_updated()
@@ -382,7 +382,7 @@ class NumberEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
             in (UnitOfTemperature.CELSIUS, UnitOfTemperature.FAHRENHEIT)
             and self.device_class == NumberDeviceClass.TEMPERATURE
         ):
-            return self.hass.config.units.temperature_unit
+            return self.menuai.config.units.temperature_unit
 
         if (translation_key := self._unit_of_measurement_translation_key) and (
             unit_of_measurement
@@ -417,7 +417,7 @@ class NumberEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_set_native_value(self, value: float) -> None:
         """Set new value."""
-        await self.hass.async_add_executor_job(self.set_native_value, value)
+        await self.menuai.async_add_executor_job(self.set_native_value, value)
 
     @final
     def set_value(self, value: float) -> None:
@@ -427,7 +427,7 @@ class NumberEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
     @final
     async def async_set_value(self, value: float) -> None:
         """Set new value."""
-        await self.hass.async_add_executor_job(self.set_value, value)
+        await self.menuai.async_add_executor_job(self.set_value, value)
 
     def _convert_to_state_value(
         self,

@@ -8,17 +8,17 @@ from datetime import datetime, timedelta
 
 from electrickiwi_api.model import AccountSummary, Hop
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import CURRENCY_DOLLAR, PERCENTAGE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.util import dt as dt_util
+from menuai.const import CURRENCY_DOLLAR, PERCENTAGE
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
+from menuai.util import dt as dt_util
 
 from .const import ATTRIBUTION
 from .coordinator import (
@@ -130,7 +130,7 @@ HOP_SENSOR_TYPES: tuple[ElectricKiwiHOPSensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ElectricKiwiConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

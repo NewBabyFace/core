@@ -9,14 +9,14 @@ from typing import Any
 from pysnooz.advertisement import SnoozAdvertisementData
 import voluptuous as vol
 
-from homeassistant.components.bluetooth import (
+from menuai.components.bluetooth import (
     BluetoothScanningMode,
     BluetoothServiceInfo,
     async_discovered_service_info,
     async_process_advertisements,
 )
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_ADDRESS, CONF_NAME, CONF_TOKEN
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_ADDRESS, CONF_NAME, CONF_TOKEN
 
 from .const import DOMAIN
 
@@ -98,7 +98,7 @@ class SnoozConfigFlow(ConfigFlow, domain=DOMAIN):
 
         configured_addresses = self._async_current_ids()
 
-        for info in async_discovered_service_info(self.hass):
+        for info in async_discovered_service_info(self.menuai):
             address = info.address
             if address in configured_addresses:
                 continue
@@ -131,7 +131,7 @@ class SnoozConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Wait for device to enter pairing mode."""
         if not self._pairing_task:
-            self._pairing_task = self.hass.async_create_task(
+            self._pairing_task = self.menuai.async_create_task(
                 self._async_wait_for_pairing_mode()
             )
 
@@ -195,7 +195,7 @@ class SnoozConfigFlow(ConfigFlow, domain=DOMAIN):
             return device.supported(service_info) and device.is_pairing
 
         await async_process_advertisements(
-            self.hass,
+            self.menuai,
             is_device_in_pairing_mode,
             {"address": self._discovery.info.address},
             BluetoothScanningMode.ACTIVE,

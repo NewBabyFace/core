@@ -2,17 +2,17 @@
 
 from knocki import Event, EventType, KnockiClient, Trigger
 
-from homeassistant.components.event import EventEntity
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.event import EventEntity
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import KnockiConfigEntry
 from .const import DOMAIN
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: KnockiConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -64,9 +64,9 @@ class KnockiTrigger(EventEntity):
         )
         self._attr_unique_id = f"{trigger.device_id}_{trigger.details.trigger_id}"
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register listener."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self.async_on_remove(
             self._client.register_listener(EventType.TRIGGERED, self._handle_event)
         )

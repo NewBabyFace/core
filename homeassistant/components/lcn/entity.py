@@ -2,11 +2,11 @@
 
 from collections.abc import Callable
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_ADDRESS, CONF_DOMAIN, CONF_NAME
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.typing import ConfigType
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_ADDRESS, CONF_DOMAIN, CONF_NAME
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity
+from menuai.helpers.typing import ConfigType
 
 from .const import CONF_DOMAIN_DATA, DOMAIN
 from .helpers import (
@@ -57,18 +57,18 @@ class LcnEntity(Entity):
             ).lower(),
         )
 
-    async def async_added_to_hass(self) -> None:
-        """Run when entity about to be added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Run when entity about to be added to menuai."""
         self.device_connection = get_device_connection(
-            self.hass, self.config[CONF_ADDRESS], self.config_entry
+            self.menuai, self.config[CONF_ADDRESS], self.config_entry
         )
         if not self.device_connection.is_group:
             self._unregister_for_inputs = self.device_connection.register_for_inputs(
                 self.input_received
             )
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Run when entity will be removed from hass."""
+    async def async_will_remove_from_menuai(self) -> None:
+        """Run when entity will be removed from menuai."""
         if self._unregister_for_inputs is not None:
             self._unregister_for_inputs()
 

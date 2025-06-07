@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import logging
 
-from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
-from homeassistant.const import PERCENTAGE, UnitOfLength
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.icon import icon_for_battery_level
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType, StateType
-from homeassistant.util.unit_conversion import DistanceConverter
-from homeassistant.util.unit_system import US_CUSTOMARY_SYSTEM
+from menuai.components.sensor import SensorDeviceClass, SensorEntity
+from menuai.const import PERCENTAGE, UnitOfLength
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.icon import icon_for_battery_level
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType, StateType
+from menuai.util.unit_conversion import DistanceConverter
+from menuai.util.unit_system import US_CUSTOMARY_SYSTEM
 
 from . import LeafDataStore
 from .const import (
@@ -27,7 +27,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -37,7 +37,7 @@ def setup_platform(
         return
 
     entities: list[LeafEntity] = []
-    for vin, datastore in hass.data[DATA_LEAF].items():
+    for vin, datastore in menuai.data[DATA_LEAF].items():
         _LOGGER.debug("Adding sensors for vin=%s", vin)
         entities.append(LeafBatterySensor(datastore))
         entities.append(LeafRangeSensor(datastore, True))
@@ -100,7 +100,7 @@ class LeafRangeSensor(LeafEntity, SensorEntity):
     def log_registration(self) -> None:
         """Log registration."""
         _LOGGER.debug(
-            "Registered LeafRangeSensor integration with Home Assistant for VIN %s",
+            "Registered LeafRangeSensor integration with MenuAI for VIN %s",
             self.car.leaf.vin,
         )
 
@@ -116,7 +116,7 @@ class LeafRangeSensor(LeafEntity, SensorEntity):
         if ret is None:
             return None
 
-        if self.car.hass.config.units is US_CUSTOMARY_SYSTEM or self.car.force_miles:
+        if self.car.menuai.config.units is US_CUSTOMARY_SYSTEM or self.car.force_miles:
             ret = DistanceConverter.convert(
                 ret, UnitOfLength.KILOMETERS, UnitOfLength.MILES
             )
@@ -126,6 +126,6 @@ class LeafRangeSensor(LeafEntity, SensorEntity):
     @property
     def native_unit_of_measurement(self) -> str:
         """Battery range unit."""
-        if self.car.hass.config.units is US_CUSTOMARY_SYSTEM or self.car.force_miles:
+        if self.car.menuai.config.units is US_CUSTOMARY_SYSTEM or self.car.force_miles:
             return UnitOfLength.MILES
         return UnitOfLength.KILOMETERS

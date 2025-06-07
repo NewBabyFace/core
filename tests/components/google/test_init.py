@@ -14,15 +14,15 @@ from aiohttp.client_exceptions import ClientError
 import pytest
 import voluptuous as vol
 
-from homeassistant.components.google import DOMAIN, SERVICE_ADD_EVENT
-from homeassistant.components.google.calendar import SERVICE_CREATE_EVENT
-from homeassistant.components.google.const import CONF_CALENDAR_ACCESS
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import ATTR_FRIENDLY_NAME, STATE_OFF
-from homeassistant.core import HomeAssistant, State
-from homeassistant.exceptions import HomeAssistantError, ServiceNotSupported
-from homeassistant.setup import async_setup_component
-from homeassistant.util.dt import UTC, utcnow
+from menuai.components.google import DOMAIN, SERVICE_ADD_EVENT
+from menuai.components.google.calendar import SERVICE_CREATE_EVENT
+from menuai.components.google.const import CONF_CALENDAR_ACCESS
+from menuai.config_entries import ConfigEntryState
+from menuai.const import ATTR_FRIENDLY_NAME, STATE_OFF
+from menuai.core import menuai, State
+from menuai.exceptions import menuaiError, ServiceNotSupported
+from menuai.setup import async_setup_component
+from menuai.util.dt import UTC, utcnow
 
 from .conftest import (
     CALENDAR_ID,
@@ -40,7 +40,7 @@ from tests.test_util.aiohttp import AiohttpClientMocker
 EXPIRED_TOKEN_TIMESTAMP = datetime.datetime(2022, 4, 8).timestamp()
 
 # Typing helpers
-type HassApi = Callable[[], Awaitable[dict[str, Any]]]
+type menuaiApi = Callable[[], Awaitable[dict[str, Any]]]
 
 TEST_EVENT_SUMMARY = "Test Summary"
 TEST_EVENT_DESCRIPTION = "Test Description"
@@ -81,14 +81,14 @@ def assert_state(actual: State | None, expected: State | None) -> None:
     ids=("google.add_event", "google.create_event", "calendar.create_event"),
 )
 def add_event_call_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     request: pytest.FixtureRequest,
 ) -> Callable[[dict[str, Any]], Awaitable[None]]:
     """Fixture for calling the add or create event service."""
     (domain, service_call, data, target) = request.param
 
     async def call_service(params: dict[str, Any]) -> None:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             domain,
             service_call,
             {
@@ -105,18 +105,18 @@ def add_event_call_service(
 
 
 async def test_unload_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     component_setup: ComponentSetup,
 ) -> None:
     """Test load and unload of a ConfigEntry."""
     await component_setup()
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     entry = entries[0]
     assert entry.state is ConfigEntryState.LOADED
 
-    assert await hass.config_entries.async_unload(entry.entry_id)
+    assert await menuai.config_entries.async_unload(entry.entry_id)
     assert entry.state is ConfigEntryState.NOT_LOADED
 
 
@@ -124,7 +124,7 @@ async def test_unload_entry(
     "token_scopes", ["https://www.googleapis.com/auth/calendar.readonly"]
 )
 async def test_existing_token_missing_scope(
-    hass: HomeAssistant,
+    menuai: menuai,
     token_scopes: list[str],
     component_setup: ComponentSetup,
     config_entry: MockConfigEntry,
@@ -132,18 +132,18 @@ async def test_existing_token_missing_scope(
     """Test setup where existing token does not have sufficient scopes."""
     await component_setup()
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     assert entries[0].state is ConfigEntryState.SETUP_ERROR
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
     assert flows[0]["step_id"] == "reauth_confirm"
 
 
 @pytest.mark.parametrize("config_entry_options", [{CONF_CALENDAR_ACCESS: "read_only"}])
 async def test_config_entry_scope_reauth(
-    hass: HomeAssistant,
+    menuai: menuai,
     token_scopes: list[str],
     component_setup: ComponentSetup,
     config_entry: MockConfigEntry,
@@ -153,14 +153,14 @@ async def test_config_entry_scope_reauth(
 
     assert config_entry.state is ConfigEntryState.SETUP_ERROR
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
     assert flows[0]["step_id"] == "reauth_confirm"
 
 
 @pytest.mark.parametrize("calendars_config", [[{"cal_id": "invalid-schema"}]])
 async def test_calendar_yaml_missing_required_fields(
-    hass: HomeAssistant,
+    menuai: menuai,
     component_setup: ComponentSetup,
     calendars_config: list[dict[str, Any]],
     mock_calendars_yaml: None,
@@ -174,7 +174,7 @@ async def test_calendar_yaml_missing_required_fields(
 
 @pytest.mark.parametrize("calendars_config", [[{"missing-cal_id": "invalid-schema"}]])
 async def test_invalid_calendar_yaml(
-    hass: HomeAssistant,
+    menuai: menuai,
     component_setup: ComponentSetup,
     calendars_config: list[dict[str, Any]],
     mock_calendars_yaml: None,
@@ -187,7 +187,7 @@ async def test_invalid_calendar_yaml(
 
 
 async def test_calendar_yaml_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     component_setup: ComponentSetup,
     mock_calendars_list: ApiResult,
     test_api_calendar: dict[str, Any],
@@ -197,16 +197,16 @@ async def test_calendar_yaml_error(
     mock_calendars_list({"items": [test_api_calendar]})
     mock_events_list({})
 
-    with patch("homeassistant.components.google.open", side_effect=FileNotFoundError()):
+    with patch("menuai.components.google.open", side_effect=FileNotFoundError()):
         assert await component_setup()
 
-    assert not hass.states.get(TEST_YAML_ENTITY)
-    assert hass.states.get(TEST_API_ENTITY)
+    assert not menuai.states.get(TEST_YAML_ENTITY)
+    assert menuai.states.get(TEST_API_ENTITY)
 
 
 @pytest.mark.parametrize("calendars_config", [None])
 async def test_empty_calendar_yaml(
-    hass: HomeAssistant,
+    menuai: menuai,
     component_setup: ComponentSetup,
     calendars_config: list[dict[str, Any]],
     mock_calendars_yaml: None,
@@ -220,12 +220,12 @@ async def test_empty_calendar_yaml(
 
     assert await component_setup()
 
-    assert not hass.states.get(TEST_YAML_ENTITY)
-    assert hass.states.get(TEST_API_ENTITY)
+    assert not menuai.states.get(TEST_YAML_ENTITY)
+    assert menuai.states.get(TEST_API_ENTITY)
 
 
 async def test_init_calendar(
-    hass: HomeAssistant,
+    menuai: menuai,
     component_setup: ComponentSetup,
     mock_calendars_list: ApiResult,
     test_api_calendar: dict[str, Any],
@@ -237,17 +237,17 @@ async def test_init_calendar(
     mock_events_list({})
     assert await component_setup()
 
-    state = hass.states.get(TEST_API_ENTITY)
+    state = menuai.states.get(TEST_API_ENTITY)
     assert state
     assert state.name == TEST_API_ENTITY_NAME
     assert state.state == STATE_OFF
 
     # No yaml config loaded that overwrites the entity name
-    assert not hass.states.get(TEST_YAML_ENTITY)
+    assert not menuai.states.get(TEST_YAML_ENTITY)
 
 
 async def test_multiple_config_entries(
-    hass: HomeAssistant,
+    menuai: menuai,
     component_setup: ComponentSetup,
     config_entry: MockConfigEntry,
     mock_calendars_list: ApiResult,
@@ -262,7 +262,7 @@ async def test_multiple_config_entries(
 
     assert await component_setup()
 
-    state = hass.states.get(TEST_API_ENTITY)
+    state = menuai.states.get(TEST_API_ENTITY)
     assert state
     assert state.state == STATE_OFF
     assert state.attributes.get(ATTR_FRIENDLY_NAME) == TEST_API_ENTITY_NAME
@@ -278,11 +278,11 @@ async def test_multiple_config_entries(
     aioclient_mock.clear_requests()
     mock_calendars_list({"items": [calendar2]})
     mock_events_list({}, calendar_id="calendar-id2")
-    config_entry2.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry2.entry_id)
-    await hass.async_block_till_done()
+    config_entry2.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry2.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("calendar.example_calendar_2")
+    state = menuai.states.get("calendar.example_calendar_2")
     assert state
     assert state.attributes.get(ATTR_FRIENDLY_NAME) == "Example calendar 2"
 
@@ -406,7 +406,7 @@ async def test_multiple_config_entries(
     ],
 )
 async def test_add_event_invalid_params(
-    hass: HomeAssistant,
+    menuai: menuai,
     component_setup: ComponentSetup,
     mock_calendars_list: ApiResult,
     test_api_calendar: dict[str, Any],
@@ -443,7 +443,7 @@ async def test_add_event_invalid_params(
     ids=["in_days", "in_weeks"],
 )
 async def test_add_event_date_in_x(
-    hass: HomeAssistant,
+    menuai: menuai,
     component_setup: ComponentSetup,
     mock_calendars_list: ApiResult,
     mock_insert_event: Callable[..., None],
@@ -481,7 +481,7 @@ async def test_add_event_date_in_x(
 
 
 async def test_add_event_date(
-    hass: HomeAssistant,
+    menuai: menuai,
     component_setup: ComponentSetup,
     mock_calendars_list: ApiResult,
     test_api_calendar: dict[str, Any],
@@ -521,7 +521,7 @@ async def test_add_event_date(
 
 
 async def test_add_event_date_time(
-    hass: HomeAssistant,
+    menuai: menuai,
     component_setup: ComponentSetup,
     mock_calendars_list: ApiResult,
     mock_insert_event: Callable[..., None],
@@ -584,7 +584,7 @@ async def test_add_event_date_time(
     ],
 )
 async def test_unsupported_create_event(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_calendars_yaml: Mock,
     component_setup: ComponentSetup,
     mock_calendars_list: ApiResult,
@@ -594,7 +594,7 @@ async def test_unsupported_create_event(
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
     """Test create event service call is unsupported for virtual calendars."""
-    await async_setup_component(hass, "homeassistant", {})
+    await async_setup_component(menuai, "menuai", {})
     mock_calendars_list({"items": [test_api_calendar]})
     mock_events_list({})
     assert await component_setup()
@@ -608,7 +608,7 @@ async def test_unsupported_create_event(
         ServiceNotSupported,
         match=f"Entity {entity_id} does not support action google.create_event",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             "create_event",
             {
@@ -624,7 +624,7 @@ async def test_unsupported_create_event(
 
 
 async def test_add_event_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     component_setup: ComponentSetup,
     mock_calendars_list: ApiResult,
     test_api_calendar: dict[str, Any],
@@ -643,14 +643,14 @@ async def test_add_event_failure(
         exc=ClientError(),
     )
 
-    with pytest.raises(HomeAssistantError):
+    with pytest.raises(menuaiError):
         await add_event_call_service(
             {"start_date": "2022-05-01", "end_date": "2022-05-02"}
         )
 
 
 async def test_add_event_location(
-    hass: HomeAssistant,
+    menuai: menuai,
     component_setup: ComponentSetup,
     mock_calendars_list: ApiResult,
     test_api_calendar: dict[str, Any],
@@ -700,7 +700,7 @@ async def test_add_event_location(
     ids=["max_timestamp", "timestamp_naive"],
 )
 async def test_invalid_token_expiry_in_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     component_setup: ComponentSetup,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
@@ -722,7 +722,7 @@ async def test_invalid_token_expiry_in_config_entry(
     assert await component_setup()
 
     # Verify token expiration values are updated
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     assert entries[0].state is ConfigEntryState.LOADED
     assert entries[0].data["token"]["access_token"] == "some-updated-token"
@@ -731,7 +731,7 @@ async def test_invalid_token_expiry_in_config_entry(
 
 @pytest.mark.parametrize("config_entry_token_expiry", [EXPIRED_TOKEN_TIMESTAMP])
 async def test_expired_token_refresh_internal_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     component_setup: ComponentSetup,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
@@ -744,7 +744,7 @@ async def test_expired_token_refresh_internal_error(
 
     await component_setup()
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     assert entries[0].state is ConfigEntryState.SETUP_RETRY
 
@@ -754,7 +754,7 @@ async def test_expired_token_refresh_internal_error(
     [EXPIRED_TOKEN_TIMESTAMP],
 )
 async def test_expired_token_requires_reauth(
-    hass: HomeAssistant,
+    menuai: menuai,
     component_setup: ComponentSetup,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
@@ -767,11 +767,11 @@ async def test_expired_token_requires_reauth(
 
     await component_setup()
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     assert entries[0].state is ConfigEntryState.SETUP_ERROR
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
     assert flows[0]["step_id"] == "reauth_confirm"
 
@@ -793,7 +793,7 @@ async def test_expired_token_requires_reauth(
     ids=["has_yaml", "no_yaml"],
 )
 async def test_calendar_yaml_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     component_setup: ComponentSetup,
     mock_calendars_yaml: Mock,
     mock_calendars_list: ApiResult,
@@ -811,17 +811,17 @@ async def test_calendar_yaml_update(
     mock_calendars_yaml().read.assert_called()
     assert mock_calendars_yaml().write.called is expect_write_calls
 
-    state = hass.states.get(TEST_API_ENTITY)
+    state = menuai.states.get(TEST_API_ENTITY)
     assert state
     assert state.name == TEST_API_ENTITY_NAME
     assert state.state == STATE_OFF
 
     # No yaml config loaded that overwrites the entity name
-    assert not hass.states.get(TEST_YAML_ENTITY)
+    assert not menuai.states.get(TEST_YAML_ENTITY)
 
 
 async def test_update_will_reload(
-    hass: HomeAssistant,
+    menuai: menuai,
     component_setup: ComponentSetup,
     mock_calendars_list: ApiResult,
     test_api_calendar: dict[str, Any],
@@ -836,38 +836,38 @@ async def test_update_will_reload(
     assert config_entry.options == {}  # read_write is default
 
     with patch(
-        "homeassistant.config_entries.ConfigEntries.async_reload",
+        "menuai.config_entries.ConfigEntries.async_reload",
         return_value=None,
     ) as mock_reload:
         # No-op does not reload
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             config_entry, options={CONF_CALENDAR_ACCESS: "read_write"}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         mock_reload.assert_not_called()
 
         # Data change does not trigger reload
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             config_entry,
             data={
                 **config_entry.data,
                 "example": "field",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         mock_reload.assert_not_called()
 
         # Reload when options changed
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             config_entry, options={CONF_CALENDAR_ACCESS: "read_only"}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         mock_reload.assert_called_once()
 
 
 @pytest.mark.parametrize("config_entry_unique_id", [None])
 async def test_assign_unique_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     component_setup: ComponentSetup,
     mock_calendars_list: ApiResult,
     test_api_calendar: dict[str, Any],
@@ -905,7 +905,7 @@ async def test_assign_unique_id(
     ],
 )
 async def test_assign_unique_id_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     component_setup: ComponentSetup,
     mock_calendars_list: ApiResult,
     test_api_calendar: dict[str, Any],
@@ -935,7 +935,7 @@ async def test_assign_unique_id_failure(
 
 
 async def test_remove_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_calendars_list: ApiResult,
     component_setup: ComponentSetup,
     test_api_calendar: dict[str, Any],
@@ -946,10 +946,10 @@ async def test_remove_entry(
     mock_events_list({})
     assert await component_setup()
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     entry = entries[0]
     assert entry.state is ConfigEntryState.LOADED
 
-    assert await hass.config_entries.async_remove(entry.entry_id)
+    assert await menuai.config_entries.async_remove(entry.entry_id)
     assert entry.state is ConfigEntryState.NOT_LOADED

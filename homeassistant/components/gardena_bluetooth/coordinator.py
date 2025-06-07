@@ -12,11 +12,11 @@ from gardena_bluetooth.exceptions import (
 )
 from gardena_bluetooth.parse import Characteristic, CharacteristicType
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 SCAN_INTERVAL = timedelta(seconds=60)
 LOGGER = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ LOGGER = logging.getLogger(__name__)
 type GardenaBluetoothConfigEntry = ConfigEntry[GardenaBluetoothCoordinator]
 
 
-class DeviceUnavailable(HomeAssistantError):
+class DeviceUnavailable(menuaiError):
     """Raised if device can't be found."""
 
 
@@ -35,7 +35,7 @@ class GardenaBluetoothCoordinator(DataUpdateCoordinator[dict[str, bytes]]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: GardenaBluetoothConfigEntry,
         logger: logging.Logger,
         client: Client,
@@ -45,7 +45,7 @@ class GardenaBluetoothCoordinator(DataUpdateCoordinator[dict[str, bytes]]):
     ) -> None:
         """Initialize global data updater."""
         super().__init__(
-            hass=hass,
+            menuai=menuai,
             logger=logger,
             config_entry=config_entry,
             name="Gardena Bluetooth Data Update Coordinator",
@@ -97,7 +97,7 @@ class GardenaBluetoothCoordinator(DataUpdateCoordinator[dict[str, bytes]]):
         try:
             await self.client.write_char(char, value)
         except (GardenaBluetoothException, DeviceUnavailable) as exception:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Unable to write characteristic {char} dur to {exception}"
             ) from exception
 

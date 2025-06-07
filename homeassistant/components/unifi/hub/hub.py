@@ -7,14 +7,14 @@ from typing import TYPE_CHECKING
 
 import aiounifi
 
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import (
+from menuai.core import Event, menuai, callback
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import (
     DeviceEntry,
     DeviceEntryType,
     DeviceInfo,
 )
-from homeassistant.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.dispatcher import async_dispatcher_send
 
 from ..const import ATTR_MANUFACTURER, CONF_SITE_ID, DOMAIN, PLATFORMS
 from .config import UnifiConfig
@@ -31,17 +31,17 @@ class UnifiHub:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: UnifiConfigEntry,
         api: aiounifi.Controller,
     ) -> None:
         """Initialize the system."""
-        self.hass = hass
+        self.menuai = menuai
         self.api = api
         self.config = UnifiConfig.from_config_entry(config_entry)
         self.entity_loader = UnifiEntityLoader(self)
-        self._entity_helper = UnifiEntityHelper(hass, api)
-        self.websocket = UnifiWebsocket(hass, api, self.signal_reachable)
+        self._entity_helper = UnifiEntityHelper(menuai, api)
+        self.websocket = UnifiWebsocket(menuai, api, self.signal_reachable)
 
         self.site = config_entry.data[CONF_SITE_ID]
         self.is_admin = False
@@ -114,14 +114,14 @@ class UnifiHub:
     @callback
     def async_update_device_registry(self) -> DeviceEntry:
         """Update device registry."""
-        device_registry = dr.async_get(self.hass)
+        device_registry = dr.async_get(self.menuai)
         return device_registry.async_get_or_create(
             config_entry_id=self.config.entry.entry_id, **self.device_info
         )
 
     @staticmethod
     async def async_config_entry_updated(
-        hass: HomeAssistant, config_entry: UnifiConfigEntry
+        menuai: menuai, config_entry: UnifiConfigEntry
     ) -> None:
         """Handle signals of config entry being updated.
 
@@ -130,7 +130,7 @@ class UnifiHub:
         """
         hub = config_entry.runtime_data
         hub.config = UnifiConfig.from_config_entry(config_entry)
-        async_dispatcher_send(hass, hub.signal_options_update)
+        async_dispatcher_send(menuai, hub.signal_options_update)
 
     @callback
     def shutdown(self, event: Event) -> None:
@@ -148,7 +148,7 @@ class UnifiHub:
         """
         await self.websocket.stop_and_wait()
 
-        unload_ok = await self.hass.config_entries.async_unload_platforms(
+        unload_ok = await self.menuai.config_entries.async_unload_platforms(
             self.config.entry, PLATFORMS
         )
 

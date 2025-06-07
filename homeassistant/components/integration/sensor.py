@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any, Final, Self
 
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     DEVICE_CLASS_UNITS,
     PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
     RestoreSensor,
@@ -20,8 +20,8 @@ from homeassistant.components.sensor import (
     SensorExtraStoredData,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     ATTR_UNIT_OF_MEASUREMENT,
     CONF_METHOD,
@@ -30,28 +30,28 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     UnitOfTime,
 )
-from homeassistant.core import (
+from menuai.core import (
     CALLBACK_TYPE,
     Event,
     EventStateChangedData,
     EventStateReportedData,
-    HomeAssistant,
+    menuai,
     State,
     callback,
 )
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.device import async_device_info_to_link_from_entity
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import (
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.device import async_device_info_to_link_from_entity
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     AddEntitiesCallback,
 )
-from homeassistant.helpers.event import (
+from menuai.helpers.event import (
     async_call_later,
     async_track_state_change_event,
     async_track_state_report_event,
 )
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import (
     CONF_MAX_SUB_INTERVAL,
@@ -235,19 +235,19 @@ class IntegrationSensorExtraStoredData(SensorExtraStoredData):
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Initialize Integration - Riemann sum integral config entry."""
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     # Validate + resolve entity registry id to entity_id
     source_entity_id = er.async_validate_entity_id(
         registry, config_entry.options[CONF_SOURCE_SENSOR]
     )
 
     device_info = async_device_info_to_link_from_entity(
-        hass,
+        menuai,
         source_entity_id,
     )
 
@@ -280,7 +280,7 @@ async def async_setup_entry(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -409,9 +409,9 @@ class IntegrationSensor(RestoreSensor):
         )
         self._last_valid_state = self._state
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         if (last_sensor_data := await self.async_get_last_sensor_data()) is not None:
             self._state = (
@@ -430,7 +430,7 @@ class IntegrationSensor(RestoreSensor):
             )
 
         if self._max_sub_interval is not None:
-            source_state = self.hass.states.get(self._sensor_source_id)
+            source_state = self.menuai.states.get(self._sensor_source_id)
             self._schedule_max_sub_interval_exceeded_if_state_is_numeric(source_state)
             self.async_on_remove(self._cancel_max_sub_interval_exceeded_callback)
             handle_state_change = self._integrate_on_state_change_with_max_sub_interval
@@ -440,20 +440,20 @@ class IntegrationSensor(RestoreSensor):
             handle_state_report = self._integrate_on_state_report_callback
 
         if (
-            state := self.hass.states.get(self._source_entity)
+            state := self.menuai.states.get(self._source_entity)
         ) and state.state != STATE_UNAVAILABLE:
             self._derive_and_set_attributes_from_state(state)
 
         self.async_on_remove(
             async_track_state_change_event(
-                self.hass,
+                self.menuai,
                 self._sensor_source_id,
                 handle_state_change,
             )
         )
         self.async_on_remove(
             async_track_state_report_event(
-                self.hass,
+                self.menuai,
                 self._sensor_source_id,
                 handle_state_report,
             )
@@ -603,7 +603,7 @@ class IntegrationSensor(RestoreSensor):
                 )
 
             self._max_sub_interval_exceeded_callback = async_call_later(
-                self.hass,
+                self.menuai,
                 self._max_sub_interval,
                 _integrate_on_max_sub_interval_exceeded_callback,
             )

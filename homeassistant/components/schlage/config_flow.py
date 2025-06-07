@@ -9,8 +9,8 @@ import pyschlage
 from pyschlage.exceptions import NotAuthorizedError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
 
 from .const import DOMAIN, LOGGER
 
@@ -33,7 +33,7 @@ class SchlageConfigFlow(ConfigFlow, domain=DOMAIN):
             return self._show_user_form({})
         username = user_input[CONF_USERNAME].lower()
         password = user_input[CONF_PASSWORD]
-        user_id, errors = await self.hass.async_add_executor_job(
+        user_id, errors = await self.menuai.async_add_executor_job(
             _authenticate, username, password
         )
         if user_id is None:
@@ -71,7 +71,7 @@ class SchlageConfigFlow(ConfigFlow, domain=DOMAIN):
         reauth_entry = self._get_reauth_entry()
         username = reauth_entry.data[CONF_USERNAME]
         password = user_input[CONF_PASSWORD]
-        user_id, errors = await self.hass.async_add_executor_job(
+        user_id, errors = await self.menuai.async_add_executor_job(
             _authenticate, username, password
         )
         if user_id is None:

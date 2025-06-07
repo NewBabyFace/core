@@ -10,9 +10,9 @@ from aiohttp import ClientConnectionError, ClientResponseError
 from tessie_api import get_state_of_all_vehicles
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_ACCESS_TOKEN
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_ACCESS_TOKEN
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN
 
@@ -37,7 +37,7 @@ class TessieConfigFlow(ConfigFlow, domain=DOMAIN):
             self._async_abort_entries_match(dict(user_input))
             try:
                 await get_state_of_all_vehicles(
-                    session=async_get_clientsession(self.hass),
+                    session=async_get_clientsession(self.menuai),
                     api_key=user_input[CONF_ACCESS_TOKEN],
                     only_active=True,
                 )
@@ -76,7 +76,7 @@ class TessieConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input:
             try:
                 await get_state_of_all_vehicles(
-                    session=async_get_clientsession(self.hass),
+                    session=async_get_clientsession(self.menuai),
                     api_key=user_input[CONF_ACCESS_TOKEN],
                 )
             except ClientResponseError as e:

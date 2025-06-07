@@ -1,4 +1,4 @@
-"""Home Assistant Hardware base firmware update entity."""
+"""MenuAI Hardware base firmware update entity."""
 
 from __future__ import annotations
 
@@ -13,16 +13,16 @@ from universal_silabs_flasher.firmware import parse_firmware_image
 from universal_silabs_flasher.flasher import Flasher
 from yarl import URL
 
-from homeassistant.components.update import (
+from menuai.components.update import (
     UpdateEntity,
     UpdateEntityDescription,
     UpdateEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import CALLBACK_TYPE, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.restore_state import ExtraStoredData
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import CALLBACK_TYPE, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.restore_state import ExtraStoredData
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .coordinator import FirmwareUpdateCoordinator
 from .helpers import async_register_firmware_info_callback
@@ -42,7 +42,7 @@ type FirmwareChangeCallbackType = Callable[
 
 @dataclass(kw_only=True, frozen=True)
 class FirmwareUpdateEntityDescription(UpdateEntityDescription):
-    """Describes Home Assistant Hardware firmware update entity."""
+    """Describes MenuAI Hardware firmware update entity."""
 
     version_parser: Callable[[str], str]
     fw_type: str | None
@@ -53,7 +53,7 @@ class FirmwareUpdateEntityDescription(UpdateEntityDescription):
 
 @dataclass
 class FirmwareUpdateExtraStoredData(ExtraStoredData):
-    """Extra stored data for Home Assistant Hardware firmware update entity."""
+    """Extra stored data for MenuAI Hardware firmware update entity."""
 
     firmware_manifest: FirmwareManifest | None = None
 
@@ -86,7 +86,7 @@ class FirmwareUpdateExtraStoredData(ExtraStoredData):
 class BaseFirmwareUpdateEntity(
     CoordinatorEntity[FirmwareUpdateCoordinator], UpdateEntity
 ):
-    """Base Home Assistant Hardware firmware update entity."""
+    """Base MenuAI Hardware firmware update entity."""
 
     # Subclasses provide the mapping between firmware types and entity descriptions
     entity_description: FirmwareUpdateEntityDescription
@@ -129,13 +129,13 @@ class BaseFirmwareUpdateEntity(
 
         return remove_callback
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         self.async_on_remove(
             async_register_firmware_info_callback(
-                self.hass,
+                self.menuai,
                 self._current_device,
                 self._firmware_info_callback,
             )
@@ -254,12 +254,12 @@ class BaseFirmwareUpdateEntity(
         self, device: str
     ) -> AsyncIterator[None]:
         """Temporarily stop addons and integrations communicating with the device."""
-        firmware_info = await guess_firmware_info(self.hass, device)
+        firmware_info = await guess_firmware_info(self.menuai, device)
         _LOGGER.debug("Identified firmware info: %s", firmware_info)
 
         async with AsyncExitStack() as stack:
             for owner in firmware_info.owners:
-                await stack.enter_async_context(owner.temporarily_stop(self.hass))
+                await stack.enter_async_context(owner.temporarily_stop(self.menuai))
 
             yield
 
@@ -278,7 +278,7 @@ class BaseFirmwareUpdateEntity(
         fw_data = await self.coordinator.client.async_fetch_firmware(
             self._latest_firmware
         )
-        fw_image = await self.hass.async_add_executor_job(parse_firmware_image, fw_data)
+        fw_image = await self.menuai.async_add_executor_job(parse_firmware_image, fw_data)
 
         device = self._current_device
 
@@ -304,7 +304,7 @@ class BaseFirmwareUpdateEntity(
                         fw_image, progress_callback=self._update_progress
                     )
                 except Exception as err:
-                    raise HomeAssistantError("Failed to flash firmware") from err
+                    raise menuaiError("Failed to flash firmware") from err
 
                 # Probe the running application type with indeterminate progress
                 self._attr_update_percentage = None
@@ -316,7 +316,7 @@ class BaseFirmwareUpdateEntity(
                 )
 
                 if firmware_info is None:
-                    raise HomeAssistantError(
+                    raise menuaiError(
                         "Failed to probe the firmware after flashing"
                     )
 

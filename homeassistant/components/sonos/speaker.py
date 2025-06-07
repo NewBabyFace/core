@@ -20,19 +20,19 @@ from soco.plugins.sharelink import ShareLinkPlugin
 from soco.snapshot import Snapshot
 from sonos_websocket import SonosWebsocket
 
-from homeassistant.components.media_player import DOMAIN as MP_DOMAIN
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.dispatcher import (
+from menuai.components.media_player import DOMAIN as MP_DOMAIN
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.dispatcher import (
     async_dispatcher_connect,
     async_dispatcher_send,
     dispatcher_send,
 )
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.util import dt as dt_util
+from menuai.helpers.event import async_track_time_interval
+from menuai.util import dt as dt_util
 
 from .alarms import SonosAlarms
 from .const import (
@@ -94,18 +94,18 @@ class SonosSpeaker:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         soco: SoCo,
         speaker_info: dict[str, Any],
         zone_group_state_sub: SubscriptionBase | None,
     ) -> None:
         """Initialize a SonosSpeaker."""
-        self.hass = hass
-        self.data: SonosData = hass.data[DATA_SONOS]
+        self.menuai = menuai
+        self.data: SonosData = menuai.data[DATA_SONOS]
         self.soco = soco
         self.websocket: SonosWebsocket | None = None
         self.household_id: str = soco.household_id
-        self.media = SonosMedia(hass, soco)
+        self.media = SonosMedia(menuai, soco)
         self._plex_plugin: PlexPlugin | None = None
         self._share_link_plugin: ShareLinkPlugin | None = None
         self.available: bool = True
@@ -185,13 +185,13 @@ class SonosSpeaker:
         # Battery events can be infrequent, polling is still necessary
         if has_battery:
             self._battery_poll_timer = async_track_time_interval(
-                self.hass, self.async_poll_battery, BATTERY_SCAN_INTERVAL
+                self.menuai, self.async_poll_battery, BATTERY_SCAN_INTERVAL
             )
 
         self.websocket = SonosWebsocket(
             self.soco.ip_address,
             player_id=self.soco.uid,
-            session=async_get_clientsession(self.hass),
+            session=async_get_clientsession(self.menuai),
         )
 
         dispatch_pairs: tuple[tuple[str, Callable[..., Any]], ...] = (
@@ -205,14 +205,14 @@ class SonosSpeaker:
         for signal, target in dispatch_pairs:
             entry.async_on_unload(
                 async_dispatcher_connect(
-                    self.hass,
+                    self.menuai,
                     signal,
                     target,
                 )
             )
 
         for dispatch in dispatches:
-            async_dispatcher_send(self.hass, *dispatch)
+            async_dispatcher_send(self.menuai, *dispatch)
 
         await self.async_subscribe()
 
@@ -236,7 +236,7 @@ class SonosSpeaker:
             _LOGGER.debug("No battery available for %s", self.zone_name)
         else:
             has_battery = True
-            dispatcher_send(self.hass, SONOS_CREATE_BATTERY, self)
+            dispatcher_send(self.menuai, SONOS_CREATE_BATTERY, self)
 
         if (mic_enabled := self.soco.mic_enabled) is not None:
             self.mic_enabled = mic_enabled
@@ -251,19 +251,19 @@ class SonosSpeaker:
         dispatches.append((SONOS_CREATE_MEDIA_PLAYER, self))
         dispatches.append((SONOS_SPEAKER_ADDED, self.soco.uid))
 
-        self.hass.create_task(self.async_setup(entry, has_battery, dispatches))
+        self.menuai.create_task(self.async_setup(entry, has_battery, dispatches))
 
     #
     # Entity management
     #
     def write_entity_states(self) -> None:
         """Write states for associated SonosEntity instances."""
-        dispatcher_send(self.hass, f"{SONOS_STATE_UPDATED}-{self.soco.uid}")
+        dispatcher_send(self.menuai, f"{SONOS_STATE_UPDATED}-{self.soco.uid}")
 
     @callback
     def async_write_entity_states(self) -> None:
         """Write states for associated SonosEntity instances."""
-        async_dispatcher_send(self.hass, f"{SONOS_STATE_UPDATED}-{self.soco.uid}")
+        async_dispatcher_send(self.menuai, f"{SONOS_STATE_UPDATED}-{self.soco.uid}")
 
     #
     # Properties
@@ -371,10 +371,10 @@ class SonosSpeaker:
         # or callback events do not arrive
         if not self._poll_timer:
             self._poll_timer = async_track_time_interval(
-                self.hass,
+                self.menuai,
                 partial(
                     async_dispatcher_send,
-                    self.hass,
+                    self.menuai,
                     f"{SONOS_FALLBACK_POLL}-{self.soco.uid}",
                 ),
                 SCAN_INTERVAL,
@@ -407,7 +407,7 @@ class SonosSpeaker:
     @callback
     def async_renew_failed(self, exception: Exception) -> None:
         """Handle a failed subscription renewal."""
-        self.hass.async_create_background_task(
+        self.menuai.async_create_background_task(
             self._async_renew_failed(exception), "sonos renew failed", eager_start=True
         )
 
@@ -451,7 +451,7 @@ class SonosSpeaker:
         """Add the soco instance associated with the event to the callback."""
         if "alarm_list_version" not in event.variables:
             return
-        self.hass.async_create_background_task(
+        self.menuai.async_create_background_task(
             self.alarms.async_process_event(event, self),
             "sonos process event",
             eager_start=True,
@@ -461,7 +461,7 @@ class SonosSpeaker:
     def async_dispatch_device_properties(self, event: SonosEvent) -> None:
         """Update device properties from an event."""
         self.event_stats.process(event)
-        self.hass.async_create_background_task(
+        self.menuai.async_create_background_task(
             self.async_update_device_properties(event),
             "sonos device properties",
             eager_start=True,
@@ -473,7 +473,7 @@ class SonosSpeaker:
             mic_exists = self.mic_enabled is not None
             self.mic_enabled = bool(int(event.variables["mic_enabled"]))
             if not mic_exists:
-                async_dispatcher_send(self.hass, SONOS_CREATE_MIC_SENSOR, self)
+                async_dispatcher_send(self.menuai, SONOS_CREATE_MIC_SENSOR, self)
 
         if more_info := event.variables.get("more_info"):
             await self.async_update_battery_info(more_info)
@@ -487,7 +487,7 @@ class SonosSpeaker:
             return
         if "container_update_i_ds" not in event.variables:
             return
-        self.hass.async_create_background_task(
+        self.menuai.async_create_background_task(
             self.favorites.async_process_event(event, self),
             "sonos dispatch favorites",
             eager_start=True,
@@ -537,7 +537,7 @@ class SonosSpeaker:
             return
 
         self.event_stats.process(event)
-        self.hass.async_add_executor_job(
+        self.menuai.async_add_executor_job(
             self.media.update_media_from_event, event.variables
         )
 
@@ -613,7 +613,7 @@ class SonosSpeaker:
         self.available = True
         if not was_available:
             self.async_write_entity_states()
-            self.hass.async_create_task(self.async_subscribe(), eager_start=True)
+            self.menuai.async_create_task(self.async_subscribe(), eager_start=True)
 
     @callback
     def async_check_activity(self, now: datetime.datetime) -> None:
@@ -623,7 +623,7 @@ class SonosSpeaker:
         if time.monotonic() - self._last_activity < AVAILABILITY_TIMEOUT:
             return
         # Ensure the ping is canceled at shutdown
-        self.hass.async_create_background_task(
+        self.menuai.async_create_background_task(
             self._async_check_activity(),
             f"sonos {self.uid} {self.zone_name} ping",
             eager_start=True,
@@ -632,7 +632,7 @@ class SonosSpeaker:
     async def _async_check_activity(self) -> None:
         """Validate availability of the speaker based on recent activity."""
         try:
-            await self.hass.async_add_executor_job(self.ping)
+            await self.menuai.async_add_executor_job(self.ping)
         except SonosUpdateError:
             _LOGGER.warning(
                 "No recent activity and cannot reach %s, marking unavailable",
@@ -651,7 +651,7 @@ class SonosSpeaker:
         if not self.available:
             return
 
-        if self._resub_cooldown_expires_at is None and not self.hass.is_stopping:
+        if self._resub_cooldown_expires_at is None and not self.menuai.is_stopping:
             self._resub_cooldown_expires_at = time.monotonic() + RESUB_COOLDOWN_SECONDS
             _LOGGER.debug("Starting resubscription cooldown for %s", self.zone_name)
 
@@ -732,7 +732,7 @@ class SonosSpeaker:
                     "S1 firmware detected on %s, battery info may update infrequently",
                     self.zone_name,
                 )
-                async_dispatcher_send(self.hass, SONOS_CREATE_BATTERY, self)
+                async_dispatcher_send(self.menuai, SONOS_CREATE_BATTERY, self)
             return
 
         if is_charging == self.charging:
@@ -743,7 +743,7 @@ class SonosSpeaker:
         else:
             # Poll to obtain current power source not provided by event
             try:
-                self.battery_info = await self.hass.async_add_executor_job(
+                self.battery_info = await self.menuai.async_add_executor_job(
                     self.fetch_battery_info
                 )
             except SonosUpdateError as err:
@@ -778,7 +778,7 @@ class SonosSpeaker:
             return
 
         try:
-            self.battery_info = await self.hass.async_add_executor_job(
+            self.battery_info = await self.menuai.async_add_executor_job(
                 self.fetch_battery_info
             )
         except SonosUpdateError as err:
@@ -791,7 +791,7 @@ class SonosSpeaker:
     #
     def update_groups(self) -> None:
         """Update group topology when polling."""
-        self.hass.add_job(self.create_update_groups_coro())
+        self.menuai.add_job(self.create_update_groups_coro())
 
     @callback
     def async_update_group_for_uid(self, uid: str) -> None:
@@ -802,7 +802,7 @@ class SonosSpeaker:
         _LOGGER.debug(
             "%s was missing, adding to %s group", missing_zone, self.zone_name
         )
-        self.hass.async_create_task(self.create_update_groups_coro(), eager_start=True)
+        self.menuai.async_create_task(self.create_update_groups_coro(), eager_start=True)
 
     @callback
     def async_update_groups(self, event: SonosEvent) -> None:
@@ -822,12 +822,12 @@ class SonosSpeaker:
                     continue
                 uid = vanished_device.get("UUID")
                 async_dispatcher_send(
-                    self.hass,
+                    self.menuai,
                     f"{SONOS_VANISHED}-{uid}",
                     reason,
                 )
         self.event_stats.process(event)
-        self.hass.async_create_background_task(
+        self.menuai.async_create_background_task(
             self.create_update_groups_coro(event),
             name=f"sonos group update {self.zone_name}",
             eager_start=True,
@@ -858,7 +858,7 @@ class SonosSpeaker:
                 assert isinstance(group, str)
                 return group.split(",")
 
-            return await self.hass.async_add_executor_job(_get_soco_group)
+            return await self.menuai.async_add_executor_job(_get_soco_group)
 
         @callback
         def _async_regroup(group: list[str]) -> None:
@@ -881,7 +881,7 @@ class SonosSpeaker:
                 # Skip updating existing single speakers in polling mode
                 return
 
-            entity_registry = er.async_get(self.hass)
+            entity_registry = er.async_get(self.menuai)
             sonos_group = []
             sonos_group_entities = []
 
@@ -960,16 +960,16 @@ class SonosSpeaker:
 
     @staticmethod
     async def join_multi(
-        hass: HomeAssistant,
+        menuai: menuai,
         master: SonosSpeaker,
         speakers: list[SonosSpeaker],
     ) -> None:
         """Form a group with other players."""
-        async with hass.data[DATA_SONOS].topology_condition:
-            group: list[SonosSpeaker] = await hass.async_add_executor_job(
+        async with menuai.data[DATA_SONOS].topology_condition:
+            group: list[SonosSpeaker] = await menuai.async_add_executor_job(
                 master.join, speakers
             )
-            await SonosSpeaker.wait_for_groups(hass, [group])
+            await SonosSpeaker.wait_for_groups(menuai, [group])
 
     @soco_error()
     def unjoin(self) -> None:
@@ -980,7 +980,7 @@ class SonosSpeaker:
         self.coordinator = None
 
     @staticmethod
-    async def unjoin_multi(hass: HomeAssistant, speakers: list[SonosSpeaker]) -> None:
+    async def unjoin_multi(menuai: menuai, speakers: list[SonosSpeaker]) -> None:
         """Unjoin several players from their group."""
 
         def _unjoin_all(speakers: list[SonosSpeaker]) -> None:
@@ -992,9 +992,9 @@ class SonosSpeaker:
             for speaker in joined_speakers + coordinators:
                 speaker.unjoin()
 
-        async with hass.data[DATA_SONOS].topology_condition:
-            await hass.async_add_executor_job(_unjoin_all, speakers)
-            await SonosSpeaker.wait_for_groups(hass, [[s] for s in speakers])
+        async with menuai.data[DATA_SONOS].topology_condition:
+            await menuai.async_add_executor_job(_unjoin_all, speakers)
+            await SonosSpeaker.wait_for_groups(menuai, [[s] for s in speakers])
 
     @soco_error()
     def snapshot(self, with_group: bool) -> None:
@@ -1008,7 +1008,7 @@ class SonosSpeaker:
 
     @staticmethod
     async def snapshot_multi(
-        hass: HomeAssistant, speakers: list[SonosSpeaker], with_group: bool
+        menuai: menuai, speakers: list[SonosSpeaker], with_group: bool
     ) -> None:
         """Snapshot all the speakers and optionally their groups."""
 
@@ -1023,8 +1023,8 @@ class SonosSpeaker:
             for speaker in list(speakers_set):
                 speakers_set.update(speaker.sonos_group)
 
-        async with hass.data[DATA_SONOS].topology_condition:
-            await hass.async_add_executor_job(_snapshot_all, speakers_set)
+        async with menuai.data[DATA_SONOS].topology_condition:
+            await menuai.async_add_executor_job(_snapshot_all, speakers_set)
 
     @soco_error()
     def restore(self) -> None:
@@ -1041,7 +1041,7 @@ class SonosSpeaker:
 
     @staticmethod
     async def restore_multi(
-        hass: HomeAssistant, speakers: list[SonosSpeaker], with_group: bool
+        menuai: menuai, speakers: list[SonosSpeaker], with_group: bool
     ) -> None:
         """Restore snapshots for all the speakers."""
 
@@ -1109,7 +1109,7 @@ class SonosSpeaker:
         # Find all affected players
         speakers_set = {s for s in speakers if s.soco_snapshot}
         if missing_snapshots := set(speakers) - speakers_set:
-            raise HomeAssistantError(
+            raise menuaiError(
                 "Restore failed, speakers are missing snapshots:"
                 f" {[s.zone_name for s in missing_snapshots]}"
             )
@@ -1119,16 +1119,16 @@ class SonosSpeaker:
                 assert len(speaker.snapshot_group)
                 speakers_set.update(speaker.snapshot_group)
 
-        async with hass.data[DATA_SONOS].topology_condition:
-            groups = await hass.async_add_executor_job(
+        async with menuai.data[DATA_SONOS].topology_condition:
+            groups = await menuai.async_add_executor_job(
                 _restore_groups, speakers_set, with_group
             )
-            await SonosSpeaker.wait_for_groups(hass, groups)
-            await hass.async_add_executor_job(_restore_players, speakers_set)
+            await SonosSpeaker.wait_for_groups(menuai, groups)
+            await menuai.async_add_executor_job(_restore_players, speakers_set)
 
     @staticmethod
     async def wait_for_groups(
-        hass: HomeAssistant, groups: list[list[SonosSpeaker]]
+        menuai: menuai, groups: list[list[SonosSpeaker]]
     ) -> None:
         """Wait until all groups are present, or timeout."""
 
@@ -1151,11 +1151,11 @@ class SonosSpeaker:
         try:
             async with asyncio.timeout(5):
                 while not _test_groups(groups):
-                    await hass.data[DATA_SONOS].topology_condition.wait()
+                    await menuai.data[DATA_SONOS].topology_condition.wait()
         except TimeoutError:
             _LOGGER.warning("Timeout waiting for target groups %s", groups)
 
-        any_speaker = next(iter(hass.data[DATA_SONOS].discovered.values()))
+        any_speaker = next(iter(menuai.data[DATA_SONOS].discovered.values()))
         any_speaker.soco.zone_group_state.clear_cache()
 
     #

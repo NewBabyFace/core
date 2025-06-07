@@ -25,7 +25,7 @@
       "reauth_account_mismatch": "Authenticated account does not match the account to be reauthenticated. Please log in with the correct account and pick the right location.",
       "reauth_location_mismatch": "Authenticated location does not match the location to be reauthenticated. Please log in with the correct account and pick the right location.",
       "missing_scopes": "Authentication failed. Please make sure you have granted all required permissions.",
-      "cloud_not_enabled": "Please make sure you run Home Assistant with `{default_config}` enabled in your configuration.yaml."
+      "cloud_not_enabled": "Please make sure you run MenuAI with `{default_config}` enabled in your configuration.yaml."
     }
   },
   "entity": {

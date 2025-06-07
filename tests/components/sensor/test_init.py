@@ -10,9 +10,9 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components import sensor
-from homeassistant.components.number import NumberDeviceClass
-from homeassistant.components.sensor import (
+from menuai.components import sensor
+from menuai.components.number import NumberDeviceClass
+from menuai.components.sensor import (
     DEVICE_CLASS_STATE_CLASSES,
     DEVICE_CLASS_UNITS,
     DOMAIN,
@@ -24,9 +24,9 @@ from homeassistant.components.sensor import (
     async_rounded_state,
     async_update_suggested_units,
 )
-from homeassistant.components.sensor.const import STATE_CLASS_UNITS, UNIT_CONVERTERS
-from homeassistant.config_entries import ConfigEntry, ConfigFlow
-from homeassistant.const import (
+from menuai.components.sensor.const import STATE_CLASS_UNITS, UNIT_CONVERTERS
+from menuai.config_entries import ConfigEntry, ConfigFlow
+from menuai.const import (
     ATTR_UNIT_OF_MEASUREMENT,
     PERCENTAGE,
     STATE_UNKNOWN,
@@ -58,13 +58,13 @@ from homeassistant.const import (
     UnitOfVolumeFlowRate,
     UnitOfVolumetricFlux,
 )
-from homeassistant.core import HomeAssistant, State
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.restore_state import STORAGE_KEY as RESTORE_STATE_KEY
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
-from homeassistant.util.unit_system import METRIC_SYSTEM, US_CUSTOMARY_SYSTEM
+from menuai.core import menuai, State
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.restore_state import STORAGE_KEY as RESTORE_STATE_KEY
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
+from menuai.util.unit_system import METRIC_SYSTEM, US_CUSTOMARY_SYSTEM
 
 from .common import MockRestoreSensor, MockSensor
 
@@ -118,7 +118,7 @@ TEST_DOMAIN = "test"
     ],
 )
 async def test_temperature_conversion(
-    hass: HomeAssistant,
+    menuai: menuai,
     unit_system,
     native_unit,
     state_unit,
@@ -126,26 +126,26 @@ async def test_temperature_conversion(
     state_value,
 ) -> None:
     """Test temperature conversion."""
-    hass.config.units = unit_system
+    menuai.config.units = unit_system
     entity0 = MockSensor(
         name="Test",
         native_value=str(native_value),
         native_unit_of_measurement=native_unit,
         device_class=SensorDeviceClass.TEMPERATURE,
     )
-    setup_test_component_platform(hass, sensor.DOMAIN, [entity0])
+    setup_test_component_platform(menuai, sensor.DOMAIN, [entity0])
 
-    assert await async_setup_component(hass, "sensor", {"sensor": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", {"sensor": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert float(state.state) == state_value
     assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == state_unit
 
 
 @pytest.mark.parametrize("device_class", [None, SensorDeviceClass.PRESSURE])
 async def test_temperature_conversion_wrong_device_class(
-    hass: HomeAssistant, device_class
+    menuai: menuai, device_class
 ) -> None:
     """Test temperatures are not converted if the sensor has wrong device class."""
     entity0 = MockSensor(
@@ -154,20 +154,20 @@ async def test_temperature_conversion_wrong_device_class(
         native_unit_of_measurement=UnitOfTemperature.FAHRENHEIT,
         device_class=device_class,
     )
-    setup_test_component_platform(hass, sensor.DOMAIN, [entity0])
+    setup_test_component_platform(menuai, sensor.DOMAIN, [entity0])
 
-    assert await async_setup_component(hass, "sensor", {"sensor": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", {"sensor": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
     # Check temperature is not converted
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert state.state == "0.0"
     assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == UnitOfTemperature.FAHRENHEIT
 
 
 @pytest.mark.parametrize("state_class", ["measurement", "total_increasing"])
 async def test_deprecated_last_reset(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     state_class,
 ) -> None:
@@ -175,10 +175,10 @@ async def test_deprecated_last_reset(
     entity0 = MockSensor(
         name="Test", state_class=state_class, last_reset=dt_util.utc_from_timestamp(0)
     )
-    setup_test_component_platform(hass, sensor.DOMAIN, [entity0])
+    setup_test_component_platform(menuai, sensor.DOMAIN, [entity0])
 
-    assert await async_setup_component(hass, "sensor", {"sensor": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", {"sensor": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
     assert (
         "Entity sensor.test (<class 'tests.components.sensor.common.MockSensor'>) "
@@ -187,12 +187,12 @@ async def test_deprecated_last_reset(
         "your configuration if state_class is manually configured."
     ) in caplog.text
 
-    state = hass.states.get("sensor.test")
+    state = menuai.states.get("sensor.test")
     assert state is None
 
 
 async def test_datetime_conversion(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test conversion of datetime."""
@@ -220,29 +220,29 @@ async def test_datetime_conversion(
             device_class=SensorDeviceClass.TIMESTAMP,
         ),
     ]
-    setup_test_component_platform(hass, sensor.DOMAIN, entities)
+    setup_test_component_platform(menuai, sensor.DOMAIN, entities)
 
-    assert await async_setup_component(hass, "sensor", {"sensor": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", {"sensor": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entities[0].entity_id)
+    state = menuai.states.get(entities[0].entity_id)
     assert state.state == test_timestamp.isoformat()
 
-    state = hass.states.get(entities[1].entity_id)
+    state = menuai.states.get(entities[1].entity_id)
     assert state.state == test_date.isoformat()
 
-    state = hass.states.get(entities[2].entity_id)
+    state = menuai.states.get(entities[2].entity_id)
     assert state.state == STATE_UNKNOWN
 
-    state = hass.states.get(entities[3].entity_id)
+    state = menuai.states.get(entities[3].entity_id)
     assert state.state == STATE_UNKNOWN
 
-    state = hass.states.get(entities[4].entity_id)
+    state = menuai.states.get(entities[4].entity_id)
     assert state.state == test_timestamp.isoformat()
 
 
 async def test_a_sensor_with_a_non_numeric_device_class(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test that a sensor with a non numeric device class will be non numeric.
@@ -269,15 +269,15 @@ async def test_a_sensor_with_a_non_numeric_device_class(
             device_class=SensorDeviceClass.TIMESTAMP,
         ),
     ]
-    setup_test_component_platform(hass, sensor.DOMAIN, entities)
+    setup_test_component_platform(menuai, sensor.DOMAIN, entities)
 
-    assert await async_setup_component(hass, "sensor", {"sensor": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", {"sensor": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entities[0].entity_id)
+    state = menuai.states.get(entities[0].entity_id)
     assert state.state == test_timestamp.isoformat()
 
-    state = hass.states.get(entities[1].entity_id)
+    state = menuai.states.get(entities[1].entity_id)
     assert state.state == test_timestamp.isoformat()
 
 
@@ -289,7 +289,7 @@ async def test_a_sensor_with_a_non_numeric_device_class(
     ],
 )
 async def test_deprecated_datetime_str(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     device_class,
     state_value,
@@ -299,10 +299,10 @@ async def test_deprecated_datetime_str(
     entity0 = MockSensor(
         name="Test", native_value=state_value, device_class=device_class
     )
-    setup_test_component_platform(hass, sensor.DOMAIN, [entity0])
+    setup_test_component_platform(menuai, sensor.DOMAIN, [entity0])
 
-    assert await async_setup_component(hass, "sensor", {"sensor": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", {"sensor": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
     assert (
         f"Invalid {provides}: sensor.test has {device_class} device class "
@@ -311,7 +311,7 @@ async def test_deprecated_datetime_str(
 
 
 async def test_reject_timezoneless_datetime_str(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test rejection of timezone-less datetime objects as timestamp."""
@@ -321,10 +321,10 @@ async def test_reject_timezoneless_datetime_str(
         native_value=test_timestamp,
         device_class=SensorDeviceClass.TIMESTAMP,
     )
-    setup_test_component_platform(hass, sensor.DOMAIN, [entity0])
+    setup_test_component_platform(menuai, sensor.DOMAIN, [entity0])
 
-    assert await async_setup_component(hass, "sensor", {"sensor": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", {"sensor": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
     assert (
         "Invalid datetime: sensor.test provides state '2017-12-19 18:29:42', "
@@ -404,8 +404,8 @@ RESTORE_DATA = {
     ],
 )
 async def test_restore_sensor_save_state(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
     native_value,
     native_value_type,
     expected_extra_data,
@@ -419,18 +419,18 @@ async def test_restore_sensor_save_state(
         native_unit_of_measurement=uom,
         device_class=device_class,
     )
-    setup_test_component_platform(hass, sensor.DOMAIN, [entity0])
+    setup_test_component_platform(menuai, sensor.DOMAIN, [entity0])
 
-    assert await async_setup_component(hass, "sensor", {"sensor": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", {"sensor": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
     # Trigger saving state
-    await async_mock_restore_state_shutdown_restart(hass)
+    await async_mock_restore_state_shutdown_restart(menuai)
 
-    assert len(hass_storage[RESTORE_STATE_KEY]["data"]) == 1
-    state = hass_storage[RESTORE_STATE_KEY]["data"][0]["state"]
+    assert len(menuai_storage[RESTORE_STATE_KEY]["data"]) == 1
+    state = menuai_storage[RESTORE_STATE_KEY]["data"][0]["state"]
     assert state["entity_id"] == entity0.entity_id
-    extra_data = hass_storage[RESTORE_STATE_KEY]["data"][0]["extra_data"]
+    extra_data = menuai_storage[RESTORE_STATE_KEY]["data"][0]["extra_data"]
     assert extra_data == expected_extra_data
     assert type(extra_data["native_value"]) is native_value_type
 
@@ -470,8 +470,8 @@ async def test_restore_sensor_save_state(
     ],
 )
 async def test_restore_sensor_restore_state(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
     native_value,
     native_value_type,
     extra_data,
@@ -479,18 +479,18 @@ async def test_restore_sensor_restore_state(
     uom,
 ) -> None:
     """Test RestoreSensor."""
-    mock_restore_cache_with_extra_data(hass, ((State("sensor.test", ""), extra_data),))
+    mock_restore_cache_with_extra_data(menuai, ((State("sensor.test", ""), extra_data),))
 
     entity0 = MockRestoreSensor(
         name="Test",
         device_class=device_class,
     )
-    setup_test_component_platform(hass, sensor.DOMAIN, [entity0])
+    setup_test_component_platform(menuai, sensor.DOMAIN, [entity0])
 
-    assert await async_setup_component(hass, "sensor", {"sensor": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", {"sensor": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(entity0.entity_id)
+    assert menuai.states.get(entity0.entity_id)
 
     assert entity0.native_value == native_value
     assert type(entity0.native_value) is native_value_type
@@ -498,12 +498,12 @@ async def test_restore_sensor_restore_state(
 
 
 async def test_translated_unit(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test translated unit."""
 
     with patch(
-        "homeassistant.helpers.service.translation.async_get_translations",
+        "menuai.helpers.service.translation.async_get_translations",
         return_value={
             "component.test.entity.sensor.test_translation_key.unit_of_measurement": "Tests"
         },
@@ -517,25 +517,25 @@ async def test_translated_unit(
             "test",
             translation_key="test_translation_key",
         )
-        setup_test_component_platform(hass, sensor.DOMAIN, [entity0])
+        setup_test_component_platform(menuai, sensor.DOMAIN, [entity0])
 
         assert await async_setup_component(
-            hass, "sensor", {"sensor": {"platform": "test"}}
+            menuai, "sensor", {"sensor": {"platform": "test"}}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         entity_id = entity0.entity_id
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == "Tests"
 
 
 async def test_translated_unit_with_native_unit_raises(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test that translated unit."""
 
     with patch(
-        "homeassistant.helpers.service.translation.async_get_translations",
+        "menuai.helpers.service.translation.async_get_translations",
         return_value={
             "component.test.entity.sensor.test_translation_key.unit_of_measurement": "Tests"
         },
@@ -550,23 +550,23 @@ async def test_translated_unit_with_native_unit_raises(
             translation_key="test_translation_key",
             native_unit_of_measurement="bad_unit",
         )
-        setup_test_component_platform(hass, sensor.DOMAIN, [entity0])
+        setup_test_component_platform(menuai, sensor.DOMAIN, [entity0])
 
         assert await async_setup_component(
-            hass, "sensor", {"sensor": {"platform": "test"}}
+            menuai, "sensor", {"sensor": {"platform": "test"}}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         # Setup fails so entity_id is None
         assert entity0.entity_id is None
 
 
 async def test_unit_translation_key_without_platform_raises(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test that unit translation key property raises if the entity has no platform yet."""
 
     with patch(
-        "homeassistant.helpers.service.translation.async_get_translations",
+        "menuai.helpers.service.translation.async_get_translations",
         return_value={
             "component.test.entity.sensor.test_translation_key.unit_of_measurement": "Tests"
         },
@@ -587,12 +587,12 @@ async def test_unit_translation_key_without_platform_raises(
         ):
             unit = entity0.unit_of_measurement
 
-        setup_test_component_platform(hass, sensor.DOMAIN, [entity0])
+        setup_test_component_platform(menuai, sensor.DOMAIN, [entity0])
 
         assert await async_setup_component(
-            hass, "sensor", {"sensor": {"platform": "test"}}
+            menuai, "sensor", {"sensor": {"platform": "test"}}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         # Should not raise after being added to the platform
         unit = entity0.unit_of_measurement
@@ -776,7 +776,7 @@ async def test_unit_translation_key_without_platform_raises(
     ],
 )
 async def test_custom_unit(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     device_class,
     native_unit,
@@ -792,7 +792,7 @@ async def test_custom_unit(
     entity_registry.async_update_entity_options(
         entry.entity_id, "sensor", {"unit_of_measurement": custom_unit}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     entity0 = MockSensor(
         name="Test",
@@ -801,18 +801,18 @@ async def test_custom_unit(
         device_class=device_class,
         unique_id="very_unique",
     )
-    setup_test_component_platform(hass, sensor.DOMAIN, [entity0])
+    setup_test_component_platform(menuai, sensor.DOMAIN, [entity0])
 
-    assert await async_setup_component(hass, "sensor", {"sensor": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", {"sensor": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
     entity_id = entity0.entity_id
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert float(state.state) == custom_state
     assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == state_unit
 
     assert (
-        async_rounded_state(hass, entity_id, hass.states.get(entity_id))
+        async_rounded_state(menuai, entity_id, menuai.states.get(entity_id))
         == rounded_state
     )
 
@@ -1069,7 +1069,7 @@ async def test_custom_unit(
     ],
 )
 async def test_custom_unit_change(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     native_unit,
     custom_unit,
@@ -1087,37 +1087,37 @@ async def test_custom_unit_change(
         device_class=device_class,
         unique_id="very_unique",
     )
-    setup_test_component_platform(hass, sensor.DOMAIN, [entity0])
+    setup_test_component_platform(menuai, sensor.DOMAIN, [entity0])
 
-    assert await async_setup_component(hass, "sensor", {"sensor": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", {"sensor": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert float(state.state) == native_state
     assert state.attributes.get(ATTR_UNIT_OF_MEASUREMENT) == native_unit
 
     entity_registry.async_update_entity_options(
         "sensor.test", "sensor", {"unit_of_measurement": custom_unit}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert float(state.state) == custom_state
     assert state.attributes.get(ATTR_UNIT_OF_MEASUREMENT) == state_unit
 
     entity_registry.async_update_entity_options(
         "sensor.test", "sensor", {"unit_of_measurement": native_unit}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert float(state.state) == native_state
     assert state.attributes.get(ATTR_UNIT_OF_MEASUREMENT) == native_unit
 
     entity_registry.async_update_entity_options("sensor.test", "sensor", None)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert float(state.state) == native_state
     assert state.attributes.get(ATTR_UNIT_OF_MEASUREMENT) == native_unit
 
@@ -1168,7 +1168,7 @@ async def test_custom_unit_change(
     ],
 )
 async def test_unit_conversion_priority(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     unit_system,
     native_unit,
@@ -1184,7 +1184,7 @@ async def test_unit_conversion_priority(
 ) -> None:
     """Test priority of unit conversion."""
 
-    hass.config.units = unit_system
+    menuai.config.units = unit_system
 
     entity0 = MockSensor(
         name="Test",
@@ -1215,7 +1215,7 @@ async def test_unit_conversion_priority(
         suggested_unit_of_measurement=suggested_unit,
     )
     setup_test_component_platform(
-        hass,
+        menuai,
         sensor.DOMAIN,
         [
             entity0,
@@ -1225,11 +1225,11 @@ async def test_unit_conversion_priority(
         ],
     )
 
-    assert await async_setup_component(hass, "sensor", {"sensor": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", {"sensor": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
     # Registered entity -> Follow automatic unit conversion
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert float(state.state) == automatic_state
     assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == automatic_unit
     # Assert the automatic unit conversion is stored in the registry
@@ -1241,12 +1241,12 @@ async def test_unit_conversion_priority(
     )
 
     # Unregistered entity -> Follow native unit
-    state = hass.states.get(entity1.entity_id)
+    state = menuai.states.get(entity1.entity_id)
     assert float(state.state) == native_state
     assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == native_unit
 
     # Registered entity with suggested unit
-    state = hass.states.get(entity2.entity_id)
+    state = menuai.states.get(entity2.entity_id)
     assert float(state.state) == suggested_state
     assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == suggested_unit
     # Assert the suggested unit is stored in the registry
@@ -1258,7 +1258,7 @@ async def test_unit_conversion_priority(
     )
 
     # Unregistered entity with suggested unit
-    state = hass.states.get(entity3.entity_id)
+    state = menuai.states.get(entity3.entity_id)
     assert float(state.state) == suggested_state
     assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == suggested_unit
 
@@ -1266,18 +1266,18 @@ async def test_unit_conversion_priority(
     entity_registry.async_update_entity_options(
         entity0.entity_id, "sensor", {"unit_of_measurement": custom_unit}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert float(state.state) == custom_state
     assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == custom_unit
 
     entity_registry.async_update_entity_options(
         entity2.entity_id, "sensor", {"unit_of_measurement": custom_unit}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity2.entity_id)
+    state = menuai.states.get(entity2.entity_id)
     assert float(state.state) == custom_state
     assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == custom_unit
 
@@ -1316,7 +1316,7 @@ async def test_unit_conversion_priority(
     ],
 )
 async def test_unit_conversion_priority_precision(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     unit_system,
     native_unit,
@@ -1333,7 +1333,7 @@ async def test_unit_conversion_priority_precision(
 ) -> None:
     """Test priority of unit conversion for sensors with suggested_display_precision."""
 
-    hass.config.units = unit_system
+    menuai.config.units = unit_system
 
     entity0 = MockSensor(
         name="Test",
@@ -1376,7 +1376,7 @@ async def test_unit_conversion_priority_precision(
         unique_id="very_unique_4",
     )
     setup_test_component_platform(
-        hass,
+        menuai,
         sensor.DOMAIN,
         [
             entity0,
@@ -1387,11 +1387,11 @@ async def test_unit_conversion_priority_precision(
         ],
     )
 
-    assert await async_setup_component(hass, "sensor", {"sensor": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", {"sensor": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
     # Registered entity -> Follow automatic unit conversion
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert float(state.state) == pytest.approx(automatic_state)
     assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == automatic_unit
     # Assert the automatic unit conversion is stored in the registry
@@ -1401,17 +1401,17 @@ async def test_unit_conversion_priority_precision(
         "sensor": {"suggested_display_precision": 2},
         "sensor.private": {"suggested_unit_of_measurement": automatic_unit},
     }
-    assert float(async_rounded_state(hass, entity0.entity_id, state)) == pytest.approx(
+    assert float(async_rounded_state(menuai, entity0.entity_id, state)) == pytest.approx(
         round(automatic_state, 2)
     )
 
     # Unregistered entity -> Follow native unit
-    state = hass.states.get(entity1.entity_id)
+    state = menuai.states.get(entity1.entity_id)
     assert state.state == native_state
     assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == native_unit
 
     # Registered entity with suggested unit
-    state = hass.states.get(entity2.entity_id)
+    state = menuai.states.get(entity2.entity_id)
     assert float(state.state) == pytest.approx(suggested_state)
     assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == suggested_unit
     # Assert the suggested unit is stored in the registry
@@ -1423,7 +1423,7 @@ async def test_unit_conversion_priority_precision(
     }
 
     # Unregistered entity with suggested unit
-    state = hass.states.get(entity3.entity_id)
+    state = menuai.states.get(entity3.entity_id)
     assert float(state.state) == pytest.approx(suggested_state)
     assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == suggested_unit
 
@@ -1431,18 +1431,18 @@ async def test_unit_conversion_priority_precision(
     entity_registry.async_update_entity_options(
         entity0.entity_id, "sensor", {"unit_of_measurement": custom_unit}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert float(state.state) == pytest.approx(custom_state)
     assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == custom_unit
 
     entity_registry.async_update_entity_options(
         entity2.entity_id, "sensor", {"unit_of_measurement": custom_unit}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity2.entity_id)
+    state = menuai.states.get(entity2.entity_id)
     assert float(state.state) == pytest.approx(custom_state)
     assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == custom_unit
 
@@ -1455,8 +1455,8 @@ async def test_unit_conversion_priority_precision(
     entry0 = entity_registry.async_get(entity0.entity_id)
     assert entry0.options["sensor"]["suggested_display_precision"] == 2
     assert entry0.options["sensor"]["display_precision"] == 4
-    await hass.async_block_till_done()
-    assert float(async_rounded_state(hass, entity0.entity_id, state)) == pytest.approx(
+    await menuai.async_block_till_done()
+    assert float(async_rounded_state(menuai, entity0.entity_id, state)) == pytest.approx(
         round(custom_state, 4)
     )
 
@@ -1468,9 +1468,9 @@ async def test_unit_conversion_priority_precision(
     )
     entry4 = entity_registry.async_get(entity4.entity_id)
     assert entry4.options["sensor"]["display_precision"] == 4
-    await hass.async_block_till_done()
-    state = hass.states.get(entity4.entity_id)
-    assert float(async_rounded_state(hass, entity4.entity_id, state)) == pytest.approx(
+    await menuai.async_block_till_done()
+    state = menuai.states.get(entity4.entity_id)
+    assert float(async_rounded_state(menuai, entity4.entity_id, state)) == pytest.approx(
         round(automatic_state, 4)
     )
 
@@ -1499,7 +1499,7 @@ async def test_unit_conversion_priority_precision(
     ],
 )
 async def test_unit_conversion_priority_suggested_unit_change(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     unit_system,
     native_unit,
@@ -1511,7 +1511,7 @@ async def test_unit_conversion_priority_suggested_unit_change(
 ) -> None:
     """Test priority of unit conversion."""
 
-    hass.config.units = unit_system
+    menuai.config.units = unit_system
 
     # Pre-register entities
     entry = entity_registry.async_get_or_create(
@@ -1546,13 +1546,13 @@ async def test_unit_conversion_priority_suggested_unit_change(
         suggested_unit_of_measurement=suggested_unit,
         unique_id="very_unique_2",
     )
-    setup_test_component_platform(hass, sensor.DOMAIN, [entity0, entity1])
+    setup_test_component_platform(menuai, sensor.DOMAIN, [entity0, entity1])
 
-    assert await async_setup_component(hass, "sensor", {"sensor": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", {"sensor": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
     # Registered entity -> Follow automatic unit conversion the first time the entity was seen
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert float(state.state) == pytest.approx(float(original_value))
     assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == original_unit
     # Assert the suggested unit is stored in the registry
@@ -1564,7 +1564,7 @@ async def test_unit_conversion_priority_suggested_unit_change(
     )
 
     # Registered entity -> Follow suggested unit the first time the entity was seen
-    state = hass.states.get(entity1.entity_id)
+    state = menuai.states.get(entity1.entity_id)
     assert float(state.state) == pytest.approx(float(original_value))
     assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == original_unit
     # Assert the suggested unit is stored in the registry
@@ -1607,7 +1607,7 @@ async def test_unit_conversion_priority_suggested_unit_change(
     ],
 )
 async def test_unit_conversion_priority_suggested_unit_change_2(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     native_unit_1,
     native_unit_2,
@@ -1618,7 +1618,7 @@ async def test_unit_conversion_priority_suggested_unit_change_2(
 ) -> None:
     """Test priority of unit conversion."""
 
-    hass.config.units = METRIC_SYSTEM
+    menuai.config.units = METRIC_SYSTEM
 
     # Pre-register entities
     entity_registry.async_get_or_create(
@@ -1643,13 +1643,13 @@ async def test_unit_conversion_priority_suggested_unit_change_2(
         suggested_unit_of_measurement=suggested_unit,
         unique_id="very_unique_2",
     )
-    setup_test_component_platform(hass, sensor.DOMAIN, [entity0, entity1])
+    setup_test_component_platform(menuai, sensor.DOMAIN, [entity0, entity1])
 
-    assert await async_setup_component(hass, "sensor", {"sensor": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", {"sensor": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
     # Registered entity -> Follow unit in entity registry
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert float(state.state) == pytest.approx(float(original_value))
     assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == native_unit_1
     # Assert the suggested unit is stored in the registry
@@ -1661,7 +1661,7 @@ async def test_unit_conversion_priority_suggested_unit_change_2(
     )
 
     # Registered entity -> Follow unit in entity registry
-    state = hass.states.get(entity1.entity_id)
+    state = menuai.states.get(entity1.entity_id)
     assert float(state.state) == pytest.approx(float(original_value))
     assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == native_unit_1
     # Assert the suggested unit is stored in the registry
@@ -1726,7 +1726,7 @@ async def test_unit_conversion_priority_suggested_unit_change_2(
     ],
 )
 async def test_default_precision(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     device_class: str,
     native_unit: str,
@@ -1734,7 +1734,7 @@ async def test_default_precision(
 ) -> None:
     """Test default unit precision."""
     entry = entity_registry.async_get_or_create("sensor", "test", "very_unique")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     entity0 = MockSensor(
         name="Test",
@@ -1743,10 +1743,10 @@ async def test_default_precision(
         device_class=device_class,
         unique_id="very_unique",
     )
-    setup_test_component_platform(hass, sensor.DOMAIN, [entity0])
+    setup_test_component_platform(menuai, sensor.DOMAIN, [entity0])
 
-    assert await async_setup_component(hass, "sensor", {"sensor": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", {"sensor": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
     entry = entity_registry.async_get(entity0.entity_id)
     assert entry.options["sensor"]["suggested_display_precision"] == suggested_precision
@@ -1786,7 +1786,7 @@ async def test_default_precision(
     ],
 )
 async def test_suggested_precision_option(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     unit_system,
     native_unit,
@@ -1798,7 +1798,7 @@ async def test_suggested_precision_option(
 ) -> None:
     """Test suggested precision is stored in the registry."""
 
-    hass.config.units = unit_system
+    menuai.config.units = unit_system
 
     entity0 = MockSensor(
         name="Test",
@@ -1808,10 +1808,10 @@ async def test_suggested_precision_option(
         suggested_display_precision=integration_suggested_precision,
         unique_id="very_unique",
     )
-    setup_test_component_platform(hass, sensor.DOMAIN, [entity0])
+    setup_test_component_platform(menuai, sensor.DOMAIN, [entity0])
 
-    assert await async_setup_component(hass, "sensor", {"sensor": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", {"sensor": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
     # Assert the suggested precision is stored in the registry
     entry = entity_registry.async_get(entity0.entity_id)
@@ -1860,7 +1860,7 @@ async def test_suggested_precision_option(
     ],
 )
 async def test_suggested_precision_option_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     unit_system,
     native_unit,
@@ -1874,7 +1874,7 @@ async def test_suggested_precision_option_update(
 ) -> None:
     """Test suggested precision stored in the registry is updated."""
 
-    hass.config.units = unit_system
+    menuai.config.units = unit_system
 
     # Pre-register entities
     entry = entity_registry.async_get_or_create("sensor", "test", "very_unique")
@@ -1901,10 +1901,10 @@ async def test_suggested_precision_option_update(
         suggested_display_precision=new_precision,
         unique_id="very_unique",
     )
-    setup_test_component_platform(hass, sensor.DOMAIN, [entity0])
+    setup_test_component_platform(menuai, sensor.DOMAIN, [entity0])
 
-    assert await async_setup_component(hass, "sensor", {"sensor": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", {"sensor": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
     # Assert the suggested precision is stored in the registry
     entry = entity_registry.async_get(entity0.entity_id)
@@ -1948,7 +1948,7 @@ async def test_suggested_precision_option_update(
     ],
 )
 async def test_unit_conversion_priority_legacy_conversion_removed(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     unit_system,
     native_unit,
@@ -1959,7 +1959,7 @@ async def test_unit_conversion_priority_legacy_conversion_removed(
 ) -> None:
     """Test priority of unit conversion."""
 
-    hass.config.units = unit_system
+    menuai.config.units = unit_system
 
     # Pre-register entities
     entity_registry.async_get_or_create(
@@ -1973,12 +1973,12 @@ async def test_unit_conversion_priority_legacy_conversion_removed(
         native_value=str(native_value),
         unique_id="very_unique",
     )
-    setup_test_component_platform(hass, sensor.DOMAIN, [entity0])
+    setup_test_component_platform(menuai, sensor.DOMAIN, [entity0])
 
-    assert await async_setup_component(hass, "sensor", {"sensor": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", {"sensor": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert float(state.state) == pytest.approx(float(original_value))
     assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == original_unit
 
@@ -1992,7 +1992,7 @@ def test_device_classes_aligned() -> None:
 
 
 async def test_value_unknown_in_enumeration(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test warning on invalid enum value."""
@@ -2002,10 +2002,10 @@ async def test_value_unknown_in_enumeration(
         device_class=SensorDeviceClass.ENUM,
         options=["option1", "option2"],
     )
-    setup_test_component_platform(hass, sensor.DOMAIN, [entity0])
+    setup_test_component_platform(menuai, sensor.DOMAIN, [entity0])
 
-    assert await async_setup_component(hass, "sensor", {"sensor": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", {"sensor": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
     assert (
         "Sensor sensor.test provides state value 'invalid_option', "
@@ -2014,7 +2014,7 @@ async def test_value_unknown_in_enumeration(
 
 
 async def test_invalid_enumeration_entity_with_device_class(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test warning on entities that provide an enum with a device class."""
@@ -2024,10 +2024,10 @@ async def test_invalid_enumeration_entity_with_device_class(
         device_class=SensorDeviceClass.POWER,
         options=["option1", "option2"],
     )
-    setup_test_component_platform(hass, sensor.DOMAIN, [entity0])
+    setup_test_component_platform(menuai, sensor.DOMAIN, [entity0])
 
-    assert await async_setup_component(hass, "sensor", {"sensor": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", {"sensor": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
     assert (
         "Sensor sensor.test is providing enum options, but has device class 'power' "
@@ -2036,7 +2036,7 @@ async def test_invalid_enumeration_entity_with_device_class(
 
 
 async def test_invalid_enumeration_entity_without_device_class(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test warning on entities that provide an enum without a device class."""
@@ -2045,10 +2045,10 @@ async def test_invalid_enumeration_entity_without_device_class(
         native_value=21,
         options=["option1", "option2"],
     )
-    setup_test_component_platform(hass, sensor.DOMAIN, [entity0])
+    setup_test_component_platform(menuai, sensor.DOMAIN, [entity0])
 
-    assert await async_setup_component(hass, "sensor", {"sensor": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", {"sensor": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
     assert (
         "Sensor sensor.test is providing enum options, but is missing "
@@ -2065,7 +2065,7 @@ async def test_invalid_enumeration_entity_without_device_class(
     ],
 )
 async def test_non_numeric_device_class_with_unit_of_measurement(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     device_class: SensorDeviceClass,
 ) -> None:
@@ -2077,10 +2077,10 @@ async def test_non_numeric_device_class_with_unit_of_measurement(
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         options=["option1", "option2"],
     )
-    setup_test_component_platform(hass, sensor.DOMAIN, [entity0])
+    setup_test_component_platform(menuai, sensor.DOMAIN, [entity0])
 
-    assert await async_setup_component(hass, "sensor", {"sensor": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", {"sensor": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
     assert (
         "Sensor sensor.test has a unit of measurement and thus indicating it has "
@@ -2141,7 +2141,7 @@ async def test_non_numeric_device_class_with_unit_of_measurement(
     ],
 )
 async def test_device_classes_with_invalid_unit_of_measurement(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     device_class: SensorDeviceClass,
 ) -> None:
@@ -2152,13 +2152,13 @@ async def test_device_classes_with_invalid_unit_of_measurement(
         device_class=device_class,
         native_unit_of_measurement="INVALID!",
     )
-    setup_test_component_platform(hass, sensor.DOMAIN, [entity0])
+    setup_test_component_platform(menuai, sensor.DOMAIN, [entity0])
     units = [
         str(unit) if unit else "no unit of measurement"
         for unit in DEVICE_CLASS_UNITS.get(device_class, set())
     ]
-    assert await async_setup_component(hass, "sensor", {"sensor": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", {"sensor": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
     assert (
         "is using native unit of measurement 'INVALID!' which is not a valid "
@@ -2172,7 +2172,7 @@ async def test_device_classes_with_invalid_unit_of_measurement(
     [SensorStateClass.MEASUREMENT_ANGLE],
 )
 async def test_state_classes_with_invalid_unit_of_measurement(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     state_class: SensorStateClass,
 ) -> None:
@@ -2183,13 +2183,13 @@ async def test_state_classes_with_invalid_unit_of_measurement(
         state_class=state_class,
         native_unit_of_measurement="INVALID!",
     )
-    setup_test_component_platform(hass, sensor.DOMAIN, [entity0])
+    setup_test_component_platform(menuai, sensor.DOMAIN, [entity0])
     units = {
         str(unit) if unit else "no unit of measurement"
         for unit in STATE_CLASS_UNITS.get(state_class, set())
     }
-    assert await async_setup_component(hass, "sensor", {"sensor": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", {"sensor": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
     assert (
         f"Sensor sensor.test ({entity0.__class__}) is using native unit of "
@@ -2221,7 +2221,7 @@ async def test_state_classes_with_invalid_unit_of_measurement(
     ],
 )
 async def test_non_numeric_validation_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     native_value: Any,
     problem: str,
@@ -2237,12 +2237,12 @@ async def test_non_numeric_validation_error(
         native_unit_of_measurement=unit,
         state_class=state_class,
     )
-    setup_test_component_platform(hass, sensor.DOMAIN, [entity0])
+    setup_test_component_platform(menuai, sensor.DOMAIN, [entity0])
 
-    assert await async_setup_component(hass, "sensor", {"sensor": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", {"sensor": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert state is None
 
     assert (
@@ -2264,7 +2264,7 @@ async def test_non_numeric_validation_error(
     ],
 )
 async def test_non_numeric_validation_raise(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     native_value: Any,
     expected: str,
@@ -2282,12 +2282,12 @@ async def test_non_numeric_validation_raise(
         state_class=state_class,
         suggested_display_precision=precision,
     )
-    setup_test_component_platform(hass, sensor.DOMAIN, [entity0])
+    setup_test_component_platform(menuai, sensor.DOMAIN, [entity0])
 
-    assert await async_setup_component(hass, "sensor", {"sensor": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", {"sensor": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert state is None
 
     assert ("for domain sensor with platform test") in caplog.text
@@ -2313,7 +2313,7 @@ async def test_non_numeric_validation_raise(
     ],
 )
 async def test_numeric_validation(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     native_value: Any,
     expected: str,
@@ -2329,12 +2329,12 @@ async def test_numeric_validation(
         native_unit_of_measurement=unit,
         state_class=state_class,
     )
-    setup_test_component_platform(hass, sensor.DOMAIN, [entity0])
+    setup_test_component_platform(menuai, sensor.DOMAIN, [entity0])
 
-    assert await async_setup_component(hass, "sensor", {"sensor": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", {"sensor": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert state.state == expected
 
     assert (
@@ -2344,7 +2344,7 @@ async def test_numeric_validation(
 
 
 async def test_numeric_validation_ignores_custom_device_class(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test does not error on expected numeric entities."""
@@ -2354,12 +2354,12 @@ async def test_numeric_validation_ignores_custom_device_class(
         native_value=native_value,
         device_class="custom__deviceclass",
     )
-    setup_test_component_platform(hass, sensor.DOMAIN, [entity0])
+    setup_test_component_platform(menuai, sensor.DOMAIN, [entity0])
 
-    assert await async_setup_component(hass, "sensor", {"sensor": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", {"sensor": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert state.state == "Three elephants"
 
     assert (
@@ -2373,7 +2373,7 @@ async def test_numeric_validation_ignores_custom_device_class(
     list(SensorDeviceClass),
 )
 async def test_device_classes_with_invalid_state_class(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     device_class: SensorDeviceClass,
 ) -> None:
@@ -2384,10 +2384,10 @@ async def test_device_classes_with_invalid_state_class(
         state_class="INVALID!",
         device_class=device_class,
     )
-    setup_test_component_platform(hass, sensor.DOMAIN, [entity0])
+    setup_test_component_platform(menuai, sensor.DOMAIN, [entity0])
 
-    assert await async_setup_component(hass, "sensor", {"sensor": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", {"sensor": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
     classes = DEVICE_CLASS_STATE_CLASSES.get(device_class, set())
     one_of = ", ".join(f"'{value.value}'" for value in classes)
@@ -2420,7 +2420,7 @@ async def test_device_classes_with_invalid_state_class(
     ],
 )
 async def test_numeric_state_expected_helper(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     device_class: SensorDeviceClass | None,
     state_class: SensorStateClass | None,
@@ -2437,12 +2437,12 @@ async def test_numeric_state_expected_helper(
         native_unit_of_measurement=native_unit_of_measurement,
         suggested_display_precision=suggested_precision,
     )
-    setup_test_component_platform(hass, sensor.DOMAIN, [entity0])
+    setup_test_component_platform(menuai, sensor.DOMAIN, [entity0])
 
-    assert await async_setup_component(hass, "sensor", {"sensor": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", {"sensor": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert state is not None
 
     assert entity0._numeric_state_expected == is_numeric
@@ -2484,7 +2484,7 @@ async def test_numeric_state_expected_helper(
     ],
 )
 async def test_unit_conversion_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     unit_system_1,
     unit_system_2,
@@ -2502,7 +2502,7 @@ async def test_unit_conversion_update(
 ) -> None:
     """Test suggested unit can be updated."""
 
-    hass.config.units = unit_system_1
+    menuai.config.units = unit_system_1
 
     entity0 = MockSensor(
         name="Test 0",
@@ -2547,7 +2547,7 @@ async def test_unit_conversion_update(
     )
 
     entity_platform = MockEntityPlatform(
-        hass, domain="sensor", platform_name="test", platform=None
+        menuai, domain="sensor", platform_name="test", platform=None
     )
     await entity_platform.async_add_entities((entity0, entity1, entity2, entity3))
 
@@ -2564,10 +2564,10 @@ async def test_unit_conversion_update(
         },
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Registered entity -> Follow automatic unit conversion
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert float(state.state) == automatic_state_1
     assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == automatic_unit_1
     # Assert the automatic unit conversion is stored in the registry
@@ -2576,7 +2576,7 @@ async def test_unit_conversion_update(
         "suggested_unit_of_measurement": automatic_unit_1
     }
 
-    state = hass.states.get(entity1.entity_id)
+    state = menuai.states.get(entity1.entity_id)
     assert float(state.state) == automatic_state_1
     assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == automatic_unit_1
     # Assert the automatic unit conversion is stored in the registry
@@ -2586,7 +2586,7 @@ async def test_unit_conversion_update(
     }
 
     # Registered entity with suggested unit
-    state = hass.states.get(entity2.entity_id)
+    state = menuai.states.get(entity2.entity_id)
     assert float(state.state) == suggested_state
     assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == suggested_unit
     # Assert the suggested unit is stored in the registry
@@ -2595,7 +2595,7 @@ async def test_unit_conversion_update(
         "suggested_unit_of_measurement": suggested_unit
     }
 
-    state = hass.states.get(entity3.entity_id)
+    state = menuai.states.get(entity3.entity_id)
     assert float(state.state) == suggested_state
     assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == suggested_unit
     # Assert the suggested unit is stored in the registry
@@ -2608,61 +2608,61 @@ async def test_unit_conversion_update(
     entity_registry.async_update_entity_options(
         entity0.entity_id, "sensor", {"unit_of_measurement": custom_unit}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert float(state.state) == custom_state
     assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == custom_unit
 
     entity_registry.async_update_entity_options(
         entity2.entity_id, "sensor", {"unit_of_measurement": custom_unit}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity2.entity_id)
+    state = menuai.states.get(entity2.entity_id)
     assert float(state.state) == custom_state
     assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == custom_unit
 
     # Change unit system, states and units should be unchanged
-    hass.config.units = unit_system_2
-    await hass.async_block_till_done()
+    menuai.config.units = unit_system_2
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert float(state.state) == custom_state
     assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == custom_unit
 
-    state = hass.states.get(entity1.entity_id)
+    state = menuai.states.get(entity1.entity_id)
     assert float(state.state) == automatic_state_1
     assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == automatic_unit_1
 
-    state = hass.states.get(entity2.entity_id)
+    state = menuai.states.get(entity2.entity_id)
     assert float(state.state) == custom_state
     assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == custom_unit
 
-    state = hass.states.get(entity3.entity_id)
+    state = menuai.states.get(entity3.entity_id)
     assert float(state.state) == suggested_state
     assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == suggested_unit
 
     # Update suggested unit
-    async_update_suggested_units(hass)
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    async_update_suggested_units(menuai)
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert float(state.state) == custom_state
     assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == custom_unit
 
-    state = hass.states.get(entity1.entity_id)
+    state = menuai.states.get(entity1.entity_id)
     assert float(state.state) == automatic_state_2
     assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == automatic_unit_2
 
-    state = hass.states.get(entity2.entity_id)
+    state = menuai.states.get(entity2.entity_id)
     assert float(state.state) == custom_state
     assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == custom_unit
 
-    state = hass.states.get(entity3.entity_id)
+    state = menuai.states.get(entity3.entity_id)
     assert float(state.state) == suggested_state
     assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == suggested_unit
 
@@ -2676,7 +2676,7 @@ async def test_unit_conversion_update(
     # Add entity 4, the pending request to refresh entity options should be handled
     await entity_platform.async_add_entities((entity4,))
 
-    state = hass.states.get(entity4_entity_id)
+    state = menuai.states.get(entity4_entity_id)
     assert float(state.state) == automatic_state_2
     assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == automatic_unit_2
 
@@ -2689,29 +2689,29 @@ class MockFlow(ConfigFlow):
 
 
 @pytest.fixture(autouse=True)
-def config_flow_fixture(hass: HomeAssistant) -> Generator[None]:
+def config_flow_fixture(menuai: menuai) -> Generator[None]:
     """Mock config flow."""
-    mock_platform(hass, f"{TEST_DOMAIN}.config_flow")
+    mock_platform(menuai, f"{TEST_DOMAIN}.config_flow")
 
     with mock_config_flow(TEST_DOMAIN, MockFlow):
         yield
 
 
-async def test_name(hass: HomeAssistant) -> None:
+async def test_name(menuai: menuai) -> None:
     """Test sensor name."""
 
     async def async_setup_entry_init(
-        hass: HomeAssistant, config_entry: ConfigEntry
+        menuai: menuai, config_entry: ConfigEntry
     ) -> bool:
         """Set up test config entry."""
-        await hass.config_entries.async_forward_entry_setups(
+        await menuai.config_entries.async_forward_entry_setups(
             config_entry, [Platform.SENSOR]
         )
         return True
 
-    mock_platform(hass, f"{TEST_DOMAIN}.config_flow")
+    mock_platform(menuai, f"{TEST_DOMAIN}.config_flow")
     mock_integration(
-        hass,
+        menuai,
         MockModule(
             TEST_DOMAIN,
             async_setup_entry=async_setup_entry_init,
@@ -2743,7 +2743,7 @@ async def test_name(hass: HomeAssistant) -> None:
     )
 
     async def async_setup_entry_platform(
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         async_add_entities: AddConfigEntryEntitiesCallback,
     ) -> None:
@@ -2751,43 +2751,43 @@ async def test_name(hass: HomeAssistant) -> None:
         async_add_entities([entity1, entity2, entity3, entity4])
 
     mock_platform(
-        hass,
+        menuai,
         f"{TEST_DOMAIN}.{DOMAIN}",
         MockPlatform(async_setup_entry=async_setup_entry_platform),
     )
 
     config_entry = MockConfigEntry(domain=TEST_DOMAIN)
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity1.entity_id)
+    state = menuai.states.get(entity1.entity_id)
     assert state.attributes == {}
 
-    state = hass.states.get(entity2.entity_id)
+    state = menuai.states.get(entity2.entity_id)
     assert state.attributes == {"device_class": "battery"}
 
-    state = hass.states.get(entity3.entity_id)
+    state = menuai.states.get(entity3.entity_id)
     assert state.attributes == {"device_class": "battery", "friendly_name": "Battery"}
 
-    state = hass.states.get(entity4.entity_id)
+    state = menuai.states.get(entity4.entity_id)
     assert state.attributes == {"device_class": "battery", "friendly_name": "Battery"}
 
 
 def test_async_rounded_state_unregistered_entity_is_passthrough(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test async_rounded_state on unregistered entity is passthrough."""
-    hass.states.async_set("sensor.test", "1.004")
-    state = hass.states.get("sensor.test")
-    assert async_rounded_state(hass, "sensor.test", state) == "1.004"
-    hass.states.async_set("sensor.test", "-0.0")
-    state = hass.states.get("sensor.test")
-    assert async_rounded_state(hass, "sensor.test", state) == "-0.0"
+    menuai.states.async_set("sensor.test", "1.004")
+    state = menuai.states.get("sensor.test")
+    assert async_rounded_state(menuai, "sensor.test", state) == "1.004"
+    menuai.states.async_set("sensor.test", "-0.0")
+    state = menuai.states.get("sensor.test")
+    assert async_rounded_state(menuai, "sensor.test", state) == "-0.0"
 
 
 def test_async_rounded_state_registered_entity_with_display_precision(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test async_rounded_state on registered with display precision.
@@ -2801,15 +2801,15 @@ def test_async_rounded_state_registered_entity_with_display_precision(
         {"suggested_display_precision": 2, "display_precision": 4},
     )
     entity_id = entry.entity_id
-    hass.states.async_set(entity_id, "1.004")
-    state = hass.states.get(entity_id)
-    assert async_rounded_state(hass, entity_id, state) == "1.0040"
-    hass.states.async_set(entity_id, "-0.0")
-    state = hass.states.get(entity_id)
-    assert async_rounded_state(hass, entity_id, state) == "0.0000"
+    menuai.states.async_set(entity_id, "1.004")
+    state = menuai.states.get(entity_id)
+    assert async_rounded_state(menuai, entity_id, state) == "1.0040"
+    menuai.states.async_set(entity_id, "-0.0")
+    state = menuai.states.get(entity_id)
+    assert async_rounded_state(menuai, entity_id, state) == "0.0000"
 
 
-def test_device_class_units_state_classes(hass: HomeAssistant) -> None:
+def test_device_class_units_state_classes(menuai: menuai) -> None:
     """Test all numeric device classes have unit and state class."""
     # DEVICE_CLASS_UNITS should include all device classes except:
     # - SensorDeviceClass.MONETARY
@@ -2822,22 +2822,22 @@ def test_device_class_units_state_classes(hass: HomeAssistant) -> None:
 
 
 async def test_entity_category_config_raises_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test error is raised when entity category is set to config."""
     entity0 = MockSensor(name="Test", entity_category=EntityCategory.CONFIG)
-    setup_test_component_platform(hass, sensor.DOMAIN, [entity0])
+    setup_test_component_platform(menuai, sensor.DOMAIN, [entity0])
 
-    assert await async_setup_component(hass, "sensor", {"sensor": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", {"sensor": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
     assert (
         "Entity sensor.test cannot be added as the entity category is set to config"
         in caplog.text
     )
 
-    assert not hass.states.get("sensor.test")
+    assert not menuai.states.get("sensor.test")
 
 
 @pytest.mark.parametrize(
@@ -2848,7 +2848,7 @@ async def test_entity_category_config_raises_error(
     ],
 )
 async def test_suggested_unit_guard_invalid_unit(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     caplog: pytest.LogCaptureFixture,
     device_class: SensorDeviceClass,
@@ -2869,11 +2869,11 @@ async def test_suggested_unit_guard_invalid_unit(
         native_value=str(state_value),
         unique_id="invalid",
     )
-    setup_test_component_platform(hass, sensor.DOMAIN, [entity])
-    assert await async_setup_component(hass, "sensor", {"sensor": {"platform": "test"}})
-    await hass.async_block_till_done()
+    setup_test_component_platform(menuai, sensor.DOMAIN, [entity])
+    assert await async_setup_component(menuai, "sensor", {"sensor": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
-    assert not hass.states.get("sensor.invalid")
+    assert not menuai.states.get("sensor.invalid")
     assert not entity_registry.async_get("sensor.invalid")
 
     assert (
@@ -2902,7 +2902,7 @@ async def test_suggested_unit_guard_invalid_unit(
     ],
 )
 async def test_suggested_unit_guard_valid_unit(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     device_class: SensorDeviceClass,
     native_unit: str,
@@ -2923,13 +2923,13 @@ async def test_suggested_unit_guard_valid_unit(
         suggested_unit_of_measurement=suggested_unit,
         unique_id="valid",
     )
-    setup_test_component_platform(hass, sensor.DOMAIN, [entity])
+    setup_test_component_platform(menuai, sensor.DOMAIN, [entity])
 
-    assert await async_setup_component(hass, "sensor", {"sensor": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", {"sensor": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
     # Unit of measurement should set to the suggested unit of measurement
-    state = hass.states.get(entity.entity_id)
+    state = menuai.states.get(entity.entity_id)
     assert float(state.state) == expect_value
     assert state.attributes[ATTR_UNIT_OF_MEASUREMENT] == suggested_unit
 

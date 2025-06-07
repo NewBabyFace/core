@@ -10,10 +10,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from pysmhi.smhi_forecast import SMHIForecast, SMHIPointForecast
 import pytest
 
-from homeassistant.components.smhi import PLATFORMS
-from homeassistant.components.smhi.const import DOMAIN
-from homeassistant.const import CONF_LATITUDE, CONF_LOCATION, CONF_LONGITUDE, Platform
-from homeassistant.core import HomeAssistant
+from menuai.components.smhi import PLATFORMS
+from menuai.components.smhi.const import DOMAIN
+from menuai.const import CONF_LATITUDE, CONF_LOCATION, CONF_LONGITUDE, Platform
+from menuai.core import menuai
 
 from . import TEST_CONFIG
 
@@ -25,7 +25,7 @@ from tests.test_util.aiohttp import AiohttpClientMocker
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.smhi.async_setup_entry", return_value=True
+        "menuai.components.smhi.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -38,13 +38,13 @@ async def patch_platform_constant() -> list[Platform]:
 
 @pytest.fixture
 async def load_int(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: SMHIPointForecast,
     load_platforms: list[Platform],
 ) -> MockConfigEntry:
     """Set up the SMHI integration."""
-    hass.config.latitude = "59.32624"
-    hass.config.longitude = "17.84197"
+    menuai.config.latitude = "59.32624"
+    menuai.config.longitude = "17.84197"
     config_entry = MockConfigEntry(
         domain=DOMAIN,
         data=TEST_CONFIG,
@@ -54,29 +54,29 @@ async def load_int(
         title="Test",
     )
 
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    with patch("homeassistant.components.smhi.PLATFORMS", load_platforms):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+    with patch("menuai.components.smhi.PLATFORMS", load_platforms):
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     return config_entry
 
 
 @pytest.fixture(name="mock_client")
 async def get_client(
-    hass: HomeAssistant,
+    menuai: menuai,
     get_data: tuple[list[SMHIForecast], list[SMHIForecast], list[SMHIForecast]],
 ) -> AsyncGenerator[MagicMock]:
     """Mock SMHIPointForecast client."""
 
     with (
         patch(
-            "homeassistant.components.smhi.coordinator.SMHIPointForecast",
+            "menuai.components.smhi.coordinator.SMHIPointForecast",
             autospec=True,
         ) as mock_client,
         patch(
-            "homeassistant.components.smhi.config_flow.SMHIPointForecast",
+            "menuai.components.smhi.config_flow.SMHIPointForecast",
             return_value=mock_client.return_value,
         ),
     ):
@@ -89,7 +89,7 @@ async def get_client(
 
 @pytest.fixture(name="get_data")
 async def get_data_from_library(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     load_json: dict[str, Any],
 ) -> AsyncGenerator[tuple[list[SMHIForecast], list[SMHIForecast], list[SMHIForecast]]]:
@@ -97,7 +97,7 @@ async def get_data_from_library(
     client = SMHIPointForecast(
         TEST_CONFIG[CONF_LOCATION][CONF_LONGITUDE],
         TEST_CONFIG[CONF_LOCATION][CONF_LATITUDE],
-        aioclient_mock.create_session(hass.loop),
+        aioclient_mock.create_session(menuai.loop),
     )
     with patch.object(
         client._api,

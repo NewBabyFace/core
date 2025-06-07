@@ -9,7 +9,7 @@ from typing import Any
 
 from hyperion import client, const
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_EFFECT,
     ATTR_HS_COLOR,
@@ -17,14 +17,14 @@ from homeassistant.components.light import (
     LightEntity,
     LightEntityFeature,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import (
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import (
     async_dispatcher_connect,
     async_dispatcher_send,
 )
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import color as color_util
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import color as color_util
 
 from . import (
     HyperionConfigEntry,
@@ -53,7 +53,7 @@ CONF_EFFECT_LIST = "effect_list"
 # As we want to preserve brightness control for effects (e.g. to reduce the
 # brightness), we need to persist the effect that is in flight, so
 # subsequent calls to turn_on will know to keep the effect enabled.
-# Unfortunately the Home Assistant UI does not easily expose a way to remove a
+# Unfortunately the MenuAI UI does not easily expose a way to remove a
 # selected effect (there is no 'No Effect' option by default). Instead, we
 # create a new fake effect ("Solid") that is always selected by default for
 # showing a solid color. This is the same method used by WLED.
@@ -72,7 +72,7 @@ ICON_EFFECT = "mdi:lava-lamp"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: HyperionConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -101,13 +101,13 @@ async def async_setup_entry(
         """Remove entities for an old Hyperion instance."""
         assert server_id
         async_dispatcher_send(
-            hass,
+            menuai,
             SIGNAL_ENTITY_REMOVE.format(
                 get_hyperion_unique_id(server_id, instance_num, TYPE_HYPERION_LIGHT)
             ),
         )
 
-    listen_for_instance_updates(hass, entry, instance_add, instance_remove)
+    listen_for_instance_updates(menuai, entry, instance_add, instance_remove)
 
 
 class HyperionLight(LightEntity):
@@ -363,11 +363,11 @@ class HyperionLight(LightEntity):
         """Update client connection state."""
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
-        """Register callbacks when entity added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Register callbacks when entity added to menuai."""
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 SIGNAL_ENTITY_REMOVE.format(self.unique_id),
                 functools.partial(self.async_remove, force_remove=True),
             )
@@ -378,8 +378,8 @@ class HyperionLight(LightEntity):
         # Load initial state.
         self._update_full_state()
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Cleanup prior to hass removal."""
+    async def async_will_remove_from_menuai(self) -> None:
+        """Cleanup prior to menuai removal."""
         self._client.remove_callbacks(self._client_callbacks)
 
     def _get_priority_entry_that_dictates_state(self) -> dict[str, Any] | None:

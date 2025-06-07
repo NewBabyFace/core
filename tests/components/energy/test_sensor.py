@@ -8,28 +8,28 @@ from typing import Any
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.components.energy import data
-from homeassistant.components.recorder.core import Recorder
-from homeassistant.components.recorder.util import session_scope
-from homeassistant.components.sensor import (
+from menuai.components.energy import data
+from menuai.components.recorder.core import Recorder
+from menuai.components.recorder.util import session_scope
+from menuai.components.sensor import (
     ATTR_LAST_RESET,
     ATTR_STATE_CLASS,
     SensorDeviceClass,
     SensorStateClass,
 )
-from homeassistant.components.sensor.recorder import compile_statistics
-from homeassistant.const import (
+from menuai.components.sensor.recorder import compile_statistics
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     ATTR_UNIT_OF_MEASUREMENT,
     STATE_UNKNOWN,
     UnitOfEnergy,
     UnitOfVolume,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
-from homeassistant.util.unit_system import METRIC_SYSTEM, US_CUSTOMARY_SYSTEM
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
+from menuai.util.unit_system import METRIC_SYSTEM, US_CUSTOMARY_SYSTEM
 
 from tests.components.recorder.common import async_wait_recording_done
 from tests.typing import WebSocketGenerator
@@ -40,12 +40,12 @@ TEST_TIME_ADVANCE_INTERVAL = timedelta(milliseconds=10)
 @pytest.fixture
 async def setup_integration(
     recorder_mock: Recorder,
-) -> Callable[[HomeAssistant], Coroutine[Any, Any, None]]:
+) -> Callable[[menuai], Coroutine[Any, Any, None]]:
     """Set up the integration."""
 
-    async def setup_integration(hass: HomeAssistant) -> None:
-        assert await async_setup_component(hass, "energy", {})
-        await hass.async_block_till_done()
+    async def setup_integration(menuai: menuai) -> None:
+        assert await async_setup_component(menuai, "energy", {})
+        await menuai.async_block_till_done()
 
     return setup_integration
 
@@ -66,7 +66,7 @@ def get_statistics_for_entity(statistics_results, entity_id):
 
 
 async def test_cost_sensor_no_states(
-    setup_integration, hass: HomeAssistant, hass_storage: dict[str, Any]
+    setup_integration, menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
     """Test sensors are created."""
     energy_data = data.EnergyManager.default_preferences()
@@ -85,20 +85,20 @@ async def test_cost_sensor_no_states(
         }
     )
 
-    hass_storage[data.STORAGE_KEY] = {
+    menuai_storage[data.STORAGE_KEY] = {
         "version": 1,
         "data": energy_data,
     }
-    await setup_integration(hass)
+    await setup_integration(menuai)
     # pylint: disable-next=fixme
     # TODO: No states, should the cost entity refuse to setup?
 
 
 async def test_cost_sensor_attributes(
     setup_integration,
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
-    hass_storage: dict[str, Any],
+    menuai_storage: dict[str, Any],
 ) -> None:
     """Test sensor attributes."""
     energy_data = data.EnergyManager.default_preferences()
@@ -118,11 +118,11 @@ async def test_cost_sensor_attributes(
         }
     )
 
-    hass_storage[data.STORAGE_KEY] = {
+    menuai_storage[data.STORAGE_KEY] = {
         "version": 1,
         "data": energy_data,
     }
-    await setup_integration(hass)
+    await setup_integration(menuai)
 
     cost_sensor_entity_id = "sensor.energy_consumption_cost"
     entry = entity_registry.async_get(cost_sensor_entity_id)
@@ -151,9 +151,9 @@ async def test_cost_sensor_attributes(
 async def test_cost_sensor_price_entity_total_increasing(
     frozen_time,
     setup_integration,
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
+    menuai_ws_client: WebSocketGenerator,
     entity_registry: er.EntityRegistry,
     initial_energy,
     initial_cost,
@@ -166,9 +166,9 @@ async def test_cost_sensor_price_entity_total_increasing(
     """Test energy cost price from total_increasing type sensor entity."""
 
     def _compile_statistics(_):
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             return compile_statistics(
-                hass, session, now, now + timedelta(seconds=1)
+                menuai, session, now, now + timedelta(seconds=1)
             ).platform_stats
 
     energy_attributes = {
@@ -204,7 +204,7 @@ async def test_cost_sensor_price_entity_total_increasing(
         }
     )
 
-    hass_storage[data.STORAGE_KEY] = {
+    menuai_storage[data.STORAGE_KEY] = {
         "version": 1,
         "data": energy_data,
     }
@@ -214,16 +214,16 @@ async def test_cost_sensor_price_entity_total_increasing(
 
     # Optionally initialize dependent entities
     if initial_energy is not None:
-        hass.states.async_set(
+        menuai.states.async_set(
             usage_sensor_entity_id,
             initial_energy,
             energy_attributes,
         )
-    hass.states.async_set("sensor.energy_price", "1")
+    menuai.states.async_set("sensor.energy_price", "1")
 
-    await setup_integration(hass)
+    await setup_integration(menuai)
 
-    state = hass.states.get(cost_sensor_entity_id)
+    state = menuai.states.get(cost_sensor_entity_id)
     assert state.state == initial_cost
     assert state.attributes[ATTR_DEVICE_CLASS] == SensorDeviceClass.MONETARY
     if initial_cost != "unknown":
@@ -233,14 +233,14 @@ async def test_cost_sensor_price_entity_total_increasing(
 
     # Optional late setup of dependent entities
     if initial_energy is None:
-        hass.states.async_set(
+        menuai.states.async_set(
             usage_sensor_entity_id,
             "0",
             energy_attributes,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    state = hass.states.get(cost_sensor_entity_id)
+    state = menuai.states.get(cost_sensor_entity_id)
     assert state.state == "0.0"
     assert state.attributes[ATTR_DEVICE_CLASS] == SensorDeviceClass.MONETARY
     assert state.attributes[ATTR_LAST_RESET] == last_reset_cost_sensor
@@ -255,89 +255,89 @@ async def test_cost_sensor_price_entity_total_increasing(
 
     # Energy use bumped to 10 kWh
     frozen_time.tick(TEST_TIME_ADVANCE_INTERVAL)
-    hass.states.async_set(
+    menuai.states.async_set(
         usage_sensor_entity_id,
         "10",
         energy_attributes,
     )
-    await hass.async_block_till_done()
-    state = hass.states.get(cost_sensor_entity_id)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(cost_sensor_entity_id)
     assert state.state == "10.0"  # 0 EUR + (10-0) kWh * 1 EUR/kWh = 10 EUR
     assert state.attributes[ATTR_LAST_RESET] == last_reset_cost_sensor
 
     # Nothing happens when price changes
     if price_entity is not None:
-        hass.states.async_set(price_entity, "2")
-        await hass.async_block_till_done()
+        menuai.states.async_set(price_entity, "2")
+        await menuai.async_block_till_done()
     else:
         energy_data = copy.deepcopy(energy_data)
         energy_data["energy_sources"][0][flow_type][0]["number_energy_price"] = 2
-        client = await hass_ws_client(hass)
+        client = await menuai_ws_client(menuai)
         await client.send_json({"id": 5, "type": "energy/save_prefs", **energy_data})
         msg = await client.receive_json()
         assert msg["success"]
-    state = hass.states.get(cost_sensor_entity_id)
+    state = menuai.states.get(cost_sensor_entity_id)
     assert state.state == "10.0"  # 10 EUR + (10-10) kWh * 2 EUR/kWh = 10 EUR
     assert state.attributes[ATTR_LAST_RESET] == last_reset_cost_sensor
 
     # Additional consumption is using the new price
     frozen_time.tick(TEST_TIME_ADVANCE_INTERVAL)
-    hass.states.async_set(
+    menuai.states.async_set(
         usage_sensor_entity_id,
         "14.5",
         energy_attributes,
     )
-    await hass.async_block_till_done()
-    state = hass.states.get(cost_sensor_entity_id)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(cost_sensor_entity_id)
     assert state.state == "19.0"  # 10 EUR + (14.5-10) kWh * 2 EUR/kWh = 19 EUR
     assert state.attributes[ATTR_LAST_RESET] == last_reset_cost_sensor
 
     # Check generated statistics
-    await async_wait_recording_done(hass)
-    all_statistics = await hass.loop.run_in_executor(None, _compile_statistics, hass)
+    await async_wait_recording_done(menuai)
+    all_statistics = await menuai.loop.run_in_executor(None, _compile_statistics, menuai)
     statistics = get_statistics_for_entity(all_statistics, cost_sensor_entity_id)
     assert statistics["stat"]["sum"] == 19.0
 
     # Energy sensor has a small dip, no reset should be detected
     frozen_time.tick(TEST_TIME_ADVANCE_INTERVAL)
-    hass.states.async_set(
+    menuai.states.async_set(
         usage_sensor_entity_id,
         "14",
         energy_attributes,
     )
-    await hass.async_block_till_done()
-    state = hass.states.get(cost_sensor_entity_id)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(cost_sensor_entity_id)
     assert state.state == "18.0"  # 19 EUR + (14-14.5) kWh * 2 EUR/kWh = 18 EUR
     assert state.attributes[ATTR_LAST_RESET] == last_reset_cost_sensor
 
     # Energy sensor is reset, with initial state at 4kWh, 0 kWh is used as zero-point
     frozen_time.tick(TEST_TIME_ADVANCE_INTERVAL)
-    hass.states.async_set(
+    menuai.states.async_set(
         usage_sensor_entity_id,
         "4",
         energy_attributes,
     )
-    await hass.async_block_till_done()
-    state = hass.states.get(cost_sensor_entity_id)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(cost_sensor_entity_id)
     assert state.state == "8.0"  # 0 EUR + (4-0) kWh * 2 EUR/kWh = 8 EUR
     assert state.attributes[ATTR_LAST_RESET] != last_reset_cost_sensor
     last_reset_cost_sensor = state.attributes[ATTR_LAST_RESET]
 
     # Energy use bumped to 10 kWh
     frozen_time.tick(TEST_TIME_ADVANCE_INTERVAL)
-    hass.states.async_set(
+    menuai.states.async_set(
         usage_sensor_entity_id,
         "10",
         energy_attributes,
     )
-    await hass.async_block_till_done()
-    state = hass.states.get(cost_sensor_entity_id)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(cost_sensor_entity_id)
     assert state.state == "20.0"  # 8 EUR + (10-4) kWh * 2 EUR/kWh = 20 EUR
     assert state.attributes[ATTR_LAST_RESET] == last_reset_cost_sensor
 
     # Check generated statistics
-    await async_wait_recording_done(hass)
-    all_statistics = await hass.loop.run_in_executor(None, _compile_statistics, hass)
+    await async_wait_recording_done(menuai)
+    all_statistics = await menuai.loop.run_in_executor(None, _compile_statistics, menuai)
     statistics = get_statistics_for_entity(all_statistics, cost_sensor_entity_id)
     assert statistics["stat"]["sum"] == 38.0
 
@@ -363,9 +363,9 @@ async def test_cost_sensor_price_entity_total_increasing(
 async def test_cost_sensor_price_entity_total(
     frozen_time,
     setup_integration,
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
+    menuai_ws_client: WebSocketGenerator,
     entity_registry: er.EntityRegistry,
     initial_energy,
     initial_cost,
@@ -379,9 +379,9 @@ async def test_cost_sensor_price_entity_total(
     """Test energy cost price from total type sensor entity."""
 
     def _compile_statistics(_):
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             return compile_statistics(
-                hass, session, now, now + timedelta(seconds=0.17)
+                menuai, session, now, now + timedelta(seconds=0.17)
             ).platform_stats
 
     energy_attributes = {
@@ -417,7 +417,7 @@ async def test_cost_sensor_price_entity_total(
         }
     )
 
-    hass_storage[data.STORAGE_KEY] = {
+    menuai_storage[data.STORAGE_KEY] = {
         "version": 1,
         "data": energy_data,
     }
@@ -428,16 +428,16 @@ async def test_cost_sensor_price_entity_total(
 
     # Optionally initialize dependent entities
     if initial_energy is not None:
-        hass.states.async_set(
+        menuai.states.async_set(
             usage_sensor_entity_id,
             initial_energy,
             {**energy_attributes, "last_reset": last_reset},
         )
-    hass.states.async_set("sensor.energy_price", "1")
+    menuai.states.async_set("sensor.energy_price", "1")
 
-    await setup_integration(hass)
+    await setup_integration(menuai)
 
-    state = hass.states.get(cost_sensor_entity_id)
+    state = menuai.states.get(cost_sensor_entity_id)
     assert state.state == initial_cost
     assert state.attributes[ATTR_DEVICE_CLASS] == SensorDeviceClass.MONETARY
     if initial_cost != "unknown":
@@ -447,14 +447,14 @@ async def test_cost_sensor_price_entity_total(
 
     # Optional late setup of dependent entities
     if initial_energy is None:
-        hass.states.async_set(
+        menuai.states.async_set(
             usage_sensor_entity_id,
             "0",
             {**energy_attributes, "last_reset": last_reset},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    state = hass.states.get(cost_sensor_entity_id)
+    state = menuai.states.get(cost_sensor_entity_id)
     assert state.state == "0.0"
     assert state.attributes[ATTR_DEVICE_CLASS] == SensorDeviceClass.MONETARY
     assert state.attributes[ATTR_LAST_RESET] == last_reset_cost_sensor
@@ -469,90 +469,90 @@ async def test_cost_sensor_price_entity_total(
 
     # Energy use bumped to 10 kWh
     frozen_time.tick(TEST_TIME_ADVANCE_INTERVAL)
-    hass.states.async_set(
+    menuai.states.async_set(
         usage_sensor_entity_id,
         "10",
         {**energy_attributes, "last_reset": last_reset},
     )
-    await hass.async_block_till_done()
-    state = hass.states.get(cost_sensor_entity_id)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(cost_sensor_entity_id)
     assert state.state == "10.0"  # 0 EUR + (10-0) kWh * 1 EUR/kWh = 10 EUR
     assert state.attributes[ATTR_LAST_RESET] == last_reset_cost_sensor
 
     # Nothing happens when price changes
     if price_entity is not None:
-        hass.states.async_set(price_entity, "2")
-        await hass.async_block_till_done()
+        menuai.states.async_set(price_entity, "2")
+        await menuai.async_block_till_done()
     else:
         energy_data = copy.deepcopy(energy_data)
         energy_data["energy_sources"][0][flow_type][0]["number_energy_price"] = 2
-        client = await hass_ws_client(hass)
+        client = await menuai_ws_client(menuai)
         await client.send_json({"id": 5, "type": "energy/save_prefs", **energy_data})
         msg = await client.receive_json()
         assert msg["success"]
-    state = hass.states.get(cost_sensor_entity_id)
+    state = menuai.states.get(cost_sensor_entity_id)
     assert state.state == "10.0"  # 10 EUR + (10-10) kWh * 2 EUR/kWh = 10 EUR
     assert state.attributes[ATTR_LAST_RESET] == last_reset_cost_sensor
 
     # Additional consumption is using the new price
     frozen_time.tick(TEST_TIME_ADVANCE_INTERVAL)
-    hass.states.async_set(
+    menuai.states.async_set(
         usage_sensor_entity_id,
         "14.5",
         {**energy_attributes, "last_reset": last_reset},
     )
-    await hass.async_block_till_done()
-    state = hass.states.get(cost_sensor_entity_id)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(cost_sensor_entity_id)
     assert state.state == "19.0"  # 10 EUR + (14.5-10) kWh * 2 EUR/kWh = 19 EUR
     assert state.attributes[ATTR_LAST_RESET] == last_reset_cost_sensor
 
     # Check generated statistics
-    await async_wait_recording_done(hass)
-    all_statistics = await hass.loop.run_in_executor(None, _compile_statistics, hass)
+    await async_wait_recording_done(menuai)
+    all_statistics = await menuai.loop.run_in_executor(None, _compile_statistics, menuai)
     statistics = get_statistics_for_entity(all_statistics, cost_sensor_entity_id)
     assert statistics["stat"]["sum"] == 19.0
 
     # Energy sensor has a small dip
     frozen_time.tick(TEST_TIME_ADVANCE_INTERVAL)
-    hass.states.async_set(
+    menuai.states.async_set(
         usage_sensor_entity_id,
         "14",
         {**energy_attributes, "last_reset": last_reset},
     )
-    await hass.async_block_till_done()
-    state = hass.states.get(cost_sensor_entity_id)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(cost_sensor_entity_id)
     assert state.state == "18.0"  # 19 EUR + (14-14.5) kWh * 2 EUR/kWh = 18 EUR
     assert state.attributes[ATTR_LAST_RESET] == last_reset_cost_sensor
 
     # Energy sensor is reset, with initial state at 4kWh, 0 kWh is used as zero-point
     frozen_time.tick(TEST_TIME_ADVANCE_INTERVAL)
     last_reset = dt_util.utcnow()
-    hass.states.async_set(
+    menuai.states.async_set(
         usage_sensor_entity_id,
         "4",
         {**energy_attributes, "last_reset": last_reset},
     )
-    await hass.async_block_till_done()
-    state = hass.states.get(cost_sensor_entity_id)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(cost_sensor_entity_id)
     assert state.state == "8.0"  # 0 EUR + (4-0) kWh * 2 EUR/kWh = 8 EUR
     assert state.attributes[ATTR_LAST_RESET] != last_reset_cost_sensor
     last_reset_cost_sensor = state.attributes[ATTR_LAST_RESET]
 
     # Energy use bumped to 10 kWh
     frozen_time.tick(TEST_TIME_ADVANCE_INTERVAL)
-    hass.states.async_set(
+    menuai.states.async_set(
         usage_sensor_entity_id,
         "10",
         {**energy_attributes, "last_reset": last_reset},
     )
-    await hass.async_block_till_done()
-    state = hass.states.get(cost_sensor_entity_id)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(cost_sensor_entity_id)
     assert state.state == "20.0"  # 8 EUR + (10-4) kWh * 2 EUR/kWh = 20 EUR
     assert state.attributes[ATTR_LAST_RESET] == last_reset_cost_sensor
 
     # Check generated statistics
-    await async_wait_recording_done(hass)
-    all_statistics = await hass.loop.run_in_executor(None, _compile_statistics, hass)
+    await async_wait_recording_done(menuai)
+    all_statistics = await menuai.loop.run_in_executor(None, _compile_statistics, menuai)
     statistics = get_statistics_for_entity(all_statistics, cost_sensor_entity_id)
     assert statistics["stat"]["sum"] == 38.0
 
@@ -578,9 +578,9 @@ async def test_cost_sensor_price_entity_total(
 async def test_cost_sensor_price_entity_total_no_reset(
     frozen_time,
     setup_integration,
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
+    menuai_ws_client: WebSocketGenerator,
     entity_registry: er.EntityRegistry,
     initial_energy,
     initial_cost,
@@ -594,9 +594,9 @@ async def test_cost_sensor_price_entity_total_no_reset(
     """Test energy cost price from total type sensor entity with no last_reset."""
 
     def _compile_statistics(_):
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             return compile_statistics(
-                hass, session, now, now + timedelta(seconds=1)
+                menuai, session, now, now + timedelta(seconds=1)
             ).platform_stats
 
     energy_attributes = {
@@ -632,7 +632,7 @@ async def test_cost_sensor_price_entity_total_no_reset(
         }
     )
 
-    hass_storage[data.STORAGE_KEY] = {
+    menuai_storage[data.STORAGE_KEY] = {
         "version": 1,
         "data": energy_data,
     }
@@ -642,16 +642,16 @@ async def test_cost_sensor_price_entity_total_no_reset(
 
     # Optionally initialize dependent entities
     if initial_energy is not None:
-        hass.states.async_set(
+        menuai.states.async_set(
             usage_sensor_entity_id,
             initial_energy,
             energy_attributes,
         )
-    hass.states.async_set("sensor.energy_price", "1")
+    menuai.states.async_set("sensor.energy_price", "1")
 
-    await setup_integration(hass)
+    await setup_integration(menuai)
 
-    state = hass.states.get(cost_sensor_entity_id)
+    state = menuai.states.get(cost_sensor_entity_id)
     assert state.state == initial_cost
     assert state.attributes[ATTR_DEVICE_CLASS] == SensorDeviceClass.MONETARY
     if initial_cost != "unknown":
@@ -661,14 +661,14 @@ async def test_cost_sensor_price_entity_total_no_reset(
 
     # Optional late setup of dependent entities
     if initial_energy is None:
-        hass.states.async_set(
+        menuai.states.async_set(
             usage_sensor_entity_id,
             "0",
             energy_attributes,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    state = hass.states.get(cost_sensor_entity_id)
+    state = menuai.states.get(cost_sensor_entity_id)
     assert state.state == "0.0"
     assert state.attributes[ATTR_DEVICE_CLASS] == SensorDeviceClass.MONETARY
     assert state.attributes[ATTR_LAST_RESET] == last_reset_cost_sensor
@@ -683,64 +683,64 @@ async def test_cost_sensor_price_entity_total_no_reset(
 
     # Energy use bumped to 10 kWh
     frozen_time.tick(TEST_TIME_ADVANCE_INTERVAL)
-    hass.states.async_set(
+    menuai.states.async_set(
         usage_sensor_entity_id,
         "10",
         energy_attributes,
     )
-    await hass.async_block_till_done()
-    state = hass.states.get(cost_sensor_entity_id)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(cost_sensor_entity_id)
     assert state.state == "10.0"  # 0 EUR + (10-0) kWh * 1 EUR/kWh = 10 EUR
     assert state.attributes[ATTR_LAST_RESET] == last_reset_cost_sensor
 
     # Nothing happens when price changes
     if price_entity is not None:
-        hass.states.async_set(price_entity, "2")
-        await hass.async_block_till_done()
+        menuai.states.async_set(price_entity, "2")
+        await menuai.async_block_till_done()
     else:
         energy_data = copy.deepcopy(energy_data)
         energy_data["energy_sources"][0][flow_type][0]["number_energy_price"] = 2
-        client = await hass_ws_client(hass)
+        client = await menuai_ws_client(menuai)
         await client.send_json({"id": 5, "type": "energy/save_prefs", **energy_data})
         msg = await client.receive_json()
         assert msg["success"]
-    state = hass.states.get(cost_sensor_entity_id)
+    state = menuai.states.get(cost_sensor_entity_id)
     assert state.state == "10.0"  # 10 EUR + (10-10) kWh * 2 EUR/kWh = 10 EUR
     assert state.attributes[ATTR_LAST_RESET] == last_reset_cost_sensor
 
     # Additional consumption is using the new price
     frozen_time.tick(TEST_TIME_ADVANCE_INTERVAL)
-    hass.states.async_set(
+    menuai.states.async_set(
         usage_sensor_entity_id,
         "14.5",
         energy_attributes,
     )
-    await hass.async_block_till_done()
-    state = hass.states.get(cost_sensor_entity_id)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(cost_sensor_entity_id)
     assert state.state == "19.0"  # 10 EUR + (14.5-10) kWh * 2 EUR/kWh = 19 EUR
     assert state.attributes[ATTR_LAST_RESET] == last_reset_cost_sensor
 
     # Check generated statistics
-    await async_wait_recording_done(hass)
-    all_statistics = await hass.loop.run_in_executor(None, _compile_statistics, hass)
+    await async_wait_recording_done(menuai)
+    all_statistics = await menuai.loop.run_in_executor(None, _compile_statistics, menuai)
     statistics = get_statistics_for_entity(all_statistics, cost_sensor_entity_id)
     assert statistics["stat"]["sum"] == 19.0
 
     # Energy sensor has a small dip
     frozen_time.tick(TEST_TIME_ADVANCE_INTERVAL)
-    hass.states.async_set(
+    menuai.states.async_set(
         usage_sensor_entity_id,
         "14",
         energy_attributes,
     )
-    await hass.async_block_till_done()
-    state = hass.states.get(cost_sensor_entity_id)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(cost_sensor_entity_id)
     assert state.state == "18.0"  # 19 EUR + (14-14.5) kWh * 2 EUR/kWh = 18 EUR
     assert state.attributes[ATTR_LAST_RESET] == last_reset_cost_sensor
 
     # Check generated statistics
-    await async_wait_recording_done(hass)
-    all_statistics = await hass.loop.run_in_executor(None, _compile_statistics, hass)
+    await async_wait_recording_done(menuai)
+    all_statistics = await menuai.loop.run_in_executor(None, _compile_statistics, menuai)
     statistics = get_statistics_for_entity(all_statistics, cost_sensor_entity_id)
     assert statistics["stat"]["sum"] == 18.0
 
@@ -756,8 +756,8 @@ async def test_cost_sensor_price_entity_total_no_reset(
 )
 async def test_cost_sensor_handle_energy_units(
     setup_integration,
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
     energy_unit,
     factor,
 ) -> None:
@@ -783,32 +783,32 @@ async def test_cost_sensor_handle_energy_units(
         }
     )
 
-    hass_storage[data.STORAGE_KEY] = {
+    menuai_storage[data.STORAGE_KEY] = {
         "version": 1,
         "data": energy_data,
     }
 
     # Initial state: 10kWh
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.energy_consumption",
         10 * factor,
         energy_attributes,
     )
 
-    await setup_integration(hass)
+    await setup_integration(menuai)
 
-    state = hass.states.get("sensor.energy_consumption_cost")
+    state = menuai.states.get("sensor.energy_consumption_cost")
     assert state.state == "0.0"
 
     # Energy use bumped by 10 kWh
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.energy_consumption",
         20 * factor,
         energy_attributes,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.energy_consumption_cost")
+    state = menuai.states.get("sensor.energy_consumption_cost")
     assert state.state == "5.0"
 
 
@@ -823,8 +823,8 @@ async def test_cost_sensor_handle_energy_units(
 )
 async def test_cost_sensor_handle_price_units(
     setup_integration,
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
     price_unit,
     factor,
 ) -> None:
@@ -854,40 +854,40 @@ async def test_cost_sensor_handle_price_units(
         }
     )
 
-    hass_storage[data.STORAGE_KEY] = {
+    menuai_storage[data.STORAGE_KEY] = {
         "version": 1,
         "data": energy_data,
     }
 
     # Initial state: 10kWh
-    hass.states.async_set("sensor.energy_price", "2", price_attributes)
-    hass.states.async_set(
+    menuai.states.async_set("sensor.energy_price", "2", price_attributes)
+    menuai.states.async_set(
         "sensor.energy_consumption",
         10 * factor,
         energy_attributes,
     )
 
-    await setup_integration(hass)
+    await setup_integration(menuai)
 
-    state = hass.states.get("sensor.energy_consumption_cost")
+    state = menuai.states.get("sensor.energy_consumption_cost")
     assert state.state == "0.0"
 
     # Energy use bumped by 10 kWh
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.energy_consumption",
         20 * factor,
         energy_attributes,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.energy_consumption_cost")
+    state = menuai.states.get("sensor.energy_consumption_cost")
     assert state.state == "20.0"
 
 
 async def test_cost_sensor_handle_late_price_sensor(
     setup_integration,
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
 ) -> None:
     """Test energy cost where the price sensor is not immediately available."""
     energy_attributes = {
@@ -915,80 +915,80 @@ async def test_cost_sensor_handle_late_price_sensor(
         }
     )
 
-    hass_storage[data.STORAGE_KEY] = {
+    menuai_storage[data.STORAGE_KEY] = {
         "version": 1,
         "data": energy_data,
     }
 
     # Initial state: 10kWh, price sensor not yet available
-    hass.states.async_set("sensor.energy_price", "unknown", price_attributes)
-    hass.states.async_set(
+    menuai.states.async_set("sensor.energy_price", "unknown", price_attributes)
+    menuai.states.async_set(
         "sensor.energy_consumption",
         10,
         energy_attributes,
     )
 
-    await setup_integration(hass)
+    await setup_integration(menuai)
 
-    state = hass.states.get("sensor.energy_consumption_cost")
+    state = menuai.states.get("sensor.energy_consumption_cost")
     assert state.state == "0.0"
 
     # Energy use bumped by 10 kWh, price sensor still not yet available
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.energy_consumption",
         20,
         energy_attributes,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.energy_consumption_cost")
+    state = menuai.states.get("sensor.energy_consumption_cost")
     assert state.state == "0.0"
 
     # Energy use bumped by 10 kWh, price sensor now available
-    hass.states.async_set("sensor.energy_price", "1", price_attributes)
-    hass.states.async_set(
+    menuai.states.async_set("sensor.energy_price", "1", price_attributes)
+    menuai.states.async_set(
         "sensor.energy_consumption",
         30,
         energy_attributes,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.energy_consumption_cost")
+    state = menuai.states.get("sensor.energy_consumption_cost")
     assert state.state == "20.0"
 
     # Energy use bumped by 10 kWh, price sensor available
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.energy_consumption",
         40,
         energy_attributes,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.energy_consumption_cost")
+    state = menuai.states.get("sensor.energy_consumption_cost")
     assert state.state == "30.0"
 
     # Energy use bumped by 10 kWh, price sensor no longer available
-    hass.states.async_set("sensor.energy_price", "unknown", price_attributes)
-    hass.states.async_set(
+    menuai.states.async_set("sensor.energy_price", "unknown", price_attributes)
+    menuai.states.async_set(
         "sensor.energy_consumption",
         50,
         energy_attributes,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.energy_consumption_cost")
+    state = menuai.states.get("sensor.energy_consumption_cost")
     assert state.state == "30.0"
 
     # Energy use bumped by 10 kWh, price sensor again available
-    hass.states.async_set("sensor.energy_price", "2", price_attributes)
-    hass.states.async_set(
+    menuai.states.async_set("sensor.energy_price", "2", price_attributes)
+    menuai.states.async_set(
         "sensor.energy_consumption",
         60,
         energy_attributes,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.energy_consumption_cost")
+    state = menuai.states.get("sensor.energy_consumption_cost")
     assert state.state == "70.0"
 
 
@@ -997,7 +997,7 @@ async def test_cost_sensor_handle_late_price_sensor(
     [UnitOfVolume.CUBIC_FEET, UnitOfVolume.CUBIC_METERS, UnitOfVolume.LITERS],
 )
 async def test_cost_sensor_handle_gas(
-    setup_integration, hass: HomeAssistant, hass_storage: dict[str, Any], unit
+    setup_integration, menuai: menuai, menuai_storage: dict[str, Any], unit
 ) -> None:
     """Test gas cost price from sensor entity."""
     energy_attributes = {
@@ -1015,36 +1015,36 @@ async def test_cost_sensor_handle_gas(
         }
     )
 
-    hass_storage[data.STORAGE_KEY] = {
+    menuai_storage[data.STORAGE_KEY] = {
         "version": 1,
         "data": energy_data,
     }
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.gas_consumption",
         100,
         energy_attributes,
     )
 
-    await setup_integration(hass)
+    await setup_integration(menuai)
 
-    state = hass.states.get("sensor.gas_consumption_cost")
+    state = menuai.states.get("sensor.gas_consumption_cost")
     assert state.state == "0.0"
 
     # gas use bumped to 10 kWh
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.gas_consumption",
         200,
         energy_attributes,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.gas_consumption_cost")
+    state = menuai.states.get("sensor.gas_consumption_cost")
     assert state.state == "50.0"
 
 
 async def test_cost_sensor_handle_gas_kwh(
-    setup_integration, hass: HomeAssistant, hass_storage: dict[str, Any]
+    setup_integration, menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
     """Test gas cost price from sensor entity."""
     energy_attributes = {
@@ -1062,31 +1062,31 @@ async def test_cost_sensor_handle_gas_kwh(
         }
     )
 
-    hass_storage[data.STORAGE_KEY] = {
+    menuai_storage[data.STORAGE_KEY] = {
         "version": 1,
         "data": energy_data,
     }
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.gas_consumption",
         100,
         energy_attributes,
     )
 
-    await setup_integration(hass)
+    await setup_integration(menuai)
 
-    state = hass.states.get("sensor.gas_consumption_cost")
+    state = menuai.states.get("sensor.gas_consumption_cost")
     assert state.state == "0.0"
 
     # gas use bumped to 10 kWh
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.gas_consumption",
         200,
         energy_attributes,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.gas_consumption_cost")
+    state = menuai.states.get("sensor.gas_consumption_cost")
     assert state.state == "50.0"
 
 
@@ -1101,14 +1101,14 @@ async def test_cost_sensor_handle_gas_kwh(
 )
 async def test_cost_sensor_handle_water(
     setup_integration,
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
     unit_system,
     usage_unit,
     growth,
 ) -> None:
     """Test water cost price from sensor entity."""
-    hass.config.units = unit_system
+    menuai.config.units = unit_system
     energy_attributes = {
         ATTR_UNIT_OF_MEASUREMENT: usage_unit,
         ATTR_STATE_CLASS: SensorStateClass.TOTAL_INCREASING,
@@ -1124,39 +1124,39 @@ async def test_cost_sensor_handle_water(
         }
     )
 
-    hass_storage[data.STORAGE_KEY] = {
+    menuai_storage[data.STORAGE_KEY] = {
         "version": 1,
         "data": energy_data,
     }
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.water_consumption",
         100,
         energy_attributes,
     )
 
-    await setup_integration(hass)
+    await setup_integration(menuai)
 
-    state = hass.states.get("sensor.water_consumption_cost")
+    state = menuai.states.get("sensor.water_consumption_cost")
     assert state.state == "0.0"
 
     # water use bumped to 200 ft³/m³
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.water_consumption",
         200,
         energy_attributes,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.water_consumption_cost")
+    state = menuai.states.get("sensor.water_consumption_cost")
     assert float(state.state) == pytest.approx(growth)
 
 
 @pytest.mark.parametrize("state_class", [None])
 async def test_cost_sensor_wrong_state_class(
     setup_integration,
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
     caplog: pytest.LogCaptureFixture,
     state_class,
 ) -> None:
@@ -1182,20 +1182,20 @@ async def test_cost_sensor_wrong_state_class(
         }
     )
 
-    hass_storage[data.STORAGE_KEY] = {
+    menuai_storage[data.STORAGE_KEY] = {
         "version": 1,
         "data": energy_data,
     }
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.energy_consumption",
         10000,
         energy_attributes,
     )
 
-    await setup_integration(hass)
+    await setup_integration(menuai)
 
-    state = hass.states.get("sensor.energy_consumption_cost")
+    state = menuai.states.get("sensor.energy_consumption_cost")
     assert state.state == STATE_UNKNOWN
     assert (
         f"Found unexpected state_class {state_class} for sensor.energy_consumption"
@@ -1203,22 +1203,22 @@ async def test_cost_sensor_wrong_state_class(
     )
 
     # Energy use bumped to 10 kWh
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.energy_consumption",
         20000,
         energy_attributes,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.energy_consumption_cost")
+    state = menuai.states.get("sensor.energy_consumption_cost")
     assert state.state == STATE_UNKNOWN
 
 
 @pytest.mark.parametrize("state_class", [SensorStateClass.MEASUREMENT])
 async def test_cost_sensor_state_class_measurement_no_reset(
     setup_integration,
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
     caplog: pytest.LogCaptureFixture,
     state_class,
 ) -> None:
@@ -1244,39 +1244,39 @@ async def test_cost_sensor_state_class_measurement_no_reset(
         }
     )
 
-    hass_storage[data.STORAGE_KEY] = {
+    menuai_storage[data.STORAGE_KEY] = {
         "version": 1,
         "data": energy_data,
     }
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.energy_consumption",
         10000,
         energy_attributes,
     )
 
-    await setup_integration(hass)
+    await setup_integration(menuai)
 
-    state = hass.states.get("sensor.energy_consumption_cost")
+    state = menuai.states.get("sensor.energy_consumption_cost")
     assert state.state == STATE_UNKNOWN
 
     # Energy use bumped to 10 kWh
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.energy_consumption",
         20000,
         energy_attributes,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.energy_consumption_cost")
+    state = menuai.states.get("sensor.energy_consumption_cost")
     assert state.state == STATE_UNKNOWN
 
 
 async def test_inherit_source_unique_id(
     setup_integration,
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
-    hass_storage: dict[str, Any],
+    menuai_storage: dict[str, Any],
 ) -> None:
     """Test sensor inherits unique ID from source."""
     energy_data = data.EnergyManager.default_preferences()
@@ -1290,7 +1290,7 @@ async def test_inherit_source_unique_id(
         }
     )
 
-    hass_storage[data.STORAGE_KEY] = {
+    menuai_storage[data.STORAGE_KEY] = {
         "version": 1,
         "data": energy_data,
     }
@@ -1299,7 +1299,7 @@ async def test_inherit_source_unique_id(
         "sensor", "test", "123456", suggested_object_id="gas_consumption"
     )
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.gas_consumption",
         100,
         {
@@ -1308,9 +1308,9 @@ async def test_inherit_source_unique_id(
         },
     )
 
-    await setup_integration(hass)
+    await setup_integration(menuai)
 
-    state = hass.states.get("sensor.gas_consumption_cost")
+    state = menuai.states.get("sensor.gas_consumption_cost")
     assert state
     assert state.state == "0.0"
 

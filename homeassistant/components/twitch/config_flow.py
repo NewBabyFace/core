@@ -9,10 +9,10 @@ from typing import Any, cast
 from twitchAPI.helper import first
 from twitchAPI.twitch import Twitch
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlowResult
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_TOKEN
-from homeassistant.helpers import config_entry_oauth2_flow
-from homeassistant.helpers.config_entry_oauth2_flow import LocalOAuth2Implementation
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlowResult
+from menuai.const import CONF_ACCESS_TOKEN, CONF_TOKEN
+from menuai.helpers import config_entry_oauth2_flow
+from menuai.helpers.config_entry_oauth2_flow import LocalOAuth2Implementation
 
 from .const import CONF_CHANNELS, DOMAIN, LOGGER, OAUTH_SCOPES
 

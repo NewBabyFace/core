@@ -8,8 +8,8 @@ from typing import Any
 from goodwe import InverterError, connect
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST
 
 from .const import CONF_MODEL_FAMILY, DEFAULT_NAME, DOMAIN
 

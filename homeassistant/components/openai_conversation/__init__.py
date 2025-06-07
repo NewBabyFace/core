@@ -19,22 +19,22 @@ from openai.types.responses import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_API_KEY, Platform
-from homeassistant.core import (
-    HomeAssistant,
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_API_KEY, Platform
+from menuai.core import (
+    menuai,
     ServiceCall,
     ServiceResponse,
     SupportsResponse,
 )
-from homeassistant.exceptions import (
+from menuai.exceptions import (
     ConfigEntryNotReady,
-    HomeAssistantError,
+    menuaiError,
     ServiceValidationError,
 )
-from homeassistant.helpers import config_validation as cv, selector
-from homeassistant.helpers.httpx_client import get_async_client
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers import config_validation as cv, selector
+from menuai.helpers.httpx_client import get_async_client
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     CONF_CHAT_MODEL,
@@ -71,13 +71,13 @@ def encode_file(file_path: str) -> tuple[str, str]:
         return (mime_type, base64.b64encode(image_file.read()).decode("utf-8"))
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up OpenAI Conversation."""
 
     async def render_image(call: ServiceCall) -> ServiceResponse:
         """Render an image with dall-e."""
         entry_id = call.data["config_entry"]
-        entry = hass.config_entries.async_get_entry(entry_id)
+        entry = menuai.config_entries.async_get_entry(entry_id)
 
         if entry is None or entry.domain != DOMAIN:
             raise ServiceValidationError(
@@ -99,17 +99,17 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                 n=1,
             )
         except openai.OpenAIError as err:
-            raise HomeAssistantError(f"Error generating image: {err}") from err
+            raise menuaiError(f"Error generating image: {err}") from err
 
         if not response.data or not response.data[0].url:
-            raise HomeAssistantError("No image returned")
+            raise menuaiError("No image returned")
 
         return response.data[0].model_dump(exclude={"b64_json"})
 
     async def send_prompt(call: ServiceCall) -> ServiceResponse:
         """Send a prompt to ChatGPT and return the response."""
         entry_id = call.data["config_entry"]
-        entry = hass.config_entries.async_get_entry(entry_id)
+        entry = menuai.config_entries.async_get_entry(entry_id)
 
         if entry is None or entry.domain != DOMAIN:
             raise ServiceValidationError(
@@ -127,14 +127,14 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
         def append_files_to_content() -> None:
             for filename in call.data[CONF_FILENAMES]:
-                if not hass.config.is_allowed_path(filename):
-                    raise HomeAssistantError(
+                if not menuai.config.is_allowed_path(filename):
+                    raise menuaiError(
                         f"Cannot read `{filename}`, no access to path; "
                         "`allowlist_external_dirs` may need to be adjusted in "
                         "`configuration.yaml`"
                     )
                 if not Path(filename).exists():
-                    raise HomeAssistantError(f"`{filename}` does not exist")
+                    raise menuaiError(f"`{filename}` does not exist")
                 mime_type, base64_file = encode_file(filename)
                 if "image/" in mime_type:
                     content.append(
@@ -153,13 +153,13 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                         )
                     )
                 else:
-                    raise HomeAssistantError(
+                    raise menuaiError(
                         "Only images and PDF are supported by the OpenAI API,"
                         f"`{filename}` is not an image file or PDF"
                     )
 
         if CONF_FILENAMES in call.data:
-            await hass.async_add_executor_job(append_files_to_content)
+            await menuai.async_add_executor_job(append_files_to_content)
 
         messages: ResponseInputParam = [
             EasyInputMessageParam(type="message", role="user", content=content)
@@ -190,13 +190,13 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             response: Response = await client.responses.create(**model_args)
 
         except openai.OpenAIError as err:
-            raise HomeAssistantError(f"Error generating content: {err}") from err
+            raise menuaiError(f"Error generating content: {err}") from err
         except FileNotFoundError as err:
-            raise HomeAssistantError(f"Error generating content: {err}") from err
+            raise menuaiError(f"Error generating content: {err}") from err
 
         return {"text": response.output_text}
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_GENERATE_CONTENT,
         send_prompt,
@@ -216,7 +216,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         supports_response=SupportsResponse.ONLY,
     )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_GENERATE_IMAGE,
         render_image,
@@ -241,18 +241,18 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: OpenAIConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: OpenAIConfigEntry) -> bool:
     """Set up OpenAI Conversation from a config entry."""
     client = openai.AsyncOpenAI(
         api_key=entry.data[CONF_API_KEY],
-        http_client=get_async_client(hass),
+        http_client=get_async_client(menuai),
     )
 
     # Cache current platform data which gets added to each request (caching done by library)
-    _ = await hass.async_add_executor_job(client.platform_headers)
+    _ = await menuai.async_add_executor_job(client.platform_headers)
 
     try:
-        await hass.async_add_executor_job(client.with_options(timeout=10.0).models.list)
+        await menuai.async_add_executor_job(client.with_options(timeout=10.0).models.list)
     except openai.AuthenticationError as err:
         LOGGER.error("Invalid API key: %s", err)
         return False
@@ -261,11 +261,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: OpenAIConfigEntry) -> bo
 
     entry.runtime_data = client
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload OpenAI."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

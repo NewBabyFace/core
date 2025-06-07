@@ -6,11 +6,11 @@ from aiohttp import ClientResponseError
 from weatherflow4py.api import WeatherFlowRestAPI
 from weatherflow4py.models.rest.unified import WeatherFlowDataREST
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_API_TOKEN
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_API_TOKEN
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN, LOGGER
 
@@ -22,13 +22,13 @@ class WeatherFlowCloudDataUpdateCoordinator(
 
     config_entry: ConfigEntry
 
-    def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: ConfigEntry) -> None:
         """Initialize global WeatherFlow forecast data updater."""
         self.weather_api = WeatherFlowRestAPI(
             api_token=config_entry.data[CONF_API_TOKEN]
         )
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name=DOMAIN,

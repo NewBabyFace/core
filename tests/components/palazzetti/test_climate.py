@@ -6,7 +6,7 @@ from pypalazzetti.exceptions import CommunicationError, ValidationError
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_FAN_MODE,
     ATTR_HVAC_MODE,
     DOMAIN as CLIMATE_DOMAIN,
@@ -15,11 +15,11 @@ from homeassistant.components.climate import (
     SERVICE_SET_TEMPERATURE,
     HVACMode,
 )
-from homeassistant.components.palazzetti.const import FAN_AUTO, FAN_HIGH
-from homeassistant.const import ATTR_ENTITY_ID, ATTR_TEMPERATURE, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import entity_registry as er
+from menuai.components.palazzetti.const import FAN_AUTO, FAN_HIGH
+from menuai.const import ATTR_ENTITY_ID, ATTR_TEMPERATURE, Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers import entity_registry as er
 
 from . import setup_integration
 
@@ -29,29 +29,29 @@ ENTITY_ID = "climate.stove"
 
 
 async def test_all_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mock_palazzetti_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test all entities."""
-    with patch("homeassistant.components.palazzetti.PLATFORMS", [Platform.CLIMATE]):
-        await setup_integration(hass, mock_config_entry)
+    with patch("menuai.components.palazzetti.PLATFORMS", [Platform.CLIMATE]):
+        await setup_integration(menuai, mock_config_entry)
 
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
 
 async def test_async_set_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_palazzetti_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test setting climate data via service call."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     # Set HVAC Mode: Success
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {ATTR_ENTITY_ID: ENTITY_ID, ATTR_HVAC_MODE: HVACMode.HEAT},
@@ -60,7 +60,7 @@ async def test_async_set_data(
     mock_palazzetti_client.set_on.assert_called_once_with(True)
     mock_palazzetti_client.set_on.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {ATTR_ENTITY_ID: ENTITY_ID, ATTR_HVAC_MODE: HVACMode.OFF},
@@ -71,8 +71,8 @@ async def test_async_set_data(
 
     # Set HVAC Mode: Error
     mock_palazzetti_client.set_on.side_effect = CommunicationError()
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             CLIMATE_DOMAIN,
             SERVICE_SET_HVAC_MODE,
             {ATTR_ENTITY_ID: ENTITY_ID, ATTR_HVAC_MODE: HVACMode.HEAT},
@@ -81,7 +81,7 @@ async def test_async_set_data(
 
     mock_palazzetti_client.set_on.side_effect = ValidationError()
     with pytest.raises(ServiceValidationError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             CLIMATE_DOMAIN,
             SERVICE_SET_HVAC_MODE,
             {ATTR_ENTITY_ID: ENTITY_ID, ATTR_HVAC_MODE: HVACMode.HEAT},
@@ -89,7 +89,7 @@ async def test_async_set_data(
         )
 
     # Set Temperature: Success
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_TEMPERATURE,
         {ATTR_ENTITY_ID: ENTITY_ID, ATTR_TEMPERATURE: 22},
@@ -100,8 +100,8 @@ async def test_async_set_data(
 
     # Set Temperature: Error
     mock_palazzetti_client.set_target_temperature.side_effect = CommunicationError()
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             CLIMATE_DOMAIN,
             SERVICE_SET_TEMPERATURE,
             {ATTR_ENTITY_ID: ENTITY_ID, ATTR_TEMPERATURE: 22},
@@ -110,7 +110,7 @@ async def test_async_set_data(
 
     mock_palazzetti_client.set_target_temperature.side_effect = ValidationError()
     with pytest.raises(ServiceValidationError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             CLIMATE_DOMAIN,
             SERVICE_SET_TEMPERATURE,
             {ATTR_ENTITY_ID: ENTITY_ID, ATTR_TEMPERATURE: 22},
@@ -118,7 +118,7 @@ async def test_async_set_data(
         )
 
     # Set Fan Mode: Success
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_FAN_MODE,
         {ATTR_ENTITY_ID: ENTITY_ID, ATTR_FAN_MODE: FAN_HIGH},
@@ -127,7 +127,7 @@ async def test_async_set_data(
     mock_palazzetti_client.set_fan_high.assert_called_once()
     mock_palazzetti_client.set_fan_high.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_FAN_MODE,
         {ATTR_ENTITY_ID: ENTITY_ID, ATTR_FAN_MODE: FAN_AUTO},
@@ -136,7 +136,7 @@ async def test_async_set_data(
     mock_palazzetti_client.set_fan_auto.assert_called_once()
     mock_palazzetti_client.set_fan_auto.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_FAN_MODE,
         {ATTR_ENTITY_ID: ENTITY_ID, ATTR_FAN_MODE: "3"},
@@ -147,8 +147,8 @@ async def test_async_set_data(
 
     # Set Fan Mode: Error
     mock_palazzetti_client.set_fan_speed.side_effect = CommunicationError()
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             CLIMATE_DOMAIN,
             SERVICE_SET_FAN_MODE,
             {ATTR_ENTITY_ID: ENTITY_ID, ATTR_FAN_MODE: 3},
@@ -157,7 +157,7 @@ async def test_async_set_data(
 
     mock_palazzetti_client.set_fan_speed.side_effect = ValidationError()
     with pytest.raises(ServiceValidationError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             CLIMATE_DOMAIN,
             SERVICE_SET_FAN_MODE,
             {ATTR_ENTITY_ID: ENTITY_ID, ATTR_FAN_MODE: 3},

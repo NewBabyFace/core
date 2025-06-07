@@ -10,16 +10,16 @@ import pytest
 from sqlalchemy import select
 import voluptuous as vol
 
-from homeassistant import exceptions
-from homeassistant.components import recorder
-from homeassistant.components.recorder import Recorder, history, statistics
-from homeassistant.components.recorder.db_schema import StatisticsShortTerm
-from homeassistant.components.recorder.models import (
+from menuai import exceptions
+from menuai.components import recorder
+from menuai.components.recorder import Recorder, history, statistics
+from menuai.components.recorder.db_schema import StatisticsShortTerm
+from menuai.components.recorder.models import (
     StatisticMeanType,
     datetime_to_timestamp_or_none,
     process_timestamp,
 )
-from homeassistant.components.recorder.statistics import (
+from menuai.components.recorder.statistics import (
     STATISTIC_UNIT_TO_UNIT_CONVERTER,
     PlatformCompiledStatistics,
     _generate_max_mean_min_statistic_in_sub_period_stmt,
@@ -38,16 +38,16 @@ from homeassistant.components.recorder.statistics import (
     list_statistic_ids,
     validate_statistics,
 )
-from homeassistant.components.recorder.table_managers.statistics_meta import (
+from menuai.components.recorder.table_managers.statistics_meta import (
     _generate_get_metadata_stmt,
 )
-from homeassistant.components.recorder.util import session_scope
-from homeassistant.components.sensor import UNIT_CONVERTERS
-from homeassistant.core import Context, HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.components.recorder.util import session_scope
+from menuai.components.sensor import UNIT_CONVERTERS
+from menuai.core import Context, menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from .common import (
     assert_dict_of_states_equal_without_context_and_last_changed,
@@ -75,14 +75,14 @@ def multiple_start_time_chunk_sizes(
     to call _generate_statistics_at_time_stmt_group_by multiple times.
     """
     with patch(
-        "homeassistant.components.recorder.statistics.MAX_IDS_FOR_INDEXED_GROUP_BY",
+        "menuai.components.recorder.statistics.MAX_IDS_FOR_INDEXED_GROUP_BY",
         ids_for_start_time_chunk_sizes,
     ):
         yield
 
 
 @pytest.fixture
-async def mock_recorder_before_hass(
+async def mock_recorder_before_menuai(
     async_test_recorder: RecorderInstanceContextManager,
 ) -> None:
     """Set up recorder."""
@@ -94,12 +94,12 @@ def setup_recorder(recorder_mock: Recorder) -> None:
 
 
 async def _setup_mock_domain(
-    hass: HomeAssistant,
+    menuai: menuai,
     platform: Any | None = None,  # There's no RecorderPlatform class yet
 ) -> None:
     """Set up a mock domain."""
-    mock_platform(hass, "some_domain.recorder", platform or MockPlatform())
-    assert await async_setup_component(hass, "some_domain", {})
+    mock_platform(menuai, "some_domain.recorder", platform or MockPlatform())
+    assert await async_setup_component(menuai, "some_domain", {})
 
 
 def test_converters_align_with_sensor() -> None:
@@ -112,20 +112,20 @@ def test_converters_align_with_sensor() -> None:
 
 
 async def test_compile_hourly_statistics(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_recorder: None,
 ) -> None:
     """Test compiling hourly statistics."""
-    instance = recorder.get_instance(hass)
-    await async_setup_component(hass, "sensor", {})
-    zero, four, states = await async_record_states(hass)
-    hist = history.get_significant_states(hass, zero, four, list(states))
+    instance = recorder.get_instance(menuai)
+    await async_setup_component(menuai, "sensor", {})
+    zero, four, states = await async_record_states(menuai)
+    hist = history.get_significant_states(menuai, zero, four, list(states))
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
 
     # Should not fail if there is nothing there yet
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         stats = get_latest_short_term_statistics_with_session(
-            hass,
+            menuai,
             session,
             {"sensor.test1", "sensor.wind_direction"},
             {"last_reset", "max", "mean", "min", "state", "sum"},
@@ -133,11 +133,11 @@ async def test_compile_hourly_statistics(
     assert stats == {}
 
     for kwargs in ({}, {"statistic_ids": ["sensor.test1", "sensor.wind_direction"]}):
-        stats = statistics_during_period(hass, zero, period="5minute", **kwargs)
+        stats = statistics_during_period(menuai, zero, period="5minute", **kwargs)
         assert stats == {}
     for sensor in ("sensor.test1", "sensor.wind_direction"):
         stats = get_last_short_term_statistics(
-            hass,
+            menuai,
             0,
             sensor,
             True,
@@ -145,12 +145,12 @@ async def test_compile_hourly_statistics(
         )
         assert stats == {}
 
-    do_adhoc_statistics(hass, start=zero)
-    do_adhoc_statistics(hass, start=four)
-    await async_wait_recording_done(hass)
+    do_adhoc_statistics(menuai, start=zero)
+    do_adhoc_statistics(menuai, start=four)
+    await async_wait_recording_done(menuai)
 
     metadata = get_metadata(
-        hass, statistic_ids={"sensor.test1", "sensor.test2", "sensor.wind_direction"}
+        menuai, statistic_ids={"sensor.test1", "sensor.test2", "sensor.wind_direction"}
     )
     for sensor, mean_type in (
         ("sensor.test1", StatisticMeanType.ARITHMETIC),
@@ -201,7 +201,7 @@ async def test_compile_hourly_statistics(
 
     # Test statistics_during_period
     stats = statistics_during_period(
-        hass,
+        menuai,
         zero,
         period="5minute",
         statistic_ids={"sensor.test1", "sensor.test2", "sensor.wind_direction"},
@@ -215,7 +215,7 @@ async def test_compile_hourly_statistics(
     # Test statistics_during_period with a far future start and end date
     future = dt_util.as_utc(dt_util.parse_datetime("2221-11-01 00:00:00"))
     stats = statistics_during_period(
-        hass,
+        menuai,
         future,
         end_time=future,
         period="5minute",
@@ -225,7 +225,7 @@ async def test_compile_hourly_statistics(
 
     # Test statistics_during_period with a far future end date
     stats = statistics_during_period(
-        hass,
+        menuai,
         zero,
         end_time=future,
         period="5minute",
@@ -238,12 +238,12 @@ async def test_compile_hourly_statistics(
     }
 
     stats = statistics_during_period(
-        hass, zero, statistic_ids={"sensor.test2"}, period="5minute"
+        menuai, zero, statistic_ids={"sensor.test2"}, period="5minute"
     )
     assert stats == {"sensor.test2": expected_stats2}
 
     stats = statistics_during_period(
-        hass, zero, statistic_ids={"sensor.test3"}, period="5minute"
+        menuai, zero, statistic_ids={"sensor.test3"}, period="5minute"
     )
     assert stats == {}
 
@@ -253,7 +253,7 @@ async def test_compile_hourly_statistics(
         ("sensor.wind_direction", expected_stats_wind_direction2),
     ):
         stats = get_last_short_term_statistics(
-            hass,
+            menuai,
             0,
             sensor,
             True,
@@ -262,7 +262,7 @@ async def test_compile_hourly_statistics(
         assert stats == {}
 
         stats = get_last_short_term_statistics(
-            hass,
+            menuai,
             1,
             sensor,
             True,
@@ -270,9 +270,9 @@ async def test_compile_hourly_statistics(
         )
         assert stats == {sensor: [expected]}
 
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         stats = get_latest_short_term_statistics_with_session(
-            hass,
+            menuai,
             session,
             {"sensor.test1", "sensor.wind_direction"},
             {"last_reset", "max", "mean", "min", "state", "sum"},
@@ -284,11 +284,11 @@ async def test_compile_hourly_statistics(
 
     # Now wipe the latest_short_term_statistics_ids table and test again
     # to make sure we can rebuild the missing data
-    run_cache = get_short_term_statistics_run_cache(instance.hass)
+    run_cache = get_short_term_statistics_run_cache(instance.menuai)
     run_cache._latest_id_by_metadata_id = {}
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         stats = get_latest_short_term_statistics_with_session(
-            hass,
+            menuai,
             session,
             {"sensor.test1", "sensor.wind_direction"},
             {"last_reset", "max", "mean", "min", "state", "sum"},
@@ -298,10 +298,10 @@ async def test_compile_hourly_statistics(
         "sensor.wind_direction": [expected_stats_wind_direction2],
     }
 
-    metadata = get_metadata(hass, statistic_ids={"sensor.test1"})
-    with session_scope(hass=hass, read_only=True) as session:
+    metadata = get_metadata(menuai, statistic_ids={"sensor.test1"})
+    with session_scope(menuai=menuai, read_only=True) as session:
         stats = get_latest_short_term_statistics_with_session(
-            hass,
+            menuai,
             session,
             {"sensor.test1"},
             {"last_reset", "max", "mean", "min", "state", "sum"},
@@ -311,11 +311,11 @@ async def test_compile_hourly_statistics(
 
     # Test with multiple metadata ids
     metadata = get_metadata(
-        hass, statistic_ids={"sensor.test1", "sensor.wind_direction"}
+        menuai, statistic_ids={"sensor.test1", "sensor.wind_direction"}
     )
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         stats = get_latest_short_term_statistics_with_session(
-            hass,
+            menuai,
             session,
             {"sensor.test1", "sensor.wind_direction"},
             {"last_reset", "max", "mean", "min", "state", "sum"},
@@ -331,7 +331,7 @@ async def test_compile_hourly_statistics(
         ("sensor.wind_direction", expected_stats_wind_direction[::-1]),
     ):
         stats = get_last_short_term_statistics(
-            hass,
+            menuai,
             2,
             sensor,
             True,
@@ -340,7 +340,7 @@ async def test_compile_hourly_statistics(
         assert stats == {sensor: expected}
 
         stats = get_last_short_term_statistics(
-            hass,
+            menuai,
             3,
             sensor,
             True,
@@ -349,7 +349,7 @@ async def test_compile_hourly_statistics(
         assert stats == {sensor: expected}
 
     stats = get_last_short_term_statistics(
-        hass,
+        menuai,
         1,
         "sensor.test3",
         True,
@@ -359,9 +359,9 @@ async def test_compile_hourly_statistics(
 
     instance.get_session().query(StatisticsShortTerm).delete()
     # Should not fail there is nothing in the table
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         stats = get_latest_short_term_statistics_with_session(
-            hass,
+            menuai,
             session,
             {"sensor.test1", "sensor.wind_direction"},
             {"last_reset", "max", "mean", "min", "state", "sum"},
@@ -370,13 +370,13 @@ async def test_compile_hourly_statistics(
 
     # Delete again, and manually wipe the cache since we deleted all the data
     instance.get_session().query(StatisticsShortTerm).delete()
-    run_cache = get_short_term_statistics_run_cache(instance.hass)
+    run_cache = get_short_term_statistics_run_cache(instance.menuai)
     run_cache._latest_id_by_metadata_id = {}
 
     # And test again to make sure there is no data
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         stats = get_latest_short_term_statistics_with_session(
-            hass,
+            menuai,
             session,
             {"sensor.test1", "sensor.wind_direction"},
             {"last_reset", "max", "mean", "min", "state", "sum"},
@@ -401,8 +401,8 @@ def mock_sensor_statistics():
             "stat": {"start": start},
         }
 
-    def get_fake_stats(_hass, session, start, _end):
-        instance = recorder.get_instance(_hass)
+    def get_fake_stats(_menuai, session, start, _end):
+        instance = recorder.get_instance(_menuai)
         return statistics.PlatformCompiledStatistics(
             [
                 sensor_stats("sensor.test1", start),
@@ -417,7 +417,7 @@ def mock_sensor_statistics():
         )
 
     with patch(
-        "homeassistant.components.sensor.recorder.compile_statistics",
+        "menuai.components.sensor.recorder.compile_statistics",
         side_effect=get_fake_stats,
     ):
         yield
@@ -437,7 +437,7 @@ def mock_from_stats():
         return real_from_stats(metadata_id, stats, now_timestamp)
 
     with patch(
-        "homeassistant.components.recorder.statistics.StatisticsShortTerm.from_stats",
+        "menuai.components.recorder.statistics.StatisticsShortTerm.from_stats",
         side_effect=from_stats,
         autospec=True,
     ):
@@ -445,15 +445,15 @@ def mock_from_stats():
 
 
 async def test_compile_periodic_statistics_exception(
-    hass: HomeAssistant, setup_recorder: None, mock_sensor_statistics, mock_from_stats
+    menuai: menuai, setup_recorder: None, mock_sensor_statistics, mock_from_stats
 ) -> None:
     """Test exception handling when compiling periodic statistics."""
-    await async_setup_component(hass, "sensor", {})
+    await async_setup_component(menuai, "sensor", {})
 
     now = get_start_time(dt_util.utcnow())
-    do_adhoc_statistics(hass, start=now)
-    do_adhoc_statistics(hass, start=now + timedelta(minutes=5))
-    await async_wait_recording_done(hass)
+    do_adhoc_statistics(menuai, start=now)
+    do_adhoc_statistics(menuai, start=now + timedelta(minutes=5))
+    await async_wait_recording_done(menuai)
     expected_1 = {
         "start": process_timestamp(now).timestamp(),
         "end": process_timestamp(now + timedelta(minutes=5)).timestamp(),
@@ -478,7 +478,7 @@ async def test_compile_periodic_statistics_exception(
     expected_stats2 = [expected_2]
     expected_stats3 = [expected_1, expected_2]
 
-    stats = statistics_during_period(hass, now, period="5minute")
+    stats = statistics_during_period(menuai, now, period="5minute")
     assert stats == {
         "sensor.test1": expected_stats1,
         "sensor.test2": expected_stats2,
@@ -487,10 +487,10 @@ async def test_compile_periodic_statistics_exception(
 
 
 async def test_rename_entity(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, setup_recorder: None
+    menuai: menuai, entity_registry: er.EntityRegistry, setup_recorder: None
 ) -> None:
     """Test statistics is migrated when entity_id is changed."""
-    await async_setup_component(hass, "sensor", {})
+    await async_setup_component(menuai, "sensor", {})
 
     reg_entry = entity_registry.async_get_or_create(
         "sensor",
@@ -499,17 +499,17 @@ async def test_rename_entity(
         suggested_object_id="test1",
     )
     assert reg_entry.entity_id == "sensor.test1"
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    zero, four, states = await async_record_states(hass)
-    hist = history.get_significant_states(hass, zero, four, list(states))
+    zero, four, states = await async_record_states(menuai)
+    hist = history.get_significant_states(menuai, zero, four, list(states))
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
 
     for kwargs in ({}, {"statistic_ids": ["sensor.test1"]}):
-        stats = statistics_during_period(hass, zero, period="5minute", **kwargs)
+        stats = statistics_during_period(menuai, zero, period="5minute", **kwargs)
         assert stats == {}
     stats = get_last_short_term_statistics(
-        hass,
+        menuai,
         0,
         "sensor.test1",
         True,
@@ -517,8 +517,8 @@ async def test_rename_entity(
     )
     assert stats == {}
 
-    do_adhoc_statistics(hass, start=zero)
-    await async_wait_recording_done(hass)
+    do_adhoc_statistics(menuai, start=zero)
+    await async_wait_recording_done(menuai)
     expected_1 = {
         "start": process_timestamp(zero).timestamp(),
         "end": process_timestamp(zero + timedelta(minutes=5)).timestamp(),
@@ -545,7 +545,7 @@ async def test_rename_entity(
         }
     ]
 
-    stats = statistics_during_period(hass, zero, period="5minute")
+    stats = statistics_during_period(menuai, zero, period="5minute")
     assert stats == {
         "sensor.test1": expected_stats1,
         "sensor.test2": expected_stats2,
@@ -553,9 +553,9 @@ async def test_rename_entity(
     }
 
     entity_registry.async_update_entity("sensor.test1", new_entity_id="sensor.test99")
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    stats = statistics_during_period(hass, zero, period="5minute")
+    stats = statistics_during_period(menuai, zero, period="5minute")
     assert stats == {
         "sensor.test99": expected_stats99,
         "sensor.test2": expected_stats2,
@@ -564,15 +564,15 @@ async def test_rename_entity(
 
 
 async def test_statistics_during_period_set_back_compat(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_recorder: None,
 ) -> None:
     """Test statistics_during_period can handle a list instead of a set."""
-    await async_setup_component(hass, "sensor", {})
+    await async_setup_component(menuai, "sensor", {})
     # This should not throw an exception when passed a list instead of a set
     assert (
         statistics.statistics_during_period(
-            hass,
+            menuai,
             dt_util.utcnow(),
             None,
             statistic_ids=["sensor.test1"],
@@ -585,7 +585,7 @@ async def test_statistics_during_period_set_back_compat(
 
 
 async def test_rename_entity_collision(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     setup_recorder: None,
     caplog: pytest.LogCaptureFixture,
@@ -595,7 +595,7 @@ async def test_rename_entity_collision(
     This test relies on the safeguard in the statistics_meta_manager
     and should not hit the filter_unique_constraint_integrity_error safeguard.
     """
-    await async_setup_component(hass, "sensor", {})
+    await async_setup_component(menuai, "sensor", {})
 
     reg_entry = entity_registry.async_get_or_create(
         "sensor",
@@ -604,17 +604,17 @@ async def test_rename_entity_collision(
         suggested_object_id="test1",
     )
     assert reg_entry.entity_id == "sensor.test1"
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    zero, four, states = await async_record_states(hass)
-    hist = history.get_significant_states(hass, zero, four, list(states))
+    zero, four, states = await async_record_states(menuai)
+    hist = history.get_significant_states(menuai, zero, four, list(states))
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
 
     for kwargs in ({}, {"statistic_ids": ["sensor.test1"]}):
-        stats = statistics_during_period(hass, zero, period="5minute", **kwargs)
+        stats = statistics_during_period(menuai, zero, period="5minute", **kwargs)
         assert stats == {}
     stats = get_last_short_term_statistics(
-        hass,
+        menuai,
         0,
         "sensor.test1",
         True,
@@ -622,8 +622,8 @@ async def test_rename_entity_collision(
     )
     assert stats == {}
 
-    do_adhoc_statistics(hass, start=zero)
-    await async_wait_recording_done(hass)
+    do_adhoc_statistics(menuai, start=zero)
+    await async_wait_recording_done(menuai)
     expected_1 = {
         "start": process_timestamp(zero).timestamp(),
         "end": process_timestamp(zero + timedelta(minutes=5)).timestamp(),
@@ -649,7 +649,7 @@ async def test_rename_entity_collision(
         }
     ]
 
-    stats = statistics_during_period(hass, zero, period="5minute")
+    stats = statistics_during_period(menuai, zero, period="5minute")
     assert stats == {
         "sensor.test1": expected_stats1,
         "sensor.test2": expected_stats2,
@@ -666,15 +666,15 @@ async def test_rename_entity_collision(
         "unit_of_measurement": "kWh",
     }
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         session.add(recorder.db_schema.StatisticsMeta.from_meta(metadata_1))
 
     # Rename entity sensor.test1 to sensor.test99
     entity_registry.async_update_entity("sensor.test1", new_entity_id="sensor.test99")
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
     # Statistics failed to migrate due to the collision
-    stats = statistics_during_period(hass, zero, period="5minute")
+    stats = statistics_during_period(menuai, zero, period="5minute")
     assert stats == {
         "sensor.test1": expected_stats1,
         "sensor.test2": expected_stats2,
@@ -692,7 +692,7 @@ async def test_rename_entity_collision(
 
 
 async def test_rename_entity_collision_states_meta_check_disabled(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     setup_recorder: None,
     caplog: pytest.LogCaptureFixture,
@@ -702,7 +702,7 @@ async def test_rename_entity_collision_states_meta_check_disabled(
     This test disables the safeguard in the statistics_meta_manager
     and relies on the filter_unique_constraint_integrity_error safeguard.
     """
-    await async_setup_component(hass, "sensor", {})
+    await async_setup_component(menuai, "sensor", {})
 
     reg_entry = entity_registry.async_get_or_create(
         "sensor",
@@ -711,17 +711,17 @@ async def test_rename_entity_collision_states_meta_check_disabled(
         suggested_object_id="test1",
     )
     assert reg_entry.entity_id == "sensor.test1"
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    zero, four, states = await async_record_states(hass)
-    hist = history.get_significant_states(hass, zero, four, list(states))
+    zero, four, states = await async_record_states(menuai)
+    hist = history.get_significant_states(menuai, zero, four, list(states))
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
 
     for kwargs in ({}, {"statistic_ids": ["sensor.test1"]}):
-        stats = statistics_during_period(hass, zero, period="5minute", **kwargs)
+        stats = statistics_during_period(menuai, zero, period="5minute", **kwargs)
         assert stats == {}
     stats = get_last_short_term_statistics(
-        hass,
+        menuai,
         0,
         "sensor.test1",
         True,
@@ -729,8 +729,8 @@ async def test_rename_entity_collision_states_meta_check_disabled(
     )
     assert stats == {}
 
-    do_adhoc_statistics(hass, start=zero)
-    await async_wait_recording_done(hass)
+    do_adhoc_statistics(menuai, start=zero)
+    await async_wait_recording_done(menuai)
     expected_1 = {
         "start": process_timestamp(zero).timestamp(),
         "end": process_timestamp(zero + timedelta(minutes=5)).timestamp(),
@@ -756,7 +756,7 @@ async def test_rename_entity_collision_states_meta_check_disabled(
         }
     ]
 
-    stats = statistics_during_period(hass, zero, period="5minute")
+    stats = statistics_during_period(menuai, zero, period="5minute")
     assert stats == {
         "sensor.test1": expected_stats1,
         "sensor.test2": expected_stats2,
@@ -773,10 +773,10 @@ async def test_rename_entity_collision_states_meta_check_disabled(
         "unit_of_measurement": "kWh",
     }
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         session.add(recorder.db_schema.StatisticsMeta.from_meta(metadata_1))
 
-    instance = recorder.get_instance(hass)
+    instance = recorder.get_instance(menuai)
     # Patch out the safeguard in the states meta manager
     # so that we hit the filter_unique_constraint_integrity_error safeguard in the statistics
     with patch.object(instance.statistics_meta_manager, "get", return_value=None):
@@ -784,10 +784,10 @@ async def test_rename_entity_collision_states_meta_check_disabled(
         entity_registry.async_update_entity(
             "sensor.test1", new_entity_id="sensor.test99"
         )
-        await async_wait_recording_done(hass)
+        await async_wait_recording_done(menuai)
 
     # Statistics failed to migrate due to the collision
-    stats = statistics_during_period(hass, zero, period="5minute")
+    stats = statistics_during_period(menuai, zero, period="5minute")
     assert stats == {
         "sensor.test1": expected_stats1,
         "sensor.test2": expected_stats2,
@@ -805,32 +805,32 @@ async def test_rename_entity_collision_states_meta_check_disabled(
 
 
 async def test_statistics_duplicated(
-    hass: HomeAssistant, setup_recorder: None, caplog: pytest.LogCaptureFixture
+    menuai: menuai, setup_recorder: None, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test statistics with same start time is not compiled."""
-    await async_setup_component(hass, "sensor", {})
-    zero, four, states = await async_record_states(hass)
-    hist = history.get_significant_states(hass, zero, four, list(states))
+    await async_setup_component(menuai, "sensor", {})
+    zero, four, states = await async_record_states(menuai)
+    hist = history.get_significant_states(menuai, zero, four, list(states))
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
     assert "Compiling statistics for" not in caplog.text
     assert "Statistics already compiled" not in caplog.text
 
     with patch(
-        "homeassistant.components.sensor.recorder.compile_statistics",
+        "menuai.components.sensor.recorder.compile_statistics",
         return_value=statistics.PlatformCompiledStatistics([], {}),
     ) as compile_statistics:
-        do_adhoc_statistics(hass, start=zero)
-        await async_wait_recording_done(hass)
+        do_adhoc_statistics(menuai, start=zero)
+        await async_wait_recording_done(menuai)
         assert compile_statistics.called
         compile_statistics.reset_mock()
         assert "Compiling statistics for" in caplog.text
         assert "Statistics already compiled" not in caplog.text
         caplog.clear()
 
-        do_adhoc_statistics(hass, start=zero)
-        await async_wait_recording_done(hass)
+        do_adhoc_statistics(menuai, start=zero)
+        await async_wait_recording_done(menuai)
         assert not compile_statistics.called
         compile_statistics.reset_mock()
         assert "Compiling statistics for" not in caplog.text
@@ -848,8 +848,8 @@ async def test_statistics_duplicated(
 )
 async def test_import_statistics(
     recorder_mock: Recorder,
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     caplog: pytest.LogCaptureFixture,
     source,
     statistic_id,
@@ -857,7 +857,7 @@ async def test_import_statistics(
     last_reset_str,
 ) -> None:
     """Test importing statistics and inserting external statistics."""
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
 
     assert "Compiling statistics for" not in caplog.text
     assert "Statistics already compiled" not in caplog.text
@@ -890,10 +890,10 @@ async def test_import_statistics(
         "unit_of_measurement": "kWh",
     }
 
-    import_fn(hass, external_metadata, (external_statistics1, external_statistics2))
-    await async_wait_recording_done(hass)
+    import_fn(menuai, external_metadata, (external_statistics1, external_statistics2))
+    await async_wait_recording_done(menuai)
     stats = statistics_during_period(
-        hass, zero, period="hour", statistic_ids={statistic_id}
+        menuai, zero, period="hour", statistic_ids={statistic_id}
     )
     assert stats == {
         statistic_id: [
@@ -913,7 +913,7 @@ async def test_import_statistics(
             },
         ]
     }
-    statistic_ids = list_statistic_ids(hass)
+    statistic_ids = list_statistic_ids(menuai)
     assert statistic_ids == [
         {
             "display_unit_of_measurement": "kWh",
@@ -927,7 +927,7 @@ async def test_import_statistics(
             "unit_class": "energy",
         }
     ]
-    metadata = get_metadata(hass, statistic_ids={statistic_id})
+    metadata = get_metadata(menuai, statistic_ids={statistic_id})
     assert metadata == {
         statistic_id: (
             1,
@@ -943,7 +943,7 @@ async def test_import_statistics(
         )
     }
     last_stats = get_last_statistics(
-        hass,
+        menuai,
         1,
         statistic_id,
         True,
@@ -968,10 +968,10 @@ async def test_import_statistics(
         "state": 5,
         "sum": 6,
     }
-    import_fn(hass, external_metadata, (external_statistics,))
-    await async_wait_recording_done(hass)
+    import_fn(menuai, external_metadata, (external_statistics,))
+    await async_wait_recording_done(menuai)
     stats = statistics_during_period(
-        hass, zero, period="hour", statistic_ids={statistic_id}
+        menuai, zero, period="hour", statistic_ids={statistic_id}
     )
     assert stats == {
         statistic_id: [
@@ -1003,9 +1003,9 @@ async def test_import_statistics(
         "sum": 5,
     }
     external_metadata["name"] = "Total imported energy renamed"
-    import_fn(hass, external_metadata, (external_statistics,))
-    await async_wait_recording_done(hass)
-    statistic_ids = list_statistic_ids(hass)
+    import_fn(menuai, external_metadata, (external_statistics,))
+    await async_wait_recording_done(menuai)
+    statistic_ids = list_statistic_ids(menuai)
     assert statistic_ids == [
         {
             "display_unit_of_measurement": "kWh",
@@ -1019,7 +1019,7 @@ async def test_import_statistics(
             "unit_class": "energy",
         }
     ]
-    metadata = get_metadata(hass, statistic_ids={statistic_id})
+    metadata = get_metadata(menuai, statistic_ids={statistic_id})
     assert metadata == {
         statistic_id: (
             1,
@@ -1035,7 +1035,7 @@ async def test_import_statistics(
         )
     }
     stats = statistics_during_period(
-        hass, zero, period="hour", statistic_ids={statistic_id}
+        menuai, zero, period="hour", statistic_ids={statistic_id}
     )
     assert stats == {
         statistic_id: [
@@ -1069,9 +1069,9 @@ async def test_import_statistics(
     response = await client.receive_json()
     assert response["success"]
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
     stats = statistics_during_period(
-        hass, zero, period="hour", statistic_ids={statistic_id}
+        menuai, zero, period="hour", statistic_ids={statistic_id}
     )
     assert stats == {
         statistic_id: [
@@ -1094,10 +1094,10 @@ async def test_import_statistics(
 
 
 async def test_external_statistics_errors(
-    hass: HomeAssistant, setup_recorder: None, caplog: pytest.LogCaptureFixture
+    menuai: menuai, setup_recorder: None, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test validation of external statistics."""
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
     assert "Compiling statistics for" not in caplog.text
     assert "Statistics already compiled" not in caplog.text
 
@@ -1127,22 +1127,22 @@ async def test_external_statistics_errors(
         "statistic_id": "sensor.total_energy_import",
     }
     external_statistics = {**_external_statistics}
-    with pytest.raises(HomeAssistantError):
-        async_add_external_statistics(hass, external_metadata, (external_statistics,))
-    await async_wait_recording_done(hass)
-    assert statistics_during_period(hass, zero, period="hour") == {}
-    assert list_statistic_ids(hass) == []
-    assert get_metadata(hass, statistic_ids={"sensor.total_energy_import"}) == {}
+    with pytest.raises(menuaiError):
+        async_add_external_statistics(menuai, external_metadata, (external_statistics,))
+    await async_wait_recording_done(menuai)
+    assert statistics_during_period(menuai, zero, period="hour") == {}
+    assert list_statistic_ids(menuai) == []
+    assert get_metadata(menuai, statistic_ids={"sensor.total_energy_import"}) == {}
 
     # Attempt to insert statistics for the wrong domain
     external_metadata = {**_external_metadata, "source": "other"}
     external_statistics = {**_external_statistics}
-    with pytest.raises(HomeAssistantError):
-        async_add_external_statistics(hass, external_metadata, (external_statistics,))
-    await async_wait_recording_done(hass)
-    assert statistics_during_period(hass, zero, period="hour") == {}
-    assert list_statistic_ids(hass) == []
-    assert get_metadata(hass, statistic_ids={"test:total_energy_import"}) == {}
+    with pytest.raises(menuaiError):
+        async_add_external_statistics(menuai, external_metadata, (external_statistics,))
+    await async_wait_recording_done(menuai)
+    assert statistics_during_period(menuai, zero, period="hour") == {}
+    assert list_statistic_ids(menuai) == []
+    assert get_metadata(menuai, statistic_ids={"test:total_energy_import"}) == {}
 
     # Attempt to insert statistics for a naive starting time
     external_metadata = {**_external_metadata}
@@ -1150,22 +1150,22 @@ async def test_external_statistics_errors(
         **_external_statistics,
         "start": period1.replace(tzinfo=None),
     }
-    with pytest.raises(HomeAssistantError):
-        async_add_external_statistics(hass, external_metadata, (external_statistics,))
-    await async_wait_recording_done(hass)
-    assert statistics_during_period(hass, zero, period="hour") == {}
-    assert list_statistic_ids(hass) == []
-    assert get_metadata(hass, statistic_ids={"test:total_energy_import"}) == {}
+    with pytest.raises(menuaiError):
+        async_add_external_statistics(menuai, external_metadata, (external_statistics,))
+    await async_wait_recording_done(menuai)
+    assert statistics_during_period(menuai, zero, period="hour") == {}
+    assert list_statistic_ids(menuai) == []
+    assert get_metadata(menuai, statistic_ids={"test:total_energy_import"}) == {}
 
     # Attempt to insert statistics for an invalid starting time
     external_metadata = {**_external_metadata}
     external_statistics = {**_external_statistics, "start": period1.replace(minute=1)}
-    with pytest.raises(HomeAssistantError):
-        async_add_external_statistics(hass, external_metadata, (external_statistics,))
-    await async_wait_recording_done(hass)
-    assert statistics_during_period(hass, zero, period="hour") == {}
-    assert list_statistic_ids(hass) == []
-    assert get_metadata(hass, statistic_ids={"test:total_energy_import"}) == {}
+    with pytest.raises(menuaiError):
+        async_add_external_statistics(menuai, external_metadata, (external_statistics,))
+    await async_wait_recording_done(menuai)
+    assert statistics_during_period(menuai, zero, period="hour") == {}
+    assert list_statistic_ids(menuai) == []
+    assert get_metadata(menuai, statistic_ids={"test:total_energy_import"}) == {}
 
     # Attempt to insert statistics with a naive last_reset
     external_metadata = {**_external_metadata}
@@ -1173,19 +1173,19 @@ async def test_external_statistics_errors(
         **_external_statistics,
         "last_reset": last_reset.replace(tzinfo=None),
     }
-    with pytest.raises(HomeAssistantError):
-        async_add_external_statistics(hass, external_metadata, (external_statistics,))
-    await async_wait_recording_done(hass)
-    assert statistics_during_period(hass, zero, period="hour") == {}
-    assert list_statistic_ids(hass) == []
-    assert get_metadata(hass, statistic_ids={"test:total_energy_import"}) == {}
+    with pytest.raises(menuaiError):
+        async_add_external_statistics(menuai, external_metadata, (external_statistics,))
+    await async_wait_recording_done(menuai)
+    assert statistics_during_period(menuai, zero, period="hour") == {}
+    assert list_statistic_ids(menuai) == []
+    assert get_metadata(menuai, statistic_ids={"test:total_energy_import"}) == {}
 
 
 async def test_import_statistics_errors(
-    hass: HomeAssistant, setup_recorder: None, caplog: pytest.LogCaptureFixture
+    menuai: menuai, setup_recorder: None, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test validation of imported statistics."""
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
     assert "Compiling statistics for" not in caplog.text
     assert "Statistics already compiled" not in caplog.text
 
@@ -1215,22 +1215,22 @@ async def test_import_statistics_errors(
         "statistic_id": "test:total_energy_import",
     }
     external_statistics = {**_external_statistics}
-    with pytest.raises(HomeAssistantError):
-        async_import_statistics(hass, external_metadata, (external_statistics,))
-    await async_wait_recording_done(hass)
-    assert statistics_during_period(hass, zero, period="hour") == {}
-    assert list_statistic_ids(hass) == []
-    assert get_metadata(hass, statistic_ids={"test:total_energy_import"}) == {}
+    with pytest.raises(menuaiError):
+        async_import_statistics(menuai, external_metadata, (external_statistics,))
+    await async_wait_recording_done(menuai)
+    assert statistics_during_period(menuai, zero, period="hour") == {}
+    assert list_statistic_ids(menuai) == []
+    assert get_metadata(menuai, statistic_ids={"test:total_energy_import"}) == {}
 
     # Attempt to insert statistics for the wrong domain
     external_metadata = {**_external_metadata, "source": "sensor"}
     external_statistics = {**_external_statistics}
-    with pytest.raises(HomeAssistantError):
-        async_import_statistics(hass, external_metadata, (external_statistics,))
-    await async_wait_recording_done(hass)
-    assert statistics_during_period(hass, zero, period="hour") == {}
-    assert list_statistic_ids(hass) == []
-    assert get_metadata(hass, statistic_ids={"sensor.total_energy_import"}) == {}
+    with pytest.raises(menuaiError):
+        async_import_statistics(menuai, external_metadata, (external_statistics,))
+    await async_wait_recording_done(menuai)
+    assert statistics_during_period(menuai, zero, period="hour") == {}
+    assert list_statistic_ids(menuai) == []
+    assert get_metadata(menuai, statistic_ids={"sensor.total_energy_import"}) == {}
 
     # Attempt to insert statistics for a naive starting time
     external_metadata = {**_external_metadata}
@@ -1238,22 +1238,22 @@ async def test_import_statistics_errors(
         **_external_statistics,
         "start": period1.replace(tzinfo=None),
     }
-    with pytest.raises(HomeAssistantError):
-        async_import_statistics(hass, external_metadata, (external_statistics,))
-    await async_wait_recording_done(hass)
-    assert statistics_during_period(hass, zero, period="hour") == {}
-    assert list_statistic_ids(hass) == []
-    assert get_metadata(hass, statistic_ids={"sensor.total_energy_import"}) == {}
+    with pytest.raises(menuaiError):
+        async_import_statistics(menuai, external_metadata, (external_statistics,))
+    await async_wait_recording_done(menuai)
+    assert statistics_during_period(menuai, zero, period="hour") == {}
+    assert list_statistic_ids(menuai) == []
+    assert get_metadata(menuai, statistic_ids={"sensor.total_energy_import"}) == {}
 
     # Attempt to insert statistics for an invalid starting time
     external_metadata = {**_external_metadata}
     external_statistics = {**_external_statistics, "start": period1.replace(minute=1)}
-    with pytest.raises(HomeAssistantError):
-        async_import_statistics(hass, external_metadata, (external_statistics,))
-    await async_wait_recording_done(hass)
-    assert statistics_during_period(hass, zero, period="hour") == {}
-    assert list_statistic_ids(hass) == []
-    assert get_metadata(hass, statistic_ids={"sensor.total_energy_import"}) == {}
+    with pytest.raises(menuaiError):
+        async_import_statistics(menuai, external_metadata, (external_statistics,))
+    await async_wait_recording_done(menuai)
+    assert statistics_during_period(menuai, zero, period="hour") == {}
+    assert list_statistic_ids(menuai) == []
+    assert get_metadata(menuai, statistic_ids={"sensor.total_energy_import"}) == {}
 
     # Attempt to insert statistics with a naive last_reset
     external_metadata = {**_external_metadata}
@@ -1261,26 +1261,26 @@ async def test_import_statistics_errors(
         **_external_statistics,
         "last_reset": last_reset.replace(tzinfo=None),
     }
-    with pytest.raises(HomeAssistantError):
-        async_import_statistics(hass, external_metadata, (external_statistics,))
-    await async_wait_recording_done(hass)
-    assert statistics_during_period(hass, zero, period="hour") == {}
-    assert list_statistic_ids(hass) == []
-    assert get_metadata(hass, statistic_ids={"sensor.total_energy_import"}) == {}
+    with pytest.raises(menuaiError):
+        async_import_statistics(menuai, external_metadata, (external_statistics,))
+    await async_wait_recording_done(menuai)
+    assert statistics_during_period(menuai, zero, period="hour") == {}
+    assert list_statistic_ids(menuai) == []
+    assert get_metadata(menuai, statistic_ids={"sensor.total_energy_import"}) == {}
 
 
 @pytest.mark.usefixtures("multiple_start_time_chunk_sizes")
 @pytest.mark.parametrize("timezone", ["America/Regina", "Europe/Vienna", "UTC"])
 @pytest.mark.freeze_time("2022-10-01 00:00:00+00:00")
 async def test_daily_statistics_sum(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_recorder: None,
     caplog: pytest.LogCaptureFixture,
     timezone,
 ) -> None:
     """Test daily statistics."""
-    await hass.config.async_set_time_zone(timezone)
-    await async_wait_recording_done(hass)
+    await menuai.config.async_set_time_zone(timezone)
+    await async_wait_recording_done(menuai)
     assert "Compiling statistics for" not in caplog.text
     assert "Statistics already compiled" not in caplog.text
 
@@ -1339,10 +1339,10 @@ async def test_daily_statistics_sum(
         "unit_of_measurement": "kWh",
     }
 
-    async_add_external_statistics(hass, external_metadata, external_statistics)
-    await async_wait_recording_done(hass)
+    async_add_external_statistics(menuai, external_metadata, external_statistics)
+    await async_wait_recording_done(menuai)
     stats = statistics_during_period(
-        hass, zero, period="day", statistic_ids={"test:total_energy_import"}
+        menuai, zero, period="day", statistic_ids={"test:total_energy_import"}
     )
     day1_start = dt_util.as_utc(dt_util.parse_datetime("2022-10-03 00:00:00"))
     day1_end = dt_util.as_utc(dt_util.parse_datetime("2022-10-04 00:00:00"))
@@ -1379,7 +1379,7 @@ async def test_daily_statistics_sum(
 
     # Get change
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=period1,
         statistic_ids={"test:total_energy_import"},
         period="day",
@@ -1407,7 +1407,7 @@ async def test_daily_statistics_sum(
 
     # Get data with start during the first period
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=period1 + timedelta(hours=1),
         statistic_ids={"test:total_energy_import"},
         period="day",
@@ -1416,7 +1416,7 @@ async def test_daily_statistics_sum(
 
     # Get data with end during the third period
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=zero,
         end_time=period6 - timedelta(hours=1),
         statistic_ids={"test:total_energy_import"},
@@ -1426,7 +1426,7 @@ async def test_daily_statistics_sum(
 
     # Try to get data for entities which do not exist
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=zero,
         statistic_ids={"not", "the", "same", "test:total_energy_import"},
         period="day",
@@ -1435,7 +1435,7 @@ async def test_daily_statistics_sum(
 
     # Use 5minute to ensure table switch works
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=zero,
         statistic_ids=["test:total_energy_import", "with_other"],
         period="5minute",
@@ -1445,7 +1445,7 @@ async def test_daily_statistics_sum(
     # Ensure future date has not data
     future = dt_util.as_utc(dt_util.parse_datetime("2221-11-01 00:00:00"))
     stats = statistics_during_period(
-        hass, start_time=future, end_time=future, period="day"
+        menuai, start_time=future, end_time=future, period="day"
     )
     assert stats == {}
 
@@ -1454,14 +1454,14 @@ async def test_daily_statistics_sum(
 @pytest.mark.parametrize("timezone", ["America/Regina", "Europe/Vienna", "UTC"])
 @pytest.mark.freeze_time("2022-10-01 00:00:00+00:00")
 async def test_multiple_daily_statistics_sum(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_recorder: None,
     caplog: pytest.LogCaptureFixture,
     timezone,
 ) -> None:
     """Test daily statistics."""
-    await hass.config.async_set_time_zone(timezone)
-    await async_wait_recording_done(hass)
+    await menuai.config.async_set_time_zone(timezone)
+    await async_wait_recording_done(menuai)
     assert "Compiling statistics for" not in caplog.text
     assert "Statistics already compiled" not in caplog.text
 
@@ -1528,12 +1528,12 @@ async def test_multiple_daily_statistics_sum(
         "unit_of_measurement": "kWh",
     }
 
-    async_add_external_statistics(hass, external_metadata1, external_statistics)
-    async_add_external_statistics(hass, external_metadata2, external_statistics)
+    async_add_external_statistics(menuai, external_metadata1, external_statistics)
+    async_add_external_statistics(menuai, external_metadata2, external_statistics)
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
     stats = statistics_during_period(
-        hass,
+        menuai,
         zero,
         period="day",
         statistic_ids={"test:total_energy_import1", "test:total_energy_import2"},
@@ -1575,7 +1575,7 @@ async def test_multiple_daily_statistics_sum(
 
     # Get change
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=period1,
         statistic_ids={"test:total_energy_import1", "test:total_energy_import2"},
         period="day",
@@ -1605,7 +1605,7 @@ async def test_multiple_daily_statistics_sum(
 
     # Get data with start during the first period
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=period1 + timedelta(hours=1),
         statistic_ids={"test:total_energy_import1", "test:total_energy_import2"},
         period="day",
@@ -1614,7 +1614,7 @@ async def test_multiple_daily_statistics_sum(
 
     # Get data with end during the third period
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=zero,
         end_time=period6 - timedelta(hours=1),
         statistic_ids={"test:total_energy_import1", "test:total_energy_import2"},
@@ -1624,7 +1624,7 @@ async def test_multiple_daily_statistics_sum(
 
     # Try to get data for entities which do not exist
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=zero,
         statistic_ids={
             "not",
@@ -1639,7 +1639,7 @@ async def test_multiple_daily_statistics_sum(
 
     # Use 5minute to ensure table switch works
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=zero,
         statistic_ids=[
             "test:total_energy_import1",
@@ -1653,7 +1653,7 @@ async def test_multiple_daily_statistics_sum(
     # Ensure future date has not data
     future = dt_util.as_utc(dt_util.parse_datetime("2221-11-01 00:00:00"))
     stats = statistics_during_period(
-        hass, start_time=future, end_time=future, period="day"
+        menuai, start_time=future, end_time=future, period="day"
     )
     assert stats == {}
 
@@ -1662,14 +1662,14 @@ async def test_multiple_daily_statistics_sum(
 @pytest.mark.parametrize("timezone", ["America/Regina", "Europe/Vienna", "UTC"])
 @pytest.mark.freeze_time("2022-10-01 00:00:00+00:00")
 async def test_weekly_statistics_mean(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_recorder: None,
     caplog: pytest.LogCaptureFixture,
     timezone,
 ) -> None:
     """Test weekly statistics."""
-    await hass.config.async_set_time_zone(timezone)
-    await async_wait_recording_done(hass)
+    await menuai.config.async_set_time_zone(timezone)
+    await async_wait_recording_done(menuai)
     assert "Compiling statistics for" not in caplog.text
     assert "Statistics already compiled" not in caplog.text
 
@@ -1718,11 +1718,11 @@ async def test_weekly_statistics_mean(
         "unit_of_measurement": "kWh",
     }
 
-    async_add_external_statistics(hass, external_metadata, external_statistics)
-    await async_wait_recording_done(hass)
+    async_add_external_statistics(menuai, external_metadata, external_statistics)
+    await async_wait_recording_done(menuai)
     # Get all data
     stats = statistics_during_period(
-        hass, zero, period="week", statistic_ids={"test:total_energy_import"}
+        menuai, zero, period="week", statistic_ids={"test:total_energy_import"}
     )
     week1_start = dt_util.as_utc(dt_util.parse_datetime("2022-10-03 00:00:00"))
     week1_end = dt_util.as_utc(dt_util.parse_datetime("2022-10-10 00:00:00"))
@@ -1752,7 +1752,7 @@ async def test_weekly_statistics_mean(
 
     # Get data starting with start of the first period
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=period1,
         statistic_ids={"test:total_energy_import"},
         period="week",
@@ -1761,7 +1761,7 @@ async def test_weekly_statistics_mean(
 
     # Get data with start during the first period
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=period1 + timedelta(days=1),
         statistic_ids={"test:total_energy_import"},
         period="week",
@@ -1770,7 +1770,7 @@ async def test_weekly_statistics_mean(
 
     # Try to get data for entities which do not exist
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=zero,
         statistic_ids={"not", "the", "same", "test:total_energy_import"},
         period="week",
@@ -1779,7 +1779,7 @@ async def test_weekly_statistics_mean(
 
     # Use 5minute to ensure table switch works
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=zero,
         statistic_ids=["test:total_energy_import", "with_other"],
         period="5minute",
@@ -1789,7 +1789,7 @@ async def test_weekly_statistics_mean(
     # Ensure future date has not data
     future = dt_util.as_utc(dt_util.parse_datetime("2221-11-01 00:00:00"))
     stats = statistics_during_period(
-        hass, start_time=future, end_time=future, period="week"
+        menuai, start_time=future, end_time=future, period="week"
     )
     assert stats == {}
 
@@ -1798,14 +1798,14 @@ async def test_weekly_statistics_mean(
 @pytest.mark.parametrize("timezone", ["America/Regina", "Europe/Vienna", "UTC"])
 @pytest.mark.freeze_time("2022-10-01 00:00:00+00:00")
 async def test_weekly_statistics_sum(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_recorder: None,
     caplog: pytest.LogCaptureFixture,
     timezone,
 ) -> None:
     """Test weekly statistics."""
-    await hass.config.async_set_time_zone(timezone)
-    await async_wait_recording_done(hass)
+    await menuai.config.async_set_time_zone(timezone)
+    await async_wait_recording_done(menuai)
     assert "Compiling statistics for" not in caplog.text
     assert "Statistics already compiled" not in caplog.text
 
@@ -1864,10 +1864,10 @@ async def test_weekly_statistics_sum(
         "unit_of_measurement": "kWh",
     }
 
-    async_add_external_statistics(hass, external_metadata, external_statistics)
-    await async_wait_recording_done(hass)
+    async_add_external_statistics(menuai, external_metadata, external_statistics)
+    await async_wait_recording_done(menuai)
     stats = statistics_during_period(
-        hass, zero, period="week", statistic_ids={"test:total_energy_import"}
+        menuai, zero, period="week", statistic_ids={"test:total_energy_import"}
     )
     week1_start = dt_util.as_utc(dt_util.parse_datetime("2022-10-03 00:00:00"))
     week1_end = dt_util.as_utc(dt_util.parse_datetime("2022-10-10 00:00:00"))
@@ -1904,7 +1904,7 @@ async def test_weekly_statistics_sum(
 
     # Get change
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=period1,
         statistic_ids={"test:total_energy_import"},
         period="week",
@@ -1932,7 +1932,7 @@ async def test_weekly_statistics_sum(
 
     # Get data with start during the first period
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=period1 + timedelta(days=1),
         statistic_ids={"test:total_energy_import"},
         period="week",
@@ -1941,7 +1941,7 @@ async def test_weekly_statistics_sum(
 
     # Get data with end during the third period
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=zero,
         end_time=period6 - timedelta(days=1),
         statistic_ids={"test:total_energy_import"},
@@ -1951,7 +1951,7 @@ async def test_weekly_statistics_sum(
 
     # Try to get data for entities which do not exist
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=zero,
         statistic_ids={"not", "the", "same", "test:total_energy_import"},
         period="week",
@@ -1960,7 +1960,7 @@ async def test_weekly_statistics_sum(
 
     # Use 5minute to ensure table switch works
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=zero,
         statistic_ids=["test:total_energy_import", "with_other"],
         period="5minute",
@@ -1970,7 +1970,7 @@ async def test_weekly_statistics_sum(
     # Ensure future date has not data
     future = dt_util.as_utc(dt_util.parse_datetime("2221-11-01 00:00:00"))
     stats = statistics_during_period(
-        hass, start_time=future, end_time=future, period="week"
+        menuai, start_time=future, end_time=future, period="week"
     )
     assert stats == {}
 
@@ -1979,14 +1979,14 @@ async def test_weekly_statistics_sum(
 @pytest.mark.parametrize("timezone", ["America/Regina", "Europe/Vienna", "UTC"])
 @pytest.mark.freeze_time("2021-08-01 00:00:00+00:00")
 async def test_monthly_statistics_sum(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_recorder: None,
     caplog: pytest.LogCaptureFixture,
     timezone,
 ) -> None:
     """Test monthly statistics."""
-    await hass.config.async_set_time_zone(timezone)
-    await async_wait_recording_done(hass)
+    await menuai.config.async_set_time_zone(timezone)
+    await async_wait_recording_done(menuai)
     assert "Compiling statistics for" not in caplog.text
     assert "Statistics already compiled" not in caplog.text
 
@@ -2045,10 +2045,10 @@ async def test_monthly_statistics_sum(
         "unit_of_measurement": "kWh",
     }
 
-    async_add_external_statistics(hass, external_metadata, external_statistics)
-    await async_wait_recording_done(hass)
+    async_add_external_statistics(menuai, external_metadata, external_statistics)
+    await async_wait_recording_done(menuai)
     stats = statistics_during_period(
-        hass, zero, period="month", statistic_ids={"test:total_energy_import"}
+        menuai, zero, period="month", statistic_ids={"test:total_energy_import"}
     )
     sep_start = dt_util.as_utc(dt_util.parse_datetime("2021-09-01 00:00:00"))
     sep_end = dt_util.as_utc(dt_util.parse_datetime("2021-10-01 00:00:00"))
@@ -2085,7 +2085,7 @@ async def test_monthly_statistics_sum(
 
     # Get change
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=period1,
         statistic_ids={"test:total_energy_import"},
         period="month",
@@ -2112,7 +2112,7 @@ async def test_monthly_statistics_sum(
     }
     # Get data with start during the first period
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=period1 + timedelta(days=1),
         statistic_ids={"test:total_energy_import"},
         period="month",
@@ -2121,7 +2121,7 @@ async def test_monthly_statistics_sum(
 
     # Get data with end during the third period
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=zero,
         end_time=period6 - timedelta(days=1),
         statistic_ids={"test:total_energy_import"},
@@ -2131,7 +2131,7 @@ async def test_monthly_statistics_sum(
 
     # Try to get data for entities which do not exist
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=zero,
         statistic_ids={"not", "the", "same", "test:total_energy_import"},
         period="month",
@@ -2140,7 +2140,7 @@ async def test_monthly_statistics_sum(
 
     # Get only sum
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=zero,
         statistic_ids={"not", "the", "same", "test:total_energy_import"},
         period="month",
@@ -2168,7 +2168,7 @@ async def test_monthly_statistics_sum(
 
     # Get only sum + convert units
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=zero,
         statistic_ids={"not", "the", "same", "test:total_energy_import"},
         period="month",
@@ -2197,7 +2197,7 @@ async def test_monthly_statistics_sum(
 
     # Use 5minute to ensure table switch works
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=zero,
         statistic_ids=["test:total_energy_import", "with_other"],
         period="5minute",
@@ -2207,7 +2207,7 @@ async def test_monthly_statistics_sum(
     # Ensure future date has not data
     future = dt_util.as_utc(dt_util.parse_datetime("2221-11-01 00:00:00"))
     stats = statistics_during_period(
-        hass, start_time=future, end_time=future, period="month"
+        menuai, start_time=future, end_time=future, period="month"
     )
     assert stats == {}
 
@@ -2322,14 +2322,14 @@ def test_cache_key_for_generate_statistics_at_time_stmt_dependent_sub_query() ->
 @pytest.mark.parametrize("timezone", ["America/Regina", "Europe/Vienna", "UTC"])
 @pytest.mark.freeze_time("2022-10-01 00:00:00+00:00")
 async def test_change(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_recorder: None,
     caplog: pytest.LogCaptureFixture,
     timezone,
 ) -> None:
     """Test deriving change from sum statistic."""
-    await hass.config.async_set_time_zone(timezone)
-    await async_wait_recording_done(hass)
+    await menuai.config.async_set_time_zone(timezone)
+    await async_wait_recording_done(menuai)
     assert "Compiling statistics for" not in caplog.text
     assert "Statistics already compiled" not in caplog.text
 
@@ -2374,11 +2374,11 @@ async def test_change(
         "unit_of_measurement": "kWh",
     }
 
-    async_import_statistics(hass, external_metadata, external_statistics)
-    await async_wait_recording_done(hass)
+    async_import_statistics(menuai, external_metadata, external_statistics)
+    await async_wait_recording_done(menuai)
     # Get change from far in the past
     stats = statistics_during_period(
-        hass,
+        menuai,
         zero,
         period="hour",
         statistic_ids={"sensor.total_energy_import"},
@@ -2420,7 +2420,7 @@ async def test_change(
 
     # Get change + sum from far in the past
     stats = statistics_during_period(
-        hass,
+        menuai,
         zero,
         period="hour",
         statistic_ids={"sensor.total_energy_import"},
@@ -2466,7 +2466,7 @@ async def test_change(
 
     # Get change from far in the past with unit conversion
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=hour1_start,
         statistic_ids={"sensor.total_energy_import"},
         period="hour",
@@ -2500,11 +2500,11 @@ async def test_change(
     assert stats == expected_stats_wh
 
     # Get change from far in the past with implicit unit conversion
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.total_energy_import", "unknown", {"unit_of_measurement": "MWh"}
     )
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=hour1_start,
         statistic_ids={"sensor.total_energy_import"},
         period="hour",
@@ -2535,11 +2535,11 @@ async def test_change(
         ]
     }
     assert stats == expected_stats_mwh
-    hass.states.async_remove("sensor.total_energy_import")
+    menuai.states.async_remove("sensor.total_energy_import")
 
     # Get change from the first recorded hour
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=hour1_start,
         statistic_ids={"sensor.total_energy_import"},
         period="hour",
@@ -2549,7 +2549,7 @@ async def test_change(
 
     # Get change from the first recorded hour with unit conversion
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=hour1_start,
         statistic_ids={"sensor.total_energy_import"},
         period="hour",
@@ -2559,22 +2559,22 @@ async def test_change(
     assert stats == expected_stats_wh
 
     # Get change from the first recorded hour with implicit unit conversion
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.total_energy_import", "unknown", {"unit_of_measurement": "MWh"}
     )
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=hour1_start,
         statistic_ids={"sensor.total_energy_import"},
         period="hour",
         types={"change"},
     )
     assert stats == expected_stats_mwh
-    hass.states.async_remove("sensor.total_energy_import")
+    menuai.states.async_remove("sensor.total_energy_import")
 
     # Get change from the second recorded hour
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=hour2_start,
         statistic_ids={"sensor.total_energy_import"},
         period="hour",
@@ -2586,7 +2586,7 @@ async def test_change(
 
     # Get change from the second recorded hour with unit conversion
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=hour2_start,
         statistic_ids={"sensor.total_energy_import"},
         period="hour",
@@ -2600,11 +2600,11 @@ async def test_change(
     }
 
     # Get change from the second recorded hour with implicit unit conversion
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.total_energy_import", "unknown", {"unit_of_measurement": "MWh"}
     )
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=hour2_start,
         statistic_ids={"sensor.total_energy_import"},
         period="hour",
@@ -2615,11 +2615,11 @@ async def test_change(
             1:4
         ]
     }
-    hass.states.async_remove("sensor.total_energy_import")
+    menuai.states.async_remove("sensor.total_energy_import")
 
     # Get change from the second until the third recorded hour
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=hour2_start,
         end_time=hour4_start,
         statistic_ids={"sensor.total_energy_import"},
@@ -2632,7 +2632,7 @@ async def test_change(
 
     # Get change from the fourth recorded hour
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=hour4_start,
         statistic_ids={"sensor.total_energy_import"},
         period="hour",
@@ -2645,7 +2645,7 @@ async def test_change(
     # Test change with a far future start date
     future = dt_util.as_utc(dt_util.parse_datetime("2221-11-01 00:00:00"))
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=future,
         statistic_ids={"sensor.total_energy_import"},
         period="hour",
@@ -2658,14 +2658,14 @@ async def test_change(
 @pytest.mark.parametrize("timezone", ["America/Regina", "Europe/Vienna", "UTC"])
 @pytest.mark.freeze_time("2022-10-01 00:00:00+00:00")
 async def test_change_multiple(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_recorder: None,
     caplog: pytest.LogCaptureFixture,
     timezone,
 ) -> None:
     """Test deriving change from sum statistic."""
-    await hass.config.async_set_time_zone(timezone)
-    await async_wait_recording_done(hass)
+    await menuai.config.async_set_time_zone(timezone)
+    await async_wait_recording_done(menuai)
     assert "Compiling statistics for" not in caplog.text
     assert "Statistics already compiled" not in caplog.text
 
@@ -2717,12 +2717,12 @@ async def test_change_multiple(
         "statistic_id": "sensor.total_energy_import2",
         "unit_of_measurement": "kWh",
     }
-    async_import_statistics(hass, external_metadata1, external_statistics)
-    async_import_statistics(hass, external_metadata2, external_statistics)
-    await async_wait_recording_done(hass)
+    async_import_statistics(menuai, external_metadata1, external_statistics)
+    async_import_statistics(menuai, external_metadata2, external_statistics)
+    await async_wait_recording_done(menuai)
     # Get change from far in the past
     stats = statistics_during_period(
-        hass,
+        menuai,
         zero,
         period="hour",
         statistic_ids={"sensor.total_energy_import1", "sensor.total_energy_import2"},
@@ -2766,7 +2766,7 @@ async def test_change_multiple(
 
     # Get change + sum from far in the past
     stats = statistics_during_period(
-        hass,
+        menuai,
         zero,
         period="hour",
         statistic_ids={"sensor.total_energy_import1", "sensor.total_energy_import2"},
@@ -2814,7 +2814,7 @@ async def test_change_multiple(
 
     # Get change from far in the past with unit conversion
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=hour1_start,
         statistic_ids={"sensor.total_energy_import1", "sensor.total_energy_import2"},
         period="hour",
@@ -2850,14 +2850,14 @@ async def test_change_multiple(
     assert stats == expected_stats_wh
 
     # Get change from far in the past with implicit unit conversion
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.total_energy_import1", "unknown", {"unit_of_measurement": "MWh"}
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.total_energy_import2", "unknown", {"unit_of_measurement": "MWh"}
     )
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=hour1_start,
         statistic_ids={"sensor.total_energy_import1", "sensor.total_energy_import2"},
         period="hour",
@@ -2890,12 +2890,12 @@ async def test_change_multiple(
         "sensor.total_energy_import2": expected_inner,
     }
     assert stats == expected_stats_mwh
-    hass.states.async_remove("sensor.total_energy_import1")
-    hass.states.async_remove("sensor.total_energy_import2")
+    menuai.states.async_remove("sensor.total_energy_import1")
+    menuai.states.async_remove("sensor.total_energy_import2")
 
     # Get change from the first recorded hour
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=hour1_start,
         statistic_ids={"sensor.total_energy_import1", "sensor.total_energy_import2"},
         period="hour",
@@ -2905,7 +2905,7 @@ async def test_change_multiple(
 
     # Get change from the first recorded hour with unit conversion
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=hour1_start,
         statistic_ids={"sensor.total_energy_import1", "sensor.total_energy_import2"},
         period="hour",
@@ -2915,26 +2915,26 @@ async def test_change_multiple(
     assert stats == expected_stats_wh
 
     # Get change from the first recorded hour with implicit unit conversion
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.total_energy_import1", "unknown", {"unit_of_measurement": "MWh"}
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.total_energy_import2", "unknown", {"unit_of_measurement": "MWh"}
     )
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=hour1_start,
         statistic_ids={"sensor.total_energy_import1", "sensor.total_energy_import2"},
         period="hour",
         types={"change"},
     )
     assert stats == expected_stats_mwh
-    hass.states.async_remove("sensor.total_energy_import1")
-    hass.states.async_remove("sensor.total_energy_import2")
+    menuai.states.async_remove("sensor.total_energy_import1")
+    menuai.states.async_remove("sensor.total_energy_import2")
 
     # Get change from the second recorded hour
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=hour2_start,
         statistic_ids={"sensor.total_energy_import1", "sensor.total_energy_import2"},
         period="hour",
@@ -2951,7 +2951,7 @@ async def test_change_multiple(
 
     # Get change from the second recorded hour with unit conversion
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=hour2_start,
         statistic_ids={"sensor.total_energy_import1", "sensor.total_energy_import2"},
         period="hour",
@@ -2968,14 +2968,14 @@ async def test_change_multiple(
     }
 
     # Get change from the second recorded hour with implicit unit conversion
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.total_energy_import1", "unknown", {"unit_of_measurement": "MWh"}
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.total_energy_import2", "unknown", {"unit_of_measurement": "MWh"}
     )
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=hour2_start,
         statistic_ids={"sensor.total_energy_import1", "sensor.total_energy_import2"},
         period="hour",
@@ -2989,12 +2989,12 @@ async def test_change_multiple(
             "sensor.total_energy_import2"
         ][1:4],
     }
-    hass.states.async_remove("sensor.total_energy_import1")
-    hass.states.async_remove("sensor.total_energy_import2")
+    menuai.states.async_remove("sensor.total_energy_import1")
+    menuai.states.async_remove("sensor.total_energy_import2")
 
     # Get change from the second until the third recorded hour
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=hour2_start,
         end_time=hour4_start,
         statistic_ids={"sensor.total_energy_import1", "sensor.total_energy_import2"},
@@ -3012,7 +3012,7 @@ async def test_change_multiple(
 
     # Get change from the fourth recorded hour
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=hour4_start,
         statistic_ids={"sensor.total_energy_import1", "sensor.total_energy_import2"},
         period="hour",
@@ -3030,7 +3030,7 @@ async def test_change_multiple(
     # Test change with a far future start date
     future = dt_util.as_utc(dt_util.parse_datetime("2221-11-01 00:00:00"))
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=future,
         statistic_ids={"sensor.total_energy_import1", "sensor.total_energy_import2"},
         period="hour",
@@ -3043,7 +3043,7 @@ async def test_change_multiple(
 @pytest.mark.parametrize("timezone", ["America/Regina", "Europe/Vienna", "UTC"])
 @pytest.mark.freeze_time("2022-10-01 00:00:00+00:00")
 async def test_change_with_none(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_recorder: None,
     caplog: pytest.LogCaptureFixture,
     timezone,
@@ -3053,8 +3053,8 @@ async def test_change_with_none(
     This tests the behavior when some record has None sum. The calculated change
     is not expected to be correct, but we should not raise on this error.
     """
-    await hass.config.async_set_time_zone(timezone)
-    await async_wait_recording_done(hass)
+    await menuai.config.async_set_time_zone(timezone)
+    await async_wait_recording_done(menuai)
     assert "Compiling statistics for" not in caplog.text
     assert "Statistics already compiled" not in caplog.text
 
@@ -3099,11 +3099,11 @@ async def test_change_with_none(
         "unit_of_measurement": "kWh",
     }
 
-    async_add_external_statistics(hass, external_metadata, external_statistics)
-    await async_wait_recording_done(hass)
+    async_add_external_statistics(menuai, external_metadata, external_statistics)
+    await async_wait_recording_done(menuai)
     # Get change from far in the past
     stats = statistics_during_period(
-        hass,
+        menuai,
         zero,
         period="hour",
         statistic_ids={"test:total_energy_import"},
@@ -3145,7 +3145,7 @@ async def test_change_with_none(
 
     # Get change from far in the past with unit conversion
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=hour1_start,
         statistic_ids={"test:total_energy_import"},
         period="hour",
@@ -3180,7 +3180,7 @@ async def test_change_with_none(
 
     # Get change from the first recorded hour
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=hour1_start,
         statistic_ids={"test:total_energy_import"},
         period="hour",
@@ -3190,7 +3190,7 @@ async def test_change_with_none(
 
     # Get change from the first recorded hour with unit conversion
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=hour1_start,
         statistic_ids={"test:total_energy_import"},
         period="hour",
@@ -3201,7 +3201,7 @@ async def test_change_with_none(
 
     # Get change from the second recorded hour
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=hour2_start,
         statistic_ids={"test:total_energy_import"},
         period="hour",
@@ -3213,7 +3213,7 @@ async def test_change_with_none(
 
     # Get change from the second recorded hour with unit conversion
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=hour2_start,
         statistic_ids={"test:total_energy_import"},
         period="hour",
@@ -3226,7 +3226,7 @@ async def test_change_with_none(
 
     # Get change from the second until the third recorded hour
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=hour2_start,
         end_time=hour4_start,
         statistic_ids={"test:total_energy_import"},
@@ -3239,7 +3239,7 @@ async def test_change_with_none(
 
     # Get change from the fourth recorded hour
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=hour4_start,
         statistic_ids={"test:total_energy_import"},
         period="hour",
@@ -3258,7 +3258,7 @@ async def test_change_with_none(
     # Test change with a far future start date
     future = dt_util.as_utc(dt_util.parse_datetime("2221-11-01 00:00:00"))
     stats = statistics_during_period(
-        hass,
+        menuai,
         start_time=future,
         statistic_ids={"test:total_energy_import"},
         period="hour",
@@ -3268,13 +3268,13 @@ async def test_change_with_none(
 
 
 async def test_recorder_platform_with_statistics(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_recorder: None,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test recorder platform."""
-    instance = recorder.get_instance(hass)
-    recorder_data = hass.data["recorder"]
+    instance = recorder.get_instance(menuai)
+    recorder_data = menuai.data["recorder"]
     assert not recorder_data.recorder_platforms
 
     def _mock_compile_statistics(*args: Any) -> PlatformCompiledStatistics:
@@ -3293,10 +3293,10 @@ async def test_recorder_platform_with_statistics(
         validate_statistics=Mock(wraps=_mock_validate_statistics),
     )
 
-    await _setup_mock_domain(hass, recorder_platform)
+    await _setup_mock_domain(menuai, recorder_platform)
 
     # Wait for the sensor recorder platform to be added
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
     assert recorder_data.recorder_platforms == {"some_domain": recorder_platform}
 
     recorder_platform.compile_statistics.assert_not_called()
@@ -3308,21 +3308,21 @@ async def test_recorder_platform_with_statistics(
     # Issues are updated hourly when minutes = 50, trigger one hour later to make
     # sure statistics is not suppressed by an existing row in StatisticsRuns
     zero = get_start_time(dt_util.utcnow()).replace(minute=50) + timedelta(hours=1)
-    do_adhoc_statistics(hass, start=zero)
-    await async_wait_recording_done(hass)
+    do_adhoc_statistics(menuai, start=zero)
+    await async_wait_recording_done(menuai)
 
     recorder_platform.compile_statistics.assert_called_once_with(
-        hass, ANY, zero, zero + timedelta(minutes=5)
+        menuai, ANY, zero, zero + timedelta(minutes=5)
     )
-    recorder_platform.update_statistics_issues.assert_called_once_with(hass, ANY)
+    recorder_platform.update_statistics_issues.assert_called_once_with(menuai, ANY)
     recorder_platform.list_statistic_ids.assert_not_called()
     recorder_platform.validate_statistics.assert_not_called()
 
     # Test list statistic IDs
-    await async_list_statistic_ids(hass)
+    await async_list_statistic_ids(menuai)
     recorder_platform.compile_statistics.assert_called_once()
     recorder_platform.list_statistic_ids.assert_called_once_with(
-        hass, statistic_ids=None, statistic_type=None
+        menuai, statistic_ids=None, statistic_type=None
     )
     recorder_platform.update_statistics_issues.assert_called_once()
     recorder_platform.validate_statistics.assert_not_called()
@@ -3330,27 +3330,27 @@ async def test_recorder_platform_with_statistics(
     # Test validate statistics
     await instance.async_add_executor_job(
         validate_statistics,
-        hass,
+        menuai,
     )
     recorder_platform.compile_statistics.assert_called_once()
     recorder_platform.list_statistic_ids.assert_called_once()
     recorder_platform.update_statistics_issues.assert_called_once()
-    recorder_platform.validate_statistics.assert_called_once_with(hass)
+    recorder_platform.validate_statistics.assert_called_once_with(menuai)
 
 
 async def test_recorder_platform_without_statistics(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_recorder: None,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test recorder platform."""
-    recorder_data = hass.data["recorder"]
+    recorder_data = menuai.data["recorder"]
     assert recorder_data.recorder_platforms == {}
 
-    await _setup_mock_domain(hass)
+    await _setup_mock_domain(menuai)
 
     # Wait for the sensor recorder platform to be added
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
     assert recorder_data.recorder_platforms == {}
 
 
@@ -3364,14 +3364,14 @@ async def test_recorder_platform_without_statistics(
     ],
 )
 async def test_recorder_platform_with_partial_statistics_support(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_recorder: None,
     caplog: pytest.LogCaptureFixture,
     supported_methods: tuple[str, ...],
 ) -> None:
     """Test recorder platform."""
-    instance = recorder.get_instance(hass)
-    recorder_data = hass.data["recorder"]
+    instance = recorder.get_instance(menuai)
+    recorder_data = menuai.data["recorder"]
     assert not recorder_data.recorder_platforms
 
     def _mock_compile_statistics(*args: Any) -> PlatformCompiledStatistics:
@@ -3397,10 +3397,10 @@ async def test_recorder_platform_with_partial_statistics_support(
         **kwargs,
     )
 
-    await _setup_mock_domain(hass, recorder_platform)
+    await _setup_mock_domain(menuai, recorder_platform)
 
     # Wait for the sensor recorder platform to be added
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
     assert recorder_data.recorder_platforms == {"some_domain": recorder_platform}
 
     for meth in supported_methods:
@@ -3410,16 +3410,16 @@ async def test_recorder_platform_with_partial_statistics_support(
     # Issues are updated hourly when minutes = 50, trigger one hour later to make
     # sure statistics is not suppressed by an existing row in StatisticsRuns
     zero = get_start_time(dt_util.utcnow()).replace(minute=50) + timedelta(hours=1)
-    do_adhoc_statistics(hass, start=zero)
-    await async_wait_recording_done(hass)
+    do_adhoc_statistics(menuai, start=zero)
+    await async_wait_recording_done(menuai)
 
     # Test list statistic IDs
-    await async_list_statistic_ids(hass)
+    await async_list_statistic_ids(menuai)
 
     # Test validate statistics
     await instance.async_add_executor_job(
         validate_statistics,
-        hass,
+        menuai,
     )
 
     for meth in supported_methods:
@@ -3594,8 +3594,8 @@ async def test_recorder_platform_with_partial_statistics_support(
 )
 @pytest.mark.usefixtures("recorder_mock")
 async def test_get_statistics_service(
-    hass: HomeAssistant,
-    hass_read_only_user: MockUser,
+    menuai: menuai,
+    menuai_read_only_user: MockUser,
     service_args: dict[str, Any],
     expected_result: dict[str, Any],
 ) -> None:
@@ -3660,25 +3660,25 @@ async def test_get_statistics_service(
         "statistic_id": "sensor.total_energy_import2",
         "unit_of_measurement": "kWh",
     }
-    async_import_statistics(hass, external_metadata1, external_statistics)
-    async_import_statistics(hass, external_metadata2, external_statistics)
+    async_import_statistics(menuai, external_metadata1, external_statistics)
+    async_import_statistics(menuai, external_metadata2, external_statistics)
 
-    await async_setup_component(hass, "sensor", {})
-    await async_recorder_block_till_done(hass)
+    await async_setup_component(menuai, "sensor", {})
+    await async_recorder_block_till_done(menuai)
 
-    result = await hass.services.async_call(
+    result = await menuai.services.async_call(
         "recorder", "get_statistics", service_args, return_response=True, blocking=True
     )
     assert result == expected_result
 
     with pytest.raises(exceptions.Unauthorized):
-        result = await hass.services.async_call(
+        result = await menuai.services.async_call(
             "recorder",
             "get_statistics",
             service_args,
             return_response=True,
             blocking=True,
-            context=Context(user_id=hass_read_only_user.id),
+            context=Context(user_id=menuai_read_only_user.id),
         )
 
 
@@ -3721,19 +3721,19 @@ async def test_get_statistics_service(
 )
 @pytest.mark.usefixtures("recorder_mock")
 async def test_get_statistics_service_missing_mandatory_keys(
-    hass: HomeAssistant,
+    menuai: menuai,
     service_args: dict[str, Any],
     missing_key: str,
 ) -> None:
     """Test the get_statistics service with missing mandatory keys."""
 
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
 
     with pytest.raises(
         vol.error.MultipleInvalid,
         match=re.escape(f"required key not provided @ data['{missing_key}']"),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "recorder",
             "get_statistics",
             service_args,

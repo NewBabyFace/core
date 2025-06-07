@@ -94,7 +94,7 @@
         "data": {
           "discovery": "Respond to discovery requests on your network",
           "blink": "Blink panel LED on when sending state change",
-          "override_api_host": "Override default Home Assistant API host URL",
+          "override_api_host": "Override default MenuAI API host URL",
           "api_host": "Custom API host URL"
         }
       }

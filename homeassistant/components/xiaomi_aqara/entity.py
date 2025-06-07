@@ -6,14 +6,14 @@ from typing import TYPE_CHECKING, Any
 
 from xiaomi_gateway import XiaomiGateway
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_BATTERY_LEVEL, ATTR_VOLTAGE, CONF_MAC
-from homeassistant.core import callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo, format_mac
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.event import async_track_point_in_utc_time
-from homeassistant.util.dt import utcnow
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_BATTERY_LEVEL, ATTR_VOLTAGE, CONF_MAC
+from menuai.core import callback
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo, format_mac
+from menuai.helpers.entity import Entity
+from menuai.helpers.event import async_track_point_in_utc_time
+from menuai.util.dt import utcnow
 
 from .const import DOMAIN
 
@@ -67,7 +67,7 @@ class XiaomiDevice(Entity):
             self._is_gateway = False
             self._device_id = self._sid
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Start unavailability tracking."""
         self._xiaomi_hub.callbacks[self._sid].append(self.push_data)
         self._async_track_unavailable()
@@ -128,7 +128,7 @@ class XiaomiDevice(Entity):
         if self._remove_unavailability_tracker:
             self._remove_unavailability_tracker()
         self._remove_unavailability_tracker = async_track_point_in_utc_time(
-            self.hass, self._async_set_unavailable, utcnow() + TIME_TILL_UNAVAILABLE
+            self.menuai, self._async_set_unavailable, utcnow() + TIME_TILL_UNAVAILABLE
         )
         if not self._is_available:
             self._is_available = True
@@ -137,7 +137,7 @@ class XiaomiDevice(Entity):
 
     def push_data(self, data: dict[str, Any], raw_data: dict[Any, Any]) -> None:
         """Push from Hub running in another thread."""
-        self.hass.loop.call_soon_threadsafe(self.async_push_data, data, raw_data)
+        self.menuai.loop.call_soon_threadsafe(self.async_push_data, data, raw_data)
 
     @callback
     def async_push_data(self, data: dict[str, Any], raw_data: dict[Any, Any]) -> None:

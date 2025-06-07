@@ -6,11 +6,11 @@ from typing import Any
 
 from aiohomekit.model.characteristics.characteristic_types import CharacteristicsTypes
 
-from homeassistant.components.diagnostics import REDACTED, async_redact_data
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.device_registry import DeviceEntry
+from menuai.components.diagnostics import REDACTED, async_redact_data
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.device_registry import DeviceEntry
 
 from .connection import HKDevice
 from .const import KNOWN_DEVICES
@@ -28,22 +28,22 @@ REDACTED_STATE = ["access_token", "entity_picture"]
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: ConfigEntry
+    menuai: menuai, entry: ConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
-    return _async_get_diagnostics(hass, entry)
+    return _async_get_diagnostics(menuai, entry)
 
 
 async def async_get_device_diagnostics(
-    hass: HomeAssistant, entry: ConfigEntry, device: DeviceEntry
+    menuai: menuai, entry: ConfigEntry, device: DeviceEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a device entry."""
-    return _async_get_diagnostics(hass, entry, device)
+    return _async_get_diagnostics(menuai, entry, device)
 
 
 @callback
 def _async_get_diagnostics_for_device(
-    hass: HomeAssistant, device: DeviceEntry
+    menuai: menuai, device: DeviceEntry
 ) -> dict[str, Any]:
     data: dict[str, Any] = {}
 
@@ -55,16 +55,16 @@ def _async_get_diagnostics_for_device(
 
     entities = data["entities"] = []
 
-    hass_entities = er.async_entries_for_device(
-        er.async_get(hass),
+    menuai_entities = er.async_entries_for_device(
+        er.async_get(menuai),
         device_id=device.id,
         include_disabled_entities=True,
     )
 
-    hass_entities.sort(key=lambda entry: entry.original_name or "")
+    menuai_entities.sort(key=lambda entry: entry.original_name or "")
 
-    for entity_entry in hass_entities:
-        state = hass.states.get(entity_entry.entity_id)
+    for entity_entry in menuai_entities:
+        state = menuai.states.get(entity_entry.entity_id)
         state_dict = None
         if state:
             state_dict = async_redact_data(state.as_dict(), REDACTED_STATE)
@@ -90,11 +90,11 @@ def _async_get_diagnostics_for_device(
 
 @callback
 def _async_get_diagnostics(
-    hass: HomeAssistant, entry: ConfigEntry, device: DeviceEntry | None = None
+    menuai: menuai, entry: ConfigEntry, device: DeviceEntry | None = None
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     hkid = entry.data["AccessoryPairingID"]
-    connection: HKDevice = hass.data[KNOWN_DEVICES][hkid]
+    connection: HKDevice = menuai.data[KNOWN_DEVICES][hkid]
 
     data: dict[str, Any] = {
         "config-entry": {
@@ -118,14 +118,14 @@ def _async_get_diagnostics(
                     char["value"] = REDACTED
 
     if device:
-        data["device"] = _async_get_diagnostics_for_device(hass, device)
+        data["device"] = _async_get_diagnostics_for_device(menuai, device)
     else:
-        device_registry = dr.async_get(hass)
+        device_registry = dr.async_get(menuai)
 
         devices = data["devices"] = []
         for device_id in connection.devices.values():
             if not (device := device_registry.async_get(device_id)):
                 continue
-            devices.append(_async_get_diagnostics_for_device(hass, device))
+            devices.append(_async_get_diagnostics_for_device(menuai, device))
 
     return data

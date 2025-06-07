@@ -9,10 +9,10 @@ from letpot.converters import CONVERTERS
 from letpot.exceptions import LetPotAuthenticationException, LetPotException
 from letpot.models import AuthenticationInfo
 
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_EMAIL, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.const import CONF_ACCESS_TOKEN, CONF_EMAIL, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
     CONF_ACCESS_TOKEN_EXPIRES,
@@ -30,7 +30,7 @@ PLATFORMS: list[Platform] = [
 ]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: LetPotConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: LetPotConfigEntry) -> bool:
     """Set up LetPot from a config entry."""
 
     auth = AuthenticationInfo(
@@ -41,13 +41,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: LetPotConfigEntry) -> bo
         user_id=entry.data[CONF_USER_ID],
         email=entry.data[CONF_EMAIL],
     )
-    websession = async_get_clientsession(hass)
+    websession = async_get_clientsession(menuai)
     client = LetPotClient(websession, auth)
 
     if not auth.is_valid:
         try:
             auth = await client.refresh_token()
-            hass.config_entries.async_update_entry(
+            menuai.config_entries.async_update_entry(
                 entry,
                 data={
                     CONF_ACCESS_TOKEN: auth.access_token,
@@ -69,7 +69,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: LetPotConfigEntry) -> bo
         raise ConfigEntryNotReady from exc
 
     coordinators: list[LetPotDeviceCoordinator] = [
-        LetPotDeviceCoordinator(hass, entry, auth, device)
+        LetPotDeviceCoordinator(menuai, entry, auth, device)
         for device in devices
         if any(converter.supports_type(device.device_type) for converter in CONVERTERS)
     ]
@@ -83,14 +83,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: LetPotConfigEntry) -> bo
 
     entry.runtime_data = coordinators
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: LetPotConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: LetPotConfigEntry) -> bool:
     """Unload a config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+    if unload_ok := await menuai.config_entries.async_unload_platforms(entry, PLATFORMS):
         for coordinator in entry.runtime_data:
             coordinator.device_client.disconnect()
     return unload_ok

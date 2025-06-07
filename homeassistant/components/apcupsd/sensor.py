@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import logging
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     PERCENTAGE,
     UnitOfApparentPower,
     UnitOfElectricCurrent,
@@ -20,9 +20,9 @@ from homeassistant.const import (
     UnitOfTemperature,
     UnitOfTime,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import LAST_S_TEST
 from .coordinator import APCUPSdConfigEntry, APCUPSdCoordinator
@@ -404,7 +404,7 @@ INFERRED_UNITS = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: APCUPSdConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

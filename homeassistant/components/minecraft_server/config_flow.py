@@ -7,8 +7,8 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_ADDRESS, CONF_TYPE
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_ADDRESS, CONF_TYPE
 
 from .api import MinecraftServer, MinecraftServerAddressError, MinecraftServerType
 from .const import DOMAIN
@@ -42,7 +42,7 @@ class MinecraftServerConfigFlow(ConfigFlow, domain=DOMAIN):
 
             # Some Bedrock Edition servers mimic a Java Edition server, therefore check for a Bedrock Edition server first.
             for server_type in MinecraftServerType:
-                api = MinecraftServer(self.hass, server_type, address)
+                api = MinecraftServer(self.menuai, server_type, address)
 
                 try:
                     await api.async_initialize()

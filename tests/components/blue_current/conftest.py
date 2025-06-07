@@ -2,7 +2,7 @@
 
 import pytest
 
-from homeassistant.components.blue_current.const import DOMAIN
+from menuai.components.blue_current.const import DOMAIN
 
 from tests.common import MockConfigEntry
 

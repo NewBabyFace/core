@@ -2,9 +2,9 @@
 
 from aiorecollect.client import PickupEvent
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.update_coordinator import (
+from menuai.config_entries import ConfigEntry
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
 )
@@ -36,7 +36,7 @@ class ReCollectWasteEntity(CoordinatorEntity[DataUpdateCoordinator[list[PickupEv
         self._attr_extra_state_attributes = {}
         self._entry = entry
 
-    async def async_added_to_hass(self) -> None:
-        """Run when entity about to be added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Run when entity about to be added to menuai."""
+        await super().async_added_to_menuai()
         self._handle_coordinator_update()

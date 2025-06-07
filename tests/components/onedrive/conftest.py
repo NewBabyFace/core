@@ -20,18 +20,18 @@ from onedrive_personal_sdk.models.items import (
 )
 import pytest
 
-from homeassistant.components.application_credentials import (
+from menuai.components.application_credentials import (
     ClientCredential,
     async_import_client_credential,
 )
-from homeassistant.components.onedrive.const import (
+from menuai.components.onedrive.const import (
     CONF_FOLDER_ID,
     CONF_FOLDER_NAME,
     DOMAIN,
     OAUTH_SCOPES,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from .const import BACKUP_METADATA, CLIENT_ID, CLIENT_SECRET, IDENTITY_SET, INSTANCE_ID
 
@@ -45,11 +45,11 @@ def mock_scopes() -> list[str]:
 
 
 @pytest.fixture(autouse=True)
-async def setup_credentials(hass: HomeAssistant) -> None:
+async def setup_credentials(menuai: menuai) -> None:
     """Fixture to setup credentials."""
-    assert await async_setup_component(hass, "application_credentials", {})
+    assert await async_setup_component(menuai, "application_credentials", {})
     await async_import_client_credential(
-        hass,
+        menuai,
         DOMAIN,
         ClientCredential(CLIENT_ID, CLIENT_SECRET),
     )
@@ -88,11 +88,11 @@ def mock_onedrive_client_init() -> Generator[MagicMock]:
     """Return a mocked GraphServiceClient."""
     with (
         patch(
-            "homeassistant.components.onedrive.config_flow.OneDriveClient",
+            "menuai.components.onedrive.config_flow.OneDriveClient",
             autospec=True,
         ) as onedrive_client,
         patch(
-            "homeassistant.components.onedrive.OneDriveClient",
+            "menuai.components.onedrive.OneDriveClient",
             new=onedrive_client,
         ),
     ):
@@ -238,7 +238,7 @@ def mock_onedrive_client(
 def mock_large_file_upload_client(mock_backup_file: File) -> Generator[AsyncMock]:
     """Return a mocked LargeFileUploadClient upload."""
     with patch(
-        "homeassistant.components.onedrive.backup.LargeFileUploadClient.upload"
+        "menuai.components.onedrive.backup.LargeFileUploadClient.upload"
     ) as mock_upload:
         mock_upload.return_value = mock_backup_file
         yield mock_upload
@@ -248,7 +248,7 @@ def mock_large_file_upload_client(mock_backup_file: File) -> Generator[AsyncMock
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.onedrive.async_setup_entry", return_value=True
+        "menuai.components.onedrive.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -258,11 +258,11 @@ def mock_instance_id() -> Generator[AsyncMock]:
     """Mock the instance ID."""
     with (
         patch(
-            "homeassistant.components.onedrive.async_get_instance_id",
+            "menuai.components.onedrive.async_get_instance_id",
             return_value=INSTANCE_ID,
         ) as mock_instance_id,
         patch(
-            "homeassistant.components.onedrive.config_flow.async_get_instance_id",
+            "menuai.components.onedrive.config_flow.async_get_instance_id",
             new=mock_instance_id,
         ),
     ):

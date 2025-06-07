@@ -2,10 +2,10 @@
 
 from unittest.mock import Mock, patch
 
-from homeassistant.components.sensor import SensorDeviceClass
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.sensor import SensorDeviceClass
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .conftest import init_integration
 
@@ -13,7 +13,7 @@ from tests.common import MockConfigEntry
 
 
 async def test_power_sensor_detected(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_fibaro_client: Mock,
     mock_config_entry: MockConfigEntry,
@@ -28,9 +28,9 @@ async def test_power_sensor_detected(
     mock_fibaro_client.read_rooms.return_value = [mock_room]
     mock_fibaro_client.read_devices.return_value = [mock_power_sensor]
 
-    with patch("homeassistant.components.fibaro.PLATFORMS", [Platform.SENSOR]):
+    with patch("menuai.components.fibaro.PLATFORMS", [Platform.SENSOR]):
         # Act
-        await init_integration(hass, mock_config_entry)
+        await init_integration(menuai, mock_config_entry)
         # Assert
         entry = entity_registry.async_get("sensor.room_1_test_sensor_1_power")
         assert entry

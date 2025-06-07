@@ -16,7 +16,7 @@ from aioesphomeapi import (
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_CURRENT_HUMIDITY,
     ATTR_CURRENT_TEMPERATURE,
     ATTR_FAN_MODE,
@@ -40,15 +40,15 @@ from homeassistant.components.climate import (
     SWING_BOTH,
     HVACMode,
 )
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
 
 from .conftest import MockGenericDeviceEntryType
 
 
 async def test_climate_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -83,11 +83,11 @@ async def test_climate_entity(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("climate.test_myclimate")
+    state = menuai.states.get("climate.test_myclimate")
     assert state is not None
     assert state.state == HVACMode.COOL
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_TEMPERATURE,
         {ATTR_ENTITY_ID: "climate.test_myclimate", ATTR_TEMPERATURE: 25},
@@ -98,7 +98,7 @@ async def test_climate_entity(
 
 
 async def test_climate_entity_with_step_and_two_point(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -137,19 +137,19 @@ async def test_climate_entity_with_step_and_two_point(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("climate.test_myclimate")
+    state = menuai.states.get("climate.test_myclimate")
     assert state is not None
     assert state.state == HVACMode.COOL
 
     with pytest.raises(ServiceValidationError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             CLIMATE_DOMAIN,
             SERVICE_SET_TEMPERATURE,
             {ATTR_ENTITY_ID: "climate.test_myclimate", ATTR_TEMPERATURE: 25},
             blocking=True,
         )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_TEMPERATURE,
         {
@@ -174,7 +174,7 @@ async def test_climate_entity_with_step_and_two_point(
 
 
 async def test_climate_entity_with_step_and_target_temp(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -217,11 +217,11 @@ async def test_climate_entity_with_step_and_target_temp(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("climate.test_myclimate")
+    state = menuai.states.get("climate.test_myclimate")
     assert state is not None
     assert state.state == HVACMode.COOL
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_TEMPERATURE,
         {
@@ -237,7 +237,7 @@ async def test_climate_entity_with_step_and_target_temp(
     mock_client.climate_command.reset_mock()
 
     with pytest.raises(ServiceValidationError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             CLIMATE_DOMAIN,
             SERVICE_SET_TEMPERATURE,
             {
@@ -249,7 +249,7 @@ async def test_climate_entity_with_step_and_target_temp(
             blocking=True,
         )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {
@@ -268,7 +268,7 @@ async def test_climate_entity_with_step_and_target_temp(
     )
     mock_client.climate_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_PRESET_MODE,
         {ATTR_ENTITY_ID: "climate.test_myclimate", ATTR_PRESET_MODE: "away"},
@@ -284,7 +284,7 @@ async def test_climate_entity_with_step_and_target_temp(
     )
     mock_client.climate_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_PRESET_MODE,
         {ATTR_ENTITY_ID: "climate.test_myclimate", ATTR_PRESET_MODE: "preset1"},
@@ -293,7 +293,7 @@ async def test_climate_entity_with_step_and_target_temp(
     mock_client.climate_command.assert_has_calls([call(key=1, custom_preset="preset1")])
     mock_client.climate_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_FAN_MODE,
         {ATTR_ENTITY_ID: "climate.test_myclimate", ATTR_FAN_MODE: FAN_HIGH},
@@ -304,7 +304,7 @@ async def test_climate_entity_with_step_and_target_temp(
     )
     mock_client.climate_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_FAN_MODE,
         {ATTR_ENTITY_ID: "climate.test_myclimate", ATTR_FAN_MODE: "fan2"},
@@ -313,7 +313,7 @@ async def test_climate_entity_with_step_and_target_temp(
     mock_client.climate_command.assert_has_calls([call(key=1, custom_fan_mode="fan2")])
     mock_client.climate_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_SWING_MODE,
         {ATTR_ENTITY_ID: "climate.test_myclimate", ATTR_SWING_MODE: SWING_BOTH},
@@ -326,7 +326,7 @@ async def test_climate_entity_with_step_and_target_temp(
 
 
 async def test_climate_entity_with_humidity(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -368,7 +368,7 @@ async def test_climate_entity_with_humidity(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("climate.test_myclimate")
+    state = menuai.states.get("climate.test_myclimate")
     assert state is not None
     assert state.state == HVACMode.AUTO
     attributes = state.attributes
@@ -377,7 +377,7 @@ async def test_climate_entity_with_humidity(
     assert attributes[ATTR_MAX_HUMIDITY] == 30
     assert attributes[ATTR_MIN_HUMIDITY] == 10
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HUMIDITY,
         {ATTR_ENTITY_ID: "climate.test_myclimate", ATTR_HUMIDITY: 23},
@@ -388,7 +388,7 @@ async def test_climate_entity_with_humidity(
 
 
 async def test_climate_entity_with_inf_value(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -430,7 +430,7 @@ async def test_climate_entity_with_inf_value(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("climate.test_myclimate")
+    state = menuai.states.get("climate.test_myclimate")
     assert state is not None
     assert state.state == HVACMode.AUTO
     attributes = state.attributes
@@ -443,7 +443,7 @@ async def test_climate_entity_with_inf_value(
 
 
 async def test_climate_entity_attributes(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
     snapshot: SnapshotAssertion,
@@ -492,14 +492,14 @@ async def test_climate_entity_attributes(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("climate.test_myclimate")
+    state = menuai.states.get("climate.test_myclimate")
     assert state is not None
     assert state.state == HVACMode.COOL
     assert state.attributes == snapshot(name="climate-entity-attributes")
 
 
 async def test_climate_entity_attribute_current_temperature_unsupported(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -526,6 +526,6 @@ async def test_climate_entity_attribute_current_temperature_unsupported(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("climate.test_myclimate")
+    state = menuai.states.get("climate.test_myclimate")
     assert state is not None
     assert state.attributes[ATTR_CURRENT_TEMPERATURE] is None

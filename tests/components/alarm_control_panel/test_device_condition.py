@@ -3,17 +3,17 @@
 import pytest
 from pytest_unordered import unordered
 
-from homeassistant.components import automation
-from homeassistant.components.alarm_control_panel import (
+from menuai.components import automation
+from menuai.components.alarm_control_panel import (
     DOMAIN,
     AlarmControlPanelEntityFeature,
     AlarmControlPanelState,
 )
-from homeassistant.components.device_automation import DeviceAutomationType
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.components.device_automation import DeviceAutomationType
+from menuai.const import EntityCategory
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry, async_get_device_automations
 
@@ -61,7 +61,7 @@ def stub_blueprint_populate_autouse(stub_blueprint_populate: None) -> None:
     ],
 )
 async def test_get_conditions(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     set_state: bool,
@@ -71,7 +71,7 @@ async def test_get_conditions(
 ) -> None:
     """Test we get the expected conditions from a alarm_control_panel."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -84,7 +84,7 @@ async def test_get_conditions(
         supported_features=features_reg,
     )
     if set_state:
-        hass.states.async_set(
+        menuai.states.async_set(
             "alarm_control_panel.test_5678",
             "attributes",
             {"supported_features": features_state},
@@ -114,7 +114,7 @@ async def test_get_conditions(
         for condition in expected_condition_types
     ]
     conditions = await async_get_device_automations(
-        hass, DeviceAutomationType.CONDITION, device_entry.id
+        menuai, DeviceAutomationType.CONDITION, device_entry.id
     )
     assert conditions == unordered(expected_conditions)
 
@@ -129,7 +129,7 @@ async def test_get_conditions(
     ],
 )
 async def test_get_conditions_hidden_auxiliary(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     hidden_by: er.RegistryEntryHider | None,
@@ -137,7 +137,7 @@ async def test_get_conditions_hidden_auxiliary(
 ) -> None:
     """Test we get the expected conditions from a hidden or auxiliary entity."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -162,20 +162,20 @@ async def test_get_conditions_hidden_auxiliary(
         for condition in ("is_disarmed", "is_triggered")
     ]
     conditions = await async_get_device_automations(
-        hass, DeviceAutomationType.CONDITION, device_entry.id
+        menuai, DeviceAutomationType.CONDITION, device_entry.id
     )
     assert conditions == unordered(expected_conditions)
 
 
 async def test_if_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     service_calls: list[ServiceCall],
 ) -> None:
     """Test for all conditions."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -185,7 +185,7 @@ async def test_if_state(
     )
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -346,87 +346,87 @@ async def test_if_state(
             ]
         },
     )
-    hass.states.async_set(entry.entity_id, AlarmControlPanelState.TRIGGERED)
-    hass.bus.async_fire("test_event1")
-    hass.bus.async_fire("test_event2")
-    hass.bus.async_fire("test_event3")
-    hass.bus.async_fire("test_event4")
-    hass.bus.async_fire("test_event5")
-    hass.bus.async_fire("test_event6")
-    hass.bus.async_fire("test_event7")
-    await hass.async_block_till_done()
+    menuai.states.async_set(entry.entity_id, AlarmControlPanelState.TRIGGERED)
+    menuai.bus.async_fire("test_event1")
+    menuai.bus.async_fire("test_event2")
+    menuai.bus.async_fire("test_event3")
+    menuai.bus.async_fire("test_event4")
+    menuai.bus.async_fire("test_event5")
+    menuai.bus.async_fire("test_event6")
+    menuai.bus.async_fire("test_event7")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
     assert service_calls[0].data["some"] == "is_triggered - event - test_event1"
 
-    hass.states.async_set(entry.entity_id, AlarmControlPanelState.DISARMED)
-    hass.bus.async_fire("test_event1")
-    hass.bus.async_fire("test_event2")
-    hass.bus.async_fire("test_event3")
-    hass.bus.async_fire("test_event4")
-    hass.bus.async_fire("test_event5")
-    hass.bus.async_fire("test_event6")
-    hass.bus.async_fire("test_event7")
-    await hass.async_block_till_done()
+    menuai.states.async_set(entry.entity_id, AlarmControlPanelState.DISARMED)
+    menuai.bus.async_fire("test_event1")
+    menuai.bus.async_fire("test_event2")
+    menuai.bus.async_fire("test_event3")
+    menuai.bus.async_fire("test_event4")
+    menuai.bus.async_fire("test_event5")
+    menuai.bus.async_fire("test_event6")
+    menuai.bus.async_fire("test_event7")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 2
     assert service_calls[1].data["some"] == "is_disarmed - event - test_event2"
 
-    hass.states.async_set(entry.entity_id, AlarmControlPanelState.ARMED_HOME)
-    hass.bus.async_fire("test_event1")
-    hass.bus.async_fire("test_event2")
-    hass.bus.async_fire("test_event3")
-    hass.bus.async_fire("test_event4")
-    hass.bus.async_fire("test_event5")
-    hass.bus.async_fire("test_event6")
-    hass.bus.async_fire("test_event7")
-    await hass.async_block_till_done()
+    menuai.states.async_set(entry.entity_id, AlarmControlPanelState.ARMED_HOME)
+    menuai.bus.async_fire("test_event1")
+    menuai.bus.async_fire("test_event2")
+    menuai.bus.async_fire("test_event3")
+    menuai.bus.async_fire("test_event4")
+    menuai.bus.async_fire("test_event5")
+    menuai.bus.async_fire("test_event6")
+    menuai.bus.async_fire("test_event7")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 3
     assert service_calls[2].data["some"] == "is_armed_home - event - test_event3"
 
-    hass.states.async_set(entry.entity_id, AlarmControlPanelState.ARMED_AWAY)
-    hass.bus.async_fire("test_event1")
-    hass.bus.async_fire("test_event2")
-    hass.bus.async_fire("test_event3")
-    hass.bus.async_fire("test_event4")
-    hass.bus.async_fire("test_event5")
-    hass.bus.async_fire("test_event6")
-    hass.bus.async_fire("test_event7")
-    await hass.async_block_till_done()
+    menuai.states.async_set(entry.entity_id, AlarmControlPanelState.ARMED_AWAY)
+    menuai.bus.async_fire("test_event1")
+    menuai.bus.async_fire("test_event2")
+    menuai.bus.async_fire("test_event3")
+    menuai.bus.async_fire("test_event4")
+    menuai.bus.async_fire("test_event5")
+    menuai.bus.async_fire("test_event6")
+    menuai.bus.async_fire("test_event7")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 4
     assert service_calls[3].data["some"] == "is_armed_away - event - test_event4"
 
-    hass.states.async_set(entry.entity_id, AlarmControlPanelState.ARMED_NIGHT)
-    hass.bus.async_fire("test_event1")
-    hass.bus.async_fire("test_event2")
-    hass.bus.async_fire("test_event3")
-    hass.bus.async_fire("test_event4")
-    hass.bus.async_fire("test_event5")
-    hass.bus.async_fire("test_event6")
-    hass.bus.async_fire("test_event7")
-    await hass.async_block_till_done()
+    menuai.states.async_set(entry.entity_id, AlarmControlPanelState.ARMED_NIGHT)
+    menuai.bus.async_fire("test_event1")
+    menuai.bus.async_fire("test_event2")
+    menuai.bus.async_fire("test_event3")
+    menuai.bus.async_fire("test_event4")
+    menuai.bus.async_fire("test_event5")
+    menuai.bus.async_fire("test_event6")
+    menuai.bus.async_fire("test_event7")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 5
     assert service_calls[4].data["some"] == "is_armed_night - event - test_event5"
 
-    hass.states.async_set(entry.entity_id, AlarmControlPanelState.ARMED_VACATION)
-    hass.bus.async_fire("test_event1")
-    hass.bus.async_fire("test_event2")
-    hass.bus.async_fire("test_event3")
-    hass.bus.async_fire("test_event4")
-    hass.bus.async_fire("test_event5")
-    hass.bus.async_fire("test_event6")
-    hass.bus.async_fire("test_event7")
-    await hass.async_block_till_done()
+    menuai.states.async_set(entry.entity_id, AlarmControlPanelState.ARMED_VACATION)
+    menuai.bus.async_fire("test_event1")
+    menuai.bus.async_fire("test_event2")
+    menuai.bus.async_fire("test_event3")
+    menuai.bus.async_fire("test_event4")
+    menuai.bus.async_fire("test_event5")
+    menuai.bus.async_fire("test_event6")
+    menuai.bus.async_fire("test_event7")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 6
     assert service_calls[5].data["some"] == "is_armed_vacation - event - test_event6"
 
-    hass.states.async_set(entry.entity_id, AlarmControlPanelState.ARMED_CUSTOM_BYPASS)
-    hass.bus.async_fire("test_event1")
-    hass.bus.async_fire("test_event2")
-    hass.bus.async_fire("test_event3")
-    hass.bus.async_fire("test_event4")
-    hass.bus.async_fire("test_event5")
-    hass.bus.async_fire("test_event6")
-    hass.bus.async_fire("test_event7")
-    await hass.async_block_till_done()
+    menuai.states.async_set(entry.entity_id, AlarmControlPanelState.ARMED_CUSTOM_BYPASS)
+    menuai.bus.async_fire("test_event1")
+    menuai.bus.async_fire("test_event2")
+    menuai.bus.async_fire("test_event3")
+    menuai.bus.async_fire("test_event4")
+    menuai.bus.async_fire("test_event5")
+    menuai.bus.async_fire("test_event6")
+    menuai.bus.async_fire("test_event7")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 7
     assert (
         service_calls[6].data["some"] == "is_armed_custom_bypass - event - test_event7"
@@ -434,14 +434,14 @@ async def test_if_state(
 
 
 async def test_if_state_legacy(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     service_calls: list[ServiceCall],
 ) -> None:
     """Test for all conditions."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -451,7 +451,7 @@ async def test_if_state_legacy(
     )
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -480,8 +480,8 @@ async def test_if_state_legacy(
             ]
         },
     )
-    hass.states.async_set(entry.entity_id, AlarmControlPanelState.TRIGGERED)
-    hass.bus.async_fire("test_event1")
-    await hass.async_block_till_done()
+    menuai.states.async_set(entry.entity_id, AlarmControlPanelState.TRIGGERED)
+    menuai.bus.async_fire("test_event1")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
     assert service_calls[0].data["some"] == "is_triggered - event - test_event1"

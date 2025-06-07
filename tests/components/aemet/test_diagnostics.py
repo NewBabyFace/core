@@ -6,8 +6,8 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 from syrupy.filters import props
 
-from homeassistant.components.aemet.const import DOMAIN
-from homeassistant.core import HomeAssistant
+from menuai.components.aemet.const import DOMAIN
+from menuai.core import menuai
 
 from .util import async_init_integration
 
@@ -17,18 +17,18 @@ from tests.typing import ClientSessionGenerator
 
 @pytest.mark.freeze_time("2024-02-23T18:00:00+00:00")
 async def test_config_entry_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test config entry diagnostics."""
-    await async_init_integration(hass)
+    await async_init_integration(menuai)
 
-    config_entry = hass.config_entries.async_entries(DOMAIN)[0]
+    config_entry = menuai.config_entries.async_entries(DOMAIN)[0]
 
     with patch(
-        "homeassistant.components.aemet.AEMET.raw_data",
+        "menuai.components.aemet.AEMET.raw_data",
         return_value={},
     ):
-        result = await get_diagnostics_for_config_entry(hass, hass_client, config_entry)
+        result = await get_diagnostics_for_config_entry(menuai, menuai_client, config_entry)
         assert result == snapshot(exclude=props("created_at", "modified_at"))

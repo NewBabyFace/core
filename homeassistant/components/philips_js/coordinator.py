@@ -14,12 +14,12 @@ from haphilipsjs import (
 )
 from haphilipsjs.typing import SystemType
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.debounce import Debouncer
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.debounce import Debouncer
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import CONF_ALLOW_NOTIFY, CONF_SYSTEM, DOMAIN
 
@@ -35,7 +35,7 @@ class PhilipsTVDataUpdateCoordinator(DataUpdateCoordinator[None]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: PhilipsTVConfigEntry,
         api: PhilipsTV,
     ) -> None:
@@ -44,13 +44,13 @@ class PhilipsTVDataUpdateCoordinator(DataUpdateCoordinator[None]):
         self._notify_future: asyncio.Task | None = None
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
             update_interval=timedelta(seconds=30),
             request_refresh_debouncer=Debouncer(
-                hass, _LOGGER, cooldown=2.0, immediate=False
+                menuai, _LOGGER, cooldown=2.0, immediate=False
             ),
         )
 

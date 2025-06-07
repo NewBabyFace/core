@@ -8,10 +8,10 @@ import logging
 import transmission_rpc
 from transmission_rpc.session import SessionStats
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
     CONF_LIMIT,
@@ -37,7 +37,7 @@ class TransmissionDataUpdateCoordinator(DataUpdateCoordinator[SessionStats]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entry: TransmissionConfigEntry,
         api: transmission_rpc.Client,
     ) -> None:
@@ -50,7 +50,7 @@ class TransmissionDataUpdateCoordinator(DataUpdateCoordinator[SessionStats]):
         self._started_torrents: list[transmission_rpc.Torrent] = []
         self.torrents: list[transmission_rpc.Torrent] = []
         super().__init__(
-            hass,
+            menuai,
             config_entry=entry,
             name=f"{DOMAIN} - {self.host}",
             logger=_LOGGER,
@@ -69,7 +69,7 @@ class TransmissionDataUpdateCoordinator(DataUpdateCoordinator[SessionStats]):
 
     async def _async_update_data(self) -> SessionStats:
         """Update transmission data."""
-        return await self.hass.async_add_executor_job(self.update)
+        return await self.menuai.async_add_executor_job(self.update)
 
     def update(self) -> SessionStats:
         """Get the latest data from Transmission instance."""
@@ -106,7 +106,7 @@ class TransmissionDataUpdateCoordinator(DataUpdateCoordinator[SessionStats]):
 
         for torrent in current_completed_torrents:
             if torrent.id not in old_completed_torrents:
-                self.hass.bus.fire(
+                self.menuai.bus.fire(
                     EVENT_DOWNLOADED_TORRENT,
                     {
                         "name": torrent.name,
@@ -127,7 +127,7 @@ class TransmissionDataUpdateCoordinator(DataUpdateCoordinator[SessionStats]):
 
         for torrent in current_started_torrents:
             if torrent.id not in old_started_torrents:
-                self.hass.bus.fire(
+                self.menuai.bus.fire(
                     EVENT_STARTED_TORRENT,
                     {
                         "name": torrent.name,
@@ -144,7 +144,7 @@ class TransmissionDataUpdateCoordinator(DataUpdateCoordinator[SessionStats]):
 
         for torrent in self._all_torrents:
             if torrent.id not in current_torrents:
-                self.hass.bus.fire(
+                self.menuai.bus.fire(
                     EVENT_REMOVED_TORRENT,
                     {
                         "name": torrent.name,

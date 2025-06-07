@@ -4,9 +4,9 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from homeassistant.components.icloud.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
+from menuai.components.icloud.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
 
 from .const import MOCK_CONFIG, USERNAME
 
@@ -17,7 +17,7 @@ from tests.common import MockConfigEntry
 def mock_controller_2fa_service():
     """Mock a successful 2fa service."""
     with patch(
-        "homeassistant.components.icloud.account.PyiCloudService"
+        "menuai.components.icloud.account.PyiCloudService"
     ) as service_mock:
         service_mock.return_value.requires_2fa = True
         service_mock.return_value.requires_2sa = True
@@ -27,20 +27,20 @@ def mock_controller_2fa_service():
 
 
 @pytest.mark.usefixtures("service_2fa")
-async def test_setup_2fa(hass: HomeAssistant) -> None:
+async def test_setup_2fa(menuai: menuai) -> None:
     """Test that invalid login triggers reauth flow."""
     config_entry = MockConfigEntry(
         domain=DOMAIN, data=MOCK_CONFIG, entry_id="test", unique_id=USERNAME
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     assert config_entry.state is ConfigEntryState.NOT_LOADED
-    assert not hass.config_entries.flow.async_progress()
+    assert not menuai.config_entries.flow.async_progress()
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
-    in_progress_flows = hass.config_entries.flow.async_progress()
+    in_progress_flows = menuai.config_entries.flow.async_progress()
     assert len(in_progress_flows) == 1
     assert in_progress_flows[0]["context"]["unique_id"] == config_entry.unique_id

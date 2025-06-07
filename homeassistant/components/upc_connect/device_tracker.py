@@ -8,16 +8,16 @@ from connect_box import ConnectBox
 from connect_box.exceptions import ConnectBoxError, ConnectBoxLoginError
 import voluptuous as vol
 
-from homeassistant.components.device_tracker import (
+from menuai.components.device_tracker import (
     DOMAIN as DEVICE_TRACKER_DOMAIN,
     PLATFORM_SCHEMA as DEVICE_TRACKER_PLATFORM_SCHEMA,
     DeviceScanner,
 )
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import CONF_HOST, CONF_PASSWORD, EVENT_menuai_STOP
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.typing import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -32,11 +32,11 @@ PLATFORM_SCHEMA = DEVICE_TRACKER_PLATFORM_SCHEMA.extend(
 
 
 async def async_get_scanner(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> UPCDeviceScanner | None:
     """Return the UPC device scanner."""
     conf = config[DEVICE_TRACKER_DOMAIN]
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
     connect_box = ConnectBox(session, conf[CONF_PASSWORD], host=conf[CONF_HOST])
 
     # Check login data
@@ -52,7 +52,7 @@ async def async_get_scanner(
         """Shutdown event."""
         await connect_box.async_close_session()
 
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _shutdown)
+    menuai.bus.async_listen_once(EVENT_menuai_STOP, _shutdown)
 
     return UPCDeviceScanner(connect_box)
 

@@ -6,21 +6,21 @@ from collections.abc import Callable
 
 from google_drive_api.exceptions import GoogleDriveApiError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import instance_id
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.config_entry_oauth2_flow import (
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import instance_id
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.config_entry_oauth2_flow import (
     OAuth2Session,
     async_get_config_entry_implementation,
 )
-from homeassistant.util.hass_dict import HassKey
+from menuai.util.menuai_dict import menuaiKey
 
 from .api import AsyncConfigEntryAuth, DriveClient
 from .const import DOMAIN
 
-DATA_BACKUP_AGENT_LISTENERS: HassKey[list[Callable[[], None]]] = HassKey(
+DATA_BACKUP_AGENT_LISTENERS: menuaiKey[list[Callable[[], None]]] = menuaiKey(
     f"{DOMAIN}.backup_agent_listeners"
 )
 
@@ -28,19 +28,19 @@ DATA_BACKUP_AGENT_LISTENERS: HassKey[list[Callable[[], None]]] = HassKey(
 type GoogleDriveConfigEntry = ConfigEntry[DriveClient]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: GoogleDriveConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: GoogleDriveConfigEntry) -> bool:
     """Set up Google Drive from a config entry."""
     auth = AsyncConfigEntryAuth(
-        async_get_clientsession(hass),
+        async_get_clientsession(menuai),
         OAuth2Session(
-            hass, entry, await async_get_config_entry_implementation(hass, entry)
+            menuai, entry, await async_get_config_entry_implementation(menuai, entry)
         ),
     )
 
     # Test we can refresh the token and raise ConfigEntryAuthFailed or ConfigEntryNotReady if not
     await auth.async_get_access_token()
 
-    client = DriveClient(await instance_id.async_get(hass), auth)
+    client = DriveClient(await instance_id.async_get(menuai), auth)
     entry.runtime_data = client
 
     # Test we can access Google Drive and raise if not
@@ -50,7 +50,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: GoogleDriveConfigEntry) 
         raise ConfigEntryNotReady from err
 
     def async_notify_backup_listeners() -> None:
-        for listener in hass.data.get(DATA_BACKUP_AGENT_LISTENERS, []):
+        for listener in menuai.data.get(DATA_BACKUP_AGENT_LISTENERS, []):
             listener()
 
     entry.async_on_unload(entry.async_on_state_change(async_notify_backup_listeners))
@@ -59,7 +59,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: GoogleDriveConfigEntry) 
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, entry: GoogleDriveConfigEntry
+    menuai: menuai, entry: GoogleDriveConfigEntry
 ) -> bool:
     """Unload a config entry."""
     return True

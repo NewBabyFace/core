@@ -11,10 +11,10 @@ from typing import TYPE_CHECKING, Any, Concatenate
 from aioautomower.exceptions import ApiError
 from aioautomower.model import MowerActivities, MowerAttributes, MowerStates, WorkArea
 
-from homeassistant.core import callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.core import callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from . import AutomowerDataUpdateCoordinator
 from .const import DOMAIN, EXECUTION_TIME_DELAY
@@ -68,7 +68,7 @@ def handle_sending_exception[_Entity: AutomowerBaseEntity, **_P](
             try:
                 await func(self, *args, **kwargs)
             except ApiError as exception:
-                raise HomeAssistantError(
+                raise menuaiError(
                     translation_domain=DOMAIN,
                     translation_key="command_send_failed",
                     translation_placeholders={"exception": str(exception)},

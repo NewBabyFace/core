@@ -5,15 +5,15 @@ import logging
 import pyads
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_DEVICE,
     CONF_IP_ADDRESS,
     CONF_PORT,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
 )
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType
 
 from .const import CONF_ADS_VAR, DATA_ADS, DOMAIN, AdsType
 from .hub import AdsHub
@@ -70,7 +70,7 @@ SCHEMA_SERVICE_WRITE_DATA_BY_NAME = vol.Schema(
 )
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the ADS component."""
 
     conf = config[DOMAIN]
@@ -92,8 +92,8 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
         )
         return False
 
-    hass.data[DATA_ADS] = ads
-    hass.bus.listen(EVENT_HOMEASSISTANT_STOP, ads.shutdown)
+    menuai.data[DATA_ADS] = ads
+    menuai.bus.listen(EVENT_menuai_STOP, ads.shutdown)
 
     def handle_write_data_by_name(call: ServiceCall) -> None:
         """Write a value to the connected ADS device."""
@@ -106,7 +106,7 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
         except pyads.ADSError as err:
             _LOGGER.error(err)
 
-    hass.services.register(
+    menuai.services.register(
         DOMAIN,
         SERVICE_WRITE_DATA_BY_NAME,
         handle_write_data_by_name,

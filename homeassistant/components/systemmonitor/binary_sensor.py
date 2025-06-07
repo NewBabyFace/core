@@ -11,18 +11,18 @@ from typing import Literal
 
 from psutil import NoSuchProcess
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     DOMAIN as BINARY_SENSOR_DOMAIN,
     BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.util import slugify
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
+from menuai.util import slugify
 
 from . import SystemMonitorConfigEntry
 from .const import CONF_PROCESS, DOMAIN
@@ -89,7 +89,7 @@ SENSOR_TYPES: tuple[SysMonitorBinarySensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: SystemMonitorConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -139,19 +139,19 @@ class SystemMonitorSensor(
         )
         self.argument = argument
 
-    async def async_added_to_hass(self) -> None:
-        """When added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """When added to menuai."""
         self.coordinator.update_subscribers[
             self.entity_description.add_to_update(self)
         ].add(self.entity_id)
-        return await super().async_added_to_hass()
+        return await super().async_added_to_menuai()
 
-    async def async_will_remove_from_hass(self) -> None:
-        """When removed from hass."""
+    async def async_will_remove_from_menuai(self) -> None:
+        """When removed from menuai."""
         self.coordinator.update_subscribers[
             self.entity_description.add_to_update(self)
         ].remove(self.entity_id)
-        return await super().async_will_remove_from_hass()
+        return await super().async_will_remove_from_menuai()
 
     @property
     def is_on(self) -> bool | None:

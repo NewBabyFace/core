@@ -1,15 +1,15 @@
-"""Test the Home Assistant SkyConnect integration."""
+"""Test the MenuAI SkyConnect integration."""
 
 from datetime import timedelta
 from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components.homeassistant_hardware.util import (
+from menuai.components.menuai_hardware.util import (
     ApplicationType,
     FirmwareInfo,
 )
-from homeassistant.components.homeassistant_sky_connect.const import (
+from menuai.components.menuai_sky_connect.const import (
     DESCRIPTION,
     DOMAIN,
     MANUFACTURER,
@@ -18,12 +18,12 @@ from homeassistant.components.homeassistant_sky_connect.const import (
     SERIAL_NUMBER,
     VID,
 )
-from homeassistant.components.usb import USBDevice
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.components.usb import USBDevice
+from menuai.config_entries import ConfigEntryState
+from menuai.const import EVENT_menuai_STARTED
+from menuai.core import menuai
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from tests.common import MockConfigEntry, async_fire_time_changed
 from tests.components.usb import (
@@ -33,7 +33,7 @@ from tests.components.usb import (
 )
 
 
-async def test_config_entry_migration_v2(hass: HomeAssistant) -> None:
+async def test_config_entry_migration_v2(menuai: menuai) -> None:
     """Test migrating config entries from v1 to v2 format."""
 
     config_entry = MockConfigEntry(
@@ -50,10 +50,10 @@ async def test_config_entry_migration_v2(hass: HomeAssistant) -> None:
         version=1,
     )
 
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.homeassistant_sky_connect.guess_firmware_info",
+        "menuai.components.menuai_sky_connect.guess_firmware_info",
         return_value=FirmwareInfo(
             device="/dev/serial/by-id/usb-Nabu_Casa_SkyConnect_v1.0_9e2adbd75b8beb119fe564a0f320645d-if00-port0",
             firmware_version=None,
@@ -62,7 +62,7 @@ async def test_config_entry_migration_v2(hass: HomeAssistant) -> None:
             owners=[],
         ),
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
+        await menuai.config_entries.async_setup(config_entry.entry_id)
 
     assert config_entry.version == 1
     assert config_entry.minor_version == 4
@@ -78,10 +78,10 @@ async def test_config_entry_migration_v2(hass: HomeAssistant) -> None:
         "firmware_version": None,  # new key
     }
 
-    await hass.config_entries.async_unload(config_entry.entry_id)
+    await menuai.config_entries.async_unload(config_entry.entry_id)
 
 
-async def test_setup_fails_on_missing_usb_port(hass: HomeAssistant) -> None:
+async def test_setup_fails_on_missing_usb_port(menuai: menuai) -> None:
     """Test setup failing when the USB port is missing."""
 
     config_entry = MockConfigEntry(
@@ -102,35 +102,35 @@ async def test_setup_fails_on_missing_usb_port(hass: HomeAssistant) -> None:
         minor_version=3,
     )
 
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     # Set up the config entry
     with patch(
-        "homeassistant.components.homeassistant_sky_connect.os.path.exists"
+        "menuai.components.menuai_sky_connect.os.path.exists"
     ) as mock_exists:
         mock_exists.return_value = False
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
         # Failed to set up, the device is missing
         assert config_entry.state is ConfigEntryState.SETUP_RETRY
 
         mock_exists.return_value = True
-        async_fire_time_changed(hass, dt_util.now() + timedelta(seconds=30))
-        await hass.async_block_till_done(wait_background_tasks=True)
+        async_fire_time_changed(menuai, dt_util.now() + timedelta(seconds=30))
+        await menuai.async_block_till_done(wait_background_tasks=True)
 
         # Now it's ready
         assert config_entry.state is ConfigEntryState.LOADED
 
 
 @pytest.mark.usefixtures("force_usb_polling_watcher")
-async def test_usb_device_reactivity(hass: HomeAssistant) -> None:
+async def test_usb_device_reactivity(menuai: menuai) -> None:
     """Test setting up USB monitoring."""
-    assert await async_setup_component(hass, "usb", {"usb": {}})
+    assert await async_setup_component(menuai, "usb", {"usb": {}})
 
-    await hass.async_block_till_done()
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    menuai.bus.async_fire(EVENT_menuai_STARTED)
+    await menuai.async_block_till_done()
 
     config_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -150,14 +150,14 @@ async def test_usb_device_reactivity(hass: HomeAssistant) -> None:
         minor_version=3,
     )
 
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.homeassistant_sky_connect.os.path.exists"
+        "menuai.components.menuai_sky_connect.os.path.exists"
     ) as mock_exists:
         mock_exists.return_value = False
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
         # Failed to set up, the device is missing
         assert config_entry.state is ConfigEntryState.SETUP_RETRY
@@ -177,27 +177,27 @@ async def test_usb_device_reactivity(hass: HomeAssistant) -> None:
                 )
             ],
         ):
-            await async_request_scan(hass)
+            await async_request_scan(menuai)
 
         # It loads immediately
-        await hass.async_block_till_done(wait_background_tasks=True)
+        await menuai.async_block_till_done(wait_background_tasks=True)
         assert config_entry.state is ConfigEntryState.LOADED
 
         # Wait for a bit for the USB scan debouncer to cool off
-        async_fire_time_changed(hass, dt_util.now() + timedelta(minutes=5))
+        async_fire_time_changed(menuai, dt_util.now() + timedelta(minutes=5))
 
         # Unplug the stick
         mock_exists.return_value = False
 
         with patch_scanned_serial_ports(return_value=[]):
-            await async_request_scan(hass)
+            await async_request_scan(menuai)
 
         # The integration has reloaded and is now in a failed state
-        await hass.async_block_till_done(wait_background_tasks=True)
+        await menuai.async_block_till_done(wait_background_tasks=True)
         assert config_entry.state is ConfigEntryState.SETUP_RETRY
 
 
-async def test_bad_config_entry_fixing(hass: HomeAssistant) -> None:
+async def test_bad_config_entry_fixing(menuai: menuai) -> None:
     """Test fixing/deleting config entries with bad data."""
 
     # Newly-added ZBT-1
@@ -218,7 +218,7 @@ async def test_bad_config_entry_fixing(hass: HomeAssistant) -> None:
         minor_version=3,
     )
 
-    new_entry.add_to_hass(hass)
+    new_entry.add_to_menuai(menuai)
 
     # Old config entry, without firmware info
     old_entry = MockConfigEntry(
@@ -236,7 +236,7 @@ async def test_bad_config_entry_fixing(hass: HomeAssistant) -> None:
         minor_version=1,
     )
 
-    old_entry.add_to_hass(hass)
+    old_entry.add_to_menuai(menuai)
 
     # Bad config entry, missing most keys
     bad_entry = MockConfigEntry(
@@ -249,7 +249,7 @@ async def test_bad_config_entry_fixing(hass: HomeAssistant) -> None:
         minor_version=2,
     )
 
-    bad_entry.add_to_hass(hass)
+    bad_entry.add_to_menuai(menuai)
 
     # Bad config entry, missing most keys, but fixable since the device is present
     fixable_entry = MockConfigEntry(
@@ -262,10 +262,10 @@ async def test_bad_config_entry_fixing(hass: HomeAssistant) -> None:
         minor_version=2,
     )
 
-    fixable_entry.add_to_hass(hass)
+    fixable_entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.homeassistant_sky_connect.scan_serial_ports",
+        "menuai.components.menuai_sky_connect.scan_serial_ports",
         return_value=[
             USBDevice(
                 device="/dev/serial/by-id/usb-Nabu_Casa_SkyConnect_v1.0_4f5f3b26d59f8714a78b599690741999-if00-port0",
@@ -277,13 +277,13 @@ async def test_bad_config_entry_fixing(hass: HomeAssistant) -> None:
             )
         ],
     ):
-        await async_setup_component(hass, "homeassistant_sky_connect", {})
+        await async_setup_component(menuai, "menuai_sky_connect", {})
 
-    assert hass.config_entries.async_get_entry(new_entry.entry_id) is not None
-    assert hass.config_entries.async_get_entry(old_entry.entry_id) is not None
-    assert hass.config_entries.async_get_entry(fixable_entry.entry_id) is not None
+    assert menuai.config_entries.async_get_entry(new_entry.entry_id) is not None
+    assert menuai.config_entries.async_get_entry(old_entry.entry_id) is not None
+    assert menuai.config_entries.async_get_entry(fixable_entry.entry_id) is not None
 
-    updated_entry = hass.config_entries.async_get_entry(fixable_entry.entry_id)
+    updated_entry = menuai.config_entries.async_get_entry(fixable_entry.entry_id)
     assert updated_entry is not None
     assert updated_entry.data[VID] == "10C4"
     assert updated_entry.data[PID] == "EA60"
@@ -292,5 +292,5 @@ async def test_bad_config_entry_fixing(hass: HomeAssistant) -> None:
     assert updated_entry.data[PRODUCT] == "SkyConnect v1.0"
     assert updated_entry.data[DESCRIPTION] == "SkyConnect v1.0"
 
-    untouched_bad_entry = hass.config_entries.async_get_entry(bad_entry.entry_id)
+    untouched_bad_entry = menuai.config_entries.async_get_entry(bad_entry.entry_id)
     assert untouched_bad_entry.minor_version == 3

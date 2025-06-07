@@ -7,17 +7,17 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pycfdns
 
-from homeassistant.components.cloudflare.const import CONF_RECORDS, DOMAIN
-from homeassistant.const import CONF_API_TOKEN, CONF_ZONE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.typing import UNDEFINED, UndefinedType
+from menuai.components.cloudflare.const import CONF_RECORDS, DOMAIN
+from menuai.const import CONF_API_TOKEN, CONF_ZONE
+from menuai.core import menuai
+from menuai.helpers.typing import UNDEFINED, UndefinedType
 
 from tests.common import MockConfigEntry
 
 ENTRY_CONFIG = {
     CONF_API_TOKEN: "mock-api-token",
     CONF_ZONE: "mock.com",
-    CONF_RECORDS: ["ha.mock.com", "homeassistant.mock.com"],
+    CONF_RECORDS: ["ha.mock.com", "menuai.mock.com"],
 }
 
 ENTRY_OPTIONS = {}
@@ -28,7 +28,7 @@ USER_INPUT = {
 
 USER_INPUT_ZONE = {CONF_ZONE: "mock.com"}
 
-USER_INPUT_RECORDS = {CONF_RECORDS: ["ha.mock.com", "homeassistant.mock.com"]}
+USER_INPUT_RECORDS = {CONF_RECORDS: ["ha.mock.com", "menuai.mock.com"]}
 
 MOCK_ZONE: pycfdns.ZoneModel = {"name": "mock.com", "id": "mock-zone-id"}
 MOCK_ZONE_RECORDS: list[pycfdns.RecordModel] = [
@@ -42,7 +42,7 @@ MOCK_ZONE_RECORDS: list[pycfdns.RecordModel] = [
     {
         "id": "zone-record-id-2",
         "type": "A",
-        "name": "homeassistant.mock.com",
+        "name": "menuai.mock.com",
         "proxied": True,
         "content": "127.0.0.1",
     },
@@ -57,25 +57,25 @@ MOCK_ZONE_RECORDS: list[pycfdns.RecordModel] = [
 
 
 async def init_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     *,
     data: dict[str, Any] | UndefinedType = UNDEFINED,
     options: dict[str, Any] | UndefinedType = UNDEFINED,
     unique_id: str = MOCK_ZONE["name"],
     skip_setup: bool = False,
 ) -> MockConfigEntry:
-    """Set up the Cloudflare integration in Home Assistant."""
+    """Set up the Cloudflare integration in MenuAI."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         data=ENTRY_CONFIG if data is UNDEFINED else data,
         options=ENTRY_OPTIONS if options is UNDEFINED else options,
         unique_id=unique_id,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     if not skip_setup:
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     return entry
 
@@ -94,6 +94,6 @@ def get_mock_client() -> Mock:
 def patch_async_setup_entry() -> AsyncMock:
     """Patch the async_setup_entry method and return a mock."""
     return patch(
-        "homeassistant.components.cloudflare.async_setup_entry",
+        "menuai.components.cloudflare.async_setup_entry",
         return_value=True,
     )

@@ -11,8 +11,8 @@ from bleak_esphome.backend.scanner import (  # pylint: disable=no-name-in-module
 )
 import pytest
 
-from homeassistant.components.bluetooth import HaBluetoothConnector
-from homeassistant.core import HomeAssistant
+from menuai.components.bluetooth import HaBluetoothConnector
+from menuai.core import menuai
 
 from tests.components.bluetooth import generate_ble_device
 
@@ -22,7 +22,7 @@ ESP_NAME = "proxy"
 
 @pytest.fixture(name="client_data")
 async def client_data_fixture(
-    hass: HomeAssistant, mock_client: APIClient
+    menuai: menuai, mock_client: APIClient
 ) -> ESPHomeClientData:
     """Return a client data fixture."""
     connector = HaBluetoothConnector(ESPHomeClientData, ESP_MAC_ADDRESS, lambda: True)

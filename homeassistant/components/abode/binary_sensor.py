@@ -6,14 +6,14 @@ from typing import cast
 
 from jaraco.abode.devices.binary_sensor import BinarySensor
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util.enum import try_parse_enum
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util.enum import try_parse_enum
 
 from . import AbodeSystem
 from .const import DOMAIN
@@ -21,12 +21,12 @@ from .entity import AbodeDevice
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Abode binary sensor devices."""
-    data: AbodeSystem = hass.data[DOMAIN]
+    data: AbodeSystem = menuai.data[DOMAIN]
 
     device_types = [
         "connectivity",

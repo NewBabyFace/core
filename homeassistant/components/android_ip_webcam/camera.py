@@ -2,23 +2,23 @@
 
 from __future__ import annotations
 
-from homeassistant.components.mjpeg import MjpegCamera, filter_urllib3_logging
-from homeassistant.const import (
+from menuai.components.mjpeg import MjpegCamera, filter_urllib3_logging
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_USERNAME,
     HTTP_BASIC_AUTHENTICATION,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import AndroidIPCamConfigEntry, AndroidIPCamDataUpdateCoordinator
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: AndroidIPCamConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

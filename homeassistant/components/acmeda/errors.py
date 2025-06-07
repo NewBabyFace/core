@@ -1,9 +1,9 @@
 """Errors for the Acmeda Pulse component."""
 
-from homeassistant.exceptions import HomeAssistantError
+from menuai.exceptions import menuaiError
 
 
-class PulseException(HomeAssistantError):
+class PulseException(menuaiError):
     """Base class for Acmeda Pulse exceptions."""
 
 

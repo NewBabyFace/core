@@ -6,17 +6,17 @@ from aiohttp import ClientError
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.components.ourgroceries.coordinator import SCAN_INTERVAL
-from homeassistant.components.todo import (
+from menuai.components.ourgroceries.coordinator import SCAN_INTERVAL
+from menuai.components.todo import (
     ATTR_ITEM,
     ATTR_RENAME,
     ATTR_STATUS,
     DOMAIN as TODO_DOMAIN,
     TodoServices,
 )
-from homeassistant.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_component import async_update_entity
+from menuai.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE
+from menuai.core import menuai
+from menuai.helpers.entity_component import async_update_entity
 
 from . import items_to_shopping_list
 
@@ -43,25 +43,25 @@ def _mock_version_id(og: AsyncMock, version: int) -> None:
     ],
 )
 async def test_todo_item_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: None,
     expected_state: str,
 ) -> None:
     """Test for a shopping list entity state."""
 
-    state = hass.states.get("todo.test_list")
+    state = menuai.states.get("todo.test_list")
     assert state
     assert state.state == expected_state
 
 
 async def test_add_todo_list_item(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: None,
     ourgroceries: AsyncMock,
 ) -> None:
     """Test for adding an item."""
 
-    state = hass.states.get("todo.test_list")
+    state = menuai.states.get("todo.test_list")
     assert state
     assert state.state == "0"
 
@@ -73,7 +73,7 @@ async def test_add_todo_list_item(
         version_id="2",
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.ADD_ITEM,
         {ATTR_ITEM: "Soda"},
@@ -87,20 +87,20 @@ async def test_add_todo_list_item(
     assert args.kwargs.get("auto_category") is True
 
     # Verify state is refreshed
-    state = hass.states.get("todo.test_list")
+    state = menuai.states.get("todo.test_list")
     assert state
     assert state.state == "1"
 
 
 @pytest.mark.parametrize(("items"), [[{"id": "12345", "name": "Soda"}]])
 async def test_update_todo_item_status(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: None,
     ourgroceries: AsyncMock,
 ) -> None:
     """Test for updating the completion status of an item."""
 
-    state = hass.states.get("todo.test_list")
+    state = menuai.states.get("todo.test_list")
     assert state
     assert state.state == "1"
 
@@ -112,7 +112,7 @@ async def test_update_todo_item_status(
         [{"id": "12345", "name": "Soda", "crossedOffAt": 1699107501}]
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.UPDATE_ITEM,
         {ATTR_ITEM: "12345", ATTR_STATUS: "completed"},
@@ -126,7 +126,7 @@ async def test_update_todo_item_status(
     assert args.kwargs.get("cross_off") is True
 
     # Verify state is refreshed
-    state = hass.states.get("todo.test_list")
+    state = menuai.states.get("todo.test_list")
     assert state
     assert state.state == "0"
 
@@ -136,7 +136,7 @@ async def test_update_todo_item_status(
         [{"id": "12345", "name": "Soda"}]
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.UPDATE_ITEM,
         {ATTR_ITEM: "12345", ATTR_STATUS: "needs_action"},
@@ -150,7 +150,7 @@ async def test_update_todo_item_status(
     assert args.kwargs.get("cross_off") is False
 
     # Verify state is refreshed
-    state = hass.states.get("todo.test_list")
+    state = menuai.states.get("todo.test_list")
     assert state
     assert state.state == "1"
 
@@ -166,14 +166,14 @@ async def test_update_todo_item_status(
     ],
 )
 async def test_update_todo_item_summary(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: None,
     ourgroceries: AsyncMock,
     category: str | None,
 ) -> None:
     """Test for updating an item summary."""
 
-    state = hass.states.get("todo.test_list")
+    state = menuai.states.get("todo.test_list")
     assert state
     assert state.state == "1"
 
@@ -185,7 +185,7 @@ async def test_update_todo_item_summary(
         [{"id": "12345", "name": "Milk"}]
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.UPDATE_ITEM,
         {ATTR_ITEM: "12345", ATTR_RENAME: "Milk"},
@@ -207,13 +207,13 @@ async def test_update_todo_item_summary(
     ],
 )
 async def test_remove_todo_item(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: None,
     ourgroceries: AsyncMock,
 ) -> None:
     """Test for removing an item."""
 
-    state = hass.states.get("todo.test_list")
+    state = menuai.states.get("todo.test_list")
     assert state
     assert state.state == "2"
 
@@ -222,7 +222,7 @@ async def test_remove_todo_item(
     _mock_version_id(ourgroceries, 2)
     ourgroceries.get_list_items.return_value = items_to_shopping_list([])
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.REMOVE_ITEM,
         {ATTR_ITEM: ["12345", "54321"]},
@@ -234,27 +234,27 @@ async def test_remove_todo_item(
     assert args[0].args == ("test_list", "12345")
     assert args[1].args == ("test_list", "54321")
 
-    await async_update_entity(hass, "todo.test_list")
-    state = hass.states.get("todo.test_list")
+    await async_update_entity(menuai, "todo.test_list")
+    state = menuai.states.get("todo.test_list")
     assert state
     assert state.state == "0"
 
 
 async def test_version_id_optimization(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     setup_integration: None,
     ourgroceries: AsyncMock,
 ) -> None:
     """Test that list items aren't being retrieved if version id stays the same."""
-    state = hass.states.get("todo.test_list")
+    state = menuai.states.get("todo.test_list")
     assert state.state == "0"
     assert ourgroceries.get_list_items.call_count == 1
     freezer.tick(SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("todo.test_list")
+    state = menuai.states.get("todo.test_list")
     assert state.state == "0"
     assert ourgroceries.get_list_items.call_count == 1
 
@@ -267,21 +267,21 @@ async def test_version_id_optimization(
     ],
 )
 async def test_coordinator_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     setup_integration: None,
     ourgroceries: AsyncMock,
     exception: Exception,
 ) -> None:
     """Test error on coordinator update."""
-    state = hass.states.get("todo.test_list")
+    state = menuai.states.get("todo.test_list")
     assert state.state == "0"
 
     _mock_version_id(ourgroceries, 2)
     ourgroceries.get_list_items.side_effect = exception
     freezer.tick(SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get("todo.test_list")
+    state = menuai.states.get("todo.test_list")
     assert state.state == STATE_UNAVAILABLE

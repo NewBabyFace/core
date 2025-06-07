@@ -6,7 +6,7 @@ from pyegps import get_device, search_for_devices
 from pyegps.exceptions import MissingLibrary, UsbError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
 
 from .const import CONF_DEVICE_API_ID, DOMAIN, LOGGER
 
@@ -21,7 +21,7 @@ class EGPSConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             dev_id = user_input[CONF_DEVICE_API_ID]
-            dev = await self.hass.async_add_executor_job(get_device, dev_id)
+            dev = await self.menuai.async_add_executor_job(get_device, dev_id)
             if dev is not None:
                 await self.async_set_unique_id(dev.device_id)
                 self._abort_if_unique_id_configured()
@@ -34,7 +34,7 @@ class EGPSConfigFlow(ConfigFlow, domain=DOMAIN):
 
         currently_configured = self._async_current_ids(include_ignore=True)
         try:
-            found_devices = await self.hass.async_add_executor_job(search_for_devices)
+            found_devices = await self.menuai.async_add_executor_job(search_for_devices)
         except (MissingLibrary, UsbError):
             LOGGER.exception("Unable to access USB devices")
             return self.async_abort(reason="usb_error")

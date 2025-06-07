@@ -10,9 +10,9 @@ from aiopvapi.helpers.aiorequest import PvApiMaintenance
 from aiopvapi.hub import Hub
 from aiopvapi.shades import Shades
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import HUB_EXCEPTIONS
 from .shade_data import PowerviewShadeData
@@ -26,7 +26,7 @@ class PowerviewShadeUpdateCoordinator(DataUpdateCoordinator[PowerviewShadeData])
     config_entry: ConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: ConfigEntry, shades: Shades, hub: Hub
+        self, menuai: menuai, config_entry: ConfigEntry, shades: Shades, hub: Hub
     ) -> None:
         """Initialize DataUpdateCoordinator to gather data for specific Powerview Hub."""
         self.shades = shades
@@ -36,7 +36,7 @@ class PowerviewShadeUpdateCoordinator(DataUpdateCoordinator[PowerviewShadeData])
         # so we have a lock to prevent multiple radio operations at the same time
         self.radio_operation_lock = asyncio.Lock()
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=f"powerview hub {hub.hub_address}",

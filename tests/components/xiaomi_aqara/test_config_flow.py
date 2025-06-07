@@ -6,12 +6,12 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.xiaomi_aqara import config_flow, const
-from homeassistant.const import CONF_HOST, CONF_MAC, CONF_NAME, CONF_PORT, CONF_PROTOCOL
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai import config_entries
+from menuai.components.xiaomi_aqara import config_flow, const
+from menuai.const import CONF_HOST, CONF_MAC, CONF_NAME, CONF_PORT, CONF_PROTOCOL
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 ZEROCONF_NAME = "name"
 ZEROCONF_PROP = "properties"
@@ -36,15 +36,15 @@ def xiaomi_aqara_fixture():
 
     with (
         patch(
-            "homeassistant.components.xiaomi_aqara.config_flow.XiaomiGatewayDiscovery",
+            "menuai.components.xiaomi_aqara.config_flow.XiaomiGatewayDiscovery",
             return_value=mock_gateway_discovery,
         ),
         patch(
-            "homeassistant.components.xiaomi_aqara.config_flow.XiaomiGateway",
+            "menuai.components.xiaomi_aqara.config_flow.XiaomiGateway",
             return_value=mock_gateway_discovery.gateways[TEST_HOST],
         ),
         patch(
-            "homeassistant.components.xiaomi_aqara.async_setup_entry", return_value=True
+            "menuai.components.xiaomi_aqara.async_setup_entry", return_value=True
         ),
     ):
         yield
@@ -84,9 +84,9 @@ def get_mock_discovery(
     return gateway_discovery
 
 
-async def test_config_flow_user_success(hass: HomeAssistant) -> None:
+async def test_config_flow_user_success(menuai: menuai) -> None:
     """Test a successful config flow initialized by the user."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -94,7 +94,7 @@ async def test_config_flow_user_success(hass: HomeAssistant) -> None:
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {const.CONF_INTERFACE: config_flow.DEFAULT_INTERFACE},
     )
@@ -103,7 +103,7 @@ async def test_config_flow_user_success(hass: HomeAssistant) -> None:
     assert result["step_id"] == "settings"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {const.CONF_KEY: TEST_KEY, CONF_NAME: TEST_NAME},
     )
@@ -121,9 +121,9 @@ async def test_config_flow_user_success(hass: HomeAssistant) -> None:
     }
 
 
-async def test_config_flow_user_multiple_success(hass: HomeAssistant) -> None:
+async def test_config_flow_user_multiple_success(menuai: menuai) -> None:
     """Test a successful config flow initialized by the user with multiple gateways discovered."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -134,10 +134,10 @@ async def test_config_flow_user_multiple_success(hass: HomeAssistant) -> None:
     mock_gateway_discovery = get_mock_discovery([TEST_HOST, TEST_HOST_2])
 
     with patch(
-        "homeassistant.components.xiaomi_aqara.config_flow.XiaomiGatewayDiscovery",
+        "menuai.components.xiaomi_aqara.config_flow.XiaomiGatewayDiscovery",
         return_value=mock_gateway_discovery,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {const.CONF_INTERFACE: config_flow.DEFAULT_INTERFACE},
         )
@@ -146,7 +146,7 @@ async def test_config_flow_user_multiple_success(hass: HomeAssistant) -> None:
     assert result["step_id"] == "select"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"select_ip": TEST_HOST_2},
     )
@@ -155,7 +155,7 @@ async def test_config_flow_user_multiple_success(hass: HomeAssistant) -> None:
     assert result["step_id"] == "settings"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {const.CONF_KEY: TEST_KEY, CONF_NAME: TEST_NAME},
     )
@@ -173,9 +173,9 @@ async def test_config_flow_user_multiple_success(hass: HomeAssistant) -> None:
     }
 
 
-async def test_config_flow_user_no_key_success(hass: HomeAssistant) -> None:
+async def test_config_flow_user_no_key_success(menuai: menuai) -> None:
     """Test a successful config flow initialized by the user without a key."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -183,7 +183,7 @@ async def test_config_flow_user_no_key_success(hass: HomeAssistant) -> None:
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {const.CONF_INTERFACE: config_flow.DEFAULT_INTERFACE},
     )
@@ -192,7 +192,7 @@ async def test_config_flow_user_no_key_success(hass: HomeAssistant) -> None:
     assert result["step_id"] == "settings"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_NAME: TEST_NAME},
     )
@@ -210,9 +210,9 @@ async def test_config_flow_user_no_key_success(hass: HomeAssistant) -> None:
     }
 
 
-async def test_config_flow_user_host_mac_success(hass: HomeAssistant) -> None:
+async def test_config_flow_user_host_mac_success(menuai: menuai) -> None:
     """Test a successful config flow initialized by the user with a host and mac specified."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -223,10 +223,10 @@ async def test_config_flow_user_host_mac_success(hass: HomeAssistant) -> None:
     mock_gateway_discovery = get_mock_discovery([])
 
     with patch(
-        "homeassistant.components.xiaomi_aqara.config_flow.XiaomiGatewayDiscovery",
+        "menuai.components.xiaomi_aqara.config_flow.XiaomiGatewayDiscovery",
         return_value=mock_gateway_discovery,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 const.CONF_INTERFACE: config_flow.DEFAULT_INTERFACE,
@@ -239,7 +239,7 @@ async def test_config_flow_user_host_mac_success(hass: HomeAssistant) -> None:
     assert result["step_id"] == "settings"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_NAME: TEST_NAME},
     )
@@ -257,9 +257,9 @@ async def test_config_flow_user_host_mac_success(hass: HomeAssistant) -> None:
     }
 
 
-async def test_config_flow_user_discovery_error(hass: HomeAssistant) -> None:
+async def test_config_flow_user_discovery_error(menuai: menuai) -> None:
     """Test a failed config flow initialized by the user with no gateways discovered."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -270,10 +270,10 @@ async def test_config_flow_user_discovery_error(hass: HomeAssistant) -> None:
     mock_gateway_discovery = get_mock_discovery([])
 
     with patch(
-        "homeassistant.components.xiaomi_aqara.config_flow.XiaomiGatewayDiscovery",
+        "menuai.components.xiaomi_aqara.config_flow.XiaomiGatewayDiscovery",
         return_value=mock_gateway_discovery,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {const.CONF_INTERFACE: config_flow.DEFAULT_INTERFACE},
         )
@@ -283,9 +283,9 @@ async def test_config_flow_user_discovery_error(hass: HomeAssistant) -> None:
     assert result["errors"] == {"base": "discovery_error"}
 
 
-async def test_config_flow_user_invalid_interface(hass: HomeAssistant) -> None:
+async def test_config_flow_user_invalid_interface(menuai: menuai) -> None:
     """Test a failed config flow initialized by the user with an invalid interface."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -296,10 +296,10 @@ async def test_config_flow_user_invalid_interface(hass: HomeAssistant) -> None:
     mock_gateway_discovery = get_mock_discovery([], invalid_interface=True)
 
     with patch(
-        "homeassistant.components.xiaomi_aqara.config_flow.XiaomiGatewayDiscovery",
+        "menuai.components.xiaomi_aqara.config_flow.XiaomiGatewayDiscovery",
         return_value=mock_gateway_discovery,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {const.CONF_INTERFACE: config_flow.DEFAULT_INTERFACE},
         )
@@ -309,9 +309,9 @@ async def test_config_flow_user_invalid_interface(hass: HomeAssistant) -> None:
     assert result["errors"] == {const.CONF_INTERFACE: "invalid_interface"}
 
 
-async def test_config_flow_user_invalid_host(hass: HomeAssistant) -> None:
+async def test_config_flow_user_invalid_host(menuai: menuai) -> None:
     """Test a failed config flow initialized by the user with an invalid host."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -322,10 +322,10 @@ async def test_config_flow_user_invalid_host(hass: HomeAssistant) -> None:
     mock_gateway_discovery = get_mock_discovery([TEST_HOST], invalid_host=True)
 
     with patch(
-        "homeassistant.components.xiaomi_aqara.config_flow.XiaomiGateway",
+        "menuai.components.xiaomi_aqara.config_flow.XiaomiGateway",
         return_value=mock_gateway_discovery.gateways[TEST_HOST],
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 const.CONF_INTERFACE: config_flow.DEFAULT_INTERFACE,
@@ -339,9 +339,9 @@ async def test_config_flow_user_invalid_host(hass: HomeAssistant) -> None:
     assert result["errors"] == {"host": "invalid_host"}
 
 
-async def test_config_flow_user_invalid_mac(hass: HomeAssistant) -> None:
+async def test_config_flow_user_invalid_mac(menuai: menuai) -> None:
     """Test a failed config flow initialized by the user with an invalid mac."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -352,10 +352,10 @@ async def test_config_flow_user_invalid_mac(hass: HomeAssistant) -> None:
     mock_gateway_discovery = get_mock_discovery([TEST_HOST], invalid_mac=True)
 
     with patch(
-        "homeassistant.components.xiaomi_aqara.config_flow.XiaomiGateway",
+        "menuai.components.xiaomi_aqara.config_flow.XiaomiGateway",
         return_value=mock_gateway_discovery.gateways[TEST_HOST],
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 const.CONF_INTERFACE: config_flow.DEFAULT_INTERFACE,
@@ -369,9 +369,9 @@ async def test_config_flow_user_invalid_mac(hass: HomeAssistant) -> None:
     assert result["errors"] == {"mac": "invalid_mac"}
 
 
-async def test_config_flow_user_invalid_key(hass: HomeAssistant) -> None:
+async def test_config_flow_user_invalid_key(menuai: menuai) -> None:
     """Test a failed config flow initialized by the user with an invalid key."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -382,10 +382,10 @@ async def test_config_flow_user_invalid_key(hass: HomeAssistant) -> None:
     mock_gateway_discovery = get_mock_discovery([TEST_HOST], invalid_key=True)
 
     with patch(
-        "homeassistant.components.xiaomi_aqara.config_flow.XiaomiGatewayDiscovery",
+        "menuai.components.xiaomi_aqara.config_flow.XiaomiGatewayDiscovery",
         return_value=mock_gateway_discovery,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {const.CONF_INTERFACE: config_flow.DEFAULT_INTERFACE},
         )
@@ -394,7 +394,7 @@ async def test_config_flow_user_invalid_key(hass: HomeAssistant) -> None:
     assert result["step_id"] == "settings"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {const.CONF_KEY: TEST_KEY, CONF_NAME: TEST_NAME},
     )
@@ -404,9 +404,9 @@ async def test_config_flow_user_invalid_key(hass: HomeAssistant) -> None:
     assert result["errors"] == {const.CONF_KEY: "invalid_key"}
 
 
-async def test_zeroconf_success(hass: HomeAssistant) -> None:
+async def test_zeroconf_success(menuai: menuai) -> None:
     """Test a successful zeroconf discovery of a xiaomi aqara gateway."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -424,7 +424,7 @@ async def test_zeroconf_success(hass: HomeAssistant) -> None:
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {const.CONF_INTERFACE: config_flow.DEFAULT_INTERFACE},
     )
@@ -433,7 +433,7 @@ async def test_zeroconf_success(hass: HomeAssistant) -> None:
     assert result["step_id"] == "settings"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {const.CONF_KEY: TEST_KEY, CONF_NAME: TEST_NAME},
     )
@@ -451,9 +451,9 @@ async def test_zeroconf_success(hass: HomeAssistant) -> None:
     }
 
 
-async def test_zeroconf_missing_data(hass: HomeAssistant) -> None:
+async def test_zeroconf_missing_data(menuai: menuai) -> None:
     """Test a failed zeroconf discovery because of missing data."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -471,9 +471,9 @@ async def test_zeroconf_missing_data(hass: HomeAssistant) -> None:
     assert result["reason"] == "not_xiaomi_aqara"
 
 
-async def test_zeroconf_unknown_device(hass: HomeAssistant) -> None:
+async def test_zeroconf_unknown_device(menuai: menuai) -> None:
     """Test a failed zeroconf discovery because of a unknown device."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         const.DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(

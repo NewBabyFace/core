@@ -8,7 +8,7 @@ from enocean.communicators import SerialCommunicator
 from enocean.protocol.packet import RadioPacket
 import serial
 
-from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
+from menuai.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
 
 from .const import SIGNAL_RECEIVE_MESSAGE, SIGNAL_SEND_MESSAGE
 
@@ -22,7 +22,7 @@ class EnOceanDongle:
     creating devices if needed, and dispatching messages to platforms.
     """
 
-    def __init__(self, hass, serial_path):
+    def __init__(self, menuai, serial_path):
         """Initialize the EnOcean dongle."""
 
         self._communicator = SerialCommunicator(
@@ -30,14 +30,14 @@ class EnOceanDongle:
         )
         self.serial_path = serial_path
         self.identifier = basename(normpath(serial_path))
-        self.hass = hass
+        self.menuai = menuai
         self.dispatcher_disconnect_handle = None
 
     async def async_setup(self):
         """Finish the setup of the bridge and supported platforms."""
         self._communicator.start()
         self.dispatcher_disconnect_handle = async_dispatcher_connect(
-            self.hass, SIGNAL_SEND_MESSAGE, self._send_message_callback
+            self.menuai, SIGNAL_SEND_MESSAGE, self._send_message_callback
         )
 
     def unload(self):
@@ -59,7 +59,7 @@ class EnOceanDongle:
 
         if isinstance(packet, RadioPacket):
             _LOGGER.debug("Received radio packet: %s", packet)
-            dispatcher_send(self.hass, SIGNAL_RECEIVE_MESSAGE, packet)
+            dispatcher_send(self.menuai, SIGNAL_RECEIVE_MESSAGE, packet)
 
 
 def detect():

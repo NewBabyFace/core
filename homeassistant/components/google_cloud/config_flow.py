@@ -9,16 +9,16 @@ from typing import TYPE_CHECKING, Any, cast
 from google.cloud import texttospeech
 import voluptuous as vol
 
-from homeassistant.components.file_upload import process_uploaded_file
-from homeassistant.components.tts import CONF_LANG
-from homeassistant.config_entries import (
+from menuai.components.file_upload import process_uploaded_file
+from menuai.components.tts import CONF_LANG
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.core import callback
-from homeassistant.helpers.selector import (
+from menuai.core import callback
+from menuai.helpers.selector import (
     FileSelector,
     FileSelectorConfig,
     SelectSelector,
@@ -67,7 +67,7 @@ class GoogleCloudConfigFlow(ConfigFlow, domain=DOMAIN):
 
     def _parse_uploaded_file(self, uploaded_file_id: str) -> dict[str, Any]:
         """Read and parse an uploaded JSON file."""
-        with process_uploaded_file(self.hass, uploaded_file_id) as file_path:
+        with process_uploaded_file(self.menuai, uploaded_file_id) as file_path:
             contents = file_path.read_text()
         return cast(dict[str, Any], json.loads(contents))
 
@@ -78,7 +78,7 @@ class GoogleCloudConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, Any] = {}
         if user_input is not None:
             try:
-                service_account_info = await self.hass.async_add_executor_job(
+                service_account_info = await self.menuai.async_add_executor_job(
                     self._parse_uploaded_file, user_input[UPLOADED_KEY_FILE]
                 )
                 validate_service_account_info(service_account_info)
@@ -108,11 +108,11 @@ class GoogleCloudConfigFlow(ConfigFlow, domain=DOMAIN):
 
         def _read_key_file() -> dict[str, Any]:
             with open(
-                self.hass.config.path(import_data[CONF_KEY_FILE]), encoding="utf8"
+                self.menuai.config.path(import_data[CONF_KEY_FILE]), encoding="utf8"
             ) as f:
                 return cast(dict[str, Any], json.load(f))
 
-        service_account_info = await self.hass.async_add_executor_job(_read_key_file)
+        service_account_info = await self.menuai.async_add_executor_job(_read_key_file)
         try:
             validate_service_account_info(service_account_info)
         except ValueError:

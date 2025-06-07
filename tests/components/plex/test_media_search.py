@@ -6,32 +6,32 @@ from plexapi.exceptions import BadRequest, NotFound
 import pytest
 import requests_mock
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     ATTR_MEDIA_CONTENT_ID,
     ATTR_MEDIA_CONTENT_TYPE,
     DOMAIN as MEDIA_PLAYER_DOMAIN,
     SERVICE_PLAY_MEDIA,
     MediaType,
 )
-from homeassistant.components.plex.const import DOMAIN
-from homeassistant.components.plex.errors import MediaNotFound
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
+from menuai.components.plex.const import DOMAIN
+from menuai.components.plex.errors import MediaNotFound
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
 
 
 async def test_media_lookups(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_plex_server,
     requests_mock: requests_mock.Mocker,
     playqueue_created,
 ) -> None:
     """Test media lookups to Plex server."""
     # Plex Key searches
-    media_player_id = hass.states.async_entity_ids("media_player")[0]
+    media_player_id = menuai.states.async_entity_ids("media_player")[0]
     requests_mock.post("/playqueues", text=playqueue_created)
     requests_mock.get("/player/playback/playMedia", status_code=200)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_PLAY_MEDIA,
         {
@@ -45,7 +45,7 @@ async def test_media_lookups(
         pytest.raises(MediaNotFound) as excinfo,
         patch("plexapi.server.PlexServer.fetchItem", side_effect=NotFound),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {
@@ -69,7 +69,7 @@ async def test_media_lookups(
         ) as plex_account_user,
     ):
         plex_account_user.return_value.get_token.return_value = "token"
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {
@@ -84,7 +84,7 @@ async def test_media_lookups(
 
     # TV show searches
     with pytest.raises(MediaNotFound) as excinfo:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {
@@ -100,7 +100,7 @@ async def test_media_lookups(
         "plexapi.library.LibrarySection.search",
         __qualname__="search",
     ) as search:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {
@@ -112,7 +112,7 @@ async def test_media_lookups(
         )
         search.assert_called_with(**{"show.title": "TV Show", "libtype": "show"})
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {
@@ -126,7 +126,7 @@ async def test_media_lookups(
             **{"episode.title": "An Episode", "libtype": "episode"}
         )
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {
@@ -140,7 +140,7 @@ async def test_media_lookups(
             **{"show.title": "TV Show", "season.index": 1, "libtype": "season"}
         )
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {
@@ -159,7 +159,7 @@ async def test_media_lookups(
             }
         )
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {
@@ -171,7 +171,7 @@ async def test_media_lookups(
         )
         search.assert_called_with(**{"artist.title": "Artist", "libtype": "artist"})
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {
@@ -183,7 +183,7 @@ async def test_media_lookups(
         )
         search.assert_called_with(**{"album.title": "Album", "libtype": "album"})
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {
@@ -197,7 +197,7 @@ async def test_media_lookups(
             **{"artist.title": "Artist", "track.title": "Track 3", "libtype": "track"}
         )
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {
@@ -211,7 +211,7 @@ async def test_media_lookups(
             **{"artist.title": "Artist", "album.title": "Album", "libtype": "album"}
         )
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {
@@ -230,7 +230,7 @@ async def test_media_lookups(
             }
         )
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {
@@ -250,7 +250,7 @@ async def test_media_lookups(
         )
 
         # Movie searches
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {
@@ -262,7 +262,7 @@ async def test_media_lookups(
         )
         search.assert_called_with(**{"movie.title": "Movie 1", "libtype": None})
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {
@@ -275,7 +275,7 @@ async def test_media_lookups(
         search.assert_called_with(title="Movie 1", libtype=None)
 
     with pytest.raises(MediaNotFound) as excinfo:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {
@@ -295,7 +295,7 @@ async def test_media_lookups(
             __qualname__="search",
         ),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {
@@ -308,7 +308,7 @@ async def test_media_lookups(
     assert "Problem in query" in str(excinfo.value)
 
     # Playlist searches
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_PLAY_MEDIA,
         {
@@ -320,7 +320,7 @@ async def test_media_lookups(
     )
 
     with pytest.raises(MediaNotFound) as excinfo:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {
@@ -333,7 +333,7 @@ async def test_media_lookups(
     assert "Playlist 'Not a Playlist' not found" in str(excinfo.value)
 
     with pytest.raises(MediaNotFound) as excinfo:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {

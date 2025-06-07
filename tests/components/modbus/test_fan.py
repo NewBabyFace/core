@@ -3,9 +3,9 @@
 from pymodbus.exceptions import ModbusException
 import pytest
 
-from homeassistant.components.fan import DOMAIN as FAN_DOMAIN
-from homeassistant.components.homeassistant import SERVICE_UPDATE_ENTITY
-from homeassistant.components.modbus.const import (
+from menuai.components.fan import DOMAIN as FAN_DOMAIN
+from menuai.components.menuai import SERVICE_UPDATE_ENTITY
+from menuai.components.modbus.const import (
     CALL_TYPE_COIL,
     CALL_TYPE_DISCRETE,
     CALL_TYPE_REGISTER_HOLDING,
@@ -19,7 +19,7 @@ from homeassistant.components.modbus.const import (
     CONF_WRITE_TYPE,
     MODBUS_DOMAIN,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     CONF_ADDRESS,
     CONF_COMMAND_OFF,
@@ -34,8 +34,8 @@ from homeassistant.const import (
     STATE_ON,
     STATE_UNAVAILABLE,
 )
-from homeassistant.core import DOMAIN as HOMEASSISTANT_DOMAIN, HomeAssistant, State
-from homeassistant.setup import async_setup_component
+from menuai.core import DOMAIN as menuai_DOMAIN, menuai, State
+from menuai.setup import async_setup_component
 
 from .conftest import TEST_ENTITY_NAME, ReadResult
 
@@ -145,9 +145,9 @@ ENTITY_ID2 = f"{ENTITY_ID}_2"
         },
     ],
 )
-async def test_config_fan(hass: HomeAssistant, mock_modbus) -> None:
+async def test_config_fan(menuai: menuai, mock_modbus) -> None:
     """Run configuration test for fan."""
-    assert FAN_DOMAIN in hass.config.components
+    assert FAN_DOMAIN in menuai.config.components
 
 
 @pytest.mark.parametrize(
@@ -210,9 +210,9 @@ async def test_config_fan(hass: HomeAssistant, mock_modbus) -> None:
         ),
     ],
 )
-async def test_all_fan(hass: HomeAssistant, mock_do_cycle, expected) -> None:
+async def test_all_fan(menuai: menuai, mock_do_cycle, expected) -> None:
     """Run test for given config."""
-    assert hass.states.get(ENTITY_ID).state == expected
+    assert menuai.states.get(ENTITY_ID).state == expected
 
 
 @pytest.mark.parametrize(
@@ -235,10 +235,10 @@ async def test_all_fan(hass: HomeAssistant, mock_do_cycle, expected) -> None:
     ],
 )
 async def test_restore_state_fan(
-    hass: HomeAssistant, mock_test_state, mock_modbus
+    menuai: menuai, mock_test_state, mock_modbus
 ) -> None:
     """Run test for fan restore state."""
-    assert hass.states.get(ENTITY_ID).state == STATE_ON
+    assert menuai.states.get(ENTITY_ID).state == STATE_ON
 
 
 @pytest.mark.parametrize(
@@ -264,52 +264,52 @@ async def test_restore_state_fan(
     ],
 )
 async def test_fan_service_turn(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     mock_modbus,
 ) -> None:
     """Run test for service turn_on/turn_off."""
 
-    assert MODBUS_DOMAIN in hass.config.components
+    assert MODBUS_DOMAIN in menuai.config.components
 
-    assert hass.states.get(ENTITY_ID).state == STATE_OFF
-    await hass.services.async_call(
+    assert menuai.states.get(ENTITY_ID).state == STATE_OFF
+    await menuai.services.async_call(
         FAN_DOMAIN, SERVICE_TURN_ON, service_data={ATTR_ENTITY_ID: ENTITY_ID}
     )
-    await hass.async_block_till_done()
-    assert hass.states.get(ENTITY_ID).state == STATE_ON
-    await hass.services.async_call(
+    await menuai.async_block_till_done()
+    assert menuai.states.get(ENTITY_ID).state == STATE_ON
+    await menuai.services.async_call(
         FAN_DOMAIN, SERVICE_TURN_OFF, service_data={ATTR_ENTITY_ID: ENTITY_ID}
     )
-    await hass.async_block_till_done()
-    assert hass.states.get(ENTITY_ID).state == STATE_OFF
+    await menuai.async_block_till_done()
+    assert menuai.states.get(ENTITY_ID).state == STATE_OFF
 
     mock_modbus.read_holding_registers.return_value = ReadResult([0x01])
-    assert hass.states.get(ENTITY_ID2).state == STATE_OFF
-    await hass.services.async_call(
+    assert menuai.states.get(ENTITY_ID2).state == STATE_OFF
+    await menuai.services.async_call(
         FAN_DOMAIN, SERVICE_TURN_ON, service_data={ATTR_ENTITY_ID: ENTITY_ID2}
     )
-    await hass.async_block_till_done()
-    assert hass.states.get(ENTITY_ID2).state == STATE_ON
+    await menuai.async_block_till_done()
+    assert menuai.states.get(ENTITY_ID2).state == STATE_ON
     mock_modbus.read_holding_registers.return_value = ReadResult([0x00])
-    await hass.services.async_call(
+    await menuai.services.async_call(
         FAN_DOMAIN, SERVICE_TURN_OFF, service_data={ATTR_ENTITY_ID: ENTITY_ID2}
     )
-    await hass.async_block_till_done()
-    assert hass.states.get(ENTITY_ID2).state == STATE_OFF
+    await menuai.async_block_till_done()
+    assert menuai.states.get(ENTITY_ID2).state == STATE_OFF
 
     mock_modbus.write_register.side_effect = ModbusException("fail write_")
-    await hass.services.async_call(
+    await menuai.services.async_call(
         FAN_DOMAIN, SERVICE_TURN_ON, service_data={ATTR_ENTITY_ID: ENTITY_ID2}
     )
-    await hass.async_block_till_done()
-    assert hass.states.get(ENTITY_ID2).state == STATE_UNAVAILABLE
+    await menuai.async_block_till_done()
+    assert menuai.states.get(ENTITY_ID2).state == STATE_UNAVAILABLE
     mock_modbus.write_coil.side_effect = ModbusException("fail write_")
-    await hass.services.async_call(
+    await menuai.services.async_call(
         FAN_DOMAIN, SERVICE_TURN_OFF, service_data={ATTR_ENTITY_ID: ENTITY_ID}
     )
-    await hass.async_block_till_done()
-    assert hass.states.get(ENTITY_ID).state == STATE_UNAVAILABLE
+    await menuai.async_block_till_done()
+    assert menuai.states.get(ENTITY_ID).state == STATE_UNAVAILABLE
 
 
 @pytest.mark.parametrize(
@@ -327,34 +327,34 @@ async def test_fan_service_turn(
         },
     ],
 )
-async def test_service_fan_update(hass: HomeAssistant, mock_modbus_ha) -> None:
-    """Run test for service homeassistant.update_entity."""
-    await hass.services.async_call(
-        HOMEASSISTANT_DOMAIN,
+async def test_service_fan_update(menuai: menuai, mock_modbus_ha) -> None:
+    """Run test for service menuai.update_entity."""
+    await menuai.services.async_call(
+        menuai_DOMAIN,
         SERVICE_UPDATE_ENTITY,
         {ATTR_ENTITY_ID: ENTITY_ID},
         blocking=True,
     )
-    assert hass.states.get(ENTITY_ID).state == STATE_OFF
+    assert menuai.states.get(ENTITY_ID).state == STATE_OFF
     mock_modbus_ha.read_coils.return_value = ReadResult([0x01])
-    await hass.services.async_call(
-        HOMEASSISTANT_DOMAIN,
+    await menuai.services.async_call(
+        menuai_DOMAIN,
         SERVICE_UPDATE_ENTITY,
         {ATTR_ENTITY_ID: ENTITY_ID},
         blocking=True,
     )
-    assert hass.states.get(ENTITY_ID).state == STATE_ON
+    assert menuai.states.get(ENTITY_ID).state == STATE_ON
 
 
 async def test_no_discovery_info_fan(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test setup without discovery info."""
-    assert FAN_DOMAIN not in hass.config.components
+    assert FAN_DOMAIN not in menuai.config.components
     assert await async_setup_component(
-        hass,
+        menuai,
         FAN_DOMAIN,
         {FAN_DOMAIN: {CONF_PLATFORM: MODBUS_DOMAIN}},
     )
-    await hass.async_block_till_done()
-    assert FAN_DOMAIN in hass.config.components
+    await menuai.async_block_till_done()
+    assert FAN_DOMAIN in menuai.config.components

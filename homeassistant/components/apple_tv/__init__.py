@@ -13,9 +13,9 @@ from pyatv.const import DeviceModel, Protocol
 from pyatv.convert import model_str
 from pyatv.interface import AppleTV as AppleTVInterface, DeviceListener
 
-from homeassistant.components import zeroconf
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.components import zeroconf
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_CONNECTIONS,
     ATTR_IDENTIFIERS,
     ATTR_MANUFACTURER,
@@ -25,14 +25,14 @@ from homeassistant.const import (
     ATTR_SW_VERSION,
     CONF_ADDRESS,
     CONF_NAME,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     Platform,
 )
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.dispatcher import async_dispatcher_send
+from menuai.core import Event, menuai, callback
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import device_registry as dr
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.dispatcher import async_dispatcher_send
 
 from .const import (
     CONF_CREDENTIALS,
@@ -76,9 +76,9 @@ DEVICE_EXCEPTIONS = (
 type AppleTvConfigEntry = ConfigEntry[AppleTVManager]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: AppleTvConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: AppleTvConfigEntry) -> bool:
     """Set up a config entry for Apple TV."""
-    manager = AppleTVManager(hass, entry)
+    manager = AppleTVManager(menuai, entry)
 
     if manager.is_on:
         address = entry.data[CONF_ADDRESS]
@@ -99,24 +99,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: AppleTvConfigEntry) -> b
 
     entry.runtime_data = manager
 
-    async def on_hass_stop(event: Event) -> None:
-        """Stop push updates when hass stops."""
+    async def on_menuai_stop(event: Event) -> None:
+        """Stop push updates when menuai stops."""
         await manager.disconnect()
 
     entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, on_hass_stop)
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, on_menuai_stop)
     )
     entry.async_on_unload(manager.disconnect)
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     await manager.init()
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload an Apple TV config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 class AppleTVManager(DeviceListener):
@@ -132,10 +132,10 @@ class AppleTVManager(DeviceListener):
     _connection_was_lost = False
     _task: asyncio.Task[None] | None = None
 
-    def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: ConfigEntry) -> None:
         """Initialize power manager."""
         self.config_entry = config_entry
-        self.hass = hass
+        self.menuai = menuai
         self.is_on = not config_entry.options.get(CONF_START_OFF, False)
 
     async def init(self) -> None:
@@ -192,7 +192,7 @@ class AppleTVManager(DeviceListener):
         """Start background connect loop to device."""
         if not self._task and self.atv is None and self.is_on:
             self._task = self.config_entry.async_create_background_task(
-                self.hass,
+                self.menuai,
                 self._connect_loop(),
                 name=f"apple_tv connect loop {self.config_entry.title}",
                 eager_start=True,
@@ -222,7 +222,7 @@ class AppleTVManager(DeviceListener):
         try:
             await self._connect_once(raise_missing_credentials)
         except exceptions.AuthenticationError:
-            self.config_entry.async_start_reauth(self.hass)
+            self.config_entry.async_start_reauth(self.menuai)
             await self.disconnect()
             _LOGGER.exception(
                 "Authentication failed for %s, try reconfiguring device",
@@ -267,7 +267,7 @@ class AppleTVManager(DeviceListener):
             config_entry.data.get(CONF_IDENTIFIERS, [config_entry.unique_id])
         )
         address: str = config_entry.data[CONF_ADDRESS]
-        hass = self.hass
+        menuai = self.menuai
 
         # Only scan for and set up protocols that was successfully paired
         protocols = {
@@ -275,9 +275,9 @@ class AppleTVManager(DeviceListener):
         }
 
         _LOGGER.debug("Discovering device %s", config_entry.title)
-        aiozc = await zeroconf.async_get_async_instance(hass)
+        aiozc = await zeroconf.async_get_async_instance(menuai)
         atvs = await scan(
-            hass.loop,
+            menuai.loop,
             identifier=identifiers,
             protocol=protocols,
             hosts=[address],
@@ -323,8 +323,8 @@ class AppleTVManager(DeviceListener):
             return
 
         _LOGGER.debug("Connecting to device %s", self.config_entry.data[CONF_NAME])
-        session = async_get_clientsession(self.hass)
-        self.atv = await connect(conf, self.hass.loop, session=session)
+        session = async_get_clientsession(self.menuai)
+        self.atv = await connect(conf, self.menuai.loop, session=session)
         self.atv.listener = self
 
         self._dispatch_send(SIGNAL_CONNECTED, self.atv)
@@ -366,7 +366,7 @@ class AppleTVManager(DeviceListener):
             if dev_info.mac:
                 attrs[ATTR_CONNECTIONS] = {(dr.CONNECTION_NETWORK_MAC, dev_info.mac)}
 
-        device_registry = dr.async_get(self.hass)
+        device_registry = dr.async_get(self.menuai)
         device_registry.async_get_or_create(
             config_entry_id=self.config_entry.entry_id, **attrs
         )
@@ -379,12 +379,12 @@ class AppleTVManager(DeviceListener):
     def _address_updated(self, address: str) -> None:
         """Update cached address in config entry."""
         _LOGGER.debug("Changing address to %s", address)
-        self.hass.config_entries.async_update_entry(
+        self.menuai.config_entries.async_update_entry(
             self.config_entry, data={**self.config_entry.data, CONF_ADDRESS: address}
         )
 
     def _dispatch_send(self, signal: str, *args: Any) -> None:
         """Dispatch a signal to all entities managed by this manager."""
         async_dispatcher_send(
-            self.hass, f"{signal}_{self.config_entry.unique_id}", *args
+            self.menuai, f"{signal}_{self.config_entry.unique_id}", *args
         )

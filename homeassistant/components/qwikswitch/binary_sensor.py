@@ -6,10 +6,10 @@ import logging
 
 from pyqwikswitch.qwikswitch import SENSORS
 
-from homeassistant.components.binary_sensor import BinarySensorEntity
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.binary_sensor import BinarySensorEntity
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import DOMAIN
 from .entity import QSEntity
@@ -18,7 +18,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     _: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -27,7 +27,7 @@ async def async_setup_platform(
     if discovery_info is None:
         return
 
-    qsusb = hass.data[DOMAIN]
+    qsusb = menuai.data[DOMAIN]
     _LOGGER.debug("Setup qwikswitch.binary_sensor %s, %s", qsusb, discovery_info)
     devs = [QSBinarySensor(sensor) for sensor in discovery_info[DOMAIN]]
     add_entities(devs)

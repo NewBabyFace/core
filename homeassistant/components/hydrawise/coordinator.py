@@ -7,10 +7,10 @@ from dataclasses import dataclass, field
 from pydrawise import HydrawiseBase
 from pydrawise.schema import Controller, ControllerWaterUseSummary, Sensor, User, Zone
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-from homeassistant.util.dt import now
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.util.dt import now
 
 from .const import DOMAIN, LOGGER, MAIN_SCAN_INTERVAL, WATER_USE_SCAN_INTERVAL
 
@@ -55,13 +55,13 @@ class HydrawiseMainDataUpdateCoordinator(HydrawiseDataUpdateCoordinator):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: HydrawiseConfigEntry,
         api: HydrawiseBase,
     ) -> None:
         """Initialize HydrawiseDataUpdateCoordinator."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -96,14 +96,14 @@ class HydrawiseWaterUseDataUpdateCoordinator(HydrawiseDataUpdateCoordinator):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: HydrawiseConfigEntry,
         api: HydrawiseBase,
         main_coordinator: HydrawiseMainDataUpdateCoordinator,
     ) -> None:
         """Initialize HydrawiseWaterUseDataUpdateCoordinator."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name=f"{DOMAIN} water use",

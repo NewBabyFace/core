@@ -2,7 +2,7 @@
 
 import pytest
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     ATTR_APP_ID,
     ATTR_APP_NAME,
     ATTR_ENTITY_PICTURE_LOCAL,
@@ -29,7 +29,7 @@ from homeassistant.components.media_player import (
     ATTR_MEDIA_VOLUME_MUTED,
     ATTR_SOUND_MODE,
 )
-from homeassistant.components.media_player.significant_change import (
+from menuai.components.media_player.significant_change import (
     async_check_significant_change,
 )
 

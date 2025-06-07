@@ -11,15 +11,15 @@ from unittest.mock import sentinel
 from freezegun import freeze_time
 import pytest
 
-from homeassistant import core as ha
-from homeassistant.components import recorder
-from homeassistant.components.recorder import Recorder, history
-from homeassistant.components.recorder.filters import Filters
-from homeassistant.components.recorder.models import process_timestamp
-from homeassistant.components.recorder.util import session_scope
-from homeassistant.core import HomeAssistant, State
-from homeassistant.helpers.json import JSONEncoder
-from homeassistant.util import dt as dt_util
+from menuai import core as ha
+from menuai.components import recorder
+from menuai.components.recorder import Recorder, history
+from menuai.components.recorder.filters import Filters
+from menuai.components.recorder.models import process_timestamp
+from menuai.components.recorder.util import session_scope
+from menuai.core import menuai, State
+from menuai.helpers.json import JSONEncoder
+from menuai.util import dt as dt_util
 
 from .common import (
     assert_dict_of_states_equal_without_context_and_last_changed,
@@ -36,16 +36,16 @@ from tests.typing import RecorderInstanceContextManager
 
 
 @pytest.fixture
-async def mock_recorder_before_hass(
+async def mock_recorder_before_menuai(
     async_test_recorder: RecorderInstanceContextManager,
 ) -> None:
     """Set up recorder."""
 
 
 @pytest.fixture(autouse=True)
-def db_schema_42(hass: HomeAssistant) -> Generator[None]:
+def db_schema_42(menuai: menuai) -> Generator[None]:
     """Fixture to initialize the db with the old schema 42."""
-    with old_db_schema(hass, "42"):
+    with old_db_schema(menuai, "42"):
         yield
 
 
@@ -55,21 +55,21 @@ def setup_recorder(db_schema_42, recorder_mock: Recorder) -> recorder.Recorder:
 
 
 async def test_get_full_significant_states_with_session_entity_no_matches(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test getting states at a specific point in time for entities that never have been recorded."""
     now = dt_util.utcnow()
     time_before_recorder_ran = now - timedelta(days=1000)
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         assert (
             history.get_full_significant_states_with_session(
-                hass, session, time_before_recorder_ran, now, entity_ids=["demo.id"]
+                menuai, session, time_before_recorder_ran, now, entity_ids=["demo.id"]
             )
             == {}
         )
         assert (
             history.get_full_significant_states_with_session(
-                hass,
+                menuai,
                 session,
                 time_before_recorder_ran,
                 now,
@@ -80,15 +80,15 @@ async def test_get_full_significant_states_with_session_entity_no_matches(
 
 
 async def test_significant_states_with_session_entity_minimal_response_no_matches(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test getting states at a specific point in time for entities that never have been recorded."""
     now = dt_util.utcnow()
     time_before_recorder_ran = now - timedelta(days=1000)
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         assert (
             history.get_significant_states_with_session(
-                hass,
+                menuai,
                 session,
                 time_before_recorder_ran,
                 now,
@@ -99,7 +99,7 @@ async def test_significant_states_with_session_entity_minimal_response_no_matche
         )
         assert (
             history.get_significant_states_with_session(
-                hass,
+                menuai,
                 session,
                 time_before_recorder_ran,
                 now,
@@ -111,16 +111,16 @@ async def test_significant_states_with_session_entity_minimal_response_no_matche
 
 
 async def test_significant_states_with_session_single_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test get_significant_states_with_session with a single entity."""
-    hass.states.async_set("demo.id", "any", {"attr": True})
-    hass.states.async_set("demo.id", "any2", {"attr": True})
-    await async_wait_recording_done(hass)
+    menuai.states.async_set("demo.id", "any", {"attr": True})
+    menuai.states.async_set("demo.id", "any2", {"attr": True})
+    await async_wait_recording_done(menuai)
     now = dt_util.utcnow()
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         states = history.get_significant_states_with_session(
-            hass,
+            menuai,
             session,
             now - timedelta(days=1),
             now,
@@ -140,15 +140,15 @@ async def test_significant_states_with_session_single_entity(
     ],
 )
 async def test_state_changes_during_period(
-    hass: HomeAssistant, attributes, no_attributes, limit
+    menuai: menuai, attributes, no_attributes, limit
 ) -> None:
     """Test state change during period."""
     entity_id = "media_player.test"
 
     def set_state(state):
         """Set the state."""
-        hass.states.async_set(entity_id, state, attributes)
-        return hass.states.get(entity_id)
+        menuai.states.async_set(entity_id, state, attributes)
+        return menuai.states.get(entity_id)
 
     start = dt_util.utcnow()
     point = start + timedelta(seconds=1)
@@ -169,25 +169,25 @@ async def test_state_changes_during_period(
         freezer.move_to(end)
         set_state("Netflix")
         set_state("Plex")
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
     hist = history.state_changes_during_period(
-        hass, start, end, entity_id, no_attributes, limit=limit
+        menuai, start, end, entity_id, no_attributes, limit=limit
     )
 
     assert_multiple_states_equal_without_context(states[:limit], hist[entity_id])
 
 
 async def test_state_changes_during_period_last_reported(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test state change during period."""
     entity_id = "media_player.test"
 
     def set_state(state):
         """Set the state."""
-        hass.states.async_set(entity_id, state)
-        return ha.State.from_dict(hass.states.get(entity_id).as_dict())
+        menuai.states.async_set(entity_id, state)
+        return ha.State.from_dict(menuai.states.get(entity_id).as_dict())
 
     start = dt_util.utcnow()
     point1 = start + timedelta(seconds=1)
@@ -205,23 +205,23 @@ async def test_state_changes_during_period_last_reported(
 
         freezer.move_to(end)
         set_state("Netflix")
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    hist = history.state_changes_during_period(hass, start, end, entity_id)
+    hist = history.state_changes_during_period(menuai, start, end, entity_id)
 
     assert_multiple_states_equal_without_context(states, hist[entity_id])
 
 
 async def test_state_changes_during_period_descending(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test state change during period descending."""
     entity_id = "media_player.test"
 
     def set_state(state):
         """Set the state."""
-        hass.states.async_set(entity_id, state, {"any": 1})
-        return hass.states.get(entity_id)
+        menuai.states.async_set(entity_id, state, {"any": 1})
+        return menuai.states.get(entity_id)
 
     start = dt_util.utcnow().replace(microsecond=0)
     point = start + timedelta(seconds=1)
@@ -249,16 +249,16 @@ async def test_state_changes_during_period_descending(
         freezer.move_to(end)
         set_state("Netflix")
         set_state("Plex")
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
     hist = history.state_changes_during_period(
-        hass, start, end, entity_id, no_attributes=False, descending=False
+        menuai, start, end, entity_id, no_attributes=False, descending=False
     )
 
     assert_multiple_states_equal_without_context(states, hist[entity_id])
 
     hist = history.state_changes_during_period(
-        hass, start, end, entity_id, no_attributes=False, descending=True
+        menuai, start, end, entity_id, no_attributes=False, descending=True
     )
     assert_multiple_states_equal_without_context(
         states, list(reversed(list(hist[entity_id])))
@@ -266,7 +266,7 @@ async def test_state_changes_during_period_descending(
 
     start_time = point2 + timedelta(microseconds=10)
     hist = history.state_changes_during_period(
-        hass,
+        menuai,
         start_time,  # Pick a point where we will generate a start time state
         end,
         entity_id,
@@ -290,7 +290,7 @@ async def test_state_changes_during_period_descending(
         > hist_states[2].last_changed
     )
     hist = history.state_changes_during_period(
-        hass,
+        menuai,
         start_time,  # Pick a point where we will generate a start time state
         end,
         entity_id,
@@ -315,14 +315,14 @@ async def test_state_changes_during_period_descending(
     )
 
 
-async def test_get_last_state_changes(hass: HomeAssistant) -> None:
+async def test_get_last_state_changes(menuai: menuai) -> None:
     """Test number of state changes."""
     entity_id = "sensor.test"
 
     def set_state(state):
         """Set the state."""
-        hass.states.async_set(entity_id, state)
-        return hass.states.get(entity_id)
+        menuai.states.async_set(entity_id, state)
+        return menuai.states.get(entity_id)
 
     start = dt_util.utcnow() - timedelta(minutes=2)
     point = start + timedelta(minutes=1)
@@ -337,23 +337,23 @@ async def test_get_last_state_changes(hass: HomeAssistant) -> None:
 
         freezer.move_to(point2)
         states.append(set_state("3"))
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    hist = history.get_last_state_changes(hass, 2, entity_id)
+    hist = history.get_last_state_changes(menuai, 2, entity_id)
 
     assert_multiple_states_equal_without_context(states, hist[entity_id])
 
 
 async def test_get_last_state_changes_last_reported(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test number of state changes."""
     entity_id = "sensor.test"
 
     def set_state(state):
         """Set the state."""
-        hass.states.async_set(entity_id, state)
-        return ha.State.from_dict(hass.states.get(entity_id).as_dict())
+        menuai.states.async_set(entity_id, state)
+        return ha.State.from_dict(menuai.states.get(entity_id).as_dict())
 
     start = dt_util.utcnow() - timedelta(minutes=2)
     point = start + timedelta(minutes=1)
@@ -368,21 +368,21 @@ async def test_get_last_state_changes_last_reported(
 
         freezer.move_to(point2)
         states.append(set_state("2"))
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    hist = history.get_last_state_changes(hass, 2, entity_id)
+    hist = history.get_last_state_changes(menuai, 2, entity_id)
 
     assert_multiple_states_equal_without_context(states, hist[entity_id])
 
 
-async def test_get_last_state_change(hass: HomeAssistant) -> None:
+async def test_get_last_state_change(menuai: menuai) -> None:
     """Test getting the last state change for an entity."""
     entity_id = "sensor.test"
 
     def set_state(state):
         """Set the state."""
-        hass.states.async_set(entity_id, state)
-        return hass.states.get(entity_id)
+        menuai.states.async_set(entity_id, state)
+        return menuai.states.get(entity_id)
 
     start = dt_util.utcnow() - timedelta(minutes=2)
     point = start + timedelta(minutes=1)
@@ -397,15 +397,15 @@ async def test_get_last_state_change(hass: HomeAssistant) -> None:
 
         freezer.move_to(point2)
         states.append(set_state("3"))
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    hist = history.get_last_state_changes(hass, 1, entity_id)
+    hist = history.get_last_state_changes(menuai, 1, entity_id)
 
     assert_multiple_states_equal_without_context(states, hist[entity_id])
 
 
 async def test_ensure_state_can_be_copied(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Ensure a state can pass though copy().
 
@@ -416,8 +416,8 @@ async def test_ensure_state_can_be_copied(
 
     def set_state(state):
         """Set the state."""
-        hass.states.async_set(entity_id, state)
-        return hass.states.get(entity_id)
+        menuai.states.async_set(entity_id, state)
+        return menuai.states.get(entity_id)
 
     start = dt_util.utcnow() - timedelta(minutes=2)
     point = start + timedelta(minutes=1)
@@ -427,30 +427,30 @@ async def test_ensure_state_can_be_copied(
 
         freezer.move_to(point)
         set_state("2")
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    hist = history.get_last_state_changes(hass, 2, entity_id)
+    hist = history.get_last_state_changes(menuai, 2, entity_id)
 
     assert_states_equal_without_context(copy(hist[entity_id][0]), hist[entity_id][0])
     assert_states_equal_without_context(copy(hist[entity_id][1]), hist[entity_id][1])
 
 
-async def test_get_significant_states(hass: HomeAssistant) -> None:
+async def test_get_significant_states(menuai: menuai) -> None:
     """Test that only significant states are returned.
 
     We should get back every thermostat change that
     includes an attribute change, but only the state updates for
     media player (attribute changes are not significant and not returned).
     """
-    zero, four, states = record_states(hass)
-    await async_wait_recording_done(hass)
+    zero, four, states = record_states(menuai)
+    await async_wait_recording_done(menuai)
 
-    hist = history.get_significant_states(hass, zero, four, entity_ids=list(states))
+    hist = history.get_significant_states(menuai, zero, four, entity_ids=list(states))
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
 
 
 async def test_get_significant_states_minimal_response(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test that only significant states are returned.
 
@@ -461,11 +461,11 @@ async def test_get_significant_states_minimal_response(
     includes an attribute change, but only the state updates for
     media player (attribute changes are not significant and not returned).
     """
-    zero, four, states = record_states(hass)
-    await async_wait_recording_done(hass)
+    zero, four, states = record_states(menuai)
+    await async_wait_recording_done(menuai)
 
     hist = history.get_significant_states(
-        hass, zero, four, minimal_response=True, entity_ids=list(states)
+        menuai, zero, four, minimal_response=True, entity_ids=list(states)
     )
     entites_with_reducable_states = [
         "media_player.test",
@@ -520,7 +520,7 @@ async def test_get_significant_states_minimal_response(
 
 @pytest.mark.parametrize("time_zone", ["Europe/Berlin", "US/Hawaii", "UTC"])
 async def test_get_significant_states_with_initial(
-    time_zone, hass: HomeAssistant
+    time_zone, menuai: menuai
 ) -> None:
     """Test that only significant states are returned.
 
@@ -528,9 +528,9 @@ async def test_get_significant_states_with_initial(
     includes an attribute change, but only the state updates for
     media player (attribute changes are not significant and not returned).
     """
-    await hass.config.async_set_time_zone(time_zone)
-    zero, four, states = record_states(hass)
-    await async_wait_recording_done(hass)
+    await menuai.config.async_set_time_zone(time_zone)
+    zero, four, states = record_states(menuai)
+    await async_wait_recording_done(menuai)
 
     one_and_half = zero + timedelta(seconds=1.5)
     for entity_id in states:
@@ -545,13 +545,13 @@ async def test_get_significant_states_with_initial(
                 state.last_changed = one_and_half
 
     hist = history.get_significant_states(
-        hass, one_and_half, four, include_start_time_state=True, entity_ids=list(states)
+        menuai, one_and_half, four, include_start_time_state=True, entity_ids=list(states)
     )
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
 
 
 async def test_get_significant_states_without_initial(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test that only significant states are returned.
 
@@ -559,8 +559,8 @@ async def test_get_significant_states_without_initial(
     includes an attribute change, but only the state updates for
     media player (attribute changes are not significant and not returned).
     """
-    zero, four, states = record_states(hass)
-    await async_wait_recording_done(hass)
+    zero, four, states = record_states(menuai)
+    await async_wait_recording_done(menuai)
 
     one = zero + timedelta(seconds=1)
     one_with_microsecond = zero + timedelta(seconds=1, microseconds=1)
@@ -575,7 +575,7 @@ async def test_get_significant_states_without_initial(
     del states["thermostat.test3"]
 
     hist = history.get_significant_states(
-        hass,
+        menuai,
         one_and_half,
         four,
         include_start_time_state=False,
@@ -585,11 +585,11 @@ async def test_get_significant_states_without_initial(
 
 
 async def test_get_significant_states_entity_id(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test that only significant states are returned for one entity."""
-    zero, four, states = record_states(hass)
-    await async_wait_recording_done(hass)
+    zero, four, states = record_states(menuai)
+    await async_wait_recording_done(menuai)
 
     del states["media_player.test2"]
     del states["media_player.test3"]
@@ -598,19 +598,19 @@ async def test_get_significant_states_entity_id(
     del states["thermostat.test3"]
     del states["script.can_cancel_this_one"]
 
-    hist = history.get_significant_states(hass, zero, four, ["media_player.test"])
+    hist = history.get_significant_states(menuai, zero, four, ["media_player.test"])
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
 
 
 async def test_get_significant_states_multiple_entity_ids(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test that only significant states are returned for one entity."""
-    zero, four, states = record_states(hass)
-    await async_wait_recording_done(hass)
+    zero, four, states = record_states(menuai)
+    await async_wait_recording_done(menuai)
 
     hist = history.get_significant_states(
-        hass,
+        menuai,
         zero,
         four,
         ["media_player.test", "thermostat.test"],
@@ -625,34 +625,34 @@ async def test_get_significant_states_multiple_entity_ids(
 
 
 async def test_get_significant_states_are_ordered(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test order of results from get_significant_states.
 
     When entity ids are given, the results should be returned with the data
     in the same order.
     """
-    zero, four, _states = record_states(hass)
-    await async_wait_recording_done(hass)
+    zero, four, _states = record_states(menuai)
+    await async_wait_recording_done(menuai)
 
     entity_ids = ["media_player.test", "media_player.test2"]
-    hist = history.get_significant_states(hass, zero, four, entity_ids)
+    hist = history.get_significant_states(menuai, zero, four, entity_ids)
     assert list(hist.keys()) == entity_ids
     entity_ids = ["media_player.test2", "media_player.test"]
-    hist = history.get_significant_states(hass, zero, four, entity_ids)
+    hist = history.get_significant_states(menuai, zero, four, entity_ids)
     assert list(hist.keys()) == entity_ids
 
 
 async def test_get_significant_states_only(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test significant states when significant_states_only is set."""
     entity_id = "sensor.test"
 
     def set_state(state, **kwargs):
         """Set the state."""
-        hass.states.async_set(entity_id, state, **kwargs)
-        return hass.states.get(entity_id)
+        menuai.states.async_set(entity_id, state, **kwargs)
+        return menuai.states.get(entity_id)
 
     start = dt_util.utcnow() - timedelta(minutes=4)
     points = [start + timedelta(minutes=i) for i in range(1, 4)]
@@ -672,10 +672,10 @@ async def test_get_significant_states_only(
         freezer.move_to(points[2])
         # everything is different
         states.append(set_state("412", attributes={"attribute": 54.23}))
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
     hist = history.get_significant_states(
-        hass,
+        menuai,
         start,
         significant_changes_only=True,
         entity_ids=list({state.entity_id for state in states}),
@@ -693,7 +693,7 @@ async def test_get_significant_states_only(
     )
 
     hist = history.get_significant_states(
-        hass,
+        menuai,
         start,
         significant_changes_only=False,
         entity_ids=list({state.entity_id for state in states}),
@@ -706,24 +706,24 @@ async def test_get_significant_states_only(
 
 
 async def test_get_significant_states_only_minimal_response(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test significant states when significant_states_only is True."""
     now = dt_util.utcnow()
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.test", "on", attributes={"any": "attr"})
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.test", "off", attributes={"any": "attr"})
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.test", "off", attributes={"any": "changed"})
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.test", "off", attributes={"any": "again"})
-    await async_recorder_block_till_done(hass)
-    hass.states.async_set("sensor.test", "on", attributes={"any": "attr"})
-    await async_wait_recording_done(hass)
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.test", "on", attributes={"any": "attr"})
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.test", "off", attributes={"any": "attr"})
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.test", "off", attributes={"any": "changed"})
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.test", "off", attributes={"any": "again"})
+    await async_recorder_block_till_done(menuai)
+    menuai.states.async_set("sensor.test", "on", attributes={"any": "attr"})
+    await async_wait_recording_done(menuai)
 
     hist = history.get_significant_states(
-        hass,
+        menuai,
         now,
         minimal_response=True,
         significant_changes_only=False,
@@ -733,7 +733,7 @@ async def test_get_significant_states_only_minimal_response(
 
 
 def record_states(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> tuple[datetime, datetime, dict[str, list[State]]]:
     """Record some test states.
 
@@ -751,8 +751,8 @@ def record_states(
 
     def set_state(entity_id, state, **kwargs):
         """Set the state."""
-        hass.states.async_set(entity_id, state, **kwargs)
-        return hass.states.get(entity_id)
+        menuai.states.async_set(entity_id, state, **kwargs)
+        return menuai.states.get(entity_id)
 
     zero = dt_util.utcnow()
     one = zero + timedelta(seconds=1)
@@ -818,24 +818,24 @@ def record_states(
 
 
 async def test_get_full_significant_states_handles_empty_last_changed(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test getting states when last_changed is null."""
     now = dt_util.utcnow()
-    hass.states.async_set("sensor.one", "on", {"attr": "original"})
-    state0 = hass.states.get("sensor.one")
-    await hass.async_block_till_done()
-    hass.states.async_set("sensor.one", "on", {"attr": "new"})
-    state1 = hass.states.get("sensor.one")
+    menuai.states.async_set("sensor.one", "on", {"attr": "original"})
+    state0 = menuai.states.get("sensor.one")
+    await menuai.async_block_till_done()
+    menuai.states.async_set("sensor.one", "on", {"attr": "new"})
+    state1 = menuai.states.get("sensor.one")
 
     assert state0.last_changed == state1.last_changed
     assert state0.last_updated != state1.last_updated
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
     def _get_entries():
-        with session_scope(hass=hass, read_only=True) as session:
+        with session_scope(menuai=menuai, read_only=True) as session:
             return history.get_full_significant_states_with_session(
-                hass,
+                menuai,
                 session,
                 now,
                 dt_util.utcnow(),
@@ -843,7 +843,7 @@ async def test_get_full_significant_states_handles_empty_last_changed(
                 significant_changes_only=False,
             )
 
-    states = await recorder.get_instance(hass).async_add_executor_job(_get_entries)
+    states = await recorder.get_instance(menuai).async_add_executor_job(_get_entries)
     sensor_one_states: list[State] = states["sensor.one"]
     assert_states_equal_without_context(sensor_one_states[0], state0)
     assert_states_equal_without_context(sensor_one_states[1], state1)
@@ -851,7 +851,7 @@ async def test_get_full_significant_states_handles_empty_last_changed(
     assert sensor_one_states[0].last_updated != sensor_one_states[1].last_updated
 
     def _fetch_native_states() -> list[State]:
-        with session_scope(hass=hass, read_only=True) as session:
+        with session_scope(menuai=menuai, read_only=True) as session:
             native_states = []
             db_state_attributes = {
                 state_attributes.attributes_id: state_attributes
@@ -872,7 +872,7 @@ async def test_get_full_significant_states_handles_empty_last_changed(
                 native_states.append(state)
             return native_states
 
-    native_sensor_one_states = await recorder.get_instance(hass).async_add_executor_job(
+    native_sensor_one_states = await recorder.get_instance(menuai).async_add_executor_job(
         _fetch_native_states
     )
     assert_states_equal_without_context(native_sensor_one_states[0], state0)
@@ -887,12 +887,12 @@ async def test_get_full_significant_states_handles_empty_last_changed(
     )
 
     def _fetch_db_states() -> list[States]:
-        with session_scope(hass=hass, read_only=True) as session:
+        with session_scope(menuai=menuai, read_only=True) as session:
             states = list(session.query(States))
             session.expunge_all()
             return states
 
-    db_sensor_one_states = await recorder.get_instance(hass).async_add_executor_job(
+    db_sensor_one_states = await recorder.get_instance(menuai).async_add_executor_job(
         _fetch_db_states
     )
     assert db_sensor_one_states[0].last_changed is None
@@ -913,7 +913,7 @@ async def test_get_full_significant_states_handles_empty_last_changed(
 
 
 async def test_state_changes_during_period_multiple_entities_single_test(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test state change during period with multiple entities in the same test.
 
@@ -923,36 +923,36 @@ async def test_state_changes_during_period_multiple_entities_single_test(
     start = dt_util.utcnow()
     test_entites = {f"sensor.{i}": str(i) for i in range(30)}
     for entity_id, value in test_entites.items():
-        hass.states.async_set(entity_id, value)
+        menuai.states.async_set(entity_id, value)
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
     end = dt_util.utcnow()
 
     for entity_id, value in test_entites.items():
-        hist = history.state_changes_during_period(hass, start, end, entity_id)
+        hist = history.state_changes_during_period(menuai, start, end, entity_id)
         assert len(hist) == 1
         assert hist[entity_id][0].state == value
 
 
 @pytest.mark.freeze_time("2039-01-19 03:14:07.555555-00:00")
 async def test_get_full_significant_states_past_year_2038(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test we can store times past year 2038."""
     past_2038_time = dt_util.parse_datetime("2039-01-19 03:14:07.555555-00:00")
-    hass.states.async_set("sensor.one", "on", {"attr": "original"})
-    state0 = hass.states.get("sensor.one")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.one", "on", {"attr": "original"})
+    state0 = menuai.states.get("sensor.one")
+    await menuai.async_block_till_done()
 
-    hass.states.async_set("sensor.one", "on", {"attr": "new"})
-    state1 = hass.states.get("sensor.one")
+    menuai.states.async_set("sensor.one", "on", {"attr": "new"})
+    state1 = menuai.states.get("sensor.one")
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
     def _get_entries():
-        with session_scope(hass=hass, read_only=True) as session:
+        with session_scope(menuai=menuai, read_only=True) as session:
             return history.get_full_significant_states_with_session(
-                hass,
+                menuai,
                 session,
                 past_2038_time - timedelta(days=365),
                 past_2038_time + timedelta(days=365),
@@ -960,7 +960,7 @@ async def test_get_full_significant_states_past_year_2038(
                 significant_changes_only=False,
             )
 
-    states = await recorder.get_instance(hass).async_add_executor_job(_get_entries)
+    states = await recorder.get_instance(menuai).async_add_executor_job(_get_entries)
     sensor_one_states: list[State] = states["sensor.one"]
     assert_states_equal_without_context(sensor_one_states[0], state0)
     assert_states_equal_without_context(sensor_one_states[1], state1)
@@ -969,54 +969,54 @@ async def test_get_full_significant_states_past_year_2038(
 
 
 async def test_get_significant_states_without_entity_ids_raises(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test at least one entity id is required for get_significant_states."""
     now = dt_util.utcnow()
     with pytest.raises(ValueError, match="entity_ids must be provided"):
-        history.get_significant_states(hass, now, None)
+        history.get_significant_states(menuai, now, None)
 
 
 async def test_state_changes_during_period_without_entity_ids_raises(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test at least one entity id is required for state_changes_during_period."""
     now = dt_util.utcnow()
     with pytest.raises(ValueError, match="entity_id must be provided"):
-        history.state_changes_during_period(hass, now, None)
+        history.state_changes_during_period(menuai, now, None)
 
 
 async def test_get_significant_states_with_filters_raises(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test passing filters is no longer supported."""
     now = dt_util.utcnow()
     with pytest.raises(NotImplementedError, match="Filters are no longer supported"):
         history.get_significant_states(
-            hass, now, None, ["media_player.test"], Filters()
+            menuai, now, None, ["media_player.test"], Filters()
         )
 
 
 async def test_get_significant_states_with_non_existent_entity_ids_returns_empty(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test get_significant_states returns an empty dict when entities not in the db."""
     now = dt_util.utcnow()
-    assert history.get_significant_states(hass, now, None, ["nonexistent.entity"]) == {}
+    assert history.get_significant_states(menuai, now, None, ["nonexistent.entity"]) == {}
 
 
 async def test_state_changes_during_period_with_non_existent_entity_ids_returns_empty(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test state_changes_during_period returns an empty dict when entities not in the db."""
     now = dt_util.utcnow()
     assert (
-        history.state_changes_during_period(hass, now, None, "nonexistent.entity") == {}
+        history.state_changes_during_period(menuai, now, None, "nonexistent.entity") == {}
     )
 
 
 async def test_get_last_state_changes_with_non_existent_entity_ids_returns_empty(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test get_last_state_changes returns an empty dict when entities not in the db."""
-    assert history.get_last_state_changes(hass, 1, "nonexistent.entity") == {}
+    assert history.get_last_state_changes(menuai, 1, "nonexistent.entity") == {}

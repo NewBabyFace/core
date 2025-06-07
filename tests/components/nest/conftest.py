@@ -17,14 +17,14 @@ from google_nest_sdm.streaming_manager import StreamingManager
 import pytest
 from yarl import URL
 
-from homeassistant.components.application_credentials import (
+from menuai.components.application_credentials import (
     async_import_client_credential,
 )
-from homeassistant.components.nest import DOMAIN
-from homeassistant.components.nest.const import API_URL, CONF_SUBSCRIBER_ID, SDM_SCOPES
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.nest import DOMAIN
+from menuai.components.nest.const import API_URL, CONF_SUBSCRIBER_ID, SDM_SCOPES
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from .common import (
     DEVICE_ID,
@@ -145,11 +145,11 @@ async def auth(
 
 
 @pytest.fixture(autouse=True, name="media_path")
-def cleanup_media_storage(hass: HomeAssistant) -> Generator[str]:
+def cleanup_media_storage(menuai: menuai) -> Generator[str]:
     """Test cleanup, remove any media storage persisted during the test."""
     tmp_path = str(uuid.uuid4())
-    with patch("homeassistant.components.nest.media_source.MEDIA_PATH", new=tmp_path):
-        full_path = hass.config.path(tmp_path)
+    with patch("menuai.components.nest.media_source.MEDIA_PATH", new=tmp_path):
+        full_path = menuai.config.path(tmp_path)
         yield full_path
         shutil.rmtree(full_path, ignore_errors=True)
 
@@ -182,7 +182,7 @@ def mock_subscriber() -> YieldFixture[AsyncMock]:
     """Fixture for injecting errors into the subscriber."""
     mock_subscriber = AsyncMock(GoogleNestSubscriber)
     with patch(
-        "homeassistant.components.nest.api.GoogleNestSubscriber",
+        "menuai.components.nest.api.GoogleNestSubscriber",
         return_value=mock_subscriber,
     ):
         yield mock_subscriber
@@ -287,34 +287,34 @@ def config_entry(
 
 
 @pytest.fixture(autouse=True)
-async def credential(hass: HomeAssistant, nest_test_config: NestTestConfig) -> None:
+async def credential(menuai: menuai, nest_test_config: NestTestConfig) -> None:
     """Fixture that provides the ClientCredential for the test if any."""
     if not nest_test_config.credential:
         return
-    assert await async_setup_component(hass, "application_credentials", {})
+    assert await async_setup_component(menuai, "application_credentials", {})
     await async_import_client_credential(
-        hass, DOMAIN, nest_test_config.credential, "imported-cred"
+        menuai, DOMAIN, nest_test_config.credential, "imported-cred"
     )
 
 
 @pytest.fixture
 async def setup_base_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     platforms: list[str],
     config_entry: MockConfigEntry | None,
     auth: FakeAuth,
 ) -> YieldFixture[PlatformSetup]:
     """Fixture to setup the integration platform."""
-    config_entry.add_to_hass(hass)
-    with patch("homeassistant.components.nest.PLATFORMS", platforms):
+    config_entry.add_to_menuai(menuai)
+    with patch("menuai.components.nest.PLATFORMS", platforms):
 
         async def _setup_func() -> bool:
-            await hass.config_entries.async_setup(config_entry.entry_id)
-            await hass.async_block_till_done()
+            await menuai.config_entries.async_setup(config_entry.entry_id)
+            await menuai.async_block_till_done()
 
         yield _setup_func
         if config_entry.state == ConfigEntryState.LOADED:
-            await hass.config_entries.async_unload(config_entry.entry_id)
+            await menuai.config_entries.async_unload(config_entry.entry_id)
 
 
 @pytest.fixture

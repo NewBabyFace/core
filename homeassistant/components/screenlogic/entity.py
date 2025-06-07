@@ -15,12 +15,12 @@ from screenlogicpy.const.common import (
 from screenlogicpy.const.data import ATTR
 from screenlogicpy.const.msg import CODE
 
-from homeassistant.core import callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import EntityDescription
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.core import callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import EntityDescription
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import ScreenLogicDataPath
 from .coordinator import ScreenlogicDataUpdateCoordinator
@@ -94,7 +94,7 @@ class ScreenLogicEntity(CoordinatorEntity[ScreenlogicDataUpdateCoordinator]):
         try:
             return self.gateway.get_data(*self._data_path, strict=True)
         except KeyError as ke:
-            raise HomeAssistantError(f"Data not found: {self._data_path}") from ke
+            raise menuaiError(f"Data not found: {self._data_path}") from ke
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -125,9 +125,9 @@ class ScreenLogicPushEntity(ScreenLogicEntity):
         self._last_update_success = self.coordinator.last_update_success
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai."""
+        await super().async_added_to_menuai()
         self.async_on_remove(
             await self.gateway.async_subscribe_client(
                 self._async_data_updated,
@@ -170,7 +170,7 @@ class ScreenLogicCircuitEntity(ScreenLogicSwitchingEntity, ScreenLogicPushEntity
         try:
             await self.gateway.async_set_circuit(self._data_key, state.value)
         except (ScreenLogicCommunicationError, ScreenLogicError) as sle:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Failed to set_circuit {self._data_key} {state.value}: {sle.msg}"
             ) from sle
         _LOGGER.debug("Set circuit %s %s", self._data_key, state.value)

@@ -4,16 +4,16 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     BrowseMedia,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
     MediaType,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util.dt import parse_datetime
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util.dt import parse_datetime
 
 from .browse_media import build_item_response, build_root_response
 from .client_wrapper import get_artwork_url
@@ -23,7 +23,7 @@ from .entity import JellyfinClientEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: JellyfinConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -256,11 +256,11 @@ class JellyfinMediaPlayer(JellyfinClientEntity, MediaPlayerEntity):
         """
         if media_content_id is None or media_content_id == "media-source://jellyfin":
             return await build_root_response(
-                self.hass, self.coordinator.api_client, self.coordinator.user_id
+                self.menuai, self.coordinator.api_client, self.coordinator.user_id
             )
 
         return await build_item_response(
-            self.hass,
+            self.menuai,
             self.coordinator.api_client,
             self.coordinator.user_id,
             media_content_type,

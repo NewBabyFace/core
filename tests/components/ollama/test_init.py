@@ -5,9 +5,9 @@ from unittest.mock import patch
 from httpx import ConnectError
 import pytest
 
-from homeassistant.components import ollama
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components import ollama
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 
@@ -20,7 +20,7 @@ from tests.common import MockConfigEntry
     ],
 )
 async def test_init_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     caplog: pytest.LogCaptureFixture,
     side_effect,
@@ -31,6 +31,6 @@ async def test_init_error(
         "ollama.AsyncClient.list",
         side_effect=side_effect,
     ):
-        assert await async_setup_component(hass, ollama.DOMAIN, {})
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, ollama.DOMAIN, {})
+        await menuai.async_block_till_done()
         assert error in caplog.text

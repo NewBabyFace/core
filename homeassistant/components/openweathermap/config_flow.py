@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_API_KEY,
     CONF_LANGUAGE,
     CONF_LATITUDE,
@@ -18,8 +18,8 @@ from homeassistant.const import (
     CONF_MODE,
     CONF_NAME,
 )
-from homeassistant.core import callback
-from homeassistant.helpers import config_validation as cv
+from menuai.core import callback
+from menuai.helpers import config_validation as cv
 
 from .const import (
     CONFIG_FLOW_VERSION,
@@ -74,10 +74,10 @@ class OpenWeatherMapConfigFlow(ConfigFlow, domain=DOMAIN):
                 vol.Required(CONF_API_KEY): str,
                 vol.Optional(CONF_NAME, default=DEFAULT_NAME): str,
                 vol.Optional(
-                    CONF_LATITUDE, default=self.hass.config.latitude
+                    CONF_LATITUDE, default=self.menuai.config.latitude
                 ): cv.latitude,
                 vol.Optional(
-                    CONF_LONGITUDE, default=self.hass.config.longitude
+                    CONF_LONGITUDE, default=self.menuai.config.longitude
                 ): cv.longitude,
                 vol.Optional(CONF_MODE, default=DEFAULT_OWM_MODE): vol.In(OWM_MODES),
                 vol.Optional(CONF_LANGUAGE, default=DEFAULT_LANGUAGE): vol.In(

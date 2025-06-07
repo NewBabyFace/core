@@ -6,9 +6,9 @@ from eheimdigital.types import EheimDeviceType, FilterErrorCode
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .conftest import init_integration
 
@@ -17,30 +17,30 @@ from tests.common import MockConfigEntry, get_sensor_display_state, snapshot_pla
 
 @pytest.mark.usefixtures("classic_vario_mock")
 async def test_setup_classic_vario(
-    hass: HomeAssistant,
+    menuai: menuai,
     eheimdigital_hub_mock: MagicMock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test sensor platform setup for the filter."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     with (
-        patch("homeassistant.components.eheimdigital.PLATFORMS", [Platform.SENSOR]),
+        patch("menuai.components.eheimdigital.PLATFORMS", [Platform.SENSOR]),
         patch(
-            "homeassistant.components.eheimdigital.coordinator.asyncio.Event",
+            "menuai.components.eheimdigital.coordinator.asyncio.Event",
             new=AsyncMock,
         ),
     ):
-        await hass.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.config_entries.async_setup(mock_config_entry.entry_id)
 
     await eheimdigital_hub_mock.call_args.kwargs["device_found_callback"](
         "00:00:00:00:00:03", EheimDeviceType.VERSION_EHEIM_CLASSIC_VARIO
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
 
 @pytest.mark.usefixtures("classic_vario_mock")
@@ -76,7 +76,7 @@ async def test_setup_classic_vario(
     ],
 )
 async def test_state_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     eheimdigital_hub_mock: MagicMock,
     mock_config_entry: MockConfigEntry,
@@ -86,15 +86,15 @@ async def test_state_update(
 ) -> None:
     """Test the sensor state update."""
     device: MagicMock = request.getfixturevalue(device_name)
-    await init_integration(hass, mock_config_entry)
+    await init_integration(menuai, mock_config_entry)
 
     await eheimdigital_hub_mock.call_args.kwargs["device_found_callback"](
         device.mac_address, device.device_type
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     for item in entity_list:
         getattr(device, item[1])[item[2]] = item[3]
         await eheimdigital_hub_mock.call_args.kwargs["receive_callback"]()
-        assert get_sensor_display_state(hass, entity_registry, item[0]) == str(item[4])
+        assert get_sensor_display_state(menuai, entity_registry, item[0]) == str(item[4])

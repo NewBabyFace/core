@@ -7,17 +7,17 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components import lawn_mower, mqtt
-from homeassistant.components.lawn_mower import (
+from menuai.components import lawn_mower, mqtt
+from menuai.components.lawn_mower import (
     DOMAIN as LAWN_MOWER_DOMAIN,
     SERVICE_DOCK,
     SERVICE_PAUSE,
     SERVICE_START_MOWING,
     LawnMowerEntityFeature,
 )
-from homeassistant.components.mqtt.lawn_mower import MQTT_LAWN_MOWER_ATTRIBUTES_BLOCKED
-from homeassistant.const import ATTR_ASSUMED_STATE, ATTR_ENTITY_ID, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant, State
+from menuai.components.mqtt.lawn_mower import MQTT_LAWN_MOWER_ATTRIBUTES_BLOCKED
+from menuai.const import ATTR_ASSUMED_STATE, ATTR_ENTITY_ID, STATE_UNKNOWN
+from menuai.core import menuai, State
 
 from .common import (
     help_custom_config,
@@ -75,7 +75,7 @@ DEFAULT_CONFIG = {
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -91,43 +91,43 @@ DEFAULT_CONFIG = {
     ],
 )
 async def test_run_lawn_mower_setup_and_state_updates(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test that it sets up correctly fetches the given payload."""
     await mqtt_mock_entry()
 
-    async_fire_mqtt_message(hass, "test/lawn_mower_stat", "mowing")
+    async_fire_mqtt_message(menuai, "test/lawn_mower_stat", "mowing")
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("lawn_mower.test_lawn_mower")
+    state = menuai.states.get("lawn_mower.test_lawn_mower")
     assert state.state == "mowing"
 
-    async_fire_mqtt_message(hass, "test/lawn_mower_stat", "returning")
+    async_fire_mqtt_message(menuai, "test/lawn_mower_stat", "returning")
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("lawn_mower.test_lawn_mower")
+    state = menuai.states.get("lawn_mower.test_lawn_mower")
     assert state.state == "returning"
 
-    async_fire_mqtt_message(hass, "test/lawn_mower_stat", "docked")
+    async_fire_mqtt_message(menuai, "test/lawn_mower_stat", "docked")
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("lawn_mower.test_lawn_mower")
+    state = menuai.states.get("lawn_mower.test_lawn_mower")
     assert state.state == "docked"
 
     # empty payloads are ignored
-    async_fire_mqtt_message(hass, "test/lawn_mower_stat", "")
+    async_fire_mqtt_message(menuai, "test/lawn_mower_stat", "")
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("lawn_mower.test_lawn_mower")
+    state = menuai.states.get("lawn_mower.test_lawn_mower")
     assert state.state == "docked"
 
 
 @pytest.mark.parametrize(
-    ("hass_config", "expected_features"),
+    ("menuai_config", "expected_features"),
     [
         (
             DEFAULT_CONFIG,
@@ -159,20 +159,20 @@ async def test_run_lawn_mower_setup_and_state_updates(
     ],
 )
 async def test_supported_features(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     expected_features: LawnMowerEntityFeature | None,
 ) -> None:
     """Test conditional enablement of supported features."""
     await mqtt_mock_entry()
     assert (
-        hass.states.get("lawn_mower.test").attributes["supported_features"]
+        menuai.states.get("lawn_mower.test").attributes["supported_features"]
         == expected_features
     )
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -186,59 +186,59 @@ async def test_supported_features(
     ],
 )
 async def test_value_template(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test that it fetches the given payload with a template."""
     await mqtt_mock_entry()
 
-    async_fire_mqtt_message(hass, "test/lawn_mower_stat", '{"val":"mowing"}')
+    async_fire_mqtt_message(menuai, "test/lawn_mower_stat", '{"val":"mowing"}')
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("lawn_mower.test_lawn_mower")
+    state = menuai.states.get("lawn_mower.test_lawn_mower")
     assert state.state == "mowing"
 
-    async_fire_mqtt_message(hass, "test/lawn_mower_stat", '{"val":"paused"}')
+    async_fire_mqtt_message(menuai, "test/lawn_mower_stat", '{"val":"paused"}')
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("lawn_mower.test_lawn_mower")
+    state = menuai.states.get("lawn_mower.test_lawn_mower")
     assert state.state == "paused"
 
-    async_fire_mqtt_message(hass, "test/lawn_mower_stat", '{"val":"returning"}')
+    async_fire_mqtt_message(menuai, "test/lawn_mower_stat", '{"val":"returning"}')
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("lawn_mower.test_lawn_mower")
+    state = menuai.states.get("lawn_mower.test_lawn_mower")
     assert state.state == "returning"
 
-    async_fire_mqtt_message(hass, "test/lawn_mower_stat", '{"val": null}')
+    async_fire_mqtt_message(menuai, "test/lawn_mower_stat", '{"val": null}')
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("lawn_mower.test_lawn_mower")
+    state = menuai.states.get("lawn_mower.test_lawn_mower")
     assert state.state == STATE_UNKNOWN
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [DEFAULT_CONFIG],
 )
 async def test_run_lawn_mower_service_optimistic(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test that service calls work in optimistic mode."""
 
     fake_state = State("lawn_mower.test", "docked")
-    mock_restore_cache(hass, (fake_state,))
+    mock_restore_cache(menuai, (fake_state,))
 
     mqtt_mock = await mqtt_mock_entry()
 
-    state = hass.states.get("lawn_mower.test")
+    state = menuai.states.get("lawn_mower.test")
     assert state.state == "docked"
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         lawn_mower.DOMAIN,
         SERVICE_START_MOWING,
         {ATTR_ENTITY_ID: "lawn_mower.test"},
@@ -249,10 +249,10 @@ async def test_run_lawn_mower_service_optimistic(
         "start_mowing-test-topic", "start_mowing", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("lawn_mower.test")
+    state = menuai.states.get("lawn_mower.test")
     assert state.state == "mowing"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         lawn_mower.DOMAIN,
         SERVICE_PAUSE,
         {ATTR_ENTITY_ID: "lawn_mower.test"},
@@ -263,10 +263,10 @@ async def test_run_lawn_mower_service_optimistic(
         "pause-test-topic", "pause", 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("lawn_mower.test")
+    state = menuai.states.get("lawn_mower.test")
     assert state.state == "paused"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         lawn_mower.DOMAIN,
         SERVICE_DOCK,
         {ATTR_ENTITY_ID: "lawn_mower.test"},
@@ -275,12 +275,12 @@ async def test_run_lawn_mower_service_optimistic(
 
     mqtt_mock.async_publish.assert_called_once_with("dock-test-topic", "dock", 0, False)
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("lawn_mower.test")
+    state = menuai.states.get("lawn_mower.test")
     assert state.state == "docked"
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -293,20 +293,20 @@ async def test_run_lawn_mower_service_optimistic(
     ],
 )
 async def test_restore_lawn_mower_from_invalid_state(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test that restoring the state skips invalid values."""
     fake_state = State("lawn_mower.test_lawn_mower", "unknown")
-    mock_restore_cache(hass, (fake_state,))
+    mock_restore_cache(menuai, (fake_state,))
 
     await mqtt_mock_entry()
 
-    state = hass.states.get("lawn_mower.test_lawn_mower")
+    state = menuai.states.get("lawn_mower.test_lawn_mower")
     assert state.state == STATE_UNKNOWN
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -324,19 +324,19 @@ async def test_restore_lawn_mower_from_invalid_state(
     ],
 )
 async def test_run_lawn_mower_service_optimistic_with_command_templates(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test that service calls work in optimistic mode and with a command_template."""
     fake_state = State("lawn_mower.test_lawn_mower", "docked")
-    mock_restore_cache(hass, (fake_state,))
+    mock_restore_cache(menuai, (fake_state,))
 
     mqtt_mock = await mqtt_mock_entry()
 
-    state = hass.states.get("lawn_mower.test_lawn_mower")
+    state = menuai.states.get("lawn_mower.test_lawn_mower")
     assert state.state == "docked"
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         lawn_mower.DOMAIN,
         SERVICE_START_MOWING,
         {ATTR_ENTITY_ID: "lawn_mower.test_lawn_mower"},
@@ -347,10 +347,10 @@ async def test_run_lawn_mower_service_optimistic_with_command_templates(
         "test/lawn_mower_start_mowing_cmd", '{"action": "start_mowing"}', 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("lawn_mower.test_lawn_mower")
+    state = menuai.states.get("lawn_mower.test_lawn_mower")
     assert state.state == "mowing"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         lawn_mower.DOMAIN,
         SERVICE_PAUSE,
         {ATTR_ENTITY_ID: "lawn_mower.test_lawn_mower"},
@@ -361,10 +361,10 @@ async def test_run_lawn_mower_service_optimistic_with_command_templates(
         "test/lawn_mower_pause_cmd", '{"action": "pause"}', 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("lawn_mower.test_lawn_mower")
+    state = menuai.states.get("lawn_mower.test_lawn_mower")
     assert state.state == "paused"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         lawn_mower.DOMAIN,
         SERVICE_DOCK,
         {ATTR_ENTITY_ID: "lawn_mower.test_lawn_mower"},
@@ -375,63 +375,63 @@ async def test_run_lawn_mower_service_optimistic_with_command_templates(
         "test/lawn_mower_dock_cmd", '{"action": "dock"}', 0, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("lawn_mower.test_lawn_mower")
+    state = menuai.states.get("lawn_mower.test_lawn_mower")
     assert state.state == "docked"
 
 
-@pytest.mark.parametrize("hass_config", [DEFAULT_CONFIG])
+@pytest.mark.parametrize("menuai_config", [DEFAULT_CONFIG])
 async def test_availability_when_connection_lost(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test availability after MQTT disconnection."""
     await help_test_availability_when_connection_lost(
-        hass, mqtt_mock_entry, lawn_mower.DOMAIN
+        menuai, mqtt_mock_entry, lawn_mower.DOMAIN
     )
 
 
-@pytest.mark.parametrize("hass_config", [DEFAULT_CONFIG])
+@pytest.mark.parametrize("menuai_config", [DEFAULT_CONFIG])
 async def test_availability_without_topic(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test availability without defined availability topic."""
     await help_test_availability_without_topic(
-        hass, mqtt_mock_entry, lawn_mower.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, lawn_mower.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_default_availability_payload(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test availability by default payload with defined topic."""
     await help_test_default_availability_payload(
-        hass, mqtt_mock_entry, lawn_mower.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, lawn_mower.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_custom_availability_payload(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test availability by custom payload with defined topic."""
     await help_test_custom_availability_payload(
-        hass, mqtt_mock_entry, lawn_mower.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, lawn_mower.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_setting_attribute_via_mqtt_json_message(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test the setting of attribute via MQTT with JSON payload."""
     await help_test_setting_attribute_via_mqtt_json_message(
-        hass, mqtt_mock_entry, lawn_mower.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, lawn_mower.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_setting_blocked_attribute_via_mqtt_json_message(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test the setting of attribute via MQTT with JSON payload."""
     await help_test_setting_blocked_attribute_via_mqtt_json_message(
-        hass,
+        menuai,
         mqtt_mock_entry,
         lawn_mower.DOMAIN,
         DEFAULT_CONFIG,
@@ -440,47 +440,47 @@ async def test_setting_blocked_attribute_via_mqtt_json_message(
 
 
 async def test_setting_attribute_with_template(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test the setting of attribute via MQTT with JSON payload."""
     await help_test_setting_attribute_with_template(
-        hass, mqtt_mock_entry, lawn_mower.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, lawn_mower.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_update_with_json_attrs_not_dict(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test attributes get extracted from a JSON result."""
     await help_test_update_with_json_attrs_not_dict(
-        hass, mqtt_mock_entry, caplog, lawn_mower.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, caplog, lawn_mower.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_update_with_json_attrs_bad_json(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test attributes get extracted from a JSON result."""
     await help_test_update_with_json_attrs_bad_json(
-        hass, mqtt_mock_entry, caplog, lawn_mower.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, caplog, lawn_mower.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_discovery_update_attr(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test update of discovered MQTTAttributes."""
     await help_test_discovery_update_attr(
-        hass, mqtt_mock_entry, lawn_mower.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, lawn_mower.DOMAIN, DEFAULT_CONFIG
     )
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -501,22 +501,22 @@ async def test_discovery_update_attr(
     ],
 )
 async def test_unique_id(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test unique id action only creates one lawn_mower per unique_id."""
-    await help_test_unique_id(hass, mqtt_mock_entry, lawn_mower.DOMAIN)
+    await help_test_unique_id(menuai, mqtt_mock_entry, lawn_mower.DOMAIN)
 
 
 async def test_discovery_removal_lawn_mower(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test removal of discovered lawn_mower."""
     data = json.dumps(DEFAULT_CONFIG[mqtt.DOMAIN][lawn_mower.DOMAIN])
-    await help_test_discovery_removal(hass, mqtt_mock_entry, lawn_mower.DOMAIN, data)
+    await help_test_discovery_removal(menuai, mqtt_mock_entry, lawn_mower.DOMAIN, data)
 
 
 async def test_discovery_update_lawn_mower(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test update of discovered lawn_mower."""
     config1 = {
@@ -533,74 +533,74 @@ async def test_discovery_update_lawn_mower(
     }
 
     await help_test_discovery_update(
-        hass, mqtt_mock_entry, lawn_mower.DOMAIN, config1, config2
+        menuai, mqtt_mock_entry, lawn_mower.DOMAIN, config1, config2
     )
 
 
 async def test_discovery_update_unchanged_lawn_mower(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test update of discovered lawn_mower."""
     data1 = '{ "name": "Beer", "activity_state_topic": "test-topic", "command_topic": "test-topic", "actions": ["milk", "beer"]}'
     with patch(
-        "homeassistant.components.mqtt.lawn_mower.MqttLawnMower.discovery_update"
+        "menuai.components.mqtt.lawn_mower.MqttLawnMower.discovery_update"
     ) as discovery_update:
         await help_test_discovery_update_unchanged(
-            hass, mqtt_mock_entry, lawn_mower.DOMAIN, data1, discovery_update
+            menuai, mqtt_mock_entry, lawn_mower.DOMAIN, data1, discovery_update
         )
 
 
 @pytest.mark.no_fail_on_log_exception
 async def test_discovery_broken(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test handling of bad discovery message."""
     data1 = '{ "invalid" }'
     data2 = '{ "name": "Milk", "activity_state_topic": "test-topic", "pause_command_topic": "test-topic"}'
 
     await help_test_discovery_broken(
-        hass, mqtt_mock_entry, lawn_mower.DOMAIN, data1, data2
+        menuai, mqtt_mock_entry, lawn_mower.DOMAIN, data1, data2
     )
 
 
 async def test_entity_device_info_with_connection(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test MQTT lawn_mower device registry integration."""
     await help_test_entity_device_info_with_connection(
-        hass, mqtt_mock_entry, lawn_mower.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, lawn_mower.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_entity_device_info_with_identifier(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test MQTT lawn_mower device registry integration."""
     await help_test_entity_device_info_with_identifier(
-        hass, mqtt_mock_entry, lawn_mower.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, lawn_mower.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_entity_device_info_update(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test device registry update."""
     await help_test_entity_device_info_update(
-        hass, mqtt_mock_entry, lawn_mower.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, lawn_mower.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_entity_device_info_remove(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test device registry remove."""
     await help_test_entity_device_info_remove(
-        hass, mqtt_mock_entry, lawn_mower.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, lawn_mower.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_entity_id_update_subscriptions(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test MQTT subscriptions are managed when entity_id is updated."""
     config = {
@@ -613,16 +613,16 @@ async def test_entity_id_update_subscriptions(
         }
     }
     await help_test_entity_id_update_subscriptions(
-        hass, mqtt_mock_entry, lawn_mower.DOMAIN, config, ["avty-topic", "test-topic"]
+        menuai, mqtt_mock_entry, lawn_mower.DOMAIN, config, ["avty-topic", "test-topic"]
     )
 
 
 async def test_entity_id_update_discovery_update(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test MQTT discovery update when entity_id is updated."""
     await help_test_entity_id_update_discovery_update(
-        hass, mqtt_mock_entry, lawn_mower.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, lawn_mower.DOMAIN, DEFAULT_CONFIG
     )
 
 
@@ -653,7 +653,7 @@ async def test_entity_id_update_discovery_update(
     ],
 )
 async def test_entity_debug_info_message(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     service: str,
     command_payload: str,
@@ -674,7 +674,7 @@ async def test_entity_debug_info_message(
         }
     }
     await help_test_entity_debug_info_message(
-        hass,
+        menuai,
         mqtt_mock_entry,
         lawn_mower.DOMAIN,
         config,
@@ -687,7 +687,7 @@ async def test_entity_debug_info_message(
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -703,16 +703,16 @@ async def test_entity_debug_info_message(
     ],
 )
 async def test_mqtt_payload_not_a_valid_activity_warning(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     mqtt_mock_entry: MqttMockHAClientGenerator,
 ) -> None:
     """Test warning for MQTT payload which is not a valid activity."""
     await mqtt_mock_entry()
 
-    async_fire_mqtt_message(hass, "test/lawn_mower_stat", "painting")
+    async_fire_mqtt_message(menuai, "test/lawn_mower_stat", "painting")
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert (
         "Invalid activity for lawn_mower.test_lawn_mower: 'painting' "
@@ -748,7 +748,7 @@ async def test_mqtt_payload_not_a_valid_activity_warning(
     ],
 )
 async def test_publishing_with_custom_encoding(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
     service: str,
@@ -762,7 +762,7 @@ async def test_publishing_with_custom_encoding(
     config = DEFAULT_CONFIG
 
     await help_test_publishing_with_custom_encoding(
-        hass,
+        menuai,
         mqtt_mock_entry,
         caplog,
         domain,
@@ -776,12 +776,12 @@ async def test_publishing_with_custom_encoding(
 
 
 async def test_reloadable(
-    hass: HomeAssistant, mqtt_client_mock: MqttMockPahoClient
+    menuai: menuai, mqtt_client_mock: MqttMockPahoClient
 ) -> None:
     """Test reloading the MQTT platform."""
     domain = lawn_mower.DOMAIN
     config = DEFAULT_CONFIG
-    await help_test_reloadable(hass, mqtt_client_mock, domain, config)
+    await help_test_reloadable(menuai, mqtt_client_mock, domain, config)
 
 
 @pytest.mark.parametrize(
@@ -794,7 +794,7 @@ async def test_reloadable(
     ],
 )
 async def test_encoding_subscribable_topics(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     topic: str,
     value: str,
@@ -807,7 +807,7 @@ async def test_encoding_subscribable_topics(
     )
     config["actions"] = ["milk", "beer"]
     await help_test_encoding_subscribable_topics(
-        hass,
+        menuai,
         mqtt_mock_entry,
         lawn_mower.DOMAIN,
         config,
@@ -819,54 +819,54 @@ async def test_encoding_subscribable_topics(
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [DEFAULT_CONFIG, {"mqtt": [DEFAULT_CONFIG["mqtt"]]}],
     ids=["platform_key", "listed"],
 )
 async def test_setup_manual_entity_from_yaml(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test setup manual configured MQTT entity."""
     await mqtt_mock_entry()
     platform = lawn_mower.DOMAIN
-    assert hass.states.get(f"{platform}.test")
+    assert menuai.states.get(f"{platform}.test")
 
 
 async def test_unload_entry(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test unloading the config entry."""
     domain = lawn_mower.DOMAIN
     config = DEFAULT_CONFIG
     await help_test_unload_config_entry_with_platform(
-        hass, mqtt_mock_entry, domain, config
+        menuai, mqtt_mock_entry, domain, config
     )
 
 
 async def test_persistent_state_after_reconfig(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test of the state is persistent after reconfiguring the lawn_mower activity."""
     await mqtt_mock_entry()
     discovery_data = '{ "name": "Garden", "activity_state_topic": "test-topic", "command_topic": "test-topic"}'
-    await help_test_discovery_setup(hass, LAWN_MOWER_DOMAIN, discovery_data, "garden")
+    await help_test_discovery_setup(menuai, LAWN_MOWER_DOMAIN, discovery_data, "garden")
 
     # assign an initial state
-    async_fire_mqtt_message(hass, "test-topic", "docked")
-    state = hass.states.get("lawn_mower.garden")
+    async_fire_mqtt_message(menuai, "test-topic", "docked")
+    state = menuai.states.get("lawn_mower.garden")
     assert state.state == "docked"
 
     # change the config
     discovery_data = '{ "name": "Garden", "activity_state_topic": "test-topic2", "command_topic": "test-topic"}'
-    await help_test_discovery_setup(hass, LAWN_MOWER_DOMAIN, discovery_data, "garden")
+    await help_test_discovery_setup(menuai, LAWN_MOWER_DOMAIN, discovery_data, "garden")
 
     # assert the state persistent
-    state = hass.states.get("lawn_mower.garden")
+    state = menuai.states.get("lawn_mower.garden")
     assert state.state == "docked"
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         help_custom_config(
             lawn_mower.DOMAIN,
@@ -890,7 +890,7 @@ async def test_persistent_state_after_reconfig(
     ],
 )
 async def test_skipped_async_ha_write_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     topic: str,
     payload1: str,
@@ -898,11 +898,11 @@ async def test_skipped_async_ha_write_state(
 ) -> None:
     """Test a write state command is only called when there is change."""
     await mqtt_mock_entry()
-    await help_test_skipped_async_ha_write_state(hass, topic, payload1, payload2)
+    await help_test_skipped_async_ha_write_state(menuai, topic, payload1, payload2)
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -916,13 +916,13 @@ async def test_skipped_async_ha_write_state(
     ],
 )
 async def test_value_template_fails(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test the rendering of MQTT value template fails."""
     await mqtt_mock_entry()
-    async_fire_mqtt_message(hass, "test-topic", '{"some_var": null }')
+    async_fire_mqtt_message(menuai, "test-topic", '{"some_var": null }')
     assert (
         "TypeError: unsupported operand type(s) for *: 'NoneType' and 'int' rendering template"
         in caplog.text

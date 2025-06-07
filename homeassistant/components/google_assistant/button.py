@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from homeassistant.components.button import ButtonEntity
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import ConfigType
+from menuai.components.button import ButtonEntity
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import ConfigType
 
 from . import GoogleConfigEntry
 from .const import CONF_PROJECT_ID, CONF_SERVICE_ACCOUNT, DATA_CONFIG, DOMAIN
@@ -16,12 +16,12 @@ from .http import GoogleConfig
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: GoogleConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the platform."""
-    yaml_config: ConfigType = hass.data[DOMAIN][DATA_CONFIG]
+    yaml_config: ConfigType = menuai.data[DOMAIN][DATA_CONFIG]
     google_config = config_entry.runtime_data
 
     entities = []
@@ -57,7 +57,7 @@ class SyncButton(ButtonEntity):
         )
         result = await self._google_config.async_sync_entities(agent_user_id)
         if result != 200:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Unable to sync devices with result code: {result}, check log for more"
                 " info."
             )

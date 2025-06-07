@@ -6,9 +6,9 @@ import functools
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import device_trigger
 from .config import MQTT_BASE_SCHEMA
@@ -25,17 +25,17 @@ DISCOVERY_SCHEMA = MQTT_BASE_SCHEMA.extend(
 )
 
 
-async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+async def async_setup_entry(menuai: menuai, config_entry: ConfigEntry) -> None:
     """Set up MQTT device automation dynamically through MQTT discovery."""
 
-    setup = functools.partial(_async_setup_automation, hass, config_entry=config_entry)
+    setup = functools.partial(_async_setup_automation, menuai, config_entry=config_entry)
     async_setup_non_entity_entry_helper(
-        hass, "device_automation", setup, DISCOVERY_SCHEMA
+        menuai, "device_automation", setup, DISCOVERY_SCHEMA
     )
 
 
 async def _async_setup_automation(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     config_entry: ConfigEntry,
     discovery_data: DiscoveryInfoType,
@@ -43,10 +43,10 @@ async def _async_setup_automation(
     """Set up an MQTT device automation."""
     if config[CONF_AUTOMATION_TYPE] == AUTOMATION_TYPE_TRIGGER:
         await device_trigger.async_setup_trigger(
-            hass, config, config_entry, discovery_data
+            menuai, config, config_entry, discovery_data
         )
 
 
-async def async_removed_from_device(hass: HomeAssistant, device_id: str) -> None:
+async def async_removed_from_device(menuai: menuai, device_id: str) -> None:
     """Handle Mqtt removed from a device."""
-    await device_trigger.async_removed_from_device(hass, device_id)
+    await device_trigger.async_removed_from_device(menuai, device_id)

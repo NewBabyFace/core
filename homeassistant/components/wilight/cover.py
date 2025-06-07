@@ -15,10 +15,10 @@ from pywilight.const import (
     WL_STOPPED,
 )
 
-from homeassistant.components.cover import ATTR_POSITION, CoverEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.cover import ATTR_POSITION, CoverEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .entity import WiLightDevice
@@ -26,12 +26,12 @@ from .parent_device import WiLightParent
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up WiLight covers from a config entry."""
-    parent: WiLightParent = hass.data[DOMAIN][entry.entry_id]
+    parent: WiLightParent = menuai.data[DOMAIN][entry.entry_id]
 
     # Handle a discovered WiLight device.
     entities = []
@@ -48,13 +48,13 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-def wilight_to_hass_position(value: int) -> int:
-    """Convert wilight position 1..255 to hass format 0..100."""
+def wilight_to_menuai_position(value: int) -> int:
+    """Convert wilight position 1..255 to menuai format 0..100."""
     return min(100, round((value * 100) / 255))
 
 
-def hass_to_wilight_position(value: int) -> int:
-    """Convert hass position 0..100 to wilight 1..255 scale."""
+def menuai_to_wilight_position(value: int) -> int:
+    """Convert menuai position 0..100 to wilight 1..255 scale."""
     return min(255, round((value * 255) / 100))
 
 
@@ -70,7 +70,7 @@ class WiLightCover(WiLightDevice, CoverEntity):
         None is unknown, 0 is closed, 100 is fully open.
         """
         if "position_current" in self._status:
-            return wilight_to_hass_position(self._status["position_current"])
+            return wilight_to_menuai_position(self._status["position_current"])
         return None
 
     @property
@@ -94,7 +94,7 @@ class WiLightCover(WiLightDevice, CoverEntity):
             return None
         return (
             self._status["motor_state"] == WL_STOPPED
-            and wilight_to_hass_position(self._status["position_current"]) == 0
+            and wilight_to_menuai_position(self._status["position_current"]) == 0
         )
 
     async def async_open_cover(self, **kwargs: Any) -> None:
@@ -107,7 +107,7 @@ class WiLightCover(WiLightDevice, CoverEntity):
 
     async def async_set_cover_position(self, **kwargs: Any) -> None:
         """Move the cover to a specific position."""
-        position = hass_to_wilight_position(kwargs[ATTR_POSITION])
+        position = menuai_to_wilight_position(kwargs[ATTR_POSITION])
         await self._client.set_cover_position(self._index, position)
 
     async def async_stop_cover(self, **kwargs: Any) -> None:

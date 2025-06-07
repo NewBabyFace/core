@@ -14,11 +14,11 @@ from homematicip.connection.connection_context import ConnectionContextBuilder
 from homematicip.connection.rest_connection import RestConnection
 from homematicip.exceptions.connection_exceptions import HmipConnectionError
 
-import homeassistant
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers.httpx_client import get_async_client
+import menuai
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers.httpx_client import get_async_client
 
 from .const import HMIPC_AUTHTOKEN, HMIPC_HAPID, HMIPC_NAME, HMIPC_PIN, PLATFORMS
 from .errors import HmipcConnectionError
@@ -29,11 +29,11 @@ type HomematicIPConfigEntry = ConfigEntry[HomematicipHAP]
 
 
 async def build_context_async(
-    hass: HomeAssistant, hapid: str | None, authtoken: str | None
+    menuai: menuai, hapid: str | None, authtoken: str | None
 ):
     """Create a HomematicIP context object."""
-    ssl_ctx = homeassistant.util.ssl.get_default_context()
-    client_session = get_async_client(hass)
+    ssl_ctx = menuai.util.ssl.get_default_context()
+    client_session = get_async_client(menuai)
 
     return await ConnectionContextBuilder.build_context_async(
         accesspoint_id=hapid,
@@ -48,16 +48,16 @@ class HomematicipAuth:
 
     auth: Auth
 
-    def __init__(self, hass: HomeAssistant, config: dict[str, str]) -> None:
+    def __init__(self, menuai: menuai, config: dict[str, str]) -> None:
         """Initialize HomematicIP Cloud client registration."""
-        self.hass = hass
+        self.menuai = menuai
         self.config = config
 
     async def async_setup(self) -> bool:
         """Connect to HomematicIP for registration."""
         try:
             self.auth = await self.get_auth(
-                self.hass, self.config.get(HMIPC_HAPID), self.config.get(HMIPC_PIN)
+                self.menuai, self.config.get(HMIPC_HAPID), self.config.get(HMIPC_PIN)
             )
         except HmipcConnectionError:
             return False
@@ -79,15 +79,15 @@ class HomematicipAuth:
             return False
         return authtoken
 
-    async def get_auth(self, hass: HomeAssistant, hapid, pin):
+    async def get_auth(self, menuai: menuai, hapid, pin):
         """Create a HomematicIP access point object."""
-        context = await build_context_async(hass, hapid, None)
+        context = await build_context_async(menuai, hapid, None)
         connection = RestConnection(
             context,
             log_status_exceptions=False,
-            httpx_client_session=get_async_client(hass),
+            httpx_client_session=get_async_client(menuai),
         )
-        # hass.loop
+        # menuai.loop
         auth = Auth(connection, context.client_auth_token, hapid)
 
         try:
@@ -105,10 +105,10 @@ class HomematicipHAP:
     home: AsyncHome
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: HomematicIPConfigEntry
+        self, menuai: menuai, config_entry: HomematicIPConfigEntry
     ) -> None:
         """Initialize HomematicIP Cloud connection."""
-        self.hass = hass
+        self.menuai = menuai
         self.config_entry = config_entry
 
         self._ws_close_requested = False
@@ -122,7 +122,7 @@ class HomematicipHAP:
         """Initialize connection."""
         try:
             self.home = await self.get_hap(
-                self.hass,
+                self.menuai,
                 self.config_entry.data.get(HMIPC_HAPID),
                 self.config_entry.data.get(HMIPC_AUTHTOKEN),
                 self.config_entry.data.get(HMIPC_NAME),
@@ -137,7 +137,7 @@ class HomematicipHAP:
             "Connected to HomematicIP with HAP %s", self.config_entry.unique_id
         )
 
-        await self.hass.config_entries.async_forward_entry_setups(
+        await self.menuai.config_entries.async_forward_entry_setups(
             self.config_entry, PLATFORMS
         )
 
@@ -151,7 +151,7 @@ class HomematicipHAP:
         There are several occasions for this event to happen.
         1. We are interested to check whether the access point
         is still connected. If not, entity state changes cannot
-        be forwarded to hass. So if access point is disconnected all devices
+        be forwarded to menuai. So if access point is disconnected all devices
         are set to unavailable.
         2. We need to update home including devices and groups after a reconnect.
         3. We need to update home without devices and groups in all other cases.
@@ -167,7 +167,7 @@ class HomematicipHAP:
             # Explicitly getting an update as entity states might have
             # changed during access point disconnect."""
 
-            job = self.hass.async_create_task(self.get_state())
+            job = self.menuai.async_create_task(self.get_state())
             job.add_done_callback(self.get_state_finished)
             self._accesspoint_connected = True
 
@@ -175,16 +175,16 @@ class HomematicipHAP:
     def async_create_entity(self, *args, **kwargs) -> None:
         """Create an entity or a group."""
         is_device = EventType(kwargs["event_type"]) == EventType.DEVICE_ADDED
-        self.hass.async_create_task(self.async_create_entity_lazy(is_device))
+        self.menuai.async_create_task(self.async_create_entity_lazy(is_device))
 
     async def async_create_entity_lazy(self, is_device=True) -> None:
         """Delay entity creation to allow the user to enter a device name."""
         if is_device:
             await asyncio.sleep(30)
-        await self.hass.config_entries.async_reload(self.config_entry.entry_id)
+        await self.menuai.config_entries.async_reload(self.config_entry.entry_id)
 
     async def get_state(self) -> None:
-        """Update HMIP state and tell Home Assistant."""
+        """Update HMIP state and tell MenuAI."""
         await self.home.get_current_state_async()
         self.update_all()
 
@@ -196,10 +196,10 @@ class HomematicipHAP:
             # Somehow connection could not recover. Will disconnect and
             # so reconnect loop is taking over.
             _LOGGER.error("Updating state after HMIP access point reconnect failed")
-            self.hass.async_create_task(self.home.disable_events())
+            self.menuai.async_create_task(self.home.disable_events())
 
     def set_all_to_unavailable(self) -> None:
-        """Set all devices to unavailable and tell Home Assistant."""
+        """Set all devices to unavailable and tell MenuAI."""
         for device in self.home.devices:
             device.unreach = True
         self.update_all()
@@ -236,7 +236,7 @@ class HomematicipHAP:
             tries += 1
 
             try:
-                self._retry_task = self.hass.async_create_task(
+                self._retry_task = self.menuai.async_create_task(
                     asyncio.sleep(retry_delay)
                 )
                 await self._retry_task
@@ -250,7 +250,7 @@ class HomematicipHAP:
             self._retry_task.cancel()
         await self.home.disable_events_async()
         _LOGGER.debug("Closed connection to HomematicIP cloud server")
-        await self.hass.config_entries.async_unload_platforms(
+        await self.menuai.config_entries.async_unload_platforms(
             self.config_entry, PLATFORMS
         )
         self.hmip_device_by_entity_id = {}
@@ -262,14 +262,14 @@ class HomematicipHAP:
 
         Used as an argument to EventBus.async_listen_once.
         """
-        self.hass.async_create_task(self.async_reset())
+        self.menuai.async_create_task(self.async_reset())
         _LOGGER.debug(
             "Reset connection to access point id %s", self.config_entry.unique_id
         )
 
     async def get_hap(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         hapid: str | None,
         authtoken: str | None,
         name: str | None,
@@ -283,13 +283,13 @@ class HomematicipHAP:
         home.modelType = "HomematicIP Cloud Home"
 
         try:
-            context = await build_context_async(hass, hapid, authtoken)
-            home.init_with_context(context, True, get_async_client(hass))
+            context = await build_context_async(menuai, hapid, authtoken)
+            home.init_with_context(context, True, get_async_client(menuai))
             await home.get_current_state_async()
         except HmipConnectionError as err:
             raise HmipcConnectionError from err
         home.on_update(self.async_update)
         home.on_create(self.async_create_entity)
-        hass.loop.create_task(self.async_connect())
+        menuai.loop.create_task(self.async_connect())
 
         return home

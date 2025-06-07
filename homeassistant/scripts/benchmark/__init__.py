@@ -9,14 +9,14 @@ from contextlib import suppress
 import logging
 from timeit import default_timer as timer
 
-from homeassistant import core
-from homeassistant.const import EVENT_STATE_CHANGED
-from homeassistant.helpers.entityfilter import convert_include_exclude_filter
-from homeassistant.helpers.event import (
+from menuai import core
+from menuai.const import EVENT_STATE_CHANGED
+from menuai.helpers.entityfilter import convert_include_exclude_filter
+from menuai.helpers.event import (
     async_track_state_change,
     async_track_state_change_event,
 )
-from homeassistant.helpers.json import JSON_DUMP
+from menuai.helpers.json import JSON_DUMP
 
 # mypy: allow-untyped-calls, allow-untyped-defs, no-check-untyped-defs
 # mypy: no-warn-return-any
@@ -27,9 +27,9 @@ BENCHMARKS: dict[str, Callable] = {}
 def run(args):
     """Handle benchmark commandline script."""
     # Disable logging
-    logging.getLogger("homeassistant.core").setLevel(logging.CRITICAL)
+    logging.getLogger("menuai.core").setLevel(logging.CRITICAL)
 
-    parser = argparse.ArgumentParser(description="Run a Home Assistant benchmark.")
+    parser = argparse.ArgumentParser(description="Run a MenuAI benchmark.")
     parser.add_argument("name", choices=BENCHMARKS)
     parser.add_argument("--script", choices=["benchmark"])
 
@@ -45,10 +45,10 @@ def run(args):
 
 async def run_benchmark(bench):
     """Run a benchmark."""
-    hass = core.HomeAssistant("")
-    runtime = await bench(hass)
+    menuai = core.menuai("")
+    runtime = await bench(menuai)
     print(f"Benchmark {bench.__name__} done in {runtime}s")
-    await hass.async_stop()
+    await menuai.async_stop()
 
 
 def benchmark[_CallableT: Callable](func: _CallableT) -> _CallableT:
@@ -58,7 +58,7 @@ def benchmark[_CallableT: Callable](func: _CallableT) -> _CallableT:
 
 
 @benchmark
-async def fire_events(hass: core.HomeAssistant) -> float:
+async def fire_events(menuai: core.menuai) -> float:
     """Fire a million events."""
     count = 0
     event_name = "benchmark_event"
@@ -70,14 +70,14 @@ async def fire_events(hass: core.HomeAssistant) -> float:
         nonlocal count
         count += 1
 
-    hass.bus.async_listen(event_name, listener)
+    menuai.bus.async_listen(event_name, listener)
 
     for _ in range(events_to_fire):
-        hass.bus.async_fire(event_name)
+        menuai.bus.async_fire(event_name)
 
     start = timer()
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert count == events_to_fire
 
@@ -85,7 +85,7 @@ async def fire_events(hass: core.HomeAssistant) -> float:
 
 
 @benchmark
-async def fire_events_with_filter(hass: core.HomeAssistant) -> float:
+async def fire_events_with_filter(menuai: core.menuai) -> float:
     """Fire a million events with a filter that rejects them."""
     count = 0
     event_name = "benchmark_event"
@@ -102,14 +102,14 @@ async def fire_events_with_filter(hass: core.HomeAssistant) -> float:
         nonlocal count
         count += 1
 
-    hass.bus.async_listen(event_name, listener, event_filter=event_filter)
+    menuai.bus.async_listen(event_name, listener, event_filter=event_filter)
 
     for _ in range(events_to_fire):
-        hass.bus.async_fire(event_name)
+        menuai.bus.async_fire(event_name)
 
     start = timer()
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert count == 0
 
@@ -117,7 +117,7 @@ async def fire_events_with_filter(hass: core.HomeAssistant) -> float:
 
 
 @benchmark
-async def state_changed_helper(hass: core.HomeAssistant) -> float:
+async def state_changed_helper(menuai: core.menuai) -> float:
     """Run a million events through state changed helper with 1000 entities."""
     count = 0
     entity_id = "light.kitchen"
@@ -133,7 +133,7 @@ async def state_changed_helper(hass: core.HomeAssistant) -> float:
             event.set()
 
     for idx in range(1000):
-        async_track_state_change(hass, f"{entity_id}{idx}", listener, "off", "on")
+        async_track_state_change(menuai, f"{entity_id}{idx}", listener, "off", "on")
     event_data = {
         "entity_id": f"{entity_id}0",
         "old_state": core.State(entity_id, "off"),
@@ -141,7 +141,7 @@ async def state_changed_helper(hass: core.HomeAssistant) -> float:
     }
 
     for _ in range(10**6):
-        hass.bus.async_fire(EVENT_STATE_CHANGED, event_data)  # type: ignore[misc]
+        menuai.bus.async_fire(EVENT_STATE_CHANGED, event_data)  # type: ignore[misc]
 
     start = timer()
 
@@ -151,7 +151,7 @@ async def state_changed_helper(hass: core.HomeAssistant) -> float:
 
 
 @benchmark
-async def state_changed_event_helper(hass: core.HomeAssistant) -> float:
+async def state_changed_event_helper(menuai: core.menuai) -> float:
     """Run a million events through state changed event helper with 1000 entities."""
     count = 0
     entity_id = "light.kitchen"
@@ -164,7 +164,7 @@ async def state_changed_event_helper(hass: core.HomeAssistant) -> float:
         count += 1
 
     async_track_state_change_event(
-        hass, [f"{entity_id}{idx}" for idx in range(1000)], listener
+        menuai, [f"{entity_id}{idx}" for idx in range(1000)], listener
     )
 
     event_data = {
@@ -174,11 +174,11 @@ async def state_changed_event_helper(hass: core.HomeAssistant) -> float:
     }
 
     for _ in range(events_to_fire):
-        hass.bus.async_fire(EVENT_STATE_CHANGED, event_data)  # type: ignore[misc]
+        menuai.bus.async_fire(EVENT_STATE_CHANGED, event_data)  # type: ignore[misc]
 
     start = timer()
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert count == events_to_fire
 
@@ -186,7 +186,7 @@ async def state_changed_event_helper(hass: core.HomeAssistant) -> float:
 
 
 @benchmark
-async def state_changed_event_filter_helper(hass: core.HomeAssistant) -> float:
+async def state_changed_event_filter_helper(menuai: core.menuai) -> float:
     """Run a million events through state changed event helper.
 
     With 1000 entities that all get filtered.
@@ -202,7 +202,7 @@ async def state_changed_event_filter_helper(hass: core.HomeAssistant) -> float:
         count += 1
 
     async_track_state_change_event(
-        hass, [f"{entity_id}{idx}" for idx in range(1000)], listener
+        menuai, [f"{entity_id}{idx}" for idx in range(1000)], listener
     )
 
     event_data = {
@@ -212,11 +212,11 @@ async def state_changed_event_filter_helper(hass: core.HomeAssistant) -> float:
     }
 
     for _ in range(events_to_fire):
-        hass.bus.async_fire(EVENT_STATE_CHANGED, event_data)  # type: ignore[misc]
+        menuai.bus.async_fire(EVENT_STATE_CHANGED, event_data)  # type: ignore[misc]
 
     start = timer()
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert count == 0
 
@@ -224,7 +224,7 @@ async def state_changed_event_filter_helper(hass: core.HomeAssistant) -> float:
 
 
 @benchmark
-async def filtering_entity_id(hass: core.HomeAssistant) -> float:
+async def filtering_entity_id(menuai: core.menuai) -> float:
     """Run a 100k state changes through entity filter."""
     config = {
         "include": {
@@ -289,7 +289,7 @@ async def filtering_entity_id(hass: core.HomeAssistant) -> float:
 
 
 @benchmark
-async def valid_entity_id(hass: core.HomeAssistant) -> float:
+async def valid_entity_id(menuai: core.menuai) -> float:
     """Run valid entity ID a million times."""
     start = timer()
     for _ in range(10**6):
@@ -298,7 +298,7 @@ async def valid_entity_id(hass: core.HomeAssistant) -> float:
 
 
 @benchmark
-async def json_serialize_states(hass: core.HomeAssistant) -> float:
+async def json_serialize_states(menuai: core.menuai) -> float:
     """Serialize million states with websocket default encoder."""
     states = [
         core.State("light.kitchen", "on", {"friendly_name": "Kitchen Lights"})

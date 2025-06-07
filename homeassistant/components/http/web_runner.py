@@ -1,4 +1,4 @@
-"""HomeAssistant specific aiohttp Site."""
+"""menuai specific aiohttp Site."""
 
 from __future__ import annotations
 
@@ -9,8 +9,8 @@ from aiohttp import web
 from yarl import URL
 
 
-class HomeAssistantTCPSite(web.BaseSite):
-    """HomeAssistant specific aiohttp Site.
+class menuaiTCPSite(web.BaseSite):
+    """menuai specific aiohttp Site.
 
     Vanilla TCPSite accepts only str as host. However, the underlying asyncio's
     create_server() implementation does take a list of strings to bind to multiple
@@ -35,7 +35,7 @@ class HomeAssistantTCPSite(web.BaseSite):
         reuse_address: bool | None = None,
         reuse_port: bool | None = None,
     ) -> None:
-        """Initialize HomeAssistantTCPSite."""
+        """Initialize menuaiTCPSite."""
         super().__init__(
             runner,
             ssl_context=ssl_context,

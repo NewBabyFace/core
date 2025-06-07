@@ -10,9 +10,9 @@ from habluetooth import BluetoothServiceInfoBleak
 from pynecil import CommunicationError, Pynecil
 import voluptuous as vol
 
-from homeassistant.components.bluetooth.api import async_discovered_service_info
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_ADDRESS
+from menuai.components.bluetooth.api import async_discovered_service_info
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_ADDRESS
 
 from .const import DISCOVERY_SVC_UUID, DOMAIN
 
@@ -99,7 +99,7 @@ class IronOSConfigFlow(ConfigFlow, domain=DOMAIN):
                 await device.disconnect()
 
         current_addresses = self._async_current_ids(include_ignore=False)
-        for discovery_info in async_discovered_service_info(self.hass, True):
+        for discovery_info in async_discovered_service_info(self.menuai, True):
             address = discovery_info.address
             if (
                 DISCOVERY_SVC_UUID not in discovery_info.service_uuids

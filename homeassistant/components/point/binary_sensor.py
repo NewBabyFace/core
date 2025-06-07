@@ -7,13 +7,13 @@ from typing import Any
 
 from pypoint import EVENTS
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import PointConfigEntry
 from .const import SIGNAL_WEBHOOK
@@ -42,7 +42,7 @@ DEVICES: dict[str, Any] = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: PointConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -69,7 +69,7 @@ async def async_setup_entry(
 
 
 class MinutPointBinarySensor(MinutPointEntity, BinarySensorEntity):
-    """The platform class required by Home Assistant."""
+    """The platform class required by MenuAI."""
 
     def __init__(
         self, coordinator: PointDataUpdateCoordinator, device_id: str, key: str
@@ -82,11 +82,11 @@ class MinutPointBinarySensor(MinutPointEntity, BinarySensorEntity):
         self._attr_unique_id = f"point.{device_id}-{key}"
         self._attr_icon = DEVICES[key].get("icon")
 
-    async def async_added_to_hass(self) -> None:
-        """Call when entity is added to HOme Assistant."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Call when entity is added to MenuAI."""
+        await super().async_added_to_menuai()
         self.async_on_remove(
-            async_dispatcher_connect(self.hass, SIGNAL_WEBHOOK, self._webhook_event)
+            async_dispatcher_connect(self.menuai, SIGNAL_WEBHOOK, self._webhook_event)
         )
 
     def _handle_coordinator_update(self) -> None:

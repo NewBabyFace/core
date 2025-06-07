@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant.components.device_automation import (
+from menuai.components.device_automation import (
     DEVICE_TRIGGER_BASE_SCHEMA,
     InvalidDeviceAutomationConfig,
 )
-from homeassistant.components.homeassistant.triggers import event as event_trigger
-from homeassistant.const import (
+from menuai.components.menuai.triggers import event as event_trigger
+from menuai.const import (
     CONF_DEVICE_ID,
     CONF_DOMAIN,
     CONF_EVENT,
@@ -17,10 +17,10 @@ from homeassistant.const import (
     CONF_TYPE,
     CONF_UNIQUE_ID,
 )
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import CALLBACK_TYPE, menuai
+from menuai.helpers import device_registry as dr
+from menuai.helpers.trigger import TriggerActionType, TriggerInfo
+from menuai.helpers.typing import ConfigType
 
 from . import DOMAIN, DeconzConfigEntry
 from .deconz_event import (
@@ -679,12 +679,12 @@ TRIGGER_SCHEMA = DEVICE_TRIGGER_BASE_SCHEMA.extend(
 
 
 def _get_deconz_event_from_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     device: dr.DeviceEntry,
 ) -> DeconzAlarmEvent | DeconzEvent | DeconzPresenceEvent | DeconzRelativeRotaryEvent:
     """Resolve deconz event from device."""
     entry: DeconzConfigEntry
-    for entry in hass.config_entries.async_loaded_entries(DOMAIN):
+    for entry in menuai.config_entries.async_loaded_entries(DOMAIN):
         for deconz_event in entry.runtime_data.events:
             if device.id == deconz_event.device_id:
                 return deconz_event
@@ -695,13 +695,13 @@ def _get_deconz_event_from_device(
 
 
 async def async_validate_trigger_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
 ) -> ConfigType:
     """Validate config."""
     config = TRIGGER_SCHEMA(config)
 
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     device = device_registry.async_get(config[CONF_DEVICE_ID])
 
     trigger = (config[CONF_TYPE], config[CONF_SUBTYPE])
@@ -722,7 +722,7 @@ async def async_validate_trigger_config(
 
 
 async def async_attach_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     action: TriggerActionType,
     trigger_info: TriggerInfo,
@@ -730,10 +730,10 @@ async def async_attach_trigger(
     """Listen for state changes based on configuration."""
     event_data: dict[str, int | str] = {}
 
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     device = device_registry.devices[config[CONF_DEVICE_ID]]
 
-    deconz_event = _get_deconz_event_from_device(hass, device)
+    deconz_event = _get_deconz_event_from_device(menuai, device)
     if event_id := deconz_event.serial:
         event_data[CONF_UNIQUE_ID] = event_id
 
@@ -749,12 +749,12 @@ async def async_attach_trigger(
 
     event_config = event_trigger.TRIGGER_SCHEMA(raw_event_config)
     return await event_trigger.async_attach_trigger(
-        hass, event_config, action, trigger_info, platform_type="device"
+        menuai, event_config, action, trigger_info, platform_type="device"
     )
 
 
 async def async_get_triggers(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_id: str,
 ) -> list[dict[str, str]]:
     """List device triggers.
@@ -763,7 +763,7 @@ async def async_get_triggers(
     Retrieve the deconz event object matching device entry.
     Generate device trigger list.
     """
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     device = device_registry.devices[device_id]
 
     if device.model not in REMOTES:

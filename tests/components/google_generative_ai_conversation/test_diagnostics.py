@@ -2,7 +2,7 @@
 
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.google_generative_ai_conversation.const import (
+from menuai.components.google_generative_ai_conversation.const import (
     CONF_CHAT_MODEL,
     CONF_DANGEROUS_BLOCK_THRESHOLD,
     CONF_HARASSMENT_BLOCK_THRESHOLD,
@@ -21,7 +21,7 @@ from homeassistant.components.google_generative_ai_conversation.const import (
     RECOMMENDED_TOP_K,
     RECOMMENDED_TOP_P,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 from tests.components.diagnostics import get_diagnostics_for_config_entry
@@ -29,14 +29,14 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     mock_config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test diagnostics."""
-    mock_config_entry.add_to_hass(hass)
-    hass.config_entries.async_update_entry(
+    mock_config_entry.add_to_menuai(menuai)
+    menuai.config_entries.async_update_entry(
         mock_config_entry,
         options={
             CONF_RECOMMENDED: False,
@@ -52,8 +52,8 @@ async def test_diagnostics(
             CONF_DANGEROUS_BLOCK_THRESHOLD: RECOMMENDED_HARM_BLOCK_THRESHOLD,
         },
     )
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
     assert (
-        await get_diagnostics_for_config_entry(hass, hass_client, mock_config_entry)
+        await get_diagnostics_for_config_entry(menuai, menuai_client, mock_config_entry)
         == snapshot
     )

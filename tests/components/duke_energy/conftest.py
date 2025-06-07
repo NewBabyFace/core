@@ -5,17 +5,17 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from homeassistant.components.duke_energy.const import DOMAIN
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
+from menuai.components.duke_energy.const import DOMAIN
+from menuai.const import CONF_EMAIL, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.util import dt as dt_util
 
 from tests.common import MockConfigEntry
 from tests.typing import RecorderInstanceContextManager
 
 
 @pytest.fixture
-async def mock_recorder_before_hass(
+async def mock_recorder_before_menuai(
     async_test_recorder: RecorderInstanceContextManager,
 ) -> None:
     """Set up recorder."""
@@ -25,14 +25,14 @@ async def mock_recorder_before_hass(
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.duke_energy.async_setup_entry",
+        "menuai.components.duke_energy.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
         yield mock_setup_entry
 
 
 @pytest.fixture
-def mock_config_entry(hass: HomeAssistant) -> Generator[AsyncMock]:
+def mock_config_entry(menuai: menuai) -> Generator[AsyncMock]:
     """Return the default mocked config entry."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -42,7 +42,7 @@ def mock_config_entry(hass: HomeAssistant) -> Generator[AsyncMock]:
             CONF_PASSWORD: "test-password",
         },
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     return config_entry
 
 
@@ -51,11 +51,11 @@ def mock_api() -> Generator[AsyncMock]:
     """Mock a successful Duke Energy API."""
     with (
         patch(
-            "homeassistant.components.duke_energy.config_flow.DukeEnergy",
+            "menuai.components.duke_energy.config_flow.DukeEnergy",
             autospec=True,
         ) as mock_api,
         patch(
-            "homeassistant.components.duke_energy.coordinator.DukeEnergy",
+            "menuai.components.duke_energy.coordinator.DukeEnergy",
             new=mock_api,
         ),
     ):

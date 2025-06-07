@@ -57,7 +57,7 @@
     "lastMaintenanceTimestamp": "2025-04-10T09:12:59-04:00",
     "nextMaintenanceTimestamp": "2026-04-10T09:12:59-04:00",
     "maintenancePeriodDays": 365,
-    "hasServiceAgreement": null,
+    "menuaierviceAgreement": null,
     "totalRuntimeHours": 120.2
   },
   "powerSource": "Utility",
@@ -66,7 +66,7 @@
   "connectionType": "Unknown",
   "serverIpAddress": "2.2.2.2",
   "serviceAgreement": {
-    "hasServiceAgreement": null,
+    "menuaierviceAgreement": null,
     "beginTimestamp": null,
     "term": null,
     "termMonths": null,

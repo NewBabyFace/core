@@ -6,19 +6,19 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from homeassistant.components.application_credentials import (
+from menuai.components.application_credentials import (
     ClientCredential,
     async_import_client_credential,
 )
-from homeassistant.components.mcp.const import (
+from menuai.components.mcp.const import (
     CONF_ACCESS_TOKEN,
     CONF_AUTHORIZATION_URL,
     CONF_TOKEN_URL,
     DOMAIN,
 )
-from homeassistant.const import CONF_TOKEN, CONF_URL
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.const import CONF_TOKEN, CONF_URL
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 
@@ -35,7 +35,7 @@ OAUTH_TOKEN_URL = "https://example-auth-server.com/token-path"
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.mcp.async_setup_entry", return_value=True
+        "menuai.components.mcp.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -44,31 +44,31 @@ def mock_setup_entry() -> Generator[AsyncMock]:
 def mock_mcp_client() -> Generator[AsyncMock]:
     """Fixture to mock the MCP client."""
     with (
-        patch("homeassistant.components.mcp.coordinator.sse_client"),
-        patch("homeassistant.components.mcp.coordinator.ClientSession") as mock_session,
-        patch("homeassistant.components.mcp.coordinator.TIMEOUT", 1),
+        patch("menuai.components.mcp.coordinator.sse_client"),
+        patch("menuai.components.mcp.coordinator.ClientSession") as mock_session,
+        patch("menuai.components.mcp.coordinator.TIMEOUT", 1),
     ):
         yield mock_session.return_value.__aenter__
 
 
 @pytest.fixture(name="config_entry")
-def mock_config_entry(hass: HomeAssistant) -> MockConfigEntry:
+def mock_config_entry(menuai: menuai) -> MockConfigEntry:
     """Fixture to load the integration."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
         data={CONF_URL: "http://1.1.1.1/sse"},
         title=TEST_API_NAME,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     return config_entry
 
 
 @pytest.fixture(name="credential")
-async def mock_credential(hass: HomeAssistant) -> None:
+async def mock_credential(menuai: menuai) -> None:
     """Fixture that provides the ClientCredential for the test."""
-    assert await async_setup_component(hass, "application_credentials", {})
+    assert await async_setup_component(menuai, "application_credentials", {})
     await async_import_client_credential(
-        hass,
+        menuai,
         DOMAIN,
         ClientCredential(CLIENT_ID, CLIENT_SECRET),
         AUTH_DOMAIN,
@@ -83,7 +83,7 @@ def mock_config_entry_token_expiration() -> datetime.datetime:
 
 @pytest.fixture(name="config_entry_with_auth")
 def mock_config_entry_with_auth(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry_token_expiration: datetime.datetime,
 ) -> MockConfigEntry:
     """Fixture to load the integration with authentication."""
@@ -103,5 +103,5 @@ def mock_config_entry_with_auth(
         },
         title=TEST_API_NAME,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     return config_entry

@@ -8,11 +8,11 @@ from surepy.entities import SurepyEntity
 from surepy.entities.devices import Felaqua as SurepyFelaqua
 from surepy.enums import EntityType
 
-from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_VOLTAGE, PERCENTAGE, EntityCategory, UnitOfVolume
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.sensor import SensorDeviceClass, SensorEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_VOLTAGE, PERCENTAGE, EntityCategory, UnitOfVolume
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN, SURE_BATT_VOLTAGE_DIFF, SURE_BATT_VOLTAGE_LOW
 from .coordinator import SurePetcareDataCoordinator
@@ -20,7 +20,7 @@ from .entity import SurePetcareEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -28,7 +28,7 @@ async def async_setup_entry(
 
     entities: list[SurePetcareEntity] = []
 
-    coordinator: SurePetcareDataCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: SurePetcareDataCoordinator = menuai.data[DOMAIN][entry.entry_id]
 
     for surepy_entity in coordinator.data.values():
         if surepy_entity.type in [

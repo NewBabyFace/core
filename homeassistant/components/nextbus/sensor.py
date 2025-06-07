@@ -5,13 +5,13 @@ from __future__ import annotations
 import logging
 from typing import cast
 
-from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_NAME, CONF_STOP
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.util.dt import utc_from_timestamp
+from menuai.components.sensor import SensorDeviceClass, SensorEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_NAME, CONF_STOP
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
+from menuai.util.dt import utc_from_timestamp
 
 from .const import CONF_AGENCY, CONF_ROUTE, DOMAIN
 from .coordinator import NextBusDataUpdateCoordinator
@@ -21,7 +21,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -31,7 +31,7 @@ async def async_setup_entry(
     entry_stop = config.data[CONF_STOP]
     coordinator_key = f"{entry_agency}-{entry_stop}"
 
-    coordinator: NextBusDataUpdateCoordinator = hass.data[DOMAIN].get(coordinator_key)
+    coordinator: NextBusDataUpdateCoordinator = menuai.data[DOMAIN].get(coordinator_key)
 
     async_add_entities(
         (
@@ -95,10 +95,10 @@ class NextBusDepartureSensor(
         msg = f"{self.agency}:{self.route}:{self.stop}:{message}"
         _LOGGER.error(msg, *args)
 
-    async def async_added_to_hass(self) -> None:
-        """Read data from coordinator after adding to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Read data from coordinator after adding to menuai."""
         self._handle_coordinator_update()
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
     @callback
     def _handle_coordinator_update(self) -> None:

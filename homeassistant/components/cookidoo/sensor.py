@@ -7,16 +7,16 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
 )
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
-from homeassistant.util import dt as dt_util
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
+from menuai.util import dt as dt_util
 
 from .const import SUBSCRIPTION_MAP
 from .coordinator import (
@@ -71,7 +71,7 @@ SENSOR_DESCRIPTIONS: tuple[CookidooSensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: CookidooConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

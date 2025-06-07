@@ -10,16 +10,16 @@ from PIL import UnidentifiedImageError
 import pytest
 import simplehound.core as hound
 
-from homeassistant.components.image_processing import DOMAIN as IP_DOMAIN, SERVICE_SCAN
-from homeassistant.components.sighthound import image_processing as sh
-from homeassistant.const import (
+from menuai.components.image_processing import DOMAIN as IP_DOMAIN, SERVICE_SCAN
+from menuai.components.sighthound import image_processing as sh
+from menuai.const import (
     ATTR_ENTITY_ID,
     CONF_API_KEY,
     CONF_ENTITY_ID,
     CONF_SOURCE,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai, callback
+from menuai.setup import async_setup_component
 
 TEST_DIR = os.path.dirname(__file__)
 
@@ -53,9 +53,9 @@ MOCK_NOW = datetime.datetime(2020, 2, 20, 10, 5, 3)
 
 
 @pytest.fixture(autouse=True)
-async def setup_homeassistant(hass: HomeAssistant):
-    """Set up the homeassistant integration."""
-    await async_setup_component(hass, "homeassistant", {})
+async def setup_menuai(menuai: menuai):
+    """Set up the menuai integration."""
+    await async_setup_component(menuai, "menuai", {})
 
 
 @pytest.fixture
@@ -71,7 +71,7 @@ def mock_detections():
 def mock_image():
     """Return a mock camera image."""
     with mock.patch(
-        "homeassistant.components.demo.camera.DemoCamera.camera_image",
+        "menuai.components.demo.camera.DemoCamera.camera_image",
         return_value=b"Test",
     ) as image:
         yield image
@@ -81,7 +81,7 @@ def mock_image():
 def mock_bad_image_data():
     """Mock bad image data."""
     with mock.patch(
-        "homeassistant.components.sighthound.image_processing.Image.open",
+        "menuai.components.sighthound.image_processing.Image.open",
         side_effect=UnidentifiedImageError,
     ) as bad_data:
         yield bad_data
@@ -90,35 +90,35 @@ def mock_bad_image_data():
 @pytest.fixture
 def mock_now():
     """Return a mock now datetime."""
-    with mock.patch("homeassistant.util.dt.now", return_value=MOCK_NOW) as now_dt:
+    with mock.patch("menuai.util.dt.now", return_value=MOCK_NOW) as now_dt:
         yield now_dt
 
 
 async def test_bad_api_key(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Catch bad api key."""
     with mock.patch(
         "simplehound.core.cloud.detect", side_effect=hound.SimplehoundException
     ):
-        await async_setup_component(hass, IP_DOMAIN, VALID_CONFIG)
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, IP_DOMAIN, VALID_CONFIG)
+        await menuai.async_block_till_done()
         assert "Sighthound error" in caplog.text
-        assert not hass.states.get(VALID_ENTITY_ID)
+        assert not menuai.states.get(VALID_ENTITY_ID)
 
 
-async def test_setup_platform(hass: HomeAssistant, mock_detections) -> None:
+async def test_setup_platform(menuai: menuai, mock_detections) -> None:
     """Set up platform with one entity."""
-    await async_setup_component(hass, IP_DOMAIN, VALID_CONFIG)
-    await hass.async_block_till_done()
-    assert hass.states.get(VALID_ENTITY_ID)
+    await async_setup_component(menuai, IP_DOMAIN, VALID_CONFIG)
+    await menuai.async_block_till_done()
+    assert menuai.states.get(VALID_ENTITY_ID)
 
 
-async def test_process_image(hass: HomeAssistant, mock_image, mock_detections) -> None:
+async def test_process_image(menuai: menuai, mock_image, mock_detections) -> None:
     """Process an image."""
-    await async_setup_component(hass, IP_DOMAIN, VALID_CONFIG)
-    await hass.async_block_till_done()
-    assert hass.states.get(VALID_ENTITY_ID)
+    await async_setup_component(menuai, IP_DOMAIN, VALID_CONFIG)
+    await menuai.async_block_till_done()
+    assert menuai.states.get(VALID_ENTITY_ID)
 
     person_events = []
 
@@ -127,19 +127,19 @@ async def test_process_image(hass: HomeAssistant, mock_image, mock_detections) -
         """Mock event."""
         person_events.append(event)
 
-    hass.bus.async_listen(sh.EVENT_PERSON_DETECTED, capture_person_event)
+    menuai.bus.async_listen(sh.EVENT_PERSON_DETECTED, capture_person_event)
 
     data = {ATTR_ENTITY_ID: VALID_ENTITY_ID}
-    await hass.services.async_call(IP_DOMAIN, SERVICE_SCAN, service_data=data)
-    await hass.async_block_till_done()
+    await menuai.services.async_call(IP_DOMAIN, SERVICE_SCAN, service_data=data)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(VALID_ENTITY_ID)
+    state = menuai.states.get(VALID_ENTITY_ID)
     assert state.state == "2"
     assert len(person_events) == 2
 
 
 async def test_catch_bad_image(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     mock_image,
     mock_detections,
@@ -148,33 +148,33 @@ async def test_catch_bad_image(
     """Process an image."""
     valid_config_save_file = deepcopy(VALID_CONFIG)
     valid_config_save_file[IP_DOMAIN].update({sh.CONF_SAVE_FILE_FOLDER: TEST_DIR})
-    await async_setup_component(hass, IP_DOMAIN, valid_config_save_file)
-    await hass.async_block_till_done()
-    assert hass.states.get(VALID_ENTITY_ID)
+    await async_setup_component(menuai, IP_DOMAIN, valid_config_save_file)
+    await menuai.async_block_till_done()
+    assert menuai.states.get(VALID_ENTITY_ID)
 
     data = {ATTR_ENTITY_ID: VALID_ENTITY_ID}
-    await hass.services.async_call(IP_DOMAIN, SERVICE_SCAN, service_data=data)
-    await hass.async_block_till_done()
+    await menuai.services.async_call(IP_DOMAIN, SERVICE_SCAN, service_data=data)
+    await menuai.async_block_till_done()
     assert "Sighthound unable to process image" in caplog.text
 
 
-async def test_save_image(hass: HomeAssistant, mock_image, mock_detections) -> None:
+async def test_save_image(menuai: menuai, mock_image, mock_detections) -> None:
     """Save a processed image."""
     valid_config_save_file = deepcopy(VALID_CONFIG)
     valid_config_save_file[IP_DOMAIN].update({sh.CONF_SAVE_FILE_FOLDER: TEST_DIR})
-    await async_setup_component(hass, IP_DOMAIN, valid_config_save_file)
-    await hass.async_block_till_done()
-    assert hass.states.get(VALID_ENTITY_ID)
+    await async_setup_component(menuai, IP_DOMAIN, valid_config_save_file)
+    await menuai.async_block_till_done()
+    assert menuai.states.get(VALID_ENTITY_ID)
 
     with mock.patch(
-        "homeassistant.components.sighthound.image_processing.Image.open"
+        "menuai.components.sighthound.image_processing.Image.open"
     ) as pil_img_open:
         pil_img = pil_img_open.return_value
         pil_img = pil_img.convert.return_value
         data = {ATTR_ENTITY_ID: VALID_ENTITY_ID}
-        await hass.services.async_call(IP_DOMAIN, SERVICE_SCAN, service_data=data)
-        await hass.async_block_till_done()
-        state = hass.states.get(VALID_ENTITY_ID)
+        await menuai.services.async_call(IP_DOMAIN, SERVICE_SCAN, service_data=data)
+        await menuai.async_block_till_done()
+        state = menuai.states.get(VALID_ENTITY_ID)
         assert state.state == "2"
         assert pil_img.save.call_count == 1
 
@@ -184,25 +184,25 @@ async def test_save_image(hass: HomeAssistant, mock_image, mock_detections) -> N
 
 
 async def test_save_timestamped_image(
-    hass: HomeAssistant, mock_image, mock_detections, mock_now
+    menuai: menuai, mock_image, mock_detections, mock_now
 ) -> None:
     """Save a processed image."""
     valid_config_save_ts_file = deepcopy(VALID_CONFIG)
     valid_config_save_ts_file[IP_DOMAIN].update({sh.CONF_SAVE_FILE_FOLDER: TEST_DIR})
     valid_config_save_ts_file[IP_DOMAIN].update({sh.CONF_SAVE_TIMESTAMPTED_FILE: True})
-    await async_setup_component(hass, IP_DOMAIN, valid_config_save_ts_file)
-    await hass.async_block_till_done()
-    assert hass.states.get(VALID_ENTITY_ID)
+    await async_setup_component(menuai, IP_DOMAIN, valid_config_save_ts_file)
+    await menuai.async_block_till_done()
+    assert menuai.states.get(VALID_ENTITY_ID)
 
     with mock.patch(
-        "homeassistant.components.sighthound.image_processing.Image.open"
+        "menuai.components.sighthound.image_processing.Image.open"
     ) as pil_img_open:
         pil_img = pil_img_open.return_value
         pil_img = pil_img.convert.return_value
         data = {ATTR_ENTITY_ID: VALID_ENTITY_ID}
-        await hass.services.async_call(IP_DOMAIN, SERVICE_SCAN, service_data=data)
-        await hass.async_block_till_done()
-        state = hass.states.get(VALID_ENTITY_ID)
+        await menuai.services.async_call(IP_DOMAIN, SERVICE_SCAN, service_data=data)
+        await menuai.async_block_till_done()
+        state = menuai.states.get(VALID_ENTITY_ID)
         assert state.state == "2"
         assert pil_img.save.call_count == 2
 

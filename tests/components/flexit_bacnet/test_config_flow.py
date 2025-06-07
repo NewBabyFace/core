@@ -5,23 +5,23 @@ import asyncio.exceptions
 from flexit_bacnet import DecodingError
 import pytest
 
-from homeassistant.const import CONF_DEVICE_ID, CONF_IP_ADDRESS
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.const import CONF_DEVICE_ID, CONF_IP_ADDRESS
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 
 async def test_form(
-    hass: HomeAssistant, flow_id: str, mock_setup_entry, mock_flexit_bacnet
+    menuai: menuai, flow_id: str, mock_setup_entry, mock_flexit_bacnet
 ) -> None:
     """Test we get the form and the happy path works."""
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         flow_id,
         {
             CONF_IP_ADDRESS: "1.1.1.1",
             CONF_DEVICE_ID: 2,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "Device Name"
@@ -47,7 +47,7 @@ async def test_form(
     ],
 )
 async def test_flow_fails(
-    hass: HomeAssistant,
+    menuai: menuai,
     flow_id: str,
     error: Exception,
     message: str,
@@ -59,7 +59,7 @@ async def test_flow_fails(
     The flexit_bacnet library raises asyncio.exceptions.TimeoutError in that scenario.
     """
     mock_flexit_bacnet.update.side_effect = error
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         flow_id,
         {
             CONF_IP_ADDRESS: "1.1.1.1",
@@ -73,7 +73,7 @@ async def test_flow_fails(
 
     # ensure that user can recover from this error
     mock_flexit_bacnet.update.side_effect = None
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_IP_ADDRESS: "1.1.1.1",
@@ -92,18 +92,18 @@ async def test_flow_fails(
 
 
 async def test_form_device_already_exist(
-    hass: HomeAssistant, flow_id: str, mock_flexit_bacnet, mock_config_entry
+    menuai: menuai, flow_id: str, mock_flexit_bacnet, mock_config_entry
 ) -> None:
     """Test that we cannot add already added device."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         flow_id,
         {
             CONF_IP_ADDRESS: "1.1.1.1",
             CONF_DEVICE_ID: 2,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"

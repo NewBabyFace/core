@@ -4,15 +4,15 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant.core import HomeAssistant, State
-from homeassistant.helpers import intent
+from menuai.core import menuai, State
+from menuai.helpers import intent
 
 from . import DOMAIN, INTENT_GET_WEATHER
 
 
-async def async_setup_intents(hass: HomeAssistant) -> None:
+async def async_setup_intents(menuai: menuai) -> None:
     """Set up the weather intents."""
-    intent.async_register(hass, GetWeatherIntent())
+    intent.async_register(menuai, GetWeatherIntent())
 
 
 class GetWeatherIntent(intent.IntentHandler):
@@ -25,7 +25,7 @@ class GetWeatherIntent(intent.IntentHandler):
 
     async def async_handle(self, intent_obj: intent.Intent) -> intent.IntentResponse:
         """Handle the intent."""
-        hass = intent_obj.hass
+        menuai = intent_obj.menuai
         slots = self.async_validate_slots(intent_obj.slots)
 
         weather_state: State | None = None
@@ -36,7 +36,7 @@ class GetWeatherIntent(intent.IntentHandler):
         match_constraints = intent.MatchTargetsConstraints(
             name=name, domains=[DOMAIN], assistant=intent_obj.assistant
         )
-        match_result = intent.async_match_targets(hass, match_constraints)
+        match_result = intent.async_match_targets(menuai, match_constraints)
         if not match_result.is_match:
             raise intent.MatchFailedError(
                 result=match_result, constraints=match_constraints

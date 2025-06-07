@@ -2,8 +2,8 @@
 
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 from .test_common import get_device_discovery_payload, send_discovery_message
 
@@ -11,7 +11,7 @@ from tests.typing import MqttMockHAClient
 
 
 async def test_device_discover(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock: MqttMockHAClient,
     device_reg,
     entity_reg,
@@ -24,7 +24,7 @@ async def test_device_discover(
         number_of_boards=2,
     )
 
-    await send_discovery_message(hass, payload)
+    await send_discovery_message(menuai, payload)
 
     # Verify device and registry entries are created
     device_entry = device_reg.async_get_device(
@@ -39,7 +39,7 @@ async def test_device_discover(
 
 
 async def test_device_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock: MqttMockHAClient,
     device_reg,
     entity_reg,
@@ -52,7 +52,7 @@ async def test_device_update(
         number_of_boards=2,
     )
 
-    await send_discovery_message(hass, payload)
+    await send_discovery_message(menuai, payload)
 
     # Verify device is created
     device_entry = device_reg.async_get_device(
@@ -64,7 +64,7 @@ async def test_device_update(
     payload["fw"] = "1.0.1"
     payload["hw"] = "1.0.8"
 
-    await send_discovery_message(hass, payload)
+    await send_discovery_message(menuai, payload)
 
     # Verify device is created
     device_entry = device_reg.async_get_device(
@@ -76,7 +76,7 @@ async def test_device_update(
 
 
 async def test_device_remove(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock: MqttMockHAClient,
     device_reg,
     entity_reg,
@@ -88,7 +88,7 @@ async def test_device_remove(
         number_of_boards=2,
     )
 
-    await send_discovery_message(hass, payload)
+    await send_discovery_message(menuai, payload)
 
     # Verify device is created
     device_entry = device_reg.async_get_device(
@@ -96,7 +96,7 @@ async def test_device_remove(
     )
     assert device_entry is not None
 
-    await send_discovery_message(hass, None)
+    await send_discovery_message(menuai, None)
 
     # Verify device entry is removed
     device_entry = device_reg.async_get_device(

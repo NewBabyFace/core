@@ -2,9 +2,9 @@
 
 import pytest
 
-from homeassistant.components import conversation
-from homeassistant.components.homeassistant.exposed_entities import async_expose_entity
-from homeassistant.components.humidifier import (
+from menuai.components import conversation
+from menuai.components.menuai.exposed_entities import async_expose_entity
+from menuai.components.humidifier import (
     ATTR_AVAILABLE_MODES,
     ATTR_HUMIDITY,
     DOMAIN,
@@ -12,7 +12,7 @@ from homeassistant.components.humidifier import (
     SERVICE_SET_MODE,
     intent,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_MODE,
     ATTR_SUPPORTED_FEATURES,
@@ -20,8 +20,8 @@ from homeassistant.const import (
     STATE_OFF,
     STATE_ON,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.intent import (
+from menuai.core import menuai
+from menuai.helpers.intent import (
     IntentHandleError,
     IntentResponseType,
     InvalidSlotInfo,
@@ -29,29 +29,29 @@ from homeassistant.helpers.intent import (
     MatchFailedReason,
     async_handle,
 )
-from homeassistant.setup import async_setup_component
+from menuai.setup import async_setup_component
 
 from tests.common import async_mock_service
 
 
-async def test_intent_set_humidity(hass: HomeAssistant) -> None:
+async def test_intent_set_humidity(menuai: menuai) -> None:
     """Test the set humidity intent."""
-    assert await async_setup_component(hass, "homeassistant", {})
-    hass.states.async_set(
+    assert await async_setup_component(menuai, "menuai", {})
+    menuai.states.async_set(
         "humidifier.bedroom_humidifier", STATE_ON, {ATTR_HUMIDITY: 40}
     )
-    humidity_calls = async_mock_service(hass, DOMAIN, SERVICE_SET_HUMIDITY)
-    turn_on_calls = async_mock_service(hass, DOMAIN, SERVICE_TURN_ON)
-    await intent.async_setup_intents(hass)
+    humidity_calls = async_mock_service(menuai, DOMAIN, SERVICE_SET_HUMIDITY)
+    turn_on_calls = async_mock_service(menuai, DOMAIN, SERVICE_TURN_ON)
+    await intent.async_setup_intents(menuai)
 
     result = await async_handle(
-        hass,
+        menuai,
         "test",
         intent.INTENT_HUMIDITY,
         {"name": {"value": "Bedroom humidifier"}, "humidity": {"value": "50"}},
         assistant=conversation.DOMAIN,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result.speech["plain"]["speech"] == "The bedroom humidifier is set to 50%"
 
@@ -64,24 +64,24 @@ async def test_intent_set_humidity(hass: HomeAssistant) -> None:
     assert call.data.get(ATTR_HUMIDITY) == 50
 
 
-async def test_intent_set_humidity_and_turn_on(hass: HomeAssistant) -> None:
+async def test_intent_set_humidity_and_turn_on(menuai: menuai) -> None:
     """Test the set humidity intent for turned off humidifier."""
-    assert await async_setup_component(hass, "homeassistant", {})
-    hass.states.async_set(
+    assert await async_setup_component(menuai, "menuai", {})
+    menuai.states.async_set(
         "humidifier.bedroom_humidifier", STATE_OFF, {ATTR_HUMIDITY: 40}
     )
-    humidity_calls = async_mock_service(hass, DOMAIN, SERVICE_SET_HUMIDITY)
-    turn_on_calls = async_mock_service(hass, DOMAIN, SERVICE_TURN_ON)
-    await intent.async_setup_intents(hass)
+    humidity_calls = async_mock_service(menuai, DOMAIN, SERVICE_SET_HUMIDITY)
+    turn_on_calls = async_mock_service(menuai, DOMAIN, SERVICE_TURN_ON)
+    await intent.async_setup_intents(menuai)
 
     result = await async_handle(
-        hass,
+        menuai,
         "test",
         intent.INTENT_HUMIDITY,
         {"name": {"value": "Bedroom humidifier"}, "humidity": {"value": "50"}},
         assistant=conversation.DOMAIN,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert (
         result.speech["plain"]["speech"]
@@ -101,10 +101,10 @@ async def test_intent_set_humidity_and_turn_on(hass: HomeAssistant) -> None:
     assert call.data.get(ATTR_HUMIDITY) == 50
 
 
-async def test_intent_set_mode(hass: HomeAssistant) -> None:
+async def test_intent_set_mode(menuai: menuai) -> None:
     """Test the set mode intent."""
-    assert await async_setup_component(hass, "homeassistant", {})
-    hass.states.async_set(
+    assert await async_setup_component(menuai, "menuai", {})
+    menuai.states.async_set(
         "humidifier.bedroom_humidifier",
         STATE_ON,
         {
@@ -114,18 +114,18 @@ async def test_intent_set_mode(hass: HomeAssistant) -> None:
             ATTR_MODE: "home",
         },
     )
-    mode_calls = async_mock_service(hass, DOMAIN, SERVICE_SET_MODE)
-    turn_on_calls = async_mock_service(hass, DOMAIN, SERVICE_TURN_ON)
-    await intent.async_setup_intents(hass)
+    mode_calls = async_mock_service(menuai, DOMAIN, SERVICE_SET_MODE)
+    turn_on_calls = async_mock_service(menuai, DOMAIN, SERVICE_TURN_ON)
+    await intent.async_setup_intents(menuai)
 
     result = await async_handle(
-        hass,
+        menuai,
         "test",
         intent.INTENT_MODE,
         {"name": {"value": "Bedroom humidifier"}, "mode": {"value": "away"}},
         assistant=conversation.DOMAIN,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert (
         result.speech["plain"]["speech"]
@@ -141,10 +141,10 @@ async def test_intent_set_mode(hass: HomeAssistant) -> None:
     assert call.data.get(ATTR_MODE) == "away"
 
 
-async def test_intent_set_mode_and_turn_on(hass: HomeAssistant) -> None:
+async def test_intent_set_mode_and_turn_on(menuai: menuai) -> None:
     """Test the set mode intent."""
-    assert await async_setup_component(hass, "homeassistant", {})
-    hass.states.async_set(
+    assert await async_setup_component(menuai, "menuai", {})
+    menuai.states.async_set(
         "humidifier.bedroom_humidifier",
         STATE_OFF,
         {
@@ -154,18 +154,18 @@ async def test_intent_set_mode_and_turn_on(hass: HomeAssistant) -> None:
             ATTR_MODE: "home",
         },
     )
-    mode_calls = async_mock_service(hass, DOMAIN, SERVICE_SET_MODE)
-    turn_on_calls = async_mock_service(hass, DOMAIN, SERVICE_TURN_ON)
-    await intent.async_setup_intents(hass)
+    mode_calls = async_mock_service(menuai, DOMAIN, SERVICE_SET_MODE)
+    turn_on_calls = async_mock_service(menuai, DOMAIN, SERVICE_TURN_ON)
+    await intent.async_setup_intents(menuai)
 
     result = await async_handle(
-        hass,
+        menuai,
         "test",
         intent.INTENT_MODE,
         {"name": {"value": "Bedroom humidifier"}, "mode": {"value": "away"}},
         assistant=conversation.DOMAIN,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert (
         result.speech["plain"]["speech"]
@@ -185,18 +185,18 @@ async def test_intent_set_mode_and_turn_on(hass: HomeAssistant) -> None:
     assert call.data.get(ATTR_MODE) == "away"
 
 
-async def test_intent_set_mode_tests_feature(hass: HomeAssistant) -> None:
+async def test_intent_set_mode_tests_feature(menuai: menuai) -> None:
     """Test the set mode intent where modes are not supported."""
-    assert await async_setup_component(hass, "homeassistant", {})
-    hass.states.async_set(
+    assert await async_setup_component(menuai, "menuai", {})
+    menuai.states.async_set(
         "humidifier.bedroom_humidifier", STATE_ON, {ATTR_HUMIDITY: 40}
     )
-    mode_calls = async_mock_service(hass, DOMAIN, SERVICE_SET_MODE)
-    await intent.async_setup_intents(hass)
+    mode_calls = async_mock_service(menuai, DOMAIN, SERVICE_SET_MODE)
+    await intent.async_setup_intents(menuai)
 
     with pytest.raises(IntentHandleError) as excinfo:
         await async_handle(
-            hass,
+            menuai,
             "test",
             intent.INTENT_MODE,
             {"name": {"value": "Bedroom humidifier"}, "mode": {"value": "away"}},
@@ -208,11 +208,11 @@ async def test_intent_set_mode_tests_feature(hass: HomeAssistant) -> None:
 
 @pytest.mark.parametrize("available_modes", [["home", "away"], None])
 async def test_intent_set_unknown_mode(
-    hass: HomeAssistant, available_modes: list[str] | None
+    menuai: menuai, available_modes: list[str] | None
 ) -> None:
     """Test the set mode intent for unsupported mode."""
-    assert await async_setup_component(hass, "homeassistant", {})
-    hass.states.async_set(
+    assert await async_setup_component(menuai, "menuai", {})
+    menuai.states.async_set(
         "humidifier.bedroom_humidifier",
         STATE_ON,
         {
@@ -222,12 +222,12 @@ async def test_intent_set_unknown_mode(
             ATTR_MODE: None,
         },
     )
-    mode_calls = async_mock_service(hass, DOMAIN, SERVICE_SET_MODE)
-    await intent.async_setup_intents(hass)
+    mode_calls = async_mock_service(menuai, DOMAIN, SERVICE_SET_MODE)
+    await intent.async_setup_intents(menuai)
 
     with pytest.raises(IntentHandleError) as excinfo:
         await async_handle(
-            hass,
+            menuai,
             "test",
             intent.INTENT_MODE,
             {"name": {"value": "Bedroom humidifier"}, "mode": {"value": "eco"}},
@@ -237,11 +237,11 @@ async def test_intent_set_unknown_mode(
     assert len(mode_calls) == 0
 
 
-async def test_intent_errors(hass: HomeAssistant) -> None:
+async def test_intent_errors(menuai: menuai) -> None:
     """Test the error conditions for set humidity and set mode intents."""
-    assert await async_setup_component(hass, "homeassistant", {})
+    assert await async_setup_component(menuai, "menuai", {})
     entity_id = "humidifier.bedroom_humidifier"
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id,
         STATE_ON,
         {
@@ -251,13 +251,13 @@ async def test_intent_errors(hass: HomeAssistant) -> None:
             ATTR_MODE: None,
         },
     )
-    async_mock_service(hass, DOMAIN, SERVICE_SET_HUMIDITY)
-    async_mock_service(hass, DOMAIN, SERVICE_SET_MODE)
-    await intent.async_setup_intents(hass)
+    async_mock_service(menuai, DOMAIN, SERVICE_SET_HUMIDITY)
+    async_mock_service(menuai, DOMAIN, SERVICE_SET_MODE)
+    await intent.async_setup_intents(menuai)
 
     # Humidifiers are exposed by default
     result = await async_handle(
-        hass,
+        menuai,
         "test",
         intent.INTENT_HUMIDITY,
         {"name": {"value": "Bedroom humidifier"}, "humidity": {"value": "50"}},
@@ -266,7 +266,7 @@ async def test_intent_errors(hass: HomeAssistant) -> None:
     assert result.response_type == IntentResponseType.ACTION_DONE
 
     result = await async_handle(
-        hass,
+        menuai,
         "test",
         intent.INTENT_MODE,
         {"name": {"value": "Bedroom humidifier"}, "mode": {"value": "away"}},
@@ -275,11 +275,11 @@ async def test_intent_errors(hass: HomeAssistant) -> None:
     assert result.response_type == IntentResponseType.ACTION_DONE
 
     # Unexposing it should fail
-    async_expose_entity(hass, conversation.DOMAIN, entity_id, False)
+    async_expose_entity(menuai, conversation.DOMAIN, entity_id, False)
 
     with pytest.raises(MatchFailedError) as err:
         await async_handle(
-            hass,
+            menuai,
             "test",
             intent.INTENT_HUMIDITY,
             {"name": {"value": "Bedroom humidifier"}, "humidity": {"value": "50"}},
@@ -289,7 +289,7 @@ async def test_intent_errors(hass: HomeAssistant) -> None:
 
     with pytest.raises(MatchFailedError) as err:
         await async_handle(
-            hass,
+            menuai,
             "test",
             intent.INTENT_MODE,
             {"name": {"value": "Bedroom humidifier"}, "mode": {"value": "away"}},
@@ -298,12 +298,12 @@ async def test_intent_errors(hass: HomeAssistant) -> None:
     assert err.value.result.no_match_reason == MatchFailedReason.ASSISTANT
 
     # Expose again to test other errors
-    async_expose_entity(hass, conversation.DOMAIN, entity_id, True)
+    async_expose_entity(menuai, conversation.DOMAIN, entity_id, True)
 
     # Empty name should fail
     with pytest.raises(InvalidSlotInfo):
         await async_handle(
-            hass,
+            menuai,
             "test",
             intent.INTENT_HUMIDITY,
             {"name": {"value": ""}, "humidity": {"value": "50"}},
@@ -312,7 +312,7 @@ async def test_intent_errors(hass: HomeAssistant) -> None:
 
     with pytest.raises(InvalidSlotInfo):
         await async_handle(
-            hass,
+            menuai,
             "test",
             intent.INTENT_MODE,
             {"name": {"value": ""}, "mode": {"value": "away"}},
@@ -322,7 +322,7 @@ async def test_intent_errors(hass: HomeAssistant) -> None:
     # Wrong name should fail
     with pytest.raises(MatchFailedError) as err:
         await async_handle(
-            hass,
+            menuai,
             "test",
             intent.INTENT_HUMIDITY,
             {"name": {"value": "does not exist"}, "humidity": {"value": "50"}},
@@ -332,7 +332,7 @@ async def test_intent_errors(hass: HomeAssistant) -> None:
 
     with pytest.raises(MatchFailedError) as err:
         await async_handle(
-            hass,
+            menuai,
             "test",
             intent.INTENT_MODE,
             {"name": {"value": "does not exist"}, "mode": {"value": "away"}},

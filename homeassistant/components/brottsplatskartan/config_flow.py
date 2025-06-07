@@ -8,9 +8,9 @@ import uuid
 from brottsplatskartan import AREAS
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_LATITUDE, CONF_LOCATION, CONF_LONGITUDE
-from homeassistant.helpers import selector
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_LATITUDE, CONF_LOCATION, CONF_LONGITUDE
+from menuai.helpers import selector
 
 from .const import CONF_APP_ID, CONF_AREA, DEFAULT_NAME, DOMAIN
 
@@ -54,8 +54,8 @@ class BPKConfigFlow(ConfigFlow, domain=DOMAIN):
                 longitude = long
                 name = f"{DEFAULT_NAME} {round(latitude, 2)}, {round(longitude, 2)}"
             else:
-                latitude = self.hass.config.latitude
-                longitude = self.hass.config.longitude
+                latitude = self.menuai.config.latitude
+                longitude = self.menuai.config.longitude
                 name = f"{DEFAULT_NAME} HOME"
 
             app = f"ha-{uuid.getnode()}"

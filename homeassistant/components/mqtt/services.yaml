@@ -4,7 +4,7 @@ publish:
   fields:
     topic:
       required: true
-      example: /homeassistant/hello
+      example: /menuai/hello
       selector:
         text:
     payload:

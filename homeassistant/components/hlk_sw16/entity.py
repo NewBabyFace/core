@@ -4,9 +4,9 @@ import logging
 
 from hlk_sw16.protocol import SW16Client
 
-from homeassistant.core import callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import Entity
+from menuai.core import callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity import Entity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -46,7 +46,7 @@ class SW16Entity(Entity):
         """Update availability state."""
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register update callback."""
         self._client.register_status_callback(
             self.handle_event_callback, self._device_port
@@ -54,7 +54,7 @@ class SW16Entity(Entity):
         self._is_on = await self._client.status(self._device_port)
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"hlk_sw16_device_available_{self._entry_id}",
                 self._availability_callback,
             )

@@ -6,9 +6,9 @@ import logging
 
 from pyws66i import WS66i, ZoneStatus
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import POLL_INTERVAL
 
@@ -22,14 +22,14 @@ class Ws66iDataUpdateCoordinator(DataUpdateCoordinator[list[ZoneStatus]]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         my_api: WS66i,
         zones: list[int],
     ) -> None:
         """Initialize DataUpdateCoordinator to gather data for specific zones."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name="WS66i",
@@ -53,4 +53,4 @@ class Ws66iDataUpdateCoordinator(DataUpdateCoordinator[list[ZoneStatus]]):
     async def _async_update_data(self) -> list[ZoneStatus]:
         """Fetch data for each of the zones."""
         # The data that is returned here can be accessed through coordinator.data.
-        return await self.hass.async_add_executor_job(self._update_all_zones)
+        return await self.menuai.async_add_executor_job(self._update_all_zones)

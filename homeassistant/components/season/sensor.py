@@ -6,13 +6,13 @@ from datetime import date, datetime
 
 import ephem
 
-from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_TYPE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util.dt import utcnow
+from menuai.components.sensor import SensorDeviceClass, SensorEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_TYPE
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util.dt import utcnow
 
 from .const import DOMAIN, TYPE_ASTRONOMICAL
 
@@ -35,15 +35,15 @@ HEMISPHERE_SEASON_SWAP = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the platform from config entry."""
     hemisphere = EQUATOR
-    if hass.config.latitude < 0:
+    if menuai.config.latitude < 0:
         hemisphere = SOUTHERN
-    elif hass.config.latitude > 0:
+    elif menuai.config.latitude > 0:
         hemisphere = NORTHERN
 
     async_add_entities([SeasonSensorEntity(entry, hemisphere)], True)

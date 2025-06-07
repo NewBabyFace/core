@@ -2,15 +2,15 @@
 
 import voluptuous as vol
 
-from homeassistant.components.humidifier import HumidifierDeviceClass
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_NAME, CONF_UNIQUE_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, discovery
-from homeassistant.helpers.device import (
+from menuai.components.humidifier import HumidifierDeviceClass
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_NAME, CONF_UNIQUE_ID, Platform
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, discovery
+from menuai.helpers.device import (
     async_remove_stale_devices_links_keep_entity_device,
 )
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers.typing import ConfigType
 
 DOMAIN = "generic_hygrostat"
 
@@ -64,42 +64,42 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Generic Hygrostat component."""
     if DOMAIN not in config:
         return True
 
     for hygrostat_conf in config[DOMAIN]:
-        hass.async_create_task(
+        menuai.async_create_task(
             discovery.async_load_platform(
-                hass, Platform.HUMIDIFIER, DOMAIN, hygrostat_conf, config
+                menuai, Platform.HUMIDIFIER, DOMAIN, hygrostat_conf, config
             )
         )
 
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up from a config entry."""
 
     async_remove_stale_devices_links_keep_entity_device(
-        hass,
+        menuai,
         entry.entry_id,
         entry.options[CONF_HUMIDIFIER],
     )
 
-    await hass.config_entries.async_forward_entry_setups(entry, (Platform.HUMIDIFIER,))
+    await menuai.config_entries.async_forward_entry_setups(entry, (Platform.HUMIDIFIER,))
     entry.async_on_unload(entry.add_update_listener(config_entry_update_listener))
     return True
 
 
-async def config_entry_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def config_entry_update_listener(menuai: menuai, entry: ConfigEntry) -> None:
     """Update listener, called when the config entry options are changed."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(
+    return await menuai.config_entries.async_unload_platforms(
         entry, (Platform.HUMIDIFIER,)
     )

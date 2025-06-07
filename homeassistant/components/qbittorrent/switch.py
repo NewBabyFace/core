@@ -6,12 +6,12 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.components.switch import SwitchEntity, SwitchEntityDescription
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import QBittorrentDataCoordinator
@@ -41,13 +41,13 @@ SWITCH_TYPES: tuple[QBittorrentSwitchEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up qBittorrent switch entries."""
 
-    coordinator: QBittorrentDataCoordinator = hass.data[DOMAIN][config_entry.entry_id]
+    coordinator: QBittorrentDataCoordinator = menuai.data[DOMAIN][config_entry.entry_id]
 
     async_add_entities(
         QBittorrentSwitch(coordinator, config_entry, description)
@@ -84,21 +84,21 @@ class QBittorrentSwitch(CoordinatorEntity[QBittorrentDataCoordinator], SwitchEnt
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on this switch."""
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             self.entity_description.turn_on_fn, self.coordinator
         )
         await self.coordinator.async_request_refresh()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off this switch."""
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             self.entity_description.turn_off_fn, self.coordinator
         )
         await self.coordinator.async_request_refresh()
 
     async def async_toggle(self, **kwargs: Any) -> None:
         """Toggle the device."""
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             self.entity_description.toggle_func, self.coordinator
         )
         await self.coordinator.async_request_refresh()

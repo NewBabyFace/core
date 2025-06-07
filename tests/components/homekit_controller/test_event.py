@@ -6,9 +6,9 @@ from aiohomekit.model import Accessory
 from aiohomekit.model.characteristics import CharacteristicsTypes
 from aiohomekit.model.services import ServicesTypes
 
-from homeassistant.components.event import EventDeviceClass
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.event import EventDeviceClass
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .common import setup_test_component
 
@@ -69,12 +69,12 @@ def create_doorbell(accessory: Accessory) -> None:
 
 
 async def test_remote(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     get_next_aid: Callable[[], int],
 ) -> None:
     """Test that remote is supported."""
-    helper = await setup_test_component(hass, get_next_aid(), create_remote)
+    helper = await setup_test_component(menuai, get_next_aid(), create_remote)
 
     entities = [
         ("event.testdevice_button_1", "Button 1"),
@@ -96,32 +96,32 @@ async def test_remote(
         helper.pairing.testing.update_named_service(
             service, {CharacteristicsTypes.INPUT_EVENT: 0}
         )
-        await hass.async_block_till_done()
-        state = hass.states.get(entity_id)
+        await menuai.async_block_till_done()
+        state = menuai.states.get(entity_id)
         assert state.attributes["event_type"] == "single_press"
 
         helper.pairing.testing.update_named_service(
             service, {CharacteristicsTypes.INPUT_EVENT: 1}
         )
-        await hass.async_block_till_done()
-        state = hass.states.get(entity_id)
+        await menuai.async_block_till_done()
+        state = menuai.states.get(entity_id)
         assert state.attributes["event_type"] == "double_press"
 
         helper.pairing.testing.update_named_service(
             service, {CharacteristicsTypes.INPUT_EVENT: 2}
         )
-        await hass.async_block_till_done()
-        state = hass.states.get(entity_id)
+        await menuai.async_block_till_done()
+        state = menuai.states.get(entity_id)
         assert state.attributes["event_type"] == "long_press"
 
 
 async def test_button(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     get_next_aid: Callable[[], int],
 ) -> None:
     """Test that a button is correctly enumerated."""
-    helper = await setup_test_component(hass, get_next_aid(), create_button)
+    helper = await setup_test_component(menuai, get_next_aid(), create_button)
     entity_id = "event.testdevice_button_1"
 
     button = entity_registry.async_get(entity_id)
@@ -136,32 +136,32 @@ async def test_button(
     helper.pairing.testing.update_named_service(
         "Button 1", {CharacteristicsTypes.INPUT_EVENT: 0}
     )
-    await hass.async_block_till_done()
-    state = hass.states.get(entity_id)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(entity_id)
     assert state.attributes["event_type"] == "single_press"
 
     helper.pairing.testing.update_named_service(
         "Button 1", {CharacteristicsTypes.INPUT_EVENT: 1}
     )
-    await hass.async_block_till_done()
-    state = hass.states.get(entity_id)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(entity_id)
     assert state.attributes["event_type"] == "double_press"
 
     helper.pairing.testing.update_named_service(
         "Button 1", {CharacteristicsTypes.INPUT_EVENT: 2}
     )
-    await hass.async_block_till_done()
-    state = hass.states.get(entity_id)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(entity_id)
     assert state.attributes["event_type"] == "long_press"
 
 
 async def test_doorbell(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     get_next_aid: Callable[[], int],
 ) -> None:
     """Test that doorbell service is handled."""
-    helper = await setup_test_component(hass, get_next_aid(), create_doorbell)
+    helper = await setup_test_component(menuai, get_next_aid(), create_doorbell)
     entity_id = "event.testdevice_doorbell"
 
     doorbell = entity_registry.async_get(entity_id)
@@ -176,20 +176,20 @@ async def test_doorbell(
     helper.pairing.testing.update_named_service(
         "Doorbell", {CharacteristicsTypes.INPUT_EVENT: 0}
     )
-    await hass.async_block_till_done()
-    state = hass.states.get(entity_id)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(entity_id)
     assert state.attributes["event_type"] == "single_press"
 
     helper.pairing.testing.update_named_service(
         "Doorbell", {CharacteristicsTypes.INPUT_EVENT: 1}
     )
-    await hass.async_block_till_done()
-    state = hass.states.get(entity_id)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(entity_id)
     assert state.attributes["event_type"] == "double_press"
 
     helper.pairing.testing.update_named_service(
         "Doorbell", {CharacteristicsTypes.INPUT_EVENT: 2}
     )
-    await hass.async_block_till_done()
-    state = hass.states.get(entity_id)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(entity_id)
     assert state.attributes["event_type"] == "long_press"

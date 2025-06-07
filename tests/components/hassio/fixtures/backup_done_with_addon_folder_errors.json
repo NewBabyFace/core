@@ -11,7 +11,7 @@
     "created": "2025-05-14T08:56:22.801143+00:00",
     "child_jobs": [
       {
-        "name": "backup_store_homeassistant",
+        "name": "backup_store_menuai",
         "reference": "14a1ea4b",
         "uuid": "176318a1a8184b02b7e9ad3ec54ee5ec",
         "progress": 0,

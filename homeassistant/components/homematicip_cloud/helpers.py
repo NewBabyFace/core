@@ -11,7 +11,7 @@ from typing import Any, Concatenate, TypeGuard
 from homematicip.base.enums import FunctionalChannelType
 from homematicip.device import Device
 
-from homeassistant.exceptions import HomeAssistantError
+from menuai.exceptions import menuaiError
 
 from .entity import HomematicipGenericEntity
 
@@ -45,7 +45,7 @@ def handle_errors[_HomematicipGenericEntityT: HomematicipGenericEntity, **_P](
                 __name__,
                 json.dumps(result),
             )
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Error while execute function {func.__name__}: {result.get('errorCode')}. See log for more information."
             )
 

@@ -10,7 +10,7 @@ import pytest
 async def mock_scanner() -> Generator[AsyncMock]:
     """Mock QuantumGatewayScanner instance."""
     with patch(
-        "homeassistant.components.quantum_gateway.device_tracker.QuantumGatewayScanner",
+        "menuai.components.quantum_gateway.device_tracker.QuantumGatewayScanner",
         autospec=True,
     ) as mock_scanner:
         client = mock_scanner.return_value

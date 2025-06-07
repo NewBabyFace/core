@@ -12,8 +12,8 @@ from tplink_omada_client.clients import OmadaWirelessClient
 from tplink_omada_client.devices import OmadaGateway, OmadaListDevice, OmadaSwitch
 from tplink_omada_client.exceptions import OmadaClientException
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 if TYPE_CHECKING:
     from . import OmadaConfigEntry
@@ -33,7 +33,7 @@ class OmadaCoordinator[_T](DataUpdateCoordinator[dict[str, _T]]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: OmadaConfigEntry,
         omada_client: OmadaSiteClient,
         name: str,
@@ -41,7 +41,7 @@ class OmadaCoordinator[_T](DataUpdateCoordinator[dict[str, _T]]):
     ) -> None:
         """Initialize my coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=f"Omada API Data - {name}",
@@ -67,14 +67,14 @@ class OmadaSwitchPortCoordinator(OmadaCoordinator[OmadaSwitchPortDetails]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: OmadaConfigEntry,
         omada_client: OmadaSiteClient,
         network_switch: OmadaSwitch,
     ) -> None:
         """Initialize my coordinator."""
         super().__init__(
-            hass,
+            menuai,
             config_entry,
             omada_client,
             f"{network_switch.name} Ports",
@@ -93,13 +93,13 @@ class OmadaGatewayCoordinator(OmadaCoordinator[OmadaGateway]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: OmadaConfigEntry,
         omada_client: OmadaSiteClient,
         mac: str,
     ) -> None:
         """Initialize my coordinator."""
-        super().__init__(hass, config_entry, omada_client, "Gateway", POLL_GATEWAY)
+        super().__init__(menuai, config_entry, omada_client, "Gateway", POLL_GATEWAY)
         self.mac = mac
 
     async def poll_update(self) -> dict[str, OmadaGateway]:
@@ -113,12 +113,12 @@ class OmadaDevicesCoordinator(OmadaCoordinator[OmadaListDevice]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: OmadaConfigEntry,
         omada_client: OmadaSiteClient,
     ) -> None:
         """Initialize my coordinator."""
-        super().__init__(hass, config_entry, omada_client, "DeviceList", POLL_CLIENTS)
+        super().__init__(menuai, config_entry, omada_client, "DeviceList", POLL_CLIENTS)
 
     async def poll_update(self) -> dict[str, OmadaListDevice]:
         """Poll the site's current registered Omada devices."""
@@ -130,12 +130,12 @@ class OmadaClientsCoordinator(OmadaCoordinator[OmadaWirelessClient]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: OmadaConfigEntry,
         omada_client: OmadaSiteClient,
     ) -> None:
         """Initialize my coordinator."""
-        super().__init__(hass, config_entry, omada_client, "ClientsList", POLL_CLIENTS)
+        super().__init__(menuai, config_entry, omada_client, "ClientsList", POLL_CLIENTS)
 
     async def poll_update(self) -> dict[str, OmadaWirelessClient]:
         """Poll the site's current active wi-fi clients."""

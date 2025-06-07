@@ -7,7 +7,7 @@ from typing import Any
 from pyinsteon.config import CELSIUS
 from pyinsteon.constants import ThermostatMode
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_TARGET_TEMP_HIGH,
     ATTR_TARGET_TEMP_LOW,
     FAN_AUTO,
@@ -16,11 +16,11 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_TEMPERATURE, Platform, UnitOfTemperature
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_TEMPERATURE, Platform, UnitOfTemperature
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import SIGNAL_ADD_ENTITIES
 from .entity import InsteonEntity
@@ -53,7 +53,7 @@ FAN_MODES = {4: FAN_AUTO, 8: FAN_ONLY}
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -63,7 +63,7 @@ async def async_setup_entry(
     def async_add_insteon_climate_entities(discovery_info=None):
         """Add the Insteon entities for the platform."""
         async_add_insteon_entities(
-            hass,
+            menuai,
             Platform.CLIMATE,
             InsteonClimateEntity,
             async_add_entities,
@@ -71,9 +71,9 @@ async def async_setup_entry(
         )
 
     signal = f"{SIGNAL_ADD_ENTITIES}_{Platform.CLIMATE}"
-    async_dispatcher_connect(hass, signal, async_add_insteon_climate_entities)
+    async_dispatcher_connect(menuai, signal, async_add_insteon_climate_entities)
     async_add_insteon_devices(
-        hass,
+        menuai,
         Platform.CLIMATE,
         InsteonClimateEntity,
         async_add_entities,
@@ -211,9 +211,9 @@ class InsteonClimateEntity(InsteonEntity, ClimateEntity):
         await self._insteon_device.async_set_humidity_low_set_point(low)
         await self._insteon_device.async_set_humidity_high_set_point(high)
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register INSTEON update events."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         await self._insteon_device.async_read_op_flags()
         for group in (
             COOLING,

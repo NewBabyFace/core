@@ -11,11 +11,11 @@ from coinbase.wallet.client import Client as LegacyClient
 from coinbase.wallet.error import AuthenticationError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
-from homeassistant.const import CONF_API_KEY, CONF_API_TOKEN, CONF_API_VERSION
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
+from menuai.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
+from menuai.const import CONF_API_KEY, CONF_API_TOKEN, CONF_API_VERSION
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
 
 from . import CoinbaseConfigEntry, get_accounts
 from .const import (
@@ -52,11 +52,11 @@ def get_user_from_client(api_key, api_token):
     return client.get_portfolios()["portfolios"][0]["name"]
 
 
-async def validate_api(hass: HomeAssistant, data):
+async def validate_api(menuai: menuai, data):
     """Validate the credentials."""
 
     try:
-        user = await hass.async_add_executor_job(
+        user = await menuai.async_add_executor_job(
             get_user_from_client, data[CONF_API_KEY], data[CONF_API_TOKEN]
         )
     except (AuthenticationError, HTTPError) as error:
@@ -79,13 +79,13 @@ async def validate_api(hass: HomeAssistant, data):
 
 
 async def validate_options(
-    hass: HomeAssistant, config_entry: CoinbaseConfigEntry, options
+    menuai: menuai, config_entry: CoinbaseConfigEntry, options
 ):
     """Validate the requested resources are provided by API."""
 
     client = config_entry.runtime_data.client
 
-    accounts = await hass.async_add_executor_job(
+    accounts = await menuai.async_add_executor_job(
         get_accounts, client, config_entry.data.get("api_version", "v2")
     )
 
@@ -95,9 +95,9 @@ async def validate_options(
         if not account[ACCOUNT_IS_VAULT]
     ]
     if config_entry.data.get("api_version", "v2") == "v2":
-        available_rates = await hass.async_add_executor_job(client.get_exchange_rates)
+        available_rates = await menuai.async_add_executor_job(client.get_exchange_rates)
     else:
-        resp = await hass.async_add_executor_job(client.get, "/v2/exchange-rates")
+        resp = await menuai.async_add_executor_job(client.get, "/v2/exchange-rates")
         available_rates = resp[API_DATA]
     if CONF_CURRENCIES in options:
         for currency in options[CONF_CURRENCIES]:
@@ -130,7 +130,7 @@ class CoinbaseConfigFlow(ConfigFlow, domain=DOMAIN):
         self._async_abort_entries_match({CONF_API_KEY: user_input[CONF_API_KEY]})
 
         try:
-            info = await validate_api(self.hass, user_input)
+            info = await validate_api(self.menuai, user_input)
         except CannotConnect:
             errors["base"] = "cannot_connect"
         except InvalidKey:
@@ -189,7 +189,7 @@ class OptionsFlowHandler(OptionsFlow):
                 default_exchange_precision = user_input[CONF_EXCHANGE_PRECISION]
 
             try:
-                await validate_options(self.hass, self.config_entry, user_input)
+                await validate_options(self.menuai, self.config_entry, user_input)
             except CurrencyUnavailable:
                 errors["base"] = "currency_unavailable"
             except ExchangeRateUnavailable:
@@ -225,29 +225,29 @@ class OptionsFlowHandler(OptionsFlow):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(menuaiError):
     """Error to indicate there is invalid auth."""
 
 
-class InvalidSecret(HomeAssistantError):
+class InvalidSecret(menuaiError):
     """Error to indicate auth failed due to invalid secret."""
 
 
-class InvalidKey(HomeAssistantError):
+class InvalidKey(menuaiError):
     """Error to indicate auth failed due to invalid key."""
 
 
-class AlreadyConfigured(HomeAssistantError):
+class AlreadyConfigured(menuaiError):
     """Error to indicate Coinbase API Key is already configured."""
 
 
-class CurrencyUnavailable(HomeAssistantError):
+class CurrencyUnavailable(menuaiError):
     """Error to indicate the requested currency resource is not provided by the API."""
 
 
-class ExchangeRateUnavailable(HomeAssistantError):
+class ExchangeRateUnavailable(menuaiError):
     """Error to indicate the requested exchange rate resource is not provided by the API."""

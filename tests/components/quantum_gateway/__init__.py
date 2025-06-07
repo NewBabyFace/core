@@ -1,15 +1,15 @@
 """Tests for the quantum_gateway component."""
 
-from homeassistant.components.device_tracker import DOMAIN as DEVICE_TRACKER_DOMAIN
-from homeassistant.const import CONF_PASSWORD, CONF_PLATFORM
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.device_tracker import DOMAIN as DEVICE_TRACKER_DOMAIN
+from menuai.const import CONF_PASSWORD, CONF_PLATFORM
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 
-async def setup_platform(hass: HomeAssistant) -> None:
+async def setup_platform(menuai: menuai) -> None:
     """Set up the quantum_gateway integration."""
     result = await async_setup_component(
-        hass,
+        menuai,
         DEVICE_TRACKER_DOMAIN,
         {
             DEVICE_TRACKER_DOMAIN: {
@@ -18,5 +18,5 @@ async def setup_platform(hass: HomeAssistant) -> None:
             }
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result

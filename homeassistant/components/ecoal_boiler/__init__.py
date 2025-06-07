@@ -5,7 +5,7 @@ import logging
 from ecoaliface.simple import ECoalController
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_MONITORED_CONDITIONS,
     CONF_PASSWORD,
@@ -14,10 +14,10 @@ from homeassistant.const import (
     CONF_USERNAME,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.discovery import load_platform
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.discovery import load_platform
+from menuai.helpers.typing import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -83,10 +83,10 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def setup(hass: HomeAssistant, hass_config: ConfigType) -> bool:
+def setup(menuai: menuai, menuai_config: ConfigType) -> bool:
     """Set up global ECoalController instance same for sensors and switches."""
 
-    conf = hass_config[DOMAIN]
+    conf = menuai_config[DOMAIN]
     host = conf[CONF_HOST]
     username = conf[CONF_USERNAME]
     passwd = conf[CONF_PASSWORD]
@@ -101,11 +101,11 @@ def setup(hass: HomeAssistant, hass_config: ConfigType) -> bool:
         )
         return False
     _LOGGER.debug("Detected controller version: %r @%s", ecoal_contr.version, host)
-    hass.data[DATA_ECOAL_BOILER] = ecoal_contr
+    menuai.data[DATA_ECOAL_BOILER] = ecoal_contr
     # Setup switches
     switches = conf[CONF_SWITCHES][CONF_MONITORED_CONDITIONS]
-    load_platform(hass, Platform.SWITCH, DOMAIN, switches, hass_config)
+    load_platform(menuai, Platform.SWITCH, DOMAIN, switches, menuai_config)
     # Setup temp sensors
     sensors = conf[CONF_SENSORS][CONF_MONITORED_CONDITIONS]
-    load_platform(hass, Platform.SENSOR, DOMAIN, sensors, hass_config)
+    load_platform(menuai, Platform.SENSOR, DOMAIN, sensors, menuai_config)
     return True

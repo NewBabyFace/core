@@ -8,10 +8,10 @@ from typing import Any
 import voluptuous as vol
 from voluptuous.humanize import humanize_error
 
-from homeassistant.exceptions import HomeAssistantError
+from menuai.exceptions import menuaiError
 
 
-class BlueprintException(HomeAssistantError):
+class BlueprintException(menuaiError):
     """Base exception for blueprint errors."""
 
     def __init__(self, domain: str | None, msg: str) -> None:

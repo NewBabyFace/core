@@ -5,11 +5,11 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.switch import SwitchEntity
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import (
     CONF_DEVICE_CODE,
@@ -25,7 +25,7 @@ DEPENDENCIES = ["satel_integra"]
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -35,7 +35,7 @@ async def async_setup_platform(
         return
 
     configured_zones = discovery_info[CONF_SWITCHABLE_OUTPUTS]
-    controller = hass.data[DATA_SATEL]
+    controller = menuai.data[DATA_SATEL]
 
     devices = []
 
@@ -64,10 +64,10 @@ class SatelIntegraSwitch(SwitchEntity):
         self._code = code
         self._satel = controller
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
         async_dispatcher_connect(
-            self.hass, SIGNAL_OUTPUTS_UPDATED, self._devices_updated
+            self.menuai, SIGNAL_OUTPUTS_UPDATED, self._devices_updated
         )
 
     @callback

@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.const import CONF_API_KEY
-from homeassistant.core import HomeAssistant
+from menuai.components.diagnostics import async_redact_data
+from menuai.const import CONF_API_KEY
+from menuai.core import menuai
 
 from . import PiHoleConfigEntry
 
@@ -14,7 +14,7 @@ TO_REDACT = {CONF_API_KEY}
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: PiHoleConfigEntry
+    menuai: menuai, entry: PiHoleConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     api = entry.runtime_data.api

@@ -7,16 +7,16 @@ from typing import Any
 from lektricowifi import Device, DeviceConnectionError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import (
     ATTR_HW_VERSION,
     ATTR_SERIAL_NUMBER,
     CONF_HOST,
     CONF_TYPE,
 )
-from homeassistant.core import callback
-from homeassistant.helpers.httpx_client import get_async_client
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.core import callback
+from menuai.helpers.httpx_client import get_async_client
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import DOMAIN
 
@@ -109,7 +109,7 @@ class LektricoFlowHandler(ConfigFlow, domain=DOMAIN):
         """Get device's serial number from a Lektrico device."""
         device = Device(
             _host=self._host,
-            asyncClient=get_async_client(self.hass),
+            asyncClient=get_async_client(self.menuai),
         )
 
         settings = await device.device_config()

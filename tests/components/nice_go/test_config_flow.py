@@ -6,15 +6,15 @@ from freezegun.api import FrozenDateTimeFactory
 from nice_go import AuthFailedError
 import pytest
 
-from homeassistant.components.nice_go.const import (
+from menuai.components.nice_go.const import (
     CONF_REFRESH_TOKEN,
     CONF_REFRESH_TOKEN_CREATION_TIME,
     DOMAIN,
 )
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_EMAIL, CONF_PASSWORD
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from . import setup_integration
 
@@ -22,19 +22,19 @@ from tests.common import MockConfigEntry
 
 
 async def test_form(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_nice_go: AsyncMock,
     mock_setup_entry: AsyncMock,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test we get the form."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert not result["errors"]
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_EMAIL: "test-email",
@@ -57,7 +57,7 @@ async def test_form(
     [(AuthFailedError, "invalid_auth"), (Exception, "unknown")],
 )
 async def test_form_exceptions(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_nice_go: AsyncMock,
     mock_setup_entry: AsyncMock,
     side_effect: Exception,
@@ -65,11 +65,11 @@ async def test_form_exceptions(
 ) -> None:
     """Test we handle invalid auth."""
     mock_nice_go.authenticate.side_effect = side_effect
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_EMAIL: "test-email",
@@ -80,7 +80,7 @@ async def test_form_exceptions(
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": expected_error}
     mock_nice_go.authenticate.side_effect = None
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_EMAIL: "test-email",
@@ -92,17 +92,17 @@ async def test_form_exceptions(
 
 
 async def test_duplicate_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_nice_go: AsyncMock,
 ) -> None:
     """Test that duplicate devices are handled."""
-    mock_config_entry.add_to_hass(hass)
-    result = await hass.config_entries.flow.async_init(
+    mock_config_entry.add_to_menuai(menuai)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_EMAIL: "test-email",
@@ -114,20 +114,20 @@ async def test_duplicate_device(
 
 
 async def test_reauth(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_nice_go: AsyncMock,
 ) -> None:
     """Test reauth flow."""
 
-    await setup_integration(hass, mock_config_entry, [])
+    await setup_integration(menuai, mock_config_entry, [])
 
-    result = await mock_config_entry.start_reauth_flow(hass)
+    result = await mock_config_entry.start_reauth_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_EMAIL: "test-email",
@@ -137,7 +137,7 @@ async def test_reauth(
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"
-    assert len(hass.config_entries.async_entries()) == 1
+    assert len(menuai.config_entries.async_entries()) == 1
 
 
 @pytest.mark.parametrize(
@@ -145,7 +145,7 @@ async def test_reauth(
     [(AuthFailedError, "invalid_auth"), (Exception, "unknown")],
 )
 async def test_reauth_exceptions(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_nice_go: AsyncMock,
     side_effect: Exception,
@@ -153,11 +153,11 @@ async def test_reauth_exceptions(
 ) -> None:
     """Test we handle invalid auth."""
     mock_nice_go.authenticate.side_effect = side_effect
-    await setup_integration(hass, mock_config_entry, [])
+    await setup_integration(menuai, mock_config_entry, [])
 
-    result = await mock_config_entry.start_reauth_flow(hass)
+    result = await mock_config_entry.start_reauth_flow(menuai)
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_EMAIL: "test-email",
@@ -168,7 +168,7 @@ async def test_reauth_exceptions(
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": expected_error}
     mock_nice_go.authenticate.side_effect = None
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_EMAIL: "test-email",
@@ -178,4 +178,4 @@ async def test_reauth_exceptions(
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"
-    assert len(hass.config_entries.async_entries()) == 1
+    assert len(menuai.config_entries.async_entries()) == 1

@@ -12,18 +12,18 @@ from pylamarzocco.exceptions import AuthFail, RequestNotSuccessful
 from pylamarzocco.models import Thing
 import voluptuous as vol
 
-from homeassistant.components.bluetooth import (
+from menuai.components.bluetooth import (
     BluetoothServiceInfo,
     async_discovered_service_info,
 )
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_REAUTH,
     SOURCE_RECONFIGURE,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_ADDRESS,
     CONF_MAC,
     CONF_NAME,
@@ -31,10 +31,10 @@ from homeassistant.const import (
     CONF_TOKEN,
     CONF_USERNAME,
 )
-from homeassistant.core import callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.selector import (
+from menuai.core import callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.selector import (
     SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
@@ -43,7 +43,7 @@ from homeassistant.helpers.selector import (
     TextSelectorConfig,
     TextSelectorType,
 )
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
 
 from .const import CONF_USE_BLUETOOTH, DOMAIN
 from .coordinator import LaMarzoccoConfigEntry
@@ -83,7 +83,7 @@ class LmConfigFlow(ConfigFlow, domain=DOMAIN):
                 **user_input,
             }
 
-            self._client = async_get_clientsession(self.hass)
+            self._client = async_get_clientsession(self.menuai)
             cloud_client = LaMarzoccoCloudClient(
                 username=data[CONF_USERNAME],
                 password=data[CONF_PASSWORD],
@@ -169,7 +169,7 @@ class LmConfigFlow(ConfigFlow, domain=DOMAIN):
 
             if not errors:
                 if self.source == SOURCE_RECONFIGURE:
-                    for service_info in async_discovered_service_info(self.hass):
+                    for service_info in async_discovered_service_info(self.menuai):
                         if service_info.name.startswith(BT_MODEL_PREFIXES):
                             self._discovered[service_info.name] = service_info.address
 

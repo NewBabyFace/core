@@ -5,8 +5,8 @@ from unittest.mock import patch
 from syrupy.assertion import SnapshotAssertion
 from syrupy.filters import props
 
-from homeassistant.components.climate import PRESET_AWAY
-from homeassistant.components.generic_thermostat.const import (
+from menuai.components.climate import PRESET_AWAY
+from menuai.components.generic_thermostat.const import (
     CONF_AC_MODE,
     CONF_COLD_TOLERANCE,
     CONF_HEATER,
@@ -15,34 +15,34 @@ from homeassistant.components.generic_thermostat.const import (
     CONF_SENSOR,
     DOMAIN,
 )
-from homeassistant.components.sensor import SensorDeviceClass
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import (
+from menuai.components.sensor import SensorDeviceClass
+from menuai.config_entries import SOURCE_USER
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     ATTR_UNIT_OF_MEASUREMENT,
     CONF_NAME,
     STATE_OFF,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
 SNAPSHOT_FLOW_PROPS = props("type", "title", "result", "error")
 
 
-async def test_config_flow(hass: HomeAssistant, snapshot: SnapshotAssertion) -> None:
+async def test_config_flow(menuai: menuai, snapshot: SnapshotAssertion) -> None:
     """Test the config flow."""
     with patch(
-        "homeassistant.components.generic_thermostat.async_setup_entry",
+        "menuai.components.generic_thermostat.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": SOURCE_USER}
         )
         assert result == snapshot(name="init", include=SNAPSHOT_FLOW_PROPS)
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_NAME: "My thermostat",
@@ -55,7 +55,7 @@ async def test_config_flow(hass: HomeAssistant, snapshot: SnapshotAssertion) -> 
         )
         assert result == snapshot(name="presets", include=SNAPSHOT_FLOW_PROPS)
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={
                 CONF_PRESETS[PRESET_AWAY]: 20,
@@ -63,16 +63,16 @@ async def test_config_flow(hass: HomeAssistant, snapshot: SnapshotAssertion) -> 
         )
         assert result == snapshot(name="create_entry", include=SNAPSHOT_FLOW_PROPS)
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_setup_entry.mock_calls) == 1
 
-    config_entry = hass.config_entries.async_entries(DOMAIN)[0]
+    config_entry = menuai.config_entries.async_entries(DOMAIN)[0]
     assert config_entry.data == {}
     assert config_entry.title == "My thermostat"
 
 
-async def test_options(hass: HomeAssistant, snapshot: SnapshotAssertion) -> None:
+async def test_options(menuai: menuai, snapshot: SnapshotAssertion) -> None:
     """Test reconfiguring."""
 
     config_entry = MockConfigEntry(
@@ -89,9 +89,9 @@ async def test_options(hass: HomeAssistant, snapshot: SnapshotAssertion) -> None
         },
         title="My dehumidifier",
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.temperature",
         "15",
         {
@@ -99,19 +99,19 @@ async def test_options(hass: HomeAssistant, snapshot: SnapshotAssertion) -> None
             ATTR_DEVICE_CLASS: SensorDeviceClass.TEMPERATURE,
         },
     )
-    hass.states.async_set("switch.run", STATE_OFF)
+    menuai.states.async_set("switch.run", STATE_OFF)
 
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
 
     # check that it is setup
-    await hass.async_block_till_done()
-    assert hass.states.get("climate.my_thermostat") == snapshot(name="with_away")
+    await menuai.async_block_till_done()
+    assert menuai.states.get("climate.my_thermostat") == snapshot(name="with_away")
 
     # remove away preset
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result == snapshot(name="init", include=SNAPSHOT_FLOW_PROPS)
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             CONF_HEATER: "switch.run",
@@ -123,31 +123,31 @@ async def test_options(hass: HomeAssistant, snapshot: SnapshotAssertion) -> None
     )
     assert result == snapshot(name="presets", include=SNAPSHOT_FLOW_PROPS)
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={},
     )
     assert result == snapshot(name="create_entry", include=SNAPSHOT_FLOW_PROPS)
 
     # Check config entry is reloaded with new options
-    await hass.async_block_till_done()
-    assert hass.states.get("climate.my_thermostat") == snapshot(name="without_away")
+    await menuai.async_block_till_done()
+    assert menuai.states.get("climate.my_thermostat") == snapshot(name="without_away")
 
 
 async def test_config_flow_preset_accepts_float(
-    hass: HomeAssistant, snapshot: SnapshotAssertion
+    menuai: menuai, snapshot: SnapshotAssertion
 ) -> None:
     """Test the config flow with preset is a float."""
     with patch(
-        "homeassistant.components.generic_thermostat.async_setup_entry",
+        "menuai.components.generic_thermostat.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": SOURCE_USER}
         )
         assert result == snapshot(name="init", include=SNAPSHOT_FLOW_PROPS)
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_NAME: "My thermostat",
@@ -160,7 +160,7 @@ async def test_config_flow_preset_accepts_float(
         )
         assert result == snapshot(name="presets", include=SNAPSHOT_FLOW_PROPS)
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={
                 CONF_PRESETS[PRESET_AWAY]: 10.4,
@@ -168,7 +168,7 @@ async def test_config_flow_preset_accepts_float(
         )
         assert result == snapshot(name="create_entry", include=SNAPSHOT_FLOW_PROPS)
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_setup_entry.mock_calls) == 1
     assert result["options"] == {

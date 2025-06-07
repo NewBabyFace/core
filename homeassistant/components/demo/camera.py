@@ -4,14 +4,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from homeassistant.components.camera import Camera, CameraEntityFeature
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.camera import Camera, CameraEntityFeature
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -47,7 +47,7 @@ class DemoCamera(Camera):
         ext = "jpg" if self.content_type == "image/jpg" else "png"
         image_path = Path(__file__).parent / f"demo_{self._images_index}.{ext}"
 
-        return await self.hass.async_add_executor_job(image_path.read_bytes)
+        return await self.menuai.async_add_executor_job(image_path.read_bytes)
 
     async def async_enable_motion_detection(self) -> None:
         """Enable the Motion detection in base station (Arm)."""

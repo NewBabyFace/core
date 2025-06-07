@@ -6,11 +6,11 @@ from unittest.mock import AsyncMock, Mock
 
 from uiprotect.data import Camera, DoorbellMessageType, LCDMessage
 
-from homeassistant.components.unifiprotect.const import DEFAULT_ATTRIBUTION
-from homeassistant.components.unifiprotect.text import CAMERA
-from homeassistant.const import ATTR_ATTRIBUTION, ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.unifiprotect.const import DEFAULT_ATTRIBUTION
+from menuai.components.unifiprotect.text import CAMERA
+from menuai.const import ATTR_ATTRIBUTION, ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .utils import (
     MockUFPFixture,
@@ -23,21 +23,21 @@ from .utils import (
 
 
 async def test_text_camera_remove(
-    hass: HomeAssistant, ufp: MockUFPFixture, doorbell: Camera, unadopted_camera: Camera
+    menuai: menuai, ufp: MockUFPFixture, doorbell: Camera, unadopted_camera: Camera
 ) -> None:
     """Test removing and re-adding a camera device."""
 
     ufp.api.bootstrap.nvr.system_info.ustorage = None
-    await init_entry(hass, ufp, [doorbell, unadopted_camera])
-    assert_entity_counts(hass, Platform.TEXT, 1, 1)
-    await remove_entities(hass, ufp, [doorbell, unadopted_camera])
-    assert_entity_counts(hass, Platform.TEXT, 0, 0)
-    await adopt_devices(hass, ufp, [doorbell, unadopted_camera])
-    assert_entity_counts(hass, Platform.TEXT, 1, 1)
+    await init_entry(menuai, ufp, [doorbell, unadopted_camera])
+    assert_entity_counts(menuai, Platform.TEXT, 1, 1)
+    await remove_entities(menuai, ufp, [doorbell, unadopted_camera])
+    assert_entity_counts(menuai, Platform.TEXT, 0, 0)
+    await adopt_devices(menuai, ufp, [doorbell, unadopted_camera])
+    assert_entity_counts(menuai, Platform.TEXT, 1, 1)
 
 
 async def test_text_camera_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     ufp: MockUFPFixture,
     doorbell: Camera,
@@ -47,8 +47,8 @@ async def test_text_camera_setup(
     doorbell.lcd_message = LCDMessage(
         type=DoorbellMessageType.CUSTOM_MESSAGE, text="Test"
     )
-    await init_entry(hass, ufp, [doorbell])
-    assert_entity_counts(hass, Platform.TEXT, 1, 1)
+    await init_entry(menuai, ufp, [doorbell])
+    assert_entity_counts(menuai, Platform.TEXT, 1, 1)
 
     description = CAMERA[0]
     unique_id, entity_id = ids_from_device_description(
@@ -59,19 +59,19 @@ async def test_text_camera_setup(
     assert entity
     assert entity.unique_id == unique_id
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == "Test"
     assert state.attributes[ATTR_ATTRIBUTION] == DEFAULT_ATTRIBUTION
 
 
 async def test_text_camera_set(
-    hass: HomeAssistant, ufp: MockUFPFixture, doorbell: Camera
+    menuai: menuai, ufp: MockUFPFixture, doorbell: Camera
 ) -> None:
     """Test text entity setting value camera devices."""
 
-    await init_entry(hass, ufp, [doorbell])
-    assert_entity_counts(hass, Platform.TEXT, 1, 1)
+    await init_entry(menuai, ufp, [doorbell])
+    assert_entity_counts(menuai, Platform.TEXT, 1, 1)
 
     description = CAMERA[0]
     unique_id, entity_id = ids_from_device_description(
@@ -81,7 +81,7 @@ async def test_text_camera_set(
     doorbell.__pydantic_fields__["set_lcd_text"] = Mock(final=False, frozen=False)
     doorbell.set_lcd_text = AsyncMock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "text",
         "set_value",
         {ATTR_ENTITY_ID: entity_id, "value": "Test test"},

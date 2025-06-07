@@ -6,10 +6,10 @@ import uuid
 import pytest
 from zwave_me_ws import ZWaveMeData
 
-from homeassistant.components.zwave_me import ZWaveMePlatform
-from homeassistant.const import CONF_TOKEN, CONF_URL
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.components.zwave_me import ZWaveMePlatform
+from menuai.const import CONF_TOKEN, CONF_URL
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 from tests.common import MockConfigEntry
 
@@ -36,7 +36,7 @@ async def mock_connection(controller):
     ],
 )
 async def test_remove_stale_devices(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry, identifier, should_exist
+    menuai: menuai, device_registry: dr.DeviceRegistry, identifier, should_exist
 ) -> None:
     """Test removing devices with old-format ids."""
 
@@ -45,7 +45,7 @@ async def test_remove_stale_devices(
         domain="zwave_me",
         data={CONF_TOKEN: "test_token", CONF_URL: "http://test_test"},
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={("mac", "12:34:56:AB:CD:EF")},
@@ -53,14 +53,14 @@ async def test_remove_stale_devices(
     )
     with (
         patch(
-            "homeassistant.components.zwave_me.ZWaveMe.get_connection",
+            "menuai.components.zwave_me.ZWaveMe.get_connection",
             mock_connection,
         ),
         patch(
-            "homeassistant.components.zwave_me.async_setup_platforms",
+            "menuai.components.zwave_me.async_setup_platforms",
         ),
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
+        await menuai.config_entries.async_setup(config_entry.entry_id)
     assert (
         bool(
             device_registry.async_get_device(

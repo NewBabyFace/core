@@ -9,28 +9,28 @@ import voluptuous as vol
 from zhong_hong_hvac.hub import ZhongHongGateway
 from zhong_hong_hvac.hvac import HVAC as ZhongHongHVAC
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_HVAC_MODE,
     PLATFORM_SCHEMA as CLIMATE_PLATFORM_SCHEMA,
     ClimateEntity,
     ClimateEntityFeature,
     HVACMode,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_TEMPERATURE,
     CONF_HOST,
     CONF_PORT,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.dispatcher import (
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.dispatcher import (
     async_dispatcher_connect,
     async_dispatcher_send,
 )
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -67,7 +67,7 @@ MODE_TO_STATE = {
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -102,10 +102,10 @@ def setup_platform(
             return
 
         _LOGGER.debug("zhong_hong hub start listen event")
-        await hass.async_add_executor_job(_start_hub)
+        await menuai.async_add_executor_job(_start_hub)
         hub_is_initialized = True
 
-    async_dispatcher_connect(hass, SIGNAL_DEVICE_ADDED, startup)
+    async_dispatcher_connect(menuai, SIGNAL_DEVICE_ADDED, startup)
 
     # add devices after SIGNAL_DEVICE_SETTED_UP event is listened
     add_entities(devices)
@@ -114,7 +114,7 @@ def setup_platform(
         """Stop ZhongHongHub socket."""
         hub.stop_listen()
 
-    hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, stop_listen)
+    menuai.bus.listen_once(EVENT_menuai_STOP, stop_listen)
 
 
 class ZhongHongClimate(ClimateEntity):
@@ -147,11 +147,11 @@ class ZhongHongClimate(ClimateEntity):
         self._current_fan_mode = None
         self.is_initialized = False
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
         self._device.register_update_callback(self._after_update)
         self.is_initialized = True
-        async_dispatcher_send(self.hass, SIGNAL_DEVICE_ADDED)
+        async_dispatcher_send(self.menuai, SIGNAL_DEVICE_ADDED)
 
     def _after_update(self, climate):
         """Handle state update."""

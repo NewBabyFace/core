@@ -9,10 +9,10 @@ from aiohue.v1.sensors import (
     TYPE_ZLL_SWITCH,
 )
 
-from homeassistant.const import CONF_DEVICE_ID, CONF_EVENT, CONF_ID, CONF_UNIQUE_ID
-from homeassistant.core import callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.util import dt as dt_util, slugify
+from menuai.const import CONF_DEVICE_ID, CONF_EVENT, CONF_ID, CONF_UNIQUE_ID
+from menuai.core import callback
+from menuai.helpers import device_registry as dr
+from menuai.util import dt as dt_util, slugify
 
 from ..const import ATTR_HUE_EVENT
 from .sensor_device import GenericHueDevice
@@ -28,7 +28,7 @@ class HueEvent(GenericHueDevice):
     """When you want signals instead of entities.
 
     Stateless sensors such as remotes are expected to generate an event
-    instead of a sensor entity in hass.
+    instead of a sensor entity in menuai.
     """
 
     def __init__(self, sensor, name, bridge, primary_sensor=None):
@@ -87,11 +87,11 @@ class HueEvent(GenericHueDevice):
             CONF_EVENT: state,
             CONF_LAST_UPDATED: self.sensor.lastupdated,
         }
-        self.bridge.hass.bus.async_fire(ATTR_HUE_EVENT, data)
+        self.bridge.menuai.bus.async_fire(ATTR_HUE_EVENT, data)
 
     async def async_update_device_registry(self):
         """Update device registry."""
-        device_registry = dr.async_get(self.bridge.hass)
+        device_registry = dr.async_get(self.bridge.menuai)
 
         entry = device_registry.async_get_or_create(
             config_entry_id=self.bridge.config_entry.entry_id, **self.device_info

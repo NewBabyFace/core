@@ -4,17 +4,17 @@ from __future__ import annotations
 
 from eufylife_ble_client import EufyLifeBLEDevice
 
-from homeassistant.components import bluetooth
-from homeassistant.components.bluetooth.match import ADDRESS, BluetoothCallbackMatcher
-from homeassistant.const import CONF_MODEL, EVENT_HOMEASSISTANT_STOP, Platform
-from homeassistant.core import Event, HomeAssistant, callback
+from menuai.components import bluetooth
+from menuai.components.bluetooth.match import ADDRESS, BluetoothCallbackMatcher
+from menuai.const import CONF_MODEL, EVENT_menuai_STOP, Platform
+from menuai.core import Event, menuai, callback
 
 from .models import EufyLifeConfigEntry, EufyLifeData
 
 PLATFORMS: list[Platform] = [Platform.SENSOR]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: EufyLifeConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: EufyLifeConfigEntry) -> bool:
     """Set up EufyLife device from a config entry."""
     address = entry.unique_id
     assert address is not None
@@ -32,11 +32,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: EufyLifeConfigEntry) -> 
             service_info.device, service_info.advertisement
         )
         if not client.advertisement_data_contains_state:
-            hass.async_create_task(client.connect())
+            menuai.async_create_task(client.connect())
 
     entry.async_on_unload(
         bluetooth.async_register_callback(
-            hass,
+            menuai,
             _async_update_ble,
             BluetoothCallbackMatcher({ADDRESS: address}),
             bluetooth.BluetoothScanningMode.ACTIVE,
@@ -45,18 +45,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: EufyLifeConfigEntry) -> 
 
     entry.runtime_data = EufyLifeData(address, model, client)
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     async def _async_stop(event: Event) -> None:
         """Close the connection."""
         await client.stop()
 
     entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _async_stop)
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, _async_stop)
     )
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: EufyLifeConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: EufyLifeConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

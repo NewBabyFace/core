@@ -15,8 +15,8 @@ from pysmartthings import (
 )
 from pysmartthings.models import HealthStatus
 
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity
 
 from . import FullDevice
 from .const import DOMAIN, MAIN
@@ -52,9 +52,9 @@ class SmartThingsEntity(Entity):
         )
         self._attr_available = device.online
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to updates."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         for capability in self._internal_state:
             self.async_on_remove(
                 self.client.add_device_capability_event_listener(

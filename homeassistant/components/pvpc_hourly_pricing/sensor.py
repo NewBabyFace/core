@@ -9,19 +9,19 @@ from typing import Any
 
 from aiopvpc.const import KEY_INJECTION, KEY_MAG, KEY_OMIE, KEY_PVPC
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CURRENCY_EURO, UnitOfEnergy
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.event import async_track_time_change
-from homeassistant.helpers.typing import StateType
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import CURRENCY_EURO, UnitOfEnergy
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.event import async_track_time_change
+from menuai.helpers.typing import StateType
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import ElecPricesDataUpdateCoordinator
@@ -148,12 +148,12 @@ _PRICE_SENSOR_ATTRIBUTES_MAP = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the electricity price sensor from config_entry."""
-    coordinator: ElecPricesDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: ElecPricesDataUpdateCoordinator = menuai.data[DOMAIN][entry.entry_id]
     sensors = [ElecPriceSensor(coordinator, SENSOR_TYPES[0], entry.unique_id)]
     if coordinator.api.using_private_api:
         sensors.extend(
@@ -194,9 +194,9 @@ class ElecPriceSensor(CoordinatorEntity[ElecPricesDataUpdateCoordinator], Sensor
             self.entity_description.key, False
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         # Enable API downloads for this sensor
         self.coordinator.api.update_active_sensors(self.entity_description.key, True)
         self.async_on_remove(
@@ -208,7 +208,7 @@ class ElecPriceSensor(CoordinatorEntity[ElecPricesDataUpdateCoordinator], Sensor
         # Update 'state' value in hour changes
         self.async_on_remove(
             async_track_time_change(
-                self.hass, self.update_current_price, second=[0], minute=[0]
+                self.menuai, self.update_current_price, second=[0], minute=[0]
             )
         )
         _LOGGER.debug(

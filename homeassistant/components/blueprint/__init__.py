@@ -1,8 +1,8 @@
 """The blueprint integration."""
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType
 
 from . import websocket_api
 from .const import CONF_USE_BLUEPRINT, DOMAIN  # noqa: F401
@@ -25,7 +25,7 @@ from .schemas import (  # noqa: F401
 CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the blueprint integration."""
-    websocket_api.async_setup(hass)
+    websocket_api.async_setup(menuai)
     return True

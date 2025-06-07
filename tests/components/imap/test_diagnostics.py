@@ -6,10 +6,10 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from homeassistant.components import imap
-from homeassistant.components.sensor import SensorStateClass
-from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
+from menuai.components import imap
+from menuai.components.sensor import SensorStateClass
+from menuai.core import menuai
+from menuai.util import dt as dt_util
 
 from .const import TEST_FETCH_RESPONSE_TEXT_PLAIN, TEST_SEARCH_RESPONSE
 from .test_config_flow import MOCK_CONFIG
@@ -23,25 +23,25 @@ from tests.typing import ClientSessionGenerator
 @pytest.mark.parametrize("imap_fetch", [TEST_FETCH_RESPONSE_TEXT_PLAIN])
 @pytest.mark.parametrize("imap_has_capability", [True, False], ids=["push", "poll"])
 async def test_entry_diagnostics(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_imap_protocol: MagicMock,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test receiving a message successfully."""
-    event_called = async_capture_events(hass, "imap_content")
+    event_called = async_capture_events(menuai, "imap_content")
 
     template = "{{ 4 * 4 }}"
     config = MOCK_CONFIG.copy()
     config["custom_event_data_template"] = template
     config_entry = MockConfigEntry(domain=imap.DOMAIN, data=config)
 
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
     # Make sure we have had one update (when polling)
-    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=5))
-    await hass.async_block_till_done()
-    state = hass.states.get("sensor.imap_email_email_com_messages")
+    async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(seconds=5))
+    await menuai.async_block_till_done()
+    state = menuai.states.get("sensor.imap_email_email_com_messages")
     # we should have received one message
     assert state is not None
     assert state.state == "1"
@@ -57,7 +57,7 @@ async def test_entry_diagnostics(
     assert data["sender"] == "john.doe@example.com"
     assert data["subject"] == "Test subject"
 
-    await get_diagnostics_for_config_entry(hass, hass_client, config_entry)
+    await get_diagnostics_for_config_entry(menuai, menuai_client, config_entry)
 
     expected_config = {
         "username": "**REDACTED**",
@@ -80,7 +80,7 @@ async def test_entry_diagnostics(
         "custom_template_result_length": 2,
     }
     diagnostics = await get_diagnostics_for_config_entry(
-        hass, hass_client, config_entry
+        menuai, menuai_client, config_entry
     )
     assert diagnostics["config"] == expected_config
     event_data = diagnostics["event"]

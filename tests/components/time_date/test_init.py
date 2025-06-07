@@ -1,18 +1,18 @@
 """The tests for the Time & Date component."""
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from . import load_int
 
 
-async def test_setup_and_remove_config_entry(hass: HomeAssistant) -> None:
+async def test_setup_and_remove_config_entry(menuai: menuai) -> None:
     """Test setting up and removing a config entry."""
-    entry = await load_int(hass)
+    entry = await load_int(menuai)
 
-    state = hass.states.get("sensor.time")
+    state = menuai.states.get("sensor.time")
     assert state is not None
 
-    assert await hass.config_entries.async_remove(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_remove(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("sensor.time") is None
+    assert menuai.states.get("sensor.time") is None

@@ -10,7 +10,7 @@ from google.api_core.exceptions import (
 )
 import pytest
 
-from homeassistant.components.google_travel_time.const import (
+from menuai.components.google_travel_time.const import (
     ARRIVAL_TIME,
     CONF_ARRIVAL_TIME,
     CONF_AVOID,
@@ -28,10 +28,10 @@ from homeassistant.components.google_travel_time.const import (
     DOMAIN,
     UNITS_IMPERIAL,
 )
-from homeassistant.config_entries import SOURCE_USER, ConfigFlowResult
-from homeassistant.const import CONF_API_KEY, CONF_LANGUAGE, CONF_MODE, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.config_entries import SOURCE_USER, ConfigFlowResult
+from menuai.const import CONF_API_KEY, CONF_LANGUAGE, CONF_MODE, CONF_NAME
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from .const import DEFAULT_OPTIONS, MOCK_CONFIG, RECONFIGURE_CONFIG
 
@@ -39,38 +39,38 @@ from tests.common import MockConfigEntry
 
 
 async def assert_common_reconfigure_steps(
-    hass: HomeAssistant, reconfigure_result: ConfigFlowResult
+    menuai: menuai, reconfigure_result: ConfigFlowResult
 ) -> None:
     """Step through and assert the happy case reconfigure flow."""
     client_mock = AsyncMock()
     with (
         patch(
-            "homeassistant.components.google_travel_time.helpers.RoutesAsyncClient",
+            "menuai.components.google_travel_time.helpers.RoutesAsyncClient",
             return_value=client_mock,
         ),
         patch(
-            "homeassistant.components.google_travel_time.sensor.RoutesAsyncClient",
+            "menuai.components.google_travel_time.sensor.RoutesAsyncClient",
             return_value=client_mock,
         ),
     ):
         client_mock.compute_routes.return_value = None
-        reconfigure_successful_result = await hass.config_entries.flow.async_configure(
+        reconfigure_successful_result = await menuai.config_entries.flow.async_configure(
             reconfigure_result["flow_id"],
             RECONFIGURE_CONFIG,
         )
         assert reconfigure_successful_result["type"] is FlowResultType.ABORT
         assert reconfigure_successful_result["reason"] == "reconfigure_successful"
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-        entry = hass.config_entries.async_entries(DOMAIN)[0]
+        entry = menuai.config_entries.async_entries(DOMAIN)[0]
         assert entry.data == RECONFIGURE_CONFIG
 
 
 async def assert_common_create_steps(
-    hass: HomeAssistant, result: ConfigFlowResult
+    menuai: menuai, result: ConfigFlowResult
 ) -> None:
     """Step through and assert the happy case create flow."""
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         MOCK_CONFIG,
     )
@@ -85,15 +85,15 @@ async def assert_common_create_steps(
 
 
 @pytest.mark.usefixtures("routes_mock", "mock_setup_entry")
-async def test_minimum_fields(hass: HomeAssistant) -> None:
+async def test_minimum_fields(menuai: menuai) -> None:
     """Test we get the form."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] is None
 
-    await assert_common_create_steps(hass, result)
+    await assert_common_create_steps(menuai, result)
 
 
 @pytest.mark.usefixtures("mock_setup_entry")
@@ -112,17 +112,17 @@ async def test_minimum_fields(hass: HomeAssistant) -> None:
     ],
 )
 async def test_errors(
-    hass: HomeAssistant, routes_mock: AsyncMock, exception: Exception, error: str
+    menuai: menuai, routes_mock: AsyncMock, exception: Exception, error: str
 ) -> None:
     """Test errors in the flow."""
     routes_mock.compute_routes.side_effect = exception
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] is None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         MOCK_CONFIG,
     )
@@ -131,7 +131,7 @@ async def test_errors(
     assert result["errors"] == {"base": error}
 
     routes_mock.compute_routes.side_effect = None
-    await assert_common_create_steps(hass, result)
+    await assert_common_create_steps(menuai, result)
 
 
 @pytest.mark.parametrize(
@@ -139,13 +139,13 @@ async def test_errors(
     [(MOCK_CONFIG, DEFAULT_OPTIONS)],
 )
 @pytest.mark.usefixtures("routes_mock", "mock_setup_entry")
-async def test_reconfigure(hass: HomeAssistant, mock_config: MockConfigEntry) -> None:
+async def test_reconfigure(menuai: menuai, mock_config: MockConfigEntry) -> None:
     """Test reconfigure flow."""
-    result = await mock_config.start_reconfigure_flow(hass)
+    result = await mock_config.start_reconfigure_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reconfigure"
 
-    await assert_common_reconfigure_steps(hass, result)
+    await assert_common_reconfigure_steps(menuai, result)
 
 
 @pytest.mark.usefixtures("mock_setup_entry")
@@ -162,21 +162,21 @@ async def test_reconfigure(hass: HomeAssistant, mock_config: MockConfigEntry) ->
     ],
 )
 async def test_reconfigure_invalid_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config: MockConfigEntry,
     routes_mock: AsyncMock,
     exception: Exception,
     error: str,
 ) -> None:
     """Test we get the form."""
-    result = await mock_config.start_reconfigure_flow(hass)
+    result = await mock_config.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] is None
 
     routes_mock.compute_routes.side_effect = exception
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         RECONFIGURE_CONFIG,
     )
@@ -186,7 +186,7 @@ async def test_reconfigure_invalid_config_entry(
 
     routes_mock.compute_routes.side_effect = None
 
-    await assert_common_reconfigure_steps(hass, result)
+    await assert_common_reconfigure_steps(menuai, result)
 
 
 @pytest.mark.parametrize(
@@ -194,14 +194,14 @@ async def test_reconfigure_invalid_config_entry(
     [(MOCK_CONFIG, DEFAULT_OPTIONS)],
 )
 @pytest.mark.usefixtures("routes_mock")
-async def test_options_flow(hass: HomeAssistant, mock_config: MockConfigEntry) -> None:
+async def test_options_flow(menuai: menuai, mock_config: MockConfigEntry) -> None:
     """Test options flow."""
-    result = await hass.config_entries.options.async_init(mock_config.entry_id)
+    result = await menuai.config_entries.options.async_init(mock_config.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             CONF_MODE: "driving",
@@ -246,15 +246,15 @@ async def test_options_flow(hass: HomeAssistant, mock_config: MockConfigEntry) -
 )
 @pytest.mark.usefixtures("routes_mock")
 async def test_options_flow_departure_time(
-    hass: HomeAssistant, mock_config: MockConfigEntry
+    menuai: menuai, mock_config: MockConfigEntry
 ) -> None:
     """Test options flow with departure time."""
-    result = await hass.config_entries.options.async_init(mock_config.entry_id)
+    result = await menuai.config_entries.options.async_init(mock_config.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             CONF_MODE: "driving",
@@ -316,15 +316,15 @@ async def test_options_flow_departure_time(
 )
 @pytest.mark.usefixtures("routes_mock")
 async def test_reset_departure_time(
-    hass: HomeAssistant, mock_config: MockConfigEntry
+    menuai: menuai, mock_config: MockConfigEntry
 ) -> None:
     """Test resetting departure time."""
-    result = await hass.config_entries.options.async_init(mock_config.entry_id)
+    result = await menuai.config_entries.options.async_init(mock_config.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             CONF_MODE: "driving",
@@ -364,15 +364,15 @@ async def test_reset_departure_time(
 )
 @pytest.mark.usefixtures("routes_mock")
 async def test_reset_arrival_time(
-    hass: HomeAssistant, mock_config: MockConfigEntry
+    menuai: menuai, mock_config: MockConfigEntry
 ) -> None:
     """Test resetting arrival time."""
-    result = await hass.config_entries.options.async_init(mock_config.entry_id)
+    result = await menuai.config_entries.options.async_init(mock_config.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             CONF_MODE: "driving",
@@ -410,15 +410,15 @@ async def test_reset_arrival_time(
 )
 @pytest.mark.usefixtures("routes_mock")
 async def test_reset_options_flow_fields(
-    hass: HomeAssistant, mock_config: MockConfigEntry
+    menuai: menuai, mock_config: MockConfigEntry
 ) -> None:
     """Test resetting options flow fields that are not time related to None."""
-    result = await hass.config_entries.options.async_init(mock_config.entry_id)
+    result = await menuai.config_entries.options.async_init(mock_config.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             CONF_MODE: "driving",
@@ -442,15 +442,15 @@ async def test_reset_options_flow_fields(
     [(MOCK_CONFIG, DEFAULT_OPTIONS)],
 )
 @pytest.mark.usefixtures("routes_mock", "mock_setup_entry")
-async def test_dupe(hass: HomeAssistant, mock_config: MockConfigEntry) -> None:
+async def test_dupe(menuai: menuai, mock_config: MockConfigEntry) -> None:
     """Test setting up the same entry data twice is OK."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] is None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_API_KEY: "test",

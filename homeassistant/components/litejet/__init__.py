@@ -4,17 +4,17 @@ import logging
 
 import pylitejet
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_PORT, EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import Event, HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_PORT, EVENT_menuai_STOP
+from menuai.core import Event, menuai
+from menuai.exceptions import ConfigEntryNotReady
 
 from .const import DOMAIN, PLATFORMS
 
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up LiteJet via a config entry."""
     port = entry.data[CONF_PORT]
 
@@ -35,22 +35,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await system.close()
 
     entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, handle_stop)
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, handle_stop)
     )
 
-    hass.data[DOMAIN] = system
+    menuai.data[DOMAIN] = system
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a LiteJet config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
     if unload_ok:
-        await hass.data[DOMAIN].close()
-        hass.data.pop(DOMAIN)
+        await menuai.data[DOMAIN].close()
+        menuai.data.pop(DOMAIN)
 
     return unload_ok

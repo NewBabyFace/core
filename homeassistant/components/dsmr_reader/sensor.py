@@ -2,21 +2,21 @@
 
 from __future__ import annotations
 
-from homeassistant.components import mqtt
-from homeassistant.components.sensor import SensorEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.issue_registry import IssueSeverity, async_create_issue
-from homeassistant.util import slugify
+from menuai.components import mqtt
+from menuai.components.sensor import SensorEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.issue_registry import IssueSeverity, async_create_issue
+from menuai.util import slugify
 
 from .const import DOMAIN
 from .definitions import SENSORS, DSMRReaderSensorEntityDescription
 
 
 async def async_setup_entry(
-    _: HomeAssistant,
+    _: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -40,7 +40,7 @@ class DSMRSensor(SensorEntity):
         self.entity_id = f"sensor.{slug}"
         self._attr_unique_id = f"{config_entry.entry_id}-{slug}"
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to MQTT events."""
 
         @callback
@@ -58,11 +58,11 @@ class DSMRSensor(SensorEntity):
 
         try:
             await mqtt.async_subscribe(
-                self.hass, self.entity_description.key, message_received, 1
+                self.menuai, self.entity_description.key, message_received, 1
             )
-        except HomeAssistantError:
+        except menuaiError:
             async_create_issue(
-                self.hass,
+                self.menuai,
                 DOMAIN,
                 f"cannot_subscribe_mqtt_topic_{self.entity_description.key}",
                 is_fixable=False,

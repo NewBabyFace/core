@@ -2,21 +2,21 @@
 
 from __future__ import annotations
 
-from homeassistant.components.notify import ATTR_DATA, BaseNotificationService
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.notify import ATTR_DATA, BaseNotificationService
+from menuai.core import menuai
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import DOMAIN
 
 
 async def async_get_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> KebaNotificationService:
     """Return the notify service."""
 
-    client = hass.data[DOMAIN]
+    client = menuai.data[DOMAIN]
     return KebaNotificationService(client)
 
 

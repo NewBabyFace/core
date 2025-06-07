@@ -11,10 +11,10 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.amazon_devices.coordinator import SCAN_INTERVAL
-from homeassistant.const import STATE_ON, STATE_UNAVAILABLE, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.amazon_devices.coordinator import SCAN_INTERVAL
+from menuai.const import STATE_ON, STATE_UNAVAILABLE, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import setup_integration
 from .const import TEST_SERIAL_NUMBER
@@ -23,7 +23,7 @@ from tests.common import MockConfigEntry, async_fire_time_changed, snapshot_plat
 
 
 async def test_all_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mock_amazon_devices_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
@@ -31,11 +31,11 @@ async def test_all_entities(
 ) -> None:
     """Test all entities."""
     with patch(
-        "homeassistant.components.amazon_devices.PLATFORMS", [Platform.BINARY_SENSOR]
+        "menuai.components.amazon_devices.PLATFORMS", [Platform.BINARY_SENSOR]
     ):
-        await setup_integration(hass, mock_config_entry)
+        await setup_integration(menuai, mock_config_entry)
 
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
 
 @pytest.mark.parametrize(
@@ -47,7 +47,7 @@ async def test_all_entities(
     ],
 )
 async def test_coordinator_data_update_fails(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     mock_amazon_devices_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
@@ -57,23 +57,23 @@ async def test_coordinator_data_update_fails(
 
     entity_id = "binary_sensor.echo_test_connectivity"
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_ON
 
     mock_amazon_devices_client.get_devices_data.side_effect = side_effect
 
     freezer.tick(SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_UNAVAILABLE
 
 
 async def test_offline_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     mock_amazon_devices_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
@@ -86,9 +86,9 @@ async def test_offline_device(
         TEST_SERIAL_NUMBER
     ].online = False
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_UNAVAILABLE
 
     mock_amazon_devices_client.get_devices_data.return_value[
@@ -96,8 +96,8 @@ async def test_offline_device(
     ].online = True
 
     freezer.tick(SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state != STATE_UNAVAILABLE

@@ -1,6 +1,6 @@
 """Proxmox parent entity class."""
 
-from homeassistant.helpers.update_coordinator import (
+from menuai.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
 )

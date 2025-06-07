@@ -9,7 +9,7 @@ from typing import Any
 import aiolifx_effects as aiolifx_effects_module
 import voluptuous as vol
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_EFFECT,
     ATTR_TRANSITION,
     LIGHT_TURN_ON_SCHEMA,
@@ -17,14 +17,14 @@ from homeassistant.components.light import (
     LightEntity,
     LightEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.event import async_call_later
-from homeassistant.helpers.typing import VolDictType
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import CALLBACK_TYPE, menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv, entity_platform
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.event import async_call_later
+from menuai.helpers.typing import VolDictType
 
 from .const import (
     _LOGGER,
@@ -77,12 +77,12 @@ HSBK_KELVIN = 3
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up LIFX from a config entry."""
-    domain_data = hass.data[DOMAIN]
+    domain_data = menuai.data[DOMAIN]
     coordinator: LIFXUpdateCoordinator = domain_data[entry.entry_id]
     manager: LIFXManager = domain_data[DATA_LIFX_MANAGER]
     device = coordinator.device
@@ -193,7 +193,7 @@ class LIFXLight(LIFXEntity, LightEntity):
                 await self.coordinator.async_refresh()
 
             self.postponed_update = async_call_later(
-                self.hass,
+                self.menuai,
                 timedelta(milliseconds=when),
                 _async_refresh,
             )
@@ -240,7 +240,7 @@ class LIFXLight(LIFXEntity, LightEntity):
         power_on = kwargs.get(ATTR_POWER, False)
         power_off = not kwargs.get(ATTR_POWER, True)
 
-        hsbk = find_hsbk(self.hass, **kwargs)
+        hsbk = find_hsbk(self.menuai, **kwargs)
 
         if not self.is_on:
             if power_off:
@@ -272,7 +272,7 @@ class LIFXLight(LIFXEntity, LightEntity):
     ) -> None:
         """Set the state of the HEV LEDs on a LIFX Clean bulb."""
         if lifx_features(self.bulb)["hev"] is False:
-            raise HomeAssistantError(
+            raise menuaiError(
                 "This device does not support setting HEV cycle state"
             )
 
@@ -288,7 +288,7 @@ class LIFXLight(LIFXEntity, LightEntity):
         try:
             await self.coordinator.async_set_power(pwr, duration)
         except TimeoutError as ex:
-            raise HomeAssistantError(f"Timeout setting power for {self.name}") from ex
+            raise menuaiError(f"Timeout setting power for {self.name}") from ex
 
     async def set_color(
         self,
@@ -301,7 +301,7 @@ class LIFXLight(LIFXEntity, LightEntity):
         try:
             await self.coordinator.async_set_color(merged_hsbk, duration)
         except TimeoutError as ex:
-            raise HomeAssistantError(f"Timeout setting color for {self.name}") from ex
+            raise menuaiError(f"Timeout setting color for {self.name}") from ex
 
     async def get_color(
         self,
@@ -310,25 +310,25 @@ class LIFXLight(LIFXEntity, LightEntity):
         try:
             await self.coordinator.async_get_color()
         except TimeoutError as ex:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Timeout setting getting color for {self.name}"
             ) from ex
 
     async def default_effect(self, **kwargs: Any) -> None:
         """Start an effect with default parameters."""
-        await self.hass.services.async_call(
+        await self.menuai.services.async_call(
             DOMAIN,
             kwargs[ATTR_EFFECT],
             {ATTR_ENTITY_ID: self.entity_id},
             context=self._context,
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
         self.async_on_remove(
             self.manager.async_register_entity(self.entity_id, self.entry.entry_id)
         )
-        return await super().async_added_to_hass()
+        return await super().async_added_to_menuai()
 
     def _cancel_postponed_update(self) -> None:
         """Cancel postponed update, if applicable."""
@@ -336,10 +336,10 @@ class LIFXLight(LIFXEntity, LightEntity):
             self.postponed_update()
             self.postponed_update = None
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Run when entity will be removed from hass."""
+    async def async_will_remove_from_menuai(self) -> None:
+        """Run when entity will be removed from menuai."""
         self._cancel_postponed_update()
-        return await super().async_will_remove_from_hass()
+        return await super().async_will_remove_from_menuai()
 
 
 class LIFXWhite(LIFXLight):
@@ -436,7 +436,7 @@ class LIFXMultiZone(LIFXColor):
                     zone, zone, zone_hsbk, duration, apply
                 )
             except TimeoutError as ex:
-                raise HomeAssistantError(
+                raise menuaiError(
                     f"Timeout setting color zones for {self.name}"
                 ) from ex
 
@@ -451,7 +451,7 @@ class LIFXMultiZone(LIFXColor):
         try:
             await self.coordinator.async_get_color_zones()
         except TimeoutError as ex:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Timeout getting color zones from {self.name}"
             ) from ex
 
@@ -484,7 +484,7 @@ class LIFXExtendedMultiZone(LIFXMultiZone):
                 color_zones, duration=duration
             )
         except TimeoutError as ex:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Timeout setting color zones on {self.name}"
             ) from ex
 

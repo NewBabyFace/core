@@ -20,12 +20,12 @@ import zoneinfo
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.components import automation, calendar
-from homeassistant.components.calendar.trigger import EVENT_END, EVENT_START
-from homeassistant.const import ATTR_ENTITY_ID, SERVICE_TURN_OFF
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.components import automation, calendar
+from menuai.components.calendar.trigger import EVENT_END, EVENT_START
+from menuai.const import ATTR_ENTITY_ID, SERVICE_TURN_OFF
+from menuai.core import menuai
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from .conftest import MockCalendarEntity
 
@@ -55,17 +55,17 @@ TEST_UPDATE_INTERVAL = datetime.timedelta(minutes=7)
 class FakeSchedule:
     """Test fixture class for return events in a specific date range."""
 
-    def __init__(self, hass: HomeAssistant, freezer: FrozenDateTimeFactory) -> None:
+    def __init__(self, menuai: menuai, freezer: FrozenDateTimeFactory) -> None:
         """Initialize FakeSchedule."""
-        self.hass = hass
+        self.menuai = menuai
         self.freezer = freezer
 
     async def fire_time(self, trigger_time: datetime.datetime) -> None:
         """Fire an alarm and wait."""
         _LOGGER.debug("Firing alarm @ %s", dt_util.as_local(trigger_time))
         self.freezer.move_to(trigger_time)
-        async_fire_time_changed(self.hass, trigger_time)
-        await self.hass.async_block_till_done()
+        async_fire_time_changed(self.menuai, trigger_time)
+        await self.menuai.async_block_till_done()
 
     async def fire_until(self, end: datetime.datetime) -> None:
         """Simulate the passage of time by firing alarms until the time is reached."""
@@ -84,13 +84,13 @@ class FakeSchedule:
 
 
 @pytest.fixture
-def fake_schedule(hass: HomeAssistant, freezer: FrozenDateTimeFactory) -> FakeSchedule:
+def fake_schedule(menuai: menuai, freezer: FrozenDateTimeFactory) -> FakeSchedule:
     """Fixture that tests can use to make fake events."""
 
     # Setup start time for all tests
     freezer.move_to("2022-04-19 10:31:02+00:00")
 
-    return FakeSchedule(hass, freezer)
+    return FakeSchedule(menuai, freezer)
 
 
 @pytest.fixture(name="test_entity")
@@ -101,18 +101,18 @@ def mock_test_entity(test_entities: list[MockCalendarEntity]) -> MockCalendarEnt
 
 @pytest.fixture(name="setup_platform", autouse=True)
 async def mock_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_integration: None,
     config_entry: MockConfigEntry,
 ) -> None:
     """Fixture to setup platforms used in the test."""
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
 
 @asynccontextmanager
 async def create_automation(
-    hass: HomeAssistant, event_type: str, offset=None
+    menuai: menuai, event_type: str, offset=None
 ) -> AsyncIterator[None]:
     """Register an automation."""
     trigger_data = {
@@ -123,7 +123,7 @@ async def create_automation(
     if offset:
         trigger_data["offset"] = offset
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -134,12 +134,12 @@ async def create_automation(
             }
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     yield
 
     # Disable automation to cleanup lingering timers
-    await hass.services.async_call(
+    await menuai.services.async_call(
         automation.DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: f"automation.{event_type}"},
@@ -148,9 +148,9 @@ async def create_automation(
 
 
 @pytest.fixture
-def calls_data(hass: HomeAssistant) -> Callable[[], list[dict[str, Any]]]:
+def calls_data(menuai: menuai) -> Callable[[], list[dict[str, Any]]]:
     """Fixture to return payload data for automation calls."""
-    service_calls = async_mock_service(hass, "test", "automation")
+    service_calls = async_mock_service(menuai, "test", "automation")
 
     def get_trigger_data() -> list[dict[str, Any]]:
         return [c.data for c in service_calls]
@@ -162,14 +162,14 @@ def calls_data(hass: HomeAssistant) -> Callable[[], list[dict[str, Any]]]:
 def mock_update_interval() -> Generator[None]:
     """Fixture to override the update interval for refreshing events."""
     with patch(
-        "homeassistant.components.calendar.trigger.UPDATE_INTERVAL",
+        "menuai.components.calendar.trigger.UPDATE_INTERVAL",
         new=TEST_UPDATE_INTERVAL,
     ):
         yield
 
 
 async def test_event_start_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     calls_data: Callable[[], list[dict[str, Any]]],
     fake_schedule: FakeSchedule,
     test_entity: MockCalendarEntity,
@@ -179,7 +179,7 @@ async def test_event_start_trigger(
         start=datetime.datetime.fromisoformat("2022-04-19 11:00:00+00:00"),
         end=datetime.datetime.fromisoformat("2022-04-19 11:30:00+00:00"),
     )
-    async with create_automation(hass, EVENT_START):
+    async with create_automation(menuai, EVENT_START):
         assert len(calls_data()) == 0
 
         await fake_schedule.fire_until(
@@ -203,7 +203,7 @@ async def test_event_start_trigger(
     ],
 )
 async def test_event_start_trigger_with_offset(
-    hass: HomeAssistant,
+    menuai: menuai,
     calls_data: Callable[[], list[dict[str, Any]]],
     fake_schedule: FakeSchedule,
     test_entity: MockCalendarEntity,
@@ -215,7 +215,7 @@ async def test_event_start_trigger_with_offset(
         start=datetime.datetime.fromisoformat("2022-04-19 12:00:00+00:00"),
         end=datetime.datetime.fromisoformat("2022-04-19 12:30:00+00:00"),
     )
-    async with create_automation(hass, EVENT_START, offset=offset_str):
+    async with create_automation(menuai, EVENT_START, offset=offset_str):
         # No calls yet
         await fake_schedule.fire_until(
             datetime.datetime.fromisoformat("2022-04-19 11:55:00+00:00") + offset_delta,
@@ -236,7 +236,7 @@ async def test_event_start_trigger_with_offset(
 
 
 async def test_event_end_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     calls_data: Callable[[], list[dict[str, Any]]],
     fake_schedule: FakeSchedule,
     test_entity: MockCalendarEntity,
@@ -246,7 +246,7 @@ async def test_event_end_trigger(
         start=datetime.datetime.fromisoformat("2022-04-19 11:00:00+00:00"),
         end=datetime.datetime.fromisoformat("2022-04-19 12:00:00+00:00"),
     )
-    async with create_automation(hass, EVENT_END):
+    async with create_automation(menuai, EVENT_END):
         # Event started, nothing should fire yet
         await fake_schedule.fire_until(
             datetime.datetime.fromisoformat("2022-04-19 11:10:00+00:00")
@@ -274,7 +274,7 @@ async def test_event_end_trigger(
     ],
 )
 async def test_event_end_trigger_with_offset(
-    hass: HomeAssistant,
+    menuai: menuai,
     calls_data: Callable[[], list[dict[str, Any]]],
     fake_schedule: FakeSchedule,
     test_entity: MockCalendarEntity,
@@ -286,7 +286,7 @@ async def test_event_end_trigger_with_offset(
         start=datetime.datetime.fromisoformat("2022-04-19 12:00:00+00:00"),
         end=datetime.datetime.fromisoformat("2022-04-19 12:30:00+00:00"),
     )
-    async with create_automation(hass, EVENT_END, offset=offset_str):
+    async with create_automation(menuai, EVENT_END, offset=offset_str):
         # No calls yet
         await fake_schedule.fire_until(
             datetime.datetime.fromisoformat("2022-04-19 12:05:00+00:00") + offset_delta,
@@ -307,13 +307,13 @@ async def test_event_end_trigger_with_offset(
 
 
 async def test_calendar_trigger_with_no_events(
-    hass: HomeAssistant,
+    menuai: menuai,
     calls_data: Callable[[], list[dict[str, Any]]],
     fake_schedule: FakeSchedule,
 ) -> None:
     """Test a calendar trigger setup  with no events."""
 
-    async with create_automation(hass, EVENT_START), create_automation(hass, EVENT_END):
+    async with create_automation(menuai, EVENT_START), create_automation(menuai, EVENT_END):
         # No calls, at arbitrary times
         await fake_schedule.fire_until(
             datetime.datetime.fromisoformat("2022-04-19 11:00:00+00:00")
@@ -322,7 +322,7 @@ async def test_calendar_trigger_with_no_events(
 
 
 async def test_multiple_start_events(
-    hass: HomeAssistant,
+    menuai: menuai,
     calls_data: Callable[[], list[dict[str, Any]]],
     fake_schedule: FakeSchedule,
     test_entity: MockCalendarEntity,
@@ -337,7 +337,7 @@ async def test_multiple_start_events(
         start=datetime.datetime.fromisoformat("2022-04-19 11:00:00+00:00"),
         end=datetime.datetime.fromisoformat("2022-04-19 11:15:00+00:00"),
     )
-    async with create_automation(hass, EVENT_START):
+    async with create_automation(menuai, EVENT_START):
         await fake_schedule.fire_until(
             datetime.datetime.fromisoformat("2022-04-19 11:30:00+00:00")
         )
@@ -356,7 +356,7 @@ async def test_multiple_start_events(
 
 
 async def test_multiple_end_events(
-    hass: HomeAssistant,
+    menuai: menuai,
     calls_data: Callable[[], list[dict[str, Any]]],
     fake_schedule: FakeSchedule,
     test_entity: MockCalendarEntity,
@@ -371,7 +371,7 @@ async def test_multiple_end_events(
         start=datetime.datetime.fromisoformat("2022-04-19 11:00:00+00:00"),
         end=datetime.datetime.fromisoformat("2022-04-19 11:15:00+00:00"),
     )
-    async with create_automation(hass, EVENT_END):
+    async with create_automation(menuai, EVENT_END):
         await fake_schedule.fire_until(
             datetime.datetime.fromisoformat("2022-04-19 11:30:00+00:00")
         )
@@ -391,7 +391,7 @@ async def test_multiple_end_events(
 
 
 async def test_multiple_events_sharing_start_time(
-    hass: HomeAssistant,
+    menuai: menuai,
     calls_data: Callable[[], list[dict[str, Any]]],
     fake_schedule: FakeSchedule,
     test_entity: MockCalendarEntity,
@@ -406,7 +406,7 @@ async def test_multiple_events_sharing_start_time(
         start=datetime.datetime.fromisoformat("2022-04-19 11:00:00+00:00"),
         end=datetime.datetime.fromisoformat("2022-04-19 11:30:00+00:00"),
     )
-    async with create_automation(hass, EVENT_START):
+    async with create_automation(menuai, EVENT_START):
         await fake_schedule.fire_until(
             datetime.datetime.fromisoformat("2022-04-19 11:35:00+00:00")
         )
@@ -426,7 +426,7 @@ async def test_multiple_events_sharing_start_time(
 
 
 async def test_overlap_events(
-    hass: HomeAssistant,
+    menuai: menuai,
     calls_data: Callable[[], list[dict[str, Any]]],
     fake_schedule: FakeSchedule,
     test_entity: MockCalendarEntity,
@@ -441,7 +441,7 @@ async def test_overlap_events(
         start=datetime.datetime.fromisoformat("2022-04-19 11:15:00+00:00"),
         end=datetime.datetime.fromisoformat("2022-04-19 11:45:00+00:00"),
     )
-    async with create_automation(hass, EVENT_START):
+    async with create_automation(menuai, EVENT_START):
         await fake_schedule.fire_until(
             datetime.datetime.fromisoformat("2022-04-19 11:20:00+00:00")
         )
@@ -461,11 +461,11 @@ async def test_overlap_events(
 
 
 async def test_invalid_calendar_id(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test creating a trigger with an invalid calendar id."""
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -477,16 +477,16 @@ async def test_invalid_calendar_id(
             }
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert "Entity ID invalid-calendar-id is an invalid entity ID" in caplog.text
 
 
 async def test_legacy_entity_type(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test creating a trigger with an invalid calendar id."""
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -498,12 +498,12 @@ async def test_legacy_entity_type(
             }
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert "is not a calendar entity" in caplog.text
 
 
 async def test_update_next_event(
-    hass: HomeAssistant,
+    menuai: menuai,
     calls_data: Callable[[], list[dict[str, Any]]],
     fake_schedule: FakeSchedule,
     test_entity: MockCalendarEntity,
@@ -514,7 +514,7 @@ async def test_update_next_event(
         start=datetime.datetime.fromisoformat("2022-04-19 11:00:00+00:00"),
         end=datetime.datetime.fromisoformat("2022-04-19 11:15:00+00:00"),
     )
-    async with create_automation(hass, EVENT_START):
+    async with create_automation(menuai, EVENT_START):
         # No calls before event start
         await fake_schedule.fire_until(
             datetime.datetime.fromisoformat("2022-04-19 10:45:00+00:00")
@@ -546,7 +546,7 @@ async def test_update_next_event(
 
 
 async def test_update_missed(
-    hass: HomeAssistant,
+    menuai: menuai,
     calls_data: Callable[[], list[dict[str, Any]]],
     fake_schedule: FakeSchedule,
     test_entity: MockCalendarEntity,
@@ -557,7 +557,7 @@ async def test_update_missed(
         start=datetime.datetime.fromisoformat("2022-04-19 11:00:00+00:00"),
         end=datetime.datetime.fromisoformat("2022-04-19 11:30:00+00:00"),
     )
-    async with create_automation(hass, EVENT_START):
+    async with create_automation(menuai, EVENT_START):
         # Events are refreshed at t+TEST_UPDATE_INTERVAL minutes. A new event is
         # added, but the next update happens after the event is already over.
         await fake_schedule.fire_until(
@@ -636,7 +636,7 @@ async def test_update_missed(
     ids=["basic", "more-fields", "all-day"],
 )
 async def test_event_payload(
-    hass: HomeAssistant,
+    menuai: menuai,
     calls_data: Callable[[], list[dict[str, Any]]],
     fake_schedule: FakeSchedule,
     test_entity: MockCalendarEntity,
@@ -647,7 +647,7 @@ async def test_event_payload(
 ) -> None:
     """Test the fields in the calendar event payload are set."""
     test_entity.create_event(**create_data)
-    async with create_automation(hass, EVENT_START):
+    async with create_automation(menuai, EVENT_START):
         assert len(calls_data()) == 0
 
         await fake_schedule.fire_until(fire_time)
@@ -661,7 +661,7 @@ async def test_event_payload(
 
 
 async def test_trigger_timestamp_window_edge(
-    hass: HomeAssistant,
+    menuai: menuai,
     calls_data: Callable[[], list[dict[str, Any]]],
     fake_schedule: FakeSchedule,
     test_entity: MockCalendarEntity,
@@ -675,7 +675,7 @@ async def test_trigger_timestamp_window_edge(
         start=datetime.datetime.fromisoformat("2022-04-19 11:14:00+00:00"),
         end=datetime.datetime.fromisoformat("2022-04-19 11:30:00+00:00"),
     )
-    async with create_automation(hass, EVENT_START):
+    async with create_automation(menuai, EVENT_START):
         assert len(calls_data()) == 0
 
         await fake_schedule.fire_until(
@@ -691,14 +691,14 @@ async def test_trigger_timestamp_window_edge(
 
 
 async def test_event_start_trigger_dst(
-    hass: HomeAssistant,
+    menuai: menuai,
     calls_data: Callable[[], list[dict[str, Any]]],
     fake_schedule: FakeSchedule,
     test_entity: MockCalendarEntity,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test a calendar event trigger happening at the start of daylight savings time."""
-    await hass.config.async_set_time_zone("America/Los_Angeles")
+    await menuai.config.async_set_time_zone("America/Los_Angeles")
     tzinfo = zoneinfo.ZoneInfo("America/Los_Angeles")
     freezer.move_to("2023-03-12 01:00:00-08:00")
 
@@ -720,7 +720,7 @@ async def test_event_start_trigger_dst(
         start=datetime.datetime(2023, 3, 12, 3, 30, tzinfo=tzinfo),
         end=datetime.datetime(2023, 3, 12, 3, 45, tzinfo=tzinfo),
     )
-    async with create_automation(hass, EVENT_START):
+    async with create_automation(menuai, EVENT_START):
         assert len(calls_data()) == 0
 
         await fake_schedule.fire_until(
@@ -747,7 +747,7 @@ async def test_event_start_trigger_dst(
 
 
 async def test_config_entry_reload(
-    hass: HomeAssistant,
+    menuai: menuai,
     calls_data: Callable[[], list[dict[str, Any]]],
     fake_schedule: FakeSchedule,
     test_entities: list[MockCalendarEntity],
@@ -761,10 +761,10 @@ async def test_config_entry_reload(
     the automation kept a reference to the specific entity which would be
     invalid after a config entry was reloaded.
     """
-    async with create_automation(hass, EVENT_START):
+    async with create_automation(menuai, EVENT_START):
         assert len(calls_data()) == 0
 
-        assert await hass.config_entries.async_reload(config_entry.entry_id)
+        assert await menuai.config_entries.async_reload(config_entry.entry_id)
 
         # Ensure the reloaded entity has events upcoming.
         test_entity = test_entities[1]
@@ -787,7 +787,7 @@ async def test_config_entry_reload(
 
 
 async def test_config_entry_unload(
-    hass: HomeAssistant,
+    menuai: menuai,
     calls_data: Callable[[], list[dict[str, Any]]],
     fake_schedule: FakeSchedule,
     test_entities: list[MockCalendarEntity],
@@ -796,10 +796,10 @@ async def test_config_entry_unload(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test an automation that references a calendar entity that is unloaded."""
-    async with create_automation(hass, EVENT_START):
+    async with create_automation(menuai, EVENT_START):
         assert len(calls_data()) == 0
 
-        assert await hass.config_entries.async_unload(config_entry.entry_id)
+        assert await menuai.config_entries.async_unload(config_entry.entry_id)
 
         await fake_schedule.fire_until(
             datetime.datetime.fromisoformat("2022-04-19 11:15:00+00:00"),

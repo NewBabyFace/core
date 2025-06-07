@@ -8,11 +8,11 @@ from typing import Any
 
 from starline import StarlineApi, StarlineDevice
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.util import dt as dt_util
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.event import async_track_time_interval
+from menuai.util import dt as dt_util
 
 from .const import (
     _LOGGER,
@@ -35,9 +35,9 @@ def _parse_datetime(dt_str: str | None) -> str | None:
 class StarlineAccount:
     """StarLine Account class."""
 
-    def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: ConfigEntry) -> None:
         """Initialize StarLine account."""
-        self._hass: HomeAssistant = hass
+        self._menuai: menuai = menuai
         self._config_entry: ConfigEntry = config_entry
         self._update_interval: int = DEFAULT_SCAN_INTERVAL
         self._update_obd_interval: int = DEFAULT_SCAN_OBD_INTERVAL
@@ -65,7 +65,7 @@ class StarlineAccount:
             )
             self._api.set_slnet_token(slnet_token)
             self._api.set_user_id(user_id)
-            self._hass.add_job(
+            self._menuai.add_job(
                 self._save_slnet_token,
                 {
                     **self._config_entry.data,
@@ -79,7 +79,7 @@ class StarlineAccount:
 
     @callback
     def _save_slnet_token(self, data) -> None:
-        self._hass.config_entries.async_update_entry(
+        self._menuai.config_entries.async_update_entry(
             self._config_entry,
             data=data,
         )
@@ -101,11 +101,11 @@ class StarlineAccount:
 
     async def update(self, unused=None):
         """Update StarLine data."""
-        await self._hass.async_add_executor_job(self._update_data)
+        await self._menuai.async_add_executor_job(self._update_data)
 
     async def update_obd(self, unused=None):
         """Update StarLine OBD data."""
-        await self._hass.async_add_executor_job(self._update_obd_data)
+        await self._menuai.async_add_executor_job(self._update_obd_data)
 
     def set_update_interval(self, interval: int) -> None:
         """Set StarLine API update interval."""
@@ -116,7 +116,7 @@ class StarlineAccount:
 
         delta = timedelta(seconds=interval)
         self._unsubscribe_auto_updater = async_track_time_interval(
-            self._hass, self.update, delta
+            self._menuai, self.update, delta
         )
 
     def set_update_obd_interval(self, interval: int) -> None:
@@ -128,7 +128,7 @@ class StarlineAccount:
 
         delta = timedelta(seconds=interval)
         self._unsubscribe_auto_obd_updater = async_track_time_interval(
-            self._hass, self.update_obd, delta
+            self._menuai, self.update_obd, delta
         )
 
     def unload(self):

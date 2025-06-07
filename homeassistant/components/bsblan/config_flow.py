@@ -7,11 +7,11 @@ from typing import Any
 from bsblan import BSBLAN, BSBLANConfig, BSBLANError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_PORT, CONF_USERNAME
-from homeassistant.core import callback
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.device_registry import format_mac
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_PORT, CONF_USERNAME
+from menuai.core import callback
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.device_registry import format_mac
 
 from .const import CONF_PASSKEY, DEFAULT_PORT, DOMAIN
 
@@ -87,7 +87,7 @@ class BSBLANFlowHandler(ConfigFlow, domain=DOMAIN):
             username=self.username,
             password=self.password,
         )
-        session = async_get_clientsession(self.hass)
+        session = async_get_clientsession(self.menuai)
         bsblan = BSBLAN(config, session)
         device = await bsblan.device()
         self.mac = device.MAC

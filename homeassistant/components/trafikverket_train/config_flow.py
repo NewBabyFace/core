@@ -15,18 +15,18 @@ from pytrafikverket import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_RECONFIGURE,
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_API_KEY, CONF_NAME, CONF_WEEKDAY, WEEKDAYS
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.selector import (
+from menuai.const import CONF_API_KEY, CONF_NAME, CONF_WEEKDAY, WEEKDAYS
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.selector import (
     SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
@@ -67,7 +67,7 @@ DATA_SCHEMA_REAUTH = vol.Schema(
 
 
 async def validate_station(
-    hass: HomeAssistant,
+    menuai: menuai,
     api_key: str,
     train_station: str,
     field: str,
@@ -76,7 +76,7 @@ async def validate_station(
     errors: dict[str, str] = {}
     stations = []
     try:
-        web_session = async_get_clientsession(hass)
+        web_session = async_get_clientsession(menuai)
         train_api = TrafikverketTrain(web_session, api_key)
         stations = await train_api.async_search_train_stations(train_station)
     except InvalidAuthentication:
@@ -131,7 +131,7 @@ class TVTrainConfigFlow(ConfigFlow, domain=DOMAIN):
 
             reauth_entry = self._get_reauth_entry()
             _, errors = await validate_station(
-                self.hass,
+                self.menuai,
                 api_key,
                 reauth_entry.data[CONF_FROM],
                 CONF_FROM,
@@ -182,10 +182,10 @@ class TVTrainConfigFlow(ConfigFlow, domain=DOMAIN):
                 name = f"{train_from} to {train_to} at {train_time}"
 
             self._from_stations, from_errors = await validate_station(
-                self.hass, api_key, train_from, CONF_FROM
+                self.menuai, api_key, train_from, CONF_FROM
             )
             self._to_stations, to_errors = await validate_station(
-                self.hass, api_key, train_to, CONF_TO
+                self.menuai, api_key, train_to, CONF_TO
             )
             errors = {**from_errors, **to_errors}
 

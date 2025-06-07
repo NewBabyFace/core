@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from switchbot.devices.device import SwitchbotOperationError
 
-from homeassistant.components.bluetooth import BluetoothServiceInfoBleak
-from homeassistant.components.fan import (
+from menuai.components.bluetooth import BluetoothServiceInfoBleak
+from menuai.components.fan import (
     ATTR_OSCILLATING,
     ATTR_PERCENTAGE,
     ATTR_PRESET_MODE,
@@ -16,9 +16,9 @@ from homeassistant.components.fan import (
     SERVICE_SET_PERCENTAGE,
     SERVICE_SET_PRESET_MODE,
 )
-from homeassistant.const import ATTR_ENTITY_ID, SERVICE_TURN_OFF, SERVICE_TURN_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.const import ATTR_ENTITY_ID, SERVICE_TURN_OFF, SERVICE_TURN_ON
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from . import (
     AIR_PURIFIER_PM25_SERVICE_INFO,
@@ -67,30 +67,30 @@ from tests.components.bluetooth import inject_bluetooth_service_info
     ],
 )
 async def test_circulator_fan_controlling(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_entry_factory: Callable[[str], MockConfigEntry],
     service: str,
     service_data: dict,
     mock_method: str,
 ) -> None:
     """Test controlling the circulator fan with different services."""
-    inject_bluetooth_service_info(hass, CIRCULATOR_FAN_SERVICE_INFO)
+    inject_bluetooth_service_info(menuai, CIRCULATOR_FAN_SERVICE_INFO)
 
     entry = mock_entry_factory(sensor_type="circulator_fan")
     entity_id = "fan.test_name"
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     mocked_instance = AsyncMock(return_value=True)
     mcoked_none_instance = AsyncMock(return_value=None)
     with patch.multiple(
-        "homeassistant.components.switchbot.fan.switchbot.SwitchbotFan",
+        "menuai.components.switchbot.fan.switchbot.SwitchbotFan",
         get_basic_info=mcoked_none_instance,
         **{mock_method: mocked_instance},
     ):
-        assert await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             FAN_DOMAIN,
             service,
             {**service_data, ATTR_ENTITY_ID: entity_id},
@@ -130,7 +130,7 @@ async def test_circulator_fan_controlling(
     ],
 )
 async def test_air_purifier_controlling(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_entry_encrypted_factory: Callable[[str], MockConfigEntry],
     service_info: BluetoothServiceInfoBleak,
     sensor_type: str,
@@ -139,24 +139,24 @@ async def test_air_purifier_controlling(
     mock_method: str,
 ) -> None:
     """Test controlling the air purifier with different services."""
-    inject_bluetooth_service_info(hass, service_info)
+    inject_bluetooth_service_info(menuai, service_info)
 
     entry = mock_entry_encrypted_factory(sensor_type)
     entity_id = "fan.test_name"
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     mocked_instance = AsyncMock(return_value=True)
     mcoked_none_instance = AsyncMock(return_value=None)
     with patch.multiple(
-        "homeassistant.components.switchbot.fan.switchbot.SwitchbotAirPurifier",
+        "menuai.components.switchbot.fan.switchbot.SwitchbotAirPurifier",
         get_basic_info=mcoked_none_instance,
         update=mcoked_none_instance,
         **{mock_method: mocked_instance},
     ):
-        assert await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             FAN_DOMAIN,
             service,
             {**service_data, ATTR_ENTITY_ID: entity_id},
@@ -193,7 +193,7 @@ async def test_air_purifier_controlling(
     ],
 )
 async def test_exception_handling_air_purifier_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_entry_encrypted_factory: Callable[[str], MockConfigEntry],
     service_info: BluetoothServiceInfoBleak,
     sensor_type: str,
@@ -204,24 +204,24 @@ async def test_exception_handling_air_purifier_service(
     error_message: str,
 ) -> None:
     """Test exception handling for air purifier service with exception."""
-    inject_bluetooth_service_info(hass, service_info)
+    inject_bluetooth_service_info(menuai, service_info)
 
     entry = mock_entry_encrypted_factory(sensor_type)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     entity_id = "fan.test_name"
 
     mcoked_none_instance = AsyncMock(return_value=None)
     with patch.multiple(
-        "homeassistant.components.switchbot.fan.switchbot.SwitchbotAirPurifier",
+        "menuai.components.switchbot.fan.switchbot.SwitchbotAirPurifier",
         get_basic_info=mcoked_none_instance,
         update=mcoked_none_instance,
         **{mock_method: AsyncMock(side_effect=exception)},
     ):
-        assert await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
-        with pytest.raises(HomeAssistantError, match=error_message):
-            await hass.services.async_call(
+        with pytest.raises(menuaiError, match=error_message):
+            await menuai.services.async_call(
                 FAN_DOMAIN,
                 service,
                 {**service_data, ATTR_ENTITY_ID: entity_id},

@@ -5,9 +5,9 @@ from __future__ import annotations
 from xknx import XKNX
 from xknx.devices import Weather as XknxWeather
 
-from homeassistant import config_entries
-from homeassistant.components.weather import WeatherEntity
-from homeassistant.const import (
+from menuai import config_entries
+from menuai.components.weather import WeatherEntity
+from menuai.const import (
     CONF_ENTITY_CATEGORY,
     CONF_NAME,
     Platform,
@@ -15,9 +15,9 @@ from homeassistant.const import (
     UnitOfSpeed,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import ConfigType
 
 from . import KNXModule
 from .const import KNX_MODULE_KEY
@@ -26,12 +26,12 @@ from .schema import WeatherSchema
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: config_entries.ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up switch(es) for KNX platform."""
-    knx_module = hass.data[KNX_MODULE_KEY]
+    knx_module = menuai.data[KNX_MODULE_KEY]
     config: list[ConfigType] = knx_module.config_yaml[Platform.WEATHER]
 
     async_add_entities(

@@ -6,10 +6,10 @@ from unittest.mock import MagicMock
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.components.tibber.const import DOMAIN
-from homeassistant.components.tibber.services import PRICE_SERVICE_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
+from menuai.components.tibber.const import DOMAIN
+from menuai.components.tibber.services import PRICE_SERVICE_NAME
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
 
 START_TIME = dt.datetime.fromtimestamp(1615766400).replace(tzinfo=dt.UTC)
 
@@ -69,7 +69,7 @@ def generate_mock_home_data():
 )
 async def test_get_prices(
     mock_tibber_setup: MagicMock,
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     data,
 ) -> None:
@@ -77,10 +77,10 @@ async def test_get_prices(
     freezer.move_to(START_TIME)
     mock_tibber_setup.get_homes.return_value = generate_mock_home_data()
 
-    result = await hass.services.async_call(
+    result = await menuai.services.async_call(
         DOMAIN, PRICE_SERVICE_NAME, data, blocking=True, return_response=True
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result == {
         "prices": {
@@ -114,7 +114,7 @@ async def test_get_prices(
 
 async def test_get_prices_start_tomorrow(
     mock_tibber_setup: MagicMock,
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test get_prices with start date tomorrow."""
@@ -123,14 +123,14 @@ async def test_get_prices_start_tomorrow(
 
     mock_tibber_setup.get_homes.return_value = generate_mock_home_data()
 
-    result = await hass.services.async_call(
+    result = await menuai.services.async_call(
         DOMAIN,
         PRICE_SERVICE_NAME,
         {"start": tomorrow.isoformat()},
         blocking=True,
         return_response=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result == {
         "prices": {
@@ -173,7 +173,7 @@ async def test_get_prices_start_tomorrow(
 )
 async def test_get_prices_with_timezones(
     mock_tibber_setup: MagicMock,
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     start_time: str,
 ) -> None:
@@ -182,14 +182,14 @@ async def test_get_prices_with_timezones(
 
     mock_tibber_setup.get_homes.return_value = generate_mock_home_data()
 
-    result = await hass.services.async_call(
+    result = await menuai.services.async_call(
         DOMAIN,
         PRICE_SERVICE_NAME,
         {"start": start_time},
         blocking=True,
         return_response=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result == {
         "prices": {
@@ -238,7 +238,7 @@ async def test_get_prices_with_timezones(
 )
 async def test_get_prices_with_wrong_timezones(
     mock_tibber_setup: MagicMock,
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     start_time: str,
 ) -> None:
@@ -248,26 +248,26 @@ async def test_get_prices_with_wrong_timezones(
 
     mock_tibber_setup.get_homes.return_value = generate_mock_home_data()
 
-    result = await hass.services.async_call(
+    result = await menuai.services.async_call(
         DOMAIN,
         PRICE_SERVICE_NAME,
         {"start": start_time, "end": tomorrow.isoformat()},
         blocking=True,
         return_response=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result == {"prices": {"first_home": [], "second_home": []}}
 
 
 async def test_get_prices_invalid_input(
     mock_tibber_setup: MagicMock,
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test get_prices with invalid input."""
 
     with pytest.raises(ServiceValidationError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             PRICE_SERVICE_NAME,
             {"start": "test"},

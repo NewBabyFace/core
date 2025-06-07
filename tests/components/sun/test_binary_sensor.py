@@ -5,38 +5,38 @@ from datetime import datetime, timedelta
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.components import sun
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.components import sun
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_setting_rising(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test retrieving sun setting and rising."""
     utc_now = datetime(2016, 11, 1, 8, 0, 0, tzinfo=dt_util.UTC)
     freezer.move_to(utc_now)
-    await async_setup_component(hass, sun.DOMAIN, {sun.DOMAIN: {}})
-    await hass.async_block_till_done()
+    await async_setup_component(menuai, sun.DOMAIN, {sun.DOMAIN: {}})
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("binary_sensor.sun_solar_rising").state == "on"
+    assert menuai.states.get("binary_sensor.sun_solar_rising").state == "on"
 
-    entry_ids = hass.config_entries.async_entries("sun")
+    entry_ids = menuai.config_entries.async_entries("sun")
 
     freezer.tick(timedelta(hours=12))
     # Block once for Sun to update
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     # Block another time for the sensors to update
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Make sure all the signals work
-    assert hass.states.get("binary_sensor.sun_solar_rising").state == "off"
+    assert menuai.states.get("binary_sensor.sun_solar_rising").state == "off"
 
     entity = entity_registry.async_get("binary_sensor.sun_solar_rising")
     assert entity

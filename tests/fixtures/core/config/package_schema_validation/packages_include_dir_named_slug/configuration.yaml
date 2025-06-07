@@ -1,2 +1,2 @@
-homeassistant:
+menuai:
   packages: !include_dir_merge_named packages/

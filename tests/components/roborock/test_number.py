@@ -5,10 +5,10 @@ from unittest.mock import patch
 import pytest
 import roborock
 
-from homeassistant.components.number import ATTR_VALUE, SERVICE_SET_VALUE
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.components.number import ATTR_VALUE, SERVICE_SET_VALUE
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from tests.common import MockConfigEntry
 
@@ -26,7 +26,7 @@ def platforms() -> list[Platform]:
     ],
 )
 async def test_update_success(
-    hass: HomeAssistant,
+    menuai: menuai,
     bypass_api_fixture,
     setup_entry: MockConfigEntry,
     entity_id: str,
@@ -34,11 +34,11 @@ async def test_update_success(
 ) -> None:
     """Test allowed changing values for number entities."""
     # Ensure that the entity exist, as these test can pass even if there is no entity.
-    assert hass.states.get(entity_id) is not None
+    assert menuai.states.get(entity_id) is not None
     with patch(
-        "homeassistant.components.roborock.coordinator.RoborockLocalClientV1.send_message"
+        "menuai.components.roborock.coordinator.RoborockLocalClientV1.send_message"
     ) as mock_send_message:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "number",
             SERVICE_SET_VALUE,
             service_data={ATTR_VALUE: value},
@@ -55,7 +55,7 @@ async def test_update_success(
     ],
 )
 async def test_update_failed(
-    hass: HomeAssistant,
+    menuai: menuai,
     bypass_api_fixture,
     setup_entry: MockConfigEntry,
     entity_id: str,
@@ -63,15 +63,15 @@ async def test_update_failed(
 ) -> None:
     """Test allowed changing values for number entities."""
     # Ensure that the entity exist, as these test can pass even if there is no entity.
-    assert hass.states.get(entity_id) is not None
+    assert menuai.states.get(entity_id) is not None
     with (
         patch(
-            "homeassistant.components.roborock.coordinator.RoborockLocalClientV1.send_message",
+            "menuai.components.roborock.coordinator.RoborockLocalClientV1.send_message",
             side_effect=roborock.exceptions.RoborockTimeout,
         ) as mock_send_message,
-        pytest.raises(HomeAssistantError, match="Failed to update Roborock options"),
+        pytest.raises(menuaiError, match="Failed to update Roborock options"),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "number",
             SERVICE_SET_VALUE,
             service_data={ATTR_VALUE: value},

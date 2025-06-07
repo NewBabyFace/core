@@ -5,21 +5,21 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components.alexa import smart_home
-from homeassistant.const import EntityCategory, UnitOfTemperature, __version__
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.alexa import smart_home
+from menuai.const import EntityCategory, UnitOfTemperature, __version__
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .test_common import get_default_config, get_new_request
 
 
-async def test_unsupported_domain(hass: HomeAssistant) -> None:
+async def test_unsupported_domain(menuai: menuai) -> None:
     """Discovery ignores entities of unknown domains."""
     request = get_new_request("Alexa.Discovery", "Discover")
 
-    hass.states.async_set("woz.boop", "on", {"friendly_name": "Boop Woz"})
+    menuai.states.async_set("woz.boop", "on", {"friendly_name": "Boop Woz"})
 
-    msg = await smart_home.async_handle_message(hass, get_default_config(hass), request)
+    msg = await smart_home.async_handle_message(menuai, get_default_config(menuai), request)
 
     assert "event" in msg
     msg = msg["event"]
@@ -28,7 +28,7 @@ async def test_unsupported_domain(hass: HomeAssistant) -> None:
 
 
 async def test_categorized_hidden_entities(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Discovery ignores hidden and categorized entities."""
     request = get_new_request("Alexa.Discovery", "Discover")
@@ -63,12 +63,12 @@ async def test_categorized_hidden_entities(
     )
 
     # These should not show up in the sync request
-    hass.states.async_set(entity_entry1.entity_id, "on")
-    hass.states.async_set(entity_entry2.entity_id, "something_else")
-    hass.states.async_set(entity_entry3.entity_id, "blah")
-    hass.states.async_set(entity_entry4.entity_id, "foo")
+    menuai.states.async_set(entity_entry1.entity_id, "on")
+    menuai.states.async_set(entity_entry2.entity_id, "something_else")
+    menuai.states.async_set(entity_entry3.entity_id, "blah")
+    menuai.states.async_set(entity_entry4.entity_id, "foo")
 
-    msg = await smart_home.async_handle_message(hass, get_default_config(hass), request)
+    msg = await smart_home.async_handle_message(menuai, get_default_config(menuai), request)
 
     assert "event" in msg
     msg = msg["event"]
@@ -76,20 +76,20 @@ async def test_categorized_hidden_entities(
     assert not msg["payload"]["endpoints"]
 
 
-async def test_serialize_discovery(hass: HomeAssistant) -> None:
+async def test_serialize_discovery(menuai: menuai) -> None:
     """Test we can serialize a discovery."""
     request = get_new_request("Alexa.Discovery", "Discover")
 
-    hass.states.async_set("switch.bla", "on", {"friendly_name": "Boop Woz"})
+    menuai.states.async_set("switch.bla", "on", {"friendly_name": "Boop Woz"})
 
-    msg = await smart_home.async_handle_message(hass, get_default_config(hass), request)
+    msg = await smart_home.async_handle_message(menuai, get_default_config(menuai), request)
 
     assert "event" in msg
     msg = msg["event"]
     endpoint = msg["payload"]["endpoints"][0]
 
     assert endpoint["additionalAttributes"] == {
-        "manufacturer": "Home Assistant",
+        "manufacturer": "MenuAI",
         "model": "switch",
         "softwareVersion": __version__,
         "customIdentifier": "mock-user-id-switch.bla",
@@ -97,18 +97,18 @@ async def test_serialize_discovery(hass: HomeAssistant) -> None:
 
 
 async def test_serialize_discovery_partly_fails(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test we can partly serialize a discovery."""
 
     async def _mock_discovery() -> dict[str, Any]:
         request = get_new_request("Alexa.Discovery", "Discover")
-        hass.states.async_set("switch.bla", "on", {"friendly_name": "My Switch"})
-        hass.states.async_set("fan.bla", "on", {"friendly_name": "My Fan"})
-        hass.states.async_set(
+        menuai.states.async_set("switch.bla", "on", {"friendly_name": "My Switch"})
+        menuai.states.async_set("fan.bla", "on", {"friendly_name": "My Fan"})
+        menuai.states.async_set(
             "humidifier.bla", "on", {"friendly_name": "My Humidifier"}
         )
-        hass.states.async_set(
+        menuai.states.async_set(
             "sensor.bla",
             "20.1",
             {
@@ -118,7 +118,7 @@ async def test_serialize_discovery_partly_fails(
             },
         )
         return await smart_home.async_handle_message(
-            hass, get_default_config(hass), request
+            menuai, get_default_config(menuai), request
         )
 
     msg = await _mock_discovery()
@@ -135,7 +135,7 @@ async def test_serialize_discovery_partly_fails(
 
     # Simulate fetching the interfaces fails for fan entity
     with patch(
-        "homeassistant.components.alexa.entities.FanCapabilities.interfaces",
+        "menuai.components.alexa.entities.FanCapabilities.interfaces",
         side_effect=TypeError(),
     ):
         msg = await _mock_discovery()
@@ -154,7 +154,7 @@ async def test_serialize_discovery_partly_fails(
 
     # Simulate serializing properties fails for sensor entity
     with patch(
-        "homeassistant.components.alexa.entities.SensorCapabilities.default_display_categories",
+        "menuai.components.alexa.entities.SensorCapabilities.default_display_categories",
         side_effect=ValueError(),
     ):
         msg = await _mock_discovery()
@@ -173,19 +173,19 @@ async def test_serialize_discovery_partly_fails(
 
 
 async def test_serialize_discovery_recovers(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test we handle an interface raising unexpectedly during serialize discovery."""
     request = get_new_request("Alexa.Discovery", "Discover")
 
-    hass.states.async_set("switch.bla", "on", {"friendly_name": "Boop Woz"})
+    menuai.states.async_set("switch.bla", "on", {"friendly_name": "Boop Woz"})
 
     with patch(
-        "homeassistant.components.alexa.capabilities.AlexaPowerController.serialize_discovery",
+        "menuai.components.alexa.capabilities.AlexaPowerController.serialize_discovery",
         side_effect=TypeError,
     ):
         msg = await smart_home.async_handle_message(
-            hass, get_default_config(hass), request
+            menuai, get_default_config(menuai), request
         )
 
     assert "event" in msg
@@ -198,5 +198,5 @@ async def test_serialize_discovery_recovers(
     assert "Alexa.PowerController" not in interfaces
     assert (
         "Error serializing Alexa.PowerController discovery"
-        f" for {hass.states.get('switch.bla')}"
+        f" for {menuai.states.get('switch.bla')}"
     ) in caplog.text

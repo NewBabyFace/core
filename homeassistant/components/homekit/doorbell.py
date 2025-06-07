@@ -7,15 +7,15 @@ from typing import Any
 
 from pyhap.util import callback as pyhap_callback
 
-from homeassistant.const import STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
-from homeassistant.core import (
+from menuai.const import STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
+from menuai.core import (
     Event,
     EventStateChangedData,
-    HassJobType,
+    menuaiJobType,
     State,
     callback as ha_callback,
 )
-from homeassistant.helpers.event import async_track_state_change_event
+from menuai.helpers.event import async_track_state_change_event
 
 from .accessories import HomeAccessory
 from .const import (
@@ -50,7 +50,7 @@ class HomeDoorbellAccessory(HomeAccessory):
         if not linked_doorbell_sensor:
             return
         self.doorbell_is_event = linked_doorbell_sensor.startswith("event.")
-        if not (state := self.hass.states.get(linked_doorbell_sensor)):
+        if not (state := self.menuai.states.get(linked_doorbell_sensor)):
             return
         serv_doorbell = self.add_preload_service(SERV_DOORBELL)
         self.set_primary_service(serv_doorbell)
@@ -78,10 +78,10 @@ class HomeDoorbellAccessory(HomeAccessory):
             assert self.linked_doorbell_sensor
             self._subscriptions.append(
                 async_track_state_change_event(
-                    self.hass,
+                    self.menuai,
                     self.linked_doorbell_sensor,
                     self.async_update_doorbell_state_event,
-                    job_type=HassJobType.Callback,
+                    job_type=menuaiJobType.Callback,
                 )
             )
 

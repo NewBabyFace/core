@@ -11,12 +11,12 @@ from jaraco.abode.helpers import timeline
 import requests
 from requests.models import Response
 
-from homeassistant.components.camera import Camera
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import Event, HomeAssistant
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import Throttle
+from menuai.components.camera import Camera
+from menuai.config_entries import ConfigEntry
+from menuai.core import Event, menuai
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import Throttle
 
 from . import AbodeSystem
 from .const import DOMAIN, LOGGER
@@ -26,12 +26,12 @@ MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=90)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Abode camera devices."""
-    data: AbodeSystem = hass.data[DOMAIN]
+    data: AbodeSystem = menuai.data[DOMAIN]
 
     async_add_entities(
         AbodeCamera(data, device, timeline.CAPTURE_IMAGE)
@@ -52,18 +52,18 @@ class AbodeCamera(AbodeDevice, Camera):
         self._event = event
         self._response: Response | None = None
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe Abode events."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
-        self.hass.async_add_executor_job(
+        self.menuai.async_add_executor_job(
             self._data.abode.events.add_timeline_callback,
             self._event,
             self._capture_callback,
         )
 
         signal = f"abode_camera_capture_{self.entity_id}"
-        self.async_on_remove(async_dispatcher_connect(self.hass, signal, self.capture))
+        self.async_on_remove(async_dispatcher_connect(self.menuai, signal, self.capture))
 
     def capture(self) -> bool:
         """Request a new image capture."""

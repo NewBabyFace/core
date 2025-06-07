@@ -4,19 +4,19 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.light import ATTR_BRIGHTNESS, ColorMode, LightEntity
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.components.light import ATTR_BRIGHTNESS, ColorMode, LightEntity
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from . import async_setup_entry_platform
 from .coordinator import FjaraskupanConfigEntry, FjaraskupanCoordinator
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: FjaraskupanConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -25,7 +25,7 @@ async def async_setup_entry(
     def _constructor(coordinator: FjaraskupanCoordinator) -> list[Entity]:
         return [Light(coordinator, coordinator.device_info)]
 
-    async_setup_entry_platform(hass, config_entry, async_add_entities, _constructor)
+    async_setup_entry_platform(menuai, config_entry, async_add_entities, _constructor)
 
 
 class Light(CoordinatorEntity[FjaraskupanCoordinator], LightEntity):

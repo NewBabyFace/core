@@ -8,8 +8,8 @@ from pyipma.observation import Observation
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.ipma.const import MIN_TIME_BETWEEN_UPDATES
-from homeassistant.components.weather import (
+from menuai.components.ipma.const import MIN_TIME_BETWEEN_UPDATES
+from menuai.components.weather import (
     ATTR_WEATHER_HUMIDITY,
     ATTR_WEATHER_PRESSURE,
     ATTR_WEATHER_TEMPERATURE,
@@ -18,8 +18,8 @@ from homeassistant.components.weather import (
     DOMAIN as WEATHER_DOMAIN,
     SERVICE_GET_FORECASTS,
 )
-from homeassistant.const import STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
+from menuai.const import STATE_UNKNOWN
+from menuai.core import menuai
 
 from . import MockLocation
 
@@ -53,18 +53,18 @@ class MockBadLocation(MockLocation):
         return []
 
 
-async def test_setup_config_flow(hass: HomeAssistant) -> None:
+async def test_setup_config_flow(menuai: menuai) -> None:
     """Test for successfully setting up the IPMA platform."""
     with patch(
         "pyipma.location.Location.get",
         return_value=MockLocation(),
     ):
         entry = MockConfigEntry(domain="ipma", data=TEST_CONFIG)
-        entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("weather.hometown")
+    state = menuai.states.get("weather.hometown")
     assert state.state == "rainy"
 
     data = state.attributes
@@ -76,18 +76,18 @@ async def test_setup_config_flow(hass: HomeAssistant) -> None:
     assert state.attributes.get("friendly_name") == "HomeTown"
 
 
-async def test_failed_get_observation_forecast(hass: HomeAssistant) -> None:
+async def test_failed_get_observation_forecast(menuai: menuai) -> None:
     """Test for successfully setting up the IPMA platform."""
     with patch(
         "pyipma.location.Location.get",
         return_value=MockBadLocation(),
     ):
         entry = MockConfigEntry(domain="ipma", data=TEST_CONFIG)
-        entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("weather.hometown")
+    state = menuai.states.get("weather.hometown")
     assert state.state == STATE_UNKNOWN
 
     data = state.attributes
@@ -104,7 +104,7 @@ async def test_failed_get_observation_forecast(hass: HomeAssistant) -> None:
     [SERVICE_GET_FORECASTS],
 )
 async def test_forecast_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     service: str,
 ) -> None:
@@ -115,11 +115,11 @@ async def test_forecast_service(
         return_value=MockLocation(),
     ):
         entry = MockConfigEntry(domain="ipma", data=TEST_CONFIG)
-        entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         WEATHER_DOMAIN,
         service,
         {
@@ -131,7 +131,7 @@ async def test_forecast_service(
     )
     assert response == snapshot
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         WEATHER_DOMAIN,
         service,
         {
@@ -146,23 +146,23 @@ async def test_forecast_service(
 
 @pytest.mark.parametrize("forecast_type", ["daily", "hourly"])
 async def test_forecast_subscription(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     freezer: FrozenDateTimeFactory,
     snapshot: SnapshotAssertion,
     forecast_type: str,
 ) -> None:
     """Test multiple forecast."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     with patch(
         "pyipma.location.Location.get",
         return_value=MockLocation(),
     ):
         entry = MockConfigEntry(domain="ipma", data=TEST_CONFIG)
-        entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     await client.send_json_auto_id(
         {
@@ -184,7 +184,7 @@ async def test_forecast_subscription(
     assert forecast1 == snapshot
 
     freezer.tick(MIN_TIME_BETWEEN_UPDATES + datetime.timedelta(seconds=1))
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     msg = await client.receive_json()
 
     assert msg["id"] == subscription_id

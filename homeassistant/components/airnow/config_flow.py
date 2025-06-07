@@ -9,29 +9,29 @@ from pyairnow import WebServiceAPI
 from pyairnow.errors import AirNowError, EmptyResponseError, InvalidKeyError
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_API_KEY, CONF_LATITUDE, CONF_LONGITUDE, CONF_RADIUS
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.const import CONF_API_KEY, CONF_LATITUDE, CONF_LONGITUDE, CONF_RADIUS
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
 
-async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> bool:
+async def validate_input(menuai: menuai, data: dict[str, Any]) -> bool:
     """Validate the user input allows us to connect.
 
     Data has the keys from DATA_SCHEMA with values provided by the user.
     """
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
     client = WebServiceAPI(data[CONF_API_KEY], session=session)
 
     lat = data[CONF_LATITUDE]
@@ -75,7 +75,7 @@ class AirNowConfigFlow(ConfigFlow, domain=DOMAIN):
 
             try:
                 # Validate inputs
-                await validate_input(self.hass, user_input)
+                await validate_input(self.menuai, user_input)
 
             except CannotConnect:
                 errors["base"] = "cannot_connect"
@@ -104,10 +104,10 @@ class AirNowConfigFlow(ConfigFlow, domain=DOMAIN):
                 {
                     vol.Required(CONF_API_KEY): str,
                     vol.Optional(
-                        CONF_LATITUDE, default=self.hass.config.latitude
+                        CONF_LATITUDE, default=self.menuai.config.latitude
                     ): cv.latitude,
                     vol.Optional(
-                        CONF_LONGITUDE, default=self.hass.config.longitude
+                        CONF_LONGITUDE, default=self.menuai.config.longitude
                     ): cv.longitude,
                     vol.Optional(CONF_RADIUS, default=150): vol.All(
                         int, vol.Range(min=5)
@@ -148,13 +148,13 @@ class AirNowOptionsFlowHandler(OptionsFlow):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(menuaiError):
     """Error to indicate there is invalid auth."""
 
 
-class InvalidLocation(HomeAssistantError):
+class InvalidLocation(menuaiError):
     """Error to indicate the location is invalid."""

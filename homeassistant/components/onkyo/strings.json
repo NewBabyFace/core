@@ -60,7 +60,7 @@
           "listening_modes": "Listening modes"
         },
         "data_description": {
-          "max_volume": "Maximum volume limit as a percentage. This will associate Home Assistant's maximum volume to this value on the receiver, i.e., if you set this to 50%, then setting the volume to 100% in Home Assistant will cause the volume on the receiver to be set to 50% of its maximum value.",
+          "max_volume": "Maximum volume limit as a percentage. This will associate MenuAI's maximum volume to this value on the receiver, i.e., if you set this to 50%, then setting the volume to 100% in MenuAI will cause the volume on the receiver to be set to 50% of its maximum value.",
           "input_sources": "List of input sources supported by the receiver.",
           "listening_modes": "List of listening modes supported by the receiver."
         }

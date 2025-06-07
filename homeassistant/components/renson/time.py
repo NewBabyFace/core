@@ -9,11 +9,11 @@ from datetime import datetime, time
 from renson_endura_delta.field_enum import DAYTIME_FIELD, NIGHTTIME_FIELD, FieldEnum
 from renson_endura_delta.renson import RensonVentilation
 
-from homeassistant.components.time import TimeEntity, TimeEntityDescription
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.time import TimeEntity, TimeEntityDescription
+from menuai.config_entries import ConfigEntry
+from menuai.const import EntityCategory
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import RensonData
 from .const import DOMAIN
@@ -48,13 +48,13 @@ ENTITY_DESCRIPTIONS: tuple[RensonTimeEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Renson time platform."""
 
-    data: RensonData = hass.data[DOMAIN][config_entry.entry_id]
+    data: RensonData = menuai.data[DOMAIN][config_entry.entry_id]
 
     entities = [
         RensonTime(description, data.coordinator) for description in ENTITY_DESCRIPTIONS

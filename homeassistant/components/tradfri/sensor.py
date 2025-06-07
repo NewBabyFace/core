@@ -9,22 +9,22 @@ from typing import Any, cast
 from pytradfri.command import Command
 from pytradfri.device import Device
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
     PERCENTAGE,
     Platform,
     UnitOfTime,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
     CONF_GATEWAY_ID,
@@ -97,9 +97,9 @@ SENSOR_DESCRIPTIONS_FAN: tuple[TradfriSensorEntityDescription, ...] = (
 
 
 @callback
-def _migrate_old_unique_ids(hass: HomeAssistant, old_unique_id: str, key: str) -> None:
+def _migrate_old_unique_ids(menuai: menuai, old_unique_id: str, key: str) -> None:
     """Migrate unique IDs to the new format."""
-    ent_reg = er.async_get(hass)
+    ent_reg = er.async_get(menuai)
 
     entity_id = ent_reg.async_get_entity_id(Platform.SENSOR, DOMAIN, old_unique_id)
 
@@ -126,13 +126,13 @@ def _migrate_old_unique_ids(hass: HomeAssistant, old_unique_id: str, key: str) -
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up a Tradfri config entry."""
     gateway_id = config_entry.data[CONF_GATEWAY_ID]
-    coordinator_data = hass.data[DOMAIN][config_entry.entry_id][COORDINATOR]
+    coordinator_data = menuai.data[DOMAIN][config_entry.entry_id][COORDINATOR]
     api = coordinator_data[KEY_API]
 
     entities: list[TradfriSensor] = []
@@ -151,9 +151,9 @@ async def async_setup_entry(
             continue
 
         for description in descriptions:
-            # Added in Home assistant 2022.3
+            # Added in MenuAI 2022.3
             _migrate_old_unique_ids(
-                hass=hass,
+                menuai=menuai,
                 old_unique_id=f"{gateway_id}-{device_coordinator.device.id}",
                 key=description.key,
             )
@@ -171,7 +171,7 @@ async def async_setup_entry(
 
 
 class TradfriSensor(TradfriBaseEntity, SensorEntity):
-    """The platform class required by Home Assistant."""
+    """The platform class required by MenuAI."""
 
     entity_description: TradfriSensorEntityDescription
 

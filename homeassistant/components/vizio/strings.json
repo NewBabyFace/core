@@ -22,11 +22,11 @@
       },
       "pairing_complete": {
         "title": "Pairing complete",
-        "description": "Your VIZIO SmartCast device is now connected to Home Assistant."
+        "description": "Your VIZIO SmartCast device is now connected to MenuAI."
       },
       "pairing_complete_import": {
         "title": "[%key:component::vizio::config::step::pairing_complete::title%]",
-        "description": "Your VIZIO SmartCast device is now connected to Home Assistant.\n\nYour access token is '**{access_token}**'."
+        "description": "Your VIZIO SmartCast device is now connected to MenuAI.\n\nYour access token is '**{access_token}**'."
       }
     },
     "error": {

@@ -7,11 +7,11 @@ from typing import Any
 
 import RFXtrx as rfxtrxmod
 
-from homeassistant.components.cover import CoverEntity, CoverEntityFeature, CoverState
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.cover import CoverEntity, CoverEntityFeature, CoverState
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.entity import Entity
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import DeviceTuple, async_setup_platform_entry
 from .const import (
@@ -32,7 +32,7 @@ def supported(event: rfxtrxmod.RFXtrxEvent) -> bool:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -54,7 +54,7 @@ async def async_setup_entry(
         ]
 
     await async_setup_platform_entry(
-        hass, config_entry, async_add_entities, supported, _constructor
+        menuai, config_entry, async_add_entities, supported, _constructor
     )
 
 
@@ -89,9 +89,9 @@ class RfxtrxCover(RfxtrxCommandEntity, CoverEntity):
                 | CoverEntityFeature.STOP_TILT
             )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Restore device state."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         if self._event is None:
             old_state = await self.async_get_last_state()

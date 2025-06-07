@@ -5,19 +5,19 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, patch
 import uuid
 
-from homeassistant import config_entries
-from homeassistant.components.rest.data import DEFAULT_TIMEOUT
-from homeassistant.components.rest.schema import DEFAULT_METHOD
-from homeassistant.components.scrape import DOMAIN
-from homeassistant.components.scrape.const import (
+from menuai import config_entries
+from menuai.components.rest.data import DEFAULT_TIMEOUT
+from menuai.components.rest.schema import DEFAULT_METHOD
+from menuai.components.scrape import DOMAIN
+from menuai.components.scrape.const import (
     CONF_ENCODING,
     CONF_INDEX,
     CONF_SELECT,
     DEFAULT_ENCODING,
     DEFAULT_VERIFY_SSL,
 )
-from homeassistant.components.sensor import CONF_STATE_CLASS
-from homeassistant.const import (
+from menuai.components.sensor import CONF_STATE_CLASS
+from menuai.const import (
     CONF_DEVICE_CLASS,
     CONF_METHOD,
     CONF_NAME,
@@ -31,9 +31,9 @@ from homeassistant.const import (
     CONF_VALUE_TEMPLATE,
     CONF_VERIFY_SSL,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.exceptions import HomeAssistantError
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.exceptions import menuaiError
 
 from . import MockRestData
 
@@ -41,21 +41,21 @@ from tests.common import MockConfigEntry
 
 
 async def test_form(
-    hass: HomeAssistant, get_data: MockRestData, mock_setup_entry: AsyncMock
+    menuai: menuai, get_data: MockRestData, mock_setup_entry: AsyncMock
 ) -> None:
     """Test we get the form."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["step_id"] == "user"
     assert result["type"] is FlowResultType.FORM
 
     with patch(
-        "homeassistant.components.rest.RestData",
+        "menuai.components.rest.RestData",
         return_value=get_data,
     ) as mock_data:
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_RESOURCE: "https://www.home-assistant.io",
@@ -64,8 +64,8 @@ async def test_form(
                 CONF_TIMEOUT: 10.0,
             },
         )
-        await hass.async_block_till_done()
-        result3 = await hass.config_entries.flow.async_configure(
+        await menuai.async_block_till_done()
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {
                 CONF_NAME: "Current version",
@@ -73,7 +73,7 @@ async def test_form(
                 CONF_INDEX: 0.0,
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.CREATE_ENTRY
     assert result3["version"] == 1
@@ -98,21 +98,21 @@ async def test_form(
 
 
 async def test_form_with_post(
-    hass: HomeAssistant, get_data: MockRestData, mock_setup_entry: AsyncMock
+    menuai: menuai, get_data: MockRestData, mock_setup_entry: AsyncMock
 ) -> None:
     """Test we get the form using POST method."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["step_id"] == "user"
     assert result["type"] is FlowResultType.FORM
 
     with patch(
-        "homeassistant.components.rest.RestData",
+        "menuai.components.rest.RestData",
         return_value=get_data,
     ) as mock_data:
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_RESOURCE: "https://www.home-assistant.io",
@@ -122,8 +122,8 @@ async def test_form_with_post(
                 CONF_TIMEOUT: 10.0,
             },
         )
-        await hass.async_block_till_done()
-        result3 = await hass.config_entries.flow.async_configure(
+        await menuai.async_block_till_done()
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {
                 CONF_NAME: "Current version",
@@ -131,7 +131,7 @@ async def test_form_with_post(
                 CONF_INDEX: 0.0,
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.CREATE_ENTRY
     assert result3["version"] == 1
@@ -157,11 +157,11 @@ async def test_form_with_post(
 
 
 async def test_flow_fails(
-    hass: HomeAssistant, get_data: MockRestData, mock_setup_entry: AsyncMock
+    menuai: menuai, get_data: MockRestData, mock_setup_entry: AsyncMock
 ) -> None:
     """Test config flow error."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -169,10 +169,10 @@ async def test_flow_fails(
     assert result["step_id"] == config_entries.SOURCE_USER
 
     with patch(
-        "homeassistant.components.rest.RestData",
-        side_effect=HomeAssistantError,
+        "menuai.components.rest.RestData",
+        side_effect=menuaiError,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={
                 CONF_RESOURCE: "https://www.home-assistant.io",
@@ -185,10 +185,10 @@ async def test_flow_fails(
     assert result2["errors"] == {"base": "resource_error"}
 
     with patch(
-        "homeassistant.components.rest.RestData",
+        "menuai.components.rest.RestData",
         return_value=MockRestData("test_scrape_sensor_no_data"),
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={
                 CONF_RESOURCE: "https://www.home-assistant.io",
@@ -201,10 +201,10 @@ async def test_flow_fails(
     assert result2["errors"] == {"base": "resource_error"}
 
     with patch(
-        "homeassistant.components.rest.RestData",
+        "menuai.components.rest.RestData",
         return_value=get_data,
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_RESOURCE: "https://www.home-assistant.io",
@@ -213,8 +213,8 @@ async def test_flow_fails(
                 CONF_TIMEOUT: 10.0,
             },
         )
-        await hass.async_block_till_done()
-        result4 = await hass.config_entries.flow.async_configure(
+        await menuai.async_block_till_done()
+        result4 = await menuai.config_entries.flow.async_configure(
             result3["flow_id"],
             {
                 CONF_NAME: "Current version",
@@ -222,7 +222,7 @@ async def test_flow_fails(
                 CONF_INDEX: 0.0,
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result4["type"] is FlowResultType.CREATE_ENTRY
     assert result4["title"] == "https://www.home-assistant.io"
@@ -244,19 +244,19 @@ async def test_flow_fails(
 
 
 async def test_options_resource_flow(
-    hass: HomeAssistant, loaded_entry: MockConfigEntry
+    menuai: menuai, loaded_entry: MockConfigEntry
 ) -> None:
     """Test options flow for a resource."""
 
-    state = hass.states.get("sensor.current_version")
+    state = menuai.states.get("sensor.current_version")
     assert state.state == "Current Version: 2021.12.10"
 
-    result = await hass.config_entries.options.async_init(loaded_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(loaded_entry.entry_id)
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         {"next_step_id": "resource"},
     )
@@ -265,8 +265,8 @@ async def test_options_resource_flow(
     assert result["step_id"] == "resource"
 
     mocker = MockRestData("test_scrape_sensor2")
-    with patch("homeassistant.components.rest.RestData", return_value=mocker):
-        result = await hass.config_entries.options.async_configure(
+    with patch("menuai.components.rest.RestData", return_value=mocker):
+        result = await menuai.config_entries.options.async_configure(
             result["flow_id"],
             user_input={
                 CONF_RESOURCE: "https://www.home-assistant.io",
@@ -278,7 +278,7 @@ async def test_options_resource_flow(
                 CONF_PASSWORD: "secret_password",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"] == {
@@ -299,30 +299,30 @@ async def test_options_resource_flow(
         ],
     }
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Check the entity was updated, no new entity was created
-    assert len(hass.states.async_all()) == 1
+    assert len(menuai.states.async_all()) == 1
 
     # Check the state of the entity has changed as expected
-    state = hass.states.get("sensor.current_version")
+    state = menuai.states.get("sensor.current_version")
     assert state.state == "Hidden Version: 2021.12.10"
 
 
 async def test_options_add_remove_sensor_flow(
-    hass: HomeAssistant, loaded_entry: MockConfigEntry
+    menuai: menuai, loaded_entry: MockConfigEntry
 ) -> None:
     """Test options flow to add and remove a sensor."""
 
-    state = hass.states.get("sensor.current_version")
+    state = menuai.states.get("sensor.current_version")
     assert state.state == "Current Version: 2021.12.10"
 
-    result = await hass.config_entries.options.async_init(loaded_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(loaded_entry.entry_id)
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         {"next_step_id": "add_sensor"},
     )
@@ -332,13 +332,13 @@ async def test_options_add_remove_sensor_flow(
 
     mocker = MockRestData("test_scrape_sensor2")
     with (
-        patch("homeassistant.components.rest.RestData", return_value=mocker),
+        patch("menuai.components.rest.RestData", return_value=mocker),
         patch(
-            "homeassistant.components.scrape.config_flow.uuid.uuid1",
+            "menuai.components.scrape.config_flow.uuid.uuid1",
             return_value=uuid.UUID("3699ef88-69e6-11ed-a1eb-0242ac120003"),
         ),
     ):
-        result = await hass.config_entries.options.async_configure(
+        result = await menuai.config_entries.options.async_configure(
             result["flow_id"],
             user_input={
                 CONF_NAME: "Template",
@@ -346,7 +346,7 @@ async def test_options_add_remove_sensor_flow(
                 CONF_INDEX: 0.0,
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"] == {
@@ -371,26 +371,26 @@ async def test_options_add_remove_sensor_flow(
         ],
     }
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Check the entity was updated, with the new entity
-    assert len(hass.states.async_all()) == 2
+    assert len(menuai.states.async_all()) == 2
 
     # Check the state of the entity has changed as expected
-    state = hass.states.get("sensor.current_version")
+    state = menuai.states.get("sensor.current_version")
     assert state.state == "Hidden Version: 2021.12.10"
 
-    state = hass.states.get("sensor.template")
+    state = menuai.states.get("sensor.template")
     assert state.state == "Trying to get"
 
     # Now remove the original sensor
 
-    result = await hass.config_entries.options.async_init(loaded_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(loaded_entry.entry_id)
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         {"next_step_id": "remove_sensor"},
     )
@@ -399,14 +399,14 @@ async def test_options_add_remove_sensor_flow(
     assert result["step_id"] == "remove_sensor"
 
     mocker = MockRestData("test_scrape_sensor2")
-    with patch("homeassistant.components.rest.RestData", return_value=mocker):
-        result = await hass.config_entries.options.async_configure(
+    with patch("menuai.components.rest.RestData", return_value=mocker):
+        result = await menuai.config_entries.options.async_configure(
             result["flow_id"],
             user_input={
                 CONF_INDEX: ["0"],
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"] == {
@@ -425,30 +425,30 @@ async def test_options_add_remove_sensor_flow(
         ],
     }
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Check the original entity was removed, with only the new entity left
-    assert len(hass.states.async_all()) == 1
+    assert len(menuai.states.async_all()) == 1
 
     # Check the state of the new entity
-    state = hass.states.get("sensor.template")
+    state = menuai.states.get("sensor.template")
     assert state.state == "Trying to get"
 
 
 async def test_options_edit_sensor_flow(
-    hass: HomeAssistant, loaded_entry: MockConfigEntry
+    menuai: menuai, loaded_entry: MockConfigEntry
 ) -> None:
     """Test options flow to edit a sensor."""
 
-    state = hass.states.get("sensor.current_version")
+    state = menuai.states.get("sensor.current_version")
     assert state.state == "Current Version: 2021.12.10"
 
-    result = await hass.config_entries.options.async_init(loaded_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(loaded_entry.entry_id)
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         {"next_step_id": "select_edit_sensor"},
     )
@@ -456,7 +456,7 @@ async def test_options_edit_sensor_flow(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "select_edit_sensor"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         {"index": "0"},
     )
@@ -465,15 +465,15 @@ async def test_options_edit_sensor_flow(
     assert result["step_id"] == "edit_sensor"
 
     mocker = MockRestData("test_scrape_sensor2")
-    with patch("homeassistant.components.rest.RestData", return_value=mocker):
-        result = await hass.config_entries.options.async_configure(
+    with patch("menuai.components.rest.RestData", return_value=mocker):
+        result = await menuai.config_entries.options.async_configure(
             result["flow_id"],
             user_input={
                 CONF_SELECT: "template",
                 CONF_INDEX: 0.0,
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"] == {
@@ -492,18 +492,18 @@ async def test_options_edit_sensor_flow(
         ],
     }
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Check the entity was updated
-    assert len(hass.states.async_all()) == 1
+    assert len(menuai.states.async_all()) == 1
 
     # Check the state of the entity has changed as expected
-    state = hass.states.get("sensor.current_version")
+    state = menuai.states.get("sensor.current_version")
     assert state.state == "Trying to get"
 
 
 async def test_sensor_options_add_device_class(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock
+    menuai: menuai, mock_setup_entry: AsyncMock
 ) -> None:
     """Test options flow to edit a sensor."""
     entry = MockConfigEntry(
@@ -526,27 +526,27 @@ async def test_sensor_options_add_device_class(
         },
         entry_id="1",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await menuai.config_entries.options.async_init(entry.entry_id)
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         {"next_step_id": "select_edit_sensor"},
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "select_edit_sensor"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         {"index": "0"},
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "edit_sensor"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             CONF_SELECT: ".current-temp h3",
@@ -557,7 +557,7 @@ async def test_sensor_options_add_device_class(
             CONF_UNIT_OF_MEASUREMENT: "°C",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"] == {
@@ -582,7 +582,7 @@ async def test_sensor_options_add_device_class(
 
 
 async def test_sensor_options_remove_device_class(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock
+    menuai: menuai, mock_setup_entry: AsyncMock
 ) -> None:
     """Test options flow to edit a sensor."""
     entry = MockConfigEntry(
@@ -608,27 +608,27 @@ async def test_sensor_options_remove_device_class(
         },
         entry_id="1",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await menuai.config_entries.options.async_init(entry.entry_id)
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         {"next_step_id": "select_edit_sensor"},
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "select_edit_sensor"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         {"index": "0"},
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "edit_sensor"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             CONF_SELECT: ".current-temp h3",
@@ -636,7 +636,7 @@ async def test_sensor_options_remove_device_class(
             CONF_VALUE_TEMPLATE: "{{ value.split(':')[1] }}",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"] == {

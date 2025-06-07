@@ -7,31 +7,31 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     PLATFORM_SCHEMA as CLIMATE_PLATFORM_SCHEMA,
     ClimateEntity,
     ClimateEntityFeature,
     HVACAction,
     HVACMode,
 )
-from homeassistant.components.modbus import (
+from menuai.components.modbus import (
     CALL_TYPE_REGISTER_HOLDING,
     CALL_TYPE_REGISTER_INPUT,
     DEFAULT_HUB,
     ModbusHub,
     get_hub,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_TEMPERATURE,
     CONF_NAME,
     CONF_SLAVE,
     DEVICE_DEFAULT_NAME,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 CALL_TYPE_WRITE_REGISTER = "write_register"
 CONF_HUB = "hub"
@@ -48,7 +48,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -56,7 +56,7 @@ async def async_setup_platform(
     """Set up the Flexit Platform."""
     modbus_slave = config.get(CONF_SLAVE)
     name = config.get(CONF_NAME)
-    hub = get_hub(hass, config[CONF_HUB])
+    hub = get_hub(menuai, config[CONF_HUB])
     async_add_entities([Flexit(hub, modbus_slave, name)], True)
 
 

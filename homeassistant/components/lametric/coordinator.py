@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from demetriek import Device, LaMetricAuthenticationError, LaMetricDevice, LaMetricError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_API_KEY, CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_API_KEY, CONF_HOST
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN, LOGGER, SCAN_INTERVAL
 
@@ -19,16 +19,16 @@ class LaMetricDataUpdateCoordinator(DataUpdateCoordinator[Device]):
 
     config_entry: ConfigEntry
 
-    def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
+    def __init__(self, menuai: menuai, entry: ConfigEntry) -> None:
         """Initialize the LaMatric coordinator."""
         self.lametric = LaMetricDevice(
             host=entry.data[CONF_HOST],
             api_key=entry.data[CONF_API_KEY],
-            session=async_get_clientsession(hass),
+            session=async_get_clientsession(menuai),
         )
 
         super().__init__(
-            hass, LOGGER, config_entry=entry, name=DOMAIN, update_interval=SCAN_INTERVAL
+            menuai, LOGGER, config_entry=entry, name=DOMAIN, update_interval=SCAN_INTERVAL
         )
 
     async def _async_update_data(self) -> Device:

@@ -15,8 +15,8 @@ from whois.exceptions import (
     WhoisQuotaExceeded,
 )
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_DOMAIN
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_DOMAIN
 
 from .const import DOMAIN
 
@@ -41,7 +41,7 @@ class WhoisFlowHandler(ConfigFlow, domain=DOMAIN):
             self._abort_if_unique_id_configured()
 
             try:
-                await self.hass.async_add_executor_job(whois.query, domain)
+                await self.menuai.async_add_executor_job(whois.query, domain)
             except UnknownTld:
                 errors["base"] = "unknown_tld"
             except WhoisCommandFailed:

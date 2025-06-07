@@ -1,6 +1,6 @@
 """Adds constants for Trafikverket Camera integration."""
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 DOMAIN = "trafikverket_camera"
 PLATFORMS = [Platform.BINARY_SENSOR, Platform.CAMERA, Platform.SENSOR]

@@ -2,8 +2,8 @@
 
 from typing import Final
 
-from homeassistant.components.srp_energy.const import CONF_IS_TOU
-from homeassistant.const import CONF_ID, CONF_NAME, CONF_PASSWORD, CONF_USERNAME
+from menuai.components.srp_energy.const import CONF_IS_TOU
+from menuai.const import CONF_ID, CONF_NAME, CONF_PASSWORD, CONF_USERNAME
 
 ACCNT_ID: Final = "123456789"
 ACCNT_IS_TOU: Final = False

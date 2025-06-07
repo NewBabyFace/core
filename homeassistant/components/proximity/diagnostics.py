@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.device_tracker import ATTR_GPS, ATTR_IP, ATTR_MAC
-from homeassistant.components.diagnostics import REDACTED, async_redact_data
-from homeassistant.components.person import ATTR_USER_ID
-from homeassistant.components.zone import DOMAIN as ZONE_DOMAIN
-from homeassistant.const import (
+from menuai.components.device_tracker import ATTR_GPS, ATTR_IP, ATTR_MAC
+from menuai.components.diagnostics import REDACTED, async_redact_data
+from menuai.components.person import ATTR_USER_ID
+from menuai.components.zone import DOMAIN as ZONE_DOMAIN
+from menuai.const import (
     ATTR_LATITUDE,
     ATTR_LONGITUDE,
     STATE_HOME,
@@ -16,7 +16,7 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .coordinator import ProximityConfigEntry
 
@@ -33,7 +33,7 @@ TO_REDACT = {
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: ProximityConfigEntry
+    menuai: menuai, entry: ProximityConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     coordinator = entry.runtime_data
@@ -47,11 +47,11 @@ async def async_get_config_entry_diagnostics(
         STATE_NOT_HOME,
         STATE_UNAVAILABLE,
         STATE_UNKNOWN,
-    ] + [z.name for z in hass.states.async_all(ZONE_DOMAIN)]
+    ] + [z.name for z in menuai.states.async_all(ZONE_DOMAIN)]
 
     tracked_states: dict[str, dict] = {}
     for tracked_entity_id in coordinator.tracked_entities:
-        if (state := hass.states.get(tracked_entity_id)) is None:
+        if (state := menuai.states.get(tracked_entity_id)) is None:
             continue
         tracked_states[tracked_entity_id] = async_redact_data(
             state.as_dict(), TO_REDACT

@@ -22,14 +22,14 @@ from wolf_comm import (
     Value,
 )
 
-from homeassistant.components.wolflink.const import (
+from menuai.components.wolflink.const import (
     DEVICE_GATEWAY,
     DEVICE_ID,
     DEVICE_NAME,
     DOMAIN,
 )
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
 
 from . import setup_integration
 
@@ -60,10 +60,10 @@ def mock_wolflink() -> Generator[MagicMock]:
     """Return a mocked wolflink client."""
     with (
         patch(
-            "homeassistant.components.wolflink.WolfClient", autospec=True
+            "menuai.components.wolflink.WolfClient", autospec=True
         ) as wolflink_mock,
         patch(
-            "homeassistant.components.wolflink.config_flow.WolfClient",
+            "menuai.components.wolflink.config_flow.WolfClient",
             new=wolflink_mock,
         ),
     ):
@@ -117,9 +117,9 @@ def mock_wolflink() -> Generator[MagicMock]:
 
 @pytest.fixture
 async def init_integration(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry, mock_wolflink: MagicMock
+    menuai: menuai, mock_config_entry: MockConfigEntry, mock_wolflink: MagicMock
 ) -> MockConfigEntry:
     """Set up the Wolflink integration for testing."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     return mock_config_entry

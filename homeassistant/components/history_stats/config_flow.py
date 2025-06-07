@@ -7,14 +7,14 @@ from typing import Any, cast
 
 import voluptuous as vol
 
-from homeassistant.const import CONF_ENTITY_ID, CONF_NAME, CONF_STATE, CONF_TYPE
-from homeassistant.helpers.schema_config_entry_flow import (
+from menuai.const import CONF_ENTITY_ID, CONF_NAME, CONF_STATE, CONF_TYPE
+from menuai.helpers.schema_config_entry_flow import (
     SchemaCommonFlowHandler,
     SchemaConfigFlowHandler,
     SchemaFlowError,
     SchemaFlowFormStep,
 )
-from homeassistant.helpers.selector import (
+from menuai.helpers.selector import (
     DurationSelector,
     DurationSelectorConfig,
     EntitySelector,

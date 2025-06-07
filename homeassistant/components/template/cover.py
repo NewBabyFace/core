@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 import voluptuous as vol
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     ATTR_POSITION,
     ATTR_TILT_POSITION,
     DEVICE_CLASSES_SCHEMA,
@@ -18,7 +18,7 @@ from homeassistant.components.cover import (
     CoverEntity,
     CoverEntityFeature,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_COVERS,
     CONF_DEVICE_CLASS,
     CONF_ENTITY_ID,
@@ -29,12 +29,12 @@ from homeassistant.const import (
     CONF_UNIQUE_ID,
     CONF_VALUE_TEMPLATE,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import TemplateError
-from homeassistant.helpers import config_validation as cv, template
-from homeassistant.helpers.entity import async_generate_entity_id
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai, callback
+from menuai.exceptions import TemplateError
+from menuai.helpers import config_validation as cv, template
+from menuai.helpers.entity import async_generate_entity_id
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import TriggerUpdateCoordinator
 from .const import CONF_OBJECT_ID, CONF_PICTURE, DOMAIN
@@ -147,7 +147,7 @@ PLATFORM_SCHEMA = COVER_PLATFORM_SCHEMA.extend(
 
 
 def rewrite_legacy_to_modern_conf(
-    hass: HomeAssistant, config: dict[str, dict]
+    menuai: menuai, config: dict[str, dict]
 ) -> list[dict]:
     """Rewrite legacy switch configuration definitions to modern ones."""
     covers = []
@@ -156,11 +156,11 @@ def rewrite_legacy_to_modern_conf(
         entity_conf = {**entity_conf, CONF_OBJECT_ID: object_id}
 
         entity_conf = rewrite_common_legacy_to_modern_conf(
-            hass, entity_conf, LEGACY_FIELDS
+            menuai, entity_conf, LEGACY_FIELDS
         )
 
         if CONF_NAME not in entity_conf:
-            entity_conf[CONF_NAME] = template.Template(object_id, hass)
+            entity_conf[CONF_NAME] = template.Template(object_id, menuai)
 
         covers.append(entity_conf)
 
@@ -170,7 +170,7 @@ def rewrite_legacy_to_modern_conf(
 @callback
 def _async_create_template_tracking_entities(
     async_add_entities: AddEntitiesCallback,
-    hass: HomeAssistant,
+    menuai: menuai,
     definitions: list[dict],
     unique_id_prefix: str | None,
 ) -> None:
@@ -185,7 +185,7 @@ def _async_create_template_tracking_entities(
 
         covers.append(
             CoverTemplate(
-                hass,
+                menuai,
                 entity_conf,
                 unique_id,
             )
@@ -195,7 +195,7 @@ def _async_create_template_tracking_entities(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -204,22 +204,22 @@ async def async_setup_platform(
     if discovery_info is None:
         _async_create_template_tracking_entities(
             async_add_entities,
-            hass,
-            rewrite_legacy_to_modern_conf(hass, config[CONF_COVERS]),
+            menuai,
+            rewrite_legacy_to_modern_conf(menuai, config[CONF_COVERS]),
             None,
         )
         return
 
     if "coordinator" in discovery_info:
         async_add_entities(
-            TriggerCoverEntity(hass, discovery_info["coordinator"], config)
+            TriggerCoverEntity(menuai, discovery_info["coordinator"], config)
             for config in discovery_info["entities"]
         )
         return
 
     _async_create_template_tracking_entities(
         async_add_entities,
-        hass,
+        menuai,
         discovery_info["entities"],
         discovery_info["unique_id"],
     )
@@ -458,18 +458,18 @@ class CoverTemplate(TemplateEntity, AbstractTemplateCover):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config: dict[str, Any],
         unique_id,
     ) -> None:
         """Initialize the Template cover."""
         TemplateEntity.__init__(
-            self, hass, config=config, fallback_name=None, unique_id=unique_id
+            self, menuai, config=config, fallback_name=None, unique_id=unique_id
         )
         AbstractTemplateCover.__init__(self, config)
         if (object_id := config.get(CONF_OBJECT_ID)) is not None:
             self.entity_id = async_generate_entity_id(
-                ENTITY_ID_FORMAT, object_id, hass=hass
+                ENTITY_ID_FORMAT, object_id, menuai=menuai
             )
         name = self._attr_name
         if TYPE_CHECKING:
@@ -523,12 +523,12 @@ class TriggerCoverEntity(TriggerEntity, AbstractTemplateCover):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         coordinator: TriggerUpdateCoordinator,
         config: ConfigType,
     ) -> None:
         """Initialize the entity."""
-        TriggerEntity.__init__(self, hass, coordinator, config)
+        TriggerEntity.__init__(self, menuai, coordinator, config)
         AbstractTemplateCover.__init__(self, config)
 
         # Render the _attr_name before initializing TriggerCoverEntity

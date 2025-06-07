@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from homeassistant.components.touchline_sl.const import DOMAIN
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.components.touchline_sl.const import DOMAIN
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
 
 from tests.common import MockConfigEntry
 
@@ -23,7 +23,7 @@ class FakeModule(NamedTuple):
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.touchline_sl.async_setup_entry", return_value=True
+        "menuai.components.touchline_sl.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -33,11 +33,11 @@ def mock_touchlinesl_client() -> Generator[AsyncMock]:
     """Mock a pytouchlinesl client."""
     with (
         patch(
-            "homeassistant.components.touchline_sl.TouchlineSL",
+            "menuai.components.touchline_sl.TouchlineSL",
             autospec=True,
         ) as mock_client,
         patch(
-            "homeassistant.components.touchline_sl.config_flow.TouchlineSL",
+            "menuai.components.touchline_sl.config_flow.TouchlineSL",
             new=mock_client,
         ),
     ):

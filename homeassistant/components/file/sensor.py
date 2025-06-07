@@ -7,17 +7,17 @@ import os
 
 from file_read_backwards import FileReadBackwards
 
-from homeassistant.components.sensor import SensorEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.components.sensor import SensorEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_FILE_PATH,
     CONF_NAME,
     CONF_UNIT_OF_MEASUREMENT,
     CONF_VALUE_TEMPLATE,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.template import Template
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.template import Template
 
 from .const import DEFAULT_NAME, FILE_ICON
 
@@ -25,7 +25,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -39,7 +39,7 @@ async def async_setup_entry(
     value_template: Template | None = None
 
     if CONF_VALUE_TEMPLATE in options:
-        value_template = Template(options[CONF_VALUE_TEMPLATE], hass)
+        value_template = Template(options[CONF_VALUE_TEMPLATE], menuai)
 
     async_add_entities(
         [FileSensor(unique_id, name, file_path, unit, value_template)], True

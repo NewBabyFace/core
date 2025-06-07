@@ -8,24 +8,24 @@ import uuid
 from ring_doorbell import Auth, AuthenticationError, Requires2FAError
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_REAUTH,
     SOURCE_RECONFIGURE,
     ConfigFlow,
     ConfigFlowResult,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_DEVICE_ID,
     CONF_NAME,
     CONF_PASSWORD,
     CONF_TOKEN,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
 
 from . import get_auth_user_agent
 from .const import CONF_2FA, CONF_CONFIG_ENTRY_MINOR_VERSION, DOMAIN
@@ -43,14 +43,14 @@ UNKNOWN_RING_ACCOUNT = "unknown_ring_account"
 
 
 async def validate_input(
-    hass: HomeAssistant, hardware_id: str, data: dict[str, str]
+    menuai: menuai, hardware_id: str, data: dict[str, str]
 ) -> dict[str, Any]:
     """Validate the user input allows us to connect."""
 
     user_agent = get_auth_user_agent()
     auth = Auth(
         user_agent,
-        http_client_session=async_get_clientsession(hass),
+        http_client_session=async_get_clientsession(menuai),
         hardware_id=hardware_id,
     )
 
@@ -87,8 +87,8 @@ class RingConfigFlow(ConfigFlow, domain=DOMAIN):
         # yet or the device is registered to a different account
         await self.async_set_unique_id(UNKNOWN_RING_ACCOUNT)
         self._abort_if_unique_id_configured()
-        if self.hass.config_entries.async_has_entries(DOMAIN):
-            device_registry = dr.async_get(self.hass)
+        if self.menuai.config_entries.async_has_entries(DOMAIN):
+            device_registry = dr.async_get(self.menuai)
             if device_registry.async_get_device(
                 identifiers={(DOMAIN, discovery_info.macaddress)}
             ):
@@ -107,7 +107,7 @@ class RingConfigFlow(ConfigFlow, domain=DOMAIN):
             if not self.hardware_id:
                 self.hardware_id = str(uuid.uuid4())
             try:
-                token = await validate_input(self.hass, self.hardware_id, user_input)
+                token = await validate_input(self.menuai, self.hardware_id, user_input)
             except Require2FA:
                 self.user_pass = user_input
 
@@ -174,7 +174,7 @@ class RingConfigFlow(ConfigFlow, domain=DOMAIN):
                 self.hardware_id = reauth_entry.data[CONF_DEVICE_ID]
                 assert self.hardware_id
             try:
-                token = await validate_input(self.hass, self.hardware_id, user_input)
+                token = await validate_input(self.menuai, self.hardware_id, user_input)
             except Require2FA:
                 self.user_pass = user_input
                 return await self.async_step_2fa()
@@ -217,7 +217,7 @@ class RingConfigFlow(ConfigFlow, domain=DOMAIN):
                 self.hardware_id = str(uuid.uuid4())
             try:
                 assert self.hardware_id
-                token = await validate_input(self.hass, self.hardware_id, user_input)
+                token = await validate_input(self.menuai, self.hardware_id, user_input)
             except Require2FA:
                 self.user_pass = user_input
                 return await self.async_step_2fa()
@@ -244,9 +244,9 @@ class RingConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class Require2FA(HomeAssistantError):
+class Require2FA(menuaiError):
     """Error to indicate we require 2FA."""
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(menuaiError):
     """Error to indicate there is invalid auth."""

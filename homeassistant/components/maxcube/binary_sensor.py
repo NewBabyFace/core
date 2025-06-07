@@ -2,27 +2,27 @@
 
 from __future__ import annotations
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import DATA_KEY
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Iterate through all MAX! Devices and add window shutters."""
     devices: list[MaxCubeBinarySensorBase] = []
-    for handler in hass.data[DATA_KEY].values():
+    for handler in menuai.data[DATA_KEY].values():
         for device in handler.cube.devices:
             devices.append(MaxCubeBattery(handler, device))
             # Only add Window Shutters

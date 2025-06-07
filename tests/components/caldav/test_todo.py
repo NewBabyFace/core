@@ -8,7 +8,7 @@ from caldav.lib.error import DAVError, NotFoundError
 from caldav.objects import Todo
 import pytest
 
-from homeassistant.components.todo import (
+from menuai.components.todo import (
     ATTR_DESCRIPTION,
     ATTR_DUE_DATE,
     ATTR_DUE_DATETIME,
@@ -18,9 +18,9 @@ from homeassistant.components.todo import (
     DOMAIN as TODO_DOMAIN,
     TodoServices,
 )
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from tests.common import MockConfigEntry
 from tests.typing import WebSocketGenerator
@@ -100,9 +100,9 @@ def platforms() -> list[Platform]:
 
 
 @pytest.fixture(autouse=True)
-async def set_tz(hass: HomeAssistant) -> None:
+async def set_tz(menuai: menuai) -> None:
     """Fixture to set timezone with fixed offset year round."""
-    await hass.config.async_set_time_zone("America/Regina")
+    await menuai.config.async_set_time_zone("America/Regina")
 
 
 @pytest.fixture(name="todos")
@@ -147,12 +147,12 @@ def mock_calendars(calendar: Mock) -> list[Mock]:
 
 
 @pytest.fixture(autouse=True)
-async def mock_add_to_hass(
-    hass: HomeAssistant,
+async def mock_add_to_menuai(
+    menuai: menuai,
     config_entry: MockConfigEntry,
 ) -> None:
     """Fixture to add the ConfigEntry."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
 
 IGNORE_COMPONENTS = ["BEGIN", "END", "DTSTAMP", "PRODID", "UID", "VERSION"]
@@ -193,14 +193,14 @@ def compact_ics(ics: str) -> list[str]:
     ),
 )
 async def test_todo_list_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     expected_state: str,
 ) -> None:
     """Test a calendar entity from a config entry."""
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
 
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
     assert state
     assert state.name == ENTITY_NAME
     assert state.state == expected_state
@@ -215,14 +215,14 @@ async def test_todo_list_state(
     [([], False), (["VTODO"], True), (["VEVENT"], False), (["VEVENT", "VTODO"], True)],
 )
 async def test_supported_components(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     has_entity: bool,
 ) -> None:
     """Test a calendar supported components matches VTODO."""
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
 
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
     assert (state is not None) == has_entity
 
 
@@ -266,7 +266,7 @@ async def test_supported_components(
     ],
 )
 async def test_add_item(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     dav_client: Mock,
     calendar: Mock,
@@ -276,16 +276,16 @@ async def test_add_item(
 ) -> None:
     """Test adding an item to the list."""
     calendar.search.return_value = []
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
 
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
     assert state
     assert state.state == "0"
 
     # Simulate return value for the state update after the service call
     calendar.search.return_value = [create_todo(calendar, "2", TODO_NEEDS_ACTION)]
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.ADD_ITEM,
         {ATTR_ITEM: "Cheese", **item_data},
@@ -297,23 +297,23 @@ async def test_add_item(
     assert calendar.save_todo.call_args.kwargs == expcted_save_args
 
     # Verify state was updated
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
     assert state
     assert state.state == "1"
 
 
 async def test_add_item_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     calendar: Mock,
 ) -> None:
     """Test failure when adding an item to the list."""
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
 
     calendar.save_todo.side_effect = DAVError()
 
-    with pytest.raises(HomeAssistantError, match="CalDAV save error"):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match="CalDAV save error"):
+        await menuai.services.async_call(
             TODO_DOMAIN,
             TodoServices.ADD_ITEM,
             {ATTR_ITEM: "Cheese"},
@@ -484,7 +484,7 @@ async def test_add_item_failure(
     ],
 )
 async def test_update_item(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     dav_client: Mock,
     calendar: Mock,
@@ -498,9 +498,9 @@ async def test_update_item(
     item = Todo(dav_client, None, TODO_ALL_FIELDS, calendar, "2")
     calendar.search = MagicMock(return_value=[item])
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
 
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
     assert state
     assert state.state == "1"
 
@@ -508,7 +508,7 @@ async def test_update_item(
 
     dav_client.put.return_value.status = 204
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.UPDATE_ITEM,
         {
@@ -523,11 +523,11 @@ async def test_update_item(
     ics = dav_client.put.call_args.args[1]
     assert compact_ics(ics) == expected_ics
 
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
     assert state
     assert state.state == expected_state
 
-    result = await hass.services.async_call(
+    result = await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.GET_ITEMS,
         {},
@@ -539,7 +539,7 @@ async def test_update_item(
 
 
 async def test_update_item_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     dav_client: Mock,
     calendar: Mock,
@@ -549,13 +549,13 @@ async def test_update_item_failure(
     item = Todo(dav_client, None, TODO_NEEDS_ACTION, calendar, "2")
     calendar.search = MagicMock(return_value=[item])
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
 
     calendar.todo_by_uid = MagicMock(return_value=item)
     dav_client.put.side_effect = DAVError()
 
-    with pytest.raises(HomeAssistantError, match="CalDAV save error"):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match="CalDAV save error"):
+        await menuai.services.async_call(
             TODO_DOMAIN,
             TodoServices.UPDATE_ITEM,
             {
@@ -572,7 +572,7 @@ async def test_update_item_failure(
     [(DAVError, "CalDAV lookup error"), (NotFoundError, "Could not find")],
 )
 async def test_update_item_lookup_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     dav_client: Mock,
     calendar: Mock,
@@ -584,12 +584,12 @@ async def test_update_item_lookup_failure(
     item = Todo(dav_client, None, TODO_NEEDS_ACTION, calendar, "2")
     calendar.search = MagicMock(return_value=[item])
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
 
     calendar.todo_by_uid.side_effect = side_effect
 
-    with pytest.raises(HomeAssistantError, match=match):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match=match):
+        await menuai.services.async_call(
             TODO_DOMAIN,
             TodoServices.UPDATE_ITEM,
             {
@@ -612,7 +612,7 @@ async def test_update_item_lookup_failure(
     ids=("none", "item1-only", "item2-only", "both-items"),
 )
 async def test_remove_item(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     dav_client: Mock,
     calendar: Mock,
@@ -626,9 +626,9 @@ async def test_remove_item(
     item2 = Todo(dav_client, None, TODO_COMPLETED, calendar, "3")
     calendar.search = MagicMock(return_value=[item1, item2])
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
 
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
     assert state
     assert state.state == "1"
 
@@ -642,7 +642,7 @@ async def test_remove_item(
     item1.delete = Mock()
     item2.delete = Mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.REMOVE_ITEM,
         {ATTR_ITEM: uids_to_delete},
@@ -662,7 +662,7 @@ async def test_remove_item(
     ],
 )
 async def test_remove_item_lookup_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     calendar: Mock,
     side_effect: Any,
@@ -670,12 +670,12 @@ async def test_remove_item_lookup_failure(
 ) -> None:
     """Test failure while removing an item from the list."""
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
 
     calendar.todo_by_uid.side_effect = side_effect
 
-    with pytest.raises(HomeAssistantError, match=match):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match=match):
+        await menuai.services.async_call(
             TODO_DOMAIN,
             TodoServices.REMOVE_ITEM,
             {ATTR_ITEM: "Cheese"},
@@ -685,7 +685,7 @@ async def test_remove_item_lookup_failure(
 
 
 async def test_remove_item_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     dav_client: Mock,
     calendar: Mock,
@@ -695,7 +695,7 @@ async def test_remove_item_failure(
     item = Todo(dav_client, "2.ics", TODO_NEEDS_ACTION, calendar, "2")
     calendar.search = MagicMock(return_value=[item])
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
 
     def lookup(uid: str) -> Mock:
         return item
@@ -703,8 +703,8 @@ async def test_remove_item_failure(
     calendar.todo_by_uid = Mock(side_effect=lookup)
     dav_client.delete.return_value.status = 500
 
-    with pytest.raises(HomeAssistantError, match="CalDAV delete error"):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match="CalDAV delete error"):
+        await menuai.services.async_call(
             TODO_DOMAIN,
             TodoServices.REMOVE_ITEM,
             {ATTR_ITEM: "Cheese"},
@@ -714,7 +714,7 @@ async def test_remove_item_failure(
 
 
 async def test_remove_item_not_found(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     dav_client: Mock,
     calendar: Mock,
@@ -724,15 +724,15 @@ async def test_remove_item_not_found(
     item = Todo(dav_client, "2.ics", TODO_NEEDS_ACTION, calendar, "2")
     calendar.search = MagicMock(return_value=[item])
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
 
     def lookup(uid: str) -> Mock:
         return item
 
     calendar.todo_by_uid.side_effect = NotFoundError()
 
-    with pytest.raises(HomeAssistantError, match="Could not find"):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match="Could not find"):
+        await menuai.services.async_call(
             TODO_DOMAIN,
             TodoServices.REMOVE_ITEM,
             {ATTR_ITEM: "Cheese"},
@@ -742,21 +742,21 @@ async def test_remove_item_not_found(
 
 
 async def test_subscribe(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     dav_client: Mock,
     calendar: Mock,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test subscription to item updates."""
 
     item = Todo(dav_client, None, TODO_NEEDS_ACTION, calendar, "2")
     calendar.search = MagicMock(return_value=[item])
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
 
     # Subscribe and get the initial list
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json_auto_id(
         {
             "type": "todo/item/subscribe",
@@ -786,7 +786,7 @@ async def test_subscribe(
             dav_client, None, TODO_NEEDS_ACTION.replace("Cheese", "Milk"), calendar, "2"
         )
     ]
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.UPDATE_ITEM,
         {

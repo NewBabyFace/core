@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import EntityDescription
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import EntityDescription
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import (
@@ -52,9 +52,9 @@ class FlumeEntity[
             configuration_url="https://portal.flumewater.com",
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Request an update when added."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         # We do not ask for an update with async_add_entities()
         # because it will update disabled entities
         await self.coordinator.async_request_refresh()

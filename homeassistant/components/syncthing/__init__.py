@@ -5,17 +5,17 @@ import logging
 
 import aiosyncthing
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_TOKEN,
     CONF_URL,
     CONF_VERIFY_SSL,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers.dispatcher import async_dispatcher_send
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers.dispatcher import async_dispatcher_send
 
 from .const import (
     DOMAIN,
@@ -30,12 +30,12 @@ PLATFORMS = [Platform.SENSOR]
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up syncthing from a config entry."""
     data = entry.data
 
-    if DOMAIN not in hass.data:
-        hass.data[DOMAIN] = {}
+    if DOMAIN not in menuai.data:
+        menuai.data[DOMAIN] = {}
 
     client = aiosyncthing.Syncthing(
         data[CONF_TOKEN],
@@ -51,27 +51,27 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     server_id = status["myID"]
 
-    syncthing = SyncthingClient(hass, client, server_id)
+    syncthing = SyncthingClient(menuai, client, server_id)
     syncthing.subscribe()
-    hass.data[DOMAIN][entry.entry_id] = syncthing
+    menuai.data[DOMAIN][entry.entry_id] = syncthing
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     async def cancel_listen_task(_):
         await syncthing.unsubscribe()
 
     entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, cancel_listen_task)
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, cancel_listen_task)
     )
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        syncthing = hass.data[DOMAIN].pop(entry.entry_id)
+        syncthing = menuai.data[DOMAIN].pop(entry.entry_id)
         await syncthing.unsubscribe()
 
     return unload_ok
@@ -80,9 +80,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 class SyncthingClient:
     """A Syncthing client."""
 
-    def __init__(self, hass, client, server_id):
+    def __init__(self, menuai, client, server_id):
         """Initialize the client."""
-        self._hass = hass
+        self._menuai = menuai
         self._client = client
         self._server_id = server_id
         self._listen_task = None
@@ -128,7 +128,7 @@ class SyncthingClient:
                         "The syncthing server '%s' is back online", self._client.url
                     )
                     async_dispatcher_send(
-                        self._hass, f"{SERVER_AVAILABLE}-{self._server_id}"
+                        self._menuai, f"{SERVER_AVAILABLE}-{self._server_id}"
                     )
                     server_was_unavailable = False
             else:
@@ -148,7 +148,7 @@ class SyncthingClient:
                     else:  # A workaround, some events store folder id under `id` key
                         folder = event["data"]["id"]
                     async_dispatcher_send(
-                        self._hass,
+                        self._menuai,
                         f"{signal_name}-{self._server_id}-{folder}",
                         event,
                     )
@@ -162,7 +162,7 @@ class SyncthingClient:
                     RECONNECT_INTERVAL.total_seconds(),
                 )
                 async_dispatcher_send(
-                    self._hass, f"{SERVER_UNAVAILABLE}-{self._server_id}"
+                    self._menuai, f"{SERVER_UNAVAILABLE}-{self._server_id}"
                 )
                 await asyncio.sleep(RECONNECT_INTERVAL.total_seconds())
                 server_was_unavailable = True

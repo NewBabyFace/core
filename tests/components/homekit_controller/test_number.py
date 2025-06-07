@@ -6,8 +6,8 @@ from aiohomekit.model import Accessory
 from aiohomekit.model.characteristics import CharacteristicsTypes
 from aiohomekit.model.services import Service, ServicesTypes
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .common import Helper, setup_test_component
 
@@ -34,7 +34,7 @@ def create_switch_with_spray_level(accessory: Accessory) -> Service:
 
 
 async def test_migrate_unique_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     get_next_aid: Callable[[], int],
 ) -> None:
@@ -46,7 +46,7 @@ async def test_migrate_unique_id(
         f"homekit-0001-aid:{aid}-sid:8-cid:9",
         suggested_object_id="testdevice_spray_quantity",
     )
-    await setup_test_component(hass, aid, create_switch_with_spray_level)
+    await setup_test_component(menuai, aid, create_switch_with_spray_level)
 
     assert (
         entity_registry.async_get(number.entity_id).unique_id
@@ -55,16 +55,16 @@ async def test_migrate_unique_id(
 
 
 async def test_read_number(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test a switch service that has a sensor characteristic is correctly handled."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_switch_with_spray_level
+        menuai, get_next_aid(), create_switch_with_spray_level
     )
 
     # Helper will be for the primary entity, which is the outlet. Make a helper for the sensor.
     spray_level = Helper(
-        hass,
+        menuai,
         "number.testdevice_spray_quantity",
         helper.pairing,
         helper.accessory,
@@ -85,23 +85,23 @@ async def test_read_number(
 
 
 async def test_write_number(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test a switch service that has a sensor characteristic is correctly handled."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_switch_with_spray_level
+        menuai, get_next_aid(), create_switch_with_spray_level
     )
 
     # Helper will be for the primary entity, which is the outlet. Make a helper for the sensor.
     spray_level = Helper(
-        hass,
+        menuai,
         "number.testdevice_spray_quantity",
         helper.pairing,
         helper.accessory,
         helper.config_entry,
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "number",
         "set_value",
         {"entity_id": "number.testdevice_spray_quantity", "value": 5},
@@ -112,7 +112,7 @@ async def test_write_number(
         {CharacteristicsTypes.VENDOR_VOCOLINC_HUMIDIFIER_SPRAY_LEVEL: 5},
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "number",
         "set_value",
         {"entity_id": "number.testdevice_spray_quantity", "value": 3},

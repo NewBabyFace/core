@@ -6,17 +6,17 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import cast
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import UnitOfEnergy, UnitOfPower
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
+from menuai.config_entries import ConfigEntry
+from menuai.const import UnitOfEnergy, UnitOfPower
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
 
 from . import async_wemo_dispatcher_connect
 from .coordinator import DeviceCoordinator
@@ -57,7 +57,7 @@ ATTRIBUTE_SENSORS = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     _config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -71,7 +71,7 @@ async def async_setup_entry(
             if hasattr(coordinator.wemo, description.key)
         )
 
-    await async_wemo_dispatcher_connect(hass, _discovered_wemo)
+    await async_wemo_dispatcher_connect(menuai, _discovered_wemo)
 
 
 class AttributeSensor(WemoEntity, SensorEntity):

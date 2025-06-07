@@ -6,15 +6,15 @@ import logging
 
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
     SensorEntity,
 )
-from homeassistant.const import CONF_NAME, CONF_PAYLOAD, CONF_UNIT_OF_MEASUREMENT
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_NAME, CONF_PAYLOAD, CONF_UNIT_OF_MEASUREMENT
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import EVENT
 
@@ -34,7 +34,7 @@ PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -43,7 +43,7 @@ def setup_platform(
     add_entities(
         [
             PilightSensor(
-                hass=hass,
+                menuai=menuai,
                 name=config.get(CONF_NAME),
                 variable=config.get(CONF_VARIABLE),
                 payload=config.get(CONF_PAYLOAD),
@@ -58,16 +58,16 @@ class PilightSensor(SensorEntity):
 
     _attr_should_poll = False
 
-    def __init__(self, hass, name, variable, payload, unit_of_measurement):
+    def __init__(self, menuai, name, variable, payload, unit_of_measurement):
         """Initialize the sensor."""
         self._state = None
-        self._hass = hass
+        self._menuai = menuai
         self._name = name
         self._variable = variable
         self._payload = payload
         self._unit_of_measurement = unit_of_measurement
 
-        hass.bus.listen(EVENT, self._handle_code)
+        menuai.bus.listen(EVENT, self._handle_code)
 
     @property
     def name(self):

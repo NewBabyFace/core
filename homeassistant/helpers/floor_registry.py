@@ -9,10 +9,10 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Literal, TypedDict
 
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.util.dt import utc_from_timestamp, utcnow
-from homeassistant.util.event_type import EventType
-from homeassistant.util.hass_dict import HassKey
+from menuai.core import Event, menuai, callback
+from menuai.util.dt import utc_from_timestamp, utcnow
+from menuai.util.event_type import EventType
+from menuai.util.menuai_dict import menuaiKey
 
 from .normalized_name_base_registry import (
     NormalizedNameBaseRegistryEntry,
@@ -24,7 +24,7 @@ from .singleton import singleton
 from .storage import Store
 from .typing import UNDEFINED, UndefinedType
 
-DATA_REGISTRY: HassKey[FloorRegistry] = HassKey("floor_registry")
+DATA_REGISTRY: menuaiKey[FloorRegistry] = menuaiKey("floor_registry")
 EVENT_FLOOR_REGISTRY_UPDATED: EventType[EventFloorRegistryUpdatedData] = EventType(
     "floor_registry_updated"
 )
@@ -133,11 +133,11 @@ class FloorRegistry(BaseRegistry[FloorRegistryStoreData]):
     floors: FloorRegistryItems
     _floor_data: dict[str, FloorEntry]
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize the floor registry."""
-        self.hass = hass
+        self.menuai = menuai
         self._store = FloorRegistryStore(
-            hass,
+            menuai,
             STORAGE_VERSION_MAJOR,
             STORAGE_KEY,
             atomic_writes=True,
@@ -182,7 +182,7 @@ class FloorRegistry(BaseRegistry[FloorRegistryStoreData]):
         level: int | None = None,
     ) -> FloorEntry:
         """Create a new floor."""
-        self.hass.verify_event_loop_thread("floor_registry.async_create")
+        self.menuai.verify_event_loop_thread("floor_registry.async_create")
 
         if floor := self.async_get_floor_by_name(name):
             raise ValueError(
@@ -200,7 +200,7 @@ class FloorRegistry(BaseRegistry[FloorRegistryStoreData]):
         self.floors[floor_id] = floor
         self.async_schedule_save()
 
-        self.hass.bus.async_fire_internal(
+        self.menuai.bus.async_fire_internal(
             EVENT_FLOOR_REGISTRY_UPDATED,
             EventFloorRegistryUpdatedData(action="create", floor_id=floor_id),
         )
@@ -209,9 +209,9 @@ class FloorRegistry(BaseRegistry[FloorRegistryStoreData]):
     @callback
     def async_delete(self, floor_id: str) -> None:
         """Delete floor."""
-        self.hass.verify_event_loop_thread("floor_registry.async_delete")
+        self.menuai.verify_event_loop_thread("floor_registry.async_delete")
         del self.floors[floor_id]
-        self.hass.bus.async_fire_internal(
+        self.menuai.bus.async_fire_internal(
             EVENT_FLOOR_REGISTRY_UPDATED,
             EventFloorRegistryUpdatedData(
                 action="remove",
@@ -249,11 +249,11 @@ class FloorRegistry(BaseRegistry[FloorRegistryStoreData]):
 
         changes["modified_at"] = utcnow()
 
-        self.hass.verify_event_loop_thread("floor_registry.async_update")
+        self.menuai.verify_event_loop_thread("floor_registry.async_update")
         new = self.floors[floor_id] = dataclasses.replace(old, **changes)
 
         self.async_schedule_save()
-        self.hass.bus.async_fire_internal(
+        self.menuai.bus.async_fire_internal(
             EVENT_FLOOR_REGISTRY_UPDATED,
             EventFloorRegistryUpdatedData(
                 action="update",
@@ -304,12 +304,12 @@ class FloorRegistry(BaseRegistry[FloorRegistryStoreData]):
 
 @callback
 @singleton(DATA_REGISTRY)
-def async_get(hass: HomeAssistant) -> FloorRegistry:
+def async_get(menuai: menuai) -> FloorRegistry:
     """Get floor registry."""
-    return FloorRegistry(hass)
+    return FloorRegistry(menuai)
 
 
-async def async_load(hass: HomeAssistant) -> None:
+async def async_load(menuai: menuai) -> None:
     """Load floor registry."""
-    assert DATA_REGISTRY not in hass.data
-    await async_get(hass).async_load()
+    assert DATA_REGISTRY not in menuai.data
+    await async_get(menuai).async_load()

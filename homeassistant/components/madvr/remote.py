@@ -6,9 +6,9 @@ from collections.abc import Iterable
 import logging
 from typing import Any
 
-from homeassistant.components.remote import RemoteEntity
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.remote import RemoteEntity
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import MadVRConfigEntry, MadVRCoordinator
 from .entity import MadVREntity
@@ -17,7 +17,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: MadVRConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

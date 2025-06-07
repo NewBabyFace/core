@@ -10,18 +10,18 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.tomorrowio.config_flow import (
+from menuai.components.tomorrowio.config_flow import (
     _get_config_schema,
     _get_unique_id,
 )
-from homeassistant.components.tomorrowio.const import (
+from menuai.components.tomorrowio.const import (
     ATTRIBUTION,
     CONF_TIMESTEP,
     DEFAULT_NAME,
     DEFAULT_TIMESTEP,
     DOMAIN,
 )
-from homeassistant.components.weather import (
+from menuai.components.weather import (
     ATTR_CONDITION_SUNNY,
     ATTR_WEATHER_HUMIDITY,
     ATTR_WEATHER_OZONE,
@@ -38,11 +38,11 @@ from homeassistant.components.weather import (
     DOMAIN as WEATHER_DOMAIN,
     SERVICE_GET_FORECASTS,
 )
-from homeassistant.config_entries import RELOAD_AFTER_UPDATE_DELAY, SOURCE_USER
-from homeassistant.const import ATTR_ATTRIBUTION, ATTR_FRIENDLY_NAME, CONF_NAME
-from homeassistant.core import HomeAssistant, State, callback
-from homeassistant.helpers import entity_registry as er
-from homeassistant.util import dt as dt_util
+from menuai.config_entries import RELOAD_AFTER_UPDATE_DELAY, SOURCE_USER
+from menuai.const import ATTR_ATTRIBUTION, ATTR_FRIENDLY_NAME, CONF_NAME
+from menuai.core import menuai, State, callback
+from menuai.helpers import entity_registry as er
+from menuai.util import dt as dt_util
 
 from .const import API_V4_ENTRY_DATA
 
@@ -51,49 +51,49 @@ from tests.typing import WebSocketGenerator
 
 
 @callback
-def _enable_entity(hass: HomeAssistant, entity_name: str) -> None:
+def _enable_entity(menuai: menuai, entity_name: str) -> None:
     """Enable disabled entity."""
-    ent_reg = er.async_get(hass)
+    ent_reg = er.async_get(menuai)
     entry = ent_reg.async_get(entity_name)
     updated_entry = ent_reg.async_update_entity(entry.entity_id, disabled_by=None)
     assert updated_entry != entry
     assert updated_entry.disabled is False
 
 
-async def _setup_config_entry(hass: HomeAssistant, config: dict[str, Any]) -> State:
+async def _setup_config_entry(menuai: menuai, config: dict[str, Any]) -> State:
     """Set up entry and return entity state."""
-    data = _get_config_schema(hass, SOURCE_USER)(config)
+    data = _get_config_schema(menuai, SOURCE_USER)(config)
     data[CONF_NAME] = DEFAULT_NAME
     config_entry = MockConfigEntry(
         title=DEFAULT_NAME,
         domain=DOMAIN,
         data=data,
         options={CONF_TIMESTEP: DEFAULT_TIMESTEP},
-        unique_id=_get_unique_id(hass, data),
+        unique_id=_get_unique_id(menuai, data),
         version=1,
     )
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
 
-async def _setup(hass: HomeAssistant, config: dict[str, Any]) -> State:
+async def _setup(menuai: menuai, config: dict[str, Any]) -> State:
     """Set up entry and return entity state."""
     with freeze_time(datetime(2021, 3, 6, 23, 59, 59, tzinfo=dt_util.UTC)):
-        await _setup_config_entry(hass, config)
+        await _setup_config_entry(menuai, config)
 
-    return hass.states.get("weather.tomorrow_io_daily")
+    return menuai.states.get("weather.tomorrow_io_daily")
 
 
-async def _setup_legacy(hass: HomeAssistant, config: dict[str, Any]) -> State:
+async def _setup_legacy(menuai: menuai, config: dict[str, Any]) -> State:
     """Set up entry and return entity state."""
-    registry = er.async_get(hass)
-    data = _get_config_schema(hass, SOURCE_USER)(config)
+    registry = er.async_get(menuai)
+    data = _get_config_schema(menuai, SOURCE_USER)(config)
     for entity_name in ("hourly", "nowcast"):
         registry.async_get_or_create(
             WEATHER_DOMAIN,
             DOMAIN,
-            f"{_get_unique_id(hass, data)}_{entity_name}",
+            f"{_get_unique_id(menuai, data)}_{entity_name}",
             disabled_by=er.RegistryEntryDisabler.INTEGRATION,
             suggested_object_id=f"tomorrow_io_{entity_name}",
         )
@@ -101,51 +101,51 @@ async def _setup_legacy(hass: HomeAssistant, config: dict[str, Any]) -> State:
     with freeze_time(
         datetime(2021, 3, 6, 23, 59, 59, tzinfo=dt_util.UTC)
     ) as frozen_time:
-        await _setup_config_entry(hass, config)
+        await _setup_config_entry(menuai, config)
         for entity_name in ("hourly", "nowcast"):
-            _enable_entity(hass, f"weather.tomorrow_io_{entity_name}")
-        await hass.async_block_till_done()
+            _enable_entity(menuai, f"weather.tomorrow_io_{entity_name}")
+        await menuai.async_block_till_done()
         # the enabled entity state will be fired in RELOAD_AFTER_UPDATE_DELAY
         frozen_time.tick(delta=RELOAD_AFTER_UPDATE_DELAY)
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done()
-        assert len(hass.states.async_entity_ids(WEATHER_DOMAIN)) == 3
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done()
+        assert len(menuai.states.async_entity_ids(WEATHER_DOMAIN)) == 3
 
-    return hass.states.get("weather.tomorrow_io_daily")
+    return menuai.states.get("weather.tomorrow_io_daily")
 
 
 async def test_new_config_entry(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test the expected entities are created."""
-    await _setup(hass, API_V4_ENTRY_DATA)
-    assert len(hass.states.async_entity_ids("weather")) == 1
+    await _setup(menuai, API_V4_ENTRY_DATA)
+    assert len(menuai.states.async_entity_ids("weather")) == 1
 
-    entry = hass.config_entries.async_entries()[0]
+    entry = menuai.config_entries.async_entries()[0]
     assert len(er.async_entries_for_config_entry(entity_registry, entry.entry_id)) == 28
 
 
 async def test_legacy_config_entry(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test the expected entities are created."""
-    data = _get_config_schema(hass, SOURCE_USER)(API_V4_ENTRY_DATA)
+    data = _get_config_schema(menuai, SOURCE_USER)(API_V4_ENTRY_DATA)
     for entity_name in ("hourly", "nowcast"):
         entity_registry.async_get_or_create(
             WEATHER_DOMAIN,
             DOMAIN,
-            f"{_get_unique_id(hass, data)}_{entity_name}",
+            f"{_get_unique_id(menuai, data)}_{entity_name}",
         )
-    await _setup(hass, API_V4_ENTRY_DATA)
-    assert len(hass.states.async_entity_ids("weather")) == 3
+    await _setup(menuai, API_V4_ENTRY_DATA)
+    assert len(menuai.states.async_entity_ids("weather")) == 3
 
-    entry = hass.config_entries.async_entries()[0]
+    entry = menuai.config_entries.async_entries()[0]
     assert len(er.async_entries_for_config_entry(entity_registry, entry.entry_id)) == 30
 
 
-async def test_v4_weather(hass: HomeAssistant, tomorrowio_config_entry_update) -> None:
+async def test_v4_weather(menuai: menuai, tomorrowio_config_entry_update) -> None:
     """Test v4 weather data."""
-    weather_state = await _setup(hass, API_V4_ENTRY_DATA)
+    weather_state = await _setup(menuai, API_V4_ENTRY_DATA)
 
     tomorrowio_config_entry_update.assert_called_with(
         [
@@ -220,9 +220,9 @@ async def test_v4_weather(hass: HomeAssistant, tomorrowio_config_entry_update) -
     assert weather_state.attributes[ATTR_WEATHER_WIND_SPEED_UNIT] == "km/h"
 
 
-async def test_v4_weather_legacy_entities(hass: HomeAssistant) -> None:
+async def test_v4_weather_legacy_entities(menuai: menuai) -> None:
     """Test v4 weather data."""
-    weather_state = await _setup_legacy(hass, API_V4_ENTRY_DATA)
+    weather_state = await _setup_legacy(menuai, API_V4_ENTRY_DATA)
     assert weather_state.state == ATTR_CONDITION_SUNNY
     assert weather_state.attributes[ATTR_ATTRIBUTION] == ATTRIBUTION
     assert weather_state.attributes[ATTR_FRIENDLY_NAME] == "Tomorrow.io Daily"
@@ -246,16 +246,16 @@ async def test_v4_weather_legacy_entities(hass: HomeAssistant) -> None:
 )
 @freeze_time(datetime(2021, 3, 6, 23, 59, 59, tzinfo=dt_util.UTC))
 async def test_v4_forecast_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     service: str,
 ) -> None:
     """Test multiple forecast."""
-    weather_state = await _setup(hass, API_V4_ENTRY_DATA)
+    weather_state = await _setup(menuai, API_V4_ENTRY_DATA)
     entity_id = weather_state.entity_id
 
     for forecast_type in ("daily", "hourly"):
-        response = await hass.services.async_call(
+        response = await menuai.services.async_call(
             WEATHER_DOMAIN,
             service,
             {
@@ -269,7 +269,7 @@ async def test_v4_forecast_service(
 
 
 async def test_v4_bad_forecast(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     tomorrowio_config_entry_update,
     snapshot: SnapshotAssertion,
@@ -277,16 +277,16 @@ async def test_v4_bad_forecast(
     """Test bad forecast data."""
     freezer.move_to(datetime(2021, 3, 6, 23, 59, 59, tzinfo=dt_util.UTC))
 
-    weather_state = await _setup(hass, API_V4_ENTRY_DATA)
+    weather_state = await _setup(menuai, API_V4_ENTRY_DATA)
     entity_id = weather_state.entity_id
     hourly_forecast = tomorrowio_config_entry_update.return_value["forecasts"]["hourly"]
     hourly_forecast[0]["values"]["precipitationProbability"] = "blah"
 
     # Trigger data refetch
     freezer.tick(timedelta(minutes=32) + timedelta(seconds=1))
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         WEATHER_DOMAIN,
         SERVICE_GET_FORECASTS,
         {
@@ -306,17 +306,17 @@ async def test_v4_bad_forecast(
 
 @pytest.mark.parametrize("forecast_type", ["daily", "hourly"])
 async def test_forecast_subscription(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     freezer: FrozenDateTimeFactory,
     snapshot: SnapshotAssertion,
     forecast_type: str,
 ) -> None:
     """Test multiple forecast."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     freezer.move_to(datetime(2021, 3, 6, 23, 59, 59, tzinfo=dt_util.UTC))
 
-    weather_state = await _setup(hass, API_V4_ENTRY_DATA)
+    weather_state = await _setup(menuai, API_V4_ENTRY_DATA)
     entity_id = weather_state.entity_id
 
     await client.send_json_auto_id(
@@ -340,7 +340,7 @@ async def test_forecast_subscription(
     assert forecast1 == snapshot
 
     freezer.tick(timedelta(minutes=32) + timedelta(seconds=1))
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     msg = await client.receive_json()
 
     assert msg["id"] == subscription_id

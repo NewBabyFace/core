@@ -6,8 +6,8 @@ from typing import Final
 
 import voluptuous as vol
 
-from homeassistant.components.device_automation import async_validate_entity_schema
-from homeassistant.const import (
+from menuai.components.device_automation import async_validate_entity_schema
+from menuai.const import (
     ATTR_CODE,
     ATTR_ENTITY_ID,
     CONF_CODE,
@@ -22,10 +22,10 @@ from homeassistant.const import (
     SERVICE_ALARM_DISARM,
     SERVICE_ALARM_TRIGGER,
 )
-from homeassistant.core import Context, HomeAssistant
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.entity import get_supported_features
-from homeassistant.helpers.typing import ConfigType, TemplateVarsType
+from menuai.core import Context, menuai
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.entity import get_supported_features
+from menuai.helpers.typing import ConfigType, TemplateVarsType
 
 from . import ATTR_CODE_ARM_REQUIRED, DOMAIN
 from .const import AlarmControlPanelEntityFeature
@@ -49,17 +49,17 @@ _ACTION_SCHEMA: Final = cv.DEVICE_ACTION_BASE_SCHEMA.extend(
 
 
 async def async_validate_action_config(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> ConfigType:
     """Validate config."""
-    return async_validate_entity_schema(hass, config, _ACTION_SCHEMA)
+    return async_validate_entity_schema(menuai, config, _ACTION_SCHEMA)
 
 
 async def async_get_actions(
-    hass: HomeAssistant, device_id: str
+    menuai: menuai, device_id: str
 ) -> list[dict[str, str]]:
     """List device actions for Alarm control panel devices."""
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     actions = []
 
     # Get all the integrations entities for this device
@@ -67,7 +67,7 @@ async def async_get_actions(
         if entry.domain != DOMAIN:
             continue
 
-        supported_features = get_supported_features(hass, entry.entity_id)
+        supported_features = get_supported_features(menuai, entry.entity_id)
 
         base_action: dict = {
             CONF_DEVICE_ID: device_id,
@@ -92,7 +92,7 @@ async def async_get_actions(
 
 
 async def async_call_action_from_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     variables: TemplateVarsType,
     context: Context | None,
@@ -115,20 +115,20 @@ async def async_call_action_from_config(
     elif config[CONF_TYPE] == "trigger":
         service = SERVICE_ALARM_TRIGGER
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN, service, service_data, blocking=True, context=context
     )
 
 
 async def async_get_action_capabilities(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> dict[str, vol.Schema]:
     """List action capabilities."""
     # We need to refer to the state directly because ATTR_CODE_ARM_REQUIRED is not a
     # capability attribute
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     entity_id = er.async_resolve_entity_id(registry, config[CONF_ENTITY_ID])
-    state = hass.states.get(entity_id) if entity_id else None
+    state = menuai.states.get(entity_id) if entity_id else None
     code_required = state.attributes.get(ATTR_CODE_ARM_REQUIRED) if state else False
 
     if config[CONF_TYPE] == "trigger" or (

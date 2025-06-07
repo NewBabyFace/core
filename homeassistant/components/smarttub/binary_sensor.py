@@ -7,15 +7,15 @@ from typing import Any
 from smarttub import Spa, SpaError, SpaReminder
 import voluptuous as vol
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_platform
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import VolDictType
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.core import menuai
+from menuai.helpers import entity_platform
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import VolDictType
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import ATTR_ERRORS, ATTR_REMINDERS
 from .controller import SmartTubConfigEntry
@@ -46,7 +46,7 @@ SNOOZE_REMINDER_SCHEMA: VolDictType = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: SmartTubConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

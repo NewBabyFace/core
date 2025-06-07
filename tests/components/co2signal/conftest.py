@@ -5,10 +5,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from homeassistant.components.co2signal.const import DOMAIN
-from homeassistant.const import CONF_API_KEY
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.co2signal.const import DOMAIN
+from menuai.const import CONF_API_KEY
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from . import VALID_RESPONSE
 
@@ -21,11 +21,11 @@ def mock_electricity_maps() -> Generator[MagicMock]:
 
     with (
         patch(
-            "homeassistant.components.co2signal.ElectricityMaps",
+            "menuai.components.co2signal.ElectricityMaps",
             autospec=True,
         ) as electricity_maps,
         patch(
-            "homeassistant.components.co2signal.config_flow.ElectricityMaps",
+            "menuai.components.co2signal.config_flow.ElectricityMaps",
             new=electricity_maps,
         ),
     ):
@@ -37,7 +37,7 @@ def mock_electricity_maps() -> Generator[MagicMock]:
 
 
 @pytest.fixture(name="config_entry")
-async def mock_config_entry(hass: HomeAssistant) -> MockConfigEntry:
+async def mock_config_entry(menuai: menuai) -> MockConfigEntry:
     """Return a MockConfigEntry for testing."""
     return MockConfigEntry(
         domain=DOMAIN,
@@ -48,10 +48,10 @@ async def mock_config_entry(hass: HomeAssistant) -> MockConfigEntry:
 
 @pytest.fixture(name="setup_integration")
 async def mock_setup_integration(
-    hass: HomeAssistant, config_entry: MockConfigEntry, electricity_maps: AsyncMock
+    menuai: menuai, config_entry: MockConfigEntry, electricity_maps: AsyncMock
 ) -> None:
     """Fixture for setting up the component."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    assert await async_setup_component(hass, DOMAIN, {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {})
+    await menuai.async_block_till_done()

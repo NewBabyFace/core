@@ -9,9 +9,9 @@ from typing import Any
 from gcal_sync.api import GoogleCalendarService
 from gcal_sync.store import CalendarStore
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.storage import Store
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.storage import Store
 
 from .const import DOMAIN
 
@@ -36,10 +36,10 @@ class GoogleRuntimeData:
 class LocalCalendarStore(CalendarStore):
     """Storage for local persistence of calendar and event data."""
 
-    def __init__(self, hass: HomeAssistant, entry_id: str) -> None:
+    def __init__(self, menuai: menuai, entry_id: str) -> None:
         """Initialize LocalCalendarStore."""
         self._store = Store[dict[str, Any]](
-            hass,
+            menuai,
             STORAGE_VERSION,
             STORAGE_KEY_FORMAT.format(domain=DOMAIN, entry_id=entry_id),
             private=True,

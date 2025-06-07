@@ -27,10 +27,10 @@ import jwt
 import voluptuous as vol
 from yarl import URL
 
-from homeassistant import config_entries
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.loader import async_get_application_credentials
-from homeassistant.util.hass_dict import HassKey
+from menuai import config_entries
+from menuai.core import menuai, callback
+from menuai.loader import async_get_application_credentials
+from menuai.util.menuai_dict import menuaiKey
 
 from . import http
 from .aiohttp_client import async_get_clientsession
@@ -42,15 +42,15 @@ from .service_info.zeroconf import ZeroconfServiceInfo
 _LOGGER = logging.getLogger(__name__)
 
 DATA_JWT_SECRET = "oauth2_jwt_secret"
-DATA_IMPLEMENTATIONS: HassKey[dict[str, dict[str, AbstractOAuth2Implementation]]] = (
-    HassKey("oauth2_impl")
+DATA_IMPLEMENTATIONS: menuaiKey[dict[str, dict[str, AbstractOAuth2Implementation]]] = (
+    menuaiKey("oauth2_impl")
 )
-DATA_PROVIDERS: HassKey[
+DATA_PROVIDERS: menuaiKey[
     dict[
         str,
-        Callable[[HomeAssistant, str], Awaitable[list[AbstractOAuth2Implementation]]],
+        Callable[[menuai, str], Awaitable[list[AbstractOAuth2Implementation]]],
     ]
-] = HassKey("oauth2_providers")
+] = menuaiKey("oauth2_providers")
 AUTH_CALLBACK_PATH = "/auth/external/callback"
 HEADER_FRONTEND_BASE = "HA-Frontend-Base"
 MY_AUTH_CALLBACK_PATH = "https://my.home-assistant.io/redirect/oauth"
@@ -62,9 +62,9 @@ OAUTH_TOKEN_TIMEOUT_SEC = 30
 
 
 @callback
-def async_get_redirect_uri(hass: HomeAssistant) -> str:
+def async_get_redirect_uri(menuai: menuai) -> str:
     """Return the redirect uri."""
-    if "my" in hass.config.components:
+    if "my" in menuai.config.components:
         return MY_AUTH_CALLBACK_PATH
 
     if (req := http.current_request.get()) is None:
@@ -94,7 +94,7 @@ class AbstractOAuth2Implementation(ABC):
         """Generate a url for the user to authorize.
 
         This step is called when a config flow is initialized. It should redirect the
-        user to the vendor website where they can authorize Home Assistant.
+        user to the vendor website where they can authorize MenuAI.
 
         The implementation is responsible to get notified when the user is authorized
         and pass this to the specified config flow. Do as little work as possible once
@@ -103,7 +103,7 @@ class AbstractOAuth2Implementation(ABC):
 
         Pass external data in with:
 
-        await hass.config_entries.flow.async_configure(
+        await menuai.config_entries.flow.async_configure(
             flow_id=flow_id, user_input={'code': 'abcd', 'state': … }
 
         )
@@ -137,7 +137,7 @@ class LocalOAuth2Implementation(AbstractOAuth2Implementation):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         domain: str,
         client_id: str,
         client_secret: str,
@@ -145,7 +145,7 @@ class LocalOAuth2Implementation(AbstractOAuth2Implementation):
         token_url: str,
     ) -> None:
         """Initialize local auth implementation."""
-        self.hass = hass
+        self.menuai = menuai
         self._domain = domain
         self.client_id = client_id
         self.client_secret = client_secret
@@ -165,7 +165,7 @@ class LocalOAuth2Implementation(AbstractOAuth2Implementation):
     @property
     def redirect_uri(self) -> str:
         """Return the redirect uri."""
-        return async_get_redirect_uri(self.hass)
+        return async_get_redirect_uri(self.menuai)
 
     @property
     def extra_authorize_data(self) -> dict:
@@ -188,7 +188,7 @@ class LocalOAuth2Implementation(AbstractOAuth2Implementation):
                     "client_id": self.client_id,
                     "redirect_uri": redirect_uri,
                     "state": _encode_jwt(
-                        self.hass, {"flow_id": flow_id, "redirect_uri": redirect_uri}
+                        self.menuai, {"flow_id": flow_id, "redirect_uri": redirect_uri}
                     ),
                 }
             )
@@ -218,7 +218,7 @@ class LocalOAuth2Implementation(AbstractOAuth2Implementation):
 
     async def _token_request(self, data: dict) -> dict:
         """Make a token request."""
-        session = async_get_clientsession(self.hass)
+        session = async_get_clientsession(self.menuai)
 
         data["client_id"] = self.client_id
 
@@ -249,7 +249,7 @@ class LocalOAuth2ImplementationWithPkce(LocalOAuth2Implementation):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         domain: str,
         client_id: str,
         authorize_url: str,
@@ -259,7 +259,7 @@ class LocalOAuth2ImplementationWithPkce(LocalOAuth2Implementation):
     ) -> None:
         """Initialize local auth implementation."""
         super().__init__(
-            hass,
+            menuai,
             domain,
             client_id,
             client_secret,
@@ -375,14 +375,14 @@ class AbstractOAuth2FlowHandler(config_entries.ConfigFlow, metaclass=ABCMeta):
         self, user_input: dict | None = None
     ) -> config_entries.ConfigFlowResult:
         """Handle a flow start."""
-        implementations = await async_get_implementations(self.hass, self.DOMAIN)
+        implementations = await async_get_implementations(self.menuai, self.DOMAIN)
 
         if user_input is not None:
             self.flow_impl = implementations[user_input["implementation"]]
             return await self.async_step_auth()
 
         if not implementations:
-            if self.DOMAIN in await async_get_application_credentials(self.hass):
+            if self.DOMAIN in await async_get_application_credentials(self.menuai):
                 return self.async_abort(reason="missing_credentials")
             return self.async_abort(reason="missing_configuration")
 
@@ -538,43 +538,43 @@ class AbstractOAuth2FlowHandler(config_entries.ConfigFlow, metaclass=ABCMeta):
 
     @classmethod
     def async_register_implementation(
-        cls, hass: HomeAssistant, local_impl: LocalOAuth2Implementation
+        cls, menuai: menuai, local_impl: LocalOAuth2Implementation
     ) -> None:
         """Register a local implementation."""
-        async_register_implementation(hass, cls.DOMAIN, local_impl)
+        async_register_implementation(menuai, cls.DOMAIN, local_impl)
 
 
 @callback
 def async_register_implementation(
-    hass: HomeAssistant, domain: str, implementation: AbstractOAuth2Implementation
+    menuai: menuai, domain: str, implementation: AbstractOAuth2Implementation
 ) -> None:
     """Register an OAuth2 flow implementation for an integration."""
-    implementations = hass.data.setdefault(DATA_IMPLEMENTATIONS, {})
+    implementations = menuai.data.setdefault(DATA_IMPLEMENTATIONS, {})
     implementations.setdefault(domain, {})[implementation.domain] = implementation
 
 
 async def async_get_implementations(
-    hass: HomeAssistant, domain: str
+    menuai: menuai, domain: str
 ) -> dict[str, AbstractOAuth2Implementation]:
     """Return OAuth2 implementations for specified domain."""
-    registered = hass.data.setdefault(DATA_IMPLEMENTATIONS, {}).get(domain, {})
+    registered = menuai.data.setdefault(DATA_IMPLEMENTATIONS, {}).get(domain, {})
 
-    if DATA_PROVIDERS not in hass.data:
+    if DATA_PROVIDERS not in menuai.data:
         return registered
 
     registered = dict(registered)
-    for get_impl in list(hass.data[DATA_PROVIDERS].values()):
-        for impl in await get_impl(hass, domain):
+    for get_impl in list(menuai.data[DATA_PROVIDERS].values()):
+        for impl in await get_impl(menuai, domain):
             registered[impl.domain] = impl
 
     return registered
 
 
 async def async_get_config_entry_implementation(
-    hass: HomeAssistant, config_entry: config_entries.ConfigEntry
+    menuai: menuai, config_entry: config_entries.ConfigEntry
 ) -> AbstractOAuth2Implementation:
     """Return the implementation for this config entry."""
-    implementations = await async_get_implementations(hass, config_entry.domain)
+    implementations = await async_get_implementations(menuai, config_entry.domain)
     implementation = implementations.get(config_entry.data["auth_implementation"])
 
     if implementation is None:
@@ -585,22 +585,22 @@ async def async_get_config_entry_implementation(
 
 @callback
 def async_add_implementation_provider(
-    hass: HomeAssistant,
+    menuai: menuai,
     provider_domain: str,
     async_provide_implementation: Callable[
-        [HomeAssistant, str], Awaitable[list[AbstractOAuth2Implementation]]
+        [menuai, str], Awaitable[list[AbstractOAuth2Implementation]]
     ],
 ) -> None:
     """Add an implementation provider.
 
     If no implementation found, return None.
     """
-    hass.data.setdefault(DATA_PROVIDERS, {})[provider_domain] = (
+    menuai.data.setdefault(DATA_PROVIDERS, {})[provider_domain] = (
         async_provide_implementation
     )
 
 
-class OAuth2AuthorizeCallbackView(http.HomeAssistantView):
+class OAuth2AuthorizeCallbackView(http.menuaiView):
     """OAuth2 Authorization Callback View."""
 
     requires_auth = False
@@ -612,14 +612,14 @@ class OAuth2AuthorizeCallbackView(http.HomeAssistantView):
         if "state" not in request.query:
             return web.Response(text="Missing state parameter")
 
-        hass = request.app[http.KEY_HASS]
+        menuai = request.app[http.KEY_menuai]
 
-        state = _decode_jwt(hass, request.query["state"])
+        state = _decode_jwt(menuai, request.query["state"])
 
         if state is None:
             return web.Response(
                 text=(
-                    "Invalid state. Is My Home Assistant configured "
+                    "Invalid state. Is My MenuAI configured "
                     "to go to the right instance?"
                 ),
                 status=400,
@@ -634,7 +634,7 @@ class OAuth2AuthorizeCallbackView(http.HomeAssistantView):
         else:
             return web.Response(text="Missing code or error parameter")
 
-        await hass.config_entries.flow.async_configure(
+        await menuai.config_entries.flow.async_configure(
             flow_id=state["flow_id"], user_input=user_input
         )
         _LOGGER.debug("Resumed OAuth configuration flow")
@@ -649,12 +649,12 @@ class OAuth2Session:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: config_entries.ConfigEntry,
         implementation: AbstractOAuth2Implementation,
     ) -> None:
         """Initialize an OAuth2 session."""
-        self.hass = hass
+        self.menuai = menuai
         self.config_entry = config_entry
         self.implementation = implementation
         self._token_lock = Lock()
@@ -680,7 +680,7 @@ class OAuth2Session:
 
             new_token = await self.implementation.async_refresh_token(self.token)
 
-            self.hass.config_entries.async_update_entry(
+            self.menuai.config_entries.async_update_entry(
                 self.config_entry, data={**self.config_entry.data, "token": new_token}
             )
 
@@ -690,18 +690,18 @@ class OAuth2Session:
         """Make a request."""
         await self.async_ensure_token_valid()
         return await async_oauth2_request(
-            self.hass, self.config_entry.data["token"], method, url, **kwargs
+            self.menuai, self.config_entry.data["token"], method, url, **kwargs
         )
 
 
 async def async_oauth2_request(
-    hass: HomeAssistant, token: dict, method: str, url: str, **kwargs: Any
+    menuai: menuai, token: dict, method: str, url: str, **kwargs: Any
 ) -> client.ClientResponse:
     """Make an OAuth2 authenticated request.
 
     This method will not refresh tokens. Use OAuth2 session for that.
     """
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
     headers = kwargs.pop("headers", {})
     return await session.request(
         method,
@@ -715,18 +715,18 @@ async def async_oauth2_request(
 
 
 @callback
-def _encode_jwt(hass: HomeAssistant, data: dict) -> str:
+def _encode_jwt(menuai: menuai, data: dict) -> str:
     """JWT encode data."""
-    if (secret := hass.data.get(DATA_JWT_SECRET)) is None:
-        secret = hass.data[DATA_JWT_SECRET] = secrets.token_hex()
+    if (secret := menuai.data.get(DATA_JWT_SECRET)) is None:
+        secret = menuai.data[DATA_JWT_SECRET] = secrets.token_hex()
 
     return jwt.encode(data, secret, algorithm="HS256")
 
 
 @callback
-def _decode_jwt(hass: HomeAssistant, encoded: str) -> dict[str, Any] | None:
+def _decode_jwt(menuai: menuai, encoded: str) -> dict[str, Any] | None:
     """JWT encode data."""
-    secret: str | None = hass.data.get(DATA_JWT_SECRET)
+    secret: str | None = menuai.data.get(DATA_JWT_SECRET)
 
     if secret is None:
         return None

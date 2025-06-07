@@ -6,16 +6,16 @@ import logging
 
 from ndms2_client import Device
 
-from homeassistant.components.device_tracker import (
+from menuai.components.device_tracker import (
     DOMAIN as DEVICE_TRACKER_DOMAIN,
     ScannerEntity,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import dt as dt_util
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers import entity_registry as er
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import dt as dt_util
 
 from .const import DOMAIN, ROUTER
 from .router import KeeneticRouter
@@ -24,12 +24,12 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up device tracker for Keenetic NDMS2 component."""
-    router: KeeneticRouter = hass.data[DOMAIN][config_entry.entry_id][ROUTER]
+    router: KeeneticRouter = menuai.data[DOMAIN][config_entry.entry_id][ROUTER]
 
     tracked: set[str] = set()
 
@@ -40,7 +40,7 @@ async def async_setup_entry(
 
     update_from_router()
 
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     # Restore devices that are not a part of active clients list.
     restored = []
     for entity_entry in registry.entities.get_entries_for_config_entry_id(
@@ -65,7 +65,7 @@ async def async_setup_entry(
 
     async_add_entities(restored)
 
-    async_dispatcher_connect(hass, router.signal_update, update_from_router)
+    async_dispatcher_connect(menuai, router.signal_update, update_from_router)
 
 
 @callback
@@ -136,7 +136,7 @@ class KeeneticTracker(ScannerEntity):
             }
         return None
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Client entity created."""
         _LOGGER.debug("New network device tracker %s (%s)", self.name, self.unique_id)
 
@@ -156,6 +156,6 @@ class KeeneticTracker(ScannerEntity):
 
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, self._router.signal_update, update_device
+                self.menuai, self._router.signal_update, update_device
             )
         )

@@ -8,18 +8,18 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Literal, TypedDict
 
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.util.dt import utc_from_timestamp, utcnow
-from homeassistant.util.event_type import EventType
-from homeassistant.util.hass_dict import HassKey
-from homeassistant.util.ulid import ulid_now
+from menuai.core import Event, menuai, callback
+from menuai.util.dt import utc_from_timestamp, utcnow
+from menuai.util.event_type import EventType
+from menuai.util.menuai_dict import menuaiKey
+from menuai.util.ulid import ulid_now
 
 from .registry import BaseRegistry
 from .singleton import singleton
 from .storage import Store
 from .typing import UNDEFINED, UndefinedType
 
-DATA_REGISTRY: HassKey[CategoryRegistry] = HassKey("category_registry")
+DATA_REGISTRY: menuaiKey[CategoryRegistry] = menuaiKey("category_registry")
 EVENT_CATEGORY_REGISTRY_UPDATED: EventType[EventCategoryRegistryUpdatedData] = (
     EventType("category_registry_updated")
 )
@@ -93,12 +93,12 @@ class CategoryRegistryStore(Store[CategoryRegistryStoreData]):
 class CategoryRegistry(BaseRegistry[CategoryRegistryStoreData]):
     """Class to hold a registry of categories by scope."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize the category registry."""
-        self.hass = hass
+        self.menuai = menuai
         self.categories: dict[str, dict[str, CategoryEntry]] = {}
         self._store = CategoryRegistryStore(
-            hass,
+            menuai,
             STORAGE_VERSION_MAJOR,
             STORAGE_KEY,
             atomic_writes=True,
@@ -130,7 +130,7 @@ class CategoryRegistry(BaseRegistry[CategoryRegistryStoreData]):
         icon: str | None = None,
     ) -> CategoryEntry:
         """Create a new category."""
-        self.hass.verify_event_loop_thread("category_registry.async_create")
+        self.menuai.verify_event_loop_thread("category_registry.async_create")
         self._async_ensure_name_is_available(scope, name)
         category = CategoryEntry(
             icon=icon,
@@ -143,7 +143,7 @@ class CategoryRegistry(BaseRegistry[CategoryRegistryStoreData]):
         self.categories[scope][category.category_id] = category
 
         self.async_schedule_save()
-        self.hass.bus.async_fire_internal(
+        self.menuai.bus.async_fire_internal(
             EVENT_CATEGORY_REGISTRY_UPDATED,
             EventCategoryRegistryUpdatedData(
                 action="create", scope=scope, category_id=category.category_id
@@ -154,9 +154,9 @@ class CategoryRegistry(BaseRegistry[CategoryRegistryStoreData]):
     @callback
     def async_delete(self, *, scope: str, category_id: str) -> None:
         """Delete category."""
-        self.hass.verify_event_loop_thread("category_registry.async_delete")
+        self.menuai.verify_event_loop_thread("category_registry.async_delete")
         del self.categories[scope][category_id]
-        self.hass.bus.async_fire_internal(
+        self.menuai.bus.async_fire_internal(
             EVENT_CATEGORY_REGISTRY_UPDATED,
             EventCategoryRegistryUpdatedData(
                 action="remove",
@@ -191,11 +191,11 @@ class CategoryRegistry(BaseRegistry[CategoryRegistryStoreData]):
 
         changes["modified_at"] = utcnow()
 
-        self.hass.verify_event_loop_thread("category_registry.async_update")
+        self.menuai.verify_event_loop_thread("category_registry.async_update")
         new = self.categories[scope][category_id] = dataclasses.replace(old, **changes)
 
         self.async_schedule_save()
-        self.hass.bus.async_fire_internal(
+        self.menuai.bus.async_fire_internal(
             EVENT_CATEGORY_REGISTRY_UPDATED,
             EventCategoryRegistryUpdatedData(
                 action="update", scope=scope, category_id=category_id
@@ -260,12 +260,12 @@ class CategoryRegistry(BaseRegistry[CategoryRegistryStoreData]):
 
 @callback
 @singleton(DATA_REGISTRY)
-def async_get(hass: HomeAssistant) -> CategoryRegistry:
+def async_get(menuai: menuai) -> CategoryRegistry:
     """Get category registry."""
-    return CategoryRegistry(hass)
+    return CategoryRegistry(menuai)
 
 
-async def async_load(hass: HomeAssistant) -> None:
+async def async_load(menuai: menuai) -> None:
     """Load category registry."""
-    assert DATA_REGISTRY not in hass.data
-    await async_get(hass).async_load()
+    assert DATA_REGISTRY not in menuai.data
+    await async_get(menuai).async_load()

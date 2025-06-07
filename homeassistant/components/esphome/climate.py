@@ -17,7 +17,7 @@ from aioesphomeapi import (
     EntityInfo,
 )
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_HVAC_MODE,
     ATTR_TARGET_TEMP_HIGH,
     ATTR_TARGET_TEMP_LOW,
@@ -47,14 +47,14 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_TEMPERATURE,
     PRECISION_HALVES,
     PRECISION_TENTHS,
     PRECISION_WHOLE,
     UnitOfTemperature,
 )
-from homeassistant.core import callback
+from menuai.core import callback
 
 from .entity import (
     EsphomeEntity,
@@ -278,7 +278,7 @@ class EsphomeClimateEntity(EsphomeEntity[ClimateInfo, ClimateState], ClimateEnti
         """Set new target temperature (and operation mode if set)."""
         data: dict[str, Any] = {"key": self._key}
         if ATTR_HVAC_MODE in kwargs:
-            data["mode"] = _CLIMATE_MODES.from_hass(
+            data["mode"] = _CLIMATE_MODES.from_menuai(
                 cast(HVACMode, kwargs[ATTR_HVAC_MODE])
             )
         if ATTR_TEMPERATURE in kwargs:
@@ -298,7 +298,7 @@ class EsphomeClimateEntity(EsphomeEntity[ClimateInfo, ClimateState], ClimateEnti
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Set new target operation mode."""
         self._client.climate_command(
-            key=self._key, mode=_CLIMATE_MODES.from_hass(hvac_mode)
+            key=self._key, mode=_CLIMATE_MODES.from_menuai(hvac_mode)
         )
 
     @convert_api_error_ha_error
@@ -308,7 +308,7 @@ class EsphomeClimateEntity(EsphomeEntity[ClimateInfo, ClimateState], ClimateEnti
         if preset_mode in self._static_info.supported_custom_presets:
             kwargs["custom_preset"] = preset_mode
         else:
-            kwargs["preset"] = _PRESETS.from_hass(preset_mode)
+            kwargs["preset"] = _PRESETS.from_menuai(preset_mode)
         self._client.climate_command(**kwargs)
 
     @convert_api_error_ha_error
@@ -318,14 +318,14 @@ class EsphomeClimateEntity(EsphomeEntity[ClimateInfo, ClimateState], ClimateEnti
         if fan_mode in self._static_info.supported_custom_fan_modes:
             kwargs["custom_fan_mode"] = fan_mode
         else:
-            kwargs["fan_mode"] = _FAN_MODES.from_hass(fan_mode)
+            kwargs["fan_mode"] = _FAN_MODES.from_menuai(fan_mode)
         self._client.climate_command(**kwargs)
 
     @convert_api_error_ha_error
     async def async_set_swing_mode(self, swing_mode: str) -> None:
         """Set new swing mode."""
         self._client.climate_command(
-            key=self._key, swing_mode=_SWING_MODES.from_hass(swing_mode)
+            key=self._key, swing_mode=_SWING_MODES.from_menuai(swing_mode)
         )
 
 

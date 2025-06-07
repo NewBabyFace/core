@@ -7,12 +7,12 @@ from typing import Any, NamedTuple
 import pytest
 from pytest_unordered import unordered
 
-from homeassistant.components import automation
-from homeassistant.components.device_automation import DeviceAutomationType
-from homeassistant.components.rfxtrx import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.setup import async_setup_component
+from menuai.components import automation
+from menuai.components.device_automation import DeviceAutomationType
+from menuai.components.rfxtrx import DOMAIN
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.setup import async_setup_component
 
 from .conftest import create_rfx_test_cfg
 
@@ -46,16 +46,16 @@ EVENT_FIREALARM_1 = EventTestData(
 )
 
 
-async def setup_entry(hass: HomeAssistant, devices: dict[str, Any]) -> None:
+async def setup_entry(menuai: menuai, devices: dict[str, Any]) -> None:
     """Construct a config setup."""
     entry_data = create_rfx_test_cfg(devices=devices)
     mock_entry = MockConfigEntry(domain="rfxtrx", unique_id=DOMAIN, data=entry_data)
 
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
-    await hass.async_start()
+    await menuai.config_entries.async_setup(mock_entry.entry_id)
+    await menuai.async_block_till_done()
+    await menuai.async_start()
 
 
 @pytest.mark.parametrize(
@@ -80,13 +80,13 @@ async def setup_entry(hass: HomeAssistant, devices: dict[str, Any]) -> None:
     ],
 )
 async def test_get_triggers(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     event: EventTestData,
     expected,
 ) -> None:
     """Test we get the expected triggers from a rfxtrx."""
-    await setup_entry(hass, {event.code: {}})
+    await setup_entry(menuai, {event.code: {}})
 
     device_entry = device_registry.async_get_device(
         identifiers=event.device_identifiers
@@ -115,7 +115,7 @@ async def test_get_triggers(
     ]
 
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device_entry.id
+        menuai, DeviceAutomationType.TRIGGER, device_entry.id
     )
     triggers = [value for value in triggers if value["domain"] == "rfxtrx"]
     assert triggers == unordered(expected_triggers)
@@ -130,21 +130,21 @@ async def test_get_triggers(
     ],
 )
 async def test_firing_event(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry, rfxtrx, event
+    menuai: menuai, device_registry: dr.DeviceRegistry, rfxtrx, event
 ) -> None:
     """Test for turn_on and turn_off triggers firing."""
 
-    await setup_entry(hass, {event.code: {"fire_event": True}})
+    await setup_entry(menuai, {event.code: {"fire_event": True}})
 
     device_entry = device_registry.async_get_device(
         identifiers=event.device_identifiers
     )
     assert device_entry
 
-    calls = async_mock_service(hass, "test", "automation")
+    calls = async_mock_service(menuai, "test", "automation")
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -164,7 +164,7 @@ async def test_firing_event(
             ]
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     await rfxtrx.signal(event.code)
 
@@ -173,21 +173,21 @@ async def test_firing_event(
 
 
 async def test_invalid_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test for invalid actions."""
     event = EVENT_LIGHTING_1
 
-    await setup_entry(hass, {event.code: {"fire_event": True}})
+    await setup_entry(menuai, {event.code: {"fire_event": True}})
 
     device_identifiers: Any = event.device_identifiers
     device_entry = device_registry.async_get_device(identifiers=device_identifiers)
     assert device_entry
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -207,6 +207,6 @@ async def test_invalid_trigger(
             ]
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert "Subtype invalid not found in device triggers" in caplog.text

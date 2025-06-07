@@ -7,15 +7,15 @@ from typing import Any
 
 from aioesphomeapi import APIVersion, CoverInfo, CoverOperation, CoverState, EntityInfo
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     ATTR_POSITION,
     ATTR_TILT_POSITION,
     CoverDeviceClass,
     CoverEntity,
     CoverEntityFeature,
 )
-from homeassistant.core import callback
-from homeassistant.util.enum import try_parse_enum
+from menuai.core import callback
+from menuai.util.enum import try_parse_enum
 
 from .entity import (
     EsphomeEntity,

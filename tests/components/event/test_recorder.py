@@ -6,14 +6,14 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components import select
-from homeassistant.components.event import ATTR_EVENT_TYPES
-from homeassistant.components.recorder import Recorder
-from homeassistant.components.recorder.history import get_significant_states
-from homeassistant.const import ATTR_FRIENDLY_NAME, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.components import select
+from menuai.components.event import ATTR_EVENT_TYPES
+from menuai.components.recorder import Recorder
+from menuai.components.recorder.history import get_significant_states
+from menuai.const import ATTR_FRIENDLY_NAME, Platform
+from menuai.core import menuai
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from tests.components.recorder.common import async_wait_recording_done
 
@@ -22,26 +22,26 @@ from tests.components.recorder.common import async_wait_recording_done
 async def event_only() -> None:
     """Enable only the event platform."""
     with patch(
-        "homeassistant.components.demo.COMPONENTS_WITH_CONFIG_ENTRY_DEMO_PLATFORM",
+        "menuai.components.demo.COMPONENTS_WITH_CONFIG_ENTRY_DEMO_PLATFORM",
         [Platform.EVENT],
     ):
         yield
 
 
-async def test_exclude_attributes(recorder_mock: Recorder, hass: HomeAssistant) -> None:
+async def test_exclude_attributes(recorder_mock: Recorder, menuai: menuai) -> None:
     """Test select registered attributes to be excluded."""
     now = dt_util.utcnow()
-    assert await async_setup_component(hass, "homeassistant", {})
+    assert await async_setup_component(menuai, "menuai", {})
     await async_setup_component(
-        hass, select.DOMAIN, {select.DOMAIN: {"platform": "demo"}}
+        menuai, select.DOMAIN, {select.DOMAIN: {"platform": "demo"}}
     )
-    await hass.async_block_till_done()
-    hass.bus.async_fire("demo_button_pressed")
-    await hass.async_block_till_done()
-    await async_wait_recording_done(hass)
+    await menuai.async_block_till_done()
+    menuai.bus.async_fire("demo_button_pressed")
+    await menuai.async_block_till_done()
+    await async_wait_recording_done(menuai)
 
-    states = await hass.async_add_executor_job(
-        get_significant_states, hass, now, None, hass.states.async_entity_ids()
+    states = await menuai.async_add_executor_job(
+        get_significant_states, menuai, now, None, menuai.states.async_entity_ids()
     )
     assert len(states) >= 1
     for entity_states in states.values():

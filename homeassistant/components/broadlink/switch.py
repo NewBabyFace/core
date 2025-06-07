@@ -9,13 +9,13 @@ from typing import Any
 from broadlink.exceptions import BroadlinkException
 import voluptuous as vol
 
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     PLATFORM_SCHEMA as SWITCH_PLATFORM_SCHEMA,
     SwitchDeviceClass,
     SwitchEntity,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_COMMAND_OFF,
     CONF_COMMAND_ON,
     CONF_HOST,
@@ -27,15 +27,15 @@ from homeassistant.const import (
     STATE_ON,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import PlatformNotReady
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import (
+from menuai.core import menuai
+from menuai.exceptions import PlatformNotReady
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     AddEntitiesCallback,
 )
-from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.helpers.restore_state import RestoreEntity
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import BroadlinkDevice
 from .const import DOMAIN
@@ -73,7 +73,7 @@ PLATFORM_SCHEMA = vol.All(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -87,7 +87,7 @@ async def async_setup_platform(
     host = config.get(CONF_HOST)
 
     if switches := config.get(CONF_SWITCHES):
-        platform_data = hass.data[DOMAIN].platforms.get(Platform.SWITCH, {})
+        platform_data = menuai.data[DOMAIN].platforms.get(Platform.SWITCH, {})
         async_add_entities_config_entry: AddConfigEntryEntitiesCallback
         device: BroadlinkDevice
         async_add_entities_config_entry, device = platform_data.get(
@@ -108,20 +108,20 @@ async def async_setup_platform(
         )
 
     if host:
-        import_device(hass, host)
+        import_device(menuai, host)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Broadlink switch."""
-    device = hass.data[DOMAIN].devices[config_entry.entry_id]
+    device = menuai.data[DOMAIN].devices[config_entry.entry_id]
     switches: list[BroadlinkSwitch] = []
 
     if device.api.type in {"RM4MINI", "RM4PRO", "RMMINI", "RMMINIB", "RMPRO"}:
-        platform_data = hass.data[DOMAIN].platforms.setdefault(Platform.SWITCH, {})
+        platform_data = menuai.data[DOMAIN].platforms.setdefault(Platform.SWITCH, {})
         platform_data[device.api.mac] = async_add_entities, device
     elif device.api.type == "SP1":
         switches.append(BroadlinkSP1Switch(device))
@@ -150,11 +150,11 @@ class BroadlinkSwitch(BroadlinkEntity, SwitchEntity, RestoreEntity, ABC):
         self._command_on = command_on
         self._command_off = command_off
 
-    async def async_added_to_hass(self) -> None:
-        """Call when the switch is added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Call when the switch is added to menuai."""
         state = await self.async_get_last_state()
         self._attr_is_on = state is not None and state.state == STATE_ON
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on the switch."""

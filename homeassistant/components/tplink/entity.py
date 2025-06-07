@@ -17,14 +17,14 @@ from kasa import (
     TimeoutError,
 )
 
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import EntityDescription
-from homeassistant.helpers.typing import UNDEFINED, UndefinedType
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.const import EntityCategory
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import EntityDescription
+from menuai.helpers.typing import UNDEFINED, UndefinedType
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from . import get_device_name, legacy_device_id
 from .const import (
@@ -44,7 +44,7 @@ from .deprecate import (
 
 _LOGGER = logging.getLogger(__name__)
 
-# Mapping from upstream category to homeassistant category
+# Mapping from upstream category to menuai category
 FEATURE_CATEGORY_TO_ENTITY_CATEGORY = {
     Feature.Category.Config: EntityCategory.CONFIG,
     Feature.Category.Info: EntityCategory.DIAGNOSTIC,
@@ -124,8 +124,8 @@ def async_refresh_after[_T: CoordinatedTPLinkEntity, **_P](
         try:
             await func(self, *args, **kwargs)
         except AuthenticationError as ex:
-            self.coordinator.config_entry.async_start_reauth(self.hass)
-            raise HomeAssistantError(
+            self.coordinator.config_entry.async_start_reauth(self.menuai)
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="device_authentication",
                 translation_placeholders={
@@ -134,7 +134,7 @@ def async_refresh_after[_T: CoordinatedTPLinkEntity, **_P](
                 },
             ) from ex
         except TimeoutError as ex:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="device_timeout",
                 translation_placeholders={
@@ -143,7 +143,7 @@ def async_refresh_after[_T: CoordinatedTPLinkEntity, **_P](
                 },
             ) from ex
         except KasaException as ex:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="device_error",
                 translation_placeholders={
@@ -250,9 +250,9 @@ class CoordinatedTPLinkEntity(CoordinatorEntity[TPLinkDataUpdateCoordinator], AB
         """Return unique ID for the entity."""
         raise NotImplementedError
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Call update attributes after the device is added to the platform."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         self._async_call_update_attrs()
 
@@ -411,7 +411,7 @@ class CoordinatedTPLinkFeatureEntity(CoordinatedTPLinkEntity, ABC):
         _D: TPLinkFeatureEntityDescription,
     ](
         cls,
-        hass: HomeAssistant,
+        menuai: menuai,
         device: Device,
         coordinator: TPLinkDataUpdateCoordinator,
         *,
@@ -448,13 +448,13 @@ class CoordinatedTPLinkFeatureEntity(CoordinatedTPLinkEntity, ABC):
                 )
             )
             and async_check_create_deprecated(
-                hass,
+                menuai,
                 cls._get_feature_unique_id(device, desc),
                 desc,
             )
         ]
         async_process_deprecated(
-            hass, platform_domain, coordinator.config_entry.entry_id, entities, device
+            menuai, platform_domain, coordinator.config_entry.entry_id, entities, device
         )
         return entities
 
@@ -464,7 +464,7 @@ class CoordinatedTPLinkFeatureEntity(CoordinatedTPLinkEntity, ABC):
         _D: TPLinkFeatureEntityDescription,
     ](
         cls,
-        hass: HomeAssistant,
+        menuai: menuai,
         device: Device,
         coordinator: TPLinkDataUpdateCoordinator,
         *,
@@ -485,7 +485,7 @@ class CoordinatedTPLinkFeatureEntity(CoordinatedTPLinkEntity, ABC):
         if first_check:
             entities.extend(
                 cls._entities_for_device(
-                    hass,
+                    menuai,
                     device,
                     coordinator=coordinator,
                     feature_type=feature_type,
@@ -513,7 +513,7 @@ class CoordinatedTPLinkFeatureEntity(CoordinatedTPLinkEntity, ABC):
             )
 
             child_entities = cls._entities_for_device(
-                hass,
+                menuai,
                 child,
                 coordinator=child_coordinator,
                 feature_type=feature_type,
@@ -574,7 +574,7 @@ class CoordinatedTPLinkModuleEntity(CoordinatedTPLinkEntity, ABC):
         _D: TPLinkModuleEntityDescription,
     ](
         cls,
-        hass: HomeAssistant,
+        menuai: menuai,
         device: Device,
         coordinator: TPLinkDataUpdateCoordinator,
         *,
@@ -594,13 +594,13 @@ class CoordinatedTPLinkModuleEntity(CoordinatedTPLinkEntity, ABC):
             for description in descriptions
             if description.exists_fn(device, coordinator.config_entry)
             and async_check_create_deprecated(
-                hass,
+                menuai,
                 description.unique_id_fn(device, description),
                 description,
             )
         ]
         async_process_deprecated(
-            hass, platform_domain, coordinator.config_entry.entry_id, entities, device
+            menuai, platform_domain, coordinator.config_entry.entry_id, entities, device
         )
         return entities
 
@@ -610,7 +610,7 @@ class CoordinatedTPLinkModuleEntity(CoordinatedTPLinkEntity, ABC):
         _D: TPLinkModuleEntityDescription,
     ](
         cls,
-        hass: HomeAssistant,
+        menuai: menuai,
         device: Device,
         coordinator: TPLinkDataUpdateCoordinator,
         *,
@@ -631,7 +631,7 @@ class CoordinatedTPLinkModuleEntity(CoordinatedTPLinkEntity, ABC):
         if first_check:
             entities.extend(
                 cls._entities_for_device(
-                    hass,
+                    menuai,
                     device,
                     coordinator=coordinator,
                     entity_class=entity_class,
@@ -658,7 +658,7 @@ class CoordinatedTPLinkModuleEntity(CoordinatedTPLinkEntity, ABC):
             )
 
             child_entities: list[_E] = cls._entities_for_device(
-                hass,
+                menuai,
                 child,
                 coordinator=child_coordinator,
                 entity_class=entity_class,
@@ -680,7 +680,7 @@ class CoordinatedTPLinkModuleEntity(CoordinatedTPLinkEntity, ABC):
             # This is a timing factor in case this platform is loaded before
             # other platforms that will have entities on the parent. Eventually
             # those other platforms will update the parent with full DeviceInfo
-            device_registry = dr.async_get(hass)
+            device_registry = dr.async_get(menuai)
             device_registry.async_get_or_create(
                 config_entry_id=coordinator.config_entry.entry_id,
                 identifiers={(DOMAIN, device.device_id)},

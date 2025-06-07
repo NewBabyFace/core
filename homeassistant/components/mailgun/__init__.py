@@ -8,12 +8,12 @@ import logging
 from aiohttp import web
 import voluptuous as vol
 
-from homeassistant.components import webhook
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_API_KEY, CONF_DOMAIN, CONF_WEBHOOK_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_entry_flow, config_validation as cv
-from homeassistant.helpers.typing import ConfigType
+from menuai.components import webhook
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_API_KEY, CONF_DOMAIN, CONF_WEBHOOK_ID
+from menuai.core import menuai
+from menuai.helpers import config_entry_flow, config_validation as cv
+from menuai.helpers.typing import ConfigType
 
 from .const import DOMAIN
 
@@ -39,17 +39,17 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Mailgun component."""
     if DOMAIN not in config:
         return True
 
-    hass.data[DOMAIN] = config[DOMAIN]
+    menuai.data[DOMAIN] = config[DOMAIN]
     return True
 
 
 async def handle_webhook(
-    hass: HomeAssistant, webhook_id: str, request: web.Request
+    menuai: menuai, webhook_id: str, request: web.Request
 ) -> None:
     """Handle incoming webhook with Mailgun inbound messages."""
     body = await request.text()
@@ -61,10 +61,10 @@ async def handle_webhook(
     if (
         isinstance(data, dict)
         and "signature" in data
-        and await verify_webhook(hass, **data["signature"])
+        and await verify_webhook(menuai, **data["signature"])
     ):
         data["webhook_id"] = webhook_id
-        hass.bus.async_fire(MESSAGE_RECEIVED, data)
+        menuai.bus.async_fire(MESSAGE_RECEIVED, data)
         return
 
     _LOGGER.warning(
@@ -73,9 +73,9 @@ async def handle_webhook(
     )
 
 
-async def verify_webhook(hass, token=None, timestamp=None, signature=None):
+async def verify_webhook(menuai, token=None, timestamp=None, signature=None):
     """Verify webhook was signed by Mailgun."""
-    if DOMAIN not in hass.data:
+    if DOMAIN not in menuai.data:
         _LOGGER.warning("Cannot validate Mailgun webhook, missing API Key")
         return True
 
@@ -83,7 +83,7 @@ async def verify_webhook(hass, token=None, timestamp=None, signature=None):
         return False
 
     hmac_digest = hmac.new(
-        key=bytes(hass.data[DOMAIN][CONF_API_KEY], "utf-8"),
+        key=bytes(menuai.data[DOMAIN][CONF_API_KEY], "utf-8"),
         msg=bytes(f"{timestamp}{token}", "utf-8"),
         digestmod=hashlib.sha256,
     ).hexdigest()
@@ -91,17 +91,17 @@ async def verify_webhook(hass, token=None, timestamp=None, signature=None):
     return hmac.compare_digest(signature, hmac_digest)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Configure based on config entry."""
     webhook.async_register(
-        hass, DOMAIN, "Mailgun", entry.data[CONF_WEBHOOK_ID], handle_webhook
+        menuai, DOMAIN, "Mailgun", entry.data[CONF_WEBHOOK_ID], handle_webhook
     )
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    webhook.async_unregister(hass, entry.data[CONF_WEBHOOK_ID])
+    webhook.async_unregister(menuai, entry.data[CONF_WEBHOOK_ID])
     return True
 
 

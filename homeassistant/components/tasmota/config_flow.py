@@ -6,9 +6,9 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.mqtt import valid_subscribe_topic
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.helpers.service_info.mqtt import MqttServiceInfo
+from menuai.components.mqtt import valid_subscribe_topic
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.helpers.service_info.mqtt import MqttServiceInfo
 
 from .const import CONF_DISCOVERY_PREFIX, DEFAULT_PREFIX, DOMAIN
 

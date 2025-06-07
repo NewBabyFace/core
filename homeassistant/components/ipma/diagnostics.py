@@ -4,14 +4,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE
-from homeassistant.core import HomeAssistant
+from menuai.const import CONF_LATITUDE, CONF_LONGITUDE
+from menuai.core import menuai
 
 from . import IpmaConfigEntry
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: IpmaConfigEntry
+    menuai: menuai, entry: IpmaConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
 

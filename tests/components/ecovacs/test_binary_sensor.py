@@ -4,11 +4,11 @@ from deebot_client.events.water_info import MopAttachedEvent
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.ecovacs.const import DOMAIN
-from homeassistant.components.ecovacs.controller import EcovacsController
-from homeassistant.const import STATE_OFF, STATE_UNKNOWN, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.components.ecovacs.const import DOMAIN
+from menuai.components.ecovacs.controller import EcovacsController
+from menuai.const import STATE_OFF, STATE_UNKNOWN, Platform
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from .util import notify_and_wait
 
@@ -22,7 +22,7 @@ def platforms() -> Platform | list[Platform]:
 
 
 async def test_mop_attached(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
@@ -30,7 +30,7 @@ async def test_mop_attached(
 ) -> None:
     """Test mop_attached binary sensor."""
     entity_id = "binary_sensor.ozmo_950_mop_attached"
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_UNKNOWN
 
     assert (entity_entry := entity_registry.async_get(state.entity_id))
@@ -43,12 +43,12 @@ async def test_mop_attached(
     assert device_entry.identifiers == {(DOMAIN, device.device_info["did"])}
 
     event_bus = device.events
-    await notify_and_wait(hass, event_bus, MopAttachedEvent(True))
+    await notify_and_wait(menuai, event_bus, MopAttachedEvent(True))
 
-    assert (state := hass.states.get(state.entity_id))
+    assert (state := menuai.states.get(state.entity_id))
     assert state == snapshot(name=f"{entity_id}-state")
 
-    await notify_and_wait(hass, event_bus, MopAttachedEvent(False))
+    await notify_and_wait(menuai, event_bus, MopAttachedEvent(False))
 
-    assert (state := hass.states.get(state.entity_id))
+    assert (state := menuai.states.get(state.entity_id))
     assert state.state == STATE_OFF

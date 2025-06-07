@@ -2,14 +2,14 @@
 
 import requests_mock
 
-from homeassistant.components.plex.const import DOMAIN
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.components.plex.const import DOMAIN
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 
 async def test_cleanup_orphaned_devices(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     entry,
@@ -18,7 +18,7 @@ async def test_cleanup_orphaned_devices(
     """Test cleaning up orphaned devices on startup."""
     test_device_id = {(DOMAIN, "temporary_device_123")}
 
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     test_device = device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
@@ -36,7 +36,7 @@ async def test_cleanup_orphaned_devices(
     device = device_registry.async_get_device(identifiers=test_device_id)
     assert device is not None
 
-    await hass.config_entries.async_unload(entry.entry_id)
+    await menuai.config_entries.async_unload(entry.entry_id)
 
     # Ensure device is removed without an entity
     entity_registry.async_remove(test_entity.entity_id)
@@ -46,7 +46,7 @@ async def test_cleanup_orphaned_devices(
 
 
 async def test_migrate_transient_devices(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     entry,
@@ -59,7 +59,7 @@ async def test_migrate_transient_devices(
     non_plexweb_device_id = {(DOMAIN, "1234567890123456-com-plexapp-android")}
     plex_client_service_device_id = {(DOMAIN, "plex.tv-clients")}
 
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     # Pre-create devices and entities to test device migration
     plexweb_device = device_registry.async_get_or_create(

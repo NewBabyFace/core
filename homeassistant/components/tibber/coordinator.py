@@ -8,22 +8,22 @@ from typing import cast
 
 import tibber
 
-from homeassistant.components.recorder import get_instance
-from homeassistant.components.recorder.models import (
+from menuai.components.recorder import get_instance
+from menuai.components.recorder.models import (
     StatisticData,
     StatisticMeanType,
     StatisticMetaData,
 )
-from homeassistant.components.recorder.statistics import (
+from menuai.components.recorder.statistics import (
     async_add_external_statistics,
     get_last_statistics,
     statistics_during_period,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import UnitOfEnergy
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util import dt as dt_util
+from menuai.config_entries import ConfigEntry
+from menuai.const import UnitOfEnergy
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.util import dt as dt_util
 
 from .const import DOMAIN
 
@@ -39,13 +39,13 @@ class TibberDataCoordinator(DataUpdateCoordinator[None]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         tibber_connection: tibber.Tibber,
     ) -> None:
         """Initialize the data handler."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=f"Tibber {tibber_connection.name}",
@@ -63,8 +63,8 @@ class TibberDataCoordinator(DataUpdateCoordinator[None]):
             raise UpdateFailed(f"Error communicating with API ({err.status})") from err
         except tibber.FatalHttpExceptionError:
             # Fatal error. Reload config entry to show correct error.
-            self.hass.async_create_task(
-                self.hass.config_entries.async_reload(self.config_entry.entry_id)
+            self.menuai.async_create_task(
+                self.menuai.config_entries.async_reload(self.config_entry.entry_id)
             )
 
     async def _insert_statistics(self) -> None:
@@ -85,8 +85,8 @@ class TibberDataCoordinator(DataUpdateCoordinator[None]):
                     f"{home.home_id.replace('-', '')}"
                 )
 
-                last_stats = await get_instance(self.hass).async_add_executor_job(
-                    get_last_statistics, self.hass, 1, statistic_id, True, set()
+                last_stats = await get_instance(self.menuai).async_add_executor_job(
+                    get_last_statistics, self.menuai, 1, statistic_id, True, set()
                 )
 
                 if not last_stats:
@@ -112,9 +112,9 @@ class TibberDataCoordinator(DataUpdateCoordinator[None]):
                     if from_time is None:
                         continue
                     start = from_time - timedelta(hours=1)
-                    stat = await get_instance(self.hass).async_add_executor_job(
+                    stat = await get_instance(self.menuai).async_add_executor_job(
                         statistics_during_period,
-                        self.hass,
+                        self.menuai,
                         start,
                         None,
                         {statistic_id},
@@ -170,4 +170,4 @@ class TibberDataCoordinator(DataUpdateCoordinator[None]):
                     statistic_id=statistic_id,
                     unit_of_measurement=unit,
                 )
-                async_add_external_statistics(self.hass, metadata, statistics)
+                async_add_external_statistics(self.menuai, metadata, statistics)

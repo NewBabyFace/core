@@ -9,10 +9,10 @@ from unittest.mock import AsyncMock, _patch, patch
 from melnor_bluetooth.device import Device
 import pytest
 
-from homeassistant.components.bluetooth.models import BluetoothServiceInfoBleak
-from homeassistant.components.melnor.const import DOMAIN
-from homeassistant.const import CONF_ADDRESS
-from homeassistant.core import HomeAssistant
+from menuai.components.bluetooth.models import BluetoothServiceInfoBleak
+from menuai.components.melnor.const import DOMAIN
+from menuai.const import CONF_ADDRESS
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 from tests.components.bluetooth import generate_advertisement_data, generate_ble_device
@@ -204,7 +204,7 @@ class MockValve:
         self._frequency.start_time = value
 
 
-def mock_config_entry(hass: HomeAssistant):
+def mock_config_entry(menuai: menuai):
     """Return a mock config entry."""
 
     entry = MockConfigEntry(
@@ -212,7 +212,7 @@ def mock_config_entry(hass: HomeAssistant):
         unique_id=FAKE_ADDRESS_1,
         data={CONF_ADDRESS: FAKE_ADDRESS_1},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     return entry
 
@@ -248,7 +248,7 @@ def mock_melnor_device():
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Patch async setup entry to return True."""
     with patch(
-        "homeassistant.components.melnor.async_setup_entry", return_value=True
+        "menuai.components.melnor.async_setup_entry", return_value=True
     ) as mock_setup:
         yield mock_setup
 
@@ -258,7 +258,7 @@ def patch_async_discovered_service_info(
 ) -> _patch:
     """Patch async_discovered_service_info a mocked device info."""
     return patch(
-        "homeassistant.components.melnor.config_flow.async_discovered_service_info",
+        "menuai.components.melnor.config_flow.async_discovered_service_info",
         return_value=return_value,
     )
 
@@ -268,16 +268,16 @@ def patch_async_ble_device_from_address(
 ):
     """Patch async_ble_device_from_address to return a mocked BluetoothServiceInfoBleak."""
     return patch(
-        "homeassistant.components.bluetooth.async_ble_device_from_address",
+        "menuai.components.bluetooth.async_ble_device_from_address",
         return_value=return_value,
     )
 
 
 def patch_melnor_device(device: Device = mock_melnor_device()):
     """Patch melnor_bluetooth.device to return a mocked Melnor device."""
-    return patch("homeassistant.components.melnor.Device", return_value=device)
+    return patch("menuai.components.melnor.Device", return_value=device)
 
 
 def patch_async_register_callback():
     """Patch async_register_callback to return True."""
-    return patch("homeassistant.components.bluetooth.async_register_callback")
+    return patch("menuai.components.bluetooth.async_register_callback")

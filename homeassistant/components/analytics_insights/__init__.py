@@ -1,22 +1,22 @@
-"""The Homeassistant Analytics integration."""
+"""The menuai Analytics integration."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 
-from python_homeassistant_analytics import (
-    HomeassistantAnalyticsClient,
-    HomeassistantAnalyticsConnectionError,
+from python_menuai_analytics import (
+    menuaiAnalyticsClient,
+    menuaiAnalyticsConnectionError,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import CONF_TRACKED_INTEGRATIONS
-from .coordinator import HomeassistantAnalyticsDataUpdateCoordinator
+from .coordinator import menuaiAnalyticsDataUpdateCoordinator
 
 PLATFORMS: list[Platform] = [Platform.SENSOR]
 type AnalyticsInsightsConfigEntry = ConfigEntry[AnalyticsInsightsData]
@@ -26,19 +26,19 @@ type AnalyticsInsightsConfigEntry = ConfigEntry[AnalyticsInsightsData]
 class AnalyticsInsightsData:
     """Analytics data class."""
 
-    coordinator: HomeassistantAnalyticsDataUpdateCoordinator
+    coordinator: menuaiAnalyticsDataUpdateCoordinator
     names: dict[str, str]
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: AnalyticsInsightsConfigEntry
+    menuai: menuai, entry: AnalyticsInsightsConfigEntry
 ) -> bool:
-    """Set up Homeassistant Analytics from a config entry."""
-    client = HomeassistantAnalyticsClient(session=async_get_clientsession(hass))
+    """Set up menuai Analytics from a config entry."""
+    client = menuaiAnalyticsClient(session=async_get_clientsession(menuai))
 
     try:
         integrations = await client.get_integrations()
-    except HomeassistantAnalyticsConnectionError as ex:
+    except menuaiAnalyticsConnectionError as ex:
         raise ConfigEntryNotReady("Could not fetch integration list") from ex
 
     names = {}
@@ -48,27 +48,27 @@ async def async_setup_entry(
             continue
         names[integration] = integrations[integration].title
 
-    coordinator = HomeassistantAnalyticsDataUpdateCoordinator(hass, entry, client)
+    coordinator = menuaiAnalyticsDataUpdateCoordinator(menuai, entry, client)
 
     await coordinator.async_config_entry_first_refresh()
 
     entry.runtime_data = AnalyticsInsightsData(coordinator=coordinator, names=names)
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(update_listener))
 
     return True
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, entry: AnalyticsInsightsConfigEntry
+    menuai: menuai, entry: AnalyticsInsightsConfigEntry
 ) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 async def update_listener(
-    hass: HomeAssistant, entry: AnalyticsInsightsConfigEntry
+    menuai: menuai, entry: AnalyticsInsightsConfigEntry
 ) -> None:
     """Handle options update."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)

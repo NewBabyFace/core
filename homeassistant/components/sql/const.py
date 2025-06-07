@@ -2,7 +2,7 @@
 
 import re
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 DOMAIN = "sql"
 PLATFORMS = [Platform.SENSOR]

@@ -9,14 +9,14 @@ from typing import Any, cast
 
 from pysmartthings import Attribute, Capability, ComponentStatus, SmartThings, Status
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     DOMAIN as SENSOR_DOMAIN,
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
     CONCENTRATION_PARTS_PER_MILLION,
     LIGHT_LUX,
@@ -30,10 +30,10 @@ from homeassistant.const import (
     UnitOfTemperature,
     UnitOfVolume,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import dt as dt_util
 
 from . import FullDevice, SmartThingsConfigEntry
 from .const import MAIN
@@ -1102,7 +1102,7 @@ UNITS = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: SmartThingsConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -1110,7 +1110,7 @@ async def async_setup_entry(
     entry_data = entry.runtime_data
     entities = []
 
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
 
     for device in entry_data.devices.values():  # pylint: disable=too-many-nested-blocks
         for capability, attributes in CAPABILITY_TO_SENSORS.items():
@@ -1154,7 +1154,7 @@ async def async_setup_entry(
                                 ):
                                     version, reason = deprecation_info
                                     if deprecate_entity(
-                                        hass,
+                                        menuai,
                                         entity_registry,
                                         SENSOR_DOMAIN,
                                         f"{device.device.device_id}_{MAIN}_{capability}_{attribute}_{description.key}",

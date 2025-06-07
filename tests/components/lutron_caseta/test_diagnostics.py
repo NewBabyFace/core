@@ -2,14 +2,14 @@
 
 from unittest.mock import ANY
 
-from homeassistant.components.lutron_caseta import DOMAIN
-from homeassistant.components.lutron_caseta.const import (
+from menuai.components.lutron_caseta import DOMAIN
+from menuai.components.lutron_caseta.const import (
     CONF_CA_CERTS,
     CONF_CERTFILE,
     CONF_KEYFILE,
 )
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
+from menuai.const import CONF_HOST
+from menuai.core import menuai
 
 from . import MockBridge, async_setup_integration
 
@@ -19,7 +19,7 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_diagnostics(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test generating diagnostics for lutron_caseta."""
     config_entry = MockConfigEntry(
@@ -32,11 +32,11 @@ async def test_diagnostics(
         },
         unique_id="abc",
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    await async_setup_integration(hass, MockBridge, config_entry.entry_id)
+    await async_setup_integration(menuai, MockBridge, config_entry.entry_id)
 
-    diag = await get_diagnostics_for_config_entry(hass, hass_client, config_entry)
+    diag = await get_diagnostics_for_config_entry(menuai, menuai_client, config_entry)
     assert diag == {
         "bridge_data": {
             "areas": {

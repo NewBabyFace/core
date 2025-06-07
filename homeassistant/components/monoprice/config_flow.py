@@ -9,16 +9,16 @@ from pymonoprice import get_monoprice
 from serial import SerialException
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_PORT
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.typing import VolDictType
+from menuai.const import CONF_PORT
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.typing import VolDictType
 
 from .const import (
     CONF_SOURCE_1,
@@ -60,13 +60,13 @@ def _sources_from_config(data):
     }
 
 
-async def validate_input(hass: HomeAssistant, data):
+async def validate_input(menuai: menuai, data):
     """Validate the user input allows us to connect.
 
     Data has the keys from DATA_SCHEMA with values provided by the user.
     """
     try:
-        await hass.async_add_executor_job(get_monoprice, data[CONF_PORT])
+        await menuai.async_add_executor_job(get_monoprice, data[CONF_PORT])
     except SerialException as err:
         _LOGGER.error("Error connecting to Monoprice controller")
         raise CannotConnect from err
@@ -89,7 +89,7 @@ class MonoPriceConfigFlow(ConfigFlow, domain=DOMAIN):
         errors = {}
         if user_input is not None:
             try:
-                info = await validate_input(self.hass, user_input)
+                info = await validate_input(self.menuai, user_input)
 
                 return self.async_create_entry(title=user_input[CONF_PORT], data=info)
             except CannotConnect:
@@ -157,5 +157,5 @@ class MonopriceOptionsFlowHandler(OptionsFlow):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""

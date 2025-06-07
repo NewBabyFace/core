@@ -16,8 +16,8 @@ from aiomealie import (
 from mashumaro.codecs.orjson import ORJSONDecoder
 import pytest
 
-from homeassistant.components.mealie.const import DOMAIN
-from homeassistant.const import CONF_API_TOKEN, CONF_HOST
+from menuai.components.mealie.const import DOMAIN
+from menuai.const import CONF_API_TOKEN, CONF_HOST
 
 from tests.common import MockConfigEntry, load_fixture
 
@@ -29,7 +29,7 @@ SHOPPING_ITEM_NOTE = "Shopping Item 1"
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.mealie.async_setup_entry",
+        "menuai.components.mealie.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
         yield mock_setup_entry
@@ -40,11 +40,11 @@ def mock_mealie_client() -> Generator[AsyncMock]:
     """Mock a Mealie client."""
     with (
         patch(
-            "homeassistant.components.mealie.MealieClient",
+            "menuai.components.mealie.MealieClient",
             autospec=True,
         ) as mock_client,
         patch(
-            "homeassistant.components.mealie.config_flow.MealieClient",
+            "menuai.components.mealie.config_flow.MealieClient",
             new=mock_client,
         ),
     ):

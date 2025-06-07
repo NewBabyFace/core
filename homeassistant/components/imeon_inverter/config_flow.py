@@ -7,14 +7,14 @@ from urllib.parse import urlparse
 from imeon_inverter_api.inverter import Inverter
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.helpers.service_info.ssdp import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
+from menuai.helpers.service_info.ssdp import (
     ATTR_UPNP_MODEL_NUMBER,
     ATTR_UPNP_SERIAL,
     SsdpServiceInfo,
 )
-from homeassistant.helpers.typing import VolDictType
+from menuai.helpers.typing import VolDictType
 
 from .const import DOMAIN
 

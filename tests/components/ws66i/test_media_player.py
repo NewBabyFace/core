@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 from freezegun.api import FrozenDateTimeFactory
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     ATTR_INPUT_SOURCE,
     ATTR_INPUT_SOURCE_LIST,
     ATTR_MEDIA_VOLUME_LEVEL,
@@ -14,15 +14,15 @@ from homeassistant.components.media_player import (
     SERVICE_SELECT_SOURCE,
     MediaPlayerEntityFeature,
 )
-from homeassistant.components.ws66i.const import (
+from menuai.components.ws66i.const import (
     CONF_SOURCES,
     DOMAIN,
     INIT_OPTIONS_DEFAULT,
     MAX_VOL,
     POLL_INTERVAL,
 )
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntryState
+from menuai.const import (
     CONF_IP_ADDRESS,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
@@ -33,8 +33,8 @@ from homeassistant.const import (
     STATE_ON,
     STATE_UNAVAILABLE,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry, async_fire_time_changed
 
@@ -121,75 +121,75 @@ class MockWs66i:
         self.zones[zone.zone] = AttrDict(zone)
 
 
-async def test_setup_success(hass: HomeAssistant) -> None:
+async def test_setup_success(menuai: menuai) -> None:
     """Test connection success."""
     config_entry = MockConfigEntry(
         domain=DOMAIN, data=MOCK_CONFIG, options=MOCK_OPTIONS
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.ws66i.get_ws66i",
+        "menuai.components.ws66i.get_ws66i",
         new=lambda *a: MockWs66i(),
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
-    assert hass.states.get(ZONE_1_ID) is not None
+    assert menuai.states.get(ZONE_1_ID) is not None
 
 
-async def _setup_ws66i(hass: HomeAssistant, ws66i) -> MockConfigEntry:
+async def _setup_ws66i(menuai: menuai, ws66i) -> MockConfigEntry:
     config_entry = MockConfigEntry(
         domain=DOMAIN, data=MOCK_CONFIG, options=MOCK_DEFAULT_OPTIONS
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.ws66i.get_ws66i",
+        "menuai.components.ws66i.get_ws66i",
         new=lambda *a: ws66i,
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     return config_entry
 
 
-async def _setup_ws66i_with_options(hass: HomeAssistant, ws66i) -> MockConfigEntry:
+async def _setup_ws66i_with_options(menuai: menuai, ws66i) -> MockConfigEntry:
     config_entry = MockConfigEntry(
         domain=DOMAIN, data=MOCK_CONFIG, options=MOCK_OPTIONS
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.ws66i.get_ws66i",
+        "menuai.components.ws66i.get_ws66i",
         new=lambda *a: ws66i,
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     return config_entry
 
 
 async def _call_media_player_service(
-    hass: HomeAssistant, name: str, data: dict[str, Any]
+    menuai: menuai, name: str, data: dict[str, Any]
 ) -> None:
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN, name, service_data=data, blocking=True
     )
 
 
-async def test_update(hass: HomeAssistant, freezer: FrozenDateTimeFactory) -> None:
+async def test_update(menuai: menuai, freezer: FrozenDateTimeFactory) -> None:
     """Test updating values from ws66i."""
     ws66i = MockWs66i()
-    _ = await _setup_ws66i_with_options(hass, ws66i)
+    _ = await _setup_ws66i_with_options(menuai, ws66i)
 
     # Changing media player to new state
     await _call_media_player_service(
-        hass, SERVICE_VOLUME_SET, {"entity_id": ZONE_1_ID, "volume_level": 0.0}
+        menuai, SERVICE_VOLUME_SET, {"entity_id": ZONE_1_ID, "volume_level": 0.0}
     )
     await _call_media_player_service(
-        hass, SERVICE_SELECT_SOURCE, {"entity_id": ZONE_1_ID, "source": "one"}
+        menuai, SERVICE_SELECT_SOURCE, {"entity_id": ZONE_1_ID, "source": "one"}
     )
 
     ws66i.set_source(11, 3)
@@ -197,72 +197,72 @@ async def test_update(hass: HomeAssistant, freezer: FrozenDateTimeFactory) -> No
 
     with patch.object(MockWs66i, "open") as method_call:
         freezer.tick(POLL_INTERVAL)
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done(wait_background_tasks=True)
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done(wait_background_tasks=True)
 
         assert not method_call.called
 
-    state = hass.states.get(ZONE_1_ID)
+    state = menuai.states.get(ZONE_1_ID)
 
-    assert hass.states.is_state(ZONE_1_ID, STATE_ON)
+    assert menuai.states.is_state(ZONE_1_ID, STATE_ON)
     assert state.attributes[ATTR_MEDIA_VOLUME_LEVEL] == 1.0
     assert state.attributes[ATTR_INPUT_SOURCE] == "three"
 
 
 async def test_failed_update(
-    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+    menuai: menuai, freezer: FrozenDateTimeFactory
 ) -> None:
     """Test updating failure from ws66i."""
     ws66i = MockWs66i()
-    _ = await _setup_ws66i_with_options(hass, ws66i)
+    _ = await _setup_ws66i_with_options(menuai, ws66i)
 
     # Changing media player to new state
     await _call_media_player_service(
-        hass, SERVICE_VOLUME_SET, {"entity_id": ZONE_1_ID, "volume_level": 0.0}
+        menuai, SERVICE_VOLUME_SET, {"entity_id": ZONE_1_ID, "volume_level": 0.0}
     )
     await _call_media_player_service(
-        hass, SERVICE_SELECT_SOURCE, {"entity_id": ZONE_1_ID, "source": "one"}
+        menuai, SERVICE_SELECT_SOURCE, {"entity_id": ZONE_1_ID, "source": "one"}
     )
 
     ws66i.set_source(11, 3)
     ws66i.set_volume(11, MAX_VOL)
 
     freezer.tick(POLL_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     # Failed update, close called
     with patch.object(MockWs66i, "zone_status", return_value=None):
         freezer.tick(POLL_INTERVAL)
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done(wait_background_tasks=True)
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done(wait_background_tasks=True)
 
-    assert hass.states.is_state(ZONE_1_ID, STATE_UNAVAILABLE)
+    assert menuai.states.is_state(ZONE_1_ID, STATE_UNAVAILABLE)
 
     # A connection re-attempt fails
     with patch.object(MockWs66i, "zone_status", return_value=None):
         freezer.tick(POLL_INTERVAL)
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done(wait_background_tasks=True)
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done(wait_background_tasks=True)
 
     # A connection re-attempt succeeds
     freezer.tick(POLL_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     # confirm entity is back on
-    state = hass.states.get(ZONE_1_ID)
+    state = menuai.states.get(ZONE_1_ID)
 
-    assert hass.states.is_state(ZONE_1_ID, STATE_ON)
+    assert menuai.states.is_state(ZONE_1_ID, STATE_ON)
     assert state.attributes[ATTR_MEDIA_VOLUME_LEVEL] == 1.0
     assert state.attributes[ATTR_INPUT_SOURCE] == "three"
 
 
-async def test_supported_features(hass: HomeAssistant) -> None:
+async def test_supported_features(menuai: menuai) -> None:
     """Test supported features property."""
-    await _setup_ws66i(hass, MockWs66i())
+    await _setup_ws66i(menuai, MockWs66i())
 
-    state = hass.states.get(ZONE_1_ID)
+    state = menuai.states.get(ZONE_1_ID)
     assert (
         state.attributes["supported_features"]
         == MediaPlayerEntityFeature.VOLUME_MUTE
@@ -274,33 +274,33 @@ async def test_supported_features(hass: HomeAssistant) -> None:
     )
 
 
-async def test_source_list(hass: HomeAssistant) -> None:
+async def test_source_list(menuai: menuai) -> None:
     """Test source list property."""
-    await _setup_ws66i(hass, MockWs66i())
+    await _setup_ws66i(menuai, MockWs66i())
 
-    state = hass.states.get(ZONE_1_ID)
+    state = menuai.states.get(ZONE_1_ID)
     # Note, the list is sorted!
     assert state.attributes[ATTR_INPUT_SOURCE_LIST] == list(
         INIT_OPTIONS_DEFAULT.values()
     )
 
 
-async def test_source_list_with_options(hass: HomeAssistant) -> None:
+async def test_source_list_with_options(menuai: menuai) -> None:
     """Test source list property."""
-    await _setup_ws66i_with_options(hass, MockWs66i())
+    await _setup_ws66i_with_options(menuai, MockWs66i())
 
-    state = hass.states.get(ZONE_1_ID)
+    state = menuai.states.get(ZONE_1_ID)
     # Note, the list is sorted!
     assert state.attributes[ATTR_INPUT_SOURCE_LIST] == list(MOCK_SOURCE_DIC.values())
 
 
-async def test_select_source(hass: HomeAssistant) -> None:
+async def test_select_source(menuai: menuai) -> None:
     """Test source selection methods."""
     ws66i = MockWs66i()
-    await _setup_ws66i_with_options(hass, ws66i)
+    await _setup_ws66i_with_options(menuai, ws66i)
 
     await _call_media_player_service(
-        hass,
+        menuai,
         SERVICE_SELECT_SOURCE,
         {"entity_id": ZONE_1_ID, ATTR_INPUT_SOURCE: "three"},
     )
@@ -308,177 +308,177 @@ async def test_select_source(hass: HomeAssistant) -> None:
 
 
 async def test_source_select(
-    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+    menuai: menuai, freezer: FrozenDateTimeFactory
 ) -> None:
     """Test source selection simulated from keypad."""
     ws66i = MockWs66i()
-    _ = await _setup_ws66i_with_options(hass, ws66i)
+    _ = await _setup_ws66i_with_options(menuai, ws66i)
 
     ws66i.set_source(11, 5)
 
     freezer.tick(POLL_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get(ZONE_1_ID)
+    state = menuai.states.get(ZONE_1_ID)
 
     assert state.attributes.get(ATTR_INPUT_SOURCE) == "five"
 
 
-async def test_turn_on_off(hass: HomeAssistant) -> None:
+async def test_turn_on_off(menuai: menuai) -> None:
     """Test turning on the zone."""
     ws66i = MockWs66i()
-    await _setup_ws66i(hass, ws66i)
+    await _setup_ws66i(menuai, ws66i)
 
-    await _call_media_player_service(hass, SERVICE_TURN_OFF, {"entity_id": ZONE_1_ID})
+    await _call_media_player_service(menuai, SERVICE_TURN_OFF, {"entity_id": ZONE_1_ID})
     assert not ws66i.zones[11].power
 
-    await _call_media_player_service(hass, SERVICE_TURN_ON, {"entity_id": ZONE_1_ID})
+    await _call_media_player_service(menuai, SERVICE_TURN_ON, {"entity_id": ZONE_1_ID})
     assert ws66i.zones[11].power
 
 
-async def test_mute_volume(hass: HomeAssistant) -> None:
+async def test_mute_volume(menuai: menuai) -> None:
     """Test mute functionality."""
     ws66i = MockWs66i()
-    await _setup_ws66i(hass, ws66i)
+    await _setup_ws66i(menuai, ws66i)
 
     await _call_media_player_service(
-        hass, SERVICE_VOLUME_SET, {"entity_id": ZONE_1_ID, "volume_level": 0.5}
+        menuai, SERVICE_VOLUME_SET, {"entity_id": ZONE_1_ID, "volume_level": 0.5}
     )
     await _call_media_player_service(
-        hass, SERVICE_VOLUME_MUTE, {"entity_id": ZONE_1_ID, "is_volume_muted": False}
+        menuai, SERVICE_VOLUME_MUTE, {"entity_id": ZONE_1_ID, "is_volume_muted": False}
     )
     assert not ws66i.zones[11].mute
 
     await _call_media_player_service(
-        hass, SERVICE_VOLUME_MUTE, {"entity_id": ZONE_1_ID, "is_volume_muted": True}
+        menuai, SERVICE_VOLUME_MUTE, {"entity_id": ZONE_1_ID, "is_volume_muted": True}
     )
     assert ws66i.zones[11].mute
 
 
 async def test_volume_up_down(
-    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+    menuai: menuai, freezer: FrozenDateTimeFactory
 ) -> None:
     """Test increasing volume by one."""
     ws66i = MockWs66i()
-    _ = await _setup_ws66i(hass, ws66i)
+    _ = await _setup_ws66i(menuai, ws66i)
 
     await _call_media_player_service(
-        hass, SERVICE_VOLUME_SET, {"entity_id": ZONE_1_ID, "volume_level": 0.0}
+        menuai, SERVICE_VOLUME_SET, {"entity_id": ZONE_1_ID, "volume_level": 0.0}
     )
     assert ws66i.zones[11].volume == 0
 
     await _call_media_player_service(
-        hass, SERVICE_VOLUME_DOWN, {"entity_id": ZONE_1_ID}
+        menuai, SERVICE_VOLUME_DOWN, {"entity_id": ZONE_1_ID}
     )
     freezer.tick(POLL_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
     # should not go below zero
     assert ws66i.zones[11].volume == 0
 
-    await _call_media_player_service(hass, SERVICE_VOLUME_UP, {"entity_id": ZONE_1_ID})
+    await _call_media_player_service(menuai, SERVICE_VOLUME_UP, {"entity_id": ZONE_1_ID})
     freezer.tick(POLL_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
     assert ws66i.zones[11].volume == 1
 
     await _call_media_player_service(
-        hass, SERVICE_VOLUME_SET, {"entity_id": ZONE_1_ID, "volume_level": 1.0}
+        menuai, SERVICE_VOLUME_SET, {"entity_id": ZONE_1_ID, "volume_level": 1.0}
     )
     freezer.tick(POLL_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
     assert ws66i.zones[11].volume == MAX_VOL
 
-    await _call_media_player_service(hass, SERVICE_VOLUME_UP, {"entity_id": ZONE_1_ID})
+    await _call_media_player_service(menuai, SERVICE_VOLUME_UP, {"entity_id": ZONE_1_ID})
 
     freezer.tick(POLL_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
     # should not go above 38 (MAX_VOL)
     assert ws66i.zones[11].volume == MAX_VOL
 
     await _call_media_player_service(
-        hass, SERVICE_VOLUME_DOWN, {"entity_id": ZONE_1_ID}
+        menuai, SERVICE_VOLUME_DOWN, {"entity_id": ZONE_1_ID}
     )
     assert ws66i.zones[11].volume == MAX_VOL - 1
 
 
-async def test_volume_while_mute(hass: HomeAssistant) -> None:
+async def test_volume_while_mute(menuai: menuai) -> None:
     """Test increasing volume by one."""
     ws66i = MockWs66i()
-    _ = await _setup_ws66i(hass, ws66i)
+    _ = await _setup_ws66i(menuai, ws66i)
 
     # Set vol to a known value
     await _call_media_player_service(
-        hass, SERVICE_VOLUME_SET, {"entity_id": ZONE_1_ID, "volume_level": 0.0}
+        menuai, SERVICE_VOLUME_SET, {"entity_id": ZONE_1_ID, "volume_level": 0.0}
     )
     assert ws66i.zones[11].volume == 0
 
     # Set mute to a known value, False
     await _call_media_player_service(
-        hass, SERVICE_VOLUME_MUTE, {"entity_id": ZONE_1_ID, "is_volume_muted": False}
+        menuai, SERVICE_VOLUME_MUTE, {"entity_id": ZONE_1_ID, "is_volume_muted": False}
     )
     assert not ws66i.zones[11].mute
 
     # Mute the zone
     await _call_media_player_service(
-        hass, SERVICE_VOLUME_MUTE, {"entity_id": ZONE_1_ID, "is_volume_muted": True}
+        menuai, SERVICE_VOLUME_MUTE, {"entity_id": ZONE_1_ID, "is_volume_muted": True}
     )
     assert ws66i.zones[11].mute
 
     # Increase volume. Mute state should go back to unmutted
-    await _call_media_player_service(hass, SERVICE_VOLUME_UP, {"entity_id": ZONE_1_ID})
+    await _call_media_player_service(menuai, SERVICE_VOLUME_UP, {"entity_id": ZONE_1_ID})
     assert ws66i.zones[11].volume == 1
     assert not ws66i.zones[11].mute
 
     # Mute the zone again
     await _call_media_player_service(
-        hass, SERVICE_VOLUME_MUTE, {"entity_id": ZONE_1_ID, "is_volume_muted": True}
+        menuai, SERVICE_VOLUME_MUTE, {"entity_id": ZONE_1_ID, "is_volume_muted": True}
     )
     assert ws66i.zones[11].mute
 
     # Decrease volume. Mute state should go back to unmutted
     await _call_media_player_service(
-        hass, SERVICE_VOLUME_DOWN, {"entity_id": ZONE_1_ID}
+        menuai, SERVICE_VOLUME_DOWN, {"entity_id": ZONE_1_ID}
     )
     assert ws66i.zones[11].volume == 0
     assert not ws66i.zones[11].mute
 
     # Mute the zone again
     await _call_media_player_service(
-        hass, SERVICE_VOLUME_MUTE, {"entity_id": ZONE_1_ID, "is_volume_muted": True}
+        menuai, SERVICE_VOLUME_MUTE, {"entity_id": ZONE_1_ID, "is_volume_muted": True}
     )
     assert ws66i.zones[11].mute
 
     # Set to max volume. Mute state should go back to unmutted
     await _call_media_player_service(
-        hass, SERVICE_VOLUME_SET, {"entity_id": ZONE_1_ID, "volume_level": 1.0}
+        menuai, SERVICE_VOLUME_SET, {"entity_id": ZONE_1_ID, "volume_level": 1.0}
     )
     assert ws66i.zones[11].volume == MAX_VOL
     assert not ws66i.zones[11].mute
 
 
 async def test_first_run_with_available_zones(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test first run with all zones available."""
     ws66i = MockWs66i()
-    await _setup_ws66i(hass, ws66i)
+    await _setup_ws66i(menuai, ws66i)
 
     entry = entity_registry.async_get(ZONE_7_ID)
     assert not entry.disabled
 
 
 async def test_first_run_with_failing_zones(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test first run with failed zones."""
     ws66i = MockWs66i()
 
     with patch.object(MockWs66i, "zone_status", return_value=None):
-        await _setup_ws66i(hass, ws66i)
+        await _setup_ws66i(menuai, ws66i)
 
     entry = entity_registry.async_get(ZONE_1_ID)
     assert entry is None
@@ -488,11 +488,11 @@ async def test_first_run_with_failing_zones(
 
 
 async def test_register_all_entities(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test run with all entities registered."""
     ws66i = MockWs66i()
-    await _setup_ws66i(hass, ws66i)
+    await _setup_ws66i(menuai, ws66i)
 
     entry = entity_registry.async_get(ZONE_1_ID)
     assert not entry.disabled
@@ -502,11 +502,11 @@ async def test_register_all_entities(
 
 
 async def test_register_entities_in_1_amp_only(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test run with only zones 11-16 registered."""
     ws66i = MockWs66i(fail_zone_check=[21])
-    await _setup_ws66i(hass, ws66i)
+    await _setup_ws66i(menuai, ws66i)
 
     entry = entity_registry.async_get(ZONE_1_ID)
     assert not entry.disabled

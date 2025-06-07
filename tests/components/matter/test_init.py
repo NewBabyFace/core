@@ -16,17 +16,17 @@ from matter_server.client.exceptions import (
 from matter_server.common.errors import MatterError
 import pytest
 
-from homeassistant.components.hassio import HassioAPIError
-from homeassistant.components.matter.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryDisabler, ConfigEntryState
-from homeassistant.const import STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import (
+from menuai.components.menuaiio import menuaiioAPIError
+from menuai.components.matter.const import DOMAIN
+from menuai.config_entries import ConfigEntryDisabler, ConfigEntryState
+from menuai.const import STATE_UNAVAILABLE
+from menuai.core import menuai
+from menuai.helpers import (
     device_registry as dr,
     entity_registry as er,
     issue_registry as ir,
 )
-from homeassistant.setup import async_setup_component
+from menuai.setup import async_setup_component
 
 from .common import create_node_from_fixture, setup_integration_with_node_fixture
 
@@ -37,7 +37,7 @@ from tests.typing import WebSocketGenerator
 @pytest.fixture(name="connect_timeout")
 def connect_timeout_fixture() -> Generator[int]:
     """Mock the connect timeout."""
-    with patch("homeassistant.components.matter.CONNECT_TIMEOUT", new=0) as timeout:
+    with patch("menuai.components.matter.CONNECT_TIMEOUT", new=0) as timeout:
         yield timeout
 
 
@@ -45,13 +45,13 @@ def connect_timeout_fixture() -> Generator[int]:
 def listen_ready_timeout_fixture() -> Generator[int]:
     """Mock the listen ready timeout."""
     with patch(
-        "homeassistant.components.matter.LISTEN_READY_TIMEOUT", new=0
+        "menuai.components.matter.LISTEN_READY_TIMEOUT", new=0
     ) as timeout:
         yield timeout
 
 
 async def test_entry_setup_unload(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
 ) -> None:
     """Test the integration set up and unload."""
@@ -59,68 +59,68 @@ async def test_entry_setup_unload(
     matter_client.get_nodes.return_value = [node]
     matter_client.get_node.return_value = node
     entry = MockConfigEntry(domain="matter", data={"url": "ws://localhost:5580/ws"})
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert matter_client.connect.call_count == 1
     assert matter_client.set_default_fabric_label.call_count == 1
     assert entry.state is ConfigEntryState.LOADED
-    entity_state = hass.states.get("light.mock_onoff_light")
+    entity_state = menuai.states.get("light.mock_onoff_light")
     assert entity_state
     assert entity_state.state != STATE_UNAVAILABLE
 
-    await hass.config_entries.async_unload(entry.entry_id)
+    await menuai.config_entries.async_unload(entry.entry_id)
 
     assert matter_client.disconnect.call_count == 1
     assert entry.state is ConfigEntryState.NOT_LOADED
-    entity_state = hass.states.get("light.mock_onoff_light")
+    entity_state = menuai.states.get("light.mock_onoff_light")
     assert entity_state
     assert entity_state.state == STATE_UNAVAILABLE
 
 
 async def test_home_assistant_stop(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     integration: MockConfigEntry,
 ) -> None:
-    """Test clean up on home assistant stop."""
-    await hass.async_stop()
+    """Test clean up on MenuAI stop."""
+    await menuai.async_stop()
 
     assert matter_client.disconnect.call_count == 1
 
 
 @pytest.mark.parametrize("error", [CannotConnect(Exception("Boom")), Exception("Boom")])
 async def test_connect_failed(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     error: Exception,
 ) -> None:
     """Test failure during client connection."""
     entry = MockConfigEntry(domain=DOMAIN, data={"url": "ws://localhost:5580/ws"})
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     matter_client.connect.side_effect = error
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.SETUP_RETRY
 
 
 @pytest.mark.parametrize("expected_lingering_tasks", [True])
 async def test_set_default_fabric_label_failed(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
 ) -> None:
     """Test failure during client connection."""
     entry = MockConfigEntry(domain=DOMAIN, data={"url": "ws://localhost:5580/ws"})
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     matter_client.set_default_fabric_label.side_effect = NotConnected()
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert matter_client.connect.call_count == 1
     assert matter_client.set_default_fabric_label.call_count == 1
@@ -129,23 +129,23 @@ async def test_set_default_fabric_label_failed(
 
 
 async def test_connect_timeout(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     connect_timeout: int,
 ) -> None:
     """Test timeout during client connection."""
     entry = MockConfigEntry(domain=DOMAIN, data={"url": "ws://localhost:5580/ws"})
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.SETUP_RETRY
 
 
 @pytest.mark.parametrize("error", [MatterError("Boom"), Exception("Boom")])
 async def test_listen_failure_timeout(
-    hass: HomeAssistant,
+    menuai: menuai,
     listen_ready_timeout: int,
     matter_client: MagicMock,
     error: Exception,
@@ -160,17 +160,17 @@ async def test_listen_failure_timeout(
 
     matter_client.start_listening.side_effect = start_listening
     entry = MockConfigEntry(domain=DOMAIN, data={"url": "ws://localhost:5580/ws"})
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.SETUP_RETRY
 
 
 @pytest.mark.parametrize("error", [MatterError("Boom"), Exception("Boom")])
 async def test_listen_failure_config_entry_not_loaded(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     error: Exception,
 ) -> None:
@@ -193,10 +193,10 @@ async def test_listen_failure_config_entry_not_loaded(
     matter_client.start_listening.side_effect = start_listening
     matter_client.get_nodes.side_effect = get_nodes
     entry = MockConfigEntry(domain=DOMAIN, data={"url": "ws://localhost:5580/ws"})
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.SETUP_RETRY
     assert matter_client.disconnect.call_count == 1
@@ -204,7 +204,7 @@ async def test_listen_failure_config_entry_not_loaded(
 
 @pytest.mark.parametrize("error", [MatterError("Boom"), Exception("Boom")])
 async def test_listen_failure_config_entry_loaded(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     error: Exception,
 ) -> None:
@@ -221,22 +221,22 @@ async def test_listen_failure_config_entry_loaded(
 
     matter_client.start_listening.side_effect = start_listening
     entry = MockConfigEntry(domain=DOMAIN, data={"url": "ws://localhost:5580/ws"})
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.LOADED
 
     listen_block.set()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.SETUP_RETRY
     assert matter_client.disconnect.call_count == 1
 
 
 async def test_raise_addon_task_in_progress(
-    hass: HomeAssistant,
+    menuai: menuai,
     addon_not_installed: AsyncMock,
     install_addon: AsyncMock,
     start_addon: AsyncMock,
@@ -261,9 +261,9 @@ async def test_raise_addon_task_in_progress(
             "use_addon": True,
         },
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
+    await menuai.config_entries.async_setup(entry.entry_id)
     await asyncio.sleep(0.05)
 
     assert entry.state is ConfigEntryState.SETUP_RETRY
@@ -271,7 +271,7 @@ async def test_raise_addon_task_in_progress(
     assert start_addon.call_count == 0
 
     # Check that we only call install add-on once if a task is in progress.
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)
     await asyncio.sleep(0.05)
 
     assert entry.state is ConfigEntryState.SETUP_RETRY
@@ -279,14 +279,14 @@ async def test_raise_addon_task_in_progress(
     assert start_addon.call_count == 0
 
     install_event.set()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert install_addon.call_count == 1
     assert start_addon.call_count == 1
 
 
 async def test_start_addon(
-    hass: HomeAssistant,
+    menuai: menuai,
     addon_installed: AsyncMock,
     addon_info: AsyncMock,
     install_addon: AsyncMock,
@@ -301,10 +301,10 @@ async def test_start_addon(
             "use_addon": True,
         },
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.SETUP_RETRY
     assert addon_info.call_count == 1
@@ -314,7 +314,7 @@ async def test_start_addon(
 
 
 async def test_install_addon(
-    hass: HomeAssistant,
+    menuai: menuai,
     addon_not_installed: AsyncMock,
     addon_store_info: AsyncMock,
     install_addon: AsyncMock,
@@ -329,10 +329,10 @@ async def test_install_addon(
             "use_addon": True,
         },
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.SETUP_RETRY
     assert addon_store_info.call_count == 3
@@ -343,7 +343,7 @@ async def test_install_addon(
 
 
 async def test_addon_info_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     addon_installed: AsyncMock,
     addon_info: AsyncMock,
     install_addon: AsyncMock,
@@ -359,10 +359,10 @@ async def test_addon_info_failure(
             "use_addon": True,
         },
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.SETUP_RETRY
     assert addon_info.call_count == 1
@@ -399,13 +399,13 @@ async def test_addon_info_failure(
             0,
             1,
             None,
-            HassioAPIError("Boom"),
+            menuaiioAPIError("Boom"),
             ServerVersionTooOld("Invalid version"),
         ),
     ],
 )
 async def test_update_addon(
-    hass: HomeAssistant,
+    menuai: menuai,
     addon_installed: AsyncMock,
     addon_running: AsyncMock,
     addon_info: AsyncMock,
@@ -436,10 +436,10 @@ async def test_update_addon(
             "use_addon": True,
         },
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.SETUP_RETRY
     assert create_backup.call_count == backup_calls
@@ -463,7 +463,7 @@ async def test_update_addon(
     ],
 )
 async def test_issue_registry_invalid_version(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     issue_registry: ir.IssueRegistry,
     connect_side_effect: Exception,
@@ -480,10 +480,10 @@ async def test_issue_registry_invalid_version(
             "use_addon": False,
         },
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     entry_state = entry.state
     assert entry_state is ConfigEntryState.SETUP_RETRY
@@ -491,8 +491,8 @@ async def test_issue_registry_invalid_version(
 
     matter_client.connect.side_effect = original_connect_side_effect
 
-    await hass.config_entries.async_reload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_reload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.LOADED
     assert not issue_registry.async_get_issue(DOMAIN, issue_raised)
@@ -506,7 +506,7 @@ async def test_issue_registry_invalid_version(
     ],
 )
 async def test_stop_addon(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     addon_installed: AsyncMock,
     addon_running: AsyncMock,
@@ -525,19 +525,19 @@ async def test_stop_addon(
             "use_addon": True,
         },
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.LOADED
     assert addon_info.call_count == 1
     addon_info.reset_mock()
 
-    await hass.config_entries.async_set_disabled_by(
+    await menuai.config_entries.async_set_disabled_by(
         entry.entry_id, ConfigEntryDisabler.USER
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert entry.state == entry_state
     assert stop_addon.call_count == 1
@@ -545,7 +545,7 @@ async def test_stop_addon(
 
 
 async def test_remove_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     addon_installed: AsyncMock,
     stop_addon: AsyncMock,
     create_backup: AsyncMock,
@@ -559,14 +559,14 @@ async def test_remove_entry(
         title="Matter",
         data={"integration_created_addon": False},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     assert entry.state is ConfigEntryState.NOT_LOADED
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
 
-    await hass.config_entries.async_remove(entry.entry_id)
+    await menuai.config_entries.async_remove(entry.entry_id)
 
     assert entry.state is ConfigEntryState.NOT_LOADED
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 0
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 0
 
     # test successful remove with created add-on
     entry = MockConfigEntry(
@@ -574,40 +574,40 @@ async def test_remove_entry(
         title="Matter",
         data={"integration_created_addon": True},
     )
-    entry.add_to_hass(hass)
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    entry.add_to_menuai(menuai)
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
 
-    await hass.config_entries.async_remove(entry.entry_id)
+    await menuai.config_entries.async_remove(entry.entry_id)
 
     assert stop_addon.call_count == 1
     assert stop_addon.call_args == call("core_matter_server")
     assert create_backup.call_count == 1
     assert create_backup.call_args == call(
-        hass,
+        menuai,
         {"name": "addon_core_matter_server_1.0.0", "addons": ["core_matter_server"]},
         partial=True,
     )
     assert uninstall_addon.call_count == 1
     assert uninstall_addon.call_args == call("core_matter_server")
     assert entry.state is ConfigEntryState.NOT_LOADED
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 0
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 0
     stop_addon.reset_mock()
     create_backup.reset_mock()
     uninstall_addon.reset_mock()
 
     # test add-on stop failure
-    entry.add_to_hass(hass)
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    entry.add_to_menuai(menuai)
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
     stop_addon.side_effect = SupervisorError()
 
-    await hass.config_entries.async_remove(entry.entry_id)
+    await menuai.config_entries.async_remove(entry.entry_id)
 
     assert stop_addon.call_count == 1
     assert stop_addon.call_args == call("core_matter_server")
     assert create_backup.call_count == 0
     assert uninstall_addon.call_count == 0
     assert entry.state is ConfigEntryState.NOT_LOADED
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 0
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 0
     assert "Failed to stop the Matter Server add-on" in caplog.text
     stop_addon.side_effect = None
     stop_addon.reset_mock()
@@ -615,23 +615,23 @@ async def test_remove_entry(
     uninstall_addon.reset_mock()
 
     # test create backup failure
-    entry.add_to_hass(hass)
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
-    create_backup.side_effect = HassioAPIError()
+    entry.add_to_menuai(menuai)
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
+    create_backup.side_effect = menuaiioAPIError()
 
-    await hass.config_entries.async_remove(entry.entry_id)
+    await menuai.config_entries.async_remove(entry.entry_id)
 
     assert stop_addon.call_count == 1
     assert stop_addon.call_args == call("core_matter_server")
     assert create_backup.call_count == 1
     assert create_backup.call_args == call(
-        hass,
+        menuai,
         {"name": "addon_core_matter_server_1.0.0", "addons": ["core_matter_server"]},
         partial=True,
     )
     assert uninstall_addon.call_count == 0
     assert entry.state is ConfigEntryState.NOT_LOADED
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 0
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 0
     assert "Failed to create a backup of the Matter Server add-on" in caplog.text
     create_backup.side_effect = None
     stop_addon.reset_mock()
@@ -639,40 +639,40 @@ async def test_remove_entry(
     uninstall_addon.reset_mock()
 
     # test add-on uninstall failure
-    entry.add_to_hass(hass)
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    entry.add_to_menuai(menuai)
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
     uninstall_addon.side_effect = SupervisorError()
 
-    await hass.config_entries.async_remove(entry.entry_id)
+    await menuai.config_entries.async_remove(entry.entry_id)
 
     assert stop_addon.call_count == 1
     assert stop_addon.call_args == call("core_matter_server")
     assert create_backup.call_count == 1
     assert create_backup.call_args == call(
-        hass,
+        menuai,
         {"name": "addon_core_matter_server_1.0.0", "addons": ["core_matter_server"]},
         partial=True,
     )
     assert uninstall_addon.call_count == 1
     assert uninstall_addon.call_args == call("core_matter_server")
     assert entry.state is ConfigEntryState.NOT_LOADED
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 0
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 0
     assert "Failed to uninstall the Matter Server add-on" in caplog.text
 
 
 async def test_remove_config_entry_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     matter_client: MagicMock,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test that a device can be removed ok."""
-    assert await async_setup_component(hass, "config", {})
-    await setup_integration_with_node_fixture(hass, "device_diagnostics", matter_client)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "config", {})
+    await setup_integration_with_node_fixture(menuai, "device_diagnostics", matter_client)
+    await menuai.async_block_till_done()
 
-    config_entry = hass.config_entries.async_entries(DOMAIN)[0]
+    config_entry = menuai.config_entries.async_entries(DOMAIN)[0]
     device_entry = dr.async_entries_for_config_entry(
         device_registry, config_entry.entry_id
     )[0]
@@ -680,27 +680,27 @@ async def test_remove_config_entry_device(
 
     assert device_entry
     assert entity_registry.async_get(entity_id)
-    assert hass.states.get(entity_id)
+    assert menuai.states.get(entity_id)
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     response = await client.remove_device(device_entry.id, config_entry.entry_id)
     assert response["success"]
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert not device_registry.async_get(device_entry.id)
     assert not entity_registry.async_get(entity_id)
-    assert not hass.states.get(entity_id)
+    assert not menuai.states.get(entity_id)
 
 
 async def test_remove_config_entry_device_no_node(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     matter_client: MagicMock,
     integration: MockConfigEntry,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test that a device can be removed ok without an existing node."""
-    assert await async_setup_component(hass, "config", {})
+    assert await async_setup_component(menuai, "config", {})
     config_entry = integration
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
@@ -709,9 +709,9 @@ async def test_remove_config_entry_device_no_node(
         },
     )
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     response = await client.remove_device(device_entry.id, config_entry.entry_id)
     assert response["success"]
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert not device_registry.async_get(device_entry.id)

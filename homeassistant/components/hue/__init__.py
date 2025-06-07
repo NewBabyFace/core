@@ -2,11 +2,11 @@
 
 from aiohue.util import normalize_bridge_id
 
-from homeassistant.components import persistent_notification
-from homeassistant.config_entries import SOURCE_IGNORE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, device_registry as dr
-from homeassistant.helpers.typing import ConfigType
+from menuai.components import persistent_notification
+from menuai.config_entries import SOURCE_IGNORE
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, device_registry as dr
+from menuai.helpers.typing import ConfigType
 
 from .bridge import HueBridge, HueConfigEntry
 from .const import DOMAIN
@@ -16,21 +16,21 @@ from .services import async_setup_services
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up Hue integration."""
 
-    async_setup_services(hass)
+    async_setup_services(menuai)
 
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: HueConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: HueConfigEntry) -> bool:
     """Set up a bridge from a config entry."""
     # check (and run) migrations if needed
-    await check_migration(hass, entry)
+    await check_migration(menuai, entry)
 
     # setup the bridge instance
-    bridge = HueBridge(hass, entry)
+    bridge = HueBridge(menuai, entry)
     if not await bridge.async_initialize_bridge():
         return False
 
@@ -39,37 +39,37 @@ async def async_setup_entry(hass: HomeAssistant, entry: HueConfigEntry) -> bool:
     # For backwards compat
     unique_id = normalize_bridge_id(api.config.bridge_id)
     if entry.unique_id is None:
-        hass.config_entries.async_update_entry(entry, unique_id=unique_id)
+        menuai.config_entries.async_update_entry(entry, unique_id=unique_id)
 
     # For recovering from bug where we incorrectly assumed homekit ID = bridge ID
-    # Remove this logic after Home Assistant 2022.4
+    # Remove this logic after MenuAI 2022.4
     elif entry.unique_id != unique_id:
         # Find entries with this unique ID
         other_entry = next(
             (
                 entry
-                for entry in hass.config_entries.async_entries(DOMAIN)
+                for entry in menuai.config_entries.async_entries(DOMAIN)
                 if entry.unique_id == unique_id
             ),
             None,
         )
         if other_entry is None:
             # If no other entry, update unique ID of this entry ID.
-            hass.config_entries.async_update_entry(entry, unique_id=unique_id)
+            menuai.config_entries.async_update_entry(entry, unique_id=unique_id)
 
         elif other_entry.source == SOURCE_IGNORE:
             # There is another entry but it is ignored, delete that one and update this one
-            hass.async_create_task(
-                hass.config_entries.async_remove(other_entry.entry_id)
+            menuai.async_create_task(
+                menuai.config_entries.async_remove(other_entry.entry_id)
             )
-            hass.config_entries.async_update_entry(entry, unique_id=unique_id)
+            menuai.config_entries.async_update_entry(entry, unique_id=unique_id)
         else:
             # There is another entry that already has the right unique ID. Delete this entry
-            hass.async_create_task(hass.config_entries.async_remove(entry.entry_id))
+            menuai.async_create_task(menuai.config_entries.async_remove(entry.entry_id))
             return False
 
     # add bridge device to device registry
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     if bridge.api_version == 1:
         device_registry.async_get_or_create(
             config_entry_id=entry.entry_id,
@@ -86,7 +86,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HueConfigEntry) -> bool:
             and api.config.software_version < "1935144040"
         ):
             persistent_notification.async_create(
-                hass,
+                menuai,
                 (
                     "Your Hue hub has a known security vulnerability ([CVE-2020-6007] "
                     "(https://cve.circl.lu/cve/CVE-2020-6007)). "
@@ -112,6 +112,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: HueConfigEntry) -> bool:
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: HueConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: HueConfigEntry) -> bool:
     """Unload a config entry."""
     return await entry.runtime_data.async_reset()

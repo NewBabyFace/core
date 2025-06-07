@@ -2,9 +2,9 @@
 
 from typing import Any
 
-from homeassistant.components.switch import SwitchDeviceClass, SwitchEntity
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchDeviceClass, SwitchEntity
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import AdvantageAirDataConfigEntry
 from .const import (
@@ -18,7 +18,7 @@ from .models import AdvantageAirData
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: AdvantageAirDataConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

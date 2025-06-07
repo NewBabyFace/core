@@ -1,15 +1,15 @@
 """Support for Nexia / Trane XL Thermostats."""
 
-from homeassistant.components.binary_sensor import BinarySensorEntity
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.binary_sensor import BinarySensorEntity
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .entity import NexiaThermostatEntity
 from .types import NexiaConfigEntry
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: NexiaConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

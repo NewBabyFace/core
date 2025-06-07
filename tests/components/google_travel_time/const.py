@@ -1,12 +1,12 @@
 """Constants for google_travel_time tests."""
 
-from homeassistant.components.google_travel_time.const import (
+from menuai.components.google_travel_time.const import (
     CONF_DESTINATION,
     CONF_ORIGIN,
     CONF_UNITS,
     UNITS_METRIC,
 )
-from homeassistant.const import CONF_API_KEY, CONF_MODE
+from menuai.const import CONF_API_KEY, CONF_MODE
 
 MOCK_CONFIG = {
     CONF_API_KEY: "api_key",

@@ -13,10 +13,10 @@ from pyezvizapi.exceptions import (
     PyEzvizError,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN
 
@@ -30,7 +30,7 @@ class EzvizDataUpdateCoordinator(DataUpdateCoordinator):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entry: EzvizConfigEntry,
         *,
         api: EzvizClient,
@@ -42,7 +42,7 @@ class EzvizDataUpdateCoordinator(DataUpdateCoordinator):
         update_interval = timedelta(seconds=30)
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
             name=DOMAIN,
@@ -53,7 +53,7 @@ class EzvizDataUpdateCoordinator(DataUpdateCoordinator):
         """Fetch data from EZVIZ."""
         try:
             async with asyncio.timeout(self._api_timeout):
-                return await self.hass.async_add_executor_job(
+                return await self.menuai.async_add_executor_job(
                     self.ezviz_client.load_cameras
                 )
 

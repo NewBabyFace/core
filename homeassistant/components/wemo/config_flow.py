@@ -8,17 +8,17 @@ from typing import Any, get_type_hints
 import pywemo
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry, ConfigFlowResult, OptionsFlow
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.config_entry_flow import DiscoveryFlowHandler
+from menuai.config_entries import ConfigEntry, ConfigFlowResult, OptionsFlow
+from menuai.core import menuai, callback
+from menuai.helpers.config_entry_flow import DiscoveryFlowHandler
 
 from .const import DOMAIN
 from .coordinator import Options, OptionsValidationError
 
 
-async def _async_has_devices(hass: HomeAssistant) -> bool:
+async def _async_has_devices(menuai: menuai) -> bool:
     """Return if there are devices that can be discovered."""
-    return bool(await hass.async_add_executor_job(pywemo.discover_devices))
+    return bool(await menuai.async_add_executor_job(pywemo.discover_devices))
 
 
 class WemoFlow(DiscoveryFlowHandler, domain=DOMAIN):

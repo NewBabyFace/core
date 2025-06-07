@@ -12,16 +12,16 @@ from aiohttp import ClientTimeout
 from aiowebdav2.exceptions import UnauthorizedError, WebDavError
 from propcache.api import cached_property
 
-from homeassistant.components.backup import (
+from menuai.components.backup import (
     AgentBackup,
     BackupAgent,
     BackupAgentError,
     BackupNotFound,
     suggested_filename,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.json import json_dumps
-from homeassistant.util.json import json_loads_object
+from menuai.core import menuai, callback
+from menuai.helpers.json import json_dumps
+from menuai.util.json import json_loads_object
 
 from . import WebDavConfigEntry
 from .const import CONF_BACKUP_PATH, DATA_BACKUP_AGENT_LISTENERS, DOMAIN
@@ -33,16 +33,16 @@ CACHE_TTL = 300
 
 
 async def async_get_backup_agents(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> list[BackupAgent]:
     """Return a list of backup agents."""
-    entries: list[WebDavConfigEntry] = hass.config_entries.async_loaded_entries(DOMAIN)
-    return [WebDavBackupAgent(hass, entry) for entry in entries]
+    entries: list[WebDavConfigEntry] = menuai.config_entries.async_loaded_entries(DOMAIN)
+    return [WebDavBackupAgent(menuai, entry) for entry in entries]
 
 
 @callback
 def async_register_backup_agents_listener(
-    hass: HomeAssistant,
+    menuai: menuai,
     *,
     listener: Callable[[], None],
     **kwargs: Any,
@@ -51,14 +51,14 @@ def async_register_backup_agents_listener(
 
     :return: A function to unregister the listener.
     """
-    hass.data.setdefault(DATA_BACKUP_AGENT_LISTENERS, []).append(listener)
+    menuai.data.setdefault(DATA_BACKUP_AGENT_LISTENERS, []).append(listener)
 
     @callback
     def remove_listener() -> None:
         """Remove the listener."""
-        hass.data[DATA_BACKUP_AGENT_LISTENERS].remove(listener)
-        if not hass.data[DATA_BACKUP_AGENT_LISTENERS]:
-            del hass.data[DATA_BACKUP_AGENT_LISTENERS]
+        menuai.data[DATA_BACKUP_AGENT_LISTENERS].remove(listener)
+        if not menuai.data[DATA_BACKUP_AGENT_LISTENERS]:
+            del menuai.data[DATA_BACKUP_AGENT_LISTENERS]
 
     return remove_listener
 
@@ -100,10 +100,10 @@ class WebDavBackupAgent(BackupAgent):
 
     domain = DOMAIN
 
-    def __init__(self, hass: HomeAssistant, entry: WebDavConfigEntry) -> None:
+    def __init__(self, menuai: menuai, entry: WebDavConfigEntry) -> None:
         """Initialize the WebDAV backup agent."""
         super().__init__()
-        self._hass = hass
+        self._menuai = menuai
         self._entry = entry
         self._client = entry.runtime_data
         self.name = entry.title

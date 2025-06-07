@@ -125,7 +125,7 @@ DEFAULT_MAX_HUMIDITY = 99
 
 DOMAIN = "climate"
 
-INTENT_SET_TEMPERATURE = "HassClimateSetTemperature"
+INTENT_SET_TEMPERATURE = "menuaiClimateSetTemperature"
 
 SERVICE_SET_FAN_MODE = "set_fan_mode"
 SERVICE_SET_PRESET_MODE = "set_preset_mode"

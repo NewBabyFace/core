@@ -4,27 +4,27 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from homeassistant.components.melissa import DOMAIN
-from homeassistant.core import HomeAssistant
+from menuai.components.melissa import DOMAIN
+from menuai.core import menuai
 
 from tests.common import async_load_json_object_fixture
 
 
 @pytest.fixture
-async def mock_melissa(hass: HomeAssistant):
+async def mock_melissa(menuai: menuai):
     """Mock the Melissa API."""
     with patch(
-        "homeassistant.components.melissa.AsyncMelissa", autospec=True
+        "menuai.components.melissa.AsyncMelissa", autospec=True
     ) as mock_client:
         mock_client.return_value.async_connect = AsyncMock()
         mock_client.return_value.async_fetch_devices.return_value = (
-            await async_load_json_object_fixture(hass, "fetch_devices.json", DOMAIN)
+            await async_load_json_object_fixture(menuai, "fetch_devices.json", DOMAIN)
         )
         mock_client.return_value.async_status.return_value = (
-            await async_load_json_object_fixture(hass, "status.json", DOMAIN)
+            await async_load_json_object_fixture(menuai, "status.json", DOMAIN)
         )
         mock_client.return_value.async_cur_settings.return_value = (
-            await async_load_json_object_fixture(hass, "cur_settings.json", DOMAIN)
+            await async_load_json_object_fixture(menuai, "cur_settings.json", DOMAIN)
         )
 
         mock_client.return_value.STATE_OFF = 0

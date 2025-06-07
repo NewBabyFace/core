@@ -9,13 +9,13 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
     SensorEntity,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_UNIT_OF_MEASUREMENT,
     CONF_NAME,
     CONF_TYPE,
@@ -23,15 +23,15 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import Event, EventStateChangedData, HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.entity_platform import (
+from menuai.core import Event, EventStateChangedData, menuai, callback
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     AddEntitiesCallback,
 )
-from homeassistant.helpers.event import async_track_state_change_event
-from homeassistant.helpers.reload import async_setup_reload_service
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType, StateType
+from menuai.helpers.event import async_track_state_change_event
+from menuai.helpers.reload import async_setup_reload_service
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType, StateType
 
 from . import PLATFORMS
 from .const import CONF_ENTITY_IDS, CONF_ROUND_DIGITS, DOMAIN
@@ -76,12 +76,12 @@ PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Initialize min/max/mean config entry."""
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     entity_ids = er.async_validate_entity_ids(
         registry, config_entry.options[CONF_ENTITY_IDS]
     )
@@ -102,7 +102,7 @@ async def async_setup_entry(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -114,7 +114,7 @@ async def async_setup_platform(
     round_digits: int = config[CONF_ROUND_DIGITS]
     unique_id = config.get(CONF_UNIQUE_ID)
 
-    await async_setup_reload_service(hass, DOMAIN, PLATFORMS)
+    await async_setup_reload_service(menuai, DOMAIN, PLATFORMS)
 
     async_add_entities(
         [MinMaxSensor(entity_ids, name, sensor_type, round_digits, unique_id)]
@@ -242,17 +242,17 @@ class MinMaxSensor(SensorEntity):
         self.count_sensors = len(self._entity_ids)
         self.states: dict[str, Any] = {}
 
-    async def async_added_to_hass(self) -> None:
-        """Handle added to Hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Handle added to menuai."""
         self.async_on_remove(
             async_track_state_change_event(
-                self.hass, self._entity_ids, self._async_min_max_sensor_state_listener
+                self.menuai, self._entity_ids, self._async_min_max_sensor_state_listener
             )
         )
 
         # Replay current state of source entities
         for entity_id in self._entity_ids:
-            state = self.hass.states.get(entity_id)
+            state = self.menuai.states.get(entity_id)
             state_event: Event[EventStateChangedData] = Event(
                 "", {"entity_id": entity_id, "new_state": state, "old_state": None}
             )

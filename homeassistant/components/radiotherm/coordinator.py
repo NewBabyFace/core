@@ -8,9 +8,9 @@ from urllib.error import URLError
 
 from radiotherm.validate import RadiothermTstatError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .data import RadioThermInitData, RadioThermUpdate, async_get_data
 
@@ -26,7 +26,7 @@ class RadioThermUpdateCoordinator(DataUpdateCoordinator[RadioThermUpdate]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         init_data: RadioThermInitData,
     ) -> None:
@@ -34,7 +34,7 @@ class RadioThermUpdateCoordinator(DataUpdateCoordinator[RadioThermUpdate]):
         self.init_data = init_data
         self._description = f"{init_data.name} ({init_data.host})"
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=f"radiotherm {self.init_data.name}",
@@ -44,7 +44,7 @@ class RadioThermUpdateCoordinator(DataUpdateCoordinator[RadioThermUpdate]):
     async def _async_update_data(self) -> RadioThermUpdate:
         """Update data from the thermostat."""
         try:
-            return await async_get_data(self.hass, self.init_data.tstat)
+            return await async_get_data(self.menuai, self.init_data.tstat)
         except RadiothermTstatError as ex:
             msg = f"{self._description} was busy (invalid value returned): {ex}"
             raise UpdateFailed(msg) from ex

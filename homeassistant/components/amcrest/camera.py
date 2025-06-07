@@ -14,19 +14,19 @@ from amcrest import AmcrestError
 from haffmpeg.camera import CameraMjpeg
 import voluptuous as vol
 
-from homeassistant.components.camera import Camera, CameraEntityFeature
-from homeassistant.components.ffmpeg import FFmpegManager, get_ffmpeg_manager
-from homeassistant.const import ATTR_ENTITY_ID, CONF_NAME, STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import (
+from menuai.components.camera import Camera, CameraEntityFeature
+from menuai.components.ffmpeg import FFmpegManager, get_ffmpeg_manager
+from menuai.const import ATTR_ENTITY_ID, CONF_NAME, STATE_OFF, STATE_ON
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import (
     async_aiohttp_proxy_stream,
     async_aiohttp_proxy_web,
     async_get_clientsession,
 )
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import (
     CAMERA_WEB_SESSION_TIMEOUT,
@@ -124,7 +124,7 @@ _BOOL_TO_STATE = {True: STATE_ON, False: STATE_OFF}
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -134,8 +134,8 @@ async def async_setup_platform(
         return
 
     name = discovery_info[CONF_NAME]
-    device = hass.data[DATA_AMCREST][DEVICES][name]
-    entity = AmcrestCam(name, device, get_ffmpeg_manager(hass))
+    device = menuai.data[DATA_AMCREST][DEVICES][name]
+    entity = AmcrestCam(name, device, get_ffmpeg_manager(menuai))
 
     async_add_entities([entity], True)
 
@@ -219,7 +219,7 @@ class AmcrestCam(Camera):
             # 1) it's not possible to send another snapshot command while camera is
             #    still working on a previous one, and
             # 2) someone will be around to catch any exceptions.
-            self._snapshot_task = self.hass.async_create_task(self._async_get_image())
+            self._snapshot_task = self.menuai.async_create_task(self._async_get_image())
             return await asyncio.shield(self._snapshot_task)
         except CannotSnapshot:
             return None
@@ -242,7 +242,7 @@ class AmcrestCam(Camera):
 
         if self._stream_source == "mjpeg":
             # stream an MJPEG image stream directly from the camera
-            websession = async_get_clientsession(self.hass)
+            websession = async_get_clientsession(self.menuai)
             streaming_url = self._api.mjpeg_url(typeno=self._resolution)
             stream_coro = websession.get(
                 streaming_url,
@@ -250,7 +250,7 @@ class AmcrestCam(Camera):
                 timeout=aiohttp.ClientTimeout(total=CAMERA_WEB_SESSION_TIMEOUT),
             )
 
-            return await async_aiohttp_proxy_web(self.hass, request, stream_coro)
+            return await async_aiohttp_proxy_web(self.menuai, request, stream_coro)
 
         # streaming via ffmpeg
         assert self._rtsp_url is not None
@@ -261,7 +261,7 @@ class AmcrestCam(Camera):
         try:
             stream_reader = await stream.get_reader()
             return await async_aiohttp_proxy_stream(
-                self.hass,
+                self.menuai,
                 request,
                 stream_reader,
                 self._ffmpeg.ffmpeg_stream_content_type,
@@ -333,11 +333,11 @@ class AmcrestCam(Camera):
         """Update state."""
         self.async_schedule_update_ha_state(True)
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to signals and add camera to list."""
         self._unsub_dispatcher.extend(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 service_signal(service, self.entity_id),
                 getattr(self, callback_name),
             )
@@ -345,16 +345,16 @@ class AmcrestCam(Camera):
         )
         self._unsub_dispatcher.append(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 service_signal(SERVICE_UPDATE, self.name),
                 self.async_on_demand_update,
             )
         )
-        self.hass.data[DATA_AMCREST][CAMERAS].append(self.entity_id)
+        self.menuai.data[DATA_AMCREST][CAMERAS].append(self.entity_id)
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Remove camera from list and disconnect from signals."""
-        self.hass.data[DATA_AMCREST][CAMERAS].remove(self.entity_id)
+        self.menuai.data[DATA_AMCREST][CAMERAS].remove(self.entity_id)
         for unsub_dispatcher in self._unsub_dispatcher:
             unsub_dispatcher()
 

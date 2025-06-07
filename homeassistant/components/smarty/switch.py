@@ -9,9 +9,9 @@ from typing import Any
 
 from pysmarty2 import Smarty
 
-from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchEntity, SwitchEntityDescription
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import SmartyConfigEntry, SmartyCoordinator
 from .entity import SmartyEntity
@@ -40,7 +40,7 @@ ENTITIES: tuple[SmartySwitchDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: SmartyConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -77,14 +77,14 @@ class SmartySwitch(SmartyEntity, SwitchEntity):
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the switch on."""
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             self.entity_description.turn_on_fn, self.coordinator.client
         )
         await self.coordinator.async_refresh()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the switch off."""
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             self.entity_description.turn_off_fn, self.coordinator.client
         )
         await self.coordinator.async_refresh()

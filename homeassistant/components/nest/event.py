@@ -7,13 +7,13 @@ from google_nest_sdm.device import Device
 from google_nest_sdm.event import EventMessage, EventType
 from google_nest_sdm.traits import TraitType
 
-from homeassistant.components.event import (
+from menuai.components.event import (
     EventDeviceClass,
     EventEntity,
     EventEntityDescription,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .device_info import NestDeviceInfo
 from .events import (
@@ -66,7 +66,7 @@ ENTITY_DESCRIPTIONS = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: NestConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -120,6 +120,6 @@ class NestTraitEventEntity(EventEntity):
             self.async_write_ha_state()
             return
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Run when entity is added to attach an event listener."""
         self.async_on_remove(self._device.add_event_callback(self._async_handle_event))

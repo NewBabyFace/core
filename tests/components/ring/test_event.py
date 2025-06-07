@@ -9,11 +9,11 @@ import pytest
 from ring_doorbell import Ring
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.ring.binary_sensor import RingEvent
-from homeassistant.components.ring.coordinator import RingEventListener
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.ring.binary_sensor import RingEvent
+from menuai.components.ring.coordinator import RingEventListener
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .common import MockConfigEntry, setup_platform
 from .device_mocks import FRONT_DOOR_DEVICE_ID, INGRESS_DEVICE_ID
@@ -22,16 +22,16 @@ from tests.common import snapshot_platform
 
 
 async def test_states(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_ring_client: Mock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test states."""
-    mock_config_entry.add_to_hass(hass)
-    await setup_platform(hass, Platform.EVENT)
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    mock_config_entry.add_to_menuai(menuai)
+    await setup_platform(menuai, Platform.EVENT)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
 
 @pytest.mark.parametrize(
@@ -60,7 +60,7 @@ async def test_states(
     ],
 )
 async def test_event(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_ring_client: Ring,
     mock_ring_event_listener_class: RingEventListener,
     freezer: FrozenDateTimeFactory,
@@ -71,7 +71,7 @@ async def test_event(
 ) -> None:
     """Test the Ring event platforms."""
 
-    await setup_platform(hass, Platform.EVENT)
+    await setup_platform(menuai, Platform.EVENT)
 
     start_time_str = "2024-09-04T15:32:53.892+00:00"
     start_time = datetime.strptime(start_time_str, "%Y-%m-%dT%H:%M:%S.%f%z")
@@ -82,7 +82,7 @@ async def test_event(
 
     # Default state is unknown
     entity_id = f"event.{device_name}_{alert_kind}"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state is not None
     assert state.state == "unknown"
     assert state.attributes["device_class"] == device_class
@@ -93,6 +93,6 @@ async def test_event(
     )
     mock_ring_client.active_alerts.return_value = [event]
     on_event_cb(event)
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state is not None
     assert state.state == start_time_str

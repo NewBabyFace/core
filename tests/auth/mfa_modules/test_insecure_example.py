@@ -1,17 +1,17 @@
 """Test the example module auth module."""
 
-from homeassistant import auth, data_entry_flow
-from homeassistant.auth.mfa_modules import auth_mfa_module_from_config
-from homeassistant.auth.models import Credentials
-from homeassistant.core import HomeAssistant
+from menuai import auth, data_entry_flow
+from menuai.auth.mfa_modules import auth_mfa_module_from_config
+from menuai.auth.models import Credentials
+from menuai.core import menuai
 
 from tests.common import MockUser
 
 
-async def test_validate(hass: HomeAssistant) -> None:
+async def test_validate(menuai: menuai) -> None:
     """Test validating pin."""
     auth_module = await auth_mfa_module_from_config(
-        hass,
+        menuai,
         {
             "type": "insecure_example",
             "data": [{"user_id": "test-user", "pin": "123456"}],
@@ -28,10 +28,10 @@ async def test_validate(hass: HomeAssistant) -> None:
     assert result is False
 
 
-async def test_setup_user(hass: HomeAssistant) -> None:
+async def test_setup_user(menuai: menuai) -> None:
     """Test setup user."""
     auth_module = await auth_mfa_module_from_config(
-        hass, {"type": "insecure_example", "data": []}
+        menuai, {"type": "insecure_example", "data": []}
     )
 
     await auth_module.async_setup_user("test-user", {"pin": "123456"})
@@ -41,10 +41,10 @@ async def test_setup_user(hass: HomeAssistant) -> None:
     assert result is True
 
 
-async def test_depose_user(hass: HomeAssistant) -> None:
+async def test_depose_user(menuai: menuai) -> None:
     """Test despose user."""
     auth_module = await auth_mfa_module_from_config(
-        hass,
+        menuai,
         {
             "type": "insecure_example",
             "data": [{"user_id": "test-user", "pin": "123456"}],
@@ -56,10 +56,10 @@ async def test_depose_user(hass: HomeAssistant) -> None:
     assert len(auth_module._data) == 0
 
 
-async def test_is_user_setup(hass: HomeAssistant) -> None:
+async def test_is_user_setup(menuai: menuai) -> None:
     """Test is user setup."""
     auth_module = await auth_mfa_module_from_config(
-        hass,
+        menuai,
         {
             "type": "insecure_example",
             "data": [{"user_id": "test-user", "pin": "123456"}],
@@ -69,10 +69,10 @@ async def test_is_user_setup(hass: HomeAssistant) -> None:
     assert await auth_module.async_is_user_setup("invalid-user") is False
 
 
-async def test_login(hass: HomeAssistant) -> None:
+async def test_login(menuai: menuai) -> None:
     """Test login flow with auth module."""
-    hass.auth = await auth.auth_manager_from_config(
-        hass,
+    menuai.auth = await auth.auth_manager_from_config(
+        menuai,
         [
             {
                 "type": "insecure_example",
@@ -88,8 +88,8 @@ async def test_login(hass: HomeAssistant) -> None:
     )
     user = MockUser(
         id="mock-user", is_owner=False, is_active=False, name="Paulus"
-    ).add_to_auth_manager(hass.auth)
-    await hass.auth.async_link_user(
+    ).add_to_auth_manager(menuai.auth)
+    await menuai.auth.async_link_user(
         user,
         Credentials(
             id="mock-id",
@@ -100,46 +100,46 @@ async def test_login(hass: HomeAssistant) -> None:
         ),
     )
 
-    provider = hass.auth.auth_providers[0]
-    result = await hass.auth.login_flow.async_init((provider.type, provider.id))
+    provider = menuai.auth.auth_providers[0]
+    result = await menuai.auth.login_flow.async_init((provider.type, provider.id))
     assert result["type"] == data_entry_flow.FlowResultType.FORM
 
-    result = await hass.auth.login_flow.async_configure(
+    result = await menuai.auth.login_flow.async_configure(
         result["flow_id"], {"username": "incorrect-user", "password": "test-pass"}
     )
     assert result["type"] == data_entry_flow.FlowResultType.FORM
     assert result["errors"]["base"] == "invalid_auth"
 
-    result = await hass.auth.login_flow.async_configure(
+    result = await menuai.auth.login_flow.async_configure(
         result["flow_id"], {"username": "test-user", "password": "incorrect-pass"}
     )
     assert result["type"] == data_entry_flow.FlowResultType.FORM
     assert result["errors"]["base"] == "invalid_auth"
 
-    result = await hass.auth.login_flow.async_configure(
+    result = await menuai.auth.login_flow.async_configure(
         result["flow_id"], {"username": "test-user", "password": "test-pass"}
     )
     assert result["type"] == data_entry_flow.FlowResultType.FORM
     assert result["step_id"] == "mfa"
     assert result["data_schema"].schema.get("pin") is str
 
-    result = await hass.auth.login_flow.async_configure(
+    result = await menuai.auth.login_flow.async_configure(
         result["flow_id"], {"pin": "invalid-code"}
     )
     assert result["type"] == data_entry_flow.FlowResultType.FORM
     assert result["errors"]["base"] == "invalid_code"
 
-    result = await hass.auth.login_flow.async_configure(
+    result = await menuai.auth.login_flow.async_configure(
         result["flow_id"], {"pin": "123456"}
     )
     assert result["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
     assert result["data"].id == "mock-id"
 
 
-async def test_setup_flow(hass: HomeAssistant) -> None:
+async def test_setup_flow(menuai: menuai) -> None:
     """Test validating pin."""
     auth_module = await auth_mfa_module_from_config(
-        hass,
+        menuai,
         {
             "type": "insecure_example",
             "data": [{"user_id": "test-user", "pin": "123456"}],

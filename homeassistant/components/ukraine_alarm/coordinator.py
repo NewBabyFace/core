@@ -10,10 +10,10 @@ import aiohttp
 from aiohttp import ClientSession
 from uasiren.client import Client
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_REGION
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_REGION
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import ALERT_TYPES, DOMAIN
 
@@ -29,7 +29,7 @@ class UkraineAlarmDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         session: ClientSession,
     ) -> None:
@@ -38,7 +38,7 @@ class UkraineAlarmDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.uasiren = Client(session)
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,

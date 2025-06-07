@@ -3,12 +3,12 @@
 from aiostreammagic import StreamMagicClient
 from aiostreammagic.models import Preset
 
-from homeassistant.components.media_player import BrowseMedia, MediaClass
-from homeassistant.core import HomeAssistant
+from menuai.components.media_player import BrowseMedia, MediaClass
+from menuai.core import menuai
 
 
 async def async_browse_media(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: StreamMagicClient,
     media_content_id: str | None,
     media_content_type: str | None,
@@ -19,13 +19,13 @@ async def async_browse_media(
         return await _presets_payload(client.preset_list.presets)
 
     return await _root_payload(
-        hass,
+        menuai,
         client,
     )
 
 
 async def _root_payload(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: StreamMagicClient,
 ) -> BrowseMedia:
     """Return root payload for Cambridge Audio."""

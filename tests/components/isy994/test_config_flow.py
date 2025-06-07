@@ -6,19 +6,19 @@ from unittest.mock import patch
 from pyisy import ISYConnectionError, ISYInvalidAuthError
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.isy994.const import (
+from menuai import config_entries
+from menuai.components.isy994.const import (
     CONF_TLS_VER,
     DOMAIN,
     ISY_URL_POSTFIX,
     UDN_UUID_PREFIX,
 )
-from homeassistant.config_entries import SOURCE_DHCP, SOURCE_IGNORE, SOURCE_SSDP
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
-from homeassistant.helpers.service_info.ssdp import (
+from menuai.config_entries import SOURCE_DHCP, SOURCE_IGNORE, SOURCE_SSDP
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.helpers.service_info.ssdp import (
     ATTR_UPNP_FRIENDLY_NAME,
     ATTR_UPNP_UDN,
     SsdpServiceInfo,
@@ -35,7 +35,7 @@ MOCK_TLS_VERSION = 1.2
 MOCK_IGNORE_STRING = "{IGNOREME}"
 MOCK_RESTORE_LIGHT_STATE = True
 MOCK_SENSOR_STRING = "IMASENSOR"
-MOCK_VARIABLE_SENSOR_STRING = "HomeAssistant."
+MOCK_VARIABLE_SENSOR_STRING = "menuai."
 
 MOCK_USER_INPUT = {
     CONF_HOST: f"http://{MOCK_HOSTNAME}",
@@ -74,7 +74,7 @@ MOCK_CONFIG_RESPONSE = """<?xml version="1.0" encoding="UTF-8"?>
 </configuration>
 """
 
-INTEGRATION = "homeassistant.components.isy994"
+INTEGRATION = "menuai.components.isy994"
 PATCH_CONNECTION = f"{INTEGRATION}.config_flow.Connection.test_connection"
 PATCH_ASYNC_SETUP = f"{INTEGRATION}.async_setup"
 PATCH_ASYNC_SETUP_ENTRY = f"{INTEGRATION}.async_setup_entry"
@@ -88,10 +88,10 @@ def _get_schema_default(schema, key_name):
     raise KeyError(f"{key_name} not found in schema")
 
 
-async def test_form(hass: HomeAssistant) -> None:
+async def test_form(menuai: menuai) -> None:
     """Test we get the form."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -104,11 +104,11 @@ async def test_form(hass: HomeAssistant) -> None:
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             MOCK_USER_INPUT,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == f"{MOCK_DEVICE_NAME} ({MOCK_HOSTNAME})"
     assert result2["result"].unique_id == MOCK_UUID
@@ -116,13 +116,13 @@ async def test_form(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_form_invalid_host(hass: HomeAssistant) -> None:
+async def test_form_invalid_host(menuai: menuai) -> None:
     """Test we handle invalid host."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "host": MOCK_HOSTNAME,  # Test with missing protocol (http://)
@@ -136,16 +136,16 @@ async def test_form_invalid_host(hass: HomeAssistant) -> None:
     assert result2["errors"] == {"base": "invalid_host"}
 
 
-async def test_form_invalid_auth(hass: HomeAssistant) -> None:
+async def test_form_invalid_auth(menuai: menuai) -> None:
     """Test we handle invalid auth."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     with patch(
         PATCH_CONNECTION,
         side_effect=ISYInvalidAuthError(),
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             MOCK_USER_INPUT,
         )
@@ -154,16 +154,16 @@ async def test_form_invalid_auth(hass: HomeAssistant) -> None:
     assert result2["errors"] == {CONF_PASSWORD: "invalid_auth"}
 
 
-async def test_form_unknown_exeption(hass: HomeAssistant) -> None:
+async def test_form_unknown_exeption(menuai: menuai) -> None:
     """Test we handle generic exceptions."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     with patch(
         PATCH_CONNECTION,
         side_effect=Exception,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             MOCK_USER_INPUT,
         )
@@ -172,16 +172,16 @@ async def test_form_unknown_exeption(hass: HomeAssistant) -> None:
     assert result2["errors"] == {"base": "unknown"}
 
 
-async def test_form_isy_connection_error(hass: HomeAssistant) -> None:
+async def test_form_isy_connection_error(menuai: menuai) -> None:
     """Test we handle invalid auth."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     with patch(
         PATCH_CONNECTION,
         side_effect=ISYConnectionError(),
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             MOCK_USER_INPUT,
         )
@@ -191,17 +191,17 @@ async def test_form_isy_connection_error(hass: HomeAssistant) -> None:
 
 
 async def test_form_isy_parse_response_error(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test we handle poorly formatted XML response from ISY."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     with patch(
         PATCH_CONNECTION,
         return_value=MOCK_CONFIG_RESPONSE.rsplit("\n", 3)[0],  # Test with invalid XML
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             MOCK_USER_INPUT,
         )
@@ -210,9 +210,9 @@ async def test_form_isy_parse_response_error(
     assert "ISY Could not parse response, poorly formatted XML." in caplog.text
 
 
-async def test_form_no_name_in_response(hass: HomeAssistant) -> None:
+async def test_form_no_name_in_response(menuai: menuai) -> None:
     """Test we handle invalid response from ISY with name not set."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     with patch(
@@ -221,7 +221,7 @@ async def test_form_no_name_in_response(hass: HomeAssistant) -> None:
             r"\<name\>.*\n", "", MOCK_CONFIG_RESPONSE
         ),  # Test with <name> line removed.
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             MOCK_USER_INPUT,
         )
@@ -230,34 +230,34 @@ async def test_form_no_name_in_response(hass: HomeAssistant) -> None:
     assert result2["errors"] == {"base": "cannot_connect"}
 
 
-async def test_form_existing_config_entry(hass: HomeAssistant) -> None:
+async def test_form_existing_config_entry(menuai: menuai) -> None:
     """Test if config entry already exists."""
-    MockConfigEntry(domain=DOMAIN, unique_id=MOCK_UUID).add_to_hass(hass)
+    MockConfigEntry(domain=DOMAIN, unique_id=MOCK_UUID).add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
     with patch(PATCH_CONNECTION, return_value=MOCK_CONFIG_RESPONSE):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             MOCK_USER_INPUT,
         )
     assert result2["type"] is FlowResultType.ABORT
 
 
-async def test_form_ssdp_already_configured(hass: HomeAssistant) -> None:
+async def test_form_ssdp_already_configured(menuai: menuai) -> None:
     """Test ssdp abort when the serial number is already configured."""
 
     MockConfigEntry(
         domain=DOMAIN,
         data={CONF_HOST: f"http://{MOCK_HOSTNAME}{ISY_URL_POSTFIX}"},
         unique_id=MOCK_UUID,
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_SSDP},
         data=SsdpServiceInfo(
@@ -273,10 +273,10 @@ async def test_form_ssdp_already_configured(hass: HomeAssistant) -> None:
     assert result["type"] is FlowResultType.ABORT
 
 
-async def test_form_ssdp(hass: HomeAssistant) -> None:
+async def test_form_ssdp(menuai: menuai) -> None:
     """Test we can setup from ssdp."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_SSDP},
         data=SsdpServiceInfo(
@@ -300,11 +300,11 @@ async def test_form_ssdp(hass: HomeAssistant) -> None:
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             MOCK_USER_INPUT,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == f"{MOCK_DEVICE_NAME} ({MOCK_HOSTNAME})"
@@ -313,7 +313,7 @@ async def test_form_ssdp(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_form_ssdp_existing_entry(hass: HomeAssistant) -> None:
+async def test_form_ssdp_existing_entry(menuai: menuai) -> None:
     """Test we update the ip of an existing entry from ssdp."""
 
     entry = MockConfigEntry(
@@ -321,10 +321,10 @@ async def test_form_ssdp_existing_entry(hass: HomeAssistant) -> None:
         data={CONF_HOST: f"http://{MOCK_HOSTNAME}{ISY_URL_POSTFIX}"},
         unique_id=MOCK_UUID,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with patch(PATCH_CONNECTION, return_value=MOCK_CONFIG_RESPONSE):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": SOURCE_SSDP},
             data=SsdpServiceInfo(
@@ -337,14 +337,14 @@ async def test_form_ssdp_existing_entry(hass: HomeAssistant) -> None:
                 },
             ),
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
     assert entry.data[CONF_HOST] == f"http://3.3.3.3:80{ISY_URL_POSTFIX}"
 
 
-async def test_form_ssdp_existing_entry_with_no_port(hass: HomeAssistant) -> None:
+async def test_form_ssdp_existing_entry_with_no_port(menuai: menuai) -> None:
     """Test we update the ip of an existing entry from ssdp with no port."""
 
     entry = MockConfigEntry(
@@ -352,10 +352,10 @@ async def test_form_ssdp_existing_entry_with_no_port(hass: HomeAssistant) -> Non
         data={CONF_HOST: f"http://{MOCK_HOSTNAME}:1443/{ISY_URL_POSTFIX}"},
         unique_id=MOCK_UUID,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with patch(PATCH_CONNECTION, return_value=MOCK_CONFIG_RESPONSE):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": SOURCE_SSDP},
             data=SsdpServiceInfo(
@@ -368,7 +368,7 @@ async def test_form_ssdp_existing_entry_with_no_port(hass: HomeAssistant) -> Non
                 },
             ),
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
@@ -376,7 +376,7 @@ async def test_form_ssdp_existing_entry_with_no_port(hass: HomeAssistant) -> Non
 
 
 async def test_form_ssdp_existing_entry_with_alternate_port(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test we update the ip of an existing entry from ssdp with an alternate port."""
 
@@ -385,10 +385,10 @@ async def test_form_ssdp_existing_entry_with_alternate_port(
         data={CONF_HOST: f"http://{MOCK_HOSTNAME}:1443/{ISY_URL_POSTFIX}"},
         unique_id=MOCK_UUID,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with patch(PATCH_CONNECTION, return_value=MOCK_CONFIG_RESPONSE):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": SOURCE_SSDP},
             data=SsdpServiceInfo(
@@ -401,14 +401,14 @@ async def test_form_ssdp_existing_entry_with_alternate_port(
                 },
             ),
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
     assert entry.data[CONF_HOST] == f"http://3.3.3.3:1443/{ISY_URL_POSTFIX}"
 
 
-async def test_form_ssdp_existing_entry_no_port_https(hass: HomeAssistant) -> None:
+async def test_form_ssdp_existing_entry_no_port_https(menuai: menuai) -> None:
     """Test we update the ip of an existing entry from ssdp with no port and https."""
 
     entry = MockConfigEntry(
@@ -416,10 +416,10 @@ async def test_form_ssdp_existing_entry_no_port_https(hass: HomeAssistant) -> No
         data={CONF_HOST: f"https://{MOCK_HOSTNAME}/{ISY_URL_POSTFIX}"},
         unique_id=MOCK_UUID,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with patch(PATCH_CONNECTION, return_value=MOCK_CONFIG_RESPONSE):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": SOURCE_SSDP},
             data=SsdpServiceInfo(
@@ -432,17 +432,17 @@ async def test_form_ssdp_existing_entry_no_port_https(hass: HomeAssistant) -> No
                 },
             ),
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
     assert entry.data[CONF_HOST] == f"https://3.3.3.3:443/{ISY_URL_POSTFIX}"
 
 
-async def test_form_dhcp(hass: HomeAssistant) -> None:
+async def test_form_dhcp(menuai: menuai) -> None:
     """Test we can setup from dhcp."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_DHCP},
         data=DhcpServiceInfo(
@@ -462,11 +462,11 @@ async def test_form_dhcp(hass: HomeAssistant) -> None:
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             MOCK_USER_INPUT,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == f"{MOCK_DEVICE_NAME} ({MOCK_HOSTNAME})"
@@ -475,10 +475,10 @@ async def test_form_dhcp(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_form_dhcp_with_polisy(hass: HomeAssistant) -> None:
+async def test_form_dhcp_with_polisy(menuai: menuai) -> None:
     """Test we can setup from dhcp with polisy."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_DHCP},
         data=DhcpServiceInfo(
@@ -502,11 +502,11 @@ async def test_form_dhcp_with_polisy(hass: HomeAssistant) -> None:
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             MOCK_IOX_USER_INPUT,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == f"{MOCK_DEVICE_NAME} ({MOCK_HOSTNAME})"
@@ -515,10 +515,10 @@ async def test_form_dhcp_with_polisy(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_form_dhcp_with_eisy(hass: HomeAssistant) -> None:
+async def test_form_dhcp_with_eisy(menuai: menuai) -> None:
     """Test we can setup from dhcp with eisy."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_DHCP},
         data=DhcpServiceInfo(
@@ -542,11 +542,11 @@ async def test_form_dhcp_with_eisy(hass: HomeAssistant) -> None:
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             MOCK_IOX_USER_INPUT,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == f"{MOCK_DEVICE_NAME} ({MOCK_HOSTNAME})"
@@ -555,7 +555,7 @@ async def test_form_dhcp_with_eisy(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_form_dhcp_existing_entry(hass: HomeAssistant) -> None:
+async def test_form_dhcp_existing_entry(menuai: menuai) -> None:
     """Test we update the ip of an existing entry from dhcp."""
 
     entry = MockConfigEntry(
@@ -563,10 +563,10 @@ async def test_form_dhcp_existing_entry(hass: HomeAssistant) -> None:
         data={CONF_HOST: f"http://{MOCK_HOSTNAME}{ISY_URL_POSTFIX}"},
         unique_id=MOCK_UUID,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with patch(PATCH_CONNECTION, return_value=MOCK_CONFIG_RESPONSE):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": SOURCE_DHCP},
             data=DhcpServiceInfo(
@@ -575,14 +575,14 @@ async def test_form_dhcp_existing_entry(hass: HomeAssistant) -> None:
                 macaddress=MOCK_MAC,
             ),
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
     assert entry.data[CONF_HOST] == f"http://1.2.3.4{ISY_URL_POSTFIX}"
 
 
-async def test_form_dhcp_existing_entry_preserves_port(hass: HomeAssistant) -> None:
+async def test_form_dhcp_existing_entry_preserves_port(menuai: menuai) -> None:
     """Test we update the ip of an existing entry from dhcp preserves port."""
 
     entry = MockConfigEntry(
@@ -593,10 +593,10 @@ async def test_form_dhcp_existing_entry_preserves_port(hass: HomeAssistant) -> N
         },
         unique_id=MOCK_UUID,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with patch(PATCH_CONNECTION, return_value=MOCK_CONFIG_RESPONSE):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": SOURCE_DHCP},
             data=DhcpServiceInfo(
@@ -605,7 +605,7 @@ async def test_form_dhcp_existing_entry_preserves_port(hass: HomeAssistant) -> N
                 macaddress=MOCK_MAC,
             ),
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
@@ -613,16 +613,16 @@ async def test_form_dhcp_existing_entry_preserves_port(hass: HomeAssistant) -> N
     assert entry.data[CONF_USERNAME] == "bob"
 
 
-async def test_form_dhcp_existing_ignored_entry(hass: HomeAssistant) -> None:
+async def test_form_dhcp_existing_ignored_entry(menuai: menuai) -> None:
     """Test we handled an ignored entry from dhcp."""
 
     entry = MockConfigEntry(
         domain=DOMAIN, data={}, unique_id=MOCK_UUID, source=SOURCE_IGNORE
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with patch(PATCH_CONNECTION, return_value=MOCK_CONFIG_RESPONSE):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": SOURCE_DHCP},
             data=DhcpServiceInfo(
@@ -631,13 +631,13 @@ async def test_form_dhcp_existing_ignored_entry(hass: HomeAssistant) -> None:
                 macaddress=MOCK_MAC,
             ),
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
 
 
-async def test_reauth(hass: HomeAssistant) -> None:
+async def test_reauth(menuai: menuai) -> None:
     """Test we can reauth."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -647,9 +647,9 @@ async def test_reauth(hass: HomeAssistant) -> None:
         },
         unique_id=MOCK_UUID,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await entry.start_reauth_flow(hass)
+    result = await entry.start_reauth_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
@@ -658,7 +658,7 @@ async def test_reauth(hass: HomeAssistant) -> None:
         PATCH_CONNECTION,
         side_effect=ISYInvalidAuthError(),
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_USERNAME: "test-username",
@@ -673,7 +673,7 @@ async def test_reauth(hass: HomeAssistant) -> None:
         PATCH_CONNECTION,
         side_effect=ISYConnectionError(),
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {
                 CONF_USERNAME: "test-username",
@@ -687,32 +687,32 @@ async def test_reauth(hass: HomeAssistant) -> None:
     with (
         patch(PATCH_CONNECTION, return_value=MOCK_CONFIG_RESPONSE),
         patch(
-            "homeassistant.components.isy994.async_setup_entry",
+            "menuai.components.isy994.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result4 = await hass.config_entries.flow.async_configure(
+        result4 = await menuai.config_entries.flow.async_configure(
             result3["flow_id"],
             {
                 CONF_USERNAME: "test-username",
                 CONF_PASSWORD: "test-password",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert mock_setup_entry.called
     assert result4["type"] is FlowResultType.ABORT
     assert result4["reason"] == "reauth_successful"
 
 
-async def test_options_flow(hass: HomeAssistant) -> None:
+async def test_options_flow(menuai: menuai) -> None:
     """Test option flow."""
     entry = MockConfigEntry(domain=DOMAIN)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await menuai.config_entries.options.async_init(entry.entry_id)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
     # This should be improved at a later stage to increase test coverage
-    hass.config_entries.options.async_abort(result["flow_id"])
+    menuai.config_entries.options.async_abort(result["flow_id"])

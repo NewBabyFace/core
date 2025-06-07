@@ -6,12 +6,12 @@ from typing import Any
 
 import pypck
 
-from homeassistant.components.scene import DOMAIN as DOMAIN_SCENE, Scene
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_DOMAIN, CONF_ENTITIES, CONF_SCENE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import ConfigType
+from menuai.components.scene import DOMAIN as DOMAIN_SCENE, Scene
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_DOMAIN, CONF_ENTITIES, CONF_SCENE
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     ADD_ENTITIES_CALLBACKS,
@@ -41,7 +41,7 @@ def add_lcn_entities(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -52,7 +52,7 @@ async def async_setup_entry(
         async_add_entities,
     )
 
-    hass.data[DOMAIN][config_entry.entry_id][ADD_ENTITIES_CALLBACKS].update(
+    menuai.data[DOMAIN][config_entry.entry_id][ADD_ENTITIES_CALLBACKS].update(
         {DOMAIN_SCENE: add_entities}
     )
 

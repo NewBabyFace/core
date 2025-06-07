@@ -12,12 +12,12 @@ from aionotion.listener.models import Listener
 from aionotion.sensor.models import Sensor
 from aionotion.user.models import UserPreferences
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_USERNAME
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_USERNAME
+from menuai.core import menuai, callback
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers import device_registry as dr
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN, LOGGER
 
@@ -31,7 +31,7 @@ DEFAULT_SCAN_INTERVAL = timedelta(minutes=1)
 
 @callback
 def _async_register_new_bridge(
-    hass: HomeAssistant, entry: ConfigEntry, bridge: Bridge
+    menuai: menuai, entry: ConfigEntry, bridge: Bridge
 ) -> None:
     """Register a new bridge."""
     if name := bridge.name:
@@ -39,7 +39,7 @@ def _async_register_new_bridge(
     else:
         bridge_name = str(bridge.id)
 
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, bridge.hardware_id)},
@@ -54,7 +54,7 @@ def _async_register_new_bridge(
 class NotionData:
     """Define a manager class for Notion data."""
 
-    hass: HomeAssistant
+    menuai: menuai
     entry: ConfigEntry
 
     # Define a dict of bridges, indexed by bridge ID (an integer):
@@ -74,7 +74,7 @@ class NotionData:
         for bridge in bridges:
             # If a new bridge is discovered, register it:
             if bridge.id not in self.bridges:
-                _async_register_new_bridge(self.hass, self.entry, bridge)
+                _async_register_new_bridge(self.menuai, self.entry, bridge)
             self.bridges[bridge.id] = bridge
 
     def update_listeners(self, listeners: list[Listener]) -> None:
@@ -108,14 +108,14 @@ class NotionDataUpdateCoordinator(DataUpdateCoordinator[NotionData]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         *,
         entry: ConfigEntry,
         client: Client,
     ) -> None:
         """Initialize."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=entry,
             name=entry.data[CONF_USERNAME],
@@ -126,7 +126,7 @@ class NotionDataUpdateCoordinator(DataUpdateCoordinator[NotionData]):
 
     async def _async_update_data(self) -> NotionData:
         """Fetch data from Notion."""
-        data = NotionData(hass=self.hass, entry=self.config_entry)
+        data = NotionData(menuai=self.menuai, entry=self.config_entry)
 
         try:
             async with asyncio.TaskGroup() as tg:

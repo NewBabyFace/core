@@ -7,11 +7,11 @@ import logging
 
 from aioswitcher.device import SwitcherBase
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_TOKEN
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr, update_coordinator
-from homeassistant.helpers.dispatcher import async_dispatcher_send
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_TOKEN
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr, update_coordinator
+from menuai.helpers.dispatcher import async_dispatcher_send
 
 from .const import DOMAIN, MAX_UPDATE_INTERVAL_SEC, SIGNAL_DEVICE_ADD
 
@@ -27,13 +27,13 @@ class SwitcherDataUpdateCoordinator(
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entry: ConfigEntry,
         device: SwitcherBase,
     ) -> None:
         """Initialize the Switcher device coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
             name=device.name,
@@ -67,7 +67,7 @@ class SwitcherDataUpdateCoordinator(
     @callback
     def async_setup(self) -> None:
         """Set up the coordinator."""
-        dev_reg = dr.async_get(self.hass)
+        dev_reg = dr.async_get(self.menuai)
         dev_reg.async_get_or_create(
             config_entry_id=self.config_entry.entry_id,
             connections={(dr.CONNECTION_NETWORK_MAC, self.mac_address)},
@@ -76,4 +76,4 @@ class SwitcherDataUpdateCoordinator(
             name=self.name,
             model=self.model,
         )
-        async_dispatcher_send(self.hass, SIGNAL_DEVICE_ADD, self)
+        async_dispatcher_send(self.menuai, SIGNAL_DEVICE_ADD, self)

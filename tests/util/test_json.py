@@ -1,4 +1,4 @@
-"""Test Home Assistant json utility functions."""
+"""Test MenuAI json utility functions."""
 
 from pathlib import Path
 import re
@@ -6,8 +6,8 @@ import re
 import orjson
 import pytest
 
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.util.json import (
+from menuai.exceptions import menuaiError
+from menuai.util.json import (
     json_loads,
     json_loads_array,
     json_loads_object,
@@ -27,7 +27,7 @@ def test_load_bad_data(tmp_path: Path) -> None:
     fname = tmp_path / "test5.json"
     with open(fname, "w", encoding="utf8") as fh:
         fh.write(TEST_BAD_SERIALIED)
-    with pytest.raises(HomeAssistantError, match=re.escape(str(fname))) as err:
+    with pytest.raises(menuaiError, match=re.escape(str(fname))) as err:
         load_json(fname)
     assert isinstance(err.value.__cause__, ValueError)
 
@@ -35,7 +35,7 @@ def test_load_bad_data(tmp_path: Path) -> None:
 def test_load_json_os_error() -> None:
     """Test trying to load JSON data from a directory."""
     fname = "/"
-    with pytest.raises(HomeAssistantError, match=re.escape(str(fname))) as err:
+    with pytest.raises(menuaiError, match=re.escape(str(fname))) as err:
         load_json(fname)
     assert isinstance(err.value.__cause__, OSError)
 
@@ -60,11 +60,11 @@ def test_load_json_value_data(tmp_path: Path) -> None:
 
     assert load_json(fname) == "two"
     with pytest.raises(
-        HomeAssistantError, match="Expected JSON to be parsed as a dict"
+        menuaiError, match="Expected JSON to be parsed as a dict"
     ):
         load_json_object(fname)
     with pytest.raises(
-        HomeAssistantError, match="Expected JSON to be parsed as a list"
+        menuaiError, match="Expected JSON to be parsed as a list"
     ):
         load_json_array(fname)
 
@@ -78,7 +78,7 @@ def test_load_json_object_data(tmp_path: Path) -> None:
     assert load_json(fname) == {"a": 1, "B": "two"}
     assert load_json_object(fname) == {"a": 1, "B": "two"}
     with pytest.raises(
-        HomeAssistantError, match="Expected JSON to be parsed as a list"
+        menuaiError, match="Expected JSON to be parsed as a list"
     ):
         load_json_array(fname)
 
@@ -92,7 +92,7 @@ def test_load_json_array_data(tmp_path: Path) -> None:
     assert load_json(fname) == [{"a": 1, "B": "two"}]
     assert load_json_array(fname) == [{"a": 1, "B": "two"}]
     with pytest.raises(
-        HomeAssistantError, match="Expected JSON to be parsed as a dict"
+        menuaiError, match="Expected JSON to be parsed as a dict"
     ):
         load_json_object(fname)
 

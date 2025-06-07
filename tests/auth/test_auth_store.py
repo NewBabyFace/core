@@ -7,8 +7,8 @@ from unittest.mock import patch
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.auth import auth_store
-from homeassistant.core import HomeAssistant
+from menuai.auth import auth_store
+from menuai.core import menuai
 
 MOCK_STORAGE_DATA = {
     "version": 1,
@@ -26,7 +26,7 @@ MOCK_STORAGE_DATA = {
                 "id": "system-id",
                 "is_active": True,
                 "is_owner": True,
-                "name": "Hass.io",
+                "name": "menuai.io",
                 "system_generated": True,
             },
         ],
@@ -67,12 +67,12 @@ MOCK_STORAGE_DATA = {
 
 
 async def test_loading_no_group_data_format(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
+    menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
     """Test we correctly load old data without any groups."""
-    hass_storage[auth_store.STORAGE_KEY] = MOCK_STORAGE_DATA
+    menuai_storage[auth_store.STORAGE_KEY] = MOCK_STORAGE_DATA
 
-    store = auth_store.AuthStore(hass)
+    store = auth_store.AuthStore(menuai)
     await store.async_load()
     groups = await store.async_get_groups()
     assert len(groups) == 3
@@ -110,12 +110,12 @@ async def test_loading_no_group_data_format(
 
 
 async def test_loading_all_access_group_data_format(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
+    menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
     """Test we correctly load old data with single group."""
-    hass_storage[auth_store.STORAGE_KEY] = MOCK_STORAGE_DATA
+    menuai_storage[auth_store.STORAGE_KEY] = MOCK_STORAGE_DATA
 
-    store = auth_store.AuthStore(hass)
+    store = auth_store.AuthStore(menuai)
     await store.async_load()
     groups = await store.async_get_groups()
     assert len(groups) == 3
@@ -153,10 +153,10 @@ async def test_loading_all_access_group_data_format(
 
 
 async def test_loading_empty_data(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
+    menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
     """Test we correctly load with no existing data."""
-    store = auth_store.AuthStore(hass)
+    store = auth_store.AuthStore(menuai)
     await store.async_load()
     groups = await store.async_get_groups()
     assert len(groups) == 3
@@ -178,13 +178,13 @@ async def test_loading_empty_data(
 
 
 async def test_system_groups_store_id_and_name(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
+    menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
     """Test that for system groups we store the ID and name.
 
     Name is stored so that we remain backwards compat with < 0.82.
     """
-    store = auth_store.AuthStore(hass)
+    store = auth_store.AuthStore(menuai)
     await store.async_load()
     data = store._data_to_save()
     assert len(data["users"]) == 0
@@ -195,14 +195,14 @@ async def test_system_groups_store_id_and_name(
     ]
 
 
-async def test_loading_only_once(hass: HomeAssistant) -> None:
+async def test_loading_only_once(menuai: menuai) -> None:
     """Test only one storage load is allowed."""
-    store = auth_store.AuthStore(hass)
+    store = auth_store.AuthStore(menuai)
     with (
-        patch("homeassistant.helpers.entity_registry.async_get") as mock_ent_registry,
-        patch("homeassistant.helpers.device_registry.async_get") as mock_dev_registry,
+        patch("menuai.helpers.entity_registry.async_get") as mock_ent_registry,
+        patch("menuai.helpers.device_registry.async_get") as mock_dev_registry,
         patch(
-            "homeassistant.helpers.storage.Store.async_load", return_value=None
+            "menuai.helpers.storage.Store.async_load", return_value=None
         ) as mock_load,
     ):
         await store.async_load()
@@ -211,17 +211,17 @@ async def test_loading_only_once(hass: HomeAssistant) -> None:
 
         results = await asyncio.gather(store.async_get_users(), store.async_get_users())
 
-        mock_ent_registry.assert_called_once_with(hass)
-        mock_dev_registry.assert_called_once_with(hass)
+        mock_ent_registry.assert_called_once_with(menuai)
+        mock_dev_registry.assert_called_once_with(menuai)
         mock_load.assert_called_once_with()
         assert results[0] == results[1]
 
 
 async def test_dont_change_expire_at_on_load(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
+    menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
     """Test we correctly don't modify expired_at store load."""
-    hass_storage[auth_store.STORAGE_KEY] = {
+    menuai_storage[auth_store.STORAGE_KEY] = {
         "version": 1,
         "data": {
             "credentials": [],
@@ -237,7 +237,7 @@ async def test_dont_change_expire_at_on_load(
                     "id": "system-id",
                     "is_active": True,
                     "is_owner": True,
-                    "name": "Hass.io",
+                    "name": "menuai.io",
                     "system_generated": True,
                 },
             ],
@@ -266,7 +266,7 @@ async def test_dont_change_expire_at_on_load(
         },
     }
 
-    store = auth_store.AuthStore(hass)
+    store = auth_store.AuthStore(menuai)
     await store.async_load()
 
     users = await store.async_get_users()
@@ -278,33 +278,33 @@ async def test_dont_change_expire_at_on_load(
 
 
 async def test_loading_does_not_write_right_away(
-    hass: HomeAssistant, hass_storage: dict[str, Any], freezer: FrozenDateTimeFactory
+    menuai: menuai, menuai_storage: dict[str, Any], freezer: FrozenDateTimeFactory
 ) -> None:
     """Test after calling load we wait five minutes to write."""
-    hass_storage[auth_store.STORAGE_KEY] = MOCK_STORAGE_DATA
+    menuai_storage[auth_store.STORAGE_KEY] = MOCK_STORAGE_DATA
 
-    store = auth_store.AuthStore(hass)
+    store = auth_store.AuthStore(menuai)
     await store.async_load()
 
     # Wipe storage so we can verify if it was written
-    hass_storage[auth_store.STORAGE_KEY] = {}
+    menuai_storage[auth_store.STORAGE_KEY] = {}
 
     freezer.tick(auth_store.DEFAULT_SAVE_DELAY)
-    await hass.async_block_till_done()
-    assert hass_storage[auth_store.STORAGE_KEY] == {}
+    await menuai.async_block_till_done()
+    assert menuai_storage[auth_store.STORAGE_KEY] == {}
     freezer.tick(auth_store.INITIAL_LOAD_SAVE_DELAY)
     # Once for scheduling the task
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     # Once for the task
-    await hass.async_block_till_done()
-    assert hass_storage[auth_store.STORAGE_KEY] != {}
+    await menuai.async_block_till_done()
+    assert menuai_storage[auth_store.STORAGE_KEY] != {}
 
 
 async def test_add_remove_user_affects_tokens(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
+    menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
     """Test adding and removing a user removes the tokens."""
-    store = auth_store.AuthStore(hass)
+    store = auth_store.AuthStore(menuai)
     await store.async_load()
     user = await store.async_create_user("Test User")
     assert user.name == "Test User"
@@ -322,10 +322,10 @@ async def test_add_remove_user_affects_tokens(
 
 
 async def test_set_expiry_date(
-    hass: HomeAssistant, hass_storage: dict[str, Any], freezer: FrozenDateTimeFactory
+    menuai: menuai, menuai_storage: dict[str, Any], freezer: FrozenDateTimeFactory
 ) -> None:
     """Test set expiry date of a refresh token."""
-    hass_storage[auth_store.STORAGE_KEY] = {
+    menuai_storage[auth_store.STORAGE_KEY] = {
         "version": 1,
         "data": {
             "credentials": [],
@@ -353,7 +353,7 @@ async def test_set_expiry_date(
         },
     }
 
-    store = auth_store.AuthStore(hass)
+    store = auth_store.AuthStore(menuai)
     await store.async_load()
 
     users = await store.async_get_users()
@@ -367,13 +367,13 @@ async def test_set_expiry_date(
 
     freezer.tick(auth_store.DEFAULT_SAVE_DELAY * 2)
     # Once for scheduling the task
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     # Once for the task
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # verify token is saved without expire_at
     assert (
-        hass_storage[auth_store.STORAGE_KEY]["data"]["refresh_tokens"][0]["expire_at"]
+        menuai_storage[auth_store.STORAGE_KEY]["data"]["refresh_tokens"][0]["expire_at"]
         is None
     )
 

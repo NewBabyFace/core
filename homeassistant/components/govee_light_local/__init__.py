@@ -9,9 +9,9 @@ import logging
 
 from govee_local_api.controller import LISTENING_PORT
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
 
 from .const import DISCOVERY_TIMEOUT
 from .coordinator import GoveeLocalApiCoordinator, GoveeLocalConfigEntry
@@ -21,9 +21,9 @@ PLATFORMS: list[Platform] = [Platform.LIGHT]
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: GoveeLocalConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: GoveeLocalConfigEntry) -> bool:
     """Set up Govee light local from a config entry."""
-    coordinator = GoveeLocalApiCoordinator(hass, entry)
+    coordinator = GoveeLocalApiCoordinator(menuai, entry)
 
     async def await_cleanup():
         cleanup_complete: asyncio.Event = coordinator.cleanup()
@@ -51,10 +51,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: GoveeLocalConfigEntry) -
         raise ConfigEntryNotReady from ex
 
     entry.runtime_data = coordinator
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: GoveeLocalConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: GoveeLocalConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

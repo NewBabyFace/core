@@ -10,7 +10,7 @@ from aioesphomeapi import (
     APIClient,
 )
 
-from homeassistant.components.alarm_control_panel import (
+from menuai.components.alarm_control_panel import (
     ATTR_CODE,
     DOMAIN as ALARM_CONTROL_PANEL_DOMAIN,
     SERVICE_ALARM_ARM_AWAY,
@@ -22,15 +22,15 @@ from homeassistant.components.alarm_control_panel import (
     SERVICE_ALARM_TRIGGER,
     AlarmControlPanelState,
 )
-from homeassistant.components.esphome.alarm_control_panel import EspHomeACPFeatures
-from homeassistant.const import ATTR_ENTITY_ID, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
+from menuai.components.esphome.alarm_control_panel import EspHomeACPFeatures
+from menuai.const import ATTR_ENTITY_ID, STATE_UNKNOWN
+from menuai.core import menuai
 
 from .conftest import MockGenericDeviceEntryType
 
 
 async def test_generic_alarm_control_panel_requires_code(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -59,11 +59,11 @@ async def test_generic_alarm_control_panel_requires_code(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("alarm_control_panel.test_myalarm_control_panel")
+    state = menuai.states.get("alarm_control_panel.test_myalarm_control_panel")
     assert state is not None
     assert state.state == AlarmControlPanelState.ARMED_AWAY
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         ALARM_CONTROL_PANEL_DOMAIN,
         SERVICE_ALARM_ARM_AWAY,
         {
@@ -77,7 +77,7 @@ async def test_generic_alarm_control_panel_requires_code(
     )
     mock_client.alarm_control_panel_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         ALARM_CONTROL_PANEL_DOMAIN,
         SERVICE_ALARM_ARM_CUSTOM_BYPASS,
         {
@@ -91,7 +91,7 @@ async def test_generic_alarm_control_panel_requires_code(
     )
     mock_client.alarm_control_panel_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         ALARM_CONTROL_PANEL_DOMAIN,
         SERVICE_ALARM_ARM_HOME,
         {
@@ -105,7 +105,7 @@ async def test_generic_alarm_control_panel_requires_code(
     )
     mock_client.alarm_control_panel_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         ALARM_CONTROL_PANEL_DOMAIN,
         SERVICE_ALARM_ARM_NIGHT,
         {
@@ -119,7 +119,7 @@ async def test_generic_alarm_control_panel_requires_code(
     )
     mock_client.alarm_control_panel_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         ALARM_CONTROL_PANEL_DOMAIN,
         SERVICE_ALARM_ARM_VACATION,
         {
@@ -133,7 +133,7 @@ async def test_generic_alarm_control_panel_requires_code(
     )
     mock_client.alarm_control_panel_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         ALARM_CONTROL_PANEL_DOMAIN,
         SERVICE_ALARM_TRIGGER,
         {
@@ -147,7 +147,7 @@ async def test_generic_alarm_control_panel_requires_code(
     )
     mock_client.alarm_control_panel_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         ALARM_CONTROL_PANEL_DOMAIN,
         SERVICE_ALARM_DISARM,
         {
@@ -163,7 +163,7 @@ async def test_generic_alarm_control_panel_requires_code(
 
 
 async def test_generic_alarm_control_panel_no_code(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -192,11 +192,11 @@ async def test_generic_alarm_control_panel_no_code(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("alarm_control_panel.test_myalarm_control_panel")
+    state = menuai.states.get("alarm_control_panel.test_myalarm_control_panel")
     assert state is not None
     assert state.state == AlarmControlPanelState.ARMED_AWAY
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         ALARM_CONTROL_PANEL_DOMAIN,
         SERVICE_ALARM_DISARM,
         {ATTR_ENTITY_ID: "alarm_control_panel.test_myalarm_control_panel"},
@@ -209,7 +209,7 @@ async def test_generic_alarm_control_panel_no_code(
 
 
 async def test_generic_alarm_control_panel_missing_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -238,6 +238,6 @@ async def test_generic_alarm_control_panel_missing_state(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("alarm_control_panel.test_myalarm_control_panel")
+    state = menuai.states.get("alarm_control_panel.test_myalarm_control_panel")
     assert state is not None
     assert state.state == STATE_UNKNOWN

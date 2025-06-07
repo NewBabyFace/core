@@ -8,8 +8,8 @@ from freezegun import freeze_time
 import pytest
 import voluptuous as vol
 
-from homeassistant.components.sensor import SensorDeviceClass
-from homeassistant.const import (
+from menuai.components.sensor import SensorDeviceClass
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     CONF_CONDITION,
     CONF_DEVICE_ID,
@@ -17,17 +17,17 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConditionError, HomeAssistantError
-from homeassistant.helpers import (
+from menuai.core import menuai
+from menuai.exceptions import ConditionError, menuaiError
+from menuai.helpers import (
     condition,
     config_validation as cv,
     entity_registry as er,
     trace,
 )
-from homeassistant.helpers.template import Template
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.helpers.template import Template
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 
 def assert_element(trace_element, expected_element, path):
@@ -70,11 +70,11 @@ def assert_condition_trace(expected):
             assert_element(condition_trace[key][index], element, path)
 
 
-async def test_invalid_condition(hass: HomeAssistant) -> None:
+async def test_invalid_condition(menuai: menuai) -> None:
     """Test if invalid condition raises."""
-    with pytest.raises(HomeAssistantError):
+    with pytest.raises(menuaiError):
         await condition.async_from_config(
-            hass,
+            menuai,
             {
                 "condition": "invalid",
                 "conditions": [
@@ -88,7 +88,7 @@ async def test_invalid_condition(hass: HomeAssistant) -> None:
         )
 
 
-async def test_and_condition(hass: HomeAssistant) -> None:
+async def test_and_condition(menuai: menuai) -> None:
     """Test the 'and' condition."""
     config = {
         "alias": "And Condition",
@@ -107,11 +107,11 @@ async def test_and_condition(hass: HomeAssistant) -> None:
         ],
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
 
     with pytest.raises(ConditionError):
-        test(hass)
+        test(menuai)
     assert_condition_trace(
         {
             "": [{"error_type": ConditionError}],
@@ -122,8 +122,8 @@ async def test_and_condition(hass: HomeAssistant) -> None:
         }
     )
 
-    hass.states.async_set("sensor.temperature", 120)
-    assert not test(hass)
+    menuai.states.async_set("sensor.temperature", 120)
+    assert not test(menuai)
     assert_condition_trace(
         {
             "": [{"result": {"result": False}}],
@@ -134,8 +134,8 @@ async def test_and_condition(hass: HomeAssistant) -> None:
         }
     )
 
-    hass.states.async_set("sensor.temperature", 105)
-    assert not test(hass)
+    menuai.states.async_set("sensor.temperature", 105)
+    assert not test(menuai)
     assert_condition_trace(
         {
             "": [{"result": {"result": False}}],
@@ -146,8 +146,8 @@ async def test_and_condition(hass: HomeAssistant) -> None:
         }
     )
 
-    hass.states.async_set("sensor.temperature", 100)
-    assert test(hass)
+    menuai.states.async_set("sensor.temperature", 100)
+    assert test(menuai)
     assert_condition_trace(
         {
             "": [{"result": {"result": True}}],
@@ -161,7 +161,7 @@ async def test_and_condition(hass: HomeAssistant) -> None:
     )
 
 
-async def test_and_condition_raises(hass: HomeAssistant) -> None:
+async def test_and_condition_raises(menuai: menuai) -> None:
     """Test the 'and' condition."""
     config = {
         "alias": "And Condition",
@@ -180,12 +180,12 @@ async def test_and_condition_raises(hass: HomeAssistant) -> None:
         ],
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
 
     # All subconditions raise, the AND-condition should raise
     with pytest.raises(ConditionError):
-        test(hass)
+        test(menuai)
     assert_condition_trace(
         {
             "": [{"error_type": ConditionError}],
@@ -198,9 +198,9 @@ async def test_and_condition_raises(hass: HomeAssistant) -> None:
 
     # The first subconditions raises, the second returns True, the AND-condition
     # should raise
-    hass.states.async_set("sensor.temperature2", 120)
+    menuai.states.async_set("sensor.temperature2", 120)
     with pytest.raises(ConditionError):
-        test(hass)
+        test(menuai)
     assert_condition_trace(
         {
             "": [{"error_type": ConditionError}],
@@ -213,8 +213,8 @@ async def test_and_condition_raises(hass: HomeAssistant) -> None:
 
     # The first subconditions raises, the second returns False, the AND-condition
     # should return False
-    hass.states.async_set("sensor.temperature2", 90)
-    assert not test(hass)
+    menuai.states.async_set("sensor.temperature2", 90)
+    assert not test(menuai)
     assert_condition_trace(
         {
             "": [{"result": {"result": False}}],
@@ -234,7 +234,7 @@ async def test_and_condition_raises(hass: HomeAssistant) -> None:
     )
 
 
-async def test_and_condition_with_template(hass: HomeAssistant) -> None:
+async def test_and_condition_with_template(menuai: menuai) -> None:
     """Test the 'and' condition."""
     config = {
         "condition": "and",
@@ -252,11 +252,11 @@ async def test_and_condition_with_template(hass: HomeAssistant) -> None:
         ],
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
 
-    hass.states.async_set("sensor.temperature", 120)
-    assert not test(hass)
+    menuai.states.async_set("sensor.temperature", 120)
+    assert not test(menuai)
     assert_condition_trace(
         {
             "": [{"result": {"result": False}}],
@@ -266,14 +266,14 @@ async def test_and_condition_with_template(hass: HomeAssistant) -> None:
         }
     )
 
-    hass.states.async_set("sensor.temperature", 105)
-    assert not test(hass)
+    menuai.states.async_set("sensor.temperature", 105)
+    assert not test(menuai)
 
-    hass.states.async_set("sensor.temperature", 100)
-    assert test(hass)
+    menuai.states.async_set("sensor.temperature", 100)
+    assert test(menuai)
 
 
-async def test_and_condition_shorthand(hass: HomeAssistant) -> None:
+async def test_and_condition_shorthand(menuai: menuai) -> None:
     """Test the 'and' condition shorthand."""
     config = {
         "alias": "And Condition Shorthand",
@@ -291,14 +291,14 @@ async def test_and_condition_shorthand(hass: HomeAssistant) -> None:
         ],
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
 
     assert config["alias"] == "And Condition Shorthand"
     assert "and" not in config
 
-    hass.states.async_set("sensor.temperature", 120)
-    assert not test(hass)
+    menuai.states.async_set("sensor.temperature", 120)
+    assert not test(menuai)
     assert_condition_trace(
         {
             "": [{"result": {"result": False}}],
@@ -308,14 +308,14 @@ async def test_and_condition_shorthand(hass: HomeAssistant) -> None:
         }
     )
 
-    hass.states.async_set("sensor.temperature", 105)
-    assert not test(hass)
+    menuai.states.async_set("sensor.temperature", 105)
+    assert not test(menuai)
 
-    hass.states.async_set("sensor.temperature", 100)
-    assert test(hass)
+    menuai.states.async_set("sensor.temperature", 100)
+    assert test(menuai)
 
 
-async def test_and_condition_list_shorthand(hass: HomeAssistant) -> None:
+async def test_and_condition_list_shorthand(menuai: menuai) -> None:
     """Test the 'and' condition list shorthand."""
     config = {
         "alias": "And Condition List Shorthand",
@@ -333,14 +333,14 @@ async def test_and_condition_list_shorthand(hass: HomeAssistant) -> None:
         ],
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
 
     assert config["alias"] == "And Condition List Shorthand"
     assert "and" not in config
 
-    hass.states.async_set("sensor.temperature", 120)
-    assert not test(hass)
+    menuai.states.async_set("sensor.temperature", 120)
+    assert not test(menuai)
     assert_condition_trace(
         {
             "": [{"result": {"result": False}}],
@@ -350,14 +350,14 @@ async def test_and_condition_list_shorthand(hass: HomeAssistant) -> None:
         }
     )
 
-    hass.states.async_set("sensor.temperature", 105)
-    assert not test(hass)
+    menuai.states.async_set("sensor.temperature", 105)
+    assert not test(menuai)
 
-    hass.states.async_set("sensor.temperature", 100)
-    assert test(hass)
+    menuai.states.async_set("sensor.temperature", 100)
+    assert test(menuai)
 
 
-async def test_malformed_and_condition_list_shorthand(hass: HomeAssistant) -> None:
+async def test_malformed_and_condition_list_shorthand(menuai: menuai) -> None:
     """Test the 'and' condition list shorthand syntax check."""
     config = {
         "alias": "Bad shorthand syntax",
@@ -368,7 +368,7 @@ async def test_malformed_and_condition_list_shorthand(hass: HomeAssistant) -> No
         cv.CONDITION_SCHEMA(config)
 
 
-async def test_or_condition(hass: HomeAssistant) -> None:
+async def test_or_condition(menuai: menuai) -> None:
     """Test the 'or' condition."""
     config = {
         "alias": "Or Condition",
@@ -387,11 +387,11 @@ async def test_or_condition(hass: HomeAssistant) -> None:
         ],
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
 
     with pytest.raises(ConditionError):
-        test(hass)
+        test(menuai)
     assert_condition_trace(
         {
             "": [{"error_type": ConditionError}],
@@ -402,8 +402,8 @@ async def test_or_condition(hass: HomeAssistant) -> None:
         }
     )
 
-    hass.states.async_set("sensor.temperature", 120)
-    assert not test(hass)
+    menuai.states.async_set("sensor.temperature", 120)
+    assert not test(menuai)
     assert_condition_trace(
         {
             "": [{"result": {"result": False}}],
@@ -424,8 +424,8 @@ async def test_or_condition(hass: HomeAssistant) -> None:
         }
     )
 
-    hass.states.async_set("sensor.temperature", 105)
-    assert test(hass)
+    menuai.states.async_set("sensor.temperature", 105)
+    assert test(menuai)
     assert_condition_trace(
         {
             "": [{"result": {"result": True}}],
@@ -438,8 +438,8 @@ async def test_or_condition(hass: HomeAssistant) -> None:
         }
     )
 
-    hass.states.async_set("sensor.temperature", 100)
-    assert test(hass)
+    menuai.states.async_set("sensor.temperature", 100)
+    assert test(menuai)
     assert_condition_trace(
         {
             "": [{"result": {"result": True}}],
@@ -451,7 +451,7 @@ async def test_or_condition(hass: HomeAssistant) -> None:
     )
 
 
-async def test_or_condition_raises(hass: HomeAssistant) -> None:
+async def test_or_condition_raises(menuai: menuai) -> None:
     """Test the 'or' condition."""
     config = {
         "alias": "Or Condition",
@@ -470,12 +470,12 @@ async def test_or_condition_raises(hass: HomeAssistant) -> None:
         ],
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
 
     # All subconditions raise, the OR-condition should raise
     with pytest.raises(ConditionError):
-        test(hass)
+        test(menuai)
     assert_condition_trace(
         {
             "": [{"error_type": ConditionError}],
@@ -488,9 +488,9 @@ async def test_or_condition_raises(hass: HomeAssistant) -> None:
 
     # The first subconditions raises, the second returns False, the OR-condition
     # should raise
-    hass.states.async_set("sensor.temperature2", 100)
+    menuai.states.async_set("sensor.temperature2", 100)
     with pytest.raises(ConditionError):
-        test(hass)
+        test(menuai)
     assert_condition_trace(
         {
             "": [{"error_type": ConditionError}],
@@ -511,8 +511,8 @@ async def test_or_condition_raises(hass: HomeAssistant) -> None:
 
     # The first subconditions raises, the second returns True, the OR-condition
     # should return True
-    hass.states.async_set("sensor.temperature2", 120)
-    assert test(hass)
+    menuai.states.async_set("sensor.temperature2", 120)
+    assert test(menuai)
     assert_condition_trace(
         {
             "": [{"result": {"result": True}}],
@@ -524,7 +524,7 @@ async def test_or_condition_raises(hass: HomeAssistant) -> None:
     )
 
 
-async def test_or_condition_with_template(hass: HomeAssistant) -> None:
+async def test_or_condition_with_template(menuai: menuai) -> None:
     """Test the 'or' condition."""
     config = {
         "condition": "or",
@@ -538,20 +538,20 @@ async def test_or_condition_with_template(hass: HomeAssistant) -> None:
         ],
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
 
-    hass.states.async_set("sensor.temperature", 120)
-    assert not test(hass)
+    menuai.states.async_set("sensor.temperature", 120)
+    assert not test(menuai)
 
-    hass.states.async_set("sensor.temperature", 105)
-    assert test(hass)
+    menuai.states.async_set("sensor.temperature", 105)
+    assert test(menuai)
 
-    hass.states.async_set("sensor.temperature", 100)
-    assert test(hass)
+    menuai.states.async_set("sensor.temperature", 100)
+    assert test(menuai)
 
 
-async def test_or_condition_shorthand(hass: HomeAssistant) -> None:
+async def test_or_condition_shorthand(menuai: menuai) -> None:
     """Test the 'or' condition shorthand."""
     config = {
         "alias": "Or Condition Shorthand",
@@ -565,23 +565,23 @@ async def test_or_condition_shorthand(hass: HomeAssistant) -> None:
         ],
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
 
     assert config["alias"] == "Or Condition Shorthand"
     assert "or" not in config
 
-    hass.states.async_set("sensor.temperature", 120)
-    assert not test(hass)
+    menuai.states.async_set("sensor.temperature", 120)
+    assert not test(menuai)
 
-    hass.states.async_set("sensor.temperature", 105)
-    assert test(hass)
+    menuai.states.async_set("sensor.temperature", 105)
+    assert test(menuai)
 
-    hass.states.async_set("sensor.temperature", 100)
-    assert test(hass)
+    menuai.states.async_set("sensor.temperature", 100)
+    assert test(menuai)
 
 
-async def test_not_condition(hass: HomeAssistant) -> None:
+async def test_not_condition(menuai: menuai) -> None:
     """Test the 'not' condition."""
     config = {
         "alias": "Not Condition",
@@ -600,11 +600,11 @@ async def test_not_condition(hass: HomeAssistant) -> None:
         ],
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
 
     with pytest.raises(ConditionError):
-        test(hass)
+        test(menuai)
     assert_condition_trace(
         {
             "": [{"error_type": ConditionError}],
@@ -615,8 +615,8 @@ async def test_not_condition(hass: HomeAssistant) -> None:
         }
     )
 
-    hass.states.async_set("sensor.temperature", 101)
-    assert test(hass)
+    menuai.states.async_set("sensor.temperature", 101)
+    assert test(menuai)
     assert_condition_trace(
         {
             "": [{"result": {"result": True}}],
@@ -637,8 +637,8 @@ async def test_not_condition(hass: HomeAssistant) -> None:
         }
     )
 
-    hass.states.async_set("sensor.temperature", 50)
-    assert test(hass)
+    menuai.states.async_set("sensor.temperature", 50)
+    assert test(menuai)
     assert_condition_trace(
         {
             "": [{"result": {"result": True}}],
@@ -653,8 +653,8 @@ async def test_not_condition(hass: HomeAssistant) -> None:
         }
     )
 
-    hass.states.async_set("sensor.temperature", 49)
-    assert not test(hass)
+    menuai.states.async_set("sensor.temperature", 49)
+    assert not test(menuai)
     assert_condition_trace(
         {
             "": [{"result": {"result": False}}],
@@ -667,8 +667,8 @@ async def test_not_condition(hass: HomeAssistant) -> None:
         }
     )
 
-    hass.states.async_set("sensor.temperature", 100)
-    assert not test(hass)
+    menuai.states.async_set("sensor.temperature", 100)
+    assert not test(menuai)
     assert_condition_trace(
         {
             "": [{"result": {"result": False}}],
@@ -680,7 +680,7 @@ async def test_not_condition(hass: HomeAssistant) -> None:
     )
 
 
-async def test_not_condition_raises(hass: HomeAssistant) -> None:
+async def test_not_condition_raises(menuai: menuai) -> None:
     """Test the 'and' condition."""
     config = {
         "alias": "Not Condition",
@@ -699,12 +699,12 @@ async def test_not_condition_raises(hass: HomeAssistant) -> None:
         ],
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
 
     # All subconditions raise, the NOT-condition should raise
     with pytest.raises(ConditionError):
-        test(hass)
+        test(menuai)
     assert_condition_trace(
         {
             "": [{"error_type": ConditionError}],
@@ -717,9 +717,9 @@ async def test_not_condition_raises(hass: HomeAssistant) -> None:
 
     # The first subconditions raises, the second returns False, the NOT-condition
     # should raise
-    hass.states.async_set("sensor.temperature2", 90)
+    menuai.states.async_set("sensor.temperature2", 90)
     with pytest.raises(ConditionError):
-        test(hass)
+        test(menuai)
     assert_condition_trace(
         {
             "": [{"error_type": ConditionError}],
@@ -734,8 +734,8 @@ async def test_not_condition_raises(hass: HomeAssistant) -> None:
 
     # The first subconditions raises, the second returns True, the NOT-condition
     # should return False
-    hass.states.async_set("sensor.temperature2", 40)
-    assert not test(hass)
+    menuai.states.async_set("sensor.temperature2", 40)
+    assert not test(menuai)
     assert_condition_trace(
         {
             "": [{"result": {"result": False}}],
@@ -747,7 +747,7 @@ async def test_not_condition_raises(hass: HomeAssistant) -> None:
     )
 
 
-async def test_not_condition_with_template(hass: HomeAssistant) -> None:
+async def test_not_condition_with_template(menuai: menuai) -> None:
     """Test the 'or' condition."""
     config = {
         "condition": "not",
@@ -764,23 +764,23 @@ async def test_not_condition_with_template(hass: HomeAssistant) -> None:
         ],
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
 
-    hass.states.async_set("sensor.temperature", 101)
-    assert test(hass)
+    menuai.states.async_set("sensor.temperature", 101)
+    assert test(menuai)
 
-    hass.states.async_set("sensor.temperature", 50)
-    assert test(hass)
+    menuai.states.async_set("sensor.temperature", 50)
+    assert test(menuai)
 
-    hass.states.async_set("sensor.temperature", 49)
-    assert not test(hass)
+    menuai.states.async_set("sensor.temperature", 49)
+    assert not test(menuai)
 
-    hass.states.async_set("sensor.temperature", 100)
-    assert not test(hass)
+    menuai.states.async_set("sensor.temperature", 100)
+    assert not test(menuai)
 
 
-async def test_not_condition_shorthand(hass: HomeAssistant) -> None:
+async def test_not_condition_shorthand(menuai: menuai) -> None:
     """Test the 'or' condition shorthand."""
     config = {
         "alias": "Not Condition Shorthand",
@@ -797,26 +797,26 @@ async def test_not_condition_shorthand(hass: HomeAssistant) -> None:
         ],
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
 
     assert config["alias"] == "Not Condition Shorthand"
     assert "not" not in config
 
-    hass.states.async_set("sensor.temperature", 101)
-    assert test(hass)
+    menuai.states.async_set("sensor.temperature", 101)
+    assert test(menuai)
 
-    hass.states.async_set("sensor.temperature", 50)
-    assert test(hass)
+    menuai.states.async_set("sensor.temperature", 50)
+    assert test(menuai)
 
-    hass.states.async_set("sensor.temperature", 49)
-    assert not test(hass)
+    menuai.states.async_set("sensor.temperature", 49)
+    assert not test(menuai)
 
-    hass.states.async_set("sensor.temperature", 100)
-    assert not test(hass)
+    menuai.states.async_set("sensor.temperature", 100)
+    assert not test(menuai)
 
 
-async def test_time_window(hass: HomeAssistant) -> None:
+async def test_time_window(menuai: menuai) -> None:
     """Test time condition windows."""
     sixam = "06:00:00"
     sixpm = "18:00:00"
@@ -828,7 +828,7 @@ async def test_time_window(hass: HomeAssistant) -> None:
         "before": sixpm,
     }
     config1 = cv.CONDITION_SCHEMA(config1)
-    config1 = await condition.async_validate_condition_config(hass, config1)
+    config1 = await condition.async_validate_condition_config(menuai, config1)
     config2 = {
         "alias": "Time Cond",
         "condition": "time",
@@ -836,43 +836,43 @@ async def test_time_window(hass: HomeAssistant) -> None:
         "before": sixam,
     }
     config2 = cv.CONDITION_SCHEMA(config2)
-    config2 = await condition.async_validate_condition_config(hass, config2)
-    test1 = await condition.async_from_config(hass, config1)
-    test2 = await condition.async_from_config(hass, config2)
+    config2 = await condition.async_validate_condition_config(menuai, config2)
+    test1 = await condition.async_from_config(menuai, config1)
+    test2 = await condition.async_from_config(menuai, config2)
 
     with patch(
-        "homeassistant.helpers.condition.dt_util.now",
+        "menuai.helpers.condition.dt_util.now",
         return_value=dt_util.now().replace(hour=3),
     ):
-        assert not test1(hass)
-        assert test2(hass)
+        assert not test1(menuai)
+        assert test2(menuai)
 
     with patch(
-        "homeassistant.helpers.condition.dt_util.now",
+        "menuai.helpers.condition.dt_util.now",
         return_value=dt_util.now().replace(hour=9),
     ):
-        assert test1(hass)
-        assert not test2(hass)
+        assert test1(menuai)
+        assert not test2(menuai)
 
     with patch(
-        "homeassistant.helpers.condition.dt_util.now",
+        "menuai.helpers.condition.dt_util.now",
         return_value=dt_util.now().replace(hour=15),
     ):
-        assert test1(hass)
-        assert not test2(hass)
+        assert test1(menuai)
+        assert not test2(menuai)
 
     with patch(
-        "homeassistant.helpers.condition.dt_util.now",
+        "menuai.helpers.condition.dt_util.now",
         return_value=dt_util.now().replace(hour=21),
     ):
-        assert not test1(hass)
-        assert test2(hass)
+        assert not test1(menuai)
+        assert test2(menuai)
 
 
-async def test_time_using_input_datetime(hass: HomeAssistant) -> None:
+async def test_time_using_input_datetime(menuai: menuai) -> None:
     """Test time conditions using input_datetime entities."""
     await async_setup_component(
-        hass,
+        menuai,
         "input_datetime",
         {
             "input_datetime": {
@@ -882,7 +882,7 @@ async def test_time_using_input_datetime(hass: HomeAssistant) -> None:
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "input_datetime",
         "set_datetime",
         {
@@ -896,7 +896,7 @@ async def test_time_using_input_datetime(hass: HomeAssistant) -> None:
         blocking=True,
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "input_datetime",
         "set_datetime",
         {
@@ -911,250 +911,250 @@ async def test_time_using_input_datetime(hass: HomeAssistant) -> None:
     )
 
     with patch(
-        "homeassistant.helpers.condition.dt_util.now",
+        "menuai.helpers.condition.dt_util.now",
         return_value=dt_util.now().replace(hour=3),
     ):
         assert not condition.time(
-            hass, after="input_datetime.am", before="input_datetime.pm"
+            menuai, after="input_datetime.am", before="input_datetime.pm"
         )
         assert condition.time(
-            hass, after="input_datetime.pm", before="input_datetime.am"
+            menuai, after="input_datetime.pm", before="input_datetime.am"
         )
 
     with patch(
-        "homeassistant.helpers.condition.dt_util.now",
+        "menuai.helpers.condition.dt_util.now",
         return_value=dt_util.now().replace(hour=9),
     ):
         assert condition.time(
-            hass, after="input_datetime.am", before="input_datetime.pm"
+            menuai, after="input_datetime.am", before="input_datetime.pm"
         )
         assert not condition.time(
-            hass, after="input_datetime.pm", before="input_datetime.am"
+            menuai, after="input_datetime.pm", before="input_datetime.am"
         )
 
     with patch(
-        "homeassistant.helpers.condition.dt_util.now",
+        "menuai.helpers.condition.dt_util.now",
         return_value=dt_util.now().replace(hour=15),
     ):
         assert condition.time(
-            hass, after="input_datetime.am", before="input_datetime.pm"
+            menuai, after="input_datetime.am", before="input_datetime.pm"
         )
         assert not condition.time(
-            hass, after="input_datetime.pm", before="input_datetime.am"
+            menuai, after="input_datetime.pm", before="input_datetime.am"
         )
 
     with patch(
-        "homeassistant.helpers.condition.dt_util.now",
+        "menuai.helpers.condition.dt_util.now",
         return_value=dt_util.now().replace(hour=21),
     ):
         assert not condition.time(
-            hass, after="input_datetime.am", before="input_datetime.pm"
+            menuai, after="input_datetime.am", before="input_datetime.pm"
         )
         assert condition.time(
-            hass, after="input_datetime.pm", before="input_datetime.am"
+            menuai, after="input_datetime.pm", before="input_datetime.am"
         )
 
     # Trigger on PM time
     with patch(
-        "homeassistant.helpers.condition.dt_util.now",
+        "menuai.helpers.condition.dt_util.now",
         return_value=dt_util.now().replace(hour=18, minute=0, second=0),
     ):
         assert condition.time(
-            hass, after="input_datetime.pm", before="input_datetime.am"
+            menuai, after="input_datetime.pm", before="input_datetime.am"
         )
         assert not condition.time(
-            hass, after="input_datetime.am", before="input_datetime.pm"
+            menuai, after="input_datetime.am", before="input_datetime.pm"
         )
-        assert condition.time(hass, after="input_datetime.pm")
-        assert not condition.time(hass, before="input_datetime.pm")
+        assert condition.time(menuai, after="input_datetime.pm")
+        assert not condition.time(menuai, before="input_datetime.pm")
 
     # Trigger on AM time
     with patch(
-        "homeassistant.helpers.condition.dt_util.now",
+        "menuai.helpers.condition.dt_util.now",
         return_value=dt_util.now().replace(hour=6, minute=0, second=0),
     ):
         assert not condition.time(
-            hass, after="input_datetime.pm", before="input_datetime.am"
+            menuai, after="input_datetime.pm", before="input_datetime.am"
         )
         assert condition.time(
-            hass, after="input_datetime.am", before="input_datetime.pm"
+            menuai, after="input_datetime.am", before="input_datetime.pm"
         )
-        assert condition.time(hass, after="input_datetime.am")
-        assert not condition.time(hass, before="input_datetime.am")
+        assert condition.time(menuai, after="input_datetime.am")
+        assert not condition.time(menuai, before="input_datetime.am")
 
     with pytest.raises(ConditionError):
-        condition.time(hass, after="input_datetime.not_existing")
+        condition.time(menuai, after="input_datetime.not_existing")
 
     with pytest.raises(ConditionError):
-        condition.time(hass, before="input_datetime.not_existing")
+        condition.time(menuai, before="input_datetime.not_existing")
 
 
-async def test_time_using_time(hass: HomeAssistant) -> None:
+async def test_time_using_time(menuai: menuai) -> None:
     """Test time conditions using time entities."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "time.am",
         "06:00:00",  # 6 am local time
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "time.pm",
         "18:00:00",  # 6 pm local time
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "time.unknown_state",
         STATE_UNKNOWN,
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "time.unavailable_state",
         STATE_UNAVAILABLE,
     )
 
     with patch(
-        "homeassistant.helpers.condition.dt_util.now",
+        "menuai.helpers.condition.dt_util.now",
         return_value=dt_util.now().replace(hour=3),
     ):
-        assert not condition.time(hass, after="time.am", before="time.pm")
-        assert condition.time(hass, after="time.pm", before="time.am")
+        assert not condition.time(menuai, after="time.am", before="time.pm")
+        assert condition.time(menuai, after="time.pm", before="time.am")
 
     with patch(
-        "homeassistant.helpers.condition.dt_util.now",
+        "menuai.helpers.condition.dt_util.now",
         return_value=dt_util.now().replace(hour=9),
     ):
-        assert condition.time(hass, after="time.am", before="time.pm")
-        assert not condition.time(hass, after="time.pm", before="time.am")
+        assert condition.time(menuai, after="time.am", before="time.pm")
+        assert not condition.time(menuai, after="time.pm", before="time.am")
 
     with patch(
-        "homeassistant.helpers.condition.dt_util.now",
+        "menuai.helpers.condition.dt_util.now",
         return_value=dt_util.now().replace(hour=15),
     ):
-        assert condition.time(hass, after="time.am", before="time.pm")
-        assert not condition.time(hass, after="time.pm", before="time.am")
+        assert condition.time(menuai, after="time.am", before="time.pm")
+        assert not condition.time(menuai, after="time.pm", before="time.am")
 
     with patch(
-        "homeassistant.helpers.condition.dt_util.now",
+        "menuai.helpers.condition.dt_util.now",
         return_value=dt_util.now().replace(hour=21),
     ):
-        assert not condition.time(hass, after="time.am", before="time.pm")
-        assert condition.time(hass, after="time.pm", before="time.am")
+        assert not condition.time(menuai, after="time.am", before="time.pm")
+        assert condition.time(menuai, after="time.pm", before="time.am")
 
     # Trigger on PM time
     with patch(
-        "homeassistant.helpers.condition.dt_util.now",
+        "menuai.helpers.condition.dt_util.now",
         return_value=dt_util.now().replace(hour=18, minute=0, second=0),
     ):
-        assert condition.time(hass, after="time.pm", before="time.am")
-        assert not condition.time(hass, after="time.am", before="time.pm")
-        assert condition.time(hass, after="time.pm")
-        assert not condition.time(hass, before="time.pm")
+        assert condition.time(menuai, after="time.pm", before="time.am")
+        assert not condition.time(menuai, after="time.am", before="time.pm")
+        assert condition.time(menuai, after="time.pm")
+        assert not condition.time(menuai, before="time.pm")
 
     # Trigger on AM time
     with patch(
-        "homeassistant.helpers.condition.dt_util.now",
+        "menuai.helpers.condition.dt_util.now",
         return_value=dt_util.now().replace(hour=6, minute=0, second=0),
     ):
-        assert not condition.time(hass, after="time.pm", before="time.am")
-        assert condition.time(hass, after="time.am", before="time.pm")
-        assert condition.time(hass, after="time.am")
-        assert not condition.time(hass, before="time.am")
+        assert not condition.time(menuai, after="time.pm", before="time.am")
+        assert condition.time(menuai, after="time.am", before="time.pm")
+        assert condition.time(menuai, after="time.am")
+        assert not condition.time(menuai, before="time.am")
 
-    assert not condition.time(hass, after="time.unknown_state")
-    assert not condition.time(hass, before="time.unavailable_state")
-
-    with pytest.raises(ConditionError):
-        condition.time(hass, after="time.not_existing")
+    assert not condition.time(menuai, after="time.unknown_state")
+    assert not condition.time(menuai, before="time.unavailable_state")
 
     with pytest.raises(ConditionError):
-        condition.time(hass, before="time.not_existing")
+        condition.time(menuai, after="time.not_existing")
+
+    with pytest.raises(ConditionError):
+        condition.time(menuai, before="time.not_existing")
 
 
-async def test_time_using_sensor(hass: HomeAssistant) -> None:
+async def test_time_using_sensor(menuai: menuai) -> None:
     """Test time conditions using sensor entities."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.am",
         "2021-06-03 13:00:00.000000+00:00",  # 6 am local time
         {ATTR_DEVICE_CLASS: SensorDeviceClass.TIMESTAMP},
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.pm",
         "2020-06-01 01:00:00.000000+00:00",  # 6 pm local time
         {ATTR_DEVICE_CLASS: SensorDeviceClass.TIMESTAMP},
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.no_device_class",
         "2020-06-01 01:00:00.000000+00:00",
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.invalid_timestamp",
         "This is not a timestamp",
         {ATTR_DEVICE_CLASS: SensorDeviceClass.TIMESTAMP},
     )
 
     with patch(
-        "homeassistant.helpers.condition.dt_util.now",
+        "menuai.helpers.condition.dt_util.now",
         return_value=dt_util.now().replace(hour=3),
     ):
-        assert not condition.time(hass, after="sensor.am", before="sensor.pm")
-        assert condition.time(hass, after="sensor.pm", before="sensor.am")
+        assert not condition.time(menuai, after="sensor.am", before="sensor.pm")
+        assert condition.time(menuai, after="sensor.pm", before="sensor.am")
 
     with patch(
-        "homeassistant.helpers.condition.dt_util.now",
+        "menuai.helpers.condition.dt_util.now",
         return_value=dt_util.now().replace(hour=9),
     ):
-        assert condition.time(hass, after="sensor.am", before="sensor.pm")
-        assert not condition.time(hass, after="sensor.pm", before="sensor.am")
+        assert condition.time(menuai, after="sensor.am", before="sensor.pm")
+        assert not condition.time(menuai, after="sensor.pm", before="sensor.am")
 
     with patch(
-        "homeassistant.helpers.condition.dt_util.now",
+        "menuai.helpers.condition.dt_util.now",
         return_value=dt_util.now().replace(hour=15),
     ):
-        assert condition.time(hass, after="sensor.am", before="sensor.pm")
-        assert not condition.time(hass, after="sensor.pm", before="sensor.am")
+        assert condition.time(menuai, after="sensor.am", before="sensor.pm")
+        assert not condition.time(menuai, after="sensor.pm", before="sensor.am")
 
     with patch(
-        "homeassistant.helpers.condition.dt_util.now",
+        "menuai.helpers.condition.dt_util.now",
         return_value=dt_util.now().replace(hour=21),
     ):
-        assert not condition.time(hass, after="sensor.am", before="sensor.pm")
-        assert condition.time(hass, after="sensor.pm", before="sensor.am")
+        assert not condition.time(menuai, after="sensor.am", before="sensor.pm")
+        assert condition.time(menuai, after="sensor.pm", before="sensor.am")
 
     # Trigger on PM time
     with patch(
-        "homeassistant.helpers.condition.dt_util.now",
+        "menuai.helpers.condition.dt_util.now",
         return_value=dt_util.now().replace(hour=18, minute=0, second=0),
     ):
-        assert condition.time(hass, after="sensor.pm", before="sensor.am")
-        assert not condition.time(hass, after="sensor.am", before="sensor.pm")
-        assert condition.time(hass, after="sensor.pm")
-        assert not condition.time(hass, before="sensor.pm")
+        assert condition.time(menuai, after="sensor.pm", before="sensor.am")
+        assert not condition.time(menuai, after="sensor.am", before="sensor.pm")
+        assert condition.time(menuai, after="sensor.pm")
+        assert not condition.time(menuai, before="sensor.pm")
 
         # Even though valid, the device class is missing
-        assert not condition.time(hass, after="sensor.no_device_class")
-        assert not condition.time(hass, before="sensor.no_device_class")
+        assert not condition.time(menuai, after="sensor.no_device_class")
+        assert not condition.time(menuai, before="sensor.no_device_class")
 
     # Trigger on AM time
     with patch(
-        "homeassistant.helpers.condition.dt_util.now",
+        "menuai.helpers.condition.dt_util.now",
         return_value=dt_util.now().replace(hour=6, minute=0, second=0),
     ):
-        assert not condition.time(hass, after="sensor.pm", before="sensor.am")
-        assert condition.time(hass, after="sensor.am", before="sensor.pm")
-        assert condition.time(hass, after="sensor.am")
-        assert not condition.time(hass, before="sensor.am")
+        assert not condition.time(menuai, after="sensor.pm", before="sensor.am")
+        assert condition.time(menuai, after="sensor.am", before="sensor.pm")
+        assert condition.time(menuai, after="sensor.am")
+        assert not condition.time(menuai, before="sensor.am")
 
-    assert not condition.time(hass, after="sensor.invalid_timestamp")
-    assert not condition.time(hass, before="sensor.invalid_timestamp")
-
-    with pytest.raises(ConditionError):
-        condition.time(hass, after="sensor.not_existing")
+    assert not condition.time(menuai, after="sensor.invalid_timestamp")
+    assert not condition.time(menuai, before="sensor.invalid_timestamp")
 
     with pytest.raises(ConditionError):
-        condition.time(hass, before="sensor.not_existing")
+        condition.time(menuai, after="sensor.not_existing")
+
+    with pytest.raises(ConditionError):
+        condition.time(menuai, before="sensor.not_existing")
 
 
-async def test_state_raises(hass: HomeAssistant) -> None:
+async def test_state_raises(menuai: menuai) -> None:
     """Test that state raises ConditionError on errors."""
     # No entity
     with pytest.raises(ConditionError, match="no entity"):
-        condition.state(hass, entity=None, req_state="missing")
+        condition.state(menuai, entity=None, req_state="missing")
 
     # Unknown entities
     config = {
@@ -1163,12 +1163,12 @@ async def test_state_raises(hass: HomeAssistant) -> None:
         "state": "open",
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
     with pytest.raises(ConditionError, match="unknown entity.*door"):
-        test(hass)
+        test(menuai)
     with pytest.raises(ConditionError, match="unknown entity.*window"):
-        test(hass)
+        test(menuai)
 
     # Unknown state entity
 
@@ -1178,15 +1178,15 @@ async def test_state_raises(hass: HomeAssistant) -> None:
         "state": "input_text.missing",
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
 
-    hass.states.async_set("sensor.door", "open")
+    menuai.states.async_set("sensor.door", "open")
     with pytest.raises(ConditionError, match="input_text.missing"):
-        test(hass)
+        test(menuai)
 
 
-async def test_state_for(hass: HomeAssistant) -> None:
+async def test_state_for(menuai: menuai) -> None:
     """Test state with duration."""
     config = {
         "condition": "and",
@@ -1200,18 +1200,18 @@ async def test_state_for(hass: HomeAssistant) -> None:
         ],
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
 
-    hass.states.async_set("sensor.temperature", 100)
-    assert not test(hass)
+    menuai.states.async_set("sensor.temperature", 100)
+    assert not test(menuai)
 
     now = dt_util.utcnow() + timedelta(seconds=5)
     with freeze_time(now):
-        assert test(hass)
+        assert test(menuai)
 
 
-async def test_state_for_template(hass: HomeAssistant) -> None:
+async def test_state_for_template(menuai: menuai) -> None:
     """Test state with templated duration."""
     config = {
         "condition": "and",
@@ -1225,21 +1225,21 @@ async def test_state_for_template(hass: HomeAssistant) -> None:
         ],
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
 
-    hass.states.async_set("sensor.temperature", 100)
-    hass.states.async_set("input_number.test", 5)
-    assert not test(hass)
+    menuai.states.async_set("sensor.temperature", 100)
+    menuai.states.async_set("input_number.test", 5)
+    assert not test(menuai)
 
     now = dt_util.utcnow() + timedelta(seconds=5)
     with freeze_time(now):
-        assert test(hass)
+        assert test(menuai)
 
 
 @pytest.mark.parametrize("for_template", [{"{{invalid}}": 5}, {"hours": "{{ 1/0 }}"}])
 async def test_state_for_invalid_template(
-    hass: HomeAssistant, for_template: dict[str, Any]
+    menuai: menuai, for_template: dict[str, Any]
 ) -> None:
     """Test state with invalid templated duration."""
     config = {
@@ -1254,16 +1254,16 @@ async def test_state_for_invalid_template(
         ],
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
 
-    hass.states.async_set("sensor.temperature", 100)
-    hass.states.async_set("input_number.test", 5)
+    menuai.states.async_set("sensor.temperature", 100)
+    menuai.states.async_set("input_number.test", 5)
     with pytest.raises(ConditionError):
-        assert not test(hass)
+        assert not test(menuai)
 
 
-async def test_state_unknown_attribute(hass: HomeAssistant) -> None:
+async def test_state_unknown_attribute(menuai: menuai) -> None:
     """Test that state returns False on unknown attribute."""
     # Unknown attribute
     config = {
@@ -1273,11 +1273,11 @@ async def test_state_unknown_attribute(hass: HomeAssistant) -> None:
         "state": "acme",
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
 
-    hass.states.async_set("sensor.door", "open")
-    assert not test(hass)
+    menuai.states.async_set("sensor.door", "open")
+    assert not test(menuai)
     assert_condition_trace(
         {
             "": [{"result": {"result": False}}],
@@ -1295,7 +1295,7 @@ async def test_state_unknown_attribute(hass: HomeAssistant) -> None:
     )
 
 
-async def test_state_multiple_entities(hass: HomeAssistant) -> None:
+async def test_state_multiple_entities(menuai: menuai) -> None:
     """Test with multiple entities in condition."""
     config = {
         "condition": "and",
@@ -1308,23 +1308,23 @@ async def test_state_multiple_entities(hass: HomeAssistant) -> None:
         ],
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
 
-    hass.states.async_set("sensor.temperature_1", 100)
-    hass.states.async_set("sensor.temperature_2", 100)
-    assert test(hass)
+    menuai.states.async_set("sensor.temperature_1", 100)
+    menuai.states.async_set("sensor.temperature_2", 100)
+    assert test(menuai)
 
-    hass.states.async_set("sensor.temperature_1", 101)
-    hass.states.async_set("sensor.temperature_2", 100)
-    assert not test(hass)
+    menuai.states.async_set("sensor.temperature_1", 101)
+    menuai.states.async_set("sensor.temperature_2", 100)
+    assert not test(menuai)
 
-    hass.states.async_set("sensor.temperature_1", 100)
-    hass.states.async_set("sensor.temperature_2", 101)
-    assert not test(hass)
+    menuai.states.async_set("sensor.temperature_1", 100)
+    menuai.states.async_set("sensor.temperature_2", 101)
+    assert not test(menuai)
 
 
-async def test_state_multiple_entities_match_any(hass: HomeAssistant) -> None:
+async def test_state_multiple_entities_match_any(menuai: menuai) -> None:
     """Test with multiple entities in condition with match any."""
     config = {
         "condition": "and",
@@ -1338,27 +1338,27 @@ async def test_state_multiple_entities_match_any(hass: HomeAssistant) -> None:
         ],
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
 
-    hass.states.async_set("sensor.temperature_1", 100)
-    hass.states.async_set("sensor.temperature_2", 100)
-    assert test(hass)
+    menuai.states.async_set("sensor.temperature_1", 100)
+    menuai.states.async_set("sensor.temperature_2", 100)
+    assert test(menuai)
 
-    hass.states.async_set("sensor.temperature_1", 101)
-    hass.states.async_set("sensor.temperature_2", 100)
-    assert test(hass)
+    menuai.states.async_set("sensor.temperature_1", 101)
+    menuai.states.async_set("sensor.temperature_2", 100)
+    assert test(menuai)
 
-    hass.states.async_set("sensor.temperature_1", 100)
-    hass.states.async_set("sensor.temperature_2", 101)
-    assert test(hass)
+    menuai.states.async_set("sensor.temperature_1", 100)
+    menuai.states.async_set("sensor.temperature_2", 101)
+    assert test(menuai)
 
-    hass.states.async_set("sensor.temperature_1", 101)
-    hass.states.async_set("sensor.temperature_2", 101)
-    assert not test(hass)
+    menuai.states.async_set("sensor.temperature_1", 101)
+    menuai.states.async_set("sensor.temperature_2", 101)
+    assert not test(menuai)
 
 
-async def test_multiple_states(hass: HomeAssistant) -> None:
+async def test_multiple_states(menuai: menuai) -> None:
     """Test with multiple states in condition."""
     config = {
         "condition": "and",
@@ -1372,20 +1372,20 @@ async def test_multiple_states(hass: HomeAssistant) -> None:
         ],
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
 
-    hass.states.async_set("sensor.temperature", 100)
-    assert test(hass)
+    menuai.states.async_set("sensor.temperature", 100)
+    assert test(menuai)
 
-    hass.states.async_set("sensor.temperature", 200)
-    assert test(hass)
+    menuai.states.async_set("sensor.temperature", 200)
+    assert test(menuai)
 
-    hass.states.async_set("sensor.temperature", 42)
-    assert not test(hass)
+    menuai.states.async_set("sensor.temperature", 42)
+    assert not test(menuai)
 
 
-async def test_state_attribute(hass: HomeAssistant) -> None:
+async def test_state_attribute(menuai: menuai) -> None:
     """Test with state attribute in condition."""
     config = {
         "condition": "and",
@@ -1399,26 +1399,26 @@ async def test_state_attribute(hass: HomeAssistant) -> None:
         ],
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
 
-    hass.states.async_set("sensor.temperature", 100, {"unknown_attr": 200})
-    assert not test(hass)
+    menuai.states.async_set("sensor.temperature", 100, {"unknown_attr": 200})
+    assert not test(menuai)
 
-    hass.states.async_set("sensor.temperature", 100, {"attribute1": 200})
-    assert test(hass)
+    menuai.states.async_set("sensor.temperature", 100, {"attribute1": 200})
+    assert test(menuai)
 
-    hass.states.async_set("sensor.temperature", 100, {"attribute1": "200"})
-    assert not test(hass)
+    menuai.states.async_set("sensor.temperature", 100, {"attribute1": "200"})
+    assert not test(menuai)
 
-    hass.states.async_set("sensor.temperature", 100, {"attribute1": 201})
-    assert not test(hass)
+    menuai.states.async_set("sensor.temperature", 100, {"attribute1": 201})
+    assert not test(menuai)
 
-    hass.states.async_set("sensor.temperature", 100, {"attribute1": None})
-    assert not test(hass)
+    menuai.states.async_set("sensor.temperature", 100, {"attribute1": None})
+    assert not test(menuai)
 
 
-async def test_state_attribute_boolean(hass: HomeAssistant) -> None:
+async def test_state_attribute_boolean(menuai: menuai) -> None:
     """Test with boolean state attribute in condition."""
     config = {
         "condition": "state",
@@ -1427,24 +1427,24 @@ async def test_state_attribute_boolean(hass: HomeAssistant) -> None:
         "state": False,
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
 
-    hass.states.async_set("sensor.temperature", 100, {"happening": 200})
-    assert not test(hass)
+    menuai.states.async_set("sensor.temperature", 100, {"happening": 200})
+    assert not test(menuai)
 
-    hass.states.async_set("sensor.temperature", 100, {"happening": True})
-    assert not test(hass)
+    menuai.states.async_set("sensor.temperature", 100, {"happening": True})
+    assert not test(menuai)
 
-    hass.states.async_set("sensor.temperature", 100, {"no_happening": 201})
-    assert not test(hass)
+    menuai.states.async_set("sensor.temperature", 100, {"no_happening": 201})
+    assert not test(menuai)
 
-    hass.states.async_set("sensor.temperature", 100, {"happening": False})
-    assert test(hass)
+    menuai.states.async_set("sensor.temperature", 100, {"happening": False})
+    assert test(menuai)
 
 
 async def test_state_entity_registry_id(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test with entity specified by entity registry id."""
     entry = entity_registry.async_get_or_create(
@@ -1457,20 +1457,20 @@ async def test_state_entity_registry_id(
         "state": "on",
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
 
-    hass.states.async_set("switch.test", "on")
-    assert test(hass)
+    menuai.states.async_set("switch.test", "on")
+    assert test(menuai)
 
-    hass.states.async_set("switch.test", "off")
-    assert not test(hass)
+    menuai.states.async_set("switch.test", "off")
+    assert not test(menuai)
 
 
-async def test_state_using_input_entities(hass: HomeAssistant) -> None:
+async def test_state_using_input_entities(menuai: menuai) -> None:
     """Test state conditions using input_* entities."""
     await async_setup_component(
-        hass,
+        menuai,
         "input_text",
         {
             "input_text": {
@@ -1480,7 +1480,7 @@ async def test_state_using_input_entities(hass: HomeAssistant) -> None:
     )
 
     await async_setup_component(
-        hass,
+        menuai,
         "input_select",
         {
             "input_select": {
@@ -1504,19 +1504,19 @@ async def test_state_using_input_entities(hass: HomeAssistant) -> None:
         ],
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
 
-    hass.states.async_set("sensor.salut", "goodbye")
-    assert test(hass)
+    menuai.states.async_set("sensor.salut", "goodbye")
+    assert test(menuai)
 
-    hass.states.async_set("sensor.salut", "salut")
-    assert test(hass)
+    menuai.states.async_set("sensor.salut", "salut")
+    assert test(menuai)
 
-    hass.states.async_set("sensor.salut", "hello")
-    assert not test(hass)
+    menuai.states.async_set("sensor.salut", "hello")
+    assert not test(menuai)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "input_text",
         "set_value",
         {
@@ -1525,15 +1525,15 @@ async def test_state_using_input_entities(hass: HomeAssistant) -> None:
         },
         blocking=True,
     )
-    assert not test(hass)
+    assert not test(menuai)
 
-    hass.states.async_set("sensor.salut", "hi")
-    assert test(hass)
+    menuai.states.async_set("sensor.salut", "hi")
+    assert test(menuai)
 
-    hass.states.async_set("sensor.salut", "cya")
-    assert test(hass)
+    menuai.states.async_set("sensor.salut", "cya")
+    assert test(menuai)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "input_select",
         "select_option",
         {
@@ -1542,26 +1542,26 @@ async def test_state_using_input_entities(hass: HomeAssistant) -> None:
         },
         blocking=True,
     )
-    assert not test(hass)
+    assert not test(menuai)
 
-    hass.states.async_set("sensor.salut", "welcome")
-    assert test(hass)
+    menuai.states.async_set("sensor.salut", "welcome")
+    assert test(menuai)
 
 
-async def test_numeric_state_known_non_matching(hass: HomeAssistant) -> None:
+async def test_numeric_state_known_non_matching(menuai: menuai) -> None:
     """Test that numeric_state doesn't match on known non-matching states."""
-    hass.states.async_set("sensor.temperature", "unavailable")
+    menuai.states.async_set("sensor.temperature", "unavailable")
     config = {
         "condition": "numeric_state",
         "entity_id": "sensor.temperature",
         "above": 0,
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
 
     # Unavailable state
-    assert not test(hass)
+    assert not test(menuai)
 
     assert_condition_trace(
         {
@@ -1580,8 +1580,8 @@ async def test_numeric_state_known_non_matching(hass: HomeAssistant) -> None:
     )
 
     # Unknown state
-    hass.states.async_set("sensor.temperature", "unknown")
-    assert not test(hass)
+    menuai.states.async_set("sensor.temperature", "unknown")
+    assert not test(menuai)
 
     assert_condition_trace(
         {
@@ -1600,7 +1600,7 @@ async def test_numeric_state_known_non_matching(hass: HomeAssistant) -> None:
     )
 
 
-async def test_numeric_state_raises(hass: HomeAssistant) -> None:
+async def test_numeric_state_raises(menuai: menuai) -> None:
     """Test that numeric_state raises ConditionError on errors."""
     # Unknown entities
     config = {
@@ -1609,12 +1609,12 @@ async def test_numeric_state_raises(hass: HomeAssistant) -> None:
         "above": 0,
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
     with pytest.raises(ConditionError, match="unknown entity.*temperature"):
-        test(hass)
+        test(menuai)
     with pytest.raises(ConditionError, match="unknown entity.*humidity"):
-        test(hass)
+        test(menuai)
 
     # Template error
     config = {
@@ -1624,12 +1624,12 @@ async def test_numeric_state_raises(hass: HomeAssistant) -> None:
         "above": 0,
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
 
-    hass.states.async_set("sensor.temperature", 50)
+    menuai.states.async_set("sensor.temperature", 50)
     with pytest.raises(ConditionError, match="ZeroDivisionError"):
-        test(hass)
+        test(menuai)
 
     # Bad number
     config = {
@@ -1638,12 +1638,12 @@ async def test_numeric_state_raises(hass: HomeAssistant) -> None:
         "above": 0,
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
 
-    hass.states.async_set("sensor.temperature", "fifty")
+    menuai.states.async_set("sensor.temperature", "fifty")
     with pytest.raises(ConditionError, match="cannot be processed as a number"):
-        test(hass)
+        test(menuai)
 
     # Below entity missing
     config = {
@@ -1652,20 +1652,20 @@ async def test_numeric_state_raises(hass: HomeAssistant) -> None:
         "below": "input_number.missing",
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
 
-    hass.states.async_set("sensor.temperature", 50)
+    menuai.states.async_set("sensor.temperature", 50)
     with pytest.raises(ConditionError, match="'below' entity"):
-        test(hass)
+        test(menuai)
 
     # Below entity not a number
-    hass.states.async_set("input_number.missing", "number")
+    menuai.states.async_set("input_number.missing", "number")
     with pytest.raises(
         ConditionError,
         match="'below'.*input_number.missing.*cannot be processed as a number",
     ):
-        test(hass)
+        test(menuai)
 
     # Above entity missing
     config = {
@@ -1674,23 +1674,23 @@ async def test_numeric_state_raises(hass: HomeAssistant) -> None:
         "above": "input_number.missing",
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
 
-    hass.states.async_set("sensor.temperature", 50)
+    menuai.states.async_set("sensor.temperature", 50)
     with pytest.raises(ConditionError, match="'above' entity"):
-        test(hass)
+        test(menuai)
 
     # Above entity not a number
-    hass.states.async_set("input_number.missing", "number")
+    menuai.states.async_set("input_number.missing", "number")
     with pytest.raises(
         ConditionError,
         match="'above'.*input_number.missing.*cannot be processed as a number",
     ):
-        test(hass)
+        test(menuai)
 
 
-async def test_numeric_state_unknown_attribute(hass: HomeAssistant) -> None:
+async def test_numeric_state_unknown_attribute(menuai: menuai) -> None:
     """Test that numeric_state returns False on unknown attribute."""
     # Unknown attribute
     config = {
@@ -1700,11 +1700,11 @@ async def test_numeric_state_unknown_attribute(hass: HomeAssistant) -> None:
         "above": 0,
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
 
-    hass.states.async_set("sensor.temperature", 50)
-    assert not test(hass)
+    menuai.states.async_set("sensor.temperature", 50)
+    assert not test(menuai)
     assert_condition_trace(
         {
             "": [{"result": {"result": False}}],
@@ -1723,7 +1723,7 @@ async def test_numeric_state_unknown_attribute(hass: HomeAssistant) -> None:
     )
 
 
-async def test_numeric_state_multiple_entities(hass: HomeAssistant) -> None:
+async def test_numeric_state_multiple_entities(menuai: menuai) -> None:
     """Test with multiple entities in condition."""
     config = {
         "condition": "and",
@@ -1737,23 +1737,23 @@ async def test_numeric_state_multiple_entities(hass: HomeAssistant) -> None:
         ],
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
 
-    hass.states.async_set("sensor.temperature_1", 49)
-    hass.states.async_set("sensor.temperature_2", 49)
-    assert test(hass)
+    menuai.states.async_set("sensor.temperature_1", 49)
+    menuai.states.async_set("sensor.temperature_2", 49)
+    assert test(menuai)
 
-    hass.states.async_set("sensor.temperature_1", 50)
-    hass.states.async_set("sensor.temperature_2", 49)
-    assert not test(hass)
+    menuai.states.async_set("sensor.temperature_1", 50)
+    menuai.states.async_set("sensor.temperature_2", 49)
+    assert not test(menuai)
 
-    hass.states.async_set("sensor.temperature_1", 49)
-    hass.states.async_set("sensor.temperature_2", 50)
-    assert not test(hass)
+    menuai.states.async_set("sensor.temperature_1", 49)
+    menuai.states.async_set("sensor.temperature_2", 50)
+    assert not test(menuai)
 
 
-async def test_numeric_state_attribute(hass: HomeAssistant) -> None:
+async def test_numeric_state_attribute(menuai: menuai) -> None:
     """Test with numeric state attribute in condition."""
     config = {
         "condition": "and",
@@ -1767,27 +1767,27 @@ async def test_numeric_state_attribute(hass: HomeAssistant) -> None:
         ],
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
 
-    hass.states.async_set("sensor.temperature", 100, {"unknown_attr": 10})
-    assert not test(hass)
+    menuai.states.async_set("sensor.temperature", 100, {"unknown_attr": 10})
+    assert not test(menuai)
 
-    hass.states.async_set("sensor.temperature", 100, {"attribute1": 49})
-    assert test(hass)
+    menuai.states.async_set("sensor.temperature", 100, {"attribute1": 49})
+    assert test(menuai)
 
-    hass.states.async_set("sensor.temperature", 100, {"attribute1": "49"})
-    assert test(hass)
+    menuai.states.async_set("sensor.temperature", 100, {"attribute1": "49"})
+    assert test(menuai)
 
-    hass.states.async_set("sensor.temperature", 100, {"attribute1": 51})
-    assert not test(hass)
+    menuai.states.async_set("sensor.temperature", 100, {"attribute1": 51})
+    assert not test(menuai)
 
-    hass.states.async_set("sensor.temperature", 100, {"attribute1": None})
-    assert not test(hass)
+    menuai.states.async_set("sensor.temperature", 100, {"attribute1": None})
+    assert not test(menuai)
 
 
 async def test_numeric_state_entity_registry_id(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test with entity specified by entity registry id."""
     entry = entity_registry.async_get_or_create(
@@ -1800,21 +1800,21 @@ async def test_numeric_state_entity_registry_id(
         "above": 100,
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
 
-    hass.states.async_set("sensor.test", "110")
-    assert test(hass)
+    menuai.states.async_set("sensor.test", "110")
+    assert test(menuai)
 
-    hass.states.async_set("sensor.test", "90")
-    assert not test(hass)
+    menuai.states.async_set("sensor.test", "90")
+    assert not test(menuai)
 
 
-async def test_numeric_state_using_input_number(hass: HomeAssistant) -> None:
+async def test_numeric_state_using_input_number(menuai: menuai) -> None:
     """Test numeric_state conditions using input_number entities."""
-    hass.states.async_set("number.low", 10)
+    menuai.states.async_set("number.low", 10)
     await async_setup_component(
-        hass,
+        menuai,
         "input_number",
         {
             "input_number": {
@@ -1835,25 +1835,25 @@ async def test_numeric_state_using_input_number(hass: HomeAssistant) -> None:
         ],
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
 
-    hass.states.async_set("sensor.temperature", 42)
-    assert test(hass)
+    menuai.states.async_set("sensor.temperature", 42)
+    assert test(menuai)
 
-    hass.states.async_set("sensor.temperature", 10)
-    assert not test(hass)
+    menuai.states.async_set("sensor.temperature", 10)
+    assert not test(menuai)
 
-    hass.states.async_set("sensor.temperature", 100)
-    assert not test(hass)
+    menuai.states.async_set("sensor.temperature", 100)
+    assert not test(menuai)
 
-    hass.states.async_set("input_number.high", "unknown")
-    assert not test(hass)
+    menuai.states.async_set("input_number.high", "unknown")
+    assert not test(menuai)
 
-    hass.states.async_set("input_number.high", "unavailable")
-    assert not test(hass)
+    menuai.states.async_set("input_number.high", "unavailable")
+    assert not test(menuai)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "input_number",
         "set_value",
         {
@@ -1862,25 +1862,25 @@ async def test_numeric_state_using_input_number(hass: HomeAssistant) -> None:
         },
         blocking=True,
     )
-    assert test(hass)
+    assert test(menuai)
 
-    hass.states.async_set("number.low", "unknown")
-    assert not test(hass)
+    menuai.states.async_set("number.low", "unknown")
+    assert not test(menuai)
 
-    hass.states.async_set("number.low", "unavailable")
-    assert not test(hass)
+    menuai.states.async_set("number.low", "unavailable")
+    assert not test(menuai)
 
     with pytest.raises(ConditionError):
         condition.async_numeric_state(
-            hass, entity="sensor.temperature", below="input_number.not_exist"
+            menuai, entity="sensor.temperature", below="input_number.not_exist"
         )
     with pytest.raises(ConditionError):
         condition.async_numeric_state(
-            hass, entity="sensor.temperature", above="input_number.not_exist"
+            menuai, entity="sensor.temperature", above="input_number.not_exist"
         )
 
 
-async def test_zone_raises(hass: HomeAssistant) -> None:
+async def test_zone_raises(menuai: menuai) -> None:
     """Test that zone raises ConditionError on errors."""
     config = {
         "condition": "zone",
@@ -1888,53 +1888,53 @@ async def test_zone_raises(hass: HomeAssistant) -> None:
         "zone": "zone.home",
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
 
     with pytest.raises(ConditionError, match="no zone"):
-        condition.zone(hass, zone_ent=None, entity="sensor.any")
+        condition.zone(menuai, zone_ent=None, entity="sensor.any")
 
     with pytest.raises(ConditionError, match="unknown zone"):
-        test(hass)
+        test(menuai)
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "zone.home",
         "zoning",
         {"name": "home", "latitude": 2.1, "longitude": 1.1, "radius": 10},
     )
 
     with pytest.raises(ConditionError, match="no entity"):
-        condition.zone(hass, zone_ent="zone.home", entity=None)
+        condition.zone(menuai, zone_ent="zone.home", entity=None)
 
     with pytest.raises(ConditionError, match="unknown entity"):
-        test(hass)
+        test(menuai)
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "device_tracker.cat",
         "home",
         {"friendly_name": "cat"},
     )
 
     with pytest.raises(ConditionError, match="latitude"):
-        test(hass)
+        test(menuai)
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "device_tracker.cat",
         "home",
         {"friendly_name": "cat", "latitude": 2.1},
     )
 
     with pytest.raises(ConditionError, match="longitude"):
-        test(hass)
+        test(menuai)
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "device_tracker.cat",
         "home",
         {"friendly_name": "cat", "latitude": 2.1, "longitude": 1.1},
     )
 
     # All okay, now test multiple failed conditions
-    assert test(hass)
+    assert test(menuai)
 
     config = {
         "condition": "zone",
@@ -1942,31 +1942,31 @@ async def test_zone_raises(hass: HomeAssistant) -> None:
         "zone": ["zone.home", "zone.work"],
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
 
     with pytest.raises(ConditionError, match="dog"):
-        test(hass)
+        test(menuai)
 
     with pytest.raises(ConditionError, match="work"):
-        test(hass)
+        test(menuai)
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "zone.work",
         "zoning",
         {"name": "work", "latitude": 20, "longitude": 10, "radius": 25000},
     )
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "device_tracker.dog",
         "work",
         {"friendly_name": "dog", "latitude": 20.1, "longitude": 10.1},
     )
 
-    assert test(hass)
+    assert test(menuai)
 
 
-async def test_zone_multiple_entities(hass: HomeAssistant) -> None:
+async def test_zone_multiple_entities(menuai: menuai) -> None:
     """Test with multiple entities in condition."""
     config = {
         "condition": "and",
@@ -1980,53 +1980,53 @@ async def test_zone_multiple_entities(hass: HomeAssistant) -> None:
         ],
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "zone.home",
         "zoning",
         {"name": "home", "latitude": 2.1, "longitude": 1.1, "radius": 10},
     )
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "device_tracker.person_1",
         "home",
         {"friendly_name": "person_1", "latitude": 2.1, "longitude": 1.1},
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "device_tracker.person_2",
         "home",
         {"friendly_name": "person_2", "latitude": 2.1, "longitude": 1.1},
     )
-    assert test(hass)
+    assert test(menuai)
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "device_tracker.person_1",
         "home",
         {"friendly_name": "person_1", "latitude": 20.1, "longitude": 10.1},
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "device_tracker.person_2",
         "home",
         {"friendly_name": "person_2", "latitude": 2.1, "longitude": 1.1},
     )
-    assert not test(hass)
+    assert not test(menuai)
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "device_tracker.person_1",
         "home",
         {"friendly_name": "person_1", "latitude": 2.1, "longitude": 1.1},
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "device_tracker.person_2",
         "home",
         {"friendly_name": "person_2", "latitude": 20.1, "longitude": 10.1},
     )
-    assert not test(hass)
+    assert not test(menuai)
 
 
-async def test_multiple_zones(hass: HomeAssistant) -> None:
+async def test_multiple_zones(menuai: menuai) -> None:
     """Test with multiple entities in condition."""
     config = {
         "condition": "and",
@@ -2039,43 +2039,43 @@ async def test_multiple_zones(hass: HomeAssistant) -> None:
         ],
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "zone.home",
         "zoning",
         {"name": "home", "latitude": 2.1, "longitude": 1.1, "radius": 10},
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "zone.work",
         "zoning",
         {"name": "work", "latitude": 20.1, "longitude": 10.1, "radius": 10},
     )
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "device_tracker.person",
         "home",
         {"friendly_name": "person", "latitude": 2.1, "longitude": 1.1},
     )
-    assert test(hass)
+    assert test(menuai)
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "device_tracker.person",
         "home",
         {"friendly_name": "person", "latitude": 20.1, "longitude": 10.1},
     )
-    assert test(hass)
+    assert test(menuai)
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "device_tracker.person",
         "home",
         {"friendly_name": "person", "latitude": 50.1, "longitude": 20.1},
     )
-    assert not test(hass)
+    assert not test(menuai)
 
 
-@pytest.mark.usefixtures("hass")
+@pytest.mark.usefixtures("menuai")
 async def test_extract_entities() -> None:
     """Test extracting entities."""
     assert condition.async_extract_entities(
@@ -2149,7 +2149,7 @@ async def test_extract_entities() -> None:
     }
 
 
-@pytest.mark.usefixtures("hass")
+@pytest.mark.usefixtures("menuai")
 async def test_extract_devices() -> None:
     """Test extracting devices."""
     assert condition.async_extract_devices(
@@ -2199,72 +2199,72 @@ async def test_extract_devices() -> None:
     ) == {"abcd", "qwer", "abcd_not", "qwer_not", "abcd_or", "qwer_or"}
 
 
-async def test_condition_template_error(hass: HomeAssistant) -> None:
+async def test_condition_template_error(menuai: menuai) -> None:
     """Test invalid template."""
     config = {"condition": "template", "value_template": "{{ undefined.state }}"}
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
 
     with pytest.raises(ConditionError, match="template"):
-        test(hass)
+        test(menuai)
 
 
-async def test_condition_template_invalid_results(hass: HomeAssistant) -> None:
+async def test_condition_template_invalid_results(menuai: menuai) -> None:
     """Test template condition render false with invalid results."""
     config = {"condition": "template", "value_template": "{{ 'string' }}"}
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
-    assert not test(hass)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
+    assert not test(menuai)
 
     config = {"condition": "template", "value_template": "{{ 10.1 }}"}
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
-    assert not test(hass)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
+    assert not test(menuai)
 
     config = {"condition": "template", "value_template": "{{ 42 }}"}
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
-    assert not test(hass)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
+    assert not test(menuai)
 
     config = {"condition": "template", "value_template": "{{ [1, 2, 3] }}"}
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
-    assert not test(hass)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
+    assert not test(menuai)
 
 
-async def test_trigger(hass: HomeAssistant) -> None:
+async def test_trigger(menuai: menuai) -> None:
     """Test trigger condition."""
     config = {"alias": "Trigger Cond", "condition": "trigger", "id": "123456"}
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
 
-    assert not test(hass)
-    assert not test(hass, {})
-    assert not test(hass, {"other_var": "123456"})
-    assert not test(hass, {"trigger": {"trigger_id": "123456"}})
-    assert test(hass, {"trigger": {"id": "123456"}})
+    assert not test(menuai)
+    assert not test(menuai, {})
+    assert not test(menuai, {"other_var": "123456"})
+    assert not test(menuai, {"trigger": {"trigger_id": "123456"}})
+    assert test(menuai, {"trigger": {"id": "123456"}})
 
 
-async def test_platform_async_validate_condition_config(hass: HomeAssistant) -> None:
+async def test_platform_async_validate_condition_config(menuai: menuai) -> None:
     """Test platform.async_validate_condition_config will be called if it exists."""
     config = {CONF_DEVICE_ID: "test", CONF_DOMAIN: "test", CONF_CONDITION: "device"}
     with patch(
-        "homeassistant.components.device_automation.condition.async_validate_condition_config",
+        "menuai.components.device_automation.condition.async_validate_condition_config",
         AsyncMock(),
     ) as device_automation_validate_condition_mock:
-        await condition.async_validate_condition_config(hass, config)
+        await condition.async_validate_condition_config(menuai, config)
         device_automation_validate_condition_mock.assert_awaited()
 
 
 @pytest.mark.parametrize("enabled_value", [True, "{{ 1 == 1 }}"])
 async def test_enabled_condition(
-    hass: HomeAssistant, enabled_value: bool | str
+    menuai: menuai, enabled_value: bool | str
 ) -> None:
     """Test an explicitly enabled condition."""
     config = {
@@ -2274,20 +2274,20 @@ async def test_enabled_condition(
         "state": "on",
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
 
-    hass.states.async_set("binary_sensor.test", "on")
-    assert test(hass) is True
+    menuai.states.async_set("binary_sensor.test", "on")
+    assert test(menuai) is True
 
     # Still passes, condition is not enabled
-    hass.states.async_set("binary_sensor.test", "off")
-    assert test(hass) is False
+    menuai.states.async_set("binary_sensor.test", "off")
+    assert test(menuai) is False
 
 
 @pytest.mark.parametrize("enabled_value", [False, "{{ 1 == 9 }}"])
 async def test_disabled_condition(
-    hass: HomeAssistant, enabled_value: bool | str
+    menuai: menuai, enabled_value: bool | str
 ) -> None:
     """Test a disabled condition returns none."""
     config = {
@@ -2297,18 +2297,18 @@ async def test_disabled_condition(
         "state": "on",
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
 
-    hass.states.async_set("binary_sensor.test", "on")
-    assert test(hass) is None
+    menuai.states.async_set("binary_sensor.test", "on")
+    assert test(menuai) is None
 
     # Still passes, condition is not enabled
-    hass.states.async_set("binary_sensor.test", "off")
-    assert test(hass) is None
+    menuai.states.async_set("binary_sensor.test", "off")
+    assert test(menuai) is None
 
 
-async def test_condition_enabled_template_limited(hass: HomeAssistant) -> None:
+async def test_condition_enabled_template_limited(menuai: menuai) -> None:
     """Test conditions enabled template raises for non-limited template uses."""
     config = {
         "enabled": "{{ states('sensor.limited') }}",
@@ -2317,13 +2317,13 @@ async def test_condition_enabled_template_limited(hass: HomeAssistant) -> None:
         "state": "on",
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
 
-    with pytest.raises(HomeAssistantError):
-        await condition.async_from_config(hass, config)
+    with pytest.raises(menuaiError):
+        await condition.async_from_config(menuai, config)
 
 
-async def test_and_condition_with_disabled_condition(hass: HomeAssistant) -> None:
+async def test_and_condition_with_disabled_condition(menuai: menuai) -> None:
     """Test the 'and' condition with one of the conditions disabled."""
     config = {
         "alias": "And Condition",
@@ -2343,11 +2343,11 @@ async def test_and_condition_with_disabled_condition(hass: HomeAssistant) -> Non
         ],
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
 
-    hass.states.async_set("sensor.temperature", 120)
-    assert not test(hass)
+    menuai.states.async_set("sensor.temperature", 120)
+    assert not test(menuai)
     assert_condition_trace(
         {
             "": [{"result": {"result": False}}],
@@ -2365,8 +2365,8 @@ async def test_and_condition_with_disabled_condition(hass: HomeAssistant) -> Non
         }
     )
 
-    hass.states.async_set("sensor.temperature", 105)
-    assert test(hass)
+    menuai.states.async_set("sensor.temperature", 105)
+    assert test(menuai)
     assert_condition_trace(
         {
             "": [{"result": {"result": True}}],
@@ -2376,8 +2376,8 @@ async def test_and_condition_with_disabled_condition(hass: HomeAssistant) -> Non
         }
     )
 
-    hass.states.async_set("sensor.temperature", 100)
-    assert test(hass)
+    menuai.states.async_set("sensor.temperature", 100)
+    assert test(menuai)
     assert_condition_trace(
         {
             "": [{"result": {"result": True}}],
@@ -2388,7 +2388,7 @@ async def test_and_condition_with_disabled_condition(hass: HomeAssistant) -> Non
     )
 
 
-async def test_or_condition_with_disabled_condition(hass: HomeAssistant) -> None:
+async def test_or_condition_with_disabled_condition(menuai: menuai) -> None:
     """Test the 'or' condition with one of the conditions disabled."""
     config = {
         "alias": "Or Condition",
@@ -2408,11 +2408,11 @@ async def test_or_condition_with_disabled_condition(hass: HomeAssistant) -> None
         ],
     }
     config = cv.CONDITION_SCHEMA(config)
-    config = await condition.async_validate_condition_config(hass, config)
-    test = await condition.async_from_config(hass, config)
+    config = await condition.async_validate_condition_config(menuai, config)
+    test = await condition.async_from_config(menuai, config)
 
-    hass.states.async_set("sensor.temperature", 120)
-    assert not test(hass)
+    menuai.states.async_set("sensor.temperature", 120)
+    assert not test(menuai)
     assert_condition_trace(
         {
             "": [{"result": {"result": False}}],
@@ -2430,8 +2430,8 @@ async def test_or_condition_with_disabled_condition(hass: HomeAssistant) -> None
         }
     )
 
-    hass.states.async_set("sensor.temperature", 105)
-    assert test(hass)
+    menuai.states.async_set("sensor.temperature", 105)
+    assert test(menuai)
     assert_condition_trace(
         {
             "": [{"result": {"result": True}}],
@@ -2441,8 +2441,8 @@ async def test_or_condition_with_disabled_condition(hass: HomeAssistant) -> None
         }
     )
 
-    hass.states.async_set("sensor.temperature", 100)
-    assert test(hass)
+    menuai.states.async_set("sensor.temperature", 100)
+    assert test(menuai)
     assert_condition_trace(
         {
             "": [{"result": {"result": True}}],

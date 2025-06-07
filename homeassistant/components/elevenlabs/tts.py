@@ -10,17 +10,17 @@ from elevenlabs import AsyncElevenLabs
 from elevenlabs.core import ApiError
 from elevenlabs.types import Model, Voice as ElevenLabsVoice, VoiceSettings
 
-from homeassistant.components.tts import (
+from menuai.components.tts import (
     ATTR_VOICE,
     TextToSpeechEntity,
     TtsAudioType,
     Voice,
 )
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import ElevenLabsConfigEntry
 from .const import (
@@ -56,7 +56,7 @@ def to_voice_settings(options: Mapping[str, Any]) -> VoiceSettings:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ElevenLabsConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -156,5 +156,5 @@ class ElevenLabsTTSEntity(TextToSpeechEntity):
             _LOGGER.warning(
                 "Error during processing of TTS request %s", exc, exc_info=True
             )
-            raise HomeAssistantError(exc) from exc
+            raise menuaiError(exc) from exc
         return "mp3", bytes_combined

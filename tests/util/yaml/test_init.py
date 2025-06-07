@@ -1,4 +1,4 @@
-"""Test Home Assistant yaml loader."""
+"""Test MenuAI yaml loader."""
 
 from collections.abc import Generator
 import importlib
@@ -12,11 +12,11 @@ import pytest
 import voluptuous as vol
 import yaml as pyyaml
 
-from homeassistant.config import YAML_CONFIG_FILE, load_yaml_config_file
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.util import yaml as yaml_util
-from homeassistant.util.yaml import loader as yaml_loader
+from menuai.config import YAML_CONFIG_FILE, load_yaml_config_file
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.util import yaml as yaml_util
+from menuai.util.yaml import loader as yaml_loader
 
 from tests.common import extract_stack_to_frame
 
@@ -73,19 +73,19 @@ def test_simple_dict() -> None:
     assert doc["key"] == "value"
 
 
-@pytest.mark.parametrize("hass_config_yaml", ["message:\n  {{ states.state }}"])
-@pytest.mark.usefixtures("try_both_loaders", "mock_hass_config_yaml")
+@pytest.mark.parametrize("menuai_config_yaml", ["message:\n  {{ states.state }}"])
+@pytest.mark.usefixtures("try_both_loaders", "mock_menuai_config_yaml")
 def test_unhashable_key() -> None:
     """Test an unhashable key."""
-    with pytest.raises(HomeAssistantError):
+    with pytest.raises(menuaiError):
         load_yaml_config_file(YAML_CONFIG_FILE)
 
 
-@pytest.mark.parametrize("hass_config_yaml", ["a: a\nnokeyhere"])
-@pytest.mark.usefixtures("try_both_loaders", "mock_hass_config_yaml")
+@pytest.mark.parametrize("menuai_config_yaml", ["a: a\nnokeyhere"])
+@pytest.mark.usefixtures("try_both_loaders", "mock_menuai_config_yaml")
 def test_no_key() -> None:
     """Test item without a key."""
-    with pytest.raises(HomeAssistantError):
+    with pytest.raises(menuaiError):
         yaml_util.load_yaml(YAML_CONFIG_FILE)
 
 
@@ -113,19 +113,19 @@ def test_environment_variable_default() -> None:
 def test_invalid_environment_variable() -> None:
     """Test config file with no environment variable sat."""
     conf = "password: !env_var PASSWORD"
-    with pytest.raises(HomeAssistantError), io.StringIO(conf) as file:
+    with pytest.raises(menuaiError), io.StringIO(conf) as file:
         yaml_loader.parse_yaml(file)
 
 
 @pytest.mark.parametrize(
-    ("hass_config_yaml_files", "value"),
+    ("menuai_config_yaml_files", "value"),
     [
         ({"test.yaml": "value"}, "value"),
         ({"test.yaml": None}, {}),
         ({"test.yaml": "123"}, 123),
     ],
 )
-@pytest.mark.usefixtures("try_both_loaders", "mock_hass_config_yaml")
+@pytest.mark.usefixtures("try_both_loaders", "mock_menuai_config_yaml")
 def test_include_yaml(value: Any) -> None:
     """Test include yaml."""
     conf = "key: !include test.yaml"
@@ -134,16 +134,16 @@ def test_include_yaml(value: Any) -> None:
         assert doc["key"] == value
 
 
-@patch("homeassistant.util.yaml.loader.os.walk")
+@patch("menuai.util.yaml.loader.os.walk")
 @pytest.mark.parametrize(
-    ("hass_config_yaml_files", "value"),
+    ("menuai_config_yaml_files", "value"),
     [
         ({"/test/one.yaml": "one", "/test/two.yaml": "two"}, ["one", "two"]),
         ({"/test/one.yaml": "1", "/test/two.yaml": "2"}, [1, 2]),
         ({"/test/one.yaml": "1", "/test/two.yaml": None}, [1]),
     ],
 )
-@pytest.mark.usefixtures("try_both_loaders", "mock_hass_config_yaml")
+@pytest.mark.usefixtures("try_both_loaders", "mock_menuai_config_yaml")
 def test_include_dir_list(mock_walk: Mock, value: Any) -> None:
     """Test include dir list yaml."""
     mock_walk.return_value = [["/test", [], ["two.yaml", "one.yaml"]]]
@@ -154,9 +154,9 @@ def test_include_dir_list(mock_walk: Mock, value: Any) -> None:
         assert sorted(doc["key"]) == sorted(value)
 
 
-@patch("homeassistant.util.yaml.loader.os.walk")
+@patch("menuai.util.yaml.loader.os.walk")
 @pytest.mark.parametrize(
-    "hass_config_yaml_files",
+    "menuai_config_yaml_files",
     [
         {
             "/test/zero.yaml": "zero",
@@ -165,7 +165,7 @@ def test_include_dir_list(mock_walk: Mock, value: Any) -> None:
         }
     ],
 )
-@pytest.mark.usefixtures("try_both_loaders", "mock_hass_config_yaml")
+@pytest.mark.usefixtures("try_both_loaders", "mock_menuai_config_yaml")
 def test_include_dir_list_recursive(mock_walk: Mock) -> None:
     """Test include dir recursive list yaml."""
     mock_walk.return_value = [
@@ -183,9 +183,9 @@ def test_include_dir_list_recursive(mock_walk: Mock) -> None:
         assert sorted(doc["key"]) == sorted(["zero", "one", "two"])
 
 
-@patch("homeassistant.util.yaml.loader.os.walk")
+@patch("menuai.util.yaml.loader.os.walk")
 @pytest.mark.parametrize(
-    ("hass_config_yaml_files", "value"),
+    ("menuai_config_yaml_files", "value"),
     [
         (
             {"/test/first.yaml": "one", "/test/second.yaml": "two"},
@@ -201,7 +201,7 @@ def test_include_dir_list_recursive(mock_walk: Mock) -> None:
         ),
     ],
 )
-@pytest.mark.usefixtures("try_both_loaders", "mock_hass_config_yaml")
+@pytest.mark.usefixtures("try_both_loaders", "mock_menuai_config_yaml")
 def test_include_dir_named(mock_walk: Mock, value: Any) -> None:
     """Test include dir named yaml."""
     mock_walk.return_value = [
@@ -214,9 +214,9 @@ def test_include_dir_named(mock_walk: Mock, value: Any) -> None:
         assert doc["key"] == value
 
 
-@patch("homeassistant.util.yaml.loader.os.walk")
+@patch("menuai.util.yaml.loader.os.walk")
 @pytest.mark.parametrize(
-    "hass_config_yaml_files",
+    "menuai_config_yaml_files",
     [
         {
             "/test/first.yaml": "one",
@@ -225,7 +225,7 @@ def test_include_dir_named(mock_walk: Mock, value: Any) -> None:
         }
     ],
 )
-@pytest.mark.usefixtures("try_both_loaders", "mock_hass_config_yaml")
+@pytest.mark.usefixtures("try_both_loaders", "mock_menuai_config_yaml")
 def test_include_dir_named_recursive(mock_walk: Mock) -> None:
     """Test include dir named yaml."""
     mock_walk.return_value = [
@@ -244,9 +244,9 @@ def test_include_dir_named_recursive(mock_walk: Mock) -> None:
         assert doc["key"] == correct
 
 
-@patch("homeassistant.util.yaml.loader.os.walk")
+@patch("menuai.util.yaml.loader.os.walk")
 @pytest.mark.parametrize(
-    ("hass_config_yaml_files", "value"),
+    ("menuai_config_yaml_files", "value"),
     [
         (
             {"/test/first.yaml": "- one", "/test/second.yaml": "- two\n- three"},
@@ -262,7 +262,7 @@ def test_include_dir_named_recursive(mock_walk: Mock) -> None:
         ),
     ],
 )
-@pytest.mark.usefixtures("try_both_loaders", "mock_hass_config_yaml")
+@pytest.mark.usefixtures("try_both_loaders", "mock_menuai_config_yaml")
 def test_include_dir_merge_list(mock_walk: Mock, value: Any) -> None:
     """Test include dir merge list yaml."""
     mock_walk.return_value = [["/test", [], ["first.yaml", "second.yaml"]]]
@@ -273,9 +273,9 @@ def test_include_dir_merge_list(mock_walk: Mock, value: Any) -> None:
         assert sorted(doc["key"]) == sorted(value)
 
 
-@patch("homeassistant.util.yaml.loader.os.walk")
+@patch("menuai.util.yaml.loader.os.walk")
 @pytest.mark.parametrize(
-    "hass_config_yaml_files",
+    "menuai_config_yaml_files",
     [
         {
             "/test/first.yaml": "- one",
@@ -284,7 +284,7 @@ def test_include_dir_merge_list(mock_walk: Mock, value: Any) -> None:
         }
     ],
 )
-@pytest.mark.usefixtures("try_both_loaders", "mock_hass_config_yaml")
+@pytest.mark.usefixtures("try_both_loaders", "mock_menuai_config_yaml")
 def test_include_dir_merge_list_recursive(mock_walk: Mock) -> None:
     """Test include dir merge list yaml."""
     mock_walk.return_value = [
@@ -302,9 +302,9 @@ def test_include_dir_merge_list_recursive(mock_walk: Mock) -> None:
         assert sorted(doc["key"]) == sorted(["one", "two", "three", "four"])
 
 
-@patch("homeassistant.util.yaml.loader.os.walk")
+@patch("menuai.util.yaml.loader.os.walk")
 @pytest.mark.parametrize(
-    ("hass_config_yaml_files", "value"),
+    ("menuai_config_yaml_files", "value"),
     [
         (
             {
@@ -329,7 +329,7 @@ def test_include_dir_merge_list_recursive(mock_walk: Mock) -> None:
         ),
     ],
 )
-@pytest.mark.usefixtures("try_both_loaders", "mock_hass_config_yaml")
+@pytest.mark.usefixtures("try_both_loaders", "mock_menuai_config_yaml")
 def test_include_dir_merge_named(mock_walk: Mock, value: Any) -> None:
     """Test include dir merge named yaml."""
     mock_walk.return_value = [["/test", [], ["first.yaml", "second.yaml"]]]
@@ -340,9 +340,9 @@ def test_include_dir_merge_named(mock_walk: Mock, value: Any) -> None:
         assert doc["key"] == value
 
 
-@patch("homeassistant.util.yaml.loader.os.walk")
+@patch("menuai.util.yaml.loader.os.walk")
 @pytest.mark.parametrize(
-    "hass_config_yaml_files",
+    "menuai_config_yaml_files",
     [
         {
             "/test/first.yaml": "key1: one",
@@ -351,7 +351,7 @@ def test_include_dir_merge_named(mock_walk: Mock, value: Any) -> None:
         }
     ],
 )
-@pytest.mark.usefixtures("try_both_loaders", "mock_hass_config_yaml")
+@pytest.mark.usefixtures("try_both_loaders", "mock_menuai_config_yaml")
 def test_include_dir_merge_named_recursive(mock_walk: Mock) -> None:
     """Test include dir merge named yaml."""
     mock_walk.return_value = [
@@ -379,7 +379,7 @@ def test_include_dir_merge_named_recursive(mock_walk: Mock) -> None:
 def test_load_yaml_encoding_error(mock_open: Mock) -> None:
     """Test raising a UnicodeDecodeError."""
     mock_open.side_effect = UnicodeDecodeError("", b"", 1, 0, "")
-    with pytest.raises(HomeAssistantError):
+    with pytest.raises(menuaiError):
         yaml_loader.load_yaml("test")
 
 
@@ -395,16 +395,16 @@ def test_dump_unicode() -> None:
     assert yaml_util.dump({"a": None, "b": "привет"}) == "a:\nb: привет\n"
 
 
-@pytest.mark.parametrize("hass_config_yaml", ['key: [1, "2", 3]'])
-@pytest.mark.usefixtures("try_both_dumpers", "mock_hass_config_yaml")
+@pytest.mark.parametrize("menuai_config_yaml", ['key: [1, "2", 3]'])
+@pytest.mark.usefixtures("try_both_dumpers", "mock_menuai_config_yaml")
 def test_representing_yaml_loaded_data() -> None:
     """Test we can represent YAML loaded data."""
     data = load_yaml_config_file(YAML_CONFIG_FILE)
     assert yaml_util.dump(data) == "key:\n- 1\n- '2'\n- 3\n"
 
 
-@pytest.mark.parametrize("hass_config_yaml", ["key: thing1\nkey: thing2"])
-@pytest.mark.usefixtures("try_both_loaders", "mock_hass_config_yaml")
+@pytest.mark.parametrize("menuai_config_yaml", ["key: thing1\nkey: thing2"])
+@pytest.mark.usefixtures("try_both_loaders", "mock_menuai_config_yaml")
 def test_duplicate_key(caplog: pytest.LogCaptureFixture) -> None:
     """Test duplicate dict keys."""
     load_yaml_config_file(YAML_CONFIG_FILE)
@@ -412,13 +412,13 @@ def test_duplicate_key(caplog: pytest.LogCaptureFixture) -> None:
 
 
 @pytest.mark.parametrize(
-    "hass_config_yaml_files",
+    "menuai_config_yaml_files",
     [{YAML_CONFIG_FILE: "key: !secret a", yaml_util.SECRET_YAML: "a: 1\nb: !secret a"}],
 )
-@pytest.mark.usefixtures("try_both_loaders", "mock_hass_config_yaml")
+@pytest.mark.usefixtures("try_both_loaders", "mock_menuai_config_yaml")
 def test_no_recursive_secrets() -> None:
     """Test that loading of secrets from the secrets file fails correctly."""
-    with pytest.raises(HomeAssistantError) as e:
+    with pytest.raises(menuaiError) as e:
         load_yaml_config_file(YAML_CONFIG_FILE)
 
     assert e.value.args == ("Secrets not supported in this YAML file",)
@@ -443,7 +443,7 @@ def test_input() -> None:
 
 
 @pytest.mark.skipif(
-    not os.environ.get("HASS_CI"),
+    not os.environ.get("menuai_CI"),
     reason="This test validates that the CI has the C loader available",
 )
 def test_c_loader_is_available_in_ci() -> None:
@@ -452,32 +452,32 @@ def test_c_loader_is_available_in_ci() -> None:
 
 
 @pytest.mark.usefixtures("try_both_loaders")
-async def test_loading_actual_file_with_syntax_error(hass: HomeAssistant) -> None:
+async def test_loading_actual_file_with_syntax_error(menuai: menuai) -> None:
     """Test loading a real file with syntax errors."""
     fixture_path = pathlib.Path(__file__).parent.joinpath("fixtures", "bad.yaml.txt")
-    with pytest.raises(HomeAssistantError):
-        await hass.async_add_executor_job(load_yaml_config_file, fixture_path)
+    with pytest.raises(menuaiError):
+        await menuai.async_add_executor_job(load_yaml_config_file, fixture_path)
 
 
 @pytest.fixture
 def mock_integration_frame() -> Generator[Mock]:
     """Mock as if we're calling code from inside an integration."""
     correct_frame = Mock(
-        filename="/home/paulus/homeassistant/components/hue/light.py",
+        filename="/home/paulus/menuai/components/hue/light.py",
         lineno="23",
         line="self.light.is_on",
     )
     with (
         patch(
-            "homeassistant.helpers.frame.linecache.getline",
+            "menuai.helpers.frame.linecache.getline",
             return_value=correct_frame.line,
         ),
         patch(
-            "homeassistant.helpers.frame.get_current_frame",
+            "menuai.helpers.frame.get_current_frame",
             return_value=extract_stack_to_frame(
                 [
                     Mock(
-                        filename="/home/paulus/homeassistant/core.py",
+                        filename="/home/paulus/menuai/core.py",
                         lineno="23",
                         line="do_something()",
                     ),
@@ -547,16 +547,16 @@ def test_string_used_as_vol_schema() -> None:
 
 
 @pytest.mark.parametrize(
-    ("hass_config_yaml", "expected_data"), [("", {}), ("bla:", {"bla": None})]
+    ("menuai_config_yaml", "expected_data"), [("", {}), ("bla:", {"bla": None})]
 )
-@pytest.mark.usefixtures("try_both_loaders", "mock_hass_config_yaml")
+@pytest.mark.usefixtures("try_both_loaders", "mock_menuai_config_yaml")
 def test_load_yaml_dict(expected_data: Any) -> None:
     """Test item without a key."""
     assert yaml_util.load_yaml_dict(YAML_CONFIG_FILE) == expected_data
 
 
-@pytest.mark.parametrize("hass_config_yaml", ["abc", "123", "[]"])
-@pytest.mark.usefixtures("try_both_loaders", "mock_hass_config_yaml")
+@pytest.mark.parametrize("menuai_config_yaml", ["abc", "123", "[]"])
+@pytest.mark.usefixtures("try_both_loaders", "mock_menuai_config_yaml")
 def test_load_yaml_dict_fail() -> None:
     """Test item without a key."""
     with pytest.raises(yaml_loader.YamlTypeError):
@@ -578,7 +578,7 @@ def test_include_without_parameter(tag: str) -> None:
     """Test include extensions without parameters."""
     with (
         io.StringIO(f"key: {tag}") as file,
-        pytest.raises(HomeAssistantError, match=f"{tag} needs an argument"),
+        pytest.raises(menuaiError, match=f"{tag} needs an argument"),
     ):
         yaml_loader.parse_yaml(file)
 
@@ -587,8 +587,8 @@ def test_include_without_parameter(tag: str) -> None:
     ("open_exception", "load_yaml_exception"),
     [
         (FileNotFoundError, OSError),
-        (NotADirectoryError, HomeAssistantError),
-        (PermissionError, HomeAssistantError),
+        (NotADirectoryError, menuaiError),
+        (PermissionError, menuaiError),
     ],
 )
 @pytest.mark.usefixtures("try_both_loaders")
@@ -596,7 +596,7 @@ def test_load_yaml_wrap_oserror(
     open_exception: Exception,
     load_yaml_exception: Exception,
 ) -> None:
-    """Test load_yaml wraps OSError in HomeAssistantError."""
+    """Test load_yaml wraps OSError in menuaiError."""
     with (
         patch("annotatedyaml.loader.open", side_effect=open_exception),
         pytest.raises(load_yaml_exception),

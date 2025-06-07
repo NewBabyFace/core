@@ -23,7 +23,7 @@
         "already_configured_location": "Location is already configured",
         "already_configured_service": "Service is already configured",
         "already_in_progress": "Configuration flow is already in progress",
-        "cloud_not_connected": "Not connected to Home Assistant Cloud.",
+        "cloud_not_connected": "Not connected to MenuAI Cloud.",
         "no_devices_found": "No devices found on the network",
         "oauth2_authorize_url_timeout": "Timeout generating authorize URL.",
         "oauth2_error": "Received invalid token data.",
@@ -38,7 +38,7 @@
         "reconfigure_successful": "Re-configuration was successful",
         "single_instance_allowed": "Already configured. Only a single configuration possible.",
         "unknown_authorize_url_generation": "Unknown error generating an authorize URL.",
-        "webhook_not_internet_accessible": "Your Home Assistant instance needs to be accessible from the internet to receive webhook messages."
+        "webhook_not_internet_accessible": "Your MenuAI instance needs to be accessible from the internet to receive webhook messages."
       },
       "create_entry": {
         "authenticated": "Successfully authenticated"
@@ -55,7 +55,7 @@
         "ip": "IP address",
         "language": "Language",
         "latitude": "Latitude",
-        "llm_hass_api": "Control Home Assistant",
+        "llm_menuai_api": "Control MenuAI",
         "location": "Location",
         "longitude": "Longitude",
         "mode": "Mode",
@@ -85,7 +85,7 @@
       "title": {
         "oauth2_pick_implementation": "Pick authentication method",
         "reauth": "Authentication expired for {name}",
-        "via_hassio_addon": "{name} via Home Assistant add-on"
+        "via_menuaiio_addon": "{name} via MenuAI add-on"
       }
     },
     "device_automation": {

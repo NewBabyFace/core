@@ -5,10 +5,10 @@ from typing import Any
 
 from epion import Epion, EpionAuthenticationError, EpionConnectionError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import REFRESH_INTERVAL
 
@@ -21,11 +21,11 @@ class EpionCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     """Epion data update coordinator."""
 
     def __init__(
-        self, hass: HomeAssistant, entry: EpionConfigEntry, epion_api: Epion
+        self, menuai: menuai, entry: EpionConfigEntry, epion_api: Epion
     ) -> None:
         """Initialize the Epion coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
             name="Epion",
@@ -36,7 +36,7 @@ class EpionCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from Epion API and construct a dictionary with device IDs as keys."""
         try:
-            response = await self.hass.async_add_executor_job(
+            response = await self.menuai.async_add_executor_job(
                 self.epion_api.get_current
             )
         except EpionAuthenticationError as err:

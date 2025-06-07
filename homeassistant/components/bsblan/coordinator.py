@@ -6,17 +6,17 @@ from random import randint
 
 from bsblan import BSBLAN, BSBLANConnectionError, HotWaterState, Sensor, State
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN, LOGGER, SCAN_INTERVAL
 
 
 @dataclass
 class BSBLanCoordinatorData:
-    """BSBLan data stored in the Home Assistant data object."""
+    """BSBLan data stored in the MenuAI data object."""
 
     state: State
     sensor: Sensor
@@ -30,13 +30,13 @@ class BSBLanUpdateCoordinator(DataUpdateCoordinator[BSBLanCoordinatorData]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         client: BSBLAN,
     ) -> None:
         """Initialize the BSB-Lan coordinator."""
         super().__init__(
-            hass,
+            menuai,
             logger=LOGGER,
             config_entry=config_entry,
             name=f"{DOMAIN}_{config_entry.data[CONF_HOST]}",

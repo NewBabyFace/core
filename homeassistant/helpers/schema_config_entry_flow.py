@@ -11,14 +11,14 @@ from typing import Any, cast
 
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.core import HomeAssistant, callback, split_entity_id
-from homeassistant.data_entry_flow import UnknownHandler
+from menuai.core import menuai, callback, split_entity_id
+from menuai.data_entry_flow import UnknownHandler
 
 from . import entity_registry as er, selector
 from .typing import UNDEFINED, UndefinedType
@@ -340,7 +340,7 @@ class SchemaConfigFlowHandler(ConfigFlow, ABC):
         self._common_handler = SchemaCommonFlowHandler(self, self.config_flow, None)
 
     @staticmethod
-    async def async_setup_preview(hass: HomeAssistant) -> None:
+    async def async_setup_preview(menuai: menuai) -> None:
         """Set up preview."""
 
     @classmethod
@@ -386,7 +386,7 @@ class SchemaConfigFlowHandler(ConfigFlow, ABC):
     @callback
     @staticmethod
     def async_options_flow_finished(
-        hass: HomeAssistant, options: Mapping[str, Any]
+        menuai: menuai, options: Mapping[str, Any]
     ) -> None:
         """Take necessary actions after the options flow is finished, if needed.
 
@@ -414,9 +414,9 @@ class SchemaOptionsFlowHandler(OptionsFlow):
         self,
         config_entry: ConfigEntry,
         options_flow: Mapping[str, SchemaFlowStep],
-        async_options_flow_finished: Callable[[HomeAssistant, Mapping[str, Any]], None]
+        async_options_flow_finished: Callable[[menuai, Mapping[str, Any]], None]
         | None = None,
-        async_setup_preview: Callable[[HomeAssistant], Coroutine[Any, Any, None]]
+        async_setup_preview: Callable[[menuai], Coroutine[Any, Any, None]]
         | None = None,
     ) -> None:
         """Initialize options flow.
@@ -470,13 +470,13 @@ class SchemaOptionsFlowHandler(OptionsFlow):
     ) -> ConfigFlowResult:
         """Finish config flow and create a config entry."""
         if self._async_options_flow_finished:
-            self._async_options_flow_finished(self.hass, data)
+            self._async_options_flow_finished(self.menuai, data)
         return super().async_create_entry(data=data, **kwargs)
 
 
 @callback
 def wrapped_entity_config_entry_title(
-    hass: HomeAssistant, entity_id_or_uuid: str
+    menuai: menuai, entity_id_or_uuid: str
 ) -> str:
     """Generate title for a config entry wrapping a single entity.
 
@@ -484,13 +484,13 @@ def wrapped_entity_config_entry_title(
     If the entity is in the state machine, use the name from the state.
     Otherwise, fall back to the object ID.
     """
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     entity_id = er.async_validate_entity_id(registry, entity_id_or_uuid)
     object_id = split_entity_id(entity_id)[1]
     entry = registry.async_get(entity_id)
     if entry:
         return entry.name or entry.original_name or object_id
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     if state:
         return state.name or object_id
     return object_id
@@ -502,7 +502,7 @@ def entity_selector_without_own_entities(
     entity_selector_config: selector.EntitySelectorConfig,
 ) -> selector.EntitySelector:
     """Return an entity selector which excludes own entities."""
-    entity_registry = er.async_get(handler.hass)
+    entity_registry = er.async_get(handler.menuai)
     entities = er.async_entries_for_config_entry(
         entity_registry,
         handler.config_entry.entry_id,

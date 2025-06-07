@@ -6,16 +6,16 @@ from typing import Any
 
 from py_dormakaba_dkey.commands import UnlockStatus
 
-from homeassistant.components.lock import LockEntity
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.lock import LockEntity
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import DormakabaDkeyConfigEntry, DormakabaDkeyCoordinator
 from .entity import DormakabaDkeyEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: DormakabaDkeyConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

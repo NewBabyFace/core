@@ -8,13 +8,13 @@ from unittest.mock import AsyncMock
 from aioesphomeapi import APIClient, BinarySensorInfo, BinarySensorState, DeviceInfo
 import pytest
 
-from homeassistant.components.esphome import repairs
-from homeassistant.components.esphome.const import DOMAIN
-from homeassistant.components.esphome.manager import DEVICE_CONFLICT_ISSUE_FORMAT
-from homeassistant.const import STATE_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import (
+from menuai.components.esphome import repairs
+from menuai.components.esphome.const import DOMAIN
+from menuai.components.esphome.manager import DEVICE_CONFLICT_ISSUE_FORMAT
+from menuai.const import STATE_ON
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers import (
     device_registry as dr,
     entity_registry as er,
     issue_registry as ir,
@@ -32,24 +32,24 @@ from tests.components.repairs import (
 from tests.typing import ClientSessionGenerator, WebSocketGenerator
 
 
-async def test_create_fix_flow_raises_on_unknown_issue_id(hass: HomeAssistant) -> None:
+async def test_create_fix_flow_raises_on_unknown_issue_id(menuai: menuai) -> None:
     """Test create_fix_flow raises on unknown issue_id."""
 
     with pytest.raises(ValueError):
-        await repairs.async_create_fix_flow(hass, "no_such_issue", None)
+        await repairs.async_create_fix_flow(menuai, "no_such_issue", None)
 
 
 async def test_device_conflict_manual(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
-    hass_client: ClientSessionGenerator,
-    hass_ws_client: WebSocketGenerator,
+    menuai_client: ClientSessionGenerator,
+    menuai_ws_client: WebSocketGenerator,
     mock_config_entry: MockConfigEntry,
     issue_registry: ir.IssueRegistry,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test guided manual conflict resolution."""
-    disconnect_done = hass.loop.create_future()
+    disconnect_done = menuai.loop.create_future()
 
     async def async_disconnect(*args, **kwargs) -> None:
         disconnect_done.set_result(None)
@@ -60,20 +60,20 @@ async def test_device_conflict_manual(
             mac_address="1122334455ab", name="test", model="esp32-iso-poe"
         )
     )
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
     async with asyncio.timeout(1):
         await disconnect_done
 
     assert "Unexpected device found" in caplog.text
     issue_id = DEVICE_CONFLICT_ISSUE_FORMAT.format(mock_config_entry.entry_id)
 
-    issues = await get_repairs(hass, hass_ws_client)
+    issues = await get_repairs(menuai, menuai_ws_client)
     assert issues
     assert issue_registry.async_get_issue(DOMAIN, issue_id) is not None
 
-    await async_process_repairs_platforms(hass)
-    client = await hass_client()
+    await async_process_repairs_platforms(menuai)
+    client = await menuai_client()
     data = await start_repair_fix_flow(client, DOMAIN, issue_id)
 
     flow_id = data["flow_id"]
@@ -111,16 +111,16 @@ async def test_device_conflict_manual(
     data = await process_repair_fix_flow(client, flow_id)
 
     assert data["type"] == FlowResultType.CREATE_ENTRY
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert "Unexpected device found" not in caplog.text
     assert issue_registry.async_get_issue(DOMAIN, issue_id) is None
 
 
 async def test_device_conflict_migration(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
-    hass_client: ClientSessionGenerator,
-    hass_ws_client: WebSocketGenerator,
+    menuai_client: ClientSessionGenerator,
+    menuai_ws_client: WebSocketGenerator,
     issue_registry: ir.IssueRegistry,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
@@ -145,7 +145,7 @@ async def test_device_conflict_migration(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("binary_sensor.test_mybinary_sensor")
+    state = menuai.states.get("binary_sensor.test_mybinary_sensor")
     assert state is not None
     assert state.state == STATE_ON
     mock_config_entry = device.entry
@@ -159,7 +159,7 @@ async def test_device_conflict_migration(
     assert entries is not None
     for entry in entries:
         assert entry.unique_id.startswith("11:22:33:44:55:AA-")
-    disconnect_done = hass.loop.create_future()
+    disconnect_done = menuai.loop.create_future()
 
     async def async_disconnect(*args, **kwargs) -> None:
         if not disconnect_done.done():
@@ -171,20 +171,20 @@ async def test_device_conflict_migration(
     )
     mock_client.device_info = AsyncMock(return_value=new_device_info)
     device.device_info = new_device_info
-    await hass.config_entries.async_reload(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_reload(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
     async with asyncio.timeout(1):
         await disconnect_done
 
     assert "Unexpected device found" in caplog.text
     issue_id = DEVICE_CONFLICT_ISSUE_FORMAT.format(mock_config_entry.entry_id)
 
-    issues = await get_repairs(hass, hass_ws_client)
+    issues = await get_repairs(menuai, menuai_ws_client)
     assert issues
     assert issue_registry.async_get_issue(DOMAIN, issue_id) is not None
 
-    await async_process_repairs_platforms(hass)
-    client = await hass_client()
+    await async_process_repairs_platforms(menuai)
+    client = await menuai_client()
     data = await start_repair_fix_flow(client, DOMAIN, issue_id)
 
     flow_id = data["flow_id"]
@@ -217,7 +217,7 @@ async def test_device_conflict_migration(
     data = await process_repair_fix_flow(client, flow_id)
 
     assert data["type"] == FlowResultType.CREATE_ENTRY
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert "Unexpected device found" not in caplog.text
     assert issue_registry.async_get_issue(DOMAIN, issue_id) is None
 

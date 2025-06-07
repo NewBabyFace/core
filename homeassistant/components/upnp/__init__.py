@@ -7,12 +7,12 @@ from datetime import timedelta
 
 from async_upnp_client.exceptions import UpnpConnectionError
 
-from homeassistant.components import ssdp
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.service_info.ssdp import SsdpServiceInfo
+from menuai.components import ssdp
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import device_registry as dr
+from menuai.helpers.service_info.ssdp import SsdpServiceInfo
 
 from .const import (
     CONFIG_ENTRY_FORCE_POLL,
@@ -36,7 +36,7 @@ NOTIFICATION_TITLE = "UPnP/IGD Setup"
 PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: UpnpConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: UpnpConfigEntry) -> bool:
     """Set up UPnP/IGD device from a config entry."""
     LOGGER.debug("Setting up config entry: %s", entry.entry_id)
 
@@ -60,7 +60,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: UpnpConfigEntry) -> bool
         device_discovered_event.set()
 
     cancel_discovered_callback = await ssdp.async_register_callback(
-        hass,
+        menuai,
         device_discovered,
         {
             "usn": usn,
@@ -82,7 +82,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: UpnpConfigEntry) -> bool
     force_poll = entry.options.get(CONFIG_ENTRY_FORCE_POLL, False)
     location = get_preferred_location(discovery_info.ssdp_all_locations)
     try:
-        device = await async_create_device(hass, location, force_poll)
+        device = await async_create_device(menuai, location, force_poll)
     except UpnpConnectionError as err:
         raise ConfigEntryNotReady(
             f"Error connecting to device at location: {location}, err: {err}"
@@ -96,7 +96,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: UpnpConfigEntry) -> bool
     entry.async_on_unload(device.async_unsubscribe_services)
 
     # Update force_poll on options update.
-    async def update_listener(hass: HomeAssistant, entry: UpnpConfigEntry):
+    async def update_listener(menuai: menuai, entry: UpnpConfigEntry):
         """Handle options update."""
         force_poll = entry.options.get(CONFIG_ENTRY_FORCE_POLL, False)
         await device.async_set_force_poll(force_poll)
@@ -105,7 +105,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: UpnpConfigEntry) -> bool
 
     # Track the original UDN such that existing sensors do not change their unique_id.
     if CONFIG_ENTRY_ORIGINAL_UDN not in entry.data:
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry=entry,
             data={
                 **entry.data,
@@ -117,7 +117,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: UpnpConfigEntry) -> bool
     # Store mac address for changed UDN matching.
     device_mac_address = await device.async_get_mac_address()
     if device_mac_address and not entry.data.get(CONFIG_ENTRY_MAC_ADDRESS):
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry=entry,
             data={
                 **entry.data,
@@ -138,7 +138,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: UpnpConfigEntry) -> bool
     if device_mac_address:
         connections.add((dr.CONNECTION_NETWORK_MAC, device_mac_address))
 
-    dev_registry = dr.async_get(hass)
+    dev_registry = dr.async_get(menuai)
     device_entry = dev_registry.async_get_device(
         identifiers=identifiers, connections=connections
     )
@@ -171,7 +171,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: UpnpConfigEntry) -> bool
     assert device_entry
     update_interval = timedelta(seconds=DEFAULT_SCAN_INTERVAL)
     coordinator = UpnpDataUpdateCoordinator(
-        hass,
+        menuai,
         config_entry=entry,
         device=device,
         device_entry=device_entry,
@@ -185,12 +185,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: UpnpConfigEntry) -> bool
     entry.runtime_data = coordinator
 
     # Setup platforms, creating sensors/binary_sensors.
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: UpnpConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: UpnpConfigEntry) -> bool:
     """Unload a UPnP/IGD device from a config entry."""
     LOGGER.debug("Unloading config entry: %s", entry.entry_id)
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

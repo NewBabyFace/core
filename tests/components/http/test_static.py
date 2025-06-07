@@ -6,35 +6,35 @@ from pathlib import Path
 from aiohttp.test_utils import TestClient
 import pytest
 
-from homeassistant.components.http import StaticPathConfig
-from homeassistant.components.http.static import CachingStaticResource
-from homeassistant.const import EVENT_HOMEASSISTANT_START
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.http import KEY_ALLOW_CONFIGURED_CORS
-from homeassistant.setup import async_setup_component
+from menuai.components.http import StaticPathConfig
+from menuai.components.http.static import CachingStaticResource
+from menuai.const import EVENT_menuai_START
+from menuai.core import menuai
+from menuai.helpers.http import KEY_ALLOW_CONFIGURED_CORS
+from menuai.setup import async_setup_component
 
 from tests.typing import ClientSessionGenerator
 
 
 @pytest.fixture(autouse=True)
-async def http(hass: HomeAssistant) -> None:
+async def http(menuai: menuai) -> None:
     """Ensure http is set up."""
-    assert await async_setup_component(hass, "http", {})
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_START)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "http", {})
+    menuai.bus.async_fire(EVENT_menuai_START)
+    await menuai.async_block_till_done()
 
 
 @pytest.fixture
-async def mock_http_client(hass: HomeAssistant, aiohttp_client: ClientSessionGenerator):
-    """Start the Home Assistant HTTP component."""
-    return await aiohttp_client(hass.http.app, server_kwargs={"skip_url_asserts": True})
+async def mock_http_client(menuai: menuai, aiohttp_client: ClientSessionGenerator):
+    """Start the MenuAI HTTP component."""
+    return await aiohttp_client(menuai.http.app, server_kwargs={"skip_url_asserts": True})
 
 
 async def test_static_resource_show_index(
-    hass: HomeAssistant, mock_http_client: TestClient, tmp_path: Path
+    menuai: menuai, mock_http_client: TestClient, tmp_path: Path
 ) -> None:
     """Test static resource will return a directory index."""
-    app = hass.http.app
+    app = menuai.http.app
 
     resource = CachingStaticResource("/", tmp_path, show_index=True)
     app.router.register_resource(resource)
@@ -46,19 +46,19 @@ async def test_static_resource_show_index(
 
 
 async def test_async_register_static_paths(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test registering multiple static paths."""
-    assert await async_setup_component(hass, "frontend", {})
+    assert await async_setup_component(menuai, "frontend", {})
     path = str(Path(__file__).parent)
-    await hass.http.async_register_static_paths(
+    await menuai.http.async_register_static_paths(
         [
             StaticPathConfig("/something", path),
             StaticPathConfig("/something_else", path),
         ]
     )
 
-    client = await hass_client()
+    client = await menuai_client()
     resp = await client.get("/something/__init__.py")
     assert resp.status == HTTPStatus.OK
     resp = await client.get("/something_else/__init__.py")

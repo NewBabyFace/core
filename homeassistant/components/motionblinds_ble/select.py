@@ -7,11 +7,11 @@ import logging
 from motionblindsble.const import MotionBlindType, MotionSpeedLevel
 from motionblindsble.device import MotionDevice
 
-from homeassistant.components.select import SelectEntity, SelectEntityDescription
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.select import SelectEntity, SelectEntityDescription
+from menuai.config_entries import ConfigEntry
+from menuai.const import EntityCategory
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import ATTR_SPEED, CONF_MAC_CODE, DOMAIN
 from .entity import MotionblindsBLEEntity
@@ -32,13 +32,13 @@ SELECT_TYPES: dict[str, SelectEntityDescription] = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up select entities based on a config entry."""
 
-    device: MotionDevice = hass.data[DOMAIN][entry.entry_id]
+    device: MotionDevice = menuai.data[DOMAIN][entry.entry_id]
 
     if device.blind_type not in {MotionBlindType.CURTAIN, MotionBlindType.VERTICAL}:
         async_add_entities([SpeedSelect(device, entry, SELECT_TYPES[ATTR_SPEED])])
@@ -59,7 +59,7 @@ class SpeedSelect(MotionblindsBLEEntity, SelectEntity):
         )
         self._attr_current_option = None
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register device callbacks."""
         _LOGGER.debug(
             "(%s) Setting up speed select entity",

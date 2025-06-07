@@ -8,10 +8,10 @@ from unittest.mock import patch
 import pytest
 from pytrafikverket import StationInfoModel, TrainStopModel
 
-from homeassistant.components.trafikverket_train.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
+from menuai.components.trafikverket_train.const import DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.core import menuai
+from menuai.util import dt as dt_util
 
 from . import ENTRY_CONFIG, ENTRY_CONFIG2, OPTIONS_CONFIG
 
@@ -20,32 +20,32 @@ from tests.common import MockConfigEntry
 
 @pytest.fixture(name="load_int")
 async def load_integration_from_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     get_trains: list[TrainStopModel],
     get_train_stop: TrainStopModel,
 ) -> MockConfigEntry:
-    """Set up the Trafikverket Train integration in Home Assistant."""
+    """Set up the Trafikverket Train integration in MenuAI."""
 
     async def setup_config_entry_with_mocked_data(config_entry_id: str) -> None:
         """Set up a config entry with mocked trafikverket data."""
         with (
             patch(
-                "homeassistant.components.trafikverket_train.coordinator.TrafikverketTrain.async_get_next_train_stops",
+                "menuai.components.trafikverket_train.coordinator.TrafikverketTrain.async_get_next_train_stops",
                 return_value=get_trains,
             ),
             patch(
-                "homeassistant.components.trafikverket_train.coordinator.TrafikverketTrain.async_get_train_stop",
+                "menuai.components.trafikverket_train.coordinator.TrafikverketTrain.async_get_train_stop",
                 return_value=get_train_stop,
             ),
             patch(
-                "homeassistant.components.trafikverket_train.coordinator.TrafikverketTrain.async_search_train_station",
+                "menuai.components.trafikverket_train.coordinator.TrafikverketTrain.async_search_train_station",
             ),
             patch(
-                "homeassistant.components.trafikverket_train.coordinator.TrafikverketTrain.async_get_train_station_from_signature",
+                "menuai.components.trafikverket_train.coordinator.TrafikverketTrain.async_get_train_station_from_signature",
             ),
         ):
-            await hass.config_entries.async_setup(config_entry_id)
-            await hass.async_block_till_done()
+            await menuai.config_entries.async_setup(config_entry_id)
+            await menuai.async_block_till_done()
 
     config_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -56,7 +56,7 @@ async def load_integration_from_entry(
         version=2,
         minor_version=1,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     await setup_config_entry_with_mocked_data(config_entry.entry_id)
 
     config_entry2 = MockConfigEntry(
@@ -67,7 +67,7 @@ async def load_integration_from_entry(
         version=2,
         minor_version=1,
     )
-    config_entry2.add_to_hass(hass)
+    config_entry2.add_to_menuai(menuai)
     await setup_config_entry_with_mocked_data(config_entry2.entry_id)
 
     return config_entry

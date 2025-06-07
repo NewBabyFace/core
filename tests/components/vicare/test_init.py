@@ -2,10 +2,10 @@
 
 from unittest.mock import patch
 
-from homeassistant.components.vicare.const import DOMAIN
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.components.vicare.const import DOMAIN
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from . import MODULE
 from .conftest import Fixture, MockPyViCare
@@ -15,7 +15,7 @@ from tests.common import MockConfigEntry
 
 # Device migration test can be removed in 2025.4.0
 async def test_device_and_entity_migration(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     mock_config_entry: MockConfigEntry,
@@ -29,7 +29,7 @@ async def test_device_and_entity_migration(
         patch(f"{MODULE}.login", return_value=MockPyViCare(fixtures)),
         patch(f"{MODULE}.PLATFORMS", [Platform.CLIMATE]),
     ):
-        mock_config_entry.add_to_hass(hass)
+        mock_config_entry.add_to_menuai(menuai)
 
         # device with serial data point
         device0 = device_registry.async_get_or_create(
@@ -88,9 +88,9 @@ async def test_device_and_entity_migration(
             device_id=device2.id,
         )
 
-        await hass.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.config_entries.async_setup(mock_config_entry.entry_id)
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert (
         entity_registry.async_get(entry0.entity_id).unique_id

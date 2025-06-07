@@ -6,18 +6,18 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from typing import Any
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.restore_state import RestoreEntity
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.restore_state import RestoreEntity
 
 from .bridge import DynaliteBridge, DynaliteConfigEntry
 from .const import DOMAIN, LOGGER
 
 
 def async_setup_entry_base(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: DynaliteConfigEntry,
     async_add_entities: AddEntitiesCallback,
     platform: str,
@@ -67,10 +67,10 @@ class DynaliteBase(RestoreEntity, ABC):
             name=self._device.name,
         )
 
-    async def async_added_to_hass(self) -> None:
-        """Handle addition to hass: restore state and register to dispatch."""
+    async def async_added_to_menuai(self) -> None:
+        """Handle addition to menuai: restore state and register to dispatch."""
         # register for device specific update
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         cur_state = await self.async_get_last_state()
         if cur_state:
@@ -80,7 +80,7 @@ class DynaliteBase(RestoreEntity, ABC):
 
         self._unsub_dispatchers.append(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 self._bridge.update_signal(self._device),
                 self.async_schedule_update_ha_state,
             )
@@ -88,7 +88,7 @@ class DynaliteBase(RestoreEntity, ABC):
         # register for wide update
         self._unsub_dispatchers.append(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 self._bridge.update_signal(),
                 self.async_schedule_update_ha_state,
             )
@@ -98,7 +98,7 @@ class DynaliteBase(RestoreEntity, ABC):
     def initialize_state(self, state):
         """Initialize the state from cache."""
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Unregister signal dispatch listeners when being removed."""
         for unsub in self._unsub_dispatchers:
             unsub()

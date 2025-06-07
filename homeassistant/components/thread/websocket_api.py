@@ -7,22 +7,22 @@ from typing import Any
 from python_otbr_api.tlv_parser import TLVError
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.core import HomeAssistant, callback
+from menuai.components import websocket_api
+from menuai.core import menuai, callback
 
 from . import dataset_store, discovery
 
 
 @callback
-def async_setup(hass: HomeAssistant) -> None:
+def async_setup(menuai: menuai) -> None:
     """Set up the sensor websocket API."""
-    websocket_api.async_register_command(hass, ws_add_dataset)
-    websocket_api.async_register_command(hass, ws_delete_dataset)
-    websocket_api.async_register_command(hass, ws_discover_routers)
-    websocket_api.async_register_command(hass, ws_get_dataset)
-    websocket_api.async_register_command(hass, ws_list_datasets)
-    websocket_api.async_register_command(hass, ws_set_preferred_border_agent)
-    websocket_api.async_register_command(hass, ws_set_preferred_dataset)
+    websocket_api.async_register_command(menuai, ws_add_dataset)
+    websocket_api.async_register_command(menuai, ws_delete_dataset)
+    websocket_api.async_register_command(menuai, ws_discover_routers)
+    websocket_api.async_register_command(menuai, ws_get_dataset)
+    websocket_api.async_register_command(menuai, ws_list_datasets)
+    websocket_api.async_register_command(menuai, ws_set_preferred_border_agent)
+    websocket_api.async_register_command(menuai, ws_set_preferred_dataset)
 
 
 @websocket_api.require_admin
@@ -35,14 +35,14 @@ def async_setup(hass: HomeAssistant) -> None:
 )
 @websocket_api.async_response
 async def ws_add_dataset(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Add a thread dataset."""
     source = msg["source"]
     tlv = msg["tlv"]
 
     try:
-        await dataset_store.async_add_dataset(hass, source, tlv)
+        await dataset_store.async_add_dataset(menuai, source, tlv)
     except TLVError as exc:
         connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, str(exc))
         return
@@ -61,13 +61,13 @@ async def ws_add_dataset(
 )
 @websocket_api.async_response
 async def ws_set_preferred_border_agent(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Set the preferred border agent's border agent ID and extended address."""
     dataset_id = msg["dataset_id"]
     border_agent_id = msg["border_agent_id"]
     extended_address = msg["extended_address"]
-    store = await dataset_store.async_get_store(hass)
+    store = await dataset_store.async_get_store(menuai)
     store.async_set_preferred_border_agent(
         dataset_id, border_agent_id, extended_address
     )
@@ -83,12 +83,12 @@ async def ws_set_preferred_border_agent(
 )
 @websocket_api.async_response
 async def ws_set_preferred_dataset(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Add a thread dataset."""
     dataset_id = msg["dataset_id"]
 
-    store = await dataset_store.async_get_store(hass)
+    store = await dataset_store.async_get_store(menuai)
     try:
         store.preferred_dataset = dataset_id
     except KeyError:
@@ -107,12 +107,12 @@ async def ws_set_preferred_dataset(
 )
 @websocket_api.async_response
 async def ws_delete_dataset(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Delete a thread dataset."""
     dataset_id = msg["dataset_id"]
 
-    store = await dataset_store.async_get_store(hass)
+    store = await dataset_store.async_get_store(menuai)
     try:
         store.async_delete(dataset_id)
     except KeyError as exc:
@@ -134,12 +134,12 @@ async def ws_delete_dataset(
 )
 @websocket_api.async_response
 async def ws_get_dataset(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Get a thread dataset in TLV format."""
     dataset_id = msg["dataset_id"]
 
-    store = await dataset_store.async_get_store(hass)
+    store = await dataset_store.async_get_store(menuai)
     if not (dataset := store.async_get(dataset_id)):
         connection.send_error(msg["id"], websocket_api.ERR_NOT_FOUND, "unknown dataset")
         return
@@ -155,11 +155,11 @@ async def ws_get_dataset(
 )
 @websocket_api.async_response
 async def ws_list_datasets(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Get a list of thread datasets."""
 
-    store = await dataset_store.async_get_store(hass)
+    store = await dataset_store.async_get_store(menuai)
     preferred_dataset = store.preferred_dataset
     result = [
         {
@@ -188,7 +188,7 @@ async def ws_list_datasets(
 )
 @websocket_api.async_response
 async def ws_discover_routers(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Discover Thread routers."""
 
@@ -224,11 +224,11 @@ async def ws_discover_routers(
     @callback
     def stop_discovery() -> None:
         """Stop discovery."""
-        hass.async_create_task(thread_discovery.async_stop())
+        menuai.async_create_task(thread_discovery.async_stop())
 
     # Start Thread router discovery
     thread_discovery = discovery.ThreadRouterDiscovery(
-        hass, router_discovered, router_removed
+        menuai, router_discovered, router_removed
     )
     await thread_discovery.async_start()
     connection.subscriptions[msg["id"]] = stop_discovery

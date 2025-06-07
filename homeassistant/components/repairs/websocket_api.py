@@ -8,14 +8,14 @@ from typing import Any
 from aiohttp import web
 import voluptuous as vol
 
-from homeassistant import data_entry_flow
-from homeassistant.auth.permissions.const import POLICY_EDIT
-from homeassistant.components import websocket_api
-from homeassistant.components.http.data_validator import RequestDataValidator
-from homeassistant.components.http.decorators import require_admin
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import issue_registry as ir
-from homeassistant.helpers.data_entry_flow import (
+from menuai import data_entry_flow
+from menuai.auth.permissions.const import POLICY_EDIT
+from menuai.components import websocket_api
+from menuai.components.http.data_validator import RequestDataValidator
+from menuai.components.http.decorators import require_admin
+from menuai.core import menuai, callback
+from menuai.helpers import issue_registry as ir
+from menuai.helpers.data_entry_flow import (
     FlowManagerIndexView,
     FlowManagerResourceView,
 )
@@ -24,14 +24,14 @@ from .const import DOMAIN
 
 
 @callback
-def async_setup(hass: HomeAssistant) -> None:
+def async_setup(menuai: menuai) -> None:
     """Set up the repairs websocket API."""
-    websocket_api.async_register_command(hass, ws_get_issue_data)
-    websocket_api.async_register_command(hass, ws_ignore_issue)
-    websocket_api.async_register_command(hass, ws_list_issues)
+    websocket_api.async_register_command(menuai, ws_get_issue_data)
+    websocket_api.async_register_command(menuai, ws_ignore_issue)
+    websocket_api.async_register_command(menuai, ws_list_issues)
 
-    hass.http.register_view(RepairsFlowIndexView(hass.data[DOMAIN]["flow_manager"]))
-    hass.http.register_view(RepairsFlowResourceView(hass.data[DOMAIN]["flow_manager"]))
+    menuai.http.register_view(RepairsFlowIndexView(menuai.data[DOMAIN]["flow_manager"]))
+    menuai.http.register_view(RepairsFlowResourceView(menuai.data[DOMAIN]["flow_manager"]))
 
 
 @callback
@@ -43,10 +43,10 @@ def async_setup(hass: HomeAssistant) -> None:
     }
 )
 def ws_get_issue_data(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Fix an issue."""
-    issue_registry = ir.async_get(hass)
+    issue_registry = ir.async_get(menuai)
     if not (issue := issue_registry.async_get_issue(msg["domain"], msg["issue_id"])):
         connection.send_error(
             msg["id"],
@@ -67,10 +67,10 @@ def ws_get_issue_data(
     }
 )
 def ws_ignore_issue(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Fix an issue."""
-    ir.async_ignore_issue(hass, msg["domain"], msg["issue_id"], msg["ignore"])
+    ir.async_ignore_issue(menuai, msg["domain"], msg["issue_id"], msg["ignore"])
 
     connection.send_result(msg["id"])
 
@@ -82,10 +82,10 @@ def ws_ignore_issue(
 )
 @callback
 def ws_list_issues(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Return a list of issues."""
-    issue_registry = ir.async_get(hass)
+    issue_registry = ir.async_get(menuai)
     issues = [
         {
             "breaks_in_ha_version": issue.breaks_in_ha_version,

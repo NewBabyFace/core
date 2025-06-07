@@ -9,9 +9,9 @@ from aiohttp import web
 import voluptuous as vol
 import voluptuous_serialize
 
-from homeassistant import data_entry_flow
-from homeassistant.components.http import HomeAssistantView
-from homeassistant.components.http.data_validator import RequestDataValidator
+from menuai import data_entry_flow
+from menuai.components.http import menuaiView
+from menuai.components.http.data_validator import RequestDataValidator
 
 from . import config_validation as cv
 
@@ -22,7 +22,7 @@ _FlowManagerT = TypeVar(
 )
 
 
-class _BaseFlowManagerView(HomeAssistantView, Generic[_FlowManagerT]):
+class _BaseFlowManagerView(menuaiView, Generic[_FlowManagerT]):
     """Foundation for flow manager views."""
 
     def __init__(self, flow_mgr: _FlowManagerT) -> None:

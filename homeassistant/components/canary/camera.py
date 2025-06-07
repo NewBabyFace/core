@@ -12,19 +12,19 @@ from canary.model import Device, Location
 from haffmpeg.camera import CameraMjpeg
 import voluptuous as vol
 
-from homeassistant.components import ffmpeg
-from homeassistant.components.camera import (
+from menuai.components import ffmpeg
+from menuai.components.camera import (
     PLATFORM_SCHEMA as CAMERA_PLATFORM_SCHEMA,
     Camera,
 )
-from homeassistant.components.ffmpeg import FFmpegManager, get_ffmpeg_manager
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_aiohttp_proxy_stream
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.util import dt as dt_util
+from menuai.components.ffmpeg import FFmpegManager, get_ffmpeg_manager
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_aiohttp_proxy_stream
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
+from menuai.util import dt as dt_util
 
 from .const import CONF_FFMPEG_ARGUMENTS, DEFAULT_FFMPEG_ARGUMENTS, DOMAIN, MANUFACTURER
 from .coordinator import CanaryConfigEntry, CanaryDataUpdateCoordinator
@@ -46,7 +46,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: CanaryConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -59,7 +59,7 @@ async def async_setup_entry(
     async_add_entities(
         (
             CanaryCamera(
-                hass,
+                menuai,
                 coordinator,
                 location_id,
                 device,
@@ -78,7 +78,7 @@ class CanaryCamera(CoordinatorEntity[CanaryDataUpdateCoordinator], Camera):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         coordinator: CanaryDataUpdateCoordinator,
         location_id: str,
         device: Device,
@@ -87,7 +87,7 @@ class CanaryCamera(CoordinatorEntity[CanaryDataUpdateCoordinator], Camera):
         """Initialize a Canary security camera."""
         super().__init__(coordinator)
         Camera.__init__(self)
-        self._ffmpeg: FFmpegManager = get_ffmpeg_manager(hass)
+        self._ffmpeg: FFmpegManager = get_ffmpeg_manager(menuai)
         self._ffmpeg_arguments = ffmpeg_args
         self._location_id = location_id
         self._device = device
@@ -128,7 +128,7 @@ class CanaryCamera(CoordinatorEntity[CanaryDataUpdateCoordinator], Camera):
         utcnow = dt_util.utcnow()
         if self._expires_at <= utcnow:
             _LOGGER.debug("Grabbing a live view image from %s", self.name)
-            await self.hass.async_add_executor_job(self.renew_live_stream_session)
+            await self.menuai.async_add_executor_job(self.renew_live_stream_session)
 
             if (live_stream_session := self._live_stream_session) is None:
                 return None
@@ -137,7 +137,7 @@ class CanaryCamera(CoordinatorEntity[CanaryDataUpdateCoordinator], Camera):
                 return None
 
             image = await ffmpeg.async_get_image(
-                self.hass,
+                self.menuai,
                 live_stream_url,
                 extra_cmd=self._ffmpeg_arguments,
                 width=width,
@@ -148,7 +148,7 @@ class CanaryCamera(CoordinatorEntity[CanaryDataUpdateCoordinator], Camera):
                 self._image = image
                 self._expires_at = FORCE_CAMERA_REFRESH_INTERVAL + utcnow
                 _LOGGER.debug("Grabbed a live view image from %s", self.name)
-            await self.hass.async_add_executor_job(live_stream_session.stop_session)
+            await self.menuai.async_add_executor_job(live_stream_session.stop_session)
             _LOGGER.debug("Stopped live session from %s", self.name)
 
         return self._image
@@ -160,7 +160,7 @@ class CanaryCamera(CoordinatorEntity[CanaryDataUpdateCoordinator], Camera):
         if self._live_stream_session is None:
             return None
 
-        live_stream_url = await self.hass.async_add_executor_job(
+        live_stream_url = await self.menuai.async_add_executor_job(
             getattr, self._live_stream_session, "live_stream_url"
         )
         stream = CameraMjpeg(self._ffmpeg.binary)
@@ -169,7 +169,7 @@ class CanaryCamera(CoordinatorEntity[CanaryDataUpdateCoordinator], Camera):
         try:
             stream_reader = await stream.get_reader()
             return await async_aiohttp_proxy_stream(
-                self.hass,
+                self.menuai,
                 request,
                 stream_reader,
                 self._ffmpeg.ffmpeg_stream_content_type,

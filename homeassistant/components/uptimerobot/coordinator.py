@@ -9,11 +9,11 @@ from pyuptimerobot import (
     UptimeRobotMonitor,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers import device_registry as dr
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import API_ATTR_OK, COORDINATOR_UPDATE_INTERVAL, DOMAIN, LOGGER
 
@@ -27,13 +27,13 @@ class UptimeRobotDataUpdateCoordinator(DataUpdateCoordinator[list[UptimeRobotMon
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: UptimeRobotConfigEntry,
         api: UptimeRobot,
     ) -> None:
         """Initialize coordinator."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -61,7 +61,7 @@ class UptimeRobotDataUpdateCoordinator(DataUpdateCoordinator[list[UptimeRobotMon
         new_monitors = {str(monitor.id) for monitor in monitors}
         if stale_monitors := current_monitors - new_monitors:
             for monitor_id in stale_monitors:
-                device_registry = dr.async_get(self.hass)
+                device_registry = dr.async_get(self.menuai)
                 if device := device_registry.async_get_device(
                     identifiers={(DOMAIN, monitor_id)}
                 ):
@@ -70,8 +70,8 @@ class UptimeRobotDataUpdateCoordinator(DataUpdateCoordinator[list[UptimeRobotMon
         # If there are new monitors, we should reload the config entry so we can
         # create new devices and entities.
         if self.data and new_monitors - current_monitors:
-            self.hass.async_create_task(
-                self.hass.config_entries.async_reload(self.config_entry.entry_id)
+            self.menuai.async_create_task(
+                self.menuai.config_entries.async_reload(self.config_entry.entry_id)
             )
 
         return monitors

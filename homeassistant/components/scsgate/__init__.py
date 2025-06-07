@@ -9,10 +9,10 @@ from scsgate.reactor import Reactor
 from scsgate.tasks import GetStatusTask
 import voluptuous as vol
 
-from homeassistant.const import CONF_DEVICE, CONF_NAME, EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import CONF_DEVICE, CONF_NAME, EVENT_menuai_STOP
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ SCSGATE_SCHEMA = vol.Schema(
 )
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the SCSGate component."""
     device = config[DOMAIN][CONF_DEVICE]
     scsgate = None
@@ -46,8 +46,8 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
         _LOGGER.debug("Stopping SCSGate monitor thread")
         scsgate.stop()
 
-    hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, stop_monitor)
-    hass.data[DOMAIN] = scsgate
+    menuai.bus.listen_once(EVENT_menuai_STOP, stop_monitor)
+    menuai.data[DOMAIN] = scsgate
 
     return True
 

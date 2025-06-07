@@ -60,8 +60,8 @@
         'friendly_name': 'Living room Balance',
         'group_members': list([
           'media_player.beosound_balance_11111111',
-          'listener_not_in_hass-1111.1111111.33333333@products.bang-olufsen.com',
-          'listener_not_in_hass-1111.1111111.44444444@products.bang-olufsen.com',
+          'listener_not_in_menuai-1111.1111111.33333333@products.bang-olufsen.com',
+          'listener_not_in_menuai-1111.1111111.44444444@products.bang-olufsen.com',
         ]),
         'media_content_type': 'music',
         'sound_mode': 'Test Listening Mode (123)',

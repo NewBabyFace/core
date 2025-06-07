@@ -26,15 +26,15 @@ from aiohomeconnect.model.program import ProgramDefinitionOption
 from aiohomeconnect.model.setting import SettingConstraints
 import pytest
 
-from homeassistant.components.home_connect.const import (
+from menuai.components.home_connect.const import (
     BSH_POWER_OFF,
     BSH_POWER_ON,
     BSH_POWER_STANDBY,
     DOMAIN,
 )
-from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import (
+from menuai.components.switch import DOMAIN as SWITCH_DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
@@ -43,9 +43,9 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from tests.common import MockConfigEntry
 
@@ -58,7 +58,7 @@ def platforms() -> list[str]:
 
 @pytest.mark.parametrize("appliance", ["Washer"], indirect=True)
 async def test_paired_depaired_devices_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     client: MagicMock,
@@ -66,7 +66,7 @@ async def test_paired_depaired_devices_flow(
     integration_setup: Callable[[MagicMock], Awaitable[bool]],
     appliance: HomeAppliance,
 ) -> None:
-    """Test that removed devices are correctly removed from and added to hass on API events."""
+    """Test that removed devices are correctly removed from and added to menuai on API events."""
     assert await integration_setup(client)
     assert config_entry.state is ConfigEntryState.LOADED
 
@@ -84,7 +84,7 @@ async def test_paired_depaired_devices_flow(
             )
         ]
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     device = device_registry.async_get_device(identifiers={(DOMAIN, appliance.ha_id)})
     assert not device
@@ -101,7 +101,7 @@ async def test_paired_depaired_devices_flow(
             )
         ]
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert device_registry.async_get_device(identifiers={(DOMAIN, appliance.ha_id)})
     for entity_entry in entity_entries:
@@ -122,7 +122,7 @@ async def test_paired_depaired_devices_flow(
     indirect=["appliance"],
 )
 async def test_connected_devices(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     client: MagicMock,
@@ -168,7 +168,7 @@ async def test_connected_devices(
             )
         ]
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     for key in keys_to_check:
         assert entity_registry.async_get_entity_id(
@@ -181,7 +181,7 @@ async def test_connected_devices(
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 @pytest.mark.parametrize("appliance", ["Dishwasher"], indirect=True)
 async def test_switch_entity_availability(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
     config_entry: MockConfigEntry,
     integration_setup: Callable[[MagicMock], Awaitable[bool]],
@@ -196,7 +196,7 @@ async def test_switch_entity_availability(
     assert config_entry.state is ConfigEntryState.LOADED
 
     for entity_id in entity_ids:
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert state.state != STATE_UNAVAILABLE
 
@@ -209,10 +209,10 @@ async def test_switch_entity_availability(
             )
         ]
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     for entity_id in entity_ids:
-        assert hass.states.is_state(entity_id, STATE_UNAVAILABLE)
+        assert menuai.states.is_state(entity_id, STATE_UNAVAILABLE)
 
     await client.add_events(
         [
@@ -223,10 +223,10 @@ async def test_switch_entity_availability(
             )
         ]
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     for entity_id in entity_ids:
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert state.state != STATE_UNAVAILABLE
 
@@ -261,7 +261,7 @@ async def test_switch_entity_availability(
     indirect=["appliance"],
 )
 async def test_switch_functionality(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
     config_entry: MockConfigEntry,
     integration_setup: Callable[[MagicMock], Awaitable[bool]],
@@ -277,12 +277,12 @@ async def test_switch_functionality(
     assert await integration_setup(client)
     assert config_entry.state is ConfigEntryState.LOADED
 
-    await hass.services.async_call(SWITCH_DOMAIN, service, {ATTR_ENTITY_ID: entity_id})
-    await hass.async_block_till_done()
+    await menuai.services.async_call(SWITCH_DOMAIN, service, {ATTR_ENTITY_ID: entity_id})
+    await menuai.async_block_till_done()
     client.set_setting.assert_awaited_once_with(
         appliance.ha_id, setting_key=settings_key_arg, value=setting_value_arg
     )
-    assert hass.states.is_state(entity_id, state)
+    assert menuai.states.is_state(entity_id, state)
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
@@ -321,7 +321,7 @@ async def test_switch_functionality(
     ],
 )
 async def test_switch_exception_handling(
-    hass: HomeAssistant,
+    menuai: menuai,
     client_with_exception: MagicMock,
     config_entry: MockConfigEntry,
     integration_setup: Callable[[MagicMock], Awaitable[bool]],
@@ -357,8 +357,8 @@ async def test_switch_exception_handling(
     with pytest.raises(HomeConnectError):
         await getattr(client_with_exception, mock_attr)()
 
-    with pytest.raises(HomeAssistantError, match=exception_match):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match=exception_match):
+        await menuai.services.async_call(
             SWITCH_DOMAIN, service, {ATTR_ENTITY_ID: entity_id}, blocking=True
         )
     assert getattr(client_with_exception, mock_attr).call_count == 2
@@ -383,7 +383,7 @@ async def test_switch_exception_handling(
     indirect=["appliance"],
 )
 async def test_ent_desc_switch_functionality(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
     config_entry: MockConfigEntry,
     integration_setup: Callable[[MagicMock], Awaitable[bool]],
@@ -396,9 +396,9 @@ async def test_ent_desc_switch_functionality(
     assert await integration_setup(client)
     assert config_entry.state is ConfigEntryState.LOADED
 
-    await hass.services.async_call(SWITCH_DOMAIN, service, {ATTR_ENTITY_ID: entity_id})
-    await hass.async_block_till_done()
-    assert hass.states.is_state(entity_id, state)
+    await menuai.services.async_call(SWITCH_DOMAIN, service, {ATTR_ENTITY_ID: entity_id})
+    await menuai.async_block_till_done()
+    assert menuai.states.is_state(entity_id, state)
 
 
 @pytest.mark.parametrize(
@@ -428,7 +428,7 @@ async def test_ent_desc_switch_functionality(
     indirect=["appliance"],
 )
 async def test_ent_desc_switch_exception_handling(
-    hass: HomeAssistant,
+    menuai: menuai,
     client_with_exception: MagicMock,
     config_entry: MockConfigEntry,
     integration_setup: Callable[[MagicMock], Awaitable[bool]],
@@ -455,8 +455,8 @@ async def test_ent_desc_switch_exception_handling(
     # Assert that an exception is called.
     with pytest.raises(HomeConnectError):
         await client_with_exception.set_setting()
-    with pytest.raises(HomeAssistantError, match=exception_match):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match=exception_match):
+        await menuai.services.async_call(
             SWITCH_DOMAIN, service, {ATTR_ENTITY_ID: entity_id}, blocking=True
         )
     assert client_with_exception.set_setting.call_count == 2
@@ -508,7 +508,7 @@ async def test_ent_desc_switch_exception_handling(
     indirect=["appliance"],
 )
 async def test_power_switch(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
     config_entry: MockConfigEntry,
     integration_setup: Callable[[MagicMock], Awaitable[bool]],
@@ -537,14 +537,14 @@ async def test_power_switch(
     assert await integration_setup(client)
     assert config_entry.state is ConfigEntryState.LOADED
 
-    await hass.services.async_call(SWITCH_DOMAIN, service, {ATTR_ENTITY_ID: entity_id})
-    await hass.async_block_till_done()
+    await menuai.services.async_call(SWITCH_DOMAIN, service, {ATTR_ENTITY_ID: entity_id})
+    await menuai.async_block_till_done()
     client.set_setting.assert_awaited_once_with(
         appliance.ha_id,
         setting_key=SettingKey.BSH_COMMON_POWER_STATE,
         value=setting_value_arg,
     )
-    assert hass.states.is_state(entity_id, power_state)
+    assert menuai.states.is_state(entity_id, power_state)
 
 
 @pytest.mark.parametrize(
@@ -555,7 +555,7 @@ async def test_power_switch(
     ],
 )
 async def test_power_switch_fetch_off_state_from_current_value(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
     config_entry: MockConfigEntry,
     integration_setup: Callable[[MagicMock], Awaitable[bool]],
@@ -576,7 +576,7 @@ async def test_power_switch_fetch_off_state_from_current_value(
     assert await integration_setup(client)
     assert config_entry.state is ConfigEntryState.LOADED
 
-    assert hass.states.is_state("switch.dishwasher_power", STATE_OFF)
+    assert menuai.states.is_state("switch.dishwasher_power", STATE_OFF)
 
 
 @pytest.mark.parametrize(
@@ -603,7 +603,7 @@ async def test_power_switch_fetch_off_state_from_current_value(
     ],
 )
 async def test_power_switch_service_validation_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
     config_entry: MockConfigEntry,
     integration_setup: Callable[[MagicMock], Awaitable[bool]],
@@ -641,8 +641,8 @@ async def test_power_switch_service_validation_errors(
     assert await integration_setup(client)
     assert config_entry.state is ConfigEntryState.LOADED
 
-    with pytest.raises(HomeAssistantError, match=exception_match):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match=exception_match):
+        await menuai.services.async_call(
             SWITCH_DOMAIN, service, {ATTR_ENTITY_ID: entity_id}, blocking=True
         )
 
@@ -678,7 +678,7 @@ async def test_power_switch_service_validation_errors(
     indirect=["appliance"],
 )
 async def test_options_functionality(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
     config_entry: MockConfigEntry,
     integration_setup: Callable[[MagicMock], Awaitable[bool]],
@@ -708,12 +708,12 @@ async def test_options_functionality(
 
     assert await integration_setup(client)
     assert config_entry.state is ConfigEntryState.LOADED
-    assert hass.states.get(entity_id)
+    assert menuai.states.get(entity_id)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN, SERVICE_TURN_OFF, {ATTR_ENTITY_ID: entity_id}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert called_mock.called
     assert called_mock.call_args.args == (appliance.ha_id,)
@@ -721,12 +721,12 @@ async def test_options_functionality(
         "option_key": option_key,
         "value": False,
     }
-    assert hass.states.is_state(entity_id, STATE_OFF)
+    assert menuai.states.is_state(entity_id, STATE_OFF)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN, SERVICE_TURN_ON, {ATTR_ENTITY_ID: entity_id}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert called_mock.called
     assert called_mock.call_args.args == (appliance.ha_id,)
@@ -734,4 +734,4 @@ async def test_options_functionality(
         "option_key": option_key,
         "value": True,
     }
-    assert hass.states.is_state(entity_id, STATE_ON)
+    assert menuai.states.is_state(entity_id, STATE_ON)

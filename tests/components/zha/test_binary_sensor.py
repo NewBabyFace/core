@@ -6,15 +6,15 @@ import pytest
 from zigpy.profiles import zha
 from zigpy.zcl.clusters import general
 
-from homeassistant.components.zha.helpers import (
+from menuai.components.zha.helpers import (
     ZHADeviceProxy,
     ZHAGatewayProxy,
     get_zha_gateway,
     get_zha_gateway_proxy,
 )
-from homeassistant.const import STATE_OFF, STATE_ON, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import STATE_OFF, STATE_ON, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .common import find_entity_id, send_attributes_report
 from .conftest import SIG_EP_INPUT, SIG_EP_OUTPUT, SIG_EP_PROFILE, SIG_EP_TYPE
@@ -27,7 +27,7 @@ OFF = 0
 def binary_sensor_platform_only():
     """Only set up the binary_sensor and required base platforms to speed up tests."""
     with patch(
-        "homeassistant.components.zha.PLATFORMS",
+        "menuai.components.zha.PLATFORMS",
         (
             Platform.BINARY_SENSOR,
             Platform.SENSOR,
@@ -37,15 +37,15 @@ def binary_sensor_platform_only():
 
 
 async def test_binary_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     setup_zha,
     zigpy_device_mock,
 ) -> None:
     """Test ZHA binary_sensor platform."""
     await setup_zha()
-    gateway = get_zha_gateway(hass)
-    gateway_proxy: ZHAGatewayProxy = get_zha_gateway_proxy(hass)
+    gateway = get_zha_gateway(menuai)
+    gateway_proxy: ZHAGatewayProxy = get_zha_gateway_proxy(menuai)
 
     zigpy_device = zigpy_device_mock(
         {
@@ -62,23 +62,23 @@ async def test_binary_sensor(
 
     gateway.get_or_create_device(zigpy_device)
     await gateway.async_device_initialized(zigpy_device)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     zha_device_proxy: ZHADeviceProxy = gateway_proxy.get_device_proxy(zigpy_device.ieee)
-    entity_id = find_entity_id(Platform.BINARY_SENSOR, zha_device_proxy, hass)
+    entity_id = find_entity_id(Platform.BINARY_SENSOR, zha_device_proxy, menuai)
     assert entity_id is not None
 
-    assert hass.states.get(entity_id).state == STATE_OFF
+    assert menuai.states.get(entity_id).state == STATE_OFF
 
     await send_attributes_report(
-        hass, cluster, {general.OnOff.AttributeDefs.on_off.id: ON}
+        menuai, cluster, {general.OnOff.AttributeDefs.on_off.id: ON}
     )
-    assert hass.states.get(entity_id).state == STATE_ON
+    assert menuai.states.get(entity_id).state == STATE_ON
 
     await send_attributes_report(
-        hass, cluster, {general.OnOff.AttributeDefs.on_off.id: OFF}
+        menuai, cluster, {general.OnOff.AttributeDefs.on_off.id: OFF}
     )
-    assert hass.states.get(entity_id).state == STATE_OFF
+    assert menuai.states.get(entity_id).state == STATE_OFF
 
     # test enable / disable sync w/ ZHA library
     entity_entry = entity_registry.async_get(entity_id)
@@ -88,11 +88,11 @@ async def test_binary_sensor(
     entity_registry.async_update_entity(
         entity_id=entity_id, disabled_by=er.RegistryEntryDisabler.USER
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert not zha_device_proxy.device.platform_entities.get(entity_key).enabled
 
     entity_registry.async_update_entity(entity_id=entity_id, disabled_by=None)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert zha_device_proxy.device.platform_entities.get(entity_key).enabled

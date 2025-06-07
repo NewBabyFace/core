@@ -20,8 +20,8 @@ from ring_doorbell import (
 )
 from ring_doorbell.const import DOORBELL_EXISTING_TYPE
 
-from homeassistant.components.ring.const import DOMAIN
-from homeassistant.util import dt as dt_util
+from menuai.components.ring.const import DOMAIN
+from menuai.util import dt as dt_util
 
 from tests.common import load_json_value_fixture
 

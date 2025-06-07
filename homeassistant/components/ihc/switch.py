@@ -6,10 +6,10 @@ from typing import Any
 
 from ihcsdk.ihccontroller import IHCController
 
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.switch import SwitchEntity
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import CONF_OFF_ID, CONF_ON_ID, DOMAIN, IHC_CONTROLLER
 from .entity import IHCEntity
@@ -17,7 +17,7 @@ from .util import async_pulse, async_set_bool
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -32,7 +32,7 @@ def setup_platform(
         product = device["product"]
         # Find controller that corresponds with device id
         controller_id = device["ctrl_id"]
-        ihc_controller: IHCController = hass.data[DOMAIN][controller_id][IHC_CONTROLLER]
+        ihc_controller: IHCController = menuai.data[DOMAIN][controller_id][IHC_CONTROLLER]
         ihc_off_id = product_cfg.get(CONF_OFF_ID)
         ihc_on_id = product_cfg.get(CONF_ON_ID)
 
@@ -64,16 +64,16 @@ class IHCSwitch(IHCEntity, SwitchEntity):
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the switch on."""
         if self._ihc_on_id:
-            await async_pulse(self.hass, self.ihc_controller, self._ihc_on_id)
+            await async_pulse(self.menuai, self.ihc_controller, self._ihc_on_id)
         else:
-            await async_set_bool(self.hass, self.ihc_controller, self.ihc_id, True)
+            await async_set_bool(self.menuai, self.ihc_controller, self.ihc_id, True)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the device off."""
         if self._ihc_off_id:
-            await async_pulse(self.hass, self.ihc_controller, self._ihc_off_id)
+            await async_pulse(self.menuai, self.ihc_controller, self._ihc_off_id)
         else:
-            await async_set_bool(self.hass, self.ihc_controller, self.ihc_id, False)
+            await async_set_bool(self.menuai, self.ihc_controller, self.ihc_id, False)
 
     def on_ihc_change(self, ihc_id, value):
         """Handle IHC resource change."""

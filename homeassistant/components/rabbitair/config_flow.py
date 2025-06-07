@@ -8,24 +8,24 @@ from typing import Any
 from rabbitair import UdpClient
 import voluptuous as vol
 
-from homeassistant.components import zeroconf
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_HOST, CONF_MAC
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.components import zeroconf
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_ACCESS_TOKEN, CONF_HOST, CONF_MAC
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
 
-async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
+async def validate_input(menuai: menuai, data: dict[str, Any]) -> dict[str, Any]:
     """Validate the user input allows us to connect."""
     try:
         try:
-            zeroconf_instance = await zeroconf.async_get_async_instance(hass)
+            zeroconf_instance = await zeroconf.async_get_async_instance(menuai)
             with UdpClient(
                 data[CONF_HOST], data[CONF_ACCESS_TOKEN], zeroconf=zeroconf_instance
             ) as client:
@@ -65,7 +65,7 @@ class RabbitAirConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             try:
-                info = await validate_input(self.hass, user_input)
+                info = await validate_input(self.menuai, user_input)
             except CannotConnect:
                 errors["base"] = "cannot_connect"
             except InvalidAccessToken:
@@ -110,17 +110,17 @@ class RabbitAirConfigFlow(ConfigFlow, domain=DOMAIN):
         return await self.async_step_user()
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAccessToken(HomeAssistantError):
+class InvalidAccessToken(menuaiError):
     """Error to indicate the access token is not valid."""
 
 
-class InvalidHost(HomeAssistantError):
+class InvalidHost(menuaiError):
     """Error to indicate the host is not valid."""
 
 
-class TimeoutConnect(HomeAssistantError):
+class TimeoutConnect(menuaiError):
     """Error to indicate the connection attempt is timed out."""

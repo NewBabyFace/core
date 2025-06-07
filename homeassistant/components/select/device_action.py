@@ -6,22 +6,22 @@ from contextlib import suppress
 
 import voluptuous as vol
 
-from homeassistant.components.device_automation import (
+from menuai.components.device_automation import (
     async_get_entity_registry_entry_or_raise,
     async_validate_entity_schema,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     CONF_DEVICE_ID,
     CONF_DOMAIN,
     CONF_ENTITY_ID,
     CONF_TYPE,
 )
-from homeassistant.core import Context, HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.entity import get_capability
-from homeassistant.helpers.typing import ConfigType, TemplateVarsType
+from menuai.core import Context, menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.entity import get_capability
+from menuai.helpers.typing import ConfigType, TemplateVarsType
 
 from .const import (
     ATTR_CYCLE,
@@ -75,17 +75,17 @@ _ACTION_SCHEMA = vol.Any(
 
 
 async def async_validate_action_config(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> ConfigType:
     """Validate config."""
-    return async_validate_entity_schema(hass, config, _ACTION_SCHEMA)
+    return async_validate_entity_schema(menuai, config, _ACTION_SCHEMA)
 
 
 async def async_get_actions(
-    hass: HomeAssistant, device_id: str
+    menuai: menuai, device_id: str
 ) -> list[dict[str, str]]:
     """List device actions for Select devices."""
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     return [
         {
             CONF_DEVICE_ID: device_id,
@@ -106,7 +106,7 @@ async def async_get_actions(
 
 
 async def async_call_action_from_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     variables: TemplateVarsType,
     context: Context | None,
@@ -118,7 +118,7 @@ async def async_call_action_from_config(
     if config[CONF_TYPE] in {SERVICE_SELECT_NEXT, SERVICE_SELECT_PREVIOUS}:
         service_data[ATTR_CYCLE] = config[CONF_CYCLE]
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         config[CONF_TYPE],
         service_data,
@@ -128,7 +128,7 @@ async def async_call_action_from_config(
 
 
 async def async_get_action_capabilities(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> dict[str, vol.Schema]:
     """List action capabilities."""
     if config[CONF_TYPE] in {SERVICE_SELECT_NEXT, SERVICE_SELECT_PREVIOUS}:
@@ -140,11 +140,11 @@ async def async_get_action_capabilities(
 
     if config[CONF_TYPE] == SERVICE_SELECT_OPTION:
         options: list[str] = []
-        with suppress(HomeAssistantError):
+        with suppress(menuaiError):
             entry = async_get_entity_registry_entry_or_raise(
-                hass, config[CONF_ENTITY_ID]
+                menuai, config[CONF_ENTITY_ID]
             )
-            options = get_capability(hass, entry.entity_id, ATTR_OPTIONS) or []
+            options = get_capability(menuai, entry.entity_id, ATTR_OPTIONS) or []
         return {
             "extra_fields": vol.Schema({vol.Required(CONF_OPTION): vol.In(options)})
         }

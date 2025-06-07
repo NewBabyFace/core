@@ -17,10 +17,10 @@ from velbusaio.channels import (
 )
 from velbusaio.module import Module
 
-from homeassistant.components.velbus import VelbusConfigEntry
-from homeassistant.components.velbus.const import DOMAIN
-from homeassistant.const import CONF_NAME, CONF_PORT
-from homeassistant.core import HomeAssistant
+from menuai.components.velbus import VelbusConfigEntry
+from menuai.components.velbus.const import DOMAIN
+from menuai.const import CONF_NAME, CONF_PORT
+from menuai.core import menuai
 
 from .const import PORT_TCP
 
@@ -44,9 +44,9 @@ def mock_controller(
 ) -> Generator[AsyncMock]:
     """Mock a successful velbus controller."""
     with (
-        patch("homeassistant.components.velbus.Velbus", autospec=True) as controller,
+        patch("menuai.components.velbus.Velbus", autospec=True) as controller,
         patch(
-            "homeassistant.components.velbus.config_flow.velbusaio.controller.Velbus",
+            "menuai.components.velbus.config_flow.velbusaio.controller.Velbus",
             new=controller,
         ),
     ):
@@ -322,7 +322,7 @@ def mock_cover_no_position() -> AsyncMock:
 
 @pytest.fixture(name="config_entry")
 async def mock_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     controller: AsyncMock,
 ) -> VelbusConfigEntry:
     """Create and register mock config entry."""
@@ -330,5 +330,5 @@ async def mock_config_entry(
         domain=DOMAIN,
         data={CONF_PORT: PORT_TCP, CONF_NAME: "velbus home"},
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     return config_entry

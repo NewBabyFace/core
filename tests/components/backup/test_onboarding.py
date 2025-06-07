@@ -7,29 +7,29 @@ from unittest.mock import ANY, patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components import backup, onboarding
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.backup import async_initialize_backup
-from homeassistant.setup import async_setup_component
+from menuai.components import backup, onboarding
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.backup import async_initialize_backup
+from menuai.setup import async_setup_component
 
 from tests.common import register_auth_provider
 from tests.typing import ClientSessionGenerator
 
 
-def mock_onboarding_storage(hass_storage, data):
+def mock_onboarding_storage(menuai_storage, data):
     """Mock the onboarding storage."""
-    hass_storage[onboarding.STORAGE_KEY] = {
+    menuai_storage[onboarding.STORAGE_KEY] = {
         "version": onboarding.STORAGE_VERSION,
         "data": data,
     }
 
 
 @pytest.fixture(autouse=True)
-def auth_active(hass: HomeAssistant) -> None:
+def auth_active(menuai: menuai) -> None:
     """Ensure auth is always active."""
-    hass.loop.run_until_complete(
-        register_auth_provider(hass, {"type": "homeassistant"})
+    menuai.loop.run_until_complete(
+        register_auth_provider(menuai, {"type": "menuai"})
     )
 
 
@@ -46,22 +46,22 @@ def auth_active(hass: HomeAssistant) -> None:
     ],
 )
 async def test_onboarding_view_after_done(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
+    menuai_client: ClientSessionGenerator,
     method: str,
     view: str,
     kwargs: dict[str, Any],
 ) -> None:
     """Test raising after onboarding."""
-    mock_onboarding_storage(hass_storage, {"done": [onboarding.const.STEP_USER]})
+    mock_onboarding_storage(menuai_storage, {"done": [onboarding.const.STEP_USER]})
 
-    assert await async_setup_component(hass, "onboarding", {})
-    async_initialize_backup(hass)
-    assert await async_setup_component(hass, "backup", {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "onboarding", {})
+    async_initialize_backup(menuai)
+    assert await async_setup_component(menuai, "backup", {})
+    await menuai.async_block_till_done()
 
-    client = await hass_client()
+    client = await menuai_client()
 
     resp = await client.request(method, f"/api/onboarding/{view}", **kwargs)
 
@@ -81,20 +81,20 @@ async def test_onboarding_view_after_done(
     ],
 )
 async def test_onboarding_backup_view_without_backup(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
+    menuai_client: ClientSessionGenerator,
     method: str,
     view: str,
     kwargs: dict[str, Any],
 ) -> None:
     """Test interacting with backup wievs when backup integration is missing."""
-    mock_onboarding_storage(hass_storage, {"done": []})
+    mock_onboarding_storage(menuai_storage, {"done": []})
 
-    assert await async_setup_component(hass, "onboarding", {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "onboarding", {})
+    await menuai.async_block_till_done()
 
-    client = await hass_client()
+    client = await menuai_client()
 
     resp = await client.request(method, f"/api/onboarding/{view}", **kwargs)
 
@@ -102,20 +102,20 @@ async def test_onboarding_backup_view_without_backup(
 
 
 async def test_onboarding_backup_info(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
+    menuai_client: ClientSessionGenerator,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test backup info."""
-    mock_onboarding_storage(hass_storage, {"done": []})
+    mock_onboarding_storage(menuai_storage, {"done": []})
 
-    assert await async_setup_component(hass, "onboarding", {})
-    async_initialize_backup(hass)
-    assert await async_setup_component(hass, "backup", {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "onboarding", {})
+    async_initialize_backup(menuai)
+    assert await async_setup_component(menuai, "backup", {})
+    await menuai.async_block_till_done()
 
-    client = await hass_client()
+    client = await menuai_client()
 
     backups = {
         "abc123": backup.ManagerBackup(
@@ -131,8 +131,8 @@ async def test_onboarding_backup_info(
             failed_agent_ids=[],
             failed_folders=[],
             folders=[backup.Folder.MEDIA, backup.Folder.SHARE],
-            homeassistant_included=True,
-            homeassistant_version="2024.12.0",
+            menuai_included=True,
+            menuai_version="2024.12.0",
             name="Test",
             with_automatic_settings=True,
         ),
@@ -152,15 +152,15 @@ async def test_onboarding_backup_info(
             failed_agent_ids=[],
             failed_folders=[],
             folders=[backup.Folder.MEDIA, backup.Folder.SHARE],
-            homeassistant_included=True,
-            homeassistant_version="2024.12.0",
+            menuai_included=True,
+            menuai_version="2024.12.0",
             name="Test 2",
             with_automatic_settings=None,
         ),
     }
 
     with patch(
-        "homeassistant.components.backup.manager.BackupManager.async_get_backups",
+        "menuai.components.backup.manager.BackupManager.async_get_backups",
         return_value=(backups, {}),
     ):
         resp = await client.get("/api/onboarding/backup/info")
@@ -180,7 +180,7 @@ async def test_onboarding_backup_info(
                 "restore_addons": None,
                 "restore_database": True,
                 "restore_folders": None,
-                "restore_homeassistant": True,
+                "restore_menuai": True,
             },
         ),
         (
@@ -198,7 +198,7 @@ async def test_onboarding_backup_info(
                 "restore_addons": ["addon_1"],
                 "restore_database": True,
                 "restore_folders": [backup.Folder.MEDIA],
-                "restore_homeassistant": True,
+                "restore_menuai": True,
             },
         ),
         (
@@ -216,30 +216,30 @@ async def test_onboarding_backup_info(
                 "restore_addons": ["addon_1", "addon_2"],
                 "restore_database": False,
                 "restore_folders": [backup.Folder.MEDIA, backup.Folder.SHARE],
-                "restore_homeassistant": True,
+                "restore_menuai": True,
             },
         ),
     ],
 )
 async def test_onboarding_backup_restore(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
+    menuai_client: ClientSessionGenerator,
     params: dict[str, Any],
     expected_kwargs: dict[str, Any],
 ) -> None:
     """Test restore backup."""
-    mock_onboarding_storage(hass_storage, {"done": []})
+    mock_onboarding_storage(menuai_storage, {"done": []})
 
-    assert await async_setup_component(hass, "onboarding", {})
-    async_initialize_backup(hass)
-    assert await async_setup_component(hass, "backup", {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "onboarding", {})
+    async_initialize_backup(menuai)
+    assert await async_setup_component(menuai, "backup", {})
+    await menuai.async_block_till_done()
 
-    client = await hass_client()
+    client = await menuai_client()
 
     with patch(
-        "homeassistant.components.backup.manager.BackupManager.async_restore_backup",
+        "menuai.components.backup.manager.BackupManager.async_restore_backup",
     ) as mock_restore:
         resp = await client.post("/api/onboarding/backup/restore", json=params)
     assert resp.status == 200
@@ -305,10 +305,10 @@ async def test_onboarding_backup_restore(
             {"code": "incorrect_password"},
             1,
         ),
-        # Home Assistant error
+        # MenuAI error
         (
             {"backup_id": "abc123", "agent_id": "backup.local"},
-            HomeAssistantError("Boom!"),
+            menuaiError("Boom!"),
             400,
             {"code": "restore_failed", "message": "Boom!"},
             1,
@@ -316,9 +316,9 @@ async def test_onboarding_backup_restore(
     ],
 )
 async def test_onboarding_backup_restore_error(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
+    menuai_client: ClientSessionGenerator,
     params: dict[str, Any],
     restore_error: Exception | None,
     expected_status: int,
@@ -326,17 +326,17 @@ async def test_onboarding_backup_restore_error(
     restore_calls: int,
 ) -> None:
     """Test restore backup fails."""
-    mock_onboarding_storage(hass_storage, {"done": []})
+    mock_onboarding_storage(menuai_storage, {"done": []})
 
-    assert await async_setup_component(hass, "onboarding", {})
-    async_initialize_backup(hass)
-    assert await async_setup_component(hass, "backup", {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "onboarding", {})
+    async_initialize_backup(menuai)
+    assert await async_setup_component(menuai, "backup", {})
+    await menuai.async_block_till_done()
 
-    client = await hass_client()
+    client = await menuai_client()
 
     with patch(
-        "homeassistant.components.backup.manager.BackupManager.async_restore_backup",
+        "menuai.components.backup.manager.BackupManager.async_restore_backup",
         side_effect=restore_error,
     ) as mock_restore:
         resp = await client.post("/api/onboarding/backup/restore", json=params)
@@ -360,9 +360,9 @@ async def test_onboarding_backup_restore_error(
     ],
 )
 async def test_onboarding_backup_restore_unexpected_error(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
+    menuai_client: ClientSessionGenerator,
     params: dict[str, Any],
     restore_error: Exception | None,
     expected_status: int,
@@ -370,17 +370,17 @@ async def test_onboarding_backup_restore_unexpected_error(
     restore_calls: int,
 ) -> None:
     """Test restore backup fails."""
-    mock_onboarding_storage(hass_storage, {"done": []})
+    mock_onboarding_storage(menuai_storage, {"done": []})
 
-    assert await async_setup_component(hass, "onboarding", {})
-    async_initialize_backup(hass)
-    assert await async_setup_component(hass, "backup", {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "onboarding", {})
+    async_initialize_backup(menuai)
+    assert await async_setup_component(menuai, "backup", {})
+    await menuai.async_block_till_done()
 
-    client = await hass_client()
+    client = await menuai_client()
 
     with patch(
-        "homeassistant.components.backup.manager.BackupManager.async_restore_backup",
+        "menuai.components.backup.manager.BackupManager.async_restore_backup",
         side_effect=restore_error,
     ) as mock_restore:
         resp = await client.post("/api/onboarding/backup/restore", json=params)
@@ -391,22 +391,22 @@ async def test_onboarding_backup_restore_unexpected_error(
 
 
 async def test_onboarding_backup_upload(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test upload backup."""
-    mock_onboarding_storage(hass_storage, {"done": []})
+    mock_onboarding_storage(menuai_storage, {"done": []})
 
-    assert await async_setup_component(hass, "onboarding", {})
-    async_initialize_backup(hass)
-    assert await async_setup_component(hass, "backup", {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "onboarding", {})
+    async_initialize_backup(menuai)
+    assert await async_setup_component(menuai, "backup", {})
+    await menuai.async_block_till_done()
 
-    client = await hass_client()
+    client = await menuai_client()
 
     with patch(
-        "homeassistant.components.backup.manager.BackupManager.async_receive_backup",
+        "menuai.components.backup.manager.BackupManager.async_receive_backup",
         return_value="abc123",
     ) as mock_receive:
         resp = await client.post(

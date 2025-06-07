@@ -1,6 +1,6 @@
 """Constants for the microBees integration."""
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 DOMAIN = "microbees"
 OAUTH2_AUTHORIZE = "https://dev.microbees.com/oauth/authorize"

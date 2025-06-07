@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import (
     DEVOPS_BUILD_MISSING_DATA,
@@ -33,28 +33,28 @@ SENSOR_KEYS = [
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
     mock_config_entry: MockConfigEntry,
     mock_devops_client: AsyncMock,
 ) -> None:
     """Test sensor entities."""
-    assert await setup_integration(hass, mock_config_entry)
+    assert await setup_integration(menuai, mock_config_entry)
 
     for sensor_key in SENSOR_KEYS:
         assert (entry := entity_registry.async_get(f"{BASE_ENTITY_ID}_{sensor_key}"))
 
         assert entry == snapshot(name=f"{entry.entity_id}-entry")
 
-        assert hass.states.get(entry.entity_id) == snapshot(
+        assert menuai.states.get(entry.entity_id) == snapshot(
             name=f"{entry.entity_id}-state"
         )
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensors_missing_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
     mock_config_entry: MockConfigEntry,
@@ -63,19 +63,19 @@ async def test_sensors_missing_data(
     """Test sensor entities with missing data."""
     mock_devops_client.get_builds.return_value = [DEVOPS_BUILD_MISSING_DATA]
 
-    assert await setup_integration(hass, mock_config_entry)
+    assert await setup_integration(menuai, mock_config_entry)
 
     for sensor_key in SENSOR_KEYS:
         assert (entry := entity_registry.async_get(f"{BASE_ENTITY_ID}_{sensor_key}"))
 
-        assert hass.states.get(entry.entity_id) == snapshot(
+        assert menuai.states.get(entry.entity_id) == snapshot(
             name=f"{entry.entity_id}-state-missing-data"
         )
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensors_missing_project_definition(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_config_entry: MockConfigEntry,
     mock_devops_client: AsyncMock,
@@ -85,7 +85,7 @@ async def test_sensors_missing_project_definition(
         DEVOPS_BUILD_MISSING_PROJECT_DEFINITION
     ]
 
-    assert await setup_integration(hass, mock_config_entry)
+    assert await setup_integration(menuai, mock_config_entry)
 
     for sensor_key in SENSOR_KEYS:
         assert not entity_registry.async_get(f"{BASE_ENTITY_ID}_{sensor_key}")

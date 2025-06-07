@@ -15,16 +15,16 @@ from google_photos_library_api.model import (
 )
 import pytest
 
-from homeassistant.components.google_photos.const import DOMAIN, READ_SCOPE
-from homeassistant.components.google_photos.services import (
+from menuai.components.google_photos.const import DOMAIN, READ_SCOPE
+from menuai.components.google_photos.services import (
     CONF_ALBUM,
     CONF_CONFIG_ENTRY_ID,
     UPLOAD_SERVICE,
 )
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_FILENAME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.config_entries import ConfigEntryState
+from menuai.const import CONF_FILENAME
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from tests.common import MockConfigEntry
 
@@ -50,20 +50,20 @@ def upload_file_fixture() -> None:
 
 @pytest.fixture(autouse=True)
 def mock_upload_file(
-    hass: HomeAssistant, upload_file: MockUploadFile
+    menuai: menuai, upload_file: MockUploadFile
 ) -> Generator[None]:
     """Fixture that mocks out the file calls using the FakeFile fixture."""
     with (
         patch(
-            "homeassistant.components.google_photos.services.Path.read_bytes",
+            "menuai.components.google_photos.services.Path.read_bytes",
             return_value=upload_file.content,
         ),
         patch(
-            "homeassistant.components.google_photos.services.Path.exists",
+            "menuai.components.google_photos.services.Path.exists",
             return_value=upload_file.exists,
         ),
         patch.object(
-            hass.config, "is_allowed_path", return_value=upload_file.is_allowed_path
+            menuai.config, "is_allowed_path", return_value=upload_file.is_allowed_path
         ),
         patch("pathlib.Path.stat") as mock_stat,
     ):
@@ -113,18 +113,18 @@ def mock_upload_file(
 )
 @pytest.mark.usefixtures("setup_integration")
 async def test_upload_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_api: Mock,
     media_items_result: CreateMediaItemsResult,
     service_response: list[dict[str, str]],
 ) -> None:
     """Test service call to upload content."""
-    assert hass.services.has_service(DOMAIN, "upload")
+    assert menuai.services.has_service(DOMAIN, "upload")
 
     mock_api.create_media_items.return_value = media_items_result
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         DOMAIN,
         UPLOAD_SERVICE,
         {
@@ -144,12 +144,12 @@ async def test_upload_service(
 
 @pytest.mark.usefixtures("setup_integration")
 async def test_upload_service_config_entry_not_found(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test upload service call with a config entry that does not exist."""
-    with pytest.raises(HomeAssistantError, match="not found in registry"):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match="not found in registry"):
+        await menuai.services.async_call(
             DOMAIN,
             UPLOAD_SERVICE,
             {
@@ -164,17 +164,17 @@ async def test_upload_service_config_entry_not_found(
 
 @pytest.mark.usefixtures("setup_integration")
 async def test_config_entry_not_loaded(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test upload service call with a config entry that is not loaded."""
-    await hass.config_entries.async_unload(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.NOT_LOADED
 
-    with pytest.raises(HomeAssistantError, match="not found in registry"):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match="not found in registry"):
+        await menuai.services.async_call(
             DOMAIN,
             UPLOAD_SERVICE,
             {
@@ -190,14 +190,14 @@ async def test_config_entry_not_loaded(
 @pytest.mark.usefixtures("setup_integration")
 @pytest.mark.parametrize("upload_file", [MockUploadFile(is_allowed_path=False)])
 async def test_path_is_not_allowed(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test upload service call with a filename path that is not allowed."""
     with (
-        pytest.raises(HomeAssistantError, match="no access to path"),
+        pytest.raises(menuaiError, match="no access to path"),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             UPLOAD_SERVICE,
             {
@@ -213,12 +213,12 @@ async def test_path_is_not_allowed(
 @pytest.mark.usefixtures("setup_integration")
 @pytest.mark.parametrize("upload_file", [MockUploadFile(exists=False)])
 async def test_filename_does_not_exist(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test upload service call with a filename path that does not exist."""
-    with pytest.raises(HomeAssistantError, match="does not exist"):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match="does not exist"):
+        await menuai.services.async_call(
             DOMAIN,
             UPLOAD_SERVICE,
             {
@@ -233,7 +233,7 @@ async def test_filename_does_not_exist(
 
 @pytest.mark.usefixtures("setup_integration")
 async def test_upload_service_upload_content_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_api: Mock,
 ) -> None:
@@ -241,8 +241,8 @@ async def test_upload_service_upload_content_failure(
 
     mock_api.upload_content.side_effect = GooglePhotosApiError()
 
-    with pytest.raises(HomeAssistantError, match="Failed to upload content"):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match="Failed to upload content"):
+        await menuai.services.async_call(
             DOMAIN,
             UPLOAD_SERVICE,
             {
@@ -257,7 +257,7 @@ async def test_upload_service_upload_content_failure(
 
 @pytest.mark.usefixtures("setup_integration")
 async def test_upload_service_fails_create(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_api: Mock,
 ) -> None:
@@ -266,9 +266,9 @@ async def test_upload_service_fails_create(
     mock_api.create_media_items.side_effect = GooglePhotosApiError()
 
     with pytest.raises(
-        HomeAssistantError, match="Google Photos API responded with error"
+        menuaiError, match="Google Photos API responded with error"
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             UPLOAD_SERVICE,
             {
@@ -289,13 +289,13 @@ async def test_upload_service_fails_create(
     ],
 )
 async def test_upload_service_no_scope(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test service call to upload content but the config entry is read-only."""
 
-    with pytest.raises(HomeAssistantError, match="not granted permission"):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match="not granted permission"):
+        await menuai.services.async_call(
             DOMAIN,
             UPLOAD_SERVICE,
             {
@@ -311,15 +311,15 @@ async def test_upload_service_no_scope(
 @pytest.mark.usefixtures("setup_integration")
 @pytest.mark.parametrize("upload_file", [MockUploadFile(size=26 * 1024 * 1024)])
 async def test_upload_size_limit(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test upload service call with a filename path that does not exist."""
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match=re.escape(f"`{TEST_FILENAME}` is too large (27262976 > 20971520)"),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             UPLOAD_SERVICE,
             {
@@ -334,12 +334,12 @@ async def test_upload_size_limit(
 
 @pytest.mark.usefixtures("setup_integration")
 async def test_upload_to_new_album(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_api: Mock,
 ) -> None:
     """Test service call to upload content to a new album."""
-    assert hass.services.has_service(DOMAIN, "upload")
+    assert menuai.services.has_service(DOMAIN, "upload")
 
     mock_api.create_media_items.return_value = CreateMediaItemsResult(
         new_media_item_results=[
@@ -351,7 +351,7 @@ async def test_upload_to_new_album(
         ]
     )
     mock_api.create_album.return_value = Album(id="album-media-id-2", title="New Album")
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         DOMAIN,
         UPLOAD_SERVICE,
         {
@@ -382,7 +382,7 @@ async def test_upload_to_new_album(
             )
         ]
     )
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         DOMAIN,
         UPLOAD_SERVICE,
         {
@@ -404,17 +404,17 @@ async def test_upload_to_new_album(
 
 @pytest.mark.usefixtures("setup_integration")
 async def test_create_album_failed(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_api: Mock,
 ) -> None:
     """Test service call to upload content to a new album but creating the album fails."""
-    assert hass.services.has_service(DOMAIN, "upload")
+    assert menuai.services.has_service(DOMAIN, "upload")
 
     mock_api.create_album.side_effect = GooglePhotosApiError()
 
-    with pytest.raises(HomeAssistantError, match="Failed to create album"):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match="Failed to create album"):
+        await menuai.services.async_call(
             DOMAIN,
             UPLOAD_SERVICE,
             {

@@ -7,13 +7,13 @@ from unittest.mock import patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.deconz.const import CONF_ALLOW_CLIP_SENSOR
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.config_entries import RELOAD_AFTER_UPDATE_DELAY
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.util import dt as dt_util
+from menuai.components.deconz.const import CONF_ALLOW_CLIP_SENSOR
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.config_entries import RELOAD_AFTER_UPDATE_DELAY
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.util import dt as dt_util
 
 from .conftest import ConfigEntryFactoryType, WebsocketDataType
 
@@ -643,7 +643,7 @@ TEST_DATA = [
 @pytest.mark.parametrize(("sensor_payload", "expected"), TEST_DATA)
 @pytest.mark.parametrize("config_entry_options", [{CONF_ALLOW_CLIP_SENSOR: True}])
 async def test_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     config_entry_factory: ConfigEntryFactoryType,
     sensor_ws_data: WebsocketDataType,
@@ -651,7 +651,7 @@ async def test_sensors(
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test successful creation of sensor entities."""
-    with patch("homeassistant.components.deconz.PLATFORMS", [Platform.SENSOR]):
+    with patch("menuai.components.deconz.PLATFORMS", [Platform.SENSOR]):
         config_entry = await config_entry_factory()
 
     # Enable in entity registry
@@ -659,20 +659,20 @@ async def test_sensors(
         entity_registry.async_update_entity(
             entity_id=expected["entity_id"], disabled_by=None
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         async_fire_time_changed(
-            hass,
+            menuai,
             dt_util.utcnow() + timedelta(seconds=RELOAD_AFTER_UPDATE_DELAY + 1),
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
     # Change state
 
     await sensor_ws_data(expected["websocket_event"])
-    assert hass.states.get(expected["entity_id"]).state == expected["next_state"]
+    assert menuai.states.get(expected["entity_id"]).state == expected["next_state"]
 
 
 @pytest.mark.parametrize(
@@ -689,9 +689,9 @@ async def test_sensors(
 )
 @pytest.mark.parametrize("config_entry_options", [{CONF_ALLOW_CLIP_SENSOR: False}])
 @pytest.mark.usefixtures("config_entry_setup")
-async def test_not_allow_clip_sensor(hass: HomeAssistant) -> None:
+async def test_not_allow_clip_sensor(menuai: menuai) -> None:
     """Test that CLIP sensors are not allowed."""
-    assert len(hass.states.async_all()) == 0
+    assert len(menuai.states.async_all()) == 0
 
 
 @pytest.mark.parametrize(
@@ -729,42 +729,42 @@ async def test_not_allow_clip_sensor(hass: HomeAssistant) -> None:
 )
 @pytest.mark.parametrize("config_entry_options", [{CONF_ALLOW_CLIP_SENSOR: True}])
 async def test_allow_clip_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     config_entry_factory: ConfigEntryFactoryType,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test that CLIP sensors can be allowed."""
-    with patch("homeassistant.components.deconz.PLATFORMS", [Platform.SENSOR]):
+    with patch("menuai.components.deconz.PLATFORMS", [Platform.SENSOR]):
         config_entry = await config_entry_factory()
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
     # Disallow clip sensors
 
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         config_entry, options={CONF_ALLOW_CLIP_SENSOR: False}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == 2
-    assert not hass.states.get("sensor.clip_light_level_sensor")
-    assert not hass.states.get("sensor.clip_flur")
+    assert len(menuai.states.async_all()) == 2
+    assert not menuai.states.get("sensor.clip_light_level_sensor")
+    assert not menuai.states.get("sensor.clip_flur")
 
     # Allow clip sensors
 
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         config_entry, options={CONF_ALLOW_CLIP_SENSOR: True}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == 4
-    assert hass.states.get("sensor.clip_light_level_sensor").state == "999.8"
-    assert hass.states.get("sensor.clip_flur").state == "0"
+    assert len(menuai.states.async_all()) == 4
+    assert menuai.states.get("sensor.clip_light_level_sensor").state == "999.8"
+    assert menuai.states.get("sensor.clip_flur").state == "0"
 
 
 @pytest.mark.usefixtures("config_entry_setup")
 async def test_add_new_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     sensor_ws_data: WebsocketDataType,
 ) -> None:
     """Test that adding a new sensor works."""
@@ -780,11 +780,11 @@ async def test_add_new_sensor(
         },
     }
 
-    assert len(hass.states.async_all()) == 0
+    assert len(menuai.states.async_all()) == 0
 
     await sensor_ws_data(event_added_sensor)
-    assert len(hass.states.async_all()) == 2
-    assert hass.states.get("sensor.light_level_sensor").state == "999.8"
+    assert len(menuai.states.async_all()) == 2
+    assert menuai.states.get("sensor.light_level_sensor").state == "999.8"
 
 
 BAD_SENSOR_DATA = [
@@ -797,7 +797,7 @@ BAD_SENSOR_DATA = [
 
 @pytest.mark.parametrize(("sensor_type", "sensor_property"), BAD_SENSOR_DATA)
 async def test_dont_add_sensor_if_state_is_none(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry_factory: ConfigEntryFactoryType,
     sensor_payload: dict[str, Any],
     sensor_type: str,
@@ -813,7 +813,7 @@ async def test_dont_add_sensor_if_state_is_none(
     }
     await config_entry_factory()
 
-    assert len(hass.states.async_all()) == 0
+    assert len(menuai.states.async_all()) == 0
 
 
 @pytest.mark.parametrize(
@@ -841,9 +841,9 @@ async def test_dont_add_sensor_if_state_is_none(
     ],
 )
 @pytest.mark.usefixtures("config_entry_setup")
-async def test_air_quality_sensor_without_ppb(hass: HomeAssistant) -> None:
+async def test_air_quality_sensor_without_ppb(menuai: menuai) -> None:
     """Test sensor with scaled data is not created if state is None."""
-    assert len(hass.states.async_all()) == 1
+    assert len(menuai.states.async_all()) == 1
 
 
 @pytest.mark.parametrize(
@@ -869,7 +869,7 @@ async def test_air_quality_sensor_without_ppb(hass: HomeAssistant) -> None:
 )
 @pytest.mark.usefixtures("config_entry_setup")
 async def test_add_battery_later(
-    hass: HomeAssistant,
+    menuai: menuai,
     sensor_ws_data: WebsocketDataType,
 ) -> None:
     """Test that a battery sensor can be created later on.
@@ -877,19 +877,19 @@ async def test_add_battery_later(
     Without an initial battery state a battery sensor
     can be created once a value is reported.
     """
-    assert len(hass.states.async_all()) == 0
+    assert len(menuai.states.async_all()) == 0
 
     await sensor_ws_data({"id": "2", "config": {"battery": 50}})
-    assert len(hass.states.async_all()) == 0
+    assert len(menuai.states.async_all()) == 0
 
     await sensor_ws_data({"id": "1", "config": {"battery": 50}})
-    assert len(hass.states.async_all()) == 1
-    assert hass.states.get("sensor.switch_1_battery").state == "50"
+    assert len(menuai.states.async_all()) == 1
+    assert menuai.states.get("sensor.switch_1_battery").state == "50"
 
 
 @pytest.mark.parametrize("model_id", ["0x8030", "0x8031", "0x8034", "0x8035"])
 async def test_special_danfoss_battery_creation(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry_factory: ConfigEntryFactoryType,
     sensor_payload: dict[str, Any],
     model_id: str,
@@ -1025,8 +1025,8 @@ async def test_special_danfoss_battery_creation(
 
     await config_entry_factory()
 
-    assert len(hass.states.async_all()) == 10
-    assert len(hass.states.async_entity_ids(SENSOR_DOMAIN)) == 5
+    assert len(menuai.states.async_all()) == 10
+    assert len(menuai.states.async_entity_ids(SENSOR_DOMAIN)) == 5
 
 
 @pytest.mark.parametrize(
@@ -1034,6 +1034,6 @@ async def test_special_danfoss_battery_creation(
     [{"type": "not supported", "name": "name", "state": {}, "config": {}}],
 )
 @pytest.mark.usefixtures("config_entry_setup")
-async def test_unsupported_sensor(hass: HomeAssistant) -> None:
+async def test_unsupported_sensor(menuai: menuai) -> None:
     """Test that unsupported sensors doesn't break anything."""
-    assert len(hass.states.async_all()) == 0
+    assert len(menuai.states.async_all()) == 0

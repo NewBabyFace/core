@@ -7,12 +7,12 @@ from aioemonitor import Emonitor
 import aiohttp
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import aiohttp_client
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_NAME
+from menuai.core import menuai
+from menuai.helpers import aiohttp_client
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
 
 from . import name_short_mac
 from .const import DOMAIN
@@ -20,9 +20,9 @@ from .const import DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 
-async def fetch_mac_and_title(hass: HomeAssistant, host):
+async def fetch_mac_and_title(menuai: menuai, host):
     """Validate the user input allows us to connect."""
-    session = aiohttp_client.async_get_clientsession(hass)
+    session = aiohttp_client.async_get_clientsession(menuai)
     emonitor = Emonitor(host, session)
     status = await emonitor.async_get_status()
     mac_address = status.network.mac_address
@@ -47,7 +47,7 @@ class EmonitorConfigFlow(ConfigFlow, domain=DOMAIN):
         errors = {}
         if user_input is not None:
             try:
-                info = await fetch_mac_and_title(self.hass, user_input[CONF_HOST])
+                info = await fetch_mac_and_title(self.menuai, user_input[CONF_HOST])
             except aiohttp.ClientError:
                 errors[CONF_HOST] = "cannot_connect"
             except Exception:
@@ -79,7 +79,7 @@ class EmonitorConfigFlow(ConfigFlow, domain=DOMAIN):
         self.context["title_placeholders"] = {"name": name}
         try:
             self.discovered_info = await fetch_mac_and_title(
-                self.hass, self.discovered_ip
+                self.menuai, self.discovered_ip
             )
         except Exception as ex:  # noqa: BLE001
             _LOGGER.debug(

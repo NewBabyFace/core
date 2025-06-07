@@ -1,9 +1,9 @@
 """Errors for the HomematicIP Cloud component."""
 
-from homeassistant.exceptions import HomeAssistantError
+from menuai.exceptions import menuaiError
 
 
-class HmipcException(HomeAssistantError):
+class HmipcException(menuaiError):
     """Base class for HomematicIP Cloud exceptions."""
 
 

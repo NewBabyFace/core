@@ -9,16 +9,16 @@ from typing import cast
 from pyefergy import Efergy
 from pyefergy.exceptions import ConnectError, DataError, ServiceError
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import UnitOfEnergy, UnitOfPower
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
+from menuai.const import UnitOfEnergy, UnitOfPower
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
 
 from . import EfergyConfigEntry
 from .const import CONF_CURRENT_VALUES, LOGGER
@@ -106,7 +106,7 @@ SENSOR_TYPES: tuple[SensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: EfergyConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -121,7 +121,7 @@ async def async_setup_entry(
                     description,
                     entry.entry_id,
                     period=sub("^energy_|^cost_", "", description.key),
-                    currency=hass.config.currency,
+                    currency=menuai.config.currency,
                 )
             )
         else:

@@ -7,20 +7,20 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.device_tracker import (
+from menuai.components.device_tracker import (
     CONF_CONSIDER_HOME,
     DEFAULT_CONSIDER_HOME,
 )
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_HOST
-from homeassistant.core import callback
-from homeassistant.helpers import selector
-from homeassistant.util.network import is_ip_address
+from menuai.const import CONF_HOST
+from menuai.core import callback
+from menuai.helpers import selector
+from menuai.util.network import is_ip_address
 
 from .const import CONF_PING_COUNT, DEFAULT_PING_COUNT, DOMAIN
 

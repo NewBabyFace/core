@@ -12,16 +12,16 @@ from dsmr_parser.obis_references import (
 from dsmr_parser.objects import CosemObject, MBusObject, Telegram
 import pytest
 
-from homeassistant.components.dsmr.const import DOMAIN
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.components.dsmr.const import DOMAIN
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from tests.common import MockConfigEntry
 
 
 async def test_migrate_gas_to_mbus(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
     dsmr_connection_fixture: tuple[MagicMock, MagicMock, MagicMock],
@@ -43,7 +43,7 @@ async def test_migrate_gas_to_mbus(
         },
     )
 
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
     old_unique_id = "37464C4F32313139303333373331_belgium_5min_gas_meter_reading"
 
@@ -52,7 +52,7 @@ async def test_migrate_gas_to_mbus(
         identifiers={(DOMAIN, mock_entry.entry_id)},
         name="Gas Meter",
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     entity: er.RegistryEntry = entity_registry.async_get_or_create(
         suggested_object_id="gas_meter_reading",
@@ -64,7 +64,7 @@ async def test_migrate_gas_to_mbus(
         config_entry=mock_entry,
     )
     assert entity.unique_id == old_unique_id
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     telegram = Telegram()
     telegram.add(
@@ -92,8 +92,8 @@ async def test_migrate_gas_to_mbus(
         "MBUS_METER_READING",
     )
 
-    assert await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(mock_entry.entry_id)
+    await menuai.async_block_till_done()
 
     telegram_callback = connection_factory.call_args_list[0][0][2]
 
@@ -101,7 +101,7 @@ async def test_migrate_gas_to_mbus(
     telegram_callback(telegram)
 
     # after receiving telegram entities need to have the chance to be created
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Check a new device is created and the old device has been removed
     assert len(device_registry.devices) == 1
@@ -132,7 +132,7 @@ async def test_migrate_gas_to_mbus(
 
 
 async def test_migrate_hourly_gas_to_mbus(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
     dsmr_connection_fixture: tuple[MagicMock, MagicMock, MagicMock],
@@ -154,7 +154,7 @@ async def test_migrate_hourly_gas_to_mbus(
         },
     )
 
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
     old_unique_id = "4730303738353635363037343639323231_hourly_gas_meter_reading"
 
@@ -163,7 +163,7 @@ async def test_migrate_hourly_gas_to_mbus(
         identifiers={(DOMAIN, mock_entry.entry_id)},
         name="Gas Meter",
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     entity: er.RegistryEntry = entity_registry.async_get_or_create(
         suggested_object_id="gas_meter_reading",
@@ -175,7 +175,7 @@ async def test_migrate_hourly_gas_to_mbus(
         config_entry=mock_entry,
     )
     assert entity.unique_id == old_unique_id
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     telegram = Telegram()
     telegram.add(
@@ -203,8 +203,8 @@ async def test_migrate_hourly_gas_to_mbus(
         "MBUS_METER_READING",
     )
 
-    assert await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(mock_entry.entry_id)
+    await menuai.async_block_till_done()
 
     telegram_callback = connection_factory.call_args_list[0][0][2]
 
@@ -212,7 +212,7 @@ async def test_migrate_hourly_gas_to_mbus(
     telegram_callback(telegram)
 
     # after receiving telegram entities need to have the chance to be created
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Check a new device is created and the old device has been removed
     assert len(device_registry.devices) == 1
@@ -243,7 +243,7 @@ async def test_migrate_hourly_gas_to_mbus(
 
 
 async def test_migrate_gas_with_devid_to_mbus(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
     dsmr_connection_fixture: tuple[MagicMock, MagicMock, MagicMock],
@@ -265,7 +265,7 @@ async def test_migrate_gas_with_devid_to_mbus(
         },
     )
 
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
     old_unique_id = "37464C4F32313139303333373331_belgium_5min_gas_meter_reading"
 
@@ -274,7 +274,7 @@ async def test_migrate_gas_with_devid_to_mbus(
         identifiers={(DOMAIN, "37464C4F32313139303333373331")},
         name="Gas Meter",
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     entity: er.RegistryEntry = entity_registry.async_get_or_create(
         suggested_object_id="gas_meter_reading",
@@ -286,7 +286,7 @@ async def test_migrate_gas_with_devid_to_mbus(
         config_entry=mock_entry,
     )
     assert entity.unique_id == old_unique_id
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     telegram = Telegram()
     telegram.add(
@@ -314,8 +314,8 @@ async def test_migrate_gas_with_devid_to_mbus(
         "MBUS_METER_READING",
     )
 
-    assert await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(mock_entry.entry_id)
+    await menuai.async_block_till_done()
 
     telegram_callback = connection_factory.call_args_list[0][0][2]
 
@@ -323,7 +323,7 @@ async def test_migrate_gas_with_devid_to_mbus(
     telegram_callback(telegram)
 
     # after receiving telegram entities need to have the chance to be created
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Check a new device is not created and the old device has not been removed
     assert len(device_registry.devices) == 1
@@ -350,7 +350,7 @@ async def test_migrate_gas_with_devid_to_mbus(
 
 
 async def test_migrate_gas_to_mbus_exists(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
     dsmr_connection_fixture: tuple[MagicMock, MagicMock, MagicMock],
@@ -373,7 +373,7 @@ async def test_migrate_gas_to_mbus_exists(
         },
     )
 
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
     old_unique_id = "37464C4F32313139303333373331_belgium_5min_gas_meter_reading"
 
@@ -382,7 +382,7 @@ async def test_migrate_gas_to_mbus_exists(
         identifiers={(DOMAIN, mock_entry.entry_id)},
         name="Gas Meter",
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     entity: er.RegistryEntry = entity_registry.async_get_or_create(
         suggested_object_id="gas_meter_reading",
@@ -400,7 +400,7 @@ async def test_migrate_gas_to_mbus_exists(
         identifiers={(DOMAIN, "37464C4F32313139303333373331")},
         name="Gas Meter",
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     entity_registry.async_get_or_create(
         suggested_object_id="gas_meter_reading_alt",
@@ -411,7 +411,7 @@ async def test_migrate_gas_to_mbus_exists(
         unique_id="37464C4F32313139303333373331",
         config_entry=mock_entry,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     telegram = Telegram()
     telegram.add(
@@ -439,8 +439,8 @@ async def test_migrate_gas_to_mbus_exists(
         "MBUS_METER_READING",
     )
 
-    assert await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(mock_entry.entry_id)
+    await menuai.async_block_till_done()
 
     telegram_callback = connection_factory.call_args_list[0][0][2]
 
@@ -448,7 +448,7 @@ async def test_migrate_gas_to_mbus_exists(
     telegram_callback(telegram)
 
     # after receiving telegram entities need to have the chance to be created
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Check a new device is not created and the old device has not been removed
     assert len(device_registry.devices) == 2

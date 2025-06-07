@@ -2,7 +2,7 @@
 
 import pytest
 
-from homeassistant.components.cover import CoverEntityFeature
+from menuai.components.cover import CoverEntityFeature
 
 from .common import MockCover
 

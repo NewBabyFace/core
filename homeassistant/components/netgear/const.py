@@ -2,7 +2,7 @@
 
 from datetime import timedelta
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 DOMAIN = "netgear"
 

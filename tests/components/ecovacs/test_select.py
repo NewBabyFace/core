@@ -7,18 +7,18 @@ from deebot_client.events.water_info import WaterAmount, WaterAmountEvent
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components import select
-from homeassistant.components.ecovacs.const import DOMAIN
-from homeassistant.components.ecovacs.controller import EcovacsController
-from homeassistant.const import (
+from menuai.components import select
+from menuai.components.ecovacs.const import DOMAIN
+from menuai.components.ecovacs.controller import EcovacsController
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_OPTION,
     SERVICE_SELECT_OPTION,
     STATE_UNKNOWN,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from .util import block_till_done
 
@@ -31,10 +31,10 @@ def platforms() -> Platform | list[Platform]:
     return Platform.SELECT
 
 
-async def notify_events(hass: HomeAssistant, event_bus: EventBus):
+async def notify_events(menuai: menuai, event_bus: EventBus):
     """Notify events."""
     event_bus.notify(WaterAmountEvent(WaterAmount.ULTRAHIGH))
-    await block_till_done(hass, event_bus)
+    await block_till_done(menuai, event_bus)
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
@@ -50,7 +50,7 @@ async def notify_events(hass: HomeAssistant, event_bus: EventBus):
     ],
 )
 async def test_selects(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
@@ -58,15 +58,15 @@ async def test_selects(
     entity_ids: list[str],
 ) -> None:
     """Test that select entity snapshots match."""
-    assert entity_ids == hass.states.async_entity_ids()
+    assert entity_ids == menuai.states.async_entity_ids()
     for entity_id in entity_ids:
-        assert (state := hass.states.get(entity_id)), f"State of {entity_id} is missing"
+        assert (state := menuai.states.get(entity_id)), f"State of {entity_id} is missing"
         assert state.state == STATE_UNKNOWN
 
     device = controller.devices[0]
-    await notify_events(hass, device.events)
+    await notify_events(menuai, device.events)
     for entity_id in entity_ids:
-        assert (state := hass.states.get(entity_id)), f"State of {entity_id} is missing"
+        assert (state := menuai.states.get(entity_id)), f"State of {entity_id} is missing"
         assert snapshot(name=f"{entity_id}:state") == state
 
         assert (entity_entry := entity_registry.async_get(state.entity_id))
@@ -91,7 +91,7 @@ async def test_selects(
     ],
 )
 async def test_selects_change(
-    hass: HomeAssistant,
+    menuai: menuai,
     controller: EcovacsController,
     entity_id: list[str],
     current_state: str,
@@ -100,13 +100,13 @@ async def test_selects_change(
 ) -> None:
     """Test that changing select entities works."""
     device = controller.devices[0]
-    await notify_events(hass, device.events)
+    await notify_events(menuai, device.events)
 
-    assert (state := hass.states.get(entity_id)), f"State of {entity_id} is missing"
+    assert (state := menuai.states.get(entity_id)), f"State of {entity_id} is missing"
     assert state.state == current_state
 
     device._execute_command.reset_mock()
-    await hass.services.async_call(
+    await menuai.services.async_call(
         select.DOMAIN,
         SERVICE_SELECT_OPTION,
         {ATTR_ENTITY_ID: entity_id, ATTR_OPTION: set_state},

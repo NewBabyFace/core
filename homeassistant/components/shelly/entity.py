@@ -10,14 +10,14 @@ from typing import Any, Concatenate, cast
 from aioshelly.block_device import Block
 from aioshelly.exceptions import DeviceConnectionError, InvalidAuthError, RpcCallError
 
-from homeassistant.core import HomeAssistant, State, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity import Entity, EntityDescription
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.entity_registry import RegistryEntry
-from homeassistant.helpers.typing import StateType
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.core import menuai, State, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity import Entity, EntityDescription
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.entity_registry import RegistryEntry
+from menuai.helpers.typing import StateType
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import CONF_SLEEP_PERIOD, DOMAIN, LOGGER
 from .coordinator import ShellyBlockCoordinator, ShellyConfigEntry, ShellyRpcCoordinator
@@ -33,7 +33,7 @@ from .utils import (
 
 @callback
 def async_setup_entry_attribute_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ShellyConfigEntry,
     async_add_entities: AddEntitiesCallback,
     sensors: Mapping[tuple[str, str], BlockEntityDescription],
@@ -44,11 +44,11 @@ def async_setup_entry_attribute_entities(
     assert coordinator
     if coordinator.device.initialized:
         async_setup_block_attribute_entities(
-            hass, async_add_entities, coordinator, sensors, sensor_class
+            menuai, async_add_entities, coordinator, sensors, sensor_class
         )
     else:
         async_restore_block_attribute_entities(
-            hass,
+            menuai,
             config_entry,
             async_add_entities,
             coordinator,
@@ -59,7 +59,7 @@ def async_setup_entry_attribute_entities(
 
 @callback
 def async_setup_block_attribute_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_add_entities: AddEntitiesCallback,
     coordinator: ShellyBlockCoordinator,
     sensors: Mapping[tuple[str, str], BlockEntityDescription],
@@ -87,7 +87,7 @@ def async_setup_block_attribute_entities(
             ):
                 domain = sensor_class.__module__.split(".")[-1]
                 unique_id = f"{coordinator.mac}-{block.description}-{sensor_id}"
-                async_remove_shelly_entity(hass, domain, unique_id)
+                async_remove_shelly_entity(menuai, domain, unique_id)
             else:
                 entities.append(
                     sensor_class(coordinator, block, sensor_id, description)
@@ -101,7 +101,7 @@ def async_setup_block_attribute_entities(
 
 @callback
 def async_restore_block_attribute_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ShellyConfigEntry,
     async_add_entities: AddEntitiesCallback,
     coordinator: ShellyBlockCoordinator,
@@ -111,7 +111,7 @@ def async_restore_block_attribute_entities(
     """Restore block attributes entities."""
     entities = []
 
-    ent_reg = er.async_get(hass)
+    ent_reg = er.async_get(menuai)
     entries = er.async_entries_for_config_entry(ent_reg, config_entry.entry_id)
 
     domain = sensor_class.__module__.split(".")[-1]
@@ -136,7 +136,7 @@ def async_restore_block_attribute_entities(
 
 @callback
 def async_setup_entry_rpc(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ShellyConfigEntry,
     async_add_entities: AddEntitiesCallback,
     sensors: Mapping[str, RpcEntityDescription],
@@ -148,17 +148,17 @@ def async_setup_entry_rpc(
 
     if coordinator.device.initialized:
         async_setup_rpc_attribute_entities(
-            hass, config_entry, async_add_entities, sensors, sensor_class
+            menuai, config_entry, async_add_entities, sensors, sensor_class
         )
     else:
         async_restore_rpc_attribute_entities(
-            hass, config_entry, async_add_entities, coordinator, sensors, sensor_class
+            menuai, config_entry, async_add_entities, coordinator, sensors, sensor_class
         )
 
 
 @callback
 def async_setup_rpc_attribute_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ShellyConfigEntry,
     async_add_entities: AddEntitiesCallback,
     sensors: Mapping[str, RpcEntityDescription],
@@ -194,7 +194,7 @@ def async_setup_rpc_attribute_entities(
             ):
                 domain = sensor_class.__module__.split(".")[-1]
                 unique_id = f"{coordinator.mac}-{key}-{sensor_id}"
-                async_remove_shelly_entity(hass, domain, unique_id)
+                async_remove_shelly_entity(menuai, domain, unique_id)
             elif description.use_polling_coordinator:
                 if not sleep_period:
                     entities.append(
@@ -216,7 +216,7 @@ def async_setup_rpc_attribute_entities(
 
 @callback
 def async_restore_rpc_attribute_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ShellyConfigEntry,
     async_add_entities: AddEntitiesCallback,
     coordinator: ShellyRpcCoordinator,
@@ -226,7 +226,7 @@ def async_restore_rpc_attribute_entities(
     """Restore block attributes entities."""
     entities = []
 
-    ent_reg = er.async_get(hass)
+    ent_reg = er.async_get(menuai)
     entries = er.async_entries_for_config_entry(ent_reg, config_entry.entry_id)
 
     domain = sensor_class.__module__.split(".")[-1]
@@ -253,7 +253,7 @@ def async_restore_rpc_attribute_entities(
 
 @callback
 def async_setup_entry_rest(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ShellyConfigEntry,
     async_add_entities: AddEntitiesCallback,
     sensors: Mapping[str, RestEntityDescription],
@@ -328,7 +328,7 @@ def rpc_call[_T: ShellyRpcEntity, **_P](
             await func(self, *args, **kwargs)
         except DeviceConnectionError as err:
             self.coordinator.last_update_success = False
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="device_communication_action_error",
                 translation_placeholders={
@@ -337,7 +337,7 @@ def rpc_call[_T: ShellyRpcEntity, **_P](
                 },
             ) from err
         except RpcCallError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="rpc_call_action_error",
                 translation_placeholders={
@@ -366,9 +366,9 @@ class ShellyBlockEntity(CoordinatorEntity[ShellyBlockCoordinator]):
         )
         self._attr_unique_id = f"{coordinator.mac}-{block.description}"
 
-    # pylint: disable-next=hass-missing-super-call
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to HASS."""
+    # pylint: disable-next=menuai-missing-super-call
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai."""
         self.async_on_remove(self.coordinator.async_add_listener(self._update_callback))
 
     @callback
@@ -383,7 +383,7 @@ class ShellyBlockEntity(CoordinatorEntity[ShellyBlockCoordinator]):
             return await self.block.set_state(**kwargs)
         except DeviceConnectionError as err:
             self.coordinator.last_update_success = False
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="device_communication_action_error",
                 translation_placeholders={
@@ -423,9 +423,9 @@ class ShellyRpcEntity(CoordinatorEntity[ShellyRpcCoordinator]):
         """Device status by entity key."""
         return cast(dict, self.coordinator.device.status[self.key])
 
-    # pylint: disable-next=hass-missing-super-call
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to HASS."""
+    # pylint: disable-next=menuai-missing-super-call
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai."""
         self.async_on_remove(self.coordinator.async_add_listener(self._update_callback))
 
     @callback

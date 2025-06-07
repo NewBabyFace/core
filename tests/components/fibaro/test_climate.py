@@ -2,10 +2,10 @@
 
 from unittest.mock import Mock, patch
 
-from homeassistant.components.climate import ClimateEntityFeature, HVACMode
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.climate import ClimateEntityFeature, HVACMode
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .conftest import init_integration
 
@@ -13,7 +13,7 @@ from tests.common import MockConfigEntry
 
 
 async def test_climate_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_fibaro_client: Mock,
     mock_config_entry: MockConfigEntry,
@@ -26,9 +26,9 @@ async def test_climate_setup(
     mock_fibaro_client.read_rooms.return_value = [mock_room]
     mock_fibaro_client.read_devices.return_value = [mock_thermostat]
 
-    with patch("homeassistant.components.fibaro.PLATFORMS", [Platform.CLIMATE]):
+    with patch("menuai.components.fibaro.PLATFORMS", [Platform.CLIMATE]):
         # Act
-        await init_integration(hass, mock_config_entry)
+        await init_integration(menuai, mock_config_entry)
         # Assert
         entry = entity_registry.async_get("climate.room_1_test_climate_4")
         assert entry
@@ -42,7 +42,7 @@ async def test_climate_setup(
 
 
 async def test_hvac_mode_preset(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_fibaro_client: Mock,
     mock_config_entry: MockConfigEntry,
     mock_thermostat: Mock,
@@ -54,17 +54,17 @@ async def test_hvac_mode_preset(
     mock_fibaro_client.read_rooms.return_value = [mock_room]
     mock_fibaro_client.read_devices.return_value = [mock_thermostat]
 
-    with patch("homeassistant.components.fibaro.PLATFORMS", [Platform.CLIMATE]):
+    with patch("menuai.components.fibaro.PLATFORMS", [Platform.CLIMATE]):
         # Act
-        await init_integration(hass, mock_config_entry)
+        await init_integration(menuai, mock_config_entry)
         # Assert
-        state = hass.states.get("climate.room_1_test_climate_4")
+        state = menuai.states.get("climate.room_1_test_climate_4")
         assert state.state == HVACMode.AUTO
         assert state.attributes["preset_mode"] == "CustomerSpecific"
 
 
 async def test_hvac_mode_heat(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_fibaro_client: Mock,
     mock_config_entry: MockConfigEntry,
     mock_thermostat: Mock,
@@ -77,17 +77,17 @@ async def test_hvac_mode_heat(
     mock_fibaro_client.read_rooms.return_value = [mock_room]
     mock_fibaro_client.read_devices.return_value = [mock_thermostat]
 
-    with patch("homeassistant.components.fibaro.PLATFORMS", [Platform.CLIMATE]):
+    with patch("menuai.components.fibaro.PLATFORMS", [Platform.CLIMATE]):
         # Act
-        await init_integration(hass, mock_config_entry)
+        await init_integration(menuai, mock_config_entry)
         # Assert
-        state = hass.states.get("climate.room_1_test_climate_4")
+        state = menuai.states.get("climate.room_1_test_climate_4")
         assert state.state == HVACMode.HEAT
         assert state.attributes["preset_mode"] is None
 
 
 async def test_set_hvac_mode(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_fibaro_client: Mock,
     mock_config_entry: MockConfigEntry,
     mock_thermostat: Mock,
@@ -99,10 +99,10 @@ async def test_set_hvac_mode(
     mock_fibaro_client.read_rooms.return_value = [mock_room]
     mock_fibaro_client.read_devices.return_value = [mock_thermostat]
 
-    with patch("homeassistant.components.fibaro.PLATFORMS", [Platform.CLIMATE]):
+    with patch("menuai.components.fibaro.PLATFORMS", [Platform.CLIMATE]):
         # Act
-        await init_integration(hass, mock_config_entry)
-        await hass.services.async_call(
+        await init_integration(menuai, mock_config_entry)
+        await menuai.services.async_call(
             "climate",
             "set_hvac_mode",
             {"entity_id": "climate.room_1_test_climate_4", "hvac_mode": HVACMode.HEAT},
@@ -114,7 +114,7 @@ async def test_set_hvac_mode(
 
 
 async def test_hvac_mode_with_operation_mode_support(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_fibaro_client: Mock,
     mock_config_entry: MockConfigEntry,
     mock_thermostat_with_operating_mode: Mock,
@@ -126,16 +126,16 @@ async def test_hvac_mode_with_operation_mode_support(
     mock_fibaro_client.read_rooms.return_value = [mock_room]
     mock_fibaro_client.read_devices.return_value = [mock_thermostat_with_operating_mode]
 
-    with patch("homeassistant.components.fibaro.PLATFORMS", [Platform.CLIMATE]):
+    with patch("menuai.components.fibaro.PLATFORMS", [Platform.CLIMATE]):
         # Act
-        await init_integration(hass, mock_config_entry)
+        await init_integration(menuai, mock_config_entry)
         # Assert
-        state = hass.states.get("climate.room_1_test_climate_6")
+        state = menuai.states.get("climate.room_1_test_climate_6")
         assert state.state == HVACMode.AUTO
 
 
 async def test_set_hvac_mode_with_operation_mode_support(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_fibaro_client: Mock,
     mock_config_entry: MockConfigEntry,
     mock_thermostat_with_operating_mode: Mock,
@@ -147,10 +147,10 @@ async def test_set_hvac_mode_with_operation_mode_support(
     mock_fibaro_client.read_rooms.return_value = [mock_room]
     mock_fibaro_client.read_devices.return_value = [mock_thermostat_with_operating_mode]
 
-    with patch("homeassistant.components.fibaro.PLATFORMS", [Platform.CLIMATE]):
+    with patch("menuai.components.fibaro.PLATFORMS", [Platform.CLIMATE]):
         # Act
-        await init_integration(hass, mock_config_entry)
-        await hass.services.async_call(
+        await init_integration(menuai, mock_config_entry)
+        await menuai.services.async_call(
             "climate",
             "set_hvac_mode",
             {"entity_id": "climate.room_1_test_climate_6", "hvac_mode": HVACMode.HEAT},
@@ -162,7 +162,7 @@ async def test_set_hvac_mode_with_operation_mode_support(
 
 
 async def test_fan_mode(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_fibaro_client: Mock,
     mock_config_entry: MockConfigEntry,
     mock_thermostat_parent: Mock,
@@ -180,17 +180,17 @@ async def test_fan_mode(
         mock_fan_device,
     ]
 
-    with patch("homeassistant.components.fibaro.PLATFORMS", [Platform.CLIMATE]):
+    with patch("menuai.components.fibaro.PLATFORMS", [Platform.CLIMATE]):
         # Act
-        await init_integration(hass, mock_config_entry)
+        await init_integration(menuai, mock_config_entry)
         # Assert
-        state = hass.states.get("climate.room_1_test_climate_6")
+        state = menuai.states.get("climate.room_1_test_climate_6")
         assert state.attributes["fan_mode"] == "low"
         assert state.attributes["fan_modes"] == ["off", "low", "auto_high"]
 
 
 async def test_set_fan_mode(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_fibaro_client: Mock,
     mock_config_entry: MockConfigEntry,
     mock_thermostat_parent: Mock,
@@ -208,10 +208,10 @@ async def test_set_fan_mode(
         mock_fan_device,
     ]
 
-    with patch("homeassistant.components.fibaro.PLATFORMS", [Platform.CLIMATE]):
+    with patch("menuai.components.fibaro.PLATFORMS", [Platform.CLIMATE]):
         # Act
-        await init_integration(hass, mock_config_entry)
-        await hass.services.async_call(
+        await init_integration(menuai, mock_config_entry)
+        await menuai.services.async_call(
             "climate",
             "set_fan_mode",
             {"entity_id": "climate.room_1_test_climate_6", "fan_mode": "off"},
@@ -223,7 +223,7 @@ async def test_set_fan_mode(
 
 
 async def test_target_temperature(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_fibaro_client: Mock,
     mock_config_entry: MockConfigEntry,
     mock_thermostat_parent: Mock,
@@ -241,16 +241,16 @@ async def test_target_temperature(
         mock_fan_device,
     ]
 
-    with patch("homeassistant.components.fibaro.PLATFORMS", [Platform.CLIMATE]):
+    with patch("menuai.components.fibaro.PLATFORMS", [Platform.CLIMATE]):
         # Act
-        await init_integration(hass, mock_config_entry)
+        await init_integration(menuai, mock_config_entry)
         # Assert
-        state = hass.states.get("climate.room_1_test_climate_6")
+        state = menuai.states.get("climate.room_1_test_climate_6")
         assert state.attributes["temperature"] == 23
 
 
 async def test_set_target_temperature(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_fibaro_client: Mock,
     mock_config_entry: MockConfigEntry,
     mock_thermostat_parent: Mock,
@@ -268,10 +268,10 @@ async def test_set_target_temperature(
         mock_fan_device,
     ]
 
-    with patch("homeassistant.components.fibaro.PLATFORMS", [Platform.CLIMATE]):
+    with patch("menuai.components.fibaro.PLATFORMS", [Platform.CLIMATE]):
         # Act
-        await init_integration(hass, mock_config_entry)
-        await hass.services.async_call(
+        await init_integration(menuai, mock_config_entry)
+        await menuai.services.async_call(
             "climate",
             "set_temperature",
             {"entity_id": "climate.room_1_test_climate_6", "temperature": 25.5},

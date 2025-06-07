@@ -1,12 +1,12 @@
 """Tests for the sensors provided by the PVOutput integration."""
 
-from homeassistant.components.pvoutput.const import DOMAIN
-from homeassistant.components.sensor import (
+from menuai.components.pvoutput.const import DOMAIN
+from menuai.components.sensor import (
     ATTR_STATE_CLASS,
     SensorDeviceClass,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     ATTR_FRIENDLY_NAME,
     ATTR_ICON,
@@ -16,21 +16,21 @@ from homeassistant.const import (
     UnitOfPower,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from tests.common import MockConfigEntry
 
 
 async def test_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     init_integration: MockConfigEntry,
 ) -> None:
     """Test the PVOutput sensors."""
 
-    state = hass.states.get("sensor.frenck_s_solar_farm_energy_consumption")
+    state = menuai.states.get("sensor.frenck_s_solar_farm_energy_consumption")
     entry = entity_registry.async_get("sensor.frenck_s_solar_farm_energy_consumption")
     assert entry
     assert state
@@ -46,7 +46,7 @@ async def test_sensors(
     assert state.attributes.get(ATTR_UNIT_OF_MEASUREMENT) == UnitOfEnergy.WATT_HOUR
     assert ATTR_ICON not in state.attributes
 
-    state = hass.states.get("sensor.frenck_s_solar_farm_energy_generation")
+    state = menuai.states.get("sensor.frenck_s_solar_farm_energy_generation")
     entry = entity_registry.async_get("sensor.frenck_s_solar_farm_energy_generation")
     assert entry
     assert state
@@ -62,7 +62,7 @@ async def test_sensors(
     assert state.attributes.get(ATTR_UNIT_OF_MEASUREMENT) == UnitOfEnergy.WATT_HOUR
     assert ATTR_ICON not in state.attributes
 
-    state = hass.states.get("sensor.frenck_s_solar_farm_efficiency")
+    state = menuai.states.get("sensor.frenck_s_solar_farm_efficiency")
     entry = entity_registry.async_get("sensor.frenck_s_solar_farm_efficiency")
     assert entry
     assert state
@@ -78,7 +78,7 @@ async def test_sensors(
     assert ATTR_DEVICE_CLASS not in state.attributes
     assert ATTR_ICON not in state.attributes
 
-    state = hass.states.get("sensor.frenck_s_solar_farm_power_consumption")
+    state = menuai.states.get("sensor.frenck_s_solar_farm_power_consumption")
     entry = entity_registry.async_get("sensor.frenck_s_solar_farm_power_consumption")
     assert entry
     assert state
@@ -94,7 +94,7 @@ async def test_sensors(
     assert state.attributes.get(ATTR_UNIT_OF_MEASUREMENT) == UnitOfPower.WATT
     assert ATTR_ICON not in state.attributes
 
-    state = hass.states.get("sensor.frenck_s_solar_farm_power_generation")
+    state = menuai.states.get("sensor.frenck_s_solar_farm_power_generation")
     entry = entity_registry.async_get("sensor.frenck_s_solar_farm_power_generation")
     assert entry
     assert state
@@ -110,7 +110,7 @@ async def test_sensors(
     assert state.attributes.get(ATTR_UNIT_OF_MEASUREMENT) == UnitOfPower.WATT
     assert ATTR_ICON not in state.attributes
 
-    state = hass.states.get("sensor.frenck_s_solar_farm_temperature")
+    state = menuai.states.get("sensor.frenck_s_solar_farm_temperature")
     entry = entity_registry.async_get("sensor.frenck_s_solar_farm_temperature")
     assert entry
     assert state
@@ -123,7 +123,7 @@ async def test_sensors(
     assert state.attributes.get(ATTR_UNIT_OF_MEASUREMENT) == UnitOfTemperature.CELSIUS
     assert ATTR_ICON not in state.attributes
 
-    state = hass.states.get("sensor.frenck_s_solar_farm_voltage")
+    state = menuai.states.get("sensor.frenck_s_solar_farm_voltage")
     entry = entity_registry.async_get("sensor.frenck_s_solar_farm_voltage")
     assert entry
     assert state

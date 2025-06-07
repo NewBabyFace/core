@@ -8,13 +8,13 @@ from aiohomeconnect.const import OAUTH2_AUTHORIZE, OAUTH2_TOKEN
 from aiohomeconnect.model import HomeAppliance
 import pytest
 
-from homeassistant import config_entries, setup
-from homeassistant.components.home_connect.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import config_entry_oauth2_flow, device_registry as dr
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai import config_entries, setup
+from menuai.components.home_connect.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers import config_entry_oauth2_flow, device_registry as dr
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
 
 from .conftest import FAKE_ACCESS_TOKEN, FAKE_REFRESH_TOKEN
 
@@ -61,18 +61,18 @@ DHCP_DISCOVERY = (
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_full_flow(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
     """Check full flow."""
-    assert await setup.async_setup_component(hass, "home_connect", {})
+    assert await setup.async_setup_component(menuai, "home_connect", {})
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "home_connect", context={"source": config_entries.SOURCE_USER}
     )
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
@@ -86,7 +86,7 @@ async def test_full_flow(
         f"&state={state}"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == HTTPStatus.OK
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
@@ -102,32 +102,32 @@ async def test_full_flow(
     )
 
     with patch(
-        "homeassistant.components.home_connect.async_setup_entry", return_value=True
+        "menuai.components.home_connect.async_setup_entry", return_value=True
     ) as mock_setup_entry:
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
-        await hass.async_block_till_done()
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
+        await menuai.async_block_till_done()
 
-    assert hass.config_entries.async_entry_for_domain_unique_id(DOMAIN, "1234567890")
+    assert menuai.config_entries.async_entry_for_domain_unique_id(DOMAIN, "1234567890")
     assert len(mock_setup_entry.mock_calls) == 1
 
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_prevent_reconfiguring_same_account(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test we only allow one config entry per account."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    assert await setup.async_setup_component(hass, "home_connect", {})
+    assert await setup.async_setup_component(menuai, "home_connect", {})
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "home_connect", context={"source": config_entries.SOURCE_USER}
     )
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
@@ -141,7 +141,7 @@ async def test_prevent_reconfiguring_same_account(
         f"&state={state}"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == HTTPStatus.OK
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
@@ -156,8 +156,8 @@ async def test_prevent_reconfiguring_same_account(
         },
     )
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
-    await hass.async_block_till_done()
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
@@ -165,29 +165,29 @@ async def test_prevent_reconfiguring_same_account(
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_reauth_flow(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test reauth flow."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    result = await config_entry.start_reauth_flow(hass)
+    result = await config_entry.start_reauth_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
         },
     )
 
-    _client = await hass_client_no_auth()
+    _client = await menuai_client_no_auth()
     resp = await _client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == HTTPStatus.OK
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
@@ -203,12 +203,12 @@ async def test_reauth_flow(
     )
 
     with patch(
-        "homeassistant.components.home_connect.async_setup_entry", return_value=True
+        "menuai.components.home_connect.async_setup_entry", return_value=True
     ) as mock_setup_entry:
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
-        await hass.async_block_till_done()
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
+        await menuai.async_block_till_done()
 
-    entry = hass.config_entries.async_entry_for_domain_unique_id(DOMAIN, "1234567890")
+    entry = menuai.config_entries.async_entry_for_domain_unique_id(DOMAIN, "1234567890")
     assert entry
     assert entry.state is ConfigEntryState.LOADED
     assert len(mock_setup_entry.mock_calls) == 1
@@ -219,29 +219,29 @@ async def test_reauth_flow(
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_reauth_flow_with_different_account(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test reauth flow."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    result = await config_entry.start_reauth_flow(hass)
+    result = await config_entry.start_reauth_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
         },
     )
 
-    _client = await hass_client_no_auth()
+    _client = await menuai_client_no_auth()
     resp = await _client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == HTTPStatus.OK
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
@@ -260,8 +260,8 @@ async def test_reauth_flow_with_different_account(
         },
     )
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
-    await hass.async_block_till_done()
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "wrong_account"
@@ -269,14 +269,14 @@ async def test_reauth_flow_with_different_account(
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_zeroconf_flow(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
     """Test zeroconf flow."""
-    assert await setup.async_setup_component(hass, "home_connect", {})
+    assert await setup.async_setup_component(menuai, "home_connect", {})
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_ZEROCONF}
     )
 
@@ -284,12 +284,12 @@ async def test_zeroconf_flow(
     assert result["step_id"] == "oauth_discovery"
     assert not result["errors"]
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {},
     )
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
@@ -303,7 +303,7 @@ async def test_zeroconf_flow(
         f"&state={state}"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == HTTPStatus.OK
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
@@ -319,26 +319,26 @@ async def test_zeroconf_flow(
     )
 
     with patch(
-        "homeassistant.components.home_connect.async_setup_entry", return_value=True
+        "menuai.components.home_connect.async_setup_entry", return_value=True
     ) as mock_setup_entry:
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
-        await hass.async_block_till_done()
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
+        await menuai.async_block_till_done()
 
-    assert hass.config_entries.async_entry_for_domain_unique_id(DOMAIN, "1234567890")
+    assert menuai.config_entries.async_entry_for_domain_unique_id(DOMAIN, "1234567890")
     assert len(mock_setup_entry.mock_calls) == 1
 
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_zeroconf_flow_already_setup(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test zeroconf discovery with already setup device."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=DHCP_DISCOVERY[0],
@@ -350,14 +350,14 @@ async def test_zeroconf_flow_already_setup(
 @pytest.mark.usefixtures("current_request_with_host")
 @pytest.mark.parametrize("dhcp_discovery", DHCP_DISCOVERY)
 async def test_dhcp_flow(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     dhcp_discovery: DhcpServiceInfo,
 ) -> None:
     """Test DHCP discovery."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_DHCP}, data=dhcp_discovery
     )
 
@@ -365,12 +365,12 @@ async def test_dhcp_flow(
     assert result["step_id"] == "oauth_discovery"
     assert not result["errors"]
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {},
     )
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
@@ -383,7 +383,7 @@ async def test_dhcp_flow(
         f"&state={state}"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == HTTPStatus.OK
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
@@ -399,24 +399,24 @@ async def test_dhcp_flow(
     )
 
     with patch(
-        "homeassistant.components.home_connect.async_setup_entry", return_value=True
+        "menuai.components.home_connect.async_setup_entry", return_value=True
     ) as mock_setup_entry:
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
-        await hass.async_block_till_done()
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
+        await menuai.async_block_till_done()
 
-    assert hass.config_entries.async_entry_for_domain_unique_id(DOMAIN, "1234567890")
+    assert menuai.config_entries.async_entry_for_domain_unique_id(DOMAIN, "1234567890")
     assert len(mock_setup_entry.mock_calls) == 1
 
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_dhcp_flow_already_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test DHCP discovery with already setup device."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_DHCP}, data=DHCP_DISCOVERY[0]
     )
     assert result["type"] is FlowResultType.ABORT
@@ -447,7 +447,7 @@ async def test_dhcp_flow_already_setup(
     indirect=["appliance"],
 )
 async def test_dhcp_flow_complete_device_information(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     client: MagicMock,
     config_entry: MockConfigEntry,
@@ -463,7 +463,7 @@ async def test_dhcp_flow_complete_device_information(
     assert device
     assert device.connections == set()
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_DHCP}, data=dhcp_discovery
     )
     assert result["type"] is FlowResultType.ABORT

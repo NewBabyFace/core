@@ -7,13 +7,13 @@ from typing import Any
 
 from aioesphomeapi import EntityInfo, ValveInfo, ValveOperation, ValveState
 
-from homeassistant.components.valve import (
+from menuai.components.valve import (
     ValveDeviceClass,
     ValveEntity,
     ValveEntityFeature,
 )
-from homeassistant.core import callback
-from homeassistant.util.enum import try_parse_enum
+from menuai.core import callback
+from menuai.util.enum import try_parse_enum
 
 from .entity import (
     EsphomeEntity,

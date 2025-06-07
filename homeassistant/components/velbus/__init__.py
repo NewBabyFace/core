@@ -11,13 +11,13 @@ import shutil
 from velbusaio.controller import Velbus
 from velbusaio.exceptions import VelbusConnectionFailed
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_PORT, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady, PlatformNotReady
-from homeassistant.helpers import config_validation as cv, device_registry as dr
-from homeassistant.helpers.storage import STORAGE_DIR
-from homeassistant.helpers.typing import ConfigType
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_PORT, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady, PlatformNotReady
+from menuai.helpers import config_validation as cv, device_registry as dr
+from menuai.helpers.storage import STORAGE_DIR
+from menuai.helpers.typing import ConfigType
 
 from .const import DOMAIN
 from .services import setup_services
@@ -49,7 +49,7 @@ class VelbusData:
 
 
 async def velbus_scan_task(
-    controller: Velbus, hass: HomeAssistant, entry_id: str
+    controller: Velbus, menuai: menuai, entry_id: str
 ) -> None:
     """Task to offload the long running scan."""
     try:
@@ -59,7 +59,7 @@ async def velbus_scan_task(
             f"Connection error while connecting to Velbus {entry_id}: {ex}"
         ) from ex
     # create all modules
-    dev_reg = dr.async_get(hass)
+    dev_reg = dr.async_get(menuai)
     for module in controller.get_modules().values():
         dev_reg.async_get_or_create(
             config_entry_id=entry_id,
@@ -75,9 +75,9 @@ async def velbus_scan_task(
         )
 
 
-def _migrate_device_identifiers(hass: HomeAssistant, entry_id: str) -> None:
+def _migrate_device_identifiers(menuai: menuai, entry_id: str) -> None:
     """Migrate old device identifiers."""
-    dev_reg = dr.async_get(hass)
+    dev_reg = dr.async_get(menuai)
     devices: list[dr.DeviceEntry] = dr.async_entries_for_config_entry(dev_reg, entry_id)
     for device in devices:
         old_identifier = list(next(iter(device.identifiers)))
@@ -89,50 +89,50 @@ def _migrate_device_identifiers(hass: HomeAssistant, entry_id: str) -> None:
             dev_reg.async_update_device(device.id, new_identifiers=new_identifier)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the actions for the Velbus component."""
-    setup_services(hass)
+    setup_services(menuai)
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: VelbusConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: VelbusConfigEntry) -> bool:
     """Establish connection with velbus."""
     controller = Velbus(
         entry.data[CONF_PORT],
-        cache_dir=hass.config.path(STORAGE_DIR, f"velbuscache-{entry.entry_id}"),
+        cache_dir=menuai.config.path(STORAGE_DIR, f"velbuscache-{entry.entry_id}"),
     )
     try:
         await controller.connect()
     except VelbusConnectionFailed as error:
         raise ConfigEntryNotReady("Cannot connect to Velbus") from error
 
-    task = hass.async_create_task(velbus_scan_task(controller, hass, entry.entry_id))
+    task = menuai.async_create_task(velbus_scan_task(controller, menuai, entry.entry_id))
     entry.runtime_data = VelbusData(controller=controller, scan_task=task)
 
-    _migrate_device_identifiers(hass, entry.entry_id)
+    _migrate_device_identifiers(menuai, entry.entry_id)
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: VelbusConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: VelbusConfigEntry) -> bool:
     """Unload (close) the velbus connection."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
     await entry.runtime_data.controller.stop()
     return unload_ok
 
 
-async def async_remove_entry(hass: HomeAssistant, entry: VelbusConfigEntry) -> None:
+async def async_remove_entry(menuai: menuai, entry: VelbusConfigEntry) -> None:
     """Remove the velbus entry, so we also have to cleanup the cache dir."""
-    await hass.async_add_executor_job(
+    await menuai.async_add_executor_job(
         shutil.rmtree,
-        hass.config.path(STORAGE_DIR, f"velbuscache-{entry.entry_id}"),
+        menuai.config.path(STORAGE_DIR, f"velbuscache-{entry.entry_id}"),
     )
 
 
 async def async_migrate_entry(
-    hass: HomeAssistant, config_entry: VelbusConfigEntry
+    menuai: menuai, config_entry: VelbusConfigEntry
 ) -> bool:
     """Migrate old entry."""
     _LOGGER.error(
@@ -143,11 +143,11 @@ async def async_migrate_entry(
     # migrate from 1.x to 2.1
     if config_entry.version < 2:
         # clean the velbusCache
-        cache_path = hass.config.path(
+        cache_path = menuai.config.path(
             STORAGE_DIR, f"velbuscache-{config_entry.entry_id}/"
         )
         if os.path.isdir(cache_path):
-            await hass.async_add_executor_job(shutil.rmtree, cache_path)
+            await menuai.async_add_executor_job(shutil.rmtree, cache_path)
 
     # This is the config entry migration for swapping the usb unique id to the serial number
     # migrate from 2.1 to 2.2
@@ -160,10 +160,10 @@ async def async_migrate_entry(
         parts = config_entry.unique_id.split("_")
         # old one should have 4 item
         if len(parts) == 4:
-            hass.config_entries.async_update_entry(config_entry, unique_id=parts[1])
+            menuai.config_entries.async_update_entry(config_entry, unique_id=parts[1])
 
     # update the config entry
-    hass.config_entries.async_update_entry(config_entry, version=2, minor_version=2)
+    menuai.config_entries.async_update_entry(config_entry, version=2, minor_version=2)
 
     _LOGGER.error(
         "Migration to version %s.%s successful",

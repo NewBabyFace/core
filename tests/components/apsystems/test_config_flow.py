@@ -2,20 +2,20 @@
 
 from unittest.mock import AsyncMock
 
-from homeassistant.components.apsystems.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_IP_ADDRESS, CONF_PORT
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.apsystems.const import DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_IP_ADDRESS, CONF_PORT
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
 
 async def test_form_create_success(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock, mock_apsystems: AsyncMock
+    menuai: menuai, mock_setup_entry: AsyncMock, mock_apsystems: AsyncMock
 ) -> None:
     """Test we handle creatinw with success."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={
@@ -28,10 +28,10 @@ async def test_form_create_success(
 
 
 async def test_form_create_success_custom_port(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock, mock_apsystems: AsyncMock
+    menuai: menuai, mock_setup_entry: AsyncMock, mock_apsystems: AsyncMock
 ) -> None:
     """Test we handle creating with custom port with success."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={
@@ -46,12 +46,12 @@ async def test_form_create_success_custom_port(
 
 
 async def test_form_cannot_connect_and_recover(
-    hass: HomeAssistant, mock_apsystems: AsyncMock, mock_setup_entry: AsyncMock
+    menuai: menuai, mock_apsystems: AsyncMock, mock_setup_entry: AsyncMock
 ) -> None:
     """Test we handle cannot connect error."""
 
     mock_apsystems.get_device_info.side_effect = TimeoutError
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={
@@ -64,7 +64,7 @@ async def test_form_cannot_connect_and_recover(
 
     mock_apsystems.get_device_info.side_effect = None
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_IP_ADDRESS: "127.0.0.1",
@@ -76,12 +76,12 @@ async def test_form_cannot_connect_and_recover(
 
 
 async def test_form_cannot_connect_and_recover_custom_port(
-    hass: HomeAssistant, mock_apsystems: AsyncMock, mock_setup_entry: AsyncMock
+    menuai: menuai, mock_apsystems: AsyncMock, mock_setup_entry: AsyncMock
 ) -> None:
     """Test we handle cannot connect error but recovering with custom port."""
 
     mock_apsystems.get_device_info.side_effect = TimeoutError
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={CONF_IP_ADDRESS: "127.0.0.2", CONF_PORT: 8042},
@@ -92,7 +92,7 @@ async def test_form_cannot_connect_and_recover_custom_port(
 
     mock_apsystems.get_device_info.side_effect = None
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_IP_ADDRESS: "127.0.0.1", CONF_PORT: 8042},
     )
@@ -103,15 +103,15 @@ async def test_form_cannot_connect_and_recover_custom_port(
 
 
 async def test_form_unique_id_already_configured(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_apsystems: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test we handle cannot connect error."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={

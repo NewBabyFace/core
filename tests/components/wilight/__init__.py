@@ -2,13 +2,13 @@
 
 from pywilight.const import DOMAIN
 
-from homeassistant.components.wilight.config_flow import (
+from menuai.components.wilight.config_flow import (
     CONF_MODEL_NAME,
     CONF_SERIAL_NUMBER,
 )
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.service_info.ssdp import (
+from menuai.const import CONF_HOST
+from menuai.core import menuai
+from menuai.helpers.service_info.ssdp import (
     ATTR_UPNP_MANUFACTURER,
     ATTR_UPNP_MODEL_NAME,
     ATTR_UPNP_MODEL_NUMBER,
@@ -71,9 +71,9 @@ MOCK_SSDP_DISCOVERY_INFO_MISSING_MANUFACTURER = SsdpServiceInfo(
 
 
 async def setup_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> MockConfigEntry:
-    """Mock ConfigEntry in Home Assistant."""
+    """Mock ConfigEntry in MenuAI."""
 
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -85,9 +85,9 @@ async def setup_integration(
         },
     )
 
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     return entry

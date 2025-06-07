@@ -8,10 +8,10 @@ import logging
 
 from ismartgate import AbstractGateApi, GogoGate2InfoResponse, ISmartGateInfoResponse
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.debounce import Debouncer
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.debounce import Debouncer
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 type GogoGateConfigEntry = ConfigEntry[DeviceDataUpdateCoordinator]
 
@@ -25,7 +25,7 @@ class DeviceDataUpdateCoordinator(
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: GogoGateConfigEntry,
         logger: logging.Logger,
         api: AbstractGateApi,
@@ -40,7 +40,7 @@ class DeviceDataUpdateCoordinator(
     ) -> None:
         """Initialize the data update coordinator."""
         super().__init__(
-            hass,
+            menuai,
             logger,
             config_entry=config_entry,
             name=name,

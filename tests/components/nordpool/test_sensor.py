@@ -11,10 +11,10 @@ from pynordpool import API
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.config_entries import ConfigEntry
+from menuai.const import STATE_UNKNOWN
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from tests.common import async_fire_time_changed, snapshot_platform
 from tests.test_util.aiohttp import AiohttpClientMocker
@@ -23,24 +23,24 @@ from tests.test_util.aiohttp import AiohttpClientMocker
 @pytest.mark.freeze_time("2024-11-05T18:00:00+00:00")
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test the Nord Pool sensor."""
 
-    await snapshot_platform(hass, entity_registry, snapshot, load_int.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, load_int.entry_id)
 
 
 @pytest.mark.freeze_time("2024-11-05T18:00:00+00:00")
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensor_current_price_is_0(
-    hass: HomeAssistant, load_int: ConfigEntry
+    menuai: menuai, load_int: ConfigEntry
 ) -> None:
     """Test the Nord Pool sensor working if price is 0."""
 
-    current_price = hass.states.get("sensor.nord_pool_se4_current_price")
+    current_price = menuai.states.get("sensor.nord_pool_se4_current_price")
 
     assert current_price is not None
     assert current_price.state == "0.0"  # SE4 2024-11-05T18:00:00Z
@@ -48,12 +48,12 @@ async def test_sensor_current_price_is_0(
 
 @pytest.mark.freeze_time("2024-11-05T23:00:00+00:00")
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
-async def test_sensor_no_next_price(hass: HomeAssistant, load_int: ConfigEntry) -> None:
+async def test_sensor_no_next_price(menuai: menuai, load_int: ConfigEntry) -> None:
     """Test the Nord Pool sensor."""
 
-    current_price = hass.states.get("sensor.nord_pool_se3_current_price")
-    last_price = hass.states.get("sensor.nord_pool_se3_previous_price")
-    next_price = hass.states.get("sensor.nord_pool_se3_next_price")
+    current_price = menuai.states.get("sensor.nord_pool_se3_current_price")
+    last_price = menuai.states.get("sensor.nord_pool_se3_previous_price")
+    next_price = menuai.states.get("sensor.nord_pool_se3_next_price")
 
     assert current_price is not None
     assert last_price is not None
@@ -66,13 +66,13 @@ async def test_sensor_no_next_price(hass: HomeAssistant, load_int: ConfigEntry) 
 @pytest.mark.freeze_time("2024-11-06T00:00:00+01:00")
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensor_no_previous_price(
-    hass: HomeAssistant, load_int: ConfigEntry
+    menuai: menuai, load_int: ConfigEntry
 ) -> None:
     """Test the Nord Pool sensor."""
 
-    current_price = hass.states.get("sensor.nord_pool_se3_current_price")
-    last_price = hass.states.get("sensor.nord_pool_se3_previous_price")
-    next_price = hass.states.get("sensor.nord_pool_se3_next_price")
+    current_price = menuai.states.get("sensor.nord_pool_se3_current_price")
+    last_price = menuai.states.get("sensor.nord_pool_se3_previous_price")
+    next_price = menuai.states.get("sensor.nord_pool_se3_next_price")
 
     assert current_price is not None
     assert last_price is not None
@@ -85,7 +85,7 @@ async def test_sensor_no_previous_price(
 @pytest.mark.freeze_time("2024-11-05T11:00:01+01:00")
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensor_empty_response(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
     load_json: list[dict[str, Any]],
     aioclient_mock: AiohttpClientMocker,
@@ -95,9 +95,9 @@ async def test_sensor_empty_response(
 
     responses = list(load_json)
 
-    current_price = hass.states.get("sensor.nord_pool_se3_current_price")
-    last_price = hass.states.get("sensor.nord_pool_se3_previous_price")
-    next_price = hass.states.get("sensor.nord_pool_se3_next_price")
+    current_price = menuai.states.get("sensor.nord_pool_se3_current_price")
+    last_price = menuai.states.get("sensor.nord_pool_se3_previous_price")
+    next_price = menuai.states.get("sensor.nord_pool_se3_next_price")
     assert current_price is not None
     assert last_price is not None
     assert next_price is not None
@@ -142,14 +142,14 @@ async def test_sensor_empty_response(
     )
 
     freezer.tick(timedelta(hours=1))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     # All prices should be known as tomorrow is not loaded by sensors
 
-    current_price = hass.states.get("sensor.nord_pool_se3_current_price")
-    last_price = hass.states.get("sensor.nord_pool_se3_previous_price")
-    next_price = hass.states.get("sensor.nord_pool_se3_next_price")
+    current_price = menuai.states.get("sensor.nord_pool_se3_current_price")
+    last_price = menuai.states.get("sensor.nord_pool_se3_previous_price")
+    next_price = menuai.states.get("sensor.nord_pool_se3_next_price")
     assert current_price is not None
     assert last_price is not None
     assert next_price is not None
@@ -194,15 +194,15 @@ async def test_sensor_empty_response(
     )
 
     freezer.move_to("2024-11-05T22:00:01+00:00")
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     # Current and last price should be known, next price should be unknown
     # as api responds with empty data (204)
 
-    current_price = hass.states.get("sensor.nord_pool_se3_current_price")
-    last_price = hass.states.get("sensor.nord_pool_se3_previous_price")
-    next_price = hass.states.get("sensor.nord_pool_se3_next_price")
+    current_price = menuai.states.get("sensor.nord_pool_se3_current_price")
+    last_price = menuai.states.get("sensor.nord_pool_se3_previous_price")
+    next_price = menuai.states.get("sensor.nord_pool_se3_next_price")
     assert current_price is not None
     assert last_price is not None
     assert next_price is not None

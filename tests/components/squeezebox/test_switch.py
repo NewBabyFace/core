@@ -6,11 +6,11 @@ from unittest.mock import MagicMock
 from freezegun.api import FrozenDateTimeFactory
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.squeezebox.const import PLAYER_UPDATE_INTERVAL
-from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
-from homeassistant.const import CONF_ENTITY_ID, SERVICE_TURN_OFF, SERVICE_TURN_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_registry import EntityRegistry
+from menuai.components.squeezebox.const import PLAYER_UPDATE_INTERVAL
+from menuai.components.switch import DOMAIN as SWITCH_DOMAIN
+from menuai.const import CONF_ENTITY_ID, SERVICE_TURN_OFF, SERVICE_TURN_ON
+from menuai.core import menuai
+from menuai.helpers.entity_registry import EntityRegistry
 
 from .conftest import TEST_ALARM_ID
 
@@ -18,52 +18,52 @@ from tests.common import MockConfigEntry, async_fire_time_changed, snapshot_plat
 
 
 async def test_entity_registry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: EntityRegistry,
     mock_alarms_player: MagicMock,
     snapshot: SnapshotAssertion,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test squeezebox media_player entity registered in the entity registry."""
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
 
 async def test_switch_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_alarms_player: MagicMock,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test the state of the switch."""
-    assert hass.states.get(f"switch.test_player_alarm_{TEST_ALARM_ID}").state == "on"
+    assert menuai.states.get(f"switch.test_player_alarm_{TEST_ALARM_ID}").state == "on"
 
     mock_alarms_player.alarms[0]["enabled"] = False
     freezer.tick(timedelta(seconds=PLAYER_UPDATE_INTERVAL))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
-    assert hass.states.get(f"switch.test_player_alarm_{TEST_ALARM_ID}").state == "off"
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
+    assert menuai.states.get(f"switch.test_player_alarm_{TEST_ALARM_ID}").state == "off"
 
 
 async def test_switch_deleted(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_alarms_player: MagicMock,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test detecting switch deleted."""
-    assert hass.states.get(f"switch.test_player_alarm_{TEST_ALARM_ID}").state == "on"
+    assert menuai.states.get(f"switch.test_player_alarm_{TEST_ALARM_ID}").state == "on"
 
     mock_alarms_player.alarms = []
     freezer.tick(timedelta(seconds=PLAYER_UPDATE_INTERVAL))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
-    assert hass.states.get(f"switch.test_player_alarm_{TEST_ALARM_ID}") is None
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
+    assert menuai.states.get(f"switch.test_player_alarm_{TEST_ALARM_ID}") is None
 
 
 async def test_turn_on(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_alarms_player: MagicMock,
 ) -> None:
     """Test turning on the switch."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_ON,
         {CONF_ENTITY_ID: f"switch.test_player_alarm_{TEST_ALARM_ID}"},
@@ -75,11 +75,11 @@ async def test_turn_on(
 
 
 async def test_turn_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_alarms_player: MagicMock,
 ) -> None:
     """Test turning on the switch."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_OFF,
         {CONF_ENTITY_ID: f"switch.test_player_alarm_{TEST_ALARM_ID}"},
@@ -91,28 +91,28 @@ async def test_turn_off(
 
 
 async def test_alarms_enabled_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_alarms_player: MagicMock,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test the alarms enabled switch."""
 
-    assert hass.states.get("switch.test_player_alarms_enabled").state == "on"
+    assert menuai.states.get("switch.test_player_alarms_enabled").state == "on"
 
     mock_alarms_player.alarms_enabled = False
     freezer.tick(timedelta(seconds=PLAYER_UPDATE_INTERVAL))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("switch.test_player_alarms_enabled").state == "off"
+    assert menuai.states.get("switch.test_player_alarms_enabled").state == "off"
 
 
 async def test_alarms_enabled_turn_on(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_alarms_player: MagicMock,
 ) -> None:
     """Test turning on the alarms enabled switch."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_ON,
         {CONF_ENTITY_ID: "switch.test_player_alarms_enabled"},
@@ -122,11 +122,11 @@ async def test_alarms_enabled_turn_on(
 
 
 async def test_alarms_enabled_turn_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_alarms_player: MagicMock,
 ) -> None:
     """Test turning off the alarms enabled switch."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_OFF,
         {CONF_ENTITY_ID: "switch.test_player_alarms_enabled"},

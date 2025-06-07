@@ -1,18 +1,18 @@
 """Intents for the vacuum integration."""
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import intent
+from menuai.core import menuai
+from menuai.helpers import intent
 
 from . import DOMAIN, SERVICE_RETURN_TO_BASE, SERVICE_START
 
-INTENT_VACUUM_START = "HassVacuumStart"
-INTENT_VACUUM_RETURN_TO_BASE = "HassVacuumReturnToBase"
+INTENT_VACUUM_START = "menuaiVacuumStart"
+INTENT_VACUUM_RETURN_TO_BASE = "menuaiVacuumReturnToBase"
 
 
-async def async_setup_intents(hass: HomeAssistant) -> None:
+async def async_setup_intents(menuai: menuai) -> None:
     """Set up the vacuum intents."""
     intent.async_register(
-        hass,
+        menuai,
         intent.ServiceIntentHandler(
             INTENT_VACUUM_START,
             DOMAIN,
@@ -23,7 +23,7 @@ async def async_setup_intents(hass: HomeAssistant) -> None:
         ),
     )
     intent.async_register(
-        hass,
+        menuai,
         intent.ServiceIntentHandler(
             INTENT_VACUUM_RETURN_TO_BASE,
             DOMAIN,

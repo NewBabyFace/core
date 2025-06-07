@@ -4,11 +4,11 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.switcher_kis.const import DOMAIN
-from homeassistant.const import CONF_TOKEN, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.switcher_kis.const import DOMAIN
+from menuai.const import CONF_TOKEN, CONF_USERNAME
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from .consts import (
     DUMMY_DUAL_SHUTTER_SINGLE_LIGHT_DEVICE,
@@ -35,25 +35,25 @@ from tests.common import MockConfigEntry
     indirect=True,
 )
 async def test_user_setup(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock, mock_bridge
+    menuai: menuai, mock_setup_entry: AsyncMock, mock_bridge
 ) -> None:
     """Test we can finish a config flow."""
-    with patch("homeassistant.components.switcher_kis.utils.DISCOVERY_TIME_SEC", 0):
-        result = await hass.config_entries.flow.async_init(
+    with patch("menuai.components.switcher_kis.utils.DISCOVERY_TIME_SEC", 0):
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
 
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "confirm"
 
-        result2 = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+        result2 = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
         assert mock_bridge.is_running is False
         assert result2["type"] is FlowResultType.CREATE_ENTRY
         assert result2["title"] == "Switcher"
         assert result2["result"].data == {CONF_USERNAME: None, CONF_TOKEN: None}
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         assert len(mock_setup_entry.mock_calls) == 1
 
@@ -69,28 +69,28 @@ async def test_user_setup(
     indirect=True,
 )
 async def test_user_setup_found_token_device_valid_token(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock, mock_bridge
+    menuai: menuai, mock_setup_entry: AsyncMock, mock_bridge
 ) -> None:
     """Test we can finish a config flow with token device found."""
-    with patch("homeassistant.components.switcher_kis.utils.DISCOVERY_TIME_SEC", 0):
-        result = await hass.config_entries.flow.async_init(
+    with patch("menuai.components.switcher_kis.utils.DISCOVERY_TIME_SEC", 0):
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "confirm"
 
-    result2 = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result2 = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert mock_bridge.is_running is False
     assert result2["type"] is FlowResultType.FORM
     assert result2["step_id"] == "credentials"
 
     with patch(
-        "homeassistant.components.switcher_kis.config_flow.validate_token",
+        "menuai.components.switcher_kis.config_flow.validate_token",
         return_value=True,
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {CONF_USERNAME: DUMMY_USERNAME, CONF_TOKEN: DUMMY_TOKEN},
         )
@@ -114,27 +114,27 @@ async def test_user_setup_found_token_device_valid_token(
     indirect=True,
 )
 async def test_user_setup_found_token_device_invalid_token(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock, mock_bridge
+    menuai: menuai, mock_setup_entry: AsyncMock, mock_bridge
 ) -> None:
     """Test we can finish a config flow with token device found."""
-    with patch("homeassistant.components.switcher_kis.utils.DISCOVERY_TIME_SEC", 0):
-        result = await hass.config_entries.flow.async_init(
+    with patch("menuai.components.switcher_kis.utils.DISCOVERY_TIME_SEC", 0):
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "confirm"
 
-    result2 = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result2 = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["step_id"] == "credentials"
 
     with patch(
-        "homeassistant.components.switcher_kis.config_flow.validate_token",
+        "menuai.components.switcher_kis.config_flow.validate_token",
         return_value=False,
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {CONF_USERNAME: DUMMY_USERNAME, CONF_TOKEN: DUMMY_TOKEN},
         )
@@ -144,34 +144,34 @@ async def test_user_setup_found_token_device_invalid_token(
 
 
 async def test_user_setup_abort_no_devices_found(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock, mock_bridge
+    menuai: menuai, mock_setup_entry: AsyncMock, mock_bridge
 ) -> None:
     """Test we abort a config flow if no devices found."""
-    with patch("homeassistant.components.switcher_kis.utils.DISCOVERY_TIME_SEC", 0):
-        result = await hass.config_entries.flow.async_init(
+    with patch("menuai.components.switcher_kis.utils.DISCOVERY_TIME_SEC", 0):
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
 
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "confirm"
 
-        result2 = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+        result2 = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
         assert mock_bridge.is_running is False
         assert result2["type"] is FlowResultType.ABORT
         assert result2["reason"] == "no_devices_found"
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         assert len(mock_setup_entry.mock_calls) == 0
 
 
-async def test_single_instance(hass: HomeAssistant) -> None:
+async def test_single_instance(menuai: menuai) -> None:
     """Test we only allow a single config flow."""
-    MockConfigEntry(domain=DOMAIN).add_to_hass(hass)
-    await hass.async_block_till_done()
+    MockConfigEntry(domain=DOMAIN).add_to_menuai(menuai)
+    await menuai.async_block_till_done()
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -186,7 +186,7 @@ async def test_single_instance(hass: HomeAssistant) -> None:
     ],
 )
 async def test_reauth_successful(
-    hass: HomeAssistant,
+    menuai: menuai,
     user_input: dict[str, str],
 ) -> None:
     """Test starting a reauthentication flow."""
@@ -194,17 +194,17 @@ async def test_reauth_successful(
         domain=DOMAIN,
         data={CONF_USERNAME: DUMMY_USERNAME, CONF_TOKEN: DUMMY_TOKEN},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await entry.start_reauth_flow(hass)
+    result = await entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
     with patch(
-        "homeassistant.components.switcher_kis.config_flow.validate_token",
+        "menuai.components.switcher_kis.config_flow.validate_token",
         return_value=True,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input=user_input,
         )
@@ -213,23 +213,23 @@ async def test_reauth_successful(
     assert result["reason"] == "reauth_successful"
 
 
-async def test_reauth_invalid_auth(hass: HomeAssistant) -> None:
+async def test_reauth_invalid_auth(menuai: menuai) -> None:
     """Test reauthentication flow with invalid credentials."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         data={CONF_USERNAME: DUMMY_USERNAME, CONF_TOKEN: DUMMY_TOKEN},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await entry.start_reauth_flow(hass)
+    result = await entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
     with patch(
-        "homeassistant.components.switcher_kis.config_flow.validate_token",
+        "menuai.components.switcher_kis.config_flow.validate_token",
         return_value=False,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={CONF_USERNAME: "invalid_user", CONF_TOKEN: "invalid_token"},
         )

@@ -6,10 +6,10 @@ import logging
 
 from idasen_ha import Desk
 
-from homeassistant.components import bluetooth
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.components import bluetooth
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -23,14 +23,14 @@ class IdasenDeskCoordinator(DataUpdateCoordinator[int | None]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: IdasenDeskConfigEntry,
         address: str,
     ) -> None:
         """Init IdasenDeskCoordinator."""
 
         super().__init__(
-            hass, _LOGGER, config_entry=config_entry, name=config_entry.title
+            menuai, _LOGGER, config_entry=config_entry, name=config_entry.title
         )
         self.address = address
         self._expected_connected = False
@@ -42,7 +42,7 @@ class IdasenDeskCoordinator(DataUpdateCoordinator[int | None]):
         _LOGGER.debug("Trying to connect %s", self.address)
         self._expected_connected = True
         ble_device = bluetooth.async_ble_device_from_address(
-            self.hass, self.address, connectable=True
+            self.menuai, self.address, connectable=True
         )
         if ble_device is None:
             _LOGGER.debug("No BLEDevice for %s", self.address)

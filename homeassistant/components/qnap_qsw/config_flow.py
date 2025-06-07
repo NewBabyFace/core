@@ -9,12 +9,12 @@ from aioqsw.exceptions import LoginError, QswError
 from aioqsw.localapi import ConnectionOptions, QnapQswApi
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_PASSWORD, CONF_URL, CONF_USERNAME
-from homeassistant.data_entry_flow import AbortFlow
-from homeassistant.helpers import aiohttp_client
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_PASSWORD, CONF_URL, CONF_USERNAME
+from menuai.data_entry_flow import AbortFlow
+from menuai.helpers import aiohttp_client
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
 
 from .const import DOMAIN
 
@@ -39,7 +39,7 @@ class QNapQSWConfigFlow(ConfigFlow, domain=DOMAIN):
             password = user_input[CONF_PASSWORD]
 
             qsw = QnapQswApi(
-                aiohttp_client.async_get_clientsession(self.hass),
+                aiohttp_client.async_get_clientsession(self.menuai),
                 ConnectionOptions(url, username, password),
             )
 
@@ -89,7 +89,7 @@ class QNapQSWConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
         options = ConnectionOptions(self._discovered_url, "", "")
-        qsw = QnapQswApi(aiohttp_client.async_get_clientsession(self.hass), options)
+        qsw = QnapQswApi(aiohttp_client.async_get_clientsession(self.menuai), options)
 
         try:
             await qsw.get_live()
@@ -110,7 +110,7 @@ class QNapQSWConfigFlow(ConfigFlow, domain=DOMAIN):
             password = user_input[CONF_PASSWORD]
 
             qsw = QnapQswApi(
-                aiohttp_client.async_get_clientsession(self.hass),
+                aiohttp_client.async_get_clientsession(self.menuai),
                 ConnectionOptions(self._discovered_url, username, password),
             )
 

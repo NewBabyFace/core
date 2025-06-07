@@ -9,16 +9,16 @@ import voluptuous as vol
 from zoneminder.monitor import Monitor, MonitorState
 from zoneminder.zm import ZoneMinder
 
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     PLATFORM_SCHEMA as SWITCH_PLATFORM_SCHEMA,
     SwitchEntity,
 )
-from homeassistant.const import CONF_COMMAND_OFF, CONF_COMMAND_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import PlatformNotReady
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_COMMAND_OFF, CONF_COMMAND_ON
+from menuai.core import menuai
+from menuai.exceptions import PlatformNotReady
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import DOMAIN
 
@@ -33,7 +33,7 @@ PLATFORM_SCHEMA = SWITCH_PLATFORM_SCHEMA.extend(
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -45,7 +45,7 @@ def setup_platform(
 
     switches: list[ZMSwitchMonitors] = []
     zm_client: ZoneMinder
-    for zm_client in hass.data[DOMAIN].values():
+    for zm_client in menuai.data[DOMAIN].values():
         if not (monitors := zm_client.get_monitors()):
             raise PlatformNotReady(
                 "Switch could not fetch any monitors from ZoneMinder"

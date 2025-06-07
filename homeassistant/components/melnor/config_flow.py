@@ -6,10 +6,10 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.bluetooth import async_discovered_service_info
-from homeassistant.components.bluetooth.models import BluetoothServiceInfoBleak
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_ADDRESS
+from menuai.components.bluetooth import async_discovered_service_info
+from menuai.components.bluetooth.models import BluetoothServiceInfoBleak
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_ADDRESS
 
 from .const import DOMAIN, MANUFACTURER_DATA_START, MANUFACTURER_ID
 
@@ -77,7 +77,7 @@ class MelnorConfigFlow(ConfigFlow, domain=DOMAIN):
 
         current_addresses = self._async_current_ids()
         for discovery_info in async_discovered_service_info(
-            self.hass, connectable=True
+            self.menuai, connectable=True
         ):
             if discovery_info.manufacturer_id == MANUFACTURER_ID and any(
                 manufacturer_data.startswith(MANUFACTURER_DATA_START)

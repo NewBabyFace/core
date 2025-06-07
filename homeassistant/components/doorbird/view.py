@@ -6,14 +6,14 @@ from http import HTTPStatus
 
 from aiohttp import web
 
-from homeassistant.components.http import KEY_HASS, HomeAssistantView
-from homeassistant.helpers.dispatcher import async_dispatcher_send
+from menuai.components.http import KEY_menuai, menuaiView
+from menuai.helpers.dispatcher import async_dispatcher_send
 
 from .const import API_URL, DOMAIN
 from .util import get_door_station_by_token
 
 
-class DoorBirdRequestView(HomeAssistantView):
+class DoorBirdRequestView(menuaiView):
     """Provide a page for the device to call."""
 
     requires_auth = False
@@ -23,9 +23,9 @@ class DoorBirdRequestView(HomeAssistantView):
 
     async def get(self, request: web.Request, event: str) -> web.Response:
         """Respond to requests from the device."""
-        hass = request.app[KEY_HASS]
+        menuai = request.app[KEY_menuai]
         token: str | None = request.query.get("token")
-        if not token or not (door_station := get_door_station_by_token(hass, token)):
+        if not token or not (door_station := get_door_station_by_token(menuai, token)):
             return web.Response(
                 status=HTTPStatus.UNAUTHORIZED, text="Invalid token provided."
             )
@@ -40,6 +40,6 @@ class DoorBirdRequestView(HomeAssistantView):
         # for any new integrations.
         #
         event_type = f"{DOMAIN}_{event}"
-        hass.bus.async_fire(event_type, event_data)
-        async_dispatcher_send(hass, event_type)
+        menuai.bus.async_fire(event_type, event_data)
+        async_dispatcher_send(menuai, event_type)
         return web.Response(text="OK")

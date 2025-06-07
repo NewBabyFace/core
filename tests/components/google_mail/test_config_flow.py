@@ -5,11 +5,11 @@ from unittest.mock import patch
 from httplib2 import Response
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.google_mail.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import config_entry_oauth2_flow
+from menuai import config_entries
+from menuai.components.google_mail.const import DOMAIN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers import config_entry_oauth2_flow
 
 from .conftest import CLIENT_ID, GOOGLE_AUTH_URI, GOOGLE_TOKEN_URI, SCOPES, TITLE
 
@@ -20,14 +20,14 @@ from tests.typing import ClientSessionGenerator
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_full_flow(
-    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+    menuai: menuai, menuai_client_no_auth: ClientSessionGenerator
 ) -> None:
     """Check full flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "google_mail", context={"source": config_entries.SOURCE_USER}
     )
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
@@ -41,29 +41,29 @@ async def test_full_flow(
         "&access_type=offline&prompt=consent"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == 200
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
 
     with (
         patch(
-            "homeassistant.components.google_mail.async_setup_entry", return_value=True
+            "menuai.components.google_mail.async_setup_entry", return_value=True
         ) as mock_setup,
         patch(
             "httplib2.Http.request",
             return_value=(
                 Response({}),
                 bytes(
-                    await async_load_fixture(hass, "get_profile.json", DOMAIN),
+                    await async_load_fixture(menuai, "get_profile.json", DOMAIN),
                     encoding="UTF-8",
                 ),
             ),
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
     assert len(mock_setup.mock_calls) == 1
 
     assert result.get("type") is FlowResultType.CREATE_ENTRY
@@ -92,8 +92,8 @@ async def test_full_flow(
 )
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_reauth(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     config_entry: MockConfigEntry,
     fixture: str,
@@ -107,19 +107,19 @@ async def test_reauth(
     Make sure we abort if the user selects the
     wrong account on the consent screen.
     """
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    config_entry.async_start_reauth(hass)
-    await hass.async_block_till_done()
+    config_entry.async_start_reauth(menuai)
+    await menuai.async_block_till_done()
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
     result = flows[0]
     assert result["step_id"] == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
@@ -131,7 +131,7 @@ async def test_reauth(
         f"&state={state}&scope={'+'.join(SCOPES)}"
         "&access_type=offline&prompt=consent"
     )
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == 200
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
@@ -149,22 +149,22 @@ async def test_reauth(
 
     with (
         patch(
-            "homeassistant.components.google_mail.async_setup_entry", return_value=True
+            "menuai.components.google_mail.async_setup_entry", return_value=True
         ) as mock_setup,
         patch(
             "httplib2.Http.request",
             return_value=(
                 Response({}),
                 bytes(
-                    await async_load_fixture(hass, f"{fixture}.json", DOMAIN),
+                    await async_load_fixture(menuai, f"{fixture}.json", DOMAIN),
                     encoding="UTF-8",
                 ),
             ),
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
 
     assert result.get("type") is FlowResultType.ABORT
     assert result["reason"] == abort_reason
@@ -180,18 +180,18 @@ async def test_reauth(
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_already_configured(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test case where config flow discovers unique id was already configured."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "google_mail", context={"source": config_entries.SOURCE_USER}
     )
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
@@ -205,7 +205,7 @@ async def test_already_configured(
         "&access_type=offline&prompt=consent"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == 200
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
@@ -215,11 +215,11 @@ async def test_already_configured(
         return_value=(
             Response({}),
             bytes(
-                await async_load_fixture(hass, "get_profile.json", DOMAIN),
+                await async_load_fixture(menuai, "get_profile.json", DOMAIN),
                 encoding="UTF-8",
             ),
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
     assert result.get("type") is FlowResultType.ABORT
     assert result.get("reason") == "already_configured"

@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from homeassistant.components.frontier_silicon.const import CONF_WEBFSAPI_URL, DOMAIN
-from homeassistant.const import CONF_PIN
+from menuai.components.frontier_silicon.const import CONF_WEBFSAPI_URL, DOMAIN
+from menuai.const import CONF_PIN
 
 from tests.common import MockConfigEntry
 
@@ -52,6 +52,6 @@ def mock_radio_id() -> Generator[None]:
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.frontier_silicon.async_setup_entry", return_value=True
+        "menuai.components.frontier_silicon.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry

@@ -1,16 +1,16 @@
 """Test KNX scene."""
 
-from homeassistant.components.knx.const import KNX_ADDRESS
-from homeassistant.components.knx.schema import SceneSchema
-from homeassistant.const import CONF_ENTITY_CATEGORY, CONF_NAME, EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.knx.const import KNX_ADDRESS
+from menuai.components.knx.schema import SceneSchema
+from menuai.const import CONF_ENTITY_CATEGORY, CONF_NAME, EntityCategory
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .conftest import KNXTestKit
 
 
 async def test_activate_knx_scene(
-    hass: HomeAssistant, knx: KNXTestKit, entity_registry: er.EntityRegistry
+    menuai: menuai, knx: KNXTestKit, entity_registry: er.EntityRegistry
 ) -> None:
     """Test KNX scene."""
     await knx.setup_integration(
@@ -30,7 +30,7 @@ async def test_activate_knx_scene(
     assert entity.entity_category is EntityCategory.DIAGNOSTIC
     assert entity.unique_id == "1/1/1_24"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "scene", "turn_on", {"entity_id": "scene.test"}, blocking=True
     )
 

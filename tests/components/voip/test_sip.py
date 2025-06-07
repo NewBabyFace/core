@@ -4,23 +4,23 @@ import socket
 
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components import voip
-from homeassistant.core import HomeAssistant
+from menuai import config_entries
+from menuai.components import voip
+from menuai.core import menuai
 
 
 @pytest.mark.usefixtures("socket_enabled")
-async def test_create_sip_server(hass: HomeAssistant) -> None:
+async def test_create_sip_server(menuai: menuai) -> None:
     """Tests starting/stopping SIP server."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         voip.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {},
     )
     entry = result["result"]
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     with (
         pytest.raises(OSError),
@@ -30,14 +30,14 @@ async def test_create_sip_server(hass: HomeAssistant) -> None:
         sock.bind(("127.0.0.1", 5060))
 
     # Configure different port
-    result = await hass.config_entries.options.async_init(
+    result = await menuai.config_entries.options.async_init(
         entry.entry_id,
     )
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={"sip_port": 5061},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Server should be stopped now on 5060
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
@@ -51,8 +51,8 @@ async def test_create_sip_server(hass: HomeAssistant) -> None:
         sock.bind(("127.0.0.1", 5061))
 
     # Shut down
-    await hass.config_entries.async_remove(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_remove(entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Server should be stopped
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:

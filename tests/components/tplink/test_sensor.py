@@ -4,12 +4,12 @@ from kasa import Device, Feature, Module
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.tplink.const import DOMAIN
-from homeassistant.components.tplink.entity import EXCLUDED_FEATURES
-from homeassistant.components.tplink.sensor import SENSOR_DESCRIPTIONS
-from homeassistant.const import CONF_HOST, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.components.tplink.const import DOMAIN
+from menuai.components.tplink.entity import EXCLUDED_FEATURES
+from menuai.components.tplink.sensor import SENSOR_DESCRIPTIONS
+from menuai.const import CONF_HOST, Platform
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from . import (
     _mocked_device,
@@ -27,7 +27,7 @@ from tests.common import MockConfigEntry
 
 
 async def test_states(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
@@ -38,21 +38,21 @@ async def test_states(
     features.update(EXCLUDED_FEATURES)
     device = _mocked_device(alias="my_device", features=features)
 
-    await setup_platform_for_device(hass, mock_config_entry, Platform.SENSOR, device)
+    await setup_platform_for_device(menuai, mock_config_entry, Platform.SENSOR, device)
     await snapshot_platform(
-        hass, entity_registry, device_registry, snapshot, mock_config_entry.entry_id
+        menuai, entity_registry, device_registry, snapshot, mock_config_entry.entry_id
     )
 
     for excluded in EXCLUDED_FEATURES:
-        assert hass.states.get(f"sensor.my_device_{excluded}") is None
+        assert menuai.states.get(f"sensor.my_device_{excluded}") is None
 
 
-async def test_color_light_with_an_emeter(hass: HomeAssistant) -> None:
+async def test_color_light_with_an_emeter(menuai: menuai) -> None:
     """Test a light with an emeter."""
     already_migrated_config_entry = MockConfigEntry(
         domain=DOMAIN, data={CONF_HOST: "127.0.0.1"}, unique_id=MAC_ADDRESS
     )
-    already_migrated_config_entry.add_to_hass(hass)
+    already_migrated_config_entry.add_to_menuai(menuai)
     emeter_features = _mocked_energy_features(
         power=None,
         total=None,
@@ -64,19 +64,19 @@ async def test_color_light_with_an_emeter(hass: HomeAssistant) -> None:
         alias="my_bulb", modules=[Module.Light], features=["state", *emeter_features]
     )
     with _patch_discovery(device=bulb), _patch_connect(device=bulb):
-        await hass.config_entries.async_setup(already_migrated_config_entry.entry_id)
-        await hass.async_block_till_done()
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(already_migrated_config_entry.entry_id)
+        await menuai.async_block_till_done()
+        await menuai.async_block_till_done()
 
     expected = {
         "sensor.my_bulb_today_s_consumption": 5000.004,
         "sensor.my_bulb_current": 5,
     }
     entity_id = "light.my_bulb"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == "on"
     for sensor_entity_id, value in expected.items():
-        assert hass.states.get(sensor_entity_id).state == str(value)
+        assert menuai.states.get(sensor_entity_id).state == str(value)
 
     not_expected = {
         "sensor.my_bulb_current_consumption",
@@ -84,15 +84,15 @@ async def test_color_light_with_an_emeter(hass: HomeAssistant) -> None:
         "sensor.my_bulb_voltage",
     }
     for sensor_entity_id in not_expected:
-        assert hass.states.get(sensor_entity_id) is None
+        assert menuai.states.get(sensor_entity_id) is None
 
 
-async def test_plug_with_an_emeter(hass: HomeAssistant) -> None:
+async def test_plug_with_an_emeter(menuai: menuai) -> None:
     """Test a plug with an emeter."""
     already_migrated_config_entry = MockConfigEntry(
         domain=DOMAIN, data={CONF_HOST: "127.0.0.1"}, unique_id=MAC_ADDRESS
     )
-    already_migrated_config_entry.add_to_hass(hass)
+    already_migrated_config_entry.add_to_menuai(menuai)
     emeter_features = _mocked_energy_features(
         power=100.06,
         total=30.0049,
@@ -101,9 +101,9 @@ async def test_plug_with_an_emeter(hass: HomeAssistant) -> None:
     )
     plug = _mocked_device(alias="my_plug", features=["state", *emeter_features])
     with _patch_discovery(device=plug), _patch_connect(device=plug):
-        await hass.config_entries.async_setup(already_migrated_config_entry.entry_id)
-        await hass.async_block_till_done()
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(already_migrated_config_entry.entry_id)
+        await menuai.async_block_till_done()
+        await menuai.async_block_till_done()
 
     expected = {
         "sensor.my_plug_current_consumption": 100.1,
@@ -113,27 +113,27 @@ async def test_plug_with_an_emeter(hass: HomeAssistant) -> None:
         "sensor.my_plug_current": 5.04,
     }
     entity_id = "switch.my_plug"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == "on"
     for sensor_entity_id, value in expected.items():
-        assert hass.states.get(sensor_entity_id).state == str(value)
+        assert menuai.states.get(sensor_entity_id).state == str(value)
 
 
-async def test_color_light_no_emeter(hass: HomeAssistant) -> None:
+async def test_color_light_no_emeter(menuai: menuai) -> None:
     """Test a light without an emeter."""
     already_migrated_config_entry = MockConfigEntry(
         domain=DOMAIN, data={CONF_HOST: "127.0.0.1"}, unique_id=MAC_ADDRESS
     )
-    already_migrated_config_entry.add_to_hass(hass)
+    already_migrated_config_entry.add_to_menuai(menuai)
     bulb = _mocked_device(alias="my_bulb", modules=[Module.Light])
 
     with _patch_discovery(device=bulb), _patch_connect(device=bulb):
-        await hass.config_entries.async_setup(already_migrated_config_entry.entry_id)
-        await hass.async_block_till_done()
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(already_migrated_config_entry.entry_id)
+        await menuai.async_block_till_done()
+        await menuai.async_block_till_done()
 
     entity_id = "light.my_bulb"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == "on"
 
     not_expected = [
@@ -144,17 +144,17 @@ async def test_color_light_no_emeter(hass: HomeAssistant) -> None:
         "sensor.my_bulb_current"
     ]
     for sensor_entity_id in not_expected:
-        assert hass.states.get(sensor_entity_id) is None
+        assert menuai.states.get(sensor_entity_id) is None
 
 
 async def test_sensor_unique_id(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test a sensor unique ids."""
     already_migrated_config_entry = MockConfigEntry(
         domain=DOMAIN, data={CONF_HOST: "127.0.0.1"}, unique_id=MAC_ADDRESS
     )
-    already_migrated_config_entry.add_to_hass(hass)
+    already_migrated_config_entry.add_to_menuai(menuai)
     emeter_features = _mocked_energy_features(
         power=100,
         total=30,
@@ -164,8 +164,8 @@ async def test_sensor_unique_id(
     )
     plug = _mocked_device(alias="my_plug", features=emeter_features)
     with _patch_discovery(device=plug), _patch_connect(device=plug):
-        await hass.config_entries.async_setup(already_migrated_config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(already_migrated_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     expected = {
         "sensor.my_plug_current_consumption": f"{DEVICE_ID}_current_power_w",
@@ -179,7 +179,7 @@ async def test_sensor_unique_id(
 
 
 async def test_undefined_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -187,7 +187,7 @@ async def test_undefined_sensor(
     already_migrated_config_entry = MockConfigEntry(
         domain=DOMAIN, data={CONF_HOST: "127.0.0.1"}, unique_id=MAC_ADDRESS
     )
-    already_migrated_config_entry.add_to_hass(hass)
+    already_migrated_config_entry.add_to_menuai(menuai)
     new_feature = _mocked_feature(
         "consumption_this_fortnight",
         value=5.2,
@@ -199,8 +199,8 @@ async def test_undefined_sensor(
     )
     plug = _mocked_device(alias="my_plug", features=[new_feature])
     with _patch_discovery(device=plug), _patch_connect(device=plug):
-        await hass.config_entries.async_setup(already_migrated_config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(already_migrated_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     msg = (
         "Device feature: Consumption for fortnight (consumption_this_fortnight) "
@@ -210,7 +210,7 @@ async def test_undefined_sensor(
 
 
 async def test_sensor_children_on_parent(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
 ) -> None:
@@ -218,7 +218,7 @@ async def test_sensor_children_on_parent(
     already_migrated_config_entry = MockConfigEntry(
         domain=DOMAIN, data={CONF_HOST: "127.0.0.1"}, unique_id=MAC_ADDRESS
     )
-    already_migrated_config_entry.add_to_hass(hass)
+    already_migrated_config_entry.add_to_menuai(menuai)
     feature = _mocked_feature(
         "consumption_this_month",
         value=5.2,
@@ -237,8 +237,8 @@ async def test_sensor_children_on_parent(
         device_type=Device.Type.WallSwitch,
     )
     with _patch_discovery(device=plug), _patch_connect(device=plug):
-        await hass.config_entries.async_setup(already_migrated_config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(already_migrated_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     entity_id = "sensor.my_plug_this_month_s_consumption"
     entity = entity_registry.async_get(entity_id)
@@ -258,7 +258,7 @@ async def test_sensor_children_on_parent(
 
 
 async def test_sensor_children_on_child(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
 ) -> None:
@@ -266,7 +266,7 @@ async def test_sensor_children_on_child(
     already_migrated_config_entry = MockConfigEntry(
         domain=DOMAIN, data={CONF_HOST: "127.0.0.1"}, unique_id=MAC_ADDRESS
     )
-    already_migrated_config_entry.add_to_hass(hass)
+    already_migrated_config_entry.add_to_menuai(menuai)
     feature = _mocked_feature(
         "consumption_this_month",
         value=5.2,
@@ -285,8 +285,8 @@ async def test_sensor_children_on_child(
         device_type=Device.Type.Strip,
     )
     with _patch_discovery(device=plug), _patch_connect(device=plug):
-        await hass.config_entries.async_setup(already_migrated_config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(already_migrated_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     entity_id = "sensor.my_plug_this_month_s_consumption"
     entity = entity_registry.async_get(entity_id)
@@ -307,22 +307,22 @@ async def test_sensor_children_on_child(
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_datetime_sensor(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test a timestamp sensor."""
     already_migrated_config_entry = MockConfigEntry(
         domain=DOMAIN, data={CONF_HOST: "127.0.0.1"}, unique_id=MAC_ADDRESS
     )
-    already_migrated_config_entry.add_to_hass(hass)
+    already_migrated_config_entry.add_to_menuai(menuai)
     plug = _mocked_device(alias="my_plug", features=["on_since"])
     with _patch_discovery(device=plug), _patch_connect(device=plug):
-        await hass.config_entries.async_setup(already_migrated_config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(already_migrated_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     entity_id = "sensor.my_plug_on_since"
     entity = entity_registry.async_get(entity_id)
     assert entity
     assert entity.unique_id == f"{DEVICE_ID}_on_since"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.attributes["device_class"] == "timestamp"

@@ -2,8 +2,8 @@
 
 from aiocomelit.const import BRIDGE
 
-from homeassistant.const import CONF_HOST, CONF_PIN, CONF_PORT, CONF_TYPE, Platform
-from homeassistant.core import HomeAssistant
+from menuai.const import CONF_HOST, CONF_PIN, CONF_PORT, CONF_TYPE, Platform
+from menuai.core import menuai
 
 from .const import DEFAULT_PORT
 from .coordinator import (
@@ -29,16 +29,16 @@ VEDO_PLATFORMS = [
 ]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ComelitConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ComelitConfigEntry) -> bool:
     """Set up Comelit platform."""
 
     coordinator: ComelitBaseCoordinator
 
-    session = await async_client_session(hass)
+    session = await async_client_session(menuai)
 
     if entry.data.get(CONF_TYPE, BRIDGE) == BRIDGE:
         coordinator = ComelitSerialBridge(
-            hass,
+            menuai,
             entry,
             entry.data[CONF_HOST],
             entry.data.get(CONF_PORT, DEFAULT_PORT),
@@ -48,7 +48,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ComelitConfigEntry) -> b
         platforms = BRIDGE_PLATFORMS
     else:
         coordinator = ComelitVedoSystem(
-            hass,
+            menuai,
             entry,
             entry.data[CONF_HOST],
             entry.data.get(CONF_PORT, DEFAULT_PORT),
@@ -61,12 +61,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ComelitConfigEntry) -> b
 
     entry.runtime_data = coordinator
 
-    await hass.config_entries.async_forward_entry_setups(entry, platforms)
+    await menuai.config_entries.async_forward_entry_setups(entry, platforms)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ComelitConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ComelitConfigEntry) -> bool:
     """Unload a config entry."""
 
     if entry.data.get(CONF_TYPE, BRIDGE) == BRIDGE:
@@ -75,7 +75,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ComelitConfigEntry) -> 
         platforms = VEDO_PLATFORMS
 
     coordinator = entry.runtime_data
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, platforms):
+    if unload_ok := await menuai.config_entries.async_unload_platforms(entry, platforms):
         await coordinator.api.logout()
 
     return unload_ok

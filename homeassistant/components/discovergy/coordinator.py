@@ -9,10 +9,10 @@ from pydiscovergy import Discovergy
 from pydiscovergy.error import DiscovergyClientError, HTTPError, InvalidLogin
 from pydiscovergy.models import Meter, Reading
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -26,7 +26,7 @@ class DiscovergyUpdateCoordinator(DataUpdateCoordinator[Reading]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: DiscovergyConfigEntry,
         meter: Meter,
         discovergy_client: Discovergy,
@@ -36,7 +36,7 @@ class DiscovergyUpdateCoordinator(DataUpdateCoordinator[Reading]):
         self.discovergy_client = discovergy_client
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=f"Discovergy meter {meter.meter_id}",

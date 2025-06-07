@@ -6,15 +6,15 @@ from typing import Any
 
 from regenmaschine.errors import RainMachineError
 
-from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.const import (
+from menuai.components.diagnostics import async_redact_data
+from menuai.const import (
     CONF_ELEVATION,
     CONF_LATITUDE,
     CONF_LONGITUDE,
     CONF_PASSWORD,
     CONF_UNIQUE_ID,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from . import RainMachineConfigEntry
 from .const import LOGGER
@@ -39,7 +39,7 @@ TO_REDACT = {
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: RainMachineConfigEntry
+    menuai: menuai, entry: RainMachineConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     data = entry.runtime_data

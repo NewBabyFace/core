@@ -14,11 +14,11 @@ from pytrafikverket.exceptions import (
 from pytrafikverket.models import WeatherStationInfoModel
 from pytrafikverket.trafikverket_weather import TrafikverketWeather
 
-from homeassistant.const import CONF_API_KEY
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.const import CONF_API_KEY
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import CONF_STATION, DOMAIN
 
@@ -34,17 +34,17 @@ class TVDataUpdateCoordinator(DataUpdateCoordinator[WeatherStationInfoModel]):
 
     config_entry: TVWeatherConfigEntry
 
-    def __init__(self, hass: HomeAssistant, config_entry: TVWeatherConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: TVWeatherConfigEntry) -> None:
         """Initialize the Sensibo coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
             update_interval=TIME_BETWEEN_UPDATES,
         )
         self._weather_api = TrafikverketWeather(
-            async_get_clientsession(hass), config_entry.data[CONF_API_KEY]
+            async_get_clientsession(menuai), config_entry.data[CONF_API_KEY]
         )
         self._station = config_entry.data[CONF_STATION]
 

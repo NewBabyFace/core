@@ -1,7 +1,7 @@
 {
   "domain": "matter",
   "name": "Matter",
-  "after_dependencies": ["hassio"],
+  "after_dependencies": ["menuaiio"],
   "codeowners": ["@home-assistant/matter"],
   "config_flow": true,
   "dependencies": ["websocket_api"],

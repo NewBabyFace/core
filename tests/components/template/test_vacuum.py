@@ -4,19 +4,19 @@ from typing import Any
 
 import pytest
 
-from homeassistant.components import template, vacuum
-from homeassistant.components.vacuum import (
+from menuai.components import template, vacuum
+from menuai.components.vacuum import (
     ATTR_BATTERY_LEVEL,
     ATTR_FAN_SPEED,
     VacuumActivity,
     VacuumEntityFeature,
 )
-from homeassistant.const import STATE_OFF, STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_component import async_update_entity
-from homeassistant.setup import async_setup_component
+from menuai.const import STATE_OFF, STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
+from menuai.core import menuai, ServiceCall
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity_component import async_update_entity
+from menuai.setup import async_setup_component
 
 from .conftest import ConfigurationStyle
 
@@ -91,13 +91,13 @@ UNIQUE_ID_CONFIG = {"unique_id": "not-so-unique-anymore", **TEMPLATE_VACUUM_ACTI
 
 
 def _verify(
-    hass: HomeAssistant,
+    menuai: menuai,
     expected_state: str,
     expected_battery_level: int | None = None,
     expected_fan_speed: int | None = None,
 ) -> None:
     """Verify vacuum's state and speed."""
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     attributes = state.attributes
     assert state.state == expected_state
     assert attributes.get(ATTR_BATTERY_LEVEL) == expected_battery_level
@@ -105,58 +105,58 @@ def _verify(
 
 
 async def async_setup_legacy_format(
-    hass: HomeAssistant, count: int, vacuum_config: dict[str, Any]
+    menuai: menuai, count: int, vacuum_config: dict[str, Any]
 ) -> None:
     """Do setup of vacuum integration via new format."""
     config = {"vacuum": {"platform": "template", "vacuums": vacuum_config}}
 
     with assert_setup_component(count, vacuum.DOMAIN):
         assert await async_setup_component(
-            hass,
+            menuai,
             vacuum.DOMAIN,
             config,
         )
 
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
 
 async def async_setup_modern_format(
-    hass: HomeAssistant, count: int, vacuum_config: dict[str, Any]
+    menuai: menuai, count: int, vacuum_config: dict[str, Any]
 ) -> None:
     """Do setup of vacuum integration via modern format."""
     config = {"template": {"vacuum": vacuum_config}}
 
     with assert_setup_component(count, template.DOMAIN):
         assert await async_setup_component(
-            hass,
+            menuai,
             template.DOMAIN,
             config,
         )
 
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
 
 @pytest.fixture
 async def setup_vacuum(
-    hass: HomeAssistant,
+    menuai: menuai,
     count: int,
     style: ConfigurationStyle,
     vacuum_config: dict[str, Any],
 ) -> None:
     """Do setup of number integration."""
     if style == ConfigurationStyle.LEGACY:
-        await async_setup_legacy_format(hass, count, vacuum_config)
+        await async_setup_legacy_format(menuai, count, vacuum_config)
     elif style == ConfigurationStyle.MODERN:
-        await async_setup_modern_format(hass, count, vacuum_config)
+        await async_setup_modern_format(menuai, count, vacuum_config)
 
 
 @pytest.fixture
 async def setup_test_vacuum_with_extra_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     count: int,
     style: ConfigurationStyle,
     vacuum_config: dict[str, Any],
@@ -165,17 +165,17 @@ async def setup_test_vacuum_with_extra_config(
     """Do setup of number integration."""
     if style == ConfigurationStyle.LEGACY:
         await async_setup_legacy_format(
-            hass, count, {TEST_OBJECT_ID: {**vacuum_config, **extra_config}}
+            menuai, count, {TEST_OBJECT_ID: {**vacuum_config, **extra_config}}
         )
     elif style == ConfigurationStyle.MODERN:
         await async_setup_modern_format(
-            hass, count, {"name": TEST_OBJECT_ID, **vacuum_config, **extra_config}
+            menuai, count, {"name": TEST_OBJECT_ID, **vacuum_config, **extra_config}
         )
 
 
 @pytest.fixture
 async def setup_state_vacuum(
-    hass: HomeAssistant,
+    menuai: menuai,
     count: int,
     style: ConfigurationStyle,
     state_template: str,
@@ -183,7 +183,7 @@ async def setup_state_vacuum(
     """Do setup of vacuum integration using a state template."""
     if style == ConfigurationStyle.LEGACY:
         await async_setup_legacy_format(
-            hass,
+            menuai,
             count,
             {
                 TEST_OBJECT_ID: {
@@ -194,7 +194,7 @@ async def setup_state_vacuum(
         )
     elif style == ConfigurationStyle.MODERN:
         await async_setup_modern_format(
-            hass,
+            menuai,
             count,
             {
                 "name": TEST_OBJECT_ID,
@@ -206,7 +206,7 @@ async def setup_state_vacuum(
 
 @pytest.fixture
 async def setup_base_vacuum(
-    hass: HomeAssistant,
+    menuai: menuai,
     count: int,
     style: ConfigurationStyle,
     state_template: str | None,
@@ -216,7 +216,7 @@ async def setup_base_vacuum(
     if style == ConfigurationStyle.LEGACY:
         state_config = {"value_template": state_template} if state_template else {}
         await async_setup_legacy_format(
-            hass,
+            menuai,
             count,
             {
                 TEST_OBJECT_ID: {
@@ -228,7 +228,7 @@ async def setup_base_vacuum(
     elif style == ConfigurationStyle.MODERN:
         state_config = {"state": state_template} if state_template else {}
         await async_setup_modern_format(
-            hass,
+            menuai,
             count,
             {
                 "name": TEST_OBJECT_ID,
@@ -240,7 +240,7 @@ async def setup_base_vacuum(
 
 @pytest.fixture
 async def setup_single_attribute_state_vacuum(
-    hass: HomeAssistant,
+    menuai: menuai,
     count: int,
     style: ConfigurationStyle,
     state_template: str | None,
@@ -253,7 +253,7 @@ async def setup_single_attribute_state_vacuum(
     if style == ConfigurationStyle.LEGACY:
         state_config = {"value_template": state_template} if state_template else {}
         await async_setup_legacy_format(
-            hass,
+            menuai,
             count,
             {
                 TEST_OBJECT_ID: {
@@ -267,7 +267,7 @@ async def setup_single_attribute_state_vacuum(
     elif style == ConfigurationStyle.MODERN:
         state_config = {"state": state_template} if state_template else {}
         await async_setup_modern_format(
-            hass,
+            menuai,
             count,
             {
                 "name": TEST_OBJECT_ID,
@@ -281,7 +281,7 @@ async def setup_single_attribute_state_vacuum(
 
 @pytest.fixture
 async def setup_attributes_state_vacuum(
-    hass: HomeAssistant,
+    menuai: menuai,
     count: int,
     style: ConfigurationStyle,
     state_template: str | None,
@@ -291,7 +291,7 @@ async def setup_attributes_state_vacuum(
     if style == ConfigurationStyle.LEGACY:
         state_config = {"value_template": state_template} if state_template else {}
         await async_setup_legacy_format(
-            hass,
+            menuai,
             count,
             {
                 TEST_OBJECT_ID: {
@@ -304,7 +304,7 @@ async def setup_attributes_state_vacuum(
     elif style == ConfigurationStyle.MODERN:
         state_config = {"state": state_template} if state_template else {}
         await async_setup_modern_format(
-            hass,
+            menuai,
             count,
             {
                 "name": TEST_OBJECT_ID,
@@ -398,10 +398,10 @@ async def setup_attributes_state_vacuum(
     ],
 )
 @pytest.mark.usefixtures("setup_base_vacuum")
-async def test_valid_legacy_configs(hass: HomeAssistant, count, parm1, parm2) -> None:
+async def test_valid_legacy_configs(menuai: menuai, count, parm1, parm2) -> None:
     """Test: configs."""
-    assert len(hass.states.async_all("vacuum")) == count
-    _verify(hass, parm1, parm2)
+    assert len(menuai.states.async_all("vacuum")) == count
+    _verify(menuai, parm1, parm2)
 
 
 @pytest.mark.parametrize("count", [0])
@@ -416,9 +416,9 @@ async def test_valid_legacy_configs(hass: HomeAssistant, count, parm1, parm2) ->
     ],
 )
 @pytest.mark.usefixtures("setup_base_vacuum")
-async def test_invalid_configs(hass: HomeAssistant, count) -> None:
+async def test_invalid_configs(menuai: menuai, count) -> None:
     """Test: configs."""
-    assert len(hass.states.async_all("vacuum")) == count
+    assert len(menuai.states.async_all("vacuum")) == count
 
 
 @pytest.mark.parametrize(
@@ -444,10 +444,10 @@ async def test_invalid_configs(hass: HomeAssistant, count) -> None:
 )
 @pytest.mark.usefixtures("setup_single_attribute_state_vacuum")
 async def test_battery_level_template(
-    hass: HomeAssistant, expected: int | None
+    menuai: menuai, expected: int | None
 ) -> None:
     """Test templates with values from other entities."""
-    _verify(hass, STATE_UNKNOWN, expected)
+    _verify(menuai, STATE_UNKNOWN, expected)
 
 
 @pytest.mark.parametrize(
@@ -479,9 +479,9 @@ async def test_battery_level_template(
     ],
 )
 @pytest.mark.usefixtures("setup_single_attribute_state_vacuum")
-async def test_fan_speed_template(hass: HomeAssistant, expected: str | None) -> None:
+async def test_fan_speed_template(menuai: menuai, expected: str | None) -> None:
     """Test templates with values from other entities."""
-    _verify(hass, STATE_UNKNOWN, None, expected)
+    _verify(menuai, STATE_UNKNOWN, None, expected)
 
 
 @pytest.mark.parametrize(
@@ -502,15 +502,15 @@ async def test_fan_speed_template(hass: HomeAssistant, expected: str | None) -> 
     ],
 )
 @pytest.mark.usefixtures("setup_single_attribute_state_vacuum")
-async def test_icon_template(hass: HomeAssistant) -> None:
+async def test_icon_template(menuai: menuai) -> None:
     """Test icon template."""
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes.get("icon") in ("", None)
 
-    hass.states.async_set("switch.test_state", STATE_ON)
-    await hass.async_block_till_done()
+    menuai.states.async_set("switch.test_state", STATE_ON)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes["icon"] == "mdi:check"
 
 
@@ -532,15 +532,15 @@ async def test_icon_template(hass: HomeAssistant) -> None:
     ],
 )
 @pytest.mark.usefixtures("setup_single_attribute_state_vacuum")
-async def test_picture_template(hass: HomeAssistant) -> None:
+async def test_picture_template(menuai: menuai) -> None:
     """Test picture template."""
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes.get("entity_picture") in ("", None)
 
-    hass.states.async_set("switch.test_state", STATE_ON)
-    await hass.async_block_till_done()
+    menuai.states.async_set("switch.test_state", STATE_ON)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes["entity_picture"] == "local/vacuum.png"
 
 
@@ -563,22 +563,22 @@ async def test_picture_template(hass: HomeAssistant) -> None:
     ],
 )
 @pytest.mark.usefixtures("setup_single_attribute_state_vacuum")
-async def test_available_template_with_entities(hass: HomeAssistant) -> None:
+async def test_available_template_with_entities(menuai: menuai) -> None:
     """Test availability templates with values from other entities."""
 
     # When template returns true..
-    hass.states.async_set("availability_state.state", STATE_ON)
-    await hass.async_block_till_done()
+    menuai.states.async_set("availability_state.state", STATE_ON)
+    await menuai.async_block_till_done()
 
     # Device State should not be unavailable
-    assert hass.states.get(TEST_ENTITY_ID).state != STATE_UNAVAILABLE
+    assert menuai.states.get(TEST_ENTITY_ID).state != STATE_UNAVAILABLE
 
     # When Availability template returns false
-    hass.states.async_set("availability_state.state", STATE_OFF)
-    await hass.async_block_till_done()
+    menuai.states.async_set("availability_state.state", STATE_OFF)
+    await menuai.async_block_till_done()
 
     # device state should be unavailable
-    assert hass.states.get(TEST_ENTITY_ID).state == STATE_UNAVAILABLE
+    assert menuai.states.get(TEST_ENTITY_ID).state == STATE_UNAVAILABLE
 
 
 @pytest.mark.parametrize("extra_config", [{}])
@@ -601,10 +601,10 @@ async def test_available_template_with_entities(hass: HomeAssistant) -> None:
 )
 @pytest.mark.usefixtures("setup_single_attribute_state_vacuum")
 async def test_invalid_availability_template_keeps_component_available(
-    hass: HomeAssistant, caplog_setup_text
+    menuai: menuai, caplog_setup_text
 ) -> None:
     """Test that an invalid availability keeps the device available."""
-    assert hass.states.get(TEST_ENTITY_ID) != STATE_UNAVAILABLE
+    assert menuai.states.get(TEST_ENTITY_ID) != STATE_UNAVAILABLE
     assert "UndefinedError: 'x' is undefined" in caplog_setup_text
 
 
@@ -622,15 +622,15 @@ async def test_invalid_availability_template_keeps_component_available(
     ],
 )
 @pytest.mark.usefixtures("setup_attributes_state_vacuum")
-async def test_attribute_templates(hass: HomeAssistant) -> None:
+async def test_attribute_templates(menuai: menuai) -> None:
     """Test attribute_templates template."""
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes["test_attribute"] == "It ."
 
-    hass.states.async_set("sensor.test_state", "Works")
-    await hass.async_block_till_done()
-    await async_update_entity(hass, TEST_ENTITY_ID)
-    state = hass.states.get(TEST_ENTITY_ID)
+    menuai.states.async_set("sensor.test_state", "Works")
+    await menuai.async_block_till_done()
+    await async_update_entity(menuai, TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes["test_attribute"] == "It Works."
 
 
@@ -649,10 +649,10 @@ async def test_attribute_templates(hass: HomeAssistant) -> None:
 )
 @pytest.mark.usefixtures("setup_attributes_state_vacuum")
 async def test_invalid_attribute_template(
-    hass: HomeAssistant, caplog_setup_text
+    menuai: menuai, caplog_setup_text
 ) -> None:
     """Test that errors are logged if rendering template fails."""
-    assert len(hass.states.async_all("vacuum")) == 1
+    assert len(menuai.states.async_all("vacuum")) == 1
     assert "test_attribute" in caplog_setup_text
     assert "TemplateError" in caplog_setup_text
 
@@ -692,9 +692,9 @@ async def test_invalid_attribute_template(
     ],
 )
 @pytest.mark.usefixtures("setup_vacuum")
-async def test_unique_id(hass: HomeAssistant) -> None:
+async def test_unique_id(menuai: menuai) -> None:
     """Test unique_id option only creates one vacuum per id."""
-    assert len(hass.states.async_all("vacuum")) == 1
+    assert len(menuai.states.async_all("vacuum")) == 1
 
 
 @pytest.mark.parametrize(
@@ -704,39 +704,39 @@ async def test_unique_id(hass: HomeAssistant) -> None:
     "style", [ConfigurationStyle.LEGACY, ConfigurationStyle.MODERN]
 )
 @pytest.mark.usefixtures("setup_base_vacuum")
-async def test_unused_services(hass: HomeAssistant) -> None:
+async def test_unused_services(menuai: menuai) -> None:
     """Test calling unused services raises."""
     # Pause vacuum
-    with pytest.raises(HomeAssistantError):
-        await common.async_pause(hass, TEST_ENTITY_ID)
-    await hass.async_block_till_done()
+    with pytest.raises(menuaiError):
+        await common.async_pause(menuai, TEST_ENTITY_ID)
+    await menuai.async_block_till_done()
 
     # Stop vacuum
-    with pytest.raises(HomeAssistantError):
-        await common.async_stop(hass, TEST_ENTITY_ID)
-    await hass.async_block_till_done()
+    with pytest.raises(menuaiError):
+        await common.async_stop(menuai, TEST_ENTITY_ID)
+    await menuai.async_block_till_done()
 
     # Return vacuum to base
-    with pytest.raises(HomeAssistantError):
-        await common.async_return_to_base(hass, TEST_ENTITY_ID)
-    await hass.async_block_till_done()
+    with pytest.raises(menuaiError):
+        await common.async_return_to_base(menuai, TEST_ENTITY_ID)
+    await menuai.async_block_till_done()
 
     # Spot cleaning
-    with pytest.raises(HomeAssistantError):
-        await common.async_clean_spot(hass, TEST_ENTITY_ID)
-    await hass.async_block_till_done()
+    with pytest.raises(menuaiError):
+        await common.async_clean_spot(menuai, TEST_ENTITY_ID)
+    await menuai.async_block_till_done()
 
     # Locate vacuum
-    with pytest.raises(HomeAssistantError):
-        await common.async_locate(hass, TEST_ENTITY_ID)
-    await hass.async_block_till_done()
+    with pytest.raises(menuaiError):
+        await common.async_locate(menuai, TEST_ENTITY_ID)
+    await menuai.async_block_till_done()
 
     # Set fan's speed
-    with pytest.raises(HomeAssistantError):
-        await common.async_set_fan_speed(hass, "medium", TEST_ENTITY_ID)
-    await hass.async_block_till_done()
+    with pytest.raises(menuaiError):
+        await common.async_set_fan_speed(menuai, "medium", TEST_ENTITY_ID)
+    await menuai.async_block_till_done()
 
-    _verify(hass, STATE_UNKNOWN, None)
+    _verify(menuai, STATE_UNKNOWN, None)
 
 
 @pytest.mark.parametrize(
@@ -759,17 +759,17 @@ async def test_unused_services(hass: HomeAssistant) -> None:
 )
 @pytest.mark.usefixtures("setup_state_vacuum")
 async def test_state_services(
-    hass: HomeAssistant, action: str, calls: list[ServiceCall]
+    menuai: menuai, action: str, calls: list[ServiceCall]
 ) -> None:
     """Test locate service."""
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "vacuum",
         action,
         {"entity_id": TEST_ENTITY_ID},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # verify
     assert len(calls) == 1
@@ -798,12 +798,12 @@ async def test_state_services(
     ],
 )
 @pytest.mark.usefixtures("setup_single_attribute_state_vacuum")
-async def test_set_fan_speed(hass: HomeAssistant, calls: list[ServiceCall]) -> None:
+async def test_set_fan_speed(menuai: menuai, calls: list[ServiceCall]) -> None:
     """Test set valid fan speed."""
 
     # Set vacuum's fan speed to high
-    await common.async_set_fan_speed(hass, "high", TEST_ENTITY_ID)
-    await hass.async_block_till_done()
+    await common.async_set_fan_speed(menuai, "high", TEST_ENTITY_ID)
+    await menuai.async_block_till_done()
 
     # verify
     assert len(calls) == 1
@@ -812,8 +812,8 @@ async def test_set_fan_speed(hass: HomeAssistant, calls: list[ServiceCall]) -> N
     assert calls[-1].data["fan_speed"] == "high"
 
     # Set fan's speed to medium
-    await common.async_set_fan_speed(hass, "medium", TEST_ENTITY_ID)
-    await hass.async_block_till_done()
+    await common.async_set_fan_speed(menuai, "medium", TEST_ENTITY_ID)
+    await menuai.async_block_till_done()
 
     # verify
     assert len(calls) == 2
@@ -849,13 +849,13 @@ async def test_set_fan_speed(hass: HomeAssistant, calls: list[ServiceCall]) -> N
 )
 @pytest.mark.usefixtures("setup_single_attribute_state_vacuum")
 async def test_set_invalid_fan_speed(
-    hass: HomeAssistant, calls: list[ServiceCall]
+    menuai: menuai, calls: list[ServiceCall]
 ) -> None:
     """Test set invalid fan speed when fan has valid speed."""
 
     # Set vacuum's fan speed to high
-    await common.async_set_fan_speed(hass, "high", TEST_ENTITY_ID)
-    await hass.async_block_till_done()
+    await common.async_set_fan_speed(menuai, "high", TEST_ENTITY_ID)
+    await menuai.async_block_till_done()
 
     # verify
     assert len(calls) == 1
@@ -864,8 +864,8 @@ async def test_set_invalid_fan_speed(
     assert calls[-1].data["fan_speed"] == "high"
 
     # Set vacuum's fan speed to 'invalid'
-    await common.async_set_fan_speed(hass, "invalid", TEST_ENTITY_ID)
-    await hass.async_block_till_done()
+    await common.async_set_fan_speed(menuai, "invalid", TEST_ENTITY_ID)
+    await menuai.async_block_till_done()
 
     # verify fan speed is unchanged
     assert len(calls) == 1
@@ -875,12 +875,12 @@ async def test_set_invalid_fan_speed(
 
 
 async def test_nested_unique_id(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test a template unique_id propagates to switch unique_ids."""
     with assert_setup_component(1, template.DOMAIN):
         assert await async_setup_component(
-            hass,
+            menuai,
             template.DOMAIN,
             {
                 "template": {
@@ -901,11 +901,11 @@ async def test_nested_unique_id(
             },
         )
 
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all("vacuum")) == 2
+    assert len(menuai.states.async_all("vacuum")) == 2
 
     entry = entity_registry.async_get("vacuum.test_a")
     assert entry
@@ -962,15 +962,15 @@ async def test_nested_unique_id(
     ],
 )
 async def test_empty_action_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     supported_features: VacuumEntityFeature,
     setup_test_vacuum_with_extra_config,
 ) -> None:
     """Test configuration with empty script."""
-    await common.async_start(hass, TEST_ENTITY_ID)
-    await hass.async_block_till_done()
+    await common.async_start(menuai, TEST_ENTITY_ID)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes["supported_features"] == (
         VacuumEntityFeature.STATE | VacuumEntityFeature.START | supported_features
     )

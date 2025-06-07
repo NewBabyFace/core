@@ -8,14 +8,14 @@ from typing import Any, cast
 from aioshelly.block_device import Block
 from aioshelly.const import BLOCK_GENERATIONS, MODEL_GAS
 
-from homeassistant.components.valve import (
+from menuai.components.valve import (
     ValveDeviceClass,
     ValveEntity,
     ValveEntityDescription,
     ValveEntityFeature,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import ShellyBlockCoordinator, ShellyConfigEntry
 from .entity import (
@@ -42,18 +42,18 @@ GAS_VALVE = BlockValveDescription(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ShellyConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up valves for device."""
     if get_device_entry_gen(config_entry) in BLOCK_GENERATIONS:
-        async_setup_block_entry(hass, config_entry, async_add_entities)
+        async_setup_block_entry(menuai, config_entry, async_add_entities)
 
 
 @callback
 def async_setup_block_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ShellyConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -63,7 +63,7 @@ def async_setup_block_entry(
 
     if coordinator.model == MODEL_GAS:
         async_setup_block_attribute_entities(
-            hass,
+            menuai,
             async_add_entities,
             coordinator,
             {("valve", "valve"): GAS_VALVE},
@@ -71,7 +71,7 @@ def async_setup_block_entry(
         )
         # Remove deprecated switch entity for gas valve
         unique_id = f"{coordinator.mac}-valve_0-valve"
-        async_remove_shelly_entity(hass, "switch", unique_id)
+        async_remove_shelly_entity(menuai, "switch", unique_id)
 
 
 class BlockShellyValve(ShellyBlockAttributeEntity, ValveEntity):

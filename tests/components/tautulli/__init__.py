@@ -2,14 +2,14 @@
 
 from unittest.mock import AsyncMock, patch
 
-from homeassistant.components.tautulli.const import DOMAIN
-from homeassistant.const import (
+from menuai.components.tautulli.const import DOMAIN
+from menuai.const import (
     CONF_API_KEY,
     CONF_URL,
     CONF_VERIFY_SSL,
     CONTENT_TYPE_JSON,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry, load_fixture
 from tests.test_util.aiohttp import AiohttpClientMocker
@@ -29,7 +29,7 @@ CONF_DATA = {
 def patch_config_flow_tautulli(mocked_tautulli) -> AsyncMock:
     """Mock Tautulli config flow."""
     return patch(
-        "homeassistant.components.tautulli.config_flow.PyTautulli.async_get_server_info",
+        "menuai.components.tautulli.config_flow.PyTautulli.async_get_server_info",
         return_value=mocked_tautulli,
     )
 
@@ -68,7 +68,7 @@ def mock_connection(
 
 
 async def setup_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     url: str = URL,
     api_key: str = API_KEY,
@@ -76,7 +76,7 @@ async def setup_integration(
     skip_entry_setup: bool = False,
     invalid_auth: bool = False,
 ) -> MockConfigEntry:
-    """Set up the Tautulli integration in Home Assistant."""
+    """Set up the Tautulli integration in MenuAI."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         unique_id=unique_id,
@@ -87,7 +87,7 @@ async def setup_integration(
         },
     )
 
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     mock_connection(
         aioclient_mock,
@@ -96,7 +96,7 @@ async def setup_integration(
     )
 
     if not skip_entry_setup:
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     return entry

@@ -8,29 +8,29 @@ import logging
 import caldav
 import voluptuous as vol
 
-from homeassistant.components.calendar import (
+from menuai.components.calendar import (
     ENTITY_ID_FORMAT,
     PLATFORM_SCHEMA as CALENDAR_PLATFORM_SCHEMA,
     CalendarEntity,
     CalendarEvent,
     is_offset_reached,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_NAME,
     CONF_PASSWORD,
     CONF_URL,
     CONF_USERNAME,
     CONF_VERIFY_SSL,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity import async_generate_entity_id
-from homeassistant.helpers.entity_platform import (
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity import async_generate_entity_id
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     AddEntitiesCallback,
 )
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from . import CalDavConfigEntry
 from .api import async_get_calendars
@@ -75,7 +75,7 @@ PLATFORM_SCHEMA = CALENDAR_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     disc_info: DiscoveryInfoType | None = None,
@@ -90,7 +90,7 @@ async def async_setup_platform(
         url, None, username, password, ssl_verify_cert=config[CONF_VERIFY_SSL]
     )
 
-    calendars = await async_get_calendars(hass, client, SUPPORTED_COMPONENT)
+    calendars = await async_get_calendars(menuai, client, SUPPORTED_COMPONENT)
 
     entities = []
     device_id: str | None
@@ -109,9 +109,9 @@ async def async_setup_platform(
 
             name = cust_calendar[CONF_NAME]
             device_id = f"{cust_calendar[CONF_CALENDAR]} {cust_calendar[CONF_NAME]}"
-            entity_id = async_generate_entity_id(ENTITY_ID_FORMAT, device_id, hass=hass)
+            entity_id = async_generate_entity_id(ENTITY_ID_FORMAT, device_id, menuai=menuai)
             coordinator = CalDavUpdateCoordinator(
-                hass,
+                menuai,
                 None,
                 calendar=calendar,
                 days=days,
@@ -127,9 +127,9 @@ async def async_setup_platform(
         if not config[CONF_CUSTOM_CALENDARS]:
             name = calendar.name
             device_id = calendar.name
-            entity_id = async_generate_entity_id(ENTITY_ID_FORMAT, device_id, hass=hass)
+            entity_id = async_generate_entity_id(ENTITY_ID_FORMAT, device_id, menuai=menuai)
             coordinator = CalDavUpdateCoordinator(
-                hass,
+                menuai,
                 None,
                 calendar=calendar,
                 days=days,
@@ -144,19 +144,19 @@ async def async_setup_platform(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: CalDavConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the CalDav calendar platform for a config entry."""
-    calendars = await async_get_calendars(hass, entry.runtime_data, SUPPORTED_COMPONENT)
+    calendars = await async_get_calendars(menuai, entry.runtime_data, SUPPORTED_COMPONENT)
     async_add_entities(
         (
             WebDavCalendarEntity(
                 calendar.name,
-                async_generate_entity_id(ENTITY_ID_FORMAT, calendar.name, hass=hass),
+                async_generate_entity_id(ENTITY_ID_FORMAT, calendar.name, menuai=menuai),
                 CalDavUpdateCoordinator(
-                    hass,
+                    menuai,
                     entry,
                     calendar=calendar,
                     days=CONFIG_ENTRY_DEFAULT_DAYS,
@@ -198,10 +198,10 @@ class WebDavCalendarEntity(CoordinatorEntity[CalDavUpdateCoordinator], CalendarE
         return self._event
 
     async def async_get_events(
-        self, hass: HomeAssistant, start_date: datetime, end_date: datetime
+        self, menuai: menuai, start_date: datetime, end_date: datetime
     ) -> list[CalendarEvent]:
         """Get all events in a specific time frame."""
-        return await self.coordinator.async_get_events(hass, start_date, end_date)
+        return await self.coordinator.async_get_events(menuai, start_date, end_date)
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -218,7 +218,7 @@ class WebDavCalendarEntity(CoordinatorEntity[CalDavUpdateCoordinator], CalendarE
             }
         super()._handle_coordinator_update()
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass update state from existing coordinator data."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai update state from existing coordinator data."""
+        await super().async_added_to_menuai()
         self._handle_coordinator_update()

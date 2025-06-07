@@ -8,7 +8,7 @@ import voluptuous as vol
 from voluptuous.error import Error as VoluptuousError
 import yaml
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_CODE,
     CONF_DEVICE,
     CONF_HOST,
@@ -17,12 +17,12 @@ from homeassistant.const import (
     CONF_REPEAT,
     CONF_SENSORS,
     CONF_TYPE,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     STATE_UNKNOWN,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, discovery
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, discovery
+from menuai.helpers.typing import ConfigType
 
 DOMAIN = "kira"
 
@@ -94,7 +94,7 @@ def load_codes(path):
     return codes
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the KIRA component."""
     sensors = config.get(DOMAIN, {}).get(CONF_SENSORS, [])
     remotes = config.get(DOMAIN, {}).get(CONF_REMOTES, [])
@@ -102,9 +102,9 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
     if not (sensors or remotes):
         sensors.append({})
 
-    codes = load_codes(hass.config.path(CODES_YAML))
+    codes = load_codes(menuai.config.path(CODES_YAML))
 
-    hass.data[DOMAIN] = {CONF_SENSOR: {}, CONF_REMOTE: {}}
+    menuai.data[DOMAIN] = {CONF_SENSOR: {}, CONF_REMOTE: {}}
 
     def load_module(platform, idx, module_conf):
         """Set up the KIRA module and load platform."""
@@ -121,13 +121,13 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
         else:
             module = pykira.KiraModule(host, port)
 
-        hass.data[DOMAIN][platform][module_name] = module
+        menuai.data[DOMAIN][platform][module_name] = module
         for code in codes:
             code_tuple = (code.get(CONF_NAME), code.get(CONF_DEVICE, STATE_UNKNOWN))
             module.registerCode(code_tuple, code.get(CONF_CODE))
 
         discovery.load_platform(
-            hass, platform, DOMAIN, {"name": module_name, "device": device_name}, config
+            menuai, platform, DOMAIN, {"name": module_name, "device": device_name}, config
         )
 
     for idx, module_conf in enumerate(sensors):
@@ -138,10 +138,10 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     def _stop_kira(_event):
         """Stop the KIRA receiver."""
-        for receiver in hass.data[DOMAIN][CONF_SENSOR].values():
+        for receiver in menuai.data[DOMAIN][CONF_SENSOR].values():
             receiver.stop()
         _LOGGER.debug("Terminated receivers")
 
-    hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, _stop_kira)
+    menuai.bus.listen_once(EVENT_menuai_STOP, _stop_kira)
 
     return True

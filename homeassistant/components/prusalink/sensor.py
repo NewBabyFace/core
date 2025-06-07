@@ -10,24 +10,24 @@ from typing import Generic, TypeVar, cast
 from pyprusalink.types import JobInfo, PrinterInfo, PrinterState, PrinterStatus
 from pyprusalink.types_legacy import LegacyPrinterStatus
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     PERCENTAGE,
     REVOLUTIONS_PER_MINUTE,
     UnitOfLength,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
-from homeassistant.util.dt import utcnow
-from homeassistant.util.variance import ignore_variance
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
+from menuai.util.dt import utcnow
+from menuai.util.variance import ignore_variance
 
 from .const import DOMAIN
 from .coordinator import PrusaLinkUpdateCoordinator
@@ -203,12 +203,12 @@ SENSORS: dict[str, tuple[PrusaLinkSensorEntityDescription, ...]] = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up PrusaLink sensor based on a config entry."""
-    coordinators: dict[str, PrusaLinkUpdateCoordinator] = hass.data[DOMAIN][
+    coordinators: dict[str, PrusaLinkUpdateCoordinator] = menuai.data[DOMAIN][
         entry.entry_id
     ]
 

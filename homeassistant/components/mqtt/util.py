@@ -13,13 +13,13 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry, ConfigEntryState
-from homeassistant.const import MAX_LENGTH_STATE_STATE, STATE_UNKNOWN, Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv, template
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util.async_ import create_eager_task
+from menuai.config_entries import ConfigEntry, ConfigEntryState
+from menuai.const import MAX_LENGTH_STATE_STATE, STATE_UNKNOWN, Platform
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv, template
+from menuai.helpers.typing import ConfigType
+from menuai.util.async_ import create_eager_task
 
 from .const import (
     ATTR_PAYLOAD,
@@ -74,7 +74,7 @@ class EnsureJobAfterCooldown:
         """Execute after a cooldown period."""
         try:
             await self._callback()
-        except HomeAssistantError as ha_error:
+        except menuaiError as ha_error:
             _LOGGER.error("%s", ha_error)
 
     @callback
@@ -151,13 +151,13 @@ def platforms_from_config(config: list[ConfigType]) -> set[Platform | str]:
 
 
 async def async_forward_entry_setup_and_setup_discovery(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     platforms: set[Platform | str],
     late: bool = False,
 ) -> None:
     """Forward the config entry setup to the platforms and set up discovery."""
-    mqtt_data = hass.data[DATA_MQTT]
+    mqtt_data = menuai.data[DATA_MQTT]
     platforms_loaded = mqtt_data.platforms_loaded
     new_platforms: set[Platform | str] = platforms - platforms_loaded
     tasks: list[asyncio.Task] = []
@@ -167,18 +167,18 @@ async def async_forward_entry_setup_and_setup_discovery(
         from . import device_automation
 
         tasks.append(
-            create_eager_task(device_automation.async_setup_entry(hass, config_entry))
+            create_eager_task(device_automation.async_setup_entry(menuai, config_entry))
         )
     if "tag" in new_platforms:
         # Local import to avoid circular dependencies
         # pylint: disable-next=import-outside-toplevel
         from . import tag
 
-        tasks.append(create_eager_task(tag.async_setup_entry(hass, config_entry)))
+        tasks.append(create_eager_task(tag.async_setup_entry(menuai, config_entry)))
     if new_entity_platforms := (new_platforms - {"tag", "device_automation"}):
         tasks.append(
             create_eager_task(
-                hass.config_entries.async_forward_entry_setups(
+                menuai.config_entries.async_forward_entry_setups(
                     config_entry, new_entity_platforms
                 )
             )
@@ -189,18 +189,18 @@ async def async_forward_entry_setup_and_setup_discovery(
     platforms_loaded.update(new_platforms)
 
 
-def mqtt_config_entry_enabled(hass: HomeAssistant) -> bool | None:
+def mqtt_config_entry_enabled(menuai: menuai) -> bool | None:
     """Return true when the MQTT config entry is enabled."""
     # If the mqtt client is connected, skip the expensive config
     # entry check as its roughly two orders of magnitude faster.
     return (
-        DATA_MQTT in hass.data and hass.data[DATA_MQTT].client.connected
-    ) or hass.config_entries.async_has_entries(
+        DATA_MQTT in menuai.data and menuai.data[DATA_MQTT].client.connected
+    ) or menuai.config_entries.async_has_entries(
         DOMAIN, include_disabled=False, include_ignore=False
     )
 
 
-async def async_wait_for_mqtt_client(hass: HomeAssistant) -> bool:
+async def async_wait_for_mqtt_client(menuai: menuai) -> bool:
     """Wait for the MQTT client to become available.
 
     Waits when mqtt set up is in progress,
@@ -208,19 +208,19 @@ async def async_wait_for_mqtt_client(hass: HomeAssistant) -> bool:
     Returns True if the mqtt client is available.
     Returns False when the client is not available.
     """
-    if not mqtt_config_entry_enabled(hass):
+    if not mqtt_config_entry_enabled(menuai):
         return False
 
-    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    entry = menuai.config_entries.async_entries(DOMAIN)[0]
     if entry.state == ConfigEntryState.LOADED:
         return True
 
     state_reached_future: asyncio.Future[bool]
-    if DATA_MQTT_AVAILABLE not in hass.data:
-        state_reached_future = hass.loop.create_future()
-        hass.data[DATA_MQTT_AVAILABLE] = state_reached_future
+    if DATA_MQTT_AVAILABLE not in menuai.data:
+        state_reached_future = menuai.loop.create_future()
+        menuai.data[DATA_MQTT_AVAILABLE] = state_reached_future
     else:
-        state_reached_future = hass.data[DATA_MQTT_AVAILABLE]
+        state_reached_future = menuai.data[DATA_MQTT_AVAILABLE]
 
     try:
         async with asyncio.timeout(AVAILABILITY_TIMEOUT):
@@ -338,7 +338,7 @@ def valid_birth_will(config: ConfigType) -> ConfigType:
 
 
 async def async_create_certificate_temp_files(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> None:
     """Create certificate temporary files for the MQTT client."""
 
@@ -364,7 +364,7 @@ async def async_create_certificate_temp_files(
         _create_temp_file(temp_dir / CONF_CLIENT_CERT, config.get(CONF_CLIENT_CERT))
         _create_temp_file(temp_dir / CONF_CLIENT_KEY, config.get(CONF_CLIENT_KEY))
 
-    await hass.async_add_executor_job(_create_temp_dir_and_files)
+    await menuai.async_add_executor_job(_create_temp_dir_and_files)
 
 
 def check_state_too_long(

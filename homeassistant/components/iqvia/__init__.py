@@ -6,10 +6,10 @@ import asyncio
 
 from pyiqvia import Client
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import aiohttp_client
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import aiohttp_client
 
 from .const import (
     CONF_ZIP_CODE,
@@ -28,15 +28,15 @@ DEFAULT_ATTRIBUTION = "Data provided by IQVIA™"
 PLATFORMS = [Platform.SENSOR]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: IqviaConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: IqviaConfigEntry) -> bool:
     """Set up IQVIA as config entry."""
     if not entry.unique_id:
         # If the config entry doesn't already have a unique ID, set one:
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry, unique_id=entry.data[CONF_ZIP_CODE]
         )
 
-    websession = aiohttp_client.async_get_clientsession(hass)
+    websession = aiohttp_client.async_get_clientsession(menuai)
     client = Client(entry.data[CONF_ZIP_CODE], session=websession)
 
     # We disable the client's request retry abilities here to avoid a lengthy (and
@@ -56,7 +56,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: IqviaConfigEntry) -> boo
         (TYPE_DISEASE_INDEX, client.disease.current),
     ):
         coordinator = coordinators[sensor_type] = IqviaUpdateCoordinator(
-            hass,
+            menuai,
             config_entry=entry,
             name=f"{entry.data[CONF_ZIP_CODE]} {sensor_type}",
             update_method=api_coro,
@@ -75,11 +75,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: IqviaConfigEntry) -> boo
 
     entry.runtime_data = coordinators
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: IqviaConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: IqviaConfigEntry) -> bool:
     """Unload an OpenUV config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

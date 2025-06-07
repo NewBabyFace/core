@@ -9,8 +9,8 @@ from habluetooth import BaseHaRemoteScanner
 import habluetooth.util as habluetooth_utils
 import pytest
 
-from homeassistant.components import bluetooth
-from homeassistant.core import HomeAssistant
+from menuai.components import bluetooth
+from menuai.core import menuai
 
 from . import (
     HCI0_SOURCE_ADDRESS,
@@ -42,11 +42,11 @@ def disable_bluetooth_auto_recovery():
 
 @pytest.fixture(name="operating_system_85")
 def mock_operating_system_85():
-    """Mock running Home Assistant Operating system 8.5."""
+    """Mock running MenuAI Operating system 8.5."""
     with (
-        patch("homeassistant.components.hassio.is_hassio", return_value=True),
+        patch("menuai.components.menuaiio.is_menuaiio", return_value=True),
         patch(
-            "homeassistant.components.hassio.get_os_info",
+            "menuai.components.menuaiio.get_os_info",
             return_value={
                 "version": "8.5",
                 "version_latest": "10.0.dev20220912",
@@ -56,19 +56,19 @@ def mock_operating_system_85():
                 "data_disk": "/dev/mmcblk1p4",
             },
         ),
-        patch("homeassistant.components.hassio.get_info", return_value={}),
-        patch("homeassistant.components.hassio.get_host_info", return_value={}),
+        patch("menuai.components.menuaiio.get_info", return_value={}),
+        patch("menuai.components.menuaiio.get_host_info", return_value={}),
     ):
         yield
 
 
 @pytest.fixture(name="operating_system_90")
 def mock_operating_system_90():
-    """Mock running Home Assistant Operating system 9.0."""
+    """Mock running MenuAI Operating system 9.0."""
     with (
-        patch("homeassistant.components.hassio.is_hassio", return_value=True),
+        patch("menuai.components.menuaiio.is_menuaiio", return_value=True),
         patch(
-            "homeassistant.components.hassio.get_os_info",
+            "menuai.components.menuaiio.get_os_info",
             return_value={
                 "version": "9.0.dev20220912",
                 "version_latest": "10.0.dev20220912",
@@ -78,8 +78,8 @@ def mock_operating_system_90():
                 "data_disk": "/dev/mmcblk1p4",
             },
         ),
-        patch("homeassistant.components.hassio.get_info", return_value={}),
-        patch("homeassistant.components.hassio.get_host_info", return_value={}),
+        patch("menuai.components.menuaiio.get_info", return_value={}),
+        patch("menuai.components.menuaiio.get_host_info", return_value={}),
     ):
         yield
 
@@ -90,7 +90,7 @@ def macos_adapter() -> Generator[None]:
     with (
         patch("bleak.get_platform_scanner_backend_type"),
         patch(
-            "homeassistant.components.bluetooth.platform.system",
+            "menuai.components.bluetooth.platform.system",
             return_value="Darwin",
         ),
         patch(
@@ -124,7 +124,7 @@ def no_adapter_fixture() -> Generator[None]:
     """Fixture that mocks no adapters on Linux."""
     with (
         patch(
-            "homeassistant.components.bluetooth.platform.system",
+            "menuai.components.bluetooth.platform.system",
             return_value="Linux",
         ),
         patch(
@@ -152,7 +152,7 @@ def one_adapter_fixture() -> Generator[None]:
     """Fixture that mocks one adapter on Linux."""
     with (
         patch(
-            "homeassistant.components.bluetooth.platform.system",
+            "menuai.components.bluetooth.platform.system",
             return_value="Linux",
         ),
         patch(
@@ -174,7 +174,7 @@ def one_adapter_fixture() -> Generator[None]:
                     "address": "00:00:00:00:00:01",
                     "hw_version": "usb:v1D6Bp0246d053F",
                     "passive_scan": True,
-                    "sw_version": "homeassistant",
+                    "sw_version": "menuai",
                     "manufacturer": "ACME",
                     "product": "Bluetooth Adapter 5.0",
                     "product_id": "aa01",
@@ -191,7 +191,7 @@ def two_adapters_fixture() -> Generator[None]:
     """Fixture that mocks two adapters on Linux."""
     with (
         patch(
-            "homeassistant.components.bluetooth.platform.system", return_value="Linux"
+            "menuai.components.bluetooth.platform.system", return_value="Linux"
         ),
         patch(
             "habluetooth.scanner.platform.system",
@@ -206,7 +206,7 @@ def two_adapters_fixture() -> Generator[None]:
                     "address": "00:00:00:00:00:01",
                     "hw_version": "usb:v1D6Bp0246d053F",
                     "passive_scan": False,
-                    "sw_version": "homeassistant",
+                    "sw_version": "menuai",
                     "manufacturer": "ACME",
                     "product": "Bluetooth Adapter 5.0",
                     "product_id": "aa01",
@@ -217,7 +217,7 @@ def two_adapters_fixture() -> Generator[None]:
                     "address": "00:00:00:00:00:02",
                     "hw_version": "usb:v1D6Bp0246d053F",
                     "passive_scan": True,
-                    "sw_version": "homeassistant",
+                    "sw_version": "menuai",
                     "manufacturer": "ACME",
                     "product": "Bluetooth Adapter 5.0",
                     "product_id": "aa01",
@@ -235,7 +235,7 @@ def crashed_adapter_fixture():
     """Fixture that mocks one crashed adapter on Linux."""
     with (
         patch(
-            "homeassistant.components.bluetooth.platform.system",
+            "menuai.components.bluetooth.platform.system",
             return_value="Linux",
         ),
         patch(
@@ -257,7 +257,7 @@ def crashed_adapter_fixture():
                     "address": "00:00:00:00:00:00",
                     "hw_version": "usb:v1D6Bp0246d053F",
                     "passive_scan": True,
-                    "sw_version": "homeassistant",
+                    "sw_version": "menuai",
                     "manufacturer": None,
                     "product": None,
                     "product_id": None,
@@ -274,7 +274,7 @@ def one_adapter_old_bluez():
     """Fixture that mocks two adapters on Linux."""
     with (
         patch(
-            "homeassistant.components.bluetooth.platform.system", return_value="Linux"
+            "menuai.components.bluetooth.platform.system", return_value="Linux"
         ),
         patch(
             "habluetooth.scanner.platform.system",
@@ -289,7 +289,7 @@ def one_adapter_old_bluez():
                     "address": "00:00:00:00:00:01",
                     "hw_version": "usb:v1D6Bp0246d053F",
                     "passive_scan": False,
-                    "sw_version": "homeassistant",
+                    "sw_version": "menuai",
                     "manufacturer": "ACME",
                     "product": "Bluetooth Adapter 5.0",
                     "product_id": "aa01",
@@ -311,40 +311,40 @@ def disable_new_discovery_flows_fixture():
     ensure we do not load other integrations.
     """
     with patch(
-        "homeassistant.components.bluetooth.manager.discovery_flow.async_create_flow"
+        "menuai.components.bluetooth.manager.discovery_flow.async_create_flow"
     ) as mock_create_flow:
         yield mock_create_flow
 
 
 @pytest.fixture
-def register_hci0_scanner(hass: HomeAssistant) -> Generator[None]:
+def register_hci0_scanner(menuai: menuai) -> Generator[None]:
     """Register an hci0 scanner."""
     hci0_scanner = FakeScanner(HCI0_SOURCE_ADDRESS, "hci0")
     hci0_scanner.connectable = True
-    cancel = bluetooth.async_register_scanner(hass, hci0_scanner, connection_slots=5)
+    cancel = bluetooth.async_register_scanner(menuai, hci0_scanner, connection_slots=5)
     yield
     cancel()
-    bluetooth.async_remove_scanner(hass, hci0_scanner.source)
+    bluetooth.async_remove_scanner(menuai, hci0_scanner.source)
 
 
 @pytest.fixture
-def register_hci1_scanner(hass: HomeAssistant) -> Generator[None]:
+def register_hci1_scanner(menuai: menuai) -> Generator[None]:
     """Register an hci1 scanner."""
     hci1_scanner = FakeScanner(HCI1_SOURCE_ADDRESS, "hci1")
     hci1_scanner.connectable = True
-    cancel = bluetooth.async_register_scanner(hass, hci1_scanner, connection_slots=5)
+    cancel = bluetooth.async_register_scanner(menuai, hci1_scanner, connection_slots=5)
     yield
     cancel()
-    bluetooth.async_remove_scanner(hass, hci1_scanner.source)
+    bluetooth.async_remove_scanner(menuai, hci1_scanner.source)
 
 
 @pytest.fixture
-def register_non_connectable_scanner(hass: HomeAssistant) -> Generator[None]:
+def register_non_connectable_scanner(menuai: menuai) -> Generator[None]:
     """Register an non connectable remote scanner."""
     remote_scanner = BaseHaRemoteScanner(
         NON_CONNECTABLE_REMOTE_SOURCE_ADDRESS, "non connectable", None, False
     )
-    cancel = bluetooth.async_register_scanner(hass, remote_scanner)
+    cancel = bluetooth.async_register_scanner(menuai, remote_scanner)
     yield
     cancel()
-    bluetooth.async_remove_scanner(hass, remote_scanner.source)
+    bluetooth.async_remove_scanner(menuai, remote_scanner.source)

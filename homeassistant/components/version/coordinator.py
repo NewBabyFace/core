@@ -8,9 +8,9 @@ from awesomeversion import AwesomeVersion
 from pyhaversion import HaVersion, HaVersionSource
 from pyhaversion.exceptions import HaVersionException
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN, LOGGER, UPDATE_COORDINATOR_UPDATE_INTERVAL
 
@@ -24,13 +24,13 @@ class VersionDataUpdateCoordinator(DataUpdateCoordinator[None]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: VersionConfigEntry,
         api: HaVersion,
     ) -> None:
         """Initialize the coordinator."""
         super().__init__(
-            hass=hass,
+            menuai=menuai,
             logger=LOGGER,
             config_entry=config_entry,
             name=DOMAIN,

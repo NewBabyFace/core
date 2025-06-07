@@ -5,16 +5,16 @@ from __future__ import annotations
 from collections.abc import Iterable
 from datetime import datetime as dt
 
-from homeassistant.components.recorder import get_instance
-from homeassistant.core import HomeAssistant
+from menuai.components.recorder import get_instance
+from menuai.core import menuai
 
 
 def entities_may_have_state_changes_after(
-    hass: HomeAssistant, entity_ids: Iterable, start_time: dt, no_attributes: bool
+    menuai: menuai, entity_ids: Iterable, start_time: dt, no_attributes: bool
 ) -> bool:
     """Check the state machine to see if entities have changed since start time."""
     for entity_id in entity_ids:
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         if state is None:
             return True
 
@@ -25,10 +25,10 @@ def entities_may_have_state_changes_after(
     return False
 
 
-def has_states_before(hass: HomeAssistant, run_time: dt) -> bool:
+def has_states_before(menuai: menuai, run_time: dt) -> bool:
     """Check if the recorder has states as old or older than run_time.
 
     Returns True if there may be such states.
     """
-    oldest_ts = get_instance(hass).states_manager.oldest_ts
+    oldest_ts = get_instance(menuai).states_manager.oldest_ts
     return oldest_ts is not None and run_time.timestamp() >= oldest_ts

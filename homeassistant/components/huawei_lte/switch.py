@@ -5,15 +5,15 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     DOMAIN as SWITCH_DOMAIN,
     SwitchDeviceClass,
     SwitchEntity,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.entity import Entity
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
     DOMAIN,
@@ -26,12 +26,12 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up from config entry."""
-    router = hass.data[DOMAIN].routers[config_entry.entry_id]
+    router = menuai.data[DOMAIN].routers[config_entry.entry_id]
     switches: list[Entity] = []
 
     if router.data.get(KEY_DIALUP_MOBILE_DATASWITCH):
@@ -63,14 +63,14 @@ class HuaweiLteBaseSwitch(HuaweiLteBaseEntityWithDevice, SwitchEntity):
         """Turn switch off."""
         self._turn(state=False)
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to needed data on add."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self.router.subscriptions[self.key].append(f"{SWITCH_DOMAIN}/{self.item}")
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Unsubscribe from needed data on remove."""
-        await super().async_will_remove_from_hass()
+        await super().async_will_remove_from_menuai()
         self.router.subscriptions[self.key].remove(f"{SWITCH_DOMAIN}/{self.item}")
 
     async def async_update(self) -> None:

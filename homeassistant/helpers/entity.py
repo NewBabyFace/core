@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, Any, Final, Literal, NotRequired, TypedDict, f
 from propcache.api import cached_property
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ASSUMED_STATE,
     ATTR_ATTRIBUTION,
     ATTR_DEVICE_CLASS,
@@ -37,22 +37,22 @@ from homeassistant.const import (
     STATE_UNKNOWN,
     EntityCategory,
 )
-from homeassistant.core import (
+from menuai.core import (
     CALLBACK_TYPE,
     Context,
     Event,
-    HassJobType,
-    HomeAssistant,
+    menuaiJobType,
+    menuai,
     ReleaseChannel,
     callback,
-    get_hassjob_callable_job_type,
+    get_menuaijob_callable_job_type,
     get_release_channel,
 )
-from homeassistant.core_config import DATA_CUSTOMIZE
-from homeassistant.exceptions import HomeAssistantError, NoEntitySpecifiedError
-from homeassistant.loader import async_suggest_report_issue, bind_hass
-from homeassistant.util import ensure_unique_string, slugify
-from homeassistant.util.frozen_dataclass_compat import FrozenOrThawed
+from menuai.core_config import DATA_CUSTOMIZE
+from menuai.exceptions import menuaiError, NoEntitySpecifiedError
+from menuai.loader import async_suggest_report_issue, bind_menuai
+from menuai.util import ensure_unique_string, slugify
+from menuai.util.frozen_dataclass_compat import FrozenOrThawed
 
 from . import device_registry as dr, entity_registry as er, singleton
 from .device_registry import DeviceInfo, EventDeviceRegistryUpdatedData
@@ -83,15 +83,15 @@ CONTEXT_RECENT_TIME_SECONDS = 5  # Time that a context is considered recent
 
 
 @callback
-def async_setup(hass: HomeAssistant) -> None:
+def async_setup(menuai: menuai) -> None:
     """Set up entity sources."""
-    entity_sources(hass)
+    entity_sources(menuai)
 
 
 @callback
-@bind_hass
+@bind_menuai
 @singleton.singleton(DATA_ENTITY_SOURCE)
-def entity_sources(hass: HomeAssistant) -> dict[str, EntityInfo]:
+def entity_sources(menuai: menuai) -> dict[str, EntityInfo]:
     """Get the entity sources."""
     return {}
 
@@ -100,10 +100,10 @@ def generate_entity_id(
     entity_id_format: str,
     name: str | None,
     current_ids: list[str] | None = None,
-    hass: HomeAssistant | None = None,
+    menuai: menuai | None = None,
 ) -> str:
     """Generate a unique entity ID based on given entity IDs or used IDs."""
-    return async_generate_entity_id(entity_id_format, name, current_ids, hass)
+    return async_generate_entity_id(entity_id_format, name, current_ids, menuai)
 
 
 @callback
@@ -111,7 +111,7 @@ def async_generate_entity_id(
     entity_id_format: str,
     name: str | None,
     current_ids: Iterable[str] | None = None,
-    hass: HomeAssistant | None = None,
+    menuai: menuai | None = None,
 ) -> str:
     """Generate a unique entity ID based on given entity IDs or used IDs."""
     name = (name or DEVICE_DEFAULT_NAME).lower()
@@ -120,74 +120,74 @@ def async_generate_entity_id(
     if current_ids is not None:
         return ensure_unique_string(preferred_string, current_ids)
 
-    if hass is None:
-        raise ValueError("Missing required parameter current_ids or hass")
+    if menuai is None:
+        raise ValueError("Missing required parameter current_ids or menuai")
 
     test_string = preferred_string
     tries = 1
-    while not hass.states.async_available(test_string):
+    while not menuai.states.async_available(test_string):
         tries += 1
         test_string = f"{preferred_string}_{tries}"
 
     return test_string
 
 
-def get_capability(hass: HomeAssistant, entity_id: str, capability: str) -> Any | None:
+def get_capability(menuai: menuai, entity_id: str, capability: str) -> Any | None:
     """Get a capability attribute of an entity.
 
     First try the statemachine, then entity registry.
     """
-    if state := hass.states.get(entity_id):
+    if state := menuai.states.get(entity_id):
         return state.attributes.get(capability)
 
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
     if not (entry := entity_registry.async_get(entity_id)):
-        raise HomeAssistantError(f"Unknown entity {entity_id}")
+        raise menuaiError(f"Unknown entity {entity_id}")
 
     return entry.capabilities.get(capability) if entry.capabilities else None
 
 
-def get_device_class(hass: HomeAssistant, entity_id: str) -> str | None:
+def get_device_class(menuai: menuai, entity_id: str) -> str | None:
     """Get device class of an entity.
 
     First try the statemachine, then entity registry.
     """
-    if state := hass.states.get(entity_id):
+    if state := menuai.states.get(entity_id):
         return state.attributes.get(ATTR_DEVICE_CLASS)
 
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
     if not (entry := entity_registry.async_get(entity_id)):
-        raise HomeAssistantError(f"Unknown entity {entity_id}")
+        raise menuaiError(f"Unknown entity {entity_id}")
 
     return entry.device_class or entry.original_device_class
 
 
-def get_supported_features(hass: HomeAssistant, entity_id: str) -> int:
+def get_supported_features(menuai: menuai, entity_id: str) -> int:
     """Get supported features for an entity.
 
     First try the statemachine, then entity registry.
     """
-    if state := hass.states.get(entity_id):
+    if state := menuai.states.get(entity_id):
         return state.attributes.get(ATTR_SUPPORTED_FEATURES, 0)  # type: ignore[no-any-return]
 
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
     if not (entry := entity_registry.async_get(entity_id)):
-        raise HomeAssistantError(f"Unknown entity {entity_id}")
+        raise menuaiError(f"Unknown entity {entity_id}")
 
     return entry.supported_features or 0
 
 
-def get_unit_of_measurement(hass: HomeAssistant, entity_id: str) -> str | None:
+def get_unit_of_measurement(menuai: menuai, entity_id: str) -> str | None:
     """Get unit of measurement of an entity.
 
     First try the statemachine, then entity registry.
     """
-    if state := hass.states.get(entity_id):
+    if state := menuai.states.get(entity_id):
         return state.attributes.get(ATTR_UNIT_OF_MEASUREMENT)
 
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
     if not (entry := entity_registry.async_get(entity_id)):
-        raise HomeAssistantError(f"Unknown entity {entity_id}")
+        raise menuaiError(f"Unknown entity {entity_id}")
 
     return entry.unit_of_measurement
 
@@ -229,7 +229,7 @@ _SENTINEL = object()
 
 
 class EntityDescription(metaclass=FrozenOrThawed, frozen_or_thawed=True):
-    """A class that describes Home Assistant entities."""
+    """A class that describes MenuAI entities."""
 
     # This is the key identifier for this entity
     key: str
@@ -427,17 +427,17 @@ CACHED_PROPERTIES_WITH_ATTR_ = {
 class Entity(
     metaclass=ABCCachedProperties, cached_properties=CACHED_PROPERTIES_WITH_ATTR_
 ):
-    """An abstract class for Home Assistant entities."""
+    """An abstract class for MenuAI entities."""
 
     # SAFE TO OVERWRITE
     # The properties and methods here are safe to overwrite when inheriting
     # this class. These may be used to customize the behavior of the entity.
     entity_id: str = None  # type: ignore[assignment]
 
-    # Owning hass instance. Set by EntityPlatform by calling add_to_platform_start
+    # Owning menuai instance. Set by EntityPlatform by calling add_to_platform_start
     # While not purely typed, it makes typehinting more useful for us
     # and removes the need for constant None checks or asserts.
-    hass: HomeAssistant = None  # type: ignore[assignment]
+    menuai: menuai = None  # type: ignore[assignment]
 
     # Owning platform instance. Set by EntityPlatform by calling add_to_platform_start
     # While not purely typed, it makes typehinting more useful for us
@@ -508,9 +508,9 @@ class Entity(
         _entity_component_unrecorded_attributes | _unrecorded_attributes
     )
     # Job type cache
-    _job_types: dict[str, HassJobType] | None = None
+    _job_types: dict[str, menuaiJobType] | None = None
 
-    # StateInfo. Set by EntityPlatform by calling async_internal_added_to_hass
+    # StateInfo. Set by EntityPlatform by calling async_internal_added_to_menuai
     # While not purely typed, it makes typehinting more useful for us
     # and removes the need for constant None checks or asserts.
     _state_info: StateInfo = None  # type: ignore[assignment]
@@ -550,7 +550,7 @@ class Entity(
             cls._entity_component_unrecorded_attributes | cls._unrecorded_attributes
         )
 
-    def get_hassjob_type(self, function_name: str) -> HassJobType:
+    def get_menuaijob_type(self, function_name: str) -> menuaiJobType:
         """Get the job type function for the given name.
 
         This is used for entity service calls to avoid
@@ -559,7 +559,7 @@ class Entity(
         if not self._job_types:
             self._job_types = {}
         if function_name not in self._job_types:
-            self._job_types[function_name] = get_hassjob_callable_job_type(
+            self._job_types[function_name] = get_menuaijob_callable_job_type(
                 getattr(self, function_name)
             )
         return self._job_types[function_name]
@@ -666,7 +666,7 @@ class Entity(
         except KeyError as err:
             if not self._name_translation_placeholders_reported:
                 if get_release_channel() is not ReleaseChannel.STABLE:
-                    raise HomeAssistantError(f"Missing placeholder {err}") from err
+                    raise menuaiError(f"Missing placeholder {err}") from err
                 report_issue = self._suggest_report_issue()
                 _LOGGER.warning(
                     (
@@ -916,7 +916,7 @@ class Entity(
         return {}
 
     # DO NOT OVERWRITE
-    # These properties and methods are either managed by Home Assistant or they
+    # These properties and methods are either managed by MenuAI or they
     # are used to perform a very specific function. Overwriting these may
     # produce undesirable effects in the entity's operation.
 
@@ -936,14 +936,14 @@ class Entity(
         self._context_set = time.time()
 
     async def async_update_ha_state(self, force_refresh: bool = False) -> None:
-        """Update Home Assistant with current state of entity.
+        """Update MenuAI with current state of entity.
 
         If force_refresh == True will update entity before setting state.
 
         This method must be run in the event loop.
         """
-        if self.hass is None:
-            raise RuntimeError(f"Attribute hass is None for {self}")
+        if self.menuai is None:
+            raise RuntimeError(f"Attribute menuai is None for {self}")
 
         if self.entity_id is None:
             raise NoEntitySpecifiedError(
@@ -976,8 +976,8 @@ class Entity(
     @callback
     def _async_verify_state_writable(self) -> None:
         """Verify the entity is in a writable state."""
-        if self.hass is None:
-            raise RuntimeError(f"Attribute hass is None for {self}")
+        if self.menuai is None:
+            raise RuntimeError(f"Attribute menuai is None for {self}")
 
         # The check for self.platform guards against integrations not using an
         # EntityComponent and can be removed in HA Core 2024.1
@@ -1005,16 +1005,16 @@ class Entity(
     @callback
     def _async_write_ha_state_from_call_soon_threadsafe(self) -> None:
         """Write the state to the state machine from the event loop thread."""
-        if not self.hass or not self._verified_state_writable:
+        if not self.menuai or not self._verified_state_writable:
             self._async_verify_state_writable()
         self._async_write_ha_state()
 
     @callback
     def async_write_ha_state(self) -> None:
         """Write the state to the state machine."""
-        if not self.hass or not self._verified_state_writable:
+        if not self.menuai or not self._verified_state_writable:
             self._async_verify_state_writable()
-        if self.hass.loop_thread_id != threading.get_ident():
+        if self.menuai.loop_thread_id != threading.get_ident():
             report_non_thread_safe_operation("async_write_ha_state")
         self._async_write_ha_state()
 
@@ -1177,7 +1177,7 @@ class Entity(
                             type(self),
                             report_issue,
                         )
-                entity_registry = er.async_get(self.hass)
+                entity_registry = er.async_get(self.menuai)
                 self.registry_entry = entity_registry.async_update_entity(
                     self.entity_id,
                     capabilities=capabilities,
@@ -1201,7 +1201,7 @@ class Entity(
             # set and since try is near zero cost
             # on py3.11+ its faster to assume it is
             # set and catch the exception if it is not.
-            custom = self.hass.data[DATA_CUSTOMIZE].get(self.entity_id)
+            custom = self.menuai.data[DATA_CUSTOMIZE].get(self.entity_id)
         except KeyError:
             pass
         else:
@@ -1217,7 +1217,7 @@ class Entity(
             self._context_set = None
 
         # Intentionally called with positional args for performance reasons
-        self.hass.states.async_set_internal(
+        self.menuai.states.async_set_internal(
             self.entity_id,
             state,
             attr,
@@ -1238,12 +1238,12 @@ class Entity(
         been executed, the intermediate state transitions will be missed.
         """
         if force_refresh:
-            self.hass.create_task(
+            self.menuai.create_task(
                 self.async_update_ha_state(force_refresh),
                 f"Entity {self.entity_id} schedule update ha state",
             )
         else:
-            self.hass.loop.call_soon_threadsafe(
+            self.menuai.loop.call_soon_threadsafe(
                 self._async_write_ha_state_from_call_soon_threadsafe
             )
 
@@ -1260,7 +1260,7 @@ class Entity(
         been executed, the intermediate state transitions will be missed.
         """
         if force_refresh:
-            self.hass.async_create_task(
+            self.menuai.async_create_task(
                 self.async_update_ha_state(force_refresh),
                 f"Entity schedule update ha state {self.entity_id}",
                 eager_start=True,
@@ -1285,8 +1285,8 @@ class Entity(
         if self._update_staged:
             return
 
-        hass = self.hass
-        assert hass is not None
+        menuai = self.menuai
+        assert menuai is not None
 
         self._update_staged = True
 
@@ -1295,15 +1295,15 @@ class Entity(
             await self.parallel_updates.acquire()
 
         if warning:
-            update_warn = hass.loop.call_at(
-                hass.loop.time() + SLOW_UPDATE_WARNING, self._async_slow_update_warning
+            update_warn = menuai.loop.call_at(
+                menuai.loop.time() + SLOW_UPDATE_WARNING, self._async_slow_update_warning
             )
 
         try:
             if hasattr(self, "async_update"):
                 await self.async_update()
             elif hasattr(self, "update"):
-                await hass.async_add_executor_job(self.update)
+                await menuai.async_add_executor_job(self.update)
             else:
                 return
         finally:
@@ -1329,18 +1329,18 @@ class Entity(
     @callback
     def add_to_platform_start(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         platform: EntityPlatform,
         parallel_updates: asyncio.Semaphore | None,
     ) -> None:
         """Start adding an entity to a platform."""
         if self._platform_state is not EntityPlatformState.NOT_ADDED:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Entity '{self.entity_id}' cannot be added a second time to an entity"
                 " platform"
             )
 
-        self.hass = hass
+        self.menuai = menuai
         self.platform = platform
         self.parallel_updates = parallel_updates
         self._platform_state = EntityPlatformState.ADDED
@@ -1359,19 +1359,19 @@ class Entity(
         self._platform_state = EntityPlatformState.REMOVED
         self._call_on_remove_callbacks()
 
-        self.hass = None  # type: ignore[assignment]
+        self.menuai = None  # type: ignore[assignment]
         self.platform = None  # type: ignore[assignment]
         self.parallel_updates = None
 
     async def add_to_platform_finish(self) -> None:
         """Finish adding an entity to a platform."""
-        await self.async_internal_added_to_hass()
-        await self.async_added_to_hass()
+        await self.async_internal_added_to_menuai()
+        await self.async_added_to_menuai()
         self.async_write_ha_state()
 
     @final
     async def async_remove(self, *, force_remove: bool = False) -> None:
-        """Remove entity from Home Assistant.
+        """Remove entity from MenuAI.
 
         If the entity has a non disabled entry in the entity registry,
         the entity's state will be set to unavailable, in the same way
@@ -1384,7 +1384,7 @@ class Entity(
             await self.__remove_future
             return
 
-        self.__remove_future = self.hass.loop.create_future()
+        self.__remove_future = self.menuai.loop.create_future()
         try:
             await self.__async_remove_impl(force_remove)
         except BaseException as ex:
@@ -1395,14 +1395,14 @@ class Entity(
 
     @final
     async def __async_remove_impl(self, force_remove: bool) -> None:
-        """Remove entity from Home Assistant."""
+        """Remove entity from MenuAI."""
 
         self._platform_state = EntityPlatformState.REMOVED
 
         self._call_on_remove_callbacks()
 
-        await self.async_internal_will_remove_from_hass()
-        await self.async_will_remove_from_hass()
+        await self.async_internal_will_remove_from_menuai()
+        await self.async_will_remove_from_menuai()
 
         # Check if entry still exists in entity registry (e.g. unloading config entry)
         if (
@@ -1422,18 +1422,18 @@ class Entity(
             and not self._removed_from_registry
         ):
             # Set the entity's state will to unavailable + ATTR_RESTORED: True
-            self.registry_entry.write_unavailable_state(self.hass)
+            self.registry_entry.write_unavailable_state(self.menuai)
         else:
-            self.hass.states.async_remove(self.entity_id, context=self._context)
+            self.menuai.states.async_remove(self.entity_id, context=self._context)
 
-    async def async_added_to_hass(self) -> None:
-        """Run when entity about to be added to hass.
+    async def async_added_to_menuai(self) -> None:
+        """Run when entity about to be added to menuai.
 
         To be extended by integrations.
         """
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Run when entity will be removed from hass.
+    async def async_will_remove_from_menuai(self) -> None:
+        """Run when entity will be removed from menuai.
 
         To be extended by integrations.
         """
@@ -1445,8 +1445,8 @@ class Entity(
         To be extended by integrations.
         """
 
-    async def async_internal_added_to_hass(self) -> None:
-        """Run when entity about to be added to hass.
+    async def async_internal_added_to_menuai(self) -> None:
+        """Run when entity about to be added to menuai.
 
         Not to be extended by integrations.
         """
@@ -1458,7 +1458,7 @@ class Entity(
         if self.platform.config_entry:
             entity_info["config_entry"] = self.platform.config_entry.entry_id
 
-        entity_sources(self.hass)[self.entity_id] = entity_info
+        entity_sources(self.menuai)[self.entity_id] = entity_info
 
         self._state_info = {
             "unrecorded_attributes": self.__combined_unrecorded_attributes
@@ -1472,23 +1472,23 @@ class Entity(
 
             self.async_on_remove(
                 async_track_entity_registry_updated_event(
-                    self.hass,
+                    self.menuai,
                     self.entity_id,
                     self._async_registry_updated,
-                    job_type=HassJobType.Callback,
+                    job_type=menuaiJobType.Callback,
                 )
             )
             self._async_subscribe_device_updates()
 
-    async def async_internal_will_remove_from_hass(self) -> None:
-        """Run when entity will be removed from hass.
+    async def async_internal_will_remove_from_menuai(self) -> None:
+        """Run when entity will be removed from menuai.
 
         Not to be extended by integrations.
         """
         # The check for self.platform guards against integrations not using an
         # EntityComponent and can be removed in HA Core 2024.1
         if self.platform:
-            del entity_sources(self.hass)[self.entity_id]
+            del entity_sources(self.menuai)[self.entity_id]
 
     @callback
     def _async_registry_updated(
@@ -1499,7 +1499,7 @@ class Entity(
         is_remove = action == "remove"
         self._removed_from_registry = is_remove
         if action == "update" or is_remove:
-            self.hass.async_create_task_internal(
+            self.menuai.async_create_task_internal(
                 self._async_process_registry_update_or_remove(event), eager_start=True
             )
 
@@ -1519,14 +1519,14 @@ class Entity(
         if "device_id" in data["changes"]:
             self._async_subscribe_device_updates()
 
-        ent_reg = er.async_get(self.hass)
+        ent_reg = er.async_get(self.menuai)
         old = self.registry_entry
         registry_entry = ent_reg.async_get(data["entity_id"])
         assert registry_entry is not None
         self.registry_entry = registry_entry
 
         if device_id := registry_entry.device_id:
-            self.device_entry = dr.async_get(self.hass).async_get(device_id)
+            self.device_entry = dr.async_get(self.menuai).async_get(device_id)
 
         if registry_entry.disabled:
             await self.async_remove()
@@ -1568,7 +1568,7 @@ class Entity(
         if "name" not in data["changes"] and "name_by_user" not in data["changes"]:
             return
 
-        self.device_entry = dr.async_get(self.hass).async_get(data["device_id"])
+        self.device_entry = dr.async_get(self.menuai).async_get(data["device_id"])
         self.async_write_ha_state()
 
     @callback
@@ -1585,10 +1585,10 @@ class Entity(
             return
 
         self._unsub_device_updates = async_track_device_registry_updated_event(
-            self.hass,
+            self.menuai,
             device_id,
             self._async_device_registry_updated,
-            job_type=HassJobType.Callback,
+            job_type=menuaiJobType.Callback,
         )
         if (
             not self._on_remove
@@ -1622,7 +1622,7 @@ class Entity(
         # EntityComponent and can be removed in HA Core 2024.1
         platform_name = self.platform.platform_name if self.platform else None
         return async_suggest_report_issue(
-            self.hass, integration_domain=platform_name, module=type(self).__module__
+            self.menuai, integration_domain=platform_name, module=type(self).__module__
         )
 
     @callback
@@ -1686,7 +1686,7 @@ class ToggleEntity(
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the entity on."""
-        await self.hass.async_add_executor_job(ft.partial(self.turn_on, **kwargs))
+        await self.menuai.async_add_executor_job(ft.partial(self.turn_on, **kwargs))
 
     def turn_off(self, **kwargs: Any) -> None:
         """Turn the entity off."""
@@ -1694,13 +1694,13 @@ class ToggleEntity(
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the entity off."""
-        await self.hass.async_add_executor_job(ft.partial(self.turn_off, **kwargs))
+        await self.menuai.async_add_executor_job(ft.partial(self.turn_off, **kwargs))
 
     @final
     def toggle(self, **kwargs: Any) -> None:
         """Toggle the entity.
 
-        This method will never be called by Home Assistant and should not be implemented
+        This method will never be called by MenuAI and should not be implemented
         by integrations.
         """
 

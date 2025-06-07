@@ -6,17 +6,17 @@ from peblar import PeblarAuthenticationError, PeblarConnectionError, PeblarError
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.number import (
+from menuai.components.number import (
     ATTR_VALUE,
     DOMAIN as NUMBER_DOMAIN,
     SERVICE_SET_VALUE,
 )
-from homeassistant.components.peblar.const import DOMAIN
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant, State
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.components.peblar.const import DOMAIN
+from menuai.config_entries import SOURCE_REAUTH, ConfigEntryState
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai, State
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from tests.common import (
     MockConfigEntry,
@@ -28,14 +28,14 @@ from tests.common import (
 @pytest.mark.parametrize("init_integration", [Platform.NUMBER], indirect=True)
 @pytest.mark.usefixtures("init_integration")
 async def test_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test the number entities."""
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
     # Ensure all entities are correctly assigned to the Peblar EV charger
     device_entry = device_registry.async_get_device(
@@ -52,7 +52,7 @@ async def test_entities(
 @pytest.mark.parametrize("init_integration", [Platform.NUMBER], indirect=True)
 @pytest.mark.usefixtures("init_integration", "entity_registry_enabled_by_default")
 async def test_number_set_value(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_peblar: MagicMock,
 ) -> None:
     """Test the Peblar EV charger numbers."""
@@ -61,7 +61,7 @@ async def test_number_set_value(
     mocked_method.reset_mock()
 
     # Test normal happy path number value change
-    await hass.services.async_call(
+    await menuai.services.async_call(
         NUMBER_DOMAIN,
         SERVICE_SET_VALUE,
         {
@@ -76,7 +76,7 @@ async def test_number_set_value(
 
 
 async def test_number_set_value_when_charging_is_suspended(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_peblar: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
@@ -87,15 +87,15 @@ async def test_number_set_value_when_charging_is_suspended(
     mock_peblar.rest_api.return_value.ev_interface.return_value.charge_current_limit = 0
 
     # Setup the config entry
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     mocked_method = mock_peblar.rest_api.return_value.ev_interface
     mocked_method.reset_mock()
 
     # Test normal happy path number value change
-    await hass.services.async_call(
+    await menuai.services.async_call(
         NUMBER_DOMAIN,
         SERVICE_SET_VALUE,
         {
@@ -108,7 +108,7 @@ async def test_number_set_value_when_charging_is_suspended(
     assert len(mocked_method.mock_calls) == 0
 
     # Check the state is reflected
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == "10"
 
 
@@ -138,7 +138,7 @@ async def test_number_set_value_when_charging_is_suspended(
 @pytest.mark.parametrize("init_integration", [Platform.NUMBER], indirect=True)
 @pytest.mark.usefixtures("init_integration", "entity_registry_enabled_by_default")
 async def test_number_set_value_communication_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_peblar: MagicMock,
     error: Exception,
     error_match: str,
@@ -150,10 +150,10 @@ async def test_number_set_value_communication_error(
     mock_peblar.rest_api.return_value.ev_interface.side_effect = error
 
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match=error_match,
     ) as excinfo:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             NUMBER_DOMAIN,
             SERVICE_SET_VALUE,
             {
@@ -171,7 +171,7 @@ async def test_number_set_value_communication_error(
 @pytest.mark.parametrize("init_integration", [Platform.NUMBER], indirect=True)
 @pytest.mark.usefixtures("init_integration")
 async def test_number_set_value_authentication_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_peblar: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
@@ -182,13 +182,13 @@ async def test_number_set_value_authentication_error(
     )
     mock_peblar.login.side_effect = PeblarAuthenticationError("Authentication error")
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match=(
             r"An authentication failure occurred while communicating "
             r"with the Peblar EV charger"
         ),
     ) as excinfo:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             NUMBER_DOMAIN,
             SERVICE_SET_VALUE,
             {
@@ -204,10 +204,10 @@ async def test_number_set_value_authentication_error(
 
     # Ensure the device is reloaded on authentication error and triggers
     # a reauthentication flow.
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert mock_config_entry.state is ConfigEntryState.SETUP_ERROR
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
 
     flow = flows[0]
@@ -229,7 +229,7 @@ async def test_number_set_value_authentication_error(
     ],
 )
 async def test_restore_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_peblar: MagicMock,
     mock_config_entry: MockConfigEntry,
     restore_state: str,
@@ -245,7 +245,7 @@ async def test_restore_state(
         "native_value": restore_native_value,
     }
     mock_restore_cache_with_extra_data(
-        hass,
+        menuai,
         (
             (
                 State("number.peblar_ev_charger_charge_limit", restore_state),
@@ -258,10 +258,10 @@ async def test_restore_state(
     mock_peblar.rest_api.return_value.ev_interface.return_value.charge_current_limit = 0
 
     # Setup the config entry
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Check if state is restored and value is set correctly
-    assert (state := hass.states.get("number.peblar_ev_charger_charge_limit"))
+    assert (state := menuai.states.get("number.peblar_ev_charger_charge_limit"))
     assert state.state == expected_state

@@ -6,10 +6,10 @@ import datetime
 import logging
 from typing import Final
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import FitbitApi
 from .exceptions import FitbitApiException, FitbitAuthException
@@ -29,11 +29,11 @@ class FitbitDeviceCoordinator(DataUpdateCoordinator[dict[str, FitbitDevice]]):
     config_entry: FitbitConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: FitbitConfigEntry, api: FitbitApi
+        self, menuai: menuai, config_entry: FitbitConfigEntry, api: FitbitApi
     ) -> None:
         """Initialize FitbitDeviceCoordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name="Fitbit",

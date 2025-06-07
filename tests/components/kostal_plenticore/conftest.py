@@ -8,9 +8,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from pykoplenti import MeData, VersionData
 import pytest
 
-from homeassistant.components.kostal_plenticore.coordinator import Plenticore
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
+from menuai.components.kostal_plenticore.coordinator import Plenticore
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
 
 from tests.common import MockConfigEntry
 
@@ -30,7 +30,7 @@ def mock_config_entry() -> MockConfigEntry:
 def mock_plenticore() -> Generator[Plenticore]:
     """Set up a Plenticore mock with some default values."""
     with patch(
-        "homeassistant.components.kostal_plenticore.Plenticore", autospec=True
+        "menuai.components.kostal_plenticore.Plenticore", autospec=True
     ) as mock_api_class:
         # setup
         plenticore = mock_api_class.return_value
@@ -74,13 +74,13 @@ def mock_plenticore() -> Generator[Plenticore]:
 
 @pytest.fixture
 async def init_integration(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_config_entry: MockConfigEntry
 ) -> MockConfigEntry:
     """Set up Kostal Plenticore integration for testing."""
 
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     return mock_config_entry

@@ -1,6 +1,6 @@
 """Constants used by multiple Tasmota modules."""
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 CONF_DISCOVERY_PREFIX = "discovery_prefix"
 

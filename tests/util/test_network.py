@@ -1,8 +1,8 @@
-"""Test Home Assistant volume utility functions."""
+"""Test MenuAI volume utility functions."""
 
 from ipaddress import ip_address
 
-from homeassistant.util import network as network_util
+from menuai.util import network as network_util
 
 
 def test_is_loopback() -> None:

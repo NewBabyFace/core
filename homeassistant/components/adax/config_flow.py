@@ -9,14 +9,14 @@ import adax
 import adax_local
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import (
     CONF_IP_ADDRESS,
     CONF_PASSWORD,
     CONF_TOKEN,
     CONF_UNIQUE_ID,
 )
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
     ACCOUNT_ID,
@@ -127,7 +127,7 @@ class AdaxConfigFlow(ConfigFlow, domain=DOMAIN):
         password = user_input[CONF_PASSWORD].replace(" ", "")
 
         token = await adax.get_adax_token(
-            async_get_clientsession(self.hass), account_id, password
+            async_get_clientsession(self.menuai), account_id, password
         )
         if token is None:
             _LOGGER.debug("Adax: Failed to login to retrieve token")

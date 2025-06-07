@@ -5,8 +5,8 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai, callback
+from menuai.setup import async_setup_component
 
 from tests.typing import ClientSessionGenerator
 
@@ -17,15 +17,15 @@ def stub_blueprint_populate_autouse(stub_blueprint_populate: None) -> None:
 
 
 @pytest.fixture(autouse=True)
-async def setup_http(hass: HomeAssistant) -> None:
+async def setup_http(menuai: menuai) -> None:
     """Set up http."""
-    assert await async_setup_component(hass, "http", {})
-    assert await async_setup_component(hass, "webhook", {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "http", {})
+    assert await async_setup_component(menuai, "webhook", {})
+    await menuai.async_block_till_done()
 
 
 async def test_webhook_json(
-    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+    menuai: menuai, menuai_client_no_auth: ClientSessionGenerator
 ) -> None:
     """Test triggering with a JSON webhook."""
     events = []
@@ -35,10 +35,10 @@ async def test_webhook_json(
         """Help store events."""
         events.append(event)
 
-    hass.bus.async_listen("test_success", store_event)
+    menuai.bus.async_listen("test_success", store_event)
 
     assert await async_setup_component(
-        hass,
+        menuai,
         "automation",
         {
             "automation": {
@@ -53,12 +53,12 @@ async def test_webhook_json(
             }
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
 
     await client.post("/api/webhook/json_webhook", json={"hello": "world"})
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(events) == 1
     assert events[0].data["hello"] == "yo world"
@@ -66,11 +66,11 @@ async def test_webhook_json(
 
 
 async def test_webhook_post(
-    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+    menuai: menuai, menuai_client_no_auth: ClientSessionGenerator
 ) -> None:
     """Test triggering with a POST webhook."""
     # Set up fake cloud
-    hass.config.components.add("cloud")
+    menuai.config.components.add("cloud")
 
     events = []
 
@@ -79,10 +79,10 @@ async def test_webhook_post(
         """Help store events."""
         events.append(event)
 
-    hass.bus.async_listen("test_success", store_event)
+    menuai.bus.async_listen("test_success", store_event)
 
     assert await async_setup_component(
-        hass,
+        menuai,
         "automation",
         {
             "automation": {
@@ -98,39 +98,39 @@ async def test_webhook_post(
             }
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
 
     await client.post("/api/webhook/post_webhook", data={"hello": "world"})
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(events) == 1
     assert events[0].data["hello"] == "yo world"
 
     # Request from remote IP
     with patch(
-        "homeassistant.components.webhook.ip_address",
+        "menuai.components.webhook.ip_address",
         return_value=ip_address("123.123.123.123"),
     ):
         await client.post("/api/webhook/post_webhook", data={"hello": "world"})
     # No hook received
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(events) == 1
 
-    # Request from Home Assistant Cloud remote UI
+    # Request from MenuAI Cloud remote UI
     with patch(
-        "hass_nabucasa.remote.is_cloud_request", Mock(get=Mock(return_value=True))
+        "menuai_nabucasa.remote.is_cloud_request", Mock(get=Mock(return_value=True))
     ):
         await client.post("/api/webhook/post_webhook", data={"hello": "world"})
 
     # No hook received
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(events) == 1
 
 
 async def test_webhook_allowed_methods_internet(
-    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+    menuai: menuai, menuai_client_no_auth: ClientSessionGenerator
 ) -> None:
     """Test the webhook obeys allowed_methods and local_only options."""
     events = []
@@ -140,10 +140,10 @@ async def test_webhook_allowed_methods_internet(
         """Help store events."""
         events.append(event)
 
-    hass.bus.async_listen("test_success", store_event)
+    menuai.bus.async_listen("test_success", store_event)
 
     assert await async_setup_component(
-        hass,
+        menuai,
         "automation",
         {
             "automation": {
@@ -159,27 +159,27 @@ async def test_webhook_allowed_methods_internet(
             }
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
 
     await client.post("/api/webhook/post_webhook")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(events) == 0
 
     # Request from remote IP
     with patch(
-        "homeassistant.components.webhook.ip_address",
+        "menuai.components.webhook.ip_address",
         return_value=ip_address("123.123.123.123"),
     ):
         await client.put("/api/webhook/post_webhook")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(events) == 1
 
 
 async def test_webhook_query(
-    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+    menuai: menuai, menuai_client_no_auth: ClientSessionGenerator
 ) -> None:
     """Test triggering with a query POST webhook."""
     events = []
@@ -189,10 +189,10 @@ async def test_webhook_query(
         """Help store events."""
         events.append(event)
 
-    hass.bus.async_listen("test_success", store_event)
+    menuai.bus.async_listen("test_success", store_event)
 
     assert await async_setup_component(
-        hass,
+        menuai,
         "automation",
         {
             "automation": {
@@ -204,19 +204,19 @@ async def test_webhook_query(
             }
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
 
     await client.post("/api/webhook/query_webhook?hello=world")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(events) == 1
     assert events[0].data["hello"] == "yo world"
 
 
 async def test_webhook_multiple(
-    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+    menuai: menuai, menuai_client_no_auth: ClientSessionGenerator
 ) -> None:
     """Test triggering multiple triggers with a POST webhook."""
     events1 = []
@@ -232,11 +232,11 @@ async def test_webhook_multiple(
         """Help store events."""
         events2.append(event)
 
-    hass.bus.async_listen("test_success1", store_event1)
-    hass.bus.async_listen("test_success2", store_event2)
+    menuai.bus.async_listen("test_success1", store_event1)
+    menuai.bus.async_listen("test_success2", store_event2)
 
     assert await async_setup_component(
-        hass,
+        menuai,
         "automation",
         {
             "automation": [
@@ -259,12 +259,12 @@ async def test_webhook_multiple(
             ]
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
 
     await client.post("/api/webhook/post_webhook", data={"hello": "world"})
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(events1) == 1
     assert events1[0].data["hello"] == "yo world"
@@ -273,7 +273,7 @@ async def test_webhook_multiple(
 
 
 async def test_webhook_reload(
-    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+    menuai: menuai, menuai_client_no_auth: ClientSessionGenerator
 ) -> None:
     """Test reloading a webhook."""
     events = []
@@ -283,10 +283,10 @@ async def test_webhook_reload(
         """Help store events."""
         events.append(event)
 
-    hass.bus.async_listen("test_success", store_event)
+    menuai.bus.async_listen("test_success", store_event)
 
     assert await async_setup_component(
-        hass,
+        menuai,
         "automation",
         {
             "automation": {
@@ -298,18 +298,18 @@ async def test_webhook_reload(
             }
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
 
     await client.post("/api/webhook/post_webhook", data={"hello": "world"})
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(events) == 1
     assert events[0].data["hello"] == "yo world"
 
     with patch(
-        "homeassistant.config.load_yaml_config_file",
+        "menuai.config.load_yaml_config_file",
         autospec=True,
         return_value={
             "automation": {
@@ -321,15 +321,15 @@ async def test_webhook_reload(
             }
         },
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "automation",
             "reload",
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     await client.post("/api/webhook/post_webhook", data={"hello": "world"})
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(events) == 2
     assert events[1].data["hello"] == "yo2 world"

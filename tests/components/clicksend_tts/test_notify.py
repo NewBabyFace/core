@@ -8,10 +8,10 @@ from unittest.mock import patch
 import pytest
 import requests_mock
 
-from homeassistant.components import notify
-from homeassistant.components.clicksend_tts import notify as cs_tts
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components import notify
+from menuai.components.clicksend_tts import notify as cs_tts
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import assert_setup_component
 
@@ -41,32 +41,32 @@ CONFIG = {
 def mock_clicksend_tts_notify():
     """Mock Clicksend TTS notify service."""
     with patch(
-        "homeassistant.components.clicksend_tts.notify.get_service", autospec=True
+        "menuai.components.clicksend_tts.notify.get_service", autospec=True
     ) as ns:
         yield ns
 
 
-async def setup_notify(hass: HomeAssistant) -> None:
+async def setup_notify(menuai: menuai) -> None:
     """Test setup."""
     with assert_setup_component(1, notify.DOMAIN) as config:
-        assert await async_setup_component(hass, notify.DOMAIN, CONFIG)
+        assert await async_setup_component(menuai, notify.DOMAIN, CONFIG)
         assert config[notify.DOMAIN]
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
 
 async def test_no_notify_service(
-    hass: HomeAssistant, mock_clicksend_tts_notify, caplog: pytest.LogCaptureFixture
+    menuai: menuai, mock_clicksend_tts_notify, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test missing platform notify service instance."""
     caplog.set_level(logging.ERROR)
     mock_clicksend_tts_notify.return_value = None
-    await setup_notify(hass)
-    await hass.async_block_till_done()
+    await setup_notify(menuai)
+    await menuai.async_block_till_done()
     assert mock_clicksend_tts_notify.called
     assert "Failed to initialize notification service clicksend_tts" in caplog.text
 
 
-async def test_send_simple_message(hass: HomeAssistant) -> None:
+async def test_send_simple_message(menuai: menuai) -> None:
     """Test sending a simple message with success."""
 
     with requests_mock.Mocker() as mock:
@@ -83,13 +83,13 @@ async def test_send_simple_message(hass: HomeAssistant) -> None:
         )
 
         # Setting up integration
-        await setup_notify(hass)
+        await setup_notify(menuai)
 
         # Sending message
         data = {
             notify.ATTR_MESSAGE: TEST_MESSAGE,
         }
-        await hass.services.async_call(
+        await menuai.services.async_call(
             notify.DOMAIN, cs_tts.DEFAULT_NAME, data, blocking=True
         )
 
@@ -100,7 +100,7 @@ async def test_send_simple_message(hass: HomeAssistant) -> None:
         expected_body = {
             "messages": [
                 {
-                    "source": "hass.notify",
+                    "source": "menuai.notify",
                     "to": TEST_VOICE_NUMBER,
                     "body": TEST_MESSAGE,
                     "lang": TEST_LANGUAGE,

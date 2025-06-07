@@ -2,20 +2,20 @@
 
 from unittest.mock import patch
 
-from homeassistant.components.awair.const import DOMAIN
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from menuai.components.awair.const import DOMAIN
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
 
-async def setup_awair(hass: HomeAssistant, fixtures, unique_id, data) -> ConfigEntry:
-    """Add Awair devices to hass, using specified fixtures for data."""
+async def setup_awair(menuai: menuai, fixtures, unique_id, data) -> ConfigEntry:
+    """Add Awair devices to menuai, using specified fixtures for data."""
 
     entry = MockConfigEntry(domain=DOMAIN, unique_id=unique_id, data=data)
     with patch("python_awair.AwairClient.query", side_effect=fixtures):
-        entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     return entry

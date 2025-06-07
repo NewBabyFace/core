@@ -7,8 +7,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from fyta_cli.fyta_models import Credentials, Plant
 import pytest
 
-from homeassistant.components.fyta.const import CONF_EXPIRATION, DOMAIN
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_PASSWORD, CONF_USERNAME
+from menuai.components.fyta.const import CONF_EXPIRATION, DOMAIN
+from menuai.const import CONF_ACCESS_TOKEN, CONF_PASSWORD, CONF_USERNAME
 
 from .const import ACCESS_TOKEN, EXPIRATION, PASSWORD, USERNAME
 
@@ -61,12 +61,12 @@ def mock_fyta_connector():
     )
     with (
         patch(
-            "homeassistant.components.fyta.FytaConnector",
+            "menuai.components.fyta.FytaConnector",
             autospec=True,
             return_value=mock_fyta_connector,
         ),
         patch(
-            "homeassistant.components.fyta.config_flow.FytaConnector",
+            "menuai.components.fyta.config_flow.FytaConnector",
             autospec=True,
             return_value=mock_fyta_connector,
         ),
@@ -78,7 +78,7 @@ def mock_fyta_connector():
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.fyta.async_setup_entry", return_value=True
+        "menuai.components.fyta.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -87,7 +87,7 @@ def mock_setup_entry() -> Generator[AsyncMock]:
 def mock_getrandbits():
     """Mock image access token which normally is randomized."""
     with patch(
-        "homeassistant.components.image.SystemRandom.getrandbits",
+        "menuai.components.image.SystemRandom.getrandbits",
         return_value=1,
     ):
         yield

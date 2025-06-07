@@ -5,11 +5,11 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components.knx.const import KNX_ADDRESS, KNX_MODULE_KEY
-from homeassistant.components.knx.project import STORAGE_KEY as KNX_PROJECT_STORAGE_KEY
-from homeassistant.components.knx.schema import SwitchSchema
-from homeassistant.const import CONF_NAME
-from homeassistant.core import HomeAssistant
+from menuai.components.knx.const import KNX_ADDRESS, KNX_MODULE_KEY
+from menuai.components.knx.project import STORAGE_KEY as KNX_PROJECT_STORAGE_KEY
+from menuai.components.knx.schema import SwitchSchema
+from menuai.const import CONF_NAME
+from menuai.core import menuai
 
 from .conftest import FIXTURE_PROJECT_DATA, KNXTestKit
 
@@ -17,11 +17,11 @@ from tests.typing import WebSocketGenerator
 
 
 async def test_knx_info_command(
-    hass: HomeAssistant, knx: KNXTestKit, hass_ws_client: WebSocketGenerator
+    menuai: menuai, knx: KNXTestKit, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test knx/info command."""
     await knx.setup_integration()
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json({"id": 6, "type": "knx/info"})
 
     res = await client.receive_json()
@@ -33,14 +33,14 @@ async def test_knx_info_command(
 
 
 async def test_knx_info_command_with_project(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXTestKit,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     load_knxproj: None,
 ) -> None:
     """Test knx/info command with loaded project."""
     await knx.setup_integration()
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json({"id": 6, "type": "knx/info"})
 
     res = await client.receive_json()
@@ -55,10 +55,10 @@ async def test_knx_info_command_with_project(
 
 
 async def test_knx_project_file_process(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXTestKit,
-    hass_ws_client: WebSocketGenerator,
-    hass_storage: dict[str, Any],
+    menuai_ws_client: WebSocketGenerator,
+    menuai_storage: dict[str, Any],
 ) -> None:
     """Test knx/project_file_process command for storing and loading new data."""
     _file_id = "1234"
@@ -66,8 +66,8 @@ async def test_knx_project_file_process(
     _parse_result = FIXTURE_PROJECT_DATA
 
     await knx.setup_integration()
-    client = await hass_ws_client(hass)
-    assert not hass.data[KNX_MODULE_KEY].project.loaded
+    client = await menuai_ws_client(menuai)
+    assert not menuai.data[KNX_MODULE_KEY].project.loaded
 
     await client.send_json(
         {
@@ -79,30 +79,30 @@ async def test_knx_project_file_process(
     )
     with (
         patch(
-            "homeassistant.components.knx.project.process_uploaded_file",
+            "menuai.components.knx.project.process_uploaded_file",
         ) as file_upload_mock,
         patch("xknxproject.XKNXProj.parse", return_value=_parse_result) as parse_mock,
     ):
         file_upload_mock.return_value.__enter__.return_value = ""
         res = await client.receive_json()
 
-        file_upload_mock.assert_called_once_with(hass, _file_id)
+        file_upload_mock.assert_called_once_with(menuai, _file_id)
         parse_mock.assert_called_once_with()
 
     assert res["success"], res
-    assert hass.data[KNX_MODULE_KEY].project.loaded
-    assert hass_storage[KNX_PROJECT_STORAGE_KEY]["data"] == _parse_result
+    assert menuai.data[KNX_MODULE_KEY].project.loaded
+    assert menuai_storage[KNX_PROJECT_STORAGE_KEY]["data"] == _parse_result
 
 
 async def test_knx_project_file_process_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXTestKit,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test knx/project_file_process exception handling."""
     await knx.setup_integration()
-    client = await hass_ws_client(hass)
-    assert not hass.data[KNX_MODULE_KEY].project.loaded
+    client = await menuai_ws_client(menuai)
+    assert not menuai.data[KNX_MODULE_KEY].project.loaded
 
     await client.send_json(
         {
@@ -114,7 +114,7 @@ async def test_knx_project_file_process_error(
     )
     with (
         patch(
-            "homeassistant.components.knx.project.process_uploaded_file",
+            "menuai.components.knx.project.process_uploaded_file",
         ) as file_upload_mock,
         patch("xknxproject.XKNXProj.parse", side_effect=ValueError) as parse_mock,
     ):
@@ -123,40 +123,40 @@ async def test_knx_project_file_process_error(
         parse_mock.assert_called_once_with()
 
     assert res["error"], res
-    assert not hass.data[KNX_MODULE_KEY].project.loaded
+    assert not menuai.data[KNX_MODULE_KEY].project.loaded
 
 
 async def test_knx_project_file_remove(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXTestKit,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     load_knxproj: None,
-    hass_storage: dict[str, Any],
+    menuai_storage: dict[str, Any],
 ) -> None:
     """Test knx/project_file_remove command."""
     await knx.setup_integration()
-    assert hass_storage[KNX_PROJECT_STORAGE_KEY]
-    client = await hass_ws_client(hass)
-    assert hass.data[KNX_MODULE_KEY].project.loaded
+    assert menuai_storage[KNX_PROJECT_STORAGE_KEY]
+    client = await menuai_ws_client(menuai)
+    assert menuai.data[KNX_MODULE_KEY].project.loaded
 
     await client.send_json({"id": 6, "type": "knx/project_file_remove"})
     res = await client.receive_json()
 
     assert res["success"], res
-    assert not hass.data[KNX_MODULE_KEY].project.loaded
-    assert not hass_storage.get(KNX_PROJECT_STORAGE_KEY)
+    assert not menuai.data[KNX_MODULE_KEY].project.loaded
+    assert not menuai_storage.get(KNX_PROJECT_STORAGE_KEY)
 
 
 async def test_knx_get_project(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXTestKit,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     load_knxproj: None,
 ) -> None:
     """Test retrieval of kxnproject from store."""
     await knx.setup_integration()
-    client = await hass_ws_client(hass)
-    assert hass.data[KNX_MODULE_KEY].project.loaded
+    client = await menuai_ws_client(menuai)
+    assert menuai.data[KNX_MODULE_KEY].project.loaded
 
     await client.send_json({"id": 3, "type": "knx/get_knx_project"})
     res = await client.receive_json()
@@ -166,11 +166,11 @@ async def test_knx_get_project(
 
 
 async def test_knx_group_monitor_info_command(
-    hass: HomeAssistant, knx: KNXTestKit, hass_ws_client: WebSocketGenerator
+    menuai: menuai, knx: KNXTestKit, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test knx/group_monitor_info command."""
     await knx.setup_integration()
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json({"id": 6, "type": "knx/group_monitor_info"})
 
@@ -181,11 +181,11 @@ async def test_knx_group_monitor_info_command(
 
 
 async def test_knx_group_telegrams_command(
-    hass: HomeAssistant, knx: KNXTestKit, hass_ws_client: WebSocketGenerator
+    menuai: menuai, knx: KNXTestKit, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test knx/group_telegrams command."""
     await knx.setup_integration()
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json_auto_id({"type": "knx/group_telegrams"})
     res = await client.receive_json()
@@ -212,7 +212,7 @@ async def test_knx_group_telegrams_command(
 
 
 async def test_knx_subscribe_telegrams_command_recent_telegrams(
-    hass: HomeAssistant, knx: KNXTestKit, hass_ws_client: WebSocketGenerator
+    menuai: menuai, knx: KNXTestKit, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test knx/subscribe_telegrams command sending recent telegrams."""
     await knx.setup_integration(
@@ -227,13 +227,13 @@ async def test_knx_subscribe_telegrams_command_recent_telegrams(
     # send incoming telegram
     await knx.receive_write("1/3/4", True)
     # send outgoing telegram
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch", "turn_on", {"entity_id": "switch.test"}, blocking=True
     )
     await knx.assert_write("1/2/4", 1)
 
     # connect websocket after telegrams have been sent
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json({"id": 6, "type": "knx/group_monitor_info"})
     res = await client.receive_json()
     assert res["success"], res
@@ -260,7 +260,7 @@ async def test_knx_subscribe_telegrams_command_recent_telegrams(
 
 
 async def test_knx_subscribe_telegrams_command_no_project(
-    hass: HomeAssistant, knx: KNXTestKit, hass_ws_client: WebSocketGenerator
+    menuai: menuai, knx: KNXTestKit, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test knx/subscribe_telegrams command without project data."""
     await knx.setup_integration(
@@ -271,7 +271,7 @@ async def test_knx_subscribe_telegrams_command_no_project(
             }
         }
     )
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json({"id": 6, "type": "knx/subscribe_telegrams"})
     res = await client.receive_json()
     assert res["success"], res
@@ -282,7 +282,7 @@ async def test_knx_subscribe_telegrams_command_no_project(
     await knx.receive_write("1/3/4", False)
     await knx.receive_write("1/3/8", (0x34, 0x45))
     # send outgoing telegrams
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch", "turn_on", {"entity_id": "switch.test"}, blocking=True
     )
     await knx.assert_write("1/2/4", 1)
@@ -332,14 +332,14 @@ async def test_knx_subscribe_telegrams_command_no_project(
 
 
 async def test_knx_subscribe_telegrams_command_project(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXTestKit,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     load_knxproj: None,
 ) -> None:
     """Test knx/subscribe_telegrams command with project data."""
     await knx.setup_integration()
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json({"id": 6, "type": "knx/subscribe_telegrams"})
     res = await client.receive_json()
     assert res["success"], res
@@ -399,15 +399,15 @@ async def test_knx_subscribe_telegrams_command_project(
     ],
 )
 async def test_websocket_when_config_entry_unloaded(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXTestKit,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     endpoint: str,
 ) -> None:
     """Test websocket connection when config entry is unloaded."""
     await knx.setup_integration()
-    await hass.config_entries.async_unload(knx.mock_config_entry.entry_id)
-    client = await hass_ws_client(hass)
+    await menuai.config_entries.async_unload(knx.mock_config_entry.entry_id)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json_auto_id({"type": endpoint})
     res = await client.receive_json()

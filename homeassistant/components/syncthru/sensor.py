@@ -8,10 +8,10 @@ from typing import Any, cast
 
 from pysyncthru import SyncThru, SyncthruState
 
-from homeassistant.components.sensor import SensorEntity, SensorEntityDescription
-from homeassistant.const import PERCENTAGE, EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.sensor import SensorEntity, SensorEntityDescription
+from menuai.const import PERCENTAGE, EntityCategory
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import SyncThruConfigEntry
 from .entity import SyncthruEntity
@@ -119,7 +119,7 @@ SENSOR_TYPES: tuple[SyncThruSensorDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: SyncThruConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

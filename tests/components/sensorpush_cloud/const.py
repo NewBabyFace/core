@@ -2,8 +2,8 @@
 
 from sensorpush_ha import SensorPushCloudData
 
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
-from homeassistant.util import dt as dt_util
+from menuai.const import CONF_EMAIL, CONF_PASSWORD
+from menuai.util import dt as dt_util
 
 CONF_DATA = {
     CONF_EMAIL: "test@example.com",

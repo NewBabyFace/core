@@ -18,18 +18,18 @@ from async_upnp_client.profiles.dlna import ContentDirectoryErrorCode, DmsDevice
 from didl_lite import didl_lite
 from propcache.api import cached_property
 
-from homeassistant.components import ssdp
-from homeassistant.components.media_player import BrowseError, MediaClass
-from homeassistant.components.media_source import (
+from menuai.components import ssdp
+from menuai.components.media_player import BrowseError, MediaClass
+from menuai.components.media_source import (
     BrowseMediaSource,
     PlayMedia,
     Unresolvable,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_DEVICE_ID, CONF_URL
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import aiohttp_client
-from homeassistant.helpers.service_info.ssdp import SsdpServiceInfo
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_DEVICE_ID, CONF_URL
+from menuai.core import menuai, callback
+from menuai.helpers import aiohttp_client
+from menuai.helpers.service_info.ssdp import SsdpServiceInfo
 
 from .const import (
     CONF_SOURCE_ID,
@@ -51,7 +51,7 @@ from .const import (
 class DlnaDmsData:
     """Storage class for domain global data."""
 
-    hass: HomeAssistant
+    menuai: menuai
     requester: UpnpRequester
     upnp_factory: UpnpFactory
     devices: dict[str, DmsDeviceSource]  # Indexed by config_entry.unique_id
@@ -59,11 +59,11 @@ class DlnaDmsData:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
     ) -> None:
         """Initialize global data."""
-        self.hass = hass
-        session = aiohttp_client.async_get_clientsession(hass, verify_ssl=False)
+        self.menuai = menuai
+        session = aiohttp_client.async_get_clientsession(menuai, verify_ssl=False)
         self.requester = AiohttpSessionRequester(session, with_sleep=True)
         self.upnp_factory = UpnpFactory(self.requester, non_strict=True)
         self.devices = {}
@@ -72,13 +72,13 @@ class DlnaDmsData:
     async def async_setup_entry(self, config_entry: ConfigEntry) -> bool:
         """Create a DMS device connection from a config entry."""
         assert config_entry.unique_id
-        device = DmsDeviceSource(self.hass, config_entry)
+        device = DmsDeviceSource(self.menuai, config_entry)
         self.devices[config_entry.unique_id] = device
         # source_id must be unique, which generate_source_id should guarantee.
         # Ensure this is the case, for debugging purposes.
         assert device.source_id not in self.sources
         self.sources[device.source_id] = device
-        await device.async_added_to_hass()
+        await device.async_added_to_menuai()
         return True
 
     async def async_unload_entry(self, config_entry: ConfigEntry) -> bool:
@@ -86,18 +86,18 @@ class DlnaDmsData:
         assert config_entry.unique_id
         device = self.devices.pop(config_entry.unique_id)
         del self.sources[device.source_id]
-        await device.async_will_remove_from_hass()
+        await device.async_will_remove_from_menuai()
         return True
 
 
 @callback
-def get_domain_data(hass: HomeAssistant) -> DlnaDmsData:
+def get_domain_data(menuai: menuai) -> DlnaDmsData:
     """Obtain this integration's domain data, creating it if needed."""
-    if DOMAIN in hass.data:
-        return cast(DlnaDmsData, hass.data[DOMAIN])
+    if DOMAIN in menuai.data:
+        return cast(DlnaDmsData, menuai.data[DOMAIN])
 
-    data = DlnaDmsData(hass)
-    hass.data[DOMAIN] = data
+    data = DlnaDmsData(menuai)
+    menuai.data[DOMAIN] = data
     return data
 
 
@@ -164,7 +164,7 @@ def catch_request_errors[_DlnaDmsDeviceMethod: DmsDeviceSource, _R](
 class DmsDeviceSource:
     """DMS Device wrapper, providing media files as a media_source."""
 
-    # Last known URL for the device, used when adding this wrapper to hass to
+    # Last known URL for the device, used when adding this wrapper to menuai to
     # try to connect before SSDP has rediscovered it, or when SSDP discovery
     # fails.
     location: str | None
@@ -178,16 +178,16 @@ class DmsDeviceSource:
     # Track BOOTID in SSDP advertisements for device changes
     _bootid: int | None = None
 
-    def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: ConfigEntry) -> None:
         """Initialize a DMS Source."""
-        self.hass = hass
+        self.menuai = menuai
         self.config_entry = config_entry
         self.location = self.config_entry.data[CONF_URL]
         self._device_lock = asyncio.Lock()
 
     # Callbacks and events
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle addition of this source."""
 
         # Try to connect to the last known location, but don't worry if not available
@@ -200,7 +200,7 @@ class DmsDeviceSource:
         # Get SSDP notifications for only this device
         self.config_entry.async_on_unload(
             await ssdp.async_register_callback(
-                self.hass, self.async_ssdp_callback, {"USN": self.usn}
+                self.menuai, self.async_ssdp_callback, {"USN": self.usn}
             )
         )
 
@@ -210,13 +210,13 @@ class DmsDeviceSource:
         # the UDN, which is reported in the _udn field of the combined_headers.
         self.config_entry.async_on_unload(
             await ssdp.async_register_callback(
-                self.hass,
+                self.menuai,
                 self.async_ssdp_callback,
                 {"_udn": self.udn, "NTS": NotificationSubType.SSDP_BYEBYE},
             )
         )
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Handle removal of this source."""
         await self.device_disconnect()
 
@@ -296,7 +296,7 @@ class DmsDeviceSource:
                 LOGGER.debug("Trying to connect when device already connected")
                 return
 
-            domain_data = get_domain_data(self.hass)
+            domain_data = get_domain_data(self.menuai)
 
             # Connect to the base UPNP device
             upnp_device = await domain_data.upnp_factory.async_create_device(
@@ -313,7 +313,7 @@ class DmsDeviceSource:
     async def device_disconnect(self) -> None:
         """Destroy connections to the device now that it's not available.
 
-        Also call when removing this device wrapper from hass to clean up connections.
+        Also call when removing this device wrapper from menuai to clean up connections.
         """
         async with self._device_lock:
             if not self._device:

@@ -1,12 +1,12 @@
 """Support for the Philips Hue sensor devices."""
 
-from homeassistant.helpers import entity
-from homeassistant.helpers.device_registry import DeviceInfo
+from menuai.helpers import entity
+from menuai.helpers.device_registry import DeviceInfo
 
 from ..const import CONF_ALLOW_UNREACHABLE, DEFAULT_ALLOW_UNREACHABLE, DOMAIN
 
 
-class GenericHueDevice(entity.Entity):  # pylint: disable=hass-enforce-class-module
+class GenericHueDevice(entity.Entity):  # pylint: disable=menuai-enforce-class-module
     """Representation of a Hue device."""
 
     def __init__(self, sensor, name, bridge, primary_sensor=None):
@@ -48,7 +48,7 @@ class GenericHueDevice(entity.Entity):  # pylint: disable=hass-enforce-class-mod
     def device_info(self) -> DeviceInfo:
         """Return the device info.
 
-        Links individual entities together in the hass device registry.
+        Links individual entities together in the menuai device registry.
         """
         return DeviceInfo(
             identifiers={(DOMAIN, self.device_id)},

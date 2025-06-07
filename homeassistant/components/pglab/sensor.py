@@ -5,15 +5,15 @@ from __future__ import annotations
 from pypglab.const import SENSOR_REBOOT_TIME, SENSOR_TEMPERATURE, SENSOR_VOLTAGE
 from pypglab.device import Device as PyPGLabDevice
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import Platform, UnitOfElectricPotential, UnitOfTemperature
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import Platform, UnitOfElectricPotential, UnitOfTemperature
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import PGLabConfigEntry
 from .coordinator import PGLabSensorsCoordinator
@@ -46,7 +46,7 @@ SENSOR_INFO: list[SensorEntityDescription] = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: PGLabConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -74,7 +74,7 @@ async def async_setup_entry(
 
     # Register the callback to create the sensor entity when discovered.
     pglab_discovery = config_entry.runtime_data
-    await pglab_discovery.register_platform(hass, Platform.SENSOR, async_discover)
+    await pglab_discovery.register_platform(menuai, Platform.SENSOR, async_discover)
 
 
 class PGLabSensor(PGLabSensorEntity, SensorEntity):

@@ -17,8 +17,8 @@ from pyatv.helpers import get_unique_id
 from pyatv.interface import BaseConfig, PairingHandler
 import voluptuous as vol
 
-from homeassistant.components import zeroconf
-from homeassistant.config_entries import (
+from menuai.components import zeroconf
+from menuai.config_entries import (
     SOURCE_IGNORE,
     SOURCE_REAUTH,
     SOURCE_ZEROCONF,
@@ -26,16 +26,16 @@ from homeassistant.config_entries import (
     ConfigFlow,
     ConfigFlowResult,
 )
-from homeassistant.const import CONF_ADDRESS, CONF_NAME, CONF_PIN
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.data_entry_flow import AbortFlow
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.schema_config_entry_flow import (
+from menuai.const import CONF_ADDRESS, CONF_NAME, CONF_PIN
+from menuai.core import menuai, callback
+from menuai.data_entry_flow import AbortFlow
+from menuai.exceptions import menuaiError
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.schema_config_entry_flow import (
     SchemaFlowFormStep,
     SchemaOptionsFlowHandler,
 )
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import CONF_CREDENTIALS, CONF_IDENTIFIERS, CONF_START_OFF, DOMAIN
 
@@ -60,7 +60,7 @@ OPTIONS_FLOW = {
 
 
 async def device_scan(
-    hass: HomeAssistant, identifier: str | None, loop: asyncio.AbstractEventLoop
+    menuai: menuai, identifier: str | None, loop: asyncio.AbstractEventLoop
 ) -> tuple[BaseConfig | None, list[str] | None]:
     """Scan for a specific device using identifier as filter."""
 
@@ -84,7 +84,7 @@ async def device_scan(
 
     # If we have an address, only probe that address to avoid
     # broadcast traffic on the network
-    aiozc = await zeroconf.async_get_async_instance(hass)
+    aiozc = await zeroconf.async_get_async_instance(menuai)
     scan_result = await scan(loop, timeout=3, hosts=_host_filter(), aiozc=aiozc)
     matches = [atv for atv in scan_result if _filter_device(atv)]
 
@@ -125,7 +125,7 @@ class AppleTVConfigFlow(ConfigFlow, domain=DOMAIN):
     def device_identifier(self) -> str | None:
         """Return a identifier for the config entry.
 
-        A device has multiple unique identifiers, but Home Assistant only supports one
+        A device has multiple unique identifiers, but MenuAI only supports one
         per config entry. Normally, a "main identifier" is determined by pyatv by
         first collecting all identifiers and then picking one in a pre-determine order.
         Under normal circumstances, this works fine but if a service is missing or
@@ -286,7 +286,7 @@ class AppleTVConfigFlow(ConfigFlow, domain=DOMAIN):
     @callback
     def _async_check_and_update_in_progress(self, host: str, unique_id: str) -> None:
         """Check for in-progress flows and update them with identifiers if needed."""
-        if self.hass.config_entries.flow.async_has_matching_flow(self):
+        if self.menuai.config_entries.flow.async_has_matching_flow(self):
             raise AbortFlow("already_in_progress")
 
     def is_matching(self, other_flow: Self) -> bool:
@@ -341,7 +341,7 @@ class AppleTVConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_find_device(self, allow_exist: bool = False) -> None:
         """Scan for the selected device to discover services."""
         self.atv, self.atv_identifiers = await device_scan(
-            self.hass, self.scan_filter, self.hass.loop
+            self.menuai, self.scan_filter, self.menuai.loop
         )
         if not self.atv:
             raise DeviceNotFound
@@ -374,7 +374,7 @@ class AppleTVConfigFlow(ConfigFlow, domain=DOMAIN):
             ) != discovered_ip_address or combined_identifiers != set(
                 entry.data.get(CONF_IDENTIFIERS, [])
             ):
-                self.hass.config_entries.async_update_entry(
+                self.menuai.config_entries.async_update_entry(
                     entry,
                     data={
                         **entry.data,
@@ -385,7 +385,7 @@ class AppleTVConfigFlow(ConfigFlow, domain=DOMAIN):
                 # Don't reload ignored entries or in the middle of reauth,
                 # e.g. if the user is entering a new PIN
                 if entry.source != SOURCE_IGNORE and self.source != SOURCE_REAUTH:
-                    self.hass.config_entries.async_schedule_reload(entry.entry_id)
+                    self.menuai.config_entries.async_schedule_reload(entry.entry_id)
             if not allow_exist:
                 raise DeviceAlreadyConfigured
 
@@ -458,15 +458,15 @@ class AppleTVConfigFlow(ConfigFlow, domain=DOMAIN):
         # Protocol specific arguments
         pair_args: dict[str, Any] = {}
         if self.protocol in {Protocol.AirPlay, Protocol.Companion, Protocol.DMAP}:
-            pair_args["name"] = "Home Assistant"
+            pair_args["name"] = "MenuAI"
         if self.protocol == Protocol.DMAP:
-            pair_args["zeroconf"] = await zeroconf.async_get_instance(self.hass)
+            pair_args["zeroconf"] = await zeroconf.async_get_instance(self.menuai)
 
         # Initiate the pairing process
         abort_reason = None
-        session = async_get_clientsession(self.hass)
+        session = async_get_clientsession(self.menuai)
         self.pairing = await pair(
-            self.atv, self.protocol, self.hass.loop, session=session, **pair_args
+            self.atv, self.protocol, self.menuai.loop, session=session, **pair_args
         )
         try:
             await self.pairing.begin()
@@ -615,9 +615,9 @@ class AppleTVConfigFlow(ConfigFlow, domain=DOMAIN):
         return self.async_create_entry(title=self.atv.name, data=data)
 
 
-class DeviceNotFound(HomeAssistantError):
+class DeviceNotFound(menuaiError):
     """Error to indicate device could not be found."""
 
 
-class DeviceAlreadyConfigured(HomeAssistantError):
+class DeviceAlreadyConfigured(menuaiError):
     """Error to indicate device is already configured."""

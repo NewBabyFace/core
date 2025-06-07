@@ -7,15 +7,15 @@ from googleapiclient.errors import HttpError
 from httplib2 import Response
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.google_tasks.const import (
+from menuai import config_entries
+from menuai.components.google_tasks.const import (
     DOMAIN,
     OAUTH2_AUTHORIZE,
     OAUTH2_TOKEN,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import config_entry_oauth2_flow
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers import config_entry_oauth2_flow
 
 from tests.common import MockConfigEntry, async_load_fixture
 from tests.test_util.aiohttp import AiohttpClientMocker
@@ -34,7 +34,7 @@ def user_identifier() -> str:
 @pytest.fixture
 def setup_userinfo(user_identifier: str) -> Generator[Mock]:
     """Set up userinfo."""
-    with patch("homeassistant.components.google_tasks.config_flow.build") as mock:
+    with patch("menuai.components.google_tasks.config_flow.build") as mock:
         mock.return_value.userinfo.return_value.get.return_value.execute.return_value = {
             "id": user_identifier,
             "name": "Test Name",
@@ -44,18 +44,18 @@ def setup_userinfo(user_identifier: str) -> Generator[Mock]:
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_full_flow(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     setup_credentials,
     setup_userinfo,
 ) -> None:
     """Check full flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "google_tasks", context={"source": config_entries.SOURCE_USER}
     )
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
@@ -71,7 +71,7 @@ async def test_full_flow(
         "&access_type=offline&prompt=consent"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == 200
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
@@ -87,30 +87,30 @@ async def test_full_flow(
     )
 
     with patch(
-        "homeassistant.components.google_tasks.async_setup_entry", return_value=True
+        "menuai.components.google_tasks.async_setup_entry", return_value=True
     ) as mock_setup:
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["result"].unique_id == "123"
     assert result["result"].title == "Test Name"
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
     assert len(mock_setup.mock_calls) == 1
 
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_api_not_enabled(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     setup_credentials,
     setup_userinfo,
 ) -> None:
     """Check flow aborts if api is not enabled."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "google_tasks", context={"source": config_entries.SOURCE_USER}
     )
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
@@ -126,7 +126,7 @@ async def test_api_not_enabled(
         "&access_type=offline&prompt=consent"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == 200
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
@@ -142,16 +142,16 @@ async def test_api_not_enabled(
     )
 
     with patch(
-        "homeassistant.components.google_tasks.config_flow.build",
+        "menuai.components.google_tasks.config_flow.build",
         side_effect=HttpError(
             Response({"status": "403"}),
             bytes(
-                await async_load_fixture(hass, "api_not_enabled_response.json", DOMAIN),
+                await async_load_fixture(menuai, "api_not_enabled_response.json", DOMAIN),
                 "utf-8",
             ),
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "access_not_configured"
@@ -163,18 +163,18 @@ async def test_api_not_enabled(
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_general_exception(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     setup_credentials,
     setup_userinfo,
 ) -> None:
     """Check flow aborts if exception happens."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "google_tasks", context={"source": config_entries.SOURCE_USER}
     )
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
@@ -190,7 +190,7 @@ async def test_general_exception(
         "&access_type=offline&prompt=consent"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == 200
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
@@ -206,10 +206,10 @@ async def test_general_exception(
     )
 
     with patch(
-        "homeassistant.components.google_tasks.config_flow.build",
+        "menuai.components.google_tasks.config_flow.build",
         side_effect=Exception,
     ):
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "unknown"
@@ -240,8 +240,8 @@ async def test_general_exception(
 )
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_reauth(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     setup_credentials,
     setup_userinfo,
@@ -261,19 +261,19 @@ async def test_reauth(
             }
         },
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    config_entry.async_start_reauth(hass)
-    await hass.async_block_till_done()
+    config_entry.async_start_reauth(menuai)
+    await menuai.async_block_till_done()
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
     result = flows[0]
     assert result["step_id"] == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
@@ -287,7 +287,7 @@ async def test_reauth(
         "https://www.googleapis.com/auth/userinfo.profile"
         "&access_type=offline&prompt=consent"
     )
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == 200
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
@@ -304,11 +304,11 @@ async def test_reauth(
     )
 
     with patch(
-        "homeassistant.components.google_tasks.async_setup_entry", return_value=True
+        "menuai.components.google_tasks.async_setup_entry", return_value=True
     ):
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
 
     assert result["type"] == "abort"
     assert result["reason"] == abort_reason

@@ -24,7 +24,7 @@ from aiohasupervisor.models import (
 )
 from aiohasupervisor.models.backups import LOCATION_CLOUD_BACKUP, LOCATION_LOCAL_STORAGE
 
-from homeassistant.components.backup import (
+from menuai.components.backup import (
     DATA_MANAGER,
     AddonErrorData,
     AddonInfo,
@@ -51,13 +51,13 @@ from homeassistant.components.backup import (
     suggested_filename as suggested_backup_filename,
     suggested_filename_from_name_date,
 )
-from homeassistant.const import __version__ as HAVERSION
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.backup import async_get_manager as async_get_backup_manager
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.util import dt as dt_util
-from homeassistant.util.enum import try_parse_enum
+from menuai.const import __version__ as HAVERSION
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.backup import async_get_manager as async_get_backup_manager
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.util import dt as dt_util
+from menuai.util.enum import try_parse_enum
 
 from .const import DATA_CONFIG_STORE, DOMAIN, EVENT_SUPERVISOR_EVENT
 from .handler import get_supervisor_client
@@ -70,25 +70,25 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_get_backup_agents(
-    hass: HomeAssistant,
+    menuai: menuai,
     **kwargs: Any,
 ) -> list[BackupAgent]:
-    """Return the hassio backup agents."""
-    client = get_supervisor_client(hass)
+    """Return the menuaiio backup agents."""
+    client = get_supervisor_client(menuai)
     mounts = await client.mounts.info()
     agents: list[BackupAgent] = [
-        SupervisorBackupAgent(hass, "local", LOCATION_LOCAL_STORAGE)
+        SupervisorBackupAgent(menuai, "local", LOCATION_LOCAL_STORAGE)
     ]
     for mount in mounts.mounts:
         if mount.usage is not supervisor_mounts.MountUsage.BACKUP:
             continue
-        agents.append(SupervisorBackupAgent(hass, mount.name, mount.name))
+        agents.append(SupervisorBackupAgent(menuai, mount.name, mount.name))
     return agents
 
 
 @callback
 def async_register_backup_agents_listener(
-    hass: HomeAssistant,
+    menuai: menuai,
     *,
     listener: Callable[[], None],
     **kwargs: Any,
@@ -113,7 +113,7 @@ def async_register_backup_agents_listener(
         _LOGGER.debug("Mount added or removed %s, calling listener", data)
         listener()
 
-    unsub_signal = async_dispatcher_connect(hass, EVENT_SUPERVISOR_EVENT, handle_signal)
+    unsub_signal = async_dispatcher_connect(menuai, EVENT_SUPERVISOR_EVENT, handle_signal)
     return unsub
 
 
@@ -121,11 +121,11 @@ def _backup_details_to_agent_backup(
     details: supervisor_backups.BackupComplete, location: str
 ) -> AgentBackup:
     """Convert a supervisor backup details object to an agent backup."""
-    homeassistant_included = details.homeassistant is not None
-    if not homeassistant_included:
+    menuai_included = details.menuai is not None
+    if not menuai_included:
         database_included = False
     else:
-        database_included = details.homeassistant_exclude_database is False
+        database_included = details.menuai_exclude_database is False
     addons = [
         AddonInfo(name=addon.name, slug=addon.slug, version=addon.version)
         for addon in details.addons
@@ -140,8 +140,8 @@ def _backup_details_to_agent_backup(
         ),
         extra_metadata=details.extra or {},
         folders=[Folder(folder) for folder in details.folders],
-        homeassistant_included=homeassistant_included,
-        homeassistant_version=details.homeassistant,
+        menuai_included=menuai_included,
+        menuai_version=details.menuai,
         name=details.name,
         protected=details.location_attributes[location].protected,
         size=details.location_attributes[location].size_bytes,
@@ -153,12 +153,12 @@ class SupervisorBackupAgent(BackupAgent):
 
     domain = DOMAIN
 
-    def __init__(self, hass: HomeAssistant, name: str, location: str) -> None:
+    def __init__(self, menuai: menuai, name: str, location: str) -> None:
         """Initialize the backup agent."""
         super().__init__()
-        self._hass = hass
+        self._menuai = menuai
         self._backup_dir = Path("/backups")
-        self._client = get_supervisor_client(hass)
+        self._client = get_supervisor_client(menuai)
         self.name = self.unique_id = name
         self.location = location
 
@@ -248,10 +248,10 @@ class SupervisorBackupAgent(BackupAgent):
 class SupervisorBackupReaderWriter(BackupReaderWriter):
     """Class for reading and writing backups in supervised installations."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize the backup reader/writer."""
-        self._hass = hass
-        self._client = get_supervisor_client(hass)
+        self._menuai = menuai
+        self._client = get_supervisor_client(menuai)
 
     async def async_create_backup(
         self,
@@ -263,16 +263,16 @@ class SupervisorBackupReaderWriter(BackupReaderWriter):
         include_all_addons: bool,
         include_database: bool,
         include_folders: list[Folder] | None,
-        include_homeassistant: bool,
+        include_menuai: bool,
         on_progress: Callable[[CreateBackupEvent], None],
         password: str | None,
     ) -> tuple[NewBackup, asyncio.Task[WrittenBackup]]:
         """Create a backup."""
-        if not include_homeassistant and include_database:
-            raise HomeAssistantError(
-                "Cannot create a backup with database but without Home Assistant"
+        if not include_menuai and include_database:
+            raise menuaiError(
+                "Cannot create a backup with database but without MenuAI"
             )
-        manager = self._hass.data[DATA_MANAGER]
+        manager = self._menuai.data[DATA_MANAGER]
 
         include_addons_set: supervisor_backups.AddonSet | set[str] | None = None
         if include_all_addons:
@@ -282,11 +282,11 @@ class SupervisorBackupReaderWriter(BackupReaderWriter):
         include_folders_set = {
             supervisor_backups.Folder(folder) for folder in include_folders or []
         }
-        # Always include SSL if Home Assistant is included
-        if include_homeassistant:
+        # Always include SSL if MenuAI is included
+        if include_menuai:
             include_folders_set.add(supervisor_backups.Folder.SSL)
 
-        hassio_agents: list[SupervisorBackupAgent] = [
+        menuaiio_agents: list[SupervisorBackupAgent] = [
             cast(SupervisorBackupAgent, manager.backup_agents[agent_id])
             for agent_id in agent_ids
             if manager.backup_agents[agent_id].domain == DOMAIN
@@ -311,17 +311,17 @@ class SupervisorBackupReaderWriter(BackupReaderWriter):
         encrypted_locations: list[str] = []
         decrypted_locations: list[str] = []
         agents_settings = manager.config.data.agents
-        for hassio_agent in hassio_agents:
+        for menuaiio_agent in menuaiio_agents:
             if password is not None:
-                if agent_settings := agents_settings.get(hassio_agent.agent_id):
+                if agent_settings := agents_settings.get(menuaiio_agent.agent_id):
                     if agent_settings.protected:
-                        encrypted_locations.append(hassio_agent.location)
+                        encrypted_locations.append(menuaiio_agent.location)
                     else:
-                        decrypted_locations.append(hassio_agent.location)
+                        decrypted_locations.append(menuaiio_agent.location)
                 else:
-                    encrypted_locations.append(hassio_agent.location)
+                    encrypted_locations.append(menuaiio_agent.location)
             else:
-                decrypted_locations.append(hassio_agent.location)
+                decrypted_locations.append(menuaiio_agent.location)
         locations = []
         if LOCATION_LOCAL_STORAGE in decrypted_locations:
             locations = decrypted_locations
@@ -336,7 +336,7 @@ class SupervisorBackupReaderWriter(BackupReaderWriter):
             encrypted_locations.insert(0, LOCATION_LOCAL_STORAGE)
         _LOGGER.debug("Encrypted locations: %s", encrypted_locations)
         _LOGGER.debug("Decrypted locations: %s", decrypted_locations)
-        if not locations and hassio_agents:
+        if not locations and menuaiio_agents:
             if len(encrypted_locations) >= len(decrypted_locations):
                 locations = encrypted_locations
             else:
@@ -352,12 +352,12 @@ class SupervisorBackupReaderWriter(BackupReaderWriter):
                 supervisor_backups.PartialBackupOptions(
                     addons=include_addons_set,
                     folders=include_folders_set,
-                    homeassistant=include_homeassistant,
+                    menuai=include_menuai,
                     name=backup_name,
                     password=password,
                     compressed=True,
                     location=locations,
-                    homeassistant_exclude_database=not include_database,
+                    menuai_exclude_database=not include_database,
                     background=True,
                     extra=extra_metadata,
                     filename=PurePath(filename),
@@ -365,7 +365,7 @@ class SupervisorBackupReaderWriter(BackupReaderWriter):
             )
         except SupervisorError as err:
             raise BackupReaderWriterError(f"Error creating backup: {err}") from err
-        backup_task = self._hass.async_create_task(
+        backup_task = self._menuai.async_create_task(
             self._async_wait_for_backup(
                 backup,
                 locations,
@@ -492,14 +492,14 @@ class SupervisorBackupReaderWriter(BackupReaderWriter):
         suggested_filename: str,
     ) -> WrittenBackup:
         """Receive a backup."""
-        manager = self._hass.data[DATA_MANAGER]
+        manager = self._menuai.data[DATA_MANAGER]
 
-        hassio_agents: list[SupervisorBackupAgent] = [
+        menuaiio_agents: list[SupervisorBackupAgent] = [
             cast(SupervisorBackupAgent, manager.backup_agents[agent_id])
             for agent_id in agent_ids
             if manager.backup_agents[agent_id].domain == DOMAIN
         ]
-        locations = [agent.location for agent in hassio_agents]
+        locations = [agent.location for agent in menuaiio_agents]
         locations = locations or [LOCATION_CLOUD_BACKUP]
 
         backup_id = await self._client.backups.upload_backup(
@@ -541,10 +541,10 @@ class SupervisorBackupReaderWriter(BackupReaderWriter):
         restore_addons: list[str] | None,
         restore_database: bool,
         restore_folders: list[Folder] | None,
-        restore_homeassistant: bool,
+        restore_menuai: bool,
     ) -> None:
         """Restore a backup."""
-        manager = self._hass.data[DATA_MANAGER]
+        manager = self._menuai.data[DATA_MANAGER]
         # The backup manager has already checked that the backup exists so we don't
         # need to catch BackupNotFound here.
         backup = await manager.backup_agents[agent_id].async_get_backup(backup_id)
@@ -552,12 +552,12 @@ class SupervisorBackupReaderWriter(BackupReaderWriter):
             # Check for None to be backwards compatible with the old BackupAgent API,
             # this can be removed in HA Core 2025.10
             backup
-            and restore_homeassistant
+            and restore_menuai
             and restore_database != backup.database_included
         ):
-            raise HomeAssistantError("Restore database must match backup")
-        if not restore_homeassistant and restore_database:
-            raise HomeAssistantError("Cannot restore database without Home Assistant")
+            raise menuaiError("Restore database must match backup")
+        if not restore_menuai and restore_database:
+            raise menuaiError("Cannot restore database without MenuAI")
         restore_addons_set = set(restore_addons) if restore_addons else None
         restore_folders_set = (
             {supervisor_backups.Folder(folder) for folder in restore_folders}
@@ -585,7 +585,7 @@ class SupervisorBackupReaderWriter(BackupReaderWriter):
                 supervisor_backups.PartialRestoreOptions(
                     addons=restore_addons_set,
                     folders=restore_folders_set,
-                    homeassistant=restore_homeassistant,
+                    menuai=restore_menuai,
                     password=password,
                     background=True,
                     location=restore_location,
@@ -598,7 +598,7 @@ class SupervisorBackupReaderWriter(BackupReaderWriter):
             message = err.args[0]
             if message.startswith("Invalid password for backup"):
                 raise IncorrectPasswordError(message) from err
-            raise HomeAssistantError(message) from err
+            raise menuaiError(message) from err
 
         restore_complete = asyncio.Event()
         restore_errors: list[dict[str, str]] = []
@@ -693,7 +693,7 @@ class SupervisorBackupReaderWriter(BackupReaderWriter):
     async def async_validate_config(self, *, config: BackupConfig) -> None:
         """Validate backup config.
 
-        Replace the core backup agent with the hassio default agent.
+        Replace the core backup agent with the menuaiio default agent.
         """
         core_agent_id = "backup.local"
         create_backup = config.data.create_backup
@@ -734,7 +734,7 @@ class SupervisorBackupReaderWriter(BackupReaderWriter):
             on_event(event_data)
 
         unsub_signal = async_dispatcher_connect(
-            self._hass, EVENT_SUPERVISOR_EVENT, handle_signal
+            self._menuai, EVENT_SUPERVISOR_EVENT, handle_signal
         )
         return unsub
 
@@ -772,18 +772,18 @@ async def _default_agent(client: SupervisorClient) -> str:
     """Return the default agent for creating a backup."""
     mounts = await client.mounts.info()
     default_mount = mounts.default_backup_mount
-    return f"hassio.{default_mount if default_mount is not None else 'local'}"
+    return f"menuaiio.{default_mount if default_mount is not None else 'local'}"
 
 
 async def backup_addon_before_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     addon: str,
     addon_name: str | None,
     installed_version: str | None,
 ) -> None:
     """Prepare for updating an add-on."""
-    backup_manager = hass.data[DATA_MANAGER]
-    client = get_supervisor_client(hass)
+    backup_manager = menuai.data[DATA_MANAGER]
+    client = get_supervisor_client(menuai)
 
     # Use the password from automatic settings if available
     if backup_manager.config.data.create_backup.agent_ids:
@@ -805,7 +805,7 @@ async def backup_addon_before_update(
         backups: dict[str, ManagerBackup],
     ) -> dict[str, ManagerBackup]:
         """Return oldest backups more numerous than copies to delete."""
-        update_config = hass.data[DATA_CONFIG_STORE].data.update_config
+        update_config = menuai.data[DATA_CONFIG_STORE].data.update_config
         return dict(
             sorted(
                 backups.items(),
@@ -821,12 +821,12 @@ async def backup_addon_before_update(
             include_all_addons=False,
             include_database=False,
             include_folders=None,
-            include_homeassistant=False,
+            include_menuai=False,
             name=f"{addon_name or addon} {installed_version or '<unknown>'}",
             password=password,
         )
     except BackupManagerError as err:
-        raise HomeAssistantError(f"Error creating backup: {err}") from err
+        raise menuaiError(f"Error creating backup: {err}") from err
     else:
         try:
             await backup_manager.async_delete_filtered_backups(
@@ -834,13 +834,13 @@ async def backup_addon_before_update(
                 delete_filter=_delete_filter,
             )
         except BackupManagerError as err:
-            raise HomeAssistantError(f"Error deleting old backups: {err}") from err
+            raise menuaiError(f"Error deleting old backups: {err}") from err
 
 
-async def backup_core_before_update(hass: HomeAssistant) -> None:
+async def backup_core_before_update(menuai: menuai) -> None:
     """Prepare for updating core."""
-    backup_manager = await async_get_backup_manager(hass)
-    client = get_supervisor_client(hass)
+    backup_manager = await async_get_backup_manager(menuai)
+    client = get_supervisor_client(menuai)
 
     try:
         if backup_manager.config.data.create_backup.agent_ids:
@@ -854,9 +854,9 @@ async def backup_core_before_update(hass: HomeAssistant) -> None:
                 include_all_addons=False,
                 include_database=True,
                 include_folders=None,
-                include_homeassistant=True,
-                name=f"Home Assistant Core {HAVERSION}",
+                include_menuai=True,
+                name=f"MenuAI Core {HAVERSION}",
                 password=None,
             )
     except BackupManagerError as err:
-        raise HomeAssistantError(f"Error creating backup: {err}") from err
+        raise menuaiError(f"Error creating backup: {err}") from err

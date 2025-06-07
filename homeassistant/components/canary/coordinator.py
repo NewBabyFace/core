@@ -11,9 +11,9 @@ from canary.api import Api
 from canary.model import Location, Reading
 from requests.exceptions import ConnectTimeout, HTTPError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN
 from .model import CanaryData
@@ -28,14 +28,14 @@ class CanaryDataUpdateCoordinator(DataUpdateCoordinator[CanaryData]):
     """Class to manage fetching Canary data."""
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: CanaryConfigEntry, *, api: Api
+        self, menuai: menuai, config_entry: CanaryConfigEntry, *, api: Api
     ) -> None:
         """Initialize global Canary data updater."""
         self.canary = api
         update_interval = timedelta(seconds=30)
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -67,6 +67,6 @@ class CanaryDataUpdateCoordinator(DataUpdateCoordinator[CanaryData]):
 
         try:
             async with asyncio.timeout(15):
-                return await self.hass.async_add_executor_job(self._update_data)
+                return await self.menuai.async_add_executor_job(self._update_data)
         except (ConnectTimeout, HTTPError) as error:
             raise UpdateFailed(f"Invalid response from API: {error}") from error

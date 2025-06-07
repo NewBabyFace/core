@@ -4,7 +4,7 @@ from typing import Any
 
 import pytest
 
-from homeassistant.components.text import (
+from menuai.components.text import (
     ATTR_MAX,
     ATTR_MIN,
     ATTR_MODE,
@@ -15,10 +15,10 @@ from homeassistant.components.text import (
     TextMode,
     _async_set_value,
 )
-from homeassistant.const import MAX_LENGTH_STATE_STATE
-from homeassistant.core import HomeAssistant, ServiceCall, State
-from homeassistant.helpers.restore_state import STORAGE_KEY as RESTORE_STATE_KEY
-from homeassistant.setup import async_setup_component
+from menuai.const import MAX_LENGTH_STATE_STATE
+from menuai.core import menuai, ServiceCall, State
+from menuai.helpers.restore_state import STORAGE_KEY as RESTORE_STATE_KEY
+from menuai.setup import async_setup_component
 
 from .common import MockRestoreText, MockTextEntity
 
@@ -29,10 +29,10 @@ from tests.common import (
 )
 
 
-async def test_text_default(hass: HomeAssistant) -> None:
+async def test_text_default(menuai: menuai) -> None:
     """Test text entity with defaults."""
     text = MockTextEntity()
-    text.hass = hass
+    text.menuai = menuai
 
     assert text.capability_attributes == {
         ATTR_MIN: 0,
@@ -44,10 +44,10 @@ async def test_text_default(hass: HomeAssistant) -> None:
     assert text.state == "test"
 
 
-async def test_text_new_min_max_pattern(hass: HomeAssistant) -> None:
+async def test_text_new_min_max_pattern(menuai: menuai) -> None:
     """Test text entity with new min, max, and pattern."""
     text = MockTextEntity(native_min=-1, native_max=500, pattern=r"[a-z]")
-    text.hass = hass
+    text.menuai = menuai
 
     assert text.capability_attributes == {
         ATTR_MIN: 0,
@@ -57,35 +57,35 @@ async def test_text_new_min_max_pattern(hass: HomeAssistant) -> None:
     }
 
 
-async def test_text_set_value(hass: HomeAssistant) -> None:
+async def test_text_set_value(menuai: menuai) -> None:
     """Test text entity with set_value service."""
     text = MockTextEntity(native_min=1, native_max=5, pattern=r"[a-z]")
-    text.hass = hass
+    text.menuai = menuai
 
     with pytest.raises(ValueError):
         await _async_set_value(
-            text, ServiceCall(hass, DOMAIN, SERVICE_SET_VALUE, {ATTR_VALUE: ""})
+            text, ServiceCall(menuai, DOMAIN, SERVICE_SET_VALUE, {ATTR_VALUE: ""})
         )
 
     with pytest.raises(ValueError):
         await _async_set_value(
             text,
-            ServiceCall(hass, DOMAIN, SERVICE_SET_VALUE, {ATTR_VALUE: "hello world!"}),
+            ServiceCall(menuai, DOMAIN, SERVICE_SET_VALUE, {ATTR_VALUE: "hello world!"}),
         )
 
     with pytest.raises(ValueError):
         await _async_set_value(
-            text, ServiceCall(hass, DOMAIN, SERVICE_SET_VALUE, {ATTR_VALUE: "HELLO"})
+            text, ServiceCall(menuai, DOMAIN, SERVICE_SET_VALUE, {ATTR_VALUE: "HELLO"})
         )
 
     await _async_set_value(
-        text, ServiceCall(hass, DOMAIN, SERVICE_SET_VALUE, {ATTR_VALUE: "test2"})
+        text, ServiceCall(menuai, DOMAIN, SERVICE_SET_VALUE, {ATTR_VALUE: "test2"})
     )
 
     assert text.state == "test2"
 
 
-async def test_text_value_outside_bounds(hass: HomeAssistant) -> None:
+async def test_text_value_outside_bounds(menuai: menuai) -> None:
     """Test text entity with value that is outside min and max."""
     with pytest.raises(ValueError):
         _ = MockTextEntity(
@@ -107,8 +107,8 @@ RESTORE_DATA = {
 
 
 async def test_restore_number_save_state(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
 ) -> None:
     """Test RestoreNumber."""
     entity0 = MockRestoreText(
@@ -117,18 +117,18 @@ async def test_restore_number_save_state(
         native_min=1,
         native_value="Hello",
     )
-    setup_test_component_platform(hass, DOMAIN, [entity0])
+    setup_test_component_platform(menuai, DOMAIN, [entity0])
 
-    assert await async_setup_component(hass, "text", {"text": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "text", {"text": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
     # Trigger saving state
-    await async_mock_restore_state_shutdown_restart(hass)
+    await async_mock_restore_state_shutdown_restart(menuai)
 
-    assert len(hass_storage[RESTORE_STATE_KEY]["data"]) == 1
-    state = hass_storage[RESTORE_STATE_KEY]["data"][0]["state"]
+    assert len(menuai_storage[RESTORE_STATE_KEY]["data"]) == 1
+    state = menuai_storage[RESTORE_STATE_KEY]["data"][0]["state"]
     assert state["entity_id"] == entity0.entity_id
-    extra_data = hass_storage[RESTORE_STATE_KEY]["data"][0]["extra_data"]
+    extra_data = menuai_storage[RESTORE_STATE_KEY]["data"][0]["extra_data"]
     assert extra_data == RESTORE_DATA
     assert isinstance(extra_data["native_value"], str)
 
@@ -144,8 +144,8 @@ async def test_restore_number_save_state(
     ],
 )
 async def test_restore_number_restore_state(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
     native_max,
     native_min,
     native_value,
@@ -153,7 +153,7 @@ async def test_restore_number_restore_state(
     extra_data,
 ) -> None:
     """Test RestoreNumber."""
-    mock_restore_cache_with_extra_data(hass, ((State("text.test", ""), extra_data),))
+    mock_restore_cache_with_extra_data(menuai, ((State("text.test", ""), extra_data),))
 
     entity0 = MockRestoreText(
         native_max=native_max,
@@ -161,12 +161,12 @@ async def test_restore_number_restore_state(
         name="Test",
         native_value=None,
     )
-    setup_test_component_platform(hass, DOMAIN, [entity0])
+    setup_test_component_platform(menuai, DOMAIN, [entity0])
 
-    assert await async_setup_component(hass, "text", {"text": {"platform": "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "text", {"text": {"platform": "test"}})
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(entity0.entity_id)
+    assert menuai.states.get(entity0.entity_id)
 
     assert entity0.native_max == native_max
     assert entity0.native_min == native_min

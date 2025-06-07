@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import orjson
 
-from homeassistant.util.event_type import EventType
+from menuai.util.event_type import EventType
 
 
 def test_compatibility_with_str() -> None:

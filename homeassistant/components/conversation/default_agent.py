@@ -1,4 +1,4 @@
-"""Standard conversation implementation for Home Assistant."""
+"""Standard conversation implementation for MenuAI."""
 
 from __future__ import annotations
 
@@ -14,33 +14,33 @@ import re
 import time
 from typing import IO, Any, cast
 
-from hassil.expression import Expression, ListReference, Sequence, TextChunk
-from hassil.intents import (
+from menuaiil.expression import Expression, ListReference, Sequence, TextChunk
+from menuaiil.intents import (
     Intents,
     SlotList,
     TextSlotList,
     TextSlotValue,
     WildcardSlotList,
 )
-from hassil.recognize import (
+from menuaiil.recognize import (
     MISSING_ENTITY,
     RecognizeResult,
     recognize_all,
     recognize_best,
 )
-from hassil.string_matcher import UnmatchedRangeEntity, UnmatchedTextEntity
-from hassil.trie import Trie
-from hassil.util import merge_dict
+from menuaiil.string_matcher import UnmatchedRangeEntity, UnmatchedTextEntity
+from menuaiil.trie import Trie
+from menuaiil.util import merge_dict
 from home_assistant_intents import ErrorKey, get_intents, get_languages
 import yaml
 
-from homeassistant import core
-from homeassistant.components.homeassistant.exposed_entities import (
+from menuai import core
+from menuai.components.menuai.exposed_entities import (
     async_listen_entity_updates,
     async_should_expose,
 )
-from homeassistant.const import EVENT_STATE_CHANGED, MATCH_ALL
-from homeassistant.helpers import (
+from menuai.const import EVENT_STATE_CHANGED, MATCH_ALL
+from menuai.helpers import (
     area_registry as ar,
     device_registry as dr,
     entity_registry as er,
@@ -50,10 +50,10 @@ from homeassistant.helpers import (
     template,
     translation,
 )
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.event import async_track_state_added_domain
-from homeassistant.util import language as language_util
-from homeassistant.util.json import JsonObjectType, json_loads_object
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.event import async_track_state_added_domain
+from menuai.util import language as language_util
+from menuai.util.json import JsonObjectType, json_loads_object
 
 from .chat_log import AssistantContent, ChatLog
 from .const import (
@@ -74,8 +74,8 @@ REGEX_TYPE = type(re.compile(""))
 TRIGGER_CALLBACK_TYPE = Callable[
     [ConversationInput, RecognizeResult], Awaitable[str | None]
 ]
-METADATA_CUSTOM_SENTENCE = "hass_custom_sentence"
-METADATA_CUSTOM_FILE = "hass_custom_file"
+METADATA_CUSTOM_SENTENCE = "menuai_custom_sentence"
+METADATA_CUSTOM_FILE = "menuai_custom_file"
 
 ERROR_SENTINEL = object()
 
@@ -120,10 +120,10 @@ class IntentMatchingStage(Enum):
     """Match against exposed entities only."""
 
     UNEXPOSED_ENTITIES = auto()
-    """Match against unexposed entities in Home Assistant."""
+    """Match against unexposed entities in MenuAI."""
 
     FUZZY = auto()
-    """Capture names that are not known to Home Assistant."""
+    """Capture names that are not known to MenuAI."""
 
 
 @dataclass(frozen=True)
@@ -185,43 +185,43 @@ class IntentCache:
 
 
 async def async_setup_default_agent(
-    hass: core.HomeAssistant,
+    menuai: core.menuai,
     entity_component: EntityComponent[ConversationEntity],
     config_intents: dict[str, Any],
 ) -> None:
     """Set up entity registry listener for the default agent."""
-    entity = DefaultAgent(hass, config_intents)
+    entity = DefaultAgent(menuai, config_intents)
     await entity_component.async_add_entities([entity])
-    hass.data[DATA_DEFAULT_ENTITY] = entity
+    menuai.data[DATA_DEFAULT_ENTITY] = entity
 
     @core.callback
     def async_entity_state_listener(
         event: core.Event[core.EventStateChangedData],
     ) -> None:
         """Set expose flag on new entities."""
-        async_should_expose(hass, DOMAIN, event.data["entity_id"])
+        async_should_expose(menuai, DOMAIN, event.data["entity_id"])
 
     @core.callback
-    def async_hass_started(hass: core.HomeAssistant) -> None:
+    def async_menuai_started(menuai: core.menuai) -> None:
         """Set expose flag on all entities."""
-        for state in hass.states.async_all():
-            async_should_expose(hass, DOMAIN, state.entity_id)
-        async_track_state_added_domain(hass, MATCH_ALL, async_entity_state_listener)
+        for state in menuai.states.async_all():
+            async_should_expose(menuai, DOMAIN, state.entity_id)
+        async_track_state_added_domain(menuai, MATCH_ALL, async_entity_state_listener)
 
-    ha_start.async_at_started(hass, async_hass_started)
+    ha_start.async_at_started(menuai, async_menuai_started)
 
 
 class DefaultAgent(ConversationEntity):
     """Default agent for conversation agent."""
 
-    _attr_name = "Home Assistant"
+    _attr_name = "MenuAI"
     _attr_supported_features = ConversationEntityFeature.CONTROL
 
     def __init__(
-        self, hass: core.HomeAssistant, config_intents: dict[str, Any]
+        self, menuai: core.menuai, config_intents: dict[str, Any]
     ) -> None:
         """Initialize the default agent."""
-        self.hass = hass
+        self.menuai = menuai
         self._lang_intents: dict[str, LanguageIntents | object] = {}
 
         # intent -> [sentences]
@@ -266,32 +266,32 @@ class DefaultAgent(ConversationEntity):
         assert self._unsub_clear_slot_list is None
 
         self._unsub_clear_slot_list = [
-            self.hass.bus.async_listen(
+            self.menuai.bus.async_listen(
                 ar.EVENT_AREA_REGISTRY_UPDATED,
                 self._async_clear_slot_list,
             ),
-            self.hass.bus.async_listen(
+            self.menuai.bus.async_listen(
                 fr.EVENT_FLOOR_REGISTRY_UPDATED,
                 self._async_clear_slot_list,
             ),
-            self.hass.bus.async_listen(
+            self.menuai.bus.async_listen(
                 er.EVENT_ENTITY_REGISTRY_UPDATED,
                 self._async_clear_slot_list,
                 event_filter=self._filter_entity_registry_changes,
             ),
-            self.hass.bus.async_listen(
+            self.menuai.bus.async_listen(
                 EVENT_STATE_CHANGED,
                 self._async_clear_slot_list,
                 event_filter=self._filter_state_changes,
             ),
-            async_listen_entity_updates(self.hass, DOMAIN, self._async_clear_slot_list),
+            async_listen_entity_updates(self.menuai, DOMAIN, self._async_clear_slot_list),
         ]
 
     async def async_recognize_intent(
         self, user_input: ConversationInput, strict_intents_only: bool = False
     ) -> RecognizeResult | None:
         """Recognize intent from user input."""
-        language = user_input.language or self.hass.config.language
+        language = user_input.language or self.menuai.config.language
         lang_intents = await self.async_get_or_load_intents(language)
 
         if lang_intents is None:
@@ -314,7 +314,7 @@ class DefaultAgent(ConversationEntity):
 
         start = time.monotonic()
 
-        result = await self.hass.async_add_executor_job(
+        result = await self.menuai.async_add_executor_job(
             self._recognize,
             user_input,
             lang_intents,
@@ -348,7 +348,7 @@ class DefaultAgent(ConversationEntity):
 
             # Convert to conversation result
             response = intent.IntentResponse(
-                language=user_input.language or self.hass.config.language
+                language=user_input.language or self.menuai.config.language
             )
             response.response_type = intent.IntentResponseType.ACTION_DONE
             response.async_set_speech(response_text)
@@ -378,7 +378,7 @@ class DefaultAgent(ConversationEntity):
         user_input: ConversationInput,
     ) -> intent.IntentResponse:
         """Process user input with intents."""
-        language = user_input.language or self.hass.config.language
+        language = user_input.language or self.menuai.config.language
 
         # Intent match or failure
         lang_intents = await self.async_get_or_load_intents(language)
@@ -441,7 +441,7 @@ class DefaultAgent(ConversationEntity):
 
         try:
             intent_response = await intent.async_handle(
-                self.hass,
+                self.menuai,
                 DOMAIN,
                 result.intent.name,
                 slots,
@@ -455,7 +455,7 @@ class DefaultAgent(ConversationEntity):
         except intent.MatchFailedError as match_error:
             # Intent was valid, but no entities matched the constraints.
             error_response_type, error_response_args = _get_match_error_response(
-                self.hass, match_error
+                self.menuai, match_error
             )
             return _make_error_result(
                 language,
@@ -493,7 +493,7 @@ class DefaultAgent(ConversationEntity):
                 result.intent.name, {}
             ).get(response_key)
             if response_template_str:
-                response_template = template.Template(response_template_str, self.hass)
+                response_template = template.Template(response_template_str, self.menuai)
                 speech = await self._build_speech(
                     language, response_template, intent_response, result
                 )
@@ -698,7 +698,7 @@ class DefaultAgent(ConversationEntity):
         return maybe_result
 
     def _get_unexposed_entity_names(self, text: str) -> TextSlotList:
-        """Get filtered slot list with unexposed entity names in Home Assistant."""
+        """Get filtered slot list with unexposed entity names in MenuAI."""
         if self._unexposed_names_trie is None:
             # Build trie
             self._unexposed_names_trie = Trie()
@@ -721,10 +721,10 @@ class DefaultAgent(ConversationEntity):
         self, exposed: bool
     ) -> Iterable[tuple[str, str, dict[str, Any]]]:
         """Yield (input name, output name, context) tuples for entities."""
-        entity_registry = er.async_get(self.hass)
+        entity_registry = er.async_get(self.menuai)
 
-        for state in self.hass.states.async_all():
-            entity_exposed = async_should_expose(self.hass, DOMAIN, state.entity_id)
+        for state in self.menuai.states.async_all():
+            entity_exposed = async_should_expose(self.menuai, DOMAIN, state.entity_id)
             if exposed and (not entity_exposed):
                 # Required exposed, entity is not
                 continue
@@ -733,7 +733,7 @@ class DefaultAgent(ConversationEntity):
                 # Required not exposed, entity is
                 continue
 
-            # Checked against "requires_context" and "excludes_context" in hassil
+            # Checked against "requires_context" and "excludes_context" in menuaiil
             context = {"domain": state.domain}
             if state.attributes:
                 # Include some attributes
@@ -802,19 +802,19 @@ class DefaultAgent(ConversationEntity):
                 "slots": speech_slots,
                 # First matched or unmatched state
                 "state": (
-                    template.TemplateState(self.hass, state1)
+                    template.TemplateState(self.menuai, state1)
                     if state1 is not None
                     else None
                 ),
                 "query": {
                     # Entity states that matched the query (e.g, "on")
                     "matched": [
-                        template.TemplateState(self.hass, state)
+                        template.TemplateState(self.menuai, state)
                         for state in intent_response.matched_states
                     ],
                     # Entity states that did not match the query
                     "unmatched": [
-                        template.TemplateState(self.hass, state)
+                        template.TemplateState(self.menuai, state)
                         for state in intent_response.unmatched_states
                     ],
                 },
@@ -843,7 +843,7 @@ class DefaultAgent(ConversationEntity):
     async def async_prepare(self, language: str | None = None) -> None:
         """Load intents for a language."""
         if language is None:
-            language = self.hass.config.language
+            language = self.menuai.config.language
 
         lang_intents = await self.async_get_or_load_intents(language)
 
@@ -873,7 +873,7 @@ class DefaultAgent(ConversationEntity):
 
             start = time.monotonic()
 
-            result = await self.hass.async_add_executor_job(
+            result = await self.menuai.async_add_executor_job(
                 self._load_intents, language
             )
 
@@ -923,7 +923,7 @@ class DefaultAgent(ConversationEntity):
 
         # Check for custom sentences in <config>/custom_sentences/<language>/
         custom_sentences_dir = Path(
-            self.hass.config.path("custom_sentences", language_variant)
+            self.menuai.config.path("custom_sentences", language_variant)
         )
         if custom_sentences_dir.is_dir():
             for custom_sentences_path in custom_sentences_dir.rglob("*.yaml"):
@@ -966,9 +966,9 @@ class DefaultAgent(ConversationEntity):
 
         # Load sentences from HA config for default language only
         if self._config_intents and (
-            self.hass.config.language in (language, language_variant)
+            self.menuai.config.language in (language, language_variant)
         ):
-            hass_config_path = self.hass.config.path()
+            menuai_config_path = self.menuai.config.path()
             merge_dict(
                 intents_dict,
                 {
@@ -979,7 +979,7 @@ class DefaultAgent(ConversationEntity):
                                     "sentences": sentences,
                                     "metadata": {
                                         METADATA_CUSTOM_SENTENCE: True,
-                                        METADATA_CUSTOM_FILE: hass_config_path,
+                                        METADATA_CUSTOM_FILE: menuai_config_path,
                                     },
                                 }
                             ]
@@ -1046,7 +1046,7 @@ class DefaultAgent(ConversationEntity):
         _LOGGER.debug("Exposed entities: %s", exposed_entity_names)
 
         # Expose all areas.
-        areas = ar.async_get(self.hass)
+        areas = ar.async_get(self.menuai)
         area_names = []
         for area in areas.async_list_areas():
             area_names.append((area.name, area.name))
@@ -1061,7 +1061,7 @@ class DefaultAgent(ConversationEntity):
                 area_names.append((alias, alias))
 
         # Expose all floors.
-        floors = fr.async_get(self.hass)
+        floors = fr.async_get(self.menuai)
         floor_names = []
         for floor in floors.async_list_floors():
             floor_names.append((floor.name, floor.name))
@@ -1116,12 +1116,12 @@ class DefaultAgent(ConversationEntity):
         if device_id is None:
             return None
 
-        devices = dr.async_get(self.hass)
+        devices = dr.async_get(self.menuai)
         device = devices.async_get(device_id)
         if (device is None) or (device.area_id is None):
             return None
 
-        areas = ar.async_get(self.hass)
+        areas = ar.async_get(self.menuai)
 
         return areas.async_get_area(device.area_id)
 
@@ -1143,7 +1143,7 @@ class DefaultAgent(ConversationEntity):
         response_str = (
             lang_intents.error_responses.get(response_key) or _DEFAULT_ERROR_TEXT
         )
-        response_template = template.Template(response_str, self.hass)
+        response_template = template.Template(response_str, self.menuai)
 
         return response_template.async_render(response_args)
 
@@ -1164,11 +1164,11 @@ class DefaultAgent(ConversationEntity):
 
     @core.callback
     def _rebuild_trigger_intents(self) -> None:
-        """Rebuild the HassIL intents object from the current trigger sentences."""
+        """Rebuild the menuaiIL intents object from the current trigger sentences."""
         intents_dict = {
-            "language": self.hass.config.language,
+            "language": self.menuai.config.language,
             "intents": {
-                # Use trigger data index as a virtual intent name for HassIL.
+                # Use trigger data index as a virtual intent name for menuaiIL.
                 # This works because the intents are rebuilt on every
                 # register/unregister.
                 str(trigger_id): {"data": [{"sentences": trigger_data.sentences}]}
@@ -1277,9 +1277,9 @@ class DefaultAgent(ConversationEntity):
             response_text = response_text or ""
         elif not response_text:
             # Use translated acknowledgment for pipeline language
-            language = user_input.language or self.hass.config.language
+            language = user_input.language or self.menuai.config.language
             translations = await translation.async_get_translations(
-                self.hass, language, DOMAIN, [DOMAIN]
+                self.menuai, language, DOMAIN, [DOMAIN]
             )
             response_text = translations.get(
                 f"component.{DOMAIN}.conversation.agent.done", "Done"
@@ -1391,7 +1391,7 @@ def _get_unmatched_response(result: RecognizeResult) -> tuple[ErrorKey, dict[str
 
 
 def _get_match_error_response(
-    hass: core.HomeAssistant,
+    menuai: core.menuai,
     match_error: intent.MatchFailedError,
 ) -> tuple[ErrorKey, dict[str, Any]]:
     """Return key and template arguments for error when target matching fails."""

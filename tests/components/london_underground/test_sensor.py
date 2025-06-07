@@ -2,9 +2,9 @@
 
 from london_tube_status import API_URL
 
-from homeassistant.components.london_underground.const import CONF_LINE, DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.london_underground.const import CONF_LINE, DOMAIN
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import async_load_fixture
 from tests.test_util.aiohttp import AiohttpClientMocker
@@ -15,18 +15,18 @@ VALID_CONFIG = {
 
 
 async def test_valid_state(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test for operational london_underground sensor with proper attributes."""
     aioclient_mock.get(
         API_URL,
-        text=await async_load_fixture(hass, "line_status.json", DOMAIN),
+        text=await async_load_fixture(menuai, "line_status.json", DOMAIN),
     )
 
-    assert await async_setup_component(hass, "sensor", VALID_CONFIG)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "sensor", VALID_CONFIG)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.metropolitan")
+    state = menuai.states.get("sensor.metropolitan")
     assert state
     assert state.state == "Good Service"
     assert state.attributes == {

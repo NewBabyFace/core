@@ -9,9 +9,9 @@ from pybalboa.enums import OffOnState, UnknownState
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.const import STATE_OFF, STATE_ON, STATE_UNKNOWN, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import STATE_OFF, STATE_ON, STATE_UNKNOWN, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import client_update, init_integration
 
@@ -41,43 +41,43 @@ def mock_light(client: MagicMock):
 
 
 async def test_lights(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test spa light."""
-    with patch("homeassistant.components.balboa.PLATFORMS", [Platform.LIGHT]):
-        entry = await init_integration(hass)
+    with patch("menuai.components.balboa.PLATFORMS", [Platform.LIGHT]):
+        entry = await init_integration(menuai)
 
-    await snapshot_platform(hass, entity_registry, snapshot, entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, entry.entry_id)
 
 
-async def test_light(hass: HomeAssistant, client: MagicMock, mock_light) -> None:
+async def test_light(menuai: menuai, client: MagicMock, mock_light) -> None:
     """Test spa light."""
-    await init_integration(hass)
+    await init_integration(menuai)
 
     # check if the initial state is off
-    state = hass.states.get(ENTITY_LIGHT)
+    state = menuai.states.get(ENTITY_LIGHT)
     assert state.state == STATE_OFF
 
     # test calling turn on
-    await common.async_turn_on(hass, ENTITY_LIGHT)
-    state = await client_update(hass, client, ENTITY_LIGHT)
+    await common.async_turn_on(menuai, ENTITY_LIGHT)
+    state = await client_update(menuai, client, ENTITY_LIGHT)
     assert state.state == STATE_ON
 
     # test calling turn off
-    await common.async_turn_off(hass, ENTITY_LIGHT)
-    state = await client_update(hass, client, ENTITY_LIGHT)
+    await common.async_turn_off(menuai, ENTITY_LIGHT)
+    state = await client_update(menuai, client, ENTITY_LIGHT)
     assert state.state == STATE_OFF
 
 
 async def test_light_unknown_state(
-    hass: HomeAssistant, client: MagicMock, mock_light
+    menuai: menuai, client: MagicMock, mock_light
 ) -> None:
     """Tests spa light with unknown state."""
-    await init_integration(hass)
+    await init_integration(menuai)
 
     mock_light.state = UnknownState.UNKNOWN
-    state = await client_update(hass, client, ENTITY_LIGHT)
+    state = await client_update(menuai, client, ENTITY_LIGHT)
     assert state.state == STATE_UNKNOWN

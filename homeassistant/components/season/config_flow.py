@@ -6,9 +6,9 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_TYPE
-from homeassistant.helpers.selector import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_TYPE
+from menuai.helpers.selector import (
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,

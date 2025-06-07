@@ -10,22 +10,22 @@ from typing import Any, final
 from propcache.api import cached_property
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_MODE,
     SERVICE_TOGGLE,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
     STATE_ON,
 )
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity import ToggleEntity, ToggleEntityDescription
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.loader import bind_hass
-from homeassistant.util.hass_dict import HassKey
+from menuai.core import menuai, ServiceCall
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity import ToggleEntity, ToggleEntityDescription
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.typing import ConfigType
+from menuai.loader import bind_menuai
+from menuai.util.menuai_dict import menuaiKey
 
 from .const import (  # noqa: F401
     ATTR_ACTION,
@@ -54,7 +54,7 @@ from .const import (  # noqa: F401
 
 _LOGGER = logging.getLogger(__name__)
 
-DATA_COMPONENT: HassKey[EntityComponent[HumidifierEntity]] = HassKey(DOMAIN)
+DATA_COMPONENT: menuaiKey[EntityComponent[HumidifierEntity]] = menuaiKey(DOMAIN)
 ENTITY_ID_FORMAT = DOMAIN + ".{}"
 PLATFORM_SCHEMA = cv.PLATFORM_SCHEMA
 PLATFORM_SCHEMA_BASE = cv.PLATFORM_SCHEMA_BASE
@@ -77,19 +77,19 @@ DEVICE_CLASSES = [cls.value for cls in HumidifierDeviceClass]
 # mypy: disallow-any-generics
 
 
-@bind_hass
-def is_on(hass: HomeAssistant, entity_id: str) -> bool:
+@bind_menuai
+def is_on(menuai: menuai, entity_id: str) -> bool:
     """Return if the humidifier is on based on the statemachine.
 
     Async friendly.
     """
-    return hass.states.is_state(entity_id, STATE_ON)
+    return menuai.states.is_state(entity_id, STATE_ON)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up humidifier devices."""
-    component = hass.data[DATA_COMPONENT] = EntityComponent[HumidifierEntity](
-        _LOGGER, DOMAIN, hass, SCAN_INTERVAL
+    component = menuai.data[DATA_COMPONENT] = EntityComponent[HumidifierEntity](
+        _LOGGER, DOMAIN, menuai, SCAN_INTERVAL
     )
     await component.async_setup(config)
 
@@ -115,14 +115,14 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up a config entry."""
-    return await hass.data[DATA_COMPONENT].async_setup_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_setup_entry(entry)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.data[DATA_COMPONENT].async_unload_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_unload_entry(entry)
 
 
 class HumidifierEntityDescription(ToggleEntityDescription, frozen_or_thawed=True):
@@ -241,7 +241,7 @@ class HumidifierEntity(ToggleEntity, cached_properties=CACHED_PROPERTIES_WITH_AT
 
     async def async_set_humidity(self, humidity: int) -> None:
         """Set new target humidity."""
-        await self.hass.async_add_executor_job(self.set_humidity, humidity)
+        await self.menuai.async_add_executor_job(self.set_humidity, humidity)
 
     def set_mode(self, mode: str) -> None:
         """Set new mode."""
@@ -249,7 +249,7 @@ class HumidifierEntity(ToggleEntity, cached_properties=CACHED_PROPERTIES_WITH_AT
 
     async def async_set_mode(self, mode: str) -> None:
         """Set new mode."""
-        await self.hass.async_add_executor_job(self.set_mode, mode)
+        await self.menuai.async_add_executor_job(self.set_mode, mode)
 
     @cached_property
     def min_humidity(self) -> float:

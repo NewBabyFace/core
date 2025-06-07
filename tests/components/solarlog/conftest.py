@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from solarlog_cli.solarlog_models import InverterData, SolarlogData
 
-from homeassistant.components.solarlog.const import CONF_HAS_PWD, DOMAIN
-from homeassistant.const import CONF_HOST, CONF_PASSWORD
+from menuai.components.solarlog.const import CONF_HAS_PWD, DOMAIN
+from menuai.const import CONF_HOST, CONF_PASSWORD
 
 from .const import HOST
 
@@ -66,12 +66,12 @@ def mock_solarlog_connector():
 
     with (
         patch(
-            "homeassistant.components.solarlog.coordinator.SolarLogConnector",
+            "menuai.components.solarlog.coordinator.SolarLogConnector",
             autospec=True,
             return_value=mock_solarlog_api,
         ),
         patch(
-            "homeassistant.components.solarlog.config_flow.SolarLogConnector",
+            "menuai.components.solarlog.config_flow.SolarLogConnector",
             autospec=True,
             return_value=mock_solarlog_api,
         ),
@@ -83,7 +83,7 @@ def mock_solarlog_connector():
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.solarlog.async_setup_entry", return_value=True
+        "menuai.components.solarlog.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -92,7 +92,7 @@ def mock_setup_entry() -> Generator[AsyncMock]:
 def mock_test_connection():
     """Mock a successful _test_connection."""
     with patch(
-        "homeassistant.components.solarlog.config_flow.SolarLogConfigFlow._test_connection",
+        "menuai.components.solarlog.config_flow.SolarLogConfigFlow._test_connection",
         return_value=True,
     ):
         yield

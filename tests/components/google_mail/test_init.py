@@ -7,10 +7,10 @@ from unittest.mock import patch
 from aiohttp.client_exceptions import ClientError
 import pytest
 
-from homeassistant.components.google_mail import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.components.google_mail import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 from .conftest import GOOGLE_TOKEN_URI, ComponentSetup
 
@@ -18,24 +18,24 @@ from tests.test_util.aiohttp import AiohttpClientMocker
 
 
 async def test_setup_success(
-    hass: HomeAssistant, setup_integration: ComponentSetup
+    menuai: menuai, setup_integration: ComponentSetup
 ) -> None:
     """Test successful setup and unload."""
     await setup_integration()
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     assert entries[0].state is ConfigEntryState.LOADED
 
-    await hass.config_entries.async_unload(entries[0].entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entries[0].entry_id)
+    await menuai.async_block_till_done()
 
-    assert not hass.services.async_services().get(DOMAIN)
+    assert not menuai.services.async_services().get(DOMAIN)
 
 
 @pytest.mark.parametrize("expires_at", [time.time() - 3600], ids=["expired"])
 async def test_expired_token_refresh_success(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: ComponentSetup,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
@@ -54,7 +54,7 @@ async def test_expired_token_refresh_success(
 
     await setup_integration()
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     assert entries[0].state is ConfigEntryState.LOADED
     assert entries[0].data["token"]["access_token"] == "updated-access-token"
@@ -83,7 +83,7 @@ async def test_expired_token_refresh_success(
     ids=["failure_requires_reauth", "transient_failure", "revoked_auth"],
 )
 async def test_expired_token_refresh_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: ComponentSetup,
     aioclient_mock: AiohttpClientMocker,
     status: http.HTTPStatus,
@@ -100,36 +100,36 @@ async def test_expired_token_refresh_failure(
     await setup_integration()
 
     # Verify a transient failure has occurred
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert entries[0].state is expected_state
 
 
 async def test_expired_token_refresh_client_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: ComponentSetup,
 ) -> None:
     """Test failure while refreshing token with a client error."""
 
     with patch(
-        "homeassistant.components.google_mail.OAuth2Session.async_ensure_token_valid",
+        "menuai.components.google_mail.OAuth2Session.async_ensure_token_valid",
         side_effect=ClientError,
     ):
         await setup_integration()
 
     # Verify a transient failure has occurred
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert entries[0].state is ConfigEntryState.SETUP_RETRY
 
 
 async def test_device_info(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     setup_integration: ComponentSetup,
 ) -> None:
     """Test device info."""
     await setup_integration()
 
-    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    entry = menuai.config_entries.async_entries(DOMAIN)[0]
     device = device_registry.async_get_device(identifiers={(DOMAIN, entry.entry_id)})
 
     assert device.entry_type is dr.DeviceEntryType.SERVICE

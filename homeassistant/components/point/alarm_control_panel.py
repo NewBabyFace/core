@@ -6,15 +6,15 @@ import logging
 
 from pypoint import PointSession
 
-from homeassistant.components.alarm_control_panel import (
+from menuai.components.alarm_control_panel import (
     AlarmControlPanelEntity,
     AlarmControlPanelEntityFeature,
     AlarmControlPanelState,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import PointConfigEntry
 from .const import DOMAIN, SIGNAL_WEBHOOK
@@ -30,7 +30,7 @@ EVENT_MAP = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: PointConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -48,7 +48,7 @@ async def async_setup_entry(
 
 
 class MinutPointAlarmControl(AlarmControlPanelEntity):
-    """The platform class required by Home Assistant."""
+    """The platform class required by MenuAI."""
 
     _attr_supported_features = AlarmControlPanelEntityFeature.ARM_AWAY
     _attr_code_arm_required = False
@@ -67,11 +67,11 @@ class MinutPointAlarmControl(AlarmControlPanelEntity):
             name=self._attr_name,
         )
 
-    async def async_added_to_hass(self) -> None:
-        """Call when entity is added to HOme Assistant."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Call when entity is added to MenuAI."""
+        await super().async_added_to_menuai()
         self.async_on_remove(
-            async_dispatcher_connect(self.hass, SIGNAL_WEBHOOK, self._webhook_event)
+            async_dispatcher_connect(self.menuai, SIGNAL_WEBHOOK, self._webhook_event)
         )
 
     @callback

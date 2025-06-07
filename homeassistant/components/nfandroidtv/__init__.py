@@ -2,51 +2,51 @@
 
 from notifications_android_tv.notifications import ConnectError, Notifications
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import config_validation as cv, discovery
-from homeassistant.helpers.typing import ConfigType
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import config_validation as cv, discovery
+from menuai.helpers.typing import ConfigType
 
-from .const import DATA_HASS_CONFIG, DOMAIN
+from .const import DATA_menuai_CONFIG, DOMAIN
 
 PLATFORMS = [Platform.NOTIFY]
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the NFAndroidTV component."""
 
-    hass.data[DATA_HASS_CONFIG] = config
+    menuai.data[DATA_menuai_CONFIG] = config
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up NFAndroidTV from a config entry."""
     try:
-        await hass.async_add_executor_job(Notifications, entry.data[CONF_HOST])
+        await menuai.async_add_executor_job(Notifications, entry.data[CONF_HOST])
     except ConnectError as ex:
         raise ConfigEntryNotReady(
             f"Failed to connect to host: {entry.data[CONF_HOST]}"
         ) from ex
 
-    hass.data.setdefault(DOMAIN, {})
+    menuai.data.setdefault(DOMAIN, {})
 
-    hass.async_create_task(
+    menuai.async_create_task(
         discovery.async_load_platform(
-            hass,
+            menuai,
             Platform.NOTIFY,
             DOMAIN,
             dict(entry.data),
-            hass.data[DATA_HASS_CONFIG],
+            menuai.data[DATA_menuai_CONFIG],
         )
     )
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

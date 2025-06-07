@@ -6,16 +6,16 @@ from typing import Any
 
 from lektricowifi import Device
 
-from homeassistant.components.number import NumberEntity, NumberEntityDescription
-from homeassistant.const import (
+from menuai.components.number import NumberEntity, NumberEntityDescription
+from menuai.const import (
     ATTR_SERIAL_NUMBER,
     CONF_TYPE,
     PERCENTAGE,
     EntityCategory,
     UnitOfElectricCurrent,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import LektricoConfigEntry, LektricoDeviceDataUpdateCoordinator
 from .entity import LektricoEntity
@@ -56,7 +56,7 @@ NUMBERS: tuple[LektricoNumberEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: LektricoConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

@@ -9,20 +9,20 @@ from zigpy.zcl import Cluster
 from zigpy.zcl.clusters import general, lighting
 import zigpy.zcl.foundation as zcl_f
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     DOMAIN as LIGHT_DOMAIN,
     FLASH_LONG,
     FLASH_SHORT,
     ColorMode,
 )
-from homeassistant.components.zha.helpers import (
+from menuai.components.zha.helpers import (
     ZHADeviceProxy,
     ZHAGatewayProxy,
     get_zha_gateway,
     get_zha_gateway_proxy,
 )
-from homeassistant.const import STATE_OFF, STATE_ON, Platform
-from homeassistant.core import HomeAssistant
+from menuai.const import STATE_OFF, STATE_ON, Platform
+from menuai.core import menuai
 
 from .common import (
     async_shift_time,
@@ -78,7 +78,7 @@ LIGHT_COLOR = {
 def light_platform_only():
     """Only set up the light and required base platforms to speed up tests."""
     with patch(
-        "homeassistant.components.zha.PLATFORMS",
+        "menuai.components.zha.PLATFORMS",
         (
             Platform.BINARY_SENSOR,
             Platform.DEVICE_TRACKER,
@@ -113,7 +113,7 @@ def light_platform_only():
     [(LIGHT_ON_OFF, (1, 0, 0)), (LIGHT_LEVEL, (1, 1, 0)), (LIGHT_COLOR, (1, 1, 6))],
 )
 async def test_light(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_zha,
     zigpy_device_mock,
     device,
@@ -122,8 +122,8 @@ async def test_light(
     """Test ZHA light platform."""
 
     await setup_zha()
-    gateway = get_zha_gateway(hass)
-    gateway_proxy: ZHAGatewayProxy = get_zha_gateway_proxy(hass)
+    gateway = get_zha_gateway(menuai)
+    gateway_proxy: ZHAGatewayProxy = get_zha_gateway_proxy(menuai)
 
     zigpy_device = zigpy_device_mock(device)
     cluster_color = getattr(zigpy_device.endpoints[1], "light_color", None)
@@ -140,43 +140,43 @@ async def test_light(
 
     gateway.get_or_create_device(zigpy_device)
     await gateway.async_device_initialized(zigpy_device)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     zha_device_proxy: ZHADeviceProxy = gateway_proxy.get_device_proxy(zigpy_device.ieee)
-    entity_id = find_entity_id(Platform.LIGHT, zha_device_proxy, hass)
+    entity_id = find_entity_id(Platform.LIGHT, zha_device_proxy, menuai)
     assert entity_id is not None
 
     cluster_on_off = zigpy_device.endpoints[1].on_off
     cluster_level = getattr(zigpy_device.endpoints[1], "level", None)
     cluster_identify = getattr(zigpy_device.endpoints[1], "identify", None)
 
-    assert hass.states.get(entity_id).state == STATE_OFF
+    assert menuai.states.get(entity_id).state == STATE_OFF
 
     # test turning the lights on and off from the light
-    await async_test_on_off_from_light(hass, cluster_on_off, entity_id)
+    await async_test_on_off_from_light(menuai, cluster_on_off, entity_id)
 
     # test turning the lights on and off from the HA
-    await async_test_on_off_from_hass(hass, cluster_on_off, entity_id)
+    await async_test_on_off_from_menuai(menuai, cluster_on_off, entity_id)
 
     # test short flashing the lights from the HA
     if cluster_identify:
-        await async_test_flash_from_hass(hass, cluster_identify, entity_id, FLASH_SHORT)
+        await async_test_flash_from_menuai(menuai, cluster_identify, entity_id, FLASH_SHORT)
 
     # test long flashing the lights from the HA
     if cluster_identify:
-        await async_test_flash_from_hass(hass, cluster_identify, entity_id, FLASH_LONG)
+        await async_test_flash_from_menuai(menuai, cluster_identify, entity_id, FLASH_LONG)
 
     # test dimming the lights on and off from the HA
     if cluster_level:
-        await async_test_level_on_off_from_hass(
-            hass, cluster_on_off, cluster_level, entity_id
+        await async_test_level_on_off_from_menuai(
+            menuai, cluster_on_off, cluster_level, entity_id
         )
-        await async_shift_time(hass)
+        await async_shift_time(menuai)
 
         # test getting a brightness change from the network
-        await async_test_on_from_light(hass, cluster_on_off, entity_id)
+        await async_test_on_from_light(menuai, cluster_on_off, entity_id)
         await async_test_dimmer_from_light(
-            hass, cluster_level, entity_id, 150, STATE_ON
+            menuai, cluster_level, entity_id, 150, STATE_ON
         )
 
 
@@ -193,13 +193,13 @@ async def test_light(
     new=AsyncMock(return_value=[sentinel.data, zcl_f.Status.SUCCESS]),
 )
 async def test_on_with_off_color(
-    hass: HomeAssistant, setup_zha, zigpy_device_mock
+    menuai: menuai, setup_zha, zigpy_device_mock
 ) -> None:
     """Test turning on the light and sending color commands before on/level commands for supporting lights."""
 
     await setup_zha()
-    gateway = get_zha_gateway(hass)
-    gateway_proxy: ZHAGatewayProxy = get_zha_gateway_proxy(hass)
+    gateway = get_zha_gateway(menuai)
+    gateway_proxy: ZHAGatewayProxy = get_zha_gateway_proxy(menuai)
 
     zigpy_device = zigpy_device_mock(
         {
@@ -228,13 +228,13 @@ async def test_on_with_off_color(
 
     gateway.get_or_create_device(zigpy_device)
     await gateway.async_device_initialized(zigpy_device)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     zha_device_proxy: ZHADeviceProxy = gateway_proxy.get_device_proxy(zigpy_device.ieee)
-    entity_id = find_entity_id(Platform.LIGHT, zha_device_proxy, hass)
+    entity_id = find_entity_id(Platform.LIGHT, zha_device_proxy, menuai)
     assert entity_id is not None
 
-    device_1_entity_id = find_entity_id(Platform.LIGHT, zha_device_proxy, hass)
+    device_1_entity_id = find_entity_id(Platform.LIGHT, zha_device_proxy, menuai)
     dev1_cluster_on_off = zigpy_device.endpoints[1].on_off
     dev1_cluster_level = zigpy_device.endpoints[1].level
 
@@ -249,7 +249,7 @@ async def test_on_with_off_color(
     dev1_cluster_level.request.reset_mock()
     dev1_cluster_color.request.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         "turn_on",
         {
@@ -285,7 +285,7 @@ async def test_on_with_off_color(
         tsn=None,
     )
 
-    light1_state = hass.states.get(device_1_entity_id)
+    light1_state = menuai.states.get(device_1_entity_id)
     assert light1_state.state == STATE_ON
     assert light1_state.attributes["color_temp"] == 235
     assert light1_state.attributes["color_mode"] == ColorMode.COLOR_TEMP
@@ -295,14 +295,14 @@ async def test_on_with_off_color(
     update_attribute_cache(dev1_cluster_color)
 
     # turn off via UI, so the old "enhanced turn on from an off-state" behavior can do something
-    await async_test_off_from_hass(hass, dev1_cluster_on_off, device_1_entity_id)
+    await async_test_off_from_menuai(menuai, dev1_cluster_on_off, device_1_entity_id)
 
     # turn on via UI (with a different color temp, so the "enhanced turn on" does something)
     dev1_cluster_on_off.request.reset_mock()
     dev1_cluster_level.request.reset_mock()
     dev1_cluster_color.request.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         "turn_on",
         {
@@ -351,7 +351,7 @@ async def test_on_with_off_color(
         tsn=None,
     )
 
-    light1_state = hass.states.get(device_1_entity_id)
+    light1_state = menuai.states.get(device_1_entity_id)
     assert light1_state.state == STATE_ON
     assert light1_state.attributes["brightness"] == 254
     assert light1_state.attributes["color_temp"] == 240
@@ -359,37 +359,37 @@ async def test_on_with_off_color(
 
 
 async def async_test_on_off_from_light(
-    hass: HomeAssistant, cluster: Cluster, entity_id: str
+    menuai: menuai, cluster: Cluster, entity_id: str
 ):
     """Test on off functionality from the light."""
     # turn on at light
-    await send_attributes_report(hass, cluster, {1: 0, 0: 1, 2: 3})
-    await hass.async_block_till_done(wait_background_tasks=True)
-    assert hass.states.get(entity_id).state == STATE_ON
+    await send_attributes_report(menuai, cluster, {1: 0, 0: 1, 2: 3})
+    await menuai.async_block_till_done(wait_background_tasks=True)
+    assert menuai.states.get(entity_id).state == STATE_ON
 
     # turn off at light
-    await send_attributes_report(hass, cluster, {1: 1, 0: 0, 2: 3})
-    await hass.async_block_till_done(wait_background_tasks=True)
-    assert hass.states.get(entity_id).state == STATE_OFF
+    await send_attributes_report(menuai, cluster, {1: 1, 0: 0, 2: 3})
+    await menuai.async_block_till_done(wait_background_tasks=True)
+    assert menuai.states.get(entity_id).state == STATE_OFF
 
 
 async def async_test_on_from_light(
-    hass: HomeAssistant, cluster: Cluster, entity_id: str
+    menuai: menuai, cluster: Cluster, entity_id: str
 ):
     """Test on off functionality from the light."""
     # turn on at light
-    await send_attributes_report(hass, cluster, {1: -1, 0: 1, 2: 2})
-    await hass.async_block_till_done(wait_background_tasks=True)
-    assert hass.states.get(entity_id).state == STATE_ON
+    await send_attributes_report(menuai, cluster, {1: -1, 0: 1, 2: 2})
+    await menuai.async_block_till_done(wait_background_tasks=True)
+    assert menuai.states.get(entity_id).state == STATE_ON
 
 
-async def async_test_on_off_from_hass(
-    hass: HomeAssistant, cluster: Cluster, entity_id: str
+async def async_test_on_off_from_menuai(
+    menuai: menuai, cluster: Cluster, entity_id: str
 ):
-    """Test on off functionality from hass."""
+    """Test on off functionality from menuai."""
     # turn on via UI
     cluster.request.reset_mock()
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN, "turn_on", {"entity_id": entity_id}, blocking=True
     )
     assert cluster.request.call_count == 1
@@ -403,17 +403,17 @@ async def async_test_on_off_from_hass(
         tsn=None,
     )
 
-    await async_test_off_from_hass(hass, cluster, entity_id)
+    await async_test_off_from_menuai(menuai, cluster, entity_id)
 
 
-async def async_test_off_from_hass(
-    hass: HomeAssistant, cluster: Cluster, entity_id: str
+async def async_test_off_from_menuai(
+    menuai: menuai, cluster: Cluster, entity_id: str
 ):
-    """Test turning off the light from Home Assistant."""
+    """Test turning off the light from MenuAI."""
 
     # turn off via UI
     cluster.request.reset_mock()
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN, "turn_off", {"entity_id": entity_id}, blocking=True
     )
     assert cluster.request.call_count == 1
@@ -428,21 +428,21 @@ async def async_test_off_from_hass(
     )
 
 
-async def async_test_level_on_off_from_hass(
-    hass: HomeAssistant,
+async def async_test_level_on_off_from_menuai(
+    menuai: menuai,
     on_off_cluster: Cluster,
     level_cluster: Cluster,
     entity_id: str,
     expected_default_transition: int = 0,
 ):
-    """Test on off functionality from hass."""
+    """Test on off functionality from menuai."""
 
     on_off_cluster.request.reset_mock()
     level_cluster.request.reset_mock()
-    await async_shift_time(hass)
+    await async_shift_time(menuai)
 
     # turn on via UI
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN, "turn_on", {"entity_id": entity_id}, blocking=True
     )
     assert on_off_cluster.request.call_count == 1
@@ -460,9 +460,9 @@ async def async_test_level_on_off_from_hass(
     on_off_cluster.request.reset_mock()
     level_cluster.request.reset_mock()
 
-    await async_shift_time(hass)
+    await async_shift_time(menuai)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         "turn_on",
         {"entity_id": entity_id, "transition": 10},
@@ -485,7 +485,7 @@ async def async_test_level_on_off_from_hass(
     on_off_cluster.request.reset_mock()
     level_cluster.request.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         "turn_on",
         {"entity_id": entity_id, "brightness": 10},
@@ -509,11 +509,11 @@ async def async_test_level_on_off_from_hass(
     on_off_cluster.request.reset_mock()
     level_cluster.request.reset_mock()
 
-    await async_test_off_from_hass(hass, on_off_cluster, entity_id)
+    await async_test_off_from_menuai(menuai, on_off_cluster, entity_id)
 
 
 async def async_test_dimmer_from_light(
-    hass: HomeAssistant,
+    menuai: menuai,
     cluster: Cluster,
     entity_id: str,
     level: int,
@@ -522,23 +522,23 @@ async def async_test_dimmer_from_light(
     """Test dimmer functionality from the light."""
 
     await send_attributes_report(
-        hass, cluster, {1: level + 10, 0: level, 2: level - 10 or 22}
+        menuai, cluster, {1: level + 10, 0: level, 2: level - 10 or 22}
     )
-    await hass.async_block_till_done(wait_background_tasks=True)
-    assert hass.states.get(entity_id).state == expected_state
-    # hass uses None for brightness of 0 in state attributes
+    await menuai.async_block_till_done(wait_background_tasks=True)
+    assert menuai.states.get(entity_id).state == expected_state
+    # menuai uses None for brightness of 0 in state attributes
     if level == 0:
         level = None
-    assert hass.states.get(entity_id).attributes.get("brightness") == level
+    assert menuai.states.get(entity_id).attributes.get("brightness") == level
 
 
-async def async_test_flash_from_hass(
-    hass: HomeAssistant, cluster: Cluster, entity_id: str, flash
+async def async_test_flash_from_menuai(
+    menuai: menuai, cluster: Cluster, entity_id: str, flash
 ):
-    """Test flash functionality from hass."""
+    """Test flash functionality from menuai."""
     # turn on via UI
     cluster.request.reset_mock()
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         "turn_on",
         {"entity_id": entity_id, "flash": flash},
@@ -575,7 +575,7 @@ async def async_test_flash_from_hass(
     new=AsyncMock(return_value=[sentinel.data, zcl_f.Status.SUCCESS]),
 )
 async def test_light_exception_on_creation(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_zha,
     zigpy_device_mock,
     caplog: pytest.LogCaptureFixture,
@@ -583,14 +583,14 @@ async def test_light_exception_on_creation(
     """Test ZHA light entity creation exception."""
 
     await setup_zha()
-    gateway = get_zha_gateway(hass)
+    gateway = get_zha_gateway(menuai)
     zigpy_device = zigpy_device_mock(LIGHT_COLOR)
 
     gateway.get_or_create_device(zigpy_device)
     with patch(
-        "homeassistant.components.zha.light.Light.__init__", side_effect=Exception
+        "menuai.components.zha.light.Light.__init__", side_effect=Exception
     ):
         await gateway.async_device_initialized(zigpy_device)
-        await hass.async_block_till_done(wait_background_tasks=True)
+        await menuai.async_block_till_done(wait_background_tasks=True)
 
         assert "Error while adding entity from entity data" in caplog.text

@@ -7,15 +7,15 @@ from unittest.mock import AsyncMock, patch
 from freezegun.api import FrozenDateTimeFactory
 from motioneye_client.const import KEY_ACTIONS
 
-from homeassistant.components.motioneye import get_motioneye_device_identifier
-from homeassistant.components.motioneye.const import (
+from menuai.components.motioneye import get_motioneye_device_identifier
+from menuai.components.motioneye.const import (
     DEFAULT_SCAN_INTERVAL,
     TYPE_MOTIONEYE_ACTION_SENSOR,
 )
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.config_entries import RELOAD_AFTER_UPDATE_DELAY
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.config_entries import RELOAD_AFTER_UPDATE_DELAY
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from . import (
     TEST_CAMERA,
@@ -30,11 +30,11 @@ from tests.common import async_fire_time_changed
 
 
 async def test_sensor_actions(
-    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+    menuai: menuai, freezer: FrozenDateTimeFactory
 ) -> None:
     """Test the actions sensor."""
     register_test_entity(
-        hass,
+        menuai,
         SENSOR_DOMAIN,
         TEST_CAMERA_ID,
         TYPE_MOTIONEYE_ACTION_SENSOR,
@@ -42,9 +42,9 @@ async def test_sensor_actions(
     )
 
     client = create_mock_motioneye_client()
-    await setup_mock_motioneye_config_entry(hass, client=client)
+    await setup_mock_motioneye_config_entry(menuai, client=client)
 
-    entity_state = hass.states.get(TEST_SENSOR_ACTION_ENTITY_ID)
+    entity_state = menuai.states.get(TEST_SENSOR_ACTION_ENTITY_ID)
     assert entity_state
     assert entity_state.state == "3"
     assert entity_state.attributes.get(KEY_ACTIONS) == ["one", "two", "three"]
@@ -55,27 +55,27 @@ async def test_sensor_actions(
     # When the next refresh is called return the updated values.
     client.async_get_cameras = AsyncMock(return_value={"cameras": [updated_camera]})
     freezer.tick(DEFAULT_SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    entity_state = hass.states.get(TEST_SENSOR_ACTION_ENTITY_ID)
+    entity_state = menuai.states.get(TEST_SENSOR_ACTION_ENTITY_ID)
     assert entity_state
     assert entity_state.state == "1"
     assert entity_state.attributes.get(KEY_ACTIONS) == ["one"]
 
     del updated_camera[KEY_ACTIONS]
     freezer.tick(DEFAULT_SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    entity_state = hass.states.get(TEST_SENSOR_ACTION_ENTITY_ID)
+    entity_state = menuai.states.get(TEST_SENSOR_ACTION_ENTITY_ID)
     assert entity_state
     assert entity_state.state == "0"
     assert entity_state.attributes.get(KEY_ACTIONS) is None
 
 
 async def test_sensor_device_info(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
@@ -83,14 +83,14 @@ async def test_sensor_device_info(
 
     # Enable the action sensor (it is disabled by default).
     register_test_entity(
-        hass,
+        menuai,
         SENSOR_DOMAIN,
         TEST_CAMERA_ID,
         TYPE_MOTIONEYE_ACTION_SENSOR,
         TEST_SENSOR_ACTION_ENTITY_ID,
     )
 
-    config_entry = await setup_mock_motioneye_config_entry(hass)
+    config_entry = await setup_mock_motioneye_config_entry(menuai)
 
     device_identifer = get_motioneye_device_identifier(
         config_entry.entry_id, TEST_CAMERA_ID
@@ -107,34 +107,34 @@ async def test_sensor_device_info(
 
 
 async def test_sensor_actions_can_be_enabled(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Verify the action sensor can be enabled."""
     client = create_mock_motioneye_client()
-    await setup_mock_motioneye_config_entry(hass, client=client)
+    await setup_mock_motioneye_config_entry(menuai, client=client)
 
     entry = entity_registry.async_get(TEST_SENSOR_ACTION_ENTITY_ID)
     assert entry
     assert entry.disabled
     assert entry.disabled_by is er.RegistryEntryDisabler.INTEGRATION
-    entity_state = hass.states.get(TEST_SENSOR_ACTION_ENTITY_ID)
+    entity_state = menuai.states.get(TEST_SENSOR_ACTION_ENTITY_ID)
     assert not entity_state
 
     with patch(
-        "homeassistant.components.motioneye.MotionEyeClient",
+        "menuai.components.motioneye.MotionEyeClient",
         return_value=client,
     ):
         updated_entry = entity_registry.async_update_entity(
             TEST_SENSOR_ACTION_ENTITY_ID, disabled_by=None
         )
         assert not updated_entry.disabled
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         freezer.tick(timedelta(seconds=RELOAD_AFTER_UPDATE_DELAY + 1))
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done()
 
-    entity_state = hass.states.get(TEST_SENSOR_ACTION_ENTITY_ID)
+    entity_state = menuai.states.get(TEST_SENSOR_ACTION_ENTITY_ID)
     assert entity_state

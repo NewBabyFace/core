@@ -9,16 +9,16 @@ from aiohttp.client_exceptions import ClientError
 from aiopyarr.lidarr_client import LidarrClient
 import pytest
 
-from homeassistant.components.lidarr.const import DOMAIN
-from homeassistant.const import (
+from menuai.components.lidarr.const import DOMAIN
+from menuai.const import (
     CONF_API_KEY,
     CONF_URL,
     CONF_VERIFY_SSL,
     CONTENT_TYPE_JSON,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry, load_fixture
 from tests.test_util.aiohttp import AiohttpClientMocker
@@ -130,21 +130,21 @@ def mock_connection(aioclient_mock: AiohttpClientMocker) -> None:
 
 
 @pytest.fixture(name="config_entry")
-def mock_config_entry(hass: HomeAssistant) -> MockConfigEntry:
-    """Create Lidarr entry in Home Assistant."""
+def mock_config_entry(menuai: menuai) -> MockConfigEntry:
+    """Create Lidarr entry in MenuAI."""
     return MockConfigEntry(domain=DOMAIN, data=CONF_DATA)
 
 
 @pytest.fixture(name="setup_integration")
 async def mock_setup_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
 ) -> Generator[ComponentSetup]:
-    """Set up the lidarr integration in Home Assistant."""
-    config_entry.add_to_hass(hass)
+    """Set up the lidarr integration in MenuAI."""
+    config_entry.add_to_menuai(menuai)
 
     async def func() -> None:
-        assert await async_setup_component(hass, DOMAIN, {})
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, {})
+        await menuai.async_block_till_done()
 
     return func

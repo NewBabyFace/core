@@ -7,7 +7,7 @@ from unittest.mock import ANY, patch
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.components import (
+from menuai.components import (
     alarm_control_panel,
     binary_sensor,
     button,
@@ -34,29 +34,29 @@ from homeassistant.components import (
     valve,
     water_heater,
 )
-from homeassistant.components.alarm_control_panel import (
+from menuai.components.alarm_control_panel import (
     AlarmControlPanelEntityFeature,
     AlarmControlPanelState,
 )
-from homeassistant.components.camera import CameraEntityFeature
-from homeassistant.components.climate import ClimateEntityFeature
-from homeassistant.components.cover import CoverEntityFeature
-from homeassistant.components.fan import FanEntityFeature
-from homeassistant.components.google_assistant import const, error, helpers, trait
-from homeassistant.components.google_assistant.error import SmartHomeError
-from homeassistant.components.humidifier import HumidifierEntityFeature
-from homeassistant.components.lawn_mower import LawnMowerEntityFeature
-from homeassistant.components.light import LightEntityFeature
-from homeassistant.components.lock import LockEntityFeature
-from homeassistant.components.media_player import (
+from menuai.components.camera import CameraEntityFeature
+from menuai.components.climate import ClimateEntityFeature
+from menuai.components.cover import CoverEntityFeature
+from menuai.components.fan import FanEntityFeature
+from menuai.components.google_assistant import const, error, helpers, trait
+from menuai.components.google_assistant.error import SmartHomeError
+from menuai.components.humidifier import HumidifierEntityFeature
+from menuai.components.lawn_mower import LawnMowerEntityFeature
+from menuai.components.light import LightEntityFeature
+from menuai.components.lock import LockEntityFeature
+from menuai.components.media_player import (
     SERVICE_PLAY_MEDIA,
     MediaPlayerEntityFeature,
     MediaType,
 )
-from homeassistant.components.vacuum import VacuumEntityFeature
-from homeassistant.components.valve import ValveEntityFeature
-from homeassistant.components.water_heater import WaterHeaterEntityFeature
-from homeassistant.const import (
+from menuai.components.vacuum import VacuumEntityFeature
+from menuai.components.valve import ValveEntityFeature
+from menuai.components.water_heater import WaterHeaterEntityFeature
+from menuai.const import (
     ATTR_ASSUMED_STATE,
     ATTR_BATTERY_LEVEL,
     ATTR_DEVICE_CLASS,
@@ -77,11 +77,11 @@ from homeassistant.const import (
     STATE_UNKNOWN,
     UnitOfTemperature,
 )
-from homeassistant.core import DOMAIN as HOMEASSISTANT_DOMAIN, HomeAssistant, State
-from homeassistant.core_config import async_process_ha_core_config
-from homeassistant.util import dt as dt_util
-from homeassistant.util.unit_conversion import TemperatureConverter
-from homeassistant.util.unit_system import (
+from menuai.core import DOMAIN as menuai_DOMAIN, menuai, State
+from menuai.core_config import async_process_ha_core_config
+from menuai.util import dt as dt_util
+from menuai.util.unit_conversion import TemperatureConverter
+from menuai.util.unit_system import (
     METRIC_SYSTEM,
     US_CUSTOMARY_SYSTEM,
     UnitSystem,
@@ -107,7 +107,7 @@ PIN_DATA = helpers.RequestData(
 @pytest.mark.parametrize(
     "supported_color_modes", [["brightness"], ["hs"], ["color_temp"]]
 )
-async def test_brightness_light(hass: HomeAssistant, supported_color_modes) -> None:
+async def test_brightness_light(menuai: menuai, supported_color_modes) -> None:
     """Test brightness trait support for light domain."""
     assert helpers.get_google_type(light.DOMAIN, None) is not None
     assert trait.BrightnessTrait.supported(
@@ -115,7 +115,7 @@ async def test_brightness_light(hass: HomeAssistant, supported_color_modes) -> N
     )
 
     trt = trait.BrightnessTrait(
-        hass,
+        menuai,
         State("light.bla", light.STATE_ON, {light.ATTR_BRIGHTNESS: 243}),
         BASIC_CONFIG,
     )
@@ -124,13 +124,13 @@ async def test_brightness_light(hass: HomeAssistant, supported_color_modes) -> N
 
     assert trt.query_attributes() == {"brightness": 95}
 
-    events = async_capture_events(hass, EVENT_CALL_SERVICE)
+    events = async_capture_events(menuai, EVENT_CALL_SERVICE)
 
-    calls = async_mock_service(hass, light.DOMAIN, light.SERVICE_TURN_ON)
+    calls = async_mock_service(menuai, light.DOMAIN, light.SERVICE_TURN_ON)
     await trt.execute(
         trait.COMMAND_BRIGHTNESS_ABSOLUTE, BASIC_DATA, {"brightness": 50}, {}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(calls) == 1
     assert calls[0].data == {ATTR_ENTITY_ID: "light.bla", light.ATTR_BRIGHTNESS_PCT: 50}
@@ -143,10 +143,10 @@ async def test_brightness_light(hass: HomeAssistant, supported_color_modes) -> N
     }
 
 
-async def test_camera_stream(hass: HomeAssistant) -> None:
+async def test_camera_stream(menuai: menuai) -> None:
     """Test camera stream trait support for camera domain."""
     await async_process_ha_core_config(
-        hass,
+        menuai,
         {"external_url": "https://example.com"},
     )
     assert helpers.get_google_type(camera.DOMAIN, None) is not None
@@ -155,7 +155,7 @@ async def test_camera_stream(hass: HomeAssistant) -> None:
     )
 
     trt = trait.CameraStreamTrait(
-        hass, State("camera.bla", camera.STATE_IDLE, {}), BASIC_CONFIG
+        menuai, State("camera.bla", camera.STATE_IDLE, {}), BASIC_CONFIG
     )
 
     assert trt.sync_attributes() == {
@@ -167,7 +167,7 @@ async def test_camera_stream(hass: HomeAssistant) -> None:
     assert trt.query_attributes() == {}
 
     with patch(
-        "homeassistant.components.camera.async_request_stream",
+        "menuai.components.camera.async_request_stream",
         return_value="/api/streams/bla",
     ):
         await trt.execute(trait.COMMAND_GET_CAMERA_STREAM, BASIC_DATA, {}, {})
@@ -178,62 +178,62 @@ async def test_camera_stream(hass: HomeAssistant) -> None:
     }
 
 
-async def test_onoff_group(hass: HomeAssistant) -> None:
+async def test_onoff_group(menuai: menuai) -> None:
     """Test OnOff trait support for group domain."""
     assert helpers.get_google_type(group.DOMAIN, None) is not None
     assert trait.OnOffTrait.supported(group.DOMAIN, 0, None, None)
 
-    trt_on = trait.OnOffTrait(hass, State("group.bla", STATE_ON), BASIC_CONFIG)
+    trt_on = trait.OnOffTrait(menuai, State("group.bla", STATE_ON), BASIC_CONFIG)
 
     assert trt_on.sync_attributes() == {}
 
     assert trt_on.query_attributes() == {"on": True}
 
-    trt_off = trait.OnOffTrait(hass, State("group.bla", STATE_OFF), BASIC_CONFIG)
+    trt_off = trait.OnOffTrait(menuai, State("group.bla", STATE_OFF), BASIC_CONFIG)
 
     assert trt_off.query_attributes() == {"on": False}
 
-    on_calls = async_mock_service(hass, HOMEASSISTANT_DOMAIN, SERVICE_TURN_ON)
+    on_calls = async_mock_service(menuai, menuai_DOMAIN, SERVICE_TURN_ON)
     await trt_on.execute(trait.COMMAND_ON_OFF, BASIC_DATA, {"on": True}, {})
     assert len(on_calls) == 1
     assert on_calls[0].data == {ATTR_ENTITY_ID: "group.bla"}
 
-    off_calls = async_mock_service(hass, HOMEASSISTANT_DOMAIN, SERVICE_TURN_OFF)
+    off_calls = async_mock_service(menuai, menuai_DOMAIN, SERVICE_TURN_OFF)
     await trt_on.execute(trait.COMMAND_ON_OFF, BASIC_DATA, {"on": False}, {})
     assert len(off_calls) == 1
     assert off_calls[0].data == {ATTR_ENTITY_ID: "group.bla"}
 
 
-async def test_onoff_input_boolean(hass: HomeAssistant) -> None:
+async def test_onoff_input_boolean(menuai: menuai) -> None:
     """Test OnOff trait support for input_boolean domain."""
     assert helpers.get_google_type(input_boolean.DOMAIN, None) is not None
     assert trait.OnOffTrait.supported(input_boolean.DOMAIN, 0, None, None)
 
-    trt_on = trait.OnOffTrait(hass, State("input_boolean.bla", STATE_ON), BASIC_CONFIG)
+    trt_on = trait.OnOffTrait(menuai, State("input_boolean.bla", STATE_ON), BASIC_CONFIG)
 
     assert trt_on.sync_attributes() == {}
 
     assert trt_on.query_attributes() == {"on": True}
 
     trt_off = trait.OnOffTrait(
-        hass, State("input_boolean.bla", STATE_OFF), BASIC_CONFIG
+        menuai, State("input_boolean.bla", STATE_OFF), BASIC_CONFIG
     )
 
     assert trt_off.query_attributes() == {"on": False}
 
-    on_calls = async_mock_service(hass, input_boolean.DOMAIN, SERVICE_TURN_ON)
+    on_calls = async_mock_service(menuai, input_boolean.DOMAIN, SERVICE_TURN_ON)
     await trt_on.execute(trait.COMMAND_ON_OFF, BASIC_DATA, {"on": True}, {})
     assert len(on_calls) == 1
     assert on_calls[0].data == {ATTR_ENTITY_ID: "input_boolean.bla"}
 
-    off_calls = async_mock_service(hass, input_boolean.DOMAIN, SERVICE_TURN_OFF)
+    off_calls = async_mock_service(menuai, input_boolean.DOMAIN, SERVICE_TURN_OFF)
     await trt_on.execute(trait.COMMAND_ON_OFF, BASIC_DATA, {"on": False}, {})
     assert len(off_calls) == 1
     assert off_calls[0].data == {ATTR_ENTITY_ID: "input_boolean.bla"}
 
 
 @pytest.mark.freeze_time("2023-08-01T00:02:57+00:00")
-async def test_doorbell_event(hass: HomeAssistant) -> None:
+async def test_doorbell_event(menuai: menuai) -> None:
     """Test doorbell event trait support for event domain."""
     assert trait.ObjectDetection.supported(event.DOMAIN, 0, "doorbell", None)
 
@@ -242,7 +242,7 @@ async def test_doorbell_event(hass: HomeAssistant) -> None:
         "2023-08-01T00:02:57+00:00",
         attributes={"device_class": "doorbell"},
     )
-    trt_od = trait.ObjectDetection(hass, state, BASIC_CONFIG)
+    trt_od = trait.ObjectDetection(menuai, state, BASIC_CONFIG)
 
     assert not trt_od.sync_attributes()
     assert trt_od.sync_options() == {"notificationSupportedByAgent": True}
@@ -264,195 +264,195 @@ async def test_doorbell_event(hass: HomeAssistant) -> None:
         "2023-08-01T00:02:22+00:00",
         attributes={"device_class": "doorbell"},
     )
-    trt_od = trait.ObjectDetection(hass, state, BASIC_CONFIG)
+    trt_od = trait.ObjectDetection(menuai, state, BASIC_CONFIG)
     assert trt_od.query_notifications() is None
 
 
-async def test_onoff_switch(hass: HomeAssistant) -> None:
+async def test_onoff_switch(menuai: menuai) -> None:
     """Test OnOff trait support for switch domain."""
     assert helpers.get_google_type(switch.DOMAIN, None) is not None
     assert trait.OnOffTrait.supported(switch.DOMAIN, 0, None, None)
 
-    trt_on = trait.OnOffTrait(hass, State("switch.bla", STATE_ON), BASIC_CONFIG)
+    trt_on = trait.OnOffTrait(menuai, State("switch.bla", STATE_ON), BASIC_CONFIG)
 
     assert trt_on.sync_attributes() == {}
 
     assert trt_on.query_attributes() == {"on": True}
 
-    trt_off = trait.OnOffTrait(hass, State("switch.bla", STATE_OFF), BASIC_CONFIG)
+    trt_off = trait.OnOffTrait(menuai, State("switch.bla", STATE_OFF), BASIC_CONFIG)
 
     assert trt_off.query_attributes() == {"on": False}
 
     trt_assumed = trait.OnOffTrait(
-        hass, State("switch.bla", STATE_OFF, {"assumed_state": True}), BASIC_CONFIG
+        menuai, State("switch.bla", STATE_OFF, {"assumed_state": True}), BASIC_CONFIG
     )
     assert trt_assumed.sync_attributes() == {"commandOnlyOnOff": True}
 
-    on_calls = async_mock_service(hass, switch.DOMAIN, SERVICE_TURN_ON)
+    on_calls = async_mock_service(menuai, switch.DOMAIN, SERVICE_TURN_ON)
     await trt_on.execute(trait.COMMAND_ON_OFF, BASIC_DATA, {"on": True}, {})
     assert len(on_calls) == 1
     assert on_calls[0].data == {ATTR_ENTITY_ID: "switch.bla"}
 
-    off_calls = async_mock_service(hass, switch.DOMAIN, SERVICE_TURN_OFF)
+    off_calls = async_mock_service(menuai, switch.DOMAIN, SERVICE_TURN_OFF)
     await trt_on.execute(trait.COMMAND_ON_OFF, BASIC_DATA, {"on": False}, {})
     assert len(off_calls) == 1
     assert off_calls[0].data == {ATTR_ENTITY_ID: "switch.bla"}
 
 
-async def test_onoff_fan(hass: HomeAssistant) -> None:
+async def test_onoff_fan(menuai: menuai) -> None:
     """Test OnOff trait support for fan domain."""
     assert helpers.get_google_type(fan.DOMAIN, None) is not None
     assert trait.OnOffTrait.supported(fan.DOMAIN, 0, None, None)
 
-    trt_on = trait.OnOffTrait(hass, State("fan.bla", STATE_ON), BASIC_CONFIG)
+    trt_on = trait.OnOffTrait(menuai, State("fan.bla", STATE_ON), BASIC_CONFIG)
 
     assert trt_on.sync_attributes() == {}
 
     assert trt_on.query_attributes() == {"on": True}
 
-    trt_off = trait.OnOffTrait(hass, State("fan.bla", STATE_OFF), BASIC_CONFIG)
+    trt_off = trait.OnOffTrait(menuai, State("fan.bla", STATE_OFF), BASIC_CONFIG)
     assert trt_off.query_attributes() == {"on": False}
 
-    on_calls = async_mock_service(hass, fan.DOMAIN, SERVICE_TURN_ON)
+    on_calls = async_mock_service(menuai, fan.DOMAIN, SERVICE_TURN_ON)
     await trt_on.execute(trait.COMMAND_ON_OFF, BASIC_DATA, {"on": True}, {})
     assert len(on_calls) == 1
     assert on_calls[0].data == {ATTR_ENTITY_ID: "fan.bla"}
 
-    off_calls = async_mock_service(hass, fan.DOMAIN, SERVICE_TURN_OFF)
+    off_calls = async_mock_service(menuai, fan.DOMAIN, SERVICE_TURN_OFF)
     await trt_on.execute(trait.COMMAND_ON_OFF, BASIC_DATA, {"on": False}, {})
     assert len(off_calls) == 1
     assert off_calls[0].data == {ATTR_ENTITY_ID: "fan.bla"}
 
 
-async def test_onoff_light(hass: HomeAssistant) -> None:
+async def test_onoff_light(menuai: menuai) -> None:
     """Test OnOff trait support for light domain."""
     assert helpers.get_google_type(light.DOMAIN, None) is not None
     assert trait.OnOffTrait.supported(light.DOMAIN, 0, None, None)
 
-    trt_on = trait.OnOffTrait(hass, State("light.bla", STATE_ON), BASIC_CONFIG)
+    trt_on = trait.OnOffTrait(menuai, State("light.bla", STATE_ON), BASIC_CONFIG)
 
     assert trt_on.sync_attributes() == {}
 
     assert trt_on.query_attributes() == {"on": True}
 
-    trt_off = trait.OnOffTrait(hass, State("light.bla", STATE_OFF), BASIC_CONFIG)
+    trt_off = trait.OnOffTrait(menuai, State("light.bla", STATE_OFF), BASIC_CONFIG)
 
     assert trt_off.query_attributes() == {"on": False}
 
-    on_calls = async_mock_service(hass, light.DOMAIN, SERVICE_TURN_ON)
+    on_calls = async_mock_service(menuai, light.DOMAIN, SERVICE_TURN_ON)
     await trt_on.execute(trait.COMMAND_ON_OFF, BASIC_DATA, {"on": True}, {})
     assert len(on_calls) == 1
     assert on_calls[0].data == {ATTR_ENTITY_ID: "light.bla"}
 
-    off_calls = async_mock_service(hass, light.DOMAIN, SERVICE_TURN_OFF)
+    off_calls = async_mock_service(menuai, light.DOMAIN, SERVICE_TURN_OFF)
     await trt_on.execute(trait.COMMAND_ON_OFF, BASIC_DATA, {"on": False}, {})
     assert len(off_calls) == 1
     assert off_calls[0].data == {ATTR_ENTITY_ID: "light.bla"}
 
 
-async def test_onoff_media_player(hass: HomeAssistant) -> None:
+async def test_onoff_media_player(menuai: menuai) -> None:
     """Test OnOff trait support for media_player domain."""
     assert helpers.get_google_type(media_player.DOMAIN, None) is not None
     assert trait.OnOffTrait.supported(media_player.DOMAIN, 0, None, None)
 
-    trt_on = trait.OnOffTrait(hass, State("media_player.bla", STATE_ON), BASIC_CONFIG)
+    trt_on = trait.OnOffTrait(menuai, State("media_player.bla", STATE_ON), BASIC_CONFIG)
 
     assert trt_on.sync_attributes() == {}
 
     assert trt_on.query_attributes() == {"on": True}
 
-    trt_off = trait.OnOffTrait(hass, State("media_player.bla", STATE_OFF), BASIC_CONFIG)
+    trt_off = trait.OnOffTrait(menuai, State("media_player.bla", STATE_OFF), BASIC_CONFIG)
 
     assert trt_off.query_attributes() == {"on": False}
 
-    on_calls = async_mock_service(hass, media_player.DOMAIN, SERVICE_TURN_ON)
+    on_calls = async_mock_service(menuai, media_player.DOMAIN, SERVICE_TURN_ON)
     await trt_on.execute(trait.COMMAND_ON_OFF, BASIC_DATA, {"on": True}, {})
     assert len(on_calls) == 1
     assert on_calls[0].data == {ATTR_ENTITY_ID: "media_player.bla"}
 
-    off_calls = async_mock_service(hass, media_player.DOMAIN, SERVICE_TURN_OFF)
+    off_calls = async_mock_service(menuai, media_player.DOMAIN, SERVICE_TURN_OFF)
 
     await trt_on.execute(trait.COMMAND_ON_OFF, BASIC_DATA, {"on": False}, {})
     assert len(off_calls) == 1
     assert off_calls[0].data == {ATTR_ENTITY_ID: "media_player.bla"}
 
 
-async def test_onoff_humidifier(hass: HomeAssistant) -> None:
+async def test_onoff_humidifier(menuai: menuai) -> None:
     """Test OnOff trait support for humidifier domain."""
     assert helpers.get_google_type(humidifier.DOMAIN, None) is not None
     assert trait.OnOffTrait.supported(humidifier.DOMAIN, 0, None, None)
 
-    trt_on = trait.OnOffTrait(hass, State("humidifier.bla", STATE_ON), BASIC_CONFIG)
+    trt_on = trait.OnOffTrait(menuai, State("humidifier.bla", STATE_ON), BASIC_CONFIG)
 
     assert trt_on.sync_attributes() == {}
 
     assert trt_on.query_attributes() == {"on": True}
 
-    trt_off = trait.OnOffTrait(hass, State("humidifier.bla", STATE_OFF), BASIC_CONFIG)
+    trt_off = trait.OnOffTrait(menuai, State("humidifier.bla", STATE_OFF), BASIC_CONFIG)
 
     assert trt_off.query_attributes() == {"on": False}
 
-    on_calls = async_mock_service(hass, humidifier.DOMAIN, SERVICE_TURN_ON)
+    on_calls = async_mock_service(menuai, humidifier.DOMAIN, SERVICE_TURN_ON)
     await trt_on.execute(trait.COMMAND_ON_OFF, BASIC_DATA, {"on": True}, {})
     assert len(on_calls) == 1
     assert on_calls[0].data == {ATTR_ENTITY_ID: "humidifier.bla"}
 
-    off_calls = async_mock_service(hass, humidifier.DOMAIN, SERVICE_TURN_OFF)
+    off_calls = async_mock_service(menuai, humidifier.DOMAIN, SERVICE_TURN_OFF)
 
     await trt_on.execute(trait.COMMAND_ON_OFF, BASIC_DATA, {"on": False}, {})
     assert len(off_calls) == 1
     assert off_calls[0].data == {ATTR_ENTITY_ID: "humidifier.bla"}
 
 
-async def test_onoff_water_heater(hass: HomeAssistant) -> None:
+async def test_onoff_water_heater(menuai: menuai) -> None:
     """Test OnOff trait support for water_heater domain."""
     assert helpers.get_google_type(water_heater.DOMAIN, None) is not None
     assert trait.OnOffTrait.supported(
         water_heater.DOMAIN, WaterHeaterEntityFeature.ON_OFF, None, None
     )
 
-    trt_on = trait.OnOffTrait(hass, State("water_heater.bla", STATE_ON), BASIC_CONFIG)
+    trt_on = trait.OnOffTrait(menuai, State("water_heater.bla", STATE_ON), BASIC_CONFIG)
 
     assert trt_on.sync_attributes() == {}
 
     assert trt_on.query_attributes() == {"on": True}
 
-    trt_off = trait.OnOffTrait(hass, State("water_heater.bla", STATE_OFF), BASIC_CONFIG)
+    trt_off = trait.OnOffTrait(menuai, State("water_heater.bla", STATE_OFF), BASIC_CONFIG)
 
     assert trt_off.query_attributes() == {"on": False}
 
-    on_calls = async_mock_service(hass, water_heater.DOMAIN, SERVICE_TURN_ON)
+    on_calls = async_mock_service(menuai, water_heater.DOMAIN, SERVICE_TURN_ON)
     await trt_on.execute(trait.COMMAND_ON_OFF, BASIC_DATA, {"on": True}, {})
     assert len(on_calls) == 1
     assert on_calls[0].data == {ATTR_ENTITY_ID: "water_heater.bla"}
 
-    off_calls = async_mock_service(hass, water_heater.DOMAIN, SERVICE_TURN_OFF)
+    off_calls = async_mock_service(menuai, water_heater.DOMAIN, SERVICE_TURN_OFF)
 
     await trt_on.execute(trait.COMMAND_ON_OFF, BASIC_DATA, {"on": False}, {})
     assert len(off_calls) == 1
     assert off_calls[0].data == {ATTR_ENTITY_ID: "water_heater.bla"}
 
 
-async def test_dock_vacuum(hass: HomeAssistant) -> None:
+async def test_dock_vacuum(menuai: menuai) -> None:
     """Test dock trait support for vacuum domain."""
     assert helpers.get_google_type(vacuum.DOMAIN, None) is not None
     assert trait.DockTrait.supported(vacuum.DOMAIN, 0, None, None)
 
     trt = trait.DockTrait(
-        hass, State("vacuum.bla", vacuum.VacuumActivity.IDLE), BASIC_CONFIG
+        menuai, State("vacuum.bla", vacuum.VacuumActivity.IDLE), BASIC_CONFIG
     )
 
     assert trt.sync_attributes() == {}
 
     assert trt.query_attributes() == {"isDocked": False}
 
-    calls = async_mock_service(hass, vacuum.DOMAIN, vacuum.SERVICE_RETURN_TO_BASE)
+    calls = async_mock_service(menuai, vacuum.DOMAIN, vacuum.SERVICE_RETURN_TO_BASE)
     await trt.execute(trait.COMMAND_DOCK, BASIC_DATA, {}, {})
     assert len(calls) == 1
     assert calls[0].data == {ATTR_ENTITY_ID: "vacuum.bla"}
 
 
-async def test_locate_vacuum(hass: HomeAssistant) -> None:
+async def test_locate_vacuum(menuai: menuai) -> None:
     """Test locate trait support for vacuum domain."""
     assert helpers.get_google_type(vacuum.DOMAIN, None) is not None
     assert trait.LocatorTrait.supported(
@@ -460,7 +460,7 @@ async def test_locate_vacuum(hass: HomeAssistant) -> None:
     )
 
     trt = trait.LocatorTrait(
-        hass,
+        menuai,
         State(
             "vacuum.bla",
             vacuum.VacuumActivity.IDLE,
@@ -473,7 +473,7 @@ async def test_locate_vacuum(hass: HomeAssistant) -> None:
 
     assert trt.query_attributes() == {}
 
-    calls = async_mock_service(hass, vacuum.DOMAIN, vacuum.SERVICE_LOCATE)
+    calls = async_mock_service(menuai, vacuum.DOMAIN, vacuum.SERVICE_LOCATE)
     await trt.execute(trait.COMMAND_LOCATE, BASIC_DATA, {"silence": False}, {})
     assert len(calls) == 1
     assert calls[0].data == {ATTR_ENTITY_ID: "vacuum.bla"}
@@ -483,7 +483,7 @@ async def test_locate_vacuum(hass: HomeAssistant) -> None:
     assert err.value.code == const.ERR_FUNCTION_NOT_SUPPORTED
 
 
-async def test_energystorage_vacuum(hass: HomeAssistant) -> None:
+async def test_energystorage_vacuum(menuai: menuai) -> None:
     """Test EnergyStorage trait support for vacuum domain."""
     assert helpers.get_google_type(vacuum.DOMAIN, None) is not None
     assert trait.EnergyStorageTrait.supported(
@@ -491,7 +491,7 @@ async def test_energystorage_vacuum(hass: HomeAssistant) -> None:
     )
 
     trt = trait.EnergyStorageTrait(
-        hass,
+        menuai,
         State(
             "vacuum.bla",
             vacuum.VacuumActivity.DOCKED,
@@ -517,7 +517,7 @@ async def test_energystorage_vacuum(hass: HomeAssistant) -> None:
     }
 
     trt = trait.EnergyStorageTrait(
-        hass,
+        menuai,
         State(
             "vacuum.bla",
             vacuum.VacuumActivity.CLEANING,
@@ -551,13 +551,13 @@ async def test_energystorage_vacuum(hass: HomeAssistant) -> None:
     assert err.value.code == const.ERR_FUNCTION_NOT_SUPPORTED
 
 
-async def test_startstop_vacuum(hass: HomeAssistant) -> None:
+async def test_startstop_vacuum(menuai: menuai) -> None:
     """Test startStop trait support for vacuum domain."""
     assert helpers.get_google_type(vacuum.DOMAIN, None) is not None
     assert trait.StartStopTrait.supported(vacuum.DOMAIN, 0, None, None)
 
     trt = trait.StartStopTrait(
-        hass,
+        menuai,
         State(
             "vacuum.bla",
             vacuum.VacuumActivity.PAUSED,
@@ -570,53 +570,53 @@ async def test_startstop_vacuum(hass: HomeAssistant) -> None:
 
     assert trt.query_attributes() == {"isRunning": False, "isPaused": True}
 
-    start_calls = async_mock_service(hass, vacuum.DOMAIN, vacuum.SERVICE_START)
+    start_calls = async_mock_service(menuai, vacuum.DOMAIN, vacuum.SERVICE_START)
     await trt.execute(trait.COMMAND_START_STOP, BASIC_DATA, {"start": True}, {})
     assert len(start_calls) == 1
     assert start_calls[0].data == {ATTR_ENTITY_ID: "vacuum.bla"}
 
-    stop_calls = async_mock_service(hass, vacuum.DOMAIN, vacuum.SERVICE_STOP)
+    stop_calls = async_mock_service(menuai, vacuum.DOMAIN, vacuum.SERVICE_STOP)
     await trt.execute(trait.COMMAND_START_STOP, BASIC_DATA, {"start": False}, {})
     assert len(stop_calls) == 1
     assert stop_calls[0].data == {ATTR_ENTITY_ID: "vacuum.bla"}
 
-    pause_calls = async_mock_service(hass, vacuum.DOMAIN, vacuum.SERVICE_PAUSE)
+    pause_calls = async_mock_service(menuai, vacuum.DOMAIN, vacuum.SERVICE_PAUSE)
     await trt.execute(trait.COMMAND_PAUSE_UNPAUSE, BASIC_DATA, {"pause": True}, {})
     assert len(pause_calls) == 1
     assert pause_calls[0].data == {ATTR_ENTITY_ID: "vacuum.bla"}
 
-    unpause_calls = async_mock_service(hass, vacuum.DOMAIN, vacuum.SERVICE_START)
+    unpause_calls = async_mock_service(menuai, vacuum.DOMAIN, vacuum.SERVICE_START)
     await trt.execute(trait.COMMAND_PAUSE_UNPAUSE, BASIC_DATA, {"pause": False}, {})
     assert len(unpause_calls) == 1
     assert unpause_calls[0].data == {ATTR_ENTITY_ID: "vacuum.bla"}
 
 
-async def test_dock_lawn_mower(hass: HomeAssistant) -> None:
+async def test_dock_lawn_mower(menuai: menuai) -> None:
     """Test dock trait support for lawn mower domain."""
     assert helpers.get_google_type(lawn_mower.DOMAIN, None) is not None
     assert trait.DockTrait.supported(lawn_mower.DOMAIN, 0, None, None)
 
     trt = trait.DockTrait(
-        hass, State("lawn_mower.bla", lawn_mower.LawnMowerActivity.MOWING), BASIC_CONFIG
+        menuai, State("lawn_mower.bla", lawn_mower.LawnMowerActivity.MOWING), BASIC_CONFIG
     )
 
     assert trt.sync_attributes() == {}
 
     assert trt.query_attributes() == {"isDocked": False}
 
-    calls = async_mock_service(hass, lawn_mower.DOMAIN, lawn_mower.SERVICE_DOCK)
+    calls = async_mock_service(menuai, lawn_mower.DOMAIN, lawn_mower.SERVICE_DOCK)
     await trt.execute(trait.COMMAND_DOCK, BASIC_DATA, {}, {})
     assert len(calls) == 1
     assert calls[0].data == {ATTR_ENTITY_ID: "lawn_mower.bla"}
 
 
-async def test_startstop_lawn_mower(hass: HomeAssistant) -> None:
+async def test_startstop_lawn_mower(menuai: menuai) -> None:
     """Test startStop trait support for lawn mower domain."""
     assert helpers.get_google_type(lawn_mower.DOMAIN, None) is not None
     assert trait.StartStopTrait.supported(lawn_mower.DOMAIN, 0, None, None)
 
     trt = trait.StartStopTrait(
-        hass,
+        menuai,
         State(
             "lawn_mower.bla",
             lawn_mower.LawnMowerActivity.PAUSED,
@@ -630,19 +630,19 @@ async def test_startstop_lawn_mower(hass: HomeAssistant) -> None:
     assert trt.query_attributes() == {"isRunning": False, "isPaused": True}
 
     start_calls = async_mock_service(
-        hass, lawn_mower.DOMAIN, lawn_mower.SERVICE_START_MOWING
+        menuai, lawn_mower.DOMAIN, lawn_mower.SERVICE_START_MOWING
     )
     await trt.execute(trait.COMMAND_START_STOP, BASIC_DATA, {"start": True}, {})
     assert len(start_calls) == 1
     assert start_calls[0].data == {ATTR_ENTITY_ID: "lawn_mower.bla"}
 
-    pause_calls = async_mock_service(hass, lawn_mower.DOMAIN, lawn_mower.SERVICE_PAUSE)
+    pause_calls = async_mock_service(menuai, lawn_mower.DOMAIN, lawn_mower.SERVICE_PAUSE)
     await trt.execute(trait.COMMAND_PAUSE_UNPAUSE, BASIC_DATA, {"pause": True}, {})
     assert len(pause_calls) == 1
     assert pause_calls[0].data == {ATTR_ENTITY_ID: "lawn_mower.bla"}
 
     unpause_calls = async_mock_service(
-        hass, lawn_mower.DOMAIN, lawn_mower.SERVICE_START_MOWING
+        menuai, lawn_mower.DOMAIN, lawn_mower.SERVICE_START_MOWING
     )
     await trt.execute(trait.COMMAND_PAUSE_UNPAUSE, BASIC_DATA, {"pause": False}, {})
     assert len(unpause_calls) == 1
@@ -694,7 +694,7 @@ async def test_startstop_lawn_mower(hass: HomeAssistant) -> None:
     ],
 )
 async def test_startstop_cover_valve(
-    hass: HomeAssistant,
+    menuai: menuai,
     domain: str,
     state_open: str,
     state_closed: str,
@@ -717,7 +717,7 @@ async def test_startstop_cover_valve(
     )
 
     trt = trait.StartStopTrait(
-        hass,
+        menuai,
         state,
         BASIC_CONFIG,
     )
@@ -728,10 +728,10 @@ async def test_startstop_cover_valve(
         state.state = state_value
         assert trt.query_attributes() == {"isRunning": True}
 
-    stop_calls = async_mock_service(hass, domain, service_stop)
-    open_calls = async_mock_service(hass, domain, service_open)
-    close_calls = async_mock_service(hass, domain, service_close)
-    toggle_calls = async_mock_service(hass, domain, service_toggle)
+    stop_calls = async_mock_service(menuai, domain, service_stop)
+    open_calls = async_mock_service(menuai, domain, service_open)
+    close_calls = async_mock_service(menuai, domain, service_close)
+    toggle_calls = async_mock_service(menuai, domain, service_toggle)
     await trt.execute(trait.COMMAND_START_STOP, BASIC_DATA, {"start": False}, {})
     assert len(stop_calls) == 1
     assert stop_calls[0].data == {ATTR_ENTITY_ID: f"{domain}.bla"}
@@ -818,7 +818,7 @@ async def test_startstop_cover_valve(
     ],
 )
 async def test_startstop_cover_valve_assumed(
-    hass: HomeAssistant,
+    menuai: menuai,
     domain: str,
     state_open: str,
     state_closed: str,
@@ -832,7 +832,7 @@ async def test_startstop_cover_valve_assumed(
 ) -> None:
     """Test startStop trait support for cover domain of assumed state."""
     trt = trait.StartStopTrait(
-        hass,
+        menuai,
         State(
             f"{domain}.bla",
             state_closed,
@@ -844,8 +844,8 @@ async def test_startstop_cover_valve_assumed(
         BASIC_CONFIG,
     )
 
-    stop_calls = async_mock_service(hass, domain, service_stop)
-    toggle_calls = async_mock_service(hass, domain, service_toggle)
+    stop_calls = async_mock_service(menuai, domain, service_stop)
+    toggle_calls = async_mock_service(menuai, domain, service_toggle)
     await trt.execute(trait.COMMAND_START_STOP, BASIC_DATA, {"start": False}, {})
     assert len(stop_calls) == 1
     assert len(toggle_calls) == 0
@@ -860,7 +860,7 @@ async def test_startstop_cover_valve_assumed(
 
 @pytest.mark.parametrize("supported_color_modes", [["hs"], ["rgb"], ["xy"]])
 async def test_color_setting_color_light(
-    hass: HomeAssistant, supported_color_modes
+    menuai: menuai, supported_color_modes
 ) -> None:
     """Test ColorSpectrum trait support for light domain."""
     assert helpers.get_google_type(light.DOMAIN, None) is not None
@@ -870,7 +870,7 @@ async def test_color_setting_color_light(
     )
 
     trt = trait.ColorSettingTrait(
-        hass,
+        menuai,
         State(
             "light.bla",
             STATE_ON,
@@ -894,7 +894,7 @@ async def test_color_setting_color_light(
         trait.COMMAND_COLOR_ABSOLUTE, {"color": {"spectrumRGB": 16715792}}
     )
 
-    calls = async_mock_service(hass, light.DOMAIN, SERVICE_TURN_ON)
+    calls = async_mock_service(menuai, light.DOMAIN, SERVICE_TURN_ON)
     await trt.execute(
         trait.COMMAND_COLOR_ABSOLUTE,
         BASIC_DATA,
@@ -921,7 +921,7 @@ async def test_color_setting_color_light(
     }
 
 
-async def test_color_setting_temperature_light(hass: HomeAssistant) -> None:
+async def test_color_setting_temperature_light(menuai: menuai) -> None:
     """Test ColorTemperature trait support for light domain."""
     assert helpers.get_google_type(light.DOMAIN, None) is not None
     assert not trait.ColorSettingTrait.supported(light.DOMAIN, 0, None, {})
@@ -930,7 +930,7 @@ async def test_color_setting_temperature_light(hass: HomeAssistant) -> None:
     )
 
     trt = trait.ColorSettingTrait(
-        hass,
+        menuai,
         State(
             "light.bla",
             STATE_ON,
@@ -954,7 +954,7 @@ async def test_color_setting_temperature_light(hass: HomeAssistant) -> None:
     assert trt.can_execute(
         trait.COMMAND_COLOR_ABSOLUTE, {"color": {"temperature": 400}}
     )
-    calls = async_mock_service(hass, light.DOMAIN, SERVICE_TURN_ON)
+    calls = async_mock_service(menuai, light.DOMAIN, SERVICE_TURN_ON)
 
     with pytest.raises(helpers.SmartHomeError) as err:
         await trt.execute(
@@ -975,7 +975,7 @@ async def test_color_setting_temperature_light(hass: HomeAssistant) -> None:
     }
 
 
-async def test_color_light_temperature_light_bad_temp(hass: HomeAssistant) -> None:
+async def test_color_light_temperature_light_bad_temp(menuai: menuai) -> None:
     """Test ColorTemperature trait support for light domain."""
     assert helpers.get_google_type(light.DOMAIN, None) is not None
     assert not trait.ColorSettingTrait.supported(light.DOMAIN, 0, None, {})
@@ -984,7 +984,7 @@ async def test_color_light_temperature_light_bad_temp(hass: HomeAssistant) -> No
     )
 
     trt = trait.ColorSettingTrait(
-        hass,
+        menuai,
         State(
             "light.bla",
             STATE_ON,
@@ -1000,7 +1000,7 @@ async def test_color_light_temperature_light_bad_temp(hass: HomeAssistant) -> No
     assert trt.query_attributes() == {}
 
 
-async def test_light_modes(hass: HomeAssistant) -> None:
+async def test_light_modes(menuai: menuai) -> None:
     """Test Light Mode trait."""
     assert helpers.get_google_type(light.DOMAIN, None) is not None
     assert trait.ModesTrait.supported(
@@ -1008,7 +1008,7 @@ async def test_light_modes(hass: HomeAssistant) -> None:
     )
 
     trt = trait.ModesTrait(
-        hass,
+        menuai,
         State(
             "light.living_room",
             light.STATE_ON,
@@ -1055,7 +1055,7 @@ async def test_light_modes(hass: HomeAssistant) -> None:
         params={"updateModeSettings": {"effect": "colorloop"}},
     )
 
-    calls = async_mock_service(hass, light.DOMAIN, SERVICE_TURN_ON)
+    calls = async_mock_service(menuai, light.DOMAIN, SERVICE_TURN_ON)
     await trt.execute(
         trait.COMMAND_SET_MODES,
         BASIC_DATA,
@@ -1074,73 +1074,73 @@ async def test_light_modes(hass: HomeAssistant) -> None:
     "component",
     [button, input_button],
 )
-async def test_scene_button(hass: HomeAssistant, component) -> None:
+async def test_scene_button(menuai: menuai, component) -> None:
     """Test Scene trait support for the (input) button domain."""
     assert helpers.get_google_type(component.DOMAIN, None) is not None
     assert trait.SceneTrait.supported(component.DOMAIN, 0, None, None)
 
     trt = trait.SceneTrait(
-        hass, State(f"{component.DOMAIN}.bla", STATE_UNKNOWN), BASIC_CONFIG
+        menuai, State(f"{component.DOMAIN}.bla", STATE_UNKNOWN), BASIC_CONFIG
     )
     assert trt.sync_attributes() == {}
     assert trt.query_attributes() == {}
     assert trt.can_execute(trait.COMMAND_ACTIVATE_SCENE, {})
 
-    calls = async_mock_service(hass, component.DOMAIN, component.SERVICE_PRESS)
+    calls = async_mock_service(menuai, component.DOMAIN, component.SERVICE_PRESS)
     await trt.execute(trait.COMMAND_ACTIVATE_SCENE, BASIC_DATA, {}, {})
 
     # We don't wait till button press is done.
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(calls) == 1
     assert calls[0].data == {ATTR_ENTITY_ID: f"{component.DOMAIN}.bla"}
 
 
-async def test_scene_scene(hass: HomeAssistant) -> None:
+async def test_scene_scene(menuai: menuai) -> None:
     """Test Scene trait support for scene domain."""
     assert helpers.get_google_type(scene.DOMAIN, None) is not None
     assert trait.SceneTrait.supported(scene.DOMAIN, 0, None, None)
 
-    trt = trait.SceneTrait(hass, State("scene.bla", STATE_UNKNOWN), BASIC_CONFIG)
+    trt = trait.SceneTrait(menuai, State("scene.bla", STATE_UNKNOWN), BASIC_CONFIG)
     assert trt.sync_attributes() == {}
     assert trt.query_attributes() == {}
     assert trt.can_execute(trait.COMMAND_ACTIVATE_SCENE, {})
 
-    calls = async_mock_service(hass, scene.DOMAIN, SERVICE_TURN_ON)
+    calls = async_mock_service(menuai, scene.DOMAIN, SERVICE_TURN_ON)
     await trt.execute(trait.COMMAND_ACTIVATE_SCENE, BASIC_DATA, {}, {})
     assert len(calls) == 1
     assert calls[0].data == {ATTR_ENTITY_ID: "scene.bla"}
 
 
-async def test_scene_script(hass: HomeAssistant) -> None:
+async def test_scene_script(menuai: menuai) -> None:
     """Test Scene trait support for script domain."""
     assert helpers.get_google_type(script.DOMAIN, None) is not None
     assert trait.SceneTrait.supported(script.DOMAIN, 0, None, None)
 
-    trt = trait.SceneTrait(hass, State("script.bla", STATE_OFF), BASIC_CONFIG)
+    trt = trait.SceneTrait(menuai, State("script.bla", STATE_OFF), BASIC_CONFIG)
     assert trt.sync_attributes() == {}
     assert trt.query_attributes() == {}
     assert trt.can_execute(trait.COMMAND_ACTIVATE_SCENE, {})
 
-    calls = async_mock_service(hass, script.DOMAIN, SERVICE_TURN_ON)
+    calls = async_mock_service(menuai, script.DOMAIN, SERVICE_TURN_ON)
     await trt.execute(trait.COMMAND_ACTIVATE_SCENE, BASIC_DATA, {}, {})
 
     # We don't wait till script execution is done.
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(calls) == 1
     assert calls[0].data == {ATTR_ENTITY_ID: "script.bla"}
 
 
-async def test_temperature_setting_climate_onoff(hass: HomeAssistant) -> None:
+async def test_temperature_setting_climate_onoff(menuai: menuai) -> None:
     """Test TemperatureSetting trait support for climate domain - range."""
     assert helpers.get_google_type(climate.DOMAIN, None) is not None
     assert trait.TemperatureSettingTrait.supported(climate.DOMAIN, 0, None, None)
 
-    hass.config.units = US_CUSTOMARY_SYSTEM
+    menuai.config.units = US_CUSTOMARY_SYSTEM
 
     trt = trait.TemperatureSettingTrait(
-        hass,
+        menuai,
         State(
             "climate.bla",
             climate.HVACMode.AUTO,
@@ -1170,26 +1170,26 @@ async def test_temperature_setting_climate_onoff(hass: HomeAssistant) -> None:
     }
     assert trt.can_execute(trait.COMMAND_THERMOSTAT_SET_MODE, {})
 
-    calls = async_mock_service(hass, climate.DOMAIN, SERVICE_TURN_ON)
+    calls = async_mock_service(menuai, climate.DOMAIN, SERVICE_TURN_ON)
     await trt.execute(
         trait.COMMAND_THERMOSTAT_SET_MODE, BASIC_DATA, {"thermostatMode": "on"}, {}
     )
     assert len(calls) == 1
 
-    calls = async_mock_service(hass, climate.DOMAIN, SERVICE_TURN_OFF)
+    calls = async_mock_service(menuai, climate.DOMAIN, SERVICE_TURN_OFF)
     await trt.execute(
         trait.COMMAND_THERMOSTAT_SET_MODE, BASIC_DATA, {"thermostatMode": "off"}, {}
     )
     assert len(calls) == 1
 
 
-async def test_temperature_setting_climate_no_modes(hass: HomeAssistant) -> None:
+async def test_temperature_setting_climate_no_modes(menuai: menuai) -> None:
     """Test TemperatureSetting trait support for climate domain not supporting any modes."""
     assert helpers.get_google_type(climate.DOMAIN, None) is not None
     assert trait.TemperatureSettingTrait.supported(climate.DOMAIN, 0, None, None)
 
     trt = trait.TemperatureSettingTrait(
-        hass,
+        menuai,
         State(
             "climate.bla",
             climate.HVACMode.AUTO,
@@ -1211,15 +1211,15 @@ async def test_temperature_setting_climate_no_modes(hass: HomeAssistant) -> None
     }
 
 
-async def test_temperature_setting_climate_range(hass: HomeAssistant) -> None:
+async def test_temperature_setting_climate_range(menuai: menuai) -> None:
     """Test TemperatureSetting trait support for climate domain - range."""
     assert helpers.get_google_type(climate.DOMAIN, None) is not None
     assert trait.TemperatureSettingTrait.supported(climate.DOMAIN, 0, None, None)
 
-    hass.config.units = US_CUSTOMARY_SYSTEM
+    menuai.config.units = US_CUSTOMARY_SYSTEM
 
     trt = trait.TemperatureSettingTrait(
-        hass,
+        menuai,
         State(
             "climate.bla",
             climate.HVACMode.AUTO,
@@ -1261,7 +1261,7 @@ async def test_temperature_setting_climate_range(hass: HomeAssistant) -> None:
     assert trt.can_execute(trait.COMMAND_THERMOSTAT_TEMPERATURE_SET_RANGE, {})
     assert trt.can_execute(trait.COMMAND_THERMOSTAT_SET_MODE, {})
 
-    calls = async_mock_service(hass, climate.DOMAIN, climate.SERVICE_SET_TEMPERATURE)
+    calls = async_mock_service(menuai, climate.DOMAIN, climate.SERVICE_SET_TEMPERATURE)
     await trt.execute(
         trait.COMMAND_THERMOSTAT_TEMPERATURE_SET_RANGE,
         BASIC_DATA,
@@ -1278,7 +1278,7 @@ async def test_temperature_setting_climate_range(hass: HomeAssistant) -> None:
         climate.ATTR_TARGET_TEMP_LOW: 68,
     }
 
-    calls = async_mock_service(hass, climate.DOMAIN, climate.SERVICE_SET_HVAC_MODE)
+    calls = async_mock_service(menuai, climate.DOMAIN, climate.SERVICE_SET_HVAC_MODE)
     await trt.execute(
         trait.COMMAND_THERMOSTAT_SET_MODE, BASIC_DATA, {"thermostatMode": "cool"}, {}
     )
@@ -1312,7 +1312,7 @@ async def test_temperature_setting_climate_range(hass: HomeAssistant) -> None:
         )
     assert err.value.code == const.ERR_VALUE_OUT_OF_RANGE
 
-    calls = async_mock_service(hass, climate.DOMAIN, climate.SERVICE_SET_TEMPERATURE)
+    calls = async_mock_service(menuai, climate.DOMAIN, climate.SERVICE_SET_TEMPERATURE)
     await trt.execute(
         trait.COMMAND_THERMOSTAT_TEMPERATURE_SETPOINT,
         BASIC_DATA,
@@ -1326,13 +1326,13 @@ async def test_temperature_setting_climate_range(hass: HomeAssistant) -> None:
     }
 
 
-async def test_temperature_setting_climate_setpoint(hass: HomeAssistant) -> None:
+async def test_temperature_setting_climate_setpoint(menuai: menuai) -> None:
     """Test TemperatureSetting trait support for climate domain - setpoint."""
     assert helpers.get_google_type(climate.DOMAIN, None) is not None
     assert trait.TemperatureSettingTrait.supported(climate.DOMAIN, 0, None, None)
 
     trt = trait.TemperatureSettingTrait(
-        hass,
+        menuai,
         State(
             "climate.bla",
             climate.HVACMode.COOL,
@@ -1366,7 +1366,7 @@ async def test_temperature_setting_climate_setpoint(hass: HomeAssistant) -> None
     assert trt.can_execute(trait.COMMAND_THERMOSTAT_TEMPERATURE_SETPOINT, {})
     assert trt.can_execute(trait.COMMAND_THERMOSTAT_SET_MODE, {})
 
-    calls = async_mock_service(hass, climate.DOMAIN, climate.SERVICE_SET_TEMPERATURE)
+    calls = async_mock_service(menuai, climate.DOMAIN, climate.SERVICE_SET_TEMPERATURE)
     with pytest.raises(helpers.SmartHomeError):
         await trt.execute(
             trait.COMMAND_THERMOSTAT_TEMPERATURE_SETPOINT,
@@ -1384,7 +1384,7 @@ async def test_temperature_setting_climate_setpoint(hass: HomeAssistant) -> None
     assert len(calls) == 1
     assert calls[0].data == {ATTR_ENTITY_ID: "climate.bla", ATTR_TEMPERATURE: 19}
 
-    calls = async_mock_service(hass, climate.DOMAIN, climate.SERVICE_SET_PRESET_MODE)
+    calls = async_mock_service(menuai, climate.DOMAIN, climate.SERVICE_SET_PRESET_MODE)
     await trt.execute(
         trait.COMMAND_THERMOSTAT_SET_MODE,
         BASIC_DATA,
@@ -1397,7 +1397,7 @@ async def test_temperature_setting_climate_setpoint(hass: HomeAssistant) -> None
         climate.ATTR_PRESET_MODE: "eco",
     }
 
-    calls = async_mock_service(hass, climate.DOMAIN, climate.SERVICE_SET_TEMPERATURE)
+    calls = async_mock_service(menuai, climate.DOMAIN, climate.SERVICE_SET_TEMPERATURE)
     await trt.execute(
         trait.COMMAND_THERMOSTAT_TEMPERATURE_SET_RANGE,
         BASIC_DATA,
@@ -1411,13 +1411,13 @@ async def test_temperature_setting_climate_setpoint(hass: HomeAssistant) -> None
     assert calls[0].data == {ATTR_ENTITY_ID: "climate.bla", ATTR_TEMPERATURE: 18.5}
 
 
-async def test_temperature_setting_climate_setpoint_auto(hass: HomeAssistant) -> None:
+async def test_temperature_setting_climate_setpoint_auto(menuai: menuai) -> None:
     """Test TemperatureSetting trait support for climate domain.
 
     Setpoint in auto mode.
     """
     trt = trait.TemperatureSettingTrait(
-        hass,
+        menuai,
         State(
             "climate.bla",
             climate.HVACMode.HEAT_COOL,
@@ -1451,7 +1451,7 @@ async def test_temperature_setting_climate_setpoint_auto(hass: HomeAssistant) ->
     assert trt.can_execute(trait.COMMAND_THERMOSTAT_TEMPERATURE_SETPOINT, {})
     assert trt.can_execute(trait.COMMAND_THERMOSTAT_SET_MODE, {})
 
-    calls = async_mock_service(hass, climate.DOMAIN, climate.SERVICE_SET_TEMPERATURE)
+    calls = async_mock_service(menuai, climate.DOMAIN, climate.SERVICE_SET_TEMPERATURE)
 
     await trt.execute(
         trait.COMMAND_THERMOSTAT_TEMPERATURE_SETPOINT,
@@ -1463,10 +1463,10 @@ async def test_temperature_setting_climate_setpoint_auto(hass: HomeAssistant) ->
     assert calls[0].data == {ATTR_ENTITY_ID: "climate.bla", ATTR_TEMPERATURE: 19}
 
 
-async def test_temperature_control(hass: HomeAssistant) -> None:
+async def test_temperature_control(menuai: menuai) -> None:
     """Test TemperatureControl trait support for sensor domain."""
     trt = trait.TemperatureControlTrait(
-        hass,
+        menuai,
         State("sensor.temp", 18),
         BASIC_CONFIG,
     )
@@ -1492,7 +1492,7 @@ async def test_temperature_control(hass: HomeAssistant) -> None:
     ],
 )
 async def test_temperature_control_water_heater(
-    hass: HomeAssistant,
+    menuai: menuai,
     unit_in: UnitSystem,
     unit_out: str,
     temp_in: str,
@@ -1501,7 +1501,7 @@ async def test_temperature_control_water_heater(
     current_out: float,
 ) -> None:
     """Test TemperatureControl trait support for water heater domain."""
-    hass.config.units = unit_in
+    menuai.config.units = unit_in
 
     min_temp = TemperatureConverter.convert(
         water_heater.DEFAULT_MIN_TEMP,
@@ -1515,7 +1515,7 @@ async def test_temperature_control_water_heater(
     )
 
     trt = trait.TemperatureControlTrait(
-        hass,
+        menuai,
         State(
             "water_heater.bla",
             "attributes",
@@ -1550,7 +1550,7 @@ async def test_temperature_control_water_heater(
     ],
 )
 async def test_temperature_control_water_heater_set_temperature(
-    hass: HomeAssistant,
+    menuai: menuai,
     unit: UnitSystem,
     temp_init: str,
     temp_in: float,
@@ -1558,7 +1558,7 @@ async def test_temperature_control_water_heater_set_temperature(
     current_init: str,
 ) -> None:
     """Test TemperatureControl trait support for water heater domain - SetTemperature."""
-    hass.config.units = unit
+    menuai.config.units = unit
 
     min_temp = TemperatureConverter.convert(
         40,
@@ -1572,7 +1572,7 @@ async def test_temperature_control_water_heater_set_temperature(
     )
 
     trt = trait.TemperatureControlTrait(
-        hass,
+        menuai,
         State(
             "water_heater.bla",
             "attributes",
@@ -1589,7 +1589,7 @@ async def test_temperature_control_water_heater_set_temperature(
     assert trt.can_execute(trait.COMMAND_SET_TEMPERATURE, {})
 
     calls = async_mock_service(
-        hass, water_heater.DOMAIN, water_heater.SERVICE_SET_TEMPERATURE
+        menuai, water_heater.DOMAIN, water_heater.SERVICE_SET_TEMPERATURE
     )
 
     with pytest.raises(helpers.SmartHomeError):
@@ -1613,13 +1613,13 @@ async def test_temperature_control_water_heater_set_temperature(
     }
 
 
-async def test_humidity_setting_humidifier_setpoint(hass: HomeAssistant) -> None:
+async def test_humidity_setting_humidifier_setpoint(menuai: menuai) -> None:
     """Test HumiditySetting trait support for humidifier domain - setpoint."""
     assert helpers.get_google_type(humidifier.DOMAIN, None) is not None
     assert trait.HumiditySettingTrait.supported(humidifier.DOMAIN, 0, None, None)
 
     trt = trait.HumiditySettingTrait(
-        hass,
+        menuai,
         State(
             "humidifier.bla",
             STATE_ON,
@@ -1641,7 +1641,7 @@ async def test_humidity_setting_humidifier_setpoint(hass: HomeAssistant) -> None
     }
     assert trt.can_execute(trait.COMMAND_SET_HUMIDITY, {})
 
-    calls = async_mock_service(hass, humidifier.DOMAIN, humidifier.SERVICE_SET_HUMIDITY)
+    calls = async_mock_service(menuai, humidifier.DOMAIN, humidifier.SERVICE_SET_HUMIDITY)
 
     await trt.execute(trait.COMMAND_SET_HUMIDITY, BASIC_DATA, {"humidity": 32}, {})
     assert len(calls) == 1
@@ -1651,7 +1651,7 @@ async def test_humidity_setting_humidifier_setpoint(hass: HomeAssistant) -> None
     }
 
 
-async def test_lock_unlock_lock(hass: HomeAssistant) -> None:
+async def test_lock_unlock_lock(menuai: menuai) -> None:
     """Test LockUnlock trait locking support for lock domain."""
     assert helpers.get_google_type(lock.DOMAIN, None) is not None
     assert trait.LockUnlockTrait.supported(
@@ -1660,7 +1660,7 @@ async def test_lock_unlock_lock(hass: HomeAssistant) -> None:
     assert trait.LockUnlockTrait.might_2fa(lock.DOMAIN, LockEntityFeature.OPEN, None)
 
     trt = trait.LockUnlockTrait(
-        hass, State("lock.front_door", lock.LockState.LOCKED), PIN_CONFIG
+        menuai, State("lock.front_door", lock.LockState.LOCKED), PIN_CONFIG
     )
 
     assert trt.sync_attributes() == {}
@@ -1669,7 +1669,7 @@ async def test_lock_unlock_lock(hass: HomeAssistant) -> None:
 
     assert trt.can_execute(trait.COMMAND_LOCK_UNLOCK, {"lock": True})
 
-    calls = async_mock_service(hass, lock.DOMAIN, lock.SERVICE_LOCK)
+    calls = async_mock_service(menuai, lock.DOMAIN, lock.SERVICE_LOCK)
 
     await trt.execute(trait.COMMAND_LOCK_UNLOCK, PIN_DATA, {"lock": True}, {})
 
@@ -1677,7 +1677,7 @@ async def test_lock_unlock_lock(hass: HomeAssistant) -> None:
     assert calls[0].data == {ATTR_ENTITY_ID: "lock.front_door"}
 
 
-async def test_lock_unlock_unlocking(hass: HomeAssistant) -> None:
+async def test_lock_unlock_unlocking(menuai: menuai) -> None:
     """Test LockUnlock trait locking support for lock domain."""
     assert helpers.get_google_type(lock.DOMAIN, None) is not None
     assert trait.LockUnlockTrait.supported(
@@ -1686,7 +1686,7 @@ async def test_lock_unlock_unlocking(hass: HomeAssistant) -> None:
     assert trait.LockUnlockTrait.might_2fa(lock.DOMAIN, LockEntityFeature.OPEN, None)
 
     trt = trait.LockUnlockTrait(
-        hass, State("lock.front_door", lock.LockState.UNLOCKING), PIN_CONFIG
+        menuai, State("lock.front_door", lock.LockState.UNLOCKING), PIN_CONFIG
     )
 
     assert trt.sync_attributes() == {}
@@ -1694,7 +1694,7 @@ async def test_lock_unlock_unlocking(hass: HomeAssistant) -> None:
     assert trt.query_attributes() == {"isLocked": True}
 
 
-async def test_lock_unlock_lock_jammed(hass: HomeAssistant) -> None:
+async def test_lock_unlock_lock_jammed(menuai: menuai) -> None:
     """Test LockUnlock trait locking support for lock domain that jams."""
     assert helpers.get_google_type(lock.DOMAIN, None) is not None
     assert trait.LockUnlockTrait.supported(
@@ -1703,7 +1703,7 @@ async def test_lock_unlock_lock_jammed(hass: HomeAssistant) -> None:
     assert trait.LockUnlockTrait.might_2fa(lock.DOMAIN, LockEntityFeature.OPEN, None)
 
     trt = trait.LockUnlockTrait(
-        hass, State("lock.front_door", lock.LockState.JAMMED), PIN_CONFIG
+        menuai, State("lock.front_door", lock.LockState.JAMMED), PIN_CONFIG
     )
 
     assert trt.sync_attributes() == {}
@@ -1712,7 +1712,7 @@ async def test_lock_unlock_lock_jammed(hass: HomeAssistant) -> None:
 
     assert trt.can_execute(trait.COMMAND_LOCK_UNLOCK, {"lock": True})
 
-    calls = async_mock_service(hass, lock.DOMAIN, lock.SERVICE_LOCK)
+    calls = async_mock_service(menuai, lock.DOMAIN, lock.SERVICE_LOCK)
 
     await trt.execute(trait.COMMAND_LOCK_UNLOCK, PIN_DATA, {"lock": True}, {})
 
@@ -1720,7 +1720,7 @@ async def test_lock_unlock_lock_jammed(hass: HomeAssistant) -> None:
     assert calls[0].data == {ATTR_ENTITY_ID: "lock.front_door"}
 
 
-async def test_lock_unlock_unlock(hass: HomeAssistant) -> None:
+async def test_lock_unlock_unlock(menuai: menuai) -> None:
     """Test LockUnlock trait unlocking support for lock domain."""
     assert helpers.get_google_type(lock.DOMAIN, None) is not None
     assert trait.LockUnlockTrait.supported(
@@ -1728,7 +1728,7 @@ async def test_lock_unlock_unlock(hass: HomeAssistant) -> None:
     )
 
     trt = trait.LockUnlockTrait(
-        hass, State("lock.front_door", lock.LockState.LOCKED), PIN_CONFIG
+        menuai, State("lock.front_door", lock.LockState.LOCKED), PIN_CONFIG
     )
 
     assert trt.sync_attributes() == {}
@@ -1737,7 +1737,7 @@ async def test_lock_unlock_unlock(hass: HomeAssistant) -> None:
 
     assert trt.can_execute(trait.COMMAND_LOCK_UNLOCK, {"lock": False})
 
-    calls = async_mock_service(hass, lock.DOMAIN, lock.SERVICE_UNLOCK)
+    calls = async_mock_service(menuai, lock.DOMAIN, lock.SERVICE_UNLOCK)
 
     # No challenge data
     with pytest.raises(error.ChallengeNeeded) as err:
@@ -1764,7 +1764,7 @@ async def test_lock_unlock_unlock(hass: HomeAssistant) -> None:
 
     # Test without pin
     trt = trait.LockUnlockTrait(
-        hass, State("lock.front_door", lock.LockState.LOCKED), BASIC_CONFIG
+        menuai, State("lock.front_door", lock.LockState.LOCKED), BASIC_CONFIG
     )
 
     with pytest.raises(error.SmartHomeError) as err:
@@ -1782,14 +1782,14 @@ async def test_lock_unlock_unlock(hass: HomeAssistant) -> None:
     assert len(calls) == 2
 
 
-async def test_arm_disarm_arm_away(hass: HomeAssistant) -> None:
+async def test_arm_disarm_arm_away(menuai: menuai) -> None:
     """Test ArmDisarm trait Arming support for alarm_control_panel domain."""
     assert helpers.get_google_type(alarm_control_panel.DOMAIN, None) is not None
     assert trait.ArmDisArmTrait.supported(alarm_control_panel.DOMAIN, 0, None, None)
     assert trait.ArmDisArmTrait.might_2fa(alarm_control_panel.DOMAIN, 0, None)
 
     trt = trait.ArmDisArmTrait(
-        hass,
+        menuai,
         State(
             "alarm_control_panel.alarm",
             AlarmControlPanelState.ARMED_AWAY,
@@ -1832,13 +1832,13 @@ async def test_arm_disarm_arm_away(hass: HomeAssistant) -> None:
     )
 
     calls = async_mock_service(
-        hass, alarm_control_panel.DOMAIN, alarm_control_panel.SERVICE_ALARM_ARM_AWAY
+        menuai, alarm_control_panel.DOMAIN, alarm_control_panel.SERVICE_ALARM_ARM_AWAY
     )
 
     # Test with no secure_pin configured
 
     trt = trait.ArmDisArmTrait(
-        hass,
+        menuai,
         State(
             "alarm_control_panel.alarm",
             AlarmControlPanelState.DISARMED,
@@ -1857,7 +1857,7 @@ async def test_arm_disarm_arm_away(hass: HomeAssistant) -> None:
     assert err.value.code == const.ERR_CHALLENGE_NOT_SETUP
 
     trt = trait.ArmDisArmTrait(
-        hass,
+        menuai,
         State(
             "alarm_control_panel.alarm",
             AlarmControlPanelState.DISARMED,
@@ -1901,7 +1901,7 @@ async def test_arm_disarm_arm_away(hass: HomeAssistant) -> None:
 
     # Test already armed
     trt = trait.ArmDisArmTrait(
-        hass,
+        menuai,
         State(
             "alarm_control_panel.alarm",
             AlarmControlPanelState.ARMED_AWAY,
@@ -1921,7 +1921,7 @@ async def test_arm_disarm_arm_away(hass: HomeAssistant) -> None:
 
     # Test with code_arm_required False
     trt = trait.ArmDisArmTrait(
-        hass,
+        menuai,
         State(
             "alarm_control_panel.alarm",
             AlarmControlPanelState.DISARMED,
@@ -1946,14 +1946,14 @@ async def test_arm_disarm_arm_away(hass: HomeAssistant) -> None:
         )
 
 
-async def test_arm_disarm_disarm(hass: HomeAssistant) -> None:
+async def test_arm_disarm_disarm(menuai: menuai) -> None:
     """Test ArmDisarm trait Disarming support for alarm_control_panel domain."""
     assert helpers.get_google_type(alarm_control_panel.DOMAIN, None) is not None
     assert trait.ArmDisArmTrait.supported(alarm_control_panel.DOMAIN, 0, None, None)
     assert trait.ArmDisArmTrait.might_2fa(alarm_control_panel.DOMAIN, 0, None)
 
     trt = trait.ArmDisArmTrait(
-        hass,
+        menuai,
         State(
             "alarm_control_panel.alarm",
             AlarmControlPanelState.DISARMED,
@@ -2004,12 +2004,12 @@ async def test_arm_disarm_disarm(hass: HomeAssistant) -> None:
     assert trt.can_execute(trait.COMMAND_ARM_DISARM, {"arm": False})
 
     calls = async_mock_service(
-        hass, alarm_control_panel.DOMAIN, alarm_control_panel.SERVICE_ALARM_DISARM
+        menuai, alarm_control_panel.DOMAIN, alarm_control_panel.SERVICE_ALARM_DISARM
     )
 
     # Test without secure_pin configured
     trt = trait.ArmDisArmTrait(
-        hass,
+        menuai,
         State(
             "alarm_control_panel.alarm",
             AlarmControlPanelState.ARMED_AWAY,
@@ -2024,7 +2024,7 @@ async def test_arm_disarm_disarm(hass: HomeAssistant) -> None:
     assert err.value.code == const.ERR_CHALLENGE_NOT_SETUP
 
     trt = trait.ArmDisArmTrait(
-        hass,
+        menuai,
         State(
             "alarm_control_panel.alarm",
             AlarmControlPanelState.ARMED_AWAY,
@@ -2058,7 +2058,7 @@ async def test_arm_disarm_disarm(hass: HomeAssistant) -> None:
 
     # Test already disarmed
     trt = trait.ArmDisArmTrait(
-        hass,
+        menuai,
         State(
             "alarm_control_panel.alarm",
             AlarmControlPanelState.DISARMED,
@@ -2072,7 +2072,7 @@ async def test_arm_disarm_disarm(hass: HomeAssistant) -> None:
     assert err.value.code == const.ERR_ALREADY_DISARMED
 
     trt = trait.ArmDisArmTrait(
-        hass,
+        menuai,
         State(
             "alarm_control_panel.alarm",
             AlarmControlPanelState.ARMED_AWAY,
@@ -2092,7 +2092,7 @@ async def test_arm_disarm_disarm(hass: HomeAssistant) -> None:
 
     # Cancel arming while pending to arm doesn't require pin
     trt = trait.ArmDisArmTrait(
-        hass,
+        menuai,
         State(
             "alarm_control_panel.alarm",
             AlarmControlPanelState.PENDING,
@@ -2106,7 +2106,7 @@ async def test_arm_disarm_disarm(hass: HomeAssistant) -> None:
     assert len(calls) == 2
 
 
-async def test_fan_speed(hass: HomeAssistant) -> None:
+async def test_fan_speed(menuai: menuai) -> None:
     """Test FanSpeed trait speed control support for fan domain."""
     assert helpers.get_google_type(fan.DOMAIN, None) is not None
     assert trait.FanSpeedTrait.supported(
@@ -2114,7 +2114,7 @@ async def test_fan_speed(hass: HomeAssistant) -> None:
     )
 
     trt = trait.FanSpeedTrait(
-        hass,
+        menuai,
         State(
             "fan.living_room_fan",
             STATE_ON,
@@ -2139,7 +2139,7 @@ async def test_fan_speed(hass: HomeAssistant) -> None:
 
     assert trt.can_execute(trait.COMMAND_SET_FAN_SPEED, params={"fanSpeedPercent": 10})
 
-    calls = async_mock_service(hass, fan.DOMAIN, fan.SERVICE_SET_PERCENTAGE)
+    calls = async_mock_service(menuai, fan.DOMAIN, fan.SERVICE_SET_PERCENTAGE)
     await trt.execute(
         trait.COMMAND_SET_FAN_SPEED, BASIC_DATA, {"fanSpeedPercent": 10}, {}
     )
@@ -2148,7 +2148,7 @@ async def test_fan_speed(hass: HomeAssistant) -> None:
     assert calls[0].data == {"entity_id": "fan.living_room_fan", "percentage": 10}
 
 
-async def test_fan_speed_without_percentage_step(hass: HomeAssistant) -> None:
+async def test_fan_speed_without_percentage_step(menuai: menuai) -> None:
     """Test FanSpeed trait speed control percentage step for fan domain."""
     assert helpers.get_google_type(fan.DOMAIN, None) is not None
     assert trait.FanSpeedTrait.supported(
@@ -2156,7 +2156,7 @@ async def test_fan_speed_without_percentage_step(hass: HomeAssistant) -> None:
     )
 
     trt = trait.FanSpeedTrait(
-        hass,
+        menuai,
         State(
             "fan.living_room_fan",
             STATE_ON,
@@ -2231,7 +2231,7 @@ async def test_fan_speed_without_percentage_step(hass: HomeAssistant) -> None:
     ],
 )
 async def test_fan_speed_ordered(
-    hass: HomeAssistant,
+    menuai: menuai,
     percentage: int,
     percentage_step: float,
     speed: str,
@@ -2245,7 +2245,7 @@ async def test_fan_speed_ordered(
     )
 
     trt = trait.FanSpeedTrait(
-        hass,
+        menuai,
         State(
             "fan.living_room_fan",
             STATE_ON,
@@ -2279,7 +2279,7 @@ async def test_fan_speed_ordered(
 
     assert trt.can_execute(trait.COMMAND_SET_FAN_SPEED, params={"fanSpeed": speed})
 
-    calls = async_mock_service(hass, fan.DOMAIN, fan.SERVICE_SET_PERCENTAGE)
+    calls = async_mock_service(menuai, fan.DOMAIN, fan.SERVICE_SET_PERCENTAGE)
     await trt.execute(trait.COMMAND_SET_FAN_SPEED, BASIC_DATA, {"fanSpeed": speed}, {})
 
     assert len(calls) == 1
@@ -2298,14 +2298,14 @@ async def test_fan_speed_ordered(
     ],
 )
 async def test_fan_reverse(
-    hass: HomeAssistant, direction_state, direction_call
+    menuai: menuai, direction_state, direction_call
 ) -> None:
     """Test FanSpeed trait speed control support for fan domain."""
 
-    calls = async_mock_service(hass, fan.DOMAIN, fan.SERVICE_SET_DIRECTION)
+    calls = async_mock_service(menuai, fan.DOMAIN, fan.SERVICE_SET_DIRECTION)
 
     trt = trait.FanSpeedTrait(
-        hass,
+        menuai,
         State(
             "fan.living_room_fan",
             STATE_ON,
@@ -2340,7 +2340,7 @@ async def test_fan_reverse(
     }
 
 
-async def test_climate_fan_speed(hass: HomeAssistant) -> None:
+async def test_climate_fan_speed(menuai: menuai) -> None:
     """Test FanSpeed trait speed control support for climate domain."""
     assert helpers.get_google_type(climate.DOMAIN, None) is not None
     assert trait.FanSpeedTrait.supported(
@@ -2348,7 +2348,7 @@ async def test_climate_fan_speed(hass: HomeAssistant) -> None:
     )
 
     trt = trait.FanSpeedTrait(
-        hass,
+        menuai,
         State(
             "climate.living_room_ac",
             "on",
@@ -2391,7 +2391,7 @@ async def test_climate_fan_speed(hass: HomeAssistant) -> None:
 
     assert trt.can_execute(trait.COMMAND_SET_FAN_SPEED, params={"fanSpeed": "medium"})
 
-    calls = async_mock_service(hass, climate.DOMAIN, climate.SERVICE_SET_FAN_MODE)
+    calls = async_mock_service(menuai, climate.DOMAIN, climate.SERVICE_SET_FAN_MODE)
     await trt.execute(
         trait.COMMAND_SET_FAN_SPEED, BASIC_DATA, {"fanSpeed": "medium"}, {}
     )
@@ -2403,7 +2403,7 @@ async def test_climate_fan_speed(hass: HomeAssistant) -> None:
     }
 
 
-async def test_inputselector(hass: HomeAssistant) -> None:
+async def test_inputselector(menuai: menuai) -> None:
     """Test input selector trait."""
     assert helpers.get_google_type(media_player.DOMAIN, None) is not None
     assert trait.InputSelectorTrait.supported(
@@ -2414,7 +2414,7 @@ async def test_inputselector(hass: HomeAssistant) -> None:
     )
 
     trt = trait.InputSelectorTrait(
-        hass,
+        menuai,
         State(
             "media_player.living_room",
             media_player.STATE_PLAYING,
@@ -2455,7 +2455,7 @@ async def test_inputselector(hass: HomeAssistant) -> None:
     )
 
     calls = async_mock_service(
-        hass, media_player.DOMAIN, media_player.SERVICE_SELECT_SOURCE
+        menuai, media_player.DOMAIN, media_player.SERVICE_SELECT_SOURCE
     )
     await trt.execute(
         trait.COMMAND_SET_INPUT,
@@ -2477,11 +2477,11 @@ async def test_inputselector(hass: HomeAssistant) -> None:
     ],
 )
 async def test_inputselector_nextprev(
-    hass: HomeAssistant, sources, source, source_next, source_prev
+    menuai: menuai, sources, source, source_next, source_prev
 ) -> None:
     """Test input selector trait."""
     trt = trait.InputSelectorTrait(
-        hass,
+        menuai,
         State(
             "media_player.living_room",
             media_player.STATE_PLAYING,
@@ -2497,7 +2497,7 @@ async def test_inputselector_nextprev(
     assert trt.can_execute("action.devices.commands.PreviousInput", params={})
 
     calls = async_mock_service(
-        hass, media_player.DOMAIN, media_player.SERVICE_SELECT_SOURCE
+        menuai, media_player.DOMAIN, media_player.SERVICE_SELECT_SOURCE
     )
     await trt.execute(
         "action.devices.commands.NextInput",
@@ -2527,11 +2527,11 @@ async def test_inputselector_nextprev(
     ("sources", "source"), [(None, "a"), (["a", "b"], None), (["a", "b"], "c")]
 )
 async def test_inputselector_nextprev_invalid(
-    hass: HomeAssistant, sources, source
+    menuai: menuai, sources, source
 ) -> None:
     """Test input selector trait."""
     trt = trait.InputSelectorTrait(
-        hass,
+        menuai,
         State(
             "media_player.living_room",
             media_player.STATE_PLAYING,
@@ -2568,20 +2568,20 @@ async def test_inputselector_nextprev_invalid(
         )
 
 
-async def test_modes_input_select(hass: HomeAssistant) -> None:
+async def test_modes_input_select(menuai: menuai) -> None:
     """Test Input Select Mode trait."""
     assert helpers.get_google_type(input_select.DOMAIN, None) is not None
     assert trait.ModesTrait.supported(input_select.DOMAIN, None, None, None)
 
     trt = trait.ModesTrait(
-        hass,
+        menuai,
         State("input_select.bla", "unavailable"),
         BASIC_CONFIG,
     )
     assert trt.sync_attributes() == {"availableModes": []}
 
     trt = trait.ModesTrait(
-        hass,
+        menuai,
         State(
             "input_select.bla",
             "abc",
@@ -2631,7 +2631,7 @@ async def test_modes_input_select(hass: HomeAssistant) -> None:
     )
 
     calls = async_mock_service(
-        hass, input_select.DOMAIN, input_select.SERVICE_SELECT_OPTION
+        menuai, input_select.DOMAIN, input_select.SERVICE_SELECT_OPTION
     )
     await trt.execute(
         trait.COMMAND_SET_MODES,
@@ -2644,20 +2644,20 @@ async def test_modes_input_select(hass: HomeAssistant) -> None:
     assert calls[0].data == {"entity_id": "input_select.bla", "option": "xyz"}
 
 
-async def test_modes_select(hass: HomeAssistant) -> None:
+async def test_modes_select(menuai: menuai) -> None:
     """Test Select Mode trait."""
     assert helpers.get_google_type(select.DOMAIN, None) is not None
     assert trait.ModesTrait.supported(select.DOMAIN, None, None, None)
 
     trt = trait.ModesTrait(
-        hass,
+        menuai,
         State("select.bla", "unavailable"),
         BASIC_CONFIG,
     )
     assert trt.sync_attributes() == {"availableModes": []}
 
     trt = trait.ModesTrait(
-        hass,
+        menuai,
         State(
             "select.bla",
             "abc",
@@ -2706,7 +2706,7 @@ async def test_modes_select(hass: HomeAssistant) -> None:
         params={"updateModeSettings": {"option": "xyz"}},
     )
 
-    calls = async_mock_service(hass, select.DOMAIN, select.SERVICE_SELECT_OPTION)
+    calls = async_mock_service(menuai, select.DOMAIN, select.SERVICE_SELECT_OPTION)
     await trt.execute(
         trait.COMMAND_SET_MODES,
         BASIC_DATA,
@@ -2718,7 +2718,7 @@ async def test_modes_select(hass: HomeAssistant) -> None:
     assert calls[0].data == {"entity_id": "select.bla", "option": "xyz"}
 
 
-async def test_modes_humidifier(hass: HomeAssistant) -> None:
+async def test_modes_humidifier(menuai: menuai) -> None:
     """Test Humidifier Mode trait."""
     assert helpers.get_google_type(humidifier.DOMAIN, None) is not None
     assert trait.ModesTrait.supported(
@@ -2726,7 +2726,7 @@ async def test_modes_humidifier(hass: HomeAssistant) -> None:
     )
 
     trt = trait.ModesTrait(
-        hass,
+        menuai,
         State(
             "humidifier.humidifier",
             STATE_OFF,
@@ -2782,7 +2782,7 @@ async def test_modes_humidifier(hass: HomeAssistant) -> None:
         trait.COMMAND_SET_MODES, params={"updateModeSettings": {"mode": "away"}}
     )
 
-    calls = async_mock_service(hass, humidifier.DOMAIN, humidifier.SERVICE_SET_MODE)
+    calls = async_mock_service(menuai, humidifier.DOMAIN, humidifier.SERVICE_SET_MODE)
     await trt.execute(
         trait.COMMAND_SET_MODES,
         BASIC_DATA,
@@ -2797,7 +2797,7 @@ async def test_modes_humidifier(hass: HomeAssistant) -> None:
     }
 
 
-async def test_modes_water_heater(hass: HomeAssistant) -> None:
+async def test_modes_water_heater(menuai: menuai) -> None:
     """Test Humidifier Mode trait."""
     assert helpers.get_google_type(water_heater.DOMAIN, None) is not None
     assert trait.ModesTrait.supported(
@@ -2805,7 +2805,7 @@ async def test_modes_water_heater(hass: HomeAssistant) -> None:
     )
 
     trt = trait.ModesTrait(
-        hass,
+        menuai,
         State(
             "water_heater.water_heater",
             STATE_OFF,
@@ -2860,7 +2860,7 @@ async def test_modes_water_heater(hass: HomeAssistant) -> None:
     )
 
     calls = async_mock_service(
-        hass, water_heater.DOMAIN, water_heater.SERVICE_SET_OPERATION_MODE
+        menuai, water_heater.DOMAIN, water_heater.SERVICE_SET_OPERATION_MODE
     )
     await trt.execute(
         trait.COMMAND_SET_MODES,
@@ -2876,7 +2876,7 @@ async def test_modes_water_heater(hass: HomeAssistant) -> None:
     }
 
 
-async def test_sound_modes(hass: HomeAssistant) -> None:
+async def test_sound_modes(menuai: menuai) -> None:
     """Test Mode trait."""
     assert helpers.get_google_type(media_player.DOMAIN, None) is not None
     assert trait.ModesTrait.supported(
@@ -2887,7 +2887,7 @@ async def test_sound_modes(hass: HomeAssistant) -> None:
     )
 
     trt = trait.ModesTrait(
-        hass,
+        menuai,
         State(
             "media_player.living_room",
             media_player.STATE_PLAYING,
@@ -2937,7 +2937,7 @@ async def test_sound_modes(hass: HomeAssistant) -> None:
     )
 
     calls = async_mock_service(
-        hass, media_player.DOMAIN, media_player.SERVICE_SELECT_SOUND_MODE
+        menuai, media_player.DOMAIN, media_player.SERVICE_SELECT_SOUND_MODE
     )
     await trt.execute(
         trait.COMMAND_SET_MODES,
@@ -2953,7 +2953,7 @@ async def test_sound_modes(hass: HomeAssistant) -> None:
     }
 
 
-async def test_preset_modes(hass: HomeAssistant) -> None:
+async def test_preset_modes(menuai: menuai) -> None:
     """Test Mode trait for fan preset modes."""
     assert helpers.get_google_type(fan.DOMAIN, None) is not None
     assert trait.ModesTrait.supported(
@@ -2961,7 +2961,7 @@ async def test_preset_modes(hass: HomeAssistant) -> None:
     )
 
     trt = trait.ModesTrait(
-        hass,
+        menuai,
         State(
             "fan.living_room",
             STATE_ON,
@@ -3009,7 +3009,7 @@ async def test_preset_modes(hass: HomeAssistant) -> None:
         params={"updateModeSettings": {"preset mode": "auto"}},
     )
 
-    calls = async_mock_service(hass, fan.DOMAIN, fan.SERVICE_SET_PRESET_MODE)
+    calls = async_mock_service(menuai, fan.DOMAIN, fan.SERVICE_SET_PRESET_MODE)
     await trt.execute(
         trait.COMMAND_SET_MODES,
         BASIC_DATA,
@@ -3025,11 +3025,11 @@ async def test_preset_modes(hass: HomeAssistant) -> None:
 
 
 async def test_traits_unknown_domains(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test Mode trait for unsupported domain."""
     trt = trait.ModesTrait(
-        hass,
+        menuai,
         State(
             "switch.living_room",
             STATE_ON,
@@ -3080,7 +3080,7 @@ async def test_traits_unknown_domains(
     ],
 )
 async def test_openclose_cover_valve(
-    hass: HomeAssistant,
+    menuai: menuai,
     domain: str,
     set_position_service: str,
     close_service: str,
@@ -3094,7 +3094,7 @@ async def test_openclose_cover_valve(
     assert trait.OpenCloseTrait.supported(domain, set_position_service, None, None)
 
     trt = trait.OpenCloseTrait(
-        hass,
+        menuai,
         State(
             f"{domain}.bla",
             "open",
@@ -3109,9 +3109,9 @@ async def test_openclose_cover_valve(
     assert trt.sync_attributes() == {}
     assert trt.query_attributes() == {"openPercent": 75}
 
-    calls_set = async_mock_service(hass, domain, set_position_service)
-    calls_open = async_mock_service(hass, domain, open_service)
-    calls_close = async_mock_service(hass, domain, close_service)
+    calls_set = async_mock_service(menuai, domain, set_position_service)
+    calls_open = async_mock_service(menuai, domain, open_service)
+    calls_close = async_mock_service(menuai, domain, close_service)
 
     await trt.execute(trait.COMMAND_OPEN_CLOSE, BASIC_DATA, {"openPercent": 50}, {})
     await trt.execute(
@@ -3158,7 +3158,7 @@ async def test_openclose_cover_valve(
     ],
 )
 async def test_openclose_cover_valve_unknown_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     open_service: str,
     domain: str,
     set_position_feature: int,
@@ -3172,7 +3172,7 @@ async def test_openclose_cover_valve_unknown_state(
 
     # No state
     trt = trait.OpenCloseTrait(
-        hass,
+        menuai,
         State(
             f"{domain}.bla",
             STATE_UNKNOWN,
@@ -3186,7 +3186,7 @@ async def test_openclose_cover_valve_unknown_state(
     with pytest.raises(helpers.SmartHomeError):
         trt.query_attributes()
 
-    calls = async_mock_service(hass, domain, open_service)
+    calls = async_mock_service(menuai, domain, open_service)
     await trt.execute(trait.COMMAND_OPEN_CLOSE, BASIC_DATA, {"openPercent": 100}, {})
     assert len(calls) == 1
     assert calls[0].data == {ATTR_ENTITY_ID: f"{domain}.bla"}
@@ -3213,7 +3213,7 @@ async def test_openclose_cover_valve_unknown_state(
     ],
 )
 async def test_openclose_cover_valve_assumed_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     domain: str,
     set_position_service: str,
     set_position_feature: int,
@@ -3224,7 +3224,7 @@ async def test_openclose_cover_valve_assumed_state(
     assert trait.OpenCloseTrait.supported(domain, set_position_feature, None, None)
 
     trt = trait.OpenCloseTrait(
-        hass,
+        menuai,
         State(
             f"{domain}.bla",
             state_open,
@@ -3240,7 +3240,7 @@ async def test_openclose_cover_valve_assumed_state(
 
     assert trt.query_attributes() == {}
 
-    calls = async_mock_service(hass, domain, set_position_service)
+    calls = async_mock_service(menuai, domain, set_position_service)
     await trt.execute(trait.COMMAND_OPEN_CLOSE, BASIC_DATA, {"openPercent": 40}, {})
     assert len(calls) == 1
     assert calls[0].data == {ATTR_ENTITY_ID: f"{domain}.bla", cover.ATTR_POSITION: 40}
@@ -3260,7 +3260,7 @@ async def test_openclose_cover_valve_assumed_state(
     ],
 )
 async def test_openclose_cover_valve_query_only(
-    hass: HomeAssistant,
+    menuai: menuai,
     domain: str,
     state_open: str,
 ) -> None:
@@ -3274,7 +3274,7 @@ async def test_openclose_cover_valve_query_only(
     )
 
     trt = trait.OpenCloseTrait(
-        hass,
+        menuai,
         state,
         BASIC_CONFIG,
     )
@@ -3315,7 +3315,7 @@ async def test_openclose_cover_valve_query_only(
     ],
 )
 async def test_openclose_cover_valve_no_position(
-    hass: HomeAssistant,
+    menuai: menuai,
     domain: str,
     state_open: str,
     state_closed: str,
@@ -3341,7 +3341,7 @@ async def test_openclose_cover_valve_no_position(
     )
 
     trt = trait.OpenCloseTrait(
-        hass,
+        menuai,
         state,
         BASIC_CONFIG,
     )
@@ -3354,12 +3354,12 @@ async def test_openclose_cover_valve_no_position(
     assert trt.sync_attributes() == {"discreteOnlyOpenClose": True}
     assert trt.query_attributes() == {"openPercent": 0}
 
-    calls = async_mock_service(hass, domain, close_service)
+    calls = async_mock_service(menuai, domain, close_service)
     await trt.execute(trait.COMMAND_OPEN_CLOSE, BASIC_DATA, {"openPercent": 0}, {})
     assert len(calls) == 1
     assert calls[0].data == {ATTR_ENTITY_ID: f"{domain}.bla"}
 
-    calls = async_mock_service(hass, domain, open_service)
+    calls = async_mock_service(menuai, domain, open_service)
     await trt.execute(trait.COMMAND_OPEN_CLOSE, BASIC_DATA, {"openPercent": 100}, {})
     assert len(calls) == 1
     assert calls[0].data == {ATTR_ENTITY_ID: f"{domain}.bla"}
@@ -3386,7 +3386,7 @@ async def test_openclose_cover_valve_no_position(
         cover.CoverDeviceClass.GATE,
     ],
 )
-async def test_openclose_cover_secure(hass: HomeAssistant, device_class) -> None:
+async def test_openclose_cover_secure(menuai: menuai, device_class) -> None:
     """Test OpenClose trait support for cover domain."""
     assert helpers.get_google_type(cover.DOMAIN, device_class) is not None
     assert trait.OpenCloseTrait.supported(
@@ -3397,7 +3397,7 @@ async def test_openclose_cover_secure(hass: HomeAssistant, device_class) -> None
     )
 
     trt = trait.OpenCloseTrait(
-        hass,
+        menuai,
         State(
             "cover.bla",
             cover.STATE_OPEN,
@@ -3413,8 +3413,8 @@ async def test_openclose_cover_secure(hass: HomeAssistant, device_class) -> None
     assert trt.sync_attributes() == {}
     assert trt.query_attributes() == {"openPercent": 75}
 
-    calls = async_mock_service(hass, cover.DOMAIN, cover.SERVICE_SET_COVER_POSITION)
-    calls_close = async_mock_service(hass, cover.DOMAIN, cover.SERVICE_CLOSE_COVER)
+    calls = async_mock_service(menuai, cover.DOMAIN, cover.SERVICE_SET_COVER_POSITION)
+    calls_close = async_mock_service(menuai, cover.DOMAIN, cover.SERVICE_CLOSE_COVER)
 
     # No challenge data
     with pytest.raises(error.ChallengeNeeded) as err:
@@ -3454,13 +3454,13 @@ async def test_openclose_cover_secure(hass: HomeAssistant, device_class) -> None
         binary_sensor.BinarySensorDeviceClass.WINDOW,
     ],
 )
-async def test_openclose_binary_sensor(hass: HomeAssistant, device_class) -> None:
+async def test_openclose_binary_sensor(menuai: menuai, device_class) -> None:
     """Test OpenClose trait support for binary_sensor domain."""
     assert helpers.get_google_type(binary_sensor.DOMAIN, device_class) is not None
     assert trait.OpenCloseTrait.supported(binary_sensor.DOMAIN, 0, device_class, None)
 
     trt = trait.OpenCloseTrait(
-        hass,
+        menuai,
         State("binary_sensor.test", STATE_ON, {ATTR_DEVICE_CLASS: device_class}),
         BASIC_CONFIG,
     )
@@ -3473,7 +3473,7 @@ async def test_openclose_binary_sensor(hass: HomeAssistant, device_class) -> Non
     assert trt.query_attributes() == {"openPercent": 100}
 
     trt = trait.OpenCloseTrait(
-        hass,
+        menuai,
         State("binary_sensor.test", STATE_OFF, {ATTR_DEVICE_CLASS: device_class}),
         BASIC_CONFIG,
     )
@@ -3486,7 +3486,7 @@ async def test_openclose_binary_sensor(hass: HomeAssistant, device_class) -> Non
     assert trt.query_attributes() == {"openPercent": 0}
 
 
-async def test_volume_media_player(hass: HomeAssistant) -> None:
+async def test_volume_media_player(menuai: menuai) -> None:
     """Test volume trait support for media player domain."""
     assert helpers.get_google_type(media_player.DOMAIN, None) is not None
     assert trait.VolumeTrait.supported(
@@ -3497,7 +3497,7 @@ async def test_volume_media_player(hass: HomeAssistant) -> None:
     )
 
     trt = trait.VolumeTrait(
-        hass,
+        menuai,
         State(
             "media_player.bla",
             media_player.STATE_PLAYING,
@@ -3519,7 +3519,7 @@ async def test_volume_media_player(hass: HomeAssistant) -> None:
     assert trt.query_attributes() == {"currentVolume": 30}
 
     calls = async_mock_service(
-        hass, media_player.DOMAIN, media_player.SERVICE_VOLUME_SET
+        menuai, media_player.DOMAIN, media_player.SERVICE_VOLUME_SET
     )
     await trt.execute(trait.COMMAND_SET_VOLUME, BASIC_DATA, {"volumeLevel": 60}, {})
     assert len(calls) == 1
@@ -3529,7 +3529,7 @@ async def test_volume_media_player(hass: HomeAssistant) -> None:
     }
 
     calls = async_mock_service(
-        hass, media_player.DOMAIN, media_player.SERVICE_VOLUME_SET
+        menuai, media_player.DOMAIN, media_player.SERVICE_VOLUME_SET
     )
     await trt.execute(
         trait.COMMAND_VOLUME_RELATIVE, BASIC_DATA, {"relativeSteps": 10}, {}
@@ -3541,7 +3541,7 @@ async def test_volume_media_player(hass: HomeAssistant) -> None:
     }
 
 
-async def test_volume_media_player_relative(hass: HomeAssistant) -> None:
+async def test_volume_media_player_relative(menuai: menuai) -> None:
     """Test volume trait support for relative-volume-only media players."""
     assert trait.VolumeTrait.supported(
         media_player.DOMAIN,
@@ -3550,7 +3550,7 @@ async def test_volume_media_player_relative(hass: HomeAssistant) -> None:
         None,
     )
     trt = trait.VolumeTrait(
-        hass,
+        menuai,
         State(
             "media_player.bla",
             media_player.STATE_PLAYING,
@@ -3572,7 +3572,7 @@ async def test_volume_media_player_relative(hass: HomeAssistant) -> None:
     assert trt.query_attributes() == {}
 
     calls = async_mock_service(
-        hass, media_player.DOMAIN, media_player.SERVICE_VOLUME_UP
+        menuai, media_player.DOMAIN, media_player.SERVICE_VOLUME_UP
     )
 
     await trt.execute(
@@ -3588,7 +3588,7 @@ async def test_volume_media_player_relative(hass: HomeAssistant) -> None:
         }
 
     calls = async_mock_service(
-        hass, media_player.DOMAIN, media_player.SERVICE_VOLUME_DOWN
+        menuai, media_player.DOMAIN, media_player.SERVICE_VOLUME_DOWN
     )
     await trt.execute(
         trait.COMMAND_VOLUME_RELATIVE,
@@ -3609,7 +3609,7 @@ async def test_volume_media_player_relative(hass: HomeAssistant) -> None:
         await trt.execute(trait.COMMAND_MUTE, BASIC_DATA, {"mute": True}, {})
 
 
-async def test_media_player_mute(hass: HomeAssistant) -> None:
+async def test_media_player_mute(menuai: menuai) -> None:
     """Test volume trait support for muting."""
     assert trait.VolumeTrait.supported(
         media_player.DOMAIN,
@@ -3618,7 +3618,7 @@ async def test_media_player_mute(hass: HomeAssistant) -> None:
         None,
     )
     trt = trait.VolumeTrait(
-        hass,
+        menuai,
         State(
             "media_player.bla",
             media_player.STATE_PLAYING,
@@ -3642,7 +3642,7 @@ async def test_media_player_mute(hass: HomeAssistant) -> None:
     assert trt.query_attributes() == {"isMuted": False}
 
     mute_calls = async_mock_service(
-        hass, media_player.DOMAIN, media_player.SERVICE_VOLUME_MUTE
+        menuai, media_player.DOMAIN, media_player.SERVICE_VOLUME_MUTE
     )
     await trt.execute(
         trait.COMMAND_MUTE,
@@ -3657,7 +3657,7 @@ async def test_media_player_mute(hass: HomeAssistant) -> None:
     }
 
     unmute_calls = async_mock_service(
-        hass, media_player.DOMAIN, media_player.SERVICE_VOLUME_MUTE
+        menuai, media_player.DOMAIN, media_player.SERVICE_VOLUME_MUTE
     )
     await trt.execute(
         trait.COMMAND_MUTE,
@@ -3672,7 +3672,7 @@ async def test_media_player_mute(hass: HomeAssistant) -> None:
     }
 
 
-async def test_temperature_control_sensor(hass: HomeAssistant) -> None:
+async def test_temperature_control_sensor(menuai: menuai) -> None:
     """Test TemperatureControl trait support for temperature sensor."""
     assert (
         helpers.get_google_type(sensor.DOMAIN, sensor.SensorDeviceClass.TEMPERATURE)
@@ -3696,13 +3696,13 @@ async def test_temperature_control_sensor(hass: HomeAssistant) -> None:
     ],
 )
 async def test_temperature_control_sensor_data(
-    hass: HomeAssistant, unit_in: UnitSystem, unit_out, state, ambient
+    menuai: menuai, unit_in: UnitSystem, unit_out, state, ambient
 ) -> None:
     """Test TemperatureControl trait support for temperature sensor."""
-    hass.config.units = unit_in
+    menuai.config.units = unit_in
 
     trt = trait.TemperatureControlTrait(
-        hass,
+        menuai,
         State(
             "sensor.test",
             state,
@@ -3726,7 +3726,7 @@ async def test_temperature_control_sensor_data(
         assert trt.query_attributes() == {}
 
 
-async def test_humidity_setting_sensor(hass: HomeAssistant) -> None:
+async def test_humidity_setting_sensor(menuai: menuai) -> None:
     """Test HumiditySetting trait support for humidity sensor."""
     assert (
         helpers.get_google_type(sensor.DOMAIN, sensor.SensorDeviceClass.HUMIDITY)
@@ -3744,11 +3744,11 @@ async def test_humidity_setting_sensor(hass: HomeAssistant) -> None:
     ("state", "ambient"), [("70", 70), ("unavailable", None), ("unknown", None)]
 )
 async def test_humidity_setting_sensor_data(
-    hass: HomeAssistant, state, ambient
+    menuai: menuai, state, ambient
 ) -> None:
     """Test HumiditySetting trait support for humidity sensor."""
     trt = trait.HumiditySettingTrait(
-        hass,
+        menuai,
         State(
             "sensor.test", state, {ATTR_DEVICE_CLASS: sensor.SensorDeviceClass.HUMIDITY}
         ),
@@ -3767,7 +3767,7 @@ async def test_humidity_setting_sensor_data(
 
 
 async def test_transport_control(
-    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+    menuai: menuai, freezer: FrozenDateTimeFactory
 ) -> None:
     """Test the TransportControlTrait."""
     assert helpers.get_google_type(media_player.DOMAIN, None) is not None
@@ -3780,7 +3780,7 @@ async def test_transport_control(
     now = datetime(2020, 1, 1, tzinfo=dt_util.UTC)
 
     trt = trait.TransportControlTrait(
-        hass,
+        menuai,
         State(
             "media_player.bla",
             media_player.STATE_PLAYING,
@@ -3804,7 +3804,7 @@ async def test_transport_control(
 
     # COMMAND_MEDIA_SEEK_RELATIVE
     calls = async_mock_service(
-        hass, media_player.DOMAIN, media_player.SERVICE_MEDIA_SEEK
+        menuai, media_player.DOMAIN, media_player.SERVICE_MEDIA_SEEK
     )
 
     # Patch to avoid time ticking over during the command failing the test
@@ -3824,7 +3824,7 @@ async def test_transport_control(
 
     # COMMAND_MEDIA_SEEK_TO_POSITION
     calls = async_mock_service(
-        hass, media_player.DOMAIN, media_player.SERVICE_MEDIA_SEEK
+        menuai, media_player.DOMAIN, media_player.SERVICE_MEDIA_SEEK
     )
     await trt.execute(
         trait.COMMAND_MEDIA_SEEK_TO_POSITION, BASIC_DATA, {"absPositionMs": 50000}, {}
@@ -3837,7 +3837,7 @@ async def test_transport_control(
 
     # COMMAND_MEDIA_NEXT
     calls = async_mock_service(
-        hass, media_player.DOMAIN, media_player.SERVICE_MEDIA_NEXT_TRACK
+        menuai, media_player.DOMAIN, media_player.SERVICE_MEDIA_NEXT_TRACK
     )
     await trt.execute(trait.COMMAND_MEDIA_NEXT, BASIC_DATA, {}, {})
     assert len(calls) == 1
@@ -3845,7 +3845,7 @@ async def test_transport_control(
 
     # COMMAND_MEDIA_PAUSE
     calls = async_mock_service(
-        hass, media_player.DOMAIN, media_player.SERVICE_MEDIA_PAUSE
+        menuai, media_player.DOMAIN, media_player.SERVICE_MEDIA_PAUSE
     )
     await trt.execute(trait.COMMAND_MEDIA_PAUSE, BASIC_DATA, {}, {})
     assert len(calls) == 1
@@ -3853,7 +3853,7 @@ async def test_transport_control(
 
     # COMMAND_MEDIA_PREVIOUS
     calls = async_mock_service(
-        hass, media_player.DOMAIN, media_player.SERVICE_MEDIA_PREVIOUS_TRACK
+        menuai, media_player.DOMAIN, media_player.SERVICE_MEDIA_PREVIOUS_TRACK
     )
     await trt.execute(trait.COMMAND_MEDIA_PREVIOUS, BASIC_DATA, {}, {})
     assert len(calls) == 1
@@ -3861,7 +3861,7 @@ async def test_transport_control(
 
     # COMMAND_MEDIA_RESUME
     calls = async_mock_service(
-        hass, media_player.DOMAIN, media_player.SERVICE_MEDIA_PLAY
+        menuai, media_player.DOMAIN, media_player.SERVICE_MEDIA_PLAY
     )
     await trt.execute(trait.COMMAND_MEDIA_RESUME, BASIC_DATA, {}, {})
     assert len(calls) == 1
@@ -3869,7 +3869,7 @@ async def test_transport_control(
 
     # COMMAND_MEDIA_SHUFFLE
     calls = async_mock_service(
-        hass, media_player.DOMAIN, media_player.SERVICE_SHUFFLE_SET
+        menuai, media_player.DOMAIN, media_player.SERVICE_SHUFFLE_SET
     )
     await trt.execute(trait.COMMAND_MEDIA_SHUFFLE, BASIC_DATA, {}, {})
     assert len(calls) == 1
@@ -3880,7 +3880,7 @@ async def test_transport_control(
 
     # COMMAND_MEDIA_STOP
     calls = async_mock_service(
-        hass, media_player.DOMAIN, media_player.SERVICE_MEDIA_STOP
+        menuai, media_player.DOMAIN, media_player.SERVICE_MEDIA_STOP
     )
     await trt.execute(trait.COMMAND_MEDIA_STOP, BASIC_DATA, {}, {})
     assert len(calls) == 1
@@ -3900,7 +3900,7 @@ async def test_transport_control(
         STATE_UNKNOWN,
     ],
 )
-async def test_media_state(hass: HomeAssistant, state) -> None:
+async def test_media_state(menuai: menuai, state) -> None:
     """Test the MediaStateTrait."""
     assert helpers.get_google_type(media_player.DOMAIN, None) is not None
 
@@ -3909,7 +3909,7 @@ async def test_media_state(hass: HomeAssistant, state) -> None:
     )
 
     trt = trait.MediaStateTrait(
-        hass,
+        menuai,
         State(
             "media_player.bla",
             state,
@@ -3934,7 +3934,7 @@ async def test_media_state(hass: HomeAssistant, state) -> None:
     }
 
 
-async def test_channel(hass: HomeAssistant) -> None:
+async def test_channel(menuai: menuai) -> None:
     """Test Channel trait support."""
     assert helpers.get_google_type(media_player.DOMAIN, None) is not None
     assert trait.ChannelTrait.supported(
@@ -3954,7 +3954,7 @@ async def test_channel(hass: HomeAssistant) -> None:
     )
     assert trait.ChannelTrait.supported(media_player.DOMAIN, 0, None, None) is False
 
-    trt = trait.ChannelTrait(hass, State("media_player.demo", STATE_ON), BASIC_CONFIG)
+    trt = trait.ChannelTrait(menuai, State("media_player.demo", STATE_ON), BASIC_CONFIG)
 
     assert trt.sync_attributes() == {
         "availableChannels": [],
@@ -3963,7 +3963,7 @@ async def test_channel(hass: HomeAssistant) -> None:
     assert trt.query_attributes() == {}
 
     media_player_calls = async_mock_service(
-        hass, media_player.DOMAIN, SERVICE_PLAY_MEDIA
+        menuai, media_player.DOMAIN, SERVICE_PLAY_MEDIA
     )
     await trt.execute(
         trait.COMMAND_SELECT_CHANNEL, BASIC_DATA, {"channelNumber": "1"}, {}
@@ -3986,10 +3986,10 @@ async def test_channel(hass: HomeAssistant) -> None:
     assert len(media_player_calls) == 1
 
 
-async def test_air_quality_description_for_aqi(hass: HomeAssistant) -> None:
+async def test_air_quality_description_for_aqi(menuai: menuai) -> None:
     """Test air quality description for a given AQI value."""
     trt = trait.SensorStateTrait(
-        hass,
+        menuai,
         State(
             "sensor.test",
             100.0,
@@ -4011,10 +4011,10 @@ async def test_air_quality_description_for_aqi(hass: HomeAssistant) -> None:
     assert trt._air_quality_description_for_aqi(-1) == "unknown"
 
 
-async def test_null_device_class(hass: HomeAssistant) -> None:
+async def test_null_device_class(menuai: menuai) -> None:
     """Test handling a null device_class in sync_attributes and query_attributes."""
     trt = trait.SensorStateTrait(
-        hass,
+        menuai,
         State(
             "sensor.test",
             100.0,
@@ -4040,7 +4040,7 @@ async def test_null_device_class(hass: HomeAssistant) -> None:
     ],
 )
 async def test_sensorstate(
-    hass: HomeAssistant, value: Any, published: Any, aqi: Any
+    menuai: menuai, value: Any, published: Any, aqi: Any
 ) -> None:
     """Test SensorState trait support for sensor domain."""
     sensor_types = {
@@ -4060,7 +4060,7 @@ async def test_sensorstate(
         assert trait.SensorStateTrait.supported(sensor.DOMAIN, None, sensor_type, None)
 
         trt = trait.SensorStateTrait(
-            hass,
+            menuai,
             State(
                 "sensor.test",
                 value,
@@ -4157,7 +4157,7 @@ async def test_sensorstate(
     ],
 )
 async def test_binary_sensorstate(
-    hass: HomeAssistant,
+    menuai: menuai,
     state: str,
     identifier: int,
     device_class: binary_sensor.BinarySensorDeviceClass,
@@ -4172,7 +4172,7 @@ async def test_binary_sensorstate(
     )
 
     trt = trait.SensorStateTrait(
-        hass,
+        menuai,
         State(
             "binary_sensor.test",
             state,

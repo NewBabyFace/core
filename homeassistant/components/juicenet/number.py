@@ -6,15 +6,15 @@ from dataclasses import dataclass
 
 from pyjuicenet import Api, Charger
 
-from homeassistant.components.number import (
+from menuai.components.number import (
     DEFAULT_MAX_VALUE,
     NumberEntity,
     NumberEntityDescription,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN, JUICENET_API, JUICENET_COORDINATOR
 from .entity import JuiceNetDevice
@@ -41,12 +41,12 @@ NUMBER_TYPES: tuple[JuiceNetNumberEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the JuiceNet Numbers."""
-    juicenet_data = hass.data[DOMAIN][config_entry.entry_id]
+    juicenet_data = menuai.data[DOMAIN][config_entry.entry_id]
     api: Api = juicenet_data[JUICENET_API]
     coordinator = juicenet_data[JUICENET_COORDINATOR]
 

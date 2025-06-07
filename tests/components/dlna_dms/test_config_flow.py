@@ -11,12 +11,12 @@ from unittest.mock import Mock, patch
 from async_upnp_client.exceptions import UpnpError
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.dlna_dms.const import CONF_SOURCE_ID, DOMAIN
-from homeassistant.const import CONF_DEVICE_ID, CONF_HOST, CONF_URL
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.ssdp import (
+from menuai import config_entries
+from menuai.components.dlna_dms.const import CONF_SOURCE_ID, DOMAIN
+from menuai.const import CONF_DEVICE_ID, CONF_HOST, CONF_URL
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.ssdp import (
     ATTR_UPNP_DEVICE_TYPE,
     ATTR_UPNP_FRIENDLY_NAME,
     ATTR_UPNP_SERVICE_LIST,
@@ -69,7 +69,7 @@ MOCK_DISCOVERY: Final = SsdpServiceInfo(
             ]
         },
     },
-    x_homeassistant_matching_domains={DOMAIN},
+    x_menuai_matching_domains={DOMAIN},
 )
 
 
@@ -77,13 +77,13 @@ MOCK_DISCOVERY: Final = SsdpServiceInfo(
 def mock_setup_entry() -> Generator[Mock]:
     """Avoid setting up the entire integration."""
     with patch(
-        "homeassistant.components.dlna_dms.async_setup_entry",
+        "menuai.components.dlna_dms.async_setup_entry",
         return_value=True,
     ) as mock:
         yield mock
 
 
-async def test_user_flow(hass: HomeAssistant, ssdp_scanner_mock: Mock) -> None:
+async def test_user_flow(menuai: menuai, ssdp_scanner_mock: Mock) -> None:
     """Test user-init'd flow, user selects discovered device."""
     ssdp_scanner_mock.async_get_discovery_info_by_st.side_effect = [
         [MOCK_DISCOVERY],
@@ -92,17 +92,17 @@ async def test_user_flow(hass: HomeAssistant, ssdp_scanner_mock: Mock) -> None:
         [],
     ]
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] is None
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={CONF_HOST: MOCK_DEVICE_HOST}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == MOCK_DEVICE_NAME
@@ -115,7 +115,7 @@ async def test_user_flow(hass: HomeAssistant, ssdp_scanner_mock: Mock) -> None:
 
 
 async def test_user_flow_no_devices(
-    hass: HomeAssistant, ssdp_scanner_mock: Mock
+    menuai: menuai, ssdp_scanner_mock: Mock
 ) -> None:
     """Test user-init'd flow, there's really no devices to choose from."""
     ssdp_scanner_mock.async_get_discovery_info_by_st.side_effect = [
@@ -125,19 +125,19 @@ async def test_user_flow_no_devices(
         [],
     ]
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "no_devices_found"
 
 
-async def test_ssdp_flow_success(hass: HomeAssistant) -> None:
+async def test_ssdp_flow_success(menuai: menuai) -> None:
     """Test that SSDP discovery with an available device works."""
-    logging.getLogger("homeassistant.components.dlna_dms.config_flow").setLevel(
+    logging.getLogger("menuai.components.dlna_dms.config_flow").setLevel(
         logging.DEBUG
     )
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_SSDP},
         data=MOCK_DISCOVERY,
@@ -145,10 +145,10 @@ async def test_ssdp_flow_success(hass: HomeAssistant) -> None:
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == MOCK_DEVICE_NAME
@@ -161,14 +161,14 @@ async def test_ssdp_flow_success(hass: HomeAssistant) -> None:
 
 
 async def test_ssdp_flow_unavailable(
-    hass: HomeAssistant, upnp_factory_mock: Mock
+    menuai: menuai, upnp_factory_mock: Mock
 ) -> None:
     """Test that SSDP discovery with an unavailable device still succeeds.
 
     All the required information for configuration is obtained from the SSDP
     message, there's no need to connect to the device to configure it.
     """
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_SSDP},
         data=MOCK_DISCOVERY,
@@ -178,10 +178,10 @@ async def test_ssdp_flow_unavailable(
 
     upnp_factory_mock.async_create_device.side_effect = UpnpError
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == MOCK_DEVICE_NAME
@@ -194,11 +194,11 @@ async def test_ssdp_flow_unavailable(
 
 
 async def test_ssdp_flow_existing(
-    hass: HomeAssistant, config_entry_mock: MockConfigEntry
+    menuai: menuai, config_entry_mock: MockConfigEntry
 ) -> None:
     """Test that SSDP discovery of existing config entry updates the URL."""
-    config_entry_mock.add_to_hass(hass)
-    result = await hass.config_entries.flow.async_init(
+    config_entry_mock.add_to_menuai(menuai)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_SSDP},
         data=SsdpServiceInfo(
@@ -219,11 +219,11 @@ async def test_ssdp_flow_existing(
 
 
 async def test_ssdp_flow_duplicate_location(
-    hass: HomeAssistant, config_entry_mock: MockConfigEntry
+    menuai: menuai, config_entry_mock: MockConfigEntry
 ) -> None:
     """Test that discovery of device with URL matching existing entry gets aborted."""
-    config_entry_mock.add_to_hass(hass)
-    result = await hass.config_entries.flow.async_init(
+    config_entry_mock.add_to_menuai(menuai)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_SSDP},
         data=MOCK_DISCOVERY,
@@ -233,11 +233,11 @@ async def test_ssdp_flow_duplicate_location(
     assert config_entry_mock.data[CONF_URL] == MOCK_DEVICE_LOCATION
 
 
-async def test_ssdp_flow_bad_data(hass: HomeAssistant) -> None:
+async def test_ssdp_flow_bad_data(menuai: menuai) -> None:
     """Test bad SSDP discovery information is rejected cleanly."""
     # Missing location
     discovery = dataclasses.replace(MOCK_DISCOVERY, ssdp_location="")
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_SSDP},
         data=discovery,
@@ -247,7 +247,7 @@ async def test_ssdp_flow_bad_data(hass: HomeAssistant) -> None:
 
     # Missing USN
     discovery = dataclasses.replace(MOCK_DISCOVERY, ssdp_usn="")
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_SSDP},
         data=discovery,
@@ -257,11 +257,11 @@ async def test_ssdp_flow_bad_data(hass: HomeAssistant) -> None:
 
 
 async def test_duplicate_name(
-    hass: HomeAssistant, config_entry_mock: MockConfigEntry
+    menuai: menuai, config_entry_mock: MockConfigEntry
 ) -> None:
     """Test device with name same as other devices results in no error."""
     # Add two entries to test generate_source_id() tries for no collisions
-    config_entry_mock.add_to_hass(hass)
+    config_entry_mock.add_to_menuai(menuai)
     mock_entry_1 = MockConfigEntry(
         unique_id="mock_entry_1",
         domain=DOMAIN,
@@ -272,7 +272,7 @@ async def test_duplicate_name(
         },
         title=MOCK_DEVICE_NAME,
     )
-    mock_entry_1.add_to_hass(hass)
+    mock_entry_1.add_to_menuai(menuai)
 
     # New UDN, USN, and location to be sure it's a new device
     new_device_udn = "uuid:7bf34520-f034-4fa2-8d2d-2f709d422000"
@@ -287,7 +287,7 @@ async def test_duplicate_name(
     discovery.upnp = dict(discovery.upnp)
     discovery.upnp[ATTR_UPNP_UDN] = new_device_udn
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_SSDP},
         data=discovery,
@@ -295,10 +295,10 @@ async def test_duplicate_name(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == MOCK_DEVICE_NAME
@@ -311,11 +311,11 @@ async def test_duplicate_name(
 
 
 async def test_ssdp_flow_upnp_udn(
-    hass: HomeAssistant, config_entry_mock: MockConfigEntry
+    menuai: menuai, config_entry_mock: MockConfigEntry
 ) -> None:
     """Test that SSDP discovery ignores the root device's UDN."""
-    config_entry_mock.add_to_hass(hass)
-    result = await hass.config_entries.flow.async_init(
+    config_entry_mock.add_to_menuai(menuai)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_SSDP},
         data=SsdpServiceInfo(
@@ -335,13 +335,13 @@ async def test_ssdp_flow_upnp_udn(
     assert config_entry_mock.data[CONF_URL] == NEW_DEVICE_LOCATION
 
 
-async def test_ssdp_missing_services(hass: HomeAssistant) -> None:
+async def test_ssdp_missing_services(menuai: menuai) -> None:
     """Test SSDP ignores devices that are missing required services."""
     # No service list at all
     discovery = dataclasses.replace(MOCK_DISCOVERY)
     discovery.upnp = dict(discovery.upnp)
     del discovery.upnp[ATTR_UPNP_SERVICE_LIST]
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_SSDP},
         data=discovery,
@@ -353,7 +353,7 @@ async def test_ssdp_missing_services(hass: HomeAssistant) -> None:
     discovery = dataclasses.replace(MOCK_DISCOVERY)
     discovery.upnp = dict(discovery.upnp)
     discovery.upnp[ATTR_UPNP_SERVICE_LIST] = {"bad_key": "bad_value"}
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_SSDP},
         data=discovery,
@@ -371,14 +371,14 @@ async def test_ssdp_missing_services(hass: HomeAssistant) -> None:
             if service.get("serviceId") != "urn:upnp-org:serviceId:ContentDirectory"
         ]
     }
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_SSDP}, data=discovery
     )
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "not_dms"
 
 
-async def test_ssdp_single_service(hass: HomeAssistant) -> None:
+async def test_ssdp_single_service(menuai: menuai) -> None:
     """Test SSDP discovery info with only one service defined.
 
     THe etree_to_dict function turns multiple services into a list of dicts, but
@@ -391,7 +391,7 @@ async def test_ssdp_single_service(hass: HomeAssistant) -> None:
     service_list["service"] = service_list["service"][0]
     discovery.upnp[ATTR_UPNP_SERVICE_LIST] = service_list
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_SSDP},
         data=discovery,

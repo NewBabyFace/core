@@ -5,9 +5,9 @@ from __future__ import annotations
 from pycognito.exceptions import WarrantException
 import pyschlage
 
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
+from menuai.const import CONF_PASSWORD, CONF_USERNAME, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
 
 from .coordinator import SchlageConfigEntry, SchlageDataUpdateCoordinator
 
@@ -20,24 +20,24 @@ PLATFORMS: list[Platform] = [
 ]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: SchlageConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: SchlageConfigEntry) -> bool:
     """Set up Schlage from a config entry."""
     username = entry.data[CONF_USERNAME]
     password = entry.data[CONF_PASSWORD]
     try:
-        auth = await hass.async_add_executor_job(pyschlage.Auth, username, password)
+        auth = await menuai.async_add_executor_job(pyschlage.Auth, username, password)
     except WarrantException as ex:
         raise ConfigEntryAuthFailed from ex
 
     coordinator = SchlageDataUpdateCoordinator(
-        hass, entry, username, pyschlage.Schlage(auth)
+        menuai, entry, username, pyschlage.Schlage(auth)
     )
     entry.runtime_data = coordinator
     await coordinator.async_config_entry_first_refresh()
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: SchlageConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: SchlageConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

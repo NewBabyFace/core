@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from homeassistant.components.text import TextEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.text import TextEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import setup_mysensors_platform
 from .const import MYSENSORS_DISCOVERY, DiscoveryInfo
@@ -15,7 +15,7 @@ from .entity import MySensorsChildEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -25,7 +25,7 @@ async def async_setup_entry(
     def async_discover(discovery_info: DiscoveryInfo) -> None:
         """Discover and add a MySensors text entity."""
         setup_mysensors_platform(
-            hass,
+            menuai,
             Platform.TEXT,
             discovery_info,
             MySensorsText,
@@ -34,7 +34,7 @@ async def async_setup_entry(
 
     config_entry.async_on_unload(
         async_dispatcher_connect(
-            hass,
+            menuai,
             MYSENSORS_DISCOVERY.format(config_entry.entry_id, Platform.TEXT),
             async_discover,
         ),

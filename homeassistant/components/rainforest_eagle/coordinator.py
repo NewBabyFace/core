@@ -9,11 +9,11 @@ import logging
 import aioeagle
 from eagle100 import Eagle as Eagle100Reader
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_TYPE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import aiohttp_client
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, CONF_TYPE
+from menuai.core import menuai
+from menuai.helpers import aiohttp_client
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
     CONF_CLOUD_ID,
@@ -33,7 +33,7 @@ class EagleDataCoordinator(DataUpdateCoordinator):
     eagle100_reader: Eagle100Reader | None = None
     eagle200_meter: aioeagle.ElectricMeter | None = None
 
-    def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: ConfigEntry) -> None:
         """Initialize the data object."""
         if config_entry.data[CONF_TYPE] == TYPE_EAGLE_100:
             self.model = "EAGLE-100"
@@ -43,7 +43,7 @@ class EagleDataCoordinator(DataUpdateCoordinator):
             update_method = self._async_update_data_200
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=config_entry.data[CONF_CLOUD_ID],
@@ -73,7 +73,7 @@ class EagleDataCoordinator(DataUpdateCoordinator):
         """Get the latest data from the Eagle-200 device."""
         if (eagle200_meter := self.eagle200_meter) is None:
             hub = aioeagle.EagleHub(
-                aiohttp_client.async_get_clientsession(self.hass),
+                aiohttp_client.async_get_clientsession(self.menuai),
                 self.cloud_id,
                 self.config_entry.data[CONF_INSTALL_CODE],
                 host=self.config_entry.data[CONF_HOST],
@@ -99,7 +99,7 @@ class EagleDataCoordinator(DataUpdateCoordinator):
     async def _async_update_data_100(self):
         """Get the latest data from the Eagle-100 device."""
         try:
-            data = await self.hass.async_add_executor_job(self._fetch_data_100)
+            data = await self.menuai.async_add_executor_job(self._fetch_data_100)
         except UPDATE_100_ERRORS as error:
             raise UpdateFailed from error
 

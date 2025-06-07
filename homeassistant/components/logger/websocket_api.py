@@ -4,11 +4,11 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.components.websocket_api import ActiveConnection
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.loader import IntegrationNotFound, async_get_integration
-from homeassistant.setup import async_get_loaded_integrations
+from menuai.components import websocket_api
+from menuai.components.websocket_api import ActiveConnection
+from menuai.core import menuai, callback
+from menuai.loader import IntegrationNotFound, async_get_integration
+from menuai.setup import async_get_loaded_integrations
 
 from .const import LOGSEVERITY
 from .helpers import (
@@ -21,17 +21,17 @@ from .helpers import (
 
 
 @callback
-def async_load_websocket_api(hass: HomeAssistant) -> None:
+def async_load_websocket_api(menuai: menuai) -> None:
     """Set up the websocket API."""
-    websocket_api.async_register_command(hass, handle_integration_log_info)
-    websocket_api.async_register_command(hass, handle_integration_log_level)
-    websocket_api.async_register_command(hass, handle_module_log_level)
+    websocket_api.async_register_command(menuai, handle_integration_log_info)
+    websocket_api.async_register_command(menuai, handle_integration_log_level)
+    websocket_api.async_register_command(menuai, handle_module_log_level)
 
 
 @callback
 @websocket_api.websocket_command({vol.Required("type"): "logger/log_info"})
 def handle_integration_log_info(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle integrations logger info."""
     connection.send_result(
@@ -40,10 +40,10 @@ def handle_integration_log_info(
             {
                 "domain": integration,
                 "level": get_logger(
-                    f"homeassistant.components.{integration}"
+                    f"menuai.components.{integration}"
                 ).getEffectiveLevel(),
             }
-            for integration in async_get_loaded_integrations(hass)
+            for integration in async_get_loaded_integrations(menuai)
         ],
     )
 
@@ -58,18 +58,18 @@ def handle_integration_log_info(
 )
 @websocket_api.async_response
 async def handle_integration_log_level(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle setting integration log level."""
     try:
-        await async_get_integration(hass, msg["integration"])
+        await async_get_integration(menuai, msg["integration"])
     except IntegrationNotFound:
         connection.send_error(
             msg["id"], websocket_api.ERR_NOT_FOUND, "Integration not found"
         )
         return
-    await hass.data[DATA_LOGGER].settings.async_update(
-        hass,
+    await menuai.data[DATA_LOGGER].settings.async_update(
+        menuai,
         msg["integration"],
         LoggerSetting(
             level=msg["level"],
@@ -90,11 +90,11 @@ async def handle_integration_log_level(
 )
 @websocket_api.async_response
 async def handle_module_log_level(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle setting integration log level."""
-    await hass.data[DATA_LOGGER].settings.async_update(
-        hass,
+    await menuai.data[DATA_LOGGER].settings.async_update(
+        menuai,
         msg["module"],
         LoggerSetting(
             level=msg["level"],

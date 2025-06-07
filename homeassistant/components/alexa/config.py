@@ -9,8 +9,8 @@ from typing import Any
 
 from yarl import URL
 
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
-from homeassistant.helpers.storage import Store
+from menuai.core import CALLBACK_TYPE, menuai, callback
+from menuai.helpers.storage import Store
 
 from .const import DOMAIN
 from .entities import TRANSLATION_TABLE
@@ -27,15 +27,15 @@ class AbstractConfig(ABC):
     _store: AlexaConfigStore
     _unsub_proactive_report: CALLBACK_TYPE | None = None
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize abstract config."""
-        self.hass = hass
+        self.menuai = menuai
         self._enable_proactive_mode_lock = asyncio.Lock()
         self._on_deinitialize: list[CALLBACK_TYPE] = []
 
     async def async_initialize(self) -> None:
         """Perform async initialization of config."""
-        self._store = AlexaConfigStore(self.hass)
+        self._store = AlexaConfigStore(self.menuai)
         await self._store.async_load()
 
     @callback
@@ -87,7 +87,7 @@ class AbstractConfig(ABC):
             if self._unsub_proactive_report is not None:
                 return
             self._unsub_proactive_report = await async_enable_proactive_mode(
-                self.hass, self
+                self.menuai, self
             )
 
     async def async_disable_proactive_mode(self) -> None:
@@ -149,11 +149,11 @@ class AlexaConfigStore:
     _STORAGE_VERSION = 1
     _STORAGE_KEY = DOMAIN
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize a configuration store."""
         self._data: dict[str, Any] | None = None
-        self._hass = hass
-        self._store: Store = Store(hass, self._STORAGE_VERSION, self._STORAGE_KEY)
+        self._menuai = menuai
+        self._store: Store = Store(menuai, self._STORAGE_VERSION, self._STORAGE_KEY)
 
     @property
     def authorized(self) -> bool:

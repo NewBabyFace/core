@@ -11,33 +11,33 @@ from typing import Any, Protocol
 import voluptuous as vol
 import yarl
 
-from homeassistant.components.hassio import (
+from menuai.components.menuaiio import (
     AddonError,
     AddonInfo,
     AddonManager,
     AddonState,
     hostname_from_addon_slug,
 )
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlowResult,
     OptionsFlow,
     OptionsFlowManager,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.data_entry_flow import AbortFlow
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.hassio import is_hassio
-from homeassistant.helpers.integration_platform import (
+from menuai.core import menuai, callback
+from menuai.data_entry_flow import AbortFlow
+from menuai.exceptions import menuaiError
+from menuai.helpers.menuaiio import is_menuaiio
+from menuai.helpers.integration_platform import (
     async_process_integration_platforms,
 )
-from homeassistant.helpers.selector import (
+from menuai.helpers.selector import (
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
 )
-from homeassistant.helpers.singleton import singleton
-from homeassistant.helpers.storage import Store
+from menuai.helpers.singleton import singleton
+from menuai.helpers.storage import Store
 
 from .const import LOGGER, SILABS_FLASHER_ADDON_SLUG, SILABS_MULTIPROTOCOL_ADDON_SLUG
 
@@ -57,7 +57,7 @@ CONF_ENABLE_MULTI_PAN = "enable_multi_pan"
 DEFAULT_CHANNEL = 15
 DEFAULT_CHANNEL_CHANGE_DELAY = 5 * 60  # Thread recommendation
 
-STORAGE_KEY = "homeassistant_hardware.silabs"
+STORAGE_KEY = "menuai_hardware.silabs"
 STORAGE_VERSION_MAJOR = 1
 STORAGE_VERSION_MINOR = 1
 SAVE_DELAY = 10
@@ -65,10 +65,10 @@ SAVE_DELAY = 10
 
 @singleton(DATA_MULTIPROTOCOL_ADDON_MANAGER)
 async def get_multiprotocol_addon_manager(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> MultiprotocolAddonManager:
     """Get the add-on manager."""
-    manager = MultiprotocolAddonManager(hass)
+    manager = MultiprotocolAddonManager(menuai)
     await manager.async_setup()
     return manager
 
@@ -123,10 +123,10 @@ class WaitingAddonManager(AddonManager):
 class MultiprotocolAddonManager(WaitingAddonManager):
     """Silicon Labs Multiprotocol add-on manager."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize the manager."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             "Silicon Labs Multiprotocol",
             SILABS_MULTIPROTOCOL_ADDON_SLUG,
@@ -134,7 +134,7 @@ class MultiprotocolAddonManager(WaitingAddonManager):
         self._channel: int | None = None
         self._platforms: dict[str, MultipanProtocol] = {}
         self._store: Store[dict[str, Any]] = Store(
-            hass,
+            menuai,
             STORAGE_VERSION_MAJOR,
             STORAGE_KEY,
             atomic_writes=True,
@@ -144,7 +144,7 @@ class MultiprotocolAddonManager(WaitingAddonManager):
     async def async_setup(self) -> None:
         """Set up the manager."""
         await async_process_integration_platforms(
-            self._hass,
+            self._menuai,
             "silabs_multiprotocol",
             self._register_multipan_platform,
             wait_for_platforms=True,
@@ -152,13 +152,13 @@ class MultiprotocolAddonManager(WaitingAddonManager):
         await self.async_load()
 
     async def _register_multipan_platform(
-        self, hass: HomeAssistant, integration_domain: str, platform: MultipanProtocol
+        self, menuai: menuai, integration_domain: str, platform: MultipanProtocol
     ) -> None:
         """Register a multipan platform."""
         self._platforms[integration_domain] = platform
 
-        channel = await platform.async_get_channel(hass)
-        using_multipan = await platform.async_using_multipan(hass)
+        channel = await platform.async_get_channel(menuai)
+        using_multipan = await platform.async_using_multipan(menuai)
 
         _LOGGER.info(
             "Registering new multipan platform '%s', using multipan: %s, channel: %s",
@@ -189,9 +189,9 @@ class MultiprotocolAddonManager(WaitingAddonManager):
         tasks = []
 
         for platform in self._platforms.values():
-            if not await platform.async_using_multipan(self._hass):
+            if not await platform.async_using_multipan(self._menuai):
                 continue
-            task = await platform.async_change_channel(self._hass, channel, delay)
+            task = await platform.async_change_channel(self._menuai, channel, delay)
             if not task:
                 continue
             tasks.append(task)
@@ -203,7 +203,7 @@ class MultiprotocolAddonManager(WaitingAddonManager):
         active_platforms: list[str] = []
 
         for integration_domain, platform in self._platforms.items():
-            if not await platform.async_using_multipan(self._hass):
+            if not await platform.async_using_multipan(self._menuai):
                 continue
             active_platforms.append(integration_domain)
 
@@ -247,20 +247,20 @@ class MultipanProtocol(Protocol):
     """Define the format of multipan platforms."""
 
     async def async_change_channel(
-        self, hass: HomeAssistant, channel: int, delay: float
+        self, menuai: menuai, channel: int, delay: float
     ) -> asyncio.Task | None:
         """Set the channel to be used.
 
         Does nothing if not configured or the multiprotocol add-on is not used.
         """
 
-    async def async_get_channel(self, hass: HomeAssistant) -> int | None:
+    async def async_get_channel(self, menuai: menuai) -> int | None:
         """Return the channel.
 
         Returns None if not configured or the multiprotocol add-on is not used.
         """
 
-    async def async_using_multipan(self, hass: HomeAssistant) -> bool:
+    async def async_using_multipan(self, menuai: menuai) -> bool:
         """Return if the multiprotocol device is used.
 
         Returns False if not configured.
@@ -269,10 +269,10 @@ class MultipanProtocol(Protocol):
 
 @singleton(DATA_FLASHER_ADDON_MANAGER)
 @callback
-def get_flasher_addon_manager(hass: HomeAssistant) -> WaitingAddonManager:
+def get_flasher_addon_manager(menuai: menuai) -> WaitingAddonManager:
     """Get the flasher add-on manager."""
     return WaitingAddonManager(
-        hass,
+        menuai,
         LOGGER,
         "Silicon Labs Flasher",
         SILABS_FLASHER_ADDON_SLUG,
@@ -310,7 +310,7 @@ class OptionsFlowHandler(OptionsFlow, ABC):
     def __init__(self, config_entry: ConfigEntry) -> None:
         """Set up the options flow."""
         # pylint: disable-next=import-outside-toplevel
-        from homeassistant.components.zha.radio_manager import (
+        from menuai.components.zha.radio_manager import (
             ZhaMultiPANMigrationHelper,
         )
 
@@ -344,7 +344,7 @@ class OptionsFlowHandler(OptionsFlow, ABC):
     @property
     def flow_manager(self) -> OptionsFlowManager:
         """Return the correct flow manager."""
-        return self.hass.config_entries.options
+        return self.menuai.config_entries.options
 
     async def _async_get_addon_info(self, addon_manager: AddonManager) -> AddonInfo:
         """Return and cache Silicon Labs Multiprotocol add-on info."""
@@ -373,8 +373,8 @@ class OptionsFlowHandler(OptionsFlow, ABC):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Manage the options."""
-        if not is_hassio(self.hass):
-            return self.async_abort(reason="not_hassio")
+        if not is_menuaiio(self.menuai):
+            return self.async_abort(reason="not_menuaiio")
 
         return await self.async_step_on_supervisor()
 
@@ -382,7 +382,7 @@ class OptionsFlowHandler(OptionsFlow, ABC):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle logic when on Supervisor host."""
-        multipan_manager = await get_multiprotocol_addon_manager(self.hass)
+        multipan_manager = await get_multiprotocol_addon_manager(self.menuai)
         addon_info = await self._async_get_addon_info(multipan_manager)
 
         if addon_info.state == AddonState.NOT_INSTALLED:
@@ -410,10 +410,10 @@ class OptionsFlowHandler(OptionsFlow, ABC):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Install Silicon Labs Multiprotocol add-on."""
-        multipan_manager = await get_multiprotocol_addon_manager(self.hass)
+        multipan_manager = await get_multiprotocol_addon_manager(self.menuai)
 
         if not self.install_task:
-            self.install_task = self.hass.async_create_task(
+            self.install_task = self.menuai.async_create_task(
                 multipan_manager.async_install_addon_waiting(),
                 "SiLabs Multiprotocol addon install",
                 eager_start=False,
@@ -441,7 +441,7 @@ class OptionsFlowHandler(OptionsFlow, ABC):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Add-on installation failed."""
-        multipan_manager = await get_multiprotocol_addon_manager(self.hass)
+        multipan_manager = await get_multiprotocol_addon_manager(self.menuai)
         return self.async_abort(
             reason="addon_install_failed",
             description_placeholders={"addon_name": multipan_manager.addon_name},
@@ -452,19 +452,19 @@ class OptionsFlowHandler(OptionsFlow, ABC):
     ) -> ConfigFlowResult:
         """Configure the Silicon Labs Multiprotocol add-on."""
         # pylint: disable-next=import-outside-toplevel
-        from homeassistant.components.zha import DOMAIN as ZHA_DOMAIN
+        from menuai.components.zha import DOMAIN as ZHA_DOMAIN
 
         # pylint: disable-next=import-outside-toplevel
-        from homeassistant.components.zha.radio_manager import (
+        from menuai.components.zha.radio_manager import (
             ZhaMultiPANMigrationHelper,
         )
 
         # pylint: disable-next=import-outside-toplevel
-        from homeassistant.components.zha.silabs_multiprotocol import (
+        from menuai.components.zha.silabs_multiprotocol import (
             async_get_channel as async_get_zha_channel,
         )
 
-        multipan_manager = await get_multiprotocol_addon_manager(self.hass)
+        multipan_manager = await get_multiprotocol_addon_manager(self.menuai)
         addon_info = await self._async_get_addon_info(multipan_manager)
 
         addon_config = addon_info.options
@@ -479,10 +479,10 @@ class OptionsFlowHandler(OptionsFlow, ABC):
         multipan_channel = DEFAULT_CHANNEL
 
         # Initiate ZHA migration
-        zha_entries = self.hass.config_entries.async_entries(ZHA_DOMAIN)
+        zha_entries = self.menuai.config_entries.async_entries(ZHA_DOMAIN)
 
         if zha_entries:
-            zha_migration_mgr = ZhaMultiPANMigrationHelper(self.hass, zha_entries[0])
+            zha_migration_mgr = ZhaMultiPANMigrationHelper(self.menuai, zha_entries[0])
             migration_data = {
                 "new_discovery_info": {
                     "name": self._zha_name(),
@@ -501,11 +501,11 @@ class OptionsFlowHandler(OptionsFlow, ABC):
                 _LOGGER.exception("Unexpected exception during ZHA migration")
                 raise AbortFlow("zha_migration_failed") from err
 
-            if (zha_channel := await async_get_zha_channel(self.hass)) is not None:
+            if (zha_channel := await async_get_zha_channel(self.menuai)) is not None:
                 multipan_channel = zha_channel
 
         # Initialize the shared channel
-        multipan_manager = await get_multiprotocol_addon_manager(self.hass)
+        multipan_manager = await get_multiprotocol_addon_manager(self.menuai)
         multipan_manager.async_set_channel(multipan_channel)
 
         if new_addon_config != addon_config:
@@ -520,10 +520,10 @@ class OptionsFlowHandler(OptionsFlow, ABC):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Start Silicon Labs Multiprotocol add-on."""
-        multipan_manager = await get_multiprotocol_addon_manager(self.hass)
+        multipan_manager = await get_multiprotocol_addon_manager(self.menuai)
 
         if not self.start_task:
-            self.start_task = self.hass.async_create_task(
+            self.start_task = self.menuai.async_create_task(
                 multipan_manager.async_start_addon_waiting(), eager_start=False
             )
 
@@ -549,7 +549,7 @@ class OptionsFlowHandler(OptionsFlow, ABC):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Add-on start failed."""
-        multipan_manager = await get_multiprotocol_addon_manager(self.hass)
+        multipan_manager = await get_multiprotocol_addon_manager(self.menuai)
         return self.async_abort(
             reason="addon_start_failed",
             description_placeholders={"addon_name": multipan_manager.addon_name},
@@ -560,8 +560,8 @@ class OptionsFlowHandler(OptionsFlow, ABC):
     ) -> ConfigFlowResult:
         """Prepare info needed to complete the config entry update."""
         # Always reload entry after installing the addon.
-        self.hass.async_create_task(
-            self.hass.config_entries.async_reload(self.config_entry.entry_id),
+        self.menuai.async_create_task(
+            self.menuai.config_entries.async_reload(self.config_entry.entry_id),
             eager_start=False,
         )
 
@@ -587,7 +587,7 @@ class OptionsFlowHandler(OptionsFlow, ABC):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle logic when the addon is already installed."""
-        multipan_manager = await get_multiprotocol_addon_manager(self.hass)
+        multipan_manager = await get_multiprotocol_addon_manager(self.menuai)
         addon_info = await self._async_get_addon_info(multipan_manager)
 
         serial_device = (await self._async_serial_port_settings()).device
@@ -611,7 +611,7 @@ class OptionsFlowHandler(OptionsFlow, ABC):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Reconfigure the addon."""
-        multipan_manager = await get_multiprotocol_addon_manager(self.hass)
+        multipan_manager = await get_multiprotocol_addon_manager(self.menuai)
         active_platforms = await multipan_manager.async_active_platforms()
         if set(active_platforms) != {"otbr", "zha"}:
             return await self.async_step_notify_unknown_multipan_user()
@@ -631,7 +631,7 @@ class OptionsFlowHandler(OptionsFlow, ABC):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Change the channel."""
-        multipan_manager = await get_multiprotocol_addon_manager(self.hass)
+        multipan_manager = await get_multiprotocol_addon_manager(self.menuai)
         if user_input is None:
             channels = [str(x) for x in range(11, 27)]
             suggested_channel = DEFAULT_CHANNEL
@@ -694,7 +694,7 @@ class OptionsFlowHandler(OptionsFlow, ABC):
     ) -> ConfigFlowResult:
         """Install the flasher addon, if necessary."""
 
-        flasher_manager = get_flasher_addon_manager(self.hass)
+        flasher_manager = get_flasher_addon_manager(self.menuai)
         addon_info = await self._async_get_addon_info(flasher_manager)
 
         if addon_info.state == AddonState.NOT_INSTALLED:
@@ -713,13 +713,13 @@ class OptionsFlowHandler(OptionsFlow, ABC):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Show progress dialog for installing flasher addon."""
-        flasher_manager = get_flasher_addon_manager(self.hass)
+        flasher_manager = get_flasher_addon_manager(self.menuai)
         addon_info = await self._async_get_addon_info(flasher_manager)
 
         _LOGGER.debug("Flasher addon state: %s", addon_info)
 
         if not self.install_task:
-            self.install_task = self.hass.async_create_task(
+            self.install_task = self.menuai.async_create_task(
                 flasher_manager.async_install_addon_waiting(),
                 "SiLabs Flasher addon install",
                 eager_start=False,
@@ -748,20 +748,20 @@ class OptionsFlowHandler(OptionsFlow, ABC):
     ) -> ConfigFlowResult:
         """Perform initial backup and reconfigure ZHA."""
         # pylint: disable-next=import-outside-toplevel
-        from homeassistant.components.zha import DOMAIN as ZHA_DOMAIN
+        from menuai.components.zha import DOMAIN as ZHA_DOMAIN
 
         # pylint: disable-next=import-outside-toplevel
-        from homeassistant.components.zha.radio_manager import (
+        from menuai.components.zha.radio_manager import (
             ZhaMultiPANMigrationHelper,
         )
 
-        zha_entries = self.hass.config_entries.async_entries(ZHA_DOMAIN)
+        zha_entries = self.menuai.config_entries.async_entries(ZHA_DOMAIN)
         new_settings = await self._async_serial_port_settings()
 
         _LOGGER.debug("Using new ZHA settings: %s", new_settings)
 
         if zha_entries:
-            zha_migration_mgr = ZhaMultiPANMigrationHelper(self.hass, zha_entries[0])
+            zha_migration_mgr = ZhaMultiPANMigrationHelper(self.menuai, zha_entries[0])
             migration_data = {
                 "new_discovery_info": {
                     "name": self._hardware_name(),
@@ -790,7 +790,7 @@ class OptionsFlowHandler(OptionsFlow, ABC):
                 _LOGGER.exception("Unexpected exception during ZHA migration")
                 raise AbortFlow("zha_migration_failed") from err
 
-        flasher_manager = get_flasher_addon_manager(self.hass)
+        flasher_manager = get_flasher_addon_manager(self.menuai)
         addon_info = await self._async_get_addon_info(flasher_manager)
         new_addon_config = {
             **addon_info.options,
@@ -807,10 +807,10 @@ class OptionsFlowHandler(OptionsFlow, ABC):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Uninstall Silicon Labs Multiprotocol add-on."""
-        multipan_manager = await get_multiprotocol_addon_manager(self.hass)
+        multipan_manager = await get_multiprotocol_addon_manager(self.menuai)
 
         if not self.stop_task:
-            self.stop_task = self.hass.async_create_task(
+            self.stop_task = self.menuai.async_create_task(
                 multipan_manager.async_uninstall_addon_waiting(),
                 "SiLabs Multiprotocol addon uninstall",
                 eager_start=False,
@@ -835,7 +835,7 @@ class OptionsFlowHandler(OptionsFlow, ABC):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Start Silicon Labs Flasher add-on."""
-        flasher_manager = get_flasher_addon_manager(self.hass)
+        flasher_manager = get_flasher_addon_manager(self.menuai)
 
         if not self.start_task:
 
@@ -846,7 +846,7 @@ class OptionsFlowHandler(OptionsFlow, ABC):
                     AddonState.NOT_RUNNING
                 )
 
-            self.start_task = self.hass.async_create_task(
+            self.start_task = self.menuai.async_create_task(
                 start_and_wait_until_done(), eager_start=False
             )
 
@@ -872,7 +872,7 @@ class OptionsFlowHandler(OptionsFlow, ABC):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Flasher add-on start failed."""
-        flasher_manager = get_flasher_addon_manager(self.hass)
+        flasher_manager = get_flasher_addon_manager(self.menuai)
         return self.async_abort(
             reason="addon_start_failed",
             description_placeholders={"addon_name": flasher_manager.addon_name},
@@ -882,7 +882,7 @@ class OptionsFlowHandler(OptionsFlow, ABC):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Finish flashing and update the config entry."""
-        flasher_manager = get_flasher_addon_manager(self.hass)
+        flasher_manager = get_flasher_addon_manager(self.menuai)
         await flasher_manager.async_uninstall_addon_waiting()
 
         # Finish ZHA migration if needed
@@ -896,21 +896,21 @@ class OptionsFlowHandler(OptionsFlow, ABC):
         return self.async_create_entry(title="", data={})
 
 
-async def check_multi_pan_addon(hass: HomeAssistant) -> None:
+async def check_multi_pan_addon(menuai: menuai) -> None:
     """Check the multiprotocol addon state, and start it if installed but not started.
 
-    Does nothing if Hass.io is not loaded.
+    Does nothing if menuai.io is not loaded.
     Raises on error or if the add-on is installed but not started.
     """
-    if not is_hassio(hass):
+    if not is_menuaiio(menuai):
         return
 
-    multipan_manager = await get_multiprotocol_addon_manager(hass)
+    multipan_manager = await get_multiprotocol_addon_manager(menuai)
     try:
         addon_info: AddonInfo = await multipan_manager.async_get_addon_info()
     except AddonError as err:
         _LOGGER.error(err)
-        raise HomeAssistantError from err
+        raise menuaiError from err
 
     # Request the addon to start if it's not started
     # `async_start_addon` returns as soon as the start request has been sent
@@ -920,19 +920,19 @@ async def check_multi_pan_addon(hass: HomeAssistant) -> None:
 
     if addon_info.state not in (AddonState.NOT_INSTALLED, AddonState.RUNNING):
         _LOGGER.debug("Multi pan addon installed and in state %s", addon_info.state)
-        raise HomeAssistantError
+        raise menuaiError
 
 
-async def multi_pan_addon_using_device(hass: HomeAssistant, device_path: str) -> bool:
+async def multi_pan_addon_using_device(menuai: menuai, device_path: str) -> bool:
     """Return True if the multi-PAN addon is using the given device.
 
-    Returns False if Hass.io is not loaded, the addon is not running or the addon is
+    Returns False if menuai.io is not loaded, the addon is not running or the addon is
     connected to another device.
     """
-    if not is_hassio(hass):
+    if not is_menuaiio(menuai):
         return False
 
-    multipan_manager = await get_multiprotocol_addon_manager(hass)
+    multipan_manager = await get_multiprotocol_addon_manager(menuai)
     addon_info: AddonInfo = await multipan_manager.async_get_addon_info()
 
     if addon_info.state != AddonState.RUNNING:

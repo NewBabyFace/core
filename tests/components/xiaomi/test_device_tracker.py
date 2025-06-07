@@ -6,11 +6,11 @@ from unittest.mock import MagicMock, call, patch
 
 import requests
 
-from homeassistant.components.device_tracker import DOMAIN as DEVICE_TRACKER_DOMAIN
-from homeassistant.components.xiaomi import device_tracker as xiaomi
-from homeassistant.components.xiaomi.device_tracker import get_scanner
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_PLATFORM, CONF_USERNAME
-from homeassistant.core import HomeAssistant
+from menuai.components.device_tracker import DOMAIN as DEVICE_TRACKER_DOMAIN
+from menuai.components.xiaomi import device_tracker as xiaomi
+from menuai.components.xiaomi.device_tracker import get_scanner
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_PLATFORM, CONF_USERNAME
+from menuai.core import menuai
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -148,10 +148,10 @@ def mocked_requests(*args, **kwargs):
 
 
 @patch(
-    "homeassistant.components.xiaomi.device_tracker.XiaomiDeviceScanner",
+    "menuai.components.xiaomi.device_tracker.XiaomiDeviceScanner",
     return_value=MagicMock(),
 )
-async def test_config(xiaomi_mock, hass: HomeAssistant) -> None:
+async def test_config(xiaomi_mock, menuai: menuai) -> None:
     """Testing minimal configuration."""
     config = {
         DEVICE_TRACKER_DOMAIN: xiaomi.PLATFORM_SCHEMA(
@@ -162,7 +162,7 @@ async def test_config(xiaomi_mock, hass: HomeAssistant) -> None:
             }
         )
     }
-    xiaomi.get_scanner(hass, config)
+    xiaomi.get_scanner(menuai, config)
     assert xiaomi_mock.call_count == 1
     assert xiaomi_mock.call_args == call(config[DEVICE_TRACKER_DOMAIN])
     call_arg = xiaomi_mock.call_args[0][0]
@@ -173,10 +173,10 @@ async def test_config(xiaomi_mock, hass: HomeAssistant) -> None:
 
 
 @patch(
-    "homeassistant.components.xiaomi.device_tracker.XiaomiDeviceScanner",
+    "menuai.components.xiaomi.device_tracker.XiaomiDeviceScanner",
     return_value=MagicMock(),
 )
-async def test_config_full(xiaomi_mock, hass: HomeAssistant) -> None:
+async def test_config_full(xiaomi_mock, menuai: menuai) -> None:
     """Testing full configuration."""
     config = {
         DEVICE_TRACKER_DOMAIN: xiaomi.PLATFORM_SCHEMA(
@@ -188,7 +188,7 @@ async def test_config_full(xiaomi_mock, hass: HomeAssistant) -> None:
             }
         )
     }
-    xiaomi.get_scanner(hass, config)
+    xiaomi.get_scanner(menuai, config)
     assert xiaomi_mock.call_count == 1
     assert xiaomi_mock.call_args == call(config[DEVICE_TRACKER_DOMAIN])
     call_arg = xiaomi_mock.call_args[0][0]
@@ -200,7 +200,7 @@ async def test_config_full(xiaomi_mock, hass: HomeAssistant) -> None:
 
 @patch("requests.get", side_effect=mocked_requests)
 @patch("requests.post", side_effect=mocked_requests)
-async def test_invalid_credential(mock_get, mock_post, hass: HomeAssistant) -> None:
+async def test_invalid_credential(mock_get, mock_post, menuai: menuai) -> None:
     """Testing invalid credential handling."""
     config = {
         DEVICE_TRACKER_DOMAIN: xiaomi.PLATFORM_SCHEMA(
@@ -212,12 +212,12 @@ async def test_invalid_credential(mock_get, mock_post, hass: HomeAssistant) -> N
             }
         )
     }
-    assert get_scanner(hass, config) is None
+    assert get_scanner(menuai, config) is None
 
 
 @patch("requests.get", side_effect=mocked_requests)
 @patch("requests.post", side_effect=mocked_requests)
-async def test_valid_credential(mock_get, mock_post, hass: HomeAssistant) -> None:
+async def test_valid_credential(mock_get, mock_post, menuai: menuai) -> None:
     """Testing valid refresh."""
     config = {
         DEVICE_TRACKER_DOMAIN: xiaomi.PLATFORM_SCHEMA(
@@ -229,7 +229,7 @@ async def test_valid_credential(mock_get, mock_post, hass: HomeAssistant) -> Non
             }
         )
     }
-    scanner = get_scanner(hass, config)
+    scanner = get_scanner(menuai, config)
     assert scanner is not None
     assert len(scanner.scan_devices()) == 2
     assert scanner.get_device_name("23:83:BF:F6:38:A0") == "Device1"
@@ -238,7 +238,7 @@ async def test_valid_credential(mock_get, mock_post, hass: HomeAssistant) -> Non
 
 @patch("requests.get", side_effect=mocked_requests)
 @patch("requests.post", side_effect=mocked_requests)
-async def test_token_timed_out(mock_get, mock_post, hass: HomeAssistant) -> None:
+async def test_token_timed_out(mock_get, mock_post, menuai: menuai) -> None:
     """Testing refresh with a timed out token.
 
     New token is requested and list is downloaded a second time.
@@ -253,7 +253,7 @@ async def test_token_timed_out(mock_get, mock_post, hass: HomeAssistant) -> None
             }
         )
     }
-    scanner = get_scanner(hass, config)
+    scanner = get_scanner(menuai, config)
     assert scanner is not None
     assert len(scanner.scan_devices()) == 2
     assert scanner.get_device_name("23:83:BF:F6:38:A0") == "Device1"

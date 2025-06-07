@@ -3,8 +3,8 @@
 import pytest
 from pywaze.route_calculator import WRCError
 
-from homeassistant.components.waze_travel_time.config_flow import WazeConfigFlow
-from homeassistant.components.waze_travel_time.const import (
+from menuai.components.waze_travel_time.config_flow import WazeConfigFlow
+from menuai.components.waze_travel_time.const import (
     CONF_AVOID_FERRIES,
     CONF_AVOID_SUBSCRIPTION_ROADS,
     CONF_AVOID_TOLL_ROADS,
@@ -18,7 +18,7 @@ from homeassistant.components.waze_travel_time.const import (
     IMPERIAL_UNITS,
     METRIC_UNITS,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .const import MOCK_CONFIG
 
@@ -37,28 +37,28 @@ def mock_update_wrcerror_fixture(mock_update):
     [(MOCK_CONFIG, DEFAULT_OPTIONS)],
 )
 @pytest.mark.usefixtures("mock_update", "mock_config")
-async def test_sensor(hass: HomeAssistant) -> None:
+async def test_sensor(menuai: menuai) -> None:
     """Test that sensor works."""
-    assert hass.states.get("sensor.waze_travel_time").state == "150"
+    assert menuai.states.get("sensor.waze_travel_time").state == "150"
     assert (
-        hass.states.get("sensor.waze_travel_time").attributes["attribution"]
+        menuai.states.get("sensor.waze_travel_time").attributes["attribution"]
         == "Powered by Waze"
     )
-    assert hass.states.get("sensor.waze_travel_time").attributes["duration"] == 150
-    assert hass.states.get("sensor.waze_travel_time").attributes["distance"] == 300
+    assert menuai.states.get("sensor.waze_travel_time").attributes["duration"] == 150
+    assert menuai.states.get("sensor.waze_travel_time").attributes["distance"] == 300
     assert (
-        hass.states.get("sensor.waze_travel_time").attributes["route"]
+        menuai.states.get("sensor.waze_travel_time").attributes["route"]
         == "E1337 - Teststreet"
     )
     assert (
-        hass.states.get("sensor.waze_travel_time").attributes["origin"] == "location1"
+        menuai.states.get("sensor.waze_travel_time").attributes["origin"] == "location1"
     )
     assert (
-        hass.states.get("sensor.waze_travel_time").attributes["destination"]
+        menuai.states.get("sensor.waze_travel_time").attributes["destination"]
         == "location2"
     )
     assert (
-        hass.states.get("sensor.waze_travel_time").attributes["unit_of_measurement"]
+        menuai.states.get("sensor.waze_travel_time").attributes["unit_of_measurement"]
         == "min"
     )
 
@@ -82,9 +82,9 @@ async def test_sensor(hass: HomeAssistant) -> None:
     ],
 )
 @pytest.mark.usefixtures("mock_update", "mock_config")
-async def test_imperial(hass: HomeAssistant) -> None:
+async def test_imperial(menuai: menuai) -> None:
     """Test that the imperial option works."""
-    assert hass.states.get("sensor.waze_travel_time").attributes[
+    assert menuai.states.get("sensor.waze_travel_time").attributes[
         "distance"
     ] == pytest.approx(186.4113)
 
@@ -108,9 +108,9 @@ async def test_imperial(hass: HomeAssistant) -> None:
     ],
 )
 @pytest.mark.usefixtures("mock_update", "mock_config")
-async def test_incl_filter(hass: HomeAssistant) -> None:
+async def test_incl_filter(menuai: menuai) -> None:
     """Test that incl_filter only includes route with the wanted street name."""
-    assert hass.states.get("sensor.waze_travel_time").attributes["distance"] == 300
+    assert menuai.states.get("sensor.waze_travel_time").attributes["distance"] == 300
 
 
 @pytest.mark.parametrize(
@@ -132,14 +132,14 @@ async def test_incl_filter(hass: HomeAssistant) -> None:
     ],
 )
 @pytest.mark.usefixtures("mock_update", "mock_config")
-async def test_excl_filter(hass: HomeAssistant) -> None:
+async def test_excl_filter(menuai: menuai) -> None:
     """Test that excl_filter only includes route without the street name."""
-    assert hass.states.get("sensor.waze_travel_time").attributes["distance"] == 300
+    assert menuai.states.get("sensor.waze_travel_time").attributes["distance"] == 300
 
 
 @pytest.mark.usefixtures("mock_update_wrcerror")
 async def test_sensor_failed_wrcerror(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test that sensor update fails with log message."""
     config_entry = MockConfigEntry(
@@ -149,9 +149,9 @@ async def test_sensor_failed_wrcerror(
         entry_id="test",
         version=WazeConfigFlow.VERSION,
     )
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("sensor.waze_travel_time").state == "unknown"
+    assert menuai.states.get("sensor.waze_travel_time").state == "unknown"
     assert "Error on retrieving data: " in caplog.text

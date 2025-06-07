@@ -2,10 +2,10 @@
 
 from unittest.mock import Mock, patch
 
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_DEVICE
-from homeassistant.core import DOMAIN as HOMEASSISTANT_DOMAIN, HomeAssistant
-from homeassistant.helpers import issue_registry as ir
+from menuai.config_entries import ConfigEntryState
+from menuai.const import CONF_DEVICE
+from menuai.core import DOMAIN as menuai_DOMAIN, menuai
+from menuai.helpers import issue_registry as ir
 
 from tests.common import MockConfigEntry
 
@@ -18,18 +18,18 @@ from tests.common import MockConfigEntry
     },
 )
 async def test_repair_issue_is_created(
-    hass: HomeAssistant,
+    menuai: menuai,
     issue_registry: ir.IssueRegistry,
 ) -> None:
     """Test repair issue is created."""
-    from homeassistant.components.sms import (  # pylint: disable=import-outside-toplevel
+    from menuai.components.sms import (  # pylint: disable=import-outside-toplevel
         DEPRECATED_ISSUE_ID,
         DOMAIN,
     )
 
     with (
-        patch("homeassistant.components.sms.create_sms_gateway", autospec=True),
-        patch("homeassistant.components.sms.PLATFORMS", []),
+        patch("menuai.components.sms.create_sms_gateway", autospec=True),
+        patch("menuai.components.sms.PLATFORMS", []),
     ):
         config_entry = MockConfigEntry(
             title="test",
@@ -39,21 +39,21 @@ async def test_repair_issue_is_created(
             },
         )
 
-        config_entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        config_entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
         assert config_entry.state is ConfigEntryState.LOADED
         assert (
-            HOMEASSISTANT_DOMAIN,
+            menuai_DOMAIN,
             DEPRECATED_ISSUE_ID,
         ) in issue_registry.issues
 
-        await hass.config_entries.async_unload(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_unload(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
         assert config_entry.state is ConfigEntryState.NOT_LOADED
         assert (
-            HOMEASSISTANT_DOMAIN,
+            menuai_DOMAIN,
             DEPRECATED_ISSUE_ID,
         ) not in issue_registry.issues

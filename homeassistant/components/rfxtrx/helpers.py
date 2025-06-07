@@ -2,16 +2,16 @@
 
 from RFXtrx import RFXtrxDevice, get_device
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr
 
 from . import get_device_tuple_from_identifiers
 
 
 @callback
-def async_get_device_object(hass: HomeAssistant, device_id: str) -> RFXtrxDevice:
+def async_get_device_object(menuai: menuai, device_id: str) -> RFXtrxDevice:
     """Get a device for the given device registry id."""
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     registry_device = device_registry.async_get(device_id)
     if registry_device is None:
         raise ValueError(f"Device {device_id} not found")

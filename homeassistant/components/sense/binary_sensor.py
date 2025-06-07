@@ -4,13 +4,13 @@ import logging
 
 from sense_energy.sense_api import SenseDevice
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import SenseConfigEntry
 from .const import DOMAIN
@@ -21,7 +21,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: SenseConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -34,7 +34,7 @@ async def async_setup_entry(
         for device in config_entry.runtime_data.data.devices
     ]
 
-    await _migrate_old_unique_ids(hass, devices)
+    await _migrate_old_unique_ids(menuai, devices)
 
     async_add_entities(devices)
 
@@ -66,9 +66,9 @@ class SenseBinarySensor(SenseDeviceEntity, BinarySensorEntity):
 
 
 async def _migrate_old_unique_ids(
-    hass: HomeAssistant, devices: list[SenseBinarySensor]
+    menuai: menuai, devices: list[SenseBinarySensor]
 ) -> None:
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     for device in devices:
         # Migration of old not so unique ids
         old_entity_id = registry.async_get_entity_id(

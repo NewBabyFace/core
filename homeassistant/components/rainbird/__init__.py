@@ -9,17 +9,17 @@ import aiohttp
 from pyrainbird.async_client import AsyncRainbirdClient, AsyncRainbirdController
 from pyrainbird.exceptions import RainbirdApiException, RainbirdAuthException
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_MAC,
     CONF_PASSWORD,
-    EVENT_HOMEASSISTANT_CLOSE,
+    EVENT_menuai_CLOSE,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.device_registry import format_mac
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.device_registry import format_mac
 
 from .const import CONF_SERIAL_NUMBER
 from .coordinator import (
@@ -44,7 +44,7 @@ DOMAIN = "rainbird"
 
 
 def _async_register_clientsession_shutdown(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: RainbirdConfigEntry,
     clientsession: aiohttp.ClientSession,
 ) -> None:
@@ -54,18 +54,18 @@ def _async_register_clientsession_shutdown(
         """Close websession."""
         await clientsession.close()
 
-    unsub = hass.bus.async_listen_once(
-        EVENT_HOMEASSISTANT_CLOSE, _async_close_websession
+    unsub = menuai.bus.async_listen_once(
+        EVENT_menuai_CLOSE, _async_close_websession
     )
     entry.async_on_unload(unsub)
     entry.async_on_unload(_async_close_websession)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: RainbirdConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: RainbirdConfigEntry) -> bool:
     """Set up the config entry for Rain Bird."""
 
     clientsession = async_create_clientsession()
-    _async_register_clientsession_shutdown(hass, entry, clientsession)
+    _async_register_clientsession_shutdown(menuai, entry, clientsession)
 
     controller = AsyncRainbirdController(
         AsyncRainbirdClient(
@@ -75,17 +75,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: RainbirdConfigEntry) -> 
         )
     )
 
-    if not (await _async_fix_unique_id(hass, controller, entry)):
+    if not (await _async_fix_unique_id(menuai, controller, entry)):
         return False
     if mac_address := entry.data.get(CONF_MAC):
         _async_fix_entity_unique_id(
-            er.async_get(hass),
+            er.async_get(menuai),
             entry.entry_id,
             format_mac(mac_address),
             str(entry.data[CONF_SERIAL_NUMBER]),
         )
         _async_fix_device_id(
-            dr.async_get(hass),
+            dr.async_get(menuai),
             entry.entry_id,
             format_mac(mac_address),
             str(entry.data[CONF_SERIAL_NUMBER]),
@@ -101,19 +101,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: RainbirdConfigEntry) -> 
     data = RainbirdData(
         controller,
         model_info,
-        coordinator=RainbirdUpdateCoordinator(hass, entry, controller, model_info),
-        schedule_coordinator=RainbirdScheduleUpdateCoordinator(hass, entry, controller),
+        coordinator=RainbirdUpdateCoordinator(menuai, entry, controller, model_info),
+        schedule_coordinator=RainbirdScheduleUpdateCoordinator(menuai, entry, controller),
     )
     await data.coordinator.async_config_entry_first_refresh()
 
     entry.runtime_data = data
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
 async def _async_fix_unique_id(
-    hass: HomeAssistant, controller: AsyncRainbirdController, entry: RainbirdConfigEntry
+    menuai: menuai, controller: AsyncRainbirdController, entry: RainbirdConfigEntry
 ) -> bool:
     """Update the config entry with a unique id based on the mac address."""
     _LOGGER.debug("Checking for migration of config entry (%s)", entry.unique_id)
@@ -133,20 +133,20 @@ async def _async_fix_unique_id(
         _LOGGER.debug("Config entry already in correct state")
         return True
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     for existing_entry in entries:
         if existing_entry.unique_id == new_unique_id:
             _LOGGER.warning(
                 "Unable to fix missing unique id (already exists); Removing duplicate entry"
             )
-            hass.async_create_background_task(
-                hass.config_entries.async_remove(entry.entry_id),
+            menuai.async_create_background_task(
+                menuai.config_entries.async_remove(entry.entry_id),
                 "Remove rainbird config entry",
             )
             return False
 
     _LOGGER.debug("Updating unique id to %s", new_unique_id)
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         entry,
         unique_id=new_unique_id,
         data={
@@ -240,6 +240,6 @@ def _async_fix_device_id(
         )
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: RainbirdConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: RainbirdConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

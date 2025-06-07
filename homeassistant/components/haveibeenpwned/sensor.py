@@ -9,23 +9,23 @@ import logging
 import requests
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
     SensorEntity,
 )
-from homeassistant.const import CONF_API_KEY, CONF_EMAIL
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.event import track_point_in_time
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import Throttle, dt as dt_util
+from menuai.const import CONF_API_KEY, CONF_EMAIL
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.event import track_point_in_time
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import Throttle, dt as dt_util
 
 _LOGGER = logging.getLogger(__name__)
 
 DATE_STR_FORMAT = "%Y-%m-%d %H:%M:%S"
 
-HA_USER_AGENT = "Home Assistant HaveIBeenPwned Sensor Component"
+HA_USER_AGENT = "MenuAI HaveIBeenPwned Sensor Component"
 
 MIN_TIME_BETWEEN_FORCED_UPDATES = timedelta(seconds=5)
 MIN_TIME_BETWEEN_UPDATES = timedelta(minutes=15)
@@ -41,7 +41,7 @@ PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -98,11 +98,11 @@ class HaveIBeenPwnedSensor(SensorEntity):
 
         return val
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Get initial data."""
         # To make sure we get initial data for the sensors ignoring the normal
         # throttle of 15 minutes but using an update throttle of 5 seconds
-        self.hass.async_add_executor_job(self.update_nothrottle)
+        self.menuai.async_add_executor_job(self.update_nothrottle)
 
     def update_nothrottle(self, dummy=None):
         """Update sensor without throttle."""
@@ -111,11 +111,11 @@ class HaveIBeenPwnedSensor(SensorEntity):
         # Schedule a forced update 5 seconds in the future if the update above
         # returned no data for this sensors email. This is mainly to make sure
         # that we don't get HTTP Error "too many requests" and to have initial
-        # data after hass startup once we have the data it will update as
+        # data after menuai startup once we have the data it will update as
         # normal using update
         if self._email not in self._data.data:
             track_point_in_time(
-                self.hass,
+                self.menuai,
                 self.update_nothrottle,
                 dt_util.now() + MIN_TIME_BETWEEN_FORCED_UPDATES,
             )

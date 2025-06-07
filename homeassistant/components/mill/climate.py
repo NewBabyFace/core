@@ -6,25 +6,25 @@ import mill
 from mill_local import OperationMode
 import voluptuous as vol
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ClimateEntity,
     ClimateEntityFeature,
     HVACAction,
     HVACMode,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_TEMPERATURE,
     CONF_IP_ADDRESS,
     CONF_USERNAME,
     PRECISION_TENTHS,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant, ServiceCall, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.core import menuai, ServiceCall, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
     ATTR_AWAY_TEMP,
@@ -54,17 +54,17 @@ SET_ROOM_TEMP_SCHEMA = vol.Schema(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Mill climate."""
     if entry.data.get(CONNECTION_TYPE) == LOCAL:
-        mill_data_coordinator = hass.data[DOMAIN][LOCAL][entry.data[CONF_IP_ADDRESS]]
+        mill_data_coordinator = menuai.data[DOMAIN][LOCAL][entry.data[CONF_IP_ADDRESS]]
         async_add_entities([LocalMillHeater(mill_data_coordinator)])
         return
 
-    mill_data_coordinator = hass.data[DOMAIN][CLOUD][entry.data[CONF_USERNAME]]
+    mill_data_coordinator = menuai.data[DOMAIN][CLOUD][entry.data[CONF_USERNAME]]
 
     entities = [
         MillHeater(mill_data_coordinator, mill_device)
@@ -83,7 +83,7 @@ async def async_setup_entry(
             room_name, sleep_temp, comfort_temp, away_temp
         )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_SET_ROOM_TEMP, set_room_temp, schema=SET_ROOM_TEMP_SCHEMA
     )
 

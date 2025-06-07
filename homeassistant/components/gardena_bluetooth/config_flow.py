@@ -11,13 +11,13 @@ from gardena_bluetooth.exceptions import CharacteristicNotFound, CommunicationFa
 from gardena_bluetooth.parse import ManufacturerData, ProductType
 import voluptuous as vol
 
-from homeassistant.components.bluetooth import (
+from menuai.components.bluetooth import (
     BluetoothServiceInfo,
     async_discovered_service_info,
 )
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_ADDRESS
-from homeassistant.data_entry_flow import AbortFlow
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_ADDRESS
+from menuai.data_entry_flow import AbortFlow
 
 from . import get_connection
 from .const import DOMAIN
@@ -70,7 +70,7 @@ class GardenaBluetoothConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_read_data(self):
         """Try to connect to device and extract information."""
-        client = Client(get_connection(self.hass, self.address))
+        client = Client(get_connection(self.menuai, self.address))
         try:
             model = await client.read_char(DeviceInformation.model_number)
             _LOGGER.debug("Found device with model: %s", model)
@@ -129,7 +129,7 @@ class GardenaBluetoothConfigFlow(ConfigFlow, domain=DOMAIN):
             return await self.async_step_confirm()
 
         current_addresses = self._async_current_ids()
-        for discovery_info in async_discovered_service_info(self.hass):
+        for discovery_info in async_discovered_service_info(self.menuai):
             address = discovery_info.address
             if address in current_addresses or not _is_supported(discovery_info):
                 continue

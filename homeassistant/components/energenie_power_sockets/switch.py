@@ -6,18 +6,18 @@ from pyegps import __version__ as PYEGPS_VERSION
 from pyegps.exceptions import EgpsException
 from pyegps.powerstrip import PowerStrip
 
-from homeassistant.components.switch import SwitchDeviceClass, SwitchEntity
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchDeviceClass, SwitchEntity
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import EnergenieConfigEntry
 from .const import DOMAIN
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: EnergenieConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -60,18 +60,18 @@ class EGPowerStripSocket(SwitchEntity):
         try:
             self._dev.switch_on(self._socket)
         except EgpsException as err:
-            raise HomeAssistantError(f"Couldn't access USB device: {err}") from err
+            raise menuaiError(f"Couldn't access USB device: {err}") from err
 
     def turn_off(self, **kwargs: Any) -> None:
         """Switch the socket off."""
         try:
             self._dev.switch_off(self._socket)
         except EgpsException as err:
-            raise HomeAssistantError(f"Couldn't access USB device: {err}") from err
+            raise menuaiError(f"Couldn't access USB device: {err}") from err
 
     def update(self) -> None:
         """Read the current state from the device."""
         try:
             self._attr_is_on = self._dev.get_status(self._socket)
         except EgpsException as err:
-            raise HomeAssistantError(f"Couldn't access USB device: {err}") from err
+            raise menuaiError(f"Couldn't access USB device: {err}") from err

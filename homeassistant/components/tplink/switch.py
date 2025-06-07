@@ -8,13 +8,13 @@ from typing import Any, cast
 
 from kasa import Feature
 
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     DOMAIN as SWITCH_DOMAIN,
     SwitchEntity,
     SwitchEntityDescription,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import TPLinkConfigEntry
 from .entity import (
@@ -83,7 +83,7 @@ SWITCH_DESCRIPTIONS_MAP = {desc.key: desc for desc in SWITCH_DESCRIPTIONS}
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: TPLinkConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -96,7 +96,7 @@ async def async_setup_entry(
 
     def _check_device() -> None:
         entities = CoordinatedTPLinkFeatureEntity.entities_for_device_and_its_children(
-            hass=hass,
+            menuai=menuai,
             device=device,
             coordinator=parent_coordinator,
             feature_type=Feature.Switch,

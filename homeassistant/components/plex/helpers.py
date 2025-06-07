@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, TypedDict
 from plexapi.gdm import GDM
 from plexwebsocket import PlexWebsocket
 
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant
+from menuai.core import CALLBACK_TYPE, menuai
 
 from .const import DOMAIN, SERVERS
 
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 
 class PlexData(TypedDict):
-    """Typed description of plex data stored in `hass.data`."""
+    """Typed description of plex data stored in `menuai.data`."""
 
     servers: dict[str, PlexServer]
     dispatchers: dict[str, list[CALLBACK_TYPE]]
@@ -26,14 +26,14 @@ class PlexData(TypedDict):
     gdm_debouncer: Callable[[], Coroutine[Any, Any, None]]
 
 
-def get_plex_data(hass: HomeAssistant) -> PlexData:
-    """Get typed data from hass.data."""
-    return hass.data[DOMAIN]
+def get_plex_data(menuai: menuai) -> PlexData:
+    """Get typed data from menuai.data."""
+    return menuai.data[DOMAIN]
 
 
-def get_plex_server(hass: HomeAssistant, server_id: str) -> PlexServer:
-    """Get Plex server from hass.data."""
-    return get_plex_data(hass)[SERVERS][server_id]
+def get_plex_server(menuai: menuai, server_id: str) -> PlexServer:
+    """Get Plex server from menuai.data."""
+    return get_plex_data(menuai)[SERVERS][server_id]
 
 
 def pretty_title(media, short_name=False):

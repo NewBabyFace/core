@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import logging
 
-from homeassistant.components.sensor import SensorEntity
-from homeassistant.const import CONF_DEVICE, CONF_NAME, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.sensor import SensorEntity
+from menuai.const import CONF_DEVICE, CONF_NAME, STATE_UNKNOWN
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import CONF_SENSOR, DOMAIN
 
@@ -16,7 +16,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -25,7 +25,7 @@ def setup_platform(
     if discovery_info is not None:
         name = discovery_info.get(CONF_NAME)
         device = discovery_info.get(CONF_DEVICE)
-        kira = hass.data[DOMAIN][CONF_SENSOR][name]
+        kira = menuai.data[DOMAIN][CONF_SENSOR][name]
 
         add_entities([KiraReceiver(device, kira)])
 

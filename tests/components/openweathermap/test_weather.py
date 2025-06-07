@@ -5,17 +5,17 @@ from unittest.mock import MagicMock
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.openweathermap.const import (
+from menuai.components.openweathermap.const import (
     DOMAIN,
     OWM_MODE_FREE_CURRENT,
     OWM_MODE_FREE_FORECAST,
     OWM_MODE_V30,
 )
-from homeassistant.components.openweathermap.weather import SERVICE_GET_MINUTE_FORECAST
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import entity_registry as er
+from menuai.components.openweathermap.weather import SERVICE_GET_MINUTE_FORECAST
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import entity_registry as er
 
 from . import setup_platform
 
@@ -26,7 +26,7 @@ ENTITY_ID = "weather.openweathermap"
 
 @pytest.mark.parametrize("mode", [OWM_MODE_V30], indirect=True)
 async def test_get_minute_forecast(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mock_config_entry: MockConfigEntry,
     owm_client_mock: MagicMock,
@@ -34,8 +34,8 @@ async def test_get_minute_forecast(
 ) -> None:
     """Test the get_minute_forecast Service call."""
 
-    await setup_platform(hass, mock_config_entry, [Platform.WEATHER])
-    result = await hass.services.async_call(
+    await setup_platform(menuai, mock_config_entry, [Platform.WEATHER])
+    result = await menuai.services.async_call(
         DOMAIN,
         SERVICE_GET_MINUTE_FORECAST,
         {"entity_id": ENTITY_ID},
@@ -49,7 +49,7 @@ async def test_get_minute_forecast(
     "mode", [OWM_MODE_FREE_CURRENT, OWM_MODE_FREE_FORECAST], indirect=True
 )
 async def test_get_minute_forecast_unavailable(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mock_config_entry: MockConfigEntry,
     owm_client_mock: MagicMock,
@@ -57,12 +57,12 @@ async def test_get_minute_forecast_unavailable(
 ) -> None:
     """Test that Minute forecasting fails when mode is not v3.0."""
 
-    await setup_platform(hass, mock_config_entry, [Platform.WEATHER])
+    await setup_platform(menuai, mock_config_entry, [Platform.WEATHER])
     with pytest.raises(
         ServiceValidationError,
         match="Minute forecast is available only when OpenWeatherMap mode is set to v3.0",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_GET_MINUTE_FORECAST,
             {"entity_id": ENTITY_ID},
@@ -75,7 +75,7 @@ async def test_get_minute_forecast_unavailable(
     "mode", [OWM_MODE_V30, OWM_MODE_FREE_CURRENT, OWM_MODE_FREE_FORECAST], indirect=True
 )
 async def test_weather_states(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
     mock_config_entry: MockConfigEntry,
@@ -83,5 +83,5 @@ async def test_weather_states(
 ) -> None:
     """Test weather states are correctly collected from library with different modes and mocked function responses."""
 
-    await setup_platform(hass, mock_config_entry, [Platform.WEATHER])
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await setup_platform(menuai, mock_config_entry, [Platform.WEATHER])
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)

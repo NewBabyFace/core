@@ -6,30 +6,30 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import area_registry as ar
+from menuai.components import websocket_api
+from menuai.core import menuai, callback
+from menuai.helpers import area_registry as ar
 
 
 @callback
-def async_setup(hass: HomeAssistant) -> bool:
+def async_setup(menuai: menuai) -> bool:
     """Enable the Area Registry views."""
-    websocket_api.async_register_command(hass, websocket_list_areas)
-    websocket_api.async_register_command(hass, websocket_create_area)
-    websocket_api.async_register_command(hass, websocket_delete_area)
-    websocket_api.async_register_command(hass, websocket_update_area)
+    websocket_api.async_register_command(menuai, websocket_list_areas)
+    websocket_api.async_register_command(menuai, websocket_create_area)
+    websocket_api.async_register_command(menuai, websocket_delete_area)
+    websocket_api.async_register_command(menuai, websocket_update_area)
     return True
 
 
 @websocket_api.websocket_command({vol.Required("type"): "config/area_registry/list"})
 @callback
 def websocket_list_areas(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Handle list areas command."""
-    registry = ar.async_get(hass)
+    registry = ar.async_get(menuai)
     connection.send_result(
         msg["id"],
         [entry.json_fragment for entry in registry.async_list_areas()],
@@ -52,12 +52,12 @@ def websocket_list_areas(
 @websocket_api.require_admin
 @callback
 def websocket_create_area(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Create area command."""
-    registry = ar.async_get(hass)
+    registry = ar.async_get(menuai)
 
     data = dict(msg)
     data.pop("type")
@@ -88,12 +88,12 @@ def websocket_create_area(
 @websocket_api.require_admin
 @callback
 def websocket_delete_area(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Delete area command."""
-    registry = ar.async_get(hass)
+    registry = ar.async_get(menuai)
 
     try:
         registry.async_delete(msg["area_id"])
@@ -120,12 +120,12 @@ def websocket_delete_area(
 @websocket_api.require_admin
 @callback
 def websocket_update_area(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Handle update area websocket command."""
-    registry = ar.async_get(hass)
+    registry = ar.async_get(menuai)
 
     data = dict(msg)
     data.pop("type")

@@ -8,15 +8,15 @@ from matter_server.common.helpers.util import create_attribute_path_from_attribu
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.water_heater import (
+from menuai.components.water_heater import (
     STATE_ECO,
     STATE_HIGH_DEMAND,
     STATE_OFF,
     WaterHeaterEntityFeature,
 )
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .common import (
     set_node_attribute,
@@ -27,22 +27,22 @@ from .common import (
 
 @pytest.mark.usefixtures("matter_devices")
 async def test_water_heaters(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test water heaters."""
-    snapshot_matter_entities(hass, entity_registry, snapshot, Platform.WATER_HEATER)
+    snapshot_matter_entities(menuai, entity_registry, snapshot, Platform.WATER_HEATER)
 
 
 @pytest.mark.parametrize("node_fixture", ["silabs_water_heater"])
 async def test_water_heater(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     matter_node: MatterNode,
 ) -> None:
     """Test water heater entity."""
-    state = hass.states.get("water_heater.water_heater")
+    state = menuai.states.get("water_heater.water_heater")
     assert state
     assert state.attributes["min_temp"] == 40
     assert state.attributes["max_temp"] == 65
@@ -61,17 +61,17 @@ async def test_water_heater(
 
 @pytest.mark.parametrize("node_fixture", ["silabs_water_heater"])
 async def test_water_heater_set_temperature(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     matter_node: MatterNode,
 ) -> None:
     """Test water_heater set temperature service."""
     # test single-setpoint temperature adjustment when eco mode is active
-    state = hass.states.get("water_heater.water_heater")
+    state = menuai.states.get("water_heater.water_heater")
 
     assert state
     assert state.state == STATE_ECO
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "water_heater",
         "set_temperature",
         {
@@ -95,18 +95,18 @@ async def test_water_heater_set_temperature(
     [(STATE_OFF, 0), (STATE_ECO, 4), (STATE_HIGH_DEMAND, 4)],
 )
 async def test_water_heater_set_operation_mode(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     matter_node: MatterNode,
     operation_mode: str,
     matter_attribute_value: int,
 ) -> None:
     """Test water_heater set operation mode service."""
-    state = hass.states.get("water_heater.water_heater")
+    state = menuai.states.get("water_heater.water_heater")
     assert state
 
     # test change mode to each operation_mode
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "water_heater",
         "set_operation_mode",
         {
@@ -128,7 +128,7 @@ async def test_water_heater_set_operation_mode(
 
 @pytest.mark.parametrize("node_fixture", ["silabs_water_heater"])
 async def test_water_heater_boostmode(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     matter_node: MatterNode,
 ) -> None:
@@ -137,11 +137,11 @@ async def test_water_heater_boostmode(
     boost_info: type[
         clusters.WaterHeaterManagement.Structs.WaterHeaterBoostInfoStruct
     ] = clusters.WaterHeaterManagement.Structs.WaterHeaterBoostInfoStruct(duration=3600)
-    state = hass.states.get("water_heater.water_heater")
+    state = menuai.states.get("water_heater.water_heater")
     assert state
 
     # enable water_heater boostmode
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "water_heater",
         "set_operation_mode",
         {
@@ -167,7 +167,7 @@ async def test_water_heater_boostmode(
     )
 
     # disable water_heater boostmode
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "water_heater",
         "set_operation_mode",
         {
@@ -195,7 +195,7 @@ async def test_water_heater_boostmode(
 
 @pytest.mark.parametrize("node_fixture", ["silabs_water_heater"])
 async def test_update_from_water_heater(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     matter_node: MatterNode,
 ) -> None:
@@ -203,36 +203,36 @@ async def test_update_from_water_heater(
     entity_id = "water_heater.water_heater"
 
     # confirm initial BoostState (as stored in the fixture)
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
 
     # confirm thermostat state is 'high_demand' by setting the BoostState to 1
     set_node_attribute(matter_node, 2, 148, 5, 1)
-    await trigger_subscription_callback(hass, matter_client)
-    state = hass.states.get(entity_id)
+    await trigger_subscription_callback(menuai, matter_client)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_HIGH_DEMAND
 
     # confirm thermostat state is 'eco' by setting the BoostState to 0
     set_node_attribute(matter_node, 2, 148, 5, 0)
-    await trigger_subscription_callback(hass, matter_client)
-    state = hass.states.get(entity_id)
+    await trigger_subscription_callback(menuai, matter_client)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_ECO
 
 
 @pytest.mark.parametrize("node_fixture", ["silabs_water_heater"])
 async def test_water_heater_turn_on_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     matter_node: MatterNode,
 ) -> None:
     """Test water_heater set turn_off/turn_on."""
-    state = hass.states.get("water_heater.water_heater")
+    state = menuai.states.get("water_heater.water_heater")
     assert state
 
     # turn_off water_heater
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "water_heater",
         "turn_off",
         {
@@ -253,7 +253,7 @@ async def test_water_heater_turn_on_off(
     matter_client.write_attribute.reset_mock()
 
     # turn_on water_heater
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "water_heater",
         "turn_on",
         {

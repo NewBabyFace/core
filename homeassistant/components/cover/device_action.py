@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant.components.device_automation import async_validate_entity_schema
-from homeassistant.const import (
+from menuai.components.device_automation import async_validate_entity_schema
+from menuai.const import (
     ATTR_ENTITY_ID,
     CONF_DEVICE_ID,
     CONF_DOMAIN,
@@ -19,10 +19,10 @@ from homeassistant.const import (
     SERVICE_SET_COVER_TILT_POSITION,
     SERVICE_STOP_COVER,
 )
-from homeassistant.core import Context, HomeAssistant
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.entity import get_supported_features
-from homeassistant.helpers.typing import ConfigType, TemplateVarsType
+from menuai.core import Context, menuai
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.entity import get_supported_features
+from menuai.helpers.typing import ConfigType, TemplateVarsType
 
 from . import ATTR_POSITION, ATTR_TILT_POSITION, DOMAIN, CoverEntityFeature
 
@@ -50,17 +50,17 @@ _ACTION_SCHEMA = vol.Any(CMD_ACTION_SCHEMA, POSITION_ACTION_SCHEMA)
 
 
 async def async_validate_action_config(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> ConfigType:
     """Validate config."""
-    return async_validate_entity_schema(hass, config, _ACTION_SCHEMA)
+    return async_validate_entity_schema(menuai, config, _ACTION_SCHEMA)
 
 
 async def async_get_actions(
-    hass: HomeAssistant, device_id: str
+    menuai: menuai, device_id: str
 ) -> list[dict[str, str]]:
     """List device actions for Cover devices."""
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     actions = []
 
     # Get all the integrations entities for this device
@@ -68,7 +68,7 @@ async def async_get_actions(
         if entry.domain != DOMAIN:
             continue
 
-        supported_features = get_supported_features(hass, entry.entity_id)
+        supported_features = get_supported_features(menuai, entry.entity_id)
 
         # Add actions for each entity that belongs to this integration
         base_action = {
@@ -97,7 +97,7 @@ async def async_get_actions(
 
 
 async def async_get_action_capabilities(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> dict[str, vol.Schema]:
     """List action capabilities."""
     if config[CONF_TYPE] not in POSITION_ACTION_TYPES:
@@ -115,7 +115,7 @@ async def async_get_action_capabilities(
 
 
 async def async_call_action_from_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     variables: TemplateVarsType,
     context: Context | None,
@@ -140,6 +140,6 @@ async def async_call_action_from_config(
         service = SERVICE_SET_COVER_TILT_POSITION
         service_data[ATTR_TILT_POSITION] = config["position"]
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN, service, service_data, blocking=True, context=context
     )

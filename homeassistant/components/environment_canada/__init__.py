@@ -5,9 +5,9 @@ import logging
 
 from env_canada import ECAirQuality, ECRadar, ECWeather
 
-from homeassistant.const import CONF_LANGUAGE, CONF_LATITUDE, CONF_LONGITUDE, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
+from menuai.const import CONF_LANGUAGE, CONF_LATITUDE, CONF_LONGITUDE, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
 
 from .const import CONF_STATION
 from .coordinator import ECConfigEntry, ECDataUpdateCoordinator, ECRuntimeData
@@ -20,7 +20,7 @@ PLATFORMS = [Platform.CAMERA, Platform.SENSOR, Platform.WEATHER]
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, config_entry: ECConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, config_entry: ECConfigEntry) -> bool:
     """Set up EC as config entry."""
     lat = config_entry.data.get(CONF_LATITUDE)
     lon = config_entry.data.get(CONF_LONGITUDE)
@@ -35,7 +35,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ECConfigEntry) ->
         language=lang.lower(),
     )
     weather_coordinator = ECDataUpdateCoordinator(
-        hass, config_entry, weather_data, "weather", DEFAULT_WEATHER_UPDATE_INTERVAL
+        menuai, config_entry, weather_data, "weather", DEFAULT_WEATHER_UPDATE_INTERVAL
     )
     try:
         await weather_coordinator.async_config_entry_first_refresh()
@@ -45,7 +45,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ECConfigEntry) ->
 
     radar_data = ECRadar(coordinates=(lat, lon))
     radar_coordinator = ECDataUpdateCoordinator(
-        hass, config_entry, radar_data, "radar", DEFAULT_RADAR_UPDATE_INTERVAL
+        menuai, config_entry, radar_data, "radar", DEFAULT_RADAR_UPDATE_INTERVAL
     )
     try:
         await radar_coordinator.async_config_entry_first_refresh()
@@ -55,7 +55,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ECConfigEntry) ->
 
     aqhi_data = ECAirQuality(coordinates=(lat, lon))
     aqhi_coordinator = ECDataUpdateCoordinator(
-        hass, config_entry, aqhi_data, "AQHI", DEFAULT_WEATHER_UPDATE_INTERVAL
+        menuai, config_entry, aqhi_data, "AQHI", DEFAULT_WEATHER_UPDATE_INTERVAL
     )
     try:
         await aqhi_coordinator.async_config_entry_first_refresh()
@@ -72,11 +72,11 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ECConfigEntry) ->
         weather_coordinator=weather_coordinator,
     )
 
-    await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, config_entry: ECConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, config_entry: ECConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(config_entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(config_entry, PLATFORMS)

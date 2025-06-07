@@ -10,12 +10,12 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components import apache_kafka
-from homeassistant.const import STATE_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components import apache_kafka
+from menuai.const import STATE_ON
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
-APACHE_KAFKA_PATH = "homeassistant.components.apache_kafka"
+APACHE_KAFKA_PATH = "menuai.components.apache_kafka"
 PRODUCER_PATH = f"{APACHE_KAFKA_PATH}.AIOKafkaProducer"
 MIN_CONFIG = {
     "ip_address": "localhost",
@@ -60,16 +60,16 @@ def mock_client_stop():
 
 
 async def test_minimal_config(
-    hass: HomeAssistant, mock_client: MockKafkaClient
+    menuai: menuai, mock_client: MockKafkaClient
 ) -> None:
     """Test the minimal config and defaults of component."""
     config = {apache_kafka.DOMAIN: MIN_CONFIG}
-    assert await async_setup_component(hass, apache_kafka.DOMAIN, config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, apache_kafka.DOMAIN, config)
+    await menuai.async_block_till_done()
     mock_client.start.assert_called_once()
 
 
-async def test_full_config(hass: HomeAssistant, mock_client: MockKafkaClient) -> None:
+async def test_full_config(menuai: menuai, mock_client: MockKafkaClient) -> None:
     """Test the full config of component."""
     config = {
         apache_kafka.DOMAIN: {
@@ -85,27 +85,27 @@ async def test_full_config(hass: HomeAssistant, mock_client: MockKafkaClient) ->
     }
     config[apache_kafka.DOMAIN].update(MIN_CONFIG)
 
-    assert await async_setup_component(hass, apache_kafka.DOMAIN, config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, apache_kafka.DOMAIN, config)
+    await menuai.async_block_till_done()
     mock_client.start.assert_called_once()
 
 
-async def _setup(hass: HomeAssistant, filter_config: dict[str, Any]) -> None:
+async def _setup(menuai: menuai, filter_config: dict[str, Any]) -> None:
     """Shared set up for filtering tests."""
     config = {apache_kafka.DOMAIN: {"filter": filter_config}}
     config[apache_kafka.DOMAIN].update(MIN_CONFIG)
 
-    assert await async_setup_component(hass, apache_kafka.DOMAIN, config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, apache_kafka.DOMAIN, config)
+    await menuai.async_block_till_done()
 
 
 async def _run_filter_tests(
-    hass: HomeAssistant, tests: list[FilterTest], mock_client: MockKafkaClient
+    menuai: menuai, tests: list[FilterTest], mock_client: MockKafkaClient
 ) -> None:
     """Run a series of filter tests on apache kafka."""
     for test in tests:
-        hass.states.async_set(test.id, STATE_ON)
-        await hass.async_block_till_done()
+        menuai.states.async_set(test.id, STATE_ON)
+        await menuai.async_block_till_done()
 
         if test.should_pass:
             mock_client.send_and_wait.assert_called_once()
@@ -114,10 +114,10 @@ async def _run_filter_tests(
             mock_client.send_and_wait.assert_not_called()
 
 
-async def test_allowlist(hass: HomeAssistant, mock_client: MockKafkaClient) -> None:
+async def test_allowlist(menuai: menuai, mock_client: MockKafkaClient) -> None:
     """Test an allowlist only config."""
     await _setup(
-        hass,
+        menuai,
         {
             "include_domains": ["light"],
             "include_entity_globs": ["sensor.included_*"],
@@ -134,13 +134,13 @@ async def test_allowlist(hass: HomeAssistant, mock_client: MockKafkaClient) -> N
         FilterTest("binary_sensor.excluded", False),
     ]
 
-    await _run_filter_tests(hass, tests, mock_client)
+    await _run_filter_tests(menuai, tests, mock_client)
 
 
-async def test_denylist(hass: HomeAssistant, mock_client: MockKafkaClient) -> None:
+async def test_denylist(menuai: menuai, mock_client: MockKafkaClient) -> None:
     """Test a denylist only config."""
     await _setup(
-        hass,
+        menuai,
         {
             "exclude_domains": ["climate"],
             "exclude_entity_globs": ["sensor.excluded_*"],
@@ -157,15 +157,15 @@ async def test_denylist(hass: HomeAssistant, mock_client: MockKafkaClient) -> No
         FilterTest("binary_sensor.excluded", False),
     ]
 
-    await _run_filter_tests(hass, tests, mock_client)
+    await _run_filter_tests(menuai, tests, mock_client)
 
 
 async def test_filtered_allowlist(
-    hass: HomeAssistant, mock_client: MockKafkaClient
+    menuai: menuai, mock_client: MockKafkaClient
 ) -> None:
     """Test an allowlist config with a filtering denylist."""
     await _setup(
-        hass,
+        menuai,
         {
             "include_domains": ["light"],
             "include_entity_globs": ["*.included_*"],
@@ -183,15 +183,15 @@ async def test_filtered_allowlist(
         FilterTest("climate.included_test", True),
     ]
 
-    await _run_filter_tests(hass, tests, mock_client)
+    await _run_filter_tests(menuai, tests, mock_client)
 
 
 async def test_filtered_denylist(
-    hass: HomeAssistant, mock_client: MockKafkaClient
+    menuai: menuai, mock_client: MockKafkaClient
 ) -> None:
     """Test a denylist config with a filtering allowlist."""
     await _setup(
-        hass,
+        menuai,
         {
             "include_entities": ["climate.included", "sensor.excluded_test"],
             "exclude_domains": ["climate"],
@@ -209,4 +209,4 @@ async def test_filtered_denylist(
         FilterTest("light.included", True),
     ]
 
-    await _run_filter_tests(hass, tests, mock_client)
+    await _run_filter_tests(menuai, tests, mock_client)

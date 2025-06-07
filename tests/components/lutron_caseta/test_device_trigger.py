@@ -3,16 +3,16 @@
 import pytest
 from pytest_unordered import unordered
 
-from homeassistant.components import automation
-from homeassistant.components.device_automation import DeviceAutomationType
-from homeassistant.components.lutron_caseta import (
+from menuai.components import automation
+from menuai.components.device_automation import DeviceAutomationType
+from menuai.components.lutron_caseta import (
     ATTR_ACTION,
     ATTR_AREA_NAME,
     ATTR_DEVICE_NAME,
     ATTR_SERIAL,
     ATTR_TYPE,
 )
-from homeassistant.components.lutron_caseta.const import (
+from menuai.components.lutron_caseta.const import (
     ATTR_BUTTON_TYPE,
     ATTR_LEAP_BUTTON_NUMBER,
     CONF_CA_CERTS,
@@ -21,9 +21,9 @@ from homeassistant.components.lutron_caseta.const import (
     DOMAIN,
     LUTRON_CASETA_BUTTON_EVENT,
 )
-from homeassistant.components.lutron_caseta.device_trigger import CONF_SUBTYPE
-from homeassistant.components.lutron_caseta.models import LutronCasetaData
-from homeassistant.const import (
+from menuai.components.lutron_caseta.device_trigger import CONF_SUBTYPE
+from menuai.components.lutron_caseta.models import LutronCasetaData
+from menuai.const import (
     ATTR_DEVICE_ID,
     CONF_DEVICE_ID,
     CONF_DOMAIN,
@@ -31,9 +31,9 @@ from homeassistant.const import (
     CONF_PLATFORM,
     CONF_TYPE,
 )
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import device_registry as dr
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import device_registry as dr
+from menuai.setup import async_setup_component
 
 from . import MockBridge, async_setup_integration
 
@@ -96,7 +96,7 @@ MOCK_BUTTON_DEVICES = [
 ]
 
 
-async def _async_setup_lutron_with_picos(hass: HomeAssistant) -> str:
+async def _async_setup_lutron_with_picos(menuai: menuai) -> str:
     """Setups a lutron bridge with picos."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -108,19 +108,19 @@ async def _async_setup_lutron_with_picos(hass: HomeAssistant) -> str:
         },
         unique_id="abc",
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    await async_setup_integration(hass, MockBridge, config_entry.entry_id)
+    await async_setup_integration(menuai, MockBridge, config_entry.entry_id)
 
     return config_entry.entry_id
 
 
-async def test_get_triggers(hass: HomeAssistant) -> None:
+async def test_get_triggers(menuai: menuai) -> None:
     """Test we get the expected triggers from a lutron pico."""
-    config_entry_id = await _async_setup_lutron_with_picos(hass)
+    config_entry_id = await _async_setup_lutron_with_picos(menuai)
     # Fetching the config entry runtime_data is a legacy pattern
     # and should not be copied for new integrations
-    data: LutronCasetaData = hass.config_entries.async_get_entry(
+    data: LutronCasetaData = menuai.config_entries.async_get_entry(
         config_entry_id
     ).runtime_data
     keypads = data.keypad_data.keypads
@@ -150,17 +150,17 @@ async def test_get_triggers(hass: HomeAssistant) -> None:
     ]
 
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device_id
+        menuai, DeviceAutomationType.TRIGGER, device_id
     )
 
     assert triggers == unordered(expected_triggers)
 
 
 async def test_get_triggers_for_invalid_device_id(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Test error raised for invalid lutron device_id."""
-    config_entry_id = await _async_setup_lutron_with_picos(hass)
+    config_entry_id = await _async_setup_lutron_with_picos(menuai)
 
     invalid_device = device_registry.async_get_or_create(
         config_entry_id=config_entry_id,
@@ -168,17 +168,17 @@ async def test_get_triggers_for_invalid_device_id(
     )
 
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, invalid_device.id
+        menuai, DeviceAutomationType.TRIGGER, invalid_device.id
     )
 
     assert triggers == []
 
 
 async def test_get_triggers_for_non_button_device(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Test error raised for invalid lutron device_id."""
-    config_entry_id = await _async_setup_lutron_with_picos(hass)
+    config_entry_id = await _async_setup_lutron_with_picos(menuai)
 
     invalid_device = device_registry.async_get_or_create(
         config_entry_id=config_entry_id,
@@ -186,17 +186,17 @@ async def test_get_triggers_for_non_button_device(
     )
 
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, invalid_device.id
+        menuai, DeviceAutomationType.TRIGGER, invalid_device.id
     )
 
     assert triggers == []
 
 
 async def test_none_serial_keypad(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Test serial assignment for keypads without serials."""
-    config_entry_id = await _async_setup_lutron_with_picos(hass)
+    config_entry_id = await _async_setup_lutron_with_picos(menuai)
 
     keypad_device = device_registry.async_get_or_create(
         config_entry_id=config_entry_id,
@@ -207,12 +207,12 @@ async def test_none_serial_keypad(
 
 
 async def test_if_fires_on_button_event(
-    hass: HomeAssistant,
+    menuai: menuai,
     service_calls: list[ServiceCall],
     device_registry: dr.DeviceRegistry,
 ) -> None:
     """Test for press trigger firing."""
-    await _async_setup_lutron_with_picos(hass)
+    await _async_setup_lutron_with_picos(menuai)
 
     device = MOCK_BUTTON_DEVICES[0]
     dr_device = device_registry.async_get_device(
@@ -221,7 +221,7 @@ async def test_if_fires_on_button_event(
     device_id = dr_device.id
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -252,27 +252,27 @@ async def test_if_fires_on_button_event(
         ATTR_DEVICE_ID: device_id,
         ATTR_BUTTON_TYPE: "on",
     }
-    hass.bus.async_fire(LUTRON_CASETA_BUTTON_EVENT, message)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire(LUTRON_CASETA_BUTTON_EVENT, message)
+    await menuai.async_block_till_done()
 
     assert len(service_calls) == 1
     assert service_calls[0].data["some"] == "test_trigger_button_press"
 
 
 async def test_if_fires_on_button_event_without_lip(
-    hass: HomeAssistant,
+    menuai: menuai,
     service_calls: list[ServiceCall],
     device_registry: dr.DeviceRegistry,
 ) -> None:
     """Test for press trigger firing on a device that does not support lip."""
-    await _async_setup_lutron_with_picos(hass)
+    await _async_setup_lutron_with_picos(menuai)
     device = MOCK_BUTTON_DEVICES[1]
     dr_device = device_registry.async_get_device(
         identifiers={(DOMAIN, device["serial"])}
     )
     device_id = dr_device.id
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -303,20 +303,20 @@ async def test_if_fires_on_button_event_without_lip(
         ATTR_DEVICE_ID: device_id,
         ATTR_BUTTON_TYPE: "Kitchen Pendants",
     }
-    hass.bus.async_fire(LUTRON_CASETA_BUTTON_EVENT, message)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire(LUTRON_CASETA_BUTTON_EVENT, message)
+    await menuai.async_block_till_done()
 
     assert len(service_calls) == 1
     assert service_calls[0].data["some"] == "test_trigger_button_press"
 
 
 async def test_validate_trigger_config_no_device(
-    hass: HomeAssistant, service_calls: list[ServiceCall]
+    menuai: menuai, service_calls: list[ServiceCall]
 ) -> None:
     """Test for no press with no device."""
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -344,21 +344,21 @@ async def test_validate_trigger_config_no_device(
         ATTR_AREA_NAME: "area",
         ATTR_ACTION: "press",
     }
-    hass.bus.async_fire(LUTRON_CASETA_BUTTON_EVENT, message)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire(LUTRON_CASETA_BUTTON_EVENT, message)
+    await menuai.async_block_till_done()
 
     assert len(service_calls) == 0
 
 
 async def test_validate_trigger_config_unknown_device(
-    hass: HomeAssistant, service_calls: list[ServiceCall]
+    menuai: menuai, service_calls: list[ServiceCall]
 ) -> None:
     """Test for no press with an unknown device."""
 
-    config_entry_id = await _async_setup_lutron_with_picos(hass)
+    config_entry_id = await _async_setup_lutron_with_picos(menuai)
     # Fetching the config entry runtime_data is a legacy pattern
     # and should not be copied for new integrations
-    data: LutronCasetaData = hass.config_entries.async_get_entry(
+    data: LutronCasetaData = menuai.config_entries.async_get_entry(
         config_entry_id
     ).runtime_data
     keypads = data.keypad_data.keypads
@@ -368,7 +368,7 @@ async def test_validate_trigger_config_unknown_device(
     keypad["type"] = "unknown"
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -396,20 +396,20 @@ async def test_validate_trigger_config_unknown_device(
         ATTR_AREA_NAME: "area",
         ATTR_ACTION: "press",
     }
-    hass.bus.async_fire(LUTRON_CASETA_BUTTON_EVENT, message)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire(LUTRON_CASETA_BUTTON_EVENT, message)
+    await menuai.async_block_till_done()
 
     assert len(service_calls) == 0
 
 
 async def test_validate_trigger_invalid_triggers(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test for click_event with invalid triggers."""
-    config_entry_id = await _async_setup_lutron_with_picos(hass)
+    config_entry_id = await _async_setup_lutron_with_picos(menuai)
     # Fetching the config entry runtime_data is a legacy pattern
     # and should not be copied for new integrations
-    data: LutronCasetaData = hass.config_entries.async_get_entry(
+    data: LutronCasetaData = menuai.config_entries.async_get_entry(
         config_entry_id
     ).runtime_data
     keypads = data.keypad_data.keypads
@@ -418,7 +418,7 @@ async def test_validate_trigger_invalid_triggers(
     device_id = keypad["dr_device_id"]
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -443,14 +443,14 @@ async def test_validate_trigger_invalid_triggers(
 
 
 async def test_if_fires_on_button_event_late_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     service_calls: list[ServiceCall],
     device_registry: dr.DeviceRegistry,
 ) -> None:
     """Test for press trigger firing with integration getting setup late."""
-    config_entry_id = await _async_setup_lutron_with_picos(hass)
-    await hass.config_entries.async_unload(config_entry_id)
-    await hass.async_block_till_done()
+    config_entry_id = await _async_setup_lutron_with_picos(menuai)
+    await menuai.config_entries.async_unload(config_entry_id)
+    await menuai.async_block_till_done()
 
     device = MOCK_BUTTON_DEVICES[0]
     dr_device = device_registry.async_get_device(
@@ -459,7 +459,7 @@ async def test_if_fires_on_button_event_late_setup(
     device_id = dr_device.id
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -480,7 +480,7 @@ async def test_if_fires_on_button_event_late_setup(
         },
     )
 
-    await async_setup_integration(hass, MockBridge, config_entry_id)
+    await async_setup_integration(menuai, MockBridge, config_entry_id)
 
     message = {
         ATTR_SERIAL: device.get("serial"),
@@ -492,8 +492,8 @@ async def test_if_fires_on_button_event_late_setup(
         ATTR_DEVICE_ID: device_id,
         ATTR_BUTTON_TYPE: "on",
     }
-    hass.bus.async_fire(LUTRON_CASETA_BUTTON_EVENT, message)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire(LUTRON_CASETA_BUTTON_EVENT, message)
+    await menuai.async_block_till_done()
 
     assert len(service_calls) == 1
     assert service_calls[0].data["some"] == "test_trigger_button_press"

@@ -1,15 +1,15 @@
 """Sensor platform support for wiffi devices."""
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import DEGREE, LIGHT_LUX, UnitOfPressure, UnitOfTemperature
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import DEGREE, LIGHT_LUX, UnitOfPressure, UnitOfTemperature
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import CREATE_ENTITY_SIGNAL
 from .entity import WiffiEntity
@@ -39,7 +39,7 @@ UOM_MAP = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -61,7 +61,7 @@ async def async_setup_entry(
 
         async_add_entities(entities)
 
-    async_dispatcher_connect(hass, CREATE_ENTITY_SIGNAL, _create_entity)
+    async_dispatcher_connect(menuai, CREATE_ENTITY_SIGNAL, _create_entity)
 
 
 class NumberEntity(WiffiEntity, SensorEntity):

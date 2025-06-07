@@ -6,12 +6,12 @@ from typing import Any
 
 from glances_api import Glances, exceptions
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util.dt import parse_duration, utcnow
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.util.dt import parse_duration, utcnow
 
 from .const import DEFAULT_SCAN_INTERVAL, DOMAIN
 
@@ -26,14 +26,14 @@ class GlancesDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     config_entry: GlancesConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, entry: GlancesConfigEntry, api: Glances
+        self, menuai: menuai, entry: GlancesConfigEntry, api: Glances
     ) -> None:
         """Initialize the Glances data."""
-        self.hass = hass
+        self.menuai = menuai
         self.host: str = entry.data[CONF_HOST]
         self.api = api
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
             name=f"{DOMAIN} - {self.host}",

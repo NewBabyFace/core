@@ -11,7 +11,7 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_HVAC_MODE,
     ATTR_PRESET_MODE,
     SERVICE_SET_HVAC_MODE,
@@ -19,15 +19,15 @@ from homeassistant.components.climate import (
     SERVICE_SET_TEMPERATURE,
     HVACMode,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_TEMPERATURE,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from .conftest import setup_evohome
 from .const import TEST_INSTALLS
@@ -35,7 +35,7 @@ from .const import TEST_INSTALLS
 
 @pytest.mark.parametrize("install", [*TEST_INSTALLS, "botched"])
 async def test_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: dict[str, str],
     install: str,
     snapshot: SnapshotAssertion,
@@ -47,16 +47,16 @@ async def test_setup_platform(
     #  - some extended state attrs are relative the current time
     freezer.move_to("2024-07-10T12:00:00Z")
 
-    async for _ in setup_evohome(hass, config, install=install):
+    async for _ in setup_evohome(menuai, config, install=install):
         pass
 
-    for x in hass.states.async_all(Platform.CLIMATE):
+    for x in menuai.states.async_all(Platform.CLIMATE):
         assert x == snapshot(name=f"{x.entity_id}-state")
 
 
 @pytest.mark.parametrize("install", TEST_INSTALLS)
 async def test_ctl_set_hvac_mode(
-    hass: HomeAssistant,
+    menuai: menuai,
     ctl_id: str,
     snapshot: SnapshotAssertion,
 ) -> None:
@@ -66,7 +66,7 @@ async def test_ctl_set_hvac_mode(
 
     # SERVICE_SET_HVAC_MODE: HVACMode.OFF
     with patch("evohomeasync2.control_system.ControlSystem.set_mode") as mock_fcn:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             Platform.CLIMATE,
             SERVICE_SET_HVAC_MODE,
             {
@@ -85,7 +85,7 @@ async def test_ctl_set_hvac_mode(
 
     # SERVICE_SET_HVAC_MODE: HVACMode.HEAT
     with patch("evohomeasync2.control_system.ControlSystem.set_mode") as mock_fcn:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             Platform.CLIMATE,
             SERVICE_SET_HVAC_MODE,
             {
@@ -107,14 +107,14 @@ async def test_ctl_set_hvac_mode(
 
 @pytest.mark.parametrize("install", TEST_INSTALLS)
 async def test_ctl_set_temperature(
-    hass: HomeAssistant,
+    menuai: menuai,
     ctl_id: str,
 ) -> None:
     """Test SERVICE_SET_TEMPERATURE of an evohome controller."""
 
     # Entity climate.xxx does not support this service
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             Platform.CLIMATE,
             SERVICE_SET_TEMPERATURE,
             {
@@ -127,7 +127,7 @@ async def test_ctl_set_temperature(
 
 @pytest.mark.parametrize("install", TEST_INSTALLS)
 async def test_ctl_turn_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     ctl_id: str,
     snapshot: SnapshotAssertion,
 ) -> None:
@@ -137,7 +137,7 @@ async def test_ctl_turn_off(
 
     # SERVICE_TURN_OFF
     with patch("evohomeasync2.control_system.ControlSystem.set_mode") as mock_fcn:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             Platform.CLIMATE,
             SERVICE_TURN_OFF,
             {
@@ -158,7 +158,7 @@ async def test_ctl_turn_off(
 
 @pytest.mark.parametrize("install", TEST_INSTALLS)
 async def test_ctl_turn_on(
-    hass: HomeAssistant,
+    menuai: menuai,
     ctl_id: str,
     snapshot: SnapshotAssertion,
 ) -> None:
@@ -168,7 +168,7 @@ async def test_ctl_turn_on(
 
     # SERVICE_TURN_ON
     with patch("evohomeasync2.control_system.ControlSystem.set_mode") as mock_fcn:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             Platform.CLIMATE,
             SERVICE_TURN_ON,
             {
@@ -189,7 +189,7 @@ async def test_ctl_turn_on(
 
 @pytest.mark.parametrize("install", TEST_INSTALLS)
 async def test_zone_set_hvac_mode(
-    hass: HomeAssistant,
+    menuai: menuai,
     zone_id: str,
     snapshot: SnapshotAssertion,
 ) -> None:
@@ -199,7 +199,7 @@ async def test_zone_set_hvac_mode(
 
     # SERVICE_SET_HVAC_MODE: HVACMode.HEAT
     with patch("evohomeasync2.zone.Zone.reset") as mock_fcn:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             Platform.CLIMATE,
             SERVICE_SET_HVAC_MODE,
             {
@@ -213,7 +213,7 @@ async def test_zone_set_hvac_mode(
 
     # SERVICE_SET_HVAC_MODE: HVACMode.OFF
     with patch("evohomeasync2.zone.Zone.set_temperature") as mock_fcn:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             Platform.CLIMATE,
             SERVICE_SET_HVAC_MODE,
             {
@@ -236,7 +236,7 @@ async def test_zone_set_hvac_mode(
 
 @pytest.mark.parametrize("install", TEST_INSTALLS)
 async def test_zone_set_preset_mode(
-    hass: HomeAssistant,
+    menuai: menuai,
     zone_id: str,
     freezer: FrozenDateTimeFactory,
     snapshot: SnapshotAssertion,
@@ -248,7 +248,7 @@ async def test_zone_set_preset_mode(
 
     # SERVICE_SET_PRESET_MODE: none
     with patch("evohomeasync2.zone.Zone.reset") as mock_fcn:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             Platform.CLIMATE,
             SERVICE_SET_PRESET_MODE,
             {
@@ -262,7 +262,7 @@ async def test_zone_set_preset_mode(
 
     # SERVICE_SET_PRESET_MODE: permanent
     with patch("evohomeasync2.zone.Zone.set_temperature") as mock_fcn:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             Platform.CLIMATE,
             SERVICE_SET_PRESET_MODE,
             {
@@ -282,7 +282,7 @@ async def test_zone_set_preset_mode(
 
     # SERVICE_SET_PRESET_MODE: temporary
     with patch("evohomeasync2.zone.Zone.set_temperature") as mock_fcn:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             Platform.CLIMATE,
             SERVICE_SET_PRESET_MODE,
             {
@@ -306,7 +306,7 @@ async def test_zone_set_preset_mode(
 
 @pytest.mark.parametrize("install", TEST_INSTALLS)
 async def test_zone_set_temperature(
-    hass: HomeAssistant,
+    menuai: menuai,
     zone_id: str,
     snapshot: SnapshotAssertion,
 ) -> None:
@@ -316,7 +316,7 @@ async def test_zone_set_temperature(
 
     # SERVICE_SET_TEMPERATURE: temperature
     with patch("evohomeasync2.zone.Zone.set_temperature") as mock_fcn:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             Platform.CLIMATE,
             SERVICE_SET_TEMPERATURE,
             {
@@ -339,7 +339,7 @@ async def test_zone_set_temperature(
 
 @pytest.mark.parametrize("install", TEST_INSTALLS)
 async def test_zone_turn_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     zone_id: str,
     snapshot: SnapshotAssertion,
 ) -> None:
@@ -349,7 +349,7 @@ async def test_zone_turn_off(
 
     # SERVICE_TURN_OFF
     with patch("evohomeasync2.zone.Zone.set_temperature") as mock_fcn:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             Platform.CLIMATE,
             SERVICE_TURN_OFF,
             {
@@ -371,14 +371,14 @@ async def test_zone_turn_off(
 
 @pytest.mark.parametrize("install", TEST_INSTALLS)
 async def test_zone_turn_on(
-    hass: HomeAssistant,
+    menuai: menuai,
     zone_id: str,
 ) -> None:
     """Test SERVICE_TURN_ON of an evohome heating zone."""
 
     # SERVICE_TURN_ON
     with patch("evohomeasync2.zone.Zone.reset") as mock_fcn:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             Platform.CLIMATE,
             SERVICE_TURN_ON,
             {

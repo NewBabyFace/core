@@ -4,19 +4,19 @@ from datetime import datetime, timedelta
 
 from async_upnp_client.profiles.igd import IgdDevice, IgdState
 
-from homeassistant.components.upnp.const import DEFAULT_SCAN_INTERVAL
-from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
+from menuai.components.upnp.const import DEFAULT_SCAN_INTERVAL
+from menuai.core import menuai
+from menuai.util import dt as dt_util
 
 from tests.common import MockConfigEntry, async_fire_time_changed
 
 
 async def test_upnp_binary_sensors(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_config_entry: MockConfigEntry
 ) -> None:
     """Test normal sensors."""
     # First poll.
-    wan_status_state = hass.states.get("binary_sensor.mock_name_wan_status")
+    wan_status_state = menuai.states.get("binary_sensor.mock_name_wan_status")
     assert wan_status_state.state == "on"
 
     # Second poll.
@@ -39,9 +39,9 @@ async def test_upnp_binary_sensors(
     )
 
     async_fire_time_changed(
-        hass, dt_util.utcnow() + timedelta(seconds=DEFAULT_SCAN_INTERVAL)
+        menuai, dt_util.utcnow() + timedelta(seconds=DEFAULT_SCAN_INTERVAL)
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    wan_status_state = hass.states.get("binary_sensor.mock_name_wan_status")
+    wan_status_state = menuai.states.get("binary_sensor.mock_name_wan_status")
     assert wan_status_state.state == "off"

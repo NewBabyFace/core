@@ -1,9 +1,9 @@
 """Exceptions for the Reolink Camera integration."""
 
-from homeassistant.exceptions import HomeAssistantError
+from menuai.exceptions import menuaiError
 
 
-class ReolinkException(HomeAssistantError):
+class ReolinkException(menuaiError):
     """BaseException for the Reolink integration."""
 
 

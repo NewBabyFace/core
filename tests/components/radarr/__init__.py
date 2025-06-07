@@ -5,15 +5,15 @@ from unittest.mock import patch
 
 from aiohttp.client_exceptions import ClientError
 
-from homeassistant.components.radarr.const import DOMAIN
-from homeassistant.const import (
+from menuai.components.radarr.const import DOMAIN
+from menuai.const import (
     CONF_API_KEY,
     CONF_URL,
     CONF_VERIFY_SSL,
     CONTENT_TYPE_JSON,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry, load_fixture
 from tests.test_util.aiohttp import AiohttpClientMocker
@@ -156,7 +156,7 @@ def mock_connection_server_error(
 
 
 async def setup_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     url: str = URL,
     api_key: str = API_KEY,
@@ -167,7 +167,7 @@ async def setup_integration(
     windows: bool = False,
     single_return: bool = False,
 ) -> MockConfigEntry:
-    """Set up the radarr integration in Home Assistant."""
+    """Set up the radarr integration in MenuAI."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         unique_id=unique_id,
@@ -178,7 +178,7 @@ async def setup_integration(
         },
     )
 
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     mock_connection(
         aioclient_mock,
@@ -192,9 +192,9 @@ async def setup_integration(
     mock_calendar(aioclient_mock, url)
 
     if not skip_entry_setup:
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
-    assert await async_setup_component(hass, DOMAIN, {})
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {})
 
     return entry
 
@@ -202,13 +202,13 @@ async def setup_integration(
 def patch_async_setup_entry(return_value=True):
     """Patch the async entry setup of radarr."""
     return patch(
-        "homeassistant.components.radarr.async_setup_entry",
+        "menuai.components.radarr.async_setup_entry",
         return_value=return_value,
     )
 
 
-def create_entry(hass: HomeAssistant) -> MockConfigEntry:
-    """Create Radarr entry in Home Assistant."""
+def create_entry(menuai: menuai) -> MockConfigEntry:
+    """Create Radarr entry in MenuAI."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         data={
@@ -218,5 +218,5 @@ def create_entry(hass: HomeAssistant) -> MockConfigEntry:
         },
     )
 
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     return entry

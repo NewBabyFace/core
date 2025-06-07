@@ -1,7 +1,7 @@
 """Test bond diagnostics."""
 
-from homeassistant.components.fan import DOMAIN as FAN_DOMAIN
-from homeassistant.core import HomeAssistant
+from menuai.components.fan import DOMAIN as FAN_DOMAIN
+from menuai.core import menuai
 
 from .common import ceiling_fan_with_breeze, setup_platform
 
@@ -10,18 +10,18 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_diagnostics(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test generating diagnostics for a config entry."""
 
     entry = await setup_platform(
-        hass,
+        menuai,
         FAN_DOMAIN,
         ceiling_fan_with_breeze("name-1"),
         bond_device_id="test-device-id",
         props={"max_speed": 6},
     )
-    diag = await get_diagnostics_for_config_entry(hass, hass_client, entry)
+    diag = await get_diagnostics_for_config_entry(menuai, menuai_client, entry)
     mock_device = diag["devices"][0]
     mock_device["attrs"]["actions"] = set(mock_device["attrs"]["actions"])
     mock_device["supported_actions"] = set(mock_device["supported_actions"])

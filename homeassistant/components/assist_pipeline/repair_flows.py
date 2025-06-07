@@ -6,10 +6,10 @@ from typing import cast
 
 import voluptuous as vol
 
-from homeassistant.components.assist_satellite import DOMAIN as ASSIST_SATELLITE_DOMAIN
-from homeassistant.components.repairs import RepairsFlow
-from homeassistant.data_entry_flow import FlowResult
-from homeassistant.helpers import entity_registry as er
+from menuai.components.assist_satellite import DOMAIN as ASSIST_SATELLITE_DOMAIN
+from menuai.components.repairs import RepairsFlow
+from menuai.data_entry_flow import FlowResult
+from menuai.helpers import entity_registry as er
 
 REQUIRED_KEYS = ("entity_id", "entity_uuid", "integration_name")
 
@@ -33,7 +33,7 @@ class AssistInProgressDeprecatedRepairFlow(RepairsFlow):
     ) -> FlowResult:
         """Handle the confirm step of a fix flow."""
         if user_input is not None:
-            entity_registry = er.async_get(self.hass)
+            entity_registry = er.async_get(self.menuai)
             entity_entry = entity_registry.async_get(
                 cast(str, self._data["entity_uuid"])
             )

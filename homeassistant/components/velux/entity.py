@@ -2,8 +2,8 @@
 
 from pyvlx import Node
 
-from homeassistant.core import callback
-from homeassistant.helpers.entity import Entity
+from menuai.core import callback
+from menuai.helpers.entity import Entity
 
 
 class VeluxEntity(Entity):
@@ -23,7 +23,7 @@ class VeluxEntity(Entity):
 
     @callback
     def async_register_callbacks(self):
-        """Register callbacks to update hass after device was changed."""
+        """Register callbacks to update menuai after device was changed."""
 
         async def after_update_callback(device):
             """Call after device was updated."""
@@ -31,6 +31,6 @@ class VeluxEntity(Entity):
 
         self.node.register_device_updated_cb(after_update_callback)
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Store register state change callback."""
         self.async_register_callbacks()

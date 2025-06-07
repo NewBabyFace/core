@@ -14,21 +14,21 @@ import zigpy.zcl
 from zigpy.zcl.clusters import general, security
 import zigpy.zcl.foundation as zcl_f
 
-from homeassistant.components.siren import (
+from menuai.components.siren import (
     ATTR_DURATION,
     ATTR_TONE,
     ATTR_VOLUME_LEVEL,
     DOMAIN as SIREN_DOMAIN,
 )
-from homeassistant.components.zha.helpers import (
+from menuai.components.zha.helpers import (
     ZHADeviceProxy,
     ZHAGatewayProxy,
     get_zha_gateway,
     get_zha_gateway_proxy,
 )
-from homeassistant.const import STATE_OFF, STATE_ON, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
+from menuai.const import STATE_OFF, STATE_ON, Platform
+from menuai.core import menuai
+from menuai.util import dt as dt_util
 
 from .common import find_entity_id
 
@@ -39,7 +39,7 @@ from tests.common import async_fire_time_changed
 def siren_platform_only():
     """Only set up the siren and required base platforms to speed up tests."""
     with patch(
-        "homeassistant.components.zha.PLATFORMS",
+        "menuai.components.zha.PLATFORMS",
         (
             Platform.DEVICE_TRACKER,
             Platform.NUMBER,
@@ -51,12 +51,12 @@ def siren_platform_only():
         yield
 
 
-async def test_siren(hass: HomeAssistant, setup_zha, zigpy_device_mock) -> None:
+async def test_siren(menuai: menuai, setup_zha, zigpy_device_mock) -> None:
     """Test zha siren platform."""
 
     await setup_zha()
-    gateway = get_zha_gateway(hass)
-    gateway_proxy: ZHAGatewayProxy = get_zha_gateway_proxy(hass)
+    gateway = get_zha_gateway(menuai)
+    gateway_proxy: ZHAGatewayProxy = get_zha_gateway_proxy(menuai)
 
     zigpy_device = zigpy_device_mock(
         {
@@ -71,14 +71,14 @@ async def test_siren(hass: HomeAssistant, setup_zha, zigpy_device_mock) -> None:
 
     gateway.get_or_create_device(zigpy_device)
     await gateway.async_device_initialized(zigpy_device)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     zha_device_proxy: ZHADeviceProxy = gateway_proxy.get_device_proxy(zigpy_device.ieee)
-    entity_id = find_entity_id(Platform.SIREN, zha_device_proxy, hass)
+    entity_id = find_entity_id(Platform.SIREN, zha_device_proxy, menuai)
     cluster = zigpy_device.endpoints[1].ias_wd
     assert entity_id is not None
 
-    assert hass.states.get(entity_id).state == STATE_OFF
+    assert menuai.states.get(entity_id).state == STATE_OFF
 
     # turn on from HA
     with (
@@ -93,7 +93,7 @@ async def test_siren(hass: HomeAssistant, setup_zha, zigpy_device_mock) -> None:
         ),
     ):
         # turn on via UI
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SIREN_DOMAIN, "turn_on", {"entity_id": entity_id}, blocking=True
         )
         assert cluster.request.mock_calls == [
@@ -113,7 +113,7 @@ async def test_siren(hass: HomeAssistant, setup_zha, zigpy_device_mock) -> None:
         ]
 
     # test that the state has changed to on
-    assert hass.states.get(entity_id).state == STATE_ON
+    assert menuai.states.get(entity_id).state == STATE_ON
 
     # turn off from HA
     with (
@@ -128,7 +128,7 @@ async def test_siren(hass: HomeAssistant, setup_zha, zigpy_device_mock) -> None:
         ),
     ):
         # turn off via UI
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SIREN_DOMAIN, "turn_off", {"entity_id": entity_id}, blocking=True
         )
         assert cluster.request.mock_calls == [
@@ -148,7 +148,7 @@ async def test_siren(hass: HomeAssistant, setup_zha, zigpy_device_mock) -> None:
         ]
 
     # test that the state has changed to off
-    assert hass.states.get(entity_id).state == STATE_OFF
+    assert menuai.states.get(entity_id).state == STATE_OFF
 
     # turn on from HA
     with (
@@ -163,7 +163,7 @@ async def test_siren(hass: HomeAssistant, setup_zha, zigpy_device_mock) -> None:
         ),
     ):
         # turn on via UI
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SIREN_DOMAIN,
             "turn_on",
             {
@@ -190,10 +190,10 @@ async def test_siren(hass: HomeAssistant, setup_zha, zigpy_device_mock) -> None:
             )
         ]
         # test that the state has changed to on
-    assert hass.states.get(entity_id).state == STATE_ON
+    assert menuai.states.get(entity_id).state == STATE_ON
 
     now = dt_util.utcnow() + timedelta(seconds=15)
-    async_fire_time_changed(hass, now)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, now)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(entity_id).state == STATE_OFF
+    assert menuai.states.get(entity_id).state == STATE_OFF

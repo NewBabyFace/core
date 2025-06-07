@@ -8,13 +8,13 @@ from typing import Any
 
 from env_canada import ECWeather
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_LOCATION,
     DEGREE,
     PERCENTAGE,
@@ -24,9 +24,9 @@ from homeassistant.const import (
     UnitOfSpeed,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import ATTR_STATION
 from .coordinator import ECConfigEntry, ECDataType, ECDataUpdateCoordinator
@@ -253,7 +253,7 @@ ALERT_TYPES: tuple[ECSensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ECConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

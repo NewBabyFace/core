@@ -10,25 +10,25 @@ from typing import Any
 
 from jsonpath import jsonpath
 
-from homeassistant.components.sensor import SensorDeviceClass
-from homeassistant.components.sensor.helpers import async_parse_date_datetime
-from homeassistant.const import (
+from menuai.components.sensor import SensorDeviceClass
+from menuai.components.sensor.helpers import async_parse_date_datetime
+from menuai.const import (
     CONF_COMMAND,
     CONF_NAME,
     CONF_SCAN_INTERVAL,
     CONF_VALUE_TEMPLATE,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import TemplateError
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.template import Template
-from homeassistant.helpers.trigger_template_entity import (
+from menuai.core import menuai
+from menuai.exceptions import TemplateError
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.event import async_track_time_interval
+from menuai.helpers.template import Template
+from menuai.helpers.trigger_template_entity import (
     ManualTriggerSensorEntity,
     ValueTemplate,
 )
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import dt as dt_util
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import dt as dt_util
 
 from .const import (
     CONF_COMMAND_TIMEOUT,
@@ -45,7 +45,7 @@ SCAN_INTERVAL = timedelta(seconds=60)
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -61,10 +61,10 @@ async def async_setup_platform(
     json_attributes_path: str | None = sensor_config.get(CONF_JSON_ATTRIBUTES_PATH)
     scan_interval: timedelta = sensor_config.get(CONF_SCAN_INTERVAL, SCAN_INTERVAL)
     value_template: ValueTemplate | None = sensor_config.get(CONF_VALUE_TEMPLATE)
-    data = CommandSensorData(hass, command, command_timeout)
+    data = CommandSensorData(menuai, command, command_timeout)
 
     trigger_entity_config = {
-        CONF_NAME: Template(sensor_config[CONF_NAME], hass),
+        CONF_NAME: Template(sensor_config[CONF_NAME], menuai),
         **{k: v for k, v in sensor_config.items() if k in TRIGGER_ENTITY_OPTIONS},
     }
 
@@ -97,7 +97,7 @@ class CommandSensor(ManualTriggerSensorEntity):
         scan_interval: timedelta,
     ) -> None:
         """Initialize the sensor."""
-        super().__init__(self.hass, config)
+        super().__init__(self.menuai, config)
         self.data = data
         self._attr_extra_state_attributes: dict[str, Any] = {}
         self._json_attributes = json_attributes
@@ -112,13 +112,13 @@ class CommandSensor(ManualTriggerSensorEntity):
         """Return extra state attributes."""
         return self._attr_extra_state_attributes
 
-    async def async_added_to_hass(self) -> None:
-        """Call when entity about to be added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Call when entity about to be added to menuai."""
+        await super().async_added_to_menuai()
         await self._update_entity_state()
         self.async_on_remove(
             async_track_time_interval(
-                self.hass,
+                self.menuai,
                 self._update_entity_state,
                 self._scan_interval,
                 name=f"Command Line Sensor - {self.name}",
@@ -213,10 +213,10 @@ class CommandSensor(ManualTriggerSensorEntity):
 class CommandSensorData:
     """The class for handling the data retrieval."""
 
-    def __init__(self, hass: HomeAssistant, command: str, command_timeout: int) -> None:
+    def __init__(self, menuai: menuai, command: str, command_timeout: int) -> None:
         """Initialize the data object."""
         self.value: str | None = None
-        self.hass = hass
+        self.menuai = menuai
         self.command = command
         self.timeout = command_timeout
 
@@ -230,7 +230,7 @@ class CommandSensorData:
             args_compiled = None
         else:
             prog, args = command.split(" ", 1)
-            args_compiled = Template(args, self.hass)
+            args_compiled = Template(args, self.menuai)
 
         if args_compiled:
             try:

@@ -2,7 +2,7 @@
 
 from home_assistant_bluetooth import BluetoothServiceInfoBleak
 
-from homeassistant.helpers.service_info.bluetooth import BluetoothServiceInfo
+from menuai.helpers.service_info.bluetooth import BluetoothServiceInfo
 
 from tests.components.bluetooth import generate_advertisement_data, generate_ble_device
 

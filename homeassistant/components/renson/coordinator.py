@@ -9,9 +9,9 @@ from typing import Any
 
 from renson_endura_delta.renson import RensonVentilation
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN
 
@@ -25,13 +25,13 @@ class RensonCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         api: RensonVentilation,
     ) -> None:
         """Initialize my coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             # Name of the data. For logging purposes.
@@ -44,4 +44,4 @@ class RensonCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from API endpoint."""
         async with asyncio.timeout(30):
-            return await self.hass.async_add_executor_job(self.api.get_all_data)
+            return await self.menuai.async_add_executor_job(self.api.get_all_data)

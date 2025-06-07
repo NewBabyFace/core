@@ -6,10 +6,10 @@ from unittest.mock import patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 pytestmark = pytest.mark.usefixtures("system_get_info", "dsl_get_info", "wan_get_info")
 
@@ -17,20 +17,20 @@ pytestmark = pytest.mark.usefixtures("system_get_info", "dsl_get_info", "wan_get
 @pytest.fixture(autouse=True)
 def override_platforms() -> Generator[None]:
     """Override PLATFORMS."""
-    with patch("homeassistant.components.sfr_box.PLATFORMS", [Platform.SENSOR]):
+    with patch("menuai.components.sfr_box.PLATFORMS", [Platform.SENSOR]):
         yield
 
 
 async def test_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test for SFR Box sensors."""
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Ensure devices are correctly registered
     device_entries = dr.async_entries_for_config_entry(
@@ -47,9 +47,9 @@ async def test_sensors(
     # Some entities are disabled, enable them and reload before checking states
     for ent in entity_entries:
         entity_registry.async_update_entity(ent.entity_id, disabled_by=None)
-    await hass.config_entries.async_reload(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_reload(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Ensure entity states are correct
-    states = [hass.states.get(ent.entity_id) for ent in entity_entries]
+    states = [menuai.states.get(ent.entity_id) for ent in entity_entries]
     assert states == snapshot

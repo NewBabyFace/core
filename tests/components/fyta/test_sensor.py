@@ -1,4 +1,4 @@
-"""Test the Home Assistant fyta sensor module."""
+"""Test the MenuAI fyta sensor module."""
 
 from datetime import timedelta
 from unittest.mock import AsyncMock
@@ -9,10 +9,10 @@ from fyta_cli.fyta_models import Plant
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.fyta.const import DOMAIN
-from homeassistant.const import STATE_UNAVAILABLE, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.fyta.const import DOMAIN
+from menuai.const import STATE_UNAVAILABLE, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import setup_platform
 
@@ -25,7 +25,7 @@ from tests.common import (
 
 
 async def test_all_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mock_fyta_connector: AsyncMock,
     mock_config_entry: MockConfigEntry,
@@ -33,8 +33,8 @@ async def test_all_entities(
 ) -> None:
     """Test all entities."""
 
-    await setup_platform(hass, mock_config_entry, [Platform.SENSOR])
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await setup_platform(menuai, mock_config_entry, [Platform.SENSOR])
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
 
 @pytest.mark.parametrize(
@@ -45,41 +45,41 @@ async def test_all_entities(
     ],
 )
 async def test_connection_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     exception: Exception,
     mock_fyta_connector: AsyncMock,
     mock_config_entry: MockConfigEntry,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test connection error."""
-    await setup_platform(hass, mock_config_entry, [Platform.SENSOR])
+    await setup_platform(menuai, mock_config_entry, [Platform.SENSOR])
 
     mock_fyta_connector.update_all_plants.side_effect = exception
 
     freezer.tick(delta=timedelta(hours=12))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("sensor.gummibaum_plant_state").state == STATE_UNAVAILABLE
+    assert menuai.states.get("sensor.gummibaum_plant_state").state == STATE_UNAVAILABLE
 
 
 async def test_add_remove_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_fyta_connector: AsyncMock,
     mock_config_entry: MockConfigEntry,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test if entities are added and old are removed."""
-    await setup_platform(hass, mock_config_entry, [Platform.SENSOR])
+    await setup_platform(menuai, mock_config_entry, [Platform.SENSOR])
 
-    assert hass.states.get("sensor.gummibaum_plant_state").state == "doing_great"
+    assert menuai.states.get("sensor.gummibaum_plant_state").state == "doing_great"
 
     plants: dict[int, Plant] = {
         0: Plant.from_dict(
-            await async_load_json_object_fixture(hass, "plant_status1.json", DOMAIN)
+            await async_load_json_object_fixture(menuai, "plant_status1.json", DOMAIN)
         ),
         2: Plant.from_dict(
-            await async_load_json_object_fixture(hass, "plant_status3.json", DOMAIN)
+            await async_load_json_object_fixture(menuai, "plant_status3.json", DOMAIN)
         ),
     }
     mock_fyta_connector.update_all_plants.return_value = plants
@@ -89,8 +89,8 @@ async def test_add_remove_entities(
     }
 
     freezer.tick(delta=timedelta(minutes=10))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("sensor.kakaobaum_plant_state") is None
-    assert hass.states.get("sensor.tomatenpflanze_plant_state").state == "doing_great"
+    assert menuai.states.get("sensor.kakaobaum_plant_state") is None
+    assert menuai.states.get("sensor.tomatenpflanze_plant_state").state == "doing_great"

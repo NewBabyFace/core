@@ -5,10 +5,10 @@ from unittest.mock import AsyncMock, Mock, patch
 
 from aiohttp.client_exceptions import ClientError
 
-from homeassistant.components import system_health
-from homeassistant.components.system_health import async_register_info
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components import system_health
+from menuai.components.system_health import async_register_info
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import get_system_health_info, mock_platform
 from tests.test_util.aiohttp import AiohttpClientMocker
@@ -16,10 +16,10 @@ from tests.typing import WebSocketGenerator
 
 
 async def gather_system_health_info(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> dict[str, Any]:
     """Gather all info."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     resp = await client.send_json({"id": 6, "type": "system_health/info"})
 
@@ -52,55 +52,55 @@ async def gather_system_health_info(
 
 
 async def test_info_endpoint_return_info(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test that the info endpoint works."""
-    assert await async_setup_component(hass, "homeassistant", {})
+    assert await async_setup_component(menuai, "menuai", {})
 
     with patch(
-        "homeassistant.components.homeassistant.system_health.system_health_info",
+        "menuai.components.menuai.system_health.system_health_info",
         return_value={"hello": True},
     ):
-        assert await async_setup_component(hass, "system_health", {})
+        assert await async_setup_component(menuai, "system_health", {})
 
-    data = await gather_system_health_info(hass, hass_ws_client)
+    data = await gather_system_health_info(menuai, menuai_ws_client)
 
     assert len(data) == 1
-    data = data["homeassistant"]
+    data = data["menuai"]
     assert data == {"info": {"hello": True}}
 
 
 async def test_info_endpoint_register_callback(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test that the info endpoint allows registering callbacks."""
 
-    async def mock_info(hass: HomeAssistant) -> dict[str, Any]:
+    async def mock_info(menuai: menuai) -> dict[str, Any]:
         return {"storage": "YAML"}
 
-    async_register_info(hass, "lovelace", mock_info)
-    assert await async_setup_component(hass, "system_health", {})
-    data = await gather_system_health_info(hass, hass_ws_client)
+    async_register_info(menuai, "lovelace", mock_info)
+    assert await async_setup_component(menuai, "system_health", {})
+    data = await gather_system_health_info(menuai, menuai_ws_client)
 
     assert len(data) == 1
     data = data["lovelace"]
     assert data == {"info": {"storage": "YAML"}}
 
     # Test our test helper works
-    assert await get_system_health_info(hass, "lovelace") == {"storage": "YAML"}
+    assert await get_system_health_info(menuai, "lovelace") == {"storage": "YAML"}
 
 
 async def test_info_endpoint_register_callback_timeout(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test that the info endpoint timing out."""
 
-    async def mock_info(hass: HomeAssistant) -> dict[str, Any]:
+    async def mock_info(menuai: menuai) -> dict[str, Any]:
         raise TimeoutError
 
-    async_register_info(hass, "lovelace", mock_info)
-    assert await async_setup_component(hass, "system_health", {})
-    data = await gather_system_health_info(hass, hass_ws_client)
+    async_register_info(menuai, "lovelace", mock_info)
+    assert await async_setup_component(menuai, "system_health", {})
+    data = await gather_system_health_info(menuai, menuai_ws_client)
 
     assert len(data) == 1
     data = data["lovelace"]
@@ -108,16 +108,16 @@ async def test_info_endpoint_register_callback_timeout(
 
 
 async def test_info_endpoint_register_callback_exc(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test that the info endpoint requires auth."""
 
-    async def mock_info(hass: HomeAssistant) -> dict[str, Any]:
+    async def mock_info(menuai: menuai) -> dict[str, Any]:
         raise Exception("TEST ERROR")  # noqa: TRY002
 
-    async_register_info(hass, "lovelace", mock_info)
-    assert await async_setup_component(hass, "system_health", {})
-    data = await gather_system_health_info(hass, hass_ws_client)
+    async_register_info(menuai, "lovelace", mock_info)
+    assert await async_setup_component(menuai, "system_health", {})
+    data = await gather_system_health_info(menuai, menuai_ws_client)
 
     assert len(data) == 1
     data = data["lovelace"]
@@ -125,33 +125,33 @@ async def test_info_endpoint_register_callback_exc(
 
 
 async def test_platform_loading(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
     """Test registering via platform."""
     aioclient_mock.get("http://example.com/status", text="")
     aioclient_mock.get("http://example.com/status_fail", exc=ClientError)
     aioclient_mock.get("http://example.com/timeout", exc=TimeoutError)
-    hass.config.components.add("fake_integration")
+    menuai.config.components.add("fake_integration")
     mock_platform(
-        hass,
+        menuai,
         "fake_integration.system_health",
         Mock(
-            async_register=lambda hass, register: register.async_register_info(
+            async_register=lambda menuai, register: register.async_register_info(
                 AsyncMock(
                     return_value={
                         "hello": "info",
                         "server_reachable": system_health.async_check_can_reach_url(
-                            hass, "http://example.com/status"
+                            menuai, "http://example.com/status"
                         ),
                         "server_fail_reachable": system_health.async_check_can_reach_url(
-                            hass,
+                            menuai,
                             "http://example.com/status_fail",
                             more_info="http://more-info-url.com",
                         ),
                         "server_timeout": system_health.async_check_can_reach_url(
-                            hass,
+                            menuai,
                             "http://example.com/timeout",
                             more_info="http://more-info-url.com",
                         ),
@@ -163,8 +163,8 @@ async def test_platform_loading(
         ),
     )
 
-    assert await async_setup_component(hass, "system_health", {})
-    data = await gather_system_health_info(hass, hass_ws_client)
+    assert await async_setup_component(menuai, "system_health", {})
+    data = await gather_system_health_info(menuai, menuai_ws_client)
 
     assert data["fake_integration"] == {
         "info": {

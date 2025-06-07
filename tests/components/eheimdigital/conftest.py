@@ -18,9 +18,9 @@ from eheimdigital.types import (
 )
 import pytest
 
-from homeassistant.components.eheimdigital.const import DOMAIN
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
+from menuai.components.eheimdigital.const import DOMAIN
+from menuai.const import CONF_HOST
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry, load_json_object_fixture
 
@@ -91,11 +91,11 @@ def eheimdigital_hub_mock(
     """Mock eheimdigital hub."""
     with (
         patch(
-            "homeassistant.components.eheimdigital.coordinator.EheimDigitalHub",
+            "menuai.components.eheimdigital.coordinator.EheimDigitalHub",
             spec=EheimDigitalHub,
         ) as eheimdigital_hub_mock,
         patch(
-            "homeassistant.components.eheimdigital.config_flow.EheimDigitalHub",
+            "menuai.components.eheimdigital.config_flow.EheimDigitalHub",
             new=eheimdigital_hub_mock,
         ),
     ):
@@ -109,12 +109,12 @@ def eheimdigital_hub_mock(
 
 
 async def init_integration(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_config_entry: MockConfigEntry
 ) -> None:
     """Initialize the integration."""
 
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
     with patch(
-        "homeassistant.components.eheimdigital.coordinator.asyncio.Event", new=AsyncMock
+        "menuai.components.eheimdigital.coordinator.asyncio.Event", new=AsyncMock
     ):
-        await hass.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.config_entries.async_setup(mock_config_entry.entry_id)

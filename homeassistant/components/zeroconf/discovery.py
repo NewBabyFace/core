@@ -1,4 +1,4 @@
-"""Zeroconf discovery for Home Assistant."""
+"""Zeroconf discovery for MenuAI."""
 
 from __future__ import annotations
 
@@ -14,16 +14,16 @@ from typing import TYPE_CHECKING, Any, Final, cast
 from zeroconf import BadTypeInNameException, IPVersion, ServiceStateChange
 from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo
 
-from homeassistant import config_entries
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import discovery_flow
-from homeassistant.helpers.discovery_flow import DiscoveryKey
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.service_info.zeroconf import (
+from menuai import config_entries
+from menuai.core import menuai, callback
+from menuai.helpers import discovery_flow
+from menuai.helpers.discovery_flow import DiscoveryKey
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.service_info.zeroconf import (
     ZeroconfServiceInfo as _ZeroconfServiceInfo,
 )
-from homeassistant.loader import HomeKitDiscoveredIntegration, ZeroconfMatcher
-from homeassistant.util.hass_dict import HassKey
+from menuai.loader import HomeKitDiscoveredIntegration, ZeroconfMatcher
+from menuai.util.menuai_dict import menuaiKey
 
 from .const import DOMAIN, REQUEST_TIMEOUT
 
@@ -50,7 +50,7 @@ ATTR_NAME: Final = "name"
 ATTR_PROPERTIES: Final = "properties"
 
 
-DATA_DISCOVERY: HassKey[ZeroconfDiscovery] = HassKey("zeroconf_discovery")
+DATA_DISCOVERY: menuaiKey[ZeroconfDiscovery] = menuaiKey("zeroconf_discovery")
 
 
 def build_homekit_model_lookups(
@@ -178,14 +178,14 @@ class ZeroconfDiscovery:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         zeroconf: HaZeroconf,
         zeroconf_types: dict[str, list[ZeroconfMatcher]],
         homekit_model_lookups: dict[str, HomeKitDiscoveredIntegration],
         homekit_model_matchers: dict[re.Pattern, HomeKitDiscoveredIntegration],
     ) -> None:
         """Init discovery."""
-        self.hass = hass
+        self.menuai = menuai
         self.zeroconf = zeroconf
         self.zeroconf_types = zeroconf_types
         self.homekit_model_lookups = homekit_model_lookups
@@ -215,7 +215,7 @@ class ZeroconfDiscovery:
     async def async_setup(self) -> None:
         """Start discovery."""
         types = list(self.zeroconf_types)
-        # We want to make sure we know about other HomeAssistant
+        # We want to make sure we know about other menuai
         # instances as soon as possible to avoid name conflicts
         # so we always browse for ZEROCONF_TYPE
         types.extend(
@@ -229,7 +229,7 @@ class ZeroconfDiscovery:
         )
 
         async_dispatcher_connect(
-            self.hass,
+            self.menuai,
             config_entries.signal_discovered_config_entry_removed(DOMAIN),
             self._handle_config_entry_removed,
         )
@@ -255,11 +255,11 @@ class ZeroconfDiscovery:
 
     def _async_dismiss_discoveries(self, name: str) -> None:
         """Dismiss all discoveries for the given name."""
-        for flow in self.hass.config_entries.flow.async_progress_by_init_data_type(
+        for flow in self.menuai.config_entries.flow.async_progress_by_init_data_type(
             _ZeroconfServiceInfo,
             lambda service_info: bool(service_info.name == name),
         ):
-            self.hass.config_entries.flow.async_abort(flow["flow_id"])
+            self.menuai.config_entries.flow.async_abort(flow["flow_id"])
 
     @callback
     def async_service_update(
@@ -304,7 +304,7 @@ class ZeroconfDiscovery:
         if async_service_info.load_from_cache(zeroconf):
             self._async_process_service_update(async_service_info, service_type, name)
         else:
-            self.hass.async_create_background_task(
+            self.menuai.async_create_background_task(
                 self._async_lookup_and_process_service_update(
                     zeroconf, async_service_info, service_type, name
                 ),
@@ -351,7 +351,7 @@ class ZeroconfDiscovery:
         ):
             domain = homekit_discovery.domain
             discovery_flow.async_create_flow(
-                self.hass,
+                self.menuai,
                 homekit_discovery.domain,
                 {"source": config_entries.SOURCE_HOMEKIT},
                 info,
@@ -402,7 +402,7 @@ class ZeroconfDiscovery:
                 context["alternative_domain"] = domain
 
             discovery_flow.async_create_flow(
-                self.hass,
+                self.menuai,
                 matcher_domain,
                 context,
                 info,

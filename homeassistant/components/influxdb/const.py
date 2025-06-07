@@ -5,7 +5,7 @@ import re
 
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_API_VERSION,
     CONF_HOST,
     CONF_PASSWORD,
@@ -16,7 +16,7 @@ from homeassistant.const import (
     CONF_USERNAME,
     CONF_VERIFY_SSL,
 )
-from homeassistant.helpers import config_validation as cv
+from menuai.helpers import config_validation as cv
 
 CONF_DB_NAME = "database"
 CONF_BUCKET = "bucket"
@@ -50,7 +50,7 @@ CONF_IMPORTS = "imports"
 DEFAULT_DATABASE = "home_assistant"
 DEFAULT_HOST_V2 = "us-west-2-1.aws.cloud2.influxdata.com"
 DEFAULT_SSL_V2 = True
-DEFAULT_BUCKET = "Home Assistant"
+DEFAULT_BUCKET = "MenuAI"
 DEFAULT_VERIFY_SSL = True
 DEFAULT_API_VERSION = "1"
 DEFAULT_GROUP_FUNCTION = "mean"

@@ -12,7 +12,7 @@ from bleak.backends.scanner import AdvertisementData, BLEDevice
 from bluetooth_adapters import DEFAULT_ADDRESS
 from habluetooth import BaseHaScanner, get_manager
 
-from homeassistant.components.bluetooth import (
+from menuai.components.bluetooth import (
     DOMAIN,
     MONOTONIC_TIME,
     SOURCE_LOCAL,
@@ -21,9 +21,9 @@ from homeassistant.components.bluetooth import (
     BluetoothServiceInfoBleak,
     async_get_advertisement_callback,
 )
-from homeassistant.components.bluetooth.manager import HomeAssistantBluetoothManager
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.bluetooth.manager import menuaiBluetoothManager
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 
@@ -68,7 +68,7 @@ def patch_bluetooth_time(mock_time: float) -> None:
     """Patch the bluetooth time."""
     with (
         patch(
-            "homeassistant.components.bluetooth.MONOTONIC_TIME", return_value=mock_time
+            "menuai.components.bluetooth.MONOTONIC_TIME", return_value=mock_time
         ),
         patch("habluetooth.base_scanner.monotonic_time_coarse", return_value=mock_time),
         patch("habluetooth.manager.monotonic_time_coarse", return_value=mock_time),
@@ -107,30 +107,30 @@ def generate_ble_device(
     return BLEDevice(**new)
 
 
-def _get_manager() -> HomeAssistantBluetoothManager:
+def _get_manager() -> menuaiBluetoothManager:
     """Return the bluetooth manager."""
-    manager: HomeAssistantBluetoothManager = get_manager()
+    manager: menuaiBluetoothManager = get_manager()
     return manager
 
 
 def inject_advertisement(
-    hass: HomeAssistant, device: BLEDevice, adv: AdvertisementData
+    menuai: menuai, device: BLEDevice, adv: AdvertisementData
 ) -> None:
     """Inject an advertisement into the manager."""
-    return inject_advertisement_with_source(hass, device, adv, SOURCE_LOCAL)
+    return inject_advertisement_with_source(menuai, device, adv, SOURCE_LOCAL)
 
 
 def inject_advertisement_with_source(
-    hass: HomeAssistant, device: BLEDevice, adv: AdvertisementData, source: str
+    menuai: menuai, device: BLEDevice, adv: AdvertisementData, source: str
 ) -> None:
     """Inject an advertisement into the manager from a specific source."""
     inject_advertisement_with_time_and_source(
-        hass, device, adv, time.monotonic(), source
+        menuai, device, adv, time.monotonic(), source
     )
 
 
 def inject_advertisement_with_time_and_source(
-    hass: HomeAssistant,
+    menuai: menuai,
     device: BLEDevice,
     adv: AdvertisementData,
     time: float,
@@ -138,12 +138,12 @@ def inject_advertisement_with_time_and_source(
 ) -> None:
     """Inject an advertisement into the manager from a specific source at a time."""
     inject_advertisement_with_time_and_source_connectable(
-        hass, device, adv, time, source, True
+        menuai, device, adv, time, source, True
     )
 
 
 def inject_advertisement_with_time_and_source_connectable(
-    hass: HomeAssistant,
+    menuai: menuai,
     device: BLEDevice,
     adv: AdvertisementData,
     time: float,
@@ -151,7 +151,7 @@ def inject_advertisement_with_time_and_source_connectable(
     connectable: bool,
 ) -> None:
     """Inject an advertisement into the manager from a specific source at a time and connectable status."""
-    async_get_advertisement_callback(hass)(
+    async_get_advertisement_callback(menuai)(
         BluetoothServiceInfoBleak(
             name=adv.local_name or device.name or device.address,
             address=device.address,
@@ -170,7 +170,7 @@ def inject_advertisement_with_time_and_source_connectable(
 
 
 def inject_bluetooth_service_info_bleak(
-    hass: HomeAssistant, info: BluetoothServiceInfoBleak
+    menuai: menuai, info: BluetoothServiceInfoBleak
 ) -> None:
     """Inject an advertisement into the manager with connectable status."""
     advertisement_data = generate_advertisement_data(
@@ -186,7 +186,7 @@ def inject_bluetooth_service_info_bleak(
         details={},
     )
     inject_advertisement_with_time_and_source_connectable(
-        hass,
+        menuai,
         device,
         advertisement_data,
         info.time,
@@ -196,7 +196,7 @@ def inject_bluetooth_service_info_bleak(
 
 
 def inject_bluetooth_service_info(
-    hass: HomeAssistant, info: BluetoothServiceInfo
+    menuai: menuai, info: BluetoothServiceInfo
 ) -> None:
     """Inject a BluetoothServiceInfo into the manager."""
     advertisement_data = generate_advertisement_data(  # type: ignore[no-untyped-call]
@@ -211,7 +211,7 @@ def inject_bluetooth_service_info(
         name=info.name,
         details={},
     )
-    inject_advertisement(hass, device, advertisement_data)
+    inject_advertisement(menuai, device, advertisement_data)
 
 
 @contextmanager
@@ -256,24 +256,24 @@ def patch_discovered_devices(mock_discovered: list[BLEDevice]) -> None:
     manager._connectable_history = original_connectable_history
 
 
-async def async_setup_with_default_adapter(hass: HomeAssistant) -> MockConfigEntry:
+async def async_setup_with_default_adapter(menuai: menuai) -> MockConfigEntry:
     """Set up the Bluetooth integration with a default adapter."""
-    return await _async_setup_with_adapter(hass, DEFAULT_ADDRESS)
+    return await _async_setup_with_adapter(menuai, DEFAULT_ADDRESS)
 
 
-async def async_setup_with_one_adapter(hass: HomeAssistant) -> MockConfigEntry:
+async def async_setup_with_one_adapter(menuai: menuai) -> MockConfigEntry:
     """Set up the Bluetooth integration with one adapter."""
-    return await _async_setup_with_adapter(hass, "00:00:00:00:00:01")
+    return await _async_setup_with_adapter(menuai, "00:00:00:00:00:01")
 
 
 async def _async_setup_with_adapter(
-    hass: HomeAssistant, address: str
+    menuai: menuai, address: str
 ) -> MockConfigEntry:
     """Set up the Bluetooth integration with any adapter."""
     entry = MockConfigEntry(domain="bluetooth", unique_id=address)
-    entry.add_to_hass(hass)
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {}})
+    await menuai.async_block_till_done()
     return entry
 
 

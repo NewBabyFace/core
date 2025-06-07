@@ -6,12 +6,12 @@ from typing import Any
 from plexapi.exceptions import PlexApiException
 import requests.exceptions
 
-from homeassistant.components.update import UpdateEntity, UpdateEntityFeature
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.update import UpdateEntity, UpdateEntityFeature
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import CONF_SERVER_IDENTIFIER, DOMAIN
 from .helpers import get_plex_server
@@ -20,14 +20,14 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Plex update entities from a config entry."""
     server_id = config_entry.data[CONF_SERVER_IDENTIFIER]
-    server = get_plex_server(hass, server_id)
-    can_update = await hass.async_add_executor_job(server.plex_server.canInstallUpdate)
+    server = get_plex_server(menuai, server_id)
+    can_update = await menuai.async_add_executor_job(server.plex_server.canInstallUpdate)
     async_add_entities([PlexUpdate(server, can_update)], update_before_add=True)
 
 
@@ -73,7 +73,7 @@ class PlexUpdate(UpdateEntity):
         try:
             self._server.plex_server.installUpdate()
         except (requests.exceptions.RequestException, PlexApiException) as exc:
-            raise HomeAssistantError(str(exc)) from exc
+            raise menuaiError(str(exc)) from exc
 
     @property
     def device_info(self) -> DeviceInfo:

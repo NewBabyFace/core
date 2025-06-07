@@ -8,13 +8,13 @@ from typing import Any
 
 from mypermobil import BATTERY_CHARGING
 
-from homeassistant import config_entries
-from homeassistant.components.binary_sensor import (
+from menuai import config_entries
+from menuai.components.binary_sensor import (
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import MyPermobilCoordinator
@@ -40,13 +40,13 @@ BINARY_SENSOR_DESCRIPTIONS: tuple[PermobilBinarySensorEntityDescription, ...] = 
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: config_entries.ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Create and setup the binary sensor."""
 
-    coordinator: MyPermobilCoordinator = hass.data[DOMAIN][config_entry.entry_id]
+    coordinator: MyPermobilCoordinator = menuai.data[DOMAIN][config_entry.entry_id]
 
     async_add_entities(
         PermobilbinarySensor(coordinator=coordinator, description=description)

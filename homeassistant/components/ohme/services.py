@@ -5,15 +5,15 @@ from typing import Final
 from ohme import OhmeApiClient
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import (
-    HomeAssistant,
+from menuai.config_entries import ConfigEntryState
+from menuai.core import (
+    menuai,
     ServiceCall,
     ServiceResponse,
     SupportsResponse,
 )
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import selector
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import selector
 
 from .const import DOMAIN
 from .coordinator import OhmeConfigEntry
@@ -48,7 +48,7 @@ SERVICE_SET_PRICE_CAP_SCHEMA: Final = vol.Schema(
 def __get_client(call: ServiceCall) -> OhmeApiClient:
     """Get the client from the config entry."""
     entry_id: str = call.data[ATTR_CONFIG_ENTRY]
-    entry: OhmeConfigEntry | None = call.hass.config_entries.async_get_entry(entry_id)
+    entry: OhmeConfigEntry | None = call.menuai.config_entries.async_get_entry(entry_id)
 
     if not entry:
         raise ServiceValidationError(
@@ -70,7 +70,7 @@ def __get_client(call: ServiceCall) -> OhmeApiClient:
     return entry.runtime_data.charge_session_coordinator.client
 
 
-def async_setup_services(hass: HomeAssistant) -> None:
+def async_setup_services(menuai: menuai) -> None:
     """Register services."""
 
     async def list_charge_slots(
@@ -89,7 +89,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
         price_cap = service_call.data[ATTR_PRICE_CAP]
         await client.async_change_price_cap(cap=price_cap)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_LIST_CHARGE_SLOTS,
         list_charge_slots,
@@ -97,7 +97,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
         supports_response=SupportsResponse.ONLY,
     )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_SET_PRICE_CAP,
         set_price_cap,

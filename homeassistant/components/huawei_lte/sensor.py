@@ -9,15 +9,15 @@ from datetime import datetime, timedelta
 import logging
 import re
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     DOMAIN as SENSOR_DOMAIN,
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     PERCENTAGE,
     EntityCategory,
     UnitOfDataRate,
@@ -25,10 +25,10 @@ from homeassistant.const import (
     UnitOfInformation,
     UnitOfTime,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
+from menuai.core import menuai
+from menuai.helpers.entity import Entity
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
 
 from . import Router
 from .const import (
@@ -739,12 +739,12 @@ SENSOR_META: dict[str, HuaweiSensorGroup] = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up from config entry."""
-    router = hass.data[DOMAIN].routers[config_entry.entry_id]
+    router = menuai.data[DOMAIN].routers[config_entry.entry_id]
     sensors: list[Entity] = []
     for key in SENSOR_KEYS:
         if not (items := router.data.get(key)):
@@ -790,18 +790,18 @@ class HuaweiLteSensor(HuaweiLteBaseEntityWithDevice, SensorEntity):
         self.item = item
         self.entity_description = entity_description
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to needed data on add."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self.router.subscriptions[self.key].append(f"{SENSOR_DOMAIN}/{self.item}")
         if self.entity_description.last_reset_item:
             self.router.subscriptions[self.key].append(
                 f"{SENSOR_DOMAIN}/{self.entity_description.last_reset_item}"
             )
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Unsubscribe from needed data on remove."""
-        await super().async_will_remove_from_hass()
+        await super().async_will_remove_from_menuai()
         self.router.subscriptions[self.key].remove(f"{SENSOR_DOMAIN}/{self.item}")
         if self.entity_description.last_reset_item:
             self.router.subscriptions[self.key].remove(

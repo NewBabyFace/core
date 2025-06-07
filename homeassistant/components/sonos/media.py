@@ -16,10 +16,10 @@ from soco.core import (
 from soco.data_structures import DidlAudioBroadcast, DidlPlaylistContainer
 from soco.music_library import MusicLibrary
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.config_validation import time_period_str
-from homeassistant.helpers.dispatcher import dispatcher_send
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.helpers.config_validation import time_period_str
+from menuai.helpers.dispatcher import dispatcher_send
+from menuai.util import dt as dt_util
 
 from .const import (
     SONOS_MEDIA_UPDATED,
@@ -54,9 +54,9 @@ def _timespan_secs(timespan: str | None) -> int | None:
 class SonosMedia:
     """Representation of the current Sonos media."""
 
-    def __init__(self, hass: HomeAssistant, soco: SoCo) -> None:
+    def __init__(self, menuai: menuai, soco: SoCo) -> None:
         """Initialize a SonosMedia."""
-        self.hass = hass
+        self.menuai = menuai
         self.soco = soco
         self.play_mode: str | None = None
         self.playback_status: str | None = None
@@ -111,7 +111,7 @@ class SonosMedia:
 
     def write_media_player_states(self) -> None:
         """Send a signal to media player(s) to write new states."""
-        dispatcher_send(self.hass, SONOS_MEDIA_UPDATED, self.soco.uid)
+        dispatcher_send(self.menuai, SONOS_MEDIA_UPDATED, self.soco.uid)
 
     def set_basic_track_info(self, update_position: bool = False) -> None:
         """Query the speaker to update media metadata and position info."""

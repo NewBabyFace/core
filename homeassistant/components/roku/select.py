@@ -8,9 +8,9 @@ from dataclasses import dataclass
 from rokuecp import Roku
 from rokuecp.models import Device as RokuDevice
 
-from homeassistant.components.select import SelectEntity, SelectEntityDescription
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.select import SelectEntity, SelectEntityDescription
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import RokuConfigEntry
 from .entity import RokuEntity
@@ -107,7 +107,7 @@ CHANNEL_ENTITY = RokuSelectEntityDescription(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: RokuConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

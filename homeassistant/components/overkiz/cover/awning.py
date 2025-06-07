@@ -6,7 +6,7 @@ from typing import Any, cast
 
 from pyoverkiz.enums import OverkizCommand, OverkizState
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     ATTR_POSITION,
     CoverDeviceClass,
     CoverEntityFeature,

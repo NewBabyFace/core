@@ -13,9 +13,9 @@ from amberelectric.models.forecast_interval import ForecastInterval
 from amberelectric.models.price_descriptor import PriceDescriptor
 from amberelectric.rest import ApiException
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import LOGGER
 
@@ -77,14 +77,14 @@ class AmberUpdateCoordinator(DataUpdateCoordinator):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: AmberConfigEntry,
         api: amberelectric.AmberApi,
         site_id: str,
     ) -> None:
         """Initialise the data service."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name="amberelectric",
@@ -153,4 +153,4 @@ class AmberUpdateCoordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Async update wrapper."""
-        return await self.hass.async_add_executor_job(self.update_price_data)
+        return await self.menuai.async_add_executor_job(self.update_price_data)

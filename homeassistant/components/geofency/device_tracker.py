@@ -1,20 +1,20 @@
 """Support for the Geofency device tracker platform."""
 
-from homeassistant.components.device_tracker import TrackerEntity
-from homeassistant.const import ATTR_LATITUDE, ATTR_LONGITUDE
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.restore_state import RestoreEntity
+from menuai.components.device_tracker import TrackerEntity
+from menuai.const import ATTR_LATITUDE, ATTR_LONGITUDE
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.restore_state import RestoreEntity
 
 from . import TRACKER_UPDATE, GeofencyConfigEntry
 from .const import DOMAIN
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: GeofencyConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -33,11 +33,11 @@ async def async_setup_entry(
         )
 
     config_entry.async_on_unload(
-        async_dispatcher_connect(hass, TRACKER_UPDATE, _receive_data)
+        async_dispatcher_connect(menuai, TRACKER_UPDATE, _receive_data)
     )
 
     # Restore previously loaded devices
-    dev_reg = dr.async_get(hass)
+    dev_reg = dr.async_get(menuai)
     dev_ids = {
         identifier[1]
         for device in dev_reg.devices.get_devices_for_config_entry_id(
@@ -73,11 +73,11 @@ class GeofencyEntity(TrackerEntity, RestoreEntity):
             name=device,
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register state update callback."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self._unsub_dispatcher = async_dispatcher_connect(
-            self.hass, TRACKER_UPDATE, self._async_receive_data
+            self.menuai, TRACKER_UPDATE, self._async_receive_data
         )
 
         if self._attr_extra_state_attributes:
@@ -92,9 +92,9 @@ class GeofencyEntity(TrackerEntity, RestoreEntity):
         self._attr_latitude = attr.get(ATTR_LATITUDE)
         self._attr_longitude = attr.get(ATTR_LONGITUDE)
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Clean up after entity before removal."""
-        await super().async_will_remove_from_hass()
+        await super().async_will_remove_from_menuai()
         self._unsub_dispatcher()
         self._entry.runtime_data.remove(self.unique_id)
 

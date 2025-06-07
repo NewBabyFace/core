@@ -5,9 +5,9 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.const import CONF_MAC
-from homeassistant.core import HomeAssistant, callback
+from menuai.components.diagnostics import async_redact_data
+from menuai.const import CONF_MAC
+from menuai.core import menuai, callback
 
 from .coordinator import RAVEnConfigEntry
 
@@ -29,7 +29,7 @@ def async_redact_meter_macs(data: dict) -> dict:
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, config_entry: RAVEnConfigEntry
+    menuai: menuai, config_entry: RAVEnConfigEntry
 ) -> Mapping[str, Any]:
     """Return diagnostics for a config entry."""
 

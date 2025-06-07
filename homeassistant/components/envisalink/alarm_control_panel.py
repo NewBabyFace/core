@@ -6,18 +6,18 @@ import logging
 
 import voluptuous as vol
 
-from homeassistant.components.alarm_control_panel import (
+from menuai.components.alarm_control_panel import (
     AlarmControlPanelEntity,
     AlarmControlPanelEntityFeature,
     AlarmControlPanelState,
     CodeFormat,
 )
-from homeassistant.const import ATTR_ENTITY_ID, CONF_CODE
-from homeassistant.core import HomeAssistant, ServiceCall, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import ATTR_ENTITY_ID, CONF_CODE
+from menuai.core import menuai, ServiceCall, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import (
     CONF_PANIC,
@@ -43,7 +43,7 @@ ALARM_KEYPRESS_SCHEMA = vol.Schema(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -59,13 +59,13 @@ async def async_setup_platform(
     for part_num in configured_partitions:
         entity_config_data = PARTITION_SCHEMA(configured_partitions[part_num])
         entity = EnvisalinkAlarm(
-            hass,
+            menuai,
             part_num,
             entity_config_data[CONF_PARTITIONNAME],
             code,
             panic_type,
-            hass.data[DATA_EVL].alarm_state["partition"][part_num],
-            hass.data[DATA_EVL],
+            menuai.data[DATA_EVL].alarm_state["partition"][part_num],
+            menuai.data[DATA_EVL],
         )
         entities.append(entity)
 
@@ -84,7 +84,7 @@ async def async_setup_platform(
         for entity in target_entities:
             entity.async_alarm_keypress(keypress)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_ALARM_KEYPRESS,
         async_alarm_keypress_handler,
@@ -103,7 +103,7 @@ class EnvisalinkAlarm(EnvisalinkEntity, AlarmControlPanelEntity):
     )
 
     def __init__(
-        self, hass, partition_number, alarm_name, code, panic_type, info, controller
+        self, menuai, partition_number, alarm_name, code, panic_type, info, controller
     ):
         """Initialize the alarm panel."""
         self._partition_number = partition_number
@@ -114,22 +114,22 @@ class EnvisalinkAlarm(EnvisalinkEntity, AlarmControlPanelEntity):
         _LOGGER.debug("Setting up alarm: %s", alarm_name)
         super().__init__(alarm_name, info, controller)
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, SIGNAL_KEYPAD_UPDATE, self.async_update_callback
+                self.menuai, SIGNAL_KEYPAD_UPDATE, self.async_update_callback
             )
         )
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, SIGNAL_PARTITION_UPDATE, self.async_update_callback
+                self.menuai, SIGNAL_PARTITION_UPDATE, self.async_update_callback
             )
         )
 
     @callback
     def async_update_callback(self, partition):
-        """Update Home Assistant state, if needed."""
+        """Update MenuAI state, if needed."""
         if partition is None or int(partition) == self._partition_number:
             self.async_write_ha_state()
 
@@ -156,28 +156,28 @@ class EnvisalinkAlarm(EnvisalinkEntity, AlarmControlPanelEntity):
 
     async def async_alarm_disarm(self, code: str | None = None) -> None:
         """Send disarm command."""
-        self.hass.data[DATA_EVL].disarm_partition(code, self._partition_number)
+        self.menuai.data[DATA_EVL].disarm_partition(code, self._partition_number)
 
     async def async_alarm_arm_home(self, code: str | None = None) -> None:
         """Send arm home command."""
-        self.hass.data[DATA_EVL].arm_stay_partition(code, self._partition_number)
+        self.menuai.data[DATA_EVL].arm_stay_partition(code, self._partition_number)
 
     async def async_alarm_arm_away(self, code: str | None = None) -> None:
         """Send arm away command."""
-        self.hass.data[DATA_EVL].arm_away_partition(code, self._partition_number)
+        self.menuai.data[DATA_EVL].arm_away_partition(code, self._partition_number)
 
     async def async_alarm_trigger(self, code: str | None = None) -> None:
         """Alarm trigger command. Will be used to trigger a panic alarm."""
-        self.hass.data[DATA_EVL].panic_alarm(self._panic_type)
+        self.menuai.data[DATA_EVL].panic_alarm(self._panic_type)
 
     async def async_alarm_arm_night(self, code: str | None = None) -> None:
         """Send arm night command."""
-        self.hass.data[DATA_EVL].arm_night_partition(code, self._partition_number)
+        self.menuai.data[DATA_EVL].arm_night_partition(code, self._partition_number)
 
     @callback
     def async_alarm_keypress(self, keypress=None):
         """Send custom keypress."""
         if keypress:
-            self.hass.data[DATA_EVL].keypresses_to_partition(
+            self.menuai.data[DATA_EVL].keypresses_to_partition(
                 self._partition_number, keypress
             )

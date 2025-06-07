@@ -13,11 +13,11 @@ from asyncarve import (
     ArveSensProData,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_CLIENT_SECRET
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_ACCESS_TOKEN, CONF_CLIENT_SECRET
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN, LOGGER
 
@@ -30,10 +30,10 @@ class ArveCoordinator(DataUpdateCoordinator[ArveSensProData]):
     config_entry: ArveConfigEntry
     devices: ArveDevices
 
-    def __init__(self, hass: HomeAssistant, config_entry: ArveConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: ArveConfigEntry) -> None:
         """Initialize Arve coordinator."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -43,7 +43,7 @@ class ArveCoordinator(DataUpdateCoordinator[ArveSensProData]):
         self.arve = Arve(
             self.config_entry.data[CONF_ACCESS_TOKEN],
             self.config_entry.data[CONF_CLIENT_SECRET],
-            session=async_get_clientsession(hass),
+            session=async_get_clientsession(menuai),
         )
 
     async def _async_update_data(self) -> dict[str, ArveDeviceInfo]:

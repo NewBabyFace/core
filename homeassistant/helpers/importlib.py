@@ -9,16 +9,16 @@ import logging
 import sys
 from types import ModuleType
 
-from homeassistant.core import HomeAssistant
-from homeassistant.util.hass_dict import HassKey
+from menuai.core import menuai
+from menuai.util.menuai_dict import menuaiKey
 
 _LOGGER = logging.getLogger(__name__)
 
-DATA_IMPORT_CACHE: HassKey[dict[str, ModuleType]] = HassKey("import_cache")
-DATA_IMPORT_FUTURES: HassKey[dict[str, asyncio.Future[ModuleType]]] = HassKey(
+DATA_IMPORT_CACHE: menuaiKey[dict[str, ModuleType]] = menuaiKey("import_cache")
+DATA_IMPORT_FUTURES: menuaiKey[dict[str, asyncio.Future[ModuleType]]] = menuaiKey(
     "import_futures"
 )
-DATA_IMPORT_FAILURES: HassKey[dict[str, bool]] = HassKey("import_failures")
+DATA_IMPORT_FAILURES: menuaiKey[dict[str, bool]] = menuaiKey("import_failures")
 
 
 def _get_module(cache: dict[str, ModuleType], name: str) -> ModuleType:
@@ -27,27 +27,27 @@ def _get_module(cache: dict[str, ModuleType], name: str) -> ModuleType:
     return cache[name]
 
 
-async def async_import_module(hass: HomeAssistant, name: str) -> ModuleType:
+async def async_import_module(menuai: menuai, name: str) -> ModuleType:
     """Import a module or return it from the cache."""
-    cache = hass.data.setdefault(DATA_IMPORT_CACHE, {})
+    cache = menuai.data.setdefault(DATA_IMPORT_CACHE, {})
     if module := cache.get(name):
         return module
 
-    failure_cache = hass.data.setdefault(DATA_IMPORT_FAILURES, {})
+    failure_cache = menuai.data.setdefault(DATA_IMPORT_FAILURES, {})
     if name in failure_cache:
         raise ModuleNotFoundError(f"{name} not found", name=name)
 
-    import_futures = hass.data.setdefault(DATA_IMPORT_FUTURES, {})
+    import_futures = menuai.data.setdefault(DATA_IMPORT_FUTURES, {})
     if future := import_futures.get(name):
         return await future
 
     if name in sys.modules:
         return _get_module(cache, name)
 
-    import_future = hass.loop.create_future()
+    import_future = menuai.loop.create_future()
     import_futures[name] = import_future
     try:
-        module = await hass.async_add_import_executor_job(_get_module, cache, name)
+        module = await menuai.async_add_import_executor_job(_get_module, cache, name)
         import_future.set_result(module)
     except BaseException as ex:
         if isinstance(ex, ModuleNotFoundError):

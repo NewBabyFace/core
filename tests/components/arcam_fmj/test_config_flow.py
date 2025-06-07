@@ -7,12 +7,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from arcam.fmj.client import ConnectionFailed
 import pytest
 
-from homeassistant.components.arcam_fmj.const import DOMAIN
-from homeassistant.config_entries import SOURCE_SSDP, SOURCE_USER
-from homeassistant.const import CONF_HOST, CONF_PORT, CONF_SOURCE
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.ssdp import (
+from menuai.components.arcam_fmj.const import DOMAIN
+from menuai.config_entries import SOURCE_SSDP, SOURCE_USER
+from menuai.const import CONF_HOST, CONF_PORT, CONF_SOURCE
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.ssdp import (
     ATTR_UPNP_DEVICE_TYPE,
     ATTR_UPNP_FRIENDLY_NAME,
     ATTR_UPNP_MANUFACTURER,
@@ -64,15 +64,15 @@ MOCK_DISCOVER = SsdpServiceInfo(
 @pytest.fixture(name="dummy_client", autouse=True)
 def dummy_client_fixture() -> Generator[MagicMock]:
     """Mock out the real client."""
-    with patch("homeassistant.components.arcam_fmj.config_flow.Client") as client:
+    with patch("menuai.components.arcam_fmj.config_flow.Client") as client:
         client.return_value.start.side_effect = AsyncMock(return_value=None)
         client.return_value.stop.side_effect = AsyncMock(return_value=None)
         yield client.return_value
 
 
-async def test_ssdp(hass: HomeAssistant) -> None:
+async def test_ssdp(menuai: menuai) -> None:
     """Test a ssdp import flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={CONF_SOURCE: SOURCE_SSDP},
         data=MOCK_DISCOVER,
@@ -80,20 +80,20 @@ async def test_ssdp(hass: HomeAssistant) -> None:
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "confirm"
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == f"Arcam FMJ ({MOCK_HOST})"
     assert result["data"] == MOCK_CONFIG_ENTRY
 
 
-async def test_ssdp_abort(hass: HomeAssistant) -> None:
+async def test_ssdp_abort(menuai: menuai) -> None:
     """Test a ssdp import flow."""
     entry = MockConfigEntry(
         domain=DOMAIN, data=MOCK_CONFIG_ENTRY, title=MOCK_NAME, unique_id=MOCK_UUID
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={CONF_SOURCE: SOURCE_SSDP},
         data=MOCK_DISCOVER,
@@ -103,12 +103,12 @@ async def test_ssdp_abort(hass: HomeAssistant) -> None:
 
 
 async def test_ssdp_unable_to_connect(
-    hass: HomeAssistant, dummy_client: MagicMock
+    menuai: menuai, dummy_client: MagicMock
 ) -> None:
     """Test a ssdp import flow."""
     dummy_client.start.side_effect = AsyncMock(side_effect=ConnectionFailed)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={CONF_SOURCE: SOURCE_SSDP},
         data=MOCK_DISCOVER,
@@ -116,18 +116,18 @@ async def test_ssdp_unable_to_connect(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "confirm"
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "cannot_connect"
 
 
-async def test_ssdp_invalid_id(hass: HomeAssistant) -> None:
+async def test_ssdp_invalid_id(menuai: menuai) -> None:
     """Test a ssdp with invalid  UDN."""
     discover = replace(
         MOCK_DISCOVER, upnp=MOCK_DISCOVER.upnp | {ATTR_UPNP_UDN: "invalid"}
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={CONF_SOURCE: SOURCE_SSDP},
         data=discover,
@@ -136,7 +136,7 @@ async def test_ssdp_invalid_id(hass: HomeAssistant) -> None:
     assert result["reason"] == "cannot_connect"
 
 
-async def test_ssdp_update(hass: HomeAssistant) -> None:
+async def test_ssdp_update(menuai: menuai) -> None:
     """Test a ssdp import flow."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -144,9 +144,9 @@ async def test_ssdp_update(hass: HomeAssistant) -> None:
         title=MOCK_NAME,
         unique_id=MOCK_UUID,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={CONF_SOURCE: SOURCE_SSDP},
         data=MOCK_DISCOVER,
@@ -157,10 +157,10 @@ async def test_ssdp_update(hass: HomeAssistant) -> None:
     assert entry.data[CONF_HOST] == MOCK_HOST
 
 
-async def test_user(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker) -> None:
+async def test_user(menuai: menuai, aioclient_mock: AiohttpClientMocker) -> None:
     """Test a manual user configuration flow."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={CONF_SOURCE: SOURCE_USER},
         data=None,
@@ -175,7 +175,7 @@ async def test_user(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker) ->
     }
 
     aioclient_mock.get(MOCK_UPNP_LOCATION, text=MOCK_UPNP_DEVICE)
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -185,7 +185,7 @@ async def test_user(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker) ->
 
 
 async def test_invalid_ssdp(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test a a config flow where ssdp fails."""
     user_input = {
@@ -194,7 +194,7 @@ async def test_invalid_ssdp(
     }
 
     aioclient_mock.get(MOCK_UPNP_LOCATION, text="")
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={CONF_SOURCE: SOURCE_USER},
         data=user_input,
@@ -206,7 +206,7 @@ async def test_invalid_ssdp(
 
 
 async def test_user_wrong(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test a manual user configuration flow with no ssdp response."""
     user_input = {
@@ -215,7 +215,7 @@ async def test_user_wrong(
     }
 
     aioclient_mock.get(MOCK_UPNP_LOCATION, status=404)
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={CONF_SOURCE: SOURCE_USER},
         data=user_input,

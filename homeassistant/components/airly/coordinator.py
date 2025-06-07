@@ -10,10 +10,10 @@ from aiohttp.client_exceptions import ClientConnectorError
 from airly import Airly
 from airly.exceptions import AirlyError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util import dt as dt_util
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.util import dt as dt_util
 
 from .const import (
     ATTR_API_ADVICE,
@@ -65,7 +65,7 @@ class AirlyDataUpdateCoordinator(DataUpdateCoordinator[dict[str, str | float | i
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: AirlyConfigEntry,
         session: ClientSession,
         api_key: str,
@@ -78,12 +78,12 @@ class AirlyDataUpdateCoordinator(DataUpdateCoordinator[dict[str, str | float | i
         self.latitude = latitude
         self.longitude = longitude
         # Currently, Airly only supports Polish and English
-        language = "pl" if hass.config.language == "pl" else "en"
+        language = "pl" if menuai.config.language == "pl" else "en"
         self.airly = Airly(api_key, session, language=language)
         self.use_nearest = use_nearest
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -124,7 +124,7 @@ class AirlyDataUpdateCoordinator(DataUpdateCoordinator[dict[str, str | float | i
         # update_interval only if we have valid value.
         if self.airly.requests_remaining:
             self.update_interval = set_update_interval(
-                len(self.hass.config_entries.async_entries(DOMAIN)),
+                len(self.menuai.config_entries.async_entries(DOMAIN)),
                 self.airly.requests_remaining,
             )
 

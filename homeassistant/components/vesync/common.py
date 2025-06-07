@@ -7,7 +7,7 @@ from pyvesync.vesyncbasedevice import VeSyncBaseDevice
 from pyvesync.vesyncoutlet import VeSyncOutlet
 from pyvesync.vesyncswitch import VeSyncWallSwitch
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .const import VeSyncFanDevice, VeSyncHumidifierDevice
 
@@ -37,12 +37,12 @@ def rgetattr(obj: object, attr: str):
 
 
 async def async_generate_device_list(
-    hass: HomeAssistant, manager: VeSync
+    menuai: menuai, manager: VeSync
 ) -> list[VeSyncBaseDevice]:
     """Assign devices to proper component."""
     devices: list[VeSyncBaseDevice] = []
 
-    await hass.async_add_executor_job(manager.update)
+    await menuai.async_add_executor_job(manager.update)
 
     devices.extend(manager.fans)
     devices.extend(manager.bulbs)

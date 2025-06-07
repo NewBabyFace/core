@@ -7,10 +7,10 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_LLM_HASS_API
-from homeassistant.helpers import llm
-from homeassistant.helpers.selector import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_LLM_menuai_API
+from menuai.helpers import llm
+from menuai.helpers.selector import (
     SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
@@ -32,10 +32,10 @@ class ModelContextServerProtocolConfigFlow(ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle the initial step."""
-        llm_apis = {api.id: api.name for api in llm.async_get_apis(self.hass)}
+        llm_apis = {api.id: api.name for api in llm.async_get_apis(self.menuai)}
         if user_input is not None:
             return self.async_create_entry(
-                title=llm_apis[user_input[CONF_LLM_HASS_API]], data=user_input
+                title=llm_apis[user_input[CONF_LLM_menuai_API]], data=user_input
             )
 
         return self.async_show_form(
@@ -43,7 +43,7 @@ class ModelContextServerProtocolConfigFlow(ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema(
                 {
                     vol.Optional(
-                        CONF_LLM_HASS_API,
+                        CONF_LLM_menuai_API,
                         default=llm.LLM_API_ASSIST,
                     ): SelectSelector(
                         SelectSelectorConfig(

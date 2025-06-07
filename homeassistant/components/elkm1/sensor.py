@@ -14,13 +14,13 @@ from elkm1_lib.util import pretty_const
 from elkm1_lib.zones import Zone
 import voluptuous as vol
 
-from homeassistant.components.sensor import SensorEntity
-from homeassistant.const import EntityCategory, UnitOfElectricPotential
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_platform
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import VolDictType
+from menuai.components.sensor import SensorEntity
+from menuai.const import EntityCategory, UnitOfElectricPotential
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_platform
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import VolDictType
 
 from . import ElkM1ConfigEntry
 from .const import ATTR_VALUE, ELK_USER_CODE_SERVICE_SCHEMA
@@ -38,7 +38,7 @@ ELK_SET_COUNTER_SERVICE_SCHEMA: VolDictType = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ElkM1ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -90,27 +90,27 @@ class ElkSensor(ElkAttachedEntity, SensorEntity):
     async def async_counter_refresh(self) -> None:
         """Refresh the value of a counter from the panel."""
         if not isinstance(self, ElkCounter):
-            raise HomeAssistantError("supported only on ElkM1 Counter sensors")
+            raise menuaiError("supported only on ElkM1 Counter sensors")
         self._element.get()
 
     async def async_counter_set(self, value: int | None = None) -> None:
         """Set the value of a counter on the panel."""
         if not isinstance(self, ElkCounter):
-            raise HomeAssistantError("supported only on ElkM1 Counter sensors")
+            raise menuaiError("supported only on ElkM1 Counter sensors")
         if value is not None:
             self._element.set(value)
 
     async def async_zone_bypass(self, code: int | None = None) -> None:
         """Bypass zone."""
         if not isinstance(self, ElkZone):
-            raise HomeAssistantError("supported only on ElkM1 Zone sensors")
+            raise menuaiError("supported only on ElkM1 Zone sensors")
         if code is not None:
             self._element.bypass(code)
 
     async def async_zone_trigger(self) -> None:
         """Trigger zone."""
         if not isinstance(self, ElkZone):
-            raise HomeAssistantError("supported only on ElkM1 Zone sensors")
+            raise menuaiError("supported only on ElkM1 Zone sensors")
         self._element.trigger()
 
 

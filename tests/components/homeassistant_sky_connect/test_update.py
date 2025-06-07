@@ -2,15 +2,15 @@
 
 import pytest
 
-from homeassistant.components.homeassistant_hardware.helpers import (
+from menuai.components.menuai_hardware.helpers import (
     async_notify_firmware_info,
 )
-from homeassistant.components.homeassistant_hardware.util import (
+from menuai.components.menuai_hardware.util import (
     ApplicationType,
     FirmwareInfo,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from .common import USB_DATA_ZBT1
 
@@ -19,13 +19,13 @@ from tests.common import MockConfigEntry
 UPDATE_ENTITY_ID = "update.home_assistant_connect_zbt_1_9e2adbd7_firmware"
 
 
-async def test_zbt1_update_entity(hass: HomeAssistant) -> None:
+async def test_zbt1_update_entity(menuai: menuai) -> None:
     """Test the ZBT-1 firmware update entity."""
-    await async_setup_component(hass, "homeassistant", {})
+    await async_setup_component(menuai, "menuai", {})
 
     # Set up the ZBT-1 integration
     zbt1_config_entry = MockConfigEntry(
-        domain="homeassistant_sky_connect",
+        domain="menuai_sky_connect",
         data={
             "firmware": "ezsp",
             "firmware_version": "7.3.1.0 build 0",
@@ -39,14 +39,14 @@ async def test_zbt1_update_entity(hass: HomeAssistant) -> None:
         version=1,
         minor_version=3,
     )
-    zbt1_config_entry.add_to_hass(hass)
+    zbt1_config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(zbt1_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(zbt1_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Pretend ZHA loaded and notified hardware of the running firmware
     await async_notify_firmware_info(
-        hass,
+        menuai,
         "zha",
         FirmwareInfo(
             device=USB_DATA_ZBT1.device,
@@ -56,9 +56,9 @@ async def test_zbt1_update_entity(hass: HomeAssistant) -> None:
             source="zha",
         ),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state_ezsp = hass.states.get(UPDATE_ENTITY_ID)
+    state_ezsp = menuai.states.get(UPDATE_ENTITY_ID)
     assert state_ezsp is not None
     assert state_ezsp.state == "unknown"
     assert state_ezsp.attributes["title"] == "EmberZNet Zigbee"
@@ -67,7 +67,7 @@ async def test_zbt1_update_entity(hass: HomeAssistant) -> None:
 
     # Now, have OTBR push some info
     await async_notify_firmware_info(
-        hass,
+        menuai,
         "otbr",
         FirmwareInfo(
             device=USB_DATA_ZBT1.device,
@@ -77,10 +77,10 @@ async def test_zbt1_update_entity(hass: HomeAssistant) -> None:
             source="otbr",
         ),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # After the firmware update, the entity has the new version and the correct state
-    state_spinel = hass.states.get(UPDATE_ENTITY_ID)
+    state_spinel = menuai.states.get(UPDATE_ENTITY_ID)
     assert state_spinel is not None
     assert state_spinel.state == "unknown"
     assert state_spinel.attributes["title"] == "OpenThread RCP"
@@ -99,13 +99,13 @@ async def test_zbt1_update_entity(hass: HomeAssistant) -> None:
     ],
 )
 async def test_zbt1_update_entity_state(
-    hass: HomeAssistant, firmware: str, version: str, expected: str
+    menuai: menuai, firmware: str, version: str, expected: str
 ) -> None:
     """Test the ZBT-1 firmware update entity with different firmware types."""
-    await async_setup_component(hass, "homeassistant", {})
+    await async_setup_component(menuai, "menuai", {})
 
     zbt1_config_entry = MockConfigEntry(
-        domain="homeassistant_sky_connect",
+        domain="menuai_sky_connect",
         data={
             "firmware": firmware,
             "firmware_version": version,
@@ -119,12 +119,12 @@ async def test_zbt1_update_entity_state(
         version=1,
         minor_version=3,
     )
-    zbt1_config_entry.add_to_hass(hass)
+    zbt1_config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(zbt1_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(zbt1_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(UPDATE_ENTITY_ID)
+    state = menuai.states.get(UPDATE_ENTITY_ID)
     assert state is not None
     assert (
         f"{state.attributes['title']} {state.attributes['installed_version']}"

@@ -7,13 +7,13 @@ from typing import Any
 
 from powerfox import HeatMeter, PowerMeter, WaterMeter
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .coordinator import PowerfoxConfigEntry, PowerfoxDataUpdateCoordinator
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: PowerfoxConfigEntry
+    menuai: menuai, entry: PowerfoxConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for Powerfox config entry."""
     powerfox_data: list[PowerfoxDataUpdateCoordinator] = entry.runtime_data

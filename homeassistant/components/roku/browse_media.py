@@ -5,15 +5,15 @@ from __future__ import annotations
 from collections.abc import Callable
 from functools import partial
 
-from homeassistant.components import media_source
-from homeassistant.components.media_player import (
+from menuai.components import media_source
+from menuai.components.media_player import (
     BrowseError,
     BrowseMedia,
     MediaClass,
     MediaType,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.network import is_internal_request
+from menuai.core import menuai
+from menuai.helpers.network import is_internal_request
 
 from .coordinator import RokuDataUpdateCoordinator
 from .helpers import format_channel_name
@@ -65,7 +65,7 @@ def get_thumbnail_url_full(
 
 
 async def async_browse_media(
-    hass: HomeAssistant,
+    menuai: menuai,
     coordinator: RokuDataUpdateCoordinator,
     get_browse_image_url: GetBrowseImageUrlType,
     media_content_id: str | None,
@@ -74,27 +74,27 @@ async def async_browse_media(
     """Browse media."""
     if media_content_id is None:
         return await root_payload(
-            hass,
+            menuai,
             coordinator,
             get_browse_image_url,
         )
 
     if media_source.is_media_source_id(media_content_id):
-        return await media_source.async_browse_media(hass, media_content_id)
+        return await media_source.async_browse_media(menuai, media_content_id)
 
     payload = {
         "search_type": media_content_type,
         "search_id": media_content_id,
     }
 
-    response = await hass.async_add_executor_job(
+    response = await menuai.async_add_executor_job(
         build_item_response,
         coordinator,
         payload,
         partial(
             get_thumbnail_url_full,
             coordinator,
-            is_internal_request(hass),
+            is_internal_request(menuai),
             get_browse_image_url,
         ),
     )
@@ -106,7 +106,7 @@ async def async_browse_media(
 
 
 async def root_payload(
-    hass: HomeAssistant,
+    menuai: menuai,
     coordinator: RokuDataUpdateCoordinator,
     get_browse_image_url: GetBrowseImageUrlType,
 ) -> BrowseMedia:
@@ -134,7 +134,7 @@ async def root_payload(
         child.thumbnail = "https://brands.home-assistant.io/_/roku/logo.png"
 
     try:
-        browse_item = await media_source.async_browse_media(hass, None)
+        browse_item = await media_source.async_browse_media(menuai, None)
 
         # If domain is None, it's overview of available sources
         if browse_item.domain is None:
@@ -147,7 +147,7 @@ async def root_payload(
 
     if len(children) == 1:
         return await async_browse_media(
-            hass,
+            menuai,
             coordinator,
             get_browse_image_url,
             children[0].media_content_id,

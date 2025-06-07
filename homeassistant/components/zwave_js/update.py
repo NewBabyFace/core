@@ -21,20 +21,20 @@ from zwave_js_server.model.node.firmware import (
     NodeFirmwareUpdateResult,
 )
 
-from homeassistant.components.update import (
+from menuai.components.update import (
     ATTR_LATEST_VERSION,
     UpdateDeviceClass,
     UpdateEntity,
     UpdateEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory
-from homeassistant.core import CoreState, HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.event import async_call_later
-from homeassistant.helpers.restore_state import ExtraStoredData
+from menuai.config_entries import ConfigEntry
+from menuai.const import EntityCategory
+from menuai.core import CoreState, menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.event import async_call_later
+from menuai.helpers.restore_state import ExtraStoredData
 
 from .const import API_KEY_FIRMWARE_UPDATE_SERVICE, DATA_CLIENT, DOMAIN, LOGGER
 from .helpers import get_device_info, get_valueless_base_unique_id
@@ -75,7 +75,7 @@ class ZWaveNodeFirmwareUpdateExtraStoredData(ExtraStoredData):
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -97,7 +97,7 @@ async def async_setup_entry(
 
     config_entry.async_on_unload(
         async_dispatcher_connect(
-            hass,
+            menuai,
             f"{DOMAIN}_{config_entry.entry_id}_add_firmware_update_entity",
             async_add_firmware_update_entity,
         )
@@ -147,7 +147,7 @@ class ZWaveNodeFirmwareUpdate(UpdateEntity):
     def _update_on_status_change(self, _: dict[str, Any]) -> None:
         """Update the entity when node is awake."""
         self._status_unsub = None
-        self.hass.async_create_task(self._async_update())
+        self.menuai.async_create_task(self._async_update())
 
     @callback
     def _update_progress(self, event: dict[str, Any]) -> None:
@@ -186,17 +186,17 @@ class ZWaveNodeFirmwareUpdate(UpdateEntity):
         if write_state:
             self.async_write_ha_state()
 
-    async def _async_update(self, _: HomeAssistant | datetime | None = None) -> None:
+    async def _async_update(self, _: menuai | datetime | None = None) -> None:
         """Update the entity."""
         if self._poll_unsub:
             self._poll_unsub()
             self._poll_unsub = None
 
-        # If hass hasn't started yet, push the next update to the next day so that we
+        # If menuai hasn't started yet, push the next update to the next day so that we
         # can preserve the offsets we've created between each node
-        if self.hass.state is not CoreState.running:
+        if self.menuai.state is not CoreState.running:
             self._poll_unsub = async_call_later(
-                self.hass, timedelta(days=1), self._async_update
+                self.menuai, timedelta(days=1), self._async_update
             )
             return
 
@@ -252,7 +252,7 @@ class ZWaveNodeFirmwareUpdate(UpdateEntity):
                 self.async_write_ha_state()
         finally:
             self._poll_unsub = async_call_later(
-                self.hass, timedelta(days=1), self._async_update
+                self.menuai, timedelta(days=1), self._async_update
             )
 
     async def async_release_notes(self) -> str | None:
@@ -283,7 +283,7 @@ class ZWaveNodeFirmwareUpdate(UpdateEntity):
             await self.driver.controller.async_firmware_update_ota(self.node, firmware)
         except BaseZwaveJSServerError as err:
             self._unsub_firmware_events_and_reset_progress()
-            raise HomeAssistantError(err) from err
+            raise menuaiError(err) from err
 
         # We need to block until we receive the `firmware update finished` event
         await self._finished_event.wait()
@@ -294,7 +294,7 @@ class ZWaveNodeFirmwareUpdate(UpdateEntity):
         if not self._result.success:
             error_msg = self._result.status.name.replace("_", " ").title()
             self._unsub_firmware_events_and_reset_progress()
-            raise HomeAssistantError(error_msg)
+            raise menuaiError(error_msg)
 
         # If we get here, all files were installed successfully
         self._attr_installed_version = self._attr_latest_version = firmware.version
@@ -311,11 +311,11 @@ class ZWaveNodeFirmwareUpdate(UpdateEntity):
             " service won't work for it"
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Call when entity is added."""
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"{DOMAIN}_{self.unique_id}_poll_value",
                 self.async_poll_value,
             )
@@ -323,7 +323,7 @@ class ZWaveNodeFirmwareUpdate(UpdateEntity):
 
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"{DOMAIN}_{self._base_unique_id}_remove_entity",
                 self.async_remove,
             )
@@ -331,7 +331,7 @@ class ZWaveNodeFirmwareUpdate(UpdateEntity):
 
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"{DOMAIN}_{self._base_unique_id}_remove_entity_on_interview_started",
                 self.async_remove,
             )
@@ -371,10 +371,10 @@ class ZWaveNodeFirmwareUpdate(UpdateEntity):
 
         # Spread updates out in 5 minute increments to avoid flooding the network
         self.async_on_remove(
-            async_call_later(self.hass, self._delay, self._async_update)
+            async_call_later(self.menuai, self._delay, self._async_update)
         )
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Call when entity will be removed."""
         if self._status_unsub:
             self._status_unsub()

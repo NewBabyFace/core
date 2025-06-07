@@ -7,8 +7,8 @@ from functools import partial
 
 from aioesphomeapi import DateTimeInfo, DateTimeState
 
-from homeassistant.components.datetime import DateTimeEntity
-from homeassistant.util import dt as dt_util
+from menuai.components.datetime import DateTimeEntity
+from menuai.util import dt as dt_util
 
 from .entity import EsphomeEntity, esphome_state_property, platform_async_setup_entry
 

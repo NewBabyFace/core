@@ -11,8 +11,8 @@ from typing import TYPE_CHECKING, Final, TypedDict
 
 from lru import LRU
 
-from homeassistant.core import callback
-from homeassistant.loader import BluetoothMatcher, BluetoothMatcherOptional
+from menuai.core import callback
+from menuai.loader import BluetoothMatcher, BluetoothMatcherOptional
 
 from .models import BluetoothCallback, BluetoothServiceInfoBleak
 

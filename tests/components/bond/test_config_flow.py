@@ -9,15 +9,15 @@ from unittest.mock import MagicMock, Mock, patch
 
 from aiohttp import ClientConnectionError, ClientResponseError
 
-from homeassistant import config_entries
-from homeassistant.components.bond.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai import config_entries
+from menuai.components.bond.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.const import CONF_ACCESS_TOKEN, CONF_HOST
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .common import (
     patch_bond_bridge,
@@ -32,10 +32,10 @@ from .common import (
 from tests.common import MockConfigEntry
 
 
-async def test_user_form(hass: HomeAssistant) -> None:
+async def test_user_form(menuai: menuai) -> None:
     """Test we get the user initiated form."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -50,11 +50,11 @@ async def test_user_form(hass: HomeAssistant) -> None:
         patch_bond_device_state(),
         _patch_async_setup_entry() as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_HOST: "some host", CONF_ACCESS_TOKEN: "test-token"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "bond-name"
@@ -66,12 +66,12 @@ async def test_user_form(hass: HomeAssistant) -> None:
 
 
 async def test_user_form_can_create_when_already_discovered(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test we get the user initiated form can create when already discovered."""
 
     with patch_bond_version(), patch_bond_token():
-        zc_result = await hass.config_entries.flow.async_init(
+        zc_result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_ZEROCONF},
             data=ZeroconfServiceInfo(
@@ -87,7 +87,7 @@ async def test_user_form_can_create_when_already_discovered(
         assert zc_result["type"] is FlowResultType.FORM
         assert zc_result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -102,11 +102,11 @@ async def test_user_form_can_create_when_already_discovered(
         patch_bond_device_state(),
         _patch_async_setup_entry() as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_HOST: "some host", CONF_ACCESS_TOKEN: "test-token"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "bond-name"
@@ -118,10 +118,10 @@ async def test_user_form_can_create_when_already_discovered(
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_user_form_with_non_bridge(hass: HomeAssistant) -> None:
+async def test_user_form_with_non_bridge(menuai: menuai) -> None:
     """Test setup a smart by bond fan."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -140,11 +140,11 @@ async def test_user_form_with_non_bridge(hass: HomeAssistant) -> None:
         patch_bond_device_state(),
         _patch_async_setup_entry() as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_HOST: "some host", CONF_ACCESS_TOKEN: "test-token"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "New Fan"
@@ -156,9 +156,9 @@ async def test_user_form_with_non_bridge(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_user_form_invalid_auth(hass: HomeAssistant) -> None:
+async def test_user_form_invalid_auth(menuai: menuai) -> None:
     """Test we handle invalid auth."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -169,7 +169,7 @@ async def test_user_form_invalid_auth(hass: HomeAssistant) -> None:
             side_effect=ClientResponseError(Mock(), Mock(), status=401),
         ),
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_HOST: "some host", CONF_ACCESS_TOKEN: "test-token"},
         )
@@ -178,9 +178,9 @@ async def test_user_form_invalid_auth(hass: HomeAssistant) -> None:
     assert result2["errors"] == {"base": "invalid_auth"}
 
 
-async def test_user_form_cannot_connect(hass: HomeAssistant) -> None:
+async def test_user_form_cannot_connect(menuai: menuai) -> None:
     """Test we handle cannot connect error."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -189,7 +189,7 @@ async def test_user_form_cannot_connect(hass: HomeAssistant) -> None:
         patch_bond_bridge(),
         patch_bond_device_ids(),
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_HOST: "some host", CONF_ACCESS_TOKEN: "test-token"},
         )
@@ -198,9 +198,9 @@ async def test_user_form_cannot_connect(hass: HomeAssistant) -> None:
     assert result2["errors"] == {"base": "cannot_connect"}
 
 
-async def test_user_form_old_firmware(hass: HomeAssistant) -> None:
+async def test_user_form_old_firmware(menuai: menuai) -> None:
     """Test we handle unsupported old firmware."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -209,7 +209,7 @@ async def test_user_form_old_firmware(hass: HomeAssistant) -> None:
         patch_bond_bridge(),
         patch_bond_device_ids(),
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_HOST: "some host", CONF_ACCESS_TOKEN: "test-token"},
         )
@@ -218,35 +218,35 @@ async def test_user_form_old_firmware(hass: HomeAssistant) -> None:
     assert result2["errors"] == {"base": "old_firmware"}
 
 
-async def test_user_form_unexpected_client_error(hass: HomeAssistant) -> None:
+async def test_user_form_unexpected_client_error(menuai: menuai) -> None:
     """Test we handle unexpected client error gracefully."""
     await _help_test_form_unexpected_error(
-        hass,
+        menuai,
         source=config_entries.SOURCE_USER,
         user_input={CONF_HOST: "some host", CONF_ACCESS_TOKEN: "test-token"},
         error=ClientResponseError(Mock(), Mock(), status=500),
     )
 
 
-async def test_user_form_unexpected_error(hass: HomeAssistant) -> None:
+async def test_user_form_unexpected_error(menuai: menuai) -> None:
     """Test we handle unexpected error gracefully."""
     await _help_test_form_unexpected_error(
-        hass,
+        menuai,
         source=config_entries.SOURCE_USER,
         user_input={CONF_HOST: "some host", CONF_ACCESS_TOKEN: "test-token"},
         error=Exception(),
     )
 
 
-async def test_user_form_one_entry_per_device_allowed(hass: HomeAssistant) -> None:
+async def test_user_form_one_entry_per_device_allowed(menuai: menuai) -> None:
     """Test that only one entry allowed per unique ID reported by Bond hub device."""
     MockConfigEntry(
         domain=DOMAIN,
         unique_id="already-registered-bond-id",
         data={CONF_HOST: "some host", CONF_ACCESS_TOKEN: "test-token"},
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -256,11 +256,11 @@ async def test_user_form_one_entry_per_device_allowed(hass: HomeAssistant) -> No
         patch_bond_device_ids(),
         _patch_async_setup_entry() as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_HOST: "some host", CONF_ACCESS_TOKEN: "test-token"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.ABORT
     assert result2["reason"] == "already_configured"
@@ -268,11 +268,11 @@ async def test_user_form_one_entry_per_device_allowed(hass: HomeAssistant) -> No
     assert len(mock_setup_entry.mock_calls) == 0
 
 
-async def test_zeroconf_form(hass: HomeAssistant) -> None:
+async def test_zeroconf_form(menuai: menuai) -> None:
     """Test we get the discovery form."""
 
     with patch_bond_version(), patch_bond_token():
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_ZEROCONF},
             data=ZeroconfServiceInfo(
@@ -294,11 +294,11 @@ async def test_zeroconf_form(hass: HomeAssistant) -> None:
         patch_bond_device_ids(),
         _patch_async_setup_entry() as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_ACCESS_TOKEN: "test-token"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "bond-name"
@@ -309,11 +309,11 @@ async def test_zeroconf_form(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_dhcp_discovery(hass: HomeAssistant) -> None:
+async def test_dhcp_discovery(menuai: menuai) -> None:
     """Test DHCP discovery."""
 
     with patch_bond_version(), patch_bond_token():
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_DHCP},
             data=DhcpServiceInfo(
@@ -331,7 +331,7 @@ async def test_dhcp_discovery(hass: HomeAssistant) -> None:
         patch_bond_device_ids(),
         _patch_async_setup_entry() as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_ACCESS_TOKEN: "test-token"},
         )
@@ -346,20 +346,20 @@ async def test_dhcp_discovery(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_dhcp_discovery_already_exists(hass: HomeAssistant) -> None:
+async def test_dhcp_discovery_already_exists(menuai: menuai) -> None:
     """Test DHCP discovery for an already existing entry."""
 
     entry = MockConfigEntry(
         domain=DOMAIN,
         unique_id="KVPRBDJ45842",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with (
         patch_bond_version(return_value={"bondid": "KVPRBDJ45842"}),
         patch_bond_token(),
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_DHCP},
             data=DhcpServiceInfo(
@@ -372,11 +372,11 @@ async def test_dhcp_discovery_already_exists(hass: HomeAssistant) -> None:
         assert result["reason"] == "already_configured"
 
 
-async def test_dhcp_discovery_short_name(hass: HomeAssistant) -> None:
+async def test_dhcp_discovery_short_name(menuai: menuai) -> None:
     """Test DHCP discovery with the name cut off."""
 
     with patch_bond_version(), patch_bond_token():
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_DHCP},
             data=DhcpServiceInfo(
@@ -394,11 +394,11 @@ async def test_dhcp_discovery_short_name(hass: HomeAssistant) -> None:
         patch_bond_device_ids(),
         _patch_async_setup_entry() as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_ACCESS_TOKEN: "test-token"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "bond-name"
@@ -410,11 +410,11 @@ async def test_dhcp_discovery_short_name(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_zeroconf_form_token_unavailable(hass: HomeAssistant) -> None:
+async def test_zeroconf_form_token_unavailable(menuai: menuai) -> None:
     """Test we get the discovery form and we handle the token being unavailable."""
 
     with patch_bond_version(), patch_bond_token():
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_ZEROCONF},
             data=ZeroconfServiceInfo(
@@ -427,7 +427,7 @@ async def test_zeroconf_form_token_unavailable(hass: HomeAssistant) -> None:
                 type="mock_type",
             ),
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
@@ -437,11 +437,11 @@ async def test_zeroconf_form_token_unavailable(hass: HomeAssistant) -> None:
         patch_bond_device_ids(),
         _patch_async_setup_entry() as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_ACCESS_TOKEN: "test-token"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "bond-name"
@@ -452,11 +452,11 @@ async def test_zeroconf_form_token_unavailable(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_zeroconf_form_token_times_out(hass: HomeAssistant) -> None:
+async def test_zeroconf_form_token_times_out(menuai: menuai) -> None:
     """Test we get the discovery form and we handle the token request timeout."""
 
     with patch_bond_version(), patch_bond_token(side_effect=TimeoutError):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_ZEROCONF},
             data=ZeroconfServiceInfo(
@@ -469,7 +469,7 @@ async def test_zeroconf_form_token_times_out(hass: HomeAssistant) -> None:
                 type="mock_type",
             ),
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
@@ -479,11 +479,11 @@ async def test_zeroconf_form_token_times_out(hass: HomeAssistant) -> None:
         patch_bond_device_ids(),
         _patch_async_setup_entry() as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_ACCESS_TOKEN: "test-token"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "bond-name"
@@ -494,7 +494,7 @@ async def test_zeroconf_form_token_times_out(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_zeroconf_form_with_token_available(hass: HomeAssistant) -> None:
+async def test_zeroconf_form_with_token_available(menuai: menuai) -> None:
     """Test we get the discovery form when we can get the token."""
 
     with (
@@ -503,7 +503,7 @@ async def test_zeroconf_form_with_token_available(hass: HomeAssistant) -> None:
         patch_bond_bridge(return_value={"name": "discovered-name"}),
         patch_bond_device_ids(),
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_ZEROCONF},
             data=ZeroconfServiceInfo(
@@ -516,16 +516,16 @@ async def test_zeroconf_form_with_token_available(hass: HomeAssistant) -> None:
                 type="mock_type",
             ),
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
     with _patch_async_setup_entry() as mock_setup_entry:
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "discovered-name"
@@ -537,7 +537,7 @@ async def test_zeroconf_form_with_token_available(hass: HomeAssistant) -> None:
 
 
 async def test_zeroconf_form_with_token_available_name_unavailable(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test we get the discovery form when we can get the token but the name is unavailable."""
 
@@ -547,7 +547,7 @@ async def test_zeroconf_form_with_token_available_name_unavailable(
         ),
         patch_bond_token(return_value={"token": "discovered-token"}),
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_ZEROCONF},
             data=ZeroconfServiceInfo(
@@ -560,16 +560,16 @@ async def test_zeroconf_form_with_token_available_name_unavailable(
                 type="mock_type",
             ),
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
     with _patch_async_setup_entry() as mock_setup_entry:
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "ZXXX12345"
@@ -580,7 +580,7 @@ async def test_zeroconf_form_with_token_available_name_unavailable(
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_zeroconf_already_configured(hass: HomeAssistant) -> None:
+async def test_zeroconf_already_configured(menuai: menuai) -> None:
     """Test starting a flow from discovery when already configured."""
 
     entry = MockConfigEntry(
@@ -588,10 +588,10 @@ async def test_zeroconf_already_configured(hass: HomeAssistant) -> None:
         unique_id="already-registered-bond-id",
         data={CONF_HOST: "stored-host", CONF_ACCESS_TOKEN: "test-token"},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with _patch_async_setup_entry() as mock_setup_entry:
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_ZEROCONF},
             data=ZeroconfServiceInfo(
@@ -604,7 +604,7 @@ async def test_zeroconf_already_configured(hass: HomeAssistant) -> None:
                 type="mock_type",
             ),
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
@@ -612,7 +612,7 @@ async def test_zeroconf_already_configured(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_zeroconf_in_setup_retry_state(hass: HomeAssistant) -> None:
+async def test_zeroconf_in_setup_retry_state(menuai: menuai) -> None:
     """Test we retry right away on zeroconf discovery."""
 
     entry = MockConfigEntry(
@@ -620,16 +620,16 @@ async def test_zeroconf_in_setup_retry_state(hass: HomeAssistant) -> None:
         unique_id="already-registered-bond-id",
         data={CONF_HOST: "stored-host", CONF_ACCESS_TOKEN: "test-token"},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with patch_bond_version(side_effect=OSError):
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.SETUP_RETRY
 
     with _patch_async_setup_entry() as mock_setup_entry:
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_ZEROCONF},
             data=ZeroconfServiceInfo(
@@ -642,7 +642,7 @@ async def test_zeroconf_in_setup_retry_state(hass: HomeAssistant) -> None:
                 type="mock_type",
             ),
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
@@ -651,32 +651,32 @@ async def test_zeroconf_in_setup_retry_state(hass: HomeAssistant) -> None:
     assert entry.state is ConfigEntryState.LOADED
 
 
-async def test_zeroconf_already_configured_refresh_token(hass: HomeAssistant) -> None:
+async def test_zeroconf_already_configured_refresh_token(menuai: menuai) -> None:
     """Test starting a flow from zeroconf when already configured and the token is out of date."""
     entry2 = MockConfigEntry(
         domain=DOMAIN,
         unique_id="not-the-same-bond-id",
         data={CONF_HOST: "stored-host", CONF_ACCESS_TOKEN: "correct-token"},
     )
-    entry2.add_to_hass(hass)
+    entry2.add_to_menuai(menuai)
     entry = MockConfigEntry(
         domain=DOMAIN,
         unique_id="already-registered-bond-id",
         data={CONF_HOST: "stored-host", CONF_ACCESS_TOKEN: "incorrect-token"},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with patch_bond_version(
         side_effect=ClientResponseError(MagicMock(), MagicMock(), status=401)
     ):
-        await hass.config_entries.async_setup(entry.entry_id)
+        await menuai.config_entries.async_setup(entry.entry_id)
     assert entry.state is ConfigEntryState.SETUP_ERROR
 
     with (
         _patch_async_setup_entry() as mock_setup_entry,
         patch_bond_token(return_value={"token": "discovered-token"}),
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_ZEROCONF},
             data=ZeroconfServiceInfo(
@@ -689,7 +689,7 @@ async def test_zeroconf_already_configured_refresh_token(hass: HomeAssistant) ->
                 type="mock_type",
             ),
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
@@ -701,7 +701,7 @@ async def test_zeroconf_already_configured_refresh_token(hass: HomeAssistant) ->
 
 
 async def test_zeroconf_already_configured_no_reload_same_host(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test starting a flow from zeroconf when already configured does not reload if the host is the same."""
     entry = MockConfigEntry(
@@ -709,13 +709,13 @@ async def test_zeroconf_already_configured_no_reload_same_host(
         unique_id="already-registered-bond-id",
         data={CONF_HOST: "127.0.0.3", CONF_ACCESS_TOKEN: "correct-token"},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with (
         _patch_async_setup_entry() as mock_setup_entry,
         patch_bond_token(return_value={"token": "correct-token"}),
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_ZEROCONF},
             data=ZeroconfServiceInfo(
@@ -728,17 +728,17 @@ async def test_zeroconf_already_configured_no_reload_same_host(
                 type="mock_type",
             ),
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
     assert len(mock_setup_entry.mock_calls) == 0
 
 
-async def test_zeroconf_form_unexpected_error(hass: HomeAssistant) -> None:
+async def test_zeroconf_form_unexpected_error(menuai: menuai) -> None:
     """Test we handle unexpected error gracefully."""
     await _help_test_form_unexpected_error(
-        hass,
+        menuai,
         source=config_entries.SOURCE_ZEROCONF,
         initial_input=ZeroconfServiceInfo(
             ip_address=ip_address("127.0.0.1"),
@@ -755,7 +755,7 @@ async def test_zeroconf_form_unexpected_error(hass: HomeAssistant) -> None:
 
 
 async def _help_test_form_unexpected_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     *,
     source: str,
     initial_input: dict[str, Any] | None = None,
@@ -764,7 +764,7 @@ async def _help_test_form_unexpected_error(
 ) -> None:
     """Test we handle unexpected error gracefully."""
     with patch_bond_token():
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": source}, data=initial_input
         )
 
@@ -772,7 +772,7 @@ async def _help_test_form_unexpected_error(
         patch_bond_version(return_value={"bond_id": "ZXXX12345"}),
         patch_bond_device_ids(side_effect=error),
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input
         )
 
@@ -782,6 +782,6 @@ async def _help_test_form_unexpected_error(
 
 def _patch_async_setup_entry():
     return patch(
-        "homeassistant.components.bond.async_setup_entry",
+        "menuai.components.bond.async_setup_entry",
         return_value=True,
     )

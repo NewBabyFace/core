@@ -5,12 +5,12 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from hass_nabucasa import Cloud
-from hass_nabucasa.voice import MAP_VOICE, AudioOutput, Gender, VoiceError
-from hass_nabucasa.voice_data import TTS_VOICES
+from menuai_nabucasa import Cloud
+from menuai_nabucasa.voice import MAP_VOICE, AudioOutput, Gender, VoiceError
+from menuai_nabucasa.voice_data import TTS_VOICES
 import voluptuous as vol
 
-from homeassistant.components.tts import (
+from menuai.components.tts import (
     ATTR_AUDIO_OUTPUT,
     ATTR_VOICE,
     CONF_LANG,
@@ -20,14 +20,14 @@ from homeassistant.components.tts import (
     TtsAudioType,
     Voice,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_PLATFORM, Platform
-from homeassistant.core import HomeAssistant, async_get_hass, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.issue_registry import IssueSeverity, async_create_issue
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.setup import async_when_setup
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_PLATFORM, Platform
+from menuai.core import menuai, async_get_menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.issue_registry import IssueSeverity, async_create_issue
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.setup import async_when_setup
 
 from .assist_pipeline import async_migrate_cloud_pipeline_engine
 from .client import CloudClient
@@ -204,18 +204,18 @@ _LOGGER = logging.getLogger(__name__)
 @callback
 def _prepare_voice_args(
     *,
-    hass: HomeAssistant,
+    menuai: menuai,
     language: str,
     voice: str,
     gender: str | None,
 ) -> dict:
     """Prepare voice arguments."""
-    gender = handle_deprecated_gender(hass, gender)
+    gender = handle_deprecated_gender(menuai, gender)
     style: str | None
     original_voice, _, style = voice.partition(VOICE_STYLE_SEPERATOR)
     if not style:
         style = None
-    updated_voice = handle_deprecated_voice(hass, original_voice)
+    updated_voice = handle_deprecated_voice(menuai, original_voice)
     if updated_voice not in TTS_VOICES[language]:
         default_voice = DEFAULT_VOICES[language]
         _LOGGER.debug(
@@ -242,9 +242,9 @@ def _deprecated_platform(value: str) -> str:
             "please remove it from your configuration "
             "and use the UI to change settings instead"
         )
-        hass = async_get_hass()
+        menuai = async_get_menuai()
         async_create_issue(
-            hass,
+            menuai,
             DOMAIN,
             "deprecated_tts_platform_config",
             breaks_in_ha_version="2024.9.0",
@@ -284,12 +284,12 @@ PLATFORM_SCHEMA = vol.All(
 
 
 async def async_get_engine(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> CloudProvider:
     """Set up Cloud speech component."""
-    cloud = hass.data[DATA_CLOUD]
+    cloud = menuai.data[DATA_CLOUD]
     cloud_provider = CloudProvider(cloud)
     if discovery_info is not None:
         discovery_info["platform_loaded"].set()
@@ -297,21 +297,21 @@ async def async_get_engine(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Set up Home Assistant Cloud text-to-speech platform."""
-    tts_platform_loaded = hass.data[DATA_PLATFORMS_SETUP][Platform.TTS]
+    """Set up MenuAI Cloud text-to-speech platform."""
+    tts_platform_loaded = menuai.data[DATA_PLATFORMS_SETUP][Platform.TTS]
     tts_platform_loaded.set()
-    cloud = hass.data[DATA_CLOUD]
+    cloud = menuai.data[DATA_CLOUD]
     async_add_entities([CloudTTSEntity(cloud)])
 
 
 class CloudTTSEntity(TextToSpeechEntity):
-    """Home Assistant Cloud text-to-speech entity."""
+    """MenuAI Cloud text-to-speech entity."""
 
-    _attr_name = "Home Assistant Cloud"
+    _attr_name = "MenuAI Cloud"
     _attr_unique_id = TTS_ENTITY_UNIQUE_ID
 
     def __init__(self, cloud: Cloud[CloudClient]) -> None:
@@ -346,21 +346,21 @@ class CloudTTSEntity(TextToSpeechEntity):
         # The gender option is deprecated and will be removed in 2024.10.0.
         return [ATTR_GENDER, ATTR_VOICE, ATTR_AUDIO_OUTPUT]
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
-        async def pipeline_setup(hass: HomeAssistant, _comp: str) -> None:
+        async def pipeline_setup(menuai: menuai, _comp: str) -> None:
             """When assist_pipeline is set up."""
             assert self.platform.config_entry
             self.platform.config_entry.async_create_task(
-                hass,
+                menuai,
                 async_migrate_cloud_pipeline_engine(
-                    self.hass, platform=Platform.TTS, engine_id=self.entity_id
+                    self.menuai, platform=Platform.TTS, engine_id=self.entity_id
                 ),
             )
 
-        async_when_setup(self.hass, "assist_pipeline", pipeline_setup)
+        async_when_setup(self.menuai, "assist_pipeline", pipeline_setup)
 
         self.async_on_remove(
             self.cloud.client.prefs.async_listen_updates(self._sync_prefs)
@@ -407,14 +407,14 @@ class CloudTTSEntity(TextToSpeechEntity):
     async def async_get_tts_audio(
         self, message: str, language: str, options: dict[str, Any]
     ) -> TtsAudioType:
-        """Load TTS from Home Assistant Cloud."""
+        """Load TTS from MenuAI Cloud."""
         # Process TTS
         try:
             data = await self.cloud.voice.process_tts(
                 text=message,
                 output=options[ATTR_AUDIO_OUTPUT],
                 **_prepare_voice_args(
-                    hass=self.hass,
+                    menuai=self.menuai,
                     language=language,
                     voice=options.get(
                         ATTR_VOICE,
@@ -435,14 +435,14 @@ class CloudTTSEntity(TextToSpeechEntity):
 
 
 class CloudProvider(Provider):
-    """Home Assistant Cloud speech API provider."""
+    """MenuAI Cloud speech API provider."""
 
     has_entity = True
 
     def __init__(self, cloud: Cloud[CloudClient]) -> None:
         """Initialize cloud provider."""
         self.cloud = cloud
-        self.name = "Home Assistant Cloud"
+        self.name = "MenuAI Cloud"
         self._language, self._voice = cloud.client.prefs.tts_default_voice
         cloud.client.prefs.async_listen_updates(self._sync_prefs)
 
@@ -514,15 +514,15 @@ class CloudProvider(Provider):
     async def async_get_tts_audio(
         self, message: str, language: str, options: dict[str, Any]
     ) -> TtsAudioType:
-        """Load TTS from Home Assistant Cloud."""
-        assert self.hass is not None
+        """Load TTS from MenuAI Cloud."""
+        assert self.menuai is not None
         # Process TTS
         try:
             data = await self.cloud.voice.process_tts(
                 text=message,
                 output=options[ATTR_AUDIO_OUTPUT],
                 **_prepare_voice_args(
-                    hass=self.hass,
+                    menuai=self.menuai,
                     language=language,
                     voice=options.get(
                         ATTR_VOICE,
@@ -542,14 +542,14 @@ class CloudProvider(Provider):
 
 @callback
 def handle_deprecated_gender(
-    hass: HomeAssistant,
+    menuai: menuai,
     gender: Gender | str | None,
 ) -> Gender | None:
     """Handle deprecated gender."""
     if gender is None:
         return None
     async_create_issue(
-        hass,
+        menuai,
         DOMAIN,
         "deprecated_gender",
         is_fixable=True,
@@ -558,7 +558,7 @@ def handle_deprecated_gender(
         breaks_in_ha_version="2024.10.0",
         translation_key="deprecated_gender",
         translation_placeholders={
-            "integration_name": "Home Assistant Cloud",
+            "integration_name": "MenuAI Cloud",
             "deprecated_option": "gender",
             "replacement_option": "voice",
         },
@@ -568,7 +568,7 @@ def handle_deprecated_gender(
 
 @callback
 def handle_deprecated_voice(
-    hass: HomeAssistant,
+    menuai: menuai,
     original_voice: str | None,
 ) -> str | None:
     """Handle deprecated voice."""
@@ -580,7 +580,7 @@ def handle_deprecated_voice(
         != original_voice
     ):
         async_create_issue(
-            hass,
+            menuai,
             DOMAIN,
             f"deprecated_voice_{original_voice}",
             is_fixable=True,

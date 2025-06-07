@@ -9,9 +9,9 @@ from typing import Any
 
 from directv import DIRECTV, DIRECTVError
 
-from homeassistant.components.remote import ATTR_NUM_REPEATS, RemoteEntity
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.remote import ATTR_NUM_REPEATS, RemoteEntity
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import DirecTVConfigEntry
 from .entity import DIRECTVEntity
@@ -22,7 +22,7 @@ SCAN_INTERVAL = timedelta(minutes=2)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: DirecTVConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

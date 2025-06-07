@@ -2,25 +2,25 @@
 
 from unittest.mock import patch
 
-from homeassistant.components.cups import CONF_PRINTERS, DOMAIN
-from homeassistant.components.sensor.const import DOMAIN as SENSOR_DOMAIN
-from homeassistant.const import CONF_PLATFORM
-from homeassistant.core import DOMAIN as HOMEASSISTANT_DOMAIN, HomeAssistant
-from homeassistant.helpers import issue_registry as ir
-from homeassistant.setup import async_setup_component
+from menuai.components.cups import CONF_PRINTERS, DOMAIN
+from menuai.components.sensor.const import DOMAIN as SENSOR_DOMAIN
+from menuai.const import CONF_PLATFORM
+from menuai.core import DOMAIN as menuai_DOMAIN, menuai
+from menuai.helpers import issue_registry as ir
+from menuai.setup import async_setup_component
 
 
 async def test_repair_issue_is_created(
-    hass: HomeAssistant,
+    menuai: menuai,
     issue_registry: ir.IssueRegistry,
 ) -> None:
     """Test repair issue is created."""
     with patch(
-        "homeassistant.components.cups.sensor.CupsData", autospec=True
+        "menuai.components.cups.sensor.CupsData", autospec=True
     ) as cups_data:
         cups_data.available = True
         assert await async_setup_component(
-            hass,
+            menuai,
             SENSOR_DOMAIN,
             {
                 SENSOR_DOMAIN: [
@@ -33,8 +33,8 @@ async def test_repair_issue_is_created(
                 ],
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         assert (
-            HOMEASSISTANT_DOMAIN,
+            menuai_DOMAIN,
             f"deprecated_system_packages_yaml_integration_{DOMAIN}",
         ) in issue_registry.issues

@@ -7,9 +7,9 @@ import dataclasses
 import datetime
 from typing import Any
 
-from homeassistant.const import EntityCategory
-from homeassistant.util import dt as dt_util
-from homeassistant.util.decorator import Registry
+from menuai.const import EntityCategory
+from menuai.util import dt as dt_util
+from menuai.util.decorator import Registry
 
 from .models import Event
 

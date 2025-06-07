@@ -4,19 +4,19 @@ from __future__ import annotations
 
 from govee_ble import ModelInfo, SensorType
 
-from homeassistant.components.bluetooth import (
+from menuai.components.bluetooth import (
     BluetoothServiceInfoBleak,
     async_last_service_info,
 )
-from homeassistant.components.event import (
+from menuai.components.event import (
     EventDeviceClass,
     EventEntity,
     EventEntityDescription,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import GoveeBLEConfigEntry, format_event_dispatcher_name
@@ -70,12 +70,12 @@ class GoveeBluetoothEventEntity(EventEntity):
             self._address, self.entity_description.key
         )
 
-    async def async_added_to_hass(self) -> None:
-        """Entity added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Entity added to menuai."""
+        await super().async_added_to_menuai()
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 self._signal,
                 self._async_handle_event,
             )
@@ -88,7 +88,7 @@ class GoveeBluetoothEventEntity(EventEntity):
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: GoveeBLEConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -106,7 +106,7 @@ async def async_setup_entry(
         descriptions = BUTTON_DESCRIPTIONS[0:button_count]
     else:
         return
-    last_service_info = async_last_service_info(hass, address, False)
+    last_service_info = async_last_service_info(menuai, address, False)
     async_add_entities(
         GoveeBluetoothEventEntity(model_info, last_service_info, address, description)
         for description in descriptions

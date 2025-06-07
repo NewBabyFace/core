@@ -9,12 +9,12 @@ from typing import Any
 import pycfdns
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_API_TOKEN, CONF_ZONE
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_API_TOKEN, CONF_ZONE
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import CONF_RECORDS, DOMAIN
 from .helpers import get_zone_id
@@ -49,7 +49,7 @@ def _records_schema(records: list[pycfdns.RecordModel] | None = None) -> vol.Sch
 
 
 async def _validate_input(
-    hass: HomeAssistant,
+    menuai: menuai,
     data: dict[str, Any],
 ) -> dict[str, Any]:
     """Validate the user input allows us to connect.
@@ -61,7 +61,7 @@ async def _validate_input(
 
     client = pycfdns.Client(
         api_token=data[CONF_API_TOKEN],
-        client_session=async_get_clientsession(hass),
+        client_session=async_get_clientsession(menuai),
     )
 
     zones = await client.list_zones()
@@ -175,7 +175,7 @@ class CloudflareConfigFlow(ConfigFlow, domain=DOMAIN):
         info = {}
 
         try:
-            info = await _validate_input(self.hass, config)
+            info = await _validate_input(self.menuai, config)
         except pycfdns.ComunicationException:
             errors["base"] = "cannot_connect"
         except pycfdns.AuthenticationException:
@@ -187,9 +187,9 @@ class CloudflareConfigFlow(ConfigFlow, domain=DOMAIN):
         return info, errors
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(menuaiError):
     """Error to indicate there is invalid auth."""

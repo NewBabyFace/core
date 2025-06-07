@@ -9,10 +9,10 @@ from yalesmartalarmclient import YaleLock
 from yalesmartalarmclient.client import YaleSmartAlarmClient
 from yalesmartalarmclient.exceptions import AuthenticationError
 
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 if TYPE_CHECKING:
     from . import YaleConfigEntry
@@ -26,10 +26,10 @@ class YaleDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     yale: YaleSmartAlarmClient
     config_entry: YaleConfigEntry
 
-    def __init__(self, hass: HomeAssistant, config_entry: YaleConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: YaleConfigEntry) -> None:
         """Initialize the Yale hub."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -41,12 +41,12 @@ class YaleDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     async def _async_setup(self) -> None:
         """Set up connection to Yale."""
         try:
-            self.yale = await self.hass.async_add_executor_job(
+            self.yale = await self.menuai.async_add_executor_job(
                 YaleSmartAlarmClient,
                 self.config_entry.data[CONF_USERNAME],
                 self.config_entry.data[CONF_PASSWORD],
             )
-            self.locks = await self.hass.async_add_executor_job(self.yale.get_locks)
+            self.locks = await self.menuai.async_add_executor_job(self.yale.get_locks)
         except AuthenticationError as error:
             raise ConfigEntryAuthFailed from error
         except YALE_BASE_ERRORS as error:
@@ -55,7 +55,7 @@ class YaleDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from Yale."""
 
-        updates = await self.hass.async_add_executor_job(self.get_updates)
+        updates = await self.menuai.async_add_executor_job(self.get_updates)
 
         door_windows = []
         temp_sensors = []

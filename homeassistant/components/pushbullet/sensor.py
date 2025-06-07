@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from homeassistant.components.sensor import SensorEntity, SensorEntityDescription
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_NAME
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.sensor import SensorEntity, SensorEntityDescription
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_NAME
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .api import PushBulletNotificationProvider
 from .const import DATA_UPDATED, DOMAIN
@@ -68,13 +68,13 @@ SENSOR_KEYS: list[str] = [desc.key for desc in SENSOR_TYPES]
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Pushbullet sensors from config entry."""
 
-    pb_provider: PushBulletNotificationProvider = hass.data[DOMAIN][entry.entry_id]
+    pb_provider: PushBulletNotificationProvider = menuai.data[DOMAIN][entry.entry_id]
 
     entities = [
         PushBulletNotificationSensor(entry.data[CONF_NAME], pb_provider, description)
@@ -122,10 +122,10 @@ class PushBulletNotificationSensor(SensorEntity):
             pass
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, DATA_UPDATED, self.async_update_callback
+                self.menuai, DATA_UPDATED, self.async_update_callback
             )
         )

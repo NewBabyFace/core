@@ -9,15 +9,15 @@ from typing import Any, NamedTuple
 from pyhap.const import CATEGORY_SENSOR
 from pyhap.service import Service
 
-from homeassistant.components.binary_sensor import BinarySensorDeviceClass
-from homeassistant.const import (
+from menuai.components.binary_sensor import BinarySensorDeviceClass
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     ATTR_UNIT_OF_MEASUREMENT,
     STATE_HOME,
     STATE_ON,
     UnitOfTemperature,
 )
-from homeassistant.core import State, callback
+from menuai.core import State, callback
 
 from .accessories import TYPES, HomeAccessory
 from .const import (
@@ -118,7 +118,7 @@ class TemperatureSensor(HomeAccessory):
     def __init__(self, *args: Any) -> None:
         """Initialize a TemperatureSensor accessory object."""
         super().__init__(*args, category=CATEGORY_SENSOR)
-        state = self.hass.states.get(self.entity_id)
+        state = self.menuai.states.get(self.entity_id)
         assert state
         serv_temp = self.add_preload_service(SERV_TEMPERATURE_SENSOR)
         self.char_temp = serv_temp.configure_char(
@@ -149,7 +149,7 @@ class HumiditySensor(HomeAccessory):
     def __init__(self, *args: Any) -> None:
         """Initialize a HumiditySensor accessory object."""
         super().__init__(*args, category=CATEGORY_SENSOR)
-        state = self.hass.states.get(self.entity_id)
+        state = self.menuai.states.get(self.entity_id)
         assert state
         serv_humidity = self.add_preload_service(SERV_HUMIDITY_SENSOR)
         self.char_humidity = serv_humidity.configure_char(
@@ -174,7 +174,7 @@ class AirQualitySensor(HomeAccessory):
     def __init__(self, *args: Any) -> None:
         """Initialize a AirQualitySensor accessory object."""
         super().__init__(*args, category=CATEGORY_SENSOR)
-        state = self.hass.states.get(self.entity_id)
+        state = self.menuai.states.get(self.entity_id)
         assert state
         self.create_services()
 
@@ -331,7 +331,7 @@ class CarbonMonoxideSensor(HomeAccessory):
     def __init__(self, *args: Any) -> None:
         """Initialize a CarbonMonoxideSensor accessory object."""
         super().__init__(*args, category=CATEGORY_SENSOR)
-        state = self.hass.states.get(self.entity_id)
+        state = self.menuai.states.get(self.entity_id)
         assert state
         serv_co = self.add_preload_service(
             SERV_CARBON_MONOXIDE_SENSOR,
@@ -371,7 +371,7 @@ class CarbonDioxideSensor(HomeAccessory):
     def __init__(self, *args: Any) -> None:
         """Initialize a CarbonDioxideSensor accessory object."""
         super().__init__(*args, category=CATEGORY_SENSOR)
-        state = self.hass.states.get(self.entity_id)
+        state = self.menuai.states.get(self.entity_id)
         assert state
         serv_co2 = self.add_preload_service(
             SERV_CARBON_DIOXIDE_SENSOR,
@@ -411,7 +411,7 @@ class LightSensor(HomeAccessory):
     def __init__(self, *args: Any) -> None:
         """Initialize a LightSensor accessory object."""
         super().__init__(*args, category=CATEGORY_SENSOR)
-        state = self.hass.states.get(self.entity_id)
+        state = self.menuai.states.get(self.entity_id)
         assert state
         serv_light = self.add_preload_service(SERV_LIGHT_SENSOR)
         self.char_light = serv_light.configure_char(
@@ -436,7 +436,7 @@ class BinarySensor(HomeAccessory):
     def __init__(self, *args: Any) -> None:
         """Initialize a BinarySensor accessory object."""
         super().__init__(*args, category=CATEGORY_SENSOR)
-        state = self.hass.states.get(self.entity_id)
+        state = self.menuai.states.get(self.entity_id)
         assert state
         device_class = state.attributes.get(ATTR_DEVICE_CLASS)
         service_char = (

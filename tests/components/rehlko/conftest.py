@@ -1,4 +1,4 @@
-"""Module for testing the Rehlko integration in Home Assistant."""
+"""Module for testing the Rehlko integration in MenuAI."""
 
 from collections.abc import Generator
 from typing import Any
@@ -6,9 +6,9 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from homeassistant.components.rehlko import CONF_REFRESH_TOKEN, DOMAIN
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
-from homeassistant.core import HomeAssistant
+from menuai.components.rehlko import CONF_REFRESH_TOKEN, DOMAIN
+from menuai.const import CONF_EMAIL, CONF_PASSWORD
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry, load_json_value_fixture
 
@@ -22,7 +22,7 @@ TEST_REFRESH_TOKEN = "my_refresh_token"
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.rehlko.async_setup_entry",
+        "menuai.components.rehlko.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
         yield mock_setup_entry
@@ -74,8 +74,8 @@ async def mock_rehlko(
 ):
     """Mock Rehlko instance."""
     with (
-        patch("homeassistant.components.rehlko.AioKem", autospec=True) as mock_kem,
-        patch("homeassistant.components.rehlko.config_flow.AioKem", new=mock_kem),
+        patch("menuai.components.rehlko.AioKem", autospec=True) as mock_kem,
+        patch("menuai.components.rehlko.config_flow.AioKem", new=mock_kem),
     ):
         client = mock_kem.return_value
         client.get_homes = AsyncMock(return_value=homes)
@@ -90,11 +90,11 @@ async def mock_rehlko(
 
 @pytest.fixture
 async def load_rehlko_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_rehlko: Mock,
     rehlko_config_entry: MockConfigEntry,
 ) -> None:
     """Load the config entry."""
-    rehlko_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(rehlko_config_entry.entry_id)
-    await hass.async_block_till_done()
+    rehlko_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(rehlko_config_entry.entry_id)
+    await menuai.async_block_till_done()

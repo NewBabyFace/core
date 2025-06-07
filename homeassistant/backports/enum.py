@@ -12,7 +12,7 @@ from __future__ import annotations
 from enum import StrEnum as _StrEnum
 from functools import partial
 
-from homeassistant.helpers.deprecation import (
+from menuai.helpers.deprecation import (
     DeprecatedAlias,
     all_with_deprecated_constants,
     check_if_deprecated_constant,

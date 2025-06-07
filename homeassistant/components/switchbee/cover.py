@@ -8,16 +8,16 @@ from switchbee.api.central_unit import SwitchBeeError, SwitchBeeTokenError
 from switchbee.const import SomfyCommand
 from switchbee.device import SwitchBeeShutter, SwitchBeeSomfy
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     ATTR_POSITION,
     CoverDeviceClass,
     CoverEntity,
     CoverEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import SwitchBeeCoordinator
@@ -25,12 +25,12 @@ from .entity import SwitchBeeDeviceEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up SwitchBee switch."""
-    coordinator: SwitchBeeCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: SwitchBeeCoordinator = menuai.data[DOMAIN][entry.entry_id]
     entities: list[CoverEntity] = []
 
     for device in coordinator.data.values():
@@ -56,7 +56,7 @@ class SwitchBeeSomfyEntity(SwitchBeeDeviceEntity[SwitchBeeSomfy], CoverEntity):
         try:
             await self.coordinator.api.set_state(self._device.id, command)
         except (SwitchBeeError, SwitchBeeTokenError) as exp:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Failed to fire {command} for {self.name}, {exp!s}"
             ) from exp
 
@@ -145,7 +145,7 @@ class SwitchBeeCoverEntity(SwitchBeeDeviceEntity[SwitchBeeShutter], CoverEntity)
         try:
             await self.coordinator.api.set_state(self._device.id, kwargs[ATTR_POSITION])
         except (SwitchBeeError, SwitchBeeTokenError) as exp:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Failed to set {self.name} position to {kwargs[ATTR_POSITION]}, error:"
                 f" {exp!s}"
             ) from exp

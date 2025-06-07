@@ -6,12 +6,12 @@ from zwave_js_server.client import Client as ZwaveClient
 from zwave_js_server.model.driver import Driver
 from zwave_js_server.model.node import Node as ZwaveNode
 
-from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN, ButtonEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.button import DOMAIN as BUTTON_DOMAIN, ButtonEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import EntityCategory
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DATA_CLIENT, DOMAIN, LOGGER
 from .discovery import ZwaveDiscoveryInfo
@@ -22,7 +22,7 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -51,7 +51,7 @@ async def async_setup_entry(
 
     config_entry.async_on_unload(
         async_dispatcher_connect(
-            hass,
+            menuai,
             f"{DOMAIN}_{config_entry.entry_id}_add_ping_button_entity",
             async_add_ping_button_entity,
         )
@@ -59,7 +59,7 @@ async def async_setup_entry(
 
     config_entry.async_on_unload(
         async_dispatcher_connect(
-            hass,
+            menuai,
             f"{DOMAIN}_{config_entry.entry_id}_add_{BUTTON_DOMAIN}",
             async_add_button,
         )
@@ -109,11 +109,11 @@ class ZWaveNodePingButton(ButtonEntity):
             " service won't work for it"
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Call when entity is added."""
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"{DOMAIN}_{self.unique_id}_poll_value",
                 self.async_poll_value,
             )
@@ -124,7 +124,7 @@ class ZWaveNodePingButton(ButtonEntity):
         # be removed if the node is removed from the network.
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"{DOMAIN}_{self._base_unique_id}_remove_entity",
                 self.async_remove,
             )
@@ -132,7 +132,7 @@ class ZWaveNodePingButton(ButtonEntity):
 
     async def async_press(self) -> None:
         """Press the button."""
-        self.hass.async_create_task(self.node.async_ping())
+        self.menuai.async_create_task(self.node.async_ping())
 
 
 class ZWaveNotificationIdleButton(ZWaveBaseEntity, ButtonEntity):

@@ -6,9 +6,9 @@ from unittest.mock import patch
 from freezegun.api import FrozenDateTimeFactory
 from nextdns import InvalidApiKeyError
 
-from homeassistant.components.nextdns.const import DOMAIN
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
-from homeassistant.core import HomeAssistant
+from menuai.components.nextdns.const import DOMAIN
+from menuai.config_entries import SOURCE_REAUTH, ConfigEntryState
+from menuai.core import menuai
 
 from . import init_integration
 
@@ -16,55 +16,55 @@ from tests.common import async_fire_time_changed
 
 
 async def test_auth_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test authentication error when polling data."""
-    entry = await init_integration(hass)
+    entry = await init_integration(menuai)
 
     assert entry.state is ConfigEntryState.LOADED
 
     freezer.tick(timedelta(minutes=10))
     with (
         patch(
-            "homeassistant.components.nextdns.NextDns.get_profiles",
+            "menuai.components.nextdns.NextDns.get_profiles",
             side_effect=InvalidApiKeyError,
         ),
         patch(
-            "homeassistant.components.nextdns.NextDns.get_analytics_status",
+            "menuai.components.nextdns.NextDns.get_analytics_status",
             side_effect=InvalidApiKeyError,
         ),
         patch(
-            "homeassistant.components.nextdns.NextDns.get_analytics_encryption",
+            "menuai.components.nextdns.NextDns.get_analytics_encryption",
             side_effect=InvalidApiKeyError,
         ),
         patch(
-            "homeassistant.components.nextdns.NextDns.get_analytics_dnssec",
+            "menuai.components.nextdns.NextDns.get_analytics_dnssec",
             side_effect=InvalidApiKeyError,
         ),
         patch(
-            "homeassistant.components.nextdns.NextDns.get_analytics_ip_versions",
+            "menuai.components.nextdns.NextDns.get_analytics_ip_versions",
             side_effect=InvalidApiKeyError,
         ),
         patch(
-            "homeassistant.components.nextdns.NextDns.get_analytics_protocols",
+            "menuai.components.nextdns.NextDns.get_analytics_protocols",
             side_effect=InvalidApiKeyError,
         ),
         patch(
-            "homeassistant.components.nextdns.NextDns.get_settings",
+            "menuai.components.nextdns.NextDns.get_settings",
             side_effect=InvalidApiKeyError,
         ),
         patch(
-            "homeassistant.components.nextdns.NextDns.connection_status",
+            "menuai.components.nextdns.NextDns.connection_status",
             side_effect=InvalidApiKeyError,
         ),
     ):
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.LOADED
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
 
     flow = flows[0]

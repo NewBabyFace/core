@@ -8,19 +8,19 @@ from typing import Any
 from aranet4.client import Aranet4Advertisement, Color
 from bleak.backends.device import BLEDevice
 
-from homeassistant.components.bluetooth.passive_update_processor import (
+from menuai.components.bluetooth.passive_update_processor import (
     PassiveBluetoothDataProcessor,
     PassiveBluetoothDataUpdate,
     PassiveBluetoothEntityKey,
     PassiveBluetoothProcessorEntity,
 )
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_MANUFACTURER,
     ATTR_MODEL,
     ATTR_NAME,
@@ -32,10 +32,10 @@ from homeassistant.const import (
     UnitOfTemperature,
     UnitOfTime,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import EntityDescription
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import EntityDescription
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import AranetConfigEntry
 from .const import ARANET_MANUFACTURER_NAME
@@ -142,18 +142,18 @@ def _device_key_to_bluetooth_entity_key(
     return PassiveBluetoothEntityKey(key, device.address)
 
 
-def _sensor_device_info_to_hass(
+def _sensor_device_info_to_menuai(
     adv: Aranet4Advertisement,
 ) -> DeviceInfo:
-    """Convert a sensor device info to hass device info."""
-    hass_device_info = DeviceInfo({})
+    """Convert a sensor device info to menuai device info."""
+    menuai_device_info = DeviceInfo({})
     if adv.readings and adv.readings.name:
-        hass_device_info[ATTR_NAME] = adv.readings.name
-        hass_device_info[ATTR_MANUFACTURER] = ARANET_MANUFACTURER_NAME
-        hass_device_info[ATTR_MODEL] = adv.readings.type.model
+        menuai_device_info[ATTR_NAME] = adv.readings.name
+        menuai_device_info[ATTR_MANUFACTURER] = ARANET_MANUFACTURER_NAME
+        menuai_device_info[ATTR_MODEL] = adv.readings.type.model
     if adv.manufacturer_data:
-        hass_device_info[ATTR_SW_VERSION] = str(adv.manufacturer_data.version)
-    return hass_device_info
+        menuai_device_info[ATTR_SW_VERSION] = str(adv.manufacturer_data.version)
+    return menuai_device_info
 
 
 def sensor_update_to_bluetooth_data_update(
@@ -176,7 +176,7 @@ def sensor_update_to_bluetooth_data_update(
         names[tag] = desc.name
         descs[tag] = desc
     return PassiveBluetoothDataUpdate(
-        devices={adv.device.address: _sensor_device_info_to_hass(adv)},
+        devices={adv.device.address: _sensor_device_info_to_menuai(adv)},
         entity_descriptions=descs,
         entity_data=data,
         entity_names=names,
@@ -184,7 +184,7 @@ def sensor_update_to_bluetooth_data_update(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: AranetConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

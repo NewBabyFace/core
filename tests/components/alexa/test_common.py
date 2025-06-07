@@ -8,10 +8,10 @@ from uuid import uuid4
 
 import pytest
 
-from homeassistant.components.alexa import config, smart_home
-from homeassistant.components.alexa.const import CONF_ENDPOINT, CONF_FILTER, CONF_LOCALE
-from homeassistant.core import Context, HomeAssistant, ServiceCall, callback
-from homeassistant.helpers import entityfilter
+from menuai.components.alexa import config, smart_home
+from menuai.components.alexa.const import CONF_ENDPOINT, CONF_FILTER, CONF_LOCALE
+from menuai.core import Context, menuai, ServiceCall, callback
+from menuai.helpers import entityfilter
 
 from tests.common import async_mock_service
 
@@ -31,10 +31,10 @@ class MockConfig(smart_home.AlexaConfig):
         "camera.test": {"display_categories": "CAMERA"},
     }
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Mock Alexa config."""
         super().__init__(
-            hass,
+            menuai,
             {
                 CONF_ENDPOINT: TEST_URL,
                 CONF_FILTER: entityfilter.FILTER_SCHEMA({}),
@@ -65,9 +65,9 @@ class MockConfig(smart_home.AlexaConfig):
         """Accept a grant."""
 
 
-def get_default_config(hass: HomeAssistant) -> MockConfig:
+def get_default_config(menuai: menuai) -> MockConfig:
     """Return a MockConfig instance."""
-    return MockConfig(hass)
+    return MockConfig(menuai)
 
 
 def get_new_request(namespace, name, endpoint=None):
@@ -100,12 +100,12 @@ async def assert_request_calls_service(
     name: str,
     endpoint: str,
     service: str,
-    hass: HomeAssistant,
+    menuai: menuai,
     response_type="Response",
     payload: dict[str, Any] | None = None,
     instance: str | None = None,
 ) -> tuple[ServiceCall, dict[str, Any]]:
-    """Assert an API request calls a hass service."""
+    """Assert an API request calls a menuai service."""
     context = Context()
     request = get_new_request(namespace, name, endpoint)
     if payload:
@@ -114,12 +114,12 @@ async def assert_request_calls_service(
         request["directive"]["header"]["instance"] = instance
 
     domain, service_name = service.split(".")
-    calls = async_mock_service(hass, domain, service_name)
+    calls = async_mock_service(menuai, domain, service_name)
 
     msg = await smart_home.async_handle_message(
-        hass, get_default_config(hass), request, context
+        menuai, get_default_config(menuai), request, context
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(calls) == 1
     call = calls[0]
@@ -136,7 +136,7 @@ async def assert_request_fails(
     name: str,
     endpoint: str,
     service_not_called: str,
-    hass: HomeAssistant,
+    menuai: menuai,
     payload: dict[str, Any] | None = None,
     instance: str | None = None,
 ) -> None:
@@ -148,10 +148,10 @@ async def assert_request_fails(
         request["directive"]["header"]["instance"] = instance
 
     domain, service_name = service_not_called.split(".")
-    call = async_mock_service(hass, domain, service_name)
+    call = async_mock_service(menuai, domain, service_name)
 
-    msg = await smart_home.async_handle_message(hass, get_default_config(hass), request)
-    await hass.async_block_till_done()
+    msg = await smart_home.async_handle_message(menuai, get_default_config(menuai), request)
+    await menuai.async_block_till_done()
 
     assert not call
     assert "event" in msg
@@ -164,18 +164,18 @@ async def assert_power_controller_works(
     endpoint: str,
     on_service: str,
     off_service: str,
-    hass: HomeAssistant,
+    menuai: menuai,
     timestamp: str,
 ) -> None:
     """Assert PowerController API requests work."""
     _, response = await assert_request_calls_service(
-        "Alexa.PowerController", "TurnOn", endpoint, on_service, hass
+        "Alexa.PowerController", "TurnOn", endpoint, on_service, menuai
     )
     for context_property in response["context"]["properties"]:
         assert context_property["timeOfSample"] == timestamp
 
     _, response = await assert_request_calls_service(
-        "Alexa.PowerController", "TurnOff", endpoint, off_service, hass
+        "Alexa.PowerController", "TurnOff", endpoint, off_service, menuai
     )
     for context_property in response["context"]["properties"]:
         assert context_property["timeOfSample"] == timestamp
@@ -185,7 +185,7 @@ async def assert_scene_controller_works(
     endpoint: str,
     activate_service: str,
     deactivate_service: str,
-    hass: HomeAssistant,
+    menuai: menuai,
     timestamp: str,
 ) -> None:
     """Assert SceneController API requests work."""
@@ -194,7 +194,7 @@ async def assert_scene_controller_works(
         "Activate",
         endpoint,
         activate_service,
-        hass,
+        menuai,
         response_type="ActivationStarted",
     )
     assert response["event"]["payload"]["cause"]["type"] == "VOICE_INTERACTION"
@@ -205,7 +205,7 @@ async def assert_scene_controller_works(
             "Deactivate",
             endpoint,
             deactivate_service,
-            hass,
+            menuai,
             response_type="DeactivationStarted",
         )
         cause_type = response["event"]["payload"]["cause"]["type"]
@@ -214,7 +214,7 @@ async def assert_scene_controller_works(
 
 
 async def reported_properties(
-    hass: HomeAssistant, endpoint: str, return_full_response: bool = False
+    menuai: menuai, endpoint: str, return_full_response: bool = False
 ) -> ReportedProperties:
     """Use ReportState to get properties and return them.
 
@@ -222,8 +222,8 @@ async def reported_properties(
     assertions about the properties.
     """
     request = get_new_request("Alexa", "ReportState", endpoint)
-    msg = await smart_home.async_handle_message(hass, get_default_config(hass), request)
-    await hass.async_block_till_done()
+    msg = await smart_home.async_handle_message(menuai, get_default_config(menuai), request)
+    await menuai.async_block_till_done()
     if return_full_response:
         return msg
     return ReportedProperties(msg["context"]["properties"])

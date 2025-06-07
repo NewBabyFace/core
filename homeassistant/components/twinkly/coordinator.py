@@ -9,10 +9,10 @@ from aiohttp import ClientError
 from awesomeversion import AwesomeVersion
 from ttls.client import Twinkly, TwinklyError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DEV_NAME, DOMAIN, MIN_EFFECT_VERSION
 
@@ -42,11 +42,11 @@ class TwinklyCoordinator(DataUpdateCoordinator[TwinklyData]):
     device_name: str
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: TwinklyConfigEntry, client: Twinkly
+        self, menuai: menuai, config_entry: TwinklyConfigEntry, client: Twinkly
     ) -> None:
         """Initialize global Twinkly data updater."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -102,7 +102,7 @@ class TwinklyCoordinator(DataUpdateCoordinator[TwinklyData]):
 
     def _async_update_device_info(self, name: str) -> None:
         """Update the device info."""
-        device_registry = dr.async_get(self.hass)
+        device_registry = dr.async_get(self.menuai)
         device = device_registry.async_get_device(
             identifiers={(DOMAIN, self.data.device_info["mac"])},
         )

@@ -18,25 +18,25 @@ from reolink_aio.exceptions import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_REAUTH,
     SOURCE_RECONFIGURE,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
     CONF_PROTOCOL,
     CONF_USERNAME,
 )
-from homeassistant.core import callback
-from homeassistant.data_entry_flow import AbortFlow
-from homeassistant.helpers import config_validation as cv, selector
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.core import callback
+from menuai.data_entry_flow import AbortFlow
+from menuai.helpers import config_validation as cv, selector
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
 
 from .const import CONF_BC_PORT, CONF_SUPPORTS_PRIVACY_MODE, CONF_USE_HTTPS, DOMAIN
 from .exceptions import (
@@ -158,7 +158,7 @@ class ReolinkFlowHandler(ConfigFlow, domain=DOMAIN):
             and CONF_PASSWORD in existing_entry.data
             and existing_entry.data[CONF_HOST] != discovery_info.ip
         ):
-            if is_connected(self.hass, existing_entry):
+            if is_connected(self.menuai, existing_entry):
                 _LOGGER.debug(
                     "Reolink DHCP reported new IP '%s', "
                     "but connection to camera seems to be okay, so sticking to IP '%s'",
@@ -170,7 +170,7 @@ class ReolinkFlowHandler(ConfigFlow, domain=DOMAIN):
             # check if the camera is reachable at the new IP
             new_config = dict(existing_entry.data)
             new_config[CONF_HOST] = discovery_info.ip
-            host = ReolinkHost(self.hass, new_config, existing_entry.options)
+            host = ReolinkHost(self.menuai, new_config, existing_entry.options)
             try:
                 await host.api.get_state("GetLocalLink")
                 await host.api.logout()
@@ -245,7 +245,7 @@ class ReolinkFlowHandler(ConfigFlow, domain=DOMAIN):
             self._password = user_input[CONF_PASSWORD]
             self._host = user_input[CONF_HOST]
 
-            host = ReolinkHost(self.hass, user_input, DEFAULT_OPTIONS)
+            host = ReolinkHost(self.menuai, user_input, DEFAULT_OPTIONS)
             try:
                 if self._disable_privacy:
                     await host.api.baichuan.set_privacy_mode(enable=False)

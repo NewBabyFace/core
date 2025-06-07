@@ -4,12 +4,12 @@ from aiohttp.client_exceptions import ClientResponseError
 from volvooncall import Connection
 from volvooncall.dashboard import Instrument
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_UNIT_SYSTEM
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.update_coordinator import UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_UNIT_SYSTEM
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.update_coordinator import UpdateFailed
 
 from .const import (
     CONF_MUTABLE,
@@ -26,12 +26,12 @@ class VolvoData:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         connection: Connection,
         entry: ConfigEntry,
     ) -> None:
         """Initialize the component state."""
-        self.hass = hass
+        self.menuai = menuai
         self.vehicles: set[str] = set()
         self.instruments: set[Instrument] = set()
         self.config_entry = entry
@@ -77,7 +77,7 @@ class VolvoData:
             if instrument.component in PLATFORMS
         ):
             self.instruments.add(instrument)
-            async_dispatcher_send(self.hass, VOLVO_DISCOVERY_NEW, [instrument])
+            async_dispatcher_send(self.menuai, VOLVO_DISCOVERY_NEW, [instrument])
 
     async def update(self):
         """Update status from the online service."""

@@ -22,7 +22,7 @@
           "max_tokens": "Maximum tokens to return in response",
           "temperature": "Temperature",
           "top_p": "Top P",
-          "llm_hass_api": "[%key:common::config_flow::data::llm_hass_api%]",
+          "llm_menuai_api": "[%key:common::config_flow::data::llm_menuai_api%]",
           "recommended": "Recommended model settings",
           "reasoning_effort": "Reasoning effort",
           "web_search": "Enable web search",

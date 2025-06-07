@@ -12,17 +12,17 @@ from renault_api.kamereon.models import KamereonVehiclesLink
 from renault_api.renault_account import RenaultAccount
 from renault_api.renault_client import RenaultClient
 
-from homeassistant.const import (
+from menuai.const import (
     ATTR_IDENTIFIERS,
     ATTR_MANUFACTURER,
     ATTR_MODEL,
     ATTR_MODEL_ID,
     ATTR_NAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import device_registry as dr
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 if TYPE_CHECKING:
     from . import RenaultConfigEntry
@@ -42,11 +42,11 @@ LOGGER = logging.getLogger(__name__)
 class RenaultHub:
     """Handle account communication with Renault servers."""
 
-    def __init__(self, hass: HomeAssistant, locale: str) -> None:
+    def __init__(self, menuai: menuai, locale: str) -> None:
         """Initialise proxy."""
-        self._hass = hass
+        self._menuai = menuai
         self._client = RenaultClient(
-            websession=async_get_clientsession(self._hass), locale=locale
+            websession=async_get_clientsession(self._menuai), locale=locale
         )
         self._account: RenaultAccount | None = None
         self._vehicles: dict[str, RenaultVehicleProxy] = {}
@@ -99,7 +99,7 @@ class RenaultHub:
                 seconds=(3600 * num_call_per_scan) / MAX_CALLS_PER_HOURS
             )
 
-            device_registry = dr.async_get(self._hass)
+            device_registry = dr.async_get(self._menuai)
             await asyncio.gather(
                 *(
                     self.async_initialise_vehicle(
@@ -141,7 +141,7 @@ class RenaultHub:
         assert vehicle_link.vehicleDetails is not None
         # Generate vehicle proxy
         vehicle = RenaultVehicleProxy(
-            hass=self._hass,
+            menuai=self._menuai,
             config_entry=config_entry,
             hub=self,
             vehicle=await renault_account.get_api_vehicle(vehicle_link.vin),

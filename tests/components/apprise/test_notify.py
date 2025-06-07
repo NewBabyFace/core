@@ -6,8 +6,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 BASE_COMPONENT = "notify"
 
@@ -22,7 +22,7 @@ def reset_log_level():
     logger.setLevel(orig_level)
 
 
-async def test_apprise_config_load_fail01(hass: HomeAssistant) -> None:
+async def test_apprise_config_load_fail01(menuai: menuai) -> None:
     """Test apprise configuration failures 1."""
 
     config = {
@@ -30,17 +30,17 @@ async def test_apprise_config_load_fail01(hass: HomeAssistant) -> None:
     }
 
     with patch(
-        "homeassistant.components.apprise.notify.apprise.AppriseConfig.add",
+        "menuai.components.apprise.notify.apprise.AppriseConfig.add",
         return_value=False,
     ):
-        assert await async_setup_component(hass, BASE_COMPONENT, config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, BASE_COMPONENT, config)
+        await menuai.async_block_till_done()
 
         # Test that our service failed to load
-        assert not hass.services.has_service(BASE_COMPONENT, "test")
+        assert not menuai.services.has_service(BASE_COMPONENT, "test")
 
 
-async def test_apprise_config_load_fail02(hass: HomeAssistant) -> None:
+async def test_apprise_config_load_fail02(menuai: menuai) -> None:
     """Test apprise configuration failures 2."""
 
     config = {
@@ -49,22 +49,22 @@ async def test_apprise_config_load_fail02(hass: HomeAssistant) -> None:
 
     with (
         patch(
-            "homeassistant.components.apprise.notify.apprise.Apprise.add",
+            "menuai.components.apprise.notify.apprise.Apprise.add",
             return_value=False,
         ),
         patch(
-            "homeassistant.components.apprise.notify.apprise.AppriseConfig.add",
+            "menuai.components.apprise.notify.apprise.AppriseConfig.add",
             return_value=True,
         ),
     ):
-        assert await async_setup_component(hass, BASE_COMPONENT, config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, BASE_COMPONENT, config)
+        await menuai.async_block_till_done()
 
         # Test that our service failed to load
-        assert not hass.services.has_service(BASE_COMPONENT, "test")
+        assert not menuai.services.has_service(BASE_COMPONENT, "test")
 
 
-async def test_apprise_config_load_okay(hass: HomeAssistant, tmp_path: Path) -> None:
+async def test_apprise_config_load_okay(menuai: menuai, tmp_path: Path) -> None:
     """Test apprise configuration failures."""
 
     # Test cases where our URL is invalid
@@ -75,14 +75,14 @@ async def test_apprise_config_load_okay(hass: HomeAssistant, tmp_path: Path) -> 
 
     config = {BASE_COMPONENT: {"name": "test", "platform": "apprise", "config": str(f)}}
 
-    assert await async_setup_component(hass, BASE_COMPONENT, config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, BASE_COMPONENT, config)
+    await menuai.async_block_till_done()
 
     # Valid configuration was loaded; our service is good
-    assert hass.services.has_service(BASE_COMPONENT, "test")
+    assert menuai.services.has_service(BASE_COMPONENT, "test")
 
 
-async def test_apprise_url_load_fail(hass: HomeAssistant) -> None:
+async def test_apprise_url_load_fail(menuai: menuai) -> None:
     """Test apprise url failure."""
 
     config = {
@@ -93,17 +93,17 @@ async def test_apprise_url_load_fail(hass: HomeAssistant) -> None:
         }
     }
     with patch(
-        "homeassistant.components.apprise.notify.apprise.Apprise.add",
+        "menuai.components.apprise.notify.apprise.Apprise.add",
         return_value=False,
     ):
-        assert await async_setup_component(hass, BASE_COMPONENT, config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, BASE_COMPONENT, config)
+        await menuai.async_block_till_done()
 
         # Test that our service failed to load
-        assert not hass.services.has_service(BASE_COMPONENT, "test")
+        assert not menuai.services.has_service(BASE_COMPONENT, "test")
 
 
-async def test_apprise_notification(hass: HomeAssistant) -> None:
+async def test_apprise_notification(menuai: menuai) -> None:
     """Test apprise notification."""
 
     config = {
@@ -118,21 +118,21 @@ async def test_apprise_notification(hass: HomeAssistant) -> None:
     data = {"title": "Test Title", "message": "Test Message"}
 
     with patch(
-        "homeassistant.components.apprise.notify.apprise.Apprise"
+        "menuai.components.apprise.notify.apprise.Apprise"
     ) as mock_apprise:
         obj = MagicMock()
         obj.add.return_value = True
         obj.notify.return_value = True
         mock_apprise.return_value = obj
-        assert await async_setup_component(hass, BASE_COMPONENT, config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, BASE_COMPONENT, config)
+        await menuai.async_block_till_done()
 
         # Test the existence of our service
-        assert hass.services.has_service(BASE_COMPONENT, "test")
+        assert menuai.services.has_service(BASE_COMPONENT, "test")
 
         # Test the call to our underlining notify() call
-        await hass.services.async_call(BASE_COMPONENT, "test", data)
-        await hass.async_block_till_done()
+        await menuai.services.async_call(BASE_COMPONENT, "test", data)
+        await menuai.async_block_till_done()
 
         # Validate calls were made under the hood correctly
         obj.add.assert_called_once_with(config[BASE_COMPONENT]["url"])
@@ -141,7 +141,7 @@ async def test_apprise_notification(hass: HomeAssistant) -> None:
         )
 
 
-async def test_apprise_multiple_notification(hass: HomeAssistant) -> None:
+async def test_apprise_multiple_notification(menuai: menuai) -> None:
     """Test apprise notification."""
 
     config = {
@@ -159,21 +159,21 @@ async def test_apprise_multiple_notification(hass: HomeAssistant) -> None:
     data = {"title": "Test Title", "message": "Test Message"}
 
     with patch(
-        "homeassistant.components.apprise.notify.apprise.Apprise"
+        "menuai.components.apprise.notify.apprise.Apprise"
     ) as mock_apprise:
         obj = MagicMock()
         obj.add.return_value = True
         obj.notify.return_value = True
         mock_apprise.return_value = obj
-        assert await async_setup_component(hass, BASE_COMPONENT, config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, BASE_COMPONENT, config)
+        await menuai.async_block_till_done()
 
         # Test the existence of our service
-        assert hass.services.has_service(BASE_COMPONENT, "test")
+        assert menuai.services.has_service(BASE_COMPONENT, "test")
 
         # Test the call to our underlining notify() call
-        await hass.services.async_call(BASE_COMPONENT, "test", data)
-        await hass.async_block_till_done()
+        await menuai.services.async_call(BASE_COMPONENT, "test", data)
+        await menuai.async_block_till_done()
 
         # Validate 2 calls were made under the hood
         assert obj.add.call_count == 2
@@ -183,7 +183,7 @@ async def test_apprise_multiple_notification(hass: HomeAssistant) -> None:
 
 
 async def test_apprise_notification_with_target(
-    hass: HomeAssistant, tmp_path: Path
+    menuai: menuai, tmp_path: Path
 ) -> None:
     """Test apprise notification with a target."""
 
@@ -202,21 +202,21 @@ async def test_apprise_notification_with_target(
     data = {"title": "Test Title", "message": "Test Message", "target": ["devops"]}
 
     with patch(
-        "homeassistant.components.apprise.notify.apprise.Apprise"
+        "menuai.components.apprise.notify.apprise.Apprise"
     ) as mock_apprise:
         apprise_obj = MagicMock()
         apprise_obj.add.return_value = True
         apprise_obj.notify.return_value = True
         mock_apprise.return_value = apprise_obj
-        assert await async_setup_component(hass, BASE_COMPONENT, config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, BASE_COMPONENT, config)
+        await menuai.async_block_till_done()
 
         # Test the existence of our service
-        assert hass.services.has_service(BASE_COMPONENT, "test")
+        assert menuai.services.has_service(BASE_COMPONENT, "test")
 
         # Test the call to our underlining notify() call
-        await hass.services.async_call(BASE_COMPONENT, "test", data)
-        await hass.async_block_till_done()
+        await menuai.services.async_call(BASE_COMPONENT, "test", data)
+        await menuai.async_block_till_done()
 
         # Validate calls were made under the hood correctly
         apprise_obj.notify.assert_called_once_with(

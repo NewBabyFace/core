@@ -8,8 +8,8 @@ from typing import Any
 from smarttub import LoginFailed
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_EMAIL, CONF_PASSWORD
 
 from .const import DOMAIN
 from .controller import SmartTubController
@@ -31,7 +31,7 @@ class SmartTubConfigFlow(ConfigFlow, domain=DOMAIN):
         errors = {}
 
         if user_input is not None:
-            controller = SmartTubController(self.hass)
+            controller = SmartTubController(self.menuai)
             try:
                 account = await controller.login(
                     user_input[CONF_EMAIL], user_input[CONF_PASSWORD]

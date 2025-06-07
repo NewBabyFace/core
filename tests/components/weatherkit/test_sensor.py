@@ -4,7 +4,7 @@ from typing import Any
 
 import pytest
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from . import init_integration, mock_weather_response
 
@@ -17,12 +17,12 @@ from . import init_integration, mock_weather_response
     ],
 )
 async def test_sensor_values(
-    hass: HomeAssistant, entity_name: str, expected_value: Any
+    menuai: menuai, entity_name: str, expected_value: Any
 ) -> None:
     """Test that various sensor values match what we expect."""
     with mock_weather_response():
-        await init_integration(hass)
+        await init_integration(menuai)
 
-    state = hass.states.get(entity_name)
+    state = menuai.states.get(entity_name)
     assert state
     assert state.state == str(expected_value)

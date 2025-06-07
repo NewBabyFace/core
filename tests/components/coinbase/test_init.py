@@ -2,15 +2,15 @@
 
 from unittest.mock import patch
 
-from homeassistant.components.coinbase.const import (
+from menuai.components.coinbase.const import (
     API_TYPE_VAULT,
     CONF_CURRENCIES,
     CONF_EXCHANGE_RATES,
     DOMAIN,
 )
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .common import (
     init_mock_coinbase,
@@ -26,7 +26,7 @@ from .const import (
 )
 
 
-async def test_unload_entry(hass: HomeAssistant) -> None:
+async def test_unload_entry(menuai: menuai) -> None:
     """Test successful unload of entry."""
     with (
         patch(
@@ -42,20 +42,20 @@ async def test_unload_entry(hass: HomeAssistant) -> None:
             return_value=mock_get_exchange_rates(),
         ),
     ):
-        entry = await init_mock_coinbase(hass)
+        entry = await init_mock_coinbase(menuai)
 
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
     assert entry.state is ConfigEntryState.LOADED
 
-    assert await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.NOT_LOADED
-    assert not hass.data.get(DOMAIN)
+    assert not menuai.data.get(DOMAIN)
 
 
 async def test_option_updates(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test handling option updates."""
 
@@ -70,19 +70,19 @@ async def test_option_updates(
             return_value=mock_get_exchange_rates(),
         ),
     ):
-        config_entry = await init_mock_coinbase(hass)
-        await hass.async_block_till_done()
+        config_entry = await init_mock_coinbase(menuai)
+        await menuai.async_block_till_done()
 
-        result = await hass.config_entries.options.async_init(config_entry.entry_id)
-        await hass.async_block_till_done()
-        await hass.config_entries.options.async_configure(
+        result = await menuai.config_entries.options.async_init(config_entry.entry_id)
+        await menuai.async_block_till_done()
+        await menuai.config_entries.options.async_configure(
             result["flow_id"],
             user_input={
                 CONF_CURRENCIES: [GOOD_CURRENCY, GOOD_CURRENCY_2],
                 CONF_EXCHANGE_RATES: [GOOD_EXCHANGE_RATE, GOOD_EXCHANGE_RATE_2],
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         entities = er.async_entries_for_config_entry(
             entity_registry, config_entry.entry_id
@@ -103,16 +103,16 @@ async def test_option_updates(
         assert currencies == [GOOD_CURRENCY, GOOD_CURRENCY_2]
         assert rates == [GOOD_EXCHANGE_RATE, GOOD_EXCHANGE_RATE_2]
 
-        result = await hass.config_entries.options.async_init(config_entry.entry_id)
-        await hass.async_block_till_done()
-        await hass.config_entries.options.async_configure(
+        result = await menuai.config_entries.options.async_init(config_entry.entry_id)
+        await menuai.async_block_till_done()
+        await menuai.config_entries.options.async_configure(
             result["flow_id"],
             user_input={
                 CONF_CURRENCIES: [GOOD_CURRENCY],
                 CONF_EXCHANGE_RATES: [GOOD_EXCHANGE_RATE],
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         entities = er.async_entries_for_config_entry(
             entity_registry, config_entry.entry_id
@@ -135,7 +135,7 @@ async def test_option_updates(
 
 
 async def test_ignore_vaults_wallets(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test vaults are ignored in wallet sensors."""
 
@@ -150,8 +150,8 @@ async def test_ignore_vaults_wallets(
             return_value=mock_get_exchange_rates(),
         ),
     ):
-        config_entry = await init_mock_coinbase(hass, currencies=[GOOD_CURRENCY])
-        await hass.async_block_till_done()
+        config_entry = await init_mock_coinbase(menuai, currencies=[GOOD_CURRENCY])
+        await menuai.async_block_till_done()
 
         entities = er.async_entries_for_config_entry(
             entity_registry, config_entry.entry_id

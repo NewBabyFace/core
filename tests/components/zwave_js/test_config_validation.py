@@ -5,7 +5,7 @@ from typing import Any
 import pytest
 import voluptuous as vol
 
-from homeassistant.components.zwave_js.config_validation import VALUE_SCHEMA, boolean
+from menuai.components.zwave_js.config_validation import VALUE_SCHEMA, boolean
 
 
 @pytest.mark.parametrize(

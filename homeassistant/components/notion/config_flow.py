@@ -9,9 +9,9 @@ from typing import Any
 from aionotion.errors import InvalidCredentialsError, NotionError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
 
 from .const import CONF_REFRESH_TOKEN, CONF_USER_UUID, DOMAIN, LOGGER
 from .util import async_get_client_with_credentials
@@ -39,13 +39,13 @@ class CredentialsValidationResult:
 
 
 async def async_validate_credentials(
-    hass: HomeAssistant, username: str, password: str
+    menuai: menuai, username: str, password: str
 ) -> CredentialsValidationResult:
     """Validate a Notion username and password."""
     errors = {}
 
     try:
-        client = await async_get_client_with_credentials(hass, username, password)
+        client = await async_get_client_with_credentials(menuai, username, password)
     except InvalidCredentialsError:
         errors["base"] = "invalid_auth"
     except NotionError as err:
@@ -90,7 +90,7 @@ class NotionFlowHandler(ConfigFlow, domain=DOMAIN):
             )
 
         credentials_validation_result = await async_validate_credentials(
-            self.hass, reauth_entry.data[CONF_USERNAME], user_input[CONF_PASSWORD]
+            self.menuai, reauth_entry.data[CONF_USERNAME], user_input[CONF_PASSWORD]
         )
 
         if credentials_validation_result.errors:
@@ -121,7 +121,7 @@ class NotionFlowHandler(ConfigFlow, domain=DOMAIN):
         self._abort_if_unique_id_configured()
 
         credentials_validation_result = await async_validate_credentials(
-            self.hass, user_input[CONF_USERNAME], user_input[CONF_PASSWORD]
+            self.menuai, user_input[CONF_USERNAME], user_input[CONF_PASSWORD]
         )
 
         if credentials_validation_result.errors:

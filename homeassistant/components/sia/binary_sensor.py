@@ -8,15 +8,15 @@ import logging
 
 from pysiaalarm import SIAEvent
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import STATE_OFF, STATE_ON, STATE_UNAVAILABLE, EntityCategory
-from homeassistant.core import HomeAssistant, State, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import STATE_OFF, STATE_ON, STATE_UNAVAILABLE, EntityCategory
+from menuai.core import menuai, State, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
     CONF_ACCOUNT,
@@ -103,7 +103,7 @@ def generate_binary_sensors(entry: ConfigEntry) -> Iterable[SIABinarySensor]:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

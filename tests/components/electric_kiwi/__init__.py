@@ -1,13 +1,13 @@
 """Tests for the Electric Kiwi integration."""
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
 
-async def init_integration(hass: HomeAssistant, entry: MockConfigEntry) -> None:
+async def init_integration(menuai: menuai, entry: MockConfigEntry) -> None:
     """Fixture for setting up the integration with args."""
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()

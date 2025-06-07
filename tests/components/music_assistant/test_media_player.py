@@ -14,7 +14,7 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 from syrupy.filters import paths
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     ATTR_GROUP_MEMBERS,
     ATTR_INPUT_SOURCE,
     ATTR_MEDIA_ENQUEUE,
@@ -30,8 +30,8 @@ from homeassistant.components.media_player import (
     SERVICE_UNJOIN,
     MediaPlayerEntityFeature,
 )
-from homeassistant.components.music_assistant.const import DOMAIN
-from homeassistant.components.music_assistant.media_player import (
+from menuai.components.music_assistant.const import DOMAIN
+from menuai.components.music_assistant.media_player import (
     ATTR_ALBUM,
     ATTR_ANNOUNCE_VOLUME,
     ATTR_ARTIST,
@@ -47,8 +47,8 @@ from homeassistant.components.music_assistant.media_player import (
     SERVICE_PLAY_MEDIA_ADVANCED,
     SERVICE_TRANSFER_QUEUE,
 )
-from homeassistant.config_entries import HomeAssistantError
-from homeassistant.const import (
+from menuai.config_entries import menuaiError
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_MEDIA_NEXT_TRACK,
     SERVICE_MEDIA_PAUSE,
@@ -65,8 +65,8 @@ from homeassistant.const import (
     SERVICE_VOLUME_UP,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .common import (
     setup_integration_from_fixtures,
@@ -85,27 +85,27 @@ MOCK_TRACK = Track(
 
 
 async def test_media_player(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
     music_assistant_client: MagicMock,
 ) -> None:
     """Test media player."""
-    await setup_integration_from_fixtures(hass, music_assistant_client)
+    await setup_integration_from_fixtures(menuai, music_assistant_client)
     snapshot_music_assistant_entities(
-        hass, entity_registry, snapshot, Platform.MEDIA_PLAYER
+        menuai, entity_registry, snapshot, Platform.MEDIA_PLAYER
     )
 
 
 async def test_media_player_basic_actions(
-    hass: HomeAssistant,
+    menuai: menuai,
     music_assistant_client: MagicMock,
 ) -> None:
     """Test media_player entity basic actions (play/stop/pause etc.)."""
-    await setup_integration_from_fixtures(hass, music_assistant_client)
+    await setup_integration_from_fixtures(menuai, music_assistant_client)
     entity_id = "media_player.test_player_1"
     mass_player_id = "00:00:00:00:00:01"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     for action, cmd in (
         (SERVICE_MEDIA_PLAY, "play"),
@@ -116,7 +116,7 @@ async def test_media_player_basic_actions(
         (SERVICE_VOLUME_UP, "volume_up"),
         (SERVICE_VOLUME_DOWN, "volume_down"),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             action,
             {
@@ -133,16 +133,16 @@ async def test_media_player_basic_actions(
 
 
 async def test_media_player_seek_action(
-    hass: HomeAssistant,
+    menuai: menuai,
     music_assistant_client: MagicMock,
 ) -> None:
     """Test media_player entity seek action."""
-    await setup_integration_from_fixtures(hass, music_assistant_client)
+    await setup_integration_from_fixtures(menuai, music_assistant_client)
     entity_id = "media_player.test_player_1"
     mass_player_id = "00:00:00:00:00:01"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         "media_seek",
         {
@@ -159,16 +159,16 @@ async def test_media_player_seek_action(
 
 
 async def test_media_player_volume_set_action(
-    hass: HomeAssistant,
+    menuai: menuai,
     music_assistant_client: MagicMock,
 ) -> None:
     """Test media_player entity volume_set action."""
-    await setup_integration_from_fixtures(hass, music_assistant_client)
+    await setup_integration_from_fixtures(menuai, music_assistant_client)
     entity_id = "media_player.test_player_1"
     mass_player_id = "00:00:00:00:00:01"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_VOLUME_SET,
         {
@@ -184,16 +184,16 @@ async def test_media_player_volume_set_action(
 
 
 async def test_media_player_volume_mute_action(
-    hass: HomeAssistant,
+    menuai: menuai,
     music_assistant_client: MagicMock,
 ) -> None:
     """Test media_player entity volume_mute action."""
-    await setup_integration_from_fixtures(hass, music_assistant_client)
+    await setup_integration_from_fixtures(menuai, music_assistant_client)
     entity_id = "media_player.test_player_1"
     mass_player_id = "00:00:00:00:00:01"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_VOLUME_MUTE,
         {
@@ -209,20 +209,20 @@ async def test_media_player_volume_mute_action(
 
 
 async def test_media_player_turn_on_off_actions(
-    hass: HomeAssistant,
+    menuai: menuai,
     music_assistant_client: MagicMock,
 ) -> None:
     """Test media_player entity turn_on/turn_off actions."""
-    await setup_integration_from_fixtures(hass, music_assistant_client)
+    await setup_integration_from_fixtures(menuai, music_assistant_client)
     entity_id = "media_player.test_player_1"
     mass_player_id = "00:00:00:00:00:01"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     for action, pwr in (
         (SERVICE_TURN_ON, True),
         (SERVICE_TURN_OFF, False),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             action,
             {
@@ -238,16 +238,16 @@ async def test_media_player_turn_on_off_actions(
 
 
 async def test_media_player_shuffle_set_action(
-    hass: HomeAssistant,
+    menuai: menuai,
     music_assistant_client: MagicMock,
 ) -> None:
     """Test media_player entity shuffle_set action."""
-    await setup_integration_from_fixtures(hass, music_assistant_client)
+    await setup_integration_from_fixtures(menuai, music_assistant_client)
     entity_id = "media_player.test_player_1"
     mass_player_id = "00:00:00:00:00:01"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_SHUFFLE_SET,
         {
@@ -263,16 +263,16 @@ async def test_media_player_shuffle_set_action(
 
 
 async def test_media_player_repeat_set_action(
-    hass: HomeAssistant,
+    menuai: menuai,
     music_assistant_client: MagicMock,
 ) -> None:
     """Test media_player entity repeat_set action."""
-    await setup_integration_from_fixtures(hass, music_assistant_client)
+    await setup_integration_from_fixtures(menuai, music_assistant_client)
     entity_id = "media_player.test_player_1"
     mass_player_id = "00:00:00:00:00:01"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_REPEAT_SET,
         {
@@ -288,16 +288,16 @@ async def test_media_player_repeat_set_action(
 
 
 async def test_media_player_join_players_action(
-    hass: HomeAssistant,
+    menuai: menuai,
     music_assistant_client: MagicMock,
 ) -> None:
     """Test media_player entity join_players action."""
-    await setup_integration_from_fixtures(hass, music_assistant_client)
+    await setup_integration_from_fixtures(menuai, music_assistant_client)
     entity_id = "media_player.test_player_1"
     mass_player_id = "00:00:00:00:00:01"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_JOIN,
         {
@@ -315,9 +315,9 @@ async def test_media_player_join_players_action(
     # test again with invalid source player
     music_assistant_client.send_command.reset_mock()
     with pytest.raises(
-        HomeAssistantError, match="Entity media_player.blah_blah not found"
+        menuaiError, match="Entity media_player.blah_blah not found"
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             SERVICE_JOIN,
             {
@@ -329,16 +329,16 @@ async def test_media_player_join_players_action(
 
 
 async def test_media_player_unjoin_player_action(
-    hass: HomeAssistant,
+    menuai: menuai,
     music_assistant_client: MagicMock,
 ) -> None:
     """Test media_player entity unjoin player action."""
-    await setup_integration_from_fixtures(hass, music_assistant_client)
+    await setup_integration_from_fixtures(menuai, music_assistant_client)
     entity_id = "media_player.test_player_1"
     mass_player_id = "00:00:00:00:00:01"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_UNJOIN,
         {
@@ -353,16 +353,16 @@ async def test_media_player_unjoin_player_action(
 
 
 async def test_media_player_clear_playlist_action(
-    hass: HomeAssistant,
+    menuai: menuai,
     music_assistant_client: MagicMock,
 ) -> None:
     """Test media_player entity clear_playlist action."""
-    await setup_integration_from_fixtures(hass, music_assistant_client)
+    await setup_integration_from_fixtures(menuai, music_assistant_client)
     entity_id = "media_player.test_player_1"
     mass_player_id = "00:00:00:00:00:01"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_CLEAR_PLAYLIST,
         {
@@ -377,18 +377,18 @@ async def test_media_player_clear_playlist_action(
 
 
 async def test_media_player_play_media_action(
-    hass: HomeAssistant,
+    menuai: menuai,
     music_assistant_client: MagicMock,
 ) -> None:
     """Test media_player (advanced) play_media action."""
-    await setup_integration_from_fixtures(hass, music_assistant_client)
+    await setup_integration_from_fixtures(menuai, music_assistant_client)
     entity_id = "media_player.test_player_1"
     mass_player_id = "00:00:00:00:00:01"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
 
     # test simple play_media call with URI as media_id and no media type
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_PLAY_MEDIA_ADVANCED,
         {
@@ -409,7 +409,7 @@ async def test_media_player_play_media_action(
 
     # test simple play_media call with URI and enqueue specified
     music_assistant_client.send_command.reset_mock()
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_PLAY_MEDIA_ADVANCED,
         {
@@ -431,7 +431,7 @@ async def test_media_player_play_media_action(
 
     # test basic play_media call with URL and radio mode specified
     music_assistant_client.send_command.reset_mock()
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_PLAY_MEDIA_ADVANCED,
         {
@@ -454,7 +454,7 @@ async def test_media_player_play_media_action(
     # test play_media call with media id and media type specified
     music_assistant_client.send_command.reset_mock()
     music_assistant_client.music.get_item = AsyncMock(return_value=MOCK_TRACK)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_PLAY_MEDIA_ADVANCED,
         {
@@ -481,7 +481,7 @@ async def test_media_player_play_media_action(
     # test play_media call by name
     music_assistant_client.send_command.reset_mock()
     music_assistant_client.music.get_item_by_name = AsyncMock(return_value=MOCK_TRACK)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_PLAY_MEDIA_ADVANCED,
         {
@@ -511,16 +511,16 @@ async def test_media_player_play_media_action(
 
 
 async def test_media_player_play_announcement_action(
-    hass: HomeAssistant,
+    menuai: menuai,
     music_assistant_client: MagicMock,
 ) -> None:
     """Test media_player play_announcement action."""
-    await setup_integration_from_fixtures(hass, music_assistant_client)
+    await setup_integration_from_fixtures(menuai, music_assistant_client)
     entity_id = "media_player.test_player_1"
     mass_player_id = "00:00:00:00:00:01"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_PLAY_ANNOUNCEMENT,
         {
@@ -542,15 +542,15 @@ async def test_media_player_play_announcement_action(
 
 
 async def test_media_player_transfer_queue_action(
-    hass: HomeAssistant,
+    menuai: menuai,
     music_assistant_client: MagicMock,
 ) -> None:
     """Test media_player transfer_queu action."""
-    await setup_integration_from_fixtures(hass, music_assistant_client)
+    await setup_integration_from_fixtures(menuai, music_assistant_client)
     entity_id = "media_player.test_player_1"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_TRANSFER_QUEUE,
         {
@@ -570,8 +570,8 @@ async def test_media_player_transfer_queue_action(
     )
     # test again with invalid source player
     music_assistant_client.send_command.reset_mock()
-    with pytest.raises(HomeAssistantError, match="Source player not available."):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match="Source player not available."):
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_TRANSFER_QUEUE,
             {
@@ -582,7 +582,7 @@ async def test_media_player_transfer_queue_action(
         )
     # test again with no source player specified (which picks first playing playerqueue)
     music_assistant_client.send_command.reset_mock()
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_TRANSFER_QUEUE,
         {
@@ -601,14 +601,14 @@ async def test_media_player_transfer_queue_action(
 
 
 async def test_media_player_get_queue_action(
-    hass: HomeAssistant,
+    menuai: menuai,
     music_assistant_client: MagicMock,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test media_player get_queue action."""
-    await setup_integration_from_fixtures(hass, music_assistant_client)
+    await setup_integration_from_fixtures(menuai, music_assistant_client)
     entity_id = "media_player.test_group_player_1"
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         DOMAIN,
         SERVICE_GET_QUEUE,
         {
@@ -623,16 +623,16 @@ async def test_media_player_get_queue_action(
 
 
 async def test_media_player_select_source_action(
-    hass: HomeAssistant,
+    menuai: menuai,
     music_assistant_client: MagicMock,
 ) -> None:
     """Test media_player entity select source action."""
-    await setup_integration_from_fixtures(hass, music_assistant_client)
+    await setup_integration_from_fixtures(menuai, music_assistant_client)
     entity_id = "media_player.test_player_1"
     mass_player_id = "00:00:00:00:00:01"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_SELECT_SOURCE,
         {
@@ -648,14 +648,14 @@ async def test_media_player_select_source_action(
 
 
 async def test_media_player_supported_features(
-    hass: HomeAssistant,
+    menuai: menuai,
     music_assistant_client: MagicMock,
 ) -> None:
     """Test if media_player entity supported features are cortrectly (re)mapped."""
-    await setup_integration_from_fixtures(hass, music_assistant_client)
+    await setup_integration_from_fixtures(menuai, music_assistant_client)
     entity_id = "media_player.test_player_1"
     mass_player_id = "00:00:00:00:00:01"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     expected_features = (
         MediaPlayerEntityFeature.STOP
@@ -688,11 +688,11 @@ async def test_media_player_supported_features(
         mass_player_id
     ].power_control = PLAYER_CONTROL_NONE
     await trigger_subscription_callback(
-        hass, music_assistant_client, EventType.PLAYER_CONFIG_UPDATED, mass_player_id
+        menuai, music_assistant_client, EventType.PLAYER_CONFIG_UPDATED, mass_player_id
     )
     expected_features &= ~MediaPlayerEntityFeature.TURN_ON
     expected_features &= ~MediaPlayerEntityFeature.TURN_OFF
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.attributes["supported_features"] == expected_features
 
@@ -702,11 +702,11 @@ async def test_media_player_supported_features(
         mass_player_id
     ].volume_control = PLAYER_CONTROL_NONE
     await trigger_subscription_callback(
-        hass, music_assistant_client, EventType.PLAYER_CONFIG_UPDATED, mass_player_id
+        menuai, music_assistant_client, EventType.PLAYER_CONFIG_UPDATED, mass_player_id
     )
     expected_features &= ~MediaPlayerEntityFeature.VOLUME_SET
     expected_features &= ~MediaPlayerEntityFeature.VOLUME_STEP
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.attributes["supported_features"] == expected_features
 
@@ -716,10 +716,10 @@ async def test_media_player_supported_features(
         mass_player_id
     ].mute_control = PLAYER_CONTROL_NONE
     await trigger_subscription_callback(
-        hass, music_assistant_client, EventType.PLAYER_CONFIG_UPDATED, mass_player_id
+        menuai, music_assistant_client, EventType.PLAYER_CONFIG_UPDATED, mass_player_id
     )
     expected_features &= ~MediaPlayerEntityFeature.VOLUME_MUTE
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.attributes["supported_features"] == expected_features
 
@@ -729,9 +729,9 @@ async def test_media_player_supported_features(
         PlayerFeature.SET_MEMBERS
     )
     await trigger_subscription_callback(
-        hass, music_assistant_client, EventType.PLAYER_CONFIG_UPDATED, mass_player_id
+        menuai, music_assistant_client, EventType.PLAYER_CONFIG_UPDATED, mass_player_id
     )
     expected_features &= ~MediaPlayerEntityFeature.GROUPING
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.attributes["supported_features"] == expected_features

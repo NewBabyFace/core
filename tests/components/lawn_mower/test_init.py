@@ -5,16 +5,16 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from homeassistant.components.lawn_mower import (
+from menuai.components.lawn_mower import (
     DOMAIN,
     LawnMowerActivity,
     LawnMowerEntity,
     LawnMowerEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry, ConfigEntryState, ConfigFlow
-from homeassistant.const import STATE_UNAVAILABLE, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry, ConfigEntryState, ConfigFlow
+from menuai.const import STATE_UNAVAILABLE, Platform
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from tests.common import (
     MockConfigEntry,
@@ -52,38 +52,38 @@ class MockLawnMowerEntity(LawnMowerEntity):
 
 
 @pytest.fixture(autouse=True)
-def config_flow_fixture(hass: HomeAssistant) -> Generator[None]:
+def config_flow_fixture(menuai: menuai) -> Generator[None]:
     """Mock config flow."""
-    mock_platform(hass, f"{TEST_DOMAIN}.config_flow")
+    mock_platform(menuai, f"{TEST_DOMAIN}.config_flow")
 
     with mock_config_flow(TEST_DOMAIN, MockFlow):
         yield
 
 
-async def test_lawn_mower_setup(hass: HomeAssistant) -> None:
+async def test_lawn_mower_setup(menuai: menuai) -> None:
     """Test setup and tear down of lawn mower platform and entity."""
 
     async def async_setup_entry_init(
-        hass: HomeAssistant, config_entry: ConfigEntry
+        menuai: menuai, config_entry: ConfigEntry
     ) -> bool:
         """Set up test config entry."""
-        await hass.config_entries.async_forward_entry_setups(
+        await menuai.config_entries.async_forward_entry_setups(
             config_entry, [Platform.LAWN_MOWER]
         )
         return True
 
     async def async_unload_entry_init(
-        hass: HomeAssistant, config_entry: ConfigEntry
+        menuai: menuai, config_entry: ConfigEntry
     ) -> bool:
         """Unload up test config entry."""
-        await hass.config_entries.async_unload_platforms(
+        await menuai.config_entries.async_unload_platforms(
             config_entry, [Platform.LAWN_MOWER]
         )
         return True
 
-    mock_platform(hass, f"{TEST_DOMAIN}.config_flow")
+    mock_platform(menuai, f"{TEST_DOMAIN}.config_flow")
     mock_integration(
-        hass,
+        menuai,
         MockModule(
             TEST_DOMAIN,
             async_setup_entry=async_setup_entry_init,
@@ -95,7 +95,7 @@ async def test_lawn_mower_setup(hass: HomeAssistant) -> None:
     entity1.entity_id = "lawn_mower.mock_lawn_mower"
 
     async def async_setup_entry_platform(
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         async_add_entities: AddConfigEntryEntitiesCallback,
     ) -> None:
@@ -103,34 +103,34 @@ async def test_lawn_mower_setup(hass: HomeAssistant) -> None:
         async_add_entities([entity1])
 
     mock_platform(
-        hass,
+        menuai,
         f"{TEST_DOMAIN}.{DOMAIN}",
         MockPlatform(async_setup_entry=async_setup_entry_platform),
     )
 
     config_entry = MockConfigEntry(domain=TEST_DOMAIN)
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
-    assert hass.states.get(entity1.entity_id)
+    assert menuai.states.get(entity1.entity_id)
 
-    assert await hass.config_entries.async_unload(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_unload(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.NOT_LOADED
-    entity_state = hass.states.get(entity1.entity_id)
+    entity_state = menuai.states.get(entity1.entity_id)
 
     assert entity_state
     assert entity_state.state == STATE_UNAVAILABLE
 
 
-async def test_sync_start_mowing(hass: HomeAssistant) -> None:
+async def test_sync_start_mowing(menuai: menuai) -> None:
     """Test if async mowing calls sync mowing."""
     lawn_mower = MockLawnMowerEntity()
-    lawn_mower.hass = hass
+    lawn_mower.menuai = menuai
 
     lawn_mower.start_mowing = MagicMock()
     await lawn_mower.async_start_mowing()
@@ -138,10 +138,10 @@ async def test_sync_start_mowing(hass: HomeAssistant) -> None:
     assert lawn_mower.start_mowing.called
 
 
-async def test_sync_dock(hass: HomeAssistant) -> None:
+async def test_sync_dock(menuai: menuai) -> None:
     """Test if async dock calls sync dock."""
     lawn_mower = MockLawnMowerEntity()
-    lawn_mower.hass = hass
+    lawn_mower.menuai = menuai
 
     lawn_mower.dock = MagicMock()
     await lawn_mower.async_dock()
@@ -149,10 +149,10 @@ async def test_sync_dock(hass: HomeAssistant) -> None:
     assert lawn_mower.dock.called
 
 
-async def test_sync_pause(hass: HomeAssistant) -> None:
+async def test_sync_pause(menuai: menuai) -> None:
     """Test if async pause calls sync pause."""
     lawn_mower = MockLawnMowerEntity()
-    lawn_mower.hass = hass
+    lawn_mower.menuai = menuai
 
     lawn_mower.pause = MagicMock()
     await lawn_mower.async_pause()
@@ -160,20 +160,20 @@ async def test_sync_pause(hass: HomeAssistant) -> None:
     assert lawn_mower.pause.called
 
 
-async def test_lawn_mower_default(hass: HomeAssistant) -> None:
+async def test_lawn_mower_default(menuai: menuai) -> None:
     """Test lawn mower entity with defaults."""
     lawn_mower = MockLawnMowerEntity()
-    lawn_mower.hass = hass
+    lawn_mower.menuai = menuai
 
     assert lawn_mower.state is None
 
 
-async def test_lawn_mower_state(hass: HomeAssistant) -> None:
+async def test_lawn_mower_state(menuai: menuai) -> None:
     """Test lawn mower entity returns state."""
     lawn_mower = MockLawnMowerEntity(
         "lawn_mower_1", "Test lawn mower", LawnMowerActivity.MOWING
     )
-    lawn_mower.hass = hass
+    lawn_mower.menuai = menuai
     lawn_mower.start_mowing()
 
     assert lawn_mower.state == LawnMowerActivity.MOWING

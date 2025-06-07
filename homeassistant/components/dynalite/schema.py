@@ -6,9 +6,9 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.cover import DEVICE_CLASSES_SCHEMA
-from homeassistant.const import CONF_DEFAULT, CONF_HOST, CONF_NAME, CONF_PORT, CONF_TYPE
-from homeassistant.helpers import config_validation as cv
+from menuai.components.cover import DEVICE_CLASSES_SCHEMA
+from menuai.const import CONF_DEFAULT, CONF_HOST, CONF_NAME, CONF_PORT, CONF_TYPE
+from menuai.helpers import config_validation as cv
 
 from .const import (
     ACTIVE_INIT,

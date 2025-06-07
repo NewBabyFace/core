@@ -18,10 +18,10 @@ from ring_doorbell import (
 )
 from ring_doorbell.listen import RingEventListener
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import (
+from menuai.config_entries import ConfigEntry
+from menuai.core import CALLBACK_TYPE, menuai, callback
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.update_coordinator import (
     BaseDataUpdateCoordinatorProtocol,
     DataUpdateCoordinator,
     UpdateFailed,
@@ -52,13 +52,13 @@ class RingDataCoordinator(DataUpdateCoordinator[RingDevices]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: RingConfigEntry,
         ring_api: Ring,
     ) -> None:
         """Initialize my coordinator."""
         super().__init__(
-            hass,
+            menuai,
             name="devices",
             logger=_LOGGER,
             update_interval=SCAN_INTERVAL,
@@ -132,14 +132,14 @@ class RingListenCoordinator(BaseDataUpdateCoordinatorProtocol):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: RingConfigEntry,
         ring_api: Ring,
         listen_credentials: dict[str, Any] | None,
         listen_credentials_updater: Callable[[dict[str, Any]], None],
     ) -> None:
         """Initialize my coordinator."""
-        self.hass = hass
+        self.menuai = menuai
         self.logger = _LOGGER
         self.ring_api: Ring = ring_api
         self.event_listener = RingEventListener(
@@ -215,7 +215,7 @@ class RingListenCoordinator(BaseDataUpdateCoordinatorProtocol):
             self._listeners.pop(remove_listener)
             if not self._listeners:
                 self.config_entry.async_create_task(
-                    self.hass,
+                    self.menuai,
                     self._async_stop_listen(),
                     "Ring event listener stop",
                     eager_start=True,
@@ -226,7 +226,7 @@ class RingListenCoordinator(BaseDataUpdateCoordinatorProtocol):
         # This is the first listener, start the event listener.
         if start_listen:
             self.config_entry.async_create_task(
-                self.hass,
+                self.menuai,
                 self._async_start_listen(),
                 "Ring event listener start",
                 eager_start=True,

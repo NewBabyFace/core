@@ -2,17 +2,17 @@
 
 from unittest.mock import AsyncMock
 
-from homeassistant.components.geniushub import DOMAIN
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.const import CONF_MAC, CONF_TOKEN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.geniushub import DOMAIN
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.const import CONF_MAC, CONF_TOKEN
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry
 
 
 async def test_cloud_unique_id_migration(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_geniushub_cloud: AsyncMock,
 ) -> None:
@@ -26,13 +26,13 @@ async def test_cloud_unique_id_migration(
         },
         entry_id="1234",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     entity_registry.async_get_or_create(
         SENSOR_DOMAIN, DOMAIN, "aa:bb:cc:dd:ee:ff_device_78", config_entry=entry
     )
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
-    assert hass.states.get("sensor.geniushub_aa_bb_cc_dd_ee_ff_device_78")
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
+    assert menuai.states.get("sensor.geniushub_aa_bb_cc_dd_ee_ff_device_78")
     entity_entry = entity_registry.async_get(
         "sensor.geniushub_aa_bb_cc_dd_ee_ff_device_78"
     )

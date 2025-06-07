@@ -4,8 +4,8 @@ from copy import deepcopy
 
 import pytest
 
-from homeassistant.components.comelit.const import BRIDGE, DOMAIN, VEDO
-from homeassistant.const import CONF_HOST, CONF_PIN, CONF_PORT, CONF_TYPE
+from menuai.components.comelit.const import BRIDGE, DOMAIN, VEDO
+from menuai.const import CONF_HOST, CONF_PIN, CONF_PORT, CONF_TYPE
 
 from .const import (
     BRIDGE_DEVICE_QUERY,
@@ -25,7 +25,7 @@ from tests.common import AsyncMock, Generator, MockConfigEntry, patch
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.comelit.async_setup_entry",
+        "menuai.components.comelit.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
         yield mock_setup_entry
@@ -36,11 +36,11 @@ def mock_serial_bridge() -> Generator[AsyncMock]:
     """Mock a Comelit serial bridge."""
     with (
         patch(
-            "homeassistant.components.comelit.coordinator.ComeliteSerialBridgeApi",
+            "menuai.components.comelit.coordinator.ComeliteSerialBridgeApi",
             autospec=True,
         ) as mock_comelit_serial_bridge,
         patch(
-            "homeassistant.components.comelit.config_flow.ComeliteSerialBridgeApi",
+            "menuai.components.comelit.config_flow.ComeliteSerialBridgeApi",
             new=mock_comelit_serial_bridge,
         ),
     ):
@@ -72,11 +72,11 @@ def mock_vedo() -> Generator[AsyncMock]:
     """Mock a Comelit vedo."""
     with (
         patch(
-            "homeassistant.components.comelit.coordinator.ComelitVedoApi",
+            "menuai.components.comelit.coordinator.ComelitVedoApi",
             autospec=True,
         ) as mock_comelit_vedo,
         patch(
-            "homeassistant.components.comelit.config_flow.ComelitVedoApi",
+            "menuai.components.comelit.config_flow.ComelitVedoApi",
             new=mock_comelit_vedo,
         ),
     ):

@@ -13,10 +13,10 @@ from aiogithubapi import (
     GitHubResponseModel,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import EVENT_menuai_STOP
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import FALLBACK_UPDATE_INTERVAL, LOGGER, REFRESH_EVENT_TYPES
 
@@ -109,7 +109,7 @@ class GitHubDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: GithubConfigEntry,
         client: GitHubAPI,
         repository: str,
@@ -122,7 +122,7 @@ class GitHubDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.data = {}
 
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name=repository,
@@ -165,7 +165,7 @@ class GitHubDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             event_callback=self._handle_event,
             error_callback=self._handle_error,
         )
-        self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, self.unsubscribe)
+        self.menuai.bus.async_listen_once(EVENT_menuai_STOP, self.unsubscribe)
 
     def unsubscribe(self, *args) -> None:
         """Unsubscribe to repository events."""

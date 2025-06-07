@@ -6,14 +6,14 @@ https://home-assistant.io/components/vacuum.romy/.
 
 from typing import Any
 
-from homeassistant.components.vacuum import (
+from menuai.components.vacuum import (
     StateVacuumEntity,
     VacuumActivity,
     VacuumEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN, LOGGER
 from .coordinator import RomyVacuumCoordinator
@@ -49,13 +49,13 @@ SUPPORT_ROMY_ROBOT = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up ROMY vacuum cleaner."""
 
-    coordinator: RomyVacuumCoordinator = hass.data[DOMAIN][config_entry.entry_id]
+    coordinator: RomyVacuumCoordinator = menuai.data[DOMAIN][config_entry.entry_id]
     async_add_entities([RomyVacuumEntity(coordinator)])
 
 

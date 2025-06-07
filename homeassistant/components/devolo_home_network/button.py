@@ -8,15 +8,15 @@ from dataclasses import dataclass
 from devolo_plc_api.device import Device
 from devolo_plc_api.exceptions.device import DevicePasswordProtected, DeviceUnavailable
 
-from homeassistant.components.button import (
+from menuai.components.button import (
     ButtonDeviceClass,
     ButtonEntity,
     ButtonEntityDescription,
 )
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN, IDENTIFY, PAIRING, RESTART, START_WPS
 from .coordinator import DevoloHomeNetworkConfigEntry
@@ -57,7 +57,7 @@ BUTTON_TYPES: dict[str, DevoloButtonEntityDescription] = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: DevoloHomeNetworkConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -114,14 +114,14 @@ class DevoloButtonEntity(DevoloEntity, ButtonEntity):
         try:
             await self.entity_description.press_func(self.device)
         except DevicePasswordProtected as ex:
-            self.entry.async_start_reauth(self.hass)
-            raise HomeAssistantError(
+            self.entry.async_start_reauth(self.menuai)
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="password_protected",
                 translation_placeholders={"title": self.entry.title},
             ) from ex
         except DeviceUnavailable as ex:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="no_response",
                 translation_placeholders={"title": self.entry.title},

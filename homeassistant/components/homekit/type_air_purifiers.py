@@ -8,21 +8,21 @@ from pyhap.const import CATEGORY_AIR_PURIFIER
 from pyhap.service import Service
 from pyhap.util import callback as pyhap_callback
 
-from homeassistant.const import (
+from menuai.const import (
     ATTR_UNIT_OF_MEASUREMENT,
     STATE_ON,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
     UnitOfTemperature,
 )
-from homeassistant.core import (
+from menuai.core import (
     Event,
     EventStateChangedData,
-    HassJobType,
+    menuaiJobType,
     State,
     callback,
 )
-from homeassistant.helpers.event import async_track_state_change_event
+from menuai.helpers.event import async_track_state_change_event
 
 from .accessories import TYPES
 from .const import (
@@ -129,7 +129,7 @@ class AirPurifier(Fan):
                 CHAR_CURRENT_HUMIDITY, value=0
             )
 
-            humidity_state = self.hass.states.get(self.linked_humidity_sensor)
+            humidity_state = self.menuai.states.get(self.linked_humidity_sensor)
             if humidity_state:
                 self._async_update_current_humidity(humidity_state)
 
@@ -146,7 +146,7 @@ class AirPurifier(Fan):
 
             self.char_air_quality = pm25_serv.configure_char(CHAR_AIR_QUALITY)
 
-            pm25_state = self.hass.states.get(self.linked_pm25_sensor)
+            pm25_state = self.menuai.states.get(self.linked_pm25_sensor)
             if pm25_state:
                 self._async_update_current_pm25(pm25_state)
 
@@ -160,7 +160,7 @@ class AirPurifier(Fan):
                 CHAR_CURRENT_TEMPERATURE, value=0
             )
 
-            temperature_state = self.hass.states.get(self.linked_temperature_sensor)
+            temperature_state = self.menuai.states.get(self.linked_temperature_sensor)
             if temperature_state:
                 self._async_update_current_temperature(temperature_state)
 
@@ -192,7 +192,7 @@ class AirPurifier(Fan):
             )
 
             if self.linked_filter_change_indicator_binary_sensor:
-                filter_change_indicator_state = self.hass.states.get(
+                filter_change_indicator_state = self.menuai.states.get(
                     self.linked_filter_change_indicator_binary_sensor
                 )
                 if filter_change_indicator_state:
@@ -206,7 +206,7 @@ class AirPurifier(Fan):
                     value=0,
                 )
 
-                filter_life_level_state = self.hass.states.get(
+                filter_life_level_state = self.menuai.states.get(
                     self.linked_filter_life_level_sensor
                 )
                 if filter_life_level_state:
@@ -223,55 +223,55 @@ class AirPurifier(Fan):
     def run(self) -> None:
         """Handle accessory driver started event.
 
-        Run inside the Home Assistant event loop.
+        Run inside the MenuAI event loop.
         """
         if self.linked_humidity_sensor:
             self._subscriptions.append(
                 async_track_state_change_event(
-                    self.hass,
+                    self.menuai,
                     [self.linked_humidity_sensor],
                     self._async_update_current_humidity_event,
-                    job_type=HassJobType.Callback,
+                    job_type=menuaiJobType.Callback,
                 )
             )
 
         if self.linked_pm25_sensor:
             self._subscriptions.append(
                 async_track_state_change_event(
-                    self.hass,
+                    self.menuai,
                     [self.linked_pm25_sensor],
                     self._async_update_current_pm25_event,
-                    job_type=HassJobType.Callback,
+                    job_type=menuaiJobType.Callback,
                 )
             )
 
         if self.linked_temperature_sensor:
             self._subscriptions.append(
                 async_track_state_change_event(
-                    self.hass,
+                    self.menuai,
                     [self.linked_temperature_sensor],
                     self._async_update_current_temperature_event,
-                    job_type=HassJobType.Callback,
+                    job_type=menuaiJobType.Callback,
                 )
             )
 
         if self.linked_filter_change_indicator_binary_sensor:
             self._subscriptions.append(
                 async_track_state_change_event(
-                    self.hass,
+                    self.menuai,
                     [self.linked_filter_change_indicator_binary_sensor],
                     self._async_update_filter_change_indicator_event,
-                    job_type=HassJobType.Callback,
+                    job_type=menuaiJobType.Callback,
                 )
             )
 
         if self.linked_filter_life_level_sensor:
             self._subscriptions.append(
                 async_track_state_change_event(
-                    self.hass,
+                    self.menuai,
                     [self.linked_filter_life_level_sensor],
                     self._async_update_filter_life_level_event,
-                    job_type=HassJobType.Callback,
+                    job_type=menuaiJobType.Callback,
                 )
             )
 
@@ -462,7 +462,7 @@ class AirPurifier(Fan):
                 else CURRENT_STATE_INACTIVE
             )
 
-        # Automatic mode is represented in HASS by a preset called Auto or auto
+        # Automatic mode is represented in menuai by a preset called Auto or auto
         attributes = new_state.attributes
         if ATTR_PRESET_MODE in attributes:
             current_preset_mode = attributes.get(ATTR_PRESET_MODE)

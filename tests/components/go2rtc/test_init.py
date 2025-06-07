@@ -20,7 +20,7 @@ from go2rtc_client.ws import (
 import pytest
 from webrtc_models import RTCIceCandidateInit
 
-from homeassistant.components.camera import (
+from menuai.components.camera import (
     DOMAIN as CAMERA_DOMAIN,
     Camera,
     CameraEntityFeature,
@@ -31,20 +31,20 @@ from homeassistant.components.camera import (
     WebRTCMessage,
     WebRTCSendMessage,
 )
-from homeassistant.components.default_config import DOMAIN as DEFAULT_CONFIG_DOMAIN
-from homeassistant.components.go2rtc import WebRTCProvider
-from homeassistant.components.go2rtc.const import (
+from menuai.components.default_config import DOMAIN as DEFAULT_CONFIG_DOMAIN
+from menuai.components.go2rtc import WebRTCProvider
+from menuai.components.go2rtc.const import (
     CONF_DEBUG_UI,
     DEBUG_UI_URL_MESSAGE,
     DOMAIN,
     RECOMMENDED_VERSION,
 )
-from homeassistant.config_entries import ConfigEntry, ConfigEntryState, ConfigFlow
-from homeassistant.const import CONF_URL, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import issue_registry as ir
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.setup import async_setup_component
+from menuai.config_entries import ConfigEntry, ConfigEntryState, ConfigFlow
+from menuai.const import CONF_URL, Platform
+from menuai.core import menuai
+from menuai.helpers import issue_registry as ir
+from menuai.helpers.typing import ConfigType
+from menuai.setup import async_setup_component
 
 from tests.common import (
     MockConfigEntry,
@@ -88,10 +88,10 @@ class MockCamera(Camera):
 
 
 @pytest.fixture
-def integration_config_entry(hass: HomeAssistant) -> ConfigEntry:
+def integration_config_entry(menuai: menuai) -> ConfigEntry:
     """Test mock config entry."""
     entry = MockConfigEntry(domain=TEST_DOMAIN)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     return entry
 
 
@@ -105,7 +105,7 @@ def go2rtc_binary_fixture() -> str:
 def mock_get_binary(go2rtc_binary) -> Generator[Mock]:
     """Mock _get_binary."""
     with patch(
-        "homeassistant.components.go2rtc.shutil.which",
+        "menuai.components.go2rtc.shutil.which",
         return_value=go2rtc_binary,
     ) as mock_which:
         yield mock_which
@@ -118,12 +118,12 @@ def has_go2rtc_entry_fixture() -> bool:
 
 
 @pytest.fixture
-def mock_go2rtc_entry(hass: HomeAssistant, has_go2rtc_entry: bool) -> None:
+def mock_go2rtc_entry(menuai: menuai, has_go2rtc_entry: bool) -> None:
     """Mock a go2rtc onfig entry."""
     if not has_go2rtc_entry:
         return
     config_entry = MockConfigEntry(domain=DOMAIN)
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
 
 @pytest.fixture(name="is_docker_env")
@@ -136,7 +136,7 @@ def is_docker_env_fixture() -> bool:
 def mock_is_docker_env(is_docker_env) -> Generator[Mock]:
     """Mock is_docker_env."""
     with patch(
-        "homeassistant.components.go2rtc.is_docker_env",
+        "menuai.components.go2rtc.is_docker_env",
         return_value=is_docker_env,
     ) as mock_is_docker_env:
         yield mock_is_docker_env
@@ -144,43 +144,43 @@ def mock_is_docker_env(is_docker_env) -> Generator[Mock]:
 
 @pytest.fixture
 async def init_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     rest_client: AsyncMock,
     mock_is_docker_env,
     mock_get_binary,
     server: Mock,
 ) -> None:
     """Initialize the go2rtc integration."""
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {}})
 
 
 @pytest.fixture
 async def init_test_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     integration_config_entry: ConfigEntry,
 ) -> MockCamera:
     """Initialize components."""
 
     async def async_setup_entry_init(
-        hass: HomeAssistant, config_entry: ConfigEntry
+        menuai: menuai, config_entry: ConfigEntry
     ) -> bool:
         """Set up test config entry."""
-        await hass.config_entries.async_forward_entry_setups(
+        await menuai.config_entries.async_forward_entry_setups(
             config_entry, [Platform.CAMERA]
         )
         return True
 
     async def async_unload_entry_init(
-        hass: HomeAssistant, config_entry: ConfigEntry
+        menuai: menuai, config_entry: ConfigEntry
     ) -> bool:
         """Unload test config entry."""
-        await hass.config_entries.async_forward_entry_unload(
+        await menuai.config_entries.async_forward_entry_unload(
             config_entry, Platform.CAMERA
         )
         return True
 
     mock_integration(
-        hass,
+        menuai,
         MockModule(
             TEST_DOMAIN,
             async_setup_entry=async_setup_entry_init,
@@ -189,19 +189,19 @@ async def init_test_integration(
     )
     test_camera = MockCamera()
     setup_test_component_platform(
-        hass, CAMERA_DOMAIN, [test_camera], from_config_entry=True
+        menuai, CAMERA_DOMAIN, [test_camera], from_config_entry=True
     )
-    mock_platform(hass, f"{TEST_DOMAIN}.config_flow", Mock())
+    mock_platform(menuai, f"{TEST_DOMAIN}.config_flow", Mock())
 
     with mock_config_flow(TEST_DOMAIN, ConfigFlow):
-        assert await hass.config_entries.async_setup(integration_config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(integration_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     return test_camera
 
 
 async def _test_setup_and_signaling(
-    hass: HomeAssistant,
+    menuai: menuai,
     issue_registry: ir.IssueRegistry,
     rest_client: AsyncMock,
     ws_client: Mock,
@@ -213,10 +213,10 @@ async def _test_setup_and_signaling(
     entity_id = camera.entity_id
     assert camera.camera_capabilities.frontend_stream_types == {StreamType.HLS}
 
-    assert await async_setup_component(hass, DOMAIN, config)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    assert await async_setup_component(menuai, DOMAIN, config)
+    await menuai.async_block_till_done(wait_background_tasks=True)
     assert issue_registry.async_get_issue(DOMAIN, "recommended_version") is None
-    config_entries = hass.config_entries.async_entries(DOMAIN)
+    config_entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(config_entries) == 1
     assert config_entries[0].state == ConfigEntryState.LOADED
     after_setup_fn()
@@ -310,7 +310,7 @@ async def _test_setup_and_signaling(
 )
 @pytest.mark.parametrize("has_go2rtc_entry", [True, False])
 async def test_setup_go_binary(
-    hass: HomeAssistant,
+    menuai: menuai,
     issue_registry: ir.IssueRegistry,
     rest_client: AsyncMock,
     ws_client: Mock,
@@ -323,14 +323,14 @@ async def test_setup_go_binary(
     ui_enabled: bool,
 ) -> None:
     """Test the go2rtc config entry with binary."""
-    assert (len(hass.config_entries.async_entries(DOMAIN)) == 1) == has_go2rtc_entry
+    assert (len(menuai.config_entries.async_entries(DOMAIN)) == 1) == has_go2rtc_entry
 
     def after_setup() -> None:
-        server.assert_called_once_with(hass, "/usr/bin/go2rtc", enable_ui=ui_enabled)
+        server.assert_called_once_with(menuai, "/usr/bin/go2rtc", enable_ui=ui_enabled)
         server_start.assert_called_once()
 
     await _test_setup_and_signaling(
-        hass,
+        menuai,
         issue_registry,
         rest_client,
         ws_client,
@@ -339,7 +339,7 @@ async def test_setup_go_binary(
         init_test_integration,
     )
 
-    await hass.async_stop()
+    await menuai.async_stop()
     server_stop.assert_called_once()
 
 
@@ -353,7 +353,7 @@ async def test_setup_go_binary(
 )
 @pytest.mark.parametrize("has_go2rtc_entry", [True, False])
 async def test_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     issue_registry: ir.IssueRegistry,
     rest_client: AsyncMock,
     ws_client: Mock,
@@ -364,7 +364,7 @@ async def test_setup(
     has_go2rtc_entry: bool,
 ) -> None:
     """Test the go2rtc config entry without binary."""
-    assert (len(hass.config_entries.async_entries(DOMAIN)) == 1) == has_go2rtc_entry
+    assert (len(menuai.config_entries.async_entries(DOMAIN)) == 1) == has_go2rtc_entry
 
     config = {DOMAIN: {CONF_URL: "http://localhost:1984/"}}
 
@@ -372,7 +372,7 @@ async def test_setup(
         server.assert_not_called()
 
     await _test_setup_and_signaling(
-        hass,
+        menuai,
         issue_registry,
         rest_client,
         ws_client,
@@ -461,7 +461,7 @@ async def test_on_candidate(
     # Session doesn't exist
     await camera.async_on_webrtc_candidate(session_id, RTCIceCandidateInit("candidate"))
     assert (
-        "homeassistant.components.go2rtc",
+        "menuai.components.go2rtc",
         logging.DEBUG,
         f"Unknown session {session_id}. Ignoring candidate",
     ) in caplog.record_tuples
@@ -544,15 +544,15 @@ ERR_URL_REQUIRED = "Go2rtc URL required in non-docker installs"
     "mock_get_binary", "mock_go2rtc_entry", "mock_is_docker_env", "server"
 )
 async def test_non_user_setup_with_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test setup integration does not fail if not setup by user."""
 
-    assert await async_setup_component(hass, DOMAIN, config)
-    await hass.async_block_till_done(wait_background_tasks=True)
-    assert not hass.config_entries.async_entries(DOMAIN)
+    assert await async_setup_component(menuai, DOMAIN, config)
+    await menuai.async_block_till_done(wait_background_tasks=True)
+    assert not menuai.config_entries.async_entries(DOMAIN)
 
 
 @pytest.mark.parametrize(
@@ -577,7 +577,7 @@ async def test_non_user_setup_with_error(
     "mock_get_binary", "mock_go2rtc_entry", "mock_is_docker_env", "server"
 )
 async def test_setup_with_setup_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     caplog: pytest.LogCaptureFixture,
     has_go2rtc_entry: bool,
@@ -585,9 +585,9 @@ async def test_setup_with_setup_error(
 ) -> None:
     """Test setup integration fails."""
 
-    assert not await async_setup_component(hass, DOMAIN, config)
-    await hass.async_block_till_done(wait_background_tasks=True)
-    assert bool(hass.config_entries.async_entries(DOMAIN)) == has_go2rtc_entry
+    assert not await async_setup_component(menuai, DOMAIN, config)
+    await menuai.async_block_till_done(wait_background_tasks=True)
+    assert bool(menuai.config_entries.async_entries(DOMAIN)) == has_go2rtc_entry
     assert expected_log_message in caplog.text
 
 
@@ -602,16 +602,16 @@ async def test_setup_with_setup_error(
     "mock_get_binary", "mock_go2rtc_entry", "mock_is_docker_env", "server"
 )
 async def test_setup_with_setup_entry_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     caplog: pytest.LogCaptureFixture,
     expected_log_message: str,
 ) -> None:
     """Test setup integration entry fails."""
 
-    assert await async_setup_component(hass, DOMAIN, config)
-    await hass.async_block_till_done(wait_background_tasks=True)
-    config_entries = hass.config_entries.async_entries(DOMAIN)
+    assert await async_setup_component(menuai, DOMAIN, config)
+    await menuai.async_block_till_done(wait_background_tasks=True)
+    config_entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(config_entries) == 1
     assert config_entries[0].state == ConfigEntryState.SETUP_ERROR
     assert expected_log_message in caplog.text
@@ -632,7 +632,7 @@ async def test_setup_with_setup_entry_error(
     "mock_get_binary", "mock_go2rtc_entry", "mock_is_docker_env", "server"
 )
 async def test_setup_with_retryable_setup_entry_error_custom_server(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     rest_client: AsyncMock,
     config: ConfigType,
@@ -644,9 +644,9 @@ async def test_setup_with_retryable_setup_entry_error_custom_server(
     go2rtc_error = Go2RtcClientError()
     go2rtc_error.__cause__ = cause
     rest_client.validate_server_version.side_effect = go2rtc_error
-    assert await async_setup_component(hass, DOMAIN, config)
-    await hass.async_block_till_done(wait_background_tasks=True)
-    config_entries = hass.config_entries.async_entries(DOMAIN)
+    assert await async_setup_component(menuai, DOMAIN, config)
+    await menuai.async_block_till_done(wait_background_tasks=True)
+    config_entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(config_entries) == 1
     assert config_entries[0].state == expected_config_entry_state
     assert expected_log_message in caplog.text
@@ -667,7 +667,7 @@ async def test_setup_with_retryable_setup_entry_error_custom_server(
     "mock_get_binary", "mock_go2rtc_entry", "mock_is_docker_env", "server"
 )
 async def test_setup_with_retryable_setup_entry_error_default_server(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     rest_client: AsyncMock,
     has_go2rtc_entry: bool,
@@ -680,9 +680,9 @@ async def test_setup_with_retryable_setup_entry_error_default_server(
     go2rtc_error = Go2RtcClientError()
     go2rtc_error.__cause__ = cause
     rest_client.validate_server_version.side_effect = go2rtc_error
-    assert not await async_setup_component(hass, DOMAIN, config)
-    await hass.async_block_till_done(wait_background_tasks=True)
-    config_entries = hass.config_entries.async_entries(DOMAIN)
+    assert not await async_setup_component(menuai, DOMAIN, config)
+    await menuai.async_block_till_done(wait_background_tasks=True)
+    config_entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(config_entries) == has_go2rtc_entry
     for config_entry in config_entries:
         assert config_entry.state == expected_config_entry_state
@@ -705,7 +705,7 @@ async def test_setup_with_retryable_setup_entry_error_default_server(
     "mock_get_binary", "mock_go2rtc_entry", "mock_is_docker_env", "server"
 )
 async def test_setup_with_version_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     rest_client: AsyncMock,
     config: ConfigType,
@@ -715,35 +715,35 @@ async def test_setup_with_version_error(
 ) -> None:
     """Test setup integration entry fails."""
     rest_client.validate_server_version.side_effect = [None, go2rtc_error]
-    assert await async_setup_component(hass, DOMAIN, config)
-    await hass.async_block_till_done(wait_background_tasks=True)
-    config_entries = hass.config_entries.async_entries(DOMAIN)
+    assert await async_setup_component(menuai, DOMAIN, config)
+    await menuai.async_block_till_done(wait_background_tasks=True)
+    config_entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(config_entries) == 1
     assert config_entries[0].state == expected_config_entry_state
     assert expected_log_message in caplog.text
 
 
-async def test_config_entry_remove(hass: HomeAssistant) -> None:
+async def test_config_entry_remove(menuai: menuai) -> None:
     """Test config entry removed when neither default_config nor go2rtc is in config."""
     config_entry = MockConfigEntry(domain=DOMAIN)
-    config_entry.add_to_hass(hass)
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
-    assert not await hass.config_entries.async_setup(config_entry.entry_id)
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 0
+    config_entry.add_to_menuai(menuai)
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
+    assert not await menuai.config_entries.async_setup(config_entry.entry_id)
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 0
 
 
 @pytest.mark.parametrize("config", [{DOMAIN: {CONF_URL: "http://localhost:1984"}}])
 @pytest.mark.usefixtures("server")
 async def test_setup_with_recommended_version_repair(
-    hass: HomeAssistant,
+    menuai: menuai,
     issue_registry: ir.IssueRegistry,
     rest_client: AsyncMock,
     config: ConfigType,
 ) -> None:
     """Test setup integration entry fails."""
     rest_client.validate_server_version.return_value = AwesomeVersion("1.9.5")
-    assert await async_setup_component(hass, DOMAIN, config)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    assert await async_setup_component(menuai, DOMAIN, config)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     # Verify the issue is created
     issue = issue_registry.async_get_issue(DOMAIN, "recommended_version")

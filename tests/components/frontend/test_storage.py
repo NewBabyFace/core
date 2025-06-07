@@ -4,25 +4,25 @@ from typing import Any
 
 import pytest
 
-from homeassistant.components.frontend import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.frontend import DOMAIN
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import MockUser
 from tests.typing import WebSocketGenerator
 
 
 @pytest.fixture(autouse=True)
-async def setup_frontend(hass: HomeAssistant) -> None:
+async def setup_frontend(menuai: menuai) -> None:
     """Fixture to setup the frontend."""
-    await async_setup_component(hass, "frontend", {})
+    await async_setup_component(menuai, "frontend", {})
 
 
 async def test_get_user_data_empty(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test get_user_data command."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json(
         {"id": 5, "type": "frontend/get_user_data", "key": "non-existing-key"}
@@ -34,20 +34,20 @@ async def test_get_user_data_empty(
 
 
 async def test_get_user_data(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
-    hass_admin_user: MockUser,
-    hass_storage: dict[str, Any],
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
+    menuai_admin_user: MockUser,
+    menuai_storage: dict[str, Any],
 ) -> None:
     """Test get_user_data command."""
-    storage_key = f"{DOMAIN}.user_data_{hass_admin_user.id}"
-    hass_storage[storage_key] = {
+    storage_key = f"{DOMAIN}.user_data_{menuai_admin_user.id}"
+    menuai_storage[storage_key] = {
         "key": storage_key,
         "version": 1,
         "data": {"test-key": "test-value", "test-complex": [{"foo": "bar"}]},
     }
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     # Get a simple string key
 
@@ -89,8 +89,8 @@ async def test_get_user_data(
     ],
 )
 async def test_set_user_data_empty(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     subscriptions: list[tuple[int, dict[str, str], Any]],
     events: list[tuple[int, Any]],
 ) -> None:
@@ -98,7 +98,7 @@ async def test_set_user_data_empty(
 
     Also test subscribing.
     """
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     for msg_id, key, event_data in subscriptions:
         await client.send_json(
@@ -205,21 +205,21 @@ async def test_set_user_data_empty(
     ],
 )
 async def test_set_user_data(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
-    hass_storage: dict[str, Any],
-    hass_admin_user: MockUser,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
+    menuai_storage: dict[str, Any],
+    menuai_admin_user: MockUser,
     subscriptions: list[tuple[int, dict[str, str], Any]],
     events: list[list[tuple[int, Any]]],
 ) -> None:
     """Test set_user_data command with initial data."""
-    storage_key = f"{DOMAIN}.user_data_{hass_admin_user.id}"
-    hass_storage[storage_key] = {
+    storage_key = f"{DOMAIN}.user_data_{menuai_admin_user.id}"
+    menuai_storage[storage_key] = {
         "version": 1,
         "data": {"test-key": "test-value", "test-complex": "string"},
     }
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     for msg_id, key, event_data in subscriptions:
         await client.send_json(

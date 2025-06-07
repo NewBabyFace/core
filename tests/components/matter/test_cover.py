@@ -8,10 +8,10 @@ from matter_server.client.models.node import MatterNode
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.cover import CoverEntityFeature, CoverState
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.cover import CoverEntityFeature, CoverState
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .common import (
     set_node_attribute,
@@ -22,12 +22,12 @@ from .common import (
 
 @pytest.mark.usefixtures("matter_devices")
 async def test_covers(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test covers."""
-    snapshot_matter_entities(hass, entity_registry, snapshot, Platform.COVER)
+    snapshot_matter_entities(menuai, entity_registry, snapshot, Platform.COVER)
 
 
 @pytest.mark.parametrize(
@@ -41,14 +41,14 @@ async def test_covers(
     ],
 )
 async def test_cover(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     matter_node: MatterNode,
     entity_id: str,
 ) -> None:
     """Test window covering commands that always are implemented."""
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover",
         "close_cover",
         {
@@ -65,7 +65,7 @@ async def test_cover(
     )
     matter_client.send_device_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover",
         "stop_cover",
         {
@@ -82,7 +82,7 @@ async def test_cover(
     )
     matter_client.send_device_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover",
         "open_cover",
         {
@@ -109,13 +109,13 @@ async def test_cover(
     ],
 )
 async def test_cover_lift(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     matter_node: MatterNode,
     entity_id: str,
 ) -> None:
     """Test window covering devices with lift and position aware lift features."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover",
         "set_cover_position",
         {
@@ -134,16 +134,16 @@ async def test_cover_lift(
     matter_client.send_device_command.reset_mock()
 
     set_node_attribute(matter_node, 1, 258, 10, 0b001010)
-    await trigger_subscription_callback(hass, matter_client)
+    await trigger_subscription_callback(menuai, matter_client)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == CoverState.CLOSING
 
     set_node_attribute(matter_node, 1, 258, 10, 0b000101)
-    await trigger_subscription_callback(hass, matter_client)
+    await trigger_subscription_callback(menuai, matter_client)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == CoverState.OPENING
 
@@ -155,7 +155,7 @@ async def test_cover_lift(
     ],
 )
 async def test_cover_lift_only(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     matter_node: MatterNode,
     entity_id: str,
@@ -164,23 +164,23 @@ async def test_cover_lift_only(
 
     set_node_attribute(matter_node, 1, 258, 14, None)
     set_node_attribute(matter_node, 1, 258, 10, 0b000000)
-    await trigger_subscription_callback(hass, matter_client)
+    await trigger_subscription_callback(menuai, matter_client)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == "unknown"
 
     set_node_attribute(matter_node, 1, 258, 65529, [0, 1, 2])
-    await trigger_subscription_callback(hass, matter_client)
+    await trigger_subscription_callback(menuai, matter_client)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.attributes["supported_features"] & CoverEntityFeature.SET_POSITION == 0
 
     set_node_attribute(matter_node, 1, 258, 65529, [0, 1, 2, 5])
-    await trigger_subscription_callback(hass, matter_client)
+    await trigger_subscription_callback(menuai, matter_client)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.attributes["supported_features"] & CoverEntityFeature.SET_POSITION != 0
 
@@ -192,14 +192,14 @@ async def test_cover_lift_only(
     ],
 )
 async def test_cover_position_aware_lift(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     matter_node: MatterNode,
     entity_id: str,
 ) -> None:
     """Test window covering devices with position aware lift features."""
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     mask = (
         CoverEntityFeature.OPEN
@@ -212,18 +212,18 @@ async def test_cover_position_aware_lift(
     for position in (0, 9999):
         set_node_attribute(matter_node, 1, 258, 14, position)
         set_node_attribute(matter_node, 1, 258, 10, 0b000000)
-        await trigger_subscription_callback(hass, matter_client)
+        await trigger_subscription_callback(menuai, matter_client)
 
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert state.attributes["current_position"] == 100 - floor(position / 100)
         assert state.state == CoverState.OPEN
 
     set_node_attribute(matter_node, 1, 258, 14, 10000)
     set_node_attribute(matter_node, 1, 258, 10, 0b000000)
-    await trigger_subscription_callback(hass, matter_client)
+    await trigger_subscription_callback(menuai, matter_client)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.attributes["current_position"] == 0
     assert state.state == CoverState.CLOSED
@@ -238,14 +238,14 @@ async def test_cover_position_aware_lift(
     ],
 )
 async def test_cover_tilt(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     matter_node: MatterNode,
     entity_id: str,
 ) -> None:
     """Test window covering devices with tilt and position aware tilt features."""
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover",
         "set_cover_tilt_position",
         {
@@ -263,18 +263,18 @@ async def test_cover_tilt(
     )
     matter_client.send_device_command.reset_mock()
 
-    await trigger_subscription_callback(hass, matter_client)
+    await trigger_subscription_callback(menuai, matter_client)
 
     set_node_attribute(matter_node, 1, 258, 10, 0b100010)
-    await trigger_subscription_callback(hass, matter_client)
-    state = hass.states.get(entity_id)
+    await trigger_subscription_callback(menuai, matter_client)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == CoverState.CLOSING
 
     set_node_attribute(matter_node, 1, 258, 10, 0b010001)
-    await trigger_subscription_callback(hass, matter_client)
+    await trigger_subscription_callback(menuai, matter_client)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == CoverState.OPENING
 
@@ -286,7 +286,7 @@ async def test_cover_tilt(
     ],
 )
 async def test_cover_tilt_only(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     matter_node: MatterNode,
     entity_id: str,
@@ -294,9 +294,9 @@ async def test_cover_tilt_only(
     """Test window covering devices with tilt feature and without position aware tilt feature."""
 
     set_node_attribute(matter_node, 1, 258, 65529, [0, 1, 2])
-    await trigger_subscription_callback(hass, matter_client)
+    await trigger_subscription_callback(menuai, matter_client)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert (
         state.attributes["supported_features"] & CoverEntityFeature.SET_TILT_POSITION
@@ -304,9 +304,9 @@ async def test_cover_tilt_only(
     )
 
     set_node_attribute(matter_node, 1, 258, 65529, [0, 1, 2, 8])
-    await trigger_subscription_callback(hass, matter_client)
+    await trigger_subscription_callback(menuai, matter_client)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert (
         state.attributes["supported_features"] & CoverEntityFeature.SET_TILT_POSITION
@@ -321,14 +321,14 @@ async def test_cover_tilt_only(
     ],
 )
 async def test_cover_position_aware_tilt(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     matter_node: MatterNode,
     entity_id: str,
 ) -> None:
     """Test window covering devices with position aware tilt feature."""
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     mask = (
         CoverEntityFeature.OPEN
@@ -341,9 +341,9 @@ async def test_cover_position_aware_tilt(
     for tilt_position in (0, 9999, 10000):
         set_node_attribute(matter_node, 1, 258, 15, tilt_position)
         set_node_attribute(matter_node, 1, 258, 10, 0b000000)
-        await trigger_subscription_callback(hass, matter_client)
+        await trigger_subscription_callback(menuai, matter_client)
 
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert state.attributes["current_tilt_position"] == 100 - floor(
             tilt_position / 100
@@ -352,14 +352,14 @@ async def test_cover_position_aware_tilt(
 
 @pytest.mark.parametrize("node_fixture", ["window_covering_full"])
 async def test_cover_full_features(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     matter_node: MatterNode,
 ) -> None:
     """Test window covering devices with all the features."""
     entity_id = "cover.mock_full_window_covering"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     mask = (
         CoverEntityFeature.OPEN
@@ -373,75 +373,75 @@ async def test_cover_full_features(
     set_node_attribute(matter_node, 1, 258, 14, 10000)
     set_node_attribute(matter_node, 1, 258, 15, 10000)
     set_node_attribute(matter_node, 1, 258, 10, 0b000000)
-    await trigger_subscription_callback(hass, matter_client)
+    await trigger_subscription_callback(menuai, matter_client)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == CoverState.CLOSED
 
     set_node_attribute(matter_node, 1, 258, 14, 5000)
     set_node_attribute(matter_node, 1, 258, 15, 10000)
     set_node_attribute(matter_node, 1, 258, 10, 0b000000)
-    await trigger_subscription_callback(hass, matter_client)
+    await trigger_subscription_callback(menuai, matter_client)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == CoverState.OPEN
 
     set_node_attribute(matter_node, 1, 258, 14, 10000)
     set_node_attribute(matter_node, 1, 258, 15, 5000)
     set_node_attribute(matter_node, 1, 258, 10, 0b000000)
-    await trigger_subscription_callback(hass, matter_client)
+    await trigger_subscription_callback(menuai, matter_client)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == CoverState.CLOSED
 
     set_node_attribute(matter_node, 1, 258, 14, 5000)
     set_node_attribute(matter_node, 1, 258, 15, 5000)
     set_node_attribute(matter_node, 1, 258, 10, 0b000000)
-    await trigger_subscription_callback(hass, matter_client)
+    await trigger_subscription_callback(menuai, matter_client)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == CoverState.OPEN
 
     set_node_attribute(matter_node, 1, 258, 14, 5000)
     set_node_attribute(matter_node, 1, 258, 15, None)
     set_node_attribute(matter_node, 1, 258, 10, 0b000000)
-    await trigger_subscription_callback(hass, matter_client)
-    state = hass.states.get(entity_id)
+    await trigger_subscription_callback(menuai, matter_client)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == CoverState.OPEN
 
     set_node_attribute(matter_node, 1, 258, 14, None)
     set_node_attribute(matter_node, 1, 258, 15, 5000)
     set_node_attribute(matter_node, 1, 258, 10, 0b000000)
-    await trigger_subscription_callback(hass, matter_client)
-    state = hass.states.get(entity_id)
+    await trigger_subscription_callback(menuai, matter_client)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == "unknown"
 
     set_node_attribute(matter_node, 1, 258, 14, 10000)
     set_node_attribute(matter_node, 1, 258, 15, None)
     set_node_attribute(matter_node, 1, 258, 10, 0b000000)
-    await trigger_subscription_callback(hass, matter_client)
-    state = hass.states.get(entity_id)
+    await trigger_subscription_callback(menuai, matter_client)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == CoverState.CLOSED
 
     set_node_attribute(matter_node, 1, 258, 14, None)
     set_node_attribute(matter_node, 1, 258, 15, 10000)
     set_node_attribute(matter_node, 1, 258, 10, 0b000000)
-    await trigger_subscription_callback(hass, matter_client)
-    state = hass.states.get(entity_id)
+    await trigger_subscription_callback(menuai, matter_client)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == "unknown"
 
     set_node_attribute(matter_node, 1, 258, 14, None)
     set_node_attribute(matter_node, 1, 258, 15, None)
     set_node_attribute(matter_node, 1, 258, 10, 0b000000)
-    await trigger_subscription_callback(hass, matter_client)
-    state = hass.states.get(entity_id)
+    await trigger_subscription_callback(menuai, matter_client)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == "unknown"

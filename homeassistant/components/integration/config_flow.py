@@ -7,18 +7,18 @@ from typing import Any, cast
 
 import voluptuous as vol
 
-from homeassistant.components.counter import DOMAIN as COUNTER_DOMAIN
-from homeassistant.components.input_number import DOMAIN as INPUT_NUMBER_DOMAIN
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.const import (
+from menuai.components.counter import DOMAIN as COUNTER_DOMAIN
+from menuai.components.input_number import DOMAIN as INPUT_NUMBER_DOMAIN
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.const import (
     ATTR_UNIT_OF_MEASUREMENT,
     CONF_METHOD,
     CONF_NAME,
     UnitOfTime,
 )
-from homeassistant.core import callback
-from homeassistant.helpers import selector
-from homeassistant.helpers.schema_config_entry_flow import (
+from menuai.core import callback
+from menuai.helpers import selector
+from menuai.helpers.schema_config_entry_flow import (
     SchemaCommonFlowHandler,
     SchemaConfigFlowHandler,
     SchemaFlowFormStep,
@@ -62,14 +62,14 @@ def entity_selector_compatible(
     handler: SchemaOptionsFlowHandler,
 ) -> selector.EntitySelector:
     """Return an entity selector which compatible entities."""
-    current = handler.hass.states.get(handler.options[CONF_SOURCE_SENSOR])
+    current = handler.menuai.states.get(handler.options[CONF_SOURCE_SENSOR])
     unit_of_measurement = (
         current.attributes.get(ATTR_UNIT_OF_MEASUREMENT) if current else None
     )
 
     entities = [
         ent.entity_id
-        for ent in handler.hass.states.async_all(ALLOWED_DOMAINS)
+        for ent in handler.menuai.states.async_all(ALLOWED_DOMAINS)
         if ent.attributes.get(ATTR_UNIT_OF_MEASUREMENT) == unit_of_measurement
         and ent.domain in ALLOWED_DOMAINS
     ]

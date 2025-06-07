@@ -1,8 +1,8 @@
 """Support for wired binary sensors attached to a Konnected device."""
 
-from homeassistant.components.binary_sensor import BinarySensorEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.components.binary_sensor import BinarySensorEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_STATE,
     CONF_BINARY_SENSORS,
@@ -10,21 +10,21 @@ from homeassistant.const import (
     CONF_NAME,
     CONF_TYPE,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up binary sensors attached to a Konnected device from a config entry."""
-    data = hass.data[DOMAIN]
+    data = menuai.data[DOMAIN]
     device_id = config_entry.data["id"]
     sensors = [
         KonnectedBinarySensor(device_id, pin_num, pin_data)
@@ -51,12 +51,12 @@ class KonnectedBinarySensor(BinarySensorEntity):
             identifiers={(DOMAIN, device_id)},
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Store entity_id and register state change callback."""
         self._data[ATTR_ENTITY_ID] = self.entity_id
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, f"konnected.{self.entity_id}.update", self.async_set_state
+                self.menuai, f"konnected.{self.entity_id}.update", self.async_set_state
             )
         )
 

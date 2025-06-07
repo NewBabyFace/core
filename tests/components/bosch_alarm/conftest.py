@@ -8,19 +8,19 @@ from bosch_alarm_mode2.panel import Area, Door, Output, Point
 from bosch_alarm_mode2.utils import Observable
 import pytest
 
-from homeassistant.components.bosch_alarm.const import (
+from menuai.components.bosch_alarm.const import (
     CONF_INSTALLER_CODE,
     CONF_USER_CODE,
     DOMAIN,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_MAC,
     CONF_MODEL,
     CONF_PASSWORD,
     CONF_PORT,
 )
-from homeassistant.helpers.device_registry import format_mac
+from menuai.helpers.device_registry import format_mac
 
 from tests.common import MockConfigEntry
 
@@ -85,7 +85,7 @@ def serial_number(model: str) -> str | None:
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.bosch_alarm.async_setup_entry",
+        "menuai.components.bosch_alarm.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
         yield mock_setup_entry
@@ -172,9 +172,9 @@ def mock_panel(
     """Define a fixture to set up Bosch Alarm."""
     with (
         patch(
-            "homeassistant.components.bosch_alarm.Panel", autospec=True
+            "menuai.components.bosch_alarm.Panel", autospec=True
         ) as mock_panel,
-        patch("homeassistant.components.bosch_alarm.config_flow.Panel", new=mock_panel),
+        patch("menuai.components.bosch_alarm.config_flow.Panel", new=mock_panel),
     ):
         client = mock_panel.return_value
         client.areas = {1: area}

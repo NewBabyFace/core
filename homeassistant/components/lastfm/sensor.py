@@ -5,12 +5,12 @@ from __future__ import annotations
 import hashlib
 from typing import Any
 
-from homeassistant.components.sensor import SensorEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.components.sensor import SensorEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
     ATTR_LAST_PLAYED,
@@ -25,13 +25,13 @@ from .coordinator import LastFMDataUpdateCoordinator, LastFMUserData
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Initialize the entries."""
 
-    coordinator: LastFMDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: LastFMDataUpdateCoordinator = menuai.data[DOMAIN][entry.entry_id]
     async_add_entities(
         (
             LastFmSensor(coordinator, username, entry.entry_id)

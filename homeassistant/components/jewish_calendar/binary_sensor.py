@@ -8,15 +8,15 @@ import datetime as dt
 
 from hdate.zmanim import Zmanim
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.const import EntityCategory
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
-from homeassistant.helpers import event
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import dt as dt_util
+from menuai.const import EntityCategory
+from menuai.core import CALLBACK_TYPE, menuai, callback
+from menuai.helpers import event
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import dt as dt_util
 
 from .entity import JewishCalendarConfigEntry, JewishCalendarEntity
 
@@ -59,7 +59,7 @@ BINARY_SENSORS: tuple[JewishCalendarBinarySensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: JewishCalendarConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -85,17 +85,17 @@ class JewishCalendarBinarySensor(JewishCalendarEntity, BinarySensorEntity):
         zmanim = self.make_zmanim(dt.date.today())
         return self.entity_description.is_on(zmanim, dt_util.now())
 
-    async def async_added_to_hass(self) -> None:
-        """Run when entity about to be added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Run when entity about to be added to menuai."""
+        await super().async_added_to_menuai()
         self._schedule_update()
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Run when entity will be removed from hass."""
+    async def async_will_remove_from_menuai(self) -> None:
+        """Run when entity will be removed from menuai."""
         if self._update_unsub:
             self._update_unsub()
             self._update_unsub = None
-        return await super().async_will_remove_from_hass()
+        return await super().async_will_remove_from_menuai()
 
     @callback
     def _update(self, now: dt.datetime | None = None) -> None:
@@ -118,5 +118,5 @@ class JewishCalendarBinarySensor(JewishCalendarEntity, BinarySensorEntity):
         if self._update_unsub:
             self._update_unsub()
         self._update_unsub = event.async_track_point_in_time(
-            self.hass, self._update, update
+            self.menuai, self._update, update
         )

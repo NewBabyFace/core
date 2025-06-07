@@ -2,17 +2,17 @@
 
 from __future__ import annotations
 
-from homeassistant.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP, UnitOfTemperature
-from homeassistant.core import Event, HomeAssistant
-from homeassistant.helpers.device_registry import DeviceEntry
-from homeassistant.helpers.entity_registry import RegistryEntry, async_migrate_entries
+from menuai.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
+from menuai.const import EVENT_menuai_STOP, UnitOfTemperature
+from menuai.core import Event, menuai
+from menuai.helpers.device_registry import DeviceEntry
+from menuai.helpers.entity_registry import RegistryEntry, async_migrate_entries
 
 from .const import DOMAIN, LOGGER, PLATFORMS
 from .coordinator import FritzboxConfigEntry, FritzboxDataUpdateCoordinator
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: FritzboxConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: FritzboxConfigEntry) -> bool:
     """Set up the AVM FRITZ!SmartHome platforms."""
 
     def _update_unique_id(entry: RegistryEntry) -> dict[str, str] | None:
@@ -35,35 +35,35 @@ async def async_setup_entry(hass: HomeAssistant, entry: FritzboxConfigEntry) -> 
             return {"new_unique_id": new_unique_id}
         return None
 
-    await async_migrate_entries(hass, entry.entry_id, _update_unique_id)
+    await async_migrate_entries(menuai, entry.entry_id, _update_unique_id)
 
-    coordinator = FritzboxDataUpdateCoordinator(hass, entry)
+    coordinator = FritzboxDataUpdateCoordinator(menuai, entry)
     await coordinator.async_setup()
 
     entry.runtime_data = coordinator
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     def logout_fritzbox(event: Event) -> None:
         """Close connections to this fritzbox."""
         coordinator.fritz.logout()
 
     entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, logout_fritzbox)
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, logout_fritzbox)
     )
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: FritzboxConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: FritzboxConfigEntry) -> bool:
     """Unloading the AVM FRITZ!SmartHome platforms."""
-    await hass.async_add_executor_job(entry.runtime_data.fritz.logout)
+    await menuai.async_add_executor_job(entry.runtime_data.fritz.logout)
 
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 async def async_remove_config_entry_device(
-    hass: HomeAssistant, entry: FritzboxConfigEntry, device: DeviceEntry
+    menuai: menuai, entry: FritzboxConfigEntry, device: DeviceEntry
 ) -> bool:
     """Remove Fritzbox config entry from a device."""
     coordinator = entry.runtime_data

@@ -4,17 +4,17 @@ from datetime import timedelta
 
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_EVENT,
     CONF_OFFSET,
     CONF_PLATFORM,
     SUN_EVENT_SUNRISE,
 )
-from homeassistant.core import CALLBACK_TYPE, HassJob, HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.event import async_track_sunrise, async_track_sunset
-from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import CALLBACK_TYPE, menuaiJob, menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.event import async_track_sunrise, async_track_sunset
+from menuai.helpers.trigger import TriggerActionType, TriggerInfo
+from menuai.helpers.typing import ConfigType
 
 TRIGGER_SCHEMA = cv.TRIGGER_BASE_SCHEMA.extend(
     {
@@ -26,7 +26,7 @@ TRIGGER_SCHEMA = cv.TRIGGER_BASE_SCHEMA.extend(
 
 
 async def async_attach_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     action: TriggerActionType,
     trigger_info: TriggerInfo,
@@ -38,12 +38,12 @@ async def async_attach_trigger(
     description = event
     if offset:
         description = f"{description} with offset"
-    job = HassJob(action)
+    job = menuaiJob(action)
 
     @callback
     def call_action() -> None:
         """Call action with right context."""
-        hass.async_run_hass_job(
+        menuai.async_run_menuai_job(
             job,
             {
                 "trigger": {
@@ -57,5 +57,5 @@ async def async_attach_trigger(
         )
 
     if event == SUN_EVENT_SUNRISE:
-        return async_track_sunrise(hass, call_action, offset)
-    return async_track_sunset(hass, call_action, offset)
+        return async_track_sunrise(menuai, call_action, offset)
+    return async_track_sunset(menuai, call_action, offset)

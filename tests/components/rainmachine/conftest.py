@@ -7,10 +7,10 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from homeassistant.components.rainmachine import DOMAIN
-from homeassistant.const import CONF_IP_ADDRESS, CONF_PASSWORD, CONF_PORT, CONF_SSL
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.rainmachine import DOMAIN
+from menuai.const import CONF_IP_ADDRESS, CONF_PASSWORD, CONF_PORT, CONF_SSL
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry, load_fixture
 
@@ -34,7 +34,7 @@ def config_fixture() -> dict[str, Any]:
 
 @pytest.fixture(name="config_entry")
 def config_entry_fixture(
-    hass: HomeAssistant, config: dict[str, Any], controller_mac: str
+    menuai: menuai, config: dict[str, Any], controller_mac: str
 ) -> MockConfigEntry:
     """Define a config entry fixture."""
     entry = MockConfigEntry(
@@ -43,7 +43,7 @@ def config_entry_fixture(
         data=config,
         entry_id="81bd010ed0a63b705f6da8407cb26d4b",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     return entry
 
 
@@ -150,20 +150,20 @@ def data_zones_fixture():
 
 @pytest.fixture(name="setup_rainmachine")
 async def setup_rainmachine_fixture(
-    hass: HomeAssistant, client: AsyncMock, config: dict[str, Any]
+    menuai: menuai, client: AsyncMock, config: dict[str, Any]
 ) -> AsyncGenerator[None]:
     """Define a fixture to set up RainMachine."""
     with (
-        patch("homeassistant.components.rainmachine.Client", return_value=client),
+        patch("menuai.components.rainmachine.Client", return_value=client),
         patch(
-            "homeassistant.components.rainmachine.config_flow.Client",
+            "menuai.components.rainmachine.config_flow.Client",
             return_value=client,
         ),
         patch(
-            "homeassistant.components.rainmachine.PLATFORMS",
+            "menuai.components.rainmachine.PLATFORMS",
             [],
         ),
     ):
-        assert await async_setup_component(hass, DOMAIN, config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, config)
+        await menuai.async_block_till_done()
         yield

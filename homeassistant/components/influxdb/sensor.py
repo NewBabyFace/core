@@ -8,25 +8,25 @@ from typing import Final
 
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
     SensorEntity,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_API_VERSION,
     CONF_LANGUAGE,
     CONF_NAME,
     CONF_UNIQUE_ID,
     CONF_UNIT_OF_MEASUREMENT,
     CONF_VALUE_TEMPLATE,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import PlatformNotReady, TemplateError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import Throttle
+from menuai.core import menuai
+from menuai.exceptions import PlatformNotReady, TemplateError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import Throttle
 
 from . import create_influx_url, get_influx_connection, validate_version_specific_config
 from .const import (
@@ -156,7 +156,7 @@ PLATFORM_SCHEMA = vol.All(
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -172,31 +172,31 @@ def setup_platform(
     if CONF_QUERIES_FLUX in config:
         for query in config[CONF_QUERIES_FLUX]:
             if query[CONF_BUCKET] in influx.data_repositories:
-                entities.append(InfluxSensor(hass, influx, query))
+                entities.append(InfluxSensor(menuai, influx, query))
             else:
                 _LOGGER.error(NO_BUCKET_ERROR, query[CONF_BUCKET])
     else:
         for query in config[CONF_QUERIES]:
             if query[CONF_DB_NAME] in influx.data_repositories:
-                entities.append(InfluxSensor(hass, influx, query))
+                entities.append(InfluxSensor(menuai, influx, query))
             else:
                 _LOGGER.error(NO_DATABASE_ERROR, query[CONF_DB_NAME])
 
     add_entities(entities, update_before_add=True)
 
-    hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, lambda _: influx.close())
+    menuai.bus.listen_once(EVENT_menuai_STOP, lambda _: influx.close())
 
 
 class InfluxSensor(SensorEntity):
     """Implementation of a Influxdb sensor."""
 
-    def __init__(self, hass, influx, query):
+    def __init__(self, menuai, influx, query):
         """Initialize the sensor."""
         self._name = query.get(CONF_NAME)
         self._unit_of_measurement = query.get(CONF_UNIT_OF_MEASUREMENT)
         self._value_template = query.get(CONF_VALUE_TEMPLATE)
         self._state = None
-        self._hass = hass
+        self._menuai = menuai
         self._attr_unique_id = query.get(CONF_UNIQUE_ID)
 
         if query[CONF_LANGUAGE] == LANGUAGE_FLUX:

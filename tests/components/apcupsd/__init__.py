@@ -6,11 +6,11 @@ from collections import OrderedDict
 from typing import Final
 from unittest.mock import patch
 
-from homeassistant.components.apcupsd.const import DOMAIN
-from homeassistant.components.apcupsd.coordinator import APCUPSdData
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.core import HomeAssistant
+from menuai.components.apcupsd.const import DOMAIN
+from menuai.components.apcupsd.coordinator import APCUPSdData
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_HOST, CONF_PORT
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -82,13 +82,13 @@ MOCK_MINIMAL_STATUS: Final = OrderedDict(
 
 
 async def async_init_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     *,
     host: str = "test",
     status: dict[str, str] | None = None,
     entry_id: str = "mocked-config-entry-id",
 ) -> MockConfigEntry:
-    """Set up the APC UPS Daemon integration in HomeAssistant."""
+    """Set up the APC UPS Daemon integration in menuai."""
     if status is None:
         status = MOCK_STATUS
 
@@ -102,10 +102,10 @@ async def async_init_integration(
         source=SOURCE_USER,
     )
 
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with patch("aioapcaccess.request_status", return_value=status):
-        assert await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     return entry

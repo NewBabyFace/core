@@ -2,16 +2,16 @@
 
 from pyws66i import WS66i, ZoneStatus
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, MAX_VOL
 from .coordinator import Ws66iDataUpdateCoordinator
@@ -21,12 +21,12 @@ PARALLEL_UPDATES = 1
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the WS66i 6-zone amplifier platform from a config entry."""
-    ws66i_data: Ws66iData = hass.data[DOMAIN][config_entry.entry_id]
+    ws66i_data: Ws66iData = menuai.data[DOMAIN][config_entry.entry_id]
 
     # Build and add the entities from the data class
     async_add_entities(
@@ -112,7 +112,7 @@ class Ws66iZone(CoordinatorEntity[Ws66iDataUpdateCoordinator], MediaPlayerEntity
     async def async_select_source(self, source: str) -> None:
         """Set input source."""
         idx = self._ws66i_data.sources.name_id[source]
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             self._ws66i.set_source, self._zone_id, idx
         )
         self._status.source = idx
@@ -120,7 +120,7 @@ class Ws66iZone(CoordinatorEntity[Ws66iDataUpdateCoordinator], MediaPlayerEntity
 
     async def async_turn_on(self) -> None:
         """Turn the media player on."""
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             self._ws66i.set_power, self._zone_id, True
         )
         self._status.power = True
@@ -128,7 +128,7 @@ class Ws66iZone(CoordinatorEntity[Ws66iDataUpdateCoordinator], MediaPlayerEntity
 
     async def async_turn_off(self) -> None:
         """Turn the media player off."""
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             self._ws66i.set_power, self._zone_id, False
         )
         self._status.power = False
@@ -136,7 +136,7 @@ class Ws66iZone(CoordinatorEntity[Ws66iDataUpdateCoordinator], MediaPlayerEntity
 
     async def async_mute_volume(self, mute: bool) -> None:
         """Mute (true) or unmute (false) media player."""
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             self._ws66i.set_mute, self._zone_id, mute
         )
         self._status.mute = bool(mute)
@@ -144,19 +144,19 @@ class Ws66iZone(CoordinatorEntity[Ws66iDataUpdateCoordinator], MediaPlayerEntity
 
     async def async_set_volume_level(self, volume: float) -> None:
         """Set volume level, range 0..1."""
-        await self.hass.async_add_executor_job(self._set_volume, int(volume * MAX_VOL))
+        await self.menuai.async_add_executor_job(self._set_volume, int(volume * MAX_VOL))
         self._async_update_attrs_write_ha_state()
 
     async def async_volume_up(self) -> None:
         """Volume up the media player."""
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             self._set_volume, min(self._status.volume + 1, MAX_VOL)
         )
         self._async_update_attrs_write_ha_state()
 
     async def async_volume_down(self) -> None:
         """Volume down media player."""
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             self._set_volume, max(self._status.volume - 1, 0)
         )
         self._async_update_attrs_write_ha_state()

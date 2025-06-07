@@ -5,15 +5,15 @@ import logging
 
 from tellduslive import BATTERY_LOW, BATTERY_OK, BATTERY_UNKNOWN
 
-from homeassistant.const import (
+from menuai.const import (
     ATTR_BATTERY_LEVEL,
     ATTR_MANUFACTURER,
     ATTR_MODEL,
     ATTR_VIA_DEVICE,
 )
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import Entity
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity import Entity
 
 from .const import SIGNAL_UPDATE_ENTITY
 
@@ -33,12 +33,12 @@ class TelldusLiveEntity(Entity):
         self._id = device_id
         self._client = client
 
-    async def async_added_to_hass(self) -> None:
-        """Call when entity is added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Call when entity is added to menuai."""
         _LOGGER.debug("Created device %s", self)
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, SIGNAL_UPDATE_ENTITY, self.async_write_ha_state
+                self.menuai, SIGNAL_UPDATE_ENTITY, self.async_write_ha_state
             )
         )
 

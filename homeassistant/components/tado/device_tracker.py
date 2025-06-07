@@ -4,15 +4,15 @@ from __future__ import annotations
 
 import logging
 
-from homeassistant.components.device_tracker import (
+from menuai.components.device_tracker import (
     DOMAIN as DEVICE_TRACKER_DOMAIN,
     TrackerEntity,
 )
-from homeassistant.const import STATE_HOME, STATE_NOT_HOME
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import (
+from menuai.const import STATE_HOME, STATE_NOT_HOME
+from menuai.core import menuai, callback
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
 )
@@ -25,7 +25,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: TadoConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -36,7 +36,7 @@ async def async_setup_entry(
 
     # Fix non-string unique_id for device trackers
     # Can be removed in 2025.1
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
     for device_key in tado.data["mobile_device"]:
         if entity_id := entity_registry.async_get_entity_id(
             DEVICE_TRACKER_DOMAIN, DOMAIN, device_key
@@ -48,14 +48,14 @@ async def async_setup_entry(
     @callback
     def update_devices() -> None:
         """Update the values of the devices."""
-        add_tracked_entities(hass, tado, async_add_entities, tracked)
+        add_tracked_entities(menuai, tado, async_add_entities, tracked)
 
     update_devices()
 
 
 @callback
 def add_tracked_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     coordinator: TadoMobileDeviceUpdateCoordinator,
     async_add_entities: AddConfigEntryEntitiesCallback,
     tracked: set[str],

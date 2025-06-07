@@ -6,12 +6,12 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Final
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     CURRENCY_EURO,
     UnitOfElectricCurrent,
     UnitOfElectricPotential,
@@ -19,7 +19,7 @@ from homeassistant.const import (
     UnitOfPower,
     UnitOfVolume,
 )
-from homeassistant.util import dt as dt_util
+from menuai.util import dt as dt_util
 
 PRICE_EUR_KWH: Final = f"EUR/{UnitOfEnergy.KILO_WATT_HOUR}"
 PRICE_EUR_M3: Final = f"EUR/{UnitOfVolume.CUBIC_METERS}"
@@ -40,7 +40,7 @@ def tariff_transform(value: str) -> str:
 
 
 @dataclass(frozen=True)
-# pylint: disable-next=hass-enforce-class-module
+# pylint: disable-next=menuai-enforce-class-module
 class DSMRReaderSensorEntityDescription(SensorEntityDescription):
     """Sensor entity description for DSMR Reader."""
 

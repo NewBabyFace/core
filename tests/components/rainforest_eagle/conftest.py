@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
-from homeassistant.components.rainforest_eagle.const import (
+from menuai.components.rainforest_eagle.const import (
     CONF_CLOUD_ID,
     CONF_HARDWARE_ADDRESS,
     CONF_INSTALL_CODE,
@@ -13,9 +13,9 @@ from homeassistant.components.rainforest_eagle.const import (
     TYPE_EAGLE_100,
     TYPE_EAGLE_200,
 )
-from homeassistant.const import CONF_HOST, CONF_TYPE
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.const import CONF_HOST, CONF_TYPE
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from . import MOCK_200_RESPONSE_WITHOUT_PRICE, MOCK_CLOUD_ID
 
@@ -23,7 +23,7 @@ from tests.common import MockConfigEntry
 
 
 @pytest.fixture
-def config_entry_200(hass: HomeAssistant) -> MockConfigEntry:
+def config_entry_200(menuai: menuai) -> MockConfigEntry:
     """Return a config entry."""
     entry = MockConfigEntry(
         domain="rainforest_eagle",
@@ -35,13 +35,13 @@ def config_entry_200(hass: HomeAssistant) -> MockConfigEntry:
             CONF_TYPE: TYPE_EAGLE_200,
         },
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     return entry
 
 
 @pytest.fixture
 async def setup_rainforest_200(
-    hass: HomeAssistant, config_entry_200: MockConfigEntry
+    menuai: menuai, config_entry_200: MockConfigEntry
 ) -> AsyncGenerator[Mock]:
     """Set up rainforest."""
     with patch(
@@ -51,13 +51,13 @@ async def setup_rainforest_200(
         ),
     ) as mock_update:
         mock_update.return_value.is_connected = True
-        assert await async_setup_component(hass, DOMAIN, {})
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, {})
+        await menuai.async_block_till_done()
         yield mock_update.return_value
 
 
 @pytest.fixture
-async def setup_rainforest_100(hass: HomeAssistant) -> AsyncGenerator[MagicMock]:
+async def setup_rainforest_100(menuai: menuai) -> AsyncGenerator[MagicMock]:
     """Set up rainforest."""
     MockConfigEntry(
         domain="rainforest_eagle",
@@ -68,9 +68,9 @@ async def setup_rainforest_100(hass: HomeAssistant) -> AsyncGenerator[MagicMock]
             CONF_HARDWARE_ADDRESS: None,
             CONF_TYPE: TYPE_EAGLE_100,
         },
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
     with patch(
-        "homeassistant.components.rainforest_eagle.coordinator.Eagle100Reader",
+        "menuai.components.rainforest_eagle.coordinator.Eagle100Reader",
         return_value=Mock(
             get_instantaneous_demand=Mock(
                 return_value={"InstantaneousDemand": {"Demand": "1.152000"}}
@@ -85,6 +85,6 @@ async def setup_rainforest_100(hass: HomeAssistant) -> AsyncGenerator[MagicMock]
             ),
         ),
     ) as mock_update:
-        assert await async_setup_component(hass, DOMAIN, {})
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, {})
+        await menuai.async_block_till_done()
         yield mock_update

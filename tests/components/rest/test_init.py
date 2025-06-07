@@ -8,18 +8,18 @@ from unittest.mock import patch
 import pytest
 import respx
 
-from homeassistant import config as hass_config
-from homeassistant.components.rest.const import DOMAIN
-from homeassistant.const import (
+from menuai import config as menuai_config
+from menuai.components.rest.const import DOMAIN
+from menuai.const import (
     ATTR_ENTITY_ID,
     CONF_PACKAGES,
     SERVICE_RELOAD,
     STATE_UNAVAILABLE,
     UnitOfInformation,
 )
-from homeassistant.core import DOMAIN as HOMEASSISTANT_DOMAIN, HomeAssistant
-from homeassistant.setup import async_setup_component
-from homeassistant.util.dt import utcnow
+from menuai.core import DOMAIN as menuai_DOMAIN, menuai
+from menuai.setup import async_setup_component
+from menuai.util.dt import utcnow
 
 from tests.common import (
     assert_setup_component,
@@ -29,13 +29,13 @@ from tests.common import (
 
 
 @respx.mock
-async def test_setup_with_endpoint_timeout_with_recovery(hass: HomeAssistant) -> None:
+async def test_setup_with_endpoint_timeout_with_recovery(menuai: menuai) -> None:
     """Test setup with an endpoint that times out that recovers."""
-    await async_setup_component(hass, "homeassistant", {})
+    await async_setup_component(menuai, "menuai", {})
 
     respx.get("http://localhost").mock(side_effect=TimeoutError())
     assert await async_setup_component(
-        hass,
+        menuai,
         DOMAIN,
         {
             DOMAIN: [
@@ -70,8 +70,8 @@ async def test_setup_with_endpoint_timeout_with_recovery(hass: HomeAssistant) ->
             ]
         },
     )
-    await hass.async_block_till_done()
-    assert len(hass.states.async_all()) == 0
+    await menuai.async_block_till_done()
+    assert len(menuai.states.async_all()) == 0
 
     respx.get("http://localhost").respond(
         status_code=HTTPStatus.OK,
@@ -84,31 +84,31 @@ async def test_setup_with_endpoint_timeout_with_recovery(hass: HomeAssistant) ->
     )
 
     # Refresh the coordinator
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=31))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=31))
+    await menuai.async_block_till_done()
 
     # Wait for platform setup retry
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=61))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=61))
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == 4
+    assert len(menuai.states.async_all()) == 4
 
-    assert hass.states.get("sensor.sensor1").state == "1"
-    assert hass.states.get("sensor.sensor2").state == "2"
-    assert hass.states.get("binary_sensor.binary_sensor1").state == "on"
-    assert hass.states.get("binary_sensor.binary_sensor2").state == "off"
+    assert menuai.states.get("sensor.sensor1").state == "1"
+    assert menuai.states.get("sensor.sensor2").state == "2"
+    assert menuai.states.get("binary_sensor.binary_sensor1").state == "on"
+    assert menuai.states.get("binary_sensor.binary_sensor2").state == "off"
 
     # Now the end point flakes out again
     respx.get("http://localhost").mock(side_effect=TimeoutError())
 
     # Refresh the coordinator
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=31))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=31))
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("sensor.sensor1").state == STATE_UNAVAILABLE
-    assert hass.states.get("sensor.sensor2").state == STATE_UNAVAILABLE
-    assert hass.states.get("binary_sensor.binary_sensor1").state == STATE_UNAVAILABLE
-    assert hass.states.get("binary_sensor.binary_sensor2").state == STATE_UNAVAILABLE
+    assert menuai.states.get("sensor.sensor1").state == STATE_UNAVAILABLE
+    assert menuai.states.get("sensor.sensor2").state == STATE_UNAVAILABLE
+    assert menuai.states.get("binary_sensor.binary_sensor1").state == STATE_UNAVAILABLE
+    assert menuai.states.get("binary_sensor.binary_sensor2").state == STATE_UNAVAILABLE
 
     # We request a manual refresh when the
     # endpoint is working again
@@ -123,28 +123,28 @@ async def test_setup_with_endpoint_timeout_with_recovery(hass: HomeAssistant) ->
         },
     )
 
-    await hass.services.async_call(
-        "homeassistant",
+    await menuai.services.async_call(
+        "menuai",
         "update_entity",
         {ATTR_ENTITY_ID: ["sensor.sensor1"]},
         blocking=True,
     )
-    assert hass.states.get("sensor.sensor1").state == "1"
-    assert hass.states.get("sensor.sensor2").state == "2"
-    assert hass.states.get("binary_sensor.binary_sensor1").state == "on"
-    assert hass.states.get("binary_sensor.binary_sensor2").state == "off"
+    assert menuai.states.get("sensor.sensor1").state == "1"
+    assert menuai.states.get("sensor.sensor2").state == "2"
+    assert menuai.states.get("binary_sensor.binary_sensor1").state == "on"
+    assert menuai.states.get("binary_sensor.binary_sensor2").state == "off"
 
 
 @respx.mock
 async def test_setup_with_ssl_error(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test setup with an ssl error."""
-    await async_setup_component(hass, "homeassistant", {})
+    await async_setup_component(menuai, "menuai", {})
 
     respx.get("https://localhost").mock(side_effect=ssl.SSLError("ssl error"))
     assert await async_setup_component(
-        hass,
+        menuai,
         DOMAIN,
         {
             DOMAIN: [
@@ -170,13 +170,13 @@ async def test_setup_with_ssl_error(
             ]
         },
     )
-    await hass.async_block_till_done()
-    assert len(hass.states.async_all()) == 0
+    await menuai.async_block_till_done()
+    assert len(menuai.states.async_all()) == 0
     assert "ssl error" in caplog.text
 
 
 @respx.mock
-async def test_setup_minimum_resource_template(hass: HomeAssistant) -> None:
+async def test_setup_minimum_resource_template(menuai: menuai) -> None:
     """Test setup with minimum configuration (resource_template)."""
 
     respx.get("http://localhost").respond(
@@ -189,7 +189,7 @@ async def test_setup_minimum_resource_template(hass: HomeAssistant) -> None:
         },
     )
     assert await async_setup_component(
-        hass,
+        menuai,
         DOMAIN,
         {
             DOMAIN: [
@@ -224,23 +224,23 @@ async def test_setup_minimum_resource_template(hass: HomeAssistant) -> None:
             ]
         },
     )
-    await hass.async_block_till_done()
-    assert len(hass.states.async_all()) == 4
+    await menuai.async_block_till_done()
+    assert len(menuai.states.async_all()) == 4
 
-    assert hass.states.get("sensor.sensor1").state == "1"
-    assert hass.states.get("sensor.sensor2").state == "2"
-    assert hass.states.get("binary_sensor.binary_sensor1").state == "on"
-    assert hass.states.get("binary_sensor.binary_sensor2").state == "off"
+    assert menuai.states.get("sensor.sensor1").state == "1"
+    assert menuai.states.get("sensor.sensor2").state == "2"
+    assert menuai.states.get("binary_sensor.binary_sensor1").state == "on"
+    assert menuai.states.get("binary_sensor.binary_sensor2").state == "off"
 
 
 @respx.mock
-async def test_reload(hass: HomeAssistant) -> None:
+async def test_reload(menuai: menuai) -> None:
     """Verify we can reload."""
 
     respx.get("http://localhost") % HTTPStatus.OK
 
     assert await async_setup_component(
-        hass,
+        menuai,
         DOMAIN,
         {
             DOMAIN: [
@@ -258,38 +258,38 @@ async def test_reload(hass: HomeAssistant) -> None:
             ]
         },
     )
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == 1
+    assert len(menuai.states.async_all()) == 1
 
-    assert hass.states.get("sensor.mockrest")
+    assert menuai.states.get("sensor.mockrest")
 
     yaml_path = get_fixture_path("configuration_top_level.yaml", "rest")
 
-    with patch.object(hass_config, "YAML_CONFIG_FILE", yaml_path):
-        await hass.services.async_call(
+    with patch.object(menuai_config, "YAML_CONFIG_FILE", yaml_path):
+        await menuai.services.async_call(
             "rest",
             SERVICE_RELOAD,
             {},
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    assert hass.states.get("sensor.mockreset") is None
-    assert hass.states.get("sensor.rollout")
-    assert hass.states.get("sensor.fallover")
+    assert menuai.states.get("sensor.mockreset") is None
+    assert menuai.states.get("sensor.rollout")
+    assert menuai.states.get("sensor.fallover")
 
 
 @respx.mock
-async def test_reload_and_remove_all(hass: HomeAssistant) -> None:
+async def test_reload_and_remove_all(menuai: menuai) -> None:
     """Verify we can reload and remove all."""
 
     respx.get("http://localhost") % HTTPStatus.OK
 
     assert await async_setup_component(
-        hass,
+        menuai,
         DOMAIN,
         {
             DOMAIN: [
@@ -307,36 +307,36 @@ async def test_reload_and_remove_all(hass: HomeAssistant) -> None:
             ]
         },
     )
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == 1
+    assert len(menuai.states.async_all()) == 1
 
-    assert hass.states.get("sensor.mockrest")
+    assert menuai.states.get("sensor.mockrest")
 
     yaml_path = get_fixture_path("configuration_empty.yaml", "rest")
 
-    with patch.object(hass_config, "YAML_CONFIG_FILE", yaml_path):
-        await hass.services.async_call(
+    with patch.object(menuai_config, "YAML_CONFIG_FILE", yaml_path):
+        await menuai.services.async_call(
             "rest",
             SERVICE_RELOAD,
             {},
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    assert hass.states.get("sensor.mockreset") is None
+    assert menuai.states.get("sensor.mockreset") is None
 
 
 @respx.mock
-async def test_reload_fails_to_read_configuration(hass: HomeAssistant) -> None:
+async def test_reload_fails_to_read_configuration(menuai: menuai) -> None:
     """Verify reload when configuration is missing or broken."""
 
     respx.get("http://localhost") % HTTPStatus.OK
 
     assert await async_setup_component(
-        hass,
+        menuai,
         DOMAIN,
         {
             DOMAIN: [
@@ -354,27 +354,27 @@ async def test_reload_fails_to_read_configuration(hass: HomeAssistant) -> None:
             ]
         },
     )
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == 1
+    assert len(menuai.states.async_all()) == 1
 
     yaml_path = get_fixture_path("configuration_invalid.notyaml", "rest")
-    with patch.object(hass_config, "YAML_CONFIG_FILE", yaml_path):
-        await hass.services.async_call(
+    with patch.object(menuai_config, "YAML_CONFIG_FILE", yaml_path):
+        await menuai.services.async_call(
             "rest",
             SERVICE_RELOAD,
             {},
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == 1
+    assert len(menuai.states.async_all()) == 1
 
 
 @respx.mock
-async def test_multiple_rest_endpoints(hass: HomeAssistant) -> None:
+async def test_multiple_rest_endpoints(menuai: menuai) -> None:
     """Test multiple rest endpoints."""
 
     respx.get("http://date.jsontest.com").respond(
@@ -401,7 +401,7 @@ async def test_multiple_rest_endpoints(hass: HomeAssistant) -> None:
         },
     )
     assert await async_setup_component(
-        hass,
+        menuai,
         DOMAIN,
         {
             DOMAIN: [
@@ -439,38 +439,38 @@ async def test_multiple_rest_endpoints(hass: HomeAssistant) -> None:
             ]
         },
     )
-    await hass.async_block_till_done()
-    assert len(hass.states.async_all()) == 4
+    await menuai.async_block_till_done()
+    assert len(menuai.states.async_all()) == 4
 
-    assert hass.states.get("sensor.json_date").state == "03-17-2021"
-    assert hass.states.get("sensor.json_date_time").state == "07:11:08 PM"
-    assert hass.states.get("sensor.json_time").state == "07:11:39 PM"
-    assert hass.states.get("binary_sensor.binary_sensor").state == "on"
+    assert menuai.states.get("sensor.json_date").state == "03-17-2021"
+    assert menuai.states.get("sensor.json_date_time").state == "07:11:08 PM"
+    assert menuai.states.get("sensor.json_time").state == "07:11:39 PM"
+    assert menuai.states.get("binary_sensor.binary_sensor").state == "on"
 
 
-async def test_empty_config(hass: HomeAssistant) -> None:
+async def test_empty_config(menuai: menuai) -> None:
     """Test setup with empty configuration.
 
     For example (with rest.yaml an empty file):
         rest: !include rest.yaml
     """
     assert await async_setup_component(
-        hass,
+        menuai,
         DOMAIN,
         {DOMAIN: {}},
     )
     assert_setup_component(0, DOMAIN)
 
 
-async def test_config_schema_via_packages(hass: HomeAssistant) -> None:
+async def test_config_schema_via_packages(menuai: menuai) -> None:
     """Test configuration via packages."""
     packages = {
         "pack_dict": {"rest": {}},
         "pack_11": {"rest": {"resource": "http://url1"}},
         "pack_list": {"rest": [{"resource": "http://url2"}]},
     }
-    config = {HOMEASSISTANT_DOMAIN: {CONF_PACKAGES: packages}}
-    await hass_config.merge_packages_config(hass, config, packages)
+    config = {menuai_DOMAIN: {CONF_PACKAGES: packages}}
+    await menuai_config.merge_packages_config(menuai, config, packages)
 
     assert len(config) == 2
     assert len(config["rest"]) == 2
@@ -479,7 +479,7 @@ async def test_config_schema_via_packages(hass: HomeAssistant) -> None:
 
 
 @respx.mock
-async def test_setup_minimum_payload_template(hass: HomeAssistant) -> None:
+async def test_setup_minimum_payload_template(menuai: menuai) -> None:
     """Test setup with minimum configuration (payload_template)."""
 
     respx.post("http://localhost", json={"data": "value"}).respond(
@@ -492,7 +492,7 @@ async def test_setup_minimum_payload_template(hass: HomeAssistant) -> None:
         },
     )
     assert await async_setup_component(
-        hass,
+        menuai,
         DOMAIN,
         {
             DOMAIN: [
@@ -528,10 +528,10 @@ async def test_setup_minimum_payload_template(hass: HomeAssistant) -> None:
             ]
         },
     )
-    await hass.async_block_till_done()
-    assert len(hass.states.async_all()) == 4
+    await menuai.async_block_till_done()
+    assert len(menuai.states.async_all()) == 4
 
-    assert hass.states.get("sensor.sensor1").state == "1"
-    assert hass.states.get("sensor.sensor2").state == "2"
-    assert hass.states.get("binary_sensor.binary_sensor1").state == "on"
-    assert hass.states.get("binary_sensor.binary_sensor2").state == "off"
+    assert menuai.states.get("sensor.sensor1").state == "1"
+    assert menuai.states.get("sensor.sensor2").state == "2"
+    assert menuai.states.get("binary_sensor.binary_sensor1").state == "on"
+    assert menuai.states.get("binary_sensor.binary_sensor2").state == "off"

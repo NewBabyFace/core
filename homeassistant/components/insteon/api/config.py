@@ -12,12 +12,12 @@ from pyinsteon.managers.link_manager import get_broken_links
 import voluptuous as vol
 import voluptuous_serialize
 
-from homeassistant.components import websocket_api
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_ADDRESS, CONF_DEVICE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.dispatcher import async_dispatcher_send
+from menuai.components import websocket_api
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_ADDRESS, CONF_DEVICE
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.helpers.dispatcher import async_dispatcher_send
 
 from ..const import (
     CONF_HOUSECODE,
@@ -64,15 +64,15 @@ class DeviceOverride(TypedDict):
     subcat: str
 
 
-def get_insteon_config_entry(hass: HomeAssistant) -> ConfigEntry:
+def get_insteon_config_entry(menuai: menuai) -> ConfigEntry:
     """Return the Insteon configuration entry."""
-    return hass.config_entries.async_entries(DOMAIN)[0]
+    return menuai.config_entries.async_entries(DOMAIN)[0]
 
 
-def add_x10_device(hass: HomeAssistant, x10_device: X10DeviceConfig):
+def add_x10_device(menuai: menuai, x10_device: X10DeviceConfig):
     """Add an X10 device to the Insteon integration."""
 
-    config_entry = get_insteon_config_entry(hass)
+    config_entry = get_insteon_config_entry(menuai)
     x10_config = config_entry.options.get(CONF_X10, [])
     if any(
         device[CONF_HOUSECODE] == x10_device["housecode"]
@@ -81,17 +81,17 @@ def add_x10_device(hass: HomeAssistant, x10_device: X10DeviceConfig):
     ):
         raise ValueError("Duplicate X10 device")
 
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         entry=config_entry,
         options=config_entry.options | {CONF_X10: [*x10_config, x10_device]},
     )
-    async_dispatcher_send(hass, SIGNAL_ADD_X10_DEVICE, x10_device)
+    async_dispatcher_send(menuai, SIGNAL_ADD_X10_DEVICE, x10_device)
 
 
-def remove_x10_device(hass: HomeAssistant, housecode: str, unitcode: int):
+def remove_x10_device(menuai: menuai, housecode: str, unitcode: int):
     """Remove an X10 device from the config."""
 
-    config_entry = get_insteon_config_entry(hass)
+    config_entry = get_insteon_config_entry(menuai)
     new_options = {**config_entry.options}
     new_x10 = [
         existing_device
@@ -101,13 +101,13 @@ def remove_x10_device(hass: HomeAssistant, housecode: str, unitcode: int):
     ]
 
     new_options[CONF_X10] = new_x10
-    hass.config_entries.async_update_entry(entry=config_entry, options=new_options)
+    menuai.config_entries.async_update_entry(entry=config_entry, options=new_options)
 
 
-def add_device_overide(hass: HomeAssistant, override: DeviceOverride):
+def add_device_overide(menuai: menuai, override: DeviceOverride):
     """Add an Insteon device override."""
 
-    config_entry = get_insteon_config_entry(hass)
+    config_entry = get_insteon_config_entry(menuai)
     override_config = config_entry.options.get(CONF_OVERRIDE, [])
     address = Address(override[CONF_ADDRESS])
     if any(
@@ -116,17 +116,17 @@ def add_device_overide(hass: HomeAssistant, override: DeviceOverride):
     ):
         raise ValueError("Duplicate override")
 
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         entry=config_entry,
         options=config_entry.options | {CONF_OVERRIDE: [*override_config, override]},
     )
-    async_dispatcher_send(hass, SIGNAL_ADD_DEVICE_OVERRIDE, override)
+    async_dispatcher_send(menuai, SIGNAL_ADD_DEVICE_OVERRIDE, override)
 
 
-def remove_device_override(hass: HomeAssistant, address: Address):
+def remove_device_override(menuai: menuai, address: Address):
     """Remove a device override from config."""
 
-    config_entry = get_insteon_config_entry(hass)
+    config_entry = get_insteon_config_entry(menuai)
     new_options = {**config_entry.options}
 
     new_overrides = [
@@ -135,7 +135,7 @@ def remove_device_override(hass: HomeAssistant, address: Address):
         if Address(existing_override[CONF_ADDRESS]) != address
     ]
     new_options[CONF_OVERRIDE] = new_overrides
-    hass.config_entries.async_update_entry(entry=config_entry, options=new_options)
+    menuai.config_entries.async_update_entry(entry=config_entry, options=new_options)
 
 
 async def async_link_to_dict(
@@ -177,12 +177,12 @@ async def _async_connect(**kwargs):
 @websocket_api.require_admin
 @websocket_api.async_response
 async def websocket_get_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.connection.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Get Insteon configuration."""
-    config_entry = get_insteon_config_entry(hass)
+    config_entry = get_insteon_config_entry(menuai)
     modem_config = config_entry.data
     options_config = config_entry.options
     x10_config = options_config.get(CONF_X10)
@@ -205,15 +205,15 @@ async def websocket_get_config(
 @websocket_api.require_admin
 @websocket_api.async_response
 async def websocket_get_modem_schema(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.connection.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Get the schema for the modem configuration."""
-    config_entry = get_insteon_config_entry(hass)
+    config_entry = get_insteon_config_entry(menuai)
     config_data = config_entry.data
     if device := config_data.get(CONF_DEVICE):
-        ports = await async_get_usb_ports(hass=hass)
+        ports = await async_get_usb_ports(menuai=menuai)
         plm_schema = voluptuous_serialize.convert(
             build_plm_schema(ports=ports, device=device)
         )
@@ -232,13 +232,13 @@ async def websocket_get_modem_schema(
 @websocket_api.require_admin
 @websocket_api.async_response
 async def websocket_update_modem_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.connection.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Get the schema for the modem configuration."""
     config = msg["config"]
-    config_entry = get_insteon_config_entry(hass)
+    config_entry = get_insteon_config_entry(menuai)
     is_connected = devices.modem is not None and devices.modem.connected
 
     if not await _async_connect(**config):
@@ -250,7 +250,7 @@ async def websocket_update_modem_config(
             await _async_connect(**config_entry.data)
         return
 
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         entry=config_entry,
         data=config,
     )
@@ -266,14 +266,14 @@ async def websocket_update_modem_config(
 @websocket_api.require_admin
 @websocket_api.async_response
 async def websocket_add_device_override(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.connection.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Get the schema for the modem configuration."""
     override = msg[OVERRIDE]
     try:
-        add_device_overide(hass, override)
+        add_device_overide(menuai, override)
     except ValueError:
         connection.send_error(msg[ID], "duplicate", "Duplicate device address")
 
@@ -289,14 +289,14 @@ async def websocket_add_device_override(
 @websocket_api.require_admin
 @websocket_api.async_response
 async def websocket_remove_device_override(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.connection.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Get the schema for the modem configuration."""
     address = Address(msg[DEVICE_ADDRESS])
-    remove_device_override(hass, address)
-    async_dispatcher_send(hass, SIGNAL_REMOVE_DEVICE_OVERRIDE, address)
+    remove_device_override(menuai, address)
+    async_dispatcher_send(menuai, SIGNAL_REMOVE_DEVICE_OVERRIDE, address)
     connection.send_result(msg[ID])
 
 
@@ -306,13 +306,13 @@ async def websocket_remove_device_override(
 @websocket_api.require_admin
 @websocket_api.async_response
 async def websocket_get_broken_links(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.connection.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Get any broken links between devices."""
     broken_links = get_broken_links(devices=devices)
-    dev_registry = dr.async_get(hass)
+    dev_registry = dr.async_get(menuai)
     broken_links_list = [
         await async_link_to_dict(address, record, dev_registry, status)
         for address, record, status in broken_links
@@ -327,7 +327,7 @@ async def websocket_get_broken_links(
 @websocket_api.require_admin
 @websocket_api.async_response
 async def websocket_get_unknown_devices(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.connection.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:

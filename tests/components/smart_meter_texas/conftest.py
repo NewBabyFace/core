@@ -14,14 +14,14 @@ from smart_meter_texas.const import (
     OD_READ_ENDPOINT,
 )
 
-from homeassistant.components.homeassistant import (
+from menuai.components.menuai import (
     DOMAIN as HA_DOMAIN,
     SERVICE_UPDATE_ENTITY,
 )
-from homeassistant.components.smart_meter_texas.const import DOMAIN
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.smart_meter_texas.const import DOMAIN
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry, load_fixture
 from tests.test_util.aiohttp import AiohttpClientMocker
@@ -36,32 +36,32 @@ def load_smt_fixture(name):
 
 
 async def setup_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     aioclient_mock: AiohttpClientMocker,
     **kwargs: Any,
 ) -> None:
     """Initialize the Smart Meter Texas integration for testing."""
     mock_connection(aioclient_mock, **kwargs)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
 
 async def refresh_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
     """Request a DataUpdateCoordinator refresh."""
     mock_connection(aioclient_mock)
-    await async_setup_component(hass, HA_DOMAIN, {})
-    await hass.services.async_call(
+    await async_setup_component(menuai, HA_DOMAIN, {})
+    await menuai.services.async_call(
         HA_DOMAIN,
         SERVICE_UPDATE_ENTITY,
         {ATTR_ENTITY_ID: TEST_ENTITY_ID},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
 def mock_connection(
@@ -103,13 +103,13 @@ def mock_connection(
 
 
 @pytest.fixture(name="config_entry")
-def mock_config_entry(hass: HomeAssistant) -> MockConfigEntry:
+def mock_config_entry(menuai: menuai) -> MockConfigEntry:
     """Return a mock config entry."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
         unique_id="user123",
         data={"username": "user123", "password": "password123"},
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     return config_entry

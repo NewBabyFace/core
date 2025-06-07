@@ -10,61 +10,61 @@ from typing import Any, cast
 
 import voluptuous as vol
 
-from homeassistant.auth.models import User
-from homeassistant.auth.permissions.const import POLICY_READ
-from homeassistant.auth.permissions.events import SUBSCRIBE_ALLOWLIST
-from homeassistant.const import (
+from menuai.auth.models import User
+from menuai.auth.permissions.const import POLICY_READ
+from menuai.auth.permissions.events import SUBSCRIBE_ALLOWLIST
+from menuai.const import (
     EVENT_STATE_CHANGED,
     MATCH_ALL,
     SIGNAL_BOOTSTRAP_INTEGRATIONS,
 )
-from homeassistant.core import (
+from menuai.core import (
     Context,
     Event,
     EventStateChangedData,
-    HomeAssistant,
+    menuai,
     ServiceResponse,
     State,
     callback,
 )
-from homeassistant.exceptions import (
-    HomeAssistantError,
+from menuai.exceptions import (
+    menuaiError,
     ServiceNotFound,
     ServiceValidationError,
     TemplateError,
     Unauthorized,
 )
-from homeassistant.helpers import config_validation as cv, entity, template
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entityfilter import (
+from menuai.helpers import config_validation as cv, entity, template
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entityfilter import (
     INCLUDE_EXCLUDE_BASE_FILTER_SCHEMA,
     convert_include_exclude_filter,
 )
-from homeassistant.helpers.event import (
+from menuai.helpers.event import (
     TrackTemplate,
     TrackTemplateResult,
     async_track_template_result,
 )
-from homeassistant.helpers.json import (
+from menuai.helpers.json import (
     JSON_DUMP,
     ExtendedJSONEncoder,
     find_paths_unserializable_data,
     json_bytes,
     json_fragment,
 )
-from homeassistant.helpers.service import async_get_all_descriptions
-from homeassistant.loader import (
+from menuai.helpers.service import async_get_all_descriptions
+from menuai.loader import (
     IntegrationNotFound,
     async_get_integration,
     async_get_integration_descriptions,
     async_get_integrations,
 )
-from homeassistant.setup import (
+from menuai.setup import (
     async_get_loaded_integrations,
     async_get_setup_timings,
     async_wait_component,
 )
-from homeassistant.util.json import format_unserializable_data
+from menuai.util.json import format_unserializable_data
 
 from . import const, decorators, messages
 from .connection import ActiveConnection
@@ -77,32 +77,32 @@ _LOGGER = logging.getLogger(__name__)
 
 @callback
 def async_register_commands(
-    hass: HomeAssistant,
-    async_reg: Callable[[HomeAssistant, const.WebSocketCommandHandler], None],
+    menuai: menuai,
+    async_reg: Callable[[menuai, const.WebSocketCommandHandler], None],
 ) -> None:
     """Register commands."""
-    async_reg(hass, handle_call_service)
-    async_reg(hass, handle_entity_source)
-    async_reg(hass, handle_execute_script)
-    async_reg(hass, handle_fire_event)
-    async_reg(hass, handle_get_config)
-    async_reg(hass, handle_get_services)
-    async_reg(hass, handle_get_states)
-    async_reg(hass, handle_manifest_get)
-    async_reg(hass, handle_integration_setup_info)
-    async_reg(hass, handle_manifest_list)
-    async_reg(hass, handle_ping)
-    async_reg(hass, handle_render_template)
-    async_reg(hass, handle_subscribe_bootstrap_integrations)
-    async_reg(hass, handle_subscribe_events)
-    async_reg(hass, handle_subscribe_trigger)
-    async_reg(hass, handle_test_condition)
-    async_reg(hass, handle_unsubscribe_events)
-    async_reg(hass, handle_validate_config)
-    async_reg(hass, handle_subscribe_entities)
-    async_reg(hass, handle_supported_features)
-    async_reg(hass, handle_integration_descriptions)
-    async_reg(hass, handle_integration_wait)
+    async_reg(menuai, handle_call_service)
+    async_reg(menuai, handle_entity_source)
+    async_reg(menuai, handle_execute_script)
+    async_reg(menuai, handle_fire_event)
+    async_reg(menuai, handle_get_config)
+    async_reg(menuai, handle_get_services)
+    async_reg(menuai, handle_get_states)
+    async_reg(menuai, handle_manifest_get)
+    async_reg(menuai, handle_integration_setup_info)
+    async_reg(menuai, handle_manifest_list)
+    async_reg(menuai, handle_ping)
+    async_reg(menuai, handle_render_template)
+    async_reg(menuai, handle_subscribe_bootstrap_integrations)
+    async_reg(menuai, handle_subscribe_events)
+    async_reg(menuai, handle_subscribe_trigger)
+    async_reg(menuai, handle_test_condition)
+    async_reg(menuai, handle_unsubscribe_events)
+    async_reg(menuai, handle_validate_config)
+    async_reg(menuai, handle_subscribe_entities)
+    async_reg(menuai, handle_supported_features)
+    async_reg(menuai, handle_integration_descriptions)
+    async_reg(menuai, handle_integration_wait)
 
 
 def pong_message(iden: int) -> dict[str, Any]:
@@ -148,7 +148,7 @@ def _forward_events_unconditional(
     }
 )
 def handle_subscribe_events(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle subscribe events command."""
     event_type = msg["event_type"]
@@ -175,7 +175,7 @@ def handle_subscribe_events(
             _forward_events_unconditional, connection.send_message, message_id_as_bytes
         )
 
-    connection.subscriptions[msg["id"]] = hass.bus.async_listen(
+    connection.subscriptions[msg["id"]] = menuai.bus.async_listen(
         event_type, forward_events
     )
 
@@ -189,7 +189,7 @@ def handle_subscribe_events(
     }
 )
 def handle_subscribe_bootstrap_integrations(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle subscribe bootstrap integrations command."""
 
@@ -199,7 +199,7 @@ def handle_subscribe_bootstrap_integrations(
         connection.send_message(messages.event_message(msg["id"], message))
 
     connection.subscriptions[msg["id"]] = async_dispatcher_connect(
-        hass, SIGNAL_BOOTSTRAP_INTEGRATIONS, forward_bootstrap_integrations
+        menuai, SIGNAL_BOOTSTRAP_INTEGRATIONS, forward_bootstrap_integrations
     )
 
     connection.send_result(msg["id"])
@@ -213,7 +213,7 @@ def handle_subscribe_bootstrap_integrations(
     }
 )
 def handle_unsubscribe_events(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle unsubscribe events command."""
     subscription = msg["subscription"]
@@ -237,7 +237,7 @@ def handle_unsubscribe_events(
 )
 @decorators.async_response
 async def handle_call_service(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle call service command."""
     # We do not support templates.
@@ -247,7 +247,7 @@ async def handle_call_service(
 
     try:
         context = connection.context(msg)
-        response = await hass.services.async_call(
+        response = await menuai.services.async_call(
             domain=msg["domain"],
             service=msg["service"],
             service_data=msg.get("service_data"),
@@ -299,7 +299,7 @@ async def handle_call_service(
             translation_key=err.translation_key,
             translation_placeholders=err.translation_placeholders,
         )
-    except HomeAssistantError as err:
+    except menuaiError as err:
         connection.logger.error(
             "Error during service call to %s.%s: %s", msg["domain"], msg["service"], err
         )
@@ -318,15 +318,15 @@ async def handle_call_service(
 
 @callback
 def _async_get_allowed_states(
-    hass: HomeAssistant, connection: ActiveConnection
+    menuai: menuai, connection: ActiveConnection
 ) -> list[State]:
     user = connection.user
     if user.is_admin or user.permissions.access_all_entities(POLICY_READ):
-        return hass.states.async_all()
+        return menuai.states.async_all()
     entity_perm = connection.user.permissions.check_entity
     return [
         state
-        for state in hass.states.async_all()
+        for state in menuai.states.async_all()
         if entity_perm(state.entity_id, POLICY_READ)
     ]
 
@@ -334,10 +334,10 @@ def _async_get_allowed_states(
 @callback
 @decorators.websocket_command({vol.Required("type"): "get_states"})
 def handle_get_states(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle get states command."""
-    states = _async_get_allowed_states(hass, connection)
+    states = _async_get_allowed_states(menuai, connection)
 
     try:
         serialized_states = [state.as_dict_json for state in states]
@@ -410,7 +410,7 @@ def _forward_entity_changes(
     }
 )
 def handle_subscribe_entities(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle subscribe entities command."""
     entity_ids = set(msg.get("entity_ids", [])) or None
@@ -419,10 +419,10 @@ def handle_subscribe_entities(
     # We must never await between sending the states and listening for
     # state changed events or we will introduce a race condition
     # where some states are missed
-    states = _async_get_allowed_states(hass, connection)
+    states = _async_get_allowed_states(menuai, connection)
     msg_id = msg["id"]
     message_id_as_bytes = str(msg_id).encode()
-    connection.subscriptions[msg_id] = hass.bus.async_listen(
+    connection.subscriptions[msg_id] = menuai.bus.async_listen(
         EVENT_STATE_CHANGED,
         partial(
             _forward_entity_changes,
@@ -493,38 +493,38 @@ def _send_handle_entities_init_response(
     )
 
 
-async def _async_get_all_descriptions_json(hass: HomeAssistant) -> bytes:
+async def _async_get_all_descriptions_json(menuai: menuai) -> bytes:
     """Return JSON of descriptions (i.e. user documentation) for all service calls."""
-    descriptions = await async_get_all_descriptions(hass)
-    if ALL_SERVICE_DESCRIPTIONS_JSON_CACHE in hass.data:
-        cached_descriptions, cached_json_payload = hass.data[
+    descriptions = await async_get_all_descriptions(menuai)
+    if ALL_SERVICE_DESCRIPTIONS_JSON_CACHE in menuai.data:
+        cached_descriptions, cached_json_payload = menuai.data[
             ALL_SERVICE_DESCRIPTIONS_JSON_CACHE
         ]
         # If the descriptions are the same, return the cached JSON payload
         if cached_descriptions is descriptions:
             return cast(bytes, cached_json_payload)
     json_payload = json_bytes(descriptions)
-    hass.data[ALL_SERVICE_DESCRIPTIONS_JSON_CACHE] = (descriptions, json_payload)
+    menuai.data[ALL_SERVICE_DESCRIPTIONS_JSON_CACHE] = (descriptions, json_payload)
     return json_payload
 
 
 @decorators.websocket_command({vol.Required("type"): "get_services"})
 @decorators.async_response
 async def handle_get_services(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle get services command."""
-    payload = await _async_get_all_descriptions_json(hass)
+    payload = await _async_get_all_descriptions_json(menuai)
     connection.send_message(construct_result_message(msg["id"], payload))
 
 
 @callback
 @decorators.websocket_command({vol.Required("type"): "get_config"})
 def handle_get_config(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle get config command."""
-    connection.send_result(msg["id"], hass.config.as_dict())
+    connection.send_result(msg["id"], menuai.config.as_dict())
 
 
 @decorators.websocket_command(
@@ -532,11 +532,11 @@ def handle_get_config(
 )
 @decorators.async_response
 async def handle_manifest_list(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle integrations command."""
     ints_or_excs = await async_get_integrations(
-        hass, msg.get("integrations") or async_get_loaded_integrations(hass)
+        menuai, msg.get("integrations") or async_get_loaded_integrations(menuai)
     )
     manifest_json_fragments: list[json_fragment] = []
     for int_or_exc in ints_or_excs.values():
@@ -551,11 +551,11 @@ async def handle_manifest_list(
 )
 @decorators.async_response
 async def handle_manifest_get(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle integrations command."""
     try:
-        integration = await async_get_integration(hass, msg["integration"])
+        integration = await async_get_integration(menuai, msg["integration"])
     except IntegrationNotFound:
         connection.send_error(msg["id"], const.ERR_NOT_FOUND, "Integration not found")
     else:
@@ -565,14 +565,14 @@ async def handle_manifest_get(
 @callback
 @decorators.websocket_command({vol.Required("type"): "integration/setup_info"})
 def handle_integration_setup_info(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle integrations command."""
     connection.send_result(
         msg["id"],
         [
             {"domain": integration, "seconds": seconds}
-            for integration, seconds in async_get_setup_timings(hass).items()
+            for integration, seconds in async_get_setup_timings(menuai).items()
         ],
     )
 
@@ -580,16 +580,16 @@ def handle_integration_setup_info(
 @callback
 @decorators.websocket_command({vol.Required("type"): "ping"})
 def handle_ping(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle ping command."""
     connection.send_message(pong_message(msg["id"]))
 
 
 @lru_cache
-def _cached_template(template_str: str, hass: HomeAssistant) -> template.Template:
+def _cached_template(template_str: str, menuai: menuai) -> template.Template:
     """Return a cached template."""
-    return template.Template(template_str, hass)
+    return template.Template(template_str, menuai)
 
 
 @decorators.websocket_command(
@@ -605,15 +605,15 @@ def _cached_template(template_str: str, hass: HomeAssistant) -> template.Templat
 )
 @decorators.async_response
 async def handle_render_template(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle render_template command."""
     template_str = msg["template"]
     report_errors: bool = msg["report_errors"]
     if report_errors:
-        template_obj = template.Template(template_str, hass)
+        template_obj = template.Template(template_str, menuai)
     else:
-        template_obj = _cached_template(template_str, hass)
+        template_obj = _cached_template(template_str, menuai)
     variables = msg.get("variables")
     timeout = msg.get("timeout")
 
@@ -628,7 +628,7 @@ async def handle_render_template(
 
     @callback
     def _thread_safe_error_listener(level: int, template_error: str) -> None:
-        hass.loop.call_soon_threadsafe(_error_listener, level, template_error)
+        menuai.loop.call_soon_threadsafe(_error_listener, level, template_error)
 
     if timeout:
         try:
@@ -673,7 +673,7 @@ async def handle_render_template(
     try:
         log_fn = _error_listener if report_errors else None
         info = async_track_template_result(
-            hass,
+            menuai,
             [TrackTemplate(template_obj, variables)],
             _template_listener,
             strict=msg["strict"],
@@ -687,7 +687,7 @@ async def handle_render_template(
 
     connection.send_result(msg["id"])
 
-    hass.loop.call_soon_threadsafe(info.async_refresh)
+    menuai.loop.call_soon_threadsafe(info.async_refresh)
 
 
 def _serialize_entity_sources(
@@ -703,10 +703,10 @@ def _serialize_entity_sources(
 @callback
 @decorators.websocket_command({vol.Required("type"): "entity/source"})
 def handle_entity_source(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle entity source command."""
-    all_entity_sources = entity.entity_sources(hass)
+    all_entity_sources = entity.entity_sources(menuai)
     entity_perm = connection.user.permissions.check_entity
 
     if connection.user.permissions.access_all_entities(POLICY_READ):
@@ -731,14 +731,14 @@ def handle_entity_source(
 @decorators.require_admin
 @decorators.async_response
 async def handle_subscribe_trigger(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle subscribe trigger command."""
     # Circular dep
     # pylint: disable-next=import-outside-toplevel
-    from homeassistant.helpers import trigger
+    from menuai.helpers import trigger
 
-    trigger_config = await trigger.async_validate_trigger_config(hass, msg["trigger"])
+    trigger_config = await trigger.async_validate_trigger_config(menuai, msg["trigger"])
 
     @callback
     def forward_triggers(
@@ -756,7 +756,7 @@ async def handle_subscribe_trigger(
 
     connection.subscriptions[msg["id"]] = (
         await trigger.async_initialize_triggers(
-            hass,
+            menuai,
             trigger_config,
             forward_triggers,
             const.DOMAIN,
@@ -782,19 +782,19 @@ async def handle_subscribe_trigger(
 @decorators.require_admin
 @decorators.async_response
 async def handle_test_condition(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle test condition command."""
     # Circular dep
     # pylint: disable-next=import-outside-toplevel
-    from homeassistant.helpers import condition
+    from menuai.helpers import condition
 
     # Do static + dynamic validation of the condition
-    config = await condition.async_validate_condition_config(hass, msg["condition"])
+    config = await condition.async_validate_condition_config(menuai, msg["condition"])
     # Test the condition
-    check_condition = await condition.async_from_config(hass, config)
+    check_condition = await condition.async_from_config(menuai, config)
     connection.send_result(
-        msg["id"], {"result": check_condition(hass, msg.get("variables"))}
+        msg["id"], {"result": check_condition(menuai, msg.get("variables"))}
     )
 
 
@@ -808,17 +808,17 @@ async def handle_test_condition(
 @decorators.require_admin
 @decorators.async_response
 async def handle_execute_script(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle execute script command."""
     # Circular dep
     # pylint: disable-next=import-outside-toplevel
-    from homeassistant.helpers.script import Script, async_validate_actions_config
+    from menuai.helpers.script import Script, async_validate_actions_config
 
-    script_config = await async_validate_actions_config(hass, msg["sequence"])
+    script_config = await async_validate_actions_config(menuai, msg["sequence"])
 
     context = connection.context(msg)
-    script_obj = Script(hass, script_config, f"{const.DOMAIN} script", const.DOMAIN)
+    script_obj = Script(menuai, script_config, f"{const.DOMAIN} script", const.DOMAIN)
     try:
         script_result = await script_obj.async_run(
             msg.get("variables"), context=context
@@ -854,12 +854,12 @@ async def handle_execute_script(
 )
 @decorators.require_admin
 def handle_fire_event(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle fire event command."""
     context = connection.context(msg)
 
-    hass.bus.async_fire(msg["event_type"], msg.get("event_data"), context=context)
+    menuai.bus.async_fire(msg["event_type"], msg.get("event_data"), context=context)
     connection.send_result(msg["id"], {"context": context})
 
 
@@ -873,12 +873,12 @@ def handle_fire_event(
 )
 @decorators.async_response
 async def handle_validate_config(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle validate config command."""
     # Circular dep
     # pylint: disable-next=import-outside-toplevel
-    from homeassistant.helpers import condition, script, trigger
+    from menuai.helpers import condition, script, trigger
 
     result = {}
 
@@ -895,10 +895,10 @@ async def handle_validate_config(
             continue
 
         try:
-            await validator(hass, schema(msg[key]))
+            await validator(menuai, schema(msg[key]))
         except (
             vol.Invalid,
-            HomeAssistantError,
+            menuaiError,
         ) as err:
             result[key] = {"valid": False, "error": str(err)}
         else:
@@ -915,7 +915,7 @@ async def handle_validate_config(
     }
 )
 def handle_supported_features(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle setting supported features."""
     connection.set_supported_features(msg["features"])
@@ -926,10 +926,10 @@ def handle_supported_features(
 @decorators.websocket_command({"type": "integration/descriptions"})
 @decorators.async_response
 async def handle_integration_descriptions(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Get metadata for all brands and integrations."""
-    connection.send_result(msg["id"], await async_get_integration_descriptions(hass))
+    connection.send_result(msg["id"], await async_get_integration_descriptions(menuai))
 
 
 @decorators.websocket_command(
@@ -940,11 +940,11 @@ async def handle_integration_descriptions(
 )
 @decorators.async_response
 async def handle_integration_wait(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle wait for integration command."""
 
     domain: str = msg["domain"]
     connection.send_result(
-        msg["id"], {"integration_loaded": await async_wait_component(hass, domain)}
+        msg["id"], {"integration_loaded": await async_wait_component(menuai, domain)}
     )

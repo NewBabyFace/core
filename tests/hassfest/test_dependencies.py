@@ -1,10 +1,10 @@
-"""Tests for hassfest dependency finder."""
+"""Tests for menuaifest dependency finder."""
 
 import ast
 
 import pytest
 
-from script.hassfest.dependencies import ImportCollector
+from script.menuaifest.dependencies import ImportCollector
 
 
 @pytest.fixture
@@ -22,7 +22,7 @@ def test_child_import(mock_collector) -> None:
         ast.parse(
             """
 
-from homeassistant.components import child_import
+from menuai.components import child_import
 """
         )
     )
@@ -35,7 +35,7 @@ def test_subimport(mock_collector) -> None:
         ast.parse(
             """
 
-from homeassistant.components.subimport.smart_home import EVENT_ALEXA_SMART_HOME
+from menuai.components.subimport.smart_home import EVENT_ALEXA_SMART_HOME
 """
         )
     )
@@ -48,7 +48,7 @@ def test_child_import_field(mock_collector) -> None:
         ast.parse(
             """
 
-from homeassistant.components.child_import_field import bla
+from menuai.components.child_import_field import bla
 """
         )
     )
@@ -61,7 +61,7 @@ def test_renamed_absolute(mock_collector) -> None:
         ast.parse(
             """
 
-import homeassistant.components.renamed_absolute as hue
+import menuai.components.renamed_absolute as hue
 """
         )
     )
@@ -74,13 +74,13 @@ def test_all_imports(mock_collector) -> None:
         ast.parse(
             """
 
-from homeassistant.components import child_import
+from menuai.components import child_import
 
-from homeassistant.components.subimport.smart_home import EVENT_ALEXA_SMART_HOME
+from menuai.components.subimport.smart_home import EVENT_ALEXA_SMART_HOME
 
-from homeassistant.components.child_import_field import bla
+from menuai.components.child_import_field import bla
 
-import homeassistant.components.renamed_absolute as hue
+import menuai.components.renamed_absolute as hue
 """
         )
     )

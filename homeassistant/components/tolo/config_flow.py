@@ -8,10 +8,10 @@ from typing import Any
 from tololib import ToloClient, ToloCommunicationError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
 
 from .const import DEFAULT_NAME, DOMAIN
 
@@ -43,7 +43,7 @@ class ToloSaunaConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             self._async_abort_entries_match({CONF_HOST: user_input[CONF_HOST]})
 
-            device_available = await self.hass.async_add_executor_job(
+            device_available = await self.menuai.async_add_executor_job(
                 self._check_device_availability, user_input[CONF_HOST]
             )
 
@@ -68,7 +68,7 @@ class ToloSaunaConfigFlow(ConfigFlow, domain=DOMAIN):
         self._abort_if_unique_id_configured({CONF_HOST: discovery_info.ip})
         self._async_abort_entries_match({CONF_HOST: discovery_info.ip})
 
-        device_available = await self.hass.async_add_executor_job(
+        device_available = await self.menuai.async_add_executor_job(
             self._check_device_availability, discovery_info.ip
         )
 

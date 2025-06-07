@@ -4,7 +4,7 @@ import logging
 
 import pytest
 
-from homeassistant.components.discord.notify import DiscordNotificationService
+from menuai.components.discord.notify import DiscordNotificationService
 
 from .conftest import CONTENT, MESSAGE, URL_ATTACHMENT
 
@@ -19,7 +19,7 @@ async def test_send_message_without_target_logs_error(
     """Test send message."""
     discord_aiohttp_mock = discord_aiohttp_mock_factory()
     with caplog.at_level(
-        logging.ERROR, logger="homeassistant.components.discord.notify"
+        logging.ERROR, logger="menuai.components.discord.notify"
     ):
         await discord_notification_service.async_send_message(MESSAGE)
     assert "No target specified" in caplog.text
@@ -48,7 +48,7 @@ async def test_get_file_from_url_not_on_allowlist(
     """Test getting file from URL that isn't on the allowlist."""
     url = "http://dodgyurl.com"
     with caplog.at_level(
-        logging.WARNING, logger="homeassistant.components.discord.notify"
+        logging.WARNING, logger="menuai.components.discord.notify"
     ):
         result = await discord_notification_service.async_get_file_from_url(
             url, True, len(CONTENT)
@@ -67,7 +67,7 @@ async def test_get_file_from_url_with_large_attachment(
     headers = {"Content-Length": str(len(CONTENT) + 1)}
     discord_aiohttp_mock = discord_aiohttp_mock_factory(headers)
     with caplog.at_level(
-        logging.WARNING, logger="homeassistant.components.discord.notify"
+        logging.WARNING, logger="menuai.components.discord.notify"
     ):
         result = await discord_notification_service.async_get_file_from_url(
             URL_ATTACHMENT, True, len(CONTENT)
@@ -86,7 +86,7 @@ async def test_get_file_from_url_with_large_attachment_no_header(
     """Test getting file from URL with large attachment (per content length) throws error."""
     discord_aiohttp_mock = discord_aiohttp_mock_factory()
     with caplog.at_level(
-        logging.WARNING, logger="homeassistant.components.discord.notify"
+        logging.WARNING, logger="menuai.components.discord.notify"
     ):
         result = await discord_notification_service.async_get_file_from_url(
             URL_ATTACHMENT, True, len(CONTENT) - 1

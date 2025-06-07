@@ -9,8 +9,8 @@ from typing import TYPE_CHECKING
 
 from aionut import AIONUTClient, NUTError, NUTLoginError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_ALIAS,
     CONF_HOST,
     CONF_PASSWORD,
@@ -18,13 +18,13 @@ from homeassistant.const import (
     CONF_RESOURCES,
     CONF_SCAN_INTERVAL,
     CONF_USERNAME,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
 )
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, format_mac
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.core import Event, menuai, callback
+from menuai.exceptions import ConfigEntryAuthFailed, menuaiError
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import CONNECTION_NETWORK_MAC, format_mac
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN, INTEGRATION_SUPPORTED_COMMANDS, PLATFORMS
 
@@ -45,7 +45,7 @@ class NutRuntimeData:
     user_available_commands: set[str]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: NutConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: NutConfigEntry) -> bool:
     """Set up Network UPS Tools (NUT) from a config entry."""
 
     # strip out the stale options CONF_RESOURCES,
@@ -53,7 +53,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: NutConfigEntry) -> bool:
     if CONF_RESOURCES in entry.options:
         new_data = {**entry.data, CONF_RESOURCES: entry.options[CONF_RESOURCES]}
         new_options = {k: v for k, v in entry.options.items() if k != CONF_RESOURCES}
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry, data=new_data, options=new_options
         )
 
@@ -67,7 +67,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: NutConfigEntry) -> bool:
     if CONF_SCAN_INTERVAL in entry.options:
         current_options = {**entry.options}
         current_options.pop(CONF_SCAN_INTERVAL)
-        hass.config_entries.async_update_entry(entry, options=current_options)
+        menuai.config_entries.async_update_entry(entry, options=current_options)
 
     data = PyNUTData(host, port, alias, username, password)
 
@@ -95,7 +95,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: NutConfigEntry) -> bool:
             ) from err
 
     coordinator = DataUpdateCoordinator(
-        hass,
+        menuai,
         _LOGGER,
         config_entry=entry,
         name="NUT resource status",
@@ -110,7 +110,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: NutConfigEntry) -> bool:
     # Note that async_listen_once is not used here because the listener
     # could be removed after the event is fired.
     entry.async_on_unload(
-        hass.bus.async_listen(EVENT_HOMEASSISTANT_STOP, data.async_shutdown)
+        menuai.bus.async_listen(EVENT_menuai_STOP, data.async_shutdown)
     )
     status = coordinator.data
 
@@ -122,7 +122,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: NutConfigEntry) -> bool:
         unique_id = entry.entry_id
 
     elif entry.unique_id is None:
-        hass.config_entries.async_update_entry(entry, unique_id=unique_id)
+        menuai.config_entries.async_update_entry(entry, unique_id=unique_id)
 
     if username is not None and password is not None:
         # Dynamically add outlet integration commands
@@ -161,7 +161,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: NutConfigEntry) -> bool:
     if data.device_info.mac_address is not None:
         connections = {(CONNECTION_NETWORK_MAC, data.device_info.mac_address)}
 
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, unique_id)},
@@ -175,18 +175,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: NutConfigEntry) -> bool:
         suggested_area=data.device_info.device_location,
     )
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: NutConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: NutConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 async def async_remove_config_entry_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: NutConfigEntry,
     device_entry: dr.DeviceEntry,
 ) -> bool:
@@ -199,9 +199,9 @@ async def async_remove_config_entry_device(
     )
 
 
-async def _async_update_listener(hass: HomeAssistant, entry: NutConfigEntry) -> None:
+async def _async_update_listener(menuai: menuai, entry: NutConfigEntry) -> None:
     """Handle options update."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)
 
 
 def _manufacturer_from_status(status: dict[str, str]) -> str | None:
@@ -370,7 +370,7 @@ class PyNUTData:
         try:
             await self._client.run_command(self._alias, command_name)
         except NUTError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="nut_command_error",
                 translation_placeholders={

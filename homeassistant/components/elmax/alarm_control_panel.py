@@ -7,15 +7,15 @@ from elmax_api.model.alarm_status import AlarmArmStatus, AlarmStatus
 from elmax_api.model.command import AreaCommand
 from elmax_api.model.panel import PanelStatus
 
-from homeassistant.components.alarm_control_panel import (
+from menuai.components.alarm_control_panel import (
     AlarmControlPanelEntity,
     AlarmControlPanelEntityFeature,
     AlarmControlPanelState,
     CodeFormat,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError, InvalidStateError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError, InvalidStateError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import ElmaxConfigEntry
@@ -23,7 +23,7 @@ from .entity import ElmaxEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ElmaxConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -85,7 +85,7 @@ class ElmaxArea(ElmaxEntity, AlarmControlPanelEntity):
                 extra_payload={"code": code},
             )
         except ElmaxApiError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="alarm_operation_failed_generic",
                 translation_placeholders={"operation": "arm"},
@@ -110,10 +110,10 @@ class ElmaxArea(ElmaxEntity, AlarmControlPanelEntity):
             )
         except ElmaxApiError as err:
             if err.status_code == 403:
-                raise HomeAssistantError(
+                raise menuaiError(
                     translation_domain=DOMAIN, translation_key="invalid_disarm_code"
                 ) from err
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="alarm_operation_failed_generic",
                 translation_placeholders={"operation": "disarm"},

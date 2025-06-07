@@ -1,12 +1,12 @@
 """Test Qbus switch entities."""
 
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     DOMAIN as SWITCH_DOMAIN,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
 )
-from homeassistant.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant
+from menuai.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON
+from menuai.core import menuai
 
 from tests.common import async_fire_mqtt_message
 from tests.typing import MqttMockHAClient
@@ -27,7 +27,7 @@ _SWITCH_ENTITY_ID = "switch.living"
 
 
 async def test_switch_turn_on_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock: MqttMockHAClient,
     setup_integration: None,
 ) -> None:
@@ -35,7 +35,7 @@ async def test_switch_turn_on_off(
 
     # Switch ON
     mqtt_mock.reset_mock()
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: _SWITCH_ENTITY_ID},
@@ -47,14 +47,14 @@ async def test_switch_turn_on_off(
     )
 
     # Simulate response
-    async_fire_mqtt_message(hass, _TOPIC_SWITCH_STATE, _PAYLOAD_SWITCH_STATE_ON)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, _TOPIC_SWITCH_STATE, _PAYLOAD_SWITCH_STATE_ON)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(_SWITCH_ENTITY_ID).state == STATE_ON
+    assert menuai.states.get(_SWITCH_ENTITY_ID).state == STATE_ON
 
     # Switch OFF
     mqtt_mock.reset_mock()
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: _SWITCH_ENTITY_ID},
@@ -66,7 +66,7 @@ async def test_switch_turn_on_off(
     )
 
     # Simulate response
-    async_fire_mqtt_message(hass, _TOPIC_SWITCH_STATE, _PAYLOAD_SWITCH_STATE_OFF)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, _TOPIC_SWITCH_STATE, _PAYLOAD_SWITCH_STATE_OFF)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(_SWITCH_ENTITY_ID).state == STATE_OFF
+    assert menuai.states.get(_SWITCH_ENTITY_ID).state == STATE_OFF

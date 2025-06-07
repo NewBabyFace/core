@@ -4,10 +4,10 @@ from datetime import tzinfo
 
 import pytest
 
-from homeassistant.components.worldclock.const import CONF_TIME_FORMAT, DEFAULT_NAME
-from homeassistant.const import CONF_NAME, CONF_TIME_ZONE
-from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
+from menuai.components.worldclock.const import CONF_TIME_FORMAT, DEFAULT_NAME
+from menuai.const import CONF_NAME, CONF_TIME_ZONE
+from menuai.core import menuai
+from menuai.util import dt as dt_util
 
 from tests.common import MockConfigEntry
 
@@ -19,11 +19,11 @@ async def time_zone() -> tzinfo | None:
 
 
 async def test_time_from_config_entry(
-    hass: HomeAssistant, time_zone: tzinfo | None, loaded_entry: MockConfigEntry
+    menuai: menuai, time_zone: tzinfo | None, loaded_entry: MockConfigEntry
 ) -> None:
     """Test the time at a different location."""
 
-    state = hass.states.get("sensor.worldclock_sensor")
+    state = menuai.states.get("sensor.worldclock_sensor")
     assert state is not None
 
     assert state.state == dt_util.now(time_zone=time_zone).strftime("%H:%M")
@@ -40,11 +40,11 @@ async def test_time_from_config_entry(
     ],
 )
 async def test_time_format(
-    hass: HomeAssistant, time_zone: tzinfo | None, loaded_entry: MockConfigEntry
+    menuai: menuai, time_zone: tzinfo | None, loaded_entry: MockConfigEntry
 ) -> None:
     """Test time_format setting."""
 
-    state = hass.states.get("sensor.worldclock_sensor")
+    state = menuai.states.get("sensor.worldclock_sensor")
     assert state is not None
 
     assert state.state == dt_util.now(time_zone=time_zone).strftime(

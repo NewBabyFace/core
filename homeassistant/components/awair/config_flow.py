@@ -11,12 +11,12 @@ from python_awair.exceptions import AuthError, AwairError
 from python_awair.user import AwairUser
 import voluptuous as vol
 
-from homeassistant.components import onboarding
-from homeassistant.config_entries import SOURCE_ZEROCONF, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_DEVICE, CONF_HOST
-from homeassistant.core import callback
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.components import onboarding
+from menuai.config_entries import SOURCE_ZEROCONF, ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_ACCESS_TOKEN, CONF_DEVICE, CONF_HOST
+from menuai.core import callback
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import DOMAIN, LOGGER
 
@@ -61,7 +61,7 @@ class AwairFlowHandler(ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Confirm discovery."""
-        if user_input is not None or not onboarding.async_is_onboarded(self.hass):
+        if user_input is not None or not onboarding.async_is_onboarded(self.menuai):
             title = f"{self._device.model} ({self._device.device_id})"
             return self.async_create_entry(
                 title=title,
@@ -123,7 +123,7 @@ class AwairFlowHandler(ConfigFlow, domain=DOMAIN):
 
         flows = cast(
             set[Self],
-            self.hass.config_entries.flow._handler_progress_index.get(DOMAIN) or set(),  # noqa: SLF001
+            self.menuai.config_entries.flow._handler_progress_index.get(DOMAIN) or set(),  # noqa: SLF001
         )
         for flow in flows:
             if flow.source != SOURCE_ZEROCONF:
@@ -229,7 +229,7 @@ class AwairFlowHandler(ConfigFlow, domain=DOMAIN):
         self, device_address: str
     ) -> tuple[AwairLocalDevice | None, str | None]:
         """Check the access token is valid."""
-        session = async_get_clientsession(self.hass)
+        session = async_get_clientsession(self.menuai)
         awair = AwairLocal(session=session, device_addrs=[device_address])
 
         try:
@@ -248,7 +248,7 @@ class AwairFlowHandler(ConfigFlow, domain=DOMAIN):
         self, access_token: str
     ) -> tuple[AwairUser | None, str | None]:
         """Check the access token is valid."""
-        session = async_get_clientsession(self.hass)
+        session = async_get_clientsession(self.menuai)
         awair = Awair(access_token=access_token, session=session)
 
         try:

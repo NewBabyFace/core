@@ -13,13 +13,13 @@ from roborock.code_mappings import DyadError, RoborockDyadStateCode, ZeoError, Z
 from roborock.roborock_message import RoborockDyadDataProtocol, RoborockZeoProtocol
 from roborock.version_a01_apis import RoborockMqttClientA01
 
-from homeassistant.components.roborock.const import (
+from menuai.components.roborock.const import (
     CONF_BASE_URL,
     CONF_USER_DATA,
     DOMAIN,
 )
-from homeassistant.const import CONF_USERNAME, Platform
-from homeassistant.core import HomeAssistant
+from menuai.const import CONF_USERNAME, Platform
+from menuai.core import menuai
 
 from .mock_data import (
     BASE_URL,
@@ -72,15 +72,15 @@ def bypass_api_client_fixture() -> None:
     """Skip calls to the API client."""
     with (
         patch(
-            "homeassistant.components.roborock.RoborockApiClient.get_home_data_v3",
+            "menuai.components.roborock.RoborockApiClient.get_home_data_v3",
             return_value=HOME_DATA,
         ),
         patch(
-            "homeassistant.components.roborock.RoborockApiClient.get_scenes",
+            "menuai.components.roborock.RoborockApiClient.get_scenes",
             return_value=SCENES,
         ),
         patch(
-            "homeassistant.components.roborock.coordinator.RoborockLocalClientV1.load_multi_map"
+            "menuai.components.roborock.coordinator.RoborockLocalClientV1.load_multi_map"
         ),
     ):
         yield
@@ -90,37 +90,37 @@ def bypass_api_client_fixture() -> None:
 def bypass_api_fixture(bypass_api_client_fixture: Any) -> None:
     """Skip calls to the API."""
     with (
-        patch("homeassistant.components.roborock.RoborockMqttClientV1.async_connect"),
-        patch("homeassistant.components.roborock.RoborockMqttClientV1._send_command"),
+        patch("menuai.components.roborock.RoborockMqttClientV1.async_connect"),
+        patch("menuai.components.roborock.RoborockMqttClientV1._send_command"),
         patch(
-            "homeassistant.components.roborock.coordinator.RoborockMqttClientV1._send_command"
+            "menuai.components.roborock.coordinator.RoborockMqttClientV1._send_command"
         ),
         patch(
-            "homeassistant.components.roborock.RoborockMqttClientV1.get_networking",
+            "menuai.components.roborock.RoborockMqttClientV1.get_networking",
             return_value=NETWORK_INFO,
         ),
         patch(
-            "homeassistant.components.roborock.coordinator.RoborockLocalClientV1.get_prop",
+            "menuai.components.roborock.coordinator.RoborockLocalClientV1.get_prop",
             return_value=PROP,
         ),
         patch(
-            "homeassistant.components.roborock.coordinator.RoborockMqttClientV1.get_multi_maps_list",
+            "menuai.components.roborock.coordinator.RoborockMqttClientV1.get_multi_maps_list",
             return_value=MULTI_MAP_LIST,
         ),
         patch(
-            "homeassistant.components.roborock.coordinator.RoborockLocalClientV1.get_multi_maps_list",
+            "menuai.components.roborock.coordinator.RoborockLocalClientV1.get_multi_maps_list",
             return_value=MULTI_MAP_LIST,
         ),
         patch(
-            "homeassistant.components.roborock.coordinator.RoborockMapDataParser.parse",
+            "menuai.components.roborock.coordinator.RoborockMapDataParser.parse",
             return_value=MAP_DATA,
         ),
         patch(
-            "homeassistant.components.roborock.coordinator.RoborockLocalClientV1.send_message"
+            "menuai.components.roborock.coordinator.RoborockLocalClientV1.send_message"
         ),
-        patch("homeassistant.components.roborock.RoborockMqttClientV1._wait_response"),
+        patch("menuai.components.roborock.RoborockMqttClientV1._wait_response"),
         patch(
-            "homeassistant.components.roborock.coordinator.RoborockLocalClientV1._wait_response"
+            "menuai.components.roborock.coordinator.RoborockLocalClientV1._wait_response"
         ),
         patch(
             "roborock.version_1_apis.AttributeCache.async_value",
@@ -129,11 +129,11 @@ def bypass_api_fixture(bypass_api_client_fixture: Any) -> None:
             "roborock.version_1_apis.AttributeCache.value",
         ),
         patch(
-            "homeassistant.components.roborock.coordinator.MAP_SLEEP",
+            "menuai.components.roborock.coordinator.MAP_SLEEP",
             0,
         ),
         patch(
-            "homeassistant.components.roborock.coordinator.RoborockLocalClientV1.get_room_mapping",
+            "menuai.components.roborock.coordinator.RoborockLocalClientV1.get_room_mapping",
             return_value=[
                 RoomMapping(16, "2362048"),
                 RoomMapping(17, "2362044"),
@@ -141,7 +141,7 @@ def bypass_api_fixture(bypass_api_client_fixture: Any) -> None:
             ],
         ),
         patch(
-            "homeassistant.components.roborock.coordinator.RoborockMqttClientV1.get_room_mapping",
+            "menuai.components.roborock.coordinator.RoborockMqttClientV1.get_room_mapping",
             return_value=[
                 RoomMapping(16, "2362048"),
                 RoomMapping(17, "2362044"),
@@ -149,14 +149,14 @@ def bypass_api_fixture(bypass_api_client_fixture: Any) -> None:
             ],
         ),
         patch(
-            "homeassistant.components.roborock.coordinator.RoborockMqttClientV1.get_map_v1",
+            "menuai.components.roborock.coordinator.RoborockMqttClientV1.get_map_v1",
             return_value=b"123",
         ),
         patch(
-            "homeassistant.components.roborock.coordinator.RoborockClientA01",
+            "menuai.components.roborock.coordinator.RoborockClientA01",
             A01Mock,
         ),
-        patch("homeassistant.components.roborock.RoborockMqttClientA01", A01Mock),
+        patch("menuai.components.roborock.RoborockMqttClientA01", A01Mock),
     ):
         yield
 
@@ -171,7 +171,7 @@ def send_message_side_effect_fixture() -> Any:
 def mock_send_message_fixture(send_message_side_effect: Any) -> Mock:
     """Fixture to mock the send_message method."""
     with patch(
-        "homeassistant.components.roborock.coordinator.RoborockLocalClientV1._send_command",
+        "menuai.components.roborock.coordinator.RoborockLocalClientV1._send_command",
         side_effect=send_message_side_effect,
     ) as mock_send_message:
         yield mock_send_message
@@ -183,7 +183,7 @@ def bypass_api_fixture_v1_only(bypass_api_fixture) -> None:
     home_data_copy = deepcopy(HOME_DATA)
     home_data_copy.received_devices = []
     with patch(
-        "homeassistant.components.roborock.RoborockApiClient.get_home_data_v3",
+        "menuai.components.roborock.RoborockApiClient.get_home_data_v3",
         return_value=home_data_copy,
     ):
         yield
@@ -201,7 +201,7 @@ def config_entry_data_fixture() -> dict[str, Any]:
 
 @pytest.fixture
 def mock_roborock_entry(
-    hass: HomeAssistant, config_entry_data: dict[str, Any]
+    menuai: menuai, config_entry_data: dict[str, Any]
 ) -> MockConfigEntry:
     """Create a Roborock Entry that has not been setup."""
     mock_entry = MockConfigEntry(
@@ -212,7 +212,7 @@ def mock_roborock_entry(
         version=1,
         minor_version=2,
     )
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
     return mock_entry
 
 
@@ -224,38 +224,38 @@ def mock_platforms() -> list[Platform]:
 
 @pytest.fixture(autouse=True)
 async def mock_patforms_fixture(
-    hass: HomeAssistant,
+    menuai: menuai,
     platforms: list[Platform],
 ) -> Generator[None]:
     """Set up the Roborock platform."""
-    with patch("homeassistant.components.roborock.PLATFORMS", platforms):
+    with patch("menuai.components.roborock.PLATFORMS", platforms):
         yield
 
 
 @pytest.fixture
 async def setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     bypass_api_fixture,
     mock_roborock_entry: MockConfigEntry,
 ) -> Generator[MockConfigEntry]:
     """Set up the Roborock platform."""
-    await hass.config_entries.async_setup(mock_roborock_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_roborock_entry.entry_id)
+    await menuai.async_block_till_done()
     return mock_roborock_entry
 
 
 @pytest.fixture(autouse=True, name="storage_path")
 async def storage_path_fixture(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> Generator[pathlib.Path]:
     """Test cleanup, remove any map storage persisted during the test."""
     with tempfile.TemporaryDirectory() as tmp_path:
 
-        def get_storage_path(_: HomeAssistant, entry_id: str) -> pathlib.Path:
+        def get_storage_path(_: menuai, entry_id: str) -> pathlib.Path:
             return pathlib.Path(tmp_path) / entry_id
 
         with patch(
-            "homeassistant.components.roborock.roborock_storage._storage_path_prefix",
+            "menuai.components.roborock.roborock_storage._storage_path_prefix",
             new=get_storage_path,
         ):
             yield pathlib.Path(tmp_path)

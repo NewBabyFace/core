@@ -7,15 +7,15 @@ from dataclasses import dataclass
 
 from powerfox import Device, HeatMeter, PowerMeter, WaterMeter
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import UnitOfEnergy, UnitOfPower, UnitOfVolume
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import UnitOfEnergy, UnitOfPower, UnitOfVolume
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import PowerfoxConfigEntry, PowerfoxDataUpdateCoordinator
 from .entity import PowerfoxEntity
@@ -128,7 +128,7 @@ SENSORS_HEAT: tuple[PowerfoxSensorEntityDescription[HeatMeter], ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: PowerfoxConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

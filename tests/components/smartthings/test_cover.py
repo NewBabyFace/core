@@ -7,13 +7,13 @@ from pysmartthings.models import HealthStatus
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     ATTR_CURRENT_POSITION,
     ATTR_POSITION,
     DOMAIN as COVER_DOMAIN,
 )
-from homeassistant.components.smartthings.const import MAIN
-from homeassistant.const import (
+from menuai.components.smartthings.const import MAIN
+from menuai.const import (
     ATTR_BATTERY_LEVEL,
     ATTR_ENTITY_ID,
     SERVICE_CLOSE_COVER,
@@ -24,8 +24,8 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import (
     setup_integration,
@@ -38,16 +38,16 @@ from tests.common import MockConfigEntry
 
 
 async def test_all_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test all entities."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    snapshot_smartthings_entities(hass, entity_registry, snapshot, Platform.COVER)
+    snapshot_smartthings_entities(menuai, entity_registry, snapshot, Platform.COVER)
 
 
 @pytest.mark.parametrize("device_fixture", ["c2c_shade"])
@@ -59,16 +59,16 @@ async def test_all_entities(
     ],
 )
 async def test_cover_open_close(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
     action: str,
     command: Command,
 ) -> None:
     """Test cover open and close command."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         action,
         {ATTR_ENTITY_ID: "cover.curtain_1a"},
@@ -84,14 +84,14 @@ async def test_cover_open_close(
 
 @pytest.mark.parametrize("device_fixture", ["c2c_shade"])
 async def test_cover_set_position(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test cover set position command."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_SET_COVER_POSITION,
         {ATTR_ENTITY_ID: "cover.curtain_1a", ATTR_POSITION: 25},
@@ -108,7 +108,7 @@ async def test_cover_set_position(
 
 @pytest.mark.parametrize("device_fixture", ["c2c_shade"])
 async def test_cover_battery(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
@@ -116,16 +116,16 @@ async def test_cover_battery(
     devices.get_device_status.return_value[MAIN][Capability.BATTERY] = {
         Attribute.BATTERY: Status(50)
     }
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    state = hass.states.get("cover.curtain_1a")
+    state = menuai.states.get("cover.curtain_1a")
     assert state
     assert state.attributes[ATTR_BATTERY_LEVEL] == 50
 
 
 @pytest.mark.parametrize("device_fixture", ["c2c_shade"])
 async def test_cover_battery_updating(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
@@ -133,14 +133,14 @@ async def test_cover_battery_updating(
     devices.get_device_status.return_value[MAIN][Capability.BATTERY] = {
         Attribute.BATTERY: Status(50)
     }
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    state = hass.states.get("cover.curtain_1a")
+    state = menuai.states.get("cover.curtain_1a")
     assert state
     assert state.attributes[ATTR_BATTERY_LEVEL] == 50
 
     await trigger_update(
-        hass,
+        menuai,
         devices,
         "571af102-15db-4030-b76b-245a691f74a5",
         Capability.BATTERY,
@@ -148,24 +148,24 @@ async def test_cover_battery_updating(
         49,
     )
 
-    state = hass.states.get("cover.curtain_1a")
+    state = menuai.states.get("cover.curtain_1a")
     assert state
     assert state.attributes[ATTR_BATTERY_LEVEL] == 49
 
 
 @pytest.mark.parametrize("device_fixture", ["c2c_shade"])
 async def test_state_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test state update."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    assert hass.states.get("cover.curtain_1a").state == STATE_OPEN
+    assert menuai.states.get("cover.curtain_1a").state == STATE_OPEN
 
     await trigger_update(
-        hass,
+        menuai,
         devices,
         "571af102-15db-4030-b76b-245a691f74a5",
         Capability.WINDOW_SHADE,
@@ -173,22 +173,22 @@ async def test_state_update(
         "opening",
     )
 
-    assert hass.states.get("cover.curtain_1a").state == STATE_OPENING
+    assert menuai.states.get("cover.curtain_1a").state == STATE_OPENING
 
 
 @pytest.mark.parametrize("device_fixture", ["c2c_shade"])
 async def test_position_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test position update."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    assert hass.states.get("cover.curtain_1a").attributes[ATTR_CURRENT_POSITION] == 100
+    assert menuai.states.get("cover.curtain_1a").attributes[ATTR_CURRENT_POSITION] == 100
 
     await trigger_update(
-        hass,
+        menuai,
         devices,
         "571af102-15db-4030-b76b-245a691f74a5",
         Capability.SWITCH_LEVEL,
@@ -196,39 +196,39 @@ async def test_position_update(
         50,
     )
 
-    assert hass.states.get("cover.curtain_1a").attributes[ATTR_CURRENT_POSITION] == 50
+    assert menuai.states.get("cover.curtain_1a").attributes[ATTR_CURRENT_POSITION] == 50
 
 
 @pytest.mark.parametrize("device_fixture", ["c2c_shade"])
 async def test_availability(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test availability."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    assert hass.states.get("cover.curtain_1a").state == STATE_OPEN
-
-    await trigger_health_update(
-        hass, devices, "571af102-15db-4030-b76b-245a691f74a5", HealthStatus.OFFLINE
-    )
-
-    assert hass.states.get("cover.curtain_1a").state == STATE_UNAVAILABLE
+    assert menuai.states.get("cover.curtain_1a").state == STATE_OPEN
 
     await trigger_health_update(
-        hass, devices, "571af102-15db-4030-b76b-245a691f74a5", HealthStatus.ONLINE
+        menuai, devices, "571af102-15db-4030-b76b-245a691f74a5", HealthStatus.OFFLINE
     )
 
-    assert hass.states.get("cover.curtain_1a").state == STATE_OPEN
+    assert menuai.states.get("cover.curtain_1a").state == STATE_UNAVAILABLE
+
+    await trigger_health_update(
+        menuai, devices, "571af102-15db-4030-b76b-245a691f74a5", HealthStatus.ONLINE
+    )
+
+    assert menuai.states.get("cover.curtain_1a").state == STATE_OPEN
 
 
 @pytest.mark.parametrize("device_fixture", ["c2c_shade"])
 async def test_availability_at_start(
-    hass: HomeAssistant,
+    menuai: menuai,
     unavailable_device: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test unavailable at boot."""
-    await setup_integration(hass, mock_config_entry)
-    assert hass.states.get("cover.curtain_1a").state == STATE_UNAVAILABLE
+    await setup_integration(menuai, mock_config_entry)
+    assert menuai.states.get("cover.curtain_1a").state == STATE_UNAVAILABLE

@@ -5,13 +5,13 @@ from __future__ import annotations
 import math
 from typing import Any
 
-from homeassistant.components.fan import FanEntity, FanEntityFeature
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util.percentage import (
+from menuai.components.fan import FanEntity, FanEntityFeature
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util.percentage import (
     percentage_to_ranged_value,
     ranged_value_to_percentage,
 )
@@ -24,7 +24,7 @@ SPEED_RANGE = (1, 255)  # off is not included
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -34,13 +34,13 @@ async def async_setup_entry(
     def async_add_insteon_fan_entities(discovery_info=None):
         """Add the Insteon entities for the platform."""
         async_add_insteon_entities(
-            hass, Platform.FAN, InsteonFanEntity, async_add_entities, discovery_info
+            menuai, Platform.FAN, InsteonFanEntity, async_add_entities, discovery_info
         )
 
     signal = f"{SIGNAL_ADD_ENTITIES}_{Platform.FAN}"
-    async_dispatcher_connect(hass, signal, async_add_insteon_fan_entities)
+    async_dispatcher_connect(menuai, signal, async_add_insteon_fan_entities)
     async_add_insteon_devices(
-        hass,
+        menuai,
         Platform.FAN,
         InsteonFanEntity,
         async_add_entities,

@@ -8,7 +8,7 @@ from soco.data_structures import SearchResult
 from sonos_websocket.exception import SonosWebsocketError
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     ATTR_INPUT_SOURCE,
     ATTR_INPUT_SOURCE_LIST,
     ATTR_MEDIA_ANNOUNCE,
@@ -26,20 +26,20 @@ from homeassistant.components.media_player import (
     MediaPlayerEnqueue,
     RepeatMode,
 )
-from homeassistant.components.sonos.const import (
+from menuai.components.sonos.const import (
     DOMAIN,
     MEDIA_TYPE_DIRECTORY,
     SOURCE_LINEIN,
     SOURCE_TV,
 )
-from homeassistant.components.sonos.media_player import (
+from menuai.components.sonos.media_player import (
     LONG_SERVICE_TIMEOUT,
     SERVICE_GET_QUEUE,
     SERVICE_RESTORE,
     SERVICE_SNAPSHOT,
     VOLUME_INCREMENT,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_MEDIA_NEXT_TRACK,
     SERVICE_MEDIA_PAUSE,
@@ -52,21 +52,21 @@ from homeassistant.const import (
     SERVICE_VOLUME_SET,
     SERVICE_VOLUME_UP,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.device_registry import (
+from menuai.core import menuai
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers import entity_registry as er
+from menuai.helpers.device_registry import (
     CONNECTION_NETWORK_MAC,
     CONNECTION_UPNP,
     DeviceRegistry,
 )
-from homeassistant.setup import async_setup_component
+from menuai.setup import async_setup_component
 
 from .conftest import MockMusicServiceItem, MockSoCo, SoCoMockFactory, SonosMockEvent
 
 
 async def test_device_registry(
-    hass: HomeAssistant, device_registry: DeviceRegistry, async_autosetup_sonos, soco
+    menuai: menuai, device_registry: DeviceRegistry, async_autosetup_sonos, soco
 ) -> None:
     """Test sonos device registered in the device registry."""
     reg_device = device_registry.async_get_device(
@@ -87,7 +87,7 @@ async def test_device_registry(
 
 
 async def test_device_registry_not_portable(
-    hass: HomeAssistant, device_registry: DeviceRegistry, async_setup_sonos, soco
+    menuai: menuai, device_registry: DeviceRegistry, async_setup_sonos, soco
 ) -> None:
     """Test non-portable sonos device registered in the device registry to ensure area suggested."""
     soco.get_battery_info.return_value = {}
@@ -101,7 +101,7 @@ async def test_device_registry_not_portable(
 
 
 async def test_entity_basic(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_autosetup_sonos,
     discover,
     entity_registry: er.EntityRegistry,
@@ -111,7 +111,7 @@ async def test_entity_basic(
     entity_id = "media_player.zone_a"
     entity_entry = entity_registry.async_get(entity_id)
     assert entity_entry == snapshot(name=f"{entity_entry.entity_id}-entry")
-    state = hass.states.get(entity_entry.entity_id)
+    state = menuai.states.get(entity_entry.entity_id)
     assert state == snapshot(name=f"{entity_entry.entity_id}-state")
 
 
@@ -199,7 +199,7 @@ async def test_entity_basic(
     ],
 )
 async def test_play_media_library(
-    hass: HomeAssistant,
+    menuai: menuai,
     soco_factory: SoCoMockFactory,
     async_autosetup_sonos,
     media_content_type,
@@ -209,7 +209,7 @@ async def test_play_media_library(
 ) -> None:
     """Test playing local library with a variety of options."""
     sock_mock = soco_factory.mock_list.get("192.168.42.2")
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_PLAY_MEDIA,
         {
@@ -269,7 +269,7 @@ async def test_play_media_library(
     ],
 )
 async def test_play_media_library_content_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_autosetup_sonos,
     media_content_type,
     media_content_id,
@@ -280,7 +280,7 @@ async def test_play_media_library_content_error(
         ServiceValidationError,
         match=message,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MP_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {
@@ -296,13 +296,13 @@ _track_url = "S://192.168.42.100/music/iTunes/The%20Beatles/A%20Hard%20Day%2fs%I
 
 
 async def test_play_media_lib_track_play(
-    hass: HomeAssistant,
+    menuai: menuai,
     soco_factory: SoCoMockFactory,
     async_autosetup_sonos,
 ) -> None:
     """Tests playing media track with enqueue mode play."""
     soco_mock = soco_factory.mock_list.get("192.168.42.2")
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_PLAY_MEDIA,
         {
@@ -325,13 +325,13 @@ async def test_play_media_lib_track_play(
 
 
 async def test_play_media_lib_track_next(
-    hass: HomeAssistant,
+    menuai: menuai,
     soco_factory: SoCoMockFactory,
     async_autosetup_sonos,
 ) -> None:
     """Tests playing media track with enqueue mode next."""
     soco_mock = soco_factory.mock_list.get("192.168.42.2")
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_PLAY_MEDIA,
         {
@@ -353,13 +353,13 @@ async def test_play_media_lib_track_next(
 
 
 async def test_play_media_lib_track_replace(
-    hass: HomeAssistant,
+    menuai: menuai,
     soco_factory: SoCoMockFactory,
     async_autosetup_sonos,
 ) -> None:
     """Tests playing media track with enqueue mode replace."""
     soco_mock = soco_factory.mock_list.get("192.168.42.2")
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_PLAY_MEDIA,
         {
@@ -376,13 +376,13 @@ async def test_play_media_lib_track_replace(
 
 
 async def test_play_media_lib_track_add(
-    hass: HomeAssistant,
+    menuai: menuai,
     soco_factory: SoCoMockFactory,
     async_autosetup_sonos,
 ) -> None:
     """Tests playing media track with enqueue mode add."""
     soco_mock = soco_factory.mock_list.get("192.168.42.2")
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_PLAY_MEDIA,
         {
@@ -406,13 +406,13 @@ _share_link: str = "spotify:playlist:abcdefghij0123456789XY"
 
 
 async def test_play_media_share_link_add(
-    hass: HomeAssistant,
+    menuai: menuai,
     soco_factory: SoCoMockFactory,
     async_autosetup_sonos,
     soco_sharelink,
 ) -> None:
     """Tests playing a share link with enqueue option add."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_PLAY_MEDIA,
         {
@@ -434,13 +434,13 @@ async def test_play_media_share_link_add(
 
 
 async def test_play_media_share_link_next(
-    hass: HomeAssistant,
+    menuai: menuai,
     soco_factory: SoCoMockFactory,
     async_autosetup_sonos,
     soco_sharelink,
 ) -> None:
     """Tests playing a share link with enqueue option next."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_PLAY_MEDIA,
         {
@@ -465,14 +465,14 @@ async def test_play_media_share_link_next(
 
 
 async def test_play_media_share_link_play(
-    hass: HomeAssistant,
+    menuai: menuai,
     soco_factory: SoCoMockFactory,
     async_autosetup_sonos,
     soco_sharelink,
 ) -> None:
     """Tests playing a share link with enqueue option play."""
     soco_mock = soco_factory.mock_list.get("192.168.42.2")
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_PLAY_MEDIA,
         {
@@ -499,14 +499,14 @@ async def test_play_media_share_link_play(
 
 
 async def test_play_media_share_link_replace(
-    hass: HomeAssistant,
+    menuai: menuai,
     soco_factory: SoCoMockFactory,
     async_autosetup_sonos,
     soco_sharelink,
 ) -> None:
     """Tests playing a share link with enqueue option replace."""
     soco_mock = soco_factory.mock_list.get("192.168.42.2")
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_PLAY_MEDIA,
         {
@@ -560,7 +560,7 @@ _mock_playlists = [
     ],
 )
 async def test_play_media_music_library_playlist(
-    hass: HomeAssistant,
+    menuai: menuai,
     soco_factory: SoCoMockFactory,
     async_autosetup_sonos,
     discover,
@@ -571,7 +571,7 @@ async def test_play_media_music_library_playlist(
     soco_mock = soco_factory.mock_list.get("192.168.42.2")
     soco_mock.music_library.get_playlists.return_value = _mock_playlists
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_PLAY_MEDIA,
         {
@@ -589,7 +589,7 @@ async def test_play_media_music_library_playlist(
 
 
 async def test_play_media_music_library_playlist_dne(
-    hass: HomeAssistant,
+    menuai: menuai,
     soco_factory: SoCoMockFactory,
     async_autosetup_sonos,
     caplog: pytest.LogCaptureFixture,
@@ -603,7 +603,7 @@ async def test_play_media_music_library_playlist_dne(
         ServiceValidationError,
         match=f"Could not find Sonos playlist: {media_content_id}",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MP_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {
@@ -617,7 +617,7 @@ async def test_play_media_music_library_playlist_dne(
 
 
 async def test_play_sonos_playlist(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_autosetup_sonos,
     soco: MockSoCo,
     sonos_playlists: SearchResult,
@@ -625,7 +625,7 @@ async def test_play_sonos_playlist(
     """Test that sonos playlists can be played."""
 
     # Test a successful call
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_PLAY_MEDIA,
         {
@@ -649,7 +649,7 @@ async def test_play_sonos_playlist(
         ServiceValidationError,
         match=f"Could not find Sonos playlist: {media_content_id}",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MP_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {
@@ -681,7 +681,7 @@ async def test_play_sonos_playlist(
     ],
 )
 async def test_select_source_line_in_tv(
-    hass: HomeAssistant,
+    menuai: menuai,
     soco_factory: SoCoMockFactory,
     async_autosetup_sonos,
     source: str,
@@ -689,7 +689,7 @@ async def test_select_source_line_in_tv(
 ) -> None:
     """Test the select_source method with a variety of inputs."""
     soco_mock = soco_factory.mock_list.get("192.168.42.2")
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_SELECT_SOURCE,
         {
@@ -735,7 +735,7 @@ async def test_select_source_line_in_tv(
     ],
 )
 async def test_select_source_play_uri(
-    hass: HomeAssistant,
+    menuai: menuai,
     soco_factory: SoCoMockFactory,
     async_autosetup_sonos,
     source: str,
@@ -743,7 +743,7 @@ async def test_select_source_play_uri(
 ) -> None:
     """Test the select_source method with a variety of inputs."""
     soco_mock = soco_factory.mock_list.get("192.168.42.2")
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_SELECT_SOURCE,
         {
@@ -776,7 +776,7 @@ async def test_select_source_play_uri(
     ],
 )
 async def test_select_source_play_queue(
-    hass: HomeAssistant,
+    menuai: menuai,
     soco_factory: SoCoMockFactory,
     async_autosetup_sonos,
     source: str,
@@ -784,7 +784,7 @@ async def test_select_source_play_queue(
 ) -> None:
     """Test the select_source method with a variety of inputs."""
     soco_mock = soco_factory.mock_list.get("192.168.42.2")
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_SELECT_SOURCE,
         {
@@ -807,13 +807,13 @@ async def test_select_source_play_queue(
 
 
 async def test_select_source_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     soco_factory: SoCoMockFactory,
     async_autosetup_sonos,
 ) -> None:
     """Test the select_source method with a variety of inputs."""
     with pytest.raises(ServiceValidationError) as sve:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MP_DOMAIN,
             SERVICE_SELECT_SOURCE,
             {
@@ -827,14 +827,14 @@ async def test_select_source_error(
 
 
 async def test_shuffle_set(
-    hass: HomeAssistant,
+    menuai: menuai,
     soco: MockSoCo,
     async_autosetup_sonos,
 ) -> None:
     """Test the set shuffle method."""
     assert soco.play_mode == "NORMAL"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_SHUFFLE_SET,
         {
@@ -845,7 +845,7 @@ async def test_shuffle_set(
     )
     assert soco.play_mode == "SHUFFLE_NOREPEAT"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_SHUFFLE_SET,
         {
@@ -858,7 +858,7 @@ async def test_shuffle_set(
 
 
 async def test_shuffle_get(
-    hass: HomeAssistant,
+    menuai: menuai,
     soco: MockSoCo,
     async_autosetup_sonos,
     no_media_event: SonosMockEvent,
@@ -867,13 +867,13 @@ async def test_shuffle_get(
     subscription = soco.avTransport.subscribe.return_value
     sub_callback = subscription.callback
 
-    state = hass.states.get("media_player.zone_a")
+    state = menuai.states.get("media_player.zone_a")
     assert state.attributes[ATTR_MEDIA_SHUFFLE] is False
 
     no_media_event.variables["current_play_mode"] = "SHUFFLE_NOREPEAT"
     sub_callback(no_media_event)
-    await hass.async_block_till_done(wait_background_tasks=True)
-    state = hass.states.get("media_player.zone_a")
+    await menuai.async_block_till_done(wait_background_tasks=True)
+    state = menuai.states.get("media_player.zone_a")
     assert state.attributes[ATTR_MEDIA_SHUFFLE] is True
 
     # The integration keeps a copy of the last event to check for
@@ -883,19 +883,19 @@ async def test_shuffle_get(
     )
     no_media_event.variables["current_play_mode"] = "NORMAL"
     sub_callback(no_media_event)
-    await hass.async_block_till_done(wait_background_tasks=True)
-    state = hass.states.get("media_player.zone_a")
+    await menuai.async_block_till_done(wait_background_tasks=True)
+    state = menuai.states.get("media_player.zone_a")
     assert state.attributes[ATTR_MEDIA_SHUFFLE] is False
 
 
 async def test_repeat_set(
-    hass: HomeAssistant,
+    menuai: menuai,
     soco: MockSoCo,
     async_autosetup_sonos,
 ) -> None:
     """Test the set repeat method."""
     assert soco.play_mode == "NORMAL"
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_REPEAT_SET,
         {
@@ -906,7 +906,7 @@ async def test_repeat_set(
     )
     assert soco.play_mode == "REPEAT_ALL"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_REPEAT_SET,
         {
@@ -917,7 +917,7 @@ async def test_repeat_set(
     )
     assert soco.play_mode == "REPEAT_ONE"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_REPEAT_SET,
         {
@@ -930,7 +930,7 @@ async def test_repeat_set(
 
 
 async def test_repeat_get(
-    hass: HomeAssistant,
+    menuai: menuai,
     soco: MockSoCo,
     async_autosetup_sonos,
     no_media_event: SonosMockEvent,
@@ -939,13 +939,13 @@ async def test_repeat_get(
     subscription = soco.avTransport.subscribe.return_value
     sub_callback = subscription.callback
 
-    state = hass.states.get("media_player.zone_a")
+    state = menuai.states.get("media_player.zone_a")
     assert state.attributes[ATTR_MEDIA_REPEAT] == RepeatMode.OFF
 
     no_media_event.variables["current_play_mode"] = "REPEAT_ALL"
     sub_callback(no_media_event)
-    await hass.async_block_till_done(wait_background_tasks=True)
-    state = hass.states.get("media_player.zone_a")
+    await menuai.async_block_till_done(wait_background_tasks=True)
+    state = menuai.states.get("media_player.zone_a")
     assert state.attributes[ATTR_MEDIA_REPEAT] == RepeatMode.ALL
 
     no_media_event = SonosMockEvent(
@@ -953,8 +953,8 @@ async def test_repeat_get(
     )
     no_media_event.variables["current_play_mode"] = "REPEAT_ONE"
     sub_callback(no_media_event)
-    await hass.async_block_till_done(wait_background_tasks=True)
-    state = hass.states.get("media_player.zone_a")
+    await menuai.async_block_till_done(wait_background_tasks=True)
+    state = menuai.states.get("media_player.zone_a")
     assert state.attributes[ATTR_MEDIA_REPEAT] == RepeatMode.ONE
 
     no_media_event = SonosMockEvent(
@@ -962,19 +962,19 @@ async def test_repeat_get(
     )
     no_media_event.variables["current_play_mode"] = "NORMAL"
     sub_callback(no_media_event)
-    await hass.async_block_till_done(wait_background_tasks=True)
-    state = hass.states.get("media_player.zone_a")
+    await menuai.async_block_till_done(wait_background_tasks=True)
+    state = menuai.states.get("media_player.zone_a")
     assert state.attributes[ATTR_MEDIA_REPEAT] == RepeatMode.OFF
 
 
 async def test_play_media_favorite_item_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     soco_factory: SoCoMockFactory,
     async_autosetup_sonos,
 ) -> None:
     """Test playing media with a favorite item id."""
     soco_mock = soco_factory.mock_list.get("192.168.42.2")
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_PLAY_MEDIA,
         {
@@ -996,7 +996,7 @@ async def test_play_media_favorite_item_id(
 
     # Test exception handling with an invalid id.
     with pytest.raises(ValueError) as sve:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MP_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {
@@ -1009,9 +1009,9 @@ async def test_play_media_favorite_item_id(
     assert "UNKNOWN_ID" in str(sve.value)
 
 
-async def _setup_hass(hass: HomeAssistant):
+async def _setup_menuai(menuai: menuai):
     await async_setup_component(
-        hass,
+        menuai,
         DOMAIN,
         {
             "sonos": {
@@ -1022,21 +1022,21 @@ async def _setup_hass(hass: HomeAssistant):
             }
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
 async def test_service_snapshot_restore(
-    hass: HomeAssistant,
+    menuai: menuai,
     soco_factory: SoCoMockFactory,
 ) -> None:
     """Test the snapshot and restore services."""
     soco_factory.cache_mock(MockSoCo(), "10.10.10.1", "Living Room")
     soco_factory.cache_mock(MockSoCo(), "10.10.10.2", "Bedroom")
-    await _setup_hass(hass)
+    await _setup_menuai(menuai)
     with patch(
-        "homeassistant.components.sonos.speaker.Snapshot.snapshot"
+        "menuai.components.sonos.speaker.Snapshot.snapshot"
     ) as mock_snapshot:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_SNAPSHOT,
             {
@@ -1047,9 +1047,9 @@ async def test_service_snapshot_restore(
     assert mock_snapshot.call_count == 2
 
     with patch(
-        "homeassistant.components.sonos.speaker.Snapshot.restore"
+        "menuai.components.sonos.speaker.Snapshot.restore"
     ) as mock_restore:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_RESTORE,
             {
@@ -1061,14 +1061,14 @@ async def test_service_snapshot_restore(
 
 
 async def test_volume(
-    hass: HomeAssistant,
+    menuai: menuai,
     soco: MockSoCo,
     async_autosetup_sonos,
 ) -> None:
     """Test the media player volume services."""
     initial_volume = soco.volume
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_VOLUME_UP,
         {
@@ -1078,7 +1078,7 @@ async def test_volume(
     )
     assert soco.volume == initial_volume + VOLUME_INCREMENT
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_VOLUME_DOWN,
         {
@@ -1088,7 +1088,7 @@ async def test_volume(
     )
     assert soco.volume == initial_volume
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_VOLUME_SET,
         {ATTR_ENTITY_ID: "media_player.zone_a", ATTR_MEDIA_VOLUME_LEVEL: 0.30},
@@ -1110,14 +1110,14 @@ async def test_volume(
     ],
 )
 async def test_media_transport(
-    hass: HomeAssistant,
+    menuai: menuai,
     soco: MockSoCo,
     async_autosetup_sonos,
     service: str,
     client_call: str,
 ) -> None:
     """Test the media player transport services."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         service,
         {
@@ -1129,7 +1129,7 @@ async def test_media_transport(
 
 
 async def test_play_media_announce(
-    hass: HomeAssistant,
+    menuai: menuai,
     soco: MockSoCo,
     async_autosetup_sonos,
     sonos_websocket,
@@ -1139,7 +1139,7 @@ async def test_play_media_announce(
     volume: float = 0.30
 
     # Test the success path
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_PLAY_MEDIA,
         {
@@ -1158,9 +1158,9 @@ async def test_play_media_announce(
     sonos_websocket.play_clip.reset_mock()
     sonos_websocket.play_clip.side_effect = SonosWebsocketError("Error Message")
     with pytest.raises(
-        HomeAssistantError, match="Error when calling Sonos websocket: Error Message"
+        menuaiError, match="Error when calling Sonos websocket: Error Message"
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MP_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {
@@ -1180,9 +1180,9 @@ async def test_play_media_announce(
     retval = {"success": 0}
     sonos_websocket.play_clip.return_value = [retval, {}]
     with pytest.raises(
-        HomeAssistantError, match=f"Announcing clip {content_id} failed {retval}"
+        menuaiError, match=f"Announcing clip {content_id} failed {retval}"
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MP_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {
@@ -1202,7 +1202,7 @@ async def test_play_media_announce(
     retval = {"success": 0, "type": "globalError"}
     sonos_websocket.play_clip.return_value = [retval, {}]
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_PLAY_MEDIA,
         {
@@ -1218,7 +1218,7 @@ async def test_play_media_announce(
 
 
 async def test_media_get_queue(
-    hass: HomeAssistant,
+    menuai: menuai,
     soco: MockSoCo,
     async_autosetup_sonos,
     soco_factory,
@@ -1226,7 +1226,7 @@ async def test_media_get_queue(
 ) -> None:
     """Test getting the media queue."""
     soco_mock = soco_factory.mock_list.get("192.168.42.2")
-    result = await hass.services.async_call(
+    result = await menuai.services.async_call(
         DOMAIN,
         SERVICE_GET_QUEUE,
         {
@@ -1253,11 +1253,11 @@ async def test_media_get_queue(
     indirect=["speaker_model"],
 )
 async def test_media_source_list(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_autosetup_sonos,
     speaker_model: str,
     source_list: list[str] | None,
 ) -> None:
     """Test the mapping between the speaker model name and source_list."""
-    state = hass.states.get("media_player.zone_a")
+    state = menuai.states.get("media_player.zone_a")
     assert state.attributes.get(ATTR_INPUT_SOURCE_LIST) == source_list

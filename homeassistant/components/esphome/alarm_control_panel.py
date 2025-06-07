@@ -13,13 +13,13 @@ from aioesphomeapi import (
     EntityInfo,
 )
 
-from homeassistant.components.alarm_control_panel import (
+from menuai.components.alarm_control_panel import (
     AlarmControlPanelEntity,
     AlarmControlPanelEntityFeature,
     AlarmControlPanelState,
     CodeFormat,
 )
-from homeassistant.core import callback
+from menuai.core import callback
 
 from .entity import (
     EsphomeEntity,
@@ -31,7 +31,7 @@ from .enum_mapper import EsphomeEnumMapper
 
 PARALLEL_UPDATES = 0
 
-_ESPHOME_ACP_STATE_TO_HASS_STATE: EsphomeEnumMapper[
+_ESPHOME_ACP_STATE_TO_menuai_STATE: EsphomeEnumMapper[
     ESPHomeAlarmControlPanelState, AlarmControlPanelState
 ] = EsphomeEnumMapper(
     {
@@ -94,7 +94,7 @@ class EsphomeAlarmControlPanel(
     @esphome_state_property
     def alarm_state(self) -> AlarmControlPanelState | None:
         """Return the state of the device."""
-        return _ESPHOME_ACP_STATE_TO_HASS_STATE.from_esphome(self._state.state)
+        return _ESPHOME_ACP_STATE_TO_menuai_STATE.from_esphome(self._state.state)
 
     @convert_api_error_ha_error
     async def async_alarm_disarm(self, code: str | None = None) -> None:

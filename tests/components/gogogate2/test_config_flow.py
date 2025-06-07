@@ -7,23 +7,23 @@ from ismartgate import GogoGate2Api, ISmartGateApi
 from ismartgate.common import ApiError
 from ismartgate.const import GogoGate2ApiErrorCode
 
-from homeassistant import config_entries
-from homeassistant.components.gogogate2.const import (
+from menuai import config_entries
+from menuai.components.gogogate2.const import (
     DEVICE_TYPE_GOGOGATE2,
     DEVICE_TYPE_ISMARTGATE,
     DOMAIN,
 )
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import (
+from menuai.config_entries import SOURCE_USER
+from menuai.const import (
     CONF_DEVICE,
     CONF_IP_ADDRESS,
     CONF_PASSWORD,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
-from homeassistant.helpers.service_info.zeroconf import (
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.helpers.service_info.zeroconf import (
     ATTR_PROPERTIES_ID,
     ZeroconfServiceInfo,
 )
@@ -35,10 +35,10 @@ from tests.common import MockConfigEntry
 MOCK_MAC_ADDR = "AA:BB:CC:DD:EE:FF"
 
 
-@patch("homeassistant.components.gogogate2.async_setup_entry", return_value=True)
-@patch("homeassistant.components.gogogate2.common.GogoGate2Api")
+@patch("menuai.components.gogogate2.async_setup_entry", return_value=True)
+@patch("menuai.components.gogogate2.common.GogoGate2Api")
 async def test_auth_fail(
-    gogogate2api_mock, async_setup_entry_mock, hass: HomeAssistant
+    gogogate2api_mock, async_setup_entry_mock, menuai: menuai
 ) -> None:
     """Test authorization failures."""
     api: GogoGate2Api = MagicMock(spec=GogoGate2Api)
@@ -48,10 +48,10 @@ async def test_auth_fail(
     api.async_info.side_effect = ApiError(
         GogoGate2ApiErrorCode.CREDENTIALS_INCORRECT, "blah"
     )
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "gogogate2", context={"source": SOURCE_USER}
     )
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_DEVICE: DEVICE_TYPE_GOGOGATE2,
@@ -68,10 +68,10 @@ async def test_auth_fail(
 
     api.reset_mock()
     api.async_info.side_effect = Exception("Generic connection error.")
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "gogogate2", context={"source": SOURCE_USER}
     )
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_DEVICE: DEVICE_TYPE_GOGOGATE2,
@@ -86,10 +86,10 @@ async def test_auth_fail(
 
     api.reset_mock()
     api.async_info.side_effect = ApiError(0, "blah")
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "gogogate2", context={"source": SOURCE_USER}
     )
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_DEVICE: DEVICE_TYPE_GOGOGATE2,
@@ -103,10 +103,10 @@ async def test_auth_fail(
     assert result["errors"] == {"base": "cannot_connect"}
 
 
-async def test_form_homekit_unique_id_already_setup(hass: HomeAssistant) -> None:
+async def test_form_homekit_unique_id_already_setup(menuai: menuai) -> None:
     """Test that we abort from homekit if gogogate2 is already setup."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_HOMEKIT},
         data=ZeroconfServiceInfo(
@@ -123,7 +123,7 @@ async def test_form_homekit_unique_id_already_setup(hass: HomeAssistant) -> None
     assert result["errors"] == {}
     flow = next(
         flow
-        for flow in hass.config_entries.flow.async_progress()
+        for flow in menuai.config_entries.flow.async_progress()
         if flow["flow_id"] == result["flow_id"]
     )
     assert flow["context"]["unique_id"] == MOCK_MAC_ADDR
@@ -132,9 +132,9 @@ async def test_form_homekit_unique_id_already_setup(hass: HomeAssistant) -> None
         domain=DOMAIN,
         data={CONF_IP_ADDRESS: "1.2.3.4", CONF_USERNAME: "mock", CONF_PASSWORD: "mock"},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_HOMEKIT},
         data=ZeroconfServiceInfo(
@@ -150,16 +150,16 @@ async def test_form_homekit_unique_id_already_setup(hass: HomeAssistant) -> None
     assert result["type"] is FlowResultType.ABORT
 
 
-async def test_form_homekit_ip_address_already_setup(hass: HomeAssistant) -> None:
+async def test_form_homekit_ip_address_already_setup(menuai: menuai) -> None:
     """Test that we abort from homekit if gogogate2 is already setup."""
 
     entry = MockConfigEntry(
         domain=DOMAIN,
         data={CONF_IP_ADDRESS: "1.2.3.4", CONF_USERNAME: "mock", CONF_PASSWORD: "mock"},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_HOMEKIT},
         data=ZeroconfServiceInfo(
@@ -175,10 +175,10 @@ async def test_form_homekit_ip_address_already_setup(hass: HomeAssistant) -> Non
     assert result["type"] is FlowResultType.ABORT
 
 
-async def test_form_homekit_ip_address(hass: HomeAssistant) -> None:
+async def test_form_homekit_ip_address(menuai: menuai) -> None:
     """Test homekit includes the defaults ip address."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_HOMEKIT},
         data=ZeroconfServiceInfo(
@@ -203,10 +203,10 @@ async def test_form_homekit_ip_address(hass: HomeAssistant) -> None:
     }
 
 
-@patch("homeassistant.components.gogogate2.async_setup_entry", return_value=True)
-@patch("homeassistant.components.gogogate2.common.ISmartGateApi")
+@patch("menuai.components.gogogate2.async_setup_entry", return_value=True)
+@patch("menuai.components.gogogate2.common.ISmartGateApi")
 async def test_discovered_dhcp(
-    ismartgateapi_mock, async_setup_entry_mock, hass: HomeAssistant
+    ismartgateapi_mock, async_setup_entry_mock, menuai: menuai
 ) -> None:
     """Test we get the form with homekit and abort for dhcp source when we get both."""
     api: ISmartGateApi = MagicMock(spec=ISmartGateApi)
@@ -214,7 +214,7 @@ async def test_discovered_dhcp(
 
     api.reset_mock()
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_DHCP},
         data=DhcpServiceInfo(
@@ -223,7 +223,7 @@ async def test_discovered_dhcp(
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_DEVICE: DEVICE_TYPE_ISMARTGATE,
@@ -239,7 +239,7 @@ async def test_discovered_dhcp(
 
     closed_door_response = _mocked_ismartgate_closed_door_response()
     api.async_info.return_value = closed_door_response
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result2["flow_id"],
         user_input={
             CONF_DEVICE: DEVICE_TYPE_ISMARTGATE,
@@ -258,10 +258,10 @@ async def test_discovered_dhcp(
     }
 
 
-async def test_discovered_by_homekit_and_dhcp(hass: HomeAssistant) -> None:
+async def test_discovered_by_homekit_and_dhcp(menuai: menuai) -> None:
     """Test we get the form with homekit and abort for dhcp source when we get both."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_HOMEKIT},
         data=ZeroconfServiceInfo(
@@ -277,7 +277,7 @@ async def test_discovered_by_homekit_and_dhcp(hass: HomeAssistant) -> None:
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    result2 = await hass.config_entries.flow.async_init(
+    result2 = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_DHCP},
         data=DhcpServiceInfo(
@@ -287,7 +287,7 @@ async def test_discovered_by_homekit_and_dhcp(hass: HomeAssistant) -> None:
     assert result2["type"] is FlowResultType.ABORT
     assert result2["reason"] == "already_in_progress"
 
-    result3 = await hass.config_entries.flow.async_init(
+    result3 = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_DHCP},
         data=DhcpServiceInfo(

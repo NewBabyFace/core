@@ -5,9 +5,9 @@ from typing import Any
 
 import pytest
 
-from homeassistant.components.rest_command import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.rest_command import DOMAIN
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import assert_setup_component
 
@@ -31,13 +31,13 @@ TEST_CONFIG = {
 
 @pytest.fixture(name="setup_component")
 async def mock_setup_component(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> ComponentSetup:
     """Set up the rest_command component."""
 
     async def _setup_func(alternative_config: dict[str, Any] | None = None) -> None:
         config = alternative_config or TEST_CONFIG
         with assert_setup_component(len(config)):
-            await async_setup_component(hass, DOMAIN, {DOMAIN: config})
+            await async_setup_component(menuai, DOMAIN, {DOMAIN: config})
 
     return _setup_func

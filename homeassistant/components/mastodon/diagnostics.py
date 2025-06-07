@@ -6,17 +6,17 @@ from typing import Any
 
 from mastodon.Mastodon import Account, Instance
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .coordinator import MastodonConfigEntry
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, config_entry: MastodonConfigEntry
+    menuai: menuai, config_entry: MastodonConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
 
-    instance, account = await hass.async_add_executor_job(
+    instance, account = await menuai.async_add_executor_job(
         get_diagnostics,
         config_entry,
     )

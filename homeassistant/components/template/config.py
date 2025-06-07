@@ -7,28 +7,28 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.alarm_control_panel import (
+from menuai.components.alarm_control_panel import (
     DOMAIN as DOMAIN_ALARM_CONTROL_PANEL,
 )
-from homeassistant.components.binary_sensor import DOMAIN as DOMAIN_BINARY_SENSOR
-from homeassistant.components.blueprint import (
+from menuai.components.binary_sensor import DOMAIN as DOMAIN_BINARY_SENSOR
+from menuai.components.blueprint import (
     is_blueprint_instance_config,
     schemas as blueprint_schemas,
 )
-from homeassistant.components.button import DOMAIN as DOMAIN_BUTTON
-from homeassistant.components.cover import DOMAIN as DOMAIN_COVER
-from homeassistant.components.fan import DOMAIN as DOMAIN_FAN
-from homeassistant.components.image import DOMAIN as DOMAIN_IMAGE
-from homeassistant.components.light import DOMAIN as DOMAIN_LIGHT
-from homeassistant.components.lock import DOMAIN as DOMAIN_LOCK
-from homeassistant.components.number import DOMAIN as DOMAIN_NUMBER
-from homeassistant.components.select import DOMAIN as DOMAIN_SELECT
-from homeassistant.components.sensor import DOMAIN as DOMAIN_SENSOR
-from homeassistant.components.switch import DOMAIN as DOMAIN_SWITCH
-from homeassistant.components.vacuum import DOMAIN as DOMAIN_VACUUM
-from homeassistant.components.weather import DOMAIN as DOMAIN_WEATHER
-from homeassistant.config import async_log_schema_error, config_without_domain
-from homeassistant.const import (
+from menuai.components.button import DOMAIN as DOMAIN_BUTTON
+from menuai.components.cover import DOMAIN as DOMAIN_COVER
+from menuai.components.fan import DOMAIN as DOMAIN_FAN
+from menuai.components.image import DOMAIN as DOMAIN_IMAGE
+from menuai.components.light import DOMAIN as DOMAIN_LIGHT
+from menuai.components.lock import DOMAIN as DOMAIN_LOCK
+from menuai.components.number import DOMAIN as DOMAIN_NUMBER
+from menuai.components.select import DOMAIN as DOMAIN_SELECT
+from menuai.components.sensor import DOMAIN as DOMAIN_SENSOR
+from menuai.components.switch import DOMAIN as DOMAIN_SWITCH
+from menuai.components.vacuum import DOMAIN as DOMAIN_VACUUM
+from menuai.components.weather import DOMAIN as DOMAIN_WEATHER
+from menuai.config import async_log_schema_error, config_without_domain
+from menuai.const import (
     CONF_ACTION,
     CONF_ACTIONS,
     CONF_BINARY_SENSORS,
@@ -41,12 +41,12 @@ from homeassistant.const import (
     CONF_UNIQUE_ID,
     CONF_VARIABLES,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.condition import async_validate_conditions_config
-from homeassistant.helpers.trigger import async_validate_trigger_config
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.setup import async_notify_setup_error
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.condition import async_validate_conditions_config
+from menuai.helpers.trigger import async_validate_trigger_config
+from menuai.helpers.typing import ConfigType
+from menuai.setup import async_notify_setup_error
 
 from . import (
     alarm_control_panel as alarm_control_panel_platform,
@@ -171,7 +171,7 @@ TEMPLATE_BLUEPRINT_SCHEMA = vol.All(
 
 
 async def _async_resolve_blueprints(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
 ) -> TemplateConfig:
     """If a config item requires a blueprint, resolve that item to an actual config."""
@@ -182,7 +182,7 @@ async def _async_resolve_blueprints(
         raw_config = dict(config)
 
     if is_blueprint_instance_config(config):
-        blueprints = async_get_blueprints(hass)
+        blueprints = async_get_blueprints(menuai)
 
         blueprint_inputs = await blueprints.async_inputs_from_config(
             _backward_compat_schema(config)
@@ -215,26 +215,26 @@ async def _async_resolve_blueprints(
 
 
 async def async_validate_config_section(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> TemplateConfig:
     """Validate an entire config section for the template integration."""
 
-    validated_config = await _async_resolve_blueprints(hass, config)
+    validated_config = await _async_resolve_blueprints(menuai, config)
 
     if CONF_TRIGGERS in validated_config:
         validated_config[CONF_TRIGGERS] = await async_validate_trigger_config(
-            hass, validated_config[CONF_TRIGGERS]
+            menuai, validated_config[CONF_TRIGGERS]
         )
 
     if CONF_CONDITIONS in validated_config:
         validated_config[CONF_CONDITIONS] = await async_validate_conditions_config(
-            hass, validated_config[CONF_CONDITIONS]
+            menuai, validated_config[CONF_CONDITIONS]
         )
 
     return validated_config
 
 
-async def async_validate_config(hass: HomeAssistant, config: ConfigType) -> ConfigType:
+async def async_validate_config(menuai: menuai, config: ConfigType) -> ConfigType:
     """Validate config."""
     if DOMAIN not in config:
         return config
@@ -244,11 +244,11 @@ async def async_validate_config(hass: HomeAssistant, config: ConfigType) -> Conf
     for cfg in cv.ensure_list(config[DOMAIN]):
         try:
             template_config: TemplateConfig = await async_validate_config_section(
-                hass, cfg
+                menuai, cfg
             )
         except vol.Invalid as err:
-            async_log_schema_error(err, DOMAIN, cfg, hass)
-            async_notify_setup_error(hass, DOMAIN)
+            async_log_schema_error(err, DOMAIN, cfg, menuai)
+            async_notify_setup_error(menuai, DOMAIN)
             continue
 
         legacy_warn_printed = False
@@ -280,7 +280,7 @@ async def async_validate_config(hass: HomeAssistant, config: ConfigType) -> Conf
             definitions = (
                 list(template_config[new_key]) if new_key in template_config else []
             )
-            definitions.extend(transform(hass, template_config[old_key]))
+            definitions.extend(transform(menuai, template_config[old_key]))
             template_config = TemplateConfig({**template_config, new_key: definitions})
 
         config_sections.append(template_config)

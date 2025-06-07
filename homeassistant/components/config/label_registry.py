@@ -4,11 +4,11 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.components.websocket_api import ActiveConnection
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv, label_registry as lr
-from homeassistant.helpers.label_registry import LabelEntry
+from menuai.components import websocket_api
+from menuai.components.websocket_api import ActiveConnection
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv, label_registry as lr
+from menuai.helpers.label_registry import LabelEntry
 
 SUPPORTED_LABEL_THEME_COLORS = {
     "primary",
@@ -41,12 +41,12 @@ SUPPORTED_LABEL_THEME_COLORS = {
 
 
 @callback
-def async_setup(hass: HomeAssistant) -> bool:
+def async_setup(menuai: menuai) -> bool:
     """Register the Label Registry WS commands."""
-    websocket_api.async_register_command(hass, websocket_list_labels)
-    websocket_api.async_register_command(hass, websocket_create_label)
-    websocket_api.async_register_command(hass, websocket_delete_label)
-    websocket_api.async_register_command(hass, websocket_update_label)
+    websocket_api.async_register_command(menuai, websocket_list_labels)
+    websocket_api.async_register_command(menuai, websocket_create_label)
+    websocket_api.async_register_command(menuai, websocket_delete_label)
+    websocket_api.async_register_command(menuai, websocket_update_label)
     return True
 
 
@@ -57,10 +57,10 @@ def async_setup(hass: HomeAssistant) -> bool:
 )
 @callback
 def websocket_list_labels(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle list labels command."""
-    registry = lr.async_get(hass)
+    registry = lr.async_get(menuai)
     connection.send_result(
         msg["id"],
         [_entry_dict(entry) for entry in registry.async_list_labels()],
@@ -81,10 +81,10 @@ def websocket_list_labels(
 @websocket_api.require_admin
 @callback
 def websocket_create_label(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Create label command."""
-    registry = lr.async_get(hass)
+    registry = lr.async_get(menuai)
 
     data = dict(msg)
     data.pop("type")
@@ -107,10 +107,10 @@ def websocket_create_label(
 @websocket_api.require_admin
 @callback
 def websocket_delete_label(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Delete label command."""
-    registry = lr.async_get(hass)
+    registry = lr.async_get(menuai)
 
     try:
         registry.async_delete(msg["label_id"])
@@ -135,10 +135,10 @@ def websocket_delete_label(
 @websocket_api.require_admin
 @callback
 def websocket_update_label(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle update label websocket command."""
-    registry = lr.async_get(hass)
+    registry = lr.async_get(menuai)
 
     data = dict(msg)
     data.pop("type")

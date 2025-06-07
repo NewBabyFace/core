@@ -9,13 +9,13 @@ from freezegun.api import FrozenDateTimeFactory
 from incomfortclient import InvalidGateway, InvalidHeaterList
 import pytest
 
-from homeassistant.components.incomfort import DOMAIN
-from homeassistant.components.incomfort.coordinator import UPDATE_INTERVAL
-from homeassistant.config_entries import ConfigEntry, ConfigEntryState
-from homeassistant.const import STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.device_registry import DeviceRegistry
+from menuai.components.incomfort import DOMAIN
+from menuai.components.incomfort.coordinator import UPDATE_INTERVAL
+from menuai.config_entries import ConfigEntry, ConfigEntryState
+from menuai.const import STATE_UNAVAILABLE
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.helpers.device_registry import DeviceRegistry
 
 from .conftest import MOCK_HEATER_STATUS
 
@@ -24,13 +24,13 @@ from tests.common import MockConfigEntry, async_fire_time_changed
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_setup_platforms(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_incomfort: MagicMock,
     entity_registry: er.EntityRegistry,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test the incomfort integration is set up correctly."""
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
     assert mock_config_entry.state is ConfigEntryState.LOADED
 
 
@@ -39,7 +39,7 @@ async def test_setup_platforms(
     "mock_heater_status", [MOCK_HEATER_STATUS | {"serial_no": "c01d00c0ffee"}]
 )
 async def test_stale_devices_cleanup(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: DeviceRegistry,
     mock_incomfort: MagicMock,
     entity_registry: er.EntityRegistry,
@@ -48,9 +48,9 @@ async def test_stale_devices_cleanup(
 ) -> None:
     """Test the incomfort integration is cleaning up stale devices."""
     # Setup an old heater with serial_no c01d00c0ffee
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
     assert mock_config_entry.state is ConfigEntryState.LOADED
-    await hass.config_entries.async_unload(mock_config_entry.entry_id)
+    await menuai.config_entries.async_unload(mock_config_entry.entry_id)
     old_entries = device_registry.devices.get_devices_for_config_entry_id(
         mock_config_entry.entry_id
     )
@@ -64,7 +64,7 @@ async def test_stale_devices_cleanup(
     assert old_climate is not None
 
     mock_heater_status["serial_no"] = "c0ffeec0ffee"
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
     assert mock_config_entry.state is ConfigEntryState.LOADED
 
     new_entries = device_registry.devices.get_devices_for_config_entry_id(
@@ -85,32 +85,32 @@ async def test_stale_devices_cleanup(
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_coordinator_updates(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_incomfort: MagicMock,
     freezer: FrozenDateTimeFactory,
     mock_config_entry: ConfigEntry,
 ) -> None:
     """Test the incomfort coordinator is updating."""
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    state = hass.states.get("climate.thermostat_1")
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    state = menuai.states.get("climate.thermostat_1")
     assert state is not None
     assert state.attributes["current_temperature"] == 21.4
     mock_incomfort().mock_room_status["room_temp"] = 20.91
 
-    state = hass.states.get("sensor.boiler_pressure")
+    state = menuai.states.get("sensor.boiler_pressure")
     assert state is not None
     assert state.state == "1.86"
     mock_incomfort().mock_heater_status["pressure"] = 1.84
 
     freezer.tick(timedelta(seconds=UPDATE_INTERVAL + 5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get("climate.thermostat_1")
+    state = menuai.states.get("climate.thermostat_1")
     assert state is not None
     assert state.attributes["current_temperature"] == 20.9
 
-    state = hass.states.get("sensor.boiler_pressure")
+    state = menuai.states.get("sensor.boiler_pressure")
     assert state is not None
     assert state.state == "1.84"
 
@@ -144,15 +144,15 @@ async def test_coordinator_updates(
     ],
 )
 async def test_coordinator_update_fails(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_incomfort: MagicMock,
     freezer: FrozenDateTimeFactory,
     exc: Exception,
     mock_config_entry: ConfigEntry,
 ) -> None:
     """Test the incomfort coordinator update fails."""
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    state = hass.states.get("sensor.boiler_pressure")
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    state = menuai.states.get("sensor.boiler_pressure")
     assert state is not None
     assert state.state == "1.86"
 
@@ -160,10 +160,10 @@ async def test_coordinator_update_fails(
         mock_incomfort().heaters.return_value[0], "update", side_effect=exc
     ):
         freezer.tick(timedelta(seconds=UPDATE_INTERVAL + 5))
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done(wait_background_tasks=True)
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get("sensor.boiler_pressure")
+    state = menuai.states.get("sensor.boiler_pressure")
     assert state is not None
     assert state.state == STATE_UNAVAILABLE
 
@@ -207,7 +207,7 @@ async def test_coordinator_update_fails(
     ],
 )
 async def test_entry_setup_fails(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_incomfort: MagicMock,
     freezer: FrozenDateTimeFactory,
     mock_config_entry: ConfigEntry,
@@ -216,10 +216,10 @@ async def test_entry_setup_fails(
 ) -> None:
     """Test the incomfort coordinator entry setup fails."""
     with patch(
-        "homeassistant.components.incomfort.async_connect_gateway",
+        "menuai.components.incomfort.async_connect_gateway",
         AsyncMock(side_effect=exc),
     ):
-        await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    state = hass.states.get("sensor.boiler_pressure")
+        await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    state = menuai.states.get("sensor.boiler_pressure")
     assert state is None
     assert mock_config_entry.state is config_entry_state

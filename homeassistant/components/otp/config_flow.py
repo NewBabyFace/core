@@ -10,9 +10,9 @@ from typing import Any
 import pyotp
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_CODE, CONF_NAME, CONF_TOKEN
-from homeassistant.helpers.selector import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_CODE, CONF_NAME, CONF_TOKEN
+from menuai.helpers.selector import (
     BooleanSelector,
     BooleanSelectorConfig,
     QrCodeSelector,
@@ -50,7 +50,7 @@ class TOTPConfigFlow(ConfigFlow, domain=DOMAIN):
             if user_input.get(CONF_TOKEN) and not user_input.get(CONF_NEW_TOKEN):
                 user_input[CONF_TOKEN] = sub(r"\s+", "", user_input[CONF_TOKEN])
                 try:
-                    await self.hass.async_add_executor_job(
+                    await self.menuai.async_add_executor_job(
                         pyotp.TOTP(user_input[CONF_TOKEN]).now
                     )
                 except binascii.Error:
@@ -66,7 +66,7 @@ class TOTPConfigFlow(ConfigFlow, domain=DOMAIN):
                         data=user_input,
                     )
             elif user_input.get(CONF_NEW_TOKEN):
-                user_input[CONF_TOKEN] = await self.hass.async_add_executor_job(
+                user_input[CONF_TOKEN] = await self.menuai.async_add_executor_job(
                     pyotp.random_base32
                 )
                 self.user_input = user_input
@@ -90,7 +90,7 @@ class TOTPConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            if await self.hass.async_add_executor_job(
+            if await self.menuai.async_add_executor_job(
                 pyotp.TOTP(self.user_input[CONF_TOKEN]).verify, user_input["code"]
             ):
                 return self.async_create_entry(
@@ -103,10 +103,10 @@ class TOTPConfigFlow(ConfigFlow, domain=DOMAIN):
 
             errors["base"] = "invalid_code"
 
-        provisioning_uri = await self.hass.async_add_executor_job(
+        provisioning_uri = await self.menuai.async_add_executor_job(
             pyotp.TOTP(self.user_input[CONF_TOKEN]).provisioning_uri,
             self.user_input[CONF_NAME],
-            "Home Assistant",
+            "MenuAI",
         )
         data_schema = STEP_CONFIRM_DATA_SCHEMA.extend(
             {

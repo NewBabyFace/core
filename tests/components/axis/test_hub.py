@@ -11,14 +11,14 @@ import axis as axislib
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components import axis
-from homeassistant.components.axis.const import DOMAIN
-from homeassistant.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
-from homeassistant.config_entries import SOURCE_ZEROCONF, ConfigEntryState
-from homeassistant.const import STATE_OFF, STATE_ON, STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.components import axis
+from menuai.components.axis.const import DOMAIN
+from menuai.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
+from menuai.config_entries import SOURCE_ZEROCONF, ConfigEntryState
+from menuai.const import STATE_OFF, STATE_ON, STATE_UNAVAILABLE
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .conftest import RtspEventMock, RtspStateType
 from .const import (
@@ -51,7 +51,7 @@ async def test_device_registry_entry(
 @pytest.mark.parametrize("api_discovery_items", [API_DISCOVERY_MQTT])
 @pytest.mark.usefixtures("config_entry_setup")
 async def test_device_support_mqtt(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Successful setup."""
     mqtt_call = call(f"axis/{MAC}/#", mock.ANY, 0, "utf-8", ANY)
@@ -63,12 +63,12 @@ async def test_device_support_mqtt(
         b' "message": {"source": {"sensor": "0"}, "key": {}, "data": {"state": "1"}}}'
     )
 
-    assert len(hass.states.async_entity_ids(BINARY_SENSOR_DOMAIN)) == 0
-    async_fire_mqtt_message(hass, topic, message)
-    await hass.async_block_till_done()
-    assert len(hass.states.async_entity_ids(BINARY_SENSOR_DOMAIN)) == 1
+    assert len(menuai.states.async_entity_ids(BINARY_SENSOR_DOMAIN)) == 0
+    async_fire_mqtt_message(menuai, topic, message)
+    await menuai.async_block_till_done()
+    assert len(menuai.states.async_entity_ids(BINARY_SENSOR_DOMAIN)) == 1
 
-    pir = hass.states.get(f"{BINARY_SENSOR_DOMAIN}.{NAME}_pir_0")
+    pir = menuai.states.get(f"{BINARY_SENSOR_DOMAIN}.{NAME}_pir_0")
     assert pir.state == STATE_ON
     assert pir.name == f"{NAME} PIR 0"
 
@@ -83,7 +83,7 @@ async def test_device_support_mqtt_low_privilege(mqtt_mock: MqttMockHAClient) ->
 
 
 async def test_update_address(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry_setup: MockConfigEntry,
     mock_requests: Callable[[str], None],
 ) -> None:
@@ -92,7 +92,7 @@ async def test_update_address(
     assert hub.api.config.host == "1.2.3.4"
 
     mock_requests("2.3.4.5")
-    await hass.config_entries.flow.async_init(
+    await menuai.config_entries.flow.async_init(
         DOMAIN,
         data=ZeroconfServiceInfo(
             ip_address=ip_address("2.3.4.5"),
@@ -105,14 +105,14 @@ async def test_update_address(
         ),
         context={"source": SOURCE_ZEROCONF},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert hub.api.config.host == "2.3.4.5"
 
 
 @pytest.mark.usefixtures("config_entry_setup")
 async def test_device_unavailable(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_rtsp_event: RtspEventMock,
     mock_rtsp_signal_state: RtspStateType,
 ) -> None:
@@ -125,55 +125,55 @@ async def test_device_unavailable(
         source_name="channel",
         source_idx="1",
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(f"{BINARY_SENSOR_DOMAIN}.{NAME}_sound_1").state == STATE_OFF
+    assert menuai.states.get(f"{BINARY_SENSOR_DOMAIN}.{NAME}_sound_1").state == STATE_OFF
 
     # Connection to device has failed
 
     mock_rtsp_signal_state(connected=False)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert (
-        hass.states.get(f"{BINARY_SENSOR_DOMAIN}.{NAME}_sound_1").state
+        menuai.states.get(f"{BINARY_SENSOR_DOMAIN}.{NAME}_sound_1").state
         == STATE_UNAVAILABLE
     )
 
     # Connection to device has been restored
 
     mock_rtsp_signal_state(connected=True)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(f"{BINARY_SENSOR_DOMAIN}.{NAME}_sound_1").state == STATE_OFF
+    assert menuai.states.get(f"{BINARY_SENSOR_DOMAIN}.{NAME}_sound_1").state == STATE_OFF
 
 
 @pytest.mark.usefixtures("mock_default_requests")
 async def test_device_trigger_reauth_flow(
-    hass: HomeAssistant, config_entry: MockConfigEntry
+    menuai: menuai, config_entry: MockConfigEntry
 ) -> None:
     """Failed authentication trigger a reauthentication flow."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     with (
         patch.object(
             axis, "get_axis_api", side_effect=axis.errors.AuthenticationRequired
         ),
-        patch.object(hass.config_entries.flow, "async_init") as mock_flow_init,
+        patch.object(menuai.config_entries.flow, "async_init") as mock_flow_init,
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
         mock_flow_init.assert_called_once()
     assert config_entry.state == ConfigEntryState.SETUP_ERROR
 
 
 async def test_shutdown(config_entry_data: MappingProxyType[str, Any]) -> None:
     """Successful shutdown."""
-    hass = Mock()
+    menuai = Mock()
     entry = Mock()
     entry.data = config_entry_data
 
     mock_api = Mock()
     mock_api.vapix.serial_number = FORMATTED_MAC
-    axis_device = axis.hub.AxisHub(hass, entry, mock_api)
+    axis_device = axis.hub.AxisHub(menuai, entry, mock_api)
 
     await axis_device.shutdown(None)
 
@@ -194,17 +194,17 @@ async def test_shutdown(config_entry_data: MappingProxyType[str, Any]) -> None:
 )
 @pytest.mark.usefixtures("mock_default_requests")
 async def test_get_axis_api_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     side_effect: Exception,
     state: ConfigEntryState,
 ) -> None:
     """Failed setup schedules a retry of setup."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     with patch(
-        "homeassistant.components.axis.hub.api.axis.interfaces.vapix.Vapix.initialize",
+        "menuai.components.axis.hub.api.axis.interfaces.vapix.Vapix.initialize",
         side_effect=side_effect,
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
     assert config_entry.state == state

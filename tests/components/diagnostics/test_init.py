@@ -5,12 +5,12 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from homeassistant.components.websocket_api import TYPE_RESULT
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.system_info import async_get_system_info
-from homeassistant.loader import async_get_integration
-from homeassistant.setup import async_setup_component
+from menuai.components.websocket_api import TYPE_RESULT
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.helpers.system_info import async_get_system_info
+from menuai.loader import async_get_integration
+from menuai.setup import async_setup_component
 
 from . import _get_diagnostics_for_config_entry, _get_diagnostics_for_device
 
@@ -19,11 +19,11 @@ from tests.typing import ClientSessionGenerator, WebSocketGenerator
 
 
 @pytest.fixture(autouse=True)
-async def mock_diagnostics_integration(hass: HomeAssistant) -> None:
+async def mock_diagnostics_integration(menuai: menuai) -> None:
     """Mock a diagnostics integration."""
-    hass.config.components.add("fake_integration")
+    menuai.config.components.add("fake_integration")
     mock_platform(
-        hass,
+        menuai,
         "fake_integration.diagnostics",
         Mock(
             async_get_config_entry_diagnostics=AsyncMock(
@@ -39,18 +39,18 @@ async def mock_diagnostics_integration(hass: HomeAssistant) -> None:
         ),
     )
     mock_platform(
-        hass,
+        menuai,
         "integration_without_diagnostics.diagnostics",
         Mock(),
     )
-    assert await async_setup_component(hass, "diagnostics", {})
+    assert await async_setup_component(menuai, "diagnostics", {})
 
 
 async def test_websocket(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test websocket command."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json({"id": 5, "type": "diagnostics/list"})
 
     msg = await client.receive_json()
@@ -82,25 +82,25 @@ async def test_websocket(
 
 @pytest.mark.usefixtures("enable_custom_integrations")
 async def test_download_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     device_registry: dr.DeviceRegistry,
 ) -> None:
     """Test download diagnostics."""
     config_entry = MockConfigEntry(domain="fake_integration")
-    config_entry.add_to_hass(hass)
-    hass_sys_info = await async_get_system_info(hass)
-    hass_sys_info["run_as_root"] = hass_sys_info["user"] == "root"
-    del hass_sys_info["user"]
-    integration = await async_get_integration(hass, "fake_integration")
+    config_entry.add_to_menuai(menuai)
+    menuai_sys_info = await async_get_system_info(menuai)
+    menuai_sys_info["run_as_root"] = menuai_sys_info["user"] == "root"
+    del menuai_sys_info["user"]
+    integration = await async_get_integration(menuai, "fake_integration")
     original_manifest = integration.manifest.copy()
     original_manifest["codeowners"] = ["@test"]
     with patch.object(integration, "manifest", original_manifest):
         response = await _get_diagnostics_for_config_entry(
-            hass, hass_client, config_entry
+            menuai, menuai_client, config_entry
         )
     assert response == {
-        "home_assistant": hass_sys_info,
+        "home_assistant": menuai_sys_info,
         "setup_times": {},
         "custom_components": {
             "test": {
@@ -186,9 +186,9 @@ async def test_download_diagnostics(
     )
 
     assert await _get_diagnostics_for_device(
-        hass, hass_client, config_entry, device
+        menuai, menuai_client, config_entry, device
     ) == {
-        "home_assistant": hass_sys_info,
+        "home_assistant": menuai_sys_info,
         "custom_components": {
             "test": {
                 "documentation": "http://example.com",
@@ -271,10 +271,10 @@ async def test_download_diagnostics(
 
 
 async def test_failure_scenarios(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test failure scenarios."""
-    client = await hass_client()
+    client = await menuai_client()
 
     # test wrong d_type
     response = await client.get("/api/diagnostics/wrong_type/fake_id")
@@ -285,7 +285,7 @@ async def test_failure_scenarios(
     assert response.status == HTTPStatus.NOT_FOUND
 
     config_entry = MockConfigEntry(domain="integration_without_diagnostics")
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     # test valid d_type and d_id but no config entry diagnostics
     response = await client.get(
@@ -294,7 +294,7 @@ async def test_failure_scenarios(
     assert response.status == HTTPStatus.NOT_FOUND
 
     config_entry = MockConfigEntry(domain="fake_integration")
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     # test invalid sub_type
     response = await client.get(

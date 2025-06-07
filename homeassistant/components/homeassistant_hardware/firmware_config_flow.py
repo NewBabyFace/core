@@ -1,4 +1,4 @@
-"""Config flow for the Home Assistant SkyConnect integration."""
+"""Config flow for the MenuAI SkyConnect integration."""
 
 from __future__ import annotations
 
@@ -7,22 +7,22 @@ import asyncio
 import logging
 from typing import Any
 
-from homeassistant.components.hassio import (
+from menuai.components.menuaiio import (
     AddonError,
     AddonInfo,
     AddonManager,
     AddonState,
 )
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigEntryBaseFlow,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.core import callback
-from homeassistant.data_entry_flow import AbortFlow
-from homeassistant.helpers.hassio import is_hassio
+from menuai.core import callback
+from menuai.data_entry_flow import AbortFlow
+from menuai.helpers.menuaiio import is_menuaiio
 
 from . import silabs_multiprotocol_addon
 from .const import OTBR_DOMAIN, ZHA_DOMAIN
@@ -167,14 +167,14 @@ class BaseFirmwareInstallFlow(ConfigEntryBaseFlow, ABC):
         ):
             return await self.async_step_confirm_zigbee()
 
-        if not is_hassio(self.hass):
+        if not is_menuaiio(self.menuai):
             return self.async_abort(
-                reason="not_hassio",
+                reason="not_menuaiio",
                 description_placeholders=self._get_translation_placeholders(),
             )
 
         # Only flash new firmware if we need to
-        fw_flasher_manager = get_zigbee_flasher_addon_manager(self.hass)
+        fw_flasher_manager = get_zigbee_flasher_addon_manager(self.menuai)
         addon_info = await self._async_get_addon_info(fw_flasher_manager)
 
         if addon_info.state == AddonState.NOT_INSTALLED:
@@ -197,7 +197,7 @@ class BaseFirmwareInstallFlow(ConfigEntryBaseFlow, ABC):
     ) -> ConfigFlowResult:
         """Show progress dialog for installing the Zigbee flasher addon."""
         return await self._install_addon(
-            get_zigbee_flasher_addon_manager(self.hass),
+            get_zigbee_flasher_addon_manager(self.menuai),
             "install_zigbee_flasher_addon",
             "run_zigbee_flasher_addon",
         )
@@ -214,7 +214,7 @@ class BaseFirmwareInstallFlow(ConfigEntryBaseFlow, ABC):
         _LOGGER.debug("Flasher addon state: %s", addon_info)
 
         if not self.addon_install_task:
-            self.addon_install_task = self.hass.async_create_task(
+            self.addon_install_task = self.menuai.async_create_task(
                 addon_manager.async_install_addon_waiting(),
                 "Addon install",
             )
@@ -258,7 +258,7 @@ class BaseFirmwareInstallFlow(ConfigEntryBaseFlow, ABC):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Configure the flasher addon to point to the SkyConnect and run it."""
-        fw_flasher_manager = get_zigbee_flasher_addon_manager(self.hass)
+        fw_flasher_manager = get_zigbee_flasher_addon_manager(self.menuai)
         addon_info = await self._async_get_addon_info(fw_flasher_manager)
 
         assert self._device is not None
@@ -282,7 +282,7 @@ class BaseFirmwareInstallFlow(ConfigEntryBaseFlow, ABC):
                     AddonState.NOT_RUNNING
                 )
 
-            self.addon_start_task = self.hass.async_create_task(
+            self.addon_start_task = self.menuai.async_create_task(
                 start_and_wait_until_done()
             )
 
@@ -315,11 +315,11 @@ class BaseFirmwareInstallFlow(ConfigEntryBaseFlow, ABC):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Uninstall the flasher addon."""
-        fw_flasher_manager = get_zigbee_flasher_addon_manager(self.hass)
+        fw_flasher_manager = get_zigbee_flasher_addon_manager(self.menuai)
 
         if not self.addon_uninstall_task:
             _LOGGER.debug("Uninstalling flasher addon")
-            self.addon_uninstall_task = self.hass.async_create_task(
+            self.addon_uninstall_task = self.menuai.async_create_task(
                 fw_flasher_manager.async_uninstall_addon_waiting()
             )
 
@@ -358,7 +358,7 @@ class BaseFirmwareInstallFlow(ConfigEntryBaseFlow, ABC):
             )
 
         if user_input is not None:
-            await self.hass.config_entries.flow.async_init(
+            await self.menuai.config_entries.flow.async_init(
                 ZHA_DOMAIN,
                 context={"source": "hardware"},
                 data={
@@ -390,13 +390,13 @@ class BaseFirmwareInstallFlow(ConfigEntryBaseFlow, ABC):
             )
 
         # We install the OTBR addon no matter what, since it is required to use Thread
-        if not is_hassio(self.hass):
+        if not is_menuaiio(self.menuai):
             return self.async_abort(
-                reason="not_hassio_thread",
+                reason="not_menuaiio_thread",
                 description_placeholders=self._get_translation_placeholders(),
             )
 
-        otbr_manager = get_otbr_addon_manager(self.hass)
+        otbr_manager = get_otbr_addon_manager(self.menuai)
         addon_info = await self._async_get_addon_info(otbr_manager)
 
         if addon_info.state == AddonState.NOT_INSTALLED:
@@ -419,14 +419,14 @@ class BaseFirmwareInstallFlow(ConfigEntryBaseFlow, ABC):
     ) -> ConfigFlowResult:
         """Show progress dialog for installing the OTBR addon."""
         return await self._install_addon(
-            get_otbr_addon_manager(self.hass), "install_otbr_addon", "start_otbr_addon"
+            get_otbr_addon_manager(self.menuai), "install_otbr_addon", "start_otbr_addon"
         )
 
     async def async_step_start_otbr_addon(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Configure OTBR to point to the SkyConnect and run the addon."""
-        otbr_manager = get_otbr_addon_manager(self.hass)
+        otbr_manager = get_otbr_addon_manager(self.menuai)
         addon_info = await self._async_get_addon_info(otbr_manager)
 
         assert self._device is not None
@@ -442,7 +442,7 @@ class BaseFirmwareInstallFlow(ConfigEntryBaseFlow, ABC):
         await self._async_set_addon_config(new_addon_config, otbr_manager)
 
         if not self.addon_start_task:
-            self.addon_start_task = self.hass.async_create_task(
+            self.addon_start_task = self.menuai.async_create_task(
                 otbr_manager.async_start_addon_waiting()
             )
 
@@ -482,7 +482,7 @@ class BaseFirmwareInstallFlow(ConfigEntryBaseFlow, ABC):
             )
 
         if user_input is not None:
-            # OTBR discovery is done automatically via hassio
+            # OTBR discovery is done automatically via menuaiio
             return self._async_flow_finished()
 
         return self.async_show_form(
@@ -513,12 +513,12 @@ class BaseFirmwareConfigFlow(BaseFirmwareInstallFlow, ConfigFlow):
     ) -> ConfigFlowResult:
         """Confirm a discovery."""
         assert self._device is not None
-        fw_info = await guess_firmware_info(self.hass, self._device)
+        fw_info = await guess_firmware_info(self.menuai, self._device)
 
         # If our guess for the firmware type is actually running, we can save the user
         # an unnecessary confirmation and silently confirm the flow
         for owner in fw_info.owners:
-            if await owner.is_running(self.hass):
+            if await owner.is_running(self.menuai):
                 self._probed_firmware_info = fw_info
                 return self._async_flow_finished()
 
@@ -552,7 +552,7 @@ class BaseFirmwareOptionsFlow(BaseFirmwareInstallFlow, OptionsFlow):
     ) -> ConfigFlowResult:
         """Pick Zigbee firmware."""
         assert self._device is not None
-        owners = await guess_hardware_owners(self.hass, self._device)
+        owners = await guess_hardware_owners(self.menuai, self._device)
 
         for info in owners:
             for owner in info.owners:
@@ -570,7 +570,7 @@ class BaseFirmwareOptionsFlow(BaseFirmwareInstallFlow, OptionsFlow):
         """Pick Thread firmware."""
         assert self._device is not None
 
-        owners = await guess_hardware_owners(self.hass, self._device)
+        owners = await guess_hardware_owners(self.menuai, self._device)
 
         for info in owners:
             for owner in info.owners:

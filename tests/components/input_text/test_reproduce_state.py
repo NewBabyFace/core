@@ -2,9 +2,9 @@
 
 import pytest
 
-from homeassistant.core import HomeAssistant, State
-from homeassistant.helpers.state import async_reproduce_state
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai, State
+from menuai.helpers.state import async_reproduce_state
+from menuai.setup import async_setup_component
 
 VALID_TEXT1 = "Test text"
 VALID_TEXT2 = "LoremIpsum"
@@ -13,13 +13,13 @@ INVALID_TEXT2 = "Short"
 
 
 async def test_reproducing_states(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test reproducing Input text states."""
 
     # Setup entity for testing
     assert await async_setup_component(
-        hass,
+        menuai,
         "input_text",
         {
             "input_text": {
@@ -30,7 +30,7 @@ async def test_reproducing_states(
 
     # These calls should do nothing as entities already in desired state
     await async_reproduce_state(
-        hass,
+        menuai,
         [
             State("input_text.test_text", VALID_TEXT1),
             # Should not raise
@@ -39,11 +39,11 @@ async def test_reproducing_states(
     )
 
     # Test that entity is in desired state
-    assert hass.states.get("input_text.test_text").state == VALID_TEXT1
+    assert menuai.states.get("input_text.test_text").state == VALID_TEXT1
 
     # Try reproducing with different state
     await async_reproduce_state(
-        hass,
+        menuai,
         [
             State("input_text.test_text", VALID_TEXT2),
             # Should not raise
@@ -52,16 +52,16 @@ async def test_reproducing_states(
     )
 
     # Test that the state was changed
-    assert hass.states.get("input_text.test_text").state == VALID_TEXT2
+    assert menuai.states.get("input_text.test_text").state == VALID_TEXT2
 
     # Test setting state to invalid state (length too long)
-    await async_reproduce_state(hass, [State("input_text.test_text", INVALID_TEXT1)])
+    await async_reproduce_state(menuai, [State("input_text.test_text", INVALID_TEXT1)])
 
     # The entity state should be unchanged
-    assert hass.states.get("input_text.test_text").state == VALID_TEXT2
+    assert menuai.states.get("input_text.test_text").state == VALID_TEXT2
 
     # Test setting state to invalid state (length too short)
-    await async_reproduce_state(hass, [State("input_text.test_text", INVALID_TEXT2)])
+    await async_reproduce_state(menuai, [State("input_text.test_text", INVALID_TEXT2)])
 
     # The entity state should be unchanged
-    assert hass.states.get("input_text.test_text").state == VALID_TEXT2
+    assert menuai.states.get("input_text.test_text").state == VALID_TEXT2

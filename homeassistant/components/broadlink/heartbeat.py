@@ -5,9 +5,9 @@ import logging
 
 import broadlink as blk
 
-from homeassistant.const import CONF_HOST
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant
-from homeassistant.helpers import event
+from menuai.const import CONF_HOST
+from menuai.core import CALLBACK_TYPE, menuai
+from menuai.helpers import event
 
 from .const import DOMAIN
 
@@ -23,9 +23,9 @@ class BroadlinkHeartbeat:
 
     HEARTBEAT_INTERVAL = dt.timedelta(minutes=2)
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize the heartbeat."""
-        self._hass = hass
+        self._menuai = menuai
         self._unsubscribe: CALLBACK_TYPE | None = None
 
     async def async_setup(self) -> None:
@@ -33,7 +33,7 @@ class BroadlinkHeartbeat:
         if self._unsubscribe is None:
             await self.async_heartbeat(dt.datetime.now())
             self._unsubscribe = event.async_track_time_interval(
-                self._hass, self.async_heartbeat, self.HEARTBEAT_INTERVAL
+                self._menuai, self.async_heartbeat, self.HEARTBEAT_INTERVAL
             )
 
     async def async_unload(self) -> None:
@@ -44,10 +44,10 @@ class BroadlinkHeartbeat:
 
     async def async_heartbeat(self, _: dt.datetime) -> None:
         """Send packets to feed watchdog timers."""
-        hass = self._hass
-        config_entries = hass.config_entries.async_entries(DOMAIN)
+        menuai = self._menuai
+        config_entries = menuai.config_entries.async_entries(DOMAIN)
         hosts: set[str] = {entry.data[CONF_HOST] for entry in config_entries}
-        await hass.async_add_executor_job(self.heartbeat, hosts)
+        await menuai.async_add_executor_job(self.heartbeat, hosts)
 
     @staticmethod
     def heartbeat(hosts: set[str]) -> None:

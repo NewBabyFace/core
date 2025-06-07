@@ -3,25 +3,25 @@
 from http import HTTPStatus
 from typing import cast
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceEntry
-from homeassistant.setup import async_setup_component
-from homeassistant.util.json import JsonObjectType
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceEntry
+from menuai.setup import async_setup_component
+from menuai.util.json import JsonObjectType
 
 from tests.typing import ClientSessionGenerator
 
 
 async def _get_diagnostics_for_config_entry(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     config_entry: ConfigEntry,
 ) -> JsonObjectType:
     """Return the diagnostics config entry for the specified domain."""
-    assert await async_setup_component(hass, "diagnostics", {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "diagnostics", {})
+    await menuai.async_block_till_done()
 
-    client = await hass_client()
+    client = await menuai_client()
     response = await client.get(
         f"/api/diagnostics/config_entry/{config_entry.entry_id}"
     )
@@ -30,25 +30,25 @@ async def _get_diagnostics_for_config_entry(
 
 
 async def get_diagnostics_for_config_entry(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     config_entry: ConfigEntry,
 ) -> JsonObjectType:
     """Return the diagnostics config entry for the specified domain."""
-    data = await _get_diagnostics_for_config_entry(hass, hass_client, config_entry)
+    data = await _get_diagnostics_for_config_entry(menuai, menuai_client, config_entry)
     return cast(JsonObjectType, data["data"])
 
 
 async def _get_diagnostics_for_device(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     config_entry: ConfigEntry,
     device: DeviceEntry,
 ) -> JsonObjectType:
     """Return the diagnostics for the specified device."""
-    assert await async_setup_component(hass, "diagnostics", {})
+    assert await async_setup_component(menuai, "diagnostics", {})
 
-    client = await hass_client()
+    client = await menuai_client()
     response = await client.get(
         f"/api/diagnostics/config_entry/{config_entry.entry_id}/device/{device.id}"
     )
@@ -57,11 +57,11 @@ async def _get_diagnostics_for_device(
 
 
 async def get_diagnostics_for_device(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     config_entry: ConfigEntry,
     device: DeviceEntry,
 ) -> JsonObjectType:
     """Return the diagnostics for the specified device."""
-    data = await _get_diagnostics_for_device(hass, hass_client, config_entry, device)
+    data = await _get_diagnostics_for_device(menuai, menuai_client, config_entry, device)
     return cast(JsonObjectType, data["data"])

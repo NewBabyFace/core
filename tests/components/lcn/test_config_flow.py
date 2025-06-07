@@ -10,15 +10,15 @@ from pypck.connection import (
 )
 import pytest
 
-from homeassistant import config_entries, data_entry_flow
-from homeassistant.components.lcn.config_flow import LcnFlowHandler, validate_connection
-from homeassistant.components.lcn.const import (
+from menuai import config_entries, data_entry_flow
+from menuai.components.lcn.config_flow import LcnFlowHandler, validate_connection
+from menuai.components.lcn.const import (
     CONF_ACKNOWLEDGE,
     CONF_DIM_MODE,
     CONF_SK_NUM_TRIES,
     DOMAIN,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_BASE,
     CONF_DEVICES,
     CONF_ENTITIES,
@@ -28,7 +28,7 @@ from homeassistant.const import (
     CONF_PORT,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -51,10 +51,10 @@ IMPORT_DATA = {
 }
 
 
-async def test_show_form(hass: HomeAssistant) -> None:
+async def test_show_form(menuai: menuai) -> None:
     """Test that the form is served with no input."""
     flow = LcnFlowHandler()
-    flow.hass = hass
+    flow.menuai = menuai
 
     result = await flow.async_step_user(user_input=None)
 
@@ -62,14 +62,14 @@ async def test_show_form(hass: HomeAssistant) -> None:
     assert result["step_id"] == "user"
 
 
-async def test_step_user(hass: HomeAssistant) -> None:
+async def test_step_user(menuai: menuai) -> None:
     """Test for user step."""
     with (
-        patch("homeassistant.components.lcn.PchkConnectionManager.async_connect"),
-        patch("homeassistant.components.lcn.async_setup_entry", return_value=True),
+        patch("menuai.components.lcn.PchkConnectionManager.async_connect"),
+        patch("menuai.components.lcn.async_setup_entry", return_value=True),
     ):
         data = CONNECTION_DATA.copy()
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}, data=data
         )
 
@@ -83,14 +83,14 @@ async def test_step_user(hass: HomeAssistant) -> None:
 
 
 async def test_step_user_existing_host(
-    hass: HomeAssistant, entry: MockConfigEntry
+    menuai: menuai, entry: MockConfigEntry
 ) -> None:
     """Test for user defined host already exists."""
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    with patch("homeassistant.components.lcn.PchkConnectionManager.async_connect"):
+    with patch("menuai.components.lcn.PchkConnectionManager.async_connect"):
         config_data = entry.data.copy()
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}, data=config_data
         )
 
@@ -108,16 +108,16 @@ async def test_step_user_existing_host(
     ],
 )
 async def test_step_user_error(
-    hass: HomeAssistant, error: type[Exception], errors: dict[str, str]
+    menuai: menuai, error: type[Exception], errors: dict[str, str]
 ) -> None:
     """Test for error in user step is handled correctly."""
     with patch(
-        "homeassistant.components.lcn.PchkConnectionManager.async_connect",
+        "menuai.components.lcn.PchkConnectionManager.async_connect",
         side_effect=error,
     ):
         data = CONNECTION_DATA.copy()
         data.update({CONF_HOST: "pchk"})
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}, data=data
         )
 
@@ -125,27 +125,27 @@ async def test_step_user_error(
         assert result["errors"] == errors
 
 
-async def test_step_reconfigure(hass: HomeAssistant, entry: MockConfigEntry) -> None:
+async def test_step_reconfigure(menuai: menuai, entry: MockConfigEntry) -> None:
     """Test for reconfigure step."""
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     old_entry_data = entry.data.copy()
 
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
     assert result["type"] == data_entry_flow.FlowResultType.FORM
     assert result["step_id"] == "reconfigure"
 
     with (
-        patch("homeassistant.components.lcn.PchkConnectionManager.async_connect"),
-        patch("homeassistant.components.lcn.async_setup_entry", return_value=True),
+        patch("menuai.components.lcn.PchkConnectionManager.async_connect"),
+        patch("menuai.components.lcn.async_setup_entry", return_value=True),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             CONFIG_DATA.copy(),
         )
         assert result["type"] == data_entry_flow.FlowResultType.ABORT
         assert result["reason"] == "reconfigure_successful"
 
-        entry = hass.config_entries.async_get_entry(entry.entry_id)
+        entry = menuai.config_entries.async_get_entry(entry.entry_id)
         assert entry.title == CONNECTION_DATA[CONF_HOST]
         assert entry.data == {**old_entry_data, **CONFIG_DATA}
 
@@ -160,23 +160,23 @@ async def test_step_reconfigure(hass: HomeAssistant, entry: MockConfigEntry) -> 
     ],
 )
 async def test_step_reconfigure_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: MockConfigEntry,
     error: type[Exception],
     errors: dict[str, str],
 ) -> None:
     """Test for error in reconfigure step is handled correctly."""
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
     assert result["type"] == data_entry_flow.FlowResultType.FORM
     assert result["step_id"] == "reconfigure"
 
     with patch(
-        "homeassistant.components.lcn.PchkConnectionManager.async_connect",
+        "menuai.components.lcn.PchkConnectionManager.async_connect",
         side_effect=error,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             CONFIG_DATA.copy(),
         )
@@ -191,10 +191,10 @@ async def test_validate_connection() -> None:
 
     with (
         patch(
-            "homeassistant.components.lcn.PchkConnectionManager.async_connect"
+            "menuai.components.lcn.PchkConnectionManager.async_connect"
         ) as async_connect,
         patch(
-            "homeassistant.components.lcn.PchkConnectionManager.async_close"
+            "menuai.components.lcn.PchkConnectionManager.async_close"
         ) as async_close,
     ):
         result = await validate_connection(data=data)

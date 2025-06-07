@@ -6,9 +6,9 @@ from functools import partial
 
 from aioesphomeapi import ButtonInfo, EntityInfo, EntityState
 
-from homeassistant.components.button import ButtonDeviceClass, ButtonEntity
-from homeassistant.core import callback
-from homeassistant.util.enum import try_parse_enum
+from menuai.components.button import ButtonDeviceClass, ButtonEntity
+from menuai.core import callback
+from menuai.util.enum import try_parse_enum
 
 from .entity import (
     EsphomeEntity,

@@ -9,7 +9,7 @@ from typing import Final, cast
 from aioshelly.block_device import Block
 from aioshelly.const import RPC_GENERATIONS
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     DOMAIN as SENSOR_PLATFORM,
     RestoreSensor,
     SensorDeviceClass,
@@ -18,7 +18,7 @@ from homeassistant.components.sensor import (
     SensorExtraStoredData,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONCENTRATION_PARTS_PER_MILLION,
     DEGREE,
     LIGHT_LUX,
@@ -33,10 +33,10 @@ from homeassistant.const import (
     UnitOfPower,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.entity_registry import RegistryEntry
-from homeassistant.helpers.typing import StateType
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.entity_registry import RegistryEntry
+from menuai.helpers.typing import StateType
 
 from .const import CONF_SLEEP_PERIOD, ROLE_TO_DEVICE_CLASS_MAP
 from .coordinator import ShellyBlockCoordinator, ShellyConfigEntry, ShellyRpcCoordinator
@@ -1431,7 +1431,7 @@ RPC_SENSORS: Final = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ShellyConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -1439,7 +1439,7 @@ async def async_setup_entry(
     if get_device_entry_gen(config_entry) in RPC_GENERATIONS:
         if config_entry.data[CONF_SLEEP_PERIOD]:
             async_setup_entry_rpc(
-                hass,
+                menuai,
                 config_entry,
                 async_add_entities,
                 RPC_SENSORS,
@@ -1450,11 +1450,11 @@ async def async_setup_entry(
             assert coordinator
 
             async_setup_entry_rpc(
-                hass, config_entry, async_add_entities, RPC_SENSORS, RpcSensor
+                menuai, config_entry, async_add_entities, RPC_SENSORS, RpcSensor
             )
 
             async_remove_orphaned_entities(
-                hass,
+                menuai,
                 config_entry.entry_id,
                 coordinator.mac,
                 SENSOR_PLATFORM,
@@ -1468,7 +1468,7 @@ async def async_setup_entry(
             )
             for component in ("enum", "number", "text"):
                 async_remove_orphaned_entities(
-                    hass,
+                    menuai,
                     config_entry.entry_id,
                     coordinator.mac,
                     SENSOR_PLATFORM,
@@ -1479,7 +1479,7 @@ async def async_setup_entry(
 
     if config_entry.data[CONF_SLEEP_PERIOD]:
         async_setup_entry_attribute_entities(
-            hass,
+            menuai,
             config_entry,
             async_add_entities,
             SENSORS,
@@ -1487,14 +1487,14 @@ async def async_setup_entry(
         )
     else:
         async_setup_entry_attribute_entities(
-            hass,
+            menuai,
             config_entry,
             async_add_entities,
             SENSORS,
             BlockSensor,
         )
         async_setup_entry_rest(
-            hass, config_entry, async_add_entities, REST_SENSORS, RestSensor
+            menuai, config_entry, async_add_entities, REST_SENSORS, RestSensor
         )
 
 
@@ -1549,9 +1549,9 @@ class BlockSleepingSensor(ShellySleepingBlockAttributeEntity, RestoreSensor):
         super().__init__(coordinator, block, attribute, description, entry)
         self.restored_data: SensorExtraStoredData | None = None
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self.restored_data = await self.async_get_last_sensor_data()
 
     @property
@@ -1594,9 +1594,9 @@ class RpcSleepingSensor(ShellySleepingRpcAttributeEntity, RestoreSensor):
         super().__init__(coordinator, key, attribute, description, entry)
         self.restored_data: SensorExtraStoredData | None = None
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self.restored_data = await self.async_get_last_sensor_data()
 
     @property

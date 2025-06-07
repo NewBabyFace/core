@@ -6,16 +6,16 @@ from typing import Final
 
 from canary.model import Device, Location, SensorType
 
-from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
-from homeassistant.const import (
+from menuai.components.sensor import SensorDeviceClass, SensorEntity
+from menuai.const import (
     PERCENTAGE,
     SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, MANUFACTURER
 from .coordinator import CanaryConfigEntry, CanaryDataUpdateCoordinator
@@ -30,7 +30,7 @@ ATTR_AIR_QUALITY: Final = "air_quality"
 # Define variables to store the device names, as referred to by the Canary API.
 # Note: If Canary change the name of any of their devices (which they have done),
 # then these variables will need updating, otherwise the sensors will stop working
-# and disappear in Home Assistant.
+# and disappear in MenuAI.
 CANARY_PRO: Final = "Canary Pro"
 CANARY_FLEX: Final = "Canary Flex"
 
@@ -62,7 +62,7 @@ STATE_AIR_QUALITY_VERY_ABNORMAL: Final = "very_abnormal"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: CanaryConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

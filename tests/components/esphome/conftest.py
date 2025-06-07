@@ -16,7 +16,7 @@ from aioesphomeapi import (
     DeviceInfo,
     EntityInfo,
     EntityState,
-    HomeassistantServiceCall,
+    menuaiServiceCall,
     LogLevel,
     ReconnectLogic,
     UserService,
@@ -27,8 +27,8 @@ from aioesphomeapi import (
 import pytest
 from zeroconf import Zeroconf
 
-from homeassistant.components.esphome import dashboard
-from homeassistant.components.esphome.const import (
+from menuai.components.esphome import dashboard
+from menuai.components.esphome.const import (
     CONF_ALLOW_SERVICE_CALLS,
     CONF_BLUETOOTH_MAC_ADDRESS,
     CONF_DEVICE_NAME,
@@ -36,9 +36,9 @@ from homeassistant.components.esphome.const import (
     DEFAULT_NEW_CONFIG_ALLOW_ALLOW_SERVICE_CALLS,
     DOMAIN,
 )
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_PORT
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_PORT
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from . import DASHBOARD_HOST, DASHBOARD_PORT, DASHBOARD_SLUG
 
@@ -102,9 +102,9 @@ def esphome_mock_async_zeroconf(mock_async_zeroconf: MagicMock) -> None:
 
 
 @pytest.fixture(autouse=True)
-async def load_homeassistant(hass: HomeAssistant) -> None:
-    """Load the homeassistant integration."""
-    assert await async_setup_component(hass, "homeassistant", {})
+async def load_menuai(menuai: menuai) -> None:
+    """Load the menuai integration."""
+    assert await async_setup_component(menuai, "menuai", {})
 
 
 @pytest.fixture(autouse=True)
@@ -113,7 +113,7 @@ def mock_tts(mock_tts_cache_dir: Path) -> None:
 
 
 @pytest.fixture
-def mock_config_entry(hass: HomeAssistant) -> MockConfigEntry:
+def mock_config_entry(menuai: menuai) -> MockConfigEntry:
     """Return the default mocked config entry."""
     config_entry = MockConfigEntry(
         title="ESPHome Device",
@@ -129,7 +129,7 @@ def mock_config_entry(hass: HomeAssistant) -> MockConfigEntry:
         # ESPHome unique ids are lower case
         unique_id="11:22:33:44:55:aa",
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     return config_entry
 
 
@@ -163,11 +163,11 @@ def mock_device_info() -> DeviceInfo:
 
 @pytest.fixture
 async def init_integration(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_config_entry: MockConfigEntry
 ) -> MockConfigEntry:
     """Set up the ESPHome integration for testing."""
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     return mock_config_entry
 
@@ -207,17 +207,17 @@ def mock_client(mock_device_info) -> Generator[APIClient]:
 
     with (
         patch(
-            "homeassistant.components.esphome.manager.ReconnectLogic",
+            "menuai.components.esphome.manager.ReconnectLogic",
             BaseMockReconnectLogic,
         ),
-        patch("homeassistant.components.esphome.APIClient", mock_client),
-        patch("homeassistant.components.esphome.config_flow.APIClient", mock_client),
+        patch("menuai.components.esphome.APIClient", mock_client),
+        patch("menuai.components.esphome.config_flow.APIClient", mock_client),
     ):
         yield mock_client
 
 
 @pytest.fixture
-async def mock_dashboard(hass: HomeAssistant) -> AsyncGenerator[dict[str, Any]]:
+async def mock_dashboard(menuai: menuai) -> AsyncGenerator[dict[str, Any]]:
     """Mock dashboard."""
     data = {"configured": [], "importable": []}
     with patch(
@@ -225,7 +225,7 @@ async def mock_dashboard(hass: HomeAssistant) -> AsyncGenerator[dict[str, Any]]:
         return_value=data,
     ):
         await dashboard.async_set_dashboard_info(
-            hass, DASHBOARD_SLUG, DASHBOARD_HOST, DASHBOARD_PORT
+            menuai, DASHBOARD_SLUG, DASHBOARD_HOST, DASHBOARD_PORT
         )
         yield data
 
@@ -240,7 +240,7 @@ class MockESPHomeDevice:
         self.entry = entry
         self.client = client
         self.state_callback: Callable[[EntityState], None]
-        self.service_call_callback: Callable[[HomeassistantServiceCall], None]
+        self.service_call_callback: Callable[[menuaiServiceCall], None]
         self.on_disconnect: Callable[[bool], None]
         self.on_connect: Callable[[bool], None]
         self.on_connect_error: Callable[[Exception], None]
@@ -278,12 +278,12 @@ class MockESPHomeDevice:
         self.state_callback = state_callback
 
     def set_service_call_callback(
-        self, callback: Callable[[HomeassistantServiceCall], None]
+        self, callback: Callable[[menuaiServiceCall], None]
     ) -> None:
         """Set the service call callback."""
         self.service_call_callback = callback
 
-    def mock_service_call(self, service_call: HomeassistantServiceCall) -> None:
+    def mock_service_call(self, service_call: menuaiServiceCall) -> None:
         """Mock a service call."""
         self.service_call_callback(service_call)
 
@@ -408,13 +408,13 @@ class MockESPHomeDevice:
 
 
 async def _mock_generic_device_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_device_info: dict[str, Any],
     mock_list_entities_services: tuple[list[EntityInfo], list[UserService]],
     states: list[EntityState],
     entry: MockConfigEntry | None = None,
-    hass_storage: dict[str, Any] | None = None,
+    menuai_storage: dict[str, Any] | None = None,
 ) -> MockESPHomeDevice:
     if not entry:
         entry = MockConfigEntry(
@@ -428,7 +428,7 @@ async def _mock_generic_device_entry(
                 CONF_ALLOW_SERVICE_CALLS: DEFAULT_NEW_CONFIG_ALLOW_ALLOW_SERVICE_CALLS
             },
         )
-        entry.add_to_hass(hass)
+        entry.add_to_menuai(menuai)
 
     default_device_info = {
         "name": "test",
@@ -438,9 +438,9 @@ async def _mock_generic_device_entry(
     }
     device_info = DeviceInfo(**(default_device_info | mock_device_info))
 
-    if hass_storage:
+    if menuai_storage:
         storage_key = f"{DOMAIN}.{entry.entry_id}"
-        hass_storage[storage_key] = {
+        menuai_storage[storage_key] = {
             "version": 1,
             "minor_version": 1,
             "key": storage_key,
@@ -458,7 +458,7 @@ async def _mock_generic_device_entry(
             callback(state)
 
     def _subscribe_service_calls(
-        callback: Callable[[HomeassistantServiceCall], None],
+        callback: Callable[[menuaiServiceCall], None],
     ) -> None:
         """Subscribe to service calls."""
         mock_device.set_service_call_callback(callback)
@@ -467,7 +467,7 @@ async def _mock_generic_device_entry(
         on_state_sub: Callable[[str, str | None], None],
         on_state_request: Callable[[str, str | None], None],
     ) -> None:
-        """Subscribe to home assistant states."""
+        """Subscribe to MenuAI states."""
         mock_device.set_home_assistant_state_subscription_callback(
             on_state_sub, on_state_request
         )
@@ -549,19 +549,19 @@ async def _mock_generic_device_entry(
             self._is_stopped = True
 
     with patch(
-        "homeassistant.components.esphome.manager.ReconnectLogic", MockReconnectLogic
+        "menuai.components.esphome.manager.ReconnectLogic", MockReconnectLogic
     ):
-        assert await hass.config_entries.async_setup(entry.entry_id)
+        assert await menuai.config_entries.async_setup(entry.entry_id)
         async with asyncio.timeout(2):
             await try_connect_done.wait()
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     return mock_device
 
 
 @pytest.fixture
 async def mock_voice_assistant_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
 ):
     """Set up an ESPHome entry with voice assistant."""
@@ -571,7 +571,7 @@ async def mock_voice_assistant_entry(
     ) -> MockConfigEntry:
         return (
             await _mock_generic_device_entry(
-                hass,
+                menuai,
                 mock_client,
                 {"voice_assistant_feature_flags": voice_assistant_feature_flags},
                 ([], []),
@@ -611,7 +611,7 @@ async def mock_voice_assistant_api_entry(mock_voice_assistant_entry) -> MockConf
 
 @pytest.fixture
 async def mock_bluetooth_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
 ) -> MockBluetoothEntryType:
     """Set up an ESPHome entry with bluetooth."""
@@ -631,9 +631,9 @@ async def mock_bluetooth_entry(
                 CONF_ALLOW_SERVICE_CALLS: DEFAULT_NEW_CONFIG_ALLOW_ALLOW_SERVICE_CALLS
             },
         )
-        entry.add_to_hass(hass)
+        entry.add_to_menuai(menuai)
         return await _mock_generic_device_entry(
-            hass,
+            menuai,
             mock_client,
             {
                 "bluetooth_mac_address": "AA:BB:CC:DD:EE:FC",
@@ -678,8 +678,8 @@ async def mock_bluetooth_entry_with_legacy_adv(
 
 @pytest.fixture
 async def mock_generic_device_entry(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
 ) -> MockGenericDeviceEntryType:
     """Set up an ESPHome entry and return the MockConfigEntry."""
 
@@ -692,13 +692,13 @@ async def mock_generic_device_entry(
     ) -> MockConfigEntry:
         return (
             await _mock_generic_device_entry(
-                hass,
+                menuai,
                 mock_client,
                 {},
                 (entity_info or [], user_service or []),
                 states or [],
                 None,
-                hass_storage if mock_storage else None,
+                menuai_storage if mock_storage else None,
             )
         ).entry
 
@@ -707,8 +707,8 @@ async def mock_generic_device_entry(
 
 @pytest.fixture
 async def mock_esphome_device(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
 ) -> MockESPHomeDeviceType:
     """Set up an ESPHome entry and return the MockESPHomeDevice."""
 
@@ -722,13 +722,13 @@ async def mock_esphome_device(
         mock_storage: bool = False,
     ) -> MockESPHomeDevice:
         return await _mock_generic_device_entry(
-            hass,
+            menuai,
             mock_client,
             device_info or {},
             (entity_info or [], user_service or []),
             states or [],
             entry,
-            hass_storage if mock_storage else None,
+            menuai_storage if mock_storage else None,
         )
 
     return _mock_device

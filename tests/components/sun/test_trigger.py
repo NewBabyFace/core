@@ -5,8 +5,8 @@ from datetime import datetime
 from freezegun import freeze_time
 import pytest
 
-from homeassistant.components import automation, sun
-from homeassistant.const import (
+from menuai.components import automation, sun
+from menuai.const import (
     ATTR_ENTITY_ID,
     ENTITY_MATCH_ALL,
     SERVICE_TURN_OFF,
@@ -14,9 +14,9 @@ from homeassistant.const import (
     SUN_EVENT_SUNRISE,
     SUN_EVENT_SUNSET,
 )
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai, ServiceCall
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from tests.common import async_fire_time_changed, mock_component
 
@@ -27,14 +27,14 @@ def stub_blueprint_populate_autouse(stub_blueprint_populate: None) -> None:
 
 
 @pytest.fixture(autouse=True)
-async def setup_comp(hass: HomeAssistant) -> None:
+async def setup_comp(menuai: menuai) -> None:
     """Initialize components."""
-    mock_component(hass, "group")
-    await async_setup_component(hass, sun.DOMAIN, {sun.DOMAIN: {}})
+    mock_component(menuai, "group")
+    await async_setup_component(menuai, sun.DOMAIN, {sun.DOMAIN: {}})
 
 
 async def test_sunset_trigger(
-    hass: HomeAssistant, service_calls: list[ServiceCall]
+    menuai: menuai, service_calls: list[ServiceCall]
 ) -> None:
     """Test the sunset trigger."""
     now = datetime(2015, 9, 15, 23, tzinfo=dt_util.UTC)
@@ -42,7 +42,7 @@ async def test_sunset_trigger(
 
     with freeze_time(now):
         await async_setup_component(
-            hass,
+            menuai,
             automation.DOMAIN,
             {
                 automation.DOMAIN: {
@@ -55,7 +55,7 @@ async def test_sunset_trigger(
             },
         )
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             automation.DOMAIN,
             SERVICE_TURN_OFF,
             {ATTR_ENTITY_ID: ENTITY_MATCH_ALL},
@@ -63,12 +63,12 @@ async def test_sunset_trigger(
         )
         assert len(service_calls) == 1
 
-        async_fire_time_changed(hass, trigger_time)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, trigger_time)
+        await menuai.async_block_till_done()
         assert len(service_calls) == 1
 
     with freeze_time(now):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             automation.DOMAIN,
             SERVICE_TURN_ON,
             {ATTR_ENTITY_ID: ENTITY_MATCH_ALL},
@@ -76,14 +76,14 @@ async def test_sunset_trigger(
         )
         assert len(service_calls) == 2
 
-        async_fire_time_changed(hass, trigger_time)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, trigger_time)
+        await menuai.async_block_till_done()
         assert len(service_calls) == 3
         assert service_calls[2].data["id"] == 0
 
 
 async def test_sunrise_trigger(
-    hass: HomeAssistant, service_calls: list[ServiceCall]
+    menuai: menuai, service_calls: list[ServiceCall]
 ) -> None:
     """Test the sunrise trigger."""
     now = datetime(2015, 9, 13, 23, tzinfo=dt_util.UTC)
@@ -91,7 +91,7 @@ async def test_sunrise_trigger(
 
     with freeze_time(now):
         await async_setup_component(
-            hass,
+            menuai,
             automation.DOMAIN,
             {
                 automation.DOMAIN: {
@@ -101,13 +101,13 @@ async def test_sunrise_trigger(
             },
         )
 
-        async_fire_time_changed(hass, trigger_time)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, trigger_time)
+        await menuai.async_block_till_done()
         assert len(service_calls) == 1
 
 
 async def test_sunset_trigger_with_offset(
-    hass: HomeAssistant, service_calls: list[ServiceCall]
+    menuai: menuai, service_calls: list[ServiceCall]
 ) -> None:
     """Test the sunset trigger with offset."""
     now = datetime(2015, 9, 15, 23, tzinfo=dt_util.UTC)
@@ -115,7 +115,7 @@ async def test_sunset_trigger_with_offset(
 
     with freeze_time(now):
         await async_setup_component(
-            hass,
+            menuai,
             automation.DOMAIN,
             {
                 automation.DOMAIN: {
@@ -138,14 +138,14 @@ async def test_sunset_trigger_with_offset(
             },
         )
 
-        async_fire_time_changed(hass, trigger_time)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, trigger_time)
+        await menuai.async_block_till_done()
         assert len(service_calls) == 1
         assert service_calls[0].data["some"] == "sun - sunset - 0:30:00"
 
 
 async def test_sunrise_trigger_with_offset(
-    hass: HomeAssistant, service_calls: list[ServiceCall]
+    menuai: menuai, service_calls: list[ServiceCall]
 ) -> None:
     """Test the sunrise trigger with offset."""
     now = datetime(2015, 9, 13, 23, tzinfo=dt_util.UTC)
@@ -153,7 +153,7 @@ async def test_sunrise_trigger_with_offset(
 
     with freeze_time(now):
         await async_setup_component(
-            hass,
+            menuai,
             automation.DOMAIN,
             {
                 automation.DOMAIN: {
@@ -167,6 +167,6 @@ async def test_sunrise_trigger_with_offset(
             },
         )
 
-        async_fire_time_changed(hass, trigger_time)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, trigger_time)
+        await menuai.async_block_till_done()
         assert len(service_calls) == 1

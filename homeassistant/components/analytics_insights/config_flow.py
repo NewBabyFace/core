@@ -1,20 +1,20 @@
-"""Config flow for Homeassistant Analytics integration."""
+"""Config flow for menuai Analytics integration."""
 
 from __future__ import annotations
 
 from typing import Any
 
-from python_homeassistant_analytics import (
-    HomeassistantAnalyticsClient,
-    HomeassistantAnalyticsConnectionError,
+from python_menuai_analytics import (
+    menuaiAnalyticsClient,
+    menuaiAnalyticsConnectionError,
 )
-from python_homeassistant_analytics.models import Environment, IntegrationType
+from python_menuai_analytics.models import Environment, IntegrationType
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
-from homeassistant.core import callback
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.selector import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
+from menuai.core import callback
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.selector import (
     SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
@@ -36,16 +36,16 @@ INTEGRATION_TYPES_WITHOUT_ANALYTICS = (
 )
 
 
-class HomeassistantAnalyticsConfigFlow(ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for Homeassistant Analytics."""
+class menuaiAnalyticsConfigFlow(ConfigFlow, domain=DOMAIN):
+    """Handle a config flow for menuai Analytics."""
 
     @staticmethod
     @callback
     def async_get_options_flow(
         config_entry: AnalyticsInsightsConfigEntry,
-    ) -> HomeassistantAnalyticsOptionsFlowHandler:
+    ) -> menuaiAnalyticsOptionsFlowHandler:
         """Get the options flow for this handler."""
-        return HomeassistantAnalyticsOptionsFlowHandler()
+        return menuaiAnalyticsOptionsFlowHandler()
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -63,7 +63,7 @@ class HomeassistantAnalyticsConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors["base"] = "no_integrations_selected"
             else:
                 return self.async_create_entry(
-                    title="Home Assistant Analytics Insights",
+                    title="MenuAI Analytics Insights",
                     data={},
                     options={
                         CONF_TRACKED_ADDONS: user_input.get(CONF_TRACKED_ADDONS, []),
@@ -76,15 +76,15 @@ class HomeassistantAnalyticsConfigFlow(ConfigFlow, domain=DOMAIN):
                     },
                 )
 
-        client = HomeassistantAnalyticsClient(
-            session=async_get_clientsession(self.hass)
+        client = menuaiAnalyticsClient(
+            session=async_get_clientsession(self.menuai)
         )
         try:
             addons = await client.get_addons()
             integrations = await client.get_integrations(Environment.NEXT)
             custom_integrations = await client.get_custom_integrations()
-        except HomeassistantAnalyticsConnectionError:
-            LOGGER.exception("Error connecting to Home Assistant analytics")
+        except menuaiAnalyticsConnectionError:
+            LOGGER.exception("Error connecting to MenuAI analytics")
             return self.async_abort(reason="cannot_connect")
         except Exception:  # noqa: BLE001
             LOGGER.exception("Unexpected error")
@@ -129,8 +129,8 @@ class HomeassistantAnalyticsConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class HomeassistantAnalyticsOptionsFlowHandler(OptionsFlow):
-    """Handle Homeassistant Analytics options."""
+class menuaiAnalyticsOptionsFlowHandler(OptionsFlow):
+    """Handle menuai Analytics options."""
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
@@ -160,15 +160,15 @@ class HomeassistantAnalyticsOptionsFlowHandler(OptionsFlow):
                     },
                 )
 
-        client = HomeassistantAnalyticsClient(
-            session=async_get_clientsession(self.hass)
+        client = menuaiAnalyticsClient(
+            session=async_get_clientsession(self.menuai)
         )
         try:
             addons = await client.get_addons()
             integrations = await client.get_integrations(Environment.NEXT)
             custom_integrations = await client.get_custom_integrations()
-        except HomeassistantAnalyticsConnectionError:
-            LOGGER.exception("Error connecting to Home Assistant analytics")
+        except menuaiAnalyticsConnectionError:
+            LOGGER.exception("Error connecting to MenuAI analytics")
             return self.async_abort(reason="cannot_connect")
 
         options = [

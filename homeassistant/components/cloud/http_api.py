@@ -16,28 +16,28 @@ from typing import Any, Concatenate, cast
 import aiohttp
 from aiohttp import web
 import attr
-from hass_nabucasa import AlreadyConnectedError, Cloud, auth
-from hass_nabucasa.const import STATE_DISCONNECTED
-from hass_nabucasa.voice_data import TTS_VOICES
+from menuai_nabucasa import AlreadyConnectedError, Cloud, auth
+from menuai_nabucasa.const import STATE_DISCONNECTED
+from menuai_nabucasa.voice_data import TTS_VOICES
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.components.alexa import (
+from menuai.components import websocket_api
+from menuai.components.alexa import (
     entities as alexa_entities,
     errors as alexa_errors,
 )
-from homeassistant.components.google_assistant import helpers as google_helpers
-from homeassistant.components.homeassistant import exposed_entities
-from homeassistant.components.http import KEY_HASS, HomeAssistantView, require_admin
-from homeassistant.components.http.data_validator import RequestDataValidator
-from homeassistant.components.system_health import get_info as get_system_health_info
-from homeassistant.const import CLOUD_NEVER_EXPOSED_ENTITIES
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.util.location import async_detect_location_info
+from menuai.components.google_assistant import helpers as google_helpers
+from menuai.components.menuai import exposed_entities
+from menuai.components.http import KEY_menuai, menuaiView, require_admin
+from menuai.components.http.data_validator import RequestDataValidator
+from menuai.components.system_health import get_info as get_system_health_info
+from menuai.const import CLOUD_NEVER_EXPOSED_ENTITIES
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.util.location import async_detect_location_info
 
 from .alexa_config import entity_supported as entity_supported_by_alexa
 from .assist_pipeline import async_create_cloud_pipeline
@@ -71,7 +71,7 @@ _CLOUD_ERRORS: dict[
 ] = {
     TimeoutError: (
         HTTPStatus.BAD_GATEWAY,
-        "Unable to reach the Home Assistant cloud.",
+        "Unable to reach the MenuAI cloud.",
     ),
     aiohttp.ClientError: (
         HTTPStatus.INTERNAL_SERVER_ERROR,
@@ -85,34 +85,34 @@ class MFAExpiredOrNotStarted(auth.CloudError):
 
 
 @callback
-def async_setup(hass: HomeAssistant) -> None:
+def async_setup(menuai: menuai) -> None:
     """Initialize the HTTP API."""
-    websocket_api.async_register_command(hass, websocket_cloud_remove_data)
-    websocket_api.async_register_command(hass, websocket_cloud_status)
-    websocket_api.async_register_command(hass, websocket_subscription)
-    websocket_api.async_register_command(hass, websocket_update_prefs)
-    websocket_api.async_register_command(hass, websocket_hook_create)
-    websocket_api.async_register_command(hass, websocket_hook_delete)
-    websocket_api.async_register_command(hass, websocket_remote_connect)
-    websocket_api.async_register_command(hass, websocket_remote_disconnect)
+    websocket_api.async_register_command(menuai, websocket_cloud_remove_data)
+    websocket_api.async_register_command(menuai, websocket_cloud_status)
+    websocket_api.async_register_command(menuai, websocket_subscription)
+    websocket_api.async_register_command(menuai, websocket_update_prefs)
+    websocket_api.async_register_command(menuai, websocket_hook_create)
+    websocket_api.async_register_command(menuai, websocket_hook_delete)
+    websocket_api.async_register_command(menuai, websocket_remote_connect)
+    websocket_api.async_register_command(menuai, websocket_remote_disconnect)
 
-    websocket_api.async_register_command(hass, google_assistant_get)
-    websocket_api.async_register_command(hass, google_assistant_list)
-    websocket_api.async_register_command(hass, google_assistant_update)
+    websocket_api.async_register_command(menuai, google_assistant_get)
+    websocket_api.async_register_command(menuai, google_assistant_list)
+    websocket_api.async_register_command(menuai, google_assistant_update)
 
-    websocket_api.async_register_command(hass, alexa_get)
-    websocket_api.async_register_command(hass, alexa_list)
-    websocket_api.async_register_command(hass, alexa_sync)
+    websocket_api.async_register_command(menuai, alexa_get)
+    websocket_api.async_register_command(menuai, alexa_list)
+    websocket_api.async_register_command(menuai, alexa_sync)
 
-    websocket_api.async_register_command(hass, tts_info)
+    websocket_api.async_register_command(menuai, tts_info)
 
-    hass.http.register_view(GoogleActionsSyncView)
-    hass.http.register_view(CloudLoginView)
-    hass.http.register_view(CloudLogoutView)
-    hass.http.register_view(CloudRegisterView)
-    hass.http.register_view(CloudResendConfirmView)
-    hass.http.register_view(CloudForgotPasswordView)
-    hass.http.register_view(DownloadSupportPackageView)
+    menuai.http.register_view(GoogleActionsSyncView)
+    menuai.http.register_view(CloudLoginView)
+    menuai.http.register_view(CloudLogoutView)
+    menuai.http.register_view(CloudRegisterView)
+    menuai.http.register_view(CloudResendConfirmView)
+    menuai.http.register_view(CloudForgotPasswordView)
+    menuai.http.register_view(DownloadSupportPackageView)
 
     _CLOUD_ERRORS.update(
         {
@@ -144,18 +144,18 @@ def async_setup(hass: HomeAssistant) -> None:
     )
 
 
-def _handle_cloud_errors[_HassViewT: HomeAssistantView, **_P](
+def _handle_cloud_errors[_menuaiViewT: menuaiView, **_P](
     handler: Callable[
-        Concatenate[_HassViewT, web.Request, _P], Awaitable[web.Response]
+        Concatenate[_menuaiViewT, web.Request, _P], Awaitable[web.Response]
     ],
 ) -> Callable[
-    Concatenate[_HassViewT, web.Request, _P], Coroutine[Any, Any, web.Response]
+    Concatenate[_menuaiViewT, web.Request, _P], Coroutine[Any, Any, web.Response]
 ]:
     """Webview decorator to handle auth errors."""
 
     @wraps(handler)
     async def error_handler(
-        view: _HassViewT, request: web.Request, *args: _P.args, **kwargs: _P.kwargs
+        view: _menuaiViewT, request: web.Request, *args: _P.args, **kwargs: _P.kwargs
     ) -> web.Response:
         """Handle exceptions that raise from the wrapped request handler."""
         try:
@@ -172,24 +172,24 @@ def _handle_cloud_errors[_HassViewT: HomeAssistantView, **_P](
 
 def _ws_handle_cloud_errors(
     handler: Callable[
-        [HomeAssistant, websocket_api.ActiveConnection, dict[str, Any]],
+        [menuai, websocket_api.ActiveConnection, dict[str, Any]],
         Coroutine[None, None, None],
     ],
 ) -> Callable[
-    [HomeAssistant, websocket_api.ActiveConnection, dict[str, Any]],
+    [menuai, websocket_api.ActiveConnection, dict[str, Any]],
     Coroutine[None, None, None],
 ]:
     """Websocket decorator to handle auth errors."""
 
     @wraps(handler)
     async def error_handler(
-        hass: HomeAssistant,
+        menuai: menuai,
         connection: websocket_api.ActiveConnection,
         msg: dict[str, Any],
     ) -> None:
         """Handle exceptions that raise from the wrapped handler."""
         try:
-            return await handler(hass, connection, msg)
+            return await handler(menuai, connection, msg)
 
         except Exception as err:  # noqa: BLE001
             err_status, err_msg = _process_cloud_exception(err, msg["type"])
@@ -218,7 +218,7 @@ def _process_cloud_exception(exc: Exception, where: str) -> tuple[HTTPStatus, st
     return err_info
 
 
-class GoogleActionsSyncView(HomeAssistantView):
+class GoogleActionsSyncView(menuaiView):
     """Trigger a Google Actions Smart Home Sync."""
 
     url = "/api/cloud/google_actions/sync"
@@ -228,15 +228,15 @@ class GoogleActionsSyncView(HomeAssistantView):
     @_handle_cloud_errors
     async def post(self, request: web.Request) -> web.Response:
         """Trigger a Google Actions sync."""
-        hass = request.app[KEY_HASS]
-        cloud = hass.data[DATA_CLOUD]
+        menuai = request.app[KEY_menuai]
+        cloud = menuai.data[DATA_CLOUD]
         gconf = await cloud.client.get_google_config()
         status = await gconf.async_sync_entities(gconf.agent_user_id)
         return self.json({}, status_code=status)
 
 
-class CloudLoginView(HomeAssistantView):
-    """Login to Home Assistant cloud."""
+class CloudLoginView(menuaiView):
+    """Login to MenuAI cloud."""
 
     _mfa_tokens: dict[str, str] = {}
     _mfa_tokens_set_time: float = 0
@@ -265,8 +265,8 @@ class CloudLoginView(HomeAssistantView):
     )
     async def _post(self, request: web.Request, data: dict[str, Any]) -> web.Response:
         """Handle login request."""
-        hass = request.app[KEY_HASS]
-        cloud = hass.data[DATA_CLOUD]
+        menuai = request.app[KEY_menuai]
+        cloud = menuai.data[DATA_CLOUD]
 
         try:
             email = data["email"]
@@ -304,17 +304,17 @@ class CloudLoginView(HomeAssistantView):
             self._mfa_tokens_set_time = time.time()
             raise
 
-        if "assist_pipeline" in hass.config.components:
-            new_cloud_pipeline_id = await async_create_cloud_pipeline(hass)
+        if "assist_pipeline" in menuai.config.components:
+            new_cloud_pipeline_id = await async_create_cloud_pipeline(menuai)
         else:
             new_cloud_pipeline_id = None
 
-        async_dispatcher_send(hass, EVENT_CLOUD_EVENT, {"type": "login"})
+        async_dispatcher_send(menuai, EVENT_CLOUD_EVENT, {"type": "login"})
         return self.json({"success": True, "cloud_pipeline": new_cloud_pipeline_id})
 
 
-class CloudLogoutView(HomeAssistantView):
-    """Log out of the Home Assistant cloud."""
+class CloudLogoutView(menuaiView):
+    """Log out of the MenuAI cloud."""
 
     url = "/api/cloud/logout"
     name = "api:cloud:logout"
@@ -327,18 +327,18 @@ class CloudLogoutView(HomeAssistantView):
     @_handle_cloud_errors
     async def _post(self, request: web.Request) -> web.Response:
         """Handle logout request."""
-        hass = request.app[KEY_HASS]
-        cloud = hass.data[DATA_CLOUD]
+        menuai = request.app[KEY_menuai]
+        cloud = menuai.data[DATA_CLOUD]
 
         async with asyncio.timeout(REQUEST_TIMEOUT):
             await cloud.logout()
 
-        async_dispatcher_send(hass, EVENT_CLOUD_EVENT, {"type": "logout"})
+        async_dispatcher_send(menuai, EVENT_CLOUD_EVENT, {"type": "logout"})
         return self.json_message("ok")
 
 
-class CloudRegisterView(HomeAssistantView):
-    """Register on the Home Assistant cloud."""
+class CloudRegisterView(menuaiView):
+    """Register on the MenuAI cloud."""
 
     url = "/api/cloud/register"
     name = "api:cloud:register"
@@ -355,14 +355,14 @@ class CloudRegisterView(HomeAssistantView):
     )
     async def post(self, request: web.Request, data: dict[str, Any]) -> web.Response:
         """Handle registration request."""
-        hass = request.app[KEY_HASS]
-        cloud = hass.data[DATA_CLOUD]
+        menuai = request.app[KEY_menuai]
+        cloud = menuai.data[DATA_CLOUD]
 
         client_metadata = None
 
         if (
             location_info := await async_detect_location_info(
-                async_get_clientsession(hass)
+                async_get_clientsession(menuai)
             )
         ) and location_info.country_code is not None:
             client_metadata = {"NC_COUNTRY_CODE": location_info.country_code}
@@ -381,7 +381,7 @@ class CloudRegisterView(HomeAssistantView):
         return self.json_message("ok")
 
 
-class CloudResendConfirmView(HomeAssistantView):
+class CloudResendConfirmView(menuaiView):
     """Resend email confirmation code."""
 
     url = "/api/cloud/resend_confirm"
@@ -392,8 +392,8 @@ class CloudResendConfirmView(HomeAssistantView):
     @RequestDataValidator(vol.Schema({vol.Required("email"): str}))
     async def post(self, request: web.Request, data: dict[str, Any]) -> web.Response:
         """Handle resending confirm email code request."""
-        hass = request.app[KEY_HASS]
-        cloud = hass.data[DATA_CLOUD]
+        menuai = request.app[KEY_menuai]
+        cloud = menuai.data[DATA_CLOUD]
 
         async with asyncio.timeout(REQUEST_TIMEOUT):
             await cloud.auth.async_resend_email_confirm(data["email"])
@@ -401,7 +401,7 @@ class CloudResendConfirmView(HomeAssistantView):
         return self.json_message("ok")
 
 
-class CloudForgotPasswordView(HomeAssistantView):
+class CloudForgotPasswordView(menuaiView):
     """View to start Forgot Password flow.."""
 
     url = "/api/cloud/forgot_password"
@@ -416,8 +416,8 @@ class CloudForgotPasswordView(HomeAssistantView):
     @RequestDataValidator(vol.Schema({vol.Required("email"): str}))
     async def _post(self, request: web.Request, data: dict[str, Any]) -> web.Response:
         """Handle forgot password request."""
-        hass = request.app[KEY_HASS]
-        cloud = hass.data[DATA_CLOUD]
+        menuai = request.app[KEY_menuai]
+        cloud = menuai.data[DATA_CLOUD]
 
         async with asyncio.timeout(REQUEST_TIMEOUT):
             await cloud.auth.async_forgot_password(data["email"])
@@ -425,7 +425,7 @@ class CloudForgotPasswordView(HomeAssistantView):
         return self.json_message("ok")
 
 
-class DownloadSupportPackageView(HomeAssistantView):
+class DownloadSupportPackageView(menuaiView):
     """Download support package view."""
 
     url = "/api/cloud/support_package"
@@ -433,8 +433,8 @@ class DownloadSupportPackageView(HomeAssistantView):
 
     async def _generate_markdown(
         self,
-        hass: HomeAssistant,
-        hass_info: dict[str, Any],
+        menuai: menuai,
+        menuai_info: dict[str, Any],
         domains_info: dict[str, dict[str, str]],
     ) -> str:
         def get_domain_table_markdown(domain_info: dict[str, Any]) -> str:
@@ -451,7 +451,7 @@ class DownloadSupportPackageView(HomeAssistantView):
             return markdown + "\n"
 
         markdown = "## System Information\n\n"
-        markdown += get_domain_table_markdown(hass_info)
+        markdown += get_domain_table_markdown(menuai_info)
 
         for domain, domain_info in domains_info.items():
             domain_info_md = get_domain_table_markdown(domain_info)
@@ -461,8 +461,8 @@ class DownloadSupportPackageView(HomeAssistantView):
                 "</details>\n\n"
             )
 
-        log_handler = hass.data[DATA_CLOUD_LOG_HANDLER]
-        logs = "\n".join(await log_handler.get_logs(hass))
+        log_handler = menuai.data[DATA_CLOUD_LOG_HANDLER]
+        logs = "\n".join(await log_handler.get_logs(menuai))
         markdown += (
             "## Full logs\n\n"
             "<details><summary>Logs</summary>\n\n"
@@ -477,11 +477,11 @@ class DownloadSupportPackageView(HomeAssistantView):
     async def get(self, request: web.Request) -> web.Response:
         """Download support package file."""
 
-        hass = request.app[KEY_HASS]
-        domain_health = await get_system_health_info(hass)
+        menuai = request.app[KEY_menuai]
+        domain_health = await get_system_health_info(menuai)
 
-        hass_info = domain_health.pop("homeassistant", {})
-        markdown = await self._generate_markdown(hass, hass_info, domain_health)
+        menuai_info = domain_health.pop("menuai", {})
+        markdown = await self._generate_markdown(menuai, menuai_info, domain_health)
 
         return web.Response(
             body=markdown,
@@ -496,7 +496,7 @@ class DownloadSupportPackageView(HomeAssistantView):
 @websocket_api.websocket_command({vol.Required("type"): "cloud/remove_data"})
 @websocket_api.async_response
 async def websocket_cloud_remove_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
@@ -504,7 +504,7 @@ async def websocket_cloud_remove_data(
 
     Async friendly.
     """
-    cloud = hass.data[DATA_CLOUD]
+    cloud = menuai.data[DATA_CLOUD]
     if cloud.is_logged_in:
         connection.send_message(
             websocket_api.error_message(
@@ -522,7 +522,7 @@ async def websocket_cloud_remove_data(
 @websocket_api.websocket_command({vol.Required("type"): "cloud/status"})
 @websocket_api.async_response
 async def websocket_cloud_status(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
@@ -530,31 +530,31 @@ async def websocket_cloud_status(
 
     Async friendly.
     """
-    cloud = hass.data[DATA_CLOUD]
+    cloud = menuai.data[DATA_CLOUD]
     connection.send_message(
-        websocket_api.result_message(msg["id"], await _account_data(hass, cloud))
+        websocket_api.result_message(msg["id"], await _account_data(menuai, cloud))
     )
 
 
 def _require_cloud_login(
     handler: Callable[
-        [HomeAssistant, websocket_api.ActiveConnection, dict[str, Any]],
+        [menuai, websocket_api.ActiveConnection, dict[str, Any]],
         None,
     ],
 ) -> Callable[
-    [HomeAssistant, websocket_api.ActiveConnection, dict[str, Any]],
+    [menuai, websocket_api.ActiveConnection, dict[str, Any]],
     None,
 ]:
     """Websocket decorator that requires cloud to be logged in."""
 
     @wraps(handler)
     def with_cloud_auth(
-        hass: HomeAssistant,
+        menuai: menuai,
         connection: websocket_api.ActiveConnection,
         msg: dict[str, Any],
     ) -> None:
         """Require to be logged into the cloud."""
-        cloud = hass.data[DATA_CLOUD]
+        cloud = menuai.data[DATA_CLOUD]
         if not cloud.is_logged_in:
             connection.send_message(
                 websocket_api.error_message(
@@ -563,7 +563,7 @@ def _require_cloud_login(
             )
             return
 
-        handler(hass, connection, msg)
+        handler(menuai, connection, msg)
 
     return with_cloud_auth
 
@@ -572,12 +572,12 @@ def _require_cloud_login(
 @websocket_api.websocket_command({vol.Required("type"): "cloud/subscription"})
 @websocket_api.async_response
 async def websocket_subscription(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Handle request for account info."""
-    cloud = hass.data[DATA_CLOUD]
+    cloud = menuai.data[DATA_CLOUD]
     if (data := await async_subscription_info(cloud)) is None:
         connection.send_error(
             msg["id"], "request_failed", "Failed to request subscription"
@@ -585,7 +585,7 @@ async def websocket_subscription(
         return
 
     connection.send_result(msg["id"], data)
-    async_manage_legacy_subscription_issue(hass, data)
+    async_manage_legacy_subscription_issue(menuai, data)
 
 
 def validate_language_voice(value: tuple[str, str]) -> tuple[str, str]:
@@ -627,12 +627,12 @@ def validate_language_voice(value: tuple[str, str]) -> tuple[str, str]:
 )
 @websocket_api.async_response
 async def websocket_update_prefs(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Handle request for account info."""
-    cloud = hass.data[DATA_CLOUD]
+    cloud = menuai.data[DATA_CLOUD]
 
     changes = dict(msg)
     changes.pop("id")
@@ -654,7 +654,7 @@ async def websocket_update_prefs(
                 msg["id"],
                 "alexa_relink",
                 (
-                    "Please go to the Alexa app and re-link the Home Assistant "
+                    "Please go to the Alexa app and re-link the MenuAI "
                     "skill and then try to enable state reporting."
                 ),
             )
@@ -678,12 +678,12 @@ async def websocket_update_prefs(
 @websocket_api.async_response
 @_ws_handle_cloud_errors
 async def websocket_hook_create(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Handle request for account info."""
-    cloud = hass.data[DATA_CLOUD]
+    cloud = menuai.data[DATA_CLOUD]
     hook = await cloud.cloudhooks.async_create(msg["webhook_id"], False)
     connection.send_message(websocket_api.result_message(msg["id"], hook))
 
@@ -698,27 +698,27 @@ async def websocket_hook_create(
 @websocket_api.async_response
 @_ws_handle_cloud_errors
 async def websocket_hook_delete(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Handle request for account info."""
-    cloud = hass.data[DATA_CLOUD]
+    cloud = menuai.data[DATA_CLOUD]
     await cloud.cloudhooks.async_delete(msg["webhook_id"])
     connection.send_message(websocket_api.result_message(msg["id"]))
 
 
 async def _account_data(
-    hass: HomeAssistant, cloud: Cloud[CloudClient]
+    menuai: menuai, cloud: Cloud[CloudClient]
 ) -> dict[str, Any]:
     """Generate the auth data JSON response."""
 
-    assert hass.config.api
+    assert menuai.config.api
     if not cloud.is_logged_in:
         return {
             "logged_in": False,
             "cloud": STATE_DISCONNECTED,
-            "http_use_ssl": hass.config.api.use_ssl,
+            "http_use_ssl": menuai.config.api.use_ssl,
         }
 
     claims = cloud.claims
@@ -756,7 +756,7 @@ async def _account_data(
         "remote_certificate_status": remote.certificate_status,
         "remote_connected": remote.is_connected,
         "remote_domain": remote.instance_domain,
-        "http_use_ssl": hass.config.api.use_ssl,
+        "http_use_ssl": menuai.config.api.use_ssl,
         "active_subscription": not cloud.subscription_expired,
     }
 
@@ -767,14 +767,14 @@ async def _account_data(
 @websocket_api.async_response
 @_ws_handle_cloud_errors
 async def websocket_remote_connect(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Handle request for connect remote."""
-    cloud = hass.data[DATA_CLOUD]
+    cloud = menuai.data[DATA_CLOUD]
     await cloud.client.prefs.async_update(remote_enabled=True)
-    connection.send_result(msg["id"], await _account_data(hass, cloud))
+    connection.send_result(msg["id"], await _account_data(menuai, cloud))
 
 
 @websocket_api.require_admin
@@ -783,14 +783,14 @@ async def websocket_remote_connect(
 @websocket_api.async_response
 @_ws_handle_cloud_errors
 async def websocket_remote_disconnect(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Handle request for disconnect remote."""
-    cloud = hass.data[DATA_CLOUD]
+    cloud = menuai.data[DATA_CLOUD]
     await cloud.client.prefs.async_update(remote_enabled=False)
-    connection.send_result(msg["id"], await _account_data(hass, cloud))
+    connection.send_result(msg["id"], await _account_data(menuai, cloud))
 
 
 @websocket_api.require_admin
@@ -804,15 +804,15 @@ async def websocket_remote_disconnect(
 @websocket_api.async_response
 @_ws_handle_cloud_errors
 async def google_assistant_get(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Get data for a single google assistant entity."""
-    cloud = hass.data[DATA_CLOUD]
+    cloud = menuai.data[DATA_CLOUD]
     gconf = await cloud.client.get_google_config()
     entity_id: str = msg["entity_id"]
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     if not state:
         connection.send_error(
@@ -822,7 +822,7 @@ async def google_assistant_get(
         )
         return
 
-    entity = google_helpers.GoogleEntity(hass, gconf, state)
+    entity = google_helpers.GoogleEntity(menuai, gconf, state)
     if entity_id in CLOUD_NEVER_EXPOSED_ENTITIES or not entity.is_supported():
         connection.send_error(
             msg["id"],
@@ -832,8 +832,8 @@ async def google_assistant_get(
         return
 
     assistant_options: Mapping[str, Any] = {}
-    with suppress(HomeAssistantError, KeyError):
-        settings = exposed_entities.async_get_entity_settings(hass, entity_id)
+    with suppress(menuaiError, KeyError):
+        settings = exposed_entities.async_get_entity_settings(menuai, entity_id)
         assistant_options = settings[CLOUD_GOOGLE]
 
     result = {
@@ -852,14 +852,14 @@ async def google_assistant_get(
 @websocket_api.async_response
 @_ws_handle_cloud_errors
 async def google_assistant_list(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """List all google assistant entities."""
-    cloud = hass.data[DATA_CLOUD]
+    cloud = menuai.data[DATA_CLOUD]
     gconf = await cloud.client.get_google_config()
-    entities = google_helpers.async_get_entities(hass, gconf)
+    entities = google_helpers.async_get_entities(menuai, gconf)
 
     result = [
         {
@@ -885,7 +885,7 @@ async def google_assistant_list(
 @websocket_api.async_response
 @_ws_handle_cloud_errors
 async def google_assistant_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
@@ -893,8 +893,8 @@ async def google_assistant_update(
     entity_id: str = msg["entity_id"]
 
     assistant_options: Mapping[str, Any] = {}
-    with suppress(HomeAssistantError, KeyError):
-        settings = exposed_entities.async_get_entity_settings(hass, entity_id)
+    with suppress(menuaiError, KeyError):
+        settings = exposed_entities.async_get_entity_settings(menuai, entity_id)
         assistant_options = settings[CLOUD_GOOGLE]
 
     disable_2fa = msg[PREF_DISABLE_2FA]
@@ -902,7 +902,7 @@ async def google_assistant_update(
         return
 
     exposed_entities.async_set_assistant_option(
-        hass, CLOUD_GOOGLE, entity_id, PREF_DISABLE_2FA, disable_2fa
+        menuai, CLOUD_GOOGLE, entity_id, PREF_DISABLE_2FA, disable_2fa
     )
     connection.send_result(msg["id"])
 
@@ -918,7 +918,7 @@ async def google_assistant_update(
 @websocket_api.async_response
 @_ws_handle_cloud_errors
 async def alexa_get(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
@@ -926,7 +926,7 @@ async def alexa_get(
     entity_id: str = msg["entity_id"]
 
     if entity_id in CLOUD_NEVER_EXPOSED_ENTITIES or not entity_supported_by_alexa(
-        hass, entity_id
+        menuai, entity_id
     ):
         connection.send_error(
             msg["id"],
@@ -944,14 +944,14 @@ async def alexa_get(
 @websocket_api.async_response
 @_ws_handle_cloud_errors
 async def alexa_list(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """List all alexa entities."""
-    cloud = hass.data[DATA_CLOUD]
+    cloud = menuai.data[DATA_CLOUD]
     alexa_config = await cloud.client.get_alexa_config()
-    entities = alexa_entities.async_get_entities(hass, alexa_config)
+    entities = alexa_entities.async_get_entities(menuai, alexa_config)
 
     result = [
         {
@@ -970,12 +970,12 @@ async def alexa_list(
 @websocket_api.websocket_command({"type": "cloud/alexa/sync"})
 @websocket_api.async_response
 async def alexa_sync(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Sync with Alexa."""
-    cloud = hass.data[DATA_CLOUD]
+    cloud = menuai.data[DATA_CLOUD]
     alexa_config = await cloud.client.get_alexa_config()
 
     async with asyncio.timeout(10):
@@ -985,7 +985,7 @@ async def alexa_sync(
             connection.send_error(
                 msg["id"],
                 "alexa_relink",
-                "Please go to the Alexa app and re-link the Home Assistant skill.",
+                "Please go to the Alexa app and re-link the MenuAI skill.",
             )
             return
 
@@ -999,7 +999,7 @@ async def alexa_sync(
 
 @websocket_api.websocket_command({"type": "cloud/tts/info"})
 def tts_info(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:

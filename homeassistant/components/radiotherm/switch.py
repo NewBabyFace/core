@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import RadioThermUpdateCoordinator
@@ -17,12 +17,12 @@ PARALLEL_UPDATES = 1
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up switches for a radiotherm device."""
-    coordinator: RadioThermUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: RadioThermUpdateCoordinator = menuai.data[DOMAIN][entry.entry_id]
     async_add_entities([RadioThermHoldSwitch(coordinator)])
 
 
@@ -48,7 +48,7 @@ class RadioThermHoldSwitch(RadioThermostatEntity, SwitchEntity):
 
     async def _async_set_hold(self, hold: bool) -> None:
         """Set hold mode."""
-        await self.hass.async_add_executor_job(self._set_hold, hold)
+        await self.menuai.async_add_executor_job(self._set_hold, hold)
         self._attr_is_on = hold
         self.async_write_ha_state()
         await self.coordinator.async_request_refresh()

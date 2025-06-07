@@ -16,8 +16,8 @@ from tesla_powerwall import (
     SiteMasterResponse,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 type PowerwallConfigEntry = ConfigEntry[PowerwallRuntimeData]
 

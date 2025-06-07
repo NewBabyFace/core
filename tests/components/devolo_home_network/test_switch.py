@@ -9,13 +9,13 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.devolo_home_network.const import (
+from menuai.components.devolo_home_network.const import (
     DOMAIN,
     SHORT_UPDATE_INTERVAL,
 )
-from homeassistant.components.switch import DOMAIN as PLATFORM
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
-from homeassistant.const import (
+from menuai.components.switch import DOMAIN as PLATFORM
+from menuai.config_entries import SOURCE_REAUTH, ConfigEntryState
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
@@ -23,10 +23,10 @@ from homeassistant.const import (
     STATE_ON,
     STATE_UNAVAILABLE,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.update_coordinator import REQUEST_REFRESH_DEFAULT_COOLDOWN
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
+from menuai.helpers.update_coordinator import REQUEST_REFRESH_DEFAULT_COOLDOWN
 
 from . import configure_integration
 from .mock import MockDevice
@@ -36,14 +36,14 @@ from tests.common import async_fire_time_changed
 
 @pytest.mark.usefixtures("mock_device")
 async def test_switch_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test default setup of the switch component."""
-    entry = configure_integration(hass)
+    entry = configure_integration(menuai)
     device_name = entry.title.replace(" ", "_").lower()
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
     assert entry.state is ConfigEntryState.LOADED
 
     assert not entity_registry.async_get(
@@ -55,17 +55,17 @@ async def test_switch_setup(
 
 
 async def test_update_guest_wifi_status_auth_failed(
-    hass: HomeAssistant, mock_device: MockDevice
+    menuai: menuai, mock_device: MockDevice
 ) -> None:
     """Test getting the wifi_status with wrong password triggers the reauth flow."""
-    entry = configure_integration(hass)
+    entry = configure_integration(menuai)
     mock_device.device.async_get_wifi_guest_access.side_effect = DevicePasswordProtected
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
     assert entry.state is ConfigEntryState.SETUP_ERROR
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
 
     flow = flows[0]
@@ -78,21 +78,21 @@ async def test_update_guest_wifi_status_auth_failed(
 
 
 async def test_update_enable_guest_wifi(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_device: MockDevice,
     entity_registry: er.EntityRegistry,
     freezer: FrozenDateTimeFactory,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test state change of a enable_guest_wifi switch device."""
-    entry = configure_integration(hass)
+    entry = configure_integration(menuai)
     device_name = entry.title.replace(" ", "_").lower()
     state_key = f"{PLATFORM}.{device_name}_enable_guest_wi_fi"
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(state_key) == snapshot
+    assert menuai.states.get(state_key) == snapshot
     assert entity_registry.async_get(state_key) == snapshot
 
     # Emulate state change
@@ -100,10 +100,10 @@ async def test_update_enable_guest_wifi(
         enabled=True
     )
     freezer.tick(SHORT_UPDATE_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(state_key)
+    state = menuai.states.get(state_key)
     assert state is not None
     assert state.state == STATE_ON
 
@@ -111,124 +111,124 @@ async def test_update_enable_guest_wifi(
     mock_device.device.async_get_wifi_guest_access.return_value = WifiGuestAccessGet(
         enabled=False
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         PLATFORM, SERVICE_TURN_OFF, {ATTR_ENTITY_ID: state_key}, blocking=True
     )
 
-    state = hass.states.get(state_key)
+    state = menuai.states.get(state_key)
     assert state is not None
     assert state.state == STATE_OFF
     mock_device.device.async_set_wifi_guest_access.assert_called_once_with(False)
     mock_device.device.async_set_wifi_guest_access.reset_mock()
 
     freezer.tick(REQUEST_REFRESH_DEFAULT_COOLDOWN)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     # Switch on
     mock_device.device.async_get_wifi_guest_access.return_value = WifiGuestAccessGet(
         enabled=True
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         PLATFORM, SERVICE_TURN_ON, {ATTR_ENTITY_ID: state_key}, blocking=True
     )
 
-    state = hass.states.get(state_key)
+    state = menuai.states.get(state_key)
     assert state is not None
     assert state.state == STATE_ON
     mock_device.device.async_set_wifi_guest_access.assert_called_once_with(True)
     mock_device.device.async_set_wifi_guest_access.reset_mock()
 
     freezer.tick(REQUEST_REFRESH_DEFAULT_COOLDOWN)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     # Device unavailable
     mock_device.device.async_get_wifi_guest_access.side_effect = DeviceUnavailable()
     mock_device.device.async_set_wifi_guest_access.side_effect = DeviceUnavailable()
 
     with pytest.raises(
-        HomeAssistantError, match=f"Device {entry.title} did not respond"
+        menuaiError, match=f"Device {entry.title} did not respond"
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             PLATFORM, SERVICE_TURN_ON, {ATTR_ENTITY_ID: state_key}, blocking=True
         )
-    state = hass.states.get(state_key)
+    state = menuai.states.get(state_key)
     assert state is not None
     assert state.state == STATE_UNAVAILABLE
 
 
 async def test_update_enable_leds(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_device: MockDevice,
     entity_registry: er.EntityRegistry,
     freezer: FrozenDateTimeFactory,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test state change of a enable_leds switch device."""
-    entry = configure_integration(hass)
+    entry = configure_integration(menuai)
     device_name = entry.title.replace(" ", "_").lower()
     state_key = f"{PLATFORM}.{device_name}_enable_leds"
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(state_key) == snapshot
+    assert menuai.states.get(state_key) == snapshot
     assert entity_registry.async_get(state_key) == snapshot
 
     # Emulate state change
     mock_device.device.async_get_led_setting.return_value = True
     freezer.tick(SHORT_UPDATE_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(state_key)
+    state = menuai.states.get(state_key)
     assert state is not None
     assert state.state == STATE_ON
 
     # Switch off
     mock_device.device.async_get_led_setting.return_value = False
-    await hass.services.async_call(
+    await menuai.services.async_call(
         PLATFORM, SERVICE_TURN_OFF, {ATTR_ENTITY_ID: state_key}, blocking=True
     )
 
-    state = hass.states.get(state_key)
+    state = menuai.states.get(state_key)
     assert state is not None
     assert state.state == STATE_OFF
     mock_device.device.async_set_led_setting.assert_called_once_with(False)
     mock_device.device.async_set_led_setting.reset_mock()
 
     freezer.tick(REQUEST_REFRESH_DEFAULT_COOLDOWN)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     # Switch on
     mock_device.device.async_get_led_setting.return_value = True
-    await hass.services.async_call(
+    await menuai.services.async_call(
         PLATFORM, SERVICE_TURN_ON, {ATTR_ENTITY_ID: state_key}, blocking=True
     )
 
-    state = hass.states.get(state_key)
+    state = menuai.states.get(state_key)
     assert state is not None
     assert state.state == STATE_ON
     mock_device.device.async_set_led_setting.assert_called_once_with(True)
     mock_device.device.async_set_led_setting.reset_mock()
 
     freezer.tick(REQUEST_REFRESH_DEFAULT_COOLDOWN)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     # Device unavailable
     mock_device.device.async_get_led_setting.side_effect = DeviceUnavailable()
     mock_device.device.async_set_led_setting.side_effect = DeviceUnavailable()
 
     with pytest.raises(
-        HomeAssistantError, match=f"Device {entry.title} did not respond"
+        menuaiError, match=f"Device {entry.title} did not respond"
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             PLATFORM, SERVICE_TURN_OFF, {ATTR_ENTITY_ID: state_key}, blocking=True
         )
-    state = hass.states.get(state_key)
+    state = menuai.states.get(state_key)
     assert state is not None
     assert state.state == STATE_UNAVAILABLE
 
@@ -241,7 +241,7 @@ async def test_update_enable_leds(
     ],
 )
 async def test_device_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_device: MockDevice,
     freezer: FrozenDateTimeFactory,
     name: str,
@@ -249,23 +249,23 @@ async def test_device_failure(
     update_interval: timedelta,
 ) -> None:
     """Test device failure."""
-    entry = configure_integration(hass)
+    entry = configure_integration(menuai)
     device_name = entry.title.replace(" ", "_").lower()
     state_key = f"{PLATFORM}.{device_name}_{name}"
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(state_key)
+    state = menuai.states.get(state_key)
     assert state is not None
 
     api = getattr(mock_device.device, get_method)
     api.side_effect = DeviceUnavailable
     freezer.tick(update_interval)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(state_key)
+    state = menuai.states.get(state_key)
     assert state is not None
     assert state.state == STATE_UNAVAILABLE
 
@@ -278,31 +278,31 @@ async def test_device_failure(
     ],
 )
 async def test_auth_failed(
-    hass: HomeAssistant, mock_device: MockDevice, name: str, set_method: str
+    menuai: menuai, mock_device: MockDevice, name: str, set_method: str
 ) -> None:
     """Test setting unautherized triggers the reauth flow."""
-    entry = configure_integration(hass)
+    entry = configure_integration(menuai)
     device_name = entry.title.replace(" ", "_").lower()
     state_key = f"{PLATFORM}.{device_name}_{name}"
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(state_key)
+    state = menuai.states.get(state_key)
     assert state is not None
 
     setattr(mock_device.device, set_method, AsyncMock())
     api = getattr(mock_device.device, set_method)
     api.side_effect = DevicePasswordProtected
 
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             PLATFORM, SERVICE_TURN_ON, {ATTR_ENTITY_ID: state_key}, blocking=True
         )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
 
     flow = flows[0]
@@ -312,11 +312,11 @@ async def test_auth_failed(
     assert flow["context"]["source"] == SOURCE_REAUTH
     assert flow["context"]["entry_id"] == entry.entry_id
 
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             PLATFORM, SERVICE_TURN_OFF, {"entity_id": state_key}, blocking=True
         )
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
 
     flow = flows[0]

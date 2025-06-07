@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from homeassistant.components.sensor import SensorEntity
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.sensor import SensorEntity
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import (
     DATA_CONNECTIONS,
@@ -16,7 +16,7 @@ from .const import (
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -37,20 +37,20 @@ class APICount(SensorEntity):
         """Initialize the API count."""
         self._attr_native_value = 0
 
-    async def async_added_to_hass(self) -> None:
-        """Handle addition to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Handle addition to menuai."""
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, SIGNAL_WEBSOCKET_CONNECTED, self._update_count
+                self.menuai, SIGNAL_WEBSOCKET_CONNECTED, self._update_count
             )
         )
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, SIGNAL_WEBSOCKET_DISCONNECTED, self._update_count
+                self.menuai, SIGNAL_WEBSOCKET_DISCONNECTED, self._update_count
             )
         )
 
     @callback
     def _update_count(self) -> None:
-        self._attr_native_value = self.hass.data.get(DATA_CONNECTIONS, 0)
+        self._attr_native_value = self.menuai.data.get(DATA_CONNECTIONS, 0)
         self.async_write_ha_state()

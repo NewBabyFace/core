@@ -6,9 +6,9 @@ from unittest.mock import MagicMock, call
 import pytest
 from rtmapi import RtmRequestFailedException
 
-from homeassistant.components.remember_the_milk import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.remember_the_milk import DOMAIN
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from .const import CONFIG, PROFILE
 
@@ -17,7 +17,7 @@ from .const import CONFIG, PROFILE
     ("valid_token", "entity_state"), [(True, "ok"), (False, "API token invalid")]
 )
 async def test_entity_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
     storage: MagicMock,
     valid_token: bool,
@@ -25,9 +25,9 @@ async def test_entity_state(
 ) -> None:
     """Test the entity state."""
     client.token_valid.return_value = valid_token
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: CONFIG})
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: CONFIG})
     entity_id = f"{DOMAIN}.{PROFILE}"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == entity_state
@@ -127,7 +127,7 @@ async def test_entity_state(
     ],
 )
 async def test_services(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
     storage: MagicMock,
     get_rtm_id_return_value: Any,
@@ -145,9 +145,9 @@ async def test_services(
 ) -> None:
     """Test create and complete task service."""
     storage.get_rtm_id.return_value = get_rtm_id_return_value
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: CONFIG})
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: CONFIG})
 
-    await hass.services.async_call(DOMAIN, service, service_data, blocking=True)
+    await menuai.services.async_call(DOMAIN, service, service_data, blocking=True)
 
     assert storage.get_rtm_id.call_count == get_rtm_id_call_count
     assert storage.get_rtm_id.call_args == get_rtm_id_call_args
@@ -250,7 +250,7 @@ async def test_services(
     ],
 )
 async def test_services_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
     storage: MagicMock,
     caplog: pytest.LogCaptureFixture,
@@ -262,7 +262,7 @@ async def test_services_errors(
     error_message: str,
 ) -> None:
     """Test create and complete task service errors."""
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: CONFIG})
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: CONFIG})
     storage.get_rtm_id.return_value = get_rtm_id_return_value
 
     client_method = client
@@ -271,6 +271,6 @@ async def test_services_errors(
 
     client_method.side_effect = exception
 
-    await hass.services.async_call(DOMAIN, service, service_data, blocking=True)
+    await menuai.services.async_call(DOMAIN, service, service_data, blocking=True)
 
     assert error_message in caplog.text

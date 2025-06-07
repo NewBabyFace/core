@@ -1,4 +1,4 @@
-"""Runtime entry data for ESPHome stored in hass.data."""
+"""Runtime entry data for ESPHome stored in menuai.data."""
 
 from __future__ import annotations
 
@@ -49,12 +49,12 @@ from aioesphomeapi import (
 from aioesphomeapi.model import ButtonInfo
 from bleak_esphome.backend.device import ESPHomeBluetoothDevice
 
-from homeassistant.components.assist_satellite import AssistSatelliteConfiguration
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.storage import Store
+from menuai.components.assist_satellite import AssistSatelliteConfiguration
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import CALLBACK_TYPE, menuai, callback
+from menuai.helpers import entity_registry as er
+from menuai.helpers.storage import Store
 
 from .const import DOMAIN
 from .dashboard import async_get_dashboard
@@ -215,11 +215,11 @@ class RuntimeEntryData:
 
     @callback
     def async_remove_entities(
-        self, hass: HomeAssistant, static_infos: Iterable[EntityInfo], mac: str
+        self, menuai: menuai, static_infos: Iterable[EntityInfo], mac: str
     ) -> None:
         """Schedule the removal of an entity."""
         # Remove from entity registry first so the entity is fully removed
-        ent_reg = er.async_get(hass)
+        ent_reg = er.async_get(menuai)
         for info in static_infos:
             if entry := ent_reg.async_get_entity_id(
                 INFO_TYPE_TO_PLATFORM[type(info)], DOMAIN, build_unique_id(mac, info)
@@ -236,18 +236,18 @@ class RuntimeEntryData:
 
     async def _ensure_platforms_loaded(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entry: ESPHomeConfigEntry,
         platforms: set[Platform],
     ) -> None:
         async with self.platform_load_lock:
             if needed := platforms - self.loaded_platforms:
-                await hass.config_entries.async_forward_entry_setups(entry, needed)
+                await menuai.config_entries.async_forward_entry_setups(entry, needed)
             self.loaded_platforms |= needed
 
     async def async_update_static_infos(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entry: ESPHomeConfigEntry,
         infos: list[EntityInfo],
         mac: str,
@@ -257,7 +257,7 @@ class RuntimeEntryData:
         needed_platforms: set[Platform] = set()
 
         if self.device_info:
-            if async_get_dashboard(hass):
+            if async_get_dashboard(menuai):
                 # Only load the update platform if the device_info is set
                 # When we restore the entry, the device_info may not be set yet
                 # and we don't want to load the update platform since it needs
@@ -267,7 +267,7 @@ class RuntimeEntryData:
                 needed_platforms.add(Platform.BINARY_SENSOR)
                 needed_platforms.add(Platform.SELECT)
 
-        ent_reg = er.async_get(hass)
+        ent_reg = er.async_get(menuai)
         registry_get_entity = ent_reg.async_get_entity_id
         for info in infos:
             platform = INFO_TYPE_TO_PLATFORM[type(info)]
@@ -283,7 +283,7 @@ class RuntimeEntryData:
             ):
                 ent_reg.async_update_entity(old_entry, new_unique_id=new_unique_id)
 
-        await self._ensure_platforms_loaded(hass, entry, needed_platforms)
+        await self._ensure_platforms_loaded(menuai, entry, needed_platforms)
 
         # Make a dict of the EntityInfo by type and send
         # them to the listeners for each specific EntityInfo type
@@ -426,12 +426,12 @@ class RuntimeEntryData:
             await self.store.async_save(self._pending_storage())
 
     async def async_update_listener(
-        self, hass: HomeAssistant, entry: ESPHomeConfigEntry
+        self, menuai: menuai, entry: ESPHomeConfigEntry
     ) -> None:
         """Handle options update."""
         if self.original_options == entry.options:
             return
-        hass.async_create_task(hass.config_entries.async_reload(entry.entry_id))
+        menuai.async_create_task(menuai.config_entries.async_reload(entry.entry_id))
 
     @callback
     def async_on_disconnect(self) -> None:

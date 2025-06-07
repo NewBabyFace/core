@@ -19,22 +19,22 @@ from aioairzone.const import (
     AZD_TEMP_UNIT,
 )
 
-from homeassistant.components.water_heater import (
+from menuai.components.water_heater import (
     STATE_ECO,
     STATE_PERFORMANCE,
     WaterHeaterEntity,
     WaterHeaterEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_TEMPERATURE, STATE_OFF
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_TEMPERATURE, STATE_OFF
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from .const import TEMP_UNIT_LIB_TO_HASS
+from .const import TEMP_UNIT_LIB_TO_menuai
 from .coordinator import AirzoneConfigEntry, AirzoneUpdateCoordinator
 from .entity import AirzoneHotWaterEntity
 
-OPERATION_LIB_TO_HASS: Final[dict[HotWaterOperation, str]] = {
+OPERATION_LIB_TO_menuai: Final[dict[HotWaterOperation, str]] = {
     HotWaterOperation.Off: STATE_OFF,
     HotWaterOperation.On: STATE_ECO,
     HotWaterOperation.Powerful: STATE_PERFORMANCE,
@@ -56,7 +56,7 @@ OPERATION_MODE_TO_DHW_PARAMS: Final[dict[str, dict[str, Any]]] = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: AirzoneConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -86,10 +86,10 @@ class AirzoneWaterHeater(AirzoneHotWaterEntity, WaterHeaterEntity):
 
         self._attr_unique_id = f"{self._attr_unique_id}_dhw"
         self._attr_operation_list = [
-            OPERATION_LIB_TO_HASS[operation]
+            OPERATION_LIB_TO_menuai[operation]
             for operation in self.get_airzone_value(AZD_OPERATIONS)
         ]
-        self._attr_temperature_unit = TEMP_UNIT_LIB_TO_HASS[
+        self._attr_temperature_unit = TEMP_UNIT_LIB_TO_menuai[
             self.get_airzone_value(AZD_TEMP_UNIT)
         ]
 
@@ -125,7 +125,7 @@ class AirzoneWaterHeater(AirzoneHotWaterEntity, WaterHeaterEntity):
     def _async_update_attrs(self) -> None:
         """Update water heater attributes."""
         self._attr_current_temperature = self.get_airzone_value(AZD_TEMP)
-        self._attr_current_operation = OPERATION_LIB_TO_HASS[
+        self._attr_current_operation = OPERATION_LIB_TO_menuai[
             self.get_airzone_value(AZD_OPERATION)
         ]
         self._attr_max_temp = self.get_airzone_value(AZD_TEMP_MAX)

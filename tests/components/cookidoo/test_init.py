@@ -5,17 +5,17 @@ from unittest.mock import AsyncMock
 from cookidoo_api import CookidooAuthException, CookidooRequestException
 import pytest
 
-from homeassistant.components.cookidoo.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import (
+from menuai.components.cookidoo.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.const import (
     CONF_COUNTRY,
     CONF_EMAIL,
     CONF_LANGUAGE,
     CONF_PASSWORD,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from . import setup_integration
 from .conftest import COUNTRY, EMAIL, LANGUAGE, PASSWORD, TEST_UUID
@@ -25,18 +25,18 @@ from tests.common import MockConfigEntry
 
 @pytest.mark.usefixtures("mock_cookidoo_client")
 async def test_load_unload(
-    hass: HomeAssistant,
+    menuai: menuai,
     cookidoo_config_entry: MockConfigEntry,
 ) -> None:
     """Test loading and unloading of the config entry."""
-    await setup_integration(hass, cookidoo_config_entry)
+    await setup_integration(menuai, cookidoo_config_entry)
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
 
     assert cookidoo_config_entry.state is ConfigEntryState.LOADED
 
-    assert await hass.config_entries.async_unload(cookidoo_config_entry.entry_id)
+    assert await menuai.config_entries.async_unload(cookidoo_config_entry.entry_id)
     assert cookidoo_config_entry.state is ConfigEntryState.NOT_LOADED
 
 
@@ -48,7 +48,7 @@ async def test_load_unload(
     ],
 )
 async def test_init_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_cookidoo_client: AsyncMock,
     status: ConfigEntryState,
     exception: Exception,
@@ -56,7 +56,7 @@ async def test_init_failure(
 ) -> None:
     """Test an initialization error on integration load."""
     mock_cookidoo_client.login.side_effect = exception
-    await setup_integration(hass, cookidoo_config_entry)
+    await setup_integration(menuai, cookidoo_config_entry)
     assert cookidoo_config_entry.state == status
 
 
@@ -68,7 +68,7 @@ async def test_init_failure(
     ],
 )
 async def test_config_entry_not_ready(
-    hass: HomeAssistant,
+    menuai: menuai,
     cookidoo_config_entry: MockConfigEntry,
     mock_cookidoo_client: AsyncMock,
     cookidoo_method: str,
@@ -77,9 +77,9 @@ async def test_config_entry_not_ready(
     getattr(
         mock_cookidoo_client, cookidoo_method
     ).side_effect = CookidooRequestException()
-    cookidoo_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(cookidoo_config_entry.entry_id)
-    await hass.async_block_till_done()
+    cookidoo_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(cookidoo_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert cookidoo_config_entry.state is ConfigEntryState.SETUP_RETRY
 
@@ -93,7 +93,7 @@ async def test_config_entry_not_ready(
     ],
 )
 async def test_config_entry_not_ready_auth_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     cookidoo_config_entry: MockConfigEntry,
     mock_cookidoo_client: AsyncMock,
     exception: Exception | None,
@@ -104,9 +104,9 @@ async def test_config_entry_not_ready_auth_error(
     mock_cookidoo_client.get_ingredient_items.side_effect = CookidooAuthException
     mock_cookidoo_client.refresh_token.side_effect = exception
 
-    cookidoo_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(cookidoo_config_entry.entry_id)
-    await hass.async_block_till_done()
+    cookidoo_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(cookidoo_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert cookidoo_config_entry.state is status
 
@@ -139,7 +139,7 @@ OLD_ENTRY_ID = "OLD_OLD_ENTRY_ID"
     ],
 )
 async def test_migration_from(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     from_version,
@@ -159,7 +159,7 @@ async def test_migration_from(
         unique_id=unique_id,
         entry_id=OLD_ENTRY_ID,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     device = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
@@ -188,7 +188,7 @@ async def test_migration_from(
         device_id=device.id,
     )
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
 
     assert config_entry.state is ConfigEntryState.LOADED
 
@@ -252,7 +252,7 @@ async def test_migration_from(
     ],
 )
 async def test_migration_from_with_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     from_version,
@@ -275,7 +275,7 @@ async def test_migration_from_with_error(
         unique_id=unique_id,
         entry_id=OLD_ENTRY_ID,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     device = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
@@ -304,7 +304,7 @@ async def test_migration_from_with_error(
         device_id=device.id,
     )
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
 
     assert config_entry.state is ConfigEntryState.MIGRATION_ERROR
 

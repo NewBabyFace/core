@@ -13,24 +13,24 @@ from bluepy.btle import BTLEException
 import decora
 import voluptuous as vol
 
-from homeassistant import util
-from homeassistant.components.light import (
+from menuai import util
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     PLATFORM_SCHEMA as LIGHT_PLATFORM_SCHEMA,
     ColorMode,
     LightEntity,
 )
-from homeassistant.const import CONF_API_KEY, CONF_DEVICES, CONF_NAME
-from homeassistant.core import DOMAIN as HOMEASSISTANT_DOMAIN
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.issue_registry import IssueSeverity, create_issue
+from menuai.const import CONF_API_KEY, CONF_DEVICES, CONF_NAME
+from menuai.core import DOMAIN as menuai_DOMAIN
+from menuai.helpers import config_validation as cv
+from menuai.helpers.issue_registry import IssueSeverity, create_issue
 
 from . import DOMAIN
 
 if TYPE_CHECKING:
-    from homeassistant.core import HomeAssistant
-    from homeassistant.helpers.entity_platform import AddEntitiesCallback
-    from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+    from menuai.core import menuai
+    from menuai.helpers.entity_platform import AddEntitiesCallback
+    from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -88,15 +88,15 @@ def retry[_DecoraLightT: DecoraLight, **_P, _R](
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up an Decora switch."""
     create_issue(
-        hass,
-        HOMEASSISTANT_DOMAIN,
+        menuai,
+        menuai_DOMAIN,
         f"deprecated_system_packages_yaml_integration_{DOMAIN}",
         breaks_in_ha_version="2025.12.0",
         is_fixable=False,

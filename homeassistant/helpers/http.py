@@ -20,10 +20,10 @@ from aiohttp.web_exceptions import (
 from aiohttp.web_urldispatcher import AbstractResource, AbstractRoute
 import voluptuous as vol
 
-from homeassistant import exceptions
-from homeassistant.const import CONTENT_TYPE_JSON
-from homeassistant.core import Context, HomeAssistant, is_callback
-from homeassistant.util.json import JSON_ENCODE_EXCEPTIONS, format_unserializable_data
+from menuai import exceptions
+from menuai.const import CONTENT_TYPE_JSON
+from menuai.core import Context, menuai, is_callback
+from menuai.util.json import JSON_ENCODE_EXCEPTIONS, format_unserializable_data
 
 from .json import find_paths_unserializable_data, json_bytes, json_dumps
 
@@ -34,7 +34,7 @@ type AllowCorsType = Callable[[AbstractRoute | AbstractResource], None]
 KEY_AUTHENTICATED: Final = "ha_authenticated"
 KEY_ALLOW_ALL_CORS = AppKey[AllowCorsType]("allow_all_cors")
 KEY_ALLOW_CONFIGURED_CORS = AppKey[AllowCorsType]("allow_configured_cors")
-KEY_HASS: AppKey[HomeAssistant] = AppKey("hass")
+KEY_menuai: AppKey[menuai] = AppKey("menuai")
 
 current_request: ContextVar[Request | None] = ContextVar(
     "current_request", default=None
@@ -42,7 +42,7 @@ current_request: ContextVar[Request | None] = ContextVar(
 
 
 def request_handler_factory(
-    hass: HomeAssistant, view: HomeAssistantView, handler: Callable
+    menuai: menuai, view: menuaiView, handler: Callable
 ) -> Callable[[web.Request], Awaitable[web.StreamResponse]]:
     """Wrap the handler classes."""
     is_coroutinefunction = asyncio.iscoroutinefunction(handler)
@@ -52,7 +52,7 @@ def request_handler_factory(
 
     async def handle(request: web.Request) -> web.StreamResponse:
         """Handle incoming request."""
-        if hass.is_stopping:
+        if menuai.is_stopping:
             return web.Response(status=HTTPStatus.SERVICE_UNAVAILABLE)
 
         authenticated = request.get(KEY_AUTHENTICATED, False)
@@ -104,7 +104,7 @@ def request_handler_factory(
     return handle
 
 
-class HomeAssistantView:
+class menuaiView:
     """Base view for all views."""
 
     url: str | None = None
@@ -116,7 +116,7 @@ class HomeAssistantView:
     @staticmethod
     def context(request: web.Request) -> Context:
         """Generate a context from a request."""
-        if (user := request.get("hass_user")) is None:
+        if (user := request.get("menuai_user")) is None:
             return Context()
 
         return Context(user_id=user.id)
@@ -162,7 +162,7 @@ class HomeAssistantView:
         return self.json(data, status_code, headers=headers)
 
     def register(
-        self, hass: HomeAssistant, app: web.Application, router: web.UrlDispatcher
+        self, menuai: menuai, app: web.Application, router: web.UrlDispatcher
     ) -> None:
         """Register the view with a router."""
         assert self.url is not None, "No url set for view"
@@ -173,7 +173,7 @@ class HomeAssistantView:
             if not (handler := getattr(self, method, None)):
                 continue
 
-            handler = request_handler_factory(hass, self, handler)
+            handler = request_handler_factory(menuai, self, handler)
 
             routes.extend(router.add_route(method, url, handler) for url in urls)
 

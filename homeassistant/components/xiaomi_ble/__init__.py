@@ -8,18 +8,18 @@ from typing import cast
 
 from xiaomi_ble import EncryptionScheme, SensorUpdate, XiaomiBluetoothDeviceData
 
-from homeassistant.components.bluetooth import (
+from menuai.components.bluetooth import (
     DOMAIN as BLUETOOTH_DOMAIN,
     BluetoothScanningMode,
     BluetoothServiceInfoBleak,
     async_ble_device_from_address,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import CoreState, HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import CONNECTION_BLUETOOTH, DeviceRegistry
-from homeassistant.helpers.dispatcher import async_dispatcher_send
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import CoreState, menuai
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import CONNECTION_BLUETOOTH, DeviceRegistry
+from menuai.helpers.dispatcher import async_dispatcher_send
 
 from .const import (
     CONF_DISCOVERED_EVENT_CLASSES,
@@ -37,7 +37,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def process_service_info(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: XiaomiBLEConfigEntry,
     device_registry: DeviceRegistry,
     service_info: BluetoothServiceInfoBleak,
@@ -48,7 +48,7 @@ def process_service_info(
     update = data.update(service_info)
     discovered_event_classes = coordinator.discovered_event_classes
     if entry.data.get(CONF_SLEEPY_DEVICE, False) != data.sleepy_device:
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry,
             data=entry.data | {CONF_SLEEPY_DEVICE: data.sleepy_device},
         )
@@ -81,18 +81,18 @@ def process_service_info(
 
             if event_class not in discovered_event_classes:
                 discovered_event_classes.add(event_class)
-                hass.config_entries.async_update_entry(
+                menuai.config_entries.async_update_entry(
                     entry,
                     data=entry.data
                     | {CONF_DISCOVERED_EVENT_CLASSES: list(discovered_event_classes)},
                 )
                 async_dispatcher_send(
-                    hass, format_discovered_event_class(address), event_class, ble_event
+                    menuai, format_discovered_event_class(address), event_class, ble_event
                 )
 
-            hass.bus.async_fire(XIAOMI_BLE_EVENT, cast(dict, ble_event))
+            menuai.bus.async_fire(XIAOMI_BLE_EVENT, cast(dict, ble_event))
             async_dispatcher_send(
-                hass,
+                menuai,
                 format_event_dispatcher_name(address, event_class),
                 ble_event,
             )
@@ -104,7 +104,7 @@ def process_service_info(
         and data.encryption_scheme != EncryptionScheme.NONE
         and not data.bindkey_verified
     ):
-        entry.async_start_reauth(hass, data={"device": data})
+        entry.async_start_reauth(menuai, data={"device": data})
 
     return update
 
@@ -119,7 +119,7 @@ def format_discovered_event_class(address: str) -> str:
     return f"{DOMAIN}_discovered_event_class_{address}"
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up Xiaomi BLE device from a config entry."""
     address = entry.unique_id
     assert address is not None
@@ -132,14 +132,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     def _needs_poll(
         service_info: BluetoothServiceInfoBleak, last_poll: float | None
     ) -> bool:
-        # Only poll if hass is running, we need to poll,
+        # Only poll if menuai is running, we need to poll,
         # and we actually have a way to connect to the device
         return (
-            hass.state is CoreState.running
+            menuai.state is CoreState.running
             and data.poll_needed(service_info, last_poll)
             and bool(
                 async_ble_device_from_address(
-                    hass, service_info.device.address, connectable=True
+                    menuai, service_info.device.address, connectable=True
                 )
             )
         )
@@ -152,7 +152,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if service_info.connectable:
             connectable_device = service_info.device
         elif device := async_ble_device_from_address(
-            hass, service_info.device.address, True
+            menuai, service_info.device.address, True
         ):
             connectable_device = device
         else:
@@ -163,13 +163,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             )
         return await data.async_poll(connectable_device)
 
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     coordinator = XiaomiActiveBluetoothProcessorCoordinator(
-        hass,
+        menuai,
         _LOGGER,
         address=address,
         mode=BluetoothScanningMode.PASSIVE,
-        update_method=partial(process_service_info, hass, entry, device_registry),
+        update_method=partial(process_service_info, menuai, entry, device_registry),
         needs_poll_method=_needs_poll,
         device_data=data,
         discovered_event_classes=set(entry.data.get(CONF_DISCOVERED_EVENT_CLASSES, [])),
@@ -181,12 +181,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         entry=entry,
     )
     entry.runtime_data = coordinator
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     # only start after all platforms have had a chance to subscribe
     entry.async_on_unload(coordinator.async_start())
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: XiaomiBLEConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: XiaomiBLEConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

@@ -12,8 +12,8 @@ from evohomeasync.auth import (
 )
 from evohomeasync2.auth import AbstractTokenManager
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.storage import Store
+from menuai.core import menuai
+from menuai.helpers.storage import Store
 
 from .const import STORAGE_KEY, STORAGE_VER
 
@@ -37,14 +37,14 @@ class TokenManager(AbstractTokenManager, AbstractSessionManager):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         *args: Any,
         **kwargs: Any,
     ) -> None:
         """Initialise the token manager."""
         super().__init__(*args, **kwargs)
 
-        self._store = Store(hass, STORAGE_VER, STORAGE_KEY)  # type: ignore[var-annotated]
+        self._store = Store(menuai, STORAGE_VER, STORAGE_KEY)  # type: ignore[var-annotated]
         self._store_initialized = False  # True once cache loaded first time
 
     async def get_access_token(self) -> str:

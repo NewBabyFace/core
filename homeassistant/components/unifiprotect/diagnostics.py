@@ -6,13 +6,13 @@ from typing import Any, cast
 
 from uiprotect.test_util.anonymize import anonymize_data
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .data import UFPConfigEntry
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, config_entry: UFPConfigEntry
+    menuai: menuai, config_entry: UFPConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
 

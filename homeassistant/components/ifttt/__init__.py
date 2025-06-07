@@ -11,12 +11,12 @@ import pyfttt
 import requests
 import voluptuous as vol
 
-from homeassistant.components import webhook
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_WEBHOOK_ID
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import config_entry_flow, config_validation as cv
-from homeassistant.helpers.typing import ConfigType
+from menuai.components import webhook
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_WEBHOOK_ID
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import config_entry_flow, config_validation as cv
+from menuai.helpers.typing import ConfigType
 
 from .const import DOMAIN
 
@@ -55,7 +55,7 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the IFTTT service component."""
     if DOMAIN not in config:
         return True
@@ -87,7 +87,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         except requests.exceptions.RequestException:
             _LOGGER.exception("Error communicating with IFTTT")
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_TRIGGER, trigger_service, schema=SERVICE_TRIGGER_SCHEMA
     )
 
@@ -95,7 +95,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 
 async def handle_webhook(
-    hass: HomeAssistant, webhook_id: str, request: web.Request
+    menuai: menuai, webhook_id: str, request: web.Request
 ) -> None:
     """Handle webhook callback."""
     body = await request.text()
@@ -115,20 +115,20 @@ async def handle_webhook(
         return
 
     data["webhook_id"] = webhook_id
-    hass.bus.async_fire(EVENT_RECEIVED, data)
+    menuai.bus.async_fire(EVENT_RECEIVED, data)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Configure based on config entry."""
     webhook.async_register(
-        hass, DOMAIN, "IFTTT", entry.data[CONF_WEBHOOK_ID], handle_webhook
+        menuai, DOMAIN, "IFTTT", entry.data[CONF_WEBHOOK_ID], handle_webhook
     )
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    webhook.async_unregister(hass, entry.data[CONF_WEBHOOK_ID])
+    webhook.async_unregister(menuai, entry.data[CONF_WEBHOOK_ID])
     return True
 
 

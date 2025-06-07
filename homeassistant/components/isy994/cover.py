@@ -6,14 +6,14 @@ from typing import Any, cast
 
 from pyisy.constants import ISY_VALUE_UNKNOWN
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     ATTR_POSITION,
     CoverEntity,
     CoverEntityFeature,
 )
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import _LOGGER, UOM_8_BIT_RANGE
 from .entity import ISYNodeEntity, ISYProgramEntity
@@ -21,7 +21,7 @@ from .models import IsyConfigEntry
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: IsyConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

@@ -8,20 +8,20 @@ import weakref
 
 import pytest
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import debounce
-from homeassistant.util.dt import utcnow
+from menuai.core import menuai, callback
+from menuai.helpers import debounce
+from menuai.util.dt import utcnow
 
 from tests.common import async_fire_time_changed
 
 _LOGGER = logging.getLogger(__name__)
 
 
-async def test_immediate_works(hass: HomeAssistant) -> None:
+async def test_immediate_works(menuai: menuai) -> None:
     """Test immediate works."""
     calls = []
     debouncer = debounce.Debouncer(
-        hass,
+        menuai,
         _LOGGER,
         cooldown=0.01,
         immediate=True,
@@ -53,8 +53,8 @@ async def test_immediate_works(hass: HomeAssistant) -> None:
     # Call and let timer run out
     await debouncer.async_call()
     assert len(calls) == 2
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=1))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=1))
+    await menuai.async_block_till_done()
     assert len(calls) == 2
     assert debouncer._timer_task is None
     assert debouncer._execute_at_end_of_timer is False
@@ -71,11 +71,11 @@ async def test_immediate_works(hass: HomeAssistant) -> None:
     assert debouncer._job.target == debouncer.function
 
 
-async def test_immediate_works_with_schedule_call(hass: HomeAssistant) -> None:
+async def test_immediate_works_with_schedule_call(menuai: menuai) -> None:
     """Test immediate works with scheduled calls."""
     calls = []
     debouncer = debounce.Debouncer(
-        hass,
+        menuai,
         _LOGGER,
         cooldown=0.01,
         immediate=True,
@@ -84,7 +84,7 @@ async def test_immediate_works_with_schedule_call(hass: HomeAssistant) -> None:
 
     # Call when nothing happening
     debouncer.async_schedule_call()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(calls) == 1
     assert debouncer._timer_task is not None
     assert debouncer._execute_at_end_of_timer is False
@@ -92,7 +92,7 @@ async def test_immediate_works_with_schedule_call(hass: HomeAssistant) -> None:
 
     # Call when cooldown active setting execute at end to True
     debouncer.async_schedule_call()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(calls) == 1
     assert debouncer._timer_task is not None
     assert debouncer._execute_at_end_of_timer is True
@@ -108,10 +108,10 @@ async def test_immediate_works_with_schedule_call(hass: HomeAssistant) -> None:
 
     # Call and let timer run out
     debouncer.async_schedule_call()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(calls) == 2
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=1))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=1))
+    await menuai.async_block_till_done()
     assert len(calls) == 2
     assert debouncer._timer_task is None
     assert debouncer._execute_at_end_of_timer is False
@@ -121,7 +121,7 @@ async def test_immediate_works_with_schedule_call(hass: HomeAssistant) -> None:
     # Test calling doesn't execute/cooldown if currently executing.
     await debouncer._execute_lock.acquire()
     debouncer.async_schedule_call()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(calls) == 2
     assert debouncer._timer_task is None
     assert debouncer._execute_at_end_of_timer is False
@@ -129,11 +129,11 @@ async def test_immediate_works_with_schedule_call(hass: HomeAssistant) -> None:
     assert debouncer._job.target == debouncer.function
 
 
-async def test_immediate_works_with_callback_function(hass: HomeAssistant) -> None:
+async def test_immediate_works_with_callback_function(menuai: menuai) -> None:
     """Test immediate works with callback function."""
     calls = []
     debouncer = debounce.Debouncer(
-        hass,
+        menuai,
         _LOGGER,
         cooldown=0.01,
         immediate=True,
@@ -150,11 +150,11 @@ async def test_immediate_works_with_callback_function(hass: HomeAssistant) -> No
     debouncer.async_cancel()
 
 
-async def test_immediate_works_with_executor_function(hass: HomeAssistant) -> None:
+async def test_immediate_works_with_executor_function(menuai: menuai) -> None:
     """Test immediate works with executor function."""
     calls = []
     debouncer = debounce.Debouncer(
-        hass,
+        menuai,
         _LOGGER,
         cooldown=0.01,
         immediate=True,
@@ -172,7 +172,7 @@ async def test_immediate_works_with_executor_function(hass: HomeAssistant) -> No
 
 
 async def test_immediate_works_with_passed_callback_function_raises(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test immediate works with a callback function that raises."""
     calls = []
@@ -183,7 +183,7 @@ async def test_immediate_works_with_passed_callback_function_raises(
         raise RuntimeError("forced_raise")
 
     debouncer = debounce.Debouncer(
-        hass,
+        menuai,
         _LOGGER,
         cooldown=0.01,
         immediate=True,
@@ -217,8 +217,8 @@ async def test_immediate_works_with_passed_callback_function_raises(
     with pytest.raises(RuntimeError, match="forced_raise"):
         await debouncer.async_call()
     assert len(calls) == 2
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=1))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=1))
+    await menuai.async_block_till_done()
     assert len(calls) == 2
     assert debouncer._timer_task is None
     assert debouncer._execute_at_end_of_timer is False
@@ -236,7 +236,7 @@ async def test_immediate_works_with_passed_callback_function_raises(
 
 
 async def test_immediate_works_with_passed_coroutine_raises(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test immediate works with a coroutine that raises."""
     calls = []
@@ -246,7 +246,7 @@ async def test_immediate_works_with_passed_coroutine_raises(
         raise RuntimeError("forced_raise")
 
     debouncer = debounce.Debouncer(
-        hass,
+        menuai,
         _LOGGER,
         cooldown=0.01,
         immediate=True,
@@ -280,8 +280,8 @@ async def test_immediate_works_with_passed_coroutine_raises(
     with pytest.raises(RuntimeError, match="forced_raise"):
         await debouncer.async_call()
     assert len(calls) == 2
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=1))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=1))
+    await menuai.async_block_till_done()
     assert len(calls) == 2
     assert debouncer._timer_task is None
     assert debouncer._execute_at_end_of_timer is False
@@ -298,11 +298,11 @@ async def test_immediate_works_with_passed_coroutine_raises(
     assert debouncer._job.target == debouncer.function
 
 
-async def test_not_immediate_works(hass: HomeAssistant) -> None:
+async def test_not_immediate_works(menuai: menuai) -> None:
     """Test immediate works."""
     calls = []
     debouncer = debounce.Debouncer(
-        hass,
+        menuai,
         _LOGGER,
         cooldown=0.01,
         immediate=False,
@@ -329,8 +329,8 @@ async def test_not_immediate_works(hass: HomeAssistant) -> None:
     # Call and let timer run out
     await debouncer.async_call()
     assert len(calls) == 0
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=1))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=1))
+    await menuai.async_block_till_done()
     assert len(calls) == 1
     assert debouncer._timer_task is not None
     assert debouncer._execute_at_end_of_timer is False
@@ -349,11 +349,11 @@ async def test_not_immediate_works(hass: HomeAssistant) -> None:
     assert debouncer._job.target == debouncer.function
 
 
-async def test_not_immediate_works_schedule_call(hass: HomeAssistant) -> None:
+async def test_not_immediate_works_schedule_call(menuai: menuai) -> None:
     """Test immediate works with schedule call."""
     calls = []
     debouncer = debounce.Debouncer(
-        hass,
+        menuai,
         _LOGGER,
         cooldown=0.01,
         immediate=False,
@@ -362,14 +362,14 @@ async def test_not_immediate_works_schedule_call(hass: HomeAssistant) -> None:
 
     # Call when nothing happening
     debouncer.async_schedule_call()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(calls) == 0
     assert debouncer._timer_task is not None
     assert debouncer._execute_at_end_of_timer is True
 
     # Call while still on cooldown
     debouncer.async_schedule_call()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(calls) == 0
     assert debouncer._timer_task is not None
     assert debouncer._execute_at_end_of_timer is True
@@ -381,10 +381,10 @@ async def test_not_immediate_works_schedule_call(hass: HomeAssistant) -> None:
 
     # Call and let timer run out
     debouncer.async_schedule_call()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(calls) == 0
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=1))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=1))
+    await menuai.async_block_till_done()
     assert len(calls) == 1
     assert debouncer._timer_task is not None
     assert debouncer._execute_at_end_of_timer is False
@@ -396,7 +396,7 @@ async def test_not_immediate_works_schedule_call(hass: HomeAssistant) -> None:
     # Test calling doesn't schedule if currently executing.
     await debouncer._execute_lock.acquire()
     debouncer.async_schedule_call()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(calls) == 1
     assert debouncer._timer_task is None
     assert debouncer._execute_at_end_of_timer is False
@@ -404,7 +404,7 @@ async def test_not_immediate_works_schedule_call(hass: HomeAssistant) -> None:
     assert debouncer._job.target == debouncer.function
 
 
-async def test_immediate_works_with_function_swapped(hass: HomeAssistant) -> None:
+async def test_immediate_works_with_function_swapped(menuai: menuai) -> None:
     """Test immediate works and we can change out the function."""
     calls = []
 
@@ -412,7 +412,7 @@ async def test_immediate_works_with_function_swapped(hass: HomeAssistant) -> Non
     two_function = AsyncMock(side_effect=lambda: calls.append(2))
 
     debouncer = debounce.Debouncer(
-        hass,
+        menuai,
         _LOGGER,
         cooldown=0.01,
         immediate=True,
@@ -446,8 +446,8 @@ async def test_immediate_works_with_function_swapped(hass: HomeAssistant) -> Non
     await debouncer.async_call()
     assert len(calls) == 2
     assert calls == [1, 2]
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=1))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=1))
+    await menuai.async_block_till_done()
     assert len(calls) == 2
     assert calls == [1, 2]
     assert debouncer._timer_task is None
@@ -466,7 +466,7 @@ async def test_immediate_works_with_function_swapped(hass: HomeAssistant) -> Non
     assert debouncer._job.target == debouncer.function
 
 
-async def test_shutdown(hass: HomeAssistant, caplog: pytest.LogCaptureFixture) -> None:
+async def test_shutdown(menuai: menuai, caplog: pytest.LogCaptureFixture) -> None:
     """Test shutdown."""
     calls = []
     future = asyncio.Future()
@@ -476,7 +476,7 @@ async def test_shutdown(hass: HomeAssistant, caplog: pytest.LogCaptureFixture) -
         calls.append(None)
 
     debouncer = debounce.Debouncer(
-        hass,
+        menuai,
         _LOGGER,
         cooldown=0.01,
         immediate=False,
@@ -484,11 +484,11 @@ async def test_shutdown(hass: HomeAssistant, caplog: pytest.LogCaptureFixture) -
     )
 
     # Ensure shutdown during a run doesn't create a cooldown timer
-    hass.async_create_task(debouncer.async_call())
+    menuai.async_create_task(debouncer.async_call())
     await asyncio.sleep(0.01)
     debouncer.async_shutdown()
     future.set_result(True)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(calls) == 1
     assert debouncer._timer_task is None
 
@@ -501,7 +501,7 @@ async def test_shutdown(hass: HomeAssistant, caplog: pytest.LogCaptureFixture) -
 
 
 async def test_background(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test background tasks are created when background is True."""
     calls = []
@@ -511,7 +511,7 @@ async def test_background(
         calls.append(None)
 
     debouncer = debounce.Debouncer(
-        hass, _LOGGER, cooldown=0.05, immediate=True, function=_func, background=True
+        menuai, _LOGGER, cooldown=0.05, immediate=True, function=_func, background=True
     )
 
     await debouncer.async_call()
@@ -520,19 +520,19 @@ async def test_background(
     debouncer.async_schedule_call()
     assert len(calls) == 1
 
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=1))
-    await hass.async_block_till_done(wait_background_tasks=False)
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=1))
+    await menuai.async_block_till_done(wait_background_tasks=False)
     assert len(calls) == 1
 
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
     assert len(calls) == 2
 
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=1))
-    await hass.async_block_till_done(wait_background_tasks=False)
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=1))
+    await menuai.async_block_till_done(wait_background_tasks=False)
     assert len(calls) == 2
 
 
-async def test_shutdown_releases_parent_class(hass: HomeAssistant) -> None:
+async def test_shutdown_releases_parent_class(menuai: menuai) -> None:
     """Test shutdown releases parent class.
 
     See https://github.com/home-assistant/core/issues/137237
@@ -547,7 +547,7 @@ async def test_shutdown_releases_parent_class(hass: HomeAssistant) -> None:
     my_class_weak_ref = weakref.ref(my_class)
 
     debouncer = debounce.Debouncer(
-        hass,
+        menuai,
         _LOGGER,
         cooldown=0.01,
         immediate=True,
@@ -557,7 +557,7 @@ async def test_shutdown_releases_parent_class(hass: HomeAssistant) -> None:
     # Debouncer keeps a reference to the function, prevening GC
     del my_class
     await debouncer.async_call()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(calls) == 1
     assert my_class_weak_ref() is not None
 

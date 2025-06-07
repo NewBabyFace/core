@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.cover import CoverEntity, CoverEntityFeature, CoverState
-from homeassistant.const import CONF_COVERS, CONF_NAME, STATE_UNAVAILABLE, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.cover import CoverEntity, CoverEntityFeature, CoverState
+from menuai.const import CONF_COVERS, CONF_NAME, STATE_UNAVAILABLE, STATE_UNKNOWN
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.restore_state import RestoreEntity
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import get_hub
 from .const import (
@@ -30,7 +30,7 @@ PARALLEL_UPDATES = 1
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -38,8 +38,8 @@ async def async_setup_platform(
     """Read configuration and create Modbus cover."""
     if discovery_info is None or not (covers := discovery_info[CONF_COVERS]):
         return
-    hub = get_hub(hass, discovery_info[CONF_NAME])
-    async_add_entities(ModbusCover(hass, hub, config) for config in covers)
+    hub = get_hub(menuai, discovery_info[CONF_NAME])
+    async_add_entities(ModbusCover(menuai, hub, config) for config in covers)
 
 
 class ModbusCover(BasePlatform, CoverEntity, RestoreEntity):
@@ -49,12 +49,12 @@ class ModbusCover(BasePlatform, CoverEntity, RestoreEntity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         hub: ModbusHub,
         config: dict[str, Any],
     ) -> None:
         """Initialize the modbus cover."""
-        super().__init__(hass, hub, config)
+        super().__init__(menuai, hub, config)
         self._state_closed = config[CONF_STATE_CLOSED]
         self._state_closing = config[CONF_STATE_CLOSING]
         self._state_open = config[CONF_STATE_OPEN]
@@ -85,9 +85,9 @@ class ModbusCover(BasePlatform, CoverEntity, RestoreEntity):
             self._address = self._status_register
             self._input_type = self._status_register_type
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
-        await self.async_base_added_to_hass()
+        await self.async_base_added_to_menuai()
         if state := await self.async_get_last_state():
             convert = {
                 CoverState.CLOSED: self._state_closed,

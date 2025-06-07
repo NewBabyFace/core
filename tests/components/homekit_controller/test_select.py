@@ -7,8 +7,8 @@ from aiohomekit.model.characteristics import CharacteristicsTypes
 from aiohomekit.model.characteristics.const import TemperatureDisplayUnits
 from aiohomekit.model.services import ServicesTypes
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .common import Helper, setup_test_component
 
@@ -37,7 +37,7 @@ def create_service_with_temperature_units(accessory: Accessory):
 
 
 async def test_migrate_unique_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     get_next_aid: Callable[[], int],
 ) -> None:
@@ -50,7 +50,7 @@ async def test_migrate_unique_id(
         suggested_object_id="testdevice_current_mode",
     )
 
-    await setup_test_component(hass, aid, create_service_with_ecobee_mode)
+    await setup_test_component(menuai, aid, create_service_with_ecobee_mode)
 
     assert (
         entity_registry.async_get(select.entity_id).unique_id
@@ -59,16 +59,16 @@ async def test_migrate_unique_id(
 
 
 async def test_read_current_mode(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that Ecobee mode can be correctly read and show as human readable text."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_service_with_ecobee_mode
+        menuai, get_next_aid(), create_service_with_ecobee_mode
     )
 
     # Helper will be for the primary entity, which is the service. Make a helper for the sensor.
     ecobee_mode = Helper(
-        hass,
+        menuai,
         "select.testdevice_current_mode",
         helper.pairing,
         helper.accessory,
@@ -101,24 +101,24 @@ async def test_read_current_mode(
 
 
 async def test_write_current_mode(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test can set a specific mode."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_service_with_ecobee_mode
+        menuai, get_next_aid(), create_service_with_ecobee_mode
     )
     helper.accessory.services.first(service_type=ServicesTypes.THERMOSTAT)
 
     # Helper will be for the primary entity, which is the service. Make a helper for the sensor.
     current_mode = Helper(
-        hass,
+        menuai,
         "select.testdevice_current_mode",
         helper.pairing,
         helper.accessory,
         helper.config_entry,
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "select",
         "select_option",
         {"entity_id": "select.testdevice_current_mode", "option": "home"},
@@ -129,7 +129,7 @@ async def test_write_current_mode(
         {CharacteristicsTypes.VENDOR_ECOBEE_SET_HOLD_SCHEDULE: 0},
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "select",
         "select_option",
         {"entity_id": "select.testdevice_current_mode", "option": "sleep"},
@@ -140,7 +140,7 @@ async def test_write_current_mode(
         {CharacteristicsTypes.VENDOR_ECOBEE_SET_HOLD_SCHEDULE: 1},
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "select",
         "select_option",
         {"entity_id": "select.testdevice_current_mode", "option": "away"},
@@ -153,16 +153,16 @@ async def test_write_current_mode(
 
 
 async def test_read_select(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test the generic select can read the current value."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_service_with_temperature_units
+        menuai, get_next_aid(), create_service_with_temperature_units
     )
 
     # Helper will be for the primary entity, which is the service. Make a helper for the sensor.
     select_entity = Helper(
-        hass,
+        menuai,
         "select.testdevice_temperature_display_units",
         helper.pairing,
         helper.accessory,
@@ -187,24 +187,24 @@ async def test_read_select(
 
 
 async def test_write_select(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test can set a value."""
     helper = await setup_test_component(
-        hass, get_next_aid(), create_service_with_temperature_units
+        menuai, get_next_aid(), create_service_with_temperature_units
     )
     helper.accessory.services.first(service_type=ServicesTypes.THERMOSTAT)
 
     # Helper will be for the primary entity, which is the service. Make a helper for the sensor.
     current_mode = Helper(
-        hass,
+        menuai,
         "select.testdevice_temperature_display_units",
         helper.pairing,
         helper.accessory,
         helper.config_entry,
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "select",
         "select_option",
         {
@@ -218,7 +218,7 @@ async def test_write_select(
         {CharacteristicsTypes.TEMPERATURE_UNITS: TemperatureDisplayUnits.FAHRENHEIT},
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "select",
         "select_option",
         {

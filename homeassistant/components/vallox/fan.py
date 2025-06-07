@@ -7,12 +7,12 @@ from typing import Any, NamedTuple
 
 from vallox_websocket_api import Vallox, ValloxApiException, ValloxInvalidInputException
 
-from homeassistant.components.fan import FanEntity, FanEntityFeature
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
+from menuai.components.fan import FanEntity, FanEntityFeature
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
 
 from .const import (
     DOMAIN,
@@ -57,12 +57,12 @@ def _convert_to_int(value: StateType) -> int | None:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the fan device."""
-    data = hass.data[DOMAIN][entry.entry_id]
+    data = menuai.data[DOMAIN][entry.entry_id]
 
     client = data["client"]
 
@@ -192,7 +192,7 @@ class ValloxFanEntity(ValloxEntity, FanEntity):
                 {METRIC_KEY_MODE: MODE_ON if mode else MODE_OFF}
             )
         except ValloxApiException as err:
-            raise HomeAssistantError("Failed to set power mode") from err
+            raise menuaiError("Failed to set power mode") from err
 
         return True
 
@@ -209,7 +209,7 @@ class ValloxFanEntity(ValloxEntity, FanEntity):
             await self._client.set_profile(profile)
 
         except ValloxApiException as err:
-            raise HomeAssistantError(f"Failed to set profile: {preset_mode}") from err
+            raise menuaiError(f"Failed to set profile: {preset_mode}") from err
 
         return True
 
@@ -234,6 +234,6 @@ class ValloxFanEntity(ValloxEntity, FanEntity):
                 f"{vallox_profile} profile does not support setting the fan speed"
             ) from err
         except ValloxApiException as err:
-            raise HomeAssistantError("Failed to set fan speed") from err
+            raise menuaiError("Failed to set fan speed") from err
 
         return True

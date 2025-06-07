@@ -9,15 +9,15 @@ from google.protobuf import duration_pb2
 from google.type import localized_text_pb2
 import pytest
 
-from homeassistant.components.google_travel_time.const import DOMAIN
-from homeassistant.core import HomeAssistant
+from menuai.components.google_travel_time.const import DOMAIN
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
 
 @pytest.fixture(name="mock_config")
 async def mock_config_fixture(
-    hass: HomeAssistant, data: dict[str, Any], options: dict[str, Any]
+    menuai: menuai, data: dict[str, Any], options: dict[str, Any]
 ) -> MockConfigEntry:
     """Mock a Google Travel Time config entry."""
     config_entry = MockConfigEntry(
@@ -26,9 +26,9 @@ async def mock_config_fixture(
         options=options,
         entry_id="test",
     )
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
     return config_entry
 
 
@@ -36,7 +36,7 @@ async def mock_config_fixture(
 def mock_setup_entry() -> Generator[None]:
     """Bypass entry setup."""
     with patch(
-        "homeassistant.components.google_travel_time.async_setup_entry",
+        "menuai.components.google_travel_time.async_setup_entry",
         return_value=True,
     ):
         yield
@@ -47,11 +47,11 @@ def routes_mock() -> Generator[AsyncMock]:
     """Return valid API result."""
     with (
         patch(
-            "homeassistant.components.google_travel_time.helpers.RoutesAsyncClient",
+            "menuai.components.google_travel_time.helpers.RoutesAsyncClient",
             autospec=True,
         ) as mock_client,
         patch(
-            "homeassistant.components.google_travel_time.sensor.RoutesAsyncClient",
+            "menuai.components.google_travel_time.sensor.RoutesAsyncClient",
             new=mock_client,
         ),
     ):

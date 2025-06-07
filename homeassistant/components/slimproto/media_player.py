@@ -9,8 +9,8 @@ from aioslimproto.client import PlayerState, SlimClient
 from aioslimproto.models import EventType, SlimEvent
 from aioslimproto.server import SlimServer
 
-from homeassistant.components import media_source
-from homeassistant.components.media_player import (
+from menuai.components import media_source
+from menuai.components.media_player import (
     BrowseMedia,
     MediaPlayerDeviceClass,
     MediaPlayerEntity,
@@ -19,11 +19,11 @@ from homeassistant.components.media_player import (
     MediaType,
     async_process_play_media_url,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util.dt import utcnow
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util.dt import utcnow
 
 from .const import DEFAULT_NAME, DOMAIN, PLAYER_EVENT
 
@@ -37,12 +37,12 @@ STATE_MAPPING = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up SlimProto MediaPlayer(s) from Config Entry."""
-    slimserver: SlimServer = hass.data[DOMAIN]
+    slimserver: SlimServer = menuai.data[DOMAIN]
     added_ids = set()
 
     async def async_add_player(player: SlimClient) -> None:
@@ -112,7 +112,7 @@ class SlimProtoPlayer(MediaPlayerEntity):
             )
         self.update_attributes()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
         self.update_attributes()
         self.async_on_remove(
@@ -201,14 +201,14 @@ class SlimProtoPlayer(MediaPlayerEntity):
         # Handle media_source
         if media_source.is_media_source_id(media_id):
             sourced_media = await media_source.async_resolve_media(
-                self.hass, media_id, self.entity_id
+                self.menuai, media_id, self.entity_id
             )
             media_id = sourced_media.url
             to_send_media_type = sourced_media.mime_type
 
         if to_send_media_type and not to_send_media_type.startswith("audio/"):
             to_send_media_type = None
-        media_id = async_process_play_media_url(self.hass, media_id)
+        media_id = async_process_play_media_url(self.menuai, media_id)
 
         await self.player.play_url(media_id, mime_type=to_send_media_type)
 
@@ -219,7 +219,7 @@ class SlimProtoPlayer(MediaPlayerEntity):
     ) -> BrowseMedia:
         """Implement the websocket media browsing helper."""
         return await media_source.async_browse_media(
-            self.hass,
+            self.menuai,
             media_content_id,
             content_filter=lambda item: item.media_content_type.startswith("audio/"),
         )
@@ -238,7 +238,7 @@ class SlimProtoPlayer(MediaPlayerEntity):
                 "entity_id": self.entity_id,
                 "device_id": dev_id,
             }
-            self.hass.bus.async_fire(PLAYER_EVENT, evt_data)
+            self.menuai.bus.async_fire(PLAYER_EVENT, evt_data)
             return
         self.update_attributes()
         self.async_write_ha_state()

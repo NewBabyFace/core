@@ -20,18 +20,18 @@ from hyperion.const import (
     KEY_UPDATE,
 )
 
-from homeassistant.components.camera import (
+from menuai.components.camera import (
     DEFAULT_CONTENT_TYPE,
     Camera,
     async_get_still_stream,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import (
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import (
     async_dispatcher_connect,
     async_dispatcher_send,
 )
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import (
     HyperionConfigEntry,
@@ -51,7 +51,7 @@ IMAGE_STREAM_JPG_SENTINEL = "data:image/jpg;base64,"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: HyperionConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -83,13 +83,13 @@ async def async_setup_entry(
         """Remove entities for an old Hyperion instance."""
         assert server_id
         async_dispatcher_send(
-            hass,
+            menuai,
             SIGNAL_ENTITY_REMOVE.format(
                 camera_unique_id(instance_num),
             ),
         )
 
-    listen_for_instance_updates(hass, entry, instance_add, instance_remove)
+    listen_for_instance_updates(menuai, entry, instance_add, instance_remove)
 
 
 # A note on Hyperion streaming semantics:
@@ -226,11 +226,11 @@ class HyperionCamera(Camera):
                 )
         return None
 
-    async def async_added_to_hass(self) -> None:
-        """Register callbacks when entity added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Register callbacks when entity added to menuai."""
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 SIGNAL_ENTITY_REMOVE.format(self._attr_unique_id),
                 functools.partial(self.async_remove, force_remove=True),
             )
@@ -238,8 +238,8 @@ class HyperionCamera(Camera):
 
         self._client.add_callbacks(self._client_callbacks)
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Cleanup prior to hass removal."""
+    async def async_will_remove_from_menuai(self) -> None:
+        """Cleanup prior to menuai removal."""
         self._client.remove_callbacks(self._client_callbacks)
 
 

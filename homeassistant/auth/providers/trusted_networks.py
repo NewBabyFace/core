@@ -19,10 +19,10 @@ from typing import Any, cast
 
 import voluptuous as vol
 
-from homeassistant.core import callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.network import is_cloud_connection
+from menuai.core import callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.network import is_cloud_connection
 
 from .. import InvalidAuthError
 from ..models import (
@@ -65,7 +65,7 @@ CONFIG_SCHEMA = AUTH_PROVIDER_SCHEMA.extend(
 )
 
 
-class InvalidUserError(HomeAssistantError):
+class InvalidUserError(menuaiError):
     """Raised when try to login as invalid user."""
 
 
@@ -91,12 +91,12 @@ class TrustedNetworksAuthProvider(AuthProvider):
     @property
     def trusted_proxies(self) -> list[IPNetwork]:
         """Return trusted proxies in the system."""
-        if not self.hass.http:
+        if not self.menuai.http:
             return []
 
         return [
             ip_network(trusted_proxy)
-            for trusted_proxy in self.hass.http.trusted_proxies
+            for trusted_proxy in self.menuai.http.trusted_proxies
         ]
 
     @property
@@ -201,8 +201,8 @@ class TrustedNetworksAuthProvider(AuthProvider):
         if any(ip_addr in trusted_proxy for trusted_proxy in self.trusted_proxies):
             raise InvalidAuthError("Can't allow access from a proxy server")
 
-        if is_cloud_connection(self.hass):
-            raise InvalidAuthError("Can't allow access from Home Assistant Cloud")
+        if is_cloud_connection(self.menuai):
+            raise InvalidAuthError("Can't allow access from MenuAI Cloud")
 
     @callback
     def async_validate_refresh_token(

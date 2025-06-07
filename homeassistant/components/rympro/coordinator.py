@@ -7,9 +7,9 @@ import logging
 
 from pyrympro import CannotConnectError, OperationError, RymPro, UnauthorizedError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN
 
@@ -24,13 +24,13 @@ class RymProDataUpdateCoordinator(DataUpdateCoordinator[dict[int, dict]]):
     config_entry: ConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: ConfigEntry, rympro: RymPro
+        self, menuai: menuai, config_entry: ConfigEntry, rympro: RymPro
     ) -> None:
         """Initialize global RymPro data updater."""
         self.rympro = rympro
         interval = timedelta(seconds=SCAN_INTERVAL)
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -52,7 +52,7 @@ class RymProDataUpdateCoordinator(DataUpdateCoordinator[dict[int, dict]]):
                     meter_id
                 )
         except UnauthorizedError as error:
-            await self.hass.config_entries.async_reload(self.config_entry.entry_id)
+            await self.menuai.config_entries.async_reload(self.config_entry.entry_id)
             raise UpdateFailed(error) from error
         except (CannotConnectError, OperationError) as error:
             raise UpdateFailed(error) from error

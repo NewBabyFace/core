@@ -17,7 +17,7 @@ from pyisy.constants import (
 )
 from pyisy.nodes import Node
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_TARGET_TEMP_HIGH,
     ATTR_TARGET_TEMP_LOW,
     FAN_AUTO,
@@ -28,16 +28,16 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_TEMPERATURE,
     PRECISION_TENTHS,
     Platform,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util.enum import try_parse_enum
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util.enum import try_parse_enum
 
 from .const import (
     _LOGGER,
@@ -54,12 +54,12 @@ from .const import (
     UOM_TO_STATES,
 )
 from .entity import ISYNodeEntity
-from .helpers import convert_isy_value_to_hass
+from .helpers import convert_isy_value_to_menuai
 from .models import IsyConfigEntry
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: IsyConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -100,7 +100,7 @@ class ISYThermostatEntity(ISYNodeEntity, ClimateEntity):
     def temperature_unit(self) -> str:
         """Return the unit of measurement."""
         if not (uom := self._node.aux_properties.get(PROP_UOM)):
-            return self.hass.config.units.temperature_unit
+            return self.menuai.config.units.temperature_unit
         if uom.value == UOM_ISY_CELSIUS:
             return UnitOfTemperature.CELSIUS
         if uom.value == UOM_ISY_FAHRENHEIT:
@@ -149,7 +149,7 @@ class ISYThermostatEntity(ISYNodeEntity, ClimateEntity):
     @property
     def current_temperature(self) -> float | None:
         """Return the current temperature."""
-        return convert_isy_value_to_hass(
+        return convert_isy_value_to_menuai(
             self._node.status, self._uom, self._node.prec, 1
         )
 
@@ -168,7 +168,7 @@ class ISYThermostatEntity(ISYNodeEntity, ClimateEntity):
         target = self._node.aux_properties.get(PROP_SETPOINT_COOL)
         if not target:
             return None
-        return convert_isy_value_to_hass(target.value, target.uom, target.prec, 1)
+        return convert_isy_value_to_menuai(target.value, target.uom, target.prec, 1)
 
     @property
     def target_temperature_low(self) -> float | None:
@@ -176,7 +176,7 @@ class ISYThermostatEntity(ISYNodeEntity, ClimateEntity):
         target = self._node.aux_properties.get(PROP_SETPOINT_HEAT)
         if not target:
             return None
-        return convert_isy_value_to_hass(target.value, target.uom, target.prec, 1)
+        return convert_isy_value_to_menuai(target.value, target.uom, target.prec, 1)
 
     @property
     def fan_mode(self) -> str:

@@ -17,10 +17,10 @@ from zcc import (
     ControlPointTimeoutError,
 )
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_MAC, CONF_PORT
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.selector import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_MAC, CONF_PORT
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.selector import (
     SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,

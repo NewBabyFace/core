@@ -6,9 +6,9 @@ from typing import Any
 from poolsense import PoolSense
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
-from homeassistant.helpers import aiohttp_client
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_EMAIL, CONF_PASSWORD
+from menuai.helpers import aiohttp_client
 
 from .const import DOMAIN
 
@@ -35,7 +35,7 @@ class PoolSenseConfigFlow(ConfigFlow, domain=DOMAIN):
             )
 
             poolsense = PoolSense(
-                aiohttp_client.async_get_clientsession(self.hass),
+                aiohttp_client.async_get_clientsession(self.menuai),
                 user_input[CONF_EMAIL],
                 user_input[CONF_PASSWORD],
             )

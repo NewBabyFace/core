@@ -8,14 +8,14 @@ from dataclasses import dataclass
 from renault_api.kamereon.enums import ChargeState, PlugState
 from renault_api.kamereon.models import KamereonVehicleBatteryStatusData
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
 
 from . import RenaultConfigEntry
 from .entity import RenaultDataEntity, RenaultDataEntityDescription
@@ -47,7 +47,7 @@ class RenaultBinarySensorEntityDescription(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: RenaultConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

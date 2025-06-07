@@ -5,25 +5,25 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components.sensor import SensorDeviceClass
-from homeassistant.const import (
+from menuai.components.sensor import SensorDeviceClass
+from menuai.const import (
     ATTR_UNIT_OF_MEASUREMENT,
     UnitOfDataRate,
     UnitOfInformation,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.util import dt as dt_util
 
 from . import init_integration
 
 
 @pytest.mark.usefixtures("nzbget_api")
-async def test_sensors(hass: HomeAssistant, entity_registry: er.EntityRegistry) -> None:
+async def test_sensors(menuai: menuai, entity_registry: er.EntityRegistry) -> None:
     """Test the creation and values of the sensors."""
     now = dt_util.utcnow().replace(microsecond=0)
-    with patch("homeassistant.components.nzbget.sensor.utcnow", return_value=now):
-        entry = await init_integration(hass)
+    with patch("menuai.components.nzbget.sensor.utcnow", return_value=now):
+        entry = await init_integration(menuai)
 
     uptime = now - timedelta(seconds=600)
 
@@ -82,7 +82,7 @@ async def test_sensors(hass: HomeAssistant, entity_registry: er.EntityRegistry) 
         assert entity_entry.original_device_class == data[3]
         assert entity_entry.unique_id == f"{entry.entry_id}_{data[0]}"
 
-        state = hass.states.get(f"sensor.nzbgettest_{sensor_id}")
+        state = menuai.states.get(f"sensor.nzbgettest_{sensor_id}")
         assert state
         assert state.attributes.get(ATTR_UNIT_OF_MEASUREMENT) == data[2]
         assert state.state == data[1]

@@ -6,21 +6,21 @@ from freezegun import freeze_time
 from pyoctoprintapi import OctoprintPrinterInfo
 import pytest
 
-from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
-from homeassistant.components.octoprint import OctoprintDataUpdateCoordinator
-from homeassistant.components.octoprint.button import InvalidPrinterState
-from homeassistant.components.octoprint.const import DOMAIN
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
+from menuai.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
+from menuai.components.octoprint import OctoprintDataUpdateCoordinator
+from menuai.components.octoprint.button import InvalidPrinterState
+from menuai.components.octoprint.const import DOMAIN
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
 
 from . import init_integration
 
 
-async def test_pause_job(hass: HomeAssistant) -> None:
+async def test_pause_job(menuai: menuai) -> None:
     """Test the pause job button."""
-    await init_integration(hass, BUTTON_DOMAIN)
+    await init_integration(menuai, BUTTON_DOMAIN)
 
-    coordinator: OctoprintDataUpdateCoordinator = hass.data[DOMAIN]["uuid"][
+    coordinator: OctoprintDataUpdateCoordinator = menuai.data[DOMAIN]["uuid"][
         "coordinator"
     ]
 
@@ -29,7 +29,7 @@ async def test_pause_job(hass: HomeAssistant) -> None:
         coordinator.data["printer"] = OctoprintPrinterInfo(
             {"state": {"flags": {"printing": True}}, "temperature": []}
         )
-        await hass.services.async_call(
+        await menuai.services.async_call(
             BUTTON_DOMAIN,
             SERVICE_PRESS,
             {
@@ -45,7 +45,7 @@ async def test_pause_job(hass: HomeAssistant) -> None:
         coordinator.data["printer"] = OctoprintPrinterInfo(
             {"state": {"flags": {"printing": False, "paused": True}}, "temperature": []}
         )
-        await hass.services.async_call(
+        await menuai.services.async_call(
             BUTTON_DOMAIN,
             SERVICE_PRESS,
             {
@@ -65,7 +65,7 @@ async def test_pause_job(hass: HomeAssistant) -> None:
             }
         )
         with pytest.raises(InvalidPrinterState):
-            await hass.services.async_call(
+            await menuai.services.async_call(
                 BUTTON_DOMAIN,
                 SERVICE_PRESS,
                 {
@@ -75,11 +75,11 @@ async def test_pause_job(hass: HomeAssistant) -> None:
             )
 
 
-async def test_resume_job(hass: HomeAssistant) -> None:
+async def test_resume_job(menuai: menuai) -> None:
     """Test the resume job button."""
-    await init_integration(hass, BUTTON_DOMAIN)
+    await init_integration(menuai, BUTTON_DOMAIN)
 
-    coordinator: OctoprintDataUpdateCoordinator = hass.data[DOMAIN]["uuid"][
+    coordinator: OctoprintDataUpdateCoordinator = menuai.data[DOMAIN]["uuid"][
         "coordinator"
     ]
 
@@ -88,7 +88,7 @@ async def test_resume_job(hass: HomeAssistant) -> None:
         coordinator.data["printer"] = OctoprintPrinterInfo(
             {"state": {"flags": {"printing": False, "paused": True}}, "temperature": []}
         )
-        await hass.services.async_call(
+        await menuai.services.async_call(
             BUTTON_DOMAIN,
             SERVICE_PRESS,
             {
@@ -104,7 +104,7 @@ async def test_resume_job(hass: HomeAssistant) -> None:
         coordinator.data["printer"] = OctoprintPrinterInfo(
             {"state": {"flags": {"printing": True, "paused": False}}, "temperature": []}
         )
-        await hass.services.async_call(
+        await menuai.services.async_call(
             BUTTON_DOMAIN,
             SERVICE_PRESS,
             {
@@ -124,7 +124,7 @@ async def test_resume_job(hass: HomeAssistant) -> None:
             }
         )
         with pytest.raises(InvalidPrinterState):
-            await hass.services.async_call(
+            await menuai.services.async_call(
                 BUTTON_DOMAIN,
                 SERVICE_PRESS,
                 {
@@ -134,11 +134,11 @@ async def test_resume_job(hass: HomeAssistant) -> None:
             )
 
 
-async def test_stop_job(hass: HomeAssistant) -> None:
+async def test_stop_job(menuai: menuai) -> None:
     """Test the stop job button."""
-    await init_integration(hass, BUTTON_DOMAIN)
+    await init_integration(menuai, BUTTON_DOMAIN)
 
-    coordinator: OctoprintDataUpdateCoordinator = hass.data[DOMAIN]["uuid"][
+    coordinator: OctoprintDataUpdateCoordinator = menuai.data[DOMAIN]["uuid"][
         "coordinator"
     ]
 
@@ -147,7 +147,7 @@ async def test_stop_job(hass: HomeAssistant) -> None:
         coordinator.data["printer"] = OctoprintPrinterInfo(
             {"state": {"flags": {"printing": False, "paused": True}}, "temperature": []}
         )
-        await hass.services.async_call(
+        await menuai.services.async_call(
             BUTTON_DOMAIN,
             SERVICE_PRESS,
             {
@@ -163,7 +163,7 @@ async def test_stop_job(hass: HomeAssistant) -> None:
         coordinator.data["printer"] = OctoprintPrinterInfo(
             {"state": {"flags": {"printing": True, "paused": False}}, "temperature": []}
         )
-        await hass.services.async_call(
+        await menuai.services.async_call(
             BUTTON_DOMAIN,
             SERVICE_PRESS,
             {
@@ -182,7 +182,7 @@ async def test_stop_job(hass: HomeAssistant) -> None:
                 "temperature": [],
             }
         )
-        await hass.services.async_call(
+        await menuai.services.async_call(
             BUTTON_DOMAIN,
             SERVICE_PRESS,
             {
@@ -195,17 +195,17 @@ async def test_stop_job(hass: HomeAssistant) -> None:
 
 
 @freeze_time("2023-01-01 00:00")
-async def test_shutdown_system(hass: HomeAssistant) -> None:
+async def test_shutdown_system(menuai: menuai) -> None:
     """Test the shutdown system button."""
-    await init_integration(hass, BUTTON_DOMAIN)
+    await init_integration(menuai, BUTTON_DOMAIN)
 
     entity_id = "button.octoprint_shutdown_system"
 
     # Test shutting down the system
     with patch(
-        "homeassistant.components.octoprint.coordinator.OctoprintClient.shutdown"
+        "menuai.components.octoprint.coordinator.OctoprintClient.shutdown"
     ) as shutdown_command:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             BUTTON_DOMAIN,
             SERVICE_PRESS,
             {ATTR_ENTITY_ID: entity_id},
@@ -214,23 +214,23 @@ async def test_shutdown_system(hass: HomeAssistant) -> None:
 
         assert len(shutdown_command.mock_calls) == 1
 
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert state.state == "2023-01-01T00:00:00+00:00"
 
 
 @freeze_time("2023-01-01 00:00")
-async def test_reboot_system(hass: HomeAssistant) -> None:
+async def test_reboot_system(menuai: menuai) -> None:
     """Test the reboot system button."""
-    await init_integration(hass, BUTTON_DOMAIN)
+    await init_integration(menuai, BUTTON_DOMAIN)
 
     entity_id = "button.octoprint_reboot_system"
 
     # Test rebooting the system
     with patch(
-        "homeassistant.components.octoprint.coordinator.OctoprintClient.reboot_system"
+        "menuai.components.octoprint.coordinator.OctoprintClient.reboot_system"
     ) as reboot_command:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             BUTTON_DOMAIN,
             SERVICE_PRESS,
             {
@@ -241,23 +241,23 @@ async def test_reboot_system(hass: HomeAssistant) -> None:
 
         assert len(reboot_command.mock_calls) == 1
 
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert state.state == "2023-01-01T00:00:00+00:00"
 
 
 @freeze_time("2023-01-01 00:00")
-async def test_restart_octoprint(hass: HomeAssistant) -> None:
+async def test_restart_octoprint(menuai: menuai) -> None:
     """Test the restart octoprint button."""
-    await init_integration(hass, BUTTON_DOMAIN)
+    await init_integration(menuai, BUTTON_DOMAIN)
 
     entity_id = "button.octoprint_restart_octoprint"
 
     # Test restarting octoprint
     with patch(
-        "homeassistant.components.octoprint.coordinator.OctoprintClient.restart"
+        "menuai.components.octoprint.coordinator.OctoprintClient.restart"
     ) as restart_command:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             BUTTON_DOMAIN,
             SERVICE_PRESS,
             {
@@ -268,6 +268,6 @@ async def test_restart_octoprint(hass: HomeAssistant) -> None:
 
         assert len(restart_command.mock_calls) == 1
 
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert state.state == "2023-01-01T00:00:00+00:00"

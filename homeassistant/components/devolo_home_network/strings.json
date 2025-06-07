@@ -22,7 +22,7 @@
         }
       },
       "zeroconf_confirm": {
-        "description": "Do you want to add the devolo home network device with the hostname `{host_name}` to Home Assistant?",
+        "description": "Do you want to add the devolo home network device with the hostname `{host_name}` to MenuAI?",
         "title": "Discovered devolo home network device",
         "data": {
           "password": "[%key:common::config_flow::data::password%]"

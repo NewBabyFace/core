@@ -13,13 +13,13 @@ from gardena_bluetooth.parse import Characteristic
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.number import (
+from menuai.components.number import (
     ATTR_VALUE,
     DOMAIN as NUMBER_DOMAIN,
     SERVICE_SET_VALUE,
 )
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
 
 from . import setup_entry
 
@@ -55,7 +55,7 @@ from tests.common import MockConfigEntry
     ],
 )
 async def test_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mock_entry: MockConfigEntry,
     mock_read_char_raw: dict[str, bytes],
@@ -67,13 +67,13 @@ async def test_setup(
     """Test setup creates expected entities."""
 
     mock_read_char_raw[uuid] = raw[0]
-    await setup_entry(hass, mock_entry, [Platform.NUMBER])
-    assert hass.states.get(entity_id) == snapshot
+    await setup_entry(menuai, mock_entry, [Platform.NUMBER])
+    assert menuai.states.get(entity_id) == snapshot
 
     for char_raw in raw[1:]:
         mock_read_char_raw[uuid] = char_raw
         await scan_step()
-        assert hass.states.get(entity_id) == snapshot
+        assert menuai.states.get(entity_id) == snapshot
 
 
 @pytest.mark.parametrize(
@@ -94,7 +94,7 @@ async def test_setup(
     ],
 )
 async def test_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_entry: MockConfigEntry,
     mock_read_char_raw: dict[str, bytes],
     mock_client: Mock,
@@ -106,10 +106,10 @@ async def test_config(
     """Test setup creates expected entities."""
 
     mock_read_char_raw[char.uuid] = char.encode(value)
-    await setup_entry(hass, mock_entry, [Platform.NUMBER])
-    assert hass.states.get(entity_id)
+    await setup_entry(menuai, mock_entry, [Platform.NUMBER])
+    assert menuai.states.get(entity_id)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         NUMBER_DOMAIN,
         SERVICE_SET_VALUE,
         {ATTR_ENTITY_ID: entity_id, ATTR_VALUE: value},
@@ -122,7 +122,7 @@ async def test_config(
 
 
 async def test_bluetooth_error_unavailable(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mock_entry: MockConfigEntry,
     mock_read_char_raw: dict[str, bytes],
@@ -137,21 +137,21 @@ async def test_bluetooth_error_unavailable(
         Valve.remaining_open_time.encode(0)
     )
 
-    await setup_entry(hass, mock_entry, [Platform.NUMBER])
-    assert hass.states.get("number.mock_title_remaining_open_time") == snapshot
-    assert hass.states.get("number.mock_title_manual_watering_time") == snapshot
+    await setup_entry(menuai, mock_entry, [Platform.NUMBER])
+    assert menuai.states.get("number.mock_title_remaining_open_time") == snapshot
+    assert menuai.states.get("number.mock_title_manual_watering_time") == snapshot
 
     mock_read_char_raw[Valve.manual_watering_time.uuid] = GardenaBluetoothException(
         "Test for errors on bluetooth"
     )
 
     await scan_step()
-    assert hass.states.get("number.mock_title_remaining_open_time") == snapshot
-    assert hass.states.get("number.mock_title_manual_watering_time") == snapshot
+    assert menuai.states.get("number.mock_title_remaining_open_time") == snapshot
+    assert menuai.states.get("number.mock_title_manual_watering_time") == snapshot
 
 
 async def test_connected_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mock_entry: MockConfigEntry,
     mock_read_char_raw: dict[str, bytes],
@@ -164,12 +164,12 @@ async def test_connected_state(
     )
     mock_read_char_raw[Sensor.threshold.uuid] = Sensor.threshold.encode(45)
 
-    await setup_entry(hass, mock_entry, [Platform.NUMBER])
-    assert hass.states.get("number.mock_title_sensor_threshold") == snapshot
+    await setup_entry(menuai, mock_entry, [Platform.NUMBER])
+    assert menuai.states.get("number.mock_title_sensor_threshold") == snapshot
 
     mock_read_char_raw[Sensor.connected_state.uuid] = Sensor.connected_state.encode(
         True
     )
 
     await scan_step()
-    assert hass.states.get("number.mock_title_sensor_threshold") == snapshot
+    assert menuai.states.get("number.mock_title_sensor_threshold") == snapshot

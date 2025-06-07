@@ -2,7 +2,7 @@
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
 
 from .const import CONF_SERIAL_PORT, DEFAULT_TITLE, DOMAIN
 

@@ -1,4 +1,4 @@
-"""Auth providers for Home Assistant."""
+"""Auth providers for MenuAI."""
 
 from __future__ import annotations
 
@@ -10,15 +10,15 @@ from typing import Any
 import voluptuous as vol
 from voluptuous.humanize import humanize_error
 
-from homeassistant import requirements
-from homeassistant.const import CONF_ID, CONF_NAME, CONF_TYPE
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.data_entry_flow import FlowHandler
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.importlib import async_import_module
-from homeassistant.util import dt as dt_util
-from homeassistant.util.decorator import Registry
-from homeassistant.util.hass_dict import HassKey
+from menuai import requirements
+from menuai.const import CONF_ID, CONF_NAME, CONF_TYPE
+from menuai.core import menuai, callback
+from menuai.data_entry_flow import FlowHandler
+from menuai.exceptions import menuaiError
+from menuai.helpers.importlib import async_import_module
+from menuai.util import dt as dt_util
+from menuai.util.decorator import Registry
+from menuai.util.menuai_dict import menuaiKey
 
 from ..auth_store import AuthStore
 from ..const import MFA_SESSION_EXPIRATION
@@ -32,7 +32,7 @@ from ..models import (
 )
 
 _LOGGER = logging.getLogger(__name__)
-DATA_REQS: HassKey[set[str]] = HassKey("auth_prov_reqs_processed")
+DATA_REQS: menuaiKey[set[str]] = menuaiKey("auth_prov_reqs_processed")
 
 AUTH_PROVIDERS: Registry[str, type[AuthProvider]] = Registry()
 
@@ -53,10 +53,10 @@ class AuthProvider:
     DEFAULT_TITLE = "Unnamed auth provider"
 
     def __init__(
-        self, hass: HomeAssistant, store: AuthStore, config: dict[str, Any]
+        self, menuai: menuai, store: AuthStore, config: dict[str, Any]
     ) -> None:
         """Initialize an auth provider."""
-        self.hass = hass
+        self.menuai = menuai
         self.store = store
         self.config = config
 
@@ -142,11 +142,11 @@ class AuthProvider:
 
 
 async def auth_provider_from_config(
-    hass: HomeAssistant, store: AuthStore, config: dict[str, Any]
+    menuai: menuai, store: AuthStore, config: dict[str, Any]
 ) -> AuthProvider:
     """Initialize an auth provider from a config."""
     provider_name: str = config[CONF_TYPE]
-    module = await load_auth_provider_module(hass, provider_name)
+    module = await load_auth_provider_module(menuai, provider_name)
 
     try:
         config = module.CONFIG_SCHEMA(config)
@@ -158,34 +158,34 @@ async def auth_provider_from_config(
         )
         raise
 
-    return AUTH_PROVIDERS[provider_name](hass, store, config)
+    return AUTH_PROVIDERS[provider_name](menuai, store, config)
 
 
 async def load_auth_provider_module(
-    hass: HomeAssistant, provider: str
+    menuai: menuai, provider: str
 ) -> types.ModuleType:
     """Load an auth provider."""
     try:
         module = await async_import_module(
-            hass, f"homeassistant.auth.providers.{provider}"
+            menuai, f"menuai.auth.providers.{provider}"
         )
     except ImportError as err:
         _LOGGER.error("Unable to load auth provider %s: %s", provider, err)
-        raise HomeAssistantError(
+        raise menuaiError(
             f"Unable to load auth provider {provider}: {err}"
         ) from err
 
-    if hass.config.skip_pip or not hasattr(module, "REQUIREMENTS"):
+    if menuai.config.skip_pip or not hasattr(module, "REQUIREMENTS"):
         return module
 
-    if (processed := hass.data.get(DATA_REQS)) is None:
-        processed = hass.data[DATA_REQS] = set()
+    if (processed := menuai.data.get(DATA_REQS)) is None:
+        processed = menuai.data[DATA_REQS] = set()
     elif provider in processed:
         return module
 
     reqs = module.REQUIREMENTS
     await requirements.async_process_requirements(
-        hass, f"auth provider {provider}", reqs
+        menuai, f"auth provider {provider}", reqs
     )
 
     processed.add(provider)
@@ -203,7 +203,7 @@ class LoginFlow[_AuthProviderT: AuthProvider = AuthProvider](
         """Initialize the login flow."""
         self._auth_provider = auth_provider
         self._auth_module_id: str | None = None
-        self._auth_manager = auth_provider.hass.auth
+        self._auth_manager = auth_provider.menuai.auth
         self.available_mfa_modules: dict[str, str] = {}
         self.created_at = dt_util.utcnow()
         self.invalid_mfa_times = 0
@@ -266,7 +266,7 @@ class LoginFlow[_AuthProviderT: AuthProvider = AuthProvider](
         ):
             try:
                 await auth_module.async_initialize_login_mfa_step(self.user.id)
-            except HomeAssistantError:
+            except menuaiError:
                 _LOGGER.exception("Error initializing MFA step")
                 return self.async_abort(reason="unknown_error")
 

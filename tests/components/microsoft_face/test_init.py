@@ -4,8 +4,8 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components import camera, microsoft_face as mf
-from homeassistant.components.microsoft_face import (
+from menuai.components import camera, microsoft_face as mf
+from menuai.components.microsoft_face import (
     ATTR_CAMERA_ENTITY,
     ATTR_GROUP,
     ATTR_PERSON,
@@ -17,78 +17,78 @@ from homeassistant.components.microsoft_face import (
     SERVICE_FACE_PERSON,
     SERVICE_TRAIN_GROUP,
 )
-from homeassistant.const import ATTR_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.const import ATTR_NAME
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import assert_setup_component, async_load_fixture
 from tests.test_util.aiohttp import AiohttpClientMocker
 
 
 @pytest.fixture(autouse=True)
-async def setup_homeassistant(hass: HomeAssistant):
-    """Set up the homeassistant integration."""
-    await async_setup_component(hass, "homeassistant", {})
+async def setup_menuai(menuai: menuai):
+    """Set up the menuai integration."""
+    await async_setup_component(menuai, "menuai", {})
 
 
-def create_group(hass: HomeAssistant, name: str) -> None:
+def create_group(menuai: menuai, name: str) -> None:
     """Create a new person group.
 
     This is a legacy helper method. Do not use it for new tests.
     """
     data = {ATTR_NAME: name}
-    hass.async_create_task(hass.services.async_call(DOMAIN, SERVICE_CREATE_GROUP, data))
+    menuai.async_create_task(menuai.services.async_call(DOMAIN, SERVICE_CREATE_GROUP, data))
 
 
-def delete_group(hass: HomeAssistant, name: str) -> None:
+def delete_group(menuai: menuai, name: str) -> None:
     """Delete a person group.
 
     This is a legacy helper method. Do not use it for new tests.
     """
     data = {ATTR_NAME: name}
-    hass.async_create_task(hass.services.async_call(DOMAIN, SERVICE_DELETE_GROUP, data))
+    menuai.async_create_task(menuai.services.async_call(DOMAIN, SERVICE_DELETE_GROUP, data))
 
 
-def train_group(hass: HomeAssistant, group: str) -> None:
+def train_group(menuai: menuai, group: str) -> None:
     """Train a person group.
 
     This is a legacy helper method. Do not use it for new tests.
     """
     data = {ATTR_GROUP: group}
-    hass.async_create_task(hass.services.async_call(DOMAIN, SERVICE_TRAIN_GROUP, data))
+    menuai.async_create_task(menuai.services.async_call(DOMAIN, SERVICE_TRAIN_GROUP, data))
 
 
-def create_person(hass: HomeAssistant, group: str, name: str) -> None:
+def create_person(menuai: menuai, group: str, name: str) -> None:
     """Create a person in a group.
 
     This is a legacy helper method. Do not use it for new tests.
     """
     data = {ATTR_GROUP: group, ATTR_NAME: name}
-    hass.async_create_task(
-        hass.services.async_call(DOMAIN, SERVICE_CREATE_PERSON, data)
+    menuai.async_create_task(
+        menuai.services.async_call(DOMAIN, SERVICE_CREATE_PERSON, data)
     )
 
 
-def delete_person(hass: HomeAssistant, group: str, name: str) -> None:
+def delete_person(menuai: menuai, group: str, name: str) -> None:
     """Delete a person in a group.
 
     This is a legacy helper method. Do not use it for new tests.
     """
     data = {ATTR_GROUP: group, ATTR_NAME: name}
-    hass.async_create_task(
-        hass.services.async_call(DOMAIN, SERVICE_DELETE_PERSON, data)
+    menuai.async_create_task(
+        menuai.services.async_call(DOMAIN, SERVICE_DELETE_PERSON, data)
     )
 
 
 def face_person(
-    hass: HomeAssistant, group: str, person: str, camera_entity: str
+    menuai: menuai, group: str, person: str, camera_entity: str
 ) -> None:
     """Add a new face picture to a person.
 
     This is a legacy helper method. Do not use it for new tests.
     """
     data = {ATTR_GROUP: group, ATTR_PERSON: person, ATTR_CAMERA_ENTITY: camera_entity}
-    hass.async_create_task(hass.services.async_call(DOMAIN, SERVICE_FACE_PERSON, data))
+    menuai.async_create_task(menuai.services.async_call(DOMAIN, SERVICE_FACE_PERSON, data))
 
 
 CONFIG = {mf.DOMAIN: {"api_key": "12345678abcdef"}}
@@ -99,61 +99,61 @@ ENDPOINT_URL = f"https://westus.{mf.FACE_API_URL}"
 def mock_update():
     """Mock update store."""
     with patch(
-        "homeassistant.components.microsoft_face.MicrosoftFace.update_store",
+        "menuai.components.microsoft_face.MicrosoftFace.update_store",
         return_value=None,
     ) as mock_update_store:
         yield mock_update_store
 
 
-async def test_setup_component(hass: HomeAssistant, mock_update) -> None:
+async def test_setup_component(menuai: menuai, mock_update) -> None:
     """Set up component."""
     with assert_setup_component(3, mf.DOMAIN):
-        await async_setup_component(hass, mf.DOMAIN, CONFIG)
+        await async_setup_component(menuai, mf.DOMAIN, CONFIG)
 
 
-async def test_setup_component_wrong_api_key(hass: HomeAssistant, mock_update) -> None:
+async def test_setup_component_wrong_api_key(menuai: menuai, mock_update) -> None:
     """Set up component without api key."""
     with assert_setup_component(0, mf.DOMAIN):
-        await async_setup_component(hass, mf.DOMAIN, {mf.DOMAIN: {}})
+        await async_setup_component(menuai, mf.DOMAIN, {mf.DOMAIN: {}})
 
 
-async def test_setup_component_test_service(hass: HomeAssistant, mock_update) -> None:
+async def test_setup_component_test_service(menuai: menuai, mock_update) -> None:
     """Set up component."""
     with assert_setup_component(3, mf.DOMAIN):
-        await async_setup_component(hass, mf.DOMAIN, CONFIG)
+        await async_setup_component(menuai, mf.DOMAIN, CONFIG)
 
-    assert hass.services.has_service(mf.DOMAIN, "create_group")
-    assert hass.services.has_service(mf.DOMAIN, "delete_group")
-    assert hass.services.has_service(mf.DOMAIN, "train_group")
-    assert hass.services.has_service(mf.DOMAIN, "create_person")
-    assert hass.services.has_service(mf.DOMAIN, "delete_person")
-    assert hass.services.has_service(mf.DOMAIN, "face_person")
+    assert menuai.services.has_service(mf.DOMAIN, "create_group")
+    assert menuai.services.has_service(mf.DOMAIN, "delete_group")
+    assert menuai.services.has_service(mf.DOMAIN, "train_group")
+    assert menuai.services.has_service(mf.DOMAIN, "create_person")
+    assert menuai.services.has_service(mf.DOMAIN, "delete_person")
+    assert menuai.services.has_service(mf.DOMAIN, "face_person")
 
 
 async def test_setup_component_test_entities(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Set up component."""
     aioclient_mock.get(
         ENDPOINT_URL.format("persongroups"),
-        text=await async_load_fixture(hass, "persongroups.json", DOMAIN),
+        text=await async_load_fixture(menuai, "persongroups.json", DOMAIN),
     )
     aioclient_mock.get(
         ENDPOINT_URL.format("persongroups/test_group1/persons"),
-        text=await async_load_fixture(hass, "persons.json", DOMAIN),
+        text=await async_load_fixture(menuai, "persons.json", DOMAIN),
     )
     aioclient_mock.get(
         ENDPOINT_URL.format("persongroups/test_group2/persons"),
-        text=await async_load_fixture(hass, "persons.json", DOMAIN),
+        text=await async_load_fixture(menuai, "persons.json", DOMAIN),
     )
 
     with assert_setup_component(3, mf.DOMAIN):
-        await async_setup_component(hass, mf.DOMAIN, CONFIG)
+        await async_setup_component(menuai, mf.DOMAIN, CONFIG)
 
     assert len(aioclient_mock.mock_calls) == 3
 
-    entity_group1 = hass.states.get("microsoft_face.test_group1")
-    entity_group2 = hass.states.get("microsoft_face.test_group2")
+    entity_group1 = menuai.states.get("microsoft_face.test_group1")
+    entity_group2 = menuai.states.get("microsoft_face.test_group2")
 
     assert entity_group1 is not None
     assert entity_group2 is not None
@@ -166,7 +166,7 @@ async def test_setup_component_test_entities(
 
 
 async def test_service_groups(
-    hass: HomeAssistant, mock_update, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, mock_update, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Set up component, test groups services."""
     aioclient_mock.put(
@@ -181,48 +181,48 @@ async def test_service_groups(
     )
 
     with assert_setup_component(3, mf.DOMAIN):
-        await async_setup_component(hass, mf.DOMAIN, CONFIG)
+        await async_setup_component(menuai, mf.DOMAIN, CONFIG)
 
-    create_group(hass, "Service Group")
-    await hass.async_block_till_done()
+    create_group(menuai, "Service Group")
+    await menuai.async_block_till_done()
 
-    entity = hass.states.get("microsoft_face.service_group")
+    entity = menuai.states.get("microsoft_face.service_group")
     assert entity is not None
     assert len(aioclient_mock.mock_calls) == 1
 
-    delete_group(hass, "Service Group")
-    await hass.async_block_till_done()
+    delete_group(menuai, "Service Group")
+    await menuai.async_block_till_done()
 
-    entity = hass.states.get("microsoft_face.service_group")
+    entity = menuai.states.get("microsoft_face.service_group")
     assert entity is None
     assert len(aioclient_mock.mock_calls) == 2
 
 
 async def test_service_person(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Set up component, test person services."""
     aioclient_mock.get(
         ENDPOINT_URL.format("persongroups"),
-        text=await async_load_fixture(hass, "persongroups.json", DOMAIN),
+        text=await async_load_fixture(menuai, "persongroups.json", DOMAIN),
     )
     aioclient_mock.get(
         ENDPOINT_URL.format("persongroups/test_group1/persons"),
-        text=await async_load_fixture(hass, "persons.json", DOMAIN),
+        text=await async_load_fixture(menuai, "persons.json", DOMAIN),
     )
     aioclient_mock.get(
         ENDPOINT_URL.format("persongroups/test_group2/persons"),
-        text=await async_load_fixture(hass, "persons.json", DOMAIN),
+        text=await async_load_fixture(menuai, "persons.json", DOMAIN),
     )
 
     with assert_setup_component(3, mf.DOMAIN):
-        await async_setup_component(hass, mf.DOMAIN, CONFIG)
+        await async_setup_component(menuai, mf.DOMAIN, CONFIG)
 
     assert len(aioclient_mock.mock_calls) == 3
 
     aioclient_mock.post(
         ENDPOINT_URL.format("persongroups/test_group1/persons"),
-        text=await async_load_fixture(hass, "create_person.json", DOMAIN),
+        text=await async_load_fixture(menuai, "create_person.json", DOMAIN),
     )
     aioclient_mock.delete(
         ENDPOINT_URL.format(
@@ -232,19 +232,19 @@ async def test_service_person(
         text="{}",
     )
 
-    create_person(hass, "test group1", "Hans")
-    await hass.async_block_till_done()
+    create_person(menuai, "test group1", "Hans")
+    await menuai.async_block_till_done()
 
-    entity_group1 = hass.states.get("microsoft_face.test_group1")
+    entity_group1 = menuai.states.get("microsoft_face.test_group1")
 
     assert len(aioclient_mock.mock_calls) == 4
     assert entity_group1 is not None
     assert entity_group1.attributes["Hans"] == "25985303-c537-4467-b41d-bdb45cd95ca1"
 
-    delete_person(hass, "test group1", "Hans")
-    await hass.async_block_till_done()
+    delete_person(menuai, "test group1", "Hans")
+    await menuai.async_block_till_done()
 
-    entity_group1 = hass.states.get("microsoft_face.test_group1")
+    entity_group1 = menuai.states.get("microsoft_face.test_group1")
 
     assert len(aioclient_mock.mock_calls) == 5
     assert entity_group1 is not None
@@ -252,11 +252,11 @@ async def test_service_person(
 
 
 async def test_service_train(
-    hass: HomeAssistant, mock_update, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, mock_update, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Set up component, test train groups services."""
     with assert_setup_component(3, mf.DOMAIN):
-        await async_setup_component(hass, mf.DOMAIN, CONFIG)
+        await async_setup_component(menuai, mf.DOMAIN, CONFIG)
 
     aioclient_mock.post(
         ENDPOINT_URL.format("persongroups/service_group/train"),
@@ -264,32 +264,32 @@ async def test_service_train(
         text="{}",
     )
 
-    train_group(hass, "Service Group")
-    await hass.async_block_till_done()
+    train_group(menuai, "Service Group")
+    await menuai.async_block_till_done()
 
     assert len(aioclient_mock.mock_calls) == 1
 
 
 async def test_service_face(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Set up component, test person face services."""
     aioclient_mock.get(
         ENDPOINT_URL.format("persongroups"),
-        text=await async_load_fixture(hass, "persongroups.json", DOMAIN),
+        text=await async_load_fixture(menuai, "persongroups.json", DOMAIN),
     )
     aioclient_mock.get(
         ENDPOINT_URL.format("persongroups/test_group1/persons"),
-        text=await async_load_fixture(hass, "persons.json", DOMAIN),
+        text=await async_load_fixture(menuai, "persons.json", DOMAIN),
     )
     aioclient_mock.get(
         ENDPOINT_URL.format("persongroups/test_group2/persons"),
-        text=await async_load_fixture(hass, "persons.json", DOMAIN),
+        text=await async_load_fixture(menuai, "persons.json", DOMAIN),
     )
 
     CONFIG["camera"] = {"platform": "demo"}
     with assert_setup_component(3, mf.DOMAIN):
-        await async_setup_component(hass, mf.DOMAIN, CONFIG)
+        await async_setup_component(menuai, mf.DOMAIN, CONFIG)
 
     assert len(aioclient_mock.mock_calls) == 3
 
@@ -303,18 +303,18 @@ async def test_service_face(
     )
 
     with patch(
-        "homeassistant.components.camera.async_get_image",
+        "menuai.components.camera.async_get_image",
         return_value=camera.Image("image/jpeg", b"Test"),
     ):
-        face_person(hass, "test_group2", "David", "camera.demo_camera")
-        await hass.async_block_till_done()
+        face_person(menuai, "test_group2", "David", "camera.demo_camera")
+        await menuai.async_block_till_done()
 
     assert len(aioclient_mock.mock_calls) == 4
     assert aioclient_mock.mock_calls[3][2] == b"Test"
 
 
 async def test_service_status_400(
-    hass: HomeAssistant, mock_update, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, mock_update, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Set up component, test groups services with error."""
     aioclient_mock.put(
@@ -324,18 +324,18 @@ async def test_service_status_400(
     )
 
     with assert_setup_component(3, mf.DOMAIN):
-        await async_setup_component(hass, mf.DOMAIN, CONFIG)
+        await async_setup_component(menuai, mf.DOMAIN, CONFIG)
 
-    create_group(hass, "Service Group")
-    await hass.async_block_till_done()
+    create_group(menuai, "Service Group")
+    await menuai.async_block_till_done()
 
-    entity = hass.states.get("microsoft_face.service_group")
+    entity = menuai.states.get("microsoft_face.service_group")
     assert entity is None
     assert len(aioclient_mock.mock_calls) == 1
 
 
 async def test_service_status_timeout(
-    hass: HomeAssistant, mock_update, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, mock_update, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Set up component, test groups services with timeout."""
     aioclient_mock.put(
@@ -345,11 +345,11 @@ async def test_service_status_timeout(
     )
 
     with assert_setup_component(3, mf.DOMAIN):
-        await async_setup_component(hass, mf.DOMAIN, CONFIG)
+        await async_setup_component(menuai, mf.DOMAIN, CONFIG)
 
-    create_group(hass, "Service Group")
-    await hass.async_block_till_done()
+    create_group(menuai, "Service Group")
+    await menuai.async_block_till_done()
 
-    entity = hass.states.get("microsoft_face.service_group")
+    entity = menuai.states.get("microsoft_face.service_group")
     assert entity is None
     assert len(aioclient_mock.mock_calls) == 1

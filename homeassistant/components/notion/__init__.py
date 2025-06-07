@@ -9,11 +9,11 @@ from uuid import UUID
 from aionotion.errors import InvalidCredentialsError, NotionError
 from aionotion.listener.models import ListenerKind
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import entity_registry as er
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_PASSWORD, CONF_USERNAME, Platform
+from menuai.core import menuai, callback
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import entity_registry as er
 
 from .const import (
     CONF_REFRESH_TOKEN,
@@ -67,7 +67,7 @@ def is_uuid(value: str) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up Notion as a config entry."""
     entry_updates: dict[str, Any] = {"data": {**entry.data}}
 
@@ -79,13 +79,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             # If a password exists in the config entry data, use it to get a new client
             # (and pop it from the new entry data):
             client = await async_get_client_with_credentials(
-                hass, entry.data[CONF_USERNAME], password
+                menuai, entry.data[CONF_USERNAME], password
             )
         else:
             # If a password doesn't exist in the config entry data, we can safely assume
             # that a refresh token and user UUID do, so we use them to get the client:
             client = await async_get_client_with_refresh_token(
-                hass,
+                menuai,
                 entry.data[CONF_USER_UUID],
                 entry.data[CONF_REFRESH_TOKEN],
             )
@@ -103,24 +103,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             continue
         entry_updates["data"][key] = value
 
-    hass.config_entries.async_update_entry(entry, **entry_updates)
+    menuai.config_entries.async_update_entry(entry, **entry_updates)
 
     @callback
     def async_save_refresh_token(refresh_token: str) -> None:
         """Save a refresh token to the config entry data."""
-        LOGGER.debug("Saving new refresh token to HASS storage")
-        hass.config_entries.async_update_entry(
+        LOGGER.debug("Saving new refresh token to menuai storage")
+        menuai.config_entries.async_update_entry(
             entry, data={**entry.data, CONF_REFRESH_TOKEN: refresh_token}
         )
 
     # Create a callback to save the refresh token when it changes:
     entry.async_on_unload(client.add_refresh_token_callback(async_save_refresh_token))
 
-    coordinator = NotionDataUpdateCoordinator(hass, entry=entry, client=client)
+    coordinator = NotionDataUpdateCoordinator(menuai, entry=entry, client=client)
 
     await coordinator.async_config_entry_first_refresh()
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.entry_id] = coordinator
+    menuai.data.setdefault(DOMAIN, {})
+    menuai.data[DOMAIN][entry.entry_id] = coordinator
 
     @callback
     def async_migrate_entity_entry(entry: er.RegistryEntry) -> dict[str, Any] | None:
@@ -151,16 +151,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         return {"new_unique_id": listener.id}
 
-    await er.async_migrate_entries(hass, entry.entry_id, async_migrate_entity_entry)
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await er.async_migrate_entries(menuai, entry.entry_id, async_migrate_entity_entry)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a Notion config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id)
+        menuai.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok

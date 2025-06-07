@@ -5,9 +5,9 @@ from unittest.mock import MagicMock
 from freezegun.api import FrozenDateTimeFactory
 from fullykiosk import FullyKioskError
 
-from homeassistant.components.binary_sensor import BinarySensorDeviceClass
-from homeassistant.components.fully_kiosk.const import DOMAIN, UPDATE_INTERVAL
-from homeassistant.const import (
+from menuai.components.binary_sensor import BinarySensorDeviceClass
+from menuai.components.fully_kiosk.const import DOMAIN, UPDATE_INTERVAL
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     ATTR_FRIENDLY_NAME,
     STATE_ON,
@@ -15,14 +15,14 @@ from homeassistant.const import (
     STATE_UNKNOWN,
     EntityCategory,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from tests.common import MockConfigEntry, async_fire_time_changed
 
 
 async def test_binary_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
     freezer: FrozenDateTimeFactory,
@@ -30,7 +30,7 @@ async def test_binary_sensors(
     init_integration: MockConfigEntry,
 ) -> None:
     """Test standard Fully Kiosk binary sensors."""
-    state = hass.states.get("binary_sensor.amazon_fire_plugged_in")
+    state = menuai.states.get("binary_sensor.amazon_fire_plugged_in")
     assert state
     assert state.state == STATE_ON
     assert state.attributes.get(ATTR_DEVICE_CLASS) == BinarySensorDeviceClass.PLUG
@@ -41,7 +41,7 @@ async def test_binary_sensors(
     assert entry.unique_id == "abcdef-123456-plugged"
     assert entry.entity_category == EntityCategory.DIAGNOSTIC
 
-    state = hass.states.get("binary_sensor.amazon_fire_kiosk_mode")
+    state = menuai.states.get("binary_sensor.amazon_fire_kiosk_mode")
     assert state
     assert state.state == STATE_ON
     assert state.attributes.get(ATTR_DEVICE_CLASS) is None
@@ -52,7 +52,7 @@ async def test_binary_sensors(
     assert entry.unique_id == "abcdef-123456-kioskMode"
     assert entry.entity_category == EntityCategory.DIAGNOSTIC
 
-    state = hass.states.get("binary_sensor.amazon_fire_device_admin")
+    state = menuai.states.get("binary_sensor.amazon_fire_device_admin")
     assert state
     assert state.state == STATE_ON
     assert state.attributes.get(ATTR_DEVICE_CLASS) is None
@@ -78,19 +78,19 @@ async def test_binary_sensors(
     # Test unknown/missing data
     mock_fully_kiosk.getDeviceInfo.return_value = {}
     freezer.tick(UPDATE_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get("binary_sensor.amazon_fire_plugged_in")
+    state = menuai.states.get("binary_sensor.amazon_fire_plugged_in")
     assert state
     assert state.state == STATE_UNKNOWN
 
     # Test failed update
     mock_fully_kiosk.getDeviceInfo.side_effect = FullyKioskError("error", "status")
     freezer.tick(UPDATE_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get("binary_sensor.amazon_fire_plugged_in")
+    state = menuai.states.get("binary_sensor.amazon_fire_plugged_in")
     assert state
     assert state.state == STATE_UNAVAILABLE

@@ -7,10 +7,10 @@ import logging
 from aiohttp import ClientConnectionError
 from faadelays import Airport
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import aiohttp_client
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers import aiohttp_client
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN
 
@@ -22,16 +22,16 @@ type FAAConfigEntry = ConfigEntry[FAADataUpdateCoordinator]
 class FAADataUpdateCoordinator(DataUpdateCoordinator[Airport]):
     """Class to manage fetching FAA API data from a single endpoint."""
 
-    def __init__(self, hass: HomeAssistant, entry: FAAConfigEntry, code: str) -> None:
+    def __init__(self, menuai: menuai, entry: FAAConfigEntry, code: str) -> None:
         """Initialize the coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
             name=DOMAIN,
             update_interval=timedelta(minutes=1),
         )
-        self.session = aiohttp_client.async_get_clientsession(hass)
+        self.session = aiohttp_client.async_get_clientsession(menuai)
         self.data = Airport(code, self.session)
 
     async def _async_update_data(self) -> Airport:

@@ -1,18 +1,18 @@
-"""Diagnostics support for Home Assistant Backup integration."""
+"""Diagnostics support for MenuAI Backup integration."""
 
 from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.const import CONF_PASSWORD
-from homeassistant.core import HomeAssistant
+from menuai.components.diagnostics import async_redact_data
+from menuai.const import CONF_PASSWORD
+from menuai.core import menuai
 
 from .coordinator import BackupConfigEntry
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: BackupConfigEntry
+    menuai: menuai, entry: BackupConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     coordinator = entry.runtime_data

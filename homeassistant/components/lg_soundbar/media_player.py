@@ -6,22 +6,22 @@ from typing import Any
 
 import temescal
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, CONF_PORT
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -80,9 +80,9 @@ class LGDevice(MediaPlayerEntity):
             identifiers={(DOMAIN, unique_id)}, name=host
         )
 
-    async def async_added_to_hass(self) -> None:
-        """Register the callback after hass is ready for it."""
-        await self.hass.async_add_executor_job(self._connect)
+    async def async_added_to_menuai(self) -> None:
+        """Register the callback after menuai is ready for it."""
+        await self.menuai.async_add_executor_job(self._connect)
 
     def _connect(self) -> None:
         """Perform the actual devices setup."""

@@ -9,19 +9,19 @@ from typing import Any
 from pyrail import iRail
 from pyrail.models import ConnectionDetails, LiveboardDeparture, StationDetails
 
-from homeassistant.components.sensor import SensorEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.components.sensor import SensorEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_LATITUDE,
     ATTR_LONGITUDE,
     CONF_NAME,
     CONF_SHOW_ON_MAP,
     UnitOfTime,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import dt as dt_util
 
 from .const import (  # noqa: F401
     CONF_EXCLUDE_VIAS,
@@ -62,19 +62,19 @@ def get_ride_duration(departure_time: datetime, arrival_time: datetime, delay=0)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up NMBS sensor entities based on a config entry."""
-    api_client = iRail(session=async_get_clientsession(hass))
+    api_client = iRail(session=async_get_clientsession(menuai))
 
     name = config_entry.data.get(CONF_NAME, None)
     show_on_map = config_entry.data.get(CONF_SHOW_ON_MAP, False)
     excl_vias = config_entry.data.get(CONF_EXCLUDE_VIAS, False)
 
-    station_from = find_station(hass, config_entry.data[CONF_STATION_FROM])
-    station_to = find_station(hass, config_entry.data[CONF_STATION_TO])
+    station_from = find_station(menuai, config_entry.data[CONF_STATION_FROM])
+    station_to = find_station(menuai, config_entry.data[CONF_STATION_TO])
 
     # setup the connection from station to station
     # setup a disabled liveboard for both from and to station

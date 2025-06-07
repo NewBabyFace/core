@@ -7,7 +7,7 @@ from typing import Any
 
 from androidtvremote2 import AndroidTVRemote, ConnectionClosed
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     BrowseMedia,
     MediaClass,
     MediaPlayerDeviceClass,
@@ -16,9 +16,9 @@ from homeassistant.components.media_player import (
     MediaPlayerState,
     MediaType,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import AndroidTVRemoteConfigEntry
 from .const import CONF_APP_ICON, CONF_APP_NAME, DOMAIN
@@ -28,7 +28,7 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: AndroidTVRemoteConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -98,9 +98,9 @@ class AndroidTVRemoteMediaPlayerEntity(AndroidTVRemoteBaseEntity, MediaPlayerEnt
         self._update_volume_info(volume_info)
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         self._update_current_app(self._api.current_app)
         self._update_volume_info(self._api.volume_info)
@@ -108,9 +108,9 @@ class AndroidTVRemoteMediaPlayerEntity(AndroidTVRemoteBaseEntity, MediaPlayerEnt
         self._api.add_current_app_updated_callback(self._current_app_updated)
         self._api.add_volume_info_updated_callback(self._volume_info_updated)
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Remove callbacks."""
-        await super().async_will_remove_from_hass()
+        await super().async_will_remove_from_menuai()
 
         self._api.remove_current_app_updated_callback(self._current_app_updated)
         self._api.remove_volume_info_updated_callback(self._volume_info_updated)
@@ -232,6 +232,6 @@ class AndroidTVRemoteMediaPlayerEntity(AndroidTVRemoteBaseEntity, MediaPlayerEnt
                 self._api.send_key_command(key_code)
                 await asyncio.sleep(delay_secs)
         except ConnectionClosed as exc:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN, translation_key="connection_closed"
             ) from exc

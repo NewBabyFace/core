@@ -7,11 +7,11 @@ from typing import Any
 
 from aioeafm import get_station
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 PLATFORMS = [Platform.SENSOR]
 
@@ -32,12 +32,12 @@ def _get_measures(station_data: dict[str, Any]) -> list[dict[str, Any]]:
 class EafmCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
     """Class to manage fetching UK Flood Monitoring data."""
 
-    def __init__(self, hass: HomeAssistant, entry: EafmConfigEntry) -> None:
+    def __init__(self, menuai: menuai, entry: EafmConfigEntry) -> None:
         """Initialize."""
         self._station_key = entry.data["station"]
-        self._session = async_get_clientsession(hass=hass)
+        self._session = async_get_clientsession(menuai=menuai)
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
             name="sensor",

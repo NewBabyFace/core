@@ -3,12 +3,12 @@
 from dataclasses import dataclass
 import logging
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     DOMAIN,
@@ -39,13 +39,13 @@ class OnkyoData:
 type OnkyoConfigEntry = ConfigEntry[OnkyoData]
 
 
-async def async_setup(hass: HomeAssistant, _: ConfigType) -> bool:
+async def async_setup(menuai: menuai, _: ConfigType) -> bool:
     """Set up Onkyo component."""
-    async_setup_services(hass)
+    async_setup_services(menuai)
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: OnkyoConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: OnkyoConfigEntry) -> bool:
     """Set up the Onkyo config entry."""
     entry.async_on_unload(entry.add_update_listener(update_listener))
 
@@ -65,18 +65,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: OnkyoConfigEntry) -> boo
 
     entry.runtime_data = OnkyoData(receiver, sources, sound_modes)
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     await receiver.conn.connect()
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: OnkyoConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: OnkyoConfigEntry) -> bool:
     """Unload Onkyo config entry."""
-    del hass.data[DATA_MP_ENTITIES][entry.entry_id]
+    del menuai.data[DATA_MP_ENTITIES][entry.entry_id]
 
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
     receiver = entry.runtime_data.receiver
     receiver.conn.close()
@@ -84,6 +84,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: OnkyoConfigEntry) -> bo
     return unload_ok
 
 
-async def update_listener(hass: HomeAssistant, entry: OnkyoConfigEntry) -> None:
+async def update_listener(menuai: menuai, entry: OnkyoConfigEntry) -> None:
     """Handle options update."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)

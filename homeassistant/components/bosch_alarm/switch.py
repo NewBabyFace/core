@@ -9,10 +9,10 @@ from typing import Any
 from bosch_alarm_mode2 import Panel
 from bosch_alarm_mode2.panel import Door
 
-from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchEntity, SwitchEntityDescription
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import BoschAlarmConfigEntry
 from .const import DOMAIN
@@ -54,7 +54,7 @@ DOOR_SWITCH_TYPES: list[BoschAlarmSwitchEntityDescription] = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: BoschAlarmConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -111,7 +111,7 @@ class PanelDoorEntity(BoschAlarmDoorEntity, SwitchEntity):
         """Run the on function."""
         # If the door is currently cycling, we can't send it any other commands until it is done
         if self._door.is_cycling():
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN, translation_key="incorrect_door_state"
             )
         await self.entity_description.on_fn(self.panel, self._door_id)
@@ -120,7 +120,7 @@ class PanelDoorEntity(BoschAlarmDoorEntity, SwitchEntity):
         """Run the off function."""
         # If the door is currently cycling, we can't send it any other commands until it is done
         if self._door.is_cycling():
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN, translation_key="incorrect_door_state"
             )
         await self.entity_description.off_fn(self.panel, self._door_id)

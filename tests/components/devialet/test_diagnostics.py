@@ -2,8 +2,8 @@
 
 import json
 
-from homeassistant.components.devialet.const import DOMAIN
-from homeassistant.core import HomeAssistant
+from menuai.components.devialet.const import DOMAIN
+from menuai.core import menuai
 
 from . import setup_integration
 
@@ -14,28 +14,28 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
     """Test diagnostics."""
-    entry = await setup_integration(hass, aioclient_mock)
+    entry = await setup_integration(menuai, aioclient_mock)
 
-    assert await get_diagnostics_for_config_entry(hass, hass_client, entry) == {
+    assert await get_diagnostics_for_config_entry(menuai, menuai_client, entry) == {
         "is_available": True,
         "general_info": json.loads(
-            await async_load_fixture(hass, "general_info.json", DOMAIN)
+            await async_load_fixture(menuai, "general_info.json", DOMAIN)
         ),
-        "sources": json.loads(await async_load_fixture(hass, "sources.json", DOMAIN)),
+        "sources": json.loads(await async_load_fixture(menuai, "sources.json", DOMAIN)),
         "source_state": json.loads(
-            await async_load_fixture(hass, "source_state.json", DOMAIN)
+            await async_load_fixture(menuai, "source_state.json", DOMAIN)
         ),
-        "volume": json.loads(await async_load_fixture(hass, "volume.json", DOMAIN)),
+        "volume": json.loads(await async_load_fixture(menuai, "volume.json", DOMAIN)),
         "night_mode": json.loads(
-            await async_load_fixture(hass, "night_mode.json", DOMAIN)
+            await async_load_fixture(menuai, "night_mode.json", DOMAIN)
         ),
         "equalizer": json.loads(
-            await async_load_fixture(hass, "equalizer.json", DOMAIN)
+            await async_load_fixture(menuai, "equalizer.json", DOMAIN)
         ),
         "source_list": [
             "Airplay",

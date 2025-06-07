@@ -9,8 +9,8 @@ from aiohttp import ContentTypeError
 from requests.exceptions import ConnectTimeout, HTTPError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
 
 from .const import DOMAIN
 from .utils import load_plum
@@ -47,7 +47,7 @@ class PlumLightpadConfigFlow(ConfigFlow, domain=DOMAIN):
 
         # load Plum just so we know username/password work
         try:
-            await load_plum(username, password, self.hass)
+            await load_plum(username, password, self.menuai)
         except (ContentTypeError, ConnectTimeout, HTTPError) as ex:
             _LOGGER.error("Unable to connect/authenticate to Plum cloud: %s", str(ex))
             return self._show_form({"base": "cannot_connect"})

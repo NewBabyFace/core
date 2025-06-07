@@ -6,15 +6,15 @@ import asyncio
 from collections.abc import Iterable
 from typing import Any
 
-from homeassistant.components.remote import (
+from menuai.components.remote import (
     ATTR_DELAY_SECS,
     ATTR_NUM_REPEATS,
     DEFAULT_DELAY_SECS,
     RemoteEntity,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.trigger import PluggableAction
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.trigger import PluggableAction
 
 from . import LOGGER
 from .coordinator import PhilipsTVConfigEntry, PhilipsTVDataUpdateCoordinator
@@ -23,7 +23,7 @@ from .helpers import async_get_turn_on_trigger
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: PhilipsTVConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -47,14 +47,14 @@ class PhilipsTVRemote(PhilipsJsEntity, RemoteEntity):
         self._attr_unique_id = coordinator.unique_id
         self._turn_on = PluggableAction(self.async_write_ha_state)
 
-    async def async_added_to_hass(self) -> None:
-        """Handle being added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Handle being added to menuai."""
+        await super().async_added_to_menuai()
 
         if (entry := self.registry_entry) and entry.device_id:
             self.async_on_remove(
                 self._turn_on.async_register(
-                    self.hass, async_get_turn_on_trigger(entry.device_id)
+                    self.menuai, async_get_turn_on_trigger(entry.device_id)
                 )
             )
 
@@ -70,7 +70,7 @@ class PhilipsTVRemote(PhilipsJsEntity, RemoteEntity):
         if self._tv.on and self._tv.powerstate:
             await self._tv.setPowerState("On")
         else:
-            await self._turn_on.async_run(self.hass, self._context)
+            await self._turn_on.async_run(self.menuai, self._context)
         self.async_write_ha_state()
 
     async def async_turn_off(self, **kwargs: Any) -> None:

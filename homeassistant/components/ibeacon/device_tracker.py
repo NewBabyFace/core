@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from ibeacon_ble import iBeaconAdvertisement
 
-from homeassistant.components.device_tracker import SourceType
-from homeassistant.components.device_tracker.config_entry import BaseTrackerEntity
-from homeassistant.const import STATE_HOME, STATE_NOT_HOME
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.device_tracker import SourceType
+from menuai.components.device_tracker.config_entry import BaseTrackerEntity
+from menuai.const import STATE_HOME, STATE_NOT_HOME
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import IBeaconConfigEntry
 from .const import SIGNAL_IBEACON_DEVICE_NEW
@@ -18,7 +18,7 @@ from .entity import IBeaconEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: IBeaconConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -44,7 +44,7 @@ async def async_setup_entry(
         )
 
     entry.async_on_unload(
-        async_dispatcher_connect(hass, SIGNAL_IBEACON_DEVICE_NEW, _async_device_new)
+        async_dispatcher_connect(menuai, SIGNAL_IBEACON_DEVICE_NEW, _async_device_new)
     )
 
 

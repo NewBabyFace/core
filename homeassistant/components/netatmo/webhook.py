@@ -4,9 +4,9 @@ import logging
 
 from aiohttp.web import Request
 
-from homeassistant.const import ATTR_DEVICE_ID, ATTR_ID, ATTR_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.dispatcher import async_dispatcher_send
+from menuai.const import ATTR_DEVICE_ID, ATTR_ID, ATTR_NAME
+from menuai.core import menuai
+from menuai.helpers.dispatcher import async_dispatcher_send
 
 from .const import (
     ATTR_EVENT_TYPE,
@@ -31,7 +31,7 @@ SUBEVENT_TYPE_MAP = {
 
 
 async def async_handle_webhook(
-    hass: HomeAssistant, webhook_id: str, request: Request
+    menuai: menuai, webhook_id: str, request: Request
 ) -> None:
     """Handle webhook callback."""
     try:
@@ -45,16 +45,16 @@ async def async_handle_webhook(
     event_type = data.get(ATTR_EVENT_TYPE)
 
     if event_type in SUBEVENT_TYPE_MAP:
-        async_send_event(hass, event_type, data)
+        async_send_event(menuai, event_type, data)
 
         for event_data in data.get(SUBEVENT_TYPE_MAP[event_type], []):
-            async_evaluate_event(hass, event_data)
+            async_evaluate_event(menuai, event_data)
 
     else:
-        async_evaluate_event(hass, data)
+        async_evaluate_event(menuai, data)
 
 
-def async_evaluate_event(hass: HomeAssistant, event_data: dict) -> None:
+def async_evaluate_event(menuai: menuai, event_data: dict) -> None:
     """Evaluate events from webhook."""
     event_type = event_data.get(ATTR_EVENT_TYPE, "None")
 
@@ -62,23 +62,23 @@ def async_evaluate_event(hass: HomeAssistant, event_data: dict) -> None:
         for person in event_data.get(ATTR_PERSONS, {}):
             person_event_data = dict(event_data)
             person_event_data[ATTR_ID] = person.get(ATTR_ID)
-            person_event_data[ATTR_NAME] = hass.data[DOMAIN][DATA_PERSONS][
+            person_event_data[ATTR_NAME] = menuai.data[DOMAIN][DATA_PERSONS][
                 event_data[ATTR_HOME_ID]
             ].get(person_event_data[ATTR_ID], DEFAULT_PERSON)
             person_event_data[ATTR_IS_KNOWN] = person.get(ATTR_IS_KNOWN)
             person_event_data[ATTR_FACE_URL] = person.get(ATTR_FACE_URL)
 
-            async_send_event(hass, event_type, person_event_data)
+            async_send_event(menuai, event_type, person_event_data)
 
     else:
-        async_send_event(hass, event_type, event_data)
+        async_send_event(menuai, event_type, event_data)
 
 
-def async_send_event(hass: HomeAssistant, event_type: str, data: dict) -> None:
+def async_send_event(menuai: menuai, event_type: str, data: dict) -> None:
     """Send events."""
     _LOGGER.debug("%s: %s", event_type, data)
     async_dispatcher_send(
-        hass,
+        menuai,
         f"signal-{DOMAIN}-webhook-{event_type}",
         {"type": event_type, "data": data},
     )
@@ -90,11 +90,11 @@ def async_send_event(hass: HomeAssistant, event_type: str, data: dict) -> None:
 
     if event_type in EVENT_ID_MAP:
         data_device_id = data[EVENT_ID_MAP[event_type]]
-        event_data[ATTR_DEVICE_ID] = hass.data[DOMAIN][DATA_DEVICE_IDS].get(
+        event_data[ATTR_DEVICE_ID] = menuai.data[DOMAIN][DATA_DEVICE_IDS].get(
             data_device_id
         )
 
-    hass.bus.async_fire(
+    menuai.bus.async_fire(
         event_type=NETATMO_EVENT,
         event_data=event_data,
     )

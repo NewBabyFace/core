@@ -1,4 +1,4 @@
-"""Test the Home Assistant solarlog sensor module."""
+"""Test the MenuAI solarlog sensor module."""
 
 from datetime import timedelta
 from unittest.mock import AsyncMock
@@ -12,10 +12,10 @@ from solarlog_cli.solarlog_exceptions import (
 from solarlog_cli.solarlog_models import InverterData
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.const import STATE_UNAVAILABLE, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceRegistry
-from homeassistant.helpers.entity_registry import EntityRegistry
+from menuai.const import STATE_UNAVAILABLE, Platform
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceRegistry
+from menuai.helpers.entity_registry import EntityRegistry
 
 from . import setup_platform
 
@@ -23,7 +23,7 @@ from tests.common import MockConfigEntry, async_fire_time_changed, snapshot_plat
 
 
 async def test_all_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mock_solarlog_connector: AsyncMock,
     mock_config_entry: MockConfigEntry,
@@ -31,12 +31,12 @@ async def test_all_entities(
 ) -> None:
     """Test all entities."""
 
-    await setup_platform(hass, mock_config_entry, [Platform.SENSOR])
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await setup_platform(menuai, mock_config_entry, [Platform.SENSOR])
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
 
 async def test_add_remove_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_solarlog_connector: AsyncMock,
     mock_config_entry: MockConfigEntry,
     device_registry: DeviceRegistry,
@@ -44,14 +44,14 @@ async def test_add_remove_entities(
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test if entities are added and old are removed."""
-    await setup_platform(hass, mock_config_entry, [Platform.SENSOR])
+    await setup_platform(menuai, mock_config_entry, [Platform.SENSOR])
 
-    assert hass.states.get("sensor.inverter_1_consumption_year").state == "354.687"
+    assert menuai.states.get("sensor.inverter_1_consumption_year").state == "354.687"
 
     # test no changes (coordinator.py line 114)
     freezer.tick(delta=timedelta(minutes=1))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     mock_solarlog_connector.update_device_list.return_value = {
         0: InverterData(name="Inv 1", enabled=True),
@@ -69,13 +69,13 @@ async def test_add_remove_entities(
     mock_solarlog_connector.device_enabled = {0: True, 2: True}.get
 
     freezer.tick(delta=timedelta(minutes=1))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("sensor.inverter_1_consumption_year") is None
-    assert hass.states.get("sensor.inv_1_consumption_year").state == "354.687"
-    assert hass.states.get("sensor.inverter_2_consumption_year") is None
-    assert hass.states.get("sensor.inverter_3_consumption_year").state == "0.454"
+    assert menuai.states.get("sensor.inverter_1_consumption_year") is None
+    assert menuai.states.get("sensor.inv_1_consumption_year").state == "354.687"
+    assert menuai.states.get("sensor.inverter_2_consumption_year") is None
+    assert menuai.states.get("sensor.inverter_3_consumption_year").state == "0.454"
 
 
 @pytest.mark.parametrize(
@@ -86,19 +86,19 @@ async def test_add_remove_entities(
     ],
 )
 async def test_connection_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     exception: Exception,
     mock_solarlog_connector: AsyncMock,
     mock_config_entry: MockConfigEntry,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test connection error."""
-    await setup_platform(hass, mock_config_entry, [Platform.SENSOR])
+    await setup_platform(menuai, mock_config_entry, [Platform.SENSOR])
 
     mock_solarlog_connector.update_data.side_effect = exception
 
     freezer.tick(delta=timedelta(hours=12))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("sensor.solarlog_power_ac").state == STATE_UNAVAILABLE
+    assert menuai.states.get("sensor.solarlog_power_ac").state == STATE_UNAVAILABLE

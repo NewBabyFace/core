@@ -6,11 +6,11 @@ import logging
 
 import voluptuous as vol
 
-from homeassistant.components import frontend
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.loader import bind_hass
+from menuai.components import frontend
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType
+from menuai.loader import bind_menuai
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -71,9 +71,9 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-@bind_hass
+@bind_menuai
 async def async_register_panel(
-    hass: HomeAssistant,
+    menuai: menuai,
     # The url to serve the panel
     frontend_url_path: str,
     # The webcomponent name that loads your panel
@@ -123,7 +123,7 @@ async def async_register_panel(
     config["_panel_custom"] = custom_panel_config
 
     frontend.async_register_built_in_panel(
-        hass,
+        menuai,
         component_name="custom",
         sidebar_title=sidebar_title,
         sidebar_icon=sidebar_icon,
@@ -134,7 +134,7 @@ async def async_register_panel(
     )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Initialize custom panel."""
     if DOMAIN not in config:
         return True
@@ -160,7 +160,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             kwargs["module_url"] = panel[CONF_MODULE_URL]
 
         try:
-            await async_register_panel(hass, **kwargs)
+            await async_register_panel(menuai, **kwargs)
         except ValueError as err:
             _LOGGER.error(
                 "Unable to register panel %s: %s",

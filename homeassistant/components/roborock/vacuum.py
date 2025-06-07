@@ -11,15 +11,15 @@ from vacuum_map_parser_base.config.size import Sizes
 from vacuum_map_parser_roborock.map_data_parser import RoborockMapDataParser
 import voluptuous as vol
 
-from homeassistant.components.vacuum import (
+from menuai.components.vacuum import (
     StateVacuumEntity,
     VacuumActivity,
     VacuumEntityFeature,
 )
-from homeassistant.core import HomeAssistant, ServiceResponse, SupportsResponse
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, ServiceResponse, SupportsResponse
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv, entity_platform
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
     DOMAIN,
@@ -60,7 +60,7 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: RoborockConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -221,7 +221,7 @@ class RoborockVacuum(RoborockCoordinatedEntityV1, StateVacuumEntity):
 
         map_data = await self.coordinator.cloud_api.get_map_v1()
         if not isinstance(map_data, bytes):
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="map_failure",
             )
@@ -230,7 +230,7 @@ class RoborockVacuum(RoborockCoordinatedEntityV1, StateVacuumEntity):
         robot_position = parsed_map.vacuum_position
 
         if robot_position is None:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN, translation_key="position_not_found"
             )
 

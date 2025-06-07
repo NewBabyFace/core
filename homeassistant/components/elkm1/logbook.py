@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from homeassistant.components.logbook import LOGBOOK_ENTRY_MESSAGE, LOGBOOK_ENTRY_NAME
-from homeassistant.core import Event, HomeAssistant, callback
+from menuai.components.logbook import LOGBOOK_ENTRY_MESSAGE, LOGBOOK_ENTRY_NAME
+from menuai.core import Event, menuai, callback
 
 from .const import (
     ATTR_KEY,
@@ -19,7 +19,7 @@ from .const import (
 
 @callback
 def async_describe_events(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_describe_event: Callable[[str, str, Callable[[Event], dict[str, str]]], None],
 ) -> None:
     """Describe logbook events."""

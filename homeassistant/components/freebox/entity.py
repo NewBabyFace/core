@@ -6,10 +6,10 @@ from collections.abc import Callable
 import logging
 from typing import Any
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import Entity
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity import Entity
 
 from .const import CATEGORY_TO_MODEL, DOMAIN, FreeboxHomeCategory
 from .router import FreeboxRouter
@@ -22,13 +22,13 @@ class FreeboxHomeEntity(Entity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         router: FreeboxRouter,
         node: dict[str, Any],
         sub_node: dict[str, Any] | None = None,
     ) -> None:
         """Initialize a Freebox Home entity."""
-        self._hass = hass
+        self._menuai = menuai
         self._router = router
         self._node = node
         self._sub_node = sub_node
@@ -114,18 +114,18 @@ class FreeboxHomeEntity(Entity):
             return None
         return node["id"]
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register state update callback."""
         self.remove_signal_update(
             async_dispatcher_connect(
-                self._hass,
+                self._menuai,
                 self._router.signal_home_device_update,
                 self.async_update_signal,
             )
         )
 
-    async def async_will_remove_from_hass(self) -> None:
-        """When entity will be removed from hass."""
+    async def async_will_remove_from_menuai(self) -> None:
+        """When entity will be removed from menuai."""
         if self._remove_signal_update is not None:
             self._remove_signal_update()
 

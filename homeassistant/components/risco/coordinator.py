@@ -10,11 +10,11 @@ from pyrisco import CannotConnectError, OperationError, RiscoCloud, Unauthorized
 from pyrisco.cloud.alarm import Alarm
 from pyrisco.cloud.event import Event
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_SCAN_INTERVAL
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.storage import Store
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_SCAN_INTERVAL
+from menuai.core import menuai
+from menuai.helpers.storage import Store
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DEFAULT_SCAN_INTERVAL, DOMAIN
 
@@ -30,14 +30,14 @@ class RiscoDataUpdateCoordinator(DataUpdateCoordinator[Alarm]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         risco: RiscoCloud,
     ) -> None:
         """Initialize global risco data updater."""
         self.risco = risco
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -63,19 +63,19 @@ class RiscoEventsDataUpdateCoordinator(DataUpdateCoordinator[list[Event]]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         risco: RiscoCloud,
     ) -> None:
         """Initialize global risco data updater."""
         self.risco = risco
         self._store = Store[dict[str, Any]](
-            hass,
+            menuai,
             LAST_EVENT_STORAGE_VERSION,
             f"risco_{config_entry.entry_id}_last_event_timestamp",
         )
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=f"{DOMAIN}_events",

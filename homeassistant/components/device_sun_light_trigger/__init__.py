@@ -6,21 +6,21 @@ import logging
 
 import voluptuous as vol
 
-from homeassistant.components.device_tracker import (
+from menuai.components.device_tracker import (
     DOMAIN as DOMAIN_DEVICE_TRACKER,
     is_on as device_tracker_is_on,
 )
-from homeassistant.components.group import get_entity_ids as group_get_entity_ids
-from homeassistant.components.light import (
+from menuai.components.group import get_entity_ids as group_get_entity_ids
+from menuai.components.light import (
     ATTR_PROFILE,
     ATTR_TRANSITION,
     DOMAIN as DOMAIN_LIGHT,
     is_on as light_is_on,
 )
-from homeassistant.components.person import DOMAIN as DOMAIN_PERSON
-from homeassistant.const import (
+from menuai.components.person import DOMAIN as DOMAIN_PERSON
+from menuai.const import (
     ATTR_ENTITY_ID,
-    EVENT_HOMEASSISTANT_START,
+    EVENT_menuai_START,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
     STATE_HOME,
@@ -28,15 +28,15 @@ from homeassistant.const import (
     SUN_EVENT_SUNRISE,
     SUN_EVENT_SUNSET,
 )
-from homeassistant.core import Event, EventStateChangedData, HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.event import (
+from menuai.core import Event, EventStateChangedData, menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.event import (
     async_track_point_in_utc_time,
     async_track_state_change_event,
 )
-from homeassistant.helpers.sun import get_astral_event_next, is_up
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util import dt as dt_util
+from menuai.helpers.sun import get_astral_event_next, is_up
+from menuai.helpers.typing import ConfigType
+from menuai.util import dt as dt_util
 
 DOMAIN = "device_sun_light_trigger"
 CONF_DEVICE_GROUP = "device_group"
@@ -68,7 +68,7 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the triggers to control lights based on device presence."""
     conf = config[DOMAIN]
     disable_turn_off = conf[CONF_DISABLE_TURN_OFF]
@@ -79,31 +79,31 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     async def activate_on_start(_):
         """Activate automation."""
         await activate_automation(
-            hass, device_group, light_group, light_profile, disable_turn_off
+            menuai, device_group, light_group, light_profile, disable_turn_off
         )
 
-    if hass.is_running:
+    if menuai.is_running:
         await activate_on_start(None)
     else:
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_START, activate_on_start)
+        menuai.bus.async_listen_once(EVENT_menuai_START, activate_on_start)
 
     return True
 
 
 async def activate_automation(  # noqa: C901
-    hass, device_group, light_group, light_profile, disable_turn_off
+    menuai, device_group, light_group, light_profile, disable_turn_off
 ):
     """Activate the automation."""
     logger = logging.getLogger(__name__)
 
     if device_group is None:
-        device_entity_ids = hass.states.async_entity_ids(DOMAIN_DEVICE_TRACKER)
+        device_entity_ids = menuai.states.async_entity_ids(DOMAIN_DEVICE_TRACKER)
     else:
         device_entity_ids = group_get_entity_ids(
-            hass, device_group, DOMAIN_DEVICE_TRACKER
+            menuai, device_group, DOMAIN_DEVICE_TRACKER
         )
         device_entity_ids.extend(
-            group_get_entity_ids(hass, device_group, DOMAIN_PERSON)
+            group_get_entity_ids(menuai, device_group, DOMAIN_PERSON)
         )
 
     if not device_entity_ids:
@@ -112,9 +112,9 @@ async def activate_automation(  # noqa: C901
 
     # Get the light IDs from the specified group
     if light_group is None:
-        light_ids = hass.states.async_entity_ids(DOMAIN_LIGHT)
+        light_ids = menuai.states.async_entity_ids(DOMAIN_LIGHT)
     else:
-        light_ids = group_get_entity_ids(hass, light_group, DOMAIN_LIGHT)
+        light_ids = group_get_entity_ids(menuai, light_group, DOMAIN_LIGHT)
 
     if not light_ids:
         logger.error("No lights found to turn on")
@@ -123,12 +123,12 @@ async def activate_automation(  # noqa: C901
     @callback
     def anyone_home():
         """Test if anyone is home."""
-        return any(device_tracker_is_on(hass, dt_id) for dt_id in device_entity_ids)
+        return any(device_tracker_is_on(menuai, dt_id) for dt_id in device_entity_ids)
 
     @callback
     def any_light_on():
         """Test if any light on."""
-        return any(light_is_on(hass, light_id) for light_id in light_ids)
+        return any(light_is_on(menuai, light_id) for light_id in light_ids)
 
     def calc_time_for_light_when_sunset():
         """Calculate the time when to start fading lights in when sun sets.
@@ -137,16 +137,16 @@ async def activate_automation(  # noqa: C901
 
         Async friendly.
         """
-        next_setting = get_astral_event_next(hass, SUN_EVENT_SUNSET)
+        next_setting = get_astral_event_next(menuai, SUN_EVENT_SUNSET)
         if not next_setting:
             return None
         return next_setting - LIGHT_TRANSITION_TIME * len(light_ids)
 
     async def async_turn_on_before_sunset(light_id):
         """Turn on lights."""
-        if not anyone_home() or light_is_on(hass, light_id):
+        if not anyone_home() or light_is_on(menuai, light_id):
             return
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN_LIGHT,
             SERVICE_TURN_ON,
             {
@@ -181,18 +181,18 @@ async def activate_automation(  # noqa: C901
 
         for index, light_id in enumerate(light_ids):
             async_track_point_in_utc_time(
-                hass,
+                menuai,
                 async_turn_on_factory(light_id),
                 start_point + index * LIGHT_TRANSITION_TIME,
             )
 
     async_track_point_in_utc_time(
-        hass, schedule_light_turn_on, get_astral_event_next(hass, SUN_EVENT_SUNRISE)
+        menuai, schedule_light_turn_on, get_astral_event_next(menuai, SUN_EVENT_SUNRISE)
     )
 
     # If the sun is already above horizon schedule the time-based pre-sun set
     # event.
-    if is_up(hass):
+    if is_up(menuai):
         schedule_light_turn_on(None)
 
     @callback
@@ -211,7 +211,7 @@ async def activate_automation(  # noqa: C901
 
         entity = event_data["entity_id"]
         lights_are_on = any_light_on()
-        light_needed = not (lights_are_on or is_up(hass))
+        light_needed = not (lights_are_on or is_up(menuai))
 
         # These variables are needed for the elif check
         now = dt_util.utcnow()
@@ -220,8 +220,8 @@ async def activate_automation(  # noqa: C901
         # Do we need lights?
         if light_needed:
             logger.info("Home coming event for %s. Turning lights on", entity)
-            hass.async_create_task(
-                hass.services.async_call(
+            menuai.async_create_task(
+                menuai.services.async_call(
                     DOMAIN_LIGHT,
                     SERVICE_TURN_ON,
                     {ATTR_ENTITY_ID: light_ids, ATTR_PROFILE: light_profile},
@@ -233,14 +233,14 @@ async def activate_automation(  # noqa: C901
         # Check this by seeing if current time is later then the point
         # in time when we would start putting the lights on.
         elif start_point and start_point < now < get_astral_event_next(
-            hass, SUN_EVENT_SUNSET
+            menuai, SUN_EVENT_SUNSET
         ):
             # Check for every light if it would be on if someone was home
             # when the fading in started and turn it on if so
             for index, light_id in enumerate(light_ids):
                 if now > start_point + index * LIGHT_TRANSITION_TIME:
-                    hass.async_create_task(
-                        hass.services.async_call(
+                    menuai.async_create_task(
+                        menuai.services.async_call(
                             DOMAIN_LIGHT, SERVICE_TURN_ON, {ATTR_ENTITY_ID: light_id}
                         )
                     )
@@ -251,7 +251,7 @@ async def activate_automation(  # noqa: C901
                     break
 
     async_track_state_change_event(
-        hass,
+        menuai,
         device_entity_ids,
         partial(check_light_on_dev_state_change, STATE_NOT_HOME, STATE_HOME),
     )
@@ -271,14 +271,14 @@ async def activate_automation(  # noqa: C901
             return
 
         logger.info("Everyone has left but there are lights on. Turning them off")
-        hass.async_create_task(
-            hass.services.async_call(
+        menuai.async_create_task(
+            menuai.services.async_call(
                 DOMAIN_LIGHT, SERVICE_TURN_OFF, {ATTR_ENTITY_ID: light_ids}
             )
         )
 
     async_track_state_change_event(
-        hass,
+        menuai,
         device_entity_ids,
         partial(turn_off_lights_when_all_leave, STATE_HOME, STATE_NOT_HOME),
     )

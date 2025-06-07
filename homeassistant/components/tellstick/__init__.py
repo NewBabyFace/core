@@ -7,11 +7,11 @@ from tellcore.telldus import AsyncioCallbackDispatcher, TelldusCore
 from tellcorenet import TellCoreClient
 import voluptuous as vol
 
-from homeassistant.const import CONF_HOST, CONF_PORT, EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv, discovery
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import CONF_HOST, CONF_PORT, EVENT_menuai_STOP
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv, discovery
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     ATTR_DISCOVER_CONFIG,
@@ -45,7 +45,7 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def _discover(hass, config, component_name, found_tellcore_devices):
+def _discover(menuai, config, component_name, found_tellcore_devices):
     """Set up and send the discovery event."""
     if not found_tellcore_devices:
         return
@@ -57,7 +57,7 @@ def _discover(hass, config, component_name, found_tellcore_devices):
     signal_repetitions = config[DOMAIN].get(CONF_SIGNAL_REPETITIONS)
 
     discovery.load_platform(
-        hass,
+        menuai,
         component_name,
         DOMAIN,
         {
@@ -68,7 +68,7 @@ def _discover(hass, config, component_name, found_tellcore_devices):
     )
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Tellstick component."""
 
     conf = config.get(DOMAIN, {})
@@ -86,11 +86,11 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
             """Event handler to stop the client."""
             net_client.stop()
 
-        hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, stop_tellcore_net)
+        menuai.bus.listen_once(EVENT_menuai_STOP, stop_tellcore_net)
 
     try:
         tellcore_lib = TelldusCore(
-            callback_dispatcher=AsyncioCallbackDispatcher(hass.loop)
+            callback_dispatcher=AsyncioCallbackDispatcher(menuai.loop)
         )
     except OSError:
         _LOGGER.exception("Could not initialize Tellstick")
@@ -100,11 +100,11 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
     tellcore_devices = tellcore_lib.devices()
 
     # Register devices
-    hass.data[DATA_TELLSTICK] = {device.id: device for device in tellcore_devices}
+    menuai.data[DATA_TELLSTICK] = {device.id: device for device in tellcore_devices}
 
     # Discover the lights
     _discover(
-        hass,
+        menuai,
         config,
         "light",
         [device.id for device in tellcore_devices if device.methods(TELLSTICK_DIM)],
@@ -112,7 +112,7 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     # Discover the cover
     _discover(
-        hass,
+        menuai,
         config,
         "cover",
         [device.id for device in tellcore_devices if device.methods(TELLSTICK_UP)],
@@ -120,7 +120,7 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     # Discover the switches
     _discover(
-        hass,
+        menuai,
         config,
         "switch",
         [
@@ -134,7 +134,7 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
     def async_handle_callback(tellcore_id, tellcore_command, tellcore_data, cid):
         """Handle the actual callback from Tellcore."""
         async_dispatcher_send(
-            hass, SIGNAL_TELLCORE_CALLBACK, tellcore_id, tellcore_command, tellcore_data
+            menuai, SIGNAL_TELLCORE_CALLBACK, tellcore_id, tellcore_command, tellcore_data
         )
 
     # Register callback
@@ -145,6 +145,6 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
         if callback_id is not None:
             tellcore_lib.unregister_callback(callback_id)
 
-    hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, clean_up_callback)
+    menuai.bus.listen_once(EVENT_menuai_STOP, clean_up_callback)
 
     return True

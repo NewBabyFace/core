@@ -15,16 +15,16 @@ from typing import Any
 from propcache.api import cached_property
 import voluptuous as vol
 
-from homeassistant.components.homeassistant.exposed_entities import async_should_expose
-from homeassistant.const import (
+from menuai.components.menuai.exposed_entities import async_should_expose
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     ATTR_ENTITY_ID,
     ATTR_SUPPORTED_FEATURES,
 )
-from homeassistant.core import Context, HomeAssistant, State, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.loader import bind_hass
-from homeassistant.util.hass_dict import HassKey
+from menuai.core import Context, menuai, State, callback
+from menuai.exceptions import menuaiError
+from menuai.loader import bind_menuai
+from menuai.util.menuai_dict import menuaiKey
 
 from . import (
     area_registry,
@@ -41,41 +41,41 @@ type _IntentSlotsType = dict[
     str | tuple[str, str], IntentSlotInfo | VolSchemaType | Callable[[Any], Any]
 ]
 
-INTENT_TURN_OFF = "HassTurnOff"
-INTENT_TURN_ON = "HassTurnOn"
-INTENT_TOGGLE = "HassToggle"
-INTENT_GET_STATE = "HassGetState"
-INTENT_NEVERMIND = "HassNevermind"
-INTENT_SET_POSITION = "HassSetPosition"
-INTENT_START_TIMER = "HassStartTimer"
-INTENT_CANCEL_TIMER = "HassCancelTimer"
-INTENT_CANCEL_ALL_TIMERS = "HassCancelAllTimers"
-INTENT_INCREASE_TIMER = "HassIncreaseTimer"
-INTENT_DECREASE_TIMER = "HassDecreaseTimer"
-INTENT_PAUSE_TIMER = "HassPauseTimer"
-INTENT_UNPAUSE_TIMER = "HassUnpauseTimer"
-INTENT_TIMER_STATUS = "HassTimerStatus"
-INTENT_GET_CURRENT_DATE = "HassGetCurrentDate"
-INTENT_GET_CURRENT_TIME = "HassGetCurrentTime"
-INTENT_RESPOND = "HassRespond"
-INTENT_BROADCAST = "HassBroadcast"
-INTENT_GET_TEMPERATURE = "HassClimateGetTemperature"
+INTENT_TURN_OFF = "menuaiTurnOff"
+INTENT_TURN_ON = "menuaiTurnOn"
+INTENT_TOGGLE = "menuaiToggle"
+INTENT_GET_STATE = "menuaiGetState"
+INTENT_NEVERMIND = "menuaiNevermind"
+INTENT_SET_POSITION = "menuaiSetPosition"
+INTENT_START_TIMER = "menuaiStartTimer"
+INTENT_CANCEL_TIMER = "menuaiCancelTimer"
+INTENT_CANCEL_ALL_TIMERS = "menuaiCancelAllTimers"
+INTENT_INCREASE_TIMER = "menuaiIncreaseTimer"
+INTENT_DECREASE_TIMER = "menuaiDecreaseTimer"
+INTENT_PAUSE_TIMER = "menuaiPauseTimer"
+INTENT_UNPAUSE_TIMER = "menuaiUnpauseTimer"
+INTENT_TIMER_STATUS = "menuaiTimerStatus"
+INTENT_GET_CURRENT_DATE = "menuaiGetCurrentDate"
+INTENT_GET_CURRENT_TIME = "menuaiGetCurrentTime"
+INTENT_RESPOND = "menuaiRespond"
+INTENT_BROADCAST = "menuaiBroadcast"
+INTENT_GET_TEMPERATURE = "menuaiClimateGetTemperature"
 
 SLOT_SCHEMA = vol.Schema({}, extra=vol.ALLOW_EXTRA)
 
-DATA_KEY: HassKey[dict[str, IntentHandler]] = HassKey("intent")
+DATA_KEY: menuaiKey[dict[str, IntentHandler]] = menuaiKey("intent")
 
 SPEECH_TYPE_PLAIN = "plain"
 SPEECH_TYPE_SSML = "ssml"
 
 
 @callback
-@bind_hass
-def async_register(hass: HomeAssistant, handler: IntentHandler) -> None:
-    """Register an intent with Home Assistant."""
-    if (intents := hass.data.get(DATA_KEY)) is None:
+@bind_menuai
+def async_register(menuai: menuai, handler: IntentHandler) -> None:
+    """Register an intent with MenuAI."""
+    if (intents := menuai.data.get(DATA_KEY)) is None:
         intents = {}
-        hass.data[DATA_KEY] = intents
+        menuai.data[DATA_KEY] = intents
 
     assert getattr(handler, "intent_type", None), "intent_type should be set"
 
@@ -88,24 +88,24 @@ def async_register(hass: HomeAssistant, handler: IntentHandler) -> None:
 
 
 @callback
-@bind_hass
-def async_remove(hass: HomeAssistant, intent_type: str) -> None:
-    """Remove an intent from Home Assistant."""
-    if (intents := hass.data.get(DATA_KEY)) is None:
+@bind_menuai
+def async_remove(menuai: menuai, intent_type: str) -> None:
+    """Remove an intent from MenuAI."""
+    if (intents := menuai.data.get(DATA_KEY)) is None:
         return
 
     intents.pop(intent_type, None)
 
 
 @callback
-def async_get(hass: HomeAssistant) -> Iterable[IntentHandler]:
+def async_get(menuai: menuai) -> Iterable[IntentHandler]:
     """Return registered intents."""
-    return hass.data.get(DATA_KEY, {}).values()
+    return menuai.data.get(DATA_KEY, {}).values()
 
 
-@bind_hass
+@bind_menuai
 async def async_handle(
-    hass: HomeAssistant,
+    menuai: menuai,
     platform: str,
     intent_type: str,
     slots: _SlotsType | None = None,
@@ -117,7 +117,7 @@ async def async_handle(
     conversation_agent_id: str | None = None,
 ) -> IntentResponse:
     """Handle an intent."""
-    handler = hass.data.get(DATA_KEY, {}).get(intent_type)
+    handler = menuai.data.get(DATA_KEY, {}).get(intent_type)
 
     if handler is None:
         raise UnknownIntent(f"Unknown intent {intent_type}")
@@ -126,10 +126,10 @@ async def async_handle(
         context = Context()
 
     if language is None:
-        language = hass.config.language
+        language = menuai.config.language
 
     intent = Intent(
-        hass,
+        menuai,
         platform=platform,
         intent_type=intent_type,
         slots=slots or {},
@@ -155,7 +155,7 @@ async def async_handle(
     return result
 
 
-class IntentError(HomeAssistantError):
+class IntentError(menuaiError):
     """Base class for intent related errors."""
 
 
@@ -516,7 +516,7 @@ def _default_area_candidate_filter(
 
 @callback
 def async_match_targets(  # noqa: C901
-    hass: HomeAssistant,
+    menuai: menuai,
     constraints: MatchTargetsConstraints,
     preferences: MatchTargetsPreferences | None = None,
     states: list[State] | None = None,
@@ -530,7 +530,7 @@ def async_match_targets(  # noqa: C901
 
     if not states:
         # Get all states and filter by domain
-        states = hass.states.async_all(constraints.domains)
+        states = menuai.states.async_all(constraints.domains)
         filtered_by_domain = True
         if not states:
             return MatchTargetsResult(False, MatchFailedReason.DOMAIN)
@@ -539,7 +539,7 @@ def async_match_targets(  # noqa: C901
         MatchTargetsCandidate(
             state=state,
             is_exposed=(
-                async_should_expose(hass, constraints.assistant, state.entity_id)
+                async_should_expose(menuai, constraints.assistant, state.entity_id)
                 if constraints.assistant
                 else True
             ),
@@ -577,7 +577,7 @@ def async_match_targets(  # noqa: C901
         return MatchTargetsResult(True, states=[c.state for c in candidates])
 
     # We need entity registry entries now
-    er = entity_registry.async_get(hass)
+    er = entity_registry.async_get(menuai)
     for candidate in candidates:
         candidate.entity = er.async_get(candidate.state.entity_id)
 
@@ -609,14 +609,14 @@ def async_match_targets(  # noqa: C901
     areas_added = False
 
     if constraints.floor_name or constraints.area_name:
-        ar = area_registry.async_get(hass)
-        dr = device_registry.async_get(hass)
+        ar = area_registry.async_get(menuai)
+        dr = device_registry.async_get(menuai)
         _add_areas(ar, dr, candidates)
         areas_added = True
 
         if constraints.floor_name:
             # Filter by areas associated with floor
-            fr = floor_registry.async_get(hass)
+            fr = floor_registry.async_get(menuai)
             targeted_floors = list(find_floors(constraints.floor_name, fr))
             if not targeted_floors:
                 return MatchTargetsResult(
@@ -673,8 +673,8 @@ def async_match_targets(  # noqa: C901
     if constraints.name and (not constraints.allow_duplicate_names):
         # Check for duplicates
         if not areas_added:
-            ar = area_registry.async_get(hass)
-            dr = device_registry.async_get(hass)
+            ar = area_registry.async_get(menuai)
+            dr = device_registry.async_get(menuai)
             _add_areas(ar, dr, candidates)
             areas_added = True
 
@@ -744,8 +744,8 @@ def async_match_targets(  # noqa: C901
             )
 
         if not areas_added:
-            ar = area_registry.async_get(hass)
-            dr = device_registry.async_get(hass)
+            ar = area_registry.async_get(menuai)
+            dr = device_registry.async_get(menuai)
             _add_areas(ar, dr, candidates)
             areas_added = True
 
@@ -785,9 +785,9 @@ def async_match_targets(  # noqa: C901
 
 
 @callback
-@bind_hass
+@bind_menuai
 def async_match_states(
-    hass: HomeAssistant,
+    menuai: menuai,
     name: str | None = None,
     area_name: str | None = None,
     floor_name: str | None = None,
@@ -798,7 +798,7 @@ def async_match_states(
 ) -> Iterable[State]:
     """Simplified interface to async_match_targets that returns states matching the constraints."""
     result = async_match_targets(
-        hass,
+        menuai,
         constraints=MatchTargetsConstraints(
             name=name,
             area_name=area_name,
@@ -1010,8 +1010,8 @@ class DynamicServiceIntentHandler(IntentHandler):
         raise NotImplementedError
 
     async def async_handle(self, intent_obj: Intent) -> IntentResponse:
-        """Handle the hass intent."""
-        hass = intent_obj.hass
+        """Handle the menuai intent."""
+        menuai = intent_obj.menuai
         slots = self.async_validate_slots(intent_obj.slots)
 
         name_slot = slots.get("name", {})
@@ -1058,7 +1058,7 @@ class DynamicServiceIntentHandler(IntentHandler):
             floor_id=slots.get("preferred_floor_id", {}).get("value"),
         )
 
-        match_result = async_match_targets(hass, match_constraints, match_preferences)
+        match_result = async_match_targets(menuai, match_constraints, match_preferences)
         if not match_result.is_match:
             raise MatchFailedError(
                 result=match_result,
@@ -1102,7 +1102,7 @@ class DynamicServiceIntentHandler(IntentHandler):
         states = match_result.states
         response = intent_obj.create_response()
 
-        hass = intent_obj.hass
+        menuai = intent_obj.menuai
         success_results: list[IntentResponseTarget] = []
 
         if match_result.floors:
@@ -1163,7 +1163,7 @@ class DynamicServiceIntentHandler(IntentHandler):
         )
 
         # Update all states
-        states = [hass.states.get(state.entity_id) or state for state in states]
+        states = [menuai.states.get(state.entity_id) or state for state in states]
         response.async_set_states(states)
 
         if self.speech is not None:
@@ -1175,7 +1175,7 @@ class DynamicServiceIntentHandler(IntentHandler):
         self, domain: str, service: str, intent_obj: Intent, state: State
     ) -> None:
         """Call service on entity."""
-        hass = intent_obj.hass
+        menuai = intent_obj.menuai
 
         service_data: dict[str, Any] = {ATTR_ENTITY_ID: state.entity_id}
         if self.required_slots:
@@ -1190,8 +1190,8 @@ class DynamicServiceIntentHandler(IntentHandler):
                     service_data[slot_info.service_data_name or key] = value["value"]
 
         await self._run_then_background(
-            hass.async_create_task_internal(
-                hass.services.async_call(
+            menuai.async_create_task_internal(
+                menuai.services.async_call(
                     domain,
                     service,
                     service_data,
@@ -1283,7 +1283,7 @@ class Intent:
         "context",
         "conversation_agent_id",
         "device_id",
-        "hass",
+        "menuai",
         "intent_type",
         "language",
         "platform",
@@ -1293,7 +1293,7 @@ class Intent:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         platform: str,
         intent_type: str,
         slots: _SlotsType,
@@ -1306,7 +1306,7 @@ class Intent:
         conversation_agent_id: str | None = None,
     ) -> None:
         """Initialize an intent."""
-        self.hass = hass
+        self.menuai = menuai
         self.platform = platform
         self.intent_type = intent_type
         self.slots = slots

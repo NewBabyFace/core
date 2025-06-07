@@ -2,7 +2,7 @@
 
 from logging import getLogger
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 DOMAIN = "velux"
 PLATFORMS = [Platform.COVER, Platform.LIGHT, Platform.SCENE]

@@ -19,10 +19,10 @@ from asyncsleepiq import (
 )
 import pytest
 
-from homeassistant.components.sleepiq import DOMAIN
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.sleepiq import DOMAIN
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 
@@ -49,7 +49,7 @@ SLEEPIQ_CONFIG = {
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.sleepiq.async_setup_entry", return_value=True
+        "menuai.components.sleepiq.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -99,7 +99,7 @@ def mock_asyncsleepiq_single_foundation(
     mock_bed: MagicMock,
 ) -> Generator[MagicMock]:
     """Mock an AsyncSleepIQ object with a single foundation."""
-    with patch("homeassistant.components.sleepiq.AsyncSleepIQ", autospec=True) as mock:
+    with patch("menuai.components.sleepiq.AsyncSleepIQ", autospec=True) as mock:
         client = mock.return_value
         client.beds = {BED_ID: mock_bed}
 
@@ -133,7 +133,7 @@ def mock_asyncsleepiq_single_foundation(
 @pytest.fixture
 def mock_asyncsleepiq(mock_bed: MagicMock) -> Generator[MagicMock]:
     """Mock an AsyncSleepIQ object with a split foundation."""
-    with patch("homeassistant.components.sleepiq.AsyncSleepIQ", autospec=True) as mock:
+    with patch("menuai.components.sleepiq.AsyncSleepIQ", autospec=True) as mock:
         client = mock.return_value
         client.beds = {BED_ID: mock_bed}
 
@@ -189,7 +189,7 @@ def mock_asyncsleepiq(mock_bed: MagicMock) -> Generator[MagicMock]:
 
 
 async def setup_platform(
-    hass: HomeAssistant, platform: str | None = None
+    menuai: menuai, platform: str | None = None
 ) -> MockConfigEntry:
     """Set up the SleepIQ platform."""
     mock_entry = MockConfigEntry(
@@ -197,11 +197,11 @@ async def setup_platform(
         data=SLEEPIQ_CONFIG,
         unique_id=SLEEPIQ_CONFIG[CONF_USERNAME].lower(),
     )
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
     if platform:
-        with patch("homeassistant.components.sleepiq.PLATFORMS", [platform]):
-            assert await async_setup_component(hass, DOMAIN, {})
-        await hass.async_block_till_done()
+        with patch("menuai.components.sleepiq.PLATFORMS", [platform]):
+            assert await async_setup_component(menuai, DOMAIN, {})
+        await menuai.async_block_till_done()
 
     return mock_entry

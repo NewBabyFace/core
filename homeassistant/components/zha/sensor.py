@@ -7,17 +7,17 @@ import functools
 import logging
 from typing import Any
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
 
 from .entity import ZHAEntity
 from .helpers import (
@@ -78,16 +78,16 @@ _EXTRA_STATE_ATTRIBUTES: set[str] = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Zigbee Home Automation sensor from config entry."""
-    zha_data = get_zha_data(hass)
+    zha_data = get_zha_data(menuai)
     entities_to_create = zha_data.platforms[Platform.SENSOR]
 
     unsub = async_dispatcher_connect(
-        hass,
+        menuai,
         SIGNAL_ADD_ENTITIES,
         functools.partial(
             zha_async_add_entities, async_add_entities, Sensor, entities_to_create
@@ -96,7 +96,7 @@ async def async_setup_entry(
     config_entry.async_on_unload(unsub)
 
 
-# pylint: disable-next=hass-invalid-inheritance # needs fixing
+# pylint: disable-next=menuai-invalid-inheritance # needs fixing
 class Sensor(ZHAEntity, SensorEntity):
     """ZHA sensor."""
 

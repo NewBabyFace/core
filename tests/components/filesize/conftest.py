@@ -8,8 +8,8 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components.filesize.const import DOMAIN, PLATFORMS
-from homeassistant.const import CONF_FILE_PATH, Platform
+from menuai.components.filesize.const import DOMAIN, PLATFORMS
+from menuai.const import CONF_FILE_PATH, Platform
 
 from . import TEST_FILE_NAME
 
@@ -41,6 +41,6 @@ def mock_config_entry(
 def mock_setup_entry() -> Generator[None]:
     """Mock setting up a config entry."""
     with patch(
-        "homeassistant.components.filesize.async_setup_entry", return_value=True
+        "menuai.components.filesize.async_setup_entry", return_value=True
     ):
         yield

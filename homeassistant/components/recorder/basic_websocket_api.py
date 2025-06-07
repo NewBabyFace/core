@@ -6,18 +6,18 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import recorder as recorder_helper
+from menuai.components import websocket_api
+from menuai.core import menuai, callback
+from menuai.helpers import recorder as recorder_helper
 
 from . import get_default_url
 from .util import get_instance
 
 
 @callback
-def async_setup(hass: HomeAssistant) -> None:
+def async_setup(menuai: menuai) -> None:
     """Set up the recorder websocket API."""
-    websocket_api.async_register_command(hass, ws_info)
+    websocket_api.async_register_command(menuai, ws_info)
 
 
 @websocket_api.websocket_command(
@@ -27,15 +27,15 @@ def async_setup(hass: HomeAssistant) -> None:
 )
 @websocket_api.async_response
 async def ws_info(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Return status of the recorder."""
     # Wait for db_connected to ensure the recorder instance is created and the
     # migration flags are set.
-    await hass.data[recorder_helper.DATA_RECORDER].db_connected
-    instance = get_instance(hass)
+    await menuai.data[recorder_helper.DATA_RECORDER].db_connected
+    instance = get_instance(menuai)
     backlog = instance.backlog
-    db_in_default_location = instance.db_url == get_default_url(hass)
+    db_in_default_location = instance.db_url == get_default_url(menuai)
     migration_in_progress = instance.migration_in_progress
     migration_is_live = instance.migration_is_live
     recording = instance.recording

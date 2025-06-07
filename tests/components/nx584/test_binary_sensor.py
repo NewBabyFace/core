@@ -7,9 +7,9 @@ from nx584 import client as nx584_client
 import pytest
 import requests
 
-from homeassistant.components.nx584 import binary_sensor as nx584
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.nx584 import binary_sensor as nx584
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 DEFAULT_CONFIG = {
     "host": nx584.DEFAULT_HOST,
@@ -58,15 +58,15 @@ def client(fake_zones):
 
 
 @pytest.mark.usefixtures("client")
-@mock.patch("homeassistant.components.nx584.binary_sensor.NX584Watcher")
-@mock.patch("homeassistant.components.nx584.binary_sensor.NX584ZoneSensor")
+@mock.patch("menuai.components.nx584.binary_sensor.NX584Watcher")
+@mock.patch("menuai.components.nx584.binary_sensor.NX584ZoneSensor")
 def test_nx584_sensor_setup_defaults(
-    mock_nx, mock_watcher, hass: HomeAssistant, fake_zones
+    mock_nx, mock_watcher, menuai: menuai, fake_zones
 ) -> None:
     """Test the setup with no configuration."""
     add_entities = mock.MagicMock()
     config = DEFAULT_CONFIG
-    nx584.setup_platform(hass, config, add_entities)
+    nx584.setup_platform(menuai, config, add_entities)
     mock_nx.assert_has_calls([mock.call(zone, "opening") for zone in fake_zones])
     assert add_entities.called
     assert nx584_client.Client.call_count == 1
@@ -74,10 +74,10 @@ def test_nx584_sensor_setup_defaults(
 
 
 @pytest.mark.usefixtures("client")
-@mock.patch("homeassistant.components.nx584.binary_sensor.NX584Watcher")
-@mock.patch("homeassistant.components.nx584.binary_sensor.NX584ZoneSensor")
+@mock.patch("menuai.components.nx584.binary_sensor.NX584Watcher")
+@mock.patch("menuai.components.nx584.binary_sensor.NX584ZoneSensor")
 def test_nx584_sensor_setup_full_config(
-    mock_nx, mock_watcher, hass: HomeAssistant, fake_zones
+    mock_nx, mock_watcher, menuai: menuai, fake_zones
 ) -> None:
     """Test the setup with full configuration."""
     config = {
@@ -87,7 +87,7 @@ def test_nx584_sensor_setup_full_config(
         "zone_types": {3: "motion"},
     }
     add_entities = mock.MagicMock()
-    nx584.setup_platform(hass, config, add_entities)
+    nx584.setup_platform(menuai, config, add_entities)
     mock_nx.assert_has_calls(
         [
             mock.call(fake_zones[0], "opening"),
@@ -101,10 +101,10 @@ def test_nx584_sensor_setup_full_config(
 
 
 async def _test_assert_graceful_fail(
-    hass: HomeAssistant, config: dict[str, Any]
+    menuai: menuai, config: dict[str, Any]
 ) -> None:
     """Test the failing."""
-    assert not await async_setup_component(hass, "nx584", config)
+    assert not await async_setup_component(menuai, "nx584", config)
 
 
 @pytest.mark.usefixtures("client")
@@ -118,10 +118,10 @@ async def _test_assert_graceful_fail(
     ],
 )
 async def test_nx584_sensor_setup_bad_config(
-    hass: HomeAssistant, config: dict[str, Any]
+    menuai: menuai, config: dict[str, Any]
 ) -> None:
     """Test the setup with bad configuration."""
-    await _test_assert_graceful_fail(hass, config)
+    await _test_assert_graceful_fail(menuai, config)
 
 
 @pytest.mark.usefixtures("client")
@@ -133,27 +133,27 @@ async def test_nx584_sensor_setup_bad_config(
     ],
 )
 async def test_nx584_sensor_setup_with_exceptions(
-    hass: HomeAssistant, exception_type
+    menuai: menuai, exception_type
 ) -> None:
     """Test the setup handles exceptions."""
     nx584_client.Client.return_value.list_zones.side_effect = exception_type
-    await _test_assert_graceful_fail(hass, {})
+    await _test_assert_graceful_fail(menuai, {})
 
 
 @pytest.mark.usefixtures("client")
-async def test_nx584_sensor_setup_version_too_old(hass: HomeAssistant) -> None:
+async def test_nx584_sensor_setup_version_too_old(menuai: menuai) -> None:
     """Test if version is too old."""
     nx584_client.Client.return_value.get_version.return_value = "1.0"
-    await _test_assert_graceful_fail(hass, {})
+    await _test_assert_graceful_fail(menuai, {})
 
 
 @pytest.mark.usefixtures("client")
-def test_nx584_sensor_setup_no_zones(hass: HomeAssistant) -> None:
+def test_nx584_sensor_setup_no_zones(menuai: menuai) -> None:
     """Test the setup with no zones."""
     nx584_client.Client.return_value.list_zones.return_value = []
     add_entities = mock.MagicMock()
     nx584.setup_platform(
-        hass,
+        menuai,
         DEFAULT_CONFIG,
         add_entities,
     )

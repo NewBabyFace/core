@@ -7,11 +7,11 @@ from arcam.fmj.client import Client
 from arcam.fmj.state import State
 import pytest
 
-from homeassistant.components.arcam_fmj.const import DEFAULT_NAME
-from homeassistant.components.arcam_fmj.media_player import ArcamFmj
-from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.arcam_fmj.const import DEFAULT_NAME
+from menuai.components.arcam_fmj.media_player import ArcamFmj
+from menuai.const import CONF_HOST, CONF_PORT
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry, MockEntityPlatform
 
@@ -74,25 +74,25 @@ def state_fixture(state_1: State) -> State:
 
 
 @pytest.fixture(name="player")
-def player_fixture(hass: HomeAssistant, state: State) -> ArcamFmj:
+def player_fixture(menuai: menuai, state: State) -> ArcamFmj:
     """Get standard player."""
     player = ArcamFmj(MOCK_NAME, state, MOCK_UUID)
     player.entity_id = MOCK_ENTITY_ID
-    player.hass = hass
-    player.platform = MockEntityPlatform(hass)
+    player.menuai = menuai
+    player.platform = MockEntityPlatform(menuai)
     player.async_write_ha_state = Mock()
     return player
 
 
 @pytest.fixture(name="player_setup")
 async def player_setup_fixture(
-    hass: HomeAssistant, state_1: State, state_2: State, client: Mock
+    menuai: menuai, state_1: State, state_2: State, client: Mock
 ) -> AsyncGenerator[str]:
     """Get standard player."""
     config_entry = MockConfigEntry(
         domain="arcam_fmj", data=MOCK_CONFIG_ENTRY, title=MOCK_NAME
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     def state_mock(cli, zone):
         if zone == 1:
@@ -101,16 +101,16 @@ async def player_setup_fixture(
             return state_2
         raise ValueError(f"Unknown player zone: {zone}")
 
-    await async_setup_component(hass, "homeassistant", {})
+    await async_setup_component(menuai, "menuai", {})
 
     with (
-        patch("homeassistant.components.arcam_fmj.Client", return_value=client),
+        patch("menuai.components.arcam_fmj.Client", return_value=client),
         patch(
-            "homeassistant.components.arcam_fmj.media_player.State",
+            "menuai.components.arcam_fmj.media_player.State",
             side_effect=state_mock,
         ),
-        patch("homeassistant.components.arcam_fmj._run_client", return_value=None),
+        patch("menuai.components.arcam_fmj._run_client", return_value=None),
     ):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
         yield MOCK_ENTITY_ID

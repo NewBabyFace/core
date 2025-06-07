@@ -5,10 +5,10 @@ from __future__ import annotations
 from aiohttp.client_exceptions import ClientError
 import pytest
 
-from homeassistant.components.netgear_lte.const import DOMAIN
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONTENT_TYPE_JSON
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.netgear_lte.const import DOMAIN
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONTENT_TYPE_JSON
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry, load_fixture
 from tests.test_util.aiohttp import AiohttpClientMocker
@@ -55,8 +55,8 @@ def mock_connection(aioclient_mock: AiohttpClientMocker) -> None:
 
 
 @pytest.fixture(name="config_entry")
-def mock_config_entry(hass: HomeAssistant) -> MockConfigEntry:
-    """Create Netgear LTE entry in Home Assistant."""
+def mock_config_entry(menuai: menuai) -> MockConfigEntry:
+    """Create Netgear LTE entry in MenuAI."""
     return MockConfigEntry(
         domain=DOMAIN, data=CONF_DATA, unique_id="FFFFFFFFFFFFF", title="Netgear LM1200"
     )
@@ -64,23 +64,23 @@ def mock_config_entry(hass: HomeAssistant) -> MockConfigEntry:
 
 @pytest.fixture(name="setup_integration")
 async def mock_setup_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     connection: None,
 ) -> None:
-    """Set up the Netgear LTE integration in Home Assistant."""
-    config_entry.add_to_hass(hass)
-    assert await async_setup_component(hass, DOMAIN, {})
-    await hass.async_block_till_done()
+    """Set up the Netgear LTE integration in MenuAI."""
+    config_entry.add_to_menuai(menuai)
+    assert await async_setup_component(menuai, DOMAIN, {})
+    await menuai.async_block_till_done()
 
 
 @pytest.fixture(name="setup_cannot_connect")
 async def setup_cannot_connect(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     cannot_connect: None,
 ) -> None:
-    """Set up the Netgear LTE integration in Home Assistant."""
-    config_entry.add_to_hass(hass)
-    assert await async_setup_component(hass, DOMAIN, {})
-    await hass.async_block_till_done()
+    """Set up the Netgear LTE integration in MenuAI."""
+    config_entry.add_to_menuai(menuai)
+    assert await async_setup_component(menuai, DOMAIN, {})
+    await menuai.async_block_till_done()

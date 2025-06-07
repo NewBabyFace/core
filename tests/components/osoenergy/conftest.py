@@ -7,11 +7,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from apyosoenergyapi.waterheater import OSOEnergyWaterHeaterData
 import pytest
 
-from homeassistant.components.osoenergy.const import DOMAIN
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_API_KEY
-from homeassistant.core import HomeAssistant
-from homeassistant.util.json import JsonObjectType
+from menuai.components.osoenergy.const import DOMAIN
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_API_KEY
+from menuai.core import menuai
+from menuai.util.json import JsonObjectType
 
 from tests.common import MockConfigEntry, load_json_object_fixture
 
@@ -44,11 +44,11 @@ def mock_entry_data() -> dict[str, Any]:
 
 @pytest.fixture
 def mock_config_entry(
-    hass: HomeAssistant, mock_entry_data: dict[str, Any]
+    menuai: menuai, mock_entry_data: dict[str, Any]
 ) -> ConfigEntry:
     """Mock a config entry setup for incomfort integration."""
     entry = MockConfigEntry(domain=DOMAIN, data=mock_entry_data)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     return entry
 
 
@@ -58,10 +58,10 @@ async def mock_osoenergy_client(mock_water_heater) -> Generator[AsyncMock]:
 
     with (
         patch(
-            "homeassistant.components.osoenergy.OSOEnergy", MagicMock()
+            "menuai.components.osoenergy.OSOEnergy", MagicMock()
         ) as mock_client,
         patch(
-            "homeassistant.components.osoenergy.config_flow.OSOEnergy", new=mock_client
+            "menuai.components.osoenergy.config_flow.OSOEnergy", new=mock_client
         ),
     ):
         mock_session = MagicMock()

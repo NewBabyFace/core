@@ -12,15 +12,15 @@ from aiorussound.models import PlayStatus, Source
 from aiorussound.rio import ZoneControlSurface
 from aiorussound.util import is_feature_supported
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     MediaPlayerDeviceClass,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
     MediaType,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import RussoundConfigEntry
 from .entity import RussoundBaseEntity, command
@@ -31,7 +31,7 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: RussoundConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

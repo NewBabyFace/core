@@ -36,7 +36,7 @@ def _patch_discovery(device=None, no_device=False):
     @contextmanager
     def _patcher():
         with patch(
-            "homeassistant.components.elkm1.discovery.AIOELKDiscovery.async_scan",
+            "menuai.components.elkm1.discovery.AIOELKDiscovery.async_scan",
             new=_discovery,
         ):
             yield
@@ -52,11 +52,11 @@ def _patch_elk(elk=None):
     def _patcher():
         with (
             patch(
-                "homeassistant.components.elkm1.config_flow.Elk",
+                "menuai.components.elkm1.config_flow.Elk",
                 new=_elk,
             ),
             patch(
-                "homeassistant.components.elkm1.config_flow.Elk",
+                "menuai.components.elkm1.config_flow.Elk",
                 new=_elk,
             ),
         ):

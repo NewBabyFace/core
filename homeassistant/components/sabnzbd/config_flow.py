@@ -8,18 +8,18 @@ from typing import Any
 import voluptuous as vol
 import yarl
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_RECONFIGURE,
     ConfigFlow,
     ConfigFlowResult,
 )
-from homeassistant.const import CONF_API_KEY, CONF_URL
-from homeassistant.helpers.selector import (
+from menuai.const import CONF_API_KEY, CONF_URL
+from menuai.helpers.selector import (
     TextSelector,
     TextSelectorConfig,
     TextSelectorType,
 )
-from homeassistant.util import slugify
+from menuai.util import slugify
 
 from .const import DOMAIN
 from .helpers import get_client
@@ -60,7 +60,7 @@ class SABnzbdConfigFlow(ConfigFlow, domain=DOMAIN):
         errors = {}
 
         if user_input is not None:
-            sab_api = await get_client(self.hass, user_input)
+            sab_api = await get_client(self.menuai, user_input)
             if not sab_api:
                 errors["base"] = "cannot_connect"
             else:

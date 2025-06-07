@@ -5,9 +5,9 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from homeassistant.core import callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import Entity
+from menuai.core import callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity import Entity
 
 from . import LeafDataStore
 from .const import SIGNAL_UPDATE_LEAF
@@ -41,12 +41,12 @@ class LeafEntity(Entity):
             "vin": self.car.leaf.vin,
         }
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
         self.log_registration()
         self.async_on_remove(
             async_dispatcher_connect(
-                self.car.hass, SIGNAL_UPDATE_LEAF, self._update_callback
+                self.car.menuai, SIGNAL_UPDATE_LEAF, self._update_callback
             )
         )
 

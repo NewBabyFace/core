@@ -12,8 +12,8 @@ from typing import Any, final
 from propcache.api import cached_property
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (  # noqa: F401
+from menuai.config_entries import ConfigEntry
+from menuai.const import (  # noqa: F401
     SERVICE_CLOSE_COVER,
     SERVICE_CLOSE_COVER_TILT,
     SERVICE_OPEN_COVER,
@@ -29,25 +29,25 @@ from homeassistant.const import (  # noqa: F401
     STATE_OPEN,
     STATE_OPENING,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.deprecation import (
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.deprecation import (
     DeprecatedConstantEnum,
     all_with_deprecated_constants,
     check_if_deprecated_constant,
     dir_with_deprecated_constants,
 )
-from homeassistant.helpers.entity import Entity, EntityDescription
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.loader import bind_hass
-from homeassistant.util.hass_dict import HassKey
+from menuai.helpers.entity import Entity, EntityDescription
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.typing import ConfigType
+from menuai.loader import bind_menuai
+from menuai.util.menuai_dict import menuaiKey
 
 from .const import DOMAIN, INTENT_CLOSE_COVER, INTENT_OPEN_COVER  # noqa: F401
 
 _LOGGER = logging.getLogger(__name__)
 
-DATA_COMPONENT: HassKey[EntityComponent[CoverEntity]] = HassKey(DOMAIN)
+DATA_COMPONENT: menuaiKey[EntityComponent[CoverEntity]] = menuaiKey(DOMAIN)
 ENTITY_ID_FORMAT = DOMAIN + ".{}"
 PLATFORM_SCHEMA = cv.PLATFORM_SCHEMA
 PLATFORM_SCHEMA_BASE = cv.PLATFORM_SCHEMA_BASE
@@ -64,7 +64,7 @@ class CoverState(StrEnum):
 
 
 # STATE_* below are deprecated as of 2024.11
-# when imported from homeassistant.components.cover
+# when imported from menuai.components.cover
 # use the CoverState enum instead.
 _DEPRECATED_STATE_CLOSED = DeprecatedConstantEnum(CoverState.CLOSED, "2025.11")
 _DEPRECATED_STATE_CLOSING = DeprecatedConstantEnum(CoverState.CLOSING, "2025.11")
@@ -114,16 +114,16 @@ ATTR_POSITION = "position"
 ATTR_TILT_POSITION = "tilt_position"
 
 
-@bind_hass
-def is_closed(hass: HomeAssistant, entity_id: str) -> bool:
+@bind_menuai
+def is_closed(menuai: menuai, entity_id: str) -> bool:
     """Return if the cover is closed based on the statemachine."""
-    return hass.states.is_state(entity_id, CoverState.CLOSED)
+    return menuai.states.is_state(entity_id, CoverState.CLOSED)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Track states and offer events for covers."""
-    component = hass.data[DATA_COMPONENT] = EntityComponent[CoverEntity](
-        _LOGGER, DOMAIN, hass, SCAN_INTERVAL
+    component = menuai.data[DATA_COMPONENT] = EntityComponent[CoverEntity](
+        _LOGGER, DOMAIN, menuai, SCAN_INTERVAL
     )
 
     await component.async_setup(config)
@@ -200,14 +200,14 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up a config entry."""
-    return await hass.data[DATA_COMPONENT].async_setup_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_setup_entry(entry)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.data[DATA_COMPONENT].async_unload_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_unload_entry(entry)
 
 
 class CoverEntityDescription(EntityDescription, frozen_or_thawed=True):
@@ -344,7 +344,7 @@ class CoverEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_open_cover(self, **kwargs: Any) -> None:
         """Open the cover."""
-        await self.hass.async_add_executor_job(ft.partial(self.open_cover, **kwargs))
+        await self.menuai.async_add_executor_job(ft.partial(self.open_cover, **kwargs))
 
     def close_cover(self, **kwargs: Any) -> None:
         """Close cover."""
@@ -352,7 +352,7 @@ class CoverEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_close_cover(self, **kwargs: Any) -> None:
         """Close cover."""
-        await self.hass.async_add_executor_job(ft.partial(self.close_cover, **kwargs))
+        await self.menuai.async_add_executor_job(ft.partial(self.close_cover, **kwargs))
 
     def toggle(self, **kwargs: Any) -> None:
         """Toggle the entity."""
@@ -379,7 +379,7 @@ class CoverEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_set_cover_position(self, **kwargs: Any) -> None:
         """Move the cover to a specific position."""
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             ft.partial(self.set_cover_position, **kwargs)
         )
 
@@ -388,14 +388,14 @@ class CoverEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_stop_cover(self, **kwargs: Any) -> None:
         """Stop the cover."""
-        await self.hass.async_add_executor_job(ft.partial(self.stop_cover, **kwargs))
+        await self.menuai.async_add_executor_job(ft.partial(self.stop_cover, **kwargs))
 
     def open_cover_tilt(self, **kwargs: Any) -> None:
         """Open the cover tilt."""
 
     async def async_open_cover_tilt(self, **kwargs: Any) -> None:
         """Open the cover tilt."""
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             ft.partial(self.open_cover_tilt, **kwargs)
         )
 
@@ -404,7 +404,7 @@ class CoverEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_close_cover_tilt(self, **kwargs: Any) -> None:
         """Close the cover tilt."""
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             ft.partial(self.close_cover_tilt, **kwargs)
         )
 
@@ -413,7 +413,7 @@ class CoverEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_set_cover_tilt_position(self, **kwargs: Any) -> None:
         """Move the cover tilt to a specific position."""
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             ft.partial(self.set_cover_tilt_position, **kwargs)
         )
 
@@ -422,7 +422,7 @@ class CoverEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_stop_cover_tilt(self, **kwargs: Any) -> None:
         """Stop the cover."""
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             ft.partial(self.stop_cover_tilt, **kwargs)
         )
 

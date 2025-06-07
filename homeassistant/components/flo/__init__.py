@@ -6,10 +6,10 @@ import logging
 from aioflo import async_get_api
 from aioflo.errors import RequestError
 
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.const import CONF_PASSWORD, CONF_USERNAME, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .coordinator import FloConfigEntry, FloDeviceDataUpdateCoordinator, FloRuntimeData
 
@@ -18,9 +18,9 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR, Platform.SWITCH]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: FloConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: FloConfigEntry) -> bool:
     """Set up flo from a config entry."""
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
     try:
         client = await async_get_api(
             entry.data[CONF_USERNAME], entry.data[CONF_PASSWORD], session=session
@@ -34,7 +34,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: FloConfigEntry) -> bool:
 
     devices = [
         FloDeviceDataUpdateCoordinator(
-            hass, entry, client, location["id"], device["id"]
+            menuai, entry, client, location["id"], device["id"]
         )
         for location in user_info["locations"]
         for device in location["devices"]
@@ -44,11 +44,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: FloConfigEntry) -> bool:
     await asyncio.gather(*tasks)
 
     entry.runtime_data = FloRuntimeData(client=client, devices=devices)
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: FloConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: FloConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

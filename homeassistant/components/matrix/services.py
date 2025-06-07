@@ -6,9 +6,9 @@ from typing import TYPE_CHECKING
 
 import voluptuous as vol
 
-from homeassistant.components.notify import ATTR_DATA, ATTR_MESSAGE, ATTR_TARGET
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv
+from menuai.components.notify import ATTR_DATA, ATTR_MESSAGE, ATTR_TARGET
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import config_validation as cv
 
 from .const import (
     ATTR_FORMAT,
@@ -46,14 +46,14 @@ SERVICE_SCHEMA_SEND_MESSAGE = vol.Schema(
 
 async def _handle_send_message(call: ServiceCall) -> None:
     """Handle the send_message service call."""
-    matrix_bot: MatrixBot = call.hass.data[DOMAIN]
+    matrix_bot: MatrixBot = call.menuai.data[DOMAIN]
     await matrix_bot.handle_send_message(call)
 
 
-def register_services(hass: HomeAssistant) -> None:
+def register_services(menuai: menuai) -> None:
     """Set up the Matrix bot component."""
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_SEND_MESSAGE,
         _handle_send_message,

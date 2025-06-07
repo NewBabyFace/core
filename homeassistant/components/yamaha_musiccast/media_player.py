@@ -9,8 +9,8 @@ from typing import Any
 from aiomusiccast import MusicCastGroupException, MusicCastMediaContent
 from aiomusiccast.features import ZoneFeature
 
-from homeassistant.components import media_source
-from homeassistant.components.media_player import (
+from menuai.components import media_source
+from menuai.components.media_player import (
     BrowseMedia,
     MediaClass,
     MediaPlayerEntity,
@@ -20,12 +20,12 @@ from homeassistant.components.media_player import (
     RepeatMode,
     async_process_play_media_url,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import uuid as uuid_util
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity import Entity
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import uuid as uuid_util
 
 from .const import (
     ATTR_MAIN_SYNC,
@@ -53,12 +53,12 @@ MUSIC_PLAYER_BASE_SUPPORT = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up MusicCast sensor based on a config entry."""
-    coordinator: MusicCastDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: MusicCastDataUpdateCoordinator = menuai.data[DOMAIN][entry.entry_id]
 
     name = coordinator.data.network_name
 
@@ -99,9 +99,9 @@ class MusicCastMediaPlayer(MusicCastDeviceEntity, MediaPlayerEntity):
         self._cur_track = 0
         self._repeat = RepeatMode.OFF
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Run when this Entity has been added to HA."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self.coordinator.entities.append(self)
         # Sensors should also register callbacks to HA when their state changes
         self.coordinator.musiccast.register_group_update_callback(
@@ -111,11 +111,11 @@ class MusicCastMediaPlayer(MusicCastDeviceEntity, MediaPlayerEntity):
             self.coordinator.async_add_listener(self.async_schedule_check_client_list)
         )
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Entity being removed from hass."""
-        await super().async_will_remove_from_hass()
+    async def async_will_remove_from_menuai(self) -> None:
+        """Entity being removed from menuai."""
+        await super().async_will_remove_from_menuai()
         self.coordinator.entities.remove(self)
-        # The opposite of async_added_to_hass. Remove any registered call backs here.
+        # The opposite of async_added_to_menuai. Remove any registered call backs here.
         self.coordinator.musiccast.remove_group_update_callback(
             self.update_all_mc_entities
         )
@@ -251,7 +251,7 @@ class MusicCastMediaPlayer(MusicCastDeviceEntity, MediaPlayerEntity):
         if self._is_netusb:
             await self.coordinator.musiccast.netusb_play()
         else:
-            raise HomeAssistantError(
+            raise menuaiError(
                 "Service play is not supported for non NetUSB sources."
             )
 
@@ -260,7 +260,7 @@ class MusicCastMediaPlayer(MusicCastDeviceEntity, MediaPlayerEntity):
         if self._is_netusb:
             await self.coordinator.musiccast.netusb_pause()
         else:
-            raise HomeAssistantError(
+            raise menuaiError(
                 "Service pause is not supported for non NetUSB sources."
             )
 
@@ -269,7 +269,7 @@ class MusicCastMediaPlayer(MusicCastDeviceEntity, MediaPlayerEntity):
         if self._is_netusb:
             await self.coordinator.musiccast.netusb_stop()
         else:
-            raise HomeAssistantError(
+            raise menuaiError(
                 "Service stop is not supported for non NetUSB sources."
             )
 
@@ -278,7 +278,7 @@ class MusicCastMediaPlayer(MusicCastDeviceEntity, MediaPlayerEntity):
         if self._is_netusb:
             await self.coordinator.musiccast.netusb_shuffle(shuffle)
         else:
-            raise HomeAssistantError(
+            raise menuaiError(
                 "Service shuffle is not supported for non NetUSB sources."
             )
 
@@ -288,7 +288,7 @@ class MusicCastMediaPlayer(MusicCastDeviceEntity, MediaPlayerEntity):
         """Play media."""
         if media_source.is_media_source_id(media_id):
             play_item = await media_source.async_resolve_media(
-                self.hass, media_id, self.entity_id
+                self.menuai, media_id, self.entity_id
             )
             media_id = play_item.url
 
@@ -313,14 +313,14 @@ class MusicCastMediaPlayer(MusicCastDeviceEntity, MediaPlayerEntity):
                 return
 
             if parts[0] in ("http", "https") or media_id.startswith("/"):
-                media_id = async_process_play_media_url(self.hass, media_id)
+                media_id = async_process_play_media_url(self.menuai, media_id)
 
                 await self.coordinator.musiccast.play_url_media(
-                    self._zone_id, media_id, "HomeAssistant"
+                    self._zone_id, media_id, "menuai"
                 )
                 return
 
-        raise HomeAssistantError(
+        raise menuaiError(
             "Only presets, media from media browser and http URLs are supported"
         )
 
@@ -328,7 +328,7 @@ class MusicCastMediaPlayer(MusicCastDeviceEntity, MediaPlayerEntity):
         """Implement the websocket media browsing helper."""
         if media_content_id and media_source.is_media_source_id(media_content_id):
             return await media_source.async_browse_media(
-                self.hass,
+                self.menuai,
                 media_content_id,
                 content_filter=lambda item: item.media_content_type.startswith(
                     "audio/"
@@ -336,7 +336,7 @@ class MusicCastMediaPlayer(MusicCastDeviceEntity, MediaPlayerEntity):
             )
 
         if self.state == MediaPlayerState.OFF:
-            raise HomeAssistantError(
+            raise menuaiError(
                 "The device has to be turned on to be able to browse media."
             )
 
@@ -374,7 +374,7 @@ class MusicCastMediaPlayer(MusicCastDeviceEntity, MediaPlayerEntity):
         if add_media_source:
             with contextlib.suppress(media_source.BrowseError):
                 item = await media_source.async_browse_media(
-                    self.hass,
+                    self.menuai,
                     None,
                     content_filter=lambda item: item.media_content_type.startswith(
                         "audio/"
@@ -480,7 +480,7 @@ class MusicCastMediaPlayer(MusicCastDeviceEntity, MediaPlayerEntity):
         elif self._is_tuner:
             await self.coordinator.musiccast.tuner_previous_station()
         else:
-            raise HomeAssistantError(
+            raise menuaiError(
                 "Service previous track is not supported for non NetUSB or Tuner"
                 " sources."
             )
@@ -492,7 +492,7 @@ class MusicCastMediaPlayer(MusicCastDeviceEntity, MediaPlayerEntity):
         elif self._is_tuner:
             await self.coordinator.musiccast.tuner_next_station()
         else:
-            raise HomeAssistantError(
+            raise menuaiError(
                 "Service next track is not supported for non NetUSB or Tuner sources."
             )
 
@@ -503,7 +503,7 @@ class MusicCastMediaPlayer(MusicCastDeviceEntity, MediaPlayerEntity):
                 HA_REPEAT_MODE_TO_MC_MAPPING.get(repeat, "off")
             )
         else:
-            raise HomeAssistantError(
+            raise menuaiError(
                 "Service set repeat is not supported for non NetUSB sources."
             )
 
@@ -548,7 +548,7 @@ class MusicCastMediaPlayer(MusicCastDeviceEntity, MediaPlayerEntity):
     def media_position_updated_at(self):
         """When was the position of the current playing media valid.
 
-        Returns value from homeassistant.util.dt.utcnow().
+        Returns value from menuai.util.dt.utcnow().
         """
         if self._is_netusb:
             return self.coordinator.data.netusb_play_time_updated
@@ -613,7 +613,7 @@ class MusicCastMediaPlayer(MusicCastDeviceEntity, MediaPlayerEntity):
     def get_all_mc_entities(self) -> list[MusicCastMediaPlayer]:
         """Return all media player entities of the musiccast system."""
         entities = []
-        for coordinator in self.hass.data[DOMAIN].values():
+        for coordinator in self.menuai.data[DOMAIN].values():
             entities += [
                 entity
                 for entity in coordinator.entities
@@ -811,7 +811,7 @@ class MusicCastMediaPlayer(MusicCastDeviceEntity, MediaPlayerEntity):
                 return False
 
             # It is not possible to join a group hosted by zone2 from main zone.
-            raise HomeAssistantError(
+            raise menuaiError(
                 "Can not join a zone other than main of the same device."
             )
 
@@ -926,4 +926,4 @@ class MusicCastMediaPlayer(MusicCastDeviceEntity, MediaPlayerEntity):
     @callback
     def async_schedule_check_client_list(self):
         """Schedule async_check_client_list."""
-        self.hass.async_create_task(self.async_check_client_list(), eager_start=True)
+        self.menuai.async_create_task(self.async_check_client_list(), eager_start=True)

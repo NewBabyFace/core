@@ -8,15 +8,15 @@ from typing import Any
 from pyrecswitch import RSNetwork, RSNetworkError
 import voluptuous as vol
 
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     PLATFORM_SCHEMA as SWITCH_PLATFORM_SCHEMA,
     SwitchEntity,
 )
-from homeassistant.const import CONF_HOST, CONF_MAC, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_HOST, CONF_MAC, CONF_NAME
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ PLATFORM_SCHEMA = SWITCH_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -45,12 +45,12 @@ async def async_setup_platform(
     mac_address = config[CONF_MAC]
     device_name = config.get(CONF_NAME)
 
-    if not hass.data.get(DATA_RSN):
-        hass.data[DATA_RSN] = RSNetwork()
-        job = hass.data[DATA_RSN].create_datagram_endpoint()
-        hass.async_create_task(job)
+    if not menuai.data.get(DATA_RSN):
+        menuai.data[DATA_RSN] = RSNetwork()
+        job = menuai.data[DATA_RSN].create_datagram_endpoint()
+        menuai.async_create_task(job)
 
-    device = hass.data[DATA_RSN].register_device(mac_address, host)
+    device = menuai.data[DATA_RSN].register_device(mac_address, host)
     async_add_entities([RecSwitchSwitch(device, device_name, mac_address)])
 
 

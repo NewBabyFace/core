@@ -8,17 +8,17 @@ from nibe.coil import Coil
 from nibe.coil_groups import WATER_HEATER_COILGROUPS, WaterHeaterCoilGroup
 from nibe.exceptions import CoilNotFoundException
 
-from homeassistant.components.water_heater import (
+from menuai.components.water_heater import (
     STATE_HEAT_PUMP,
     STATE_HIGH_DEMAND,
     WaterHeaterEntity,
     WaterHeaterEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
     DOMAIN,
@@ -30,13 +30,13 @@ from .coordinator import CoilCoordinator
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up platform."""
 
-    coordinator: CoilCoordinator = hass.data[DOMAIN][config_entry.entry_id]
+    coordinator: CoilCoordinator = menuai.data[DOMAIN][config_entry.entry_id]
 
     def water_heaters():
         for key, group in WATER_HEATER_COILGROUPS.get(coordinator.series, ()).items():
@@ -184,7 +184,7 @@ class WaterHeater(CoordinatorEntity[CoilCoordinator], WaterHeaterEntity):
     async def async_set_operation_mode(self, operation_mode: str) -> None:
         """Set new target operation mode."""
         if not self._coil_temporary_lux:
-            raise HomeAssistantError("Not supported")
+            raise menuaiError("Not supported")
 
         lux = self._operation_mode_to_lux.get(operation_mode)
         if not lux:

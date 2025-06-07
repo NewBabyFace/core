@@ -9,25 +9,25 @@ from typing import Any
 from incomfortclient import InvalidGateway, InvalidHeaterList
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_RECONFIGURE,
     ConfigEntryState,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.data_entry_flow import AbortFlow
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.selector import (
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai, callback
+from menuai.data_entry_flow import AbortFlow
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.selector import (
     BooleanSelector,
     BooleanSelectorConfig,
     TextSelector,
     TextSelectorConfig,
     TextSelectorType,
 )
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
 
 from .const import CONF_LEGACY_SETPOINT_STATUS, DOMAIN
 from .coordinator import InComfortConfigEntry, async_connect_gateway
@@ -79,11 +79,11 @@ OPTIONS_SCHEMA = vol.Schema(
 
 
 async def async_try_connect_gateway(
-    hass: HomeAssistant, config: dict[str, Any]
+    menuai: menuai, config: dict[str, Any]
 ) -> dict[str, str] | None:
     """Try to connect to the Lan2RF gateway."""
     try:
-        await async_connect_gateway(hass, config)
+        await async_connect_gateway(menuai, config)
     except InvalidGateway:
         return {"base": "auth_error"}
     except InvalidHeaterList:
@@ -126,10 +126,10 @@ class InComfortConfigFlow(ConfigFlow, domain=DOMAIN):
             and entry.state is ConfigEntryState.LOADED
         ]
         if existing_entries_without_unique_id:
-            self.hass.config_entries.async_update_entry(
+            self.menuai.config_entries.async_update_entry(
                 existing_entries_without_unique_id[0], unique_id=unique_id
             )
-            self.hass.config_entries.async_schedule_reload(
+            self.menuai.config_entries.async_schedule_reload(
                 existing_entries_without_unique_id[0].entry_id
             )
             raise AbortFlow("already_configured")
@@ -159,7 +159,7 @@ class InComfortConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             user_input[CONF_HOST] = self._discovered_host
             if (
-                errors := await async_try_connect_gateway(self.hass, user_input)
+                errors := await async_try_connect_gateway(self.menuai, user_input)
             ) is None:
                 return self.async_create_entry(title=TITLE, data=user_input)
             data_schema = self.add_suggested_values_to_schema(data_schema, user_input)
@@ -185,7 +185,7 @@ class InComfortConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             if (
                 errors := await async_try_connect_gateway(
-                    self.hass,
+                    self.menuai,
                     (reconfigure_entry.data | user_input)
                     if is_reconfigure
                     else user_input,
@@ -220,7 +220,7 @@ class InComfortConfigFlow(ConfigFlow, domain=DOMAIN):
 
             reauth_entry = self._get_reauth_entry()
             errors = await async_try_connect_gateway(
-                self.hass, reauth_entry.data | {CONF_PASSWORD: password}
+                self.menuai, reauth_entry.data | {CONF_PASSWORD: password}
             )
             if not errors:
                 return self.async_update_reload_and_abort(
@@ -248,10 +248,10 @@ class InComfortOptionsFlowHandler(OptionsFlow):
         errors: dict[str, str] | None = None
         if user_input is not None:
             new_options: dict[str, Any] = self.config_entry.options | user_input
-            self.hass.config_entries.async_update_entry(
+            self.menuai.config_entries.async_update_entry(
                 self.config_entry, options=new_options
             )
-            self.hass.config_entries.async_schedule_reload(self.config_entry.entry_id)
+            self.menuai.config_entries.async_schedule_reload(self.config_entry.entry_id)
             return self.async_create_entry(data=new_options)
 
         data_schema = self.add_suggested_values_to_schema(

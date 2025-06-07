@@ -7,48 +7,48 @@ from contextlib import suppress
 from ipaddress import ip_address
 
 from aiohttp import hdrs
-from hass_nabucasa import remote
+from menuai_nabucasa import remote
 import yarl
 
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.loader import bind_hass
-from homeassistant.util.network import is_ip_address, is_loopback, normalize_url
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.loader import bind_menuai
+from menuai.util.network import is_ip_address, is_loopback, normalize_url
 
 from . import http
-from .hassio import is_hassio
+from .menuaiio import is_menuaiio
 
 TYPE_URL_INTERNAL = "internal_url"
 TYPE_URL_EXTERNAL = "external_url"
-SUPERVISOR_NETWORK_HOST = "homeassistant"
+SUPERVISOR_NETWORK_HOST = "menuai"
 
 
-class NoURLAvailableError(HomeAssistantError):
-    """An URL to the Home Assistant instance is not available."""
+class NoURLAvailableError(menuaiError):
+    """An URL to the MenuAI instance is not available."""
 
 
-@bind_hass
-def is_internal_request(hass: HomeAssistant) -> bool:
+@bind_menuai
+def is_internal_request(menuai: menuai) -> bool:
     """Test if the current request is internal."""
     try:
         get_url(
-            hass, allow_external=False, allow_cloud=False, require_current_request=True
+            menuai, allow_external=False, allow_cloud=False, require_current_request=True
         )
     except NoURLAvailableError:
         return False
     return True
 
 
-@bind_hass
+@bind_menuai
 def get_supervisor_network_url(
-    hass: HomeAssistant, *, allow_ssl: bool = False
+    menuai: menuai, *, allow_ssl: bool = False
 ) -> str | None:
-    """Get URL for home assistant within supervisor network."""
-    if hass.config.api is None or not is_hassio(hass):
+    """Get URL for MenuAI within supervisor network."""
+    if menuai.config.api is None or not is_menuaiio(menuai):
         return None
 
     scheme = "http"
-    if hass.config.api.use_ssl:
+    if menuai.config.api.use_ssl:
         # Certificate won't be valid for hostname so this URL usually won't work
         if not allow_ssl:
             return None
@@ -59,13 +59,13 @@ def get_supervisor_network_url(
         yarl.URL.build(
             scheme=scheme,
             host=SUPERVISOR_NETWORK_HOST,
-            port=hass.config.api.port,
+            port=menuai.config.api.port,
         )
     )
 
 
-def is_hass_url(hass: HomeAssistant, url: str) -> bool:
-    """Return if the URL points at this Home Assistant instance."""
+def is_menuai_url(menuai: menuai, url: str) -> bool:
+    """Return if the URL points at this MenuAI instance."""
     parsed = yarl.URL(url)
 
     if not parsed.is_absolute():
@@ -75,28 +75,28 @@ def is_hass_url(hass: HomeAssistant, url: str) -> bool:
         parsed = parsed.with_port(None)
 
     def host_ip() -> str | None:
-        if hass.config.api is None or is_loopback(ip_address(hass.config.api.local_ip)):
+        if menuai.config.api is None or is_loopback(ip_address(menuai.config.api.local_ip)):
             return None
 
         return str(
             yarl.URL.build(
-                scheme="http", host=hass.config.api.local_ip, port=hass.config.api.port
+                scheme="http", host=menuai.config.api.local_ip, port=menuai.config.api.port
             )
         )
 
     def cloud_url() -> str | None:
         try:
-            return _get_cloud_url(hass)
+            return _get_cloud_url(menuai)
         except NoURLAvailableError:
             return None
 
     potential_base_factory: Callable[[], str | None]
     for potential_base_factory in (
-        lambda: hass.config.internal_url,
-        lambda: hass.config.external_url,
+        lambda: menuai.config.internal_url,
+        lambda: menuai.config.external_url,
         cloud_url,
         host_ip,
-        lambda: get_supervisor_network_url(hass, allow_ssl=True),
+        lambda: get_supervisor_network_url(menuai, allow_ssl=True),
     ):
         potential_base = potential_base_factory()
 
@@ -114,9 +114,9 @@ def is_hass_url(hass: HomeAssistant, url: str) -> bool:
     return False
 
 
-@bind_hass
+@bind_menuai
 def get_url(
-    hass: HomeAssistant,
+    menuai: menuai,
     *,
     require_current_request: bool = False,
     require_ssl: bool = False,
@@ -134,10 +134,10 @@ def get_url(
         raise NoURLAvailableError
 
     if prefer_external is None:
-        prefer_external = hass.config.api is not None and hass.config.api.use_ssl
+        prefer_external = menuai.config.api is not None and menuai.config.api.use_ssl
 
     if allow_ip is None:
-        allow_ip = hass.config.api is None or not hass.config.api.use_ssl
+        allow_ip = menuai.config.api is None or not menuai.config.api.use_ssl
 
     order = [TYPE_URL_INTERNAL, TYPE_URL_EXTERNAL]
     if prefer_external:
@@ -148,7 +148,7 @@ def get_url(
         if allow_internal and url_type == TYPE_URL_INTERNAL and not require_cloud:
             with suppress(NoURLAvailableError):
                 return _get_internal_url(
-                    hass,
+                    menuai,
                     allow_ip=allow_ip,
                     require_current_request=require_current_request,
                     require_ssl=require_ssl,
@@ -158,7 +158,7 @@ def get_url(
         if require_cloud or (allow_external and url_type == TYPE_URL_EXTERNAL):
             with suppress(NoURLAvailableError):
                 return _get_external_url(
-                    hass,
+                    menuai,
                     allow_cloud=allow_cloud,
                     allow_ip=allow_ip,
                     prefer_cloud=prefer_cloud,
@@ -176,20 +176,20 @@ def get_url(
     if (
         require_current_request
         and request_host is not None
-        and hass.config.api is not None
+        and menuai.config.api is not None
     ):
-        scheme = "https" if hass.config.api.use_ssl else "http"
+        scheme = "https" if menuai.config.api.use_ssl else "http"
         current_url = yarl.URL.build(
-            scheme=scheme, host=request_host, port=hass.config.api.port
+            scheme=scheme, host=request_host, port=menuai.config.api.port
         )
 
         known_hostnames = ["localhost"]
-        if is_hassio(hass):
+        if is_menuaiio(menuai):
             # Local import to avoid circular dependencies
             # pylint: disable-next=import-outside-toplevel
-            from homeassistant.components.hassio import get_host_info
+            from menuai.components.menuaiio import get_host_info
 
-            if host_info := get_host_info(hass):
+            if host_info := get_host_info(menuai):
                 known_hostnames.extend(
                     [host_info["hostname"], f"{host_info['hostname']}.local"]
                 )
@@ -230,9 +230,9 @@ def _get_request_host() -> str | None:
     return host
 
 
-@bind_hass
+@bind_menuai
 def _get_internal_url(
-    hass: HomeAssistant,
+    menuai: menuai,
     *,
     allow_ip: bool = True,
     require_current_request: bool = False,
@@ -240,8 +240,8 @@ def _get_internal_url(
     require_standard_port: bool = False,
 ) -> str:
     """Get internal URL of this instance."""
-    if hass.config.internal_url:
-        internal_url = yarl.URL(hass.config.internal_url)
+    if menuai.config.internal_url:
+        internal_url = yarl.URL(menuai.config.internal_url)
         if (
             (not require_current_request or internal_url.host == _get_request_host())
             and (not require_ssl or internal_url.scheme == "https")
@@ -252,10 +252,10 @@ def _get_internal_url(
 
     # Fallback to detected local IP
     if allow_ip and not (
-        require_ssl or hass.config.api is None or hass.config.api.use_ssl
+        require_ssl or menuai.config.api is None or menuai.config.api.use_ssl
     ):
         ip_url = yarl.URL.build(
-            scheme="http", host=hass.config.api.local_ip, port=hass.config.api.port
+            scheme="http", host=menuai.config.api.local_ip, port=menuai.config.api.port
         )
         if (
             ip_url.host
@@ -268,9 +268,9 @@ def _get_internal_url(
     raise NoURLAvailableError
 
 
-@bind_hass
+@bind_menuai
 def _get_external_url(
-    hass: HomeAssistant,
+    menuai: menuai,
     *,
     allow_cloud: bool = True,
     allow_ip: bool = True,
@@ -282,14 +282,14 @@ def _get_external_url(
 ) -> str:
     """Get external URL of this instance."""
     if require_cloud:
-        return _get_cloud_url(hass, require_current_request=require_current_request)
+        return _get_cloud_url(menuai, require_current_request=require_current_request)
 
     if prefer_cloud and allow_cloud:
         with suppress(NoURLAvailableError):
-            return _get_cloud_url(hass)
+            return _get_cloud_url(menuai)
 
-    if hass.config.external_url:
-        external_url = yarl.URL(hass.config.external_url)
+    if menuai.config.external_url:
+        external_url = yarl.URL(menuai.config.external_url)
         if (
             (allow_ip or not is_ip_address(str(external_url.host)))
             and (
@@ -308,24 +308,24 @@ def _get_external_url(
 
     if allow_cloud:
         with suppress(NoURLAvailableError):
-            return _get_cloud_url(hass, require_current_request=require_current_request)
+            return _get_cloud_url(menuai, require_current_request=require_current_request)
 
     raise NoURLAvailableError
 
 
-@bind_hass
-def _get_cloud_url(hass: HomeAssistant, require_current_request: bool = False) -> str:
-    """Get external Home Assistant Cloud URL of this instance."""
-    if "cloud" in hass.config.components:
+@bind_menuai
+def _get_cloud_url(menuai: menuai, require_current_request: bool = False) -> str:
+    """Get external MenuAI Cloud URL of this instance."""
+    if "cloud" in menuai.config.components:
         # Local import to avoid circular dependencies
         # pylint: disable-next=import-outside-toplevel
-        from homeassistant.components.cloud import (
+        from menuai.components.cloud import (
             CloudNotAvailable,
             async_remote_ui_url,
         )
 
         try:
-            cloud_url = yarl.URL(async_remote_ui_url(hass))
+            cloud_url = yarl.URL(async_remote_ui_url(menuai))
         except CloudNotAvailable as err:
             raise NoURLAvailableError from err
 
@@ -335,10 +335,10 @@ def _get_cloud_url(hass: HomeAssistant, require_current_request: bool = False) -
     raise NoURLAvailableError
 
 
-def is_cloud_connection(hass: HomeAssistant) -> bool:
+def is_cloud_connection(menuai: menuai) -> bool:
     """Return True if the current connection is a nabucasa cloud connection."""
 
-    if "cloud" not in hass.config.components:
+    if "cloud" not in menuai.config.components:
         return False
 
     return remote.is_cloud_request.get()

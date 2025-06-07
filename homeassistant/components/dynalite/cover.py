@@ -2,21 +2,21 @@
 
 from typing import Any
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     ATTR_CURRENT_POSITION,
     CoverDeviceClass,
     CoverEntity,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util.enum import try_parse_enum
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util.enum import try_parse_enum
 
 from .bridge import DynaliteBridge, DynaliteConfigEntry
 from .entity import DynaliteBase, async_setup_entry_base
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: DynaliteConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -29,12 +29,12 @@ async def async_setup_entry(
         return DynaliteCover(device, bridge)
 
     async_setup_entry_base(
-        hass, config_entry, async_add_entities, "cover", cover_from_device
+        menuai, config_entry, async_add_entities, "cover", cover_from_device
     )
 
 
 class DynaliteCover(DynaliteBase, CoverEntity):
-    """Representation of a Dynalite Channel as a Home Assistant Cover."""
+    """Representation of a Dynalite Channel as a MenuAI Cover."""
 
     def __init__(self, device: Any, bridge: DynaliteBridge) -> None:
         """Initialize the cover."""
@@ -86,7 +86,7 @@ class DynaliteCover(DynaliteBase, CoverEntity):
 
 
 class DynaliteCoverWithTilt(DynaliteCover):
-    """Representation of a Dynalite Channel as a Home Assistant Cover that uses up and down for tilt."""
+    """Representation of a Dynalite Channel as a MenuAI Cover that uses up and down for tilt."""
 
     @property
     def current_cover_tilt_position(self) -> int:

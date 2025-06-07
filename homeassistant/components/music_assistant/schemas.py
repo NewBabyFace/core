@@ -7,8 +7,8 @@ from typing import TYPE_CHECKING, Any
 from music_assistant_models.enums import MediaType
 import voluptuous as vol
 
-from homeassistant.const import ATTR_NAME
-from homeassistant.helpers import config_validation as cv
+from menuai.const import ATTR_NAME
+from menuai.helpers import config_validation as cv
 
 from .const import (
     ATTR_ACTIVE,

@@ -7,9 +7,9 @@ from typing import Any
 from apyosoenergyapi import OSOEnergy
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_API_KEY
-from homeassistant.helpers import aiohttp_client
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_API_KEY
+from menuai.helpers import aiohttp_client
 
 from .const import DOMAIN
 
@@ -50,7 +50,7 @@ class OSOEnergyFlowHandler(ConfigFlow, domain=DOMAIN):
     async def get_user_email(self, subscription_key: str) -> str | None:
         """Return the user email for the provided subscription key."""
         try:
-            websession = aiohttp_client.async_get_clientsession(self.hass)
+            websession = aiohttp_client.async_get_clientsession(self.menuai)
             client = OSOEnergy(subscription_key, websession)
             return await client.get_user_email()
         except Exception:

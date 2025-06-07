@@ -11,14 +11,14 @@ from typing import Any, cast
 
 import aiohttp
 
-from homeassistant.components.application_credentials import (
+from menuai.components.application_credentials import (
     AuthImplementation,
     AuthorizationServer,
     ClientCredential,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_entry_oauth2_flow
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.core import menuai
+from menuai.helpers import config_entry_oauth2_flow
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import CONF_CLIENT_ID, CONF_CLIENT_SECRET, OAUTH2_AUTHORIZE, OAUTH2_TOKEN
 from .exceptions import FitbitApiException, FitbitAuthException
@@ -54,7 +54,7 @@ class FitbitOAuth2Implementation(AuthImplementation):
         )
 
     async def _post(self, data: dict[str, Any]) -> dict[str, Any]:
-        session = async_get_clientsession(self.hass)
+        session = async_get_clientsession(self.menuai)
         try:
             resp = await session.post(self.token_url, data=data, headers=self._headers)
             resp.raise_for_status()
@@ -86,11 +86,11 @@ class FitbitOAuth2Implementation(AuthImplementation):
 
 
 async def async_get_auth_implementation(
-    hass: HomeAssistant, auth_domain: str, credential: ClientCredential
+    menuai: menuai, auth_domain: str, credential: ClientCredential
 ) -> config_entry_oauth2_flow.AbstractOAuth2Implementation:
     """Return a custom auth implementation."""
     return FitbitOAuth2Implementation(
-        hass,
+        menuai,
         auth_domain,
         credential,
         AuthorizationServer(

@@ -5,18 +5,18 @@ import logging
 from aiohttp import web
 import voluptuous as vol
 
-from homeassistant.components import webhook
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_WEBHOOK_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_entry_flow, intent, template
+from menuai.components import webhook
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_WEBHOOK_ID
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_entry_flow, intent, template
 
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-SOURCE = "Home Assistant Dialogflow"
+SOURCE = "MenuAI Dialogflow"
 
 CONFIG_SCHEMA = vol.Schema({DOMAIN: {}}, extra=vol.ALLOW_EXTRA)
 
@@ -24,12 +24,12 @@ V1 = 1
 V2 = 2
 
 
-class DialogFlowError(HomeAssistantError):
+class DialogFlowError(menuaiError):
     """Raised when a DialogFlow error happens."""
 
 
 async def handle_webhook(
-    hass: HomeAssistant, webhook_id: str, request: web.Request
+    menuai: menuai, webhook_id: str, request: web.Request
 ) -> web.Response | None:
     """Handle incoming webhook with Dialogflow requests."""
     message = await request.json()
@@ -37,7 +37,7 @@ async def handle_webhook(
     _LOGGER.debug("Received Dialogflow request: %s", message)
 
     try:
-        response = await async_handle_message(hass, message)
+        response = await async_handle_message(menuai, message)
         return None if response is None else web.json_response(response)
 
     except DialogFlowError as err:
@@ -48,7 +48,7 @@ async def handle_webhook(
         _LOGGER.warning(str(err))
         return web.json_response(
             dialogflow_error_response(
-                message, "This intent is not yet configured within Home Assistant."
+                message, "This intent is not yet configured within MenuAI."
             )
         )
 
@@ -67,17 +67,17 @@ async def handle_webhook(
         )
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Configure based on config entry."""
     webhook.async_register(
-        hass, DOMAIN, "DialogFlow", entry.data[CONF_WEBHOOK_ID], handle_webhook
+        menuai, DOMAIN, "DialogFlow", entry.data[CONF_WEBHOOK_ID], handle_webhook
     )
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    webhook.async_unregister(hass, entry.data[CONF_WEBHOOK_ID])
+    webhook.async_unregister(menuai, entry.data[CONF_WEBHOOK_ID])
     return True
 
 
@@ -106,7 +106,7 @@ def get_api_version(message):
     raise ValueError(f"Unable to extract API version from message: {message}")
 
 
-async def async_handle_message(hass, message):
+async def async_handle_message(menuai, message):
     """Handle a DialogFlow message."""
     _api_version = get_api_version(message)
     if _api_version is V1:
@@ -134,7 +134,7 @@ async def async_handle_message(hass, message):
         )
 
     intent_response = await intent.async_handle(
-        hass,
+        menuai,
         DOMAIN,
         action,
         {key: {"value": value} for key, value in parameters.items()},

@@ -7,13 +7,13 @@ import logging
 from plexapi.exceptions import NotFound
 import requests.exceptions
 
-from homeassistant.components.sensor import SensorEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.debounce import Debouncer
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.sensor import SensorEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.debounce import Debouncer
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
     CONF_SERVER_IDENTIFIER,
@@ -50,23 +50,23 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Plex sensor from a config entry."""
     server_id = config_entry.data[CONF_SERVER_IDENTIFIER]
-    plexserver = get_plex_server(hass, server_id)
-    sensors: list[SensorEntity] = [PlexSensor(hass, plexserver)]
+    plexserver = get_plex_server(menuai, server_id)
+    sensors: list[SensorEntity] = [PlexSensor(menuai, plexserver)]
 
     def create_library_sensors():
         """Create Plex library sensors with sync calls."""
         sensors.extend(
-            PlexLibrarySectionSensor(hass, plexserver, library)
+            PlexLibrarySectionSensor(menuai, plexserver, library)
             for library in plexserver.library.sections()
         )
 
-    await hass.async_add_executor_job(create_library_sensors)
+    await menuai.async_add_executor_job(create_library_sensors)
     async_add_entities(sensors)
 
 
@@ -79,25 +79,25 @@ class PlexSensor(SensorEntity):
     _attr_should_poll = False
     _attr_native_unit_of_measurement = "watching"
 
-    def __init__(self, hass, plex_server):
+    def __init__(self, menuai, plex_server):
         """Initialize the sensor."""
         self._attr_unique_id = f"sensor-{plex_server.machine_identifier}"
 
         self._server = plex_server
         self.async_refresh_sensor = Debouncer(
-            hass,
+            menuai,
             _LOGGER,
             cooldown=3,
             immediate=False,
             function=self._async_refresh_sensor,
         ).async_call
 
-    async def async_added_to_hass(self) -> None:
-        """Run when about to be added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Run when about to be added to menuai."""
         server_id = self._server.machine_identifier
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 PLEX_UPDATE_SENSOR_SIGNAL.format(server_id),
                 self.async_refresh_sensor,
             )
@@ -135,7 +135,7 @@ class PlexLibrarySectionSensor(SensorEntity):
     _attr_should_poll = False
     _attr_native_unit_of_measurement = "Items"
 
-    def __init__(self, hass, plex_server, plex_library_section):
+    def __init__(self, menuai, plex_server, plex_library_section):
         """Initialize the sensor."""
         self._server = plex_server
         self.server_name = plex_server.friendly_name
@@ -148,11 +148,11 @@ class PlexLibrarySectionSensor(SensorEntity):
         self._attr_name = f"{self.server_name} Library - {plex_library_section.title}"
         self._attr_unique_id = f"library-{self.server_id}-{plex_library_section.uuid}"
 
-    async def async_added_to_hass(self) -> None:
-        """Run when about to be added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Run when about to be added to menuai."""
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 PLEX_UPDATE_LIBRARY_SIGNAL.format(self.server_id),
                 self.async_refresh_sensor,
             )
@@ -163,7 +163,7 @@ class PlexLibrarySectionSensor(SensorEntity):
         """Update state and attributes for the library sensor."""
         _LOGGER.debug("Refreshing library sensor for '%s'", self.name)
         try:
-            await self.hass.async_add_executor_job(self._update_state_and_attrs)
+            await self.menuai.async_add_executor_job(self._update_state_and_attrs)
             self._attr_available = True
         except NotFound:
             self._attr_available = False

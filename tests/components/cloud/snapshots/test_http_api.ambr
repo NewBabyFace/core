@@ -5,11 +5,11 @@
   
   version | core-2025.2.0
   --- | ---
-  installation_type | Home Assistant Core
+  installation_type | MenuAI Core
   dev | False
-  hassio | False
+  menuaiio | False
   docker | False
-  user | hass
+  user | menuai
   virtualenv | False
   python_version | 3.13.1
   os_name | Linux
@@ -49,9 +49,9 @@
   <details><summary>Logs</summary>
   
   ```logs
-  2025-02-10 12:00:00.000 INFO (MainThread) [hass_nabucasa.iot] Hass nabucasa log
+  2025-02-10 12:00:00.000 INFO (MainThread) [menuai_nabucasa.iot] menuai nabucasa log
   2025-02-10 12:00:00.000 WARNING (MainThread) [snitun.utils.aiohttp_client] Snitun log
-  2025-02-10 12:00:00.000 ERROR (MainThread) [homeassistant.components.cloud.client] Cloud log
+  2025-02-10 12:00:00.000 ERROR (MainThread) [menuai.components.cloud.client] Cloud log
   ```
   
   </details>

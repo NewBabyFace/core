@@ -3,7 +3,7 @@
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .conftest import ComponentSetup
 
@@ -19,7 +19,7 @@ from tests.common import MockConfigEntry
     ],
 )
 async def test_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: ComponentSetup,
     config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
@@ -32,6 +32,6 @@ async def test_sensors(
 
     entity_id = "sensor.lastfm_testaccount1"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state == snapshot

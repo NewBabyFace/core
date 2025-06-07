@@ -8,8 +8,8 @@ from elevenlabs.types import GetVoicesResponse
 from httpx import ConnectError
 import pytest
 
-from homeassistant.components.elevenlabs.const import CONF_MODEL, CONF_VOICE
-from homeassistant.const import CONF_API_KEY
+from menuai.components.elevenlabs.const import CONF_MODEL, CONF_VOICE
+from menuai.const import CONF_API_KEY
 
 from .const import MOCK_MODELS, MOCK_VOICES
 
@@ -20,7 +20,7 @@ from tests.common import MockConfigEntry
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.elevenlabs.async_setup_entry", return_value=True
+        "menuai.components.elevenlabs.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -37,11 +37,11 @@ def mock_async_client() -> Generator[AsyncMock]:
     """Override async ElevenLabs client."""
     with (
         patch(
-            "homeassistant.components.elevenlabs.AsyncElevenLabs",
+            "menuai.components.elevenlabs.AsyncElevenLabs",
             return_value=_client_mock(),
         ) as mock_async_client,
         patch(
-            "homeassistant.components.elevenlabs.config_flow.AsyncElevenLabs",
+            "menuai.components.elevenlabs.config_flow.AsyncElevenLabs",
             new=mock_async_client,
         ),
     ):
@@ -57,11 +57,11 @@ def mock_async_client_api_error() -> Generator[AsyncMock]:
 
     with (
         patch(
-            "homeassistant.components.elevenlabs.AsyncElevenLabs",
+            "menuai.components.elevenlabs.AsyncElevenLabs",
             return_value=client_mock,
         ) as mock_async_client,
         patch(
-            "homeassistant.components.elevenlabs.config_flow.AsyncElevenLabs",
+            "menuai.components.elevenlabs.config_flow.AsyncElevenLabs",
             new=mock_async_client,
         ),
     ):
@@ -76,11 +76,11 @@ def mock_async_client_connect_error() -> Generator[AsyncMock]:
     client_mock.voices.get_all.side_effect = ConnectError("Unknown")
     with (
         patch(
-            "homeassistant.components.elevenlabs.AsyncElevenLabs",
+            "menuai.components.elevenlabs.AsyncElevenLabs",
             return_value=client_mock,
         ) as mock_async_client,
         patch(
-            "homeassistant.components.elevenlabs.config_flow.AsyncElevenLabs",
+            "menuai.components.elevenlabs.config_flow.AsyncElevenLabs",
             new=mock_async_client,
         ),
     ):

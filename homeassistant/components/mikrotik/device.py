@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from homeassistant.util import dt as dt_util, slugify
+from menuai.util import dt as dt_util, slugify
 
 from .const import ATTR_DEVICE_TRACKER
 

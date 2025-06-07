@@ -5,11 +5,11 @@ from unittest.mock import MagicMock
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.whois.const import SCAN_INTERVAL
-from homeassistant.const import STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.util import dt as dt_util
+from menuai.components.whois.const import SCAN_INTERVAL
+from menuai.const import STATE_UNKNOWN
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.util import dt as dt_util
 
 from tests.common import async_fire_time_changed
 
@@ -36,7 +36,7 @@ pytestmark = [
     ],
 )
 async def test_whois_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
@@ -44,7 +44,7 @@ async def test_whois_sensors(
 ) -> None:
     """Test the Whois sensors."""
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state == snapshot
 
     assert (entity_entry := entity_registry.async_get(entity_id))
@@ -56,10 +56,10 @@ async def test_whois_sensors(
 
 
 async def test_whois_sensors_missing_some_attrs(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, snapshot: SnapshotAssertion
+    menuai: menuai, entity_registry: er.EntityRegistry, snapshot: SnapshotAssertion
 ) -> None:
     """Test the Whois sensors with owner and reseller missing."""
-    assert (state := hass.states.get("sensor.home_assistant_io_last_updated"))
+    assert (state := menuai.states.get("sensor.home_assistant_io_last_updated"))
     assert state == snapshot
 
     assert (entry := entity_registry.async_get("sensor.home_assistant_io_last_updated"))
@@ -78,10 +78,10 @@ async def test_whois_sensors_missing_some_attrs(
     ],
 )
 async def test_disabled_by_default_sensors(
-    hass: HomeAssistant, entity_id: str, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_id: str, entity_registry: er.EntityRegistry
 ) -> None:
     """Test the disabled by default Whois sensors."""
-    assert hass.states.get(entity_id) is None
+    assert menuai.states.get(entity_id) is None
     assert (entry := entity_registry.async_get(entity_id))
     assert entry.disabled
     assert entry.disabled_by is er.RegistryEntryDisabler.INTEGRATION
@@ -104,13 +104,13 @@ async def test_disabled_by_default_sensors(
     ],
 )
 async def test_no_data(
-    hass: HomeAssistant, mock_whois: MagicMock, entity_id: str
+    menuai: menuai, mock_whois: MagicMock, entity_id: str
 ) -> None:
     """Test whois sensors become unknown when there is no data provided."""
     mock_whois.return_value = None
 
-    async_fire_time_changed(hass, dt_util.utcnow() + SCAN_INTERVAL)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + SCAN_INTERVAL)
+    await menuai.async_block_till_done()
 
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_UNKNOWN

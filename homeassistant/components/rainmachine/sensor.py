@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any, cast
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     DOMAIN as SENSOR_DOMAIN,
     RestoreSensor,
     SensorDeviceClass,
@@ -14,11 +14,11 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory, UnitOfVolume
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util.dt import utc_from_timestamp, utcnow
+from menuai.config_entries import ConfigEntry
+from menuai.const import EntityCategory, UnitOfVolume
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util.dt import utc_from_timestamp, utcnow
 
 from . import RainMachineConfigEntry, RainMachineData
 from .const import DATA_PROGRAMS, DATA_PROVISION_SETTINGS, DATA_ZONES
@@ -151,7 +151,7 @@ SENSOR_DESCRIPTIONS = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: RainMachineConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -159,7 +159,7 @@ async def async_setup_entry(
     data = entry.runtime_data
 
     async_finish_entity_domain_replacements(
-        hass,
+        menuai,
         entry,
         (
             EntityDomainReplacementStrategy(
@@ -251,11 +251,11 @@ class TimeRemainingSensor(RainMachineEntity, RestoreSensor):
         """Return the data key that contains the activity status."""
         return "state"
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
         if restored_data := await self.async_get_last_sensor_data():
             self._attr_native_value = restored_data.native_value
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
     def calculate_seconds_remaining(self) -> int:
         """Calculate the number of seconds remaining."""

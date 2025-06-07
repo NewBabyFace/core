@@ -9,11 +9,11 @@ from pypjlink import MUTE_AUDIO
 from pypjlink.projector import ProjectorError
 import pytest
 
-from homeassistant.components import media_player
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.components import media_player
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from tests.common import assert_setup_component, async_fire_time_changed
 
@@ -50,7 +50,7 @@ def mocked_projector(projector_from_address):
 
 @pytest.mark.parametrize("side_effect", [socket.timeout, OSError])
 async def test_offline_initialization(
-    projector_from_address, hass: HomeAssistant, side_effect
+    projector_from_address, menuai: menuai, side_effect
 ) -> None:
     """Test initialization of a device that is offline."""
 
@@ -58,7 +58,7 @@ async def test_offline_initialization(
         projector_from_address.side_effect = side_effect
 
         assert await async_setup_component(
-            hass,
+            menuai,
             media_player.DOMAIN,
             {
                 media_player.DOMAIN: {
@@ -68,13 +68,13 @@ async def test_offline_initialization(
                 }
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-        state = hass.states.get("media_player.test_offline")
+        state = menuai.states.get("media_player.test_offline")
         assert state.state == "unavailable"
 
 
-async def test_initialization(projector_from_address, hass: HomeAssistant) -> None:
+async def test_initialization(projector_from_address, menuai: menuai) -> None:
     """Test a device that is available."""
 
     with assert_setup_component(1, media_player.DOMAIN):
@@ -89,7 +89,7 @@ async def test_initialization(projector_from_address, hass: HomeAssistant) -> No
             )
 
         assert await async_setup_component(
-            hass,
+            menuai,
             media_player.DOMAIN,
             {
                 media_player.DOMAIN: {
@@ -99,9 +99,9 @@ async def test_initialization(projector_from_address, hass: HomeAssistant) -> No
             },
         )
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-        state = hass.states.get("media_player.test")
+        state = menuai.states.get("media_player.test")
         assert state.state == "off"
 
         assert "source_list" in state.attributes
@@ -112,7 +112,7 @@ async def test_initialization(projector_from_address, hass: HomeAssistant) -> No
 
 @pytest.mark.parametrize("power_state", ["on", "warm-up"])
 async def test_on_state_init(
-    projector_from_address, hass: HomeAssistant, power_state
+    projector_from_address, menuai: menuai, power_state
 ) -> None:
     """Test a device that is available."""
 
@@ -126,7 +126,7 @@ async def test_on_state_init(
             mocked_instance.get_input.return_value = ("HDMI", 1)
 
         assert await async_setup_component(
-            hass,
+            menuai,
             media_player.DOMAIN,
             {
                 media_player.DOMAIN: {
@@ -136,15 +136,15 @@ async def test_on_state_init(
             },
         )
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-        state = hass.states.get("media_player.test")
+        state = menuai.states.get("media_player.test")
         assert state.state == "on"
 
         assert state.attributes["source"] == "HDMI 1"
 
 
-async def test_api_error(projector_from_address, hass: HomeAssistant) -> None:
+async def test_api_error(projector_from_address, menuai: menuai) -> None:
     """Test invalid api responses."""
 
     with assert_setup_component(1, media_player.DOMAIN):
@@ -160,7 +160,7 @@ async def test_api_error(projector_from_address, hass: HomeAssistant) -> None:
             mocked_instance.get_power.side_effect = KeyError("OK")
 
         assert await async_setup_component(
-            hass,
+            menuai,
             media_player.DOMAIN,
             {
                 media_player.DOMAIN: {
@@ -170,13 +170,13 @@ async def test_api_error(projector_from_address, hass: HomeAssistant) -> None:
             },
         )
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-        state = hass.states.get("media_player.test")
+        state = menuai.states.get("media_player.test")
         assert state.state == "off"
 
 
-async def test_update_unavailable(projector_from_address, hass: HomeAssistant) -> None:
+async def test_update_unavailable(projector_from_address, menuai: menuai) -> None:
     """Test update to a device that is unavailable."""
 
     with assert_setup_component(1, media_player.DOMAIN):
@@ -191,7 +191,7 @@ async def test_update_unavailable(projector_from_address, hass: HomeAssistant) -
             )
 
         assert await async_setup_component(
-            hass,
+            menuai,
             media_player.DOMAIN,
             {
                 media_player.DOMAIN: {
@@ -201,24 +201,24 @@ async def test_update_unavailable(projector_from_address, hass: HomeAssistant) -
             },
         )
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-        state = hass.states.get("media_player.test")
+        state = menuai.states.get("media_player.test")
         assert state.state == "off"
 
         projector_from_address.side_effect = socket.timeout
-        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=10))
-        await hass.async_block_till_done(wait_background_tasks=True)
+        async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(seconds=10))
+        await menuai.async_block_till_done(wait_background_tasks=True)
 
-        state = hass.states.get("media_player.test")
+        state = menuai.states.get("media_player.test")
         assert state.state == "unavailable"
 
 
-async def test_unavailable_time(mocked_projector, hass: HomeAssistant) -> None:
+async def test_unavailable_time(mocked_projector, menuai: menuai) -> None:
     """Test unavailable time projector error."""
 
     assert await async_setup_component(
-        hass,
+        menuai,
         media_player.DOMAIN,
         {
             media_player.DOMAIN: {
@@ -228,28 +228,28 @@ async def test_unavailable_time(mocked_projector, hass: HomeAssistant) -> None:
         },
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("media_player.test")
+    state = menuai.states.get("media_player.test")
     assert state.state == "on"
     assert state.attributes["source"] is not None
     assert state.attributes["is_volume_muted"] is not False
 
     mocked_projector.get_power.side_effect = ProjectorError("unavailable time")
-    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=10))
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(seconds=10))
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get("media_player.test")
+    state = menuai.states.get("media_player.test")
     assert state.state == "off"
     assert "source" not in state.attributes
     assert "is_volume_muted" not in state.attributes
 
 
-async def test_turn_off(mocked_projector, hass: HomeAssistant) -> None:
+async def test_turn_off(mocked_projector, menuai: menuai) -> None:
     """Test turning off beamer."""
 
     assert await async_setup_component(
-        hass,
+        menuai,
         media_player.DOMAIN,
         {
             media_player.DOMAIN: {
@@ -259,8 +259,8 @@ async def test_turn_off(mocked_projector, hass: HomeAssistant) -> None:
         },
     )
 
-    await hass.async_block_till_done()
-    await hass.services.async_call(
+    await menuai.async_block_till_done()
+    await menuai.services.async_call(
         domain=media_player.DOMAIN,
         service="turn_off",
         service_data={ATTR_ENTITY_ID: "media_player.test"},
@@ -270,11 +270,11 @@ async def test_turn_off(mocked_projector, hass: HomeAssistant) -> None:
     mocked_projector.set_power.assert_called_with("off")
 
 
-async def test_turn_on(mocked_projector, hass: HomeAssistant) -> None:
+async def test_turn_on(mocked_projector, menuai: menuai) -> None:
     """Test turning on beamer."""
 
     assert await async_setup_component(
-        hass,
+        menuai,
         media_player.DOMAIN,
         {
             media_player.DOMAIN: {
@@ -284,8 +284,8 @@ async def test_turn_on(mocked_projector, hass: HomeAssistant) -> None:
         },
     )
 
-    await hass.async_block_till_done()
-    await hass.services.async_call(
+    await menuai.async_block_till_done()
+    await menuai.services.async_call(
         domain=media_player.DOMAIN,
         service="turn_on",
         service_data={ATTR_ENTITY_ID: "media_player.test"},
@@ -295,11 +295,11 @@ async def test_turn_on(mocked_projector, hass: HomeAssistant) -> None:
     mocked_projector.set_power.assert_called_with("on")
 
 
-async def test_mute(mocked_projector, hass: HomeAssistant) -> None:
+async def test_mute(mocked_projector, menuai: menuai) -> None:
     """Test muting beamer."""
 
     assert await async_setup_component(
-        hass,
+        menuai,
         media_player.DOMAIN,
         {
             media_player.DOMAIN: {
@@ -309,8 +309,8 @@ async def test_mute(mocked_projector, hass: HomeAssistant) -> None:
         },
     )
 
-    await hass.async_block_till_done()
-    await hass.services.async_call(
+    await menuai.async_block_till_done()
+    await menuai.services.async_call(
         domain=media_player.DOMAIN,
         service="volume_mute",
         service_data={ATTR_ENTITY_ID: "media_player.test", "is_volume_muted": True},
@@ -320,11 +320,11 @@ async def test_mute(mocked_projector, hass: HomeAssistant) -> None:
     mocked_projector.set_mute.assert_called_with(MUTE_AUDIO, True)
 
 
-async def test_unmute(mocked_projector, hass: HomeAssistant) -> None:
+async def test_unmute(mocked_projector, menuai: menuai) -> None:
     """Test unmuting beamer."""
 
     assert await async_setup_component(
-        hass,
+        menuai,
         media_player.DOMAIN,
         {
             media_player.DOMAIN: {
@@ -334,8 +334,8 @@ async def test_unmute(mocked_projector, hass: HomeAssistant) -> None:
         },
     )
 
-    await hass.async_block_till_done()
-    await hass.services.async_call(
+    await menuai.async_block_till_done()
+    await menuai.services.async_call(
         domain=media_player.DOMAIN,
         service="volume_mute",
         service_data={ATTR_ENTITY_ID: "media_player.test", "is_volume_muted": False},
@@ -345,11 +345,11 @@ async def test_unmute(mocked_projector, hass: HomeAssistant) -> None:
     mocked_projector.set_mute.assert_called_with(MUTE_AUDIO, False)
 
 
-async def test_select_source(mocked_projector, hass: HomeAssistant) -> None:
+async def test_select_source(mocked_projector, menuai: menuai) -> None:
     """Test selecting source."""
 
     assert await async_setup_component(
-        hass,
+        menuai,
         media_player.DOMAIN,
         {
             media_player.DOMAIN: {
@@ -359,8 +359,8 @@ async def test_select_source(mocked_projector, hass: HomeAssistant) -> None:
         },
     )
 
-    await hass.async_block_till_done()
-    await hass.services.async_call(
+    await menuai.async_block_till_done()
+    await menuai.services.async_call(
         domain=media_player.DOMAIN,
         service="select_source",
         service_data={ATTR_ENTITY_ID: "media_player.test", "source": "VGA 1"},

@@ -8,18 +8,18 @@ import pytest
 from reolink_aio.exceptions import ReolinkError
 from reolink_aio.typings import VOD_trigger
 
-from homeassistant.components.media_source import (
+from menuai.components.media_source import (
     DOMAIN as MEDIA_SOURCE_DOMAIN,
     URI_SCHEME,
     Unresolvable,
     async_browse_media,
     async_resolve_media,
 )
-from homeassistant.components.reolink.config_flow import DEFAULT_PROTOCOL
-from homeassistant.components.reolink.const import CONF_BC_PORT, CONF_USE_HTTPS, DOMAIN
-from homeassistant.components.reolink.media_source import VOD_SPLIT_TIME
-from homeassistant.components.stream import DOMAIN as MEDIA_STREAM_DOMAIN
-from homeassistant.const import (
+from menuai.components.reolink.config_flow import DEFAULT_PROTOCOL
+from menuai.components.reolink.const import CONF_BC_PORT, CONF_USE_HTTPS, DOMAIN
+from menuai.components.reolink.media_source import VOD_SPLIT_TIME
+from menuai.components.stream import DOMAIN as MEDIA_STREAM_DOMAIN
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
@@ -27,10 +27,10 @@ from homeassistant.const import (
     CONF_USERNAME,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import format_mac
+from menuai.setup import async_setup_component
 
 from .conftest import (
     TEST_BC_PORT,
@@ -70,39 +70,39 @@ TEST_URL2 = "http:test_url&token=test"
 
 
 @pytest.fixture(autouse=True)
-async def setup_component(hass: HomeAssistant) -> None:
+async def setup_component(menuai: menuai) -> None:
     """Set up component."""
-    assert await async_setup_component(hass, MEDIA_SOURCE_DOMAIN, {})
-    assert await async_setup_component(hass, MEDIA_STREAM_DOMAIN, {})
+    assert await async_setup_component(menuai, MEDIA_SOURCE_DOMAIN, {})
+    assert await async_setup_component(menuai, MEDIA_STREAM_DOMAIN, {})
 
 
 async def test_platform_loads_before_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test that the platform can be loaded before the config entry."""
     # Fake that the config entry is not loaded before the media_source platform
-    assert await async_setup_component(hass, DOMAIN, {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {})
+    await menuai.async_block_till_done()
     assert mock_setup_entry.call_count == 0
 
 
 async def test_resolve(
-    hass: HomeAssistant,
+    menuai: menuai,
     reolink_connect: MagicMock,
     config_entry: MockConfigEntry,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test resolving Reolink media items."""
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
     caplog.set_level(logging.DEBUG)
 
     file_id = f"FILE|{config_entry.entry_id}|{TEST_CHANNEL}|{TEST_STREAM}|{TEST_FILE_NAME}|{TEST_START}|{TEST_END}"
     reolink_connect.get_vod_source.return_value = (TEST_MIME_TYPE_MP4, TEST_URL)
 
     play_media = await async_resolve_media(
-        hass, f"{URI_SCHEME}{DOMAIN}/{file_id}", None
+        menuai, f"{URI_SCHEME}{DOMAIN}/{file_id}", None
     )
     assert play_media.mime_type == TEST_MIME_TYPE_MP4
 
@@ -110,14 +110,14 @@ async def test_resolve(
     reolink_connect.get_vod_source.return_value = (TEST_MIME_TYPE_MP4, TEST_URL2)
 
     play_media = await async_resolve_media(
-        hass, f"{URI_SCHEME}{DOMAIN}/{file_id}", None
+        menuai, f"{URI_SCHEME}{DOMAIN}/{file_id}", None
     )
     assert play_media.mime_type == TEST_MIME_TYPE_MP4
 
     reolink_connect.is_nvr = False
 
     play_media = await async_resolve_media(
-        hass, f"{URI_SCHEME}{DOMAIN}/{file_id}", None
+        menuai, f"{URI_SCHEME}{DOMAIN}/{file_id}", None
     )
     assert play_media.mime_type == TEST_MIME_TYPE_MP4
 
@@ -125,13 +125,13 @@ async def test_resolve(
     reolink_connect.get_vod_source.return_value = (TEST_MIME_TYPE, TEST_URL)
 
     play_media = await async_resolve_media(
-        hass, f"{URI_SCHEME}{DOMAIN}/{file_id}", None
+        menuai, f"{URI_SCHEME}{DOMAIN}/{file_id}", None
     )
     assert play_media.mime_type == TEST_MIME_TYPE
 
 
 async def test_browsing(
-    hass: HomeAssistant,
+    menuai: menuai,
     reolink_connect: MagicMock,
     config_entry: MockConfigEntry,
     device_registry: dr.DeviceRegistry,
@@ -142,9 +142,9 @@ async def test_browsing(
     reolink_connect.supported.return_value = 1
     reolink_connect.model = "Reolink TrackMix PoE"
 
-    with patch("homeassistant.components.reolink.PLATFORMS", [Platform.CAMERA]):
-        assert await hass.config_entries.async_setup(entry_id) is True
-    await hass.async_block_till_done()
+    with patch("menuai.components.reolink.PLATFORMS", [Platform.CAMERA]):
+        assert await menuai.config_entries.async_setup(entry_id) is True
+    await menuai.async_block_till_done()
 
     entries = dr.async_entries_for_config_entry(device_registry, entry_id)
     assert len(entries) > 0
@@ -153,7 +153,7 @@ async def test_browsing(
     caplog.set_level(logging.DEBUG)
 
     # browse root
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}")
 
     browse_root_id = f"CAM|{entry_id}|{TEST_CHANNEL}"
     assert browse.domain == DOMAIN
@@ -163,7 +163,7 @@ async def test_browsing(
     assert browse.children[0].title == f"{TEST_CAM_NAME} lens 0"
 
     # browse resolution select
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}/{browse_root_id}")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}/{browse_root_id}")
 
     browse_resolution_id = f"RESs|{entry_id}|{TEST_CHANNEL}"
     browse_res_sub_id = f"RES|{entry_id}|{TEST_CHANNEL}|sub"
@@ -185,24 +185,24 @@ async def test_browsing(
     mock_status.days = (TEST_DAY, TEST_DAY2)
     reolink_connect.request_vod_files.return_value = ([mock_status], [])
 
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}/{browse_res_sub_id}")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}/{browse_res_sub_id}")
     assert browse.domain == DOMAIN
     assert browse.title == f"{TEST_NVR_NAME} lens 0 Low res."
 
     browse = await async_browse_media(
-        hass, f"{URI_SCHEME}{DOMAIN}/{browse_res_AT_sub_id}"
+        menuai, f"{URI_SCHEME}{DOMAIN}/{browse_res_AT_sub_id}"
     )
     assert browse.domain == DOMAIN
     assert browse.title == f"{TEST_NVR_NAME} lens 0 Autotrack low res."
 
     browse = await async_browse_media(
-        hass, f"{URI_SCHEME}{DOMAIN}/{browse_res_AT_main_id}"
+        menuai, f"{URI_SCHEME}{DOMAIN}/{browse_res_AT_main_id}"
     )
     assert browse.domain == DOMAIN
     assert browse.title == f"{TEST_NVR_NAME} lens 0 Autotrack high res."
 
     browse = await async_browse_media(
-        hass, f"{URI_SCHEME}{DOMAIN}/{browse_res_main_id}"
+        menuai, f"{URI_SCHEME}{DOMAIN}/{browse_res_main_id}"
     )
 
     browse_days_id = f"DAYS|{entry_id}|{TEST_CHANNEL}|{TEST_STREAM}"
@@ -224,7 +224,7 @@ async def test_browsing(
     mock_vod_file.triggers = VOD_trigger.PERSON
     reolink_connect.request_vod_files.return_value = ([mock_status], [mock_vod_file])
 
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}/{browse_day_0_id}")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}/{browse_day_0_id}")
 
     browse_files_id = f"FILES|{entry_id}|{TEST_CHANNEL}|{TEST_STREAM}"
     browse_file_id = f"FILE|{entry_id}|{TEST_CHANNEL}|{TEST_STREAM}|{TEST_FILE_NAME}|{TEST_START}|{TEST_END}"
@@ -250,11 +250,11 @@ async def test_browsing(
     reolink_connect.is_nvr = True
     browse_event_person_id = f"EVE|{entry_id}|{TEST_CHANNEL}|{TEST_STREAM}|{TEST_YEAR}|{TEST_MONTH}|{TEST_DAY}|{VOD_trigger.PERSON.name}"
 
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}/{browse_day_0_id}")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}/{browse_day_0_id}")
     assert browse.children[0].identifier == browse_event_person_id
 
     browse = await async_browse_media(
-        hass, f"{URI_SCHEME}{DOMAIN}/{browse_event_person_id}"
+        menuai, f"{URI_SCHEME}{DOMAIN}/{browse_event_person_id}"
     )
 
     assert browse.domain == DOMAIN
@@ -277,16 +277,16 @@ async def test_browsing(
 
 
 async def test_browsing_h265_encoding(
-    hass: HomeAssistant,
+    menuai: menuai,
     reolink_connect: MagicMock,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test browsing a Reolink camera with h265 stream encoding."""
     entry_id = config_entry.entry_id
 
-    with patch("homeassistant.components.reolink.PLATFORMS", [Platform.CAMERA]):
-        assert await hass.config_entries.async_setup(entry_id) is True
-    await hass.async_block_till_done()
+    with patch("menuai.components.reolink.PLATFORMS", [Platform.CAMERA]):
+        assert await menuai.config_entries.async_setup(entry_id) is True
+    await menuai.async_block_till_done()
 
     browse_root_id = f"CAM|{entry_id}|{TEST_CHANNEL}"
 
@@ -299,7 +299,7 @@ async def test_browsing_h265_encoding(
     reolink_connect.get_encoding.return_value = "h265"
     reolink_connect.supported.return_value = False
 
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}/{browse_root_id}")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}/{browse_root_id}")
 
     browse_resolution_id = f"RESs|{entry_id}|{TEST_CHANNEL}"
     browse_res_sub_id = f"RES|{entry_id}|{TEST_CHANNEL}|sub"
@@ -311,7 +311,7 @@ async def test_browsing_h265_encoding(
     assert browse.children[0].identifier == browse_res_sub_id
     assert browse.children[1].identifier == browse_res_main_id
 
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}/{browse_res_sub_id}")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}/{browse_res_sub_id}")
 
     browse_days_id = f"DAYS|{entry_id}|{TEST_CHANNEL}|sub"
     browse_day_0_id = (
@@ -328,19 +328,19 @@ async def test_browsing_h265_encoding(
 
 
 async def test_browsing_rec_playback_unsupported(
-    hass: HomeAssistant,
+    menuai: menuai,
     reolink_connect: MagicMock,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test browsing a Reolink camera which does not support playback of recordings."""
     reolink_connect.supported.return_value = 0
 
-    with patch("homeassistant.components.reolink.PLATFORMS", [Platform.CAMERA]):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    with patch("menuai.components.reolink.PLATFORMS", [Platform.CAMERA]):
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # browse root
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}")
 
     assert browse.domain == DOMAIN
     assert browse.title == "Reolink"
@@ -349,35 +349,35 @@ async def test_browsing_rec_playback_unsupported(
 
 
 async def test_browsing_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     reolink_connect: MagicMock,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test browsing a Reolink camera errors."""
     reolink_connect.supported.return_value = 1
 
-    with patch("homeassistant.components.reolink.PLATFORMS", [Platform.CAMERA]):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    with patch("menuai.components.reolink.PLATFORMS", [Platform.CAMERA]):
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # browse root
     with pytest.raises(Unresolvable):
-        await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}/UNKNOWN")
+        await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}/UNKNOWN")
     with pytest.raises(Unresolvable):
-        await async_resolve_media(hass, f"{URI_SCHEME}{DOMAIN}/UNKNOWN", None)
+        await async_resolve_media(menuai, f"{URI_SCHEME}{DOMAIN}/UNKNOWN", None)
 
 
 async def test_browsing_not_loaded(
-    hass: HomeAssistant,
+    menuai: menuai,
     reolink_connect: MagicMock,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test browsing a Reolink camera integration which is not loaded."""
     reolink_connect.supported.return_value = 1
 
-    with patch("homeassistant.components.reolink.PLATFORMS", [Platform.CAMERA]):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    with patch("menuai.components.reolink.PLATFORMS", [Platform.CAMERA]):
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     reolink_connect.get_host_data.side_effect = ReolinkError("Test error")
     config_entry2 = MockConfigEntry(
@@ -396,12 +396,12 @@ async def test_browsing_not_loaded(
         },
         title=TEST_NVR_NAME2,
     )
-    config_entry2.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry2.entry_id) is False
-    await hass.async_block_till_done()
+    config_entry2.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry2.entry_id) is False
+    await menuai.async_block_till_done()
 
     # browse root
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}")
 
     assert browse.domain == DOMAIN
     assert browse.title == "Reolink"

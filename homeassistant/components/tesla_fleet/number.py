@@ -10,16 +10,16 @@ from typing import Any
 from tesla_fleet_api.const import Scope
 from tesla_fleet_api.tesla import EnergySite, VehicleFleet
 
-from homeassistant.components.number import (
+from menuai.components.number import (
     NumberDeviceClass,
     NumberEntity,
     NumberEntityDescription,
     NumberMode,
 )
-from homeassistant.const import PERCENTAGE, PRECISION_WHOLE, UnitOfElectricCurrent
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.icon import icon_for_battery_level
+from menuai.const import PERCENTAGE, PRECISION_WHOLE, UnitOfElectricCurrent
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.icon import icon_for_battery_level
 
 from . import TeslaFleetConfigEntry
 from .entity import TeslaFleetEnergyInfoEntity, TeslaFleetVehicleEntity
@@ -93,7 +93,7 @@ ENERGY_INFO_DESCRIPTIONS: tuple[TeslaFleetNumberBatteryEntityDescription, ...] =
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: TeslaFleetConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

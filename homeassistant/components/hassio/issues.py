@@ -12,10 +12,10 @@ from uuid import UUID
 from aiohasupervisor import SupervisorError
 from aiohasupervisor.models import ContextType, Issue as SupervisorIssue
 
-from homeassistant.core import HassJob, HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.event import async_call_later
-from homeassistant.helpers.issue_registry import (
+from menuai.core import menuaiJob, menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.event import async_call_later
+from menuai.helpers.issue_registry import (
     IssueSeverity,
     async_create_issue,
     async_delete_issue,
@@ -47,7 +47,7 @@ from .const import (
     UPDATE_KEY_SUPERVISOR,
 )
 from .coordinator import get_addons_info
-from .handler import HassIO, get_supervisor_client
+from .handler import menuaiIO, get_supervisor_client
 
 ISSUE_KEY_UNHEALTHY = "unhealthy"
 ISSUE_KEY_UNSUPPORTED = "unsupported"
@@ -183,14 +183,14 @@ class Issue:
 class SupervisorIssues:
     """Create issues from supervisor events."""
 
-    def __init__(self, hass: HomeAssistant, client: HassIO) -> None:
+    def __init__(self, menuai: menuai, client: menuaiIO) -> None:
         """Initialize supervisor issues."""
-        self._hass = hass
+        self._menuai = menuai
         self._client = client
         self._unsupported_reasons: set[str] = set()
         self._unhealthy_reasons: set[str] = set()
         self._issues: dict[UUID, Issue] = {}
-        self._supervisor_client = get_supervisor_client(hass)
+        self._supervisor_client = get_supervisor_client(menuai)
 
     @property
     def unhealthy_reasons(self) -> set[str]:
@@ -209,7 +209,7 @@ class SupervisorIssues:
                 translation_placeholders = {PLACEHOLDER_KEY_REASON: unhealthy}
 
             async_create_issue(
-                self._hass,
+                self._menuai,
                 DOMAIN,
                 f"{ISSUE_ID_UNHEALTHY}_{unhealthy}",
                 is_fixable=False,
@@ -220,7 +220,7 @@ class SupervisorIssues:
             )
 
         for fixed in self.unhealthy_reasons - reasons:
-            async_delete_issue(self._hass, DOMAIN, f"{ISSUE_ID_UNHEALTHY}_{fixed}")
+            async_delete_issue(self._menuai, DOMAIN, f"{ISSUE_ID_UNHEALTHY}_{fixed}")
 
         self._unhealthy_reasons = reasons
 
@@ -241,7 +241,7 @@ class SupervisorIssues:
                 translation_placeholders = {PLACEHOLDER_KEY_REASON: unsupported}
 
             async_create_issue(
-                self._hass,
+                self._menuai,
                 DOMAIN,
                 f"{ISSUE_ID_UNSUPPORTED}_{unsupported}",
                 is_fixable=False,
@@ -252,7 +252,7 @@ class SupervisorIssues:
             )
 
         for fixed in self.unsupported_reasons - (reasons - UNSUPPORTED_SKIP_REPAIR):
-            async_delete_issue(self._hass, DOMAIN, f"{ISSUE_ID_UNSUPPORTED}_{fixed}")
+            async_delete_issue(self._menuai, DOMAIN, f"{ISSUE_ID_UNSUPPORTED}_{fixed}")
 
         self._unsupported_reasons = reasons
 
@@ -270,9 +270,9 @@ class SupervisorIssues:
 
                 if issue.key == ISSUE_KEY_ADDON_DETACHED_ADDON_MISSING:
                     placeholders[PLACEHOLDER_KEY_ADDON_URL] = (
-                        f"/hassio/addon/{issue.reference}"
+                        f"/menuaiio/addon/{issue.reference}"
                     )
-                    addons = get_addons_info(self._hass)
+                    addons = get_addons_info(self._menuai)
                     if addons and issue.reference in addons:
                         placeholders[PLACEHOLDER_KEY_ADDON] = addons[issue.reference][
                             "name"
@@ -281,7 +281,7 @@ class SupervisorIssues:
                         placeholders[PLACEHOLDER_KEY_ADDON] = issue.reference
 
             async_create_issue(
-                self._hass,
+                self._menuai,
                 DOMAIN,
                 issue.uuid.hex,
                 is_fixable=bool(issue.suggestions),
@@ -330,7 +330,7 @@ class SupervisorIssues:
             return
 
         if issue.key in ISSUE_KEYS_FOR_REPAIRS:
-            async_delete_issue(self._hass, DOMAIN, issue.uuid.hex)
+            async_delete_issue(self._menuai, DOMAIN, issue.uuid.hex)
 
         del self._issues[issue.uuid]
 
@@ -343,7 +343,7 @@ class SupervisorIssues:
         await self._update()
 
         async_dispatcher_connect(
-            self._hass, EVENT_SUPERVISOR_EVENT, self._supervisor_events_to_issues
+            self._menuai, EVENT_SUPERVISOR_EVENT, self._supervisor_events_to_issues
         )
 
     async def _update(self, _: datetime | None = None) -> None:
@@ -353,9 +353,9 @@ class SupervisorIssues:
         except SupervisorError as err:
             _LOGGER.error("Failed to update supervisor issues: %r", err)
             async_call_later(
-                self._hass,
+                self._menuai,
                 REQUEST_REFRESH_DELAY,
-                HassJob(self._update, cancel_on_shutdown=True),
+                menuaiJob(self._update, cancel_on_shutdown=True),
             )
             return
         self.unhealthy_reasons = set(data.unhealthy)
@@ -380,7 +380,7 @@ class SupervisorIssues:
             event[ATTR_WS_EVENT] == EVENT_SUPERVISOR_UPDATE
             and event.get(ATTR_UPDATE_KEY) == UPDATE_KEY_SUPERVISOR
         ):
-            self._hass.async_create_task(self._update())
+            self._menuai.async_create_task(self._update())
 
         elif event[ATTR_WS_EVENT] == EVENT_HEALTH_CHANGED:
             self.unhealthy_reasons = (

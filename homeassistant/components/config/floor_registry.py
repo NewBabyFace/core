@@ -4,20 +4,20 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.components.websocket_api import ActiveConnection
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import floor_registry as fr
-from homeassistant.helpers.floor_registry import FloorEntry
+from menuai.components import websocket_api
+from menuai.components.websocket_api import ActiveConnection
+from menuai.core import menuai, callback
+from menuai.helpers import floor_registry as fr
+from menuai.helpers.floor_registry import FloorEntry
 
 
 @callback
-def async_setup(hass: HomeAssistant) -> bool:
+def async_setup(menuai: menuai) -> bool:
     """Register the floor registry WS commands."""
-    websocket_api.async_register_command(hass, websocket_list_floors)
-    websocket_api.async_register_command(hass, websocket_create_floor)
-    websocket_api.async_register_command(hass, websocket_delete_floor)
-    websocket_api.async_register_command(hass, websocket_update_floor)
+    websocket_api.async_register_command(menuai, websocket_list_floors)
+    websocket_api.async_register_command(menuai, websocket_create_floor)
+    websocket_api.async_register_command(menuai, websocket_delete_floor)
+    websocket_api.async_register_command(menuai, websocket_update_floor)
     return True
 
 
@@ -28,10 +28,10 @@ def async_setup(hass: HomeAssistant) -> bool:
 )
 @callback
 def websocket_list_floors(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle list floors command."""
-    registry = fr.async_get(hass)
+    registry = fr.async_get(menuai)
     connection.send_result(
         msg["id"],
         [_entry_dict(entry) for entry in registry.async_list_floors()],
@@ -50,10 +50,10 @@ def websocket_list_floors(
 @websocket_api.require_admin
 @callback
 def websocket_create_floor(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Create floor command."""
-    registry = fr.async_get(hass)
+    registry = fr.async_get(menuai)
 
     data = dict(msg)
     data.pop("type")
@@ -80,10 +80,10 @@ def websocket_create_floor(
 @websocket_api.require_admin
 @callback
 def websocket_delete_floor(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Delete floor command."""
-    registry = fr.async_get(hass)
+    registry = fr.async_get(menuai)
 
     try:
         registry.async_delete(msg["floor_id"])
@@ -106,10 +106,10 @@ def websocket_delete_floor(
 @websocket_api.require_admin
 @callback
 def websocket_update_floor(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle update floor websocket command."""
-    registry = fr.async_get(hass)
+    registry = fr.async_get(menuai)
 
     data = dict(msg)
     data.pop("type")

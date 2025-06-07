@@ -6,10 +6,10 @@ from typing import Any, Concatenate
 
 from letpot.exceptions import LetPotConnectionException, LetPotException
 
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import EntityDescription
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import EntityDescription
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import LetPotDeviceCoordinator
@@ -49,13 +49,13 @@ def exception_handler[_EntityT: LetPotEntity, **_P](
         try:
             await func(self, *args, **kwargs)
         except LetPotConnectionException as exception:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="communication_error",
                 translation_placeholders={"exception": str(exception)},
             ) from exception
         except LetPotException as exception:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="unknown_error",
                 translation_placeholders={"exception": str(exception)},

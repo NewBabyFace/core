@@ -9,17 +9,17 @@ from typing import Any, cast
 from aioshelly.block_device import Block
 from aioshelly.const import RPC_GENERATIONS
 
-from homeassistant.components.climate import DOMAIN as CLIMATE_PLATFORM
-from homeassistant.components.switch import (
+from menuai.components.climate import DOMAIN as CLIMATE_PLATFORM
+from menuai.components.switch import (
     DOMAIN as SWITCH_PLATFORM,
     SwitchEntity,
     SwitchEntityDescription,
 )
-from homeassistant.const import STATE_ON, EntityCategory
-from homeassistant.core import HomeAssistant, State, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.entity_registry import RegistryEntry
-from homeassistant.helpers.restore_state import RestoreEntity
+from menuai.const import STATE_ON, EntityCategory
+from menuai.core import menuai, State, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.entity_registry import RegistryEntry
+from menuai.helpers.restore_state import RestoreEntity
 
 from .coordinator import ShellyBlockCoordinator, ShellyConfigEntry, ShellyRpcCoordinator
 from .entity import (
@@ -108,20 +108,20 @@ RPC_SWITCHES = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ShellyConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up switches for device."""
     if get_device_entry_gen(config_entry) in RPC_GENERATIONS:
-        return async_setup_rpc_entry(hass, config_entry, async_add_entities)
+        return async_setup_rpc_entry(menuai, config_entry, async_add_entities)
 
-    return async_setup_block_entry(hass, config_entry, async_add_entities)
+    return async_setup_block_entry(menuai, config_entry, async_add_entities)
 
 
 @callback
 def async_setup_block_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ShellyConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -130,11 +130,11 @@ def async_setup_block_entry(
     assert coordinator
 
     async_setup_entry_attribute_entities(
-        hass, config_entry, async_add_entities, BLOCK_RELAY_SWITCHES, BlockRelaySwitch
+        menuai, config_entry, async_add_entities, BLOCK_RELAY_SWITCHES, BlockRelaySwitch
     )
 
     async_setup_entry_attribute_entities(
-        hass,
+        menuai,
         config_entry,
         async_add_entities,
         BLOCK_SLEEPING_MOTION_SWITCH,
@@ -144,7 +144,7 @@ def async_setup_block_entry(
 
 @callback
 def async_setup_rpc_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ShellyConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -153,11 +153,11 @@ def async_setup_rpc_entry(
     assert coordinator
 
     async_setup_entry_rpc(
-        hass, config_entry, async_add_entities, RPC_RELAY_SWITCHES, RpcRelaySwitch
+        menuai, config_entry, async_add_entities, RPC_RELAY_SWITCHES, RpcRelaySwitch
     )
 
     async_setup_entry_rpc(
-        hass, config_entry, async_add_entities, RPC_SWITCHES, RpcSwitch
+        menuai, config_entry, async_add_entities, RPC_SWITCHES, RpcSwitch
     )
 
     # the user can remove virtual components from the device configuration, so we need
@@ -166,7 +166,7 @@ def async_setup_rpc_entry(
         coordinator.device.config, SWITCH_PLATFORM
     )
     async_remove_orphaned_entities(
-        hass,
+        menuai,
         config_entry.entry_id,
         coordinator.mac,
         SWITCH_PLATFORM,
@@ -177,7 +177,7 @@ def async_setup_rpc_entry(
     # if the script is removed, from the device configuration, we need
     # to remove orphaned entities
     async_remove_orphaned_entities(
-        hass,
+        menuai,
         config_entry.entry_id,
         coordinator.mac,
         SWITCH_PLATFORM,
@@ -188,7 +188,7 @@ def async_setup_rpc_entry(
     # if the climate is removed, from the device configuration, we need
     # to remove orphaned entities
     async_remove_orphaned_entities(
-        hass,
+        menuai,
         config_entry.entry_id,
         coordinator.mac,
         CLIMATE_PLATFORM,
@@ -238,9 +238,9 @@ class BlockSleepingMotionSwitch(
         await self.coordinator.device.set_shelly_motion_detection(False)
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         if (last_state := await self.async_get_last_state()) is not None:
             self.last_state = last_state
 

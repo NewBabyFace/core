@@ -6,9 +6,9 @@ from unittest.mock import patch
 from lacrosse_view import Sensor
 import pytest
 
-from homeassistant.components.lacrosse_view import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
+from menuai.components.lacrosse_view import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
 
 from . import (
     MOCK_ENTRY_DATA,
@@ -29,10 +29,10 @@ from . import (
 from tests.common import MockConfigEntry
 
 
-async def test_entities_added(hass: HomeAssistant) -> None:
+async def test_entities_added(menuai: menuai) -> None:
     """Test the entities are added."""
     config_entry = MockConfigEntry(domain=DOMAIN, data=MOCK_ENTRY_DATA)
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     sensor = TEST_SENSOR.model_copy()
     status = sensor.data
@@ -43,23 +43,23 @@ async def test_entities_added(hass: HomeAssistant) -> None:
         patch("lacrosse_view.LaCrosse.get_devices", return_value=[sensor]),
         patch("lacrosse_view.LaCrosse.get_sensor_status", return_value=status),
     ):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
-    assert hass.data[DOMAIN]
-    entries = hass.config_entries.async_entries(DOMAIN)
+    assert menuai.data[DOMAIN]
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert entries
     assert len(entries) == 1
     assert entries[0].state is ConfigEntryState.LOADED
-    assert hass.states.get("sensor.test_temperature")
+    assert menuai.states.get("sensor.test_temperature")
 
 
 async def test_sensor_permission(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test if it raises a warning when there is no permission to read the sensor."""
     config_entry = MockConfigEntry(domain=DOMAIN, data=MOCK_ENTRY_DATA)
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     sensor = TEST_NO_PERMISSION_SENSOR.model_copy()
     status = sensor.data
@@ -73,23 +73,23 @@ async def test_sensor_permission(
         ),
         patch("lacrosse_view.LaCrosse.get_sensor_status", return_value=status),
     ):
-        assert not await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert not await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert entries
     assert len(entries) == 1
     assert entries[0].state is ConfigEntryState.SETUP_ERROR
-    assert not hass.states.get("sensor.test_temperature")
+    assert not menuai.states.get("sensor.test_temperature")
     assert "This account does not have permission to read Test" in caplog.text
 
 
 async def test_field_not_supported(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test if it raises a warning when the field is not supported."""
     config_entry = MockConfigEntry(domain=DOMAIN, data=MOCK_ENTRY_DATA)
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     sensor = TEST_UNSUPPORTED_SENSOR.model_copy()
     status = sensor.data
@@ -100,15 +100,15 @@ async def test_field_not_supported(
         patch("lacrosse_view.LaCrosse.get_devices", return_value=[sensor]),
         patch("lacrosse_view.LaCrosse.get_sensor_status", return_value=status),
     ):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
-    assert hass.data[DOMAIN]
-    entries = hass.config_entries.async_entries(DOMAIN)
+    assert menuai.data[DOMAIN]
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert entries
     assert len(entries) == 1
     assert entries[0].state is ConfigEntryState.LOADED
-    assert hass.states.get("sensor.test_some_unsupported_field") is None
+    assert menuai.states.get("sensor.test_some_unsupported_field") is None
     assert "Unsupported sensor field" in caplog.text
 
 
@@ -123,11 +123,11 @@ async def test_field_not_supported(
     ],
 )
 async def test_field_types(
-    hass: HomeAssistant, test_input: Sensor, expected: Any, entity_id: str
+    menuai: menuai, test_input: Sensor, expected: Any, entity_id: str
 ) -> None:
     """Test the different data types for fields."""
     config_entry = MockConfigEntry(domain=DOMAIN, data=MOCK_ENTRY_DATA)
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     sensor = test_input.model_copy()
     status = sensor.data
@@ -141,21 +141,21 @@ async def test_field_types(
         ),
         patch("lacrosse_view.LaCrosse.get_sensor_status", return_value=status),
     ):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
-    assert hass.data[DOMAIN]
-    entries = hass.config_entries.async_entries(DOMAIN)
+    assert menuai.data[DOMAIN]
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert entries
     assert len(entries) == 1
     assert entries[0].state is ConfigEntryState.LOADED
-    assert hass.states.get(f"sensor.test_{entity_id}").state == expected
+    assert menuai.states.get(f"sensor.test_{entity_id}").state == expected
 
 
-async def test_no_field(hass: HomeAssistant, caplog: pytest.LogCaptureFixture) -> None:
+async def test_no_field(menuai: menuai, caplog: pytest.LogCaptureFixture) -> None:
     """Test behavior when the expected field is not present."""
     config_entry = MockConfigEntry(domain=DOMAIN, data=MOCK_ENTRY_DATA)
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     sensor = TEST_NO_FIELD_SENSOR.model_copy()
     status = sensor.data
@@ -169,21 +169,21 @@ async def test_no_field(hass: HomeAssistant, caplog: pytest.LogCaptureFixture) -
         ),
         patch("lacrosse_view.LaCrosse.get_sensor_status", return_value=status),
     ):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
-    assert hass.data[DOMAIN]
-    entries = hass.config_entries.async_entries(DOMAIN)
+    assert menuai.data[DOMAIN]
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert entries
     assert len(entries) == 1
     assert entries[0].state is ConfigEntryState.LOADED
-    assert hass.states.get("sensor.test_temperature").state == "unavailable"
+    assert menuai.states.get("sensor.test_temperature").state == "unavailable"
 
 
-async def test_field_data_missing(hass: HomeAssistant) -> None:
+async def test_field_data_missing(menuai: menuai) -> None:
     """Test behavior when field data is missing."""
     config_entry = MockConfigEntry(domain=DOMAIN, data=MOCK_ENTRY_DATA)
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     sensor = TEST_MISSING_FIELD_DATA_SENSOR.model_copy()
     status = sensor.data
@@ -197,21 +197,21 @@ async def test_field_data_missing(hass: HomeAssistant) -> None:
         ),
         patch("lacrosse_view.LaCrosse.get_sensor_status", return_value=status),
     ):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
-    assert hass.data[DOMAIN]
-    entries = hass.config_entries.async_entries(DOMAIN)
+    assert menuai.data[DOMAIN]
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert entries
     assert len(entries) == 1
     assert entries[0].state is ConfigEntryState.LOADED
-    assert hass.states.get("sensor.test_temperature").state == "unknown"
+    assert menuai.states.get("sensor.test_temperature").state == "unknown"
 
 
-async def test_no_readings(hass: HomeAssistant) -> None:
+async def test_no_readings(menuai: menuai) -> None:
     """Test behavior when there are no readings."""
     config_entry = MockConfigEntry(domain=DOMAIN, data=MOCK_ENTRY_DATA)
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     sensor = TEST_NO_READINGS_SENSOR.model_copy()
     status = sensor.data
@@ -225,21 +225,21 @@ async def test_no_readings(hass: HomeAssistant) -> None:
         ),
         patch("lacrosse_view.LaCrosse.get_sensor_status", return_value=status),
     ):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
-    assert hass.data[DOMAIN]
-    entries = hass.config_entries.async_entries(DOMAIN)
+    assert menuai.data[DOMAIN]
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert entries
     assert len(entries) == 1
     assert entries[0].state is ConfigEntryState.LOADED
-    assert hass.states.get("sensor.test_temperature").state == "unavailable"
+    assert menuai.states.get("sensor.test_temperature").state == "unavailable"
 
 
-async def test_other_error(hass: HomeAssistant) -> None:
+async def test_other_error(menuai: menuai) -> None:
     """Test behavior when there is an error."""
     config_entry = MockConfigEntry(domain=DOMAIN, data=MOCK_ENTRY_DATA)
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     sensor = TEST_OTHER_ERROR_SENSOR.model_copy()
     status = sensor.data
@@ -253,10 +253,10 @@ async def test_other_error(hass: HomeAssistant) -> None:
         ),
         patch("lacrosse_view.LaCrosse.get_sensor_status", return_value=status),
     ):
-        assert not await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert not await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert entries
     assert len(entries) == 1
     assert entries[0].state is ConfigEntryState.SETUP_RETRY

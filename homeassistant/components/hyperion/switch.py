@@ -25,16 +25,16 @@ from hyperion.const import (
     KEY_UPDATE,
 )
 
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import (
+from menuai.components.switch import SwitchEntity
+from menuai.const import EntityCategory
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import (
     async_dispatcher_connect,
     async_dispatcher_send,
 )
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import slugify
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import slugify
 
 from . import (
     HyperionConfigEntry,
@@ -87,7 +87,7 @@ def _component_to_translation_key(component: str) -> str:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: HyperionConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -115,13 +115,13 @@ async def async_setup_entry(
         assert server_id
         for component in COMPONENT_SWITCHES:
             async_dispatcher_send(
-                hass,
+                menuai,
                 SIGNAL_ENTITY_REMOVE.format(
                     _component_to_unique_id(server_id, component, instance_num),
                 ),
             )
 
-    listen_for_instance_updates(hass, entry, instance_add, instance_remove)
+    listen_for_instance_updates(menuai, entry, instance_add, instance_remove)
 
 
 class HyperionComponentSwitch(SwitchEntity):
@@ -198,11 +198,11 @@ class HyperionComponentSwitch(SwitchEntity):
         """Update Hyperion components."""
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
-        """Register callbacks when entity added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Register callbacks when entity added to menuai."""
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 SIGNAL_ENTITY_REMOVE.format(self._attr_unique_id),
                 functools.partial(self.async_remove, force_remove=True),
             )
@@ -210,6 +210,6 @@ class HyperionComponentSwitch(SwitchEntity):
 
         self._client.add_callbacks(self._client_callbacks)
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Cleanup prior to hass removal."""
+    async def async_will_remove_from_menuai(self) -> None:
+        """Cleanup prior to menuai removal."""
         self._client.remove_callbacks(self._client_callbacks)

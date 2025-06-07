@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .coordinator import GoodweConfigEntry
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, config_entry: GoodweConfigEntry
+    menuai: menuai, config_entry: GoodweConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     inverter = config_entry.runtime_data.inverter

@@ -5,10 +5,10 @@ from unittest.mock import patch
 from pyprusalink.types import Conflict
 import pytest
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.setup import async_setup_component
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.setup import async_setup_component
 
 from tests.typing import ClientSessionGenerator
 
@@ -16,7 +16,7 @@ from tests.typing import ClientSessionGenerator
 @pytest.fixture(autouse=True)
 def setup_button_platform_only():
     """Only setup button platform."""
-    with patch("homeassistant.components.prusalink.PLATFORMS", [Platform.BUTTON]):
+    with patch("menuai.components.prusalink.PLATFORMS", [Platform.BUTTON]):
         yield
 
 
@@ -28,10 +28,10 @@ def setup_button_platform_only():
     ],
 )
 async def test_button_pause_cancel(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry,
     mock_api,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     mock_job_api_printing,
     mock_get_status_printing,
     object_id,
@@ -39,13 +39,13 @@ async def test_button_pause_cancel(
 ) -> None:
     """Test cancel and pause button."""
     entity_id = f"button.{object_id}"
-    assert await async_setup_component(hass, "prusalink", {})
-    state = hass.states.get(entity_id)
+    assert await async_setup_component(menuai, "prusalink", {})
+    state = menuai.states.get(entity_id)
     assert state is not None
     assert state.state == "unknown"
 
     with patch(f"pyprusalink.PrusaLink.{method}") as mock_meth:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "button",
             "press",
             {"entity_id": entity_id},
@@ -56,10 +56,10 @@ async def test_button_pause_cancel(
 
     # Verify it calls correct method + does error handling
     with (
-        pytest.raises(HomeAssistantError),
+        pytest.raises(menuaiError),
         patch(f"pyprusalink.PrusaLink.{method}", side_effect=Conflict),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "button",
             "press",
             {"entity_id": entity_id},
@@ -75,28 +75,28 @@ async def test_button_pause_cancel(
     ],
 )
 async def test_button_resume_cancel(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry,
     mock_api,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     mock_job_api_paused,
     object_id,
     method,
 ) -> None:
     """Test resume button."""
     entity_id = f"button.{object_id}"
-    assert await async_setup_component(hass, "prusalink", {})
-    state = hass.states.get(entity_id)
+    assert await async_setup_component(menuai, "prusalink", {})
+    state = menuai.states.get(entity_id)
     assert state is not None
     assert state.state == "unknown"
 
     with (
         patch(f"pyprusalink.PrusaLink.{method}") as mock_meth,
         patch(
-            "homeassistant.components.prusalink.coordinator.PrusaLinkUpdateCoordinator._fetch_data"
+            "menuai.components.prusalink.coordinator.PrusaLinkUpdateCoordinator._fetch_data"
         ),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "button",
             "press",
             {"entity_id": entity_id},
@@ -107,10 +107,10 @@ async def test_button_resume_cancel(
 
     # Verify it calls correct method + does error handling
     with (
-        pytest.raises(HomeAssistantError),
+        pytest.raises(menuaiError),
         patch(f"pyprusalink.PrusaLink.{method}", side_effect=Conflict),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "button",
             "press",
             {"entity_id": entity_id},

@@ -8,16 +8,16 @@ from typing import TYPE_CHECKING, Any
 from aioguardian.errors import GuardianError
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     ATTR_DEVICE_ID,
     CONF_DEVICE_ID,
     CONF_FILENAME,
     CONF_PORT,
     CONF_URL,
 )
-from homeassistant.core import HomeAssistant, ServiceCall, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv, device_registry as dr
+from menuai.core import menuai, ServiceCall, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv, device_registry as dr
 
 from .const import CONF_UID, DOMAIN
 
@@ -61,13 +61,13 @@ SERVICE_UPGRADE_FIRMWARE_SCHEMA = vol.Schema(
 def async_get_entry_id_for_service_call(call: ServiceCall) -> GuardianConfigEntry:
     """Get the entry ID related to a service call (by device ID)."""
     device_id = call.data[CONF_DEVICE_ID]
-    device_registry = dr.async_get(call.hass)
+    device_registry = dr.async_get(call.menuai)
 
     if (device_entry := device_registry.async_get(device_id)) is None:
         raise ValueError(f"Invalid Guardian device ID: {device_id}")
 
     for entry_id in device_entry.config_entries:
-        if (entry := call.hass.config_entries.async_get_entry(entry_id)) is None:
+        if (entry := call.menuai.config_entries.async_get_entry(entry_id)) is None:
             continue
         if entry.domain == DOMAIN:
             return entry
@@ -89,7 +89,7 @@ def call_with_data(
             async with data.client:
                 await func(call, data)
         except GuardianError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Error while executing {func.__name__}: {err}"
             ) from err
 
@@ -122,7 +122,7 @@ async def async_upgrade_firmware(call: ServiceCall, data: GuardianData) -> None:
     )
 
 
-def setup_services(hass: HomeAssistant) -> None:
+def setup_services(menuai: menuai) -> None:
     """Register the Renault services."""
     for service_name, schema, method in (
         (
@@ -141,4 +141,4 @@ def setup_services(hass: HomeAssistant) -> None:
             async_upgrade_firmware,
         ),
     ):
-        hass.services.async_register(DOMAIN, service_name, method, schema=schema)
+        menuai.services.async_register(DOMAIN, service_name, method, schema=schema)

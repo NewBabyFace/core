@@ -3,17 +3,17 @@
 import asyncio
 from unittest.mock import patch
 
-from homeassistant.components import mill
-from homeassistant.components.recorder import Recorder
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components import mill
+from menuai.components.recorder import Recorder
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 
 
 async def test_setup_with_cloud_config(
-    recorder_mock: Recorder, hass: HomeAssistant
+    recorder_mock: Recorder, menuai: menuai
 ) -> None:
     """Test setup of cloud config."""
     entry = MockConfigEntry(
@@ -24,18 +24,18 @@ async def test_setup_with_cloud_config(
             mill.CONNECTION_TYPE: mill.CLOUD,
         },
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     with (
         patch("mill.Mill.fetch_heater_and_sensor_data", return_value={}) as mock_fetch,
         patch("mill.Mill.connect", return_value=True) as mock_connect,
     ):
-        assert await async_setup_component(hass, "mill", {})
+        assert await async_setup_component(menuai, "mill", {})
     assert len(mock_fetch.mock_calls) == 1
     assert len(mock_connect.mock_calls) == 1
 
 
 async def test_setup_with_cloud_config_fails(
-    recorder_mock: Recorder, hass: HomeAssistant
+    recorder_mock: Recorder, menuai: menuai
 ) -> None:
     """Test setup of cloud config."""
     entry = MockConfigEntry(
@@ -46,14 +46,14 @@ async def test_setup_with_cloud_config_fails(
             mill.CONNECTION_TYPE: mill.CLOUD,
         },
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     with patch("mill.Mill.connect", return_value=False):
-        assert await async_setup_component(hass, "mill", {})
+        assert await async_setup_component(menuai, "mill", {})
     assert entry.state is ConfigEntryState.SETUP_RETRY
 
 
 async def test_setup_with_cloud_config_times_out(
-    recorder_mock: Recorder, hass: HomeAssistant
+    recorder_mock: Recorder, menuai: menuai
 ) -> None:
     """Test setup of cloud config will retry if timed out."""
     entry = MockConfigEntry(
@@ -64,14 +64,14 @@ async def test_setup_with_cloud_config_times_out(
             mill.CONNECTION_TYPE: mill.CLOUD,
         },
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     with patch("mill.Mill.connect", side_effect=asyncio.TimeoutError):
-        await hass.config_entries.async_setup(entry.entry_id)
+        await menuai.config_entries.async_setup(entry.entry_id)
     assert entry.state is ConfigEntryState.SETUP_RETRY
 
 
 async def test_setup_with_old_cloud_config(
-    recorder_mock: Recorder, hass: HomeAssistant
+    recorder_mock: Recorder, menuai: menuai
 ) -> None:
     """Test setup of old cloud config."""
     entry = MockConfigEntry(
@@ -81,18 +81,18 @@ async def test_setup_with_old_cloud_config(
             mill.CONF_PASSWORD: "pswd",
         },
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     with (
         patch("mill.Mill.fetch_heater_and_sensor_data", return_value={}),
         patch("mill.Mill.connect", return_value=True) as mock_connect,
     ):
-        assert await async_setup_component(hass, "mill", {})
+        assert await async_setup_component(menuai, "mill", {})
 
     assert len(mock_connect.mock_calls) == 1
 
 
 async def test_setup_with_local_config(
-    recorder_mock: Recorder, hass: HomeAssistant
+    recorder_mock: Recorder, menuai: menuai
 ) -> None:
     """Test setup of local config."""
     entry = MockConfigEntry(
@@ -102,7 +102,7 @@ async def test_setup_with_local_config(
             mill.CONNECTION_TYPE: mill.LOCAL,
         },
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     with (
         patch(
             "mill_local.Mill.fetch_heater_and_sensor_data",
@@ -124,13 +124,13 @@ async def test_setup_with_local_config(
             },
         ) as mock_connect,
     ):
-        assert await async_setup_component(hass, "mill", {})
+        assert await async_setup_component(menuai, "mill", {})
 
     assert len(mock_fetch.mock_calls) == 1
     assert len(mock_connect.mock_calls) == 1
 
 
-async def test_unload_entry(recorder_mock: Recorder, hass: HomeAssistant) -> None:
+async def test_unload_entry(recorder_mock: Recorder, menuai: menuai) -> None:
     """Test removing mill client."""
     entry = MockConfigEntry(
         domain=mill.DOMAIN,
@@ -140,11 +140,11 @@ async def test_unload_entry(recorder_mock: Recorder, hass: HomeAssistant) -> Non
             mill.CONNECTION_TYPE: mill.CLOUD,
         },
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with (
         patch.object(
-            hass.config_entries,
+            menuai.config_entries,
             "async_forward_entry_unload",
             return_value=True,
         ) as unload_entry,
@@ -154,9 +154,9 @@ async def test_unload_entry(recorder_mock: Recorder, hass: HomeAssistant) -> Non
             return_value=True,
         ),
     ):
-        assert await async_setup_component(hass, "mill", {})
+        assert await async_setup_component(menuai, "mill", {})
 
-        assert await hass.config_entries.async_unload(entry.entry_id)
+        assert await menuai.config_entries.async_unload(entry.entry_id)
 
         assert unload_entry.call_count == 3
-        assert entry.entry_id not in hass.data[mill.DOMAIN]
+        assert entry.entry_id not in menuai.data[mill.DOMAIN]

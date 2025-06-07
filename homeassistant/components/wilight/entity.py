@@ -4,9 +4,9 @@ from typing import Any
 
 from pywilight.wilight_device import PyWiLightDevice
 
-from homeassistant.core import callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity
+from menuai.core import callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity
 
 from .const import DOMAIN
 
@@ -53,7 +53,7 @@ class WiLightDevice(Entity):
         """Synchronize state with api_device."""
         await self._client.status(self._index)
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register update callback."""
         self._client.register_status_callback(self.handle_event_callback, self._index)
         await self._client.status(self._index)

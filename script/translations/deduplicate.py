@@ -4,7 +4,7 @@ import argparse
 import json
 from pathlib import Path
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 from . import upload
 from .util import flatten_translations, get_base_arg_parser, load_json_from_path
@@ -22,7 +22,7 @@ def get_arguments() -> argparse.Namespace:
     return parser.parse_args()
 
 
-STRINGS_PATH = "homeassistant/components/{}/strings.json"
+STRINGS_PATH = "menuai/components/{}/strings.json"
 ENTITY_COMPONENT_PREFIX = tuple(f"component::{domain}::" for domain in Platform)
 
 

@@ -4,19 +4,19 @@ from unittest.mock import call
 
 from aioesphomeapi import APIClient, TimeInfo, TimeState
 
-from homeassistant.components.time import (
+from menuai.components.time import (
     ATTR_TIME,
     DOMAIN as TIME_DOMAIN,
     SERVICE_SET_VALUE,
 )
-from homeassistant.const import ATTR_ENTITY_ID, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
+from menuai.const import ATTR_ENTITY_ID, STATE_UNKNOWN
+from menuai.core import menuai
 
 from .conftest import MockGenericDeviceEntryType
 
 
 async def test_generic_time_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -37,11 +37,11 @@ async def test_generic_time_entity(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("time.test_mytime")
+    state = menuai.states.get("time.test_mytime")
     assert state is not None
     assert state.state == "12:34:56"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TIME_DOMAIN,
         SERVICE_SET_VALUE,
         {ATTR_ENTITY_ID: "time.test_mytime", ATTR_TIME: "01:23:45"},
@@ -52,7 +52,7 @@ async def test_generic_time_entity(
 
 
 async def test_generic_time_missing_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -73,6 +73,6 @@ async def test_generic_time_missing_state(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("time.test_mytime")
+    state = menuai.states.get("time.test_mytime")
     assert state is not None
     assert state.state == STATE_UNKNOWN

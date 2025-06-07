@@ -7,14 +7,14 @@ from typing import Any, cast
 
 import voluptuous as vol
 
-from homeassistant.const import CONF_FILE_PATH, CONF_NAME
-from homeassistant.helpers.schema_config_entry_flow import (
+from menuai.const import CONF_FILE_PATH, CONF_NAME
+from menuai.helpers.schema_config_entry_flow import (
     SchemaCommonFlowHandler,
     SchemaConfigFlowHandler,
     SchemaFlowError,
     SchemaFlowFormStep,
 )
-from homeassistant.helpers.selector import TextSelector
+from menuai.helpers.selector import TextSelector
 
 from .const import DEFAULT_NAME, DOMAIN
 from .util import check_file_path_access
@@ -25,7 +25,7 @@ async def validate_options(
 ) -> dict[str, Any]:
     """Validate options selected."""
     file_path: str = user_input[CONF_FILE_PATH]
-    if not await handler.parent_handler.hass.async_add_executor_job(
+    if not await handler.parent_handler.menuai.async_add_executor_job(
         check_file_path_access, file_path
     ):
         raise SchemaFlowError("not_readable_path")

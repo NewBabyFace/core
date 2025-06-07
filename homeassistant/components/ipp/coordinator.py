@@ -7,11 +7,11 @@ import logging
 
 from pyipp import IPP, IPPError, Printer as IPPPrinter
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PORT, CONF_SSL, CONF_VERIFY_SSL
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, CONF_PORT, CONF_SSL, CONF_VERIFY_SSL
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import CONF_BASE_PATH, DOMAIN
 
@@ -27,7 +27,7 @@ class IPPDataUpdateCoordinator(DataUpdateCoordinator[IPPPrinter]):
 
     config_entry: IPPConfigEntry
 
-    def __init__(self, hass: HomeAssistant, config_entry: IPPConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: IPPConfigEntry) -> None:
         """Initialize global IPP data updater."""
         self.device_id = config_entry.unique_id or config_entry.entry_id
         self.ipp = IPP(
@@ -36,11 +36,11 @@ class IPPDataUpdateCoordinator(DataUpdateCoordinator[IPPPrinter]):
             base_path=config_entry.data[CONF_BASE_PATH],
             tls=config_entry.data[CONF_SSL],
             verify_ssl=config_entry.data[CONF_VERIFY_SSL],
-            session=async_get_clientsession(hass, config_entry.data[CONF_VERIFY_SSL]),
+            session=async_get_clientsession(menuai, config_entry.data[CONF_VERIFY_SSL]),
         )
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,

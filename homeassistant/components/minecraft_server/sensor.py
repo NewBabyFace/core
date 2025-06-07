@@ -6,11 +6,11 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-from homeassistant.components.sensor import SensorEntity, SensorEntityDescription
-from homeassistant.const import CONF_TYPE, EntityCategory, UnitOfTime
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
+from menuai.components.sensor import SensorEntity, SensorEntityDescription
+from menuai.const import CONF_TYPE, EntityCategory, UnitOfTime
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
 
 from .api import MinecraftServerData, MinecraftServerType
 from .const import KEY_LATENCY, KEY_MOTD
@@ -159,7 +159,7 @@ SENSOR_DESCRIPTIONS = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MinecraftServerConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

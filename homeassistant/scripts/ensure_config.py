@@ -4,8 +4,8 @@ import argparse
 import asyncio
 import os
 
-from homeassistant import config as config_util
-from homeassistant.core import HomeAssistant
+from menuai import config as config_util
+from menuai.core import menuai
 
 # mypy: allow-untyped-calls, allow-untyped-defs
 
@@ -13,14 +13,14 @@ from homeassistant.core import HomeAssistant
 def run(args):
     """Handle ensure config commandline script."""
     parser = argparse.ArgumentParser(
-        description="Ensure a Home Assistant config exists, creates one if necessary."
+        description="Ensure a MenuAI config exists, creates one if necessary."
     )
     parser.add_argument(
         "-c",
         "--config",
         metavar="path_to_config_dir",
         default=config_util.get_default_config_dir(),
-        help="Directory that contains the Home Assistant configuration",
+        help="Directory that contains the MenuAI configuration",
     )
     parser.add_argument("--script", choices=["ensure_config"])
 
@@ -40,7 +40,7 @@ def run(args):
 
 async def async_run(config_dir):
     """Make sure config exists."""
-    hass = HomeAssistant(config_dir)
-    path = await config_util.async_ensure_config_exists(hass)
-    await hass.async_stop(force=True)
+    menuai = menuai(config_dir)
+    path = await config_util.async_ensure_config_exists(menuai)
+    await menuai.async_stop(force=True)
     return path

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from homeassistant.util import color as color_util
+from menuai.util import color as color_util
 
 
 def normalize_hue_brightness(brightness: float | None) -> float | None:

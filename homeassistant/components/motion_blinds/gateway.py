@@ -6,7 +6,7 @@ import socket
 
 from motionblinds import DEVICE_TYPES_WIFI, AsyncMotionMulticast, MotionGateway
 
-from homeassistant.components import network
+from menuai.components import network
 
 from .const import DEFAULT_INTERFACE
 
@@ -23,9 +23,9 @@ def device_name(blind):
 class ConnectMotionGateway:
     """Class to async connect to a Motion Gateway."""
 
-    def __init__(self, hass, multicast=None, interface=None):
+    def __init__(self, menuai, multicast=None, interface=None):
         """Initialize the entity."""
-        self._hass = hass
+        self._menuai = menuai
         self._multicast = multicast
         self._gateway_device = None
         self._interface = interface
@@ -55,7 +55,7 @@ class ConnectMotionGateway:
         )
         try:
             # update device info and get the connected sub devices
-            await self._hass.async_add_executor_job(self.update_gateway)
+            await self._menuai.async_add_executor_job(self.update_gateway)
         except TimeoutError:
             _LOGGER.error(
                 "Timeout trying to connect to Motion Gateway with host %s", host
@@ -80,7 +80,7 @@ class ConnectMotionGateway:
         enabled_interfaces = []
         default_interface = DEFAULT_INTERFACE
 
-        adapters = await network.async_get_adapters(self._hass)
+        adapters = await network.async_get_adapters(self._menuai)
         for adapter in adapters:
             if ipv4s := adapter["ipv4"]:
                 ip4 = ipv4s[0]["address"]
@@ -121,7 +121,7 @@ class ConnectMotionGateway:
             self._gateway_device = MotionGateway(
                 ip=host, key=key, multicast=check_multicast
             )
-            result = await self._hass.async_add_executor_job(self.check_interface)
+            result = await self._menuai.async_add_executor_job(self.check_interface)
 
             # close multicast listener again
             try:

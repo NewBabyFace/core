@@ -4,15 +4,15 @@ from __future__ import annotations
 
 from pydroid_ipcam import PyDroidIPCam
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
     CONF_USERNAME,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .coordinator import AndroidIPCamConfigEntry, AndroidIPCamDataUpdateCoordinator
 
@@ -25,10 +25,10 @@ PLATFORMS: list[Platform] = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: AndroidIPCamConfigEntry
+    menuai: menuai, entry: AndroidIPCamConfigEntry
 ) -> bool:
     """Set up Android IP Webcam from a config entry."""
-    websession = async_get_clientsession(hass)
+    websession = async_get_clientsession(menuai)
     cam = PyDroidIPCam(
         websession,
         entry.data[CONF_HOST],
@@ -37,18 +37,18 @@ async def async_setup_entry(
         password=entry.data.get(CONF_PASSWORD),
         ssl=False,
     )
-    coordinator = AndroidIPCamDataUpdateCoordinator(hass, entry, cam)
+    coordinator = AndroidIPCamDataUpdateCoordinator(menuai, entry, cam)
     await coordinator.async_config_entry_first_refresh()
 
     entry.runtime_data = coordinator
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, entry: AndroidIPCamConfigEntry
+    menuai: menuai, entry: AndroidIPCamConfigEntry
 ) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

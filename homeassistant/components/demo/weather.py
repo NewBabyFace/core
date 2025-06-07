@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
-from homeassistant.components.weather import (
+from menuai.components.weather import (
     ATTR_CONDITION_CLOUDY,
     ATTR_CONDITION_EXCEPTIONAL,
     ATTR_CONDITION_FOG,
@@ -23,12 +23,12 @@ from homeassistant.components.weather import (
     WeatherEntity,
     WeatherEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import UnitOfPressure, UnitOfSpeed, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.util import dt as dt_util
+from menuai.config_entries import ConfigEntry
+from menuai.const import UnitOfPressure, UnitOfSpeed, UnitOfTemperature
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.event import async_track_time_interval
+from menuai.util import dt as dt_util
 
 CONDITION_CLASSES: dict[str, list[str]] = {
     ATTR_CONDITION_CLOUDY: [],
@@ -56,7 +56,7 @@ WEATHER_UPDATE_INTERVAL = timedelta(minutes=30)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -130,7 +130,7 @@ async def async_setup_entry(
 class DemoWeather(WeatherEntity):
     """Representation of a weather condition."""
 
-    _attr_attribution = "Powered by Home Assistant"
+    _attr_attribution = "Powered by MenuAI"
     _attr_should_poll = False
 
     def __init__(
@@ -170,7 +170,7 @@ class DemoWeather(WeatherEntity):
         if self._forecast_twice_daily:
             self._attr_supported_features |= WeatherEntityFeature.FORECAST_TWICE_DAILY
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Set up a timer updating the forecasts."""
 
         async def update_forecasts(_: datetime) -> None:
@@ -190,7 +190,7 @@ class DemoWeather(WeatherEntity):
 
         self.async_on_remove(
             async_track_time_interval(
-                self.hass, update_forecasts, WEATHER_UPDATE_INTERVAL
+                self.menuai, update_forecasts, WEATHER_UPDATE_INTERVAL
             )
         )
 

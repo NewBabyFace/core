@@ -7,16 +7,16 @@ from typing import Any
 from pyemoncms import EmoncmsClient
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_API_KEY, CONF_URL
-from homeassistant.core import callback
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.selector import selector
+from menuai.const import CONF_API_KEY, CONF_URL
+from menuai.core import callback
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.selector import selector
 
 from .const import (
     CONF_MESSAGE,
@@ -86,7 +86,7 @@ class EmoncmsConfigFlow(ConfigFlow, domain=DOMAIN):
                 }
             )
             emoncms_client = EmoncmsClient(
-                self.url, self.api_key, session=async_get_clientsession(self.hass)
+                self.url, self.api_key, session=async_get_clientsession(self.menuai)
             )
             result = await get_feed_list(emoncms_client)
             if not result[CONF_SUCCESS]:
@@ -174,7 +174,7 @@ class EmoncmsOptionsFlow(OptionsFlow):
         emoncms_client = EmoncmsClient(
             self._url,
             self._api_key,
-            session=async_get_clientsession(self.hass),
+            session=async_get_clientsession(self.menuai),
         )
         result = await get_feed_list(emoncms_client)
         if not result[CONF_SUCCESS]:

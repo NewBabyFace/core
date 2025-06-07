@@ -9,16 +9,16 @@ from aiohomeconnect.client import Client as HomeConnectClient
 import aiohttp
 import jwt
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import (
+from menuai.const import Platform
+from menuai.core import menuai, callback
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import (
     config_entry_oauth2_flow,
     config_validation as cv,
     issue_registry as ir,
 )
-from homeassistant.helpers.entity_registry import RegistryEntry, async_migrate_entries
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers.entity_registry import RegistryEntry, async_migrate_entries
+from menuai.helpers.typing import ConfigType
 
 from .api import AsyncConfigEntryAuth
 from .const import DOMAIN, OLD_NEW_UNIQUE_ID_SUFFIX_MAP
@@ -41,23 +41,23 @@ PLATFORMS = [
 ]
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up Home Connect component."""
-    register_actions(hass)
+    register_actions(menuai)
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: HomeConnectConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: HomeConnectConfigEntry) -> bool:
     """Set up Home Connect from a config entry."""
     implementation = (
         await config_entry_oauth2_flow.async_get_config_entry_implementation(
-            hass, entry
+            menuai, entry
         )
     )
 
-    session = config_entry_oauth2_flow.OAuth2Session(hass, entry, implementation)
+    session = config_entry_oauth2_flow.OAuth2Session(menuai, entry, implementation)
 
-    config_entry_auth = AsyncConfigEntryAuth(hass, session)
+    config_entry_auth = AsyncConfigEntryAuth(menuai, session)
     try:
         await config_entry_auth.async_get_access_token()
     except aiohttp.ClientResponseError as err:
@@ -69,16 +69,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: HomeConnectConfigEntry) 
 
     home_connect_client = HomeConnectClient(config_entry_auth)
 
-    coordinator = HomeConnectCoordinator(hass, entry, home_connect_client)
+    coordinator = HomeConnectCoordinator(menuai, entry, home_connect_client)
     await coordinator.async_setup()
     entry.runtime_data = coordinator
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     entry.runtime_data.start_event_listener()
 
     entry.async_create_background_task(
-        hass,
+        menuai,
         coordinator.async_refresh(),
         f"home_connect-initial-full-refresh-{entry.entry_id}",
     )
@@ -87,10 +87,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: HomeConnectConfigEntry) 
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, entry: HomeConnectConfigEntry
+    menuai: menuai, entry: HomeConnectConfigEntry
 ) -> bool:
     """Unload a config entry."""
-    issue_registry = ir.async_get(hass)
+    issue_registry = ir.async_get(menuai)
     issues_to_delete = [
         "deprecated_set_program_and_option_actions",
         "deprecated_command_actions",
@@ -102,11 +102,11 @@ async def async_unload_entry(
     ]
     for issue_id in issues_to_delete:
         issue_registry.async_delete(DOMAIN, issue_id)
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 async def async_migrate_entry(
-    hass: HomeAssistant, entry: HomeConnectConfigEntry
+    menuai: menuai, entry: HomeConnectConfigEntry
 ) -> bool:
     """Migrate old entry."""
     _LOGGER.debug("Migrating from version %s", entry.version)
@@ -132,11 +132,11 @@ async def async_migrate_entry(
                             }
                     return None
 
-                await async_migrate_entries(hass, entry.entry_id, update_unique_id)
+                await async_migrate_entries(menuai, entry.entry_id, update_unique_id)
 
-                hass.config_entries.async_update_entry(entry, minor_version=2)
+                menuai.config_entries.async_update_entry(entry, minor_version=2)
             case 2:
-                hass.config_entries.async_update_entry(
+                menuai.config_entries.async_update_entry(
                     entry,
                     minor_version=3,
                     unique_id=jwt.decode(

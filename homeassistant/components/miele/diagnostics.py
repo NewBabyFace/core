@@ -7,9 +7,9 @@ from typing import Any, cast
 
 from pymiele import completed_warnings
 
-from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceEntry
+from menuai.components.diagnostics import async_redact_data
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceEntry
 
 from .coordinator import MieleConfigEntry
 
@@ -30,7 +30,7 @@ def redact_identifiers(in_data: dict[str, Any]) -> dict[str, Any]:
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, config_entry: MieleConfigEntry
+    menuai: menuai, config_entry: MieleConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
 
@@ -59,7 +59,7 @@ async def async_get_config_entry_diagnostics(
 
 
 async def async_get_device_diagnostics(
-    hass: HomeAssistant, config_entry: MieleConfigEntry, device: DeviceEntry
+    menuai: menuai, config_entry: MieleConfigEntry, device: DeviceEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a device."""
     info = {

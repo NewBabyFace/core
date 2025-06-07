@@ -2,29 +2,29 @@
 
 from unittest.mock import AsyncMock, patch
 
-from homeassistant.components.niko_home_control.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.niko_home_control.const import DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_HOST
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
 
 async def test_full_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_niko_home_control_connection: AsyncMock,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test the full flow."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: "192.168.0.123"},
     )
@@ -36,20 +36,20 @@ async def test_full_flow(
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_cannot_connect(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
+async def test_cannot_connect(menuai: menuai, mock_setup_entry: AsyncMock) -> None:
     """Test the cannot connect error."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
     with patch(
-        "homeassistant.components.niko_home_control.config_flow.NHCController.connect",
+        "menuai.components.niko_home_control.config_flow.NHCController.connect",
         side_effect=Exception,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_HOST: "192.168.0.123"},
         )
@@ -58,9 +58,9 @@ async def test_cannot_connect(hass: HomeAssistant, mock_setup_entry: AsyncMock) 
     assert result["errors"] == {"base": "cannot_connect"}
 
     with patch(
-        "homeassistant.components.niko_home_control.config_flow.NHCController.connect",
+        "menuai.components.niko_home_control.config_flow.NHCController.connect",
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_HOST: "192.168.0.123"},
         )
@@ -69,19 +69,19 @@ async def test_cannot_connect(hass: HomeAssistant, mock_setup_entry: AsyncMock) 
 
 
 async def test_duplicate_entry(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_setup_entry: AsyncMock, mock_config_entry: MockConfigEntry
 ) -> None:
     """Test uniqueness."""
 
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: "192.168.0.123"},
     )

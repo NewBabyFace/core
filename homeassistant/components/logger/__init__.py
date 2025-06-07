@@ -7,10 +7,10 @@ import re
 
 import voluptuous as vol
 
-from homeassistant.const import EVENT_LOGGING_CHANGED  # noqa: F401
-from homeassistant.core import HomeAssistant, ServiceCall, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import EVENT_LOGGING_CHANGED  # noqa: F401
+from menuai.core import menuai, ServiceCall, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType
 
 from . import websocket_api
 from .const import (
@@ -51,15 +51,15 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the logger component."""
 
-    settings = LoggerSettings(hass, config)
+    settings = LoggerSettings(menuai, config)
 
-    domain_config = hass.data[DATA_LOGGER] = LoggerDomainConfig({}, settings)
+    domain_config = menuai.data[DATA_LOGGER] = LoggerDomainConfig({}, settings)
     logging.setLoggerClass(_get_logger_class(domain_config.overrides))
 
-    websocket_api.async_load_websocket_api(hass)
+    websocket_api.async_load_websocket_api(menuai)
 
     await settings.async_load()
 
@@ -67,7 +67,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     logger_config = config.get(DOMAIN, {})
 
     if LOGGER_DEFAULT in logger_config:
-        set_default_log_level(hass, logger_config[LOGGER_DEFAULT])
+        set_default_log_level(menuai, logger_config[LOGGER_DEFAULT])
 
     if LOGGER_FILTERS in logger_config:
         log_filters: dict[str, list[re.Pattern]] = logger_config[LOGGER_FILTERS]
@@ -75,25 +75,25 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             _add_log_filter(logging.getLogger(key), value)
 
     # Combine log levels configured in configuration.yaml with log levels set by frontend
-    combined_logs = await settings.async_get_levels(hass)
-    set_log_levels(hass, combined_logs)
+    combined_logs = await settings.async_get_levels(menuai)
+    set_log_levels(menuai, combined_logs)
 
     @callback
     def async_service_handler(service: ServiceCall) -> None:
         """Handle logger services."""
         if service.service == SERVICE_SET_DEFAULT_LEVEL:
-            set_default_log_level(hass, service.data[ATTR_LEVEL])
+            set_default_log_level(menuai, service.data[ATTR_LEVEL])
         else:
-            set_log_levels(hass, service.data)
+            set_log_levels(menuai, service.data)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_SET_DEFAULT_LEVEL,
         async_service_handler,
         schema=SERVICE_SET_DEFAULT_LEVEL_SCHEMA,
     )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_SET_LEVEL,
         async_service_handler,
@@ -112,19 +112,19 @@ def _add_log_filter(logger: logging.Logger, patterns: list[re.Pattern]) -> None:
     logger.addFilter(filter_func)
 
 
-def _get_logger_class(hass_overrides: dict[str, int]) -> type[logging.Logger]:
+def _get_logger_class(menuai_overrides: dict[str, int]) -> type[logging.Logger]:
     """Create a logger subclass.
 
     logging.setLoggerClass checks if it is a subclass of Logger and
-    so we cannot use partial to inject hass_overrides.
+    so we cannot use partial to inject menuai_overrides.
     """
 
-    class HassLogger(logging.Logger):
-        """Home Assistant aware logger class."""
+    class menuaiLogger(logging.Logger):
+        """MenuAI aware logger class."""
 
         def setLevel(self, level: int | str) -> None:
             """Set the log level unless overridden."""
-            if self.name in hass_overrides:
+            if self.name in menuai_overrides:
                 return
 
             super().setLevel(level)
@@ -133,4 +133,4 @@ def _get_logger_class(hass_overrides: dict[str, int]) -> type[logging.Logger]:
             """Set the log level."""
             super().setLevel(level)
 
-    return HassLogger
+    return menuaiLogger

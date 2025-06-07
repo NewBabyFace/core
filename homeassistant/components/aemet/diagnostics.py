@@ -6,14 +6,14 @@ from typing import Any
 
 from aemet_opendata.const import AOD_COORDS, AOD_IMG_BYTES
 
-from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.const import (
+from menuai.components.diagnostics import async_redact_data
+from menuai.const import (
     CONF_API_KEY,
     CONF_LATITUDE,
     CONF_LONGITUDE,
     CONF_UNIQUE_ID,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .coordinator import AemetConfigEntry
 
@@ -31,7 +31,7 @@ TO_REDACT_COORD = [
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, config_entry: AemetConfigEntry
+    menuai: menuai, config_entry: AemetConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     coordinator = config_entry.runtime_data.coordinator

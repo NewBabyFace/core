@@ -18,7 +18,7 @@ NET_IO_TYPES = [
 # platforms / hardware combinations.
 # Taken from last version of "glances" integration before they moved to
 # a generic temperature sensor logic.
-# https://github.com/home-assistant/core/blob/5e15675593ba94a2c11f9f929cdad317e27ce190/homeassistant/components/glances/sensor.py#L199
+# https://github.com/home-assistant/core/blob/5e15675593ba94a2c11f9f929cdad317e27ce190/menuai/components/glances/sensor.py#L199
 CPU_SENSOR_PREFIXES = [
     "amdgpu 1",
     "aml_thermal",

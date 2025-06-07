@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_DEVICES,
     CONF_NAME,
     CONF_SENSORS,
@@ -17,10 +17,10 @@ from homeassistant.const import (
     PERCENTAGE,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN, SIGNAL_DS18B20_NEW
 
@@ -41,12 +41,12 @@ SENSOR_TYPES: dict[str, SensorEntityDescription] = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up sensors attached to a Konnected device from a config entry."""
-    data = hass.data[DOMAIN]
+    data = menuai.data[DOMAIN]
     device_id = config_entry.data["id"]
 
     # Initialize all DHT sensors.
@@ -90,7 +90,7 @@ async def async_setup_entry(
 
     # DS18B20 sensors entities are initialized when they report for the first
     # time. Set up a listener for that signal from the Konnected component.
-    async_dispatcher_connect(hass, SIGNAL_DS18B20_NEW, async_add_ds18b20)
+    async_dispatcher_connect(menuai, SIGNAL_DS18B20_NEW, async_add_ds18b20)
 
 
 class KonnectedSensor(SensorEntity):
@@ -123,12 +123,12 @@ class KonnectedSensor(SensorEntity):
 
         self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, device_id)})
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Store entity_id and register state change callback."""
         entity_id_key = self._addr or self.entity_description.key
         self._data[entity_id_key] = self.entity_id
         async_dispatcher_connect(
-            self.hass, f"konnected.{self.entity_id}.update", self.async_set_state
+            self.menuai, f"konnected.{self.entity_id}.update", self.async_set_state
         )
 
     @callback

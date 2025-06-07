@@ -16,16 +16,16 @@ from uiprotect.exceptions import ClientError, NotAuthorized
 # diagnostics module will not be imported in the executor.
 from uiprotect.test_util.anonymize import anonymize_data  # noqa: F401
 
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import (
+from menuai.const import EVENT_menuai_STOP
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import (
     config_validation as cv,
     device_registry as dr,
     issue_registry as ir,
 )
-from homeassistant.helpers.issue_registry import IssueSeverity
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers.issue_registry import IssueSeverity
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     AUTH_RETRIES,
@@ -41,7 +41,7 @@ from .discovery import async_start_discovery
 from .migrate import async_migrate_data
 from .services import async_setup_services
 from .utils import (
-    _async_unifi_mac_from_hass,
+    _async_unifi_mac_from_menuai,
     async_create_api_client,
     async_get_devices,
 )
@@ -63,39 +63,39 @@ EARLY_ACCESS_URL = (
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the UniFi Protect."""
     # Only start discovery once regardless of how many entries they have
-    async_setup_services(hass)
-    async_start_discovery(hass)
+    async_setup_services(menuai)
+    async_start_discovery(menuai)
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: UFPConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: UFPConfigEntry) -> bool:
     """Set up the UniFi Protect config entries."""
-    protect = async_create_api_client(hass, entry)
+    protect = async_create_api_client(menuai, entry)
     _LOGGER.debug("Connect to UniFi Protect")
 
     try:
         await protect.update()
     except NotAuthorized as err:
         retry_key = f"{entry.entry_id}_auth"
-        retries = hass.data.setdefault(DOMAIN, {}).get(retry_key, 0)
+        retries = menuai.data.setdefault(DOMAIN, {}).get(retry_key, 0)
         if retries < AUTH_RETRIES:
             retries += 1
-            hass.data[DOMAIN][retry_key] = retries
+            menuai.data[DOMAIN][retry_key] = retries
             raise ConfigEntryNotReady from err
         raise ConfigEntryAuthFailed(err) from err
     except (TimeoutError, ClientError, ServerDisconnectedError) as err:
         raise ConfigEntryNotReady from err
 
-    data_service = ProtectData(hass, protect, SCAN_INTERVAL, entry)
+    data_service = ProtectData(menuai, protect, SCAN_INTERVAL, entry)
     bootstrap = protect.bootstrap
     nvr_info = bootstrap.nvr
     auth_user = bootstrap.users.get(bootstrap.auth_user_id)
     if auth_user and auth_user.cloud_account:
         ir.async_create_issue(
-            hass,
+            menuai,
             DOMAIN,
             "cloud_user",
             is_fixable=True,
@@ -115,12 +115,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: UFPConfigEntry) -> bool:
         return False
 
     if entry.unique_id is None:
-        hass.config_entries.async_update_entry(entry, unique_id=nvr_info.mac)
+        menuai.config_entries.async_update_entry(entry, unique_id=nvr_info.mac)
 
     entry.runtime_data = data_service
     entry.async_on_unload(entry.add_update_listener(_async_options_updated))
     entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, data_service.async_stop)
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, data_service.async_stop)
     )
 
     if not entry.options.get(CONF_ALLOW_EA, False) and (
@@ -128,7 +128,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: UFPConfigEntry) -> bool:
         or nvr_info.release_channel != FirmwareReleaseChannel.RELEASE
     ):
         ir.async_create_issue(
-            hass,
+            menuai,
             DOMAIN,
             "ea_channel_warning",
             is_fixable=True,
@@ -141,14 +141,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: UFPConfigEntry) -> bool:
         )
 
     try:
-        await _async_setup_entry(hass, entry, data_service, bootstrap)
+        await _async_setup_entry(menuai, entry, data_service, bootstrap)
     except Exception as err:
         if await nvr_info.get_is_prerelease():
             # If they are running a pre-release, its quite common for setup
             # to fail so we want to create a repair issue for them so its
             # obvious what the problem is.
             ir.async_create_issue(
-                hass,
+                menuai,
                 DOMAIN,
                 f"ea_setup_failed_{nvr_info.version}",
                 is_fixable=False,
@@ -161,7 +161,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: UFPConfigEntry) -> bool:
                     "version": str(nvr_info.version),
                 },
             )
-            ir.async_delete_issue(hass, DOMAIN, "ea_channel_warning")
+            ir.async_delete_issue(menuai, DOMAIN, "ea_channel_warning")
             _LOGGER.exception("Error setting up UniFi Protect integration")
         raise
 
@@ -169,38 +169,38 @@ async def async_setup_entry(hass: HomeAssistant, entry: UFPConfigEntry) -> bool:
 
 
 async def _async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: UFPConfigEntry,
     data_service: ProtectData,
     bootstrap: Bootstrap,
 ) -> None:
-    await async_migrate_data(hass, entry, data_service.api, bootstrap)
+    await async_migrate_data(menuai, entry, data_service.api, bootstrap)
     data_service.async_setup()
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-    hass.http.register_view(ThumbnailProxyView(hass))
-    hass.http.register_view(SnapshotProxyView(hass))
-    hass.http.register_view(VideoProxyView(hass))
-    hass.http.register_view(VideoEventProxyView(hass))
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    menuai.http.register_view(ThumbnailProxyView(menuai))
+    menuai.http.register_view(SnapshotProxyView(menuai))
+    menuai.http.register_view(VideoProxyView(menuai))
+    menuai.http.register_view(VideoEventProxyView(menuai))
 
 
-async def _async_options_updated(hass: HomeAssistant, entry: UFPConfigEntry) -> None:
+async def _async_options_updated(menuai: menuai, entry: UFPConfigEntry) -> None:
     """Update options."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: UFPConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: UFPConfigEntry) -> bool:
     """Unload UniFi Protect config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+    if unload_ok := await menuai.config_entries.async_unload_platforms(entry, PLATFORMS):
         await entry.runtime_data.async_stop()
     return unload_ok
 
 
 async def async_remove_config_entry_device(
-    hass: HomeAssistant, config_entry: UFPConfigEntry, device_entry: dr.DeviceEntry
+    menuai: menuai, config_entry: UFPConfigEntry, device_entry: dr.DeviceEntry
 ) -> bool:
     """Remove ufp config entry from a device."""
     unifi_macs = {
-        _async_unifi_mac_from_hass(connection[1])
+        _async_unifi_mac_from_menuai(connection[1])
         for connection in device_entry.connections
         if connection[0] == dr.CONNECTION_NETWORK_MAC
     }

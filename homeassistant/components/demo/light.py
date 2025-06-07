@@ -5,7 +5,7 @@ from __future__ import annotations
 import random
 from typing import Any
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_TEMP_KELVIN,
     ATTR_EFFECT,
@@ -20,10 +20,10 @@ from homeassistant.components.light import (
     LightEntity,
     LightEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import DOMAIN
 
@@ -38,7 +38,7 @@ SUPPORT_DEMO_HS_WHITE = {ColorMode.HS, ColorMode.WHITE}
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -165,7 +165,7 @@ class DemoLight(LightEntity):
     def available(self) -> bool:
         """Return availability."""
         # This demo light is always available, but well-behaving components
-        # should implement this to inform Home Assistant accordingly.
+        # should implement this to inform MenuAI accordingly.
         return self._available
 
     @property
@@ -249,7 +249,7 @@ class DemoLight(LightEntity):
             self._brightness = kwargs[ATTR_WHITE]
 
         # As we have disabled polling, we need to inform
-        # Home Assistant about updates in our state ourselves.
+        # MenuAI about updates in our state ourselves.
         self.async_write_ha_state()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
@@ -257,5 +257,5 @@ class DemoLight(LightEntity):
         self._state = False
 
         # As we have disabled polling, we need to inform
-        # Home Assistant about updates in our state ourselves.
+        # MenuAI about updates in our state ourselves.
         self.async_write_ha_state()

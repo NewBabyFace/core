@@ -10,22 +10,22 @@ from snapcast.control.client import Snapclient
 from snapcast.control.group import Snapgroup
 import voluptuous as vol
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     DOMAIN as MEDIA_PLAYER_DOMAIN,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, CONF_PORT
+from menuai.core import menuai, callback
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import (
     config_validation as cv,
     entity_platform,
     entity_registry as er,
 )
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
     ATTR_LATENCY,
@@ -71,14 +71,14 @@ def register_services() -> None:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the snapcast config entry."""
 
     # Fetch coordinator from global data
-    coordinator: SnapcastUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
+    coordinator: SnapcastUpdateCoordinator = menuai.data[DOMAIN][config_entry.entry_id]
 
     # Create an ID for the Snapserver
     host = config_entry.data[CONF_HOST]
@@ -150,7 +150,7 @@ async def async_setup_entry(
         )
 
         # Remove stale entities
-        entity_registry = er.async_get(hass)
+        entity_registry = er.async_get(menuai)
         for group_id in groups_to_remove:
             if entity_id := entity_registry.async_get_entity_id(
                 MEDIA_PLAYER_DOMAIN,
@@ -203,12 +203,12 @@ class SnapcastBaseDevice(SnapcastCoordinatorEntity, MediaPlayerEntity):
         """Return the group."""
         raise NotImplementedError
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to events."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self._device.set_callback(self.schedule_update_ha_state)
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Disconnect object when removed."""
         self._device.set_callback(None)
 
@@ -365,7 +365,7 @@ class SnapcastClientDevice(SnapcastBaseDevice):
 
     async def async_join(self, master) -> None:
         """Join the group of the master player."""
-        entity_registry = er.async_get(self.hass)
+        entity_registry = er.async_get(self.menuai)
         master_entity = entity_registry.async_get(master)
         if master_entity is None:
             raise ServiceValidationError(f"Master entity '{master}' not found.")

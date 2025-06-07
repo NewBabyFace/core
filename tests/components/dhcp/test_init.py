@@ -15,9 +15,9 @@ from scapy.error import Scapy_Exception
 from scapy.layers.dhcp import DHCP
 from scapy.layers.l2 import Ether
 
-from homeassistant import config_entries
-from homeassistant.components import dhcp
-from homeassistant.components.device_tracker import (
+from menuai import config_entries
+from menuai.components import dhcp
+from menuai.components.device_tracker import (
     ATTR_HOST_NAME,
     ATTR_IP,
     ATTR_MAC,
@@ -25,21 +25,21 @@ from homeassistant.components.device_tracker import (
     CONNECTED_DEVICE_REGISTERED,
     SourceType,
 )
-from homeassistant.components.dhcp.const import DOMAIN
-from homeassistant.components.dhcp.models import DHCPData
-from homeassistant.const import (
-    EVENT_HOMEASSISTANT_STARTED,
-    EVENT_HOMEASSISTANT_STOP,
+from menuai.components.dhcp.const import DOMAIN
+from menuai.components.dhcp.models import DHCPData
+from menuai.const import (
+    EVENT_menuai_STARTED,
+    EVENT_menuai_STOP,
     STATE_HOME,
     STATE_NOT_HOME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.discovery_flow import DiscoveryKey
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.helpers.discovery_flow import DiscoveryKey
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from tests.common import (
     MockConfigEntry,
@@ -146,7 +146,7 @@ RAW_DHCP_REQUEST_WITHOUT_HOSTNAME = (
 
 
 async def _async_get_handle_dhcp_packet(
-    hass: HomeAssistant,
+    menuai: menuai,
     integration_matchers: dhcp.DhcpMatchers,
     address_data: dict | None = None,
 ) -> Callable[[Any], Awaitable[None]]:
@@ -154,7 +154,7 @@ async def _async_get_handle_dhcp_packet(
     if address_data is None:
         address_data = {}
     dhcp_watcher = dhcp.DHCPWatcher(
-        hass,
+        menuai,
         DHCPData(integration_matchers, set(), address_data),
     )
 
@@ -173,7 +173,7 @@ async def _async_get_handle_dhcp_packet(
 
 
 async def test_dhcp_start_using_multiple_interfaces(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test start using multiple interfaces."""
 
@@ -203,14 +203,14 @@ async def test_dhcp_start_using_multiple_interfaces(
         [{"domain": "mock-domain", "hostname": "connect", "macaddress": "B8B7F1*"}]
     )
     dhcp_watcher = dhcp.DHCPWatcher(
-        hass,
+        menuai,
         DHCPData(integration_matchers, set(), {}),
     )
 
     with (
         patch("aiodhcpwatcher.async_start") as mock_start,
         patch(
-            "homeassistant.components.dhcp.network.async_get_adapters",
+            "menuai.components.dhcp.network.async_get_adapters",
             return_value=_generate_mock_adapters(),
         ),
     ):
@@ -219,7 +219,7 @@ async def test_dhcp_start_using_multiple_interfaces(
     mock_start.assert_called_with(dhcp_watcher._async_process_dhcp_request, [1, 2])
 
 
-async def test_dhcp_match_hostname_and_macaddress(hass: HomeAssistant) -> None:
+async def test_dhcp_match_hostname_and_macaddress(menuai: menuai) -> None:
     """Test matching based on hostname and macaddress."""
     integration_matchers = dhcp.async_index_integration_matchers(
         [{"domain": "mock-domain", "hostname": "connect", "macaddress": "B8B7F1*"}]
@@ -227,9 +227,9 @@ async def test_dhcp_match_hostname_and_macaddress(hass: HomeAssistant) -> None:
     packet = Ether(RAW_DHCP_REQUEST)
 
     async_handle_dhcp_packet = await _async_get_handle_dhcp_packet(
-        hass, integration_matchers
+        menuai, integration_matchers
     )
-    with patch.object(hass.config_entries.flow, "async_init") as mock_init:
+    with patch.object(menuai.config_entries.flow, "async_init") as mock_init:
         await async_handle_dhcp_packet(packet)
         # Ensure no change is ignored
         await async_handle_dhcp_packet(packet)
@@ -247,7 +247,7 @@ async def test_dhcp_match_hostname_and_macaddress(hass: HomeAssistant) -> None:
     )
 
 
-async def test_dhcp_renewal_match_hostname_and_macaddress(hass: HomeAssistant) -> None:
+async def test_dhcp_renewal_match_hostname_and_macaddress(menuai: menuai) -> None:
     """Test renewal matching based on hostname and macaddress."""
     integration_matchers = dhcp.async_index_integration_matchers(
         [{"domain": "mock-domain", "hostname": "irobot-*", "macaddress": "501479*"}]
@@ -256,9 +256,9 @@ async def test_dhcp_renewal_match_hostname_and_macaddress(hass: HomeAssistant) -
     packet = Ether(RAW_DHCP_RENEWAL)
 
     async_handle_dhcp_packet = await _async_get_handle_dhcp_packet(
-        hass, integration_matchers
+        menuai, integration_matchers
     )
-    with patch.object(hass.config_entries.flow, "async_init") as mock_init:
+    with patch.object(menuai.config_entries.flow, "async_init") as mock_init:
         await async_handle_dhcp_packet(packet)
         # Ensure no change is ignored
         await async_handle_dhcp_packet(packet)
@@ -277,7 +277,7 @@ async def test_dhcp_renewal_match_hostname_and_macaddress(hass: HomeAssistant) -
 
 
 async def test_registered_devices(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Test discovery flows are created for registered devices."""
     integration_matchers = dhcp.async_index_integration_matchers(
@@ -290,7 +290,7 @@ async def test_registered_devices(
     packet = Ether(RAW_DHCP_RENEWAL)
 
     config_entry = MockConfigEntry(domain="mock-domain", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "50147903852c")},
@@ -298,7 +298,7 @@ async def test_registered_devices(
     )
     # Not enabled should not get flows
     config_entry2 = MockConfigEntry(domain="mock-domain-2", data={})
-    config_entry2.add_to_hass(hass)
+    config_entry2.add_to_menuai(menuai)
     device_registry.async_get_or_create(
         config_entry_id=config_entry2.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "50147903852c")},
@@ -306,9 +306,9 @@ async def test_registered_devices(
     )
 
     async_handle_dhcp_packet = await _async_get_handle_dhcp_packet(
-        hass, integration_matchers
+        menuai, integration_matchers
     )
-    with patch.object(hass.config_entries.flow, "async_init") as mock_init:
+    with patch.object(menuai.config_entries.flow, "async_init") as mock_init:
         await async_handle_dhcp_packet(packet)
         # Ensure no change is ignored
         await async_handle_dhcp_packet(packet)
@@ -326,7 +326,7 @@ async def test_registered_devices(
     )
 
 
-async def test_dhcp_match_hostname(hass: HomeAssistant) -> None:
+async def test_dhcp_match_hostname(menuai: menuai) -> None:
     """Test matching based on hostname only."""
     integration_matchers = dhcp.async_index_integration_matchers(
         [{"domain": "mock-domain", "hostname": "connect"}]
@@ -335,9 +335,9 @@ async def test_dhcp_match_hostname(hass: HomeAssistant) -> None:
     packet = Ether(RAW_DHCP_REQUEST)
 
     async_handle_dhcp_packet = await _async_get_handle_dhcp_packet(
-        hass, integration_matchers
+        menuai, integration_matchers
     )
-    with patch.object(hass.config_entries.flow, "async_init") as mock_init:
+    with patch.object(menuai.config_entries.flow, "async_init") as mock_init:
         await async_handle_dhcp_packet(packet)
 
     assert len(mock_init.mock_calls) == 1
@@ -353,7 +353,7 @@ async def test_dhcp_match_hostname(hass: HomeAssistant) -> None:
     )
 
 
-async def test_dhcp_match_macaddress(hass: HomeAssistant) -> None:
+async def test_dhcp_match_macaddress(menuai: menuai) -> None:
     """Test matching based on macaddress only."""
     integration_matchers = dhcp.async_index_integration_matchers(
         [{"domain": "mock-domain", "macaddress": "B8B7F1*"}]
@@ -362,9 +362,9 @@ async def test_dhcp_match_macaddress(hass: HomeAssistant) -> None:
     packet = Ether(RAW_DHCP_REQUEST)
 
     async_handle_dhcp_packet = await _async_get_handle_dhcp_packet(
-        hass, integration_matchers
+        menuai, integration_matchers
     )
-    with patch.object(hass.config_entries.flow, "async_init") as mock_init:
+    with patch.object(menuai.config_entries.flow, "async_init") as mock_init:
         await async_handle_dhcp_packet(packet)
 
     assert len(mock_init.mock_calls) == 1
@@ -380,7 +380,7 @@ async def test_dhcp_match_macaddress(hass: HomeAssistant) -> None:
     )
 
 
-async def test_dhcp_multiple_match_only_one_flow(hass: HomeAssistant) -> None:
+async def test_dhcp_multiple_match_only_one_flow(menuai: menuai) -> None:
     """Test matching the domain multiple times only generates one flow."""
     integration_matchers = dhcp.async_index_integration_matchers(
         [
@@ -392,9 +392,9 @@ async def test_dhcp_multiple_match_only_one_flow(hass: HomeAssistant) -> None:
     packet = Ether(RAW_DHCP_REQUEST)
 
     async_handle_dhcp_packet = await _async_get_handle_dhcp_packet(
-        hass, integration_matchers
+        menuai, integration_matchers
     )
-    with patch.object(hass.config_entries.flow, "async_init") as mock_init:
+    with patch.object(menuai.config_entries.flow, "async_init") as mock_init:
         await async_handle_dhcp_packet(packet)
 
     assert len(mock_init.mock_calls) == 1
@@ -410,7 +410,7 @@ async def test_dhcp_multiple_match_only_one_flow(hass: HomeAssistant) -> None:
     )
 
 
-async def test_dhcp_match_macaddress_without_hostname(hass: HomeAssistant) -> None:
+async def test_dhcp_match_macaddress_without_hostname(menuai: menuai) -> None:
     """Test matching based on macaddress only."""
     integration_matchers = dhcp.async_index_integration_matchers(
         [{"domain": "mock-domain", "macaddress": "606BBD*"}]
@@ -419,9 +419,9 @@ async def test_dhcp_match_macaddress_without_hostname(hass: HomeAssistant) -> No
     packet = Ether(RAW_DHCP_REQUEST_WITHOUT_HOSTNAME)
 
     async_handle_dhcp_packet = await _async_get_handle_dhcp_packet(
-        hass, integration_matchers
+        menuai, integration_matchers
     )
-    with patch.object(hass.config_entries.flow, "async_init") as mock_init:
+    with patch.object(menuai.config_entries.flow, "async_init") as mock_init:
         await async_handle_dhcp_packet(packet)
 
     assert len(mock_init.mock_calls) == 1
@@ -437,7 +437,7 @@ async def test_dhcp_match_macaddress_without_hostname(hass: HomeAssistant) -> No
     )
 
 
-async def test_dhcp_nomatch(hass: HomeAssistant) -> None:
+async def test_dhcp_nomatch(menuai: menuai) -> None:
     """Test not matching based on macaddress only."""
     integration_matchers = dhcp.async_index_integration_matchers(
         [{"domain": "mock-domain", "macaddress": "ABC123*"}]
@@ -446,15 +446,15 @@ async def test_dhcp_nomatch(hass: HomeAssistant) -> None:
     packet = Ether(RAW_DHCP_REQUEST)
 
     async_handle_dhcp_packet = await _async_get_handle_dhcp_packet(
-        hass, integration_matchers
+        menuai, integration_matchers
     )
-    with patch.object(hass.config_entries.flow, "async_init") as mock_init:
+    with patch.object(menuai.config_entries.flow, "async_init") as mock_init:
         await async_handle_dhcp_packet(packet)
 
     assert len(mock_init.mock_calls) == 0
 
 
-async def test_dhcp_nomatch_hostname(hass: HomeAssistant) -> None:
+async def test_dhcp_nomatch_hostname(menuai: menuai) -> None:
     """Test not matching based on hostname only."""
     integration_matchers = dhcp.async_index_integration_matchers(
         [{"domain": "mock-domain", "hostname": "nomatch*"}]
@@ -463,15 +463,15 @@ async def test_dhcp_nomatch_hostname(hass: HomeAssistant) -> None:
     packet = Ether(RAW_DHCP_REQUEST)
 
     async_handle_dhcp_packet = await _async_get_handle_dhcp_packet(
-        hass, integration_matchers
+        menuai, integration_matchers
     )
-    with patch.object(hass.config_entries.flow, "async_init") as mock_init:
+    with patch.object(menuai.config_entries.flow, "async_init") as mock_init:
         await async_handle_dhcp_packet(packet)
 
     assert len(mock_init.mock_calls) == 0
 
 
-async def test_dhcp_nomatch_non_dhcp_packet(hass: HomeAssistant) -> None:
+async def test_dhcp_nomatch_non_dhcp_packet(menuai: menuai) -> None:
     """Test matching does not throw on a non-dhcp packet."""
     integration_matchers = dhcp.async_index_integration_matchers(
         [{"domain": "mock-domain", "hostname": "nomatch*"}]
@@ -480,15 +480,15 @@ async def test_dhcp_nomatch_non_dhcp_packet(hass: HomeAssistant) -> None:
     packet = Ether(b"")
 
     async_handle_dhcp_packet = await _async_get_handle_dhcp_packet(
-        hass, integration_matchers
+        menuai, integration_matchers
     )
-    with patch.object(hass.config_entries.flow, "async_init") as mock_init:
+    with patch.object(menuai.config_entries.flow, "async_init") as mock_init:
         await async_handle_dhcp_packet(packet)
 
     assert len(mock_init.mock_calls) == 0
 
 
-async def test_dhcp_nomatch_non_dhcp_request_packet(hass: HomeAssistant) -> None:
+async def test_dhcp_nomatch_non_dhcp_request_packet(menuai: menuai) -> None:
     """Test nothing happens with the wrong message-type."""
     integration_matchers = dhcp.async_index_integration_matchers(
         [{"domain": "mock-domain", "hostname": "nomatch*"}]
@@ -506,15 +506,15 @@ async def test_dhcp_nomatch_non_dhcp_request_packet(hass: HomeAssistant) -> None
     ]
 
     async_handle_dhcp_packet = await _async_get_handle_dhcp_packet(
-        hass, integration_matchers
+        menuai, integration_matchers
     )
-    with patch.object(hass.config_entries.flow, "async_init") as mock_init:
+    with patch.object(menuai.config_entries.flow, "async_init") as mock_init:
         await async_handle_dhcp_packet(packet)
 
     assert len(mock_init.mock_calls) == 0
 
 
-async def test_dhcp_invalid_hostname(hass: HomeAssistant) -> None:
+async def test_dhcp_invalid_hostname(menuai: menuai) -> None:
     """Test we ignore invalid hostnames."""
     integration_matchers = dhcp.async_index_integration_matchers(
         [{"domain": "mock-domain", "hostname": "nomatch*"}]
@@ -532,15 +532,15 @@ async def test_dhcp_invalid_hostname(hass: HomeAssistant) -> None:
     ]
 
     async_handle_dhcp_packet = await _async_get_handle_dhcp_packet(
-        hass, integration_matchers
+        menuai, integration_matchers
     )
-    with patch.object(hass.config_entries.flow, "async_init") as mock_init:
+    with patch.object(menuai.config_entries.flow, "async_init") as mock_init:
         await async_handle_dhcp_packet(packet)
 
     assert len(mock_init.mock_calls) == 0
 
 
-async def test_dhcp_missing_hostname(hass: HomeAssistant) -> None:
+async def test_dhcp_missing_hostname(menuai: menuai) -> None:
     """Test we ignore missing hostnames."""
     integration_matchers = dhcp.async_index_integration_matchers(
         [{"domain": "mock-domain", "hostname": "nomatch*"}]
@@ -558,15 +558,15 @@ async def test_dhcp_missing_hostname(hass: HomeAssistant) -> None:
     ]
 
     async_handle_dhcp_packet = await _async_get_handle_dhcp_packet(
-        hass, integration_matchers
+        menuai, integration_matchers
     )
-    with patch.object(hass.config_entries.flow, "async_init") as mock_init:
+    with patch.object(menuai.config_entries.flow, "async_init") as mock_init:
         await async_handle_dhcp_packet(packet)
 
     assert len(mock_init.mock_calls) == 0
 
 
-async def test_dhcp_invalid_option(hass: HomeAssistant) -> None:
+async def test_dhcp_invalid_option(menuai: menuai) -> None:
     """Test we ignore invalid hostname option."""
     integration_matchers = dhcp.async_index_integration_matchers(
         [{"domain": "mock-domain", "hostname": "nomatch*"}]
@@ -584,23 +584,23 @@ async def test_dhcp_invalid_option(hass: HomeAssistant) -> None:
     ]
 
     async_handle_dhcp_packet = await _async_get_handle_dhcp_packet(
-        hass, integration_matchers
+        menuai, integration_matchers
     )
-    with patch.object(hass.config_entries.flow, "async_init") as mock_init:
+    with patch.object(menuai.config_entries.flow, "async_init") as mock_init:
         await async_handle_dhcp_packet(packet)
 
     assert len(mock_init.mock_calls) == 0
 
 
-async def test_setup_and_stop(hass: HomeAssistant) -> None:
+async def test_setup_and_stop(menuai: menuai) -> None:
     """Test we can setup and stop."""
 
     assert await async_setup_component(
-        hass,
+        menuai,
         DOMAIN,
         {},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     with (
         patch.object(
@@ -608,28 +608,28 @@ async def test_setup_and_stop(hass: HomeAssistant) -> None:
             "resolve_iface",
         ) as resolve_iface_call,
         patch("scapy.arch.common.compile_filter"),
-        patch("homeassistant.components.dhcp.DiscoverHosts.async_discover"),
+        patch("menuai.components.dhcp.DiscoverHosts.async_discover"),
     ):
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-        await hass.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
+        await menuai.async_block_till_done()
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire(EVENT_menuai_STOP)
+    await menuai.async_block_till_done()
 
     resolve_iface_call.assert_called_once()
 
 
 async def test_setup_fails_as_root(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test we handle sniff setup failing as root."""
 
     assert await async_setup_component(
-        hass,
+        menuai,
         DOMAIN,
         {},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     wait_event = threading.Event()
 
@@ -640,28 +640,28 @@ async def test_setup_fails_as_root(
             "resolve_iface",
             side_effect=Scapy_Exception,
         ),
-        patch("homeassistant.components.dhcp.DiscoverHosts.async_discover"),
+        patch("menuai.components.dhcp.DiscoverHosts.async_discover"),
     ):
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-        await hass.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
+        await menuai.async_block_till_done()
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire(EVENT_menuai_STOP)
+    await menuai.async_block_till_done()
     wait_event.set()
     assert "Cannot watch for dhcp packets" in caplog.text
 
 
 async def test_setup_fails_non_root(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test we handle sniff setup failing as non-root."""
 
     assert await async_setup_component(
-        hass,
+        menuai,
         DOMAIN,
         {},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     with (
         patch("os.geteuid", return_value=10),
@@ -671,27 +671,27 @@ async def test_setup_fails_non_root(
             "resolve_iface",
             side_effect=Scapy_Exception,
         ),
-        patch("homeassistant.components.dhcp.DiscoverHosts.async_discover"),
+        patch("menuai.components.dhcp.DiscoverHosts.async_discover"),
     ):
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-        await hass.async_block_till_done()
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
-        await hass.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
+        await menuai.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STOP)
+        await menuai.async_block_till_done()
 
     assert "Cannot watch for dhcp packets without root or CAP_NET_RAW" in caplog.text
 
 
 async def test_setup_fails_with_broken_libpcap(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test we abort if libpcap is missing or broken."""
 
     assert await async_setup_component(
-        hass,
+        menuai,
         DOMAIN,
         {},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     with (
         patch(
@@ -702,12 +702,12 @@ async def test_setup_fails_with_broken_libpcap(
             interfaces,
             "resolve_iface",
         ) as resolve_iface_call,
-        patch("homeassistant.components.dhcp.DiscoverHosts.async_discover"),
+        patch("menuai.components.dhcp.DiscoverHosts.async_discover"),
     ):
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-        await hass.async_block_till_done()
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
-        await hass.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
+        await menuai.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STOP)
+        await menuai.async_block_till_done()
 
     assert compile_filter.called
     assert not resolve_iface_call.called
@@ -718,10 +718,10 @@ async def test_setup_fails_with_broken_libpcap(
 
 
 def _make_device_tracker_watcher(
-    hass: HomeAssistant, matchers: list[dhcp.DHCPMatcher]
+    menuai: menuai, matchers: list[dhcp.DHCPMatcher]
 ) -> dhcp.DeviceTrackerWatcher:
     return dhcp.DeviceTrackerWatcher(
-        hass,
+        menuai,
         DHCPData(
             dhcp.async_index_integration_matchers(matchers),
             set(),
@@ -731,10 +731,10 @@ def _make_device_tracker_watcher(
 
 
 def _make_device_tracker_registered_watcher(
-    hass: HomeAssistant, matchers: list[dhcp.DHCPMatcher]
+    menuai: menuai, matchers: list[dhcp.DHCPMatcher]
 ) -> dhcp.DeviceTrackerRegisteredWatcher:
     return dhcp.DeviceTrackerRegisteredWatcher(
-        hass,
+        menuai,
         DHCPData(
             dhcp.async_index_integration_matchers(matchers),
             set(),
@@ -744,10 +744,10 @@ def _make_device_tracker_registered_watcher(
 
 
 def _make_network_watcher(
-    hass: HomeAssistant, matchers: list[dhcp.DHCPMatcher]
+    menuai: menuai, matchers: list[dhcp.DHCPMatcher]
 ) -> dhcp.NetworkWatcher:
     return dhcp.NetworkWatcher(
-        hass,
+        menuai,
         DHCPData(
             dhcp.async_index_integration_matchers(matchers),
             set(),
@@ -757,10 +757,10 @@ def _make_network_watcher(
 
 
 async def test_device_tracker_hostname_and_macaddress_exists_before_start(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test matching based on hostname and macaddress before start."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "device_tracker.august_connect",
         STATE_HOME,
         {
@@ -771,9 +771,9 @@ async def test_device_tracker_hostname_and_macaddress_exists_before_start(
         },
     )
 
-    with patch.object(hass.config_entries.flow, "async_init") as mock_init:
+    with patch.object(menuai.config_entries.flow, "async_init") as mock_init:
         device_tracker_watcher = _make_device_tracker_watcher(
-            hass,
+            menuai,
             [
                 {
                     "domain": "mock-domain",
@@ -783,9 +783,9 @@ async def test_device_tracker_hostname_and_macaddress_exists_before_start(
             ],
         )
         device_tracker_watcher.async_start()
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         device_tracker_watcher.async_stop()
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_init.mock_calls) == 1
     assert mock_init.mock_calls[0][1][0] == "mock-domain"
@@ -800,11 +800,11 @@ async def test_device_tracker_hostname_and_macaddress_exists_before_start(
     )
 
 
-async def test_device_tracker_registered(hass: HomeAssistant) -> None:
+async def test_device_tracker_registered(menuai: menuai) -> None:
     """Test matching based on hostname and macaddress when registered."""
-    with patch.object(hass.config_entries.flow, "async_init") as mock_init:
+    with patch.object(menuai.config_entries.flow, "async_init") as mock_init:
         device_tracker_watcher = _make_device_tracker_registered_watcher(
-            hass,
+            menuai,
             [
                 {
                     "domain": "mock-domain",
@@ -814,13 +814,13 @@ async def test_device_tracker_registered(hass: HomeAssistant) -> None:
             ],
         )
         device_tracker_watcher.async_start()
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         async_dispatcher_send(
-            hass,
+            menuai,
             CONNECTED_DEVICE_REGISTERED,
             {"ip": "192.168.210.56", "mac": "b8b7f16db533", "host_name": "connect"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_init.mock_calls) == 1
     assert mock_init.mock_calls[0][1][0] == "mock-domain"
@@ -834,14 +834,14 @@ async def test_device_tracker_registered(hass: HomeAssistant) -> None:
         macaddress="b8b7f16db533",
     )
     device_tracker_watcher.async_stop()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
-async def test_device_tracker_registered_hostname_none(hass: HomeAssistant) -> None:
+async def test_device_tracker_registered_hostname_none(menuai: menuai) -> None:
     """Test handle None hostname."""
-    with patch.object(hass.config_entries.flow, "async_init") as mock_init:
+    with patch.object(menuai.config_entries.flow, "async_init") as mock_init:
         device_tracker_watcher = _make_device_tracker_watcher(
-            hass,
+            menuai,
             [
                 {
                     "domain": "mock-domain",
@@ -851,27 +851,27 @@ async def test_device_tracker_registered_hostname_none(hass: HomeAssistant) -> N
             ],
         )
         device_tracker_watcher.async_start()
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         async_dispatcher_send(
-            hass,
+            menuai,
             CONNECTED_DEVICE_REGISTERED,
             {"ip": "192.168.210.56", "mac": "b8b7f16db533", "host_name": None},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_init.mock_calls) == 0
     device_tracker_watcher.async_stop()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
 async def test_device_tracker_hostname_and_macaddress_after_start(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test matching based on hostname and macaddress after start."""
 
-    with patch.object(hass.config_entries.flow, "async_init") as mock_init:
+    with patch.object(menuai.config_entries.flow, "async_init") as mock_init:
         device_tracker_watcher = _make_device_tracker_watcher(
-            hass,
+            menuai,
             [
                 {
                     "domain": "mock-domain",
@@ -881,8 +881,8 @@ async def test_device_tracker_hostname_and_macaddress_after_start(
             ],
         )
         device_tracker_watcher.async_start()
-        await hass.async_block_till_done()
-        hass.states.async_set(
+        await menuai.async_block_till_done()
+        menuai.states.async_set(
             "device_tracker.august_connect",
             STATE_HOME,
             {
@@ -892,9 +892,9 @@ async def test_device_tracker_hostname_and_macaddress_after_start(
                 ATTR_MAC: "B8:B7:F1:6D:B5:33",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         device_tracker_watcher.async_stop()
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_init.mock_calls) == 1
     assert mock_init.mock_calls[0][1][0] == "mock-domain"
@@ -910,13 +910,13 @@ async def test_device_tracker_hostname_and_macaddress_after_start(
 
 
 async def test_device_tracker_hostname_and_macaddress_after_start_not_home(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test matching based on hostname and macaddress after start but not home."""
 
-    with patch.object(hass.config_entries.flow, "async_init") as mock_init:
+    with patch.object(menuai.config_entries.flow, "async_init") as mock_init:
         device_tracker_watcher = _make_device_tracker_watcher(
-            hass,
+            menuai,
             [
                 {
                     "domain": "mock-domain",
@@ -926,8 +926,8 @@ async def test_device_tracker_hostname_and_macaddress_after_start_not_home(
             ],
         )
         device_tracker_watcher.async_start()
-        await hass.async_block_till_done()
-        hass.states.async_set(
+        await menuai.async_block_till_done()
+        menuai.states.async_set(
             "device_tracker.august_connect",
             STATE_NOT_HOME,
             {
@@ -937,26 +937,26 @@ async def test_device_tracker_hostname_and_macaddress_after_start_not_home(
                 ATTR_MAC: "B8:B7:F1:6D:B5:33",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         device_tracker_watcher.async_stop()
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_init.mock_calls) == 0
 
 
 async def test_device_tracker_hostname_and_macaddress_after_start_not_router(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test matching based on hostname and macaddress after start but not router."""
 
-    with patch.object(hass.config_entries.flow, "async_init") as mock_init:
+    with patch.object(menuai.config_entries.flow, "async_init") as mock_init:
         device_tracker_watcher = _make_device_tracker_watcher(
-            hass,
+            menuai,
             [{"domain": "mock-domain", "hostname": "connect", "macaddress": "B8B7F1*"}],
         )
         device_tracker_watcher.async_start()
-        await hass.async_block_till_done()
-        hass.states.async_set(
+        await menuai.async_block_till_done()
+        menuai.states.async_set(
             "device_tracker.august_connect",
             STATE_HOME,
             {
@@ -966,26 +966,26 @@ async def test_device_tracker_hostname_and_macaddress_after_start_not_router(
                 ATTR_MAC: "B8:B7:F1:6D:B5:33",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         device_tracker_watcher.async_stop()
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_init.mock_calls) == 0
 
 
 async def test_device_tracker_hostname_and_macaddress_after_start_hostname_missing(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test matching based on hostname and macaddress after start but missing hostname."""
 
-    with patch.object(hass.config_entries.flow, "async_init") as mock_init:
+    with patch.object(menuai.config_entries.flow, "async_init") as mock_init:
         device_tracker_watcher = _make_device_tracker_watcher(
-            hass,
+            menuai,
             [{"domain": "mock-domain", "hostname": "connect", "macaddress": "B8B7F1*"}],
         )
         device_tracker_watcher.async_start()
-        await hass.async_block_till_done()
-        hass.states.async_set(
+        await menuai.async_block_till_done()
+        menuai.states.async_set(
             "device_tracker.august_connect",
             STATE_HOME,
             {
@@ -994,26 +994,26 @@ async def test_device_tracker_hostname_and_macaddress_after_start_hostname_missi
                 ATTR_MAC: "B8:B7:F1:6D:B5:33",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         device_tracker_watcher.async_stop()
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_init.mock_calls) == 0
 
 
 async def test_device_tracker_invalid_ip_address(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test an invalid ip address."""
 
-    with patch.object(hass.config_entries.flow, "async_init") as mock_init:
+    with patch.object(menuai.config_entries.flow, "async_init") as mock_init:
         device_tracker_watcher = _make_device_tracker_watcher(
-            hass,
+            menuai,
             [{"domain": "mock-domain", "hostname": "connect", "macaddress": "B8B7F1*"}],
         )
         device_tracker_watcher.async_start()
-        await hass.async_block_till_done()
-        hass.states.async_set(
+        await menuai.async_block_till_done()
+        menuai.states.async_set(
             "device_tracker.august_connect",
             STATE_HOME,
             {
@@ -1022,19 +1022,19 @@ async def test_device_tracker_invalid_ip_address(
                 ATTR_MAC: "B8:B7:F1:6D:B5:33",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         device_tracker_watcher.async_stop()
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert "Ignoring invalid IP Address: invalid" in caplog.text
     assert len(mock_init.mock_calls) == 0
 
 
 async def test_device_tracker_ignore_self_assigned_ips_before_start(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test matching ignores self assigned ip address."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "device_tracker.august_connect",
         STATE_HOME,
         {
@@ -1045,9 +1045,9 @@ async def test_device_tracker_ignore_self_assigned_ips_before_start(
         },
     )
 
-    with patch.object(hass.config_entries.flow, "async_init") as mock_init:
+    with patch.object(menuai.config_entries.flow, "async_init") as mock_init:
         device_tracker_watcher = _make_device_tracker_watcher(
-            hass,
+            menuai,
             [
                 {
                     "domain": "mock-domain",
@@ -1057,19 +1057,19 @@ async def test_device_tracker_ignore_self_assigned_ips_before_start(
             ],
         )
         device_tracker_watcher.async_start()
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         device_tracker_watcher.async_stop()
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_init.mock_calls) == 0
 
 
-async def test_aiodiscover_finds_new_hosts(hass: HomeAssistant) -> None:
+async def test_aiodiscover_finds_new_hosts(menuai: menuai) -> None:
     """Test aiodiscover finds new host."""
     with (
-        patch.object(hass.config_entries.flow, "async_init") as mock_init,
+        patch.object(menuai.config_entries.flow, "async_init") as mock_init,
         patch(
-            "homeassistant.components.dhcp.DiscoverHosts.async_discover",
+            "menuai.components.dhcp.DiscoverHosts.async_discover",
             return_value=[
                 {
                     dhcp.DISCOVERY_IP_ADDRESS: "192.168.210.56",
@@ -1080,7 +1080,7 @@ async def test_aiodiscover_finds_new_hosts(hass: HomeAssistant) -> None:
         ),
     ):
         device_tracker_watcher = _make_network_watcher(
-            hass,
+            menuai,
             [
                 {
                     "domain": "mock-domain",
@@ -1090,9 +1090,9 @@ async def test_aiodiscover_finds_new_hosts(hass: HomeAssistant) -> None:
             ],
         )
         device_tracker_watcher.async_start()
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         device_tracker_watcher.async_stop()
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_init.mock_calls) == 1
     assert mock_init.mock_calls[0][1][0] == "mock-domain"
@@ -1108,7 +1108,7 @@ async def test_aiodiscover_finds_new_hosts(hass: HomeAssistant) -> None:
 
 
 async def test_aiodiscover_does_not_call_again_on_shorter_hostname(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Verify longer hostnames generate a new flow but shorter ones do not.
 
@@ -1117,9 +1117,9 @@ async def test_aiodiscover_does_not_call_again_on_shorter_hostname(
     reject shorter ones.
     """
     with (
-        patch.object(hass.config_entries.flow, "async_init") as mock_init,
+        patch.object(menuai.config_entries.flow, "async_init") as mock_init,
         patch(
-            "homeassistant.components.dhcp.DiscoverHosts.async_discover",
+            "menuai.components.dhcp.DiscoverHosts.async_discover",
             return_value=[
                 {
                     dhcp.DISCOVERY_IP_ADDRESS: "192.168.210.56",
@@ -1140,7 +1140,7 @@ async def test_aiodiscover_does_not_call_again_on_shorter_hostname(
         ),
     ):
         device_tracker_watcher = _make_network_watcher(
-            hass,
+            menuai,
             [
                 {
                     "domain": "mock-domain",
@@ -1150,9 +1150,9 @@ async def test_aiodiscover_does_not_call_again_on_shorter_hostname(
             ],
         )
         device_tracker_watcher.async_start()
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         device_tracker_watcher.async_stop()
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_init.mock_calls) == 2
     assert mock_init.mock_calls[0][1][0] == "mock-domain"
@@ -1177,17 +1177,17 @@ async def test_aiodiscover_does_not_call_again_on_shorter_hostname(
     )
 
 
-async def test_aiodiscover_finds_new_hosts_after_interval(hass: HomeAssistant) -> None:
+async def test_aiodiscover_finds_new_hosts_after_interval(menuai: menuai) -> None:
     """Test aiodiscover finds new host after interval."""
     with (
-        patch.object(hass.config_entries.flow, "async_init") as mock_init,
+        patch.object(menuai.config_entries.flow, "async_init") as mock_init,
         patch(
-            "homeassistant.components.dhcp.DiscoverHosts.async_discover",
+            "menuai.components.dhcp.DiscoverHosts.async_discover",
             return_value=[],
         ),
     ):
         device_tracker_watcher = _make_network_watcher(
-            hass,
+            menuai,
             [
                 {
                     "domain": "mock-domain",
@@ -1198,14 +1198,14 @@ async def test_aiodiscover_finds_new_hosts_after_interval(hass: HomeAssistant) -
         )
 
         device_tracker_watcher.async_start()
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_init.mock_calls) == 0
 
     with (
-        patch.object(hass.config_entries.flow, "async_init") as mock_init,
+        patch.object(menuai.config_entries.flow, "async_init") as mock_init,
         patch(
-            "homeassistant.components.dhcp.DiscoverHosts.async_discover",
+            "menuai.components.dhcp.DiscoverHosts.async_discover",
             return_value=[
                 {
                     dhcp.DISCOVERY_IP_ADDRESS: "192.168.210.56",
@@ -1215,10 +1215,10 @@ async def test_aiodiscover_finds_new_hosts_after_interval(hass: HomeAssistant) -
             ],
         ),
     ):
-        async_fire_time_changed(hass, dt_util.utcnow() + datetime.timedelta(minutes=65))
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, dt_util.utcnow() + datetime.timedelta(minutes=65))
+        await menuai.async_block_till_done()
         device_tracker_watcher.async_stop()
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_init.mock_calls) == 1
     assert mock_init.mock_calls[0][1][0] == "mock-domain"
@@ -1270,7 +1270,7 @@ async def test_aiodiscover_finds_new_hosts_after_interval(hass: HomeAssistant) -
     ],
 )
 async def test_dhcp_rediscover(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry_domain: str,
     entry_discovery_keys: dict[str, tuple[DiscoveryKey, ...]],
     entry_source: str,
@@ -1284,7 +1284,7 @@ async def test_dhcp_rediscover(
         state=config_entries.ConfigEntryState.LOADED,
         source=entry_source,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     address_data = {}
     integration_matchers = dhcp.async_index_integration_matchers(
@@ -1293,13 +1293,13 @@ async def test_dhcp_rediscover(
     packet = Ether(RAW_DHCP_REQUEST)
 
     async_handle_dhcp_packet = await _async_get_handle_dhcp_packet(
-        hass, integration_matchers, address_data
+        menuai, integration_matchers, address_data
     )
     rediscovery_watcher = dhcp.RediscoveryWatcher(
-        hass, DHCPData(integration_matchers, set(), address_data)
+        menuai, DHCPData(integration_matchers, set(), address_data)
     )
     rediscovery_watcher.async_start()
-    with patch.object(hass.config_entries.flow, "async_init") as mock_init:
+    with patch.object(menuai.config_entries.flow, "async_init") as mock_init:
         await async_handle_dhcp_packet(packet)
         # Ensure no change is ignored
         await async_handle_dhcp_packet(packet)
@@ -1322,9 +1322,9 @@ async def test_dhcp_rediscover(
         macaddress="b8b7f16db533",
     )
 
-    with patch.object(hass.config_entries.flow, "async_init") as mock_init:
-        await hass.config_entries.async_remove(entry.entry_id)
-        await hass.async_block_till_done()
+    with patch.object(menuai.config_entries.flow, "async_init") as mock_init:
+        await menuai.config_entries.async_remove(entry.entry_id)
+        await menuai.async_block_till_done()
 
         assert len(mock_init.mock_calls) == 1
         assert mock_init.mock_calls[0][1][0] == "mock-domain"
@@ -1361,7 +1361,7 @@ async def test_dhcp_rediscover(
     ],
 )
 async def test_dhcp_rediscover_no_match(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry_domain: str,
     entry_discovery_keys: dict[str, tuple[DiscoveryKey, ...]],
     entry_source: str,
@@ -1369,7 +1369,7 @@ async def test_dhcp_rediscover_no_match(
 ) -> None:
     """Test we don't reinitiate flows when a non matching config entry is removed."""
 
-    mock_integration(hass, MockModule(entry_domain))
+    mock_integration(menuai, MockModule(entry_domain))
 
     entry = MockConfigEntry(
         domain=entry_domain,
@@ -1378,7 +1378,7 @@ async def test_dhcp_rediscover_no_match(
         state=config_entries.ConfigEntryState.LOADED,
         source=entry_source,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     address_data = {}
     integration_matchers = dhcp.async_index_integration_matchers(
@@ -1387,13 +1387,13 @@ async def test_dhcp_rediscover_no_match(
     packet = Ether(RAW_DHCP_REQUEST)
 
     async_handle_dhcp_packet = await _async_get_handle_dhcp_packet(
-        hass, integration_matchers, address_data
+        menuai, integration_matchers, address_data
     )
     rediscovery_watcher = dhcp.RediscoveryWatcher(
-        hass, DHCPData(integration_matchers, set(), address_data)
+        menuai, DHCPData(integration_matchers, set(), address_data)
     )
     rediscovery_watcher.async_start()
-    with patch.object(hass.config_entries.flow, "async_init") as mock_init:
+    with patch.object(menuai.config_entries.flow, "async_init") as mock_init:
         await async_handle_dhcp_packet(packet)
         # Ensure no change is ignored
         await async_handle_dhcp_packet(packet)
@@ -1411,9 +1411,9 @@ async def test_dhcp_rediscover_no_match(
         macaddress="b8b7f16db533",
     )
 
-    with patch.object(hass.config_entries.flow, "async_init") as mock_init:
-        await hass.config_entries.async_remove(entry.entry_id)
-        await hass.async_block_till_done()
+    with patch.object(menuai.config_entries.flow, "async_init") as mock_init:
+        await menuai.config_entries.async_remove(entry.entry_id)
+        await menuai.async_block_till_done()
 
         assert len(mock_init.mock_calls) == 0
 
@@ -1423,7 +1423,7 @@ async def test_dhcp_rediscover_no_match(
     [
         (
             "DhcpServiceInfo",
-            "homeassistant.helpers.service_info.dhcp.DhcpServiceInfo",
+            "menuai.helpers.service_info.dhcp.DhcpServiceInfo",
             DhcpServiceInfo,
         ),
     ],

@@ -15,11 +15,11 @@ from aioimmich.server.models import (
     ImmichServerStorage,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PORT, CONF_SSL
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, CONF_PORT, CONF_SSL
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN
 
@@ -44,7 +44,7 @@ class ImmichDataUpdateCoordinator(DataUpdateCoordinator[ImmichData]):
     config_entry: ImmichConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, entry: ConfigEntry, api: Immich, is_admin: bool
+        self, menuai: menuai, entry: ConfigEntry, api: Immich, is_admin: bool
     ) -> None:
         """Initialize the data update coordinator."""
         self.api = api
@@ -54,7 +54,7 @@ class ImmichDataUpdateCoordinator(DataUpdateCoordinator[ImmichData]):
             f"{entry.data[CONF_HOST]}:{entry.data[CONF_PORT]}"
         )
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
             name=DOMAIN,

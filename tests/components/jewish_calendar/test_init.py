@@ -2,10 +2,10 @@
 
 import pytest
 
-from homeassistant.components.jewish_calendar.const import DOMAIN
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.jewish_calendar.const import DOMAIN
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry
 
@@ -19,14 +19,14 @@ from tests.common import MockConfigEntry
     ],
 )
 async def test_migrate_unique_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     config_entry: MockConfigEntry,
     old_key: str,
     new_key: str,
 ) -> None:
     """Test unique id migration."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     entity: er.RegistryEntry = entity_registry.async_get_or_create(
         domain=SENSOR_DOMAIN,
@@ -36,8 +36,8 @@ async def test_migrate_unique_id(
     )
     assert entity.unique_id.endswith(f"-{old_key}")
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     entity_migrated = entity_registry.async_get(entity.entity_id)
     assert entity_migrated

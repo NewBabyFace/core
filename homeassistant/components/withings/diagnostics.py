@@ -6,19 +6,19 @@ from typing import Any
 
 from yarl import URL
 
-from homeassistant.components.webhook import async_generate_url as webhook_generate_url
-from homeassistant.const import CONF_WEBHOOK_ID
-from homeassistant.core import HomeAssistant
+from menuai.components.webhook import async_generate_url as webhook_generate_url
+from menuai.const import CONF_WEBHOOK_ID
+from menuai.core import menuai
 
 from . import CONF_CLOUDHOOK_URL, WithingsConfigEntry
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: WithingsConfigEntry
+    menuai: menuai, entry: WithingsConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
 
-    webhook_url = webhook_generate_url(hass, entry.data[CONF_WEBHOOK_ID])
+    webhook_url = webhook_generate_url(menuai, entry.data[CONF_WEBHOOK_ID])
     url = URL(webhook_url)
     has_valid_external_webhook_url = url.scheme == "https" and url.port == 443
 

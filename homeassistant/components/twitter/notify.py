@@ -13,17 +13,17 @@ import os
 from TwitterAPI import TwitterAPI
 import voluptuous as vol
 
-from homeassistant.components.notify import (
+from menuai.components.notify import (
     ATTR_DATA,
     ATTR_TARGET,
     PLATFORM_SCHEMA as NOTIFY_PLATFORM_SCHEMA,
     BaseNotificationService,
 )
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.event import async_track_point_in_time
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_ACCESS_TOKEN, CONF_USERNAME
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.event import async_track_point_in_time
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -45,13 +45,13 @@ PLATFORM_SCHEMA = NOTIFY_PLATFORM_SCHEMA.extend(
 
 
 def get_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> TwitterNotificationService:
     """Get the Twitter notification service."""
     return TwitterNotificationService(
-        hass,
+        menuai,
         config[CONF_CONSUMER_KEY],
         config[CONF_CONSUMER_SECRET],
         config[CONF_ACCESS_TOKEN],
@@ -65,7 +65,7 @@ class TwitterNotificationService(BaseNotificationService):
 
     def __init__(
         self,
-        hass,
+        menuai,
         consumer_key,
         consumer_secret,
         access_token_key,
@@ -74,7 +74,7 @@ class TwitterNotificationService(BaseNotificationService):
     ):
         """Initialize the service."""
         self.default_user = username
-        self.hass = hass
+        self.menuai = menuai
         self.api = TwitterAPI(
             consumer_key, consumer_secret, access_token_key, access_token_secret
         )
@@ -87,7 +87,7 @@ class TwitterNotificationService(BaseNotificationService):
         media = None
         if data:
             media = data.get(ATTR_MEDIA)
-            if not self.hass.config.is_allowed_path(media):
+            if not self.menuai.config.is_allowed_path(media):
                 _LOGGER.warning("'%s' is not a whitelisted directory", media)
                 return
 
@@ -235,7 +235,7 @@ class TwitterNotificationService(BaseNotificationService):
 
         when = datetime.now() + timedelta(seconds=check_after_secs)
         myself = partial(self.check_status_until_done, media_id, callback)
-        async_track_point_in_time(self.hass, myself, when)
+        async_track_point_in_time(self.menuai, myself, when)
 
     @staticmethod
     def media_category_for_type(media_type):

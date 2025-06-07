@@ -62,7 +62,7 @@
   "mdmApkToInstall": "",
   "autoplayVideos": false,
   "loadOverview": false,
-  "startURL": "https://homeassistant.local/",
+  "startURL": "https://menuai.local/",
   "screensaverOtherApp": false,
   "showNewTabButton": false,
   "advancedKioskProtection": false,

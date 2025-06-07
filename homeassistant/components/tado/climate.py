@@ -9,7 +9,7 @@ from typing import Any
 import PyTado
 import voluptuous as vol
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     FAN_AUTO,
     PRESET_AWAY,
     PRESET_HOME,
@@ -23,11 +23,11 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.const import ATTR_TEMPERATURE, PRECISION_TENTHS, UnitOfTemperature
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import VolDictType
+from menuai.const import ATTR_TEMPERATURE, PRECISION_TENTHS, UnitOfTemperature
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv, entity_platform
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import VolDictType
 
 from . import TadoConfigEntry
 from .const import (
@@ -100,7 +100,7 @@ CLIMATE_TEMP_OFFSET_SCHEMA: VolDictType = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: TadoConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

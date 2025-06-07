@@ -8,7 +8,7 @@ from typing import Any, cast
 from aiohttp import ClientResponseError
 from bond_async import Action, Bond, BondType
 
-from homeassistant.util.async_ import gather_with_limited_concurrency
+from menuai.util.async_ import gather_with_limited_concurrency
 
 from .const import BRIDGE_MAKE
 

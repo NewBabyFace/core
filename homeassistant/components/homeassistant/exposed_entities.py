@@ -9,16 +9,16 @@ from typing import Any, TypedDict
 
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.components.binary_sensor import BinarySensorDeviceClass
-from homeassistant.components.sensor import SensorDeviceClass
-from homeassistant.const import CLOUD_NEVER_EXPOSED_ENTITIES
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback, split_entity_id
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity import get_device_class
-from homeassistant.helpers.storage import Store
-from homeassistant.util.read_only_dict import ReadOnlyDict
+from menuai.components import websocket_api
+from menuai.components.binary_sensor import BinarySensorDeviceClass
+from menuai.components.sensor import SensorDeviceClass
+from menuai.const import CLOUD_NEVER_EXPOSED_ENTITIES
+from menuai.core import CALLBACK_TYPE, menuai, callback, split_entity_id
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity import get_device_class
+from menuai.helpers.storage import Store
+from menuai.util.read_only_dict import ReadOnlyDict
 
 from .const import DATA_EXPOSED_ENTITIES, DOMAIN
 
@@ -110,20 +110,20 @@ class ExposedEntities:
     _assistants: dict[str, AssistantPreferences]
     entities: dict[str, ExposedEntity]
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize."""
-        self._hass = hass
+        self._menuai = menuai
         self._listeners: dict[str, list[Callable[[], None]]] = {}
         self._store: Store[SerializedExposedEntities] = Store(
-            hass, STORAGE_VERSION, STORAGE_KEY
+            menuai, STORAGE_VERSION, STORAGE_KEY
         )
 
     async def async_initialize(self) -> None:
         """Finish initializing."""
-        websocket_api.async_register_command(self._hass, ws_expose_entity)
-        websocket_api.async_register_command(self._hass, ws_expose_new_entities_get)
-        websocket_api.async_register_command(self._hass, ws_expose_new_entities_set)
-        websocket_api.async_register_command(self._hass, ws_list_exposed_entities)
+        websocket_api.async_register_command(self._menuai, ws_expose_entity)
+        websocket_api.async_register_command(self._menuai, ws_expose_new_entities_get)
+        websocket_api.async_register_command(self._menuai, ws_expose_new_entities_set)
+        websocket_api.async_register_command(self._menuai, ws_list_exposed_entities)
         await self._async_load_data()
 
     @callback
@@ -148,7 +148,7 @@ class ExposedEntities:
 
         Notify listeners if expose flag was changed.
         """
-        entity_registry = er.async_get(self._hass)
+        entity_registry = er.async_get(self._menuai)
         if not (registry_entry := entity_registry.async_get(entity_id)):
             self._async_set_legacy_assistant_option(assistant, entity_id, key, value)
             return
@@ -209,7 +209,7 @@ class ExposedEntities:
         self, assistant: str
     ) -> dict[str, Mapping[str, Any]]:
         """Get all entity expose settings for an assistant."""
-        entity_registry = er.async_get(self._hass)
+        entity_registry = er.async_get(self._menuai)
         result: dict[str, Mapping[str, Any]] = {}
 
         options: Mapping | None
@@ -226,7 +226,7 @@ class ExposedEntities:
     @callback
     def async_get_entity_settings(self, entity_id: str) -> dict[str, Mapping[str, Any]]:
         """Get assistant expose settings for an entity."""
-        entity_registry = er.async_get(self._hass)
+        entity_registry = er.async_get(self._menuai)
         result: dict[str, Mapping[str, Any]] = {}
 
         assistant_settings: Mapping
@@ -235,7 +235,7 @@ class ExposedEntities:
         elif exposed_entity := self.entities.get(entity_id):
             assistant_settings = exposed_entity.assistants
         else:
-            raise HomeAssistantError("Unknown entity")
+            raise menuaiError("Unknown entity")
 
         for assistant in KNOWN_ASSISTANTS:
             if options := assistant_settings.get(assistant):
@@ -251,7 +251,7 @@ class ExposedEntities:
         if entity_id in CLOUD_NEVER_EXPOSED_ENTITIES:
             return False
 
-        entity_registry = er.async_get(self._hass)
+        entity_registry = er.async_get(self._menuai)
         if not (registry_entry := entity_registry.async_get(entity_id)):
             return self._async_should_expose_legacy_entity(assistant, entity_id)
         if assistant in registry_entry.options:
@@ -319,8 +319,8 @@ class ExposedEntities:
             return True
 
         try:
-            device_class = get_device_class(self._hass, entity_id)
-        except HomeAssistantError:
+            device_class = get_device_class(self._menuai, entity_id)
+        except menuaiError:
             # The entity no longer exists
             return False
         if (
@@ -396,14 +396,14 @@ class ExposedEntities:
 @websocket_api.require_admin
 @websocket_api.websocket_command(
     {
-        vol.Required("type"): "homeassistant/expose_entity",
+        vol.Required("type"): "menuai/expose_entity",
         vol.Required("assistants"): [vol.In(KNOWN_ASSISTANTS)],
         vol.Required("entity_ids"): [str],
         vol.Required("should_expose"): bool,
     }
 )
 def ws_expose_entity(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Expose an entity to an assistant."""
     entity_ids: str = msg["entity_ids"]
@@ -423,7 +423,7 @@ def ws_expose_entity(
 
     for entity_id in entity_ids:
         for assistant in msg["assistants"]:
-            async_expose_entity(hass, assistant, entity_id, msg["should_expose"])
+            async_expose_entity(menuai, assistant, entity_id, msg["should_expose"])
     connection.send_result(msg["id"])
 
 
@@ -431,20 +431,20 @@ def ws_expose_entity(
 @websocket_api.require_admin
 @websocket_api.websocket_command(
     {
-        vol.Required("type"): "homeassistant/expose_entity/list",
+        vol.Required("type"): "menuai/expose_entity/list",
     }
 )
 def ws_list_exposed_entities(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """List entities which are exposed to assistants."""
     result: dict[str, Any] = {}
 
-    exposed_entities = hass.data[DATA_EXPOSED_ENTITIES]
-    entity_registry = er.async_get(hass)
+    exposed_entities = menuai.data[DATA_EXPOSED_ENTITIES]
+    entity_registry = er.async_get(menuai)
     for entity_id in chain(exposed_entities.entities, entity_registry.entities):
         exposed_to = {}
-        entity_settings = async_get_entity_settings(hass, entity_id)
+        entity_settings = async_get_entity_settings(menuai, entity_id)
         for assistant, settings in entity_settings.items():
             if "should_expose" not in settings or not settings["should_expose"]:
                 continue
@@ -459,15 +459,15 @@ def ws_list_exposed_entities(
 @websocket_api.require_admin
 @websocket_api.websocket_command(
     {
-        vol.Required("type"): "homeassistant/expose_new_entities/get",
+        vol.Required("type"): "menuai/expose_new_entities/get",
         vol.Required("assistant"): vol.In(KNOWN_ASSISTANTS),
     }
 )
 def ws_expose_new_entities_get(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Check if new entities are exposed to an assistant."""
-    exposed_entities = hass.data[DATA_EXPOSED_ENTITIES]
+    exposed_entities = menuai.data[DATA_EXPOSED_ENTITIES]
     expose_new = exposed_entities.async_get_expose_new_entities(msg["assistant"])
     connection.send_result(msg["id"], {"expose_new": expose_new})
 
@@ -476,74 +476,74 @@ def ws_expose_new_entities_get(
 @websocket_api.require_admin
 @websocket_api.websocket_command(
     {
-        vol.Required("type"): "homeassistant/expose_new_entities/set",
+        vol.Required("type"): "menuai/expose_new_entities/set",
         vol.Required("assistant"): vol.In(KNOWN_ASSISTANTS),
         vol.Required("expose_new"): bool,
     }
 )
 def ws_expose_new_entities_set(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Expose new entities to an assistant."""
-    exposed_entities = hass.data[DATA_EXPOSED_ENTITIES]
+    exposed_entities = menuai.data[DATA_EXPOSED_ENTITIES]
     exposed_entities.async_set_expose_new_entities(msg["assistant"], msg["expose_new"])
     connection.send_result(msg["id"])
 
 
 @callback
 def async_listen_entity_updates(
-    hass: HomeAssistant, assistant: str, listener: Callable[[], None]
+    menuai: menuai, assistant: str, listener: Callable[[], None]
 ) -> CALLBACK_TYPE:
     """Listen for updates to entity expose settings."""
-    exposed_entities = hass.data[DATA_EXPOSED_ENTITIES]
+    exposed_entities = menuai.data[DATA_EXPOSED_ENTITIES]
     return exposed_entities.async_listen_entity_updates(assistant, listener)
 
 
 @callback
 def async_get_assistant_settings(
-    hass: HomeAssistant, assistant: str
+    menuai: menuai, assistant: str
 ) -> dict[str, Mapping[str, Any]]:
     """Get all entity expose settings for an assistant."""
-    exposed_entities = hass.data[DATA_EXPOSED_ENTITIES]
+    exposed_entities = menuai.data[DATA_EXPOSED_ENTITIES]
     return exposed_entities.async_get_assistant_settings(assistant)
 
 
 @callback
 def async_get_entity_settings(
-    hass: HomeAssistant, entity_id: str
+    menuai: menuai, entity_id: str
 ) -> dict[str, Mapping[str, Any]]:
     """Get assistant expose settings for an entity."""
-    exposed_entities = hass.data[DATA_EXPOSED_ENTITIES]
+    exposed_entities = menuai.data[DATA_EXPOSED_ENTITIES]
     return exposed_entities.async_get_entity_settings(entity_id)
 
 
 @callback
 def async_expose_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     assistant: str,
     entity_id: str,
     should_expose: bool,
 ) -> None:
     """Get assistant expose settings for an entity."""
     async_set_assistant_option(
-        hass, assistant, entity_id, "should_expose", should_expose
+        menuai, assistant, entity_id, "should_expose", should_expose
     )
 
 
 @callback
-def async_should_expose(hass: HomeAssistant, assistant: str, entity_id: str) -> bool:
+def async_should_expose(menuai: menuai, assistant: str, entity_id: str) -> bool:
     """Return True if an entity should be exposed to an assistant."""
-    exposed_entities = hass.data[DATA_EXPOSED_ENTITIES]
+    exposed_entities = menuai.data[DATA_EXPOSED_ENTITIES]
     return exposed_entities.async_should_expose(assistant, entity_id)
 
 
 @callback
 def async_set_assistant_option(
-    hass: HomeAssistant, assistant: str, entity_id: str, option: str, value: Any
+    menuai: menuai, assistant: str, entity_id: str, option: str, value: Any
 ) -> None:
     """Set an option for an assistant.
 
     Notify listeners if expose flag was changed.
     """
-    exposed_entities = hass.data[DATA_EXPOSED_ENTITIES]
+    exposed_entities = menuai.data[DATA_EXPOSED_ENTITIES]
     exposed_entities.async_set_assistant_option(assistant, entity_id, option, value)

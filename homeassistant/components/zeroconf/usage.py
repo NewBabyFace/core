@@ -4,12 +4,12 @@ from typing import Any
 
 import zeroconf
 
-from homeassistant.helpers.frame import ReportBehavior, report_usage
+from menuai.helpers.frame import ReportBehavior, report_usage
 
 from .models import HaZeroconf
 
 
-def install_multiple_zeroconf_catcher(hass_zc: HaZeroconf) -> None:
+def install_multiple_zeroconf_catcher(menuai_zc: HaZeroconf) -> None:
     """Wrap the Zeroconf class to return the shared instance.
 
     Only if if multiple instances are detected.
@@ -20,12 +20,12 @@ def install_multiple_zeroconf_catcher(hass_zc: HaZeroconf) -> None:
             (
                 "attempted to create another Zeroconf instance. Please use the shared"
                 " Zeroconf via await"
-                " homeassistant.components.zeroconf.async_get_instance(hass)"
+                " menuai.components.zeroconf.async_get_instance(menuai)"
             ),
             exclude_integrations={"zeroconf"},
             core_behavior=ReportBehavior.LOG,
         )
-        return hass_zc
+        return menuai_zc
 
     def new_zeroconf_init(self: zeroconf.Zeroconf, *k: Any, **kw: Any) -> None:
         return

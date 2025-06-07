@@ -7,15 +7,15 @@ from pysmartthings.models import HealthStatus
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.fan import (
+from menuai.components.fan import (
     ATTR_PERCENTAGE,
     ATTR_PRESET_MODE,
     DOMAIN as FAN_DOMAIN,
     SERVICE_SET_PERCENTAGE,
     SERVICE_SET_PRESET_MODE,
 )
-from homeassistant.components.smartthings import MAIN
-from homeassistant.const import (
+from menuai.components.smartthings import MAIN
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
@@ -23,8 +23,8 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import setup_integration, snapshot_smartthings_entities, trigger_health_update
 
@@ -32,16 +32,16 @@ from tests.common import MockConfigEntry
 
 
 async def test_all_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test all entities."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    snapshot_smartthings_entities(hass, entity_registry, snapshot, Platform.FAN)
+    snapshot_smartthings_entities(menuai, entity_registry, snapshot, Platform.FAN)
 
 
 @pytest.mark.parametrize("device_fixture", ["fake_fan"])
@@ -53,16 +53,16 @@ async def test_all_entities(
     ],
 )
 async def test_turn_on_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
     action: str,
     command: Command,
 ) -> None:
     """Test turning on and off."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         FAN_DOMAIN,
         action,
         {ATTR_ENTITY_ID: "fan.fake_fan"},
@@ -78,14 +78,14 @@ async def test_turn_on_off(
 
 @pytest.mark.parametrize("device_fixture", ["fake_fan"])
 async def test_set_percentage(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test setting the speed percentage of the fan."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         FAN_DOMAIN,
         SERVICE_SET_PERCENTAGE,
         {ATTR_ENTITY_ID: "fan.fake_fan", ATTR_PERCENTAGE: 50},
@@ -102,14 +102,14 @@ async def test_set_percentage(
 
 @pytest.mark.parametrize("device_fixture", ["fake_fan"])
 async def test_set_percentage_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test setting the speed percentage of the fan."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         FAN_DOMAIN,
         SERVICE_SET_PERCENTAGE,
         {ATTR_ENTITY_ID: "fan.fake_fan", ATTR_PERCENTAGE: 0},
@@ -125,14 +125,14 @@ async def test_set_percentage_off(
 
 @pytest.mark.parametrize("device_fixture", ["fake_fan"])
 async def test_set_percentage_on(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test setting the speed percentage of the fan."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         FAN_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "fan.fake_fan", ATTR_PERCENTAGE: 50},
@@ -149,14 +149,14 @@ async def test_set_percentage_on(
 
 @pytest.mark.parametrize("device_fixture", ["fake_fan"])
 async def test_set_preset_mode(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test setting the speed percentage of the fan."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         FAN_DOMAIN,
         SERVICE_SET_PRESET_MODE,
         {ATTR_ENTITY_ID: "fan.fake_fan", ATTR_PRESET_MODE: "turbo"},
@@ -173,34 +173,34 @@ async def test_set_preset_mode(
 
 @pytest.mark.parametrize("device_fixture", ["fake_fan"])
 async def test_availability(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test availability."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    assert hass.states.get("fan.fake_fan").state == STATE_OFF
-
-    await trigger_health_update(
-        hass, devices, "f1af21a2-d5a1-437c-b10a-b34a87394b71", HealthStatus.OFFLINE
-    )
-
-    assert hass.states.get("fan.fake_fan").state == STATE_UNAVAILABLE
+    assert menuai.states.get("fan.fake_fan").state == STATE_OFF
 
     await trigger_health_update(
-        hass, devices, "f1af21a2-d5a1-437c-b10a-b34a87394b71", HealthStatus.ONLINE
+        menuai, devices, "f1af21a2-d5a1-437c-b10a-b34a87394b71", HealthStatus.OFFLINE
     )
 
-    assert hass.states.get("fan.fake_fan").state == STATE_OFF
+    assert menuai.states.get("fan.fake_fan").state == STATE_UNAVAILABLE
+
+    await trigger_health_update(
+        menuai, devices, "f1af21a2-d5a1-437c-b10a-b34a87394b71", HealthStatus.ONLINE
+    )
+
+    assert menuai.states.get("fan.fake_fan").state == STATE_OFF
 
 
 @pytest.mark.parametrize("device_fixture", ["fake_fan"])
 async def test_availability_at_start(
-    hass: HomeAssistant,
+    menuai: menuai,
     unavailable_device: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test unavailable at boot."""
-    await setup_integration(hass, mock_config_entry)
-    assert hass.states.get("fan.fake_fan").state == STATE_UNAVAILABLE
+    await setup_integration(menuai, mock_config_entry)
+    assert menuai.states.get("fan.fake_fan").state == STATE_UNAVAILABLE

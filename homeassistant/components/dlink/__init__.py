@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from pyW215.pyW215 import SmartPlug
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
 
 from .const import CONF_USE_LEGACY_PROTOCOL
 from .data import SmartPlugData
@@ -17,9 +17,9 @@ type DLinkConfigEntry = ConfigEntry[SmartPlugData]
 PLATFORMS = [Platform.SWITCH]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: DLinkConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: DLinkConfigEntry) -> bool:
     """Set up D-Link Power Plug from a config entry."""
-    smartplug = await hass.async_add_executor_job(
+    smartplug = await menuai.async_add_executor_job(
         SmartPlug,
         entry.data[CONF_HOST],
         entry.data[CONF_PASSWORD],
@@ -30,11 +30,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: DLinkConfigEntry) -> boo
         raise ConfigEntryNotReady("Cannot connect/authenticate")
 
     entry.runtime_data = SmartPlugData(smartplug)
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: DLinkConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: DLinkConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

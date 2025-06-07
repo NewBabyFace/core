@@ -3,7 +3,7 @@
 import lakeside
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_ACCESS_TOKEN,
     CONF_ADDRESS,
     CONF_DEVICES,
@@ -13,9 +13,9 @@ from homeassistant.const import (
     CONF_USERNAME,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, discovery
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, discovery
+from menuai.helpers.typing import ConfigType
 
 DOMAIN = "eufy"
 
@@ -54,7 +54,7 @@ PLATFORMS = {
 }
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up EufyHome devices."""
 
     if CONF_USERNAME in config[DOMAIN] and CONF_PASSWORD in config[DOMAIN]:
@@ -65,7 +65,7 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
             kind = device["type"]
             if kind not in PLATFORMS:
                 continue
-            discovery.load_platform(hass, PLATFORMS[kind], DOMAIN, device, config)
+            discovery.load_platform(menuai, PLATFORMS[kind], DOMAIN, device, config)
 
     for device_info in config[DOMAIN][CONF_DEVICES]:
         kind = device_info["type"]
@@ -76,6 +76,6 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
         device["code"] = device_info["access_token"]
         device["type"] = device_info["type"]
         device["name"] = device_info["name"]
-        discovery.load_platform(hass, PLATFORMS[kind], DOMAIN, device, config)
+        discovery.load_platform(menuai, PLATFORMS[kind], DOMAIN, device, config)
 
     return True

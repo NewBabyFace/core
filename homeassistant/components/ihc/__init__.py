@@ -5,10 +5,10 @@ import logging
 from ihcsdk.ihccontroller import IHCController
 import voluptuous as vol
 
-from homeassistant.const import CONF_PASSWORD, CONF_URL, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import CONF_PASSWORD, CONF_URL, CONF_USERNAME
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType
 
 from .auto_setup import autosetup_ihc_products
 from .const import (
@@ -29,17 +29,17 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the IHC integration."""
     conf = config[DOMAIN]
     for index, controller_conf in enumerate(conf):
-        if not ihc_setup(hass, config, controller_conf, index):
+        if not ihc_setup(menuai, config, controller_conf, index):
             return False
     return True
 
 
 def ihc_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     controller_conf: ConfigType,
     controller_index: int,
@@ -55,18 +55,18 @@ def ihc_setup(
         return False
     controller_id: str = ihc_controller.client.get_system_info()["serial_number"]
     # Store controller configuration
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][controller_id] = {
+    menuai.data.setdefault(DOMAIN, {})
+    menuai.data[DOMAIN][controller_id] = {
         IHC_CONTROLLER: ihc_controller,
         CONF_INFO: controller_conf[CONF_INFO],
         IHC_CONTROLLER_INDEX: controller_index,
     }
     if controller_conf[CONF_AUTOSETUP] and not autosetup_ihc_products(
-        hass, config, ihc_controller, controller_id
+        menuai, config, ihc_controller, controller_id
     ):
         return False
-    get_manual_configuration(hass, config, controller_conf, controller_id)
+    get_manual_configuration(menuai, config, controller_conf, controller_id)
     # We only want to register the service functions once for the first controller
     if controller_index == 0:
-        setup_service_functions(hass)
+        setup_service_functions(menuai)
     return True

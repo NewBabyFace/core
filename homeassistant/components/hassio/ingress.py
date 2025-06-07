@@ -1,4 +1,4 @@
-"""Hass.io Add-on ingress service."""
+"""menuai.io Add-on ingress service."""
 
 from __future__ import annotations
 
@@ -15,13 +15,13 @@ from aiohttp.web_exceptions import HTTPBadGateway, HTTPBadRequest
 from multidict import CIMultiDict
 from yarl import URL
 
-from homeassistant.components.http import HomeAssistantView
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.typing import UNDEFINED
-from homeassistant.util.async_ import create_eager_task
+from menuai.components.http import menuaiView
+from menuai.core import menuai, callback
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.typing import UNDEFINED
+from menuai.util.async_ import create_eager_task
 
-from .const import X_HASS_SOURCE, X_INGRESS_PATH
+from .const import X_menuai_SOURCE, X_INGRESS_PATH
 from .http import should_compress
 
 _LOGGER = logging.getLogger(__name__)
@@ -50,23 +50,23 @@ DISABLED_TIMEOUT = ClientTimeout(total=None)
 
 
 @callback
-def async_setup_ingress_view(hass: HomeAssistant, host: str) -> None:
+def async_setup_ingress_view(menuai: menuai, host: str) -> None:
     """Auth setup."""
-    websession = async_get_clientsession(hass)
+    websession = async_get_clientsession(menuai)
 
-    hassio_ingress = HassIOIngress(host, websession)
-    hass.http.register_view(hassio_ingress)
+    menuaiio_ingress = menuaiIOIngress(host, websession)
+    menuai.http.register_view(menuaiio_ingress)
 
 
-class HassIOIngress(HomeAssistantView):
-    """Hass.io view to handle base part."""
+class menuaiIOIngress(menuaiView):
+    """menuai.io view to handle base part."""
 
-    name = "api:hassio:ingress"
-    url = "/api/hassio_ingress/{token}/{path:.*}"
+    name = "api:menuaiio:ingress"
+    url = "/api/menuaiio_ingress/{token}/{path:.*}"
     requires_auth = False
 
     def __init__(self, host: str, websession: aiohttp.ClientSession) -> None:
-        """Initialize a Hass.io ingress view."""
+        """Initialize a menuai.io ingress view."""
         self._host = host
         self._websession = websession
         self._url = URL(f"http://{host}")
@@ -89,7 +89,7 @@ class HassIOIngress(HomeAssistantView):
     async def _handle(
         self, request: web.Request, token: str, path: str
     ) -> web.Response | web.StreamResponse | web.WebSocketResponse:
-        """Route data to Hass.io ingress service."""
+        """Route data to menuai.io ingress service."""
         try:
             # Websocket
             if _is_websocket(request):
@@ -243,8 +243,8 @@ def _init_header(request: web.Request, token: str) -> CIMultiDict | dict[str, st
         if name not in INIT_HEADERS_FILTER
     }
     # Ingress information
-    headers[X_HASS_SOURCE] = "core.ingress"
-    headers[X_INGRESS_PATH] = f"/api/hassio_ingress/{token}"
+    headers[X_menuai_SOURCE] = "core.ingress"
+    headers[X_INGRESS_PATH] = f"/api/menuaiio_ingress/{token}"
 
     # Set X-Forwarded-For
     forward_for = request.headers.get(hdrs.X_FORWARDED_FOR)

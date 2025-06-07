@@ -8,15 +8,15 @@ from aiorecollect.client import Client
 from aiorecollect.errors import RecollectError
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_FRIENDLY_NAME
-from homeassistant.core import callback
-from homeassistant.helpers import aiohttp_client
+from menuai.const import CONF_FRIENDLY_NAME
+from menuai.core import callback
+from menuai.helpers import aiohttp_client
 
 from .const import CONF_PLACE_ID, CONF_SERVICE_ID, DOMAIN, LOGGER
 
@@ -52,7 +52,7 @@ class RecollectWasteConfigFlow(ConfigFlow, domain=DOMAIN):
         await self.async_set_unique_id(unique_id)
         self._abort_if_unique_id_configured()
 
-        session = aiohttp_client.async_get_clientsession(self.hass)
+        session = aiohttp_client.async_get_clientsession(self.menuai)
         client = Client(
             user_input[CONF_PLACE_ID], user_input[CONF_SERVICE_ID], session=session
         )

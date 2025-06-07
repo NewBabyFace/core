@@ -6,21 +6,21 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components.axis import config_flow
-from homeassistant.components.axis.const import (
+from menuai.components.axis import config_flow
+from menuai.components.axis.const import (
     CONF_STREAM_PROFILE,
     CONF_VIDEO_SOURCE,
     DEFAULT_STREAM_PROFILE,
     DEFAULT_VIDEO_SOURCE,
     DOMAIN,
 )
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_DHCP,
     SOURCE_SSDP,
     SOURCE_USER,
     SOURCE_ZEROCONF,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_MODEL,
     CONF_NAME,
@@ -29,12 +29,12 @@ from homeassistant.const import (
     CONF_PROTOCOL,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import BaseServiceInfo, FlowResultType
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
-from homeassistant.helpers.service_info.ssdp import SsdpServiceInfo
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.core import menuai
+from menuai.data_entry_flow import BaseServiceInfo, FlowResultType
+from menuai.helpers import device_registry as dr
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.helpers.service_info.ssdp import SsdpServiceInfo
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import DEFAULT_HOST, MAC, MODEL, NAME
 
@@ -44,16 +44,16 @@ DHCP_FORMATTED_MAC = dr.format_mac(MAC).replace(":", "")
 
 
 @pytest.mark.usefixtures("mock_default_requests")
-async def test_flow_manual_configuration(hass: HomeAssistant) -> None:
+async def test_flow_manual_configuration(menuai: menuai) -> None:
     """Test that config flow works."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_PROTOCOL: "http",
@@ -78,14 +78,14 @@ async def test_flow_manual_configuration(hass: HomeAssistant) -> None:
 
 
 async def test_manual_configuration_duplicate_fails(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry_setup: MockConfigEntry,
     mock_requests: Callable[[str], None],
 ) -> None:
     """Test that config flow fails on already configured device."""
     assert config_entry_setup.data[CONF_HOST] == "1.2.3.4"
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
@@ -93,7 +93,7 @@ async def test_manual_configuration_duplicate_fails(
     assert result["step_id"] == "user"
 
     mock_requests("2.3.4.5")
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_PROTOCOL: "http",
@@ -103,7 +103,7 @@ async def test_manual_configuration_duplicate_fails(
             CONF_PORT: 80,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
@@ -118,10 +118,10 @@ async def test_manual_configuration_duplicate_fails(
     ],
 )
 async def test_flow_fails_on_api(
-    hass: HomeAssistant, exc: Exception, error: str
+    menuai: menuai, exc: Exception, error: str
 ) -> None:
     """Test that config flow fails on faulty credentials."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
@@ -129,10 +129,10 @@ async def test_flow_fails_on_api(
     assert result["step_id"] == "user"
 
     with patch(
-        "homeassistant.components.axis.config_flow.get_axis_api",
+        "menuai.components.axis.config_flow.get_axis_api",
         side_effect=exc,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={
                 CONF_PROTOCOL: "http",
@@ -148,28 +148,28 @@ async def test_flow_fails_on_api(
 
 @pytest.mark.usefixtures("mock_default_requests")
 async def test_flow_create_entry_multiple_existing_entries_of_same_model(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test that create entry can generate a name with other entries."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         data={CONF_NAME: "M1065-LW 0", CONF_MODEL: "M1065-LW"},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     entry2 = MockConfigEntry(
         domain=DOMAIN,
         data={CONF_NAME: "M1065-LW 1", CONF_MODEL: "M1065-LW"},
     )
-    entry2.add_to_hass(hass)
+    entry2.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_PROTOCOL: "http",
@@ -196,7 +196,7 @@ async def test_flow_create_entry_multiple_existing_entries_of_same_model(
 
 
 async def test_reauth_flow_update_configuration(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry_setup: MockConfigEntry,
     mock_requests: Callable[[str], None],
 ) -> None:
@@ -205,12 +205,12 @@ async def test_reauth_flow_update_configuration(
     assert config_entry_setup.data[CONF_USERNAME] == "root"
     assert config_entry_setup.data[CONF_PASSWORD] == "pass"
 
-    result = await config_entry_setup.start_reauth_flow(hass)
+    result = await config_entry_setup.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
     mock_requests("2.3.4.5")
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_PROTOCOL: "https",
@@ -220,7 +220,7 @@ async def test_reauth_flow_update_configuration(
             CONF_PORT: 443,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"
@@ -232,7 +232,7 @@ async def test_reauth_flow_update_configuration(
 
 
 async def test_reconfiguration_flow_update_configuration(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry_setup: MockConfigEntry,
     mock_requests: Callable[[str], None],
 ) -> None:
@@ -241,20 +241,20 @@ async def test_reconfiguration_flow_update_configuration(
     assert config_entry_setup.data[CONF_USERNAME] == "root"
     assert config_entry_setup.data[CONF_PASSWORD] == "pass"
 
-    result = await config_entry_setup.start_reconfigure_flow(hass)
+    result = await config_entry_setup.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
     mock_requests("2.3.4.5")
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_HOST: "2.3.4.5",
             CONF_USERNAME: "user",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reconfigure_successful"
@@ -331,23 +331,23 @@ async def test_reconfiguration_flow_update_configuration(
 )
 @pytest.mark.usefixtures("mock_default_requests")
 async def test_discovery_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     source: str,
     discovery_info: BaseServiceInfo,
 ) -> None:
     """Test the different discovery flows for new devices work."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, data=discovery_info, context={"source": source}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
     assert flows[0].get("context", {}).get("configuration_url") == "http://1.2.3.4:80"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_PROTOCOL: "http",
@@ -411,7 +411,7 @@ async def test_discovery_flow(
     ],
 )
 async def test_discovered_device_already_configured(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry_setup: MockConfigEntry,
     source: str,
     discovery_info: BaseServiceInfo,
@@ -419,7 +419,7 @@ async def test_discovered_device_already_configured(
     """Test that discovery doesn't setup already configured devices."""
     assert config_entry_setup.data[CONF_HOST] == DEFAULT_HOST
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, data=discovery_info, context={"source": source}
     )
 
@@ -469,7 +469,7 @@ async def test_discovered_device_already_configured(
     ],
 )
 async def test_discovery_flow_updated_configuration(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry_setup: MockConfigEntry,
     mock_requests: Callable[[str], None],
     source: str,
@@ -487,10 +487,10 @@ async def test_discovery_flow_updated_configuration(
     }
 
     mock_requests("2.3.4.5")
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, data=discovery_info, context={"source": source}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
@@ -542,10 +542,10 @@ async def test_discovery_flow_updated_configuration(
     ],
 )
 async def test_discovery_flow_ignore_non_axis_device(
-    hass: HomeAssistant, source: str, discovery_info: BaseServiceInfo
+    menuai: menuai, source: str, discovery_info: BaseServiceInfo
 ) -> None:
     """Test that discovery flow ignores devices with non Axis OUI."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, data=discovery_info, context={"source": source}
     )
 
@@ -591,10 +591,10 @@ async def test_discovery_flow_ignore_non_axis_device(
     ],
 )
 async def test_discovery_flow_ignore_link_local_address(
-    hass: HomeAssistant, source: str, discovery_info: BaseServiceInfo
+    menuai: menuai, source: str, discovery_info: BaseServiceInfo
 ) -> None:
     """Test that discovery flow ignores devices with link local addresses."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, data=discovery_info, context={"source": source}
     )
 
@@ -603,13 +603,13 @@ async def test_discovery_flow_ignore_link_local_address(
 
 
 async def test_option_flow(
-    hass: HomeAssistant, config_entry_setup: MockConfigEntry
+    menuai: menuai, config_entry_setup: MockConfigEntry
 ) -> None:
     """Test config flow options."""
     assert CONF_STREAM_PROFILE not in config_entry_setup.options
     assert CONF_VIDEO_SOURCE not in config_entry_setup.options
 
-    result = await hass.config_entries.options.async_init(config_entry_setup.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry_setup.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "configure_stream"
@@ -623,7 +623,7 @@ async def test_option_flow(
         1,
     }
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={CONF_STREAM_PROFILE: "profile_1", CONF_VIDEO_SOURCE: 1},
     )

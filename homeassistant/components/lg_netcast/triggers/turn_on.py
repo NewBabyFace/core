@@ -2,7 +2,7 @@
 
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     ATTR_DEVICE_ID,
     ATTR_ENTITY_ID,
     CONF_DEVICE_ID,
@@ -10,14 +10,14 @@ from homeassistant.const import (
     CONF_PLATFORM,
     CONF_TYPE,
 )
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.trigger import (
+from menuai.core import CALLBACK_TYPE, menuai, callback
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.trigger import (
     PluggableAction,
     TriggerActionType,
     TriggerInfo,
 )
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers.typing import ConfigType
 
 from ..const import DOMAIN
 from ..helpers import async_get_device_entry_by_device_id
@@ -48,7 +48,7 @@ def async_get_turn_on_trigger(device_id: str) -> dict[str, str]:
 
 
 async def async_attach_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     action: TriggerActionType,
     trigger_info: TriggerInfo,
@@ -61,7 +61,7 @@ async def async_attach_trigger(
         device_ids.update(config.get(ATTR_DEVICE_ID, []))
 
     if ATTR_ENTITY_ID in config:
-        ent_reg = er.async_get(hass)
+        ent_reg = er.async_get(menuai)
 
         def _get_device_id_from_entity_id(entity_id):
             entity_entry = ent_reg.async_get(entity_id)
@@ -87,7 +87,7 @@ async def async_attach_trigger(
     unsubs = []
 
     for device_id in device_ids:
-        device = async_get_device_entry_by_device_id(hass, device_id)
+        device = async_get_device_entry_by_device_id(menuai, device_id)
         device_name = device.name_by_user or device.name
 
         variables = {
@@ -101,7 +101,7 @@ async def async_attach_trigger(
 
         unsubs.append(
             PluggableAction.async_attach_trigger(
-                hass, turn_on_trigger, action, {"trigger": variables}
+                menuai, turn_on_trigger, action, {"trigger": variables}
             )
         )
 

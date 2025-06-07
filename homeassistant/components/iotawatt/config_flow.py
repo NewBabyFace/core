@@ -8,23 +8,23 @@ from typing import Any
 from iotawattpy.iotawatt import Iotawatt
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import httpx_client
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import httpx_client
 
 from .const import CONNECTION_ERRORS, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
 
-async def validate_input(hass: HomeAssistant, data: dict[str, str]) -> dict[str, str]:
+async def validate_input(menuai: menuai, data: dict[str, str]) -> dict[str, str]:
     """Validate the user input allows us to connect."""
     iotawatt = Iotawatt(
         "",
         data[CONF_HOST],
-        httpx_client.get_async_client(hass),
+        httpx_client.get_async_client(menuai),
         data.get(CONF_USERNAME),
         data.get(CONF_PASSWORD),
     )
@@ -66,7 +66,7 @@ class IOTaWattConfigFlow(ConfigFlow, domain=DOMAIN):
         if not user_input:
             return self.async_show_form(step_id="user", data_schema=schema)
 
-        if not (errors := await validate_input(self.hass, user_input)):
+        if not (errors := await validate_input(self.menuai, user_input)):
             return self.async_create_entry(title=user_input[CONF_HOST], data=user_input)
 
         if errors == {"base": "invalid_auth"}:
@@ -97,7 +97,7 @@ class IOTaWattConfigFlow(ConfigFlow, domain=DOMAIN):
 
         data = {**self._data, **user_input}
 
-        if errors := await validate_input(self.hass, data):
+        if errors := await validate_input(self.menuai, data):
             return self.async_show_form(
                 step_id="auth", data_schema=data_schema, errors=errors
             )
@@ -105,9 +105,9 @@ class IOTaWattConfigFlow(ConfigFlow, domain=DOMAIN):
         return self.async_create_entry(title=data[CONF_HOST], data=data)
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(menuaiError):
     """Error to indicate there is invalid auth."""

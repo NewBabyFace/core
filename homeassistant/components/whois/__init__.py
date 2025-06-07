@@ -10,21 +10,21 @@ from whois.exceptions import (
     WhoisCommandFailed,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_DOMAIN
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN, LOGGER, PLATFORMS, SCAN_INTERVAL
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up from a config entry."""
 
     async def _async_query_domain() -> Domain | None:
         """Query WHOIS for domain information."""
         try:
-            return await hass.async_add_executor_job(
+            return await menuai.async_add_executor_job(
                 whois_query, entry.data[CONF_DOMAIN]
             )
         except UnknownTld as ex:
@@ -33,7 +33,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             raise UpdateFailed("An error occurred during WHOIS lookup") from ex
 
     coordinator: DataUpdateCoordinator[Domain | None] = DataUpdateCoordinator(
-        hass,
+        menuai,
         LOGGER,
         config_entry=entry,
         name=f"{DOMAIN}_APK",
@@ -41,16 +41,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         update_method=_async_query_domain,
     )
     await coordinator.async_config_entry_first_refresh()
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
+    menuai.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        del hass.data[DOMAIN][entry.entry_id]
+        del menuai.data[DOMAIN][entry.entry_id]
     return unload_ok

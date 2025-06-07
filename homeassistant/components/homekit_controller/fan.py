@@ -12,17 +12,17 @@ from aiohomekit.model.characteristics.const import (
 from aiohomekit.model.services import Service, ServicesTypes
 from propcache.api import cached_property
 
-from homeassistant.components.fan import (
+from menuai.components.fan import (
     DIRECTION_FORWARD,
     DIRECTION_REVERSE,
     FanEntity,
     FanEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util.percentage import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util.percentage import (
     percentage_to_ranged_value,
     ranged_value_to_percentage,
 )
@@ -32,7 +32,7 @@ from .connection import HKDevice
 from .entity import HomeKitEntity
 
 # 0 is clockwise, 1 is counter-clockwise. The match to forward and reverse is so that
-# its consistent with homeassistant.components.homekit.
+# its consistent with menuai.components.homekit.
 DIRECTION_TO_HK = {
     DIRECTION_REVERSE: 1,
     DIRECTION_FORWARD: 0,
@@ -265,13 +265,13 @@ ENTITY_TYPES = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Homekit fans."""
     hkid: str = config_entry.data["AccessoryPairingID"]
-    conn: HKDevice = hass.data[KNOWN_DEVICES][hkid]
+    conn: HKDevice = menuai.data[KNOWN_DEVICES][hkid]
 
     @callback
     def async_add_service(service: Service) -> bool:

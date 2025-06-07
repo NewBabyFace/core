@@ -3,17 +3,17 @@
 from kasa import Feature
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.number import (
+from menuai.components.number import (
     ATTR_VALUE,
     DOMAIN as NUMBER_DOMAIN,
     SERVICE_SET_VALUE,
 )
-from homeassistant.components.tplink.const import DOMAIN
-from homeassistant.components.tplink.entity import EXCLUDED_FEATURES
-from homeassistant.components.tplink.number import NUMBER_DESCRIPTIONS
-from homeassistant.const import ATTR_ENTITY_ID, CONF_HOST, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.components.tplink.const import DOMAIN
+from menuai.components.tplink.entity import EXCLUDED_FEATURES
+from menuai.components.tplink.number import NUMBER_DESCRIPTIONS
+from menuai.const import ATTR_ENTITY_ID, CONF_HOST, Platform
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from . import (
     _mocked_device,
@@ -30,7 +30,7 @@ from tests.common import MockConfigEntry
 
 
 async def test_states(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
@@ -41,21 +41,21 @@ async def test_states(
     features.update(EXCLUDED_FEATURES)
     device = _mocked_device(alias="my_device", features=features)
 
-    await setup_platform_for_device(hass, mock_config_entry, Platform.NUMBER, device)
+    await setup_platform_for_device(menuai, mock_config_entry, Platform.NUMBER, device)
     await snapshot_platform(
-        hass, entity_registry, device_registry, snapshot, mock_config_entry.entry_id
+        menuai, entity_registry, device_registry, snapshot, mock_config_entry.entry_id
     )
 
     for excluded in EXCLUDED_FEATURES:
-        assert hass.states.get(f"sensor.my_device_{excluded}") is None
+        assert menuai.states.get(f"sensor.my_device_{excluded}") is None
 
 
-async def test_number(hass: HomeAssistant, entity_registry: er.EntityRegistry) -> None:
+async def test_number(menuai: menuai, entity_registry: er.EntityRegistry) -> None:
     """Test number unique ids."""
     already_migrated_config_entry = MockConfigEntry(
         domain=DOMAIN, data={CONF_HOST: "127.0.0.1"}, unique_id=MAC_ADDRESS
     )
-    already_migrated_config_entry.add_to_hass(hass)
+    already_migrated_config_entry.add_to_menuai(menuai)
     new_feature = _mocked_feature(
         "temperature_offset",
         value=10,
@@ -67,8 +67,8 @@ async def test_number(hass: HomeAssistant, entity_registry: er.EntityRegistry) -
     )
     plug = _mocked_device(alias="my_plug", features=[new_feature])
     with _patch_discovery(device=plug), _patch_connect(device=plug):
-        await hass.config_entries.async_setup(already_migrated_config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(already_migrated_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     entity_id = "number.my_plug_temperature_offset"
     entity = entity_registry.async_get(entity_id)
@@ -77,7 +77,7 @@ async def test_number(hass: HomeAssistant, entity_registry: er.EntityRegistry) -
 
 
 async def test_number_children(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
 ) -> None:
@@ -85,7 +85,7 @@ async def test_number_children(
     already_migrated_config_entry = MockConfigEntry(
         domain=DOMAIN, data={CONF_HOST: "127.0.0.1"}, unique_id=MAC_ADDRESS
     )
-    already_migrated_config_entry.add_to_hass(hass)
+    already_migrated_config_entry.add_to_menuai(menuai)
     new_feature = _mocked_feature(
         "temperature_offset",
         value=10,
@@ -101,8 +101,8 @@ async def test_number_children(
         children=_mocked_strip_children(features=[new_feature]),
     )
     with _patch_discovery(device=plug), _patch_connect(device=plug):
-        await hass.config_entries.async_setup(already_migrated_config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(already_migrated_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     entity_id = "number.my_plug_temperature_offset"
     entity = entity_registry.async_get(entity_id)
@@ -121,13 +121,13 @@ async def test_number_children(
 
 
 async def test_number_set(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test a number entity limits and setting values."""
     already_migrated_config_entry = MockConfigEntry(
         domain=DOMAIN, data={CONF_HOST: "127.0.0.1"}, unique_id=MAC_ADDRESS
     )
-    already_migrated_config_entry.add_to_hass(hass)
+    already_migrated_config_entry.add_to_menuai(menuai)
     new_feature = _mocked_feature(
         "temperature_offset",
         value=10,
@@ -139,19 +139,19 @@ async def test_number_set(
     )
     plug = _mocked_device(alias="my_plug", features=[new_feature])
     with _patch_discovery(device=plug), _patch_connect(device=plug):
-        await hass.config_entries.async_setup(already_migrated_config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(already_migrated_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     entity_id = "number.my_plug_temperature_offset"
     entity = entity_registry.async_get(entity_id)
     assert entity
     assert entity.unique_id == f"{DEVICE_ID}_temperature_offset"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state is not None
     assert state.state == "10"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         NUMBER_DOMAIN,
         SERVICE_SET_VALUE,
         {ATTR_ENTITY_ID: entity_id, ATTR_VALUE: 50},

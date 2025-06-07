@@ -3,28 +3,28 @@
 import asyncio
 from unittest.mock import patch
 
-from homeassistant import data_entry_flow
-from homeassistant.auth import auth_manager_from_config, models as auth_models
-from homeassistant.auth.mfa_modules import auth_mfa_module_from_config
-from homeassistant.core import HomeAssistant
+from menuai import data_entry_flow
+from menuai.auth import auth_manager_from_config, models as auth_models
+from menuai.auth.mfa_modules import auth_mfa_module_from_config
+from menuai.core import menuai
 
 from tests.common import MockUser
 
 MOCK_CODE = "123456"
 
 
-async def test_validating_mfa(hass: HomeAssistant) -> None:
+async def test_validating_mfa(menuai: menuai) -> None:
     """Test validating mfa code."""
-    totp_auth_module = await auth_mfa_module_from_config(hass, {"type": "totp"})
+    totp_auth_module = await auth_mfa_module_from_config(menuai, {"type": "totp"})
     await totp_auth_module.async_setup_user("test-user", {})
 
     with patch("pyotp.TOTP.verify", return_value=True):
         assert await totp_auth_module.async_validate("test-user", {"code": MOCK_CODE})
 
 
-async def test_validating_mfa_invalid_code(hass: HomeAssistant) -> None:
+async def test_validating_mfa_invalid_code(menuai: menuai) -> None:
     """Test validating an invalid mfa code."""
-    totp_auth_module = await auth_mfa_module_from_config(hass, {"type": "totp"})
+    totp_auth_module = await auth_mfa_module_from_config(menuai, {"type": "totp"})
     await totp_auth_module.async_setup_user("test-user", {})
 
     with patch("pyotp.TOTP.verify", return_value=False):
@@ -34,9 +34,9 @@ async def test_validating_mfa_invalid_code(hass: HomeAssistant) -> None:
         )
 
 
-async def test_validating_mfa_invalid_user(hass: HomeAssistant) -> None:
+async def test_validating_mfa_invalid_user(menuai: menuai) -> None:
     """Test validating an mfa code with invalid user."""
-    totp_auth_module = await auth_mfa_module_from_config(hass, {"type": "totp"})
+    totp_auth_module = await auth_mfa_module_from_config(menuai, {"type": "totp"})
     await totp_auth_module.async_setup_user("test-user", {})
 
     assert (
@@ -45,9 +45,9 @@ async def test_validating_mfa_invalid_user(hass: HomeAssistant) -> None:
     )
 
 
-async def test_setup_depose_user(hass: HomeAssistant) -> None:
+async def test_setup_depose_user(menuai: menuai) -> None:
     """Test despose user."""
-    totp_auth_module = await auth_mfa_module_from_config(hass, {"type": "totp"})
+    totp_auth_module = await auth_mfa_module_from_config(menuai, {"type": "totp"})
     result = await totp_auth_module.async_setup_user("test-user", {})
     assert len(totp_auth_module._users) == 1
     result2 = await totp_auth_module.async_setup_user("test-user", {})
@@ -64,10 +64,10 @@ async def test_setup_depose_user(hass: HomeAssistant) -> None:
     assert len(totp_auth_module._users) == 1
 
 
-async def test_login_flow_validates_mfa(hass: HomeAssistant) -> None:
+async def test_login_flow_validates_mfa(menuai: menuai) -> None:
     """Test login flow with mfa enabled."""
-    hass.auth = await auth_manager_from_config(
-        hass,
+    menuai.auth = await auth_manager_from_config(
+        menuai,
         [
             {
                 "type": "insecure_example",
@@ -78,8 +78,8 @@ async def test_login_flow_validates_mfa(hass: HomeAssistant) -> None:
     )
     user = MockUser(
         id="mock-user", is_owner=False, is_active=False, name="Paulus"
-    ).add_to_auth_manager(hass.auth)
-    await hass.auth.async_link_user(
+    ).add_to_auth_manager(menuai.auth)
+    await menuai.auth.async_link_user(
         user,
         auth_models.Credentials(
             id="mock-id",
@@ -90,26 +90,26 @@ async def test_login_flow_validates_mfa(hass: HomeAssistant) -> None:
         ),
     )
 
-    await hass.auth.async_enable_user_mfa(user, "totp", {})
+    await menuai.auth.async_enable_user_mfa(user, "totp", {})
 
-    provider = hass.auth.auth_providers[0]
+    provider = menuai.auth.auth_providers[0]
 
-    result = await hass.auth.login_flow.async_init((provider.type, provider.id))
+    result = await menuai.auth.login_flow.async_init((provider.type, provider.id))
     assert result["type"] == data_entry_flow.FlowResultType.FORM
 
-    result = await hass.auth.login_flow.async_configure(
+    result = await menuai.auth.login_flow.async_configure(
         result["flow_id"], {"username": "incorrect-user", "password": "test-pass"}
     )
     assert result["type"] == data_entry_flow.FlowResultType.FORM
     assert result["errors"]["base"] == "invalid_auth"
 
-    result = await hass.auth.login_flow.async_configure(
+    result = await menuai.auth.login_flow.async_configure(
         result["flow_id"], {"username": "test-user", "password": "incorrect-pass"}
     )
     assert result["type"] == data_entry_flow.FlowResultType.FORM
     assert result["errors"]["base"] == "invalid_auth"
 
-    result = await hass.auth.login_flow.async_configure(
+    result = await menuai.auth.login_flow.async_configure(
         result["flow_id"], {"username": "test-user", "password": "test-pass"}
     )
     assert result["type"] == data_entry_flow.FlowResultType.FORM
@@ -117,7 +117,7 @@ async def test_login_flow_validates_mfa(hass: HomeAssistant) -> None:
     assert result["data_schema"].schema.get("code") is str
 
     with patch("pyotp.TOTP.verify", return_value=False):
-        result = await hass.auth.login_flow.async_configure(
+        result = await menuai.auth.login_flow.async_configure(
             result["flow_id"], {"code": "invalid-code"}
         )
         assert result["type"] == data_entry_flow.FlowResultType.FORM
@@ -125,25 +125,25 @@ async def test_login_flow_validates_mfa(hass: HomeAssistant) -> None:
         assert result["errors"]["base"] == "invalid_code"
 
     with patch("pyotp.TOTP.verify", return_value=True):
-        result = await hass.auth.login_flow.async_configure(
+        result = await menuai.auth.login_flow.async_configure(
             result["flow_id"], {"code": MOCK_CODE}
         )
         assert result["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
         assert result["data"].id == "mock-id"
 
 
-async def test_race_condition_in_data_loading(hass: HomeAssistant) -> None:
+async def test_race_condition_in_data_loading(menuai: menuai) -> None:
     """Test race condition in the data loading."""
     counter = 0
 
     async def mock_load(_):
-        """Mock of homeassistant.helpers.storage.Store.async_load."""
+        """Mock of menuai.helpers.storage.Store.async_load."""
         nonlocal counter
         counter += 1
         await asyncio.sleep(0)
 
-    totp_auth_module = await auth_mfa_module_from_config(hass, {"type": "totp"})
-    with patch("homeassistant.helpers.storage.Store.async_load", new=mock_load):
+    totp_auth_module = await auth_mfa_module_from_config(menuai, {"type": "totp"})
+    with patch("menuai.helpers.storage.Store.async_load", new=mock_load):
         task1 = totp_auth_module.async_validate("user", {"code": "value"})
         task2 = totp_auth_module.async_validate("user", {"code": "value"})
         results = await asyncio.gather(task1, task2, return_exceptions=True)

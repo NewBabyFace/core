@@ -7,23 +7,23 @@ from typing import Any
 
 import subarulink.const as sc
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import PERCENTAGE, UnitOfLength, UnitOfPressure, UnitOfVolume
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import PERCENTAGE, UnitOfLength, UnitOfPressure, UnitOfVolume
+from menuai.core import menuai, callback
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
 )
-from homeassistant.util.unit_conversion import DistanceConverter, VolumeConverter
-from homeassistant.util.unit_system import METRIC_SYSTEM
+from menuai.util.unit_conversion import DistanceConverter, VolumeConverter
+from menuai.util.unit_system import METRIC_SYSTEM
 
 from . import get_device_info
 from .const import (
@@ -139,16 +139,16 @@ EV_SENSORS = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Subaru sensors by config_entry."""
-    entry = hass.data[DOMAIN][config_entry.entry_id]
+    entry = menuai.data[DOMAIN][config_entry.entry_id]
     coordinator = entry[ENTRY_COORDINATOR]
     vehicle_info = entry[ENTRY_VEHICLES]
     entities = []
-    await _async_migrate_entries(hass, config_entry)
+    await _async_migrate_entries(menuai, config_entry)
     for info in vehicle_info.values():
         entities.extend(create_vehicle_sensors(info, coordinator))
     async_add_entities(entities)
@@ -209,7 +209,7 @@ class SubaruSensor(
 
         if (
             self.entity_description.key == sc.AVG_FUEL_CONSUMPTION
-            and self.hass.config.units == METRIC_SYSTEM
+            and self.menuai.config.units == METRIC_SYSTEM
         ):
             return round((100.0 * L_PER_GAL) / (KM_PER_MI * current_value), 1)
 
@@ -220,7 +220,7 @@ class SubaruSensor(
         """Return the unit_of_measurement of the device."""
         if (
             self.entity_description.key == sc.AVG_FUEL_CONSUMPTION
-            and self.hass.config.units == METRIC_SYSTEM
+            and self.menuai.config.units == METRIC_SYSTEM
         ):
             return FUEL_CONSUMPTION_LITERS_PER_HUNDRED_KILOMETERS
         return self.entity_description.native_unit_of_measurement
@@ -235,10 +235,10 @@ class SubaruSensor(
 
 
 async def _async_migrate_entries(
-    hass: HomeAssistant, config_entry: ConfigEntry
+    menuai: menuai, config_entry: ConfigEntry
 ) -> None:
     """Migrate sensor entries from HA<=2022.10 to use preferred unique_id."""
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
 
     replacements = {
         "ODOMETER": sc.ODOMETER,
@@ -282,4 +282,4 @@ async def _async_migrate_entries(
             "new_unique_id": new_unique_id,
         }
 
-    await er.async_migrate_entries(hass, config_entry.entry_id, update_unique_id)
+    await er.async_migrate_entries(menuai, config_entry.entry_id, update_unique_id)

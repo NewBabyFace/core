@@ -7,9 +7,9 @@ from unittest.mock import AsyncMock, patch
 from aiohttp.client_exceptions import ClientError
 import pytest
 
-from homeassistant.components.twitch.const import DOMAIN, OAUTH2_TOKEN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
+from menuai.components.twitch.const import DOMAIN, OAUTH2_TOKEN
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
 
 from . import setup_integration
 
@@ -18,24 +18,24 @@ from tests.test_util.aiohttp import AiohttpClientMocker
 
 
 async def test_setup_success(
-    hass: HomeAssistant, config_entry: MockConfigEntry, twitch_mock: AsyncMock
+    menuai: menuai, config_entry: MockConfigEntry, twitch_mock: AsyncMock
 ) -> None:
     """Test successful setup and unload."""
-    await setup_integration(hass, config_entry)
+    await setup_integration(menuai, config_entry)
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     assert entries[0].state is ConfigEntryState.LOADED
 
-    await hass.config_entries.async_unload(entries[0].entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entries[0].entry_id)
+    await menuai.async_block_till_done()
 
-    assert not hass.services.async_services().get(DOMAIN)
+    assert not menuai.services.async_services().get(DOMAIN)
 
 
 @pytest.mark.parametrize("expires_at", [time.time() - 3600], ids=["expired"])
 async def test_expired_token_refresh_success(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     config_entry: MockConfigEntry,
     twitch_mock: AsyncMock,
@@ -53,9 +53,9 @@ async def test_expired_token_refresh_success(
         },
     )
 
-    await setup_integration(hass, config_entry)
+    await setup_integration(menuai, config_entry)
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     assert entries[0].state is ConfigEntryState.LOADED
     assert entries[0].data["token"]["access_token"] == "updated-access-token"
@@ -79,7 +79,7 @@ async def test_expired_token_refresh_success(
     ids=["failure_requires_reauth", "transient_failure"],
 )
 async def test_expired_token_refresh_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     status: http.HTTPStatus,
     expected_state: ConfigEntryState,
@@ -93,30 +93,30 @@ async def test_expired_token_refresh_failure(
         OAUTH2_TOKEN,
         status=status,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    assert not await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert not await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Verify a transient failure has occurred
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert entries[0].state is expected_state
 
 
 async def test_expired_token_refresh_client_error(
-    hass: HomeAssistant, config_entry: MockConfigEntry, twitch_mock: AsyncMock
+    menuai: menuai, config_entry: MockConfigEntry, twitch_mock: AsyncMock
 ) -> None:
     """Test failure while refreshing token with a client error."""
 
     with patch(
-        "homeassistant.components.twitch.OAuth2Session.async_ensure_token_valid",
+        "menuai.components.twitch.OAuth2Session.async_ensure_token_valid",
         side_effect=ClientError,
     ):
-        config_entry.add_to_hass(hass)
+        config_entry.add_to_menuai(menuai)
 
-        assert not await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert not await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     # Verify a transient failure has occurred
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert entries[0].state is ConfigEntryState.SETUP_RETRY

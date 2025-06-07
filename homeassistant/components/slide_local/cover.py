@@ -5,10 +5,10 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from homeassistant.components.cover import ATTR_POSITION, CoverDeviceClass, CoverEntity
-from homeassistant.const import STATE_CLOSED, STATE_CLOSING, STATE_OPENING
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.cover import ATTR_POSITION, CoverDeviceClass, CoverEntity
+from menuai.const import STATE_CLOSED, STATE_CLOSING, STATE_OPENING
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import CONF_INVERT_POSITION, DEFAULT_OFFSET
 from .coordinator import SlideConfigEntry, SlideCoordinator
@@ -20,7 +20,7 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: SlideConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

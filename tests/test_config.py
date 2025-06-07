@@ -15,16 +15,16 @@ from syrupy.assertion import SnapshotAssertion
 import voluptuous as vol
 import yaml
 
-from homeassistant import config as config_util, loader
-from homeassistant.const import CONF_PACKAGES, __version__
-from homeassistant.core import DOMAIN as HOMEASSISTANT_DOMAIN, HomeAssistant
-from homeassistant.exceptions import ConfigValidationError, HomeAssistantError
-from homeassistant.helpers import check_config, config_validation as cv
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.loader import Integration, async_get_integration
-from homeassistant.setup import async_setup_component
-from homeassistant.util.yaml import SECRET_YAML
-from homeassistant.util.yaml.objects import NodeDictClass
+from menuai import config as config_util, loader
+from menuai.const import CONF_PACKAGES, __version__
+from menuai.core import DOMAIN as menuai_DOMAIN, menuai
+from menuai.exceptions import ConfigValidationError, menuaiError
+from menuai.helpers import check_config, config_validation as cv
+from menuai.helpers.typing import ConfigType
+from menuai.loader import Integration, async_get_integration
+from menuai.setup import async_setup_component
+from menuai.util.yaml import SECRET_YAML
+from menuai.util.yaml.objects import NodeDictClass
 
 from .common import (
     MockModule,
@@ -81,13 +81,13 @@ IOT_DOMAIN_PLATFORM_SCHEMA = cv.PLATFORM_SCHEMA.extend({vol.Remove("old"): str})
 
 
 @pytest.fixture
-async def mock_iot_domain_integration(hass: HomeAssistant) -> Integration:
+async def mock_iot_domain_integration(menuai: menuai) -> Integration:
     """Mock an integration which provides an IoT domain."""
     comp_platform_schema = cv.PLATFORM_SCHEMA.extend({vol.Remove("old"): str})
     comp_platform_schema_base = comp_platform_schema.extend({}, extra=vol.ALLOW_EXTRA)
 
     return mock_integration(
-        hass,
+        menuai,
         MockModule(
             "iot_domain",
             platform_schema_base=comp_platform_schema_base,
@@ -97,13 +97,13 @@ async def mock_iot_domain_integration(hass: HomeAssistant) -> Integration:
 
 
 @pytest.fixture
-async def mock_iot_domain_integration_with_docs(hass: HomeAssistant) -> Integration:
+async def mock_iot_domain_integration_with_docs(menuai: menuai) -> Integration:
     """Mock an integration which provides an IoT domain."""
     comp_platform_schema = cv.PLATFORM_SCHEMA.extend({vol.Remove("old"): str})
     comp_platform_schema_base = comp_platform_schema.extend({}, extra=vol.ALLOW_EXTRA)
 
     return mock_integration(
-        hass,
+        menuai,
         MockModule(
             "iot_domain",
             platform_schema_base=comp_platform_schema_base,
@@ -116,7 +116,7 @@ async def mock_iot_domain_integration_with_docs(hass: HomeAssistant) -> Integrat
 
 
 @pytest.fixture
-async def mock_non_adr_0007_integration(hass: HomeAssistant) -> None:
+async def mock_non_adr_0007_integration(menuai: menuai) -> None:
     """Mock a non-ADR-0007 compliant integration with iot_domain platform.
 
     The integration allows setting up iot_domain entities under the iot_domain's
@@ -127,14 +127,14 @@ async def mock_non_adr_0007_integration(hass: HomeAssistant) -> None:
         {vol.Required("option1"): str, vol.Optional("option2"): str}
     )
     mock_platform(
-        hass,
+        menuai,
         "non_adr_0007.iot_domain",
         MockPlatform(platform_schema=test_platform_schema),
     )
 
 
 @pytest.fixture
-async def mock_non_adr_0007_integration_with_docs(hass: HomeAssistant) -> None:
+async def mock_non_adr_0007_integration_with_docs(menuai: menuai) -> None:
     """Mock a non-ADR-0007 compliant integration with iot_domain platform.
 
     The integration allows setting up iot_domain entities under the iot_domain's
@@ -142,7 +142,7 @@ async def mock_non_adr_0007_integration_with_docs(hass: HomeAssistant) -> None:
     """
 
     mock_integration(
-        hass,
+        menuai,
         MockModule(
             "non_adr_0007",
             partial_manifest={
@@ -154,14 +154,14 @@ async def mock_non_adr_0007_integration_with_docs(hass: HomeAssistant) -> None:
         {vol.Required("option1"): str, vol.Optional("option2"): str}
     )
     mock_platform(
-        hass,
+        menuai,
         "non_adr_0007.iot_domain",
         MockPlatform(platform_schema=test_platform_schema),
     )
 
 
 @pytest.fixture
-async def mock_adr_0007_integrations(hass: HomeAssistant) -> list[Integration]:
+async def mock_adr_0007_integrations(menuai: menuai) -> list[Integration]:
     """Mock ADR-0007 compliant integrations."""
     integrations = []
     for domain in (
@@ -184,7 +184,7 @@ async def mock_adr_0007_integrations(hass: HomeAssistant) -> list[Integration]:
         )
         integrations.append(
             mock_integration(
-                hass,
+                menuai,
                 MockModule(domain, config_schema=adr_0007_config_schema),
             )
         )
@@ -193,7 +193,7 @@ async def mock_adr_0007_integrations(hass: HomeAssistant) -> list[Integration]:
 
 @pytest.fixture
 async def mock_adr_0007_integrations_with_docs(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> list[Integration]:
     """Mock ADR-0007 compliant integrations."""
     integrations = []
@@ -217,7 +217,7 @@ async def mock_adr_0007_integrations_with_docs(
         )
         integrations.append(
             mock_integration(
-                hass,
+                menuai,
                 MockModule(
                     domain,
                     config_schema=adr_0007_config_schema,
@@ -231,7 +231,7 @@ async def mock_adr_0007_integrations_with_docs(
 
 
 @pytest.fixture
-async def mock_custom_validator_integrations(hass: HomeAssistant) -> list[Integration]:
+async def mock_custom_validator_integrations(menuai: menuai) -> list[Integration]:
     """Mock integrations with custom validator."""
     integrations = []
 
@@ -251,27 +251,27 @@ async def mock_custom_validator_integrations(hass: HomeAssistant) -> list[Integr
             )
 
             async def async_validate_config(
-                hass: HomeAssistant, config: ConfigType
+                menuai: menuai, config: ConfigType
             ) -> ConfigType:
                 """Validate config."""
                 return schema(config)
 
             return async_validate_config
 
-        integrations.append(mock_integration(hass, MockModule(domain)))
+        integrations.append(mock_integration(menuai, MockModule(domain)))
         mock_platform(
-            hass,
+            menuai,
             f"{domain}.config",
             Mock(async_validate_config=gen_async_validate_config(domain)),
         )
 
     for domain, exception in (
-        ("custom_validator_bad_1", HomeAssistantError("broken")),
+        ("custom_validator_bad_1", menuaiError("broken")),
         ("custom_validator_bad_2", ValueError("broken")),
     ):
-        integrations.append(mock_integration(hass, MockModule(domain)))
+        integrations.append(mock_integration(menuai, MockModule(domain)))
         mock_platform(
-            hass,
+            menuai,
             f"{domain}.config",
             Mock(async_validate_config=AsyncMock(side_effect=exception)),
         )
@@ -279,7 +279,7 @@ async def mock_custom_validator_integrations(hass: HomeAssistant) -> list[Integr
 
 @pytest.fixture
 async def mock_custom_validator_integrations_with_docs(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> list[Integration]:
     """Mock integrations with custom validator."""
     integrations = []
@@ -300,7 +300,7 @@ async def mock_custom_validator_integrations_with_docs(
             )
 
             async def async_validate_config(
-                hass: HomeAssistant, config: ConfigType
+                menuai: menuai, config: ConfigType
             ) -> ConfigType:
                 """Validate config."""
                 return schema(config)
@@ -309,7 +309,7 @@ async def mock_custom_validator_integrations_with_docs(
 
         integrations.append(
             mock_integration(
-                hass,
+                menuai,
                 MockModule(
                     domain,
                     partial_manifest={
@@ -319,18 +319,18 @@ async def mock_custom_validator_integrations_with_docs(
             )
         )
         mock_platform(
-            hass,
+            menuai,
             f"{domain}.config",
             Mock(async_validate_config=gen_async_validate_config(domain)),
         )
 
     for domain, exception in (
-        ("custom_validator_bad_1", HomeAssistantError("broken")),
+        ("custom_validator_bad_1", menuaiError("broken")),
         ("custom_validator_bad_2", ValueError("broken")),
     ):
         integrations.append(
             mock_integration(
-                hass,
+                menuai,
                 MockModule(
                     domain,
                     partial_manifest={
@@ -340,7 +340,7 @@ async def mock_custom_validator_integrations_with_docs(
             )
         )
         mock_platform(
-            hass,
+            menuai,
             f"{domain}.config",
             Mock(async_validate_config=AsyncMock(side_effect=exception)),
         )
@@ -353,14 +353,14 @@ class ConfigTestClass(NodeDictClass):
     __config_file__ = "configuration.yaml"
 
 
-async def test_create_default_config(hass: HomeAssistant) -> None:
+async def test_create_default_config(menuai: menuai) -> None:
     """Test creation of default config."""
     assert not os.path.isfile(YAML_PATH)
     assert not os.path.isfile(SECRET_PATH)
     assert not os.path.isfile(VERSION_PATH)
     assert not os.path.isfile(AUTOMATIONS_PATH)
 
-    await config_util.async_create_default_config(hass)
+    await config_util.async_create_default_config(menuai)
 
     assert os.path.isfile(YAML_PATH)
     assert os.path.isfile(SECRET_PATH)
@@ -368,37 +368,37 @@ async def test_create_default_config(hass: HomeAssistant) -> None:
     assert os.path.isfile(AUTOMATIONS_PATH)
 
 
-async def test_ensure_config_exists_creates_config(hass: HomeAssistant) -> None:
+async def test_ensure_config_exists_creates_config(menuai: menuai) -> None:
     """Test that calling ensure_config_exists.
 
     If not creates a new config file.
     """
     assert not os.path.isfile(YAML_PATH)
     with patch("builtins.print") as mock_print:
-        await config_util.async_ensure_config_exists(hass)
+        await config_util.async_ensure_config_exists(menuai)
 
     assert os.path.isfile(YAML_PATH)
     assert mock_print.called
 
 
-async def test_ensure_config_exists_uses_existing_config(hass: HomeAssistant) -> None:
+async def test_ensure_config_exists_uses_existing_config(menuai: menuai) -> None:
     """Test that calling ensure_config_exists uses existing config."""
-    await hass.async_add_executor_job(create_file, YAML_PATH)
-    await config_util.async_ensure_config_exists(hass)
+    await menuai.async_add_executor_job(create_file, YAML_PATH)
+    await config_util.async_ensure_config_exists(menuai)
 
-    content = await hass.async_add_executor_job(Path(YAML_PATH).read_text)
+    content = await menuai.async_add_executor_job(Path(YAML_PATH).read_text)
 
     # File created with create_file are empty
     assert content == ""
 
 
-async def test_ensure_existing_files_is_not_overwritten(hass: HomeAssistant) -> None:
+async def test_ensure_existing_files_is_not_overwritten(menuai: menuai) -> None:
     """Test that calling async_create_default_config does not overwrite existing files."""
-    await hass.async_add_executor_job(create_file, SECRET_PATH)
+    await menuai.async_add_executor_job(create_file, SECRET_PATH)
 
-    await config_util.async_create_default_config(hass)
+    await config_util.async_create_default_config(menuai)
 
-    content = await hass.async_add_executor_job(Path(SECRET_PATH).read_text)
+    content = await menuai.async_add_executor_job(Path(SECRET_PATH).read_text)
 
     # File created with create_file are empty
     assert content == ""
@@ -416,7 +416,7 @@ def test_load_yaml_config_raises_error_if_not_dict() -> None:
     with open(YAML_PATH, "w", encoding="utf8") as fp:
         fp.write("5")
 
-    with pytest.raises(HomeAssistantError):
+    with pytest.raises(menuaiError):
         config_util.load_yaml_config_file(YAML_PATH)
 
 
@@ -425,7 +425,7 @@ def test_load_yaml_config_raises_error_if_malformed_yaml() -> None:
     with open(YAML_PATH, "w", encoding="utf8") as fp:
         fp.write(":-")
 
-    with pytest.raises(HomeAssistantError):
+    with pytest.raises(menuaiError):
         config_util.load_yaml_config_file(YAML_PATH)
 
 
@@ -436,7 +436,7 @@ def test_load_yaml_config_raises_error_if_unsafe_yaml() -> None:
 
     with (
         patch.object(os, "system") as system_mock,
-        contextlib.suppress(HomeAssistantError),
+        contextlib.suppress(menuaiError),
     ):
         config_util.load_yaml_config_file(YAML_PATH)
 
@@ -466,128 +466,128 @@ def test_load_yaml_config_preserves_key_order() -> None:
 
 
 async def test_create_default_config_returns_none_if_write_error(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test the writing of a default configuration.
 
     Non existing folder returns None.
     """
-    hass.config.config_dir = os.path.join(CONFIG_DIR, "non_existing_dir/")
+    menuai.config.config_dir = os.path.join(CONFIG_DIR, "non_existing_dir/")
     with patch("builtins.print") as mock_print:
-        assert await config_util.async_create_default_config(hass) is False
+        assert await config_util.async_create_default_config(menuai) is False
     assert mock_print.called
 
 
-@patch("homeassistant.config.shutil")
-@patch("homeassistant.config.os")
-@patch("homeassistant.config.is_docker_env", return_value=False)
+@patch("menuai.config.shutil")
+@patch("menuai.config.os")
+@patch("menuai.config.is_docker_env", return_value=False)
 def test_remove_lib_on_upgrade(
-    mock_docker, mock_os, mock_shutil, hass: HomeAssistant
+    mock_docker, mock_os, mock_shutil, menuai: menuai
 ) -> None:
     """Test removal of library on upgrade from before 0.50."""
     ha_version = "0.49.0"
     mock_os.path.isdir = mock.Mock(return_value=True)
     mock_open = mock.mock_open()
-    with patch("homeassistant.config.open", mock_open, create=True):
+    with patch("menuai.config.open", mock_open, create=True):
         opened_file = mock_open.return_value
         opened_file.readline.return_value = ha_version
-        hass.config.path = mock.Mock()
-        config_util.process_ha_config_upgrade(hass)
-        hass_path = hass.config.path.return_value
+        menuai.config.path = mock.Mock()
+        config_util.process_ha_config_upgrade(menuai)
+        menuai_path = menuai.config.path.return_value
 
         assert mock_os.path.isdir.call_count == 1
-        assert mock_os.path.isdir.call_args == mock.call(hass_path)
+        assert mock_os.path.isdir.call_args == mock.call(menuai_path)
         assert mock_shutil.rmtree.call_count == 1
-        assert mock_shutil.rmtree.call_args == mock.call(hass_path)
+        assert mock_shutil.rmtree.call_args == mock.call(menuai_path)
 
 
-@patch("homeassistant.config.shutil")
-@patch("homeassistant.config.os")
-@patch("homeassistant.config.is_docker_env", return_value=True)
+@patch("menuai.config.shutil")
+@patch("menuai.config.os")
+@patch("menuai.config.is_docker_env", return_value=True)
 def test_remove_lib_on_upgrade_94(
-    mock_docker, mock_os, mock_shutil, hass: HomeAssistant
+    mock_docker, mock_os, mock_shutil, menuai: menuai
 ) -> None:
     """Test removal of library on upgrade from before 0.94 and in Docker."""
     ha_version = "0.93.0.dev0"
     mock_os.path.isdir = mock.Mock(return_value=True)
     mock_open = mock.mock_open()
-    with patch("homeassistant.config.open", mock_open, create=True):
+    with patch("menuai.config.open", mock_open, create=True):
         opened_file = mock_open.return_value
         opened_file.readline.return_value = ha_version
-        hass.config.path = mock.Mock()
-        config_util.process_ha_config_upgrade(hass)
-        hass_path = hass.config.path.return_value
+        menuai.config.path = mock.Mock()
+        config_util.process_ha_config_upgrade(menuai)
+        menuai_path = menuai.config.path.return_value
 
         assert mock_os.path.isdir.call_count == 1
-        assert mock_os.path.isdir.call_args == mock.call(hass_path)
+        assert mock_os.path.isdir.call_args == mock.call(menuai_path)
         assert mock_shutil.rmtree.call_count == 1
-        assert mock_shutil.rmtree.call_args == mock.call(hass_path)
+        assert mock_shutil.rmtree.call_args == mock.call(menuai_path)
 
 
-def test_process_config_upgrade(hass: HomeAssistant) -> None:
+def test_process_config_upgrade(menuai: menuai) -> None:
     """Test update of version on upgrade."""
     ha_version = "0.92.0"
 
     mock_open = mock.mock_open()
     with (
-        patch("homeassistant.config.open", mock_open, create=True),
+        patch("menuai.config.open", mock_open, create=True),
         patch.object(config_util, "__version__", "0.91.0"),
     ):
         opened_file = mock_open.return_value
         opened_file.readline.return_value = ha_version
 
-        config_util.process_ha_config_upgrade(hass)
+        config_util.process_ha_config_upgrade(menuai)
 
         assert opened_file.write.call_count == 1
         assert opened_file.write.call_args == mock.call("0.91.0")
 
 
-def test_config_upgrade_same_version(hass: HomeAssistant) -> None:
+def test_config_upgrade_same_version(menuai: menuai) -> None:
     """Test no update of version on no upgrade."""
     ha_version = __version__
 
     mock_open = mock.mock_open()
-    with patch("homeassistant.config.open", mock_open, create=True):
+    with patch("menuai.config.open", mock_open, create=True):
         opened_file = mock_open.return_value
         opened_file.readline.return_value = ha_version
 
-        config_util.process_ha_config_upgrade(hass)
+        config_util.process_ha_config_upgrade(menuai)
 
         assert opened_file.write.call_count == 0
 
 
-def test_config_upgrade_no_file(hass: HomeAssistant) -> None:
+def test_config_upgrade_no_file(menuai: menuai) -> None:
     """Test update of version on upgrade, with no version file."""
     mock_open = mock.mock_open()
     mock_open.side_effect = [FileNotFoundError(), mock.DEFAULT, mock.DEFAULT]
-    with patch("homeassistant.config.open", mock_open, create=True):
+    with patch("menuai.config.open", mock_open, create=True):
         opened_file = mock_open.return_value
-        config_util.process_ha_config_upgrade(hass)
+        config_util.process_ha_config_upgrade(menuai)
         assert opened_file.write.call_count == 1
         assert opened_file.write.call_args == mock.call(__version__)
 
 
-@patch("homeassistant.helpers.check_config.async_check_ha_config_file")
-async def test_check_ha_config_file_correct(mock_check, hass: HomeAssistant) -> None:
+@patch("menuai.helpers.check_config.async_check_ha_config_file")
+async def test_check_ha_config_file_correct(mock_check, menuai: menuai) -> None:
     """Check that restart propagates to stop."""
-    mock_check.return_value = check_config.HomeAssistantConfig()
-    assert await config_util.async_check_ha_config_file(hass) is None
+    mock_check.return_value = check_config.menuaiConfig()
+    assert await config_util.async_check_ha_config_file(menuai) is None
 
 
-@patch("homeassistant.helpers.check_config.async_check_ha_config_file")
-async def test_check_ha_config_file_wrong(mock_check, hass: HomeAssistant) -> None:
+@patch("menuai.helpers.check_config.async_check_ha_config_file")
+async def test_check_ha_config_file_wrong(mock_check, menuai: menuai) -> None:
     """Check that restart with a bad config doesn't propagate to stop."""
-    mock_check.return_value = check_config.HomeAssistantConfig()
+    mock_check.return_value = check_config.menuaiConfig()
     mock_check.return_value.add_error("bad")
 
-    assert await config_util.async_check_ha_config_file(hass) == "bad"
+    assert await config_util.async_check_ha_config_file(menuai) == "bad"
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
-            HOMEASSISTANT_DOMAIN: {
+            menuai_DOMAIN: {
                 CONF_PACKAGES: {"pack_dict": {"input_boolean": {"ib1": None}}}
             },
             "input_boolean": {"ib2": None},
@@ -595,15 +595,15 @@ async def test_check_ha_config_file_wrong(mock_check, hass: HomeAssistant) -> No
         }
     ],
 )
-@pytest.mark.usefixtures("mock_hass_config")
-async def test_async_hass_config_yaml_merge(
-    merge_log_err: MagicMock, hass: HomeAssistant
+@pytest.mark.usefixtures("mock_menuai_config")
+async def test_async_menuai_config_yaml_merge(
+    merge_log_err: MagicMock, menuai: menuai
 ) -> None:
     """Test merge during async config reload."""
-    conf = await config_util.async_hass_config_yaml(hass)
+    conf = await config_util.async_menuai_config_yaml(menuai)
 
     assert merge_log_err.call_count == 0
-    assert conf[HOMEASSISTANT_DOMAIN].get(CONF_PACKAGES) is not None
+    assert conf[menuai_DOMAIN].get(CONF_PACKAGES) is not None
     assert len(conf) == 3
     assert len(conf["input_boolean"]) == 2
     assert len(conf["light"]) == 1
@@ -612,11 +612,11 @@ async def test_async_hass_config_yaml_merge(
 @pytest.fixture
 def merge_log_err() -> Generator[MagicMock]:
     """Patch _merge_log_error from packages."""
-    with patch("homeassistant.config._LOGGER.error") as logerr:
+    with patch("menuai.config._LOGGER.error") as logerr:
         yield logerr
 
 
-async def test_merge(merge_log_err: MagicMock, hass: HomeAssistant) -> None:
+async def test_merge(merge_log_err: MagicMock, menuai: menuai) -> None:
     """Test if we can merge packages."""
     packages = {
         "pack_dict": {"input_boolean": {"ib1": None}},
@@ -631,14 +631,14 @@ async def test_merge(merge_log_err: MagicMock, hass: HomeAssistant) -> None:
         },
     }
     config = {
-        HOMEASSISTANT_DOMAIN: {CONF_PACKAGES: packages},
+        menuai_DOMAIN: {CONF_PACKAGES: packages},
         "input_boolean": {"ib2": None},
         "light": {"platform": "test"},
         "automation": [],
         "script": {},
         "template": [],
     }
-    await config_util.merge_packages_config(hass, config, packages)
+    await config_util.merge_packages_config(menuai, config, packages)
 
     assert merge_log_err.call_count == 0
     assert len(config) == 8
@@ -651,18 +651,18 @@ async def test_merge(merge_log_err: MagicMock, hass: HomeAssistant) -> None:
     assert isinstance(config["wake_on_lan"], OrderedDict)
 
 
-async def test_merge_try_falsy(merge_log_err: MagicMock, hass: HomeAssistant) -> None:
+async def test_merge_try_falsy(merge_log_err: MagicMock, menuai: menuai) -> None:
     """Ensure we don't add falsy items like empty OrderedDict() to list."""
     packages = {
         "pack_falsy_to_lst": {"automation": OrderedDict()},
         "pack_list2": {"light": OrderedDict()},
     }
     config = {
-        HOMEASSISTANT_DOMAIN: {CONF_PACKAGES: packages},
+        menuai_DOMAIN: {CONF_PACKAGES: packages},
         "automation": {"do": "something"},
         "light": {"some": "light"},
     }
-    await config_util.merge_packages_config(hass, config, packages)
+    await config_util.merge_packages_config(menuai, config, packages)
 
     assert merge_log_err.call_count == 0
     assert len(config) == 3
@@ -670,7 +670,7 @@ async def test_merge_try_falsy(merge_log_err: MagicMock, hass: HomeAssistant) ->
     assert len(config["light"]) == 1
 
 
-async def test_merge_new(merge_log_err: MagicMock, hass: HomeAssistant) -> None:
+async def test_merge_new(merge_log_err: MagicMock, menuai: menuai) -> None:
     """Test adding new components to outer scope."""
     packages = {
         "pack_1": {"light": [{"platform": "one"}]},
@@ -681,8 +681,8 @@ async def test_merge_new(merge_log_err: MagicMock, hass: HomeAssistant) -> None:
             "api": {},
         },
     }
-    config = {HOMEASSISTANT_DOMAIN: {CONF_PACKAGES: packages}}
-    await config_util.merge_packages_config(hass, config, packages)
+    config = {menuai_DOMAIN: {CONF_PACKAGES: packages}}
+    await config_util.merge_packages_config(menuai, config, packages)
 
     assert merge_log_err.call_count == 0
     assert "api" in config
@@ -692,7 +692,7 @@ async def test_merge_new(merge_log_err: MagicMock, hass: HomeAssistant) -> None:
 
 
 async def test_merge_type_mismatch(
-    merge_log_err: MagicMock, hass: HomeAssistant
+    merge_log_err: MagicMock, menuai: menuai
 ) -> None:
     """Test if we have a type mismatch for packages."""
     packages = {
@@ -701,12 +701,12 @@ async def test_merge_type_mismatch(
         "pack_2": {"light": {"ib1": None}},  # light gets merged - ensure_list
     }
     config = {
-        HOMEASSISTANT_DOMAIN: {CONF_PACKAGES: packages},
+        menuai_DOMAIN: {CONF_PACKAGES: packages},
         "input_boolean": {"ib2": None},
         "input_select": [{"ib2": None}],
         "light": [{"platform": "two"}],
     }
-    await config_util.merge_packages_config(hass, config, packages)
+    await config_util.merge_packages_config(menuai, config, packages)
 
     assert merge_log_err.call_count == 2
     assert len(config) == 4
@@ -715,33 +715,33 @@ async def test_merge_type_mismatch(
 
 
 async def test_merge_once_only_keys(
-    merge_log_err: MagicMock, hass: HomeAssistant
+    merge_log_err: MagicMock, menuai: menuai
 ) -> None:
     """Test if we have a merge for a comp that may occur only once. Keys."""
     packages = {"pack_2": {"api": None}}
-    config = {HOMEASSISTANT_DOMAIN: {CONF_PACKAGES: packages}, "api": None}
-    await config_util.merge_packages_config(hass, config, packages)
+    config = {menuai_DOMAIN: {CONF_PACKAGES: packages}, "api": None}
+    await config_util.merge_packages_config(menuai, config, packages)
     assert config["api"] == OrderedDict()
 
     packages = {"pack_2": {"api": {"key_3": 3}}}
     config = {
-        HOMEASSISTANT_DOMAIN: {CONF_PACKAGES: packages},
+        menuai_DOMAIN: {CONF_PACKAGES: packages},
         "api": {"key_1": 1, "key_2": 2},
     }
-    await config_util.merge_packages_config(hass, config, packages)
+    await config_util.merge_packages_config(menuai, config, packages)
     assert config["api"] == {"key_1": 1, "key_2": 2, "key_3": 3}
 
     # Duplicate keys error
     packages = {"pack_2": {"api": {"key": 2}}}
     config = {
-        HOMEASSISTANT_DOMAIN: {CONF_PACKAGES: packages},
+        menuai_DOMAIN: {CONF_PACKAGES: packages},
         "api": {"key": 1},
     }
-    await config_util.merge_packages_config(hass, config, packages)
+    await config_util.merge_packages_config(menuai, config, packages)
     assert merge_log_err.call_count == 1
 
 
-async def test_merge_once_only_lists(hass: HomeAssistant) -> None:
+async def test_merge_once_only_lists(menuai: menuai) -> None:
     """Test if we have a merge for a comp that may occur only once. Lists."""
     packages = {
         "pack_2": {
@@ -749,10 +749,10 @@ async def test_merge_once_only_lists(hass: HomeAssistant) -> None:
         }
     }
     config = {
-        HOMEASSISTANT_DOMAIN: {CONF_PACKAGES: packages},
+        menuai_DOMAIN: {CONF_PACKAGES: packages},
         "api": {"list_1": ["item_1"]},
     }
-    await config_util.merge_packages_config(hass, config, packages)
+    await config_util.merge_packages_config(menuai, config, packages)
     assert config["api"] == {
         "list_1": ["item_1", "item_2", "item_3"],
         "list_2": ["item_4"],
@@ -760,7 +760,7 @@ async def test_merge_once_only_lists(hass: HomeAssistant) -> None:
     }
 
 
-async def test_merge_once_only_dictionaries(hass: HomeAssistant) -> None:
+async def test_merge_once_only_dictionaries(menuai: menuai) -> None:
     """Test if we have a merge for a comp that may occur only once. Dicts."""
     packages = {
         "pack_2": {
@@ -772,10 +772,10 @@ async def test_merge_once_only_dictionaries(hass: HomeAssistant) -> None:
         }
     }
     config = {
-        HOMEASSISTANT_DOMAIN: {CONF_PACKAGES: packages},
+        menuai_DOMAIN: {CONF_PACKAGES: packages},
         "api": {"dict_1": {"key_1": 1, "dict_1.1": {"key_1.1": 1.1}}},
     }
-    await config_util.merge_packages_config(hass, config, packages)
+    await config_util.merge_packages_config(menuai, config, packages)
     assert config["api"] == {
         "dict_1": {
             "key_1": 1,
@@ -786,7 +786,7 @@ async def test_merge_once_only_dictionaries(hass: HomeAssistant) -> None:
     }
 
 
-async def test_merge_id_schema(hass: HomeAssistant) -> None:
+async def test_merge_id_schema(menuai: menuai) -> None:
     """Test if we identify the config schemas correctly."""
     types = {
         "panel_custom": "list",
@@ -796,36 +796,36 @@ async def test_merge_id_schema(hass: HomeAssistant) -> None:
         "qwikswitch": "dict",
     }
     for domain, expected_type in types.items():
-        integration = await async_get_integration(hass, domain)
+        integration = await async_get_integration(menuai, domain)
         module = integration.get_component()
         typ = config_util._identify_config_schema(module)
         assert typ == expected_type, f"{domain} expected {expected_type}, got {typ}"
 
 
 async def test_merge_duplicate_keys(
-    merge_log_err: MagicMock, hass: HomeAssistant
+    merge_log_err: MagicMock, menuai: menuai
 ) -> None:
     """Test if keys in dicts are duplicates."""
     packages = {"pack_1": {"input_select": {"ib1": None}}}
     config = {
-        HOMEASSISTANT_DOMAIN: {CONF_PACKAGES: packages},
+        menuai_DOMAIN: {CONF_PACKAGES: packages},
         "input_select": {"ib1": 1},
     }
-    await config_util.merge_packages_config(hass, config, packages)
+    await config_util.merge_packages_config(menuai, config, packages)
 
     assert merge_log_err.call_count == 1
     assert len(config) == 2
     assert len(config["input_select"]) == 1
 
 
-async def test_merge_split_component_definition(hass: HomeAssistant) -> None:
+async def test_merge_split_component_definition(menuai: menuai) -> None:
     """Test components with trailing description in packages are merged."""
     packages = {
         "pack_1": {"light one": {"l1": None}},
         "pack_2": {"light two": {"l2": None}, "light three": {"l3": None}},
     }
-    config = {HOMEASSISTANT_DOMAIN: {CONF_PACKAGES: packages}}
-    await config_util.merge_packages_config(hass, config, packages)
+    config = {menuai_DOMAIN: {CONF_PACKAGES: packages}}
+    await config_util.merge_packages_config(menuai, config, packages)
 
     assert len(config) == 4
     assert len(config["light one"]) == 1
@@ -834,7 +834,7 @@ async def test_merge_split_component_definition(hass: HomeAssistant) -> None:
 
 
 async def test_component_config_exceptions(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test unexpected exceptions validating component config."""
 
@@ -853,7 +853,7 @@ async def test_component_config_exceptions(
     )
 
     # Make sure the exception translation cache is loaded
-    await async_setup_component(hass, "homeassistant", {})
+    await async_setup_component(menuai, "menuai", {})
 
     test_integration = Mock(
         domain="test_domain",
@@ -866,16 +866,16 @@ async def test_component_config_exceptions(
     )
     assert (
         await config_util.async_process_component_and_handle_errors(
-            hass, test_config, integration=test_integration
+            menuai, test_config, integration=test_integration
         )
         is None
     )
     assert "ValueError: broken" in caplog.text
     assert "Unknown error calling test_domain config validator" in caplog.text
     caplog.clear()
-    with pytest.raises(HomeAssistantError) as ex:
+    with pytest.raises(menuaiError) as ex:
         await config_util.async_process_component_and_handle_errors(
-            hass, test_config, integration=test_integration, raise_on_failure=True
+            menuai, test_config, integration=test_integration, raise_on_failure=True
         )
     assert "ValueError: broken" in caplog.text
     assert "Unknown error calling test_domain config validator" in caplog.text
@@ -887,7 +887,7 @@ async def test_component_config_exceptions(
         async_get_platform=AsyncMock(
             return_value=Mock(
                 async_validate_config=AsyncMock(
-                    side_effect=HomeAssistantError("broken")
+                    side_effect=menuaiError("broken")
                 )
             )
         ),
@@ -896,7 +896,7 @@ async def test_component_config_exceptions(
     caplog.clear()
     assert (
         await config_util.async_process_component_and_handle_errors(
-            hass, test_config, integration=test_integration, raise_on_failure=False
+            menuai, test_config, integration=test_integration, raise_on_failure=False
         )
         is None
     )
@@ -904,9 +904,9 @@ async def test_component_config_exceptions(
         "Invalid config for 'test_domain' at ../../configuration.yaml, "
         "line 140: broken, please check the docs at" in caplog.text
     )
-    with pytest.raises(HomeAssistantError) as ex:
+    with pytest.raises(menuaiError) as ex:
         await config_util.async_process_component_and_handle_errors(
-            hass, test_config, integration=test_integration, raise_on_failure=True
+            menuai, test_config, integration=test_integration, raise_on_failure=True
         )
     assert (
         str(ex.value)
@@ -924,7 +924,7 @@ async def test_component_config_exceptions(
     )
     assert (
         await config_util.async_process_component_and_handle_errors(
-            hass,
+            menuai,
             test_config,
             integration=test_integration,
             raise_on_failure=False,
@@ -933,9 +933,9 @@ async def test_component_config_exceptions(
     )
     assert "Unknown error calling test_domain CONFIG_SCHEMA" in caplog.text
     caplog.clear()
-    with pytest.raises(HomeAssistantError) as ex:
+    with pytest.raises(menuaiError) as ex:
         await config_util.async_process_component_and_handle_errors(
-            hass,
+            menuai,
             test_config,
             integration=test_integration,
             raise_on_failure=True,
@@ -955,7 +955,7 @@ async def test_component_config_exceptions(
         ),
     )
     assert await config_util.async_process_component_and_handle_errors(
-        hass,
+        menuai,
         test_platform_config,
         integration=test_integration,
         raise_on_failure=False,
@@ -966,9 +966,9 @@ async def test_component_config_exceptions(
         "from integration test_platform - broken"
     ) in caplog.text
     caplog.clear()
-    with pytest.raises(HomeAssistantError) as ex:
+    with pytest.raises(menuaiError) as ex:
         await config_util.async_process_component_and_handle_errors(
-            hass,
+            menuai,
             test_platform_config,
             integration=test_integration,
             raise_on_failure=True,
@@ -990,7 +990,7 @@ async def test_component_config_exceptions(
         async_get_component=AsyncMock(return_value=Mock(spec=["PLATFORM_SCHEMA_BASE"])),
     )
     with patch(
-        "homeassistant.config.async_get_integration_with_requirements",
+        "menuai.config.async_get_integration_with_requirements",
         return_value=Mock(  # integration that owns platform
             async_get_platform=AsyncMock(
                 return_value=Mock(  # platform
@@ -1000,7 +1000,7 @@ async def test_component_config_exceptions(
         ),
     ):
         assert await config_util.async_process_component_and_handle_errors(
-            hass,
+            menuai,
             test_platform_config,
             integration=test_integration,
             raise_on_failure=False,
@@ -1011,9 +1011,9 @@ async def test_component_config_exceptions(
             "from integration test_platform - broken"
         ) in caplog.text
         caplog.clear()
-        with pytest.raises(HomeAssistantError) as ex:
+        with pytest.raises(menuaiError) as ex:
             assert await config_util.async_process_component_and_handle_errors(
-                hass,
+                menuai,
                 test_platform_config,
                 integration=test_integration,
                 raise_on_failure=True,
@@ -1029,7 +1029,7 @@ async def test_component_config_exceptions(
         )
         # Test multiple platform failures
         assert await config_util.async_process_component_and_handle_errors(
-            hass,
+            menuai,
             test_multi_platform_config,
             integration=test_integration,
             raise_on_failure=False,
@@ -1040,9 +1040,9 @@ async def test_component_config_exceptions(
             "from integration test_platform - broken"
         ) in caplog.text
         caplog.clear()
-        with pytest.raises(HomeAssistantError) as ex:
+        with pytest.raises(menuaiError) as ex:
             assert await config_util.async_process_component_and_handle_errors(
-                hass,
+                menuai,
                 test_multi_platform_config,
                 integration=test_integration,
                 raise_on_failure=True,
@@ -1074,13 +1074,13 @@ async def test_component_config_exceptions(
         name="not_installed_something",
     )
     with patch(
-        "homeassistant.config.async_get_integration_with_requirements",
+        "menuai.config.async_get_integration_with_requirements",
         return_value=Mock(  # integration that owns platform
             async_get_platform=AsyncMock(side_effect=import_error)
         ),
     ):
         assert await config_util.async_process_component_and_handle_errors(
-            hass,
+            menuai,
             test_platform_config,
             integration=test_integration,
             raise_on_failure=False,
@@ -1090,9 +1090,9 @@ async def test_component_config_exceptions(
             "'not_installed_something'" in caplog.text
         )
         caplog.clear()
-        with pytest.raises(HomeAssistantError) as ex:
+        with pytest.raises(menuaiError) as ex:
             assert await config_util.async_process_component_and_handle_errors(
-                hass,
+                menuai,
                 test_platform_config,
                 integration=test_integration,
                 raise_on_failure=True,
@@ -1113,7 +1113,7 @@ async def test_component_config_exceptions(
     # async_get_platform("config") raising
     caplog.clear()
     test_integration = Mock(
-        pkg_path="homeassistant.components.test_domain",
+        pkg_path="menuai.components.test_domain",
         domain="test_domain",
         async_get_component=AsyncMock(),
         async_get_platform=AsyncMock(
@@ -1125,7 +1125,7 @@ async def test_component_config_exceptions(
     )
     assert (
         await config_util.async_process_component_and_handle_errors(
-            hass,
+            menuai,
             test_config,
             integration=test_integration,
             raise_on_failure=False,
@@ -1136,9 +1136,9 @@ async def test_component_config_exceptions(
         "Error importing config platform test_domain: ModuleNotFoundError: "
         "No module named 'not_installed_something'" in caplog.text
     )
-    with pytest.raises(HomeAssistantError) as ex:
+    with pytest.raises(menuaiError) as ex:
         await config_util.async_process_component_and_handle_errors(
-            hass,
+            menuai,
             test_config,
             integration=test_integration,
             raise_on_failure=True,
@@ -1155,7 +1155,7 @@ async def test_component_config_exceptions(
     # async_get_component raising
     caplog.clear()
     test_integration = Mock(
-        pkg_path="homeassistant.components.test_domain",
+        pkg_path="menuai.components.test_domain",
         domain="test_domain",
         async_get_component=AsyncMock(
             side_effect=FileNotFoundError("No such file or directory: b'liblibc.a'")
@@ -1163,7 +1163,7 @@ async def test_component_config_exceptions(
     )
     assert (
         await config_util.async_process_component_and_handle_errors(
-            hass,
+            menuai,
             test_config,
             integration=test_integration,
             raise_on_failure=False,
@@ -1171,9 +1171,9 @@ async def test_component_config_exceptions(
         is None
     )
     assert "Unable to import test_domain: No such file or directory" in caplog.text
-    with pytest.raises(HomeAssistantError) as ex:
+    with pytest.raises(menuaiError) as ex:
         await config_util.async_process_component_and_handle_errors(
-            hass,
+            menuai,
             test_config,
             integration=test_integration,
             raise_on_failure=True,
@@ -1203,7 +1203,7 @@ async def test_component_config_exceptions(
         (
             [
                 config_util.ConfigExceptionInfo(
-                    HomeAssistantError("bla"),
+                    menuaiError("bla"),
                     "config_validation_err",
                     "test_domain",
                     ConfigTestClass({"test_domain": []}),
@@ -1278,7 +1278,7 @@ async def test_component_config_exceptions(
     ],
 )
 async def test_component_config_error_processing(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     exception_info_list: list[config_util.ConfigExceptionInfo],
     snapshot: SnapshotAssertion,
@@ -1290,7 +1290,7 @@ async def test_component_config_error_processing(
     """Test component config error processing."""
 
     # Make sure the exception translation cache is loaded
-    await async_setup_component(hass, "homeassistant", {})
+    await async_setup_component(menuai, "menuai", {})
 
     test_integration = Mock(
         domain="test_domain",
@@ -1303,30 +1303,30 @@ async def test_component_config_error_processing(
     )
     with (
         patch(
-            "homeassistant.config.async_process_component_config",
+            "menuai.config.async_process_component_config",
             return_value=config_util.IntegrationConfigInfo(None, exception_info_list),
         ),
         pytest.raises(ConfigValidationError) as ex,
     ):
         await config_util.async_process_component_and_handle_errors(
-            hass, {}, test_integration, raise_on_failure=True
+            menuai, {}, test_integration, raise_on_failure=True
         )
     records = [record for record in caplog.records if record.msg == messages[0]]
     assert len(records) == 1
     assert (records[0].exc_info is not None) == show_stack_trace
     assert str(ex.value) == snapshot
     assert ex.value.translation_key == translation_key
-    assert ex.value.translation_domain == "homeassistant"
+    assert ex.value.translation_domain == "menuai"
     assert ex.value.translation_placeholders["domain"] == "test_domain"
     assert all(message in caplog.text for message in messages)
 
     caplog.clear()
     with patch(
-        "homeassistant.config.async_process_component_config",
+        "menuai.config.async_process_component_config",
         return_value=config_util.IntegrationConfigInfo(None, exception_info_list),
     ):
         await config_util.async_process_component_and_handle_errors(
-            hass, ConfigTestClass({}), test_integration
+            menuai, ConfigTestClass({}), test_integration
         )
     assert all(message in caplog.text for message in messages)
 
@@ -1369,13 +1369,13 @@ def test_identify_config_schema(domain, schema, expected) -> None:
     )
 
 
-async def test_safe_mode(hass: HomeAssistant) -> None:
+async def test_safe_mode(menuai: menuai) -> None:
     """Test safe mode."""
-    assert config_util.safe_mode_enabled(hass.config.config_dir) is False
-    assert config_util.safe_mode_enabled(hass.config.config_dir) is False
-    await config_util.async_enable_safe_mode(hass)
-    assert config_util.safe_mode_enabled(hass.config.config_dir) is True
-    assert config_util.safe_mode_enabled(hass.config.config_dir) is False
+    assert config_util.safe_mode_enabled(menuai.config.config_dir) is False
+    assert config_util.safe_mode_enabled(menuai.config.config_dir) is False
+    await config_util.async_enable_safe_mode(menuai)
+    assert config_util.safe_mode_enabled(menuai.config.config_dir) is True
+    assert config_util.safe_mode_enabled(menuai.config.config_dir) is False
 
 
 @pytest.mark.parametrize(
@@ -1390,7 +1390,7 @@ async def test_safe_mode(hass: HomeAssistant) -> None:
     ],
 )
 async def test_component_config_validation_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     config_dir: str,
     mock_iot_domain_integration: Integration,
@@ -1402,17 +1402,17 @@ async def test_component_config_validation_error(
     """Test schema error in component."""
 
     base_path = os.path.dirname(__file__)
-    hass.config.config_dir = os.path.join(
+    menuai.config.config_dir = os.path.join(
         base_path, "fixtures", "core", "config", "component_validation", config_dir
     )
-    config = await config_util.async_hass_config_yaml(hass)
+    config = await config_util.async_menuai_config_yaml(menuai)
 
     for domain_with_label in config:
         integration = await async_get_integration(
-            hass, cv.domain_key(domain_with_label)
+            menuai, cv.domain_key(domain_with_label)
         )
         await config_util.async_process_component_and_handle_errors(
-            hass,
+            menuai,
             config,
             integration=integration,
         )
@@ -1435,7 +1435,7 @@ async def test_component_config_validation_error(
     ],
 )
 async def test_component_config_validation_error_with_docs(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     config_dir: str,
     mock_iot_domain_integration_with_docs: Integration,
@@ -1447,17 +1447,17 @@ async def test_component_config_validation_error_with_docs(
     """Test schema error in component."""
 
     base_path = os.path.dirname(__file__)
-    hass.config.config_dir = os.path.join(
+    menuai.config.config_dir = os.path.join(
         base_path, "fixtures", "core", "config", "component_validation", config_dir
     )
-    config = await config_util.async_hass_config_yaml(hass)
+    config = await config_util.async_menuai_config_yaml(menuai)
 
     for domain_with_label in config:
         integration = await async_get_integration(
-            hass, cv.domain_key(domain_with_label)
+            menuai, cv.domain_key(domain_with_label)
         )
         await config_util.async_process_component_and_handle_errors(
-            hass,
+            menuai,
             config,
             integration=integration,
         )
@@ -1475,7 +1475,7 @@ async def test_component_config_validation_error_with_docs(
     ["packages", "packages_include_dir_named"],
 )
 async def test_package_merge_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     config_dir: str,
     mock_iot_domain_integration: Integration,
@@ -1485,10 +1485,10 @@ async def test_package_merge_error(
 ) -> None:
     """Test schema error in component."""
     base_path = os.path.dirname(__file__)
-    hass.config.config_dir = os.path.join(
+    menuai.config.config_dir = os.path.join(
         base_path, "fixtures", "core", "config", "package_errors", config_dir
     )
-    await config_util.async_hass_config_yaml(hass)
+    await config_util.async_menuai_config_yaml(menuai)
 
     error_records = [
         record.message
@@ -1513,7 +1513,7 @@ async def test_package_merge_error(
     ["packages", "packages_include_dir_named"],
 )
 async def test_package_merge_exception(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     config_dir: str,
     error: Exception,
@@ -1521,14 +1521,14 @@ async def test_package_merge_exception(
 ) -> None:
     """Test exception when merging packages."""
     base_path = os.path.dirname(__file__)
-    hass.config.config_dir = os.path.join(
+    menuai.config.config_dir = os.path.join(
         base_path, "fixtures", "core", "config", "package_exceptions", config_dir
     )
     with patch(
-        "homeassistant.config.async_get_integration_with_requirements",
+        "menuai.config.async_get_integration_with_requirements",
         side_effect=error,
     ):
-        await config_util.async_hass_config_yaml(hass)
+        await config_util.async_menuai_config_yaml(menuai)
 
     error_records = [
         record.message
@@ -1549,7 +1549,7 @@ async def test_package_merge_exception(
     ],
 )
 async def test_yaml_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     config_dir: str,
     mock_iot_domain_integration: Integration,
@@ -1560,11 +1560,11 @@ async def test_yaml_error(
     """Test schema error in component."""
 
     base_path = os.path.dirname(__file__)
-    hass.config.config_dir = os.path.join(
+    menuai.config.config_dir = os.path.join(
         base_path, "fixtures", "core", "config", "yaml_errors", config_dir
     )
-    with pytest.raises(HomeAssistantError) as exc_info:
-        await config_util.async_hass_config_yaml(hass)
+    with pytest.raises(menuaiError) as exc_info:
+        await config_util.async_menuai_config_yaml(menuai)
     assert str(exc_info.value).replace(base_path, "<BASE_PATH>") == snapshot
 
     error_records = [
@@ -1585,7 +1585,7 @@ async def test_yaml_error(
     ],
 )
 async def test_individual_packages_schema_validation_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     config_dir: str,
     mock_iot_domain_integration: Integration,
@@ -1594,11 +1594,11 @@ async def test_individual_packages_schema_validation_errors(
     """Tests syntactic errors in individual packages."""
 
     base_path = os.path.dirname(__file__)
-    hass.config.config_dir = os.path.join(
+    menuai.config.config_dir = os.path.join(
         base_path, "fixtures", "core", "config", "package_schema_validation", config_dir
     )
 
-    config = await config_util.async_hass_config_yaml(hass)
+    config = await config_util.async_menuai_config_yaml(menuai)
 
     error_records = [
         record.message
@@ -1619,7 +1619,7 @@ async def test_individual_packages_schema_validation_errors(
     ],
 )
 async def test_packages_schema_validation_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     config_dir: str,
     snapshot: SnapshotAssertion,
@@ -1627,7 +1627,7 @@ async def test_packages_schema_validation_error(
     """Ensure that global package schema validation errors are logged."""
 
     base_path = os.path.dirname(__file__)
-    hass.config.config_dir = os.path.join(
+    menuai.config.config_dir = os.path.join(
         base_path,
         "fixtures",
         "core",
@@ -1636,7 +1636,7 @@ async def test_packages_schema_validation_error(
         config_dir,
     )
 
-    config = await config_util.async_hass_config_yaml(hass)
+    config = await config_util.async_menuai_config_yaml(menuai)
 
     error_records = [
         record.message
@@ -1645,7 +1645,7 @@ async def test_packages_schema_validation_error(
     ]
     assert error_records == snapshot
 
-    assert len(config[HOMEASSISTANT_DOMAIN][CONF_PACKAGES]) == 0
+    assert len(config[menuai_DOMAIN][CONF_PACKAGES]) == 0
 
 
 def test_extract_domain_configs() -> None:
@@ -1714,17 +1714,17 @@ def test_extract_platform_integrations() -> None:
 
 
 @pytest.mark.parametrize("load_registries", [False])
-async def test_loading_platforms_gathers(hass: HomeAssistant) -> None:
+async def test_loading_platforms_gathers(menuai: menuai) -> None:
     """Test loading platform integrations gathers."""
 
     mock_integration(
-        hass,
+        menuai,
         MockModule(
             domain="platform_int",
         ),
     )
     mock_integration(
-        hass,
+        menuai,
         MockModule(
             domain="platform_int2",
         ),
@@ -1735,8 +1735,8 @@ async def test_loading_platforms_gathers(hass: HomeAssistant) -> None:
     # will not create an executor job to load them. We are testing in
     # what order the executor jobs happen here as we want to make
     # sure the platform integrations are at the front of the line
-    light_integration = await loader.async_get_integration(hass, "light")
-    sensor_integration = await loader.async_get_integration(hass, "sensor")
+    light_integration = await loader.async_get_integration(menuai, "light")
+    sensor_integration = await loader.async_get_integration(menuai, "sensor")
 
     order: list[tuple[str, str]] = []
 
@@ -1747,12 +1747,12 @@ async def test_loading_platforms_gathers(hass: HomeAssistant) -> None:
     # We need to patch what runs in the executor so we are counting
     # the order that jobs are scheduled in th executor
     with patch(
-        "homeassistant.loader.Integration._load_platform",
+        "menuai.loader.Integration._load_platform",
         _load_platform,
     ):
-        light_task = hass.async_create_task(
+        light_task = menuai.async_create_task(
             config_util.async_process_component_config(
-                hass,
+                menuai,
                 {
                     "light": [
                         {"platform": "platform_int"},
@@ -1763,9 +1763,9 @@ async def test_loading_platforms_gathers(hass: HomeAssistant) -> None:
             ),
             eager_start=True,
         )
-        sensor_task = hass.async_create_task(
+        sensor_task = menuai.async_create_task(
             config_util.async_process_component_config(
-                hass,
+                menuai,
                 {
                     "sensor": [
                         {"platform": "platform_int"},

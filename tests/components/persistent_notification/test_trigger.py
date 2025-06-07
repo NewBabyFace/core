@@ -2,12 +2,12 @@
 
 from typing import Any
 
-from homeassistant.components import persistent_notification as pn
-from homeassistant.components.persistent_notification import trigger
-from homeassistant.core import Context, HomeAssistant, callback
+from menuai.components import persistent_notification as pn
+from menuai.components.persistent_notification import trigger
+from menuai.core import Context, menuai, callback
 
 
-async def test_automation_with_pn_trigger(hass: HomeAssistant) -> None:
+async def test_automation_with_pn_trigger(menuai: menuai) -> None:
     """Test automation with a persistent_notification trigger."""
 
     result_any = []
@@ -23,7 +23,7 @@ async def test_automation_with_pn_trigger(hass: HomeAssistant) -> None:
         result_any.append(run_variables)
 
     await trigger.async_attach_trigger(
-        hass,
+        menuai,
         {"platform": "persistent_notification"},
         trigger_callback_any,
         trigger_info,
@@ -36,7 +36,7 @@ async def test_automation_with_pn_trigger(hass: HomeAssistant) -> None:
         result_dismissed.append(run_variables)
 
     await trigger.async_attach_trigger(
-        hass,
+        menuai,
         {"platform": "persistent_notification", "update_type": "removed"},
         trigger_callback_dismissed,
         trigger_info,
@@ -49,13 +49,13 @@ async def test_automation_with_pn_trigger(hass: HomeAssistant) -> None:
         result_id.append(run_variables)
 
     await trigger.async_attach_trigger(
-        hass,
+        menuai,
         {"platform": "persistent_notification", "notification_id": "42"},
         trigger_callback_id,
         trigger_info,
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         pn.DOMAIN,
         "create",
         {"notification_id": "test_notification", "message": "test"},
@@ -71,7 +71,7 @@ async def test_automation_with_pn_trigger(hass: HomeAssistant) -> None:
     assert len(result_dismissed) == 0
     assert len(result_id) == 0
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         pn.DOMAIN,
         "dismiss",
         {"notification_id": "test_notification"},
@@ -87,7 +87,7 @@ async def test_automation_with_pn_trigger(hass: HomeAssistant) -> None:
 
     assert len(result_id) == 0
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         pn.DOMAIN,
         "create",
         {"notification_id": "42", "message": "Forty Two"},

@@ -5,13 +5,13 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.lock import LockEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, State, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import (
+from menuai.components.lock import LockEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai, State, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     async_get_current_platform,
 )
@@ -31,16 +31,16 @@ SERVICE_CLEAR_LOCK_USER_CODE = "clear_lock_user_code"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Zigbee Home Automation Door Lock from config entry."""
-    zha_data = get_zha_data(hass)
+    zha_data = get_zha_data(menuai)
     entities_to_create = zha_data.platforms[Platform.LOCK]
 
     unsub = async_dispatcher_connect(
-        hass,
+        menuai,
         SIGNAL_ADD_ENTITIES,
         functools.partial(
             zha_async_add_entities, async_add_entities, ZhaDoorLock, entities_to_create

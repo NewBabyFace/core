@@ -4,44 +4,44 @@ from unittest.mock import AsyncMock, MagicMock
 
 from serial import SerialException
 
-from homeassistant import config_entries
-from homeassistant.components.opentherm_gw.const import (
+from menuai import config_entries
+from menuai.components.opentherm_gw.const import (
     CONF_FLOOR_TEMP,
     CONF_READ_PRECISION,
     CONF_SET_PRECISION,
     CONF_TEMPORARY_OVRD_MODE,
     DOMAIN,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_DEVICE,
     CONF_ID,
     CONF_NAME,
     PRECISION_HALVES,
     PRECISION_TENTHS,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
 
 async def test_form_user(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_pyotgw: MagicMock,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test we get the form."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {CONF_NAME: "Test Entry 1", CONF_DEVICE: "/dev/ttyUSB0"}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "Test Entry 1"
@@ -55,33 +55,33 @@ async def test_form_user(
 
 
 async def test_form_duplicate_entries(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_pyotgw: MagicMock,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test duplicate device or id errors."""
-    flow1 = await hass.config_entries.flow.async_init(
+    flow1 = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    flow2 = await hass.config_entries.flow.async_init(
+    flow2 = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    flow3 = await hass.config_entries.flow.async_init(
+    flow3 = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    result1 = await hass.config_entries.flow.async_configure(
+    result1 = await menuai.config_entries.flow.async_configure(
         flow1["flow_id"], {CONF_NAME: "Test Entry 1", CONF_DEVICE: "/dev/ttyUSB0"}
     )
     assert result1["type"] is FlowResultType.CREATE_ENTRY
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         flow2["flow_id"], {CONF_NAME: "Test Entry 1", CONF_DEVICE: "/dev/ttyUSB1"}
     )
     assert result2["type"] is FlowResultType.FORM
     assert result2["errors"] == {"base": "id_exists"}
 
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         flow3["flow_id"], {CONF_NAME: "Test Entry 2", CONF_DEVICE: "/dev/ttyUSB0"}
     )
     assert result3["type"] is FlowResultType.FORM
@@ -92,18 +92,18 @@ async def test_form_duplicate_entries(
 
 
 async def test_form_connection_timeout(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_pyotgw: MagicMock,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test we handle connection timeout."""
-    flow = await hass.config_entries.flow.async_init(
+    flow = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     mock_pyotgw.return_value.connect.side_effect = TimeoutError
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         flow["flow_id"],
         {CONF_NAME: "Test Entry 1", CONF_DEVICE: "socket://192.0.2.254:1234"},
     )
@@ -115,18 +115,18 @@ async def test_form_connection_timeout(
 
 
 async def test_form_connection_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_pyotgw: MagicMock,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test we handle serial connection error."""
-    flow = await hass.config_entries.flow.async_init(
+    flow = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     mock_pyotgw.return_value.connect.side_effect = SerialException
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         flow["flow_id"], {CONF_NAME: "Test Entry 1", CONF_DEVICE: "/dev/ttyUSB0"}
     )
 
@@ -136,7 +136,7 @@ async def test_form_connection_error(
 
 
 async def test_options_form(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_pyotgw: MagicMock,
     mock_setup_entry: AsyncMock,
 ) -> None:
@@ -151,18 +151,18 @@ async def test_options_form(
         },
         options={},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    flow = await hass.config_entries.options.async_init(
+    flow = await menuai.config_entries.options.async_init(
         entry.entry_id, context={"source": "test"}, data=None
     )
     assert flow["type"] is FlowResultType.FORM
     assert flow["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         flow["flow_id"],
         user_input={
             CONF_FLOOR_TEMP: True,
@@ -178,11 +178,11 @@ async def test_options_form(
     assert result["data"][CONF_TEMPORARY_OVRD_MODE] is True
     assert result["data"][CONF_FLOOR_TEMP] is True
 
-    flow = await hass.config_entries.options.async_init(
+    flow = await menuai.config_entries.options.async_init(
         entry.entry_id, context={"source": "test"}, data=None
     )
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         flow["flow_id"], user_input={CONF_READ_PRECISION: 0}
     )
 
@@ -192,11 +192,11 @@ async def test_options_form(
     assert result["data"][CONF_TEMPORARY_OVRD_MODE] is True
     assert result["data"][CONF_FLOOR_TEMP] is True
 
-    flow = await hass.config_entries.options.async_init(
+    flow = await menuai.config_entries.options.async_init(
         entry.entry_id, context={"source": "test"}, data=None
     )
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         flow["flow_id"],
         user_input={
             CONF_FLOOR_TEMP: False,

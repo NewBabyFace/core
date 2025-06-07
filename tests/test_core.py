@@ -1,4 +1,4 @@
-"""Test to verify that Home Assistant core works."""
+"""Test to verify that MenuAI core works."""
 
 from __future__ import annotations
 
@@ -20,16 +20,16 @@ import pytest
 from pytest_unordered import unordered
 import voluptuous as vol
 
-from homeassistant import core as ha
-from homeassistant.const import (
+from menuai import core as ha
+from menuai.const import (
     ATTR_FRIENDLY_NAME,
     EVENT_CALL_SERVICE,
     EVENT_CORE_CONFIG_UPDATE,
-    EVENT_HOMEASSISTANT_CLOSE,
-    EVENT_HOMEASSISTANT_FINAL_WRITE,
-    EVENT_HOMEASSISTANT_START,
-    EVENT_HOMEASSISTANT_STARTED,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_CLOSE,
+    EVENT_menuai_FINAL_WRITE,
+    EVENT_menuai_START,
+    EVENT_menuai_STARTED,
+    EVENT_menuai_STOP,
     EVENT_SERVICE_REGISTERED,
     EVENT_SERVICE_REMOVED,
     EVENT_STATE_CHANGED,
@@ -37,10 +37,10 @@ from homeassistant.const import (
     MATCH_ALL,
     STATE_UNKNOWN,
 )
-from homeassistant.core import (
+from menuai.core import (
     CoreState,
-    HassJob,
-    HomeAssistant,
+    menuaiJob,
+    menuai,
     ReleaseChannel,
     ServiceCall,
     ServiceResponse,
@@ -49,20 +49,20 @@ from homeassistant.core import (
     callback,
     get_release_channel,
 )
-from homeassistant.core_config import Config
-from homeassistant.exceptions import (
-    HomeAssistantError,
+from menuai.core_config import Config
+from menuai.exceptions import (
+    menuaiError,
     InvalidEntityFormatError,
     InvalidStateError,
     MaxLengthExceeded,
     ServiceNotFound,
     ServiceValidationError,
 )
-from homeassistant.helpers.json import json_dumps
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
-from homeassistant.util.async_ import create_eager_task
-from homeassistant.util.read_only_dict import ReadOnlyDict
+from menuai.helpers.json import json_dumps
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
+from menuai.util.async_ import create_eager_task
+from menuai.util.read_only_dict import ReadOnlyDict
 
 from .common import (
     async_capture_events,
@@ -89,198 +89,198 @@ def test_split_entity_id() -> None:
         ha.split_entity_id(".empty_domain")
 
 
-async def test_async_add_hass_job_schedule_callback() -> None:
+async def test_async_add_menuai_job_schedule_callback() -> None:
     """Test that we schedule callbacks and add jobs to the job pool."""
-    hass = MagicMock()
+    menuai = MagicMock()
     job = MagicMock()
 
-    ha.HomeAssistant._async_add_hass_job(hass, ha.HassJob(ha.callback(job)))
-    assert len(hass.loop.call_soon.mock_calls) == 1
-    assert len(hass.loop.create_task.mock_calls) == 0
-    assert len(hass.add_job.mock_calls) == 0
+    ha.menuai._async_add_menuai_job(menuai, ha.menuaiJob(ha.callback(job)))
+    assert len(menuai.loop.call_soon.mock_calls) == 1
+    assert len(menuai.loop.create_task.mock_calls) == 0
+    assert len(menuai.add_job.mock_calls) == 0
 
 
-async def test_async_add_hass_job_eager_start_coro_suspends(
-    hass: HomeAssistant,
+async def test_async_add_menuai_job_eager_start_coro_suspends(
+    menuai: menuai,
 ) -> None:
     """Test scheduling a coro as a task that will suspend with eager_start."""
 
     async def job_that_suspends():
         await asyncio.sleep(0)
 
-    task = hass._async_add_hass_job(ha.HassJob(ha.callback(job_that_suspends)))
+    task = menuai._async_add_menuai_job(ha.menuaiJob(ha.callback(job_that_suspends)))
     assert not task.done()
-    assert task in hass._tasks
+    assert task in menuai._tasks
     await task
-    assert task not in hass._tasks
+    assert task not in menuai._tasks
 
 
-async def test_async_run_hass_job_eager_start_coro_suspends(
-    hass: HomeAssistant,
+async def test_async_run_menuai_job_eager_start_coro_suspends(
+    menuai: menuai,
 ) -> None:
     """Test scheduling a coro as a task that will suspend with eager_start."""
 
     async def job_that_suspends():
         await asyncio.sleep(0)
 
-    task = hass.async_run_hass_job(ha.HassJob(ha.callback(job_that_suspends)))
+    task = menuai.async_run_menuai_job(ha.menuaiJob(ha.callback(job_that_suspends)))
     assert not task.done()
-    assert task in hass._tasks
+    assert task in menuai._tasks
     await task
-    assert task not in hass._tasks
+    assert task not in menuai._tasks
 
 
-async def test_async_add_hass_job_background(hass: HomeAssistant) -> None:
-    """Test scheduling a coro as a background task with async_add_hass_job."""
+async def test_async_add_menuai_job_background(menuai: menuai) -> None:
+    """Test scheduling a coro as a background task with async_add_menuai_job."""
 
     async def job_that_suspends():
         await asyncio.sleep(0)
 
-    task = hass._async_add_hass_job(
-        ha.HassJob(ha.callback(job_that_suspends)), background=True
+    task = menuai._async_add_menuai_job(
+        ha.menuaiJob(ha.callback(job_that_suspends)), background=True
     )
     assert not task.done()
-    assert task in hass._background_tasks
+    assert task in menuai._background_tasks
     await task
-    assert task not in hass._background_tasks
+    assert task not in menuai._background_tasks
 
 
-async def test_async_run_hass_job_background(hass: HomeAssistant) -> None:
-    """Test scheduling a coro as a background task with async_run_hass_job."""
+async def test_async_run_menuai_job_background(menuai: menuai) -> None:
+    """Test scheduling a coro as a background task with async_run_menuai_job."""
 
     async def job_that_suspends():
         await asyncio.sleep(0)
 
-    task = hass.async_run_hass_job(
-        ha.HassJob(ha.callback(job_that_suspends)), background=True
+    task = menuai.async_run_menuai_job(
+        ha.menuaiJob(ha.callback(job_that_suspends)), background=True
     )
     assert not task.done()
-    assert task in hass._background_tasks
+    assert task in menuai._background_tasks
     await task
-    assert task not in hass._background_tasks
+    assert task not in menuai._background_tasks
 
 
-async def test_async_add_hass_job_eager_background(hass: HomeAssistant) -> None:
-    """Test scheduling a coro as an eager background task with async_add_hass_job."""
+async def test_async_add_menuai_job_eager_background(menuai: menuai) -> None:
+    """Test scheduling a coro as an eager background task with async_add_menuai_job."""
 
     async def job_that_suspends():
         await asyncio.sleep(0)
 
-    task = hass._async_add_hass_job(
-        ha.HassJob(ha.callback(job_that_suspends)), background=True
+    task = menuai._async_add_menuai_job(
+        ha.menuaiJob(ha.callback(job_that_suspends)), background=True
     )
     assert not task.done()
-    assert task in hass._background_tasks
+    assert task in menuai._background_tasks
     await task
-    assert task not in hass._background_tasks
+    assert task not in menuai._background_tasks
 
 
-async def test_async_run_hass_job_eager_background(hass: HomeAssistant) -> None:
-    """Test scheduling a coro as an eager background task with async_run_hass_job."""
+async def test_async_run_menuai_job_eager_background(menuai: menuai) -> None:
+    """Test scheduling a coro as an eager background task with async_run_menuai_job."""
 
     async def job_that_suspends():
         await asyncio.sleep(0)
 
-    task = hass.async_run_hass_job(
-        ha.HassJob(ha.callback(job_that_suspends)), background=True
+    task = menuai.async_run_menuai_job(
+        ha.menuaiJob(ha.callback(job_that_suspends)), background=True
     )
     assert not task.done()
-    assert task in hass._background_tasks
+    assert task in menuai._background_tasks
     await task
-    assert task not in hass._background_tasks
+    assert task not in menuai._background_tasks
 
 
-async def test_async_run_hass_job_background_synchronous(hass: HomeAssistant) -> None:
-    """Test scheduling a coro as an eager background task with async_run_hass_job."""
+async def test_async_run_menuai_job_background_synchronous(menuai: menuai) -> None:
+    """Test scheduling a coro as an eager background task with async_run_menuai_job."""
 
     async def job_that_does_not_suspends():
         pass
 
-    task = hass.async_run_hass_job(
-        ha.HassJob(ha.callback(job_that_does_not_suspends)),
+    task = menuai.async_run_menuai_job(
+        ha.menuaiJob(ha.callback(job_that_does_not_suspends)),
         background=True,
     )
     assert task.done()
-    assert task not in hass._background_tasks
-    assert task not in hass._tasks
+    assert task not in menuai._background_tasks
+    assert task not in menuai._tasks
     await task
 
 
-async def test_async_run_hass_job_synchronous(hass: HomeAssistant) -> None:
-    """Test scheduling a coro as an eager task with async_run_hass_job."""
+async def test_async_run_menuai_job_synchronous(menuai: menuai) -> None:
+    """Test scheduling a coro as an eager task with async_run_menuai_job."""
 
     async def job_that_does_not_suspends():
         pass
 
-    task = hass.async_run_hass_job(
-        ha.HassJob(ha.callback(job_that_does_not_suspends)),
+    task = menuai.async_run_menuai_job(
+        ha.menuaiJob(ha.callback(job_that_does_not_suspends)),
         background=False,
     )
     assert task.done()
-    assert task not in hass._background_tasks
-    assert task not in hass._tasks
+    assert task not in menuai._background_tasks
+    assert task not in menuai._tasks
     await task
 
 
-async def test_async_add_hass_job_coro_named(hass: HomeAssistant) -> None:
+async def test_async_add_menuai_job_coro_named(menuai: menuai) -> None:
     """Test that we schedule coroutines and add jobs to the job pool with a name."""
 
     async def mycoro():
         pass
 
-    job = ha.HassJob(mycoro, "named coro")
+    job = ha.menuaiJob(mycoro, "named coro")
     assert "named coro" in str(job)
     assert job.name == "named coro"
-    task = ha.HomeAssistant._async_add_hass_job(hass, job)
+    task = ha.menuai._async_add_menuai_job(menuai, job)
     assert "named coro" in str(task)
 
 
-async def test_async_add_hass_job_eager_start(hass: HomeAssistant) -> None:
-    """Test eager_start with async_add_hass_job."""
+async def test_async_add_menuai_job_eager_start(menuai: menuai) -> None:
+    """Test eager_start with async_add_menuai_job."""
 
     async def mycoro():
         pass
 
-    job = ha.HassJob(mycoro, "named coro")
+    job = ha.menuaiJob(mycoro, "named coro")
     assert "named coro" in str(job)
     assert job.name == "named coro"
-    task = ha.HomeAssistant._async_add_hass_job(hass, job)
+    task = ha.menuai._async_add_menuai_job(menuai, job)
     assert "named coro" in str(task)
 
 
-async def test_async_add_hass_job_schedule_partial_callback() -> None:
+async def test_async_add_menuai_job_schedule_partial_callback() -> None:
     """Test that we schedule partial coros and add jobs to the job pool."""
-    hass = MagicMock()
+    menuai = MagicMock()
     job = MagicMock()
     partial = functools.partial(ha.callback(job))
 
-    ha.HomeAssistant._async_add_hass_job(hass, ha.HassJob(partial))
-    assert len(hass.loop.call_soon.mock_calls) == 1
-    assert len(hass.loop.create_task.mock_calls) == 0
-    assert len(hass.add_job.mock_calls) == 0
+    ha.menuai._async_add_menuai_job(menuai, ha.menuaiJob(partial))
+    assert len(menuai.loop.call_soon.mock_calls) == 1
+    assert len(menuai.loop.create_task.mock_calls) == 0
+    assert len(menuai.add_job.mock_calls) == 0
 
 
-async def test_async_add_hass_job_schedule_corofunction_eager_start() -> None:
+async def test_async_add_menuai_job_schedule_corofunction_eager_start() -> None:
     """Test that we schedule coroutines and add jobs to the job pool."""
-    hass = MagicMock(loop=MagicMock(wraps=asyncio.get_running_loop()))
+    menuai = MagicMock(loop=MagicMock(wraps=asyncio.get_running_loop()))
 
     async def job():
         pass
 
     with patch(
-        "homeassistant.core.create_eager_task", wraps=create_eager_task
+        "menuai.core.create_eager_task", wraps=create_eager_task
     ) as mock_create_eager_task:
-        hass_job = ha.HassJob(job)
-        task = ha.HomeAssistant._async_add_hass_job(hass, hass_job)
-        assert len(hass.loop.call_soon.mock_calls) == 0
-        assert len(hass.add_job.mock_calls) == 0
+        menuai_job = ha.menuaiJob(job)
+        task = ha.menuai._async_add_menuai_job(menuai, menuai_job)
+        assert len(menuai.loop.call_soon.mock_calls) == 0
+        assert len(menuai.add_job.mock_calls) == 0
         assert mock_create_eager_task.mock_calls
         await task
 
 
-async def test_async_add_hass_job_schedule_partial_corofunction_eager_start() -> None:
+async def test_async_add_menuai_job_schedule_partial_corofunction_eager_start() -> None:
     """Test that we schedule coroutines and add jobs to the job pool."""
-    hass = MagicMock(loop=MagicMock(wraps=asyncio.get_running_loop()))
+    menuai = MagicMock(loop=MagicMock(wraps=asyncio.get_running_loop()))
 
     async def job():
         pass
@@ -288,272 +288,272 @@ async def test_async_add_hass_job_schedule_partial_corofunction_eager_start() ->
     partial = functools.partial(job)
 
     with patch(
-        "homeassistant.core.create_eager_task", wraps=create_eager_task
+        "menuai.core.create_eager_task", wraps=create_eager_task
     ) as mock_create_eager_task:
-        hass_job = ha.HassJob(partial)
-        task = ha.HomeAssistant._async_add_hass_job(hass, hass_job)
-        assert len(hass.loop.call_soon.mock_calls) == 0
-        assert len(hass.add_job.mock_calls) == 0
+        menuai_job = ha.menuaiJob(partial)
+        task = ha.menuai._async_add_menuai_job(menuai, menuai_job)
+        assert len(menuai.loop.call_soon.mock_calls) == 0
+        assert len(menuai.add_job.mock_calls) == 0
         assert mock_create_eager_task.mock_calls
         await task
 
 
-async def test_async_add_job_add_hass_threaded_job_to_pool() -> None:
+async def test_async_add_job_add_menuai_threaded_job_to_pool() -> None:
     """Test that we schedule coroutines and add jobs to the job pool."""
-    hass = MagicMock()
+    menuai = MagicMock()
 
     def job():
         pass
 
-    ha.HomeAssistant._async_add_hass_job(hass, ha.HassJob(job))
-    assert len(hass.loop.call_soon.mock_calls) == 0
-    assert len(hass.loop.create_task.mock_calls) == 0
-    assert len(hass.loop.run_in_executor.mock_calls) == 2
+    ha.menuai._async_add_menuai_job(menuai, ha.menuaiJob(job))
+    assert len(menuai.loop.call_soon.mock_calls) == 0
+    assert len(menuai.loop.create_task.mock_calls) == 0
+    assert len(menuai.loop.run_in_executor.mock_calls) == 2
 
 
 async def test_async_create_task_schedule_coroutine() -> None:
     """Test that we schedule coroutines and add jobs to the job pool."""
-    hass = MagicMock(loop=MagicMock(wraps=asyncio.get_running_loop()))
+    menuai = MagicMock(loop=MagicMock(wraps=asyncio.get_running_loop()))
 
     async def job():
         pass
 
-    ha.HomeAssistant.async_create_task_internal(hass, job(), eager_start=False)
-    assert len(hass.loop.call_soon.mock_calls) == 0
-    assert len(hass.loop.create_task.mock_calls) == 1
-    assert len(hass.add_job.mock_calls) == 0
+    ha.menuai.async_create_task_internal(menuai, job(), eager_start=False)
+    assert len(menuai.loop.call_soon.mock_calls) == 0
+    assert len(menuai.loop.create_task.mock_calls) == 1
+    assert len(menuai.add_job.mock_calls) == 0
 
 
 async def test_async_create_task_eager_start_schedule_coroutine() -> None:
     """Test that we schedule coroutines and add jobs to the job pool."""
-    hass = MagicMock(loop=MagicMock(wraps=asyncio.get_running_loop()))
+    menuai = MagicMock(loop=MagicMock(wraps=asyncio.get_running_loop()))
 
     async def job():
         pass
 
-    ha.HomeAssistant.async_create_task_internal(hass, job(), eager_start=True)
+    ha.menuai.async_create_task_internal(menuai, job(), eager_start=True)
     # Should create the task directly since 3.12 supports eager_start
-    assert len(hass.loop.create_task.mock_calls) == 0
-    assert len(hass.add_job.mock_calls) == 0
+    assert len(menuai.loop.create_task.mock_calls) == 0
+    assert len(menuai.add_job.mock_calls) == 0
 
 
 async def test_async_create_task_schedule_coroutine_with_name() -> None:
     """Test that we schedule coroutines and add jobs to the job pool with a name."""
-    hass = MagicMock(loop=MagicMock(wraps=asyncio.get_running_loop()))
+    menuai = MagicMock(loop=MagicMock(wraps=asyncio.get_running_loop()))
 
     async def job():
         pass
 
-    task = ha.HomeAssistant.async_create_task_internal(
-        hass, job(), "named task", eager_start=False
+    task = ha.menuai.async_create_task_internal(
+        menuai, job(), "named task", eager_start=False
     )
-    assert len(hass.loop.call_soon.mock_calls) == 0
-    assert len(hass.loop.create_task.mock_calls) == 1
-    assert len(hass.add_job.mock_calls) == 0
+    assert len(menuai.loop.call_soon.mock_calls) == 0
+    assert len(menuai.loop.create_task.mock_calls) == 1
+    assert len(menuai.add_job.mock_calls) == 0
     assert "named task" in str(task)
 
 
-async def test_async_run_eager_hass_job_calls_callback() -> None:
+async def test_async_run_eager_menuai_job_calls_callback() -> None:
     """Test that the callback annotation is respected."""
-    hass = MagicMock()
+    menuai = MagicMock()
     calls = []
 
     def job():
         asyncio.get_running_loop()  # ensure we are in the event loop
         calls.append(1)
 
-    ha.HomeAssistant.async_run_hass_job(hass, ha.HassJob(ha.callback(job)))
+    ha.menuai.async_run_menuai_job(menuai, ha.menuaiJob(ha.callback(job)))
     assert len(calls) == 1
 
 
-async def test_async_run_eager_hass_job_calls_coro_function() -> None:
-    """Test running coros from async_run_hass_job with eager_start."""
-    hass = MagicMock()
+async def test_async_run_eager_menuai_job_calls_coro_function() -> None:
+    """Test running coros from async_run_menuai_job with eager_start."""
+    menuai = MagicMock()
 
     async def job():
         pass
 
-    ha.HomeAssistant.async_run_hass_job(hass, ha.HassJob(job))
-    assert len(hass._async_add_hass_job.mock_calls) == 1
+    ha.menuai.async_run_menuai_job(menuai, ha.menuaiJob(job))
+    assert len(menuai._async_add_menuai_job.mock_calls) == 1
 
 
-async def test_async_run_hass_job_calls_callback() -> None:
+async def test_async_run_menuai_job_calls_callback() -> None:
     """Test that the callback annotation is respected."""
-    hass = MagicMock()
+    menuai = MagicMock()
     calls = []
 
     def job():
         calls.append(1)
 
-    ha.HomeAssistant.async_run_hass_job(hass, ha.HassJob(ha.callback(job)))
+    ha.menuai.async_run_menuai_job(menuai, ha.menuaiJob(ha.callback(job)))
     assert len(calls) == 1
-    assert len(hass.async_add_job.mock_calls) == 0
+    assert len(menuai.async_add_job.mock_calls) == 0
 
 
-async def test_async_run_hass_job_delegates_non_async() -> None:
+async def test_async_run_menuai_job_delegates_non_async() -> None:
     """Test that the callback annotation is respected."""
-    hass = MagicMock()
+    menuai = MagicMock()
     calls = []
 
     def job():
         calls.append(1)
 
-    ha.HomeAssistant.async_run_hass_job(hass, ha.HassJob(job))
+    ha.menuai.async_run_menuai_job(menuai, ha.menuaiJob(job))
     assert len(calls) == 0
-    assert len(hass._async_add_hass_job.mock_calls) == 1
+    assert len(menuai._async_add_menuai_job.mock_calls) == 1
 
 
-async def test_async_get_hass_can_be_called(hass: HomeAssistant) -> None:
-    """Test calling async_get_hass via different paths.
+async def test_async_get_menuai_can_be_called(menuai: menuai) -> None:
+    """Test calling async_get_menuai via different paths.
 
-    The test asserts async_get_hass can be called from:
+    The test asserts async_get_menuai can be called from:
     - Coroutines and callbacks
     - Callbacks scheduled from callbacks, coroutines and threads
     - Coroutines scheduled from callbacks, coroutines and threads
 
-    The test also asserts async_get_hass can not be called from threads
+    The test also asserts async_get_menuai can not be called from threads
     other than the event loop.
     """
     task_finished = asyncio.Event()
 
-    def can_call_async_get_hass() -> bool:
-        """Test if it's possible to call async_get_hass."""
+    def can_call_async_get_menuai() -> bool:
+        """Test if it's possible to call async_get_menuai."""
         try:
-            if ha.async_get_hass() is hass:
+            if ha.async_get_menuai() is menuai:
                 return True
             raise Exception  # noqa: TRY002
-        except HomeAssistantError:
+        except menuaiError:
             return False
 
         raise Exception  # noqa: TRY002
 
-    # Test scheduling a coroutine which calls async_get_hass via hass.async_create_task
+    # Test scheduling a coroutine which calls async_get_menuai via menuai.async_create_task
     async def _async_create_task() -> None:
         task_finished.set()
-        assert can_call_async_get_hass()
+        assert can_call_async_get_menuai()
 
-    hass.async_create_task(_async_create_task(), "create_task")
+    menuai.async_create_task(_async_create_task(), "create_task")
     async with asyncio.timeout(1):
         await task_finished.wait()
     task_finished.clear()
 
-    # Test scheduling a callback which calls async_get_hass via hass.async_add_job
+    # Test scheduling a callback which calls async_get_menuai via menuai.async_add_job
     @callback
     def _add_job() -> None:
-        assert can_call_async_get_hass()
+        assert can_call_async_get_menuai()
         task_finished.set()
 
-    hass.async_add_job(_add_job)
+    menuai.async_add_job(_add_job)
     async with asyncio.timeout(1):
         await task_finished.wait()
     task_finished.clear()
 
-    # Test scheduling a callback which calls async_get_hass from a callback
+    # Test scheduling a callback which calls async_get_menuai from a callback
     @callback
     def _schedule_callback_from_callback() -> None:
         @callback
         def _callback():
-            assert can_call_async_get_hass()
+            assert can_call_async_get_menuai()
             task_finished.set()
 
-        # Test the scheduled callback itself can call async_get_hass
-        assert can_call_async_get_hass()
-        hass.async_add_job(_callback)
+        # Test the scheduled callback itself can call async_get_menuai
+        assert can_call_async_get_menuai()
+        menuai.async_add_job(_callback)
 
     _schedule_callback_from_callback()
     async with asyncio.timeout(1):
         await task_finished.wait()
     task_finished.clear()
 
-    # Test scheduling a coroutine which calls async_get_hass from a callback
+    # Test scheduling a coroutine which calls async_get_menuai from a callback
     @callback
     def _schedule_coroutine_from_callback() -> None:
         async def _coroutine():
-            assert can_call_async_get_hass()
+            assert can_call_async_get_menuai()
             task_finished.set()
 
-        # Test the scheduled callback itself can call async_get_hass
-        assert can_call_async_get_hass()
-        hass.async_add_job(_coroutine())
+        # Test the scheduled callback itself can call async_get_menuai
+        assert can_call_async_get_menuai()
+        menuai.async_add_job(_coroutine())
 
     _schedule_coroutine_from_callback()
     async with asyncio.timeout(1):
         await task_finished.wait()
     task_finished.clear()
 
-    # Test scheduling a callback which calls async_get_hass from a coroutine
+    # Test scheduling a callback which calls async_get_menuai from a coroutine
     async def _schedule_callback_from_coroutine() -> None:
         @callback
         def _callback():
-            assert can_call_async_get_hass()
+            assert can_call_async_get_menuai()
             task_finished.set()
 
-        # Test the coroutine itself can call async_get_hass
-        assert can_call_async_get_hass()
-        hass.async_add_job(_callback)
+        # Test the coroutine itself can call async_get_menuai
+        assert can_call_async_get_menuai()
+        menuai.async_add_job(_callback)
 
     await _schedule_callback_from_coroutine()
     async with asyncio.timeout(1):
         await task_finished.wait()
     task_finished.clear()
 
-    # Test scheduling a coroutine which calls async_get_hass from a coroutine
+    # Test scheduling a coroutine which calls async_get_menuai from a coroutine
     async def _schedule_callback_from_coroutine() -> None:
         async def _coroutine():
-            assert can_call_async_get_hass()
+            assert can_call_async_get_menuai()
             task_finished.set()
 
-        # Test the coroutine itself can call async_get_hass
-        assert can_call_async_get_hass()
-        await hass.async_create_task(_coroutine())
+        # Test the coroutine itself can call async_get_menuai
+        assert can_call_async_get_menuai()
+        await menuai.async_create_task(_coroutine())
 
     await _schedule_callback_from_coroutine()
     async with asyncio.timeout(1):
         await task_finished.wait()
     task_finished.clear()
 
-    # Test scheduling a callback which calls async_get_hass from an executor
+    # Test scheduling a callback which calls async_get_menuai from an executor
     def _async_add_executor_job_add_job() -> None:
         @callback
         def _async_add_job():
-            assert can_call_async_get_hass()
+            assert can_call_async_get_menuai()
             task_finished.set()
 
-        # Test the executor itself can not call async_get_hass
-        assert not can_call_async_get_hass()
-        hass.add_job(_async_add_job)
+        # Test the executor itself can not call async_get_menuai
+        assert not can_call_async_get_menuai()
+        menuai.add_job(_async_add_job)
 
-    await hass.async_add_executor_job(_async_add_executor_job_add_job)
+    await menuai.async_add_executor_job(_async_add_executor_job_add_job)
     async with asyncio.timeout(1):
         await task_finished.wait()
     task_finished.clear()
 
-    # Test scheduling a coroutine which calls async_get_hass from an executor
+    # Test scheduling a coroutine which calls async_get_menuai from an executor
     def _async_add_executor_job_create_task() -> None:
         async def _async_create_task() -> None:
-            assert can_call_async_get_hass()
+            assert can_call_async_get_menuai()
             task_finished.set()
 
-        # Test the executor itself can not call async_get_hass
-        assert not can_call_async_get_hass()
-        hass.create_task(_async_create_task())
+        # Test the executor itself can not call async_get_menuai
+        assert not can_call_async_get_menuai()
+        menuai.create_task(_async_create_task())
 
-    await hass.async_add_executor_job(_async_add_executor_job_create_task)
+    await menuai.async_add_executor_job(_async_add_executor_job_create_task)
     async with asyncio.timeout(1):
         await task_finished.wait()
     task_finished.clear()
 
-    # Test scheduling a callback which calls async_get_hass from a worker thread
+    # Test scheduling a callback which calls async_get_menuai from a worker thread
     class MyJobAddJob(threading.Thread):
         @callback
         def _my_threaded_job_add_job(self) -> None:
-            assert can_call_async_get_hass()
+            assert can_call_async_get_menuai()
             task_finished.set()
 
         def run(self) -> None:
-            # Test the worker thread itself can not call async_get_hass
-            assert not can_call_async_get_hass()
-            hass.add_job(self._my_threaded_job_add_job)
+            # Test the worker thread itself can not call async_get_menuai
+            assert not can_call_async_get_menuai()
+            menuai.add_job(self._my_threaded_job_add_job)
 
     my_job_add_job = MyJobAddJob()
     my_job_add_job.start()
@@ -562,16 +562,16 @@ async def test_async_get_hass_can_be_called(hass: HomeAssistant) -> None:
     task_finished.clear()
     my_job_add_job.join()
 
-    # Test scheduling a coroutine which calls async_get_hass from a worker thread
+    # Test scheduling a coroutine which calls async_get_menuai from a worker thread
     class MyJobCreateTask(threading.Thread):
         async def _my_threaded_job_create_task(self) -> None:
-            assert can_call_async_get_hass()
+            assert can_call_async_get_menuai()
             task_finished.set()
 
         def run(self) -> None:
-            # Test the worker thread itself can not call async_get_hass
-            assert not can_call_async_get_hass()
-            hass.create_task(self._my_threaded_job_create_task())
+            # Test the worker thread itself can not call async_get_menuai
+            assert not can_call_async_get_menuai()
+            menuai.create_task(self._my_threaded_job_create_task())
 
     my_job_create_task = MyJobCreateTask()
     my_job_create_task.start()
@@ -581,7 +581,7 @@ async def test_async_get_hass_can_be_called(hass: HomeAssistant) -> None:
     my_job_create_task.join()
 
 
-async def test_async_add_executor_job_background(hass: HomeAssistant) -> None:
+async def test_async_add_executor_job_background(menuai: menuai) -> None:
     """Test running an executor job in the background."""
     calls = []
 
@@ -590,19 +590,19 @@ async def test_async_add_executor_job_background(hass: HomeAssistant) -> None:
         calls.append(1)
 
     async def _async_add_executor_job():
-        await hass.async_add_executor_job(job)
+        await menuai.async_add_executor_job(job)
 
-    task = hass.async_create_background_task(
+    task = menuai.async_create_background_task(
         _async_add_executor_job(), "background", eager_start=True
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(calls) == 0
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
     assert len(calls) == 1
     await task
 
 
-async def test_async_add_executor_job(hass: HomeAssistant) -> None:
+async def test_async_add_executor_job(menuai: menuai) -> None:
     """Test running an executor job."""
     calls = []
 
@@ -611,24 +611,24 @@ async def test_async_add_executor_job(hass: HomeAssistant) -> None:
         calls.append(1)
 
     async def _async_add_executor_job():
-        await hass.async_add_executor_job(job)
+        await menuai.async_add_executor_job(job)
 
-    task = hass.async_create_task(
+    task = menuai.async_create_task(
         _async_add_executor_job(), "background", eager_start=True
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(calls) == 1
     await task
 
 
-async def test_stage_shutdown(hass: HomeAssistant) -> None:
+async def test_stage_shutdown(menuai: menuai) -> None:
     """Simulate a shutdown, test calling stuff."""
-    test_stop = async_capture_events(hass, EVENT_HOMEASSISTANT_STOP)
-    test_final_write = async_capture_events(hass, EVENT_HOMEASSISTANT_FINAL_WRITE)
-    test_close = async_capture_events(hass, EVENT_HOMEASSISTANT_CLOSE)
-    test_all = async_capture_events(hass, MATCH_ALL)
+    test_stop = async_capture_events(menuai, EVENT_menuai_STOP)
+    test_final_write = async_capture_events(menuai, EVENT_menuai_FINAL_WRITE)
+    test_close = async_capture_events(menuai, EVENT_menuai_CLOSE)
+    test_all = async_capture_events(menuai, MATCH_ALL)
 
-    await hass.async_stop()
+    await menuai.async_stop()
 
     assert len(test_stop) == 1
     assert len(test_close) == 1
@@ -636,61 +636,61 @@ async def test_stage_shutdown(hass: HomeAssistant) -> None:
     assert len(test_all) == 2
 
 
-async def test_stage_shutdown_timeouts(hass: HomeAssistant) -> None:
+async def test_stage_shutdown_timeouts(menuai: menuai) -> None:
     """Simulate a shutdown, test timeouts at each step."""
 
-    with patch.object(hass.timeout, "async_timeout", side_effect=TimeoutError):
-        await hass.async_stop()
+    with patch.object(menuai.timeout, "async_timeout", side_effect=TimeoutError):
+        await menuai.async_stop()
 
-    assert hass.state is CoreState.stopped
+    assert menuai.state is CoreState.stopped
 
 
 async def test_stage_shutdown_generic_error(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Simulate a shutdown, test that a generic error at the final stage doesn't prevent it."""
 
     task = asyncio.Future()
-    hass._tasks.add(task)
+    menuai._tasks.add(task)
 
     def fail_the_task(_):
         task.set_exception(Exception("test_exception"))
 
     with patch.object(task, "cancel", side_effect=fail_the_task) as patched_call:
-        await hass.async_stop()
+        await menuai.async_stop()
         assert patched_call.called
 
     assert "test_exception" in caplog.text
-    assert hass.state == ha.CoreState.stopped
+    assert menuai.state == ha.CoreState.stopped
 
 
-async def test_stage_shutdown_with_exit_code(hass: HomeAssistant) -> None:
+async def test_stage_shutdown_with_exit_code(menuai: menuai) -> None:
     """Simulate a shutdown, test calling stuff with exit code checks."""
-    test_stop = async_capture_events(hass, EVENT_HOMEASSISTANT_STOP)
-    test_final_write = async_capture_events(hass, EVENT_HOMEASSISTANT_FINAL_WRITE)
-    test_close = async_capture_events(hass, EVENT_HOMEASSISTANT_CLOSE)
-    test_all = async_capture_events(hass, MATCH_ALL)
+    test_stop = async_capture_events(menuai, EVENT_menuai_STOP)
+    test_final_write = async_capture_events(menuai, EVENT_menuai_FINAL_WRITE)
+    test_close = async_capture_events(menuai, EVENT_menuai_CLOSE)
+    test_all = async_capture_events(menuai, MATCH_ALL)
 
     event_call_counters = [0, 0, 0]
     expected_exit_code = 101
 
     async def async_on_stop(event) -> None:
-        if hass.exit_code == expected_exit_code:
+        if menuai.exit_code == expected_exit_code:
             event_call_counters[0] += 1
 
     async def async_on_final_write(event) -> None:
-        if hass.exit_code == expected_exit_code:
+        if menuai.exit_code == expected_exit_code:
             event_call_counters[1] += 1
 
     async def async_on_close(event) -> None:
-        if hass.exit_code == expected_exit_code:
+        if menuai.exit_code == expected_exit_code:
             event_call_counters[2] += 1
 
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, async_on_stop)
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_FINAL_WRITE, async_on_final_write)
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_CLOSE, async_on_close)
+    menuai.bus.async_listen_once(EVENT_menuai_STOP, async_on_stop)
+    menuai.bus.async_listen_once(EVENT_menuai_FINAL_WRITE, async_on_final_write)
+    menuai.bus.async_listen_once(EVENT_menuai_CLOSE, async_on_close)
 
-    await hass.async_stop(expected_exit_code)
+    await menuai.async_stop(expected_exit_code)
 
     assert len(test_stop) == 1
     assert len(test_close) == 1
@@ -705,7 +705,7 @@ async def test_stage_shutdown_with_exit_code(hass: HomeAssistant) -> None:
 
 
 async def test_shutdown_calls_block_till_done_after_shutdown_run_callback_threadsafe(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Ensure shutdown_run_callback_threadsafe is called before the final async_block_till_done."""
     stop_calls = []
@@ -719,19 +719,19 @@ async def test_shutdown_calls_block_till_done_after_shutdown_run_callback_thread
         stop_calls.append(("shutdown_run_callback_threadsafe", loop))
 
     with (
-        patch.object(hass, "async_block_till_done", _record_block_till_done),
+        patch.object(menuai, "async_block_till_done", _record_block_till_done),
         patch(
-            "homeassistant.core.shutdown_run_callback_threadsafe",
+            "menuai.core.shutdown_run_callback_threadsafe",
             _record_shutdown_run_callback_threadsafe,
         ),
     ):
-        await hass.async_stop()
+        await menuai.async_stop()
 
-    assert stop_calls[-2] == ("shutdown_run_callback_threadsafe", hass.loop)
+    assert stop_calls[-2] == ("shutdown_run_callback_threadsafe", menuai.loop)
     assert stop_calls[-1] == "async_block_till_done"
 
 
-async def test_pending_scheduler(hass: HomeAssistant) -> None:
+async def test_pending_scheduler(menuai: menuai) -> None:
     """Add a coro to pending tasks."""
     call_count = []
 
@@ -740,28 +740,28 @@ async def test_pending_scheduler(hass: HomeAssistant) -> None:
         call_count.append("call")
 
     for _ in range(3):
-        hass.async_add_job(test_coro())
+        menuai.async_add_job(test_coro())
 
-    await asyncio.wait(hass._tasks)
+    await asyncio.wait(menuai._tasks)
 
-    assert len(hass._tasks) == 0
+    assert len(menuai._tasks) == 0
     assert len(call_count) == 3
 
 
-def test_add_job_pending_tasks_coro(hass: HomeAssistant) -> None:
+def test_add_job_pending_tasks_coro(menuai: menuai) -> None:
     """Add a coro to pending tasks."""
 
     async def test_coro():
         """Test Coro."""
 
     for _ in range(2):
-        hass.add_job(test_coro())
+        menuai.add_job(test_coro())
 
     # Ensure add_job does not run immediately
-    assert len(hass._tasks) == 0
+    assert len(menuai._tasks) == 0
 
 
-async def test_async_add_job_pending_tasks_coro(hass: HomeAssistant) -> None:
+async def test_async_add_job_pending_tasks_coro(menuai: menuai) -> None:
     """Add a coro to pending tasks."""
     call_count = []
 
@@ -770,15 +770,15 @@ async def test_async_add_job_pending_tasks_coro(hass: HomeAssistant) -> None:
         call_count.append("call")
 
     for _ in range(2):
-        hass.async_add_job(test_coro())
+        menuai.async_add_job(test_coro())
 
-    assert len(hass._tasks) == 2
-    await hass.async_block_till_done()
+    assert len(menuai._tasks) == 2
+    await menuai.async_block_till_done()
     assert len(call_count) == 2
-    assert len(hass._tasks) == 0
+    assert len(menuai._tasks) == 0
 
 
-async def test_async_create_task_pending_tasks_coro(hass: HomeAssistant) -> None:
+async def test_async_create_task_pending_tasks_coro(menuai: menuai) -> None:
     """Add a coro to pending tasks."""
     call_count = []
 
@@ -787,15 +787,15 @@ async def test_async_create_task_pending_tasks_coro(hass: HomeAssistant) -> None
         call_count.append("call")
 
     for _ in range(2):
-        hass.async_create_task(test_coro(), eager_start=False)
+        menuai.async_create_task(test_coro(), eager_start=False)
 
-    assert len(hass._tasks) == 2
-    await hass.async_block_till_done()
+    assert len(menuai._tasks) == 2
+    await menuai.async_block_till_done()
     assert len(call_count) == 2
-    assert len(hass._tasks) == 0
+    assert len(menuai._tasks) == 0
 
 
-async def test_async_add_job_pending_tasks_executor(hass: HomeAssistant) -> None:
+async def test_async_add_job_pending_tasks_executor(menuai: menuai) -> None:
     """Run an executor in pending tasks."""
     call_count = []
 
@@ -809,15 +809,15 @@ async def test_async_add_job_pending_tasks_executor(hass: HomeAssistant) -> None
         await asyncio.sleep(0)
 
     for _ in range(2):
-        hass.async_add_job(test_executor)
+        menuai.async_add_job(test_executor)
 
     await wait_finish_callback()
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(call_count) == 2
 
 
-async def test_async_add_job_pending_tasks_callback(hass: HomeAssistant) -> None:
+async def test_async_add_job_pending_tasks_callback(menuai: menuai) -> None:
     """Run a callback in pending tasks."""
     call_count = []
 
@@ -832,20 +832,20 @@ async def test_async_add_job_pending_tasks_callback(hass: HomeAssistant) -> None
         await asyncio.sleep(0)
 
     for _ in range(2):
-        hass.async_add_job(test_callback)
+        menuai.async_add_job(test_callback)
 
     await wait_finish_callback()
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert len(hass._tasks) == 0
+    assert len(menuai._tasks) == 0
     assert len(call_count) == 2
 
 
-async def test_add_job_with_none(hass: HomeAssistant) -> None:
+async def test_add_job_with_none(menuai: menuai) -> None:
     """Try to add a job with None as function."""
     with pytest.raises(ValueError):
-        hass.async_add_job(None, "test_arg")
+        menuai.async_add_job(None, "test_arg")
 
 
 def test_event_eq() -> None:
@@ -1118,26 +1118,26 @@ def test_state_as_compressed_state_json() -> None:
     assert state.as_compressed_state_json is as_compressed_state
 
 
-async def test_eventbus_add_remove_listener(hass: HomeAssistant) -> None:
+async def test_eventbus_add_remove_listener(menuai: menuai) -> None:
     """Test remove_listener method."""
-    old_count = len(hass.bus.async_listeners())
+    old_count = len(menuai.bus.async_listeners())
 
     def listener(_):
         pass
 
-    unsub = hass.bus.async_listen("test", listener)
+    unsub = menuai.bus.async_listen("test", listener)
 
-    assert old_count + 1 == len(hass.bus.async_listeners())
+    assert old_count + 1 == len(menuai.bus.async_listeners())
 
     # Remove listener
     unsub()
-    assert old_count == len(hass.bus.async_listeners())
+    assert old_count == len(menuai.bus.async_listeners())
 
     # Should do nothing now
     unsub()
 
 
-async def test_eventbus_filtered_listener(hass: HomeAssistant) -> None:
+async def test_eventbus_filtered_listener(menuai: menuai) -> None:
     """Test we can prefilter events."""
     calls = []
 
@@ -1151,22 +1151,22 @@ async def test_eventbus_filtered_listener(hass: HomeAssistant) -> None:
         """Mock filter."""
         return not event_data["filtered"]
 
-    unsub = hass.bus.async_listen("test", listener, event_filter=mock_filter)
+    unsub = menuai.bus.async_listen("test", listener, event_filter=mock_filter)
 
-    hass.bus.async_fire("test", {"filtered": True})
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test", {"filtered": True})
+    await menuai.async_block_till_done()
 
     assert len(calls) == 0
 
-    hass.bus.async_fire("test", {"filtered": False})
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test", {"filtered": False})
+    await menuai.async_block_till_done()
 
     assert len(calls) == 1
 
     unsub()
 
 
-async def test_eventbus_run_immediately_callback(hass: HomeAssistant) -> None:
+async def test_eventbus_run_immediately_callback(menuai: menuai) -> None:
     """Test we can call events immediately with a callback."""
     calls = []
 
@@ -1175,16 +1175,16 @@ async def test_eventbus_run_immediately_callback(hass: HomeAssistant) -> None:
         """Mock listener."""
         calls.append(event)
 
-    unsub = hass.bus.async_listen("test", listener)
+    unsub = menuai.bus.async_listen("test", listener)
 
-    hass.bus.async_fire("test", {"event": True})
+    menuai.bus.async_fire("test", {"event": True})
     # No async_block_till_done here
     assert len(calls) == 1
 
     unsub()
 
 
-async def test_eventbus_run_immediately_coro(hass: HomeAssistant) -> None:
+async def test_eventbus_run_immediately_coro(menuai: menuai) -> None:
     """Test we can call events immediately with a coro."""
     calls = []
 
@@ -1192,16 +1192,16 @@ async def test_eventbus_run_immediately_coro(hass: HomeAssistant) -> None:
         """Mock listener."""
         calls.append(event)
 
-    unsub = hass.bus.async_listen("test", listener)
+    unsub = menuai.bus.async_listen("test", listener)
 
-    hass.bus.async_fire("test", {"event": True})
+    menuai.bus.async_fire("test", {"event": True})
     # No async_block_till_done here
     assert len(calls) == 1
 
     unsub()
 
 
-async def test_eventbus_listen_once_run_immediately_coro(hass: HomeAssistant) -> None:
+async def test_eventbus_listen_once_run_immediately_coro(menuai: menuai) -> None:
     """Test we can call events immediately with a coro."""
     calls = []
 
@@ -1209,14 +1209,14 @@ async def test_eventbus_listen_once_run_immediately_coro(hass: HomeAssistant) ->
         """Mock listener."""
         calls.append(event)
 
-    hass.bus.async_listen_once("test", listener)
+    menuai.bus.async_listen_once("test", listener)
 
-    hass.bus.async_fire("test", {"event": True})
+    menuai.bus.async_fire("test", {"event": True})
     # No async_block_till_done here
     assert len(calls) == 1
 
 
-async def test_eventbus_unsubscribe_listener(hass: HomeAssistant) -> None:
+async def test_eventbus_unsubscribe_listener(menuai: menuai) -> None:
     """Test unsubscribe listener from returned function."""
     calls = []
 
@@ -1225,22 +1225,22 @@ async def test_eventbus_unsubscribe_listener(hass: HomeAssistant) -> None:
         """Mock listener."""
         calls.append(event)
 
-    unsub = hass.bus.async_listen("test", listener)
+    unsub = menuai.bus.async_listen("test", listener)
 
-    hass.bus.async_fire("test")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test")
+    await menuai.async_block_till_done()
 
     assert len(calls) == 1
 
     unsub()
 
-    hass.bus.async_fire("event")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("event")
+    await menuai.async_block_till_done()
 
     assert len(calls) == 1
 
 
-async def test_eventbus_listen_once_event_with_callback(hass: HomeAssistant) -> None:
+async def test_eventbus_listen_once_event_with_callback(menuai: menuai) -> None:
     """Test listen_once_event method."""
     runs = []
 
@@ -1248,64 +1248,64 @@ async def test_eventbus_listen_once_event_with_callback(hass: HomeAssistant) -> 
     def event_handler(event):
         runs.append(event)
 
-    hass.bus.async_listen_once("test_event", event_handler)
+    menuai.bus.async_listen_once("test_event", event_handler)
 
-    hass.bus.async_fire("test_event")
+    menuai.bus.async_fire("test_event")
     # Second time it should not increase runs
-    hass.bus.async_fire("test_event")
+    menuai.bus.async_fire("test_event")
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(runs) == 1
 
 
-async def test_eventbus_listen_once_event_with_coroutine(hass: HomeAssistant) -> None:
+async def test_eventbus_listen_once_event_with_coroutine(menuai: menuai) -> None:
     """Test listen_once_event method."""
     runs = []
 
     async def event_handler(event):
         runs.append(event)
 
-    hass.bus.async_listen_once("test_event", event_handler)
+    menuai.bus.async_listen_once("test_event", event_handler)
 
-    hass.bus.async_fire("test_event")
+    menuai.bus.async_fire("test_event")
     # Second time it should not increase runs
-    hass.bus.async_fire("test_event")
+    menuai.bus.async_fire("test_event")
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(runs) == 1
 
 
-async def test_eventbus_listen_once_event_with_thread(hass: HomeAssistant) -> None:
+async def test_eventbus_listen_once_event_with_thread(menuai: menuai) -> None:
     """Test listen_once_event method."""
     runs = []
 
     def event_handler(event):
         runs.append(event)
 
-    hass.bus.async_listen_once("test_event", event_handler)
+    menuai.bus.async_listen_once("test_event", event_handler)
 
-    hass.bus.async_fire("test_event")
+    menuai.bus.async_fire("test_event")
     # Second time it should not increase runs
-    hass.bus.async_fire("test_event")
+    menuai.bus.async_fire("test_event")
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(runs) == 1
 
 
-async def test_eventbus_thread_event_listener(hass: HomeAssistant) -> None:
+async def test_eventbus_thread_event_listener(menuai: menuai) -> None:
     """Test thread event listener."""
     thread_calls = []
 
     def thread_listener(event):
         thread_calls.append(event)
 
-    hass.bus.async_listen("test_thread", thread_listener)
-    hass.bus.async_fire("test_thread")
-    await hass.async_block_till_done()
+    menuai.bus.async_listen("test_thread", thread_listener)
+    menuai.bus.async_fire("test_thread")
+    await menuai.async_block_till_done()
     assert len(thread_calls) == 1
 
 
-async def test_eventbus_callback_event_listener(hass: HomeAssistant) -> None:
+async def test_eventbus_callback_event_listener(menuai: menuai) -> None:
     """Test callback event listener."""
     callback_calls = []
 
@@ -1313,26 +1313,26 @@ async def test_eventbus_callback_event_listener(hass: HomeAssistant) -> None:
     def callback_listener(event):
         callback_calls.append(event)
 
-    hass.bus.async_listen("test_callback", callback_listener)
-    hass.bus.async_fire("test_callback")
-    await hass.async_block_till_done()
+    menuai.bus.async_listen("test_callback", callback_listener)
+    menuai.bus.async_fire("test_callback")
+    await menuai.async_block_till_done()
     assert len(callback_calls) == 1
 
 
-async def test_eventbus_coroutine_event_listener(hass: HomeAssistant) -> None:
+async def test_eventbus_coroutine_event_listener(menuai: menuai) -> None:
     """Test coroutine event listener."""
     coroutine_calls = []
 
     async def coroutine_listener(event):
         coroutine_calls.append(event)
 
-    hass.bus.async_listen("test_coroutine", coroutine_listener)
-    hass.bus.async_fire("test_coroutine")
-    await hass.async_block_till_done()
+    menuai.bus.async_listen("test_coroutine", coroutine_listener)
+    menuai.bus.async_fire("test_coroutine")
+    await menuai.async_block_till_done()
     assert len(coroutine_calls) == 1
 
 
-async def test_eventbus_max_length_exceeded(hass: HomeAssistant) -> None:
+async def test_eventbus_max_length_exceeded(menuai: menuai) -> None:
     """Test that an exception is raised when the max character length is exceeded."""
 
     long_evt_name = (
@@ -1341,7 +1341,7 @@ async def test_eventbus_max_length_exceeded(hass: HomeAssistant) -> None:
 
     # Without cached translations the translation key is returned
     with pytest.raises(MaxLengthExceeded) as exc_info:
-        hass.bus.async_fire(long_evt_name)
+        menuai.bus.async_fire(long_evt_name)
 
     assert str(exc_info.value) == "max_length_exceeded"
     assert exc_info.value.property_name == "event_type"
@@ -1349,11 +1349,11 @@ async def test_eventbus_max_length_exceeded(hass: HomeAssistant) -> None:
     assert exc_info.value.value == long_evt_name
 
     # Fetch translations
-    await async_setup_component(hass, "homeassistant", {})
+    await async_setup_component(menuai, "menuai", {})
 
     # With cached translations the formatted message is returned
     with pytest.raises(MaxLengthExceeded) as exc_info:
-        hass.bus.async_fire(long_evt_name)
+        menuai.bus.async_fire(long_evt_name)
 
     assert (
         str(exc_info.value)
@@ -1438,21 +1438,21 @@ def test_state_repr() -> None:
     )
 
 
-async def test_statemachine_async_set_invalid_state(hass: HomeAssistant) -> None:
+async def test_statemachine_async_set_invalid_state(menuai: menuai) -> None:
     """Test setting an invalid state with the async_set method."""
     with pytest.raises(
         InvalidStateError,
         match="Invalid state with length 256. State max length is 255 characters.",
     ):
-        hass.states.async_set("light.bowl", "o" * 256, {})
+        menuai.states.async_set("light.bowl", "o" * 256, {})
 
 
 async def test_statemachine_async_set_internal_invalid_state(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test setting an invalid state with the async_set_internal method."""
     long_state = "o" * 256
-    hass.states.async_set_internal(
+    menuai.states.async_set_internal(
         "light.bowl",
         long_state,
         {},
@@ -1461,51 +1461,51 @@ async def test_statemachine_async_set_internal_invalid_state(
         state_info=None,
         timestamp=time.time(),
     )
-    assert hass.states.get("light.bowl").state == STATE_UNKNOWN
+    assert menuai.states.get("light.bowl").state == STATE_UNKNOWN
     assert (
-        "homeassistant.core",
+        "menuai.core",
         logging.ERROR,
         f"State {long_state} for light.bowl is longer than 255, "
         f"falling back to {STATE_UNKNOWN}",
     ) in caplog.record_tuples
 
 
-async def test_statemachine_is_state(hass: HomeAssistant) -> None:
+async def test_statemachine_is_state(menuai: menuai) -> None:
     """Test is_state method."""
-    hass.states.async_set("light.bowl", "on", {})
-    assert hass.states.is_state("light.Bowl", "on")
-    assert not hass.states.is_state("light.Bowl", "off")
-    assert not hass.states.is_state("light.Non_existing", "on")
+    menuai.states.async_set("light.bowl", "on", {})
+    assert menuai.states.is_state("light.Bowl", "on")
+    assert not menuai.states.is_state("light.Bowl", "off")
+    assert not menuai.states.is_state("light.Non_existing", "on")
 
 
-async def test_statemachine_entity_ids(hass: HomeAssistant) -> None:
+async def test_statemachine_entity_ids(menuai: menuai) -> None:
     """Test async_entity_ids method."""
-    assert hass.states.async_entity_ids() == []
-    assert hass.states.async_entity_ids("light") == []
-    assert hass.states.async_entity_ids(("light", "switch", "other")) == []
+    assert menuai.states.async_entity_ids() == []
+    assert menuai.states.async_entity_ids("light") == []
+    assert menuai.states.async_entity_ids(("light", "switch", "other")) == []
 
-    hass.states.async_set("light.bowl", "on", {})
-    hass.states.async_set("SWITCH.AC", "off", {})
-    assert hass.states.async_entity_ids() == unordered(["light.bowl", "switch.ac"])
-    assert hass.states.async_entity_ids("light") == ["light.bowl"]
-    assert hass.states.async_entity_ids(("light", "switch", "other")) == unordered(
+    menuai.states.async_set("light.bowl", "on", {})
+    menuai.states.async_set("SWITCH.AC", "off", {})
+    assert menuai.states.async_entity_ids() == unordered(["light.bowl", "switch.ac"])
+    assert menuai.states.async_entity_ids("light") == ["light.bowl"]
+    assert menuai.states.async_entity_ids(("light", "switch", "other")) == unordered(
         ["light.bowl", "switch.ac"]
     )
 
-    states = sorted(state.entity_id for state in hass.states.async_all())
+    states = sorted(state.entity_id for state in menuai.states.async_all())
     assert states == ["light.bowl", "switch.ac"]
 
 
-async def test_statemachine_remove(hass: HomeAssistant) -> None:
+async def test_statemachine_remove(menuai: menuai) -> None:
     """Test remove method."""
-    hass.states.async_set("light.bowl", "on", {})
-    events = async_capture_events(hass, EVENT_STATE_CHANGED)
+    menuai.states.async_set("light.bowl", "on", {})
+    events = async_capture_events(menuai, EVENT_STATE_CHANGED)
 
-    assert "light.bowl" in hass.states.async_entity_ids()
-    assert hass.states.async_remove("light.bowl")
-    await hass.async_block_till_done()
+    assert "light.bowl" in menuai.states.async_entity_ids()
+    assert menuai.states.async_remove("light.bowl")
+    await menuai.async_block_till_done()
 
-    assert "light.bowl" not in hass.states.async_entity_ids()
+    assert "light.bowl" not in menuai.states.async_entity_ids()
     assert len(events) == 1
     assert events[0].data.get("entity_id") == "light.bowl"
     assert events[0].data.get("old_state") is not None
@@ -1513,77 +1513,77 @@ async def test_statemachine_remove(hass: HomeAssistant) -> None:
     assert events[0].data.get("new_state") is None
 
     # If it does not exist, we should get False
-    assert not hass.states.async_remove("light.Bowl")
-    await hass.async_block_till_done()
+    assert not menuai.states.async_remove("light.Bowl")
+    await menuai.async_block_till_done()
     assert len(events) == 1
 
 
-async def test_state_machine_case_insensitivity(hass: HomeAssistant) -> None:
+async def test_state_machine_case_insensitivity(menuai: menuai) -> None:
     """Test setting and getting states entity_id insensitivity."""
-    events = async_capture_events(hass, EVENT_STATE_CHANGED)
+    events = async_capture_events(menuai, EVENT_STATE_CHANGED)
 
-    hass.states.async_set("light.BOWL", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.BOWL", "off")
+    await menuai.async_block_till_done()
 
-    assert hass.states.is_state("light.bowl", "off")
+    assert menuai.states.is_state("light.bowl", "off")
     assert len(events) == 1
 
-    hass.states.async_set("ligHT.Bowl", "on")
-    assert hass.states.get("light.bowl").state == "on"
+    menuai.states.async_set("ligHT.Bowl", "on")
+    assert menuai.states.get("light.bowl").state == "on"
 
-    hass.states.async_set("light.BOWL", "off")
-    assert hass.states.get("light.BoWL").state == "off"
+    menuai.states.async_set("light.BOWL", "off")
+    assert menuai.states.get("light.BoWL").state == "off"
 
-    hass.states.async_set("light.bowl", "on")
-    assert hass.states.get("light.bowl").state == "on"
+    menuai.states.async_set("light.bowl", "on")
+    assert menuai.states.get("light.bowl").state == "on"
 
 
 async def test_statemachine_last_changed_not_updated_on_same_state(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test to not update the existing, same state."""
-    hass.states.async_set("light.bowl", "on", {})
-    state = hass.states.get("light.Bowl")
+    menuai.states.async_set("light.bowl", "on", {})
+    state = menuai.states.get("light.Bowl")
 
     future = dt_util.utcnow() + timedelta(hours=10)
 
     with freeze_time(future):
-        hass.states.async_set("light.Bowl", "on", {"attr": "triggers_change"})
-        await hass.async_block_till_done()
+        menuai.states.async_set("light.Bowl", "on", {"attr": "triggers_change"})
+        await menuai.async_block_till_done()
 
-    state2 = hass.states.get("light.Bowl")
+    state2 = menuai.states.get("light.Bowl")
     assert state2 is not None
     assert state.last_changed == state2.last_changed
 
 
-async def test_statemachine_force_update(hass: HomeAssistant) -> None:
+async def test_statemachine_force_update(menuai: menuai) -> None:
     """Test force update option."""
-    hass.states.async_set("light.bowl", "on", {})
-    events = async_capture_events(hass, EVENT_STATE_CHANGED)
+    menuai.states.async_set("light.bowl", "on", {})
+    events = async_capture_events(menuai, EVENT_STATE_CHANGED)
 
-    hass.states.async_set("light.bowl", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.bowl", "on")
+    await menuai.async_block_till_done()
     assert len(events) == 0
 
-    hass.states.async_set("light.bowl", "on", None, True)
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.bowl", "on", None, True)
+    await menuai.async_block_till_done()
     assert len(events) == 1
 
 
-async def test_statemachine_avoids_updating_attributes(hass: HomeAssistant) -> None:
+async def test_statemachine_avoids_updating_attributes(menuai: menuai) -> None:
     """Test async_set avoids recreating ReadOnly dicts when possible."""
     attrs = {"some_attr": "attr_value"}
 
-    hass.states.async_set("light.bowl", "off", attrs)
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.bowl", "off", attrs)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("light.bowl")
+    state = menuai.states.get("light.bowl")
     assert state.attributes == attrs
 
-    hass.states.async_set("light.bowl", "on", attrs)
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.bowl", "on", attrs)
+    await menuai.async_block_till_done()
 
-    new_state = hass.states.get("light.bowl")
+    new_state = menuai.states.get("light.bowl")
     assert new_state.attributes == attrs
 
     assert new_state.attributes is state.attributes
@@ -1592,74 +1592,74 @@ async def test_statemachine_avoids_updating_attributes(hass: HomeAssistant) -> N
 
 def test_service_call_repr() -> None:
     """Test ServiceCall repr."""
-    call = ha.ServiceCall(None, "homeassistant", "start")
-    assert str(call) == f"<ServiceCall homeassistant.start (c:{call.context.id})>"
+    call = ha.ServiceCall(None, "menuai", "start")
+    assert str(call) == f"<ServiceCall menuai.start (c:{call.context.id})>"
 
-    call2 = ha.ServiceCall(None, "homeassistant", "start", {"fast": "yes"})
+    call2 = ha.ServiceCall(None, "menuai", "start", {"fast": "yes"})
     assert (
         str(call2)
-        == f"<ServiceCall homeassistant.start (c:{call2.context.id}): fast=yes>"
+        == f"<ServiceCall menuai.start (c:{call2.context.id}): fast=yes>"
     )
 
 
-async def test_service_registry_has_service(hass: HomeAssistant) -> None:
+async def test_service_registry_has_service(menuai: menuai) -> None:
     """Test has_service method."""
-    hass.services.async_register("test_domain", "test_service", lambda call: None)
-    assert len(hass.services.async_services()) == 1
-    assert hass.services.has_service("tesT_domaiN", "tesT_servicE")
-    assert not hass.services.has_service("test_domain", "non_existing")
-    assert not hass.services.has_service("non_existing", "test_service")
+    menuai.services.async_register("test_domain", "test_service", lambda call: None)
+    assert len(menuai.services.async_services()) == 1
+    assert menuai.services.has_service("tesT_domaiN", "tesT_servicE")
+    assert not menuai.services.has_service("test_domain", "non_existing")
+    assert not menuai.services.has_service("non_existing", "test_service")
 
 
-async def test_service_registry_service_enumeration(hass: HomeAssistant) -> None:
+async def test_service_registry_service_enumeration(menuai: menuai) -> None:
     """Test enumerating services methods."""
-    hass.services.async_register("test_domain", "test_service", lambda call: None)
-    services1 = hass.services.async_services()
-    services2 = hass.services.async_services()
+    menuai.services.async_register("test_domain", "test_service", lambda call: None)
+    services1 = menuai.services.async_services()
+    services2 = menuai.services.async_services()
     assert len(services1) == 1
     assert services1 == services2
     assert services1 is not services2  # should be a copy
 
-    services1 = hass.services.async_services_internal()
-    services2 = hass.services.async_services_internal()
+    services1 = menuai.services.async_services_internal()
+    services2 = menuai.services.async_services_internal()
     assert len(services1) == 1
     assert services1 == services2
     assert services1 is services2  # should be the same object
 
-    assert hass.services.async_services_for_domain("unknown") == {}
+    assert menuai.services.async_services_for_domain("unknown") == {}
 
-    services1 = hass.services.async_services_for_domain("test_domain")
-    services2 = hass.services.async_services_for_domain("test_domain")
+    services1 = menuai.services.async_services_for_domain("test_domain")
+    services2 = menuai.services.async_services_for_domain("test_domain")
     assert len(services1) == 1
     assert services1 == services2
     assert services1 is not services2  # should be a copy
 
 
 async def test_serviceregistry_call_with_blocking_done_in_time(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test call with blocking."""
-    registered_events = async_capture_events(hass, EVENT_SERVICE_REGISTERED)
-    calls = async_mock_service(hass, "test_domain", "register_calls")
-    await hass.async_block_till_done()
+    registered_events = async_capture_events(menuai, EVENT_SERVICE_REGISTERED)
+    calls = async_mock_service(menuai, "test_domain", "register_calls")
+    await menuai.async_block_till_done()
 
     assert len(registered_events) == 1
     assert registered_events[0].data["domain"] == "test_domain"
     assert registered_events[0].data["service"] == "register_calls"
 
-    await hass.services.async_call("test_domain", "REGISTER_CALLS", blocking=True)
+    await menuai.services.async_call("test_domain", "REGISTER_CALLS", blocking=True)
     assert len(calls) == 1
 
 
 async def test_serviceregistry_call_non_existing_with_blocking(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test non-existing with blocking."""
     with pytest.raises(ServiceNotFound):
-        await hass.services.async_call("test_domain", "i_do_not_exist", blocking=True)
+        await menuai.services.async_call("test_domain", "i_do_not_exist", blocking=True)
 
 
-async def test_serviceregistry_async_service(hass: HomeAssistant) -> None:
+async def test_serviceregistry_async_service(menuai: menuai) -> None:
     """Test registering and calling an async service."""
     calls = []
 
@@ -1667,13 +1667,13 @@ async def test_serviceregistry_async_service(hass: HomeAssistant) -> None:
         """Service handler coroutine."""
         calls.append(call)
 
-    hass.services.async_register("test_domain", "register_calls", service_handler)
+    menuai.services.async_register("test_domain", "register_calls", service_handler)
 
-    await hass.services.async_call("test_domain", "REGISTER_CALLS", blocking=True)
+    await menuai.services.async_call("test_domain", "REGISTER_CALLS", blocking=True)
     assert len(calls) == 1
 
 
-async def test_serviceregistry_async_service_partial(hass: HomeAssistant) -> None:
+async def test_serviceregistry_async_service_partial(menuai: menuai) -> None:
     """Test registering and calling an wrapped async service."""
     calls = []
 
@@ -1681,16 +1681,16 @@ async def test_serviceregistry_async_service_partial(hass: HomeAssistant) -> Non
         """Service handler coroutine."""
         calls.append(call)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         "test_domain", "register_calls", functools.partial(service_handler)
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await hass.services.async_call("test_domain", "REGISTER_CALLS", blocking=True)
+    await menuai.services.async_call("test_domain", "REGISTER_CALLS", blocking=True)
     assert len(calls) == 1
 
 
-async def test_serviceregistry_callback_service(hass: HomeAssistant) -> None:
+async def test_serviceregistry_callback_service(menuai: menuai) -> None:
     """Test registering and calling an async service."""
     calls = []
 
@@ -1699,40 +1699,40 @@ async def test_serviceregistry_callback_service(hass: HomeAssistant) -> None:
         """Service handler coroutine."""
         calls.append(call)
 
-    hass.services.async_register("test_domain", "register_calls", service_handler)
+    menuai.services.async_register("test_domain", "register_calls", service_handler)
 
-    await hass.services.async_call("test_domain", "REGISTER_CALLS", blocking=True)
+    await menuai.services.async_call("test_domain", "REGISTER_CALLS", blocking=True)
     assert len(calls) == 1
 
 
-async def test_serviceregistry_remove_service(hass: HomeAssistant) -> None:
+async def test_serviceregistry_remove_service(menuai: menuai) -> None:
     """Test remove service."""
-    calls_remove = async_capture_events(hass, EVENT_SERVICE_REMOVED)
+    calls_remove = async_capture_events(menuai, EVENT_SERVICE_REMOVED)
 
-    hass.services.async_register("test_domain", "test_service", lambda call: None)
-    assert hass.services.has_service("test_Domain", "test_Service")
+    menuai.services.async_register("test_domain", "test_service", lambda call: None)
+    assert menuai.services.has_service("test_Domain", "test_Service")
 
-    hass.services.async_remove("test_Domain", "test_Service")
-    await hass.async_block_till_done()
+    menuai.services.async_remove("test_Domain", "test_Service")
+    await menuai.async_block_till_done()
 
-    assert not hass.services.has_service("test_Domain", "test_Service")
+    assert not menuai.services.has_service("test_Domain", "test_Service")
     assert len(calls_remove) == 1
     assert calls_remove[-1].data["domain"] == "test_domain"
     assert calls_remove[-1].data["service"] == "test_service"
 
 
-async def test_serviceregistry_service_that_not_exists(hass: HomeAssistant) -> None:
+async def test_serviceregistry_service_that_not_exists(menuai: menuai) -> None:
     """Test remove service that not exists."""
-    await async_setup_component(hass, "homeassistant", {})
-    calls_remove = async_capture_events(hass, EVENT_SERVICE_REMOVED)
-    assert not hass.services.has_service("test_xxx", "test_yyy")
-    hass.services.async_remove("test_xxx", "test_yyy")
-    await hass.async_block_till_done()
+    await async_setup_component(menuai, "menuai", {})
+    calls_remove = async_capture_events(menuai, EVENT_SERVICE_REMOVED)
+    assert not menuai.services.has_service("test_xxx", "test_yyy")
+    menuai.services.async_remove("test_xxx", "test_yyy")
+    await menuai.async_block_till_done()
     assert len(calls_remove) == 0
 
     with pytest.raises(ServiceNotFound) as exc:
-        await hass.services.async_call("test_do_not", "exist", {})
-    assert exc.value.translation_domain == "homeassistant"
+        await menuai.services.async_call("test_do_not", "exist", {})
+    assert exc.value.translation_domain == "menuai"
     assert exc.value.translation_key == "service_not_found"
     assert exc.value.translation_placeholders == {
         "domain": "test_do_not",
@@ -1745,7 +1745,7 @@ async def test_serviceregistry_service_that_not_exists(hass: HomeAssistant) -> N
 
 
 async def test_serviceregistry_async_service_raise_exception(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test registering and calling an async service raise exception."""
 
@@ -1753,18 +1753,18 @@ async def test_serviceregistry_async_service_raise_exception(
         """Service handler coroutine."""
         raise ValueError
 
-    hass.services.async_register("test_domain", "register_calls", service_handler)
+    menuai.services.async_register("test_domain", "register_calls", service_handler)
 
     with pytest.raises(ValueError):
-        await hass.services.async_call("test_domain", "REGISTER_CALLS", blocking=True)
+        await menuai.services.async_call("test_domain", "REGISTER_CALLS", blocking=True)
 
     # Non-blocking service call never throw exception
-    await hass.services.async_call("test_domain", "REGISTER_CALLS", blocking=False)
-    await hass.async_block_till_done()
+    await menuai.services.async_call("test_domain", "REGISTER_CALLS", blocking=False)
+    await menuai.async_block_till_done()
 
 
 async def test_serviceregistry_callback_service_raise_exception(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test registering and calling an callback service raise exception."""
 
@@ -1773,14 +1773,14 @@ async def test_serviceregistry_callback_service_raise_exception(
         """Service handler coroutine."""
         raise ValueError
 
-    hass.services.async_register("test_domain", "register_calls", service_handler)
+    menuai.services.async_register("test_domain", "register_calls", service_handler)
 
     with pytest.raises(ValueError):
-        await hass.services.async_call("test_domain", "REGISTER_CALLS", blocking=True)
+        await menuai.services.async_call("test_domain", "REGISTER_CALLS", blocking=True)
 
     # Non-blocking service call never throw exception
-    await hass.services.async_call("test_domain", "REGISTER_CALLS", blocking=False)
-    await hass.async_block_till_done()
+    await menuai.services.async_call("test_domain", "REGISTER_CALLS", blocking=False)
+    await menuai.async_block_till_done()
 
 
 @pytest.mark.parametrize(
@@ -1791,7 +1791,7 @@ async def test_serviceregistry_callback_service_raise_exception(
     ],
 )
 async def test_serviceregistry_async_return_response(
-    hass: HomeAssistant, supports_response: SupportsResponse
+    menuai: menuai, supports_response: SupportsResponse
 ) -> None:
     """Test service call for a service that returns response data."""
 
@@ -1800,31 +1800,31 @@ async def test_serviceregistry_async_return_response(
         assert call.return_response
         return {"test-reply": "test-value1"}
 
-    hass.services.async_register(
+    menuai.services.async_register(
         "test_domain",
         "test_service",
         service_handler,
         supports_response=supports_response,
     )
-    result = await hass.services.async_call(
+    result = await menuai.services.async_call(
         "test_domain",
         "test_service",
         service_data={},
         blocking=True,
         return_response=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result == {"test-reply": "test-value1"}
 
 
 async def test_services_call_return_response_requires_blocking(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test that non-blocking service calls cannot ask for response data."""
-    await async_setup_component(hass, "homeassistant", {})
-    async_mock_service(hass, "test_domain", "test_service")
+    await async_setup_component(menuai, "menuai", {})
+    async_mock_service(menuai, "test_domain", "test_service")
     with pytest.raises(ServiceValidationError, match="blocking=False") as exc:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "test_domain",
             "test_service",
             service_data={},
@@ -1848,24 +1848,24 @@ async def test_services_call_return_response_requires_blocking(
     ],
 )
 async def test_serviceregistry_return_response_invalid(
-    hass: HomeAssistant, response_data: Any, expected_error: str
+    menuai: menuai, response_data: Any, expected_error: str
 ) -> None:
     """Test service call response data must be json serializable objects."""
-    await async_setup_component(hass, "homeassistant", {})
+    await async_setup_component(menuai, "menuai", {})
 
     def service_handler(call: ServiceCall) -> ServiceResponse:
         """Service handler coroutine."""
         assert call.return_response
         return response_data
 
-    hass.services.async_register(
+    menuai.services.async_register(
         "test_domain",
         "test_service",
         service_handler,
         supports_response=SupportsResponse.ONLY,
     )
-    with pytest.raises(HomeAssistantError, match=expected_error):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match=expected_error):
+        await menuai.services.async_call(
             "test_domain",
             "test_service",
             service_data={},
@@ -1882,15 +1882,15 @@ async def test_serviceregistry_return_response_invalid(
     ],
 )
 async def test_serviceregistry_return_response_arguments(
-    hass: HomeAssistant,
+    menuai: menuai,
     supports_response: SupportsResponse,
     return_response: bool,
     expected_error: str,
 ) -> None:
     """Test service call response data invalid arguments."""
-    await async_setup_component(hass, "homeassistant", {})
+    await async_setup_component(menuai, "menuai", {})
 
-    hass.services.async_register(
+    menuai.services.async_register(
         "test_domain",
         "test_service",
         "service_handler",
@@ -1898,7 +1898,7 @@ async def test_serviceregistry_return_response_arguments(
     )
 
     with pytest.raises(ServiceValidationError, match=expected_error):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "test_domain",
             "test_service",
             service_data={},
@@ -1915,7 +1915,7 @@ async def test_serviceregistry_return_response_arguments(
     ],
 )
 async def test_serviceregistry_return_response_optional(
-    hass: HomeAssistant,
+    menuai: menuai,
     return_response: bool,
     expected_response_data: Any,
 ) -> None:
@@ -1927,85 +1927,85 @@ async def test_serviceregistry_return_response_optional(
             return {"key": "value"}
         return None
 
-    hass.services.async_register(
+    menuai.services.async_register(
         "test_domain",
         "test_service",
         service_handler,
         supports_response=SupportsResponse.OPTIONAL,
     )
-    response_data = await hass.services.async_call(
+    response_data = await menuai.services.async_call(
         "test_domain",
         "test_service",
         service_data={},
         blocking=True,
         return_response=return_response,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert response_data == expected_response_data
 
 
 async def test_start_taking_too_long(caplog: pytest.LogCaptureFixture) -> None:
     """Test when async_start takes too long."""
-    hass = ha.HomeAssistant("/test/ha-config")
+    menuai = ha.menuai("/test/ha-config")
     caplog.set_level(logging.WARNING)
-    hass.async_create_task(asyncio.sleep(0))
+    menuai.async_create_task(asyncio.sleep(0))
 
     try:
         with patch("asyncio.wait", return_value=(set(), {asyncio.Future()})):
-            await hass.async_start()
+            await menuai.async_start()
 
-        assert hass.state == ha.CoreState.running
-        assert "Something is blocking Home Assistant" in caplog.text
+        assert menuai.state == ha.CoreState.running
+        assert "Something is blocking MenuAI" in caplog.text
 
     finally:
-        await hass.async_stop()
-        assert hass.state == ha.CoreState.stopped
+        await menuai.async_stop()
+        assert menuai.state == ha.CoreState.stopped
 
 
-async def test_service_executed_with_subservices(hass: HomeAssistant) -> None:
+async def test_service_executed_with_subservices(menuai: menuai) -> None:
     """Test we block correctly till all services done."""
-    calls = async_mock_service(hass, "test", "inner")
+    calls = async_mock_service(menuai, "test", "inner")
     context = ha.Context()
 
     async def handle_outer(call):
         """Handle outer service call."""
         calls.append(call)
-        call1 = hass.services.async_call(
+        call1 = menuai.services.async_call(
             "test", "inner", blocking=True, context=call.context
         )
-        call2 = hass.services.async_call(
+        call2 = menuai.services.async_call(
             "test", "inner", blocking=True, context=call.context
         )
         await asyncio.wait(
             [
-                hass.async_create_task(call1),
-                hass.async_create_task(call2),
+                menuai.async_create_task(call1),
+                menuai.async_create_task(call2),
             ]
         )
         calls.append(call)
 
-    hass.services.async_register("test", "outer", handle_outer)
+    menuai.services.async_register("test", "outer", handle_outer)
 
-    await hass.services.async_call("test", "outer", blocking=True, context=context)
+    await menuai.services.async_call("test", "outer", blocking=True, context=context)
 
     assert len(calls) == 4
     assert [call.service for call in calls] == ["outer", "inner", "inner", "outer"]
     assert all(call.context is context for call in calls)
 
 
-async def test_service_call_event_contains_original_data(hass: HomeAssistant) -> None:
+async def test_service_call_event_contains_original_data(menuai: menuai) -> None:
     """Test that service call event contains original data."""
-    events = async_capture_events(hass, EVENT_CALL_SERVICE)
+    events = async_capture_events(menuai, EVENT_CALL_SERVICE)
 
     calls = async_mock_service(
-        hass, "test", "service", vol.Schema({"number": vol.Coerce(int)})
+        menuai, "test", "service", vol.Schema({"number": vol.Coerce(int)})
     )
 
     context = ha.Context()
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "test", "service", {"number": "23"}, blocking=True, context=context
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(events) == 1
     assert events[0].data["service_data"]["number"] == "23"
     assert events[0].context is context
@@ -2048,54 +2048,54 @@ def test_context_json_fragment() -> None:
     assert isinstance(as_dict_2, ReadOnlyDict)
 
 
-async def test_async_functions_with_callback(hass: HomeAssistant) -> None:
+async def test_async_functions_with_callback(menuai: menuai) -> None:
     """Test we deal with async functions accidentally marked as callback."""
     runs = []
 
     @ha.callback
-    async def test():  # pylint: disable=hass-async-callback-decorator
+    async def test():  # pylint: disable=menuai-async-callback-decorator
         runs.append(True)
 
-    await hass.async_add_job(test)
+    await menuai.async_add_job(test)
     assert len(runs) == 1
 
-    hass.async_run_job(test)
-    await hass.async_block_till_done()
+    menuai.async_run_job(test)
+    await menuai.async_block_till_done()
     assert len(runs) == 2
 
     @ha.callback
-    async def service_handler(call):  # pylint: disable=hass-async-callback-decorator
+    async def service_handler(call):  # pylint: disable=menuai-async-callback-decorator
         runs.append(True)
 
-    hass.services.async_register("test_domain", "test_service", service_handler)
+    menuai.services.async_register("test_domain", "test_service", service_handler)
 
-    await hass.services.async_call("test_domain", "test_service", blocking=True)
+    await menuai.services.async_call("test_domain", "test_service", blocking=True)
     assert len(runs) == 3
 
 
-async def test_async_run_job_starts_tasks_eagerly(hass: HomeAssistant) -> None:
+async def test_async_run_job_starts_tasks_eagerly(menuai: menuai) -> None:
     """Test async_run_job starts tasks eagerly."""
     runs = []
 
     async def _test():
         runs.append(True)
 
-    task = hass.async_run_job(_test)
-    # No call to hass.async_block_till_done to ensure the task is run eagerly
+    task = menuai.async_run_job(_test)
+    # No call to menuai.async_block_till_done to ensure the task is run eagerly
     assert len(runs) == 1
     assert task.done()
     await task
 
 
-async def test_async_run_job_starts_coro_eagerly(hass: HomeAssistant) -> None:
+async def test_async_run_job_starts_coro_eagerly(menuai: menuai) -> None:
     """Test async_run_job starts coros eagerly."""
     runs = []
 
     async def _test():
         runs.append(True)
 
-    task = hass.async_run_job(_test())
-    # No call to hass.async_block_till_done to ensure the task is run eagerly
+    task = menuai.async_run_job(_test())
+    # No call to menuai.async_block_till_done to ensure the task is run eagerly
     assert len(runs) == 1
     assert task.done()
     await task
@@ -2158,9 +2158,9 @@ def test_valid_domain() -> None:
         assert ha.valid_domain(valid), valid
 
 
-async def test_start_events(hass: HomeAssistant) -> None:
-    """Test events fired when starting Home Assistant."""
-    hass.state = ha.CoreState.not_running
+async def test_start_events(menuai: menuai) -> None:
+    """Test events fired when starting MenuAI."""
+    menuai.state = ha.CoreState.not_running
 
     all_events = []
 
@@ -2168,30 +2168,30 @@ async def test_start_events(hass: HomeAssistant) -> None:
     def capture_events(ev):
         all_events.append(ev.event_type)
 
-    hass.bus.async_listen(MATCH_ALL, capture_events)
+    menuai.bus.async_listen(MATCH_ALL, capture_events)
 
     core_states = []
 
     @ha.callback
     def capture_core_state(_):
-        core_states.append(hass.state)
+        core_states.append(menuai.state)
 
-    hass.bus.async_listen(EVENT_CORE_CONFIG_UPDATE, capture_core_state)
+    menuai.bus.async_listen(EVENT_CORE_CONFIG_UPDATE, capture_core_state)
 
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
     assert all_events == [
         EVENT_CORE_CONFIG_UPDATE,
-        EVENT_HOMEASSISTANT_START,
+        EVENT_menuai_START,
         EVENT_CORE_CONFIG_UPDATE,
-        EVENT_HOMEASSISTANT_STARTED,
+        EVENT_menuai_STARTED,
     ]
     assert core_states == [ha.CoreState.starting, ha.CoreState.running]
 
 
 async def test_log_blocking_events(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Ensure we log which task is blocking startup when debug logging is on."""
     caplog.set_level(logging.DEBUG)
@@ -2202,19 +2202,19 @@ async def test_log_blocking_events(
     async def _wait_a_bit_2():
         await asyncio.sleep(0.1)
 
-    hass.async_create_task(_wait_a_bit_1(), eager_start=False)
-    await hass.async_block_till_done()
+    menuai.async_create_task(_wait_a_bit_1(), eager_start=False)
+    await menuai.async_block_till_done()
 
     with patch.object(ha, "BLOCK_LOG_TIMEOUT", 0.0001):
-        hass.async_create_task(_wait_a_bit_2(), eager_start=False)
-        await hass.async_block_till_done()
+        menuai.async_create_task(_wait_a_bit_2(), eager_start=False)
+        await menuai.async_block_till_done()
 
     assert "_wait_a_bit_2" in caplog.text
     assert "_wait_a_bit_1" not in caplog.text
 
 
 async def test_chained_logging_hits_log_timeout(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Ensure we log which task is blocking startup when there is a task chain and debug logging is on."""
     caplog.set_level(logging.DEBUG)
@@ -2226,24 +2226,24 @@ async def test_chained_logging_hits_log_timeout(
         created += 1
         if created > 1000:
             return
-        hass.async_create_task(_task_chain_2(), eager_start=False)
+        menuai.async_create_task(_task_chain_2(), eager_start=False)
 
     async def _task_chain_2():
         nonlocal created
         created += 1
         if created > 1000:
             return
-        hass.async_create_task(_task_chain_1(), eager_start=False)
+        menuai.async_create_task(_task_chain_1(), eager_start=False)
 
     with patch.object(ha, "BLOCK_LOG_TIMEOUT", 0.0):
-        hass.async_create_task(_task_chain_1())
-        await hass.async_block_till_done(wait_background_tasks=False)
+        menuai.async_create_task(_task_chain_1())
+        await menuai.async_block_till_done(wait_background_tasks=False)
 
     assert "_task_chain_" in caplog.text
 
 
 async def test_chained_logging_misses_log_timeout(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Ensure we do not log which task is blocking startup if we do not hit the timeout."""
     caplog.set_level(logging.DEBUG)
@@ -2255,71 +2255,71 @@ async def test_chained_logging_misses_log_timeout(
         created += 1
         if created > 10:
             return
-        hass.async_create_task(_task_chain_2(), eager_start=False)
+        menuai.async_create_task(_task_chain_2(), eager_start=False)
 
     async def _task_chain_2():
         nonlocal created
         created += 1
         if created > 10:
             return
-        hass.async_create_task(_task_chain_1(), eager_start=False)
+        menuai.async_create_task(_task_chain_1(), eager_start=False)
 
-    hass.async_create_task(_task_chain_1(), eager_start=False)
-    await hass.async_block_till_done()
+    menuai.async_create_task(_task_chain_1(), eager_start=False)
+    await menuai.async_block_till_done()
 
     assert "_task_chain_" not in caplog.text
 
 
-async def test_async_all(hass: HomeAssistant) -> None:
+async def test_async_all(menuai: menuai) -> None:
     """Test async_all."""
-    assert hass.states.async_all() == []
-    assert hass.states.async_all("light") == []
-    assert hass.states.async_all(["light", "switch"]) == []
+    assert menuai.states.async_all() == []
+    assert menuai.states.async_all("light") == []
+    assert menuai.states.async_all(["light", "switch"]) == []
 
-    hass.states.async_set("switch.link", "on")
-    hass.states.async_set("light.bowl", "on")
-    hass.states.async_set("light.frog", "on")
-    hass.states.async_set("vacuum.floor", "on")
+    menuai.states.async_set("switch.link", "on")
+    menuai.states.async_set("light.bowl", "on")
+    menuai.states.async_set("light.frog", "on")
+    menuai.states.async_set("vacuum.floor", "on")
 
-    assert {state.entity_id for state in hass.states.async_all()} == {
+    assert {state.entity_id for state in menuai.states.async_all()} == {
         "switch.link",
         "light.bowl",
         "light.frog",
         "vacuum.floor",
     }
-    assert {state.entity_id for state in hass.states.async_all("light")} == {
+    assert {state.entity_id for state in menuai.states.async_all("light")} == {
         "light.bowl",
         "light.frog",
     }
     assert {
-        state.entity_id for state in hass.states.async_all(["light", "switch"])
+        state.entity_id for state in menuai.states.async_all(["light", "switch"])
     } == {"light.bowl", "light.frog", "switch.link"}
 
 
-async def test_async_entity_ids_count(hass: HomeAssistant) -> None:
+async def test_async_entity_ids_count(menuai: menuai) -> None:
     """Test async_entity_ids_count."""
 
-    assert hass.states.async_entity_ids_count() == 0
-    assert hass.states.async_entity_ids_count("light") == 0
-    assert hass.states.async_entity_ids_count({"light", "vacuum"}) == 0
+    assert menuai.states.async_entity_ids_count() == 0
+    assert menuai.states.async_entity_ids_count("light") == 0
+    assert menuai.states.async_entity_ids_count({"light", "vacuum"}) == 0
 
-    hass.states.async_set("switch.link", "on")
-    hass.states.async_set("light.bowl", "on")
-    hass.states.async_set("light.frog", "on")
-    hass.states.async_set("vacuum.floor", "on")
+    menuai.states.async_set("switch.link", "on")
+    menuai.states.async_set("light.bowl", "on")
+    menuai.states.async_set("light.frog", "on")
+    menuai.states.async_set("vacuum.floor", "on")
 
-    assert hass.states.async_entity_ids_count() == 4
-    assert hass.states.async_entity_ids_count("light") == 2
+    assert menuai.states.async_entity_ids_count() == 4
+    assert menuai.states.async_entity_ids_count("light") == 2
 
-    hass.states.async_set("light.cow", "on")
+    menuai.states.async_set("light.cow", "on")
 
-    assert hass.states.async_entity_ids_count() == 5
-    assert hass.states.async_entity_ids_count("light") == 3
-    assert hass.states.async_entity_ids_count({"light", "vacuum"}) == 4
+    assert menuai.states.async_entity_ids_count() == 5
+    assert menuai.states.async_entity_ids_count("light") == 3
+    assert menuai.states.async_entity_ids_count({"light", "vacuum"}) == 4
 
 
-async def test_hassjob_forbid_coroutine() -> None:
-    """Test hassjob forbids coroutines."""
+async def test_menuaijob_forbid_coroutine() -> None:
+    """Test menuaijob forbids coroutines."""
 
     async def bla():
         pass
@@ -2327,33 +2327,33 @@ async def test_hassjob_forbid_coroutine() -> None:
     coro = bla()
 
     with pytest.raises(ValueError):
-        _ = ha.HassJob(coro).job_type
+        _ = ha.menuaiJob(coro).job_type
 
     # To avoid warning about unawaited coro
     await coro
 
 
-async def test_reserving_states(hass: HomeAssistant) -> None:
+async def test_reserving_states(menuai: menuai) -> None:
     """Test we can reserve a state in the state machine."""
 
-    hass.states.async_reserve("light.bedroom")
-    assert hass.states.async_available("light.bedroom") is False
-    hass.states.async_set("light.bedroom", "on")
-    assert hass.states.async_available("light.bedroom") is False
+    menuai.states.async_reserve("light.bedroom")
+    assert menuai.states.async_available("light.bedroom") is False
+    menuai.states.async_set("light.bedroom", "on")
+    assert menuai.states.async_available("light.bedroom") is False
 
-    with pytest.raises(HomeAssistantError):
-        hass.states.async_reserve("light.bedroom")
+    with pytest.raises(menuaiError):
+        menuai.states.async_reserve("light.bedroom")
 
-    hass.states.async_remove("light.bedroom")
-    assert hass.states.async_available("light.bedroom") is True
-    hass.states.async_set("light.bedroom", "on")
+    menuai.states.async_remove("light.bedroom")
+    assert menuai.states.async_available("light.bedroom") is True
+    menuai.states.async_set("light.bedroom", "on")
 
-    with pytest.raises(HomeAssistantError):
-        hass.states.async_reserve("light.bedroom")
+    with pytest.raises(menuaiError):
+        menuai.states.async_reserve("light.bedroom")
 
-    assert hass.states.async_available("light.bedroom") is False
-    hass.states.async_remove("light.bedroom")
-    assert hass.states.async_available("light.bedroom") is True
+    assert menuai.states.async_available("light.bedroom") is False
+    menuai.states.async_remove("light.bedroom")
+    assert menuai.states.async_available("light.bedroom") is True
 
 
 def _ulid_timestamp(ulid: str) -> int:
@@ -2649,13 +2649,13 @@ def _ulid_timestamp(ulid: str) -> int:
 
 
 async def test_state_change_events_context_id_match_state_time(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test last_updated, timed_fired, and the ulid all have the same time."""
-    events = async_capture_events(hass, EVENT_STATE_CHANGED)
-    hass.states.async_set("light.bedroom", "on")
-    await hass.async_block_till_done()
-    state: State = hass.states.get("light.bedroom")
+    events = async_capture_events(menuai, EVENT_STATE_CHANGED)
+    menuai.states.async_set("light.bedroom", "on")
+    await menuai.async_block_till_done()
+    state: State = menuai.states.get("light.bedroom")
     assert state.last_updated == events[0].time_fired
     assert len(state.context.id) == 26
     # ULIDs store time to 3 decimal places compared to python timestamps
@@ -2663,7 +2663,7 @@ async def test_state_change_events_context_id_match_state_time(
 
 
 async def test_state_change_events_match_time_with_limits_of_precision(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Ensure last_updated matches last_updated_timestamp within limits of precision.
 
@@ -2671,10 +2671,10 @@ async def test_state_change_events_match_time_with_limits_of_precision(
     a bit better than the precision of datetime.now() which is used for last_updated
     on some platforms.
     """
-    events = async_capture_events(hass, EVENT_STATE_CHANGED)
-    hass.states.async_set("light.bedroom", "on")
-    await hass.async_block_till_done()
-    state: State = hass.states.get("light.bedroom")
+    events = async_capture_events(menuai, EVENT_STATE_CHANGED)
+    menuai.states.async_set("light.bedroom", "on")
+    await menuai.async_block_till_done()
+    state: State = menuai.states.get("light.bedroom")
     assert state.last_updated == events[0].time_fired
     assert state.last_updated_timestamp == pytest.approx(
         events[0].time_fired.timestamp()
@@ -2709,12 +2709,12 @@ def test_state_timestamps() -> None:
 
 
 async def test_state_firing_event_matches_context_id_ulid_time(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test timed_fired and the ulid have the same time."""
-    events = async_capture_events(hass, EVENT_HOMEASSISTANT_STARTED)
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-    await hass.async_block_till_done()
+    events = async_capture_events(menuai, EVENT_menuai_STARTED)
+    menuai.bus.async_fire(EVENT_menuai_STARTED)
+    await menuai.async_block_till_done()
 
     event = events[0]
     assert len(event.context.id) == 26
@@ -2724,7 +2724,7 @@ async def test_state_firing_event_matches_context_id_ulid_time(
     )
 
 
-async def test_event_context(hass: HomeAssistant) -> None:
+async def test_event_context(menuai: menuai) -> None:
     """Test we can lookup the origin of a context from an event."""
     events = []
 
@@ -2733,16 +2733,16 @@ async def test_event_context(hass: HomeAssistant) -> None:
         nonlocal events
         events.append(event)
 
-    cancel = hass.bus.async_listen("dummy_event", capture_events)
-    cancel2 = hass.bus.async_listen("dummy_event_2", capture_events)
+    cancel = menuai.bus.async_listen("dummy_event", capture_events)
+    cancel2 = menuai.bus.async_listen("dummy_event_2", capture_events)
 
-    hass.bus.async_fire("dummy_event")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("dummy_event")
+    await menuai.async_block_till_done()
 
     dummy_event: ha.Event = events[0]
 
-    hass.bus.async_fire("dummy_event_2", context=dummy_event.context)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("dummy_event_2", context=dummy_event.context)
+    await menuai.async_block_till_done()
     context_id = dummy_event.context.id
 
     dummy_event2: ha.Event = events[1]
@@ -2775,30 +2775,30 @@ def _get_by_type(full_name: str) -> list[Any]:
     reason="Takes too long on the CI",
 )
 @patch.object(ha._LOGGER, "debug", lambda *args: None)
-async def test_state_changed_events_to_not_leak_contexts(hass: HomeAssistant) -> None:
+async def test_state_changed_events_to_not_leak_contexts(menuai: menuai) -> None:
     """Test state changed events do not leak contexts."""
     gc.collect()
     # Other tests can log Contexts which keep them in memory
     # so we need to look at how many exist at the start
-    init_count = len(_get_by_type("homeassistant.core.Context"))
+    init_count = len(_get_by_type("menuai.core.Context"))
 
-    assert len(_get_by_type("homeassistant.core.Context")) == init_count
+    assert len(_get_by_type("menuai.core.Context")) == init_count
     for i in range(20):
-        hass.states.async_set("light.switch", str(i))
-    await hass.async_block_till_done()
+        menuai.states.async_set("light.switch", str(i))
+    await menuai.async_block_till_done()
     gc.collect()
 
-    assert len(_get_by_type("homeassistant.core.Context")) == init_count + 2
+    assert len(_get_by_type("menuai.core.Context")) == init_count + 2
 
-    hass.states.async_remove("light.switch")
-    await hass.async_block_till_done()
+    menuai.states.async_remove("light.switch")
+    await menuai.async_block_till_done()
     gc.collect()
 
-    assert len(_get_by_type("homeassistant.core.Context")) == init_count
+    assert len(_get_by_type("menuai.core.Context")) == init_count
 
 
 @pytest.mark.parametrize("eager_start", [True, False])
-async def test_background_task(hass: HomeAssistant, eager_start: bool) -> None:
+async def test_background_task(menuai: menuai, eager_start: bool) -> None:
     """Test background tasks being quit."""
     result = asyncio.Future()
 
@@ -2806,20 +2806,20 @@ async def test_background_task(hass: HomeAssistant, eager_start: bool) -> None:
         try:
             await asyncio.sleep(1)
         except asyncio.CancelledError:
-            result.set_result(hass.state)
+            result.set_result(menuai.state)
             raise
 
-    task = hass.async_create_background_task(
+    task = menuai.async_create_background_task(
         test_task(), "happy task", eager_start=eager_start
     )
     assert "happy task" in str(task)
     await asyncio.sleep(0)
-    await hass.async_stop()
+    await menuai.async_stop()
     assert result.result() == ha.CoreState.stopping
 
 
 async def test_shutdown_does_not_block_on_normal_tasks(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Ensure shutdown does not block on normal tasks."""
     result = asyncio.Future()
@@ -2829,12 +2829,12 @@ async def test_shutdown_does_not_block_on_normal_tasks(
         try:
             await unshielded_task
         except asyncio.CancelledError:
-            result.set_result(hass.state)
+            result.set_result(menuai.state)
 
     start = time.monotonic()
-    task = hass.async_create_task(test_task())
+    task = menuai.async_create_task(test_task())
     await asyncio.sleep(0)
-    await hass.async_stop()
+    await menuai.async_stop()
     await asyncio.sleep(0)
     assert result.done()
     assert task.done()
@@ -2842,7 +2842,7 @@ async def test_shutdown_does_not_block_on_normal_tasks(
 
 
 async def test_shutdown_does_not_block_on_shielded_tasks(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Ensure shutdown does not block on shielded tasks."""
     result = asyncio.Future()
@@ -2853,12 +2853,12 @@ async def test_shutdown_does_not_block_on_shielded_tasks(
         try:
             await shielded_task
         except asyncio.CancelledError:
-            result.set_result(hass.state)
+            result.set_result(menuai.state)
 
     start = time.monotonic()
-    task = hass.async_create_task(test_task())
+    task = menuai.async_create_task(test_task())
     await asyncio.sleep(0)
-    await hass.async_stop()
+    await menuai.async_stop()
     await asyncio.sleep(0)
     assert result.done()
     assert task.done()
@@ -2869,21 +2869,21 @@ async def test_shutdown_does_not_block_on_shielded_tasks(
 
 
 @pytest.mark.parametrize("eager_start", [True, False])
-async def test_cancellable_hassjob(hass: HomeAssistant, eager_start: bool) -> None:
+async def test_cancellable_menuaijob(menuai: menuai, eager_start: bool) -> None:
     """Simulate a shutdown, ensure cancellable jobs are cancelled."""
     job = MagicMock()
 
     @ha.callback
-    def run_job(job: HassJob) -> None:
+    def run_job(job: menuaiJob) -> None:
         """Call the action."""
-        hass.async_run_hass_job(job, eager_start=True)
+        menuai.async_run_menuai_job(job, eager_start=True)
 
-    timer1 = hass.loop.call_later(
-        60, run_job, HassJob(ha.callback(job), cancel_on_shutdown=True)
+    timer1 = menuai.loop.call_later(
+        60, run_job, menuaiJob(ha.callback(job), cancel_on_shutdown=True)
     )
-    timer2 = hass.loop.call_later(60, run_job, HassJob(ha.callback(job)))
+    timer2 = menuai.loop.call_later(60, run_job, menuaiJob(ha.callback(job)))
 
-    await hass.async_stop()
+    await menuai.async_stop()
 
     assert timer1.cancelled()
     assert not timer2.cancelled()
@@ -2892,7 +2892,7 @@ async def test_cancellable_hassjob(hass: HomeAssistant, eager_start: bool) -> No
     timer2.cancel()
 
 
-async def test_validate_state(hass: HomeAssistant) -> None:
+async def test_validate_state(menuai: menuai) -> None:
     """Test validate_state."""
     assert ha.validate_state("test") == "test"
     with pytest.raises(InvalidStateError):
@@ -2911,13 +2911,13 @@ async def test_validate_state(hass: HomeAssistant) -> None:
 async def test_get_release_channel(
     version: str, release_channel: ReleaseChannel
 ) -> None:
-    """Test if release channel detection works from Home Assistant version number."""
-    with patch("homeassistant.core.__version__", f"{version}"):
+    """Test if release channel detection works from MenuAI version number."""
+    with patch("menuai.core.__version__", f"{version}"):
         assert get_release_channel() == release_channel
 
 
 def test_is_callback_check_partial() -> None:
-    """Test is_callback_check_partial matches HassJob."""
+    """Test is_callback_check_partial matches menuaiJob."""
 
     @ha.callback
     def callback_func() -> None:
@@ -2927,33 +2927,33 @@ def test_is_callback_check_partial() -> None:
         pass
 
     assert ha.is_callback(callback_func)
-    assert HassJob(callback_func).job_type == ha.HassJobType.Callback
+    assert menuaiJob(callback_func).job_type == ha.menuaiJobType.Callback
     assert ha.is_callback_check_partial(functools.partial(callback_func))
-    assert HassJob(functools.partial(callback_func)).job_type == ha.HassJobType.Callback
+    assert menuaiJob(functools.partial(callback_func)).job_type == ha.menuaiJobType.Callback
     assert ha.is_callback_check_partial(
         functools.partial(functools.partial(callback_func))
     )
-    assert HassJob(functools.partial(functools.partial(callback_func))).job_type == (
-        ha.HassJobType.Callback
+    assert menuaiJob(functools.partial(functools.partial(callback_func))).job_type == (
+        ha.menuaiJobType.Callback
     )
     assert not ha.is_callback_check_partial(not_callback_func)
-    assert HassJob(not_callback_func).job_type == ha.HassJobType.Executor
+    assert menuaiJob(not_callback_func).job_type == ha.menuaiJobType.Executor
     assert not ha.is_callback_check_partial(functools.partial(not_callback_func))
-    assert HassJob(functools.partial(not_callback_func)).job_type == (
-        ha.HassJobType.Executor
+    assert menuaiJob(functools.partial(not_callback_func)).job_type == (
+        ha.menuaiJobType.Executor
     )
 
     # We check the inner function, not the outer one
     assert not ha.is_callback_check_partial(
         ha.callback(functools.partial(not_callback_func))
     )
-    assert HassJob(ha.callback(functools.partial(not_callback_func))).job_type == (
-        ha.HassJobType.Executor
+    assert menuaiJob(ha.callback(functools.partial(not_callback_func))).job_type == (
+        ha.menuaiJobType.Executor
     )
 
 
-def test_hassjob_passing_job_type() -> None:
-    """Test passing the job type to HassJob when we already know it."""
+def test_menuaijob_passing_job_type() -> None:
+    """Test passing the job type to menuaiJob when we already know it."""
 
     @ha.callback
     def callback_func() -> None:
@@ -2963,18 +2963,18 @@ def test_hassjob_passing_job_type() -> None:
         pass
 
     assert (
-        HassJob(callback_func, job_type=ha.HassJobType.Callback).job_type
-        == ha.HassJobType.Callback
+        menuaiJob(callback_func, job_type=ha.menuaiJobType.Callback).job_type
+        == ha.menuaiJobType.Callback
     )
 
     # We should trust the job_type passed in
     assert (
-        HassJob(not_callback_func, job_type=ha.HassJobType.Callback).job_type
-        == ha.HassJobType.Callback
+        menuaiJob(not_callback_func, job_type=ha.menuaiJobType.Callback).job_type
+        == ha.menuaiJobType.Callback
     )
 
 
-async def test_shutdown_job(hass: HomeAssistant) -> None:
+async def test_shutdown_job(menuai: menuai) -> None:
     """Test async_add_shutdown_job."""
     evt = asyncio.Event()
 
@@ -2984,23 +2984,23 @@ async def test_shutdown_job(hass: HomeAssistant) -> None:
         # Set the event
         evt.set()
 
-    job = HassJob(shutdown_func, "shutdown_job")
-    hass.async_add_shutdown_job(job)
-    await hass.async_stop()
+    job = menuaiJob(shutdown_func, "shutdown_job")
+    menuai.async_add_shutdown_job(job)
+    await menuai.async_stop()
     assert evt.is_set()
 
 
-async def test_cancel_shutdown_job(hass: HomeAssistant) -> None:
+async def test_cancel_shutdown_job(menuai: menuai) -> None:
     """Test cancelling a job added to async_add_shutdown_job."""
     evt = asyncio.Event()
 
     async def shutdown_func() -> None:
         evt.set()
 
-    job = HassJob(shutdown_func, "shutdown_job")
-    cancel = hass.async_add_shutdown_job(job)
+    job = menuaiJob(shutdown_func, "shutdown_job")
+    cancel = menuai.async_add_shutdown_job(job)
     cancel()
-    await hass.async_stop()
+    await menuai.async_stop()
     assert not evt.is_set()
 
 
@@ -3014,20 +3014,20 @@ def test_deprecated_config(caplog: pytest.LogCaptureFixture) -> None:
     import_and_test_deprecated_alias(caplog, ha, "Config", Config, "2025.11")
 
 
-def test_one_time_listener_repr(hass: HomeAssistant) -> None:
+def test_one_time_listener_repr(menuai: menuai) -> None:
     """Test one time listener repr."""
 
     def _listener(event: ha.Event):
         """Test listener."""
 
-    one_time_listener = ha._OneTimeListener(hass, HassJob(_listener))
+    one_time_listener = ha._OneTimeListener(menuai, menuaiJob(_listener))
     repr_str = repr(one_time_listener)
     assert "OneTimeListener" in repr_str
     assert "test_core" in repr_str
     assert "_listener" in repr_str
 
 
-async def test_async_add_import_executor_job(hass: HomeAssistant) -> None:
+async def test_async_add_import_executor_job(menuai: menuai) -> None:
     """Test async_add_import_executor_job works and is limited to one thread."""
     evt = threading.Event()
     loop = asyncio.get_running_loop()
@@ -3036,62 +3036,62 @@ async def test_async_add_import_executor_job(hass: HomeAssistant) -> None:
         evt.set()
         return evt
 
-    future = hass.async_add_import_executor_job(executor_func)
+    future = menuai.async_add_import_executor_job(executor_func)
     await loop.run_in_executor(None, evt.wait)
     assert await future is evt
 
-    assert hass.import_executor._max_workers == 1
+    assert menuai.import_executor._max_workers == 1
 
 
 async def test_async_run_job_deprecated(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test async_run_job warns about its deprecation."""
 
     async def _test() -> None:
         pass
 
-    hass.async_run_job(_test)
+    menuai.async_run_job(_test)
     assert (
         "Detected code that calls `async_run_job`, which should be reviewed against "
         "https://developers.home-assistant.io/blog/2024/03/13/deprecate_add_run_job"
-        " for replacement options. This will stop working in Home Assistant 2025.4"
+        " for replacement options. This will stop working in MenuAI 2025.4"
     ) in caplog.text
 
 
 async def test_async_add_job_deprecated(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test async_add_job warns about its deprecation."""
 
     async def _test() -> None:
         pass
 
-    hass.async_add_job(_test)
+    menuai.async_add_job(_test)
     assert (
         "Detected code that calls `async_add_job`, which should be reviewed against "
         "https://developers.home-assistant.io/blog/2024/03/13/deprecate_add_run_job"
-        " for replacement options. This will stop working in Home Assistant 2025.4"
+        " for replacement options. This will stop working in MenuAI 2025.4"
     ) in caplog.text
 
 
-async def test_async_add_hass_job_deprecated(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+async def test_async_add_menuai_job_deprecated(
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """Test async_add_hass_job warns about its deprecation."""
+    """Test async_add_menuai_job warns about its deprecation."""
 
     async def _test() -> None:
         pass
 
-    hass.async_add_hass_job(HassJob(_test))
+    menuai.async_add_menuai_job(menuaiJob(_test))
     assert (
-        "Detected code that calls `async_add_hass_job`, which should be reviewed against "
-        "https://developers.home-assistant.io/blog/2024/04/07/deprecate_add_hass_job"
-        " for replacement options. This will stop working in Home Assistant 2025.5"
+        "Detected code that calls `async_add_menuai_job`, which should be reviewed against "
+        "https://developers.home-assistant.io/blog/2024/04/07/deprecate_add_menuai_job"
+        " for replacement options. This will stop working in MenuAI 2025.5"
     ) in caplog.text
 
 
-async def test_eventbus_lazy_object_creation(hass: HomeAssistant) -> None:
+async def test_eventbus_lazy_object_creation(menuai: menuai) -> None:
     """Test we don't create unneeded objects when firing events."""
     calls = []
 
@@ -3105,53 +3105,53 @@ async def test_eventbus_lazy_object_creation(hass: HomeAssistant) -> None:
         """Mock filter."""
         return not event_data["filtered"]
 
-    unsub = hass.bus.async_listen("test_1", listener, event_filter=mock_filter)
+    unsub = menuai.bus.async_listen("test_1", listener, event_filter=mock_filter)
 
     # Test lazy creation of Event objects
-    with patch("homeassistant.core.Event") as mock_event:
+    with patch("menuai.core.Event") as mock_event:
         # Fire an event which is filtered out by its listener
-        hass.bus.async_fire("test_1", {"filtered": True})
-        await hass.async_block_till_done()
+        menuai.bus.async_fire("test_1", {"filtered": True})
+        await menuai.async_block_till_done()
         mock_event.assert_not_called()
         assert len(calls) == 0
 
         # Fire an event which has no listener
-        hass.bus.async_fire("test_2")
-        await hass.async_block_till_done()
+        menuai.bus.async_fire("test_2")
+        await menuai.async_block_till_done()
         mock_event.assert_not_called()
         assert len(calls) == 0
 
         # Fire an event which is not filtered out by its listener
-        hass.bus.async_fire("test_1", {"filtered": False})
-        await hass.async_block_till_done()
+        menuai.bus.async_fire("test_1", {"filtered": False})
+        await menuai.async_block_till_done()
         mock_event.assert_called_once()
         assert len(calls) == 1
 
     calls = []
     # Test lazy creation of Context objects
-    with patch("homeassistant.core.Context") as mock_context:
+    with patch("menuai.core.Context") as mock_context:
         # Fire an event which is filtered out by its listener
-        hass.bus.async_fire("test_1", {"filtered": True})
-        await hass.async_block_till_done()
+        menuai.bus.async_fire("test_1", {"filtered": True})
+        await menuai.async_block_till_done()
         mock_context.assert_not_called()
         assert len(calls) == 0
 
         # Fire an event which has no listener
-        hass.bus.async_fire("test_2")
-        await hass.async_block_till_done()
+        menuai.bus.async_fire("test_2")
+        await menuai.async_block_till_done()
         mock_context.assert_not_called()
         assert len(calls) == 0
 
         # Fire an event which is not filtered out by its listener
-        hass.bus.async_fire("test_1", {"filtered": False})
-        await hass.async_block_till_done()
+        menuai.bus.async_fire("test_1", {"filtered": False})
+        await menuai.async_block_till_done()
         mock_context.assert_called_once()
         assert len(calls) == 1
 
     unsub()
 
 
-async def test_event_filter_sanity_checks(hass: HomeAssistant) -> None:
+async def test_event_filter_sanity_checks(menuai: menuai) -> None:
     """Test raising on bad event filters."""
 
     @ha.callback
@@ -3162,11 +3162,11 @@ async def test_event_filter_sanity_checks(hass: HomeAssistant) -> None:
         """Mock filter."""
         return False
 
-    with pytest.raises(HomeAssistantError):
-        hass.bus.async_listen("test", listener, event_filter=bad_filter)
+    with pytest.raises(menuaiError):
+        menuai.bus.async_listen("test", listener, event_filter=bad_filter)
 
 
-async def test_statemachine_report_state(hass: HomeAssistant) -> None:
+async def test_statemachine_report_state(menuai: menuai) -> None:
     """Test report state event."""
 
     @ha.callback
@@ -3178,42 +3178,42 @@ async def test_statemachine_report_state(hass: HomeAssistant) -> None:
     def listener(event: ha.Event) -> None:
         state_reported_events.append(event)
 
-    hass.states.async_set("light.bowl", "on", {})
-    state_changed_events = async_capture_events(hass, EVENT_STATE_CHANGED)
+    menuai.states.async_set("light.bowl", "on", {})
+    state_changed_events = async_capture_events(menuai, EVENT_STATE_CHANGED)
     state_reported_events = []
-    unsub = hass.bus.async_listen(
+    unsub = menuai.bus.async_listen(
         EVENT_STATE_REPORTED, listener, event_filter=mock_filter
     )
 
-    hass.states.async_set("light.bowl", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.bowl", "on")
+    await menuai.async_block_till_done()
     assert len(state_changed_events) == 0
     assert len(state_reported_events) == 1
 
-    hass.states.async_set("light.bowl", "on", None, True)
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.bowl", "on", None, True)
+    await menuai.async_block_till_done()
     assert len(state_changed_events) == 1
     assert len(state_reported_events) == 1
 
-    hass.states.async_set("light.bowl", "off")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.bowl", "off")
+    await menuai.async_block_till_done()
     assert len(state_changed_events) == 2
     assert len(state_reported_events) == 1
 
-    hass.states.async_remove("light.bowl")
-    await hass.async_block_till_done()
+    menuai.states.async_remove("light.bowl")
+    await menuai.async_block_till_done()
     assert len(state_changed_events) == 3
     assert len(state_reported_events) == 1
 
     unsub()
 
-    hass.states.async_set("light.bowl", "on")
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.bowl", "on")
+    await menuai.async_block_till_done()
     assert len(state_changed_events) == 4
     assert len(state_reported_events) == 1
 
 
-async def test_report_state_listener_restrictions(hass: HomeAssistant) -> None:
+async def test_report_state_listener_restrictions(menuai: menuai) -> None:
     """Test we enforce requirements for EVENT_STATE_REPORTED listeners."""
 
     @ha.callback
@@ -3226,11 +3226,11 @@ async def test_report_state_listener_restrictions(hass: HomeAssistant) -> None:
         return False
 
     # no filter
-    with pytest.raises(HomeAssistantError):
-        hass.bus.async_listen(EVENT_STATE_REPORTED, listener)
+    with pytest.raises(menuaiError):
+        menuai.bus.async_listen(EVENT_STATE_REPORTED, listener)
 
     # Both filter and run_immediately
-    hass.bus.async_listen(EVENT_STATE_REPORTED, listener, event_filter=mock_filter)
+    menuai.bus.async_listen(EVENT_STATE_REPORTED, listener, event_filter=mock_filter)
 
 
 @pytest.mark.parametrize(
@@ -3242,7 +3242,7 @@ async def test_report_state_listener_restrictions(hass: HomeAssistant) -> None:
     ["async_listen", "async_listen_once"],
 )
 async def test_async_listen_with_run_immediately_deprecated(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     run_immediately: bool,
     method: str,
@@ -3252,53 +3252,53 @@ async def test_async_listen_with_run_immediately_deprecated(
     async def _test(event: ha.Event):
         pass
 
-    func = getattr(hass.bus, method)
-    func(EVENT_HOMEASSISTANT_START, _test, run_immediately=run_immediately)
+    func = getattr(menuai.bus, method)
+    func(EVENT_menuai_START, _test, run_immediately=run_immediately)
     assert (
         f"Detected code that calls `{method}` with run_immediately. "
-        "This will stop working in Home Assistant 2025.5"
+        "This will stop working in MenuAI 2025.5"
     ) in caplog.text
 
 
-async def test_async_fire_thread_safety(hass: HomeAssistant) -> None:
+async def test_async_fire_thread_safety(menuai: menuai) -> None:
     """Test async_fire thread safety."""
-    events = async_capture_events(hass, "test_event")
-    hass.bus.async_fire("test_event")
+    events = async_capture_events(menuai, "test_event")
+    menuai.bus.async_fire("test_event")
     with pytest.raises(
         RuntimeError,
-        match="Detected code that calls hass.bus.async_fire from a thread.",
+        match="Detected code that calls menuai.bus.async_fire from a thread.",
     ):
-        await hass.async_add_executor_job(hass.bus.async_fire, "test_event")
+        await menuai.async_add_executor_job(menuai.bus.async_fire, "test_event")
 
     assert len(events) == 1
 
 
-async def test_async_register_thread_safety(hass: HomeAssistant) -> None:
+async def test_async_register_thread_safety(menuai: menuai) -> None:
     """Test async_register thread safety."""
     with pytest.raises(
         RuntimeError,
-        match="Detected code that calls hass.services.async_register from a thread.",
+        match="Detected code that calls menuai.services.async_register from a thread.",
     ):
-        await hass.async_add_executor_job(
-            hass.services.async_register,
+        await menuai.async_add_executor_job(
+            menuai.services.async_register,
             "test_domain",
             "test_service",
             lambda call: None,
         )
 
 
-async def test_async_remove_thread_safety(hass: HomeAssistant) -> None:
+async def test_async_remove_thread_safety(menuai: menuai) -> None:
     """Test async_remove thread safety."""
     with pytest.raises(
         RuntimeError,
-        match="Detected code that calls hass.services.async_remove from a thread.",
+        match="Detected code that calls menuai.services.async_remove from a thread.",
     ):
-        await hass.async_add_executor_job(
-            hass.services.async_remove, "test_domain", "test_service"
+        await menuai.async_add_executor_job(
+            menuai.services.async_remove, "test_domain", "test_service"
         )
 
 
-async def test_async_create_task_thread_safety(hass: HomeAssistant) -> None:
+async def test_async_create_task_thread_safety(menuai: menuai) -> None:
     """Test async_create_task thread safety."""
 
     async def _any_coro():
@@ -3306,35 +3306,35 @@ async def test_async_create_task_thread_safety(hass: HomeAssistant) -> None:
 
     with pytest.raises(
         RuntimeError,
-        match="Detected code that calls hass.async_create_task from a thread.",
+        match="Detected code that calls menuai.async_create_task from a thread.",
     ):
-        await hass.async_add_executor_job(hass.async_create_task, _any_coro)
+        await menuai.async_add_executor_job(menuai.async_create_task, _any_coro)
 
 
-async def test_thread_safety_message(hass: HomeAssistant) -> None:
+async def test_thread_safety_message(menuai: menuai) -> None:
     """Test the thread safety message."""
     with pytest.raises(
         RuntimeError,
         match=re.escape(
             "Detected code that calls test from a thread other than the event loop, "
-            "which may cause Home Assistant to crash or data to corrupt. For more "
+            "which may cause MenuAI to crash or data to corrupt. For more "
             "information, see "
             "https://developers.home-assistant.io/docs/asyncio_thread_safety/#test"
             ". Please report this issue",
         ),
     ):
-        await hass.async_add_executor_job(hass.verify_event_loop_thread, "test")
+        await menuai.async_add_executor_job(menuai.verify_event_loop_thread, "test")
 
 
-async def test_async_set_updates_last_reported(hass: HomeAssistant) -> None:
+async def test_async_set_updates_last_reported(menuai: menuai) -> None:
     """Test async_set method updates last_reported AND last_reported_timestamp."""
-    hass.states.async_set("light.bowl", "on", {})
-    state = hass.states.get("light.bowl")
+    menuai.states.async_set("light.bowl", "on", {})
+    state = menuai.states.get("light.bowl")
     last_reported = state.last_reported
     last_reported_timestamp = state.last_reported_timestamp
 
     for _ in range(2):
-        hass.states.async_set("light.bowl", "on", {})
+        menuai.states.async_set("light.bowl", "on", {})
         assert state.last_reported != last_reported
         assert state.last_reported_timestamp != last_reported_timestamp
         last_reported = state.last_reported

@@ -7,10 +7,10 @@ import logging
 
 from asyncsleepiq import AsyncSleepIQ
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_USERNAME
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -25,13 +25,13 @@ class SleepIQDataUpdateCoordinator(DataUpdateCoordinator[None]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         client: AsyncSleepIQ,
     ) -> None:
         """Initialize coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=f"{config_entry.data[CONF_USERNAME]}@SleepIQ",
@@ -54,13 +54,13 @@ class SleepIQPauseUpdateCoordinator(DataUpdateCoordinator[None]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         client: AsyncSleepIQ,
     ) -> None:
         """Initialize coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=f"{config_entry.data[CONF_USERNAME]}@SleepIQPause",

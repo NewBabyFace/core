@@ -14,14 +14,14 @@ from freezegun.api import FrozenDateTimeFactory
 from gcal_sync.auth import API_BASE_URL
 import pytest
 
-from homeassistant.components.google.const import CONF_CALENDAR_ACCESS, DOMAIN
-from homeassistant.config_entries import RELOAD_AFTER_UPDATE_DELAY
-from homeassistant.const import STATE_OFF, STATE_ON, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_registry import RegistryEntryDisabler
-from homeassistant.helpers.template import DATE_STR_FORMAT
-from homeassistant.util import dt as dt_util
+from menuai.components.google.const import CONF_CALENDAR_ACCESS, DOMAIN
+from menuai.config_entries import RELOAD_AFTER_UPDATE_DELAY
+from menuai.const import STATE_OFF, STATE_ON, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity_registry import RegistryEntryDisabler
+from menuai.helpers.template import DATE_STR_FORMAT
+from menuai.util import dt as dt_util
 
 from .conftest import (
     CALENDAR_ID,
@@ -110,20 +110,20 @@ type ClientFixture = Callable[[], Awaitable[Client]]
 
 @pytest.fixture
 async def ws_client(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
 ) -> ClientFixture:
     """Fixture for creating the test websocket client."""
 
     async def create_client() -> Client:
-        ws_client = await hass_ws_client(hass)
+        ws_client = await menuai_ws_client(menuai)
         return Client(ws_client)
 
     return create_client
 
 
 async def test_all_day_event(
-    hass: HomeAssistant, mock_events_list_items, component_setup
+    menuai: menuai, mock_events_list_items, component_setup
 ) -> None:
     """Test for an all day calendar event."""
     week_from_today = dt_util.now().date() + datetime.timedelta(days=7)
@@ -137,7 +137,7 @@ async def test_all_day_event(
 
     assert await component_setup()
 
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
     assert state.name == TEST_ENTITY_NAME
     assert state.state == STATE_OFF
     assert dict(state.attributes) == {
@@ -154,7 +154,7 @@ async def test_all_day_event(
 
 
 async def test_future_event(
-    hass: HomeAssistant, mock_events_list_items, component_setup
+    menuai: menuai, mock_events_list_items, component_setup
 ) -> None:
     """Test for an upcoming event."""
     one_hour_from_now = dt_util.now() + datetime.timedelta(minutes=30)
@@ -168,7 +168,7 @@ async def test_future_event(
 
     assert await component_setup()
 
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
     assert state.name == TEST_ENTITY_NAME
     assert state.state == STATE_OFF
     assert dict(state.attributes) == {
@@ -185,7 +185,7 @@ async def test_future_event(
 
 
 async def test_in_progress_event(
-    hass: HomeAssistant, mock_events_list_items, component_setup
+    menuai: menuai, mock_events_list_items, component_setup
 ) -> None:
     """Test an event that is active now."""
     middle_of_event = dt_util.now() - datetime.timedelta(minutes=30)
@@ -199,7 +199,7 @@ async def test_in_progress_event(
 
     assert await component_setup()
 
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
     assert state.name == TEST_ENTITY_NAME
     assert state.state == STATE_ON
     assert dict(state.attributes) == {
@@ -216,7 +216,7 @@ async def test_in_progress_event(
 
 
 async def test_offset_in_progress_event(
-    hass: HomeAssistant, mock_events_list_items, component_setup
+    menuai: menuai, mock_events_list_items, component_setup
 ) -> None:
     """Test an event that is active now with an offset."""
     middle_of_event = dt_util.now() + datetime.timedelta(minutes=14)
@@ -232,7 +232,7 @@ async def test_offset_in_progress_event(
 
     assert await component_setup()
 
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
     assert state.name == TEST_ENTITY_NAME
     assert state.state == STATE_OFF
     assert dict(state.attributes) == {
@@ -249,7 +249,7 @@ async def test_offset_in_progress_event(
 
 
 async def test_all_day_offset_in_progress_event(
-    hass: HomeAssistant, mock_events_list_items, component_setup
+    menuai: menuai, mock_events_list_items, component_setup
 ) -> None:
     """Test an all day event that is currently in progress due to an offset."""
     tomorrow = dt_util.now().date() + datetime.timedelta(days=1)
@@ -265,7 +265,7 @@ async def test_all_day_offset_in_progress_event(
 
     assert await component_setup()
 
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
     assert state.name == TEST_ENTITY_NAME
     assert state.state == STATE_OFF
     assert dict(state.attributes) == {
@@ -282,7 +282,7 @@ async def test_all_day_offset_in_progress_event(
 
 
 async def test_all_day_offset_event(
-    hass: HomeAssistant, mock_events_list_items, component_setup
+    menuai: menuai, mock_events_list_items, component_setup
 ) -> None:
     """Test an all day event that not in progress due to an offset."""
     now = dt_util.now()
@@ -300,7 +300,7 @@ async def test_all_day_offset_event(
 
     assert await component_setup()
 
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
     assert state.name == TEST_ENTITY_NAME
     assert state.state == STATE_OFF
     assert dict(state.attributes) == {
@@ -317,7 +317,7 @@ async def test_all_day_offset_event(
 
 
 async def test_missing_summary(
-    hass: HomeAssistant, mock_events_list_items, component_setup
+    menuai: menuai, mock_events_list_items, component_setup
 ) -> None:
     """Test that a summary is optional."""
     start_event = dt_util.now() + datetime.timedelta(minutes=14)
@@ -332,7 +332,7 @@ async def test_missing_summary(
 
     assert await component_setup()
 
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
     assert state.name == TEST_ENTITY_NAME
     assert state.state == STATE_OFF
     assert dict(state.attributes) == {
@@ -349,7 +349,7 @@ async def test_missing_summary(
 
 
 async def test_update_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     component_setup,
     mock_events_list,
     aioclient_mock: AiohttpClientMocker,
@@ -374,7 +374,7 @@ async def test_update_error(
     )
     assert await component_setup()
 
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
     assert state.name == TEST_ENTITY_NAME
     assert state.state == "on"
 
@@ -384,15 +384,15 @@ async def test_update_error(
     aioclient_mock.clear_requests()
     mock_events_list({}, exc=ClientError())
 
-    with patch("homeassistant.util.utcnow", return_value=now):
-        async_fire_time_changed(hass, now)
-        await hass.async_block_till_done()
+    with patch("menuai.util.utcnow", return_value=now):
+        async_fire_time_changed(menuai, now)
+        await menuai.async_block_till_done()
         # Ensure coordinator update completes
-        await hass.async_block_till_done()
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
+        await menuai.async_block_till_done()
 
     # Entity is marked uanvailable due to API failure
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
     assert state.name == TEST_ENTITY_NAME
     assert state.state == "unavailable"
 
@@ -416,22 +416,22 @@ async def test_update_error(
         }
     )
 
-    with patch("homeassistant.util.utcnow", return_value=now):
-        async_fire_time_changed(hass, now)
-        await hass.async_block_till_done()
+    with patch("menuai.util.utcnow", return_value=now):
+        async_fire_time_changed(menuai, now)
+        await menuai.async_block_till_done()
         # Ensure coordinator update completes
-        await hass.async_block_till_done()
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
+        await menuai.async_block_till_done()
 
     # State updated with new API response
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
     assert state.name == TEST_ENTITY_NAME
     assert state.state == "off"
 
 
 async def test_calendars_api(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     component_setup,
     mock_events_list_items,
 ) -> None:
@@ -439,7 +439,7 @@ async def test_calendars_api(
     mock_events_list_items([])
     assert await component_setup()
 
-    client = await hass_client()
+    client = await menuai_client()
     response = await client.get("/api/calendars")
     assert response.status == HTTPStatus.OK
     data = await response.json()
@@ -452,8 +452,8 @@ async def test_calendars_api(
 
 
 async def test_http_event_api_failure(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     component_setup,
     mock_events_list,
 ) -> None:
@@ -462,25 +462,25 @@ async def test_http_event_api_failure(
 
     assert await component_setup()
 
-    client = await hass_client()
+    client = await menuai_client()
 
     response = await client.get(upcoming_event_url())
     assert response.status == HTTPStatus.INTERNAL_SERVER_ERROR
 
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
     assert state.name == TEST_ENTITY_NAME
     assert state.state == "unavailable"
 
 
 @pytest.mark.freeze_time("2022-03-27 12:05:00+00:00")
 async def test_http_api_event(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     mock_events_list_items,
     component_setup,
 ) -> None:
     """Test querying the API and fetching events from the server."""
-    await hass.config.async_set_time_zone("Asia/Baghdad")
+    await menuai.config.async_set_time_zone("Asia/Baghdad")
     event = {
         **TEST_EVENT,
         **upcoming(),
@@ -488,7 +488,7 @@ async def test_http_api_event(
     mock_events_list_items([event])
     assert await component_setup()
 
-    client = await hass_client()
+    client = await menuai_client()
     response = await client.get(upcoming_event_url())
     assert response.status == HTTPStatus.OK
     events = await response.json()
@@ -502,8 +502,8 @@ async def test_http_api_event(
 
 @pytest.mark.freeze_time("2022-03-27 12:05:00+00:00")
 async def test_http_api_all_day_event(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     mock_events_list_items,
     component_setup,
 ) -> None:
@@ -516,7 +516,7 @@ async def test_http_api_all_day_event(
     mock_events_list_items([event])
     assert await component_setup()
 
-    client = await hass_client()
+    client = await menuai_client()
     response = await client.get(upcoming_event_url())
     assert response.status == HTTPStatus.OK
     events = await response.json()
@@ -543,8 +543,8 @@ async def test_http_api_all_day_event(
     ],
 )
 async def test_opaque_event(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     mock_calendars_yaml,
     mock_events_list_items,
     component_setup,
@@ -560,21 +560,21 @@ async def test_opaque_event(
     mock_events_list_items([event])
     assert await component_setup()
 
-    client = await hass_client()
+    client = await menuai_client()
     response = await client.get(upcoming_event_url(TEST_YAML_ENTITY))
     assert response.status == HTTPStatus.OK
     events = await response.json()
     assert (len(events) > 0) == expect_visible_event
 
     # Verify entity state for upcoming event
-    state = hass.states.get(TEST_YAML_ENTITY)
+    state = menuai.states.get(TEST_YAML_ENTITY)
     assert state.name == TEST_YAML_ENTITY_NAME
     assert state.state == (STATE_ON if expect_visible_event else STATE_OFF)
 
 
 async def test_declined_event(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     mock_calendars_yaml,
     mock_events_list_items,
     component_setup,
@@ -593,7 +593,7 @@ async def test_declined_event(
     mock_events_list_items([event])
     assert await component_setup()
 
-    client = await hass_client()
+    client = await menuai_client()
     response = await client.get(upcoming_event_url(TEST_YAML_ENTITY))
     assert response.status == HTTPStatus.OK
     events = await response.json()
@@ -601,8 +601,8 @@ async def test_declined_event(
 
 
 async def test_attending_event(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     mock_calendars_yaml,
     mock_events_list_items,
     component_setup,
@@ -621,7 +621,7 @@ async def test_attending_event(
     mock_events_list_items([event])
     assert await component_setup()
 
-    client = await hass_client()
+    client = await menuai_client()
     response = await client.get(upcoming_event_url(TEST_YAML_ENTITY))
     assert response.status == HTTPStatus.OK
     events = await response.json()
@@ -630,7 +630,7 @@ async def test_attending_event(
 
 @pytest.mark.parametrize("mock_test_setup", [None])
 async def test_scan_calendar_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     component_setup,
     mock_calendars_list: ApiResult,
     config_entry,
@@ -639,11 +639,11 @@ async def test_scan_calendar_error(
     mock_calendars_list({}, exc=ClientError())
     assert await component_setup()
 
-    assert not hass.states.get(TEST_ENTITY)
+    assert not menuai.states.get(TEST_ENTITY)
 
 
 async def test_future_event_update_behavior(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     mock_events_list_items,
     component_setup,
@@ -661,26 +661,26 @@ async def test_future_event_update_behavior(
     assert await component_setup()
 
     # Event has not started yet
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
     assert state.name == TEST_ENTITY_NAME
     assert state.state == STATE_OFF
 
     # Advance time until event has started
     now += datetime.timedelta(minutes=60)
     freezer.move_to(now)
-    async_fire_time_changed(hass, now)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, now)
+    await menuai.async_block_till_done()
     # Ensure coordinator update completes
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Event has started
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
     assert state.state == STATE_ON
 
 
 async def test_future_event_offset_update_behavior(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     mock_events_list_items,
     component_setup,
@@ -700,7 +700,7 @@ async def test_future_event_offset_update_behavior(
     assert await component_setup()
 
     # Event has not started yet
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
     assert state.name == TEST_ENTITY_NAME
     assert state.state == STATE_OFF
     assert not state.attributes["offset_reached"]
@@ -708,20 +708,20 @@ async def test_future_event_offset_update_behavior(
     # Advance time until event has started
     now += datetime.timedelta(minutes=45)
     freezer.move_to(now)
-    async_fire_time_changed(hass, now)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, now)
+    await menuai.async_block_till_done()
     # Ensure coordinator update completes
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Event has not started, but the offset was reached
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
     assert state.state == STATE_OFF
     assert state.attributes["offset_reached"]
 
 
 async def test_unique_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_events_list_items,
     component_setup,
@@ -743,7 +743,7 @@ async def test_unique_id(
     "old_unique_id", [CALENDAR_ID, f"{CALENDAR_ID}-we_are_we_are_a_test_calendar"]
 )
 async def test_unique_id_migration(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_events_list_items,
     component_setup,
@@ -751,7 +751,7 @@ async def test_unique_id_migration(
     old_unique_id,
 ) -> None:
     """Test that old unique id format is migrated to the new format that supports multiple accounts."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     # Create an entity using the old unique id format
     entity_registry.async_get_or_create(
         DOMAIN,
@@ -798,7 +798,7 @@ async def test_unique_id_migration(
     ],
 )
 async def test_invalid_unique_id_cleanup(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_events_list_items,
     component_setup,
@@ -806,7 +806,7 @@ async def test_invalid_unique_id_cleanup(
     mock_calendars_yaml,
 ) -> None:
     """Test that old unique id format that is not actually unique is removed."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     # Create an entity using the old unique id format
     entity_registry.async_get_or_create(
         DOMAIN,
@@ -850,15 +850,15 @@ async def test_invalid_unique_id_cleanup(
     ],
 )
 async def test_all_day_iter_order(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     mock_events_list_items,
     component_setup,
     time_zone,
     event_order,
 ) -> None:
     """Test the sort order of an all day events depending on the time zone."""
-    await hass.config.async_set_time_zone(time_zone)
+    await menuai.config.async_set_time_zone(time_zone)
     mock_events_list_items(
         [
             {
@@ -886,7 +886,7 @@ async def test_all_day_iter_order(
     )
     assert await component_setup()
 
-    client = await hass_client()
+    client = await menuai_client()
     response = await client.get(
         get_events_url(TEST_ENTITY, "2022-10-06T00:00:00Z", "2022-10-09T00:00:00Z")
     )
@@ -896,7 +896,7 @@ async def test_all_day_iter_order(
 
 
 async def test_websocket_create(
-    hass: HomeAssistant,
+    menuai: menuai,
     component_setup: ComponentSetup,
     test_api_calendar: dict[str, Any],
     mock_insert_event: Callable[..., None],
@@ -938,7 +938,7 @@ async def test_websocket_create(
 
 
 async def test_websocket_create_all_day(
-    hass: HomeAssistant,
+    menuai: menuai,
     component_setup: ComponentSetup,
     test_api_calendar: dict[str, Any],
     mock_insert_event: Callable[..., None],
@@ -982,7 +982,7 @@ async def test_websocket_create_all_day(
 
 async def test_websocket_delete(
     ws_client: ClientFixture,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     component_setup,
     mock_events_list: ApiResult,
     mock_events_list_items: ApiResult,
@@ -1025,7 +1025,7 @@ async def test_websocket_delete(
 
 async def test_websocket_delete_recurring_event_instance(
     ws_client: ClientFixture,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     component_setup,
     mock_events_list: ApiResult,
     mock_events_list_items: ApiResult,
@@ -1050,7 +1050,7 @@ async def test_websocket_delete_recurring_event_instance(
 
     # Get a time range for the first event and the second instance of the
     # recurring event.
-    web_client = await hass_client()
+    web_client = await menuai_client()
     response = await web_client.get(
         get_events_url(TEST_ENTITY, "2022-10-06T00:00:00Z", "2022-10-20T00:00:00Z")
     )
@@ -1135,7 +1135,7 @@ async def test_websocket_delete_recurring_event_instance(
     ],
 )
 async def test_readonly_websocket_create(
-    hass: HomeAssistant,
+    menuai: menuai,
     component_setup: ComponentSetup,
     test_api_calendar: dict[str, Any],
     mock_insert_event: Callable[..., None],
@@ -1186,7 +1186,7 @@ async def test_readonly_websocket_create(
     ],
 )
 async def test_readonly_search_calendar(
-    hass: HomeAssistant,
+    menuai: menuai,
     component_setup: ComponentSetup,
     mock_calendars_yaml,
     mock_insert_event: Callable[..., None],
@@ -1221,7 +1221,7 @@ async def test_readonly_search_calendar(
 
 @pytest.mark.parametrize("calendar_access_role", ["reader", "freeBusyReader"])
 async def test_all_day_reader_access(
-    hass: HomeAssistant, mock_events_list_items, component_setup
+    menuai: menuai, mock_events_list_items, component_setup
 ) -> None:
     """Test that reader / freebusy reader access can load properly."""
     week_from_today = dt_util.now().date() + datetime.timedelta(days=7)
@@ -1235,7 +1235,7 @@ async def test_all_day_reader_access(
 
     assert await component_setup()
 
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
     assert state.name == TEST_ENTITY_NAME
     assert state.state == STATE_OFF
     assert dict(state.attributes) == {
@@ -1252,7 +1252,7 @@ async def test_all_day_reader_access(
 
 @pytest.mark.parametrize("calendar_access_role", ["reader", "freeBusyReader"])
 async def test_reader_in_progress_event(
-    hass: HomeAssistant, mock_events_list_items, component_setup
+    menuai: menuai, mock_events_list_items, component_setup
 ) -> None:
     """Test reader access for an event in process."""
     middle_of_event = dt_util.now() - datetime.timedelta(minutes=30)
@@ -1266,7 +1266,7 @@ async def test_reader_in_progress_event(
 
     assert await component_setup()
 
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
     assert state.name == TEST_ENTITY_NAME
     assert state.state == STATE_ON
     assert dict(state.attributes) == {
@@ -1282,7 +1282,7 @@ async def test_reader_in_progress_event(
 
 
 async def test_all_day_event_without_duration(
-    hass: HomeAssistant, mock_events_list_items, component_setup
+    menuai: menuai, mock_events_list_items, component_setup
 ) -> None:
     """Test that an all day event without a duration is adjusted to have a duration of one day."""
     week_from_today = dt_util.now().date() + datetime.timedelta(days=7)
@@ -1297,7 +1297,7 @@ async def test_all_day_event_without_duration(
 
     expected_end_event = week_from_today + datetime.timedelta(days=1)
 
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
     assert state.name == TEST_ENTITY_NAME
     assert state.state == STATE_OFF
     assert dict(state.attributes) == {
@@ -1314,7 +1314,7 @@ async def test_all_day_event_without_duration(
 
 
 async def test_event_without_duration(
-    hass: HomeAssistant, mock_events_list_items, component_setup
+    menuai: menuai, mock_events_list_items, component_setup
 ) -> None:
     """Google calendar UI allows creating events without a duration."""
     one_hour_from_now = dt_util.now() + datetime.timedelta(minutes=30)
@@ -1327,7 +1327,7 @@ async def test_event_without_duration(
 
     assert await component_setup()
 
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
     assert state.name == TEST_ENTITY_NAME
     assert state.state == STATE_OFF
     # Confirm the event is parsed successfully, but we don't assert on the
@@ -1339,7 +1339,7 @@ async def test_event_without_duration(
 
 
 async def test_event_differs_timezone(
-    hass: HomeAssistant, mock_events_list_items, component_setup
+    menuai: menuai, mock_events_list_items, component_setup
 ) -> None:
     """Test a case where the event has a different start/end timezone."""
     one_hour_from_now = dt_util.now() + datetime.timedelta(minutes=30)
@@ -1356,7 +1356,7 @@ async def test_event_differs_timezone(
 
     assert await component_setup()
 
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
     assert state.name == TEST_ENTITY_NAME
     assert state.state == STATE_OFF
     assert dict(state.attributes) == {
@@ -1374,8 +1374,8 @@ async def test_event_differs_timezone(
 
 @pytest.mark.freeze_time("2023-11-30 12:15:00 +00:00")
 async def test_invalid_rrule_fix(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     mock_events_list_items,
     component_setup,
 ) -> None:
@@ -1394,12 +1394,12 @@ async def test_invalid_rrule_fix(
 
     assert await component_setup()
 
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
     assert state.name == TEST_ENTITY_NAME
     assert state.state == STATE_OFF
 
     # Pick a date range that contains two instances of the event
-    web_client = await hass_client()
+    web_client = await menuai_client()
     response = await web_client.get(
         get_events_url(TEST_ENTITY, "2023-08-10T00:00:00Z", "2023-09-20T00:00:00Z")
     )
@@ -1429,8 +1429,8 @@ async def test_invalid_rrule_fix(
     ],
 )
 async def test_working_location_ignored(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     mock_events_list_items: Callable[[list[dict[str, Any]]], None],
     component_setup: ComponentSetup,
     event_type: str,
@@ -1445,7 +1445,7 @@ async def test_working_location_ignored(
     mock_events_list_items([event])
     assert await component_setup()
 
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
     assert state
     assert state.name == TEST_ENTITY_NAME
     assert state.attributes.get("message") == expected_event_message
@@ -1461,8 +1461,8 @@ async def test_working_location_ignored(
 )
 @pytest.mark.parametrize("calendar_is_primary", [True])
 async def test_working_location_entity(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     entity_registry: er.EntityRegistry,
     mock_events_list_items: Callable[[list[dict[str, Any]]], None],
     component_setup: ComponentSetup,
@@ -1486,12 +1486,12 @@ async def test_working_location_entity(
         entity_id="calendar.working_location", disabled_by=None
     )
     async_fire_time_changed(
-        hass,
+        menuai,
         dt_util.utcnow() + datetime.timedelta(seconds=RELOAD_AFTER_UPDATE_DELAY + 1),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("calendar.working_location")
+    state = menuai.states.get("calendar.working_location")
     assert state
     assert state.name == "Working location"
     assert state.attributes.get("message") == expected_event_message
@@ -1499,8 +1499,8 @@ async def test_working_location_entity(
 
 @pytest.mark.parametrize("calendar_is_primary", [False])
 async def test_no_working_location_entity(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     entity_registry: er.EntityRegistry,
     mock_events_list_items: Callable[[list[dict[str, Any]]], None],
     component_setup: ComponentSetup,
@@ -1528,8 +1528,8 @@ async def test_no_working_location_entity(
 )
 @pytest.mark.parametrize("calendar_is_primary", [True])
 async def test_birthday_entity(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     entity_registry: er.EntityRegistry,
     mock_events_list_items: Callable[[list[dict[str, Any]]], None],
     component_setup: ComponentSetup,
@@ -1553,12 +1553,12 @@ async def test_birthday_entity(
         entity_id="calendar.birthdays", disabled_by=None
     )
     async_fire_time_changed(
-        hass,
+        menuai,
         dt_util.utcnow() + datetime.timedelta(seconds=RELOAD_AFTER_UPDATE_DELAY + 1),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("calendar.birthdays")
+    state = menuai.states.get("calendar.birthdays")
     assert state
     assert state.name == "Birthdays"
     assert state.attributes.get("message") == expected_event_message

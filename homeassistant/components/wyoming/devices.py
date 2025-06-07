@@ -5,9 +5,9 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from homeassistant.components.assist_pipeline.vad import VadSensitivity
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er
+from menuai.components.assist_pipeline.vad import VadSensitivity
+from menuai.core import menuai, callback
+from menuai.helpers import entity_registry as er
 
 from .const import DOMAIN
 
@@ -109,51 +109,51 @@ class SatelliteDevice:
         """Listen for updates to audio settings."""
         self._audio_settings_listener = audio_settings_listener
 
-    def get_assist_in_progress_entity_id(self, hass: HomeAssistant) -> str | None:
+    def get_assist_in_progress_entity_id(self, menuai: menuai) -> str | None:
         """Return entity id for assist in progress binary sensor."""
-        ent_reg = er.async_get(hass)
+        ent_reg = er.async_get(menuai)
         return ent_reg.async_get_entity_id(
             "binary_sensor", DOMAIN, f"{self.satellite_id}-assist_in_progress"
         )
 
-    def get_muted_entity_id(self, hass: HomeAssistant) -> str | None:
+    def get_muted_entity_id(self, menuai: menuai) -> str | None:
         """Return entity id for satellite muted switch."""
-        ent_reg = er.async_get(hass)
+        ent_reg = er.async_get(menuai)
         return ent_reg.async_get_entity_id(
             "switch", DOMAIN, f"{self.satellite_id}-mute"
         )
 
-    def get_pipeline_entity_id(self, hass: HomeAssistant) -> str | None:
+    def get_pipeline_entity_id(self, menuai: menuai) -> str | None:
         """Return entity id for pipeline select."""
-        ent_reg = er.async_get(hass)
+        ent_reg = er.async_get(menuai)
         return ent_reg.async_get_entity_id(
             "select", DOMAIN, f"{self.satellite_id}-pipeline"
         )
 
-    def get_noise_suppression_level_entity_id(self, hass: HomeAssistant) -> str | None:
+    def get_noise_suppression_level_entity_id(self, menuai: menuai) -> str | None:
         """Return entity id for noise suppression select."""
-        ent_reg = er.async_get(hass)
+        ent_reg = er.async_get(menuai)
         return ent_reg.async_get_entity_id(
             "select", DOMAIN, f"{self.satellite_id}-noise_suppression_level"
         )
 
-    def get_auto_gain_entity_id(self, hass: HomeAssistant) -> str | None:
+    def get_auto_gain_entity_id(self, menuai: menuai) -> str | None:
         """Return entity id for auto gain amount."""
-        ent_reg = er.async_get(hass)
+        ent_reg = er.async_get(menuai)
         return ent_reg.async_get_entity_id(
             "number", DOMAIN, f"{self.satellite_id}-auto_gain"
         )
 
-    def get_volume_multiplier_entity_id(self, hass: HomeAssistant) -> str | None:
+    def get_volume_multiplier_entity_id(self, menuai: menuai) -> str | None:
         """Return entity id for microphone volume multiplier."""
-        ent_reg = er.async_get(hass)
+        ent_reg = er.async_get(menuai)
         return ent_reg.async_get_entity_id(
             "number", DOMAIN, f"{self.satellite_id}-volume_multiplier"
         )
 
-    def get_vad_sensitivity_entity_id(self, hass: HomeAssistant) -> str | None:
+    def get_vad_sensitivity_entity_id(self, menuai: menuai) -> str | None:
         """Return entity id for VAD sensitivity."""
-        ent_reg = er.async_get(hass)
+        ent_reg = er.async_get(menuai)
         return ent_reg.async_get_entity_id(
             "select", DOMAIN, f"{self.satellite_id}-vad_sensitivity"
         )

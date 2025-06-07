@@ -6,8 +6,8 @@ from typing import Any
 
 from yalexs.const import Brand
 
-from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.core import HomeAssistant
+from menuai.components.diagnostics import async_redact_data
+from menuai.core import menuai
 
 from . import YaleConfigEntry
 
@@ -28,7 +28,7 @@ TO_REDACT = {
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: YaleConfigEntry
+    menuai: menuai, entry: YaleConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     data = entry.runtime_data

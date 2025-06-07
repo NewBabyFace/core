@@ -12,9 +12,9 @@ from typing import Any, Protocol, cast
 from propcache.api import cached_property
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.components.blueprint import CONF_USE_BLUEPRINT
-from homeassistant.const import (
+from menuai.components import websocket_api
+from menuai.components.blueprint import CONF_USE_BLUEPRINT
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_MODE,
     ATTR_NAME,
@@ -31,35 +31,35 @@ from homeassistant.const import (
     CONF_TRIGGERS,
     CONF_VARIABLES,
     CONF_ZONE,
-    EVENT_HOMEASSISTANT_STARTED,
+    EVENT_menuai_STARTED,
     SERVICE_RELOAD,
     SERVICE_TOGGLE,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
     STATE_ON,
 )
-from homeassistant.core import (
+from menuai.core import (
     CALLBACK_TYPE,
     Context,
     CoreState,
     Event,
-    HomeAssistant,
+    menuai,
     ServiceCall,
     callback,
     split_entity_id,
     valid_entity_id,
 )
-from homeassistant.exceptions import HomeAssistantError, ServiceNotFound, TemplateError
-from homeassistant.helpers import condition, config_validation as cv
-from homeassistant.helpers.entity import ToggleEntity
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.issue_registry import (
+from menuai.exceptions import menuaiError, ServiceNotFound, TemplateError
+from menuai.helpers import condition, config_validation as cv
+from menuai.helpers.entity import ToggleEntity
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.issue_registry import (
     IssueSeverity,
     async_create_issue,
     async_delete_issue,
 )
-from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.script import (
+from menuai.helpers.restore_state import RestoreEntity
+from menuai.helpers.script import (
     ATTR_CUR,
     ATTR_MAX,
     CONF_MAX,
@@ -68,23 +68,23 @@ from homeassistant.helpers.script import (
     ScriptRunResult,
     script_stack_cv,
 )
-from homeassistant.helpers.script_variables import ScriptVariables
-from homeassistant.helpers.service import (
+from menuai.helpers.script_variables import ScriptVariables
+from menuai.helpers.service import (
     ReloadServiceHelper,
     async_register_admin_service,
 )
-from homeassistant.helpers.trace import (
+from menuai.helpers.trace import (
     TraceElement,
     script_execution_set,
     trace_append_element,
     trace_get,
     trace_path,
 )
-from homeassistant.helpers.trigger import async_initialize_triggers
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.loader import bind_hass
-from homeassistant.util.dt import parse_datetime
-from homeassistant.util.hass_dict import HassKey
+from menuai.helpers.trigger import async_initialize_triggers
+from menuai.helpers.typing import ConfigType
+from menuai.loader import bind_menuai
+from menuai.util.dt import parse_datetime
+from menuai.util.menuai_dict import menuaiKey
 
 from .config import AutomationConfig, ValidationStatus
 from .const import (
@@ -98,7 +98,7 @@ from .const import (
 from .helpers import async_get_blueprints
 from .trace import trace_automation
 
-DATA_COMPONENT: HassKey[EntityComponent[BaseAutomationEntity]] = HassKey(DOMAIN)
+DATA_COMPONENT: menuaiKey[EntityComponent[BaseAutomationEntity]] = menuaiKey(DOMAIN)
 ENTITY_ID_FORMAT = DOMAIN + ".{}"
 
 
@@ -124,145 +124,145 @@ class IfAction(Protocol):
         """AND all conditions."""
 
 
-@bind_hass
-def is_on(hass: HomeAssistant, entity_id: str) -> bool:
+@bind_menuai
+def is_on(menuai: menuai, entity_id: str) -> bool:
     """Return true if specified automation entity_id is on.
 
     Async friendly.
     """
-    return hass.states.is_state(entity_id, STATE_ON)
+    return menuai.states.is_state(entity_id, STATE_ON)
 
 
 def _automations_with_x(
-    hass: HomeAssistant, referenced_id: str, property_name: str
+    menuai: menuai, referenced_id: str, property_name: str
 ) -> list[str]:
     """Return all automations that reference the x."""
-    if DATA_COMPONENT not in hass.data:
+    if DATA_COMPONENT not in menuai.data:
         return []
 
     return [
         automation_entity.entity_id
-        for automation_entity in hass.data[DATA_COMPONENT].entities
+        for automation_entity in menuai.data[DATA_COMPONENT].entities
         if referenced_id in getattr(automation_entity, property_name)
     ]
 
 
 def _x_in_automation(
-    hass: HomeAssistant, entity_id: str, property_name: str
+    menuai: menuai, entity_id: str, property_name: str
 ) -> list[str]:
     """Return all x in an automation."""
-    if DATA_COMPONENT not in hass.data:
+    if DATA_COMPONENT not in menuai.data:
         return []
 
-    if (automation_entity := hass.data[DATA_COMPONENT].get_entity(entity_id)) is None:
+    if (automation_entity := menuai.data[DATA_COMPONENT].get_entity(entity_id)) is None:
         return []
 
     return list(getattr(automation_entity, property_name))
 
 
 @callback
-def automations_with_entity(hass: HomeAssistant, entity_id: str) -> list[str]:
+def automations_with_entity(menuai: menuai, entity_id: str) -> list[str]:
     """Return all automations that reference the entity."""
-    return _automations_with_x(hass, entity_id, "referenced_entities")
+    return _automations_with_x(menuai, entity_id, "referenced_entities")
 
 
 @callback
-def entities_in_automation(hass: HomeAssistant, entity_id: str) -> list[str]:
+def entities_in_automation(menuai: menuai, entity_id: str) -> list[str]:
     """Return all entities in an automation."""
-    return _x_in_automation(hass, entity_id, "referenced_entities")
+    return _x_in_automation(menuai, entity_id, "referenced_entities")
 
 
 @callback
-def automations_with_device(hass: HomeAssistant, device_id: str) -> list[str]:
+def automations_with_device(menuai: menuai, device_id: str) -> list[str]:
     """Return all automations that reference the device."""
-    return _automations_with_x(hass, device_id, "referenced_devices")
+    return _automations_with_x(menuai, device_id, "referenced_devices")
 
 
 @callback
-def devices_in_automation(hass: HomeAssistant, entity_id: str) -> list[str]:
+def devices_in_automation(menuai: menuai, entity_id: str) -> list[str]:
     """Return all devices in an automation."""
-    return _x_in_automation(hass, entity_id, "referenced_devices")
+    return _x_in_automation(menuai, entity_id, "referenced_devices")
 
 
 @callback
-def automations_with_area(hass: HomeAssistant, area_id: str) -> list[str]:
+def automations_with_area(menuai: menuai, area_id: str) -> list[str]:
     """Return all automations that reference the area."""
-    return _automations_with_x(hass, area_id, "referenced_areas")
+    return _automations_with_x(menuai, area_id, "referenced_areas")
 
 
 @callback
-def areas_in_automation(hass: HomeAssistant, entity_id: str) -> list[str]:
+def areas_in_automation(menuai: menuai, entity_id: str) -> list[str]:
     """Return all areas in an automation."""
-    return _x_in_automation(hass, entity_id, "referenced_areas")
+    return _x_in_automation(menuai, entity_id, "referenced_areas")
 
 
 @callback
-def automations_with_floor(hass: HomeAssistant, floor_id: str) -> list[str]:
+def automations_with_floor(menuai: menuai, floor_id: str) -> list[str]:
     """Return all automations that reference the floor."""
-    return _automations_with_x(hass, floor_id, "referenced_floors")
+    return _automations_with_x(menuai, floor_id, "referenced_floors")
 
 
 @callback
-def floors_in_automation(hass: HomeAssistant, entity_id: str) -> list[str]:
+def floors_in_automation(menuai: menuai, entity_id: str) -> list[str]:
     """Return all floors in an automation."""
-    return _x_in_automation(hass, entity_id, "referenced_floors")
+    return _x_in_automation(menuai, entity_id, "referenced_floors")
 
 
 @callback
-def automations_with_label(hass: HomeAssistant, label_id: str) -> list[str]:
+def automations_with_label(menuai: menuai, label_id: str) -> list[str]:
     """Return all automations that reference the label."""
-    return _automations_with_x(hass, label_id, "referenced_labels")
+    return _automations_with_x(menuai, label_id, "referenced_labels")
 
 
 @callback
-def labels_in_automation(hass: HomeAssistant, entity_id: str) -> list[str]:
+def labels_in_automation(menuai: menuai, entity_id: str) -> list[str]:
     """Return all labels in an automation."""
-    return _x_in_automation(hass, entity_id, "referenced_labels")
+    return _x_in_automation(menuai, entity_id, "referenced_labels")
 
 
 @callback
-def automations_with_blueprint(hass: HomeAssistant, blueprint_path: str) -> list[str]:
+def automations_with_blueprint(menuai: menuai, blueprint_path: str) -> list[str]:
     """Return all automations that reference the blueprint."""
-    if DOMAIN not in hass.data:
+    if DOMAIN not in menuai.data:
         return []
 
     return [
         automation_entity.entity_id
-        for automation_entity in hass.data[DATA_COMPONENT].entities
+        for automation_entity in menuai.data[DATA_COMPONENT].entities
         if automation_entity.referenced_blueprint == blueprint_path
     ]
 
 
 @callback
-def blueprint_in_automation(hass: HomeAssistant, entity_id: str) -> str | None:
+def blueprint_in_automation(menuai: menuai, entity_id: str) -> str | None:
     """Return the blueprint the automation is based on or None."""
-    if DATA_COMPONENT not in hass.data:
+    if DATA_COMPONENT not in menuai.data:
         return None
 
-    if (automation_entity := hass.data[DATA_COMPONENT].get_entity(entity_id)) is None:
+    if (automation_entity := menuai.data[DATA_COMPONENT].get_entity(entity_id)) is None:
         return None
 
     return automation_entity.referenced_blueprint
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up all automations."""
-    hass.data[DATA_COMPONENT] = component = EntityComponent[BaseAutomationEntity](
-        LOGGER, DOMAIN, hass
+    menuai.data[DATA_COMPONENT] = component = EntityComponent[BaseAutomationEntity](
+        LOGGER, DOMAIN, menuai
     )
 
     # Register automation as valid domain for Blueprint
-    async_get_blueprints(hass)
+    async_get_blueprints(menuai)
 
-    await _async_process_config(hass, config, component)
+    await _async_process_config(menuai, config, component)
 
     # Add some default blueprints to blueprints/automation, does nothing
     # if blueprints/automation already exists but still has to create
     # an executor job to check if the folder exists so we run it in a
     # separate task to avoid waiting for it to finish setting up
     # since a tracked task will be waited at the end of startup
-    hass.async_create_task(
-        async_get_blueprints(hass).async_populate(), eager_start=True
+    menuai.async_create_task(
+        async_get_blueprints(menuai).async_populate(), eager_start=True
     )
 
     async def trigger_service_handler(
@@ -293,14 +293,14 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     async def reload_service_handler(service_call: ServiceCall) -> None:
         """Remove all automations and load new ones from config."""
-        await async_get_blueprints(hass).async_reset_cache()
+        await async_get_blueprints(menuai).async_reset_cache()
         if (conf := await component.async_prepare_reload(skip_reset=True)) is None:
             return
         if automation_id := service_call.data.get(CONF_ID):
-            await _async_process_single_config(hass, conf, component, automation_id)
+            await _async_process_single_config(menuai, conf, component, automation_id)
         else:
-            await _async_process_config(hass, conf, component)
-        hass.bus.async_fire(EVENT_AUTOMATION_RELOADED, context=service_call.context)
+            await _async_process_config(menuai, conf, component)
+        menuai.bus.async_fire(EVENT_AUTOMATION_RELOADED, context=service_call.context)
 
     def reload_targets(service_call: ServiceCall) -> set[str | None]:
         if automation_id := service_call.data.get(CONF_ID):
@@ -310,14 +310,14 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     reload_helper = ReloadServiceHelper(reload_service_handler, reload_targets)
 
     async_register_admin_service(
-        hass,
+        menuai,
         DOMAIN,
         SERVICE_RELOAD,
         reload_helper.execute_service,
         schema=vol.Schema({vol.Optional(CONF_ID): str}),
     )
 
-    websocket_api.async_register_command(hass, websocket_config)
+    websocket_api.async_register_command(menuai, websocket_config)
 
     return True
 
@@ -431,11 +431,11 @@ class UnavailableAutomationEntity(BaseAutomationEntity):
         """Return a set of referenced entities."""
         return set()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Create a repair issue to notify the user the automation has errors."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         async_create_issue(
-            self.hass,
+            self.menuai,
             DOMAIN,
             f"{self.entity_id}_validation_{self._validation_status}",
             is_fixable=False,
@@ -449,11 +449,11 @@ class UnavailableAutomationEntity(BaseAutomationEntity):
             },
         )
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Run when entity will be removed from hass."""
-        await super().async_will_remove_from_hass()
+    async def async_will_remove_from_menuai(self) -> None:
+        """Run when entity will be removed from menuai."""
+        await super().async_will_remove_from_menuai()
         async_delete_issue(
-            self.hass, DOMAIN, f"{self.entity_id}_validation_{self._validation_status}"
+            self.menuai, DOMAIN, f"{self.entity_id}_validation_{self._validation_status}"
         )
 
     async def async_trigger(
@@ -569,9 +569,9 @@ class AutomationEntity(BaseAutomationEntity, RestoreEntity):
 
         return referenced
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Startup with initial state or previous state."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         self._logger = logging.getLogger(
             f"{__name__}.{split_entity_id(self.entity_id)[1]}"
@@ -645,7 +645,7 @@ class AutomationEntity(BaseAutomationEntity, RestoreEntity):
         trigger_context = Context(parent_id=parent_id)
 
         with trace_automation(
-            self.hass,
+            self.menuai,
             self.unique_id,
             self.raw_config,
             self._blueprint_inputs,
@@ -653,12 +653,12 @@ class AutomationEntity(BaseAutomationEntity, RestoreEntity):
             self._trace_config,
         ) as automation_trace:
             this = None
-            if state := self.hass.states.get(self.entity_id):
+            if state := self.menuai.states.get(self.entity_id):
                 this = state.as_dict()
             variables: dict[str, Any] = {"this": this, **(run_variables or {})}
             if self._variables:
                 try:
-                    variables = self._variables.async_render(self.hass, variables)
+                    variables = self._variables.async_render(self.menuai, variables)
                 except TemplateError as err:
                     self._logger.error("Error rendering variables: %s", err)
                     automation_trace.set_error(err)
@@ -704,7 +704,7 @@ class AutomationEntity(BaseAutomationEntity, RestoreEntity):
                 # This is always a callback from a coro so there is no
                 # risk of this running in a thread which allows us to use
                 # async_fire_internal
-                self.hass.bus.async_fire_internal(
+                self.menuai.bus.async_fire_internal(
                     EVENT_AUTOMATION_TRIGGERED, event_data, context=trigger_context
                 )
 
@@ -719,7 +719,7 @@ class AutomationEntity(BaseAutomationEntity, RestoreEntity):
                     )
             except ServiceNotFound as err:
                 async_create_issue(
-                    self.hass,
+                    self.menuai,
                     DOMAIN,
                     f"{self.entity_id}_service_not_found_{err.domain}.{err.service}",
                     is_fixable=True,
@@ -734,7 +734,7 @@ class AutomationEntity(BaseAutomationEntity, RestoreEntity):
                     },
                 )
                 automation_trace.set_error(err)
-            except (vol.Invalid, HomeAssistantError) as err:
+            except (vol.Invalid, menuaiError) as err:
                 self._logger.error(
                     "Error while executing automation %s: %s",
                     self.entity_id,
@@ -747,9 +747,9 @@ class AutomationEntity(BaseAutomationEntity, RestoreEntity):
 
             return None
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Remove listeners when removing automation from Home Assistant."""
-        await super().async_will_remove_from_hass()
+    async def async_will_remove_from_menuai(self) -> None:
+        """Remove listeners when removing automation from MenuAI."""
+        await super().async_will_remove_from_menuai()
         await self._async_disable()
 
     async def _async_enable_automation(self, event: Event) -> None:
@@ -771,13 +771,13 @@ class AutomationEntity(BaseAutomationEntity, RestoreEntity):
             return
 
         self._is_enabled = True
-        # HomeAssistant is starting up
-        if self.hass.state is not CoreState.not_running:
+        # menuai is starting up
+        if self.menuai.state is not CoreState.not_running:
             self._async_detach_triggers = await self._async_attach_triggers(False)
             return
 
-        self.hass.bus.async_listen_once(
-            EVENT_HOMEASSISTANT_STARTED,
+        self.menuai.bus.async_listen_once(
+            EVENT_menuai_STARTED,
             self._async_enable_automation,
         )
 
@@ -824,13 +824,13 @@ class AutomationEntity(BaseAutomationEntity, RestoreEntity):
     ) -> Callable[[], None] | None:
         """Set up the triggers."""
         this = None
-        if state := self.hass.states.get(self.entity_id):
+        if state := self.menuai.states.get(self.entity_id):
             this = state.as_dict()
         variables = {"this": this}
         if self._trigger_variables:
             try:
                 variables = self._trigger_variables.async_render(
-                    self.hass,
+                    self.menuai,
                     variables,
                     limited=True,
                 )
@@ -839,7 +839,7 @@ class AutomationEntity(BaseAutomationEntity, RestoreEntity):
                 return None
 
         return await async_initialize_triggers(
-            self.hass,
+            self.menuai,
             self._trigger_config,
             self._async_trigger_if_enabled,
             DOMAIN,
@@ -863,7 +863,7 @@ class AutomationEntityConfig:
 
 
 async def _prepare_automation_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     wanted_automation_id: str | None,
 ) -> list[AutomationEntityConfig]:
@@ -903,7 +903,7 @@ def _automation_name(automation_config: AutomationEntityConfig) -> str:
 
 
 async def _create_automation_entities(
-    hass: HomeAssistant, automation_configs: list[AutomationEntityConfig]
+    menuai: menuai, automation_configs: list[AutomationEntityConfig]
 ) -> list[BaseAutomationEntity]:
     """Create automation entities from prepared configuration."""
     entities: list[BaseAutomationEntity] = []
@@ -929,7 +929,7 @@ async def _create_automation_entities(
         initial_state: bool | None = config_block.get(CONF_INITIAL_STATE)
 
         action_script = Script(
-            hass,
+            menuai,
             config_block[CONF_ACTIONS],
             name,
             DOMAIN,
@@ -944,7 +944,7 @@ async def _create_automation_entities(
         )
 
         if CONF_CONDITIONS in config_block:
-            cond_func = await _async_process_if(hass, name, config_block)
+            cond_func = await _async_process_if(menuai, name, config_block)
 
             if cond_func is None:
                 continue
@@ -982,7 +982,7 @@ async def _create_automation_entities(
 
 
 async def _async_process_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: dict[str, Any],
     component: EntityComponent[BaseAutomationEntity],
 ) -> None:
@@ -1043,7 +1043,7 @@ async def _async_process_config(
 
         return automation_matches, config_matches
 
-    automation_configs = await _prepare_automation_config(hass, config, None)
+    automation_configs = await _prepare_automation_config(menuai, config, None)
     automations: list[BaseAutomationEntity] = list(component.entities)
 
     # Find automations and configurations which have matches
@@ -1063,7 +1063,7 @@ async def _async_process_config(
         for idx, config in enumerate(automation_configs)
         if idx not in config_matches
     ]
-    entities = await _create_automation_entities(hass, updated_automation_configs)
+    entities = await _create_automation_entities(menuai, updated_automation_configs)
     await component.async_add_entities(entities)
 
 
@@ -1080,14 +1080,14 @@ def _automation_matches_config(
 
 
 async def _async_process_single_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: dict[str, Any],
     component: EntityComponent[BaseAutomationEntity],
     automation_id: str,
 ) -> None:
     """Process config and add a single automation."""
 
-    automation_configs = await _prepare_automation_config(hass, config, automation_id)
+    automation_configs = await _prepare_automation_config(menuai, config, automation_id)
     automation = next(
         (x for x in component.entities if x.unique_id == automation_id), None
     )
@@ -1098,21 +1098,21 @@ async def _async_process_single_config(
 
     if automation:
         await automation.async_remove()
-    entities = await _create_automation_entities(hass, automation_configs)
+    entities = await _create_automation_entities(menuai, automation_configs)
     await component.async_add_entities(entities)
 
 
 async def _async_process_if(
-    hass: HomeAssistant, name: str, config: dict[str, Any]
+    menuai: menuai, name: str, config: dict[str, Any]
 ) -> IfAction | None:
     """Process if checks."""
     if_configs = config[CONF_CONDITIONS]
 
     try:
         if_action = await condition.async_conditions_from_config(
-            hass, if_configs, LOGGER, name
+            menuai, if_configs, LOGGER, name
         )
-    except HomeAssistantError as ex:
+    except menuaiError as ex:
         LOGGER.warning("Invalid condition: %s", ex)
         return None
 
@@ -1174,12 +1174,12 @@ def _trigger_extract_entities(trigger_conf: dict) -> list[str]:
 
 @websocket_api.websocket_command({"type": "automation/config", "entity_id": str})
 def websocket_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Get automation config."""
-    automation = hass.data[DATA_COMPONENT].get_entity(msg["entity_id"])
+    automation = menuai.data[DATA_COMPONENT].get_entity(msg["entity_id"])
 
     if automation is None:
         connection.send_error(

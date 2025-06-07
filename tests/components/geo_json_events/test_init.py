@@ -2,10 +2,10 @@
 
 from unittest.mock import patch
 
-from homeassistant.components.geo_location import DOMAIN as GEO_LOCATION_DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.geo_location import DOMAIN as GEO_LOCATION_DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import _generate_mock_feed_entry
 
@@ -13,31 +13,31 @@ from tests.common import MockConfigEntry
 
 
 async def test_component_unload_config_entry(
-    hass: HomeAssistant, config_entry: MockConfigEntry
+    menuai: menuai, config_entry: MockConfigEntry
 ) -> None:
     """Test that loading and unloading of a config entry works."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     with patch(
         "aio_geojson_generic_client.GenericFeedManager.update"
     ) as mock_feed_manager_update:
         # Load config entry.
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
         assert mock_feed_manager_update.call_count == 1
         assert config_entry.state is ConfigEntryState.LOADED
         # Unload config entry.
-        assert await hass.config_entries.async_unload(config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_unload(config_entry.entry_id)
+        await menuai.async_block_till_done()
         assert config_entry.state is ConfigEntryState.NOT_LOADED
 
 
 async def test_remove_orphaned_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test removing orphaned geolocation entities."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     entity_registry.async_get_or_create(
         GEO_LOCATION_DOMAIN, "geo_json_events", "1", config_entry=config_entry
@@ -66,8 +66,8 @@ async def test_remove_orphaned_entities(
         "aio_geojson_client.feed.GeoJsonFeed.update",
         return_value=("OK", [mock_entry_1]),
     ):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
         # 1 geolocation entity.
         entries = er.async_entries_for_config_entry(
@@ -75,4 +75,4 @@ async def test_remove_orphaned_entities(
         )
         assert len(entries) == 1
 
-        assert len(hass.states.async_entity_ids(GEO_LOCATION_DOMAIN)) == 1
+        assert len(menuai.states.async_entity_ids(GEO_LOCATION_DOMAIN)) == 1

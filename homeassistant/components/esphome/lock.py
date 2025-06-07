@@ -7,9 +7,9 @@ from typing import Any
 
 from aioesphomeapi import EntityInfo, LockCommand, LockEntityState, LockInfo, LockState
 
-from homeassistant.components.lock import LockEntity, LockEntityFeature
-from homeassistant.const import ATTR_CODE
-from homeassistant.core import callback
+from menuai.components.lock import LockEntity, LockEntityFeature
+from menuai.const import ATTR_CODE
+from menuai.core import callback
 
 from .entity import (
     EsphomeEntity,

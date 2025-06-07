@@ -8,17 +8,17 @@ from typing import Any, Literal
 
 from pytraccar import DeviceModel, GeofenceModel, PositionModel
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfLength, UnitOfSpeed
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
+from menuai.config_entries import ConfigEntry
+from menuai.const import PERCENTAGE, EntityCategory, UnitOfLength, UnitOfSpeed
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
 
 from .const import DOMAIN
 from .coordinator import TraccarServerCoordinator
@@ -81,12 +81,12 @@ TRACCAR_SERVER_SENSOR_ENTITY_DESCRIPTIONS: tuple[
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up sensor entities."""
-    coordinator: TraccarServerCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: TraccarServerCoordinator = menuai.data[DOMAIN][entry.entry_id]
     async_add_entities(
         TraccarServerSensor(
             coordinator=coordinator,

@@ -5,7 +5,7 @@ from copy import deepcopy
 import pytest
 from zwave_js_server.event import Event
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_MODE,
     ATTR_COLOR_TEMP_KELVIN,
@@ -19,7 +19,7 @@ from homeassistant.components.light import (
     DOMAIN as LIGHT_DOMAIN,
     LightEntityFeature,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_SUPPORTED_FEATURES,
     SERVICE_TURN_OFF,
@@ -29,8 +29,8 @@ from homeassistant.const import (
     STATE_UNKNOWN,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .common import (
     AEON_SMART_SWITCH_LIGHT_ENTITY,
@@ -51,11 +51,11 @@ def platforms() -> list[str]:
 
 
 async def test_light(
-    hass: HomeAssistant, client, bulb_6_multi_color, integration
+    menuai: menuai, client, bulb_6_multi_color, integration
 ) -> None:
     """Test the light entity."""
     node = bulb_6_multi_color
-    state = hass.states.get(BULB_6_MULTI_COLOR_LIGHT_ENTITY)
+    state = menuai.states.get(BULB_6_MULTI_COLOR_LIGHT_ENTITY)
 
     assert state
     assert state.state == STATE_OFF
@@ -65,7 +65,7 @@ async def test_light(
     assert state.attributes[ATTR_SUPPORTED_COLOR_MODES] == ["color_temp", "hs"]
 
     # Test turning on
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": BULB_6_MULTI_COLOR_LIGHT_ENTITY},
@@ -85,7 +85,7 @@ async def test_light(
 
     # Due to optimistic updates, the state should be on even though the Z-Wave state
     # hasn't been updated yet
-    state = hass.states.get(BULB_6_MULTI_COLOR_LIGHT_ENTITY)
+    state = menuai.states.get(BULB_6_MULTI_COLOR_LIGHT_ENTITY)
 
     assert state
     assert state.state == STATE_ON
@@ -93,7 +93,7 @@ async def test_light(
     client.async_send_command.reset_mock()
 
     # Test turning on with transition
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": BULB_6_MULTI_COLOR_LIGHT_ENTITY, ATTR_TRANSITION: 10},
@@ -134,7 +134,7 @@ async def test_light(
     )
     node.receive_event(event)
 
-    state = hass.states.get(BULB_6_MULTI_COLOR_LIGHT_ENTITY)
+    state = menuai.states.get(BULB_6_MULTI_COLOR_LIGHT_ENTITY)
     assert state.state == STATE_ON
     assert state.attributes[ATTR_COLOR_MODE] == "color_temp"
     assert state.attributes[ATTR_BRIGHTNESS] == 255
@@ -142,7 +142,7 @@ async def test_light(
     assert state.attributes[ATTR_RGB_COLOR] is not None
 
     # Test turning on with same brightness
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": BULB_6_MULTI_COLOR_LIGHT_ENTITY, ATTR_BRIGHTNESS: 255},
@@ -154,7 +154,7 @@ async def test_light(
     client.async_send_command.reset_mock()
 
     # Test turning on with brightness
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": BULB_6_MULTI_COLOR_LIGHT_ENTITY, ATTR_BRIGHTNESS: 129},
@@ -176,7 +176,7 @@ async def test_light(
     client.async_send_command.reset_mock()
 
     # Test turning on with brightness and transition
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {
@@ -202,7 +202,7 @@ async def test_light(
     client.async_send_command.reset_mock()
 
     # Test turning on with rgb color
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": BULB_6_MULTI_COLOR_LIGHT_ENTITY, ATTR_RGB_COLOR: (255, 76, 255)},
@@ -259,7 +259,7 @@ async def test_light(
     node.receive_event(green_event)
     node.receive_event(blue_event)
 
-    state = hass.states.get(BULB_6_MULTI_COLOR_LIGHT_ENTITY)
+    state = menuai.states.get(BULB_6_MULTI_COLOR_LIGHT_ENTITY)
     assert state.state == STATE_ON
     assert state.attributes[ATTR_COLOR_MODE] == "hs"
     assert state.attributes[ATTR_BRIGHTNESS] == 255
@@ -269,7 +269,7 @@ async def test_light(
     client.async_send_command.reset_mock()
 
     # Test turning on with same rgb color
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": BULB_6_MULTI_COLOR_LIGHT_ENTITY, ATTR_RGB_COLOR: (255, 76, 255)},
@@ -281,7 +281,7 @@ async def test_light(
     client.async_send_command.reset_mock()
 
     # Test turning on with rgb color and transition
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {
@@ -298,7 +298,7 @@ async def test_light(
     client.async_send_command.reset_mock()
 
     # Test turning on with color temp
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": BULB_6_MULTI_COLOR_LIGHT_ENTITY, ATTR_COLOR_TEMP_KELVIN: 5881},
@@ -362,7 +362,7 @@ async def test_light(
     node.receive_event(warm_white_event)
     node.receive_event(cold_white_event)
 
-    state = hass.states.get(BULB_6_MULTI_COLOR_LIGHT_ENTITY)
+    state = menuai.states.get(BULB_6_MULTI_COLOR_LIGHT_ENTITY)
     assert state.state == STATE_ON
     assert state.attributes[ATTR_COLOR_MODE] == "color_temp"
     assert state.attributes[ATTR_BRIGHTNESS] == 255
@@ -370,7 +370,7 @@ async def test_light(
     assert ATTR_RGB_COLOR in state.attributes
 
     # Test turning on with same color temp
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": BULB_6_MULTI_COLOR_LIGHT_ENTITY, ATTR_COLOR_TEMP_KELVIN: 5881},
@@ -382,7 +382,7 @@ async def test_light(
     client.async_send_command.reset_mock()
 
     # Test turning on with color temp and transition
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {
@@ -400,7 +400,7 @@ async def test_light(
     client.async_send_command.reset_mock()
 
     # Test turning off
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_off",
         {"entity_id": BULB_6_MULTI_COLOR_LIGHT_ENTITY},
@@ -440,17 +440,17 @@ async def test_light(
     )
     node.receive_event(event)
 
-    state = hass.states.get(BULB_6_MULTI_COLOR_LIGHT_ENTITY)
+    state = menuai.states.get(BULB_6_MULTI_COLOR_LIGHT_ENTITY)
     assert state.state == STATE_UNKNOWN
     assert state.attributes[ATTR_COLOR_MODE] is None
     assert state.attributes[ATTR_BRIGHTNESS] is None
 
 
 async def test_v4_dimmer_light(
-    hass: HomeAssistant, client, eaton_rf9640_dimmer, integration
+    menuai: menuai, client, eaton_rf9640_dimmer, integration
 ) -> None:
     """Test a light that supports MultiLevelSwitch CommandClass version 4."""
-    state = hass.states.get(EATON_RF9640_ENTITY)
+    state = menuai.states.get(EATON_RF9640_ENTITY)
 
     assert state
     assert state.state == STATE_ON
@@ -459,23 +459,23 @@ async def test_v4_dimmer_light(
 
 
 async def test_optional_light(
-    hass: HomeAssistant, client, aeon_smart_switch_6, integration
+    menuai: menuai, client, aeon_smart_switch_6, integration
 ) -> None:
     """Test a device that has an additional light endpoint being identified as light."""
-    state = hass.states.get(AEON_SMART_SWITCH_LIGHT_ENTITY)
+    state = menuai.states.get(AEON_SMART_SWITCH_LIGHT_ENTITY)
     assert state.state == STATE_ON
 
 
-async def test_rgbw_light(hass: HomeAssistant, client, zen_31, integration) -> None:
+async def test_rgbw_light(menuai: menuai, client, zen_31, integration) -> None:
     """Test the light entity."""
-    state = hass.states.get(ZEN_31_ENTITY)
+    state = menuai.states.get(ZEN_31_ENTITY)
 
     assert state
     assert state.state == STATE_ON
     assert state.attributes[ATTR_SUPPORTED_FEATURES] == LightEntityFeature.TRANSITION
 
     # Test turning on
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": ZEN_31_ENTITY, ATTR_RGBW_COLOR: (0, 0, 0, 128)},
@@ -507,11 +507,11 @@ async def test_rgbw_light(hass: HomeAssistant, client, zen_31, integration) -> N
 
 
 async def test_light_none_color_value(
-    hass: HomeAssistant, light_color_null_values, integration
+    menuai: menuai, light_color_null_values, integration
 ) -> None:
     """Test the light entity can handle None value in current color Value."""
     entity_id = "light.repeater"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state
     assert state.state == STATE_ON
@@ -520,11 +520,11 @@ async def test_light_none_color_value(
 
 
 async def test_light_on_off_color(
-    hass: HomeAssistant, client, logic_group_zdb5100, integration
+    menuai: menuai, client, logic_group_zdb5100, integration
 ) -> None:
     """Test the light entity for RGB lights without dimming support."""
     node = logic_group_zdb5100
-    state = hass.states.get(ZDB5100_ENTITY)
+    state = menuai.states.get(ZDB5100_ENTITY)
     assert state.state == STATE_OFF
 
     async def update_color(red: int, green: int, blue: int) -> None:
@@ -548,7 +548,7 @@ async def test_light_on_off_color(
             },
         )
         node.receive_event(event)
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         event = Event(
             type="value updated",
@@ -570,7 +570,7 @@ async def test_light_on_off_color(
             },
         )
         node.receive_event(event)
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         event = Event(
             type="value updated",
@@ -592,7 +592,7 @@ async def test_light_on_off_color(
             },
         )
         node.receive_event(event)
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         event = Event(
             type="value updated",
@@ -616,7 +616,7 @@ async def test_light_on_off_color(
             },
         )
         node.receive_event(event)
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     async def update_switch_state(state: bool) -> None:
         event = Event(
@@ -637,10 +637,10 @@ async def test_light_on_off_color(
             },
         )
         node.receive_event(event)
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     # Turn on the light. Since this is the first call, the light should default to white
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: ZDB5100_ENTITY},
@@ -674,20 +674,20 @@ async def test_light_on_off_color(
     # Force the light to turn off
     await update_switch_state(False)
 
-    state = hass.states.get(ZDB5100_ENTITY)
+    state = menuai.states.get(ZDB5100_ENTITY)
     assert state.state == STATE_OFF
 
     # Force the light to turn on (green)
     await update_color(0, 255, 0)
     await update_switch_state(True)
 
-    state = hass.states.get(ZDB5100_ENTITY)
+    state = menuai.states.get(ZDB5100_ENTITY)
     assert state.state == STATE_ON
 
     client.async_send_command.reset_mock()
 
     # Set the brightness to 128. This should be encoded in the color value
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: ZDB5100_ENTITY, ATTR_BRIGHTNESS: 128},
@@ -724,7 +724,7 @@ async def test_light_on_off_color(
     await update_color(0, 128, 0)
 
     # Set the color to red. This should preserve the previous brightness value
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: ZDB5100_ENTITY, ATTR_HS_COLOR: (0, 100)},
@@ -761,7 +761,7 @@ async def test_light_on_off_color(
     await update_color(128, 0, 0)
 
     # Turn the device off. This should only affect the binary switch, not the color
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: ZDB5100_ENTITY},
@@ -784,7 +784,7 @@ async def test_light_on_off_color(
     await update_switch_state(False)
 
     # Turn the device on again. This should only affect the binary switch, not the color
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: ZDB5100_ENTITY},
@@ -803,11 +803,11 @@ async def test_light_on_off_color(
 
 
 async def test_light_color_only(
-    hass: HomeAssistant, client, express_controls_ezmultipli, integration
+    menuai: menuai, client, express_controls_ezmultipli, integration
 ) -> None:
     """Test the light entity for RGB lights with Color Switch CC only."""
     node = express_controls_ezmultipli
-    state = hass.states.get(HSM200_V1_ENTITY)
+    state = menuai.states.get(HSM200_V1_ENTITY)
     assert state.state == STATE_ON
 
     async def update_color(red: int, green: int, blue: int) -> None:
@@ -831,7 +831,7 @@ async def test_light_color_only(
             },
         )
         node.receive_event(event)
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         event = Event(
             type="value updated",
@@ -853,7 +853,7 @@ async def test_light_color_only(
             },
         )
         node.receive_event(event)
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         event = Event(
             type="value updated",
@@ -875,7 +875,7 @@ async def test_light_color_only(
             },
         )
         node.receive_event(event)
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         event = Event(
             type="value updated",
@@ -899,10 +899,10 @@ async def test_light_color_only(
             },
         )
         node.receive_event(event)
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     # Attempt to turn on the light and ensure it defaults to white
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: HSM200_V1_ENTITY},
@@ -924,16 +924,16 @@ async def test_light_color_only(
     # Force the light to turn off
     await update_color(0, 0, 0)
 
-    state = hass.states.get(HSM200_V1_ENTITY)
+    state = menuai.states.get(HSM200_V1_ENTITY)
     assert state.state == STATE_OFF
 
     # Force the light to turn on (50% green)
     await update_color(0, 128, 0)
 
-    state = hass.states.get(HSM200_V1_ENTITY)
+    state = menuai.states.get(HSM200_V1_ENTITY)
     assert state.state == STATE_ON
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: HSM200_V1_ENTITY},
@@ -956,7 +956,7 @@ async def test_light_color_only(
     await update_color(0, 0, 0)
 
     # Assert that the last color is restored
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: HSM200_V1_ENTITY},
@@ -978,13 +978,13 @@ async def test_light_color_only(
     # Force the light to turn on (50% green)
     await update_color(0, 128, 0)
 
-    state = hass.states.get(HSM200_V1_ENTITY)
+    state = menuai.states.get(HSM200_V1_ENTITY)
     assert state.state == STATE_ON
 
     client.async_send_command.reset_mock()
 
     # Assert that the brightness is preserved when changing colors
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: HSM200_V1_ENTITY, ATTR_RGB_COLOR: (255, 0, 0)},
@@ -1006,11 +1006,11 @@ async def test_light_color_only(
     # Force the light to turn on (50% red)
     await update_color(128, 0, 0)
 
-    state = hass.states.get(HSM200_V1_ENTITY)
+    state = menuai.states.get(HSM200_V1_ENTITY)
     assert state.state == STATE_ON
 
     # Assert that the color is preserved when changing brightness
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: HSM200_V1_ENTITY, ATTR_BRIGHTNESS: 69},
@@ -1032,7 +1032,7 @@ async def test_light_color_only(
     await update_color(69, 0, 0)
 
     # Turn off again
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: HSM200_V1_ENTITY},
@@ -1043,7 +1043,7 @@ async def test_light_color_only(
     client.async_send_command.reset_mock()
 
     # Assert that the color is preserved when turning on with brightness
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: HSM200_V1_ENTITY, ATTR_BRIGHTNESS: 123},
@@ -1065,7 +1065,7 @@ async def test_light_color_only(
     await update_color(123, 0, 0)
 
     # Turn off again
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: HSM200_V1_ENTITY},
@@ -1076,7 +1076,7 @@ async def test_light_color_only(
     client.async_send_command.reset_mock()
 
     # Assert that the brightness is preserved when turning on with color
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: HSM200_V1_ENTITY, ATTR_HS_COLOR: (240, 100)},
@@ -1114,15 +1114,15 @@ async def test_light_color_only(
         },
     )
     node.receive_event(event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(HSM200_V1_ENTITY)
+    state = menuai.states.get(HSM200_V1_ENTITY)
     assert state.state == STATE_UNKNOWN
 
     client.async_send_command.reset_mock()
 
     # Assert that call fails if attribute is added to service call
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: HSM200_V1_ENTITY, ATTR_RGBW_COLOR: (255, 76, 255, 0)},
@@ -1141,7 +1141,7 @@ async def test_light_color_only(
 
 
 async def test_basic_cc_light(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     client,
     ge_in_wall_dimmer_switch,
@@ -1155,7 +1155,7 @@ async def test_basic_cc_light(
     assert entity_entry
     assert not entity_entry.disabled
 
-    state = hass.states.get(BASIC_LIGHT_ENTITY)
+    state = menuai.states.get(BASIC_LIGHT_ENTITY)
     assert state
     assert state.state == STATE_UNKNOWN
     assert state.attributes["supported_features"] == 0
@@ -1180,12 +1180,12 @@ async def test_basic_cc_light(
     )
     node.receive_event(event)
 
-    state = hass.states.get(BASIC_LIGHT_ENTITY)
+    state = menuai.states.get(BASIC_LIGHT_ENTITY)
     assert state
     assert state.state == STATE_OFF
 
     # Turn on light
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": BASIC_LIGHT_ENTITY},
@@ -1205,7 +1205,7 @@ async def test_basic_cc_light(
 
     # Due to optimistic updates, the state should be on even though the Z-Wave state
     # hasn't been updated yet
-    state = hass.states.get(BASIC_LIGHT_ENTITY)
+    state = menuai.states.get(BASIC_LIGHT_ENTITY)
 
     assert state
     assert state.state == STATE_ON
@@ -1232,12 +1232,12 @@ async def test_basic_cc_light(
     )
     node.receive_event(event)
 
-    state = hass.states.get(BASIC_LIGHT_ENTITY)
+    state = menuai.states.get(BASIC_LIGHT_ENTITY)
     assert state
     assert state.state == STATE_OFF
 
     # Turn on light with brightness
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": BASIC_LIGHT_ENTITY, ATTR_BRIGHTNESS: 128},
@@ -1257,7 +1257,7 @@ async def test_basic_cc_light(
 
     # Since we specified a brightness, there is no optimistic update so the state
     # should be off
-    state = hass.states.get(BASIC_LIGHT_ENTITY)
+    state = menuai.states.get(BASIC_LIGHT_ENTITY)
 
     assert state
     assert state.state == STATE_OFF
@@ -1265,7 +1265,7 @@ async def test_basic_cc_light(
     client.async_send_command.reset_mock()
 
     # Turn off light
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_off",
         {"entity_id": BASIC_LIGHT_ENTITY},

@@ -11,16 +11,16 @@ import uuid
 from aiohttp import web
 import voluptuous as vol
 
-from homeassistant import config_entries
-from homeassistant.components import http, websocket_api
-from homeassistant.components.http.data_validator import RequestDataValidator
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_NAME, Platform
-from homeassistant.core import Context, HomeAssistant, ServiceCall, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.json import save_json
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util.json import JsonValueType, load_json_array
+from menuai import config_entries
+from menuai.components import http, websocket_api
+from menuai.components.http.data_validator import RequestDataValidator
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_NAME, Platform
+from menuai.core import Context, menuai, ServiceCall, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.json import save_json
+from menuai.helpers.typing import ConfigType
+from menuai.util.json import JsonValueType, load_json_array
 
 from .const import (
     ATTR_REVERSE,
@@ -53,14 +53,14 @@ SERVICE_SORT_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Initialize the shopping list."""
 
     if DOMAIN not in config:
         return True
 
-    hass.async_create_task(
-        hass.config_entries.flow.async_init(
+    menuai.async_create_task(
+        menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_IMPORT}
         )
     )
@@ -68,17 +68,17 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, config_entry: ConfigEntry) -> bool:
     """Set up shopping list from config flow."""
 
     async def add_item_service(call: ServiceCall) -> None:
         """Add an item with `name`."""
-        data = hass.data[DOMAIN]
+        data = menuai.data[DOMAIN]
         await data.async_add(call.data[ATTR_NAME])
 
     async def remove_item_service(call: ServiceCall) -> None:
         """Remove the first item with matching `name`."""
-        data = hass.data[DOMAIN]
+        data = menuai.data[DOMAIN]
         name = call.data[ATTR_NAME]
 
         try:
@@ -90,7 +90,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
     async def complete_item_service(call: ServiceCall) -> None:
         """Mark the first item with matching `name` as completed."""
-        data = hass.data[DOMAIN]
+        data = menuai.data[DOMAIN]
         name = call.data[ATTR_NAME]
         try:
             await data.async_complete(name)
@@ -99,7 +99,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
     async def incomplete_item_service(call: ServiceCall) -> None:
         """Mark the first item with matching `name` as incomplete."""
-        data = hass.data[DOMAIN]
+        data = menuai.data[DOMAIN]
         name = call.data[ATTR_NAME]
 
         try:
@@ -125,62 +125,62 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         """Sort all items by name."""
         await data.async_sort(call.data[ATTR_REVERSE])
 
-    data = hass.data[DOMAIN] = ShoppingData(hass)
+    data = menuai.data[DOMAIN] = ShoppingData(menuai)
     await data.async_load()
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_ADD_ITEM, add_item_service, schema=SERVICE_ITEM_SCHEMA
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_REMOVE_ITEM, remove_item_service, schema=SERVICE_ITEM_SCHEMA
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_COMPLETE_ITEM, complete_item_service, schema=SERVICE_ITEM_SCHEMA
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_INCOMPLETE_ITEM,
         incomplete_item_service,
         schema=SERVICE_ITEM_SCHEMA,
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_COMPLETE_ALL,
         complete_all_service,
         schema=SERVICE_LIST_SCHEMA,
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_INCOMPLETE_ALL,
         incomplete_all_service,
         schema=SERVICE_LIST_SCHEMA,
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_CLEAR_COMPLETED_ITEMS,
         clear_completed_items_service,
         schema=SERVICE_LIST_SCHEMA,
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_SORT,
         sort_list_service,
         schema=SERVICE_SORT_SCHEMA,
     )
 
-    hass.http.register_view(ShoppingListView)
-    hass.http.register_view(CreateShoppingListItemView)
-    hass.http.register_view(UpdateShoppingListItemView)
-    hass.http.register_view(ClearCompletedItemsView)
+    menuai.http.register_view(ShoppingListView)
+    menuai.http.register_view(CreateShoppingListItemView)
+    menuai.http.register_view(UpdateShoppingListItemView)
+    menuai.http.register_view(ClearCompletedItemsView)
 
-    websocket_api.async_register_command(hass, websocket_handle_items)
-    websocket_api.async_register_command(hass, websocket_handle_add)
-    websocket_api.async_register_command(hass, websocket_handle_remove)
-    websocket_api.async_register_command(hass, websocket_handle_update)
-    websocket_api.async_register_command(hass, websocket_handle_clear)
-    websocket_api.async_register_command(hass, websocket_handle_reorder)
+    websocket_api.async_register_command(menuai, websocket_handle_items)
+    websocket_api.async_register_command(menuai, websocket_handle_add)
+    websocket_api.async_register_command(menuai, websocket_handle_remove)
+    websocket_api.async_register_command(menuai, websocket_handle_update)
+    websocket_api.async_register_command(menuai, websocket_handle_clear)
+    websocket_api.async_register_command(menuai, websocket_handle_reorder)
 
-    await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 
     return True
 
@@ -192,9 +192,9 @@ class NoMatchingShoppingListItem(Exception):
 class ShoppingData:
     """Class to hold shopping list data."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize the shopping list."""
-        self.hass = hass
+        self.menuai = menuai
         self.items: list[dict[str, JsonValueType]] = []
         self._listeners: list[Callable[[], None]] = []
 
@@ -208,9 +208,9 @@ class ShoppingData:
             "complete": complete,
         }
         self.items.append(item)
-        await self.hass.async_add_executor_job(self.save)
+        await self.menuai.async_add_executor_job(self.save)
         self._async_notify()
-        self.hass.bus.async_fire(
+        self.menuai.bus.async_fire(
             EVENT_SHOPPING_LIST_UPDATED,
             {"action": "add", "item": item},
             context=context,
@@ -245,10 +245,10 @@ class ShoppingData:
                 )
             removed.append(item)
         self.items = list(items_dict.values())
-        await self.hass.async_add_executor_job(self.save)
+        await self.menuai.async_add_executor_job(self.save)
         self._async_notify()
         for item in removed:
-            self.hass.bus.async_fire(
+            self.menuai.bus.async_fire(
                 EVENT_SHOPPING_LIST_UPDATED,
                 {"action": "remove", "item": item},
                 context=context,
@@ -269,10 +269,10 @@ class ShoppingData:
         for item in complete_items:
             _LOGGER.debug("Completing %s", item)
             item["complete"] = True
-        await self.hass.async_add_executor_job(self.save)
+        await self.menuai.async_add_executor_job(self.save)
         self._async_notify()
         for item in complete_items:
-            self.hass.bus.async_fire(
+            self.menuai.bus.async_fire(
                 EVENT_SHOPPING_LIST_UPDATED,
                 {"action": "complete", "item": item},
                 context=context,
@@ -290,9 +290,9 @@ class ShoppingData:
 
         info = ITEM_UPDATE_SCHEMA(info)
         item.update(info)
-        await self.hass.async_add_executor_job(self.save)
+        await self.menuai.async_add_executor_job(self.save)
         self._async_notify()
-        self.hass.bus.async_fire(
+        self.menuai.bus.async_fire(
             EVENT_SHOPPING_LIST_UPDATED,
             {"action": "update", "item": item},
             context=context,
@@ -302,9 +302,9 @@ class ShoppingData:
     async def async_clear_completed(self, context: Context | None = None) -> None:
         """Clear completed items."""
         self.items = [itm for itm in self.items if not itm["complete"]]
-        await self.hass.async_add_executor_job(self.save)
+        await self.menuai.async_add_executor_job(self.save)
         self._async_notify()
-        self.hass.bus.async_fire(
+        self.menuai.bus.async_fire(
             EVENT_SHOPPING_LIST_UPDATED,
             {"action": "clear"},
             context=context,
@@ -316,9 +316,9 @@ class ShoppingData:
         """Update all items in the list."""
         for item in self.items:
             item.update(info)
-        await self.hass.async_add_executor_job(self.save)
+        await self.menuai.async_add_executor_job(self.save)
         self._async_notify()
-        self.hass.bus.async_fire(
+        self.menuai.bus.async_fire(
             EVENT_SHOPPING_LIST_UPDATED,
             {"action": "update_list"},
             context=context,
@@ -351,9 +351,9 @@ class ShoppingData:
                 )
             new_items.append(value)
         self.items = new_items
-        self.hass.async_add_executor_job(self.save)
+        self.menuai.async_add_executor_job(self.save)
         self._async_notify()
-        self.hass.bus.async_fire(
+        self.menuai.bus.async_fire(
             EVENT_SHOPPING_LIST_UPDATED,
             {"action": "reorder"},
             context=context,
@@ -376,9 +376,9 @@ class ShoppingData:
         if dst_idx > src_idx:
             dst_idx -= 1
         self.items.insert(dst_idx, src_item)
-        await self.hass.async_add_executor_job(self.save)
+        await self.menuai.async_add_executor_job(self.save)
         self._async_notify()
-        self.hass.bus.async_fire(
+        self.menuai.bus.async_fire(
             EVENT_SHOPPING_LIST_UPDATED,
             {"action": "reorder"},
         )
@@ -388,9 +388,9 @@ class ShoppingData:
     ) -> None:
         """Sort items by name."""
         self.items = sorted(self.items, key=lambda item: item["name"], reverse=reverse)  # type: ignore[arg-type,return-value]
-        self.hass.async_add_executor_job(self.save)
+        self.menuai.async_add_executor_job(self.save)
         self._async_notify()
-        self.hass.bus.async_fire(
+        self.menuai.bus.async_fire(
             EVENT_SHOPPING_LIST_UPDATED,
             {"action": "sorted"},
             context=context,
@@ -403,14 +403,14 @@ class ShoppingData:
             """Load the items synchronously."""
             return cast(
                 list[dict[str, JsonValueType]],
-                load_json_array(self.hass.config.path(PERSISTENCE)),
+                load_json_array(self.menuai.config.path(PERSISTENCE)),
             )
 
-        self.items = await self.hass.async_add_executor_job(load)
+        self.items = await self.menuai.async_add_executor_job(load)
 
     def save(self) -> None:
         """Save the items."""
-        save_json(self.hass.config.path(PERSISTENCE), self.items)
+        save_json(self.menuai.config.path(PERSISTENCE), self.items)
 
     def async_add_listener(self, cb: Callable[[], None]) -> Callable[[], None]:
         """Add a listener to notify when data is updated."""
@@ -427,7 +427,7 @@ class ShoppingData:
             listener()
 
 
-class ShoppingListView(http.HomeAssistantView):
+class ShoppingListView(http.menuaiView):
     """View to retrieve shopping list content."""
 
     url = "/api/shopping_list"
@@ -436,10 +436,10 @@ class ShoppingListView(http.HomeAssistantView):
     @callback
     def get(self, request: web.Request) -> web.Response:
         """Retrieve shopping list items."""
-        return self.json(request.app[http.KEY_HASS].data[DOMAIN].items)
+        return self.json(request.app[http.KEY_menuai].data[DOMAIN].items)
 
 
-class UpdateShoppingListItemView(http.HomeAssistantView):
+class UpdateShoppingListItemView(http.menuaiView):
     """View to retrieve shopping list content."""
 
     url = "/api/shopping_list/item/{item_id}"
@@ -448,10 +448,10 @@ class UpdateShoppingListItemView(http.HomeAssistantView):
     async def post(self, request: web.Request, item_id: str) -> web.Response:
         """Update a shopping list item."""
         data = await request.json()
-        hass = request.app[http.KEY_HASS]
+        menuai = request.app[http.KEY_menuai]
 
         try:
-            item = await hass.data[DOMAIN].async_update(item_id, data)
+            item = await menuai.data[DOMAIN].async_update(item_id, data)
             return self.json(item)
         except NoMatchingShoppingListItem:
             return self.json_message("Item not found", HTTPStatus.NOT_FOUND)
@@ -459,7 +459,7 @@ class UpdateShoppingListItemView(http.HomeAssistantView):
             return self.json_message("Item not found", HTTPStatus.BAD_REQUEST)
 
 
-class CreateShoppingListItemView(http.HomeAssistantView):
+class CreateShoppingListItemView(http.menuaiView):
     """View to retrieve shopping list content."""
 
     url = "/api/shopping_list/item"
@@ -468,12 +468,12 @@ class CreateShoppingListItemView(http.HomeAssistantView):
     @RequestDataValidator(vol.Schema({vol.Required("name"): str}))
     async def post(self, request: web.Request, data: dict[str, str]) -> web.Response:
         """Create a new shopping list item."""
-        hass = request.app[http.KEY_HASS]
-        item = await hass.data[DOMAIN].async_add(data["name"])
+        menuai = request.app[http.KEY_menuai]
+        item = await menuai.data[DOMAIN].async_add(data["name"])
         return self.json(item)
 
 
-class ClearCompletedItemsView(http.HomeAssistantView):
+class ClearCompletedItemsView(http.menuaiView):
     """View to retrieve shopping list content."""
 
     url = "/api/shopping_list/clear_completed"
@@ -481,21 +481,21 @@ class ClearCompletedItemsView(http.HomeAssistantView):
 
     async def post(self, request: web.Request) -> web.Response:
         """Retrieve if API is running."""
-        hass = request.app[http.KEY_HASS]
-        await hass.data[DOMAIN].async_clear_completed()
+        menuai = request.app[http.KEY_menuai]
+        await menuai.data[DOMAIN].async_clear_completed()
         return self.json_message("Cleared completed items.")
 
 
 @callback
 @websocket_api.websocket_command({vol.Required("type"): "shopping_list/items"})
 def websocket_handle_items(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Handle getting shopping_list items."""
     connection.send_message(
-        websocket_api.result_message(msg["id"], hass.data[DOMAIN].items)
+        websocket_api.result_message(msg["id"], menuai.data[DOMAIN].items)
     )
 
 
@@ -504,12 +504,12 @@ def websocket_handle_items(
 )
 @websocket_api.async_response
 async def websocket_handle_add(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Handle adding item to shopping_list."""
-    item = await hass.data[DOMAIN].async_add(
+    item = await menuai.data[DOMAIN].async_add(
         msg["name"], context=connection.context(msg)
     )
     connection.send_message(websocket_api.result_message(msg["id"], item))
@@ -520,7 +520,7 @@ async def websocket_handle_add(
 )
 @websocket_api.async_response
 async def websocket_handle_remove(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
@@ -530,7 +530,7 @@ async def websocket_handle_remove(
     msg.pop("type")
 
     try:
-        item = await hass.data[DOMAIN].async_remove(item_id, connection.context(msg))
+        item = await menuai.data[DOMAIN].async_remove(item_id, connection.context(msg))
     except NoMatchingShoppingListItem:
         connection.send_message(
             websocket_api.error_message(msg_id, "item_not_found", "Item not found")
@@ -550,7 +550,7 @@ async def websocket_handle_remove(
 )
 @websocket_api.async_response
 async def websocket_handle_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
@@ -561,7 +561,7 @@ async def websocket_handle_update(
     data = msg
 
     try:
-        item = await hass.data[DOMAIN].async_update(
+        item = await menuai.data[DOMAIN].async_update(
             item_id, data, connection.context(msg)
         )
     except NoMatchingShoppingListItem:
@@ -576,12 +576,12 @@ async def websocket_handle_update(
 @websocket_api.websocket_command({vol.Required("type"): "shopping_list/items/clear"})
 @websocket_api.async_response
 async def websocket_handle_clear(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Handle clearing shopping_list items."""
-    await hass.data[DOMAIN].async_clear_completed(connection.context(msg))
+    await menuai.data[DOMAIN].async_clear_completed(connection.context(msg))
     connection.send_message(websocket_api.result_message(msg["id"]))
 
 
@@ -592,14 +592,14 @@ async def websocket_handle_clear(
     }
 )
 def websocket_handle_reorder(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Handle reordering shopping_list items."""
     msg_id = msg.pop("id")
     try:
-        hass.data[DOMAIN].async_reorder(msg.pop("item_ids"), connection.context(msg))
+        menuai.data[DOMAIN].async_reorder(msg.pop("item_ids"), connection.context(msg))
     except NoMatchingShoppingListItem:
         connection.send_error(
             msg_id,

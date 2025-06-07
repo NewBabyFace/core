@@ -10,10 +10,10 @@ from python_snoo.containers import SnooData, SnooDevice
 from python_snoo.exceptions import SnooCommandException
 from python_snoo.snoo import Snoo
 
-from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchEntity, SwitchEntityDescription
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import SnooConfigEntry
@@ -49,7 +49,7 @@ BINARY_SENSOR_DESCRIPTIONS: list[SnooSwitchEntityDescription] = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: SnooConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -82,7 +82,7 @@ class SnooSwitch(SnooDescriptionEntity, SwitchEntity):
                 True,
             )
         except SnooCommandException as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="switch_on_failed",
                 translation_placeholders={"name": str(self.name), "status": "on"},
@@ -98,7 +98,7 @@ class SnooSwitch(SnooDescriptionEntity, SwitchEntity):
                 False,
             )
         except SnooCommandException as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="switch_off_failed",
                 translation_placeholders={"name": str(self.name), "status": "off"},

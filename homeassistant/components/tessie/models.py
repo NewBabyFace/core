@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 from tesla_fleet_api.tessie import EnergySite
 
-from homeassistant.helpers.device_registry import DeviceInfo
+from menuai.helpers.device_registry import DeviceInfo
 
 from .coordinator import (
     TessieEnergySiteInfoCoordinator,

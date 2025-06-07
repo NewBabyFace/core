@@ -17,7 +17,7 @@
             "type": "20",
             "perms": ["pr"],
             "format": "string",
-            "value": "Home Assistant"
+            "value": "MenuAI"
           },
           {
             "iid": 4,
@@ -31,7 +31,7 @@
             "type": "23",
             "perms": ["pr"],
             "format": "string",
-            "value": "HASS Bridge S6"
+            "value": "menuai Bridge S6"
           },
           {
             "iid": 6,

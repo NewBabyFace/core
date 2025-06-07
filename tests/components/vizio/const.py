@@ -2,11 +2,11 @@
 
 from ipaddress import ip_address
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     DOMAIN as MP_DOMAIN,
     MediaPlayerDeviceClass,
 )
-from homeassistant.components.vizio.const import (
+from menuai.components.vizio.const import (
     CONF_ADDITIONAL_CONFIGS,
     CONF_APP_ID,
     CONF_APPS,
@@ -17,7 +17,7 @@ from homeassistant.components.vizio.const import (
     CONF_NAME_SPACE,
     CONF_VOLUME_STEP,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_ACCESS_TOKEN,
     CONF_DEVICE_CLASS,
     CONF_EXCLUDE,
@@ -26,8 +26,8 @@ from homeassistant.const import (
     CONF_NAME,
     CONF_PIN,
 )
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
-from homeassistant.util import slugify
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.util import slugify
 
 NAME = "Vizio"
 NAME2 = "Vizio2"

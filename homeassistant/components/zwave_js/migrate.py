@@ -9,9 +9,9 @@ from zwave_js_server.model.driver import Driver
 from zwave_js_server.model.node import Node
 from zwave_js_server.model.value import Value as ZwaveValue
 
-from homeassistant.const import STATE_UNAVAILABLE, Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.const import STATE_UNAVAILABLE, Platform
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from .const import DOMAIN
 from .discovery import ZwaveDiscoveryInfo
@@ -57,7 +57,7 @@ class ValueID:
 
 @callback
 def async_migrate_old_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     ent_reg: er.EntityRegistry,
     registered_unique_ids: set[str],
     platform: Platform,
@@ -97,7 +97,7 @@ def async_migrate_old_entity(
         return
 
     entry = existing_entity_entries[0]
-    state = hass.states.get(entry.entity_id)
+    state = menuai.states.get(entry.entity_id)
 
     if not state or state.state == STATE_UNAVAILABLE:
         async_migrate_unique_id(ent_reg, platform, entry.unique_id, unique_id)
@@ -135,7 +135,7 @@ def async_migrate_unique_id(
 
 @callback
 def async_migrate_discovered_value(
-    hass: HomeAssistant,
+    menuai: menuai,
     ent_reg: er.EntityRegistry,
     registered_unique_ids: set[str],
     device: dr.DeviceEntry,
@@ -187,7 +187,7 @@ def async_migrate_discovered_value(
 
             # Migrate entities in case upstream changes cause endpoint change
             async_migrate_old_entity(
-                hass,
+                menuai,
                 ent_reg,
                 registered_unique_ids,
                 disc_info.platform,
@@ -207,20 +207,20 @@ def async_migrate_discovered_value(
 
     # Migrate entities in case upstream changes cause endpoint change
     async_migrate_old_entity(
-        hass, ent_reg, registered_unique_ids, disc_info.platform, device, new_unique_id
+        menuai, ent_reg, registered_unique_ids, disc_info.platform, device, new_unique_id
     )
     registered_unique_ids.add(new_unique_id)
 
 
 @callback
 def async_migrate_statistics_sensors(
-    hass: HomeAssistant, driver: Driver, node: Node, key_map: dict[str, str]
+    menuai: menuai, driver: Driver, node: Node, key_map: dict[str, str]
 ) -> None:
     """Migrate statistics sensors to new unique IDs.
 
     - Migrate camel case keys in unique IDs to snake keys.
     """
-    ent_reg = er.async_get(hass)
+    ent_reg = er.async_get(menuai)
     base_unique_id = f"{get_valueless_base_unique_id(driver, node)}.statistics"
     for new_key, old_key in key_map.items():
         if new_key == old_key:

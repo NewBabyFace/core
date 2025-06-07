@@ -6,10 +6,10 @@ import datetime
 
 from aioridwell.model import RidwellAccount, RidwellPickupEvent
 
-from homeassistant.components.calendar import CalendarEntity, CalendarEvent
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.calendar import CalendarEntity, CalendarEvent
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import RidwellDataUpdateCoordinator
@@ -20,7 +20,7 @@ from .entity import RidwellEntity
 def async_get_calendar_event_from_pickup_event(
     pickup_event: RidwellPickupEvent,
 ) -> CalendarEvent:
-    """Get a HASS CalendarEvent from an aioridwell PickupEvent."""
+    """Get a menuai CalendarEvent from an aioridwell PickupEvent."""
     pickup_type_string = ", ".join(
         [
             f"{pickup.name} (quantity: {pickup.quantity})"
@@ -36,12 +36,12 @@ def async_get_calendar_event_from_pickup_event(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Ridwell calendars based on a config entry."""
-    coordinator: RidwellDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: RidwellDataUpdateCoordinator = menuai.data[DOMAIN][entry.entry_id]
 
     async_add_entities(
         RidwellCalendar(coordinator, account)
@@ -71,7 +71,7 @@ class RidwellCalendar(RidwellEntity, CalendarEntity):
 
     async def async_get_events(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         start_date: datetime.datetime,
         end_date: datetime.datetime,
     ) -> list[CalendarEvent]:

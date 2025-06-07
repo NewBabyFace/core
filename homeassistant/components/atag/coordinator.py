@@ -6,10 +6,10 @@ import logging
 
 from pyatag import AtagException, AtagOne
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -21,10 +21,10 @@ class AtagDataUpdateCoordinator(DataUpdateCoordinator[None]):
 
     config_entry: AtagConfigEntry
 
-    def __init__(self, hass: HomeAssistant, config_entry: AtagConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: AtagConfigEntry) -> None:
         """Initialize Atag coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name="Atag",
@@ -32,7 +32,7 @@ class AtagDataUpdateCoordinator(DataUpdateCoordinator[None]):
         )
 
         self.atag = AtagOne(
-            session=async_get_clientsession(hass),
+            session=async_get_clientsession(menuai),
             **config_entry.data,
             device=config_entry.unique_id,
         )

@@ -5,31 +5,31 @@ from unittest.mock import patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant import config_entries
-from homeassistant.components.threshold.const import DOMAIN
-from homeassistant.const import ATTR_UNIT_OF_MEASUREMENT, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.threshold.const import DOMAIN
+from menuai.const import ATTR_UNIT_OF_MEASUREMENT, UnitOfTemperature
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry, get_schema_suggested_value
 from tests.typing import WebSocketGenerator
 
 
-async def test_config_flow(hass: HomeAssistant) -> None:
+async def test_config_flow(menuai: menuai) -> None:
     """Test the config flow."""
     input_sensor = "sensor.input"
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] is None
 
     with patch(
-        "homeassistant.components.threshold.async_setup_entry",
+        "menuai.components.threshold.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "entity_id": input_sensor,
@@ -38,7 +38,7 @@ async def test_config_flow(hass: HomeAssistant) -> None:
                 "name": "My threshold sensor",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "My threshold sensor"
@@ -52,7 +52,7 @@ async def test_config_flow(hass: HomeAssistant) -> None:
     }
     assert len(mock_setup_entry.mock_calls) == 1
 
-    config_entry = hass.config_entries.async_entries(DOMAIN)[0]
+    config_entry = menuai.config_entries.async_entries(DOMAIN)[0]
     assert config_entry.data == {}
     assert config_entry.options == {
         "entity_id": input_sensor,
@@ -65,17 +65,17 @@ async def test_config_flow(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.parametrize(("extra_input_data", "error"), [({}, "need_lower_upper")])
-async def test_fail(hass: HomeAssistant, extra_input_data, error) -> None:
+async def test_fail(menuai: menuai, extra_input_data, error) -> None:
     """Test not providing lower or upper limit fails."""
     input_sensor = "sensor.input"
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] is None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "entity_id": input_sensor,
@@ -88,10 +88,10 @@ async def test_fail(hass: HomeAssistant, extra_input_data, error) -> None:
     assert result["errors"] == {"base": error}
 
 
-async def test_options(hass: HomeAssistant) -> None:
+async def test_options(menuai: menuai) -> None:
     """Test reconfiguring."""
     input_sensor = "sensor.input"
-    hass.states.async_set(input_sensor, "10")
+    menuai.states.async_set(input_sensor, "10")
 
     # Setup the config entry
     config_entry = MockConfigEntry(
@@ -106,11 +106,11 @@ async def test_options(hass: HomeAssistant) -> None:
         },
         title="My threshold",
     )
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
     schema = result["data_schema"].schema
@@ -118,7 +118,7 @@ async def test_options(hass: HomeAssistant) -> None:
     assert get_schema_suggested_value(schema, "lower") == -2.0
     assert get_schema_suggested_value(schema, "upper") is None
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "entity_id": input_sensor,
@@ -145,13 +145,13 @@ async def test_options(hass: HomeAssistant) -> None:
     assert config_entry.title == "My threshold"
 
     # Check config entry is reloaded with new options
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Check the entity was updated, no new entity was created
-    assert len(hass.states.async_all()) == 2
+    assert len(menuai.states.async_all()) == 2
 
     # Check the state of the entity has changed as expected
-    state = hass.states.get("binary_sensor.my_threshold")
+    state = menuai.states.get("binary_sensor.my_threshold")
     assert state.state == "off"
     assert state.attributes["type"] == "upper"
 
@@ -186,22 +186,22 @@ async def test_options(hass: HomeAssistant) -> None:
     ids=("success", "missing_upper_lower", "missing_entity_id"),
 )
 async def test_config_flow_preview_success(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     user_input: str,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test the config flow preview."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     # add state for the tests
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test_monitored",
         16,
         {ATTR_UNIT_OF_MEASUREMENT: UnitOfTemperature.CELSIUS},
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] == FlowResultType.FORM
@@ -223,19 +223,19 @@ async def test_config_flow_preview_success(
 
     msg = await client.receive_json()
     assert msg["event"] == snapshot
-    assert len(hass.states.async_all()) == 1
+    assert len(menuai.states.async_all()) == 1
 
 
 async def test_options_flow_preview(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test the options flow preview."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     # add state for the tests
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.test_monitored",
         16,
         {ATTR_UNIT_OF_MEASUREMENT: UnitOfTemperature.CELSIUS},
@@ -254,11 +254,11 @@ async def test_options_flow_preview(
         },
         title="Test Sensor",
     )
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result["type"] == FlowResultType.FORM
     assert result["errors"] is None
     assert result["preview"] == "threshold"
@@ -282,14 +282,14 @@ async def test_options_flow_preview(
 
     msg = await client.receive_json()
     assert msg["event"] == snapshot
-    assert len(hass.states.async_all()) == 2
+    assert len(menuai.states.async_all()) == 2
 
 
 async def test_options_flow_sensor_preview_config_entry_removed(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test the option flow preview where the config entry is removed."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     # Setup the config entry
     config_entry = MockConfigEntry(
@@ -304,16 +304,16 @@ async def test_options_flow_sensor_preview_config_entry_removed(
         },
         title="Test Sensor",
     )
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result["type"] == FlowResultType.FORM
     assert result["errors"] is None
     assert result["preview"] == "threshold"
 
-    await hass.config_entries.async_remove(config_entry.entry_id)
+    await menuai.config_entries.async_remove(config_entry.entry_id)
 
     await client.send_json_auto_id(
         {

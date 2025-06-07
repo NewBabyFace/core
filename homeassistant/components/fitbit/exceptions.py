@@ -3,10 +3,10 @@
 These exceptions exist to provide common exceptions for the async and sync client libraries.
 """
 
-from homeassistant.exceptions import HomeAssistantError
+from menuai.exceptions import menuaiError
 
 
-class FitbitApiException(HomeAssistantError):
+class FitbitApiException(menuaiError):
     """Error talking to the fitbit API."""
 
 

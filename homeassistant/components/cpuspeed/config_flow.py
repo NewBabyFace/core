@@ -6,7 +6,7 @@ from typing import Any
 
 from cpuinfo import cpuinfo
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
 
 from .const import DOMAIN
 
@@ -27,7 +27,7 @@ class CPUSpeedFlowHandler(ConfigFlow, domain=DOMAIN):
         if user_input is None:
             return self.async_show_form(step_id="user")
 
-        if not await self.hass.async_add_executor_job(cpuinfo.get_cpu_info):
+        if not await self.menuai.async_add_executor_job(cpuinfo.get_cpu_info):
             return self.async_abort(reason="not_compatible")
 
         return self.async_create_entry(

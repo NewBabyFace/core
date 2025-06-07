@@ -7,9 +7,9 @@ from unittest.mock import AsyncMock, patch
 from aiomealie import MealplanResponse
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.const import STATE_OFF, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import STATE_OFF, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import setup_integration
 
@@ -18,16 +18,16 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_api_calendar(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mock_mealie_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test the API returns the calendar."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    client = await hass_client()
+    client = await menuai_client()
     response = await client.get("/api/calendars")
     assert response.status == HTTPStatus.OK
     data = await response.json()
@@ -35,21 +35,21 @@ async def test_api_calendar(
 
 
 async def test_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
     mock_mealie_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test the calendar entities."""
-    with patch("homeassistant.components.mealie.PLATFORMS", [Platform.CALENDAR]):
-        await setup_integration(hass, mock_config_entry)
+    with patch("menuai.components.mealie.PLATFORMS", [Platform.CALENDAR]):
+        await setup_integration(menuai, mock_config_entry)
 
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
 
 async def test_no_meal_planned(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
     mock_mealie_client: AsyncMock,
@@ -58,22 +58,22 @@ async def test_no_meal_planned(
     """Test the calendar handles no meal planned."""
     mock_mealie_client.get_mealplans.return_value = MealplanResponse([])
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    assert hass.states.get("calendar.mealie_dinner").state == STATE_OFF
+    assert menuai.states.get("calendar.mealie_dinner").state == STATE_OFF
 
 
 async def test_api_events(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mock_mealie_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test the Mealie calendar view."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    client = await hass_client()
+    client = await menuai_client()
     response = await client.get(
         "/api/calendars/calendar.mealie_dinner?start=2023-08-01&end=2023-11-01"
     )

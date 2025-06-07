@@ -5,15 +5,15 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import cast
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     DOMAIN as SENSOR_DOMAIN,
     RestoreSensor,
     SensorDeviceClass,
     SensorEntity,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_BATTERY_LEVEL,
     CONCENTRATION_PARTS_PER_MILLION,
     PERCENTAGE,
@@ -22,16 +22,16 @@ from homeassistant.const import (
     UnitOfTemperature,
     UnitOfVolume,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.event import async_track_time_interval
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.event import async_track_time_interval
 
 from . import DOMAIN
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -215,15 +215,15 @@ class DemoSumSensor(RestoreSensor):
         self._attr_native_value += self._five_minute_increase
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
-        """Call when entity about to be added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Call when entity about to be added to menuai."""
+        await super().async_added_to_menuai()
         state = await self.async_get_last_sensor_data()
         if state:
             self._attr_native_value = cast(float, state.native_value)
 
         self.async_on_remove(
             async_track_time_interval(
-                self.hass, self._async_bump_sum, timedelta(minutes=5)
+                self.menuai, self._async_bump_sum, timedelta(minutes=5)
             ),
         )

@@ -7,10 +7,10 @@ from datetime import timedelta
 
 from srpenergy.client import SrpEnergyClient
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util import dt as dt_util
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.util import dt as dt_util
 
 from .const import (
     CONF_IS_TOU,
@@ -30,13 +30,13 @@ class SRPEnergyDataUpdateCoordinator(DataUpdateCoordinator[float]):
     config_entry: ConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: ConfigEntry, client: SrpEnergyClient
+        self, menuai: menuai, config_entry: ConfigEntry, client: SrpEnergyClient
     ) -> None:
         """Initialize the srp_energy data coordinator."""
         self._client = client
         self._is_time_of_use = config_entry.data[CONF_IS_TOU]
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -55,7 +55,7 @@ class SRPEnergyDataUpdateCoordinator(DataUpdateCoordinator[float]):
         start_date = end_date - timedelta(days=1)
         try:
             async with asyncio.timeout(TIMEOUT):
-                hourly_usage = await self.hass.async_add_executor_job(
+                hourly_usage = await self.menuai.async_add_executor_job(
                     self._client.usage,
                     start_date,
                     end_date,

@@ -5,8 +5,8 @@ from typing import Any
 import pytest
 import voluptuous as vol
 
-from homeassistant.components import fan, template
-from homeassistant.components.fan import (
+from menuai.components import fan, template
+from menuai.components.fan import (
     ATTR_DIRECTION,
     ATTR_OSCILLATING,
     ATTR_PERCENTAGE,
@@ -16,10 +16,10 @@ from homeassistant.components.fan import (
     FanEntityFeature,
     NotValidPresetModeError,
 )
-from homeassistant.const import STATE_OFF, STATE_ON, STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.const import STATE_OFF, STATE_ON, STATE_UNAVAILABLE
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import entity_registry as er
+from menuai.setup import async_setup_component
 
 from .conftest import ConfigurationStyle
 
@@ -124,7 +124,7 @@ UNIQUE_ID_CONFIG = {
 
 
 def _verify(
-    hass: HomeAssistant,
+    menuai: menuai,
     expected_state: str,
     expected_percentage: int | None = None,
     expected_oscillating: bool | None = None,
@@ -132,7 +132,7 @@ def _verify(
     expected_preset_mode: str | None = None,
 ) -> None:
     """Verify fan's state, speed and osc."""
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     attributes = state.attributes
     assert state.state == str(expected_state)
     assert attributes.get(ATTR_PERCENTAGE) == expected_percentage
@@ -142,57 +142,57 @@ def _verify(
 
 
 async def async_setup_legacy_format(
-    hass: HomeAssistant, count: int, fan_config: dict[str, Any]
+    menuai: menuai, count: int, fan_config: dict[str, Any]
 ) -> None:
     """Do setup of fan integration via legacy format."""
     config = {"fan": {"platform": "template", "fans": fan_config}}
 
     with assert_setup_component(count, fan.DOMAIN):
         assert await async_setup_component(
-            hass,
+            menuai,
             fan.DOMAIN,
             config,
         )
 
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
 
 async def async_setup_modern_format(
-    hass: HomeAssistant, count: int, fan_config: dict[str, Any]
+    menuai: menuai, count: int, fan_config: dict[str, Any]
 ) -> None:
     """Do setup of fan integration via modern format."""
     config = {"template": {"fan": fan_config}}
 
     with assert_setup_component(count, template.DOMAIN):
         assert await async_setup_component(
-            hass,
+            menuai,
             template.DOMAIN,
             config,
         )
 
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
 
 async def async_setup_legacy_named_fan(
-    hass: HomeAssistant, count: int, fan_config: dict[str, Any]
+    menuai: menuai, count: int, fan_config: dict[str, Any]
 ):
     """Do setup of a named fan via legacy format."""
-    await async_setup_legacy_format(hass, count, {TEST_OBJECT_ID: fan_config})
+    await async_setup_legacy_format(menuai, count, {TEST_OBJECT_ID: fan_config})
 
 
 async def async_setup_modern_named_fan(
-    hass: HomeAssistant, count: int, fan_config: dict[str, Any]
+    menuai: menuai, count: int, fan_config: dict[str, Any]
 ):
     """Do setup of a named fan via legacy format."""
-    await async_setup_modern_format(hass, count, {"name": TEST_OBJECT_ID, **fan_config})
+    await async_setup_modern_format(menuai, count, {"name": TEST_OBJECT_ID, **fan_config})
 
 
 async def async_setup_legacy_format_with_attribute(
-    hass: HomeAssistant,
+    menuai: menuai,
     count: int,
     attribute: str,
     attribute_template: str,
@@ -201,7 +201,7 @@ async def async_setup_legacy_format_with_attribute(
     """Do setup of a legacy fan that has a single templated attribute."""
     extra = {attribute: attribute_template} if attribute and attribute_template else {}
     await async_setup_legacy_format(
-        hass,
+        menuai,
         count,
         {
             TEST_OBJECT_ID: {
@@ -214,7 +214,7 @@ async def async_setup_legacy_format_with_attribute(
 
 
 async def async_setup_modern_format_with_attribute(
-    hass: HomeAssistant,
+    menuai: menuai,
     count: int,
     attribute: str,
     attribute_template: str,
@@ -223,7 +223,7 @@ async def async_setup_modern_format_with_attribute(
     """Do setup of a modern fan that has a single templated attribute."""
     extra = {attribute: attribute_template} if attribute and attribute_template else {}
     await async_setup_modern_format(
-        hass,
+        menuai,
         count,
         {
             "name": TEST_OBJECT_ID,
@@ -236,35 +236,35 @@ async def async_setup_modern_format_with_attribute(
 
 @pytest.fixture
 async def setup_fan(
-    hass: HomeAssistant,
+    menuai: menuai,
     count: int,
     style: ConfigurationStyle,
     fan_config: dict[str, Any],
 ) -> None:
     """Do setup of fan integration."""
     if style == ConfigurationStyle.LEGACY:
-        await async_setup_legacy_format(hass, count, fan_config)
+        await async_setup_legacy_format(menuai, count, fan_config)
     elif style == ConfigurationStyle.MODERN:
-        await async_setup_modern_format(hass, count, fan_config)
+        await async_setup_modern_format(menuai, count, fan_config)
 
 
 @pytest.fixture
 async def setup_named_fan(
-    hass: HomeAssistant,
+    menuai: menuai,
     count: int,
     style: ConfigurationStyle,
     fan_config: dict[str, Any],
 ) -> None:
     """Do setup of fan integration."""
     if style == ConfigurationStyle.LEGACY:
-        await async_setup_legacy_named_fan(hass, count, fan_config)
+        await async_setup_legacy_named_fan(menuai, count, fan_config)
     elif style == ConfigurationStyle.MODERN:
-        await async_setup_modern_named_fan(hass, count, fan_config)
+        await async_setup_modern_named_fan(menuai, count, fan_config)
 
 
 @pytest.fixture
 async def setup_state_fan(
-    hass: HomeAssistant,
+    menuai: menuai,
     count: int,
     style: ConfigurationStyle,
     state_template: str,
@@ -272,7 +272,7 @@ async def setup_state_fan(
     """Do setup of fan integration using a state template."""
     if style == ConfigurationStyle.LEGACY:
         await async_setup_legacy_format(
-            hass,
+            menuai,
             count,
             {
                 TEST_OBJECT_ID: {
@@ -283,7 +283,7 @@ async def setup_state_fan(
         )
     elif style == ConfigurationStyle.MODERN:
         await async_setup_modern_format(
-            hass,
+            menuai,
             count,
             {
                 **NAMED_ON_OFF_ACTIONS,
@@ -294,7 +294,7 @@ async def setup_state_fan(
 
 @pytest.fixture
 async def setup_test_fan_with_extra_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     count: int,
     style: ConfigurationStyle,
     fan_config: dict[str, Any],
@@ -303,17 +303,17 @@ async def setup_test_fan_with_extra_config(
     """Do setup of fan integration."""
     if style == ConfigurationStyle.LEGACY:
         await async_setup_legacy_format(
-            hass, count, {TEST_OBJECT_ID: {**fan_config, **extra_config}}
+            menuai, count, {TEST_OBJECT_ID: {**fan_config, **extra_config}}
         )
     elif style == ConfigurationStyle.MODERN:
         await async_setup_modern_format(
-            hass, count, {"name": TEST_OBJECT_ID, **fan_config, **extra_config}
+            menuai, count, {"name": TEST_OBJECT_ID, **fan_config, **extra_config}
         )
 
 
 @pytest.fixture
 async def setup_optimistic_fan_attribute(
-    hass: HomeAssistant,
+    menuai: menuai,
     count: int,
     style: ConfigurationStyle,
     extra_config: dict,
@@ -321,17 +321,17 @@ async def setup_optimistic_fan_attribute(
     """Do setup of a non-optimistic fan with an optimistic attribute."""
     if style == ConfigurationStyle.LEGACY:
         await async_setup_legacy_format_with_attribute(
-            hass, count, "", "", extra_config
+            menuai, count, "", "", extra_config
         )
     elif style == ConfigurationStyle.MODERN:
         await async_setup_modern_format_with_attribute(
-            hass, count, "", "", extra_config
+            menuai, count, "", "", extra_config
         )
 
 
 @pytest.fixture
 async def setup_single_attribute_state_fan(
-    hass: HomeAssistant,
+    menuai: menuai,
     count: int,
     style: ConfigurationStyle,
     attribute: str,
@@ -343,7 +343,7 @@ async def setup_single_attribute_state_fan(
     extra = {attribute: attribute_template} if attribute and attribute_template else {}
     if style == ConfigurationStyle.LEGACY:
         await async_setup_legacy_format(
-            hass,
+            menuai,
             count,
             {
                 TEST_OBJECT_ID: {
@@ -356,7 +356,7 @@ async def setup_single_attribute_state_fan(
         )
     elif style == ConfigurationStyle.MODERN:
         await async_setup_modern_format(
-            hass,
+            menuai,
             count,
             {
                 **NAMED_ON_OFF_ACTIONS,
@@ -372,9 +372,9 @@ async def setup_single_attribute_state_fan(
     "style", [ConfigurationStyle.LEGACY, ConfigurationStyle.MODERN]
 )
 @pytest.mark.usefixtures("setup_state_fan")
-async def test_missing_optional_config(hass: HomeAssistant) -> None:
+async def test_missing_optional_config(menuai: menuai) -> None:
     """Test: missing optional template is ok."""
-    _verify(hass, STATE_ON, None, None, None, None)
+    _verify(menuai, STATE_ON, None, None, None, None)
 
 
 @pytest.mark.parametrize("count", [0])
@@ -395,9 +395,9 @@ async def test_missing_optional_config(hass: HomeAssistant) -> None:
     ],
 )
 @pytest.mark.usefixtures("setup_fan")
-async def test_wrong_template_config(hass: HomeAssistant) -> None:
+async def test_wrong_template_config(menuai: menuai) -> None:
     """Test: missing 'turn_on' or 'turn_off' will fail."""
-    assert hass.states.async_all("fan") == []
+    assert menuai.states.async_all("fan") == []
 
 
 @pytest.mark.parametrize(
@@ -407,19 +407,19 @@ async def test_wrong_template_config(hass: HomeAssistant) -> None:
     "style", [ConfigurationStyle.LEGACY, ConfigurationStyle.MODERN]
 )
 @pytest.mark.usefixtures("setup_state_fan")
-async def test_state_template(hass: HomeAssistant) -> None:
+async def test_state_template(menuai: menuai) -> None:
     """Test state template."""
-    _verify(hass, STATE_OFF, None, None, None, None)
+    _verify(menuai, STATE_OFF, None, None, None, None)
 
-    hass.states.async_set(_STATE_INPUT_BOOLEAN, STATE_ON)
-    await hass.async_block_till_done()
+    menuai.states.async_set(_STATE_INPUT_BOOLEAN, STATE_ON)
+    await menuai.async_block_till_done()
 
-    _verify(hass, STATE_ON, None, None, None, None)
+    _verify(menuai, STATE_ON, None, None, None, None)
 
-    hass.states.async_set(_STATE_INPUT_BOOLEAN, STATE_OFF)
-    await hass.async_block_till_done()
+    menuai.states.async_set(_STATE_INPUT_BOOLEAN, STATE_OFF)
+    await menuai.async_block_till_done()
 
-    _verify(hass, STATE_OFF, None, None, None, None)
+    _verify(menuai, STATE_OFF, None, None, None, None)
 
 
 @pytest.mark.parametrize("count", [1])
@@ -436,9 +436,9 @@ async def test_state_template(hass: HomeAssistant) -> None:
     "style", [ConfigurationStyle.LEGACY, ConfigurationStyle.MODERN]
 )
 @pytest.mark.usefixtures("setup_state_fan")
-async def test_state_template_states(hass: HomeAssistant, expected: str) -> None:
+async def test_state_template_states(menuai: menuai, expected: str) -> None:
     """Test state template."""
-    _verify(hass, expected, None, None, None, None)
+    _verify(menuai, expected, None, None, None, None)
 
 
 @pytest.mark.parametrize(
@@ -459,15 +459,15 @@ async def test_state_template_states(hass: HomeAssistant, expected: str) -> None
     ],
 )
 @pytest.mark.usefixtures("setup_single_attribute_state_fan")
-async def test_picture_template(hass: HomeAssistant) -> None:
+async def test_picture_template(menuai: menuai) -> None:
     """Test picture template."""
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes.get("entity_picture") in ("", None)
 
-    hass.states.async_set(_STATE_INPUT_BOOLEAN, STATE_ON)
-    await hass.async_block_till_done()
+    menuai.states.async_set(_STATE_INPUT_BOOLEAN, STATE_ON)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes["entity_picture"] == "/local/switch.png"
 
 
@@ -489,15 +489,15 @@ async def test_picture_template(hass: HomeAssistant) -> None:
     ],
 )
 @pytest.mark.usefixtures("setup_single_attribute_state_fan")
-async def test_icon_template(hass: HomeAssistant) -> None:
+async def test_icon_template(menuai: menuai) -> None:
     """Test icon template."""
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes.get("icon") in ("", None)
 
-    hass.states.async_set(_STATE_INPUT_BOOLEAN, STATE_ON)
-    await hass.async_block_till_done()
+    menuai.states.async_set(_STATE_INPUT_BOOLEAN, STATE_ON)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes["icon"] == "mdi:eye"
 
 
@@ -531,12 +531,12 @@ async def test_icon_template(hass: HomeAssistant) -> None:
 )
 @pytest.mark.usefixtures("setup_single_attribute_state_fan")
 async def test_percentage_template(
-    hass: HomeAssistant, percent: str, expected: int, calls: list[ServiceCall]
+    menuai: menuai, percent: str, expected: int, calls: list[ServiceCall]
 ) -> None:
     """Test templates with fan percentages from other entities."""
-    hass.states.async_set("sensor.percentage", percent)
-    await hass.async_block_till_done()
-    _verify(hass, STATE_ON, expected, None, None, None)
+    menuai.states.async_set("sensor.percentage", percent)
+    await menuai.async_block_till_done()
+    _verify(menuai, STATE_ON, expected, None, None, None)
 
 
 @pytest.mark.parametrize(
@@ -568,12 +568,12 @@ async def test_percentage_template(
 )
 @pytest.mark.usefixtures("setup_single_attribute_state_fan")
 async def test_preset_mode_template(
-    hass: HomeAssistant, preset_mode: str, expected: int
+    menuai: menuai, preset_mode: str, expected: int
 ) -> None:
     """Test preset_mode template."""
-    hass.states.async_set("sensor.preset_mode", preset_mode)
-    await hass.async_block_till_done()
-    _verify(hass, STATE_ON, None, None, None, expected)
+    menuai.states.async_set("sensor.preset_mode", preset_mode)
+    await menuai.async_block_till_done()
+    _verify(menuai, STATE_ON, None, None, None, expected)
 
 
 @pytest.mark.parametrize(
@@ -603,12 +603,12 @@ async def test_preset_mode_template(
 )
 @pytest.mark.usefixtures("setup_single_attribute_state_fan")
 async def test_oscillating_template(
-    hass: HomeAssistant, oscillating: str, expected: bool | None
+    menuai: menuai, oscillating: str, expected: bool | None
 ) -> None:
     """Test oscillating template."""
-    hass.states.async_set("binary_sensor.oscillating", oscillating)
-    await hass.async_block_till_done()
-    _verify(hass, STATE_ON, None, expected, None, None)
+    menuai.states.async_set("binary_sensor.oscillating", oscillating)
+    await menuai.async_block_till_done()
+    _verify(menuai, STATE_ON, None, expected, None, None)
 
 
 @pytest.mark.parametrize(
@@ -638,12 +638,12 @@ async def test_oscillating_template(
 )
 @pytest.mark.usefixtures("setup_single_attribute_state_fan")
 async def test_direction_template(
-    hass: HomeAssistant, direction: str, expected: bool | None
+    menuai: menuai, direction: str, expected: bool | None
 ) -> None:
     """Test direction template."""
-    hass.states.async_set("sensor.direction", direction)
-    await hass.async_block_till_done()
-    _verify(hass, STATE_ON, None, None, expected, None)
+    menuai.states.async_set("sensor.direction", direction)
+    await menuai.async_block_till_done()
+    _verify(menuai, STATE_ON, None, None, expected, None)
 
 
 @pytest.mark.parametrize("count", [1])
@@ -677,13 +677,13 @@ async def test_direction_template(
     ],
 )
 @pytest.mark.usefixtures("setup_named_fan")
-async def test_availability_template_with_entities(hass: HomeAssistant) -> None:
+async def test_availability_template_with_entities(menuai: menuai) -> None:
     """Test availability tempalates with values from other entities."""
     for state, test_assert in ((STATE_ON, True), (STATE_OFF, False)):
-        hass.states.async_set(_STATE_AVAILABILITY_BOOLEAN, state)
-        await hass.async_block_till_done()
+        menuai.states.async_set(_STATE_AVAILABILITY_BOOLEAN, state)
+        await menuai.async_block_till_done()
         assert (
-            hass.states.get(TEST_ENTITY_ID).state != STATE_UNAVAILABLE
+            menuai.states.get(TEST_ENTITY_ID).state != STATE_UNAVAILABLE
         ) == test_assert
 
 
@@ -788,9 +788,9 @@ async def test_availability_template_with_entities(hass: HomeAssistant) -> None:
     ],
 )
 @pytest.mark.usefixtures("setup_named_fan")
-async def test_template_with_unavailable_entities(hass: HomeAssistant, states) -> None:
+async def test_template_with_unavailable_entities(menuai: menuai, states) -> None:
     """Test unavailability with value_template."""
-    _verify(hass, states[0], states[1], states[2], states[3], None)
+    _verify(menuai, states[0], states[1], states[2], states[3], None)
 
 
 @pytest.mark.parametrize("count", [1])
@@ -825,10 +825,10 @@ async def test_template_with_unavailable_entities(hass: HomeAssistant, states) -
 )
 @pytest.mark.usefixtures("setup_named_fan")
 async def test_invalid_availability_template_keeps_component_available(
-    hass: HomeAssistant, caplog_setup_text
+    menuai: menuai, caplog_setup_text
 ) -> None:
     """Test that an invalid availability keeps the device available."""
-    assert hass.states.get("fan.test_fan").state != STATE_UNAVAILABLE
+    assert menuai.states.get("fan.test_fan").state != STATE_UNAVAILABLE
     assert "TemplateError" in caplog_setup_text
     assert "x" in caplog_setup_text
 
@@ -852,10 +852,10 @@ async def test_invalid_availability_template_keeps_component_available(
     ],
 )
 @pytest.mark.usefixtures("setup_test_fan_with_extra_config")
-async def test_on_off(hass: HomeAssistant, calls: list[ServiceCall]) -> None:
+async def test_on_off(menuai: menuai, calls: list[ServiceCall]) -> None:
     """Test turn on and turn off."""
 
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == STATE_OFF
 
     for expected_calls, (func, action) in enumerate(
@@ -864,7 +864,7 @@ async def test_on_off(hass: HomeAssistant, calls: list[ServiceCall]) -> None:
             (common.async_turn_off, "turn_off"),
         ]
     ):
-        await func(hass, TEST_ENTITY_ID)
+        await func(menuai, TEST_ENTITY_ID)
 
         assert len(calls) == expected_calls + 1
         assert calls[-1].data["action"] == action
@@ -903,14 +903,14 @@ async def test_on_off(hass: HomeAssistant, calls: list[ServiceCall]) -> None:
 )
 @pytest.mark.usefixtures("setup_test_fan_with_extra_config")
 async def test_on_with_extra_attributes(
-    hass: HomeAssistant, calls: list[ServiceCall]
+    menuai: menuai, calls: list[ServiceCall]
 ) -> None:
     """Test turn on and turn off."""
 
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.state == STATE_OFF
 
-    await common.async_turn_on(hass, TEST_ENTITY_ID, 100)
+    await common.async_turn_on(menuai, TEST_ENTITY_ID, 100)
 
     assert len(calls) == 2
     assert calls[-2].data["action"] == "turn_on"
@@ -920,13 +920,13 @@ async def test_on_with_extra_attributes(
     assert calls[-1].data["caller"] == TEST_ENTITY_ID
     assert calls[-1].data["percentage"] == 100
 
-    await common.async_turn_off(hass, TEST_ENTITY_ID)
+    await common.async_turn_off(menuai, TEST_ENTITY_ID)
 
     assert len(calls) == 3
     assert calls[-1].data["action"] == "turn_off"
     assert calls[-1].data["caller"] == TEST_ENTITY_ID
 
-    await common.async_turn_on(hass, TEST_ENTITY_ID, None, "auto")
+    await common.async_turn_on(menuai, TEST_ENTITY_ID, None, "auto")
 
     assert len(calls) == 5
     assert calls[-2].data["action"] == "turn_on"
@@ -936,13 +936,13 @@ async def test_on_with_extra_attributes(
     assert calls[-1].data["caller"] == TEST_ENTITY_ID
     assert calls[-1].data["preset_mode"] == "auto"
 
-    await common.async_turn_off(hass, TEST_ENTITY_ID)
+    await common.async_turn_off(menuai, TEST_ENTITY_ID)
 
     assert len(calls) == 6
     assert calls[-1].data["action"] == "turn_off"
     assert calls[-1].data["caller"] == TEST_ENTITY_ID
 
-    await common.async_turn_on(hass, TEST_ENTITY_ID, 50, "high")
+    await common.async_turn_on(menuai, TEST_ENTITY_ID, 50, "high")
 
     assert len(calls) == 9
     assert calls[-3].data["action"] == "turn_on"
@@ -956,7 +956,7 @@ async def test_on_with_extra_attributes(
     assert calls[-1].data["caller"] == TEST_ENTITY_ID
     assert calls[-1].data["percentage"] == 50
 
-    await common.async_turn_off(hass, TEST_ENTITY_ID)
+    await common.async_turn_off(menuai, TEST_ENTITY_ID)
 
     assert len(calls) == 10
     assert calls[-1].data["action"] == "turn_off"
@@ -984,10 +984,10 @@ async def test_on_with_extra_attributes(
     ],
 )
 @pytest.mark.usefixtures("setup_test_fan_with_extra_config")
-async def test_set_invalid_direction_from_initial_stage(hass: HomeAssistant) -> None:
+async def test_set_invalid_direction_from_initial_stage(menuai: menuai) -> None:
     """Test set invalid direction when fan is in initial state."""
-    await common.async_set_direction(hass, TEST_ENTITY_ID, "invalid")
-    _verify(hass, STATE_ON, None, None, None, None)
+    await common.async_set_direction(menuai, TEST_ENTITY_ID, "invalid")
+    _verify(menuai, STATE_ON, None, None, None, None)
 
 
 @pytest.mark.parametrize(
@@ -1011,15 +1011,15 @@ async def test_set_invalid_direction_from_initial_stage(hass: HomeAssistant) -> 
     ],
 )
 @pytest.mark.usefixtures("setup_test_fan_with_extra_config")
-async def test_set_osc(hass: HomeAssistant, calls: list[ServiceCall]) -> None:
+async def test_set_osc(menuai: menuai, calls: list[ServiceCall]) -> None:
     """Test set oscillating."""
     expected_calls = 0
 
-    await common.async_turn_on(hass, TEST_ENTITY_ID)
+    await common.async_turn_on(menuai, TEST_ENTITY_ID)
     expected_calls += 1
     for state in (True, False):
-        await common.async_oscillate(hass, TEST_ENTITY_ID, state)
-        _verify(hass, STATE_ON, None, state, None, None)
+        await common.async_oscillate(menuai, TEST_ENTITY_ID, state)
+        _verify(menuai, STATE_ON, None, state, None, None)
         expected_calls += 1
         assert len(calls) == expected_calls
         assert calls[-1].data["action"] == "set_oscillating"
@@ -1048,15 +1048,15 @@ async def test_set_osc(hass: HomeAssistant, calls: list[ServiceCall]) -> None:
     ],
 )
 @pytest.mark.usefixtures("setup_test_fan_with_extra_config")
-async def test_set_direction(hass: HomeAssistant, calls: list[ServiceCall]) -> None:
+async def test_set_direction(menuai: menuai, calls: list[ServiceCall]) -> None:
     """Test set valid direction."""
     expected_calls = 0
 
-    await common.async_turn_on(hass, TEST_ENTITY_ID)
+    await common.async_turn_on(menuai, TEST_ENTITY_ID)
     expected_calls += 1
     for direction in (DIRECTION_FORWARD, DIRECTION_REVERSE):
-        await common.async_set_direction(hass, TEST_ENTITY_ID, direction)
-        _verify(hass, STATE_ON, None, None, direction, None)
+        await common.async_set_direction(menuai, TEST_ENTITY_ID, direction)
+        _verify(menuai, STATE_ON, None, None, direction, None)
         expected_calls += 1
         assert len(calls) == expected_calls
         assert calls[-1].data["action"] == "set_direction"
@@ -1086,13 +1086,13 @@ async def test_set_direction(hass: HomeAssistant, calls: list[ServiceCall]) -> N
 )
 @pytest.mark.usefixtures("setup_test_fan_with_extra_config")
 async def test_set_invalid_direction(
-    hass: HomeAssistant, calls: list[ServiceCall]
+    menuai: menuai, calls: list[ServiceCall]
 ) -> None:
     """Test set invalid direction when fan has valid direction."""
     expected_calls = 1
     for direction in (DIRECTION_FORWARD, "invalid"):
-        await common.async_set_direction(hass, TEST_ENTITY_ID, direction)
-        _verify(hass, STATE_ON, None, None, DIRECTION_FORWARD, None)
+        await common.async_set_direction(menuai, TEST_ENTITY_ID, direction)
+        _verify(menuai, STATE_ON, None, None, DIRECTION_FORWARD, None)
         assert len(calls) == expected_calls
         assert calls[-1].data["action"] == "set_direction"
         assert calls[-1].data["caller"] == TEST_ENTITY_ID
@@ -1120,16 +1120,16 @@ async def test_set_invalid_direction(
     ],
 )
 @pytest.mark.usefixtures("setup_test_fan_with_extra_config")
-async def test_preset_modes(hass: HomeAssistant, calls: list[ServiceCall]) -> None:
+async def test_preset_modes(menuai: menuai, calls: list[ServiceCall]) -> None:
     """Test preset_modes."""
     expected_calls = 0
     valid_modes = OPTIMISTIC_PRESET_MODE_CONFIG2["preset_modes"]
     for mode in ("auto", "low", "medium", "high", "invalid", "smart"):
         if mode not in valid_modes:
             with pytest.raises(NotValidPresetModeError):
-                await common.async_set_preset_mode(hass, TEST_ENTITY_ID, mode)
+                await common.async_set_preset_mode(menuai, TEST_ENTITY_ID, mode)
         else:
-            await common.async_set_preset_mode(hass, TEST_ENTITY_ID, mode)
+            await common.async_set_preset_mode(menuai, TEST_ENTITY_ID, mode)
             expected_calls += 1
 
             assert len(calls) == expected_calls
@@ -1157,27 +1157,27 @@ async def test_preset_modes(hass: HomeAssistant, calls: list[ServiceCall]) -> No
     ],
 )
 @pytest.mark.usefixtures("setup_test_fan_with_extra_config")
-async def test_set_percentage(hass: HomeAssistant, calls: list[ServiceCall]) -> None:
+async def test_set_percentage(menuai: menuai, calls: list[ServiceCall]) -> None:
     """Test set valid speed percentage."""
     expected_calls = 0
 
-    await common.async_turn_on(hass, TEST_ENTITY_ID)
+    await common.async_turn_on(menuai, TEST_ENTITY_ID)
     expected_calls += 1
     for state, value in (
         (STATE_ON, 100),
         (STATE_ON, 66),
         (STATE_ON, 0),
     ):
-        await common.async_set_percentage(hass, TEST_ENTITY_ID, value)
-        _verify(hass, state, value, None, None, None)
+        await common.async_set_percentage(menuai, TEST_ENTITY_ID, value)
+        _verify(menuai, state, value, None, None, None)
         expected_calls += 1
         assert len(calls) == expected_calls
         assert calls[-1].data["action"] == "set_percentage"
         assert calls[-1].data["caller"] == TEST_ENTITY_ID
         assert calls[-1].data["percentage"] == value
 
-    await common.async_turn_on(hass, TEST_ENTITY_ID, percentage=50)
-    _verify(hass, STATE_ON, 50, None, None, None)
+    await common.async_turn_on(menuai, TEST_ENTITY_ID, percentage=50)
+    _verify(menuai, STATE_ON, 50, None, None, None)
 
 
 @pytest.mark.parametrize(
@@ -1202,11 +1202,11 @@ async def test_set_percentage(hass: HomeAssistant, calls: list[ServiceCall]) -> 
 )
 @pytest.mark.usefixtures("setup_test_fan_with_extra_config")
 async def test_increase_decrease_speed(
-    hass: HomeAssistant, calls: list[ServiceCall]
+    menuai: menuai, calls: list[ServiceCall]
 ) -> None:
     """Test set valid increase and decrease speed."""
 
-    await common.async_turn_on(hass, TEST_ENTITY_ID)
+    await common.async_turn_on(menuai, TEST_ENTITY_ID)
     for func, extra, state, value in (
         (common.async_set_percentage, 100, STATE_ON, 100),
         (common.async_decrease_speed, None, STATE_ON, 66),
@@ -1214,8 +1214,8 @@ async def test_increase_decrease_speed(
         (common.async_decrease_speed, None, STATE_ON, 0),
         (common.async_increase_speed, None, STATE_ON, 33),
     ):
-        await func(hass, TEST_ENTITY_ID, extra)
-        _verify(hass, state, value, None, None, None)
+        await func(menuai, TEST_ENTITY_ID, extra)
+        _verify(menuai, state, value, None, None, None)
 
 
 @pytest.mark.parametrize(
@@ -1239,65 +1239,65 @@ async def test_increase_decrease_speed(
     [ConfigurationStyle.LEGACY, ConfigurationStyle.MODERN],
 )
 @pytest.mark.usefixtures("setup_named_fan")
-async def test_optimistic_state(hass: HomeAssistant, calls: list[ServiceCall]) -> None:
+async def test_optimistic_state(menuai: menuai, calls: list[ServiceCall]) -> None:
     """Test a fan without a value_template."""
 
-    await common.async_turn_on(hass, TEST_ENTITY_ID)
-    _verify(hass, STATE_ON)
+    await common.async_turn_on(menuai, TEST_ENTITY_ID)
+    _verify(menuai, STATE_ON)
 
     assert len(calls) == 1
     assert calls[-1].data["action"] == "turn_on"
     assert calls[-1].data["caller"] == TEST_ENTITY_ID
 
-    await common.async_turn_off(hass, TEST_ENTITY_ID)
-    _verify(hass, STATE_OFF)
+    await common.async_turn_off(menuai, TEST_ENTITY_ID)
+    _verify(menuai, STATE_OFF)
 
     assert len(calls) == 2
     assert calls[-1].data["action"] == "turn_off"
     assert calls[-1].data["caller"] == TEST_ENTITY_ID
 
     percent = 100
-    await common.async_set_percentage(hass, TEST_ENTITY_ID, percent)
-    _verify(hass, STATE_ON, percent)
+    await common.async_set_percentage(menuai, TEST_ENTITY_ID, percent)
+    _verify(menuai, STATE_ON, percent)
 
     assert len(calls) == 3
     assert calls[-1].data["action"] == "set_percentage"
     assert calls[-1].data["percentage"] == 100
     assert calls[-1].data["caller"] == TEST_ENTITY_ID
 
-    await common.async_turn_off(hass, TEST_ENTITY_ID)
-    _verify(hass, STATE_OFF, percent)
+    await common.async_turn_off(menuai, TEST_ENTITY_ID)
+    _verify(menuai, STATE_OFF, percent)
 
     assert len(calls) == 4
     assert calls[-1].data["action"] == "turn_off"
     assert calls[-1].data["caller"] == TEST_ENTITY_ID
 
     preset = "auto"
-    await common.async_set_preset_mode(hass, TEST_ENTITY_ID, preset)
-    _verify(hass, STATE_ON, percent, None, None, preset)
+    await common.async_set_preset_mode(menuai, TEST_ENTITY_ID, preset)
+    _verify(menuai, STATE_ON, percent, None, None, preset)
 
     assert len(calls) == 5
     assert calls[-1].data["action"] == "set_preset_mode"
     assert calls[-1].data["preset_mode"] == preset
     assert calls[-1].data["caller"] == TEST_ENTITY_ID
 
-    await common.async_turn_off(hass, TEST_ENTITY_ID)
-    _verify(hass, STATE_OFF, percent, None, None, preset)
+    await common.async_turn_off(menuai, TEST_ENTITY_ID)
+    _verify(menuai, STATE_OFF, percent, None, None, preset)
 
     assert len(calls) == 6
     assert calls[-1].data["action"] == "turn_off"
     assert calls[-1].data["caller"] == TEST_ENTITY_ID
 
-    await common.async_set_direction(hass, TEST_ENTITY_ID, DIRECTION_FORWARD)
-    _verify(hass, STATE_OFF, percent, None, DIRECTION_FORWARD, preset)
+    await common.async_set_direction(menuai, TEST_ENTITY_ID, DIRECTION_FORWARD)
+    _verify(menuai, STATE_OFF, percent, None, DIRECTION_FORWARD, preset)
 
     assert len(calls) == 7
     assert calls[-1].data["action"] == "set_direction"
     assert calls[-1].data["direction"] == DIRECTION_FORWARD
     assert calls[-1].data["caller"] == TEST_ENTITY_ID
 
-    await common.async_oscillate(hass, TEST_ENTITY_ID, True)
-    _verify(hass, STATE_OFF, percent, True, DIRECTION_FORWARD, preset)
+    await common.async_oscillate(menuai, TEST_ENTITY_ID, True)
+    _verify(menuai, STATE_OFF, percent, True, DIRECTION_FORWARD, preset)
 
     assert len(calls) == 8
     assert calls[-1].data["action"] == "set_oscillating"
@@ -1348,7 +1348,7 @@ async def test_optimistic_state(hass: HomeAssistant, calls: list[ServiceCall]) -
 )
 @pytest.mark.usefixtures("setup_optimistic_fan_attribute")
 async def test_optimistic_attributes(
-    hass: HomeAssistant,
+    menuai: menuai,
     attribute: str,
     action: str,
     verify_attr: str,
@@ -1358,8 +1358,8 @@ async def test_optimistic_attributes(
 ) -> None:
     """Test setting percentage with optimistic template."""
 
-    await coro(hass, TEST_ENTITY_ID, value)
-    _verify(hass, STATE_ON, **{verify_attr: value})
+    await coro(menuai, TEST_ENTITY_ID, value)
+    _verify(menuai, STATE_ON, **{verify_attr: value})
 
     assert len(calls) == 1
     assert calls[-1].data["action"] == action
@@ -1387,10 +1387,10 @@ async def test_optimistic_attributes(
 )
 @pytest.mark.usefixtures("setup_test_fan_with_extra_config")
 async def test_increase_decrease_speed_default_speed_count(
-    hass: HomeAssistant, calls: list[ServiceCall]
+    menuai: menuai, calls: list[ServiceCall]
 ) -> None:
     """Test set valid increase and decrease speed."""
-    await common.async_turn_on(hass, TEST_ENTITY_ID)
+    await common.async_turn_on(menuai, TEST_ENTITY_ID)
     for func, extra, state, value in (
         (common.async_set_percentage, 100, STATE_ON, 100),
         (common.async_decrease_speed, None, STATE_ON, 99),
@@ -1398,8 +1398,8 @@ async def test_increase_decrease_speed_default_speed_count(
         (common.async_decrease_speed, 31, STATE_ON, 67),
         (common.async_decrease_speed, None, STATE_ON, 66),
     ):
-        await func(hass, TEST_ENTITY_ID, extra)
-        _verify(hass, state, value, None, None, None)
+        await func(menuai, TEST_ENTITY_ID, extra)
+        _verify(menuai, state, value, None, None, None)
 
 
 @pytest.mark.parametrize(
@@ -1424,13 +1424,13 @@ async def test_increase_decrease_speed_default_speed_count(
 )
 @pytest.mark.usefixtures("setup_test_fan_with_extra_config")
 async def test_set_invalid_osc_from_initial_state(
-    hass: HomeAssistant, calls: list[ServiceCall]
+    menuai: menuai, calls: list[ServiceCall]
 ) -> None:
     """Test set invalid oscillating when fan is in initial state."""
-    await common.async_turn_on(hass, TEST_ENTITY_ID)
+    await common.async_turn_on(menuai, TEST_ENTITY_ID)
     with pytest.raises(vol.Invalid):
-        await common.async_oscillate(hass, TEST_ENTITY_ID, "invalid")
-    _verify(hass, STATE_ON, None, None, None, None)
+        await common.async_oscillate(menuai, TEST_ENTITY_ID, "invalid")
+    _verify(menuai, STATE_ON, None, None, None, None)
 
 
 @pytest.mark.parametrize(
@@ -1454,18 +1454,18 @@ async def test_set_invalid_osc_from_initial_state(
     ],
 )
 @pytest.mark.usefixtures("setup_test_fan_with_extra_config")
-async def test_set_invalid_osc(hass: HomeAssistant, calls: list[ServiceCall]) -> None:
+async def test_set_invalid_osc(menuai: menuai, calls: list[ServiceCall]) -> None:
     """Test set invalid oscillating when fan has valid osc."""
-    await common.async_turn_on(hass, TEST_ENTITY_ID)
-    await common.async_oscillate(hass, TEST_ENTITY_ID, True)
-    _verify(hass, STATE_ON, None, True, None, None)
+    await common.async_turn_on(menuai, TEST_ENTITY_ID)
+    await common.async_oscillate(menuai, TEST_ENTITY_ID, True)
+    _verify(menuai, STATE_ON, None, True, None, None)
 
-    await common.async_oscillate(hass, TEST_ENTITY_ID, False)
-    _verify(hass, STATE_ON, None, False, None, None)
+    await common.async_oscillate(menuai, TEST_ENTITY_ID, False)
+    _verify(menuai, STATE_ON, None, False, None, None)
 
     with pytest.raises(vol.Invalid):
-        await common.async_oscillate(hass, TEST_ENTITY_ID, None)
-    _verify(hass, STATE_ON, None, False, None, None)
+        await common.async_oscillate(menuai, TEST_ENTITY_ID, None)
+    _verify(menuai, STATE_ON, None, False, None, None)
 
 
 @pytest.mark.parametrize("count", [1])
@@ -1495,9 +1495,9 @@ async def test_set_invalid_osc(hass: HomeAssistant, calls: list[ServiceCall]) ->
     ],
 )
 @pytest.mark.usefixtures("setup_fan")
-async def test_unique_id(hass: HomeAssistant) -> None:
+async def test_unique_id(menuai: menuai) -> None:
     """Test unique_id option only creates one fan per id."""
-    assert len(hass.states.async_all()) == 1
+    assert len(menuai.states.async_all()) == 1
 
 
 @pytest.mark.parametrize(
@@ -1513,11 +1513,11 @@ async def test_unique_id(hass: HomeAssistant) -> None:
     [({"speed_count": 0}, 1), ({"speed_count": 100}, 1), ({"speed_count": 3}, 100 / 3)],
 )
 @pytest.mark.usefixtures("setup_test_fan_with_extra_config")
-async def test_speed_percentage_step(hass: HomeAssistant, percentage_step) -> None:
+async def test_speed_percentage_step(menuai: menuai, percentage_step) -> None:
     """Test a fan that implements percentage."""
-    assert len(hass.states.async_all()) == 1
+    assert len(menuai.states.async_all()) == 1
 
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     attributes = state.attributes
     assert attributes["percentage_step"] == percentage_step
     assert attributes.get("supported_features") & FanEntityFeature.SET_SPEED
@@ -1532,11 +1532,11 @@ async def test_speed_percentage_step(hass: HomeAssistant, percentage_step) -> No
     [ConfigurationStyle.LEGACY, ConfigurationStyle.MODERN],
 )
 @pytest.mark.usefixtures("setup_named_fan")
-async def test_preset_mode_supported_features(hass: HomeAssistant) -> None:
+async def test_preset_mode_supported_features(menuai: menuai) -> None:
     """Test a fan that implements preset_mode."""
-    assert len(hass.states.async_all()) == 1
+    assert len(menuai.states.async_all()) == 1
 
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     attributes = state.attributes
     assert attributes.get("supported_features") & FanEntityFeature.PRESET_MODE
 
@@ -1591,24 +1591,24 @@ async def test_preset_mode_supported_features(hass: HomeAssistant) -> None:
     ],
 )
 async def test_empty_action_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     supported_features: FanEntityFeature,
     setup_test_fan_with_extra_config,
 ) -> None:
     """Test configuration with empty script."""
-    state = hass.states.get(TEST_ENTITY_ID)
+    state = menuai.states.get(TEST_ENTITY_ID)
     assert state.attributes["supported_features"] == (
         FanEntityFeature.TURN_OFF | FanEntityFeature.TURN_ON | supported_features
     )
 
 
 async def test_nested_unique_id(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test a template unique_id propagates to switch unique_ids."""
     with assert_setup_component(1, template.DOMAIN):
         assert await async_setup_component(
-            hass,
+            menuai,
             template.DOMAIN,
             {
                 "template": {
@@ -1631,11 +1631,11 @@ async def test_nested_unique_id(
             },
         )
 
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all("fan")) == 2
+    assert len(menuai.states.async_all("fan")) == 2
 
     entry = entity_registry.async_get("fan.test_a")
     assert entry

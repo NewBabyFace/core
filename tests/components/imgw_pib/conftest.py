@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, patch
 from imgw_pib import HydrologicalData, SensorData
 import pytest
 
-from homeassistant.components.imgw_pib.const import DOMAIN
+from menuai.components.imgw_pib.const import DOMAIN
 
 from tests.common import MockConfigEntry
 
@@ -30,7 +30,7 @@ HYDROLOGICAL_DATA = HydrologicalData(
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.imgw_pib.async_setup_entry", return_value=True
+        "menuai.components.imgw_pib.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -40,10 +40,10 @@ def mock_imgw_pib_client() -> Generator[AsyncMock]:
     """Mock a ImgwPib client."""
     with (
         patch(
-            "homeassistant.components.imgw_pib.ImgwPib", autospec=True
+            "menuai.components.imgw_pib.ImgwPib", autospec=True
         ) as mock_client,
         patch(
-            "homeassistant.components.imgw_pib.config_flow.ImgwPib",
+            "menuai.components.imgw_pib.config_flow.ImgwPib",
             new=mock_client,
         ),
     ):

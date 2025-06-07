@@ -15,6 +15,6 @@ class Subscriber:
         self.callback = callback
 
     def update(self, message: str) -> None:
-        """Trigger hass to update the device."""
+        """Trigger menuai to update the device."""
         _LOGGER.debug('%s got message "%s"', self.name, message)
         self.callback(message)

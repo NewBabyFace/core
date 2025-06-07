@@ -4,13 +4,13 @@ from http import HTTPStatus
 
 import pytest
 
-from homeassistant.components import number
-from homeassistant.components.rainbird import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.components import number
+from menuai.components.rainbird import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from .conftest import (
     ACK_ECHO,
@@ -34,10 +34,10 @@ def platforms() -> list[str]:
 
 @pytest.fixture(autouse=True)
 async def setup_config_entry(
-    hass: HomeAssistant, config_entry: MockConfigEntry
+    menuai: menuai, config_entry: MockConfigEntry
 ) -> list[Platform]:
     """Fixture to setup the config entry."""
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
     assert config_entry.state is ConfigEntryState.LOADED
 
 
@@ -46,13 +46,13 @@ async def setup_config_entry(
     [(RAIN_DELAY, "16"), (RAIN_DELAY_OFF, "0")],
 )
 async def test_number_values(
-    hass: HomeAssistant,
+    menuai: menuai,
     expected_state: str,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test number platform."""
 
-    raindelay = hass.states.get("number.rain_bird_controller_rain_delay")
+    raindelay = menuai.states.get("number.rain_bird_controller_rain_delay")
     assert raindelay is not None
     assert raindelay.state == expected_state
     assert raindelay.attributes == {
@@ -70,14 +70,14 @@ async def test_number_values(
 
 
 async def test_set_value(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     aioclient_mock: AiohttpClientMocker,
     responses: list[str],
 ) -> None:
     """Test setting the rain delay number."""
 
-    raindelay = hass.states.get("number.rain_bird_controller_rain_delay")
+    raindelay = menuai.states.get("number.rain_bird_controller_rain_delay")
     assert raindelay is not None
 
     device = device_registry.async_get_device(
@@ -91,7 +91,7 @@ async def test_set_value(
     aioclient_mock.mock_calls.clear()
     responses.append(mock_response(ACK_ECHO))
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         number.DOMAIN,
         number.SERVICE_SET_VALUE,
         {
@@ -112,7 +112,7 @@ async def test_set_value(
     ],
 )
 async def test_set_value_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     responses: list[str],
     status: HTTPStatus,
@@ -123,8 +123,8 @@ async def test_set_value_error(
     aioclient_mock.mock_calls.clear()
     responses.append(mock_response_error(status=status))
 
-    with pytest.raises(HomeAssistantError, match=expected_msg):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match=expected_msg):
+        await menuai.services.async_call(
             number.DOMAIN,
             number.SERVICE_SET_VALUE,
             {
@@ -144,7 +144,7 @@ async def test_set_value_error(
     ],
 )
 async def test_no_unique_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     responses: list[AiohttpClientMockResponse],
     entity_registry: er.EntityRegistry,
     config_entry: MockConfigEntry,
@@ -154,10 +154,10 @@ async def test_no_unique_id(
     # Failure to migrate config entry to a unique id
     responses.insert(0, mock_response_error(HTTPStatus.SERVICE_UNAVAILABLE))
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
     assert config_entry.state is ConfigEntryState.LOADED
 
-    raindelay = hass.states.get("number.rain_bird_controller_rain_delay")
+    raindelay = menuai.states.get("number.rain_bird_controller_rain_delay")
     assert raindelay is not None
     assert (
         raindelay.attributes.get("friendly_name") == "Rain Bird Controller Rain delay"

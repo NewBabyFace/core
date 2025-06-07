@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     ATTR_MEDIA_CONTENT_ID,
     ATTR_MEDIA_CONTENT_TYPE,
     DOMAIN as MEDIA_PLAYER_DOMAIN,
@@ -13,12 +13,12 @@ from homeassistant.components.media_player import (
     MediaClass,
     MediaType,
 )
-from homeassistant.components.squeezebox.browse_media import (
+from menuai.components.squeezebox.browse_media import (
     LIBRARY,
     MEDIA_TYPE_TO_SQUEEZEBOX,
 )
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
 
 from .conftest import FAKE_VALID_ITEM_ID
 
@@ -28,31 +28,31 @@ from tests.typing import WebSocketGenerator
 
 @pytest.fixture(autouse=True)
 async def setup_integration(
-    hass: HomeAssistant, config_entry: MockConfigEntry, lms: MagicMock
+    menuai: menuai, config_entry: MockConfigEntry, lms: MagicMock
 ) -> None:
     """Fixture for setting up the component."""
     with (
-        patch("homeassistant.components.squeezebox.Server", return_value=lms),
+        patch("menuai.components.squeezebox.Server", return_value=lms),
         patch(
-            "homeassistant.components.squeezebox.PLATFORMS",
+            "menuai.components.squeezebox.PLATFORMS",
             [Platform.MEDIA_PLAYER],
         ),
         patch(
-            "homeassistant.components.squeezebox.media_player.start_server_discovery"
+            "menuai.components.squeezebox.media_player.start_server_discovery"
         ),
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done(wait_background_tasks=True)
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done(wait_background_tasks=True)
 
 
 async def test_async_browse_media_root(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test the async_browse_media function at the root level."""
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -84,18 +84,18 @@ async def test_async_browse_media_root(
     ],
 )
 async def test_async_browse_media_with_subitems(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     category: str,
     child_count: int,
 ) -> None:
     """Test each category with subitems."""
     with patch(
-        "homeassistant.components.squeezebox.browse_media.is_internal_request",
+        "menuai.components.squeezebox.browse_media.is_internal_request",
         return_value=False,
     ):
-        client = await hass_ws_client()
+        client = await menuai_ws_client()
         await client.send_json(
             {
                 "id": 1,
@@ -131,17 +131,17 @@ async def test_async_browse_media_with_subitems(
 
 
 async def test_async_browse_media_for_apps(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test browsing for app category."""
     with patch(
-        "homeassistant.components.squeezebox.browse_media.is_internal_request",
+        "menuai.components.squeezebox.browse_media.is_internal_request",
         return_value=False,
     ):
         category = "Apps"
-        client = await hass_ws_client()
+        client = await menuai_ws_client()
         await client.send_json(
             {
                 "id": 1,
@@ -185,18 +185,18 @@ async def test_async_browse_media_for_apps(
     ],
 )
 async def test_async_search_media(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     category: str,
     media_filter_classes: list[MediaClass] | None,
 ) -> None:
     """Test each category with subitems."""
     with patch(
-        "homeassistant.components.squeezebox.browse_media.is_internal_request",
+        "menuai.components.squeezebox.browse_media.is_internal_request",
         return_value=False,
     ):
-        client = await hass_ws_client()
+        client = await menuai_ws_client()
         await client.send_json(
             {
                 "id": 1,
@@ -215,16 +215,16 @@ async def test_async_search_media(
 
 
 async def test_async_search_media_invalid_filter(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test search_media action with invalid media_filter_class."""
     with patch(
-        "homeassistant.components.squeezebox.browse_media.is_internal_request",
+        "menuai.components.squeezebox.browse_media.is_internal_request",
         return_value=False,
     ):
-        client = await hass_ws_client()
+        client = await menuai_ws_client()
         await client.send_json(
             {
                 "id": 1,
@@ -242,16 +242,16 @@ async def test_async_search_media_invalid_filter(
 
 
 async def test_async_search_media_invalid_type(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test search_media action with invalid media_content_type."""
     with patch(
-        "homeassistant.components.squeezebox.browse_media.is_internal_request",
+        "menuai.components.squeezebox.browse_media.is_internal_request",
         return_value=False,
     ):
-        client = await hass_ws_client()
+        client = await menuai_ws_client()
         await client.send_json(
             {
                 "id": 1,
@@ -269,16 +269,16 @@ async def test_async_search_media_invalid_type(
 
 
 async def test_async_search_media_not_found(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test trying to play an item that doesn't exist."""
     with patch(
-        "homeassistant.components.squeezebox.browse_media.is_internal_request",
+        "menuai.components.squeezebox.browse_media.is_internal_request",
         return_value=False,
     ):
-        client = await hass_ws_client()
+        client = await menuai_ws_client()
         await client.send_json(
             {
                 "id": 1,
@@ -295,16 +295,16 @@ async def test_async_search_media_not_found(
 
 
 async def test_generate_playlist_for_app(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test the generate_playlist for app-fakecommand media type."""
     with patch(
-        "homeassistant.components.squeezebox.browse_media.is_internal_request",
+        "menuai.components.squeezebox.browse_media.is_internal_request",
         return_value=False,
     ):
         category = "Apps"
-        client = await hass_ws_client()
+        client = await menuai_ws_client()
         await client.send_json(
             {
                 "id": 1,
@@ -318,7 +318,7 @@ async def test_generate_playlist_for_app(
         assert response["success"]
 
         try:
-            await hass.services.async_call(
+            await menuai.services.async_call(
                 MEDIA_PLAYER_DOMAIN,
                 SERVICE_PLAY_MEDIA,
                 {
@@ -333,16 +333,16 @@ async def test_generate_playlist_for_app(
 
 
 async def test_async_browse_tracks(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test tracks (no subitems)."""
     with patch(
-        "homeassistant.components.squeezebox.browse_media.is_internal_request",
+        "menuai.components.squeezebox.browse_media.is_internal_request",
         return_value=True,
     ):
-        client = await hass_ws_client()
+        client = await menuai_ws_client()
         await client.send_json(
             {
                 "id": 1,
@@ -360,12 +360,12 @@ async def test_async_browse_tracks(
 
 
 async def test_async_browse_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Search for a non-existent item and assert error."""
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -380,11 +380,11 @@ async def test_async_browse_error(
 
 
 async def test_play_browse_item(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test play browse item."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_PLAY_MEDIA,
         {
@@ -396,11 +396,11 @@ async def test_play_browse_item(
 
 
 async def test_play_browse_item_nonexistent(
-    hass: HomeAssistant, config_entry: MockConfigEntry
+    menuai: menuai, config_entry: MockConfigEntry
 ) -> None:
     """Test trying to play an item that doesn't exist."""
     with pytest.raises(BrowseError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {
@@ -413,12 +413,12 @@ async def test_play_browse_item_nonexistent(
 
 
 async def test_play_browse_item_bad_category(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test trying to play an item whose category doesn't exist."""
     with pytest.raises(BrowseError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MEDIA_PLAYER_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {

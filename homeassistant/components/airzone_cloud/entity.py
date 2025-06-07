@@ -25,10 +25,10 @@ from aioairzone_cloud.const import (
 )
 from aioairzone_cloud.exceptions import AirzoneCloudError
 
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, MANUFACTURER
 from .coordinator import AirzoneUpdateCoordinator
@@ -92,7 +92,7 @@ class AirzoneAidooEntity(AirzoneEntity):
                 self.aidoo_id, params
             )
         except AirzoneCloudError as error:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Failed to set {self.entity_id} params: {error}"
             ) from error
 
@@ -135,7 +135,7 @@ class AirzoneGroupEntity(AirzoneEntity):
                 self.group_id, params
             )
         except AirzoneCloudError as error:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Failed to set {self.entity_id} params: {error}"
             ) from error
 
@@ -177,7 +177,7 @@ class AirzoneHotWaterEntity(AirzoneEntity):
         try:
             await self.coordinator.airzone.api_set_dhw_id_params(self.dhw_id, params)
         except AirzoneCloudError as error:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Failed to set {self.entity_id} params: {error}"
             ) from error
 
@@ -224,7 +224,7 @@ class AirzoneInstallationEntity(AirzoneEntity):
                 self.inst_id, params
             )
         except AirzoneCloudError as error:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Failed to set {self.entity_id} params: {error}"
             ) from error
 
@@ -330,7 +330,7 @@ class AirzoneZoneEntity(AirzoneEntity):
         try:
             await self.coordinator.airzone.api_set_zone_id_params(self.zone_id, params)
         except AirzoneCloudError as error:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Failed to set {self.entity_id} params: {error}"
             ) from error
 

@@ -29,10 +29,10 @@ from deebot_client.events import (
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.ecovacs.const import DOMAIN
-from homeassistant.components.ecovacs.controller import EcovacsController
-from homeassistant.components.switch import DOMAIN as PLATFORM_DOMAIN
-from homeassistant.const import (
+from menuai.components.ecovacs.const import DOMAIN
+from menuai.components.ecovacs.controller import EcovacsController
+from menuai.components.switch import DOMAIN as PLATFORM_DOMAIN
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
@@ -40,8 +40,8 @@ from homeassistant.const import (
     STATE_ON,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from .util import block_till_done
 
@@ -131,7 +131,7 @@ class SwitchTestCase:
     ids=["yna5x1", "5xu9h3"],
 )
 async def test_switch_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
@@ -142,16 +142,16 @@ async def test_switch_entities(
     device = controller.devices[0]
     event_bus = device.events
 
-    assert hass.states.async_entity_ids() == [test.entity_id for test in tests]
+    assert menuai.states.async_entity_ids() == [test.entity_id for test in tests]
     for test_case in tests:
         entity_id = test_case.entity_id
-        assert (state := hass.states.get(entity_id)), f"State of {entity_id} is missing"
+        assert (state := menuai.states.get(entity_id)), f"State of {entity_id} is missing"
         assert state.state == STATE_OFF
 
         event_bus.notify(test_case.event)
-        await block_till_done(hass, event_bus)
+        await block_till_done(menuai, event_bus)
 
-        assert (state := hass.states.get(entity_id)), f"State of {entity_id} is missing"
+        assert (state := menuai.states.get(entity_id)), f"State of {entity_id} is missing"
         assert snapshot(name=f"{entity_id}:state") == state
         assert state.state == STATE_ON
 
@@ -163,7 +163,7 @@ async def test_switch_entities(
         assert device_entry.identifiers == {(DOMAIN, device.device_info["did"])}
 
         device._execute_command.reset_mock()
-        await hass.services.async_call(
+        await menuai.services.async_call(
             PLATFORM_DOMAIN,
             SERVICE_TURN_OFF,
             {ATTR_ENTITY_ID: entity_id},
@@ -172,7 +172,7 @@ async def test_switch_entities(
         device._execute_command.assert_called_with(test_case.command(False))
 
         device._execute_command.reset_mock()
-        await hass.services.async_call(
+        await menuai.services.async_call(
             PLATFORM_DOMAIN,
             SERVICE_TURN_ON,
             {ATTR_ENTITY_ID: entity_id},
@@ -208,11 +208,11 @@ async def test_switch_entities(
     ids=["yna5x1", "5xu9h3"],
 )
 async def test_disabled_by_default_switch_entities(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, entity_ids: list[str]
+    menuai: menuai, entity_registry: er.EntityRegistry, entity_ids: list[str]
 ) -> None:
     """Test the disabled by default switch entities."""
     for entity_id in entity_ids:
-        assert not hass.states.get(entity_id)
+        assert not menuai.states.get(entity_id)
 
         assert (entry := entity_registry.async_get(entity_id)), (
             f"Entity registry entry for {entity_id} is missing"

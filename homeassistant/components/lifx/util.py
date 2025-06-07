@@ -12,7 +12,7 @@ from aiolifx.aiolifx import Light
 from aiolifx.message import Message
 from awesomeversion import AwesomeVersion
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_BRIGHTNESS_PCT,
     ATTR_COLOR_NAME,
@@ -21,10 +21,10 @@ from homeassistant.components.light import (
     ATTR_RGB_COLOR,
     ATTR_XY_COLOR,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.util import color as color_util
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr
+from menuai.util import color as color_util
 
 from .const import (
     _ATTR_COLOR_TEMP,
@@ -45,9 +45,9 @@ def async_entry_is_legacy(entry: ConfigEntry) -> bool:
 
 
 @callback
-def async_get_legacy_entry(hass: HomeAssistant) -> ConfigEntry | None:
+def async_get_legacy_entry(menuai: menuai) -> ConfigEntry | None:
     """Get the legacy config entry."""
-    for entry in hass.config_entries.async_entries(DOMAIN):
+    for entry in menuai.config_entries.async_entries(DOMAIN):
         if async_entry_is_legacy(entry):
             return entry
     return None
@@ -82,7 +82,7 @@ def lifx_features(bulb: Light) -> dict[str, Any]:
     return features
 
 
-def find_hsbk(hass: HomeAssistant, **kwargs: Any) -> list[float | int | None] | None:
+def find_hsbk(menuai: menuai, **kwargs: Any) -> list[float | int | None] | None:
     """Find the desired color from a number of possible inputs.
 
     Hue, Saturation, Brightness, Kelvin

@@ -2,10 +2,10 @@
 
 from pyfritzhome.devicetypes import FritzhomeTemplate
 
-from homeassistant.components.button import ButtonEntity
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.button import ButtonEntity
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import FritzboxConfigEntry
@@ -13,7 +13,7 @@ from .entity import FritzBoxEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: FritzboxConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -35,7 +35,7 @@ async def async_setup_entry(
 
 
 class FritzBoxTemplate(FritzBoxEntity, ButtonEntity):
-    """Interface between FritzhomeTemplate and hass."""
+    """Interface between FritzhomeTemplate and menuai."""
 
     @property
     def data(self) -> FritzhomeTemplate:
@@ -55,7 +55,7 @@ class FritzBoxTemplate(FritzBoxEntity, ButtonEntity):
 
     async def async_press(self) -> None:
         """Apply template and refresh."""
-        await self.hass.async_add_executor_job(self.apply_template)
+        await self.menuai.async_add_executor_job(self.apply_template)
         await self.coordinator.async_refresh()
 
     def apply_template(self) -> None:

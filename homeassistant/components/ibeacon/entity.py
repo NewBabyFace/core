@@ -6,10 +6,10 @@ from abc import abstractmethod
 
 from ibeacon_ble import iBeaconAdvertisement
 
-from homeassistant.core import callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import Entity
+from menuai.core import callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity import Entity
 
 from .const import ATTR_MAJOR, ATTR_MINOR, ATTR_SOURCE, ATTR_UUID, DOMAIN
 from .coordinator import IBeaconCoordinator, signal_seen, signal_unavailable
@@ -63,19 +63,19 @@ class IBeaconEntity(Entity):
     def _async_unavailable(self) -> None:
         """Set unavailable."""
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register state update callbacks."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 signal_seen(self._device_unique_id),
                 self._async_seen,
             )
         )
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 signal_unavailable(self._device_unique_id),
                 self._async_unavailable,
             )

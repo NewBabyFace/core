@@ -5,17 +5,17 @@ from typing import Any, Final
 from pyseventeentrack.package import PACKAGE_STATUS_MAP, Package
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry, ConfigEntryState
-from homeassistant.const import ATTR_FRIENDLY_NAME, ATTR_LOCATION
-from homeassistant.core import (
-    HomeAssistant,
+from menuai.config_entries import ConfigEntry, ConfigEntryState
+from menuai.const import ATTR_FRIENDLY_NAME, ATTR_LOCATION
+from menuai.core import (
+    menuai,
     ServiceCall,
     ServiceResponse,
     SupportsResponse,
 )
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import config_validation as cv, selector
-from homeassistant.util import slugify
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import config_validation as cv, selector
+from menuai.util import slugify
 
 from . import SeventeenTrackCoordinator
 from .const import (
@@ -70,7 +70,7 @@ SERVICE_ARCHIVE_PACKAGE_SCHEMA: Final = vol.Schema(
 )
 
 
-def setup_services(hass: HomeAssistant) -> None:
+def setup_services(menuai: menuai) -> None:
     """Set up the services for the seventeentrack integration."""
 
     async def get_packages(call: ServiceCall) -> ServiceResponse:
@@ -80,7 +80,7 @@ def setup_services(hass: HomeAssistant) -> None:
 
         await _validate_service(config_entry_id)
 
-        seventeen_coordinator: SeventeenTrackCoordinator = hass.data[DOMAIN][
+        seventeen_coordinator: SeventeenTrackCoordinator = menuai.data[DOMAIN][
             config_entry_id
         ]
         live_packages = sorted(
@@ -105,7 +105,7 @@ def setup_services(hass: HomeAssistant) -> None:
 
         await _validate_service(config_entry_id)
 
-        seventeen_coordinator: SeventeenTrackCoordinator = hass.data[DOMAIN][
+        seventeen_coordinator: SeventeenTrackCoordinator = menuai.data[DOMAIN][
             config_entry_id
         ]
 
@@ -119,7 +119,7 @@ def setup_services(hass: HomeAssistant) -> None:
 
         await _validate_service(config_entry_id)
 
-        seventeen_coordinator: SeventeenTrackCoordinator = hass.data[DOMAIN][
+        seventeen_coordinator: SeventeenTrackCoordinator = menuai.data[DOMAIN][
             config_entry_id
         ]
 
@@ -142,7 +142,7 @@ def setup_services(hass: HomeAssistant) -> None:
         return result
 
     async def _validate_service(config_entry_id):
-        entry: ConfigEntry | None = hass.config_entries.async_get_entry(config_entry_id)
+        entry: ConfigEntry | None = menuai.config_entries.async_get_entry(config_entry_id)
         if not entry:
             raise ServiceValidationError(
                 translation_domain=DOMAIN,
@@ -160,7 +160,7 @@ def setup_services(hass: HomeAssistant) -> None:
                 },
             )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_GET_PACKAGES,
         get_packages,
@@ -168,14 +168,14 @@ def setup_services(hass: HomeAssistant) -> None:
         supports_response=SupportsResponse.ONLY,
     )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_ADD_PACKAGE,
         add_package,
         schema=SERVICE_ADD_PACKAGE_SCHEMA,
     )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_ARCHIVE_PACKAGE,
         archive_package,

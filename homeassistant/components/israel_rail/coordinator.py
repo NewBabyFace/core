@@ -10,10 +10,10 @@ from israelrailapi import TrainSchedule
 from israelrailapi.api import TrainRoute
 from israelrailapi.train_station import station_name_to_id
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util import dt as dt_util
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.util import dt as dt_util
 
 from .const import DEFAULT_SCAN_INTERVAL, DEPARTURES_COUNT, DOMAIN
 
@@ -48,7 +48,7 @@ class IsraelRailDataUpdateCoordinator(DataUpdateCoordinator[list[DataConnection]
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: IsraelRailConfigEntry,
         train_schedule: TrainSchedule,
         start: str,
@@ -56,7 +56,7 @@ class IsraelRailDataUpdateCoordinator(DataUpdateCoordinator[list[DataConnection]
     ) -> None:
         """Initialize the IsraelRail data coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -68,7 +68,7 @@ class IsraelRailDataUpdateCoordinator(DataUpdateCoordinator[list[DataConnection]
 
     async def _async_update_data(self) -> list[DataConnection]:
         try:
-            train_routes = await self.hass.async_add_executor_job(
+            train_routes = await self.menuai.async_add_executor_job(
                 self._train_schedule.query,
                 self._start,
                 self._destination,

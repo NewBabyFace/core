@@ -21,11 +21,11 @@ from nextdns import (
 )
 from tenacity import RetryError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_API_KEY, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_API_KEY, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
     ATTR_CONNECTION,
@@ -80,12 +80,12 @@ COORDINATORS: list[tuple[str, type[NextDnsUpdateCoordinator], timedelta]] = [
 ]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: NextDnsConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: NextDnsConfigEntry) -> bool:
     """Set up NextDNS as config entry."""
     api_key = entry.data[CONF_API_KEY]
     profile_id = entry.data[CONF_PROFILE_ID]
 
-    websession = async_get_clientsession(hass)
+    websession = async_get_clientsession(menuai)
     try:
         nextdns = await NextDns.create(websession, api_key)
     except (ApiError, ClientConnectorError, RetryError, TimeoutError) as err:
@@ -111,7 +111,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: NextDnsConfigEntry) -> b
     # unnecessary requests when entities using this endpoint are disabled.
     for coordinator_name, coordinator_class, update_interval in COORDINATORS:
         coordinator = coordinator_class(
-            hass, entry, nextdns, profile_id, update_interval
+            menuai, entry, nextdns, profile_id, update_interval
         )
         tasks.append(coordinator.async_config_entry_first_refresh())
         coordinators[coordinator_name] = coordinator
@@ -120,11 +120,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: NextDnsConfigEntry) -> b
 
     entry.runtime_data = NextDnsData(**coordinators)
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: NextDnsConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: NextDnsConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

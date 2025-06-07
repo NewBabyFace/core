@@ -4,16 +4,16 @@ from __future__ import annotations
 
 from aioesphomeapi import EntityInfo, SelectInfo, SelectState
 
-from homeassistant.components.assist_pipeline.select import (
+from menuai.components.assist_pipeline.select import (
     AssistPipelineSelect,
     VadSensitivitySelect,
 )
-from homeassistant.components.assist_satellite import AssistSatelliteConfiguration
-from homeassistant.components.select import SelectEntity, SelectEntityDescription
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import restore_state
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.assist_satellite import AssistSatelliteConfiguration
+from menuai.components.select import SelectEntity, SelectEntityDescription
+from menuai.const import EntityCategory
+from menuai.core import menuai, callback
+from menuai.helpers import restore_state
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .entity import (
@@ -29,13 +29,13 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ESPHomeConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up esphome selects based on a config entry."""
     await platform_async_setup_entry(
-        hass,
+        menuai,
         entry,
         async_add_entities,
         info_type=SelectInfo,
@@ -50,8 +50,8 @@ async def async_setup_entry(
     ):
         async_add_entities(
             [
-                EsphomeAssistPipelineSelect(hass, entry_data),
-                EsphomeVadSensitivitySelect(hass, entry_data),
+                EsphomeAssistPipelineSelect(menuai, entry_data),
+                EsphomeVadSensitivitySelect(menuai, entry_data),
                 EsphomeAssistSatelliteWakeWordSelect(entry_data),
             ]
         )
@@ -82,19 +82,19 @@ class EsphomeSelect(EsphomeEntity[SelectInfo, SelectState], SelectEntity):
 class EsphomeAssistPipelineSelect(EsphomeAssistEntity, AssistPipelineSelect):
     """Pipeline selector for esphome devices."""
 
-    def __init__(self, hass: HomeAssistant, entry_data: RuntimeEntryData) -> None:
+    def __init__(self, menuai: menuai, entry_data: RuntimeEntryData) -> None:
         """Initialize a pipeline selector."""
         EsphomeAssistEntity.__init__(self, entry_data)
-        AssistPipelineSelect.__init__(self, hass, DOMAIN, self._device_info.mac_address)
+        AssistPipelineSelect.__init__(self, menuai, DOMAIN, self._device_info.mac_address)
 
 
 class EsphomeVadSensitivitySelect(EsphomeAssistEntity, VadSensitivitySelect):
     """VAD sensitivity selector for ESPHome devices."""
 
-    def __init__(self, hass: HomeAssistant, entry_data: RuntimeEntryData) -> None:
+    def __init__(self, menuai: menuai, entry_data: RuntimeEntryData) -> None:
         """Initialize a VAD sensitivity selector."""
         EsphomeAssistEntity.__init__(self, entry_data)
-        VadSensitivitySelect.__init__(self, hass, self._device_info.mac_address)
+        VadSensitivitySelect.__init__(self, menuai, self._device_info.mac_address)
 
 
 class EsphomeAssistSatelliteWakeWordSelect(
@@ -125,9 +125,9 @@ class EsphomeAssistSatelliteWakeWordSelect(
         """Return if entity is available."""
         return bool(self._attr_options)
 
-    async def async_added_to_hass(self) -> None:
-        """Run when entity about to be added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Run when entity about to be added to menuai."""
+        await super().async_added_to_menuai()
 
         # Update options when config is updated
         self.async_on_remove(

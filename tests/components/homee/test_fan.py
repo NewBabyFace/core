@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, call, patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.fan import (
+from menuai.components.fan import (
     ATTR_PERCENTAGE,
     ATTR_PRESET_MODE,
     DOMAIN as FAN_DOMAIN,
@@ -17,16 +17,16 @@ from homeassistant.components.fan import (
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
 )
-from homeassistant.components.homee.const import (
+from menuai.components.homee.const import (
     DOMAIN,
     PRESET_AUTO,
     PRESET_MANUAL,
     PRESET_SUMMER,
 )
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import entity_registry as er
 
 from . import build_mock_node, setup_integration
 
@@ -48,7 +48,7 @@ from tests.common import MockConfigEntry, snapshot_platform
     ],
 )
 async def test_percentage(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_homee: MagicMock,
     speed: int,
@@ -57,9 +57,9 @@ async def test_percentage(
     """Test percentage."""
     mock_homee.nodes = [build_mock_node("fan.json")]
     mock_homee.nodes[0].attributes[0].current_value = speed
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    assert hass.states.get("fan.test_fan").attributes["percentage"] == expected
+    assert menuai.states.get("fan.test_fan").attributes["percentage"] == expected
 
 
 @pytest.mark.parametrize(
@@ -71,7 +71,7 @@ async def test_percentage(
     ],
 )
 async def test_preset_mode(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_homee: MagicMock,
     mode_value: int,
@@ -80,9 +80,9 @@ async def test_preset_mode(
     """Test preset mode."""
     mock_homee.nodes = [build_mock_node("fan.json")]
     mock_homee.nodes[0].attributes[1].current_value = mode_value
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    assert hass.states.get("fan.test_fan").attributes["preset_mode"] == expected
+    assert menuai.states.get("fan.test_fan").attributes["preset_mode"] == expected
 
 
 @pytest.mark.parametrize(
@@ -108,7 +108,7 @@ async def test_preset_mode(
     ],
 )
 async def test_fan_services(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_homee: MagicMock,
     service: str,
@@ -117,12 +117,12 @@ async def test_fan_services(
 ) -> None:
     """Test fan services."""
     mock_homee.nodes = [build_mock_node("fan.json")]
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     OPTIONS = {ATTR_ENTITY_ID: "fan.test_fan"}
     OPTIONS.update(options)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         FAN_DOMAIN,
         service,
         OPTIONS,
@@ -133,16 +133,16 @@ async def test_fan_services(
 
 
 async def test_turn_on_preset_last_value_zero(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_homee: MagicMock,
 ) -> None:
     """Test turn on with preset last value == 0."""
     mock_homee.nodes = [build_mock_node("fan.json")]
     mock_homee.nodes[0].attributes[0].last_value = 0
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         FAN_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "fan.test_fan", ATTR_PRESET_MODE: PRESET_MANUAL},
@@ -156,16 +156,16 @@ async def test_turn_on_preset_last_value_zero(
 
 
 async def test_turn_on_invalid_preset(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_homee: MagicMock,
 ) -> None:
     """Test turn on with invalid preset."""
     mock_homee.nodes = [build_mock_node("fan.json")]
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     with pytest.raises(ServiceValidationError) as exc_info:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             FAN_DOMAIN,
             SERVICE_TURN_ON,
             {ATTR_ENTITY_ID: "fan.test_fan", ATTR_PRESET_MODE: PRESET_AUTO},
@@ -177,7 +177,7 @@ async def test_turn_on_invalid_preset(
 
 
 async def test_fan_snapshot(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_homee: MagicMock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
@@ -186,7 +186,7 @@ async def test_fan_snapshot(
     """Test the fan snapshot."""
     mock_homee.nodes = [build_mock_node("fan.json")]
     mock_homee.get_node_by_id.return_value = mock_homee.nodes[0]
-    with patch("homeassistant.components.homee.PLATFORMS", [Platform.FAN]):
-        await setup_integration(hass, mock_config_entry)
+    with patch("menuai.components.homee.PLATFORMS", [Platform.FAN]):
+        await setup_integration(menuai, mock_config_entry)
 
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)

@@ -9,9 +9,9 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from homeassistant.auth.providers import homeassistant as hass_auth
-from homeassistant.core import HomeAssistant
-from homeassistant.scripts import auth as script_auth
+from menuai.auth.providers import menuai as menuai_auth
+from menuai.core import menuai
+from menuai.scripts import auth as script_auth
 
 from tests.common import register_auth_provider
 
@@ -19,23 +19,23 @@ from tests.common import register_auth_provider
 @pytest.fixture(autouse=True)
 def reset_log_level() -> Generator[None]:
     """Reset log level after each test case."""
-    logger = logging.getLogger("homeassistant.core")
+    logger = logging.getLogger("menuai.core")
     orig_level = logger.level
     yield
     logger.setLevel(orig_level)
 
 
 @pytest.fixture
-async def provider(hass: HomeAssistant) -> hass_auth.HassAuthProvider:
-    """Home Assistant auth provider."""
-    provider = await register_auth_provider(hass, {"type": "homeassistant"})
+async def provider(menuai: menuai) -> menuai_auth.menuaiAuthProvider:
+    """MenuAI auth provider."""
+    provider = await register_auth_provider(menuai, {"type": "menuai"})
     await provider.async_initialize()
     return provider
 
 
 async def test_list_user(
-    hass: HomeAssistant,
-    provider: hass_auth.HassAuthProvider,
+    menuai: menuai,
+    provider: menuai_auth.menuaiAuthProvider,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Test we can list users."""
@@ -43,7 +43,7 @@ async def test_list_user(
     data.add_auth("test-user", "test-pass")
     data.add_auth("second-user", "second-pass")
 
-    await script_auth.list_users(hass, provider, None)
+    await script_auth.list_users(menuai, provider, None)
 
     captured = capsys.readouterr()
 
@@ -51,18 +51,18 @@ async def test_list_user(
 
 
 async def test_add_user(
-    hass: HomeAssistant,
-    provider: hass_auth.HassAuthProvider,
+    menuai: menuai,
+    provider: menuai_auth.menuaiAuthProvider,
     capsys: pytest.CaptureFixture[str],
-    hass_storage: dict[str, Any],
+    menuai_storage: dict[str, Any],
 ) -> None:
     """Test we can add a user."""
     data = provider.data
     await script_auth.add_user(
-        hass, provider, Mock(username="paulus", password="test-pass")
+        menuai, provider, Mock(username="paulus", password="test-pass")
     )
 
-    assert len(hass_storage[hass_auth.STORAGE_KEY]["data"]["users"]) == 1
+    assert len(menuai_storage[menuai_auth.STORAGE_KEY]["data"]["users"]) == 1
 
     captured = capsys.readouterr()
     assert captured.out == "Auth created\n"
@@ -72,8 +72,8 @@ async def test_add_user(
 
 
 async def test_validate_login(
-    hass: HomeAssistant,
-    provider: hass_auth.HassAuthProvider,
+    menuai: menuai,
+    provider: menuai_auth.menuaiAuthProvider,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Test we can validate a user login."""
@@ -81,65 +81,65 @@ async def test_validate_login(
     data.add_auth("test-user", "test-pass")
 
     await script_auth.validate_login(
-        hass, provider, Mock(username="test-user", password="test-pass")
+        menuai, provider, Mock(username="test-user", password="test-pass")
     )
     captured = capsys.readouterr()
     assert captured.out == "Auth valid\n"
 
     await script_auth.validate_login(
-        hass, provider, Mock(username="test-user", password="invalid-pass")
+        menuai, provider, Mock(username="test-user", password="invalid-pass")
     )
     captured = capsys.readouterr()
     assert captured.out == "Auth invalid\n"
 
     await script_auth.validate_login(
-        hass, provider, Mock(username="invalid-user", password="test-pass")
+        menuai, provider, Mock(username="invalid-user", password="test-pass")
     )
     captured = capsys.readouterr()
     assert captured.out == "Auth invalid\n"
 
 
 async def test_change_password(
-    hass: HomeAssistant,
-    provider: hass_auth.HassAuthProvider,
+    menuai: menuai,
+    provider: menuai_auth.menuaiAuthProvider,
     capsys: pytest.CaptureFixture[str],
-    hass_storage: dict[str, Any],
+    menuai_storage: dict[str, Any],
 ) -> None:
     """Test we can change a password."""
     data = provider.data
     data.add_auth("test-user", "test-pass")
 
     await script_auth.change_password(
-        hass, provider, Mock(username="test-user", new_password="new-pass")
+        menuai, provider, Mock(username="test-user", new_password="new-pass")
     )
 
-    assert len(hass_storage[hass_auth.STORAGE_KEY]["data"]["users"]) == 1
+    assert len(menuai_storage[menuai_auth.STORAGE_KEY]["data"]["users"]) == 1
     captured = capsys.readouterr()
     assert captured.out == "Password changed\n"
     data.validate_login("test-user", "new-pass")
-    with pytest.raises(hass_auth.InvalidAuth):
+    with pytest.raises(menuai_auth.InvalidAuth):
         data.validate_login("test-user", "test-pass")
 
 
 async def test_change_password_invalid_user(
-    hass: HomeAssistant,
-    provider: hass_auth.HassAuthProvider,
+    menuai: menuai,
+    provider: menuai_auth.menuaiAuthProvider,
     capsys: pytest.CaptureFixture[str],
-    hass_storage: dict[str, Any],
+    menuai_storage: dict[str, Any],
 ) -> None:
     """Test changing password of non-existing user."""
     data = provider.data
     data.add_auth("test-user", "test-pass")
 
     await script_auth.change_password(
-        hass, provider, Mock(username="invalid-user", new_password="new-pass")
+        menuai, provider, Mock(username="invalid-user", new_password="new-pass")
     )
 
-    assert hass_auth.STORAGE_KEY not in hass_storage
+    assert menuai_auth.STORAGE_KEY not in menuai_storage
     captured = capsys.readouterr()
     assert captured.out == "User not found\n"
     data.validate_login("test-user", "test-pass")
-    with pytest.raises(hass_auth.InvalidAuth):
+    with pytest.raises(menuai_auth.InvalidAuth):
         data.validate_login("invalid-user", "new-pass")
 
 
@@ -148,12 +148,12 @@ async def test_parsing_args() -> None:
     called = False
 
     async def mock_func(
-        hass: HomeAssistant, provider: hass_auth.AuthProvider, args2: argparse.Namespace
+        menuai: menuai, provider: menuai_auth.AuthProvider, args2: argparse.Namespace
     ) -> None:
         """Mock function to be called."""
         nonlocal called
         called = True
-        assert provider.hass.config.config_dir == "/somewhere/config"
+        assert provider.menuai.config.config_dir == "/somewhere/config"
         assert args2 is args
 
     args = Mock(config="/somewhere/config", func=mock_func)

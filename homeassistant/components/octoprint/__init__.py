@@ -9,8 +9,8 @@ import aiohttp
 from pyoctoprintapi import OctoprintClient
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import SOURCE_IMPORT, ConfigEntry
+from menuai.const import (
     CONF_API_KEY,
     CONF_BINARY_SENSORS,
     CONF_DEVICE_ID,
@@ -23,15 +23,15 @@ from homeassistant.const import (
     CONF_SENSORS,
     CONF_SSL,
     CONF_VERIFY_SSL,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     Platform,
 )
-from homeassistant.core import Event, HomeAssistant, ServiceCall, callback
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import config_validation as cv, device_registry as dr
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util import slugify as util_slugify
-from homeassistant.util.ssl import get_default_context, get_default_no_verify_context
+from menuai.core import Event, menuai, ServiceCall, callback
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import config_validation as cv, device_registry as dr
+from menuai.helpers.typing import ConfigType
+from menuai.util import slugify as util_slugify
+from menuai.util.ssl import get_default_context, get_default_no_verify_context
 
 from .const import CONF_BAUDRATE, DOMAIN, SERVICE_CONNECT
 from .coordinator import OctoprintDataUpdateCoordinator
@@ -137,7 +137,7 @@ SERVICE_CONNECT_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the OctoPrint component."""
     if DOMAIN not in config:
         return True
@@ -145,8 +145,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     domain_config = config[DOMAIN]
 
     for conf in domain_config:
-        hass.async_create_task(
-            hass.config_entries.flow.async_init(
+        menuai.async_create_task(
+            menuai.config_entries.flow.async_init(
                 DOMAIN,
                 context={"source": SOURCE_IMPORT},
                 data={
@@ -162,15 +162,15 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up OctoPrint from a config entry."""
 
-    if DOMAIN not in hass.data:
-        hass.data[DOMAIN] = {}
+    if DOMAIN not in menuai.data:
+        menuai.data[DOMAIN] = {}
 
     if CONF_VERIFY_SSL not in entry.data:
         data = {**entry.data, CONF_VERIFY_SSL: True}
-        hass.config_entries.async_update_entry(entry, data=data)
+        menuai.config_entries.async_update_entry(entry, data=data)
 
     connector = aiohttp.TCPConnector(
         force_close=True,
@@ -187,7 +187,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     entry.async_on_unload(_async_close_websession)
     entry.async_on_unload(
-        hass.bus.async_listen(EVENT_HOMEASSISTANT_STOP, _async_close_websession)
+        menuai.bus.async_listen(EVENT_menuai_STOP, _async_close_websession)
     )
 
     client = OctoprintClient(
@@ -200,28 +200,28 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     client.set_api_key(entry.data[CONF_API_KEY])
 
-    coordinator = OctoprintDataUpdateCoordinator(hass, client, entry, 30)
+    coordinator = OctoprintDataUpdateCoordinator(menuai, client, entry, 30)
 
     await coordinator.async_config_entry_first_refresh()
 
-    hass.data[DOMAIN][entry.entry_id] = {
+    menuai.data[DOMAIN][entry.entry_id] = {
         "coordinator": coordinator,
         "client": client,
     }
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     async def async_printer_connect(call: ServiceCall) -> None:
         """Connect to a printer."""
-        client = async_get_client_for_service_call(hass, call)
+        client = async_get_client_for_service_call(menuai, call)
         await client.connect(
             printer_profile=call.data.get(CONF_PROFILE_NAME),
             port=call.data.get(CONF_PORT),
             baud_rate=call.data.get(CONF_BAUDRATE),
         )
 
-    if not hass.services.has_service(DOMAIN, SERVICE_CONNECT):
-        hass.services.async_register(
+    if not menuai.services.has_service(DOMAIN, SERVICE_CONNECT):
+        menuai.services.async_register(
             DOMAIN,
             SERVICE_CONNECT,
             async_printer_connect,
@@ -231,26 +231,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
     if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id)
+        menuai.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok
 
 
 def async_get_client_for_service_call(
-    hass: HomeAssistant, call: ServiceCall
+    menuai: menuai, call: ServiceCall
 ) -> OctoprintClient:
     """Get the client related to a service call (by device ID)."""
     device_id = call.data[CONF_DEVICE_ID]
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
 
     if device_entry := device_registry.async_get(device_id):
         for entry_id in device_entry.config_entries:
-            if data := hass.data[DOMAIN].get(entry_id):
+            if data := menuai.data[DOMAIN].get(entry_id):
                 return cast(OctoprintClient, data["client"])
 
     raise ServiceValidationError(

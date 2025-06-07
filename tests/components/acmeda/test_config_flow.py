@@ -5,11 +5,11 @@ from unittest.mock import patch
 import aiopulse
 import pytest
 
-from homeassistant.components.acmeda.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.acmeda.const import DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_HOST
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
@@ -34,11 +34,11 @@ async def async_generator(items):
         yield item
 
 
-async def test_show_form_no_hubs(hass: HomeAssistant, mock_hub_discover) -> None:
+async def test_show_form_no_hubs(menuai: menuai, mock_hub_discover) -> None:
     """Test that flow aborts if no hubs are discovered."""
     mock_hub_discover.return_value = async_generator([])
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
@@ -49,11 +49,11 @@ async def test_show_form_no_hubs(hass: HomeAssistant, mock_hub_discover) -> None
     assert len(mock_hub_discover.mock_calls) == 1
 
 
-async def test_timeout_fetching_hub(hass: HomeAssistant, mock_hub_discover) -> None:
+async def test_timeout_fetching_hub(menuai: menuai, mock_hub_discover) -> None:
     """Test that flow aborts if no hubs are discovered."""
     mock_hub_discover.side_effect = TimeoutError
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
@@ -65,7 +65,7 @@ async def test_timeout_fetching_hub(hass: HomeAssistant, mock_hub_discover) -> N
 
 
 @pytest.mark.usefixtures("mock_hub_run")
-async def test_show_form_one_hub(hass: HomeAssistant, mock_hub_discover) -> None:
+async def test_show_form_one_hub(menuai: menuai, mock_hub_discover) -> None:
     """Test that a config is created when one hub discovered."""
 
     dummy_hub_1 = aiopulse.Hub(DUMMY_HOST1)
@@ -73,7 +73,7 @@ async def test_show_form_one_hub(hass: HomeAssistant, mock_hub_discover) -> None
 
     mock_hub_discover.return_value = async_generator([dummy_hub_1])
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
@@ -87,7 +87,7 @@ async def test_show_form_one_hub(hass: HomeAssistant, mock_hub_discover) -> None
     assert len(mock_hub_discover.mock_calls) == 1
 
 
-async def test_show_form_two_hubs(hass: HomeAssistant, mock_hub_discover) -> None:
+async def test_show_form_two_hubs(menuai: menuai, mock_hub_discover) -> None:
     """Test that the form is served when more than one hub discovered."""
 
     dummy_hub_1 = aiopulse.Hub(DUMMY_HOST1)
@@ -98,7 +98,7 @@ async def test_show_form_two_hubs(hass: HomeAssistant, mock_hub_discover) -> Non
 
     mock_hub_discover.return_value = async_generator([dummy_hub_1, dummy_hub_2])
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
@@ -110,7 +110,7 @@ async def test_show_form_two_hubs(hass: HomeAssistant, mock_hub_discover) -> Non
 
 
 @pytest.mark.usefixtures("mock_hub_run")
-async def test_create_second_entry(hass: HomeAssistant, mock_hub_discover) -> None:
+async def test_create_second_entry(menuai: menuai, mock_hub_discover) -> None:
     """Test that a config is created when a second hub is discovered."""
 
     dummy_hub_1 = aiopulse.Hub(DUMMY_HOST1)
@@ -121,11 +121,11 @@ async def test_create_second_entry(hass: HomeAssistant, mock_hub_discover) -> No
 
     mock_hub_discover.return_value = async_generator([dummy_hub_1, dummy_hub_2])
 
-    MockConfigEntry(domain=DOMAIN, unique_id=dummy_hub_1.id, data=CONFIG).add_to_hass(
-        hass
+    MockConfigEntry(domain=DOMAIN, unique_id=dummy_hub_1.id, data=CONFIG).add_to_menuai(
+        menuai
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
@@ -136,7 +136,7 @@ async def test_create_second_entry(hass: HomeAssistant, mock_hub_discover) -> No
     }
 
 
-async def test_already_configured(hass: HomeAssistant, mock_hub_discover) -> None:
+async def test_already_configured(menuai: menuai, mock_hub_discover) -> None:
     """Test that flow aborts when all hubs are configured."""
 
     dummy_hub_1 = aiopulse.Hub(DUMMY_HOST1)
@@ -144,11 +144,11 @@ async def test_already_configured(hass: HomeAssistant, mock_hub_discover) -> Non
 
     mock_hub_discover.return_value = async_generator([dummy_hub_1])
 
-    MockConfigEntry(domain=DOMAIN, unique_id=dummy_hub_1.id, data=CONFIG).add_to_hass(
-        hass
+    MockConfigEntry(domain=DOMAIN, unique_id=dummy_hub_1.id, data=CONFIG).add_to_menuai(
+        menuai
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 

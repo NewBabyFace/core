@@ -9,11 +9,11 @@ from typing import cast
 from synology_dsm.api.file_station.models import SynoFileSharedFolder
 import voluptuous as vol
 
-from homeassistant import data_entry_flow
-from homeassistant.components.repairs import ConfirmRepairFlow, RepairsFlow
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import issue_registry as ir
-from homeassistant.helpers.selector import (
+from menuai import data_entry_flow
+from menuai.components.repairs import ConfirmRepairFlow, RepairsFlow
+from menuai.core import menuai
+from menuai.helpers import issue_registry as ir
+from menuai.helpers.selector import (
     SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
@@ -61,7 +61,7 @@ class MissingBackupSetupRepairFlow(RepairsFlow):
         syno_data = self.entry.runtime_data
 
         if user_input is not None:
-            self.hass.config_entries.async_update_entry(
+            self.menuai.config_entries.async_update_entry(
                 self.entry, options={**dict(self.entry.options), **user_input}
             )
             return self.async_create_entry(data={})
@@ -103,12 +103,12 @@ class MissingBackupSetupRepairFlow(RepairsFlow):
         self, _: dict[str, str] | None = None
     ) -> data_entry_flow.FlowResult:
         """Handle the confirm step of a fix flow."""
-        ir.async_ignore_issue(self.hass, DOMAIN, self.issue_id, True)
+        ir.async_ignore_issue(self.menuai, DOMAIN, self.issue_id, True)
         return self.async_abort(reason="ignored")
 
 
 async def async_create_fix_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     issue_id: str,
     data: dict[str, str | int | float | None] | None,
 ) -> RepairsFlow:
@@ -116,7 +116,7 @@ async def async_create_fix_flow(
     entry = None
     if data and (entry_id := data.get("entry_id")):
         entry_id = cast(str, entry_id)
-        entry = hass.config_entries.async_get_entry(entry_id)
+        entry = menuai.config_entries.async_get_entry(entry_id)
 
     if entry and issue_id.startswith(ISSUE_MISSING_BACKUP_SETUP):
         return MissingBackupSetupRepairFlow(entry, issue_id)

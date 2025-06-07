@@ -6,17 +6,17 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     PLATFORM_SCHEMA as LIGHT_PLATFORM_SCHEMA,
     ColorMode,
     LightEntity,
 )
-from homeassistant.const import CONF_LIGHTS
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_LIGHTS
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import CONF_DIMLEVEL_MAX, CONF_DIMLEVEL_MIN
 from .entity import SWITCHES_SCHEMA, PilightBaseDevice
@@ -34,7 +34,7 @@ PLATFORM_SCHEMA = LIGHT_PLATFORM_SCHEMA.extend(
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -44,7 +44,7 @@ def setup_platform(
     devices = []
 
     for dev_name, dev_config in switches.items():
-        devices.append(PilightLight(hass, dev_name, dev_config))
+        devices.append(PilightLight(menuai, dev_name, dev_config))
 
     add_entities(devices)
 
@@ -55,9 +55,9 @@ class PilightLight(PilightBaseDevice, LightEntity):
     _attr_color_mode = ColorMode.BRIGHTNESS
     _attr_supported_color_modes = {ColorMode.BRIGHTNESS}
 
-    def __init__(self, hass, name, config):
+    def __init__(self, menuai, name, config):
         """Initialize a switch."""
-        super().__init__(hass, name, config)
+        super().__init__(menuai, name, config)
         self._dimlevel_min = config.get(CONF_DIMLEVEL_MIN)
         self._dimlevel_max = config.get(CONF_DIMLEVEL_MAX)
 

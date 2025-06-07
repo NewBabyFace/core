@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import Generic, TypeVar
 
-from homeassistant.components.sensor import EntityDescription
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.components.sensor import EntityDescription
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import PaperlessCoordinator

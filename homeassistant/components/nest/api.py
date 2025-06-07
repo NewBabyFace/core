@@ -1,4 +1,4 @@
-"""API for Google Nest Device Access bound to Home Assistant OAuth."""
+"""API for Google Nest Device Access bound to MenuAI OAuth."""
 
 from __future__ import annotations
 
@@ -12,8 +12,8 @@ from google_nest_sdm.admin_client import PUBSUB_API_HOST, AdminClient
 from google_nest_sdm.auth import AbstractAuth
 from google_nest_sdm.google_nest_subscriber import GoogleNestSubscriber
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import aiohttp_client, config_entry_oauth2_flow
+from menuai.core import menuai
+from menuai.helpers import aiohttp_client, config_entry_oauth2_flow
 
 from .const import (
     API_URL,
@@ -102,11 +102,11 @@ class AccessTokenAuthImpl(AbstractAuth):
         )
 
 
-async def new_auth(hass: HomeAssistant, entry: NestConfigEntry) -> AbstractAuth:
+async def new_auth(menuai: menuai, entry: NestConfigEntry) -> AbstractAuth:
     """Create a GoogleNestSubscriber."""
     implementation = (
         await config_entry_oauth2_flow.async_get_config_entry_implementation(
-            hass, entry
+            menuai, entry
         )
     )
     if not isinstance(
@@ -114,15 +114,15 @@ async def new_auth(hass: HomeAssistant, entry: NestConfigEntry) -> AbstractAuth:
     ):
         raise TypeError(f"Unexpected auth implementation {implementation}")
     return AsyncConfigEntryAuth(
-        aiohttp_client.async_get_clientsession(hass),
-        config_entry_oauth2_flow.OAuth2Session(hass, entry, implementation),
+        aiohttp_client.async_get_clientsession(menuai),
+        config_entry_oauth2_flow.OAuth2Session(menuai, entry, implementation),
         implementation.client_id,
         implementation.client_secret,
     )
 
 
 async def new_subscriber(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: NestConfigEntry,
     auth: AbstractAuth,
 ) -> GoogleNestSubscriber:
@@ -133,7 +133,7 @@ async def new_subscriber(
 
 
 def new_subscriber_with_token(
-    hass: HomeAssistant,
+    menuai: menuai,
     access_token: str,
     project_id: str,
     subscription_name: str,
@@ -141,7 +141,7 @@ def new_subscriber_with_token(
     """Create a GoogleNestSubscriber with an access token."""
     return GoogleNestSubscriber(
         AccessTokenAuthImpl(
-            aiohttp_client.async_get_clientsession(hass),
+            aiohttp_client.async_get_clientsession(menuai),
             access_token,
             API_URL,
         ),
@@ -151,14 +151,14 @@ def new_subscriber_with_token(
 
 
 def new_pubsub_admin_client(
-    hass: HomeAssistant,
+    menuai: menuai,
     access_token: str,
     cloud_project_id: str,
 ) -> AdminClient:
     """Create a Nest AdminClient with an access token."""
     return AdminClient(
         auth=AccessTokenAuthImpl(
-            aiohttp_client.async_get_clientsession(hass),
+            aiohttp_client.async_get_clientsession(menuai),
             access_token,
             PUBSUB_API_HOST,
         ),

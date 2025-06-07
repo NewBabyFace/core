@@ -7,13 +7,13 @@ import time
 from maxcube.cube import MaxCube
 import voluptuous as vol
 
-from homeassistant.components import persistent_notification
-from homeassistant.const import CONF_HOST, CONF_PORT, CONF_SCAN_INTERVAL, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.discovery import load_platform
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util.dt import now
+from menuai.components import persistent_notification
+from menuai.const import CONF_HOST, CONF_PORT, CONF_SCAN_INTERVAL, Platform
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.discovery import load_platform
+from menuai.helpers.typing import ConfigType
+from menuai.util.dt import now
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -49,11 +49,11 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Establish connection to MAX! Cube."""
 
-    if DATA_KEY not in hass.data:
-        hass.data[DATA_KEY] = {}
+    if DATA_KEY not in menuai.data:
+        menuai.data[DATA_KEY] = {}
 
     connection_failed = 0
     gateways = config[DOMAIN][CONF_GATEWAYS]
@@ -64,13 +64,13 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
         try:
             cube = MaxCube(host, port, now=now)
-            hass.data[DATA_KEY][host] = MaxCubeHandle(cube, scan_interval)
+            menuai.data[DATA_KEY][host] = MaxCubeHandle(cube, scan_interval)
         except TimeoutError as ex:
             _LOGGER.error("Unable to connect to Max!Cube gateway: %s", str(ex))
             persistent_notification.create(
-                hass,
+                menuai,
                 (
-                    f"Error: {ex}<br />You will need to restart Home Assistant after"
+                    f"Error: {ex}<br />You will need to restart MenuAI after"
                     " fixing."
                 ),
                 title=NOTIFICATION_TITLE,
@@ -81,8 +81,8 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
     if connection_failed >= len(gateways):
         return False
 
-    load_platform(hass, Platform.CLIMATE, DOMAIN, {}, config)
-    load_platform(hass, Platform.BINARY_SENSOR, DOMAIN, {}, config)
+    load_platform(menuai, Platform.CLIMATE, DOMAIN, {}, config)
+    load_platform(menuai, Platform.BINARY_SENSOR, DOMAIN, {}, config)
 
     return True
 

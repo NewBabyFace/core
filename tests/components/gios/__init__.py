@@ -3,8 +3,8 @@
 import json
 from unittest.mock import patch
 
-from homeassistant.components.gios.const import DOMAIN
-from homeassistant.core import HomeAssistant
+from menuai.components.gios.const import DOMAIN
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry, async_load_fixture
 
@@ -15,9 +15,9 @@ STATIONS = [
 
 
 async def init_integration(
-    hass: HomeAssistant, incomplete_data=False, invalid_indexes=False
+    menuai: menuai, incomplete_data=False, invalid_indexes=False
 ) -> MockConfigEntry:
-    """Set up the GIOS integration in Home Assistant."""
+    """Set up the GIOS integration in MenuAI."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         title="Home",
@@ -26,9 +26,9 @@ async def init_integration(
         entry_id="86129426118ae32020417a53712d6eef",
     )
 
-    indexes = json.loads(await async_load_fixture(hass, "indexes.json", DOMAIN))
-    station = json.loads(await async_load_fixture(hass, "station.json", DOMAIN))
-    sensors = json.loads(await async_load_fixture(hass, "sensors.json", DOMAIN))
+    indexes = json.loads(await async_load_fixture(menuai, "indexes.json", DOMAIN))
+    station = json.loads(await async_load_fixture(menuai, "station.json", DOMAIN))
+    sensors = json.loads(await async_load_fixture(menuai, "sensors.json", DOMAIN))
     if incomplete_data:
         indexes["stIndexLevel"]["indexLevelName"] = "foo"
         sensors["pm10"]["values"][0]["value"] = None
@@ -38,24 +38,24 @@ async def init_integration(
 
     with (
         patch(
-            "homeassistant.components.gios.coordinator.Gios._get_stations",
+            "menuai.components.gios.coordinator.Gios._get_stations",
             return_value=STATIONS,
         ),
         patch(
-            "homeassistant.components.gios.coordinator.Gios._get_station",
+            "menuai.components.gios.coordinator.Gios._get_station",
             return_value=station,
         ),
         patch(
-            "homeassistant.components.gios.coordinator.Gios._get_all_sensors",
+            "menuai.components.gios.coordinator.Gios._get_all_sensors",
             return_value=sensors,
         ),
         patch(
-            "homeassistant.components.gios.coordinator.Gios._get_indexes",
+            "menuai.components.gios.coordinator.Gios._get_indexes",
             return_value=indexes,
         ),
     ):
-        entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     return entry

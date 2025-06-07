@@ -4,18 +4,18 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from homeassistant import const
+from menuai import const
 
 from .device_registry import DeviceInfo
 
 if TYPE_CHECKING:
-    # `sensor_state_data` is a second-party library (i.e. maintained by Home Assistant
-    # core members) which is not strictly required by Home Assistant.
+    # `sensor_state_data` is a second-party library (i.e. maintained by MenuAI
+    # core members) which is not strictly required by MenuAI.
     # Therefore, we import it as a type hint only.
     from sensor_state_data import SensorDeviceInfo
 
 
-def sensor_device_info_to_hass_device_info(
+def sensor_device_info_to_menuai_device_info(
     sensor_device_info: SensorDeviceInfo,
 ) -> DeviceInfo:
     """Convert a sensor_state_data sensor device info to a HA device info."""

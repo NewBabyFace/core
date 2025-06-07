@@ -10,10 +10,10 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 from tenacity import RetryError
 
-from homeassistant.components.nextdns.const import DOMAIN
-from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
-from homeassistant.const import (
+from menuai.components.nextdns.const import DOMAIN
+from menuai.components.switch import DOMAIN as SWITCH_DOMAIN
+from menuai.config_entries import SOURCE_REAUTH, ConfigEntryState
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
@@ -22,10 +22,10 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
-from homeassistant.util.dt import utcnow
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
+from menuai.util.dt import utcnow
 
 from . import init_integration, mock_nextdns
 
@@ -34,63 +34,63 @@ from tests.common import async_fire_time_changed, snapshot_platform
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_switch(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test states of the switches."""
-    with patch("homeassistant.components.nextdns.PLATFORMS", [Platform.SWITCH]):
-        entry = await init_integration(hass)
+    with patch("menuai.components.nextdns.PLATFORMS", [Platform.SWITCH]):
+        entry = await init_integration(menuai)
 
-    await snapshot_platform(hass, entity_registry, snapshot, entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, entry.entry_id)
 
 
-async def test_switch_on(hass: HomeAssistant) -> None:
+async def test_switch_on(menuai: menuai) -> None:
     """Test the switch can be turned on."""
-    await init_integration(hass)
+    await init_integration(menuai)
 
-    state = hass.states.get("switch.fake_profile_block_page")
+    state = menuai.states.get("switch.fake_profile_block_page")
     assert state
     assert state.state == STATE_OFF
 
     with patch(
-        "homeassistant.components.nextdns.NextDns.set_setting", return_value=True
+        "menuai.components.nextdns.NextDns.set_setting", return_value=True
     ) as mock_switch_on:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SWITCH_DOMAIN,
             SERVICE_TURN_ON,
             {ATTR_ENTITY_ID: "switch.fake_profile_block_page"},
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-        state = hass.states.get("switch.fake_profile_block_page")
+        state = menuai.states.get("switch.fake_profile_block_page")
         assert state
         assert state.state == STATE_ON
 
         mock_switch_on.assert_called_once()
 
 
-async def test_switch_off(hass: HomeAssistant) -> None:
+async def test_switch_off(menuai: menuai) -> None:
     """Test the switch can be turned on."""
-    await init_integration(hass)
+    await init_integration(menuai)
 
-    state = hass.states.get("switch.fake_profile_web3")
+    state = menuai.states.get("switch.fake_profile_web3")
     assert state
     assert state.state == STATE_ON
 
     with patch(
-        "homeassistant.components.nextdns.NextDns.set_setting", return_value=True
+        "menuai.components.nextdns.NextDns.set_setting", return_value=True
     ) as mock_switch_on:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SWITCH_DOMAIN,
             SERVICE_TURN_OFF,
             {ATTR_ENTITY_ID: "switch.fake_profile_web3"},
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-        state = hass.states.get("switch.fake_profile_web3")
+        state = menuai.states.get("switch.fake_profile_web3")
         assert state
         assert state.state == STATE_OFF
 
@@ -105,33 +105,33 @@ async def test_switch_off(hass: HomeAssistant) -> None:
         TimeoutError,
     ],
 )
-async def test_availability(hass: HomeAssistant, exc: Exception) -> None:
+async def test_availability(menuai: menuai, exc: Exception) -> None:
     """Ensure that we mark the entities unavailable correctly when service causes an error."""
-    await init_integration(hass)
+    await init_integration(menuai)
 
-    state = hass.states.get("switch.fake_profile_web3")
+    state = menuai.states.get("switch.fake_profile_web3")
     assert state
     assert state.state != STATE_UNAVAILABLE
     assert state.state == STATE_ON
 
     future = utcnow() + timedelta(minutes=10)
     with patch(
-        "homeassistant.components.nextdns.NextDns.get_settings",
+        "menuai.components.nextdns.NextDns.get_settings",
         side_effect=exc,
     ):
-        async_fire_time_changed(hass, future)
-        await hass.async_block_till_done(wait_background_tasks=True)
+        async_fire_time_changed(menuai, future)
+        await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get("switch.fake_profile_web3")
+    state = menuai.states.get("switch.fake_profile_web3")
     assert state
     assert state.state == STATE_UNAVAILABLE
 
     future = utcnow() + timedelta(minutes=20)
     with mock_nextdns():
-        async_fire_time_changed(hass, future)
-        await hass.async_block_till_done(wait_background_tasks=True)
+        async_fire_time_changed(menuai, future)
+        await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get("switch.fake_profile_web3")
+    state = menuai.states.get("switch.fake_profile_web3")
     assert state
     assert state.state != STATE_UNAVAILABLE
     assert state.state == STATE_ON
@@ -146,15 +146,15 @@ async def test_availability(hass: HomeAssistant, exc: Exception) -> None:
         ClientError,
     ],
 )
-async def test_switch_failure(hass: HomeAssistant, exc: Exception) -> None:
-    """Tests that the turn on/off service throws HomeAssistantError."""
-    await init_integration(hass)
+async def test_switch_failure(menuai: menuai, exc: Exception) -> None:
+    """Tests that the turn on/off service throws menuaiError."""
+    await init_integration(menuai)
 
     with (
-        patch("homeassistant.components.nextdns.NextDns.set_setting", side_effect=exc),
-        pytest.raises(HomeAssistantError),
+        patch("menuai.components.nextdns.NextDns.set_setting", side_effect=exc),
+        pytest.raises(menuaiError),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SWITCH_DOMAIN,
             SERVICE_TURN_ON,
             {ATTR_ENTITY_ID: "switch.fake_profile_block_page"},
@@ -162,15 +162,15 @@ async def test_switch_failure(hass: HomeAssistant, exc: Exception) -> None:
         )
 
 
-async def test_switch_auth_error(hass: HomeAssistant) -> None:
+async def test_switch_auth_error(menuai: menuai) -> None:
     """Tests that the turn on/off action starts re-auth flow."""
-    entry = await init_integration(hass)
+    entry = await init_integration(menuai)
 
     with patch(
-        "homeassistant.components.nextdns.NextDns.set_setting",
+        "menuai.components.nextdns.NextDns.set_setting",
         side_effect=InvalidApiKeyError,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SWITCH_DOMAIN,
             SERVICE_TURN_ON,
             {ATTR_ENTITY_ID: "switch.fake_profile_block_page"},
@@ -179,7 +179,7 @@ async def test_switch_auth_error(hass: HomeAssistant) -> None:
 
     assert entry.state is ConfigEntryState.LOADED
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
 
     flow = flows[0]

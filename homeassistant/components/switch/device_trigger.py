@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant.components.device_automation import toggle_entity
-from homeassistant.const import CONF_DOMAIN
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant
-from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
-from homeassistant.helpers.typing import ConfigType
+from menuai.components.device_automation import toggle_entity
+from menuai.const import CONF_DOMAIN
+from menuai.core import CALLBACK_TYPE, menuai
+from menuai.helpers.trigger import TriggerActionType, TriggerInfo
+from menuai.helpers.typing import ConfigType
 
 from . import DOMAIN
 
@@ -19,24 +19,24 @@ TRIGGER_SCHEMA = vol.All(
 
 
 async def async_attach_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     action: TriggerActionType,
     trigger_info: TriggerInfo,
 ) -> CALLBACK_TYPE:
     """Listen for state changes based on configuration."""
-    return await toggle_entity.async_attach_trigger(hass, config, action, trigger_info)
+    return await toggle_entity.async_attach_trigger(menuai, config, action, trigger_info)
 
 
 async def async_get_triggers(
-    hass: HomeAssistant, device_id: str
+    menuai: menuai, device_id: str
 ) -> list[dict[str, str]]:
     """List device triggers."""
-    return await toggle_entity.async_get_triggers(hass, device_id, DOMAIN)
+    return await toggle_entity.async_get_triggers(menuai, device_id, DOMAIN)
 
 
 async def async_get_trigger_capabilities(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> dict[str, vol.Schema]:
     """List trigger capabilities."""
-    return await toggle_entity.async_get_trigger_capabilities(hass, config)
+    return await toggle_entity.async_get_trigger_capabilities(menuai, config)

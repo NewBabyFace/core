@@ -9,9 +9,9 @@ from typing import Any
 from google.oauth2.credentials import Credentials
 from gspread import Client, GSpreadException
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlowResult
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_TOKEN
-from homeassistant.helpers import config_entry_oauth2_flow
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlowResult
+from menuai.const import CONF_ACCESS_TOKEN, CONF_TOKEN
+from menuai.helpers import config_entry_oauth2_flow
 
 from .const import DEFAULT_ACCESS, DEFAULT_NAME, DOMAIN
 
@@ -64,7 +64,7 @@ class OAuth2FlowHandler(
             reauth_entry = self._get_reauth_entry()
             _LOGGER.debug("service.open_by_key")
             try:
-                await self.hass.async_add_executor_job(
+                await self.menuai.async_add_executor_job(
                     service.open_by_key,
                     reauth_entry.unique_id,
                 )
@@ -79,8 +79,8 @@ class OAuth2FlowHandler(
             return self.async_update_reload_and_abort(reauth_entry, data=data)
 
         try:
-            doc = await self.hass.async_add_executor_job(
-                service.create, "Home Assistant"
+            doc = await self.menuai.async_add_executor_job(
+                service.create, "MenuAI"
             )
         except GSpreadException as err:
             _LOGGER.error("Error creating spreadsheet: %s", str(err))

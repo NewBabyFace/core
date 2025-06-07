@@ -9,17 +9,17 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.select import (
+from menuai.components.select import (
     ATTR_OPTION,
     DOMAIN as SELECT_DOMAIN,
     SERVICE_SELECT_OPTION,
 )
-from homeassistant.components.sensibo.const import DOMAIN
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er, issue_registry as ir
+from menuai.components.sensibo.const import DOMAIN
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE, Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er, issue_registry as ir
 
 from . import ENTRY_CONFIG
 
@@ -31,7 +31,7 @@ from tests.common import MockConfigEntry, async_fire_time_changed, snapshot_plat
     [[Platform.SELECT]],
 )
 async def test_select(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
     mock_client: MagicMock,
     entity_registry: er.EntityRegistry,
@@ -40,22 +40,22 @@ async def test_select(
 ) -> None:
     """Test the Sensibo select."""
 
-    await snapshot_platform(hass, entity_registry, snapshot, load_int.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, load_int.entry_id)
 
     mock_client.async_get_devices_data.return_value.parsed[
         "AAZZAAZZ"
     ].light_mode = "dim"
 
     freezer.tick(timedelta(minutes=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("select.kitchen_light")
+    state = menuai.states.get("select.kitchen_light")
     assert state.state == "dim"
 
 
 async def test_select_set_option(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
     mock_client: MagicMock,
     freezer: FrozenDateTimeFactory,
@@ -73,10 +73,10 @@ async def test_select_set_option(
     ]
 
     freezer.tick(timedelta(minutes=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("select.kitchen_light")
+    state = menuai.states.get("select.kitchen_light")
     assert state.state == "on"
 
     mock_client.async_set_ac_state_property.return_value = {
@@ -84,16 +84,16 @@ async def test_select_set_option(
     }
 
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SELECT_DOMAIN,
             SERVICE_SELECT_OPTION,
             {ATTR_ENTITY_ID: state.entity_id, ATTR_OPTION: "dim"},
             blocking=True,
         )
 
-    state = hass.states.get("select.kitchen_light")
+    state = menuai.states.get("select.kitchen_light")
     assert state.state == "on"
 
     mock_client.async_get_devices_data.return_value.parsed[
@@ -106,38 +106,38 @@ async def test_select_set_option(
     ]
 
     freezer.tick(timedelta(minutes=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     mock_client.async_set_ac_state_property.return_value = {
         "result": {"status": "Failed", "failureReason": "No connection"}
     }
 
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SELECT_DOMAIN,
             SERVICE_SELECT_OPTION,
             {ATTR_ENTITY_ID: state.entity_id, ATTR_OPTION: "dim"},
             blocking=True,
         )
 
-    state = hass.states.get("select.kitchen_light")
+    state = menuai.states.get("select.kitchen_light")
     assert state.state == "on"
 
     mock_client.async_set_ac_state_property.return_value = {
         "result": {"status": "Success"}
     }
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SELECT_DOMAIN,
         SERVICE_SELECT_OPTION,
         {ATTR_ENTITY_ID: state.entity_id, ATTR_OPTION: "dim"},
         blocking=True,
     )
 
-    state = hass.states.get("select.kitchen_light")
+    state = menuai.states.get("select.kitchen_light")
     assert state.state == "dim"
 
     mock_client.async_get_devices_data.return_value.parsed[
@@ -149,10 +149,10 @@ async def test_select_set_option(
     ]
 
     freezer.tick(timedelta(minutes=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("select.kitchen_light")
+    state = menuai.states.get("select.kitchen_light")
     assert state.state == STATE_UNAVAILABLE
 
 
@@ -161,7 +161,7 @@ async def test_select_set_option(
     [[Platform.SELECT]],
 )
 async def test_deprecated_horizontal_swing_select(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_platforms: list[Platform],
     mock_client: MagicMock,
     entity_registry: er.EntityRegistry,
@@ -177,7 +177,7 @@ async def test_deprecated_horizontal_swing_select(
         version=2,
     )
 
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     entity_registry.async_get_or_create(
         SELECT_DOMAIN,
@@ -189,32 +189,32 @@ async def test_deprecated_horizontal_swing_select(
         suggested_object_id="hallway_horizontal_swing",
     )
 
-    with patch("homeassistant.components.sensibo.PLATFORMS", load_platforms):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+    with patch("menuai.components.sensibo.PLATFORMS", load_platforms):
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("select.hallway_horizontal_swing")
+    state = menuai.states.get("select.hallway_horizontal_swing")
     assert state.state == "stopped"
 
     # No issue created without automation or script
     assert issue_registry.issues == {}
 
     with (
-        patch("homeassistant.components.sensibo.PLATFORMS", load_platforms),
+        patch("menuai.components.sensibo.PLATFORMS", load_platforms),
         patch(
             # Patch check for automation, that one exist
-            "homeassistant.components.sensibo.select.automations_with_entity",
+            "menuai.components.sensibo.select.automations_with_entity",
             return_value=["automation.test"],
         ),
     ):
-        await hass.config_entries.async_reload(config_entry.entry_id)
-        await hass.async_block_till_done(True)
+        await menuai.config_entries.async_reload(config_entry.entry_id)
+        await menuai.async_block_till_done(True)
 
     # Issue is created when entity is enabled and automation/script exist
     issue = issue_registry.async_get_issue(DOMAIN, "deprecated_entity_horizontalswing")
     assert issue
     assert issue.translation_key == "deprecated_entity_horizontalswing"
-    assert hass.states.get("select.hallway_horizontal_swing")
+    assert menuai.states.get("select.hallway_horizontal_swing")
     assert entity_registry.async_is_registered("select.hallway_horizontal_swing")
 
     # Disabling the entity should remove the entity and remove the issue
@@ -224,17 +224,17 @@ async def test_deprecated_horizontal_swing_select(
     )
 
     with (
-        patch("homeassistant.components.sensibo.PLATFORMS", load_platforms),
+        patch("menuai.components.sensibo.PLATFORMS", load_platforms),
         patch(
-            "homeassistant.components.sensibo.select.automations_with_entity",
+            "menuai.components.sensibo.select.automations_with_entity",
             return_value=["automation.test"],
         ),
     ):
-        await hass.config_entries.async_reload(config_entry.entry_id)
-        await hass.async_block_till_done(True)
+        await menuai.config_entries.async_reload(config_entry.entry_id)
+        await menuai.async_block_till_done(True)
 
     # Disabling the entity and reloading has removed the entity and issue
-    assert not hass.states.get("select.hallway_horizontal_swing")
+    assert not menuai.states.get("select.hallway_horizontal_swing")
     assert not entity_registry.async_is_registered("select.hallway_horizontal_swing")
     issue = issue_registry.async_get_issue(DOMAIN, "deprecated_entity_horizontalswing")
     assert not issue

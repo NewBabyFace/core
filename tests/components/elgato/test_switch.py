@@ -6,15 +6,15 @@ from elgato import ElgatoError
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     DOMAIN as SWITCH_DOMAIN,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
 )
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 pytestmark = [
     pytest.mark.parametrize("device_fixtures", ["key-light-mini"]),
@@ -30,7 +30,7 @@ pytestmark = [
     ],
 )
 async def test_switches(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     mock_elgato: MagicMock,
@@ -39,7 +39,7 @@ async def test_switches(
     method: str,
 ) -> None:
     """Test the Elgato switches."""
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state == snapshot
 
     assert (entry := entity_registry.async_get(entity_id))
@@ -49,7 +49,7 @@ async def test_switches(
     assert (device_entry := device_registry.async_get(entry.device_id))
     assert device_entry == snapshot
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: entity_id},
@@ -60,7 +60,7 @@ async def test_switches(
     assert len(mocked_method.mock_calls) == 1
     mocked_method.assert_called_once_with(on=True)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: entity_id},
@@ -73,9 +73,9 @@ async def test_switches(
     mocked_method.side_effect = ElgatoError
 
     with pytest.raises(
-        HomeAssistantError, match="An error occurred while updating the Elgato Light"
+        menuaiError, match="An error occurred while updating the Elgato Light"
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SWITCH_DOMAIN,
             SERVICE_TURN_ON,
             {ATTR_ENTITY_ID: entity_id},
@@ -85,9 +85,9 @@ async def test_switches(
     assert len(mocked_method.mock_calls) == 3
 
     with pytest.raises(
-        HomeAssistantError, match="An error occurred while updating the Elgato Light"
+        menuaiError, match="An error occurred while updating the Elgato Light"
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SWITCH_DOMAIN,
             SERVICE_TURN_OFF,
             {ATTR_ENTITY_ID: entity_id},

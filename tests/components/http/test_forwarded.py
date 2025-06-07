@@ -8,7 +8,7 @@ from aiohttp import web
 from aiohttp.hdrs import X_FORWARDED_FOR, X_FORWARDED_HOST, X_FORWARDED_PROTO
 import pytest
 
-from homeassistant.components.http.forwarded import async_setup_forwarded
+from menuai.components.http.forwarded import async_setup_forwarded
 
 from tests.typing import ClientSessionGenerator
 
@@ -494,7 +494,7 @@ async def test_x_forwarded_cloud(
     mock_api_client = await aiohttp_client(app)
 
     with patch(
-        "hass_nabucasa.remote.is_cloud_request", Mock(get=Mock(return_value=True))
+        "menuai_nabucasa.remote.is_cloud_request", Mock(get=Mock(return_value=True))
     ):
         resp = await mock_api_client.get(
             "/", headers={X_FORWARDED_FOR: "222.222.222.222", X_FORWARDED_HOST: ""}

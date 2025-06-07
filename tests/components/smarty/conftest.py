@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from homeassistant.components.smarty.const import DOMAIN
-from homeassistant.const import CONF_HOST
+from menuai.components.smarty.const import DOMAIN
+from menuai.const import CONF_HOST
 
 from tests.common import MockConfigEntry
 
@@ -15,7 +15,7 @@ from tests.common import MockConfigEntry
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override integration setup."""
     with patch(
-        "homeassistant.components.smarty.async_setup_entry",
+        "menuai.components.smarty.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
         yield mock_setup_entry
@@ -26,11 +26,11 @@ def mock_smarty() -> Generator[AsyncMock]:
     """Mock a Smarty client."""
     with (
         patch(
-            "homeassistant.components.smarty.coordinator.Smarty",
+            "menuai.components.smarty.coordinator.Smarty",
             autospec=True,
         ) as mock_client,
         patch(
-            "homeassistant.components.smarty.config_flow.Smarty",
+            "menuai.components.smarty.config_flow.Smarty",
             new=mock_client,
         ),
     ):

@@ -2,17 +2,17 @@
 
 from __future__ import annotations
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai, callback
+from menuai.helpers import entity_registry as er
 
 from .const import _LOGGER
 from .models import IsyConfigEntry
 
 
 @callback
-def _async_cleanup_registry_entries(hass: HomeAssistant, entry: IsyConfigEntry) -> None:
+def _async_cleanup_registry_entries(menuai: menuai, entry: IsyConfigEntry) -> None:
     """Remove extra entities that are no longer part of the integration."""
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
     isy_data = entry.runtime_data
 
     existing_entries = er.async_entries_for_config_entry(

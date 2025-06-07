@@ -7,17 +7,17 @@ from unittest.mock import AsyncMock, Mock
 from uiprotect.data import Light
 from uiprotect.data.types import LEDLevel
 
-from homeassistant.components.light import ATTR_BRIGHTNESS
-from homeassistant.components.unifiprotect.const import DEFAULT_ATTRIBUTION
-from homeassistant.const import (
+from menuai.components.light import ATTR_BRIGHTNESS
+from menuai.components.unifiprotect.const import DEFAULT_ATTRIBUTION
+from menuai.const import (
     ATTR_ATTRIBUTION,
     ATTR_ENTITY_ID,
     STATE_OFF,
     STATE_ON,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .utils import (
     MockUFPFixture,
@@ -29,20 +29,20 @@ from .utils import (
 
 
 async def test_light_remove(
-    hass: HomeAssistant, ufp: MockUFPFixture, light: Light
+    menuai: menuai, ufp: MockUFPFixture, light: Light
 ) -> None:
     """Test removing and re-adding a light device."""
 
-    await init_entry(hass, ufp, [light])
-    assert_entity_counts(hass, Platform.LIGHT, 1, 1)
-    await remove_entities(hass, ufp, [light])
-    assert_entity_counts(hass, Platform.LIGHT, 0, 0)
-    await adopt_devices(hass, ufp, [light])
-    assert_entity_counts(hass, Platform.LIGHT, 1, 1)
+    await init_entry(menuai, ufp, [light])
+    assert_entity_counts(menuai, Platform.LIGHT, 1, 1)
+    await remove_entities(menuai, ufp, [light])
+    assert_entity_counts(menuai, Platform.LIGHT, 0, 0)
+    await adopt_devices(menuai, ufp, [light])
+    assert_entity_counts(menuai, Platform.LIGHT, 1, 1)
 
 
 async def test_light_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     ufp: MockUFPFixture,
     light: Light,
@@ -50,8 +50,8 @@ async def test_light_setup(
 ) -> None:
     """Test light entity setup."""
 
-    await init_entry(hass, ufp, [light, unadopted_light])
-    assert_entity_counts(hass, Platform.LIGHT, 1, 1)
+    await init_entry(menuai, ufp, [light, unadopted_light])
+    assert_entity_counts(menuai, Platform.LIGHT, 1, 1)
 
     unique_id = light.mac
     entity_id = "light.test_light"
@@ -60,19 +60,19 @@ async def test_light_setup(
     assert entity
     assert entity.unique_id == unique_id
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_ATTRIBUTION] == DEFAULT_ATTRIBUTION
 
 
 async def test_light_update(
-    hass: HomeAssistant, ufp: MockUFPFixture, light: Light, unadopted_light: Light
+    menuai: menuai, ufp: MockUFPFixture, light: Light, unadopted_light: Light
 ) -> None:
     """Test light entity update."""
 
-    await init_entry(hass, ufp, [light, unadopted_light])
-    assert_entity_counts(hass, Platform.LIGHT, 1, 1)
+    await init_entry(menuai, ufp, [light, unadopted_light])
+    assert_entity_counts(menuai, Platform.LIGHT, 1, 1)
 
     new_light = light.model_copy()
     new_light.is_light_on = True
@@ -84,27 +84,27 @@ async def test_light_update(
 
     ufp.api.bootstrap.lights = {new_light.id: new_light}
     ufp.ws_msg(mock_msg)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("light.test_light")
+    state = menuai.states.get("light.test_light")
     assert state
     assert state.state == STATE_ON
     assert state.attributes[ATTR_BRIGHTNESS] == 128
 
 
 async def test_light_turn_on(
-    hass: HomeAssistant, ufp: MockUFPFixture, light: Light, unadopted_light: Light
+    menuai: menuai, ufp: MockUFPFixture, light: Light, unadopted_light: Light
 ) -> None:
     """Test light entity turn on."""
 
     light._api = ufp.api
     light.api.set_light_is_led_force_on = AsyncMock()
 
-    await init_entry(hass, ufp, [light, unadopted_light])
-    assert_entity_counts(hass, Platform.LIGHT, 1, 1)
+    await init_entry(menuai, ufp, [light, unadopted_light])
+    assert_entity_counts(menuai, Platform.LIGHT, 1, 1)
 
     entity_id = "light.test_light"
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light", "turn_on", {ATTR_ENTITY_ID: entity_id}, blocking=True
     )
 
@@ -113,18 +113,18 @@ async def test_light_turn_on(
 
 
 async def test_light_turn_off(
-    hass: HomeAssistant, ufp: MockUFPFixture, light: Light, unadopted_light: Light
+    menuai: menuai, ufp: MockUFPFixture, light: Light, unadopted_light: Light
 ) -> None:
     """Test light entity turn off."""
 
     light._api = ufp.api
     light.api.set_light_is_led_force_on = AsyncMock()
 
-    await init_entry(hass, ufp, [light, unadopted_light])
-    assert_entity_counts(hass, Platform.LIGHT, 1, 1)
+    await init_entry(menuai, ufp, [light, unadopted_light])
+    assert_entity_counts(menuai, Platform.LIGHT, 1, 1)
 
     entity_id = "light.test_light"
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light", "turn_off", {ATTR_ENTITY_ID: entity_id}, blocking=True
     )
 

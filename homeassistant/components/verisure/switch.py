@@ -5,24 +5,24 @@ from __future__ import annotations
 from time import monotonic
 from typing import Any
 
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.components.switch import SwitchEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import CONF_GIID, DOMAIN
 from .coordinator import VerisureDataUpdateCoordinator
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Verisure alarm control panel from a config entry."""
-    coordinator: VerisureDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: VerisureDataUpdateCoordinator = menuai.data[DOMAIN][entry.entry_id]
     async_add_entities(
         VerisureSmartplug(coordinator, serial_number)
         for serial_number in coordinator.data["smart_plugs"]
@@ -93,7 +93,7 @@ class VerisureSmartplug(CoordinatorEntity[VerisureDataUpdateCoordinator], Switch
         command: dict[str, str | dict[str, str]] = (
             self.coordinator.verisure.set_smartplug(self.serial_number, state)
         )
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             self.coordinator.verisure.request,
             command,
         )

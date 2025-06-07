@@ -10,9 +10,9 @@ from aurorapy.client import AuroraError, AuroraSerialClient
 import serial.tools.list_ports
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import ATTR_SERIAL_NUMBER, CONF_ADDRESS, CONF_PORT
-from homeassistant.core import HomeAssistant
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import ATTR_SERIAL_NUMBER, CONF_ADDRESS, CONF_PORT
+from menuai.core import menuai
 
 from .const import (
     ATTR_FIRMWARE,
@@ -28,7 +28,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def validate_and_connect(
-    hass: HomeAssistant, data: Mapping[str, Any]
+    menuai: menuai, data: Mapping[str, Any]
 ) -> dict[str, str]:
     """Validate the user input allows us to connect.
 
@@ -87,7 +87,7 @@ class AuroraABBConfigFlow(ConfigFlow, domain=DOMAIN):
 
         errors = {}
         if self._com_ports_list is None:
-            result = await self.hass.async_add_executor_job(scan_comports)
+            result = await self.menuai.async_add_executor_job(scan_comports)
             self._com_ports_list, self._default_com_port = result
             if self._default_com_port is None:
                 return self.async_abort(reason="no_serial_ports")
@@ -97,8 +97,8 @@ class AuroraABBConfigFlow(ConfigFlow, domain=DOMAIN):
         # Handle the initial step.
         if user_input is not None:
             try:
-                info = await self.hass.async_add_executor_job(
-                    validate_and_connect, self.hass, user_input
+                info = await self.menuai.async_add_executor_job(
+                    validate_and_connect, self.menuai, user_input
                 )
             except OSError as error:
                 if error.errno == 19:  # No such device.

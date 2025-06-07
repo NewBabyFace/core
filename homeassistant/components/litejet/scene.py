@@ -5,12 +5,12 @@ from typing import Any
 
 from pylitejet import LiteJet, LiteJetError
 
-from homeassistant.components.scene import Scene
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.scene import Scene
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 
@@ -20,13 +20,13 @@ ATTR_NUMBER = "number"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up entry."""
 
-    system: LiteJet = hass.data[DOMAIN]
+    system: LiteJet = menuai.data[DOMAIN]
 
     entities = []
     for i in system.scenes():
@@ -55,12 +55,12 @@ class LiteJetScene(Scene):
             model=system.model_name,
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Run when this Entity has been added to HA."""
         self._lj.on_connected_changed(self._on_connected_changed)
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Entity being removed from hass."""
+    async def async_will_remove_from_menuai(self) -> None:
+        """Entity being removed from menuai."""
         self._lj.unsubscribe(self._on_connected_changed)
 
     def _on_connected_changed(self, connected: bool, reason: str) -> None:
@@ -77,4 +77,4 @@ class LiteJetScene(Scene):
         try:
             await self._lj.activate_scene(self._index)
         except LiteJetError as exc:
-            raise HomeAssistantError from exc
+            raise menuaiError from exc

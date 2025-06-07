@@ -10,9 +10,9 @@ from typing import Any
 
 from google_nest_sdm.streaming_manager import Message
 
-from homeassistant.components.application_credentials import ClientCredential
-from homeassistant.components.nest import DOMAIN
-from homeassistant.components.nest.const import API_URL
+from menuai.components.application_credentials import ClientCredential
+from menuai.components.nest import DOMAIN
+from menuai.components.nest.const import API_URL
 
 # Typing helpers
 type PlatformSetup = Callable[[], Awaitable[None]]

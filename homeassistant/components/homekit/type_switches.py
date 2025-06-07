@@ -14,23 +14,23 @@ from pyhap.const import (
     CATEGORY_SWITCH,
 )
 
-from homeassistant.components import button, input_button
-from homeassistant.components.input_select import ATTR_OPTIONS, SERVICE_SELECT_OPTION
-from homeassistant.components.lawn_mower import (
+from menuai.components import button, input_button
+from menuai.components.input_select import ATTR_OPTIONS, SERVICE_SELECT_OPTION
+from menuai.components.lawn_mower import (
     DOMAIN as LAWN_MOWER_DOMAIN,
     SERVICE_DOCK,
     SERVICE_START_MOWING,
     LawnMowerActivity,
 )
-from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
-from homeassistant.components.vacuum import (
+from menuai.components.switch import DOMAIN as SWITCH_DOMAIN
+from menuai.components.vacuum import (
     DOMAIN as VACUUM_DOMAIN,
     SERVICE_RETURN_TO_BASE,
     SERVICE_START,
     VacuumActivity,
     VacuumEntityFeature,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_SUPPORTED_FEATURES,
     CONF_TYPE,
@@ -43,8 +43,8 @@ from homeassistant.const import (
     STATE_OPEN,
     STATE_OPENING,
 )
-from homeassistant.core import HomeAssistant, State, callback, split_entity_id
-from homeassistant.helpers.event import async_call_later
+from menuai.core import menuai, State, callback, split_entity_id
+from menuai.helpers.event import async_call_later
 
 from .accessories import TYPES, HomeAccessory, HomeDriver
 from .const import (
@@ -97,7 +97,7 @@ class Outlet(HomeAccessory):
     def __init__(self, *args: Any) -> None:
         """Initialize an Outlet accessory object."""
         super().__init__(*args, category=CATEGORY_OUTLET)
-        state = self.hass.states.get(self.entity_id)
+        state = self.menuai.states.get(self.entity_id)
         assert state
 
         serv_outlet = self.add_preload_service(SERV_OUTLET)
@@ -134,7 +134,7 @@ class Switch(HomeAccessory):
         """Initialize a Switch accessory object."""
         super().__init__(*args, category=CATEGORY_SWITCH)
         self._domain, self._object_id = split_entity_id(self.entity_id)
-        state = self.hass.states.get(self.entity_id)
+        state = self.menuai.states.get(self.entity_id)
         assert state
 
         self.activate_only = self.is_activate(state)
@@ -177,7 +177,7 @@ class Switch(HomeAccessory):
         self.async_call_service(self._domain, service, params)
 
         if self.activate_only:
-            async_call_later(self.hass, ACTIVATE_ONLY_RESET_SECONDS, self.reset_switch)
+            async_call_later(self.menuai, ACTIVATE_ONLY_RESET_SECONDS, self.reset_switch)
 
     @callback
     def async_update_state(self, new_state: State) -> None:
@@ -201,7 +201,7 @@ class Vacuum(Switch):
     def set_state(self, value: bool) -> None:
         """Move switch state to value if call came from HomeKit."""
         _LOGGER.debug("%s: Set switch state to %s", self.entity_id, value)
-        state = self.hass.states.get(self.entity_id)
+        state = self.menuai.states.get(self.entity_id)
         assert state
 
         features = state.attributes.get(ATTR_SUPPORTED_FEATURES, 0)
@@ -232,7 +232,7 @@ class LawnMower(Switch):
     def set_state(self, value: bool) -> None:
         """Move switch state to value if call came from HomeKit."""
         _LOGGER.debug("%s: Set switch state to %s", self.entity_id, value)
-        state = self.hass.states.get(self.entity_id)
+        state = self.menuai.states.get(self.entity_id)
         assert state
 
         service = SERVICE_START_MOWING if value else SERVICE_DOCK
@@ -263,7 +263,7 @@ class ValveBase(HomeAccessory):
         """Initialize a Valve accessory object."""
         super().__init__(*args, **kwargs)
         self.domain = split_entity_id(self.entity_id)[0]
-        state = self.hass.states.get(self.entity_id)
+        state = self.menuai.states.get(self.entity_id)
         assert state
 
         self.category = VALVE_TYPE[valve_type].category
@@ -303,11 +303,11 @@ class ValveBase(HomeAccessory):
 
 @TYPES.register("ValveSwitch")
 class ValveSwitch(ValveBase):
-    """Generate a Valve accessory from a HomeAssistant switch."""
+    """Generate a Valve accessory from a menuai switch."""
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         driver: HomeDriver,
         name: str,
         entity_id: str,
@@ -321,7 +321,7 @@ class ValveSwitch(ValveBase):
             {STATE_ON},
             SERVICE_TURN_ON,
             SERVICE_TURN_OFF,
-            hass,
+            menuai,
             driver,
             name,
             entity_id,
@@ -333,7 +333,7 @@ class ValveSwitch(ValveBase):
 
 @TYPES.register("Valve")
 class Valve(ValveBase):
-    """Generate a Valve accessory from a HomeAssistant valve."""
+    """Generate a Valve accessory from a menuai valve."""
 
     def __init__(self, *args: Any) -> None:
         """Initialize a Valve accessory object."""
@@ -354,7 +354,7 @@ class SelectSwitch(HomeAccessory):
         """Initialize a Switch accessory object."""
         super().__init__(*args, category=CATEGORY_SWITCH)
         self.domain = split_entity_id(self.entity_id)[0]
-        state = self.hass.states.get(self.entity_id)
+        state = self.menuai.states.get(self.entity_id)
         assert state
 
         self.select_chars: dict[str, Characteristic] = {}

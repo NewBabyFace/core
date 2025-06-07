@@ -9,7 +9,7 @@ ATTR_PROPERTIES = "properties"
 
 DEFAULT_MANUFACTURER = "Samsung"
 
-VALUE_CONF_NAME = "HomeAssistant"
+VALUE_CONF_NAME = "menuai"
 VALUE_CONF_ID = "ha.component.samsung"
 
 CONF_MANUFACTURER = "manufacturer"

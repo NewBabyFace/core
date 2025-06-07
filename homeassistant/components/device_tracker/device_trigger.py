@@ -7,9 +7,9 @@ from typing import Final
 
 import voluptuous as vol
 
-from homeassistant.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA
-from homeassistant.components.zone import DOMAIN as DOMAIN_ZONE, trigger as zone
-from homeassistant.const import (
+from menuai.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA
+from menuai.components.zone import DOMAIN as DOMAIN_ZONE, trigger as zone
+from menuai.const import (
     CONF_DEVICE_ID,
     CONF_DOMAIN,
     CONF_ENTITY_ID,
@@ -18,10 +18,10 @@ from homeassistant.const import (
     CONF_TYPE,
     CONF_ZONE,
 )
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import CALLBACK_TYPE, menuai
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.trigger import TriggerActionType, TriggerInfo
+from menuai.helpers.typing import ConfigType
 
 from .const import DOMAIN
 
@@ -37,10 +37,10 @@ TRIGGER_SCHEMA: Final = DEVICE_TRIGGER_BASE_SCHEMA.extend(
 
 
 async def async_get_triggers(
-    hass: HomeAssistant, device_id: str
+    menuai: menuai, device_id: str
 ) -> list[dict[str, str]]:
     """List device triggers for Device Tracker devices."""
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     triggers = []
 
     # Get all the integrations entities for this device
@@ -71,7 +71,7 @@ async def async_get_triggers(
 
 
 async def async_attach_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     action: TriggerActionType,
     trigger_info: TriggerInfo,
@@ -88,19 +88,19 @@ async def async_attach_trigger(
         CONF_ZONE: config[CONF_ZONE],
         CONF_EVENT: event,
     }
-    zone_config = await zone.async_validate_trigger_config(hass, zone_config)
+    zone_config = await zone.async_validate_trigger_config(menuai, zone_config)
     return await zone.async_attach_trigger(
-        hass, zone_config, action, trigger_info, platform_type="device"
+        menuai, zone_config, action, trigger_info, platform_type="device"
     )
 
 
 async def async_get_trigger_capabilities(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> dict[str, vol.Schema]:
     """List trigger capabilities."""
     zones = {
         ent.entity_id: ent.name
-        for ent in sorted(hass.states.async_all(DOMAIN_ZONE), key=attrgetter("name"))
+        for ent in sorted(menuai.states.async_all(DOMAIN_ZONE), key=attrgetter("name"))
     }
     return {
         "extra_fields": vol.Schema(

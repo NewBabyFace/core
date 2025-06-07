@@ -7,14 +7,14 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.repairs import (
+from menuai.components.repairs import (
     ConfirmRepairFlow,
     RepairsFlow,
     repairs_flow_manager,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.data_entry_flow import FlowResult
-from homeassistant.helpers import issue_registry as ir
+from menuai.core import menuai, callback
+from menuai.data_entry_flow import FlowResult
+from menuai.helpers import issue_registry as ir
 
 from .const import DATA_CLOUD, DOMAIN
 from .subscription import async_migrate_paypal_agreement, async_subscription_info
@@ -25,7 +25,7 @@ MAX_RETRIES = 60  # This allows for 10 minutes of retries
 
 @callback
 def async_manage_legacy_subscription_issue(
-    hass: HomeAssistant,
+    menuai: menuai,
     subscription_info: dict[str, Any],
 ) -> None:
     """Manage the legacy subscription issue.
@@ -35,7 +35,7 @@ def async_manage_legacy_subscription_issue(
     """
     if subscription_info.get("provider") == "legacy":
         ir.async_create_issue(
-            hass=hass,
+            menuai=menuai,
             domain=DOMAIN,
             issue_id="legacy_subscription",
             is_fixable=True,
@@ -43,7 +43,7 @@ def async_manage_legacy_subscription_issue(
             translation_key="legacy_subscription",
         )
         return
-    ir.async_delete_issue(hass=hass, domain=DOMAIN, issue_id="legacy_subscription")
+    ir.async_delete_issue(menuai=menuai, domain=DOMAIN, issue_id="legacy_subscription")
 
 
 class LegacySubscriptionRepairFlow(RepairsFlow):
@@ -71,10 +71,10 @@ class LegacySubscriptionRepairFlow(RepairsFlow):
     async def async_step_change_plan(self, _: None = None) -> FlowResult:
         """Wait for the user to authorize the app installation."""
 
-        cloud = self.hass.data[DATA_CLOUD]
+        cloud = self.menuai.data[DATA_CLOUD]
 
         async def _async_wait_for_plan_change() -> None:
-            flow_manager = repairs_flow_manager(self.hass)
+            flow_manager = repairs_flow_manager(self.menuai)
             # We cannot get here without a flow manager
             assert flow_manager is not None
 
@@ -87,12 +87,12 @@ class LegacySubscriptionRepairFlow(RepairsFlow):
                 retries += 1
                 await asyncio.sleep(BACKOFF_TIME)
 
-            self.hass.async_create_task(
+            self.menuai.async_create_task(
                 flow_manager.async_configure(flow_id=self.flow_id)
             )
 
         if not self.wait_task:
-            self.wait_task = self.hass.async_create_task(
+            self.wait_task = self.menuai.async_create_task(
                 _async_wait_for_plan_change(), eager_start=False
             )
             migration = await async_migrate_paypal_agreement(cloud)
@@ -119,7 +119,7 @@ class LegacySubscriptionRepairFlow(RepairsFlow):
 
 
 async def async_create_fix_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     issue_id: str,
     data: dict[str, str | int | float | None] | None,
 ) -> RepairsFlow:

@@ -4,10 +4,10 @@ from unittest import mock
 
 import pytest
 
-from homeassistant.components import switch
-from homeassistant.components.mochad import switch as mochad
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components import switch
+from menuai.components.mochad import switch as mochad
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import MockEntityPlatform
 
@@ -16,23 +16,23 @@ from tests.common import MockEntityPlatform
 def pymochad_mock():
     """Mock pymochad."""
     with (
-        mock.patch("homeassistant.components.mochad.switch.device"),
-        mock.patch("homeassistant.components.mochad.switch.MochadException"),
+        mock.patch("menuai.components.mochad.switch.device"),
+        mock.patch("menuai.components.mochad.switch.MochadException"),
     ):
         yield
 
 
 @pytest.fixture
-def switch_mock(hass: HomeAssistant) -> mochad.MochadSwitch:
+def switch_mock(menuai: menuai) -> mochad.MochadSwitch:
     """Mock switch."""
     controller_mock = mock.MagicMock()
     dev_dict = {"address": "a1", "name": "fake_switch"}
-    entity = mochad.MochadSwitch(hass, controller_mock, dev_dict)
-    entity.platform = MockEntityPlatform(hass)
+    entity = mochad.MochadSwitch(menuai, controller_mock, dev_dict)
+    entity.platform = MockEntityPlatform(menuai)
     return entity
 
 
-async def test_setup_adds_proper_devices(hass: HomeAssistant) -> None:
+async def test_setup_adds_proper_devices(menuai: menuai) -> None:
     """Test if setup adds devices."""
     good_config = {
         "mochad": {},
@@ -41,7 +41,7 @@ async def test_setup_adds_proper_devices(hass: HomeAssistant) -> None:
             "devices": [{"name": "Switch1", "address": "a1"}],
         },
     }
-    assert await async_setup_component(hass, switch.DOMAIN, good_config)
+    assert await async_setup_component(menuai, switch.DOMAIN, good_config)
 
 
 async def test_name(switch_mock) -> None:

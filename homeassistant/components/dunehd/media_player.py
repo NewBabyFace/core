@@ -6,8 +6,8 @@ from typing import Any, Final
 
 from pdunehd import DuneHDPlayer
 
-from homeassistant.components import media_source
-from homeassistant.components.media_player import (
+from menuai.components import media_source
+from menuai.components.media_player import (
     BrowseMedia,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
@@ -15,9 +15,9 @@ from homeassistant.components.media_player import (
     MediaType,
     async_process_play_media_url,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import DuneHDConfigEntry
 from .const import ATTR_MANUFACTURER, DEFAULT_NAME, DOMAIN
@@ -37,7 +37,7 @@ DUNEHD_PLAYER_SUPPORT: Final[MediaPlayerEntityFeature] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: DuneHDConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -140,14 +140,14 @@ class DuneHDPlayerEntity(MediaPlayerEntity):
         # Handle media_source
         if media_source.is_media_source_id(media_id):
             sourced_media = await media_source.async_resolve_media(
-                self.hass, media_id, self.entity_id
+                self.menuai, media_id, self.entity_id
             )
             media_id = sourced_media.url
 
         # If media ID is a relative URL, we serve it from HA.
-        media_id = async_process_play_media_url(self.hass, media_id)
+        media_id = async_process_play_media_url(self.menuai, media_id)
 
-        self._state = await self.hass.async_add_executor_job(
+        self._state = await self.menuai.async_add_executor_job(
             self._player.launch_media_url, media_id
         )
 
@@ -157,7 +157,7 @@ class DuneHDPlayerEntity(MediaPlayerEntity):
         media_content_id: str | None = None,
     ) -> BrowseMedia:
         """Implement the websocket media browsing helper."""
-        return await media_source.async_browse_media(self.hass, media_content_id)
+        return await media_source.async_browse_media(self.menuai, media_content_id)
 
     @property
     def media_title(self) -> str | None:

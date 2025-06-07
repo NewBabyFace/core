@@ -9,9 +9,9 @@ from pylamarzocco.exceptions import RequestNotSuccessful
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.const import STATE_UNAVAILABLE, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import STATE_UNAVAILABLE, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import async_init_integration
 
@@ -22,7 +22,7 @@ pytestmark = pytest.mark.usefixtures("mock_websocket_terminated")
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_binary_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
@@ -30,32 +30,32 @@ async def test_binary_sensors(
     """Test the La Marzocco binary sensors."""
 
     with patch(
-        "homeassistant.components.lamarzocco.PLATFORMS", [Platform.BINARY_SENSOR]
+        "menuai.components.lamarzocco.PLATFORMS", [Platform.BINARY_SENSOR]
     ):
-        await async_init_integration(hass, mock_config_entry)
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+        await async_init_integration(menuai, mock_config_entry)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
 
 @pytest.fixture(autouse=True)
 def mock_websocket_terminated() -> Generator[bool]:
     """Mock websocket terminated."""
     with patch(
-        "homeassistant.components.lamarzocco.coordinator.LaMarzoccoUpdateCoordinator.websocket_terminated",
+        "menuai.components.lamarzocco.coordinator.LaMarzoccoUpdateCoordinator.websocket_terminated",
         new=False,
     ) as mock_websocket_terminated:
         yield mock_websocket_terminated
 
 
 async def test_brew_active_unavailable(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_lamarzocco: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test the La Marzocco brew active becomes unavailable."""
 
     mock_lamarzocco.websocket.connected = False
-    await async_init_integration(hass, mock_config_entry)
-    state = hass.states.get(
+    await async_init_integration(menuai, mock_config_entry)
+    state = menuai.states.get(
         f"binary_sensor.{mock_lamarzocco.serial_number}_brewing_active"
     )
     assert state
@@ -63,7 +63,7 @@ async def test_brew_active_unavailable(
 
 
 async def test_sensor_going_unavailable(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_lamarzocco: MagicMock,
     mock_config_entry: MockConfigEntry,
     freezer: FrozenDateTimeFactory,
@@ -72,18 +72,18 @@ async def test_sensor_going_unavailable(
     brewing_active_sensor = (
         f"binary_sensor.{mock_lamarzocco.serial_number}_brewing_active"
     )
-    await async_init_integration(hass, mock_config_entry)
+    await async_init_integration(menuai, mock_config_entry)
 
-    state = hass.states.get(brewing_active_sensor)
+    state = menuai.states.get(brewing_active_sensor)
     assert state
     assert state.state != STATE_UNAVAILABLE
 
     mock_lamarzocco.websocket.connected = False
     mock_lamarzocco.get_dashboard.side_effect = RequestNotSuccessful("")
     freezer.tick(timedelta(minutes=10))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(brewing_active_sensor)
+    state = menuai.states.get(brewing_active_sensor)
     assert state
     assert state.state == STATE_UNAVAILABLE

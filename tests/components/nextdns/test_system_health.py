@@ -5,24 +5,24 @@ import asyncio
 from aiohttp import ClientError
 from nextdns.const import API_ENDPOINT
 
-from homeassistant.components.nextdns.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.nextdns.const import DOMAIN
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import get_system_health_info
 from tests.test_util.aiohttp import AiohttpClientMocker
 
 
 async def test_nextdns_system_health(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test NextDNS system health."""
     aioclient_mock.get(API_ENDPOINT, text="")
-    hass.config.components.add(DOMAIN)
-    assert await async_setup_component(hass, "system_health", {})
-    await hass.async_block_till_done()
+    menuai.config.components.add(DOMAIN)
+    assert await async_setup_component(menuai, "system_health", {})
+    await menuai.async_block_till_done()
 
-    info = await get_system_health_info(hass, DOMAIN)
+    info = await get_system_health_info(menuai, DOMAIN)
 
     for key, val in info.items():
         if asyncio.iscoroutine(val):
@@ -32,15 +32,15 @@ async def test_nextdns_system_health(
 
 
 async def test_nextdns_system_health_fail(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test NextDNS system health."""
     aioclient_mock.get(API_ENDPOINT, exc=ClientError)
-    hass.config.components.add(DOMAIN)
-    assert await async_setup_component(hass, "system_health", {})
-    await hass.async_block_till_done()
+    menuai.config.components.add(DOMAIN)
+    assert await async_setup_component(menuai, "system_health", {})
+    await menuai.async_block_till_done()
 
-    info = await get_system_health_info(hass, DOMAIN)
+    info = await get_system_health_info(menuai, DOMAIN)
 
     for key, val in info.items():
         if asyncio.iscoroutine(val):

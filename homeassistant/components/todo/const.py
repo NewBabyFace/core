@@ -5,15 +5,15 @@ from __future__ import annotations
 from enum import IntFlag, StrEnum
 from typing import TYPE_CHECKING
 
-from homeassistant.util.hass_dict import HassKey
+from menuai.util.menuai_dict import menuaiKey
 
 if TYPE_CHECKING:
-    from homeassistant.helpers.entity_component import EntityComponent
+    from menuai.helpers.entity_component import EntityComponent
 
     from . import TodoListEntity
 
 DOMAIN = "todo"
-DATA_COMPONENT: HassKey[EntityComponent[TodoListEntity]] = HassKey(DOMAIN)
+DATA_COMPONENT: menuaiKey[EntityComponent[TodoListEntity]] = menuaiKey(DOMAIN)
 
 ATTR_DUE = "due"
 ATTR_DUE_DATE = "due_date"

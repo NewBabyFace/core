@@ -5,15 +5,15 @@ from unittest.mock import AsyncMock, patch
 from aiorecollect.errors import RecollectError
 import pytest
 
-from homeassistant.components.recollect_waste import (
+from menuai.components.recollect_waste import (
     CONF_PLACE_ID,
     CONF_SERVICE_ID,
     DOMAIN,
 )
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_FRIENDLY_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_FRIENDLY_NAME
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from .conftest import TEST_PLACE_ID, TEST_SERVICE_ID
 
@@ -28,7 +28,7 @@ from .conftest import TEST_PLACE_ID, TEST_SERVICE_ID
     ],
 )
 async def test_create_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     client,
     config,
     get_pickup_events_errors,
@@ -36,7 +36,7 @@ async def test_create_entry(
     mock_aiorecollect,
 ) -> None:
     """Test creating an entry."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -44,13 +44,13 @@ async def test_create_entry(
 
     # Test errors that can arise when checking the API key:
     with patch.object(client, "async_get_pickup_events", get_pickup_events_mock):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input=config
         )
         assert result["type"] is FlowResultType.FORM
         assert result["errors"] == get_pickup_events_errors
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input=config
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -61,9 +61,9 @@ async def test_create_entry(
     }
 
 
-async def test_duplicate_error(hass: HomeAssistant, config, setup_config_entry) -> None:
+async def test_duplicate_error(menuai: menuai, config, setup_config_entry) -> None:
     """Test that errors are shown when duplicates are added."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}, data=config
     )
     assert result["type"] is FlowResultType.ABORT
@@ -71,14 +71,14 @@ async def test_duplicate_error(hass: HomeAssistant, config, setup_config_entry) 
 
 
 async def test_options_flow(
-    hass: HomeAssistant, config, config_entry, setup_config_entry
+    menuai: menuai, config, config_entry, setup_config_entry
 ) -> None:
     """Test config flow options."""
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"], user_input={CONF_FRIENDLY_NAME: True}
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY

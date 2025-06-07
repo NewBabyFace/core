@@ -6,14 +6,14 @@ import logging
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.components.knx.const import (
+from menuai.components.knx.const import (
     CONF_PAYLOAD_LENGTH,
     KNX_ADDRESS,
     KNX_MODULE_KEY,
 )
-from homeassistant.components.knx.schema import ButtonSchema
-from homeassistant.const import CONF_NAME, CONF_PAYLOAD, CONF_TYPE
-from homeassistant.core import HomeAssistant
+from menuai.components.knx.schema import ButtonSchema
+from menuai.const import CONF_NAME, CONF_PAYLOAD, CONF_TYPE
+from menuai.core import menuai
 
 from .conftest import KNXTestKit
 
@@ -21,7 +21,7 @@ from tests.common import async_capture_events, async_fire_time_changed
 
 
 async def test_button_simple(
-    hass: HomeAssistant, knx: KNXTestKit, freezer: FrozenDateTimeFactory
+    menuai: menuai, knx: KNXTestKit, freezer: FrozenDateTimeFactory
 ) -> None:
     """Test KNX button with default payload."""
     await knx.setup_integration(
@@ -32,10 +32,10 @@ async def test_button_simple(
             }
         }
     )
-    events = async_capture_events(hass, "state_changed")
+    events = async_capture_events(menuai, "state_changed")
 
     # press button
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "button", "press", {"entity_id": "button.test"}, blocking=True
     )
     await knx.assert_write("1/2/3", True)
@@ -43,12 +43,12 @@ async def test_button_simple(
     events.pop()
 
     # received telegrams on button GA are ignored by the entity
-    old_state = hass.states.get("button.test")
+    old_state = menuai.states.get("button.test")
     freezer.tick(timedelta(seconds=3))
-    async_fire_time_changed(hass)
+    async_fire_time_changed(menuai)
     await knx.receive_write("1/2/3", False)
     await knx.receive_write("1/2/3", True)
-    new_state = hass.states.get("button.test")
+    new_state = menuai.states.get("button.test")
     assert old_state == new_state
     assert len(events) == 0
 
@@ -57,7 +57,7 @@ async def test_button_simple(
     await knx.assert_telegram_count(0)
 
 
-async def test_button_raw(hass: HomeAssistant, knx: KNXTestKit) -> None:
+async def test_button_raw(menuai: menuai, knx: KNXTestKit) -> None:
     """Test KNX button with raw payload."""
     await knx.setup_integration(
         {
@@ -70,13 +70,13 @@ async def test_button_raw(hass: HomeAssistant, knx: KNXTestKit) -> None:
         }
     )
     # press button
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "button", "press", {"entity_id": "button.test"}, blocking=True
     )
     await knx.assert_write("1/2/3", False)
 
 
-async def test_button_type(hass: HomeAssistant, knx: KNXTestKit) -> None:
+async def test_button_type(menuai: menuai, knx: KNXTestKit) -> None:
     """Test KNX button with encoded payload."""
     await knx.setup_integration(
         {
@@ -89,7 +89,7 @@ async def test_button_type(hass: HomeAssistant, knx: KNXTestKit) -> None:
         }
     )
     # press button
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "button", "press", {"entity_id": "button.test"}, blocking=True
     )
     await knx.assert_write("1/2/3", (0x0C, 0x33))
@@ -111,7 +111,7 @@ async def test_button_type(hass: HomeAssistant, knx: KNXTestKit) -> None:
     ],
 )
 async def test_button_invalid(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     knx: KNXTestKit,
     conf_type: str,
@@ -137,5 +137,5 @@ async def test_button_invalid(
         record = caplog.records[1]
         assert record.levelname == "ERROR"
         assert "Setup failed for 'knx': Invalid config." in record.message
-    assert hass.states.get("button.test") is None
-    assert hass.data.get(KNX_MODULE_KEY) is None
+    assert menuai.states.get("button.test") is None
+    assert menuai.data.get(KNX_MODULE_KEY) is None

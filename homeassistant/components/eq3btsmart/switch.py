@@ -7,9 +7,9 @@ from typing import TYPE_CHECKING, Any
 from eq3btsmart import Thermostat
 from eq3btsmart.models import Status
 
-from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchEntity, SwitchEntityDescription
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import Eq3ConfigEntry
 from .const import ENTITY_KEY_AWAY, ENTITY_KEY_BOOST, ENTITY_KEY_LOCK
@@ -47,7 +47,7 @@ SWITCH_ENTITY_DESCRIPTIONS = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: Eq3ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

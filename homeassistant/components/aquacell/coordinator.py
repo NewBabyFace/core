@@ -11,11 +11,11 @@ from aioaquacell import (
     Softener,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryError
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_EMAIL, CONF_PASSWORD
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryError
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
     CONF_REFRESH_TOKEN,
@@ -36,13 +36,13 @@ class AquacellCoordinator(DataUpdateCoordinator[dict[str, Softener]]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: AquacellConfigEntry,
         aquacell_api: AquacellApi,
     ) -> None:
         """Initialize coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name="Aquacell Coordinator",
@@ -95,4 +95,4 @@ class AquacellCoordinator(DataUpdateCoordinator[dict[str, Softener]]):
             CONF_REFRESH_TOKEN_CREATION_TIME: datetime.now().timestamp(),
         }
 
-        self.hass.config_entries.async_update_entry(self.config_entry, data=data)
+        self.menuai.config_entries.async_update_entry(self.config_entry, data=data)

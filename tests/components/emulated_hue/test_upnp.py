@@ -11,11 +11,11 @@ from aiohttp.test_utils import TestClient
 import defusedxml.ElementTree as ET
 import pytest
 
-from homeassistant import setup
-from homeassistant.components import emulated_hue
-from homeassistant.components.emulated_hue import upnp
-from homeassistant.const import CONTENT_TYPE_JSON
-from homeassistant.core import HomeAssistant
+from menuai import setup
+from menuai.components import emulated_hue
+from menuai.components.emulated_hue import upnp
+from menuai.const import CONTENT_TYPE_JSON
+from menuai.core import menuai
 
 from tests.common import get_test_instance_port
 from tests.typing import ClientSessionGenerator
@@ -51,7 +51,7 @@ def hue_client(
     """Return a hue API client."""
     app = web.Application()
     with unittest.mock.patch(
-        "homeassistant.components.emulated_hue.web.Application", return_value=app
+        "menuai.components.emulated_hue.web.Application", return_value=app
     ):
 
         async def client():
@@ -61,17 +61,17 @@ def hue_client(
         yield client
 
 
-async def setup_hue(hass: HomeAssistant) -> None:
+async def setup_hue(menuai: menuai) -> None:
     """Set up the emulated_hue integration."""
     with patch(
-        "homeassistant.components.emulated_hue.async_create_upnp_datagram_endpoint"
+        "menuai.components.emulated_hue.async_create_upnp_datagram_endpoint"
     ):
         assert await setup.async_setup_component(
-            hass,
+            menuai,
             emulated_hue.DOMAIN,
             {emulated_hue.DOMAIN: {emulated_hue.CONF_LISTEN_PORT: BRIDGE_SERVER_PORT}},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
 
 def test_upnp_discovery_basic() -> None:
@@ -159,9 +159,9 @@ MX:3
     assert not mock_transport.sends
 
 
-async def test_description_xml(hass: HomeAssistant, hue_client) -> None:
+async def test_description_xml(menuai: menuai, hue_client) -> None:
     """Test the description."""
-    await setup_hue(hass)
+    await setup_hue(menuai)
     client = await hue_client()
     result = await client.get("/description.xml", timeout=5)
 
@@ -176,9 +176,9 @@ async def test_description_xml(hass: HomeAssistant, hue_client) -> None:
         pytest.fail("description.xml is not valid XML!")
 
 
-async def test_create_username(hass: HomeAssistant, hue_client) -> None:
+async def test_create_username(menuai: menuai, hue_client) -> None:
     """Test the creation of an username."""
-    await setup_hue(hass)
+    await setup_hue(menuai)
     client = await hue_client()
     request_json = {"devicetype": "my_device"}
 
@@ -194,9 +194,9 @@ async def test_create_username(hass: HomeAssistant, hue_client) -> None:
     assert "username" in success_json["success"]
 
 
-async def test_unauthorized_view(hass: HomeAssistant, hue_client) -> None:
+async def test_unauthorized_view(menuai: menuai, hue_client) -> None:
     """Test unauthorized view."""
-    await setup_hue(hass)
+    await setup_hue(menuai)
     client = await hue_client()
     request_json = {"devicetype": "my_device"}
 
@@ -220,9 +220,9 @@ async def test_unauthorized_view(hass: HomeAssistant, hue_client) -> None:
     assert "1" in error_json["type"]
 
 
-async def test_valid_username_request(hass: HomeAssistant, hue_client) -> None:
+async def test_valid_username_request(menuai: menuai, hue_client) -> None:
     """Test request with a valid username."""
-    await setup_hue(hass)
+    await setup_hue(menuai)
     client = await hue_client()
     request_json = {"invalid_key": "my_device"}
 

@@ -6,13 +6,13 @@ from typing import Any
 
 from pysmlight.const import Actions
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .coordinator import SmConfigEntry
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, config_entry: SmConfigEntry
+    menuai: menuai, config_entry: SmConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     coordintator = config_entry.runtime_data.data

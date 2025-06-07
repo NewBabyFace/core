@@ -9,9 +9,9 @@ from typing import Any
 from aioskybell import Skybell, exceptions
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_EMAIL, CONF_PASSWORD
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN
 
@@ -90,7 +90,7 @@ class SkybellFlowHandler(ConfigFlow, domain=DOMAIN):
             username=email,
             password=password,
             disable_cache=True,
-            session=async_get_clientsession(self.hass),
+            session=async_get_clientsession(self.menuai),
         )
         try:
             await skybell.async_initialize()

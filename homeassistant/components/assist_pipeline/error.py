@@ -1,9 +1,9 @@
 """Assist pipeline errors."""
 
-from homeassistant.exceptions import HomeAssistantError
+from menuai.exceptions import menuaiError
 
 
-class PipelineError(HomeAssistantError):
+class PipelineError(menuaiError):
     """Base class for pipeline errors."""
 
     def __init__(self, code: str, message: str) -> None:

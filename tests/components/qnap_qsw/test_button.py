@@ -2,39 +2,39 @@
 
 from unittest.mock import patch
 
-from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
-from homeassistant.const import ATTR_ENTITY_ID, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
+from menuai.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
+from menuai.const import ATTR_ENTITY_ID, STATE_UNKNOWN
+from menuai.core import menuai
 
 from .util import SYSTEM_COMMAND_MOCK, USERS_VERIFICATION_MOCK, async_init_integration
 
 
-async def test_qnap_buttons(hass: HomeAssistant) -> None:
+async def test_qnap_buttons(menuai: menuai) -> None:
     """Test buttons."""
 
-    await async_init_integration(hass)
+    await async_init_integration(menuai)
 
-    state = hass.states.get("button.qsw_m408_4c_restart")
+    state = menuai.states.get("button.qsw_m408_4c_restart")
     assert state
     assert state.state == STATE_UNKNOWN
 
     with (
         patch(
-            "homeassistant.components.qnap_qsw.QnapQswApi.get_users_verification",
+            "menuai.components.qnap_qsw.QnapQswApi.get_users_verification",
             return_value=USERS_VERIFICATION_MOCK,
         ) as mock_users_verification,
         patch(
-            "homeassistant.components.qnap_qsw.QnapQswApi.post_system_command",
+            "menuai.components.qnap_qsw.QnapQswApi.post_system_command",
             return_value=SYSTEM_COMMAND_MOCK,
         ) as mock_post_system_command,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             BUTTON_DOMAIN,
             SERVICE_PRESS,
             {ATTR_ENTITY_ID: "button.qsw_m408_4c_restart"},
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         mock_users_verification.assert_called_once()
         mock_post_system_command.assert_called_once()

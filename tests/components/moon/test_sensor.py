@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components.moon.sensor import (
+from menuai.components.moon.sensor import (
     STATE_FIRST_QUARTER,
     STATE_FULL_MOON,
     STATE_LAST_QUARTER,
@@ -16,10 +16,10 @@ from homeassistant.components.moon.sensor import (
     STATE_WAXING_CRESCENT,
     STATE_WAXING_GIBBOUS,
 )
-from homeassistant.components.sensor import ATTR_OPTIONS, SensorDeviceClass
-from homeassistant.const import ATTR_DEVICE_CLASS, ATTR_FRIENDLY_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.components.sensor import ATTR_OPTIONS, SensorDeviceClass
+from menuai.const import ATTR_DEVICE_CLASS, ATTR_FRIENDLY_NAME
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from tests.common import MockConfigEntry
 
@@ -38,7 +38,7 @@ from tests.common import MockConfigEntry
     ],
 )
 async def test_moon_day(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     mock_config_entry: MockConfigEntry,
@@ -46,15 +46,15 @@ async def test_moon_day(
     native_value: str,
 ) -> None:
     """Test the Moon sensor."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.moon.sensor.moon.phase", return_value=moon_value
+        "menuai.components.moon.sensor.moon.phase", return_value=moon_value
     ):
-        await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.moon_phase")
+    state = menuai.states.get("sensor.moon_phase")
     assert state
     assert state.state == native_value
     assert state.attributes[ATTR_FRIENDLY_NAME] == "Moon Phase"

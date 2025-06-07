@@ -3,14 +3,14 @@ requires = ["setuptools==78.1.1"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "homeassistant"
+name = "menuai"
 version = "2025.7.0.dev0"
 license = "Apache-2.0"
-license-files = ["LICENSE*", "homeassistant/backports/LICENSE*"]
+license-files = ["LICENSE*", "menuai/backports/LICENSE*"]
 description = "Open-source home automation platform running on Python 3."
 readme = "README.rst"
 authors = [
-  { name = "The Home Assistant Authors", email = "hello@home-assistant.io" },
+  { name = "The MenuAI Authors", email = "hello@home-assistant.io" },
 ]
 keywords = ["home", "automation"]
 classifiers = [
@@ -24,7 +24,7 @@ classifiers = [
 requires-python = ">=3.13.2"
 dependencies = [
   "aiodns==3.4.0",
-  # Integrations may depend on hassio integration without listing it to
+  # Integrations may depend on menuaiio integration without listing it to
   # change behavior based on presence of supervisor. Deprecated with #127228
   # Lib can be removed with 2025.11
   "aiohasupervisor==0.3.1",
@@ -37,7 +37,7 @@ dependencies = [
   "astral==2.2",
   "async-interrupt==1.2.2",
   "attrs==25.3.0",
-  "atomicwrites-homeassistant==1.4.1",
+  "atomicwrites-menuai==1.4.1",
   "audioop-lts==0.2.1",
   "awesomeversion==24.6.0",
   "bcrypt==4.3.0",
@@ -50,14 +50,14 @@ dependencies = [
   # to be setup in stage 0, but we don't want to also promote cloud with all its
   # dependencies to stage 0.
   "ha-ffmpeg==3.2.2",
-  # hass-nabucasa is imported by helpers which don't depend on the cloud
+  # menuai-nabucasa is imported by helpers which don't depend on the cloud
   # integration
-  "hass-nabucasa==0.101.0",
-  # hassil is indirectly imported from onboarding via the import chain
-  # onboarding->cloud->assist_pipeline->conversation->hassil. Onboarding needs
+  "menuai-nabucasa==0.101.0",
+  # menuaiil is indirectly imported from onboarding via the import chain
+  # onboarding->cloud->assist_pipeline->conversation->menuaiil. Onboarding needs
   # to be setup in stage 0, but we don't want to also promote cloud with all its
   # dependencies to stage 0.
-  "hassil==2.2.3",
+  "menuaiil==2.2.3",
   # When bumping httpx, please check the version pins of
   # httpcore, anyio, and h11 in gen_requirements_all
   "httpx==0.28.1",
@@ -135,13 +135,13 @@ dependencies = [
 "Forum" = "https://community.home-assistant.io/"
 
 [project.scripts]
-hass = "homeassistant.__main__:main"
+menuai = "menuai.__main__:main"
 
 [tool.setuptools]
 include-package-data = true
 
 [tool.setuptools.packages.find]
-include = ["homeassistant*"]
+include = ["menuai*"]
 
 [tool.pylint.MAIN]
 py-version = "3.13"
@@ -161,14 +161,14 @@ init-hook = """\
 load-plugins = [
   "pylint.extensions.code_style",
   "pylint.extensions.typing",
-  "hass_decorator",
-  "hass_enforce_class_module",
-  "hass_enforce_sorted_platforms",
-  "hass_enforce_super_call",
-  "hass_enforce_type_hints",
-  "hass_inheritance",
-  "hass_imports",
-  "hass_logger",
+  "menuai_decorator",
+  "menuai_enforce_class_module",
+  "menuai_enforce_sorted_platforms",
+  "menuai_enforce_super_call",
+  "menuai_enforce_type_hints",
+  "menuai_inheritance",
+  "menuai_imports",
+  "menuai_logger",
   "pylint_per_file_ignores",
 ]
 persistent = false
@@ -474,7 +474,7 @@ expected-line-ending-format = "LF"
 overgeneral-exceptions = [
   "builtins.BaseException",
   "builtins.Exception",
-  # "homeassistant.exceptions.HomeAssistantError",  # too many issues
+  # "menuai.exceptions.menuaiError",  # too many issues
 ]
 
 [tool.pylint.TYPING]
@@ -494,11 +494,11 @@ filterwarnings = [
   "error::sqlalchemy.exc.SAWarning",
   "error:usefixtures\\(\\) in .* without arguments has no effect:UserWarning",  # pytest
 
-  # -- HomeAssistant - aiohttp
+  # -- menuai - aiohttp
   # Overwrite web.Application to pass a custom default argument to _make_request
-  "ignore:Inheritance class HomeAssistantApplication from web.Application is discouraged:DeprecationWarning",
-  # Hass wraps `ClientSession.close` to emit a warning if the session is closed accidentally
-  "ignore:Setting custom ClientSession.close attribute is discouraged:DeprecationWarning:homeassistant.helpers.aiohttp_client",
+  "ignore:Inheritance class menuaiApplication from web.Application is discouraged:DeprecationWarning",
+  # menuai wraps `ClientSession.close` to emit a warning if the session is closed accidentally
+  "ignore:Setting custom ClientSession.close attribute is discouraged:DeprecationWarning:menuai.helpers.aiohttp_client",
   # Modify app state for testing
   "ignore:Changing state of started or joined application is deprecated:DeprecationWarning:tests.components.http.test_ban",
 
@@ -590,7 +590,7 @@ filterwarnings = [
   # https://github.com/briis/pyweatherflowudp/blob/v1.4.5/pyweatherflowudp/const.py#L20 - v1.4.5 - 2023-10-10
   "ignore:This function will be removed in future versions of pint:DeprecationWarning:pyweatherflowudp.const",
   # New in aiohttp - v3.9.0
-  "ignore:It is recommended to use web.AppKey instances for keys:UserWarning:(homeassistant|tests|aiohttp_cors)",
+  "ignore:It is recommended to use web.AppKey instances for keys:UserWarning:(menuai|tests|aiohttp_cors)",
   # - SyntaxWarnings
   # https://pypi.org/project/aprslib/ - v0.7.2 - 2022-07-10
   "ignore:invalid escape sequence:SyntaxWarning:.*aprslib.parsing.common",
@@ -622,7 +622,7 @@ filterwarnings = [
   "ignore:'count' is passed as positional argument:DeprecationWarning:feedparser.html",
   # https://github.com/youknowone/python-deadlib - Backports for aifc, telnetlib
   "ignore:aifc was removed in Python 3.13.*'standard-aifc':DeprecationWarning:speech_recognition",
-  "ignore:telnetlib was removed in Python 3.13.*'standard-telnetlib':DeprecationWarning:homeassistant.components.hddtemp.sensor",
+  "ignore:telnetlib was removed in Python 3.13.*'standard-telnetlib':DeprecationWarning:menuai.components.hddtemp.sensor",
   "ignore:telnetlib was removed in Python 3.13.*'standard-telnetlib':DeprecationWarning:ndms2_client.connection",
   "ignore:telnetlib was removed in Python 3.13.*'standard-telnetlib':DeprecationWarning:plumlightpad.lightpad",
   "ignore:telnetlib was removed in Python 3.13.*'standard-telnetlib':DeprecationWarning:pyws66i",
@@ -630,7 +630,7 @@ filterwarnings = [
   # -- Websockets 14.1
   # https://websockets.readthedocs.io/en/stable/howto/upgrade.html
   "ignore:websockets.legacy is deprecated:DeprecationWarning:websockets.legacy",
-  # https://github.com/bluecurrent/HomeAssistantAPI
+  # https://github.com/bluecurrent/menuaiAPI
   "ignore:websockets.client.connect is deprecated:DeprecationWarning:bluecurrent_api.websocket",
   "ignore:websockets.client.WebSocketClientProtocol is deprecated:DeprecationWarning:bluecurrent_api.websocket",
   "ignore:websockets.exceptions.InvalidStatusCode is deprecated:DeprecationWarning:bluecurrent_api.websocket",
@@ -680,7 +680,7 @@ filterwarnings = [
 ]
 
 [tool.coverage.run]
-source = ["homeassistant"]
+source = ["menuai"]
 
 [tool.coverage.report]
 exclude_lines = [
@@ -858,65 +858,65 @@ ignore = [
 
 [tool.ruff.lint.flake8-import-conventions.extend-aliases]
 voluptuous = "vol"
-"homeassistant.components.air_quality.PLATFORM_SCHEMA" = "AIR_QUALITY_PLATFORM_SCHEMA"
-"homeassistant.components.alarm_control_panel.PLATFORM_SCHEMA" = "ALARM_CONTROL_PANEL_PLATFORM_SCHEMA"
-"homeassistant.components.binary_sensor.PLATFORM_SCHEMA" = "BINARY_SENSOR_PLATFORM_SCHEMA"
-"homeassistant.components.button.PLATFORM_SCHEMA" = "BUTTON_PLATFORM_SCHEMA"
-"homeassistant.components.calendar.PLATFORM_SCHEMA" = "CALENDAR_PLATFORM_SCHEMA"
-"homeassistant.components.camera.PLATFORM_SCHEMA" = "CAMERA_PLATFORM_SCHEMA"
-"homeassistant.components.climate.PLATFORM_SCHEMA" = "CLIMATE_PLATFORM_SCHEMA"
-"homeassistant.components.conversation.PLATFORM_SCHEMA" = "CONVERSATION_PLATFORM_SCHEMA"
-"homeassistant.components.cover.PLATFORM_SCHEMA" = "COVER_PLATFORM_SCHEMA"
-"homeassistant.components.date.PLATFORM_SCHEMA" = "DATE_PLATFORM_SCHEMA"
-"homeassistant.components.datetime.PLATFORM_SCHEMA" = "DATETIME_PLATFORM_SCHEMA"
-"homeassistant.components.device_tracker.PLATFORM_SCHEMA" = "DEVICE_TRACKER_PLATFORM_SCHEMA"
-"homeassistant.components.event.PLATFORM_SCHEMA" = "EVENT_PLATFORM_SCHEMA"
-"homeassistant.components.fan.PLATFORM_SCHEMA" = "FAN_PLATFORM_SCHEMA"
-"homeassistant.components.geo_location.PLATFORM_SCHEMA" = "GEO_LOCATION_PLATFORM_SCHEMA"
-"homeassistant.components.humidifier.PLATFORM_SCHEMA" = "HUMIDIFIER_PLATFORM_SCHEMA"
-"homeassistant.components.image.PLATFORM_SCHEMA" = "IMAGE_PLATFORM_SCHEMA"
-"homeassistant.components.image_processing.PLATFORM_SCHEMA" = "IMAGE_PROCESSING_PLATFORM_SCHEMA"
-"homeassistant.components.lawn_mower.PLATFORM_SCHEMA" = "LAWN_MOWER_PLATFORM_SCHEMA"
-"homeassistant.components.light.PLATFORM_SCHEMA" = "LIGHT_PLATFORM_SCHEMA"
-"homeassistant.components.lock.PLATFORM_SCHEMA" = "LOCK_PLATFORM_SCHEMA"
-"homeassistant.components.media_player.PLATFORM_SCHEMA" = "MEDIA_PLAYER_PLATFORM_SCHEMA"
-"homeassistant.components.notify.PLATFORM_SCHEMA" = "NOTIFY_PLATFORM_SCHEMA"
-"homeassistant.components.number.PLATFORM_SCHEMA" = "NUMBER_PLATFORM_SCHEMA"
-"homeassistant.components.remote.PLATFORM_SCHEMA" = "REMOTE_PLATFORM_SCHEMA"
-"homeassistant.components.scene.PLATFORM_SCHEMA" = "SCENE_PLATFORM_SCHEMA"
-"homeassistant.components.select.PLATFORM_SCHEMA" = "SELECT_PLATFORM_SCHEMA"
-"homeassistant.components.sensor.PLATFORM_SCHEMA" = "SENSOR_PLATFORM_SCHEMA"
-"homeassistant.components.siren.PLATFORM_SCHEMA" = "SIREN_PLATFORM_SCHEMA"
-"homeassistant.components.stt.PLATFORM_SCHEMA" = "STT_PLATFORM_SCHEMA"
-"homeassistant.components.switch.PLATFORM_SCHEMA" = "SWITCH_PLATFORM_SCHEMA"
-"homeassistant.components.text.PLATFORM_SCHEMA" = "TEXT_PLATFORM_SCHEMA"
-"homeassistant.components.time.PLATFORM_SCHEMA" = "TIME_PLATFORM_SCHEMA"
-"homeassistant.components.todo.PLATFORM_SCHEMA" = "TODO_PLATFORM_SCHEMA"
-"homeassistant.components.tts.PLATFORM_SCHEMA" = "TTS_PLATFORM_SCHEMA"
-"homeassistant.components.vacuum.PLATFORM_SCHEMA" = "VACUUM_PLATFORM_SCHEMA"
-"homeassistant.components.valve.PLATFORM_SCHEMA" = "VALVE_PLATFORM_SCHEMA"
-"homeassistant.components.update.PLATFORM_SCHEMA" = "UPDATE_PLATFORM_SCHEMA"
-"homeassistant.components.wake_word.PLATFORM_SCHEMA" = "WAKE_WORD_PLATFORM_SCHEMA"
-"homeassistant.components.water_heater.PLATFORM_SCHEMA" = "WATER_HEATER_PLATFORM_SCHEMA"
-"homeassistant.components.weather.PLATFORM_SCHEMA" = "WEATHER_PLATFORM_SCHEMA"
-"homeassistant.core.DOMAIN" = "HOMEASSISTANT_DOMAIN"
-"homeassistant.helpers.area_registry" = "ar"
-"homeassistant.helpers.category_registry" = "cr"
-"homeassistant.helpers.config_validation" = "cv"
-"homeassistant.helpers.device_registry" = "dr"
-"homeassistant.helpers.entity_registry" = "er"
-"homeassistant.helpers.floor_registry" = "fr"
-"homeassistant.helpers.issue_registry" = "ir"
-"homeassistant.helpers.label_registry" = "lr"
-"homeassistant.util.color" = "color_util"
-"homeassistant.util.dt" = "dt_util"
-"homeassistant.util.json" = "json_util"
-"homeassistant.util.location" = "location_util"
-"homeassistant.util.logging" = "logging_util"
-"homeassistant.util.network" = "network_util"
-"homeassistant.util.ulid" = "ulid_util"
-"homeassistant.util.uuid" = "uuid_util"
-"homeassistant.util.yaml" = "yaml_util"
+"menuai.components.air_quality.PLATFORM_SCHEMA" = "AIR_QUALITY_PLATFORM_SCHEMA"
+"menuai.components.alarm_control_panel.PLATFORM_SCHEMA" = "ALARM_CONTROL_PANEL_PLATFORM_SCHEMA"
+"menuai.components.binary_sensor.PLATFORM_SCHEMA" = "BINARY_SENSOR_PLATFORM_SCHEMA"
+"menuai.components.button.PLATFORM_SCHEMA" = "BUTTON_PLATFORM_SCHEMA"
+"menuai.components.calendar.PLATFORM_SCHEMA" = "CALENDAR_PLATFORM_SCHEMA"
+"menuai.components.camera.PLATFORM_SCHEMA" = "CAMERA_PLATFORM_SCHEMA"
+"menuai.components.climate.PLATFORM_SCHEMA" = "CLIMATE_PLATFORM_SCHEMA"
+"menuai.components.conversation.PLATFORM_SCHEMA" = "CONVERSATION_PLATFORM_SCHEMA"
+"menuai.components.cover.PLATFORM_SCHEMA" = "COVER_PLATFORM_SCHEMA"
+"menuai.components.date.PLATFORM_SCHEMA" = "DATE_PLATFORM_SCHEMA"
+"menuai.components.datetime.PLATFORM_SCHEMA" = "DATETIME_PLATFORM_SCHEMA"
+"menuai.components.device_tracker.PLATFORM_SCHEMA" = "DEVICE_TRACKER_PLATFORM_SCHEMA"
+"menuai.components.event.PLATFORM_SCHEMA" = "EVENT_PLATFORM_SCHEMA"
+"menuai.components.fan.PLATFORM_SCHEMA" = "FAN_PLATFORM_SCHEMA"
+"menuai.components.geo_location.PLATFORM_SCHEMA" = "GEO_LOCATION_PLATFORM_SCHEMA"
+"menuai.components.humidifier.PLATFORM_SCHEMA" = "HUMIDIFIER_PLATFORM_SCHEMA"
+"menuai.components.image.PLATFORM_SCHEMA" = "IMAGE_PLATFORM_SCHEMA"
+"menuai.components.image_processing.PLATFORM_SCHEMA" = "IMAGE_PROCESSING_PLATFORM_SCHEMA"
+"menuai.components.lawn_mower.PLATFORM_SCHEMA" = "LAWN_MOWER_PLATFORM_SCHEMA"
+"menuai.components.light.PLATFORM_SCHEMA" = "LIGHT_PLATFORM_SCHEMA"
+"menuai.components.lock.PLATFORM_SCHEMA" = "LOCK_PLATFORM_SCHEMA"
+"menuai.components.media_player.PLATFORM_SCHEMA" = "MEDIA_PLAYER_PLATFORM_SCHEMA"
+"menuai.components.notify.PLATFORM_SCHEMA" = "NOTIFY_PLATFORM_SCHEMA"
+"menuai.components.number.PLATFORM_SCHEMA" = "NUMBER_PLATFORM_SCHEMA"
+"menuai.components.remote.PLATFORM_SCHEMA" = "REMOTE_PLATFORM_SCHEMA"
+"menuai.components.scene.PLATFORM_SCHEMA" = "SCENE_PLATFORM_SCHEMA"
+"menuai.components.select.PLATFORM_SCHEMA" = "SELECT_PLATFORM_SCHEMA"
+"menuai.components.sensor.PLATFORM_SCHEMA" = "SENSOR_PLATFORM_SCHEMA"
+"menuai.components.siren.PLATFORM_SCHEMA" = "SIREN_PLATFORM_SCHEMA"
+"menuai.components.stt.PLATFORM_SCHEMA" = "STT_PLATFORM_SCHEMA"
+"menuai.components.switch.PLATFORM_SCHEMA" = "SWITCH_PLATFORM_SCHEMA"
+"menuai.components.text.PLATFORM_SCHEMA" = "TEXT_PLATFORM_SCHEMA"
+"menuai.components.time.PLATFORM_SCHEMA" = "TIME_PLATFORM_SCHEMA"
+"menuai.components.todo.PLATFORM_SCHEMA" = "TODO_PLATFORM_SCHEMA"
+"menuai.components.tts.PLATFORM_SCHEMA" = "TTS_PLATFORM_SCHEMA"
+"menuai.components.vacuum.PLATFORM_SCHEMA" = "VACUUM_PLATFORM_SCHEMA"
+"menuai.components.valve.PLATFORM_SCHEMA" = "VALVE_PLATFORM_SCHEMA"
+"menuai.components.update.PLATFORM_SCHEMA" = "UPDATE_PLATFORM_SCHEMA"
+"menuai.components.wake_word.PLATFORM_SCHEMA" = "WAKE_WORD_PLATFORM_SCHEMA"
+"menuai.components.water_heater.PLATFORM_SCHEMA" = "WATER_HEATER_PLATFORM_SCHEMA"
+"menuai.components.weather.PLATFORM_SCHEMA" = "WEATHER_PLATFORM_SCHEMA"
+"menuai.core.DOMAIN" = "menuai_DOMAIN"
+"menuai.helpers.area_registry" = "ar"
+"menuai.helpers.category_registry" = "cr"
+"menuai.helpers.config_validation" = "cv"
+"menuai.helpers.device_registry" = "dr"
+"menuai.helpers.entity_registry" = "er"
+"menuai.helpers.floor_registry" = "fr"
+"menuai.helpers.issue_registry" = "ir"
+"menuai.helpers.label_registry" = "lr"
+"menuai.util.color" = "color_util"
+"menuai.util.dt" = "dt_util"
+"menuai.util.json" = "json_util"
+"menuai.util.location" = "location_util"
+"menuai.util.logging" = "logging_util"
+"menuai.util.network" = "network_util"
+"menuai.util.ulid" = "ulid_util"
+"menuai.util.uuid" = "uuid_util"
+"menuai.util.yaml" = "yaml_util"
 
 [tool.ruff.lint.flake8-pytest-style]
 fixture-parentheses = false
@@ -929,24 +929,24 @@ mark-parentheses = false
 
 [tool.ruff.lint.isort]
 force-sort-within-sections = true
-known-first-party = ["homeassistant"]
+known-first-party = ["menuai"]
 combine-as-imports = true
 split-on-trailing-comma = false
 
 [tool.ruff.lint.per-file-ignores]
 
 # Allow for main entry & scripts to write to stdout
-"homeassistant/__main__.py" = ["T201"]
-"homeassistant/scripts/*" = ["T201"]
+"menuai/__main__.py" = ["T201"]
+"menuai/scripts/*" = ["T201"]
 "script/*" = ["T20"]
 
 # Allow relative imports within auth and within components
-"homeassistant/auth/*/*" = ["TID252"]
-"homeassistant/components/*/*/*" = ["TID252"]
+"menuai/auth/*/*" = ["TID252"]
+"menuai/components/*/*/*" = ["TID252"]
 "tests/components/*/*/*" = ["TID252"]
 
 # Temporary
-"homeassistant/**" = ["PTH"]
+"menuai/**" = ["PTH"]
 "tests/**" = ["PTH"]
 
 [tool.ruff.lint.mccabe]

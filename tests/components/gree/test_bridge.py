@@ -5,10 +5,10 @@ from datetime import timedelta
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.components.climate import DOMAIN as CLIMATE_DOMAIN, HVACMode
-from homeassistant.components.gree.const import UPDATE_INTERVAL
-from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
+from menuai.components.climate import DOMAIN as CLIMATE_DOMAIN, HVACMode
+from menuai.components.gree.const import UPDATE_INTERVAL
+from menuai.core import menuai
+from menuai.util import dt as dt_util
 
 from .common import async_setup_gree, build_device_mock
 
@@ -25,7 +25,7 @@ def mock_now():
 
 
 async def test_discovery_after_setup(
-    hass: HomeAssistant, freezer: FrozenDateTimeFactory, discovery, device, mock_now
+    menuai: menuai, freezer: FrozenDateTimeFactory, discovery, device, mock_now
 ) -> None:
     """Test gree devices don't change after multiple discoveries."""
     mock_device_1 = build_device_mock(
@@ -38,11 +38,11 @@ async def test_discovery_after_setup(
     discovery.return_value.mock_devices = [mock_device_1, mock_device_2]
     device.side_effect = [mock_device_1, mock_device_2]
 
-    entry = await async_setup_gree(hass)
-    await hass.async_block_till_done()
+    entry = await async_setup_gree(menuai)
+    await menuai.async_block_till_done()
 
     assert discovery.return_value.scan_count == 1
-    assert len(hass.states.async_all(CLIMATE_DOMAIN)) == 2
+    assert len(menuai.states.async_all(CLIMATE_DOMAIN)) == 2
 
     device_infos = [x.device.device_info for x in entry.runtime_data.coordinators]
     assert device_infos[0].ip == "1.1.1.1"
@@ -60,11 +60,11 @@ async def test_discovery_after_setup(
 
     next_update = mock_now + timedelta(minutes=6)
     freezer.move_to(next_update)
-    async_fire_time_changed(hass, next_update)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, next_update)
+    await menuai.async_block_till_done()
 
     assert discovery.return_value.scan_count == 2
-    assert len(hass.states.async_all(CLIMATE_DOMAIN)) == 2
+    assert len(menuai.states.async_all(CLIMATE_DOMAIN)) == 2
 
     device_infos = [x.device.device_info for x in entry.runtime_data.coordinators]
     assert device_infos[0].ip == "1.1.1.2"
@@ -72,13 +72,13 @@ async def test_discovery_after_setup(
 
 
 async def test_coordinator_updates(
-    hass: HomeAssistant, freezer: FrozenDateTimeFactory, discovery, device
+    menuai: menuai, freezer: FrozenDateTimeFactory, discovery, device
 ) -> None:
     """Test gree devices update their state."""
-    await async_setup_gree(hass)
-    await hass.async_block_till_done()
+    await async_setup_gree(menuai)
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all(CLIMATE_DOMAIN)) == 1
+    assert len(menuai.states.async_all(CLIMATE_DOMAIN)) == 1
 
     callback = device().add_handler.call_args_list[0][0][1]
 
@@ -90,9 +90,9 @@ async def test_coordinator_updates(
     device().update_state.side_effect = fake_update_state
 
     freezer.tick(timedelta(seconds=UPDATE_INTERVAL))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(ENTITY_ID_1)
+    state = menuai.states.get(ENTITY_ID_1)
     assert state is not None
     assert state.state != HVACMode.OFF

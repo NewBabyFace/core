@@ -8,7 +8,7 @@ from typing import Any, TypedDict, cast
 from aiocomelit import ComelitSerialBridgeObject
 from aiocomelit.const import CLIMATE
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     DOMAIN as CLIMATE_DOMAIN,
     ClimateEntity,
     ClimateEntityFeature,
@@ -16,9 +16,9 @@ from homeassistant.components.climate import (
     HVACMode,
     UnitOfTemperature,
 )
-from homeassistant.const import ATTR_TEMPERATURE, PRECISION_TENTHS
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import ATTR_TEMPERATURE, PRECISION_TENTHS
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import PRESET_MODE_AUTO, PRESET_MODE_AUTO_TARGET_TEMP, PRESET_MODE_MANUAL
 from .coordinator import ComelitConfigEntry, ComelitSerialBridge
@@ -82,7 +82,7 @@ PRESET_MODE_TO_ACTION: dict[str, ClimaComelitCommand] = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ComelitConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -97,7 +97,7 @@ async def async_setup_entry(
             # No climate data, device is only a humidifier/dehumidifier
 
             await cleanup_stale_entity(
-                hass, config_entry, f"{config_entry.entry_id}-{device.index}", device
+                menuai, config_entry, f"{config_entry.entry_id}-{device.index}", device
             )
 
             continue

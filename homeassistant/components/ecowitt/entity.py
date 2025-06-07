@@ -6,8 +6,8 @@ import time
 
 from aioecowitt import EcoWittSensor
 
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity
 
 from .const import DOMAIN
 
@@ -32,7 +32,7 @@ class EcowittEntity(Entity):
             sw_version=sensor.station.version,
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Install listener for updates later."""
 
         def _update_state() -> None:

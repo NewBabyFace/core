@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant.helpers import config_validation as cv
+from menuai.helpers import config_validation as cv
 
 CONF_ALIASES = "aliases"
 CONF_GROUP_ALIASES = "group_aliases"

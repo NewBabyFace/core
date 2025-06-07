@@ -12,10 +12,10 @@ from unittest.mock import MagicMock, mock_open, patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.backup import DOMAIN, AgentBackup
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.backup import async_initialize_backup
-from homeassistant.setup import async_setup_component
+from menuai.components.backup import DOMAIN, AgentBackup
+from menuai.core import menuai
+from menuai.helpers.backup import async_initialize_backup
+from menuai.setup import async_setup_component
 
 from .common import (
     TEST_BACKUP_ABC123,
@@ -40,7 +40,7 @@ def mock_read_backup(backup_path: Path) -> AgentBackup:
 def read_backup_fixture(path_glob: MagicMock) -> Generator[MagicMock]:
     """Mock read backup."""
     with patch(
-        "homeassistant.components.backup.backup.read_backup",
+        "menuai.components.backup.backup.read_backup",
         side_effect=mock_read_backup,
     ) as read_backup:
         yield read_backup
@@ -57,17 +57,17 @@ def read_backup_fixture(path_glob: MagicMock) -> Generator[MagicMock]:
     ],
 )
 async def test_load_backups(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     snapshot: SnapshotAssertion,
     read_backup: MagicMock,
     side_effect: Exception | None,
 ) -> None:
     """Test load backups."""
-    async_initialize_backup(hass)
-    assert await async_setup_component(hass, DOMAIN, {})
-    await hass.async_block_till_done()
-    client = await hass_ws_client(hass)
+    async_initialize_backup(menuai)
+    assert await async_setup_component(menuai, DOMAIN, {})
+    await menuai.async_block_till_done()
+    client = await menuai_ws_client(menuai)
     read_backup.side_effect = side_effect
 
     # list agents
@@ -80,21 +80,21 @@ async def test_load_backups(
 
 
 async def test_upload(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test upload backup."""
-    async_initialize_backup(hass)
-    assert await async_setup_component(hass, DOMAIN, {})
-    await hass.async_block_till_done()
-    client = await hass_client()
+    async_initialize_backup(menuai)
+    assert await async_setup_component(menuai, DOMAIN, {})
+    await menuai.async_block_till_done()
+    client = await menuai_client()
     open_mock = mock_open()
 
     with (
         patch("pathlib.Path.open", open_mock),
         patch("shutil.move") as move_mock,
         patch(
-            "homeassistant.components.backup.manager.read_backup",
+            "menuai.components.backup.manager.read_backup",
             return_value=TEST_BACKUP_ABC123,
         ),
     ):
@@ -129,9 +129,9 @@ async def test_upload(
     ],
 )
 async def test_delete_backup(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     snapshot: SnapshotAssertion,
     path_glob: MagicMock,
     found_backups: list[Path],
@@ -140,10 +140,10 @@ async def test_delete_backup(
     unlink_path: Path | None,
 ) -> None:
     """Test delete backup."""
-    async_initialize_backup(hass)
-    assert await async_setup_component(hass, DOMAIN, {})
-    await hass.async_block_till_done()
-    client = await hass_ws_client(hass)
+    async_initialize_backup(menuai)
+    assert await async_setup_component(menuai, DOMAIN, {})
+    await menuai.async_block_till_done()
+    client = await menuai_ws_client(menuai)
     path_glob.return_value = found_backups
 
     with (

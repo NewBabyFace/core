@@ -9,10 +9,10 @@ import it.
 
 from __future__ import annotations
 
-# pylint: disable-next=hass-deprecated-import
+# pylint: disable-next=menuai-deprecated-import
 from functools import cached_property as _cached_property, partial
 
-from homeassistant.helpers.deprecation import (
+from menuai.helpers.deprecation import (
     DeprecatedAlias,
     all_with_deprecated_constants,
     check_if_deprecated_constant,

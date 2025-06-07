@@ -2,23 +2,23 @@
 
 from unittest.mock import MagicMock
 
-from homeassistant.components.device_automation import DeviceAutomationType
-from homeassistant.components.homekit.const import (
+from menuai.components.device_automation import DeviceAutomationType
+from menuai.components.homekit.const import (
     CHAR_CONFIGURED_NAME,
     CHAR_PROGRAMMABLE_SWITCH_EVENT,
     SERV_STATELESS_PROGRAMMABLE_SWITCH,
 )
-from homeassistant.components.homekit.type_triggers import DeviceTriggerAccessory
-from homeassistant.const import STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.components.homekit.type_triggers import DeviceTriggerAccessory
+from menuai.const import STATE_OFF, STATE_ON
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry, async_get_device_automations
 
 
 async def test_programmable_switch_button_fires_on_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     hk_driver,
     demo_cleanup,
     entity_registry: er.EntityRegistry,
@@ -27,22 +27,22 @@ async def test_programmable_switch_button_fires_on_trigger(
     hk_driver.publish = MagicMock()
 
     demo_config_entry = MockConfigEntry(domain="domain")
-    demo_config_entry.add_to_hass(hass)
-    assert await async_setup_component(hass, "homeassistant", {})
-    assert await async_setup_component(hass, "demo", {"demo": {}})
-    await hass.async_block_till_done()
-    hass.states.async_set("light.ceiling_lights", STATE_OFF)
-    await hass.async_block_till_done()
+    demo_config_entry.add_to_menuai(menuai)
+    assert await async_setup_component(menuai, "menuai", {})
+    assert await async_setup_component(menuai, "demo", {"demo": {}})
+    await menuai.async_block_till_done()
+    menuai.states.async_set("light.ceiling_lights", STATE_OFF)
+    await menuai.async_block_till_done()
 
     entry = entity_registry.async_get("light.ceiling_lights")
     assert entry is not None
     device_id = entry.device_id
 
     device_triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device_id
+        menuai, DeviceAutomationType.TRIGGER, device_id
     )
     acc = DeviceTriggerAccessory(
-        hass,
+        menuai,
         hk_driver,
         "DeviceTriggerAccessory",
         None,
@@ -53,7 +53,7 @@ async def test_programmable_switch_button_fires_on_trigger(
     )
     acc.run()
     await acc.async_attach()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert acc.entity_id is None
     assert acc.device_id is device_id
@@ -64,19 +64,19 @@ async def test_programmable_switch_button_fires_on_trigger(
     assert configured_name_char.value == "ceiling lights Changed States"
 
     hk_driver.publish.reset_mock()
-    hass.states.async_set("light.ceiling_lights", STATE_ON)
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.ceiling_lights", STATE_ON)
+    await menuai.async_block_till_done()
     assert len(hk_driver.publish.mock_calls) == 2  # one for on, one for toggle
     for call in hk_driver.publish.mock_calls:
         char = acc.get_characteristic(call.args[0]["aid"], call.args[0]["iid"])
         assert char.display_name == CHAR_PROGRAMMABLE_SWITCH_EVENT
 
     hk_driver.publish.reset_mock()
-    hass.states.async_set("light.ceiling_lights", STATE_OFF)
-    await hass.async_block_till_done()
+    menuai.states.async_set("light.ceiling_lights", STATE_OFF)
+    await menuai.async_block_till_done()
     assert len(hk_driver.publish.mock_calls) == 2  # one for on, one for toggle
     for call in hk_driver.publish.mock_calls:
         char = acc.get_characteristic(call.args[0]["aid"], call.args[0]["iid"])
         assert char.display_name == CHAR_PROGRAMMABLE_SWITCH_EVENT
     await acc.stop()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()

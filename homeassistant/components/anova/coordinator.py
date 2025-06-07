@@ -7,10 +7,10 @@ import logging
 
 from anova_wifi import AnovaApi, APCUpdate, APCWifiDevice
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN
 
@@ -36,13 +36,13 @@ class AnovaCoordinator(DataUpdateCoordinator[APCUpdate]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: AnovaConfigEntry,
         anova_device: APCWifiDevice,
     ) -> None:
         """Set up Anova Coordinator."""
         super().__init__(
-            hass,
+            menuai,
             config_entry=config_entry,
             name="Anova Precision Cooker",
             logger=_LOGGER,

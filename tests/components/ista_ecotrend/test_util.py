@@ -2,7 +2,7 @@
 
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.ista_ecotrend.util import (
+from menuai.components.ista_ecotrend.util import (
     IstaConsumptionType,
     IstaValueType,
     as_number,

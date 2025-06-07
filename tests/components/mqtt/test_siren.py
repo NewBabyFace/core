@@ -6,9 +6,9 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components import mqtt, siren
-from homeassistant.components.siren import ATTR_VOLUME_LEVEL
-from homeassistant.const import (
+from menuai.components import mqtt, siren
+from menuai.components.siren import ATTR_VOLUME_LEVEL
+from menuai.const import (
     ATTR_ASSUMED_STATE,
     ATTR_ENTITY_ID,
     ENTITY_MATCH_ALL,
@@ -18,7 +18,7 @@ from homeassistant.const import (
     STATE_ON,
     STATE_UNKNOWN,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .common import (
     help_custom_config,
@@ -60,26 +60,26 @@ DEFAULT_CONFIG = {
 
 
 async def async_turn_on(
-    hass: HomeAssistant, entity_id: str, parameters: dict[str, Any]
+    menuai: menuai, entity_id: str, parameters: dict[str, Any]
 ) -> None:
     """Turn all or specified siren on."""
     data = {ATTR_ENTITY_ID: entity_id} if entity_id else {}
     data.update(parameters)
 
-    await hass.services.async_call(siren.DOMAIN, SERVICE_TURN_ON, data, blocking=True)
+    await menuai.services.async_call(siren.DOMAIN, SERVICE_TURN_ON, data, blocking=True)
 
 
 async def async_turn_off(
-    hass: HomeAssistant, entity_id: str = ENTITY_MATCH_ALL
+    menuai: menuai, entity_id: str = ENTITY_MATCH_ALL
 ) -> None:
     """Turn all or specified siren off."""
     data = {ATTR_ENTITY_ID: entity_id} if entity_id else {}
 
-    await hass.services.async_call(siren.DOMAIN, SERVICE_TURN_OFF, data, blocking=True)
+    await menuai.services.async_call(siren.DOMAIN, SERVICE_TURN_OFF, data, blocking=True)
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -95,28 +95,28 @@ async def async_turn_off(
     ],
 )
 async def test_controlling_state_via_topic(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test the controlling state via topic."""
     await mqtt_mock_entry()
 
-    state = hass.states.get("siren.test")
+    state = menuai.states.get("siren.test")
     assert state.state == STATE_UNKNOWN
     assert not state.attributes.get(ATTR_ASSUMED_STATE)
 
-    async_fire_mqtt_message(hass, "state-topic", "1")
+    async_fire_mqtt_message(menuai, "state-topic", "1")
 
-    state = hass.states.get("siren.test")
+    state = menuai.states.get("siren.test")
     assert state.state == STATE_ON
 
-    async_fire_mqtt_message(hass, "state-topic", "0")
+    async_fire_mqtt_message(menuai, "state-topic", "0")
 
-    state = hass.states.get("siren.test")
+    state = menuai.states.get("siren.test")
     assert state.state == STATE_OFF
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -132,36 +132,36 @@ async def test_controlling_state_via_topic(
     ],
 )
 async def test_sending_mqtt_commands_and_optimistic(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test the sending MQTT commands in optimistic mode."""
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     mqtt_mock = await mqtt_mock_entry()
 
-    state = hass.states.get("siren.test")
+    state = menuai.states.get("siren.test")
     assert state.state == STATE_OFF
     assert state.attributes.get(ATTR_ASSUMED_STATE)
 
-    await async_turn_on(hass, entity_id="siren.test", parameters={})
+    await async_turn_on(menuai, entity_id="siren.test", parameters={})
 
     mqtt_mock.async_publish.assert_called_once_with(
         "command-topic", '{"state":"beer on"}', 2, False
     )
     mqtt_mock.async_publish.reset_mock()
-    state = hass.states.get("siren.test")
+    state = menuai.states.get("siren.test")
     assert state.state == STATE_ON
 
-    await async_turn_off(hass, entity_id="siren.test")
+    await async_turn_off(menuai, entity_id="siren.test")
 
     mqtt_mock.async_publish.assert_called_once_with(
         "command-topic", '{"state":"beer off"}', 2, False
     )
-    state = hass.states.get("siren.test")
+    state = menuai.states.get("siren.test")
     assert state.state == STATE_OFF
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -178,31 +178,31 @@ async def test_sending_mqtt_commands_and_optimistic(
     ],
 )
 async def test_controlling_state_via_topic_and_json_message(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test the controlling state via topic and JSON message."""
     await mqtt_mock_entry()
 
-    state = hass.states.get("siren.test")
+    state = menuai.states.get("siren.test")
     assert state.state == STATE_UNKNOWN
 
-    async_fire_mqtt_message(hass, "state-topic", '{"val":"beer on"}')
+    async_fire_mqtt_message(menuai, "state-topic", '{"val":"beer on"}')
 
-    state = hass.states.get("siren.test")
+    state = menuai.states.get("siren.test")
     assert state.state == STATE_ON
 
-    async_fire_mqtt_message(hass, "state-topic", '{"val": null }')
-    state = hass.states.get("siren.test")
+    async_fire_mqtt_message(menuai, "state-topic", '{"val": null }')
+    state = menuai.states.get("siren.test")
     assert state.state == STATE_UNKNOWN
 
-    async_fire_mqtt_message(hass, "state-topic", '{"val":"beer off"}')
+    async_fire_mqtt_message(menuai, "state-topic", '{"val":"beer off"}')
 
-    state = hass.states.get("siren.test")
+    state = menuai.states.get("siren.test")
     assert state.state == STATE_OFF
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -219,38 +219,38 @@ async def test_controlling_state_via_topic_and_json_message(
     ],
 )
 async def test_controlling_state_and_attributes_with_json_message_without_template(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test the controlling state via topic and JSON message without a value template."""
     await mqtt_mock_entry()
 
-    state = hass.states.get("siren.test")
+    state = menuai.states.get("siren.test")
     assert state.state == STATE_UNKNOWN
     assert state.attributes.get(siren.ATTR_TONE) is None
     assert state.attributes.get(siren.ATTR_DURATION) is None
     assert state.attributes.get(siren.ATTR_VOLUME_LEVEL) is None
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "state-topic",
         '{"state":"beer on", "tone": "bell", "duration": 10, "volume_level": 0.5 }',
     )
 
-    state = hass.states.get("siren.test")
+    state = menuai.states.get("siren.test")
     assert state.state == STATE_ON
     assert state.attributes.get(siren.ATTR_TONE) == "bell"
     assert state.attributes.get(siren.ATTR_DURATION) == 10
     assert state.attributes.get(siren.ATTR_VOLUME_LEVEL) == 0.5
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "state-topic",
         '{"state":"beer off", "tone": "bell", "duration": 5, "volume_level": 0.6}',
     )
 
-    state = hass.states.get("siren.test")
+    state = menuai.states.get("siren.test")
     assert state.state == STATE_OFF
     assert state.attributes.get(siren.ATTR_TONE) == "bell"
     assert state.attributes.get(siren.ATTR_DURATION) == 5
@@ -258,11 +258,11 @@ async def test_controlling_state_and_attributes_with_json_message_without_templa
 
     # Test validation of received attributes, invalid
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "state-topic",
         '{"state":"beer on", "duration": 6, "volume_level": 2,"tone": "ping"}',
     )
-    state = hass.states.get("siren.test")
+    state = menuai.states.get("siren.test")
     assert (
         "Unable to update siren state attributes from payload '{'duration': 6, 'volume_level': 2, 'tone': 'ping'}': value must be at most 1 for dictionary value @ data['volume_level']"
         in caplog.text
@@ -274,7 +274,7 @@ async def test_controlling_state_and_attributes_with_json_message_without_templa
     assert state.attributes.get(siren.ATTR_VOLUME_LEVEL) == 0.6
 
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "state-topic",
         "{}",
     )
@@ -285,7 +285,7 @@ async def test_controlling_state_and_attributes_with_json_message_without_templa
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         help_custom_config(
             siren.DOMAIN,
@@ -315,19 +315,19 @@ async def test_controlling_state_and_attributes_with_json_message_without_templa
     ],
 )
 async def test_filtering_not_supported_attributes_optimistic(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test setting attributes with support flags optimistic."""
     await mqtt_mock_entry()
 
-    state1 = hass.states.get("siren.test1")
+    state1 = menuai.states.get("siren.test1")
     assert state1.state == STATE_OFF
     assert siren.ATTR_DURATION not in state1.attributes
     assert siren.ATTR_AVAILABLE_TONES in state1.attributes
     assert siren.ATTR_TONE in state1.attributes
     assert siren.ATTR_VOLUME_LEVEL in state1.attributes
     await async_turn_on(
-        hass,
+        menuai,
         entity_id="siren.test1",
         parameters={
             siren.ATTR_DURATION: 22,
@@ -335,18 +335,18 @@ async def test_filtering_not_supported_attributes_optimistic(
             ATTR_VOLUME_LEVEL: 0.88,
         },
     )
-    state1 = hass.states.get("siren.test1")
+    state1 = menuai.states.get("siren.test1")
     assert state1.attributes.get(siren.ATTR_TONE) == "ping"
     assert state1.attributes.get(siren.ATTR_DURATION) is None
     assert state1.attributes.get(siren.ATTR_VOLUME_LEVEL) == 0.88
 
-    state2 = hass.states.get("siren.test2")
+    state2 = menuai.states.get("siren.test2")
     assert siren.ATTR_DURATION in state2.attributes
     assert siren.ATTR_AVAILABLE_TONES in state2.attributes
     assert siren.ATTR_TONE in state2.attributes
     assert siren.ATTR_VOLUME_LEVEL not in state2.attributes
     await async_turn_on(
-        hass,
+        menuai,
         entity_id="siren.test2",
         parameters={
             siren.ATTR_DURATION: 22,
@@ -354,18 +354,18 @@ async def test_filtering_not_supported_attributes_optimistic(
             ATTR_VOLUME_LEVEL: 0.88,
         },
     )
-    state2 = hass.states.get("siren.test2")
+    state2 = menuai.states.get("siren.test2")
     assert state2.attributes.get(siren.ATTR_TONE) == "ping"
     assert state2.attributes.get(siren.ATTR_DURATION) == 22
     assert state2.attributes.get(siren.ATTR_VOLUME_LEVEL) is None
 
-    state3 = hass.states.get("siren.test3")
+    state3 = menuai.states.get("siren.test3")
     assert siren.ATTR_DURATION in state3.attributes
     assert siren.ATTR_AVAILABLE_TONES not in state3.attributes
     assert siren.ATTR_TONE not in state3.attributes
     assert siren.ATTR_VOLUME_LEVEL in state3.attributes
     await async_turn_on(
-        hass,
+        menuai,
         entity_id="siren.test3",
         parameters={
             siren.ATTR_DURATION: 22,
@@ -373,14 +373,14 @@ async def test_filtering_not_supported_attributes_optimistic(
             ATTR_VOLUME_LEVEL: 0.88,
         },
     )
-    state3 = hass.states.get("siren.test3")
+    state3 = menuai.states.get("siren.test3")
     assert state3.attributes.get(siren.ATTR_TONE) is None
     assert state3.attributes.get(siren.ATTR_DURATION) == 22
     assert state3.attributes.get(siren.ATTR_VOLUME_LEVEL) == 0.88
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         help_custom_config(
             siren.DOMAIN,
@@ -413,83 +413,83 @@ async def test_filtering_not_supported_attributes_optimistic(
     ],
 )
 async def test_filtering_not_supported_attributes_via_state(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test setting attributes with support flags via state."""
     await mqtt_mock_entry()
 
-    state1 = hass.states.get("siren.test1")
+    state1 = menuai.states.get("siren.test1")
     assert state1.state == STATE_UNKNOWN
     assert siren.ATTR_DURATION not in state1.attributes
     assert siren.ATTR_AVAILABLE_TONES in state1.attributes
     assert siren.ATTR_TONE in state1.attributes
     assert siren.ATTR_VOLUME_LEVEL in state1.attributes
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "state-topic1",
         '{"state":"ON", "duration": 22, "tone": "ping", "volume_level": 0.88}',
     )
-    await hass.async_block_till_done()
-    state1 = hass.states.get("siren.test1")
+    await menuai.async_block_till_done()
+    state1 = menuai.states.get("siren.test1")
     assert state1.attributes.get(siren.ATTR_TONE) == "ping"
     assert state1.attributes.get(siren.ATTR_DURATION) is None
     assert state1.attributes.get(siren.ATTR_VOLUME_LEVEL) == 0.88
 
-    state2 = hass.states.get("siren.test2")
+    state2 = menuai.states.get("siren.test2")
     assert siren.ATTR_DURATION in state2.attributes
     assert siren.ATTR_AVAILABLE_TONES in state2.attributes
     assert siren.ATTR_TONE in state2.attributes
     assert siren.ATTR_VOLUME_LEVEL not in state2.attributes
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "state-topic2",
         '{"state":"ON", "duration": 22, "tone": "ping", "volume_level": 0.88}',
     )
-    await hass.async_block_till_done()
-    state2 = hass.states.get("siren.test2")
+    await menuai.async_block_till_done()
+    state2 = menuai.states.get("siren.test2")
     assert state2.attributes.get(siren.ATTR_TONE) == "ping"
     assert state2.attributes.get(siren.ATTR_DURATION) == 22
     assert state2.attributes.get(siren.ATTR_VOLUME_LEVEL) is None
 
-    state3 = hass.states.get("siren.test3")
+    state3 = menuai.states.get("siren.test3")
     assert siren.ATTR_DURATION in state3.attributes
     assert siren.ATTR_AVAILABLE_TONES not in state3.attributes
     assert siren.ATTR_TONE not in state3.attributes
     assert siren.ATTR_VOLUME_LEVEL in state3.attributes
     async_fire_mqtt_message(
-        hass,
+        menuai,
         "state-topic3",
         '{"state":"ON", "duration": 22, "tone": "ping", "volume_level": 0.88}',
     )
-    await hass.async_block_till_done()
-    state3 = hass.states.get("siren.test3")
+    await menuai.async_block_till_done()
+    state3 = menuai.states.get("siren.test3")
     assert state3.attributes.get(siren.ATTR_TONE) is None
     assert state3.attributes.get(siren.ATTR_DURATION) == 22
     assert state3.attributes.get(siren.ATTR_VOLUME_LEVEL) == 0.88
 
 
-@pytest.mark.parametrize("hass_config", [DEFAULT_CONFIG])
+@pytest.mark.parametrize("menuai_config", [DEFAULT_CONFIG])
 async def test_availability_when_connection_lost(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test availability after MQTT disconnection."""
     await help_test_availability_when_connection_lost(
-        hass, mqtt_mock_entry, siren.DOMAIN
+        menuai, mqtt_mock_entry, siren.DOMAIN
     )
 
 
-@pytest.mark.parametrize("hass_config", [DEFAULT_CONFIG])
+@pytest.mark.parametrize("menuai_config", [DEFAULT_CONFIG])
 async def test_availability_without_topic(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test availability without defined availability topic."""
     await help_test_availability_without_topic(
-        hass, mqtt_mock_entry, siren.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, siren.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_default_availability_payload(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test availability by default payload with defined topic."""
     config = {
@@ -504,7 +504,7 @@ async def test_default_availability_payload(
         }
     }
     await help_test_default_availability_payload(
-        hass,
+        menuai,
         mqtt_mock_entry,
         siren.DOMAIN,
         config,
@@ -515,7 +515,7 @@ async def test_default_availability_payload(
 
 
 async def test_custom_availability_payload(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test availability by custom payload with defined topic."""
     config = {
@@ -531,7 +531,7 @@ async def test_custom_availability_payload(
     }
 
     await help_test_custom_availability_payload(
-        hass,
+        menuai,
         mqtt_mock_entry,
         siren.DOMAIN,
         config,
@@ -542,7 +542,7 @@ async def test_custom_availability_payload(
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -560,86 +560,86 @@ async def test_custom_availability_payload(
     ],
 )
 async def test_custom_state_payload(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test the state payload."""
     await mqtt_mock_entry()
 
-    state = hass.states.get("siren.test")
+    state = menuai.states.get("siren.test")
     assert state.state == STATE_UNKNOWN
     assert not state.attributes.get(ATTR_ASSUMED_STATE)
 
-    async_fire_mqtt_message(hass, "state-topic", "HIGH")
+    async_fire_mqtt_message(menuai, "state-topic", "HIGH")
 
-    state = hass.states.get("siren.test")
+    state = menuai.states.get("siren.test")
     assert state.state == STATE_ON
 
-    async_fire_mqtt_message(hass, "state-topic", "LOW")
+    async_fire_mqtt_message(menuai, "state-topic", "LOW")
 
-    state = hass.states.get("siren.test")
+    state = menuai.states.get("siren.test")
     assert state.state == STATE_OFF
 
 
 async def test_setting_attribute_via_mqtt_json_message(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test the setting of attribute via MQTT with JSON payload."""
     await help_test_setting_attribute_via_mqtt_json_message(
-        hass, mqtt_mock_entry, siren.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, siren.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_setting_blocked_attribute_via_mqtt_json_message(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test the setting of attribute via MQTT with JSON payload."""
     await help_test_setting_blocked_attribute_via_mqtt_json_message(
-        hass, mqtt_mock_entry, siren.DOMAIN, DEFAULT_CONFIG, None
+        menuai, mqtt_mock_entry, siren.DOMAIN, DEFAULT_CONFIG, None
     )
 
 
 async def test_setting_attribute_with_template(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test the setting of attribute via MQTT with JSON payload."""
     await help_test_setting_attribute_with_template(
-        hass, mqtt_mock_entry, siren.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, siren.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_update_with_json_attrs_not_dict(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test attributes get extracted from a JSON result."""
     await help_test_update_with_json_attrs_not_dict(
-        hass, mqtt_mock_entry, caplog, siren.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, caplog, siren.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_update_with_json_attrs_bad_json(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test attributes get extracted from a JSON result."""
     await help_test_update_with_json_attrs_bad_json(
-        hass, mqtt_mock_entry, caplog, siren.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, caplog, siren.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_discovery_update_attr(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test update of discovered MQTTAttributes."""
     await help_test_discovery_update_attr(
-        hass, mqtt_mock_entry, siren.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, siren.DOMAIN, DEFAULT_CONFIG
     )
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -662,14 +662,14 @@ async def test_discovery_update_attr(
     ],
 )
 async def test_unique_id(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test unique id option only creates one siren per unique_id."""
-    await help_test_unique_id(hass, mqtt_mock_entry, siren.DOMAIN)
+    await help_test_unique_id(menuai, mqtt_mock_entry, siren.DOMAIN)
 
 
 async def test_discovery_removal_siren(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test removal of discovered siren."""
     data = (
@@ -677,11 +677,11 @@ async def test_discovery_removal_siren(
         '  "state_topic": "test_topic",'
         '  "command_topic": "test_topic" }'
     )
-    await help_test_discovery_removal(hass, mqtt_mock_entry, siren.DOMAIN, data)
+    await help_test_discovery_removal(menuai, mqtt_mock_entry, siren.DOMAIN, data)
 
 
 async def test_discovery_update_siren_topic_template(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test update of discovered siren."""
     config1 = copy.deepcopy(DEFAULT_CONFIG[mqtt.DOMAIN][siren.DOMAIN])
@@ -706,7 +706,7 @@ async def test_discovery_update_siren_topic_template(
     ]
 
     await help_test_discovery_update(
-        hass,
+        menuai,
         mqtt_mock_entry,
         siren.DOMAIN,
         config1,
@@ -717,7 +717,7 @@ async def test_discovery_update_siren_topic_template(
 
 
 async def test_discovery_update_siren_template(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test update of discovered siren."""
     config1 = copy.deepcopy(DEFAULT_CONFIG[mqtt.DOMAIN][siren.DOMAIN])
@@ -740,7 +740,7 @@ async def test_discovery_update_siren_template(
     ]
 
     await help_test_discovery_update(
-        hass,
+        menuai,
         mqtt_mock_entry,
         siren.DOMAIN,
         config1,
@@ -751,7 +751,7 @@ async def test_discovery_update_siren_template(
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         help_custom_config(
             siren.DOMAIN,
@@ -775,21 +775,21 @@ async def test_discovery_update_siren_template(
     ],
 )
 async def test_command_templates(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test siren with command templates optimistic."""
     mqtt_mock = await mqtt_mock_entry()
 
-    state1 = hass.states.get("siren.beer")
+    state1 = menuai.states.get("siren.beer")
     assert state1.state == STATE_OFF
     assert state1.attributes.get(ATTR_ASSUMED_STATE)
 
-    state2 = hass.states.get("siren.milk")
+    state2 = menuai.states.get("siren.milk")
     assert state2.state == STATE_OFF
     assert state1.attributes.get(ATTR_ASSUMED_STATE)
 
     await async_turn_on(
-        hass,
+        menuai,
         entity_id="siren.beer",
         parameters={
             siren.ATTR_DURATION: 22,
@@ -797,7 +797,7 @@ async def test_command_templates(
             ATTR_VOLUME_LEVEL: 0.88,
         },
     )
-    state1 = hass.states.get("siren.beer")
+    state1 = menuai.states.get("siren.beer")
     assert state1.attributes.get(siren.ATTR_TONE) == "ping"
     assert state1.attributes.get(siren.ATTR_DURATION) == 22
     assert state1.attributes.get(siren.ATTR_VOLUME_LEVEL) == 0.88
@@ -808,7 +808,7 @@ async def test_command_templates(
     assert mqtt_mock.async_publish.call_count == 1
     mqtt_mock.reset_mock()
     await async_turn_off(
-        hass,
+        menuai,
         entity_id="siren.beer",
     )
     mqtt_mock.async_publish.assert_any_call(
@@ -818,7 +818,7 @@ async def test_command_templates(
     mqtt_mock.reset_mock()
 
     await async_turn_on(
-        hass,
+        menuai,
         entity_id="siren.milk",
         parameters={
             siren.ATTR_DURATION: 22,
@@ -826,12 +826,12 @@ async def test_command_templates(
             ATTR_VOLUME_LEVEL: 0.88,
         },
     )
-    state2 = hass.states.get("siren.milk")
+    state2 = menuai.states.get("siren.milk")
     assert state2.attributes.get(siren.ATTR_TONE) == "ping"
     assert state2.attributes.get(siren.ATTR_DURATION) == 22
     assert state2.attributes.get(siren.ATTR_VOLUME_LEVEL) == 0.88
     await async_turn_off(
-        hass,
+        menuai,
         entity_id="siren.milk",
     )
     mqtt_mock.async_publish.assert_any_call("test-topic", "CMD_OFF: OFF", 0, False)
@@ -840,7 +840,7 @@ async def test_command_templates(
 
 
 async def test_discovery_update_unchanged_siren(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test update of discovered siren."""
     data1 = (
@@ -850,10 +850,10 @@ async def test_discovery_update_unchanged_siren(
         '  "command_topic": "test_topic" }'
     )
     with patch(
-        "homeassistant.components.mqtt.siren.MqttSiren.discovery_update"
+        "menuai.components.mqtt.siren.MqttSiren.discovery_update"
     ) as discovery_update:
         await help_test_discovery_update_unchanged(
-            hass,
+            menuai,
             mqtt_mock_entry,
             siren.DOMAIN,
             data1,
@@ -863,7 +863,7 @@ async def test_discovery_update_unchanged_siren(
 
 @pytest.mark.no_fail_on_log_exception
 async def test_discovery_broken(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test handling of bad discovery message."""
     data1 = '{ "name": "Beer" }'
@@ -872,69 +872,69 @@ async def test_discovery_broken(
         '  "state_topic": "test_topic",'
         '  "command_topic": "test_topic" }'
     )
-    await help_test_discovery_broken(hass, mqtt_mock_entry, siren.DOMAIN, data1, data2)
+    await help_test_discovery_broken(menuai, mqtt_mock_entry, siren.DOMAIN, data1, data2)
 
 
 async def test_entity_device_info_with_connection(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test MQTT siren device registry integration."""
     await help_test_entity_device_info_with_connection(
-        hass, mqtt_mock_entry, siren.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, siren.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_entity_device_info_with_identifier(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test MQTT siren device registry integration."""
     await help_test_entity_device_info_with_identifier(
-        hass, mqtt_mock_entry, siren.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, siren.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_entity_device_info_update(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test device registry update."""
     await help_test_entity_device_info_update(
-        hass, mqtt_mock_entry, siren.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, siren.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_entity_device_info_remove(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test device registry remove."""
     await help_test_entity_device_info_remove(
-        hass, mqtt_mock_entry, siren.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, siren.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_entity_id_update_subscriptions(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test MQTT subscriptions are managed when entity_id is updated."""
     await help_test_entity_id_update_subscriptions(
-        hass, mqtt_mock_entry, siren.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, siren.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_entity_id_update_discovery_update(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test MQTT discovery update when entity_id is updated."""
     await help_test_entity_id_update_discovery_update(
-        hass, mqtt_mock_entry, siren.DOMAIN, DEFAULT_CONFIG
+        menuai, mqtt_mock_entry, siren.DOMAIN, DEFAULT_CONFIG
     )
 
 
 async def test_entity_debug_info_message(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test MQTT debug info."""
     await help_test_entity_debug_info_message(
-        hass,
+        menuai,
         mqtt_mock_entry,
         siren.DOMAIN,
         DEFAULT_CONFIG,
@@ -963,7 +963,7 @@ async def test_entity_debug_info_message(
     ],
 )
 async def test_publishing_with_custom_encoding(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
     service: str,
@@ -978,7 +978,7 @@ async def test_publishing_with_custom_encoding(
     config[mqtt.DOMAIN][domain][siren.ATTR_AVAILABLE_TONES] = ["siren", "xylophone"]
 
     await help_test_publishing_with_custom_encoding(
-        hass,
+        menuai,
         mqtt_mock_entry,
         caplog,
         domain,
@@ -992,12 +992,12 @@ async def test_publishing_with_custom_encoding(
 
 
 async def test_reloadable(
-    hass: HomeAssistant, mqtt_client_mock: MqttMockPahoClient
+    menuai: menuai, mqtt_client_mock: MqttMockPahoClient
 ) -> None:
     """Test reloading the MQTT platform."""
     domain = siren.DOMAIN
     config = DEFAULT_CONFIG
-    await help_test_reloadable(hass, mqtt_client_mock, domain, config)
+    await help_test_reloadable(menuai, mqtt_client_mock, domain, config)
 
 
 @pytest.mark.parametrize(
@@ -1005,7 +1005,7 @@ async def test_reloadable(
     [("state_topic", "ON", None, "on")],
 )
 async def test_encoding_subscribable_topics(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     topic: str,
     value: str,
@@ -1014,7 +1014,7 @@ async def test_encoding_subscribable_topics(
 ) -> None:
     """Test handling of incoming encoded payload."""
     await help_test_encoding_subscribable_topics(
-        hass,
+        menuai,
         mqtt_mock_entry,
         siren.DOMAIN,
         DEFAULT_CONFIG[mqtt.DOMAIN][siren.DOMAIN],
@@ -1026,32 +1026,32 @@ async def test_encoding_subscribable_topics(
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [DEFAULT_CONFIG, {"mqtt": [DEFAULT_CONFIG["mqtt"]]}],
     ids=["platform_key", "listed"],
 )
 async def test_setup_manual_entity_from_yaml(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test setup manual configured MQTT entity."""
     await mqtt_mock_entry()
     platform = siren.DOMAIN
-    assert hass.states.get(f"{platform}.test")
+    assert menuai.states.get(f"{platform}.test")
 
 
 async def test_unload_entry(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test unloading the config entry."""
     domain = siren.DOMAIN
     config = DEFAULT_CONFIG
     await help_test_unload_config_entry_with_platform(
-        hass, mqtt_mock_entry, domain, config
+        menuai, mqtt_mock_entry, domain, config
     )
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         help_custom_config(
             siren.DOMAIN,
@@ -1089,7 +1089,7 @@ async def test_unload_entry(
     ],
 )
 async def test_skipped_async_ha_write_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     topic: str,
     payload1: str,
@@ -1097,11 +1097,11 @@ async def test_skipped_async_ha_write_state(
 ) -> None:
     """Test a write state command is only called when there is change."""
     await mqtt_mock_entry()
-    await help_test_skipped_async_ha_write_state(hass, topic, payload1, payload2)
+    await help_test_skipped_async_ha_write_state(menuai, topic, payload1, payload2)
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         help_custom_config(
             siren.DOMAIN,
@@ -1116,13 +1116,13 @@ async def test_skipped_async_ha_write_state(
     ],
 )
 async def test_value_template_fails(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test the rendering of MQTT value template fails."""
     await mqtt_mock_entry()
-    async_fire_mqtt_message(hass, "test-topic", '{"some_var": null }')
+    async_fire_mqtt_message(menuai, "test-topic", '{"some_var": null }')
     assert (
         "TypeError: unsupported operand type(s) for *: 'NoneType' and 'int' rendering template"
         in caplog.text

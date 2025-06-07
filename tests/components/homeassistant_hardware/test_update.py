@@ -1,4 +1,4 @@
-"""Test Home Assistant Hardware firmware update entity."""
+"""Test MenuAI Hardware firmware update entity."""
 
 from __future__ import annotations
 
@@ -13,40 +13,40 @@ from ha_silabs_firmware_client import FirmwareManifest, FirmwareMetadata
 import pytest
 from yarl import URL
 
-from homeassistant.components.homeassistant_hardware.coordinator import (
+from menuai.components.menuai_hardware.coordinator import (
     FirmwareUpdateCoordinator,
 )
-from homeassistant.components.homeassistant_hardware.helpers import (
+from menuai.components.menuai_hardware.helpers import (
     async_notify_firmware_info,
     async_register_firmware_info_provider,
 )
-from homeassistant.components.homeassistant_hardware.update import (
+from menuai.components.menuai_hardware.update import (
     BaseFirmwareUpdateEntity,
     FirmwareUpdateEntityDescription,
     FirmwareUpdateExtraStoredData,
 )
-from homeassistant.components.homeassistant_hardware.util import (
+from menuai.components.menuai_hardware.util import (
     ApplicationType,
     FirmwareInfo,
     OwningIntegration,
 )
-from homeassistant.components.update import UpdateDeviceClass
-from homeassistant.config_entries import ConfigEntry, ConfigEntryState, ConfigFlow
-from homeassistant.const import EVENT_STATE_CHANGED, EntityCategory, Platform
-from homeassistant.core import (
+from menuai.components.update import UpdateDeviceClass
+from menuai.config_entries import ConfigEntry, ConfigEntryState, ConfigFlow
+from menuai.const import EVENT_STATE_CHANGED, EntityCategory, Platform
+from menuai.core import (
     Event,
     EventStateChangedData,
-    HomeAssistant,
-    HomeAssistantError,
+    menuai,
+    menuaiError,
     State,
     callback,
 )
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.helpers import entity_registry as er
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from tests.common import (
     MockConfigEntry,
@@ -127,7 +127,7 @@ TEST_FIRMWARE_ENTITY_DESCRIPTIONS: dict[
 
 
 def _mock_async_create_update_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     session: aiohttp.ClientSession,
     async_add_entities: AddConfigEntryEntitiesCallback,
@@ -142,7 +142,7 @@ def _mock_async_create_update_entity(
         device=config_entry.data["device"],
         config_entry=config_entry,
         update_coordinator=FirmwareUpdateCoordinator(
-            hass,
+            menuai,
             session,
             TEST_FIRMWARE_RELEASES_URL,
         ),
@@ -153,11 +153,11 @@ def _mock_async_create_update_entity(
         old_type: ApplicationType | None, new_type: ApplicationType | None
     ) -> None:
         """Replace the current entity when the firmware type changes."""
-        er.async_get(hass).async_remove(entity.entity_id)
+        er.async_get(menuai).async_remove(entity.entity_id)
         async_add_entities(
             [
                 _mock_async_create_update_entity(
-                    hass, config_entry, session, async_add_entities
+                    menuai, config_entry, session, async_add_entities
                 )
             ]
         )
@@ -170,24 +170,24 @@ def _mock_async_create_update_entity(
 
 
 async def mock_async_setup_entry(
-    hass: HomeAssistant, config_entry: ConfigEntry
+    menuai: menuai, config_entry: ConfigEntry
 ) -> bool:
     """Set up test config entry."""
-    await hass.config_entries.async_forward_entry_setups(
+    await menuai.config_entries.async_forward_entry_setups(
         config_entry, [Platform.UPDATE]
     )
     return True
 
 
 async def mock_async_setup_update_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the firmware update config entry."""
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
     entity = _mock_async_create_update_entity(
-        hass, config_entry, session, async_add_entities
+        menuai, config_entry, session, async_add_entities
     )
 
     async_add_entities([entity])
@@ -230,7 +230,7 @@ class MockFirmwareUpdateEntity(BaseFirmwareUpdateEntity):
         """Handle updated firmware info being pushed by an integration."""
         super()._firmware_info_callback(firmware_info)
 
-        self.hass.config_entries.async_update_entry(
+        self.menuai.config_entries.async_update_entry(
             self._config_entry,
             data={
                 **self._config_entry.data,
@@ -242,23 +242,23 @@ class MockFirmwareUpdateEntity(BaseFirmwareUpdateEntity):
 
 @pytest.fixture(name="update_config_entry")
 async def mock_update_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> AsyncGenerator[ConfigEntry]:
-    """Set up a mock Home Assistant Hardware firmware update entity."""
-    await async_setup_component(hass, "homeassistant", {})
-    await async_setup_component(hass, "homeassistant_hardware", {})
+    """Set up a mock MenuAI Hardware firmware update entity."""
+    await async_setup_component(menuai, "menuai", {})
+    await async_setup_component(menuai, "menuai_hardware", {})
 
     mock_integration(
-        hass,
+        menuai,
         MockModule(
             TEST_DOMAIN,
             async_setup_entry=mock_async_setup_entry,
         ),
         built_in=False,
     )
-    mock_platform(hass, "test.config_flow")
+    mock_platform(menuai, "test.config_flow")
     mock_platform(
-        hass,
+        menuai,
         "test.update",
         MockPlatform(async_setup_entry=mock_async_setup_update_entities),
     )
@@ -272,11 +272,11 @@ async def mock_update_config_entry(
             "firmware_version": "7.3.1.0 build 0",
         },
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with (
         patch(
-            "homeassistant.components.homeassistant_hardware.coordinator.FirmwareUpdateClient",
+            "menuai.components.menuai_hardware.coordinator.FirmwareUpdateClient",
             autospec=True,
         ) as mock_update_client,
         mock_config_flow(TEST_DOMAIN, ConfigFlow),
@@ -286,12 +286,12 @@ async def mock_update_config_entry(
 
 
 async def test_update_entity_installation(
-    hass: HomeAssistant, update_config_entry: ConfigEntry
+    menuai: menuai, update_config_entry: ConfigEntry
 ) -> None:
     """Test the Hardware firmware update entity installation."""
 
-    assert await hass.config_entries.async_setup(update_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(update_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Set up another integration communicating with the device
     owning_config_entry = MockConfigEntry(
@@ -306,12 +306,12 @@ async def test_update_entity_installation(
         },
         version=4,
     )
-    owning_config_entry.add_to_hass(hass)
-    owning_config_entry.mock_state(hass, ConfigEntryState.LOADED)
+    owning_config_entry.add_to_menuai(menuai)
+    owning_config_entry.mock_state(menuai, ConfigEntryState.LOADED)
 
     # The integration provides firmware info
     mock_hw_module = Mock()
-    mock_hw_module.get_firmware_info = lambda hass, config_entry: FirmwareInfo(
+    mock_hw_module.get_firmware_info = lambda menuai, config_entry: FirmwareInfo(
         device=TEST_DEVICE,
         firmware_type=ApplicationType.EZSP,
         firmware_version="7.3.1.0 build 0",
@@ -319,16 +319,16 @@ async def test_update_entity_installation(
         source="another_integration",
     )
 
-    async_register_firmware_info_provider(hass, "another_integration", mock_hw_module)
+    async_register_firmware_info_provider(menuai, "another_integration", mock_hw_module)
 
     # Pretend the other integration loaded and notified hardware of the running firmware
     await async_notify_firmware_info(
-        hass,
+        menuai,
         "another_integration",
-        mock_hw_module.get_firmware_info(hass, owning_config_entry),
+        mock_hw_module.get_firmware_info(menuai, owning_config_entry),
     )
 
-    state_before_update = hass.states.get(TEST_UPDATE_ENTITY_ID)
+    state_before_update = menuai.states.get(TEST_UPDATE_ENTITY_ID)
     assert state_before_update is not None
     assert state_before_update.state == "unknown"
     assert state_before_update.attributes["title"] == "EmberZNet"
@@ -336,13 +336,13 @@ async def test_update_entity_installation(
     assert state_before_update.attributes["latest_version"] is None
 
     # When we check for an update, one will be shown
-    await hass.services.async_call(
-        "homeassistant",
+    await menuai.services.async_call(
+        "menuai",
         "update_entity",
         {"entity_id": TEST_UPDATE_ENTITY_ID},
         blocking=True,
     )
-    state_after_update = hass.states.get(TEST_UPDATE_ENTITY_ID)
+    state_after_update = menuai.states.get(TEST_UPDATE_ENTITY_ID)
     assert state_after_update is not None
     assert state_after_update.state == "on"
     assert state_after_update.attributes["title"] == "EmberZNet"
@@ -371,15 +371,15 @@ async def test_update_entity_installation(
     # When we install it, the other integration is reloaded
     with (
         patch(
-            "homeassistant.components.homeassistant_hardware.update.parse_firmware_image",
+            "menuai.components.menuai_hardware.update.parse_firmware_image",
             return_value=mock_firmware,
         ),
         patch(
-            "homeassistant.components.homeassistant_hardware.update.Flasher",
+            "menuai.components.menuai_hardware.update.Flasher",
             return_value=mock_flasher,
         ),
         patch(
-            "homeassistant.components.homeassistant_hardware.update.probe_silabs_firmware_info",
+            "menuai.components.menuai_hardware.update.probe_silabs_firmware_info",
             return_value=FirmwareInfo(
                 device=TEST_DEVICE,
                 firmware_type=ApplicationType.EZSP,
@@ -393,9 +393,9 @@ async def test_update_entity_installation(
         ) as owning_config_entry_unload,
     ):
         state_changes: list[Event[EventStateChangedData]] = async_capture_events(
-            hass, EVENT_STATE_CHANGED
+            menuai, EVENT_STATE_CHANGED
         )
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "update",
             "install",
             {"entity_id": TEST_UPDATE_ENTITY_ID},
@@ -427,7 +427,7 @@ async def test_update_entity_installation(
     assert len(owning_config_entry_unload.mock_calls) == 1
 
     # After the firmware update, the entity has the new version and the correct state
-    state_after_install = hass.states.get(TEST_UPDATE_ENTITY_ID)
+    state_after_install = menuai.states.get(TEST_UPDATE_ENTITY_ID)
     assert state_after_install is not None
     assert state_after_install.state == "off"
     assert state_after_install.attributes["title"] == "EmberZNet"
@@ -436,20 +436,20 @@ async def test_update_entity_installation(
 
 
 async def test_update_entity_installation_failure(
-    hass: HomeAssistant, update_config_entry: ConfigEntry
+    menuai: menuai, update_config_entry: ConfigEntry
 ) -> None:
     """Test installation failing during flashing."""
-    assert await hass.config_entries.async_setup(update_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(update_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    await hass.services.async_call(
-        "homeassistant",
+    await menuai.services.async_call(
+        "menuai",
         "update_entity",
         {"entity_id": TEST_UPDATE_ENTITY_ID},
         blocking=True,
     )
 
-    state_before_install = hass.states.get(TEST_UPDATE_ENTITY_ID)
+    state_before_install = menuai.states.get(TEST_UPDATE_ENTITY_ID)
     assert state_before_install is not None
     assert state_before_install.state == "on"
     assert state_before_install.attributes["title"] == "EmberZNet"
@@ -463,16 +463,16 @@ async def test_update_entity_installation_failure(
 
     with (
         patch(
-            "homeassistant.components.homeassistant_hardware.update.parse_firmware_image",
+            "menuai.components.menuai_hardware.update.parse_firmware_image",
             return_value=Mock(),
         ),
         patch(
-            "homeassistant.components.homeassistant_hardware.update.Flasher",
+            "menuai.components.menuai_hardware.update.Flasher",
             return_value=mock_flasher,
         ),
-        pytest.raises(HomeAssistantError, match="Failed to flash firmware"),
+        pytest.raises(menuaiError, match="Failed to flash firmware"),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "update",
             "install",
             {"entity_id": TEST_UPDATE_ENTITY_ID},
@@ -480,7 +480,7 @@ async def test_update_entity_installation_failure(
         )
 
     # After the firmware update fails, we can still try again
-    state_after_install = hass.states.get(TEST_UPDATE_ENTITY_ID)
+    state_after_install = menuai.states.get(TEST_UPDATE_ENTITY_ID)
     assert state_after_install is not None
     assert state_after_install.state == "on"
     assert state_after_install.attributes["title"] == "EmberZNet"
@@ -489,20 +489,20 @@ async def test_update_entity_installation_failure(
 
 
 async def test_update_entity_installation_probe_failure(
-    hass: HomeAssistant, update_config_entry: ConfigEntry
+    menuai: menuai, update_config_entry: ConfigEntry
 ) -> None:
     """Test installation failing during post-flashing probing."""
-    assert await hass.config_entries.async_setup(update_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(update_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    await hass.services.async_call(
-        "homeassistant",
+    await menuai.services.async_call(
+        "menuai",
         "update_entity",
         {"entity_id": TEST_UPDATE_ENTITY_ID},
         blocking=True,
     )
 
-    state_before_install = hass.states.get(TEST_UPDATE_ENTITY_ID)
+    state_before_install = menuai.states.get(TEST_UPDATE_ENTITY_ID)
     assert state_before_install is not None
     assert state_before_install.state == "on"
     assert state_before_install.attributes["title"] == "EmberZNet"
@@ -511,22 +511,22 @@ async def test_update_entity_installation_probe_failure(
 
     with (
         patch(
-            "homeassistant.components.homeassistant_hardware.update.parse_firmware_image",
+            "menuai.components.menuai_hardware.update.parse_firmware_image",
             return_value=Mock(),
         ),
         patch(
-            "homeassistant.components.homeassistant_hardware.update.Flasher",
+            "menuai.components.menuai_hardware.update.Flasher",
             return_value=AsyncMock(),
         ),
         patch(
-            "homeassistant.components.homeassistant_hardware.update.probe_silabs_firmware_info",
+            "menuai.components.menuai_hardware.update.probe_silabs_firmware_info",
             return_value=None,
         ),
         pytest.raises(
-            HomeAssistantError, match="Failed to probe the firmware after flashing"
+            menuaiError, match="Failed to probe the firmware after flashing"
         ),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "update",
             "install",
             {"entity_id": TEST_UPDATE_ENTITY_ID},
@@ -534,7 +534,7 @@ async def test_update_entity_installation_probe_failure(
         )
 
     # After the firmware update fails, we can still try again
-    state_after_install = hass.states.get(TEST_UPDATE_ENTITY_ID)
+    state_after_install = menuai.states.get(TEST_UPDATE_ENTITY_ID)
     assert state_after_install is not None
     assert state_after_install.state == "on"
     assert state_after_install.attributes["title"] == "EmberZNet"
@@ -543,12 +543,12 @@ async def test_update_entity_installation_probe_failure(
 
 
 async def test_update_entity_state_restoration(
-    hass: HomeAssistant, update_config_entry: ConfigEntry
+    menuai: menuai, update_config_entry: ConfigEntry
 ) -> None:
     """Test the Hardware firmware update entity state restoration."""
 
     mock_restore_cache_with_extra_data(
-        hass,
+        menuai,
         [
             (
                 State(TEST_UPDATE_ENTITY_ID, "on"),
@@ -559,11 +559,11 @@ async def test_update_entity_state_restoration(
         ],
     )
 
-    assert await hass.config_entries.async_setup(update_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(update_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # The state is correctly restored
-    state = hass.states.get(TEST_UPDATE_ENTITY_ID)
+    state = menuai.states.get(TEST_UPDATE_ENTITY_ID)
     assert state is not None
     assert state.state == "on"
     assert state.attributes["title"] == "EmberZNet"
@@ -574,12 +574,12 @@ async def test_update_entity_state_restoration(
 
 
 async def test_update_entity_firmware_missing_from_manifest(
-    hass: HomeAssistant, update_config_entry: ConfigEntry
+    menuai: menuai, update_config_entry: ConfigEntry
 ) -> None:
     """Test the Hardware firmware update entity handles missing firmware."""
 
     mock_restore_cache_with_extra_data(
-        hass,
+        menuai,
         [
             (
                 State(TEST_UPDATE_ENTITY_ID, "on"),
@@ -591,11 +591,11 @@ async def test_update_entity_firmware_missing_from_manifest(
         ],
     )
 
-    assert await hass.config_entries.async_setup(update_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(update_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # The state is restored, accounting for the missing firmware
-    state = hass.states.get(TEST_UPDATE_ENTITY_ID)
+    state = menuai.states.get(TEST_UPDATE_ENTITY_ID)
     assert state is not None
     assert state.state == "unknown"
     assert state.attributes["title"] == "EmberZNet"
@@ -606,32 +606,32 @@ async def test_update_entity_firmware_missing_from_manifest(
 
 
 async def test_update_entity_graceful_firmware_type_callback_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     update_config_entry: ConfigEntry,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test firmware update entity handling of firmware type callback errors."""
 
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
     update_entity = MockFirmwareUpdateEntity(
         device=TEST_DEVICE,
         config_entry=update_config_entry,
         update_coordinator=FirmwareUpdateCoordinator(
-            hass,
+            menuai,
             session,
             TEST_FIRMWARE_RELEASES_URL,
         ),
         entity_description=TEST_FIRMWARE_ENTITY_DESCRIPTIONS[ApplicationType.EZSP],
     )
-    update_entity.hass = hass
-    await update_entity.async_added_to_hass()
+    update_entity.menuai = menuai
+    await update_entity.async_added_to_menuai()
 
     callback = Mock(side_effect=RuntimeError("Callback failed"))
     unregister_callback = update_entity.add_firmware_type_changed_callback(callback)
 
     with caplog.at_level(logging.WARNING):
         await async_notify_firmware_info(
-            hass,
+            menuai,
             "some_integration",
             FirmwareInfo(
                 device=TEST_DEVICE,

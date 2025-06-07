@@ -5,13 +5,13 @@ from unittest.mock import AsyncMock
 from knocki import KnockiConnectionError, KnockiInvalidAuthError
 import pytest
 
-from homeassistant.components.knocki.const import DOMAIN
-from homeassistant.config_entries import SOURCE_DHCP, SOURCE_USER
-from homeassistant.const import CONF_PASSWORD, CONF_TOKEN, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.components.knocki.const import DOMAIN
+from menuai.config_entries import SOURCE_DHCP, SOURCE_USER
+from menuai.const import CONF_PASSWORD, CONF_TOKEN, CONF_USERNAME
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers import device_registry as dr
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
 
 from . import setup_integration
 
@@ -25,18 +25,18 @@ DHCP_DISCOVERY = DhcpServiceInfo(
 
 
 async def test_full_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_knocki_client: AsyncMock,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test full flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert not result["errors"]
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_USERNAME: "test-username",
@@ -55,19 +55,19 @@ async def test_full_flow(
 
 
 async def test_duplcate_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_knocki_client: AsyncMock,
 ) -> None:
     """Test abort when setting up duplicate entry."""
-    mock_config_entry.add_to_hass(hass)
-    result = await hass.config_entries.flow.async_init(
+    mock_config_entry.add_to_menuai(menuai)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert not result["errors"]
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_USERNAME: "test-username",
@@ -89,7 +89,7 @@ async def test_duplcate_entry(
     ],
 )
 async def test_exceptions(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_knocki_client: AsyncMock,
     mock_setup_entry: AsyncMock,
     field: str,
@@ -98,10 +98,10 @@ async def test_exceptions(
 ) -> None:
     """Test exceptions."""
     getattr(mock_knocki_client, field).side_effect = exception
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_USERNAME: "test-username",
@@ -113,7 +113,7 @@ async def test_exceptions(
 
     getattr(mock_knocki_client, field).side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_USERNAME: "test-username",
@@ -124,18 +124,18 @@ async def test_exceptions(
 
 
 async def test_dhcp(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_knocki_client: AsyncMock,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test DHCP discovery."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_DHCP}, data=DHCP_DISCOVERY
     )
     assert result["type"] is FlowResultType.FORM
     assert not result["errors"]
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_USERNAME: "test-username",
@@ -148,19 +148,19 @@ async def test_dhcp(
 
 
 async def test_dhcp_mac(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_knocki_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     device_registry: dr.DeviceRegistry,
 ) -> None:
     """Test updating the mac address in the DHCP discovery."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     device = device_registry.async_get_device(identifiers={(DOMAIN, "KNC1-W-00000214")})
     assert device
     assert device.connections == set()
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_DHCP}, data=DHCP_DISCOVERY
     )
     assert result["type"] is FlowResultType.ABORT
@@ -172,14 +172,14 @@ async def test_dhcp_mac(
 
 
 async def test_dhcp_already_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_knocki_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test DHCP discovery with already setup device."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_DHCP}, data=DHCP_DISCOVERY
     )
     assert result["type"] is FlowResultType.ABORT

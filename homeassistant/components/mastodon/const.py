@@ -8,7 +8,7 @@ LOGGER = logging.getLogger(__name__)
 DOMAIN: Final = "mastodon"
 
 CONF_BASE_URL: Final = "base_url"
-DATA_HASS_CONFIG = "mastodon_hass_config"
+DATA_menuai_CONFIG = "mastodon_menuai_config"
 DEFAULT_URL: Final = "https://mastodon.social"
 DEFAULT_NAME: Final = "Mastodon"
 

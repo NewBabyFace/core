@@ -4,12 +4,12 @@ from typing import Any
 
 import pytest
 
-from homeassistant.components.knx.storage.config_store import (
+from menuai.components.knx.storage.config_store import (
     STORAGE_KEY as KNX_CONFIG_STORAGE_KEY,
 )
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import KnxEntityGenerator
 from .conftest import KNXTestKit
@@ -18,15 +18,15 @@ from tests.typing import WebSocketGenerator
 
 
 async def test_create_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXTestKit,
-    hass_ws_client: WebSocketGenerator,
-    hass_storage: dict[str, Any],
+    menuai_ws_client: WebSocketGenerator,
+    menuai_storage: dict[str, Any],
     create_ui_entity: KnxEntityGenerator,
 ) -> None:
     """Test entity creation."""
     await knx.setup_integration()
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     test_name = "Test no device"
     test_entity = await create_ui_entity(
@@ -45,7 +45,7 @@ async def test_create_entity(
     # Test if entity is correctly stored in config store
     test_storage_data = next(
         iter(
-            hass_storage[KNX_CONFIG_STORAGE_KEY]["data"]["entities"]["switch"].values()
+            menuai_storage[KNX_CONFIG_STORAGE_KEY]["data"]["entities"]["switch"].values()
         )
     )
     assert test_storage_data == {
@@ -64,13 +64,13 @@ async def test_create_entity(
 
 
 async def test_create_entity_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXTestKit,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test unsuccessful entity creation."""
     await knx.setup_integration()
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     # create entity with invalid platform
     await client.send_json_auto_id(
@@ -108,16 +108,16 @@ async def test_create_entity_error(
 
 
 async def test_update_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXTestKit,
     entity_registry: er.EntityRegistry,
-    hass_ws_client: WebSocketGenerator,
-    hass_storage: dict[str, Any],
+    menuai_ws_client: WebSocketGenerator,
+    menuai_storage: dict[str, Any],
     create_ui_entity: KnxEntityGenerator,
 ) -> None:
     """Test entity update."""
     await knx.setup_integration()
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     test_entity = await create_ui_entity(
         platform=Platform.SWITCH,
@@ -149,7 +149,7 @@ async def test_update_entity(
     assert entity.original_name == new_name
 
     assert (
-        hass_storage[KNX_CONFIG_STORAGE_KEY]["data"]["entities"]["switch"][
+        menuai_storage[KNX_CONFIG_STORAGE_KEY]["data"]["entities"]["switch"][
             test_entity.unique_id
         ]["knx"]["ga_switch"]["write"]
         == new_ga_switch_write
@@ -157,14 +157,14 @@ async def test_update_entity(
 
 
 async def test_update_entity_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXTestKit,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     create_ui_entity: KnxEntityGenerator,
 ) -> None:
     """Test entity update."""
     await knx.setup_integration()
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     test_entity = await create_ui_entity(
         platform=Platform.SWITCH,
@@ -230,16 +230,16 @@ async def test_update_entity_error(
 
 
 async def test_delete_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXTestKit,
     entity_registry: er.EntityRegistry,
-    hass_ws_client: WebSocketGenerator,
-    hass_storage: dict[str, Any],
+    menuai_ws_client: WebSocketGenerator,
+    menuai_storage: dict[str, Any],
     create_ui_entity: KnxEntityGenerator,
 ) -> None:
     """Test entity deletion."""
     await knx.setup_integration()
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     test_entity = await create_ui_entity(
         platform=Platform.SWITCH,
@@ -259,19 +259,19 @@ async def test_delete_entity(
     assert res["success"], res
 
     assert not entity_registry.async_get(test_entity_id)
-    assert not hass_storage[KNX_CONFIG_STORAGE_KEY]["data"]["entities"].get("switch")
+    assert not menuai_storage[KNX_CONFIG_STORAGE_KEY]["data"]["entities"].get("switch")
 
 
 async def test_delete_entity_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXTestKit,
     entity_registry: er.EntityRegistry,
-    hass_ws_client: WebSocketGenerator,
-    hass_storage: dict[str, Any],
+    menuai_ws_client: WebSocketGenerator,
+    menuai_storage: dict[str, Any],
 ) -> None:
     """Test unsuccessful entity deletion."""
     await knx.setup_integration()
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     # delete unknown entity
     await client.send_json_auto_id(
@@ -301,14 +301,14 @@ async def test_delete_entity_error(
 
 
 async def test_get_entity_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXTestKit,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     create_ui_entity: KnxEntityGenerator,
 ) -> None:
     """Test entity config retrieval."""
     await knx.setup_integration()
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     test_entity = await create_ui_entity(
         platform=Platform.SWITCH,
@@ -348,15 +348,15 @@ async def test_get_entity_config(
     ],
 )
 async def test_get_entity_config_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXTestKit,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     test_entity_id: str,
     error_message_start: str,
 ) -> None:
     """Test entity config retrieval errors."""
     await knx.setup_integration()
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json_auto_id(
         {
@@ -371,13 +371,13 @@ async def test_get_entity_config_error(
 
 
 async def test_validate_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXTestKit,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test entity validation."""
     await knx.setup_integration()
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json_auto_id(
         {

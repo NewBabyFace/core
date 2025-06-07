@@ -12,18 +12,18 @@ from uiprotect.exceptions import NvrError
 from uiprotect.utils import from_js_time
 from yarl import URL
 
-from homeassistant.components.camera import CameraImageView
-from homeassistant.components.media_player import BrowseError, MediaClass
-from homeassistant.components.media_source import (
+from menuai.components.camera import CameraImageView
+from menuai.components.media_player import BrowseError, MediaClass
+from menuai.components.media_source import (
     BrowseMediaSource,
     MediaSource,
     MediaSourceItem,
     PlayMedia,
 )
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er
-from homeassistant.util import dt as dt_util
+from menuai.const import Platform
+from menuai.core import menuai, callback
+from menuai.helpers import entity_registry as er
+from menuai.util import dt as dt_util
 
 from .const import DOMAIN
 from .data import ProtectData, async_get_ufp_entries
@@ -81,13 +81,13 @@ EVENT_NAME_MAP = {
 }
 
 
-async def async_get_media_source(hass: HomeAssistant) -> MediaSource:
+async def async_get_media_source(menuai: menuai) -> MediaSource:
     """Set up UniFi Protect media source."""
     return ProtectMediaSource(
-        hass,
+        menuai,
         {
             entry.runtime_data.api.bootstrap.nvr.id: entry.runtime_data
-            for entry in async_get_ufp_entries(hass)
+            for entry in async_get_ufp_entries(menuai)
         },
     )
 
@@ -181,12 +181,12 @@ class ProtectMediaSource(MediaSource):
     _registry: er.EntityRegistry | None
 
     def __init__(
-        self, hass: HomeAssistant, data_sources: dict[str, ProtectData]
+        self, menuai: menuai, data_sources: dict[str, ProtectData]
     ) -> None:
         """Initialize the UniFi Protect media source."""
 
         super().__init__(DOMAIN)
-        self.hass = hass
+        self.menuai = menuai
         self.data_sources = data_sources
         self._registry = None
 
@@ -384,7 +384,7 @@ class ProtectMediaSource(MediaSource):
     def async_get_registry(self) -> er.EntityRegistry:
         """Get or return Entity Registry."""
         if self._registry is None:
-            self._registry = er.async_get(self.hass)
+            self._registry = er.async_get(self.menuai)
         return self._registry
 
     def _breadcrumb(

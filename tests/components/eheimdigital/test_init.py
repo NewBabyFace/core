@@ -4,9 +4,9 @@ from unittest.mock import MagicMock
 
 from eheimdigital.types import EheimDeviceType
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.setup import async_setup_component
 
 from .conftest import init_integration
 
@@ -15,21 +15,21 @@ from tests.typing import WebSocketGenerator
 
 
 async def test_remove_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     eheimdigital_hub_mock: MagicMock,
     mock_config_entry: MockConfigEntry,
     device_registry: dr.DeviceRegistry,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test removing a device."""
-    assert await async_setup_component(hass, "config", {})
+    assert await async_setup_component(menuai, "config", {})
 
-    await init_integration(hass, mock_config_entry)
+    await init_integration(menuai, mock_config_entry)
 
     await eheimdigital_hub_mock.call_args.kwargs["device_found_callback"](
         "00:00:00:00:00:01", EheimDeviceType.VERSION_EHEIM_CLASSIC_LED_CTRL_PLUS_E
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     mac_address: str = eheimdigital_hub_mock.return_value.main.mac_address
 
@@ -39,10 +39,10 @@ async def test_remove_device(
     )
     assert device_entry is not None
 
-    hass_client = await hass_ws_client(hass)
+    menuai_client = await menuai_ws_client(menuai)
 
     # Do not allow to delete a connected device
-    response = await hass_client.remove_device(
+    response = await menuai_client.remove_device(
         device_entry.id, mock_config_entry.entry_id
     )
     assert not response["success"]
@@ -50,7 +50,7 @@ async def test_remove_device(
     eheimdigital_hub_mock.return_value.devices = {}
 
     # Allow to delete a not connected device
-    response = await hass_client.remove_device(
+    response = await menuai_client.remove_device(
         device_entry.id, mock_config_entry.entry_id
     )
     assert response["success"]

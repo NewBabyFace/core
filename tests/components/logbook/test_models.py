@@ -2,7 +2,7 @@
 
 from unittest.mock import Mock
 
-from homeassistant.components.logbook.models import EventAsRow, LazyEventPartialState
+from menuai.components.logbook.models import EventAsRow, LazyEventPartialState
 
 
 def test_lazy_event_partial_state_context() -> None:

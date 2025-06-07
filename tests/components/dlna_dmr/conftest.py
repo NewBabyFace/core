@@ -10,10 +10,10 @@ from async_upnp_client.client import UpnpDevice, UpnpService
 from async_upnp_client.client_factory import UpnpFactory
 import pytest
 
-from homeassistant.components.dlna_dmr.const import DOMAIN
-from homeassistant.components.dlna_dmr.data import DlnaDmrData
-from homeassistant.const import CONF_DEVICE_ID, CONF_MAC, CONF_TYPE, CONF_URL
-from homeassistant.core import HomeAssistant
+from menuai.components.dlna_dmr.const import DOMAIN
+from menuai.components.dlna_dmr.data import DlnaDmrData
+from menuai.const import CONF_DEVICE_ID, CONF_MAC, CONF_TYPE, CONF_URL
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -32,7 +32,7 @@ NEW_DEVICE_LOCATION = "http://198.51.100.7" + "/dmr_description.xml"
 
 
 @pytest.fixture
-def domain_data_mock(hass: HomeAssistant) -> Mock:
+def domain_data_mock(menuai: menuai) -> Mock:
     """Mock the global data used by this component.
 
     This includes network clients and library object factories. Mocking it
@@ -76,7 +76,7 @@ def domain_data_mock(hass: HomeAssistant) -> Mock:
     seal(upnp_device)
     domain_data.upnp_factory.async_create_device.return_value = upnp_device
 
-    hass.data[DOMAIN] = domain_data
+    menuai.data[DOMAIN] = domain_data
     return domain_data
 
 
@@ -117,7 +117,7 @@ def config_entry_mock_no_mac() -> MockConfigEntry:
 def dmr_device_mock(domain_data_mock: Mock) -> Generator[Mock]:
     """Mock the async_upnp_client DMR device, initially connected."""
     with patch(
-        "homeassistant.components.dlna_dmr.media_player.DmrDevice", autospec=True
+        "menuai.components.dlna_dmr.media_player.DmrDevice", autospec=True
     ) as constructor:
         device = constructor.return_value
         device.on_event = None
@@ -137,7 +137,7 @@ def dmr_device_mock(domain_data_mock: Mock) -> Generator[Mock]:
 @pytest.fixture(autouse=True)
 def ssdp_scanner_mock() -> Generator[Mock]:
     """Mock the SSDP Scanner."""
-    with patch("homeassistant.components.ssdp.Scanner", autospec=True) as mock_scanner:
+    with patch("menuai.components.ssdp.Scanner", autospec=True) as mock_scanner:
         reg_callback = mock_scanner.return_value.async_register_callback
         reg_callback.return_value = Mock(return_value=None)
         yield mock_scanner.return_value
@@ -146,7 +146,7 @@ def ssdp_scanner_mock() -> Generator[Mock]:
 @pytest.fixture(autouse=True)
 def ssdp_server_mock() -> Generator[None]:
     """Mock the SSDP Server."""
-    with patch("homeassistant.components.ssdp.Server", autospec=True):
+    with patch("menuai.components.ssdp.Server", autospec=True):
         yield
 
 
@@ -154,7 +154,7 @@ def ssdp_server_mock() -> Generator[None]:
 def async_get_local_ip_mock() -> Generator[Mock]:
     """Mock the async_get_local_ip utility function to prevent network access."""
     with patch(
-        "homeassistant.components.dlna_dmr.media_player.async_get_local_ip",
+        "menuai.components.dlna_dmr.media_player.async_get_local_ip",
         autospec=True,
     ) as func:
         func.return_value = AddressFamily.AF_INET, LOCAL_IP

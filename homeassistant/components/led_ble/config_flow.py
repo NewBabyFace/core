@@ -9,12 +9,12 @@ from bluetooth_data_tools import human_readable_name
 from led_ble import BLEAK_EXCEPTIONS, LEDBLE, CharacteristicMissingError
 import voluptuous as vol
 
-from homeassistant.components.bluetooth import (
+from menuai.components.bluetooth import (
     BluetoothServiceInfoBleak,
     async_discovered_service_info,
 )
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_ADDRESS
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_ADDRESS
 
 from .const import DOMAIN, LOCAL_NAMES, UNSUPPORTED_SUB_MODEL
 
@@ -86,7 +86,7 @@ class LedBleConfigFlow(ConfigFlow, domain=DOMAIN):
             self._discovered_devices[discovery.address] = discovery
         else:
             current_addresses = self._async_current_ids()
-            for discovery in async_discovered_service_info(self.hass):
+            for discovery in async_discovered_service_info(self.menuai):
                 if (
                     discovery.address in current_addresses
                     or discovery.address in self._discovered_devices

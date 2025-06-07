@@ -9,13 +9,13 @@ from aiolifx.aiolifx import Light
 from aiolifx.connection import LIFXConnection
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_DEVICE, CONF_HOST
-from homeassistant.core import callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
-from homeassistant.helpers.typing import DiscoveryInfoType
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_DEVICE, CONF_HOST
+from menuai.core import callback
+from menuai.helpers import device_registry as dr
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.helpers.typing import DiscoveryInfoType
 
 from .const import (
     _LOGGER,
@@ -54,7 +54,7 @@ class LifXConfigFlow(ConfigFlow, domain=DOMAIN):
         """Handle discovery via DHCP."""
         mac = discovery_info.macaddress
         host = discovery_info.ip
-        hass = self.hass
+        menuai = self.menuai
         for entry in self._async_current_entries():
             if (
                 entry.unique_id
@@ -62,11 +62,11 @@ class LifXConfigFlow(ConfigFlow, domain=DOMAIN):
                 and mac_matches_serial_number(mac, entry.unique_id)
             ):
                 if entry.data[CONF_HOST] != host:
-                    hass.config_entries.async_update_entry(
+                    menuai.config_entries.async_update_entry(
                         entry, data={**entry.data, CONF_HOST: host}
                     )
-                    hass.async_create_task(
-                        hass.config_entries.async_reload(entry.entry_id)
+                    menuai.async_create_task(
+                        menuai.config_entries.async_reload(entry.entry_id)
                     )
                 return self.async_abort(reason="already_configured")
         return await self._async_handle_discovery(host)
@@ -93,7 +93,7 @@ class LifXConfigFlow(ConfigFlow, domain=DOMAIN):
         """Handle any discovery."""
         self._async_abort_entries_match({CONF_HOST: host})
         self.host = host
-        if self.hass.config_entries.flow.async_has_matching_flow(self):
+        if self.menuai.config_entries.flow.async_has_matching_flow(self):
             return self.async_abort(reason="already_in_progress")
         if not (
             device := await self._async_try_connect(
@@ -112,9 +112,9 @@ class LifXConfigFlow(ConfigFlow, domain=DOMAIN):
     def _async_discovered_pending_migration(self) -> bool:
         """Check if a discovered device is pending migration."""
         assert self.unique_id is not None
-        if not (legacy_entry := async_get_legacy_entry(self.hass)):
+        if not (legacy_entry := async_get_legacy_entry(self.menuai)):
             return False
-        device_registry = dr.async_get(self.hass)
+        device_registry = dr.async_get(self.menuai)
         existing_device = device_registry.async_get_device(
             identifiers={(DOMAIN, self.unique_id)}
         )
@@ -195,7 +195,7 @@ class LifXConfigFlow(ConfigFlow, domain=DOMAIN):
         self._discovered_devices = {
             # device.mac_addr is not the mac_address, its the serial number
             device.mac_addr: device
-            for device in await async_discover_devices(self.hass)
+            for device in await async_discover_devices(self.menuai)
         }
         devices_name = {
             serial: f"{serial} ({device.ip_addr})"

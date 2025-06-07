@@ -3,9 +3,9 @@
 import logging
 from typing import Any
 
-from homeassistant.components.event import EventEntity
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.event import EventEntity
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import NiceGOConfigEntry
 from .entity import NiceGOEntity
@@ -14,7 +14,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: NiceGOConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -37,9 +37,9 @@ class NiceGOEventEntity(NiceGOEntity, EventEntity):
     _attr_translation_key = "barrier_obstructed"
     _attr_event_types = [EVENT_BARRIER_OBSTRUCTED]
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Listen for events."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self.async_on_remove(
             self.coordinator.api.listen(
                 "on_barrier_obstructed", self.on_barrier_obstructed

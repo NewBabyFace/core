@@ -3,17 +3,17 @@
 import pytest
 from pytest_unordered import unordered
 
-from homeassistant.components import automation
-from homeassistant.components.alarm_control_panel import (
+from menuai.components import automation
+from menuai.components.alarm_control_panel import (
     DOMAIN,
     AlarmControlPanelEntityFeature,
     AlarmControlPanelState,
 )
-from homeassistant.components.device_automation import DeviceAutomationType
-from homeassistant.const import CONF_PLATFORM, STATE_UNKNOWN, EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.components.device_automation import DeviceAutomationType
+from menuai.const import CONF_PLATFORM, STATE_UNKNOWN, EntityCategory
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.setup import async_setup_component
 
 from .common import MockAlarm
 
@@ -82,7 +82,7 @@ def stub_blueprint_populate_autouse(stub_blueprint_populate: None) -> None:
     ],
 )
 async def test_get_actions(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     set_state: bool,
@@ -92,7 +92,7 @@ async def test_get_actions(
 ) -> None:
     """Test we get the expected actions from a alarm_control_panel."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -105,7 +105,7 @@ async def test_get_actions(
         supported_features=features_reg,
     )
     if set_state:
-        hass.states.async_set(
+        menuai.states.async_set(
             f"{DOMAIN}.test_5678", "attributes", {"supported_features": features_state}
         )
     expected_actions = [
@@ -119,7 +119,7 @@ async def test_get_actions(
         for action in expected_action_types
     ]
     actions = await async_get_device_automations(
-        hass, DeviceAutomationType.ACTION, device_entry.id
+        menuai, DeviceAutomationType.ACTION, device_entry.id
     )
     assert actions == unordered(expected_actions)
 
@@ -134,7 +134,7 @@ async def test_get_actions(
     ],
 )
 async def test_get_actions_hidden_auxiliary(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     hidden_by: er.RegistryEntryHider | None,
@@ -142,7 +142,7 @@ async def test_get_actions_hidden_auxiliary(
 ) -> None:
     """Test we get the expected actions from a hidden or auxiliary entity."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -168,19 +168,19 @@ async def test_get_actions_hidden_auxiliary(
         for action in ("disarm", "arm_away")
     ]
     actions = await async_get_device_automations(
-        hass, DeviceAutomationType.ACTION, device_entry.id
+        menuai, DeviceAutomationType.ACTION, device_entry.id
     )
     assert actions == unordered(expected_actions)
 
 
 async def test_get_actions_arm_night_only(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test we get the expected actions from a alarm_control_panel."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -188,7 +188,7 @@ async def test_get_actions_arm_night_only(
     entity_entry = entity_registry.async_get_or_create(
         DOMAIN, "test", "5678", device_id=device_entry.id
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "alarm_control_panel.test_5678", "attributes", {"supported_features": 4}
     )
     expected_actions = [
@@ -208,26 +208,26 @@ async def test_get_actions_arm_night_only(
         },
     ]
     actions = await async_get_device_automations(
-        hass, DeviceAutomationType.ACTION, device_entry.id
+        menuai, DeviceAutomationType.ACTION, device_entry.id
     )
     assert actions == unordered(expected_actions)
 
 
 async def test_get_action_capabilities(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     mock_alarm_control_panel_entities: dict[str, MockAlarm],
 ) -> None:
     """Test we get the expected capabilities from a sensor trigger."""
     setup_test_component_platform(
-        hass, DOMAIN, mock_alarm_control_panel_entities.values()
+        menuai, DOMAIN, mock_alarm_control_panel_entities.values()
     )
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
+    await menuai.async_block_till_done()
 
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -250,32 +250,32 @@ async def test_get_action_capabilities(
         "trigger": {"extra_fields": []},
     }
     actions = await async_get_device_automations(
-        hass, DeviceAutomationType.ACTION, device_entry.id
+        menuai, DeviceAutomationType.ACTION, device_entry.id
     )
     assert len(actions) == 6
     assert {action["type"] for action in actions} == set(expected_capabilities)
     for action in actions:
         capabilities = await async_get_device_automation_capabilities(
-            hass, DeviceAutomationType.ACTION, action
+            menuai, DeviceAutomationType.ACTION, action
         )
         assert capabilities == expected_capabilities[action["type"]]
 
 
 async def test_get_action_capabilities_legacy(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     mock_alarm_control_panel_entities: dict[str, MockAlarm],
 ) -> None:
     """Test we get the expected capabilities from a sensor trigger."""
     setup_test_component_platform(
-        hass, DOMAIN, mock_alarm_control_panel_entities.values()
+        menuai, DOMAIN, mock_alarm_control_panel_entities.values()
     )
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
+    await menuai.async_block_till_done()
 
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -298,33 +298,33 @@ async def test_get_action_capabilities_legacy(
         "trigger": {"extra_fields": []},
     }
     actions = await async_get_device_automations(
-        hass, DeviceAutomationType.ACTION, device_entry.id
+        menuai, DeviceAutomationType.ACTION, device_entry.id
     )
     assert len(actions) == 6
     assert {action["type"] for action in actions} == set(expected_capabilities)
     for action in actions:
         action["entity_id"] = entity_registry.async_get(action["entity_id"]).entity_id
         capabilities = await async_get_device_automation_capabilities(
-            hass, DeviceAutomationType.ACTION, action
+            menuai, DeviceAutomationType.ACTION, action
         )
         assert capabilities == expected_capabilities[action["type"]]
 
 
 async def test_get_action_capabilities_arm_code(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     mock_alarm_control_panel_entities: dict[str, MockAlarm],
 ) -> None:
     """Test we get the expected capabilities from a sensor trigger."""
     setup_test_component_platform(
-        hass, DOMAIN, mock_alarm_control_panel_entities.values()
+        menuai, DOMAIN, mock_alarm_control_panel_entities.values()
     )
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
+    await menuai.async_block_till_done()
 
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -355,32 +355,32 @@ async def test_get_action_capabilities_arm_code(
         "trigger": {"extra_fields": []},
     }
     actions = await async_get_device_automations(
-        hass, DeviceAutomationType.ACTION, device_entry.id
+        menuai, DeviceAutomationType.ACTION, device_entry.id
     )
     assert len(actions) == 6
     assert {action["type"] for action in actions} == set(expected_capabilities)
     for action in actions:
         capabilities = await async_get_device_automation_capabilities(
-            hass, DeviceAutomationType.ACTION, action
+            menuai, DeviceAutomationType.ACTION, action
         )
         assert capabilities == expected_capabilities[action["type"]]
 
 
 async def test_get_action_capabilities_arm_code_legacy(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     mock_alarm_control_panel_entities: dict[str, MockAlarm],
 ) -> None:
     """Test we get the expected capabilities from a sensor trigger."""
     setup_test_component_platform(
-        hass, DOMAIN, mock_alarm_control_panel_entities.values()
+        menuai, DOMAIN, mock_alarm_control_panel_entities.values()
     )
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
+    await menuai.async_block_till_done()
 
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -411,31 +411,31 @@ async def test_get_action_capabilities_arm_code_legacy(
         "trigger": {"extra_fields": []},
     }
     actions = await async_get_device_automations(
-        hass, DeviceAutomationType.ACTION, device_entry.id
+        menuai, DeviceAutomationType.ACTION, device_entry.id
     )
     assert len(actions) == 6
     assert {action["type"] for action in actions} == set(expected_capabilities)
     for action in actions:
         action["entity_id"] = entity_registry.async_get(action["entity_id"]).entity_id
         capabilities = await async_get_device_automation_capabilities(
-            hass, DeviceAutomationType.ACTION, action
+            menuai, DeviceAutomationType.ACTION, action
         )
         assert capabilities == expected_capabilities[action["type"]]
 
 
 async def test_action(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     mock_alarm_control_panel_entities: dict[str, MockAlarm],
 ) -> None:
     """Test for turn_on and turn_off actions."""
     setup_test_component_platform(
-        hass, DOMAIN, mock_alarm_control_panel_entities.values()
+        menuai, DOMAIN, mock_alarm_control_panel_entities.values()
     )
 
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -448,7 +448,7 @@ async def test_action(
     )
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -525,66 +525,66 @@ async def test_action(
             ]
         },
     )
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(entity_entry.entity_id).state == STATE_UNKNOWN
+    assert menuai.states.get(entity_entry.entity_id).state == STATE_UNKNOWN
 
-    hass.bus.async_fire("test_event_arm_away")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event_arm_away")
+    await menuai.async_block_till_done()
     assert (
-        hass.states.get(entity_entry.entity_id).state
+        menuai.states.get(entity_entry.entity_id).state
         == AlarmControlPanelState.ARMED_AWAY
     )
 
-    hass.bus.async_fire("test_event_arm_home")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event_arm_home")
+    await menuai.async_block_till_done()
     assert (
-        hass.states.get(entity_entry.entity_id).state
+        menuai.states.get(entity_entry.entity_id).state
         == AlarmControlPanelState.ARMED_HOME
     )
 
-    hass.bus.async_fire("test_event_arm_vacation")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event_arm_vacation")
+    await menuai.async_block_till_done()
     assert (
-        hass.states.get(entity_entry.entity_id).state
+        menuai.states.get(entity_entry.entity_id).state
         == AlarmControlPanelState.ARMED_VACATION
     )
 
-    hass.bus.async_fire("test_event_arm_night")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event_arm_night")
+    await menuai.async_block_till_done()
     assert (
-        hass.states.get(entity_entry.entity_id).state
+        menuai.states.get(entity_entry.entity_id).state
         == AlarmControlPanelState.ARMED_NIGHT
     )
 
-    hass.bus.async_fire("test_event_disarm")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event_disarm")
+    await menuai.async_block_till_done()
     assert (
-        hass.states.get(entity_entry.entity_id).state == AlarmControlPanelState.DISARMED
+        menuai.states.get(entity_entry.entity_id).state == AlarmControlPanelState.DISARMED
     )
 
-    hass.bus.async_fire("test_event_trigger")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event_trigger")
+    await menuai.async_block_till_done()
     assert (
-        hass.states.get(entity_entry.entity_id).state
+        menuai.states.get(entity_entry.entity_id).state
         == AlarmControlPanelState.TRIGGERED
     )
 
 
 async def test_action_legacy(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     mock_alarm_control_panel_entities: dict[str, MockAlarm],
 ) -> None:
     """Test for turn_on and turn_off actions."""
     setup_test_component_platform(
-        hass, DOMAIN, mock_alarm_control_panel_entities.values()
+        menuai, DOMAIN, mock_alarm_control_panel_entities.values()
     )
 
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -597,7 +597,7 @@ async def test_action_legacy(
     )
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -616,14 +616,14 @@ async def test_action_legacy(
             ]
         },
     )
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(entity_entry.entity_id).state == STATE_UNKNOWN
+    assert menuai.states.get(entity_entry.entity_id).state == STATE_UNKNOWN
 
-    hass.bus.async_fire("test_event_arm_away")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event_arm_away")
+    await menuai.async_block_till_done()
     assert (
-        hass.states.get(entity_entry.entity_id).state
+        menuai.states.get(entity_entry.entity_id).state
         == AlarmControlPanelState.ARMED_AWAY
     )

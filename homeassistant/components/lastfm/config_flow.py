@@ -8,15 +8,15 @@ from typing import Any
 from pylast import LastFMNetwork, PyLastError, User, WSError
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_API_KEY
-from homeassistant.core import callback
-from homeassistant.helpers.selector import (
+from menuai.const import CONF_API_KEY
+from menuai.core import callback
+from menuai.helpers.selector import (
     SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
@@ -132,7 +132,7 @@ class LastFmConfigFlowHandler(ConfigFlow, domain=DOMAIN):
             main_user, _ = get_lastfm_user(
                 self.data[CONF_API_KEY], self.data[CONF_MAIN_USER]
             )
-            friends_response = await self.hass.async_add_executor_job(
+            friends_response = await self.menuai.async_add_executor_job(
                 main_user.get_friends
             )
             friends = [
@@ -187,7 +187,7 @@ class LastFmOptionsFlowHandler(OptionsFlow):
                     options[CONF_API_KEY],
                     options[CONF_MAIN_USER],
                 )
-                friends_response = await self.hass.async_add_executor_job(
+                friends_response = await self.menuai.async_add_executor_job(
                     main_user.get_friends
                 )
                 friends = [

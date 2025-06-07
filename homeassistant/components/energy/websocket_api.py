@@ -12,15 +12,15 @@ from typing import Any, cast
 
 import voluptuous as vol
 
-from homeassistant.components import recorder, websocket_api
-from homeassistant.components.recorder.statistics import StatisticsRow
-from homeassistant.const import UnitOfEnergy
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.integration_platform import (
+from menuai.components import recorder, websocket_api
+from menuai.components.recorder.statistics import StatisticsRow
+from menuai.const import UnitOfEnergy
+from menuai.core import menuai, callback
+from menuai.helpers.integration_platform import (
     async_process_integration_platforms,
 )
-from homeassistant.helpers.singleton import singleton
-from homeassistant.util import dt as dt_util
+from menuai.helpers.singleton import singleton
+from menuai.util import dt as dt_util
 
 from .const import DOMAIN
 from .data import (
@@ -34,36 +34,36 @@ from .types import EnergyPlatform, GetSolarForecastType, SolarForecastType
 from .validate import async_validate
 
 type EnergyWebSocketCommandHandler = Callable[
-    [HomeAssistant, websocket_api.ActiveConnection, dict[str, Any], EnergyManager],
+    [menuai, websocket_api.ActiveConnection, dict[str, Any], EnergyManager],
     None,
 ]
 type AsyncEnergyWebSocketCommandHandler = Callable[
-    [HomeAssistant, websocket_api.ActiveConnection, dict[str, Any], EnergyManager],
+    [menuai, websocket_api.ActiveConnection, dict[str, Any], EnergyManager],
     Coroutine[Any, Any, None],
 ]
 
 
 @callback
-def async_setup(hass: HomeAssistant) -> None:
+def async_setup(menuai: menuai) -> None:
     """Set up the energy websocket API."""
-    websocket_api.async_register_command(hass, ws_get_prefs)
-    websocket_api.async_register_command(hass, ws_save_prefs)
-    websocket_api.async_register_command(hass, ws_info)
-    websocket_api.async_register_command(hass, ws_validate)
-    websocket_api.async_register_command(hass, ws_solar_forecast)
-    websocket_api.async_register_command(hass, ws_get_fossil_energy_consumption)
+    websocket_api.async_register_command(menuai, ws_get_prefs)
+    websocket_api.async_register_command(menuai, ws_save_prefs)
+    websocket_api.async_register_command(menuai, ws_info)
+    websocket_api.async_register_command(menuai, ws_validate)
+    websocket_api.async_register_command(menuai, ws_solar_forecast)
+    websocket_api.async_register_command(menuai, ws_get_fossil_energy_consumption)
 
 
 @singleton("energy_platforms")
 async def async_get_energy_platforms(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> dict[str, GetSolarForecastType]:
     """Get energy platforms."""
     platforms: dict[str, GetSolarForecastType] = {}
 
     @callback
     def _process_energy_platform(
-        hass: HomeAssistant,
+        menuai: menuai,
         domain: str,
         platform: EnergyPlatform,
     ) -> None:
@@ -74,7 +74,7 @@ async def async_get_energy_platforms(
         platforms[domain] = platform.async_get_solar_forecast
 
     await async_process_integration_platforms(
-        hass, DOMAIN, _process_energy_platform, wait_for_platforms=True
+        menuai, DOMAIN, _process_energy_platform, wait_for_platforms=True
     )
 
     return platforms
@@ -87,13 +87,13 @@ def _ws_with_manager(
 
     @functools.wraps(func)
     async def with_manager(
-        hass: HomeAssistant,
+        menuai: menuai,
         connection: websocket_api.ActiveConnection,
         msg: dict[str, Any],
     ) -> None:
-        manager = await async_get_manager(hass)
+        manager = await async_get_manager(menuai)
 
-        result = func(hass, connection, msg, manager)
+        result = func(menuai, connection, msg, manager)
 
         if asyncio.iscoroutine(result):
             await result
@@ -110,7 +110,7 @@ def _ws_with_manager(
 @_ws_with_manager
 @callback
 def ws_get_prefs(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
     manager: EnergyManager,
@@ -134,7 +134,7 @@ def ws_get_prefs(
 @websocket_api.async_response
 @_ws_with_manager
 async def ws_save_prefs(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
     manager: EnergyManager,
@@ -153,16 +153,16 @@ async def ws_save_prefs(
 )
 @websocket_api.async_response
 async def ws_info(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Handle get info command."""
-    forecast_platforms = await async_get_energy_platforms(hass)
+    forecast_platforms = await async_get_energy_platforms(menuai)
     connection.send_result(
         msg["id"],
         {
-            "cost_sensors": hass.data[DOMAIN]["cost_sensors"],
+            "cost_sensors": menuai.data[DOMAIN]["cost_sensors"],
             "solar_forecast_domains": list(forecast_platforms),
         },
     )
@@ -175,12 +175,12 @@ async def ws_info(
 )
 @websocket_api.async_response
 async def ws_validate(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Handle validate command."""
-    connection.send_result(msg["id"], (await async_validate(hass)).as_dict())
+    connection.send_result(msg["id"], (await async_validate(menuai)).as_dict())
 
 
 @websocket_api.websocket_command(
@@ -191,7 +191,7 @@ async def ws_validate(
 @websocket_api.async_response
 @_ws_with_manager
 async def ws_solar_forecast(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
     manager: EnergyManager,
@@ -219,16 +219,16 @@ async def ws_solar_forecast(
 
     forecasts: dict[str, SolarForecastType] = {}
 
-    forecast_platforms = await async_get_energy_platforms(hass)
+    forecast_platforms = await async_get_energy_platforms(menuai)
 
     for config_entry_id in config_entries:
-        config_entry = hass.config_entries.async_get_entry(config_entry_id)
+        config_entry = menuai.config_entries.async_get_entry(config_entry_id)
         # Filter out non-existing config entries or unsupported domains
 
         if config_entry is None or config_entry.domain not in forecast_platforms:
             continue
 
-        forecast = await forecast_platforms[config_entry.domain](hass, config_entry_id)
+        forecast = await forecast_platforms[config_entry.domain](menuai, config_entry_id)
 
         if forecast is not None:
             forecasts[config_entry_id] = forecast
@@ -248,7 +248,7 @@ async def ws_solar_forecast(
 )
 @websocket_api.async_response
 async def ws_get_fossil_energy_consumption(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
@@ -272,9 +272,9 @@ async def ws_get_fossil_energy_consumption(
     statistic_ids.add(msg["co2_statistic_id"])
 
     # Fetch energy + CO2 statistics
-    statistics = await recorder.get_instance(hass).async_add_executor_job(
+    statistics = await recorder.get_instance(menuai).async_add_executor_job(
         recorder.statistics.statistics_during_period,
-        hass,
+        menuai,
         start_time,
         end_time,
         statistic_ids,

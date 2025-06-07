@@ -7,17 +7,17 @@ import asyncio
 from pysensibo import SensiboClient
 from pysensibo.exceptions import AuthenticationError
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import LOGGER, SENSIBO_ERRORS, TIMEOUT
 
 
-async def async_validate_api(hass: HomeAssistant, api_key: str) -> str:
+async def async_validate_api(menuai: menuai, api_key: str) -> str:
     """Validate the api and return username."""
     client = SensiboClient(
         api_key,
-        session=async_get_clientsession(hass),
+        session=async_get_clientsession(menuai),
         timeout=TIMEOUT,
     )
 

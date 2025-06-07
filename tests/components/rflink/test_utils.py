@@ -1,6 +1,6 @@
 """Test for RFLink utils methods."""
 
-from homeassistant.components.rflink.utils import (
+from menuai.components.rflink.utils import (
     brightness_to_rflink,
     rflink_to_brightness,
 )

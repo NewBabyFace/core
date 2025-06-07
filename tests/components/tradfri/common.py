@@ -9,8 +9,8 @@ from pytradfri.const import ATTR_ID
 from pytradfri.device import Device
 from pytradfri.gateway import Gateway
 
-from homeassistant.components import tradfri
-from homeassistant.core import HomeAssistant
+from menuai.components import tradfri
+from menuai.core import menuai
 
 from . import GATEWAY_ID
 
@@ -46,7 +46,7 @@ class CommandStore:
 
     async def trigger_observe_callback(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         device: Device,
         new_device_state: dict[str, Any] | None = None,
     ) -> None:
@@ -76,10 +76,10 @@ class CommandStore:
 
         observe_command.process_result(device_state)
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
 
-async def setup_integration(hass: HomeAssistant) -> MockConfigEntry:
+async def setup_integration(menuai: menuai) -> MockConfigEntry:
     """Load the Tradfri integration with a mock gateway."""
     entry = MockConfigEntry(
         domain=tradfri.DOMAIN,
@@ -91,9 +91,9 @@ async def setup_integration(hass: HomeAssistant) -> MockConfigEntry:
         },
     )
 
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     return entry
 

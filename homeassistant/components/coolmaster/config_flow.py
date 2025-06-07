@@ -7,10 +7,10 @@ from typing import Any
 from pycoolmasternet_async import CoolMasterNet
 import voluptuous as vol
 
-from homeassistant.components.climate import HVACMode
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.core import callback
+from menuai.components.climate import HVACMode
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_PORT
+from menuai.core import callback
 
 from .const import CONF_SUPPORTED_MODES, CONF_SWING_SUPPORT, DEFAULT_PORT, DOMAIN
 

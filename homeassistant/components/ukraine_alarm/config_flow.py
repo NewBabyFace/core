@@ -9,9 +9,9 @@ import aiohttp
 from uasiren.client import Client
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_NAME, CONF_REGION
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_NAME, CONF_REGION
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN
 
@@ -37,7 +37,7 @@ class UkraineAlarmConfigFlow(ConfigFlow, domain=DOMAIN):
             return self.async_abort(reason="max_regions")
 
         if not self.states:
-            websession = async_get_clientsession(self.hass)
+            websession = async_get_clientsession(self.menuai)
             reason = None
             unknown_err_msg = None
             try:

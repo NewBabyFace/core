@@ -10,24 +10,24 @@ import random
 from typing import Any
 
 from aiohttp import ClientError, ClientResponseError
-from hass_nabucasa import Cloud, CloudError
-from hass_nabucasa.api import CloudApiError, CloudApiNonRetryableError
-from hass_nabucasa.cloud_api import (
+from menuai_nabucasa import Cloud, CloudError
+from menuai_nabucasa.api import CloudApiError, CloudApiNonRetryableError
+from menuai_nabucasa.cloud_api import (
     FilesHandlerListEntry,
     async_files_delete_file,
     async_files_list,
 )
-from hass_nabucasa.files import FilesError, StorageType, calculate_b64md5
+from menuai_nabucasa.files import FilesError, StorageType, calculate_b64md5
 
-from homeassistant.components.backup import (
+from menuai.components.backup import (
     AgentBackup,
     BackupAgent,
     BackupAgentError,
     BackupNotFound,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.aiohttp_client import ChunkAsyncStreamIterator
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from menuai.core import menuai, callback
+from menuai.helpers.aiohttp_client import ChunkAsyncStreamIterator
+from menuai.helpers.dispatcher import async_dispatcher_connect
 
 from .client import CloudClient
 from .const import DATA_CLOUD, DOMAIN, EVENT_CLOUD_EVENT
@@ -39,20 +39,20 @@ _RETRY_SECONDS_MAX = 600
 
 
 async def async_get_backup_agents(
-    hass: HomeAssistant,
+    menuai: menuai,
     **kwargs: Any,
 ) -> list[BackupAgent]:
     """Return the cloud backup agent."""
-    cloud = hass.data[DATA_CLOUD]
+    cloud = menuai.data[DATA_CLOUD]
     if not cloud.is_logged_in:
         return []
 
-    return [CloudBackupAgent(hass=hass, cloud=cloud)]
+    return [CloudBackupAgent(menuai=menuai, cloud=cloud)]
 
 
 @callback
 def async_register_backup_agents_listener(
-    hass: HomeAssistant,
+    menuai: menuai,
     *,
     listener: Callable[[], None],
     **kwargs: Any,
@@ -71,7 +71,7 @@ def async_register_backup_agents_listener(
             return
         listener()
 
-    unsub_signal = async_dispatcher_connect(hass, EVENT_CLOUD_EVENT, handle_event)
+    unsub_signal = async_dispatcher_connect(menuai, EVENT_CLOUD_EVENT, handle_event)
     return unsub
 
 
@@ -80,11 +80,11 @@ class CloudBackupAgent(BackupAgent):
 
     domain = name = unique_id = DOMAIN
 
-    def __init__(self, hass: HomeAssistant, cloud: Cloud[CloudClient]) -> None:
+    def __init__(self, menuai: menuai, cloud: Cloud[CloudClient]) -> None:
         """Initialize the cloud backup sync agent."""
         super().__init__()
         self._cloud = cloud
-        self._hass = hass
+        self._menuai = menuai
 
     async def async_download_backup(
         self,

@@ -7,23 +7,23 @@ from dataclasses import dataclass
 
 from refoss_ha.controller.electricity import ElectricityXMix
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     UnitOfElectricCurrent,
     UnitOfElectricPotential,
     UnitOfEnergy,
     UnitOfPower,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
 
 from .bridge import RefossDataUpdateCoordinator
 from .const import (
@@ -115,7 +115,7 @@ SENSORS: dict[str, tuple[RefossSensorEntityDescription, ...]] = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -146,11 +146,11 @@ async def async_setup_entry(
         )
         _LOGGER.debug("Device %s add sensor entity success", device.dev_name)
 
-    for coordinator in hass.data[DOMAIN][COORDINATORS]:
+    for coordinator in menuai.data[DOMAIN][COORDINATORS]:
         init_device(coordinator)
 
     config_entry.async_on_unload(
-        async_dispatcher_connect(hass, DISPATCH_DEVICE_DISCOVERED, init_device)
+        async_dispatcher_connect(menuai, DISPATCH_DEVICE_DISCOVERED, init_device)
     )
 
 

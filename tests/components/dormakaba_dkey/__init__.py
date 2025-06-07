@@ -1,6 +1,6 @@
 """Tests for the Dormakaba dKey integration."""
 
-from homeassistant.components.bluetooth import BluetoothServiceInfoBleak
+from menuai.components.bluetooth import BluetoothServiceInfoBleak
 
 from tests.components.bluetooth import generate_advertisement_data, generate_ble_device
 

@@ -22,15 +22,15 @@ from pyinsteon.managers.x10_manager import (
 )
 from pyinsteon.x10_address import create as create_x10_address
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_ADDRESS,
     CONF_ENTITY_ID,
     CONF_PLATFORM,
     ENTITY_MATCH_ALL,
 )
-from homeassistant.core import HomeAssistant, ServiceCall, callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.dispatcher import (
+from menuai.core import menuai, ServiceCall, callback
+from menuai.helpers import device_registry as dr
+from menuai.helpers.dispatcher import (
     async_dispatcher_connect,
     async_dispatcher_send,
     dispatcher_send,
@@ -86,7 +86,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 @callback
-def async_setup_services(hass: HomeAssistant) -> None:  # noqa: C901
+def async_setup_services(menuai: menuai) -> None:  # noqa: C901
     """Register services used by insteon component."""
 
     save_lock = asyncio.Lock()
@@ -111,7 +111,7 @@ def async_setup_services(hass: HomeAssistant) -> None:  # noqa: C901
             await async_srv_load_aldb_all(reload)
         else:
             signal = f"{entity_id}_{SIGNAL_LOAD_ALDB}"
-            async_dispatcher_send(hass, signal, reload)
+            async_dispatcher_send(menuai, signal, reload)
 
     async def async_srv_load_aldb_all(reload):
         """Load the All-Link database for all devices."""
@@ -126,7 +126,7 @@ def async_setup_services(hass: HomeAssistant) -> None:  # noqa: C901
         """Write the Insteon device configuration to file."""
         async with save_lock:
             _LOGGER.debug("Saving Insteon devices")
-            await devices.async_save(hass.config.config_dir)
+            await devices.async_save(menuai.config.config_dir)
 
     def print_aldb(service: ServiceCall) -> None:
         """Print the All-Link Database for a device."""
@@ -134,7 +134,7 @@ def async_setup_services(hass: HomeAssistant) -> None:  # noqa: C901
         # Future direction is to create an INSTEON control panel.
         entity_id = service.data[CONF_ENTITY_ID]
         signal = f"{entity_id}_{SIGNAL_PRINT_ALDB}"
-        dispatcher_send(hass, signal)
+        dispatcher_send(menuai, signal)
 
     def print_im_aldb(service: ServiceCall) -> None:
         """Print the All-Link Database for a device."""
@@ -172,7 +172,7 @@ def async_setup_services(hass: HomeAssistant) -> None:  # noqa: C901
         """Add the default All-Link entries to a device."""
         entity_id = service.data[CONF_ENTITY_ID]
         signal = f"{entity_id}_{SIGNAL_ADD_DEFAULT_LINKS}"
-        async_dispatcher_send(hass, signal)
+        async_dispatcher_send(menuai, signal)
 
     async def async_add_device_override(override):
         """Remove an Insten device and associated entities."""
@@ -214,10 +214,10 @@ def async_setup_services(hass: HomeAssistant) -> None:  # noqa: C901
         await async_remove_ha_device(address)
 
     async def async_remove_ha_device(address: Address, remove_all_refs: bool = False):
-        """Remove the device and all entities from hass."""
+        """Remove the device and all entities from menuai."""
         signal = f"{address.id}_{SIGNAL_REMOVE_ENTITY}"
-        async_dispatcher_send(hass, signal)
-        dev_registry = dr.async_get(hass)
+        async_dispatcher_send(menuai, signal)
+        dev_registry = dr.async_get(menuai)
         device = dev_registry.async_get_device(identifiers={(DOMAIN, str(address))})
         if device:
             dev_registry.async_remove_device(device.id)
@@ -231,61 +231,61 @@ def async_setup_services(hass: HomeAssistant) -> None:  # noqa: C901
         )
         await async_srv_save_devices()
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SRV_ADD_ALL_LINK, async_srv_add_all_link, schema=ADD_ALL_LINK_SCHEMA
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SRV_DEL_ALL_LINK, async_srv_del_all_link, schema=DEL_ALL_LINK_SCHEMA
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SRV_LOAD_ALDB, async_srv_load_aldb, schema=LOAD_ALDB_SCHEMA
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SRV_PRINT_ALDB, print_aldb, schema=PRINT_ALDB_SCHEMA
     )
-    hass.services.async_register(DOMAIN, SRV_PRINT_IM_ALDB, print_im_aldb, schema=None)
-    hass.services.async_register(
+    menuai.services.async_register(DOMAIN, SRV_PRINT_IM_ALDB, print_im_aldb, schema=None)
+    menuai.services.async_register(
         DOMAIN,
         SRV_X10_ALL_UNITS_OFF,
         async_srv_x10_all_units_off,
         schema=X10_HOUSECODE_SCHEMA,
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SRV_X10_ALL_LIGHTS_OFF,
         async_srv_x10_all_lights_off,
         schema=X10_HOUSECODE_SCHEMA,
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SRV_X10_ALL_LIGHTS_ON,
         async_srv_x10_all_lights_on,
         schema=X10_HOUSECODE_SCHEMA,
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SRV_SCENE_ON, async_srv_scene_on, schema=TRIGGER_SCENE_SCHEMA
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SRV_SCENE_OFF, async_srv_scene_off, schema=TRIGGER_SCENE_SCHEMA
     )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SRV_ADD_DEFAULT_LINKS,
         async_add_default_links,
         schema=ADD_DEFAULT_LINKS_SCHEMA,
     )
-    async_dispatcher_connect(hass, SIGNAL_SAVE_DEVICES, async_srv_save_devices)
+    async_dispatcher_connect(menuai, SIGNAL_SAVE_DEVICES, async_srv_save_devices)
     async_dispatcher_connect(
-        hass, SIGNAL_ADD_DEVICE_OVERRIDE, async_add_device_override
+        menuai, SIGNAL_ADD_DEVICE_OVERRIDE, async_add_device_override
     )
     async_dispatcher_connect(
-        hass, SIGNAL_REMOVE_DEVICE_OVERRIDE, async_remove_device_override
+        menuai, SIGNAL_REMOVE_DEVICE_OVERRIDE, async_remove_device_override
     )
-    async_dispatcher_connect(hass, SIGNAL_ADD_X10_DEVICE, async_add_x10_device)
-    async_dispatcher_connect(hass, SIGNAL_REMOVE_X10_DEVICE, async_remove_x10_device)
-    async_dispatcher_connect(hass, SIGNAL_REMOVE_HA_DEVICE, async_remove_ha_device)
+    async_dispatcher_connect(menuai, SIGNAL_ADD_X10_DEVICE, async_add_x10_device)
+    async_dispatcher_connect(menuai, SIGNAL_REMOVE_X10_DEVICE, async_remove_x10_device)
+    async_dispatcher_connect(menuai, SIGNAL_REMOVE_HA_DEVICE, async_remove_ha_device)
     async_dispatcher_connect(
-        hass, SIGNAL_REMOVE_INSTEON_DEVICE, async_remove_insteon_device
+        menuai, SIGNAL_REMOVE_INSTEON_DEVICE, async_remove_insteon_device
     )
     _LOGGER.debug("Insteon Services registered")

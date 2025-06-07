@@ -11,11 +11,11 @@ from aiohttp.web import Response, json_response
 from nacl.encoding import Base64Encoder, HexEncoder, RawEncoder
 from nacl.secret import SecretBox
 
-from homeassistant.const import ATTR_DEVICE_ID, CONTENT_TYPE_JSON
-from homeassistant.core import Context, HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.json import json_bytes
-from homeassistant.util.json import JsonValueType, json_loads
+from menuai.const import ATTR_DEVICE_ID, CONTENT_TYPE_JSON
+from menuai.core import Context, menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.json import json_bytes
+from menuai.util.json import JsonValueType, json_loads
 
 from .const import (
     ATTR_APP_DATA,
@@ -158,10 +158,10 @@ def safe_registration(registration: dict) -> dict:
     }
 
 
-def savable_state(hass: HomeAssistant) -> dict:
+def savable_state(menuai: menuai) -> dict:
     """Return a clean object containing things that should be saved."""
     return {
-        DATA_DELETED_IDS: hass.data[DOMAIN][DATA_DELETED_IDS],
+        DATA_DELETED_IDS: menuai.data[DOMAIN][DATA_DELETED_IDS],
     }
 
 

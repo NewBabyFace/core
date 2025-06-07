@@ -7,22 +7,22 @@ from typing import Any
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant import setup
-from homeassistant.components.trend.const import DOMAIN
-from homeassistant.const import STATE_OFF, STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant, State
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai import setup
+from menuai.components.trend.const import DOMAIN
+from menuai.const import STATE_OFF, STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
+from menuai.core import menuai, State
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.setup import async_setup_component
 
 from .conftest import ComponentSetup
 
 from tests.common import MockConfigEntry, assert_setup_component, mock_restore_cache
 
 
-async def _setup_legacy_component(hass: HomeAssistant, params: dict[str, Any]) -> None:
+async def _setup_legacy_component(menuai: menuai, params: dict[str, Any]) -> None:
     """Set up the trend component the legacy way."""
     assert await async_setup_component(
-        hass,
+        menuai,
         "binary_sensor",
         {
             "binary_sensor": {
@@ -33,7 +33,7 @@ async def _setup_legacy_component(hass: HomeAssistant, params: dict[str, Any]) -
             }
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
 @pytest.mark.parametrize(
@@ -47,14 +47,14 @@ async def _setup_legacy_component(hass: HomeAssistant, params: dict[str, Any]) -
     ids=["up", "down", "up inverted", "down inverted"],
 )
 async def test_basic_trend_setup_from_yaml(
-    hass: HomeAssistant,
+    menuai: menuai,
     states: list[str],
     inverted: bool,
     expected_state: str,
 ) -> None:
     """Test trend with a basic setup."""
     await _setup_legacy_component(
-        hass,
+        menuai,
         {
             "friendly_name": "Test state",
             "entity_id": "sensor.cpu_temp",
@@ -66,10 +66,10 @@ async def test_basic_trend_setup_from_yaml(
     )
 
     for state in states:
-        hass.states.async_set("sensor.cpu_temp", state)
-        await hass.async_block_till_done()
+        menuai.states.async_set("sensor.cpu_temp", state)
+        await menuai.async_block_till_done()
 
-    assert (sensor_state := hass.states.get("binary_sensor.test_trend_sensor"))
+    assert (sensor_state := menuai.states.get("binary_sensor.test_trend_sensor"))
     assert sensor_state.state == expected_state
 
 
@@ -84,7 +84,7 @@ async def test_basic_trend_setup_from_yaml(
     ids=["up", "down", "up inverted", "down inverted"],
 )
 async def test_basic_trend(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     setup_component: ComponentSetup,
     states: list[str],
@@ -99,10 +99,10 @@ async def test_basic_trend(
     )
 
     for state in states:
-        hass.states.async_set("sensor.test_state", state)
-        await hass.async_block_till_done()
+        menuai.states.async_set("sensor.test_state", state)
+        await menuai.async_block_till_done()
 
-    assert (sensor_state := hass.states.get("binary_sensor.test_trend_sensor"))
+    assert (sensor_state := menuai.states.get("binary_sensor.test_trend_sensor"))
     assert sensor_state.state == expected_state
 
 
@@ -128,7 +128,7 @@ async def test_basic_trend(
     ids=["up", "up inverted", "down"],
 )
 async def test_using_trendline(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     freezer: FrozenDateTimeFactory,
     setup_component: ComponentSetup,
@@ -150,10 +150,10 @@ async def test_using_trendline(
     for idx, states in enumerate(state_series):
         for state in states:
             freezer.tick(timedelta(seconds=2))
-            hass.states.async_set("sensor.test_state", state)
-            await hass.async_block_till_done()
+            menuai.states.async_set("sensor.test_state", state)
+            await menuai.async_block_till_done()
 
-        assert (sensor_state := hass.states.get("binary_sensor.test_trend_sensor"))
+        assert (sensor_state := menuai.states.get("binary_sensor.test_trend_sensor"))
         assert sensor_state.state == expected_states[idx]
 
 
@@ -166,7 +166,7 @@ async def test_using_trendline(
     ids=["up", "down"],
 )
 async def test_attribute_trend(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     setup_component: ComponentSetup,
     attr_values: list[str],
@@ -181,15 +181,15 @@ async def test_attribute_trend(
     )
 
     for attr in attr_values:
-        hass.states.async_set("sensor.test_state", "State", {"attr": attr})
-        await hass.async_block_till_done()
+        menuai.states.async_set("sensor.test_state", "State", {"attr": attr})
+        await menuai.async_block_till_done()
 
-    assert (sensor_state := hass.states.get("binary_sensor.test_trend_sensor"))
+    assert (sensor_state := menuai.states.get("binary_sensor.test_trend_sensor"))
     assert sensor_state.state == expected_state
 
 
 async def test_max_samples(
-    hass: HomeAssistant, config_entry: MockConfigEntry, setup_component: ComponentSetup
+    menuai: menuai, config_entry: MockConfigEntry, setup_component: ComponentSetup
 ) -> None:
     """Test that sample count is limited correctly."""
     await setup_component(
@@ -200,30 +200,30 @@ async def test_max_samples(
     )
 
     for val in (0, 1, 2, 3, 2, 1):
-        hass.states.async_set("sensor.test_state", val)
-        await hass.async_block_till_done()
+        menuai.states.async_set("sensor.test_state", val)
+        await menuai.async_block_till_done()
 
-    assert (state := hass.states.get("binary_sensor.test_trend_sensor"))
+    assert (state := menuai.states.get("binary_sensor.test_trend_sensor"))
     assert state.state == "on"
     assert state.attributes["sample_count"] == 3
 
 
 async def test_non_numeric(
-    hass: HomeAssistant, config_entry: MockConfigEntry, setup_component: ComponentSetup
+    menuai: menuai, config_entry: MockConfigEntry, setup_component: ComponentSetup
 ) -> None:
     """Test for non-numeric sensor."""
     await setup_component({"entity_id": "sensor.test_state"})
 
     for val in ("Non", "Numeric"):
-        hass.states.async_set("sensor.test_state", val)
-        await hass.async_block_till_done()
+        menuai.states.async_set("sensor.test_state", val)
+        await menuai.async_block_till_done()
 
-    assert (state := hass.states.get("binary_sensor.test_trend_sensor"))
+    assert (state := menuai.states.get("binary_sensor.test_trend_sensor"))
     assert state.state == STATE_UNKNOWN
 
 
 async def test_missing_attribute(
-    hass: HomeAssistant, config_entry: MockConfigEntry, setup_component: ComponentSetup
+    menuai: menuai, config_entry: MockConfigEntry, setup_component: ComponentSetup
 ) -> None:
     """Test for missing attribute."""
     await setup_component(
@@ -233,18 +233,18 @@ async def test_missing_attribute(
     )
 
     for val in (1, 2):
-        hass.states.async_set("sensor.test_state", "State", {"attr": val})
-        await hass.async_block_till_done()
+        menuai.states.async_set("sensor.test_state", "State", {"attr": val})
+        await menuai.async_block_till_done()
 
-    assert (state := hass.states.get("binary_sensor.test_trend_sensor"))
+    assert (state := menuai.states.get("binary_sensor.test_trend_sensor"))
     assert state.state == STATE_UNKNOWN
 
 
-async def test_invalid_name_does_not_create(hass: HomeAssistant) -> None:
+async def test_invalid_name_does_not_create(menuai: menuai) -> None:
     """Test for invalid name."""
     with assert_setup_component(0):
         assert await setup.async_setup_component(
-            hass,
+            menuai,
             "binary_sensor",
             {
                 "binary_sensor": {
@@ -255,14 +255,14 @@ async def test_invalid_name_does_not_create(hass: HomeAssistant) -> None:
                 }
             },
         )
-    assert hass.states.async_all("binary_sensor") == []
+    assert menuai.states.async_all("binary_sensor") == []
 
 
-async def test_invalid_sensor_does_not_create(hass: HomeAssistant) -> None:
+async def test_invalid_sensor_does_not_create(menuai: menuai) -> None:
     """Test invalid sensor."""
     with assert_setup_component(0):
         assert await setup.async_setup_component(
-            hass,
+            menuai,
             "binary_sensor",
             {
                 "binary_sensor": {
@@ -273,16 +273,16 @@ async def test_invalid_sensor_does_not_create(hass: HomeAssistant) -> None:
                 }
             },
         )
-    assert hass.states.async_all("binary_sensor") == []
+    assert menuai.states.async_all("binary_sensor") == []
 
 
-async def test_no_sensors_does_not_create(hass: HomeAssistant) -> None:
+async def test_no_sensors_does_not_create(menuai: menuai) -> None:
     """Test no sensors."""
     with assert_setup_component(0):
         assert await setup.async_setup_component(
-            hass, "binary_sensor", {"binary_sensor": {"platform": "trend"}}
+            menuai, "binary_sensor", {"binary_sensor": {"platform": "trend"}}
         )
-    assert hass.states.async_all("binary_sensor") == []
+    assert menuai.states.async_all("binary_sensor") == []
 
 
 @pytest.mark.parametrize(
@@ -290,7 +290,7 @@ async def test_no_sensors_does_not_create(hass: HomeAssistant) -> None:
     [("on", "on"), ("off", "off"), ("unknown", "unknown")],
 )
 async def test_restore_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     freezer: FrozenDateTimeFactory,
     setup_component: ComponentSetup,
@@ -298,7 +298,7 @@ async def test_restore_state(
     restored_state: str,
 ) -> None:
     """Test we restore the trend state."""
-    mock_restore_cache(hass, (State("binary_sensor.test_trend_sensor", saved_state),))
+    mock_restore_cache(menuai, (State("binary_sensor.test_trend_sensor", saved_state),))
 
     await setup_component(
         {
@@ -310,35 +310,35 @@ async def test_restore_state(
     )
 
     # restored sensor should match saved one
-    assert hass.states.get("binary_sensor.test_trend_sensor").state == restored_state
+    assert menuai.states.get("binary_sensor.test_trend_sensor").state == restored_state
 
     # add not enough samples to trigger calculation
     for val in (10, 20, 30, 40):
         freezer.tick(timedelta(seconds=2))
-        hass.states.async_set("sensor.test_state", val)
-        await hass.async_block_till_done()
+        menuai.states.async_set("sensor.test_state", val)
+        await menuai.async_block_till_done()
 
     # state should match restored state as no calculation happened
-    assert hass.states.get("binary_sensor.test_trend_sensor").state == restored_state
+    assert menuai.states.get("binary_sensor.test_trend_sensor").state == restored_state
 
     # add more samples to trigger calculation
     for val in (50, 60, 70, 80):
         freezer.tick(timedelta(seconds=2))
-        hass.states.async_set("sensor.test_state", val)
-        await hass.async_block_till_done()
+        menuai.states.async_set("sensor.test_state", val)
+        await menuai.async_block_till_done()
 
     # sensor should detect an upwards trend and turn on
-    assert hass.states.get("binary_sensor.test_trend_sensor").state == "on"
+    assert menuai.states.get("binary_sensor.test_trend_sensor").state == "on"
 
 
 async def test_invalid_min_sample(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test if error is logged when min_sample is larger than max_samples."""
     with caplog.at_level(logging.ERROR):
         await _setup_legacy_component(
-            hass,
+            menuai,
             {
                 "entity_id": "sensor.test_state",
                 "max_samples": 25,
@@ -355,13 +355,13 @@ async def test_invalid_min_sample(
 
 
 async def test_device_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
 ) -> None:
     """Test for source entity device for Trend."""
     source_config_entry = MockConfigEntry()
-    source_config_entry.add_to_hass(hass)
+    source_config_entry.add_to_menuai(menuai)
     source_device_entry = device_registry.async_get_or_create(
         config_entry_id=source_config_entry.entry_id,
         identifiers={("sensor", "identifier_test")},
@@ -374,7 +374,7 @@ async def test_device_id(
         config_entry=source_config_entry,
         device_id=source_device_entry.id,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert entity_registry.async_get("sensor.test_source") is not None
 
     trend_config_entry = MockConfigEntry(
@@ -387,10 +387,10 @@ async def test_device_id(
         },
         title="Trend",
     )
-    trend_config_entry.add_to_hass(hass)
+    trend_config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(trend_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(trend_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     trend_entity = entity_registry.async_get("binary_sensor.trend")
     assert trend_entity is not None
@@ -405,7 +405,7 @@ async def test_device_id(
     ],
 )
 async def test_unavailable_source(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     freezer: FrozenDateTimeFactory,
     setup_component: ComponentSetup,
@@ -423,17 +423,17 @@ async def test_unavailable_source(
 
     for val in (10, 20, 30, 40, 50, 60):
         freezer.tick(timedelta(seconds=2))
-        hass.states.async_set("sensor.test_state", val)
-        await hass.async_block_till_done()
+        menuai.states.async_set("sensor.test_state", val)
+        await menuai.async_block_till_done()
 
-    assert hass.states.get("binary_sensor.test_trend_sensor").state == "on"
+    assert menuai.states.get("binary_sensor.test_trend_sensor").state == "on"
 
-    hass.states.async_set("sensor.test_state", error_state)
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test_state", error_state)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("binary_sensor.test_trend_sensor").state == STATE_UNAVAILABLE
+    assert menuai.states.get("binary_sensor.test_trend_sensor").state == STATE_UNAVAILABLE
 
-    hass.states.async_set("sensor.test_state", 50)
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test_state", 50)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("binary_sensor.test_trend_sensor").state == "on"
+    assert menuai.states.get("binary_sensor.test_trend_sensor").state == "on"

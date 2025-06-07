@@ -10,16 +10,16 @@ from pyrisco.cloud.zone import Zone as CloudZone
 from pyrisco.common import System
 from pyrisco.local.zone import Zone as LocalZone
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import LocalData, is_local
 from .const import DATA_COORDINATOR, DOMAIN, SYSTEM_UPDATE_SIGNAL
@@ -71,13 +71,13 @@ SYSTEM_ENTITY_DESCRIPTIONS = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Risco alarm control panel."""
     if is_local(config_entry):
-        local_data: LocalData = hass.data[DOMAIN][config_entry.entry_id]
+        local_data: LocalData = menuai.data[DOMAIN][config_entry.entry_id]
         zone_entities = (
             entity
             for zone_id, zone in local_data.system.zones.items()
@@ -97,7 +97,7 @@ async def async_setup_entry(
 
         async_add_entities(chain(system_entities, zone_entities))
     else:
-        coordinator: RiscoDataUpdateCoordinator = hass.data[DOMAIN][
+        coordinator: RiscoDataUpdateCoordinator = menuai.data[DOMAIN][
             config_entry.entry_id
         ][DATA_COORDINATOR]
         async_add_entities(
@@ -211,11 +211,11 @@ class RiscoSystemBinarySensor(BinarySensorEntity):
         )
         self.entity_description = entity_description
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to updates."""
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, SYSTEM_UPDATE_SIGNAL, self.async_write_ha_state
+                self.menuai, SYSTEM_UPDATE_SIGNAL, self.async_write_ha_state
             )
         )
 

@@ -5,17 +5,17 @@ from unittest.mock import MagicMock, patch
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.components import sensor
-from homeassistant.components.geo_rss_events import sensor as geo_rss_events
-from homeassistant.const import (
+from menuai.components import sensor
+from menuai.components.geo_rss_events import sensor as geo_rss_events
+from menuai.const import (
     ATTR_FRIENDLY_NAME,
     ATTR_ICON,
     ATTR_UNIT_OF_MEASUREMENT,
-    EVENT_HOMEASSISTANT_START,
+    EVENT_menuai_START,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from tests.common import assert_setup_component, async_fire_time_changed
 
@@ -38,9 +38,9 @@ VALID_CONFIG = {
 
 @pytest.fixture
 def mock_feed():
-    """Pytest fixture for homeassistant.components.geo_rss_events.sensor.GenericFeed."""
+    """Pytest fixture for menuai.components.geo_rss_events.sensor.GenericFeed."""
     with patch(
-        "homeassistant.components.geo_rss_events.sensor.GenericFeed"
+        "menuai.components.geo_rss_events.sensor.GenericFeed"
     ) as mock_feed:
         yield mock_feed
 
@@ -59,7 +59,7 @@ def _generate_mock_feed_entry(
 
 
 async def test_setup(
-    hass: HomeAssistant, freezer: FrozenDateTimeFactory, mock_feed
+    menuai: menuai, freezer: FrozenDateTimeFactory, mock_feed
 ) -> None:
     """Test the general setup of the platform."""
     # Set up some mock feed entries for this test.
@@ -74,16 +74,16 @@ async def test_setup(
     utcnow = dt_util.utcnow()
     freezer.move_to(utcnow)
     with assert_setup_component(1, sensor.DOMAIN):
-        assert await async_setup_component(hass, sensor.DOMAIN, VALID_CONFIG)
+        assert await async_setup_component(menuai, sensor.DOMAIN, VALID_CONFIG)
         # Artificially trigger update.
-        hass.bus.fire(EVENT_HOMEASSISTANT_START)
+        menuai.bus.fire(EVENT_menuai_START)
         # Collect events.
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-        all_states = hass.states.async_all()
+        all_states = menuai.states.async_all()
         assert len(all_states) == 1
 
-        state = hass.states.get("sensor.event_service_any")
+        state = menuai.states.get("sensor.event_service_any")
         assert state is not None
         assert state.name == "Event Service Any"
         assert int(state.state) == 2
@@ -98,22 +98,22 @@ async def test_setup(
         # Simulate an update - empty data, but successful update,
         # so no changes to entities.
         mock_feed.return_value.update.return_value = "OK_NO_DATA", None
-        async_fire_time_changed(hass, utcnow + geo_rss_events.SCAN_INTERVAL)
-        await hass.async_block_till_done(wait_background_tasks=True)
+        async_fire_time_changed(menuai, utcnow + geo_rss_events.SCAN_INTERVAL)
+        await menuai.async_block_till_done(wait_background_tasks=True)
 
-        all_states = hass.states.async_all()
+        all_states = menuai.states.async_all()
         assert len(all_states) == 1
-        state = hass.states.get("sensor.event_service_any")
+        state = menuai.states.get("sensor.event_service_any")
         assert int(state.state) == 2
 
         # Simulate an update - empty data, removes all entities
         mock_feed.return_value.update.return_value = "ERROR", None
-        async_fire_time_changed(hass, utcnow + 2 * geo_rss_events.SCAN_INTERVAL)
-        await hass.async_block_till_done(wait_background_tasks=True)
+        async_fire_time_changed(menuai, utcnow + 2 * geo_rss_events.SCAN_INTERVAL)
+        await menuai.async_block_till_done(wait_background_tasks=True)
 
-        all_states = hass.states.async_all()
+        all_states = menuai.states.async_all()
         assert len(all_states) == 1
-        state = hass.states.get("sensor.event_service_any")
+        state = menuai.states.get("sensor.event_service_any")
         assert int(state.state) == 0
         assert state.attributes == {
             ATTR_FRIENDLY_NAME: "Event Service Any",
@@ -122,7 +122,7 @@ async def test_setup(
         }
 
 
-async def test_setup_with_categories(hass: HomeAssistant, mock_feed) -> None:
+async def test_setup_with_categories(menuai: menuai, mock_feed) -> None:
     """Test the general setup of the platform."""
     # Set up some mock feed entries for this test.
     mock_entry_1 = _generate_mock_feed_entry(
@@ -135,17 +135,17 @@ async def test_setup_with_categories(hass: HomeAssistant, mock_feed) -> None:
 
     with assert_setup_component(1, sensor.DOMAIN):
         assert await async_setup_component(
-            hass, sensor.DOMAIN, VALID_CONFIG_WITH_CATEGORIES
+            menuai, sensor.DOMAIN, VALID_CONFIG_WITH_CATEGORIES
         )
         # Artificially trigger update.
-        hass.bus.fire(EVENT_HOMEASSISTANT_START)
+        menuai.bus.fire(EVENT_menuai_START)
         # Collect events.
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-        all_states = hass.states.async_all()
+        all_states = menuai.states.async_all()
         assert len(all_states) == 1
 
-        state = hass.states.get("sensor.event_service_category_1")
+        state = menuai.states.get("sensor.event_service_category_1")
         assert state is not None
         assert state.name == "Event Service Category 1"
         assert int(state.state) == 2

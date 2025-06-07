@@ -1,18 +1,18 @@
-"""Stub file for hass_dict. Provide overload for type checking."""
+"""Stub file for menuai_dict. Provide overload for type checking."""
 # ruff: noqa: PYI021  # Allow docstrings
 
 from typing import Any, Generic, TypeVar, assert_type, overload
 
 __all__ = [
-    "HassDict",
-    "HassEntryKey",
-    "HassKey",
+    "menuaiDict",
+    "menuaiEntryKey",
+    "menuaiKey",
 ]
 
 _T = TypeVar("_T")  # needs to be invariant
 
 class _Key(Generic[_T]):
-    """Base class for Hass key types. At runtime delegated to str."""
+    """Base class for menuai key types. At runtime delegated to str."""
 
     def __init__(self, value: str, /) -> None: ...
     def __len__(self) -> int: ...
@@ -20,39 +20,39 @@ class _Key(Generic[_T]):
     def __eq__(self, other: object) -> bool: ...
     def __getitem__(self, index: int) -> str: ...
 
-class HassEntryKey(_Key[_T]):
+class menuaiEntryKey(_Key[_T]):
     """Key type for integrations with config entries."""
 
-class HassKey(_Key[_T]):
-    """Generic Hass key type."""
+class menuaiKey(_Key[_T]):
+    """Generic menuai key type."""
 
-class HassDict(dict[_Key[Any] | str, Any]):
-    """Custom dict type to provide better value type hints for Hass key types."""
+class menuaiDict(dict[_Key[Any] | str, Any]):
+    """Custom dict type to provide better value type hints for menuai key types."""
 
     @overload  # type: ignore[override]
-    def __getitem__[_S](self, key: HassEntryKey[_S], /) -> dict[str, _S]: ...
+    def __getitem__[_S](self, key: menuaiEntryKey[_S], /) -> dict[str, _S]: ...
     @overload
-    def __getitem__[_S](self, key: HassKey[_S], /) -> _S: ...
+    def __getitem__[_S](self, key: menuaiKey[_S], /) -> _S: ...
     @overload
     def __getitem__(self, key: str, /) -> Any: ...
 
     # ------
     @overload  # type: ignore[override]
     def __setitem__[_S](
-        self, key: HassEntryKey[_S], value: dict[str, _S], /
+        self, key: menuaiEntryKey[_S], value: dict[str, _S], /
     ) -> None: ...
     @overload
-    def __setitem__[_S](self, key: HassKey[_S], value: _S, /) -> None: ...
+    def __setitem__[_S](self, key: menuaiKey[_S], value: _S, /) -> None: ...
     @overload
     def __setitem__(self, key: str, value: Any, /) -> None: ...
 
     # ------
     @overload  # type: ignore[override]
     def setdefault[_S](
-        self, key: HassEntryKey[_S], default: dict[str, _S], /
+        self, key: menuaiEntryKey[_S], default: dict[str, _S], /
     ) -> dict[str, _S]: ...
     @overload
-    def setdefault[_S](self, key: HassKey[_S], default: _S, /) -> _S: ...
+    def setdefault[_S](self, key: menuaiKey[_S], default: _S, /) -> _S: ...
     @overload
     def setdefault(self, key: str, default: None = None, /) -> Any | None: ...
     @overload
@@ -60,15 +60,15 @@ class HassDict(dict[_Key[Any] | str, Any]):
 
     # ------
     @overload  # type: ignore[override]
-    def get[_S](self, key: HassEntryKey[_S], /) -> dict[str, _S] | None: ...
+    def get[_S](self, key: menuaiEntryKey[_S], /) -> dict[str, _S] | None: ...
     @overload
     def get[_S, _U](
-        self, key: HassEntryKey[_S], default: _U, /
+        self, key: menuaiEntryKey[_S], default: _U, /
     ) -> dict[str, _S] | _U: ...
     @overload
-    def get[_S](self, key: HassKey[_S], /) -> _S | None: ...
+    def get[_S](self, key: menuaiKey[_S], /) -> _S | None: ...
     @overload
-    def get[_S, _U](self, key: HassKey[_S], default: _U, /) -> _S | _U: ...
+    def get[_S, _U](self, key: menuaiKey[_S], default: _U, /) -> _S | _U: ...
     @overload
     def get(self, key: str, /) -> Any | None: ...
     @overload
@@ -76,36 +76,36 @@ class HassDict(dict[_Key[Any] | str, Any]):
 
     # ------
     @overload  # type: ignore[override]
-    def pop[_S](self, key: HassEntryKey[_S], /) -> dict[str, _S]: ...
+    def pop[_S](self, key: menuaiEntryKey[_S], /) -> dict[str, _S]: ...
     @overload
     def pop[_S](
-        self, key: HassEntryKey[_S], default: dict[str, _S], /
+        self, key: menuaiEntryKey[_S], default: dict[str, _S], /
     ) -> dict[str, _S]: ...
     @overload
     def pop[_S, _U](
-        self, key: HassEntryKey[_S], default: _U, /
+        self, key: menuaiEntryKey[_S], default: _U, /
     ) -> dict[str, _S] | _U: ...
     @overload
-    def pop[_S](self, key: HassKey[_S], /) -> _S: ...
+    def pop[_S](self, key: menuaiKey[_S], /) -> _S: ...
     @overload
-    def pop[_S](self, key: HassKey[_S], default: _S, /) -> _S: ...
+    def pop[_S](self, key: menuaiKey[_S], default: _S, /) -> _S: ...
     @overload
-    def pop[_S, _U](self, key: HassKey[_S], default: _U, /) -> _S | _U: ...
+    def pop[_S, _U](self, key: menuaiKey[_S], default: _U, /) -> _S | _U: ...
     @overload
     def pop(self, key: str, /) -> Any: ...
     @overload
     def pop[_U](self, key: str, default: _U, /) -> Any | _U: ...
 
-def _test_hass_dict_typing() -> None:  # noqa: PYI048
-    """Test HassDict overloads work as intended.
+def _test_menuai_dict_typing() -> None:  # noqa: PYI048
+    """Test menuaiDict overloads work as intended.
 
     This is tested during the mypy run. Do not move it to 'tests'!
     """
-    d = HassDict()
-    entry_key = HassEntryKey[int]("entry_key")
-    key = HassKey[int]("key")
-    key2 = HassKey[dict[int, bool]]("key2")
-    key3 = HassKey[set[str]]("key3")
+    d = menuaiDict()
+    entry_key = menuaiEntryKey[int]("entry_key")
+    key = menuaiKey[int]("key")
+    key2 = menuaiKey[dict[int, bool]]("key2")
+    key3 = menuaiKey[set[str]]("key3")
     other_key = "domain"
 
     # __getitem__

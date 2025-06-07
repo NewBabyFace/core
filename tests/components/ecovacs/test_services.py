@@ -7,10 +7,10 @@ from unittest.mock import patch
 from deebot_client.device import Device
 import pytest
 
-from homeassistant.components.ecovacs.const import DOMAIN
-from homeassistant.components.ecovacs.vacuum import SERVICE_RAW_GET_POSITIONS
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
+from menuai.components.ecovacs.const import DOMAIN
+from menuai.components.ecovacs.vacuum import SERVICE_RAW_GET_POSITIONS
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
 
 pytestmark = [pytest.mark.usefixtures("init_integration")]
 
@@ -70,15 +70,15 @@ def mock_device_execute_response(data: dict[str, Any]) -> Generator[dict[str, An
     ids=["yna5x1"],
 )
 async def test_get_positions_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_device_execute_response: dict[str, Any],
     entity_id: str,
 ) -> None:
     """Test that get_positions service response snapshots match."""
-    vacuum = hass.states.get(entity_id)
+    vacuum = menuai.states.get(entity_id)
     assert vacuum
 
-    assert await hass.services.async_call(
+    assert await menuai.services.async_call(
         DOMAIN,
         SERVICE_RAW_GET_POSITIONS,
         {ATTR_ENTITY_ID: entity_id},

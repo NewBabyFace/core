@@ -5,11 +5,11 @@ from unittest.mock import Mock, patch
 import pytest
 import yarl
 
-from homeassistant.components import media_source
-from homeassistant.components.media_player import BrowseError, MediaClass
-from homeassistant.components.media_source import const, models
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components import media_source
+from menuai.components.media_player import BrowseError, MediaClass
+from menuai.components.media_source import const, models
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.typing import WebSocketGenerator
 
@@ -41,20 +41,20 @@ async def test_generate_media_source_id() -> None:
         )
 
 
-async def test_async_browse_media(hass: HomeAssistant) -> None:
+async def test_async_browse_media(menuai: menuai) -> None:
     """Test browse media."""
-    assert await async_setup_component(hass, media_source.DOMAIN, {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, media_source.DOMAIN, {})
+    await menuai.async_block_till_done()
 
     # Test non-media ignored (/media has test.mp3 and not_media.txt)
-    media = await media_source.async_browse_media(hass, "")
+    media = await media_source.async_browse_media(menuai, "")
     assert isinstance(media, media_source.models.BrowseMediaSource)
     assert media.title == "media"
     assert len(media.children) == 2
 
     # Test content filter
     media = await media_source.async_browse_media(
-        hass,
+        menuai,
         "",
         content_filter=lambda item: item.media_content_type.startswith("video/"),
     )
@@ -74,11 +74,11 @@ async def test_async_browse_media(hass: HomeAssistant) -> None:
         return item
 
     with patch(
-        "homeassistant.components.media_source.models.MediaSourceItem.async_browse",
+        "menuai.components.media_source.models.MediaSourceItem.async_browse",
         not_shown_browse,
     ):
         media = await media_source.async_browse_media(
-            hass,
+            menuai,
             "",
             content_filter=lambda item: item.media_content_type.startswith("video/"),
         )
@@ -90,22 +90,22 @@ async def test_async_browse_media(hass: HomeAssistant) -> None:
 
     # Test invalid media content
     with pytest.raises(BrowseError):
-        await media_source.async_browse_media(hass, "invalid")
+        await media_source.async_browse_media(menuai, "invalid")
 
     # Test base URI returns all domains
-    media = await media_source.async_browse_media(hass, const.URI_SCHEME)
+    media = await media_source.async_browse_media(menuai, const.URI_SCHEME)
     assert isinstance(media, media_source.models.BrowseMediaSource)
     assert len(media.children) == 1
     assert media.children[0].title == "My media"
 
 
-async def test_async_resolve_media(hass: HomeAssistant) -> None:
+async def test_async_resolve_media(menuai: menuai) -> None:
     """Test browse media."""
-    assert await async_setup_component(hass, media_source.DOMAIN, {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, media_source.DOMAIN, {})
+    await menuai.async_block_till_done()
 
     media = await media_source.async_resolve_media(
-        hass,
+        menuai,
         media_source.generate_media_source_id(media_source.DOMAIN, "local/test.mp3"),
         None,
     )
@@ -115,49 +115,49 @@ async def test_async_resolve_media(hass: HomeAssistant) -> None:
 
 
 async def test_async_resolve_media_no_entity(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test browse media."""
-    assert await async_setup_component(hass, media_source.DOMAIN, {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, media_source.DOMAIN, {})
+    await menuai.async_block_till_done()
 
     with pytest.raises(RuntimeError):
         await media_source.async_resolve_media(
-            hass,
+            menuai,
             media_source.generate_media_source_id(
                 media_source.DOMAIN, "local/test.mp3"
             ),
         )
 
 
-async def test_async_unresolve_media(hass: HomeAssistant) -> None:
+async def test_async_unresolve_media(menuai: menuai) -> None:
     """Test browse media."""
-    assert await async_setup_component(hass, media_source.DOMAIN, {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, media_source.DOMAIN, {})
+    await menuai.async_block_till_done()
 
     # Test no media content
     with pytest.raises(media_source.Unresolvable):
-        await media_source.async_resolve_media(hass, "", None)
+        await media_source.async_resolve_media(menuai, "", None)
 
     # Test invalid media content
     with pytest.raises(media_source.Unresolvable):
-        await media_source.async_resolve_media(hass, "invalid", None)
+        await media_source.async_resolve_media(menuai, "invalid", None)
 
     # Test invalid media source
     with pytest.raises(media_source.Unresolvable):
         await media_source.async_resolve_media(
-            hass, "media-source://media_source2", None
+            menuai, "media-source://media_source2", None
         )
 
 
 async def test_websocket_browse_media(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test browse media websocket."""
-    assert await async_setup_component(hass, media_source.DOMAIN, {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, media_source.DOMAIN, {})
+    await menuai.async_block_till_done()
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     media = media_source.models.BrowseMediaSource(
         domain=media_source.DOMAIN,
@@ -170,7 +170,7 @@ async def test_websocket_browse_media(
     )
 
     with patch(
-        "homeassistant.components.media_source.async_browse_media",
+        "menuai.components.media_source.async_browse_media",
         return_value=media,
     ):
         await client.send_json(
@@ -187,7 +187,7 @@ async def test_websocket_browse_media(
     assert media.as_dict() == msg["result"]
 
     with patch(
-        "homeassistant.components.media_source.async_browse_media",
+        "menuai.components.media_source.async_browse_media",
         side_effect=BrowseError("test"),
     ):
         await client.send_json(
@@ -207,13 +207,13 @@ async def test_websocket_browse_media(
 
 @pytest.mark.parametrize("filename", ["test.mp3", "Epic Sax Guy 10 Hours.mp4"])
 async def test_websocket_resolve_media(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, filename
+    menuai: menuai, menuai_ws_client: WebSocketGenerator, filename
 ) -> None:
     """Test browse media websocket."""
-    assert await async_setup_component(hass, media_source.DOMAIN, {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, media_source.DOMAIN, {})
+    await menuai.async_block_till_done()
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     media = media_source.models.PlayMedia(
         f"/media/local/{filename}",
@@ -221,7 +221,7 @@ async def test_websocket_resolve_media(
     )
 
     with patch(
-        "homeassistant.components.media_source.async_resolve_media",
+        "menuai.components.media_source.async_resolve_media",
         return_value=media,
     ):
         await client.send_json(
@@ -245,7 +245,7 @@ async def test_websocket_resolve_media(
     assert "authSig" in parsed.query
 
     with patch(
-        "homeassistant.components.media_source.async_resolve_media",
+        "menuai.components.media_source.async_resolve_media",
         side_effect=media_source.Unresolvable("test"),
     ):
         await client.send_json(

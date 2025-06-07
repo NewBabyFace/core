@@ -6,12 +6,12 @@ from unittest.mock import AsyncMock
 from linkplay.exceptions import LinkPlayRequestException
 import pytest
 
-from homeassistant.components.linkplay.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER, SOURCE_ZEROCONF
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.components.linkplay.const import DOMAIN
+from menuai.config_entries import SOURCE_USER, SOURCE_ZEROCONF
+from menuai.const import CONF_HOST
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .conftest import HOST, HOST_REENTRY, NAME, UUID
 
@@ -52,10 +52,10 @@ ZEROCONF_DISCOVERY_RE_ENTRY = ZeroconfServiceInfo(
 
 @pytest.mark.usefixtures("mock_linkplay_factory_bridge", "mock_setup_entry")
 async def test_user_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test user setup config flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
@@ -63,7 +63,7 @@ async def test_user_flow(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: HOST},
     )
@@ -78,7 +78,7 @@ async def test_user_flow(
 
 @pytest.mark.usefixtures("mock_linkplay_factory_bridge")
 async def test_user_flow_re_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test user setup config flow when an entry with the same unique id already exists."""
 
@@ -89,15 +89,15 @@ async def test_user_flow_re_entry(
         title=NAME,
         unique_id=UUID,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     # Re-create entry with different host
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: HOST_REENTRY},
     )
@@ -108,10 +108,10 @@ async def test_user_flow_re_entry(
 
 @pytest.mark.usefixtures("mock_linkplay_factory_bridge", "mock_setup_entry")
 async def test_zeroconf_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test Zeroconf flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_ZEROCONF},
         data=ZEROCONF_DISCOVERY,
@@ -120,7 +120,7 @@ async def test_zeroconf_flow(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "discovery_confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {},
     )
@@ -135,7 +135,7 @@ async def test_zeroconf_flow(
 
 @pytest.mark.usefixtures("mock_linkplay_factory_bridge")
 async def test_zeroconf_flow_re_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test Zeroconf flow when an entry with the same unique id already exists."""
 
@@ -146,10 +146,10 @@ async def test_zeroconf_flow_re_entry(
         title=NAME,
         unique_id=UUID,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     # Re-create entry with different host
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_ZEROCONF},
         data=ZEROCONF_DISCOVERY_RE_ENTRY,
@@ -161,7 +161,7 @@ async def test_zeroconf_flow_re_entry(
 
 @pytest.mark.usefixtures("mock_setup_entry")
 async def test_zeroconf_flow_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_linkplay_factory_bridge: AsyncMock,
 ) -> None:
     """Test flow when the device discovered through Zeroconf cannot be reached."""
@@ -169,7 +169,7 @@ async def test_zeroconf_flow_errors(
     # Temporarily make the mock_linkplay_factory_bridge throw an exception
     mock_linkplay_factory_bridge.side_effect = (LinkPlayRequestException("Error"),)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_ZEROCONF},
         data=ZEROCONF_DISCOVERY,
@@ -181,7 +181,7 @@ async def test_zeroconf_flow_errors(
 
 @pytest.mark.usefixtures("mock_setup_entry")
 async def test_user_flow_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_linkplay_factory_bridge: AsyncMock,
 ) -> None:
     """Test flow when the device cannot be reached."""
@@ -189,7 +189,7 @@ async def test_user_flow_errors(
     # Temporarily make the mock_linkplay_factory_bridge throw an exception
     mock_linkplay_factory_bridge.side_effect = (LinkPlayRequestException("Error"),)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
@@ -197,7 +197,7 @@ async def test_user_flow_errors(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: HOST},
     )
@@ -209,7 +209,7 @@ async def test_user_flow_errors(
     # Make mock_linkplay_factory_bridge_exception no longer throw an exception
     mock_linkplay_factory_bridge.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: HOST},
     )

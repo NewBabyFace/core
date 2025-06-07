@@ -4,17 +4,17 @@ from unittest.mock import AsyncMock
 
 from mill import Heater, Mill, Sensor
 
-from homeassistant.components.mill.const import DOMAIN
-from homeassistant.components.mill.coordinator import MillHistoricDataUpdateCoordinator
-from homeassistant.components.recorder import Recorder
-from homeassistant.components.recorder.statistics import statistics_during_period
-from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
+from menuai.components.mill.const import DOMAIN
+from menuai.components.mill.coordinator import MillHistoricDataUpdateCoordinator
+from menuai.components.recorder import Recorder
+from menuai.components.recorder.statistics import statistics_during_period
+from menuai.core import menuai
+from menuai.util import dt as dt_util
 
 from tests.components.recorder.common import async_wait_recording_done
 
 
-async def test_mill_historic_data(recorder_mock: Recorder, hass: HomeAssistant) -> None:
+async def test_mill_historic_data(recorder_mock: Recorder, menuai: menuai) -> None:
     """Test historic data from Mill."""
 
     data = {
@@ -31,13 +31,13 @@ async def test_mill_historic_data(recorder_mock: Recorder, hass: HomeAssistant) 
     statistic_id = f"{DOMAIN}:energy_dev_id"
 
     coordinator = MillHistoricDataUpdateCoordinator(
-        hass, mill_data_connection=mill_data_connection
+        menuai, mill_data_connection=mill_data_connection
     )
     await coordinator._async_update_data()
-    await async_wait_recording_done(hass)
-    stats = await hass.async_add_executor_job(
+    await async_wait_recording_done(menuai)
+    stats = await menuai.async_add_executor_job(
         statistics_during_period,
-        hass,
+        menuai,
         next(iter(data)),
         None,
         {statistic_id},
@@ -66,10 +66,10 @@ async def test_mill_historic_data(recorder_mock: Recorder, hass: HomeAssistant) 
     }
     mill_data_connection.fetch_historic_energy_usage = AsyncMock(return_value=data2)
     await coordinator._async_update_data()
-    await async_wait_recording_done(hass)
-    stats = await hass.async_add_executor_job(
+    await async_wait_recording_done(menuai)
+    stats = await menuai.async_add_executor_job(
         statistics_during_period,
-        hass,
+        menuai,
         next(iter(data)),
         None,
         {statistic_id},
@@ -92,7 +92,7 @@ async def test_mill_historic_data(recorder_mock: Recorder, hass: HomeAssistant) 
 
 
 async def test_mill_historic_data_no_heater(
-    recorder_mock: Recorder, hass: HomeAssistant
+    recorder_mock: Recorder, menuai: menuai
 ) -> None:
     """Test historic data from Mill."""
 
@@ -110,13 +110,13 @@ async def test_mill_historic_data_no_heater(
     statistic_id = f"{DOMAIN}:energy_dev_id"
 
     coordinator = MillHistoricDataUpdateCoordinator(
-        hass, mill_data_connection=mill_data_connection
+        menuai, mill_data_connection=mill_data_connection
     )
     await coordinator._async_update_data()
-    await async_wait_recording_done(hass)
-    stats = await hass.async_add_executor_job(
+    await async_wait_recording_done(menuai)
+    stats = await menuai.async_add_executor_job(
         statistics_during_period,
-        hass,
+        menuai,
         next(iter(data)),
         None,
         {statistic_id},
@@ -129,7 +129,7 @@ async def test_mill_historic_data_no_heater(
 
 
 async def test_mill_historic_data_no_data(
-    recorder_mock: Recorder, hass: HomeAssistant
+    recorder_mock: Recorder, menuai: menuai
 ) -> None:
     """Test historic data from Mill."""
 
@@ -145,16 +145,16 @@ async def test_mill_historic_data_no_data(
     mill_data_connection.fetch_historic_energy_usage = AsyncMock(return_value=data)
 
     coordinator = MillHistoricDataUpdateCoordinator(
-        hass, mill_data_connection=mill_data_connection
+        menuai, mill_data_connection=mill_data_connection
     )
     await coordinator._async_update_data()
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
     statistic_id = f"{DOMAIN}:energy_dev_id"
 
-    stats = await hass.async_add_executor_job(
+    stats = await menuai.async_add_executor_job(
         statistics_during_period,
-        hass,
+        menuai,
         next(iter(data)),
         None,
         {statistic_id},
@@ -168,13 +168,13 @@ async def test_mill_historic_data_no_data(
     mill_data_connection.fetch_historic_energy_usage = AsyncMock(return_value=None)
 
     coordinator = MillHistoricDataUpdateCoordinator(
-        hass, mill_data_connection=mill_data_connection
+        menuai, mill_data_connection=mill_data_connection
     )
     await coordinator._async_update_data()
-    await async_wait_recording_done(hass)
-    stats = await hass.async_add_executor_job(
+    await async_wait_recording_done(menuai)
+    stats = await menuai.async_add_executor_job(
         statistics_during_period,
-        hass,
+        menuai,
         next(iter(data)),
         None,
         {statistic_id},
@@ -188,7 +188,7 @@ async def test_mill_historic_data_no_data(
 
 
 async def test_mill_historic_data_invalid_data(
-    recorder_mock: Recorder, hass: HomeAssistant
+    recorder_mock: Recorder, menuai: menuai
 ) -> None:
     """Test historic data from Mill."""
 
@@ -206,13 +206,13 @@ async def test_mill_historic_data_invalid_data(
     statistic_id = f"{DOMAIN}:energy_dev_id"
 
     coordinator = MillHistoricDataUpdateCoordinator(
-        hass, mill_data_connection=mill_data_connection
+        menuai, mill_data_connection=mill_data_connection
     )
     await coordinator._async_update_data()
-    await async_wait_recording_done(hass)
-    stats = await hass.async_add_executor_job(
+    await async_wait_recording_done(menuai)
+    stats = await menuai.async_add_executor_job(
         statistics_during_period,
-        hass,
+        menuai,
         next(iter(data)),
         None,
         {statistic_id},

@@ -7,10 +7,10 @@ from typing import Any
 
 from incomfortclient import Heater as InComfortHeater
 
-from homeassistant.components.water_heater import WaterHeaterEntity
-from homeassistant.const import EntityCategory, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.water_heater import WaterHeaterEntity
+from menuai.const import EntityCategory, UnitOfTemperature
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import InComfortConfigEntry, InComfortDataCoordinator
 from .entity import IncomfortBoilerEntity
@@ -23,7 +23,7 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: InComfortConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

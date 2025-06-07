@@ -9,11 +9,11 @@ from urllib.error import URLError
 from radiotherm.validate import RadiothermTstatError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
 
 from .const import DOMAIN
 from .data import RadioThermInitData, async_get_init_data
@@ -21,14 +21,14 @@ from .data import RadioThermInitData, async_get_init_data
 _LOGGER = logging.getLogger(__name__)
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""
 
 
-async def validate_connection(hass: HomeAssistant, host: str) -> RadioThermInitData:
+async def validate_connection(menuai: menuai, host: str) -> RadioThermInitData:
     """Validate the connection."""
     try:
-        return await async_get_init_data(hass, host)
+        return await async_get_init_data(menuai, host)
     except (TimeoutError, RadiothermTstatError, URLError, OSError) as ex:
         raise CannotConnect(f"Failed to connect to {host}: {ex}") from ex
 
@@ -49,7 +49,7 @@ class RadioThermConfigFlow(ConfigFlow, domain=DOMAIN):
         """Discover via DHCP."""
         self._async_abort_entries_match({CONF_HOST: discovery_info.ip})
         try:
-            init_data = await validate_connection(self.hass, discovery_info.ip)
+            init_data = await validate_connection(self.menuai, discovery_info.ip)
         except CannotConnect:
             return self.async_abort(reason="cannot_connect")
         await self.async_set_unique_id(init_data.mac)
@@ -93,7 +93,7 @@ class RadioThermConfigFlow(ConfigFlow, domain=DOMAIN):
         errors = {}
         if user_input is not None:
             try:
-                init_data = await validate_connection(self.hass, user_input[CONF_HOST])
+                init_data = await validate_connection(self.menuai, user_input[CONF_HOST])
             except CannotConnect:
                 errors[CONF_HOST] = "cannot_connect"
             except Exception:

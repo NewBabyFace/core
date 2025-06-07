@@ -6,20 +6,20 @@ from dataclasses import dataclass
 from pyHomee.const import AttributeType, NodeState
 from pyHomee.model import HomeeAttribute, HomeeNode
 
-from homeassistant.components.automation import automations_with_entity
-from homeassistant.components.script import scripts_with_entity
-from homeassistant.components.sensor import (
+from menuai.components.automation import automations_with_entity
+from menuai.components.script import scripts_with_entity
+from menuai.components.sensor import (
     DOMAIN as SENSOR_DOMAIN,
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.issue_registry import (
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.issue_registry import (
     IssueSeverity,
     async_create_issue,
     async_delete_issue,
@@ -284,20 +284,20 @@ NODE_SENSOR_DESCRIPTIONS: tuple[HomeeNodeSensorEntityDescription, ...] = (
 )
 
 
-def entity_used_in(hass: HomeAssistant, entity_id: str) -> list[str]:
+def entity_used_in(menuai: menuai, entity_id: str) -> list[str]:
     """Get list of related automations and scripts."""
-    used_in = automations_with_entity(hass, entity_id)
-    used_in += scripts_with_entity(hass, entity_id)
+    used_in = automations_with_entity(menuai, entity_id)
+    used_in += scripts_with_entity(menuai, entity_id)
     return used_in
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: HomeeConfigEntry,
     async_add_devices: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Add the homee platform for the sensor components."""
-    ent_reg = er.async_get(hass)
+    ent_reg = er.async_get(menuai)
     devices: list[HomeeSensor | HomeeNodeSensor] = []
 
     def add_deprecated_entity(
@@ -310,15 +310,15 @@ async def async_setup_entry(
             if entity_entry and entity_entry.disabled:
                 ent_reg.async_remove(entity_id)
                 async_delete_issue(
-                    hass,
+                    menuai,
                     DOMAIN,
                     f"deprecated_entity_{entity_uid}",
                 )
             elif entity_entry:
                 devices.append(HomeeSensor(attribute, config_entry, description))
-                if entity_used_in(hass, entity_id):
+                if entity_used_in(menuai, entity_id):
                     async_create_issue(
-                        hass,
+                        menuai,
                         DOMAIN,
                         f"deprecated_entity_{entity_uid}",
                         breaks_in_ha_version="2025.12.0",

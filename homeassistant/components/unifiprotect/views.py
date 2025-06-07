@@ -12,9 +12,9 @@ from aiohttp import web
 from uiprotect.data import Camera, Event
 from uiprotect.exceptions import ClientError
 
-from homeassistant.components.http import HomeAssistantView
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.components.http import menuaiView
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from .data import ProtectData, async_get_data_for_entry_id, async_get_data_for_nvr_id
 
@@ -135,19 +135,19 @@ def _validate_event(event: Event) -> None:
         raise PermissionError(f"User cannot read media from camera: {event.camera.id}")
 
 
-class ProtectProxyView(HomeAssistantView):
+class ProtectProxyView(menuaiView):
     """Base class to proxy request to UniFi Protect console."""
 
     requires_auth = True
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize a thumbnail proxy view."""
-        self.hass = hass
+        self.menuai = menuai
 
     def _get_data_or_404(self, nvr_id_or_entry_id: str) -> ProtectData | web.Response:
         if data := (
-            async_get_data_for_nvr_id(self.hass, nvr_id_or_entry_id)
-            or async_get_data_for_entry_id(self.hass, nvr_id_or_entry_id)
+            async_get_data_for_nvr_id(self.menuai, nvr_id_or_entry_id)
+            or async_get_data_for_entry_id(self.menuai, nvr_id_or_entry_id)
         ):
             return data
         return _404("Invalid NVR ID")
@@ -157,8 +157,8 @@ class ProtectProxyView(HomeAssistantView):
         if (camera := data.api.bootstrap.cameras.get(camera_id)) is not None:
             return camera
 
-        entity_registry = er.async_get(self.hass)
-        device_registry = dr.async_get(self.hass)
+        entity_registry = er.async_get(self.menuai)
+        device_registry = dr.async_get(self.menuai)
 
         if (entity := entity_registry.async_get(camera_id)) is None or (
             device := device_registry.async_get(entity.device_id or "")

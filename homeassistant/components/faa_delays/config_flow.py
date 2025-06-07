@@ -7,9 +7,9 @@ from aiohttp import ClientConnectionError
 import faadelays
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_ID
-from homeassistant.helpers import aiohttp_client
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_ID
+from menuai.helpers import aiohttp_client
 
 from .const import DOMAIN
 
@@ -32,7 +32,7 @@ class FAADelaysConfigFlow(ConfigFlow, domain=DOMAIN):
             await self.async_set_unique_id(user_input[CONF_ID])
             self._abort_if_unique_id_configured()
 
-            websession = aiohttp_client.async_get_clientsession(self.hass)
+            websession = aiohttp_client.async_get_clientsession(self.menuai)
 
             data = faadelays.Airport(user_input[CONF_ID], websession)
 

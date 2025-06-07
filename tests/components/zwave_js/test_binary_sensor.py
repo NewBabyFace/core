@@ -4,8 +4,8 @@ import pytest
 from zwave_js_server.event import Event
 from zwave_js_server.model.node import Node
 
-from homeassistant.components.binary_sensor import BinarySensorDeviceClass
-from homeassistant.const import (
+from menuai.components.binary_sensor import BinarySensorDeviceClass
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     STATE_OFF,
     STATE_ON,
@@ -13,8 +13,8 @@ from homeassistant.const import (
     EntityCategory,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .common import (
     DISABLED_LEGACY_BINARY_SENSOR,
@@ -35,10 +35,10 @@ def platforms() -> list[str]:
 
 
 async def test_low_battery_sensor(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, multisensor_6, integration
+    menuai: menuai, entity_registry: er.EntityRegistry, multisensor_6, integration
 ) -> None:
     """Test boolean binary sensor of type low battery."""
-    state = hass.states.get(LOW_BATTERY_BINARY_SENSOR)
+    state = menuai.states.get(LOW_BATTERY_BINARY_SENSOR)
 
     assert state
     assert state.state == STATE_OFF
@@ -51,14 +51,14 @@ async def test_low_battery_sensor(
 
 
 async def test_enabled_legacy_sensor(
-    hass: HomeAssistant, ecolink_door_sensor, integration
+    menuai: menuai, ecolink_door_sensor, integration
 ) -> None:
     """Test enabled legacy boolean binary sensor."""
     node = ecolink_door_sensor
     # this node has Notification CC not (fully) implemented
     # so legacy binary sensor should be enabled
 
-    state = hass.states.get(ENABLED_LEGACY_BINARY_SENSOR)
+    state = menuai.states.get(ENABLED_LEGACY_BINARY_SENSOR)
     assert state
     assert state.state == STATE_OFF
     assert state.attributes.get(ATTR_DEVICE_CLASS) is None
@@ -83,7 +83,7 @@ async def test_enabled_legacy_sensor(
     )
     node.receive_event(event)
 
-    state = hass.states.get(ENABLED_LEGACY_BINARY_SENSOR)
+    state = menuai.states.get(ENABLED_LEGACY_BINARY_SENSOR)
     assert state.state == STATE_ON
 
     # Test state updates from value updated event
@@ -106,18 +106,18 @@ async def test_enabled_legacy_sensor(
     )
     node.receive_event(event)
 
-    state = hass.states.get(ENABLED_LEGACY_BINARY_SENSOR)
+    state = menuai.states.get(ENABLED_LEGACY_BINARY_SENSOR)
     assert state.state == STATE_UNKNOWN
 
 
 async def test_disabled_legacy_sensor(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, multisensor_6, integration
+    menuai: menuai, entity_registry: er.EntityRegistry, multisensor_6, integration
 ) -> None:
     """Test disabled legacy boolean binary sensor."""
     # this node has Notification CC implemented so legacy binary sensor should be disabled
 
     entity_id = DISABLED_LEGACY_BINARY_SENSOR
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state is None
     entry = entity_registry.async_get(entity_id)
     assert entry
@@ -133,16 +133,16 @@ async def test_disabled_legacy_sensor(
 
 
 async def test_notification_sensor(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, multisensor_6, integration
+    menuai: menuai, entity_registry: er.EntityRegistry, multisensor_6, integration
 ) -> None:
     """Test binary sensor created from Notification CC."""
-    state = hass.states.get(NOTIFICATION_MOTION_BINARY_SENSOR)
+    state = menuai.states.get(NOTIFICATION_MOTION_BINARY_SENSOR)
 
     assert state
     assert state.state == STATE_ON
     assert state.attributes[ATTR_DEVICE_CLASS] == BinarySensorDeviceClass.MOTION
 
-    state = hass.states.get(TAMPER_SENSOR)
+    state = menuai.states.get(TAMPER_SENSOR)
 
     assert state
     assert state.state == STATE_OFF
@@ -155,7 +155,7 @@ async def test_notification_sensor(
 
 
 async def test_notification_off_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     lock_popp_electric_strike_lock_control: Node,
 ) -> None:
     """Test the description off_state attribute of certain notification sensors."""
@@ -168,13 +168,13 @@ async def test_notification_off_state(
     }
 
     entry = MockConfigEntry(domain="zwave_js", data={"url": "ws://test.org"})
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     door_states = [
         state
-        for state in hass.states.async_all("binary_sensor")
+        for state in menuai.states.async_all("binary_sensor")
         if state.attributes.get(ATTR_DEVICE_CLASS) == BinarySensorDeviceClass.DOOR
     ]
 
@@ -187,12 +187,12 @@ async def test_notification_off_state(
 
 
 async def test_property_sensor_door_status(
-    hass: HomeAssistant, lock_august_pro, integration
+    menuai: menuai, lock_august_pro, integration
 ) -> None:
     """Test property binary sensor with sensor mapping (doorStatus)."""
     node = lock_august_pro
 
-    state = hass.states.get(PROPERTY_DOOR_STATUS_BINARY_SENSOR)
+    state = menuai.states.get(PROPERTY_DOOR_STATUS_BINARY_SENSOR)
     assert state
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_DEVICE_CLASS] == BinarySensorDeviceClass.DOOR
@@ -216,7 +216,7 @@ async def test_property_sensor_door_status(
         },
     )
     node.receive_event(event)
-    state = hass.states.get(PROPERTY_DOOR_STATUS_BINARY_SENSOR)
+    state = menuai.states.get(PROPERTY_DOOR_STATUS_BINARY_SENSOR)
     assert state
     assert state.state == STATE_ON
 
@@ -239,7 +239,7 @@ async def test_property_sensor_door_status(
         },
     )
     node.receive_event(event)
-    state = hass.states.get(PROPERTY_DOOR_STATUS_BINARY_SENSOR)
+    state = menuai.states.get(PROPERTY_DOOR_STATUS_BINARY_SENSOR)
     assert state
     assert state.state == STATE_OFF
 
@@ -262,13 +262,13 @@ async def test_property_sensor_door_status(
         },
     )
     node.receive_event(event)
-    state = hass.states.get(PROPERTY_DOOR_STATUS_BINARY_SENSOR)
+    state = menuai.states.get(PROPERTY_DOOR_STATUS_BINARY_SENSOR)
     assert state
     assert state.state == STATE_UNKNOWN
 
 
 async def test_config_parameter_binary_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     climate_adc_t3000,
     integration,
@@ -287,16 +287,16 @@ async def test_config_parameter_binary_sensor(
     assert updated_entry.disabled is False
 
     # reload integration and check if entity is correctly there
-    await hass.config_entries.async_reload(integration.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_reload(integration.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(binary_sensor_entity_id)
+    state = menuai.states.get(binary_sensor_entity_id)
     assert state
     assert state.state == STATE_OFF
 
 
 async def test_smoke_co_notification_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     zcombo_smoke_co_alarm: Node,
     integration: MockConfigEntry,
@@ -304,7 +304,7 @@ async def test_smoke_co_notification_sensors(
     """Test smoke and CO notification sensors with diagnostic states."""
     # Test smoke alarm sensor
     smoke_sensor = "binary_sensor.zcombo_g_smoke_co_alarm_smoke_detected"
-    state = hass.states.get(smoke_sensor)
+    state = menuai.states.get(smoke_sensor)
     assert state
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_DEVICE_CLASS] == BinarySensorDeviceClass.SMOKE
@@ -314,7 +314,7 @@ async def test_smoke_co_notification_sensors(
 
     # Test smoke alarm diagnostic sensor
     smoke_diagnostic = "binary_sensor.zcombo_g_smoke_co_alarm_smoke_alarm_test"
-    state = hass.states.get(smoke_diagnostic)
+    state = menuai.states.get(smoke_diagnostic)
     assert state
     assert state.state == STATE_OFF
     entity_entry = entity_registry.async_get(smoke_diagnostic)
@@ -323,7 +323,7 @@ async def test_smoke_co_notification_sensors(
 
     # Test CO alarm sensor
     co_sensor = "binary_sensor.zcombo_g_smoke_co_alarm_carbon_monoxide_detected"
-    state = hass.states.get(co_sensor)
+    state = menuai.states.get(co_sensor)
     assert state
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_DEVICE_CLASS] == BinarySensorDeviceClass.CO
@@ -366,9 +366,9 @@ async def test_smoke_co_notification_sensors(
         },
     )
     zcombo_smoke_co_alarm.receive_event(event)
-    await hass.async_block_till_done()  # Wait for state change to be processed
+    await menuai.async_block_till_done()  # Wait for state change to be processed
     # Get a fresh state after the sleep
-    state = hass.states.get(smoke_sensor)
+    state = menuai.states.get(smoke_sensor)
     assert state is not None, "Smoke sensor state should not be None"
     assert state.state == STATE_ON, (
         f"Expected smoke sensor state to be 'on', got '{state.state}'"
@@ -395,9 +395,9 @@ async def test_smoke_co_notification_sensors(
         },
     )
     zcombo_smoke_co_alarm.receive_event(event)
-    await hass.async_block_till_done()  # Wait for state change to be processed
+    await menuai.async_block_till_done()  # Wait for state change to be processed
     # Get a fresh state after the sleep
-    state = hass.states.get(co_sensor)
+    state = menuai.states.get(co_sensor)
     assert state is not None, "CO sensor state should not be None"
     assert state.state == STATE_ON, (
         f"Expected CO sensor state to be 'on', got '{state.state}'"
@@ -424,9 +424,9 @@ async def test_smoke_co_notification_sensors(
         },
     )
     zcombo_smoke_co_alarm.receive_event(event)
-    await hass.async_block_till_done()  # Wait for state change to be processed
+    await menuai.async_block_till_done()  # Wait for state change to be processed
     # Get a fresh state after the sleep
-    state = hass.states.get(smoke_diagnostic)
+    state = menuai.states.get(smoke_diagnostic)
     assert state is not None, "Smoke diagnostic state should not be None"
     assert state.state == STATE_ON, (
         f"Expected smoke diagnostic state to be 'on', got '{state.state}'"

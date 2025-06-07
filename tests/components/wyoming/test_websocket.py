@@ -1,14 +1,14 @@
 """Websocket tests for Wyoming integration."""
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
 
 from tests.typing import WebSocketGenerator
 
 
 async def test_info(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     init_components,
     init_wyoming_stt: ConfigEntry,
     init_wyoming_tts: ConfigEntry,
@@ -17,7 +17,7 @@ async def test_info(
     init_wyoming_handle: ConfigEntry,
 ) -> None:
     """Test info websocket command."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json_auto_id({"type": "wyoming/info"})
 

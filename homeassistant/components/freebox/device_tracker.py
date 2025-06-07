@@ -5,17 +5,17 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from homeassistant.components.device_tracker import ScannerEntity
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.device_tracker import ScannerEntity
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DEFAULT_DEVICE_NAME, DEVICE_ICONS
 from .router import FreeboxConfigEntry, FreeboxRouter
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: FreeboxConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -29,7 +29,7 @@ async def async_setup_entry(
         add_entities(router, async_add_entities, tracked)
 
     entry.async_on_unload(
-        async_dispatcher_connect(hass, router.signal_device_new, update_router)
+        async_dispatcher_connect(menuai, router.signal_device_new, update_router)
     )
 
     update_router()
@@ -107,12 +107,12 @@ class FreeboxDevice(ScannerEntity):
         self.async_update_state()
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register state update callback."""
         self.async_update_state()
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 self._router.signal_device_update,
                 self.async_on_demand_update,
             )

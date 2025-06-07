@@ -9,10 +9,10 @@ from typing import Any
 
 from pyforked_daapd import ForkedDaapdAPI
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import PlatformNotReady
-from homeassistant.helpers.dispatcher import async_dispatcher_send
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import PlatformNotReady
+from menuai.helpers.dispatcher import async_dispatcher_send
 
 from .const import (
     SIGNAL_ADD_ZONES,
@@ -34,9 +34,9 @@ WEBSOCKET_RECONNECT_TIME = 30  # seconds
 class ForkedDaapdUpdater:
     """Manage updates for the forked-daapd device."""
 
-    def __init__(self, hass: HomeAssistant, api: ForkedDaapdAPI, entry_id: str) -> None:
+    def __init__(self, menuai: menuai, api: ForkedDaapdAPI, entry_id: str) -> None:
         """Initialize."""
-        self.hass = hass
+        self.menuai = menuai
         self._api = api
         self.websocket_handler: asyncio.Task[None] | None = None
         self._all_output_ids: set[str] = set()
@@ -67,10 +67,10 @@ class ForkedDaapdUpdater:
     async def _disconnected_callback(self) -> None:
         """Send update signals when the websocket gets disconnected."""
         async_dispatcher_send(
-            self.hass, SIGNAL_UPDATE_MASTER.format(self._entry_id), False
+            self.menuai, SIGNAL_UPDATE_MASTER.format(self._entry_id), False
         )
         async_dispatcher_send(
-            self.hass, SIGNAL_UPDATE_OUTPUTS.format(self._entry_id), []
+            self.menuai, SIGNAL_UPDATE_OUTPUTS.format(self._entry_id), []
         )
 
     async def _update(self, update_types_sequence: Sequence[str]) -> None:
@@ -84,7 +84,7 @@ class ForkedDaapdUpdater:
             if queue := await self._api.get_request("queue"):
                 update_events["queue"] = asyncio.Event()
                 async_dispatcher_send(
-                    self.hass,
+                    self.menuai,
                     SIGNAL_UPDATE_QUEUE.format(self._entry_id),
                     queue,
                     update_events["queue"],
@@ -97,7 +97,7 @@ class ForkedDaapdUpdater:
                     asyncio.Event()
                 )  # only for master, zones should ignore
                 async_dispatcher_send(
-                    self.hass,
+                    self.menuai,
                     SIGNAL_UPDATE_OUTPUTS.format(self._entry_id),
                     outputs,
                     update_events["outputs"],
@@ -109,7 +109,7 @@ class ForkedDaapdUpdater:
             )
             update_events["database"] = asyncio.Event()
             async_dispatcher_send(
-                self.hass,
+                self.menuai,
                 SIGNAL_UPDATE_DATABASE.format(self._entry_id),
                 pipes,
                 playlists,
@@ -127,7 +127,7 @@ class ForkedDaapdUpdater:
                         "queue"
                     ].wait()  # make sure queue done before player for async_play_media
                 async_dispatcher_send(
-                    self.hass,
+                    self.menuai,
                     SIGNAL_UPDATE_PLAYER.format(self._entry_id),
                     player,
                     update_events["player"],
@@ -137,7 +137,7 @@ class ForkedDaapdUpdater:
                 [asyncio.create_task(event.wait()) for event in update_events.values()]
             )  # make sure callbacks done before update
             async_dispatcher_send(
-                self.hass, SIGNAL_UPDATE_MASTER.format(self._entry_id), True
+                self.menuai, SIGNAL_UPDATE_MASTER.format(self._entry_id), True
             )
 
     def _add_zones(self, outputs: list[dict[str, Any]]) -> None:
@@ -148,7 +148,7 @@ class ForkedDaapdUpdater:
                 outputs_to_add.append(output)
         if outputs_to_add:
             async_dispatcher_send(
-                self.hass,
+                self.menuai,
                 SIGNAL_ADD_ZONES.format(self._entry_id),
                 self._api,
                 outputs_to_add,

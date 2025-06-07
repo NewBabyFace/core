@@ -10,8 +10,8 @@ from typing import Any
 from pyweatherflowudp.client import EVENT_DEVICE_DISCOVERED, WeatherFlowListener
 from pyweatherflowudp.errors import AddressInUseError, EndpointError, ListenerError
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.core import callback
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.core import callback
 
 from .const import (
     DOMAIN,

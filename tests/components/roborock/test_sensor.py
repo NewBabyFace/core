@@ -13,8 +13,8 @@ from roborock.const import (
 from roborock.roborock_message import RoborockMessage, RoborockMessageProtocol
 from roborock.version_1_apis import RoborockMqttClientV1
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
+from menuai.const import Platform
+from menuai.core import menuai
 
 from .mock_data import CONSUMABLE, STATUS, USER_DATA
 
@@ -27,63 +27,63 @@ def platforms() -> list[Platform]:
     return [Platform.SENSOR]
 
 
-async def test_sensors(hass: HomeAssistant, setup_entry: MockConfigEntry) -> None:
+async def test_sensors(menuai: menuai, setup_entry: MockConfigEntry) -> None:
     """Test sensors and check test values are correctly set."""
-    assert len(hass.states.async_all("sensor")) == 42
-    assert hass.states.get("sensor.roborock_s7_maxv_main_brush_time_left").state == str(
+    assert len(menuai.states.async_all("sensor")) == 42
+    assert menuai.states.get("sensor.roborock_s7_maxv_main_brush_time_left").state == str(
         MAIN_BRUSH_REPLACE_TIME - 74382
     )
-    assert hass.states.get("sensor.roborock_s7_maxv_side_brush_time_left").state == str(
+    assert menuai.states.get("sensor.roborock_s7_maxv_side_brush_time_left").state == str(
         SIDE_BRUSH_REPLACE_TIME - 74382
     )
-    assert hass.states.get("sensor.roborock_s7_maxv_filter_time_left").state == str(
+    assert menuai.states.get("sensor.roborock_s7_maxv_filter_time_left").state == str(
         FILTER_REPLACE_TIME - 74382
     )
-    assert hass.states.get("sensor.roborock_s7_maxv_sensor_time_left").state == str(
+    assert menuai.states.get("sensor.roborock_s7_maxv_sensor_time_left").state == str(
         SENSOR_DIRTY_REPLACE_TIME - 74382
     )
-    assert hass.states.get("sensor.roborock_s7_maxv_cleaning_time").state == "1176"
+    assert menuai.states.get("sensor.roborock_s7_maxv_cleaning_time").state == "1176"
     assert (
-        hass.states.get("sensor.roborock_s7_maxv_total_cleaning_time").state == "74382"
+        menuai.states.get("sensor.roborock_s7_maxv_total_cleaning_time").state == "74382"
     )
-    assert hass.states.get("sensor.roborock_s7_maxv_status").state == "charging"
+    assert menuai.states.get("sensor.roborock_s7_maxv_status").state == "charging"
     assert (
-        hass.states.get("sensor.roborock_s7_maxv_total_cleaning_area").state == "1159.2"
+        menuai.states.get("sensor.roborock_s7_maxv_total_cleaning_area").state == "1159.2"
     )
-    assert hass.states.get("sensor.roborock_s7_maxv_cleaning_area").state == "21.0"
-    assert hass.states.get("sensor.roborock_s7_maxv_vacuum_error").state == "none"
-    assert hass.states.get("sensor.roborock_s7_maxv_battery").state == "100"
-    assert hass.states.get("sensor.roborock_s7_maxv_dock_dock_error").state == "ok"
-    assert hass.states.get("sensor.roborock_s7_maxv_total_cleaning_count").state == "31"
+    assert menuai.states.get("sensor.roborock_s7_maxv_cleaning_area").state == "21.0"
+    assert menuai.states.get("sensor.roborock_s7_maxv_vacuum_error").state == "none"
+    assert menuai.states.get("sensor.roborock_s7_maxv_battery").state == "100"
+    assert menuai.states.get("sensor.roborock_s7_maxv_dock_dock_error").state == "ok"
+    assert menuai.states.get("sensor.roborock_s7_maxv_total_cleaning_count").state == "31"
     assert (
-        hass.states.get("sensor.roborock_s7_maxv_last_clean_begin").state
+        menuai.states.get("sensor.roborock_s7_maxv_last_clean_begin").state
         == "2023-01-01T03:22:10+00:00"
     )
     assert (
-        hass.states.get("sensor.roborock_s7_maxv_last_clean_end").state
+        menuai.states.get("sensor.roborock_s7_maxv_last_clean_end").state
         == "2023-01-01T03:43:58+00:00"
     )
     assert (
-        hass.states.get("sensor.roborock_s7_maxv_current_room").state
+        menuai.states.get("sensor.roborock_s7_maxv_current_room").state
         == "Example room 2"
     )
-    assert hass.states.get("sensor.dyad_pro_status").state == "drying"
-    assert hass.states.get("sensor.dyad_pro_battery").state == "100"
-    assert hass.states.get("sensor.dyad_pro_filter_time_left").state == "111"
-    assert hass.states.get("sensor.dyad_pro_roller_left").state == "222"
-    assert hass.states.get("sensor.dyad_pro_error").state == "none"
-    assert hass.states.get("sensor.dyad_pro_total_cleaning_time").state == "213"
-    assert hass.states.get("sensor.zeo_one_state").state == "drying"
-    assert hass.states.get("sensor.zeo_one_countdown").state == "0"
-    assert hass.states.get("sensor.zeo_one_washing_left").state == "253"
-    assert hass.states.get("sensor.zeo_one_error").state == "none"
+    assert menuai.states.get("sensor.dyad_pro_status").state == "drying"
+    assert menuai.states.get("sensor.dyad_pro_battery").state == "100"
+    assert menuai.states.get("sensor.dyad_pro_filter_time_left").state == "111"
+    assert menuai.states.get("sensor.dyad_pro_roller_left").state == "222"
+    assert menuai.states.get("sensor.dyad_pro_error").state == "none"
+    assert menuai.states.get("sensor.dyad_pro_total_cleaning_time").state == "213"
+    assert menuai.states.get("sensor.zeo_one_state").state == "drying"
+    assert menuai.states.get("sensor.zeo_one_countdown").state == "0"
+    assert menuai.states.get("sensor.zeo_one_washing_left").state == "253"
+    assert menuai.states.get("sensor.zeo_one_error").state == "none"
 
 
 async def test_listener_update(
-    hass: HomeAssistant, setup_entry: MockConfigEntry
+    menuai: menuai, setup_entry: MockConfigEntry
 ) -> None:
     """Test that when we receive a mqtt topic, we successfully update the entity."""
-    assert hass.states.get("sensor.roborock_s7_maxv_status").state == "charging"
+    assert menuai.states.get("sensor.roborock_s7_maxv_status").state == "charging"
     # Listeners are global based on uuid - so this is okay
     client = RoborockMqttClientV1(
         USER_DATA, DeviceData(device=HomeDataDevice("abc123", "", "", "", ""), model="")
@@ -100,7 +100,7 @@ async def test_listener_update(
             ]
         )
     # Test consumable
-    assert hass.states.get("sensor.roborock_s7_maxv_filter_time_left").state == str(
+    assert menuai.states.get("sensor.roborock_s7_maxv_filter_time_left").state == str(
         FILTER_REPLACE_TIME - 74382
     )
     with patch("roborock.version_1_apis.AttributeCache.value", CONSUMABLE.as_dict()):
@@ -112,7 +112,7 @@ async def test_listener_update(
                 )
             ]
         )
-    await hass.async_block_till_done()
-    assert hass.states.get("sensor.roborock_s7_maxv_filter_time_left").state == str(
+    await menuai.async_block_till_done()
+    assert menuai.states.get("sensor.roborock_s7_maxv_filter_time_left").state == str(
         FILTER_REPLACE_TIME - 743
     )

@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 from . import DOMAIN
 
 
 def async_create_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry_id: str,
     device_name: str | None,
     device_translation_key: str | None,
@@ -17,7 +17,7 @@ def async_create_device(
     unique_id: str,
 ) -> dr.DeviceEntry:
     """Create a device."""
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     return device_registry.async_get_or_create(
         config_entry_id=config_entry_id,
         identifiers={(DOMAIN, unique_id)},

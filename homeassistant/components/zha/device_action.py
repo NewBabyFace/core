@@ -15,12 +15,12 @@ from zha.zigbee.cluster_handlers.manufacturerspecific import (
     SingleLEDEffectType,
 )
 
-from homeassistant.components.device_automation import InvalidDeviceAutomationConfig
-from homeassistant.const import CONF_DEVICE_ID, CONF_DOMAIN, CONF_TYPE
-from homeassistant.core import Context, HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType, TemplateVarsType
+from menuai.components.device_automation import InvalidDeviceAutomationConfig
+from menuai.const import CONF_DEVICE_ID, CONF_DOMAIN, CONF_TYPE
+from menuai.core import Context, menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType, TemplateVarsType
 
 from .const import DOMAIN
 from .helpers import async_get_zha_device_proxy
@@ -125,19 +125,19 @@ CLUSTER_HANDLER_MAPPINGS = {
 
 
 async def async_call_action_from_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     variables: TemplateVarsType,
     context: Context | None,
 ) -> None:
     """Perform an action based on configuration."""
     await ZHA_ACTION_TYPES[DEVICE_ACTION_TYPES[config[CONF_TYPE]]](
-        hass, config, variables, context
+        menuai, config, variables, context
     )
 
 
 async def async_validate_action_config(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> ConfigType:
     """Validate config."""
     schema = ACTION_SCHEMA_MAP.get(config[CONF_TYPE], DEFAULT_ACTION_SCHEMA)
@@ -145,11 +145,11 @@ async def async_validate_action_config(
 
 
 async def async_get_actions(
-    hass: HomeAssistant, device_id: str
+    menuai: menuai, device_id: str
 ) -> list[dict[str, str]]:
     """List device actions."""
     try:
-        zha_device = async_get_zha_device_proxy(hass, device_id).device
+        zha_device = async_get_zha_device_proxy(menuai, device_id).device
     except (KeyError, AttributeError):
         return []
     cluster_handlers = [
@@ -169,7 +169,7 @@ async def async_get_actions(
 
 
 async def async_get_action_capabilities(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> dict[str, vol.Schema]:
     """List action capabilities."""
     if (fields := DEVICE_ACTION_SCHEMAS.get(config[CONF_TYPE])) is None:
@@ -178,7 +178,7 @@ async def async_get_action_capabilities(
 
 
 async def _execute_service_based_action(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: dict[str, Any],
     variables: TemplateVarsType,
     context: Context | None,
@@ -186,19 +186,19 @@ async def _execute_service_based_action(
     action_type = config[CONF_TYPE]
     service_name = SERVICE_NAMES[action_type]
     try:
-        zha_device = async_get_zha_device_proxy(hass, config[CONF_DEVICE_ID]).device
+        zha_device = async_get_zha_device_proxy(menuai, config[CONF_DEVICE_ID]).device
     except (KeyError, AttributeError):
         return
 
     service_data = {ATTR_IEEE: str(zha_device.ieee)}
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN, service_name, service_data, blocking=True, context=context
     )
 
 
 async def _execute_cluster_handler_command_based_action(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: dict[str, Any],
     variables: TemplateVarsType,
     context: Context | None,
@@ -206,7 +206,7 @@ async def _execute_cluster_handler_command_based_action(
     action_type = config[CONF_TYPE]
     cluster_handler_name = CLUSTER_HANDLER_MAPPINGS[action_type]
     try:
-        zha_device = async_get_zha_device_proxy(hass, config[CONF_DEVICE_ID]).device
+        zha_device = async_get_zha_device_proxy(menuai, config[CONF_DEVICE_ID]).device
     except (KeyError, AttributeError):
         return
 
@@ -232,7 +232,7 @@ async def _execute_cluster_handler_command_based_action(
     try:
         await getattr(action_cluster_handler, action_type)(**config)
     except ZHAException as err:
-        raise HomeAssistantError(err) from err
+        raise menuaiError(err) from err
 
 
 ZHA_ACTION_TYPES = {

@@ -14,13 +14,13 @@ from aiotankerkoenig import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_API_KEY,
     CONF_LATITUDE,
     CONF_LOCATION,
@@ -30,10 +30,10 @@ from homeassistant.const import (
     CONF_SHOW_ON_MAP,
     UnitOfLength,
 )
-from homeassistant.core import callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.selector import (
+from menuai.core import callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.selector import (
     LocationSelector,
     NumberSelector,
     NumberSelectorConfig,
@@ -90,7 +90,7 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
 
         tankerkoenig = Tankerkoenig(
             api_key=user_input[CONF_API_KEY],
-            session=async_get_clientsession(self.hass),
+            session=async_get_clientsession(self.menuai),
         )
         try:
             stations = await async_get_nearby_stations(tankerkoenig, user_input)
@@ -149,7 +149,7 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
 
         tankerkoenig = Tankerkoenig(
             api_key=user_input[CONF_API_KEY],
-            session=async_get_clientsession(self.hass),
+            session=async_get_clientsession(self.menuai),
         )
         try:
             await async_get_nearby_stations(tankerkoenig, user_input)
@@ -180,8 +180,8 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
                         default=user_input.get(
                             CONF_LOCATION,
                             {
-                                "latitude": self.hass.config.latitude,
-                                "longitude": self.hass.config.longitude,
+                                "latitude": self.menuai.config.latitude,
+                                "longitude": self.menuai.config.longitude,
                             },
                         ),
                     ): LocationSelector(),
@@ -241,7 +241,7 @@ class OptionsFlowHandler(OptionsFlow):
     ) -> ConfigFlowResult:
         """Handle options flow."""
         if user_input is not None:
-            self.hass.config_entries.async_update_entry(
+            self.menuai.config_entries.async_update_entry(
                 self.config_entry,
                 data={
                     **self.config_entry.data,
@@ -252,7 +252,7 @@ class OptionsFlowHandler(OptionsFlow):
 
         tankerkoenig = Tankerkoenig(
             api_key=self.config_entry.data[CONF_API_KEY],
-            session=async_get_clientsession(self.hass),
+            session=async_get_clientsession(self.menuai),
         )
         try:
             stations = await async_get_nearby_stations(

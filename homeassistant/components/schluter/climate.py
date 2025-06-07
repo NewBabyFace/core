@@ -8,7 +8,7 @@ from typing import Any
 from requests import RequestException
 import voluptuous as vol
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     PLATFORM_SCHEMA as CLIMATE_PLATFORM_SCHEMA,
     SCAN_INTERVAL,
     ClimateEntity,
@@ -16,11 +16,11 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.const import ATTR_TEMPERATURE, CONF_SCAN_INTERVAL, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.helpers.update_coordinator import (
+from menuai.const import ATTR_TEMPERATURE, CONF_SCAN_INTERVAL, UnitOfTemperature
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
     UpdateFailed,
@@ -35,7 +35,7 @@ PLATFORM_SCHEMA = CLIMATE_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -43,12 +43,12 @@ async def async_setup_platform(
     """Set up the Schluter thermostats."""
     if discovery_info is None:
         return
-    session_id = hass.data[DOMAIN][DATA_SCHLUTER_SESSION]
-    api = hass.data[DOMAIN][DATA_SCHLUTER_API]
+    session_id = menuai.data[DOMAIN][DATA_SCHLUTER_SESSION]
+    api = menuai.data[DOMAIN][DATA_SCHLUTER_API]
 
     async def async_update_data():
         try:
-            thermostats = await hass.async_add_executor_job(
+            thermostats = await menuai.async_add_executor_job(
                 api.get_thermostats, session_id
             )
         except RequestException as err:
@@ -60,7 +60,7 @@ async def async_setup_platform(
         return {thermo.serial_number: thermo for thermo in thermostats}
 
     coordinator = DataUpdateCoordinator(
-        hass,
+        menuai,
         _LOGGER,
         name="schluter",
         update_method=async_update_data,

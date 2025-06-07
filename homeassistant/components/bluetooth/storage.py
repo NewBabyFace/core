@@ -11,8 +11,8 @@ from habluetooth import (
     expire_stale_scanner_discovered_device_advertisement_data,
 )
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.storage import Store
+from menuai.core import menuai, callback
+from menuai.helpers.storage import Store
 
 REMOTE_SCANNER_STORAGE_VERSION = 1
 REMOTE_SCANNER_STORAGE_KEY = "bluetooth.remote_scanners"
@@ -22,10 +22,10 @@ SCANNER_SAVE_DELAY = 5
 class BluetoothStorage:
     """Storage for remote scanners."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize the storage."""
         self._store: Store[DiscoveryStorageType] = Store(
-            hass, REMOTE_SCANNER_STORAGE_VERSION, REMOTE_SCANNER_STORAGE_KEY
+            menuai, REMOTE_SCANNER_STORAGE_VERSION, REMOTE_SCANNER_STORAGE_KEY
         )
         self._data: DiscoveryStorageType = {}
 

@@ -7,9 +7,9 @@ from unittest.mock import ANY, Mock, patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import frame
-from homeassistant.loader import async_get_integration
+from menuai.core import menuai
+from menuai.helpers import frame
+from menuai.loader import async_get_integration
 
 from tests.common import MockModule, extract_stack_to_frame, mock_integration
 
@@ -23,8 +23,8 @@ async def test_extract_frame_integration(
         custom_integration=False,
         frame=mock_integration_frame,
         integration="hue",
-        module="homeassistant.components.hue.light",
-        relative_filename="homeassistant/components/hue/light.py",
+        module="menuai.components.hue.light",
+        relative_filename="menuai/components/hue/light.py",
     )
 
 
@@ -33,10 +33,10 @@ async def test_get_integration_logger(
 ) -> None:
     """Test extracting the current frame to get the logger."""
     logger = frame.get_integration_logger(__name__)
-    assert logger.name == "homeassistant.components.hue"
+    assert logger.name == "menuai.components.hue"
 
 
-@pytest.mark.usefixtures("enable_custom_integrations", "hass")
+@pytest.mark.usefixtures("enable_custom_integrations", "menuai")
 async def test_extract_frame_resolve_module() -> None:
     """Test extracting the current frame from integration context."""
     # pylint: disable-next=import-outside-toplevel
@@ -53,7 +53,7 @@ async def test_extract_frame_resolve_module() -> None:
     )
 
 
-@pytest.mark.usefixtures("enable_custom_integrations", "hass")
+@pytest.mark.usefixtures("enable_custom_integrations", "menuai")
 async def test_get_integration_logger_resolve_module() -> None:
     """Test getting the logger from integration context."""
     # pylint: disable-next=import-outside-toplevel
@@ -69,22 +69,22 @@ async def test_extract_frame_integration_with_excluded_integration(
 ) -> None:
     """Test extracting the current frame from integration context."""
     correct_frame = Mock(
-        filename="/home/dev/homeassistant/components/mdns/light.py",
+        filename="/home/dev/menuai/components/mdns/light.py",
         lineno="23",
         line="self.light.is_on",
     )
     with patch(
-        "homeassistant.helpers.frame.get_current_frame",
+        "menuai.helpers.frame.get_current_frame",
         return_value=extract_stack_to_frame(
             [
                 Mock(
-                    filename="/home/dev/homeassistant/core.py",
+                    filename="/home/dev/menuai/core.py",
                     lineno="23",
                     line="do_something()",
                 ),
                 correct_frame,
                 Mock(
-                    filename="/home/dev/homeassistant/components/zeroconf/usage.py",
+                    filename="/home/dev/menuai/components/zeroconf/usage.py",
                     lineno="23",
                     line="self.light.is_on",
                 ),
@@ -105,7 +105,7 @@ async def test_extract_frame_integration_with_excluded_integration(
         frame=correct_frame,
         integration="mdns",
         module=None,
-        relative_filename="homeassistant/components/mdns/light.py",
+        relative_filename="menuai/components/mdns/light.py",
     )
 
 
@@ -113,11 +113,11 @@ async def test_extract_frame_no_integration(caplog: pytest.LogCaptureFixture) ->
     """Test extracting the current frame without integration context."""
     with (
         patch(
-            "homeassistant.helpers.frame.get_current_frame",
+            "menuai.helpers.frame.get_current_frame",
             return_value=extract_stack_to_frame(
                 [
                     Mock(
-                        filename="/home/paulus/homeassistant/core.py",
+                        filename="/home/paulus/menuai/core.py",
                         lineno="23",
                         line="do_something()",
                     ),
@@ -139,11 +139,11 @@ async def test_get_integration_logger_no_integration(
 ) -> None:
     """Test getting fallback logger without integration context."""
     with patch(
-        "homeassistant.helpers.frame.get_current_frame",
+        "menuai.helpers.frame.get_current_frame",
         return_value=extract_stack_to_frame(
             [
                 Mock(
-                    filename="/home/paulus/homeassistant/core.py",
+                    filename="/home/paulus/menuai/core.py",
                     lineno="23",
                     line="do_something()",
                 ),
@@ -164,14 +164,14 @@ async def test_get_integration_logger_no_integration(
     ("integration_frame_path", "keywords", "expected_result", "expected_log"),
     [
         pytest.param(
-            "homeassistant/test_core",
+            "menuai/test_core",
             {},
             pytest.raises(RuntimeError, match="test_report_string"),
             0,
             id="core default",
         ),
         pytest.param(
-            "homeassistant/components/test_core_integration",
+            "menuai/components/test_core_integration",
             {},
             does_not_raise(),
             1,
@@ -199,28 +199,28 @@ async def test_get_integration_logger_no_integration(
             id="custom integration error",
         ),
         pytest.param(
-            "homeassistant/components/test_integration_frame",
+            "menuai/components/test_integration_frame",
             {"core_integration_behavior": frame.ReportBehavior.IGNORE},
             does_not_raise(),
             0,
             id="core_integration_behavior ignore",
         ),
         pytest.param(
-            "homeassistant/components/test_integration_frame",
+            "menuai/components/test_integration_frame",
             {"core_integration_behavior": frame.ReportBehavior.ERROR},
             pytest.raises(RuntimeError, match="test_report_string"),
             1,
             id="core_integration_behavior error",
         ),
         pytest.param(
-            "homeassistant/test_integration_frame",
+            "menuai/test_integration_frame",
             {"core_behavior": frame.ReportBehavior.IGNORE},
             does_not_raise(),
             0,
             id="core_behavior ignore",
         ),
         pytest.param(
-            "homeassistant/test_integration_frame",
+            "menuai/test_integration_frame",
             {"core_behavior": frame.ReportBehavior.LOG},
             does_not_raise(),
             1,
@@ -228,7 +228,7 @@ async def test_get_integration_logger_no_integration(
         ),
     ],
 )
-@pytest.mark.usefixtures("hass", "mock_integration_frame")
+@pytest.mark.usefixtures("menuai", "mock_integration_frame")
 async def test_report_usage(
     caplog: pytest.LogCaptureFixture,
     snapshot: SnapshotAssertion,
@@ -254,7 +254,7 @@ async def test_report_usage(
     assert reports == snapshot
 
 
-async def test_report_usage_no_hass() -> None:
+async def test_report_usage_no_menuai() -> None:
     """Test report_usage when frame helper is not set up."""
 
     with pytest.raises(RuntimeError, match="Frame helper not set up"):
@@ -265,11 +265,11 @@ async def test_report_usage_no_hass() -> None:
     "integration_frame_path",
     [
         pytest.param(
-            "homeassistant/test_core",
+            "menuai/test_core",
             id="core",
         ),
         pytest.param(
-            "homeassistant/components/test_core_integration",
+            "menuai/components/test_core_integration",
             id="core integration",
         ),
         pytest.param(
@@ -284,7 +284,7 @@ async def test_report_usage_no_hass() -> None:
 )
 @pytest.mark.usefixtures("mock_integration_frame")
 async def test_report_usage_find_issue_tracker(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     snapshot: SnapshotAssertion,
 ) -> None:
@@ -296,9 +296,9 @@ async def test_report_usage_find_issue_tracker(
     """
 
     what = "test_report_string"
-    mock_integration(hass, MockModule("test_core_integration"))
+    mock_integration(menuai, MockModule("test_core_integration"))
     mock_integration(
-        hass,
+        menuai,
         MockModule(
             "test_custom_integration",
             partial_manifest={"issue_tracker": "https://blablabla.com"},
@@ -320,11 +320,11 @@ async def test_report_usage_find_issue_tracker(
     "integration_frame_path",
     [
         pytest.param(
-            "homeassistant/test_core",
+            "menuai/test_core",
             id="core",
         ),
         pytest.param(
-            "homeassistant/components/test_core_integration",
+            "menuai/components/test_core_integration",
             id="core integration",
         ),
         pytest.param(
@@ -339,7 +339,7 @@ async def test_report_usage_find_issue_tracker(
 )
 @pytest.mark.usefixtures("mock_integration_frame")
 async def test_report_usage_find_issue_tracker_other_thread(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     snapshot: SnapshotAssertion,
 ) -> None:
@@ -353,9 +353,9 @@ async def test_report_usage_find_issue_tracker_other_thread(
     """
 
     what = "test_report_string"
-    mock_integration(hass, MockModule("test_core_integration"))
+    mock_integration(menuai, MockModule("test_core_integration"))
     mock_integration(
-        hass,
+        menuai,
         MockModule(
             "test_custom_integration",
             partial_manifest={"issue_tracker": "https://blablabla.com"},
@@ -367,7 +367,7 @@ async def test_report_usage_find_issue_tracker_other_thread(
         with patch.object(frame, "_REPORTED_INTEGRATIONS", set()):
             frame.report_usage(what, core_behavior=frame.ReportBehavior.LOG)
 
-    await hass.async_add_executor_job(sync_job)
+    await menuai.async_add_executor_job(sync_job)
 
     assert caplog.text.count(what) == 1
     reports = [
@@ -376,16 +376,16 @@ async def test_report_usage_find_issue_tracker_other_thread(
     assert reports == snapshot
 
 
-@pytest.mark.usefixtures("hass", "mock_integration_frame")
+@pytest.mark.usefixtures("menuai", "mock_integration_frame")
 async def test_prevent_flooding(
     caplog: pytest.LogCaptureFixture, mock_integration_frame: Mock
 ) -> None:
     """Test to ensure a report is only written once to the log."""
 
     what = "accessed hi instead of hello"
-    key = "/home/paulus/homeassistant/components/hue/light.py:23"
+    key = "/home/paulus/menuai/components/hue/light.py:23"
     integration = "hue"
-    filename = "homeassistant/components/hue/light.py"
+    filename = "menuai/components/hue/light.py"
 
     expected_message = (
         f"Detected that integration '{integration}' {what} at {filename}, line "
@@ -407,7 +407,7 @@ async def test_prevent_flooding(
     assert len(frame._REPORTED_INTEGRATIONS) == 1
 
 
-@pytest.mark.usefixtures("hass", "mock_integration_frame")
+@pytest.mark.usefixtures("menuai", "mock_integration_frame")
 async def test_breaks_in_ha_version(
     caplog: pytest.LogCaptureFixture, mock_integration_frame: Mock
 ) -> None:
@@ -415,12 +415,12 @@ async def test_breaks_in_ha_version(
 
     what = "accessed hi instead of hello"
     integration = "hue"
-    filename = "homeassistant/components/hue/light.py"
+    filename = "menuai/components/hue/light.py"
 
     expected_message = (
         f"Detected that integration '{integration}' {what} at {filename}, line "
         f"{mock_integration_frame.lineno}: {mock_integration_frame.line}. "
-        f"This will stop working in Home Assistant 2024.11, please create a bug "
+        f"This will stop working in MenuAI 2024.11, please create a bug "
         "report at https://github.com/home-assistant/core/issues?"
         f"q=is%3Aopen+is%3Aissue+label%3A%22integration%3A+{integration}%22"
     )
@@ -429,7 +429,7 @@ async def test_breaks_in_ha_version(
     assert expected_message in caplog.text
 
 
-@pytest.mark.usefixtures("hass")
+@pytest.mark.usefixtures("menuai")
 async def test_report_missing_integration_frame(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -437,7 +437,7 @@ async def test_report_missing_integration_frame(
 
     what = "teststring"
     with patch(
-        "homeassistant.helpers.frame.get_integration_frame",
+        "menuai.helpers.frame.get_integration_frame",
         side_effect=frame.MissingIntegrationFrame,
     ):
         frame.report_usage(what, core_behavior=frame.ReportBehavior.LOG)
@@ -453,7 +453,7 @@ async def test_report_missing_integration_frame(
 @pytest.mark.parametrize("run_count", [1, 2])
 # Run this twice to make sure the flood check does not
 # kick in when error_if_integration=True
-@pytest.mark.usefixtures("hass")
+@pytest.mark.usefixtures("menuai")
 async def test_report_error_if_integration(
     caplog: pytest.LogCaptureFixture, run_count: int
 ) -> None:
@@ -461,12 +461,12 @@ async def test_report_error_if_integration(
     frames = extract_stack_to_frame(
         [
             Mock(
-                filename="/home/paulus/homeassistant/core.py",
+                filename="/home/paulus/menuai/core.py",
                 lineno="23",
                 line="do_something()",
             ),
             Mock(
-                filename="/home/paulus/homeassistant/components/hue/light.py",
+                filename="/home/paulus/menuai/components/hue/light.py",
                 lineno="23",
                 line="self.light.is_on",
             ),
@@ -479,14 +479,14 @@ async def test_report_error_if_integration(
     )
     with (
         patch(
-            "homeassistant.helpers.frame.get_current_frame",
+            "menuai.helpers.frame.get_current_frame",
             return_value=frames,
         ),
         pytest.raises(
             RuntimeError,
             match=(
                 "Detected that integration 'hue' did a bad"
-                " thing at homeassistant/components/hue/light.py"
+                " thing at menuai/components/hue/light.py"
             ),
         ),
     ):
@@ -507,7 +507,7 @@ async def test_report_error_if_integration(
         pytest.param(
             "core_behavior",
             None,
-            "homeassistant",
+            "menuai",
             "code that",
             True,
             id="core",
@@ -515,7 +515,7 @@ async def test_report_error_if_integration(
         pytest.param(
             "core_behavior",
             "unknown_integration",
-            "homeassistant",
+            "menuai",
             "code that",
             True,
             id="unknown integration",
@@ -523,7 +523,7 @@ async def test_report_error_if_integration(
         pytest.param(
             "core_integration_behavior",
             "sensor",
-            "homeassistant",
+            "menuai",
             "that integration 'sensor'",
             False,
             id="core integration",
@@ -531,7 +531,7 @@ async def test_report_error_if_integration(
         pytest.param(
             "custom_integration_behavior",
             "test_package",
-            "homeassistant",
+            "menuai",
             "that custom integration 'test_package'",
             False,
             id="custom integration",
@@ -540,7 +540,7 @@ async def test_report_error_if_integration(
         pytest.param(
             "core_integration_behavior",
             "sensor",
-            "homeassistant/components/hue",
+            "menuai/components/hue",
             "that integration 'sensor'",
             False,
             id="core integration stack mismatch",
@@ -558,7 +558,7 @@ async def test_report_error_if_integration(
 )
 @pytest.mark.usefixtures("enable_custom_integrations", "mock_integration_frame")
 async def test_report_integration_domain(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     behavior: str,
     integration_domain: str | None,
@@ -566,8 +566,8 @@ async def test_report_integration_domain(
     logs_again: bool,
 ) -> None:
     """Test report_usage when integration_domain is specified."""
-    await async_get_integration(hass, "sensor")
-    await async_get_integration(hass, "test_package")
+    await async_get_integration(menuai, "sensor")
+    await async_get_integration(menuai, "test_package")
 
     what = "test_report_string"
     lookup_text = f"Detected {source} {what}"

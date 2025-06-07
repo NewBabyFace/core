@@ -5,18 +5,18 @@ from typing import TYPE_CHECKING
 from nexia.thermostat import NexiaThermostat
 from nexia.zone import NexiaThermostatZone
 
-from homeassistant.const import (
+from menuai.const import (
     ATTR_IDENTIFIERS,
     ATTR_NAME,
     ATTR_SUGGESTED_AREA,
     ATTR_VIA_DEVICE,
 )
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import (
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import (
     async_dispatcher_connect,
     async_dispatcher_send,
 )
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
     ATTRIBUTION,
@@ -64,12 +64,12 @@ class NexiaThermostatEntity(NexiaEntity):
         )
         self._thermostat_signal = f"{SIGNAL_THERMOSTAT_UPDATE}-{thermostat_id}"
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Listen for signals for services."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 self._thermostat_signal,
                 self.async_write_ha_state,
             )
@@ -84,7 +84,7 @@ class NexiaThermostatEntity(NexiaEntity):
 
         Update all the zones on the thermostat.
         """
-        async_dispatcher_send(self.hass, self._thermostat_signal)
+        async_dispatcher_send(self.menuai, self._thermostat_signal)
 
     @property
     def available(self) -> bool:
@@ -115,12 +115,12 @@ class NexiaThermostatZoneEntity(NexiaThermostatEntity):
         }
         self._zone_signal = f"{SIGNAL_ZONE_UPDATE}-{zone.zone_id}"
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Listen for signals for services."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 self._zone_signal,
                 self.async_write_ha_state,
             )
@@ -134,4 +134,4 @@ class NexiaThermostatZoneEntity(NexiaThermostatEntity):
 
         Update a single zone.
         """
-        async_dispatcher_send(self.hass, self._zone_signal)
+        async_dispatcher_send(self.menuai, self._zone_signal)

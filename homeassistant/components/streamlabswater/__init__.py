@@ -3,10 +3,10 @@
 from streamlabswater.streamlabswater import StreamlabsClient
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_API_KEY, Platform
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_API_KEY, Platform
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import config_validation as cv
 
 from .const import DOMAIN
 from .coordinator import StreamlabsCoordinator
@@ -30,17 +30,17 @@ SET_AWAY_MODE_SCHEMA = vol.Schema(
 PLATFORMS: list[Platform] = [Platform.BINARY_SENSOR, Platform.SENSOR]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up StreamLabs from a config entry."""
 
     api_key = entry.data[CONF_API_KEY]
     client = StreamlabsClient(api_key)
-    coordinator = StreamlabsCoordinator(hass, entry, client)
+    coordinator = StreamlabsCoordinator(menuai, entry, client)
 
     await coordinator.async_config_entry_first_refresh()
 
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    menuai.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     def set_away_mode(service: ServiceCall) -> None:
         """Set the StreamLabsWater Away Mode."""
@@ -48,16 +48,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         location_id = service.data.get(CONF_LOCATION_ID) or list(coordinator.data)[0]
         client.update_location(location_id, away_mode)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_SET_AWAY_MODE, set_away_mode, schema=SET_AWAY_MODE_SCHEMA
     )
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        hass.data[DOMAIN].pop(entry.entry_id)
+    if unload_ok := await menuai.config_entries.async_unload_platforms(entry, PLATFORMS):
+        menuai.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok

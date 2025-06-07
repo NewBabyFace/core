@@ -1,4 +1,4 @@
-"""API for Neato Botvac bound to Home Assistant OAuth."""
+"""API for Neato Botvac bound to MenuAI OAuth."""
 
 from __future__ import annotations
 
@@ -7,9 +7,9 @@ from typing import Any
 
 import pybotvac
 
-from homeassistant import config_entries, core
-from homeassistant.components.application_credentials import AuthImplementation
-from homeassistant.helpers import config_entry_oauth2_flow
+from menuai import config_entries, core
+from menuai.components.application_credentials import AuthImplementation
+from menuai.helpers import config_entry_oauth2_flow
 
 
 class ConfigEntryAuth(pybotvac.OAuthSession):  # type: ignore[misc]
@@ -17,21 +17,21 @@ class ConfigEntryAuth(pybotvac.OAuthSession):  # type: ignore[misc]
 
     def __init__(
         self,
-        hass: core.HomeAssistant,
+        menuai: core.menuai,
         config_entry: config_entries.ConfigEntry,
         implementation: config_entry_oauth2_flow.AbstractOAuth2Implementation,
     ) -> None:
         """Initialize Neato Botvac Auth."""
-        self.hass = hass
+        self.menuai = menuai
         self.session = config_entry_oauth2_flow.OAuth2Session(
-            hass, config_entry, implementation
+            menuai, config_entry, implementation
         )
         super().__init__(self.session.token, vendor=pybotvac.Neato())
 
     def refresh_tokens(self) -> str:
         """Refresh and return new Neato Botvac tokens."""
         run_coroutine_threadsafe(
-            self.session.async_ensure_token_valid(), self.hass.loop
+            self.session.async_ensure_token_valid(), self.menuai.loop
         ).result()
 
         return self.session.token["access_token"]  # type: ignore[no-any-return]

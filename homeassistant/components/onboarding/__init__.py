@@ -6,11 +6,11 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, TypedDict
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.storage import Store
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.loader import bind_hass
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.storage import Store
+from menuai.helpers.typing import ConfigType
+from menuai.loader import bind_menuai
 
 from . import views
 from .const import (
@@ -64,25 +64,25 @@ class OnboardingStorage(Store[OnboardingStoreData]):
         return old_data
 
 
-@bind_hass
+@bind_menuai
 @callback
-def async_is_onboarded(hass: HomeAssistant) -> bool:
-    """Return if Home Assistant has been onboarded."""
-    data: OnboardingData | None = hass.data.get(DOMAIN)
+def async_is_onboarded(menuai: menuai) -> bool:
+    """Return if MenuAI has been onboarded."""
+    data: OnboardingData | None = menuai.data.get(DOMAIN)
     return data is None or data.onboarded is True
 
 
-@bind_hass
+@bind_menuai
 @callback
-def async_is_user_onboarded(hass: HomeAssistant) -> bool:
+def async_is_user_onboarded(menuai: menuai) -> bool:
     """Return if a user has been created as part of onboarding."""
-    return async_is_onboarded(hass) or STEP_USER in hass.data[DOMAIN].steps["done"]
+    return async_is_onboarded(menuai) or STEP_USER in menuai.data[DOMAIN].steps["done"]
 
 
 @callback
-def async_add_listener(hass: HomeAssistant, listener: Callable[[], None]) -> None:
+def async_add_listener(menuai: menuai, listener: Callable[[], None]) -> None:
     """Add a listener to be called when onboarding is complete."""
-    data: OnboardingData | None = hass.data.get(DOMAIN)
+    data: OnboardingData | None = menuai.data.get(DOMAIN)
 
     if not data:
         # Onboarding not active
@@ -95,9 +95,9 @@ def async_add_listener(hass: HomeAssistant, listener: Callable[[], None]) -> Non
     data.listeners.append(listener)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the onboarding component."""
-    store = OnboardingStorage(hass, STORAGE_VERSION, STORAGE_KEY, private=True)
+    store = OnboardingStorage(menuai, STORAGE_VERSION, STORAGE_KEY, private=True)
     data: OnboardingStoreData | None
     if (data := await store.async_load()) is None:
         data = {"done": []}
@@ -110,7 +110,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         # If so, mark the user step as done.
         has_owner = False
 
-        for user in await hass.auth.async_get_users():
+        for user in await menuai.auth.async_get_users():
             if user.is_owner:
                 has_owner = True
                 break
@@ -122,8 +122,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     if set(data["done"]) == set(STEPS):
         return True
 
-    hass.data[DOMAIN] = OnboardingData([], False, data)
+    menuai.data[DOMAIN] = OnboardingData([], False, data)
 
-    await views.async_setup(hass, data, store)
+    await views.async_setup(menuai, data, store)
 
     return True

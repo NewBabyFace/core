@@ -11,7 +11,7 @@ import logging
 from typing import TYPE_CHECKING, Any, Concatenate
 
 import pychromecast
-from pychromecast.controllers.homeassistant import HomeAssistantController
+from pychromecast.controllers.menuai import menuaiController
 from pychromecast.controllers.media import (
     MEDIA_PLAYER_ERROR_CODES,
     MEDIA_PLAYER_STATE_BUFFERING,
@@ -28,8 +28,8 @@ from pychromecast.socket_client import (
 )
 import yarl
 
-from homeassistant.components import media_source, zeroconf
-from homeassistant.components.media_player import (
+from menuai.components import media_source, zeroconf
+from menuai.components.media_player import (
     ATTR_MEDIA_EXTRA,
     BrowseError,
     BrowseMedia,
@@ -41,20 +41,20 @@ from homeassistant.components.media_player import (
     MediaType,
     async_process_play_media_url,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
-    CAST_APP_ID_HOMEASSISTANT_LOVELACE,
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
+    CAST_APP_ID_menuai_LOVELACE,
     CONF_UUID,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
 )
-from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.network import NoURLAvailableError, get_url, is_hass_url
-from homeassistant.util import dt as dt_util
-from homeassistant.util.logging import async_create_catching_coro
+from menuai.core import CALLBACK_TYPE, Event, menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.network import NoURLAvailableError, get_url, is_menuai_url
+from menuai.util import dt as dt_util
+from menuai.util.logging import async_create_catching_coro
 
 from .const import (
     ADDED_CAST_DEVICES_KEY,
@@ -63,8 +63,8 @@ from .const import (
     DOMAIN,
     SIGNAL_CAST_DISCOVERED,
     SIGNAL_CAST_REMOVED,
-    SIGNAL_HASS_CAST_SHOW_VIEW,
-    HomeAssistantControllerData,
+    SIGNAL_menuai_CAST_SHOW_VIEW,
+    menuaiControllerData,
 )
 from .discovery import setup_internal_discovery
 from .helpers import (
@@ -91,7 +91,7 @@ type _FuncType[_T, **_P, _R] = Callable[Concatenate[_T, _P], _R]
 def api_error[_CastDeviceT: CastDevice, **_P, _R](
     func: _FuncType[_CastDeviceT, _P, _R],
 ) -> _FuncType[_CastDeviceT, _P, _R]:
-    """Handle PyChromecastError and reraise a HomeAssistantError."""
+    """Handle PyChromecastError and reraise a menuaiError."""
 
     @wraps(func)
     def wrapper(self: _CastDeviceT, *args: _P.args, **kwargs: _P.kwargs) -> _R:
@@ -99,7 +99,7 @@ def api_error[_CastDeviceT: CastDevice, **_P, _R](
         try:
             return_value = func(self, *args, **kwargs)
         except PyChromecastError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"{self.__class__.__name__}.{func.__name__} Failed: {err}"
             ) from err
 
@@ -109,7 +109,7 @@ def api_error[_CastDeviceT: CastDevice, **_P, _R](
 
 
 @callback
-def _async_create_cast_device(hass: HomeAssistant, info: ChromecastInfo):
+def _async_create_cast_device(menuai: menuai, info: ChromecastInfo):
     """Create a CastDevice entity or dynamic group from the chromecast object.
 
     Returns None if the cast device has already been added.
@@ -120,7 +120,7 @@ def _async_create_cast_device(hass: HomeAssistant, info: ChromecastInfo):
         return None
 
     # Found a cast with UUID
-    added_casts = hass.data[ADDED_CAST_DEVICES_KEY]
+    added_casts = menuai.data[ADDED_CAST_DEVICES_KEY]
     if info.uuid in added_casts:
         # Already added this one, the entity will take care of moved hosts
         # itself
@@ -130,20 +130,20 @@ def _async_create_cast_device(hass: HomeAssistant, info: ChromecastInfo):
 
     if info.is_dynamic_group:
         # This is a dynamic group, do not add it but connect to the service.
-        group = DynamicCastGroup(hass, info)
+        group = DynamicCastGroup(menuai, info)
         group.async_setup()
         return None
 
-    return CastMediaPlayerEntity(hass, info)
+    return CastMediaPlayerEntity(menuai, info)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Cast from a config entry."""
-    hass.data.setdefault(ADDED_CAST_DEVICES_KEY, set())
+    menuai.data.setdefault(ADDED_CAST_DEVICES_KEY, set())
 
     # Import CEC IGNORE attributes
     pychromecast.IGNORE_CEC += config_entry.data.get(CONF_IGNORE_CEC) or []
@@ -159,13 +159,13 @@ async def async_setup_entry(
             # UUID not matching, ignore.
             return
 
-        cast_device = _async_create_cast_device(hass, discover)
+        cast_device = _async_create_cast_device(menuai, discover)
         if cast_device is not None:
             async_add_entities([cast_device])
 
-    async_dispatcher_connect(hass, SIGNAL_CAST_DISCOVERED, async_cast_discovered)
-    ChromeCastZeroconf.set_zeroconf(await zeroconf.async_get_instance(hass))
-    hass.async_add_executor_job(setup_internal_discovery, hass, config_entry)
+    async_dispatcher_connect(menuai, SIGNAL_CAST_DISCOVERED, async_cast_discovered)
+    ChromeCastZeroconf.set_zeroconf(await zeroconf.async_get_instance(menuai))
+    menuai.async_add_executor_job(setup_internal_discovery, menuai, config_entry)
 
 
 class CastDevice:
@@ -178,10 +178,10 @@ class CastDevice:
 
     _mz_only: bool
 
-    def __init__(self, hass: HomeAssistant, cast_info: ChromecastInfo) -> None:
+    def __init__(self, menuai: menuai, cast_info: ChromecastInfo) -> None:
         """Initialize the cast device."""
 
-        self.hass: HomeAssistant = hass
+        self.menuai: menuai = menuai
         self._cast_info = cast_info
         self._chromecast: pychromecast.Chromecast | None = None
         self.mz_mgr = None
@@ -194,15 +194,15 @@ class CastDevice:
         """Create chromecast object."""
         self._name = name
         self._add_remove_handler = async_dispatcher_connect(
-            self.hass, SIGNAL_CAST_DISCOVERED, self._async_cast_discovered
+            self.menuai, SIGNAL_CAST_DISCOVERED, self._async_cast_discovered
         )
         self._del_remove_handler = async_dispatcher_connect(
-            self.hass, SIGNAL_CAST_REMOVED, self._async_cast_removed
+            self.menuai, SIGNAL_CAST_REMOVED, self._async_cast_removed
         )
-        self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, self._async_stop)
+        self.menuai.bus.async_listen_once(EVENT_menuai_STOP, self._async_stop)
         # async_create_background_task is used to avoid delaying startup wrapup if the device
         # is discovered already during startup but then fails to respond
-        self.hass.async_create_background_task(
+        self.menuai.async_create_background_task(
             async_create_catching_coro(self._async_connect_to_chromecast()),
             "cast-connect",
         )
@@ -213,7 +213,7 @@ class CastDevice:
         if self._cast_info.uuid is not None:
             # Remove the entity from the added casts so that it can dynamically
             # be re-added again.
-            self.hass.data[ADDED_CAST_DEVICES_KEY].remove(self._cast_info.uuid)
+            self.menuai.data[ADDED_CAST_DEVICES_KEY].remove(self._cast_info.uuid)
         if self._add_remove_handler:
             self._add_remove_handler()
             self._add_remove_handler = None
@@ -229,17 +229,17 @@ class CastDevice:
             self._cast_info.friendly_name,
             self._cast_info.cast_info.services,
         )
-        chromecast = await self.hass.async_add_executor_job(
+        chromecast = await self.menuai.async_add_executor_job(
             pychromecast.get_chromecast_from_cast_info,
             self._cast_info.cast_info,
             ChromeCastZeroconf.get_zeroconf(),
         )
         self._chromecast = chromecast
 
-        if CAST_MULTIZONE_MANAGER_KEY not in self.hass.data:
-            self.hass.data[CAST_MULTIZONE_MANAGER_KEY] = MultizoneManager()
+        if CAST_MULTIZONE_MANAGER_KEY not in self.menuai.data:
+            self.menuai.data[CAST_MULTIZONE_MANAGER_KEY] = MultizoneManager()
 
-        self.mz_mgr = self.hass.data[CAST_MULTIZONE_MANAGER_KEY]
+        self.mz_mgr = self.menuai.data[CAST_MULTIZONE_MANAGER_KEY]
 
         self._status_listener = CastStatusListener(
             self, chromecast, self.mz_mgr, self._mz_only
@@ -254,7 +254,7 @@ class CastDevice:
                 self._name,
                 self._cast_info.friendly_name,
             )
-            await self.hass.async_add_executor_job(self._chromecast.disconnect)
+            await self.menuai.async_add_executor_job(self._chromecast.disconnect)
 
         self._invalidate()
 
@@ -280,13 +280,13 @@ class CastDevice:
         """Handle removal of Chromecast."""
 
     async def _async_stop(self, event: Event) -> None:
-        """Disconnect socket on Home Assistant stop."""
+        """Disconnect socket on MenuAI stop."""
         await self._async_disconnect()
 
     def _get_chromecast(self) -> pychromecast.Chromecast:
         """Ensure chromecast is available, to facilitate type checking."""
         if self._chromecast is None:
-            raise HomeAssistantError("Chromecast is not available.")
+            raise menuaiError("Chromecast is not available.")
         return self._chromecast
 
 
@@ -299,10 +299,10 @@ class CastMediaPlayerEntity(CastDevice, MediaPlayerEntity):
     _attr_media_image_remotely_accessible = True
     _mz_only = False
 
-    def __init__(self, hass: HomeAssistant, cast_info: ChromecastInfo) -> None:
+    def __init__(self, menuai: menuai, cast_info: ChromecastInfo) -> None:
         """Initialize the cast device."""
 
-        CastDevice.__init__(self, hass, cast_info)
+        CastDevice.__init__(self, menuai, cast_info)
 
         self.cast_status = None
         self.media_status = None
@@ -310,7 +310,7 @@ class CastMediaPlayerEntity(CastDevice, MediaPlayerEntity):
         self.mz_media_status: dict[str, pychromecast.controllers.media.MediaStatus] = {}
         self.mz_media_status_received: dict[str, datetime] = {}
         self._attr_available = False
-        self._hass_cast_controller: HomeAssistantController | None = None
+        self._menuai_cast_controller: menuaiController | None = None
 
         self._cast_view_remove_handler: CALLBACK_TYPE | None = None
         self._attr_unique_id = str(cast_info.uuid)
@@ -327,15 +327,15 @@ class CastMediaPlayerEntity(CastDevice, MediaPlayerEntity):
         ]:
             self._attr_device_class = MediaPlayerDeviceClass.SPEAKER
 
-    async def async_added_to_hass(self) -> None:
-        """Create chromecast object when added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Create chromecast object when added to menuai."""
         self._async_setup(self.entity_id)
 
         self._cast_view_remove_handler = async_dispatcher_connect(
-            self.hass, SIGNAL_HASS_CAST_SHOW_VIEW, self._handle_signal_show_view
+            self.menuai, SIGNAL_menuai_CAST_SHOW_VIEW, self._handle_signal_show_view
         )
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Disconnect Chromecast object when removed."""
         await self._async_tear_down()
 
@@ -368,7 +368,7 @@ class CastMediaPlayerEntity(CastDevice, MediaPlayerEntity):
         self.media_status_received = None
         self.mz_media_status = {}
         self.mz_media_status_received = {}
-        self._hass_cast_controller = None
+        self._menuai_cast_controller = None
 
     # ========== Callbacks ==========
     def new_cast_status(self, cast_status):
@@ -391,10 +391,10 @@ class CastMediaPlayerEntity(CastDevice, MediaPlayerEntity):
             internal_url = None
             url_description = ""
             with suppress(NoURLAvailableError):  # external_url not configured
-                external_url = get_url(self.hass, allow_internal=False)
+                external_url = get_url(self.menuai, allow_internal=False)
 
             with suppress(NoURLAvailableError):  # internal_url not configured
-                internal_url = get_url(self.hass, allow_external=False)
+                internal_url = get_url(self.menuai, allow_external=False)
 
             if media_status.content_id:
                 if external_url and media_status.content_id.startswith(external_url):
@@ -591,17 +591,17 @@ class CastMediaPlayerEntity(CastDevice, MediaPlayerEntity):
         """Generate root node."""
         children = []
         # Add media browsers
-        for platform in self.hass.data[DOMAIN]["cast_platform"].values():
+        for platform in self.menuai.data[DOMAIN]["cast_platform"].values():
             children.extend(
                 await platform.async_get_media_browser_root_object(
-                    self.hass, self._chromecast.cast_type
+                    self.menuai, self._chromecast.cast_type
                 )
             )
 
         # Add media sources
         try:
             result = await media_source.async_browse_media(
-                self.hass, None, content_filter=content_filter
+                self.menuai, None, content_filter=content_filter
             )
             children.extend(result.children)
         except BrowseError:
@@ -650,9 +650,9 @@ class CastMediaPlayerEntity(CastDevice, MediaPlayerEntity):
 
         platform: CastProtocol
         assert media_content_type is not None
-        for platform in self.hass.data[DOMAIN]["cast_platform"].values():
+        for platform in self.menuai.data[DOMAIN]["cast_platform"].values():
             browse_media = await platform.async_browse_media(
-                self.hass,
+                self.menuai,
                 media_content_type,
                 media_content_id,
                 chromecast.cast_type,
@@ -661,7 +661,7 @@ class CastMediaPlayerEntity(CastDevice, MediaPlayerEntity):
                 return browse_media
 
         return await media_source.async_browse_media(
-            self.hass, media_content_id, content_filter=content_filter
+            self.menuai, media_content_id, content_filter=content_filter
         )
 
     async def async_play_media(
@@ -672,7 +672,7 @@ class CastMediaPlayerEntity(CastDevice, MediaPlayerEntity):
         # Handle media_source
         if media_source.is_media_source_id(media_id):
             sourced_media = await media_source.async_resolve_media(
-                self.hass, media_id, self.entity_id
+                self.menuai, media_id, self.entity_id
             )
             media_type = sourced_media.mime_type
             media_id = sourced_media.url
@@ -694,7 +694,7 @@ class CastMediaPlayerEntity(CastDevice, MediaPlayerEntity):
             if "app_id" in app_data:
                 app_id = app_data.pop("app_id")
                 _LOGGER.debug("Starting Cast app by ID %s", app_id)
-                await self.hass.async_add_executor_job(self._start_app, app_id)
+                await self.menuai.async_add_executor_job(self._start_app, app_id)
                 if app_data:
                     _LOGGER.warning(
                         "Extra keys %s were ignored. Please use app_name to cast media",
@@ -704,7 +704,7 @@ class CastMediaPlayerEntity(CastDevice, MediaPlayerEntity):
 
             app_name = app_data.pop("app_name")
             try:
-                await self.hass.async_add_executor_job(
+                await self.menuai.async_add_executor_job(
                     self._quick_play, app_name, app_data
                 )
             except NotImplementedError:
@@ -712,18 +712,18 @@ class CastMediaPlayerEntity(CastDevice, MediaPlayerEntity):
             return
 
         # Try the cast platforms
-        for platform in self.hass.data[DOMAIN]["cast_platform"].values():
+        for platform in self.menuai.data[DOMAIN]["cast_platform"].values():
             result = await platform.async_play_media(
-                self.hass, self.entity_id, chromecast, media_type, media_id
+                self.menuai, self.entity_id, chromecast, media_type, media_id
             )
             if result:
                 return
 
         # If media ID is a relative URL, we serve it from HA.
-        media_id = async_process_play_media_url(self.hass, media_id)
+        media_id = async_process_play_media_url(self.menuai, media_id)
 
         # Configure play command for when playing a HLS stream
-        if is_hass_url(self.hass, media_id):
+        if is_menuai_url(self.menuai, media_id):
             parsed = yarl.URL(media_id)
             if parsed.path.startswith("/api/hls/"):
                 extra = {
@@ -735,7 +735,7 @@ class CastMediaPlayerEntity(CastDevice, MediaPlayerEntity):
                 }
         elif media_id.endswith((".m3u", ".m3u8", ".pls")):
             try:
-                playlist = await parse_playlist(self.hass, media_id)
+                playlist = await parse_playlist(self.menuai, media_id)
                 _LOGGER.debug(
                     "[%s %s] Playing item %s from playlist %s",
                     self.entity_id,
@@ -774,7 +774,7 @@ class CastMediaPlayerEntity(CastDevice, MediaPlayerEntity):
             self._cast_info.friendly_name,
             app_data,
         )
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             self._quick_play, "default_media_receiver", app_data
         )
 
@@ -803,7 +803,7 @@ class CastMediaPlayerEntity(CastDevice, MediaPlayerEntity):
     def state(self) -> MediaPlayerState | None:
         """Return the state of the player."""
         # The lovelace app loops media to prevent timing out, don't show that
-        if self.app_id == CAST_APP_ID_HOMEASSISTANT_LOVELACE:
+        if self.app_id == CAST_APP_ID_menuai_LOVELACE:
             return MediaPlayerState.PLAYING
         if (media_status := self._media_status()[0]) is not None:
             if media_status.player_state == MEDIA_PLAYER_STATE_PLAYING:
@@ -827,7 +827,7 @@ class CastMediaPlayerEntity(CastDevice, MediaPlayerEntity):
     def media_content_id(self) -> str | None:
         """Content ID of current playing media."""
         # The lovelace app loops media to prevent timing out, don't show that
-        if self.app_id == CAST_APP_ID_HOMEASSISTANT_LOVELACE:
+        if self.app_id == CAST_APP_ID_menuai_LOVELACE:
             return None
         media_status = self._media_status()[0]
         return media_status.content_id if media_status else None
@@ -836,7 +836,7 @@ class CastMediaPlayerEntity(CastDevice, MediaPlayerEntity):
     def media_content_type(self) -> MediaType | None:
         """Content type of current playing media."""
         # The lovelace app loops media to prevent timing out, don't show that
-        if self.app_id == CAST_APP_ID_HOMEASSISTANT_LOVELACE:
+        if self.app_id == CAST_APP_ID_menuai_LOVELACE:
             return None
         if (media_status := self._media_status()[0]) is None:
             return None
@@ -860,7 +860,7 @@ class CastMediaPlayerEntity(CastDevice, MediaPlayerEntity):
     def media_duration(self):
         """Duration of current playing media in seconds."""
         # The lovelace app loops media to prevent timing out, don't show that
-        if self.app_id == CAST_APP_ID_HOMEASSISTANT_LOVELACE:
+        if self.app_id == CAST_APP_ID_menuai_LOVELACE:
             return None
         media_status = self._media_status()[0]
         return media_status.duration if media_status else None
@@ -952,7 +952,7 @@ class CastMediaPlayerEntity(CastDevice, MediaPlayerEntity):
                 | MediaPlayerEntityFeature.VOLUME_SET
             )
 
-        if media_status and self.app_id != CAST_APP_ID_HOMEASSISTANT_LOVELACE:
+        if media_status and self.app_id != CAST_APP_ID_menuai_LOVELACE:
             support |= (
                 MediaPlayerEntityFeature.PAUSE
                 | MediaPlayerEntityFeature.PLAY
@@ -966,7 +966,7 @@ class CastMediaPlayerEntity(CastDevice, MediaPlayerEntity):
             if media_status.supports_seek:
                 support |= MediaPlayerEntityFeature.SEEK
 
-        if "media_source" in self.hass.config.components:
+        if "media_source" in self.menuai.config.components:
             support |= MediaPlayerEntityFeature.BROWSE_MEDIA
 
         return support
@@ -975,7 +975,7 @@ class CastMediaPlayerEntity(CastDevice, MediaPlayerEntity):
     def media_position(self):
         """Position of current playing media in seconds."""
         # The lovelace app loops media to prevent timing out, don't show that
-        if self.app_id == CAST_APP_ID_HOMEASSISTANT_LOVELACE:
+        if self.app_id == CAST_APP_ID_menuai_LOVELACE:
             return None
         media_status = self._media_status()[0]
         if media_status is None or not (
@@ -990,15 +990,15 @@ class CastMediaPlayerEntity(CastDevice, MediaPlayerEntity):
     def media_position_updated_at(self):
         """When was the position of the current playing media valid.
 
-        Returns value from homeassistant.util.dt.utcnow().
+        Returns value from menuai.util.dt.utcnow().
         """
-        if self.app_id == CAST_APP_ID_HOMEASSISTANT_LOVELACE:
+        if self.app_id == CAST_APP_ID_menuai_LOVELACE:
             return None
         return self._media_status()[1]
 
     def _handle_signal_show_view(
         self,
-        controller_data: HomeAssistantControllerData,
+        controller_data: menuaiControllerData,
         entity_id: str,
         view_path: str,
         url_path: str | None,
@@ -1007,28 +1007,28 @@ class CastMediaPlayerEntity(CastDevice, MediaPlayerEntity):
         if entity_id != self.entity_id or self._chromecast is None:
             return
 
-        if self._hass_cast_controller is None:
+        if self._menuai_cast_controller is None:
 
             def unregister() -> None:
                 """Handle request to unregister the handler."""
-                if not self._hass_cast_controller or not self._chromecast:
+                if not self._menuai_cast_controller or not self._chromecast:
                     return
                 _LOGGER.debug(
-                    "[%s %s] Unregistering HomeAssistantController",
+                    "[%s %s] Unregistering menuaiController",
                     self.entity_id,
                     self._cast_info.friendly_name,
                 )
 
-                self._chromecast.unregister_handler(self._hass_cast_controller)
-                self._hass_cast_controller = None
+                self._chromecast.unregister_handler(self._menuai_cast_controller)
+                self._menuai_cast_controller = None
 
-            controller = HomeAssistantController(
+            controller = menuaiController(
                 **controller_data, unregister=unregister
             )
-            self._hass_cast_controller = controller
+            self._menuai_cast_controller = controller
             self._chromecast.register_handler(controller)
 
-        self._hass_cast_controller.show_lovelace_view(view_path, url_path)
+        self._menuai_cast_controller.show_lovelace_view(view_path, url_path)
 
 
 class DynamicCastGroup(CastDevice):

@@ -9,18 +9,18 @@ from hdate.omer import Nusach, Omer
 from hdate.translator import Language, set_language
 import voluptuous as vol
 
-from homeassistant.const import CONF_LANGUAGE, SUN_EVENT_SUNSET
-from homeassistant.core import (
-    HomeAssistant,
+from menuai.const import CONF_LANGUAGE, SUN_EVENT_SUNSET
+from menuai.core import (
+    menuai,
     ServiceCall,
     ServiceResponse,
     SupportsResponse,
 )
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.selector import LanguageSelector, LanguageSelectorConfig
-from homeassistant.helpers.sun import get_astral_event_date
-from homeassistant.util import dt as dt_util
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.selector import LanguageSelector, LanguageSelectorConfig
+from menuai.helpers.sun import get_astral_event_date
+from menuai.util import dt as dt_util
 
 from .const import ATTR_AFTER_SUNSET, ATTR_DATE, ATTR_NUSACH, DOMAIN, SERVICE_COUNT_OMER
 
@@ -39,17 +39,17 @@ OMER_SCHEMA = vol.Schema(
 )
 
 
-def async_setup_services(hass: HomeAssistant) -> None:
+def async_setup_services(menuai: menuai) -> None:
     """Set up the Jewish Calendar services."""
 
-    def is_after_sunset(hass: HomeAssistant) -> bool:
+    def is_after_sunset(menuai: menuai) -> bool:
         """Determine if the current time is after sunset."""
         now = dt_util.now()
         today = now.date()
-        event_date = get_astral_event_date(hass, SUN_EVENT_SUNSET, today)
+        event_date = get_astral_event_date(menuai, SUN_EVENT_SUNSET, today)
         if event_date is None:
             _LOGGER.error("Can't get sunset event date for %s", today)
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN, translation_key="sunset_event"
             )
         sunset = dt_util.as_local(event_date)
@@ -62,7 +62,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
         after_sunset = (
             call.data[ATTR_AFTER_SUNSET]
             if ATTR_DATE in call.data
-            else is_after_sunset(hass)
+            else is_after_sunset(menuai)
         )
         hebrew_date = HebrewDate.from_gdate(
             date + datetime.timedelta(days=int(after_sunset))
@@ -77,7 +77,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
             "total_days": omer.total_days,
         }
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_COUNT_OMER,
         get_omer_count,

@@ -10,14 +10,14 @@ from flux_led.const import (
     COLOR_MODE_RGBWW as FLUX_COLOR_MODE_RGBWW,
 )
 
-from homeassistant.components.light import ColorMode
+from menuai.components.light import ColorMode
 
 DOMAIN: Final = "flux_led"
 
 MIN_RGB_BRIGHTNESS: Final = 1
 MIN_CCT_BRIGHTNESS: Final = 2
 
-FLUX_COLOR_MODE_TO_HASS: Final = {
+FLUX_COLOR_MODE_TO_menuai: Final = {
     FLUX_COLOR_MODE_RGB: ColorMode.RGB,
     FLUX_COLOR_MODE_RGBW: ColorMode.RGBW,
     FLUX_COLOR_MODE_RGBWW: ColorMode.RGBWW,

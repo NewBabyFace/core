@@ -5,18 +5,18 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import PERCENTAGE, UnitOfDataRate, UnitOfTemperature
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import dt as dt_util
+from menuai.const import PERCENTAGE, UnitOfDataRate, UnitOfTemperature
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import dt as dt_util
 
 from .const import DOMAIN
 from .entity import FreeboxHomeEntity
@@ -62,7 +62,7 @@ DISK_PARTITION_SENSORS: tuple[SensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: FreeboxConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -112,7 +112,7 @@ async def async_setup_entry(
                 and endpoint["ep_type"] == "signal"
                 and endpoint.get("value") is not None
             ):
-                entities.append(FreeboxBatterySensor(hass, router, node, endpoint))
+                entities.append(FreeboxBatterySensor(menuai, router, node, endpoint))
 
     if entities:
         async_add_entities(entities, True)
@@ -147,12 +147,12 @@ class FreeboxSensor(SensorEntity):
         self.async_update_state()
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register state update callback."""
         self.async_update_state()
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 self._router.signal_sensor_update,
                 self.async_on_demand_update,
             )

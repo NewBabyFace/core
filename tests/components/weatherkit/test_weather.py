@@ -3,7 +3,7 @@
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.weather import (
+from menuai.components.weather import (
     ATTR_WEATHER_APPARENT_TEMPERATURE,
     ATTR_WEATHER_CLOUD_COVERAGE,
     ATTR_WEATHER_DEW_POINT,
@@ -19,19 +19,19 @@ from homeassistant.components.weather import (
     SERVICE_GET_FORECASTS,
     WeatherEntityFeature,
 )
-from homeassistant.components.weatherkit.const import ATTRIBUTION
-from homeassistant.const import ATTR_ATTRIBUTION, ATTR_SUPPORTED_FEATURES
-from homeassistant.core import HomeAssistant
+from menuai.components.weatherkit.const import ATTRIBUTION
+from menuai.const import ATTR_ATTRIBUTION, ATTR_SUPPORTED_FEATURES
+from menuai.core import menuai
 
 from . import init_integration, mock_weather_response
 
 
-async def test_current_weather(hass: HomeAssistant) -> None:
+async def test_current_weather(menuai: menuai) -> None:
     """Test states of the current weather."""
     with mock_weather_response():
-        await init_integration(hass)
+        await init_integration(menuai)
 
-    state = hass.states.get("weather.home")
+    state = menuai.states.get("weather.home")
     assert state
     assert state.state == "partlycloudy"
     assert state.attributes[ATTR_WEATHER_HUMIDITY] == 91
@@ -48,34 +48,34 @@ async def test_current_weather(hass: HomeAssistant) -> None:
     assert state.attributes[ATTR_ATTRIBUTION] == ATTRIBUTION
 
 
-async def test_current_weather_nighttime(hass: HomeAssistant) -> None:
+async def test_current_weather_nighttime(menuai: menuai) -> None:
     """Test that the condition is clear-night when it's sunny and night time."""
     with mock_weather_response(is_night_time=True):
-        await init_integration(hass)
+        await init_integration(menuai)
 
-    state = hass.states.get("weather.home")
+    state = menuai.states.get("weather.home")
     assert state
     assert state.state == "clear-night"
 
 
-async def test_daily_forecast_missing(hass: HomeAssistant) -> None:
+async def test_daily_forecast_missing(menuai: menuai) -> None:
     """Test that daily forecast is not supported when WeatherKit doesn't support it."""
     with mock_weather_response(has_daily_forecast=False):
-        await init_integration(hass)
+        await init_integration(menuai)
 
-    state = hass.states.get("weather.home")
+    state = menuai.states.get("weather.home")
     assert state
     assert (
         state.attributes[ATTR_SUPPORTED_FEATURES] & WeatherEntityFeature.FORECAST_DAILY
     ) == 0
 
 
-async def test_hourly_forecast_missing(hass: HomeAssistant) -> None:
+async def test_hourly_forecast_missing(menuai: menuai) -> None:
     """Test that hourly forecast is not supported when WeatherKit doesn't support it."""
     with mock_weather_response(has_hourly_forecast=False):
-        await init_integration(hass)
+        await init_integration(menuai)
 
-    state = hass.states.get("weather.home")
+    state = menuai.states.get("weather.home")
     assert state
     assert (
         state.attributes[ATTR_SUPPORTED_FEATURES] & WeatherEntityFeature.FORECAST_HOURLY
@@ -87,13 +87,13 @@ async def test_hourly_forecast_missing(hass: HomeAssistant) -> None:
     [SERVICE_GET_FORECASTS],
 )
 async def test_hourly_forecast(
-    hass: HomeAssistant, snapshot: SnapshotAssertion, service: str
+    menuai: menuai, snapshot: SnapshotAssertion, service: str
 ) -> None:
     """Test states of the hourly forecast."""
     with mock_weather_response():
-        await init_integration(hass)
+        await init_integration(menuai)
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         WEATHER_DOMAIN,
         service,
         {
@@ -111,13 +111,13 @@ async def test_hourly_forecast(
     [SERVICE_GET_FORECASTS],
 )
 async def test_daily_forecast(
-    hass: HomeAssistant, snapshot: SnapshotAssertion, service: str
+    menuai: menuai, snapshot: SnapshotAssertion, service: str
 ) -> None:
     """Test states of the daily forecast."""
     with mock_weather_response():
-        await init_integration(hass)
+        await init_integration(menuai)
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         WEATHER_DOMAIN,
         service,
         {

@@ -11,7 +11,7 @@ from aioesphomeapi import (
     FanState,
 )
 
-from homeassistant.components.fan import (
+from menuai.components.fan import (
     ATTR_DIRECTION,
     ATTR_OSCILLATING,
     ATTR_PERCENTAGE,
@@ -27,14 +27,14 @@ from homeassistant.components.fan import (
     SERVICE_TURN_ON,
     STATE_ON,
 )
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
 
 from .conftest import MockGenericDeviceEntryType
 
 
 async def test_fan_entity_with_all_features_old_api(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -66,11 +66,11 @@ async def test_fan_entity_with_all_features_old_api(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("fan.test_myfan")
+    state = menuai.states.get("fan.test_myfan")
     assert state is not None
     assert state.state == STATE_ON
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         FAN_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "fan.test_myfan", ATTR_PERCENTAGE: 20},
@@ -81,7 +81,7 @@ async def test_fan_entity_with_all_features_old_api(
     )
     mock_client.fan_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         FAN_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "fan.test_myfan", ATTR_PERCENTAGE: 50},
@@ -92,7 +92,7 @@ async def test_fan_entity_with_all_features_old_api(
     )
     mock_client.fan_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         FAN_DOMAIN,
         SERVICE_DECREASE_SPEED,
         {ATTR_ENTITY_ID: "fan.test_myfan"},
@@ -103,7 +103,7 @@ async def test_fan_entity_with_all_features_old_api(
     )
     mock_client.fan_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         FAN_DOMAIN,
         SERVICE_INCREASE_SPEED,
         {ATTR_ENTITY_ID: "fan.test_myfan"},
@@ -114,7 +114,7 @@ async def test_fan_entity_with_all_features_old_api(
     )
     mock_client.fan_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         FAN_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: "fan.test_myfan"},
@@ -123,7 +123,7 @@ async def test_fan_entity_with_all_features_old_api(
     mock_client.fan_command.assert_has_calls([call(key=1, state=False)])
     mock_client.fan_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         FAN_DOMAIN,
         SERVICE_SET_PERCENTAGE,
         {ATTR_ENTITY_ID: "fan.test_myfan", ATTR_PERCENTAGE: 100},
@@ -136,7 +136,7 @@ async def test_fan_entity_with_all_features_old_api(
 
 
 async def test_fan_entity_with_all_features_new_api(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -172,11 +172,11 @@ async def test_fan_entity_with_all_features_new_api(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("fan.test_myfan")
+    state = menuai.states.get("fan.test_myfan")
     assert state is not None
     assert state.state == STATE_ON
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         FAN_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "fan.test_myfan", ATTR_PERCENTAGE: 20},
@@ -185,7 +185,7 @@ async def test_fan_entity_with_all_features_new_api(
     mock_client.fan_command.assert_has_calls([call(key=1, speed_level=1, state=True)])
     mock_client.fan_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         FAN_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "fan.test_myfan", ATTR_PERCENTAGE: 50},
@@ -194,7 +194,7 @@ async def test_fan_entity_with_all_features_new_api(
     mock_client.fan_command.assert_has_calls([call(key=1, speed_level=2, state=True)])
     mock_client.fan_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         FAN_DOMAIN,
         SERVICE_DECREASE_SPEED,
         {ATTR_ENTITY_ID: "fan.test_myfan"},
@@ -203,7 +203,7 @@ async def test_fan_entity_with_all_features_new_api(
     mock_client.fan_command.assert_has_calls([call(key=1, speed_level=2, state=True)])
     mock_client.fan_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         FAN_DOMAIN,
         SERVICE_INCREASE_SPEED,
         {ATTR_ENTITY_ID: "fan.test_myfan"},
@@ -212,7 +212,7 @@ async def test_fan_entity_with_all_features_new_api(
     mock_client.fan_command.assert_has_calls([call(key=1, speed_level=4, state=True)])
     mock_client.fan_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         FAN_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: "fan.test_myfan"},
@@ -221,7 +221,7 @@ async def test_fan_entity_with_all_features_new_api(
     mock_client.fan_command.assert_has_calls([call(key=1, state=False)])
     mock_client.fan_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         FAN_DOMAIN,
         SERVICE_SET_PERCENTAGE,
         {ATTR_ENTITY_ID: "fan.test_myfan", ATTR_PERCENTAGE: 100},
@@ -230,7 +230,7 @@ async def test_fan_entity_with_all_features_new_api(
     mock_client.fan_command.assert_has_calls([call(key=1, speed_level=4, state=True)])
     mock_client.fan_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         FAN_DOMAIN,
         SERVICE_SET_PERCENTAGE,
         {ATTR_ENTITY_ID: "fan.test_myfan", ATTR_PERCENTAGE: 0},
@@ -239,7 +239,7 @@ async def test_fan_entity_with_all_features_new_api(
     mock_client.fan_command.assert_has_calls([call(key=1, state=False)])
     mock_client.fan_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         FAN_DOMAIN,
         SERVICE_OSCILLATE,
         {ATTR_ENTITY_ID: "fan.test_myfan", ATTR_OSCILLATING: True},
@@ -248,7 +248,7 @@ async def test_fan_entity_with_all_features_new_api(
     mock_client.fan_command.assert_has_calls([call(key=1, oscillating=True)])
     mock_client.fan_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         FAN_DOMAIN,
         SERVICE_OSCILLATE,
         {ATTR_ENTITY_ID: "fan.test_myfan", ATTR_OSCILLATING: False},
@@ -257,7 +257,7 @@ async def test_fan_entity_with_all_features_new_api(
     mock_client.fan_command.assert_has_calls([call(key=1, oscillating=False)])
     mock_client.fan_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         FAN_DOMAIN,
         SERVICE_SET_DIRECTION,
         {ATTR_ENTITY_ID: "fan.test_myfan", ATTR_DIRECTION: "forward"},
@@ -268,7 +268,7 @@ async def test_fan_entity_with_all_features_new_api(
     )
     mock_client.fan_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         FAN_DOMAIN,
         SERVICE_SET_DIRECTION,
         {ATTR_ENTITY_ID: "fan.test_myfan", ATTR_DIRECTION: "reverse"},
@@ -279,7 +279,7 @@ async def test_fan_entity_with_all_features_new_api(
     )
     mock_client.fan_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         FAN_DOMAIN,
         SERVICE_SET_PRESET_MODE,
         {ATTR_ENTITY_ID: "fan.test_myfan", ATTR_PRESET_MODE: "Preset1"},
@@ -290,7 +290,7 @@ async def test_fan_entity_with_all_features_new_api(
 
 
 async def test_fan_entity_with_no_features_new_api(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -316,11 +316,11 @@ async def test_fan_entity_with_no_features_new_api(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("fan.test_myfan")
+    state = menuai.states.get("fan.test_myfan")
     assert state is not None
     assert state.state == STATE_ON
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         FAN_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "fan.test_myfan"},
@@ -329,7 +329,7 @@ async def test_fan_entity_with_no_features_new_api(
     mock_client.fan_command.assert_has_calls([call(key=1, state=True)])
     mock_client.fan_command.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         FAN_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: "fan.test_myfan"},

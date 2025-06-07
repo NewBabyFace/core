@@ -17,7 +17,7 @@ TEMPLATES = [
 
 def get_arguments() -> argparse.Namespace:
     """Get parsed passed in arguments."""
-    parser = argparse.ArgumentParser(description="Home Assistant Scaffolder")
+    parser = argparse.ArgumentParser(description="MenuAI Scaffolder")
     parser.add_argument("template", type=str, choices=TEMPLATES)
     parser.add_argument(
         "--develop", action="store_true", help="Automatically fill in info"
@@ -100,13 +100,13 @@ def main() -> int:
         generate.generate(args.template, info)
 
     # Always output sub commands as the output will contain useful information if a command fails.
-    print("Running hassfest to pick up new information.")
+    print("Running menuaifest to pick up new information.")
     run_process(
-        "hassfest",
+        "menuaifest",
         [
             "python",
             "-m",
-            "script.hassfest",
+            "script.menuaifest",
             "--integration-path",
             str(info.integration_dir),
             "--skip-plugins",

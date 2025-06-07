@@ -4,8 +4,8 @@ from freezegun import freeze_time
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.google_assistant_sdk.const import CONF_LANGUAGE_CODE
-from homeassistant.core import HomeAssistant
+from menuai.components.google_assistant_sdk.const import CONF_LANGUAGE_CODE
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 from tests.components.diagnostics import get_diagnostics_for_config_entry
@@ -20,19 +20,19 @@ def freeze_the_time():
 
 
 async def test_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test diagnostics."""
-    config_entry.add_to_hass(hass)
-    hass.config_entries.async_update_entry(
+    config_entry.add_to_menuai(menuai)
+    menuai.config_entries.async_update_entry(
         config_entry,
         options={CONF_LANGUAGE_CODE: "en-US"},
     )
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
     assert (
-        await get_diagnostics_for_config_entry(hass, hass_client, config_entry)
+        await get_diagnostics_for_config_entry(menuai, menuai_client, config_entry)
         == snapshot
     )

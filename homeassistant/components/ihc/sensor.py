@@ -4,19 +4,19 @@ from __future__ import annotations
 
 from ihcsdk.ihccontroller import IHCController
 
-from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
-from homeassistant.const import CONF_UNIT_OF_MEASUREMENT
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util.unit_system import TEMPERATURE_UNITS
+from menuai.components.sensor import SensorDeviceClass, SensorEntity
+from menuai.const import CONF_UNIT_OF_MEASUREMENT
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util.unit_system import TEMPERATURE_UNITS
 
 from .const import DOMAIN, IHC_CONTROLLER
 from .entity import IHCEntity
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -31,7 +31,7 @@ def setup_platform(
         product = device["product"]
         # Find controller that corresponds with device id
         controller_id = device["ctrl_id"]
-        ihc_controller: IHCController = hass.data[DOMAIN][controller_id][IHC_CONTROLLER]
+        ihc_controller: IHCController = menuai.data[DOMAIN][controller_id][IHC_CONTROLLER]
         unit = product_cfg[CONF_UNIT_OF_MEASUREMENT]
         sensor = IHCSensor(ihc_controller, controller_id, name, ihc_id, unit, product)
         devices.append(sensor)

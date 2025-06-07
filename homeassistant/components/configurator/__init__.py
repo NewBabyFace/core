@@ -14,19 +14,19 @@ from datetime import datetime
 import functools as ft
 from typing import Any
 
-from homeassistant.const import ATTR_ENTITY_PICTURE, ATTR_FRIENDLY_NAME
-from homeassistant.core import (
-    HassJob,
-    HomeAssistant,
+from menuai.const import ATTR_ENTITY_PICTURE, ATTR_FRIENDLY_NAME
+from menuai.core import (
+    menuaiJob,
+    menuai,
     ServiceCall,
     callback as async_callback,
 )
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity import async_generate_entity_id
-from homeassistant.helpers.event import async_call_later
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.loader import bind_hass
-from homeassistant.util.async_ import run_callback_threadsafe
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity import async_generate_entity_id
+from menuai.helpers.event import async_call_later
+from menuai.helpers.typing import ConfigType
+from menuai.loader import bind_menuai
+from menuai.util.async_ import run_callback_threadsafe
 
 _KEY_INSTANCE = "configurator"
 
@@ -54,10 +54,10 @@ type ConfiguratorCallback = Callable[[list[dict[str, str]]], None]
 CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)
 
 
-@bind_hass
+@bind_menuai
 @async_callback
 def async_request_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     name: str,
     callback: ConfiguratorCallback | None = None,
     description: str | None = None,
@@ -78,85 +78,85 @@ def async_request_config(
     if description and description_image is not None:
         description += f"\n\n![Description image]({description_image})"
 
-    if (instance := hass.data.get(_KEY_INSTANCE)) is None:
-        instance = hass.data[_KEY_INSTANCE] = Configurator(hass)
+    if (instance := menuai.data.get(_KEY_INSTANCE)) is None:
+        instance = menuai.data[_KEY_INSTANCE] = Configurator(menuai)
 
     request_id = instance.async_request_config(
         name, callback, description, submit_caption, fields, entity_picture
     )
 
-    if DATA_REQUESTS not in hass.data:
-        hass.data[DATA_REQUESTS] = {}
+    if DATA_REQUESTS not in menuai.data:
+        menuai.data[DATA_REQUESTS] = {}
 
-    _get_requests(hass)[request_id] = instance
+    _get_requests(menuai)[request_id] = instance
 
     return request_id
 
 
-@bind_hass
-def request_config(hass: HomeAssistant, *args: Any, **kwargs: Any) -> str:
+@bind_menuai
+def request_config(menuai: menuai, *args: Any, **kwargs: Any) -> str:
     """Create a new request for configuration.
 
     Will return an ID to be used for sequent calls.
     """
     return run_callback_threadsafe(
-        hass.loop, ft.partial(async_request_config, hass, *args, **kwargs)
+        menuai.loop, ft.partial(async_request_config, menuai, *args, **kwargs)
     ).result()
 
 
-@bind_hass
+@bind_menuai
 @async_callback
-def async_notify_errors(hass: HomeAssistant, request_id: str, error: str) -> None:
+def async_notify_errors(menuai: menuai, request_id: str, error: str) -> None:
     """Add errors to a config request."""
     with suppress(KeyError):  # If request_id does not exist
-        _get_requests(hass)[request_id].async_notify_errors(request_id, error)
+        _get_requests(menuai)[request_id].async_notify_errors(request_id, error)
 
 
-@bind_hass
-def notify_errors(hass: HomeAssistant, request_id: str, error: str) -> None:
+@bind_menuai
+def notify_errors(menuai: menuai, request_id: str, error: str) -> None:
     """Add errors to a config request."""
     return run_callback_threadsafe(
-        hass.loop, async_notify_errors, hass, request_id, error
+        menuai.loop, async_notify_errors, menuai, request_id, error
     ).result()
 
 
-@bind_hass
+@bind_menuai
 @async_callback
-def async_request_done(hass: HomeAssistant, request_id: str) -> None:
+def async_request_done(menuai: menuai, request_id: str) -> None:
     """Mark a configuration request as done."""
     with suppress(KeyError):  # If request_id does not exist
-        _get_requests(hass).pop(request_id).async_request_done(request_id)
+        _get_requests(menuai).pop(request_id).async_request_done(request_id)
 
 
-@bind_hass
-def request_done(hass: HomeAssistant, request_id: str) -> None:
+@bind_menuai
+def request_done(menuai: menuai, request_id: str) -> None:
     """Mark a configuration request as done."""
     return run_callback_threadsafe(
-        hass.loop, async_request_done, hass, request_id
+        menuai.loop, async_request_done, menuai, request_id
     ).result()
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the configurator component."""
     return True
 
 
-def _get_requests(hass: HomeAssistant) -> dict[str, Configurator]:
+def _get_requests(menuai: menuai) -> dict[str, Configurator]:
     """Return typed configurator_requests data."""
-    return hass.data[DATA_REQUESTS]  # type: ignore[no-any-return]
+    return menuai.data[DATA_REQUESTS]  # type: ignore[no-any-return]
 
 
 class Configurator:
     """The class to keep track of current configuration requests."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize the configurator."""
-        self.hass = hass
+        self.menuai = menuai
         self._cur_id = 0
         self._requests: dict[
             str, tuple[str, list[dict[str, str]], ConfiguratorCallback | None]
         ] = {}
-        hass.services.async_register(
+        menuai.services.async_register(
             DOMAIN, SERVICE_CONFIGURE, self.async_handle_service_call
         )
 
@@ -171,7 +171,7 @@ class Configurator:
         entity_picture: str | None,
     ) -> str:
         """Set up a request for configuration."""
-        entity_id = async_generate_entity_id(ENTITY_ID_FORMAT, name, hass=self.hass)
+        entity_id = async_generate_entity_id(ENTITY_ID_FORMAT, name, menuai=self.menuai)
 
         if fields is None:
             fields = []
@@ -198,7 +198,7 @@ class Configurator:
             }
         )
 
-        self.hass.states.async_set(entity_id, STATE_CONFIGURE, data)
+        self.menuai.states.async_set(entity_id, STATE_CONFIGURE, data)
 
         return request_id
 
@@ -210,13 +210,13 @@ class Configurator:
 
         entity_id = self._requests[request_id][0]
 
-        if (state := self.hass.states.get(entity_id)) is None:
+        if (state := self.menuai.states.get(entity_id)) is None:
             return
 
         new_data = dict(state.attributes)
         new_data[ATTR_ERRORS] = error
 
-        self.hass.states.async_set(entity_id, STATE_CONFIGURE, new_data)
+        self.menuai.states.async_set(entity_id, STATE_CONFIGURE, new_data)
 
     @async_callback
     def async_request_done(self, request_id: str) -> None:
@@ -230,14 +230,14 @@ class Configurator:
         # the result of the service call (current design limitation).
         # Instead, we will set it to configured to give as feedback but delete
         # it shortly after so that it is deleted when the client updates.
-        self.hass.states.async_set(entity_id, STATE_CONFIGURED)
+        self.menuai.states.async_set(entity_id, STATE_CONFIGURED)
 
         @async_callback
         def deferred_remove(now: datetime) -> None:
             """Remove the request state."""
-            self.hass.states.async_remove(entity_id)
+            self.menuai.states.async_remove(entity_id)
 
-        async_call_later(self.hass, 1, deferred_remove)
+        async_call_later(self.menuai, 1, deferred_remove)
 
     async def async_handle_service_call(self, call: ServiceCall) -> None:
         """Handle a configure service call."""
@@ -250,8 +250,8 @@ class Configurator:
 
         # field validation goes here?
         if callback and (
-            job := self.hass.async_run_hass_job(
-                HassJob(callback), call.data.get(ATTR_FIELDS, {})
+            job := self.menuai.async_run_menuai_job(
+                menuaiJob(callback), call.data.get(ATTR_FIELDS, {})
             )
         ):
             await job

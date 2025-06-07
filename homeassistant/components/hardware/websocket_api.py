@@ -9,19 +9,19 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.util import dt as dt_util
+from menuai.components import websocket_api
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.event import async_track_time_interval
+from menuai.util import dt as dt_util
 
 from .const import DATA_HARDWARE
 
 
-async def async_setup(hass: HomeAssistant) -> None:
+async def async_setup(menuai: menuai) -> None:
     """Set up the hardware websocket API."""
-    websocket_api.async_register_command(hass, ws_info)
-    websocket_api.async_register_command(hass, ws_subscribe_system_status)
+    websocket_api.async_register_command(menuai, ws_info)
+    websocket_api.async_register_command(menuai, ws_subscribe_system_status)
 
 
 @websocket_api.websocket_command(
@@ -31,16 +31,16 @@ async def async_setup(hass: HomeAssistant) -> None:
 )
 @websocket_api.async_response
 async def ws_info(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Return hardware info."""
     hardware_info = []
 
-    hardware_platform = hass.data[DATA_HARDWARE].hardware_platform
+    hardware_platform = menuai.data[DATA_HARDWARE].hardware_platform
     for platform in hardware_platform.values():
         if hasattr(platform, "async_info"):
-            with contextlib.suppress(HomeAssistantError):
-                hardware_info.extend([asdict(hw) for hw in platform.async_info(hass)])
+            with contextlib.suppress(menuaiError):
+                hardware_info.extend([asdict(hw) for hw in platform.async_info(menuai)])
 
     connection.send_result(msg["id"], {"hardware": hardware_info})
 
@@ -52,11 +52,11 @@ async def ws_info(
     }
 )
 def ws_subscribe_system_status(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Subscribe to system status updates."""
 
-    system_status = hass.data[DATA_HARDWARE].system_status
+    system_status = menuai.data[DATA_HARDWARE].system_status
 
     @callback
     def async_update_status(now: datetime) -> None:
@@ -82,7 +82,7 @@ def ws_subscribe_system_status(
 
     if not system_status.subscribers:
         system_status.remove_periodic_timer = async_track_time_interval(
-            hass, async_update_status, timedelta(seconds=5)
+            menuai, async_update_status, timedelta(seconds=5)
         )
 
     system_status.subscribers.add((connection, msg["id"]))

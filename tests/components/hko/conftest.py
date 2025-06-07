@@ -12,7 +12,7 @@ from tests.common import load_fixture
 def hko_config_flow_connect():
     """Mock valid config flow setup."""
     with patch(
-        "homeassistant.components.hko.config_flow.HKO.weather",
+        "menuai.components.hko.config_flow.HKO.weather",
         return_value=json.loads(load_fixture("hko/rhrread.json")),
     ):
         yield

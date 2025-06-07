@@ -6,11 +6,11 @@ from aiohttp import ClientError
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.number import SERVICE_SET_VALUE
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from menuai.components.number import SERVICE_SET_VALUE
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry, snapshot_platform
 
@@ -23,7 +23,7 @@ ENTITY_UID = "robin-r-1234-20240201-123456-aa-bb-cc-dd-ee-ff-47011"
 
 
 async def test_entity_registry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_myuplink_client: MagicMock,
     setup_platform: None,
@@ -35,32 +35,32 @@ async def test_entity_registry(
 
 
 async def test_set_value(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_myuplink_client: MagicMock,
     setup_platform: None,
 ) -> None:
     """Test the value of the number entity can be set."""
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TEST_PLATFORM,
         SERVICE_SET_VALUE,
         {ATTR_ENTITY_ID: ENTITY_ID, "value": 1},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     mock_myuplink_client.async_set_device_points.assert_called_once()
 
 
 async def test_api_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_myuplink_client: MagicMock,
     setup_platform: None,
 ) -> None:
     """Test handling of exception from API."""
 
     mock_myuplink_client.async_set_device_points.side_effect = ClientError
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             TEST_PLATFORM,
             SERVICE_SET_VALUE,
             {ATTR_ENTITY_ID: ENTITY_ID, "value": 1},
@@ -74,7 +74,7 @@ async def test_api_failure(
     ["device_points_nibe_smo20.json"],
 )
 async def test_entity_registry_smo20(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_myuplink_client: MagicMock,
     setup_platform: None,
@@ -86,7 +86,7 @@ async def test_entity_registry_smo20(
 
 
 async def test_number_states(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_myuplink_client: MagicMock,
     mock_config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
@@ -95,4 +95,4 @@ async def test_number_states(
 ) -> None:
     """Test number entity state."""
 
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)

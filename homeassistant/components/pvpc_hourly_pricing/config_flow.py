@@ -8,17 +8,17 @@ from typing import Any
 from aiopvpc import DEFAULT_POWER_KW, PVPCData
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_REAUTH,
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_API_TOKEN, CONF_NAME
-from homeassistant.core import callback
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.util import dt as dt_util
+from menuai.const import CONF_API_TOKEN, CONF_NAME
+from menuai.core import callback
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.util import dt as dt_util
 
 from .const import (
     ATTR_POWER,
@@ -123,7 +123,7 @@ class TariffSelectorConfigFlow(ConfigFlow, domain=DOMAIN):
         auth_ok = True
         if self._use_api_token:
             if not self._api:
-                self._api = PVPCData(session=async_get_clientsession(self.hass))
+                self._api = PVPCData(session=async_get_clientsession(self.menuai))
             auth_ok = await self._api.check_api_token(dt_util.utcnow(), self._api_token)
         if not auth_ok:
             errors["base"] = "invalid_auth"

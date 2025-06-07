@@ -10,14 +10,14 @@ from typing import Any
 import pywemo
 import voluptuous as vol
 
-from homeassistant import config_entries
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_DISCOVERY, EVENT_HOMEASSISTANT_STOP, Platform
-from homeassistant.core import CALLBACK_TYPE, Event, HassJob, HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.event import async_call_later
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util.async_ import gather_with_limited_concurrency
+from menuai import config_entries
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_DISCOVERY, EVENT_menuai_STOP, Platform
+from menuai.core import CALLBACK_TYPE, Event, menuaiJob, menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.event import async_call_later
+from menuai.helpers.typing import ConfigType
+from menuai.util.async_ import gather_with_limited_concurrency
 
 from .const import DOMAIN
 from .coordinator import DeviceCoordinator, async_register_device
@@ -82,32 +82,32 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up for WeMo devices."""
     # Keep track of WeMo device subscriptions for push updates
     registry = pywemo.SubscriptionRegistry()
-    await hass.async_add_executor_job(registry.start)
+    await menuai.async_add_executor_job(registry.start)
 
     # Respond to discovery requests from WeMo devices.
     discovery_responder = pywemo.ssdp.DiscoveryResponder(registry.port)
-    await hass.async_add_executor_job(discovery_responder.start)
+    await menuai.async_add_executor_job(discovery_responder.start)
 
-    def _on_hass_stop(_: Event) -> None:
+    def _on_menuai_stop(_: Event) -> None:
         discovery_responder.stop()
         registry.stop()
 
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _on_hass_stop)
+    menuai.bus.async_listen_once(EVENT_menuai_STOP, _on_menuai_stop)
 
     yaml_config = config.get(DOMAIN, {})
-    hass.data[DOMAIN] = WemoData(
+    menuai.data[DOMAIN] = WemoData(
         discovery_enabled=yaml_config.get(CONF_DISCOVERY, DEFAULT_DISCOVERY),
         static_config=yaml_config.get(CONF_STATIC, []),
         registry=registry,
     )
 
     if DOMAIN in config:
-        hass.async_create_task(
-            hass.config_entries.flow.async_init(
+        menuai.async_create_task(
+            menuai.config_entries.flow.async_init(
                 DOMAIN, context={"source": config_entries.SOURCE_IMPORT}
             )
         )
@@ -115,11 +115,11 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up a wemo config entry."""
-    wemo_data = hass.data[DATA_WEMO]
+    wemo_data = menuai.data[DATA_WEMO]
     dispatcher = WemoDispatcher(entry)
-    discovery = WemoDiscovery(hass, dispatcher, wemo_data.static_config, entry)
+    discovery = WemoDiscovery(menuai, dispatcher, wemo_data.static_config, entry)
     wemo_data.config_entry_data = WemoConfigEntryData(
         device_coordinators={},
         discovery=discovery,
@@ -135,15 +135,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a wemo config entry."""
     _LOGGER.debug("Unloading WeMo")
-    wemo_data = hass.data[DATA_WEMO]
+    wemo_data = menuai.data[DATA_WEMO]
 
     wemo_data.config_entry_data.discovery.async_stop_discovery()
 
     dispatcher = wemo_data.config_entry_data.dispatcher
-    if unload_ok := await dispatcher.async_unload_platforms(hass):
+    if unload_ok := await dispatcher.async_unload_platforms(menuai):
         for coordinator in list(
             wemo_data.config_entry_data.device_coordinators.values()
         ):
@@ -154,14 +154,14 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def async_wemo_dispatcher_connect(
-    hass: HomeAssistant,
+    menuai: menuai,
     dispatch: DispatchCallback,
 ) -> None:
     """Connect a wemo platform with the WemoDispatcher."""
-    module = dispatch.__module__  # Example: "homeassistant.components.wemo.switch"
+    module = dispatch.__module__  # Example: "menuai.components.wemo.switch"
     platform = Platform(module.rsplit(".", 1)[1])
 
-    dispatcher = hass.data[DATA_WEMO].config_entry_data.dispatcher
+    dispatcher = menuai.data[DATA_WEMO].config_entry_data.dispatcher
     await dispatcher.async_connect_platform(platform, dispatch)
 
 
@@ -177,14 +177,14 @@ class WemoDispatcher:
         self._dispatch_callbacks: dict[Platform, DispatchCallback] = {}
 
     async def async_add_unique_device(
-        self, hass: HomeAssistant, wemo: pywemo.WeMoDevice
+        self, menuai: menuai, wemo: pywemo.WeMoDevice
     ) -> None:
-        """Add a WeMo device to hass if it has not already been added."""
+        """Add a WeMo device to menuai if it has not already been added."""
         if wemo.serial_number in self._added_serial_numbers:
             return
 
         try:
-            coordinator = await async_register_device(hass, self._config_entry, wemo)
+            coordinator = await async_register_device(menuai, self._config_entry, wemo)
         except pywemo.PyWeMoException as err:
             if wemo.serial_number not in self._failed_serial_numbers:
                 self._failed_serial_numbers.add(wemo.serial_number)
@@ -214,7 +214,7 @@ class WemoDispatcher:
         self._failed_serial_numbers.discard(wemo.serial_number)
 
         if platforms_to_load:
-            await hass.config_entries.async_forward_entry_setups(
+            await menuai.config_entries.async_forward_entry_setups(
                 self._config_entry, platforms_to_load
             )
 
@@ -232,11 +232,11 @@ class WemoDispatcher:
             ),
         )
 
-    async def async_unload_platforms(self, hass: HomeAssistant) -> bool:
+    async def async_unload_platforms(self, menuai: menuai) -> bool:
         """Forward the unloading of an entry to platforms."""
         platforms: set[Platform] = set(self._dispatch_backlog.keys())
         platforms.update(self._dispatch_callbacks.keys())
-        return await hass.config_entries.async_unload_platforms(
+        return await menuai.config_entries.async_unload_platforms(
             self._config_entry, platforms
         )
 
@@ -249,18 +249,18 @@ class WemoDiscovery:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         wemo_dispatcher: WemoDispatcher,
         static_config: Sequence[HostPortTuple],
         entry: ConfigEntry,
     ) -> None:
         """Initialize the WemoDiscovery."""
-        self._hass = hass
+        self._menuai = menuai
         self._wemo_dispatcher = wemo_dispatcher
         self._stop: CALLBACK_TYPE | None = None
         self._scan_delay = 0
         self._static_config = static_config
-        self._discover_job: HassJob[[datetime], None] | None = None
+        self._discover_job: menuaiJob[[datetime], None] | None = None
         self._entry = entry
 
     async def async_discover_and_schedule(
@@ -269,22 +269,22 @@ class WemoDiscovery:
         """Periodically scan the network looking for WeMo devices."""
         _LOGGER.debug("Scanning network for WeMo devices")
         try:
-            for device in await self._hass.async_add_executor_job(
+            for device in await self._menuai.async_add_executor_job(
                 pywemo.discover_devices
             ):
-                await self._wemo_dispatcher.async_add_unique_device(self._hass, device)
+                await self._wemo_dispatcher.async_add_unique_device(self._menuai, device)
             await self.discover_statics()
 
         finally:
-            # Run discovery more frequently after hass has just started.
+            # Run discovery more frequently after menuai has just started.
             self._scan_delay = min(
                 self._scan_delay + self.ADDITIONAL_SECONDS_BETWEEN_SCANS,
                 self.MAX_SECONDS_BETWEEN_SCANS,
             )
             if not self._discover_job:
-                self._discover_job = HassJob(self._async_discover_and_schedule_callback)
+                self._discover_job = menuaiJob(self._async_discover_and_schedule_callback)
             self._stop = async_call_later(
-                self._hass,
+                self._menuai,
                 self._scan_delay,
                 self._discover_job,
             )
@@ -293,7 +293,7 @@ class WemoDiscovery:
     def _async_discover_and_schedule_callback(self, event_time: datetime) -> None:
         """Run the periodic background scanning."""
         self._entry.async_create_background_task(
-            self._hass,
+            self._menuai,
             self.async_discover_and_schedule(),
             name="wemo_discovery",
             eager_start=True,
@@ -314,12 +314,12 @@ class WemoDiscovery:
         for device in await gather_with_limited_concurrency(
             MAX_CONCURRENCY,
             *(
-                self._hass.async_add_executor_job(validate_static_config, host, port)
+                self._menuai.async_add_executor_job(validate_static_config, host, port)
                 for host, port in self._static_config
             ),
         ):
             if device:
-                await self._wemo_dispatcher.async_add_unique_device(self._hass, device)
+                await self._wemo_dispatcher.async_add_unique_device(self._menuai, device)
 
 
 def validate_static_config(host: str, port: int | None) -> pywemo.WeMoDevice | None:

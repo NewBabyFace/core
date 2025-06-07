@@ -11,9 +11,9 @@ from async_upnp_client.client import UpnpRequester
 from async_upnp_client.client_factory import UpnpFactory
 from async_upnp_client.event_handler import UpnpEventHandler
 
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant
-from homeassistant.helpers import aiohttp_client
+from menuai.const import EVENT_menuai_STOP
+from menuai.core import CALLBACK_TYPE, Event, menuai
+from menuai.helpers import aiohttp_client
 
 from .const import DOMAIN, LOGGER
 
@@ -36,17 +36,17 @@ class DlnaDmrData:
     event_notifier_refs: defaultdict[EventListenAddr, int]
     stop_listener_remove: CALLBACK_TYPE | None = None
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize global data."""
         self.lock = asyncio.Lock()
-        session = aiohttp_client.async_get_clientsession(hass, verify_ssl=False)
+        session = aiohttp_client.async_get_clientsession(menuai, verify_ssl=False)
         self.requester = AiohttpSessionRequester(session, with_sleep=True)
         self.upnp_factory = UpnpFactory(self.requester, non_strict=True)
         self.event_notifiers = {}
         self.event_notifier_refs = defaultdict(int)
 
     async def async_cleanup_event_notifiers(self, event: Event) -> None:
-        """Clean up resources when Home Assistant is stopped."""
+        """Clean up resources when MenuAI is stopped."""
         LOGGER.debug("Cleaning resources in DlnaDmrData")
         async with self.lock:
             tasks = (
@@ -57,7 +57,7 @@ class DlnaDmrData:
             self.event_notifier_refs = defaultdict(int)
 
     async def async_get_event_notifier(
-        self, listen_addr: EventListenAddr, hass: HomeAssistant
+        self, listen_addr: EventListenAddr, menuai: menuai
     ) -> UpnpEventHandler:
         """Return existing event notifier for the listen_addr, or create one.
 
@@ -69,8 +69,8 @@ class DlnaDmrData:
         async with self.lock:
             # Stop all servers when HA shuts down, to release resources on devices
             if not self.stop_listener_remove:
-                self.stop_listener_remove = hass.bus.async_listen_once(
-                    EVENT_HOMEASSISTANT_STOP, self.async_cleanup_event_notifiers
+                self.stop_listener_remove = menuai.bus.async_listen_once(
+                    EVENT_menuai_STOP, self.async_cleanup_event_notifiers
                 )
 
             # Always increment the reference counter, for existing or new event handlers
@@ -86,7 +86,7 @@ class DlnaDmrData:
                 requester=self.requester,
                 source=source,
                 callback_url=listen_addr.callback_url,
-                loop=hass.loop,
+                loop=menuai.loop,
             )
             await server.async_start_server()
             LOGGER.debug("Started event handler at %s", server.callback_url)
@@ -117,11 +117,11 @@ class DlnaDmrData:
                 self.stop_listener_remove = None
 
 
-def get_domain_data(hass: HomeAssistant) -> DlnaDmrData:
+def get_domain_data(menuai: menuai) -> DlnaDmrData:
     """Obtain this integration's domain data, creating it if needed."""
-    if DOMAIN in hass.data:
-        return cast(DlnaDmrData, hass.data[DOMAIN])
+    if DOMAIN in menuai.data:
+        return cast(DlnaDmrData, menuai.data[DOMAIN])
 
-    data = DlnaDmrData(hass)
-    hass.data[DOMAIN] = data
+    data = DlnaDmrData(menuai)
+    menuai.data[DOMAIN] = data
     return data

@@ -4,7 +4,7 @@ from datetime import timedelta
 import logging
 from typing import Final
 
-from homeassistant.components.weather import DOMAIN as WEATHER_DOMAIN
+from menuai.components.weather import DOMAIN as WEATHER_DOMAIN
 
 ATTR_SMHI_THUNDER_PROBABILITY: Final = "thunder_probability"
 

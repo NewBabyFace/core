@@ -2,9 +2,9 @@
 
 from pykoplenti import SettingsData
 
-from homeassistant.components.diagnostics import REDACTED
-from homeassistant.components.kostal_plenticore.coordinator import Plenticore
-from homeassistant.core import HomeAssistant
+from menuai.components.diagnostics import REDACTED
+from menuai.components.kostal_plenticore.coordinator import Plenticore
+from menuai.core import menuai
 
 from tests.common import ANY, MockConfigEntry
 from tests.components.diagnostics import get_diagnostics_for_config_entry
@@ -12,8 +12,8 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_entry_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     mock_plenticore: Plenticore,
     init_integration: MockConfigEntry,
 ) -> None:
@@ -39,7 +39,7 @@ async def test_entry_diagnostics(
     }
 
     assert await get_diagnostics_for_config_entry(
-        hass, hass_client, init_integration
+        menuai, menuai_client, init_integration
     ) == {
         "config_entry": {
             "entry_id": "2ab8dd92a62787ddfe213a67e09406bd",

@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from homeassistant.components.device_tracker import TrackerEntity
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.device_tracker import TrackerEntity
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import IturanConfigEntry
 from .coordinator import IturanDataUpdateCoordinator
@@ -12,7 +12,7 @@ from .entity import IturanBaseEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: IturanConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

@@ -22,16 +22,16 @@ from habiticalib import (
     UserData,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_NAME
+from menuai.core import menuai
+from menuai.exceptions import (
     ConfigEntryAuthFailed,
     ConfigEntryNotReady,
-    HomeAssistantError,
+    menuaiError,
 )
-from homeassistant.helpers.debounce import Debouncer
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.helpers.debounce import Debouncer
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN
 
@@ -55,17 +55,17 @@ class HabiticaDataUpdateCoordinator(DataUpdateCoordinator[HabiticaData]):
     config_entry: HabiticaConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: HabiticaConfigEntry, habitica: Habitica
+        self, menuai: menuai, config_entry: HabiticaConfigEntry, habitica: Habitica
     ) -> None:
         """Initialize the Habitica data coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
             update_interval=timedelta(seconds=60),
             request_refresh_debouncer=Debouncer(
-                hass,
+                menuai,
                 _LOGGER,
                 cooldown=5,
                 immediate=False,
@@ -107,7 +107,7 @@ class HabiticaDataUpdateCoordinator(DataUpdateCoordinator[HabiticaData]):
             ) from e
 
         if not self.config_entry.data.get(CONF_NAME):
-            self.hass.config_entries.async_update_entry(
+            self.menuai.config_entries.async_update_entry(
                 self.config_entry,
                 data={**self.config_entry.data, CONF_NAME: user.data.profile.name},
             )
@@ -145,19 +145,19 @@ class HabiticaDataUpdateCoordinator(DataUpdateCoordinator[HabiticaData]):
         try:
             await func(self)
         except TooManyRequestsError as e:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="setup_rate_limit_exception",
                 translation_placeholders={"retry_after": str(e.retry_after)},
             ) from e
         except HabiticaException as e:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="service_call_exception",
                 translation_placeholders={"reason": e.error.message},
             ) from e
         except ClientError as e:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="service_call_exception",
                 translation_placeholders={"reason": str(e)},

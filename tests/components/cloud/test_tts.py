@@ -6,37 +6,37 @@ from http import HTTPStatus
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from hass_nabucasa.voice import VoiceError, VoiceTokenError
-from hass_nabucasa.voice_data import TTS_VOICES
+from menuai_nabucasa.voice import VoiceError, VoiceTokenError
+from menuai_nabucasa.voice_data import TTS_VOICES
 import pytest
 import voluptuous as vol
 
-from homeassistant.components.assist_pipeline.pipeline import STORAGE_KEY
-from homeassistant.components.cloud.const import DEFAULT_TTS_DEFAULT_VOICE, DOMAIN
-from homeassistant.components.cloud.tts import (
+from menuai.components.assist_pipeline.pipeline import STORAGE_KEY
+from menuai.components.cloud.const import DEFAULT_TTS_DEFAULT_VOICE, DOMAIN
+from menuai.components.cloud.tts import (
     DEFAULT_VOICES,
     PLATFORM_SCHEMA,
     SUPPORT_LANGUAGES,
     Voice,
 )
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     ATTR_MEDIA_CONTENT_ID,
     DOMAIN as DOMAIN_MP,
     SERVICE_PLAY_MEDIA,
 )
-from homeassistant.components.tts import (
+from menuai.components.tts import (
     ATTR_LANGUAGE,
     ATTR_MEDIA_PLAYER_ENTITY_ID,
     ATTR_MESSAGE,
     DOMAIN as TTS_DOMAIN,
     get_engine_instance,
 )
-from homeassistant.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
-from homeassistant.core_config import async_process_ha_core_config
-from homeassistant.helpers import issue_registry as ir
-from homeassistant.helpers.entity_registry import EntityRegistry
-from homeassistant.setup import async_setup_component
+from menuai.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE, STATE_UNKNOWN
+from menuai.core import menuai
+from menuai.core_config import async_process_ha_core_config
+from menuai.helpers import issue_registry as ir
+from menuai.helpers.entity_registry import EntityRegistry
+from menuai.setup import async_setup_component
 
 from . import PIPELINE_DATA
 
@@ -47,16 +47,16 @@ from tests.typing import ClientSessionGenerator
 
 @pytest.fixture(autouse=True)
 async def delay_save_fixture() -> AsyncGenerator[None]:
-    """Load the homeassistant integration."""
-    with patch("homeassistant.helpers.collection.SAVE_DELAY", new=0):
+    """Load the menuai integration."""
+    with patch("menuai.helpers.collection.SAVE_DELAY", new=0):
         yield
 
 
 @pytest.fixture(autouse=True)
-async def internal_url_mock(hass: HomeAssistant) -> None:
+async def internal_url_mock(menuai: menuai) -> None:
     """Mock internal URL of the instance."""
     await async_process_ha_core_config(
-        hass,
+        menuai,
         {"internal_url": "http://example.local:8123"},
     )
 
@@ -125,26 +125,26 @@ def test_schema() -> None:
     ],
 )
 async def test_prefs_default_voice(
-    hass: HomeAssistant,
+    menuai: menuai,
     cloud: MagicMock,
     set_cloud_prefs: Callable[[dict[str, Any]], Coroutine[Any, Any, None]],
     engine_id: str,
     platform_config: dict[str, Any] | None,
 ) -> None:
     """Test cloud provider uses the preferences."""
-    assert await async_setup_component(hass, "homeassistant", {})
-    assert await async_setup_component(hass, TTS_DOMAIN, {TTS_DOMAIN: platform_config})
-    await hass.async_block_till_done()
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "menuai", {})
+    assert await async_setup_component(menuai, TTS_DOMAIN, {TTS_DOMAIN: platform_config})
+    await menuai.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {}})
+    await menuai.async_block_till_done()
 
     assert cloud.client.prefs.tts_default_voice == ("en-US", "JennyNeural")
 
     on_start_callback = cloud.register_on_start.call_args[0][0]
     await on_start_callback()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    engine = get_engine_instance(hass, engine_id)
+    engine = get_engine_instance(menuai, engine_id)
 
     assert engine is not None
     # The platform config provider will be overridden by the discovery info provider.
@@ -152,22 +152,22 @@ async def test_prefs_default_voice(
     assert engine.default_options == {"audio_output": "mp3"}
 
     await set_cloud_prefs({"tts_default_voice": ("nl-NL", "MaartenNeural")})
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert engine.default_language == "nl-NL"
     assert engine.default_options == {"audio_output": "mp3"}
 
 
 async def test_deprecated_platform_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     issue_registry: ir.IssueRegistry,
     cloud: MagicMock,
 ) -> None:
     """Test cloud provider uses the preferences."""
     assert await async_setup_component(
-        hass, TTS_DOMAIN, {TTS_DOMAIN: {"platform": DOMAIN}}
+        menuai, TTS_DOMAIN, {TTS_DOMAIN: {"platform": DOMAIN}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     issue = issue_registry.async_get_issue(DOMAIN, "deprecated_tts_platform_config")
     assert issue is not None
@@ -186,18 +186,18 @@ async def test_deprecated_platform_config(
     ],
 )
 async def test_provider_properties(
-    hass: HomeAssistant,
+    menuai: menuai,
     cloud: MagicMock,
     engine_id: str,
 ) -> None:
     """Test cloud provider."""
-    assert await async_setup_component(hass, "homeassistant", {})
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "menuai", {})
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {}})
+    await menuai.async_block_till_done()
     on_start_callback = cloud.register_on_start.call_args[0][0]
     await on_start_callback()
 
-    engine = get_engine_instance(hass, engine_id)
+    engine = get_engine_instance(menuai, engine_id)
 
     assert engine is not None
     assert engine.supported_options == ["gender", "voice", "audio_output"]
@@ -225,8 +225,8 @@ async def test_provider_properties(
     ],
 )
 async def test_get_tts_audio(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     cloud: MagicMock,
     data: dict[str, Any],
     expected_url_suffix: str,
@@ -239,15 +239,15 @@ async def test_get_tts_audio(
         side_effect=mock_process_tts_side_effect,
     )
     cloud.voice.process_tts = mock_process_tts
-    assert await async_setup_component(hass, "homeassistant", {})
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "menuai", {})
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {}})
+    await menuai.async_block_till_done()
     on_start_callback = cloud.register_on_start.call_args[0][0]
     await on_start_callback()
-    client = await hass_client()
+    client = await menuai_client()
 
     with patch(
-        "homeassistant.components.tts.secrets.token_urlsafe", return_value="test_token"
+        "menuai.components.tts.secrets.token_urlsafe", return_value="test_token"
     ):
         url = "/api/tts_get_url"
         data |= {"message": "There is someone at the door."}
@@ -260,7 +260,7 @@ async def test_get_tts_audio(
             "url": ("http://example.local:8123/api/tts_proxy/test_token.mp3"),
             "path": ("/api/tts_proxy/test_token.mp3"),
         }
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert mock_process_tts.call_count == 1
     assert mock_process_tts.call_args is not None
@@ -279,8 +279,8 @@ async def test_get_tts_audio(
     ],
 )
 async def test_get_tts_audio_logged_out(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     cloud: MagicMock,
     data: dict[str, Any],
     expected_url_suffix: str,
@@ -290,13 +290,13 @@ async def test_get_tts_audio_logged_out(
         side_effect=VoiceTokenError("No token!"),
     )
     cloud.voice.process_tts = mock_process_tts
-    assert await async_setup_component(hass, "homeassistant", {})
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
-    await hass.async_block_till_done()
-    client = await hass_client()
+    assert await async_setup_component(menuai, "menuai", {})
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {}})
+    await menuai.async_block_till_done()
+    client = await menuai_client()
 
     with patch(
-        "homeassistant.components.tts.secrets.token_urlsafe", return_value="test_token"
+        "menuai.components.tts.secrets.token_urlsafe", return_value="test_token"
     ):
         url = "/api/tts_get_url"
         data |= {"message": "There is someone at the door."}
@@ -309,7 +309,7 @@ async def test_get_tts_audio_logged_out(
             "url": ("http://example.local:8123/api/tts_proxy/test_token.mp3"),
             "path": ("/api/tts_proxy/test_token.mp3"),
         }
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert mock_process_tts.call_count == 1
     assert mock_process_tts.call_args is not None
@@ -328,8 +328,8 @@ async def test_get_tts_audio_logged_out(
     ],
 )
 async def test_tts_entity(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     entity_registry: EntityRegistry,
     cloud: MagicMock,
     mock_process_tts_return_value: bytes | None,
@@ -341,20 +341,20 @@ async def test_tts_entity(
         side_effect=mock_process_tts_side_effect,
     )
     cloud.voice.process_tts = mock_process_tts
-    assert await async_setup_component(hass, "homeassistant", {})
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "menuai", {})
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {}})
+    await menuai.async_block_till_done()
     on_start_callback = cloud.register_on_start.call_args[0][0]
     await on_start_callback()
-    client = await hass_client()
+    client = await menuai_client()
     entity_id = "tts.home_assistant_cloud"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_UNKNOWN
 
     with patch(
-        "homeassistant.components.tts.secrets.token_urlsafe", return_value="test_token"
+        "menuai.components.tts.secrets.token_urlsafe", return_value="test_token"
     ):
         url = "/api/tts_get_url"
         data = {
@@ -370,7 +370,7 @@ async def test_tts_entity(
             "url": ("http://example.local:8123/api/tts_proxy/test_token.mp3"),
             "path": ("/api/tts_proxy/test_token.mp3"),
         }
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert mock_process_tts.call_count == 1
     assert mock_process_tts.call_args is not None
@@ -380,23 +380,23 @@ async def test_tts_entity(
     assert mock_process_tts.call_args.kwargs["voice"] == "JennyNeural"
     assert mock_process_tts.call_args.kwargs["output"] == "mp3"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN)
 
     # Test removing the entity
     entity_registry.async_remove(entity_id)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state is None
 
 
 async def test_migrating_pipelines(
-    hass: HomeAssistant,
+    menuai: menuai,
     cloud: MagicMock,
-    hass_client: ClientSessionGenerator,
-    hass_storage: dict[str, Any],
+    menuai_client: ClientSessionGenerator,
+    menuai_storage: dict[str, Any],
 ) -> None:
     """Test migrating pipelines when cloud tts entity is added."""
     entity_id = "tts.home_assistant_cloud"
@@ -404,58 +404,58 @@ async def test_migrating_pipelines(
         return_value=b"",
     )
     cloud.voice.process_tts = mock_process_tts
-    hass_storage[STORAGE_KEY] = {
+    menuai_storage[STORAGE_KEY] = {
         "version": 1,
         "minor_version": 1,
         "key": "assist_pipeline.pipelines",
         "data": deepcopy(PIPELINE_DATA),
     }
 
-    assert await async_setup_component(hass, "assist_pipeline", {})
-    assert await async_setup_component(hass, DOMAIN, {"cloud": {}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "assist_pipeline", {})
+    assert await async_setup_component(menuai, DOMAIN, {"cloud": {}})
+    await menuai.async_block_till_done()
 
     await cloud.login("test-user", "test-pass")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_UNKNOWN
 
     # The stt/tts engines should have been updated to the new cloud engine ids.
     assert (
-        hass_storage[STORAGE_KEY]["data"]["items"][0]["stt_engine"]
+        menuai_storage[STORAGE_KEY]["data"]["items"][0]["stt_engine"]
         == "stt.home_assistant_cloud"
     )
-    assert hass_storage[STORAGE_KEY]["data"]["items"][0]["tts_engine"] == entity_id
+    assert menuai_storage[STORAGE_KEY]["data"]["items"][0]["tts_engine"] == entity_id
 
     # The other items should stay the same.
     assert (
-        hass_storage[STORAGE_KEY]["data"]["items"][0]["conversation_engine"]
+        menuai_storage[STORAGE_KEY]["data"]["items"][0]["conversation_engine"]
         == "conversation_engine_1"
     )
     assert (
-        hass_storage[STORAGE_KEY]["data"]["items"][0]["conversation_language"]
+        menuai_storage[STORAGE_KEY]["data"]["items"][0]["conversation_language"]
         == "language_1"
     )
     assert (
-        hass_storage[STORAGE_KEY]["data"]["items"][0]["id"]
+        menuai_storage[STORAGE_KEY]["data"]["items"][0]["id"]
         == "01GX8ZWBAQYWNB1XV3EXEZ75DY"
     )
-    assert hass_storage[STORAGE_KEY]["data"]["items"][0]["language"] == "language_1"
+    assert menuai_storage[STORAGE_KEY]["data"]["items"][0]["language"] == "language_1"
     assert (
-        hass_storage[STORAGE_KEY]["data"]["items"][0]["name"] == "Home Assistant Cloud"
+        menuai_storage[STORAGE_KEY]["data"]["items"][0]["name"] == "MenuAI Cloud"
     )
-    assert hass_storage[STORAGE_KEY]["data"]["items"][0]["stt_language"] == "language_1"
-    assert hass_storage[STORAGE_KEY]["data"]["items"][0]["tts_language"] == "language_1"
+    assert menuai_storage[STORAGE_KEY]["data"]["items"][0]["stt_language"] == "language_1"
+    assert menuai_storage[STORAGE_KEY]["data"]["items"][0]["tts_language"] == "language_1"
     assert (
-        hass_storage[STORAGE_KEY]["data"]["items"][0]["tts_voice"]
+        menuai_storage[STORAGE_KEY]["data"]["items"][0]["tts_voice"]
         == "Arnold Schwarzenegger"
     )
-    assert hass_storage[STORAGE_KEY]["data"]["items"][0]["wake_word_entity"] is None
-    assert hass_storage[STORAGE_KEY]["data"]["items"][0]["wake_word_id"] is None
-    assert hass_storage[STORAGE_KEY]["data"]["items"][1] == PIPELINE_DATA["items"][1]
-    assert hass_storage[STORAGE_KEY]["data"]["items"][2] == PIPELINE_DATA["items"][2]
+    assert menuai_storage[STORAGE_KEY]["data"]["items"][0]["wake_word_entity"] is None
+    assert menuai_storage[STORAGE_KEY]["data"]["items"][0]["wake_word_id"] is None
+    assert menuai_storage[STORAGE_KEY]["data"]["items"][1] == PIPELINE_DATA["items"][1]
+    assert menuai_storage[STORAGE_KEY]["data"]["items"][2] == PIPELINE_DATA["items"][2]
 
 
 @pytest.mark.parametrize(
@@ -467,10 +467,10 @@ async def test_migrating_pipelines(
     ],
 )
 async def test_deprecated_voice(
-    hass: HomeAssistant,
+    menuai: menuai,
     issue_registry: ir.IssueRegistry,
     cloud: MagicMock,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     data: dict[str, Any],
     expected_url_suffix: str,
 ) -> None:
@@ -483,14 +483,14 @@ async def test_deprecated_voice(
     )
     cloud.voice.process_tts = mock_process_tts
 
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {}})
+    await menuai.async_block_till_done()
     await cloud.login("test-user", "test-pass")
-    client = await hass_client()
+    client = await menuai_client()
 
     # Test with non deprecated voice.
     with patch(
-        "homeassistant.components.tts.secrets.token_urlsafe", return_value="test_token"
+        "menuai.components.tts.secrets.token_urlsafe", return_value="test_token"
     ):
         url = "/api/tts_get_url"
         data |= {
@@ -507,7 +507,7 @@ async def test_deprecated_voice(
             "url": ("http://example.local:8123/api/tts_proxy/test_token.mp3"),
             "path": ("/api/tts_proxy/test_token.mp3"),
         }
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert mock_process_tts.call_count == 1
     assert mock_process_tts.call_args is not None
@@ -526,7 +526,7 @@ async def test_deprecated_voice(
     data["options"] = {"voice": deprecated_voice}
 
     with patch(
-        "homeassistant.components.tts.secrets.token_urlsafe", return_value="test_token"
+        "menuai.components.tts.secrets.token_urlsafe", return_value="test_token"
     ):
         req = await client.post(url, json=data)
         assert req.status == HTTPStatus.OK
@@ -536,7 +536,7 @@ async def test_deprecated_voice(
             "url": ("http://example.local:8123/api/tts_proxy/test_token.mp3"),
             "path": ("/api/tts_proxy/test_token.mp3"),
         }
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     issue_id = f"deprecated_voice_{deprecated_voice}"
 
@@ -609,10 +609,10 @@ async def test_deprecated_voice(
     ],
 )
 async def test_deprecated_gender(
-    hass: HomeAssistant,
+    menuai: menuai,
     issue_registry: ir.IssueRegistry,
     cloud: MagicMock,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     data: dict[str, Any],
     expected_url_suffix: str,
 ) -> None:
@@ -624,14 +624,14 @@ async def test_deprecated_gender(
     )
     cloud.voice.process_tts = mock_process_tts
 
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {}})
+    await menuai.async_block_till_done()
     await cloud.login("test-user", "test-pass")
-    client = await hass_client()
+    client = await menuai_client()
 
     # Test without deprecated gender option.
     with patch(
-        "homeassistant.components.tts.secrets.token_urlsafe", return_value="test_token"
+        "menuai.components.tts.secrets.token_urlsafe", return_value="test_token"
     ):
         url = "/api/tts_get_url"
         data |= {
@@ -647,7 +647,7 @@ async def test_deprecated_gender(
             "url": ("http://example.local:8123/api/tts_proxy/test_token.mp3"),
             "path": ("/api/tts_proxy/test_token.mp3"),
         }
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert mock_process_tts.call_count == 1
     assert mock_process_tts.call_args is not None
@@ -663,7 +663,7 @@ async def test_deprecated_gender(
     data["options"] = {"gender": gender_option}
 
     with patch(
-        "homeassistant.components.tts.secrets.token_urlsafe", return_value="test_token"
+        "menuai.components.tts.secrets.token_urlsafe", return_value="test_token"
     ):
         req = await client.post(url, json=data)
         assert req.status == HTTPStatus.OK
@@ -673,7 +673,7 @@ async def test_deprecated_gender(
             "url": ("http://example.local:8123/api/tts_proxy/test_token.mp3"),
             "path": ("/api/tts_proxy/test_token.mp3"),
         }
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     issue_id = "deprecated_gender"
 
@@ -692,7 +692,7 @@ async def test_deprecated_gender(
     assert issue.severity == ir.IssueSeverity.WARNING
     assert issue.translation_key == "deprecated_gender"
     assert issue.translation_placeholders == {
-        "integration_name": "Home Assistant Cloud",
+        "integration_name": "MenuAI Cloud",
         "deprecated_option": "gender",
         "replacement_option": "voice",
     }
@@ -714,7 +714,7 @@ async def test_deprecated_gender(
         "data_schema": [],
         "errors": None,
         "description_placeholders": {
-            "integration_name": "Home Assistant Cloud",
+            "integration_name": "MenuAI Cloud",
             "deprecated_option": "gender",
             "replacement_option": "voice",
         },
@@ -762,23 +762,23 @@ async def test_deprecated_gender(
     ],
 )
 async def test_tts_services(
-    hass: HomeAssistant,
+    menuai: menuai,
     cloud: MagicMock,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     service: str,
     service_data: dict[str, Any],
 ) -> None:
     """Test tts services."""
-    calls = async_mock_service(hass, DOMAIN_MP, SERVICE_PLAY_MEDIA)
+    calls = async_mock_service(menuai, DOMAIN_MP, SERVICE_PLAY_MEDIA)
     mock_process_tts = AsyncMock(return_value=b"")
     cloud.voice.process_tts = mock_process_tts
 
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {}})
+    await menuai.async_block_till_done()
     await cloud.login("test-user", "test-pass")
-    client = await hass_client()
+    client = await menuai_client()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         domain=TTS_DOMAIN,
         service=service,
         service_data=service_data,
@@ -787,11 +787,11 @@ async def test_tts_services(
 
     assert len(calls) == 1
 
-    url = await get_media_source_url(hass, calls[0].data[ATTR_MEDIA_CONTENT_ID])
-    await hass.async_block_till_done()
+    url = await get_media_source_url(menuai, calls[0].data[ATTR_MEDIA_CONTENT_ID])
+    await menuai.async_block_till_done()
     response = await client.get(url)
     assert response.status == HTTPStatus.OK
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert mock_process_tts.call_count == 1
     assert mock_process_tts.call_args is not None

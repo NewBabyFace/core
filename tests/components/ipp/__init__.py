@@ -2,9 +2,9 @@
 
 from ipaddress import ip_address
 
-from homeassistant.components.ipp.const import CONF_BASE_PATH
-from homeassistant.const import CONF_HOST, CONF_PORT, CONF_SSL, CONF_VERIFY_SSL
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.components.ipp.const import CONF_BASE_PATH
+from menuai.const import CONF_HOST, CONF_PORT, CONF_SSL, CONF_VERIFY_SSL
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 ATTR_HOSTNAME = "hostname"
 ATTR_PROPERTIES = "properties"

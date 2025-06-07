@@ -10,17 +10,17 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 from yalesmartalarmclient import YaleSmartAlarmData
 
-from homeassistant.components.alarm_control_panel import (
+from menuai.components.alarm_control_panel import (
     DOMAIN as ALARM_CONTROL_PANEL_DOMAIN,
     SERVICE_ALARM_ARM_AWAY,
     SERVICE_ALARM_ARM_HOME,
     SERVICE_ALARM_DISARM,
     AlarmControlPanelState,
 )
-from homeassistant.const import ATTR_CODE, ATTR_ENTITY_ID, STATE_UNAVAILABLE, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_CODE, ATTR_ENTITY_ID, STATE_UNAVAILABLE, Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry, async_fire_time_changed, snapshot_platform
 
@@ -30,14 +30,14 @@ from tests.common import MockConfigEntry, async_fire_time_changed, snapshot_plat
     [[Platform.ALARM_CONTROL_PANEL]],
 )
 async def test_alarm_control_panel(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_config_entry: tuple[MockConfigEntry, Mock],
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test the Yale Smart Alarm alarm_control_panel."""
     entry = load_config_entry[0]
-    await snapshot_platform(hass, entity_registry, snapshot, entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, entry.entry_id)
 
 
 @pytest.mark.parametrize(
@@ -45,7 +45,7 @@ async def test_alarm_control_panel(
     [[Platform.ALARM_CONTROL_PANEL]],
 )
 async def test_alarm_control_panel_service_calls(
-    hass: HomeAssistant,
+    menuai: menuai,
     get_data: YaleSmartAlarmData,
     load_config_entry: tuple[MockConfigEntry, Mock],
 ) -> None:
@@ -61,64 +61,64 @@ async def test_alarm_control_panel_service_calls(
     client.arm_partial = Mock(return_value=True)
     client.arm_full = Mock(return_value=True)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         ALARM_CONTROL_PANEL_DOMAIN,
         SERVICE_ALARM_DISARM,
         {ATTR_ENTITY_ID: "alarm_control_panel.test_username", ATTR_CODE: "123456"},
         blocking=True,
     )
     client.disarm.assert_called_once()
-    state = hass.states.get("alarm_control_panel.test_username")
+    state = menuai.states.get("alarm_control_panel.test_username")
     assert state.state == AlarmControlPanelState.DISARMED
-    await hass.services.async_call(
+    await menuai.services.async_call(
         ALARM_CONTROL_PANEL_DOMAIN,
         SERVICE_ALARM_ARM_HOME,
         {ATTR_ENTITY_ID: "alarm_control_panel.test_username", ATTR_CODE: "123456"},
         blocking=True,
     )
     client.arm_partial.assert_called_once()
-    state = hass.states.get("alarm_control_panel.test_username")
+    state = menuai.states.get("alarm_control_panel.test_username")
     assert state.state == AlarmControlPanelState.ARMED_HOME
-    await hass.services.async_call(
+    await menuai.services.async_call(
         ALARM_CONTROL_PANEL_DOMAIN,
         SERVICE_ALARM_ARM_AWAY,
         {ATTR_ENTITY_ID: "alarm_control_panel.test_username", ATTR_CODE: "123456"},
         blocking=True,
     )
     client.arm_full.assert_called_once()
-    state = hass.states.get("alarm_control_panel.test_username")
+    state = menuai.states.get("alarm_control_panel.test_username")
     assert state.state == AlarmControlPanelState.ARMED_AWAY
 
     client.disarm = Mock(side_effect=ConnectionError("no connection"))
 
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match="Could not set alarm for test-username: no connection",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             ALARM_CONTROL_PANEL_DOMAIN,
             SERVICE_ALARM_DISARM,
             {ATTR_ENTITY_ID: "alarm_control_panel.test_username", ATTR_CODE: "123456"},
             blocking=True,
         )
 
-    state = hass.states.get("alarm_control_panel.test_username")
+    state = menuai.states.get("alarm_control_panel.test_username")
     assert state.state == AlarmControlPanelState.ARMED_AWAY
 
     client.disarm = Mock(return_value=False)
 
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match="Could not change alarm, check system ready for arming",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             ALARM_CONTROL_PANEL_DOMAIN,
             SERVICE_ALARM_DISARM,
             {ATTR_ENTITY_ID: "alarm_control_panel.test_username", ATTR_CODE: "123456"},
             blocking=True,
         )
 
-    state = hass.states.get("alarm_control_panel.test_username")
+    state = menuai.states.get("alarm_control_panel.test_username")
     assert state.state == AlarmControlPanelState.ARMED_AWAY
 
 
@@ -127,7 +127,7 @@ async def test_alarm_control_panel_service_calls(
     [[Platform.ALARM_CONTROL_PANEL]],
 )
 async def test_alarm_control_panel_not_available(
-    hass: HomeAssistant,
+    menuai: menuai,
     get_data: YaleSmartAlarmData,
     load_config_entry: tuple[MockConfigEntry, Mock],
     freezer: FrozenDateTimeFactory,
@@ -137,12 +137,12 @@ async def test_alarm_control_panel_not_available(
     client = load_config_entry[1]
     client.get_armed_status = Mock(return_value=None)
 
-    state = hass.states.get("alarm_control_panel.test_username")
+    state = menuai.states.get("alarm_control_panel.test_username")
     assert state.state == AlarmControlPanelState.ARMED_AWAY
 
     freezer.tick(3600)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get("alarm_control_panel.test_username")
+    state = menuai.states.get("alarm_control_panel.test_username")
     assert state.state == STATE_UNAVAILABLE

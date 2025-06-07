@@ -6,11 +6,11 @@ from aiohttp import ClientError
 from aioimmich.exceptions import ImmichUnauthorizedError
 import pytest
 
-from homeassistant.components.immich.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_API_KEY, CONF_URL
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.immich.const import DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_API_KEY, CONF_URL
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from .const import MOCK_CONFIG_ENTRY_DATA, MOCK_USER_DATA
 
@@ -18,16 +18,16 @@ from tests.common import MockConfigEntry
 
 
 async def test_step_user(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock, mock_immich: Mock
+    menuai: menuai, mock_setup_entry: AsyncMock, mock_immich: Mock
 ) -> None:
     """Test a user initiated config flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         MOCK_USER_DATA,
     )
@@ -58,14 +58,14 @@ async def test_step_user(
     ],
 )
 async def test_step_user_error_handling(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_immich: Mock,
     exception: Exception,
     error: str,
 ) -> None:
     """Test a user initiated config flow with errors."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -73,7 +73,7 @@ async def test_step_user_error_handling(
 
     mock_immich.users.async_get_my_user.side_effect = exception
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         MOCK_USER_DATA,
     )
@@ -83,7 +83,7 @@ async def test_step_user_error_handling(
 
     mock_immich.users.async_get_my_user.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         MOCK_USER_DATA,
     )
@@ -92,16 +92,16 @@ async def test_step_user_error_handling(
 
 
 async def test_step_user_invalid_url(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock, mock_immich: Mock
+    menuai: menuai, mock_setup_entry: AsyncMock, mock_immich: Mock
 ) -> None:
     """Test a user initiated config flow with errors."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {**MOCK_USER_DATA, CONF_URL: "hts://invalid"},
     )
@@ -109,7 +109,7 @@ async def test_step_user_invalid_url(
     assert result["step_id"] == "user"
     assert result["errors"] == {CONF_URL: "invalid_url"}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         MOCK_USER_DATA,
     )
@@ -118,18 +118,18 @@ async def test_step_user_invalid_url(
 
 
 async def test_user_already_configured(
-    hass: HomeAssistant, mock_immich: Mock, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_immich: Mock, mock_config_entry: MockConfigEntry
 ) -> None:
     """Test starting a flow by user when already configured."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         MOCK_USER_DATA,
     )
@@ -138,18 +138,18 @@ async def test_user_already_configured(
 
 
 async def test_reauth_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_immich: Mock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test reauthentication flow."""
-    mock_config_entry.add_to_hass(hass)
-    result = await mock_config_entry.start_reauth_flow(hass)
+    mock_config_entry.add_to_menuai(menuai)
+    result = await mock_config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_API_KEY: "other_fake_api_key",
@@ -180,7 +180,7 @@ async def test_reauth_flow(
     ],
 )
 async def test_reauth_flow_error_handling(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_immich: Mock,
     mock_config_entry: MockConfigEntry,
@@ -188,14 +188,14 @@ async def test_reauth_flow_error_handling(
     error: str,
 ) -> None:
     """Test reauthentication flow with errors."""
-    mock_config_entry.add_to_hass(hass)
-    result = await mock_config_entry.start_reauth_flow(hass)
+    mock_config_entry.add_to_menuai(menuai)
+    result = await mock_config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
     mock_immich.users.async_get_my_user.side_effect = exception
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_API_KEY: "other_fake_api_key",
@@ -207,7 +207,7 @@ async def test_reauth_flow_error_handling(
 
     mock_immich.users.async_get_my_user.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_API_KEY: "other_fake_api_key",
@@ -221,19 +221,19 @@ async def test_reauth_flow_error_handling(
 
 
 async def test_reauth_flow_mismatch(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_immich: Mock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test reauthentication flow with mis-matching unique id."""
-    mock_config_entry.add_to_hass(hass)
-    result = await mock_config_entry.start_reauth_flow(hass)
+    mock_config_entry.add_to_menuai(menuai)
+    result = await mock_config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
     mock_immich.users.async_get_my_user.return_value.user_id = "other_user_id"
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_API_KEY: "other_fake_api_key",

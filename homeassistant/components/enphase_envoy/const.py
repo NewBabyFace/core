@@ -2,7 +2,7 @@
 
 from pyenphase import EnvoyAuthenticationError, EnvoyAuthenticationRequired
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 DOMAIN = "enphase_envoy"
 

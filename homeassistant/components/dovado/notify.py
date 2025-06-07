@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import logging
 
-from homeassistant.components.notify import ATTR_TARGET, BaseNotificationService
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.notify import ATTR_TARGET, BaseNotificationService
+from menuai.core import menuai
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import DOMAIN
 
@@ -14,12 +14,12 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def get_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> DovadoSMSNotificationService:
     """Get the Dovado Router SMS notification service."""
-    return DovadoSMSNotificationService(hass.data[DOMAIN].client)
+    return DovadoSMSNotificationService(menuai.data[DOMAIN].client)
 
 
 class DovadoSMSNotificationService(BaseNotificationService):

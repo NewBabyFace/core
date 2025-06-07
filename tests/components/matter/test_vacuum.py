@@ -7,11 +7,11 @@ from matter_server.client.models.node import MatterNode
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceNotSupported
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.exceptions import ServiceNotSupported
+from menuai.helpers import entity_registry as er
+from menuai.setup import async_setup_component
 
 from .common import (
     set_node_attribute,
@@ -22,29 +22,29 @@ from .common import (
 
 @pytest.mark.usefixtures("matter_devices")
 async def test_vacuum(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test that the correct entities get created for a vacuum device."""
-    snapshot_matter_entities(hass, entity_registry, snapshot, Platform.VACUUM)
+    snapshot_matter_entities(menuai, entity_registry, snapshot, Platform.VACUUM)
 
 
 @pytest.mark.parametrize("node_fixture", ["vacuum_cleaner"])
 async def test_vacuum_actions(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     matter_node: MatterNode,
 ) -> None:
     """Test vacuum entity actions."""
     # Fetch translations
-    await async_setup_component(hass, "homeassistant", {})
+    await async_setup_component(menuai, "menuai", {})
     entity_id = "vacuum.mock_vacuum"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
 
     # test return_to_base action
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "vacuum",
         "return_to_base",
         {
@@ -62,7 +62,7 @@ async def test_vacuum_actions(
     matter_client.send_device_command.reset_mock()
 
     # test start/resume action
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "vacuum",
         "start",
         {
@@ -80,7 +80,7 @@ async def test_vacuum_actions(
     matter_client.send_device_command.reset_mock()
 
     # test pause action
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "vacuum",
         "pause",
         {
@@ -103,7 +103,7 @@ async def test_vacuum_actions(
         ServiceNotSupported,
         match="Entity vacuum.mock_vacuum does not support action vacuum.stop",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "vacuum",
             "stop",
             {
@@ -116,8 +116,8 @@ async def test_vacuum_actions(
     set_node_attribute(
         matter_node, 1, 97, 65529, [clusters.OperationalState.Commands.Stop.command_id]
     )
-    await trigger_subscription_callback(hass, matter_client)
-    await hass.services.async_call(
+    await trigger_subscription_callback(menuai, matter_client)
+    await menuai.services.async_call(
         "vacuum",
         "stop",
         {
@@ -136,49 +136,49 @@ async def test_vacuum_actions(
 
 @pytest.mark.parametrize("node_fixture", ["vacuum_cleaner"])
 async def test_vacuum_updates(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     matter_node: MatterNode,
 ) -> None:
     """Test vacuum entity updates."""
     entity_id = "vacuum.mock_vacuum"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     # confirm initial state is idle (as stored in the fixture)
     assert state.state == "idle"
 
     # confirm state is 'docked' by setting the operational state to 0x42
     set_node_attribute(matter_node, 1, 97, 4, 0x42)
-    await trigger_subscription_callback(hass, matter_client)
-    state = hass.states.get(entity_id)
+    await trigger_subscription_callback(menuai, matter_client)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == "docked"
 
     # confirm state is 'docked' by setting the operational state to 0x41
     set_node_attribute(matter_node, 1, 97, 4, 0x41)
-    await trigger_subscription_callback(hass, matter_client)
-    state = hass.states.get(entity_id)
+    await trigger_subscription_callback(menuai, matter_client)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == "docked"
 
     # confirm state is 'returning' by setting the operational state to 0x40
     set_node_attribute(matter_node, 1, 97, 4, 0x40)
-    await trigger_subscription_callback(hass, matter_client)
-    state = hass.states.get(entity_id)
+    await trigger_subscription_callback(menuai, matter_client)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == "returning"
 
     # confirm state is 'error' by setting the operational state to 0x01
     set_node_attribute(matter_node, 1, 97, 4, 0x01)
-    await trigger_subscription_callback(hass, matter_client)
-    state = hass.states.get(entity_id)
+    await trigger_subscription_callback(menuai, matter_client)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == "error"
 
     # confirm state is 'error' by setting the operational state to 0x02
     set_node_attribute(matter_node, 1, 97, 4, 0x02)
-    await trigger_subscription_callback(hass, matter_client)
-    state = hass.states.get(entity_id)
+    await trigger_subscription_callback(menuai, matter_client)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == "error"
 
@@ -187,8 +187,8 @@ async def test_vacuum_updates(
     # - the run mode is set to a mode which has cleaning tag
     set_node_attribute(matter_node, 1, 97, 4, 0)
     set_node_attribute(matter_node, 1, 84, 1, 1)
-    await trigger_subscription_callback(hass, matter_client)
-    state = hass.states.get(entity_id)
+    await trigger_subscription_callback(menuai, matter_client)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == "cleaning"
 
@@ -197,8 +197,8 @@ async def test_vacuum_updates(
     # - the run mode is set to a mode which has idle tag
     set_node_attribute(matter_node, 1, 97, 4, 0)
     set_node_attribute(matter_node, 1, 84, 1, 0)
-    await trigger_subscription_callback(hass, matter_client)
-    state = hass.states.get(entity_id)
+    await trigger_subscription_callback(menuai, matter_client)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == "idle"
 
@@ -207,7 +207,7 @@ async def test_vacuum_updates(
     # - the run mode is set to a mode which has neither cleaning or idle tag
     set_node_attribute(matter_node, 1, 97, 4, 0)
     set_node_attribute(matter_node, 1, 84, 1, 2)
-    await trigger_subscription_callback(hass, matter_client)
-    state = hass.states.get(entity_id)
+    await trigger_subscription_callback(menuai, matter_client)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == "unknown"

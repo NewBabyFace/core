@@ -5,10 +5,10 @@ from unittest.mock import AsyncMock, Mock, patch
 import aiohue.v2 as aiohue_v2
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components import hue
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai import config_entries
+from menuai.components import hue
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry, async_get_persistent_notifications
 
@@ -34,25 +34,25 @@ def mock_bridge_setup():
         yield mock_bridge.return_value
 
 
-async def test_setup_with_no_config(hass: HomeAssistant) -> None:
+async def test_setup_with_no_config(menuai: menuai) -> None:
     """Test that we do not discover anything or try to set up a bridge."""
-    assert await async_setup_component(hass, hue.DOMAIN, {}) is True
+    assert await async_setup_component(menuai, hue.DOMAIN, {}) is True
 
     # No flows started
-    assert len(hass.config_entries.flow.async_progress()) == 0
+    assert len(menuai.config_entries.flow.async_progress()) == 0
 
     # No configs stored
-    assert not hass.config_entries.async_entries(hue.DOMAIN)
+    assert not menuai.config_entries.async_entries(hue.DOMAIN)
 
 
-async def test_unload_entry(hass: HomeAssistant, mock_bridge_setup) -> None:
+async def test_unload_entry(menuai: menuai, mock_bridge_setup) -> None:
     """Test being able to unload an entry."""
     entry = MockConfigEntry(
         domain=hue.DOMAIN, data={"host": "0.0.0.0", "api_version": 2}
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    assert await async_setup_component(hass, hue.DOMAIN, {}) is True
+    assert await async_setup_component(menuai, hue.DOMAIN, {}) is True
     assert len(mock_bridge_setup.mock_calls) == 1
 
     entry.runtime_data = mock_bridge_setup
@@ -62,22 +62,22 @@ async def test_unload_entry(hass: HomeAssistant, mock_bridge_setup) -> None:
         return True
 
     mock_bridge_setup.async_reset = mock_reset
-    assert await hue.async_unload_entry(hass, entry)
+    assert await hue.async_unload_entry(menuai, entry)
     assert not hasattr(entry, "runtime_data")
 
 
-async def test_setting_unique_id(hass: HomeAssistant, mock_bridge_setup) -> None:
+async def test_setting_unique_id(menuai: menuai, mock_bridge_setup) -> None:
     """Test we set unique ID if not set yet."""
     entry = MockConfigEntry(
         domain=hue.DOMAIN, data={"host": "0.0.0.0", "api_version": 2}
     )
-    entry.add_to_hass(hass)
-    assert await async_setup_component(hass, hue.DOMAIN, {}) is True
+    entry.add_to_menuai(menuai)
+    assert await async_setup_component(menuai, hue.DOMAIN, {}) is True
     assert entry.unique_id == "mock-id"
 
 
 async def test_fixing_unique_id_no_other(
-    hass: HomeAssistant, mock_bridge_setup
+    menuai: menuai, mock_bridge_setup
 ) -> None:
     """Test we set unique ID if not set yet."""
     entry = MockConfigEntry(
@@ -85,13 +85,13 @@ async def test_fixing_unique_id_no_other(
         data={"host": "0.0.0.0", "api_version": 2},
         unique_id="invalid-id",
     )
-    entry.add_to_hass(hass)
-    assert await async_setup_component(hass, hue.DOMAIN, {}) is True
+    entry.add_to_menuai(menuai)
+    assert await async_setup_component(menuai, hue.DOMAIN, {}) is True
     assert entry.unique_id == "mock-id"
 
 
 async def test_fixing_unique_id_other_ignored(
-    hass: HomeAssistant, mock_bridge_setup
+    menuai: menuai, mock_bridge_setup
 ) -> None:
     """Test we set unique ID if not set yet."""
     MockConfigEntry(
@@ -99,21 +99,21 @@ async def test_fixing_unique_id_other_ignored(
         data={"host": "0.0.0.0", "api_version": 2},
         unique_id="mock-id",
         source=config_entries.SOURCE_IGNORE,
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
     entry = MockConfigEntry(
         domain=hue.DOMAIN,
         data={"host": "0.0.0.0", "api_version": 2},
         unique_id="invalid-id",
     )
-    entry.add_to_hass(hass)
-    assert await async_setup_component(hass, hue.DOMAIN, {}) is True
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    assert await async_setup_component(menuai, hue.DOMAIN, {}) is True
+    await menuai.async_block_till_done()
     assert entry.unique_id == "mock-id"
-    assert hass.config_entries.async_entries() == [entry]
+    assert menuai.config_entries.async_entries() == [entry]
 
 
 async def test_fixing_unique_id_other_correct(
-    hass: HomeAssistant, mock_bridge_setup
+    menuai: menuai, mock_bridge_setup
 ) -> None:
     """Test we remove config entry if another one has correct ID."""
     correct_entry = MockConfigEntry(
@@ -121,24 +121,24 @@ async def test_fixing_unique_id_other_correct(
         data={"host": "0.0.0.0", "api_version": 2},
         unique_id="mock-id",
     )
-    correct_entry.add_to_hass(hass)
+    correct_entry.add_to_menuai(menuai)
     entry = MockConfigEntry(
         domain=hue.DOMAIN,
         data={"host": "0.0.0.0", "api_version": 2},
         unique_id="invalid-id",
     )
-    entry.add_to_hass(hass)
-    assert await async_setup_component(hass, hue.DOMAIN, {}) is True
-    await hass.async_block_till_done()
-    assert hass.config_entries.async_entries() == [correct_entry]
+    entry.add_to_menuai(menuai)
+    assert await async_setup_component(menuai, hue.DOMAIN, {}) is True
+    await menuai.async_block_till_done()
+    assert menuai.config_entries.async_entries() == [correct_entry]
 
 
-async def test_security_vuln_check(hass: HomeAssistant) -> None:
+async def test_security_vuln_check(menuai: menuai) -> None:
     """Test that we report security vulnerabilities."""
     entry = MockConfigEntry(
         domain=hue.DOMAIN, data={"host": "0.0.0.0", "api_version": 1}
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     config = Mock(
         bridge_id="",
@@ -162,10 +162,10 @@ async def test_security_vuln_check(hass: HomeAssistant) -> None:
             ),
         ),
     ):
-        assert await async_setup_component(hass, "hue", {})
+        assert await async_setup_component(menuai, "hue", {})
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    notifications = async_get_persistent_notifications(hass)
+    notifications = async_get_persistent_notifications(menuai)
     assert "hue_hub_firmware" in notifications
     assert "CVE-2020-6007" in notifications["hue_hub_firmware"]["message"]

@@ -8,22 +8,22 @@ from axis.interfaces.mqtt import mqtt_json_to_event
 from axis.models.mqtt import ClientState
 from axis.stream_manager import Signal, State
 
-from homeassistant.components import mqtt
-from homeassistant.components.mqtt import DOMAIN as MQTT_DOMAIN, ReceiveMessage
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.setup import async_when_setup
+from menuai.components import mqtt
+from menuai.components.mqtt import DOMAIN as MQTT_DOMAIN, ReceiveMessage
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.setup import async_when_setup
 
 
 class AxisEventSource:
     """Manage connection to event sources from an Axis device."""
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: ConfigEntry, api: axis.AxisDevice
+        self, menuai: menuai, config_entry: ConfigEntry, api: axis.AxisDevice
     ) -> None:
         """Initialize the device."""
-        self.hass = hass
+        self.menuai = menuai
         self.config_entry = config_entry
         self.api = api
 
@@ -39,7 +39,7 @@ class AxisEventSource:
         self.api.stream.start()
 
         if self.api.vapix.mqtt.supported:
-            async_when_setup(self.hass, MQTT_DOMAIN, self._async_use_mqtt)
+            async_when_setup(self.menuai, MQTT_DOMAIN, self._async_use_mqtt)
 
     @callback
     def teardown(self) -> None:
@@ -53,7 +53,7 @@ class AxisEventSource:
             self.api.stream.connection_status_callback.clear()
         self.api.stream.stop()
 
-    async def _async_use_mqtt(self, hass: HomeAssistant, component: str) -> None:
+    async def _async_use_mqtt(self, menuai: menuai, component: str) -> None:
         """Set up to use MQTT."""
         try:
             status = await self.api.vapix.mqtt.get_client_status()
@@ -64,7 +64,7 @@ class AxisEventSource:
         if status.status.state == ClientState.ACTIVE:
             self.config_entry.async_on_unload(
                 await mqtt.async_subscribe(
-                    hass, f"{status.config.device_topic_prefix}/#", self._mqtt_message
+                    menuai, f"{status.config.device_topic_prefix}/#", self._mqtt_message
                 )
             )
 
@@ -89,4 +89,4 @@ class AxisEventSource:
 
         if self.available != (status == Signal.PLAYING):
             self.available = not self.available
-            async_dispatcher_send(self.hass, self.signal_reachable)
+            async_dispatcher_send(self.menuai, self.signal_reachable)

@@ -9,22 +9,22 @@ from glances_api.exceptions import (
 )
 import pytest
 
-from homeassistant.components.glances.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
+from menuai.components.glances.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
 
 from . import MOCK_USER_INPUT
 
 from tests.common import MockConfigEntry
 
 
-async def test_successful_config_entry(hass: HomeAssistant) -> None:
+async def test_successful_config_entry(menuai: menuai) -> None:
     """Test that Glances is configured successfully."""
 
     entry = MockConfigEntry(domain=DOMAIN, data=MOCK_USER_INPUT)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
+    await menuai.config_entries.async_setup(entry.entry_id)
 
     assert entry.state is ConfigEntryState.LOADED
 
@@ -38,7 +38,7 @@ async def test_successful_config_entry(hass: HomeAssistant) -> None:
     ],
 )
 async def test_setup_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     error: Exception,
     entry_state: ConfigEntryState,
     mock_api: MagicMock,
@@ -46,23 +46,23 @@ async def test_setup_error(
     """Test Glances failed due to api error."""
 
     entry = MockConfigEntry(domain=DOMAIN, data=MOCK_USER_INPUT)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     mock_api.return_value.get_ha_sensor_data.side_effect = error
-    await hass.config_entries.async_setup(entry.entry_id)
+    await menuai.config_entries.async_setup(entry.entry_id)
     assert entry.state is entry_state
 
 
-async def test_unload_entry(hass: HomeAssistant) -> None:
+async def test_unload_entry(menuai: menuai) -> None:
     """Test removing Glances."""
     entry = MockConfigEntry(domain=DOMAIN, data=MOCK_USER_INPUT)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.NOT_LOADED
-    assert DOMAIN not in hass.data
+    assert DOMAIN not in menuai.data

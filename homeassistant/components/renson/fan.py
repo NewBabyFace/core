@@ -15,17 +15,17 @@ from renson_endura_delta.field_enum import (
 from renson_endura_delta.renson import Level, RensonVentilation
 import voluptuous as vol
 
-from homeassistant.components.fan import FanEntity, FanEntityFeature
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import VolDictType
-from homeassistant.util.percentage import (
+from menuai.components.fan import FanEntity, FanEntityFeature
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv, entity_platform
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import VolDictType
+from menuai.util.percentage import (
     percentage_to_ranged_value,
     ranged_value_to_percentage,
 )
-from homeassistant.util.scaling import int_states_in_range
+from menuai.util.scaling import int_states_in_range
 
 from .const import DOMAIN
 from .coordinator import RensonCoordinator
@@ -83,14 +83,14 @@ SPEED_RANGE: tuple[float, float] = (1, 4)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Renson fan platform."""
 
-    api: RensonVentilation = hass.data[DOMAIN][config_entry.entry_id].api
-    coordinator: RensonCoordinator = hass.data[DOMAIN][
+    api: RensonVentilation = menuai.data[DOMAIN][config_entry.entry_id].api
+    coordinator: RensonCoordinator = menuai.data[DOMAIN][
         config_entry.entry_id
     ].coordinator
 
@@ -195,11 +195,11 @@ class RensonFan(RensonEntity, FanEntity):
         if level == Level.BREEZE.value:
             all_data = self.coordinator.data
             breeze_temp = self.api.get_field_value(all_data, BREEZE_TEMPERATURE_FIELD)
-            await self.hass.async_add_executor_job(
+            await self.menuai.async_add_executor_job(
                 self.api.set_breeze, cmd.name, breeze_temp, True
             )
         else:
-            await self.hass.async_add_executor_job(self.api.set_manual_level, cmd)
+            await self.menuai.async_add_executor_job(self.api.set_manual_level, cmd)
 
         await self.coordinator.async_request_refresh()
 
@@ -207,7 +207,7 @@ class RensonFan(RensonEntity, FanEntity):
         """Set timer level."""
         level = Level[str(timer_level).upper()]
 
-        await self.hass.async_add_executor_job(self.api.set_timer_level, level, minutes)
+        await self.menuai.async_add_executor_job(self.api.set_timer_level, level, minutes)
 
     async def set_breeze(
         self, breeze_level: str, temperature: int, activate: bool
@@ -215,7 +215,7 @@ class RensonFan(RensonEntity, FanEntity):
         """Configure breeze feature."""
         level = Level[str(breeze_level).upper()]
 
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             self.api.set_breeze, level, temperature, activate
         )
 

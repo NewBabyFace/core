@@ -4,10 +4,10 @@ from unittest.mock import AsyncMock
 
 from aiohttp.client_exceptions import ServerTimeoutError
 
-from homeassistant.components.bang_olufsen import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceRegistry
+from menuai.components.bang_olufsen import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceRegistry
 
 from .const import TEST_FRIENDLY_NAME, TEST_MODEL_BALANCE, TEST_SERIAL_NUMBER
 
@@ -15,7 +15,7 @@ from tests.common import MockConfigEntry
 
 
 async def test_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: DeviceRegistry,
     mock_config_entry: MockConfigEntry,
     mock_mozart_client: AsyncMock,
@@ -25,8 +25,8 @@ async def test_setup_entry(
     assert mock_config_entry.state == ConfigEntryState.NOT_LOADED
 
     # Load entry
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
 
     assert mock_config_entry.state == ConfigEntryState.LOADED
 
@@ -46,7 +46,7 @@ async def test_setup_entry(
 
 
 async def test_setup_entry_failed(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_mozart_client: AsyncMock,
 ) -> None:
@@ -60,8 +60,8 @@ async def test_setup_entry_failed(
     assert mock_config_entry.state == ConfigEntryState.NOT_LOADED
 
     # Load entry
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
 
     assert mock_config_entry.state == ConfigEntryState.SETUP_RETRY
 
@@ -73,7 +73,7 @@ async def test_setup_entry_failed(
 
 
 async def test_unload_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_mozart_client: AsyncMock,
 ) -> None:
@@ -82,19 +82,19 @@ async def test_unload_entry(
     # Load entry
     assert mock_config_entry.state == ConfigEntryState.NOT_LOADED
 
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
 
     assert mock_config_entry.state == ConfigEntryState.LOADED
     assert hasattr(mock_config_entry, "runtime_data")
 
     # Unload entry
-    await hass.config_entries.async_unload(mock_config_entry.entry_id)
+    await menuai.config_entries.async_unload(mock_config_entry.entry_id)
 
     # Ensure WebSocket notification listener and REST API client have been closed
     assert mock_mozart_client.disconnect_notifications.call_count == 1
     assert mock_mozart_client.close_api_client.call_count == 1
 
-    # Ensure that the entry is not loaded and has been removed from hass
+    # Ensure that the entry is not loaded and has been removed from menuai
     assert not hasattr(mock_config_entry, "runtime_data")
     assert mock_config_entry.state == ConfigEntryState.NOT_LOADED

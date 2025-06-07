@@ -6,22 +6,22 @@ from typing import TYPE_CHECKING, Any
 
 import voluptuous as vol
 
-from homeassistant.components.device_automation import (
+from menuai.components.device_automation import (
     DEVICE_TRIGGER_BASE_SCHEMA,
     InvalidDeviceAutomationConfig,
 )
-from homeassistant.components.homeassistant.triggers import event as event_trigger
-from homeassistant.const import (
+from menuai.components.menuai.triggers import event as event_trigger
+from menuai.const import (
     CONF_DEVICE_ID,
     CONF_DOMAIN,
     CONF_EVENT,
     CONF_PLATFORM,
     CONF_TYPE,
 )
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import CALLBACK_TYPE, menuai
+from menuai.helpers import device_registry as dr
+from menuai.helpers.trigger import TriggerActionType, TriggerInfo
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     BTHOME_BLE_EVENT,
@@ -52,19 +52,19 @@ TRIGGER_SCHEMA = DEVICE_TRIGGER_BASE_SCHEMA.extend(
 )
 
 
-def get_event_classes_by_device_id(hass: HomeAssistant, device_id: str) -> list[str]:
+def get_event_classes_by_device_id(menuai: menuai, device_id: str) -> list[str]:
     """Get the supported event classes for a device.
 
     Events for BTHome BLE devices are dynamically discovered
     and stored in the device config entry when they are first seen.
     """
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     device = device_registry.async_get(device_id)
     if TYPE_CHECKING:
         assert device is not None
 
     config_entries = [
-        hass.config_entries.async_get_entry(entry_id)
+        menuai.config_entries.async_get_entry(entry_id)
         for entry_id in device.config_entries
     ]
     bthome_config_entry = next(
@@ -85,14 +85,14 @@ def get_event_types_by_event_class(event_class: str) -> set[str]:
 
 
 async def async_validate_trigger_config(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> ConfigType:
     """Validate trigger config."""
     config = TRIGGER_SCHEMA(config)
     event_class = config[CONF_TYPE]
     event_type = config[CONF_SUBTYPE]
     device_id = config[CONF_DEVICE_ID]
-    event_classes = get_event_classes_by_device_id(hass, device_id)
+    event_classes = get_event_classes_by_device_id(menuai, device_id)
 
     if event_class not in event_classes:
         raise InvalidDeviceAutomationConfig(
@@ -108,10 +108,10 @@ async def async_validate_trigger_config(
 
 
 async def async_get_triggers(
-    hass: HomeAssistant, device_id: str
+    menuai: menuai, device_id: str
 ) -> list[dict[str, Any]]:
     """Return a list of triggers for BTHome BLE devices."""
-    event_classes = get_event_classes_by_device_id(hass, device_id)
+    event_classes = get_event_classes_by_device_id(menuai, device_id)
     return [
         {
             # Required fields of TRIGGER_BASE_SCHEMA
@@ -128,14 +128,14 @@ async def async_get_triggers(
 
 
 async def async_attach_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     action: TriggerActionType,
     trigger_info: TriggerInfo,
 ) -> CALLBACK_TYPE:
     """Attach a trigger."""
     return await event_trigger.async_attach_trigger(
-        hass,
+        menuai,
         event_trigger.TRIGGER_SCHEMA(
             {
                 event_trigger.CONF_PLATFORM: CONF_EVENT,

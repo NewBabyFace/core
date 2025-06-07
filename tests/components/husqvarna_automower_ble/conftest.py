@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from homeassistant.components.husqvarna_automower_ble.const import DOMAIN
-from homeassistant.const import CONF_ADDRESS, CONF_CLIENT_ID
+from menuai.components.husqvarna_automower_ble.const import DOMAIN
+from menuai.const import CONF_ADDRESS, CONF_CLIENT_ID
 
 from . import AUTOMOWER_SERVICE_INFO
 
@@ -17,7 +17,7 @@ from tests.common import MockConfigEntry
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.husqvarna_automower_ble.async_setup_entry",
+        "menuai.components.husqvarna_automower_ble.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
         yield mock_setup_entry
@@ -28,11 +28,11 @@ def mock_automower_client(enable_bluetooth: None) -> Generator[AsyncMock]:
     """Mock a BleakClient client."""
     with (
         patch(
-            "homeassistant.components.husqvarna_automower_ble.Mower",
+            "menuai.components.husqvarna_automower_ble.Mower",
             autospec=True,
         ) as mock_client,
         patch(
-            "homeassistant.components.husqvarna_automower_ble.config_flow.Mower",
+            "menuai.components.husqvarna_automower_ble.config_flow.Mower",
             new=mock_client,
         ),
     ):

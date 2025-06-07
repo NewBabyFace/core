@@ -6,7 +6,7 @@ from collections.abc import AsyncIterable, Callable, Coroutine
 from pathlib import Path
 from typing import Any
 
-from homeassistant.components.stt import (
+from menuai.components.stt import (
     AudioBitRates,
     AudioChannels,
     AudioCodecs,
@@ -18,10 +18,10 @@ from homeassistant.components.stt import (
     SpeechResultState,
     SpeechToTextEntity,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from tests.common import MockPlatform, mock_platform
 
@@ -106,12 +106,12 @@ class MockSTTPlatform(MockPlatform):
     def __init__(
         self,
         async_get_engine: Callable[
-            [HomeAssistant, ConfigType, DiscoveryInfoType | None],
+            [menuai, ConfigType, DiscoveryInfoType | None],
             Coroutine[Any, Any, Provider | None],
         ]
         | None = None,
         get_engine: Callable[
-            [HomeAssistant, ConfigType, DiscoveryInfoType | None], Provider | None
+            [menuai, ConfigType, DiscoveryInfoType | None], Provider | None
         ]
         | None = None,
     ) -> None:
@@ -124,37 +124,37 @@ class MockSTTPlatform(MockPlatform):
 
 
 def mock_stt_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     tmp_path: Path,
     integration: str = "stt",
     async_get_engine: Callable[
-        [HomeAssistant, ConfigType, DiscoveryInfoType | None],
+        [menuai, ConfigType, DiscoveryInfoType | None],
         Coroutine[Any, Any, Provider | None],
     ]
     | None = None,
     get_engine: Callable[
-        [HomeAssistant, ConfigType, DiscoveryInfoType | None], Provider | None
+        [menuai, ConfigType, DiscoveryInfoType | None], Provider | None
     ]
     | None = None,
 ):
     """Specialize the mock platform for stt."""
     loaded_platform = MockSTTPlatform(async_get_engine, get_engine)
-    mock_platform(hass, f"{integration}.stt", loaded_platform)
+    mock_platform(menuai, f"{integration}.stt", loaded_platform)
 
     return loaded_platform
 
 
 def mock_stt_entity_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     tmp_path: Path,
     integration: str,
     async_setup_entry: Callable[
-        [HomeAssistant, ConfigEntry, AddEntitiesCallback],
+        [menuai, ConfigEntry, AddEntitiesCallback],
         Coroutine[Any, Any, None],
     ]
     | None = None,
 ) -> MockPlatform:
     """Specialize the mock platform for stt."""
     loaded_platform = MockPlatform(async_setup_entry=async_setup_entry)
-    mock_platform(hass, f"{integration}.stt", loaded_platform)
+    mock_platform(menuai, f"{integration}.stt", loaded_platform)
     return loaded_platform

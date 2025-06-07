@@ -12,39 +12,39 @@ from typing import Any, Protocol, TypedDict, cast
 
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_ALIAS,
     CONF_ENABLED,
     CONF_ID,
     CONF_PLATFORM,
     CONF_VARIABLES,
 )
-from homeassistant.core import (
+from menuai.core import (
     CALLBACK_TYPE,
     Context,
-    HassJob,
-    HomeAssistant,
+    menuaiJob,
+    menuai,
     callback,
     is_callback,
 )
-from homeassistant.exceptions import HomeAssistantError, TemplateError
-from homeassistant.loader import IntegrationNotFound, async_get_integration
-from homeassistant.util.async_ import create_eager_task
-from homeassistant.util.hass_dict import HassKey
+from menuai.exceptions import menuaiError, TemplateError
+from menuai.loader import IntegrationNotFound, async_get_integration
+from menuai.util.async_ import create_eager_task
+from menuai.util.menuai_dict import menuaiKey
 
 from .template import Template
 from .typing import ConfigType, TemplateVarsType
 
 _PLATFORM_ALIASES = {
     "device": "device_automation",
-    "event": "homeassistant",
-    "numeric_state": "homeassistant",
-    "state": "homeassistant",
-    "time_pattern": "homeassistant",
-    "time": "homeassistant",
+    "event": "menuai",
+    "numeric_state": "menuai",
+    "state": "menuai",
+    "time_pattern": "menuai",
+    "time": "menuai",
 }
 
-DATA_PLUGGABLE_ACTIONS: HassKey[defaultdict[tuple, PluggableActionsEntry]] = HassKey(
+DATA_PLUGGABLE_ACTIONS: menuaiKey[defaultdict[tuple, PluggableActionsEntry]] = menuaiKey(
     "pluggable_actions"
 )
 
@@ -58,13 +58,13 @@ class TriggerProtocol(Protocol):
     TRIGGER_SCHEMA: vol.Schema
 
     async def async_validate_trigger_config(
-        self, hass: HomeAssistant, config: ConfigType
+        self, menuai: menuai, config: ConfigType
     ) -> ConfigType:
         """Validate config."""
 
     async def async_attach_trigger(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config: ConfigType,
         action: TriggerActionType,
         trigger_info: TriggerInfo,
@@ -109,7 +109,7 @@ class PluggableActionsEntry:
     actions: dict[
         object,
         tuple[
-            HassJob[[dict[str, Any], Context | None], Coroutine[Any, Any, None]],
+            menuaiJob[[dict[str, Any], Context | None], Coroutine[Any, Any, None]],
             dict[str, Any],
         ],
     ] = field(default_factory=dict)
@@ -139,17 +139,17 @@ class PluggableAction:
 
     @staticmethod
     @callback
-    def async_get_registry(hass: HomeAssistant) -> dict[tuple, PluggableActionsEntry]:
+    def async_get_registry(menuai: menuai) -> dict[tuple, PluggableActionsEntry]:
         """Return the pluggable actions registry."""
-        if data := hass.data.get(DATA_PLUGGABLE_ACTIONS):
+        if data := menuai.data.get(DATA_PLUGGABLE_ACTIONS):
             return data
-        data = hass.data[DATA_PLUGGABLE_ACTIONS] = defaultdict(PluggableActionsEntry)
+        data = menuai.data[DATA_PLUGGABLE_ACTIONS] = defaultdict(PluggableActionsEntry)
         return data
 
     @staticmethod
     @callback
     def async_attach_trigger(
-        hass: HomeAssistant,
+        menuai: menuai,
         trigger: dict[str, str],
         action: TriggerActionType,
         variables: dict[str, Any],
@@ -158,7 +158,7 @@ class PluggableAction:
 
         Existing or future plugs registered will be attached.
         """
-        reg = PluggableAction.async_get_registry(hass)
+        reg = PluggableAction.async_get_registry(menuai)
         key = tuple(sorted(trigger.items()))
         entry = reg[key]
 
@@ -174,7 +174,7 @@ class PluggableAction:
             if not entry.actions and not entry.plugs:
                 del reg[key]
 
-        job = HassJob(action, f"trigger {trigger} {variables}")
+        job = menuaiJob(action, f"trigger {trigger} {variables}")
         entry.actions[_remove] = (job, variables)
         _update()
 
@@ -182,11 +182,11 @@ class PluggableAction:
 
     @callback
     def async_register(
-        self, hass: HomeAssistant, trigger: dict[str, str]
+        self, menuai: menuai, trigger: dict[str, str]
     ) -> CALLBACK_TYPE:
         """Register plug in the global plugs dictionary."""
 
-        reg = PluggableAction.async_get_registry(hass)
+        reg = PluggableAction.async_get_registry(menuai)
         key = tuple(sorted(trigger.items()))
         self._entry = reg[key]
         self._entry.plugs.add(self)
@@ -206,24 +206,24 @@ class PluggableAction:
         return _remove
 
     async def async_run(
-        self, hass: HomeAssistant, context: Context | None = None
+        self, menuai: menuai, context: Context | None = None
     ) -> None:
         """Run all actions."""
         assert self._entry
         for job, variables in self._entry.actions.values():
-            task = hass.async_run_hass_job(job, variables, context)
+            task = menuai.async_run_menuai_job(job, variables, context)
             if task:
                 await task
 
 
 async def _async_get_trigger_platform(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> TriggerProtocol:
     platform_and_sub_type = config[CONF_PLATFORM].split(".")
     platform = platform_and_sub_type[0]
     platform = _PLATFORM_ALIASES.get(platform, platform)
     try:
-        integration = await async_get_integration(hass, platform)
+        integration = await async_get_integration(menuai, platform)
     except IntegrationNotFound:
         raise vol.Invalid(f"Invalid trigger '{platform}' specified") from None
     try:
@@ -235,14 +235,14 @@ async def _async_get_trigger_platform(
 
 
 async def async_validate_trigger_config(
-    hass: HomeAssistant, trigger_config: list[ConfigType]
+    menuai: menuai, trigger_config: list[ConfigType]
 ) -> list[ConfigType]:
     """Validate triggers."""
     config = []
     for conf in trigger_config:
-        platform = await _async_get_trigger_platform(hass, conf)
+        platform = await _async_get_trigger_platform(menuai, conf)
         if hasattr(platform, "async_validate_trigger_config"):
-            conf = await platform.async_validate_trigger_config(hass, conf)
+            conf = await platform.async_validate_trigger_config(menuai, conf)
         else:
             conf = platform.TRIGGER_SCHEMA(conf)
         config.append(conf)
@@ -250,7 +250,7 @@ async def async_validate_trigger_config(
 
 
 def _trigger_action_wrapper(
-    hass: HomeAssistant, action: Callable, conf: ConfigType
+    menuai: menuai, action: Callable, conf: ConfigType
 ) -> Callable:
     """Wrap trigger action with extra vars if configured.
 
@@ -275,7 +275,7 @@ def _trigger_action_wrapper(
         ) -> Any:
             """Wrap action with extra vars."""
             trigger_variables = conf[CONF_VARIABLES]
-            run_variables.update(trigger_variables.async_render(hass, run_variables))
+            run_variables.update(trigger_variables.async_render(menuai, run_variables))
             return await action(run_variables, context)
 
         wrapper_func = async_with_vars
@@ -288,7 +288,7 @@ def _trigger_action_wrapper(
         ) -> Any:
             """Wrap action with extra vars."""
             trigger_variables = conf[CONF_VARIABLES]
-            run_variables.update(trigger_variables.async_render(hass, run_variables))
+            run_variables.update(trigger_variables.async_render(menuai, run_variables))
             return action(run_variables, context)
 
         if is_callback(check_func):
@@ -300,7 +300,7 @@ def _trigger_action_wrapper(
 
 
 async def async_initialize_triggers(
-    hass: HomeAssistant,
+    menuai: menuai,
     trigger_config: list[ConfigType],
     action: Callable,
     domain: str,
@@ -324,7 +324,7 @@ async def async_initialize_triggers(
             if not enabled:
                 continue
 
-        platform = await _async_get_trigger_platform(hass, conf)
+        platform = await _async_get_trigger_platform(menuai, conf)
         trigger_id = conf.get(CONF_ID, f"{idx}")
         trigger_idx = f"{idx}"
         trigger_alias = conf.get(CONF_ALIAS)
@@ -340,7 +340,7 @@ async def async_initialize_triggers(
         triggers.append(
             create_eager_task(
                 platform.async_attach_trigger(
-                    hass, conf, _trigger_action_wrapper(hass, action, conf), info
+                    menuai, conf, _trigger_action_wrapper(menuai, action, conf), info
                 )
             )
         )
@@ -349,7 +349,7 @@ async def async_initialize_triggers(
     removes: list[Callable[[], None]] = []
 
     for result in attach_results:
-        if isinstance(result, HomeAssistantError):
+        if isinstance(result, menuaiError):
             log_cb(logging.ERROR, f"Got error '{result}' when setting up triggers for")
         elif isinstance(result, Exception):
             log_cb(logging.ERROR, "Error setting up trigger", exc_info=result)

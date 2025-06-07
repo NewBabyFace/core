@@ -7,12 +7,12 @@ from typing import Any
 
 import RFXtrx as rfxtrxmod
 
-from homeassistant.components.siren import ATTR_TONE, SirenEntity, SirenEntityFeature
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.event import async_call_later
+from menuai.components.siren import ATTR_TONE, SirenEntity, SirenEntityFeature
+from menuai.config_entries import ConfigEntry
+from menuai.core import CALLBACK_TYPE, menuai, callback
+from menuai.helpers.entity import Entity
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.event import async_call_later
 
 from . import DEFAULT_OFF_DELAY, DeviceTuple, async_setup_platform_entry
 from .const import CONF_OFF_DELAY
@@ -45,7 +45,7 @@ def get_first_key(data: dict[int, str], entry: str) -> int:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -85,11 +85,11 @@ async def async_setup_entry(
         return []
 
     await async_setup_platform_entry(
-        hass, config_entry, async_add_entities, supported, _constructor
+        menuai, config_entry, async_add_entities, supported, _constructor
     )
 
 
-class RfxtrxOffDelayMixin(Entity):  # pylint: disable=hass-enforce-class-module
+class RfxtrxOffDelayMixin(Entity):  # pylint: disable=menuai-enforce-class-module
     """Mixin to support timeouts on data.
 
     Many 433 devices only send data when active. They will
@@ -109,17 +109,17 @@ class RfxtrxOffDelayMixin(Entity):  # pylint: disable=hass-enforce-class-module
             self.async_write_ha_state()
 
         if self._off_delay:
-            self._timeout = async_call_later(self.hass, self._off_delay, _done)
+            self._timeout = async_call_later(self.menuai, self._off_delay, _done)
 
     def _cancel_timeout(self) -> None:
         if self._timeout:
             self._timeout()
             self._timeout = None
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Run when entity will be removed from hass."""
+    async def async_will_remove_from_menuai(self) -> None:
+        """Run when entity will be removed from menuai."""
         self._cancel_timeout()
-        return await super().async_will_remove_from_hass()
+        return await super().async_will_remove_from_menuai()
 
 
 class RfxtrxChime(RfxtrxCommandEntity, SirenEntity, RfxtrxOffDelayMixin):

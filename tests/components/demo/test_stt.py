@@ -5,36 +5,36 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components.demo import DOMAIN
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
+from menuai.components.demo import DOMAIN
+from menuai.const import Platform
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 from tests.typing import ClientSessionGenerator
 
 
 @pytest.fixture
-async def stt_only(hass: HomeAssistant) -> None:
+async def stt_only(menuai: menuai) -> None:
     """Enable only the stt platform."""
     with patch(
-        "homeassistant.components.demo.COMPONENTS_WITH_CONFIG_ENTRY_DEMO_PLATFORM",
+        "menuai.components.demo.COMPONENTS_WITH_CONFIG_ENTRY_DEMO_PLATFORM",
         [Platform.STT],
     ):
         yield
 
 
 @pytest.fixture(autouse=True)
-async def setup_config_entry(hass: HomeAssistant, stt_only) -> None:
+async def setup_config_entry(menuai: menuai, stt_only) -> None:
     """Set up demo component from config entry."""
     config_entry = MockConfigEntry(domain=DOMAIN)
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
 
-async def test_demo_settings(hass_client: ClientSessionGenerator) -> None:
+async def test_demo_settings(menuai_client: ClientSessionGenerator) -> None:
     """Test retrieve settings from demo provider."""
-    client = await hass_client()
+    client = await menuai_client()
 
     response = await client.get("/api/stt/stt.demo_stt")
     response_data = await response.json()
@@ -50,17 +50,17 @@ async def test_demo_settings(hass_client: ClientSessionGenerator) -> None:
     }
 
 
-async def test_demo_speech_no_metadata(hass_client: ClientSessionGenerator) -> None:
+async def test_demo_speech_no_metadata(menuai_client: ClientSessionGenerator) -> None:
     """Test retrieve settings from demo provider."""
-    client = await hass_client()
+    client = await menuai_client()
 
     response = await client.post("/api/stt/stt.demo_stt", data=b"Test")
     assert response.status == HTTPStatus.BAD_REQUEST
 
 
-async def test_demo_speech_wrong_metadata(hass_client: ClientSessionGenerator) -> None:
+async def test_demo_speech_wrong_metadata(menuai_client: ClientSessionGenerator) -> None:
     """Test retrieve settings from demo provider."""
-    client = await hass_client()
+    client = await menuai_client()
 
     response = await client.post(
         "/api/stt/stt.demo_stt",
@@ -75,9 +75,9 @@ async def test_demo_speech_wrong_metadata(hass_client: ClientSessionGenerator) -
     assert response.status == HTTPStatus.UNSUPPORTED_MEDIA_TYPE
 
 
-async def test_demo_speech(hass_client: ClientSessionGenerator) -> None:
+async def test_demo_speech(menuai_client: ClientSessionGenerator) -> None:
     """Test retrieve settings from demo provider."""
-    client = await hass_client()
+    client = await menuai_client()
 
     response = await client.post(
         "/api/stt/stt.demo_stt",
@@ -97,10 +97,10 @@ async def test_demo_speech(hass_client: ClientSessionGenerator) -> None:
 
 @pytest.mark.usefixtures("setup_config_entry")
 async def test_config_entry_demo_speech(
-    hass_client: ClientSessionGenerator, hass: HomeAssistant
+    menuai_client: ClientSessionGenerator, menuai: menuai
 ) -> None:
     """Test retrieve settings from demo provider from config entry."""
-    client = await hass_client()
+    client = await menuai_client()
 
     response = await client.post(
         "/api/stt/stt.demo_stt",

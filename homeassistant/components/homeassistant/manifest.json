@@ -1,8 +1,8 @@
 {
-  "domain": "homeassistant",
-  "name": "Home Assistant Core Integration",
+  "domain": "menuai",
+  "name": "MenuAI Core Integration",
   "codeowners": ["@home-assistant/core"],
-  "documentation": "https://www.home-assistant.io/integrations/homeassistant",
+  "documentation": "https://www.home-assistant.io/integrations/menuai",
   "integration_type": "system",
   "quality_scale": "internal"
 }

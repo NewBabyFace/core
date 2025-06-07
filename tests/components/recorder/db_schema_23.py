@@ -1,7 +1,7 @@
 """Models for SQLAlchemy.
 
 This file contains the model definitions for schema version 23,
-used by Home Assistant Core 2021.11.0, which adds the name column
+used by MenuAI Core 2021.11.0, which adds the name column
 to statistics_meta.
 It is used to test the schema migration logic.
 """
@@ -31,7 +31,7 @@ from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.orm.session import Session
 
-from homeassistant.const import (
+from menuai.const import (
     MAX_LENGTH_EVENT_CONTEXT_ID,
     MAX_LENGTH_EVENT_EVENT_TYPE,
     MAX_LENGTH_EVENT_ORIGIN,
@@ -39,9 +39,9 @@ from homeassistant.const import (
     MAX_LENGTH_STATE_ENTITY_ID,
     MAX_LENGTH_STATE_STATE,
 )
-from homeassistant.core import Context, Event, EventOrigin, State, split_entity_id
-from homeassistant.helpers.json import JSONEncoder
-from homeassistant.util import dt as dt_util
+from menuai.core import Context, Event, EventOrigin, State, split_entity_id
+from menuai.helpers.json import JSONEncoder
+from menuai.util import dt as dt_util
 
 # SQLAlchemy Schema
 Base = declarative_base()

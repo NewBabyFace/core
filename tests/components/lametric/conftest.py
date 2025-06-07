@@ -8,24 +8,24 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from demetriek import CloudDevice, Device
 import pytest
 
-from homeassistant.components.application_credentials import (
+from menuai.components.application_credentials import (
     ClientCredential,
     async_import_client_credential,
 )
-from homeassistant.components.lametric.const import DOMAIN
-from homeassistant.const import CONF_API_KEY, CONF_HOST, CONF_MAC
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.lametric.const import DOMAIN
+from menuai.const import CONF_API_KEY, CONF_HOST, CONF_MAC
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry, load_fixture, load_json_array_fixture
 
 
 @pytest.fixture(autouse=True)
-async def setup_credentials(hass: HomeAssistant) -> None:
+async def setup_credentials(menuai: menuai) -> None:
     """Fixture to setup credentials."""
-    assert await async_setup_component(hass, "application_credentials", {})
+    assert await async_setup_component(menuai, "application_credentials", {})
     await async_import_client_credential(
-        hass, DOMAIN, ClientCredential("client", "secret"), "credentials"
+        menuai, DOMAIN, ClientCredential("client", "secret"), "credentials"
     )
 
 
@@ -48,7 +48,7 @@ def mock_config_entry() -> MockConfigEntry:
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Mock setting up a config entry."""
     with patch(
-        "homeassistant.components.lametric.async_setup_entry", return_value=True
+        "menuai.components.lametric.async_setup_entry", return_value=True
     ):
         yield
 
@@ -57,7 +57,7 @@ def mock_setup_entry() -> Generator[AsyncMock]:
 def mock_lametric_cloud() -> Generator[MagicMock]:
     """Return a mocked LaMetric Cloud client."""
     with patch(
-        "homeassistant.components.lametric.config_flow.LaMetricCloud", autospec=True
+        "menuai.components.lametric.config_flow.LaMetricCloud", autospec=True
     ) as lametric_mock:
         lametric = lametric_mock.return_value
         lametric.devices.return_value = [
@@ -78,11 +78,11 @@ def mock_lametric(device_fixture: str) -> Generator[MagicMock]:
     """Return a mocked LaMetric TIME client."""
     with (
         patch(
-            "homeassistant.components.lametric.coordinator.LaMetricDevice",
+            "menuai.components.lametric.coordinator.LaMetricDevice",
             autospec=True,
         ) as lametric_mock,
         patch(
-            "homeassistant.components.lametric.config_flow.LaMetricDevice",
+            "menuai.components.lametric.config_flow.LaMetricDevice",
             new=lametric_mock,
         ),
     ):
@@ -97,12 +97,12 @@ def mock_lametric(device_fixture: str) -> Generator[MagicMock]:
 
 @pytest.fixture
 async def init_integration(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry, mock_lametric: MagicMock
+    menuai: menuai, mock_config_entry: MockConfigEntry, mock_lametric: MagicMock
 ) -> MockConfigEntry:
     """Set up the LaMetric integration for testing."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     return mock_config_entry

@@ -7,14 +7,14 @@ from unittest.mock import patch
 import pytest
 from qbusmqttapi.discovery import QbusDiscovery
 
-from homeassistant.components.qbus.const import CONF_SERIAL_NUMBER, DOMAIN
-from homeassistant.components.qbus.coordinator import QbusConfigCoordinator
-from homeassistant.config_entries import SOURCE_MQTT, SOURCE_USER
-from homeassistant.const import CONF_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.mqtt import MqttServiceInfo
-from homeassistant.util.json import JsonObjectType
+from menuai.components.qbus.const import CONF_SERIAL_NUMBER, DOMAIN
+from menuai.components.qbus.coordinator import QbusConfigCoordinator
+from menuai.config_entries import SOURCE_MQTT, SOURCE_USER
+from menuai.const import CONF_ID
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.mqtt import MqttServiceInfo
+from menuai.util.json import JsonObjectType
 
 from .const import TOPIC_CONFIG
 
@@ -22,7 +22,7 @@ _PAYLOAD_DEVICE_STATE = '{"id":"UL1","properties":{"connected":true},"type":"eve
 
 
 async def test_step_discovery_confirm_create_entry(
-    hass: HomeAssistant, payload_config: JsonObjectType
+    menuai: menuai, payload_config: JsonObjectType
 ) -> None:
     """Test mqtt confirm step and entry creation."""
     discovery = MqttServiceInfo(
@@ -41,17 +41,17 @@ async def test_step_discovery_confirm_create_entry(
             return_value=QbusDiscovery(payload_config),
         ),
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": SOURCE_MQTT}, data=discovery
         )
 
     assert result.get("type") == FlowResultType.FORM
     assert result.get("step_id") == "discovery_confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result.get("type") == FlowResultType.CREATE_ENTRY
     assert result.get("data") == {
@@ -69,7 +69,7 @@ async def test_step_discovery_confirm_create_entry(
     ],
 )
 async def test_step_mqtt_invalid(
-    hass: HomeAssistant, topic: str, payload: bytes
+    menuai: menuai, topic: str, payload: bytes
 ) -> None:
     """Test mqtt discovery with empty payload."""
     discovery = MqttServiceInfo(
@@ -81,7 +81,7 @@ async def test_step_mqtt_invalid(
         timestamp=time.time(),
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_MQTT}, data=discovery
     )
 
@@ -97,7 +97,7 @@ async def test_step_mqtt_invalid(
     ],
 )
 async def test_handle_gateway_topic_when_online(
-    hass: HomeAssistant, payload: str, mqtt_publish: bool
+    menuai: menuai, payload: str, mqtt_publish: bool
 ) -> None:
     """Test handling of gateway topic with payload indicating online."""
     discovery = MqttServiceInfo(
@@ -110,9 +110,9 @@ async def test_handle_gateway_topic_when_online(
     )
 
     with (
-        patch("homeassistant.components.mqtt.client.async_publish") as mock_publish,
+        patch("menuai.components.mqtt.client.async_publish") as mock_publish,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": SOURCE_MQTT}, data=discovery
         )
 
@@ -122,7 +122,7 @@ async def test_handle_gateway_topic_when_online(
 
 
 async def test_handle_config_topic(
-    hass: HomeAssistant, payload_config: JsonObjectType
+    menuai: menuai, payload_config: JsonObjectType
 ) -> None:
     """Test handling of config topic."""
 
@@ -136,9 +136,9 @@ async def test_handle_config_topic(
     )
 
     with (
-        patch("homeassistant.components.mqtt.client.async_publish") as mock_publish,
+        patch("menuai.components.mqtt.client.async_publish") as mock_publish,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": SOURCE_MQTT}, data=discovery
         )
 
@@ -147,7 +147,7 @@ async def test_handle_config_topic(
     assert result.get("reason") == "discovery_in_progress"
 
 
-async def test_handle_device_topic_missing_config(hass: HomeAssistant) -> None:
+async def test_handle_device_topic_missing_config(menuai: menuai) -> None:
     """Test handling of device topic when config is missing."""
     discovery = MqttServiceInfo(
         subscribed_topic="cloudapp/QBUSMQTTGW/+/state",
@@ -158,7 +158,7 @@ async def test_handle_device_topic_missing_config(hass: HomeAssistant) -> None:
         timestamp=time.time(),
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_MQTT}, data=discovery
     )
 
@@ -167,7 +167,7 @@ async def test_handle_device_topic_missing_config(hass: HomeAssistant) -> None:
 
 
 async def test_handle_device_topic_device_not_found(
-    hass: HomeAssistant, payload_config: JsonObjectType
+    menuai: menuai, payload_config: JsonObjectType
 ) -> None:
     """Test handling of device topic when device is not found."""
     discovery = MqttServiceInfo(
@@ -184,7 +184,7 @@ async def test_handle_device_topic_device_not_found(
         "async_get_or_request_config",
         return_value=QbusDiscovery(payload_config),
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": SOURCE_MQTT}, data=discovery
         )
 
@@ -192,9 +192,9 @@ async def test_handle_device_topic_device_not_found(
     assert result.get("reason") == "invalid_discovery_info"
 
 
-async def test_step_user_not_supported(hass: HomeAssistant) -> None:
+async def test_step_user_not_supported(menuai: menuai) -> None:
     """Test user step, which should abort."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 

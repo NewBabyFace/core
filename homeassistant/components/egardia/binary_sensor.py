@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
-from homeassistant.const import STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import STATE_OFF, STATE_ON
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import ATTR_DISCOVER_DEVICES, EGARDIA_DEVICE
 
@@ -21,7 +21,7 @@ EGARDIA_TYPE_TO_DEVICE_CLASS = {
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -37,7 +37,7 @@ async def async_setup_platform(
             EgardiaBinarySensor(
                 sensor_id=disc_info[sensor]["id"],
                 name=disc_info[sensor]["name"],
-                egardia_system=hass.data[EGARDIA_DEVICE],
+                egardia_system=menuai.data[EGARDIA_DEVICE],
                 device_class=EGARDIA_TYPE_TO_DEVICE_CLASS.get(
                     disc_info[sensor]["type"], None
                 ),

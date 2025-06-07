@@ -7,11 +7,11 @@ import logging
 from Tami4EdgeAPI import Tami4EdgeAPI
 from Tami4EdgeAPI.drink import Drink
 
-from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import EntityDescription
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.button import ButtonEntity, ButtonEntityDescription
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.entity import EntityDescription
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import API, DOMAIN
 from .entity import Tami4EdgeBaseEntity
@@ -41,16 +41,16 @@ BOIL_WATER_BUTTON = Tami4EdgeButtonEntityDescription(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Perform the setup for Tami4Edge."""
 
-    api: Tami4EdgeAPI = hass.data[DOMAIN][entry.entry_id][API]
+    api: Tami4EdgeAPI = menuai.data[DOMAIN][entry.entry_id][API]
     buttons: list[Tami4EdgeBaseEntity] = [Tami4EdgeButton(api, BOIL_WATER_BUTTON)]
 
-    device = await hass.async_add_executor_job(api.get_device)
+    device = await menuai.async_add_executor_job(api.get_device)
     drinks = device.drinks
 
     buttons.extend(

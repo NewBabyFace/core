@@ -16,16 +16,16 @@ from fjaraskupan import (
     State,
 )
 
-from homeassistant.components.bluetooth import (
+from menuai.components.bluetooth import (
     BluetoothServiceInfoBleak,
     async_address_present,
     async_ble_device_from_address,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN
 
@@ -36,31 +36,31 @@ _LOGGER = logging.getLogger(__name__)
 
 @contextmanager
 def exception_converter():
-    """Convert exception so home assistant translated ones."""
+    """Convert exception so MenuAI translated ones."""
 
     try:
         yield
     except FjaraskupanWriteError as exception:
-        raise HomeAssistantError(
+        raise menuaiError(
             translation_domain=DOMAIN, translation_key="write_error"
         ) from exception
     except FjaraskupanReadError as exception:
-        raise HomeAssistantError(
+        raise menuaiError(
             translation_domain=DOMAIN, translation_key="read_error"
         ) from exception
     except FjaraskupanConnectionError as exception:
-        raise HomeAssistantError(
+        raise menuaiError(
             translation_domain=DOMAIN, translation_key="connection_error"
         ) from exception
     except FjaraskupanError as exception:
-        raise HomeAssistantError(
+        raise menuaiError(
             translation_domain=DOMAIN,
             translation_key="unexpected_error",
             translation_placeholders={"msg": str(exception)},
         ) from exception
 
 
-class UnableToConnect(HomeAssistantError):
+class UnableToConnect(menuaiError):
     """Exception to indicate that we cannot connect to device."""
 
 
@@ -71,7 +71,7 @@ class FjaraskupanCoordinator(DataUpdateCoordinator[State]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: FjaraskupanConfigEntry,
         device: Device,
         device_info: DeviceInfo,
@@ -82,7 +82,7 @@ class FjaraskupanCoordinator(DataUpdateCoordinator[State]):
         self._refresh_was_scheduled = False
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name="Fjäråskupan",
@@ -107,7 +107,7 @@ class FjaraskupanCoordinator(DataUpdateCoordinator[State]):
     async def _async_update_data(self) -> State:
         """Handle an explicit update request."""
         if self._refresh_was_scheduled:
-            if async_address_present(self.hass, self.device.address, False):
+            if async_address_present(self.menuai, self.device.address, False):
                 return self.device.state
             raise UpdateFailed(
                 "No data received within schedule, and device is no longer present"
@@ -115,7 +115,7 @@ class FjaraskupanCoordinator(DataUpdateCoordinator[State]):
 
         if (
             ble_device := async_ble_device_from_address(
-                self.hass, self.device.address, True
+                self.menuai, self.device.address, True
             )
         ) is None:
             raise UpdateFailed("No connectable path to device")
@@ -136,7 +136,7 @@ class FjaraskupanCoordinator(DataUpdateCoordinator[State]):
         """Provide an up-to-date device for use during connections."""
         if (
             ble_device := async_ble_device_from_address(
-                self.hass, self.device.address, True
+                self.menuai, self.device.address, True
             )
         ) is None:
             raise UnableToConnect("No connectable path to device")

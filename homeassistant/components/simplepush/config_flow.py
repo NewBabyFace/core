@@ -7,8 +7,8 @@ from typing import Any
 from simplepush import UnknownError, send
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_NAME, CONF_PASSWORD
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_NAME, CONF_PASSWORD
 
 from .const import ATTR_ENCRYPTED, CONF_DEVICE_KEY, CONF_SALT, DEFAULT_NAME, DOMAIN
 
@@ -55,7 +55,7 @@ class SimplePushFlowHandler(ConfigFlow, domain=DOMAIN):
             )
 
             if not (
-                errors := await self.hass.async_add_executor_job(
+                errors := await self.menuai.async_add_executor_job(
                     validate_input, user_input
                 )
             ):

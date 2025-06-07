@@ -16,7 +16,7 @@
       },
       "captcha": {
         "title": "Are you a robot?",
-        "description": "A captcha is required for BMW login. Visit the external website to complete the challenge and submit the form. Copy the resulting token into the field below.\n\n{captcha_url}\n\nNo data will be exposed outside of your Home Assistant instance.",
+        "description": "A captcha is required for BMW login. Visit the external website to complete the challenge and submit the form. Copy the resulting token into the field below.\n\n{captcha_url}\n\nNo data will be exposed outside of your MenuAI instance.",
         "data": {
           "captcha_token": "Captcha token"
         },

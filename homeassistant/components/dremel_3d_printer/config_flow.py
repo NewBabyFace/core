@@ -9,9 +9,9 @@ from dremel3dpy import Dremel3DPrinter
 from requests.exceptions import ConnectTimeout, HTTPError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST
-from homeassistant.helpers import config_validation as cv
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST
+from menuai.helpers import config_validation as cv
 
 from .const import DOMAIN, LOGGER
 
@@ -39,7 +39,7 @@ class Dremel3DPrinterConfigFlow(ConfigFlow, domain=DOMAIN):
         host = user_input[CONF_HOST]
 
         try:
-            api = await self.hass.async_add_executor_job(Dremel3DPrinter, host)
+            api = await self.menuai.async_add_executor_job(Dremel3DPrinter, host)
         except (ConnectTimeout, HTTPError, JSONDecodeError):
             errors = {"base": "cannot_connect"}
         except Exception:  # noqa: BLE001

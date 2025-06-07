@@ -6,18 +6,18 @@ from typing import Any
 
 from evolutionhttp import BryantEvolutionLocalClient
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ClimateEntity,
     ClimateEntityFeature,
     HVACAction,
     HVACMode,
 )
-from homeassistant.const import UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import UnitOfTemperature
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import BryantEvolutionConfigEntry, names
 from .const import CONF_SYSTEM_ZONE, DOMAIN
@@ -29,7 +29,7 @@ SCAN_INTERVAL = timedelta(seconds=60)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: BryantEvolutionConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -137,7 +137,7 @@ class BryantEvolutionClimate(ClimateEntity):
     async def _read_hvac_mode(self) -> HVACMode:
         mode_and_active = await self._client.read_hvac_mode()
         if not mode_and_active:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN, translation_key="failed_to_read_hvac_mode"
             )
         mode = mode_and_active[0]
@@ -148,7 +148,7 @@ class BryantEvolutionClimate(ClimateEntity):
             "OFF": HVACMode.OFF,
         }.get(mode.upper())
         if mode_enum is None:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="failed_to_parse_hvac_mode",
                 translation_placeholders={"mode": mode},
@@ -159,7 +159,7 @@ class BryantEvolutionClimate(ClimateEntity):
         """Return the current running hvac operation."""
         mode_and_active = await self._client.read_hvac_mode()
         if not mode_and_active:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN, translation_key="failed_to_read_hvac_action"
             )
         mode, is_active = mode_and_active
@@ -185,7 +185,7 @@ class BryantEvolutionClimate(ClimateEntity):
                         # then we must be cooling.
                         return HVACAction.COOLING
                     return HVACAction.HEATING
-        raise HomeAssistantError(
+        raise menuaiError(
             translation_domain=DOMAIN,
             translation_key="failed_to_parse_hvac_mode",
             translation_placeholders={
@@ -200,7 +200,7 @@ class BryantEvolutionClimate(ClimateEntity):
         if hvac_mode == HVACMode.HEAT_COOL:
             hvac_mode = HVACMode.AUTO
         if not await self._client.set_hvac_mode(hvac_mode):
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN, translation_key="failed_to_set_hvac_mode"
             )
         self._attr_hvac_mode = hvac_mode
@@ -211,7 +211,7 @@ class BryantEvolutionClimate(ClimateEntity):
         if kwargs.get("target_temp_high"):
             temp = int(kwargs["target_temp_high"])
             if not await self._client.set_cooling_setpoint(temp):
-                raise HomeAssistantError(
+                raise menuaiError(
                     translation_domain=DOMAIN, translation_key="failed_to_set_clsp"
                 )
             self._attr_target_temperature_high = temp
@@ -219,7 +219,7 @@ class BryantEvolutionClimate(ClimateEntity):
         if kwargs.get("target_temp_low"):
             temp = int(kwargs["target_temp_low"])
             if not await self._client.set_heating_setpoint(temp):
-                raise HomeAssistantError(
+                raise menuaiError(
                     translation_domain=DOMAIN, translation_key="failed_to_set_htsp"
                 )
             self._attr_target_temperature_low = temp
@@ -232,7 +232,7 @@ class BryantEvolutionClimate(ClimateEntity):
                 else self._client.set_cooling_setpoint
             )
             if not await fn(temp):
-                raise HomeAssistantError(
+                raise menuaiError(
                     translation_domain=DOMAIN, translation_key="failed_to_set_temp"
                 )
             self._attr_target_temperature = temp
@@ -244,7 +244,7 @@ class BryantEvolutionClimate(ClimateEntity):
     async def async_set_fan_mode(self, fan_mode: str) -> None:
         """Set new target fan mode."""
         if not await self._client.set_fan_mode(fan_mode):
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN, translation_key="failed_to_set_fan_mode"
             )
         self._attr_fan_mode = fan_mode.lower()

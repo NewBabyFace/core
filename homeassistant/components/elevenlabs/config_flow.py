@@ -9,11 +9,11 @@ from elevenlabs import AsyncElevenLabs
 from elevenlabs.core import ApiError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
-from homeassistant.const import CONF_API_KEY
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.httpx_client import get_async_client
-from homeassistant.helpers.selector import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
+from menuai.const import CONF_API_KEY
+from menuai.core import menuai
+from menuai.helpers.httpx_client import get_async_client
+from menuai.helpers.selector import (
     SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
@@ -45,10 +45,10 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def get_voices_models(
-    hass: HomeAssistant, api_key: str
+    menuai: menuai, api_key: str
 ) -> tuple[dict[str, str], dict[str, str]]:
     """Get available voices and models as dicts."""
-    httpx_client = get_async_client(hass)
+    httpx_client = get_async_client(menuai)
     client = AsyncElevenLabs(api_key=api_key, httpx_client=httpx_client)
     voices = (await client.voices.get_all()).voices
     models = await client.models.get_all()
@@ -77,7 +77,7 @@ class ElevenLabsConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
         if user_input is not None:
             try:
-                voices, _ = await get_voices_models(self.hass, user_input[CONF_API_KEY])
+                voices, _ = await get_voices_models(self.menuai, user_input[CONF_API_KEY])
             except ApiError:
                 errors["base"] = "invalid_api_key"
             else:
@@ -115,7 +115,7 @@ class ElevenLabsOptionsFlow(OptionsFlow):
     ) -> ConfigFlowResult:
         """Manage the options."""
         if not self.voices or not self.models:
-            self.voices, self.models = await get_voices_models(self.hass, self.api_key)
+            self.voices, self.models = await get_voices_models(self.menuai, self.api_key)
 
         assert self.models and self.voices
 

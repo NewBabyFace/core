@@ -8,7 +8,7 @@ import pytest
 from requests.exceptions import HTTPError
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_CURRENT_TEMPERATURE,
     ATTR_HVAC_MODE,
     ATTR_HVAC_MODES,
@@ -25,23 +25,23 @@ from homeassistant.components.climate import (
     SERVICE_SET_TEMPERATURE,
     HVACMode,
 )
-from homeassistant.components.fritzbox.climate import (
+from menuai.components.fritzbox.climate import (
     OFF_API_TEMPERATURE,
     ON_API_TEMPERATURE,
     PRESET_HOLIDAY,
     PRESET_SUMMER,
 )
-from homeassistant.components.fritzbox.const import (
+from menuai.components.fritzbox.const import (
     ATTR_STATE_HOLIDAY_MODE,
     ATTR_STATE_SUMMER_MODE,
     DOMAIN,
 )
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import ATTR_ENTITY_ID, ATTR_TEMPERATURE, CONF_DEVICES, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
-from homeassistant.util import dt as dt_util
+from menuai.config_entries import ConfigEntryState
+from menuai.const import ATTR_ENTITY_ID, ATTR_TEMPERATURE, CONF_DEVICES, Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
+from menuai.util import dt as dt_util
 
 from . import (
     FritzDeviceClimateMock,
@@ -57,67 +57,67 @@ ENTITY_ID = f"{CLIMATE_DOMAIN}.{CONF_FAKE_NAME}"
 
 
 async def test_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
     fritz: Mock,
 ) -> None:
     """Test setup of platform."""
     device = FritzDeviceClimateMock()
-    with patch("homeassistant.components.fritzbox.PLATFORMS", [Platform.CLIMATE]):
+    with patch("menuai.components.fritzbox.PLATFORMS", [Platform.CLIMATE]):
         entry = await setup_config_entry(
-            hass, MOCK_CONFIG[DOMAIN][CONF_DEVICES][0], ENTITY_ID, device, fritz
+            menuai, MOCK_CONFIG[DOMAIN][CONF_DEVICES][0], ENTITY_ID, device, fritz
         )
 
-    await snapshot_platform(hass, entity_registry, snapshot, entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, entry.entry_id)
 
 
-async def test_hkr_wo_temperature_sensor(hass: HomeAssistant, fritz: Mock) -> None:
+async def test_hkr_wo_temperature_sensor(menuai: menuai, fritz: Mock) -> None:
     """Test hkr without exposing dedicated temperature sensor data block."""
     device = FritzDeviceClimateWithoutTempSensorMock()
     await setup_config_entry(
-        hass, MOCK_CONFIG[DOMAIN][CONF_DEVICES][0], ENTITY_ID, device, fritz
+        menuai, MOCK_CONFIG[DOMAIN][CONF_DEVICES][0], ENTITY_ID, device, fritz
     )
 
-    state = hass.states.get(ENTITY_ID)
+    state = menuai.states.get(ENTITY_ID)
     assert state
     assert state.attributes[ATTR_CURRENT_TEMPERATURE] == 18.0
 
 
-async def test_target_temperature_on(hass: HomeAssistant, fritz: Mock) -> None:
+async def test_target_temperature_on(menuai: menuai, fritz: Mock) -> None:
     """Test turn device on."""
     device = FritzDeviceClimateMock()
     device.target_temperature = 127.0
     await setup_config_entry(
-        hass, MOCK_CONFIG[DOMAIN][CONF_DEVICES][0], ENTITY_ID, device, fritz
+        menuai, MOCK_CONFIG[DOMAIN][CONF_DEVICES][0], ENTITY_ID, device, fritz
     )
 
-    state = hass.states.get(ENTITY_ID)
+    state = menuai.states.get(ENTITY_ID)
     assert state
     assert state.attributes[ATTR_TEMPERATURE] is None
 
 
-async def test_target_temperature_off(hass: HomeAssistant, fritz: Mock) -> None:
+async def test_target_temperature_off(menuai: menuai, fritz: Mock) -> None:
     """Test turn device on."""
     device = FritzDeviceClimateMock()
     device.target_temperature = 126.5
     await setup_config_entry(
-        hass, MOCK_CONFIG[DOMAIN][CONF_DEVICES][0], ENTITY_ID, device, fritz
+        menuai, MOCK_CONFIG[DOMAIN][CONF_DEVICES][0], ENTITY_ID, device, fritz
     )
 
-    state = hass.states.get(ENTITY_ID)
+    state = menuai.states.get(ENTITY_ID)
     assert state
     assert state.attributes[ATTR_TEMPERATURE] is None
 
 
-async def test_update(hass: HomeAssistant, fritz: Mock) -> None:
+async def test_update(menuai: menuai, fritz: Mock) -> None:
     """Test update without error."""
     device = FritzDeviceClimateMock()
     await setup_config_entry(
-        hass, MOCK_CONFIG[DOMAIN][CONF_DEVICES][0], ENTITY_ID, device, fritz
+        menuai, MOCK_CONFIG[DOMAIN][CONF_DEVICES][0], ENTITY_ID, device, fritz
     )
 
-    state = hass.states.get(ENTITY_ID)
+    state = menuai.states.get(ENTITY_ID)
     assert state
     assert state.attributes[ATTR_CURRENT_TEMPERATURE] == 18
     assert state.attributes[ATTR_MAX_TEMP] == 28
@@ -128,9 +128,9 @@ async def test_update(hass: HomeAssistant, fritz: Mock) -> None:
     device.target_temperature = 20
 
     next_update = dt_util.utcnow() + timedelta(seconds=200)
-    async_fire_time_changed(hass, next_update)
-    await hass.async_block_till_done(wait_background_tasks=True)
-    state = hass.states.get(ENTITY_ID)
+    async_fire_time_changed(menuai, next_update)
+    await menuai.async_block_till_done(wait_background_tasks=True)
+    state = menuai.states.get(ENTITY_ID)
 
     assert fritz().update_devices.call_count == 2
     assert state
@@ -138,17 +138,17 @@ async def test_update(hass: HomeAssistant, fritz: Mock) -> None:
     assert state.attributes[ATTR_TEMPERATURE] == 20
 
 
-async def test_automatic_offset(hass: HomeAssistant, fritz: Mock) -> None:
+async def test_automatic_offset(menuai: menuai, fritz: Mock) -> None:
     """Test when automatic offset is configured on fritz!box device."""
     device = FritzDeviceClimateMock()
     device.temperature = 18
     device.actual_temperature = 19
     device.target_temperature = 20
     await setup_config_entry(
-        hass, MOCK_CONFIG[DOMAIN][CONF_DEVICES][0], ENTITY_ID, device, fritz
+        menuai, MOCK_CONFIG[DOMAIN][CONF_DEVICES][0], ENTITY_ID, device, fritz
     )
 
-    state = hass.states.get(ENTITY_ID)
+    state = menuai.states.get(ENTITY_ID)
     assert state
     assert state.attributes[ATTR_CURRENT_TEMPERATURE] == 18
     assert state.attributes[ATTR_MAX_TEMP] == 28
@@ -156,12 +156,12 @@ async def test_automatic_offset(hass: HomeAssistant, fritz: Mock) -> None:
     assert state.attributes[ATTR_TEMPERATURE] == 20
 
 
-async def test_update_error(hass: HomeAssistant, fritz: Mock) -> None:
+async def test_update_error(menuai: menuai, fritz: Mock) -> None:
     """Test update with error."""
     device = FritzDeviceClimateMock()
     fritz().update_devices.side_effect = HTTPError("Boom")
     entry = await setup_config_entry(
-        hass, MOCK_CONFIG[DOMAIN][CONF_DEVICES][0], ENTITY_ID, device, fritz
+        menuai, MOCK_CONFIG[DOMAIN][CONF_DEVICES][0], ENTITY_ID, device, fritz
     )
     assert entry.state is ConfigEntryState.SETUP_RETRY
 
@@ -169,8 +169,8 @@ async def test_update_error(hass: HomeAssistant, fritz: Mock) -> None:
     assert fritz().login.call_count == 2
 
     next_update = dt_util.utcnow() + timedelta(seconds=200)
-    async_fire_time_changed(hass, next_update)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai, next_update)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     assert fritz().update_devices.call_count == 4
     assert fritz().login.call_count == 4
@@ -203,7 +203,7 @@ async def test_update_error(hass: HomeAssistant, fritz: Mock) -> None:
     ],
 )
 async def test_set_temperature(
-    hass: HomeAssistant,
+    menuai: menuai,
     fritz: Mock,
     service_data: dict,
     expected_set_target_temperature_call_args: list[_Call],
@@ -214,10 +214,10 @@ async def test_set_temperature(
     device.lock = False
 
     await setup_config_entry(
-        hass, MOCK_CONFIG[DOMAIN][CONF_DEVICES][0], ENTITY_ID, device, fritz
+        menuai, MOCK_CONFIG[DOMAIN][CONF_DEVICES][0], ENTITY_ID, device, fritz
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_TEMPERATURE,
         {ATTR_ENTITY_ID: ENTITY_ID, **service_data},
@@ -280,7 +280,7 @@ async def test_set_temperature(
     ],
 )
 async def test_set_hvac_mode(
-    hass: HomeAssistant,
+    menuai: menuai,
     fritz: Mock,
     service_data: dict,
     target_temperature: float,
@@ -302,10 +302,10 @@ async def test_set_hvac_mode(
         device.nextchange_endperiod = 0
 
     await setup_config_entry(
-        hass, MOCK_CONFIG[DOMAIN][CONF_DEVICES][0], ENTITY_ID, device, fritz
+        menuai, MOCK_CONFIG[DOMAIN][CONF_DEVICES][0], ENTITY_ID, device, fritz
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {ATTR_ENTITY_ID: ENTITY_ID, **service_data},
@@ -332,7 +332,7 @@ async def test_set_hvac_mode(
     ],
 )
 async def test_set_preset_mode_comfort(
-    hass: HomeAssistant,
+    menuai: menuai,
     fritz: Mock,
     comfort_temperature: int,
     expected_call_args: list[_Call],
@@ -343,10 +343,10 @@ async def test_set_preset_mode_comfort(
     device.lock = False
     device.comfort_temperature = comfort_temperature
     await setup_config_entry(
-        hass, MOCK_CONFIG[DOMAIN][CONF_DEVICES][0], ENTITY_ID, device, fritz
+        menuai, MOCK_CONFIG[DOMAIN][CONF_DEVICES][0], ENTITY_ID, device, fritz
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_PRESET_MODE,
         {ATTR_ENTITY_ID: ENTITY_ID, ATTR_PRESET_MODE: PRESET_COMFORT},
@@ -365,7 +365,7 @@ async def test_set_preset_mode_comfort(
     ],
 )
 async def test_set_preset_mode_eco(
-    hass: HomeAssistant,
+    menuai: menuai,
     fritz: Mock,
     eco_temperature: int,
     expected_call_args: list[_Call],
@@ -376,10 +376,10 @@ async def test_set_preset_mode_eco(
     device.lock = False
     device.eco_temperature = eco_temperature
     await setup_config_entry(
-        hass, MOCK_CONFIG[DOMAIN][CONF_DEVICES][0], ENTITY_ID, device, fritz
+        menuai, MOCK_CONFIG[DOMAIN][CONF_DEVICES][0], ENTITY_ID, device, fritz
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_PRESET_MODE,
         {ATTR_ENTITY_ID: ENTITY_ID, ATTR_PRESET_MODE: PRESET_ECO},
@@ -390,7 +390,7 @@ async def test_set_preset_mode_eco(
 
 
 async def test_set_preset_mode_boost(
-    hass: HomeAssistant,
+    menuai: menuai,
     fritz: Mock,
 ) -> None:
     """Test setting preset mode."""
@@ -398,10 +398,10 @@ async def test_set_preset_mode_boost(
     device.lock = False
 
     await setup_config_entry(
-        hass, MOCK_CONFIG[DOMAIN][CONF_DEVICES][0], ENTITY_ID, device, fritz
+        menuai, MOCK_CONFIG[DOMAIN][CONF_DEVICES][0], ENTITY_ID, device, fritz
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_PRESET_MODE,
         {ATTR_ENTITY_ID: ENTITY_ID, ATTR_PRESET_MODE: PRESET_BOOST},
@@ -411,25 +411,25 @@ async def test_set_preset_mode_boost(
     assert device.set_hkr_state.call_args_list == [call("on", True)]
 
 
-async def test_preset_mode_update(hass: HomeAssistant, fritz: Mock) -> None:
+async def test_preset_mode_update(menuai: menuai, fritz: Mock) -> None:
     """Test preset mode."""
     device = FritzDeviceClimateMock()
     device.comfort_temperature = 23
     device.eco_temperature = 20
     await setup_config_entry(
-        hass, MOCK_CONFIG[DOMAIN][CONF_DEVICES][0], ENTITY_ID, device, fritz
+        menuai, MOCK_CONFIG[DOMAIN][CONF_DEVICES][0], ENTITY_ID, device, fritz
     )
 
-    state = hass.states.get(ENTITY_ID)
+    state = menuai.states.get(ENTITY_ID)
     assert state
     assert state.attributes[ATTR_PRESET_MODE] is None
 
     # test comfort preset
     device.target_temperature = 23
     next_update = dt_util.utcnow() + timedelta(seconds=200)
-    async_fire_time_changed(hass, next_update)
-    await hass.async_block_till_done(wait_background_tasks=True)
-    state = hass.states.get(ENTITY_ID)
+    async_fire_time_changed(menuai, next_update)
+    await menuai.async_block_till_done(wait_background_tasks=True)
+    state = menuai.states.get(ENTITY_ID)
 
     assert fritz().update_devices.call_count == 2
     assert state
@@ -438,9 +438,9 @@ async def test_preset_mode_update(hass: HomeAssistant, fritz: Mock) -> None:
     # test eco preset
     device.target_temperature = 20
     next_update = dt_util.utcnow() + timedelta(seconds=200)
-    async_fire_time_changed(hass, next_update)
-    await hass.async_block_till_done(wait_background_tasks=True)
-    state = hass.states.get(ENTITY_ID)
+    async_fire_time_changed(menuai, next_update)
+    await menuai.async_block_till_done(wait_background_tasks=True)
+    state = menuai.states.get(ENTITY_ID)
 
     assert fritz().update_devices.call_count == 3
     assert state
@@ -449,23 +449,23 @@ async def test_preset_mode_update(hass: HomeAssistant, fritz: Mock) -> None:
     # test boost preset
     device.target_temperature = 127  # special temp from the api
     next_update = dt_util.utcnow() + timedelta(seconds=200)
-    async_fire_time_changed(hass, next_update)
-    await hass.async_block_till_done(wait_background_tasks=True)
-    state = hass.states.get(ENTITY_ID)
+    async_fire_time_changed(menuai, next_update)
+    await menuai.async_block_till_done(wait_background_tasks=True)
+    state = menuai.states.get(ENTITY_ID)
 
     assert fritz().update_devices.call_count == 4
     assert state
     assert state.attributes[ATTR_PRESET_MODE] == PRESET_BOOST
 
 
-async def test_discover_new_device(hass: HomeAssistant, fritz: Mock) -> None:
+async def test_discover_new_device(menuai: menuai, fritz: Mock) -> None:
     """Test adding new discovered devices during runtime."""
     device = FritzDeviceClimateMock()
     await setup_config_entry(
-        hass, MOCK_CONFIG[DOMAIN][CONF_DEVICES][0], ENTITY_ID, device, fritz
+        menuai, MOCK_CONFIG[DOMAIN][CONF_DEVICES][0], ENTITY_ID, device, fritz
     )
 
-    state = hass.states.get(ENTITY_ID)
+    state = menuai.states.get(ENTITY_ID)
     assert state
 
     new_device = FritzDeviceClimateMock()
@@ -474,10 +474,10 @@ async def test_discover_new_device(hass: HomeAssistant, fritz: Mock) -> None:
     set_devices(fritz, devices=[device, new_device])
 
     next_update = dt_util.utcnow() + timedelta(seconds=200)
-    async_fire_time_changed(hass, next_update)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai, next_update)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get(f"{CLIMATE_DOMAIN}.new_climate")
+    state = menuai.states.get(f"{CLIMATE_DOMAIN}.new_climate")
     assert state
 
 
@@ -492,7 +492,7 @@ async def test_discover_new_device(hass: HomeAssistant, fritz: Mock) -> None:
     ],
 )
 async def test_set_temperature_lock(
-    hass: HomeAssistant,
+    menuai: menuai,
     fritz: Mock,
     service_data: dict,
 ) -> None:
@@ -501,14 +501,14 @@ async def test_set_temperature_lock(
 
     device.lock = True
     assert await setup_config_entry(
-        hass, MOCK_CONFIG[DOMAIN][CONF_DEVICES][0], ENTITY_ID, device, fritz
+        menuai, MOCK_CONFIG[DOMAIN][CONF_DEVICES][0], ENTITY_ID, device, fritz
     )
 
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match="Can't change settings while manual access for telephone, app, or user interface is disabled on the device",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             CLIMATE_DOMAIN,
             SERVICE_SET_TEMPERATURE,
             {ATTR_ENTITY_ID: ENTITY_ID, **service_data},
@@ -538,7 +538,7 @@ async def test_set_temperature_lock(
     ],
 )
 async def test_set_hvac_mode_lock(
-    hass: HomeAssistant,
+    menuai: menuai,
     fritz: Mock,
     service_data: dict,
     target_temperature: float,
@@ -559,14 +559,14 @@ async def test_set_hvac_mode_lock(
         device.nextchange_endperiod = 0
 
     assert await setup_config_entry(
-        hass, MOCK_CONFIG[DOMAIN][CONF_DEVICES][0], ENTITY_ID, device, fritz
+        menuai, MOCK_CONFIG[DOMAIN][CONF_DEVICES][0], ENTITY_ID, device, fritz
     )
 
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match="Can't change settings while manual access for telephone, app, or user interface is disabled on the device",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             CLIMATE_DOMAIN,
             SERVICE_SET_HVAC_MODE,
             {ATTR_ENTITY_ID: ENTITY_ID, **service_data},
@@ -575,18 +575,18 @@ async def test_set_hvac_mode_lock(
 
 
 async def test_holidy_summer_mode(
-    hass: HomeAssistant, freezer: FrozenDateTimeFactory, fritz: Mock
+    menuai: menuai, freezer: FrozenDateTimeFactory, fritz: Mock
 ) -> None:
     """Test holiday and summer mode."""
     device = FritzDeviceClimateMock()
     device.lock = False
 
     await setup_config_entry(
-        hass, MOCK_CONFIG[DOMAIN][CONF_DEVICES][0], ENTITY_ID, device, fritz
+        menuai, MOCK_CONFIG[DOMAIN][CONF_DEVICES][0], ENTITY_ID, device, fritz
     )
 
     # initial state
-    state = hass.states.get(ENTITY_ID)
+    state = menuai.states.get(ENTITY_ID)
     assert state
     assert state.attributes[ATTR_STATE_HOLIDAY_MODE] is False
     assert state.attributes[ATTR_STATE_SUMMER_MODE] is False
@@ -602,10 +602,10 @@ async def test_holidy_summer_mode(
     device.holiday_active = True
     device.summer_active = False
     freezer.tick(timedelta(seconds=200))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get(ENTITY_ID)
+    state = menuai.states.get(ENTITY_ID)
     assert state
     assert state.attributes[ATTR_STATE_HOLIDAY_MODE]
     assert state.attributes[ATTR_STATE_SUMMER_MODE] is False
@@ -614,20 +614,20 @@ async def test_holidy_summer_mode(
     assert state.attributes[ATTR_PRESET_MODES] == [PRESET_HOLIDAY]
 
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match="Can't change settings while holiday or summer mode is active on the device",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "climate",
             SERVICE_SET_HVAC_MODE,
             {"entity_id": ENTITY_ID, ATTR_HVAC_MODE: HVACMode.HEAT},
             blocking=True,
         )
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match="Can't change settings while holiday or summer mode is active on the device",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "climate",
             SERVICE_SET_PRESET_MODE,
             {"entity_id": ENTITY_ID, ATTR_PRESET_MODE: PRESET_HOLIDAY},
@@ -638,10 +638,10 @@ async def test_holidy_summer_mode(
     device.holiday_active = False
     device.summer_active = True
     freezer.tick(timedelta(seconds=200))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get(ENTITY_ID)
+    state = menuai.states.get(ENTITY_ID)
     assert state
     assert state.attributes[ATTR_STATE_HOLIDAY_MODE] is False
     assert state.attributes[ATTR_STATE_SUMMER_MODE]
@@ -650,20 +650,20 @@ async def test_holidy_summer_mode(
     assert state.attributes[ATTR_PRESET_MODES] == [PRESET_SUMMER]
 
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match="Can't change settings while holiday or summer mode is active on the device",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "climate",
             SERVICE_SET_HVAC_MODE,
             {"entity_id": ENTITY_ID, ATTR_HVAC_MODE: HVACMode.HEAT},
             blocking=True,
         )
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match="Can't change settings while holiday or summer mode is active on the device",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "climate",
             SERVICE_SET_PRESET_MODE,
             {"entity_id": ENTITY_ID, ATTR_PRESET_MODE: PRESET_SUMMER},
@@ -674,10 +674,10 @@ async def test_holidy_summer_mode(
     device.holiday_active = False
     device.summer_active = False
     freezer.tick(timedelta(seconds=200))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get(ENTITY_ID)
+    state = menuai.states.get(ENTITY_ID)
     assert state
     assert state.attributes[ATTR_STATE_HOLIDAY_MODE] is False
     assert state.attributes[ATTR_STATE_SUMMER_MODE] is False

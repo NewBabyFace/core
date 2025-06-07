@@ -4,7 +4,7 @@ from http import HTTPStatus
 from typing import Any
 from unittest.mock import patch
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from . import async_setup_auth
 
@@ -13,7 +13,7 @@ from tests.typing import ClientSessionGenerator
 
 
 async def async_get_code(
-    hass: HomeAssistant, aiohttp_client: ClientSessionGenerator
+    menuai: menuai, aiohttp_client: ClientSessionGenerator
 ) -> dict[str, Any]:
     """Return authorization code for link user tests."""
     config = [
@@ -33,10 +33,10 @@ async def async_get_code(
             ],
         },
     ]
-    client = await async_setup_auth(hass, aiohttp_client, config)
-    user = await hass.auth.async_create_user(name="Hello")
-    refresh_token = await hass.auth.async_create_refresh_token(user, CLIENT_ID)
-    access_token = hass.auth.async_create_access_token(refresh_token)
+    client = await async_setup_auth(menuai, aiohttp_client, config)
+    user = await menuai.auth.async_create_user(name="Hello")
+    refresh_token = await menuai.auth.async_create_refresh_token(user, CLIENT_ID)
+    access_token = menuai.auth.async_create_access_token(refresh_token)
 
     # Now authenticate with the 2nd flow
     resp = await client.post(
@@ -72,10 +72,10 @@ async def async_get_code(
 
 
 async def test_link_user(
-    hass: HomeAssistant, aiohttp_client: ClientSessionGenerator
+    menuai: menuai, aiohttp_client: ClientSessionGenerator
 ) -> None:
     """Test linking a user to new credentials."""
-    info = await async_get_code(hass, aiohttp_client)
+    info = await async_get_code(menuai, aiohttp_client)
     client = info["client"]
     code = info["code"]
 
@@ -91,10 +91,10 @@ async def test_link_user(
 
 
 async def test_link_user_invalid_client_id(
-    hass: HomeAssistant, aiohttp_client: ClientSessionGenerator
+    menuai: menuai, aiohttp_client: ClientSessionGenerator
 ) -> None:
     """Test linking a user to new credentials."""
-    info = await async_get_code(hass, aiohttp_client)
+    info = await async_get_code(menuai, aiohttp_client)
     client = info["client"]
     code = info["code"]
 
@@ -110,10 +110,10 @@ async def test_link_user_invalid_client_id(
 
 
 async def test_link_user_invalid_code(
-    hass: HomeAssistant, aiohttp_client: ClientSessionGenerator
+    menuai: menuai, aiohttp_client: ClientSessionGenerator
 ) -> None:
     """Test linking a user to new credentials."""
-    info = await async_get_code(hass, aiohttp_client)
+    info = await async_get_code(menuai, aiohttp_client)
     client = info["client"]
 
     # Link user
@@ -128,10 +128,10 @@ async def test_link_user_invalid_code(
 
 
 async def test_link_user_invalid_auth(
-    hass: HomeAssistant, aiohttp_client: ClientSessionGenerator
+    menuai: menuai, aiohttp_client: ClientSessionGenerator
 ) -> None:
     """Test linking a user to new credentials."""
-    info = await async_get_code(hass, aiohttp_client)
+    info = await async_get_code(menuai, aiohttp_client)
     client = info["client"]
     code = info["code"]
 
@@ -147,16 +147,16 @@ async def test_link_user_invalid_auth(
 
 
 async def test_link_user_already_linked_same_user(
-    hass: HomeAssistant, aiohttp_client: ClientSessionGenerator
+    menuai: menuai, aiohttp_client: ClientSessionGenerator
 ) -> None:
     """Test linking a user to a credential it's already linked to."""
-    info = await async_get_code(hass, aiohttp_client)
+    info = await async_get_code(menuai, aiohttp_client)
     client = info["client"]
     code = info["code"]
 
     # Link user
     with patch.object(
-        hass.auth, "async_get_user_by_credentials", return_value=info["user"]
+        menuai.auth, "async_get_user_by_credentials", return_value=info["user"]
     ):
         resp = await client.post(
             "/auth/link_user",
@@ -170,18 +170,18 @@ async def test_link_user_already_linked_same_user(
 
 
 async def test_link_user_already_linked_other_user(
-    hass: HomeAssistant, aiohttp_client: ClientSessionGenerator
+    menuai: menuai, aiohttp_client: ClientSessionGenerator
 ) -> None:
     """Test linking a user to a credential already linked to other user."""
-    info = await async_get_code(hass, aiohttp_client)
+    info = await async_get_code(menuai, aiohttp_client)
     client = info["client"]
     code = info["code"]
 
-    another_user = await hass.auth.async_create_user(name="Another")
+    another_user = await menuai.auth.async_create_user(name="Another")
 
     # Link user
     with patch.object(
-        hass.auth, "async_get_user_by_credentials", return_value=another_user
+        menuai.auth, "async_get_user_by_credentials", return_value=another_user
     ):
         resp = await client.post(
             "/auth/link_user",

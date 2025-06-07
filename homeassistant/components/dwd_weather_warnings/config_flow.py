@@ -7,9 +7,9 @@ from typing import Any
 from dwdwfsapi import DwdWeatherWarningsAPI
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.selector import EntitySelector, EntitySelectorConfig
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.selector import EntitySelector, EntitySelectorConfig
 
 from .const import CONF_REGION_DEVICE_TRACKER, CONF_REGION_IDENTIFIER, DOMAIN
 from .exceptions import EntityNotFoundError
@@ -39,7 +39,7 @@ class DwdWeatherWarningsConfigFlow(ConfigFlow, domain=DOMAIN):
                 # Validate region identifier using the API
                 identifier = user_input[CONF_REGION_IDENTIFIER]
 
-                if not await self.hass.async_add_executor_job(
+                if not await self.menuai.async_add_executor_job(
                     DwdWeatherWarningsAPI, identifier
                 ):
                     errors["base"] = "invalid_identifier"
@@ -52,21 +52,21 @@ class DwdWeatherWarningsConfigFlow(ConfigFlow, domain=DOMAIN):
                     return self.async_create_entry(title=identifier, data=user_input)
             else:  # CONF_REGION_DEVICE_TRACKER
                 device_tracker = user_input[CONF_REGION_DEVICE_TRACKER]
-                registry = er.async_get(self.hass)
+                registry = er.async_get(self.menuai)
                 entity_entry = registry.async_get(device_tracker)
 
                 if entity_entry is None:
                     errors["base"] = "entity_not_found"
                 else:
                     try:
-                        position = get_position_data(self.hass, entity_entry.id)
+                        position = get_position_data(self.menuai, entity_entry.id)
                     except EntityNotFoundError:
                         errors["base"] = "entity_not_found"
                     except AttributeError:
                         errors["base"] = "attribute_not_found"
                     else:
                         # Validate position using the API
-                        if not await self.hass.async_add_executor_job(
+                        if not await self.menuai.async_add_executor_job(
                             DwdWeatherWarningsAPI, position
                         ):
                             errors["base"] = "invalid_identifier"

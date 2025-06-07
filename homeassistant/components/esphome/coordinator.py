@@ -8,9 +8,9 @@ import logging
 from awesomeversion import AwesomeVersion
 from esphome_dashboard_api import ConfiguredDevice, ESPHomeDashboardAPI
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -21,10 +21,10 @@ REFRESH_INTERVAL = timedelta(minutes=5)
 class ESPHomeDashboardCoordinator(DataUpdateCoordinator[dict[str, ConfiguredDevice]]):
     """Class to interact with the ESPHome dashboard."""
 
-    def __init__(self, hass: HomeAssistant, addon_slug: str, url: str) -> None:
+    def __init__(self, menuai: menuai, addon_slug: str, url: str) -> None:
         """Initialize the dashboard coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=None,
             name="ESPHome Dashboard",
@@ -33,7 +33,7 @@ class ESPHomeDashboardCoordinator(DataUpdateCoordinator[dict[str, ConfiguredDevi
         )
         self.addon_slug = addon_slug
         self.url = url
-        self.api = ESPHomeDashboardAPI(url, async_get_clientsession(hass))
+        self.api = ESPHomeDashboardAPI(url, async_get_clientsession(menuai))
         self.supports_update: bool | None = None
 
     async def _async_update_data(self) -> dict[str, ConfiguredDevice]:

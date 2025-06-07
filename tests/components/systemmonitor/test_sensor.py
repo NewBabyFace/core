@@ -9,21 +9,21 @@ from psutil._common import sdiskpart, sdiskusage, shwtemp, snetio, snicaddr
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.components.systemmonitor.const import DOMAIN
-from homeassistant.components.systemmonitor.coordinator import VirtualMemory
-from homeassistant.components.systemmonitor.sensor import get_cpu_icon
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.components.systemmonitor.const import DOMAIN
+from menuai.components.systemmonitor.coordinator import VirtualMemory
+from menuai.components.systemmonitor.sensor import get_cpu_icon
+from menuai.config_entries import ConfigEntry
+from menuai.const import STATE_UNAVAILABLE, STATE_UNKNOWN
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry, async_fire_time_changed
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_psutil: Mock,
     mock_os: Mock,
     entity_registry: er.EntityRegistry,
@@ -45,11 +45,11 @@ async def test_sensor(
             ],
         },
     )
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    memory_sensor = hass.states.get("sensor.system_monitor_memory_free")
+    memory_sensor = menuai.states.get("sensor.system_monitor_memory_free")
     assert memory_sensor is not None
     assert memory_sensor.state == "40.0"
     assert memory_sensor.attributes == {
@@ -63,14 +63,14 @@ async def test_sensor(
         entity_registry, mock_config_entry.entry_id
     ):
         if entity.domain == SENSOR_DOMAIN:
-            state = hass.states.get(entity.entity_id)
+            state = menuai.states.get(entity.entity_id)
             assert state.state == snapshot(name=f"{state.name} - state")
             assert state.attributes == snapshot(name=f"{state.name} - attributes")
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_process_sensor_not_loaded(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_psutil: Mock,
     mock_os: Mock,
     entity_registry: er.EntityRegistry,
@@ -92,22 +92,22 @@ async def test_process_sensor_not_loaded(
             ],
         },
     )
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    process_sensor = hass.states.get("sensor.system_monitor_process_python3")
+    process_sensor = menuai.states.get("sensor.system_monitor_process_python3")
     assert process_sensor is None
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensor_not_loading_veth_networks(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_added_config_entry: ConfigEntry,
 ) -> None:
     """Test the sensor."""
-    network_sensor_1 = hass.states.get("sensor.system_monitor_network_out_eth1")
-    network_sensor_2 = hass.states.get(
+    network_sensor_1 = menuai.states.get("sensor.system_monitor_network_out_eth1")
+    network_sensor_2 = menuai.states.get(
         "sensor.sensor.system_monitor_network_out_vethxyzxyz"
     )
     assert network_sensor_1 is not None
@@ -117,7 +117,7 @@ async def test_sensor_not_loading_veth_networks(
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensor_icon(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_psutil: Mock,
     mock_os: Mock,
     mock_config_entry: MockConfigEntry,
@@ -135,7 +135,7 @@ async def test_sensor_icon(
 
 
 async def test_sensor_updating(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_psutil: Mock,
     mock_os: Mock,
     freezer: FrozenDateTimeFactory,
@@ -156,20 +156,20 @@ async def test_sensor_updating(
             ],
         },
     )
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    memory_sensor = hass.states.get("sensor.system_monitor_memory_free")
+    memory_sensor = menuai.states.get("sensor.system_monitor_memory_free")
     assert memory_sensor is not None
     assert memory_sensor.state == "40.0"
 
     mock_psutil.virtual_memory.side_effect = Exception("Failed to update")
     freezer.tick(timedelta(minutes=1))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    memory_sensor = hass.states.get("sensor.system_monitor_memory_free")
+    memory_sensor = menuai.states.get("sensor.system_monitor_memory_free")
     assert memory_sensor is not None
     assert memory_sensor.state == STATE_UNAVAILABLE
 
@@ -182,10 +182,10 @@ async def test_sensor_updating(
         30 * 1024**2,
     )
     freezer.tick(timedelta(minutes=1))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    memory_sensor = hass.states.get("sensor.system_monitor_memory_free")
+    memory_sensor = menuai.states.get("sensor.system_monitor_memory_free")
     assert memory_sensor is not None
     assert memory_sensor.state == "25.0"
 
@@ -193,14 +193,14 @@ async def test_sensor_updating(
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensor_network_sensors(
     freezer: FrozenDateTimeFactory,
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_added_config_entry: ConfigEntry,
     mock_psutil: Mock,
 ) -> None:
     """Test process not exist failure."""
-    network_out_sensor = hass.states.get("sensor.system_monitor_network_out_eth1")
-    packets_out_sensor = hass.states.get("sensor.system_monitor_packets_out_eth1")
-    throughput_network_out_sensor = hass.states.get(
+    network_out_sensor = menuai.states.get("sensor.system_monitor_network_out_eth1")
+    packets_out_sensor = menuai.states.get("sensor.system_monitor_packets_out_eth1")
+    throughput_network_out_sensor = menuai.states.get(
         "sensor.system_monitor_network_throughput_out_eth1"
     )
 
@@ -217,12 +217,12 @@ async def test_sensor_network_sensors(
     }
 
     freezer.tick(timedelta(minutes=1))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    network_out_sensor = hass.states.get("sensor.system_monitor_network_out_eth1")
-    packets_out_sensor = hass.states.get("sensor.system_monitor_packets_out_eth1")
-    throughput_network_out_sensor = hass.states.get(
+    network_out_sensor = menuai.states.get("sensor.system_monitor_network_out_eth1")
+    packets_out_sensor = menuai.states.get("sensor.system_monitor_packets_out_eth1")
+    throughput_network_out_sensor = menuai.states.get(
         "sensor.system_monitor_network_throughput_out_eth1"
     )
 
@@ -249,12 +249,12 @@ async def test_sensor_network_sensors(
     }
 
     freezer.tick(timedelta(minutes=1))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    network_out_sensor = hass.states.get("sensor.system_monitor_network_out_eth1")
-    packets_out_sensor = hass.states.get("sensor.system_monitor_packets_out_eth1")
-    throughput_network_out_sensor = hass.states.get(
+    network_out_sensor = menuai.states.get("sensor.system_monitor_network_out_eth1")
+    packets_out_sensor = menuai.states.get("sensor.system_monitor_packets_out_eth1")
+    throughput_network_out_sensor = menuai.states.get(
         "sensor.system_monitor_network_throughput_out_eth1"
     )
 
@@ -268,7 +268,7 @@ async def test_sensor_network_sensors(
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_missing_cpu_temperature(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_psutil: Mock,
     mock_os: Mock,
     mock_config_entry: MockConfigEntry,
@@ -281,18 +281,18 @@ async def test_missing_cpu_temperature(
     mock_psutil.sensors_temperatures.return_value = {
         "not_exist": [shwtemp("not_exist", 50.0, 60.0, 70.0)]
     }
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # assert "Cannot read CPU / processor temperature information" in caplog.text
-    temp_sensor = hass.states.get("sensor.system_monitor_processor_temperature")
+    temp_sensor = menuai.states.get("sensor.system_monitor_processor_temperature")
     assert temp_sensor is None
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_processor_temperature(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_psutil: Mock,
     mock_os: Mock,
     mock_config_entry: MockConfigEntry,
@@ -305,51 +305,51 @@ async def test_processor_temperature(
             "cpu0-thermal": [shwtemp("cpu0-thermal", 50.0, 60.0, 70.0)]
         }
         mock_psutil.sensors_temperatures.side_effect = None
-        mock_config_entry.add_to_hass(hass)
-        assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
-        temp_entity = hass.states.get("sensor.system_monitor_processor_temperature")
+        mock_config_entry.add_to_menuai(menuai)
+        assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
+        temp_entity = menuai.states.get("sensor.system_monitor_processor_temperature")
         assert temp_entity.state == "50.0"
-        assert await hass.config_entries.async_unload(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_unload(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     with patch("sys.platform", "nt"):
         mock_psutil.sensors_temperatures.return_value = None
         mock_psutil.sensors_temperatures.side_effect = AttributeError(
             "sensors_temperatures not exist"
         )
-        mock_config_entry.add_to_hass(hass)
-        assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
-        temp_entity = hass.states.get("sensor.system_monitor_processor_temperature")
+        mock_config_entry.add_to_menuai(menuai)
+        assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
+        temp_entity = menuai.states.get("sensor.system_monitor_processor_temperature")
         assert temp_entity.state == STATE_UNAVAILABLE
-        assert await hass.config_entries.async_unload(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_unload(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     with patch("sys.platform", "darwin"):
         mock_psutil.sensors_temperatures.return_value = {
             "cpu0-thermal": [shwtemp("cpu0-thermal", 50.0, 60.0, 70.0)]
         }
         mock_psutil.sensors_temperatures.side_effect = None
-        mock_config_entry.add_to_hass(hass)
-        assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
-        temp_entity = hass.states.get("sensor.system_monitor_processor_temperature")
+        mock_config_entry.add_to_menuai(menuai)
+        assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
+        temp_entity = menuai.states.get("sensor.system_monitor_processor_temperature")
         assert temp_entity.state == "50.0"
-        assert await hass.config_entries.async_unload(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_unload(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_exception_handling_disk_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_psutil: Mock,
     mock_added_config_entry: ConfigEntry,
     caplog: pytest.LogCaptureFixture,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test the sensor."""
-    disk_sensor = hass.states.get("sensor.system_monitor_disk_free")
+    disk_sensor = menuai.states.get("sensor.system_monitor_disk_free")
     assert disk_sensor is not None
     assert disk_sensor.state == "200.0"  # GiB
 
@@ -357,12 +357,12 @@ async def test_exception_handling_disk_sensor(
     mock_psutil.disk_usage.side_effect = OSError("Could not update /")
 
     freezer.tick(timedelta(minutes=1))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     assert "OS error for /" in caplog.text
 
-    disk_sensor = hass.states.get("sensor.system_monitor_disk_free")
+    disk_sensor = menuai.states.get("sensor.system_monitor_disk_free")
     assert disk_sensor is not None
     assert disk_sensor.state == STATE_UNAVAILABLE
 
@@ -370,12 +370,12 @@ async def test_exception_handling_disk_sensor(
     mock_psutil.disk_usage.side_effect = PermissionError("No access to /")
 
     freezer.tick(timedelta(minutes=1))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     assert "OS error for /" in caplog.text
 
-    disk_sensor = hass.states.get("sensor.system_monitor_disk_free")
+    disk_sensor = menuai.states.get("sensor.system_monitor_disk_free")
     assert disk_sensor is not None
     assert disk_sensor.state == STATE_UNAVAILABLE
 
@@ -385,15 +385,15 @@ async def test_exception_handling_disk_sensor(
     mock_psutil.disk_usage.side_effect = None
 
     freezer.tick(timedelta(minutes=1))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    disk_sensor = hass.states.get("sensor.system_monitor_disk_free")
+    disk_sensor = menuai.states.get("sensor.system_monitor_disk_free")
     assert disk_sensor is not None
     assert disk_sensor.state == "150.0"
     assert disk_sensor.attributes["unit_of_measurement"] == "GiB"
 
-    disk_sensor = hass.states.get("sensor.system_monitor_disk_usage")
+    disk_sensor = menuai.states.get("sensor.system_monitor_disk_usage")
     assert disk_sensor is not None
     assert disk_sensor.state == "70.0"
     assert disk_sensor.attributes["unit_of_measurement"] == "%"
@@ -401,40 +401,40 @@ async def test_exception_handling_disk_sensor(
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_cpu_percentage_is_zero_returns_unknown(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_psutil: Mock,
     mock_added_config_entry: ConfigEntry,
     caplog: pytest.LogCaptureFixture,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test the sensor."""
-    cpu_sensor = hass.states.get("sensor.system_monitor_processor_use")
+    cpu_sensor = menuai.states.get("sensor.system_monitor_processor_use")
     assert cpu_sensor is not None
     assert cpu_sensor.state == "10"
 
     mock_psutil.cpu_percent.return_value = 0.0
 
     freezer.tick(timedelta(minutes=1))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    cpu_sensor = hass.states.get("sensor.system_monitor_processor_use")
+    cpu_sensor = menuai.states.get("sensor.system_monitor_processor_use")
     assert cpu_sensor is not None
     assert cpu_sensor.state == STATE_UNKNOWN
 
     mock_psutil.cpu_percent.return_value = 15.0
 
     freezer.tick(timedelta(minutes=1))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    cpu_sensor = hass.states.get("sensor.system_monitor_processor_use")
+    cpu_sensor = menuai.states.get("sensor.system_monitor_processor_use")
     assert cpu_sensor is not None
     assert cpu_sensor.state == "15"
 
 
 async def test_remove_obsolete_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_psutil: Mock,
     mock_added_config_entry: ConfigEntry,
     caplog: pytest.LogCaptureFixture,
@@ -442,7 +442,7 @@ async def test_remove_obsolete_entities(
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test we remove sensors that are not actual and disabled."""
-    cpu_sensor = hass.states.get("sensor.system_monitor_processor_use")
+    cpu_sensor = menuai.states.get("sensor.system_monitor_processor_use")
     assert cpu_sensor is None
     cpu_sensor_entity = entity_registry.async_get("sensor.system_monitor_processor_use")
     assert cpu_sensor_entity.disabled is True
@@ -460,8 +460,8 @@ async def test_remove_obsolete_entities(
         "sensor.system_monitor_processor_use", disabled_by=None
     )
     freezer.tick(timedelta(minutes=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     # Fake an entity which should be removed as not supported and disabled
     entity_registry.async_get_or_create(
@@ -485,8 +485,8 @@ async def test_remove_obsolete_entities(
         device_id=cpu_sensor_entity.device_id,
         translation_key="network_out",
     )
-    await hass.config_entries.async_reload(mock_added_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_reload(mock_added_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert (
         len(
@@ -508,7 +508,7 @@ async def test_remove_obsolete_entities(
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_no_duplicate_disk_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_psutil: Mock,
     mock_os: Mock,
     caplog: pytest.LogCaptureFixture,
@@ -535,11 +535,11 @@ async def test_no_duplicate_disk_entities(
             "binary_sensor": {"process": ["python3", "pip"]},
         },
     )
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    disk_sensor = hass.states.get("sensor.system_monitor_disk_usage_media_frigate")
+    disk_sensor = menuai.states.get("sensor.system_monitor_disk_usage_media_frigate")
     assert disk_sensor is not None
     assert disk_sensor.state == "60.0"
 

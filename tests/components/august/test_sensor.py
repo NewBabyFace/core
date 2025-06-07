@@ -2,15 +2,15 @@
 
 from typing import Any
 
-from homeassistant import core as ha
-from homeassistant.const import (
+from menuai import core as ha
+from menuai.const import (
     ATTR_ENTITY_PICTURE,
     ATTR_UNIT_OF_MEASUREMENT,
     PERCENTAGE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import CoreState, HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import CoreState, menuai
+from menuai.helpers import entity_registry as er
 
 from .mocks import (
     _create_august_with_devices,
@@ -23,24 +23,24 @@ from .mocks import (
 from tests.common import mock_restore_cache_with_extra_data
 
 
-async def test_create_doorbell(hass: HomeAssistant) -> None:
+async def test_create_doorbell(menuai: menuai) -> None:
     """Test creation of a doorbell."""
-    doorbell_one = await _mock_doorbell_from_fixture(hass, "get_doorbell.json")
-    await _create_august_with_devices(hass, [doorbell_one])
+    doorbell_one = await _mock_doorbell_from_fixture(menuai, "get_doorbell.json")
+    await _create_august_with_devices(menuai, [doorbell_one])
 
-    battery_state = hass.states.get("sensor.k98gidt45gul_name_battery")
+    battery_state = menuai.states.get("sensor.k98gidt45gul_name_battery")
     assert battery_state.state == "96"
     assert battery_state.attributes["unit_of_measurement"] == PERCENTAGE
 
 
 async def test_create_doorbell_offline(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test creation of a doorbell that is offline."""
-    doorbell_one = await _mock_doorbell_from_fixture(hass, "get_doorbell.offline.json")
-    await _create_august_with_devices(hass, [doorbell_one])
+    doorbell_one = await _mock_doorbell_from_fixture(menuai, "get_doorbell.offline.json")
+    await _create_august_with_devices(menuai, [doorbell_one])
 
-    battery_state = hass.states.get("sensor.tmt100_name_battery")
+    battery_state = menuai.states.get("sensor.tmt100_name_battery")
     assert battery_state.state == "81"
     assert battery_state.attributes["unit_of_measurement"] == PERCENTAGE
 
@@ -49,24 +49,24 @@ async def test_create_doorbell_offline(
     assert entry.unique_id == "tmt100_device_battery"
 
 
-async def test_create_doorbell_hardwired(hass: HomeAssistant) -> None:
+async def test_create_doorbell_hardwired(menuai: menuai) -> None:
     """Test creation of a doorbell that is hardwired without a battery."""
     doorbell_one = await _mock_doorbell_from_fixture(
-        hass, "get_doorbell.nobattery.json"
+        menuai, "get_doorbell.nobattery.json"
     )
-    await _create_august_with_devices(hass, [doorbell_one])
+    await _create_august_with_devices(menuai, [doorbell_one])
 
-    assert hass.states.get("sensor.tmt100_name_battery") is None
+    assert menuai.states.get("sensor.tmt100_name_battery") is None
 
 
 async def test_create_lock_with_linked_keypad(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test creation of a lock with a linked keypad that both have a battery."""
-    lock_one = await _mock_lock_from_fixture(hass, "get_lock.doorsense_init.json")
-    await _create_august_with_devices(hass, [lock_one])
+    lock_one = await _mock_lock_from_fixture(menuai, "get_lock.doorsense_init.json")
+    await _create_august_with_devices(menuai, [lock_one])
 
-    battery_state = hass.states.get(
+    battery_state = menuai.states.get(
         "sensor.a6697750d607098bae8d6baa11ef8063_name_battery"
     )
     assert battery_state.state == "88"
@@ -78,7 +78,7 @@ async def test_create_lock_with_linked_keypad(
     assert entry
     assert entry.unique_id == "A6697750D607098BAE8D6BAA11EF8063_device_battery"
 
-    keypad_battery_state = hass.states.get("sensor.front_door_lock_keypad_battery")
+    keypad_battery_state = menuai.states.get("sensor.front_door_lock_keypad_battery")
     assert keypad_battery_state.state == "62"
     assert keypad_battery_state.attributes[ATTR_UNIT_OF_MEASUREMENT] == PERCENTAGE
     entry = entity_registry.async_get("sensor.front_door_lock_keypad_battery")
@@ -87,12 +87,12 @@ async def test_create_lock_with_linked_keypad(
 
 
 async def test_create_lock_with_low_battery_linked_keypad(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test creation of a lock with a linked keypad that both have a battery."""
-    lock_one = await _mock_lock_from_fixture(hass, "get_lock.low_keypad_battery.json")
-    await _create_august_with_devices(hass, [lock_one])
-    states = hass.states
+    lock_one = await _mock_lock_from_fixture(menuai, "get_lock.low_keypad_battery.json")
+    await _create_august_with_devices(menuai, [lock_one])
+    states = menuai.states
 
     battery_state = states.get("sensor.a6697750d607098bae8d6baa11ef8063_name_battery")
     assert battery_state.state == "88"
@@ -121,22 +121,22 @@ async def test_create_lock_with_low_battery_linked_keypad(
 
 
 async def test_lock_operator_bluetooth(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test operation of a lock with doorsense and bridge."""
-    lock_one = await _mock_doorsense_enabled_august_lock_detail(hass)
+    lock_one = await _mock_doorsense_enabled_august_lock_detail(menuai)
 
     activities = await _mock_activities_from_fixture(
-        hass, "get_activity.lock_from_bluetooth.json"
+        menuai, "get_activity.lock_from_bluetooth.json"
     )
-    await _create_august_with_devices(hass, [lock_one], activities=activities)
+    await _create_august_with_devices(menuai, [lock_one], activities=activities)
 
     lock_operator_sensor = entity_registry.async_get(
         "sensor.online_with_doorsense_name_operator"
     )
     assert lock_operator_sensor
 
-    state = hass.states.get("sensor.online_with_doorsense_name_operator")
+    state = menuai.states.get("sensor.online_with_doorsense_name_operator")
     assert state.state == "Your favorite elven princess"
     assert state.attributes["manual"] is False
     assert state.attributes["tag"] is False
@@ -147,22 +147,22 @@ async def test_lock_operator_bluetooth(
 
 
 async def test_lock_operator_keypad(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test operation of a lock with doorsense and bridge."""
-    lock_one = await _mock_doorsense_enabled_august_lock_detail(hass)
+    lock_one = await _mock_doorsense_enabled_august_lock_detail(menuai)
 
     activities = await _mock_activities_from_fixture(
-        hass, "get_activity.lock_from_keypad.json"
+        menuai, "get_activity.lock_from_keypad.json"
     )
-    await _create_august_with_devices(hass, [lock_one], activities=activities)
+    await _create_august_with_devices(menuai, [lock_one], activities=activities)
 
     lock_operator_sensor = entity_registry.async_get(
         "sensor.online_with_doorsense_name_operator"
     )
     assert lock_operator_sensor
 
-    state = hass.states.get("sensor.online_with_doorsense_name_operator")
+    state = menuai.states.get("sensor.online_with_doorsense_name_operator")
     assert state.state == "Your favorite elven princess"
     assert state.attributes["manual"] is False
     assert state.attributes["tag"] is False
@@ -173,20 +173,20 @@ async def test_lock_operator_keypad(
 
 
 async def test_lock_operator_remote(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test operation of a lock with doorsense and bridge."""
-    lock_one = await _mock_doorsense_enabled_august_lock_detail(hass)
+    lock_one = await _mock_doorsense_enabled_august_lock_detail(menuai)
 
-    activities = await _mock_activities_from_fixture(hass, "get_activity.lock.json")
-    await _create_august_with_devices(hass, [lock_one], activities=activities)
+    activities = await _mock_activities_from_fixture(menuai, "get_activity.lock.json")
+    await _create_august_with_devices(menuai, [lock_one], activities=activities)
 
     lock_operator_sensor = entity_registry.async_get(
         "sensor.online_with_doorsense_name_operator"
     )
     assert lock_operator_sensor
 
-    state = hass.states.get("sensor.online_with_doorsense_name_operator")
+    state = menuai.states.get("sensor.online_with_doorsense_name_operator")
     assert state.state == "Your favorite elven princess"
     assert state.attributes["manual"] is False
     assert state.attributes["tag"] is False
@@ -197,21 +197,21 @@ async def test_lock_operator_remote(
 
 
 async def test_lock_operator_manual(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test operation of a lock with doorsense and bridge."""
-    lock_one = await _mock_doorsense_enabled_august_lock_detail(hass)
+    lock_one = await _mock_doorsense_enabled_august_lock_detail(menuai)
 
     activities = await _mock_activities_from_fixture(
-        hass, "get_activity.lock_from_manual.json"
+        menuai, "get_activity.lock_from_manual.json"
     )
-    await _create_august_with_devices(hass, [lock_one], activities=activities)
+    await _create_august_with_devices(menuai, [lock_one], activities=activities)
 
     lock_operator_sensor = entity_registry.async_get(
         "sensor.online_with_doorsense_name_operator"
     )
     assert lock_operator_sensor
-    state = hass.states.get("sensor.online_with_doorsense_name_operator")
+    state = menuai.states.get("sensor.online_with_doorsense_name_operator")
     assert state.state == "Your favorite elven princess"
     assert state.attributes["manual"] is True
     assert state.attributes["tag"] is False
@@ -222,22 +222,22 @@ async def test_lock_operator_manual(
 
 
 async def test_lock_operator_autorelock(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test operation of a lock with doorsense and bridge."""
-    lock_one = await _mock_doorsense_enabled_august_lock_detail(hass)
+    lock_one = await _mock_doorsense_enabled_august_lock_detail(menuai)
 
     activities = await _mock_activities_from_fixture(
-        hass, "get_activity.lock_from_autorelock.json"
+        menuai, "get_activity.lock_from_autorelock.json"
     )
-    await _create_august_with_devices(hass, [lock_one], activities=activities)
+    await _create_august_with_devices(menuai, [lock_one], activities=activities)
 
     lock_operator_sensor = entity_registry.async_get(
         "sensor.online_with_doorsense_name_operator"
     )
     assert lock_operator_sensor
 
-    state = hass.states.get("sensor.online_with_doorsense_name_operator")
+    state = menuai.states.get("sensor.online_with_doorsense_name_operator")
     assert state.state == "Auto Relock"
     assert state.attributes["manual"] is False
     assert state.attributes["tag"] is False
@@ -248,22 +248,22 @@ async def test_lock_operator_autorelock(
 
 
 async def test_unlock_operator_manual(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test operation of a lock manually."""
-    lock_one = await _mock_doorsense_enabled_august_lock_detail(hass)
+    lock_one = await _mock_doorsense_enabled_august_lock_detail(menuai)
 
     activities = await _mock_activities_from_fixture(
-        hass, "get_activity.unlock_from_manual.json"
+        menuai, "get_activity.unlock_from_manual.json"
     )
-    await _create_august_with_devices(hass, [lock_one], activities=activities)
+    await _create_august_with_devices(menuai, [lock_one], activities=activities)
 
     lock_operator_sensor = entity_registry.async_get(
         "sensor.online_with_doorsense_name_operator"
     )
     assert lock_operator_sensor
 
-    state = hass.states.get("sensor.online_with_doorsense_name_operator")
+    state = menuai.states.get("sensor.online_with_doorsense_name_operator")
     assert state.state == "Your favorite elven princess"
     assert state.attributes["manual"] is True
     assert state.attributes["tag"] is False
@@ -274,22 +274,22 @@ async def test_unlock_operator_manual(
 
 
 async def test_unlock_operator_tag(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test operation of a lock with a tag."""
-    lock_one = await _mock_doorsense_enabled_august_lock_detail(hass)
+    lock_one = await _mock_doorsense_enabled_august_lock_detail(menuai)
 
     activities = await _mock_activities_from_fixture(
-        hass, "get_activity.unlock_from_tag.json"
+        menuai, "get_activity.unlock_from_tag.json"
     )
-    await _create_august_with_devices(hass, [lock_one], activities=activities)
+    await _create_august_with_devices(menuai, [lock_one], activities=activities)
 
     lock_operator_sensor = entity_registry.async_get(
         "sensor.online_with_doorsense_name_operator"
     )
     assert lock_operator_sensor
 
-    state = hass.states.get("sensor.online_with_doorsense_name_operator")
+    state = menuai.states.get("sensor.online_with_doorsense_name_operator")
     assert state.state == "Your favorite elven princess"
     assert state.attributes["manual"] is False
     assert state.attributes["tag"] is True
@@ -300,12 +300,12 @@ async def test_unlock_operator_tag(
 
 
 async def test_restored_state(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
+    menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
     """Test restored state."""
 
     entity_id = "sensor.online_with_doorsense_name_operator"
-    lock_one = await _mock_doorsense_enabled_august_lock_detail(hass)
+    lock_one = await _mock_doorsense_enabled_august_lock_detail(menuai)
 
     fake_state = ha.State(
         entity_id,
@@ -321,10 +321,10 @@ async def test_restored_state(
         },
     )
 
-    # Home assistant is not running yet
-    hass.set_state(CoreState.not_running)
+    # MenuAI is not running yet
+    menuai.set_state(CoreState.not_running)
     mock_restore_cache_with_extra_data(
-        hass,
+        menuai,
         [
             (
                 fake_state,
@@ -333,11 +333,11 @@ async def test_restored_state(
         ],
     )
 
-    await _create_august_with_devices(hass, [lock_one])
+    await _create_august_with_devices(menuai, [lock_one])
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == "Tag Unlock"
     assert state.attributes["method"] == "tag"
     assert state.attributes[ATTR_ENTITY_PICTURE] == "image.png"

@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.bluetooth.passive_update_coordinator import (
+from menuai.components.bluetooth.passive_update_coordinator import (
     PassiveBluetoothCoordinatorEntity,
 )
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo
 
 from .const import MANUFACTURER
 from .coordinator import MicroBotDataUpdateCoordinator

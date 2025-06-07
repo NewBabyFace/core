@@ -4,9 +4,9 @@ from datetime import timedelta
 
 from dremel3dpy import Dremel3DPrinter
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN, LOGGER
 
@@ -19,11 +19,11 @@ class Dremel3DPrinterDataUpdateCoordinator(DataUpdateCoordinator[None]):
     config_entry: DremelConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: DremelConfigEntry, api: Dremel3DPrinter
+        self, menuai: menuai, config_entry: DremelConfigEntry, api: Dremel3DPrinter
     ) -> None:
         """Initialize Dremel 3D Printer data update coordinator."""
         super().__init__(
-            hass=hass,
+            menuai=menuai,
             logger=LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -34,7 +34,7 @@ class Dremel3DPrinterDataUpdateCoordinator(DataUpdateCoordinator[None]):
     async def _async_update_data(self) -> None:
         """Update data via APIs."""
         try:
-            await self.hass.async_add_executor_job(self.api.refresh)
+            await self.menuai.async_add_executor_job(self.api.refresh)
         except RuntimeError as ex:
             raise UpdateFailed(
                 f"Unable to refresh printer information: Printer offline: {ex}"

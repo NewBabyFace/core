@@ -12,11 +12,11 @@ from aioraven.data import DeviceInfo as RAVEnDeviceInfo
 from aioraven.device import RAVEnConnectionError
 from aioraven.serial import RAVEnSerialDevice
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_DEVICE, CONF_MAC
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_DEVICE, CONF_MAC
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN
 
@@ -71,10 +71,10 @@ class RAVEnDataCoordinator(DataUpdateCoordinator):
     _device_info: RAVEnDeviceInfo | None = None
     config_entry: RAVEnConfigEntry
 
-    def __init__(self, hass: HomeAssistant, entry: RAVEnConfigEntry) -> None:
+    def __init__(self, menuai: menuai, entry: RAVEnConfigEntry) -> None:
         """Initialize the data object."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
             name=DOMAIN,

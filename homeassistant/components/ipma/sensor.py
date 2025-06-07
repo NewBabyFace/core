@@ -13,10 +13,10 @@ from pyipma.location import Location
 from pyipma.rcm import RCM
 from pyipma.uv import UV
 
-from homeassistant.components.sensor import SensorEntity, SensorEntityDescription
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import Throttle
+from menuai.components.sensor import SensorEntity, SensorEntityDescription
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import Throttle
 
 from . import IpmaConfigEntry
 from .const import MIN_TIME_BETWEEN_UPDATES
@@ -86,7 +86,7 @@ SENSOR_TYPES: tuple[IPMASensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: IpmaConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

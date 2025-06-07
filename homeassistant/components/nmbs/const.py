@@ -2,8 +2,8 @@
 
 from typing import Final
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
+from menuai.const import Platform
+from menuai.core import menuai
 
 DOMAIN: Final = "nmbs"
 
@@ -16,17 +16,17 @@ CONF_EXCLUDE_VIAS = "exclude_vias"
 CONF_SHOW_ON_MAP = "show_on_map"
 
 
-def find_station_by_name(hass: HomeAssistant, station_name: str):
+def find_station_by_name(menuai: menuai, station_name: str):
     """Find given station_name in the station list."""
     return next(
-        (s for s in hass.data[DOMAIN] if station_name in (s.standard_name, s.name)),
+        (s for s in menuai.data[DOMAIN] if station_name in (s.standard_name, s.name)),
         None,
     )
 
 
-def find_station(hass: HomeAssistant, station_name: str):
+def find_station(menuai: menuai, station_name: str):
     """Find given station_id in the station list."""
     return next(
-        (s for s in hass.data[DOMAIN] if station_name in s.id),
+        (s for s in menuai.data[DOMAIN] if station_name in s.id),
         None,
     )

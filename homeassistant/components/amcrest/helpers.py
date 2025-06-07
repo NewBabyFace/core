@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from homeassistant.helpers.typing import UndefinedType
+from menuai.helpers.typing import UndefinedType
 
 from .const import DOMAIN
 

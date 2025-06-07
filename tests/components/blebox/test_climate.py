@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, PropertyMock
 import blebox_uniapi
 import pytest
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_CURRENT_TEMPERATURE,
     ATTR_HVAC_ACTION,
     ATTR_HVAC_MODE,
@@ -19,15 +19,15 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     ATTR_ENTITY_ID,
     ATTR_SUPPORTED_FEATURES,
     ATTR_TEMPERATURE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 from .conftest import async_setup_entity, mock_feature
 
@@ -79,15 +79,15 @@ def thermobox_fixture():
 
 
 async def test_init(
-    saunabox, hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    saunabox, menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Test default state."""
 
     _, entity_id = saunabox
-    entry = await async_setup_entity(hass, entity_id)
+    entry = await async_setup_entity(menuai, entity_id)
     assert entry.unique_id == "BleBox-saunaBox-1afe34db9437-thermostat"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.name == "saunaBox-thermostat"
 
     supported_features = state.attributes[ATTR_SUPPORTED_FEATURES]
@@ -115,7 +115,7 @@ async def test_init(
     assert device.sw_version == "1.23"
 
 
-async def test_update(saunabox, hass: HomeAssistant, config) -> None:
+async def test_update(saunabox, menuai: menuai, config) -> None:
     """Test updating."""
 
     feature_mock, entity_id = saunabox
@@ -126,16 +126,16 @@ async def test_update(saunabox, hass: HomeAssistant, config) -> None:
         feature_mock.current = 40.9
 
     feature_mock.async_update = AsyncMock(side_effect=initial_update)
-    await async_setup_entity(hass, entity_id)
+    await async_setup_entity(menuai, entity_id)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.attributes[ATTR_HVAC_ACTION] == HVACAction.OFF
     assert state.attributes[ATTR_TEMPERATURE] == 64.3
     assert state.attributes[ATTR_CURRENT_TEMPERATURE] == 40.9
     assert state.state == HVACMode.OFF
 
 
-async def test_on_when_below_desired(saunabox, hass: HomeAssistant) -> None:
+async def test_on_when_below_desired(saunabox, menuai: menuai) -> None:
     """Test when temperature is below desired."""
 
     feature_mock, entity_id = saunabox
@@ -144,7 +144,7 @@ async def test_on_when_below_desired(saunabox, hass: HomeAssistant) -> None:
         feature_mock.is_on = False
 
     feature_mock.async_update = AsyncMock(side_effect=initial_update)
-    await async_setup_entity(hass, entity_id)
+    await async_setup_entity(menuai, entity_id)
     feature_mock.async_update = AsyncMock()
 
     def turn_on():
@@ -155,14 +155,14 @@ async def test_on_when_below_desired(saunabox, hass: HomeAssistant) -> None:
 
     feature_mock.mode = 1
     feature_mock.async_on = AsyncMock(side_effect=turn_on)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "climate",
         SERVICE_SET_HVAC_MODE,
         {"entity_id": entity_id, ATTR_HVAC_MODE: HVACMode.HEAT},
         blocking=True,
     )
     feature_mock.async_off.assert_not_called()
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state.attributes[ATTR_HVAC_ACTION] == HVACAction.HEATING
     assert state.attributes[ATTR_TEMPERATURE] == 64.8
@@ -170,7 +170,7 @@ async def test_on_when_below_desired(saunabox, hass: HomeAssistant) -> None:
     assert state.state == HVACMode.HEAT
 
 
-async def test_on_when_above_desired(saunabox, hass: HomeAssistant) -> None:
+async def test_on_when_above_desired(saunabox, menuai: menuai) -> None:
     """Test when temperature is below desired."""
 
     feature_mock, entity_id = saunabox
@@ -179,7 +179,7 @@ async def test_on_when_above_desired(saunabox, hass: HomeAssistant) -> None:
         feature_mock.is_on = False
 
     feature_mock.async_update = AsyncMock(side_effect=initial_update)
-    await async_setup_entity(hass, entity_id)
+    await async_setup_entity(menuai, entity_id)
     feature_mock.async_update = AsyncMock()
 
     def turn_on():
@@ -191,14 +191,14 @@ async def test_on_when_above_desired(saunabox, hass: HomeAssistant) -> None:
     feature_mock.mode = 1
     feature_mock.async_on = AsyncMock(side_effect=turn_on)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "climate",
         SERVICE_SET_HVAC_MODE,
         {ATTR_ENTITY_ID: entity_id, ATTR_HVAC_MODE: HVACMode.HEAT},
         blocking=True,
     )
     feature_mock.async_off.assert_not_called()
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state.attributes[ATTR_TEMPERATURE] == 23.4
     assert state.attributes[ATTR_CURRENT_TEMPERATURE] == 28.7
@@ -206,7 +206,7 @@ async def test_on_when_above_desired(saunabox, hass: HomeAssistant) -> None:
     assert state.state == HVACMode.HEAT
 
 
-async def test_off(saunabox, hass: HomeAssistant) -> None:
+async def test_off(saunabox, menuai: menuai) -> None:
     """Test turning off."""
 
     feature_mock, entity_id = saunabox
@@ -216,7 +216,7 @@ async def test_off(saunabox, hass: HomeAssistant) -> None:
         feature_mock.is_heating = False
 
     feature_mock.async_update = AsyncMock(side_effect=initial_update)
-    await async_setup_entity(hass, entity_id)
+    await async_setup_entity(menuai, entity_id)
     feature_mock.async_update = AsyncMock()
 
     def turn_off():
@@ -226,14 +226,14 @@ async def test_off(saunabox, hass: HomeAssistant) -> None:
         feature_mock.current = 22.7
 
     feature_mock.async_off = AsyncMock(side_effect=turn_off)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "climate",
         SERVICE_SET_HVAC_MODE,
         {"entity_id": entity_id, ATTR_HVAC_MODE: HVACMode.OFF},
         blocking=True,
     )
     feature_mock.async_on.assert_not_called()
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state.attributes[ATTR_HVAC_ACTION] == HVACAction.OFF
     assert state.attributes[ATTR_TEMPERATURE] == 29.8
@@ -241,7 +241,7 @@ async def test_off(saunabox, hass: HomeAssistant) -> None:
     assert state.state == HVACMode.OFF
 
 
-async def test_set_thermo(saunabox, hass: HomeAssistant) -> None:
+async def test_set_thermo(saunabox, menuai: menuai) -> None:
     """Test setting thermostat."""
 
     feature_mock, entity_id = saunabox
@@ -251,7 +251,7 @@ async def test_set_thermo(saunabox, hass: HomeAssistant) -> None:
         feature_mock.is_heating = False
 
     feature_mock.async_update = AsyncMock(side_effect=update)
-    await async_setup_entity(hass, entity_id)
+    await async_setup_entity(menuai, entity_id)
     feature_mock.async_update = AsyncMock()
 
     def set_temp(temp):
@@ -261,13 +261,13 @@ async def test_set_thermo(saunabox, hass: HomeAssistant) -> None:
         feature_mock.current = 29.1
 
     feature_mock.async_set_temperature = AsyncMock(side_effect=set_temp)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "climate",
         SERVICE_SET_TEMPERATURE,
         {"entity_id": entity_id, ATTR_TEMPERATURE: 43.21},
         blocking=True,
     )
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
 
     assert state.attributes[ATTR_TEMPERATURE] == 29.2
     assert state.attributes[ATTR_CURRENT_TEMPERATURE] == 29.1
@@ -276,7 +276,7 @@ async def test_set_thermo(saunabox, hass: HomeAssistant) -> None:
 
 
 async def test_update_failure(
-    saunabox, hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    saunabox, menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test that update failures are logged."""
 
@@ -284,20 +284,20 @@ async def test_update_failure(
 
     feature_mock, entity_id = saunabox
     feature_mock.async_update = AsyncMock(side_effect=blebox_uniapi.error.ClientError)
-    await async_setup_entity(hass, entity_id)
+    await async_setup_entity(menuai, entity_id)
 
     assert f"Updating '{feature_mock.full_name}' failed: " in caplog.text
 
 
 async def test_reding_hvac_actions(
-    saunabox, hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    saunabox, menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test hvac action for given device(mock) state."""
 
     caplog.set_level(logging.ERROR)
 
     feature_mock, entity_id = saunabox
-    await async_setup_entity(hass, entity_id)
+    await async_setup_entity(menuai, entity_id)
 
     def set_heating():
         feature_mock.is_on = True
@@ -306,25 +306,25 @@ async def test_reding_hvac_actions(
 
     feature_mock.async_update = AsyncMock(side_effect=set_heating)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "climate",
         SERVICE_SET_TEMPERATURE,
         {"entity_id": entity_id, ATTR_TEMPERATURE: 43.21},
         blocking=True,
     )
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.attributes[ATTR_HVAC_ACTION] == HVACAction.HEATING
     assert state.attributes[ATTR_HVAC_MODES] == [HVACMode.OFF, HVACMode.HEAT]
 
 
 async def test_thermo_off(
-    thermobox, hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    thermobox, menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test hvac action off fir given device state."""
     caplog.set_level(logging.ERROR)
 
     feature_mock, entity_id = thermobox
-    await async_setup_entity(hass, entity_id)
+    await async_setup_entity(menuai, entity_id)
 
     def set_off():
         feature_mock.is_on = False
@@ -332,12 +332,12 @@ async def test_thermo_off(
 
     feature_mock.async_update = AsyncMock(side_effect=set_off)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "climate",
         SERVICE_SET_HVAC_MODE,
         {"entity_id": entity_id, ATTR_HVAC_MODE: HVACMode.OFF},
         blocking=True,
     )
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.attributes[ATTR_HVAC_ACTION] == HVACAction.OFF
     assert state.attributes[ATTR_HVAC_MODES] == [HVACMode.OFF, HVACMode.COOL]

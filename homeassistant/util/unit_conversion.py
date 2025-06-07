@@ -1,4 +1,4 @@
-"""Typing Helpers for Home Assistant."""
+"""Typing Helpers for MenuAI."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from collections.abc import Callable
 from functools import lru_cache
 from math import floor, log10
 
-from homeassistant.const import (
+from menuai.const import (
     CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
     CONCENTRATION_MILLIGRAMS_PER_CUBIC_METER,
     CONCENTRATION_PARTS_PER_BILLION,
@@ -34,7 +34,7 @@ from homeassistant.const import (
     UnitOfVolumeFlowRate,
     UnitOfVolumetricFlux,
 )
-from homeassistant.exceptions import HomeAssistantError
+from menuai.exceptions import menuaiError
 
 # Distance conversion constants
 _MM_TO_M = 0.001  # 1 mm = 0.001 m
@@ -124,7 +124,7 @@ class BaseUnitConverter:
         try:
             return unit_conversion[from_unit], unit_conversion[to_unit]
         except KeyError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 UNIT_NOT_RECOGNIZED_TEMPLATE.format(err.args[0], cls.UNIT_CLASS)
             ) from err
 
@@ -517,7 +517,7 @@ class SpeedConverter(BaseUnitConverter):
             from_unit not in SpeedConverter.VALID_UNITS
             or to_unit not in SpeedConverter.VALID_UNITS
         ):
-            raise HomeAssistantError(
+            raise menuaiError(
                 UNIT_NOT_RECOGNIZED_TEMPLATE.format(to_unit, cls.UNIT_CLASS)
             )
 
@@ -603,7 +603,7 @@ class TemperatureConverter(BaseUnitConverter):
                 return cls._celsius_to_fahrenheit
             if to_unit == UnitOfTemperature.KELVIN:
                 return cls._celsius_to_kelvin
-            raise HomeAssistantError(
+            raise menuaiError(
                 UNIT_NOT_RECOGNIZED_TEMPLATE.format(to_unit, cls.UNIT_CLASS)
             )
 
@@ -612,7 +612,7 @@ class TemperatureConverter(BaseUnitConverter):
                 return cls._fahrenheit_to_celsius
             if to_unit == UnitOfTemperature.KELVIN:
                 return cls._fahrenheit_to_kelvin
-            raise HomeAssistantError(
+            raise menuaiError(
                 UNIT_NOT_RECOGNIZED_TEMPLATE.format(to_unit, cls.UNIT_CLASS)
             )
 
@@ -621,10 +621,10 @@ class TemperatureConverter(BaseUnitConverter):
                 return cls._kelvin_to_celsius
             if to_unit == UnitOfTemperature.FAHRENHEIT:
                 return cls._kelvin_to_fahrenheit
-            raise HomeAssistantError(
+            raise menuaiError(
                 UNIT_NOT_RECOGNIZED_TEMPLATE.format(to_unit, cls.UNIT_CLASS)
             )
-        raise HomeAssistantError(
+        raise menuaiError(
             UNIT_NOT_RECOGNIZED_TEMPLATE.format(from_unit, cls.UNIT_CLASS)
         )
 

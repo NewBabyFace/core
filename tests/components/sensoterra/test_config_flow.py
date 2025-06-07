@@ -6,31 +6,31 @@ from jwt import DecodeError
 import pytest
 from sensoterra.customerapi import InvalidAuth as StInvalidAuth, Timeout as StTimeout
 
-from homeassistant.components.sensoterra.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD, CONF_TOKEN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.sensoterra.const import DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_EMAIL, CONF_PASSWORD, CONF_TOKEN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
-from .const import API_EMAIL, API_PASSWORD, API_TOKEN, HASS_UUID
+from .const import API_EMAIL, API_PASSWORD, API_TOKEN, menuai_UUID
 
 from tests.common import MockConfigEntry
 
 
 async def test_full_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_customer_api_client: AsyncMock,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test we can finish a config flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    hass.data["core.uuid"] = HASS_UUID
-    result = await hass.config_entries.flow.async_configure(
+    menuai.data["core.uuid"] = menuai_UUID
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_EMAIL: API_EMAIL,
@@ -48,18 +48,18 @@ async def test_full_flow(
 
 
 async def test_form_unique_id(
-    hass: HomeAssistant, mock_customer_api_client: AsyncMock
+    menuai: menuai, mock_customer_api_client: AsyncMock
 ) -> None:
     """Test we get the form."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
-    hass.data["core.uuid"] = HASS_UUID
+    menuai.data["core.uuid"] = menuai_UUID
 
     entry = MockConfigEntry(unique_id="39", domain=DOMAIN)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_EMAIL: API_EMAIL,
@@ -81,21 +81,21 @@ async def test_form_unique_id(
     ],
 )
 async def test_form_exceptions(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_customer_api_client: AsyncMock,
     exception: Exception,
     error: str,
 ) -> None:
     """Test we handle config form exceptions."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
-    hass.data["core.uuid"] = HASS_UUID
+    menuai.data["core.uuid"] = menuai_UUID
 
     mock_customer_api_client.get_token.side_effect = exception
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_EMAIL: API_EMAIL,
@@ -107,7 +107,7 @@ async def test_form_exceptions(
 
     mock_customer_api_client.get_token.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_EMAIL: API_EMAIL,

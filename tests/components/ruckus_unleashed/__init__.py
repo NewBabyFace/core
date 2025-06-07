@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, patch
 
 from aioruckus import AjaxSession, RuckusAjaxApi
 
-from homeassistant.components.ruckus_unleashed.const import (
+from menuai.components.ruckus_unleashed.const import (
     API_AP_DEVNAME,
     API_AP_MAC,
     API_AP_MODEL,
@@ -26,9 +26,9 @@ from homeassistant.components.ruckus_unleashed.const import (
     API_SYS_UNLEASHEDNETWORK_TOKEN,
     DOMAIN,
 )
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 from tests.common import MockConfigEntry
 
@@ -88,22 +88,22 @@ def mock_config_entry() -> MockConfigEntry:
     )
 
 
-async def init_integration(hass: HomeAssistant) -> MockConfigEntry:
-    """Set up the Ruckus integration in Home Assistant."""
+async def init_integration(menuai: menuai) -> MockConfigEntry:
+    """Set up the Ruckus integration in MenuAI."""
     entry = mock_config_entry()
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     # Make device tied to other integration so device tracker entities get enabled
     other_config_entry = MockConfigEntry()
-    other_config_entry.add_to_hass(hass)
-    dr.async_get(hass).async_get_or_create(
+    other_config_entry.add_to_menuai(menuai)
+    dr.async_get(menuai).async_get_or_create(
         name="Device from other integration",
         config_entry_id=other_config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, TEST_CLIENT[API_CLIENT_MAC])},
     )
 
     with RuckusAjaxApiPatchContext():
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     return entry
 

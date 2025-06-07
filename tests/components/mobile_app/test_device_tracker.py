@@ -5,12 +5,12 @@ from typing import Any
 
 from aiohttp.test_utils import TestClient
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
+from menuai.const import Platform
+from menuai.core import menuai
 
 
 async def test_sending_location(
-    hass: HomeAssistant,
+    menuai: menuai,
     create_registrations: tuple[dict[str, Any], dict[str, Any]],
     webhook_client: TestClient,
 ) -> None:
@@ -33,8 +33,8 @@ async def test_sending_location(
     )
 
     assert resp.status == HTTPStatus.OK
-    await hass.async_block_till_done()
-    state = hass.states.get("device_tracker.test_1_2")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("device_tracker.test_1_2")
     assert state is not None
     assert state.name == "Test 1"
     assert state.state == "bar"
@@ -66,8 +66,8 @@ async def test_sending_location(
     )
 
     assert resp.status == HTTPStatus.OK
-    await hass.async_block_till_done()
-    state = hass.states.get("device_tracker.test_1_2")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("device_tracker.test_1_2")
     assert state is not None
     assert state.state == "not_home"
     assert state.attributes["source_type"] == "gps"
@@ -82,7 +82,7 @@ async def test_sending_location(
 
 
 async def test_restoring_location(
-    hass: HomeAssistant,
+    menuai: menuai,
     create_registrations: tuple[dict[str, Any], dict[str, Any]],
     webhook_client: TestClient,
 ) -> None:
@@ -104,22 +104,22 @@ async def test_restoring_location(
     )
 
     assert resp.status == HTTPStatus.OK
-    await hass.async_block_till_done()
-    state_1 = hass.states.get("device_tracker.test_1_2")
+    await menuai.async_block_till_done()
+    state_1 = menuai.states.get("device_tracker.test_1_2")
     assert state_1 is not None
 
-    config_entry = hass.config_entries.async_entries("mobile_app")[1]
+    config_entry = menuai.config_entries.async_entries("mobile_app")[1]
 
     # mobile app doesn't support unloading, so we just reload device tracker
-    await hass.config_entries.async_forward_entry_unload(
+    await menuai.config_entries.async_forward_entry_unload(
         config_entry, Platform.DEVICE_TRACKER
     )
-    await hass.config_entries.async_forward_entry_setups(
+    await menuai.config_entries.async_forward_entry_setups(
         config_entry, [Platform.DEVICE_TRACKER]
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state_2 = hass.states.get("device_tracker.test_1_2")
+    state_2 = menuai.states.get("device_tracker.test_1_2")
     assert state_2 is not None
 
     assert state_1 is not state_2

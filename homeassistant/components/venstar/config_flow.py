@@ -5,21 +5,21 @@ from typing import Any
 from venstarcolortouch import VenstarColorTouch
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PIN,
     CONF_SSL,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from .const import _LOGGER, DOMAIN, VENSTAR_TIMEOUT
 
 
-async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> str:
+async def validate_input(menuai: menuai, data: dict[str, Any]) -> str:
     """Validate the user input allows us to connect."""
     username = data.get(CONF_USERNAME)
     password = data.get(CONF_PASSWORD)
@@ -39,7 +39,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> str:
 
     # perform a full info pull, because this calls login also.
 
-    info_success = await hass.async_add_executor_job(client.update_info)
+    info_success = await menuai.async_add_executor_job(client.update_info)
     if not info_success:
         raise CannotConnect
 
@@ -61,7 +61,7 @@ class VenstarConfigFlow(ConfigFlow, domain=DOMAIN):
             self._async_abort_entries_match({CONF_HOST: user_input[CONF_HOST]})
 
             try:
-                title = await validate_input(self.hass, user_input)
+                title = await validate_input(self.menuai, user_input)
             except CannotConnect:
                 errors["base"] = "cannot_connect"
             except Exception:  # noqa: BLE001
@@ -98,5 +98,5 @@ class VenstarConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""

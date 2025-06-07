@@ -10,15 +10,15 @@ from typing import Any, Generic
 from ring_doorbell import RingCapability, RingEvent
 from ring_doorbell.const import KIND_DING, KIND_MOTION
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.const import Platform
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.event import async_call_at
+from menuai.const import Platform
+from menuai.core import CALLBACK_TYPE, menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.event import async_call_at
 
 from . import RingConfigEntry
 from .coordinator import RingListenCoordinator
@@ -65,7 +65,7 @@ BINARY_SENSOR_TYPES: tuple[RingBinarySensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: RingConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -79,7 +79,7 @@ async def async_setup_entry(
         for device in ring_data.devices.all_devices
         if device.has_capability(description.capability)
         and async_check_create_deprecated(
-            hass,
+            menuai,
             Platform.BINARY_SENSOR,
             f"{device.id}-{description.key}",
             description,
@@ -117,11 +117,11 @@ class RingBinarySensor(
         """Handle the event."""
         self._attr_is_on = True
         self._active_alert = alert
-        loop = self.hass.loop
+        loop = self.menuai.loop
         when = loop.time() + alert.expires_in
         if self._cancel_callback:
             self._cancel_callback()
-        self._cancel_callback = async_call_at(self.hass, self._async_cancel_event, when)
+        self._cancel_callback = async_call_at(self.menuai, self._async_cancel_event, when)
 
     @callback
     def _async_cancel_event(self, _now: Any) -> None:

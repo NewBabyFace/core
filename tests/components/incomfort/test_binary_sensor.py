@@ -6,28 +6,28 @@ from incomfortclient import FaultCode
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .conftest import MOCK_HEATER_STATUS
 
 from tests.common import snapshot_platform
 
 
-@patch("homeassistant.components.incomfort.PLATFORMS", [Platform.BINARY_SENSOR])
+@patch("menuai.components.incomfort.PLATFORMS", [Platform.BINARY_SENSOR])
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_incomfort: MagicMock,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
     mock_config_entry: ConfigEntry,
 ) -> None:
     """Test the incomfort entities are set up correctly."""
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
 
 @pytest.mark.parametrize(
@@ -45,15 +45,15 @@ async def test_setup_platform(
     ],
     ids=["is_failed", "is_pumping", "is_burning", "is_tapping"],
 )
-@patch("homeassistant.components.incomfort.PLATFORMS", [Platform.BINARY_SENSOR])
+@patch("menuai.components.incomfort.PLATFORMS", [Platform.BINARY_SENSOR])
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_setup_binary_sensors_alt(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_incomfort: MagicMock,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
     mock_config_entry: ConfigEntry,
 ) -> None:
     """Test the incomfort heater ."""
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)

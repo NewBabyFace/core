@@ -20,9 +20,9 @@ from pyinsteon.device_types.device_base import Device
 import voluptuous as vol
 import voluptuous_serialize
 
-from homeassistant.components import websocket_api
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
+from menuai.components import websocket_api
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
 
 from ..const import (
     DEVICE_ADDRESS,
@@ -165,7 +165,7 @@ def update_property(device, prop_name, value):
 @websocket_api.require_admin
 @websocket_api.async_response
 async def websocket_get_properties(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.connection.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
@@ -190,7 +190,7 @@ async def websocket_get_properties(
 @websocket_api.require_admin
 @websocket_api.async_response
 async def websocket_change_properties_record(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.connection.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
@@ -212,7 +212,7 @@ async def websocket_change_properties_record(
 @websocket_api.require_admin
 @websocket_api.async_response
 async def websocket_write_properties(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.connection.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
@@ -222,7 +222,7 @@ async def websocket_write_properties(
         return
 
     result = await device.async_write_config()
-    await devices.async_save(workdir=hass.config.config_dir)
+    await devices.async_save(workdir=menuai.config.config_dir)
     if result not in [ResponseStatus.SUCCESS, ResponseStatus.RUN_ON_WAKE]:
         connection.send_message(
             websocket_api.error_message(
@@ -242,7 +242,7 @@ async def websocket_write_properties(
 @websocket_api.require_admin
 @websocket_api.async_response
 async def websocket_load_properties(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.connection.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
@@ -252,7 +252,7 @@ async def websocket_load_properties(
         return
 
     result = await device.async_read_config(read_aldb=False)
-    await devices.async_save(workdir=hass.config.config_dir)
+    await devices.async_save(workdir=menuai.config.config_dir)
 
     if result not in [ResponseStatus.SUCCESS, ResponseStatus.RUN_ON_WAKE]:
         connection.send_message(
@@ -273,7 +273,7 @@ async def websocket_load_properties(
 @websocket_api.require_admin
 @websocket_api.async_response
 async def websocket_reset_properties(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.connection.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:

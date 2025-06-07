@@ -9,25 +9,25 @@ from uuid import UUID
 from bleak import BleakClient, BleakError
 import voluptuous as vol
 
-from homeassistant.components import bluetooth
-from homeassistant.components.bluetooth.match import BluetoothCallbackMatcher
-from homeassistant.components.device_tracker import (
+from menuai.components import bluetooth
+from menuai.components.bluetooth.match import BluetoothCallbackMatcher
+from menuai.components.device_tracker import (
     CONF_TRACK_NEW,
     PLATFORM_SCHEMA as DEVICE_TRACKER_PLATFORM_SCHEMA,
     SCAN_INTERVAL,
     SourceType,
 )
-from homeassistant.components.device_tracker.legacy import (
+from menuai.components.device_tracker.legacy import (
     YAML_DEVICES,
     AsyncSeeCallback,
     async_load_config,
 )
-from homeassistant.const import CONF_SCAN_INTERVAL, EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import dt as dt_util
+from menuai.const import CONF_SCAN_INTERVAL, EVENT_menuai_STOP
+from menuai.core import Event, menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.event import async_track_time_interval
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import dt as dt_util
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -53,7 +53,7 @@ PLATFORM_SCHEMA = DEVICE_TRACKER_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_scanner(  # noqa: C901
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_see: AsyncSeeCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -67,7 +67,7 @@ async def async_setup_scanner(  # noqa: C901
     else:
         battery_track_interval = timedelta(0)
 
-    yaml_path = hass.config.path(YAML_DEVICES)
+    yaml_path = menuai.config.path(YAML_DEVICES)
     devs_to_track: set[str] = set()
     devs_no_track: set[str] = set()
     devs_advertise_time: dict[str, float] = {}
@@ -113,7 +113,7 @@ async def async_setup_scanner(  # noqa: C901
     # Load all known devices.
     # We just need the devices so set consider_home and home range
     # to 0
-    for device in await async_load_config(yaml_path, hass, timedelta(0)):
+    for device in await async_load_config(yaml_path, menuai, timedelta(0)):
         # check if device is a valid bluetooth device
         if device.mac and device.mac[:4].upper() == BLE_PREFIX:
             address = device.mac[4:]
@@ -144,7 +144,7 @@ async def async_setup_scanner(  # noqa: C901
         if service_info.connectable:
             device = service_info.device
         elif connectable_device := bluetooth.async_ble_device_from_address(
-            hass, service_info.device.address, True
+            menuai, service_info.device.address, True
         ):
             device = connectable_device
         else:
@@ -181,13 +181,13 @@ async def async_setup_scanner(  # noqa: C901
         if mac in devs_to_track:
             devs_advertise_time[mac] = service_info.time
             now = dt_util.utcnow()
-            hass.async_create_task(async_see_device(mac, service_info.name))
+            menuai.async_create_task(async_see_device(mac, service_info.name))
             if (
                 mac in devs_track_battery
                 and now > devs_track_battery[mac] + battery_track_interval
             ):
                 devs_track_battery[mac] = now
-                hass.async_create_background_task(
+                menuai.async_create_background_task(
                     _async_see_update_ble_battery(mac, now, service_info),
                     "bluetooth_le_tracker.device_tracker-see_update_ble_battery",
                 )
@@ -195,7 +195,7 @@ async def async_setup_scanner(  # noqa: C901
         if track_new:
             if mac not in devs_to_track and mac not in devs_no_track:
                 _LOGGER.debug("Discovered Bluetooth LE device %s", mac)
-                hass.async_create_task(
+                menuai.async_create_task(
                     async_see_device(mac, service_info.name, new_device=True)
                 )
 
@@ -206,21 +206,21 @@ async def async_setup_scanner(  # noqa: C901
         # interval so they do not get set to not_home when
         # there have been no callbacks because the RSSI or
         # other properties have not changed.
-        for service_info in bluetooth.async_discovered_service_info(hass, False):
+        for service_info in bluetooth.async_discovered_service_info(menuai, False):
             # Only call _async_update_ble if the advertisement time has changed
             if service_info.time != devs_advertise_time.get(service_info.address):
                 _async_update_ble(service_info, bluetooth.BluetoothChange.ADVERTISEMENT)
 
     cancels = [
         bluetooth.async_register_callback(
-            hass,
+            menuai,
             _async_update_ble,
             BluetoothCallbackMatcher(
                 connectable=False
             ),  # We will take data from any source
             bluetooth.BluetoothScanningMode.ACTIVE,
         ),
-        async_track_time_interval(hass, _async_refresh_ble, interval),
+        async_track_time_interval(menuai, _async_refresh_ble, interval),
     ]
 
     @callback
@@ -229,7 +229,7 @@ async def async_setup_scanner(  # noqa: C901
         for cancel in cancels:
             cancel()
 
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _async_handle_stop)
+    menuai.bus.async_listen_once(EVENT_menuai_STOP, _async_handle_stop)
 
     _async_refresh_ble(dt_util.now())
 

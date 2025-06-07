@@ -7,9 +7,9 @@ import logging
 
 from myuplink import Device, DevicePoint, MyUplinkAPI, System
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -33,11 +33,11 @@ class MyUplinkDataCoordinator(DataUpdateCoordinator[CoordinatorData]):
     config_entry: MyUplinkConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: MyUplinkConfigEntry, api: MyUplinkAPI
+        self, menuai: menuai, config_entry: MyUplinkConfigEntry, api: MyUplinkAPI
     ) -> None:
         """Initialize myUplink coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name="myuplink",

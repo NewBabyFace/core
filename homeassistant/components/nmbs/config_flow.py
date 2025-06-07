@@ -6,9 +6,9 @@ from pyrail import iRail
 from pyrail.models import StationDetails
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.selector import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.selector import (
     BooleanSelector,
     SelectOptionDict,
     SelectSelector,
@@ -34,7 +34,7 @@ class NMBSConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def _fetch_stations(self) -> list[StationDetails]:
         """Fetch the stations."""
-        api_client = iRail(session=async_get_clientsession(self.hass))
+        api_client = iRail(session=async_get_clientsession(self.menuai))
         stations_response = await api_client.get_stations()
         if stations_response is None:
             raise CannotConnect("The API is currently unavailable.")

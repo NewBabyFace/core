@@ -4,17 +4,17 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components import media_source
-from homeassistant.components.media_player import (
+from menuai.components import media_source
+from menuai.components.media_player import (
     BrowseMedia,
     MediaPlayerEntity,
     MediaPlayerState,
     MediaType,
     async_process_play_media_url,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import FullyKioskConfigEntry
 from .const import AUDIOMANAGER_STREAM_MUSIC, MEDIA_SUPPORT_FULLYKIOSK
@@ -23,7 +23,7 @@ from .entity import FullyKioskEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: FullyKioskConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -51,9 +51,9 @@ class FullyMediaPlayer(FullyKioskEntity, MediaPlayerEntity):
         """Play a piece of media."""
         if media_source.is_media_source_id(media_id):
             play_item = await media_source.async_resolve_media(
-                self.hass, media_id, self.entity_id
+                self.menuai, media_id, self.entity_id
             )
-            media_id = async_process_play_media_url(self.hass, play_item.url)
+            media_id = async_process_play_media_url(self.menuai, play_item.url)
 
         if media_type.startswith("audio/"):
             media_type = MediaType.MUSIC
@@ -72,7 +72,7 @@ class FullyMediaPlayer(FullyKioskEntity, MediaPlayerEntity):
                 exitOnCompletion=1,
             )
         else:
-            raise HomeAssistantError(f"Unsupported media type {media_type}")
+            raise menuaiError(f"Unsupported media type {media_type}")
         self._attr_state = MediaPlayerState.PLAYING
         self.async_write_ha_state()
 
@@ -100,7 +100,7 @@ class FullyMediaPlayer(FullyKioskEntity, MediaPlayerEntity):
     ) -> BrowseMedia:
         """Implement the WebSocket media browsing helper."""
         return await media_source.async_browse_media(
-            self.hass,
+            self.menuai,
             media_content_id,
             content_filter=lambda item: item.media_content_type.startswith("audio/")
             or item.media_content_type.startswith("video/"),

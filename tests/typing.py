@@ -1,4 +1,4 @@
-"""Typing helpers for Home Assistant tests."""
+"""Typing helpers for MenuAI tests."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from aiohttp.test_utils import TestClient
 if TYPE_CHECKING:
     # Local import to avoid processing recorder module when running a
     # testcase which does not use the recorder.
-    from homeassistant.components.recorder import Recorder
+    from menuai.components.recorder import Recorder
 
 
 class MockHAClientWebSocket(ClientWebSocketResponse):
@@ -28,13 +28,13 @@ type ClientSessionGenerator = Callable[..., Coroutine[Any, Any, TestClient]]
 type MqttMockPahoClient = MagicMock
 """MagicMock for `paho.mqtt.client.Client`"""
 type MqttMockHAClient = MagicMock
-"""MagicMock for `homeassistant.components.mqtt.MQTT`."""
+"""MagicMock for `menuai.components.mqtt.MQTT`."""
 type MqttMockHAClientGenerator = Callable[..., Coroutine[Any, Any, MqttMockHAClient]]
-"""MagicMock generator for `homeassistant.components.mqtt.MQTT`."""
+"""MagicMock generator for `menuai.components.mqtt.MQTT`."""
 type RecorderInstanceContextManager = Callable[
     ..., AbstractAsyncContextManager[Recorder]
 ]
-"""ContextManager for `homeassistant.components.recorder.Recorder`."""
+"""ContextManager for `menuai.components.recorder.Recorder`."""
 type RecorderInstanceGenerator = Callable[..., Coroutine[Any, Any, Recorder]]
-"""Instance generator for `homeassistant.components.recorder.Recorder`."""
+"""Instance generator for `menuai.components.recorder.Recorder`."""
 type WebSocketGenerator = Callable[..., Coroutine[Any, Any, MockHAClientWebSocket]]

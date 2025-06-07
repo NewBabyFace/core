@@ -1,9 +1,9 @@
 """Test the Trend integration."""
 
-from homeassistant.components.trend.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.components.trend.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from .conftest import ComponentSetup
 
@@ -11,7 +11,7 @@ from tests.common import MockConfigEntry
 
 
 async def test_setup_and_remove_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     config_entry: MockConfigEntry,
 ) -> None:
@@ -19,24 +19,24 @@ async def test_setup_and_remove_config_entry(
     trend_entity_id = "binary_sensor.my_trend"
 
     # Set up the config entry
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Check the entity is registered in the entity registry
     assert entity_registry.async_get(trend_entity_id) is not None
 
     # Remove the config entry
-    assert await hass.config_entries.async_remove(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_remove(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Check the state and entity registry entry are removed
-    assert hass.states.get(trend_entity_id) is None
+    assert menuai.states.get(trend_entity_id) is None
     assert entity_registry.async_get(trend_entity_id) is None
 
 
 async def test_reload_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     setup_component: ComponentSetup,
 ) -> None:
@@ -45,7 +45,7 @@ async def test_reload_config_entry(
 
     assert config_entry.state is ConfigEntryState.LOADED
 
-    assert hass.config_entries.async_update_entry(
+    assert menuai.config_entries.async_update_entry(
         config_entry, data={**config_entry.data, "max_samples": 4.0}
     )
 
@@ -54,7 +54,7 @@ async def test_reload_config_entry(
 
 
 async def test_device_cleaning(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
@@ -62,7 +62,7 @@ async def test_device_cleaning(
 
     # Source entity device config entry
     source_config_entry = MockConfigEntry()
-    source_config_entry.add_to_hass(hass)
+    source_config_entry.add_to_menuai(menuai)
 
     # Device entry of the source entity
     source_device1_entry = device_registry.async_get_or_create(
@@ -79,7 +79,7 @@ async def test_device_cleaning(
         config_entry=source_config_entry,
         device_id=source_device1_entry.id,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert entity_registry.async_get("sensor.test_source") is not None
 
     # Configure the configuration entry for Trend
@@ -93,9 +93,9 @@ async def test_device_cleaning(
         },
         title="Trend",
     )
-    trend_config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(trend_config_entry.entry_id)
-    await hass.async_block_till_done()
+    trend_config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(trend_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Confirm the link between the source entity device and the trend sensor
     trend_entity = entity_registry.async_get("binary_sensor.trend")
@@ -113,7 +113,7 @@ async def test_device_cleaning(
         identifiers={("sensor", "identifier_test3")},
         connections={("mac", "30:31:32:33:34:03")},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Before reloading the config entry, two devices are expected to be linked
     devices_before_reload = device_registry.devices.get_devices_for_config_entry_id(
@@ -122,8 +122,8 @@ async def test_device_cleaning(
     assert len(devices_before_reload) == 3
 
     # Config entry reload
-    await hass.config_entries.async_reload(trend_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_reload(trend_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Confirm the link between the source entity device and the trend sensor after reload
     trend_entity = entity_registry.async_get("binary_sensor.trend")

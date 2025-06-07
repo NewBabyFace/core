@@ -1,7 +1,7 @@
 """Define tests for the The Things Network sensor."""
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from . import init_integration
 from .conftest import (
@@ -16,7 +16,7 @@ from .conftest import (
 
 
 async def test_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
     mock_ttnclient,
@@ -24,7 +24,7 @@ async def test_sensor(
 ) -> None:
     """Test a working configurations."""
 
-    await init_integration(hass, mock_config_entry)
+    await init_integration(menuai, mock_config_entry)
 
     # Check devices
     assert (

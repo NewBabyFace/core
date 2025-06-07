@@ -7,13 +7,13 @@ import mimetypes
 
 import voluptuous as vol
 
-from homeassistant.components.camera import Camera
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_FILE_PATH, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.camera import Camera
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_FILE_PATH, CONF_NAME
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import config_validation as cv, entity_platform
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import SERVICE_UPDATE_FILE_PATH
 from .util import check_file_path_access
@@ -22,7 +22,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -79,7 +79,7 @@ class LocalFile(Camera):
 
     async def update_file_path(self, file_path: str) -> None:
         """Update the file_path."""
-        if not await self.hass.async_add_executor_job(
+        if not await self.menuai.async_add_executor_job(
             check_file_path_access, file_path
         ):
             raise ServiceValidationError(f"Path {file_path} is not accessible")

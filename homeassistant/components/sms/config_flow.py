@@ -6,11 +6,11 @@ from typing import Any
 import gammu
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_DEVICE
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import selector
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_DEVICE
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import selector
 
 from .const import CONF_BAUD_SPEED, DEFAULT_BAUD_SPEED, DEFAULT_BAUD_SPEEDS, DOMAIN
 from .gateway import create_sms_gateway
@@ -27,7 +27,7 @@ DATA_SCHEMA = vol.Schema(
 )
 
 
-async def get_imei_from_config(hass: HomeAssistant, data: dict[str, Any]) -> str:
+async def get_imei_from_config(menuai: menuai, data: dict[str, Any]) -> str:
     """Validate the user input allows us to connect.
 
     Data has the keys from DATA_SCHEMA with values provided by the user.
@@ -38,7 +38,7 @@ async def get_imei_from_config(hass: HomeAssistant, data: dict[str, Any]) -> str
     if baud_speed != DEFAULT_BAUD_SPEED:
         connection_mode += baud_speed
     config = {"Device": device, "Connection": connection_mode}
-    gateway = await create_sms_gateway(config, hass)
+    gateway = await create_sms_gateway(config, menuai)
     if not gateway:
         raise CannotConnect
     try:
@@ -66,7 +66,7 @@ class SMSFlowHandler(ConfigFlow, domain=DOMAIN):
         errors = {}
         if user_input is not None:
             try:
-                imei = await get_imei_from_config(self.hass, user_input)
+                imei = await get_imei_from_config(self.menuai, user_input)
             except CannotConnect:
                 errors["base"] = "cannot_connect"
             except Exception:
@@ -83,5 +83,5 @@ class SMSFlowHandler(ConfigFlow, domain=DOMAIN):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""

@@ -2,17 +2,17 @@
 
 from unittest.mock import Mock
 
-from homeassistant.const import STATE_UNKNOWN, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.util.json import JsonArrayType
+from menuai.const import STATE_UNKNOWN, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.util.json import JsonArrayType
 
 from .conftest import setup_platform
 from .const import FAKE_SCENE
 
 
 async def test_scene(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_bridge_v2: Mock,
     v2_resources_test_data: JsonArrayType,
@@ -20,14 +20,14 @@ async def test_scene(
     """Test if (config) scenes get created."""
     await mock_bridge_v2.api.load_test_data(v2_resources_test_data)
 
-    await setup_platform(hass, mock_bridge_v2, Platform.SCENE)
+    await setup_platform(menuai, mock_bridge_v2, Platform.SCENE)
     # there shouldn't have been any requests at this point
     assert len(mock_bridge_v2.mock_requests) == 0
     # 3 entities should be created from test data
-    assert len(hass.states.async_all()) == 3
+    assert len(menuai.states.async_all()) == 3
 
     # test (dynamic) scene for a hue zone
-    test_entity = hass.states.get("scene.test_zone_dynamic_test_scene")
+    test_entity = menuai.states.get("scene.test_zone_dynamic_test_scene")
     assert test_entity is not None
     assert test_entity.name == "Test Zone Dynamic Test Scene"
     assert test_entity.state == STATE_UNKNOWN
@@ -39,7 +39,7 @@ async def test_scene(
     assert test_entity.attributes["is_dynamic"] is True
 
     # test (regular) scene for a hue room
-    test_entity = hass.states.get("scene.test_room_regular_test_scene")
+    test_entity = menuai.states.get("scene.test_room_regular_test_scene")
     assert test_entity is not None
     assert test_entity.name == "Test Room Regular Test Scene"
     assert test_entity.state == STATE_UNKNOWN
@@ -51,7 +51,7 @@ async def test_scene(
     assert test_entity.attributes["is_dynamic"] is False
 
     # test smart scene
-    test_entity = hass.states.get("scene.test_room_smart_test_scene")
+    test_entity = menuai.states.get("scene.test_room_smart_test_scene")
     assert test_entity is not None
     assert test_entity.name == "Test Room Smart Test Scene"
     assert test_entity.state == STATE_UNKNOWN
@@ -75,17 +75,17 @@ async def test_scene(
 
 
 async def test_scene_turn_on_service(
-    hass: HomeAssistant, mock_bridge_v2: Mock, v2_resources_test_data: JsonArrayType
+    menuai: menuai, mock_bridge_v2: Mock, v2_resources_test_data: JsonArrayType
 ) -> None:
     """Test calling the turn on service on a scene."""
     await mock_bridge_v2.api.load_test_data(v2_resources_test_data)
 
-    await setup_platform(hass, mock_bridge_v2, Platform.SCENE)
+    await setup_platform(menuai, mock_bridge_v2, Platform.SCENE)
 
     test_entity_id = "scene.test_room_regular_test_scene"
 
     # call the HA turn_on service
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "scene",
         "turn_on",
         {"entity_id": test_entity_id},
@@ -98,7 +98,7 @@ async def test_scene_turn_on_service(
     assert mock_bridge_v2.mock_requests[0]["json"]["recall"] == {"action": "active"}
 
     # test again with sending transition
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "scene",
         "turn_on",
         {"entity_id": test_entity_id, "transition": 0.25},
@@ -112,17 +112,17 @@ async def test_scene_turn_on_service(
 
 
 async def test_scene_advanced_turn_on_service(
-    hass: HomeAssistant, mock_bridge_v2: Mock, v2_resources_test_data: JsonArrayType
+    menuai: menuai, mock_bridge_v2: Mock, v2_resources_test_data: JsonArrayType
 ) -> None:
     """Test calling the advanced turn on service on a scene."""
     await mock_bridge_v2.api.load_test_data(v2_resources_test_data)
 
-    await setup_platform(hass, mock_bridge_v2, Platform.SCENE)
+    await setup_platform(menuai, mock_bridge_v2, Platform.SCENE)
 
     test_entity_id = "scene.test_room_regular_test_scene"
 
     # call the hue.activate_scene service
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "hue",
         "activate_scene",
         {"entity_id": test_entity_id},
@@ -135,7 +135,7 @@ async def test_scene_advanced_turn_on_service(
     assert mock_bridge_v2.mock_requests[0]["json"]["recall"] == {"action": "active"}
 
     # test again with sending speed and dynamic
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "hue",
         "activate_scene",
         {"entity_id": test_entity_id, "speed": 80, "dynamic": True},
@@ -149,24 +149,24 @@ async def test_scene_advanced_turn_on_service(
 
 
 async def test_scene_updates(
-    hass: HomeAssistant, mock_bridge_v2: Mock, v2_resources_test_data: JsonArrayType
+    menuai: menuai, mock_bridge_v2: Mock, v2_resources_test_data: JsonArrayType
 ) -> None:
     """Test scene events from bridge."""
     await mock_bridge_v2.api.load_test_data(v2_resources_test_data)
 
-    await setup_platform(hass, mock_bridge_v2, Platform.SCENE)
+    await setup_platform(menuai, mock_bridge_v2, Platform.SCENE)
 
     test_entity_id = "scene.test_room_mocked_scene"
 
     # verify entity does not exist before we start
-    assert hass.states.get(test_entity_id) is None
+    assert menuai.states.get(test_entity_id) is None
 
     # Add new fake scene
     mock_bridge_v2.api.emit_event("add", FAKE_SCENE)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # the entity should now be available
-    test_entity = hass.states.get(test_entity_id)
+    test_entity = menuai.states.get(test_entity_id)
     assert test_entity is not None
     assert test_entity.state == STATE_UNKNOWN
     assert test_entity.name == "Test Room Mocked Scene"
@@ -176,8 +176,8 @@ async def test_scene_updates(
     updated_resource = {**FAKE_SCENE}
     updated_resource["actions"][0]["action"]["dimming"]["brightness"] = 35.0
     mock_bridge_v2.api.emit_event("update", updated_resource)
-    await hass.async_block_till_done()
-    test_entity = hass.states.get(test_entity_id)
+    await menuai.async_block_till_done()
+    test_entity = menuai.states.get(test_entity_id)
     assert test_entity is not None
     assert test_entity.attributes["brightness"] == 89
 
@@ -190,13 +190,13 @@ async def test_scene_updates(
             "metadata": {"name": "Test Room 2"},
         },
     )
-    await hass.async_block_till_done()
-    test_entity = hass.states.get(test_entity_id)
+    await menuai.async_block_till_done()
+    test_entity = menuai.states.get(test_entity_id)
     assert test_entity.attributes["group_name"] == "Test Room 2"
 
     # # test delete
     mock_bridge_v2.api.emit_event("delete", updated_resource)
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
-    test_entity = hass.states.get(test_entity_id)
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
+    test_entity = menuai.states.get(test_entity_id)
     assert test_entity is None

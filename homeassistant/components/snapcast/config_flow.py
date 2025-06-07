@@ -9,8 +9,8 @@ import snapcast.control
 from snapcast.control.server import CONTROL_PORT
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_PORT
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_PORT
 
 from .const import DEFAULT_TITLE, DOMAIN
 
@@ -38,7 +38,7 @@ class SnapcastConfigFlow(ConfigFlow, domain=DOMAIN):
             # Attempt to create the server - make sure it's going to work
             try:
                 client = await snapcast.control.create_server(
-                    self.hass.loop, host, port, reconnect=False
+                    self.menuai.loop, host, port, reconnect=False
                 )
             except socket.gaierror:
                 errors["base"] = "invalid_host"

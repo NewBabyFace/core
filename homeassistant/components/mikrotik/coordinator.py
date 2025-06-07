@@ -10,11 +10,11 @@ from typing import Any
 import librouteros
 from librouteros.login import plain as login_plain, token as login_token
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME, CONF_VERIFY_SSL
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME, CONF_VERIFY_SSL
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
     ARP,
@@ -52,10 +52,10 @@ class MikrotikData:
     """Handle all communication with the Mikrotik API."""
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: ConfigEntry, api: librouteros.Api
+        self, menuai: menuai, config_entry: ConfigEntry, api: librouteros.Api
     ) -> None:
         """Initialize the Mikrotik Client."""
-        self.hass = hass
+        self.menuai = menuai
         self.config_entry = config_entry
         self.api = api
         self._host: str = self.config_entry.data[CONF_HOST]
@@ -252,14 +252,14 @@ class MikrotikDataUpdateCoordinator(DataUpdateCoordinator[None]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: MikrotikConfigEntry,
         api: librouteros.Api,
     ) -> None:
         """Initialize the Mikrotik Client."""
-        self._mk_data = MikrotikData(hass, config_entry, api)
+        self._mk_data = MikrotikData(menuai, config_entry, api)
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=f"{DOMAIN} - {config_entry.data[CONF_HOST]}",
@@ -307,7 +307,7 @@ class MikrotikDataUpdateCoordinator(DataUpdateCoordinator[None]):
 
     async def _async_update_data(self) -> None:
         """Update Mikrotik devices information."""
-        await self.hass.async_add_executor_job(self._mk_data.update_devices)
+        await self.menuai.async_add_executor_job(self._mk_data.update_devices)
 
 
 def get_api(entry: dict[str, Any]) -> librouteros.Api:

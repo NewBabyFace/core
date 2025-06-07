@@ -7,15 +7,15 @@ from typing import Any
 from enocean.utils import combine_hex
 import voluptuous as vol
 
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     PLATFORM_SCHEMA as SWITCH_PLATFORM_SCHEMA,
     SwitchEntity,
 )
-from homeassistant.const import CONF_ID, CONF_NAME, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_ID, CONF_NAME, Platform
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import DOMAIN, LOGGER
 from .entity import EnOceanEntity
@@ -37,11 +37,11 @@ def generate_unique_id(dev_id: list[int], channel: int) -> str:
     return f"{combine_hex(dev_id)}-{channel}"
 
 
-def _migrate_to_new_unique_id(hass: HomeAssistant, dev_id, channel) -> None:
+def _migrate_to_new_unique_id(menuai: menuai, dev_id, channel) -> None:
     """Migrate old unique ids to new unique ids."""
     old_unique_id = f"{combine_hex(dev_id)}"
 
-    ent_reg = er.async_get(hass)
+    ent_reg = er.async_get(menuai)
     entity_id = ent_reg.async_get_entity_id(Platform.SWITCH, DOMAIN, old_unique_id)
 
     if entity_id is not None:
@@ -63,7 +63,7 @@ def _migrate_to_new_unique_id(hass: HomeAssistant, dev_id, channel) -> None:
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -73,7 +73,7 @@ async def async_setup_platform(
     dev_id: list[int] = config[CONF_ID]
     dev_name: str = config[CONF_NAME]
 
-    _migrate_to_new_unique_id(hass, dev_id, channel)
+    _migrate_to_new_unique_id(menuai, dev_id, channel)
     async_add_entities([EnOceanSwitch(dev_id, dev_name, channel)])
 
 

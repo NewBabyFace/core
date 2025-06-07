@@ -7,20 +7,20 @@ from pylint.checkers import BaseChecker
 from pylint.lint import PyLinter
 
 
-class HassDecoratorChecker(BaseChecker):
+class menuaiDecoratorChecker(BaseChecker):
     """Checker for decorators."""
 
-    name = "hass_decorator"
+    name = "menuai_decorator"
     priority = -1
     msgs = {
         "W7471": (
             "A coroutine function should not be decorated with @callback",
-            "hass-async-callback-decorator",
+            "menuai-async-callback-decorator",
             "Used when a coroutine function has an invalid @callback decorator",
         ),
         "W7472": (
             "Fixture %s is invalid here, please %s",
-            "hass-pytest-fixture-decorator",
+            "menuai-pytest-fixture-decorator",
             "Used when a pytest fixture is invalid",
         ),
     }
@@ -69,7 +69,7 @@ class HassDecoratorChecker(BaseChecker):
         if scope == "session":
             if test_component:
                 self.add_message(
-                    "hass-pytest-fixture-decorator",
+                    "menuai-pytest-fixture-decorator",
                     node=decorator,
                     args=("scope `session`", "use `package` or lower"),
                 )
@@ -83,7 +83,7 @@ class HassDecoratorChecker(BaseChecker):
                 and not autouse_keyword.value.value
             ):
                 self.add_message(
-                    "hass-pytest-fixture-decorator",
+                    "menuai-pytest-fixture-decorator",
                     node=decorator,
                     args=(
                         "scope/autouse combination",
@@ -96,7 +96,7 @@ class HassDecoratorChecker(BaseChecker):
 
         if test_component and scope == "package" and test_module != "conftest":
             self.add_message(
-                "hass-pytest-fixture-decorator",
+                "menuai-pytest-fixture-decorator",
                 node=decorator,
                 args=("scope `package`", "use `module` or lower"),
             )
@@ -104,8 +104,8 @@ class HassDecoratorChecker(BaseChecker):
     def visit_asyncfunctiondef(self, node: nodes.AsyncFunctionDef) -> None:
         """Apply checks on an AsyncFunctionDef node."""
         if decoratornames := node.decoratornames():
-            if "homeassistant.core.callback" in decoratornames:
-                self.add_message("hass-async-callback-decorator", node=node)
+            if "menuai.core.callback" in decoratornames:
+                self.add_message("menuai-async-callback-decorator", node=node)
             self._check_pytest_fixture(node, decoratornames)
 
     def visit_functiondef(self, node: nodes.FunctionDef) -> None:
@@ -116,4 +116,4 @@ class HassDecoratorChecker(BaseChecker):
 
 def register(linter: PyLinter) -> None:
     """Register the checker."""
-    linter.register_checker(HassDecoratorChecker(linter))
+    linter.register_checker(menuaiDecoratorChecker(linter))

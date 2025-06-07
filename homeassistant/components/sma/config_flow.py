@@ -10,8 +10,8 @@ import pysma
 import voluptuous as vol
 from yarl import URL
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import (
     CONF_HOST,
     CONF_MAC,
     CONF_NAME,
@@ -19,11 +19,11 @@ from homeassistant.const import (
     CONF_SSL,
     CONF_VERIFY_SSL,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
 
 from .const import CONF_GROUP, DOMAIN, GROUPS
 
@@ -31,12 +31,12 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def validate_input(
-    hass: HomeAssistant,
+    menuai: menuai,
     user_input: dict[str, Any],
     data: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Validate the user input allows us to connect."""
-    session = async_get_clientsession(hass, verify_ssl=user_input[CONF_VERIFY_SSL])
+    session = async_get_clientsession(menuai, verify_ssl=user_input[CONF_VERIFY_SSL])
 
     protocol = "https" if user_input[CONF_SSL] else "http"
     host = data[CONF_HOST] if data is not None else user_input[CONF_HOST]
@@ -88,7 +88,7 @@ class SmaConfigFlow(ConfigFlow, domain=DOMAIN):
 
         try:
             device_info = await validate_input(
-                self.hass, user_input=user_input, data=self._data
+                self.menuai, user_input=user_input, data=self._data
             )
         except pysma.exceptions.SmaConnectionException:
             errors["base"] = "cannot_connect"

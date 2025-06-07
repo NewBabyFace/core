@@ -4,13 +4,13 @@ from kasa import Feature
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
-from homeassistant.components.tplink.button import BUTTON_DESCRIPTIONS
-from homeassistant.components.tplink.const import DOMAIN
-from homeassistant.components.tplink.entity import EXCLUDED_FEATURES
-from homeassistant.const import ATTR_ENTITY_ID, CONF_HOST, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import (
+from menuai.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
+from menuai.components.tplink.button import BUTTON_DESCRIPTIONS
+from menuai.components.tplink.const import DOMAIN
+from menuai.components.tplink.entity import EXCLUDED_FEATURES
+from menuai.const import ATTR_ENTITY_ID, CONF_HOST, Platform
+from menuai.core import menuai
+from menuai.helpers import (
     device_registry as dr,
     entity_registry as er,
     issue_registry as ir,
@@ -33,12 +33,12 @@ from tests.common import MockConfigEntry
 
 @pytest.fixture
 def create_deprecated_button_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
 ):
     """Create the entity so it is not ignored by the deprecation check."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     def create_entry(device_name, device_id, key):
         unique_id = f"{device_id}_{key}"
@@ -57,7 +57,7 @@ def create_deprecated_button_entities(
 
 @pytest.fixture
 def create_deprecated_child_button_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
 ):
@@ -91,7 +91,7 @@ def mocked_feature_button() -> Feature:
 
 
 async def test_states(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
@@ -103,17 +103,17 @@ async def test_states(
     features.update(EXCLUDED_FEATURES)
     device = _mocked_device(alias="my_device", features=features)
 
-    await setup_platform_for_device(hass, mock_config_entry, Platform.BUTTON, device)
+    await setup_platform_for_device(menuai, mock_config_entry, Platform.BUTTON, device)
     await snapshot_platform(
-        hass, entity_registry, device_registry, snapshot, mock_config_entry.entry_id
+        menuai, entity_registry, device_registry, snapshot, mock_config_entry.entry_id
     )
 
     for excluded in EXCLUDED_FEATURES:
-        assert hass.states.get(f"sensor.my_device_{excluded}") is None
+        assert menuai.states.get(f"sensor.my_device_{excluded}") is None
 
 
 async def test_button(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_config_entry: MockConfigEntry,
     mocked_feature_button: Feature,
@@ -123,8 +123,8 @@ async def test_button(
     mocked_feature = mocked_feature_button
     plug = _mocked_device(alias="my_device", features=[mocked_feature])
     with _patch_discovery(device=plug), _patch_connect(device=plug):
-        await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     # The entity_id is based on standard name from core.
     entity_id = "button.my_device_test_alarm"
@@ -134,7 +134,7 @@ async def test_button(
 
 
 async def test_button_children(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
     mock_config_entry: MockConfigEntry,
@@ -150,8 +150,8 @@ async def test_button_children(
         children=_mocked_strip_children(features=[mocked_feature]),
     )
     with _patch_discovery(device=plug), _patch_connect(device=plug):
-        await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     entity_id = "button.my_device_test_alarm"
     entity = entity_registry.async_get(entity_id)
@@ -170,7 +170,7 @@ async def test_button_children(
 
 
 async def test_button_press(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_config_entry: MockConfigEntry,
     mocked_feature_button: Feature,
@@ -180,15 +180,15 @@ async def test_button_press(
     mocked_feature = mocked_feature_button
     plug = _mocked_device(alias="my_device", features=[mocked_feature])
     with _patch_discovery(device=plug), _patch_connect(device=plug):
-        await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     entity_id = "button.my_device_test_alarm"
     entity = entity_registry.async_get(entity_id)
     assert entity
     assert entity.unique_id == f"{DEVICE_ID}_test_alarm"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         BUTTON_DOMAIN,
         SERVICE_PRESS,
         {ATTR_ENTITY_ID: entity_id},
@@ -198,7 +198,7 @@ async def test_button_press(
 
 
 async def test_button_not_exists_with_deprecation(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mocked_feature_button: Feature,
 ) -> None:
@@ -206,19 +206,19 @@ async def test_button_not_exists_with_deprecation(
     config_entry = MockConfigEntry(
         domain=DOMAIN, data={CONF_HOST: "127.0.0.1"}, unique_id=MAC_ADDRESS
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     entity_id = "button.my_device_test_alarm"
 
-    assert not hass.states.get(entity_id)
+    assert not menuai.states.get(entity_id)
     mocked_feature = mocked_feature_button
     dev = _mocked_device(alias="my_device", features=[mocked_feature])
     with _patch_discovery(device=dev), _patch_connect(device=dev):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     assert not entity_registry.async_get(entity_id)
     assert not er.async_entries_for_config_entry(entity_registry, config_entry.entry_id)
-    assert not hass.states.get(entity_id)
+    assert not menuai.states.get(entity_id)
 
 
 @pytest.mark.parametrize(
@@ -230,7 +230,7 @@ async def test_button_not_exists_with_deprecation(
     ],
 )
 async def test_button_exists_with_deprecation(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     issue_registry: ir.IssueRegistry,
     mocked_feature_button: Feature,
@@ -241,7 +241,7 @@ async def test_button_exists_with_deprecation(
     config_entry = MockConfigEntry(
         domain=DOMAIN, data={CONF_HOST: "127.0.0.1"}, unique_id=MAC_ADDRESS
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     object_id = "my_device_test_alarm"
     entity_id = f"button.{object_id}"
@@ -249,7 +249,7 @@ async def test_button_exists_with_deprecation(
     issue_id = f"deprecated_entity_{entity_id}_automation.test_automation"
 
     if entity_has_automations:
-        await setup_automation(hass, "test_automation", entity_id)
+        await setup_automation(menuai, "test_automation", entity_id)
 
     entity = entity_registry.async_get_or_create(
         domain=BUTTON_DOMAIN,
@@ -260,18 +260,18 @@ async def test_button_exists_with_deprecation(
         disabled_by=er.RegistryEntryDisabler.USER if entity_disabled else None,
     )
     assert entity.entity_id == entity_id
-    assert not hass.states.get(entity_id)
+    assert not menuai.states.get(entity_id)
 
     mocked_feature = mocked_feature_button
     dev = _mocked_device(alias="my_device", features=[mocked_feature])
     with _patch_discovery(device=dev), _patch_connect(device=dev):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     entity = entity_registry.async_get(entity_id)
     # entity and state will be none if removed from registry
     assert (entity is None) == entity_disabled
-    assert (hass.states.get(entity_id) is None) == entity_disabled
+    assert (menuai.states.get(entity_id) is None) == entity_disabled
 
     assert (
         issue_registry.async_get_issue(DOMAIN, issue_id) is not None

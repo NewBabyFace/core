@@ -10,12 +10,12 @@ from pywizlight.discovery import DiscoveredBulb
 from pywizlight.exceptions import WizLightConnectionError, WizLightTimeOutError
 import voluptuous as vol
 
-from homeassistant.components import onboarding
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST
-from homeassistant.data_entry_flow import AbortFlow
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
-from homeassistant.util.network import is_ip_address
+from menuai.components import onboarding
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST
+from menuai.data_entry_flow import AbortFlow
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.util.network import is_ip_address
 
 from .const import DEFAULT_NAME, DISCOVER_SCAN_TIMEOUT, DOMAIN, WIZ_CONNECT_EXCEPTIONS
 from .discovery import async_discover_devices
@@ -88,7 +88,7 @@ class WizConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Confirm discovery."""
         ip_address = self._discovered_device.ip_address
-        if user_input is not None or not onboarding.async_is_onboarded(self.hass):
+        if user_input is not None or not onboarding.async_is_onboarded(self.menuai):
             # Make sure the device is still there and
             # update the name if the firmware has auto
             # updated since discovery
@@ -130,7 +130,7 @@ class WizConfigFlow(ConfigFlow, domain=DOMAIN):
             for entry in self._async_current_entries(include_ignore=False)
         }
         discovered_devices = await async_discover_devices(
-            self.hass, DISCOVER_SCAN_TIMEOUT
+            self.menuai, DISCOVER_SCAN_TIMEOUT
         )
         self._discovered_devices = {
             device.mac_address: device for device in discovered_devices

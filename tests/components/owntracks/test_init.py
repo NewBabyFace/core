@@ -3,10 +3,10 @@
 from aiohttp.test_utils import TestClient
 import pytest
 
-from homeassistant.components import owntracks
-from homeassistant.components.device_tracker.legacy import Device
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components import owntracks
+from menuai.components.device_tracker.legacy import Device
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry, mock_component
 from tests.typing import ClientSessionGenerator
@@ -44,19 +44,19 @@ def mock_dev_track(mock_device_tracker_conf: list[Device]) -> None:
 
 @pytest.fixture
 async def mock_client(
-    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+    menuai: menuai, menuai_client_no_auth: ClientSessionGenerator
 ) -> TestClient:
-    """Start the Home Assistant HTTP component."""
-    mock_component(hass, "group")
-    mock_component(hass, "zone")
-    mock_component(hass, "device_tracker")
+    """Start the MenuAI HTTP component."""
+    mock_component(menuai, "group")
+    mock_component(menuai, "zone")
+    mock_component(menuai, "device_tracker")
 
     MockConfigEntry(
         domain="owntracks", data={"webhook_id": "owntracks_test", "secret": "abcd"}
-    ).add_to_hass(hass)
-    await async_setup_component(hass, "owntracks", {})
+    ).add_to_menuai(menuai)
+    await async_setup_component(menuai, "owntracks", {})
 
-    return await hass_client_no_auth()
+    return await menuai_client_no_auth()
 
 
 async def test_handle_valid_message(mock_client) -> None:

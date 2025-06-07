@@ -9,27 +9,27 @@ from typing import TYPE_CHECKING, Any, Concatenate
 from aiohttp import web
 from aiohttp.web_exceptions import HTTPUnauthorized
 
-from homeassistant.components.http import KEY_HASS
-from homeassistant.components.onboarding import (
+from menuai.components.http import KEY_menuai
+from menuai.components.onboarding import (
     BaseOnboardingView,
     NoAuthBaseOnboardingView,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from . import http_api as cloud_http
 from .const import DATA_CLOUD
 
 if TYPE_CHECKING:
-    from homeassistant.components.onboarding import OnboardingStoreData
+    from menuai.components.onboarding import OnboardingStoreData
 
 
-async def async_setup_views(hass: HomeAssistant, data: OnboardingStoreData) -> None:
+async def async_setup_views(menuai: menuai, data: OnboardingStoreData) -> None:
     """Set up the cloud views."""
 
-    hass.http.register_view(CloudForgotPasswordView(data))
-    hass.http.register_view(CloudLoginView(data))
-    hass.http.register_view(CloudLogoutView(data))
-    hass.http.register_view(CloudStatusView(data))
+    menuai.http.register_view(CloudForgotPasswordView(data))
+    menuai.http.register_view(CloudLoginView(data))
+    menuai.http.register_view(CloudLogoutView(data))
+    menuai.http.register_view(CloudStatusView(data))
 
 
 def ensure_not_done[_ViewT: BaseOnboardingView, **_P](
@@ -38,7 +38,7 @@ def ensure_not_done[_ViewT: BaseOnboardingView, **_P](
         Coroutine[Any, Any, web.Response],
     ],
 ) -> Callable[Concatenate[_ViewT, web.Request, _P], Coroutine[Any, Any, web.Response]]:
-    """Home Assistant API decorator to check onboarding and cloud."""
+    """MenuAI API decorator to check onboarding and cloud."""
 
     @wraps(func)
     async def _ensure_not_done(
@@ -73,7 +73,7 @@ class CloudForgotPasswordView(
 
 
 class CloudLoginView(NoAuthBaseOnboardingView, cloud_http.CloudLoginView):
-    """Login to Home Assistant Cloud."""
+    """Login to MenuAI Cloud."""
 
     url = "/api/onboarding/cloud/login"
     name = "api:onboarding:cloud:login"
@@ -85,7 +85,7 @@ class CloudLoginView(NoAuthBaseOnboardingView, cloud_http.CloudLoginView):
 
 
 class CloudLogoutView(NoAuthBaseOnboardingView, cloud_http.CloudLogoutView):
-    """Log out of the Home Assistant cloud."""
+    """Log out of the MenuAI cloud."""
 
     url = "/api/onboarding/cloud/logout"
     name = "api:onboarding:cloud:logout"
@@ -105,6 +105,6 @@ class CloudStatusView(NoAuthBaseOnboardingView):
     @ensure_not_done
     async def get(self, request: web.Request) -> web.Response:
         """Return cloud status."""
-        hass = request.app[KEY_HASS]
-        cloud = hass.data[DATA_CLOUD]
+        menuai = request.app[KEY_menuai]
+        cloud = menuai.data[DATA_CLOUD]
         return self.json({"logged_in": cloud.is_logged_in})

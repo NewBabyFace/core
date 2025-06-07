@@ -2,18 +2,18 @@
 
 from unittest.mock import Mock
 
-from homeassistant.components import media_player
-from homeassistant.components.dlna_dmr.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_component import async_update_entity
-from homeassistant.setup import async_setup_component
+from menuai.components import media_player
+from menuai.components.dlna_dmr.const import DOMAIN
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity_component import async_update_entity
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 
 
 async def test_resource_lifecycle(
-    hass: HomeAssistant,
+    menuai: menuai,
     domain_data_mock: Mock,
     config_entry_mock: MockConfigEntry,
     ssdp_scanner_mock: Mock,
@@ -22,9 +22,9 @@ async def test_resource_lifecycle(
 ) -> None:
     """Test that resources are acquired/released as the entity is setup/unloaded."""
     # Set up the config entry
-    config_entry_mock.add_to_hass(hass)
-    assert await async_setup_component(hass, DOMAIN, {}) is True
-    await hass.async_block_till_done()
+    config_entry_mock.add_to_menuai(menuai)
+    assert await async_setup_component(menuai, DOMAIN, {}) is True
+    await menuai.async_block_till_done()
 
     # Check the entity is created and working
     entries = er.async_entries_for_config_entry(
@@ -33,10 +33,10 @@ async def test_resource_lifecycle(
     assert len(entries) == 1
     entity_id = entries[0].entity_id
 
-    await async_update_entity(hass, entity_id)
-    await hass.async_block_till_done()
+    await async_update_entity(menuai, entity_id)
+    await menuai.async_block_till_done()
 
-    mock_state = hass.states.get(entity_id)
+    mock_state = menuai.states.get(entity_id)
     assert mock_state is not None
     assert mock_state.state == media_player.STATE_IDLE
 
@@ -51,7 +51,7 @@ async def test_resource_lifecycle(
     assert dmr_device_mock.on_event is not None
 
     # Unload the config entry
-    assert await hass.config_entries.async_remove(config_entry_mock.entry_id) == {
+    assert await menuai.config_entries.async_remove(config_entry_mock.entry_id) == {
         "require_restart": False
     }
 

@@ -15,20 +15,20 @@ from jaraco.abode.exceptions import (
 from jaraco.abode.helpers.timeline import Groups as GROUPS
 from requests.exceptions import ConnectTimeout, HTTPError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_DATE,
     ATTR_DEVICE_ID,
     ATTR_TIME,
     CONF_PASSWORD,
     CONF_USERNAME,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     Platform,
 )
-from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import CALLBACK_TYPE, Event, menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType
 
 from .const import CONF_POLLING, DOMAIN, LOGGER
 from .services import async_setup_services
@@ -67,29 +67,29 @@ class AbodeSystem:
     logout_listener: CALLBACK_TYPE | None = None
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Abode component."""
-    async_setup_services(hass)
+    async_setup_services(menuai)
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up Abode integration from a config entry."""
     username = entry.data[CONF_USERNAME]
     password = entry.data[CONF_PASSWORD]
     polling = entry.data[CONF_POLLING]
 
     # Configure abode library to use config directory for storing data
-    jaraco.abode.config.paths.override(user_data=Path(hass.config.path("Abode")))
+    jaraco.abode.config.paths.override(user_data=Path(menuai.config.path("Abode")))
 
     # For previous config entries where unique_id is None
     if entry.unique_id is None:
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry, unique_id=entry.data[CONF_USERNAME]
         )
 
     try:
-        abode = await hass.async_add_executor_job(
+        abode = await menuai.async_add_executor_job(
             Abode, username, password, True, True, True
         )
 
@@ -99,49 +99,49 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except (AbodeException, ConnectTimeout, HTTPError) as ex:
         raise ConfigEntryNotReady(f"Unable to connect to Abode: {ex}") from ex
 
-    hass.data[DOMAIN] = AbodeSystem(abode, polling)
+    menuai.data[DOMAIN] = AbodeSystem(abode, polling)
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    await setup_hass_events(hass)
-    await hass.async_add_executor_job(setup_abode_events, hass)
+    await setup_menuai_events(menuai)
+    await menuai.async_add_executor_job(setup_abode_events, menuai)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
-    await hass.async_add_executor_job(hass.data[DOMAIN].abode.events.stop)
-    await hass.async_add_executor_job(hass.data[DOMAIN].abode.logout)
+    await menuai.async_add_executor_job(menuai.data[DOMAIN].abode.events.stop)
+    await menuai.async_add_executor_job(menuai.data[DOMAIN].abode.logout)
 
-    hass.data[DOMAIN].logout_listener()
-    hass.data.pop(DOMAIN)
+    menuai.data[DOMAIN].logout_listener()
+    menuai.data.pop(DOMAIN)
 
     return unload_ok
 
 
-async def setup_hass_events(hass: HomeAssistant) -> None:
-    """Home Assistant start and stop callbacks."""
+async def setup_menuai_events(menuai: menuai) -> None:
+    """MenuAI start and stop callbacks."""
 
     def logout(event: Event) -> None:
         """Logout of Abode."""
-        if not hass.data[DOMAIN].polling:
-            hass.data[DOMAIN].abode.events.stop()
+        if not menuai.data[DOMAIN].polling:
+            menuai.data[DOMAIN].abode.events.stop()
 
-        hass.data[DOMAIN].abode.logout()
+        menuai.data[DOMAIN].abode.logout()
         LOGGER.info("Logged out of Abode")
 
-    if not hass.data[DOMAIN].polling:
-        await hass.async_add_executor_job(hass.data[DOMAIN].abode.events.start)
+    if not menuai.data[DOMAIN].polling:
+        await menuai.async_add_executor_job(menuai.data[DOMAIN].abode.events.start)
 
-    hass.data[DOMAIN].logout_listener = hass.bus.async_listen_once(
-        EVENT_HOMEASSISTANT_STOP, logout
+    menuai.data[DOMAIN].logout_listener = menuai.bus.async_listen_once(
+        EVENT_menuai_STOP, logout
     )
 
 
-def setup_abode_events(hass: HomeAssistant) -> None:
+def setup_abode_events(menuai: menuai) -> None:
     """Event callbacks."""
 
     def event_callback(event: str, event_json: dict[str, str]) -> None:
@@ -161,7 +161,7 @@ def setup_abode_events(hass: HomeAssistant) -> None:
             ATTR_TIME: event_json.get(ATTR_TIME, ""),
         }
 
-        hass.bus.fire(event, data)
+        menuai.bus.fire(event, data)
 
     events = [
         GROUPS.ALARM,
@@ -178,6 +178,6 @@ def setup_abode_events(hass: HomeAssistant) -> None:
     ]
 
     for event in events:
-        hass.data[DOMAIN].abode.events.add_event_callback(
+        menuai.data[DOMAIN].abode.events.add_event_callback(
             event, partial(event_callback, event)
         )

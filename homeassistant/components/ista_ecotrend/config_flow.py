@@ -9,9 +9,9 @@ from typing import TYPE_CHECKING, Any
 from pyecotrend_ista import KeycloakError, LoginError, PyEcotrendIsta, ServerError
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_EMAIL, CONF_NAME, CONF_PASSWORD
-from homeassistant.helpers.selector import (
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_EMAIL, CONF_NAME, CONF_PASSWORD
+from menuai.helpers.selector import (
     TextSelector,
     TextSelectorConfig,
     TextSelectorType,
@@ -54,7 +54,7 @@ class IstaConfigFlow(ConfigFlow, domain=DOMAIN):
                 _LOGGER,
             )
             try:
-                await self.hass.async_add_executor_job(ista.login)
+                await self.menuai.async_add_executor_job(ista.login)
                 info = ista.get_account()
             except ServerError:
                 errors["base"] = "cannot_connect"
@@ -113,7 +113,7 @@ class IstaConfigFlow(ConfigFlow, domain=DOMAIN):
                 return {unit["id"] for unit in consumption_units}
 
             try:
-                consumption_units = await self.hass.async_add_executor_job(
+                consumption_units = await self.menuai.async_add_executor_job(
                     get_consumption_units
                 )
 

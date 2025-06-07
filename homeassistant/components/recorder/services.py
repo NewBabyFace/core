@@ -7,22 +7,22 @@ from typing import cast
 
 import voluptuous as vol
 
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import (
-    HomeAssistant,
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import (
+    menuai,
     ServiceCall,
     ServiceResponse,
     SupportsResponse,
     callback,
 )
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entityfilter import generate_filter
-from homeassistant.helpers.service import (
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entityfilter import generate_filter
+from menuai.helpers.service import (
     async_extract_entity_ids,
     async_register_admin_service,
 )
-from homeassistant.util import dt as dt_util
-from homeassistant.util.json import JsonArrayType, JsonObjectType
+from menuai.util import dt as dt_util
+from menuai.util.json import JsonArrayType, JsonObjectType
 
 from .const import ATTR_APPLY_FILTER, ATTR_KEEP_DAYS, ATTR_REPACK, DOMAIN
 from .core import Recorder
@@ -88,7 +88,7 @@ SERVICE_GET_STATISTICS_SCHEMA = vol.Schema(
 
 
 @callback
-def _async_register_purge_service(hass: HomeAssistant, instance: Recorder) -> None:
+def _async_register_purge_service(menuai: menuai, instance: Recorder) -> None:
     async def async_handle_purge_service(service: ServiceCall) -> None:
         """Handle calls to the purge service."""
         kwargs = service.data
@@ -99,7 +99,7 @@ def _async_register_purge_service(hass: HomeAssistant, instance: Recorder) -> No
         instance.queue_task(PurgeTask(purge_before, repack, apply_filter))
 
     async_register_admin_service(
-        hass,
+        menuai,
         DOMAIN,
         SERVICE_PURGE,
         async_handle_purge_service,
@@ -109,11 +109,11 @@ def _async_register_purge_service(hass: HomeAssistant, instance: Recorder) -> No
 
 @callback
 def _async_register_purge_entities_service(
-    hass: HomeAssistant, instance: Recorder
+    menuai: menuai, instance: Recorder
 ) -> None:
     async def async_handle_purge_entities_service(service: ServiceCall) -> None:
         """Handle calls to the purge entities service."""
-        entity_ids = await async_extract_entity_ids(hass, service)
+        entity_ids = await async_extract_entity_ids(menuai, service)
         domains = service.data.get(ATTR_DOMAINS, [])
         keep_days = service.data.get(ATTR_KEEP_DAYS, 0)
         entity_globs = service.data.get(ATTR_ENTITY_GLOBS, [])
@@ -122,7 +122,7 @@ def _async_register_purge_entities_service(
         instance.queue_task(PurgeEntitiesTask(entity_filter, purge_before))
 
     async_register_admin_service(
-        hass,
+        menuai,
         DOMAIN,
         SERVICE_PURGE_ENTITIES,
         async_handle_purge_entities_service,
@@ -131,12 +131,12 @@ def _async_register_purge_entities_service(
 
 
 @callback
-def _async_register_enable_service(hass: HomeAssistant, instance: Recorder) -> None:
+def _async_register_enable_service(menuai: menuai, instance: Recorder) -> None:
     async def async_handle_enable_service(service: ServiceCall) -> None:
         instance.set_enable(True)
 
     async_register_admin_service(
-        hass,
+        menuai,
         DOMAIN,
         SERVICE_ENABLE,
         async_handle_enable_service,
@@ -145,12 +145,12 @@ def _async_register_enable_service(hass: HomeAssistant, instance: Recorder) -> N
 
 
 @callback
-def _async_register_disable_service(hass: HomeAssistant, instance: Recorder) -> None:
+def _async_register_disable_service(menuai: menuai, instance: Recorder) -> None:
     async def async_handle_disable_service(service: ServiceCall) -> None:
         instance.set_enable(False)
 
     async_register_admin_service(
-        hass,
+        menuai,
         DOMAIN,
         SERVICE_DISABLE,
         async_handle_disable_service,
@@ -160,7 +160,7 @@ def _async_register_disable_service(hass: HomeAssistant, instance: Recorder) -> 
 
 @callback
 def _async_register_get_statistics_service(
-    hass: HomeAssistant, instance: Recorder
+    menuai: menuai, instance: Recorder
 ) -> None:
     async def async_handle_get_statistics_service(
         service: ServiceCall,
@@ -180,7 +180,7 @@ def _async_register_get_statistics_service(
 
         result = await instance.async_add_executor_job(
             statistics_during_period,
-            hass,
+            menuai,
             start_time,
             end_time,
             statistic_ids,
@@ -222,7 +222,7 @@ def _async_register_get_statistics_service(
         return {"statistics": formatted_result}
 
     async_register_admin_service(
-        hass,
+        menuai,
         DOMAIN,
         SERVICE_GET_STATISTICS,
         async_handle_get_statistics_service,
@@ -232,10 +232,10 @@ def _async_register_get_statistics_service(
 
 
 @callback
-def async_register_services(hass: HomeAssistant, instance: Recorder) -> None:
+def async_register_services(menuai: menuai, instance: Recorder) -> None:
     """Register recorder services."""
-    _async_register_purge_service(hass, instance)
-    _async_register_purge_entities_service(hass, instance)
-    _async_register_enable_service(hass, instance)
-    _async_register_disable_service(hass, instance)
-    _async_register_get_statistics_service(hass, instance)
+    _async_register_purge_service(menuai, instance)
+    _async_register_purge_entities_service(menuai, instance)
+    _async_register_enable_service(menuai, instance)
+    _async_register_disable_service(menuai, instance)
+    _async_register_get_statistics_service(menuai, instance)

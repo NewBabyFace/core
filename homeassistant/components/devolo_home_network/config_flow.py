@@ -10,12 +10,12 @@ from devolo_plc_api.device import Device
 from devolo_plc_api.exceptions.device import DeviceNotFound, DevicePasswordProtected
 import voluptuous as vol
 
-from homeassistant.components import zeroconf
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_IP_ADDRESS, CONF_NAME, CONF_PASSWORD
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.httpx_client import get_async_client
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.components import zeroconf
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_IP_ADDRESS, CONF_NAME, CONF_PASSWORD
+from menuai.core import menuai
+from menuai.helpers.httpx_client import get_async_client
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import DOMAIN, PRODUCT, SERIAL_NUMBER, TITLE
 from .coordinator import DevoloHomeNetworkConfigEntry
@@ -28,13 +28,13 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
 STEP_REAUTH_DATA_SCHEMA = vol.Schema({vol.Optional(CONF_PASSWORD): str})
 
 
-async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, str]:
+async def validate_input(menuai: menuai, data: dict[str, Any]) -> dict[str, str]:
     """Validate the user input allows us to connect.
 
     Data has the keys from STEP_USER_DATA_SCHEMA with values provided by the user.
     """
-    zeroconf_instance = await zeroconf.async_get_instance(hass)
-    async_client = get_async_client(hass)
+    zeroconf_instance = await zeroconf.async_get_instance(menuai)
+    async_client = get_async_client(menuai)
 
     device = Device(data[CONF_IP_ADDRESS], zeroconf_instance=zeroconf_instance)
 
@@ -72,7 +72,7 @@ class DevoloHomeNetworkConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             try:
-                info = await validate_input(self.hass, user_input)
+                info = await validate_input(self.menuai, user_input)
             except DeviceNotFound:
                 errors["base"] = "cannot_connect"
             except DevicePasswordProtected:
@@ -125,7 +125,7 @@ class DevoloHomeNetworkConfigFlow(ConfigFlow, domain=DOMAIN):
                 CONF_PASSWORD: user_input.get(CONF_PASSWORD, ""),
             }
             try:
-                await validate_input(self.hass, data)
+                await validate_input(self.menuai, data)
             except DevicePasswordProtected:
                 errors = {"base": "invalid_auth"}
                 data_schema = STEP_REAUTH_DATA_SCHEMA
@@ -163,7 +163,7 @@ class DevoloHomeNetworkConfigFlow(ConfigFlow, domain=DOMAIN):
                 CONF_PASSWORD: user_input[CONF_PASSWORD],
             }
             try:
-                await validate_input(self.hass, data)
+                await validate_input(self.menuai, data)
             except DevicePasswordProtected:
                 errors = {"base": "invalid_auth"}
             else:

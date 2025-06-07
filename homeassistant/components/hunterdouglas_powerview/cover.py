@@ -18,16 +18,16 @@ from aiopvapi.helpers.constants import (
 )
 from aiopvapi.resources.shade import BaseShade, ShadePosition
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     ATTR_POSITION,
     ATTR_TILT_POSITION,
     CoverDeviceClass,
     CoverEntity,
     CoverEntityFeature,
 )
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.event import async_call_later
+from menuai.core import CALLBACK_TYPE, menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.event import async_call_later
 
 from .const import STATE_ATTRIBUTE_ROOM_NAME
 from .coordinator import PowerviewShadeUpdateCoordinator
@@ -48,7 +48,7 @@ SCAN_INTERVAL = timedelta(minutes=10)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: PowerviewConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -83,7 +83,7 @@ async def async_setup_entry(
 
     # background the fetching of state for initial launch
     entry.async_create_background_task(
-        hass,
+        menuai,
         _async_initial_refresh(),
         f"powerview {entry.title} initial shade refresh",
     )
@@ -188,20 +188,20 @@ class PowerViewShadeBase(ShadeEntity, CoverEntity):
         await self._async_force_refresh_state()
 
     @callback
-    def _clamp_cover_limit(self, target_hass_position: int) -> int:
+    def _clamp_cover_limit(self, target_menuai_position: int) -> int:
         """Don't allow a cover to go into an impossbile position."""
         # no override required in base
-        return target_hass_position
+        return target_menuai_position
 
     async def async_set_cover_position(self, **kwargs: Any) -> None:
         """Move the shade to a specific position."""
         await self._async_set_cover_position(kwargs[ATTR_POSITION])
 
     @callback
-    def _get_shade_move(self, target_hass_position: int) -> ShadePosition:
+    def _get_shade_move(self, target_menuai_position: int) -> ShadePosition:
         """Return a ShadePosition."""
         return ShadePosition(
-            primary=target_hass_position,
+            primary=target_menuai_position,
             velocity=self.positions.velocity,
         )
 
@@ -215,16 +215,16 @@ class PowerViewShadeBase(ShadeEntity, CoverEntity):
         # Process the response from the hub (including new positions)
         self.data.update_shade_position(self._shade.id, response)
 
-    async def _async_set_cover_position(self, target_hass_position: int) -> None:
+    async def _async_set_cover_position(self, target_menuai_position: int) -> None:
         """Move the shade to a position."""
-        target_hass_position = self._clamp_cover_limit(target_hass_position)
-        current_hass_position = self.current_cover_position
+        target_menuai_position = self._clamp_cover_limit(target_menuai_position)
+        current_menuai_position = self.current_cover_position
         self._async_schedule_update_for_transition(
-            abs(current_hass_position - target_hass_position)
+            abs(current_menuai_position - target_menuai_position)
         )
-        await self._async_execute_move(self._get_shade_move(target_hass_position))
-        self._attr_is_opening = target_hass_position > current_hass_position
-        self._attr_is_closing = target_hass_position < current_hass_position
+        await self._async_execute_move(self._get_shade_move(target_menuai_position))
+        self._attr_is_opening = target_menuai_position > current_menuai_position
+        self._attr_is_closing = target_menuai_position < current_menuai_position
         self.async_write_ha_state()
 
     @callback
@@ -263,7 +263,7 @@ class PowerViewShadeBase(ShadeEntity, CoverEntity):
         # Schedule a forced update for when we expect the transition
         # to be completed.
         self._scheduled_transition_update = async_call_later(
-            self.hass,
+            self.menuai,
             est_time_to_complete_transition,
             self._async_complete_schedule_update,
         )
@@ -274,7 +274,7 @@ class PowerViewShadeBase(ShadeEntity, CoverEntity):
         self._scheduled_transition_update = None
         await self._async_force_refresh_state()
         self._forced_resync = async_call_later(
-            self.hass, RESYNC_DELAY, self._async_force_resync
+            self.menuai, RESYNC_DELAY, self._async_force_resync
         )
 
     async def _async_force_resync(self, *_: Any) -> None:
@@ -288,14 +288,14 @@ class PowerViewShadeBase(ShadeEntity, CoverEntity):
         await self.async_update()
         self.async_write_ha_state()
 
-    # pylint: disable-next=hass-missing-super-call
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
+    # pylint: disable-next=menuai-missing-super-call
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai."""
         self.async_on_remove(
             self.coordinator.async_add_listener(self._async_update_shade_from_group)
         )
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Cancel any pending refreshes."""
         self._async_cancel_scheduled_transition_update()
 
@@ -397,29 +397,29 @@ class PowerViewShadeWithTiltBase(PowerViewShadeBase):
         await self._async_set_cover_tilt_position(kwargs[ATTR_TILT_POSITION])
 
     async def _async_set_cover_tilt_position(
-        self, target_hass_tilt_position: int
+        self, target_menuai_tilt_position: int
     ) -> None:
         """Move the tilt to a specific position."""
-        final_position = self.current_cover_position + target_hass_tilt_position
+        final_position = self.current_cover_position + target_menuai_tilt_position
         self._async_schedule_update_for_transition(
             abs(self.transition_steps - final_position)
         )
-        await self._async_execute_move(self._get_shade_tilt(target_hass_tilt_position))
+        await self._async_execute_move(self._get_shade_tilt(target_menuai_tilt_position))
         self.async_write_ha_state()
 
     @callback
-    def _get_shade_move(self, target_hass_position: int) -> ShadePosition:
+    def _get_shade_move(self, target_menuai_position: int) -> ShadePosition:
         """Return a ShadePosition."""
         return ShadePosition(
-            primary=target_hass_position,
+            primary=target_menuai_position,
             velocity=self.positions.velocity,
         )
 
     @callback
-    def _get_shade_tilt(self, target_hass_tilt_position: int) -> ShadePosition:
+    def _get_shade_tilt(self, target_menuai_tilt_position: int) -> ShadePosition:
         """Return a ShadePosition."""
         return ShadePosition(
-            tilt=target_hass_tilt_position,
+            tilt=target_menuai_tilt_position,
             velocity=self.positions.velocity,
         )
 
@@ -472,20 +472,20 @@ class PowerViewShadeWithTiltAnywhere(PowerViewShadeWithTiltBase):
     """
 
     @callback
-    def _get_shade_move(self, target_hass_position: int) -> ShadePosition:
+    def _get_shade_move(self, target_menuai_position: int) -> ShadePosition:
         """Return a ShadePosition."""
         return ShadePosition(
-            primary=target_hass_position,
+            primary=target_menuai_position,
             tilt=self.positions.tilt,
             velocity=self.positions.velocity,
         )
 
     @callback
-    def _get_shade_tilt(self, target_hass_tilt_position: int) -> ShadePosition:
+    def _get_shade_tilt(self, target_menuai_tilt_position: int) -> ShadePosition:
         """Return a ShadePosition."""
         return ShadePosition(
             primary=self.positions.primary,
-            tilt=target_hass_tilt_position,
+            tilt=target_menuai_tilt_position,
             velocity=self.positions.velocity,
         )
 
@@ -598,15 +598,15 @@ class PowerViewShadeTDBUBottom(PowerViewShadeDualRailBase):
         self._attr_unique_id = f"{self._attr_unique_id}_bottom"
 
     @callback
-    def _clamp_cover_limit(self, target_hass_position: int) -> int:
+    def _clamp_cover_limit(self, target_menuai_position: int) -> int:
         """Don't allow a cover to go into an impossbile position."""
-        return min(target_hass_position, (MAX_POSITION - self.positions.secondary))
+        return min(target_menuai_position, (MAX_POSITION - self.positions.secondary))
 
     @callback
-    def _get_shade_move(self, target_hass_position: int) -> ShadePosition:
+    def _get_shade_move(self, target_menuai_position: int) -> ShadePosition:
         """Return a ShadePosition."""
         return ShadePosition(
-            primary=target_hass_position,
+            primary=target_menuai_position,
             secondary=self.positions.secondary,
             velocity=self.positions.velocity,
         )
@@ -667,16 +667,16 @@ class PowerViewShadeTDBUTop(PowerViewShadeDualRailBase):
         )
 
     @callback
-    def _clamp_cover_limit(self, target_hass_position: int) -> int:
+    def _clamp_cover_limit(self, target_menuai_position: int) -> int:
         """Don't allow a cover to go into an impossbile position."""
-        return min(target_hass_position, (MAX_POSITION - self.positions.primary))
+        return min(target_menuai_position, (MAX_POSITION - self.positions.primary))
 
     @callback
-    def _get_shade_move(self, target_hass_position: int) -> ShadePosition:
+    def _get_shade_move(self, target_menuai_position: int) -> ShadePosition:
         """Return a ShadePosition."""
         return ShadePosition(
             primary=self.positions.primary,
-            secondary=target_hass_position,
+            secondary=target_menuai_position,
             velocity=self.positions.velocity,
         )
 
@@ -690,11 +690,11 @@ class PowerViewShadeDualOverlappedBase(PowerViewShadeBase):
     @property
     def transition_steps(self) -> int:
         """Return the steps to make a move."""
-        # poskind 1 represents the second half of the shade in hass
+        # poskind 1 represents the second half of the shade in menuai
         # front must be fully closed before rear can move
         # 51 - 100 is equiv to 1-100 on other shades - one motor, two shades
         primary = (self.positions.primary / 2) + 50
-        # poskind 2 represents the shade first half of the shade in hass
+        # poskind 2 represents the shade first half of the shade in menuai
         # rear (opaque) must be fully open before front can move
         # 51 - 100 is equiv to 1-100 on other shades - one motor, two shades
         secondary = self.positions.secondary / 2
@@ -760,20 +760,20 @@ class PowerViewShadeDualOverlappedCombined(PowerViewShadeDualOverlappedBase):
         return ceil(position)
 
     @callback
-    def _get_shade_move(self, target_hass_position: int) -> ShadePosition:
+    def _get_shade_move(self, target_menuai_position: int) -> ShadePosition:
         """Return a ShadePosition."""
         # 0 - 50 represents the rear blockut shade
-        if target_hass_position <= 50:
-            target_hass_position = target_hass_position * 2
+        if target_menuai_position <= 50:
+            target_menuai_position = target_menuai_position * 2
             return ShadePosition(
-                secondary=target_hass_position,
+                secondary=target_menuai_position,
                 velocity=self.positions.velocity,
             )
 
-        # 51 <= target_hass_position <= 100 (51-100 represents front sheer shade)
-        target_hass_position = (target_hass_position - 50) * 2
+        # 51 <= target_menuai_position <= 100 (51-100 represents front sheer shade)
+        target_menuai_position = (target_menuai_position - 50) * 2
         return ShadePosition(
-            primary=target_hass_position,
+            primary=target_menuai_position,
             velocity=self.positions.velocity,
         )
 
@@ -818,10 +818,10 @@ class PowerViewShadeDualOverlappedFront(PowerViewShadeDualOverlappedBase):
         return False
 
     @callback
-    def _get_shade_move(self, target_hass_position: int) -> ShadePosition:
+    def _get_shade_move(self, target_menuai_position: int) -> ShadePosition:
         """Return a ShadePosition."""
         return ShadePosition(
-            primary=target_hass_position,
+            primary=target_menuai_position,
             velocity=self.positions.velocity,
         )
 
@@ -885,10 +885,10 @@ class PowerViewShadeDualOverlappedRear(PowerViewShadeDualOverlappedBase):
         return self.positions.secondary
 
     @callback
-    def _get_shade_move(self, target_hass_position: int) -> ShadePosition:
+    def _get_shade_move(self, target_menuai_position: int) -> ShadePosition:
         """Return a ShadePosition."""
         return ShadePosition(
-            secondary=target_hass_position,
+            secondary=target_menuai_position,
             velocity=self.positions.velocity,
         )
 
@@ -938,11 +938,11 @@ class PowerViewShadeDualOverlappedCombinedTilt(PowerViewShadeDualOverlappedCombi
     @property
     def transition_steps(self) -> int:
         """Return the steps to make a move."""
-        # poskind 1 represents the second half of the shade in hass
+        # poskind 1 represents the second half of the shade in menuai
         # front must be fully closed before rear can move
         # 51 - 100 is equiv to 1-100 on other shades - one motor, two shades
         primary = (self.positions.primary / 2) + 50
-        # poskind 2 represents the shade first half of the shade in hass
+        # poskind 2 represents the shade first half of the shade in menuai
         # rear (opaque) must be fully open before front can move
         # 51 - 100 is equiv to 1-100 on other shades - one motor, two shades
         secondary = self.positions.secondary / 2
@@ -950,10 +950,10 @@ class PowerViewShadeDualOverlappedCombinedTilt(PowerViewShadeDualOverlappedCombi
         return ceil(primary + secondary + tilt)
 
     @callback
-    def _get_shade_tilt(self, target_hass_tilt_position: int) -> ShadePosition:
+    def _get_shade_tilt(self, target_menuai_tilt_position: int) -> ShadePosition:
         """Return a ShadePosition."""
         return ShadePosition(
-            tilt=target_hass_tilt_position,
+            tilt=target_menuai_tilt_position,
             velocity=self.positions.velocity,
         )
 

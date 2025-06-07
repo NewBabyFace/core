@@ -10,7 +10,7 @@ from vacuum_map_parser_base.map_data import MapData
 
 
 @dataclass
-class RoborockHassDeviceInfo:
+class RoborockmenuaiDeviceInfo:
     """A model to describe roborock devices."""
 
     device: HomeDataDevice
@@ -19,7 +19,7 @@ class RoborockHassDeviceInfo:
     props: DeviceProp
 
     def as_dict(self) -> dict[str, dict[str, Any]]:
-        """Turn RoborockHassDeviceInfo into a dictionary."""
+        """Turn RoborockmenuaiDeviceInfo into a dictionary."""
         return {
             "device": self.device.as_dict(),
             "network_info": self.network_info.as_dict(),
@@ -29,14 +29,14 @@ class RoborockHassDeviceInfo:
 
 
 @dataclass
-class RoborockA01HassDeviceInfo:
+class RoborockA01menuaiDeviceInfo:
     """A model to describe A01 roborock devices."""
 
     device: HomeDataDevice
     product: HomeDataProduct
 
     def as_dict(self) -> dict[str, dict[str, Any]]:
-        """Turn RoborockA01HassDeviceInfo into a dictionary."""
+        """Turn RoborockA01menuaiDeviceInfo into a dictionary."""
         return {
             "device": self.device.as_dict(),
             "product": self.product.as_dict(),

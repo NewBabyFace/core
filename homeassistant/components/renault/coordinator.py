@@ -16,8 +16,8 @@ from renault_api.kamereon.exceptions import (
 )
 from renault_api.kamereon.models import KamereonVehicleDataAttributes
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 if TYPE_CHECKING:
     from . import RenaultConfigEntry
@@ -37,7 +37,7 @@ class RenaultDataUpdateCoordinator(DataUpdateCoordinator[T]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: RenaultConfigEntry,
         hub: RenaultHub,
         logger: logging.Logger,
@@ -48,7 +48,7 @@ class RenaultDataUpdateCoordinator(DataUpdateCoordinator[T]):
     ) -> None:
         """Initialise coordinator."""
         super().__init__(
-            hass,
+            menuai,
             logger,
             config_entry=config_entry,
             name=name,

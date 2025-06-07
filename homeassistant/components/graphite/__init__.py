@@ -9,18 +9,18 @@ import time
 
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_PORT,
     CONF_PREFIX,
     CONF_PROTOCOL,
-    EVENT_HOMEASSISTANT_START,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_START,
+    EVENT_menuai_STOP,
     EVENT_STATE_CHANGED,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, state
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, state
+from menuai.helpers.typing import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -49,7 +49,7 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Graphite feeder."""
     conf = config[DOMAIN]
     host = conf.get(CONF_HOST)
@@ -69,17 +69,17 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
     else:
         _LOGGER.debug("No connection check for UDP possible")
 
-    hass.data[DOMAIN] = GraphiteFeeder(hass, host, port, protocol, prefix)
+    menuai.data[DOMAIN] = GraphiteFeeder(menuai, host, port, protocol, prefix)
     return True
 
 
 class GraphiteFeeder(threading.Thread):
     """Feed data to Graphite."""
 
-    def __init__(self, hass, host, port, protocol, prefix):
+    def __init__(self, menuai, host, port, protocol, prefix):
         """Initialize the feeder."""
         super().__init__(daemon=True)
-        self._hass = hass
+        self._menuai = menuai
         self._host = host
         self._port = port
         self._protocol = protocol
@@ -89,14 +89,14 @@ class GraphiteFeeder(threading.Thread):
         self._quit_object = object()
         self._unsub_state_changed = None
 
-        hass.bus.listen_once(EVENT_HOMEASSISTANT_START, self.start_listen)
+        menuai.bus.listen_once(EVENT_menuai_START, self.start_listen)
         _LOGGER.debug("Graphite feeding to %s:%i initialized", self._host, self._port)
 
     def start_listen(self, event):
         """Start event-processing thread."""
         _LOGGER.debug("Event processing thread started")
-        self._hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, self.shutdown)
-        self._unsub_state_changed = self._hass.bus.listen(
+        self._menuai.bus.listen_once(EVENT_menuai_STOP, self.shutdown)
+        self._unsub_state_changed = self._menuai.bus.listen(
             EVENT_STATE_CHANGED, self.event_listener
         )
         self.start()

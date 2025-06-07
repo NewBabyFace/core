@@ -6,14 +6,14 @@ from typing import Any
 
 from dio_chacon_wifi_api import DIOChaconAPIClient
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_PASSWORD,
     CONF_USERNAME,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     Platform,
 )
-from homeassistant.core import Event, HomeAssistant
+from menuai.core import Event, menuai
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ class ChaconDioData:
 type ChaconDioConfigEntry = ConfigEntry[ChaconDioData]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ChaconDioConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ChaconDioConfigEntry) -> bool:
     """Set up chacon_dio from a config entry."""
 
     config = entry.data
@@ -56,25 +56,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: ChaconDioConfigEntry) ->
         list_devices=list_devices,
     )
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    # Disconnect the permanent websocket connection of home assistant on shutdown
+    # Disconnect the permanent websocket connection of MenuAI on shutdown
     async def _async_disconnect_websocket(_: Event) -> None:
         await client.disconnect()
 
     entry.async_on_unload(
-        hass.bus.async_listen_once(
-            EVENT_HOMEASSISTANT_STOP, _async_disconnect_websocket
+        menuai.bus.async_listen_once(
+            EVENT_menuai_STOP, _async_disconnect_websocket
         )
     )
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
 
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+    if unload_ok := await menuai.config_entries.async_unload_platforms(entry, PLATFORMS):
         await entry.runtime_data.client.disconnect()
 
     return unload_ok

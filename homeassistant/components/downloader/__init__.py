@@ -4,27 +4,27 @@ from __future__ import annotations
 
 import os
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
 
 from .const import _LOGGER, CONF_DOWNLOAD_DIR
 from .services import async_setup_services
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Listen for download events to download files."""
     download_path = entry.data[CONF_DOWNLOAD_DIR]
 
-    # If path is relative, we assume relative to Home Assistant config dir
+    # If path is relative, we assume relative to MenuAI config dir
     if not os.path.isabs(download_path):
-        download_path = hass.config.path(download_path)
+        download_path = menuai.config.path(download_path)
 
-    if not await hass.async_add_executor_job(os.path.isdir, download_path):
+    if not await menuai.async_add_executor_job(os.path.isdir, download_path):
         _LOGGER.error(
             "Download path %s does not exist. File Downloader not active", download_path
         )
         return False
 
-    async_setup_services(hass)
+    async_setup_services(menuai)
 
     return True

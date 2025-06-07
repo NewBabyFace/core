@@ -5,23 +5,23 @@ from unittest.mock import PropertyMock
 
 import pytest
 
-from homeassistant import core as ha
-from homeassistant.components.recorder.const import SupportedDialect
-from homeassistant.components.recorder.db_schema import (
+from menuai import core as ha
+from menuai.components.recorder.const import SupportedDialect
+from menuai.components.recorder.db_schema import (
     EventData,
     Events,
     StateAttributes,
     States,
 )
-from homeassistant.components.recorder.models import (
+from menuai.components.recorder.models import (
     LazyState,
     process_timestamp,
     process_timestamp_to_utc_isoformat,
 )
-from homeassistant.const import EVENT_STATE_CHANGED
-from homeassistant.exceptions import InvalidEntityFormatError
-from homeassistant.util import dt as dt_util
-from homeassistant.util.json import json_loads
+from menuai.const import EVENT_STATE_CHANGED
+from menuai.exceptions import InvalidEntityFormatError
+from menuai.util import dt as dt_util
+from menuai.util.json import json_loads
 
 
 def test_from_event_to_db_event() -> None:

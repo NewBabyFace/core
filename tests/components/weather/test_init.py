@@ -5,7 +5,7 @@ from datetime import datetime
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.weather import (
+from menuai.components.weather import (
     ATTR_CONDITION_SUNNY,
     ATTR_WEATHER_APPARENT_TEMPERATURE,
     ATTR_WEATHER_OZONE,
@@ -29,12 +29,12 @@ from homeassistant.components.weather import (
     WeatherEntityFeature,
     round_temperature,
 )
-from homeassistant.components.weather.const import (
+from menuai.components.weather.const import (
     ATTR_WEATHER_CLOUD_COVERAGE,
     ATTR_WEATHER_DEW_POINT,
     ATTR_WEATHER_HUMIDITY,
 )
-from homeassistant.const import (
+from menuai.const import (
     PRECISION_HALVES,
     PRECISION_TENTHS,
     PRECISION_WHOLE,
@@ -43,17 +43,17 @@ from homeassistant.const import (
     UnitOfSpeed,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
-from homeassistant.util import dt as dt_util
-from homeassistant.util.unit_conversion import (
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
+from menuai.util import dt as dt_util
+from menuai.util.unit_conversion import (
     DistanceConverter,
     PressureConverter,
     SpeedConverter,
     TemperatureConverter,
 )
-from homeassistant.util.unit_system import METRIC_SYSTEM, US_CUSTOMARY_SYSTEM
+from menuai.util.unit_system import METRIC_SYSTEM, US_CUSTOMARY_SYSTEM
 
 from . import MockWeatherTest, create_entity
 
@@ -100,14 +100,14 @@ class MockWeatherEntity(WeatherEntity):
     ],
 )
 async def test_temperature(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_flow_fixture: None,
     native_unit: str,
     state_unit: str,
     unit_system,
 ) -> None:
     """Test temperature."""
-    hass.config.units = unit_system
+    menuai.config.units = unit_system
     native_value = 38
     apparent_native_value = 45
     dew_point_native_value = 32
@@ -128,9 +128,9 @@ async def test_temperature(
         "native_dew_point": dew_point_native_value,
     }
 
-    entity0 = await create_entity(hass, MockWeatherTest, None, **kwargs)
+    entity0 = await create_entity(menuai, MockWeatherTest, None, **kwargs)
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
 
     expected = state_value
     apparent_expected = apparent_state_value
@@ -156,14 +156,14 @@ async def test_temperature(
     ],
 )
 async def test_temperature_no_unit(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_flow_fixture: None,
     native_unit: str,
     state_unit: str,
     unit_system,
 ) -> None:
     """Test temperature when the entity does not declare a native unit."""
-    hass.config.units = unit_system
+    menuai.config.units = unit_system
     native_value = 38
     dew_point_native_value = 32
     apparent_temp_native_value = 45
@@ -178,9 +178,9 @@ async def test_temperature_no_unit(
         "native_apparent_temperature": apparent_temp_native_value,
     }
 
-    entity0 = await create_entity(hass, MockWeatherTest, None, **kwargs)
+    entity0 = await create_entity(menuai, MockWeatherTest, None, **kwargs)
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
 
     expected = state_value
     dew_point_expected = dew_point_state_value
@@ -205,22 +205,22 @@ async def test_temperature_no_unit(
     ],
 )
 async def test_pressure(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_flow_fixture: None,
     native_unit: str,
     state_unit: str,
     unit_system,
 ) -> None:
     """Test pressure."""
-    hass.config.units = unit_system
+    menuai.config.units = unit_system
     native_value = 30
     state_value = PressureConverter.convert(native_value, native_unit, state_unit)
 
     kwargs = {"native_pressure": native_value, "native_pressure_unit": native_unit}
 
-    entity0 = await create_entity(hass, MockWeatherTest, None, **kwargs)
+    entity0 = await create_entity(menuai, MockWeatherTest, None, **kwargs)
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
 
     expected = state_value
     assert float(state.attributes[ATTR_WEATHER_PRESSURE]) == pytest.approx(
@@ -234,22 +234,22 @@ async def test_pressure(
     [(UnitOfPressure.HPA, METRIC_SYSTEM), (UnitOfPressure.INHG, US_CUSTOMARY_SYSTEM)],
 )
 async def test_pressure_no_unit(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_flow_fixture: None,
     native_unit: str,
     state_unit: str,
     unit_system,
 ) -> None:
     """Test pressure when the entity does not declare a native unit."""
-    hass.config.units = unit_system
+    menuai.config.units = unit_system
     native_value = 30
     state_value = native_value
 
     kwargs = {"native_pressure": native_value, "native_pressure_unit": native_unit}
 
-    entity0 = await create_entity(hass, MockWeatherTest, None, **kwargs)
+    entity0 = await create_entity(menuai, MockWeatherTest, None, **kwargs)
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
 
     expected = state_value
     assert float(state.attributes[ATTR_WEATHER_PRESSURE]) == pytest.approx(
@@ -273,22 +273,22 @@ async def test_pressure_no_unit(
     ],
 )
 async def test_wind_speed(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_flow_fixture: None,
     native_unit: str,
     state_unit: str,
     unit_system,
 ) -> None:
     """Test wind speed."""
-    hass.config.units = unit_system
+    menuai.config.units = unit_system
     native_value = 10
     state_value = SpeedConverter.convert(native_value, native_unit, state_unit)
 
     kwargs = {"native_wind_speed": native_value, "native_wind_speed_unit": native_unit}
 
-    entity0 = await create_entity(hass, MockWeatherTest, None, **kwargs)
+    entity0 = await create_entity(menuai, MockWeatherTest, None, **kwargs)
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
 
     expected = state_value
     assert float(state.attributes[ATTR_WEATHER_WIND_SPEED]) == pytest.approx(
@@ -312,14 +312,14 @@ async def test_wind_speed(
     ],
 )
 async def test_wind_gust_speed(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_flow_fixture: None,
     native_unit: str,
     state_unit: str,
     unit_system,
 ) -> None:
     """Test wind speed."""
-    hass.config.units = unit_system
+    menuai.config.units = unit_system
     native_value = 10
     state_value = SpeedConverter.convert(native_value, native_unit, state_unit)
 
@@ -328,9 +328,9 @@ async def test_wind_gust_speed(
         "native_wind_speed_unit": native_unit,
     }
 
-    entity0 = await create_entity(hass, MockWeatherTest, None, **kwargs)
+    entity0 = await create_entity(menuai, MockWeatherTest, None, **kwargs)
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
 
     expected = state_value
     assert float(state.attributes[ATTR_WEATHER_WIND_GUST_SPEED]) == pytest.approx(
@@ -347,22 +347,22 @@ async def test_wind_gust_speed(
     ],
 )
 async def test_wind_speed_no_unit(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_flow_fixture: None,
     native_unit: str,
     state_unit: str,
     unit_system,
 ) -> None:
     """Test wind speed when the entity does not declare a native unit."""
-    hass.config.units = unit_system
+    menuai.config.units = unit_system
     native_value = 10
     state_value = native_value
 
     kwargs = {"native_wind_speed": native_value, "native_wind_speed_unit": native_unit}
 
-    entity0 = await create_entity(hass, MockWeatherTest, None, **kwargs)
+    entity0 = await create_entity(menuai, MockWeatherTest, None, **kwargs)
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
 
     expected = state_value
     assert float(state.attributes[ATTR_WEATHER_WIND_SPEED]) == pytest.approx(
@@ -371,7 +371,7 @@ async def test_wind_speed_no_unit(
 
 
 async def test_wind_bearing_ozone_and_cloud_coverage_and_uv_index(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_flow_fixture: None,
 ) -> None:
     """Test wind bearing, ozone and cloud coverage."""
@@ -387,9 +387,9 @@ async def test_wind_bearing_ozone_and_cloud_coverage_and_uv_index(
         "uv_index": uv_index,
     }
 
-    entity0 = await create_entity(hass, MockWeatherTest, None, **kwargs)
+    entity0 = await create_entity(menuai, MockWeatherTest, None, **kwargs)
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert float(state.attributes[ATTR_WEATHER_WIND_BEARING]) == 180
     assert float(state.attributes[ATTR_WEATHER_OZONE]) == 10
     assert float(state.attributes[ATTR_WEATHER_CLOUD_COVERAGE]) == 75
@@ -397,7 +397,7 @@ async def test_wind_bearing_ozone_and_cloud_coverage_and_uv_index(
 
 
 async def test_humidity(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_flow_fixture: None,
 ) -> None:
     """Test humidity."""
@@ -405,14 +405,14 @@ async def test_humidity(
 
     kwargs = {"humidity": humidity_value}
 
-    entity0 = await create_entity(hass, MockWeatherTest, None, **kwargs)
+    entity0 = await create_entity(menuai, MockWeatherTest, None, **kwargs)
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
     assert float(state.attributes[ATTR_WEATHER_HUMIDITY]) == 80
 
 
 async def test_custom_units(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, config_flow_fixture: None
+    menuai: menuai, entity_registry: er.EntityRegistry, config_flow_fixture: None
 ) -> None:
     """Test custom unit."""
     wind_speed_value = 5
@@ -436,7 +436,7 @@ async def test_custom_units(
 
     entry = entity_registry.async_get_or_create("weather", "test", "very_unique")
     entity_registry.async_update_entity_options(entry.entity_id, "weather", set_options)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     kwargs = {
         "native_temperature": temperature_value,
@@ -453,9 +453,9 @@ async def test_custom_units(
         "unique_id": "very_unique",
     }
 
-    entity0 = await create_entity(hass, MockWeatherTest, None, **kwargs)
+    entity0 = await create_entity(menuai, MockWeatherTest, None, **kwargs)
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
 
     expected_wind_speed = round(
         SpeedConverter.convert(
@@ -507,7 +507,7 @@ async def test_custom_units(
     )
 
 
-async def test_backwards_compatibility_round_temperature(hass: HomeAssistant) -> None:
+async def test_backwards_compatibility_round_temperature(menuai: menuai) -> None:
     """Test backward compatibility for rounding temperature."""
 
     assert round_temperature(20.3, PRECISION_HALVES) == 20.5
@@ -516,11 +516,11 @@ async def test_backwards_compatibility_round_temperature(hass: HomeAssistant) ->
     assert round_temperature(None, PRECISION_WHOLE) is None
 
 
-async def test_attr(hass: HomeAssistant) -> None:
+async def test_attr(menuai: menuai) -> None:
     """Test the _attr attributes."""
 
     weather = MockWeatherEntity()
-    weather.hass = hass
+    weather.menuai = menuai
 
     assert weather.condition == ATTR_CONDITION_SUNNY
     assert weather.native_precipitation_unit == UnitOfLength.MILLIMETERS
@@ -540,7 +540,7 @@ async def test_attr(hass: HomeAssistant) -> None:
 
 
 async def test_precision_for_temperature(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_flow_fixture: None,
 ) -> None:
     """Test the precision for temperature."""
@@ -555,9 +555,9 @@ async def test_precision_for_temperature(
         "native_dew_point": 2.7,
     }
 
-    entity0 = await create_entity(hass, MockWeatherMock, None, **kwargs)
+    entity0 = await create_entity(menuai, MockWeatherMock, None, **kwargs)
 
-    state = hass.states.get(entity0.entity_id)
+    state = menuai.states.get(entity0.entity_id)
 
     assert state.state == ATTR_CONDITION_SUNNY
     assert state.attributes[ATTR_WEATHER_TEMPERATURE] == 23.5
@@ -566,8 +566,8 @@ async def test_precision_for_temperature(
 
 
 async def test_forecast_twice_daily_missing_is_daytime(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     config_flow_fixture: None,
 ) -> None:
     """Test forecast_twice_daily missing mandatory attribute is_daytime."""
@@ -579,9 +579,9 @@ async def test_forecast_twice_daily_missing_is_daytime(
         "supported_features": WeatherEntityFeature.FORECAST_TWICE_DAILY,
     }
 
-    entity0 = await create_entity(hass, MockWeatherTest, None, **kwargs)
+    entity0 = await create_entity(menuai, MockWeatherTest, None, **kwargs)
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json_auto_id(
         {
@@ -614,7 +614,7 @@ async def test_forecast_twice_daily_missing_is_daytime(
     ],
 )
 async def test_get_forecast(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_flow_fixture: None,
     forecast_type: str,
     supported_features: int,
@@ -645,9 +645,9 @@ async def test_get_forecast(
         "supported_features": supported_features,
     }
 
-    entity0 = await create_entity(hass, MockWeatherMock, None, **kwargs)
+    entity0 = await create_entity(menuai, MockWeatherMock, None, **kwargs)
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         DOMAIN,
         SERVICE_GET_FORECASTS,
         {
@@ -661,7 +661,7 @@ async def test_get_forecast(
 
 
 async def test_get_forecast_no_forecast(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_flow_fixture: None,
 ) -> None:
     """Test get forecast service."""
@@ -679,9 +679,9 @@ async def test_get_forecast_no_forecast(
         "supported_features": WeatherEntityFeature.FORECAST_DAILY,
     }
 
-    entity0 = await create_entity(hass, MockWeatherMock, None, **kwargs)
+    entity0 = await create_entity(menuai, MockWeatherMock, None, **kwargs)
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         DOMAIN,
         SERVICE_GET_FORECASTS,
         {
@@ -707,7 +707,7 @@ async def test_get_forecast_no_forecast(
     ],
 )
 async def test_get_forecast_unsupported(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_flow_fixture: None,
     forecast_types: list[str],
     supported_features: int,
@@ -734,11 +734,11 @@ async def test_get_forecast_unsupported(
         "native_temperature_unit": UnitOfTemperature.CELSIUS,
         "supported_features": supported_features,
     }
-    weather_entity = await create_entity(hass, MockWeatherMockForecast, None, **kwargs)
+    weather_entity = await create_entity(menuai, MockWeatherMockForecast, None, **kwargs)
 
     for forecast_type in forecast_types:
-        with pytest.raises(HomeAssistantError):
-            await hass.services.async_call(
+        with pytest.raises(menuaiError):
+            await menuai.services.async_call(
                 DOMAIN,
                 SERVICE_GET_FORECASTS,
                 {

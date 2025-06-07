@@ -4,16 +4,16 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.bluetooth import async_scanner_by_source
-from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.const import (
+from menuai.components.bluetooth import async_scanner_by_source
+from menuai.components.diagnostics import async_redact_data
+from menuai.const import (
     ATTR_MODEL,
     ATTR_NAME,
     ATTR_SW_VERSION,
     CONF_PASSWORD,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .coordinator import ShellyConfigEntry
 from .utils import get_rpc_ws_url
@@ -22,7 +22,7 @@ TO_REDACT = {CONF_USERNAME, CONF_PASSWORD}
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: ShellyConfigEntry
+    menuai: menuai, entry: ShellyConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     shelly_entry_data = entry.runtime_data
@@ -85,7 +85,7 @@ async def async_get_config_entry_diagnostics(
                 device_settings["ws_outbound_enabled"] = ws_outbound_enabled
                 if ws_outbound_enabled:
                     device_settings["ws_outbound_server_valid"] = bool(
-                        ws_config["server"] == get_rpc_ws_url(hass)
+                        ws_config["server"] == get_rpc_ws_url(menuai)
                     )
             device_status = {
                 k: v
@@ -93,7 +93,7 @@ async def async_get_config_entry_diagnostics(
                 if k in ["sys", "wifi"]
             }
 
-        if scanner := async_scanner_by_source(hass, rpc_coordinator.bluetooth_source):
+        if scanner := async_scanner_by_source(menuai, rpc_coordinator.bluetooth_source):
             bluetooth = {
                 "scanner": await scanner.async_diagnostics(),
             }

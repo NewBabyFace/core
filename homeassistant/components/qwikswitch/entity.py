@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from homeassistant.components.light import ATTR_BRIGHTNESS
-from homeassistant.core import callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import Entity
+from menuai.components.light import ATTR_BRIGHTNESS
+from menuai.core import callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity import Entity
 
 from . import DOMAIN
 
@@ -35,10 +35,10 @@ class QSEntity(Entity):
         """Receive update packet from QSUSB. Match dispather_send signature."""
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Listen for updates from QSUSb via dispatcher."""
         self.async_on_remove(
-            async_dispatcher_connect(self.hass, self.qsid, self.update_packet)
+            async_dispatcher_connect(self.menuai, self.qsid, self.update_packet)
         )
 
 
@@ -67,8 +67,8 @@ class QSToggleEntity(QSEntity):
     async def async_turn_on(self, **kwargs):
         """Turn the device on."""
         new = kwargs.get(ATTR_BRIGHTNESS, 255)
-        self.hass.data[DOMAIN].devices.set_value(self.qsid, new)
+        self.menuai.data[DOMAIN].devices.set_value(self.qsid, new)
 
     async def async_turn_off(self, **_):
         """Turn the device off."""
-        self.hass.data[DOMAIN].devices.set_value(self.qsid, 0)
+        self.menuai.data[DOMAIN].devices.set_value(self.qsid, 0)

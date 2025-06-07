@@ -8,16 +8,16 @@ from async_upnp_client.ssdp import udn_from_headers
 from async_upnp_client.ssdp_listener import SsdpListener
 from async_upnp_client.utils import CaseInsensitiveDict
 
-from homeassistant.components import ssdp
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components import ssdp
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 
-async def init_ssdp_component(hass: HomeAssistant) -> SsdpListener:
+async def init_ssdp_component(menuai: menuai) -> SsdpListener:
     """Initialize ssdp component and get SsdpListener."""
-    await async_setup_component(hass, ssdp.DOMAIN, {ssdp.DOMAIN: {}})
-    await hass.async_block_till_done()
-    return hass.data[ssdp.DOMAIN][ssdp.SSDP_SCANNER]._ssdp_listeners[0]
+    await async_setup_component(menuai, ssdp.DOMAIN, {ssdp.DOMAIN: {}})
+    await menuai.async_block_till_done()
+    return menuai.data[ssdp.DOMAIN][ssdp.SSDP_SCANNER]._ssdp_listeners[0]
 
 
 def _ssdp_headers(headers) -> CaseInsensitiveDict:

@@ -7,16 +7,16 @@ from typing import Any
 
 from directv import DIRECTV
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     MediaPlayerDeviceClass,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
     MediaType,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import dt as dt_util
 
 from . import DirecTVConfigEntry
 from .const import (
@@ -53,7 +53,7 @@ SUPPORT_DTV_CLIENT = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: DirecTVConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

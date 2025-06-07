@@ -9,13 +9,13 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components import lifx
-from homeassistant.components.lifx import DOMAIN, discovery
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_HOST, EVENT_HOMEASSISTANT_STARTED
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.components import lifx
+from menuai.components.lifx import DOMAIN, discovery
+from menuai.config_entries import ConfigEntryState
+from menuai.const import CONF_HOST, EVENT_menuai_STARTED
+from menuai.core import menuai
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from . import (
     IP_ADDRESS,
@@ -31,7 +31,7 @@ from . import (
 from tests.common import MockConfigEntry, async_fire_time_changed
 
 
-async def test_configuring_lifx_causes_discovery(hass: HomeAssistant) -> None:
+async def test_configuring_lifx_causes_discovery(menuai: menuai) -> None:
     """Test that specifying empty config does discovery."""
     start_calls = 0
 
@@ -55,84 +55,84 @@ async def test_configuring_lifx_causes_discovery(hass: HomeAssistant) -> None:
         _patch_config_flow_try_connect(),
         patch.object(discovery, "DEFAULT_TIMEOUT", 0),
         patch(
-            "homeassistant.components.lifx.discovery.LifxDiscovery", MockLifxDiscovery
+            "menuai.components.lifx.discovery.LifxDiscovery", MockLifxDiscovery
         ),
     ):
-        await async_setup_component(hass, lifx.DOMAIN, {lifx.DOMAIN: {}})
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, lifx.DOMAIN, {lifx.DOMAIN: {}})
+        await menuai.async_block_till_done()
         assert start_calls == 0
 
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-        await hass.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
+        await menuai.async_block_till_done()
         assert start_calls == 1
 
-        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=5))
-        await hass.async_block_till_done(wait_background_tasks=True)
+        async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(minutes=5))
+        await menuai.async_block_till_done(wait_background_tasks=True)
         assert start_calls == 2
 
-        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=15))
-        await hass.async_block_till_done(wait_background_tasks=True)
+        async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(minutes=15))
+        await menuai.async_block_till_done(wait_background_tasks=True)
         assert start_calls == 3
 
-        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=30))
-        await hass.async_block_till_done(wait_background_tasks=True)
+        async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(minutes=30))
+        await menuai.async_block_till_done(wait_background_tasks=True)
         assert start_calls == 4
 
 
-async def test_config_entry_reload(hass: HomeAssistant) -> None:
+async def test_config_entry_reload(menuai: menuai) -> None:
     """Test that a config entry can be reloaded."""
     already_migrated_config_entry = MockConfigEntry(
         domain=DOMAIN, data={CONF_HOST: "127.0.0.1"}, unique_id=SERIAL
     )
-    already_migrated_config_entry.add_to_hass(hass)
+    already_migrated_config_entry.add_to_menuai(menuai)
     with _patch_discovery(), _patch_config_flow_try_connect(), _patch_device():
-        await async_setup_component(hass, lifx.DOMAIN, {lifx.DOMAIN: {}})
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, lifx.DOMAIN, {lifx.DOMAIN: {}})
+        await menuai.async_block_till_done()
         assert already_migrated_config_entry.state is ConfigEntryState.LOADED
-        await hass.config_entries.async_unload(already_migrated_config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_unload(already_migrated_config_entry.entry_id)
+        await menuai.async_block_till_done()
         assert already_migrated_config_entry.state is ConfigEntryState.NOT_LOADED
 
 
-async def test_config_entry_retry(hass: HomeAssistant) -> None:
+async def test_config_entry_retry(menuai: menuai) -> None:
     """Test that a config entry can be retried."""
     already_migrated_config_entry = MockConfigEntry(
         domain=DOMAIN, data={CONF_HOST: IP_ADDRESS}, unique_id=SERIAL
     )
-    already_migrated_config_entry.add_to_hass(hass)
+    already_migrated_config_entry.add_to_menuai(menuai)
     with (
         _patch_discovery(no_device=True),
         _patch_config_flow_try_connect(no_device=True),
         _patch_device(no_device=True),
     ):
-        await async_setup_component(hass, lifx.DOMAIN, {lifx.DOMAIN: {}})
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, lifx.DOMAIN, {lifx.DOMAIN: {}})
+        await menuai.async_block_till_done()
         assert already_migrated_config_entry.state is ConfigEntryState.SETUP_RETRY
 
 
-async def test_get_version_fails(hass: HomeAssistant) -> None:
+async def test_get_version_fails(menuai: menuai) -> None:
     """Test we handle get version failing."""
     already_migrated_config_entry = MockConfigEntry(
         domain=DOMAIN, data={CONF_HOST: IP_ADDRESS}, unique_id=SERIAL
     )
-    already_migrated_config_entry.add_to_hass(hass)
+    already_migrated_config_entry.add_to_menuai(menuai)
     bulb = _mocked_bulb()
     bulb.product = None
     bulb.host_firmware_version = None
     bulb.get_version = MockFailingLifxCommand(bulb)
 
     with _patch_discovery(device=bulb), _patch_device(device=bulb):
-        await async_setup_component(hass, lifx.DOMAIN, {lifx.DOMAIN: {}})
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, lifx.DOMAIN, {lifx.DOMAIN: {}})
+        await menuai.async_block_till_done()
         assert already_migrated_config_entry.state is ConfigEntryState.SETUP_RETRY
 
 
-async def test_dns_error_at_startup(hass: HomeAssistant) -> None:
+async def test_dns_error_at_startup(menuai: menuai) -> None:
     """Test we handle get version failing."""
     already_migrated_config_entry = MockConfigEntry(
         domain=DOMAIN, data={CONF_HOST: IP_ADDRESS}, unique_id=SERIAL
     )
-    already_migrated_config_entry.add_to_hass(hass)
+    already_migrated_config_entry.add_to_menuai(menuai)
     bulb = _mocked_failing_bulb()
 
     class MockLifxConnectonDnsError:
@@ -153,27 +153,27 @@ async def test_dns_error_at_startup(hass: HomeAssistant) -> None:
     with (
         _patch_discovery(device=bulb),
         patch(
-            "homeassistant.components.lifx.LIFXConnection",
+            "menuai.components.lifx.LIFXConnection",
             MockLifxConnectonDnsError,
         ),
     ):
-        await async_setup_component(hass, lifx.DOMAIN, {lifx.DOMAIN: {}})
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, lifx.DOMAIN, {lifx.DOMAIN: {}})
+        await menuai.async_block_till_done()
         assert already_migrated_config_entry.state is ConfigEntryState.SETUP_RETRY
 
 
 async def test_config_entry_wrong_serial(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test config entry enters setup retry when serial mismatches."""
     mismatched_serial = f"{SERIAL[:-1]}0"
     already_migrated_config_entry = MockConfigEntry(
         domain=DOMAIN, data={CONF_HOST: "127.0.0.1"}, unique_id=mismatched_serial
     )
-    already_migrated_config_entry.add_to_hass(hass)
+    already_migrated_config_entry.add_to_menuai(menuai)
     with _patch_discovery(), _patch_config_flow_try_connect(), _patch_device():
-        await async_setup_component(hass, lifx.DOMAIN, {lifx.DOMAIN: {}})
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, lifx.DOMAIN, {lifx.DOMAIN: {}})
+        await menuai.async_block_till_done()
         assert already_migrated_config_entry.state is ConfigEntryState.SETUP_RETRY
 
     assert (

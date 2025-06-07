@@ -7,9 +7,9 @@ from typing import Any
 from pushbullet import InvalidKeyError, PushBullet, PushbulletError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_API_KEY, CONF_NAME
-from homeassistant.helpers import selector
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_API_KEY, CONF_NAME
+from menuai.helpers import selector
 
 from .const import DEFAULT_NAME, DOMAIN
 
@@ -34,7 +34,7 @@ class PushBulletConfigFlow(ConfigFlow, domain=DOMAIN):
             self._async_abort_entries_match({CONF_NAME: user_input[CONF_NAME]})
 
             try:
-                pushbullet = await self.hass.async_add_executor_job(
+                pushbullet = await self.menuai.async_add_executor_job(
                     PushBullet, user_input[CONF_API_KEY]
                 )
             except InvalidKeyError:

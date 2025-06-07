@@ -5,16 +5,16 @@ from unittest.mock import AsyncMock, patch
 from pyflick.authentication import AuthException
 from pyflick.types import APIException
 
-from homeassistant import config_entries
-from homeassistant.components.flick_electric.const import (
+from menuai import config_entries
+from menuai.components.flick_electric.const import (
     CONF_ACCOUNT_ID,
     CONF_SUPPLY_NODE_REF,
     DOMAIN,
 )
-from homeassistant.config_entries import ConfigFlowResult
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.config_entries import ConfigFlowResult
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from . import CONF, setup_integration
 
@@ -27,8 +27,8 @@ ACCOUNT_ID_2 = "123456"
 SUPPLY_NODE_REF_2 = "/network/nz/supply_nodes/ed7617df-4b10-4c8a-a05d-deadbeef1234"
 
 
-async def _flow_submit(hass: HomeAssistant) -> ConfigFlowResult:
-    return await hass.config_entries.flow.async_init(
+async def _flow_submit(menuai: menuai) -> ConfigFlowResult:
+    return await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USER},
         data={
@@ -38,23 +38,23 @@ async def _flow_submit(hass: HomeAssistant) -> ConfigFlowResult:
     )
 
 
-async def test_form(hass: HomeAssistant, mock_flick_client: AsyncMock) -> None:
+async def test_form(menuai: menuai, mock_flick_client: AsyncMock) -> None:
     """Test we get the form with only one, with no account picker."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_USERNAME: CONF[CONF_USERNAME],
             CONF_PASSWORD: CONF[CONF_PASSWORD],
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == ACCOUNT_NAME_1
@@ -63,34 +63,34 @@ async def test_form(hass: HomeAssistant, mock_flick_client: AsyncMock) -> None:
 
 
 async def test_form_multi_account(
-    hass: HomeAssistant, mock_flick_client_multiple: AsyncMock
+    menuai: menuai, mock_flick_client_multiple: AsyncMock
 ) -> None:
     """Test the form when multiple accounts are available."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_USERNAME: CONF[CONF_USERNAME],
             CONF_PASSWORD: CONF[CONF_PASSWORD],
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["step_id"] == "select_account"
 
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result2["flow_id"],
         {CONF_ACCOUNT_ID: ACCOUNT_ID_2},
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.CREATE_ENTRY
     assert result3["title"] == ACCOUNT_NAME_2
@@ -103,24 +103,24 @@ async def test_form_multi_account(
 
 
 async def test_reauth_token(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_flick_client: AsyncMock,
 ) -> None:
     """Test reauth flow when username/password is wrong."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     with patch(
-        "homeassistant.components.flick_electric.config_flow.SimpleFlickAuth.async_get_access_token",
+        "menuai.components.flick_electric.config_flow.SimpleFlickAuth.async_get_access_token",
         side_effect=AuthException,
     ):
-        result = await mock_config_entry.start_reauth_flow(hass)
+        result = await mock_config_entry.start_reauth_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": "invalid_auth"}
     assert result["step_id"] == "user"
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_USERNAME: CONF[CONF_USERNAME], CONF_PASSWORD: CONF[CONF_PASSWORD]},
     )
@@ -130,13 +130,13 @@ async def test_reauth_token(
 
 
 async def test_form_reauth_migrate(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_old_config_entry: MockConfigEntry,
     mock_flick_client: AsyncMock,
 ) -> None:
     """Test reauth flow for v1 with single account."""
-    mock_old_config_entry.add_to_hass(hass)
-    result = await mock_old_config_entry.start_reauth_flow(hass)
+    mock_old_config_entry.add_to_menuai(menuai)
+    result = await mock_old_config_entry.start_reauth_flow(menuai)
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"
@@ -146,23 +146,23 @@ async def test_form_reauth_migrate(
 
 
 async def test_form_reauth_migrate_multi_account(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_old_config_entry: MockConfigEntry,
     mock_flick_client_multiple: AsyncMock,
 ) -> None:
     """Test the form when multiple accounts are available."""
-    mock_old_config_entry.add_to_hass(hass)
-    result = await mock_old_config_entry.start_reauth_flow(hass)
+    mock_old_config_entry.add_to_menuai(menuai)
+    result = await mock_old_config_entry.start_reauth_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "select_account"
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_ACCOUNT_ID: CONF[CONF_ACCOUNT_ID]},
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.ABORT
     assert result2["reason"] == "reauth_successful"
@@ -173,60 +173,60 @@ async def test_form_reauth_migrate_multi_account(
 
 
 async def test_form_duplicate_account(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_flick_client: AsyncMock,
 ) -> None:
     """Test uniqueness for account_id."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    result = await _flow_submit(hass)
+    result = await _flow_submit(menuai)
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
 
 
-async def test_form_invalid_auth(hass: HomeAssistant) -> None:
+async def test_form_invalid_auth(menuai: menuai) -> None:
     """Test we handle invalid auth."""
     with patch(
-        "homeassistant.components.flick_electric.config_flow.SimpleFlickAuth.async_get_access_token",
+        "menuai.components.flick_electric.config_flow.SimpleFlickAuth.async_get_access_token",
         side_effect=AuthException,
     ):
-        result = await _flow_submit(hass)
+        result = await _flow_submit(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": "invalid_auth"}
 
 
-async def test_form_cannot_connect(hass: HomeAssistant) -> None:
+async def test_form_cannot_connect(menuai: menuai) -> None:
     """Test we handle cannot connect error."""
     with patch(
-        "homeassistant.components.flick_electric.config_flow.SimpleFlickAuth.async_get_access_token",
+        "menuai.components.flick_electric.config_flow.SimpleFlickAuth.async_get_access_token",
         side_effect=TimeoutError,
     ):
-        result = await _flow_submit(hass)
+        result = await _flow_submit(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": "cannot_connect"}
 
 
-async def test_form_generic_exception(hass: HomeAssistant) -> None:
+async def test_form_generic_exception(menuai: menuai) -> None:
     """Test we handle cannot connect error."""
     with patch(
-        "homeassistant.components.flick_electric.config_flow.SimpleFlickAuth.async_get_access_token",
+        "menuai.components.flick_electric.config_flow.SimpleFlickAuth.async_get_access_token",
         side_effect=Exception,
     ):
-        result = await _flow_submit(hass)
+        result = await _flow_submit(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": "unknown"}
 
 
 async def test_form_select_account_cannot_connect(
-    hass: HomeAssistant, mock_flick_client_multiple: AsyncMock
+    menuai: menuai, mock_flick_client_multiple: AsyncMock
 ) -> None:
     """Test we handle connection errors for select account."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -237,19 +237,19 @@ async def test_form_select_account_cannot_connect(
         "getPricing",
         side_effect=APIException,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_USERNAME: CONF[CONF_USERNAME],
                 CONF_PASSWORD: CONF[CONF_PASSWORD],
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         assert result2["type"] is FlowResultType.FORM
         assert result2["step_id"] == "select_account"
 
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {CONF_ACCOUNT_ID: CONF[CONF_ACCOUNT_ID]},
         )
@@ -260,30 +260,30 @@ async def test_form_select_account_cannot_connect(
 
 
 async def test_form_select_account_invalid_auth(
-    hass: HomeAssistant, mock_flick_client_multiple: AsyncMock
+    menuai: menuai, mock_flick_client_multiple: AsyncMock
 ) -> None:
     """Test we handle auth errors for select account."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_USERNAME: CONF[CONF_USERNAME],
             CONF_PASSWORD: CONF[CONF_PASSWORD],
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["step_id"] == "select_account"
 
     with (
         patch(
-            "homeassistant.components.flick_electric.config_flow.SimpleFlickAuth.async_get_access_token",
+            "menuai.components.flick_electric.config_flow.SimpleFlickAuth.async_get_access_token",
             side_effect=AuthException,
         ),
         patch.object(
@@ -292,7 +292,7 @@ async def test_form_select_account_invalid_auth(
             side_effect=AuthException,
         ),
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {CONF_ACCOUNT_ID: CONF[CONF_ACCOUNT_ID]},
         )
@@ -302,23 +302,23 @@ async def test_form_select_account_invalid_auth(
 
 
 async def test_form_select_account_failed_to_connect(
-    hass: HomeAssistant, mock_flick_client_multiple: AsyncMock
+    menuai: menuai, mock_flick_client_multiple: AsyncMock
 ) -> None:
     """Test we handle connection errors for select account."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_USERNAME: CONF[CONF_USERNAME],
             CONF_PASSWORD: CONF[CONF_PASSWORD],
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["step_id"] == "select_account"
@@ -335,7 +335,7 @@ async def test_form_select_account_failed_to_connect(
             side_effect=APIException,
         ),
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {CONF_ACCOUNT_ID: CONF[CONF_ACCOUNT_ID]},
         )
@@ -343,7 +343,7 @@ async def test_form_select_account_failed_to_connect(
         assert result3["type"] is FlowResultType.FORM
         assert result3["errors"] == {"base": "cannot_connect"}
 
-    result4 = await hass.config_entries.flow.async_configure(
+    result4 = await menuai.config_entries.flow.async_configure(
         result3["flow_id"],
         {CONF_ACCOUNT_ID: ACCOUNT_ID_2},
     )
@@ -359,10 +359,10 @@ async def test_form_select_account_failed_to_connect(
 
 
 async def test_form_select_account_no_accounts(
-    hass: HomeAssistant, mock_flick_client: AsyncMock
+    menuai: menuai, mock_flick_client: AsyncMock
 ) -> None:
     """Test we handle connection errors for select account."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -380,14 +380,14 @@ async def test_form_select_account_no_accounts(
             },
         ],
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_USERNAME: CONF[CONF_USERNAME],
                 CONF_PASSWORD: CONF[CONF_PASSWORD],
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         assert result2["type"] is FlowResultType.ABORT
         assert result2["reason"] == "no_accounts"

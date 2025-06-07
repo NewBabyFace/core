@@ -4,7 +4,7 @@ from typing import Any
 
 import pytest
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_ICON,
     CONF_NAME,
     CONF_STATE,
@@ -13,9 +13,9 @@ from homeassistant.const import (
     STATE_ON,
     STATE_UNKNOWN,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import template
-from homeassistant.helpers.trigger_template_entity import (
+from menuai.core import menuai
+from menuai.helpers import template
+from menuai.helpers.trigger_template_entity import (
     CONF_ATTRIBUTES,
     CONF_AVAILABILITY,
     CONF_PICTURE,
@@ -49,7 +49,7 @@ _PICTURE_TEMPLATE = '/local/picture_o{{ "n" if value=="on" else "ff" }}'
     ],
 )
 async def test_value_template_object(
-    hass: HomeAssistant,
+    menuai: menuai,
     value: Any,
     test_template: str,
     error_value: Any,
@@ -59,14 +59,14 @@ async def test_value_template_object(
 ) -> None:
     """Test ValueTemplate object."""
     entity = ManualTriggerEntity(
-        hass,
+        menuai,
         {
-            CONF_NAME: template.Template("test_entity", hass),
+            CONF_NAME: template.Template("test_entity", menuai),
         },
     )
     entity.entity_id = "test.entity"
 
-    value_template = ValueTemplate.from_template(template.Template(test_template, hass))
+    value_template = ValueTemplate.from_template(template.Template(test_template, menuai))
 
     variables = entity._template_variables_with_value(value)
     result = value_template.async_render_as_value_template(
@@ -79,38 +79,38 @@ async def test_value_template_object(
         assert error in caplog.text
 
 
-async def test_template_entity_requires_hass_set(hass: HomeAssistant) -> None:
+async def test_template_entity_requires_menuai_set(menuai: menuai) -> None:
     """Test manual trigger template entity."""
     config = {
-        "name": template.Template("test_entity", hass),
+        "name": template.Template("test_entity", menuai),
         "icon": template.Template(
-            '{% if value=="on" %} mdi:on {% else %} mdi:off {% endif %}', hass
+            '{% if value=="on" %} mdi:on {% else %} mdi:off {% endif %}', menuai
         ),
         "picture": template.Template(
             '{% if value=="on" %} /local/picture_on {% else %} /local/picture_off {% endif %}',
-            hass,
+            menuai,
         ),
     }
 
-    entity = ManualTriggerEntity(hass, config)
+    entity = ManualTriggerEntity(menuai, config)
     entity.entity_id = "test.entity"
-    hass.states.async_set("test.entity", STATE_ON)
-    await entity.async_added_to_hass()
+    menuai.states.async_set("test.entity", STATE_ON)
+    await entity.async_added_to_menuai()
 
     variables = entity._template_variables_with_value(STATE_ON)
     entity._process_manual_data(variables)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert entity.name == "test_entity"
     assert entity.icon == "mdi:on"
     assert entity.entity_picture == "/local/picture_on"
 
-    hass.states.async_set("test.entity", STATE_OFF)
-    await entity.async_added_to_hass()
+    menuai.states.async_set("test.entity", STATE_OFF)
+    await entity.async_added_to_menuai()
 
     variables = entity._template_variables_with_value(STATE_OFF)
     entity._process_manual_data(variables)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert entity.name == "test_entity"
     assert entity.icon == "mdi:off"
@@ -130,40 +130,40 @@ async def test_template_entity_requires_hass_set(hass: HomeAssistant) -> None:
     ],
 )
 async def test_trigger_template_availability(
-    hass: HomeAssistant,
+    menuai: menuai,
     test_template: str,
     test_entity_state: str,
     expected: bool,
 ) -> None:
     """Test manual trigger template entity availability template."""
     config = {
-        CONF_NAME: template.Template("test_entity", hass),
-        CONF_AVAILABILITY: template.Template(test_template, hass),
+        CONF_NAME: template.Template("test_entity", menuai),
+        CONF_AVAILABILITY: template.Template(test_template, menuai),
         CONF_UNIQUE_ID: "9961786c-f8c8-4ea0-ab1d-b9e922c39088",
     }
 
-    entity = ManualTriggerEntity(hass, config)
+    entity = ManualTriggerEntity(menuai, config)
     entity.entity_id = "test.entity"
-    hass.states.async_set("test.entity", test_entity_state)
-    await entity.async_added_to_hass()
+    menuai.states.async_set("test.entity", test_entity_state)
+    await entity.async_added_to_menuai()
 
     variables = entity._template_variables()
     assert entity._render_availability_template(variables) is expected
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert entity.unique_id == "9961786c-f8c8-4ea0-ab1d-b9e922c39088"
     assert entity.available is expected
 
 
 async def test_trigger_no_availability_template(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test manual trigger template entity when availability template isn't used."""
     config = {
-        CONF_NAME: template.Template("test_entity", hass),
-        CONF_ICON: template.Template(_ICON_TEMPLATE, hass),
-        CONF_PICTURE: template.Template(_PICTURE_TEMPLATE, hass),
-        CONF_STATE: template.Template("{{ value == 'on' }}", hass),
+        CONF_NAME: template.Template("test_entity", menuai),
+        CONF_ICON: template.Template(_ICON_TEMPLATE, menuai),
+        CONF_PICTURE: template.Template(_PICTURE_TEMPLATE, menuai),
+        CONF_STATE: template.Template("{{ value == 'on' }}", menuai),
     }
 
     class TestEntity(ManualTriggerEntity):
@@ -176,13 +176,13 @@ async def test_trigger_no_availability_template(
             """Return extra attributes."""
             return self._rendered.get(CONF_STATE)
 
-    entity = TestEntity(hass, config)
+    entity = TestEntity(menuai, config)
     entity.entity_id = "test.entity"
     variables = entity._template_variables_with_value(STATE_ON)
     assert entity._render_availability_template(variables) is True
     assert entity.available is True
     entity._process_manual_data(variables)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert entity.state == "True"
     assert entity.icon == "mdi:on"
@@ -192,7 +192,7 @@ async def test_trigger_no_availability_template(
     assert entity._render_availability_template(variables) is True
     assert entity.available is True
     entity._process_manual_data(variables)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert entity.state == "False"
     assert entity.icon == "mdi:off"
@@ -200,15 +200,15 @@ async def test_trigger_no_availability_template(
 
 
 async def test_trigger_template_availability_with_syntax_error(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test manual trigger template entity when availability render fails."""
     config = {
-        CONF_NAME: template.Template("test_entity", hass),
-        CONF_AVAILABILITY: template.Template("{{ incorrect ", hass),
+        CONF_NAME: template.Template("test_entity", menuai),
+        CONF_AVAILABILITY: template.Template("{{ incorrect ", menuai),
     }
 
-    entity = ManualTriggerEntity(hass, config)
+    entity = ManualTriggerEntity(menuai, config)
     entity.entity_id = "test.entity"
 
     variables = entity._template_variables()
@@ -219,26 +219,26 @@ async def test_trigger_template_availability_with_syntax_error(
 
 
 async def test_attribute_order(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test manual trigger template entity when availability render fails."""
     config = {
-        CONF_NAME: template.Template("test_entity", hass),
+        CONF_NAME: template.Template("test_entity", menuai),
         CONF_ATTRIBUTES: {
-            "beer": template.Template("{{ value }}", hass),
-            "no_beer": template.Template("{{ sad - 1 }}", hass),
-            "more_beer": template.Template("{{ beer + 1 }}", hass),
+            "beer": template.Template("{{ value }}", menuai),
+            "no_beer": template.Template("{{ sad - 1 }}", menuai),
+            "more_beer": template.Template("{{ beer + 1 }}", menuai),
         },
     }
 
-    entity = ManualTriggerEntity(hass, config)
+    entity = ManualTriggerEntity(menuai, config)
     entity.entity_id = "test.entity"
-    hass.states.async_set("test.entity", STATE_ON)
-    await entity.async_added_to_hass()
+    menuai.states.async_set("test.entity", STATE_ON)
+    await entity.async_added_to_menuai()
 
     variables = entity._template_variables_with_value(1)
     entity._process_manual_data(variables)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert entity.extra_state_attributes == {"beer": 1, "more_beer": 2}
 
@@ -248,7 +248,7 @@ async def test_attribute_order(
     )
 
 
-async def test_trigger_template_complex(hass: HomeAssistant) -> None:
+async def test_trigger_template_complex(menuai: menuai) -> None:
     """Test manual trigger template entity complex template."""
     complex_template = """
     {% set d = {'test_key':'test_data'} %}
@@ -256,16 +256,16 @@ async def test_trigger_template_complex(hass: HomeAssistant) -> None:
 
 """
     config = {
-        CONF_NAME: template.Template("test_entity", hass),
+        CONF_NAME: template.Template("test_entity", menuai),
         CONF_ICON: template.Template(
-            '{% if value=="on" %} mdi:on {% else %} mdi:off {% endif %}', hass
+            '{% if value=="on" %} mdi:on {% else %} mdi:off {% endif %}', menuai
         ),
         CONF_PICTURE: template.Template(
             '{% if value=="on" %} /local/picture_on {% else %} /local/picture_off {% endif %}',
-            hass,
+            menuai,
         ),
-        CONF_AVAILABILITY: template.Template('{{ has_value("test.entity") }}', hass),
-        "other_key": template.Template(complex_template, hass),
+        CONF_AVAILABILITY: template.Template('{{ has_value("test.entity") }}', menuai),
+        "other_key": template.Template(complex_template, menuai),
     }
 
     class TestEntity(ManualTriggerEntity):
@@ -278,13 +278,13 @@ async def test_trigger_template_complex(hass: HomeAssistant) -> None:
             """Return extra attributes."""
             return self._rendered.get("other_key")
 
-    entity = TestEntity(hass, config)
+    entity = TestEntity(menuai, config)
     entity.entity_id = "test.entity"
-    hass.states.async_set("test.entity", STATE_ON)
-    await entity.async_added_to_hass()
+    menuai.states.async_set("test.entity", STATE_ON)
+    await entity.async_added_to_menuai()
 
     variables = entity._template_variables_with_value(STATE_ON)
     entity._process_manual_data(variables)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert entity.some_other_key == {"test_key": "test_data"}

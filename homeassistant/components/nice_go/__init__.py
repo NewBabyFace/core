@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import logging
 
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP, Platform
-from homeassistant.core import HomeAssistant
+from menuai.const import EVENT_menuai_STOP, Platform
+from menuai.core import menuai
 
 from .coordinator import NiceGOConfigEntry, NiceGOUpdateCoordinator
 
@@ -18,12 +18,12 @@ PLATFORMS: list[Platform] = [
 ]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: NiceGOConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: NiceGOConfigEntry) -> bool:
     """Set up Nice G.O. from a config entry."""
 
-    coordinator = NiceGOUpdateCoordinator(hass, entry)
+    coordinator = NiceGOUpdateCoordinator(menuai, entry)
     entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, coordinator.async_ha_stop)
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, coordinator.async_ha_stop)
     )
 
     await coordinator.async_config_entry_first_refresh()
@@ -31,21 +31,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: NiceGOConfigEntry) -> bo
     entry.runtime_data = coordinator
 
     entry.async_create_background_task(
-        hass,
+        menuai,
         coordinator.client_listen(),
         "nice_go_websocket_task",
     )
 
     entry.async_on_unload(coordinator.unsubscribe)
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: NiceGOConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: NiceGOConfigEntry) -> bool:
     """Unload a config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+    if unload_ok := await menuai.config_entries.async_unload_platforms(entry, PLATFORMS):
         await entry.runtime_data.api.close()
 
     return unload_ok

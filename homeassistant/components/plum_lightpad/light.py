@@ -6,30 +6,30 @@ from typing import Any
 
 from plumlightpad import Plum
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_HS_COLOR,
     ColorMode,
     LightEntity,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import color as color_util
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import color as color_util
 
 from .const import DOMAIN
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Plum Lightpad dimmer lights and glow rings."""
 
-    plum: Plum = hass.data[DOMAIN][entry.entry_id]
+    plum: Plum = menuai.data[DOMAIN][entry.entry_id]
 
     def setup_entities(device) -> None:
         entities: list[LightEntity] = []
@@ -50,11 +50,11 @@ async def async_setup_entry(
     async def new_lightpad(device):
         setup_entities(device)
 
-    device_web_session = async_get_clientsession(hass, verify_ssl=False)
+    device_web_session = async_get_clientsession(menuai, verify_ssl=False)
     entry.async_create_background_task(
-        hass,
+        menuai,
         plum.discover(
-            hass.loop,
+            menuai.loop,
             loadListener=new_load,
             lightpadListener=new_lightpad,
             websession=device_web_session,
@@ -83,7 +83,7 @@ class PlumLight(LightEntity):
             name=load.name,
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to dimmerchange events."""
         self._load.add_event_listener("dimmerchange", self.dimmerchange)
 
@@ -154,7 +154,7 @@ class GlowRing(LightEntity):
             name=self._attr_name,
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to configchange events."""
         self._lightpad.add_event_listener("configchange", self.configchange_event)
 

@@ -10,8 +10,8 @@ from pyHomee import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
 
 from .const import DOMAIN
 
@@ -57,7 +57,7 @@ class HomeeConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors["base"] = "unknown"
             else:
                 _LOGGER.info("Got access token for homee")
-                self.hass.loop.create_task(self.homee.run())
+                self.menuai.loop.create_task(self.homee.run())
                 _LOGGER.debug("Homee task created")
                 await self.homee.wait_until_connected()
                 _LOGGER.info("Homee connected")
@@ -108,7 +108,7 @@ class HomeeConfigFlow(ConfigFlow, domain=DOMAIN):
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
             else:
-                self.hass.loop.create_task(self.homee.run())
+                self.menuai.loop.create_task(self.homee.run())
                 await self.homee.wait_until_connected()
                 self.homee.disconnect()
                 await self.homee.wait_until_disconnected()

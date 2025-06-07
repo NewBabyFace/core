@@ -11,9 +11,9 @@ from jellyfin_apiclient_python.configuration import Config
 from jellyfin_apiclient_python.connection_manager import ConnectionManager
 import pytest
 
-from homeassistant.components.jellyfin.const import DOMAIN
-from homeassistant.const import CONF_PASSWORD, CONF_URL, CONF_USERNAME
-from homeassistant.core import HomeAssistant
+from menuai.components.jellyfin.const import DOMAIN
+from menuai.const import CONF_PASSWORD, CONF_URL, CONF_USERNAME
+from menuai.core import menuai
 
 from . import load_json_fixture
 from .const import TEST_PASSWORD, TEST_URL, TEST_USERNAME
@@ -40,7 +40,7 @@ def mock_config_entry() -> MockConfigEntry:
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Mock setting up a config entry."""
     with patch(
-        "homeassistant.components.jellyfin.async_setup_entry", return_value=True
+        "menuai.components.jellyfin.async_setup_entry", return_value=True
     ) as setup_mock:
         yield setup_mock
 
@@ -49,7 +49,7 @@ def mock_setup_entry() -> Generator[AsyncMock]:
 def mock_client_device_id() -> Generator[MagicMock]:
     """Mock generating device id."""
     with patch(
-        "homeassistant.components.jellyfin.config_flow._generate_client_device_id"
+        "menuai.components.jellyfin.config_flow._generate_client_device_id"
     ) as id_mock:
         id_mock.return_value = "TEST-UUID"
         yield id_mock
@@ -111,7 +111,7 @@ def mock_client(
 def mock_jellyfin(mock_client: MagicMock) -> Generator[MagicMock]:
     """Return a mocked Jellyfin."""
     with patch(
-        "homeassistant.components.jellyfin.client_wrapper.Jellyfin", autospec=True
+        "menuai.components.jellyfin.client_wrapper.Jellyfin", autospec=True
     ) as jellyfin_mock:
         jf = jellyfin_mock.return_value
         jf.get_client.return_value = mock_client
@@ -121,13 +121,13 @@ def mock_jellyfin(mock_client: MagicMock) -> Generator[MagicMock]:
 
 @pytest.fixture
 async def init_integration(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry, mock_jellyfin: MagicMock
+    menuai: menuai, mock_config_entry: MockConfigEntry, mock_jellyfin: MagicMock
 ) -> MockConfigEntry:
     """Set up the Jellyfin integration for testing."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     return mock_config_entry
 

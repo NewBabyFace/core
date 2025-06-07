@@ -6,8 +6,8 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.core import HomeAssistant, callback
+from menuai.components import websocket_api
+from menuai.core import menuai, callback
 
 from .const import (
     DEVICE_CLASS_UNITS,
@@ -20,10 +20,10 @@ _NUMERIC_DEVICE_CLASSES = list(set(SensorDeviceClass) - NON_NUMERIC_DEVICE_CLASS
 
 
 @callback
-def async_setup(hass: HomeAssistant) -> None:
+def async_setup(menuai: menuai) -> None:
     """Set up the sensor websocket API."""
-    websocket_api.async_register_command(hass, ws_device_class_units)
-    websocket_api.async_register_command(hass, ws_numeric_device_classes)
+    websocket_api.async_register_command(menuai, ws_device_class_units)
+    websocket_api.async_register_command(menuai, ws_numeric_device_classes)
 
 
 @callback
@@ -34,7 +34,7 @@ def async_setup(hass: HomeAssistant) -> None:
     }
 )
 def ws_device_class_units(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Return supported units for a device class."""
     device_class = msg["device_class"]
@@ -54,7 +54,7 @@ def ws_device_class_units(
     }
 )
 def ws_numeric_device_classes(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Return numeric sensor device classes."""
     connection.send_result(

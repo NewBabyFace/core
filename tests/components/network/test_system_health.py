@@ -4,21 +4,21 @@ import asyncio
 
 import pytest
 
-from homeassistant.components.network.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.network.const import DOMAIN
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import get_system_health_info
 
 
 @pytest.mark.usefixtures("mock_socket_no_loopback")
-async def test_network_system_health(hass: HomeAssistant) -> None:
+async def test_network_system_health(menuai: menuai) -> None:
     """Test network system health."""
 
-    assert await async_setup_component(hass, "system_health", {})
-    assert await async_setup_component(hass, DOMAIN, {})
-    await hass.async_block_till_done()
-    info = await get_system_health_info(hass, "network")
+    assert await async_setup_component(menuai, "system_health", {})
+    assert await async_setup_component(menuai, DOMAIN, {})
+    await menuai.async_block_till_done()
+    info = await get_system_health_info(menuai, "network")
 
     for key, val in info.items():
         if asyncio.iscoroutine(val):

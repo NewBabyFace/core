@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import logging
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 from .const import (
     CONF_TRACK_HOME,
@@ -22,16 +22,16 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, config_entry: MetWeatherConfigEntry
+    menuai: menuai, config_entry: MetWeatherConfigEntry
 ) -> bool:
     """Set up Met as config entry."""
     # Don't setup if tracking home location and latitude or longitude isn't set.
     # Also, filters out our onboarding default location.
     if config_entry.data.get(CONF_TRACK_HOME, False) and (
-        (not hass.config.latitude and not hass.config.longitude)
+        (not menuai.config.latitude and not menuai.config.longitude)
         or (
-            hass.config.latitude == DEFAULT_HOME_LATITUDE
-            and hass.config.longitude == DEFAULT_HOME_LONGITUDE
+            menuai.config.latitude == DEFAULT_HOME_LATITUDE
+            and menuai.config.longitude == DEFAULT_HOME_LONGITUDE
         )
     ):
         _LOGGER.warning(
@@ -39,7 +39,7 @@ async def async_setup_entry(
         )
         return False
 
-    coordinator = MetDataUpdateCoordinator(hass, config_entry)
+    coordinator = MetDataUpdateCoordinator(menuai, config_entry)
     await coordinator.async_config_entry_first_refresh()
 
     if config_entry.data.get(CONF_TRACK_HOME, False):
@@ -50,28 +50,28 @@ async def async_setup_entry(
     config_entry.async_on_unload(config_entry.add_update_listener(async_update_entry))
     config_entry.async_on_unload(coordinator.untrack_home)
 
-    await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 
-    await cleanup_old_device(hass)
+    await cleanup_old_device(menuai)
 
     return True
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, config_entry: MetWeatherConfigEntry
+    menuai: menuai, config_entry: MetWeatherConfigEntry
 ) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(config_entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(config_entry, PLATFORMS)
 
 
-async def async_update_entry(hass: HomeAssistant, config_entry: MetWeatherConfigEntry):
+async def async_update_entry(menuai: menuai, config_entry: MetWeatherConfigEntry):
     """Reload Met component when options changed."""
-    await hass.config_entries.async_reload(config_entry.entry_id)
+    await menuai.config_entries.async_reload(config_entry.entry_id)
 
 
-async def cleanup_old_device(hass: HomeAssistant) -> None:
+async def cleanup_old_device(menuai: menuai) -> None:
     """Cleanup device without proper device identifier."""
-    device_reg = dr.async_get(hass)
+    device_reg = dr.async_get(menuai)
     device = device_reg.async_get_device(identifiers={(DOMAIN,)})  # type: ignore[arg-type]
     if device:
         _LOGGER.debug("Removing improper device %s", device.name)

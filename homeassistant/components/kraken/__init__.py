@@ -9,11 +9,11 @@ import logging
 import krakenex
 import pykrakenapi
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_SCAN_INTERVAL, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_SCAN_INTERVAL, Platform
+from menuai.core import menuai
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
     CONF_TRACKED_ASSET_PAIRS,
@@ -32,23 +32,23 @@ PLATFORMS = [Platform.SENSOR]
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up kraken from a config entry."""
-    kraken_data = KrakenData(hass, entry)
+    kraken_data = KrakenData(menuai, entry)
     await kraken_data.async_setup()
-    hass.data[DOMAIN] = kraken_data
+    menuai.data[DOMAIN] = kraken_data
     entry.async_on_unload(entry.add_update_listener(async_options_updated))
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, config_entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(
+    unload_ok = await menuai.config_entries.async_unload_platforms(
         config_entry, PLATFORMS
     )
     if unload_ok:
-        hass.data.pop(DOMAIN)
+        menuai.data.pop(DOMAIN)
 
     return unload_ok
 
@@ -56,9 +56,9 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
 class KrakenData:
     """Define an object to hold kraken data."""
 
-    def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: ConfigEntry) -> None:
         """Initialize."""
-        self._hass = hass
+        self._menuai = menuai
         self._config_entry = config_entry
         self._api = pykrakenapi.KrakenAPI(krakenex.API(), retry=0, crl_sleep=0)
         self.tradable_asset_pairs: dict[str, str] = {}
@@ -74,7 +74,7 @@ class KrakenData:
         """
         try:
             async with asyncio.timeout(10):
-                return await self._hass.async_add_executor_job(self._get_kraken_data)
+                return await self._menuai.async_add_executor_job(self._get_kraken_data)
         except pykrakenapi.pykrakenapi.KrakenAPIError as error:
             if "Unknown asset pair" in str(error):
                 _LOGGER.warning(
@@ -114,7 +114,7 @@ class KrakenData:
         return response_dict
 
     async def _async_refresh_tradable_asset_pairs(self) -> None:
-        self.tradable_asset_pairs = await self._hass.async_add_executor_job(
+        self.tradable_asset_pairs = await self._menuai.async_add_executor_job(
             get_tradable_asset_pairs, self._api
         )
 
@@ -125,14 +125,14 @@ class KrakenData:
                 CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL,
                 CONF_TRACKED_ASSET_PAIRS: [DEFAULT_TRACKED_ASSET_PAIR],
             }
-            self._hass.config_entries.async_update_entry(
+            self._menuai.config_entries.async_update_entry(
                 self._config_entry, options=options
             )
         await self._async_refresh_tradable_asset_pairs()
         # Wait 1 second to avoid triggering the KrakenAPI CallRateLimiter
         await asyncio.sleep(CALL_RATE_LIMIT_SLEEP)
         self.coordinator = DataUpdateCoordinator(
-            self._hass,
+            self._menuai,
             _LOGGER,
             name=DOMAIN,
             update_method=self.async_update,
@@ -156,7 +156,7 @@ class KrakenData:
             self.coordinator.update_interval = timedelta(seconds=update_interval)
 
 
-async def async_options_updated(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+async def async_options_updated(menuai: menuai, config_entry: ConfigEntry) -> None:
     """Triggered by config entry options updates."""
-    hass.data[DOMAIN].set_update_interval(config_entry.options[CONF_SCAN_INTERVAL])
-    async_dispatcher_send(hass, DISPATCH_CONFIG_UPDATED, hass, config_entry)
+    menuai.data[DOMAIN].set_update_interval(config_entry.options[CONF_SCAN_INTERVAL])
+    async_dispatcher_send(menuai, DISPATCH_CONFIG_UPDATED, menuai, config_entry)

@@ -6,8 +6,8 @@ import asyncio
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.components.cover import CoverEntity
-from homeassistant.const import (
+from menuai.components.cover import CoverEntity
+from menuai.const import (
     CONF_COMMAND_CLOSE,
     CONF_COMMAND_OPEN,
     CONF_COMMAND_STATE,
@@ -16,16 +16,16 @@ from homeassistant.const import (
     CONF_SCAN_INTERVAL,
     CONF_VALUE_TEMPLATE,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.template import Template
-from homeassistant.helpers.trigger_template_entity import (
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.event import async_track_time_interval
+from menuai.helpers.template import Template
+from menuai.helpers.trigger_template_entity import (
     ManualTriggerEntity,
     ValueTemplate,
 )
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import dt as dt_util, slugify
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import dt as dt_util, slugify
 
 from .const import CONF_COMMAND_TIMEOUT, LOGGER, TRIGGER_ENTITY_OPTIONS
 from .utils import async_call_shell_with_timeout, async_check_output_or_log
@@ -34,7 +34,7 @@ SCAN_INTERVAL = timedelta(seconds=15)
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -50,7 +50,7 @@ async def async_setup_platform(
 
     for device_name, cover_config in entities.items():
         trigger_entity_config = {
-            CONF_NAME: Template(cover_config.get(CONF_NAME, device_name), hass),
+            CONF_NAME: Template(cover_config.get(CONF_NAME, device_name), menuai),
             **{k: v for k, v in cover_config.items() if k in TRIGGER_ENTITY_OPTIONS},
         }
 
@@ -87,7 +87,7 @@ class CommandCover(ManualTriggerEntity, CoverEntity):
         scan_interval: timedelta,
     ) -> None:
         """Initialize the cover."""
-        super().__init__(self.hass, config)
+        super().__init__(self.menuai, config)
         self._state: int | None = None
         self._command_open = command_open
         self._command_close = command_close
@@ -98,13 +98,13 @@ class CommandCover(ManualTriggerEntity, CoverEntity):
         self._scan_interval = scan_interval
         self._process_updates: asyncio.Lock | None = None
 
-    async def async_added_to_hass(self) -> None:
-        """Call when entity about to be added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Call when entity about to be added to menuai."""
+        await super().async_added_to_menuai()
         if self._command_state:
             self.async_on_remove(
                 async_track_time_interval(
-                    self.hass,
+                    self.menuai,
                     self._update_entity_state,
                     self._scan_interval,
                     name=f"Command Line Cover - {self.name}",

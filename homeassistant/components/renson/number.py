@@ -7,15 +7,15 @@ import logging
 from renson_endura_delta.field_enum import FILTER_PRESET_FIELD, DataType
 from renson_endura_delta.renson import RensonVentilation
 
-from homeassistant.components.number import (
+from menuai.components.number import (
     NumberDeviceClass,
     NumberEntity,
     NumberEntityDescription,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory, UnitOfTime
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import EntityCategory, UnitOfTime
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import RensonCoordinator
@@ -38,14 +38,14 @@ RENSON_NUMBER_DESCRIPTION = NumberEntityDescription(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Renson number platform."""
 
-    api: RensonVentilation = hass.data[DOMAIN][config_entry.entry_id].api
-    coordinator: RensonCoordinator = hass.data[DOMAIN][
+    api: RensonVentilation = menuai.data[DOMAIN][config_entry.entry_id].api
+    coordinator: RensonCoordinator = menuai.data[DOMAIN][
         config_entry.entry_id
     ].coordinator
 
@@ -79,6 +79,6 @@ class RensonNumber(RensonEntity, NumberEntity):
     async def async_set_native_value(self, value: float) -> None:
         """Update the current value."""
 
-        await self.hass.async_add_executor_job(self.api.set_filter_days, value)
+        await self.menuai.async_add_executor_job(self.api.set_filter_days, value)
 
         await self.coordinator.async_request_refresh()

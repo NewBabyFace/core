@@ -6,7 +6,7 @@ from telegram import Bot, Update
 from telegram.error import NetworkError, RetryAfter, TelegramError, TimedOut
 from telegram.ext import ApplicationBuilder, CallbackContext, TypeHandler
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .bot import BaseTelegramBot, TelegramBotConfigEntry
 
@@ -14,12 +14,12 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_platform(
-    hass: HomeAssistant, bot: Bot, config: TelegramBotConfigEntry
+    menuai: menuai, bot: Bot, config: TelegramBotConfigEntry
 ) -> BaseTelegramBot | None:
     """Set up the Telegram polling platform."""
-    pollbot = PollBot(hass, bot, config)
+    pollbot = PollBot(menuai, bot, config)
 
-    config.async_create_task(hass, pollbot.start_polling(), "polling telegram bot")
+    config.async_create_task(menuai, pollbot.start_polling(), "polling telegram bot")
 
     return pollbot
 
@@ -51,10 +51,10 @@ class PollBot(BaseTelegramBot):
     """
 
     def __init__(
-        self, hass: HomeAssistant, bot: Bot, config: TelegramBotConfigEntry
+        self, menuai: menuai, bot: Bot, config: TelegramBotConfigEntry
     ) -> None:
         """Create Application to poll for updates."""
-        super().__init__(hass, config)
+        super().__init__(menuai, config)
         self.bot = bot
         self.application = ApplicationBuilder().bot(self.bot).build()
         self.application.add_handler(TypeHandler(Update, self.handle_update))

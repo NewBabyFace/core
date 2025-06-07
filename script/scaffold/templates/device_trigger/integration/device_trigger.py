@@ -6,9 +6,9 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA
-from homeassistant.components.homeassistant.triggers import state as state_trigger
-from homeassistant.const import (
+from menuai.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA
+from menuai.components.menuai.triggers import state as state_trigger
+from menuai.const import (
     CONF_DEVICE_ID,
     CONF_DOMAIN,
     CONF_ENTITY_ID,
@@ -17,10 +17,10 @@ from homeassistant.const import (
     STATE_OFF,
     STATE_ON,
 )
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import CALLBACK_TYPE, menuai
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.trigger import TriggerActionType, TriggerInfo
+from menuai.helpers.typing import ConfigType
 
 from . import DOMAIN
 
@@ -36,17 +36,17 @@ TRIGGER_SCHEMA = DEVICE_TRIGGER_BASE_SCHEMA.extend(
 
 
 async def async_get_triggers(
-    hass: HomeAssistant, device_id: str
+    menuai: menuai, device_id: str
 ) -> list[dict[str, Any]]:
     """List device triggers for NEW_NAME devices."""
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     triggers = []
 
     # TODO Read this comment and remove it.
     # This example shows how to iterate over the entities of this device
     # that match this integration. If your triggers instead rely on
     # events fired by devices without entities, do something like:
-    # zha_device = await _async_get_zha_device(hass, device_id)
+    # zha_device = await _async_get_zha_device(menuai, device_id)
     # return zha_device.device_triggers
 
     # Get all the integrations entities for this device
@@ -69,7 +69,7 @@ async def async_get_triggers(
 
 
 async def async_attach_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     action: TriggerActionType,
     trigger_info: TriggerInfo,
@@ -88,7 +88,7 @@ async def async_attach_trigger(
         CONF_ENTITY_ID: config[CONF_ENTITY_ID],
         state_trigger.CONF_TO: to_state,
     }
-    state_config = await state_trigger.async_validate_trigger_config(hass, state_config)
+    state_config = await state_trigger.async_validate_trigger_config(menuai, state_config)
     return await state_trigger.async_attach_trigger(
-        hass, state_config, action, trigger_info, platform_type="device"
+        menuai, state_config, action, trigger_info, platform_type="device"
     )

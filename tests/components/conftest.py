@@ -22,32 +22,32 @@ from aiohasupervisor.models import (
 import pytest
 import voluptuous as vol
 
-from homeassistant import components, loader
-from homeassistant.components import repairs
-from homeassistant.config_entries import (
+from menuai import components, loader
+from menuai.components import repairs
+from menuai.config_entries import (
     DISCOVERY_SOURCES,
     ConfigEntriesFlowManager,
     FlowResult,
     OptionsFlowManager,
 )
-from homeassistant.const import STATE_OFF, STATE_ON
-from homeassistant.core import Context, HomeAssistant, ServiceRegistry, ServiceResponse
-from homeassistant.data_entry_flow import (
+from menuai.const import STATE_OFF, STATE_ON
+from menuai.core import Context, menuai, ServiceRegistry, ServiceResponse
+from menuai.data_entry_flow import (
     FlowContext,
     FlowHandler,
     FlowManager,
     FlowResultType,
     section,
 )
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import issue_registry as ir
-from homeassistant.helpers.translation import async_get_translations
-from homeassistant.util import yaml as yaml_util
+from menuai.exceptions import menuaiError
+from menuai.helpers import issue_registry as ir
+from menuai.helpers.translation import async_get_translations
+from menuai.util import yaml as yaml_util
 
 from tests.common import QualityScaleStatus, get_quality_scale
 
 if TYPE_CHECKING:
-    from homeassistant.components.hassio import AddonManager
+    from menuai.components.menuaiio import AddonManager
 
     from .conversation import MockAgent
     from .device_tracker.common import MockScanner
@@ -63,7 +63,7 @@ RE_REQUEST_DOMAIN = re.compile(r".*tests\/components\/([^/]+)\/.*")
 def patch_zeroconf_multiple_catcher() -> Generator[None]:
     """If installed, patch zeroconf wrapper that detects if multiple instances are used."""
     with patch(
-        "homeassistant.components.zeroconf.install_multiple_zeroconf_catcher",
+        "menuai.components.zeroconf.install_multiple_zeroconf_catcher",
         side_effect=lambda zc: None,
     ):
         yield
@@ -73,7 +73,7 @@ def patch_zeroconf_multiple_catcher() -> Generator[None]:
 def prevent_io() -> Generator[None]:
     """Fixture to prevent certain I/O from happening."""
     with patch(
-        "homeassistant.components.http.ban.load_yaml_config_file",
+        "menuai.components.http.ban.load_yaml_config_file",
     ):
         yield
 
@@ -83,11 +83,11 @@ def entity_registry_enabled_by_default() -> Generator[None]:
     """Test fixture that ensures all entities are enabled in the registry."""
     with (
         patch(
-            "homeassistant.helpers.entity.Entity.entity_registry_enabled_default",
+            "menuai.helpers.entity.Entity.entity_registry_enabled_default",
             return_value=True,
         ),
         patch(
-            "homeassistant.components.device_tracker.config_entry.ScannerEntity.entity_registry_enabled_default",
+            "menuai.components.device_tracker.config_entry.ScannerEntity.entity_registry_enabled_default",
             return_value=True,
         ),
     ):
@@ -160,19 +160,19 @@ def tts_mutagen_mock_fixture() -> Generator[MagicMock]:
 
 
 @pytest.fixture(name="mock_conversation_agent")
-def mock_conversation_agent_fixture(hass: HomeAssistant) -> MockAgent:
+def mock_conversation_agent_fixture(menuai: menuai) -> MockAgent:
     """Mock a conversation agent."""
     # pylint: disable-next=import-outside-toplevel
     from .conversation.common import mock_conversation_agent_fixture_helper
 
-    return mock_conversation_agent_fixture_helper(hass)
+    return mock_conversation_agent_fixture_helper(menuai)
 
 
 @pytest.fixture(scope="session", autouse=find_spec("ffmpeg") is not None)
 def prevent_ffmpeg_subprocess() -> Generator[None]:
     """If installed, prevent ffmpeg from creating a subprocess."""
     with patch(
-        "homeassistant.components.ffmpeg.FFVersion.get_version", return_value="6.0"
+        "menuai.components.ffmpeg.FFVersion.get_version", return_value="6.0"
     ):
         yield
 
@@ -218,7 +218,7 @@ def mock_legacy_device_scanner() -> MockScanner:
 
 
 @pytest.fixture
-def mock_legacy_device_tracker_setup() -> Callable[[HomeAssistant, MockScanner], None]:
+def mock_legacy_device_tracker_setup() -> Callable[[menuai, MockScanner], None]:
     """Return setup callable for legacy device tracker setup."""
     # pylint: disable-next=import-outside-toplevel
     from .device_tracker.common import mock_legacy_device_tracker_setup
@@ -228,13 +228,13 @@ def mock_legacy_device_tracker_setup() -> Callable[[HomeAssistant, MockScanner],
 
 @pytest.fixture(name="addon_manager")
 def addon_manager_fixture(
-    hass: HomeAssistant, supervisor_client: AsyncMock
+    menuai: menuai, supervisor_client: AsyncMock
 ) -> AddonManager:
     """Return an AddonManager instance."""
     # pylint: disable-next=import-outside-toplevel
-    from .hassio.common import mock_addon_manager
+    from .menuaiio.common import mock_addon_manager
 
-    return mock_addon_manager(hass)
+    return mock_addon_manager(menuai)
 
 
 @pytest.fixture(name="discovery_info")
@@ -289,7 +289,7 @@ def addon_store_info_fixture(
 ) -> AsyncMock:
     """Mock Supervisor add-on store info."""
     # pylint: disable-next=import-outside-toplevel
-    from .hassio.common import mock_addon_store_info
+    from .menuaiio.common import mock_addon_store_info
 
     return mock_addon_store_info(supervisor_client, addon_store_info_side_effect)
 
@@ -306,7 +306,7 @@ def addon_info_fixture(
 ) -> AsyncMock:
     """Mock Supervisor add-on info."""
     # pylint: disable-next=import-outside-toplevel
-    from .hassio.common import mock_addon_info
+    from .menuaiio.common import mock_addon_info
 
     return mock_addon_info(supervisor_client, addon_info_side_effect)
 
@@ -317,7 +317,7 @@ def addon_not_installed_fixture(
 ) -> AsyncMock:
     """Mock add-on not installed."""
     # pylint: disable-next=import-outside-toplevel
-    from .hassio.common import mock_addon_not_installed
+    from .menuaiio.common import mock_addon_not_installed
 
     return mock_addon_not_installed(addon_store_info, addon_info)
 
@@ -328,7 +328,7 @@ def addon_installed_fixture(
 ) -> AsyncMock:
     """Mock add-on already installed but not running."""
     # pylint: disable-next=import-outside-toplevel
-    from .hassio.common import mock_addon_installed
+    from .menuaiio.common import mock_addon_installed
 
     return mock_addon_installed(addon_store_info, addon_info)
 
@@ -339,7 +339,7 @@ def addon_running_fixture(
 ) -> AsyncMock:
     """Mock add-on already running."""
     # pylint: disable-next=import-outside-toplevel
-    from .hassio.common import mock_addon_running
+    from .menuaiio.common import mock_addon_running
 
     return mock_addon_running(addon_store_info, addon_info)
 
@@ -351,7 +351,7 @@ def install_addon_side_effect_fixture(
     """Return the install add-on side effect."""
 
     # pylint: disable-next=import-outside-toplevel
-    from .hassio.common import mock_install_addon_side_effect
+    from .menuaiio.common import mock_install_addon_side_effect
 
     return mock_install_addon_side_effect(addon_store_info, addon_info)
 
@@ -372,7 +372,7 @@ def start_addon_side_effect_fixture(
 ) -> Any | None:
     """Return the start add-on options side effect."""
     # pylint: disable-next=import-outside-toplevel
-    from .hassio.common import mock_start_addon_side_effect
+    from .menuaiio.common import mock_start_addon_side_effect
 
     return mock_start_addon_side_effect(addon_store_info, addon_info)
 
@@ -420,7 +420,7 @@ def set_addon_options_side_effect_fixture(
 ) -> Any | None:
     """Return the set add-on options side effect."""
     # pylint: disable-next=import-outside-toplevel
-    from .hassio.common import mock_set_addon_options_side_effect
+    from .menuaiio.common import mock_set_addon_options_side_effect
 
     return mock_set_addon_options_side_effect(addon_options)
 
@@ -447,7 +447,7 @@ def uninstall_addon_fixture(supervisor_client: AsyncMock) -> AsyncMock:
 def create_backup_fixture() -> Generator[AsyncMock]:
     """Mock create backup."""
     # pylint: disable-next=import-outside-toplevel
-    from .hassio.common import mock_create_backup
+    from .menuaiio.common import mock_create_backup
 
     yield from mock_create_backup()
 
@@ -487,7 +487,7 @@ def store_info_fixture(
 def addon_stats_fixture(supervisor_client: AsyncMock) -> AsyncMock:
     """Mock addon stats info."""
     # pylint: disable-next=import-outside-toplevel
-    from .hassio.common import mock_addon_stats
+    from .menuaiio.common import mock_addon_stats
 
     return mock_addon_stats(supervisor_client)
 
@@ -535,7 +535,7 @@ def supervisor_client() -> Generator[AsyncMock]:
     supervisor_client = AsyncMock()
     supervisor_client.addons = AsyncMock()
     supervisor_client.discovery = AsyncMock()
-    supervisor_client.homeassistant = AsyncMock()
+    supervisor_client.menuai = AsyncMock()
     supervisor_client.host = AsyncMock()
     supervisor_client.jobs = AsyncMock()
     supervisor_client.mounts.info.return_value = mounts_info_mock
@@ -544,39 +544,39 @@ def supervisor_client() -> Generator[AsyncMock]:
     supervisor_client.supervisor = AsyncMock()
     with (
         patch(
-            "homeassistant.components.hassio.get_supervisor_client",
+            "menuai.components.menuaiio.get_supervisor_client",
             return_value=supervisor_client,
         ),
         patch(
-            "homeassistant.components.hassio.handler.get_supervisor_client",
+            "menuai.components.menuaiio.handler.get_supervisor_client",
             return_value=supervisor_client,
         ),
         patch(
-            "homeassistant.components.hassio.addon_manager.get_supervisor_client",
+            "menuai.components.menuaiio.addon_manager.get_supervisor_client",
             return_value=supervisor_client,
         ),
         patch(
-            "homeassistant.components.hassio.backup.get_supervisor_client",
+            "menuai.components.menuaiio.backup.get_supervisor_client",
             return_value=supervisor_client,
         ),
         patch(
-            "homeassistant.components.hassio.discovery.get_supervisor_client",
+            "menuai.components.menuaiio.discovery.get_supervisor_client",
             return_value=supervisor_client,
         ),
         patch(
-            "homeassistant.components.hassio.coordinator.get_supervisor_client",
+            "menuai.components.menuaiio.coordinator.get_supervisor_client",
             return_value=supervisor_client,
         ),
         patch(
-            "homeassistant.components.hassio.issues.get_supervisor_client",
+            "menuai.components.menuaiio.issues.get_supervisor_client",
             return_value=supervisor_client,
         ),
         patch(
-            "homeassistant.components.hassio.repairs.get_supervisor_client",
+            "menuai.components.menuaiio.repairs.get_supervisor_client",
             return_value=supervisor_client,
         ),
         patch(
-            "homeassistant.components.hassio.update_helper.get_supervisor_client",
+            "menuai.components.menuaiio.update_helper.get_supervisor_client",
             return_value=supervisor_client,
         ),
     ):
@@ -604,7 +604,7 @@ def _validate_translation_placeholders(
 
 
 async def _validate_translation(
-    hass: HomeAssistant,
+    menuai: menuai,
     translation_errors: dict[str, str],
     ignore_translations_for_mock_domains: set[str],
     category: str,
@@ -618,7 +618,7 @@ async def _validate_translation(
     full_key = f"component.{component}.{category}.{key}"
     if component in ignore_translations_for_mock_domains:
         try:
-            integration = await loader.async_get_integration(hass, component)
+            integration = await loader.async_get_integration(menuai, component)
         except loader.IntegrationNotFound:
             return
         component_paths = components.__path__
@@ -633,7 +633,7 @@ async def _validate_translation(
         translation_errors[full_key] = f"The integration '{component}' exists"
         return
 
-    translations = await async_get_translations(hass, "en", category, [component])
+    translations = await async_get_translations(menuai, "en", category, [component])
 
     if (translation := translations.get(full_key)) is not None:
         _validate_translation_placeholders(
@@ -649,7 +649,7 @@ async def _validate_translation(
         # via the ignore_translations_for_mock_domains fixture instead of the
         # ignore_missing_translations fixture.
         try:
-            await loader.async_get_integration(hass, component)
+            await loader.async_get_integration(menuai, component)
         except loader.IntegrationNotFound:
             translation_errors[full_key] = (
                 f"Translation not found for {component}: `{category}.{key}`. "
@@ -663,7 +663,7 @@ async def _validate_translation(
 
     translation_errors[full_key] = (
         f"Translation not found for {component}: `{category}.{key}`. "
-        f"Please add to homeassistant/components/{component}/strings.json"
+        f"Please add to menuai/components/{component}/strings.json"
     )
 
 
@@ -693,7 +693,7 @@ def _get_integration_quality_scale(integration: str) -> dict[str, Any]:
     """Get the quality scale for an integration."""
     try:
         return yaml_util.load_yaml_dict(
-            f"homeassistant/components/{integration}/quality_scale.yaml"
+            f"menuai/components/{integration}/quality_scale.yaml"
         ).get("rules", {})
     except FileNotFoundError:
         return {}
@@ -709,7 +709,7 @@ def _get_integration_quality_scale_rule(integration: str, rule: str) -> str:
 
 
 async def _check_step_or_section_translations(
-    hass: HomeAssistant,
+    menuai: menuai,
     translation_errors: dict[str, str],
     category: str,
     integration: str,
@@ -723,7 +723,7 @@ async def _check_step_or_section_translations(
     # - description is optional
     for header in ("title", "description"):
         await _validate_translation(
-            hass,
+            menuai,
             translation_errors,
             ignore_translations_for_mock_domains,
             category,
@@ -740,7 +740,7 @@ async def _check_step_or_section_translations(
         if isinstance(data_value, section):
             # check the nested section
             await _check_step_or_section_translations(
-                hass,
+                menuai,
                 translation_errors,
                 category,
                 integration,
@@ -756,7 +756,7 @@ async def _check_step_or_section_translations(
         # data and data_description are compulsory
         for header in ("data", "data_description"):
             await _validate_translation(
-                hass,
+                menuai,
                 translation_errors,
                 ignore_translations_for_mock_domains,
                 category,
@@ -784,12 +784,12 @@ async def _check_config_flow_result_translations(
         integration = flow.handler
     elif isinstance(manager, OptionsFlowManager):
         category = "options"
-        integration = flow.hass.config_entries.async_get_entry(flow.handler).domain
+        integration = flow.menuai.config_entries.async_get_entry(flow.handler).domain
     elif isinstance(manager, repairs.RepairsFlowManager):
         category = "issues"
         integration = flow.handler
         issue_id = flow.issue_id
-        issue = ir.async_get(flow.hass).async_get_issue(integration, issue_id)
+        issue = ir.async_get(flow.menuai).async_get_issue(integration, issue_id)
         key_prefix = f"{issue.translation_key}.fix_flow."
     else:
         return
@@ -801,7 +801,7 @@ async def _check_config_flow_result_translations(
     if result["type"] is FlowResultType.FORM:
         if step_id := result.get("step_id"):
             await _check_step_or_section_translations(
-                flow.hass,
+                flow.menuai,
                 translation_errors,
                 category,
                 integration,
@@ -814,7 +814,7 @@ async def _check_config_flow_result_translations(
         if errors := result.get("errors"):
             for error in errors.values():
                 await _validate_translation(
-                    flow.hass,
+                    flow.menuai,
                     translation_errors,
                     ignore_translations_for_mock_domains,
                     category,
@@ -830,7 +830,7 @@ async def _check_config_flow_result_translations(
         if not flow.__flow_seen_before and flow.source in DISCOVERY_SOURCES:
             return
         await _validate_translation(
-            flow.hass,
+            flow.menuai,
             translation_errors,
             ignore_translations_for_mock_domains,
             category,
@@ -850,7 +850,7 @@ async def _check_create_issue_translations(
         # `translation_key` is only None on dismissed issues
         return
     await _validate_translation(
-        issue_registry.hass,
+        issue_registry.menuai,
         translation_errors,
         ignore_translations_for_mock_domains,
         "issues",
@@ -861,7 +861,7 @@ async def _check_create_issue_translations(
     if not issue.is_fixable:
         # Description is required for non-fixable issues
         await _validate_translation(
-            issue_registry.hass,
+            issue_registry.menuai,
             translation_errors,
             ignore_translations_for_mock_domains,
             "issues",
@@ -881,8 +881,8 @@ def _get_request_quality_scale(
 
 
 async def _check_exception_translation(
-    hass: HomeAssistant,
-    exception: HomeAssistantError,
+    menuai: menuai,
+    exception: menuaiError,
     translation_errors: dict[str, str],
     request: pytest.FixtureRequest,
     ignore_translations_for_mock_domains: set[str],
@@ -897,7 +897,7 @@ async def _check_exception_translation(
             )
         return
     await _validate_translation(
-        hass,
+        menuai,
         translation_errors,
         ignore_translations_for_mock_domains,
         "exceptions",
@@ -982,10 +982,10 @@ async def check_translations(
                 target,
                 return_response,
             )
-        except HomeAssistantError as err:
+        except menuaiError as err:
             translation_coros.add(
                 _check_exception_translation(
-                    self._hass,
+                    self._menuai,
                     err,
                     translation_errors,
                     request,
@@ -997,15 +997,15 @@ async def check_translations(
     # Use override functions
     with (
         patch(
-            "homeassistant.data_entry_flow.FlowManager._async_handle_step",
+            "menuai.data_entry_flow.FlowManager._async_handle_step",
             _flow_manager_async_handle_step,
         ),
         patch(
-            "homeassistant.helpers.issue_registry.IssueRegistry.async_get_or_create",
+            "menuai.helpers.issue_registry.IssueRegistry.async_get_or_create",
             _issue_registry_async_create_issue,
         ),
         patch(
-            "homeassistant.core.ServiceRegistry.async_call",
+            "menuai.core.ServiceRegistry.async_call",
             _service_registry_async_call,
         ),
     ):

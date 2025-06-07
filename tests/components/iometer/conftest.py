@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock, patch
 from iometer import Reading, Status
 import pytest
 
-from homeassistant.components.iometer.const import DOMAIN
-from homeassistant.const import CONF_HOST
+from menuai.components.iometer.const import DOMAIN
+from menuai.const import CONF_HOST
 
 from tests.common import MockConfigEntry, load_fixture
 
@@ -16,7 +16,7 @@ from tests.common import MockConfigEntry, load_fixture
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.iometer.async_setup_entry",
+        "menuai.components.iometer.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
         yield mock_setup_entry
@@ -27,11 +27,11 @@ def mock_iometer_client() -> Generator[AsyncMock]:
     """Mock a new IOmeter client."""
     with (
         patch(
-            "homeassistant.components.iometer.IOmeterClient",
+            "menuai.components.iometer.IOmeterClient",
             autospec=True,
         ) as mock_client,
         patch(
-            "homeassistant.components.iometer.config_flow.IOmeterClient",
+            "menuai.components.iometer.config_flow.IOmeterClient",
             new=mock_client,
         ),
     ):

@@ -2,8 +2,8 @@
 
 import pytest
 
-from homeassistant.components.sensor import SensorDeviceClass
-from homeassistant.components.sensor.helpers import async_parse_date_datetime
+from menuai.components.sensor import SensorDeviceClass
+from menuai.components.sensor.helpers import async_parse_date_datetime
 
 
 def test_async_parse_datetime(caplog: pytest.LogCaptureFixture) -> None:

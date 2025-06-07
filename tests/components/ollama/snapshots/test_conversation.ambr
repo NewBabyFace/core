@@ -1,5 +1,5 @@
 # serializer version: 1
-# name: test_unknown_hass_api
+# name: test_unknown_menuai_api
   dict({
     'continue_conversation': False,
     'conversation_id': '1234',

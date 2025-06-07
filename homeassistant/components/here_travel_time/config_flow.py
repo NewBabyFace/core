@@ -16,23 +16,23 @@ from here_routing import (
 from here_transit import HERETransitError
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_RECONFIGURE,
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_API_KEY,
     CONF_LATITUDE,
     CONF_LONGITUDE,
     CONF_MODE,
     CONF_NAME,
 )
-from homeassistant.core import callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.selector import (
+from menuai.core import callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.selector import (
     EntitySelector,
     LocationSelector,
     TimeSelector,
@@ -177,9 +177,9 @@ class HERETravelTimeConfigFlow(ConfigFlow, domain=DOMAIN):
             {
                 CONF_ORIGIN: {
                     CONF_LATITUDE: self._config.get(CONF_ORIGIN_LATITUDE)
-                    or self.hass.config.latitude,
+                    or self.menuai.config.latitude,
                     CONF_LONGITUDE: self._config.get(CONF_ORIGIN_LONGITUDE)
-                    or self.hass.config.longitude,
+                    or self.menuai.config.longitude,
                 }
             },
         )
@@ -250,9 +250,9 @@ class HERETravelTimeConfigFlow(ConfigFlow, domain=DOMAIN):
             {
                 CONF_DESTINATION: {
                     CONF_LATITUDE: self._config.get(CONF_DESTINATION_LATITUDE)
-                    or self.hass.config.latitude,
+                    or self.menuai.config.latitude,
                     CONF_LONGITUDE: self._config.get(CONF_DESTINATION_LONGITUDE)
-                    or self.hass.config.longitude,
+                    or self.menuai.config.longitude,
                 },
             },
         )

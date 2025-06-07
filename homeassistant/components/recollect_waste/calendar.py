@@ -6,11 +6,11 @@ import datetime
 
 from aiorecollect.client import PickupEvent
 
-from homeassistant.components.calendar import CalendarEntity, CalendarEvent
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.components.calendar import CalendarEntity, CalendarEvent
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN
 from .entity import ReCollectWasteEntity
@@ -21,7 +21,7 @@ from .util import async_get_pickup_type_names
 def async_get_calendar_event_from_pickup_event(
     entry: ConfigEntry, pickup_event: PickupEvent
 ) -> CalendarEvent:
-    """Get a HASS CalendarEvent from an aiorecollect PickupEvent."""
+    """Get a menuai CalendarEvent from an aiorecollect PickupEvent."""
     pickup_type_string = ", ".join(
         async_get_pickup_type_names(entry, pickup_event.pickup_types)
     )
@@ -35,12 +35,12 @@ def async_get_calendar_event_from_pickup_event(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up ReCollect Waste sensors based on a config entry."""
-    coordinator: DataUpdateCoordinator[list[PickupEvent]] = hass.data[DOMAIN][
+    coordinator: DataUpdateCoordinator[list[PickupEvent]] = menuai.data[DOMAIN][
         entry.entry_id
     ]
 
@@ -89,7 +89,7 @@ class ReCollectWasteCalendar(ReCollectWasteEntity, CalendarEntity):
 
     async def async_get_events(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         start_date: datetime.datetime,
         end_date: datetime.datetime,
     ) -> list[CalendarEvent]:

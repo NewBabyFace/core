@@ -7,17 +7,17 @@ from unittest.mock import AsyncMock
 from letpot.exceptions import LetPotAuthenticationException, LetPotConnectionException
 import pytest
 
-from homeassistant.components.letpot.const import (
+from menuai.components.letpot.const import (
     CONF_ACCESS_TOKEN_EXPIRES,
     CONF_REFRESH_TOKEN,
     CONF_REFRESH_TOKEN_EXPIRES,
     CONF_USER_ID,
     DOMAIN,
 )
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_EMAIL, CONF_PASSWORD
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_ACCESS_TOKEN, CONF_EMAIL, CONF_PASSWORD
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from . import AUTHENTICATION
 
@@ -40,16 +40,16 @@ def _assert_result_success(result: Any) -> None:
 
 
 async def test_full_flow(
-    hass: HomeAssistant, mock_client: AsyncMock, mock_setup_entry: AsyncMock
+    menuai: menuai, mock_client: AsyncMock, mock_setup_entry: AsyncMock
 ) -> None:
     """Test full flow with success."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_EMAIL: "email@example.com",
@@ -70,19 +70,19 @@ async def test_full_flow(
     ],
 )
 async def test_flow_exceptions(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: AsyncMock,
     mock_setup_entry: AsyncMock,
     exception: Exception,
     error: str,
 ) -> None:
     """Test flow with exception during login and recovery."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
     mock_client.login.side_effect = exception
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_EMAIL: "email@example.com",
@@ -95,7 +95,7 @@ async def test_flow_exceptions(
 
     # Retry to show recovery.
     mock_client.login.side_effect = None
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_EMAIL: "email@example.com",
@@ -108,15 +108,15 @@ async def test_flow_exceptions(
 
 
 async def test_flow_duplicate(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: AsyncMock,
     mock_setup_entry: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test flow aborts when trying to add a previously added account."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
@@ -124,7 +124,7 @@ async def test_flow_duplicate(
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_EMAIL: "email@example.com",
@@ -138,15 +138,15 @@ async def test_flow_duplicate(
 
 
 async def test_reauth_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: AsyncMock,
     mock_setup_entry: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test reauth flow with success."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await mock_config_entry.start_reauth_flow(hass)
+    result = await mock_config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
@@ -156,7 +156,7 @@ async def test_reauth_flow(
         refresh_token="new_refresh_token",
     )
     mock_client.login.return_value = updated_auth
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_PASSWORD: "new-password"},
     )
@@ -171,7 +171,7 @@ async def test_reauth_flow(
         CONF_USER_ID: AUTHENTICATION.user_id,
         CONF_EMAIL: AUTHENTICATION.email,
     }
-    assert len(hass.config_entries.async_entries()) == 1
+    assert len(menuai.config_entries.async_entries()) == 1
 
 
 @pytest.mark.parametrize(
@@ -183,7 +183,7 @@ async def test_reauth_flow(
     ],
 )
 async def test_reauth_exceptions(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: AsyncMock,
     mock_setup_entry: AsyncMock,
     mock_config_entry: MockConfigEntry,
@@ -191,14 +191,14 @@ async def test_reauth_exceptions(
     error: str,
 ) -> None:
     """Test reauth flow with exception during login and recovery."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await mock_config_entry.start_reauth_flow(hass)
+    result = await mock_config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
     mock_client.login.side_effect = exception
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_PASSWORD: "new-password"},
     )
@@ -214,7 +214,7 @@ async def test_reauth_exceptions(
     )
     mock_client.login.return_value = updated_auth
     mock_client.login.side_effect = None
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_PASSWORD: "new-password"},
     )
@@ -229,28 +229,28 @@ async def test_reauth_exceptions(
         CONF_USER_ID: AUTHENTICATION.user_id,
         CONF_EMAIL: AUTHENTICATION.email,
     }
-    assert len(hass.config_entries.async_entries()) == 1
+    assert len(menuai.config_entries.async_entries()) == 1
 
 
 async def test_reauth_different_user_id_new(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: AsyncMock,
     mock_setup_entry: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test reauth flow with different, new user ID updating the existing entry."""
-    mock_config_entry.add_to_hass(hass)
-    config_entries = hass.config_entries.async_entries()
+    mock_config_entry.add_to_menuai(menuai)
+    config_entries = menuai.config_entries.async_entries()
     assert len(config_entries) == 1
     assert config_entries[0].unique_id == AUTHENTICATION.user_id
 
-    result = await mock_config_entry.start_reauth_flow(hass)
+    result = await mock_config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
     updated_auth = dataclasses.replace(AUTHENTICATION, user_id="new_user_id")
     mock_client.login.return_value = updated_auth
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_PASSWORD: "new-password"},
     )
@@ -265,35 +265,35 @@ async def test_reauth_different_user_id_new(
         CONF_USER_ID: "new_user_id",
         CONF_EMAIL: AUTHENTICATION.email,
     }
-    config_entries = hass.config_entries.async_entries()
+    config_entries = menuai.config_entries.async_entries()
     assert len(config_entries) == 1
     assert config_entries[0].unique_id == "new_user_id"
 
 
 async def test_reauth_different_user_id_existing(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: AsyncMock,
     mock_setup_entry: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test reauth flow with different, existing user ID aborting."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
     mock_other = MockConfigEntry(
         domain=DOMAIN, title="email2@example.com", data={}, unique_id="other_user_id"
     )
-    mock_other.add_to_hass(hass)
+    mock_other.add_to_menuai(menuai)
 
-    result = await mock_config_entry.start_reauth_flow(hass)
+    result = await mock_config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
     updated_auth = dataclasses.replace(AUTHENTICATION, user_id="other_user_id")
     mock_client.login.return_value = updated_auth
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_PASSWORD: "new-password"},
     )
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
-    assert len(hass.config_entries.async_entries()) == 2
+    assert len(menuai.config_entries.async_entries()) == 2

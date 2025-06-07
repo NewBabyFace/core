@@ -5,22 +5,22 @@ from unittest.mock import AsyncMock
 from aioaquacell import ApiException, AuthenticationFailed
 import pytest
 
-from homeassistant.components.aquacell.const import (
+from menuai.components.aquacell.const import (
     CONF_BRAND,
     CONF_REFRESH_TOKEN,
     DOMAIN,
 )
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_EMAIL, CONF_PASSWORD
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from . import TEST_CONFIG_ENTRY, TEST_USER_INPUT
 
 from tests.common import MockConfigEntry
 
 
-async def test_config_flow_already_configured(hass: HomeAssistant) -> None:
+async def test_config_flow_already_configured(menuai: menuai) -> None:
     """Test already configured."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -29,9 +29,9 @@ async def test_config_flow_already_configured(hass: HomeAssistant) -> None:
         },
         unique_id=TEST_CONFIG_ENTRY[CONF_EMAIL],
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
@@ -39,7 +39,7 @@ async def test_config_flow_already_configured(hass: HomeAssistant) -> None:
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         TEST_USER_INPUT,
     )
@@ -49,10 +49,10 @@ async def test_config_flow_already_configured(hass: HomeAssistant) -> None:
 
 
 async def test_full_flow(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock, mock_aquacell_api: AsyncMock
+    menuai: menuai, mock_setup_entry: AsyncMock, mock_aquacell_api: AsyncMock
 ) -> None:
     """Test the full config flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
@@ -60,11 +60,11 @@ async def test_full_flow(
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         TEST_USER_INPUT,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == TEST_CONFIG_ENTRY[CONF_EMAIL]
@@ -85,19 +85,19 @@ async def test_full_flow(
     ],
 )
 async def test_form_exceptions(
-    hass: HomeAssistant,
+    menuai: menuai,
     exception: Exception,
     error: str,
     mock_setup_entry: AsyncMock,
     mock_aquacell_api: AsyncMock,
 ) -> None:
     """Test we handle form exceptions."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
     mock_aquacell_api.authenticate.side_effect = exception
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"], TEST_USER_INPUT
     )
 
@@ -106,11 +106,11 @@ async def test_form_exceptions(
 
     mock_aquacell_api.authenticate.side_effect = None
 
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         TEST_USER_INPUT,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.CREATE_ENTRY
     assert result3["title"] == TEST_CONFIG_ENTRY[CONF_EMAIL]

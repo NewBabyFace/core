@@ -10,14 +10,14 @@ from yalesmartalarmclient.const import (
     YALE_STATE_DISARM,
 )
 
-from homeassistant.components.alarm_control_panel import (
+from menuai.components.alarm_control_panel import (
     AlarmControlPanelEntity,
     AlarmControlPanelEntityFeature,
     AlarmControlPanelState,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import YaleConfigEntry
 from .const import DOMAIN, STATE_MAP, YALE_ALL_ERRORS
@@ -26,7 +26,7 @@ from .entity import YaleAlarmEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: YaleConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -69,19 +69,19 @@ class YaleAlarmDevice(YaleAlarmEntity, AlarmControlPanelEntity):
 
         try:
             if command == YALE_STATE_ARM_FULL:
-                alarm_state = await self.hass.async_add_executor_job(
+                alarm_state = await self.menuai.async_add_executor_job(
                     self.coordinator.yale.arm_full
                 )
             if command == YALE_STATE_ARM_PARTIAL:
-                alarm_state = await self.hass.async_add_executor_job(
+                alarm_state = await self.menuai.async_add_executor_job(
                     self.coordinator.yale.arm_partial
                 )
             if command == YALE_STATE_DISARM:
-                alarm_state = await self.hass.async_add_executor_job(
+                alarm_state = await self.menuai.async_add_executor_job(
                     self.coordinator.yale.disarm
                 )
         except YALE_ALL_ERRORS as error:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="set_alarm",
                 translation_placeholders={
@@ -94,7 +94,7 @@ class YaleAlarmDevice(YaleAlarmEntity, AlarmControlPanelEntity):
             self.coordinator.data["alarm"] = command
             self.async_write_ha_state()
             return
-        raise HomeAssistantError(
+        raise menuaiError(
             translation_domain=DOMAIN,
             translation_key="could_not_change_alarm",
         )

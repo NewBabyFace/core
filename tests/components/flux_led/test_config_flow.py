@@ -6,9 +6,9 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.flux_led.config_flow import FluxLedConfigFlow
-from homeassistant.components.flux_led.const import (
+from menuai import config_entries
+from menuai.components.flux_led.config_flow import FluxLedConfigFlow
+from menuai.components.flux_led.const import (
     CONF_CUSTOM_EFFECT_COLORS,
     CONF_CUSTOM_EFFECT_SPEED_PCT,
     CONF_CUSTOM_EFFECT_TRANSITION,
@@ -23,10 +23,10 @@ from homeassistant.components.flux_led.const import (
     TRANSITION_JUMP,
     TRANSITION_STROBE,
 )
-from homeassistant.const import CONF_DEVICE, CONF_HOST, CONF_MODEL
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.const import CONF_DEVICE, CONF_HOST, CONF_MODEL
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
 
 from . import (
     DEFAULT_ENTRY_TITLE,
@@ -49,33 +49,33 @@ from tests.common import MockConfigEntry
 MAC_ADDRESS_DIFFERENT = "ff:bb:ff:dd:ee:ff"
 
 
-async def test_discovery(hass: HomeAssistant) -> None:
+async def test_discovery(menuai: menuai) -> None:
     """Test setting up discovery."""
     with _patch_discovery(), _patch_wifibulb():
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "user"
         assert not result["errors"]
 
-        result2 = await hass.config_entries.flow.async_configure(result["flow_id"], {})
-        await hass.async_block_till_done()
+        result2 = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
+        await menuai.async_block_till_done()
         assert result2["type"] is FlowResultType.FORM
         assert result2["step_id"] == "pick_device"
         assert not result2["errors"]
 
         # test we can try again
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "user"
         assert not result["errors"]
 
-        result2 = await hass.config_entries.flow.async_configure(result["flow_id"], {})
-        await hass.async_block_till_done()
+        result2 = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
+        await menuai.async_block_till_done()
         assert result2["type"] is FlowResultType.FORM
         assert result2["step_id"] == "pick_device"
         assert not result2["errors"]
@@ -86,11 +86,11 @@ async def test_discovery(hass: HomeAssistant) -> None:
         patch(f"{MODULE}.async_setup", return_value=True) as mock_setup,
         patch(f"{MODULE}.async_setup_entry", return_value=True) as mock_setup_entry,
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_DEVICE: MAC_ADDRESS},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.CREATE_ENTRY
     assert result3["title"] == DEFAULT_ENTRY_TITLE
@@ -109,7 +109,7 @@ async def test_discovery(hass: HomeAssistant) -> None:
     mock_setup_entry.assert_called_once()
 
     # ignore configured devices
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -117,40 +117,40 @@ async def test_discovery(hass: HomeAssistant) -> None:
     assert not result["errors"]
 
     with _patch_discovery(), _patch_wifibulb():
-        result2 = await hass.config_entries.flow.async_configure(result["flow_id"], {})
-        await hass.async_block_till_done()
+        result2 = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.ABORT
     assert result2["reason"] == "no_devices_found"
 
 
-async def test_discovery_legacy(hass: HomeAssistant) -> None:
+async def test_discovery_legacy(menuai: menuai) -> None:
     """Test setting up discovery with a legacy device."""
     with _patch_discovery(device=FLUX_DISCOVERY_PARTIAL), _patch_wifibulb():
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "user"
         assert not result["errors"]
 
-        result2 = await hass.config_entries.flow.async_configure(result["flow_id"], {})
-        await hass.async_block_till_done()
+        result2 = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
+        await menuai.async_block_till_done()
         assert result2["type"] is FlowResultType.FORM
         assert result2["step_id"] == "pick_device"
         assert not result2["errors"]
 
         # test we can try again
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "user"
         assert not result["errors"]
 
-        result2 = await hass.config_entries.flow.async_configure(result["flow_id"], {})
-        await hass.async_block_till_done()
+        result2 = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
+        await menuai.async_block_till_done()
         assert result2["type"] is FlowResultType.FORM
         assert result2["step_id"] == "pick_device"
         assert not result2["errors"]
@@ -161,11 +161,11 @@ async def test_discovery_legacy(hass: HomeAssistant) -> None:
         patch(f"{MODULE}.async_setup", return_value=True) as mock_setup,
         patch(f"{MODULE}.async_setup_entry", return_value=True) as mock_setup_entry,
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_DEVICE: MAC_ADDRESS},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.CREATE_ENTRY
     assert result3["title"] == DEFAULT_ENTRY_TITLE
@@ -184,7 +184,7 @@ async def test_discovery_legacy(hass: HomeAssistant) -> None:
     mock_setup_entry.assert_called_once()
 
     # ignore configured devices
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -192,25 +192,25 @@ async def test_discovery_legacy(hass: HomeAssistant) -> None:
     assert not result["errors"]
 
     with _patch_discovery(), _patch_wifibulb():
-        result2 = await hass.config_entries.flow.async_configure(result["flow_id"], {})
-        await hass.async_block_till_done()
+        result2 = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.ABORT
     assert result2["reason"] == "no_devices_found"
 
 
-async def test_discovery_with_existing_device_present(hass: HomeAssistant) -> None:
+async def test_discovery_with_existing_device_present(menuai: menuai) -> None:
     """Test setting up discovery."""
     config_entry = MockConfigEntry(
         domain=DOMAIN, data={CONF_HOST: "127.0.0.2"}, unique_id="dd:dd:dd:dd:dd:dd"
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with _patch_discovery(), _patch_wifibulb(no_device=True):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -218,8 +218,8 @@ async def test_discovery_with_existing_device_present(hass: HomeAssistant) -> No
     assert not result["errors"]
 
     with _patch_discovery(), _patch_wifibulb():
-        result2 = await hass.config_entries.flow.async_configure(result["flow_id"], {})
-        await hass.async_block_till_done()
+        result2 = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["step_id"] == "pick_device"
@@ -227,7 +227,7 @@ async def test_discovery_with_existing_device_present(hass: HomeAssistant) -> No
 
     # Now abort and make sure we can start over
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -235,8 +235,8 @@ async def test_discovery_with_existing_device_present(hass: HomeAssistant) -> No
     assert not result["errors"]
 
     with _patch_discovery(), _patch_wifibulb():
-        result2 = await hass.config_entries.flow.async_configure(result["flow_id"], {})
-        await hass.async_block_till_done()
+        result2 = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["step_id"] == "pick_device"
@@ -247,7 +247,7 @@ async def test_discovery_with_existing_device_present(hass: HomeAssistant) -> No
         _patch_wifibulb(),
         patch(f"{MODULE}.async_setup_entry", return_value=True) as mock_setup_entry,
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result["flow_id"], {CONF_DEVICE: MAC_ADDRESS}
         )
         assert result3["type"] is FlowResultType.CREATE_ENTRY
@@ -263,12 +263,12 @@ async def test_discovery_with_existing_device_present(hass: HomeAssistant) -> No
             CONF_REMOTE_ACCESS_HOST: "the.cloud",
             CONF_REMOTE_ACCESS_PORT: 8816,
         }
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     mock_setup_entry.assert_called_once()
 
     # ignore configured devices
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -276,30 +276,30 @@ async def test_discovery_with_existing_device_present(hass: HomeAssistant) -> No
     assert not result["errors"]
 
     with _patch_discovery(), _patch_wifibulb():
-        result2 = await hass.config_entries.flow.async_configure(result["flow_id"], {})
-        await hass.async_block_till_done()
+        result2 = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.ABORT
     assert result2["reason"] == "no_devices_found"
 
 
-async def test_discovery_no_device(hass: HomeAssistant) -> None:
+async def test_discovery_no_device(menuai: menuai) -> None:
     """Test discovery without device."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     with _patch_discovery(no_device=True), _patch_wifibulb():
-        result2 = await hass.config_entries.flow.async_configure(result["flow_id"], {})
-        await hass.async_block_till_done()
+        result2 = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.ABORT
     assert result2["reason"] == "no_devices_found"
 
 
-async def test_manual_working_discovery(hass: HomeAssistant) -> None:
+async def test_manual_working_discovery(menuai: menuai) -> None:
     """Test manually setup."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -308,10 +308,10 @@ async def test_manual_working_discovery(hass: HomeAssistant) -> None:
 
     # Cannot connect (timeout)
     with _patch_discovery(no_device=True), _patch_wifibulb(no_device=True):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"], {CONF_HOST: IP_ADDRESS}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["step_id"] == "user"
@@ -324,10 +324,10 @@ async def test_manual_working_discovery(hass: HomeAssistant) -> None:
         patch(f"{MODULE}.async_setup", return_value=True),
         patch(f"{MODULE}.async_setup_entry", return_value=True),
     ):
-        result4 = await hass.config_entries.flow.async_configure(
+        result4 = await menuai.config_entries.flow.async_configure(
             result["flow_id"], {CONF_HOST: IP_ADDRESS}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     assert result4["type"] is FlowResultType.CREATE_ENTRY
     assert result4["title"] == DEFAULT_ENTRY_TITLE
     assert result4["data"] == {
@@ -343,20 +343,20 @@ async def test_manual_working_discovery(hass: HomeAssistant) -> None:
     }
 
     # Duplicate
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     with _patch_discovery(no_device=True), _patch_wifibulb(no_device=True):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"], {CONF_HOST: IP_ADDRESS}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.ABORT
     assert result2["reason"] == "already_configured"
 
 
-async def test_user_flow_can_replace_ignored(hass: HomeAssistant) -> None:
+async def test_user_flow_can_replace_ignored(menuai: menuai) -> None:
     """Test a user flow can replace an ignored entry."""
     ignored_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -365,8 +365,8 @@ async def test_user_flow_can_replace_ignored(hass: HomeAssistant) -> None:
         title=DEFAULT_ENTRY_TITLE,
         source=config_entries.SOURCE_IGNORE,
     )
-    ignored_entry.add_to_hass(hass)
-    result = await hass.config_entries.flow.async_init(
+    ignored_entry.add_to_menuai(menuai)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -375,10 +375,10 @@ async def test_user_flow_can_replace_ignored(hass: HomeAssistant) -> None:
 
     # Cannot connect (timeout)
     with _patch_discovery(no_device=True), _patch_wifibulb(no_device=True):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"], {CONF_HOST: IP_ADDRESS}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["step_id"] == "user"
@@ -391,10 +391,10 @@ async def test_user_flow_can_replace_ignored(hass: HomeAssistant) -> None:
         patch(f"{MODULE}.async_setup", return_value=True),
         patch(f"{MODULE}.async_setup_entry", return_value=True),
     ):
-        result4 = await hass.config_entries.flow.async_configure(
+        result4 = await menuai.config_entries.flow.async_configure(
             result["flow_id"], {CONF_HOST: IP_ADDRESS}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     assert result4["type"] is FlowResultType.CREATE_ENTRY
     assert result4["title"] == DEFAULT_ENTRY_TITLE
     assert result4["data"] == {
@@ -410,9 +410,9 @@ async def test_user_flow_can_replace_ignored(hass: HomeAssistant) -> None:
     }
 
 
-async def test_manual_no_discovery_data(hass: HomeAssistant) -> None:
+async def test_manual_no_discovery_data(menuai: menuai) -> None:
     """Test manually setup without discovery data."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -425,10 +425,10 @@ async def test_manual_no_discovery_data(hass: HomeAssistant) -> None:
         patch(f"{MODULE}.async_setup", return_value=True),
         patch(f"{MODULE}.async_setup_entry", return_value=True),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], {CONF_HOST: IP_ADDRESS}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"] == {
@@ -438,26 +438,26 @@ async def test_manual_no_discovery_data(hass: HomeAssistant) -> None:
     }
 
 
-async def test_discovered_by_discovery_and_dhcp(hass: HomeAssistant) -> None:
+async def test_discovered_by_discovery_and_dhcp(menuai: menuai) -> None:
     """Test we get the form with discovery and abort for dhcp source when we get both."""
 
     with _patch_discovery(), _patch_wifibulb():
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_INTEGRATION_DISCOVERY},
             data=FLUX_DISCOVERY,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] is None
 
     with _patch_discovery(), _patch_wifibulb():
-        result2 = await hass.config_entries.flow.async_init(
+        result2 = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_DHCP},
             data=DHCP_DISCOVERY,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     assert result2["type"] is FlowResultType.ABORT
     assert result2["reason"] == "already_in_progress"
 
@@ -475,7 +475,7 @@ async def test_discovered_by_discovery_and_dhcp(hass: HomeAssistant) -> None:
             FluxLedConfigFlow, "is_matching", wraps=is_matching, autospec=True
         ),
     ):
-        result3 = await hass.config_entries.flow.async_init(
+        result3 = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_DHCP},
             data=DhcpServiceInfo(
@@ -484,7 +484,7 @@ async def test_discovered_by_discovery_and_dhcp(hass: HomeAssistant) -> None:
                 macaddress="000000000000",
             ),
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     # Ensure the is_matching method returned True
     assert return_values == [True]
@@ -493,16 +493,16 @@ async def test_discovered_by_discovery_and_dhcp(hass: HomeAssistant) -> None:
     assert result3["reason"] == "already_in_progress"
 
 
-async def test_discovered_by_discovery(hass: HomeAssistant) -> None:
+async def test_discovered_by_discovery(menuai: menuai) -> None:
     """Test we can setup when discovered from discovery."""
 
     with _patch_discovery(), _patch_wifibulb():
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_INTEGRATION_DISCOVERY},
             data=FLUX_DISCOVERY,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] is None
@@ -515,8 +515,8 @@ async def test_discovered_by_discovery(hass: HomeAssistant) -> None:
             f"{MODULE}.async_setup_entry", return_value=True
         ) as mock_async_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(result["flow_id"], {})
-        await hass.async_block_till_done()
+        result2 = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["data"] == {
@@ -534,14 +534,14 @@ async def test_discovered_by_discovery(hass: HomeAssistant) -> None:
     assert mock_async_setup_entry.called
 
 
-async def test_discovered_by_dhcp_udp_responds(hass: HomeAssistant) -> None:
+async def test_discovered_by_dhcp_udp_responds(menuai: menuai) -> None:
     """Test we can setup when discovered from dhcp but with udp response."""
 
     with _patch_discovery(), _patch_wifibulb():
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_DHCP}, data=DHCP_DISCOVERY
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] is None
@@ -554,8 +554,8 @@ async def test_discovered_by_dhcp_udp_responds(hass: HomeAssistant) -> None:
             f"{MODULE}.async_setup_entry", return_value=True
         ) as mock_async_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(result["flow_id"], {})
-        await hass.async_block_till_done()
+        result2 = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["data"] == {
@@ -573,14 +573,14 @@ async def test_discovered_by_dhcp_udp_responds(hass: HomeAssistant) -> None:
     assert mock_async_setup_entry.called
 
 
-async def test_discovered_by_dhcp_no_udp_response(hass: HomeAssistant) -> None:
+async def test_discovered_by_dhcp_no_udp_response(menuai: menuai) -> None:
     """Test we can setup when discovered from dhcp but no udp response."""
 
     with _patch_discovery(no_device=True), _patch_wifibulb():
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_DHCP}, data=DHCP_DISCOVERY
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] is None
@@ -593,8 +593,8 @@ async def test_discovered_by_dhcp_no_udp_response(hass: HomeAssistant) -> None:
             f"{MODULE}.async_setup_entry", return_value=True
         ) as mock_async_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(result["flow_id"], {})
-        await hass.async_block_till_done()
+        result2 = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["data"] == {
@@ -607,15 +607,15 @@ async def test_discovered_by_dhcp_no_udp_response(hass: HomeAssistant) -> None:
 
 
 async def test_discovered_by_dhcp_partial_udp_response_fallback_tcp(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test we can setup when discovered from dhcp but part of the udp response is missing."""
 
     with _patch_discovery(no_device=True), _patch_wifibulb():
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_DHCP}, data=DHCP_DISCOVERY
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] is None
@@ -628,8 +628,8 @@ async def test_discovered_by_dhcp_partial_udp_response_fallback_tcp(
             f"{MODULE}.async_setup_entry", return_value=True
         ) as mock_async_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(result["flow_id"], {})
-        await hass.async_block_till_done()
+        result2 = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["data"] == {
@@ -643,15 +643,15 @@ async def test_discovered_by_dhcp_partial_udp_response_fallback_tcp(
 
 
 async def test_discovered_by_dhcp_no_udp_response_or_tcp_response(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test we can setup when discovered from dhcp but no udp response or tcp response."""
 
     with _patch_discovery(no_device=True), _patch_wifibulb(no_device=True):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_DHCP}, data=DHCP_DISCOVERY
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "cannot_connect"
@@ -665,17 +665,17 @@ async def test_discovered_by_dhcp_no_udp_response_or_tcp_response(
     ],
 )
 async def test_discovered_by_dhcp_or_discovery_adds_missing_unique_id(
-    hass: HomeAssistant, source, data
+    menuai: menuai, source, data
 ) -> None:
     """Test we can setup when discovered from dhcp or discovery."""
     config_entry = MockConfigEntry(domain=DOMAIN, data={CONF_HOST: IP_ADDRESS})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with _patch_discovery(), _patch_wifibulb():
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": source}, data=data
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
@@ -684,21 +684,21 @@ async def test_discovered_by_dhcp_or_discovery_adds_missing_unique_id(
 
 
 async def test_mac_address_off_by_one_updated_via_discovery(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test the mac address is updated when its off by one from integration discovery."""
     config_entry = MockConfigEntry(
         domain=DOMAIN, data={CONF_HOST: IP_ADDRESS}, unique_id=MAC_ADDRESS_ONE_OFF
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with _patch_discovery(), _patch_wifibulb():
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_INTEGRATION_DISCOVERY},
             data=FLUX_DISCOVERY,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
@@ -707,19 +707,19 @@ async def test_mac_address_off_by_one_updated_via_discovery(
 
 
 async def test_mac_address_off_by_one_not_updated_from_dhcp(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test the mac address is NOT updated when its off by one from dhcp discovery."""
     config_entry = MockConfigEntry(
         domain=DOMAIN, data={CONF_HOST: IP_ADDRESS}, unique_id=MAC_ADDRESS_ONE_OFF
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with _patch_discovery(), _patch_wifibulb():
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_DHCP}, data=DHCP_DISCOVERY
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
@@ -735,19 +735,19 @@ async def test_mac_address_off_by_one_not_updated_from_dhcp(
     ],
 )
 async def test_discovered_by_dhcp_or_discovery_mac_address_mismatch_host_already_configured(
-    hass: HomeAssistant, source, data
+    menuai: menuai, source, data
 ) -> None:
     """Test we abort if the host is already configured but the mac does not match."""
     config_entry = MockConfigEntry(
         domain=DOMAIN, data={CONF_HOST: IP_ADDRESS}, unique_id=MAC_ADDRESS_DIFFERENT
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with _patch_discovery(), _patch_wifibulb():
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": source}, data=data
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
@@ -755,7 +755,7 @@ async def test_discovered_by_dhcp_or_discovery_mac_address_mismatch_host_already
     assert config_entry.unique_id == MAC_ADDRESS_DIFFERENT
 
 
-async def test_options(hass: HomeAssistant) -> None:
+async def test_options(menuai: menuai) -> None:
     """Test options flow."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -768,13 +768,13 @@ async def test_options(hass: HomeAssistant) -> None:
         },
         unique_id=MAC_ADDRESS,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with _patch_discovery(), _patch_wifibulb():
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
@@ -784,14 +784,14 @@ async def test_options(hass: HomeAssistant) -> None:
         CONF_CUSTOM_EFFECT_TRANSITION: TRANSITION_JUMP,
     }
     with _patch_discovery(), _patch_wifibulb():
-        result2 = await hass.config_entries.options.async_configure(
+        result2 = await menuai.config_entries.options.async_configure(
             result["flow_id"], user_input
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["data"] == user_input
     assert result2["data"] == config_entry.options
-    assert hass.states.get("light.bulb_rgbcw_ddeeff") is not None
+    assert menuai.states.get("light.bulb_rgbcw_ddeeff") is not None
 
 
 @pytest.mark.parametrize(
@@ -801,7 +801,7 @@ async def test_options(hass: HomeAssistant) -> None:
         (config_entries.SOURCE_INTEGRATION_DISCOVERY, FLUX_DISCOVERY),
     ],
 )
-async def test_discovered_can_be_ignored(hass: HomeAssistant, source, data) -> None:
+async def test_discovered_can_be_ignored(menuai: menuai, source, data) -> None:
     """Test we abort if the mac was already ignored."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -809,13 +809,13 @@ async def test_discovered_can_be_ignored(hass: HomeAssistant, source, data) -> N
         unique_id=MAC_ADDRESS,
         source=config_entries.SOURCE_IGNORE,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with _patch_discovery(), _patch_wifibulb():
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": source}, data=data
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"

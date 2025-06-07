@@ -1,7 +1,7 @@
 """Constants for the Risco integration."""
 
-from homeassistant.components.alarm_control_panel import AlarmControlPanelState
-from homeassistant.const import CONF_SCAN_INTERVAL
+from menuai.components.alarm_control_panel import AlarmControlPanelState
+from menuai.const import CONF_SCAN_INTERVAL
 
 DOMAIN = "risco"
 

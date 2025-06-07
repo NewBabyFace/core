@@ -4,15 +4,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Final
 
-from homeassistant.util.hass_dict import HassKey
+from menuai.util.menuai_dict import menuaiKey
 
 if TYPE_CHECKING:
-    from homeassistant.helpers.entity_component import EntityComponent
+    from menuai.helpers.entity_component import EntityComponent
 
     from . import ImageEntity
 
 
 DOMAIN: Final = "image"
-DATA_COMPONENT: HassKey[EntityComponent[ImageEntity]] = HassKey(DOMAIN)
+DATA_COMPONENT: menuaiKey[EntityComponent[ImageEntity]] = menuaiKey(DOMAIN)
 
 IMAGE_TIMEOUT: Final = 10

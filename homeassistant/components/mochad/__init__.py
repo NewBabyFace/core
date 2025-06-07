@@ -6,15 +6,15 @@ import threading
 from pymochad import controller, exceptions
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_PORT,
-    EVENT_HOMEASSISTANT_START,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_START,
+    EVENT_menuai_STOP,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the mochad component."""
     conf = config[DOMAIN]
     host = conf.get(CONF_HOST)
@@ -55,10 +55,10 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     def start_mochad(event):
         """Start the Mochad service."""
-        hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, stop_mochad)
+        menuai.bus.listen_once(EVENT_menuai_STOP, stop_mochad)
 
-    hass.bus.listen_once(EVENT_HOMEASSISTANT_START, start_mochad)
-    hass.data[DOMAIN] = mochad_controller
+    menuai.bus.listen_once(EVENT_menuai_START, start_mochad)
+    menuai.data[DOMAIN] = mochad_controller
 
     return True
 

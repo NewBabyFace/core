@@ -5,13 +5,13 @@ from __future__ import annotations
 from aiohttp import web
 from haffmpeg.camera import CameraMjpeg
 
-from homeassistant.components.camera import Camera, CameraEntityDescription
-from homeassistant.components.ffmpeg import get_ffmpeg_manager
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_aiohttp_proxy_stream
-from homeassistant.helpers.entity import EntityDescription
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.camera import Camera, CameraEntityDescription
+from menuai.components.ffmpeg import get_ffmpeg_manager
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_aiohttp_proxy_stream
+from menuai.helpers.entity import EntityDescription
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import SkybellDataUpdateCoordinator
@@ -30,14 +30,14 @@ CAMERA_TYPES: tuple[CameraEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Skybell camera."""
     entities = []
     for description in CAMERA_TYPES:
-        for coordinator in hass.data[DOMAIN][entry.entry_id]:
+        for coordinator in menuai.data[DOMAIN][entry.entry_id]:
             if description.key == "avatar":
                 entities.append(SkybellCamera(coordinator, description))
             else:
@@ -71,16 +71,16 @@ class SkybellActivityCamera(SkybellCamera):
         self, request: web.Request
     ) -> web.StreamResponse:
         """Generate an HTTP MJPEG stream from the latest recorded activity."""
-        stream = CameraMjpeg(get_ffmpeg_manager(self.hass).binary)
+        stream = CameraMjpeg(get_ffmpeg_manager(self.menuai).binary)
         url = await self.coordinator.device.async_get_activity_video_url()
         await stream.open_camera(url, extra_cmd="-r 210")
 
         try:
             return await async_aiohttp_proxy_stream(
-                self.hass,
+                self.menuai,
                 request,
                 await stream.get_reader(),
-                get_ffmpeg_manager(self.hass).ffmpeg_stream_content_type,
+                get_ffmpeg_manager(self.menuai).ffmpeg_stream_content_type,
             )
         finally:
             await stream.close()

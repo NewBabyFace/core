@@ -6,21 +6,21 @@ import logging
 from cronsim import CronSim, CronSimError
 import voluptuous as vol
 
-from homeassistant.components.select import DOMAIN as SELECT_DOMAIN
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_ENTITY_ID, CONF_NAME, CONF_UNIQUE_ID, Platform
-from homeassistant.core import HomeAssistant, split_entity_id
-from homeassistant.helpers import (
+from menuai.components.select import DOMAIN as SELECT_DOMAIN
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_ENTITY_ID, CONF_NAME, CONF_UNIQUE_ID, Platform
+from menuai.core import menuai, split_entity_id
+from menuai.helpers import (
     config_validation as cv,
     discovery,
     entity_registry as er,
 )
-from homeassistant.helpers.device import (
+from menuai.helpers.device import (
     async_remove_stale_devices_links_keep_entity_device,
 )
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     CONF_CRON_PATTERN,
@@ -111,9 +111,9 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up an Utility Meter."""
-    hass.data[DATA_UTILITY] = {}
+    menuai.data[DATA_UTILITY] = {}
 
     async def async_reset_meters(service_call):
         """Reset all sensors of a meter."""
@@ -125,12 +125,12 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             # backward compatibility up to 2022.07:
             if domain == DOMAIN:
                 async_dispatcher_send(
-                    hass, SIGNAL_RESET_METER, f"{SELECT_DOMAIN}.{entity}"
+                    menuai, SIGNAL_RESET_METER, f"{SELECT_DOMAIN}.{entity}"
                 )
             else:
-                async_dispatcher_send(hass, SIGNAL_RESET_METER, meter)
+                async_dispatcher_send(menuai, SIGNAL_RESET_METER, meter)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_RESET,
         async_reset_meters,
@@ -143,14 +143,14 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     for meter, conf in config[DOMAIN].items():
         _LOGGER.debug("Setup %s.%s", DOMAIN, meter)
 
-        hass.data[DATA_UTILITY][meter] = conf
-        hass.data[DATA_UTILITY][meter][DATA_TARIFF_SENSORS] = []
+        menuai.data[DATA_UTILITY][meter] = conf
+        menuai.data[DATA_UTILITY][meter][DATA_TARIFF_SENSORS] = []
 
         if not conf[CONF_TARIFFS]:
             # only one entity is required
-            hass.async_create_task(
+            menuai.async_create_task(
                 discovery.async_load_platform(
-                    hass,
+                    menuai,
                     SENSOR_DOMAIN,
                     DOMAIN,
                     {meter: {CONF_METER: meter}},
@@ -160,9 +160,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             )
         else:
             # create tariff selection
-            hass.async_create_task(
+            menuai.async_create_task(
                 discovery.async_load_platform(
-                    hass,
+                    menuai,
                     SELECT_DOMAIN,
                     DOMAIN,
                     {CONF_METER: meter, CONF_TARIFFS: conf[CONF_TARIFFS]},
@@ -171,7 +171,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                 eager_start=True,
             )
 
-            hass.data[DATA_UTILITY][meter][CONF_TARIFF_ENTITY] = (
+            menuai.data[DATA_UTILITY][meter][CONF_TARIFF_ENTITY] = (
                 f"{SELECT_DOMAIN}.{meter}"
             )
 
@@ -184,9 +184,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                     CONF_TARIFF: tariff,
                 }
 
-            hass.async_create_task(
+            menuai.async_create_task(
                 discovery.async_load_platform(
-                    hass, SENSOR_DOMAIN, DOMAIN, tariff_confs, config
+                    menuai, SENSOR_DOMAIN, DOMAIN, tariff_confs, config
                 ),
                 eager_start=True,
             )
@@ -194,18 +194,18 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up Utility Meter from a config entry."""
 
     async_remove_stale_devices_links_keep_entity_device(
-        hass, entry.entry_id, entry.options[CONF_SOURCE_SENSOR]
+        menuai, entry.entry_id, entry.options[CONF_SOURCE_SENSOR]
     )
 
-    entity_registry = er.async_get(hass)
-    hass.data[DATA_UTILITY][entry.entry_id] = {
+    entity_registry = er.async_get(menuai)
+    menuai.data[DATA_UTILITY][entry.entry_id] = {
         "source": entry.options[CONF_SOURCE_SENSOR],
     }
-    hass.data[DATA_UTILITY][entry.entry_id][DATA_TARIFF_SENSORS] = []
+    menuai.data[DATA_UTILITY][entry.entry_id][DATA_TARIFF_SENSORS] = []
 
     try:
         er.async_validate_entity_id(entity_registry, entry.options[CONF_SOURCE_SENSOR])
@@ -219,17 +219,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     if not entry.options.get(CONF_TARIFFS):
         # Only a single meter sensor is required
-        hass.data[DATA_UTILITY][entry.entry_id][CONF_TARIFF_ENTITY] = None
-        await hass.config_entries.async_forward_entry_setups(entry, (Platform.SENSOR,))
+        menuai.data[DATA_UTILITY][entry.entry_id][CONF_TARIFF_ENTITY] = None
+        await menuai.config_entries.async_forward_entry_setups(entry, (Platform.SENSOR,))
     else:
         # Create tariff selection + one meter sensor for each tariff
         entity_entry = entity_registry.async_get_or_create(
             Platform.SELECT, DOMAIN, entry.entry_id, suggested_object_id=entry.title
         )
-        hass.data[DATA_UTILITY][entry.entry_id][CONF_TARIFF_ENTITY] = (
+        menuai.data[DATA_UTILITY][entry.entry_id][CONF_TARIFF_ENTITY] = (
             entity_entry.entity_id
         )
-        await hass.config_entries.async_forward_entry_setups(
+        await menuai.config_entries.async_forward_entry_setups(
             entry, (Platform.SELECT, Platform.SENSOR)
         )
 
@@ -238,35 +238,35 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
-async def config_entry_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def config_entry_update_listener(menuai: menuai, entry: ConfigEntry) -> None:
     """Update listener, called when the config entry options are changed."""
 
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     platforms_to_unload = [Platform.SENSOR]
     if entry.options.get(CONF_TARIFFS):
         platforms_to_unload.append(Platform.SELECT)
 
-    if unload_ok := await hass.config_entries.async_unload_platforms(
+    if unload_ok := await menuai.config_entries.async_unload_platforms(
         entry,
         platforms_to_unload,
     ):
-        hass.data[DATA_UTILITY].pop(entry.entry_id)
+        menuai.data[DATA_UTILITY].pop(entry.entry_id)
 
     return unload_ok
 
 
-async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+async def async_migrate_entry(menuai: menuai, config_entry: ConfigEntry) -> bool:
     """Migrate old entry."""
     _LOGGER.debug("Migrating from version %s", config_entry.version)
 
     if config_entry.version == 1:
         new = {**config_entry.options}
         new[CONF_METER_PERIODICALLY_RESETTING] = True
-        hass.config_entries.async_update_entry(config_entry, options=new, version=2)
+        menuai.config_entries.async_update_entry(config_entry, options=new, version=2)
 
     _LOGGER.info("Migration to version %s successful", config_entry.version)
 

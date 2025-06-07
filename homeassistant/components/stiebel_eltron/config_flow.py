@@ -9,8 +9,8 @@ from pymodbus.client import ModbusTcpClient
 from pystiebeleltron.pystiebeleltron import StiebelEltronAPI
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_NAME, CONF_PORT
 
 from .const import DEFAULT_PORT, DOMAIN
 
@@ -35,7 +35,7 @@ class StiebelEltronConfigFlow(ConfigFlow, domain=DOMAIN):
                 ModbusTcpClient(user_input[CONF_HOST], port=user_input[CONF_PORT]), 1
             )
             try:
-                success = await self.hass.async_add_executor_job(client.update)
+                success = await self.menuai.async_add_executor_job(client.update)
             except Exception:
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
@@ -65,7 +65,7 @@ class StiebelEltronConfigFlow(ConfigFlow, domain=DOMAIN):
             ModbusTcpClient(user_input[CONF_HOST], port=user_input[CONF_PORT]), 1
         )
         try:
-            success = await self.hass.async_add_executor_job(client.update)
+            success = await self.menuai.async_add_executor_job(client.update)
         except Exception:
             _LOGGER.exception("Unexpected exception")
             return self.async_abort(reason="unknown")

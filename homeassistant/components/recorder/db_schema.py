@@ -35,8 +35,8 @@ from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import DeclarativeBase, Mapped, aliased, mapped_column, relationship
 from sqlalchemy.types import TypeDecorator
 
-from homeassistant.components.sensor import ATTR_STATE_CLASS
-from homeassistant.const import (
+from menuai.components.sensor import ATTR_STATE_CLASS
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     ATTR_FRIENDLY_NAME,
     ATTR_UNIT_OF_MEASUREMENT,
@@ -45,10 +45,10 @@ from homeassistant.const import (
     MAX_LENGTH_STATE_ENTITY_ID,
     MAX_LENGTH_STATE_STATE,
 )
-from homeassistant.core import Context, Event, EventOrigin, EventStateChangedData, State
-from homeassistant.helpers.json import JSON_DUMP, json_bytes, json_bytes_strip_null
-from homeassistant.util import dt as dt_util
-from homeassistant.util.json import (
+from menuai.core import Context, Event, EventOrigin, EventStateChangedData, State
+from menuai.helpers.json import JSON_DUMP, json_bytes, json_bytes_strip_null
+from menuai.util import dt as dt_util
+from menuai.util.json import (
     JSON_DECODE_EXCEPTIONS,
     json_loads,
     json_loads_object,

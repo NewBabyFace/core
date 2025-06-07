@@ -13,10 +13,10 @@ import pytest
 from sharkiq import AylaApi, SharkIqAuthError, SharkIqNotAuthedError, SharkIqVacuum
 from voluptuous.error import MultipleInvalid
 
-from homeassistant import exceptions
-from homeassistant.components.homeassistant import SERVICE_UPDATE_ENTITY
-from homeassistant.components.sharkiq import DOMAIN
-from homeassistant.components.sharkiq.vacuum import (
+from menuai import exceptions
+from menuai.components.menuai import SERVICE_UPDATE_ENTITY
+from menuai.components.sharkiq import DOMAIN
+from menuai.components.sharkiq.vacuum import (
     ATTR_ERROR_CODE,
     ATTR_ERROR_MSG,
     ATTR_LOW_LIGHT,
@@ -25,7 +25,7 @@ from homeassistant.components.sharkiq.vacuum import (
     FAN_SPEEDS_MAP,
     SERVICE_CLEAN_ROOM,
 )
-from homeassistant.components.vacuum import (
+from menuai.components.vacuum import (
     ATTR_BATTERY_LEVEL,
     ATTR_FAN_SPEED,
     ATTR_FAN_SPEED_LIST,
@@ -38,14 +38,14 @@ from homeassistant.components.vacuum import (
     VacuumActivity,
     VacuumEntityFeature,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_SUPPORTED_FEATURES,
     STATE_UNAVAILABLE,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.setup import async_setup_component
 
 from .const import (
     CONFIG,
@@ -138,21 +138,21 @@ class MockShark(SharkIqVacuum):
 
 @pytest.fixture(autouse=True)
 @patch("sharkiq.ayla_api.AylaApi", MockAyla)
-async def setup_integration(hass: HomeAssistant) -> None:
+async def setup_integration(menuai: menuai) -> None:
     """Build the mock integration."""
     entry = MockConfigEntry(
         domain=DOMAIN, unique_id=TEST_USERNAME, data=CONFIG, entry_id=ENTRY_ID
     )
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
 
 async def test_simple_properties(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test that simple properties work as intended."""
-    state = hass.states.get(VAC_ENTITY_ID)
+    state = menuai.states.get(VAC_ENTITY_ID)
     entity = entity_registry.async_get(VAC_ENTITY_ID)
 
     assert entity
@@ -176,10 +176,10 @@ async def test_simple_properties(
     ],
 )
 async def test_initial_attributes(
-    hass: HomeAssistant, attribute: str, target_value: Any
+    menuai: menuai, attribute: str, target_value: Any
 ) -> None:
     """Test initial config attributes."""
-    state = hass.states.get(VAC_ENTITY_ID)
+    state = menuai.states.get(VAC_ENTITY_ID)
     assert state.attributes.get(attribute) == target_value
 
 
@@ -193,23 +193,23 @@ async def test_initial_attributes(
     ],
 )
 async def test_cleaning_states(
-    hass: HomeAssistant, service: str, target_state: str
+    menuai: menuai, service: str, target_state: str
 ) -> None:
     """Test cleaning states."""
     service_data = {ATTR_ENTITY_ID: VAC_ENTITY_ID}
-    await hass.services.async_call("vacuum", service, service_data, blocking=True)
-    state = hass.states.get(VAC_ENTITY_ID)
+    await menuai.services.async_call("vacuum", service, service_data, blocking=True)
+    state = menuai.states.get(VAC_ENTITY_ID)
     assert state.state == target_state
 
 
 @pytest.mark.parametrize("fan_speed", list(FAN_SPEEDS_MAP))
-async def test_fan_speed(hass: HomeAssistant, fan_speed: str) -> None:
+async def test_fan_speed(menuai: menuai, fan_speed: str) -> None:
     """Test setting fan speeds."""
     service_data = {ATTR_ENTITY_ID: VAC_ENTITY_ID, ATTR_FAN_SPEED: fan_speed}
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "vacuum", SERVICE_SET_FAN_SPEED, service_data, blocking=True
     )
-    state = hass.states.get(VAC_ENTITY_ID)
+    state = menuai.states.get(VAC_ENTITY_ID)
     assert state.attributes.get(ATTR_FAN_SPEED) == fan_speed
 
 
@@ -223,7 +223,7 @@ async def test_fan_speed(hass: HomeAssistant, fan_speed: str) -> None:
     ],
 )
 async def test_device_properties(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     device_property: str,
     target_value: str,
@@ -242,20 +242,20 @@ async def test_device_properties(
     ],
 )
 async def test_clean_room_error(
-    hass: HomeAssistant, room_list: list, exception: Exception
+    menuai: menuai, room_list: list, exception: Exception
 ) -> None:
     """Test clean_room errors."""
     data = {ATTR_ENTITY_ID: VAC_ENTITY_ID, ATTR_ROOMS: room_list}
 
     with pytest.raises(exception):
-        await hass.services.async_call(DOMAIN, SERVICE_CLEAN_ROOM, data, blocking=True)
+        await menuai.services.async_call(DOMAIN, SERVICE_CLEAN_ROOM, data, blocking=True)
 
 
-async def test_locate(hass: HomeAssistant) -> None:
+async def test_locate(menuai: menuai) -> None:
     """Test that the locate command works."""
     with patch.object(SharkIqVacuum, "async_find_device") as mock_locate:
         data = {ATTR_ENTITY_ID: VAC_ENTITY_ID}
-        await hass.services.async_call("vacuum", SERVICE_LOCATE, data, blocking=True)
+        await menuai.services.async_call("vacuum", SERVICE_LOCATE, data, blocking=True)
         mock_locate.assert_called_once()
 
 
@@ -263,11 +263,11 @@ async def test_locate(hass: HomeAssistant) -> None:
     ("room_list"),
     [(ROOM_LIST), (["Kitchen"])],
 )
-async def test_clean_room(hass: HomeAssistant, room_list: list) -> None:
+async def test_clean_room(menuai: menuai, room_list: list) -> None:
     """Test that the clean_room command works."""
     with patch.object(SharkIqVacuum, "async_clean_rooms") as mock_clean_room:
         data = {ATTR_ENTITY_ID: VAC_ENTITY_ID, ATTR_ROOMS: room_list}
-        await hass.services.async_call(DOMAIN, SERVICE_CLEAN_ROOM, data, blocking=True)
+        await menuai.services.async_call(DOMAIN, SERVICE_CLEAN_ROOM, data, blocking=True)
         mock_clean_room.assert_called_once_with(room_list)
 
 
@@ -282,22 +282,22 @@ async def test_clean_room(hass: HomeAssistant, room_list: list) -> None:
 )
 @patch("sharkiq.ayla_api.AylaApi", MockAyla)
 async def test_coordinator_updates(
-    hass: HomeAssistant, side_effect: Exception | None, success: bool
+    menuai: menuai, side_effect: Exception | None, success: bool
 ) -> None:
     """Test the update coordinator update functions."""
-    coordinator = hass.data[DOMAIN][ENTRY_ID]
+    coordinator = menuai.data[DOMAIN][ENTRY_ID]
 
-    await async_setup_component(hass, "homeassistant", {})
+    await async_setup_component(menuai, "menuai", {})
 
     with patch.object(
         MockShark, "async_update", side_effect=side_effect
     ) as mock_update:
         data = {ATTR_ENTITY_ID: [VAC_ENTITY_ID]}
-        await hass.services.async_call(
-            "homeassistant", SERVICE_UPDATE_ENTITY, data, blocking=True
+        await menuai.services.async_call(
+            "menuai", SERVICE_UPDATE_ENTITY, data, blocking=True
         )
         assert coordinator.last_update_success == success
         mock_update.assert_called_once()
 
-    state = hass.states.get(VAC_ENTITY_ID)
+    state = menuai.states.get(VAC_ENTITY_ID)
     assert (state.state == STATE_UNAVAILABLE) != success

@@ -7,8 +7,8 @@ import hmac
 
 import voluptuous as vol
 
-from homeassistant.core import callback
-from homeassistant.exceptions import HomeAssistantError
+from menuai.core import callback
+from menuai.exceptions import menuaiError
 
 from ..models import AuthFlowContext, AuthFlowResult, Credentials, UserMeta
 from . import AUTH_PROVIDER_SCHEMA, AUTH_PROVIDERS, AuthProvider, LoginFlow
@@ -27,7 +27,7 @@ CONFIG_SCHEMA = AUTH_PROVIDER_SCHEMA.extend(
 )
 
 
-class InvalidAuthError(HomeAssistantError):
+class InvalidAuthError(menuaiError):
     """Raised when submitting invalid authentication."""
 
 

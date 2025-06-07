@@ -6,11 +6,11 @@ from unittest.mock import AsyncMock, patch
 from pyprosegur.installation import Status
 import pytest
 
-from homeassistant.components.alarm_control_panel import (
+from menuai.components.alarm_control_panel import (
     DOMAIN as ALARM_DOMAIN,
     AlarmControlPanelState,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_FRIENDLY_NAME,
     ATTR_SUPPORTED_FEATURES,
@@ -19,8 +19,8 @@ from homeassistant.const import (
     SERVICE_ALARM_DISARM,
     STATE_UNAVAILABLE,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_component, entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_component, entity_registry as er
 
 from .conftest import CONTRACT
 
@@ -48,7 +48,7 @@ def mock_status(request: pytest.FixtureRequest) -> Generator[None]:
 
 
 async def test_entity_registry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     init_integration,
     mock_auth,
@@ -59,16 +59,16 @@ async def test_entity_registry(
     # Prosegur alarm device unique_id is the contract id associated to the alarm account
     assert entry.unique_id == CONTRACT
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(PROSEGUR_ALARM_ENTITY)
+    state = menuai.states.get(PROSEGUR_ALARM_ENTITY)
 
     assert state.attributes.get(ATTR_FRIENDLY_NAME) == f"Contract {CONTRACT}"
     assert state.attributes.get(ATTR_SUPPORTED_FEATURES) == 3
 
 
 async def test_connection_error(
-    hass: HomeAssistant, init_integration, mock_auth, mock_config_entry
+    menuai: menuai, init_integration, mock_auth, mock_config_entry
 ) -> None:
     """Test the alarm control panel when connection can't be made to the cloud service."""
 
@@ -79,14 +79,14 @@ async def test_connection_error(
     install.status = Status.ARMED
 
     with patch("pyprosegur.installation.Installation.retrieve", return_value=install):
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     with patch(
         "pyprosegur.installation.Installation.retrieve", side_effect=ConnectionError
     ):
-        await entity_component.async_update_entity(hass, PROSEGUR_ALARM_ENTITY)
+        await entity_component.async_update_entity(menuai, PROSEGUR_ALARM_ENTITY)
 
-        state = hass.states.get(PROSEGUR_ALARM_ENTITY)
+        state = menuai.states.get(PROSEGUR_ALARM_ENTITY)
         assert state.state == STATE_UNAVAILABLE
 
 
@@ -103,7 +103,7 @@ async def test_connection_error(
     ],
 )
 async def test_arm(
-    hass: HomeAssistant, init_integration, mock_auth, code, alarm_service, alarm_state
+    menuai: menuai, init_integration, mock_auth, code, alarm_service, alarm_state
 ) -> None:
     """Test the alarm control panel can be set to away."""
 
@@ -114,13 +114,13 @@ async def test_arm(
     install.status = code
 
     with patch("pyprosegur.installation.Installation.retrieve", return_value=install):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             ALARM_DOMAIN,
             alarm_service,
             {ATTR_ENTITY_ID: PROSEGUR_ALARM_ENTITY},
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-        state = hass.states.get(PROSEGUR_ALARM_ENTITY)
+        state = menuai.states.get(PROSEGUR_ALARM_ENTITY)
         assert state.state == alarm_state

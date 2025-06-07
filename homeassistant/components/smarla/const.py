@@ -1,6 +1,6 @@
 """Constants for the Swing2Sleep Smarla integration."""
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 DOMAIN = "smarla"
 

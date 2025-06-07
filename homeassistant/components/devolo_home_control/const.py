@@ -2,7 +2,7 @@
 
 import re
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 DOMAIN = "devolo_home_control"
 PLATFORMS = [

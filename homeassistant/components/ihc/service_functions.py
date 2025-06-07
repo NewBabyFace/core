@@ -2,8 +2,8 @@
 
 import voluptuous as vol
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
 
 from .const import (
     ATTR_CONTROLLER_ID,
@@ -51,13 +51,13 @@ PULSE_SCHEMA = vol.Schema(
 )
 
 
-def setup_service_functions(hass: HomeAssistant) -> None:
+def setup_service_functions(menuai: menuai) -> None:
     """Set up the IHC service functions."""
 
     def _get_controller(call):
         controller_index = call.data[ATTR_CONTROLLER_ID]
-        for controller_id in hass.data[DOMAIN]:
-            controller_conf = hass.data[DOMAIN][controller_id]
+        for controller_id in menuai.data[DOMAIN]:
+            controller_conf = menuai.data[DOMAIN][controller_id]
             if controller_conf[IHC_CONTROLLER_INDEX] == controller_index:
                 return controller_conf[IHC_CONTROLLER]
         # if not found the controller_index is ouf of range
@@ -68,46 +68,46 @@ def setup_service_functions(hass: HomeAssistant) -> None:
         ihc_id = call.data[ATTR_IHC_ID]
         value = call.data[ATTR_VALUE]
         ihc_controller = _get_controller(call)
-        await async_set_bool(hass, ihc_controller, ihc_id, value)
+        await async_set_bool(menuai, ihc_controller, ihc_id, value)
 
     async def async_set_runtime_value_int(call):
         """Set a IHC runtime integer value service function."""
         ihc_id = call.data[ATTR_IHC_ID]
         value = call.data[ATTR_VALUE]
         ihc_controller = _get_controller(call)
-        await async_set_int(hass, ihc_controller, ihc_id, value)
+        await async_set_int(menuai, ihc_controller, ihc_id, value)
 
     async def async_set_runtime_value_float(call):
         """Set a IHC runtime float value service function."""
         ihc_id = call.data[ATTR_IHC_ID]
         value = call.data[ATTR_VALUE]
         ihc_controller = _get_controller(call)
-        await async_set_float(hass, ihc_controller, ihc_id, value)
+        await async_set_float(menuai, ihc_controller, ihc_id, value)
 
     async def async_pulse_runtime_input(call):
         """Pulse a IHC controller input function."""
         ihc_id = call.data[ATTR_IHC_ID]
         ihc_controller = _get_controller(call)
-        await async_pulse(hass, ihc_controller, ihc_id)
+        await async_pulse(menuai, ihc_controller, ihc_id)
 
-    hass.services.register(
+    menuai.services.register(
         DOMAIN,
         SERVICE_SET_RUNTIME_VALUE_BOOL,
         async_set_runtime_value_bool,
         schema=SET_RUNTIME_VALUE_BOOL_SCHEMA,
     )
-    hass.services.register(
+    menuai.services.register(
         DOMAIN,
         SERVICE_SET_RUNTIME_VALUE_INT,
         async_set_runtime_value_int,
         schema=SET_RUNTIME_VALUE_INT_SCHEMA,
     )
-    hass.services.register(
+    menuai.services.register(
         DOMAIN,
         SERVICE_SET_RUNTIME_VALUE_FLOAT,
         async_set_runtime_value_float,
         schema=SET_RUNTIME_VALUE_FLOAT_SCHEMA,
     )
-    hass.services.register(
+    menuai.services.register(
         DOMAIN, SERVICE_PULSE, async_pulse_runtime_input, schema=PULSE_SCHEMA
     )

@@ -5,7 +5,7 @@ from typing import Any
 from pyHomee.const import AttributeType, NodeProfile
 from pyHomee.model import HomeeNode
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_TEMPERATURE,
     PRESET_BOOST,
     PRESET_ECO,
@@ -15,8 +15,8 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import HomeeConfigEntry
 from .const import CLIMATE_PROFILES, DOMAIN, HOMEE_UNIT_TO_HA_UNIT, PRESET_MANUAL
@@ -32,7 +32,7 @@ ROOM_THERMOSTATS = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: HomeeConfigEntry,
     async_add_devices: AddConfigEntryEntitiesCallback,
 ) -> None:

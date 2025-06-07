@@ -10,9 +10,9 @@ from pylitterbot import Account
 from pylitterbot.exceptions import LitterRobotException, LitterRobotLoginException
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN
 
@@ -78,7 +78,7 @@ class LitterRobotConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def _async_validate_input(self, user_input: Mapping[str, Any]) -> str:
         """Validate login credentials."""
-        account = Account(websession=async_get_clientsession(self.hass))
+        account = Account(websession=async_get_clientsession(self.menuai))
         try:
             await account.connect(
                 username=user_input[CONF_USERNAME],

@@ -6,8 +6,8 @@ import logging
 
 from madvr.madvr import Madvr
 
-from homeassistant.const import CONF_HOST, CONF_PORT, EVENT_HOMEASSISTANT_STOP, Platform
-from homeassistant.core import Event, HomeAssistant
+from menuai.const import CONF_HOST, CONF_PORT, EVENT_menuai_STOP, Platform
+from menuai.core import Event, menuai
 
 from .coordinator import MadVRConfigEntry, MadVRCoordinator
 
@@ -26,7 +26,7 @@ async def async_handle_unload(coordinator: MadVRCoordinator) -> None:
     _LOGGER.debug("Unloaded")
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: MadVRConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: MadVRConfigEntry) -> bool:
     """Set up the integration from a config entry."""
     assert entry.unique_id
     madVRClient = Madvr(
@@ -35,29 +35,29 @@ async def async_setup_entry(hass: HomeAssistant, entry: MadVRConfigEntry) -> boo
         port=entry.data[CONF_PORT],
         mac=entry.unique_id,
         connect_timeout=10,
-        loop=hass.loop,
+        loop=menuai.loop,
     )
-    coordinator = MadVRCoordinator(hass, entry, madVRClient)
+    coordinator = MadVRCoordinator(menuai, entry, madVRClient)
 
     entry.runtime_data = coordinator
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     async def handle_unload(event: Event) -> None:
         """Handle unload."""
         await async_handle_unload(coordinator=coordinator)
 
     # listen for core stop event
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, handle_unload)
+    menuai.bus.async_listen_once(EVENT_menuai_STOP, handle_unload)
 
     # handle loading operations
     await coordinator.handle_coordinator_load()
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: MadVRConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: MadVRConfigEntry) -> bool:
     """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
         coordinator: MadVRCoordinator = entry.runtime_data
         await async_handle_unload(coordinator=coordinator)

@@ -5,7 +5,7 @@ from unittest.mock import Mock
 from psutil._common import sdiskpart
 import pytest
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -19,7 +19,7 @@ from tests.common import MockConfigEntry
 )
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_disk_setup_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_psutil: Mock,
     mock_os: Mock,
     mock_config_entry: MockConfigEntry,
@@ -30,11 +30,11 @@ async def test_disk_setup_failure(
     """Test the disk failures."""
 
     mock_psutil.disk_usage.side_effect = side_effect
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    disk_sensor = hass.states.get("sensor.system_monitor_disk_free_media_share")
+    disk_sensor = menuai.states.get("sensor.system_monitor_disk_free_media_share")
     assert disk_sensor is None
 
     assert error_text in caplog.text
@@ -42,7 +42,7 @@ async def test_disk_setup_failure(
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_disk_util(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_psutil: Mock,
     mock_os: Mock,
     mock_config_entry: MockConfigEntry,
@@ -65,16 +65,16 @@ async def test_disk_util(
         sdiskpart("test5", "E:", "cd", "cdrom"),  # Should be skipped as cdrom
     ]
 
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    disk_sensor1 = hass.states.get("sensor.system_monitor_disk_free")
-    disk_sensor2 = hass.states.get("sensor.system_monitor_disk_free_media_share")
-    disk_sensor3 = hass.states.get("sensor.system_monitor_disk_free_incorrect")
-    disk_sensor4 = hass.states.get("sensor.system_monitor_disk_free_proc_run")
-    disk_sensor5 = hass.states.get("sensor.system_monitor_disk_free_tmpfs")
-    disk_sensor6 = hass.states.get("sensor.system_monitor_disk_free_e")
+    disk_sensor1 = menuai.states.get("sensor.system_monitor_disk_free")
+    disk_sensor2 = menuai.states.get("sensor.system_monitor_disk_free_media_share")
+    disk_sensor3 = menuai.states.get("sensor.system_monitor_disk_free_incorrect")
+    disk_sensor4 = menuai.states.get("sensor.system_monitor_disk_free_proc_run")
+    disk_sensor5 = menuai.states.get("sensor.system_monitor_disk_free_tmpfs")
+    disk_sensor6 = menuai.states.get("sensor.system_monitor_disk_free_e")
     assert disk_sensor1 is not None
     assert disk_sensor2 is not None
     assert disk_sensor3 is None

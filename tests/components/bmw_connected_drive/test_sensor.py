@@ -8,15 +8,15 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.bmw_connected_drive import DOMAIN
-from homeassistant.components.bmw_connected_drive.const import SCAN_INTERVALS
-from homeassistant.components.bmw_connected_drive.sensor import SENSOR_TYPES
-from homeassistant.components.sensor import SensorDeviceClass
-from homeassistant.const import STATE_UNAVAILABLE, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.translation import async_get_translations
-from homeassistant.util.unit_system import (
+from menuai.components.bmw_connected_drive import DOMAIN
+from menuai.components.bmw_connected_drive.const import SCAN_INTERVALS
+from menuai.components.bmw_connected_drive.sensor import SENSOR_TYPES
+from menuai.components.sensor import SensorDeviceClass
+from menuai.const import STATE_UNAVAILABLE, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.helpers.translation import async_get_translations
+from menuai.util.unit_system import (
     METRIC_SYSTEM as METRIC,
     US_CUSTOMARY_SYSTEM as IMPERIAL,
     UnitSystem,
@@ -31,7 +31,7 @@ from tests.common import async_fire_time_changed, snapshot_platform
 @pytest.mark.usefixtures("bmw_fixture")
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_entity_state_attrs(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
 ) -> None:
@@ -39,11 +39,11 @@ async def test_entity_state_attrs(
 
     # Setup component
     with patch(
-        "homeassistant.components.bmw_connected_drive.PLATFORMS", [Platform.SENSOR]
+        "menuai.components.bmw_connected_drive.PLATFORMS", [Platform.SENSOR]
     ):
-        mock_config_entry = await setup_mocked_integration(hass)
+        mock_config_entry = await setup_mocked_integration(menuai)
 
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
 
 @pytest.mark.usefixtures("bmw_fixture")
@@ -67,7 +67,7 @@ async def test_entity_state_attrs(
     ],
 )
 async def test_unit_conversion(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_id: str,
     unit_system: UnitSystem,
     value: str,
@@ -76,29 +76,29 @@ async def test_unit_conversion(
     """Test conversion between metric and imperial units for sensors."""
 
     # Set unit system
-    hass.config.units = unit_system
+    menuai.config.units = unit_system
 
     # Setup component
-    assert await setup_mocked_integration(hass)
+    assert await setup_mocked_integration(menuai)
 
     # Test
-    entity = hass.states.get(entity_id)
+    entity = menuai.states.get(entity_id)
     assert entity.state == value
     assert entity.attributes.get("unit_of_measurement") == unit_of_measurement
 
 
 @pytest.mark.usefixtures("bmw_fixture")
 async def test_entity_option_translations(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Ensure all enum sensor values are translated."""
 
     # Setup component to load translations
-    assert await setup_mocked_integration(hass)
+    assert await setup_mocked_integration(menuai)
 
     prefix = f"component.{DOMAIN}.entity.{Platform.SENSOR.value}"
 
-    translations = await async_get_translations(hass, "en", "entity", [DOMAIN])
+    translations = await async_get_translations(menuai, "en", "entity", [DOMAIN])
     translation_states = {
         k for k in translations if k.startswith(prefix) and ".state." in k
     }
@@ -115,17 +115,17 @@ async def test_entity_option_translations(
 
 @pytest.mark.usefixtures("bmw_fixture")
 async def test_enum_sensor_unknown(
-    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch, freezer: FrozenDateTimeFactory
+    menuai: menuai, monkeypatch: pytest.MonkeyPatch, freezer: FrozenDateTimeFactory
 ) -> None:
     """Test conversion handling of enum sensors."""
 
     # Setup component
-    assert await setup_mocked_integration(hass)
+    assert await setup_mocked_integration(menuai)
 
     entity_id = "sensor.i4_edrive40_charging_status"
 
     # Check normal state
-    entity = hass.states.get(entity_id)
+    entity = menuai.states.get(entity_id)
     assert entity.state == "not_charging"
 
     class ChargingStateUnkown(StrEnum):
@@ -141,9 +141,9 @@ async def test_enum_sensor_unknown(
     )
 
     freezer.tick(SCAN_INTERVALS["rest_of_world"])
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     # Check normal state
-    entity = hass.states.get("sensor.i4_edrive40_charging_status")
+    entity = menuai.states.get("sensor.i4_edrive40_charging_status")
     assert entity.state == STATE_UNAVAILABLE

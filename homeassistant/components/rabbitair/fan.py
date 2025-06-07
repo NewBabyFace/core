@@ -6,11 +6,11 @@ from typing import Any
 
 from rabbitair import Mode, Model, Speed
 
-from homeassistant.components.fan import FanEntity, FanEntityFeature
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util.percentage import (
+from menuai.components.fan import FanEntity, FanEntityFeature
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util.percentage import (
     ordered_list_item_to_percentage,
     percentage_to_ordered_list_item,
 )
@@ -39,12 +39,12 @@ PRESET_MODES = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up a config entry."""
-    coordinator: RabbitAirDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: RabbitAirDataUpdateCoordinator = menuai.data[DOMAIN][entry.entry_id]
     async_add_entities([RabbitAirFanEntity(coordinator, entry)])
 
 

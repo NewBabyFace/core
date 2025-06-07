@@ -14,10 +14,10 @@ from synology_dsm.exceptions import (
     SynologyDSMNotLoggedInException,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .common import SynoApi, raise_config_entry_auth_error
 from .const import (
@@ -76,7 +76,7 @@ class SynologyDSMUpdateCoordinator[_DataT](DataUpdateCoordinator[_DataT]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entry: SynologyDSMConfigEntry,
         api: SynoApi,
         update_interval: timedelta,
@@ -84,7 +84,7 @@ class SynologyDSMUpdateCoordinator[_DataT](DataUpdateCoordinator[_DataT]):
         """Initialize synology_dsm DataUpdateCoordinator."""
         self.api = api
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
             name=f"{entry.title} {self.__class__.__name__}",
@@ -99,12 +99,12 @@ class SynologyDSMSwitchUpdateCoordinator(
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entry: SynologyDSMConfigEntry,
         api: SynoApi,
     ) -> None:
         """Initialize DataUpdateCoordinator for switch devices."""
-        super().__init__(hass, entry, api, timedelta(seconds=30))
+        super().__init__(menuai, entry, api, timedelta(seconds=30))
         self.version: str | None = None
 
     async def async_setup(self) -> None:
@@ -130,12 +130,12 @@ class SynologyDSMCentralUpdateCoordinator(SynologyDSMUpdateCoordinator[None]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entry: SynologyDSMConfigEntry,
         api: SynoApi,
     ) -> None:
         """Initialize DataUpdateCoordinator for central device."""
-        super().__init__(hass, entry, api, timedelta(minutes=15))
+        super().__init__(menuai, entry, api, timedelta(minutes=15))
 
     @async_re_login_on_expired
     async def _async_update_data(self) -> None:
@@ -150,12 +150,12 @@ class SynologyDSMCameraUpdateCoordinator(
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entry: SynologyDSMConfigEntry,
         api: SynoApi,
     ) -> None:
         """Initialize DataUpdateCoordinator for cameras."""
-        super().__init__(hass, entry, api, timedelta(seconds=30))
+        super().__init__(menuai, entry, api, timedelta(seconds=30))
 
     @async_re_login_on_expired
     async def _async_update_data(self) -> dict[str, dict[int, SynoCamera]]:
@@ -181,7 +181,7 @@ class SynologyDSMCameraUpdateCoordinator(
                 and cam_data_current.live_view.rtsp != cam_data_new.live_view.rtsp
             ):
                 async_dispatcher_send(
-                    self.hass,
+                    self.menuai,
                     f"{SIGNAL_CAMERA_SOURCE_CHANGED}_{self.config_entry.entry_id}_{cam_id}",
                     cam_data_new.live_view.rtsp,
                 )

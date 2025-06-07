@@ -18,13 +18,13 @@ from miio.gateway.gateway import (
     GatewayException,
 )
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_BATTERY_LEVEL,
     ATTR_TEMPERATURE,
     CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
@@ -44,11 +44,11 @@ from homeassistant.const import (
     UnitOfTime,
     UnitOfVolume,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.util import dt as dt_util
 
 from . import VacuumCoordinatorDataAttributes
 from .const import (
@@ -726,7 +726,7 @@ VACUUM_SENSORS = {
 
 
 def _setup_vacuum_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: XiaomiMiioConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -760,7 +760,7 @@ def _setup_vacuum_sensors(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: XiaomiMiioConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -835,7 +835,7 @@ async def async_setup_entry(
             elif model in MODELS_VACUUM or model.startswith(
                 (ROBOROCK_GENERIC, ROCKROBO_GENERIC)
             ):
-                _setup_vacuum_sensors(hass, config_entry, async_add_entities)
+                _setup_vacuum_sensors(menuai, config_entry, async_add_entities)
                 return
 
             for sensor, description in SENSOR_TYPES.items():
@@ -953,7 +953,7 @@ class XiaomiAirQualityMonitor(XiaomiMiioEntity, SensorEntity):
     async def async_update(self) -> None:
         """Fetch state from the miio device."""
         try:
-            state = await self.hass.async_add_executor_job(self._device.status)
+            state = await self.menuai.async_add_executor_job(self._device.status)
             _LOGGER.debug("Got new state: %s", state)
 
             self._attr_available = True
@@ -1016,7 +1016,7 @@ class XiaomiGatewayIlluminanceSensor(SensorEntity):
     async def async_update(self) -> None:
         """Fetch state from the device."""
         try:
-            self._attr_native_value = await self.hass.async_add_executor_job(
+            self._attr_native_value = await self.menuai.async_add_executor_job(
                 self._gateway.get_illumination
             )
             self._attr_available = True

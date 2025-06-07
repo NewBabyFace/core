@@ -12,31 +12,31 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from yarl import URL
 
-from homeassistant import config_entries
-from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
-from homeassistant.core import CoreState, HomeAssistant, ReleaseChannel
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import (
+from menuai import config_entries
+from menuai.const import EVENT_menuai_STARTED
+from menuai.core import CoreState, menuai, ReleaseChannel
+from menuai.exceptions import menuaiError
+from menuai.helpers import (
     area_registry as ar,
     device_registry as dr,
     entity_registry as er,
 )
-from homeassistant.util.dt import utcnow
+from menuai.util.dt import utcnow
 
 from tests.common import MockConfigEntry, async_capture_events, flush_store
 
 
 @pytest.fixture
-def mock_config_entry(hass: HomeAssistant) -> MockConfigEntry:
-    """Create a mock config entry and add it to hass."""
+def mock_config_entry(menuai: menuai) -> MockConfigEntry:
+    """Create a mock config entry and add it to menuai."""
     entry = MockConfigEntry(title=None)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     return entry
 
 
 @pytest.fixture
-def mock_config_entry_with_subentries(hass: HomeAssistant) -> MockConfigEntry:
-    """Create a mock config entry and add it to hass."""
+def mock_config_entry_with_subentries(menuai: menuai) -> MockConfigEntry:
+    """Create a mock config entry and add it to menuai."""
     entry = MockConfigEntry(
         title=None,
         subentries_data=(
@@ -56,18 +56,18 @@ def mock_config_entry_with_subentries(hass: HomeAssistant) -> MockConfigEntry:
             ),
         ),
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     return entry
 
 
 async def test_get_or_create_returns_same_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     area_registry: ar.AreaRegistry,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Make sure we do not duplicate entries."""
-    update_events = async_capture_events(hass, dr.EVENT_DEVICE_REGISTRY_UPDATED)
+    update_events = async_capture_events(menuai, dr.EVENT_DEVICE_REGISTRY_UPDATED)
     entry = device_registry.async_get_or_create(
         config_entry_id=mock_config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -110,7 +110,7 @@ async def test_get_or_create_returns_same_entry(
     assert entry3.suggested_area == "Game Room"
     assert entry3.area_id == game_room_area.id
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Only 2 update events. The third entry did not generate any changes.
     assert len(update_events) == 2
@@ -149,7 +149,7 @@ async def test_requirement_for_identifier_or_connection(
     assert entry
     assert entry2
 
-    with pytest.raises(HomeAssistantError):
+    with pytest.raises(menuaiError):
         device_registry.async_get_or_create(
             config_entry_id=mock_config_entry.entry_id,
             connections=set(),
@@ -160,13 +160,13 @@ async def test_requirement_for_identifier_or_connection(
 
 
 async def test_multiple_config_entries(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Make sure we do not get duplicate entries."""
     config_entry_1 = MockConfigEntry()
-    config_entry_1.add_to_hass(hass)
+    config_entry_1.add_to_menuai(menuai)
     config_entry_2 = MockConfigEntry()
-    config_entry_2.add_to_hass(hass)
+    config_entry_2.add_to_menuai(menuai)
 
     entry = device_registry.async_get_or_create(
         config_entry_id=config_entry_1.entry_id,
@@ -200,7 +200,7 @@ async def test_multiple_config_entries(
 
 
 async def test_multiple_config_subentries(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Make sure we do not get duplicate entries."""
     config_entry_1 = MockConfigEntry(
@@ -221,7 +221,7 @@ async def test_multiple_config_subentries(
             ),
         )
     )
-    config_entry_1.add_to_hass(hass)
+    config_entry_1.add_to_menuai(menuai)
     config_entry_2 = MockConfigEntry(
         subentries_data=(
             config_entries.ConfigSubentryData(
@@ -233,7 +233,7 @@ async def test_multiple_config_subentries(
             ),
         )
     )
-    config_entry_2.add_to_hass(hass)
+    config_entry_2.add_to_menuai(menuai)
 
     entry = device_registry.async_get_or_create(
         config_entry_id=config_entry_1.entry_id,
@@ -305,14 +305,14 @@ async def test_multiple_config_subentries(
 @pytest.mark.parametrize("load_registries", [False])
 @pytest.mark.usefixtures("freezer")
 async def test_loading_from_storage(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test loading stored devices on start."""
     created_at = "2024-01-01T00:00:00+00:00"
     modified_at = "2024-02-01T00:00:00+00:00"
-    hass_storage[dr.STORAGE_KEY] = {
+    menuai_storage[dr.STORAGE_KEY] = {
         "version": dr.STORAGE_VERSION_MAJOR,
         "minor_version": dr.STORAGE_VERSION_MINOR,
         "data": {
@@ -357,8 +357,8 @@ async def test_loading_from_storage(
         },
     }
 
-    await dr.async_load(hass)
-    registry = dr.async_get(hass)
+    await dr.async_load(menuai)
+    registry = dr.async_get(menuai)
     assert len(registry.devices) == 1
     assert len(registry.deleted_devices) == 1
 
@@ -437,12 +437,12 @@ async def test_loading_from_storage(
 @pytest.mark.parametrize("load_registries", [False])
 @pytest.mark.usefixtures("freezer")
 async def test_migration_from_1_1(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test migration from version 1.1."""
-    hass_storage[dr.STORAGE_KEY] = {
+    menuai_storage[dr.STORAGE_KEY] = {
         "version": 1,
         "minor_version": 1,
         "data": {
@@ -487,8 +487,8 @@ async def test_migration_from_1_1(
         },
     }
 
-    await dr.async_load(hass)
-    registry = dr.async_get(hass)
+    await dr.async_load(menuai)
+    registry = dr.async_get(menuai)
 
     # Test data was loaded
     entry = registry.async_get_or_create(
@@ -509,7 +509,7 @@ async def test_migration_from_1_1(
 
     # Check we store migrated data
     await flush_store(registry._store)
-    assert hass_storage[dr.STORAGE_KEY] == {
+    assert menuai_storage[dr.STORAGE_KEY] == {
         "version": dr.STORAGE_VERSION_MAJOR,
         "minor_version": dr.STORAGE_VERSION_MINOR,
         "key": dr.STORAGE_KEY,
@@ -583,12 +583,12 @@ async def test_migration_from_1_1(
 @pytest.mark.parametrize("load_registries", [False])
 @pytest.mark.usefixtures("freezer")
 async def test_migration_from_1_2(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test migration from version 1.2."""
-    hass_storage[dr.STORAGE_KEY] = {
+    menuai_storage[dr.STORAGE_KEY] = {
         "version": 1,
         "minor_version": 2,
         "key": dr.STORAGE_KEY,
@@ -633,8 +633,8 @@ async def test_migration_from_1_2(
         },
     }
 
-    await dr.async_load(hass)
-    registry = dr.async_get(hass)
+    await dr.async_load(menuai)
+    registry = dr.async_get(menuai)
 
     # Test data was loaded
     entry = registry.async_get_or_create(
@@ -656,7 +656,7 @@ async def test_migration_from_1_2(
     # Check we store migrated data
     await flush_store(registry._store)
 
-    assert hass_storage[dr.STORAGE_KEY] == {
+    assert menuai_storage[dr.STORAGE_KEY] == {
         "version": dr.STORAGE_VERSION_MAJOR,
         "minor_version": dr.STORAGE_VERSION_MINOR,
         "key": dr.STORAGE_KEY,
@@ -719,12 +719,12 @@ async def test_migration_from_1_2(
 @pytest.mark.parametrize("load_registries", [False])
 @pytest.mark.usefixtures("freezer")
 async def test_migration_fom_1_3(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test migration from version 1.3."""
-    hass_storage[dr.STORAGE_KEY] = {
+    menuai_storage[dr.STORAGE_KEY] = {
         "version": 1,
         "minor_version": 3,
         "key": dr.STORAGE_KEY,
@@ -769,8 +769,8 @@ async def test_migration_fom_1_3(
         },
     }
 
-    await dr.async_load(hass)
-    registry = dr.async_get(hass)
+    await dr.async_load(menuai)
+    registry = dr.async_get(menuai)
 
     # Test data was loaded
     entry = registry.async_get_or_create(
@@ -792,7 +792,7 @@ async def test_migration_fom_1_3(
     # Check we store migrated data
     await flush_store(registry._store)
 
-    assert hass_storage[dr.STORAGE_KEY] == {
+    assert menuai_storage[dr.STORAGE_KEY] == {
         "version": dr.STORAGE_VERSION_MAJOR,
         "minor_version": dr.STORAGE_VERSION_MINOR,
         "key": dr.STORAGE_KEY,
@@ -855,12 +855,12 @@ async def test_migration_fom_1_3(
 @pytest.mark.parametrize("load_registries", [False])
 @pytest.mark.usefixtures("freezer")
 async def test_migration_from_1_4(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test migration from version 1.4."""
-    hass_storage[dr.STORAGE_KEY] = {
+    menuai_storage[dr.STORAGE_KEY] = {
         "version": 1,
         "minor_version": 4,
         "key": dr.STORAGE_KEY,
@@ -907,8 +907,8 @@ async def test_migration_from_1_4(
         },
     }
 
-    await dr.async_load(hass)
-    registry = dr.async_get(hass)
+    await dr.async_load(menuai)
+    registry = dr.async_get(menuai)
 
     # Test data was loaded
     entry = registry.async_get_or_create(
@@ -930,7 +930,7 @@ async def test_migration_from_1_4(
     # Check we store migrated data
     await flush_store(registry._store)
 
-    assert hass_storage[dr.STORAGE_KEY] == {
+    assert menuai_storage[dr.STORAGE_KEY] == {
         "version": dr.STORAGE_VERSION_MAJOR,
         "minor_version": dr.STORAGE_VERSION_MINOR,
         "key": dr.STORAGE_KEY,
@@ -993,12 +993,12 @@ async def test_migration_from_1_4(
 @pytest.mark.parametrize("load_registries", [False])
 @pytest.mark.usefixtures("freezer")
 async def test_migration_from_1_5(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test migration from version 1.5."""
-    hass_storage[dr.STORAGE_KEY] = {
+    menuai_storage[dr.STORAGE_KEY] = {
         "version": 1,
         "minor_version": 5,
         "key": dr.STORAGE_KEY,
@@ -1047,8 +1047,8 @@ async def test_migration_from_1_5(
         },
     }
 
-    await dr.async_load(hass)
-    registry = dr.async_get(hass)
+    await dr.async_load(menuai)
+    registry = dr.async_get(menuai)
 
     # Test data was loaded
     entry = registry.async_get_or_create(
@@ -1070,7 +1070,7 @@ async def test_migration_from_1_5(
     # Check we store migrated data
     await flush_store(registry._store)
 
-    assert hass_storage[dr.STORAGE_KEY] == {
+    assert menuai_storage[dr.STORAGE_KEY] == {
         "version": dr.STORAGE_VERSION_MAJOR,
         "minor_version": dr.STORAGE_VERSION_MINOR,
         "key": dr.STORAGE_KEY,
@@ -1133,12 +1133,12 @@ async def test_migration_from_1_5(
 @pytest.mark.parametrize("load_registries", [False])
 @pytest.mark.usefixtures("freezer")
 async def test_migration_from_1_6(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test migration from version 1.6."""
-    hass_storage[dr.STORAGE_KEY] = {
+    menuai_storage[dr.STORAGE_KEY] = {
         "version": 1,
         "minor_version": 6,
         "key": dr.STORAGE_KEY,
@@ -1189,8 +1189,8 @@ async def test_migration_from_1_6(
         },
     }
 
-    await dr.async_load(hass)
-    registry = dr.async_get(hass)
+    await dr.async_load(menuai)
+    registry = dr.async_get(menuai)
 
     # Test data was loaded
     entry = registry.async_get_or_create(
@@ -1212,7 +1212,7 @@ async def test_migration_from_1_6(
     # Check we store migrated data
     await flush_store(registry._store)
 
-    assert hass_storage[dr.STORAGE_KEY] == {
+    assert menuai_storage[dr.STORAGE_KEY] == {
         "version": dr.STORAGE_VERSION_MAJOR,
         "minor_version": dr.STORAGE_VERSION_MINOR,
         "key": dr.STORAGE_KEY,
@@ -1275,12 +1275,12 @@ async def test_migration_from_1_6(
 @pytest.mark.parametrize("load_registries", [False])
 @pytest.mark.usefixtures("freezer")
 async def test_migration_from_1_7(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test migration from version 1.7."""
-    hass_storage[dr.STORAGE_KEY] = {
+    menuai_storage[dr.STORAGE_KEY] = {
         "version": 1,
         "minor_version": 7,
         "key": dr.STORAGE_KEY,
@@ -1333,8 +1333,8 @@ async def test_migration_from_1_7(
         },
     }
 
-    await dr.async_load(hass)
-    registry = dr.async_get(hass)
+    await dr.async_load(menuai)
+    registry = dr.async_get(menuai)
 
     # Test data was loaded
     entry = registry.async_get_or_create(
@@ -1356,7 +1356,7 @@ async def test_migration_from_1_7(
     # Check we store migrated data
     await flush_store(registry._store)
 
-    assert hass_storage[dr.STORAGE_KEY] == {
+    assert menuai_storage[dr.STORAGE_KEY] == {
         "version": dr.STORAGE_VERSION_MAJOR,
         "minor_version": dr.STORAGE_VERSION_MINOR,
         "key": dr.STORAGE_KEY,
@@ -1417,14 +1417,14 @@ async def test_migration_from_1_7(
 
 
 async def test_removing_config_entries(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Make sure we do not get duplicate entries."""
-    update_events = async_capture_events(hass, dr.EVENT_DEVICE_REGISTRY_UPDATED)
+    update_events = async_capture_events(menuai, dr.EVENT_DEVICE_REGISTRY_UPDATED)
     config_entry_1 = MockConfigEntry()
-    config_entry_1.add_to_hass(hass)
+    config_entry_1.add_to_menuai(menuai)
     config_entry_2 = MockConfigEntry()
-    config_entry_2.add_to_hass(hass)
+    config_entry_2.add_to_menuai(menuai)
 
     entry = device_registry.async_get_or_create(
         config_entry_id=config_entry_1.entry_id,
@@ -1467,7 +1467,7 @@ async def test_removing_config_entries(
     assert entry.config_entries_subentries == {config_entry_2.entry_id: {None}}
     assert entry3_removed is None
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(update_events) == 5
     assert update_events[0].data == {
@@ -1505,14 +1505,14 @@ async def test_removing_config_entries(
 
 
 async def test_deleted_device_removing_config_entries(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Make sure we do not get duplicate entries."""
-    update_events = async_capture_events(hass, dr.EVENT_DEVICE_REGISTRY_UPDATED)
+    update_events = async_capture_events(menuai, dr.EVENT_DEVICE_REGISTRY_UPDATED)
     config_entry_1 = MockConfigEntry()
-    config_entry_1.add_to_hass(hass)
+    config_entry_1.add_to_menuai(menuai)
     config_entry_2 = MockConfigEntry()
-    config_entry_2.add_to_hass(hass)
+    config_entry_2.add_to_menuai(menuai)
 
     entry = device_registry.async_get_or_create(
         config_entry_id=config_entry_1.entry_id,
@@ -1552,7 +1552,7 @@ async def test_deleted_device_removing_config_entries(
     assert len(device_registry.devices) == 0
     assert len(device_registry.deleted_devices) == 2
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(update_events) == 5
     assert update_events[0].data == {
         "action": "create",
@@ -1594,7 +1594,7 @@ async def test_deleted_device_removing_config_entries(
     assert entry.config_entries_subentries == {}
 
     # No event when a deleted device is purged
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(update_events) == 5
 
     # Re-add, expect to keep the device id
@@ -1625,10 +1625,10 @@ async def test_deleted_device_removing_config_entries(
 
 
 async def test_removing_config_subentries(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Make sure we do not get duplicate entries."""
-    update_events = async_capture_events(hass, dr.EVENT_DEVICE_REGISTRY_UPDATED)
+    update_events = async_capture_events(menuai, dr.EVENT_DEVICE_REGISTRY_UPDATED)
     config_entry_1 = MockConfigEntry(
         subentries_data=(
             config_entries.ConfigSubentryData(
@@ -1647,7 +1647,7 @@ async def test_removing_config_subentries(
             ),
         )
     )
-    config_entry_1.add_to_hass(hass)
+    config_entry_1.add_to_menuai(menuai)
     config_entry_2 = MockConfigEntry(
         subentries_data=(
             config_entries.ConfigSubentryData(
@@ -1659,7 +1659,7 @@ async def test_removing_config_subentries(
             ),
         )
     )
-    config_entry_2.add_to_hass(hass)
+    config_entry_2.add_to_menuai(menuai)
 
     entry = device_registry.async_get_or_create(
         config_entry_id=config_entry_1.entry_id,
@@ -1715,7 +1715,7 @@ async def test_removing_config_subentries(
         config_entry_2.entry_id: {"mock-subentry-id-2-1"},
     }
 
-    hass.config_entries.async_remove_subentry(config_entry_1, "mock-subentry-id-1-1")
+    menuai.config_entries.async_remove_subentry(config_entry_1, "mock-subentry-id-1-1")
     entry = device_registry.async_get_device(identifiers={("bridgeid", "0123")})
     assert entry.config_entries == {config_entry_1.entry_id, config_entry_2.entry_id}
     assert entry.config_entries_subentries == {
@@ -1723,18 +1723,18 @@ async def test_removing_config_subentries(
         config_entry_2.entry_id: {"mock-subentry-id-2-1"},
     }
 
-    hass.config_entries.async_remove_subentry(config_entry_1, "mock-subentry-id-1-2")
+    menuai.config_entries.async_remove_subentry(config_entry_1, "mock-subentry-id-1-2")
     entry = device_registry.async_get_device(identifiers={("bridgeid", "0123")})
     assert entry.config_entries == {config_entry_2.entry_id}
     assert entry.config_entries_subentries == {
         config_entry_2.entry_id: {"mock-subentry-id-2-1"}
     }
 
-    hass.config_entries.async_remove_subentry(config_entry_2, "mock-subentry-id-2-1")
+    menuai.config_entries.async_remove_subentry(config_entry_2, "mock-subentry-id-2-1")
     assert device_registry.async_get_device(identifiers={("bridgeid", "0123")}) is None
     assert device_registry.async_get_device(identifiers={("bridgeid", "4567")}) is None
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(update_events) == 8
     assert update_events[0].data == {
@@ -1826,10 +1826,10 @@ async def test_removing_config_subentries(
 
 
 async def test_deleted_device_removing_config_subentries(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Make sure we do not get duplicate entries."""
-    update_events = async_capture_events(hass, dr.EVENT_DEVICE_REGISTRY_UPDATED)
+    update_events = async_capture_events(menuai, dr.EVENT_DEVICE_REGISTRY_UPDATED)
     config_entry_1 = MockConfigEntry(
         subentries_data=(
             config_entries.ConfigSubentryData(
@@ -1848,7 +1848,7 @@ async def test_deleted_device_removing_config_subentries(
             ),
         )
     )
-    config_entry_1.add_to_hass(hass)
+    config_entry_1.add_to_menuai(menuai)
     config_entry_2 = MockConfigEntry(
         subentries_data=(
             config_entries.ConfigSubentryData(
@@ -1860,7 +1860,7 @@ async def test_deleted_device_removing_config_subentries(
             ),
         )
     )
-    config_entry_2.add_to_hass(hass)
+    config_entry_2.add_to_menuai(menuai)
 
     entry = device_registry.async_get_or_create(
         config_entry_id=config_entry_1.entry_id,
@@ -1910,7 +1910,7 @@ async def test_deleted_device_removing_config_subentries(
     assert len(device_registry.devices) == 0
     assert len(device_registry.deleted_devices) == 1
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(update_events) == 5
     assert update_events[0].data == {
@@ -1962,7 +1962,7 @@ async def test_deleted_device_removing_config_subentries(
     }
     assert entry.orphaned_timestamp is None
 
-    hass.config_entries.async_remove_subentry(config_entry_1, "mock-subentry-id-1-1")
+    menuai.config_entries.async_remove_subentry(config_entry_1, "mock-subentry-id-1-1")
     entry = device_registry.deleted_devices.get_entry({("bridgeid", "0123")}, None)
     assert entry.config_entries == {config_entry_1.entry_id, config_entry_2.entry_id}
     assert entry.config_entries_subentries == {
@@ -1979,7 +1979,7 @@ async def test_deleted_device_removing_config_subentries(
         device_registry.deleted_devices.get_entry({("bridgeid", "0123")}, None) is entry
     )
 
-    hass.config_entries.async_remove_subentry(config_entry_1, "mock-subentry-id-1-2")
+    menuai.config_entries.async_remove_subentry(config_entry_1, "mock-subentry-id-1-2")
     entry = device_registry.deleted_devices.get_entry({("bridgeid", "0123")}, None)
     assert entry.config_entries == {config_entry_2.entry_id}
     assert entry.config_entries_subentries == {
@@ -1987,18 +1987,18 @@ async def test_deleted_device_removing_config_subentries(
     }
     assert entry.orphaned_timestamp is None
 
-    hass.config_entries.async_remove_subentry(config_entry_2, "mock-subentry-id-2-1")
+    menuai.config_entries.async_remove_subentry(config_entry_2, "mock-subentry-id-2-1")
     entry = device_registry.deleted_devices.get_entry({("bridgeid", "0123")}, None)
     assert entry.config_entries == set()
     assert entry.config_entries_subentries == {}
     assert entry.orphaned_timestamp is not None
 
     # No event when a deleted device is purged
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(update_events) == 5
 
     # Re-add, expect to keep the device id
-    hass.config_entries.async_add_subentry(
+    menuai.config_entries.async_add_subentry(
         config_entry_2,
         config_entries.ConfigSubentry(
             data={},
@@ -2020,7 +2020,7 @@ async def test_deleted_device_removing_config_subentries(
 
     # Remove again, and trigger purge
     device_registry.async_remove_device(entry.id)
-    hass.config_entries.async_remove_subentry(config_entry_2, "mock-subentry-id-2-1")
+    menuai.config_entries.async_remove_subentry(config_entry_2, "mock-subentry-id-2-1")
     entry = device_registry.deleted_devices.get_entry({("bridgeid", "0123")}, None)
     assert entry.config_entries == set()
     assert entry.config_entries_subentries == {}
@@ -2067,15 +2067,15 @@ async def test_removing_area_id(
 
 
 async def test_specifying_via_device_create(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test specifying a via_device and removal of the hub device."""
     config_entry_1 = MockConfigEntry()
-    config_entry_1.add_to_hass(hass)
+    config_entry_1.add_to_menuai(menuai)
     config_entry_2 = MockConfigEntry()
-    config_entry_2.add_to_hass(hass)
+    config_entry_2.add_to_menuai(menuai)
 
     via = device_registry.async_get_or_create(
         config_entry_id=config_entry_1.entry_id,
@@ -2123,15 +2123,15 @@ async def test_specifying_via_device_create(
 
 
 async def test_specifying_via_device_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test specifying a via_device and updating."""
     config_entry_1 = MockConfigEntry()
-    config_entry_1.add_to_hass(hass)
+    config_entry_1.add_to_menuai(menuai)
     config_entry_2 = MockConfigEntry()
-    config_entry_2.add_to_hass(hass)
+    config_entry_2.add_to_menuai(menuai)
 
     light = device_registry.async_get_or_create(
         config_entry_id=config_entry_2.entry_id,
@@ -2186,19 +2186,19 @@ async def test_specifying_via_device_update(
 
 
 async def test_loading_saving_data(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Test that we load/save data correctly."""
     config_entry_1 = MockConfigEntry()
-    config_entry_1.add_to_hass(hass)
+    config_entry_1.add_to_menuai(menuai)
     config_entry_2 = MockConfigEntry()
-    config_entry_2.add_to_hass(hass)
+    config_entry_2.add_to_menuai(menuai)
     config_entry_3 = MockConfigEntry()
-    config_entry_3.add_to_hass(hass)
+    config_entry_3.add_to_menuai(menuai)
     config_entry_4 = MockConfigEntry()
-    config_entry_4.add_to_hass(hass)
+    config_entry_4.add_to_menuai(menuai)
     config_entry_5 = MockConfigEntry()
-    config_entry_5.add_to_hass(hass)
+    config_entry_5.add_to_menuai(menuai)
 
     orig_via = device_registry.async_get_or_create(
         config_entry_id=config_entry_1.entry_id,
@@ -2283,7 +2283,7 @@ async def test_loading_saving_data(
     )
 
     # Now load written data in new registry
-    registry2 = dr.DeviceRegistry(hass)
+    registry2 = dr.DeviceRegistry(menuai)
     await flush_store(device_registry._store)
     await registry2.async_load()
 
@@ -2329,7 +2329,7 @@ async def test_no_unnecessary_changes(
         identifiers={("hue", "456"), ("bla", "123")},
     )
     with patch(
-        "homeassistant.helpers.device_registry.DeviceRegistry.async_schedule_save"
+        "menuai.helpers.device_registry.DeviceRegistry.async_schedule_save"
     ) as mock_save:
         entry2 = device_registry.async_get_or_create(
             config_entry_id=mock_config_entry.entry_id, identifiers={("hue", "456")}
@@ -2374,7 +2374,7 @@ async def test_format_mac(
 
 
 async def test_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mock_config_entry: MockConfigEntry,
     freezer: FrozenDateTimeFactory,
@@ -2382,7 +2382,7 @@ async def test_update(
     """Verify that we can update some attributes of a device."""
     created_at = datetime.fromisoformat("2024-01-01T01:00:00+00:00")
     freezer.move_to(created_at)
-    update_events = async_capture_events(hass, dr.EVENT_DEVICE_REGISTRY_UPDATED)
+    update_events = async_capture_events(menuai, dr.EVENT_DEVICE_REGISTRY_UPDATED)
     entry = device_registry.async_get_or_create(
         config_entry_id=mock_config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -2472,7 +2472,7 @@ async def test_update(
 
     assert device_registry.async_get(updated_entry.id) is not None
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(update_events) == 2
     assert update_events[0].data == {
@@ -2502,14 +2502,14 @@ async def test_update(
             "via_device_id": None,
         },
     }
-    with pytest.raises(HomeAssistantError):
+    with pytest.raises(menuaiError):
         device_registry.async_update_device(
             entry.id,
             merge_connections=new_connections,
             new_connections=new_connections,
         )
 
-    with pytest.raises(HomeAssistantError):
+    with pytest.raises(menuaiError):
         device_registry.async_update_device(
             entry.id,
             merge_identifiers=new_identifiers,
@@ -2604,16 +2604,16 @@ async def test_update_connection(
 
 
 async def test_update_remove_config_entries(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Make sure we do not get duplicate entries."""
-    update_events = async_capture_events(hass, dr.EVENT_DEVICE_REGISTRY_UPDATED)
+    update_events = async_capture_events(menuai, dr.EVENT_DEVICE_REGISTRY_UPDATED)
     config_entry_1 = MockConfigEntry()
-    config_entry_1.add_to_hass(hass)
+    config_entry_1.add_to_menuai(menuai)
     config_entry_2 = MockConfigEntry()
-    config_entry_2.add_to_hass(hass)
+    config_entry_2.add_to_menuai(menuai)
     config_entry_3 = MockConfigEntry()
-    config_entry_3.add_to_hass(hass)
+    config_entry_3.add_to_menuai(menuai)
 
     entry = device_registry.async_get_or_create(
         config_entry_id=config_entry_1.entry_id,
@@ -2640,7 +2640,7 @@ async def test_update_remove_config_entries(
         entry2.id, add_config_entry_id=config_entry_3.entry_id
     )
     # Try to add an unknown config entry
-    with pytest.raises(HomeAssistantError):
+    with pytest.raises(menuaiError):
         device_registry.async_update_device(entry2.id, add_config_entry_id="blabla")
 
     assert len(device_registry.devices) == 2
@@ -2670,7 +2670,7 @@ async def test_update_remove_config_entries(
 
     assert removed_entry is None
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(update_events) == 7
     assert update_events[0].data == {
@@ -2735,10 +2735,10 @@ async def test_update_remove_config_entries(
 
 
 async def test_update_remove_config_subentries(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Make sure we do not get duplicate entries."""
-    update_events = async_capture_events(hass, dr.EVENT_DEVICE_REGISTRY_UPDATED)
+    update_events = async_capture_events(menuai, dr.EVENT_DEVICE_REGISTRY_UPDATED)
     config_entry_1 = MockConfigEntry(
         subentries_data=(
             config_entries.ConfigSubentryData(
@@ -2757,7 +2757,7 @@ async def test_update_remove_config_subentries(
             ),
         )
     )
-    config_entry_1.add_to_hass(hass)
+    config_entry_1.add_to_menuai(menuai)
     config_entry_2 = MockConfigEntry(
         subentries_data=(
             config_entries.ConfigSubentryData(
@@ -2769,9 +2769,9 @@ async def test_update_remove_config_subentries(
             ),
         )
     )
-    config_entry_2.add_to_hass(hass)
+    config_entry_2.add_to_menuai(menuai)
     config_entry_3 = MockConfigEntry()
-    config_entry_3.add_to_hass(hass)
+    config_entry_3.add_to_menuai(menuai)
 
     entry = device_registry.async_get_or_create(
         config_entry_id=config_entry_1.entry_id,
@@ -2836,14 +2836,14 @@ async def test_update_remove_config_subentries(
 
     # Try to add a subentry without specifying entry
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match="Can't add config subentry without specifying config entry",
     ):
         device_registry.async_update_device(entry_id, add_config_subentry_id="blabla")
 
     # Try to add an unknown subentry
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match=f"Config entry {config_entry_3.entry_id} has no subentry blabla",
     ):
         device_registry.async_update_device(
@@ -2854,7 +2854,7 @@ async def test_update_remove_config_subentries(
 
     # Try to remove a subentry without specifying entry
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match="Can't remove config subentry without specifying config entry",
     ):
         device_registry.async_update_device(
@@ -2917,7 +2917,7 @@ async def test_update_remove_config_subentries(
     )
     assert entry is None
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(update_events) == 8
     assert update_events[0].data == {
@@ -3011,13 +3011,13 @@ async def test_update_remove_config_subentries(
 
 
 async def test_update_suggested_area(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     area_registry: ar.AreaRegistry,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Verify that we can update the suggested area version of a device."""
-    update_events = async_capture_events(hass, dr.EVENT_DEVICE_REGISTRY_UPDATED)
+    update_events = async_capture_events(menuai, dr.EVENT_DEVICE_REGISTRY_UPDATED)
     entry = device_registry.async_get_or_create(
         config_entry_id=mock_config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -3042,7 +3042,7 @@ async def test_update_suggested_area(
     assert updated_entry.area_id == pool_area.id
     assert len(area_registry.areas) == 1
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(update_events) == 2
     assert update_events[0].data == {
@@ -3069,15 +3069,15 @@ async def test_update_suggested_area(
 
 
 async def test_cleanup_device_registry(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test cleanup works."""
     config_entry = MockConfigEntry(domain="hue")
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     ghost_config_entry = MockConfigEntry()
-    ghost_config_entry.add_to_hass(hass)
+    ghost_config_entry.add_to_menuai(menuai)
 
     d1 = device_registry.async_get_or_create(
         identifiers={("hue", "d1")}, config_entry_id=config_entry.entry_id
@@ -3092,14 +3092,14 @@ async def test_cleanup_device_registry(
         identifiers={("something", "d4")}, config_entry_id=ghost_config_entry.entry_id
     )
     # Remove the config entry without triggering the normal cleanup
-    hass.config_entries._entries.pop(ghost_config_entry.entry_id)
+    menuai.config_entries._entries.pop(ghost_config_entry.entry_id)
 
     entity_registry.async_get_or_create("light", "hue", "e1", device_id=d1.id)
     entity_registry.async_get_or_create("light", "hue", "e2", device_id=d1.id)
     entity_registry.async_get_or_create("light", "hue", "e3", device_id=d3.id)
 
     # Manual cleanup should detect the orphaned config entry
-    dr.async_cleanup(hass, device_registry, entity_registry)
+    dr.async_cleanup(menuai, device_registry, entity_registry)
 
     assert device_registry.async_get_device(identifiers={("hue", "d1")}) is not None
     assert device_registry.async_get_device(identifiers={("hue", "d2")}) is not None
@@ -3108,13 +3108,13 @@ async def test_cleanup_device_registry(
 
 
 async def test_cleanup_device_registry_removes_expired_orphaned_devices(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test cleanup removes expired orphaned devices."""
     config_entry = MockConfigEntry(domain="hue")
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     device_registry.async_get_or_create(
         identifiers={("hue", "d1")}, config_entry_id=config_entry.entry_id
@@ -3130,7 +3130,7 @@ async def test_cleanup_device_registry_removes_expired_orphaned_devices(
     assert len(device_registry.devices) == 0
     assert len(device_registry.deleted_devices) == 3
 
-    dr.async_cleanup(hass, device_registry, entity_registry)
+    dr.async_cleanup(menuai, device_registry, entity_registry)
 
     assert len(device_registry.devices) == 0
     assert len(device_registry.deleted_devices) == 3
@@ -3138,38 +3138,38 @@ async def test_cleanup_device_registry_removes_expired_orphaned_devices(
     future_time = time.time() + dr.ORPHANED_DEVICE_KEEP_SECONDS + 1
 
     with patch("time.time", return_value=future_time):
-        dr.async_cleanup(hass, device_registry, entity_registry)
+        dr.async_cleanup(menuai, device_registry, entity_registry)
 
     assert len(device_registry.devices) == 0
     assert len(device_registry.deleted_devices) == 0
 
 
-async def test_cleanup_startup(hass: HomeAssistant) -> None:
+async def test_cleanup_startup(menuai: menuai) -> None:
     """Test we run a cleanup on startup."""
-    hass.set_state(CoreState.not_running)
+    menuai.set_state(CoreState.not_running)
 
     with patch(
-        "homeassistant.helpers.device_registry.Debouncer.async_call"
+        "menuai.helpers.device_registry.Debouncer.async_call"
     ) as mock_call:
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-        await hass.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
+        await menuai.async_block_till_done()
 
     assert len(mock_call.mock_calls) == 1
 
 
 @pytest.mark.parametrize("load_registries", [False])
 async def test_cleanup_entity_registry_change(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_config_entry: MockConfigEntry
 ) -> None:
     """Test we run a cleanup when entity registry changes.
 
     Don't pre-load the registries as the debouncer will then not be waiting for
     EVENT_ENTITY_REGISTRY_UPDATED events.
     """
-    await dr.async_load(hass)
-    await er.async_load(hass)
-    dev_reg = dr.async_get(hass)
-    ent_reg = er.async_get(hass)
+    await dr.async_load(menuai)
+    await er.async_load(menuai)
+    dev_reg = dr.async_get(menuai)
+    ent_reg = er.async_get(menuai)
 
     entry = dev_reg.async_get_or_create(
         config_entry_id=mock_config_entry.entry_id,
@@ -3177,38 +3177,38 @@ async def test_cleanup_entity_registry_change(
     )
 
     with patch(
-        "homeassistant.helpers.device_registry.Debouncer.async_schedule_call"
+        "menuai.helpers.device_registry.Debouncer.async_schedule_call"
     ) as mock_call:
         entity = ent_reg.async_get_or_create("light", "hue", "e1")
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         assert len(mock_call.mock_calls) == 0
 
         # Normal update does not trigger
         ent_reg.async_update_entity(entity.entity_id, name="updated")
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         assert len(mock_call.mock_calls) == 0
 
         # Device ID update triggers
         ent_reg.async_get_or_create("light", "hue", "e1", device_id=entry.id)
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         assert len(mock_call.mock_calls) == 1
 
         # Removal also triggers
         ent_reg.async_remove(entity.entity_id)
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         assert len(mock_call.mock_calls) == 2
 
 
 @pytest.mark.usefixtures("freezer")
 async def test_restore_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mock_config_entry_with_subentries: MockConfigEntry,
 ) -> None:
     """Make sure device id is stable."""
     entry_id = mock_config_entry_with_subentries.entry_id
     subentry_id = "mock-subentry-id-1-1"
-    update_events = async_capture_events(hass, dr.EVENT_DEVICE_REGISTRY_UPDATED)
+    update_events = async_capture_events(menuai, dr.EVENT_DEVICE_REGISTRY_UPDATED)
     entry = device_registry.async_get_or_create(
         config_entry_id=entry_id,
         config_subentry_id=subentry_id,
@@ -3328,7 +3328,7 @@ async def test_restore_device(
     assert isinstance(entry3.connections, set)
     assert isinstance(entry3.identifiers, set)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(update_events) == 5
     assert update_events[0].data == {
@@ -3361,10 +3361,10 @@ async def test_restore_device(
 
 @pytest.mark.usefixtures("freezer")
 async def test_restore_shared_device(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Make sure device id is stable for shared devices."""
-    update_events = async_capture_events(hass, dr.EVENT_DEVICE_REGISTRY_UPDATED)
+    update_events = async_capture_events(menuai, dr.EVENT_DEVICE_REGISTRY_UPDATED)
     config_entry_1 = MockConfigEntry(
         subentries_data=(
             config_entries.ConfigSubentryData(
@@ -3376,9 +3376,9 @@ async def test_restore_shared_device(
             ),
         ),
     )
-    config_entry_1.add_to_hass(hass)
+    config_entry_1.add_to_menuai(menuai)
     config_entry_2 = MockConfigEntry()
-    config_entry_2.add_to_hass(hass)
+    config_entry_2.add_to_menuai(menuai)
 
     entry = device_registry.async_get_or_create(
         config_entry_id=config_entry_1.entry_id,
@@ -3627,7 +3627,7 @@ async def test_restore_shared_device(
     assert isinstance(entry4.connections, set)
     assert isinstance(entry4.identifiers, set)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(update_events) == 8
     assert update_events[0].data == {
@@ -3839,11 +3839,11 @@ async def test_verify_suggested_area_does_not_overwrite_area_id(
 
 
 async def test_disable_config_entry_disables_devices(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Test that we disable entities tied to a config entry."""
     config_entry = MockConfigEntry(domain="light")
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     entry1 = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
@@ -3858,10 +3858,10 @@ async def test_disable_config_entry_disables_devices(
     assert not entry1.disabled
     assert entry2.disabled
 
-    await hass.config_entries.async_set_disabled_by(
+    await menuai.config_entries.async_set_disabled_by(
         config_entry.entry_id, config_entries.ConfigEntryDisabler.USER
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     entry1 = device_registry.async_get(entry1.id)
     assert entry1.disabled
@@ -3870,8 +3870,8 @@ async def test_disable_config_entry_disables_devices(
     assert entry2.disabled
     assert entry2.disabled_by is dr.DeviceEntryDisabler.USER
 
-    await hass.config_entries.async_set_disabled_by(config_entry.entry_id, None)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_set_disabled_by(config_entry.entry_id, None)
+    await menuai.async_block_till_done()
 
     entry1 = device_registry.async_get(entry1.id)
     assert not entry1.disabled
@@ -3881,13 +3881,13 @@ async def test_disable_config_entry_disables_devices(
 
 
 async def test_only_disable_device_if_all_config_entries_are_disabled(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Test that we only disable device if all related config entries are disabled."""
     config_entry1 = MockConfigEntry(domain="light")
-    config_entry1.add_to_hass(hass)
+    config_entry1.add_to_menuai(menuai)
     config_entry2 = MockConfigEntry(domain="light")
-    config_entry2.add_to_hass(hass)
+    config_entry2.add_to_menuai(menuai)
 
     device_registry.async_get_or_create(
         config_entry_id=config_entry1.entry_id,
@@ -3900,25 +3900,25 @@ async def test_only_disable_device_if_all_config_entries_are_disabled(
     assert len(entry1.config_entries) == 2
     assert not entry1.disabled
 
-    await hass.config_entries.async_set_disabled_by(
+    await menuai.config_entries.async_set_disabled_by(
         config_entry1.entry_id, config_entries.ConfigEntryDisabler.USER
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     entry1 = device_registry.async_get(entry1.id)
     assert not entry1.disabled
 
-    await hass.config_entries.async_set_disabled_by(
+    await menuai.config_entries.async_set_disabled_by(
         config_entry2.entry_id, config_entries.ConfigEntryDisabler.USER
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     entry1 = device_registry.async_get(entry1.id)
     assert entry1.disabled
     assert entry1.disabled_by is dr.DeviceEntryDisabler.CONFIG_ENTRY
 
-    await hass.config_entries.async_set_disabled_by(config_entry1.entry_id, None)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_set_disabled_by(config_entry1.entry_id, None)
+    await menuai.async_block_till_done()
 
     entry1 = device_registry.async_get(entry1.id)
     assert not entry1.disabled
@@ -3933,23 +3933,23 @@ async def test_only_disable_device_if_all_config_entries_are_disabled(
         ("http://localhost/config", nullcontext()),
         ("http://localhost:8123/config", nullcontext()),
         ("https://example.com/config", nullcontext()),
-        ("homeassistant://config", nullcontext()),
+        ("menuai://config", nullcontext()),
         (URL("http://localhost"), nullcontext()),
         (URL("http://localhost:8123"), nullcontext()),
         (URL("https://example.com"), nullcontext()),
         (URL("http://localhost/config"), nullcontext()),
         (URL("http://localhost:8123/config"), nullcontext()),
         (URL("https://example.com/config"), nullcontext()),
-        (URL("homeassistant://config"), nullcontext()),
+        (URL("menuai://config"), nullcontext()),
         (None, nullcontext()),
         ("http://", pytest.raises(ValueError)),
         ("https://", pytest.raises(ValueError)),
         ("gopher://localhost", pytest.raises(ValueError)),
-        ("homeassistant://", pytest.raises(ValueError)),
+        ("menuai://", pytest.raises(ValueError)),
         (URL("http://"), pytest.raises(ValueError)),
         (URL("https://"), pytest.raises(ValueError)),
         (URL("gopher://localhost"), pytest.raises(ValueError)),
-        (URL("homeassistant://"), pytest.raises(ValueError)),
+        (URL("menuai://"), pytest.raises(ValueError)),
         # Exception implements __str__
         (Exception("https://example.com"), nullcontext()),
         (Exception("https://"), pytest.raises(ValueError)),
@@ -3957,16 +3957,16 @@ async def test_only_disable_device_if_all_config_entries_are_disabled(
     ],
 )
 async def test_device_info_configuration_url_validation(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     configuration_url: str | URL | None,
     expectation: AbstractContextManager,
 ) -> None:
     """Test configuration URL of device info is properly validated."""
     config_entry_1 = MockConfigEntry()
-    config_entry_1.add_to_hass(hass)
+    config_entry_1.add_to_menuai(menuai)
     config_entry_2 = MockConfigEntry()
-    config_entry_2.add_to_hass(hass)
+    config_entry_2.add_to_menuai(menuai)
 
     with expectation:
         device_registry.async_get_or_create(
@@ -3989,12 +3989,12 @@ async def test_device_info_configuration_url_validation(
 
 @pytest.mark.parametrize("load_registries", [False])
 async def test_loading_invalid_configuration_url_from_storage(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test loading stored devices with an invalid URL."""
-    hass_storage[dr.STORAGE_KEY] = {
+    menuai_storage[dr.STORAGE_KEY] = {
         "version": dr.STORAGE_VERSION_MAJOR,
         "minor_version": dr.STORAGE_VERSION_MINOR,
         "data": {
@@ -4028,8 +4028,8 @@ async def test_loading_invalid_configuration_url_from_storage(
         },
     }
 
-    await dr.async_load(hass)
-    registry = dr.async_get(hass)
+    await dr.async_load(menuai)
+    registry = dr.async_get(menuai)
     assert len(registry.devices) == 1
     entry = registry.async_get_or_create(
         config_entry_id=mock_config_entry.entry_id,
@@ -4039,11 +4039,11 @@ async def test_loading_invalid_configuration_url_from_storage(
 
 
 async def test_removing_labels(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Make sure we can clear labels."""
     config_entry = MockConfigEntry()
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -4070,11 +4070,11 @@ async def test_removing_labels(
 
 
 async def test_entries_for_label(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Test getting device entries by label."""
     config_entry = MockConfigEntry()
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
@@ -4162,7 +4162,7 @@ async def test_entries_for_label(
     ],
 )
 async def test_device_name_translation_placeholders(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     translation_key: str | None,
     translations: dict[str, str] | None,
@@ -4172,7 +4172,7 @@ async def test_device_name_translation_placeholders(
     """Test device name when the device name translation has placeholders."""
 
     def async_get_cached_translations(
-        hass: HomeAssistant,
+        menuai: menuai,
         language: str,
         category: str,
         integrations: Iterable[str] | None = None,
@@ -4182,9 +4182,9 @@ async def test_device_name_translation_placeholders(
         return translations[language]
 
     config_entry_1 = MockConfigEntry()
-    config_entry_1.add_to_hass(hass)
+    config_entry_1.add_to_menuai(menuai)
     with patch(
-        "homeassistant.helpers.device_registry.translation.async_get_cached_translations",
+        "menuai.helpers.device_registry.translation.async_get_cached_translations",
         side_effect=async_get_cached_translations,
     ):
         entry1 = device_registry.async_get_or_create(
@@ -4232,7 +4232,7 @@ async def test_device_name_translation_placeholders(
             {"placeholder": "special"},
             ReleaseChannel.BETA,
             pytest.raises(
-                HomeAssistantError, match="Missing placeholder '2ndplaceholder'"
+                menuaiError, match="Missing placeholder '2ndplaceholder'"
             ),
             "",
         ),
@@ -4254,7 +4254,7 @@ async def test_device_name_translation_placeholders(
     ],
 )
 async def test_device_name_translation_placeholders_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     translation_key: str | None,
     translations: dict[str, str] | None,
@@ -4267,7 +4267,7 @@ async def test_device_name_translation_placeholders_errors(
     """Test device name has placeholder issuess."""
 
     def async_get_cached_translations(
-        hass: HomeAssistant,
+        menuai: menuai,
         language: str,
         category: str,
         integrations: Iterable[str] | None = None,
@@ -4277,14 +4277,14 @@ async def test_device_name_translation_placeholders_errors(
         return translations[language]
 
     config_entry_1 = MockConfigEntry()
-    config_entry_1.add_to_hass(hass)
+    config_entry_1.add_to_menuai(menuai)
     with (
         patch(
-            "homeassistant.helpers.device_registry.translation.async_get_cached_translations",
+            "menuai.helpers.device_registry.translation.async_get_cached_translations",
             side_effect=async_get_cached_translations,
         ),
         patch(
-            "homeassistant.helpers.device_registry.get_release_channel",
+            "menuai.helpers.device_registry.get_release_channel",
             return_value=release_channel,
         ),
         expectation,
@@ -4301,7 +4301,7 @@ async def test_device_name_translation_placeholders_errors(
 
 
 async def test_async_get_or_create_thread_safety(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mock_config_entry: MockConfigEntry,
 ) -> None:
@@ -4311,7 +4311,7 @@ async def test_async_get_or_create_thread_safety(
         RuntimeError,
         match="Detected code that calls device_registry.async_update_device from a thread.",
     ):
-        await hass.async_add_executor_job(
+        await menuai.async_add_executor_job(
             partial(
                 device_registry.async_get_or_create,
                 config_entry_id=mock_config_entry.entry_id,
@@ -4324,7 +4324,7 @@ async def test_async_get_or_create_thread_safety(
 
 
 async def test_async_remove_device_thread_safety(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mock_config_entry: MockConfigEntry,
 ) -> None:
@@ -4341,17 +4341,17 @@ async def test_async_remove_device_thread_safety(
         RuntimeError,
         match="Detected code that calls device_registry.async_remove_device from a thread.",
     ):
-        await hass.async_add_executor_job(
+        await menuai.async_add_executor_job(
             device_registry.async_remove_device, device.id
         )
 
 
 async def test_device_registry_connections_collision(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Test connection collisions in the device registry."""
     config_entry = MockConfigEntry()
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     device1 = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
@@ -4378,7 +4378,7 @@ async def test_device_registry_connections_collision(
     # Attempt to merge connection for device3 with the same
     # connection that already exists in device1
     with pytest.raises(
-        HomeAssistantError, match=f"Connections.*already registered.*{device1.id}"
+        menuaiError, match=f"Connections.*already registered.*{device1.id}"
     ):
         device_registry.async_update_device(
             device3.id,
@@ -4391,7 +4391,7 @@ async def test_device_registry_connections_collision(
     # Attempt to add new connections for device3 with the same
     # connection that already exists in device1
     with pytest.raises(
-        HomeAssistantError, match=f"Connections.*already registered.*{device1.id}"
+        menuaiError, match=f"Connections.*already registered.*{device1.id}"
     ):
         device_registry.async_update_device(
             device3.id,
@@ -4435,11 +4435,11 @@ async def test_device_registry_connections_collision(
 
 
 async def test_device_registry_identifiers_collision(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Test identifiers collisions in the device registry."""
     config_entry = MockConfigEntry()
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     device1 = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
@@ -4466,7 +4466,7 @@ async def test_device_registry_identifiers_collision(
     # Attempt to merge identifiers for device3 with the same
     # connection that already exists in device1
     with pytest.raises(
-        HomeAssistantError, match=f"Identifiers.*already registered.*{device1.id}"
+        menuaiError, match=f"Identifiers.*already registered.*{device1.id}"
     ):
         device_registry.async_update_device(
             device3.id, merge_identifiers={("bridgeid", "0123"), ("bridgeid", "8888")}
@@ -4475,7 +4475,7 @@ async def test_device_registry_identifiers_collision(
     # Attempt to add new identifiers for device3 with the same
     # connection that already exists in device1
     with pytest.raises(
-        HomeAssistantError, match=f"Identifiers.*already registered.*{device1.id}"
+        menuaiError, match=f"Identifiers.*already registered.*{device1.id}"
     ):
         device_registry.async_update_device(
             device3.id, new_identifiers={("bridgeid", "0123"), ("bridgeid", "8888")}
@@ -4511,11 +4511,11 @@ async def test_device_registry_identifiers_collision(
 
 
 async def test_device_registry_deleted_device_collision(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Test update collisions with deleted devices in the device registry."""
     config_entry = MockConfigEntry()
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     device1 = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
@@ -4544,18 +4544,18 @@ async def test_device_registry_deleted_device_collision(
 
 
 async def test_primary_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
 ) -> None:
     """Test the primary integration field."""
     mock_config_entry_1 = MockConfigEntry(domain="mqtt", title=None)
-    mock_config_entry_1.add_to_hass(hass)
+    mock_config_entry_1.add_to_menuai(menuai)
     mock_config_entry_2 = MockConfigEntry(title=None)
-    mock_config_entry_2.add_to_hass(hass)
+    mock_config_entry_2.add_to_menuai(menuai)
     mock_config_entry_3 = MockConfigEntry(title=None)
-    mock_config_entry_3.add_to_hass(hass)
+    mock_config_entry_3.add_to_menuai(menuai)
     mock_config_entry_4 = MockConfigEntry(domain="matter", title=None)
-    mock_config_entry_4.add_to_hass(hass)
+    mock_config_entry_4.add_to_menuai(menuai)
 
     # Create device without model name etc, config entry will not be marked primary
     device = device_registry.async_get_or_create(
@@ -4616,19 +4616,19 @@ async def test_primary_config_entry(
 
 
 async def test_update_device_no_connections_or_identifiers(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
 ) -> None:
     """Test updating a device clearing connections and identifiers."""
     mock_config_entry = MockConfigEntry(domain="mqtt", title=None)
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     device = device_registry.async_get_or_create(
         config_entry_id=mock_config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
         identifiers={("bridgeid", "0123")},
     )
-    with pytest.raises(HomeAssistantError):
+    with pytest.raises(menuaiError):
         device_registry.async_update_device(
             device.id, new_connections=set(), new_identifiers=set()
         )

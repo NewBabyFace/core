@@ -6,8 +6,8 @@ import logging
 
 from pynzbgetapi import NZBGetAPI, NZBGetAPIException
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
@@ -15,8 +15,8 @@ from homeassistant.const import (
     CONF_USERNAME,
     CONF_VERIFY_SSL,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN
 
@@ -30,7 +30,7 @@ class NZBGetDataUpdateCoordinator(DataUpdateCoordinator):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
     ) -> None:
         """Initialize global NZBGet data updater."""
@@ -47,7 +47,7 @@ class NZBGetDataUpdateCoordinator(DataUpdateCoordinator):
         self._completed_downloads = set[tuple]()
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -66,7 +66,7 @@ class NZBGetDataUpdateCoordinator(DataUpdateCoordinator):
             )
 
             for download in tmp_completed_downloads:
-                self.hass.bus.fire(
+                self.menuai.bus.fire(
                     "nzbget_download_complete",
                     {
                         "name": download[0],
@@ -95,6 +95,6 @@ class NZBGetDataUpdateCoordinator(DataUpdateCoordinator):
 
         try:
             async with asyncio.timeout(4):
-                return await self.hass.async_add_executor_job(_update_data)
+                return await self.menuai.async_add_executor_job(_update_data)
         except NZBGetAPIException as error:
             raise UpdateFailed(f"Invalid response from API: {error}") from error

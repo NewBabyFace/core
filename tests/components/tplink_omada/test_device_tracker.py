@@ -8,11 +8,11 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 from tplink_omada_client.clients import OmadaConnectedClient
 
-from homeassistant.components.tplink_omada.const import DOMAIN
-from homeassistant.components.tplink_omada.coordinator import POLL_CLIENTS
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.util.dt import utcnow
+from menuai.components.tplink_omada.const import DOMAIN
+from menuai.components.tplink_omada.coordinator import POLL_CLIENTS
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.util.dt import utcnow
 
 from tests.common import MockConfigEntry, async_fire_time_changed
 
@@ -30,7 +30,7 @@ MOCK_ENTRY_DATA = {
 
 @pytest.fixture
 async def init_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_omada_clients_only_client: MagicMock,
 ) -> MockConfigEntry:
     """Set up the TP-Link Omada integration for testing."""
@@ -40,16 +40,16 @@ async def init_integration(
         data=dict(MOCK_ENTRY_DATA),
         unique_id="12345",
     )
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     return mock_config_entry
 
 
 async def test_device_scanner_created(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_integration: MockConfigEntry,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
@@ -60,16 +60,16 @@ async def test_device_scanner_created(
 
     updated_entity = entity_registry.async_update_entity(entity_id, disabled_by=None)
     assert not updated_entity.disabled
-    async_fire_time_changed(hass, utcnow() + POLL_INTERVAL)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + POLL_INTERVAL)
+    await menuai.async_block_till_done()
 
-    entity = hass.states.get(entity_id)
+    entity = menuai.states.get(entity_id)
     assert entity is not None
     assert entity == snapshot
 
 
 async def test_device_scanner_update_to_away_nulls_properties(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_omada_clients_only_site_client: MagicMock,
     init_integration: MockConfigEntry,
     snapshot: SnapshotAssertion,
@@ -81,18 +81,18 @@ async def test_device_scanner_update_to_away_nulls_properties(
 
     updated_entity = entity_registry.async_update_entity(entity_id, disabled_by=None)
     assert not updated_entity.disabled
-    async_fire_time_changed(hass, utcnow() + POLL_INTERVAL)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + POLL_INTERVAL)
+    await menuai.async_block_till_done()
 
-    entity = hass.states.get(entity_id)
+    entity = menuai.states.get(entity_id)
     await _setup_client_disconnect(
         mock_omada_clients_only_site_client, "2C-71-FF-ED-34-83"
     )
 
-    async_fire_time_changed(hass, utcnow() + (POLL_INTERVAL * 2))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + (POLL_INTERVAL * 2))
+    await menuai.async_block_till_done()
 
-    entity = hass.states.get(entity_id)
+    entity = menuai.states.get(entity_id)
     assert entity is not None
     assert entity == snapshot
 

@@ -1,16 +1,16 @@
-"""Config flow for Home Assistant Supervisor integration."""
+"""Config flow for MenuAI Supervisor integration."""
 
 from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
 
 from .const import DOMAIN
 
 
-class HassIoConfigFlow(ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for Home Assistant Supervisor."""
+class menuaiIoConfigFlow(ConfigFlow, domain=DOMAIN):
+    """Handle a config flow for MenuAI Supervisor."""
 
     VERSION = 1
 

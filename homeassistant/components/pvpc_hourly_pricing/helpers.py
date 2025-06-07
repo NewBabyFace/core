@@ -9,7 +9,7 @@ from aiopvpc.const import (
     TARIFFS,
 )
 
-from homeassistant.helpers.entity_registry import RegistryEntry
+from menuai.helpers.entity_registry import RegistryEntry
 
 _ha_uniqueid_to_sensor_key = {
     TARIFFS[0]: KEY_PVPC,

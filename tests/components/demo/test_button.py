@@ -5,11 +5,11 @@ from unittest.mock import patch
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
-from homeassistant.const import ATTR_ENTITY_ID, STATE_UNKNOWN, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
+from menuai.const import ATTR_ENTITY_ID, STATE_UNKNOWN, Platform
+from menuai.core import menuai
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 ENTITY_PUSH = "button.push"
 
@@ -18,43 +18,43 @@ ENTITY_PUSH = "button.push"
 async def button_only() -> None:
     """Enable only the button platform."""
     with patch(
-        "homeassistant.components.demo.COMPONENTS_WITH_CONFIG_ENTRY_DEMO_PLATFORM",
+        "menuai.components.demo.COMPONENTS_WITH_CONFIG_ENTRY_DEMO_PLATFORM",
         [Platform.BUTTON],
     ):
         yield
 
 
 @pytest.fixture(autouse=True)
-async def setup_demo_button(hass: HomeAssistant, button_only) -> None:
+async def setup_demo_button(menuai: menuai, button_only) -> None:
     """Initialize setup demo button entity."""
     assert await async_setup_component(
-        hass, BUTTON_DOMAIN, {"button": {"platform": "demo"}}
+        menuai, BUTTON_DOMAIN, {"button": {"platform": "demo"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
-def test_setup_params(hass: HomeAssistant) -> None:
+def test_setup_params(menuai: menuai) -> None:
     """Test the initial parameters."""
-    state = hass.states.get(ENTITY_PUSH)
+    state = menuai.states.get(ENTITY_PUSH)
     assert state
     assert state.state == STATE_UNKNOWN
 
 
-async def test_press(hass: HomeAssistant, freezer: FrozenDateTimeFactory) -> None:
+async def test_press(menuai: menuai, freezer: FrozenDateTimeFactory) -> None:
     """Test pressing the button."""
-    state = hass.states.get(ENTITY_PUSH)
+    state = menuai.states.get(ENTITY_PUSH)
     assert state
     assert state.state == STATE_UNKNOWN
 
     now = dt_util.parse_datetime("2021-01-09 12:00:00+00:00")
     freezer.move_to(now)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         BUTTON_DOMAIN,
         SERVICE_PRESS,
         {ATTR_ENTITY_ID: ENTITY_PUSH},
         blocking=True,
     )
 
-    state = hass.states.get(ENTITY_PUSH)
+    state = menuai.states.get(ENTITY_PUSH)
     assert state
     assert state.state == now.isoformat()

@@ -2,34 +2,34 @@
 
 from unittest.mock import Mock
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_EFFECT,
     DOMAIN as LIGHT_DOMAIN,
     ColorMode,
 )
-from homeassistant.const import ATTR_ENTITY_ID, SERVICE_TURN_ON, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er, issue_registry as ir
-from homeassistant.util.json import JsonArrayType
+from menuai.const import ATTR_ENTITY_ID, SERVICE_TURN_ON, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er, issue_registry as ir
+from menuai.util.json import JsonArrayType
 
 from .conftest import setup_platform
 from .const import FAKE_DEVICE, FAKE_LIGHT, FAKE_ZIGBEE_CONNECTIVITY
 
 
 async def test_lights(
-    hass: HomeAssistant, mock_bridge_v2: Mock, v2_resources_test_data: JsonArrayType
+    menuai: menuai, mock_bridge_v2: Mock, v2_resources_test_data: JsonArrayType
 ) -> None:
     """Test if all v2 lights get created with correct features."""
     await mock_bridge_v2.api.load_test_data(v2_resources_test_data)
 
-    await setup_platform(hass, mock_bridge_v2, Platform.LIGHT)
+    await setup_platform(menuai, mock_bridge_v2, Platform.LIGHT)
     # there shouldn't have been any requests at this point
     assert len(mock_bridge_v2.mock_requests) == 0
     # 8 entities should be created from test data
-    assert len(hass.states.async_all()) == 8
+    assert len(menuai.states.async_all()) == 8
 
     # test light which supports color and color temperature
-    light_1 = hass.states.get("light.hue_light_with_color_and_color_temperature_1")
+    light_1 = menuai.states.get("light.hue_light_with_color_and_color_temperature_1")
     assert light_1 is not None
     assert (
         light_1.attributes["friendly_name"]
@@ -51,7 +51,7 @@ async def test_lights(
     assert light_1.attributes["effect"] == "off"
 
     # test light which supports color temperature only
-    light_2 = hass.states.get("light.hue_light_with_color_temperature_only")
+    light_2 = menuai.states.get("light.hue_light_with_color_temperature_only")
     assert light_2 is not None
     assert (
         light_2.attributes["friendly_name"] == "Hue light with color temperature only"
@@ -65,7 +65,7 @@ async def test_lights(
     assert light_2.attributes["effect_list"] == ["off", "candle", "sunrise"]
 
     # test light which supports color only
-    light_3 = hass.states.get("light.hue_light_with_color_only")
+    light_3 = menuai.states.get("light.hue_light_with_color_only")
     assert light_3 is not None
     assert light_3.attributes["friendly_name"] == "Hue light with color only"
     assert light_3.state == "on"
@@ -76,7 +76,7 @@ async def test_lights(
     assert light_3.attributes["dynamics"] == "dynamic_palette"
 
     # test light which supports on/off only
-    light_4 = hass.states.get("light.hue_on_off_light")
+    light_4 = menuai.states.get("light.hue_on_off_light")
     assert light_4 is not None
     assert light_4.attributes["friendly_name"] == "Hue on/off light"
     assert light_4.state == "off"
@@ -85,20 +85,20 @@ async def test_lights(
 
 
 async def test_light_turn_on_service(
-    hass: HomeAssistant, mock_bridge_v2: Mock, v2_resources_test_data: JsonArrayType
+    menuai: menuai, mock_bridge_v2: Mock, v2_resources_test_data: JsonArrayType
 ) -> None:
     """Test calling the turn on service on a light."""
     await mock_bridge_v2.api.load_test_data(v2_resources_test_data)
 
-    await setup_platform(hass, mock_bridge_v2, Platform.LIGHT)
+    await setup_platform(menuai, mock_bridge_v2, Platform.LIGHT)
 
     test_light_id = "light.hue_light_with_color_temperature_only"
 
     # verify the light is off before we start
-    assert hass.states.get(test_light_id).state == "off"
+    assert menuai.states.get(test_light_id).state == "off"
 
     # now call the HA turn_on service
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": test_light_id, "brightness_pct": 100, "color_temp": 300},
@@ -119,10 +119,10 @@ async def test_light_turn_on_service(
         **mock_bridge_v2.mock_requests[0]["json"],
     }
     mock_bridge_v2.api.emit_event("update", event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # the light should now be on
-    test_light = hass.states.get(test_light_id)
+    test_light = menuai.states.get(test_light_id)
     assert test_light is not None
     assert test_light.state == "on"
     assert test_light.attributes["mode"] == "normal"
@@ -131,7 +131,7 @@ async def test_light_turn_on_service(
     assert test_light.attributes["brightness"] == 255
 
     # test again with sending transition with 250ms which should round up to 200ms
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": test_light_id, "brightness_pct": 50, "transition": 0.25},
@@ -142,7 +142,7 @@ async def test_light_turn_on_service(
     assert mock_bridge_v2.mock_requests[1]["json"]["dynamics"]["duration"] == 200
 
     # test again with sending long flash
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": test_light_id, "flash": "long"},
@@ -152,7 +152,7 @@ async def test_light_turn_on_service(
     assert mock_bridge_v2.mock_requests[2]["json"]["alert"]["action"] == "breathe"
 
     # test again with sending short flash
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": test_light_id, "flash": "short"},
@@ -163,7 +163,7 @@ async def test_light_turn_on_service(
 
     # test again with sending a colortemperature which is out of range
     # which should be normalized to the upper/lower bounds Hue can handle
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": test_light_id, "color_temp": 50},
@@ -171,7 +171,7 @@ async def test_light_turn_on_service(
     )
     assert len(mock_bridge_v2.mock_requests) == 5
     assert mock_bridge_v2.mock_requests[4]["json"]["color_temperature"]["mirek"] == 153
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": test_light_id, "color_temp": 550},
@@ -181,7 +181,7 @@ async def test_light_turn_on_service(
     assert mock_bridge_v2.mock_requests[5]["json"]["color_temperature"]["mirek"] == 500
 
     # test enable an effect
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": test_light_id, "effect": "candle"},
@@ -196,14 +196,14 @@ async def test_light_turn_on_service(
         "effects": {"status": "candle"},
     }
     mock_bridge_v2.api.emit_event("update", event)
-    await hass.async_block_till_done()
-    test_light = hass.states.get(test_light_id)
+    await menuai.async_block_till_done()
+    test_light = menuai.states.get(test_light_id)
     assert test_light is not None
     assert test_light.attributes["effect"] == "candle"
 
     # test disable effect
     # it should send a request with effect set to "no_effect"
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": test_light_id, "effect": "off"},
@@ -218,14 +218,14 @@ async def test_light_turn_on_service(
         "effects": {"status": "no_effect"},
     }
     mock_bridge_v2.api.emit_event("update", event)
-    await hass.async_block_till_done()
-    test_light = hass.states.get(test_light_id)
+    await menuai.async_block_till_done()
+    test_light = menuai.states.get(test_light_id)
     assert test_light is not None
     assert test_light.attributes["effect"] == "off"
 
     # test turn on with useless effect
     # it should send a effect in the request if the device has no effect active
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": test_light_id, "effect": "off"},
@@ -235,7 +235,7 @@ async def test_light_turn_on_service(
     assert "effects" not in mock_bridge_v2.mock_requests[8]["json"]
 
     # test timed effect
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": test_light_id, "effect": "sunrise", "transition": 6},
@@ -248,7 +248,7 @@ async def test_light_turn_on_service(
     assert mock_bridge_v2.mock_requests[9]["json"]["timed_effects"]["duration"] == 6000
 
     # test enabling effect should ignore color temperature
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": test_light_id, "effect": "candle", "color_temp": 500},
@@ -259,7 +259,7 @@ async def test_light_turn_on_service(
     assert "color_temperature" not in mock_bridge_v2.mock_requests[10]["json"]
 
     # test enabling effect should ignore xy color
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": test_light_id, "effect": "candle", "xy_color": [0.123, 0.123]},
@@ -271,21 +271,21 @@ async def test_light_turn_on_service(
 
 
 async def test_light_turn_off_service(
-    hass: HomeAssistant, mock_bridge_v2: Mock, v2_resources_test_data: JsonArrayType
+    menuai: menuai, mock_bridge_v2: Mock, v2_resources_test_data: JsonArrayType
 ) -> None:
     """Test calling the turn off service on a light."""
     await mock_bridge_v2.api.load_test_data(v2_resources_test_data)
 
-    await setup_platform(hass, mock_bridge_v2, Platform.LIGHT)
+    await setup_platform(menuai, mock_bridge_v2, Platform.LIGHT)
 
     test_light_id = "light.hue_light_with_color_and_color_temperature_1"
 
     # verify the light is on before we start
-    assert hass.states.get(test_light_id).state == "on"
-    brightness_pct = hass.states.get(test_light_id).attributes["brightness"] / 255 * 100
+    assert menuai.states.get(test_light_id).state == "on"
+    brightness_pct = menuai.states.get(test_light_id).attributes["brightness"] / 255 * 100
 
     # now call the HA turn_off service
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_off",
         {"entity_id": test_light_id},
@@ -304,15 +304,15 @@ async def test_light_turn_off_service(
         **mock_bridge_v2.mock_requests[0]["json"],
     }
     mock_bridge_v2.api.emit_event("update", event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # the light should now be off
-    test_light = hass.states.get(test_light_id)
+    test_light = menuai.states.get(test_light_id)
     assert test_light is not None
     assert test_light.state == "off"
 
     # test again with sending transition
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_off",
         {"entity_id": test_light_id, "transition": 0.25},
@@ -323,7 +323,7 @@ async def test_light_turn_off_service(
     assert mock_bridge_v2.mock_requests[1]["json"]["dynamics"]["duration"] == 200
 
     # test turn_on resets brightness
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": test_light_id},
@@ -340,7 +340,7 @@ async def test_light_turn_off_service(
     )
 
     # test again with sending long flash
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_off",
         {"entity_id": test_light_id, "flash": "long"},
@@ -350,7 +350,7 @@ async def test_light_turn_off_service(
     assert mock_bridge_v2.mock_requests[3]["json"]["alert"]["action"] == "breathe"
 
     # test again with sending short flash
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_off",
         {"entity_id": test_light_id, "flash": "short"},
@@ -360,40 +360,40 @@ async def test_light_turn_off_service(
     assert mock_bridge_v2.mock_requests[4]["json"]["identify"]["action"] == "identify"
 
 
-async def test_light_added(hass: HomeAssistant, mock_bridge_v2: Mock) -> None:
+async def test_light_added(menuai: menuai, mock_bridge_v2: Mock) -> None:
     """Test new light added to bridge."""
     await mock_bridge_v2.api.load_test_data([FAKE_DEVICE, FAKE_ZIGBEE_CONNECTIVITY])
 
-    await setup_platform(hass, mock_bridge_v2, Platform.LIGHT)
+    await setup_platform(menuai, mock_bridge_v2, Platform.LIGHT)
 
     test_entity_id = "light.hue_mocked_device"
 
     # verify entity does not exist before we start
-    assert hass.states.get(test_entity_id) is None
+    assert menuai.states.get(test_entity_id) is None
 
     # Add new fake entity (and attached device and zigbee_connectivity) by emitting events
     mock_bridge_v2.api.emit_event("add", FAKE_LIGHT)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # the entity should now be available
-    test_entity = hass.states.get(test_entity_id)
+    test_entity = menuai.states.get(test_entity_id)
     assert test_entity is not None
     assert test_entity.state == "off"
     assert test_entity.attributes["friendly_name"] == FAKE_DEVICE["metadata"]["name"]
 
 
 async def test_light_availability(
-    hass: HomeAssistant, mock_bridge_v2: Mock, v2_resources_test_data: JsonArrayType
+    menuai: menuai, mock_bridge_v2: Mock, v2_resources_test_data: JsonArrayType
 ) -> None:
     """Test light availability property."""
     await mock_bridge_v2.api.load_test_data(v2_resources_test_data)
 
-    await setup_platform(hass, mock_bridge_v2, Platform.LIGHT)
+    await setup_platform(menuai, mock_bridge_v2, Platform.LIGHT)
 
     test_light_id = "light.hue_light_with_color_and_color_temperature_1"
 
     # verify entity does exist and is available before we start
-    test_light = hass.states.get(test_light_id)
+    test_light = menuai.states.get(test_light_id)
     assert test_light is not None
     assert test_light.state == "on"
 
@@ -407,15 +407,15 @@ async def test_light_availability(
                 "type": "zigbee_connectivity",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         # the entity should now be available only when zigbee is connected
-        test_light = hass.states.get(test_light_id)
+        test_light = menuai.states.get(test_light_id)
         assert test_light.state == "on" if status == "connected" else "unavailable"
 
 
 async def test_grouped_lights(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_bridge_v2: Mock,
     v2_resources_test_data: JsonArrayType,
@@ -423,7 +423,7 @@ async def test_grouped_lights(
     """Test if all v2 grouped lights get created with correct features."""
     await mock_bridge_v2.api.load_test_data(v2_resources_test_data)
 
-    await setup_platform(hass, mock_bridge_v2, Platform.LIGHT)
+    await setup_platform(menuai, mock_bridge_v2, Platform.LIGHT)
 
     # test if entities for hue groups are created and enabled by default
     for entity_id in ("light.test_zone", "light.test_room"):
@@ -434,7 +434,7 @@ async def test_grouped_lights(
         assert entity_entry.device_id is not None
 
     # test light created for hue zone
-    test_entity = hass.states.get("light.test_zone")
+    test_entity = menuai.states.get("light.test_zone")
     assert test_entity is not None
     assert test_entity.attributes["friendly_name"] == "Test Zone"
     assert test_entity.state == "on"
@@ -461,7 +461,7 @@ async def test_grouped_lights(
     }
 
     # test light created for hue room
-    test_entity = hass.states.get("light.test_room")
+    test_entity = menuai.states.get("light.test_room")
     assert test_entity is not None
     assert test_entity.attributes["friendly_name"] == "Test Room"
     assert test_entity.state == "off"
@@ -485,7 +485,7 @@ async def test_grouped_lights(
 
     # Test calling the turn on service on a grouped light
     test_light_id = "light.test_zone"
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {
@@ -517,11 +517,11 @@ async def test_grouped_lights(
             **mock_bridge_v2.mock_requests[0]["json"],
         }
         mock_bridge_v2.api.emit_event("update", event)
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # the light should now be on and have the properties we've set
-    test_light = hass.states.get(test_light_id)
+    test_light = menuai.states.get(test_light_id)
     assert test_light is not None
     assert test_light.state == "on"
     assert test_light.attributes["color_mode"] == ColorMode.XY
@@ -530,7 +530,7 @@ async def test_grouped_lights(
 
     # Test calling the turn off service on a grouped light.
     mock_bridge_v2.mock_requests.clear()
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_off",
         {"entity_id": test_light_id},
@@ -550,17 +550,17 @@ async def test_grouped_lights(
     }
     mock_bridge_v2.api.emit_event("update", event)
     mock_bridge_v2.api.emit_event("update", mock_bridge_v2.mock_requests[0]["json"])
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # the light should now be off
-    test_light = hass.states.get(test_light_id)
+    test_light = menuai.states.get(test_light_id)
     assert test_light is not None
     assert test_light.state == "off"
 
     # Test calling the turn off service on a grouped light with transition
     mock_bridge_v2.mock_requests.clear()
     test_light_id = "light.test_zone"
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_off",
         {
@@ -576,7 +576,7 @@ async def test_grouped_lights(
     assert mock_bridge_v2.mock_requests[0]["json"]["dynamics"]["duration"] == 200
 
     # Test turn_on resets brightness
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": test_light_id},
@@ -589,7 +589,7 @@ async def test_grouped_lights(
     # Test sending short flash effect to a grouped light
     mock_bridge_v2.mock_requests.clear()
     test_light_id = "light.test_zone"
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {
@@ -610,7 +610,7 @@ async def test_grouped_lights(
     # Test sending long flash effect to a grouped light
     mock_bridge_v2.mock_requests.clear()
     test_light_id = "light.test_zone"
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {
@@ -627,7 +627,7 @@ async def test_grouped_lights(
     # Test sending flash effect in turn_off call
     mock_bridge_v2.mock_requests.clear()
     test_light_id = "light.test_zone"
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_off",
         {
@@ -647,7 +647,7 @@ async def test_grouped_lights(
 
 
 async def test_light_turn_on_service_deprecation(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_bridge_v2: Mock,
     v2_resources_test_data: JsonArrayType,
     issue_registry: ir.IssueRegistry,
@@ -657,7 +657,7 @@ async def test_light_turn_on_service_deprecation(
 
     test_light_id = "light.hue_light_with_color_temperature_only"
 
-    await setup_platform(hass, mock_bridge_v2, Platform.LIGHT)
+    await setup_platform(menuai, mock_bridge_v2, Platform.LIGHT)
 
     event = {
         "id": "3a6710fa-4474-4eba-b533-5e6e72968feb",
@@ -665,11 +665,11 @@ async def test_light_turn_on_service_deprecation(
         "effects": {"status": "candle"},
     }
     mock_bridge_v2.api.emit_event("update", event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # test disable effect
     # it should send a request with effect set to "no_effect"
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {

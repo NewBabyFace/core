@@ -10,10 +10,10 @@ from total_connect_client.exceptions import (
     TotalConnectError,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN
 
@@ -30,14 +30,14 @@ class TotalConnectDataUpdateCoordinator(DataUpdateCoordinator[None]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: TotalConnectConfigEntry,
         client: TotalConnectClient,
     ) -> None:
         """Initialize."""
         self.client = client
         super().__init__(
-            hass,
+            menuai,
             logger=_LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -46,7 +46,7 @@ class TotalConnectDataUpdateCoordinator(DataUpdateCoordinator[None]):
 
     async def _async_update_data(self) -> None:
         """Update data."""
-        await self.hass.async_add_executor_job(self.sync_update_data)
+        await self.menuai.async_add_executor_job(self.sync_update_data)
 
     def sync_update_data(self) -> None:
         """Fetch synchronous data from TotalConnect."""

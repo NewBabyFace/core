@@ -5,26 +5,26 @@ import uuid
 
 import pytest
 
-from homeassistant.auth import AuthManager, auth_store, models as auth_models
-from homeassistant.auth.providers import insecure_example
-from homeassistant.core import HomeAssistant
+from menuai.auth import AuthManager, auth_store, models as auth_models
+from menuai.auth.providers import insecure_example
+from menuai.core import menuai
 
 
 @pytest.fixture
-async def store(hass: HomeAssistant) -> auth_store.AuthStore:
+async def store(menuai: menuai) -> auth_store.AuthStore:
     """Mock store."""
-    store = auth_store.AuthStore(hass)
+    store = auth_store.AuthStore(menuai)
     await store.async_load()
     return store
 
 
 @pytest.fixture
 def provider(
-    hass: HomeAssistant, store: auth_store.AuthStore
+    menuai: menuai, store: auth_store.AuthStore
 ) -> insecure_example.ExampleAuthProvider:
     """Mock provider."""
     return insecure_example.ExampleAuthProvider(
-        hass,
+        menuai,
         store,
         {
             "type": "insecure_example",
@@ -42,12 +42,12 @@ def provider(
 
 @pytest.fixture
 def manager(
-    hass: HomeAssistant,
+    menuai: menuai,
     store: auth_store.AuthStore,
     provider: insecure_example.ExampleAuthProvider,
 ) -> AuthManager:
     """Mock manager."""
-    return AuthManager(hass, store, {(provider.type, provider.id): provider}, {})
+    return AuthManager(menuai, store, {(provider.type, provider.id): provider}, {})
 
 
 async def test_create_new_credential(

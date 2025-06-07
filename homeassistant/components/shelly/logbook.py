@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from homeassistant.components.logbook import LOGBOOK_ENTRY_MESSAGE, LOGBOOK_ENTRY_NAME
-from homeassistant.const import ATTR_DEVICE_ID
-from homeassistant.core import Event, HomeAssistant, callback
+from menuai.components.logbook import LOGBOOK_ENTRY_MESSAGE, LOGBOOK_ENTRY_NAME
+from menuai.const import ATTR_DEVICE_ID
+from menuai.core import Event, menuai, callback
 
 from .const import (
     ATTR_CHANNEL,
@@ -26,7 +26,7 @@ from .utils import get_rpc_entity_name
 
 @callback
 def async_describe_events(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_describe_event: Callable[[str, str, Callable[[Event], dict]], None],
 ) -> None:
     """Describe logbook events."""
@@ -40,13 +40,13 @@ def async_describe_events(
         input_name = f"{event.data[ATTR_DEVICE]} channel {channel}"
 
         if click_type in RPC_INPUTS_EVENTS_TYPES:
-            rpc_coordinator = get_rpc_coordinator_by_device_id(hass, device_id)
+            rpc_coordinator = get_rpc_coordinator_by_device_id(menuai, device_id)
             if rpc_coordinator and rpc_coordinator.device.initialized:
                 key = f"input:{channel - 1}"
                 input_name = f"{rpc_coordinator.device.name} {get_rpc_entity_name(rpc_coordinator.device, key)}"
 
         elif click_type in BLOCK_INPUTS_EVENTS_TYPES:
-            block_coordinator = get_block_coordinator_by_device_id(hass, device_id)
+            block_coordinator = get_block_coordinator_by_device_id(menuai, device_id)
             if block_coordinator and block_coordinator.device.initialized:
                 input_name = f"{block_coordinator.device.name} channel {channel}"
 

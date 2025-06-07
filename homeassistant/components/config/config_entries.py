@@ -10,21 +10,21 @@ from aiohttp import web
 import aiohttp.web_exceptions
 import voluptuous as vol
 
-from homeassistant import config_entries, data_entry_flow
-from homeassistant.auth.permissions.const import CAT_CONFIG_ENTRIES, POLICY_EDIT
-from homeassistant.components import websocket_api
-from homeassistant.components.http import KEY_HASS, HomeAssistantView, require_admin
-from homeassistant.components.http.data_validator import RequestDataValidator
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import DependencyError, Unauthorized
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.data_entry_flow import (
+from menuai import config_entries, data_entry_flow
+from menuai.auth.permissions.const import CAT_CONFIG_ENTRIES, POLICY_EDIT
+from menuai.components import websocket_api
+from menuai.components.http import KEY_menuai, menuaiView, require_admin
+from menuai.components.http.data_validator import RequestDataValidator
+from menuai.core import menuai, callback
+from menuai.exceptions import DependencyError, Unauthorized
+from menuai.helpers import config_validation as cv
+from menuai.helpers.data_entry_flow import (
     FlowManagerIndexView,
     FlowManagerResourceView,
 )
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.json import json_fragment
-from homeassistant.loader import (
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.json import json_fragment
+from menuai.loader import (
     Integration,
     IntegrationNotFound,
     async_get_config_flows,
@@ -34,41 +34,41 @@ from homeassistant.loader import (
 
 
 @callback
-def async_setup(hass: HomeAssistant) -> bool:
-    """Enable the Home Assistant views."""
-    hass.http.register_view(ConfigManagerEntryIndexView)
-    hass.http.register_view(ConfigManagerEntryResourceView)
-    hass.http.register_view(ConfigManagerEntryResourceReloadView)
-    hass.http.register_view(ConfigManagerFlowIndexView(hass.config_entries.flow))
-    hass.http.register_view(ConfigManagerFlowResourceView(hass.config_entries.flow))
-    hass.http.register_view(ConfigManagerAvailableFlowView)
+def async_setup(menuai: menuai) -> bool:
+    """Enable the MenuAI views."""
+    menuai.http.register_view(ConfigManagerEntryIndexView)
+    menuai.http.register_view(ConfigManagerEntryResourceView)
+    menuai.http.register_view(ConfigManagerEntryResourceReloadView)
+    menuai.http.register_view(ConfigManagerFlowIndexView(menuai.config_entries.flow))
+    menuai.http.register_view(ConfigManagerFlowResourceView(menuai.config_entries.flow))
+    menuai.http.register_view(ConfigManagerAvailableFlowView)
 
-    hass.http.register_view(OptionManagerFlowIndexView(hass.config_entries.options))
-    hass.http.register_view(OptionManagerFlowResourceView(hass.config_entries.options))
+    menuai.http.register_view(OptionManagerFlowIndexView(menuai.config_entries.options))
+    menuai.http.register_view(OptionManagerFlowResourceView(menuai.config_entries.options))
 
-    hass.http.register_view(
-        SubentryManagerFlowIndexView(hass.config_entries.subentries)
+    menuai.http.register_view(
+        SubentryManagerFlowIndexView(menuai.config_entries.subentries)
     )
-    hass.http.register_view(
-        SubentryManagerFlowResourceView(hass.config_entries.subentries)
+    menuai.http.register_view(
+        SubentryManagerFlowResourceView(menuai.config_entries.subentries)
     )
 
-    websocket_api.async_register_command(hass, config_entries_get)
-    websocket_api.async_register_command(hass, config_entry_disable)
-    websocket_api.async_register_command(hass, config_entry_get_single)
-    websocket_api.async_register_command(hass, config_entry_update)
-    websocket_api.async_register_command(hass, config_entries_subscribe)
-    websocket_api.async_register_command(hass, config_entries_flow_progress)
-    websocket_api.async_register_command(hass, config_entries_flow_subscribe)
-    websocket_api.async_register_command(hass, ignore_config_flow)
+    websocket_api.async_register_command(menuai, config_entries_get)
+    websocket_api.async_register_command(menuai, config_entry_disable)
+    websocket_api.async_register_command(menuai, config_entry_get_single)
+    websocket_api.async_register_command(menuai, config_entry_update)
+    websocket_api.async_register_command(menuai, config_entries_subscribe)
+    websocket_api.async_register_command(menuai, config_entries_flow_progress)
+    websocket_api.async_register_command(menuai, config_entries_flow_subscribe)
+    websocket_api.async_register_command(menuai, ignore_config_flow)
 
-    websocket_api.async_register_command(hass, config_subentry_delete)
-    websocket_api.async_register_command(hass, config_subentry_list)
+    websocket_api.async_register_command(menuai, config_subentry_delete)
+    websocket_api.async_register_command(menuai, config_subentry_list)
 
     return True
 
 
-class ConfigManagerEntryIndexView(HomeAssistantView):
+class ConfigManagerEntryIndexView(menuaiView):
     """View to get available config entries."""
 
     url = "/api/config/config_entries/entry"
@@ -76,7 +76,7 @@ class ConfigManagerEntryIndexView(HomeAssistantView):
 
     async def get(self, request: web.Request) -> web.Response:
         """List available config entries."""
-        hass = request.app[KEY_HASS]
+        menuai = request.app[KEY_menuai]
         domain = None
         if "domain" in request.query:
             domain = request.query["domain"]
@@ -84,12 +84,12 @@ class ConfigManagerEntryIndexView(HomeAssistantView):
         if "type" in request.query:
             type_filter = [request.query["type"]]
         fragments = await _async_matching_config_entries_json_fragments(
-            hass, type_filter, domain
+            menuai, type_filter, domain
         )
         return self.json(fragments)
 
 
-class ConfigManagerEntryResourceView(HomeAssistantView):
+class ConfigManagerEntryResourceView(menuaiView):
     """View to interact with a config entry."""
 
     url = "/api/config/config_entries/entry/{entry_id}"
@@ -97,20 +97,20 @@ class ConfigManagerEntryResourceView(HomeAssistantView):
 
     async def delete(self, request: web.Request, entry_id: str) -> web.Response:
         """Delete a config entry."""
-        if not request["hass_user"].is_admin:
+        if not request["menuai_user"].is_admin:
             raise Unauthorized(config_entry_id=entry_id, permission="remove")
 
-        hass = request.app[KEY_HASS]
+        menuai = request.app[KEY_menuai]
 
         try:
-            result = await hass.config_entries.async_remove(entry_id)
+            result = await menuai.config_entries.async_remove(entry_id)
         except config_entries.UnknownEntry:
             return self.json_message("Invalid entry specified", HTTPStatus.NOT_FOUND)
 
         return self.json(result)
 
 
-class ConfigManagerEntryResourceReloadView(HomeAssistantView):
+class ConfigManagerEntryResourceReloadView(menuaiView):
     """View to reload a config entry."""
 
     url = "/api/config/config_entries/entry/{entry_id}/reload"
@@ -118,17 +118,17 @@ class ConfigManagerEntryResourceReloadView(HomeAssistantView):
 
     async def post(self, request: web.Request, entry_id: str) -> web.Response:
         """Reload a config entry."""
-        if not request["hass_user"].is_admin:
+        if not request["menuai_user"].is_admin:
             raise Unauthorized(config_entry_id=entry_id, permission="remove")
 
-        hass = request.app[KEY_HASS]
-        entry = hass.config_entries.async_get_entry(entry_id)
+        menuai = request.app[KEY_menuai]
+        entry = menuai.config_entries.async_get_entry(entry_id)
         if not entry:
             return self.json_message("Invalid entry specified", HTTPStatus.NOT_FOUND)
         assert isinstance(entry, config_entries.ConfigEntry)
 
         try:
-            await hass.config_entries.async_reload(entry_id)
+            await menuai.config_entries.async_reload(entry_id)
         except config_entries.OperationNotAllowed:
             return self.json_message("Entry cannot be reloaded", HTTPStatus.FORBIDDEN)
 
@@ -233,7 +233,7 @@ class ConfigManagerFlowResourceView(
         return _prepare_config_flow_result_json(result, super()._prepare_result_json)
 
 
-class ConfigManagerAvailableFlowView(HomeAssistantView):
+class ConfigManagerAvailableFlowView(menuaiView):
     """View to query available flows."""
 
     url = "/api/config/config_entries/flow_handlers"
@@ -241,11 +241,11 @@ class ConfigManagerAvailableFlowView(HomeAssistantView):
 
     async def get(self, request: web.Request) -> web.Response:
         """List available flow handlers."""
-        hass = request.app[KEY_HASS]
+        menuai = request.app[KEY_menuai]
         kwargs: dict[str, Any] = {}
         if "type" in request.query:
             kwargs["type_filter"] = request.query["type"]
-        return self.json(await async_get_config_flows(hass, **kwargs))
+        return self.json(await async_get_config_flows(menuai, **kwargs))
 
 
 class OptionManagerFlowIndexView(
@@ -341,7 +341,7 @@ class SubentryManagerFlowResourceView(
 @websocket_api.require_admin
 @websocket_api.websocket_command({"type": "config_entries/flow/progress"})
 def config_entries_flow_progress(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
@@ -354,7 +354,7 @@ def config_entries_flow_progress(
         msg["id"],
         [
             flw
-            for flw in hass.config_entries.flow.async_progress()
+            for flw in menuai.config_entries.flow.async_progress()
             if flw["context"]["source"]
             not in (config_entries.SOURCE_RECONFIGURE, config_entries.SOURCE_USER)
         ],
@@ -364,7 +364,7 @@ def config_entries_flow_progress(
 @websocket_api.require_admin
 @websocket_api.websocket_command({"type": "config_entries/flow/subscribe"})
 def config_entries_flow_subscribe(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
@@ -395,13 +395,13 @@ def config_entries_flow_subscribe(
                     {
                         "type": change_type,
                         "flow_id": flow_id,
-                        "flow": hass.config_entries.flow.async_get(flow_id),
+                        "flow": menuai.config_entries.flow.async_get(flow_id),
                     }
                 ],
             )
         )
 
-    connection.subscriptions[msg["id"]] = hass.config_entries.flow.async_subscribe_flow(
+    connection.subscriptions[msg["id"]] = menuai.config_entries.flow.async_subscribe_flow(
         async_on_flow_init_remove
     )
     connection.send_message(
@@ -409,7 +409,7 @@ def config_entries_flow_subscribe(
             msg["id"],
             [
                 {"type": None, "flow_id": flw["flow_id"], "flow": flw}
-                for flw in hass.config_entries.flow.async_progress()
+                for flw in menuai.config_entries.flow.async_progress()
                 if flw["context"]["source"]
                 not in (
                     config_entries.SOURCE_RECONFIGURE,
@@ -429,13 +429,13 @@ def send_entry_not_found(
 
 
 def get_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     entry_id: str,
     msg_id: int,
 ) -> config_entries.ConfigEntry | None:
     """Get entry, send error message if it doesn't exist."""
-    if (entry := hass.config_entries.async_get_entry(entry_id)) is None:
+    if (entry := menuai.config_entries.async_get_entry(entry_id)) is None:
         send_entry_not_found(connection, msg_id)
     return entry
 
@@ -449,12 +449,12 @@ def get_entry(
 )
 @websocket_api.async_response
 async def config_entry_get_single(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Update config entry."""
-    entry = get_entry(hass, connection, msg["entry_id"], msg["id"])
+    entry = get_entry(menuai, connection, msg["entry_id"], msg["id"])
     if entry is None:
         return
 
@@ -474,7 +474,7 @@ async def config_entry_get_single(
 )
 @websocket_api.async_response
 async def config_entry_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
@@ -484,13 +484,13 @@ async def config_entry_update(
     changes.pop("type")
     changes.pop("entry_id")
 
-    entry = get_entry(hass, connection, msg["entry_id"], msg["id"])
+    entry = get_entry(menuai, connection, msg["entry_id"], msg["id"])
     if entry is None:
         return
 
     old_disable_polling = entry.pref_disable_polling
 
-    hass.config_entries.async_update_entry(entry, **changes)
+    menuai.config_entries.async_update_entry(entry, **changes)
 
     result = {
         "config_entry": entry.as_json_fragment,
@@ -502,7 +502,7 @@ async def config_entry_update(
         old_disable_polling != entry.pref_disable_polling
         and initial_state is config_entries.ConfigEntryState.LOADED
     ):
-        if not await hass.config_entries.async_reload(entry.entry_id):
+        if not await menuai.config_entries.async_reload(entry.entry_id):
             result["require_restart"] = (
                 entry.state is config_entries.ConfigEntryState.FAILED_UNLOAD
             )
@@ -522,7 +522,7 @@ async def config_entry_update(
 )
 @websocket_api.async_response
 async def config_entry_disable(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
@@ -532,7 +532,7 @@ async def config_entry_disable(
 
     success = False
     try:
-        success = await hass.config_entries.async_set_disabled_by(
+        success = await menuai.config_entries.async_set_disabled_by(
             msg["entry_id"], disabled_by
         )
     except config_entries.OperationNotAllowed:
@@ -553,7 +553,7 @@ async def config_entry_disable(
 )
 @websocket_api.async_response
 async def ignore_config_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
@@ -561,7 +561,7 @@ async def ignore_config_flow(
     flow = next(
         (
             flw
-            for flw in hass.config_entries.flow.async_progress()
+            for flw in menuai.config_entries.flow.async_progress()
             if flw["flow_id"] == msg["flow_id"]
         ),
         None,
@@ -580,7 +580,7 @@ async def ignore_config_flow(
     context = config_entries.ConfigFlowContext(source=config_entries.SOURCE_IGNORE)
     if "discovery_key" in flow["context"]:
         context["discovery_key"] = flow["context"]["discovery_key"]
-    await hass.config_entries.flow.async_init(
+    await menuai.config_entries.flow.async_init(
         flow["handler"],
         context=context,
         data={"unique_id": flow["context"]["unique_id"], "title": msg["title"]},
@@ -597,13 +597,13 @@ async def ignore_config_flow(
 )
 @websocket_api.async_response
 async def config_entries_get(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Return matching config entries by type and/or domain."""
     fragments = await _async_matching_config_entries_json_fragments(
-        hass, msg.get("type_filter"), msg.get("domain")
+        menuai, msg.get("type_filter"), msg.get("domain")
     )
     connection.send_result(msg["id"], fragments)
 
@@ -616,7 +616,7 @@ async def config_entries_get(
 )
 @websocket_api.async_response
 async def config_entries_subscribe(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
@@ -629,7 +629,7 @@ async def config_entries_subscribe(
     ) -> None:
         """Forward config entry state events to websocket."""
         if type_filter:
-            integration = async_get_loaded_integration(hass, entry.domain)
+            integration = async_get_loaded_integration(menuai, entry.domain)
             if integration.integration_type not in type_filter:
                 return
 
@@ -646,10 +646,10 @@ async def config_entries_subscribe(
         )
 
     current_entries = await _async_matching_config_entries_json_fragments(
-        hass, type_filter, None
+        menuai, type_filter, None
     )
     connection.subscriptions[msg["id"]] = async_dispatcher_connect(
-        hass,
+        menuai,
         config_entries.SIGNAL_CONFIG_ENTRY_CHANGED,
         async_forward_config_entry_changes,
     )
@@ -662,13 +662,13 @@ async def config_entries_subscribe(
 
 
 async def _async_matching_config_entries_json_fragments(
-    hass: HomeAssistant, type_filter: list[str] | None, domain: str | None
+    menuai: menuai, type_filter: list[str] | None, domain: str | None
 ) -> list[json_fragment]:
     """Return matching config entries by type and/or domain."""
     if domain:
-        entries = hass.config_entries.async_entries(domain)
+        entries = menuai.config_entries.async_entries(domain)
     else:
-        entries = hass.config_entries.async_entries()
+        entries = menuai.config_entries.async_entries()
 
     if not type_filter:
         return [entry.as_json_fragment for entry in entries]
@@ -677,7 +677,7 @@ async def _async_matching_config_entries_json_fragments(
     # Fetch all the integrations so we can check their type
     domains = {entry.domain for entry in entries}
     for domain_key, integration_or_exc in (
-        await async_get_integrations(hass, domains)
+        await async_get_integrations(menuai, domains)
     ).items():
         if isinstance(integration_or_exc, Integration):
             integrations[domain_key] = integration_or_exc
@@ -713,12 +713,12 @@ async def _async_matching_config_entries_json_fragments(
 )
 @websocket_api.async_response
 async def config_subentry_list(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """List subentries of a config entry."""
-    entry = get_entry(hass, connection, msg["entry_id"], msg["id"])
+    entry = get_entry(menuai, connection, msg["entry_id"], msg["id"])
     if entry is None:
         return
 
@@ -744,17 +744,17 @@ async def config_subentry_list(
 )
 @websocket_api.async_response
 async def config_subentry_delete(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Delete a subentry of a config entry."""
-    entry = get_entry(hass, connection, msg["entry_id"], msg["id"])
+    entry = get_entry(menuai, connection, msg["entry_id"], msg["id"])
     if entry is None:
         return
 
     try:
-        hass.config_entries.async_remove_subentry(entry, msg["subentry_id"])
+        menuai.config_entries.async_remove_subentry(entry, msg["subentry_id"])
     except config_entries.UnknownSubEntry:
         connection.send_error(
             msg["id"], websocket_api.const.ERR_NOT_FOUND, "Config subentry not found"

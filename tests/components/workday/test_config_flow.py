@@ -8,8 +8,8 @@ from freezegun.api import FrozenDateTimeFactory
 from holidays import HALF_DAY, OPTIONAL
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.workday.const import (
+from menuai import config_entries
+from menuai.components.workday.const import (
     CONF_ADD_HOLIDAYS,
     CONF_CATEGORY,
     CONF_EXCLUDES,
@@ -21,32 +21,32 @@ from homeassistant.components.workday.const import (
     DEFAULT_WORKDAYS,
     DOMAIN,
 )
-from homeassistant.const import CONF_COUNTRY, CONF_LANGUAGE, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.util.dt import UTC
+from menuai.const import CONF_COUNTRY, CONF_LANGUAGE, CONF_NAME
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.util.dt import UTC
 
 from . import init_integration
 
 
 @pytest.mark.usefixtures("mock_setup_entry")
-async def test_form(hass: HomeAssistant) -> None:
+async def test_form(menuai: menuai) -> None:
     """Test we get the forms."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_NAME: "Workday Sensor",
             CONF_COUNTRY: "DE",
         },
     )
-    await hass.async_block_till_done()
-    result3 = await hass.config_entries.flow.async_configure(
+    await menuai.async_block_till_done()
+    result3 = await menuai.config_entries.flow.async_configure(
         result2["flow_id"],
         {
             CONF_EXCLUDES: DEFAULT_EXCLUDES,
@@ -57,7 +57,7 @@ async def test_form(hass: HomeAssistant) -> None:
             CONF_LANGUAGE: "en_US",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.CREATE_ENTRY
     assert result3["title"] == "Workday Sensor"
@@ -74,23 +74,23 @@ async def test_form(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("mock_setup_entry")
-async def test_form_province_no_alias(hass: HomeAssistant) -> None:
+async def test_form_province_no_alias(menuai: menuai) -> None:
     """Test we get the forms."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_NAME: "Workday Sensor",
             CONF_COUNTRY: "US",
         },
     )
-    await hass.async_block_till_done()
-    result3 = await hass.config_entries.flow.async_configure(
+    await menuai.async_block_till_done()
+    result3 = await menuai.config_entries.flow.async_configure(
         result2["flow_id"],
         {
             CONF_EXCLUDES: DEFAULT_EXCLUDES,
@@ -100,7 +100,7 @@ async def test_form_province_no_alias(hass: HomeAssistant) -> None:
             CONF_REMOVE_HOLIDAYS: [],
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.CREATE_ENTRY
     assert result3["title"] == "Workday Sensor"
@@ -116,22 +116,22 @@ async def test_form_province_no_alias(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("mock_setup_entry")
-async def test_form_no_country(hass: HomeAssistant) -> None:
+async def test_form_no_country(menuai: menuai) -> None:
     """Test we get the forms correctly without a country."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_NAME: "Workday Sensor",
         },
     )
-    await hass.async_block_till_done()
-    result3 = await hass.config_entries.flow.async_configure(
+    await menuai.async_block_till_done()
+    result3 = await menuai.config_entries.flow.async_configure(
         result2["flow_id"],
         {
             CONF_EXCLUDES: DEFAULT_EXCLUDES,
@@ -141,7 +141,7 @@ async def test_form_no_country(hass: HomeAssistant) -> None:
             CONF_REMOVE_HOLIDAYS: [],
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.CREATE_ENTRY
     assert result3["title"] == "Workday Sensor"
@@ -156,23 +156,23 @@ async def test_form_no_country(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("mock_setup_entry")
-async def test_form_no_subdivision(hass: HomeAssistant) -> None:
+async def test_form_no_subdivision(menuai: menuai) -> None:
     """Test we get the forms correctly without subdivision."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_NAME: "Workday Sensor",
             CONF_COUNTRY: "SE",
         },
     )
-    await hass.async_block_till_done()
-    result3 = await hass.config_entries.flow.async_configure(
+    await menuai.async_block_till_done()
+    result3 = await menuai.config_entries.flow.async_configure(
         result2["flow_id"],
         {
             CONF_EXCLUDES: DEFAULT_EXCLUDES,
@@ -182,7 +182,7 @@ async def test_form_no_subdivision(hass: HomeAssistant) -> None:
             CONF_REMOVE_HOLIDAYS: [],
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.CREATE_ENTRY
     assert result3["title"] == "Workday Sensor"
@@ -199,11 +199,11 @@ async def test_form_no_subdivision(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("mock_setup_entry")
-async def test_options_form(hass: HomeAssistant) -> None:
+async def test_options_form(menuai: menuai) -> None:
     """Test we get the form in options."""
 
     entry = await init_integration(
-        hass,
+        menuai,
         {
             "name": "Workday Sensor",
             "country": "DE",
@@ -216,9 +216,9 @@ async def test_options_form(hass: HomeAssistant) -> None:
         },
     )
 
-    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await menuai.config_entries.options.async_init(entry.entry_id)
 
-    result2 = await hass.config_entries.options.async_configure(
+    result2 = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "excludes": ["sat", "sun", "holiday"],
@@ -246,23 +246,23 @@ async def test_options_form(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("mock_setup_entry")
-async def test_form_incorrect_dates(hass: HomeAssistant) -> None:
+async def test_form_incorrect_dates(menuai: menuai) -> None:
     """Test errors in setup entry."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_NAME: "Workday Sensor",
             CONF_COUNTRY: "DE",
         },
     )
-    await hass.async_block_till_done()
-    result3 = await hass.config_entries.flow.async_configure(
+    await menuai.async_block_till_done()
+    result3 = await menuai.config_entries.flow.async_configure(
         result2["flow_id"],
         {
             CONF_EXCLUDES: DEFAULT_EXCLUDES,
@@ -273,10 +273,10 @@ async def test_form_incorrect_dates(hass: HomeAssistant) -> None:
             CONF_LANGUAGE: "de",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result3["errors"] == {"add_holidays": "add_holiday_error"}
 
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result2["flow_id"],
         {
             CONF_EXCLUDES: DEFAULT_EXCLUDES,
@@ -287,11 +287,11 @@ async def test_form_incorrect_dates(hass: HomeAssistant) -> None:
             CONF_LANGUAGE: "de",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result3["errors"] == {"remove_holidays": "remove_holiday_error"}
 
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result2["flow_id"],
         {
             CONF_EXCLUDES: DEFAULT_EXCLUDES,
@@ -302,7 +302,7 @@ async def test_form_incorrect_dates(hass: HomeAssistant) -> None:
             CONF_LANGUAGE: "de",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.CREATE_ENTRY
     assert result3["title"] == "Workday Sensor"
@@ -319,11 +319,11 @@ async def test_form_incorrect_dates(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("mock_setup_entry")
-async def test_options_form_incorrect_dates(hass: HomeAssistant) -> None:
+async def test_options_form_incorrect_dates(menuai: menuai) -> None:
     """Test errors in options."""
 
     entry = await init_integration(
-        hass,
+        menuai,
         {
             "name": "Workday Sensor",
             "country": "DE",
@@ -336,9 +336,9 @@ async def test_options_form_incorrect_dates(hass: HomeAssistant) -> None:
         },
     )
 
-    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await menuai.config_entries.options.async_init(entry.entry_id)
 
-    result2 = await hass.config_entries.options.async_configure(
+    result2 = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "excludes": ["sat", "sun", "holiday"],
@@ -353,7 +353,7 @@ async def test_options_form_incorrect_dates(hass: HomeAssistant) -> None:
 
     assert result2["errors"] == {"add_holidays": "add_holiday_error"}
 
-    result2 = await hass.config_entries.options.async_configure(
+    result2 = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "excludes": ["sat", "sun", "holiday"],
@@ -368,7 +368,7 @@ async def test_options_form_incorrect_dates(hass: HomeAssistant) -> None:
 
     assert result2["errors"] == {"remove_holidays": "remove_holiday_error"}
 
-    result2 = await hass.config_entries.options.async_configure(
+    result2 = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "excludes": ["sat", "sun", "holiday"],
@@ -396,11 +396,11 @@ async def test_options_form_incorrect_dates(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("mock_setup_entry")
-async def test_options_form_abort_duplicate(hass: HomeAssistant) -> None:
+async def test_options_form_abort_duplicate(menuai: menuai) -> None:
     """Test errors in options for duplicates."""
 
     await init_integration(
-        hass,
+        menuai,
         {
             "name": "Workday Sensor",
             "country": "CH",
@@ -415,7 +415,7 @@ async def test_options_form_abort_duplicate(hass: HomeAssistant) -> None:
         entry_id="1",
     )
     entry2 = await init_integration(
-        hass,
+        menuai,
         {
             "name": "Workday Sensor2",
             "country": "CH",
@@ -430,9 +430,9 @@ async def test_options_form_abort_duplicate(hass: HomeAssistant) -> None:
         entry_id="2",
     )
 
-    result = await hass.config_entries.options.async_init(entry2.entry_id)
+    result = await menuai.config_entries.options.async_init(entry2.entry_id)
 
-    result2 = await hass.config_entries.options.async_configure(
+    result2 = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "excludes": ["sat", "sun", "holiday"],
@@ -450,23 +450,23 @@ async def test_options_form_abort_duplicate(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("mock_setup_entry")
-async def test_form_incorrect_date_range(hass: HomeAssistant) -> None:
+async def test_form_incorrect_date_range(menuai: menuai) -> None:
     """Test errors in setup entry."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_NAME: "Workday Sensor",
             CONF_COUNTRY: "DE",
         },
     )
-    await hass.async_block_till_done()
-    result3 = await hass.config_entries.flow.async_configure(
+    await menuai.async_block_till_done()
+    result3 = await menuai.config_entries.flow.async_configure(
         result2["flow_id"],
         {
             CONF_EXCLUDES: DEFAULT_EXCLUDES,
@@ -477,10 +477,10 @@ async def test_form_incorrect_date_range(hass: HomeAssistant) -> None:
             CONF_LANGUAGE: "de",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result3["errors"] == {"add_holidays": "add_holiday_range_error"}
 
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result2["flow_id"],
         {
             CONF_EXCLUDES: DEFAULT_EXCLUDES,
@@ -491,11 +491,11 @@ async def test_form_incorrect_date_range(hass: HomeAssistant) -> None:
             CONF_LANGUAGE: "de",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result3["errors"] == {"remove_holidays": "remove_holiday_range_error"}
 
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result2["flow_id"],
         {
             CONF_EXCLUDES: DEFAULT_EXCLUDES,
@@ -506,7 +506,7 @@ async def test_form_incorrect_date_range(hass: HomeAssistant) -> None:
             CONF_LANGUAGE: "de",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.CREATE_ENTRY
     assert result3["title"] == "Workday Sensor"
@@ -523,11 +523,11 @@ async def test_form_incorrect_date_range(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("mock_setup_entry")
-async def test_options_form_incorrect_date_ranges(hass: HomeAssistant) -> None:
+async def test_options_form_incorrect_date_ranges(menuai: menuai) -> None:
     """Test errors in options."""
 
     entry = await init_integration(
-        hass,
+        menuai,
         {
             "name": "Workday Sensor",
             "country": "DE",
@@ -540,9 +540,9 @@ async def test_options_form_incorrect_date_ranges(hass: HomeAssistant) -> None:
         },
     )
 
-    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await menuai.config_entries.options.async_init(entry.entry_id)
 
-    result2 = await hass.config_entries.options.async_configure(
+    result2 = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "excludes": ["sat", "sun", "holiday"],
@@ -557,7 +557,7 @@ async def test_options_form_incorrect_date_ranges(hass: HomeAssistant) -> None:
 
     assert result2["errors"] == {"add_holidays": "add_holiday_range_error"}
 
-    result2 = await hass.config_entries.options.async_configure(
+    result2 = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "excludes": ["sat", "sun", "holiday"],
@@ -572,7 +572,7 @@ async def test_options_form_incorrect_date_ranges(hass: HomeAssistant) -> None:
 
     assert result2["errors"] == {"remove_holidays": "remove_holiday_range_error"}
 
-    result2 = await hass.config_entries.options.async_configure(
+    result2 = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "excludes": ["sat", "sun", "holiday"],
@@ -607,25 +607,25 @@ async def test_options_form_incorrect_date_ranges(hass: HomeAssistant) -> None:
     ],
 )
 async def test_language(
-    hass: HomeAssistant, language: str, holiday: str, freezer: FrozenDateTimeFactory
+    menuai: menuai, language: str, holiday: str, freezer: FrozenDateTimeFactory
 ) -> None:
     """Test we get the forms."""
     freezer.move_to(datetime(2023, 12, 25, 12, tzinfo=UTC))  # Monday
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_NAME: "Workday Sensor",
             CONF_COUNTRY: "DE",
         },
     )
-    await hass.async_block_till_done()
-    result3 = await hass.config_entries.flow.async_configure(
+    await menuai.async_block_till_done()
+    result3 = await menuai.config_entries.flow.async_configure(
         result2["flow_id"],
         {
             CONF_EXCLUDES: DEFAULT_EXCLUDES,
@@ -636,7 +636,7 @@ async def test_language(
             CONF_LANGUAGE: language,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.CREATE_ENTRY
     assert result3["title"] == "Workday Sensor"
@@ -651,28 +651,28 @@ async def test_language(
         "language": language,
     }
 
-    state = hass.states.get("binary_sensor.workday_sensor")
+    state = menuai.states.get("binary_sensor.workday_sensor")
     assert state is not None
     assert state.state == "on"
 
 
-async def test_form_with_categories(hass: HomeAssistant) -> None:
+async def test_form_with_categories(menuai: menuai) -> None:
     """Test optional categories."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_NAME: "Workday Sensor",
             CONF_COUNTRY: "CH",
         },
     )
-    await hass.async_block_till_done()
-    result3 = await hass.config_entries.flow.async_configure(
+    await menuai.async_block_till_done()
+    result3 = await menuai.config_entries.flow.async_configure(
         result2["flow_id"],
         {
             CONF_EXCLUDES: DEFAULT_EXCLUDES,
@@ -684,7 +684,7 @@ async def test_form_with_categories(hass: HomeAssistant) -> None:
             CONF_CATEGORY: [HALF_DAY],
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.CREATE_ENTRY
     assert result3["title"] == "Workday Sensor"
@@ -701,11 +701,11 @@ async def test_form_with_categories(hass: HomeAssistant) -> None:
     }
 
 
-async def test_options_form_removes_subdiv(hass: HomeAssistant) -> None:
+async def test_options_form_removes_subdiv(menuai: menuai) -> None:
     """Test we get the form in options when removing a configured subdivision."""
 
     entry = await init_integration(
-        hass,
+        menuai,
         {
             "name": "Workday Sensor",
             "country": "DE",
@@ -719,9 +719,9 @@ async def test_options_form_removes_subdiv(hass: HomeAssistant) -> None:
         },
     )
 
-    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await menuai.config_entries.options.async_init(entry.entry_id)
 
-    result2 = await hass.config_entries.options.async_configure(
+    result2 = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "excludes": ["sat", "sun", "holiday"],

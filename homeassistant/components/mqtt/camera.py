@@ -8,14 +8,14 @@ from typing import TYPE_CHECKING
 
 import voluptuous as vol
 
-from homeassistant.components import camera
-from homeassistant.components.camera import Camera
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_NAME
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components import camera
+from menuai.components.camera import Camera
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_NAME
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import subscription
 from .config import MQTT_BASE_SCHEMA
@@ -58,13 +58,13 @@ DISCOVERY_SCHEMA = PLATFORM_SCHEMA_BASE.extend({}, extra=vol.REMOVE_EXTRA)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up MQTT camera through YAML and through MQTT discovery."""
     async_setup_entity_entry_helper(
-        hass,
+        menuai,
         config_entry,
         MqttCamera,
         camera.DOMAIN,
@@ -84,14 +84,14 @@ class MqttCamera(MqttEntity, Camera):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config: ConfigType,
         config_entry: ConfigEntry,
         discovery_data: DiscoveryInfoType | None,
     ) -> None:
         """Initialize the MQTT Camera."""
         Camera.__init__(self)
-        MqttEntity.__init__(self, hass, config, config_entry, discovery_data)
+        MqttEntity.__init__(self, menuai, config, config_entry, discovery_data)
 
     @staticmethod
     def config_schema() -> vol.Schema:
@@ -118,7 +118,7 @@ class MqttCamera(MqttEntity, Camera):
 
     async def _subscribe_topics(self) -> None:
         """(Re)Subscribe to topics."""
-        subscription.async_subscribe_topics_internal(self.hass, self._sub_state)
+        subscription.async_subscribe_topics_internal(self.menuai, self._sub_state)
 
     async def async_camera_image(
         self, width: int | None = None, height: int | None = None

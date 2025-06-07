@@ -24,9 +24,9 @@ from voluptuous.humanize import MAX_VALIDATION_ERROR_ITEM_LENGTH
 from yaml.error import MarkedYAMLError
 
 from .const import CONF_PACKAGES, CONF_PLATFORM, __version__
-from .core import DOMAIN as HOMEASSISTANT_DOMAIN, HomeAssistant, callback
+from .core import DOMAIN as menuai_DOMAIN, menuai, callback
 from .core_config import _PACKAGE_DEFINITION_SCHEMA, _PACKAGES_CONFIG_SCHEMA
-from .exceptions import ConfigValidationError, HomeAssistantError
+from .exceptions import ConfigValidationError, menuaiError
 from .helpers import config_validation as cv
 from .helpers.translation import async_get_exception_message
 from .helpers.typing import ConfigType
@@ -39,11 +39,11 @@ from .util.yaml.objects import NodeStrClass
 
 _LOGGER = logging.getLogger(__name__)
 
-RE_YAML_ERROR = re.compile(r"homeassistant\.util\.yaml")
+RE_YAML_ERROR = re.compile(r"menuai\.util\.yaml")
 RE_ASCII = re.compile(r"\033\[[^m]*m")
 YAML_CONFIG_FILE = "configuration.yaml"
 VERSION_FILE = ".HA_VERSION"
-CONFIG_DIR_NAME = ".homeassistant"
+CONFIG_DIR_NAME = ".menuai"
 
 AUTOMATION_CONFIG_PATH = "automations.yaml"
 SCRIPT_CONFIG_PATH = "scripts.yaml"
@@ -138,30 +138,30 @@ def get_default_config_dir() -> str:
     return os.path.join(data_dir, CONFIG_DIR_NAME)
 
 
-async def async_ensure_config_exists(hass: HomeAssistant) -> bool:
+async def async_ensure_config_exists(menuai: menuai) -> bool:
     """Ensure a configuration file exists in given configuration directory.
 
     Creating a default one if needed.
     Return boolean if configuration dir is ready to go.
     """
-    config_path = hass.config.path(YAML_CONFIG_FILE)
+    config_path = menuai.config.path(YAML_CONFIG_FILE)
 
     if os.path.isfile(config_path):
         return True
 
     print(  # noqa: T201
-        "Unable to find configuration. Creating default one in", hass.config.config_dir
+        "Unable to find configuration. Creating default one in", menuai.config.config_dir
     )
-    return await async_create_default_config(hass)
+    return await async_create_default_config(menuai)
 
 
-async def async_create_default_config(hass: HomeAssistant) -> bool:
+async def async_create_default_config(menuai: menuai) -> bool:
     """Create a default configuration file in given configuration directory.
 
     Return if creation was successful.
     """
-    return await hass.async_add_executor_job(
-        _write_default_config, hass.config.config_dir
+    return await menuai.async_add_executor_job(
+        _write_default_config, menuai.config.config_dir
     )
 
 
@@ -206,31 +206,31 @@ def _write_default_config(config_dir: str) -> bool:
     return True
 
 
-async def async_hass_config_yaml(hass: HomeAssistant) -> dict:
-    """Load YAML from a Home Assistant configuration file.
+async def async_menuai_config_yaml(menuai: menuai) -> dict:
+    """Load YAML from a MenuAI configuration file.
 
     This function allows a component inside the asyncio loop to reload its
     configuration by itself. Include package merge.
     """
-    secrets = Secrets(Path(hass.config.config_dir))
+    secrets = Secrets(Path(menuai.config.config_dir))
 
     # Not using async_add_executor_job because this is an internal method.
     try:
-        config = await hass.loop.run_in_executor(
+        config = await menuai.loop.run_in_executor(
             None,
             load_yaml_config_file,
-            hass.config.path(YAML_CONFIG_FILE),
+            menuai.config.path(YAML_CONFIG_FILE),
             secrets,
         )
-    except HomeAssistantError as exc:
+    except menuaiError as exc:
         if not (base_exc := exc.__cause__) or not isinstance(base_exc, MarkedYAMLError):
             raise
 
-        # Rewrite path to offending YAML file to be relative the hass config dir
+        # Rewrite path to offending YAML file to be relative the menuai config dir
         if base_exc.context_mark and base_exc.context_mark.name:
-            base_exc.context_mark.name = _relpath(hass, base_exc.context_mark.name)
+            base_exc.context_mark.name = _relpath(menuai, base_exc.context_mark.name)
         if base_exc.problem_mark and base_exc.problem_mark.name:
-            base_exc.problem_mark.name = _relpath(hass, base_exc.problem_mark.name)
+            base_exc.problem_mark.name = _relpath(menuai, base_exc.problem_mark.name)
         raise
 
     invalid_domains = []
@@ -240,21 +240,21 @@ async def async_hass_config_yaml(hass: HomeAssistant) -> dict:
         except vol.Invalid as exc:
             suffix = ""
             if annotation := find_annotation(config, exc.path):
-                suffix = f" at {_relpath(hass, annotation[0])}, line {annotation[1]}"
+                suffix = f" at {_relpath(menuai, annotation[0])}, line {annotation[1]}"
             _LOGGER.error("Invalid domain '%s'%s", key, suffix)
             invalid_domains.append(key)
     for invalid_domain in invalid_domains:
         config.pop(invalid_domain)
 
-    core_config = config.get(HOMEASSISTANT_DOMAIN, {})
+    core_config = config.get(menuai_DOMAIN, {})
     try:
-        await merge_packages_config(hass, config, core_config.get(CONF_PACKAGES, {}))
+        await merge_packages_config(menuai, config, core_config.get(CONF_PACKAGES, {}))
     except vol.Invalid as exc:
         suffix = ""
         if annotation := find_annotation(
-            config, [HOMEASSISTANT_DOMAIN, CONF_PACKAGES, *exc.path]
+            config, [menuai_DOMAIN, CONF_PACKAGES, *exc.path]
         ):
-            suffix = f" at {_relpath(hass, annotation[0])}, line {annotation[1]}"
+            suffix = f" at {_relpath(menuai, annotation[0])}, line {annotation[1]}"
         _LOGGER.error(
             "Invalid package configuration '%s'%s: %s", CONF_PACKAGES, suffix, exc
         )
@@ -268,7 +268,7 @@ def load_yaml_config_file(
 ) -> dict[Any, Any]:
     """Parse a YAML configuration file.
 
-    Raises FileNotFoundError or HomeAssistantError.
+    Raises FileNotFoundError or menuaiError.
 
     This method needs to run in an executor.
     """
@@ -280,7 +280,7 @@ def load_yaml_config_file(
             "does not contain a dictionary"
         )
         _LOGGER.error(msg)
-        raise HomeAssistantError(msg) from exc
+        raise menuaiError(msg) from exc
 
     # Convert values to dictionaries if they are None
     for key, value in conf_dict.items():
@@ -288,12 +288,12 @@ def load_yaml_config_file(
     return conf_dict
 
 
-def process_ha_config_upgrade(hass: HomeAssistant) -> None:
+def process_ha_config_upgrade(menuai: menuai) -> None:
     """Upgrade configuration if necessary.
 
     This method needs to run in an executor.
     """
-    version_path = hass.config.path(VERSION_FILE)
+    version_path = menuai.config.path(VERSION_FILE)
 
     try:
         with open(version_path, encoding="utf8") as inp:
@@ -313,13 +313,13 @@ def process_ha_config_upgrade(hass: HomeAssistant) -> None:
 
     if version_obj < AwesomeVersion("0.50"):
         # 0.50 introduced persistent deps dir.
-        lib_path = hass.config.path("deps")
+        lib_path = menuai.config.path("deps")
         if os.path.isdir(lib_path):
             shutil.rmtree(lib_path)
 
     if version_obj < AwesomeVersion("0.92"):
         # 0.92 moved google/tts.py to google_translate/tts.py
-        config_path = hass.config.path(YAML_CONFIG_FILE)
+        config_path = menuai.config.path(YAML_CONFIG_FILE)
 
         with open(config_path, encoding="utf-8") as config_file:
             config_raw = config_file.read()
@@ -336,7 +336,7 @@ def process_ha_config_upgrade(hass: HomeAssistant) -> None:
     if version_obj < AwesomeVersion("0.94") and is_docker_env():
         # In 0.94 we no longer install packages inside the deps folder when
         # running inside a Docker container.
-        lib_path = hass.config.path("deps")
+        lib_path = menuai.config.path("deps")
         if os.path.isdir(lib_path):
             shutil.rmtree(lib_path)
 
@@ -349,28 +349,28 @@ def async_log_schema_error(
     exc: vol.Invalid,
     domain: str,
     config: dict,
-    hass: HomeAssistant,
+    menuai: menuai,
     link: str | None = None,
 ) -> None:
     """Log a schema validation error."""
-    message = format_schema_error(hass, exc, domain, config, link)
+    message = format_schema_error(menuai, exc, domain, config, link)
     _LOGGER.error(message)
 
 
 @callback
 def async_log_config_validator_error(
-    exc: vol.Invalid | HomeAssistantError,
+    exc: vol.Invalid | menuaiError,
     domain: str,
     config: dict,
-    hass: HomeAssistant,
+    menuai: menuai,
     link: str | None = None,
 ) -> None:
     """Log an error from a custom config validator."""
     if isinstance(exc, vol.Invalid):
-        async_log_schema_error(exc, domain, config, hass, link)
+        async_log_schema_error(exc, domain, config, menuai, link)
         return
 
-    message = format_homeassistant_error(hass, exc, domain, config, link)
+    message = format_menuai_error(menuai, exc, domain, config, link)
     _LOGGER.error(message, exc_info=exc)
 
 
@@ -445,13 +445,13 @@ def find_annotation(
     return find_annotation_rec(config, list(path), None)
 
 
-def _relpath(hass: HomeAssistant, path: str) -> str:
-    """Return path relative to the Home Assistant config dir."""
-    return os.path.relpath(path, hass.config.config_dir)
+def _relpath(menuai: menuai, path: str) -> str:
+    """Return path relative to the MenuAI config dir."""
+    return os.path.relpath(path, menuai.config.config_dir)
 
 
 def stringify_invalid(
-    hass: HomeAssistant,
+    menuai: menuai,
     exc: vol.Invalid,
     domain: str,
     config: dict,
@@ -476,12 +476,12 @@ def stringify_invalid(
         )
     else:
         message_prefix = f"Invalid config for '{domain}'"
-    if domain != HOMEASSISTANT_DOMAIN and link:
+    if domain != menuai_DOMAIN and link:
         message_suffix = f", please check the docs at {link}"
     else:
         message_suffix = ""
     if annotation := find_annotation(config, exc.path):
-        message_prefix += f" at {_relpath(hass, annotation[0])}, line {annotation[1]}"
+        message_prefix += f" at {_relpath(menuai, annotation[0])}, line {annotation[1]}"
     path = "->".join(str(m) for m in exc.path)
     if exc.error_message == "extra keys not allowed":
         return (
@@ -511,7 +511,7 @@ def stringify_invalid(
 
 
 def humanize_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     validation_error: vol.Invalid,
     domain: str,
     config: dict,
@@ -527,25 +527,25 @@ def humanize_error(
         return "\n".join(
             sorted(
                 humanize_error(
-                    hass, sub_error, domain, config, link, max_sub_error_length
+                    menuai, sub_error, domain, config, link, max_sub_error_length
                 )
                 for sub_error in validation_error.errors
             )
         )
     return stringify_invalid(
-        hass, validation_error, domain, config, link, max_sub_error_length
+        menuai, validation_error, domain, config, link, max_sub_error_length
     )
 
 
 @callback
-def format_homeassistant_error(
-    hass: HomeAssistant,
-    exc: HomeAssistantError,
+def format_menuai_error(
+    menuai: menuai,
+    exc: menuaiError,
     domain: str,
     config: dict,
     link: str | None = None,
 ) -> str:
-    """Format HomeAssistantError thrown by a custom config validator."""
+    """Format menuaiError thrown by a custom config validator."""
     if "." in domain:
         integration_domain, _, platform_domain = domain.partition(".")
         message_prefix = (
@@ -554,12 +554,12 @@ def format_homeassistant_error(
         )
     else:
         message_prefix = f"Invalid config for '{domain}'"
-    # HomeAssistantError raised by custom config validator has no path to the
+    # menuaiError raised by custom config validator has no path to the
     # offending configuration key, use the domain key as path instead.
     if annotation := find_annotation(config, [domain]):
-        message_prefix += f" at {_relpath(hass, annotation[0])}, line {annotation[1]}"
+        message_prefix += f" at {_relpath(menuai, annotation[0])}, line {annotation[1]}"
     message = f"{message_prefix}: {str(exc) or repr(exc)}"
-    if domain != HOMEASSISTANT_DOMAIN and link:
+    if domain != menuai_DOMAIN and link:
         message += f", please check the docs at {link}"
 
     return message
@@ -567,25 +567,25 @@ def format_homeassistant_error(
 
 @callback
 def format_schema_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     exc: vol.Invalid,
     domain: str,
     config: dict,
     link: str | None = None,
 ) -> str:
     """Format configuration validation error."""
-    return humanize_error(hass, exc, domain, config, link)
+    return humanize_error(menuai, exc, domain, config, link)
 
 
 def _log_pkg_error(
-    hass: HomeAssistant, package: str, component: str | None, config: dict, message: str
+    menuai: menuai, package: str, component: str | None, config: dict, message: str
 ) -> None:
     """Log an error while merging packages."""
     message_prefix = f"Setup of package '{package}'"
     if annotation := find_annotation(
-        config, [HOMEASSISTANT_DOMAIN, CONF_PACKAGES, package]
+        config, [menuai_DOMAIN, CONF_PACKAGES, package]
     ):
-        message_prefix += f" at {_relpath(hass, annotation[0])}, line {annotation[1]}"
+        message_prefix += f" at {_relpath(menuai, annotation[0])}, line {annotation[1]}"
 
     _LOGGER.error("%s failed: %s", message_prefix, message)
 
@@ -667,11 +667,11 @@ def _recursive_merge(conf: dict[str, Any], package: dict[str, Any]) -> str | Non
 
 
 async def merge_packages_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: dict,
     packages: dict[str, Any],
     _log_pkg_error: Callable[
-        [HomeAssistant, str, str | None, dict, str], None
+        [menuai, str, str | None, dict, str], None
     ] = _log_pkg_error,
 ) -> dict:
     """Merge packages into the top-level configuration.
@@ -688,7 +688,7 @@ async def merge_packages_config(
             _validate_package_definition(pack_name, pack_conf)
         except vol.Invalid as exc:
             _log_pkg_error(
-                hass,
+                menuai,
                 pack_name,
                 None,
                 config,
@@ -699,24 +699,24 @@ async def merge_packages_config(
             continue
 
         for comp_name, comp_conf in pack_conf.items():
-            if comp_name == HOMEASSISTANT_DOMAIN:
+            if comp_name == menuai_DOMAIN:
                 continue
             try:
                 domain = cv.domain_key(comp_name)
             except vol.Invalid:
                 _log_pkg_error(
-                    hass, pack_name, comp_name, config, f"Invalid domain '{comp_name}'"
+                    menuai, pack_name, comp_name, config, f"Invalid domain '{comp_name}'"
                 )
                 continue
 
             try:
                 integration = await async_get_integration_with_requirements(
-                    hass, domain
+                    menuai, domain
                 )
                 component = await integration.async_get_component()
             except LOAD_EXCEPTIONS as exc:
                 _log_pkg_error(
-                    hass,
+                    menuai,
                     pack_name,
                     comp_name,
                     config,
@@ -724,7 +724,7 @@ async def merge_packages_config(
                 )
                 continue
             except INTEGRATION_LOAD_EXCEPTIONS as exc:
-                _log_pkg_error(hass, pack_name, comp_name, config, str(exc))
+                _log_pkg_error(menuai, pack_name, comp_name, config, str(exc))
                 continue
 
             try:
@@ -760,7 +760,7 @@ async def merge_packages_config(
 
             if not isinstance(comp_conf, dict):
                 _log_pkg_error(
-                    hass,
+                    menuai,
                     pack_name,
                     comp_name,
                     config,
@@ -773,7 +773,7 @@ async def merge_packages_config(
 
             if not isinstance(config[comp_name], dict):
                 _log_pkg_error(
-                    hass,
+                    menuai,
                     pack_name,
                     comp_name,
                     config,
@@ -787,7 +787,7 @@ async def merge_packages_config(
             duplicate_key = _recursive_merge(conf=config[comp_name], package=comp_conf)
             if duplicate_key:
                 _log_pkg_error(
-                    hass,
+                    menuai,
                     pack_name,
                     comp_name,
                     config,
@@ -802,7 +802,7 @@ async def merge_packages_config(
 
 @callback
 def _get_log_message_and_stack_print_pref(
-    hass: HomeAssistant, domain: str, platform_exception: ConfigExceptionInfo
+    menuai: menuai, domain: str, platform_exception: ConfigExceptionInfo
 ) -> tuple[str | None, bool, dict[str, str]]:
     """Get message to log and print stack trace preference."""
     exception = platform_exception.exception
@@ -827,16 +827,16 @@ def _get_log_message_and_stack_print_pref(
         show_stack_trace = False
         if isinstance(exception, vol.Invalid):
             log_message = format_schema_error(
-                hass, exception, platform_path, platform_config, link
+                menuai, exception, platform_path, platform_config, link
             )
             if annotation := find_annotation(platform_config, exception.path):
                 placeholders["config_file"], line = annotation
                 placeholders["line"] = str(line)
         else:
             if TYPE_CHECKING:
-                assert isinstance(exception, HomeAssistantError)
-            log_message = format_homeassistant_error(
-                hass, exception, platform_path, platform_config, link
+                assert isinstance(exception, menuaiError)
+            log_message = format_menuai_error(
+                menuai, exception, platform_path, platform_config, link
             )
             if annotation := find_annotation(platform_config, [platform_path]):
                 placeholders["config_file"], line = annotation
@@ -846,7 +846,7 @@ def _get_log_message_and_stack_print_pref(
 
     # Generate the log message from the English translations
     log_message = async_get_exception_message(
-        HOMEASSISTANT_DOMAIN,
+        menuai_DOMAIN,
         platform_exception.translation_key,
         translation_placeholders=placeholders,
     )
@@ -855,7 +855,7 @@ def _get_log_message_and_stack_print_pref(
 
 
 async def async_process_component_and_handle_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     integration: Integration,
     raise_on_failure: bool = False,
@@ -869,10 +869,10 @@ async def async_process_component_and_handle_errors(
     Returns the integration config or `None`.
     """
     integration_config_info = await async_process_component_config(
-        hass, config, integration
+        menuai, config, integration
     )
     async_handle_component_errors(
-        hass, integration_config_info, integration, raise_on_failure
+        menuai, integration_config_info, integration, raise_on_failure
     )
     return async_drop_config_annotations(integration_config_info, integration)
 
@@ -905,16 +905,16 @@ def async_drop_config_annotations(
 
         return node
 
-    # Don't drop annotations from the homeassistant integration because it may
+    # Don't drop annotations from the menuai integration because it may
     # have configuration for other integrations as packages.
-    if integration.domain in config and integration.domain != HOMEASSISTANT_DOMAIN:
+    if integration.domain in config and integration.domain != menuai_DOMAIN:
         drop_config_annotations_rec(config[integration.domain])
     return config
 
 
 @callback
 def async_handle_component_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     integration_config_info: IntegrationConfigInfo,
     integration: Integration,
     raise_on_failure: bool = False,
@@ -938,7 +938,7 @@ def async_handle_component_errors(
             log_message,
             show_stack_trace,
             placeholders,
-        ) = _get_log_message_and_stack_print_pref(hass, domain, platform_exception)
+        ) = _get_log_message_and_stack_print_pref(menuai, domain, platform_exception)
         _LOGGER.error(
             log_message,
             exc_info=exception if show_stack_trace else None,
@@ -959,7 +959,7 @@ def async_handle_component_errors(
     raise ConfigValidationError(
         translation_key,
         [platform_exception.exception for platform_exception in config_exception_info],
-        translation_domain=HOMEASSISTANT_DOMAIN,
+        translation_domain=menuai_DOMAIN,
         translation_placeholders=placeholders,
     )
 
@@ -1095,7 +1095,7 @@ async def _async_load_and_validate_platform_integration(
 
 
 async def async_process_component_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     integration: Integration,
     component: ComponentProtocol | None = None,
@@ -1153,9 +1153,9 @@ async def async_process_component_config(
     ):
         try:
             return IntegrationConfigInfo(
-                await config_validator.async_validate_config(hass, config), []
+                await config_validator.async_validate_config(menuai, config), []
             )
-        except (vol.Invalid, HomeAssistantError) as exc:
+        except (vol.Invalid, menuaiError) as exc:
             exc_info = ConfigExceptionInfo(
                 exc,
                 ConfigErrorTranslationKey.CONFIG_VALIDATION_ERR,
@@ -1180,7 +1180,7 @@ async def async_process_component_config(
     if hasattr(component, "CONFIG_SCHEMA"):
         try:
             return IntegrationConfigInfo(
-                await cv.async_validate(hass, component.CONFIG_SCHEMA, config), []
+                await cv.async_validate(menuai, component.CONFIG_SCHEMA, config), []
             )
         except vol.Invalid as exc:
             exc_info = ConfigExceptionInfo(
@@ -1217,7 +1217,7 @@ async def async_process_component_config(
         platform_path = f"{p_name}.{domain}"
         try:
             p_validated = await cv.async_validate(
-                hass, component_platform_schema, p_config
+                menuai, component_platform_schema, p_config
             )
         except vol.Invalid as exc:
             exc_info = ConfigExceptionInfo(
@@ -1248,7 +1248,7 @@ async def async_process_component_config(
             continue
 
         try:
-            p_integration = await async_get_integration_with_requirements(hass, p_name)
+            p_integration = await async_get_integration_with_requirements(menuai, p_name)
         except (RequirementsNotFound, IntegrationNotFound) as exc:
             exc_info = ConfigExceptionInfo(
                 exc,
@@ -1293,7 +1293,7 @@ async def async_process_component_config(
             for validated_config in await asyncio.gather(
                 *(
                     create_eager_task(
-                        async_load_and_validate(p_integration), loop=hass.loop
+                        async_load_and_validate(p_integration), loop=menuai.loop
                     )
                     for p_integration in platform_integrations_to_load
                 )
@@ -1316,15 +1316,15 @@ def config_without_domain(config: ConfigType, domain: str) -> ConfigType:
     return {key: value for key, value in config.items() if key not in filter_keys}
 
 
-async def async_check_ha_config_file(hass: HomeAssistant) -> str | None:
-    """Check if Home Assistant configuration file is valid.
+async def async_check_ha_config_file(menuai: menuai) -> str | None:
+    """Check if MenuAI configuration file is valid.
 
     This method is a coroutine.
     """
     # pylint: disable-next=import-outside-toplevel
     from .helpers import check_config
 
-    res = await check_config.async_check_ha_config_file(hass)
+    res = await check_config.async_check_ha_config_file(menuai)
 
     if not res.errors:
         return None
@@ -1343,10 +1343,10 @@ def safe_mode_enabled(config_dir: str) -> bool:
     return safe_mode
 
 
-async def async_enable_safe_mode(hass: HomeAssistant) -> None:
+async def async_enable_safe_mode(menuai: menuai) -> None:
     """Enable safe mode."""
 
     def _enable_safe_mode() -> None:
-        Path(hass.config.path(SAFE_MODE_FILENAME)).touch()
+        Path(menuai.config.path(SAFE_MODE_FILENAME)).touch()
 
-    await hass.async_add_executor_job(_enable_safe_mode)
+    await menuai.async_add_executor_job(_enable_safe_mode)

@@ -1,4 +1,4 @@
-"""API for Husqvarna Automower bound to Home Assistant OAuth."""
+"""API for Husqvarna Automower bound to MenuAI OAuth."""
 
 import logging
 from typing import cast
@@ -7,8 +7,8 @@ from aioautomower.auth import AbstractAuth
 from aioautomower.const import API_BASE_URL
 from aiohttp import ClientSession
 
-from homeassistant.const import CONF_ACCESS_TOKEN
-from homeassistant.helpers import config_entry_oauth2_flow
+from menuai.const import CONF_ACCESS_TOKEN
+from menuai.helpers import config_entry_oauth2_flow
 
 _LOGGER = logging.getLogger(__name__)
 

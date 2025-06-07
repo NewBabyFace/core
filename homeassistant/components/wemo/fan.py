@@ -9,17 +9,17 @@ from typing import Any
 from pywemo import DesiredHumidity, FanMode, Humidifier
 import voluptuous as vol
 
-from homeassistant.components.fan import FanEntity, FanEntityFeature
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_platform
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import VolDictType
-from homeassistant.util.percentage import (
+from menuai.components.fan import FanEntity, FanEntityFeature
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers import entity_platform
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import VolDictType
+from menuai.util.percentage import (
     percentage_to_ranged_value,
     ranged_value_to_percentage,
 )
-from homeassistant.util.scaling import int_states_in_range
+from menuai.util.scaling import int_states_in_range
 
 from . import async_wemo_dispatcher_connect
 from .const import SERVICE_RESET_FILTER_LIFE, SERVICE_SET_HUMIDITY
@@ -46,7 +46,7 @@ SET_HUMIDITY_SCHEMA: VolDictType = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     _config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -56,7 +56,7 @@ async def async_setup_entry(
         """Handle a discovered Wemo device."""
         async_add_entities([WemoHumidifier(coordinator)])
 
-    await async_wemo_dispatcher_connect(hass, _discovered_wemo)
+    await async_wemo_dispatcher_connect(menuai, _discovered_wemo)
 
     platform = entity_platform.async_get_current_platform()
 

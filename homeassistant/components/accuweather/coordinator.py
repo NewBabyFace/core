@@ -11,10 +11,10 @@ from typing import TYPE_CHECKING, Any
 from accuweather import AccuWeather, ApiError, InvalidApiKeyError, RequestsExceededError
 from aiohttp.client_exceptions import ClientConnectorError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.update_coordinator import (
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.update_coordinator import (
     DataUpdateCoordinator,
     TimestampDataUpdateCoordinator,
     UpdateFailed,
@@ -45,7 +45,7 @@ class AccuWeatherObservationDataUpdateCoordinator(
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: AccuWeatherConfigEntry,
         accuweather: AccuWeather,
         name: str,
@@ -62,7 +62,7 @@ class AccuWeatherObservationDataUpdateCoordinator(
         self.device_info = _get_device_info(self.location_key, name)
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=f"{name} ({coordinator_type})",
@@ -93,7 +93,7 @@ class AccuWeatherDailyForecastDataUpdateCoordinator(
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: AccuWeatherConfigEntry,
         accuweather: AccuWeather,
         name: str,
@@ -110,7 +110,7 @@ class AccuWeatherDailyForecastDataUpdateCoordinator(
         self.device_info = _get_device_info(self.location_key, name)
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=f"{name} ({coordinator_type})",
@@ -122,7 +122,7 @@ class AccuWeatherDailyForecastDataUpdateCoordinator(
         try:
             async with timeout(10):
                 result = await self.accuweather.async_get_daily_forecast(
-                    language=self.hass.config.language
+                    language=self.menuai.config.language
                 )
         except EXCEPTIONS as error:
             raise UpdateFailed(

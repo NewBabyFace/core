@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant.components.device_automation import (
+from menuai.components.device_automation import (
     async_get_entity_registry_entry_or_raise,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     CONF_CONDITION,
     CONF_DEVICE_ID,
@@ -15,16 +15,16 @@ from homeassistant.const import (
     CONF_ENTITY_ID,
     CONF_TYPE,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import (
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import (
     condition,
     config_validation as cv,
     entity_registry as er,
 )
-from homeassistant.helpers.config_validation import DEVICE_CONDITION_BASE_SCHEMA
-from homeassistant.helpers.entity import get_capability, get_supported_features
-from homeassistant.helpers.typing import ConfigType, TemplateVarsType
+from menuai.helpers.config_validation import DEVICE_CONDITION_BASE_SCHEMA
+from menuai.helpers.entity import get_capability, get_supported_features
+from menuai.helpers.typing import ConfigType, TemplateVarsType
 
 from . import DOMAIN, const
 
@@ -50,10 +50,10 @@ CONDITION_SCHEMA = vol.Any(HVAC_MODE_CONDITION, PRESET_MODE_CONDITION)
 
 
 async def async_get_conditions(
-    hass: HomeAssistant, device_id: str
+    menuai: menuai, device_id: str
 ) -> list[dict[str, str]]:
     """List device conditions for Climate devices."""
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     conditions = []
 
     # Get all the integrations entities for this device
@@ -61,7 +61,7 @@ async def async_get_conditions(
         if entry.domain != DOMAIN:
             continue
 
-        supported_features = get_supported_features(hass, entry.entity_id)
+        supported_features = get_supported_features(menuai, entry.entity_id)
 
         base_condition = {
             CONF_CONDITION: "device",
@@ -80,16 +80,16 @@ async def async_get_conditions(
 
 @callback
 def async_condition_from_config(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> condition.ConditionCheckerType:
     """Create a function to test a device condition."""
 
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     entity_id = er.async_resolve_entity_id(registry, config[ATTR_ENTITY_ID])
 
-    def test_is_state(hass: HomeAssistant, variables: TemplateVarsType) -> bool:
+    def test_is_state(menuai: menuai, variables: TemplateVarsType) -> bool:
         """Test if an entity is a certain state."""
-        if not entity_id or (state := hass.states.get(entity_id)) is None:
+        if not entity_id or (state := menuai.states.get(entity_id)) is None:
             return False
 
         if config[CONF_TYPE] == "is_hvac_mode":
@@ -104,7 +104,7 @@ def async_condition_from_config(
 
 
 async def async_get_condition_capabilities(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> dict[str, vol.Schema]:
     """List condition capabilities."""
     condition_type = config[CONF_TYPE]
@@ -114,24 +114,24 @@ async def async_get_condition_capabilities(
     if condition_type == "is_hvac_mode":
         try:
             entry = async_get_entity_registry_entry_or_raise(
-                hass, config[CONF_ENTITY_ID]
+                menuai, config[CONF_ENTITY_ID]
             )
             hvac_modes = (
-                get_capability(hass, entry.entity_id, const.ATTR_HVAC_MODES) or []
+                get_capability(menuai, entry.entity_id, const.ATTR_HVAC_MODES) or []
             )
-        except HomeAssistantError:
+        except menuaiError:
             hvac_modes = []
         fields[vol.Required(const.ATTR_HVAC_MODE)] = vol.In(hvac_modes)
 
     elif condition_type == "is_preset_mode":
         try:
             entry = async_get_entity_registry_entry_or_raise(
-                hass, config[CONF_ENTITY_ID]
+                menuai, config[CONF_ENTITY_ID]
             )
             preset_modes = (
-                get_capability(hass, entry.entity_id, const.ATTR_PRESET_MODES) or []
+                get_capability(menuai, entry.entity_id, const.ATTR_PRESET_MODES) or []
             )
-        except HomeAssistantError:
+        except menuaiError:
             preset_modes = []
         fields[vol.Required(const.ATTR_PRESET_MODE)] = vol.In(preset_modes)
 

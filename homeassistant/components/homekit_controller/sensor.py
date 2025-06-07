@@ -15,18 +15,18 @@ from aiohomekit.model.characteristics.const import (
 )
 from aiohomekit.model.services import Service, ServicesTypes
 
-from homeassistant.components.bluetooth import (
+from menuai.components.bluetooth import (
     async_ble_device_from_address,
     async_last_service_info,
 )
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
     CONCENTRATION_PARTS_PER_MILLION,
     LIGHT_LUX,
@@ -42,9 +42,9 @@ from homeassistant.const import (
     UnitOfSoundPressure,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import ConfigType
 
 from . import KNOWN_DEVICES
 from .connection import HKDevice
@@ -616,7 +616,7 @@ class RSSISensor(HomeKitEntity, SensorEntity):
     def available(self) -> bool:
         """Return if the bluetooth device is available."""
         address = self._accessory.pairing_data["AccessoryAddress"]
-        return async_ble_device_from_address(self.hass, address) is not None
+        return async_ble_device_from_address(self.menuai, address) is not None
 
     @property
     def name(self) -> str:
@@ -633,18 +633,18 @@ class RSSISensor(HomeKitEntity, SensorEntity):
     def native_value(self) -> int | None:
         """Return the current rssi value."""
         address = self._accessory.pairing_data["AccessoryAddress"]
-        last_service_info = async_last_service_info(self.hass, address)
+        last_service_info = async_last_service_info(self.menuai, address)
         return last_service_info.rssi if last_service_info else None
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Homekit sensors."""
     hkid = config_entry.data["AccessoryPairingID"]
-    conn: HKDevice = hass.data[KNOWN_DEVICES][hkid]
+    conn: HKDevice = menuai.data[KNOWN_DEVICES][hkid]
 
     @callback
     def async_add_service(service: Service) -> bool:

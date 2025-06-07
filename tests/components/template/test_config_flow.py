@@ -6,12 +6,12 @@ from unittest.mock import patch
 import pytest
 from pytest_unordered import unordered
 
-from homeassistant import config_entries
-from homeassistant.components.template import DOMAIN, async_setup_entry
-from homeassistant.const import STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import device_registry as dr
+from menuai import config_entries
+from menuai.components.template import DOMAIN, async_setup_entry
+from menuai.const import STATE_UNAVAILABLE
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers import device_registry as dr
 
 from tests.common import MockConfigEntry, get_schema_suggested_value
 from tests.typing import WebSocketGenerator
@@ -185,7 +185,7 @@ BINARY_SENSOR_OPTIONS = {
 )
 @pytest.mark.freeze_time("2024-07-09 00:00:00+00:00")
 async def test_config_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     template_type: str,
     state_template: dict[str, Any],
     template_state: str,
@@ -198,29 +198,29 @@ async def test_config_flow(
     """Test the config flow."""
     input_entities = ["one", "two"]
     for input_entity in input_entities:
-        hass.states.async_set(
+        menuai.states.async_set(
             f"{template_type}.{input_entity}",
             input_states[input_entity],
             input_attributes.get(input_entity, {}),
         )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.MENU
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": template_type},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == template_type
 
     with patch(
-        "homeassistant.components.template.async_setup_entry", wraps=async_setup_entry
+        "menuai.components.template.async_setup_entry", wraps=async_setup_entry
     ) as mock_setup_entry:
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "name": "My template",
@@ -228,7 +228,7 @@ async def test_config_flow(
                 **extra_input,
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "My template"
@@ -241,7 +241,7 @@ async def test_config_flow(
     }
     assert len(mock_setup_entry.mock_calls) == 1
 
-    config_entry = hass.config_entries.async_entries(DOMAIN)[0]
+    config_entry = menuai.config_entries.async_entries(DOMAIN)[0]
     assert config_entry.data == {}
     assert config_entry.options == {
         "name": "My template",
@@ -250,7 +250,7 @@ async def test_config_flow(
         **extra_options,
     }
 
-    state = hass.states.get(f"{template_type}.my_template")
+    state = menuai.states.get(f"{template_type}.my_template")
     assert state.state == template_state
     for key, value in extra_attrs.items():
         assert state.attributes[key] == value
@@ -335,7 +335,7 @@ async def test_config_flow(
     ],
 )
 async def test_config_flow_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     template_type: str,
     state_template: dict[str, Any],
     extra_input: dict[str, Any],
@@ -346,34 +346,34 @@ async def test_config_flow_device(
 
     # Configure a device registry
     entry_device = MockConfigEntry()
-    entry_device.add_to_hass(hass)
+    entry_device.add_to_menuai(menuai)
     device = device_registry.async_get_or_create(
         config_entry_id=entry_device.entry_id,
         identifiers={("test", "identifier_test1")},
         connections={("mac", "20:31:32:33:34:01")},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     device_id = device.id
     assert device_id is not None
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.MENU
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": template_type},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == template_type
 
     with patch(
-        "homeassistant.components.template.async_setup_entry", wraps=async_setup_entry
+        "menuai.components.template.async_setup_entry", wraps=async_setup_entry
     ) as mock_setup_entry:
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "name": "My template",
@@ -382,7 +382,7 @@ async def test_config_flow_device(
                 **extra_input,
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "My template"
@@ -396,7 +396,7 @@ async def test_config_flow_device(
     }
     assert len(mock_setup_entry.mock_calls) == 1
 
-    config_entry = hass.config_entries.async_entries(DOMAIN)[0]
+    config_entry = menuai.config_entries.async_entries(DOMAIN)[0]
     assert config_entry.data == {}
     assert config_entry.options == {
         "name": "My template",
@@ -555,7 +555,7 @@ async def test_config_flow_device(
 )
 @pytest.mark.freeze_time("2024-07-09 00:00:00+00:00")
 async def test_options(
-    hass: HomeAssistant,
+    menuai: menuai,
     template_type: str,
     old_state_template: dict[str, Any],
     new_state_template: dict[str, Any],
@@ -569,7 +569,7 @@ async def test_options(
     input_entities = ["one", "two"]
 
     for input_entity in input_entities:
-        hass.states.async_set(
+        menuai.states.async_set(
             f"{template_type}.{input_entity}", input_states[input_entity], {}
         )
 
@@ -584,17 +584,17 @@ async def test_options(
         },
         title="My template",
     )
-    template_config_entry.add_to_hass(hass)
+    template_config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(template_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(template_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(f"{template_type}.my_template")
+    state = menuai.states.get(f"{template_type}.my_template")
     assert state.state == template_state[0]
 
-    config_entry = hass.config_entries.async_entries(DOMAIN)[0]
+    config_entry = menuai.config_entries.async_entries(DOMAIN)[0]
 
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == template_type
     assert get_schema_suggested_value(
@@ -602,7 +602,7 @@ async def test_options(
     ) == old_state_template.get(key_template)
     assert "name" not in result["data_schema"].schema
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             **new_state_template,
@@ -626,21 +626,21 @@ async def test_options(
     assert config_entry.title == "My template"
 
     # Check config entry is reloaded with new options
-    await hass.async_block_till_done()
-    state = hass.states.get(f"{template_type}.my_template")
+    await menuai.async_block_till_done()
+    state = menuai.states.get(f"{template_type}.my_template")
     assert state.state == template_state[1]
 
     # Check we don't get suggestions from another entry
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.MENU
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": template_type},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == template_type
 
@@ -682,8 +682,8 @@ async def test_options(
     ],
 )
 async def test_config_flow_preview(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     template_type: str,
     state_template: str,
     extra_user_input: dict[str, Any],
@@ -693,20 +693,20 @@ async def test_config_flow_preview(
     listeners: list[list[str]],
 ) -> None:
     """Test the config flow preview."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     input_entities = ["one", "two"]
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.MENU
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": template_type},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == template_type
     assert result["errors"] is None
@@ -738,10 +738,10 @@ async def test_config_flow_preview(
     }
 
     for input_entity in input_entities:
-        hass.states.async_set(
+        menuai.states.async_set(
             f"{template_type}.{input_entity}", input_states[input_entity], {}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     for template_state in template_states[1:]:
         msg = await client.receive_json()
@@ -759,7 +759,7 @@ async def test_config_flow_preview(
             },
             "state": template_state,
         }
-    assert len(hass.states.async_all()) == 2
+    assert len(menuai.states.async_all()) == 2
 
 
 EARLY_END_ERROR = "invalid template (TemplateSyntaxError: unexpected 'end of template')"
@@ -832,26 +832,26 @@ EARLY_END_ERROR = "invalid template (TemplateSyntaxError: unexpected 'end of tem
     ],
 )
 async def test_config_flow_preview_bad_input(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     template_type: str,
     state_template: str,
     extra_user_input: dict[str, str],
     error: dict[str, str],
 ) -> None:
     """Test the config flow preview."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.MENU
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": template_type},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == template_type
     assert result["errors"] is None
@@ -899,8 +899,8 @@ async def test_config_flow_preview_bad_input(
     ],
 )
 async def test_config_flow_preview_template_startup_error(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     template_type: str,
     state_template: str,
     input_states: dict[str, str],
@@ -908,20 +908,20 @@ async def test_config_flow_preview_template_startup_error(
     error_events: list[str],
 ) -> None:
     """Test the config flow preview."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     input_entities = ["one", "two"]
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.MENU
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": template_type},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == template_type
     assert result["errors"] is None
@@ -949,7 +949,7 @@ async def test_config_flow_preview_template_startup_error(
     assert msg["event"]["state"] == template_states[0]
 
     for input_entity in input_entities:
-        hass.states.async_set(
+        menuai.states.async_set(
             f"{template_type}.{input_entity}", input_states[input_entity], {}
         )
 
@@ -977,8 +977,8 @@ async def test_config_flow_preview_template_startup_error(
     ],
 )
 async def test_config_flow_preview_template_error(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     template_type: str,
     state_template: str,
     input_states: list[dict[str, str]],
@@ -986,25 +986,25 @@ async def test_config_flow_preview_template_error(
     error_events: list[str],
 ) -> None:
     """Test the config flow preview."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     input_entities = ["one", "two"]
 
     for input_entity in input_entities:
-        hass.states.async_set(
+        menuai.states.async_set(
             f"{template_type}.{input_entity}", input_states[0][input_entity], {}
         )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.MENU
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": template_type},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == template_type
     assert result["errors"] is None
@@ -1027,7 +1027,7 @@ async def test_config_flow_preview_template_error(
     assert msg["event"]["state"] == template_states[0]
 
     for input_entity in input_entities:
-        hass.states.async_set(
+        menuai.states.async_set(
             f"{template_type}.{input_entity}", input_states[1][input_entity], {}
         )
 
@@ -1056,25 +1056,25 @@ async def test_config_flow_preview_template_error(
     ],
 )
 async def test_config_flow_preview_bad_state(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     template_type: str,
     state_template: str,
     extra_user_input: dict[str, Any],
 ) -> None:
     """Test the config flow preview."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.MENU
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {"next_step_id": template_type},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == template_type
     assert result["errors"] is None
@@ -1142,8 +1142,8 @@ async def test_config_flow_preview_bad_state(
     ],
 )
 async def test_option_flow_preview(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     template_type: str,
     old_state_template: str,
     new_state_template: str,
@@ -1155,7 +1155,7 @@ async def test_option_flow_preview(
     listeners: list[str],
 ) -> None:
     """Test the option flow preview."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     input_entities = ["one", "two"]
 
@@ -1171,17 +1171,17 @@ async def test_option_flow_preview(
         | extra_config_flow_data,
         title="My template",
     )
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] is None
     assert result["preview"] == "template"
 
     for input_entity in input_entities:
-        hass.states.async_set(
+        menuai.states.async_set(
             f"{template_type}.{input_entity}", input_states[input_entity], {}
         )
 
@@ -1208,14 +1208,14 @@ async def test_option_flow_preview(
         },
         "state": template_state,
     }
-    assert len(hass.states.async_all()) == 3
+    assert len(menuai.states.async_all()) == 3
 
 
 async def test_option_flow_sensor_preview_config_entry_removed(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test the option flow preview where the config entry is removed."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     # Setup the config entry
     config_entry = MockConfigEntry(
@@ -1228,16 +1228,16 @@ async def test_option_flow_sensor_preview_config_entry_removed(
         },
         title="My template",
     )
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] is None
     assert result["preview"] == "template"
 
-    await hass.config_entries.async_remove(config_entry.entry_id)
+    await menuai.config_entries.async_remove(config_entry.entry_id)
 
     await client.send_json_auto_id(
         {
@@ -1332,7 +1332,7 @@ async def test_option_flow_sensor_preview_config_entry_removed(
     ],
 )
 async def test_options_flow_change_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     template_type: str,
     state_template: dict[str, Any],
     extra_input: dict[str, Any],
@@ -1343,20 +1343,20 @@ async def test_options_flow_change_device(
 
     # Configure a device registry
     entry_device1 = MockConfigEntry()
-    entry_device1.add_to_hass(hass)
+    entry_device1.add_to_menuai(menuai)
     device1 = device_registry.async_get_or_create(
         config_entry_id=entry_device1.entry_id,
         identifiers={("test", "identifier_test1")},
         connections={("mac", "20:31:32:33:34:01")},
     )
     entry_device2 = MockConfigEntry()
-    entry_device2.add_to_hass(hass)
+    entry_device2.add_to_menuai(menuai)
     device2 = device_registry.async_get_or_create(
         config_entry_id=entry_device1.entry_id,
         identifiers={("test", "identifier_test2")},
         connections={("mac", "20:31:32:33:34:02")},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     device_id1 = device1.id
     assert device_id1 is not None
@@ -1377,17 +1377,17 @@ async def test_options_flow_change_device(
         },
         title="Template",
     )
-    template_config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(template_config_entry.entry_id)
-    await hass.async_block_till_done()
+    template_config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(template_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Change to link to device 2
-    result = await hass.config_entries.options.async_init(
+    result = await menuai.config_entries.options.async_init(
         template_config_entry.entry_id
     )
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "device_id": device_id2,
@@ -1413,12 +1413,12 @@ async def test_options_flow_change_device(
     }
 
     # Remove link with device
-    result = await hass.config_entries.options.async_init(
+    result = await menuai.config_entries.options.async_init(
         template_config_entry.entry_id
     )
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             **state_template,
@@ -1441,12 +1441,12 @@ async def test_options_flow_change_device(
     }
 
     # Change to link to device 1
-    result = await hass.config_entries.options.async_init(
+    result = await menuai.config_entries.options.async_init(
         template_config_entry.entry_id
     )
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             "device_id": device_id1,

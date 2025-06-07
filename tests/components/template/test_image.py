@@ -10,17 +10,17 @@ import pytest
 import respx
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant import setup
-from homeassistant.components.input_text import (
+from menuai import setup
+from menuai.components.input_text import (
     ATTR_VALUE as INPUT_TEXT_ATTR_VALUE,
     DOMAIN as INPUT_TEXT_DOMAIN,
     SERVICE_SET_VALUE as INPUT_TEXT_SERVICE_SET_VALUE,
 )
-from homeassistant.components.template import DOMAIN
-from homeassistant.const import ATTR_ENTITY_PICTURE, CONF_ENTITY_ID, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.util import dt as dt_util
+from menuai.components.template import DOMAIN
+from menuai.const import ATTR_ENTITY_PICTURE, CONF_ENTITY_ID, STATE_UNKNOWN
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.util import dt as dt_util
 
 from tests.common import MockConfigEntry, assert_setup_component
 from tests.typing import ClientSessionGenerator
@@ -47,8 +47,8 @@ def imgbytes2_jpg():
 
 
 async def _assert_state(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     expected_state: str,
     expected_image: bytes | None,
     entity_id: str = _TEST_IMAGE,
@@ -57,7 +57,7 @@ async def _assert_state(
     expected_status: HTTPStatus = HTTPStatus.OK,
 ):
     """Verify image's state."""
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     attributes = state.attributes
     assert state.state == expected_state
     if expected_entity_picture is _DEFAULT:
@@ -67,7 +67,7 @@ async def _assert_state(
 
     assert attributes.get(ATTR_ENTITY_PICTURE) == expected_entity_picture
 
-    client = await hass_client()
+    client = await menuai_client()
 
     resp = await client.get(f"/api/image_proxy/{entity_id}")
     assert resp.content_type == expected_content_type
@@ -79,7 +79,7 @@ async def _assert_state(
 @respx.mock
 @pytest.mark.freeze_time("2024-07-09 00:00:00+00:00")
 async def test_setup_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     imgbytes_jpg,
 ) -> None:
@@ -99,12 +99,12 @@ async def test_setup_config_entry(
         },
         title="My template",
     )
-    template_config_entry.add_to_hass(hass)
+    template_config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(template_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(template_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("image.my_template")
+    state = menuai.states.get("image.my_template")
     assert state is not None
     assert state.state == "2024-07-09T00:00:00+00:00"
 
@@ -112,7 +112,7 @@ async def test_setup_config_entry(
 @respx.mock
 @pytest.mark.freeze_time("2023-04-01 00:00:00+00:00")
 async def test_platform_config(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator, imgbytes_jpg
+    menuai: menuai, menuai_client: ClientSessionGenerator, imgbytes_jpg
 ) -> None:
     """Test configuring under the platform key does not work."""
     respx.get("http://example.com").respond(
@@ -121,7 +121,7 @@ async def test_platform_config(
 
     with assert_setup_component(1, "image"):
         assert await setup.async_setup_component(
-            hass,
+            menuai,
             "image",
             {
                 "image": {
@@ -131,17 +131,17 @@ async def test_platform_config(
             },
         )
 
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == 0
+    assert len(menuai.states.async_all()) == 0
 
 
 @respx.mock
 @pytest.mark.freeze_time("2023-04-01 00:00:00+00:00")
 async def test_missing_optional_config(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator, imgbytes_jpg
+    menuai: menuai, menuai_client: ClientSessionGenerator, imgbytes_jpg
 ) -> None:
     """Test: missing optional template is ok."""
     respx.get("http://example.com").respond(
@@ -150,7 +150,7 @@ async def test_missing_optional_config(
 
     with assert_setup_component(1, "template"):
         assert await setup.async_setup_component(
-            hass,
+            menuai,
             "template",
             {
                 "template": {
@@ -161,24 +161,24 @@ async def test_missing_optional_config(
             },
         )
 
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
     expected_state = dt_util.utcnow().isoformat()
-    await _assert_state(hass, hass_client, expected_state, imgbytes_jpg)
+    await _assert_state(menuai, menuai_client, expected_state, imgbytes_jpg)
     assert respx.get("http://example.com").call_count == 1
 
     # Check the image is not refetched
-    await _assert_state(hass, hass_client, expected_state, imgbytes_jpg)
+    await _assert_state(menuai, menuai_client, expected_state, imgbytes_jpg)
     assert respx.get("http://example.com").call_count == 1
 
 
 @respx.mock
 @pytest.mark.freeze_time("2023-04-01 00:00:00+00:00")
 async def test_multiple_configs(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     imgbytes_jpg,
     imgbytes2_jpg,
 ) -> None:
@@ -192,7 +192,7 @@ async def test_multiple_configs(
 
     with assert_setup_component(1, "template"):
         assert await setup.async_setup_component(
-            hass,
+            menuai,
             "template",
             {
                 "template": {
@@ -208,15 +208,15 @@ async def test_multiple_configs(
             },
         )
 
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
     expected_state = dt_util.utcnow().isoformat()
-    await _assert_state(hass, hass_client, expected_state, imgbytes_jpg)
+    await _assert_state(menuai, menuai_client, expected_state, imgbytes_jpg)
     await _assert_state(
-        hass,
-        hass_client,
+        menuai,
+        menuai_client,
         expected_state,
         imgbytes2_jpg,
         f"{_TEST_IMAGE}_2",
@@ -224,11 +224,11 @@ async def test_multiple_configs(
     )
 
 
-async def test_missing_required_keys(hass: HomeAssistant) -> None:
+async def test_missing_required_keys(menuai: menuai) -> None:
     """Test: missing required fields will fail."""
     with assert_setup_component(0, "template"):
         assert await setup.async_setup_component(
-            hass,
+            menuai,
             "template",
             {
                 "template": {
@@ -239,20 +239,20 @@ async def test_missing_required_keys(hass: HomeAssistant) -> None:
             },
         )
 
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
-    assert hass.states.async_all("image") == []
+    assert menuai.states.async_all("image") == []
 
 
 async def test_unique_id(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test unique_id configuration."""
     with assert_setup_component(1, "template"):
         assert await setup.async_setup_component(
-            hass,
+            menuai,
             "template",
             {
                 "template": {
@@ -265,9 +265,9 @@ async def test_unique_id(
             },
         )
 
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
     entry = entity_registry.async_get(_TEST_IMAGE)
     assert entry
@@ -277,7 +277,7 @@ async def test_unique_id(
 @respx.mock
 @pytest.mark.freeze_time("2023-04-01 00:00:00+00:00")
 async def test_custom_entity_picture(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator, imgbytes_jpg
+    menuai: menuai, menuai_client: ClientSessionGenerator, imgbytes_jpg
 ) -> None:
     """Test custom entity picture."""
     respx.get("http://example.com").respond(
@@ -286,7 +286,7 @@ async def test_custom_entity_picture(
 
     with assert_setup_component(1, "template"):
         assert await setup.async_setup_component(
-            hass,
+            menuai,
             "template",
             {
                 "template": {
@@ -298,14 +298,14 @@ async def test_custom_entity_picture(
             },
         )
 
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
     expected_state = dt_util.utcnow().isoformat()
     await _assert_state(
-        hass,
-        hass_client,
+        menuai,
+        menuai_client,
         expected_state,
         imgbytes_jpg,
         expected_entity_picture="http://example2.com",
@@ -314,14 +314,14 @@ async def test_custom_entity_picture(
 
 @respx.mock
 async def test_template_error(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test handling template error."""
     respx.get("http://example.com").side_effect = httpx.TimeoutException
 
     with assert_setup_component(1, "template"):
         assert await setup.async_setup_component(
-            hass,
+            menuai,
             "template",
             {
                 "template": {
@@ -332,13 +332,13 @@ async def test_template_error(
             },
         )
 
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
     await _assert_state(
-        hass,
-        hass_client,
+        menuai,
+        menuai_client,
         STATE_UNKNOWN,
         b"500: Internal Server Error",
         expected_status=HTTPStatus.INTERNAL_SERVER_ERROR,
@@ -349,8 +349,8 @@ async def test_template_error(
 @respx.mock
 @pytest.mark.freeze_time("2023-04-01 00:00:00+00:00")
 async def test_templates_with_entities(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     imgbytes_jpg,
     imgbytes2_jpg,
 ) -> None:
@@ -364,7 +364,7 @@ async def test_templates_with_entities(
 
     with assert_setup_component(1, "input_text"):
         assert await setup.async_setup_component(
-            hass,
+            menuai,
             "input_text",
             {
                 "input_text": {
@@ -378,7 +378,7 @@ async def test_templates_with_entities(
 
     with assert_setup_component(1, "template"):
         assert await setup.async_setup_component(
-            hass,
+            menuai,
             "template",
             {
                 "template": {
@@ -389,28 +389,28 @@ async def test_templates_with_entities(
             },
         )
 
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
     expected_state = dt_util.utcnow().isoformat()
-    await _assert_state(hass, hass_client, expected_state, imgbytes_jpg)
+    await _assert_state(menuai, menuai_client, expected_state, imgbytes_jpg)
     assert respx.get("http://example.com").call_count == 1
 
     # Check the image is not refetched
-    await _assert_state(hass, hass_client, expected_state, imgbytes_jpg)
+    await _assert_state(menuai, menuai_client, expected_state, imgbytes_jpg)
     assert respx.get("http://example.com").call_count == 1
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         INPUT_TEXT_DOMAIN,
         INPUT_TEXT_SERVICE_SET_VALUE,
         {CONF_ENTITY_ID: _URL_INPUT_TEXT, INPUT_TEXT_ATTR_VALUE: "http://example2.com"},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     await _assert_state(
-        hass,
-        hass_client,
+        menuai,
+        menuai_client,
         expected_state,
         imgbytes2_jpg,
         expected_content_type="image/png",
@@ -420,8 +420,8 @@ async def test_templates_with_entities(
 @respx.mock
 @pytest.mark.freeze_time("2023-04-01 00:00:00+00:00")
 async def test_trigger_image(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     imgbytes_jpg,
     imgbytes2_jpg,
 ) -> None:
@@ -434,7 +434,7 @@ async def test_trigger_image(
     )
 
     assert await setup.async_setup_component(
-        hass,
+        menuai,
         "template",
         {
             "template": [
@@ -450,35 +450,35 @@ async def test_trigger_image(
         },
     )
 
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
     # No image is loaded, expect error
     await _assert_state(
-        hass,
-        hass_client,
+        menuai,
+        menuai_client,
         "unknown",
         b"500: Internal Server Error",
         expected_status=HTTPStatus.INTERNAL_SERVER_ERROR,
         expected_content_type="text/plain",
     )
 
-    hass.bus.async_fire("test_event", {"url": "http://example.com"})
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event", {"url": "http://example.com"})
+    await menuai.async_block_till_done()
     expected_state = dt_util.utcnow().isoformat()
-    await _assert_state(hass, hass_client, expected_state, imgbytes_jpg)
+    await _assert_state(menuai, menuai_client, expected_state, imgbytes_jpg)
     assert respx.get("http://example.com").call_count == 1
 
     # Check the image is not refetched
-    await _assert_state(hass, hass_client, expected_state, imgbytes_jpg)
+    await _assert_state(menuai, menuai_client, expected_state, imgbytes_jpg)
     assert respx.get("http://example.com").call_count == 1
 
-    hass.bus.async_fire("test_event", {"url": "http://example2.com"})
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event", {"url": "http://example2.com"})
+    await menuai.async_block_till_done()
     await _assert_state(
-        hass,
-        hass_client,
+        menuai,
+        menuai_client,
         expected_state,
         imgbytes2_jpg,
         expected_content_type="image/png",
@@ -488,7 +488,7 @@ async def test_trigger_image(
 @respx.mock
 @pytest.mark.freeze_time("2023-04-01 00:00:00+00:00")
 async def test_trigger_image_custom_entity_picture(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator, imgbytes_jpg
+    menuai: menuai, menuai_client: ClientSessionGenerator, imgbytes_jpg
 ) -> None:
     """Test trigger based template image with custom entity picture."""
     respx.get("http://example.com").respond(
@@ -496,7 +496,7 @@ async def test_trigger_image_custom_entity_picture(
     )
 
     assert await setup.async_setup_component(
-        hass,
+        menuai,
         "template",
         {
             "template": [
@@ -513,14 +513,14 @@ async def test_trigger_image_custom_entity_picture(
         },
     )
 
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
     # No image is loaded, expect error
     await _assert_state(
-        hass,
-        hass_client,
+        menuai,
+        menuai_client,
         "unknown",
         b"500: Internal Server Error",
         expected_status=HTTPStatus.INTERNAL_SERVER_ERROR,
@@ -528,12 +528,12 @@ async def test_trigger_image_custom_entity_picture(
         expected_content_type="text/plain",
     )
 
-    hass.bus.async_fire("test_event", {"url": "http://example.com"})
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event", {"url": "http://example.com"})
+    await menuai.async_block_till_done()
     expected_state = dt_util.utcnow().isoformat()
     await _assert_state(
-        hass,
-        hass_client,
+        menuai,
+        menuai_client,
         expected_state,
         imgbytes_jpg,
         expected_entity_picture="http://example2.com",
@@ -542,20 +542,20 @@ async def test_trigger_image_custom_entity_picture(
 
 @respx.mock
 async def test_device_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test for device for image template."""
 
     device_config_entry = MockConfigEntry()
-    device_config_entry.add_to_hass(hass)
+    device_config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=device_config_entry.entry_id,
         identifiers={("test", "identifier_test")},
         connections={("mac", "30:31:32:33:34:35")},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert device_entry is not None
     assert device_entry.id is not None
 
@@ -574,10 +574,10 @@ async def test_device_id(
         },
         title="My template",
     )
-    template_config_entry.add_to_hass(hass)
+    template_config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(template_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(template_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     template_entity = entity_registry.async_get("image.my_template")
     assert template_entity is not None

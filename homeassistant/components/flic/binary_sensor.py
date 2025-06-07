@@ -8,22 +8,22 @@ import threading
 import pyflic
 import voluptuous as vol
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     PLATFORM_SCHEMA as BINARY_SENSOR_PLATFORM_SCHEMA,
     BinarySensorEntity,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_DISCOVERY,
     CONF_HOST,
     CONF_PORT,
     CONF_TIMEOUT,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -59,7 +59,7 @@ PLATFORM_SCHEMA = BINARY_SENSOR_PLATFORM_SCHEMA.extend(
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -79,14 +79,14 @@ def setup_platform(
         return
 
     def new_button_callback(address):
-        """Set up newly verified button as device in Home Assistant."""
-        setup_button(hass, config, add_entities, client, address)
+        """Set up newly verified button as device in MenuAI."""
+        setup_button(menuai, config, add_entities, client, address)
 
     client.on_new_verified_button = new_button_callback
     if discovery:
         start_scanning(config, add_entities, client)
 
-    hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, lambda event: client.close())
+    menuai.bus.listen_once(EVENT_menuai_STOP, lambda event: client.close())
 
     # Start the pyflic event handling thread
     threading.Thread(target=client.handle_events).start()
@@ -95,7 +95,7 @@ def setup_platform(
         """Add entities for already verified buttons."""
         addresses = items["bd_addr_of_verified_buttons"] or []
         for address in addresses:
-            setup_button(hass, config, add_entities, client, address)
+            setup_button(menuai, config, add_entities, client, address)
 
     # Get addresses of already verified buttons
     client.get_info(get_info_callback)
@@ -122,7 +122,7 @@ def start_scanning(config, add_entities, client):
 
 
 def setup_button(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     client,
@@ -131,7 +131,7 @@ def setup_button(
     """Set up a single button device."""
     timeout: int = config[CONF_TIMEOUT]
     ignored_click_types: list[str] | None = config.get(CONF_IGNORED_CLICK_TYPES)
-    button = FlicButton(hass, client, address, timeout, ignored_click_types)
+    button = FlicButton(menuai, client, address, timeout, ignored_click_types)
     _LOGGER.debug("Connected to button %s", address)
 
     add_entities([button])
@@ -144,7 +144,7 @@ class FlicButton(BinarySensorEntity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         client: pyflic.FlicClient,
         address: str,
         timeout: int,
@@ -155,12 +155,12 @@ class FlicButton(BinarySensorEntity):
         self._attr_extra_state_attributes = {"address": address}
         self._attr_name = f"flic_{address.replace(':', '')}"
         self._attr_unique_id = format_mac(address)
-        self._hass = hass
+        self._menuai = menuai
         self._address = address
         self._timeout = timeout
         self._attr_is_on = True
         self._ignored_click_types = ignored_click_types or []
-        self._hass_click_types = {
+        self._menuai_click_types = {
             pyflic.ClickType.ButtonClick: CLICK_TYPE_SINGLE,
             pyflic.ClickType.ButtonSingleClick: CLICK_TYPE_SINGLE,
             pyflic.ClickType.ButtonDoubleClick: CLICK_TYPE_DOUBLE,
@@ -226,17 +226,17 @@ class FlicButton(BinarySensorEntity):
             return
 
         # Return if click event is in ignored click types
-        hass_click_type = self._hass_click_types[click_type]
-        if hass_click_type in self._ignored_click_types:
+        menuai_click_type = self._menuai_click_types[click_type]
+        if menuai_click_type in self._ignored_click_types:
             return
 
-        self._hass.bus.fire(
+        self._menuai.bus.fire(
             EVENT_NAME,
             {
                 EVENT_DATA_NAME: self.name,
                 EVENT_DATA_ADDRESS: self._address,
                 EVENT_DATA_QUEUED_TIME: time_diff,
-                EVENT_DATA_TYPE: hass_click_type,
+                EVENT_DATA_TYPE: menuai_click_type,
             },
         )
 

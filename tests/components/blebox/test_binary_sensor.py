@@ -5,10 +5,10 @@ from unittest.mock import AsyncMock, PropertyMock
 import blebox_uniapi
 import pytest
 
-from homeassistant.components.binary_sensor import BinarySensorDeviceClass
-from homeassistant.const import ATTR_DEVICE_CLASS, STATE_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.components.binary_sensor import BinarySensorDeviceClass
+from menuai.const import ATTR_DEVICE_CLASS, STATE_ON
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 from .conftest import async_setup_entity, mock_feature
 
@@ -30,14 +30,14 @@ def airsensor_fixture() -> tuple[AsyncMock, str]:
 
 
 async def test_init(
-    rainsensor: AsyncMock, device_registry: dr.DeviceRegistry, hass: HomeAssistant
+    rainsensor: AsyncMock, device_registry: dr.DeviceRegistry, menuai: menuai
 ) -> None:
     """Test binary_sensor initialisation."""
     _, entity_id = rainsensor
-    entry = await async_setup_entity(hass, entity_id)
+    entry = await async_setup_entity(menuai, entity_id)
     assert entry.unique_id == "BleBox-windRainSensor-ea68e74f4f49-0.rain"
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.name == "windRainSensor-0.rain"
 
     assert state.attributes[ATTR_DEVICE_CLASS] == BinarySensorDeviceClass.MOISTURE

@@ -7,7 +7,7 @@ from collections import UserDict, defaultdict
 from collections.abc import Mapping, Sequence, ValuesView
 from typing import TYPE_CHECKING, Any, Literal
 
-from homeassistant.core import CoreState, HomeAssistant, callback
+from menuai.core import CoreState, menuai, callback
 
 if TYPE_CHECKING:
     from .storage import Store
@@ -66,7 +66,7 @@ class BaseRegistryItems[_DataT](UserDict[str, _DataT], ABC):
 class BaseRegistry[_StoreDataT: Mapping[str, Any] | Sequence[Any]](ABC):
     """Class to implement a registry."""
 
-    hass: HomeAssistant
+    menuai: menuai
     _store: Store[_StoreDataT]
 
     @callback
@@ -74,7 +74,7 @@ class BaseRegistry[_StoreDataT: Mapping[str, Any] | Sequence[Any]](ABC):
         """Schedule saving the registry."""
         # Schedule the save past startup to avoid writing
         # the file while the system is starting.
-        delay = SAVE_DELAY if self.hass.state is CoreState.running else SAVE_DELAY_LONG
+        delay = SAVE_DELAY if self.menuai.state is CoreState.running else SAVE_DELAY_LONG
         self._store.async_delay_save(self._data_to_save, delay)
 
     @callback

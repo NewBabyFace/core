@@ -3,13 +3,13 @@
 import pytest
 import voluptuous as vol
 
-from homeassistant.auth.permissions.entities import (
+from menuai.auth.permissions.entities import (
     ENTITY_POLICY_SCHEMA,
     compile_entities,
 )
-from homeassistant.auth.permissions.models import PermissionLookup
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceEntry
+from menuai.auth.permissions.models import PermissionLookup
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceEntry
 
 from tests.common import RegistryEntryWithDefaults, mock_device_registry, mock_registry
 
@@ -150,10 +150,10 @@ def test_entities_all_control() -> None:
     assert compiled("switch.kitchen", "control") is True
 
 
-def test_entities_device_id_boolean(hass: HomeAssistant) -> None:
+def test_entities_device_id_boolean(menuai: menuai) -> None:
     """Test entity ID policy applying control on device id."""
     entity_registry = mock_registry(
-        hass,
+        menuai,
         {
             "test_domain.allowed": RegistryEntryWithDefaults(
                 entity_id="test_domain.allowed",
@@ -169,7 +169,7 @@ def test_entities_device_id_boolean(hass: HomeAssistant) -> None:
             ),
         },
     )
-    device_registry = mock_device_registry(hass)
+    device_registry = mock_device_registry(menuai)
 
     policy = {"device_ids": {"mock-allowed-dev-id": {"read": True}}}
     ENTITY_POLICY_SCHEMA(policy)
@@ -190,10 +190,10 @@ def test_entities_areas_true() -> None:
     assert compiled("light.kitchen", "read") is True
 
 
-def test_entities_areas_area_true(hass: HomeAssistant) -> None:
+def test_entities_areas_area_true(menuai: menuai) -> None:
     """Test entity ID policy for areas with specific area."""
     entity_registry = mock_registry(
-        hass,
+        menuai,
         {
             "light.kitchen": RegistryEntryWithDefaults(
                 entity_id="light.kitchen",
@@ -204,7 +204,7 @@ def test_entities_areas_area_true(hass: HomeAssistant) -> None:
         },
     )
     device_registry = mock_device_registry(
-        hass, {"mock-dev-id": DeviceEntry(id="mock-dev-id", area_id="mock-area-id")}
+        menuai, {"mock-dev-id": DeviceEntry(id="mock-dev-id", area_id="mock-area-id")}
     )
 
     policy = {"area_ids": {"mock-area-id": {"read": True, "control": True}}}

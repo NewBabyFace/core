@@ -35,14 +35,14 @@ from yalexs.lock import Lock, LockDetail
 from yalexs.manager.ratelimit import _RateLimitChecker
 from yalexs.manager.socketio import SocketIORunner
 
-from homeassistant.components.application_credentials import (
+from menuai.components.application_credentials import (
     ClientCredential,
     async_import_client_credential,
 )
-from homeassistant.components.yale.const import DOMAIN
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.yale.const import DOMAIN
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry, load_fixture
 
@@ -79,11 +79,11 @@ def _timetoken() -> str:
 
 
 async def mock_yale_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> MockConfigEntry:
     """Mock yale config entry and client credentials."""
     entry = mock_config_entry()
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     return entry
 
 
@@ -97,11 +97,11 @@ def mock_config_entry(jwt: str | None = None) -> MockConfigEntry:
     )
 
 
-async def mock_client_credentials(hass: HomeAssistant) -> ClientCredential:
+async def mock_client_credentials(menuai: menuai) -> ClientCredential:
     """Mock client credentials."""
-    assert await async_setup_component(hass, "application_credentials", {})
+    assert await async_setup_component(menuai, "application_credentials", {})
     await async_import_client_credential(
-        hass,
+        menuai,
         DOMAIN,
         ClientCredential("1", "2"),
         DOMAIN,
@@ -117,32 +117,32 @@ def patch_yale_setup():
         patch("yalexs.manager.data.SocketIORunner") as socketio_mock,
         patch.object(socketio_mock, "run"),
         patch(
-            "homeassistant.components.yale.config_entry_oauth2_flow.async_get_config_entry_implementation"
+            "menuai.components.yale.config_entry_oauth2_flow.async_get_config_entry_implementation"
         ),
     ):
         yield api_mock, authenticate_mock, socketio_mock
 
 
 async def _mock_setup_yale(
-    hass: HomeAssistant,
+    menuai: menuai,
     api_instance: ApiAsync,
     socketio_mock: SocketIORunner,
     authenticate_side_effect: MagicMock,
 ) -> ConfigEntry:
     """Set up yale integration."""
-    entry = await mock_yale_config_entry(hass)
+    entry = await mock_yale_config_entry(menuai)
     with patch_yale_setup() as patched_setup:
         api_mock, authenticate_mock, sockio_mock_ = patched_setup
         authenticate_mock.side_effect = authenticate_side_effect
         sockio_mock_.return_value = socketio_mock
         api_mock.return_value = api_instance
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
     return entry
 
 
 async def _create_yale_with_devices(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: Iterable[LockDetail | DoorbellDetail] | None = None,
     api_call_side_effects: dict[str, Any] | None = None,
     activities: list[Any] | None = None,
@@ -150,7 +150,7 @@ async def _create_yale_with_devices(
     authenticate_side_effect: MagicMock | None = None,
 ) -> tuple[ConfigEntry, SocketIORunner]:
     entry, _, socketio = await _create_yale_api_with_devices(
-        hass,
+        menuai,
         devices,
         api_call_side_effects,
         activities,
@@ -161,7 +161,7 @@ async def _create_yale_with_devices(
 
 
 async def _create_yale_api_with_devices(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: Iterable[LockDetail | DoorbellDetail] | None = None,
     api_call_side_effects: dict[str, Any] | None = None,
     activities: dict[str, Any] | None = None,
@@ -184,7 +184,7 @@ async def _create_yale_api_with_devices(
     socketio.run = AsyncMock()
 
     entry = await _mock_setup_yale(
-        hass,
+        menuai,
         api_instance,
         socketio,
         authenticate_side_effect=authenticate_side_effect,
@@ -413,22 +413,22 @@ def _mock_yale_lock_data(
     }
 
 
-async def _mock_operative_yale_lock_detail(hass: HomeAssistant) -> LockDetail:
-    return await _mock_lock_from_fixture(hass, "get_lock.online.json")
+async def _mock_operative_yale_lock_detail(menuai: menuai) -> LockDetail:
+    return await _mock_lock_from_fixture(menuai, "get_lock.online.json")
 
 
-async def _mock_lock_with_offline_key(hass: HomeAssistant) -> LockDetail:
-    return await _mock_lock_from_fixture(hass, "get_lock.online_with_keys.json")
+async def _mock_lock_with_offline_key(menuai: menuai) -> LockDetail:
+    return await _mock_lock_from_fixture(menuai, "get_lock.online_with_keys.json")
 
 
-async def _mock_inoperative_yale_lock_detail(hass: HomeAssistant) -> LockDetail:
-    return await _mock_lock_from_fixture(hass, "get_lock.offline.json")
+async def _mock_inoperative_yale_lock_detail(menuai: menuai) -> LockDetail:
+    return await _mock_lock_from_fixture(menuai, "get_lock.offline.json")
 
 
 async def _mock_activities_from_fixture(
-    hass: HomeAssistant, path: str
+    menuai: menuai, path: str
 ) -> list[Activity]:
-    json_dict = await _load_json_fixture(hass, path)
+    json_dict = await _load_json_fixture(menuai, path)
     activities = []
     for activity_json in json_dict:
         activity = _activity_from_dict(activity_json)
@@ -438,33 +438,33 @@ async def _mock_activities_from_fixture(
     return activities
 
 
-async def _mock_lock_from_fixture(hass: HomeAssistant, path: str) -> LockDetail:
-    json_dict = await _load_json_fixture(hass, path)
+async def _mock_lock_from_fixture(menuai: menuai, path: str) -> LockDetail:
+    json_dict = await _load_json_fixture(menuai, path)
     return LockDetail(json_dict)
 
 
-async def _mock_doorbell_from_fixture(hass: HomeAssistant, path: str) -> LockDetail:
-    json_dict = await _load_json_fixture(hass, path)
+async def _mock_doorbell_from_fixture(menuai: menuai, path: str) -> LockDetail:
+    json_dict = await _load_json_fixture(menuai, path)
     return DoorbellDetail(json_dict)
 
 
-async def _load_json_fixture(hass: HomeAssistant, path: str) -> dict[str, Any]:
-    fixture = await hass.async_add_executor_job(
+async def _load_json_fixture(menuai: menuai, path: str) -> dict[str, Any]:
+    fixture = await menuai.async_add_executor_job(
         load_fixture, os.path.join("yale", path)
     )
     return json.loads(fixture)
 
 
-async def _mock_doorsense_enabled_yale_lock_detail(hass: HomeAssistant) -> LockDetail:
-    return await _mock_lock_from_fixture(hass, "get_lock.online_with_doorsense.json")
+async def _mock_doorsense_enabled_yale_lock_detail(menuai: menuai) -> LockDetail:
+    return await _mock_lock_from_fixture(menuai, "get_lock.online_with_doorsense.json")
 
 
-async def _mock_doorsense_missing_yale_lock_detail(hass: HomeAssistant) -> LockDetail:
-    return await _mock_lock_from_fixture(hass, "get_lock.online_missing_doorsense.json")
+async def _mock_doorsense_missing_yale_lock_detail(menuai: menuai) -> LockDetail:
+    return await _mock_lock_from_fixture(menuai, "get_lock.online_missing_doorsense.json")
 
 
-async def _mock_lock_with_unlatch(hass: HomeAssistant) -> LockDetail:
-    return await _mock_lock_from_fixture(hass, "get_lock.online_with_unlatch.json")
+async def _mock_lock_with_unlatch(menuai: menuai) -> LockDetail:
+    return await _mock_lock_from_fixture(menuai, "get_lock.online_with_unlatch.json")
 
 
 def _mock_lock_operation_activity(

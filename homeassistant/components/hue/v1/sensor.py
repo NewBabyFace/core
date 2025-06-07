@@ -7,14 +7,14 @@ from aiohue.v1.sensors import (
     TYPE_ZLL_TEMPERATURE,
 )
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorStateClass,
 )
-from homeassistant.const import LIGHT_LUX, PERCENTAGE, EntityCategory, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import LIGHT_LUX, PERCENTAGE, EntityCategory, UnitOfTemperature
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from ..bridge import HueConfigEntry
 from .sensor_base import SENSOR_CONFIG_MAP, GenericHueSensor, GenericZLLSensor
@@ -25,7 +25,7 @@ TEMPERATURE_NAME_FORMAT = "{} temperature"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: HueConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -38,12 +38,12 @@ async def async_setup_entry(
     await bridge.sensor_manager.async_register_component("sensor", async_add_entities)
 
 
-# pylint: disable-next=hass-enforce-class-module
+# pylint: disable-next=menuai-enforce-class-module
 class GenericHueGaugeSensorEntity(GenericZLLSensor, SensorEntity):
     """Parent class for all 'gauge' Hue device sensors."""
 
 
-# pylint: disable-next=hass-enforce-class-module
+# pylint: disable-next=menuai-enforce-class-module
 class HueLightLevel(GenericHueGaugeSensorEntity):
     """The light level sensor entity for a Hue motion sensor device."""
 
@@ -79,7 +79,7 @@ class HueLightLevel(GenericHueGaugeSensorEntity):
         return attributes
 
 
-# pylint: disable-next=hass-enforce-class-module
+# pylint: disable-next=menuai-enforce-class-module
 class HueTemperature(GenericHueGaugeSensorEntity):
     """The temperature sensor entity for a Hue motion sensor device."""
 
@@ -96,7 +96,7 @@ class HueTemperature(GenericHueGaugeSensorEntity):
         return self.sensor.temperature / 100
 
 
-# pylint: disable-next=hass-enforce-class-module
+# pylint: disable-next=menuai-enforce-class-module
 class HueBattery(GenericHueSensor, SensorEntity):
     """Battery class for when a batt-powered device is only represented as an event."""
 

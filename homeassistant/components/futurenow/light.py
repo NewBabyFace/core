@@ -7,17 +7,17 @@ from typing import Any
 import pyfnip
 import voluptuous as vol
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     PLATFORM_SCHEMA as LIGHT_PLATFORM_SCHEMA,
     ColorMode,
     LightEntity,
 )
-from homeassistant.const import CONF_DEVICES, CONF_HOST, CONF_NAME, CONF_PORT
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_DEVICES, CONF_HOST, CONF_NAME, CONF_PORT
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 CONF_DRIVER = "driver"
 CONF_DRIVER_FNIP6X10AD = "FNIP6x10ad"
@@ -42,7 +42,7 @@ PLATFORM_SCHEMA = LIGHT_PLATFORM_SCHEMA.extend(
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -63,12 +63,12 @@ def setup_platform(
 
 
 def to_futurenow_level(level):
-    """Convert the given Home Assistant light level (0-255) to FutureNow (0-100)."""
+    """Convert the given MenuAI light level (0-255) to FutureNow (0-100)."""
     return round((level * 100) / 255)
 
 
-def to_hass_level(level):
-    """Convert the given FutureNow (0-100) light level to Home Assistant (0-255)."""
+def to_menuai_level(level):
+    """Convert the given FutureNow (0-100) light level to MenuAI (0-255)."""
     return int((level * 255) / 100)
 
 
@@ -138,4 +138,4 @@ class FutureNowLight(LightEntity):
         """Fetch new state data for this light."""
         state = int(self._light.is_on())
         self._state = bool(state)
-        self._brightness = to_hass_level(state)
+        self._brightness = to_menuai_level(state)

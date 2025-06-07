@@ -6,22 +6,22 @@ import asyncio
 
 from autarco import Autarco, AutarcoConnectionError
 
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.const import CONF_EMAIL, CONF_PASSWORD, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .coordinator import AutarcoConfigEntry, AutarcoDataUpdateCoordinator
 
 PLATFORMS: list[Platform] = [Platform.SENSOR]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: AutarcoConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: AutarcoConfigEntry) -> bool:
     """Set up Autarco from a config entry."""
     client = Autarco(
         email=entry.data[CONF_EMAIL],
         password=entry.data[CONF_PASSWORD],
-        session=async_get_clientsession(hass),
+        session=async_get_clientsession(menuai),
     )
 
     try:
@@ -31,7 +31,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: AutarcoConfigEntry) -> b
         raise ConfigEntryNotReady from err
 
     coordinators: list[AutarcoDataUpdateCoordinator] = [
-        AutarcoDataUpdateCoordinator(hass, entry, client, site)
+        AutarcoDataUpdateCoordinator(menuai, entry, client, site)
         for site in account_sites
     ]
 
@@ -44,10 +44,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: AutarcoConfigEntry) -> b
 
     entry.runtime_data = coordinators
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: AutarcoConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: AutarcoConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

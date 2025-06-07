@@ -11,8 +11,8 @@ from rokuecp.helpers import guess_stream_format
 import voluptuous as vol
 import yarl
 
-from homeassistant.components import media_source
-from homeassistant.components.media_player import (
+from menuai.components import media_source
+from menuai.components.media_player import (
     ATTR_MEDIA_EXTRA,
     BrowseMedia,
     MediaPlayerDeviceClass,
@@ -22,12 +22,12 @@ from homeassistant.components.media_player import (
     MediaType,
     async_process_play_media_url,
 )
-from homeassistant.components.stream import FORMAT_CONTENT_TYPE, HLS_PROVIDER
-from homeassistant.const import ATTR_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_platform
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import VolDictType
+from menuai.components.stream import FORMAT_CONTENT_TYPE, HLS_PROVIDER
+from menuai.const import ATTR_NAME
+from menuai.core import menuai
+from menuai.helpers import entity_platform
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import VolDictType
 
 from .browse_media import async_browse_media
 from .const import (
@@ -82,7 +82,7 @@ PARALLEL_UPDATES = 1
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: RokuConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -286,7 +286,7 @@ class RokuMediaPlayer(RokuEntity, MediaPlayerEntity):
     ) -> BrowseMedia:
         """Implement the websocket media browsing helper."""
         return await async_browse_media(
-            self.hass,
+            self.menuai,
             self.coordinator,
             self.get_browse_image_url,
             media_content_id,
@@ -369,7 +369,7 @@ class RokuMediaPlayer(RokuEntity, MediaPlayerEntity):
         # Handle media_source
         if media_source.is_media_source_id(media_id):
             sourced_media = await media_source.async_resolve_media(
-                self.hass, media_id, self.entity_id
+                self.menuai, media_id, self.entity_id
             )
             media_type = MediaType.URL
             media_id = sourced_media.url
@@ -385,7 +385,7 @@ class RokuMediaPlayer(RokuEntity, MediaPlayerEntity):
 
         if media_type in {MediaType.MUSIC, MediaType.URL, MediaType.VIDEO}:
             # If media ID is a relative URL, we serve it from HA.
-            media_id = async_process_play_media_url(self.hass, media_id)
+            media_id = async_process_play_media_url(self.menuai, media_id)
 
             parsed = yarl.URL(media_id)
 
@@ -436,7 +436,7 @@ class RokuMediaPlayer(RokuEntity, MediaPlayerEntity):
             await self.coordinator.roku.tune(media_id)
         elif media_type == MediaType.MUSIC:
             if extra.get(ATTR_ARTIST_NAME) is None:
-                extra[ATTR_ARTIST_NAME] = "Home Assistant"
+                extra[ATTR_ARTIST_NAME] = "MenuAI"
 
             params = {
                 param: extra[attr]

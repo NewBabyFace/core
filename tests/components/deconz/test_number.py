@@ -7,15 +7,15 @@ from unittest.mock import patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.number import (
+from menuai.components.number import (
     ATTR_VALUE,
     DOMAIN as NUMBER_DOMAIN,
     SERVICE_SET_VALUE,
 )
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import entity_registry as er
 
 from .conftest import ConfigEntryFactoryType, WebsocketDataType
 
@@ -76,7 +76,7 @@ TEST_DATA = [
 
 @pytest.mark.parametrize(("sensor_payload", "expected"), TEST_DATA)
 async def test_number_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     config_entry_factory: ConfigEntryFactoryType,
     sensor_ws_data: WebsocketDataType,
@@ -85,14 +85,14 @@ async def test_number_entities(
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test successful creation of number entities."""
-    with patch("homeassistant.components.deconz.PLATFORMS", [Platform.NUMBER]):
+    with patch("menuai.components.deconz.PLATFORMS", [Platform.NUMBER]):
         config_entry = await config_entry_factory()
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
     # Change state
 
     await sensor_ws_data(expected["websocket_event"])
-    assert hass.states.get(expected["entity_id"]).state == expected["next_state"]
+    assert menuai.states.get(expected["entity_id"]).state == expected["next_state"]
 
     # Verify service calls
 
@@ -100,7 +100,7 @@ async def test_number_entities(
 
     # Service set supported value
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         NUMBER_DOMAIN,
         SERVICE_SET_VALUE,
         {
@@ -113,7 +113,7 @@ async def test_number_entities(
 
     # Service set float value
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         NUMBER_DOMAIN,
         SERVICE_SET_VALUE,
         {
@@ -127,7 +127,7 @@ async def test_number_entities(
     # Service set value beyond the supported range
 
     with pytest.raises(ServiceValidationError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             NUMBER_DOMAIN,
             SERVICE_SET_VALUE,
             {

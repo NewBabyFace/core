@@ -2,7 +2,7 @@
 
 import logging
 
-from homeassistant.const import CONF_ROOM, Platform
+from menuai.const import CONF_ROOM, Platform
 
 LOGGER = logging.getLogger(__package__)
 DOMAIN = "dynalite"

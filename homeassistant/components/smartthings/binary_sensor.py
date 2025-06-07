@@ -7,16 +7,16 @@ from dataclasses import dataclass
 
 from pysmartthings import Attribute, Capability, Category, SmartThings, Status
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     DOMAIN as BINARY_SENSOR_DOMAIN,
     BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import FullDevice, SmartThingsConfigEntry
 from .const import INVALID_SWITCH_CATEGORIES, MAIN
@@ -183,7 +183,7 @@ def get_main_component_category(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: SmartThingsConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -191,7 +191,7 @@ async def async_setup_entry(
     entry_data = entry.runtime_data
     entities = []
 
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
 
     for device in entry_data.devices.values():  # pylint: disable=too-many-nested-blocks
         for capability, attribute_map in CAPABILITY_TO_SENSORS.items():
@@ -218,7 +218,7 @@ async def async_setup_entry(
                             is not None
                         ):
                             if deprecate_entity(
-                                hass,
+                                menuai,
                                 entity_registry,
                                 BINARY_SENSOR_DOMAIN,
                                 f"{device.device.device_id}_{component}_{capability}_{attribute}_{attribute}",

@@ -2,16 +2,16 @@
 
 from unittest.mock import MagicMock
 
-from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
+from menuai.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
 
 
 async def test_squeezebox_press(
-    hass: HomeAssistant, configured_player_with_button: MagicMock
+    menuai: menuai, configured_player_with_button: MagicMock
 ) -> None:
     """Test press service call."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         BUTTON_DOMAIN,
         SERVICE_PRESS,
         {ATTR_ENTITY_ID: "button.test_player_preset_1"},

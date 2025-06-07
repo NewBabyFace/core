@@ -9,14 +9,14 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 from syrupy.filters import props
 
-from homeassistant.components.bluesound import DOMAIN
-from homeassistant.components.bluesound.const import ATTR_MASTER
-from homeassistant.components.bluesound.media_player import (
+from menuai.components.bluesound import DOMAIN
+from menuai.components.bluesound.const import ATTR_MASTER
+from menuai.components.bluesound.media_player import (
     SERVICE_CLEAR_TIMER,
     SERVICE_JOIN,
     SERVICE_SET_TIMER,
 )
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     ATTR_INPUT_SOURCE,
     ATTR_MEDIA_VOLUME_LEVEL,
     DOMAIN as MEDIA_PLAYER_DOMAIN,
@@ -31,9 +31,9 @@ from homeassistant.components.media_player import (
     SERVICE_VOLUME_UP,
     MediaPlayerState,
 )
-from homeassistant.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
+from menuai.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
 
 from .conftest import PlayerMocks
 
@@ -48,14 +48,14 @@ from .conftest import PlayerMocks
     ],
 )
 async def test_simple_actions(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_config_entry: None,
     player_mocks: PlayerMocks,
     service: str,
     method: str,
 ) -> None:
     """Test the media player simple actions."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         service,
         {ATTR_ENTITY_ID: "media_player.player_name1111"},
@@ -66,10 +66,10 @@ async def test_simple_actions(
 
 
 async def test_volume_set(
-    hass: HomeAssistant, setup_config_entry: None, player_mocks: PlayerMocks
+    menuai: menuai, setup_config_entry: None, player_mocks: PlayerMocks
 ) -> None:
     """Test the media player volume set."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_VOLUME_SET,
         {ATTR_ENTITY_ID: "media_player.player_name1111", ATTR_MEDIA_VOLUME_LEVEL: 0.5},
@@ -80,10 +80,10 @@ async def test_volume_set(
 
 
 async def test_volume_mute(
-    hass: HomeAssistant, setup_config_entry: None, player_mocks: PlayerMocks
+    menuai: menuai, setup_config_entry: None, player_mocks: PlayerMocks
 ) -> None:
     """Test the media player volume mute."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_VOLUME_MUTE,
         {ATTR_ENTITY_ID: "media_player.player_name1111", "is_volume_muted": True},
@@ -94,10 +94,10 @@ async def test_volume_mute(
 
 
 async def test_volume_up(
-    hass: HomeAssistant, setup_config_entry: None, player_mocks: PlayerMocks
+    menuai: menuai, setup_config_entry: None, player_mocks: PlayerMocks
 ) -> None:
     """Test the media player volume up."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_VOLUME_UP,
         {ATTR_ENTITY_ID: "media_player.player_name1111"},
@@ -108,10 +108,10 @@ async def test_volume_up(
 
 
 async def test_volume_down(
-    hass: HomeAssistant, setup_config_entry: None, player_mocks: PlayerMocks
+    menuai: menuai, setup_config_entry: None, player_mocks: PlayerMocks
 ) -> None:
     """Test the media player volume down."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_VOLUME_DOWN,
         {ATTR_ENTITY_ID: "media_player.player_name1111"},
@@ -122,10 +122,10 @@ async def test_volume_down(
 
 
 async def test_select_input_source(
-    hass: HomeAssistant, setup_config_entry: None, player_mocks: PlayerMocks
+    menuai: menuai, setup_config_entry: None, player_mocks: PlayerMocks
 ) -> None:
     """Test the media player select input source."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_SELECT_SOURCE,
         {ATTR_ENTITY_ID: "media_player.player_name1111", ATTR_INPUT_SOURCE: "input1"},
@@ -135,10 +135,10 @@ async def test_select_input_source(
 
 
 async def test_select_preset_source(
-    hass: HomeAssistant, setup_config_entry: None, player_mocks: PlayerMocks
+    menuai: menuai, setup_config_entry: None, player_mocks: PlayerMocks
 ) -> None:
     """Test the media player select preset source."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_SELECT_SOURCE,
         {ATTR_ENTITY_ID: "media_player.player_name1111", ATTR_INPUT_SOURCE: "preset1"},
@@ -148,20 +148,20 @@ async def test_select_preset_source(
 
 
 async def test_attributes_set(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_config_entry: None,
     player_mocks: PlayerMocks,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test the media player attributes set."""
-    state = hass.states.get("media_player.player_name1111")
+    state = menuai.states.get("media_player.player_name1111")
     assert state == snapshot(
         exclude=props("media_position_updated_at", "media_position")
     )
 
 
 async def test_stop_maps_to_idle(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_config_entry: None,
     player_mocks: PlayerMocks,
 ) -> None:
@@ -173,20 +173,20 @@ async def test_stop_maps_to_idle(
     )
 
     # give the long polling loop a chance to update the state; this could be any async call
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert (
-        hass.states.get("media_player.player_name1111").state == MediaPlayerState.IDLE
+        menuai.states.get("media_player.player_name1111").state == MediaPlayerState.IDLE
     )
 
 
 async def test_status_updated(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_config_entry: None,
     player_mocks: PlayerMocks,
 ) -> None:
     """Test the media player status updated."""
-    pre_state = hass.states.get("media_player.player_name1111")
+    pre_state = menuai.states.get("media_player.player_name1111")
     assert pre_state.state == "playing"
     assert pre_state.attributes[ATTR_MEDIA_VOLUME_LEVEL] == 0.1
 
@@ -195,21 +195,21 @@ async def test_status_updated(
     player_mocks.player_data.status_long_polling_mock.set(status)
 
     # give the long polling loop a chance to update the state; this could be any async call
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    post_state = hass.states.get("media_player.player_name1111")
+    post_state = menuai.states.get("media_player.player_name1111")
 
     assert post_state.state == MediaPlayerState.PAUSED
     assert post_state.attributes[ATTR_MEDIA_VOLUME_LEVEL] == 0.5
 
 
 async def test_unavailable_when_offline(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_config_entry: None,
     player_mocks: PlayerMocks,
 ) -> None:
     """Test that the media player goes unavailable when the player is unreachable."""
-    pre_state = hass.states.get("media_player.player_name1111")
+    pre_state = menuai.states.get("media_player.player_name1111")
     assert pre_state.state == "playing"
 
     player_mocks.player_data.status_long_polling_mock.set_error(
@@ -218,18 +218,18 @@ async def test_unavailable_when_offline(
     player_mocks.player_data.status_long_polling_mock.trigger()
 
     # give the long polling loop a chance to update the state; this could be any async call
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    post_state = hass.states.get("media_player.player_name1111")
+    post_state = menuai.states.get("media_player.player_name1111")
 
     assert post_state.state == STATE_UNAVAILABLE
 
 
 async def test_set_sleep_timer(
-    hass: HomeAssistant, setup_config_entry: None, player_mocks: PlayerMocks
+    menuai: menuai, setup_config_entry: None, player_mocks: PlayerMocks
 ) -> None:
     """Test the set sleep timer action."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_TIMER,
         {ATTR_ENTITY_ID: "media_player.player_name1111"},
@@ -240,13 +240,13 @@ async def test_set_sleep_timer(
 
 
 async def test_clear_sleep_timer(
-    hass: HomeAssistant, setup_config_entry: None, player_mocks: PlayerMocks
+    menuai: menuai, setup_config_entry: None, player_mocks: PlayerMocks
 ) -> None:
     """Test the clear sleep timer action."""
 
     player_mocks.player_data.player.sleep_timer.side_effect = [15, 30, 45, 60, 90, 0]
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_CLEAR_TIMER,
         {ATTR_ENTITY_ID: "media_player.player_name1111"},
@@ -257,11 +257,11 @@ async def test_clear_sleep_timer(
 
 
 async def test_join_cannot_join_to_self(
-    hass: HomeAssistant, setup_config_entry: None, player_mocks: PlayerMocks
+    menuai: menuai, setup_config_entry: None, player_mocks: PlayerMocks
 ) -> None:
     """Test that joining to self is not allowed."""
     with pytest.raises(ServiceValidationError, match="Cannot join player to itself"):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_JOIN,
             {
@@ -273,13 +273,13 @@ async def test_join_cannot_join_to_self(
 
 
 async def test_join(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_config_entry: None,
     setup_config_entry_secondary: None,
     player_mocks: PlayerMocks,
 ) -> None:
     """Test the join action."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_JOIN,
         {
@@ -295,7 +295,7 @@ async def test_join(
 
 
 async def test_unjoin(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_config_entry: None,
     setup_config_entry_secondary: None,
     player_mocks: PlayerMocks,
@@ -308,9 +308,9 @@ async def test_unjoin(
     player_mocks.player_data.sync_status_long_polling_mock.set(updated_sync_status)
 
     # give the long polling loop a chance to update the state; this could be any async call
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         "unjoin",
         {ATTR_ENTITY_ID: "media_player.player_name1111"},
@@ -323,12 +323,12 @@ async def test_unjoin(
 
 
 async def test_attr_master(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_config_entry: None,
     player_mocks: PlayerMocks,
 ) -> None:
     """Test the media player leader."""
-    attr_master = hass.states.get("media_player.player_name1111").attributes[
+    attr_master = menuai.states.get("media_player.player_name1111").attributes[
         ATTR_MASTER
     ]
     assert attr_master is False
@@ -340,9 +340,9 @@ async def test_attr_master(
     player_mocks.player_data.sync_status_long_polling_mock.set(updated_sync_status)
 
     # give the long polling loop a chance to update the state; this could be any async call
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    attr_master = hass.states.get("media_player.player_name1111").attributes[
+    attr_master = menuai.states.get("media_player.player_name1111").attributes[
         ATTR_MASTER
     ]
 
@@ -350,13 +350,13 @@ async def test_attr_master(
 
 
 async def test_attr_bluesound_group(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_config_entry: None,
     setup_config_entry_secondary: None,
     player_mocks: PlayerMocks,
 ) -> None:
     """Test the media player grouping for leader."""
-    attr_bluesound_group = hass.states.get(
+    attr_bluesound_group = menuai.states.get(
         "media_player.player_name1111"
     ).attributes.get("bluesound_group")
     assert attr_bluesound_group is None
@@ -368,9 +368,9 @@ async def test_attr_bluesound_group(
     player_mocks.player_data.sync_status_long_polling_mock.set(updated_sync_status)
 
     # give the long polling loop a chance to update the state; this could be any async call
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    attr_bluesound_group = hass.states.get(
+    attr_bluesound_group = menuai.states.get(
         "media_player.player_name1111"
     ).attributes.get("bluesound_group")
 
@@ -378,13 +378,13 @@ async def test_attr_bluesound_group(
 
 
 async def test_attr_bluesound_group_for_follower(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_config_entry: None,
     setup_config_entry_secondary: None,
     player_mocks: PlayerMocks,
 ) -> None:
     """Test the media player grouping for follower."""
-    attr_bluesound_group = hass.states.get(
+    attr_bluesound_group = menuai.states.get(
         "media_player.player_name2222"
     ).attributes.get("bluesound_group")
     assert attr_bluesound_group is None
@@ -396,7 +396,7 @@ async def test_attr_bluesound_group_for_follower(
     player_mocks.player_data.sync_status_long_polling_mock.set(updated_sync_status)
 
     # give the long polling loop a chance to update the state; this could be any async call
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     updated_sync_status = dataclasses.replace(
         player_mocks.player_data_secondary.sync_status_long_polling_mock.get(),
@@ -407,9 +407,9 @@ async def test_attr_bluesound_group_for_follower(
     )
 
     # give the long polling loop a chance to update the state; this could be any async call
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    attr_bluesound_group = hass.states.get(
+    attr_bluesound_group = menuai.states.get(
         "media_player.player_name2222"
     ).attributes.get("bluesound_group")
 
@@ -417,7 +417,7 @@ async def test_attr_bluesound_group_for_follower(
 
 
 async def test_volume_up_from_6_to_7(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_config_entry: None,
     player_mocks: PlayerMocks,
 ) -> None:
@@ -432,9 +432,9 @@ async def test_volume_up_from_6_to_7(
     )
 
     # give the long polling loop a chance to update the state; this could be any async call
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_VOLUME_UP,
         {ATTR_ENTITY_ID: "media_player.player_name1111"},

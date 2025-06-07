@@ -9,12 +9,12 @@ from typing import Any, Literal, TypeGuard
 
 import voluptuous as vol
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     PLATFORM_SCHEMA as BINARY_SENSOR_PLATFORM_SCHEMA,
     BinarySensorEntity,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_AFTER,
     CONF_BEFORE,
     CONF_NAME,
@@ -22,15 +22,15 @@ from homeassistant.const import (
     SUN_EVENT_SUNRISE,
     SUN_EVENT_SUNSET,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv, event
-from homeassistant.helpers.entity_platform import (
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv, event
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     AddEntitiesCallback,
 )
-from homeassistant.helpers.sun import get_astral_event_date, get_astral_event_next
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import dt as dt_util
+from menuai.helpers.sun import get_astral_event_date, get_astral_event_next
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import dt as dt_util
 
 from .const import (
     CONF_AFTER_OFFSET,
@@ -60,13 +60,13 @@ PLATFORM_SCHEMA = BINARY_SENSOR_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Initialize Times of the Day config entry."""
-    if hass.config.time_zone is None:
-        _LOGGER.error("Timezone is not set in Home Assistant configuration")  # type: ignore[unreachable]
+    if menuai.config.time_zone is None:
+        _LOGGER.error("Timezone is not set in MenuAI configuration")  # type: ignore[unreachable]
         return
 
     after = cv.time(config_entry.options[CONF_AFTER_TIME])
@@ -82,14 +82,14 @@ async def async_setup_entry(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the ToD sensors."""
-    if hass.config.time_zone is None:
-        _LOGGER.error("Timezone is not set in Home Assistant configuration")  # type: ignore[unreachable]
+    if menuai.config.time_zone is None:
+        _LOGGER.error("Timezone is not set in MenuAI configuration")  # type: ignore[unreachable]
         return
 
     after = config[CONF_AFTER]
@@ -169,13 +169,13 @@ class TodSensor(BinarySensorEntity):
             # Calculate the today's event utc time or
             # if not available take next
             after_event_date = get_astral_event_date(
-                self.hass, self._after, nowutc
-            ) or get_astral_event_next(self.hass, self._after, nowutc)
+                self.menuai, self._after, nowutc
+            ) or get_astral_event_next(self.menuai, self._after, nowutc)
         else:
             # Convert local time provided to UTC today
             # datetime.combine(date, time, tzinfo) is not supported
             # in python 3.5. The self._after is provided
-            # with hass configured TZ not system wide
+            # with menuai configured TZ not system wide
             after_event_date = self._naive_time_to_utc_datetime(self._after)
 
         self._time_after = after_event_date
@@ -185,13 +185,13 @@ class TodSensor(BinarySensorEntity):
             # Calculate the today's event utc time or  if not available take
             # next
             before_event_date = get_astral_event_date(
-                self.hass, self._before, nowutc
-            ) or get_astral_event_next(self.hass, self._before, nowutc)
+                self.menuai, self._before, nowutc
+            ) or get_astral_event_next(self.menuai, self._before, nowutc)
             # Before is earlier than after
             if before_event_date < after_event_date:
                 # Take next day for before
                 before_event_date = get_astral_event_next(
-                    self.hass, self._before, after_event_date
+                    self.menuai, self._before, after_event_date
                 )
         else:
             # Convert local time provided to UTC today, see above
@@ -242,7 +242,7 @@ class TodSensor(BinarySensorEntity):
         """Turn to to the next day."""
         if _is_sun_event(self._after):
             self._time_after = get_astral_event_next(
-                self.hass, self._after, self._time_after - self._after_offset
+                self.menuai, self._after, self._time_after - self._after_offset
             )
             self._time_after += self._after_offset
         else:
@@ -253,7 +253,7 @@ class TodSensor(BinarySensorEntity):
 
         if _is_sun_event(self._before):
             self._time_before = get_astral_event_next(
-                self.hass, self._before, self._time_before - self._before_offset
+                self.menuai, self._before, self._time_before - self._before_offset
             )
             self._time_before += self._before_offset
         else:
@@ -262,8 +262,8 @@ class TodSensor(BinarySensorEntity):
                 self._time_before, self._before
             )
 
-    async def async_added_to_hass(self) -> None:
-        """Call when entity about to be added to Home Assistant."""
+    async def async_added_to_menuai(self) -> None:
+        """Call when entity about to be added to MenuAI."""
         self._calculate_boundary_time()
         self._calculate_next_update()
 
@@ -276,7 +276,7 @@ class TodSensor(BinarySensorEntity):
         self.async_on_remove(_clean_up_listener)
 
         self._unsub_update = event.async_track_point_in_utc_time(
-            self.hass, self._point_in_time_listener, self._next_update
+            self.menuai, self._point_in_time_listener, self._next_update
         )
 
     def _calculate_next_update(self) -> None:
@@ -298,5 +298,5 @@ class TodSensor(BinarySensorEntity):
         self.async_write_ha_state()
 
         self._unsub_update = event.async_track_point_in_utc_time(
-            self.hass, self._point_in_time_listener, self._next_update
+            self.menuai, self._point_in_time_listener, self._next_update
         )

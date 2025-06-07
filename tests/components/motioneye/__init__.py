@@ -7,13 +7,13 @@ from unittest.mock import AsyncMock, Mock, patch
 
 from motioneye_client.const import DEFAULT_PORT
 
-from homeassistant.components.motioneye.const import DOMAIN
-from homeassistant.components.motioneye.entity import get_motioneye_entity_unique_id
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_URL
-from homeassistant.core import HomeAssistant
-from homeassistant.core_config import async_process_ha_core_config
-from homeassistant.helpers import entity_registry as er
+from menuai.components.motioneye.const import DOMAIN
+from menuai.components.motioneye.entity import get_motioneye_entity_unique_id
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_URL
+from menuai.core import menuai
+from menuai.core_config import async_process_ha_core_config
+from menuai.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry
 
@@ -155,7 +155,7 @@ def create_mock_motioneye_client() -> AsyncMock:
 
 
 def create_mock_motioneye_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     data: dict[str, Any] | None = None,
     options: dict[str, Any] | None = None,
 ) -> ConfigEntry:
@@ -167,39 +167,39 @@ def create_mock_motioneye_config_entry(
         title=f"{TEST_URL}",
         options=options or {},
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     return config_entry
 
 
 async def setup_mock_motioneye_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry | None = None,
     client: Mock | None = None,
 ) -> ConfigEntry:
     """Create and setup a mock motionEye config entry."""
 
     await async_process_ha_core_config(
-        hass,
+        menuai,
         {
             "internal_url": "https://internal.url",
             "external_url": "https://external.url",
         },
     )
 
-    config_entry = config_entry or create_mock_motioneye_config_entry(hass)
+    config_entry = config_entry or create_mock_motioneye_config_entry(menuai)
     client = client or create_mock_motioneye_client()
 
     with patch(
-        "homeassistant.components.motioneye.MotionEyeClient",
+        "menuai.components.motioneye.MotionEyeClient",
         return_value=client,
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
     return config_entry
 
 
 def register_test_entity(
-    hass: HomeAssistant, platform: str, camera_id: int, type_name: str, entity_id: str
+    menuai: menuai, platform: str, camera_id: int, type_name: str, entity_id: str
 ) -> None:
     """Register a test entity."""
 
@@ -208,7 +208,7 @@ def register_test_entity(
     )
     entity_id = entity_id.split(".")[1]
 
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
     entity_registry.async_get_or_create(
         platform,
         DOMAIN,

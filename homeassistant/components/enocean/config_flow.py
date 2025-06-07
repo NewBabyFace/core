@@ -4,9 +4,9 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_DEVICE
-from homeassistant.helpers.selector import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_DEVICE
+from menuai.helpers.selector import (
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
@@ -57,7 +57,7 @@ class EnOceanFlowHandler(ConfigFlow, domain=DOMAIN):
                 return self.create_enocean_entry(user_input)
             errors = {CONF_DEVICE: ERROR_INVALID_DONGLE_PATH}
 
-        devices = await self.hass.async_add_executor_job(dongle.detect)
+        devices = await self.menuai.async_add_executor_job(dongle.detect)
         if len(devices) == 0:
             return await self.async_step_manual(user_input)
         devices.append(self.MANUAL_PATH_VALUE)
@@ -101,7 +101,7 @@ class EnOceanFlowHandler(ConfigFlow, domain=DOMAIN):
     async def validate_enocean_conf(self, user_input) -> bool:
         """Return True if the user_input contains a valid dongle path."""
         dongle_path = user_input[CONF_DEVICE]
-        return await self.hass.async_add_executor_job(dongle.validate_path, dongle_path)
+        return await self.menuai.async_add_executor_job(dongle.validate_path, dongle_path)
 
     def create_enocean_entry(self, user_input):
         """Create an entry for the provided configuration."""

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, NotRequired, TypedDict
 
-from homeassistant.util.signal_type import SignalType
+from menuai.util.signal_type import SignalType
 
 if TYPE_CHECKING:
     from .helpers import ChromecastInfo
@@ -30,20 +30,20 @@ SIGNAL_CAST_DISCOVERED: SignalType[ChromecastInfo] = SignalType("cast_discovered
 # removed
 SIGNAL_CAST_REMOVED: SignalType[ChromecastInfo] = SignalType("cast_removed")
 
-# Dispatcher signal fired when a Chromecast should show a Home Assistant Cast view.
-SIGNAL_HASS_CAST_SHOW_VIEW: SignalType[
-    HomeAssistantControllerData, str, str, str | None
+# Dispatcher signal fired when a Chromecast should show a MenuAI Cast view.
+SIGNAL_menuai_CAST_SHOW_VIEW: SignalType[
+    menuaiControllerData, str, str, str | None
 ] = SignalType("cast_show_view")
 
 CONF_IGNORE_CEC = "ignore_cec"
 CONF_KNOWN_HOSTS = "known_hosts"
 
 
-class HomeAssistantControllerData(TypedDict):
-    """Data for creating a HomeAssistantController."""
+class menuaiControllerData(TypedDict):
+    """Data for creating a menuaiController."""
 
-    hass_url: str
-    hass_uuid: str
+    menuai_url: str
+    menuai_uuid: str
     client_id: str | None
     refresh_token: str
     app_id: NotRequired[str]

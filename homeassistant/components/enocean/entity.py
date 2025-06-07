@@ -3,8 +3,8 @@
 from enocean.protocol.packet import Packet
 from enocean.utils import combine_hex
 
-from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
-from homeassistant.helpers.entity import Entity
+from menuai.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
+from menuai.helpers.entity import Entity
 
 from .const import SIGNAL_RECEIVE_MESSAGE, SIGNAL_SEND_MESSAGE
 
@@ -16,11 +16,11 @@ class EnOceanEntity(Entity):
         """Initialize the device."""
         self.dev_id = dev_id
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, SIGNAL_RECEIVE_MESSAGE, self._message_received_callback
+                self.menuai, SIGNAL_RECEIVE_MESSAGE, self._message_received_callback
             )
         )
 
@@ -37,4 +37,4 @@ class EnOceanEntity(Entity):
         """Send a command via the EnOcean dongle."""
 
         packet = Packet(packet_type, data=data, optional=optional)
-        dispatcher_send(self.hass, SIGNAL_SEND_MESSAGE, packet)
+        dispatcher_send(self.menuai, SIGNAL_SEND_MESSAGE, packet)

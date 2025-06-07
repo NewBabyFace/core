@@ -19,8 +19,8 @@ from pyoverkiz.exceptions import (
 from pyoverkiz.models import Device, OverkizServer, Scenario
 from pyoverkiz.utils import generate_local_server
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_TOKEN,
@@ -28,10 +28,10 @@ from homeassistant.const import (
     CONF_VERIFY_SSL,
     Platform,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.aiohttp_client import async_create_clientsession
+from menuai.core import menuai, callback
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.aiohttp_client import async_create_clientsession
 
 from .const import (
     CONF_API_TYPE,
@@ -47,7 +47,7 @@ from .coordinator import OverkizDataUpdateCoordinator
 
 
 @dataclass
-class HomeAssistantOverkizData:
+class menuaiOverkizData:
     """Overkiz data stored in the runtime data object."""
 
     coordinator: OverkizDataUpdateCoordinator
@@ -55,10 +55,10 @@ class HomeAssistantOverkizData:
     scenarios: list[Scenario]
 
 
-type OverkizDataConfigEntry = ConfigEntry[HomeAssistantOverkizData]
+type OverkizDataConfigEntry = ConfigEntry[menuaiOverkizData]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: OverkizDataConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: OverkizDataConfigEntry) -> bool:
     """Set up Overkiz from a config entry."""
     client: OverkizClient | None = None
     api_type = entry.data.get(CONF_API_TYPE, APIType.CLOUD)
@@ -66,7 +66,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: OverkizDataConfigEntry) 
     # Local API
     if api_type == APIType.LOCAL:
         client = create_local_client(
-            hass,
+            menuai,
             host=entry.data[CONF_HOST],
             token=entry.data[CONF_TOKEN],
             verify_ssl=entry.data[CONF_VERIFY_SSL],
@@ -75,13 +75,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: OverkizDataConfigEntry) 
     # Overkiz Cloud API
     else:
         client = create_cloud_client(
-            hass,
+            menuai,
             username=entry.data[CONF_USERNAME],
             password=entry.data[CONF_PASSWORD],
             server=SUPPORTED_SERVERS[entry.data[CONF_HUB]],
         )
 
-    await _async_migrate_entries(hass, entry)
+    await _async_migrate_entries(menuai, entry)
 
     try:
         await client.login()
@@ -107,7 +107,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: OverkizDataConfigEntry) 
         raise ConfigEntryNotReady("Server is down for maintenance") from exception
 
     coordinator = OverkizDataUpdateCoordinator(
-        hass,
+        menuai,
         entry,
         LOGGER,
         client=client,
@@ -133,11 +133,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: OverkizDataConfigEntry) 
 
     platforms: defaultdict[Platform, list[Device]] = defaultdict(list)
 
-    entry.runtime_data = HomeAssistantOverkizData(
+    entry.runtime_data = menuaiOverkizData(
         coordinator=coordinator, platforms=platforms, scenarios=scenarios
     )
 
-    # Map Overkiz entities to Home Assistant platform
+    # Map Overkiz entities to MenuAI platform
     for device in coordinator.data.values():
         LOGGER.debug(
             (
@@ -152,7 +152,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: OverkizDataConfigEntry) 
         ) or OVERKIZ_DEVICE_TO_PLATFORM.get(device.ui_class):
             platforms[platform].append(device)
 
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
 
     for gateway in setup.gateways:
         LOGGER.debug("Added gateway (%s)", gateway)
@@ -167,23 +167,23 @@ async def async_setup_entry(hass: HomeAssistant, entry: OverkizDataConfigEntry) 
             configuration_url=client.server.configuration_url,
         )
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, entry: OverkizDataConfigEntry
+    menuai: menuai, entry: OverkizDataConfigEntry
 ) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 async def _async_migrate_entries(
-    hass: HomeAssistant, config_entry: OverkizDataConfigEntry
+    menuai: menuai, config_entry: OverkizDataConfigEntry
 ) -> bool:
     """Migrate old entries to new unique IDs."""
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
 
     @callback
     def update_unique_id(entry: er.RegistryEntry) -> dict[str, str] | None:
@@ -233,16 +233,16 @@ async def _async_migrate_entries(
 
         return None
 
-    await er.async_migrate_entries(hass, config_entry.entry_id, update_unique_id)
+    await er.async_migrate_entries(menuai, config_entry.entry_id, update_unique_id)
 
     return True
 
 
 def create_local_client(
-    hass: HomeAssistant, host: str, token: str, verify_ssl: bool
+    menuai: menuai, host: str, token: str, verify_ssl: bool
 ) -> OverkizClient:
     """Create Overkiz local client."""
-    session = async_create_clientsession(hass, verify_ssl=verify_ssl)
+    session = async_create_clientsession(menuai, verify_ssl=verify_ssl)
 
     return OverkizClient(
         username="",
@@ -255,11 +255,11 @@ def create_local_client(
 
 
 def create_cloud_client(
-    hass: HomeAssistant, username: str, password: str, server: OverkizServer
+    menuai: menuai, username: str, password: str, server: OverkizServer
 ) -> OverkizClient:
     """Create Overkiz cloud client."""
     # To allow users with multiple accounts/hubs, we create a new session so they have separate cookies
-    session = async_create_clientsession(hass)
+    session = async_create_clientsession(menuai)
 
     return OverkizClient(
         username=username, password=password, session=session, server=server

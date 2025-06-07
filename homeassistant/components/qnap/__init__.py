@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai
 
 from .const import DOMAIN
 from .coordinator import QnapCoordinator
@@ -14,21 +14,21 @@ PLATFORMS: list[Platform] = [
 ]
 
 
-async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, config_entry: ConfigEntry) -> bool:
     """Set the config entry up."""
-    hass.data.setdefault(DOMAIN, {})
-    coordinator = QnapCoordinator(hass, config_entry)
+    menuai.data.setdefault(DOMAIN, {})
+    coordinator = QnapCoordinator(menuai, config_entry)
     # Fetch initial data so we have data when entities subscribe
     await coordinator.async_config_entry_first_refresh()
-    hass.data[DOMAIN][config_entry.entry_id] = coordinator
-    await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
+    menuai.data[DOMAIN][config_entry.entry_id] = coordinator
+    await menuai.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, config_entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(
+    if unload_ok := await menuai.config_entries.async_unload_platforms(
         config_entry, PLATFORMS
     ):
-        hass.data[DOMAIN].pop(config_entry.entry_id)
+        menuai.data[DOMAIN].pop(config_entry.entry_id)
     return unload_ok

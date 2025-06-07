@@ -17,11 +17,11 @@ from aiomealie import (
     Statistics,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util import dt as dt_util
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.util import dt as dt_util
 
 from .const import DOMAIN, LOGGER
 
@@ -49,11 +49,11 @@ class MealieDataUpdateCoordinator[_DataT](DataUpdateCoordinator[_DataT]):
     _update_interval: timedelta
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: MealieConfigEntry, client: MealieClient
+        self, menuai: menuai, config_entry: MealieConfigEntry, client: MealieClient
     ) -> None:
         """Initialize the Mealie data coordinator."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name=f"Mealie {self._name}",

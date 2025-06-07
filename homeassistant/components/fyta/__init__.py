@@ -7,15 +7,15 @@ import logging
 
 from fyta_cli.fyta_connector import FytaConnector
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_ACCESS_TOKEN,
     CONF_PASSWORD,
     CONF_USERNAME,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.util.dt import async_get_time_zone
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.util.dt import async_get_time_zone
 
 from .const import CONF_EXPIRATION
 from .coordinator import FytaConfigEntry, FytaCoordinator
@@ -29,9 +29,9 @@ PLATFORMS = [
 ]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: FytaConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: FytaConfigEntry) -> bool:
     """Set up the Fyta integration."""
-    tz: str = hass.config.time_zone
+    tz: str = menuai.config.time_zone
 
     username = entry.data[CONF_USERNAME]
     password = entry.data[CONF_PASSWORD]
@@ -41,28 +41,28 @@ async def async_setup_entry(hass: HomeAssistant, entry: FytaConfigEntry) -> bool
     ).astimezone(await async_get_time_zone(tz))
 
     fyta = FytaConnector(
-        username, password, access_token, expiration, tz, async_get_clientsession(hass)
+        username, password, access_token, expiration, tz, async_get_clientsession(menuai)
     )
 
-    coordinator = FytaCoordinator(hass, entry, fyta)
+    coordinator = FytaCoordinator(menuai, entry, fyta)
 
     await coordinator.async_config_entry_first_refresh()
 
     entry.runtime_data = coordinator
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: FytaConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: FytaConfigEntry) -> bool:
     """Unload Fyta entity."""
 
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 async def async_migrate_entry(
-    hass: HomeAssistant, config_entry: FytaConfigEntry
+    menuai: menuai, config_entry: FytaConfigEntry
 ) -> bool:
     """Migrate old entry."""
     _LOGGER.debug("Migrating from version %s", config_entry.version)
@@ -83,7 +83,7 @@ async def async_migrate_entry(
             new[CONF_ACCESS_TOKEN] = credentials.access_token
             new[CONF_EXPIRATION] = credentials.expiration.isoformat()
 
-            hass.config_entries.async_update_entry(
+            menuai.config_entries.async_update_entry(
                 config_entry,
                 data=new,
                 minor_version=2,

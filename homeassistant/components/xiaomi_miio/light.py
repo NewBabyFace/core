@@ -27,25 +27,25 @@ from miio.gateway.gateway import (
 )
 import voluptuous as vol
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_TEMP_KELVIN,
     ATTR_HS_COLOR,
     ColorMode,
     LightEntity,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     CONF_DEVICE,
     CONF_HOST,
     CONF_MODEL,
     CONF_TOKEN,
 )
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import color as color_util, dt as dt_util
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import config_validation as cv
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import color as color_util, dt as dt_util
 
 from .const import (
     CONF_FLOW_TYPE,
@@ -129,7 +129,7 @@ SERVICE_TO_METHOD = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: XiaomiMiioConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -161,8 +161,8 @@ async def async_setup_entry(
                 )
 
     if config_entry.data[CONF_FLOW_TYPE] == CONF_DEVICE:
-        if DATA_KEY not in hass.data:
-            hass.data[DATA_KEY] = {}
+        if DATA_KEY not in menuai.data:
+            menuai.data[DATA_KEY] = {}
 
         host = config_entry.data[CONF_HOST]
         token = config_entry.data[CONF_TOKEN]
@@ -176,7 +176,7 @@ async def async_setup_entry(
             light = PhilipsEyecare(host, token)
             entity = XiaomiPhilipsEyecareLamp(name, light, config_entry, unique_id)
             entities.append(entity)
-            hass.data[DATA_KEY][host] = entity
+            menuai.data[DATA_KEY][host] = entity
 
             entities.append(
                 XiaomiPhilipsEyecareLampAmbientLight(
@@ -184,27 +184,27 @@ async def async_setup_entry(
                 )
             )
             # The ambient light doesn't expose additional services.
-            # A hass.data[DATA_KEY] entry isn't needed.
+            # A menuai.data[DATA_KEY] entry isn't needed.
         elif model in MODELS_LIGHT_CEILING:
             light = Ceil(host, token)
             entity = XiaomiPhilipsCeilingLamp(name, light, config_entry, unique_id)
             entities.append(entity)
-            hass.data[DATA_KEY][host] = entity
+            menuai.data[DATA_KEY][host] = entity
         elif model in MODELS_LIGHT_MOON:
             light = PhilipsMoonlight(host, token)
             entity = XiaomiPhilipsMoonlightLamp(name, light, config_entry, unique_id)
             entities.append(entity)
-            hass.data[DATA_KEY][host] = entity
+            menuai.data[DATA_KEY][host] = entity
         elif model in MODELS_LIGHT_BULB:
             light = PhilipsBulb(host, token)
             entity = XiaomiPhilipsBulb(name, light, config_entry, unique_id)
             entities.append(entity)
-            hass.data[DATA_KEY][host] = entity
+            menuai.data[DATA_KEY][host] = entity
         elif model in MODELS_LIGHT_MONO:
             light = PhilipsBulb(host, token)
             entity = XiaomiPhilipsGenericLight(name, light, config_entry, unique_id)
             entities.append(entity)
-            hass.data[DATA_KEY][host] = entity
+            menuai.data[DATA_KEY][host] = entity
         else:
             _LOGGER.error(
                 (
@@ -227,11 +227,11 @@ async def async_setup_entry(
             if entity_ids := service.data.get(ATTR_ENTITY_ID):
                 target_devices = [
                     dev
-                    for dev in hass.data[DATA_KEY].values()
+                    for dev in menuai.data[DATA_KEY].values()
                     if dev.entity_id in entity_ids
                 ]
             else:
-                target_devices = hass.data[DATA_KEY].values()
+                target_devices = menuai.data[DATA_KEY].values()
 
             update_tasks = []
             for target_device in target_devices:
@@ -247,7 +247,7 @@ async def async_setup_entry(
 
         for xiaomi_miio_service, method in SERVICE_TO_METHOD.items():
             schema = method.schema or XIAOMI_MIIO_SERVICE_SCHEMA
-            hass.services.async_register(
+            menuai.services.async_register(
                 DOMAIN, xiaomi_miio_service, async_service_handler, schema=schema
             )
 
@@ -276,7 +276,7 @@ class XiaomiPhilipsAbstractLight(XiaomiMiioEntity, LightEntity):
     async def _try_command(self, mask_error, func, *args, **kwargs):
         """Call a light command handling error messages."""
         try:
-            result = await self.hass.async_add_executor_job(
+            result = await self.menuai.async_add_executor_job(
                 partial(func, *args, **kwargs)
             )
         except DeviceException as exc:
@@ -315,7 +315,7 @@ class XiaomiPhilipsAbstractLight(XiaomiMiioEntity, LightEntity):
     async def async_update(self) -> None:
         """Fetch state from the device."""
         try:
-            state = await self.hass.async_add_executor_job(self._device.status)
+            state = await self.menuai.async_add_executor_job(self._device.status)
         except DeviceException as ex:
             if self._attr_available:
                 self._attr_available = False
@@ -351,7 +351,7 @@ class XiaomiPhilipsGenericLight(XiaomiPhilipsAbstractLight):
     async def async_update(self) -> None:
         """Fetch state from the device."""
         try:
-            state = await self.hass.async_add_executor_job(self._device.status)
+            state = await self.menuai.async_add_executor_job(self._device.status)
         except DeviceException as ex:
             if self._attr_available:
                 self._attr_available = False
@@ -534,7 +534,7 @@ class XiaomiPhilipsBulb(XiaomiPhilipsGenericLight):
     async def async_update(self) -> None:
         """Fetch state from the device."""
         try:
-            state = await self.hass.async_add_executor_job(self._device.status)
+            state = await self.menuai.async_add_executor_job(self._device.status)
         except DeviceException as ex:
             if self._attr_available:
                 self._attr_available = False
@@ -605,7 +605,7 @@ class XiaomiPhilipsCeilingLamp(XiaomiPhilipsBulb):
     async def async_update(self) -> None:
         """Fetch state from the device."""
         try:
-            state = await self.hass.async_add_executor_job(self._device.status)
+            state = await self.menuai.async_add_executor_job(self._device.status)
         except DeviceException as ex:
             if self._attr_available:
                 self._attr_available = False
@@ -663,7 +663,7 @@ class XiaomiPhilipsEyecareLamp(XiaomiPhilipsGenericLight):
     async def async_update(self) -> None:
         """Fetch state from the device."""
         try:
-            state = await self.hass.async_add_executor_job(self._device.status)
+            state = await self.menuai.async_add_executor_job(self._device.status)
         except DeviceException as ex:
             if self._attr_available:
                 self._attr_available = False
@@ -814,7 +814,7 @@ class XiaomiPhilipsEyecareLampAmbientLight(XiaomiPhilipsAbstractLight):
     async def async_update(self) -> None:
         """Fetch state from the device."""
         try:
-            state = await self.hass.async_add_executor_job(self._device.status)
+            state = await self.menuai.async_add_executor_job(self._device.status)
         except DeviceException as ex:
             if self._attr_available:
                 self._attr_available = False
@@ -979,7 +979,7 @@ class XiaomiPhilipsMoonlightLamp(XiaomiPhilipsBulb):
     async def async_update(self) -> None:
         """Fetch state from the device."""
         try:
-            state = await self.hass.async_add_executor_job(self._device.status)
+            state = await self.menuai.async_add_executor_job(self._device.status)
         except DeviceException as ex:
             if self._attr_available:
                 self._attr_available = False
@@ -1074,7 +1074,7 @@ class XiaomiGatewayLight(LightEntity):
     async def async_update(self) -> None:
         """Fetch state from the device."""
         try:
-            state_dict = await self.hass.async_add_executor_job(
+            state_dict = await self.menuai.async_add_executor_job(
                 self._gateway.light.rgb_status
             )
         except GatewayException as ex:
@@ -1128,22 +1128,22 @@ class XiaomiGatewayBulb(XiaomiGatewayDevice, LightEntity):
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Instruct the light to turn on."""
-        await self.hass.async_add_executor_job(self._sub_device.on)
+        await self.menuai.async_add_executor_job(self._sub_device.on)
 
         if ATTR_COLOR_TEMP_KELVIN in kwargs:
             color_temp = color_util.color_temperature_kelvin_to_mired(
                 kwargs[ATTR_COLOR_TEMP_KELVIN]
             )
-            await self.hass.async_add_executor_job(
+            await self.menuai.async_add_executor_job(
                 self._sub_device.set_color_temp, color_temp
             )
 
         if ATTR_BRIGHTNESS in kwargs:
             brightness = round((kwargs[ATTR_BRIGHTNESS] * 100) / 255)
-            await self.hass.async_add_executor_job(
+            await self.menuai.async_add_executor_job(
                 self._sub_device.set_brightness, brightness
             )
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Instruct the light to turn off."""
-        await self.hass.async_add_executor_job(self._sub_device.off)
+        await self.menuai.async_add_executor_job(self._sub_device.off)

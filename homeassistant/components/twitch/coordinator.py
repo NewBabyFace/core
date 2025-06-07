@@ -8,10 +8,10 @@ from twitchAPI.object.api import FollowedChannel, Stream, TwitchUser, UserSubscr
 from twitchAPI.twitch import Twitch
 from twitchAPI.type import TwitchAPIException, TwitchResourceNotFound
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.config_entry_oauth2_flow import OAuth2Session
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.config_entry_oauth2_flow import OAuth2Session
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import CONF_CHANNELS, DOMAIN, LOGGER, OAUTH_SCOPES
 
@@ -52,7 +52,7 @@ class TwitchCoordinator(DataUpdateCoordinator[dict[str, TwitchUpdate]]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         twitch: Twitch,
         session: OAuth2Session,
         entry: TwitchConfigEntry,
@@ -60,7 +60,7 @@ class TwitchCoordinator(DataUpdateCoordinator[dict[str, TwitchUpdate]]):
         """Initialize the coordinator."""
         self.twitch = twitch
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             name=DOMAIN,
             update_interval=timedelta(minutes=5),

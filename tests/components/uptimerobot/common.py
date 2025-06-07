@@ -14,11 +14,11 @@ from pyuptimerobot import (
     UptimeRobotMonitor,
 )
 
-from homeassistant import config_entries
-from homeassistant.components.uptimerobot.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import STATE_ON
-from homeassistant.core import HomeAssistant
+from menuai import config_entries
+from menuai.components.uptimerobot.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.const import STATE_ON
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -103,20 +103,20 @@ def mock_uptimerobot_api_response(
     )
 
 
-async def setup_uptimerobot_integration(hass: HomeAssistant) -> MockConfigEntry:
+async def setup_uptimerobot_integration(menuai: menuai) -> MockConfigEntry:
     """Set up the UptimeRobot integration."""
     mock_entry = MockConfigEntry(**MOCK_UPTIMEROBOT_CONFIG_ENTRY_DATA)
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
     with patch(
         "pyuptimerobot.UptimeRobot.async_get_monitors",
         return_value=mock_uptimerobot_api_response(data=[MOCK_UPTIMEROBOT_MONITOR]),
     ):
-        assert await hass.config_entries.async_setup(mock_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(mock_entry.entry_id)
+        await menuai.async_block_till_done()
 
-    assert hass.states.get(UPTIMEROBOT_BINARY_SENSOR_TEST_ENTITY).state == STATE_ON
-    assert hass.states.get(UPTIMEROBOT_SENSOR_TEST_ENTITY).state == STATE_UP
+    assert menuai.states.get(UPTIMEROBOT_BINARY_SENSOR_TEST_ENTITY).state == STATE_ON
+    assert menuai.states.get(UPTIMEROBOT_SENSOR_TEST_ENTITY).state == STATE_UP
     assert mock_entry.state is ConfigEntryState.LOADED
 
     return mock_entry

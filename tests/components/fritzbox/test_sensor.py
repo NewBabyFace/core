@@ -7,14 +7,14 @@ import pytest
 from requests.exceptions import HTTPError
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.climate import PRESET_COMFORT, PRESET_ECO
-from homeassistant.components.fritzbox.const import DOMAIN
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_DEVICES, STATE_UNKNOWN, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.util import dt as dt_util
+from menuai.components.climate import PRESET_COMFORT, PRESET_ECO
+from menuai.components.fritzbox.const import DOMAIN
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.const import CONF_DEVICES, STATE_UNKNOWN, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.util import dt as dt_util
 
 from . import (
     FritzDeviceBinarySensorMock,
@@ -42,7 +42,7 @@ ENTITY_ID = f"{SENSOR_DOMAIN}.{CONF_FAKE_NAME}"
     ],
 )
 async def test_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
     fritz: Mock,
@@ -51,59 +51,59 @@ async def test_setup(
     """Test setup of sensor platform for different device types."""
     device = device()
 
-    with patch("homeassistant.components.fritzbox.PLATFORMS", [Platform.SENSOR]):
+    with patch("menuai.components.fritzbox.PLATFORMS", [Platform.SENSOR]):
         entry = await setup_config_entry(
-            hass, MOCK_CONFIG[DOMAIN][CONF_DEVICES][0], ENTITY_ID, device, fritz
+            menuai, MOCK_CONFIG[DOMAIN][CONF_DEVICES][0], ENTITY_ID, device, fritz
         )
     assert entry.state is ConfigEntryState.LOADED
 
-    await snapshot_platform(hass, entity_registry, snapshot, entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, entry.entry_id)
 
 
-async def test_update(hass: HomeAssistant, fritz: Mock) -> None:
+async def test_update(menuai: menuai, fritz: Mock) -> None:
     """Test update without error."""
     device = FritzDeviceSensorMock()
     await setup_config_entry(
-        hass, MOCK_CONFIG[DOMAIN][CONF_DEVICES][0], ENTITY_ID, device, fritz
+        menuai, MOCK_CONFIG[DOMAIN][CONF_DEVICES][0], ENTITY_ID, device, fritz
     )
     assert fritz().update_devices.call_count == 1
     assert fritz().login.call_count == 1
 
     next_update = dt_util.utcnow() + timedelta(seconds=200)
-    async_fire_time_changed(hass, next_update)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai, next_update)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     assert fritz().update_devices.call_count == 2
     assert fritz().login.call_count == 1
 
 
-async def test_update_error(hass: HomeAssistant, fritz: Mock) -> None:
+async def test_update_error(menuai: menuai, fritz: Mock) -> None:
     """Test update with error."""
     device = FritzDeviceSensorMock()
     fritz().update_devices.side_effect = HTTPError("Boom")
     entry = await setup_config_entry(
-        hass, MOCK_CONFIG[DOMAIN][CONF_DEVICES][0], ENTITY_ID, device, fritz
+        menuai, MOCK_CONFIG[DOMAIN][CONF_DEVICES][0], ENTITY_ID, device, fritz
     )
     assert entry.state is ConfigEntryState.SETUP_RETRY
     assert fritz().update_devices.call_count == 2
     assert fritz().login.call_count == 2
 
     next_update = dt_util.utcnow() + timedelta(seconds=200)
-    async_fire_time_changed(hass, next_update)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai, next_update)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     assert fritz().update_devices.call_count == 4
     assert fritz().login.call_count == 4
 
 
-async def test_discover_new_device(hass: HomeAssistant, fritz: Mock) -> None:
+async def test_discover_new_device(menuai: menuai, fritz: Mock) -> None:
     """Test adding new discovered devices during runtime."""
     device = FritzDeviceSensorMock()
     await setup_config_entry(
-        hass, MOCK_CONFIG[DOMAIN][CONF_DEVICES][0], ENTITY_ID, device, fritz
+        menuai, MOCK_CONFIG[DOMAIN][CONF_DEVICES][0], ENTITY_ID, device, fritz
     )
 
-    state = hass.states.get(f"{ENTITY_ID}_temperature")
+    state = menuai.states.get(f"{ENTITY_ID}_temperature")
     assert state
 
     new_device = FritzDeviceSensorMock()
@@ -113,10 +113,10 @@ async def test_discover_new_device(hass: HomeAssistant, fritz: Mock) -> None:
     set_devices(fritz, devices=[device, new_device])
 
     next_update = dt_util.utcnow() + timedelta(seconds=200)
-    async_fire_time_changed(hass, next_update)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai, next_update)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get(f"{SENSOR_DOMAIN}.new_device_temperature")
+    state = menuai.states.get(f"{SENSOR_DOMAIN}.new_device_temperature")
     assert state
 
 
@@ -142,7 +142,7 @@ async def test_discover_new_device(hass: HomeAssistant, fritz: Mock) -> None:
     ],
 )
 async def test_next_change_sensors(
-    hass: HomeAssistant, fritz: Mock, next_changes: list, expected_states: list
+    menuai: menuai, fritz: Mock, next_changes: list, expected_states: list
 ) -> None:
     """Test next change sensors."""
     device = FritzDeviceClimateMock()
@@ -150,23 +150,23 @@ async def test_next_change_sensors(
     device.nextchange_temperature = next_changes[1]
 
     await setup_config_entry(
-        hass, MOCK_CONFIG[DOMAIN][CONF_DEVICES][0], ENTITY_ID, device, fritz
+        menuai, MOCK_CONFIG[DOMAIN][CONF_DEVICES][0], ENTITY_ID, device, fritz
     )
 
     base_name = f"{SENSOR_DOMAIN}.{CONF_FAKE_NAME}"
 
-    state = hass.states.get(f"{base_name}_next_scheduled_change_time")
+    state = menuai.states.get(f"{base_name}_next_scheduled_change_time")
     assert state
     assert state.state == expected_states[0]
 
-    state = hass.states.get(f"{base_name}_next_scheduled_temperature")
+    state = menuai.states.get(f"{base_name}_next_scheduled_temperature")
     assert state
     assert state.state == expected_states[1]
 
-    state = hass.states.get(f"{base_name}_next_scheduled_preset")
+    state = menuai.states.get(f"{base_name}_next_scheduled_preset")
     assert state
     assert state.state == expected_states[2]
 
-    state = hass.states.get(f"{base_name}_current_scheduled_preset")
+    state = menuai.states.get(f"{base_name}_current_scheduled_preset")
     assert state
     assert state.state == expected_states[3]

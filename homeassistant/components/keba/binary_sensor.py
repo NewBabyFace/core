@@ -4,19 +4,19 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import DOMAIN, KebaHandler
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -25,7 +25,7 @@ async def async_setup_platform(
     if discovery_info is None:
         return
 
-    keba: KebaHandler = hass.data[DOMAIN]
+    keba: KebaHandler = menuai.data[DOMAIN]
 
     sensors = [
         KebaBinarySensor(
@@ -118,6 +118,6 @@ class KebaBinarySensor(BinarySensorEntity):
         """Schedule a state update."""
         self.async_schedule_update_ha_state(True)
 
-    async def async_added_to_hass(self) -> None:
-        """Add update callback after being added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Add update callback after being added to menuai."""
         self._keba.add_update_listener(self.update_callback)

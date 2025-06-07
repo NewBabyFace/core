@@ -4,24 +4,24 @@ import logging
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_DEVICE, CONF_NAME, Platform
-from homeassistant.core import DOMAIN as HOMEASSISTANT_DOMAIN, HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import config_validation as cv, discovery
-from homeassistant.helpers.issue_registry import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_DEVICE, CONF_NAME, Platform
+from menuai.core import DOMAIN as menuai_DOMAIN, menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import config_validation as cv, discovery
+from menuai.helpers.issue_registry import (
     IssueSeverity,
     async_create_issue,
     async_delete_issue,
 )
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     CONF_BAUD_SPEED,
     DEFAULT_BAUD_SPEED,
     DOMAIN,
     GATEWAY,
-    HASS_CONFIG,
+    menuai_CONFIG,
     NETWORK_COORDINATOR,
     SIGNAL_COORDINATOR,
     SMS_GATEWAY,
@@ -49,18 +49,18 @@ CONFIG_SCHEMA = vol.Schema(
 DEPRECATED_ISSUE_ID = f"deprecated_system_packages_config_flow_integration_{DOMAIN}"
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Configure Gammu state machine."""
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[HASS_CONFIG] = config
+    menuai.data.setdefault(DOMAIN, {})
+    menuai.data[menuai_CONFIG] = config
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Configure Gammu state machine."""
     async_create_issue(
-        hass,
-        HOMEASSISTANT_DOMAIN,
+        menuai,
+        menuai_DOMAIN,
         DEPRECATED_ISSUE_ID,
         breaks_in_ha_version="2025.12.0",
         is_fixable=False,
@@ -79,48 +79,48 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         connection_mode += baud_speed
     config = {"Device": device, "Connection": connection_mode}
     _LOGGER.debug("Connecting mode:%s", connection_mode)
-    gateway = await create_sms_gateway(config, hass)
+    gateway = await create_sms_gateway(config, menuai)
     if not gateway:
         raise ConfigEntryNotReady(f"Cannot find device {device}")
 
-    signal_coordinator = SignalCoordinator(hass, gateway)
-    network_coordinator = NetworkCoordinator(hass, gateway)
+    signal_coordinator = SignalCoordinator(menuai, gateway)
+    network_coordinator = NetworkCoordinator(menuai, gateway)
 
     # Fetch initial data so we have data when entities subscribe
     await signal_coordinator.async_config_entry_first_refresh()
     await network_coordinator.async_config_entry_first_refresh()
 
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][SMS_GATEWAY] = {
+    menuai.data.setdefault(DOMAIN, {})
+    menuai.data[DOMAIN][SMS_GATEWAY] = {
         SIGNAL_COORDINATOR: signal_coordinator,
         NETWORK_COORDINATOR: network_coordinator,
         GATEWAY: gateway,
     }
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     # set up notify platform, no entry support for notify component yet,
     # have to use discovery to load platform.
-    hass.async_create_task(
+    menuai.async_create_task(
         discovery.async_load_platform(
-            hass,
+            menuai,
             Platform.NOTIFY,
             DOMAIN,
             {CONF_NAME: DOMAIN},
-            hass.data[HASS_CONFIG],
+            menuai.data[menuai_CONFIG],
         )
     )
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        gateway = hass.data[DOMAIN].pop(SMS_GATEWAY)[GATEWAY]
+        gateway = menuai.data[DOMAIN].pop(SMS_GATEWAY)[GATEWAY]
         await gateway.terminate_async()
 
-    if not hass.config_entries.async_loaded_entries(DOMAIN):
-        async_delete_issue(hass, HOMEASSISTANT_DOMAIN, DEPRECATED_ISSUE_ID)
+    if not menuai.config_entries.async_loaded_entries(DOMAIN):
+        async_delete_issue(menuai, menuai_DOMAIN, DEPRECATED_ISSUE_ID)
 
     return unload_ok

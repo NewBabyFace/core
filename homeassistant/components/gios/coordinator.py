@@ -11,9 +11,9 @@ from gios import Gios
 from gios.exceptions import GiosError
 from gios.model import GiosSensors
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import API_TIMEOUT, DOMAIN, SCAN_INTERVAL
 
@@ -36,7 +36,7 @@ class GiosDataUpdateCoordinator(DataUpdateCoordinator[GiosSensors]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: GiosConfigEntry,
         gios: Gios,
     ) -> None:
@@ -44,7 +44,7 @@ class GiosDataUpdateCoordinator(DataUpdateCoordinator[GiosSensors]):
         self.gios = gios
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,

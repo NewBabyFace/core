@@ -6,10 +6,10 @@ from typing import cast
 
 import voluptuous as vol
 
-from homeassistant.const import CONF_DEVICE_ID, CONF_DOMAIN, CONF_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import CONF_DEVICE_ID, CONF_DOMAIN, CONF_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.typing import ConfigType
 
 from . import DeviceAutomationType, async_get_device_automation_platform
 from .exceptions import InvalidDeviceAutomationConfig
@@ -46,7 +46,7 @@ ENTITY_PLATFORMS = {
 
 
 async def async_validate_device_automation_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     automation_schema: vol.Schema,
     automation_type: DeviceAutomationType,
@@ -54,11 +54,11 @@ async def async_validate_device_automation_config(
     """Validate config."""
     validated_config: ConfigType = automation_schema(config)
     platform = await async_get_device_automation_platform(
-        hass, validated_config[CONF_DOMAIN], automation_type
+        menuai, validated_config[CONF_DOMAIN], automation_type
     )
 
     # Make sure the referenced device and optional entity exist
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     if not (device := device_registry.async_get(validated_config[CONF_DEVICE_ID])):
         # The device referenced by the device automation does not exist
         raise InvalidDeviceAutomationConfig(
@@ -66,7 +66,7 @@ async def async_validate_device_automation_config(
         )
     if entity_id := validated_config.get(CONF_ENTITY_ID):
         try:
-            er.async_validate_entity_id(er.async_get(hass), entity_id)
+            er.async_validate_entity_id(er.async_get(menuai), entity_id)
         except vol.Invalid as err:
             raise InvalidDeviceAutomationConfig(
                 f"Unknown entity '{entity_id}'"
@@ -88,14 +88,14 @@ async def async_validate_device_automation_config(
         # Pass the unvalidated config to avoid mutating the raw config twice
         return cast(
             ConfigType,
-            await getattr(platform, DYNAMIC_VALIDATOR[automation_type])(hass, config),
+            await getattr(platform, DYNAMIC_VALIDATOR[automation_type])(menuai, config),
         )
 
     # Find a config entry with the same domain as the device automation
     device_config_entry = None
     for entry_id in device.config_entries:
         if (
-            not (entry := hass.config_entries.async_get_entry(entry_id))
+            not (entry := menuai.config_entries.async_get_entry(entry_id))
             or entry.domain != validated_config[CONF_DOMAIN]
         ):
             continue
@@ -109,12 +109,12 @@ async def async_validate_device_automation_config(
             f"domain '{validated_config[CONF_DOMAIN]}'"
         )
 
-    if not await hass.config_entries.async_wait_component(device_config_entry):
+    if not await menuai.config_entries.async_wait_component(device_config_entry):
         # The component could not be loaded, skip the dynamic validation
         return validated_config
 
     # Pass the unvalidated config to avoid mutating the raw config twice
     return cast(
         ConfigType,
-        await getattr(platform, DYNAMIC_VALIDATOR[automation_type])(hass, config),
+        await getattr(platform, DYNAMIC_VALIDATOR[automation_type])(menuai, config),
     )

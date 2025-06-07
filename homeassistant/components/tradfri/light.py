@@ -7,7 +7,7 @@ from typing import Any, cast
 
 from pytradfri.command import Command
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_TEMP_KELVIN,
     ATTR_HS_COLOR,
@@ -17,10 +17,10 @@ from homeassistant.components.light import (
     LightEntityFeature,
     filter_supported_color_modes,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import color as color_util
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import color as color_util
 
 from .const import CONF_GATEWAY_ID, COORDINATOR, COORDINATOR_LIST, DOMAIN, KEY_API
 from .coordinator import TradfriDeviceDataUpdateCoordinator
@@ -28,13 +28,13 @@ from .entity import TradfriBaseEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Load Tradfri lights based on a config entry."""
     gateway_id = config_entry.data[CONF_GATEWAY_ID]
-    coordinator_data = hass.data[DOMAIN][config_entry.entry_id][COORDINATOR]
+    coordinator_data = menuai.data[DOMAIN][config_entry.entry_id][COORDINATOR]
     api = coordinator_data[KEY_API]
 
     async_add_entities(
@@ -49,7 +49,7 @@ async def async_setup_entry(
 
 
 class TradfriLight(TradfriBaseEntity, LightEntity):
-    """The platform class required by Home Assistant."""
+    """The platform class required by MenuAI."""
 
     _attr_name = None
     _attr_supported_features = LightEntityFeature.TRANSITION

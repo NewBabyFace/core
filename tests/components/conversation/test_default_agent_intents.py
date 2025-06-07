@@ -6,7 +6,7 @@ from unittest.mock import patch
 from freezegun import freeze_time
 import pytest
 
-from homeassistant.components import (
+from menuai.components import (
     conversation,
     cover,
     light,
@@ -15,28 +15,28 @@ from homeassistant.components import (
     vacuum,
     valve,
 )
-from homeassistant.components.cover import intent as cover_intent
-from homeassistant.components.homeassistant.exposed_entities import async_expose_entity
-from homeassistant.components.media_player import (
+from menuai.components.cover import intent as cover_intent
+from menuai.components.menuai.exposed_entities import async_expose_entity
+from menuai.components.media_player import (
     MediaPlayerEntityFeature,
     intent as media_player_intent,
 )
-from homeassistant.components.vacuum import intent as vaccum_intent
-from homeassistant.const import (
+from menuai.components.vacuum import intent as vaccum_intent
+from menuai.const import (
     ATTR_SUPPORTED_FEATURES,
     STATE_CLOSED,
     STATE_PAUSED,
     STATE_PLAYING,
 )
-from homeassistant.core import Context, HomeAssistant
-from homeassistant.helpers import (
+from menuai.core import Context, menuai
+from menuai.helpers import (
     area_registry as ar,
     entity_registry as er,
     floor_registry as fr,
     intent,
 )
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from tests.common import async_mock_service
 
@@ -63,30 +63,30 @@ class MockTodoListEntity(todo.TodoListEntity):
 
 
 @pytest.fixture
-async def init_components(hass: HomeAssistant):
+async def init_components(menuai: menuai):
     """Initialize relevant components with empty configs."""
-    assert await async_setup_component(hass, "homeassistant", {})
-    assert await async_setup_component(hass, "conversation", {})
-    assert await async_setup_component(hass, "intent", {})
+    assert await async_setup_component(menuai, "menuai", {})
+    assert await async_setup_component(menuai, "conversation", {})
+    assert await async_setup_component(menuai, "intent", {})
 
 
 async def test_cover_set_position(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_components,
 ) -> None:
     """Test the open/close/set position for covers."""
-    await cover_intent.async_setup_intents(hass)
+    await cover_intent.async_setup_intents(menuai)
 
     entity_id = f"{cover.DOMAIN}.garage_door"
-    hass.states.async_set(entity_id, STATE_CLOSED)
-    async_expose_entity(hass, conversation.DOMAIN, entity_id, True)
+    menuai.states.async_set(entity_id, STATE_CLOSED)
+    async_expose_entity(menuai, conversation.DOMAIN, entity_id, True)
 
     # open
-    calls = async_mock_service(hass, cover.DOMAIN, cover.SERVICE_OPEN_COVER)
+    calls = async_mock_service(menuai, cover.DOMAIN, cover.SERVICE_OPEN_COVER)
     result = await conversation.async_converse(
-        hass, "open the garage door", None, Context(), None
+        menuai, "open the garage door", None, Context(), None
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     response = result.response
     assert response.response_type == intent.IntentResponseType.ACTION_DONE
@@ -96,11 +96,11 @@ async def test_cover_set_position(
     assert call.data == {"entity_id": entity_id}
 
     # close
-    calls = async_mock_service(hass, cover.DOMAIN, cover.SERVICE_CLOSE_COVER)
+    calls = async_mock_service(menuai, cover.DOMAIN, cover.SERVICE_CLOSE_COVER)
     result = await conversation.async_converse(
-        hass, "close garage door", None, Context(), None
+        menuai, "close garage door", None, Context(), None
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     response = result.response
     assert response.response_type == intent.IntentResponseType.ACTION_DONE
@@ -110,11 +110,11 @@ async def test_cover_set_position(
     assert call.data == {"entity_id": entity_id}
 
     # set position
-    calls = async_mock_service(hass, cover.DOMAIN, cover.SERVICE_SET_COVER_POSITION)
+    calls = async_mock_service(menuai, cover.DOMAIN, cover.SERVICE_SET_COVER_POSITION)
     result = await conversation.async_converse(
-        hass, "set garage door to 50%", None, Context(), None
+        menuai, "set garage door to 50%", None, Context(), None
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     response = result.response
     assert response.response_type == intent.IntentResponseType.ACTION_DONE
@@ -125,24 +125,24 @@ async def test_cover_set_position(
 
 
 async def test_cover_device_class(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_components,
 ) -> None:
     """Test the open position for covers by device class."""
-    await cover_intent.async_setup_intents(hass)
+    await cover_intent.async_setup_intents(menuai)
 
     entity_id = f"{cover.DOMAIN}.front"
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id, STATE_CLOSED, attributes={"device_class": "garage"}
     )
-    async_expose_entity(hass, conversation.DOMAIN, entity_id, True)
+    async_expose_entity(menuai, conversation.DOMAIN, entity_id, True)
 
     # Open service
-    calls = async_mock_service(hass, cover.DOMAIN, cover.SERVICE_OPEN_COVER)
+    calls = async_mock_service(menuai, cover.DOMAIN, cover.SERVICE_OPEN_COVER)
     result = await conversation.async_converse(
-        hass, "open the garage door", None, Context(), None
+        menuai, "open the garage door", None, Context(), None
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     response = result.response
     assert response.response_type == intent.IntentResponseType.ACTION_DONE
@@ -153,20 +153,20 @@ async def test_cover_device_class(
 
 
 async def test_valve_intents(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_components,
 ) -> None:
     """Test open/close/set position for valves."""
     entity_id = f"{valve.DOMAIN}.main_valve"
-    hass.states.async_set(entity_id, STATE_CLOSED)
-    async_expose_entity(hass, conversation.DOMAIN, entity_id, True)
+    menuai.states.async_set(entity_id, STATE_CLOSED)
+    async_expose_entity(menuai, conversation.DOMAIN, entity_id, True)
 
     # open
-    calls = async_mock_service(hass, valve.DOMAIN, valve.SERVICE_OPEN_VALVE)
+    calls = async_mock_service(menuai, valve.DOMAIN, valve.SERVICE_OPEN_VALVE)
     result = await conversation.async_converse(
-        hass, "open the main valve", None, Context(), None
+        menuai, "open the main valve", None, Context(), None
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     response = result.response
     assert response.response_type == intent.IntentResponseType.ACTION_DONE
@@ -176,11 +176,11 @@ async def test_valve_intents(
     assert call.data == {"entity_id": entity_id}
 
     # close
-    calls = async_mock_service(hass, valve.DOMAIN, valve.SERVICE_CLOSE_VALVE)
+    calls = async_mock_service(menuai, valve.DOMAIN, valve.SERVICE_CLOSE_VALVE)
     result = await conversation.async_converse(
-        hass, "close main valve", None, Context(), None
+        menuai, "close main valve", None, Context(), None
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     response = result.response
     assert response.response_type == intent.IntentResponseType.ACTION_DONE
@@ -190,11 +190,11 @@ async def test_valve_intents(
     assert call.data == {"entity_id": entity_id}
 
     # set position
-    calls = async_mock_service(hass, valve.DOMAIN, valve.SERVICE_SET_VALVE_POSITION)
+    calls = async_mock_service(menuai, valve.DOMAIN, valve.SERVICE_SET_VALVE_POSITION)
     result = await conversation.async_converse(
-        hass, "set main valve position to 25", None, Context(), None
+        menuai, "set main valve position to 25", None, Context(), None
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     response = result.response
     assert response.response_type == intent.IntentResponseType.ACTION_DONE
@@ -205,22 +205,22 @@ async def test_valve_intents(
 
 
 async def test_vacuum_intents(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_components,
 ) -> None:
     """Test start/return to base for vacuums."""
-    await vaccum_intent.async_setup_intents(hass)
+    await vaccum_intent.async_setup_intents(menuai)
 
     entity_id = f"{vacuum.DOMAIN}.rover"
-    hass.states.async_set(entity_id, STATE_CLOSED)
-    async_expose_entity(hass, conversation.DOMAIN, entity_id, True)
+    menuai.states.async_set(entity_id, STATE_CLOSED)
+    async_expose_entity(menuai, conversation.DOMAIN, entity_id, True)
 
     # start
-    calls = async_mock_service(hass, vacuum.DOMAIN, vacuum.SERVICE_START)
+    calls = async_mock_service(menuai, vacuum.DOMAIN, vacuum.SERVICE_START)
     result = await conversation.async_converse(
-        hass, "start rover", None, Context(), None
+        menuai, "start rover", None, Context(), None
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     response = result.response
     assert response.response_type == intent.IntentResponseType.ACTION_DONE
@@ -230,11 +230,11 @@ async def test_vacuum_intents(
     assert call.data == {"entity_id": entity_id}
 
     # return to base
-    calls = async_mock_service(hass, vacuum.DOMAIN, vacuum.SERVICE_RETURN_TO_BASE)
+    calls = async_mock_service(menuai, vacuum.DOMAIN, vacuum.SERVICE_RETURN_TO_BASE)
     result = await conversation.async_converse(
-        hass, "return rover to base", None, Context(), None
+        menuai, "return rover to base", None, Context(), None
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     response = result.response
     assert response.response_type == intent.IntentResponseType.ACTION_DONE
@@ -245,11 +245,11 @@ async def test_vacuum_intents(
 
 
 async def test_media_player_intents(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_components,
 ) -> None:
     """Test pause/unpause/next/set volume for media players."""
-    await media_player_intent.async_setup_intents(hass)
+    await media_player_intent.async_setup_intents(menuai)
 
     entity_id = f"{media_player.DOMAIN}.tv"
     attributes = {
@@ -258,15 +258,15 @@ async def test_media_player_intents(
         | MediaPlayerEntityFeature.VOLUME_SET
     }
 
-    hass.states.async_set(entity_id, STATE_PLAYING, attributes=attributes)
-    async_expose_entity(hass, conversation.DOMAIN, entity_id, True)
+    menuai.states.async_set(entity_id, STATE_PLAYING, attributes=attributes)
+    async_expose_entity(menuai, conversation.DOMAIN, entity_id, True)
 
     # pause
     calls = async_mock_service(
-        hass, media_player.DOMAIN, media_player.SERVICE_MEDIA_PAUSE
+        menuai, media_player.DOMAIN, media_player.SERVICE_MEDIA_PAUSE
     )
-    result = await conversation.async_converse(hass, "pause tv", None, Context(), None)
-    await hass.async_block_till_done()
+    result = await conversation.async_converse(menuai, "pause tv", None, Context(), None)
+    await menuai.async_block_till_done()
 
     response = result.response
     assert response.response_type == intent.IntentResponseType.ACTION_DONE
@@ -276,16 +276,16 @@ async def test_media_player_intents(
     assert call.data == {"entity_id": entity_id}
 
     # Unpause requires paused state
-    hass.states.async_set(entity_id, STATE_PAUSED, attributes=attributes)
+    menuai.states.async_set(entity_id, STATE_PAUSED, attributes=attributes)
 
     # unpause
     calls = async_mock_service(
-        hass, media_player.DOMAIN, media_player.SERVICE_MEDIA_PLAY
+        menuai, media_player.DOMAIN, media_player.SERVICE_MEDIA_PLAY
     )
     result = await conversation.async_converse(
-        hass, "unpause tv", None, Context(), None
+        menuai, "unpause tv", None, Context(), None
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     response = result.response
     assert response.response_type == intent.IntentResponseType.ACTION_DONE
@@ -295,16 +295,16 @@ async def test_media_player_intents(
     assert call.data == {"entity_id": entity_id}
 
     # Next track requires playing state
-    hass.states.async_set(entity_id, STATE_PLAYING, attributes=attributes)
+    menuai.states.async_set(entity_id, STATE_PLAYING, attributes=attributes)
 
     # next
     calls = async_mock_service(
-        hass, media_player.DOMAIN, media_player.SERVICE_MEDIA_NEXT_TRACK
+        menuai, media_player.DOMAIN, media_player.SERVICE_MEDIA_NEXT_TRACK
     )
     result = await conversation.async_converse(
-        hass, "next item on tv", None, Context(), None
+        menuai, "next item on tv", None, Context(), None
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     response = result.response
     assert response.response_type == intent.IntentResponseType.ACTION_DONE
@@ -315,12 +315,12 @@ async def test_media_player_intents(
 
     # volume
     calls = async_mock_service(
-        hass, media_player.DOMAIN, media_player.SERVICE_VOLUME_SET
+        menuai, media_player.DOMAIN, media_player.SERVICE_VOLUME_SET
     )
     result = await conversation.async_converse(
-        hass, "set tv volume to 75 percent", None, Context(), None
+        menuai, "set tv volume to 75 percent", None, Context(), None
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     response = result.response
     assert response.response_type == intent.IntentResponseType.ACTION_DONE
@@ -334,7 +334,7 @@ async def test_media_player_intents(
 
 
 async def test_turn_floor_lights_on_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_components,
     entity_registry: er.EntityRegistry,
     area_registry: ar.AreaRegistry,
@@ -368,7 +368,7 @@ async def test_turn_floor_lights_on_off(
     kitchen_light = entity_registry.async_update_entity(
         kitchen_light.entity_id, area_id=area_kitchen.id
     )
-    hass.states.async_set(kitchen_light.entity_id, "off")
+    menuai.states.async_set(kitchen_light.entity_id, "off")
 
     living_room_light = entity_registry.async_get_or_create(
         "light", "demo", "living_room_light"
@@ -376,7 +376,7 @@ async def test_turn_floor_lights_on_off(
     living_room_light = entity_registry.async_update_entity(
         living_room_light.entity_id, area_id=area_living_room.id
     )
-    hass.states.async_set(living_room_light.entity_id, "off")
+    menuai.states.async_set(living_room_light.entity_id, "off")
 
     bedroom_light = entity_registry.async_get_or_create(
         "light", "demo", "bedroom_light"
@@ -384,12 +384,12 @@ async def test_turn_floor_lights_on_off(
     bedroom_light = entity_registry.async_update_entity(
         bedroom_light.entity_id, area_id=area_bedroom.id
     )
-    hass.states.async_set(bedroom_light.entity_id, "off")
+    menuai.states.async_set(bedroom_light.entity_id, "off")
 
     # Target by floor
-    on_calls = async_mock_service(hass, light.DOMAIN, light.SERVICE_TURN_ON)
+    on_calls = async_mock_service(menuai, light.DOMAIN, light.SERVICE_TURN_ON)
     result = await conversation.async_converse(
-        hass, "turn on all lights downstairs", None, Context(), None
+        menuai, "turn on all lights downstairs", None, Context(), None
     )
 
     assert len(on_calls) == 2
@@ -401,7 +401,7 @@ async def test_turn_floor_lights_on_off(
 
     on_calls.clear()
     result = await conversation.async_converse(
-        hass, "upstairs lights on", None, Context(), None
+        menuai, "upstairs lights on", None, Context(), None
     )
 
     assert len(on_calls) == 1
@@ -410,9 +410,9 @@ async def test_turn_floor_lights_on_off(
         bedroom_light.entity_id
     }
 
-    off_calls = async_mock_service(hass, light.DOMAIN, light.SERVICE_TURN_OFF)
+    off_calls = async_mock_service(menuai, light.DOMAIN, light.SERVICE_TURN_OFF)
     result = await conversation.async_converse(
-        hass, "turn upstairs lights off", None, Context(), None
+        menuai, "turn upstairs lights off", None, Context(), None
     )
 
     assert len(off_calls) == 1
@@ -423,22 +423,22 @@ async def test_turn_floor_lights_on_off(
 
 
 async def test_todo_add_item_fr(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_components,
 ) -> None:
     """Test that wildcard matches prioritize results with more literal text matched."""
-    assert await async_setup_component(hass, todo.DOMAIN, {})
-    hass.states.async_set("todo.liste_des_courses", 0, {})
+    assert await async_setup_component(menuai, todo.DOMAIN, {})
+    menuai.states.async_set("todo.liste_des_courses", 0, {})
 
     with (
-        patch.object(hass.config, "language", "fr"),
+        patch.object(menuai.config, "language", "fr"),
         patch(
-            "homeassistant.components.todo.intent.ListAddItemIntent.async_handle",
-            return_value=intent.IntentResponse(hass.config.language),
+            "menuai.components.todo.intent.ListAddItemIntent.async_handle",
+            return_value=intent.IntentResponse(menuai.config.language),
         ) as mock_handle,
     ):
         await conversation.async_converse(
-            hass, "Ajoute de la farine a la liste des courses", None, Context(), None
+            menuai, "Ajoute de la farine a la liste des courses", None, Context(), None
         )
         mock_handle.assert_called_once()
         assert mock_handle.call_args.args
@@ -457,24 +457,24 @@ async def test_todo_add_item_fr(
     )
 )
 async def test_date_time(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_components,
 ) -> None:
     """Test the date and time intents."""
-    await hass.config.async_set_time_zone("UTC")
+    await menuai.config.async_set_time_zone("UTC")
     result = await conversation.async_converse(
-        hass, "what is the date", None, Context(), None
+        menuai, "what is the date", None, Context(), None
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     response = result.response
     assert response.response_type == intent.IntentResponseType.ACTION_DONE
     assert response.speech["plain"]["speech"] == "September 17th, 2013"
 
     result = await conversation.async_converse(
-        hass, "what time is it", None, Context(), None
+        menuai, "what time is it", None, Context(), None
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     response = result.response
     assert response.response_type == intent.IntentResponseType.ACTION_DONE

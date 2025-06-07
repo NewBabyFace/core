@@ -2,12 +2,12 @@
 
 from unittest.mock import Mock
 
-from homeassistant.components import hue
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
-from homeassistant.util.json import JsonArrayType
+from menuai.components import hue
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.setup import async_setup_component
+from menuai.util.json import JsonArrayType
 
 from .conftest import setup_bridge, setup_platform
 from .const import FAKE_DEVICE, FAKE_SENSOR, FAKE_ZIGBEE_CONNECTIVITY
@@ -16,7 +16,7 @@ from tests.common import MockConfigEntry
 
 
 async def test_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_bridge_v2: Mock,
     v2_resources_test_data: JsonArrayType,
@@ -24,14 +24,14 @@ async def test_sensors(
     """Test if all v2 sensors get created with correct features."""
     await mock_bridge_v2.api.load_test_data(v2_resources_test_data)
 
-    await setup_platform(hass, mock_bridge_v2, Platform.SENSOR)
+    await setup_platform(menuai, mock_bridge_v2, Platform.SENSOR)
     # there shouldn't have been any requests at this point
     assert len(mock_bridge_v2.mock_requests) == 0
     # 6 entities should be created from test data
-    assert len(hass.states.async_all()) == 6
+    assert len(menuai.states.async_all()) == 6
 
     # test temperature sensor
-    sensor = hass.states.get("sensor.hue_motion_sensor_temperature")
+    sensor = menuai.states.get("sensor.hue_motion_sensor_temperature")
     assert sensor is not None
     assert sensor.state == "18.1"
     assert sensor.attributes["friendly_name"] == "Hue motion sensor Temperature"
@@ -40,7 +40,7 @@ async def test_sensors(
     assert sensor.attributes["unit_of_measurement"] == "°C"
 
     # test illuminance sensor
-    sensor = hass.states.get("sensor.hue_motion_sensor_illuminance")
+    sensor = menuai.states.get("sensor.hue_motion_sensor_illuminance")
     assert sensor is not None
     assert sensor.state == "63"
     assert sensor.attributes["friendly_name"] == "Hue motion sensor Illuminance"
@@ -50,7 +50,7 @@ async def test_sensors(
     assert sensor.attributes["light_level"] == 18027
 
     # test battery sensor
-    sensor = hass.states.get("sensor.wall_switch_with_2_controls_battery")
+    sensor = menuai.states.get("sensor.wall_switch_with_2_controls_battery")
     assert sensor is not None
     assert sensor.state == "100"
     assert sensor.attributes["friendly_name"] == "Wall switch with 2 controls Battery"
@@ -69,7 +69,7 @@ async def test_sensors(
 
 
 async def test_enable_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_bridge_v2: Mock,
     v2_resources_test_data: JsonArrayType,
@@ -77,11 +77,11 @@ async def test_enable_sensor(
 ) -> None:
     """Test enabling of the by default disabled zigbee_connectivity sensor."""
     await mock_bridge_v2.api.load_test_data(v2_resources_test_data)
-    await setup_bridge(hass, mock_bridge_v2, mock_config_entry_v2)
+    await setup_bridge(menuai, mock_bridge_v2, mock_config_entry_v2)
 
-    assert await async_setup_component(hass, hue.DOMAIN, {}) is True
-    await hass.async_block_till_done()
-    await hass.config_entries.async_forward_entry_setups(
+    assert await async_setup_component(menuai, hue.DOMAIN, {}) is True
+    await menuai.async_block_till_done()
+    await menuai.config_entries.async_forward_entry_setups(
         mock_config_entry_v2, [Platform.SENSOR]
     )
 
@@ -100,42 +100,42 @@ async def test_enable_sensor(
     assert updated_entry.disabled is False
 
     # reload platform and check if entity is correctly there
-    await hass.config_entries.async_forward_entry_unload(
+    await menuai.config_entries.async_forward_entry_unload(
         mock_config_entry_v2, Platform.SENSOR
     )
-    await hass.config_entries.async_forward_entry_setups(
+    await menuai.config_entries.async_forward_entry_setups(
         mock_config_entry_v2, [Platform.SENSOR]
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == "connected"
     assert state.attributes["mac_address"] == "00:17:88:01:0b:aa:bb:99"
 
 
-async def test_sensor_add_update(hass: HomeAssistant, mock_bridge_v2: Mock) -> None:
+async def test_sensor_add_update(menuai: menuai, mock_bridge_v2: Mock) -> None:
     """Test if sensors get added/updated from events."""
     await mock_bridge_v2.api.load_test_data([FAKE_DEVICE, FAKE_ZIGBEE_CONNECTIVITY])
-    await setup_platform(hass, mock_bridge_v2, Platform.SENSOR)
+    await setup_platform(menuai, mock_bridge_v2, Platform.SENSOR)
 
     test_entity_id = "sensor.hue_mocked_device_temperature"
 
     # verify entity does not exist before we start
-    assert hass.states.get(test_entity_id) is None
+    assert menuai.states.get(test_entity_id) is None
 
     # Add new fake sensor by emitting event
     mock_bridge_v2.api.emit_event("add", FAKE_SENSOR)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # the entity should now be available
-    test_entity = hass.states.get(test_entity_id)
+    test_entity = menuai.states.get(test_entity_id)
     assert test_entity is not None
     assert test_entity.state == "18.0"
 
     # test update of entity works on incoming event
     updated_sensor = {**FAKE_SENSOR, "temperature": {"temperature": 22.5}}
     mock_bridge_v2.api.emit_event("update", updated_sensor)
-    await hass.async_block_till_done()
-    test_entity = hass.states.get(test_entity_id)
+    await menuai.async_block_till_done()
+    test_entity = menuai.states.get(test_entity_id)
     assert test_entity is not None
     assert test_entity.state == "22.5"

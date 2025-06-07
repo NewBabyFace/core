@@ -5,11 +5,11 @@ from __future__ import annotations
 import datetime
 import logging
 
-from homeassistant.components.sensor import SensorEntity
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import Throttle, dt as dt_util
+from menuai.components.sensor import SensorEntity
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import Throttle, dt as dt_util
 
 from .const import DOMAIN
 
@@ -25,7 +25,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -33,7 +33,7 @@ def setup_platform(
     """Set up the Ebus sensor."""
     if not discovery_info:
         return
-    ebusd_api = hass.data[DOMAIN]
+    ebusd_api = menuai.data[DOMAIN]
     monitored_conditions = discovery_info["monitored_conditions"]
     name = discovery_info["client_name"]
 

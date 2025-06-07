@@ -10,32 +10,32 @@ from typing import Any
 import pysaj
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
     SensorDeviceClass,
     SensorEntity,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_NAME,
     CONF_PASSWORD,
     CONF_TYPE,
     CONF_USERNAME,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     UnitOfEnergy,
     UnitOfMass,
     UnitOfPower,
     UnitOfTemperature,
     UnitOfTime,
 )
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
-from homeassistant.exceptions import PlatformNotReady
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.event import async_call_later
-from homeassistant.helpers.start import async_at_start
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import CALLBACK_TYPE, menuai, callback
+from menuai.exceptions import PlatformNotReady
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.event import async_call_later
+from menuai.helpers.start import async_at_start
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -65,7 +65,7 @@ PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -79,7 +79,7 @@ async def async_setup_platform(
     sensor_def = pysaj.Sensors(wifi)
 
     # Use all sensors by default
-    hass_sensors: list[SAJsensor] = []
+    menuai_sensors: list[SAJsensor] = []
 
     kwargs = {}
     if wifi:
@@ -103,19 +103,19 @@ async def async_setup_platform(
     if not done:
         raise PlatformNotReady
 
-    hass_sensors.extend(
+    menuai_sensors.extend(
         SAJsensor(saj.serialnumber, sensor, inverter_name=config.get(CONF_NAME))
         for sensor in sensor_def
         if sensor.enabled
     )
 
-    async_add_entities(hass_sensors)
+    async_add_entities(menuai_sensors)
 
     async def async_saj() -> bool:
         """Update all the SAJ sensors."""
         success = await saj.read(sensor_def)
 
-        for sensor in hass_sensors:
+        for sensor in menuai_sensors:
             state_unknown = False
             # SAJ inverters are powered by DC via solar panels and thus are
             # offline after the sun has set. If a sensor resets on a daily
@@ -134,23 +134,23 @@ async def async_setup_platform(
         return success
 
     @callback
-    def start_update_interval(hass: HomeAssistant) -> None:
+    def start_update_interval(menuai: menuai) -> None:
         """Start the update interval scheduling."""
         nonlocal remove_interval_update
-        remove_interval_update = async_track_time_interval_backoff(hass, async_saj)
+        remove_interval_update = async_track_time_interval_backoff(menuai, async_saj)
 
     @callback
     def stop_update_interval(event):
         """Properly cancel the scheduled update."""
         remove_interval_update()
 
-    hass.bus.async_listen(EVENT_HOMEASSISTANT_STOP, stop_update_interval)
-    async_at_start(hass, start_update_interval)
+    menuai.bus.async_listen(EVENT_menuai_STOP, stop_update_interval)
+    async_at_start(menuai, start_update_interval)
 
 
 @callback
 def async_track_time_interval_backoff(
-    hass: HomeAssistant, action: Callable[[], Coroutine[Any, Any, bool]]
+    menuai: menuai, action: Callable[[], Coroutine[Any, Any, bool]]
 ) -> CALLBACK_TYPE:
     """Add a listener that fires repetitively and increases the interval when failed."""
     remove = None
@@ -165,9 +165,9 @@ def async_track_time_interval_backoff(
             else:
                 interval = min(interval * 2, MAX_INTERVAL)
         finally:
-            remove = async_call_later(hass, interval, interval_listener)
+            remove = async_call_later(menuai, interval, interval_listener)
 
-    hass.async_create_task(interval_listener())
+    menuai.async_create_task(interval_listener())
 
     def remove_listener() -> None:
         """Remove interval listener."""

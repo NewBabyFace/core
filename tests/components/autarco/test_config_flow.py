@@ -5,22 +5,22 @@ from unittest.mock import AsyncMock, patch
 from autarco import AutarcoAuthenticationError, AutarcoConnectionError
 import pytest
 
-from homeassistant.components.autarco.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.autarco.const import DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_EMAIL, CONF_PASSWORD
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
 
 async def test_full_user_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_autarco_client: AsyncMock,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test the full user configuration flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
@@ -28,7 +28,7 @@ async def test_full_user_flow(
     assert result.get("step_id") == "user"
     assert not result.get("errors")
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_EMAIL: "test@autarco.com", CONF_PASSWORD: "test-password"},
     )
@@ -44,20 +44,20 @@ async def test_full_user_flow(
 
 
 async def test_duplicate_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_autarco_client: AsyncMock,
 ) -> None:
     """Test abort when setting up duplicate entry."""
-    mock_config_entry.add_to_hass(hass)
-    result = await hass.config_entries.flow.async_init(
+    mock_config_entry.add_to_menuai(menuai)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
     assert result.get("type") is FlowResultType.FORM
     assert not result.get("errors")
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_EMAIL: "test@autarco.com", CONF_PASSWORD: "test-password"},
     )
@@ -74,7 +74,7 @@ async def test_duplicate_entry(
     ],
 )
 async def test_exceptions(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_autarco_client: AsyncMock,
     mock_setup_entry: AsyncMock,
     exception: Exception,
@@ -82,10 +82,10 @@ async def test_exceptions(
 ) -> None:
     """Test exceptions."""
     mock_autarco_client.get_account.side_effect = exception
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_EMAIL: "test@autarco.com", CONF_PASSWORD: "test-password"},
     )
@@ -95,7 +95,7 @@ async def test_exceptions(
     # Recover from error
     mock_autarco_client.get_account.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_EMAIL: "test@autarco.com", CONF_PASSWORD: "test-password"},
     )
@@ -103,19 +103,19 @@ async def test_exceptions(
 
 
 async def test_step_reauth(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test reauth flow."""
-    mock_config_entry.add_to_hass(hass)
-    result = await mock_config_entry.start_reauth_flow(hass)
+    mock_config_entry.add_to_menuai(menuai)
+    result = await mock_config_entry.start_reauth_flow(menuai)
 
     assert result.get("type") is FlowResultType.FORM
     assert result.get("step_id") == "reauth_confirm"
 
-    with patch("homeassistant.components.autarco.config_flow.Autarco", autospec=True):
-        result = await hass.config_entries.flow.async_configure(
+    with patch("menuai.components.autarco.config_flow.Autarco", autospec=True):
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={CONF_PASSWORD: "new-password"},
         )
@@ -123,7 +123,7 @@ async def test_step_reauth(
     assert result.get("type") is FlowResultType.ABORT
     assert result.get("reason") == "reauth_successful"
 
-    assert len(hass.config_entries.async_entries()) == 1
+    assert len(menuai.config_entries.async_entries()) == 1
     assert mock_config_entry.data[CONF_PASSWORD] == "new-password"
 
 
@@ -135,7 +135,7 @@ async def test_step_reauth(
     ],
 )
 async def test_step_reauth_exceptions(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_autarco_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     mock_setup_entry: AsyncMock,
@@ -144,13 +144,13 @@ async def test_step_reauth_exceptions(
 ) -> None:
     """Test exceptions in reauth flow."""
     mock_autarco_client.get_account.side_effect = exception
-    mock_config_entry.add_to_hass(hass)
-    result = await mock_config_entry.start_reauth_flow(hass)
+    mock_config_entry.add_to_menuai(menuai)
+    result = await mock_config_entry.start_reauth_flow(menuai)
 
     assert result.get("type") is FlowResultType.FORM
     assert result.get("step_id") == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_PASSWORD: "new-password"},
     )
@@ -160,12 +160,12 @@ async def test_step_reauth_exceptions(
     # Recover from error
     mock_autarco_client.get_account.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_PASSWORD: "new-password"},
     )
     assert result.get("type") is FlowResultType.ABORT
     assert result.get("reason") == "reauth_successful"
 
-    assert len(hass.config_entries.async_entries()) == 1
+    assert len(menuai.config_entries.async_entries()) == 1
     assert mock_config_entry.data[CONF_PASSWORD] == "new-password"

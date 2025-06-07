@@ -4,10 +4,10 @@ from unittest import mock
 
 import pytest
 
-from homeassistant.components import switch as switch_component
-from homeassistant.components.mfi import switch as mfi
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components import switch as switch_component
+from menuai.components.mfi import switch as mfi
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 PLATFORM = mfi
 COMPONENT = switch_component
@@ -25,12 +25,12 @@ GOOD_CONFIG = {
 }
 
 
-async def test_setup_adds_proper_devices(hass: HomeAssistant) -> None:
+async def test_setup_adds_proper_devices(menuai: menuai) -> None:
     """Test if setup adds devices."""
     with (
-        mock.patch("homeassistant.components.mfi.switch.MFiClient") as mock_client,
+        mock.patch("menuai.components.mfi.switch.MFiClient") as mock_client,
         mock.patch(
-            "homeassistant.components.mfi.switch.MfiSwitch", side_effect=mfi.MfiSwitch
+            "menuai.components.mfi.switch.MfiSwitch", side_effect=mfi.MfiSwitch
         ) as mock_switch,
     ):
         ports = {
@@ -43,12 +43,12 @@ async def test_setup_adds_proper_devices(hass: HomeAssistant) -> None:
         mock_client.return_value.get_devices.return_value = [
             mock.MagicMock(ports=ports)
         ]
-        assert await async_setup_component(hass, COMPONENT.DOMAIN, GOOD_CONFIG)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, COMPONENT.DOMAIN, GOOD_CONFIG)
+        await menuai.async_block_till_done()
         for ident, port in ports.items():
             if ident != "bad":
                 mock_switch.assert_any_call(port)
-        assert mock.call(ports["bad"], hass) not in mock_switch.mock_calls
+        assert mock.call(ports["bad"], menuai) not in mock_switch.mock_calls
 
 
 @pytest.fixture(name="port")

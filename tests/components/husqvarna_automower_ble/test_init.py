@@ -6,10 +6,10 @@ from bleak import BleakError
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.husqvarna_automower_ble.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.components.husqvarna_automower_ble.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 from . import AUTOMOWER_SERVICE_INFO
 
@@ -19,16 +19,16 @@ pytestmark = pytest.mark.usefixtures("mock_automower_client")
 
 
 async def test_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mock_config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test setup creates expected devices."""
 
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert mock_config_entry.state is ConfigEntryState.LOADED
 
@@ -40,7 +40,7 @@ async def test_setup(
 
 
 async def test_setup_retry_connect(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_automower_client: Mock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
@@ -48,15 +48,15 @@ async def test_setup_retry_connect(
 
     mock_automower_client.connect.return_value = False
 
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert mock_config_entry.state is ConfigEntryState.SETUP_RETRY
 
 
 async def test_setup_failed_connect(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_automower_client: Mock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
@@ -64,8 +64,8 @@ async def test_setup_failed_connect(
 
     mock_automower_client.connect.side_effect = BleakError
 
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert mock_config_entry.state is ConfigEntryState.SETUP_RETRY

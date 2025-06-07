@@ -7,15 +7,15 @@ import logging
 
 from pyialarm import IAlarm
 
-from homeassistant.components.alarm_control_panel import (
+from menuai.components.alarm_control_panel import (
     SCAN_INTERVAL,
     AlarmControlPanelState,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import DOMAIN, IALARM_TO_HASS
+from .const import DOMAIN, IALARM_TO_menuai
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ class IAlarmDataUpdateCoordinator(DataUpdateCoordinator[None]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: IAlarmConfigEntry,
         ialarm: IAlarm,
         mac: str,
@@ -41,7 +41,7 @@ class IAlarmDataUpdateCoordinator(DataUpdateCoordinator[None]):
         self.mac = mac
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -53,12 +53,12 @@ class IAlarmDataUpdateCoordinator(DataUpdateCoordinator[None]):
         status = self.ialarm.get_status()
         _LOGGER.debug("iAlarm status: %s", status)
 
-        self.state = IALARM_TO_HASS.get(status)
+        self.state = IALARM_TO_menuai.get(status)
 
     async def _async_update_data(self) -> None:
         """Fetch data from iAlarm."""
         try:
             async with asyncio.timeout(10):
-                await self.hass.async_add_executor_job(self._update_data)
+                await self.menuai.async_add_executor_job(self._update_data)
         except ConnectionError as error:
             raise UpdateFailed(error) from error

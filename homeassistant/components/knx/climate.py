@@ -13,8 +13,8 @@ from xknx.devices import (
 from xknx.devices.fan import FanSpeedMode
 from xknx.dpt.dpt_20 import HVACControllerMode, HVACOperationMode
 
-from homeassistant import config_entries
-from homeassistant.components.climate import (
+from menuai import config_entries
+from menuai.components.climate import (
     FAN_HIGH,
     FAN_LOW,
     FAN_MEDIUM,
@@ -26,16 +26,16 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_TEMPERATURE,
     CONF_ENTITY_CATEGORY,
     CONF_NAME,
     Platform,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import ConfigType
 
 from . import KNXModule
 from .const import CONTROLLER_MODES, CURRENT_HVAC_ACTIONS, KNX_MODULE_KEY
@@ -47,12 +47,12 @@ CONTROLLER_MODES_INV = {value: key for key, value in CONTROLLER_MODES.items()}
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: config_entries.ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up climate(s) for KNX platform."""
-    knx_module = hass.data[KNX_MODULE_KEY]
+    knx_module = menuai.data[KNX_MODULE_KEY]
     config: list[ConfigType] = knx_module.config_yaml[Platform.CLIMATE]
 
     async_add_entities(
@@ -452,19 +452,19 @@ class KNXClimate(KnxYamlEntity, ClimateEntity):
             attr[ATTR_COMMAND_VALUE] = self._device.command_value.value
         return attr
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Store register state change callback and start device object."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         if self._device.mode is not None:
             self._device.mode.register_device_updated_cb(self.after_update_callback)
             self._device.mode.xknx.devices.async_add(self._device.mode)
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Disconnect device object when removed."""
         if self._device.mode is not None:
             self._device.mode.unregister_device_updated_cb(self.after_update_callback)
             self._device.mode.xknx.devices.async_remove(self._device.mode)
-        await super().async_will_remove_from_hass()
+        await super().async_will_remove_from_menuai()
 
     def after_update_callback(self, device: XknxDevice) -> None:
         """Call after device was updated."""

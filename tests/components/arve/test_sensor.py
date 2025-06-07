@@ -4,8 +4,8 @@ from unittest.mock import MagicMock
 
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import async_init_integration
 
@@ -23,17 +23,17 @@ SENSORS = (
 
 
 async def test_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_arve: MagicMock,
     entity_registry: er.EntityRegistry,
     mock_config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test the Arve sensors."""
-    await async_init_integration(hass, mock_config_entry)
+    await async_init_integration(menuai, mock_config_entry)
 
     for sensor in SENSORS:
-        state = hass.states.get(f"sensor.test_sensor_{sensor}")
+        state = menuai.states.get(f"sensor.test_sensor_{sensor}")
         assert state
         assert state == snapshot(name=f"test_sensor_{sensor}")
 

@@ -24,11 +24,11 @@ from systembridgemodels.media_files import MediaFile, MediaFiles
 from systembridgemodels.modules import Module, ModulesData, RegisterDataListener
 from systembridgemodels.response import Response
 
-from homeassistant.components.system_bridge.config_flow import SystemBridgeConfigFlow
-from homeassistant.components.system_bridge.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_HOST, CONF_PORT, CONF_TOKEN
-from homeassistant.core import HomeAssistant
+from menuai.components.system_bridge.config_flow import SystemBridgeConfigFlow
+from menuai.components.system_bridge.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.const import CONF_HOST, CONF_PORT, CONF_TOKEN
+from menuai.core import menuai
 
 from . import (
     FIXTURE_REQUEST_ID,
@@ -67,7 +67,7 @@ def mock_config_entry() -> MockConfigEntry:
 def mock_setup_notify_platform() -> Generator[AsyncMock]:
     """Mock notify platform setup."""
     with patch(
-        "homeassistant.helpers.discovery.async_load_platform",
+        "menuai.helpers.discovery.async_load_platform",
     ) as mock_setup_notify_platform:
         yield mock_setup_notify_platform
 
@@ -76,7 +76,7 @@ def mock_setup_notify_platform() -> Generator[AsyncMock]:
 def mock_version() -> Generator[AsyncMock]:
     """Return a mocked Version class."""
     with patch(
-        "homeassistant.components.system_bridge.Version",
+        "menuai.components.system_bridge.Version",
         autospec=True,
     ) as mock_version:
         version = mock_version.return_value
@@ -95,11 +95,11 @@ def mock_websocket_client(
 
     with (
         patch(
-            "homeassistant.components.system_bridge.coordinator.WebSocketClient",
+            "menuai.components.system_bridge.coordinator.WebSocketClient",
             autospec=True,
         ) as mock_websocket_client,
         patch(
-            "homeassistant.components.system_bridge.config_flow.WebSocketClient",
+            "menuai.components.system_bridge.config_flow.WebSocketClient",
             new=mock_websocket_client,
         ),
     ):
@@ -182,13 +182,13 @@ def mock_websocket_client(
 
 @pytest.fixture
 async def init_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_version: MagicMock,
     mock_websocket_client: MagicMock,
 ) -> MockConfigEntry:
     """Initialize the System Bridge integration."""
-    assert await setup_integration(hass, mock_config_entry)
+    assert await setup_integration(menuai, mock_config_entry)
 
     assert mock_config_entry.state is ConfigEntryState.LOADED
 

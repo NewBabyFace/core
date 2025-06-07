@@ -11,8 +11,8 @@ from pypaperless.exceptions import (
 )
 import pytest
 
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
 
 from . import setup_integration
 
@@ -20,34 +20,34 @@ from tests.common import MockConfigEntry
 
 
 async def test_load_unload_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test loading and unloading the integration."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     assert mock_config_entry.state is ConfigEntryState.LOADED
 
-    await hass.config_entries.async_unload(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert mock_config_entry.state is ConfigEntryState.NOT_LOADED
 
 
 async def test_load_config_status_forbidden(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_paperless: AsyncMock,
 ) -> None:
     """Test loading and unloading the integration."""
     mock_paperless.status.side_effect = PaperlessForbiddenError
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     assert mock_config_entry.state is ConfigEntryState.LOADED
 
-    await hass.config_entries.async_unload(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert mock_config_entry.state is ConfigEntryState.NOT_LOADED
 
@@ -67,7 +67,7 @@ async def test_load_config_status_forbidden(
     ],
 )
 async def test_setup_config_error_handling(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_paperless: AsyncMock,
     side_effect: Exception,
@@ -77,7 +77,7 @@ async def test_setup_config_error_handling(
     """Test all initialization error paths during setup."""
     mock_paperless.initialize.side_effect = side_effect
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     assert mock_config_entry.state == expected_state
     assert mock_config_entry.error_reason_translation_key == expected_error_key

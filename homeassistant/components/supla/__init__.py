@@ -9,13 +9,13 @@ import logging
 from asyncpysupla import SuplaAPI
 import voluptuous as vol
 
-from homeassistant.const import CONF_ACCESS_TOKEN, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.discovery import async_load_platform
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.const import CONF_ACCESS_TOKEN, Platform
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.discovery import async_load_platform
+from menuai.helpers.typing import ConfigType
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -52,14 +52,14 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, base_config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, base_config: ConfigType) -> bool:
     """Set up the Supla component."""
 
     server_confs = base_config[DOMAIN][CONF_SERVERS]
 
-    hass.data[DOMAIN] = {SUPLA_SERVERS: {}, SUPLA_COORDINATORS: {}}
+    menuai.data[DOMAIN] = {SUPLA_SERVERS: {}, SUPLA_COORDINATORS: {}}
 
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
 
     for server_conf in server_confs:
         server_address = server_conf[CONF_SERVER]
@@ -70,7 +70,7 @@ async def async_setup(hass: HomeAssistant, base_config: ConfigType) -> bool:
         try:
             srv_info = await server.get_server_info()
             if srv_info.get("authenticated"):
-                hass.data[DOMAIN][SUPLA_SERVERS][server_conf[CONF_SERVER]] = server
+                menuai.data[DOMAIN][SUPLA_SERVERS][server_conf[CONF_SERVER]] = server
 
             else:
                 _LOGGER.error(
@@ -85,19 +85,19 @@ async def async_setup(hass: HomeAssistant, base_config: ConfigType) -> bool:
             )
             return False
 
-    await discover_devices(hass, base_config)
+    await discover_devices(menuai, base_config)
 
     return True
 
 
-async def discover_devices(hass, hass_config):
+async def discover_devices(menuai, menuai_config):
     """Run periodically to discover new devices.
 
     Currently it is only run at startup.
     """
     component_configs: dict[Platform, dict[str, dict]] = {}
 
-    for server_name, server in hass.data[DOMAIN][SUPLA_SERVERS].items():
+    for server_name, server in menuai.data[DOMAIN][SUPLA_SERVERS].items():
 
         async def _fetch_channels():
             async with asyncio.timeout(SCAN_INTERVAL.total_seconds()):
@@ -109,7 +109,7 @@ async def discover_devices(hass, hass_config):
                 }
 
         coordinator = DataUpdateCoordinator(
-            hass,
+            menuai,
             _LOGGER,
             name=f"{DOMAIN}-{server_name}",
             update_method=_fetch_channels,
@@ -118,7 +118,7 @@ async def discover_devices(hass, hass_config):
 
         await coordinator.async_refresh()
 
-        hass.data[DOMAIN][SUPLA_COORDINATORS][server_name] = coordinator
+        menuai.data[DOMAIN][SUPLA_COORDINATORS][server_name] = coordinator
 
         for channel_id, channel in coordinator.data.items():
             channel_function = channel["function"]["name"]
@@ -151,4 +151,4 @@ async def discover_devices(hass, hass_config):
 
     # Load discovered devices
     for component_name, config in component_configs.items():
-        await async_load_platform(hass, component_name, DOMAIN, config, hass_config)
+        await async_load_platform(menuai, component_name, DOMAIN, config, menuai_config)

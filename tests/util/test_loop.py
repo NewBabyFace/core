@@ -7,8 +7,8 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from homeassistant.core import HomeAssistant
-from homeassistant.util import loop as haloop
+from menuai.core import menuai
+from menuai.util import loop as haloop
 
 from tests.common import extract_stack_to_frame
 
@@ -23,19 +23,19 @@ def patch_get_current_frame(stack: list[Mock]) -> Generator[None]:
     frames = extract_stack_to_frame(stack)
     with (
         patch(
-            "homeassistant.helpers.frame.linecache.getline",
+            "menuai.helpers.frame.linecache.getline",
             return_value=stack[1].line,
         ),
         patch(
-            "homeassistant.util.loop._get_line_from_cache",
+            "menuai.util.loop._get_line_from_cache",
             return_value="mock_line",
         ),
         patch(
-            "homeassistant.util.loop.get_current_frame",
+            "menuai.util.loop.get_current_frame",
             return_value=frames,
         ),
         patch(
-            "homeassistant.helpers.frame.get_current_frame",
+            "menuai.helpers.frame.get_current_frame",
             return_value=frames,
         ),
     ):
@@ -54,12 +54,12 @@ async def test_raise_for_blocking_call_async_non_strict_core(
     """Test non_strict_core raise_for_blocking_call detects from event loop without integration context."""
     stack = [
         Mock(
-            filename="/home/paulus/homeassistant/core.py",
+            filename="/home/paulus/menuai/core.py",
             lineno="12",
             line="do_something()",
         ),
         Mock(
-            filename="/home/paulus/homeassistant/core.py",
+            filename="/home/paulus/menuai/core.py",
             lineno="12",
             line="self.light.is_on",
         ),
@@ -111,12 +111,12 @@ async def test_raise_for_blocking_call_async_integration(
     """Test raise_for_blocking_call detects and raises when called from event loop from integration context."""
     stack = [
         Mock(
-            filename="/home/paulus/homeassistant/core.py",
+            filename="/home/paulus/menuai/core.py",
             lineno="18",
             line="do_something()",
         ),
         Mock(
-            filename="/home/paulus/homeassistant/components/hue/light.py",
+            filename="/home/paulus/menuai/components/hue/light.py",
             lineno="18",
             line="self.light.is_on",
         ),
@@ -134,7 +134,7 @@ async def test_raise_for_blocking_call_async_integration(
     assert (
         "Detected blocking call to banned_function with args None"
         " inside the event loop by integration"
-        " 'hue' at homeassistant/components/hue/light.py, line 18: self.light.is_on "
+        " 'hue' at menuai/components/hue/light.py, line 18: self.light.is_on "
         "(offender: /home/paulus/aiohue/lights.py, line 8: mock_line), please create "
         "a bug report at https://github.com/home-assistant/core/issues?"
         "q=is%3Aopen+is%3Aissue+label%3A%22integration%3A+hue%22" in caplog.text
@@ -151,12 +151,12 @@ async def test_raise_for_blocking_call_async_integration_non_strict(
     """Test raise_for_blocking_call detects when called from event loop from integration context."""
     stack = [
         Mock(
-            filename="/home/paulus/homeassistant/core.py",
+            filename="/home/paulus/menuai/core.py",
             lineno="15",
             line="do_something()",
         ),
         Mock(
-            filename="/home/paulus/homeassistant/components/hue/light.py",
+            filename="/home/paulus/menuai/components/hue/light.py",
             lineno="15",
             line="self.light.is_on",
         ),
@@ -172,14 +172,14 @@ async def test_raise_for_blocking_call_async_integration_non_strict(
     assert (
         "Detected blocking call to banned_function with args None"
         " inside the event loop by integration"
-        " 'hue' at homeassistant/components/hue/light.py, line 15: self.light.is_on "
+        " 'hue' at menuai/components/hue/light.py, line 15: self.light.is_on "
         "(offender: /home/paulus/aiohue/lights.py, line 1: mock_line), "
         "please create a bug report at https://github.com/home-assistant/core/issues?"
         "q=is%3Aopen+is%3Aissue+label%3A%22integration%3A+hue%22" in caplog.text
     )
     assert "Traceback (most recent call last)" in caplog.text
     assert (
-        'File "/home/paulus/homeassistant/components/hue/light.py", line 15'
+        'File "/home/paulus/menuai/components/hue/light.py", line 15'
         in caplog.text
     )
     assert (
@@ -218,7 +218,7 @@ async def test_raise_for_blocking_call_async_custom(
     """Test raise_for_blocking_call detects when called from event loop with custom component context."""
     stack = [
         Mock(
-            filename="/home/paulus/homeassistant/core.py",
+            filename="/home/paulus/menuai/core.py",
             lineno="12",
             line="do_something()",
         ),
@@ -255,11 +255,11 @@ async def test_raise_for_blocking_call_async_custom(
 
 
 async def test_raise_for_blocking_call_sync(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test raise_for_blocking_call does nothing when called from thread."""
     func = haloop.protect_loop(banned_function, threading.get_ident())
-    await hass.async_add_executor_job(func)
+    await menuai.async_add_executor_job(func)
     assert "Detected blocking call inside the event loop" not in caplog.text
 
 
@@ -267,7 +267,7 @@ async def test_protect_loop_async() -> None:
     """Test protect_loop calls raise_for_blocking_call."""
     func = Mock()
     with patch(
-        "homeassistant.util.loop.raise_for_blocking_call"
+        "menuai.util.loop.raise_for_blocking_call"
     ) as mock_raise_for_blocking_call:
         haloop.protect_loop(func, threading.get_ident())(1, test=2)
     mock_raise_for_blocking_call.assert_called_once_with(

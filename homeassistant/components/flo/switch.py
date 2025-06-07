@@ -7,10 +7,10 @@ from typing import Any
 from aioflo.location import SLEEP_MINUTE_OPTIONS, SYSTEM_MODE_HOME, SYSTEM_REVERT_MODES
 import voluptuous as vol
 
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_platform
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchEntity
+from menuai.core import menuai, callback
+from menuai.helpers import entity_platform
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import FloConfigEntry, FloDeviceDataUpdateCoordinator
 from .entity import FloEntity
@@ -24,7 +24,7 @@ SERVICE_RUN_HEALTH_TEST = "run_health_test"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: FloConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -89,9 +89,9 @@ class FloSwitch(FloEntity, SwitchEntity):
         self._attr_is_on = self._device.last_known_valve_state == "open"
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai."""
+        await super().async_added_to_menuai()
         self.async_on_remove(self._device.async_add_listener(self.async_update_state))
 
     async def async_set_mode_home(self):

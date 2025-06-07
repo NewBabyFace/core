@@ -1,6 +1,6 @@
 """Test the Binary Sensor significant change platform."""
 
-from homeassistant.components.binary_sensor.significant_change import (
+from menuai.components.binary_sensor.significant_change import (
     async_check_significant_change,
 )
 

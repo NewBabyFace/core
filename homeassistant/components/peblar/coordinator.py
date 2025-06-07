@@ -21,10 +21,10 @@ from peblar import (
     PeblarVersions,
 )
 
-from homeassistant.config_entries import ConfigEntry, ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry, ConfigEntryState
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN, LOGGER
 
@@ -85,7 +85,7 @@ def _coordinator_exception_handler[
                 # This is not the first refresh, so let's reload
                 # the config entry to ensure we trigger a re-authentication
                 # flow (or recover in case of API token changes).
-                self.hass.config_entries.async_schedule_reload(
+                self.menuai.config_entries.async_schedule_reload(
                     self.config_entry.entry_id
                 )
             raise ConfigEntryAuthFailed(
@@ -114,12 +114,12 @@ class PeblarVersionDataUpdateCoordinator(
     """Class to manage fetching Peblar version information."""
 
     def __init__(
-        self, hass: HomeAssistant, entry: PeblarConfigEntry, peblar: Peblar
+        self, menuai: menuai, entry: PeblarConfigEntry, peblar: Peblar
     ) -> None:
         """Initialize the coordinator."""
         self.peblar = peblar
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=entry,
             name=f"Peblar {entry.title} version",
@@ -141,12 +141,12 @@ class PeblarDataUpdateCoordinator(DataUpdateCoordinator[PeblarData]):
     config_entry: PeblarConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, entry: PeblarConfigEntry, api: PeblarApi
+        self, menuai: menuai, entry: PeblarConfigEntry, api: PeblarApi
     ) -> None:
         """Initialize the coordinator."""
         self.api = api
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=entry,
             name=f"Peblar {entry.title} meter",
@@ -169,12 +169,12 @@ class PeblarUserConfigurationDataUpdateCoordinator(
     """Class to manage fetching Peblar user configuration data."""
 
     def __init__(
-        self, hass: HomeAssistant, entry: PeblarConfigEntry, peblar: Peblar
+        self, menuai: menuai, entry: PeblarConfigEntry, peblar: Peblar
     ) -> None:
         """Initialize the coordinator."""
         self.peblar = peblar
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=entry,
             name=f"Peblar {entry.title} user configuration",

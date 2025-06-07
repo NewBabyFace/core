@@ -4,46 +4,46 @@ from unittest.mock import patch
 
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.application_credentials import (
+from menuai.components.application_credentials import (
     ClientCredential,
     async_import_client_credential,
 )
-from homeassistant.components.tesla_fleet.const import CLIENT_ID, DOMAIN
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.components.tesla_fleet.const import CLIENT_ID, DOMAIN
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 
 
 async def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     platforms: list[Platform] | None = None,
 ) -> None:
     """Set up the Tesla Fleet platform."""
 
-    assert await async_setup_component(hass, "application_credentials", {})
+    assert await async_setup_component(menuai, "application_credentials", {})
     await async_import_client_credential(
-        hass,
+        menuai,
         DOMAIN,
-        ClientCredential(CLIENT_ID, "", "Home Assistant"),
+        ClientCredential(CLIENT_ID, "", "MenuAI"),
         DOMAIN,
     )
 
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     if platforms is None:
-        await hass.config_entries.async_setup(config_entry.entry_id)
+        await menuai.config_entries.async_setup(config_entry.entry_id)
     else:
-        with patch("homeassistant.components.tesla_fleet.PLATFORMS", platforms):
-            await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+        with patch("menuai.components.tesla_fleet.PLATFORMS", platforms):
+            await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
 
 def assert_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry_id: str,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
@@ -55,12 +55,12 @@ def assert_entities(
     assert entity_entries
     for entity_entry in entity_entries:
         assert entity_entry == snapshot(name=f"{entity_entry.entity_id}-entry")
-        assert (state := hass.states.get(entity_entry.entity_id))
+        assert (state := menuai.states.get(entity_entry.entity_id))
         assert state == snapshot(name=f"{entity_entry.entity_id}-state")
 
 
 def assert_entities_alt(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry_id: str,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
@@ -70,5 +70,5 @@ def assert_entities_alt(
 
     assert entity_entries
     for entity_entry in entity_entries:
-        assert (state := hass.states.get(entity_entry.entity_id))
+        assert (state := menuai.states.get(entity_entry.entity_id))
         assert state == snapshot(name=f"{entity_entry.entity_id}-statealt")

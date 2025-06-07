@@ -12,11 +12,11 @@ import datapoint.Manager
 from requests import HTTPError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_API_KEY, CONF_LATITUDE, CONF_LONGITUDE, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_API_KEY, CONF_LATITUDE, CONF_LONGITUDE, CONF_NAME
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
 
 from .const import DOMAIN
 
@@ -24,7 +24,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def validate_input(
-    hass: HomeAssistant, latitude: float, longitude: float, api_key: str
+    menuai: menuai, latitude: float, longitude: float, api_key: str
 ) -> dict[str, Any]:
     """Validate that the user input allows us to connect to DataPoint.
 
@@ -34,7 +34,7 @@ async def validate_input(
     connection = datapoint.Manager.Manager(api_key=api_key)
 
     try:
-        forecast = await hass.async_add_executor_job(
+        forecast = await menuai.async_add_executor_job(
             connection.get_forecast,
             latitude,
             longitude,
@@ -73,7 +73,7 @@ class MetOfficeConfigFlow(ConfigFlow, domain=DOMAIN):
             self._abort_if_unique_id_configured()
 
             result = await validate_input(
-                self.hass,
+                self.menuai,
                 latitude=user_input[CONF_LATITUDE],
                 longitude=user_input[CONF_LONGITUDE],
                 api_key=user_input[CONF_API_KEY],
@@ -91,10 +91,10 @@ class MetOfficeConfigFlow(ConfigFlow, domain=DOMAIN):
             {
                 vol.Required(CONF_API_KEY): str,
                 vol.Required(
-                    CONF_LATITUDE, default=self.hass.config.latitude
+                    CONF_LATITUDE, default=self.menuai.config.latitude
                 ): cv.latitude,
                 vol.Required(
-                    CONF_LONGITUDE, default=self.hass.config.longitude
+                    CONF_LONGITUDE, default=self.menuai.config.longitude
                 ): cv.longitude,
             },
         )
@@ -120,7 +120,7 @@ class MetOfficeConfigFlow(ConfigFlow, domain=DOMAIN):
         entry = self._get_reauth_entry()
         if user_input is not None:
             result = await validate_input(
-                self.hass,
+                self.menuai,
                 latitude=entry.data[CONF_LATITUDE],
                 longitude=entry.data[CONF_LONGITUDE],
                 api_key=user_input[CONF_API_KEY],
@@ -148,5 +148,5 @@ class MetOfficeConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""

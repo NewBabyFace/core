@@ -5,11 +5,11 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from homeassistant.components.cover import ATTR_POSITION, CoverDeviceClass, CoverEntity
-from homeassistant.const import ATTR_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.cover import ATTR_POSITION, CoverDeviceClass, CoverEntity
+from menuai.const import ATTR_ID
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import API, DEFAULT_OFFSET, DOMAIN, SLIDES
 
@@ -21,7 +21,7 @@ OPENING = "opening"
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -33,9 +33,9 @@ async def async_setup_platform(
 
     entities = []
 
-    for slide in hass.data[DOMAIN][SLIDES].values():
+    for slide in menuai.data[DOMAIN][SLIDES].values():
         _LOGGER.debug("Setting up Slide entity: %s", slide)
-        entities.append(SlideCover(hass.data[DOMAIN][API], slide))
+        entities.append(SlideCover(menuai.data[DOMAIN][API], slide))
 
     async_add_entities(entities)
 

@@ -6,32 +6,32 @@ import pytest
 from pytest_unordered import unordered
 import voluptuous_serialize
 
-from homeassistant.components import automation
-from homeassistant.components.device_automation import DeviceAutomationType
-from homeassistant.components.select import DOMAIN
-from homeassistant.components.select.device_condition import (
+from menuai.components import automation
+from menuai.components.device_automation import DeviceAutomationType
+from menuai.components.select import DOMAIN
+from menuai.components.select.device_condition import (
     async_get_condition_capabilities,
 )
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import (
+from menuai.const import EntityCategory
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import (
     config_validation as cv,
     device_registry as dr,
     entity_registry as er,
 )
-from homeassistant.setup import async_setup_component
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry, async_get_device_automations
 
 
 async def test_get_conditions(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test we get the expected conditions from a select."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -50,7 +50,7 @@ async def test_get_conditions(
         }
     ]
     conditions = await async_get_device_automations(
-        hass, DeviceAutomationType.CONDITION, device_entry.id
+        menuai, DeviceAutomationType.CONDITION, device_entry.id
     )
     assert conditions == unordered(expected_conditions)
 
@@ -65,7 +65,7 @@ async def test_get_conditions(
     ],
 )
 async def test_get_conditions_hidden_auxiliary(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     hidden_by,
@@ -73,7 +73,7 @@ async def test_get_conditions_hidden_auxiliary(
 ) -> None:
     """Test we get the expected conditions from a hidden or auxiliary entity."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -98,20 +98,20 @@ async def test_get_conditions_hidden_auxiliary(
         for condition in ("selected_option",)
     ]
     conditions = await async_get_device_automations(
-        hass, DeviceAutomationType.CONDITION, device_entry.id
+        menuai, DeviceAutomationType.CONDITION, device_entry.id
     )
     assert conditions == unordered(expected_conditions)
 
 
 async def test_if_selected_option(
-    hass: HomeAssistant,
+    menuai: menuai,
     service_calls: list[ServiceCall],
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test for selected_option conditions."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -121,7 +121,7 @@ async def test_if_selected_option(
     )
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -168,39 +168,39 @@ async def test_if_selected_option(
     )
 
     # Test with non existing entity
-    hass.bus.async_fire("test_event1")
-    hass.bus.async_fire("test_event2")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event1")
+    menuai.bus.async_fire("test_event2")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 0
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entry.entity_id, "option1", {"options": ["option1", "option2"]}
     )
-    hass.bus.async_fire("test_event1")
-    hass.bus.async_fire("test_event2")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event1")
+    menuai.bus.async_fire("test_event2")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
     assert service_calls[0].data["result"] == "option1 - event - test_event1"
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entry.entity_id, "option2", {"options": ["option1", "option2"]}
     )
-    hass.bus.async_fire("test_event1")
-    hass.bus.async_fire("test_event2")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event1")
+    menuai.bus.async_fire("test_event2")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 2
     assert service_calls[1].data["result"] == "option2 - event - test_event2"
 
 
 async def test_if_selected_option_legacy(
-    hass: HomeAssistant,
+    menuai: menuai,
     service_calls: list[ServiceCall],
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test for selected_option conditions."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -210,7 +210,7 @@ async def test_if_selected_option_legacy(
     )
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -237,17 +237,17 @@ async def test_if_selected_option_legacy(
         },
     )
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entry.entity_id, "option1", {"options": ["option1", "option2"]}
     )
-    hass.bus.async_fire("test_event1")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event1")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
     assert service_calls[0].data["result"] == "option1 - event - test_event1"
 
 
 async def test_get_condition_capabilities(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test we get the expected capabilities from a select condition."""
     entry = entity_registry.async_get_or_create(DOMAIN, "test", "5678")
@@ -261,7 +261,7 @@ async def test_get_condition_capabilities(
     }
 
     # Test when entity doesn't exists
-    capabilities = await async_get_condition_capabilities(hass, config)
+    capabilities = await async_get_condition_capabilities(menuai, config)
     assert capabilities
     assert "extra_fields" in capabilities
     assert voluptuous_serialize.convert(
@@ -281,12 +281,12 @@ async def test_get_condition_capabilities(
     ]
 
     # Mock an entity
-    hass.states.async_set(
+    menuai.states.async_set(
         entry.entity_id, "option1", {"options": ["option1", "option2"]}
     )
 
     # Test if we get the right capabilities now
-    capabilities = await async_get_condition_capabilities(hass, config)
+    capabilities = await async_get_condition_capabilities(menuai, config)
     assert capabilities
     assert "extra_fields" in capabilities
     assert voluptuous_serialize.convert(
@@ -307,7 +307,7 @@ async def test_get_condition_capabilities(
 
 
 async def test_get_condition_capabilities_legacy(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test we get the expected capabilities from a select condition."""
     entry = entity_registry.async_get_or_create(DOMAIN, "test", "5678")
@@ -321,7 +321,7 @@ async def test_get_condition_capabilities_legacy(
     }
 
     # Test when entity doesn't exists
-    capabilities = await async_get_condition_capabilities(hass, config)
+    capabilities = await async_get_condition_capabilities(menuai, config)
     assert capabilities
     assert "extra_fields" in capabilities
     assert voluptuous_serialize.convert(
@@ -341,12 +341,12 @@ async def test_get_condition_capabilities_legacy(
     ]
 
     # Mock an entity
-    hass.states.async_set(
+    menuai.states.async_set(
         entry.entity_id, "option1", {"options": ["option1", "option2"]}
     )
 
     # Test if we get the right capabilities now
-    capabilities = await async_get_condition_capabilities(hass, config)
+    capabilities = await async_get_condition_capabilities(menuai, config)
     assert capabilities
     assert "extra_fields" in capabilities
     assert voluptuous_serialize.convert(

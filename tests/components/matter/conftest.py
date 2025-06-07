@@ -12,7 +12,7 @@ from matter_server.common.const import SCHEMA_VERSION
 from matter_server.common.models import ServerInfoMessage
 import pytest
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .common import setup_integration_with_node_fixture
 
@@ -26,7 +26,7 @@ MOCK_COMPR_FABRIC_ID = 1234
 async def matter_client_fixture() -> AsyncGenerator[MagicMock]:
     """Fixture for a Matter client."""
     with patch(
-        "homeassistant.components.matter.MatterClient", autospec=True
+        "menuai.components.matter.MatterClient", autospec=True
     ) as client_class:
         client = client_class.return_value
 
@@ -61,13 +61,13 @@ async def matter_client_fixture() -> AsyncGenerator[MagicMock]:
 
 @pytest.fixture(name="integration")
 async def integration_fixture(
-    hass: HomeAssistant, matter_client: MagicMock
+    menuai: menuai, matter_client: MagicMock
 ) -> MockConfigEntry:
     """Set up the Matter integration."""
     entry = MockConfigEntry(domain="matter", data={"url": "ws://localhost:5580/ws"})
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     return entry
 
@@ -131,10 +131,10 @@ async def integration_fixture(
     ]
 )
 async def matter_devices(
-    hass: HomeAssistant, matter_client: MagicMock, request: pytest.FixtureRequest
+    menuai: menuai, matter_client: MagicMock, request: pytest.FixtureRequest
 ) -> MatterNode:
     """Fixture for a Matter device."""
-    return await setup_integration_with_node_fixture(hass, request.param, matter_client)
+    return await setup_integration_with_node_fixture(menuai, request.param, matter_client)
 
 
 @pytest.fixture
@@ -145,12 +145,12 @@ def attributes() -> dict[str, Any]:
 
 @pytest.fixture
 async def matter_node(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     node_fixture: str,
     attributes: dict[str, Any],
 ) -> MatterNode:
     """Fixture for a Matter node."""
     return await setup_integration_with_node_fixture(
-        hass, node_fixture, matter_client, attributes
+        menuai, node_fixture, matter_client, attributes
     )

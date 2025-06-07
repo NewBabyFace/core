@@ -7,16 +7,16 @@ from typing import Any
 import eternalegypt
 from eternalegypt.eternalegypt import Modem
 
-from homeassistant.components.notify import ATTR_TARGET, BaseNotificationService
-from homeassistant.const import CONF_RECIPIENT
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.notify import ATTR_TARGET, BaseNotificationService
+from menuai.const import CONF_RECIPIENT
+from menuai.core import menuai
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import CONF_NOTIFY, LOGGER
 
 
 async def async_get_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> NetgearNotifyService | None:

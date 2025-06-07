@@ -5,7 +5,7 @@ from __future__ import annotations
 from pyinsteon.constants import HC_LOOKUP
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_ADDRESS,
     CONF_DEVICE,
     CONF_ENTITY_ID,
@@ -16,7 +16,7 @@ from homeassistant.const import (
     CONF_USERNAME,
     ENTITY_MATCH_ALL,
 )
-from homeassistant.helpers import config_validation as cv
+from menuai.helpers import config_validation as cv
 
 from .const import (
     CONF_CAT,

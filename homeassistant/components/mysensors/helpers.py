@@ -12,11 +12,11 @@ from mysensors import BaseAsyncGateway, Message
 from mysensors.sensor import ChildSensor
 import voluptuous as vol
 
-from homeassistant.const import CONF_NAME, Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.util.decorator import Registry
+from menuai.const import CONF_NAME, Platform
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.util.decorator import Registry
 
 from .const import (
     ATTR_DEVICES,
@@ -42,12 +42,12 @@ SCHEMAS: Registry[
 
 @callback
 def discover_mysensors_platform(
-    hass: HomeAssistant, gateway_id: GatewayId, platform: str, new_devices: list[DevId]
+    menuai: menuai, gateway_id: GatewayId, platform: str, new_devices: list[DevId]
 ) -> None:
     """Discover a MySensors platform."""
     _LOGGER.debug("Discovering platform %s with devIds: %s", platform, new_devices)
     async_dispatcher_send(
-        hass,
+        menuai,
         MYSENSORS_DISCOVERY.format(gateway_id, platform),
         {
             ATTR_DEVICES: new_devices,
@@ -59,17 +59,17 @@ def discover_mysensors_platform(
 
 @callback
 def discover_mysensors_node(
-    hass: HomeAssistant, gateway_id: GatewayId, node_id: int
+    menuai: menuai, gateway_id: GatewayId, node_id: int
 ) -> None:
     """Discover a MySensors node."""
-    discovered_nodes = hass.data[DOMAIN].setdefault(
+    discovered_nodes = menuai.data[DOMAIN].setdefault(
         MYSENSORS_DISCOVERED_NODES.format(gateway_id), set()
     )
 
     if node_id not in discovered_nodes:
         discovered_nodes.add(node_id)
         async_dispatcher_send(
-            hass,
+            menuai,
             MYSENSORS_NODE_DISCOVERY,
             {
                 ATTR_GATEWAY_ID: gateway_id,
@@ -185,7 +185,7 @@ def validate_child(
     child: ChildSensor,
     value_type: int | None = None,
 ) -> defaultdict[Platform, list[DevId]]:
-    """Validate a child. Returns a dict mapping hass platform names to list of DevId."""
+    """Validate a child. Returns a dict mapping menuai platform names to list of DevId."""
     validated: defaultdict[Platform, list[DevId]] = defaultdict(list)
     presentation: type[IntEnum] = gateway.const.Presentation
     set_req: type[IntEnum] = gateway.const.SetReq

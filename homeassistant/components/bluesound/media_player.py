@@ -10,8 +10,8 @@ from typing import TYPE_CHECKING, Any
 from pyblu import Input, Player, Preset, Status, SyncStatus
 import voluptuous as vol
 
-from homeassistant.components import media_source
-from homeassistant.components.media_player import (
+from menuai.components import media_source
+from menuai.components.media_player import (
     BrowseMedia,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
@@ -19,26 +19,26 @@ from homeassistant.components.media_player import (
     MediaType,
     async_process_play_media_url,
 )
-from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import (
+from menuai.const import CONF_HOST, CONF_PORT
+from menuai.core import menuai, callback
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import (
     config_validation as cv,
     entity_platform,
     issue_registry as ir,
 )
-from homeassistant.helpers.device_registry import (
+from menuai.helpers.device_registry import (
     CONNECTION_NETWORK_MAC,
     DeviceInfo,
     format_mac,
 )
-from homeassistant.helpers.dispatcher import (
+from menuai.helpers.dispatcher import (
     async_dispatcher_connect,
     async_dispatcher_send,
 )
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.util import dt as dt_util, slugify
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
+from menuai.util import dt as dt_util, slugify
 
 from .const import ATTR_BLUESOUND_GROUP, ATTR_MASTER, DOMAIN
 from .coordinator import BluesoundCoordinator
@@ -63,7 +63,7 @@ POLL_TIMEOUT = 120
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: BluesoundConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -145,29 +145,29 @@ class BluesoundPlayer(CoordinatorEntity[BluesoundCoordinator], MediaPlayerEntity
                 via_device=(DOMAIN, format_mac(sync_status.mac)),
             )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Start the polling task."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         assert self._sync_status.id is not None
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 dispatcher_join_signal(self.entity_id),
                 self.async_add_follower,
             )
         )
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 dispatcher_unjoin_signal(self._sync_status.id),
                 self.async_remove_follower,
             )
         )
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Stop the polling task."""
-        await super().async_will_remove_from_hass()
+        await super().async_will_remove_from_menuai()
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -422,7 +422,7 @@ class BluesoundPlayer(CoordinatorEntity[BluesoundCoordinator], MediaPlayerEntity
 
         _LOGGER.debug("Trying to join player: %s", self.id)
         async_dispatcher_send(
-            self.hass, dispatcher_join_signal(master), self.host, self.port
+            self.menuai, dispatcher_join_signal(master), self.host, self.port
         )
 
     async def async_unjoin(self) -> None:
@@ -434,7 +434,7 @@ class BluesoundPlayer(CoordinatorEntity[BluesoundCoordinator], MediaPlayerEntity
 
         _LOGGER.debug("Trying to unjoin player: %s", self.id)
         async_dispatcher_send(
-            self.hass, dispatcher_unjoin_signal(leader_id), self.host, self.port
+            self.menuai, dispatcher_unjoin_signal(leader_id), self.host, self.port
         )
 
     @property
@@ -454,7 +454,7 @@ class BluesoundPlayer(CoordinatorEntity[BluesoundCoordinator], MediaPlayerEntity
             return []
 
         config_entries: list[BluesoundConfigEntry] = (
-            self.hass.config_entries.async_entries(DOMAIN)
+            self.menuai.config_entries.async_entries(DOMAIN)
         )
         sync_status_list = [
             x.runtime_data.coordinator.data.sync_status for x in config_entries
@@ -493,7 +493,7 @@ class BluesoundPlayer(CoordinatorEntity[BluesoundCoordinator], MediaPlayerEntity
     async def async_increase_timer(self) -> int:
         """Increase sleep time on player."""
         ir.async_create_issue(
-            self.hass,
+            self.menuai,
             DOMAIN,
             f"deprecated_service_{SERVICE_SET_TIMER}",
             is_fixable=False,
@@ -510,7 +510,7 @@ class BluesoundPlayer(CoordinatorEntity[BluesoundCoordinator], MediaPlayerEntity
     async def async_clear_timer(self) -> None:
         """Clear sleep timer on player."""
         ir.async_create_issue(
-            self.hass,
+            self.menuai,
             DOMAIN,
             f"deprecated_service_{SERVICE_CLEAR_TIMER}",
             is_fixable=False,
@@ -605,11 +605,11 @@ class BluesoundPlayer(CoordinatorEntity[BluesoundCoordinator], MediaPlayerEntity
 
         if media_source.is_media_source_id(media_id):
             play_item = await media_source.async_resolve_media(
-                self.hass, media_id, self.entity_id
+                self.menuai, media_id, self.entity_id
             )
             media_id = play_item.url
 
-        url = async_process_play_media_url(self.hass, media_id)
+        url = async_process_play_media_url(self.menuai, media_id)
 
         await self._player.play_url(url)
 
@@ -650,7 +650,7 @@ class BluesoundPlayer(CoordinatorEntity[BluesoundCoordinator], MediaPlayerEntity
     ) -> BrowseMedia:
         """Implement the websocket media browsing helper."""
         return await media_source.async_browse_media(
-            self.hass,
+            self.menuai,
             media_content_id,
             content_filter=lambda item: item.media_content_type.startswith("audio/"),
         )

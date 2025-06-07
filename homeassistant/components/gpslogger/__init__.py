@@ -5,13 +5,13 @@ from http import HTTPStatus
 from aiohttp import web
 import voluptuous as vol
 
-from homeassistant.components import webhook
-from homeassistant.components.device_tracker import ATTR_BATTERY
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_LATITUDE, ATTR_LONGITUDE, CONF_WEBHOOK_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_entry_flow, config_validation as cv
-from homeassistant.helpers.dispatcher import async_dispatcher_send
+from menuai.components import webhook
+from menuai.components.device_tracker import ATTR_BATTERY
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_LATITUDE, ATTR_LONGITUDE, CONF_WEBHOOK_ID, Platform
+from menuai.core import menuai
+from menuai.helpers import config_entry_flow, config_validation as cv
+from menuai.helpers.dispatcher import async_dispatcher_send
 
 from .const import (
     ATTR_ACCURACY,
@@ -57,7 +57,7 @@ WEBHOOK_SCHEMA = vol.Schema(
 
 
 async def handle_webhook(
-    hass: HomeAssistant, webhook_id: str, request: web.Request
+    menuai: menuai, webhook_id: str, request: web.Request
 ) -> web.Response:
     """Handle incoming webhook with GPSLogger request."""
     try:
@@ -78,7 +78,7 @@ async def handle_webhook(
     device = data[ATTR_DEVICE]
 
     async_dispatcher_send(
-        hass,
+        menuai,
         TRACKER_UPDATE,
         device,
         (data[ATTR_LATITUDE], data[ATTR_LONGITUDE]),
@@ -90,22 +90,22 @@ async def handle_webhook(
     return web.Response(text=f"Setting location for {device}")
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: GPSLoggerConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: GPSLoggerConfigEntry) -> bool:
     """Configure based on config entry."""
     entry.runtime_data = set()
     webhook.async_register(
-        hass, DOMAIN, "GPSLogger", entry.data[CONF_WEBHOOK_ID], handle_webhook
+        menuai, DOMAIN, "GPSLogger", entry.data[CONF_WEBHOOK_ID], handle_webhook
     )
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    webhook.async_unregister(hass, entry.data[CONF_WEBHOOK_ID])
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    webhook.async_unregister(menuai, entry.data[CONF_WEBHOOK_ID])
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 async_remove_entry = config_entry_flow.webhook_async_remove_entry

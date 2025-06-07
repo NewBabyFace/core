@@ -12,14 +12,14 @@ from bimmer_connected.vehicle.doors_windows import LockState
 from bimmer_connected.vehicle.fuel_and_battery import ChargingState
 from bimmer_connected.vehicle.reports import ConditionBasedService
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util.unit_system import UnitSystem
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util.unit_system import UnitSystem
 
 from . import BMWConfigEntry
 from .const import UNIT_MAP
@@ -198,7 +198,7 @@ SENSOR_TYPES: tuple[BMWBinarySensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: BMWConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -206,7 +206,7 @@ async def async_setup_entry(
     coordinator = config_entry.runtime_data
 
     entities = [
-        BMWBinarySensor(coordinator, vehicle, description, hass.config.units)
+        BMWBinarySensor(coordinator, vehicle, description, menuai.config.units)
         for vehicle in coordinator.account.vehicles
         for description in SENSOR_TYPES
         if description.is_available(vehicle)

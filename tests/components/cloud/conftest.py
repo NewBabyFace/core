@@ -5,50 +5,50 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import DEFAULT, AsyncMock, MagicMock, PropertyMock, patch
 
-from hass_nabucasa import Cloud
-from hass_nabucasa.auth import CognitoAuth
-from hass_nabucasa.cloudhooks import Cloudhooks
-from hass_nabucasa.const import DEFAULT_SERVERS, DEFAULT_VALUES, STATE_CONNECTED
-from hass_nabucasa.files import Files
-from hass_nabucasa.google_report_state import GoogleReportState
-from hass_nabucasa.ice_servers import IceServers
-from hass_nabucasa.iot import CloudIoT
-from hass_nabucasa.remote import RemoteUI
-from hass_nabucasa.voice import Voice
+from menuai_nabucasa import Cloud
+from menuai_nabucasa.auth import CognitoAuth
+from menuai_nabucasa.cloudhooks import Cloudhooks
+from menuai_nabucasa.const import DEFAULT_SERVERS, DEFAULT_VALUES, STATE_CONNECTED
+from menuai_nabucasa.files import Files
+from menuai_nabucasa.google_report_state import GoogleReportState
+from menuai_nabucasa.ice_servers import IceServers
+from menuai_nabucasa.iot import CloudIoT
+from menuai_nabucasa.remote import RemoteUI
+from menuai_nabucasa.voice import Voice
 import jwt
 import pytest
 
-from homeassistant.components.cloud.client import CloudClient
-from homeassistant.components.cloud.const import DATA_CLOUD
-from homeassistant.components.cloud.prefs import (
+from menuai.components.cloud.client import CloudClient
+from menuai.components.cloud.const import DATA_CLOUD
+from menuai.components.cloud.prefs import (
     PREF_ALEXA_DEFAULT_EXPOSE,
     PREF_GOOGLE_DEFAULT_EXPOSE,
     CloudPreferences,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
-from homeassistant.util.dt import utcnow
+from menuai.core import menuai
+from menuai.setup import async_setup_component
+from menuai.util.dt import utcnow
 
 from . import mock_cloud, mock_cloud_prefs
 
 
 @pytest.fixture(autouse=True)
-async def load_homeassistant(hass: HomeAssistant) -> None:
-    """Load the homeassistant integration.
+async def load_menuai(menuai: menuai) -> None:
+    """Load the menuai integration.
 
     This is needed for the cloud integration to work.
     """
-    assert await async_setup_component(hass, "homeassistant", {})
+    assert await async_setup_component(menuai, "menuai", {})
 
 
 @pytest.fixture(name="cloud")
 async def cloud_fixture() -> AsyncGenerator[MagicMock]:
     """Mock the cloud object.
 
-    See the real hass_nabucasa.Cloud class for how to configure the mock.
+    See the real menuai_nabucasa.Cloud class for how to configure the mock.
     """
     with patch(
-        "homeassistant.components.cloud.Cloud", autospec=True
+        "menuai.components.cloud.Cloud", autospec=True
     ) as mock_cloud_class:
         mock_cloud = mock_cloud_class.return_value
 
@@ -213,35 +213,35 @@ def tts_mutagen_mock_fixture_autouse(tts_mutagen_mock: MagicMock) -> None:
 @pytest.fixture(autouse=True)
 def mock_user_data() -> Generator[MagicMock]:
     """Mock os module."""
-    with patch("hass_nabucasa.Cloud._write_user_info") as writer:
+    with patch("menuai_nabucasa.Cloud._write_user_info") as writer:
         yield writer
 
 
 @pytest.fixture
-async def mock_cloud_fixture(hass: HomeAssistant) -> CloudPreferences:
+async def mock_cloud_fixture(menuai: menuai) -> CloudPreferences:
     """Fixture for cloud component."""
-    await mock_cloud(hass)
-    return mock_cloud_prefs(hass, {})
+    await mock_cloud(menuai)
+    return mock_cloud_prefs(menuai, {})
 
 
 @pytest.fixture
-async def cloud_prefs(hass: HomeAssistant) -> CloudPreferences:
+async def cloud_prefs(menuai: menuai) -> CloudPreferences:
     """Fixture for cloud preferences."""
-    cloud_prefs = CloudPreferences(hass)
+    cloud_prefs = CloudPreferences(menuai)
     await cloud_prefs.async_initialize()
     return cloud_prefs
 
 
 @pytest.fixture
-async def mock_cloud_setup(hass: HomeAssistant) -> None:
+async def mock_cloud_setup(menuai: menuai) -> None:
     """Set up the cloud."""
-    await mock_cloud(hass)
+    await mock_cloud(menuai)
 
 
 @pytest.fixture
-def mock_cloud_login(hass: HomeAssistant, mock_cloud_setup: None) -> Generator[None]:
+def mock_cloud_login(menuai: menuai, mock_cloud_setup: None) -> Generator[None]:
     """Mock cloud is logged in."""
-    hass.data[DATA_CLOUD].id_token = jwt.encode(
+    menuai.data[DATA_CLOUD].id_token = jwt.encode(
         {
             "email": "hello@home-assistant.io",
             "custom:sub-exp": "2300-01-03",
@@ -249,7 +249,7 @@ def mock_cloud_login(hass: HomeAssistant, mock_cloud_setup: None) -> Generator[N
         },
         "test",
     )
-    with patch.object(hass.data[DATA_CLOUD].auth, "async_check_token"):
+    with patch.object(menuai.data[DATA_CLOUD].auth, "async_check_token"):
         yield
 
 
@@ -257,16 +257,16 @@ def mock_cloud_login(hass: HomeAssistant, mock_cloud_setup: None) -> Generator[N
 def mock_auth_fixture() -> Generator[None]:
     """Mock check token."""
     with (
-        patch("hass_nabucasa.auth.CognitoAuth.async_check_token"),
-        patch("hass_nabucasa.auth.CognitoAuth.async_renew_access_token"),
+        patch("menuai_nabucasa.auth.CognitoAuth.async_check_token"),
+        patch("menuai_nabucasa.auth.CognitoAuth.async_renew_access_token"),
     ):
         yield
 
 
 @pytest.fixture
-def mock_expired_cloud_login(hass: HomeAssistant, mock_cloud_setup: None) -> None:
+def mock_expired_cloud_login(menuai: menuai, mock_cloud_setup: None) -> None:
     """Mock cloud is logged in."""
-    hass.data[DATA_CLOUD].id_token = jwt.encode(
+    menuai.data[DATA_CLOUD].id_token = jwt.encode(
         {
             "email": "hello@home-assistant.io",
             "custom:sub-exp": "2018-01-01",

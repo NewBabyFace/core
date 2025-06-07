@@ -1,4 +1,4 @@
-"""Tests for pylint hass_enforce_sorted_platforms plugin."""
+"""Tests for pylint menuai_enforce_sorted_platforms plugin."""
 
 from __future__ import annotations
 
@@ -48,7 +48,7 @@ def test_enforce_sorted_platforms(
     code: str,
 ) -> None:
     """Good test cases."""
-    root_node = astroid.parse(code, "homeassistant.components.pylint_test")
+    root_node = astroid.parse(code, "menuai.components.pylint_test")
     walker = ASTWalker(linter)
     walker.add_checker(enforce_sorted_platforms_checker)
 
@@ -65,13 +65,13 @@ def test_enforce_sorted_platforms_bad(
         """
     PLATFORMS = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.BUTTON]
     """,
-        "homeassistant.components.pylint_test",
+        "menuai.components.pylint_test",
     )
 
     with assert_adds_messages(
         linter,
         MessageTest(
-            msg_id="hass-enforce-sorted-platforms",
+            msg_id="menuai-enforce-sorted-platforms",
             line=2,
             node=assign_node,
             args=None,
@@ -93,13 +93,13 @@ def test_enforce_sorted_platforms_bad_typed(
         """
     PLATFORMS: list[str] = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.BUTTON]
     """,
-        "homeassistant.components.pylint_test",
+        "menuai.components.pylint_test",
     )
 
     with assert_adds_messages(
         linter,
         MessageTest(
-            msg_id="hass-enforce-sorted-platforms",
+            msg_id="menuai-enforce-sorted-platforms",
             line=2,
             node=assign_node,
             args=None,

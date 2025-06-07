@@ -6,16 +6,16 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     DOMAIN as BINARY_SENSOR_DOMAIN,
     BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import EntityCategory
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import GuardianConfigEntry
 from .const import (
@@ -84,7 +84,7 @@ VALVE_CONTROLLER_DESCRIPTIONS = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: GuardianConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -93,7 +93,7 @@ async def async_setup_entry(
     uid = entry.data[CONF_UID]
 
     async_finish_entity_domain_replacements(
-        hass,
+        menuai,
         entry,
         (
             EntityDomainReplacementStrategy(
@@ -113,10 +113,10 @@ async def async_setup_entry(
             for description in PAIRED_SENSOR_DESCRIPTIONS
         )
 
-    # Handle adding paired sensors after HASS startup:
+    # Handle adding paired sensors after menuai startup:
     entry.async_on_unload(
         async_dispatcher_connect(
-            hass,
+            menuai,
             SIGNAL_PAIRED_SENSOR_COORDINATOR_ADDED.format(entry.data[CONF_UID]),
             add_new_paired_sensor,
         )

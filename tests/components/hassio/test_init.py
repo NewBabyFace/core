@@ -1,4 +1,4 @@
-"""The tests for the hassio component."""
+"""The tests for the menuaiio component."""
 
 from datetime import timedelta
 import logging
@@ -11,26 +11,26 @@ from aiohasupervisor.models import AddonsStats
 import pytest
 from voluptuous import Invalid
 
-from homeassistant.auth.const import GROUP_ID_ADMIN
-from homeassistant.components import frontend, hassio
-from homeassistant.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
-from homeassistant.components.hassio import (
+from menuai.auth.const import GROUP_ID_ADMIN
+from menuai.components import frontend, menuaiio
+from menuai.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
+from menuai.components.menuaiio import (
     ADDONS_COORDINATOR,
     DOMAIN,
     get_core_info,
     get_supervisor_ip,
     hostname_from_addon_slug,
-    is_hassio as deprecated_is_hassio,
+    is_menuaiio as deprecated_is_menuaiio,
 )
-from homeassistant.components.hassio.config import STORAGE_KEY
-from homeassistant.components.hassio.const import REQUEST_REFRESH_DELAY
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.hassio import is_hassio
-from homeassistant.helpers.service_info.hassio import HassioServiceInfo
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.components.menuaiio.config import STORAGE_KEY
+from menuai.components.menuaiio.const import REQUEST_REFRESH_DELAY
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.helpers.menuaiio import is_menuaiio
+from menuai.helpers.service_info.menuaiio import menuaiioServiceInfo
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from tests.common import (
     MockConfigEntry,
@@ -70,7 +70,7 @@ def mock_all(
     resolution_info: AsyncMock,
 ) -> None:
     """Mock all setup requests."""
-    aioclient_mock.post("http://127.0.0.1/homeassistant/options", json={"result": "ok"})
+    aioclient_mock.post("http://127.0.0.1/menuai/options", json={"result": "ok"})
     aioclient_mock.post("http://127.0.0.1/supervisor/options", json={"result": "ok"})
     aioclient_mock.get(
         "http://127.0.0.1/info",
@@ -78,8 +78,8 @@ def mock_all(
             "result": "ok",
             "data": {
                 "supervisor": "222",
-                "homeassistant": "0.110.0",
-                "hassos": "1.2.3",
+                "menuai": "0.110.0",
+                "menuaios": "1.2.3",
             },
         },
     )
@@ -90,7 +90,7 @@ def mock_all(
             "data": {
                 "result": "ok",
                 "data": {
-                    "chassis": "vm",
+                    "cmenuaiis": "vm",
                     "operating_system": "Debian GNU/Linux 10 (buster)",
                     "kernel": "4.19.0-6-amd64",
                 },
@@ -218,44 +218,44 @@ def mock_all(
 
 
 async def test_setup_api_ping(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     supervisor_client: AsyncMock,
 ) -> None:
     """Test setup with API ping."""
     with patch.dict(os.environ, MOCK_ENVIRON):
-        result = await async_setup_component(hass, "hassio", {})
-        await hass.async_block_till_done()
+        result = await async_setup_component(menuai, "menuaiio", {})
+        await menuai.async_block_till_done()
 
     assert result
     assert aioclient_mock.call_count + len(supervisor_client.mock_calls) == 18
-    assert get_core_info(hass)["version_latest"] == "1.0.0"
-    assert is_hassio(hass)
+    assert get_core_info(menuai)["version_latest"] == "1.0.0"
+    assert is_menuaiio(menuai)
 
 
 async def test_setup_api_panel(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test setup with API ping."""
-    assert await async_setup_component(hass, "frontend", {})
+    assert await async_setup_component(menuai, "frontend", {})
     with patch.dict(os.environ, MOCK_ENVIRON):
-        result = await async_setup_component(hass, "hassio", {})
+        result = await async_setup_component(menuai, "menuaiio", {})
         assert result
 
-    panels = hass.data[frontend.DATA_PANELS]
+    panels = menuai.data[frontend.DATA_PANELS]
 
-    assert panels.get("hassio").to_response() == {
+    assert panels.get("menuaiio").to_response() == {
         "component_name": "custom",
         "icon": None,
         "title": None,
-        "url_path": "hassio",
+        "url_path": "menuaiio",
         "require_admin": True,
         "config_panel_domain": None,
         "config": {
             "_panel_custom": {
                 "embed_iframe": True,
-                "js_url": "/api/hassio/app/entrypoint.js",
-                "name": "hassio-main",
+                "js_url": "/api/menuaiio/app/entrypoint.js",
+                "name": "menuaiio-main",
                 "trust_external": False,
             }
         },
@@ -263,16 +263,16 @@ async def test_setup_api_panel(
 
 
 async def test_setup_api_push_api_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     supervisor_client: AsyncMock,
 ) -> None:
     """Test setup with API push."""
     with patch.dict(os.environ, MOCK_ENVIRON):
         result = await async_setup_component(
-            hass, "hassio", {"http": {"server_port": 9999}, "hassio": {}}
+            menuai, "menuaiio", {"http": {"server_port": 9999}, "menuaiio": {}}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result
     assert aioclient_mock.call_count + len(supervisor_client.mock_calls) == 18
@@ -282,18 +282,18 @@ async def test_setup_api_push_api_data(
 
 
 async def test_setup_api_push_api_data_server_host(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     supervisor_client: AsyncMock,
 ) -> None:
     """Test setup with API push with active server host."""
     with patch.dict(os.environ, MOCK_ENVIRON):
         result = await async_setup_component(
-            hass,
-            "hassio",
-            {"http": {"server_port": 9999, "server_host": "127.0.0.1"}, "hassio": {}},
+            menuai,
+            "menuaiio",
+            {"http": {"server_port": 9999, "server_host": "127.0.0.1"}, "menuaiio": {}},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result
     assert aioclient_mock.call_count + len(supervisor_client.mock_calls) == 18
@@ -303,33 +303,33 @@ async def test_setup_api_push_api_data_server_host(
 
 
 async def test_setup_api_push_api_data_default(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
-    hass_storage: dict[str, Any],
+    menuai_storage: dict[str, Any],
     supervisor_client: AsyncMock,
 ) -> None:
     """Test setup with API push default data."""
     with (
         patch.dict(os.environ, MOCK_ENVIRON),
-        patch("homeassistant.components.hassio.config.STORE_DELAY_SAVE", 0),
+        patch("menuai.components.menuaiio.config.STORE_DELAY_SAVE", 0),
     ):
-        result = await async_setup_component(hass, "hassio", {"http": {}, "hassio": {}})
-        await hass.async_block_till_done()
+        result = await async_setup_component(menuai, "menuaiio", {"http": {}, "menuaiio": {}})
+        await menuai.async_block_till_done()
 
     assert result
     assert aioclient_mock.call_count + len(supervisor_client.mock_calls) == 18
     assert not aioclient_mock.mock_calls[0][2]["ssl"]
     assert aioclient_mock.mock_calls[0][2]["port"] == 8123
     refresh_token = aioclient_mock.mock_calls[0][2]["refresh_token"]
-    hassio_user = await hass.auth.async_get_user(
-        hass_storage[STORAGE_KEY]["data"]["hassio_user"]
+    menuaiio_user = await menuai.auth.async_get_user(
+        menuai_storage[STORAGE_KEY]["data"]["menuaiio_user"]
     )
-    assert hassio_user is not None
-    assert hassio_user.system_generated
-    assert len(hassio_user.groups) == 1
-    assert hassio_user.groups[0].id == GROUP_ID_ADMIN
-    assert hassio_user.name == "Supervisor"
-    for token in hassio_user.refresh_tokens.values():
+    assert menuaiio_user is not None
+    assert menuaiio_user.system_generated
+    assert len(menuaiio_user.groups) == 1
+    assert menuaiio_user.groups[0].id == GROUP_ID_ADMIN
+    assert menuaiio_user.name == "Supervisor"
+    for token in menuaiio_user.refresh_tokens.values():
         if token.token == refresh_token:
             break
     else:
@@ -337,65 +337,65 @@ async def test_setup_api_push_api_data_default(
 
 
 async def test_setup_adds_admin_group_to_user(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
-    hass_storage: dict[str, Any],
+    menuai_storage: dict[str, Any],
 ) -> None:
     """Test setup with API push default data."""
     # Create user without admin
-    user = await hass.auth.async_create_system_user("Hass.io")
+    user = await menuai.auth.async_create_system_user("menuai.io")
     assert not user.is_admin
-    await hass.auth.async_create_refresh_token(user)
+    await menuai.auth.async_create_refresh_token(user)
 
-    hass_storage[STORAGE_KEY] = {
-        "data": {"hassio_user": user.id},
+    menuai_storage[STORAGE_KEY] = {
+        "data": {"menuaiio_user": user.id},
         "key": STORAGE_KEY,
         "version": 1,
     }
 
     with patch.dict(os.environ, MOCK_ENVIRON):
-        result = await async_setup_component(hass, "hassio", {"http": {}, "hassio": {}})
+        result = await async_setup_component(menuai, "menuaiio", {"http": {}, "menuaiio": {}})
         assert result
 
     assert user.is_admin
 
 
 async def test_setup_migrate_user_name(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
-    hass_storage: dict[str, Any],
+    menuai_storage: dict[str, Any],
 ) -> None:
     """Test setup with migrating the user name."""
     # Create user with old name
-    user = await hass.auth.async_create_system_user("Hass.io")
-    await hass.auth.async_create_refresh_token(user)
+    user = await menuai.auth.async_create_system_user("menuai.io")
+    await menuai.auth.async_create_refresh_token(user)
 
-    hass_storage[STORAGE_KEY] = {
-        "data": {"hassio_user": user.id},
+    menuai_storage[STORAGE_KEY] = {
+        "data": {"menuaiio_user": user.id},
         "key": STORAGE_KEY,
         "version": 1,
     }
 
     with patch.dict(os.environ, MOCK_ENVIRON):
-        result = await async_setup_component(hass, "hassio", {"http": {}, "hassio": {}})
+        result = await async_setup_component(menuai, "menuaiio", {"http": {}, "menuaiio": {}})
         assert result
 
     assert user.name == "Supervisor"
 
 
-async def test_setup_api_existing_hassio_user(
-    hass: HomeAssistant,
+async def test_setup_api_existing_menuaiio_user(
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
-    hass_storage: dict[str, Any],
+    menuai_storage: dict[str, Any],
     supervisor_client: AsyncMock,
 ) -> None:
     """Test setup with API push default data."""
-    user = await hass.auth.async_create_system_user("Hass.io test")
-    token = await hass.auth.async_create_refresh_token(user)
-    hass_storage[STORAGE_KEY] = {"version": 1, "data": {"hassio_user": user.id}}
+    user = await menuai.auth.async_create_system_user("menuai.io test")
+    token = await menuai.auth.async_create_refresh_token(user)
+    menuai_storage[STORAGE_KEY] = {"version": 1, "data": {"menuaiio_user": user.id}}
     with patch.dict(os.environ, MOCK_ENVIRON):
-        result = await async_setup_component(hass, "hassio", {"http": {}, "hassio": {}})
-        await hass.async_block_till_done()
+        result = await async_setup_component(menuai, "menuaiio", {"http": {}, "menuaiio": {}})
+        await menuai.async_block_till_done()
 
     assert result
     assert aioclient_mock.call_count + len(supervisor_client.mock_calls) == 18
@@ -405,30 +405,30 @@ async def test_setup_api_existing_hassio_user(
 
 
 async def test_setup_core_push_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     supervisor_client: AsyncMock,
 ) -> None:
     """Test setup with API push default data."""
-    hass.config.time_zone = "testzone"
+    menuai.config.time_zone = "testzone"
 
     with patch.dict(os.environ, MOCK_ENVIRON):
-        result = await async_setup_component(hass, "hassio", {"hassio": {}})
-        await hass.async_block_till_done()
+        result = await async_setup_component(menuai, "menuaiio", {"menuaiio": {}})
+        await menuai.async_block_till_done()
 
     assert result
     assert aioclient_mock.call_count + len(supervisor_client.mock_calls) == 18
     assert aioclient_mock.mock_calls[1][2]["timezone"] == "testzone"
 
-    with patch("homeassistant.util.dt.set_default_time_zone"):
-        await hass.config.async_update(time_zone="America/New_York", country="US")
-    await hass.async_block_till_done()
+    with patch("menuai.util.dt.set_default_time_zone"):
+        await menuai.config.async_update(time_zone="America/New_York", country="US")
+    await menuai.async_block_till_done()
     assert aioclient_mock.mock_calls[-1][2]["timezone"] == "America/New_York"
     assert aioclient_mock.mock_calls[-1][2]["country"] == "US"
 
 
-async def test_setup_hassio_no_additional_data(
-    hass: HomeAssistant,
+async def test_setup_menuaiio_no_additional_data(
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     supervisor_client: AsyncMock,
 ) -> None:
@@ -437,56 +437,56 @@ async def test_setup_hassio_no_additional_data(
         patch.dict(os.environ, MOCK_ENVIRON),
         patch.dict(os.environ, {"SUPERVISOR_TOKEN": "123456"}),
     ):
-        result = await async_setup_component(hass, "hassio", {"hassio": {}})
-        await hass.async_block_till_done()
+        result = await async_setup_component(menuai, "menuaiio", {"menuaiio": {}})
+        await menuai.async_block_till_done()
 
     assert result
     assert aioclient_mock.call_count + len(supervisor_client.mock_calls) == 18
     assert aioclient_mock.mock_calls[-1][3]["Authorization"] == "Bearer 123456"
 
 
-async def test_fail_setup_without_environ_var(hass: HomeAssistant) -> None:
+async def test_fail_setup_without_environ_var(menuai: menuai) -> None:
     """Fail setup if no environ variable set."""
     with patch.dict(os.environ, {}, clear=True):
-        result = await async_setup_component(hass, "hassio", {})
+        result = await async_setup_component(menuai, "menuaiio", {})
         assert not result
 
 
 async def test_warn_when_cannot_connect(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     supervisor_is_connected: AsyncMock,
 ) -> None:
     """Fail warn when we cannot connect."""
     supervisor_is_connected.side_effect = SupervisorError
     with patch.dict(os.environ, MOCK_ENVIRON):
-        result = await async_setup_component(hass, "hassio", {})
+        result = await async_setup_component(menuai, "menuaiio", {})
         assert result
 
-    assert is_hassio(hass)
+    assert is_menuaiio(menuai)
     assert "Not connected with the supervisor / system too busy!" in caplog.text
 
 
-@pytest.mark.usefixtures("hassio_env")
-async def test_service_register(hass: HomeAssistant) -> None:
+@pytest.mark.usefixtures("menuaiio_env")
+async def test_service_register(menuai: menuai) -> None:
     """Check if service will be setup."""
-    assert await async_setup_component(hass, "hassio", {})
-    assert hass.services.has_service("hassio", "addon_start")
-    assert hass.services.has_service("hassio", "addon_stop")
-    assert hass.services.has_service("hassio", "addon_restart")
-    assert hass.services.has_service("hassio", "addon_stdin")
-    assert hass.services.has_service("hassio", "host_shutdown")
-    assert hass.services.has_service("hassio", "host_reboot")
-    assert hass.services.has_service("hassio", "host_reboot")
-    assert hass.services.has_service("hassio", "backup_full")
-    assert hass.services.has_service("hassio", "backup_partial")
-    assert hass.services.has_service("hassio", "restore_full")
-    assert hass.services.has_service("hassio", "restore_partial")
+    assert await async_setup_component(menuai, "menuaiio", {})
+    assert menuai.services.has_service("menuaiio", "addon_start")
+    assert menuai.services.has_service("menuaiio", "addon_stop")
+    assert menuai.services.has_service("menuaiio", "addon_restart")
+    assert menuai.services.has_service("menuaiio", "addon_stdin")
+    assert menuai.services.has_service("menuaiio", "host_shutdown")
+    assert menuai.services.has_service("menuaiio", "host_reboot")
+    assert menuai.services.has_service("menuaiio", "host_reboot")
+    assert menuai.services.has_service("menuaiio", "backup_full")
+    assert menuai.services.has_service("menuaiio", "backup_partial")
+    assert menuai.services.has_service("menuaiio", "restore_full")
+    assert menuai.services.has_service("menuaiio", "restore_partial")
 
 
 @pytest.mark.freeze_time("2021-11-13 11:48:00")
 async def test_service_calls(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     caplog: pytest.LogCaptureFixture,
     supervisor_client: AsyncMock,
@@ -496,8 +496,8 @@ async def test_service_calls(
     """Call service and check the API calls behind that."""
     supervisor_is_connected.side_effect = SupervisorError
     with patch.dict(os.environ, MOCK_ENVIRON):
-        assert await async_setup_component(hass, "hassio", {})
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, "menuaiio", {})
+        await menuai.async_block_till_done()
 
     aioclient_mock.post("http://127.0.0.1/addons/test/start", json={"result": "ok"})
     aioclient_mock.post("http://127.0.0.1/addons/test/stop", json={"result": "ok"})
@@ -515,95 +515,95 @@ async def test_service_calls(
         "http://127.0.0.1/backups/test/restore/partial", json={"result": "ok"}
     )
 
-    await hass.services.async_call("hassio", "addon_start", {"addon": "test"})
-    await hass.services.async_call("hassio", "addon_stop", {"addon": "test"})
-    await hass.services.async_call("hassio", "addon_restart", {"addon": "test"})
-    await hass.services.async_call(
-        "hassio", "addon_stdin", {"addon": "test", "input": "test"}
+    await menuai.services.async_call("menuaiio", "addon_start", {"addon": "test"})
+    await menuai.services.async_call("menuaiio", "addon_stop", {"addon": "test"})
+    await menuai.services.async_call("menuaiio", "addon_restart", {"addon": "test"})
+    await menuai.services.async_call(
+        "menuaiio", "addon_stdin", {"addon": "test", "input": "test"}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert aioclient_mock.call_count + len(supervisor_client.mock_calls) == 22
     assert aioclient_mock.mock_calls[-1][2] == "test"
 
-    await hass.services.async_call("hassio", "host_shutdown", {})
-    await hass.services.async_call("hassio", "host_reboot", {})
-    await hass.async_block_till_done()
+    await menuai.services.async_call("menuaiio", "host_shutdown", {})
+    await menuai.services.async_call("menuaiio", "host_reboot", {})
+    await menuai.async_block_till_done()
 
     assert aioclient_mock.call_count + len(supervisor_client.mock_calls) == 24
 
-    await hass.services.async_call("hassio", "backup_full", {})
-    await hass.services.async_call(
-        "hassio",
+    await menuai.services.async_call("menuaiio", "backup_full", {})
+    await menuai.services.async_call(
+        "menuaiio",
         "backup_partial",
         {
-            "homeassistant": True,
+            "menuai": True,
             "addons": ["test"],
             "folders": ["ssl"],
             "password": "123456",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert aioclient_mock.call_count + len(supervisor_client.mock_calls) == 26
     assert aioclient_mock.mock_calls[-1][2] == {
         "name": "2021-11-13 03:48:00",
-        "homeassistant": True,
+        "menuai": True,
         "addons": ["test"],
         "folders": ["ssl"],
         "password": "123456",
     }
 
-    await hass.services.async_call("hassio", "restore_full", {"slug": "test"})
-    await hass.async_block_till_done()
+    await menuai.services.async_call("menuaiio", "restore_full", {"slug": "test"})
+    await menuai.async_block_till_done()
 
-    await hass.services.async_call(
-        "hassio",
+    await menuai.services.async_call(
+        "menuaiio",
         "restore_partial",
         {
             "slug": "test",
-            "homeassistant": False,
+            "menuai": False,
             "addons": ["test"],
             "folders": ["ssl"],
             "password": "123456",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert aioclient_mock.call_count + len(supervisor_client.mock_calls) == 28
     assert aioclient_mock.mock_calls[-1][2] == {
         "addons": ["test"],
         "folders": ["ssl"],
-        "homeassistant": False,
+        "menuai": False,
         "password": "123456",
     }
 
-    await hass.services.async_call(
-        "hassio",
+    await menuai.services.async_call(
+        "menuaiio",
         "backup_full",
         {
             "name": "backup_name",
             "location": "backup_share",
-            "homeassistant_exclude_database": True,
+            "menuai_exclude_database": True,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert aioclient_mock.call_count + len(supervisor_client.mock_calls) == 29
     assert aioclient_mock.mock_calls[-1][2] == {
         "name": "backup_name",
         "location": "backup_share",
-        "homeassistant_exclude_database": True,
+        "menuai_exclude_database": True,
     }
 
-    await hass.services.async_call(
-        "hassio",
+    await menuai.services.async_call(
+        "menuaiio",
         "backup_full",
         {
             "location": "/backup",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert aioclient_mock.call_count + len(supervisor_client.mock_calls) == 30
     assert aioclient_mock.mock_calls[-1][2] == {
@@ -612,17 +612,17 @@ async def test_service_calls(
     }
 
     # check backup with different timezone
-    await hass.config.async_update(time_zone="Europe/London")
-    await hass.async_block_till_done()
+    await menuai.config.async_update(time_zone="Europe/London")
+    await menuai.async_block_till_done()
 
-    await hass.services.async_call(
-        "hassio",
+    await menuai.services.async_call(
+        "menuaiio",
         "backup_full",
         {
             "location": "/backup",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert aioclient_mock.call_count + len(supervisor_client.mock_calls) == 32
     assert aioclient_mock.mock_calls[-1][2] == {
@@ -632,28 +632,28 @@ async def test_service_calls(
 
 
 async def test_invalid_service_calls(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     supervisor_is_connected: AsyncMock,
 ) -> None:
     """Call service with invalid input and check that it raises."""
     supervisor_is_connected.side_effect = SupervisorError
     with patch.dict(os.environ, MOCK_ENVIRON):
-        assert await async_setup_component(hass, "hassio", {})
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, "menuaiio", {})
+        await menuai.async_block_till_done()
 
     with pytest.raises(Invalid):
-        await hass.services.async_call(
-            "hassio", "addon_start", {"addon": "does_not_exist"}
+        await menuai.services.async_call(
+            "menuaiio", "addon_start", {"addon": "does_not_exist"}
         )
     with pytest.raises(Invalid):
-        await hass.services.async_call(
-            "hassio", "addon_stdin", {"addon": "does_not_exist", "input": "test"}
+        await menuai.services.async_call(
+            "menuaiio", "addon_stdin", {"addon": "does_not_exist", "input": "test"}
         )
 
 
 async def test_addon_service_call_with_complex_slug(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     supervisor_is_connected: AsyncMock,
 ) -> None:
@@ -679,81 +679,81 @@ async def test_addon_service_call_with_complex_slug(
     with (
         patch.dict(os.environ, MOCK_ENVIRON),
         patch(
-            "homeassistant.components.hassio.HassIO.get_supervisor_info",
+            "menuai.components.menuaiio.menuaiIO.get_supervisor_info",
             return_value=supervisor_mock_data,
         ),
     ):
-        assert await async_setup_component(hass, "hassio", {})
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, "menuaiio", {})
+        await menuai.async_block_till_done()
 
-    await hass.services.async_call("hassio", "addon_start", {"addon": "test.a_1-2"})
+    await menuai.services.async_call("menuaiio", "addon_start", {"addon": "test.a_1-2"})
 
 
-@pytest.mark.usefixtures("hassio_env")
+@pytest.mark.usefixtures("menuaiio_env")
 async def test_service_calls_core(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     supervisor_client: AsyncMock,
 ) -> None:
     """Call core service and check the API calls behind that."""
-    assert await async_setup_component(hass, "homeassistant", {})
-    assert await async_setup_component(hass, "hassio", {})
+    assert await async_setup_component(menuai, "menuai", {})
+    assert await async_setup_component(menuai, "menuaiio", {})
 
-    aioclient_mock.post("http://127.0.0.1/homeassistant/restart", json={"result": "ok"})
-    aioclient_mock.post("http://127.0.0.1/homeassistant/stop", json={"result": "ok"})
+    aioclient_mock.post("http://127.0.0.1/menuai/restart", json={"result": "ok"})
+    aioclient_mock.post("http://127.0.0.1/menuai/stop", json={"result": "ok"})
 
-    await hass.services.async_call("homeassistant", "stop")
-    await hass.async_block_till_done()
+    await menuai.services.async_call("menuai", "stop")
+    await menuai.async_block_till_done()
 
     assert aioclient_mock.call_count + len(supervisor_client.mock_calls) == 6
 
-    await hass.services.async_call("homeassistant", "check_config")
-    await hass.async_block_till_done()
+    await menuai.services.async_call("menuai", "check_config")
+    await menuai.async_block_till_done()
 
     assert aioclient_mock.call_count + len(supervisor_client.mock_calls) == 6
 
     with patch(
-        "homeassistant.config.async_check_ha_config_file", return_value=None
+        "menuai.config.async_check_ha_config_file", return_value=None
     ) as mock_check_config:
-        await hass.services.async_call("homeassistant", "restart")
-        await hass.async_block_till_done()
+        await menuai.services.async_call("menuai", "restart")
+        await menuai.async_block_till_done()
         assert mock_check_config.called
 
     assert aioclient_mock.call_count + len(supervisor_client.mock_calls) == 7
 
 
 @pytest.mark.usefixtures("addon_installed")
-async def test_entry_load_and_unload(hass: HomeAssistant) -> None:
+async def test_entry_load_and_unload(menuai: menuai) -> None:
     """Test loading and unloading config entry."""
     with patch.dict(os.environ, MOCK_ENVIRON):
         config_entry = MockConfigEntry(domain=DOMAIN, data={}, unique_id=DOMAIN)
-        config_entry.add_to_hass(hass)
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        config_entry.add_to_menuai(menuai)
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
-    assert SENSOR_DOMAIN in hass.config.components
-    assert BINARY_SENSOR_DOMAIN in hass.config.components
-    assert ADDONS_COORDINATOR in hass.data
+    assert SENSOR_DOMAIN in menuai.config.components
+    assert BINARY_SENSOR_DOMAIN in menuai.config.components
+    assert ADDONS_COORDINATOR in menuai.data
 
-    assert await hass.config_entries.async_unload(config_entry.entry_id)
-    await hass.async_block_till_done()
-    assert ADDONS_COORDINATOR not in hass.data
+    assert await menuai.config_entries.async_unload(config_entry.entry_id)
+    await menuai.async_block_till_done()
+    assert ADDONS_COORDINATOR not in menuai.data
 
 
-async def test_migration_off_hassio(hass: HomeAssistant) -> None:
-    """Test that when a user moves instance off Hass.io, config entry gets cleaned up."""
+async def test_migration_off_menuaiio(menuai: menuai) -> None:
+    """Test that when a user moves instance off menuai.io, config entry gets cleaned up."""
     config_entry = MockConfigEntry(domain=DOMAIN, data={}, unique_id=DOMAIN)
-    config_entry.add_to_hass(hass)
-    assert not await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
-    assert hass.config_entries.async_entries(DOMAIN) == []
+    config_entry.add_to_menuai(menuai)
+    assert not await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
+    assert menuai.config_entries.async_entries(DOMAIN) == []
 
 
 @pytest.mark.usefixtures("addon_installed")
 async def test_device_registry_calls(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
-    """Test device registry entries for hassio."""
+    """Test device registry entries for menuaiio."""
     supervisor_mock_data = {
         "version": "1.0.0",
         "version_latest": "1.0.0",
@@ -795,18 +795,18 @@ async def test_device_registry_calls(
     with (
         patch.dict(os.environ, MOCK_ENVIRON),
         patch(
-            "homeassistant.components.hassio.HassIO.get_supervisor_info",
+            "menuai.components.menuaiio.menuaiIO.get_supervisor_info",
             return_value=supervisor_mock_data,
         ),
         patch(
-            "homeassistant.components.hassio.HassIO.get_os_info",
+            "menuai.components.menuaiio.menuaiIO.get_os_info",
             return_value=os_mock_data,
         ),
     ):
         config_entry = MockConfigEntry(domain=DOMAIN, data={}, unique_id=DOMAIN)
-        config_entry.add_to_hass(hass)
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done(wait_background_tasks=True)
+        config_entry.add_to_menuai(menuai)
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done(wait_background_tasks=True)
         assert len(device_registry.devices) == 6
 
     supervisor_mock_data = {
@@ -831,20 +831,20 @@ async def test_device_registry_calls(
     # Test that when addon is removed, next update will remove the add-on and subsequent updates won't
     with (
         patch(
-            "homeassistant.components.hassio.HassIO.get_supervisor_info",
+            "menuai.components.menuaiio.menuaiIO.get_supervisor_info",
             return_value=supervisor_mock_data,
         ),
         patch(
-            "homeassistant.components.hassio.HassIO.get_os_info",
+            "menuai.components.menuaiio.menuaiIO.get_os_info",
             return_value=os_mock_data,
         ),
     ):
-        async_fire_time_changed(hass, dt_util.now() + timedelta(hours=1))
-        await hass.async_block_till_done(wait_background_tasks=True)
+        async_fire_time_changed(menuai, dt_util.now() + timedelta(hours=1))
+        await menuai.async_block_till_done(wait_background_tasks=True)
         assert len(device_registry.devices) == 5
 
-        async_fire_time_changed(hass, dt_util.now() + timedelta(hours=2))
-        await hass.async_block_till_done(wait_background_tasks=True)
+        async_fire_time_changed(menuai, dt_util.now() + timedelta(hours=2))
+        await menuai.async_block_till_done(wait_background_tasks=True)
         assert len(device_registry.devices) == 5
 
     supervisor_mock_data = {
@@ -881,50 +881,50 @@ async def test_device_registry_calls(
     # a new device
     with (
         patch(
-            "homeassistant.components.hassio.HassIO.get_supervisor_info",
+            "menuai.components.menuaiio.menuaiIO.get_supervisor_info",
             return_value=supervisor_mock_data,
         ),
         patch(
-            "homeassistant.components.hassio.HassIO.get_os_info",
+            "menuai.components.menuaiio.menuaiIO.get_os_info",
             return_value=os_mock_data,
         ),
         patch(
-            "homeassistant.components.hassio.HassIO.get_info",
+            "menuai.components.menuaiio.menuaiIO.get_info",
             return_value={
                 "supervisor": "222",
-                "homeassistant": "0.110.0",
-                "hassos": None,
+                "menuai": "0.110.0",
+                "menuaios": None,
             },
         ),
     ):
-        async_fire_time_changed(hass, dt_util.now() + timedelta(hours=3))
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, dt_util.now() + timedelta(hours=3))
+        await menuai.async_block_till_done()
         assert len(device_registry.devices) == 5
 
 
 @pytest.mark.usefixtures("addon_installed")
 async def test_coordinator_updates(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture, supervisor_client: AsyncMock
+    menuai: menuai, caplog: pytest.LogCaptureFixture, supervisor_client: AsyncMock
 ) -> None:
     """Test coordinator updates."""
-    await async_setup_component(hass, "homeassistant", {})
+    await async_setup_component(menuai, "menuai", {})
     with patch.dict(os.environ, MOCK_ENVIRON):
         config_entry = MockConfigEntry(domain=DOMAIN, data={}, unique_id=DOMAIN)
-        config_entry.add_to_hass(hass)
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        config_entry.add_to_menuai(menuai)
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
         # Initial refresh, no update refresh call
         supervisor_client.refresh_updates.assert_not_called()
 
-    async_fire_time_changed(hass, dt_util.now() + timedelta(minutes=20))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.now() + timedelta(minutes=20))
+    await menuai.async_block_till_done()
 
     # Scheduled refresh, no update refresh call
     supervisor_client.refresh_updates.assert_not_called()
 
-    await hass.services.async_call(
-        "homeassistant",
+    await menuai.services.async_call(
+        "menuai",
         "update_entity",
         {
             "entity_id": [
@@ -938,15 +938,15 @@ async def test_coordinator_updates(
     # There is a REQUEST_REFRESH_DELAYs cooldown on the debouncer
     supervisor_client.refresh_updates.assert_not_called()
     async_fire_time_changed(
-        hass, dt_util.now() + timedelta(seconds=REQUEST_REFRESH_DELAY)
+        menuai, dt_util.now() + timedelta(seconds=REQUEST_REFRESH_DELAY)
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     supervisor_client.refresh_updates.assert_called_once()
 
     supervisor_client.refresh_updates.reset_mock()
     supervisor_client.refresh_updates.side_effect = SupervisorError("Unknown")
-    await hass.services.async_call(
-        "homeassistant",
+    await menuai.services.async_call(
+        "menuai",
         "update_entity",
         {
             "entity_id": [
@@ -958,44 +958,44 @@ async def test_coordinator_updates(
     )
     # There is a REQUEST_REFRESH_DELAYs cooldown on the debouncer
     async_fire_time_changed(
-        hass, dt_util.now() + timedelta(seconds=REQUEST_REFRESH_DELAY)
+        menuai, dt_util.now() + timedelta(seconds=REQUEST_REFRESH_DELAY)
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     supervisor_client.refresh_updates.assert_called_once()
     assert "Error on Supervisor API: Unknown" in caplog.text
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default", "addon_installed")
 async def test_coordinator_updates_stats_entities_enabled(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     supervisor_client: AsyncMock,
 ) -> None:
     """Test coordinator updates with stats entities enabled."""
-    await async_setup_component(hass, "homeassistant", {})
+    await async_setup_component(menuai, "menuai", {})
     with patch.dict(os.environ, MOCK_ENVIRON):
         config_entry = MockConfigEntry(domain=DOMAIN, data={}, unique_id=DOMAIN)
-        config_entry.add_to_hass(hass)
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        config_entry.add_to_menuai(menuai)
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
         # Initial refresh without stats
         supervisor_client.refresh_updates.assert_not_called()
 
         # Refresh with stats once we know which ones are needed
         async_fire_time_changed(
-            hass, dt_util.now() + timedelta(seconds=REQUEST_REFRESH_DELAY)
+            menuai, dt_util.now() + timedelta(seconds=REQUEST_REFRESH_DELAY)
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         supervisor_client.refresh_updates.assert_called_once()
 
     supervisor_client.refresh_updates.reset_mock()
-    async_fire_time_changed(hass, dt_util.now() + timedelta(minutes=20))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.now() + timedelta(minutes=20))
+    await menuai.async_block_till_done()
     supervisor_client.refresh_updates.assert_not_called()
 
-    await hass.services.async_call(
-        "homeassistant",
+    await menuai.services.async_call(
+        "menuai",
         "update_entity",
         {
             "entity_id": [
@@ -1009,14 +1009,14 @@ async def test_coordinator_updates_stats_entities_enabled(
 
     # There is a REQUEST_REFRESH_DELAYs cooldown on the debouncer
     async_fire_time_changed(
-        hass, dt_util.now() + timedelta(seconds=REQUEST_REFRESH_DELAY)
+        menuai, dt_util.now() + timedelta(seconds=REQUEST_REFRESH_DELAY)
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     supervisor_client.refresh_updates.reset_mock()
     supervisor_client.refresh_updates.side_effect = SupervisorError("Unknown")
-    await hass.services.async_call(
-        "homeassistant",
+    await menuai.services.async_call(
+        "menuai",
         "update_entity",
         {
             "entity_id": [
@@ -1028,9 +1028,9 @@ async def test_coordinator_updates_stats_entities_enabled(
     )
     # There is a REQUEST_REFRESH_DELAYs cooldown on the debouncer
     async_fire_time_changed(
-        hass, dt_util.now() + timedelta(seconds=REQUEST_REFRESH_DELAY)
+        menuai, dt_util.now() + timedelta(seconds=REQUEST_REFRESH_DELAY)
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     supervisor_client.refresh_updates.assert_called_once()
     assert "Error on Supervisor API: Unknown" in caplog.text
 
@@ -1038,7 +1038,7 @@ async def test_coordinator_updates_stats_entities_enabled(
 @pytest.mark.parametrize(
     ("extra_os_info", "integration"),
     [
-        ({"board": "green"}, "homeassistant_green"),
+        ({"board": "green"}, "menuai_green"),
         ({"board": "odroid-c2"}, "hardkernel"),
         ({"board": "odroid-c4"}, "hardkernel"),
         ({"board": "odroid-n2"}, "hardkernel"),
@@ -1048,11 +1048,11 @@ async def test_coordinator_updates_stats_entities_enabled(
         ({"board": "rpi3-64"}, "raspberry_pi"),
         ({"board": "rpi4"}, "raspberry_pi"),
         ({"board": "rpi4-64"}, "raspberry_pi"),
-        ({"board": "yellow"}, "homeassistant_yellow"),
+        ({"board": "yellow"}, "menuai_yellow"),
     ],
 )
 async def test_setup_hardware_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     supervisor_client: AsyncMock,
     integration,
@@ -1062,12 +1062,12 @@ async def test_setup_hardware_integration(
     with (
         patch.dict(os.environ, MOCK_ENVIRON),
         patch(
-            f"homeassistant.components.{integration}.async_setup_entry",
+            f"menuai.components.{integration}.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result = await async_setup_component(hass, "hassio", {"hassio": {}})
-        await hass.async_block_till_done(wait_background_tasks=True)
+        result = await async_setup_component(menuai, "menuaiio", {"menuaiio": {}})
+        await menuai.async_block_till_done(wait_background_tasks=True)
 
     assert result
     assert aioclient_mock.call_count + len(supervisor_client.mock_calls) == 18
@@ -1083,24 +1083,24 @@ def test_hostname_from_addon_slug() -> None:
     )
 
 
-def test_deprecated_function_is_hassio(
-    hass: HomeAssistant,
+def test_deprecated_function_is_menuaiio(
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """Test calling deprecated_is_hassio function will create log entry."""
+    """Test calling deprecated_is_menuaiio function will create log entry."""
 
-    deprecated_is_hassio(hass)
+    deprecated_is_menuaiio(menuai)
     assert caplog.record_tuples == [
         (
-            "homeassistant.components.hassio",
+            "menuai.components.menuaiio",
             logging.WARNING,
-            "is_hassio is a deprecated function which will be removed in HA Core 2025.11. Use homeassistant.helpers.hassio.is_hassio instead",
+            "is_menuaiio is a deprecated function which will be removed in HA Core 2025.11. Use menuai.helpers.menuaiio.is_menuaiio instead",
         )
     ]
 
 
 def test_deprecated_function_get_supervisor_ip(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test calling get_supervisor_ip function will create log entry."""
@@ -1108,9 +1108,9 @@ def test_deprecated_function_get_supervisor_ip(
     get_supervisor_ip()
     assert caplog.record_tuples == [
         (
-            "homeassistant.helpers.hassio",
+            "menuai.helpers.menuaiio",
             logging.WARNING,
-            "get_supervisor_ip is a deprecated function which will be removed in HA Core 2025.11. Use homeassistant.helpers.hassio.get_supervisor_ip instead",
+            "get_supervisor_ip is a deprecated function which will be removed in HA Core 2025.11. Use menuai.helpers.menuaiio.get_supervisor_ip instead",
         )
     ]
 
@@ -1119,9 +1119,9 @@ def test_deprecated_function_get_supervisor_ip(
     ("constant_name", "replacement_name", "replacement"),
     [
         (
-            "HassioServiceInfo",
-            "homeassistant.helpers.service_info.hassio.HassioServiceInfo",
-            HassioServiceInfo,
+            "menuaiioServiceInfo",
+            "menuai.helpers.service_info.menuaiio.menuaiioServiceInfo",
+            menuaiioServiceInfo,
         ),
     ],
 )
@@ -1134,7 +1134,7 @@ def test_deprecated_constants(
     """Test deprecated automation constants."""
     import_and_test_deprecated_constant(
         caplog,
-        hassio,
+        menuaiio,
         constant_name,
         replacement_name,
         replacement,

@@ -15,39 +15,39 @@ from sqlalchemy.orm import Session, scoped_session, sessionmaker
 from sqlalchemy.sql.lambdas import StatementLambdaElement
 from sqlalchemy.util import LRUCache
 
-from homeassistant.components.recorder import (
+from menuai.components.recorder import (
     CONF_DB_URL,
     SupportedDialect,
     get_instance,
 )
-from homeassistant.components.sensor import CONF_STATE_CLASS
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.components.sensor import CONF_STATE_CLASS
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_DEVICE_CLASS,
     CONF_ICON,
     CONF_NAME,
     CONF_UNIQUE_ID,
     CONF_UNIT_OF_MEASUREMENT,
     CONF_VALUE_TEMPLATE,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     MATCH_ALL,
 )
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.exceptions import TemplateError
-from homeassistant.helpers import issue_registry as ir
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.entity_platform import (
+from menuai.core import Event, menuai, callback
+from menuai.exceptions import TemplateError
+from menuai.helpers import issue_registry as ir
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     AddEntitiesCallback,
 )
-from homeassistant.helpers.template import Template
-from homeassistant.helpers.trigger_template_entity import (
+from menuai.helpers.template import Template
+from menuai.helpers.trigger_template_entity import (
     CONF_AVAILABILITY,
     CONF_PICTURE,
     ManualTriggerSensorEntity,
     ValueTemplate,
 )
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import CONF_COLUMN_NAME, CONF_QUERY, DOMAIN
 from .models import SQLData
@@ -69,7 +69,7 @@ TRIGGER_ENTITY_OPTIONS = (
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -83,7 +83,7 @@ async def async_setup_platform(
     value_template: ValueTemplate | None = conf.get(CONF_VALUE_TEMPLATE)
     column_name: str = conf[CONF_COLUMN_NAME]
     unique_id: str | None = conf.get(CONF_UNIQUE_ID)
-    db_url: str = resolve_db_url(hass, conf.get(CONF_DB_URL))
+    db_url: str = resolve_db_url(menuai, conf.get(CONF_DB_URL))
 
     trigger_entity_config = {CONF_NAME: name}
     for key in TRIGGER_ENTITY_OPTIONS:
@@ -92,7 +92,7 @@ async def async_setup_platform(
         trigger_entity_config[key] = conf[key]
 
     await async_setup_sensor(
-        hass,
+        menuai,
         trigger_entity_config,
         query_str,
         column_name,
@@ -105,13 +105,13 @@ async def async_setup_platform(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the SQL sensor from config entry."""
 
-    db_url: str = resolve_db_url(hass, entry.options.get(CONF_DB_URL))
+    db_url: str = resolve_db_url(menuai, entry.options.get(CONF_DB_URL))
     name: str = entry.options[CONF_NAME]
     query_str: str = entry.options[CONF_QUERY]
     template: str | None = entry.options.get(CONF_VALUE_TEMPLATE)
@@ -120,12 +120,12 @@ async def async_setup_entry(
     value_template: ValueTemplate | None = None
     if template is not None:
         try:
-            value_template = ValueTemplate(template, hass)
+            value_template = ValueTemplate(template, menuai)
             value_template.ensure_valid()
         except TemplateError:
             value_template = None
 
-    name_template = Template(name, hass)
+    name_template = Template(name, menuai)
     trigger_entity_config = {CONF_NAME: name_template, CONF_UNIQUE_ID: entry.entry_id}
     for key in TRIGGER_ENTITY_OPTIONS:
         if key not in entry.options:
@@ -133,7 +133,7 @@ async def async_setup_entry(
         trigger_entity_config[key] = entry.options[key]
 
     await async_setup_sensor(
-        hass,
+        menuai,
         trigger_entity_config,
         query_str,
         column_name,
@@ -146,10 +146,10 @@ async def async_setup_entry(
 
 
 @callback
-def _async_get_or_init_domain_data(hass: HomeAssistant) -> SQLData:
+def _async_get_or_init_domain_data(menuai: menuai) -> SQLData:
     """Get or initialize domain data."""
-    if DOMAIN in hass.data:
-        sql_data: SQLData = hass.data[DOMAIN]
+    if DOMAIN in menuai.data:
+        sql_data: SQLData = menuai.data[DOMAIN]
         return sql_data
 
     session_makers_by_db_url: dict[str, scoped_session] = {}
@@ -166,17 +166,17 @@ def _async_get_or_init_domain_data(hass: HomeAssistant) -> SQLData:
         for sessmaker in session_makers_by_db_url.values():
             sessmaker.connection().engine.dispose()
 
-    cancel_shutdown = hass.bus.async_listen_once(
-        EVENT_HOMEASSISTANT_STOP, _shutdown_db_engines
+    cancel_shutdown = menuai.bus.async_listen_once(
+        EVENT_menuai_STOP, _shutdown_db_engines
     )
 
     sql_data = SQLData(cancel_shutdown, session_makers_by_db_url)
-    hass.data[DOMAIN] = sql_data
+    menuai.data[DOMAIN] = sql_data
     return sql_data
 
 
 async def async_setup_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     trigger_entity_config: ConfigType,
     query_str: str,
     column_name: str,
@@ -188,13 +188,13 @@ async def async_setup_sensor(
 ) -> None:
     """Set up the SQL sensor."""
     try:
-        instance = get_instance(hass)
+        instance = get_instance(menuai)
     except KeyError:  # No recorder loaded
         uses_recorder_db = False
     else:
         uses_recorder_db = db_url == instance.db_url
     sessmaker: scoped_session | None
-    sql_data = _async_get_or_init_domain_data(hass)
+    sql_data = _async_get_or_init_domain_data(menuai)
     use_database_executor = False
     if uses_recorder_db and instance.dialect_name == SupportedDialect.SQLITE:
         use_database_executor = True
@@ -208,7 +208,7 @@ async def async_setup_sensor(
     # for every sensor.
     elif db_url in sql_data.session_makers_by_db_url:
         sessmaker = sql_data.session_makers_by_db_url[db_url]
-    elif sessmaker := await hass.async_add_executor_job(
+    elif sessmaker := await menuai.async_add_executor_job(
         _validate_and_get_session_maker_for_db_url, db_url
     ):
         sql_data.session_makers_by_db_url[db_url] = sessmaker
@@ -235,7 +235,7 @@ async def async_setup_sensor(
             )
 
             ir.async_create_issue(
-                hass,
+                menuai,
                 DOMAIN,
                 f"entity_id_query_does_full_table_scan_{issue_key}",
                 translation_key="entity_id_query_does_full_table_scan",
@@ -248,7 +248,7 @@ async def async_setup_sensor(
             )
 
         ir.async_delete_issue(
-            hass, DOMAIN, f"entity_id_query_does_full_table_scan_{issue_key}"
+            menuai, DOMAIN, f"entity_id_query_does_full_table_scan_{issue_key}"
         )
 
     # MSSQL uses TOP and not LIMIT
@@ -322,7 +322,7 @@ class SQLSensor(ManualTriggerSensorEntity):
         use_database_executor: bool,
     ) -> None:
         """Initialize the SQL sensor."""
-        super().__init__(self.hass, trigger_entity_config)
+        super().__init__(self.menuai, trigger_entity_config)
         self._query = query
         self._template = value_template
         self._column_name = column
@@ -347,9 +347,9 @@ class SQLSensor(ManualTriggerSensorEntity):
             return self._attr_name
         return self._rendered.get(CONF_NAME)
 
-    async def async_added_to_hass(self) -> None:
-        """Call when entity about to be added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Call when entity about to be added to menuai."""
+        await super().async_added_to_menuai()
         await self.async_update()
 
     @property
@@ -360,9 +360,9 @@ class SQLSensor(ManualTriggerSensorEntity):
     async def async_update(self) -> None:
         """Retrieve sensor data from the query using the right executor."""
         if self._use_database_executor:
-            await get_instance(self.hass).async_add_executor_job(self._update)
+            await get_instance(self.menuai).async_add_executor_job(self._update)
         else:
-            await self.hass.async_add_executor_job(self._update)
+            await self.menuai.async_add_executor_job(self._update)
 
     def _update(self) -> None:
         """Retrieve sensor data from the query."""

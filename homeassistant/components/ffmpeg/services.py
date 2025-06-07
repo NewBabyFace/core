@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.dispatcher import async_dispatcher_send
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import config_validation as cv
+from menuai.helpers.dispatcher import async_dispatcher_send
 
 from .const import (
     DOMAIN,
@@ -28,24 +28,24 @@ async def _async_service_handle(service: ServiceCall) -> None:
     entity_ids: list[str] | None = service.data.get(ATTR_ENTITY_ID)
 
     if service.service == SERVICE_START:
-        async_dispatcher_send(service.hass, SIGNAL_FFMPEG_START, entity_ids)
+        async_dispatcher_send(service.menuai, SIGNAL_FFMPEG_START, entity_ids)
     elif service.service == SERVICE_STOP:
-        async_dispatcher_send(service.hass, SIGNAL_FFMPEG_STOP, entity_ids)
+        async_dispatcher_send(service.menuai, SIGNAL_FFMPEG_STOP, entity_ids)
     else:
-        async_dispatcher_send(service.hass, SIGNAL_FFMPEG_RESTART, entity_ids)
+        async_dispatcher_send(service.menuai, SIGNAL_FFMPEG_RESTART, entity_ids)
 
 
-def async_setup_services(hass: HomeAssistant) -> None:
+def async_setup_services(menuai: menuai) -> None:
     """Register FFmpeg services."""
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_START, _async_service_handle, schema=SERVICE_FFMPEG_SCHEMA
     )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_STOP, _async_service_handle, schema=SERVICE_FFMPEG_SCHEMA
     )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_RESTART, _async_service_handle, schema=SERVICE_FFMPEG_SCHEMA
     )

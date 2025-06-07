@@ -5,10 +5,10 @@ from __future__ import annotations
 import datetime
 import logging
 
-from homeassistant.components.device_tracker import ScannerEntity
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.device_tracker import ScannerEntity
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import (
     FRITZ_DATA_KEY,
@@ -27,14 +27,14 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: FritzConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up device tracker for FRITZ!Box component."""
     _LOGGER.debug("Starting FRITZ!Box device tracker")
     avm_wrapper = entry.runtime_data
-    data_fritz = hass.data[FRITZ_DATA_KEY]
+    data_fritz = menuai.data[FRITZ_DATA_KEY]
 
     @callback
     def update_avm_device() -> None:
@@ -42,7 +42,7 @@ async def async_setup_entry(
         _async_add_entities(avm_wrapper, async_add_entities, data_fritz)
 
     entry.async_on_unload(
-        async_dispatcher_connect(hass, avm_wrapper.signal_device_new, update_avm_device)
+        async_dispatcher_connect(menuai, avm_wrapper.signal_device_new, update_avm_device)
     )
 
     update_avm_device()

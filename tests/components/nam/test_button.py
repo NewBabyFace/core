@@ -6,27 +6,27 @@ from aiohttp.client_exceptions import ClientError
 from nettigo_air_monitor import ApiError, AuthFailedError
 import pytest
 
-from homeassistant.components.button import (
+from menuai.components.button import (
     DOMAIN as BUTTON_DOMAIN,
     SERVICE_PRESS,
     ButtonDeviceClass,
 )
-from homeassistant.components.nam import DOMAIN
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
-from homeassistant.const import ATTR_DEVICE_CLASS, ATTR_ENTITY_ID, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
-from homeassistant.util import dt as dt_util
+from menuai.components.nam import DOMAIN
+from menuai.config_entries import SOURCE_REAUTH, ConfigEntryState
+from menuai.const import ATTR_DEVICE_CLASS, ATTR_ENTITY_ID, STATE_UNKNOWN
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
+from menuai.util import dt as dt_util
 
 from . import init_integration
 
 
-async def test_button(hass: HomeAssistant, entity_registry: er.EntityRegistry) -> None:
+async def test_button(menuai: menuai, entity_registry: er.EntityRegistry) -> None:
     """Test states of the button."""
-    await init_integration(hass)
+    await init_integration(menuai)
 
-    state = hass.states.get("button.nettigo_air_monitor_restart")
+    state = menuai.states.get("button.nettigo_air_monitor_restart")
     assert state
     assert state.state == STATE_UNKNOWN
     assert state.attributes.get(ATTR_DEVICE_CLASS) == ButtonDeviceClass.RESTART
@@ -36,48 +36,48 @@ async def test_button(hass: HomeAssistant, entity_registry: er.EntityRegistry) -
     assert entry.unique_id == "aa:bb:cc:dd:ee:ff-restart"
 
 
-async def test_button_press(hass: HomeAssistant) -> None:
+async def test_button_press(menuai: menuai) -> None:
     """Test button press."""
-    await init_integration(hass)
+    await init_integration(menuai)
 
     now = dt_util.utcnow()
     with (
         patch(
-            "homeassistant.components.nam.NettigoAirMonitor.async_restart"
+            "menuai.components.nam.NettigoAirMonitor.async_restart"
         ) as mock_restart,
-        patch("homeassistant.core.dt_util.utcnow", return_value=now),
+        patch("menuai.core.dt_util.utcnow", return_value=now),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             BUTTON_DOMAIN,
             SERVICE_PRESS,
             {ATTR_ENTITY_ID: "button.nettigo_air_monitor_restart"},
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     mock_restart.assert_called_once()
 
-    state = hass.states.get("button.nettigo_air_monitor_restart")
+    state = menuai.states.get("button.nettigo_air_monitor_restart")
     assert state
     assert state.state == now.isoformat()
 
 
 @pytest.mark.parametrize(("exc"), [ApiError("API Error"), ClientError])
-async def test_button_press_exc(hass: HomeAssistant, exc: Exception) -> None:
+async def test_button_press_exc(menuai: menuai, exc: Exception) -> None:
     """Test button press when exception occurs."""
-    await init_integration(hass)
+    await init_integration(menuai)
 
     with (
         patch(
-            "homeassistant.components.nam.NettigoAirMonitor.async_restart",
+            "menuai.components.nam.NettigoAirMonitor.async_restart",
             side_effect=exc,
         ),
         pytest.raises(
-            HomeAssistantError,
+            menuaiError,
             match="An error occurred while calling action for button.nettigo_air_monitor_restart",
         ),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             BUTTON_DOMAIN,
             SERVICE_PRESS,
             {ATTR_ENTITY_ID: "button.nettigo_air_monitor_restart"},
@@ -85,15 +85,15 @@ async def test_button_press_exc(hass: HomeAssistant, exc: Exception) -> None:
         )
 
 
-async def test_button_press_auth_error(hass: HomeAssistant) -> None:
+async def test_button_press_auth_error(menuai: menuai) -> None:
     """Test button press when auth error occurs."""
-    entry = await init_integration(hass)
+    entry = await init_integration(menuai)
 
     with patch(
-        "homeassistant.components.nam.NettigoAirMonitor.async_restart",
+        "menuai.components.nam.NettigoAirMonitor.async_restart",
         side_effect=AuthFailedError("auth error"),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             BUTTON_DOMAIN,
             SERVICE_PRESS,
             {ATTR_ENTITY_ID: "button.nettigo_air_monitor_restart"},
@@ -102,7 +102,7 @@ async def test_button_press_auth_error(hass: HomeAssistant) -> None:
 
     assert entry.state is ConfigEntryState.LOADED
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
 
     flow = flows[0]

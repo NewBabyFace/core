@@ -3,9 +3,9 @@
 import logging
 from typing import Any
 
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.components.switch import SwitchEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_STATE,
     CONF_DEVICES,
     CONF_NAME,
@@ -13,10 +13,10 @@ from homeassistant.const import (
     CONF_SWITCHES,
     CONF_ZONE,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
     CONF_ACTIVATION,
@@ -31,12 +31,12 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up switches attached to a Konnected device from a config entry."""
-    data = hass.data[DOMAIN]
+    data = menuai.data[DOMAIN]
     device_id = config_entry.data["id"]
     switches = [
         KonnectedSwitch(device_id, zone_data.get(CONF_ZONE), zone_data)
@@ -68,7 +68,7 @@ class KonnectedSwitch(SwitchEntity):
     @property
     def panel(self):
         """Return the Konnected HTTP client."""
-        device_data = self.hass.data[DOMAIN][CONF_DEVICES][self._device_id]
+        device_data = self.menuai.data[DOMAIN][CONF_DEVICES][self._device_id]
         return device_data.get("panel")
 
     @property
@@ -124,11 +124,11 @@ class KonnectedSwitch(SwitchEntity):
         """Update the switch state."""
         self._set_state(state)
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Store entity_id and register state change callback."""
         self._data["entity_id"] = self.entity_id
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, f"konnected.{self.entity_id}.update", self.async_set_state
+                self.menuai, f"konnected.{self.entity_id}.update", self.async_set_state
             )
         )

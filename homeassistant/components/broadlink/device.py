@@ -13,8 +13,8 @@ from broadlink.exceptions import (
     NetworkTimeoutError,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_HOST,
     CONF_MAC,
     CONF_NAME,
@@ -22,9 +22,9 @@ from homeassistant.const import (
     CONF_TYPE,
     Platform,
 )
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr
+from menuai.core import CALLBACK_TYPE, menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import device_registry as dr
 
 from .const import DEFAULT_PORT, DOMAIN, DOMAINS_AND_TYPES
 from .updater import BroadlinkUpdateManager, get_update_manager
@@ -42,9 +42,9 @@ class BroadlinkDevice[_ApiT: blk.Device = blk.Device]:
 
     api: _ApiT
 
-    def __init__(self, hass: HomeAssistant, config: ConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config: ConfigEntry) -> None:
         """Initialize the device."""
-        self.hass = hass
+        self.menuai = menuai
         self.config = config
         self.update_manager: BroadlinkUpdateManager[_ApiT] | None = None
         self.fw_version: int | None = None
@@ -74,19 +74,19 @@ class BroadlinkDevice[_ApiT: blk.Device = blk.Device]:
         return self.update_manager.available
 
     @staticmethod
-    async def async_update(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    async def async_update(menuai: menuai, entry: ConfigEntry) -> None:
         """Update the device and related entities.
 
         Triggered when the device is renamed on the frontend.
         """
-        device_registry = dr.async_get(hass)
+        device_registry = dr.async_get(menuai)
         assert entry.unique_id
         device_entry = device_registry.async_get_device(
             identifiers={(DOMAIN, entry.unique_id)}
         )
         assert device_entry
         device_registry.async_update_device(device_entry.id, name=entry.title)
-        await hass.config_entries.async_reload(entry.entry_id)
+        await menuai.config_entries.async_reload(entry.entry_id)
 
     def _get_firmware_version(self) -> int | None:
         """Get firmware version."""
@@ -109,7 +109,7 @@ class BroadlinkDevice[_ApiT: blk.Device = blk.Device]:
         self.api = api
 
         try:
-            self.fw_version = await self.hass.async_add_executor_job(
+            self.fw_version = await self.menuai.async_add_executor_job(
                 self._get_firmware_version
             )
 
@@ -133,11 +133,11 @@ class BroadlinkDevice[_ApiT: blk.Device = blk.Device]:
         await coordinator.async_config_entry_first_refresh()
 
         self.update_manager = update_manager
-        self.hass.data[DOMAIN].devices[config.entry_id] = self
+        self.menuai.data[DOMAIN].devices[config.entry_id] = self
         self.reset_jobs.append(config.add_update_listener(self.async_update))
 
         # Forward entry setup to related domains.
-        await self.hass.config_entries.async_forward_entry_setups(
+        await self.menuai.config_entries.async_forward_entry_setups(
             config, get_domains(self.api.type)
         )
 
@@ -151,14 +151,14 @@ class BroadlinkDevice[_ApiT: blk.Device = blk.Device]:
         while self.reset_jobs:
             self.reset_jobs.pop()()
 
-        return await self.hass.config_entries.async_unload_platforms(
+        return await self.menuai.config_entries.async_unload_platforms(
             self.config, get_domains(self.api.type)
         )
 
     async def async_auth(self) -> bool:
         """Authenticate to the device."""
         try:
-            await self.hass.async_add_executor_job(self.api.auth)
+            await self.menuai.async_add_executor_job(self.api.auth)
         except (BroadlinkException, OSError) as err:
             _LOGGER.debug(
                 "Failed to authenticate to the device at %s: %s", self.api.host[0], err
@@ -172,11 +172,11 @@ class BroadlinkDevice[_ApiT: blk.Device = blk.Device]:
         """Send a request to the device."""
         request = partial(function, *args, **kwargs)
         try:
-            return await self.hass.async_add_executor_job(request)
+            return await self.menuai.async_add_executor_job(request)
         except (AuthorizationError, ConnectionClosedError):
             if not await self.async_auth():
                 raise
-            return await self.hass.async_add_executor_job(request)
+            return await self.menuai.async_add_executor_job(request)
 
     async def _async_handle_auth_error(self) -> None:
         """Handle an authentication error."""
@@ -196,4 +196,4 @@ class BroadlinkDevice[_ApiT: blk.Device = blk.Device]:
             self.api.host[0],
         )
 
-        self.config.async_start_reauth(self.hass, data={CONF_NAME: self.name})
+        self.config.async_start_reauth(self.menuai, data={CONF_NAME: self.name})

@@ -15,22 +15,22 @@ from pyhap.accessory import Accessory
 import pyqrcode
 import voluptuous as vol
 
-from homeassistant.components import (
+from menuai.components import (
     binary_sensor,
     media_player,
     persistent_notification,
     sensor,
 )
-from homeassistant.components.camera import DOMAIN as CAMERA_DOMAIN
-from homeassistant.components.event import DOMAIN as EVENT_DOMAIN
-from homeassistant.components.lock import DOMAIN as LOCK_DOMAIN
-from homeassistant.components.media_player import (
+from menuai.components.camera import DOMAIN as CAMERA_DOMAIN
+from menuai.components.event import DOMAIN as EVENT_DOMAIN
+from menuai.components.lock import DOMAIN as LOCK_DOMAIN
+from menuai.components.media_player import (
     DOMAIN as MEDIA_PLAYER_DOMAIN,
     MediaPlayerDeviceClass,
     MediaPlayerEntityFeature,
 )
-from homeassistant.components.remote import DOMAIN as REMOTE_DOMAIN, RemoteEntityFeature
-from homeassistant.const import (
+from menuai.components.remote import DOMAIN as REMOTE_DOMAIN, RemoteEntityFeature
+from menuai.const import (
     ATTR_CODE,
     ATTR_DEVICE_CLASS,
     ATTR_SUPPORTED_FEATURES,
@@ -39,17 +39,17 @@ from homeassistant.const import (
     CONF_TYPE,
     UnitOfTemperature,
 )
-from homeassistant.core import (
+from menuai.core import (
     Event,
     EventStateChangedData,
-    HomeAssistant,
+    menuai,
     State,
     callback,
     split_entity_id,
 )
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.storage import STORAGE_DIR
-from homeassistant.util.unit_conversion import TemperatureConverter
+from menuai.helpers import config_validation as cv
+from menuai.helpers.storage import STORAGE_DIR
+from menuai.util.unit_conversion import TemperatureConverter
 
 from .const import (
     AUDIO_CODEC_COPY,
@@ -406,7 +406,7 @@ def validate_media_player_features(state: State, feature_list: str) -> bool:
 
 
 def async_show_setup_message(
-    hass: HomeAssistant, entry_id: str, bridge_name: str, pincode: bytes, uri: str
+    menuai: menuai, entry_id: str, bridge_name: str, pincode: bytes, uri: str
 ) -> None:
     """Display persistent notification with setup information."""
     pin = pincode.decode()
@@ -417,7 +417,7 @@ def async_show_setup_message(
     url.svg(buffer, scale=5, module_color="#000", background="#FFF")
     pairing_secret = secrets.token_hex(32)
 
-    entry = cast(HomeKitConfigEntry, hass.config_entries.async_get_entry(entry_id))
+    entry = cast(HomeKitConfigEntry, menuai.config_entries.async_get_entry(entry_id))
     entry_data = entry.runtime_data
 
     entry_data.pairing_qr = buffer.getvalue()
@@ -429,12 +429,12 @@ def async_show_setup_message(
         f"### {pin}\n"
         f"![image](/api/homekit/pairingqr?{entry_id}-{pairing_secret})"
     )
-    persistent_notification.async_create(hass, message, "HomeKit Pairing", entry_id)
+    persistent_notification.async_create(menuai, message, "HomeKit Pairing", entry_id)
 
 
-def async_dismiss_setup_message(hass: HomeAssistant, entry_id: str) -> None:
+def async_dismiss_setup_message(menuai: menuai, entry_id: str) -> None:
     """Dismiss persistent notification and remove QR code."""
-    persistent_notification.async_dismiss(hass, entry_id)
+    persistent_notification.async_dismiss(menuai, entry_id)
 
 
 def convert_to_float(state: Any) -> float | None:
@@ -475,7 +475,7 @@ def temperature_to_homekit(temperature: float, unit: str) -> float:
 
 
 def temperature_to_states(temperature: float, unit: str) -> float:
-    """Convert temperature back from Celsius to Home Assistant unit."""
+    """Convert temperature back from Celsius to MenuAI unit."""
     return TemperatureConverter.convert(temperature, UnitOfTemperature.CELSIUS, unit)
 
 
@@ -551,21 +551,21 @@ def get_iid_storage_filename_for_entry_id(entry_id: str) -> str:
     return f"{DOMAIN}.{entry_id}.iids"
 
 
-def get_persist_fullpath_for_entry_id(hass: HomeAssistant, entry_id: str) -> str:
+def get_persist_fullpath_for_entry_id(menuai: menuai, entry_id: str) -> str:
     """Determine the path to the homekit state file."""
-    return hass.config.path(STORAGE_DIR, get_persist_filename_for_entry_id(entry_id))
+    return menuai.config.path(STORAGE_DIR, get_persist_filename_for_entry_id(entry_id))
 
 
-def get_aid_storage_fullpath_for_entry_id(hass: HomeAssistant, entry_id: str) -> str:
+def get_aid_storage_fullpath_for_entry_id(menuai: menuai, entry_id: str) -> str:
     """Determine the path to the homekit aid storage file."""
-    return hass.config.path(
+    return menuai.config.path(
         STORAGE_DIR, get_aid_storage_filename_for_entry_id(entry_id)
     )
 
 
-def get_iid_storage_fullpath_for_entry_id(hass: HomeAssistant, entry_id: str) -> str:
+def get_iid_storage_fullpath_for_entry_id(menuai: menuai, entry_id: str) -> str:
     """Determine the path to the homekit iid storage file."""
-    return hass.config.path(
+    return menuai.config.path(
         STORAGE_DIR, get_iid_storage_filename_for_entry_id(entry_id)
     )
 
@@ -589,12 +589,12 @@ def _is_zero_but_true(value: Any) -> bool:
     return convert_to_float(value) == 0
 
 
-def remove_state_files_for_entry_id(hass: HomeAssistant, entry_id: str) -> None:
+def remove_state_files_for_entry_id(menuai: menuai, entry_id: str) -> None:
     """Remove the state files from disk."""
     for path in (
-        get_persist_fullpath_for_entry_id(hass, entry_id),
-        get_aid_storage_fullpath_for_entry_id(hass, entry_id),
-        get_iid_storage_fullpath_for_entry_id(hass, entry_id),
+        get_persist_fullpath_for_entry_id(menuai, entry_id),
+        get_aid_storage_fullpath_for_entry_id(menuai, entry_id),
+        get_iid_storage_fullpath_for_entry_id(menuai, entry_id),
     ):
         if os.path.exists(path):
             os.unlink(path)
@@ -619,11 +619,11 @@ def async_port_is_available(port: int) -> bool:
 
 
 @callback
-def async_find_next_available_port(hass: HomeAssistant, start_port: int) -> int:
+def async_find_next_available_port(menuai: menuai, start_port: int) -> int:
     """Find the next available port not assigned to a config entry."""
     exclude_ports = {
         entry.data[CONF_PORT]
-        for entry in hass.config_entries.async_entries(DOMAIN)
+        for entry in menuai.config_entries.async_entries(DOMAIN)
         if CONF_PORT in entry.data
     }
     return _async_find_next_available_port(start_port, exclude_ports)
@@ -656,19 +656,19 @@ def pid_is_alive(pid: int) -> bool:
     return True
 
 
-def accessory_friendly_name(hass_name: str, accessory: Accessory) -> str:
+def accessory_friendly_name(menuai_name: str, accessory: Accessory) -> str:
     """Return the combined name for the accessory.
 
-    The mDNS name and the Home Assistant config entry
+    The mDNS name and the MenuAI config entry
     name are usually different which means they need to
     see both to identify the accessory.
     """
     accessory_mdns_name = cast(str, accessory.display_name)
-    if hass_name.casefold().startswith(accessory_mdns_name.casefold()):
-        return hass_name
-    if accessory_mdns_name.casefold().startswith(hass_name.casefold()):
+    if menuai_name.casefold().startswith(accessory_mdns_name.casefold()):
+        return menuai_name
+    if accessory_mdns_name.casefold().startswith(menuai_name.casefold()):
         return accessory_mdns_name
-    return f"{hass_name} ({accessory_mdns_name})"
+    return f"{menuai_name} ({accessory_mdns_name})"
 
 
 def state_needs_accessory_mode(state: State) -> bool:

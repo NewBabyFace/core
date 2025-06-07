@@ -7,13 +7,13 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_FILE_PATH,
     CONF_NAME,
     CONF_PLATFORM,
@@ -21,8 +21,8 @@ from homeassistant.const import (
     CONF_VALUE_TEMPLATE,
     Platform,
 )
-from homeassistant.core import callback
-from homeassistant.helpers.selector import (
+from menuai.core import callback
+from menuai.helpers.selector import (
     BooleanSelector,
     BooleanSelectorConfig,
     TemplateSelector,
@@ -81,8 +81,8 @@ class FileConfigFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def validate_file_path(self, file_path: str) -> bool:
         """Ensure the file path is valid."""
-        return await self.hass.async_add_executor_job(
-            self.hass.config.is_allowed_path, file_path
+        return await self.menuai.async_add_executor_job(
+            self.menuai.config.is_allowed_path, file_path
         )
 
     async def async_step_user(

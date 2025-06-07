@@ -8,11 +8,11 @@ from typing import Any
 import aioruuvigateway.api as gw_api
 from aioruuvigateway.excs import CannotConnect, InvalidAuth
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_TOKEN
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.httpx_client import get_async_client
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_TOKEN
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.httpx_client import get_async_client
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
 
 from . import DOMAIN
 from .schemata import CONFIG_SCHEMA, get_config_schema_with_default_host
@@ -38,7 +38,7 @@ class RuuviConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         try:
-            async with get_async_client(self.hass) as client:
+            async with get_async_client(self.menuai) as client:
                 resp = await gw_api.get_gateway_history_data(
                     client,
                     host=user_input[CONF_HOST],

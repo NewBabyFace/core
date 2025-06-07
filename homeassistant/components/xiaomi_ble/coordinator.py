@@ -6,18 +6,18 @@ from typing import Any
 
 from xiaomi_ble import SensorUpdate, XiaomiBluetoothDeviceData
 
-from homeassistant.components.bluetooth import (
+from menuai.components.bluetooth import (
     BluetoothScanningMode,
     BluetoothServiceInfoBleak,
 )
-from homeassistant.components.bluetooth.active_update_processor import (
+from menuai.components.bluetooth.active_update_processor import (
     ActiveBluetoothProcessorCoordinator,
 )
-from homeassistant.components.bluetooth.passive_update_processor import (
+from menuai.components.bluetooth.passive_update_processor import (
     PassiveBluetoothDataProcessor,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.debounce import Debouncer
+from menuai.core import menuai
+from menuai.helpers.debounce import Debouncer
 
 from .const import CONF_SLEEPY_DEVICE
 from .types import XiaomiBLEConfigEntry
@@ -30,7 +30,7 @@ class XiaomiActiveBluetoothProcessorCoordinator(
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         logger: Logger,
         *,
         address: str,
@@ -50,7 +50,7 @@ class XiaomiActiveBluetoothProcessorCoordinator(
     ) -> None:
         """Initialize the Xiaomi Bluetooth Active Update Processor Coordinator."""
         super().__init__(
-            hass=hass,
+            menuai=menuai,
             logger=logger,
             address=address,
             mode=mode,

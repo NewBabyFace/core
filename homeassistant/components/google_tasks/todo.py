@@ -5,16 +5,16 @@ from __future__ import annotations
 from datetime import UTC, date, datetime
 from typing import Any, cast
 
-from homeassistant.components.todo import (
+from menuai.components.todo import (
     TodoItem,
     TodoItemStatus,
     TodoListEntity,
     TodoListEntityFeature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
+from menuai.util import dt as dt_util
 
 from .coordinator import GoogleTasksConfigEntry, TaskUpdateCoordinator
 
@@ -66,7 +66,7 @@ def _convert_api_item(item: dict[str, str]) -> TodoItem:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: GoogleTasksConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -153,7 +153,7 @@ def _order_tasks(tasks: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
     All tasks have an order amongst their siblings based on position.
 
-    Home Assistant To-do items do not support the Google Task parent/sibling
+    MenuAI To-do items do not support the Google Task parent/sibling
     relationships and the desired behavior is for them to be filtered.
     """
     parents = [task for task in tasks if task.get("parent") is None]

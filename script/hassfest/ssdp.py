@@ -27,7 +27,7 @@ def generate_and_validate(integrations: dict[str, Integration]) -> str:
 
 def validate(integrations: dict[str, Integration], config: Config) -> None:
     """Validate ssdp file."""
-    ssdp_path = config.root / "homeassistant/generated/ssdp.py"
+    ssdp_path = config.root / "menuai/generated/ssdp.py"
     config.cache["ssdp"] = content = generate_and_validate(integrations)
 
     if config.specific_integrations:
@@ -36,12 +36,12 @@ def validate(integrations: dict[str, Integration], config: Config) -> None:
     if ssdp_path.read_text() != content:
         config.add_error(
             "ssdp",
-            "File ssdp.py is not up to date. Run python3 -m script.hassfest",
+            "File ssdp.py is not up to date. Run python3 -m script.menuaifest",
             fixable=True,
         )
 
 
 def generate(integrations: dict[str, Integration], config: Config) -> None:
     """Generate ssdp file."""
-    ssdp_path = config.root / "homeassistant/generated/ssdp.py"
+    ssdp_path = config.root / "menuai/generated/ssdp.py"
     ssdp_path.write_text(f"{config.cache['ssdp']}")

@@ -4,13 +4,13 @@ from unittest.mock import AsyncMock
 
 from pysyncthru import SyncThruAPINotSupported
 
-from homeassistant import config_entries
-from homeassistant.components.syncthru.const import DOMAIN
-from homeassistant.config_entries import SOURCE_SSDP, SOURCE_USER
-from homeassistant.const import CONF_NAME, CONF_URL
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.ssdp import (
+from menuai import config_entries
+from menuai.components.syncthru.const import DOMAIN
+from menuai.config_entries import SOURCE_SSDP, SOURCE_USER
+from menuai.const import CONF_NAME, CONF_URL
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.ssdp import (
     ATTR_UPNP_DEVICE_TYPE,
     ATTR_UPNP_MANUFACTURER,
     ATTR_UPNP_PRESENTATION_URL,
@@ -28,17 +28,17 @@ FIXTURE_USER_INPUT = {
 
 
 async def test_full_flow(
-    hass: HomeAssistant, mock_syncthru: AsyncMock, mock_setup_entry: AsyncMock
+    menuai: menuai, mock_syncthru: AsyncMock, mock_setup_entry: AsyncMock
 ) -> None:
     """Test the full flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=FIXTURE_USER_INPUT,
     )
@@ -49,7 +49,7 @@ async def test_full_flow(
 
 
 async def test_already_configured_by_url(
-    hass: HomeAssistant, mock_syncthru: AsyncMock
+    menuai: menuai, mock_syncthru: AsyncMock
 ) -> None:
     """Test we match and update already configured devices by URL."""
 
@@ -59,9 +59,9 @@ async def test_already_configured_by_url(
         data={**FIXTURE_USER_INPUT, CONF_NAME: "Already configured"},
         title="Already configured",
         unique_id=udn,
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USER},
         data=FIXTURE_USER_INPUT,
@@ -74,11 +74,11 @@ async def test_already_configured_by_url(
 
 
 async def test_syncthru_not_supported(
-    hass: HomeAssistant, mock_syncthru: AsyncMock
+    menuai: menuai, mock_syncthru: AsyncMock
 ) -> None:
     """Test we show user form on unsupported device."""
     mock_syncthru.update.side_effect = SyncThruAPINotSupported
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USER},
         data=FIXTURE_USER_INPUT,
@@ -89,10 +89,10 @@ async def test_syncthru_not_supported(
     assert result["errors"] == {CONF_URL: "syncthru_not_supported"}
 
 
-async def test_unknown_state(hass: HomeAssistant, mock_syncthru: AsyncMock) -> None:
+async def test_unknown_state(menuai: menuai, mock_syncthru: AsyncMock) -> None:
     """Test we show user form on unsupported device."""
     mock_syncthru.is_unknown_state.return_value = True
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
@@ -101,7 +101,7 @@ async def test_unknown_state(hass: HomeAssistant, mock_syncthru: AsyncMock) -> N
     assert result["step_id"] == "user"
     assert not result["errors"]
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=FIXTURE_USER_INPUT,
     )
@@ -112,7 +112,7 @@ async def test_unknown_state(hass: HomeAssistant, mock_syncthru: AsyncMock) -> N
 
     mock_syncthru.is_unknown_state.return_value = False
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input=FIXTURE_USER_INPUT,
     )
@@ -120,12 +120,12 @@ async def test_unknown_state(hass: HomeAssistant, mock_syncthru: AsyncMock) -> N
 
 
 async def test_ssdp(
-    hass: HomeAssistant, mock_syncthru: AsyncMock, mock_setup_entry: AsyncMock
+    menuai: menuai, mock_syncthru: AsyncMock, mock_setup_entry: AsyncMock
 ) -> None:
     """Test SSDP discovery initiates config properly."""
 
     url = "http://192.168.1.2/"
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_SSDP},
         data=SsdpServiceInfo(
@@ -149,7 +149,7 @@ async def test_ssdp(
         if k == CONF_URL:
             assert k.default() == url
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_URL: url, CONF_NAME: "Printer"},
     )
@@ -160,17 +160,17 @@ async def test_ssdp(
 
 
 async def test_ssdp_already_configured(
-    hass: HomeAssistant, mock_syncthru: AsyncMock, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_syncthru: AsyncMock, mock_config_entry: MockConfigEntry
 ) -> None:
     """Test SSDP discovery initiates config properly."""
 
-    mock_config_entry.add_to_hass(hass)
-    hass.config_entries.async_update_entry(
+    mock_config_entry.add_to_menuai(menuai)
+    menuai.config_entries.async_update_entry(
         mock_config_entry, unique_id="uuid:XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
     )
 
     url = "http://192.168.1.2/"
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_SSDP},
         data=SsdpServiceInfo(

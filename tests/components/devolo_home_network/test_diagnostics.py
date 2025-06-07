@@ -6,8 +6,8 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 from syrupy.filters import props
 
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
 
 from . import configure_integration
 
@@ -17,16 +17,16 @@ from tests.typing import ClientSessionGenerator
 
 @pytest.mark.usefixtures("mock_device")
 async def test_entry_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test config entry diagnostics."""
-    entry = configure_integration(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry = configure_integration(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.LOADED
 
-    result = await get_diagnostics_for_config_entry(hass, hass_client, entry)
+    result = await get_diagnostics_for_config_entry(menuai, menuai_client, entry)
     assert result == snapshot(exclude=props("created_at", "modified_at"))

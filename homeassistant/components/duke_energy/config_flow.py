@@ -9,9 +9,9 @@ from aiodukeenergy import DukeEnergy
 from aiohttp import ClientError, ClientResponseError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_EMAIL, CONF_PASSWORD, CONF_USERNAME
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN
 
@@ -36,7 +36,7 @@ class DukeEnergyConfigFlow(ConfigFlow, domain=DOMAIN):
         """Handle the initial step."""
         errors: dict[str, str] = {}
         if user_input is not None:
-            session = async_get_clientsession(self.hass)
+            session = async_get_clientsession(self.menuai)
             api = DukeEnergy(
                 user_input[CONF_USERNAME], user_input[CONF_PASSWORD], session
             )

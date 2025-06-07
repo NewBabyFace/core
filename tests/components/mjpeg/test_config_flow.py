@@ -5,13 +5,13 @@ from unittest.mock import AsyncMock
 import requests
 from requests_mock import Mocker
 
-from homeassistant.components.mjpeg.const import (
+from menuai.components.mjpeg.const import (
     CONF_MJPEG_URL,
     CONF_STILL_IMAGE_URL,
     DOMAIN,
 )
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import (
+from menuai.config_entries import SOURCE_USER
+from menuai.const import (
     CONF_AUTHENTICATION,
     CONF_NAME,
     CONF_PASSWORD,
@@ -19,26 +19,26 @@ from homeassistant.const import (
     CONF_VERIFY_SSL,
     HTTP_BASIC_AUTHENTICATION,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
 
 async def test_full_user_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mjpeg_requests: Mocker,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test the full user configuration flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
     assert result.get("type") is FlowResultType.FORM
     assert result.get("step_id") == "user"
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_NAME: "Spy cam",
@@ -67,7 +67,7 @@ async def test_full_user_flow(
 
 
 async def test_full_flow_with_authentication_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mjpeg_requests: Mocker,
     mock_setup_entry: AsyncMock,
 ) -> None:
@@ -76,7 +76,7 @@ async def test_full_flow_with_authentication_error(
     This tests tests a full config flow, with a case the user enters an invalid
     credentials, but recovers by entering the correct ones.
     """
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
@@ -86,7 +86,7 @@ async def test_full_flow_with_authentication_error(
     mock_mjpeg_requests.get(
         "https://example.com/mjpeg", text="Access Denied!", status_code=401
     )
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_NAME: "Sky cam",
@@ -104,7 +104,7 @@ async def test_full_flow_with_authentication_error(
     assert mock_mjpeg_requests.call_count == 2
 
     mock_mjpeg_requests.get("https://example.com/mjpeg", text="resp")
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result2["flow_id"],
         user_input={
             CONF_NAME: "Sky cam",
@@ -131,12 +131,12 @@ async def test_full_flow_with_authentication_error(
 
 
 async def test_connection_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mjpeg_requests: Mocker,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test connection error."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
@@ -147,7 +147,7 @@ async def test_connection_error(
     mock_mjpeg_requests.get(
         "https://example.com/mjpeg", exc=requests.exceptions.ConnectionError
     )
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_NAME: "My cam",
@@ -170,7 +170,7 @@ async def test_connection_error(
     mock_mjpeg_requests.get(
         "https://example.com/still", exc=requests.exceptions.ConnectionError
     )
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result2["flow_id"],
         user_input={
             CONF_NAME: "My cam",
@@ -190,7 +190,7 @@ async def test_connection_error(
     mock_mjpeg_requests.get("https://example.com/still", text="resp")
 
     # Finish
-    result4 = await hass.config_entries.flow.async_configure(
+    result4 = await menuai.config_entries.flow.async_configure(
         result3["flow_id"],
         user_input={
             CONF_NAME: "My cam",
@@ -216,19 +216,19 @@ async def test_connection_error(
 
 
 async def test_already_configured(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mjpeg_requests: Mocker,
     mock_config_entry: MockConfigEntry,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test we abort if the MJPEG IP Camera is already configured."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_NAME: "My cam",
@@ -241,12 +241,12 @@ async def test_already_configured(
 
 
 async def test_options_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mjpeg_requests: Mocker,
     init_integration: MockConfigEntry,
 ) -> None:
     """Test options config flow."""
-    result = await hass.config_entries.options.async_init(init_integration.entry_id)
+    result = await menuai.config_entries.options.async_init(init_integration.entry_id)
 
     assert result.get("type") is FlowResultType.FORM
     assert result.get("step_id") == "init"
@@ -266,10 +266,10 @@ async def test_options_flow(
             CONF_VERIFY_SSL: True,
         },
     )
-    mock_second_config_entry.add_to_hass(hass)
+    mock_second_config_entry.add_to_menuai(menuai)
 
     # Try updating options to already existing secondary camera
-    result2 = await hass.config_entries.options.async_configure(
+    result2 = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             CONF_MJPEG_URL: "https://example.com/second_camera",
@@ -286,7 +286,7 @@ async def test_options_flow(
     mock_mjpeg_requests.get(
         "https://example.com/invalid_mjpeg", exc=requests.exceptions.ConnectionError
     )
-    result3 = await hass.config_entries.options.async_configure(
+    result3 = await menuai.config_entries.options.async_configure(
         result2["flow_id"],
         user_input={
             CONF_MJPEG_URL: "https://example.com/invalid_mjpeg",
@@ -304,7 +304,7 @@ async def test_options_flow(
     mock_mjpeg_requests.get(
         "https://example.com/invalid_still", exc=requests.exceptions.ConnectionError
     )
-    result4 = await hass.config_entries.options.async_configure(
+    result4 = await menuai.config_entries.options.async_configure(
         result3["flow_id"],
         user_input={
             CONF_MJPEG_URL: "https://example.com/mjpeg",
@@ -322,7 +322,7 @@ async def test_options_flow(
     mock_mjpeg_requests.get(
         "https://example.com/invalid_auth", text="Access Denied!", status_code=401
     )
-    result5 = await hass.config_entries.options.async_configure(
+    result5 = await menuai.config_entries.options.async_configure(
         result4["flow_id"],
         user_input={
             CONF_MJPEG_URL: "https://example.com/invalid_auth",
@@ -338,7 +338,7 @@ async def test_options_flow(
     assert mock_mjpeg_requests.call_count == 6
 
     # Finish
-    result6 = await hass.config_entries.options.async_configure(
+    result6 = await menuai.config_entries.options.async_configure(
         result5["flow_id"],
         user_input={
             CONF_MJPEG_URL: "https://example.com/mjpeg",

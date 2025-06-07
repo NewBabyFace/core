@@ -2,11 +2,11 @@
 
 from typing import Any
 
-from homeassistant.components.bluetooth import BluetoothServiceInfoBleak
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_MAC
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.util import slugify
+from menuai.components.bluetooth import BluetoothServiceInfoBleak
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_MAC
+from menuai.helpers.device_registry import format_mac
+from menuai.util import slugify
 
 from .const import DOMAIN
 from .schemas import SCHEMA_MAC

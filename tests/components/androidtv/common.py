@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from homeassistant.components.androidtv.const import (
+from menuai.components.androidtv.const import (
     CONF_ADB_SERVER_IP,
     CONF_ADB_SERVER_PORT,
     CONF_ADBKEY,
@@ -12,9 +12,9 @@ from homeassistant.components.androidtv.const import (
     DEVICE_FIRETV,
     DOMAIN,
 )
-from homeassistant.components.androidtv.entity import PREFIX_ANDROIDTV, PREFIX_FIRETV
-from homeassistant.const import CONF_DEVICE_CLASS, CONF_HOST, CONF_NAME, CONF_PORT
-from homeassistant.util import slugify
+from menuai.components.androidtv.entity import PREFIX_ANDROIDTV, PREFIX_FIRETV
+from menuai.const import CONF_DEVICE_CLASS, CONF_HOST, CONF_NAME, CONF_PORT
+from menuai.util import slugify
 
 from . import patchers
 

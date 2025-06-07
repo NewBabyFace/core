@@ -7,14 +7,14 @@ import pytest
 import serial
 import serial.tools.list_ports
 
-from homeassistant import config_entries
-from homeassistant.components.landisgyr_heat_meter import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.landisgyr_heat_meter import DOMAIN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
-API_HEAT_METER_SERVICE = "homeassistant.components.landisgyr_heat_meter.config_flow.ultraheat_api.HeatMeterService"
+API_HEAT_METER_SERVICE = "menuai.components.landisgyr_heat_meter.config_flow.ultraheat_api.HeatMeterService"
 
 pytestmark = pytest.mark.usefixtures("mock_setup_entry")
 
@@ -41,19 +41,19 @@ class MockUltraheatRead:
 
 
 @patch(API_HEAT_METER_SERVICE)
-async def test_manual_entry(mock_heat_meter, hass: HomeAssistant) -> None:
+async def test_manual_entry(mock_heat_meter, menuai: menuai) -> None:
     """Test manual entry."""
 
     mock_heat_meter().read.return_value = MockUltraheatRead("LUGCUH50", "123456789")
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"device": "Enter Manually"}
     )
 
@@ -61,7 +61,7 @@ async def test_manual_entry(mock_heat_meter, hass: HomeAssistant) -> None:
     assert result["step_id"] == "setup_serial_manual_path"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"device": "/dev/ttyUSB0"}
     )
 
@@ -76,20 +76,20 @@ async def test_manual_entry(mock_heat_meter, hass: HomeAssistant) -> None:
 
 @patch(API_HEAT_METER_SERVICE)
 @patch("serial.tools.list_ports.comports", return_value=[mock_serial_port()])
-async def test_list_entry(mock_port, mock_heat_meter, hass: HomeAssistant) -> None:
+async def test_list_entry(mock_port, mock_heat_meter, menuai: menuai) -> None:
     """Test select from list entry."""
 
     mock_heat_meter().read.return_value = MockUltraheatRead("LUGCUH50", "123456789")
     port = mock_serial_port()
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"device": port.device}
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -102,19 +102,19 @@ async def test_list_entry(mock_port, mock_heat_meter, hass: HomeAssistant) -> No
 
 
 @patch(API_HEAT_METER_SERVICE)
-async def test_manual_entry_fail(mock_heat_meter, hass: HomeAssistant) -> None:
+async def test_manual_entry_fail(mock_heat_meter, menuai: menuai) -> None:
     """Test manual entry fails."""
 
     mock_heat_meter().read.side_effect = serial.SerialException
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"device": "Enter Manually"}
     )
 
@@ -122,7 +122,7 @@ async def test_manual_entry_fail(mock_heat_meter, hass: HomeAssistant) -> None:
     assert result["step_id"] == "setup_serial_manual_path"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"device": "/dev/ttyUSB0"}
     )
 
@@ -133,20 +133,20 @@ async def test_manual_entry_fail(mock_heat_meter, hass: HomeAssistant) -> None:
 
 @patch(API_HEAT_METER_SERVICE)
 @patch("serial.tools.list_ports.comports", return_value=[mock_serial_port()])
-async def test_list_entry_fail(mock_port, mock_heat_meter, hass: HomeAssistant) -> None:
+async def test_list_entry_fail(mock_port, mock_heat_meter, menuai: menuai) -> None:
     """Test select from list entry fails."""
 
     mock_heat_meter().read.side_effect = serial.SerialException
     port = mock_serial_port()
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"device": port.device}
     )
     assert result["type"] is FlowResultType.FORM
@@ -157,7 +157,7 @@ async def test_list_entry_fail(mock_port, mock_heat_meter, hass: HomeAssistant) 
 @patch(API_HEAT_METER_SERVICE)
 @patch("serial.tools.list_ports.comports", return_value=[mock_serial_port()])
 async def test_already_configured(
-    mock_port, mock_heat_meter, hass: HomeAssistant
+    mock_port, mock_heat_meter, menuai: menuai
 ) -> None:
     """Test we abort if the Heat Meter is already configured."""
 
@@ -168,20 +168,20 @@ async def test_already_configured(
         "device_number": "123456789",
     }
     mock_entry = MockConfigEntry(domain=DOMAIN, unique_id="123456789", data=entry_data)
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # run flow and see if it aborts
     mock_heat_meter().read.return_value = MockUltraheatRead("LUGCUH50", "123456789")
     port = mock_serial_port()
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"device": port.device}
     )
 

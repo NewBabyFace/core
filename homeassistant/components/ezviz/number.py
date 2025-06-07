@@ -15,11 +15,11 @@ from pyezvizapi.exceptions import (
     PyEzvizError,
 )
 
-from homeassistant.components.number import NumberEntity, NumberEntityDescription
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.number import NumberEntity, NumberEntityDescription
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import EzvizConfigEntry, EzvizDataUpdateCoordinator
 from .entity import EzvizBaseEntity
@@ -49,7 +49,7 @@ NUMBER_TYPE = EzvizNumberEntityDescription(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: EzvizConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -84,8 +84,8 @@ class EzvizNumber(EzvizBaseEntity, NumberEntity):
         self.config_entry_id = config_entry_id
         self.sensor_value: int | None = None
 
-    async def async_added_to_hass(self) -> None:
-        """Run when about to be added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Run when about to be added to menuai."""
         self.async_schedule_update_ha_state(True)
 
     @property
@@ -106,7 +106,7 @@ class EzvizNumber(EzvizBaseEntity, NumberEntity):
             )
 
         except (HTTPError, PyEzvizError) as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Cannot set detection sensitivity level on {self.name}"
             ) from err
 
@@ -123,10 +123,10 @@ class EzvizNumber(EzvizBaseEntity, NumberEntity):
 
         except (EzvizAuthTokenExpired, EzvizAuthVerificationCode):
             _LOGGER.debug("Failed to login to EZVIZ API")
-            self.hass.async_create_task(
-                self.hass.config_entries.async_reload(self.config_entry_id)
+            self.menuai.async_create_task(
+                self.menuai.config_entries.async_reload(self.config_entry_id)
             )
             return
 
         except (InvalidURL, HTTPError, PyEzvizError) as error:
-            raise HomeAssistantError(f"Invalid response from API: {error}") from error
+            raise menuaiError(f"Invalid response from API: {error}") from error

@@ -12,13 +12,13 @@ import httpx
 import voluptuous as vol
 import yarl
 
-from homeassistant.components.camera import Camera, CameraEntityFeature
-from homeassistant.components.stream import (
+from menuai.components.camera import Camera, CameraEntityFeature
+from menuai.components.stream import (
     CONF_RTSP_TRANSPORT,
     CONF_USE_WALLCLOCK_AS_TIMESTAMPS,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_AUTHENTICATION,
     CONF_NAME,
     CONF_PASSWORD,
@@ -26,12 +26,12 @@ from homeassistant.const import (
     CONF_VERIFY_SSL,
     HTTP_DIGEST_AUTHENTICATION,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import TemplateError
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.httpx_client import get_async_client
-from homeassistant.helpers.template import Template
+from menuai.core import menuai
+from menuai.exceptions import TemplateError
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.httpx_client import get_async_client
+from menuai.helpers.template import Template
 
 from . import DOMAIN
 from .const import (
@@ -47,14 +47,14 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up a generic IP Camera."""
 
     async_add_entities(
-        [GenericCamera(hass, entry.options, entry.entry_id, entry.title)]
+        [GenericCamera(menuai, entry.options, entry.entry_id, entry.title)]
     )
 
 
@@ -79,14 +79,14 @@ class GenericCamera(Camera):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         device_info: Mapping[str, Any],
         identifier: str,
         title: str,
     ) -> None:
         """Initialize a generic camera."""
         super().__init__()
-        self.hass = hass
+        self.menuai = menuai
         self._attr_unique_id = identifier
         self._authentication = device_info.get(CONF_AUTHENTICATION)
         self._username = device_info.get(CONF_USERNAME)
@@ -94,10 +94,10 @@ class GenericCamera(Camera):
         self._name = device_info.get(CONF_NAME, title)
         self._still_image_url = device_info.get(CONF_STILL_IMAGE_URL)
         if self._still_image_url:
-            self._still_image_url = Template(self._still_image_url, hass)
+            self._still_image_url = Template(self._still_image_url, menuai)
         self._stream_source = device_info.get(CONF_STREAM_SOURCE)
         if self._stream_source:
-            self._stream_source = Template(self._stream_source, hass)
+            self._stream_source = Template(self._stream_source, menuai)
             self._attr_supported_features = CameraEntityFeature.STREAM
         self._limit_refetch = device_info.get(CONF_LIMIT_REFETCH_TO_URL_CHANGE, False)
         self._attr_frame_interval = 1 / device_info[CONF_FRAMERATE]
@@ -156,7 +156,7 @@ class GenericCamera(Camera):
 
             try:
                 update_time = datetime.now()
-                async_client = get_async_client(self.hass, verify_ssl=self.verify_ssl)
+                async_client = get_async_client(self.menuai, verify_ssl=self.verify_ssl)
                 response = await async_client.get(
                     url,
                     auth=self._auth,

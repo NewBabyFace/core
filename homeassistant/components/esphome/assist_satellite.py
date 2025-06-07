@@ -23,22 +23,22 @@ from aioesphomeapi import (
     VoiceAssistantTimerEventType,
 )
 
-from homeassistant.components import assist_satellite, tts
-from homeassistant.components.assist_pipeline import (
+from menuai.components import assist_satellite, tts
+from menuai.components.assist_pipeline import (
     PipelineEvent,
     PipelineEventType,
     PipelineStage,
 )
-from homeassistant.components.intent import (
+from menuai.components.intent import (
     TimerEventType,
     TimerInfo,
     async_register_timer_handler,
 )
-from homeassistant.components.media_player import async_process_play_media_url
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.media_player import async_process_play_media_url
+from menuai.const import Platform
+from menuai.core import menuai, callback
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .entity import EsphomeAssistEntity, convert_api_error_ha_error
@@ -86,7 +86,7 @@ _CONFIG_TIMEOUT_SEC = 5
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ESPHomeConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -130,7 +130,7 @@ class EsphomeAssistSatellite(
     def pipeline_entity_id(self) -> str | None:
         """Return the entity ID of the pipeline to use for the next conversation."""
         assert self._entry_data.device_info is not None
-        ent_reg = er.async_get(self.hass)
+        ent_reg = er.async_get(self.menuai)
         return ent_reg.async_get_entity_id(
             Platform.SELECT,
             DOMAIN,
@@ -141,7 +141,7 @@ class EsphomeAssistSatellite(
     def vad_sensitivity_entity_id(self) -> str | None:
         """Return the entity ID of the VAD sensitivity to use for the next conversation."""
         assert self._entry_data.device_info is not None
-        ent_reg = er.async_get(self.hass)
+        ent_reg = er.async_get(self.menuai)
         return ent_reg.async_get_entity_id(
             Platform.SELECT,
             DOMAIN,
@@ -193,9 +193,9 @@ class EsphomeAssistSatellite(
         # Inform listeners that config has been updated
         self._entry_data.async_assist_satellite_config_updated(self._satellite_config)
 
-    async def async_added_to_hass(self) -> None:
-        """Run when entity about to be added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Run when entity about to be added to menuai."""
+        await super().async_added_to_menuai()
 
         assert self._entry_data.device_info is not None
         feature_flags = (
@@ -230,7 +230,7 @@ class EsphomeAssistSatellite(
             )
             self.async_on_remove(
                 async_register_timer_handler(
-                    self.hass, self.registry_entry.device_id, self.handle_timer_event
+                    self.menuai, self.registry_entry.device_id, self.handle_timer_event
                 )
             )
 
@@ -261,9 +261,9 @@ class EsphomeAssistSatellite(
             )
         )
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Run when entity will be removed from hass."""
-        await super().async_will_remove_from_hass()
+    async def async_will_remove_from_menuai(self) -> None:
+        """Run when entity will be removed from menuai."""
+        await super().async_will_remove_from_menuai()
 
         self._is_running = False
         self._stop_pipeline()
@@ -271,7 +271,7 @@ class EsphomeAssistSatellite(
     def on_pipeline_event(self, event: PipelineEvent) -> None:
         """Handle pipeline events."""
         try:
-            event_type = _VOICE_ASSISTANT_EVENT_TYPES.from_hass(event.type)
+            event_type = _VOICE_ASSISTANT_EVENT_TYPES.from_menuai(event.type)
         except KeyError:
             _LOGGER.debug("Received unknown pipeline event type: %s", event.type)
             return
@@ -297,7 +297,7 @@ class EsphomeAssistSatellite(
             assert event.data is not None
             if tts_output := event.data["tts_output"]:
                 path = tts_output["url"]
-                url = async_process_play_media_url(self.hass, path)
+                url = async_process_play_media_url(self.menuai, path)
                 data_to_send = {"url": url}
 
                 assert self._entry_data.device_info is not None
@@ -307,11 +307,11 @@ class EsphomeAssistSatellite(
                     )
                 )
                 if feature_flags & VoiceAssistantFeature.SPEAKER and (
-                    stream := tts.async_get_stream(self.hass, tts_output["token"])
+                    stream := tts.async_get_stream(self.menuai, tts_output["token"])
                 ):
                     self._tts_streaming_task = (
                         self.config_entry.async_create_background_task(
-                            self.hass,
+                            self.menuai,
                             self._stream_tts_audio(stream),
                             "esphome_voice_assistant_tts",
                         )
@@ -334,7 +334,7 @@ class EsphomeAssistSatellite(
             assert event.data is not None
             if tts_output := event.data["tts_output"]:
                 path = tts_output["url"]
-                url = async_process_play_media_url(self.hass, path)
+                url = async_process_play_media_url(self.menuai, path)
                 data_to_send = {"url": url}
         elif event_type == VoiceAssistantEventType.VOICE_ASSISTANT_RUN_END:
             if self._tts_streaming_task is None:
@@ -394,7 +394,7 @@ class EsphomeAssistSatellite(
 
                 make_proxy_url = partial(
                     async_create_proxy_url,
-                    hass=self.hass,
+                    menuai=self.menuai,
                     device_id=self.registry_entry.device_id,
                     media_format=format_to_use.format,
                     rate=format_to_use.sample_rate or None,
@@ -404,12 +404,12 @@ class EsphomeAssistSatellite(
 
                 if not is_media_tts:
                     media_id = async_process_play_media_url(
-                        self.hass, make_proxy_url(media_url=media_id)
+                        self.menuai, make_proxy_url(media_url=media_id)
                     )
 
                 if preannounce_media_id:
                     preannounce_media_id = async_process_play_media_url(
-                        self.hass, make_proxy_url(media_url=preannounce_media_id)
+                        self.menuai, make_proxy_url(media_url=preannounce_media_id)
                     )
 
         await self.cli.send_voice_assistant_announcement_await_response(
@@ -474,7 +474,7 @@ class EsphomeAssistSatellite(
         # Run the pipeline
         _LOGGER.debug("Running pipeline from %s to %s", start_stage, end_stage)
         self._pipeline_task = self.config_entry.async_create_background_task(
-            self.hass,
+            self.menuai,
             self.async_accept_pipeline_from_satellite(
                 audio_stream=self._wrap_audio_stream(),
                 start_stage=start_stage,
@@ -510,7 +510,7 @@ class EsphomeAssistSatellite(
     ) -> None:
         """Handle timer events."""
         try:
-            native_event_type = _TIMER_EVENT_TYPES.from_hass(event_type)
+            native_event_type = _TIMER_EVENT_TYPES.from_menuai(event_type)
         except KeyError:
             _LOGGER.debug("Received unknown timer event type: %s", event_type)
             return
@@ -535,7 +535,7 @@ class EsphomeAssistSatellite(
         """Set active wake word and update config on satellite."""
         self._satellite_config.active_wake_words = [wake_word_id]
         self.config_entry.async_create_background_task(
-            self.hass,
+            self.menuai,
             self.async_set_configuration(self._satellite_config),
             "esphome_voice_assistant_set_config",
         )

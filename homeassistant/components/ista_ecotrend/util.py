@@ -6,7 +6,7 @@ import datetime
 from enum import StrEnum
 from typing import Any
 
-from homeassistant.util import dt as dt_util
+from menuai.util import dt as dt_util
 
 
 class IstaConsumptionType(StrEnum):

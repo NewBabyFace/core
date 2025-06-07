@@ -12,11 +12,11 @@ from xknx.telegram import Telegram
 from xknx.telegram.address import parse_device_group_address
 from xknx.telegram.apci import GroupValueRead, GroupValueResponse, GroupValueWrite
 
-from homeassistant.const import CONF_TYPE, SERVICE_RELOAD
-from homeassistant.core import HomeAssistant, ServiceCall, callback
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.service import async_register_admin_service
+from menuai.const import CONF_TYPE, SERVICE_RELOAD
+from menuai.core import menuai, ServiceCall, callback
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.service import async_register_admin_service
 
 from .const import (
     DOMAIN,
@@ -41,16 +41,16 @@ _LOGGER = logging.getLogger(__name__)
 
 
 @callback
-def register_knx_services(hass: HomeAssistant) -> None:
+def register_knx_services(menuai: menuai) -> None:
     """Register KNX integration services."""
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_KNX_SEND,
         service_send_to_knx_bus,
         schema=SERVICE_KNX_SEND_SCHEMA,
     )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_KNX_READ,
         service_read_to_knx_bus,
@@ -58,7 +58,7 @@ def register_knx_services(hass: HomeAssistant) -> None:
     )
 
     async_register_admin_service(
-        hass,
+        menuai,
         DOMAIN,
         SERVICE_KNX_EVENT_REGISTER,
         service_event_register_modify,
@@ -66,7 +66,7 @@ def register_knx_services(hass: HomeAssistant) -> None:
     )
 
     async_register_admin_service(
-        hass,
+        menuai,
         DOMAIN,
         SERVICE_KNX_EXPOSURE_REGISTER,
         service_exposure_register_modify,
@@ -74,7 +74,7 @@ def register_knx_services(hass: HomeAssistant) -> None:
     )
 
     async_register_admin_service(
-        hass,
+        menuai,
         DOMAIN,
         SERVICE_RELOAD,
         service_reload_integration,
@@ -82,12 +82,12 @@ def register_knx_services(hass: HomeAssistant) -> None:
 
 
 @callback
-def get_knx_module(hass: HomeAssistant) -> KNXModule:
+def get_knx_module(menuai: menuai) -> KNXModule:
     """Return KNXModule instance."""
     try:
-        return hass.data[KNX_MODULE_KEY]
+        return menuai.data[KNX_MODULE_KEY]
     except KeyError as err:
-        raise HomeAssistantError(
+        raise menuaiError(
             translation_domain=DOMAIN, translation_key="integration_not_loaded"
         ) from err
 
@@ -106,7 +106,7 @@ SERVICE_KNX_EVENT_REGISTER_SCHEMA = vol.Schema(
 
 async def service_event_register_modify(call: ServiceCall) -> None:
     """Service for adding or removing a GroupAddress to the knx_event filter."""
-    knx_module = get_knx_module(call.hass)
+    knx_module = get_knx_module(call.menuai)
 
     attr_address = call.data[KNX_ADDRESS]
     group_addresses = list(map(parse_device_group_address, attr_address))
@@ -159,7 +159,7 @@ SERVICE_KNX_EXPOSURE_REGISTER_SCHEMA = vol.Any(
 
 async def service_exposure_register_modify(call: ServiceCall) -> None:
     """Service for adding or removing an exposure to KNX bus."""
-    knx_module = get_knx_module(call.hass)
+    knx_module = get_knx_module(call.menuai)
 
     group_address = call.data[KNX_ADDRESS]
 
@@ -189,7 +189,7 @@ async def service_exposure_register_modify(call: ServiceCall) -> None:
             replaced_exposure.device.name,
         )
         replaced_exposure.async_remove()
-    exposure = create_knx_exposure(knx_module.hass, knx_module.xknx, call.data)
+    exposure = create_knx_exposure(knx_module.menuai, knx_module.xknx, call.data)
     knx_module.service_exposures[group_address] = exposure
     _LOGGER.debug(
         "Service exposure_register registered exposure for '%s' - %s",
@@ -228,7 +228,7 @@ SERVICE_KNX_SEND_SCHEMA = vol.Any(
 
 async def service_send_to_knx_bus(call: ServiceCall) -> None:
     """Service for sending an arbitrary KNX message to the KNX bus."""
-    knx_module = get_knx_module(call.hass)
+    knx_module = get_knx_module(call.menuai)
 
     attr_address = call.data[KNX_ADDRESS]
     attr_payload = call.data[SERVICE_KNX_ATTR_PAYLOAD]
@@ -280,7 +280,7 @@ SERVICE_KNX_READ_SCHEMA = vol.Schema(
 
 async def service_read_to_knx_bus(call: ServiceCall) -> None:
     """Service for sending a GroupValueRead telegram to the KNX bus."""
-    knx_module = get_knx_module(call.hass)
+    knx_module = get_knx_module(call.menuai)
 
     for address in call.data[KNX_ADDRESS]:
         telegram = Telegram(
@@ -293,6 +293,6 @@ async def service_read_to_knx_bus(call: ServiceCall) -> None:
 
 async def service_reload_integration(call: ServiceCall) -> None:
     """Reload the integration."""
-    knx_module = get_knx_module(call.hass)
-    await call.hass.config_entries.async_reload(knx_module.entry.entry_id)
-    call.hass.bus.async_fire(f"event_{DOMAIN}_reloaded", context=call.context)
+    knx_module = get_knx_module(call.menuai)
+    await call.menuai.config_entries.async_reload(knx_module.entry.entry_id)
+    call.menuai.bus.async_fire(f"event_{DOMAIN}_reloaded", context=call.context)

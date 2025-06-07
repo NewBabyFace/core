@@ -10,20 +10,20 @@ import logging
 from PIL import Image
 import voluptuous as vol
 
-from homeassistant.components.camera import (
+from menuai.components.camera import (
     PLATFORM_SCHEMA as CAMERA_PLATFORM_SCHEMA,
     Camera,
     async_get_image,
     async_get_mjpeg_stream,
     async_get_still_stream,
 )
-from homeassistant.const import CONF_ENTITY_ID, CONF_MODE, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import dt as dt_util
+from menuai.const import CONF_ENTITY_ID, CONF_MODE, CONF_NAME
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import dt as dt_util
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -66,13 +66,13 @@ PLATFORM_SCHEMA = CAMERA_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the Proxy camera platform."""
-    async_add_entities([ProxyCamera(hass, config)])
+    async_add_entities([ProxyCamera(menuai, config)])
 
 
 def _precheck_image(image, opts):
@@ -207,10 +207,10 @@ class ImageOpts:
 class ProxyCamera(Camera):
     """The representation of a Proxy camera."""
 
-    def __init__(self, hass, config):
+    def __init__(self, menuai, config):
         """Initialize a proxy camera component."""
         super().__init__()
-        self.hass = hass
+        self.menuai = menuai
         self._proxied_camera = config.get(CONF_ENTITY_ID)
         self._name = (
             config.get(CONF_NAME) or f"{DEFAULT_BASENAME} - {self._proxied_camera}"
@@ -246,7 +246,7 @@ class ProxyCamera(Camera):
     ) -> bytes | None:
         """Return camera image."""
         return asyncio.run_coroutine_threadsafe(
-            self.async_camera_image(), self.hass.loop
+            self.async_camera_image(), self.menuai.loop
         ).result()
 
     async def async_camera_image(
@@ -261,7 +261,7 @@ class ProxyCamera(Camera):
             return self._last_image
 
         self._last_image_time = now
-        image = await async_get_image(self.hass, self._proxied_camera)
+        image = await async_get_image(self.menuai, self._proxied_camera)
         if not image:
             _LOGGER.error("Error getting original camera image")
             return self._last_image
@@ -270,7 +270,7 @@ class ProxyCamera(Camera):
             job = _resize_image
         else:
             job = _crop_image
-        image_bytes: bytes = await self.hass.async_add_executor_job(
+        image_bytes: bytes = await self.menuai.async_add_executor_job(
             job, image.content, self._image_opts
         )
 
@@ -282,7 +282,7 @@ class ProxyCamera(Camera):
         """Generate an HTTP MJPEG stream from camera images."""
         if not self._stream_opts:
             return await async_get_mjpeg_stream(
-                self.hass, request, self._proxied_camera
+                self.menuai, request, self._proxied_camera
             )
 
         return await async_get_still_stream(
@@ -297,16 +297,16 @@ class ProxyCamera(Camera):
     async def _async_stream_image(self):
         """Return a still image response from the camera."""
         try:
-            image = await async_get_image(self.hass, self._proxied_camera)
+            image = await async_get_image(self.menuai, self._proxied_camera)
             if not image:
                 return None
-        except HomeAssistantError as err:
+        except menuaiError as err:
             raise asyncio.CancelledError from err
 
         if self._mode == MODE_RESIZE:
             job = _resize_image
         else:
             job = _crop_image
-        return await self.hass.async_add_executor_job(
+        return await self.menuai.async_add_executor_job(
             job, image.content, self._stream_opts
         )

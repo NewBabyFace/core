@@ -7,8 +7,8 @@ from typing import Any
 
 from flux_led.aiodevice import AIOWifiLedBulb
 
-from homeassistant import config_entries
-from homeassistant.const import (
+from menuai import config_entries
+from menuai.const import (
     ATTR_CONNECTIONS,
     ATTR_HW_VERSION,
     ATTR_IDENTIFIERS,
@@ -19,12 +19,12 @@ from homeassistant.const import (
     CONF_MODEL,
     CONF_NAME,
 )
-from homeassistant.core import callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.core import callback
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity import Entity
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import CONF_MINOR_VERSION, DOMAIN, SIGNAL_STATE_UPDATED
 from .coordinator import FluxLedUpdateCoordinator
@@ -110,16 +110,16 @@ class FluxEntity(CoordinatorEntity[FluxLedUpdateCoordinator]):
             self.async_write_ha_state()
         self._responding = self.coordinator.last_update_success
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 SIGNAL_STATE_UPDATED.format(self._device.ipaddr),
                 self.async_write_ha_state,
             )
         )
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
 
 class FluxOnOffEntity(FluxEntity):

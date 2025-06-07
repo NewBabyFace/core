@@ -4,13 +4,13 @@ from dataclasses import dataclass
 
 from pyprobeplus import ProbePlusDevice
 
-from homeassistant.helpers.device_registry import (
+from menuai.helpers.device_registry import (
     CONNECTION_BLUETOOTH,
     DeviceInfo,
     format_mac,
 )
-from homeassistant.helpers.entity import EntityDescription
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.helpers.entity import EntityDescription
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import ProbePlusDataUpdateCoordinator

@@ -11,10 +11,10 @@ from typing import TYPE_CHECKING
 import voluptuous as vol
 import yarl
 
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import aiohttp_client, config_validation as cv
-from homeassistant.util import yaml as yaml_util
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import aiohttp_client, config_validation as cv
+from menuai.util import yaml as yaml_util
 
 from .models import Blueprint
 from .schemas import BLUEPRINT_SCHEMA, is_blueprint_config
@@ -45,7 +45,7 @@ COMMUNITY_TOPIC_SCHEMA = vol.Schema(
 )
 
 
-class UnsupportedUrl(HomeAssistantError):
+class UnsupportedUrl(menuaiError):
     """When the function doesn't support the url."""
 
 
@@ -117,7 +117,7 @@ def _extract_blueprint_from_community_topic(
 
         try:
             data = yaml_util.parse_yaml(block_content)
-        except HomeAssistantError:
+        except menuaiError:
             if block_syntax == "yaml":
                 raise
 
@@ -131,7 +131,7 @@ def _extract_blueprint_from_community_topic(
         break
 
     if blueprint is None:
-        raise HomeAssistantError(
+        raise menuaiError(
             "No valid blueprint found in the topic. Blueprint syntax blocks need to be"
             " marked as YAML or no syntax."
         )
@@ -142,7 +142,7 @@ def _extract_blueprint_from_community_topic(
 
 
 async def fetch_blueprint_from_community_post(
-    hass: HomeAssistant, url: str
+    menuai: menuai, url: str
 ) -> ImportedBlueprint:
     """Get blueprints from a community post url.
 
@@ -151,7 +151,7 @@ async def fetch_blueprint_from_community_post(
     Caller needs to implement own timeout.
     """
     import_url = _get_community_post_import_url(url)
-    session = aiohttp_client.async_get_clientsession(hass)
+    session = aiohttp_client.async_get_clientsession(menuai)
 
     resp = await session.get(import_url, raise_for_status=True)
     json_resp = await resp.json()
@@ -160,11 +160,11 @@ async def fetch_blueprint_from_community_post(
 
 
 async def fetch_blueprint_from_github_url(
-    hass: HomeAssistant, url: str
+    menuai: menuai, url: str
 ) -> ImportedBlueprint:
     """Get a blueprint from a github url."""
     import_url = _get_github_import_url(url)
-    session = aiohttp_client.async_get_clientsession(hass)
+    session = aiohttp_client.async_get_clientsession(menuai)
 
     resp = await session.get(import_url, raise_for_status=True)
     raw_yaml = await resp.text()
@@ -180,14 +180,14 @@ async def fetch_blueprint_from_github_url(
 
 
 async def fetch_blueprint_from_github_gist_url(
-    hass: HomeAssistant, url: str
+    menuai: menuai, url: str
 ) -> ImportedBlueprint:
     """Get a blueprint from a Github Gist."""
     if not url.startswith("https://gist.github.com/"):
         raise UnsupportedUrl("Not a GitHub gist url")
 
     parsed_url = yarl.URL(url)
-    session = aiohttp_client.async_get_clientsession(hass)
+    session = aiohttp_client.async_get_clientsession(menuai)
 
     resp = await session.get(
         f"https://api.github.com/gists/{parsed_url.parts[2]}",
@@ -215,7 +215,7 @@ async def fetch_blueprint_from_github_gist_url(
         break
 
     if blueprint is None:
-        raise HomeAssistantError(
+        raise menuaiError(
             "No valid blueprint found in the gist. The blueprint file needs to end with"
             " '.yaml'"
         )
@@ -228,13 +228,13 @@ async def fetch_blueprint_from_github_gist_url(
 
 
 async def fetch_blueprint_from_website_url(
-    hass: HomeAssistant, url: str
+    menuai: menuai, url: str
 ) -> ImportedBlueprint:
     """Get a blueprint from our website."""
     if (WEBSITE_PATTERN.match(url)) is None:
-        raise UnsupportedUrl("Not a Home Assistant website URL")
+        raise UnsupportedUrl("Not a MenuAI website URL")
 
-    session = aiohttp_client.async_get_clientsession(hass)
+    session = aiohttp_client.async_get_clientsession(menuai)
 
     resp = await session.get(url, raise_for_status=True)
     raw_yaml = await resp.text()
@@ -243,15 +243,15 @@ async def fetch_blueprint_from_website_url(
     blueprint = Blueprint(data, schema=BLUEPRINT_SCHEMA)
 
     parsed_import_url = yarl.URL(url)
-    suggested_filename = f"homeassistant/{parsed_import_url.parts[-1][:-5]}"
+    suggested_filename = f"menuai/{parsed_import_url.parts[-1][:-5]}"
     return ImportedBlueprint(suggested_filename, raw_yaml, blueprint)
 
 
 async def fetch_blueprint_from_generic_url(
-    hass: HomeAssistant, url: str
+    menuai: menuai, url: str
 ) -> ImportedBlueprint:
     """Get a blueprint from a generic website."""
-    session = aiohttp_client.async_get_clientsession(hass)
+    session = aiohttp_client.async_get_clientsession(menuai)
 
     resp = await session.get(url, raise_for_status=True)
     raw_yaml = await resp.text()
@@ -274,7 +274,7 @@ FETCH_FUNCTIONS = (
 )
 
 
-async def fetch_blueprint_from_url(hass: HomeAssistant, url: str) -> ImportedBlueprint:
+async def fetch_blueprint_from_url(menuai: menuai, url: str) -> ImportedBlueprint:
     """Get a blueprint from a url.
 
     The returned blueprint will only be validated with BLUEPRINT_SCHEMA, not the domain
@@ -282,8 +282,8 @@ async def fetch_blueprint_from_url(hass: HomeAssistant, url: str) -> ImportedBlu
     """
     for func in FETCH_FUNCTIONS:
         with suppress(UnsupportedUrl):
-            imported_bp = await func(hass, url)
+            imported_bp = await func(menuai, url)
             imported_bp.blueprint.update_metadata(source_url=url)
             return imported_bp
 
-    raise HomeAssistantError("Unsupported URL")
+    raise menuaiError("Unsupported URL")

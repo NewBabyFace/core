@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 from serial import SerialException
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     ATTR_INPUT_SOURCE,
     ATTR_INPUT_SOURCE_LIST,
     ATTR_MEDIA_VOLUME_LEVEL,
@@ -14,14 +14,14 @@ from homeassistant.components.media_player import (
     SERVICE_SELECT_SOURCE,
     MediaPlayerEntityFeature,
 )
-from homeassistant.components.monoprice.const import (
+from menuai.components.monoprice.const import (
     CONF_NOT_FIRST_RUN,
     CONF_SOURCES,
     DOMAIN,
     SERVICE_RESTORE,
     SERVICE_SNAPSHOT,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_PORT,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
@@ -30,9 +30,9 @@ from homeassistant.const import (
     SERVICE_VOLUME_SET,
     SERVICE_VOLUME_UP,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_component import async_update_entity
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity_component import async_update_entity
 
 from tests.common import MockConfigEntry
 
@@ -92,277 +92,277 @@ class MockMonoprice:
         self.zones[zone.zone] = AttrDict(zone)
 
 
-async def test_cannot_connect(hass: HomeAssistant) -> None:
+async def test_cannot_connect(menuai: menuai) -> None:
     """Test connection error."""
 
     with patch(
-        "homeassistant.components.monoprice.get_monoprice",
+        "menuai.components.monoprice.get_monoprice",
         side_effect=SerialException,
     ):
         config_entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG)
-        config_entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
-        assert hass.states.get(ZONE_1_ID) is None
+        config_entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
+        assert menuai.states.get(ZONE_1_ID) is None
 
 
-async def _setup_monoprice(hass: HomeAssistant, monoprice: MockMonoprice) -> None:
+async def _setup_monoprice(menuai: menuai, monoprice: MockMonoprice) -> None:
     with patch(
-        "homeassistant.components.monoprice.get_monoprice",
+        "menuai.components.monoprice.get_monoprice",
         new=lambda *a: monoprice,
     ):
         config_entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG)
-        config_entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        config_entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
 
 async def _setup_monoprice_with_options(
-    hass: HomeAssistant, monoprice: MockMonoprice
+    menuai: menuai, monoprice: MockMonoprice
 ) -> None:
     with patch(
-        "homeassistant.components.monoprice.get_monoprice",
+        "menuai.components.monoprice.get_monoprice",
         new=lambda *a: monoprice,
     ):
         config_entry = MockConfigEntry(
             domain=DOMAIN, data=MOCK_CONFIG, options=MOCK_OPTIONS
         )
-        config_entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        config_entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
 
 async def _setup_monoprice_not_first_run(
-    hass: HomeAssistant, monoprice: MockMonoprice
+    menuai: menuai, monoprice: MockMonoprice
 ) -> None:
     with patch(
-        "homeassistant.components.monoprice.get_monoprice",
+        "menuai.components.monoprice.get_monoprice",
         new=lambda *a: monoprice,
     ):
         data = {**MOCK_CONFIG, CONF_NOT_FIRST_RUN: True}
         config_entry = MockConfigEntry(domain=DOMAIN, data=data)
-        config_entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        config_entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
 
 async def _call_media_player_service(
-    hass: HomeAssistant, name: str, data: dict[str, Any]
+    menuai: menuai, name: str, data: dict[str, Any]
 ) -> None:
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN, name, service_data=data, blocking=True
     )
 
 
 async def _call_monoprice_service(
-    hass: HomeAssistant, name: str, data: dict[str, Any]
+    menuai: menuai, name: str, data: dict[str, Any]
 ) -> None:
-    await hass.services.async_call(DOMAIN, name, service_data=data, blocking=True)
+    await menuai.services.async_call(DOMAIN, name, service_data=data, blocking=True)
 
 
-async def test_service_calls_with_entity_id(hass: HomeAssistant) -> None:
+async def test_service_calls_with_entity_id(menuai: menuai) -> None:
     """Test snapshot save/restore service calls."""
-    await _setup_monoprice(hass, MockMonoprice())
+    await _setup_monoprice(menuai, MockMonoprice())
 
     # Changing media player to new state
     await _call_media_player_service(
-        hass, SERVICE_VOLUME_SET, {"entity_id": ZONE_1_ID, "volume_level": 0.0}
+        menuai, SERVICE_VOLUME_SET, {"entity_id": ZONE_1_ID, "volume_level": 0.0}
     )
     await _call_media_player_service(
-        hass, SERVICE_SELECT_SOURCE, {"entity_id": ZONE_1_ID, "source": "one"}
+        menuai, SERVICE_SELECT_SOURCE, {"entity_id": ZONE_1_ID, "source": "one"}
     )
 
     # Saving existing values
-    await _call_monoprice_service(hass, SERVICE_SNAPSHOT, {"entity_id": ZONE_1_ID})
+    await _call_monoprice_service(menuai, SERVICE_SNAPSHOT, {"entity_id": ZONE_1_ID})
 
     # Changing media player to new state
     await _call_media_player_service(
-        hass, SERVICE_VOLUME_SET, {"entity_id": ZONE_1_ID, "volume_level": 1.0}
+        menuai, SERVICE_VOLUME_SET, {"entity_id": ZONE_1_ID, "volume_level": 1.0}
     )
     await _call_media_player_service(
-        hass, SERVICE_SELECT_SOURCE, {"entity_id": ZONE_1_ID, "source": "three"}
+        menuai, SERVICE_SELECT_SOURCE, {"entity_id": ZONE_1_ID, "source": "three"}
     )
 
     # Restoring other media player to its previous state
     # The zone should not be restored
-    await _call_monoprice_service(hass, SERVICE_RESTORE, {"entity_id": ZONE_2_ID})
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await _call_monoprice_service(menuai, SERVICE_RESTORE, {"entity_id": ZONE_2_ID})
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     # Checking that values were not (!) restored
-    state = hass.states.get(ZONE_1_ID)
+    state = menuai.states.get(ZONE_1_ID)
 
     assert state.attributes[ATTR_MEDIA_VOLUME_LEVEL] == 1.0
     assert state.attributes[ATTR_INPUT_SOURCE] == "three"
 
     # Restoring media player to its previous state
-    await _call_monoprice_service(hass, SERVICE_RESTORE, {"entity_id": ZONE_1_ID})
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await _call_monoprice_service(menuai, SERVICE_RESTORE, {"entity_id": ZONE_1_ID})
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get(ZONE_1_ID)
-
-    assert state.attributes[ATTR_MEDIA_VOLUME_LEVEL] == 0.0
-    assert state.attributes[ATTR_INPUT_SOURCE] == "one"
-
-
-async def test_service_calls_with_all_entities(hass: HomeAssistant) -> None:
-    """Test snapshot save/restore service calls."""
-    await _setup_monoprice(hass, MockMonoprice())
-
-    # Changing media player to new state
-    await _call_media_player_service(
-        hass, SERVICE_VOLUME_SET, {"entity_id": ZONE_1_ID, "volume_level": 0.0}
-    )
-    await _call_media_player_service(
-        hass, SERVICE_SELECT_SOURCE, {"entity_id": ZONE_1_ID, "source": "one"}
-    )
-
-    # Saving existing values
-    await _call_monoprice_service(hass, SERVICE_SNAPSHOT, {"entity_id": "all"})
-
-    # Changing media player to new state
-    await _call_media_player_service(
-        hass, SERVICE_VOLUME_SET, {"entity_id": ZONE_1_ID, "volume_level": 1.0}
-    )
-    await _call_media_player_service(
-        hass, SERVICE_SELECT_SOURCE, {"entity_id": ZONE_1_ID, "source": "three"}
-    )
-
-    # Restoring media player to its previous state
-    await _call_monoprice_service(hass, SERVICE_RESTORE, {"entity_id": "all"})
-    await hass.async_block_till_done(wait_background_tasks=True)
-
-    state = hass.states.get(ZONE_1_ID)
+    state = menuai.states.get(ZONE_1_ID)
 
     assert state.attributes[ATTR_MEDIA_VOLUME_LEVEL] == 0.0
     assert state.attributes[ATTR_INPUT_SOURCE] == "one"
 
 
-async def test_service_calls_without_relevant_entities(hass: HomeAssistant) -> None:
+async def test_service_calls_with_all_entities(menuai: menuai) -> None:
     """Test snapshot save/restore service calls."""
-    await _setup_monoprice(hass, MockMonoprice())
+    await _setup_monoprice(menuai, MockMonoprice())
 
     # Changing media player to new state
     await _call_media_player_service(
-        hass, SERVICE_VOLUME_SET, {"entity_id": ZONE_1_ID, "volume_level": 0.0}
+        menuai, SERVICE_VOLUME_SET, {"entity_id": ZONE_1_ID, "volume_level": 0.0}
     )
     await _call_media_player_service(
-        hass, SERVICE_SELECT_SOURCE, {"entity_id": ZONE_1_ID, "source": "one"}
+        menuai, SERVICE_SELECT_SOURCE, {"entity_id": ZONE_1_ID, "source": "one"}
     )
 
     # Saving existing values
-    await _call_monoprice_service(hass, SERVICE_SNAPSHOT, {"entity_id": "all"})
+    await _call_monoprice_service(menuai, SERVICE_SNAPSHOT, {"entity_id": "all"})
 
     # Changing media player to new state
     await _call_media_player_service(
-        hass, SERVICE_VOLUME_SET, {"entity_id": ZONE_1_ID, "volume_level": 1.0}
+        menuai, SERVICE_VOLUME_SET, {"entity_id": ZONE_1_ID, "volume_level": 1.0}
     )
     await _call_media_player_service(
-        hass, SERVICE_SELECT_SOURCE, {"entity_id": ZONE_1_ID, "source": "three"}
+        menuai, SERVICE_SELECT_SOURCE, {"entity_id": ZONE_1_ID, "source": "three"}
     )
 
     # Restoring media player to its previous state
-    await _call_monoprice_service(hass, SERVICE_RESTORE, {"entity_id": "light.demo"})
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await _call_monoprice_service(menuai, SERVICE_RESTORE, {"entity_id": "all"})
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get(ZONE_1_ID)
+    state = menuai.states.get(ZONE_1_ID)
+
+    assert state.attributes[ATTR_MEDIA_VOLUME_LEVEL] == 0.0
+    assert state.attributes[ATTR_INPUT_SOURCE] == "one"
+
+
+async def test_service_calls_without_relevant_entities(menuai: menuai) -> None:
+    """Test snapshot save/restore service calls."""
+    await _setup_monoprice(menuai, MockMonoprice())
+
+    # Changing media player to new state
+    await _call_media_player_service(
+        menuai, SERVICE_VOLUME_SET, {"entity_id": ZONE_1_ID, "volume_level": 0.0}
+    )
+    await _call_media_player_service(
+        menuai, SERVICE_SELECT_SOURCE, {"entity_id": ZONE_1_ID, "source": "one"}
+    )
+
+    # Saving existing values
+    await _call_monoprice_service(menuai, SERVICE_SNAPSHOT, {"entity_id": "all"})
+
+    # Changing media player to new state
+    await _call_media_player_service(
+        menuai, SERVICE_VOLUME_SET, {"entity_id": ZONE_1_ID, "volume_level": 1.0}
+    )
+    await _call_media_player_service(
+        menuai, SERVICE_SELECT_SOURCE, {"entity_id": ZONE_1_ID, "source": "three"}
+    )
+
+    # Restoring media player to its previous state
+    await _call_monoprice_service(menuai, SERVICE_RESTORE, {"entity_id": "light.demo"})
+    await menuai.async_block_till_done(wait_background_tasks=True)
+
+    state = menuai.states.get(ZONE_1_ID)
 
     assert state.attributes[ATTR_MEDIA_VOLUME_LEVEL] == 1.0
     assert state.attributes[ATTR_INPUT_SOURCE] == "three"
 
 
-async def test_restore_without_snapshort(hass: HomeAssistant) -> None:
+async def test_restore_without_snapshort(menuai: menuai) -> None:
     """Test restore when snapshot wasn't called."""
-    await _setup_monoprice(hass, MockMonoprice())
+    await _setup_monoprice(menuai, MockMonoprice())
 
     with patch.object(MockMonoprice, "restore_zone") as method_call:
-        await _call_monoprice_service(hass, SERVICE_RESTORE, {"entity_id": ZONE_1_ID})
-        await hass.async_block_till_done(wait_background_tasks=True)
+        await _call_monoprice_service(menuai, SERVICE_RESTORE, {"entity_id": ZONE_1_ID})
+        await menuai.async_block_till_done(wait_background_tasks=True)
 
         assert not method_call.called
 
 
-async def test_update(hass: HomeAssistant) -> None:
+async def test_update(menuai: menuai) -> None:
     """Test updating values from monoprice."""
     monoprice = MockMonoprice()
-    await _setup_monoprice(hass, monoprice)
+    await _setup_monoprice(menuai, monoprice)
 
     # Changing media player to new state
     await _call_media_player_service(
-        hass, SERVICE_VOLUME_SET, {"entity_id": ZONE_1_ID, "volume_level": 0.0}
+        menuai, SERVICE_VOLUME_SET, {"entity_id": ZONE_1_ID, "volume_level": 0.0}
     )
     await _call_media_player_service(
-        hass, SERVICE_SELECT_SOURCE, {"entity_id": ZONE_1_ID, "source": "one"}
+        menuai, SERVICE_SELECT_SOURCE, {"entity_id": ZONE_1_ID, "source": "one"}
     )
 
     monoprice.set_source(11, 3)
     monoprice.set_volume(11, 38)
 
-    await async_update_entity(hass, ZONE_1_ID)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await async_update_entity(menuai, ZONE_1_ID)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get(ZONE_1_ID)
+    state = menuai.states.get(ZONE_1_ID)
 
     assert state.attributes[ATTR_MEDIA_VOLUME_LEVEL] == 1.0
     assert state.attributes[ATTR_INPUT_SOURCE] == "three"
 
 
-async def test_failed_update(hass: HomeAssistant) -> None:
+async def test_failed_update(menuai: menuai) -> None:
     """Test updating failure from monoprice."""
     monoprice = MockMonoprice()
-    await _setup_monoprice(hass, monoprice)
+    await _setup_monoprice(menuai, monoprice)
 
     # Changing media player to new state
     await _call_media_player_service(
-        hass, SERVICE_VOLUME_SET, {"entity_id": ZONE_1_ID, "volume_level": 0.0}
+        menuai, SERVICE_VOLUME_SET, {"entity_id": ZONE_1_ID, "volume_level": 0.0}
     )
     await _call_media_player_service(
-        hass, SERVICE_SELECT_SOURCE, {"entity_id": ZONE_1_ID, "source": "one"}
+        menuai, SERVICE_SELECT_SOURCE, {"entity_id": ZONE_1_ID, "source": "one"}
     )
 
     monoprice.set_source(11, 3)
     monoprice.set_volume(11, 38)
 
     with patch.object(MockMonoprice, "zone_status", side_effect=SerialException):
-        await async_update_entity(hass, ZONE_1_ID)
-        await hass.async_block_till_done(wait_background_tasks=True)
+        await async_update_entity(menuai, ZONE_1_ID)
+        await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get(ZONE_1_ID)
+    state = menuai.states.get(ZONE_1_ID)
 
     assert state.attributes[ATTR_MEDIA_VOLUME_LEVEL] == 0.0
     assert state.attributes[ATTR_INPUT_SOURCE] == "one"
 
 
-async def test_empty_update(hass: HomeAssistant) -> None:
+async def test_empty_update(menuai: menuai) -> None:
     """Test updating with no state from monoprice."""
     monoprice = MockMonoprice()
-    await _setup_monoprice(hass, monoprice)
+    await _setup_monoprice(menuai, monoprice)
 
     # Changing media player to new state
     await _call_media_player_service(
-        hass, SERVICE_VOLUME_SET, {"entity_id": ZONE_1_ID, "volume_level": 0.0}
+        menuai, SERVICE_VOLUME_SET, {"entity_id": ZONE_1_ID, "volume_level": 0.0}
     )
     await _call_media_player_service(
-        hass, SERVICE_SELECT_SOURCE, {"entity_id": ZONE_1_ID, "source": "one"}
+        menuai, SERVICE_SELECT_SOURCE, {"entity_id": ZONE_1_ID, "source": "one"}
     )
 
     monoprice.set_source(11, 3)
     monoprice.set_volume(11, 38)
 
     with patch.object(MockMonoprice, "zone_status", return_value=None):
-        await async_update_entity(hass, ZONE_1_ID)
-        await hass.async_block_till_done(wait_background_tasks=True)
+        await async_update_entity(menuai, ZONE_1_ID)
+        await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get(ZONE_1_ID)
+    state = menuai.states.get(ZONE_1_ID)
 
     assert state.attributes[ATTR_MEDIA_VOLUME_LEVEL] == 0.0
     assert state.attributes[ATTR_INPUT_SOURCE] == "one"
 
 
-async def test_supported_features(hass: HomeAssistant) -> None:
+async def test_supported_features(menuai: menuai) -> None:
     """Test supported features property."""
-    await _setup_monoprice(hass, MockMonoprice())
+    await _setup_monoprice(menuai, MockMonoprice())
 
-    state = hass.states.get(ZONE_1_ID)
+    state = menuai.states.get(ZONE_1_ID)
     assert (
         state.attributes["supported_features"]
         == MediaPlayerEntityFeature.VOLUME_MUTE
@@ -374,31 +374,31 @@ async def test_supported_features(hass: HomeAssistant) -> None:
     )
 
 
-async def test_source_list(hass: HomeAssistant) -> None:
+async def test_source_list(menuai: menuai) -> None:
     """Test source list property."""
-    await _setup_monoprice(hass, MockMonoprice())
+    await _setup_monoprice(menuai, MockMonoprice())
 
-    state = hass.states.get(ZONE_1_ID)
+    state = menuai.states.get(ZONE_1_ID)
     # Note, the list is sorted!
     assert state.attributes[ATTR_INPUT_SOURCE_LIST] == ["one", "three"]
 
 
-async def test_source_list_with_options(hass: HomeAssistant) -> None:
+async def test_source_list_with_options(menuai: menuai) -> None:
     """Test source list property."""
-    await _setup_monoprice_with_options(hass, MockMonoprice())
+    await _setup_monoprice_with_options(menuai, MockMonoprice())
 
-    state = hass.states.get(ZONE_1_ID)
+    state = menuai.states.get(ZONE_1_ID)
     # Note, the list is sorted!
     assert state.attributes[ATTR_INPUT_SOURCE_LIST] == ["two", "four"]
 
 
-async def test_select_source(hass: HomeAssistant) -> None:
+async def test_select_source(menuai: menuai) -> None:
     """Test source selection methods."""
     monoprice = MockMonoprice()
-    await _setup_monoprice(hass, monoprice)
+    await _setup_monoprice(menuai, monoprice)
 
     await _call_media_player_service(
-        hass,
+        menuai,
         SERVICE_SELECT_SOURCE,
         {"entity_id": ZONE_1_ID, ATTR_INPUT_SOURCE: "three"},
     )
@@ -406,112 +406,112 @@ async def test_select_source(hass: HomeAssistant) -> None:
 
     # Trying to set unknown source
     await _call_media_player_service(
-        hass,
+        menuai,
         SERVICE_SELECT_SOURCE,
         {"entity_id": ZONE_1_ID, ATTR_INPUT_SOURCE: "no name"},
     )
     assert monoprice.zones[11].source == 3
 
 
-async def test_unknown_source(hass: HomeAssistant) -> None:
+async def test_unknown_source(menuai: menuai) -> None:
     """Test behavior when device has unknown source."""
     monoprice = MockMonoprice()
-    await _setup_monoprice(hass, monoprice)
+    await _setup_monoprice(menuai, monoprice)
 
     monoprice.set_source(11, 5)
 
-    await async_update_entity(hass, ZONE_1_ID)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await async_update_entity(menuai, ZONE_1_ID)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get(ZONE_1_ID)
+    state = menuai.states.get(ZONE_1_ID)
 
     assert state.attributes.get(ATTR_INPUT_SOURCE) is None
 
 
-async def test_turn_on_off(hass: HomeAssistant) -> None:
+async def test_turn_on_off(menuai: menuai) -> None:
     """Test turning on the zone."""
     monoprice = MockMonoprice()
-    await _setup_monoprice(hass, monoprice)
+    await _setup_monoprice(menuai, monoprice)
 
-    await _call_media_player_service(hass, SERVICE_TURN_OFF, {"entity_id": ZONE_1_ID})
+    await _call_media_player_service(menuai, SERVICE_TURN_OFF, {"entity_id": ZONE_1_ID})
     assert not monoprice.zones[11].power
 
-    await _call_media_player_service(hass, SERVICE_TURN_ON, {"entity_id": ZONE_1_ID})
+    await _call_media_player_service(menuai, SERVICE_TURN_ON, {"entity_id": ZONE_1_ID})
     assert monoprice.zones[11].power
 
 
-async def test_mute_volume(hass: HomeAssistant) -> None:
+async def test_mute_volume(menuai: menuai) -> None:
     """Test mute functionality."""
     monoprice = MockMonoprice()
-    await _setup_monoprice(hass, monoprice)
+    await _setup_monoprice(menuai, monoprice)
 
     await _call_media_player_service(
-        hass, SERVICE_VOLUME_SET, {"entity_id": ZONE_1_ID, "volume_level": 0.5}
+        menuai, SERVICE_VOLUME_SET, {"entity_id": ZONE_1_ID, "volume_level": 0.5}
     )
     await _call_media_player_service(
-        hass, SERVICE_VOLUME_MUTE, {"entity_id": ZONE_1_ID, "is_volume_muted": False}
+        menuai, SERVICE_VOLUME_MUTE, {"entity_id": ZONE_1_ID, "is_volume_muted": False}
     )
     assert not monoprice.zones[11].mute
 
     await _call_media_player_service(
-        hass, SERVICE_VOLUME_MUTE, {"entity_id": ZONE_1_ID, "is_volume_muted": True}
+        menuai, SERVICE_VOLUME_MUTE, {"entity_id": ZONE_1_ID, "is_volume_muted": True}
     )
     assert monoprice.zones[11].mute
 
 
-async def test_volume_up_down(hass: HomeAssistant) -> None:
+async def test_volume_up_down(menuai: menuai) -> None:
     """Test increasing volume by one."""
     monoprice = MockMonoprice()
-    await _setup_monoprice(hass, monoprice)
+    await _setup_monoprice(menuai, monoprice)
 
     await _call_media_player_service(
-        hass, SERVICE_VOLUME_SET, {"entity_id": ZONE_1_ID, "volume_level": 0.0}
+        menuai, SERVICE_VOLUME_SET, {"entity_id": ZONE_1_ID, "volume_level": 0.0}
     )
     assert monoprice.zones[11].volume == 0
 
     await _call_media_player_service(
-        hass, SERVICE_VOLUME_DOWN, {"entity_id": ZONE_1_ID}
+        menuai, SERVICE_VOLUME_DOWN, {"entity_id": ZONE_1_ID}
     )
     # should not go below zero
     assert monoprice.zones[11].volume == 0
 
-    await _call_media_player_service(hass, SERVICE_VOLUME_UP, {"entity_id": ZONE_1_ID})
+    await _call_media_player_service(menuai, SERVICE_VOLUME_UP, {"entity_id": ZONE_1_ID})
     assert monoprice.zones[11].volume == 1
 
     await _call_media_player_service(
-        hass, SERVICE_VOLUME_SET, {"entity_id": ZONE_1_ID, "volume_level": 1.0}
+        menuai, SERVICE_VOLUME_SET, {"entity_id": ZONE_1_ID, "volume_level": 1.0}
     )
     assert monoprice.zones[11].volume == 38
 
-    await _call_media_player_service(hass, SERVICE_VOLUME_UP, {"entity_id": ZONE_1_ID})
+    await _call_media_player_service(menuai, SERVICE_VOLUME_UP, {"entity_id": ZONE_1_ID})
     # should not go above 38
     assert monoprice.zones[11].volume == 38
 
     await _call_media_player_service(
-        hass, SERVICE_VOLUME_DOWN, {"entity_id": ZONE_1_ID}
+        menuai, SERVICE_VOLUME_DOWN, {"entity_id": ZONE_1_ID}
     )
     assert monoprice.zones[11].volume == 37
 
 
 async def test_first_run_with_available_zones(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test first run with all zones available."""
     monoprice = MockMonoprice()
-    await _setup_monoprice(hass, monoprice)
+    await _setup_monoprice(menuai, monoprice)
 
     entry = entity_registry.async_get(ZONE_7_ID)
     assert not entry.disabled
 
 
 async def test_first_run_with_failing_zones(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test first run with failed zones."""
     monoprice = MockMonoprice()
 
     with patch.object(MockMonoprice, "zone_status", side_effect=SerialException):
-        await _setup_monoprice(hass, monoprice)
+        await _setup_monoprice(menuai, monoprice)
 
     entry = entity_registry.async_get(ZONE_1_ID)
     assert not entry.disabled
@@ -522,13 +522,13 @@ async def test_first_run_with_failing_zones(
 
 
 async def test_not_first_run_with_failing_zone(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test first run with failed zones."""
     monoprice = MockMonoprice()
 
     with patch.object(MockMonoprice, "zone_status", side_effect=SerialException):
-        await _setup_monoprice_not_first_run(hass, monoprice)
+        await _setup_monoprice_not_first_run(menuai, monoprice)
 
     entry = entity_registry.async_get(ZONE_1_ID)
     assert not entry.disabled

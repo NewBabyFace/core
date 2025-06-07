@@ -10,7 +10,7 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 from voluptuous import MultipleInvalid
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_FAN_MODE,
     ATTR_HVAC_MODE,
     ATTR_SWING_HORIZONTAL_MODE,
@@ -25,7 +25,7 @@ from homeassistant.components.climate import (
     SERVICE_SET_TEMPERATURE,
     HVACMode,
 )
-from homeassistant.components.sensibo.climate import (
+from menuai.components.sensibo.climate import (
     ATTR_AC_INTEGRATION,
     ATTR_GEO_INTEGRATION,
     ATTR_HIGH_TEMPERATURE_STATE,
@@ -48,9 +48,9 @@ from homeassistant.components.sensibo.climate import (
     SERVICE_GET_DEVICE_CAPABILITIES,
     _find_valid_target_temp,
 )
-from homeassistant.components.sensibo.const import DOMAIN
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.components.sensibo.const import DOMAIN
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_MODE,
     ATTR_STATE,
@@ -62,10 +62,10 @@ from homeassistant.const import (
     STATE_UNKNOWN,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import entity_registry as er
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers import entity_registry as er
+from menuai.util import dt as dt_util
 
 from tests.common import async_fire_time_changed, snapshot_platform
 
@@ -90,7 +90,7 @@ async def test_climate_find_valid_targets() -> None:
     [[Platform.CLIMATE]],
 )
 async def test_climate(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     load_int: ConfigEntry,
     entity_registry: er.EntityRegistry,
@@ -98,7 +98,7 @@ async def test_climate(
 ) -> None:
     """Test the Sensibo climate."""
 
-    await snapshot_platform(hass, entity_registry, snapshot, load_int.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, load_int.entry_id)
 
     logs = caplog.get_records("setup")
 
@@ -108,14 +108,14 @@ async def test_climate(
 
 
 async def test_climate_fan(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
     mock_client: MagicMock,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test the Sensibo climate fan service."""
 
-    state = hass.states.get("climate.hallway")
+    state = menuai.states.get("climate.hallway")
     assert state.attributes["fan_mode"] == "high"
 
     mock_client.async_get_devices_data.return_value.parsed["ABC999111"].fan_modes = [
@@ -134,10 +134,10 @@ async def test_climate_fan(
     }
 
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match="Climate fan mode not_in_ha is not supported by the integration",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             CLIMATE_DOMAIN,
             SERVICE_SET_FAN_MODE,
             {ATTR_ENTITY_ID: state.entity_id, ATTR_FAN_MODE: "not_in_ha"},
@@ -148,14 +148,14 @@ async def test_climate_fan(
         "result": {"status": "Success"}
     }
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_FAN_MODE,
         {ATTR_ENTITY_ID: state.entity_id, ATTR_FAN_MODE: "low"},
         blocking=True,
     )
 
-    state = hass.states.get("climate.hallway")
+    state = menuai.states.get("climate.hallway")
     assert state.attributes["fan_mode"] == "low"
 
     mock_client.async_get_devices_data.return_value.parsed[
@@ -171,30 +171,30 @@ async def test_climate_fan(
     ]
 
     freezer.tick(timedelta(minutes=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    with pytest.raises(HomeAssistantError, match="service_not_supported"):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match="service_not_supported"):
+        await menuai.services.async_call(
             CLIMATE_DOMAIN,
             SERVICE_SET_FAN_MODE,
             {ATTR_ENTITY_ID: state.entity_id, ATTR_FAN_MODE: "low"},
             blocking=True,
         )
 
-    state = hass.states.get("climate.hallway")
+    state = menuai.states.get("climate.hallway")
     assert "fan_mode" not in state.attributes
 
 
 async def test_climate_swing(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
     mock_client: MagicMock,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test the Sensibo climate swing service."""
 
-    state = hass.states.get("climate.hallway")
+    state = menuai.states.get("climate.hallway")
     assert state.attributes["swing_mode"] == "stopped"
 
     mock_client.async_get_devices_data.return_value.parsed["ABC999111"].swing_modes = [
@@ -213,14 +213,14 @@ async def test_climate_swing(
     }
 
     freezer.tick(timedelta(minutes=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match="Climate swing mode not_in_ha is not supported by the integration",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             CLIMATE_DOMAIN,
             SERVICE_SET_SWING_MODE,
             {ATTR_ENTITY_ID: state.entity_id, ATTR_SWING_MODE: "not_in_ha"},
@@ -231,14 +231,14 @@ async def test_climate_swing(
         "result": {"status": "Success"}
     }
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_SWING_MODE,
         {ATTR_ENTITY_ID: state.entity_id, ATTR_SWING_MODE: "fixedtop"},
         blocking=True,
     )
 
-    state = hass.states.get("climate.hallway")
+    state = menuai.states.get("climate.hallway")
     assert state.attributes["swing_mode"] == "fixedtop"
 
     mock_client.async_get_devices_data.return_value.parsed[
@@ -252,30 +252,30 @@ async def test_climate_swing(
         "light",
     ]
     freezer.tick(timedelta(minutes=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    with pytest.raises(HomeAssistantError, match="service_not_supported"):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match="service_not_supported"):
+        await menuai.services.async_call(
             CLIMATE_DOMAIN,
             SERVICE_SET_SWING_MODE,
             {ATTR_ENTITY_ID: state.entity_id, ATTR_SWING_MODE: "fixedtop"},
             blocking=True,
         )
 
-    state = hass.states.get("climate.hallway")
+    state = menuai.states.get("climate.hallway")
     assert "swing_mode" not in state.attributes
 
 
 async def test_climate_horizontal_swing(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
     mock_client: MagicMock,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test the Sensibo climate horizontal swing service."""
 
-    state = hass.states.get("climate.hallway")
+    state = menuai.states.get("climate.hallway")
     assert state.attributes["swing_horizontal_mode"] == "stopped"
 
     mock_client.async_get_devices_data.return_value.parsed[
@@ -298,14 +298,14 @@ async def test_climate_horizontal_swing(
     }
 
     freezer.tick(timedelta(minutes=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match="Climate horizontal swing mode not_in_ha is not supported by the integration",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             CLIMATE_DOMAIN,
             SERVICE_SET_SWING_HORIZONTAL_MODE,
             {ATTR_ENTITY_ID: state.entity_id, ATTR_SWING_HORIZONTAL_MODE: "not_in_ha"},
@@ -316,14 +316,14 @@ async def test_climate_horizontal_swing(
         "result": {"status": "Success"}
     }
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_SWING_HORIZONTAL_MODE,
         {ATTR_ENTITY_ID: state.entity_id, ATTR_SWING_HORIZONTAL_MODE: "fixedleft"},
         blocking=True,
     )
 
-    state = hass.states.get("climate.hallway")
+    state = menuai.states.get("climate.hallway")
     assert state.attributes["swing_horizontal_mode"] == "fixedleft"
 
     mock_client.async_get_devices_data.return_value.parsed[
@@ -338,11 +338,11 @@ async def test_climate_horizontal_swing(
     ]
 
     freezer.tick(timedelta(minutes=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    with pytest.raises(HomeAssistantError, match="service_not_supported"):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match="service_not_supported"):
+        await menuai.services.async_call(
             CLIMATE_DOMAIN,
             SERVICE_SET_SWING_HORIZONTAL_MODE,
             {
@@ -352,38 +352,38 @@ async def test_climate_horizontal_swing(
             blocking=True,
         )
 
-    state = hass.states.get("climate.hallway")
+    state = menuai.states.get("climate.hallway")
     assert "swing_horizontal_mode" not in state.attributes
 
 
 async def test_climate_temperatures(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
     mock_client: MagicMock,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test the Sensibo climate temperature service."""
 
-    state = hass.states.get("climate.hallway")
+    state = menuai.states.get("climate.hallway")
     assert state.attributes["temperature"] == 25
 
     mock_client.async_set_ac_state_property.return_value = {
         "result": {"status": "Success"}
     }
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_TEMPERATURE,
         {ATTR_ENTITY_ID: state.entity_id, ATTR_TEMPERATURE: 20},
         blocking=True,
     )
 
-    state = hass.states.get("climate.hallway")
+    state = menuai.states.get("climate.hallway")
     assert state.attributes["temperature"] == 20
 
     mock_client.async_set_ac_state_property.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_TEMPERATURE,
         {ATTR_ENTITY_ID: state.entity_id, ATTR_TEMPERATURE: 20},
@@ -395,59 +395,59 @@ async def test_climate_temperatures(
         "result": {"status": "Success"}
     }
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_TEMPERATURE,
         {ATTR_ENTITY_ID: state.entity_id, ATTR_TEMPERATURE: 15},
         blocking=True,
     )
 
-    state = hass.states.get("climate.hallway")
+    state = menuai.states.get("climate.hallway")
     assert state.attributes["temperature"] == 16
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_TEMPERATURE,
         {ATTR_ENTITY_ID: state.entity_id, ATTR_TEMPERATURE: 18.5},
         blocking=True,
     )
 
-    state2 = hass.states.get("climate.hallway")
+    state2 = menuai.states.get("climate.hallway")
     assert state2.attributes["temperature"] == 19
 
     with pytest.raises(
         ServiceValidationError,
         match="Provided temperature 24.0 is not valid. Accepted range is 10 to 20",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             CLIMATE_DOMAIN,
             SERVICE_SET_TEMPERATURE,
             {ATTR_ENTITY_ID: state.entity_id, ATTR_TEMPERATURE: 24},
             blocking=True,
         )
 
-    state = hass.states.get("climate.hallway")
+    state = menuai.states.get("climate.hallway")
     assert state.attributes["temperature"] == 19
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_TEMPERATURE,
         {ATTR_ENTITY_ID: state.entity_id, ATTR_TEMPERATURE: 20},
         blocking=True,
     )
 
-    state = hass.states.get("climate.hallway")
+    state = menuai.states.get("climate.hallway")
     assert state.attributes["temperature"] == 20
 
     with pytest.raises(MultipleInvalid):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             CLIMATE_DOMAIN,
             SERVICE_SET_TEMPERATURE,
             {ATTR_ENTITY_ID: state.entity_id},
             blocking=True,
         )
 
-    state = hass.states.get("climate.hallway")
+    state = menuai.states.get("climate.hallway")
     assert state.attributes["temperature"] == 20
 
     mock_client.async_get_devices_data.return_value.parsed[
@@ -462,23 +462,23 @@ async def test_climate_temperatures(
     ]
 
     freezer.tick(timedelta(minutes=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    with pytest.raises(HomeAssistantError, match="service_not_supported"):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match="service_not_supported"):
+        await menuai.services.async_call(
             CLIMATE_DOMAIN,
             SERVICE_SET_TEMPERATURE,
             {ATTR_ENTITY_ID: state.entity_id, ATTR_TEMPERATURE: 20},
             blocking=True,
         )
 
-    state = hass.states.get("climate.hallway")
+    state = menuai.states.get("climate.hallway")
     assert "temperature" not in state.attributes
 
 
 async def test_climate_temperature_is_none(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
     mock_client: MagicMock,
     freezer: FrozenDateTimeFactory,
@@ -500,14 +500,14 @@ async def test_climate_temperature_is_none(
     mock_client.async_get_devices_data.return_value.parsed["ABC999111"].target_temp = 25
 
     freezer.tick(timedelta(minutes=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("climate.hallway")
+    state = menuai.states.get("climate.hallway")
     assert state.attributes["temperature"] == 25
 
     with pytest.raises(ServiceValidationError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             CLIMATE_DOMAIN,
             SERVICE_SET_TEMPERATURE,
             {
@@ -518,12 +518,12 @@ async def test_climate_temperature_is_none(
             blocking=True,
         )
 
-    state = hass.states.get("climate.hallway")
+    state = menuai.states.get("climate.hallway")
     assert state.attributes["temperature"] == 25
 
 
 async def test_climate_hvac_mode(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
     mock_client: MagicMock,
     freezer: FrozenDateTimeFactory,
@@ -544,24 +544,24 @@ async def test_climate_hvac_mode(
     ]
 
     freezer.tick(timedelta(minutes=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("climate.hallway")
+    state = menuai.states.get("climate.hallway")
     assert state.state == HVACMode.HEAT
 
     mock_client.async_set_ac_state_property.return_value = {
         "result": {"status": "Success"}
     }
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {ATTR_ENTITY_ID: state.entity_id, ATTR_HVAC_MODE: "off"},
         blocking=True,
     )
 
-    state = hass.states.get("climate.hallway")
+    state = menuai.states.get("climate.hallway")
     assert state.state == HVACMode.OFF
 
     mock_client.async_get_devices_data.return_value.parsed[
@@ -569,22 +569,22 @@ async def test_climate_hvac_mode(
     ].device_on = False
 
     freezer.tick(timedelta(minutes=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_SET_HVAC_MODE,
         {ATTR_ENTITY_ID: state.entity_id, ATTR_HVAC_MODE: "heat"},
         blocking=True,
     )
 
-    state = hass.states.get("climate.hallway")
+    state = menuai.states.get("climate.hallway")
     assert state.state == HVACMode.HEAT
 
 
 async def test_climate_on_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
     mock_client: MagicMock,
     freezer: FrozenDateTimeFactory,
@@ -597,39 +597,39 @@ async def test_climate_on_off(
     mock_client.async_get_devices_data.return_value.parsed["ABC999111"].device_on = True
 
     freezer.tick(timedelta(minutes=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("climate.hallway")
+    state = menuai.states.get("climate.hallway")
     assert state.state == HVACMode.HEAT
 
     mock_client.async_set_ac_state_property.return_value = {
         "result": {"status": "Success"}
     }
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: state.entity_id},
         blocking=True,
     )
 
-    state = hass.states.get("climate.hallway")
+    state = menuai.states.get("climate.hallway")
     assert state.state == HVACMode.OFF
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: state.entity_id},
         blocking=True,
     )
 
-    state = hass.states.get("climate.hallway")
+    state = menuai.states.get("climate.hallway")
     assert state.state == HVACMode.HEAT
 
 
 async def test_climate_service_failed(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
     mock_client: MagicMock,
     freezer: FrozenDateTimeFactory,
@@ -642,30 +642,30 @@ async def test_climate_service_failed(
     mock_client.async_get_devices_data.return_value.parsed["ABC999111"].device_on = True
 
     freezer.tick(timedelta(minutes=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("climate.hallway")
+    state = menuai.states.get("climate.hallway")
     assert state.state == HVACMode.HEAT
 
     mock_client.async_set_ac_state_property.return_value = {
         "result": {"status": "Error", "failureReason": "Did not work"}
     }
 
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             CLIMATE_DOMAIN,
             SERVICE_TURN_OFF,
             {ATTR_ENTITY_ID: state.entity_id},
             blocking=True,
         )
 
-    state = hass.states.get("climate.hallway")
+    state = menuai.states.get("climate.hallway")
     assert state.state == HVACMode.HEAT
 
 
 async def test_climate_assumed_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
     mock_client: MagicMock,
     freezer: FrozenDateTimeFactory,
@@ -678,36 +678,36 @@ async def test_climate_assumed_state(
     mock_client.async_get_devices_data.return_value.parsed["ABC999111"].device_on = True
 
     freezer.tick(timedelta(minutes=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("climate.hallway")
+    state = menuai.states.get("climate.hallway")
     assert state.state == HVACMode.HEAT
 
     mock_client.async_set_ac_state_property.return_value = {
         "result": {"status": "Success"}
     }
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_ASSUME_STATE,
         {ATTR_ENTITY_ID: state.entity_id, ATTR_STATE: "off"},
         blocking=True,
     )
 
-    state = hass.states.get("climate.hallway")
+    state = menuai.states.get("climate.hallway")
     assert state.state == HVACMode.OFF
 
 
 async def test_climate_no_fan_no_swing(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
     mock_client: MagicMock,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test the Sensibo climate fan."""
 
-    state = hass.states.get("climate.hallway")
+    state = menuai.states.get("climate.hallway")
     assert state.attributes["fan_mode"] == "high"
     assert state.attributes["swing_mode"] == "stopped"
 
@@ -721,10 +721,10 @@ async def test_climate_no_fan_no_swing(
     ].swing_modes = None
 
     freezer.tick(timedelta(minutes=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("climate.hallway")
+    state = menuai.states.get("climate.hallway")
     assert state.attributes["fan_mode"] is None
     assert state.attributes["swing_mode"] is None
     assert state.attributes["fan_modes"] is None
@@ -733,7 +733,7 @@ async def test_climate_no_fan_no_swing(
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_climate_set_timer(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
     mock_client: MagicMock,
     freezer: FrozenDateTimeFactory,
@@ -741,16 +741,16 @@ async def test_climate_set_timer(
     """Test the Sensibo climate Set Timer service."""
 
     freezer.tick(timedelta(minutes=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("climate.hallway")
-    assert hass.states.get("sensor.hallway_timer_end_time").state == STATE_UNKNOWN
+    state = menuai.states.get("climate.hallway")
+    assert menuai.states.get("sensor.hallway_timer_end_time").state == STATE_UNKNOWN
 
     mock_client.async_set_timer.return_value = {"status": "failure"}
 
     with pytest.raises(MultipleInvalid):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_ENABLE_TIMER,
             {
@@ -759,8 +759,8 @@ async def test_climate_set_timer(
             blocking=True,
         )
 
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_ENABLE_TIMER,
             {
@@ -775,7 +775,7 @@ async def test_climate_set_timer(
         "result": {"id": "SzTGE4oZ4D"},
     }
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_ENABLE_TIMER,
         {
@@ -797,18 +797,18 @@ async def test_climate_set_timer(
     ].timer_time = datetime(2022, 6, 6, 12, 00, 00, tzinfo=dt_util.UTC)
 
     freezer.tick(timedelta(minutes=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     assert (
-        hass.states.get("sensor.hallway_timer_end_time").state
+        menuai.states.get("sensor.hallway_timer_end_time").state
         == "2022-06-06T12:00:00+00:00"
     )
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_climate_pure_boost(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
     mock_client: MagicMock,
     freezer: FrozenDateTimeFactory,
@@ -816,17 +816,17 @@ async def test_climate_pure_boost(
     """Test the Sensibo climate pure boost service."""
 
     freezer.tick(timedelta(minutes=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("climate.kitchen")
-    state2 = hass.states.get("switch.kitchen_pure_boost")
+    state = menuai.states.get("climate.kitchen")
+    state2 = menuai.states.get("switch.kitchen_pure_boost")
     assert state2.state == STATE_OFF
 
     with pytest.raises(
         MultipleInvalid,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_ENABLE_PURE_BOOST,
             {
@@ -850,7 +850,7 @@ async def test_climate_pure_boost(
         },
     }
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_ENABLE_PURE_BOOST,
         {
@@ -878,28 +878,28 @@ async def test_climate_pure_boost(
     ].pure_prime_integration = True
 
     freezer.tick(timedelta(minutes=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("switch.kitchen_pure_boost").state == STATE_ON
+    assert menuai.states.get("switch.kitchen_pure_boost").state == STATE_ON
     assert (
-        hass.states.get(
+        menuai.states.get(
             "binary_sensor.kitchen_pure_boost_linked_with_indoor_air_quality"
         ).state
         == STATE_ON
     )
     assert (
-        hass.states.get(
+        menuai.states.get(
             "binary_sensor.kitchen_pure_boost_linked_with_outdoor_air_quality"
         ).state
         == STATE_ON
     )
-    assert hass.states.get("sensor.kitchen_pure_sensitivity").state == "s"
+    assert menuai.states.get("sensor.kitchen_pure_sensitivity").state == "s"
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_climate_climate_react(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
     mock_client: MagicMock,
     freezer: FrozenDateTimeFactory,
@@ -907,15 +907,15 @@ async def test_climate_climate_react(
     """Test the Sensibo climate react custom service."""
 
     freezer.tick(timedelta(minutes=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state_climate = hass.states.get("climate.hallway")
+    state_climate = menuai.states.get("climate.hallway")
 
     with pytest.raises(
         MultipleInvalid,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_ENABLE_PURE_BOOST,
             {
@@ -958,7 +958,7 @@ async def test_climate_climate_react(
         },
     }
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_ENABLE_CLIMATE_REACT,
         {
@@ -1026,24 +1026,24 @@ async def test_climate_climate_react(
     }
 
     freezer.tick(timedelta(minutes=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("switch.hallway_climate_react").state == STATE_ON
+    assert menuai.states.get("switch.hallway_climate_react").state == STATE_ON
     assert (
-        hass.states.get("sensor.hallway_climate_react_low_temperature_threshold").state
+        menuai.states.get("sensor.hallway_climate_react_low_temperature_threshold").state
         == "5.5"
     )
     assert (
-        hass.states.get("sensor.hallway_climate_react_high_temperature_threshold").state
+        menuai.states.get("sensor.hallway_climate_react_high_temperature_threshold").state
         == "30.5"
     )
-    assert hass.states.get("sensor.hallway_climate_react_type").state == "feelslike"
+    assert menuai.states.get("sensor.hallway_climate_react_type").state == "feelslike"
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_climate_climate_react_fahrenheit(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
     mock_client: MagicMock,
     freezer: FrozenDateTimeFactory,
@@ -1051,10 +1051,10 @@ async def test_climate_climate_react_fahrenheit(
     """Test the Sensibo climate react custom service with fahrenheit."""
 
     freezer.tick(timedelta(minutes=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("climate.hallway")
+    state = menuai.states.get("climate.hallway")
 
     mock_client.async_set_climate_react.return_value = {
         "status": "success",
@@ -1087,7 +1087,7 @@ async def test_climate_climate_react_fahrenheit(
         },
     }
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_ENABLE_CLIMATE_REACT,
         {
@@ -1155,24 +1155,24 @@ async def test_climate_climate_react_fahrenheit(
     }
 
     freezer.tick(timedelta(minutes=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("switch.hallway_climate_react").state == STATE_ON
+    assert menuai.states.get("switch.hallway_climate_react").state == STATE_ON
     assert (
-        hass.states.get("sensor.hallway_climate_react_low_temperature_threshold").state
+        menuai.states.get("sensor.hallway_climate_react_low_temperature_threshold").state
         == "0"
     )
     assert (
-        hass.states.get("sensor.hallway_climate_react_high_temperature_threshold").state
+        menuai.states.get("sensor.hallway_climate_react_high_temperature_threshold").state
         == "25"
     )
-    assert hass.states.get("sensor.hallway_climate_react_type").state == "temperature"
+    assert menuai.states.get("sensor.hallway_climate_react_type").state == "temperature"
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_climate_full_ac_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
     mock_client: MagicMock,
     freezer: FrozenDateTimeFactory,
@@ -1180,16 +1180,16 @@ async def test_climate_full_ac_state(
     """Test the Sensibo climate Full AC state service."""
 
     freezer.tick(timedelta(minutes=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("climate.hallway")
+    state = menuai.states.get("climate.hallway")
     assert state.state == HVACMode.HEAT
 
     with pytest.raises(
         MultipleInvalid,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_FULL_STATE,
             {
@@ -1201,7 +1201,7 @@ async def test_climate_full_ac_state(
 
     mock_client.async_set_ac_states.return_value = {"result": {"status": "Success"}}
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_FULL_STATE,
         {
@@ -1235,29 +1235,29 @@ async def test_climate_full_ac_state(
     ].light_mode = "on"
 
     freezer.tick(timedelta(minutes=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("climate.hallway")
+    state = menuai.states.get("climate.hallway")
 
     assert state.state == HVACMode.COOL
     assert state.attributes["temperature"] == 22
 
 
 async def test_climate_fan_mode_and_swing_mode_not_supported(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
     mock_client: MagicMock,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test the Sensibo climate fan_mode and swing_mode not supported is raising error."""
 
-    state = hass.states.get("climate.hallway")
+    state = menuai.states.get("climate.hallway")
     assert state.attributes["fan_mode"] == "high"
     assert state.attributes["swing_mode"] == "stopped"
 
     with pytest.raises(ServiceValidationError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             CLIMATE_DOMAIN,
             SERVICE_SET_SWING_MODE,
             {ATTR_ENTITY_ID: state.entity_id, ATTR_SWING_MODE: "faulty_swing_mode"},
@@ -1265,7 +1265,7 @@ async def test_climate_fan_mode_and_swing_mode_not_supported(
         )
 
     with pytest.raises(ServiceValidationError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             CLIMATE_DOMAIN,
             SERVICE_SET_FAN_MODE,
             {ATTR_ENTITY_ID: state.entity_id, ATTR_FAN_MODE: "faulty_fan_mode"},
@@ -1273,16 +1273,16 @@ async def test_climate_fan_mode_and_swing_mode_not_supported(
         )
 
     freezer.tick(timedelta(minutes=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("climate.hallway")
+    state = menuai.states.get("climate.hallway")
     assert state.attributes["fan_mode"] == "high"
     assert state.attributes["swing_mode"] == "stopped"
 
 
 async def test_climate_get_device_capabilities(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: ConfigEntry,
     mock_client: MagicMock,
     freezer: FrozenDateTimeFactory,
@@ -1290,7 +1290,7 @@ async def test_climate_get_device_capabilities(
 ) -> None:
     """Test the Sensibo climate Get device capabilitites service."""
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         DOMAIN,
         SERVICE_GET_DEVICE_CAPABILITIES,
         {ATTR_ENTITY_ID: "climate.hallway", ATTR_HVAC_MODE: "heat"},
@@ -1302,7 +1302,7 @@ async def test_climate_get_device_capabilities(
     with pytest.raises(
         ServiceValidationError, match="The entity does not support the chosen mode"
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_GET_DEVICE_CAPABILITIES,
             {ATTR_ENTITY_ID: "climate.hallway", ATTR_HVAC_MODE: "heat_cool"},

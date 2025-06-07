@@ -24,8 +24,8 @@ from music_assistant_models.media_items import ItemMapping, MediaItemType, Track
 from music_assistant_models.player_queue import PlayerQueue
 import voluptuous as vol
 
-from homeassistant.components import media_source
-from homeassistant.components.media_player import (
+from menuai.components import media_source
+from menuai.components.media_player import (
     ATTR_MEDIA_ENQUEUE,
     ATTR_MEDIA_EXTRA,
     BrowseMedia,
@@ -40,15 +40,15 @@ from homeassistant.components.media_player import (
     SearchMediaQuery,
     async_process_play_media_url,
 )
-from homeassistant.const import ATTR_NAME, STATE_OFF
-from homeassistant.core import HomeAssistant, ServiceResponse, SupportsResponse
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.entity_platform import (
+from menuai.const import ATTR_NAME, STATE_OFF
+from menuai.core import menuai, ServiceResponse, SupportsResponse
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     async_get_current_platform,
 )
-from homeassistant.util.dt import utc_from_timestamp
+from menuai.util.dt import utc_from_timestamp
 
 from . import MusicAssistantConfigEntry
 from .const import (
@@ -129,18 +129,18 @@ def catch_musicassistant_error[_R, **P](
     async def wrapper(
         self: MusicAssistantPlayer, *args: P.args, **kwargs: P.kwargs
     ) -> _R:
-        """Catch Music Assistant errors and convert to Home Assistant error."""
+        """Catch Music Assistant errors and convert to MenuAI error."""
         try:
             return await func(self, *args, **kwargs)
         except MusicAssistantError as err:
             error_msg = str(err) or err.__class__.__name__
-            raise HomeAssistantError(error_msg) from err
+            raise menuaiError(error_msg) from err
 
     return wrapper
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: MusicAssistantConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -229,9 +229,9 @@ class MusicAssistantPlayer(MusicAssistantEntity, MediaPlayerEntity):
         self._prev_time: float = 0
         self._source_list_mapping: dict[str, str] = {}
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         # we subscribe to player queue time update but we only
         # accept a state change on big time jumps (e.g. seeking)
@@ -315,7 +315,7 @@ class MusicAssistantPlayer(MusicAssistantEntity, MediaPlayerEntity):
             group_members = parent.group_childs
 
         # translate MA group_childs to HA group_members as entity id's
-        entity_registry = er.async_get(self.hass)
+        entity_registry = er.async_get(self.menuai)
         group_members_entity_ids: list[str] = [
             entity_id
             for child_id in group_members
@@ -435,10 +435,10 @@ class MusicAssistantPlayer(MusicAssistantEntity, MediaPlayerEntity):
         if media_source.is_media_source_id(media_id):
             # Handle media_source
             sourced_media = await media_source.async_resolve_media(
-                self.hass, media_id, self.entity_id
+                self.menuai, media_id, self.entity_id
             )
             media_id = sourced_media.url
-            media_id = async_process_play_media_url(self.hass, media_id)
+            media_id = async_process_play_media_url(self.menuai, media_id)
 
         if announce:
             await self._async_handle_play_announcement(
@@ -460,11 +460,11 @@ class MusicAssistantPlayer(MusicAssistantEntity, MediaPlayerEntity):
     async def async_join_players(self, group_members: list[str]) -> None:
         """Join `group_members` as a player group with the current player."""
         player_ids: list[str] = []
-        entity_registry = er.async_get(self.hass)
+        entity_registry = er.async_get(self.menuai)
         for child_entity_id in group_members:
             # resolve HA entity_id to MA player_id
             if not (entity_reg_entry := entity_registry.async_get(child_entity_id)):
-                raise HomeAssistantError(f"Entity {child_entity_id} not found")
+                raise menuaiError(f"Entity {child_entity_id} not found")
             # unique id is the MA player_id
             player_ids.append(entity_reg_entry.unique_id)
         await self.mass.players.player_command_group_many(self.player_id, player_ids)
@@ -528,7 +528,7 @@ class MusicAssistantPlayer(MusicAssistantEntity, MediaPlayerEntity):
                 media_uris.append(item.uri)
 
         if not media_uris:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Could not resolve {media_id} to playable media item"
             )
 
@@ -571,14 +571,14 @@ class MusicAssistantPlayer(MusicAssistantEntity, MediaPlayerEntity):
                     source_queue_id = queue.queue_id
                     break
             else:
-                raise HomeAssistantError(
+                raise menuaiError(
                     "Source player not specified and no playing player found."
                 )
         else:
             # resolve HA entity_id to MA player_id
-            entity_registry = er.async_get(self.hass)
+            entity_registry = er.async_get(self.menuai)
             if (entity := entity_registry.async_get(source_player)) is None:
-                raise HomeAssistantError("Source player not available.")
+                raise menuaiError("Source player not available.")
             source_queue_id = entity.unique_id  # unique_id is the MA player_id
         target_queue_id = self.player_id
         await self.mass.player_queues.transfer_queue(
@@ -589,7 +589,7 @@ class MusicAssistantPlayer(MusicAssistantEntity, MediaPlayerEntity):
     async def _async_handle_get_queue(self) -> ServiceResponse:
         """Handle get_queue action."""
         if not self.active_queue:
-            raise HomeAssistantError("No active queue found")
+            raise menuaiError("No active queue found")
         active_queue = self.active_queue
         response: ServiceResponse = QUEUE_DETAILS_SCHEMA(
             {
@@ -618,7 +618,7 @@ class MusicAssistantPlayer(MusicAssistantEntity, MediaPlayerEntity):
     ) -> BrowseMedia:
         """Implement the websocket media browsing helper."""
         return await async_browse_media(
-            self.hass,
+            self.menuai,
             self.mass,
             media_content_id,
             media_content_type,

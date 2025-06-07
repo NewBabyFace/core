@@ -7,14 +7,14 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.alarm_control_panel import (
+from menuai.components.alarm_control_panel import (
     PLATFORM_SCHEMA as ALARM_CONTROL_PANEL_PLATFORM_SCHEMA,
     AlarmControlPanelEntity,
     AlarmControlPanelEntityFeature,
     AlarmControlPanelState,
     CodeFormat,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_ARMING_TIME,
     CONF_CODE,
     CONF_DELAY_TIME,
@@ -23,15 +23,15 @@ from homeassistant.const import (
     CONF_TRIGGER_TIME,
     CONF_UNIQUE_ID,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.event import async_track_point_in_time
-from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.template import Template
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai, callback
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.event import async_track_point_in_time
+from menuai.helpers.restore_state import RestoreEntity
+from menuai.helpers.template import Template
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import dt as dt_util
 
 DOMAIN = "manual"
 
@@ -180,7 +180,7 @@ PLATFORM_SCHEMA = vol.Schema(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -189,7 +189,7 @@ async def async_setup_platform(
     async_add_entities(
         [
             ManualAlarm(
-                hass,
+                menuai,
                 config[CONF_NAME],
                 config.get(CONF_UNIQUE_ID),
                 config.get(CONF_CODE),
@@ -216,7 +216,7 @@ class ManualAlarm(AlarmControlPanelEntity, RestoreEntity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         name: str,
         unique_id: str | None,
         code: str | None,
@@ -227,7 +227,7 @@ class ManualAlarm(AlarmControlPanelEntity, RestoreEntity):
     ) -> None:
         """Init the manual alarm panel."""
         self._state: AlarmControlPanelState = AlarmControlPanelState.DISARMED
-        self._hass = hass
+        self._menuai = menuai
         self._attr_name = name
         self._attr_unique_id = unique_id
         self._code = code_template or code or None
@@ -373,12 +373,12 @@ class ManualAlarm(AlarmControlPanelEntity, RestoreEntity):
         if state == AlarmControlPanelState.TRIGGERED:
             pending_time = self._pending_time(state)
             async_track_point_in_time(
-                self._hass, self.async_scheduled_update, self._state_ts + pending_time
+                self._menuai, self.async_scheduled_update, self._state_ts + pending_time
             )
 
             trigger_time = self._trigger_time_by_state[self._previous_state]
             async_track_point_in_time(
-                self._hass,
+                self._menuai,
                 self.async_scheduled_update,
                 self._state_ts + pending_time + trigger_time,
             )
@@ -386,7 +386,7 @@ class ManualAlarm(AlarmControlPanelEntity, RestoreEntity):
             arming_time = self._arming_time(state)
             if arming_time:
                 async_track_point_in_time(
-                    self._hass,
+                    self._menuai,
                     self.async_scheduled_update,
                     self._state_ts + arming_time,
                 )
@@ -436,9 +436,9 @@ class ManualAlarm(AlarmControlPanelEntity, RestoreEntity):
         """Update state at a scheduled point in time."""
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
-        """Run when entity about to be added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Run when entity about to be added to menuai."""
+        await super().async_added_to_menuai()
         if state := await self.async_get_last_state():
             self._state_ts = state.last_updated
             if next_state := state.attributes.get(ATTR_NEXT_STATE):

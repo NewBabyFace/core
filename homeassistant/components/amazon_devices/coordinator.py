@@ -9,11 +9,11 @@ from aioamazondevices.exceptions import (
     CannotRetrieveData,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_COUNTRY, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryError
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_COUNTRY, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryError
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import _LOGGER, CONF_LOGIN_DATA
 
@@ -29,12 +29,12 @@ class AmazonDevicesCoordinator(DataUpdateCoordinator[dict[str, AmazonDevice]]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entry: AmazonConfigEntry,
     ) -> None:
         """Initialize the scanner."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             name=entry.title,
             config_entry=entry,

@@ -10,16 +10,16 @@ import subprocess
 from PIL import Image
 import voluptuous as vol
 
-from homeassistant.components.image_processing import (
+from menuai.components.image_processing import (
     PLATFORM_SCHEMA as IMAGE_PROCESSING_PLATFORM_SCHEMA,
     ImageProcessingDeviceClass,
     ImageProcessingEntity,
 )
-from homeassistant.const import CONF_ENTITY_ID, CONF_NAME, CONF_SOURCE
-from homeassistant.core import HomeAssistant, split_entity_id
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_ENTITY_ID, CONF_NAME, CONF_SOURCE
+from menuai.core import menuai, split_entity_id
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -51,7 +51,7 @@ PLATFORM_SCHEMA = IMAGE_PROCESSING_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -59,7 +59,7 @@ async def async_setup_platform(
     """Set up the Seven segments OCR platform."""
     async_add_entities(
         ImageProcessingSsocr(
-            hass, camera[CONF_ENTITY_ID], config, camera.get(CONF_NAME)
+            menuai, camera[CONF_ENTITY_ID], config, camera.get(CONF_NAME)
         )
         for camera in config[CONF_SOURCE]
     )
@@ -72,7 +72,7 @@ class ImageProcessingSsocr(ImageProcessingEntity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         camera_entity: str,
         config: ConfigType,
         name: str | None,
@@ -86,7 +86,7 @@ class ImageProcessingSsocr(ImageProcessingEntity):
         self._attr_state = None
 
         self.filepath = os.path.join(
-            hass.config.config_dir,
+            menuai.config.config_dir,
             f"ssocr-{self._attr_name.replace(' ', '_')}.png",
         )
         crop = [

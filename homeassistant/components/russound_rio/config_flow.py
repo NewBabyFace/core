@@ -8,14 +8,14 @@ from typing import Any
 from aiorussound import RussoundClient, RussoundTcpConnectionHandler
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_RECONFIGURE,
     ConfigFlow,
     ConfigFlowResult,
 )
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.const import CONF_HOST, CONF_NAME, CONF_PORT
+from menuai.helpers import config_validation as cv
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import DOMAIN, RUSSOUND_RIO_EXCEPTIONS
 

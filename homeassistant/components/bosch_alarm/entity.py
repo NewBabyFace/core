@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from bosch_alarm_mode2 import Panel
 
-from homeassistant.components.sensor import Entity
-from homeassistant.helpers.device_registry import DeviceInfo
+from menuai.components.sensor import Entity
+from menuai.helpers.device_registry import DeviceInfo
 
 from .const import DOMAIN
 
@@ -35,13 +35,13 @@ class BoschAlarmEntity(Entity):
         """Return True if entity is available."""
         return self.panel.connection_status()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Observe state changes."""
         self.panel.connection_status_observer.attach(self.schedule_update_ha_state)
         if self._observe_faults:
             self.panel.faults_observer.attach(self.schedule_update_ha_state)
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Stop observing state changes."""
         self.panel.connection_status_observer.detach(self.schedule_update_ha_state)
         if self._observe_faults:
@@ -75,9 +75,9 @@ class BoschAlarmAreaEntity(BoschAlarmEntity):
             via_device=(DOMAIN, unique_id),
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Observe state changes."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         if self._observe_alarms:
             self._area.alarm_observer.attach(self.schedule_update_ha_state)
         if self._observe_ready:
@@ -85,9 +85,9 @@ class BoschAlarmAreaEntity(BoschAlarmEntity):
         if self._observe_status:
             self._area.status_observer.attach(self.schedule_update_ha_state)
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Stop observing state changes."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         if self._observe_alarms:
             self._area.alarm_observer.detach(self.schedule_update_ha_state)
         if self._observe_ready:
@@ -112,14 +112,14 @@ class BoschAlarmPointEntity(BoschAlarmEntity):
             via_device=(DOMAIN, unique_id),
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Observe state changes."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self._point.status_observer.attach(self.schedule_update_ha_state)
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Stop observing state changes."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self._point.status_observer.detach(self.schedule_update_ha_state)
 
 
@@ -139,14 +139,14 @@ class BoschAlarmDoorEntity(BoschAlarmEntity):
             via_device=(DOMAIN, unique_id),
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Observe state changes."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self._door.status_observer.attach(self.schedule_update_ha_state)
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Stop observing state changes."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self._door.status_observer.detach(self.schedule_update_ha_state)
 
 
@@ -166,12 +166,12 @@ class BoschAlarmOutputEntity(BoschAlarmEntity):
             via_device=(DOMAIN, unique_id),
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Observe state changes."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self._output.status_observer.attach(self.schedule_update_ha_state)
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Stop observing state changes."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self._output.status_observer.detach(self.schedule_update_ha_state)

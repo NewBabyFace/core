@@ -1,4 +1,4 @@
-"""Tests for pylint hass_enforce_super_call plugin."""
+"""Tests for pylint menuai_enforce_super_call plugin."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ from . import assert_adds_messages, assert_no_messages
         pytest.param(
             """
     class Entity:
-        async def async_added_to_hass(self) -> None:
+        async def async_added_to_menuai(self) -> None:
             pass
     """,
             id="no_parent",
@@ -30,11 +30,11 @@ from . import assert_adds_messages, assert_no_messages
         pytest.param(
             """
     class Entity:
-        async def async_added_to_hass(self) -> None:
+        async def async_added_to_menuai(self) -> None:
             \"\"\"Some docstring.\"\"\"
 
     class Child(Entity):
-        async def async_added_to_hass(self) -> None:
+        async def async_added_to_menuai(self) -> None:
             x = 2
         """,
             id="empty_parent_implementation",
@@ -42,12 +42,12 @@ from . import assert_adds_messages, assert_no_messages
         pytest.param(
             """
     class Entity:
-        async def async_added_to_hass(self) -> None:
+        async def async_added_to_menuai(self) -> None:
             \"\"\"Some docstring.\"\"\"
             pass
 
     class Child(Entity):
-        async def async_added_to_hass(self) -> None:
+        async def async_added_to_menuai(self) -> None:
             x = 2
         """,
             id="empty_parent_implementation2",
@@ -55,58 +55,58 @@ from . import assert_adds_messages, assert_no_messages
         pytest.param(
             """
     class Entity:
-        async def async_added_to_hass(self) -> None:
+        async def async_added_to_menuai(self) -> None:
             x = 2
 
     class Child(Entity):
-        async def async_added_to_hass(self) -> None:
-            await super().async_added_to_hass()
+        async def async_added_to_menuai(self) -> None:
+            await super().async_added_to_menuai()
         """,
             id="correct_super_call",
         ),
         pytest.param(
             """
     class Entity:
-        async def async_added_to_hass(self) -> None:
+        async def async_added_to_menuai(self) -> None:
             x = 2
 
     class Child(Entity):
-        async def async_added_to_hass(self) -> None:
-            return await super().async_added_to_hass()
+        async def async_added_to_menuai(self) -> None:
+            return await super().async_added_to_menuai()
         """,
             id="super_call_in_return",
         ),
         pytest.param(
             """
     class Entity:
-        def added_to_hass(self) -> None:
+        def added_to_menuai(self) -> None:
             x = 2
 
     class Child(Entity):
-        def added_to_hass(self) -> None:
-            super().added_to_hass()
+        def added_to_menuai(self) -> None:
+            super().added_to_menuai()
         """,
             id="super_call_not_async",
         ),
         pytest.param(
             """
     class Entity:
-        async def async_added_to_hass(self) -> None:
+        async def async_added_to_menuai(self) -> None:
             \"\"\"\"\"\"
 
     class Coordinator:
-        async def async_added_to_hass(self) -> None:
+        async def async_added_to_menuai(self) -> None:
             x = 2
 
     class Child(Entity, Coordinator):
-        async def async_added_to_hass(self) -> None:
-            await super().async_added_to_hass()
+        async def async_added_to_menuai(self) -> None:
+            await super().async_added_to_menuai()
         """,
             id="multiple_inheritance",
         ),
         pytest.param(
             """
-        async def async_added_to_hass() -> None:
+        async def async_added_to_menuai() -> None:
             x = 2
         """,
             id="not_a_method",
@@ -115,20 +115,20 @@ from . import assert_adds_messages, assert_no_messages
 )
 def test_enforce_super_call(
     linter: UnittestLinter,
-    hass_enforce_super_call: ModuleType,
+    menuai_enforce_super_call: ModuleType,
     super_call_checker: BaseChecker,
     code: str,
 ) -> None:
     """Good test cases."""
-    root_node = astroid.parse(code, "homeassistant.components.pylint_test")
+    root_node = astroid.parse(code, "menuai.components.pylint_test")
     walker = ASTWalker(linter)
     walker.add_checker(super_call_checker)
 
     with (
         patch.object(
-            hass_enforce_super_call,
+            menuai_enforce_super_call,
             "METHODS",
-            new={"added_to_hass", "async_added_to_hass"},
+            new={"added_to_menuai", "async_added_to_menuai"},
         ),
         assert_no_messages(linter),
     ):
@@ -141,11 +141,11 @@ def test_enforce_super_call(
         pytest.param(
             """
     class Entity:
-        def added_to_hass(self) -> None:
+        def added_to_menuai(self) -> None:
             x = 2
 
     class Child(Entity):
-        def added_to_hass(self) -> None:
+        def added_to_menuai(self) -> None:
             x = 3
     """,
             1,
@@ -154,11 +154,11 @@ def test_enforce_super_call(
         pytest.param(
             """
     class Entity:
-        async def async_added_to_hass(self) -> None:
+        async def async_added_to_menuai(self) -> None:
             x = 2
 
     class Child(Entity):
-        async def async_added_to_hass(self) -> None:
+        async def async_added_to_menuai(self) -> None:
             x = 3
     """,
             1,
@@ -167,12 +167,12 @@ def test_enforce_super_call(
         pytest.param(
             """
     class Entity:
-        async def async_added_to_hass(self) -> None:
+        async def async_added_to_menuai(self) -> None:
             x = 2
 
     class Child(Entity):
-        async def async_added_to_hass(self) -> None:
-            await Entity.async_added_to_hass()
+        async def async_added_to_menuai(self) -> None:
+            await Entity.async_added_to_menuai()
     """,
             1,
             id="explicit_call_to_base_implementation",
@@ -180,15 +180,15 @@ def test_enforce_super_call(
         pytest.param(
             """
     class Entity:
-        async def async_added_to_hass(self) -> None:
+        async def async_added_to_menuai(self) -> None:
             \"\"\"\"\"\"
 
     class Coordinator:
-        async def async_added_to_hass(self) -> None:
+        async def async_added_to_menuai(self) -> None:
             x = 2
 
     class Child(Entity, Coordinator):
-        async def async_added_to_hass(self) -> None:
+        async def async_added_to_menuai(self) -> None:
             x = 3
     """,
             2,
@@ -198,27 +198,27 @@ def test_enforce_super_call(
 )
 def test_enforce_super_call_bad(
     linter: UnittestLinter,
-    hass_enforce_super_call: ModuleType,
+    menuai_enforce_super_call: ModuleType,
     super_call_checker: BaseChecker,
     code: str,
     node_idx: int,
 ) -> None:
     """Bad test cases."""
-    root_node = astroid.parse(code, "homeassistant.components.pylint_test")
+    root_node = astroid.parse(code, "menuai.components.pylint_test")
     walker = ASTWalker(linter)
     walker.add_checker(super_call_checker)
     node = root_node.body[node_idx].body[0]
 
     with (
         patch.object(
-            hass_enforce_super_call,
+            menuai_enforce_super_call,
             "METHODS",
-            new={"added_to_hass", "async_added_to_hass"},
+            new={"added_to_menuai", "async_added_to_menuai"},
         ),
         assert_adds_messages(
             linter,
             MessageTest(
-                msg_id="hass-missing-super-call",
+                msg_id="menuai-missing-super-call",
                 node=node,
                 line=node.lineno,
                 args=(node.name,),

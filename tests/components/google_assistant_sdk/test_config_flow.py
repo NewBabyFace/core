@@ -4,11 +4,11 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.google_assistant_sdk.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import config_entry_oauth2_flow
+from menuai import config_entries
+from menuai.components.google_assistant_sdk.const import DOMAIN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers import config_entry_oauth2_flow
 
 from .conftest import CLIENT_ID, ComponentSetup
 
@@ -23,17 +23,17 @@ TITLE = "Google Assistant SDK"
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_full_flow(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     setup_credentials,
 ) -> None:
     """Check full flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "google_assistant_sdk", context={"source": config_entries.SOURCE_USER}
     )
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
@@ -47,7 +47,7 @@ async def test_full_flow(
         "&access_type=offline&prompt=consent"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == 200
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
@@ -63,12 +63,12 @@ async def test_full_flow(
     )
 
     with patch(
-        "homeassistant.components.google_assistant_sdk.async_setup_entry",
+        "menuai.components.google_assistant_sdk.async_setup_entry",
         return_value=True,
     ) as mock_setup:
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
     assert len(mock_setup.mock_calls) == 1
 
     assert result.get("type") is FlowResultType.CREATE_ENTRY
@@ -84,8 +84,8 @@ async def test_full_flow(
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_reauth(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     setup_credentials,
 ) -> None:
@@ -99,19 +99,19 @@ async def test_reauth(
             },
         },
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    config_entry.async_start_reauth(hass)
-    await hass.async_block_till_done()
+    config_entry.async_start_reauth(menuai)
+    await menuai.async_block_till_done()
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
     result = flows[0]
     assert result["step_id"] == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
@@ -123,7 +123,7 @@ async def test_reauth(
         f"&state={state}&scope=https://www.googleapis.com/auth/assistant-sdk-prototype"
         "&access_type=offline&prompt=consent"
     )
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == 200
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
@@ -139,12 +139,12 @@ async def test_reauth(
     )
 
     with patch(
-        "homeassistant.components.google_assistant_sdk.async_setup_entry",
+        "menuai.components.google_assistant_sdk.async_setup_entry",
         return_value=True,
     ) as mock_setup:
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
     assert len(mock_setup.mock_calls) == 1
 
     assert result.get("type") is FlowResultType.ABORT
@@ -159,8 +159,8 @@ async def test_reauth(
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_single_instance_allowed(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     setup_credentials,
 ) -> None:
@@ -173,9 +173,9 @@ async def test_single_instance_allowed(
             },
         },
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "google_assistant_sdk", context={"source": config_entries.SOURCE_USER}
     )
 
@@ -184,7 +184,7 @@ async def test_single_instance_allowed(
 
 
 async def test_options_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: ComponentSetup,
     config_entry: MockConfigEntry,
 ) -> None:
@@ -193,13 +193,13 @@ async def test_options_flow(
     assert not config_entry.options
 
     # Trigger options flow, first time
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
     data_schema = result["data_schema"].schema
     assert set(data_schema) == {"language_code"}
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={"language_code": "es-ES"},
     )
@@ -207,13 +207,13 @@ async def test_options_flow(
     assert config_entry.options == {"language_code": "es-ES"}
 
     # Retrigger options flow, not change language
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
     data_schema = result["data_schema"].schema
     assert set(data_schema) == {"language_code"}
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={"language_code": "es-ES"},
     )
@@ -221,13 +221,13 @@ async def test_options_flow(
     assert config_entry.options == {"language_code": "es-ES"}
 
     # Retrigger options flow, change language
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
     data_schema = result["data_schema"].schema
     assert set(data_schema) == {"language_code"}
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={"language_code": "en-US"},
     )

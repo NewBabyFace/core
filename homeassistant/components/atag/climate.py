@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     PRESET_AWAY,
     PRESET_BOOST,
     ClimateEntity,
@@ -12,10 +12,10 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.const import ATTR_TEMPERATURE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util.enum import try_parse_enum
+from menuai.const import ATTR_TEMPERATURE
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util.enum import try_parse_enum
 
 from .coordinator import AtagConfigEntry, AtagDataUpdateCoordinator
 from .entity import AtagEntity
@@ -32,7 +32,7 @@ HVAC_MODES = [HVACMode.AUTO, HVACMode.HEAT]
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: AtagConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

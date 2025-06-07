@@ -4,13 +4,13 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components.energy import async_get_manager, validate
-from homeassistant.components.energy.data import EnergyManager
-from homeassistant.components.recorder import Recorder
-from homeassistant.const import UnitOfEnergy
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.json import JSON_DUMP
-from homeassistant.setup import async_setup_component
+from menuai.components.energy import async_get_manager, validate
+from menuai.components.energy.data import EnergyManager
+from menuai.components.recorder import Recorder
+from menuai.const import UnitOfEnergy
+from menuai.core import menuai
+from menuai.helpers.json import JSON_DUMP
+from menuai.setup import async_setup_component
 
 
 @pytest.fixture
@@ -19,8 +19,8 @@ def mock_is_entity_recorded():
     mocks = {}
 
     with patch(
-        "homeassistant.components.recorder.is_entity_recorded",
-        side_effect=lambda hass, entity_id: mocks.get(entity_id, True),
+        "menuai.components.recorder.is_entity_recorded",
+        side_effect=lambda menuai, entity_id: mocks.get(entity_id, True),
     ):
         yield mocks
 
@@ -30,7 +30,7 @@ def mock_get_metadata():
     """Mock recorder.statistics.get_metadata."""
     mocks = {}
 
-    def _get_metadata(_hass, *, statistic_ids):
+    def _get_metadata(_menuai, *, statistic_ids):
         result = {}
         for statistic_id in statistic_ids:
             if statistic_id in mocks:
@@ -41,7 +41,7 @@ def mock_get_metadata():
         return result
 
     with patch(
-        "homeassistant.components.recorder.statistics.get_metadata",
+        "menuai.components.recorder.statistics.get_metadata",
         wraps=_get_metadata,
     ):
         yield mocks
@@ -49,18 +49,18 @@ def mock_get_metadata():
 
 @pytest.fixture(autouse=True)
 async def mock_energy_manager(
-    recorder_mock: Recorder, hass: HomeAssistant
+    recorder_mock: Recorder, menuai: menuai
 ) -> EnergyManager:
     """Set up energy."""
-    assert await async_setup_component(hass, "energy", {"energy": {}})
-    manager = await async_get_manager(hass)
+    assert await async_setup_component(menuai, "energy", {"energy": {}})
+    manager = await async_get_manager(menuai)
     manager.data = manager.default_preferences()
     return manager
 
 
-async def test_validation_empty_config(hass: HomeAssistant) -> None:
+async def test_validation_empty_config(menuai: menuai) -> None:
     """Test validating an empty config."""
-    assert (await validate.async_validate(hass)).as_dict() == {
+    assert (await validate.async_validate(menuai)).as_dict() == {
         "energy_sources": [],
         "device_consumption": [],
     }
@@ -79,7 +79,7 @@ async def test_validation_empty_config(hass: HomeAssistant) -> None:
     ],
 )
 async def test_validation(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_energy_manager,
     mock_get_metadata,
     state_class,
@@ -88,7 +88,7 @@ async def test_validation(
 ) -> None:
     """Test validating success."""
     for key in ("device_cons", "battery_import", "battery_export", "solar_production"):
-        hass.states.async_set(
+        menuai.states.async_set(
             f"sensor.{key}",
             "123",
             {
@@ -112,20 +112,20 @@ async def test_validation(
             "device_consumption": [{"stat_consumption": "sensor.device_cons"}],
         }
     )
-    assert (await validate.async_validate(hass)).as_dict() == {
+    assert (await validate.async_validate(menuai)).as_dict() == {
         "energy_sources": [[], []],
         "device_consumption": [[]],
     }
 
 
 async def test_validation_device_consumption_entity_missing(
-    hass: HomeAssistant, mock_energy_manager
+    menuai: menuai, mock_energy_manager
 ) -> None:
     """Test validating missing entity for device."""
     await mock_energy_manager.async_update(
         {"device_consumption": [{"stat_consumption": "sensor.not_exist"}]}
     )
-    assert (await validate.async_validate(hass)).as_dict() == {
+    assert (await validate.async_validate(menuai)).as_dict() == {
         "energy_sources": [],
         "device_consumption": [
             [
@@ -145,13 +145,13 @@ async def test_validation_device_consumption_entity_missing(
 
 
 async def test_validation_device_consumption_stat_missing(
-    hass: HomeAssistant, mock_energy_manager
+    menuai: menuai, mock_energy_manager
 ) -> None:
     """Test validating missing statistic for device with non entity stats."""
     await mock_energy_manager.async_update(
         {"device_consumption": [{"stat_consumption": "external:not_exist"}]}
     )
-    assert (await validate.async_validate(hass)).as_dict() == {
+    assert (await validate.async_validate(menuai)).as_dict() == {
         "energy_sources": [],
         "device_consumption": [
             [
@@ -166,15 +166,15 @@ async def test_validation_device_consumption_stat_missing(
 
 
 async def test_validation_device_consumption_entity_unavailable(
-    hass: HomeAssistant, mock_energy_manager, mock_get_metadata
+    menuai: menuai, mock_energy_manager, mock_get_metadata
 ) -> None:
     """Test validating missing stat for device."""
     await mock_energy_manager.async_update(
         {"device_consumption": [{"stat_consumption": "sensor.unavailable"}]}
     )
-    hass.states.async_set("sensor.unavailable", "unavailable", {})
+    menuai.states.async_set("sensor.unavailable", "unavailable", {})
 
-    assert (await validate.async_validate(hass)).as_dict() == {
+    assert (await validate.async_validate(menuai)).as_dict() == {
         "energy_sources": [],
         "device_consumption": [
             [
@@ -189,15 +189,15 @@ async def test_validation_device_consumption_entity_unavailable(
 
 
 async def test_validation_device_consumption_entity_non_numeric(
-    hass: HomeAssistant, mock_energy_manager, mock_get_metadata
+    menuai: menuai, mock_energy_manager, mock_get_metadata
 ) -> None:
     """Test validating missing stat for device."""
     await mock_energy_manager.async_update(
         {"device_consumption": [{"stat_consumption": "sensor.non_numeric"}]}
     )
-    hass.states.async_set("sensor.non_numeric", "123,123.10")
+    menuai.states.async_set("sensor.non_numeric", "123,123.10")
 
-    assert (await validate.async_validate(hass)).as_dict() == {
+    assert (await validate.async_validate(menuai)).as_dict() == {
         "energy_sources": [],
         "device_consumption": [
             [
@@ -212,13 +212,13 @@ async def test_validation_device_consumption_entity_non_numeric(
 
 
 async def test_validation_device_consumption_entity_unexpected_unit(
-    hass: HomeAssistant, mock_energy_manager, mock_get_metadata
+    menuai: menuai, mock_energy_manager, mock_get_metadata
 ) -> None:
     """Test validating missing stat for device."""
     await mock_energy_manager.async_update(
         {"device_consumption": [{"stat_consumption": "sensor.unexpected_unit"}]}
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.unexpected_unit",
         "10.10",
         {
@@ -228,7 +228,7 @@ async def test_validation_device_consumption_entity_unexpected_unit(
         },
     )
 
-    assert (await validate.async_validate(hass)).as_dict() == {
+    assert (await validate.async_validate(menuai)).as_dict() == {
         "energy_sources": [],
         "device_consumption": [
             [
@@ -245,7 +245,7 @@ async def test_validation_device_consumption_entity_unexpected_unit(
 
 
 async def test_validation_device_consumption_recorder_not_tracked(
-    hass: HomeAssistant, mock_energy_manager, mock_is_entity_recorded, mock_get_metadata
+    menuai: menuai, mock_energy_manager, mock_is_entity_recorded, mock_get_metadata
 ) -> None:
     """Test validating device based on untracked entity."""
     mock_is_entity_recorded["sensor.not_recorded"] = False
@@ -253,7 +253,7 @@ async def test_validation_device_consumption_recorder_not_tracked(
         {"device_consumption": [{"stat_consumption": "sensor.not_recorded"}]}
     )
 
-    assert (await validate.async_validate(hass)).as_dict() == {
+    assert (await validate.async_validate(menuai)).as_dict() == {
         "energy_sources": [],
         "device_consumption": [
             [
@@ -268,13 +268,13 @@ async def test_validation_device_consumption_recorder_not_tracked(
 
 
 async def test_validation_device_consumption_no_last_reset(
-    hass: HomeAssistant, mock_energy_manager, mock_get_metadata
+    menuai: menuai, mock_energy_manager, mock_get_metadata
 ) -> None:
     """Test validating device based on untracked entity."""
     await mock_energy_manager.async_update(
         {"device_consumption": [{"stat_consumption": "sensor.no_last_reset"}]}
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.no_last_reset",
         "10.10",
         {
@@ -284,7 +284,7 @@ async def test_validation_device_consumption_no_last_reset(
         },
     )
 
-    assert (await validate.async_validate(hass)).as_dict() == {
+    assert (await validate.async_validate(menuai)).as_dict() == {
         "energy_sources": [],
         "device_consumption": [
             [
@@ -299,7 +299,7 @@ async def test_validation_device_consumption_no_last_reset(
 
 
 async def test_validation_solar(
-    hass: HomeAssistant, mock_energy_manager, mock_get_metadata
+    menuai: menuai, mock_energy_manager, mock_get_metadata
 ) -> None:
     """Test validating missing stat for device."""
     await mock_energy_manager.async_update(
@@ -309,7 +309,7 @@ async def test_validation_solar(
             ]
         }
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.solar_production",
         "10.10",
         {
@@ -319,7 +319,7 @@ async def test_validation_solar(
         },
     )
 
-    assert (await validate.async_validate(hass)).as_dict() == {
+    assert (await validate.async_validate(menuai)).as_dict() == {
         "energy_sources": [
             [
                 {
@@ -336,7 +336,7 @@ async def test_validation_solar(
 
 
 async def test_validation_battery(
-    hass: HomeAssistant, mock_energy_manager, mock_get_metadata
+    menuai: menuai, mock_energy_manager, mock_get_metadata
 ) -> None:
     """Test validating missing stat for device."""
     await mock_energy_manager.async_update(
@@ -350,7 +350,7 @@ async def test_validation_battery(
             ]
         }
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.battery_import",
         "10.10",
         {
@@ -359,7 +359,7 @@ async def test_validation_battery(
             "state_class": "total_increasing",
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.battery_export",
         "10.10",
         {
@@ -369,7 +369,7 @@ async def test_validation_battery(
         },
     )
 
-    assert (await validate.async_validate(hass)).as_dict() == {
+    assert (await validate.async_validate(menuai)).as_dict() == {
         "energy_sources": [
             [
                 {
@@ -389,7 +389,7 @@ async def test_validation_battery(
 
 
 async def test_validation_grid(
-    hass: HomeAssistant, mock_energy_manager, mock_is_entity_recorded, mock_get_metadata
+    menuai: menuai, mock_energy_manager, mock_is_entity_recorded, mock_get_metadata
 ) -> None:
     """Test validating grid with sensors for energy and cost/compensation."""
     mock_is_entity_recorded["sensor.grid_cost_1"] = False
@@ -417,7 +417,7 @@ async def test_validation_grid(
             ]
         }
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.grid_consumption_1",
         "10.10",
         {
@@ -426,7 +426,7 @@ async def test_validation_grid(
             "state_class": "total_increasing",
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.grid_production_1",
         "10.10",
         {
@@ -436,7 +436,7 @@ async def test_validation_grid(
         },
     )
 
-    result = await validate.async_validate(hass)
+    result = await validate.async_validate(menuai)
     # verify its also json serializable
     JSON_DUMP(result)
 
@@ -484,7 +484,7 @@ async def test_validation_grid(
 
 
 async def test_validation_grid_external_cost_compensation(
-    hass: HomeAssistant, mock_energy_manager, mock_is_entity_recorded, mock_get_metadata
+    menuai: menuai, mock_energy_manager, mock_is_entity_recorded, mock_get_metadata
 ) -> None:
     """Test validating grid with non entity stats for energy and cost/compensation."""
     mock_get_metadata["external:grid_cost_1"] = None
@@ -510,7 +510,7 @@ async def test_validation_grid_external_cost_compensation(
             ]
         }
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.grid_consumption_1",
         "10.10",
         {
@@ -519,7 +519,7 @@ async def test_validation_grid_external_cost_compensation(
             "state_class": "total_increasing",
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.grid_production_1",
         "10.10",
         {
@@ -529,7 +529,7 @@ async def test_validation_grid_external_cost_compensation(
         },
     )
 
-    assert (await validate.async_validate(hass)).as_dict() == {
+    assert (await validate.async_validate(menuai)).as_dict() == {
         "energy_sources": [
             [
                 {
@@ -557,7 +557,7 @@ async def test_validation_grid_external_cost_compensation(
 
 
 async def test_validation_grid_price_not_exist(
-    hass: HomeAssistant, mock_energy_manager, mock_get_metadata, mock_is_entity_recorded
+    menuai: menuai, mock_energy_manager, mock_get_metadata, mock_is_entity_recorded
 ) -> None:
     """Test validating grid with errors.
 
@@ -566,7 +566,7 @@ async def test_validation_grid_price_not_exist(
     """
     mock_is_entity_recorded["sensor.grid_consumption_1_cost"] = False
     mock_is_entity_recorded["sensor.grid_production_1_compensation"] = False
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.grid_consumption_1",
         "10.10",
         {
@@ -575,7 +575,7 @@ async def test_validation_grid_price_not_exist(
             "state_class": "total_increasing",
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.grid_production_1",
         "10.10",
         {
@@ -607,9 +607,9 @@ async def test_validation_grid_price_not_exist(
             ]
         }
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert (await validate.async_validate(hass)).as_dict() == {
+    assert (await validate.async_validate(menuai)).as_dict() == {
         "energy_sources": [
             [
                 {
@@ -632,7 +632,7 @@ async def test_validation_grid_price_not_exist(
 
 
 async def test_validation_grid_auto_cost_entity_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_energy_manager,
     mock_get_metadata,
     mock_is_entity_recorded,
@@ -643,7 +643,7 @@ async def test_validation_grid_auto_cost_entity_errors(
     The intention of the test is to make sure the validation does not throw due to the
     bad config.
     """
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.grid_consumption_1",
         "10.10",
         {
@@ -652,7 +652,7 @@ async def test_validation_grid_auto_cost_entity_errors(
             "state_class": "total_increasing",
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.grid_production_1",
         "10.10",
         {
@@ -684,9 +684,9 @@ async def test_validation_grid_auto_cost_entity_errors(
             ]
         }
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert (await validate.async_validate(hass)).as_dict() == {
+    assert (await validate.async_validate(menuai)).as_dict() == {
         "energy_sources": [[]],
         "device_consumption": [],
     }
@@ -718,10 +718,10 @@ async def test_validation_grid_auto_cost_entity_errors(
     ],
 )
 async def test_validation_grid_price_errors(
-    hass: HomeAssistant, mock_energy_manager, mock_get_metadata, state, unit, expected
+    menuai: menuai, mock_energy_manager, mock_get_metadata, state, unit, expected
 ) -> None:
     """Test validating grid with price data that gives errors."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.grid_consumption_1",
         "10.10",
         {
@@ -730,7 +730,7 @@ async def test_validation_grid_price_errors(
             "state_class": "total_increasing",
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.grid_price_1",
         state,
         {"unit_of_measurement": unit, "state_class": "measurement"},
@@ -752,9 +752,9 @@ async def test_validation_grid_price_errors(
             ]
         }
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert (await validate.async_validate(hass)).as_dict() == {
+    assert (await validate.async_validate(menuai)).as_dict() == {
         "energy_sources": [
             [expected],
         ],
@@ -763,7 +763,7 @@ async def test_validation_grid_price_errors(
 
 
 async def test_validation_gas(
-    hass: HomeAssistant, mock_energy_manager, mock_is_entity_recorded, mock_get_metadata
+    menuai: menuai, mock_energy_manager, mock_is_entity_recorded, mock_get_metadata
 ) -> None:
     """Test validating gas with sensors for energy and cost/compensation."""
     mock_is_entity_recorded["sensor.gas_cost_1"] = False
@@ -799,8 +799,8 @@ async def test_validation_gas(
             ]
         }
     )
-    await hass.async_block_till_done()
-    hass.states.async_set(
+    await menuai.async_block_till_done()
+    menuai.states.async_set(
         "sensor.gas_consumption_1",
         "10.10",
         {
@@ -809,7 +809,7 @@ async def test_validation_gas(
             "state_class": "total_increasing",
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.gas_consumption_2",
         "10.10",
         {
@@ -818,7 +818,7 @@ async def test_validation_gas(
             "state_class": "total_increasing",
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.gas_consumption_3",
         "10.10",
         {
@@ -827,28 +827,28 @@ async def test_validation_gas(
             "state_class": "total_increasing",
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.gas_consumption_4",
         "10.10",
         {"unit_of_measurement": "beers", "state_class": "total_increasing"},
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.gas_cost_2",
         "10.10",
         {"unit_of_measurement": "EUR/kWh", "state_class": "total_increasing"},
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.gas_price_1",
         "10.10",
         {"unit_of_measurement": "EUR/m³", "state_class": "total_increasing"},
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.gas_price_2",
         "10.10",
         {"unit_of_measurement": "EUR/invalid", "state_class": "total_increasing"},
     )
 
-    assert (await validate.async_validate(hass)).as_dict() == {
+    assert (await validate.async_validate(menuai)).as_dict() == {
         "energy_sources": [
             [
                 {
@@ -896,7 +896,7 @@ async def test_validation_gas(
 
 
 async def test_validation_gas_no_costs_tracking(
-    hass: HomeAssistant, mock_energy_manager, mock_is_entity_recorded, mock_get_metadata
+    menuai: menuai, mock_energy_manager, mock_is_entity_recorded, mock_get_metadata
 ) -> None:
     """Test validating gas with sensors without cost tracking."""
     await mock_energy_manager.async_update(
@@ -912,7 +912,7 @@ async def test_validation_gas_no_costs_tracking(
             ]
         }
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.gas_consumption_1",
         "10.10",
         {
@@ -922,14 +922,14 @@ async def test_validation_gas_no_costs_tracking(
         },
     )
 
-    assert (await validate.async_validate(hass)).as_dict() == {
+    assert (await validate.async_validate(menuai)).as_dict() == {
         "energy_sources": [[]],
         "device_consumption": [],
     }
 
 
 async def test_validation_grid_no_costs_tracking(
-    hass: HomeAssistant, mock_energy_manager, mock_is_entity_recorded, mock_get_metadata
+    menuai: menuai, mock_energy_manager, mock_is_entity_recorded, mock_get_metadata
 ) -> None:
     """Test validating grid with sensors for energy without cost tracking."""
     await mock_energy_manager.async_update(
@@ -958,7 +958,7 @@ async def test_validation_grid_no_costs_tracking(
             ]
         }
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.grid_energy",
         "10.10",
         {
@@ -968,14 +968,14 @@ async def test_validation_grid_no_costs_tracking(
         },
     )
 
-    assert (await validate.async_validate(hass)).as_dict() == {
+    assert (await validate.async_validate(menuai)).as_dict() == {
         "energy_sources": [[]],
         "device_consumption": [],
     }
 
 
 async def test_validation_water(
-    hass: HomeAssistant, mock_energy_manager, mock_is_entity_recorded, mock_get_metadata
+    menuai: menuai, mock_energy_manager, mock_is_entity_recorded, mock_get_metadata
 ) -> None:
     """Test validating water with sensors for energy and cost/compensation."""
     mock_is_entity_recorded["sensor.water_cost_1"] = False
@@ -1011,8 +1011,8 @@ async def test_validation_water(
             ]
         }
     )
-    await hass.async_block_till_done()
-    hass.states.async_set(
+    await menuai.async_block_till_done()
+    menuai.states.async_set(
         "sensor.water_consumption_1",
         "10.10",
         {
@@ -1021,7 +1021,7 @@ async def test_validation_water(
             "state_class": "total_increasing",
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.water_consumption_2",
         "10.10",
         {
@@ -1030,7 +1030,7 @@ async def test_validation_water(
             "state_class": "total_increasing",
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.water_consumption_3",
         "10.10",
         {
@@ -1039,28 +1039,28 @@ async def test_validation_water(
             "state_class": "total_increasing",
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.water_consumption_4",
         "10.10",
         {"unit_of_measurement": "beers", "state_class": "total_increasing"},
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.water_cost_2",
         "10.10",
         {"unit_of_measurement": "EUR/kWh", "state_class": "total_increasing"},
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.water_price_1",
         "10.10",
         {"unit_of_measurement": "EUR/m³", "state_class": "total_increasing"},
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.water_price_2",
         "10.10",
         {"unit_of_measurement": "EUR/invalid", "state_class": "total_increasing"},
     )
 
-    assert (await validate.async_validate(hass)).as_dict() == {
+    assert (await validate.async_validate(menuai)).as_dict() == {
         "energy_sources": [
             [
                 {
@@ -1103,7 +1103,7 @@ async def test_validation_water(
 
 
 async def test_validation_water_no_costs_tracking(
-    hass: HomeAssistant, mock_energy_manager, mock_is_entity_recorded, mock_get_metadata
+    menuai: menuai, mock_energy_manager, mock_is_entity_recorded, mock_get_metadata
 ) -> None:
     """Test validating water with sensors without cost tracking."""
     await mock_energy_manager.async_update(
@@ -1119,7 +1119,7 @@ async def test_validation_water_no_costs_tracking(
             ]
         }
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.water_consumption_1",
         "10.10",
         {
@@ -1129,7 +1129,7 @@ async def test_validation_water_no_costs_tracking(
         },
     )
 
-    assert (await validate.async_validate(hass)).as_dict() == {
+    assert (await validate.async_validate(menuai)).as_dict() == {
         "energy_sources": [[]],
         "device_consumption": [],
     }

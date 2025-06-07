@@ -1,9 +1,9 @@
 """Entity representing a Netgear LTE entity."""
 
-from homeassistant.const import CONF_HOST
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import EntityDescription
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.const import CONF_HOST
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import EntityDescription
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, MANUFACTURER
 from .coordinator import NetgearLTEConfigEntry, NetgearLTEDataUpdateCoordinator

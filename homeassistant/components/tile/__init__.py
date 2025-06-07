@@ -5,11 +5,11 @@ from __future__ import annotations
 from pytile import async_login
 from pytile.errors import InvalidAuthError, TileError
 
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import aiohttp_client
-from homeassistant.util.async_ import gather_with_limited_concurrency
+from menuai.const import CONF_PASSWORD, CONF_USERNAME, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import aiohttp_client
+from menuai.util.async_ import gather_with_limited_concurrency
 
 from .coordinator import TileConfigEntry, TileCoordinator
 
@@ -21,12 +21,12 @@ DEFAULT_INIT_TASK_LIMIT = 2
 CONF_SHOW_INACTIVE = "show_inactive"
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: TileConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: TileConfigEntry) -> bool:
     """Set up Tile as config entry."""
 
     # Tile's API uses cookies to identify a consumer; in order to allow for multiple
     # instances of this config entry, we use a new session each time:
-    websession = aiohttp_client.async_create_clientsession(hass)
+    websession = aiohttp_client.async_create_clientsession(menuai)
 
     try:
         client = await async_login(
@@ -45,7 +45,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: TileConfigEntry) -> bool
 
     for tile_uuid, tile in tiles.items():
         coordinator = coordinators[tile_uuid] = TileCoordinator(
-            hass, entry, client, tile
+            menuai, entry, client, tile
         )
         coordinator_init_tasks.append(coordinator.async_refresh())
 
@@ -54,11 +54,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: TileConfigEntry) -> bool
     )
     entry.runtime_data = coordinators
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: TileConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: TileConfigEntry) -> bool:
     """Unload a Tile config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

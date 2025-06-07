@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from google.cloud.texttospeech_v1.types import cloud_tts
 import pytest
 
-from homeassistant.components.google_cloud.const import (
+from menuai.components.google_cloud.const import (
     CONF_SERVICE_ACCOUNT_INFO,
     DOMAIN,
 )
@@ -57,7 +57,7 @@ def mock_process_uploaded_file(
     ctx_mock = MagicMock()
     ctx_mock.__enter__.return_value = Path(create_google_credentials_json)
     with patch(
-        "homeassistant.components.google_cloud.config_flow.process_uploaded_file",
+        "menuai.components.google_cloud.config_flow.process_uploaded_file",
         return_value=ctx_mock,
     ) as mock_upload:
         yield mock_upload
@@ -119,6 +119,6 @@ def mock_api_tts_from_service_account_file(
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.google_cloud.async_setup_entry", return_value=True
+        "menuai.components.google_cloud.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry

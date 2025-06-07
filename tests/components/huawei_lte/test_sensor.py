@@ -2,8 +2,8 @@
 
 import pytest
 
-from homeassistant.components.huawei_lte import sensor
-from homeassistant.const import (
+from menuai.components.huawei_lte import sensor
+from menuai.const import (
     SIGNAL_STRENGTH_DECIBELS,
     SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
 )

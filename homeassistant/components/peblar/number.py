@@ -2,19 +2,19 @@
 
 from __future__ import annotations
 
-from homeassistant.components.number import (
+from menuai.components.number import (
     NumberDeviceClass,
     NumberEntityDescription,
     RestoreNumber,
 )
-from homeassistant.const import (
+from menuai.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
     EntityCategory,
     UnitOfElectricCurrent,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import PeblarConfigEntry, PeblarDataUpdateCoordinator
 from .entity import PeblarEntity
@@ -24,7 +24,7 @@ PARALLEL_UPDATES = 1
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: PeblarConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -73,7 +73,7 @@ class PeblarChargeCurrentLimitNumberEntity(
         configuration = entry.runtime_data.user_configuration_coordinator.data
         self._attr_native_max_value = configuration.user_defined_charge_limit_current
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Load the last known state when adding this entity."""
         if (
             (last_state := await self.async_get_last_state())
@@ -88,7 +88,7 @@ class PeblarChargeCurrentLimitNumberEntity(
             self.coordinator.config_entry.runtime_data.last_known_charging_limit = int(
                 last_number_data.native_value
             )
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self._handle_coordinator_update()
 
     @callback

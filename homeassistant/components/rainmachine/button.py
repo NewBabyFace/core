@@ -8,16 +8,16 @@ from dataclasses import dataclass
 from regenmaschine.controller import Controller
 from regenmaschine.errors import RainMachineError
 
-from homeassistant.components.button import (
+from menuai.components.button import (
     ButtonDeviceClass,
     ButtonEntity,
     ButtonEntityDescription,
 )
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import RainMachineConfigEntry
 from .const import DATA_PROVISION_SETTINGS
@@ -51,7 +51,7 @@ BUTTON_DESCRIPTIONS = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: RainMachineConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -76,8 +76,8 @@ class RainMachineButton(RainMachineEntity, ButtonEntity):
         try:
             await self.entity_description.push_action(self._data.controller)
         except RainMachineError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f'Error while pressing button "{self.entity_id}": {err}'
             ) from err
 
-        async_dispatcher_send(self.hass, self.coordinator.signal_reboot_requested)
+        async_dispatcher_send(self.menuai, self.coordinator.signal_reboot_requested)

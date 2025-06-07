@@ -13,16 +13,16 @@ from PyTado.interface import Tado
 import voluptuous as vol
 from yarl import URL
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_REAUTH,
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.core import callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.core import callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import (
     CONF_FALLBACK,
@@ -66,7 +66,7 @@ class TadoConfigFlow(ConfigFlow, domain=DOMAIN):
         if self.tado is None:
             _LOGGER.debug("Initiating device activation")
             try:
-                self.tado = await self.hass.async_add_executor_job(Tado)
+                self.tado = await self.menuai.async_add_executor_job(Tado)
             except TadoException:
                 _LOGGER.exception("Error while initiating Tado")
                 return self.async_abort(reason="cannot_connect")
@@ -79,7 +79,7 @@ class TadoConfigFlow(ConfigFlow, domain=DOMAIN):
             assert self.tado is not None
             _LOGGER.debug("Waiting for device activation")
             try:
-                await self.hass.async_add_executor_job(self.tado.device_activation)
+                await self.menuai.async_add_executor_job(self.tado.device_activation)
             except Exception as ex:
                 _LOGGER.exception("Error while waiting for device activation")
                 raise CannotConnect from ex
@@ -93,13 +93,13 @@ class TadoConfigFlow(ConfigFlow, domain=DOMAIN):
         _LOGGER.debug("Checking login task")
         if self.login_task is None:
             _LOGGER.debug("Creating task for device activation")
-            self.login_task = self.hass.async_create_task(_wait_for_login())
+            self.login_task = self.menuai.async_create_task(_wait_for_login())
 
         if self.login_task.done():
             _LOGGER.debug("Login task is done, checking results")
             if self.login_task.exception():
                 return self.async_show_progress_done(next_step_id="timeout")
-            self.refresh_token = await self.hass.async_add_executor_job(
+            self.refresh_token = await self.menuai.async_add_executor_job(
                 self.tado.get_refresh_token
             )
             return self.async_show_progress_done(next_step_id="finish_login")
@@ -121,7 +121,7 @@ class TadoConfigFlow(ConfigFlow, domain=DOMAIN):
         """Handle the finalization of reauth."""
         _LOGGER.debug("Finalizing reauth")
         assert self.tado is not None
-        tado_me = await self.hass.async_add_executor_job(self.tado.get_me)
+        tado_me = await self.menuai.async_add_executor_job(self.tado.get_me)
 
         if "homes" not in tado_me or len(tado_me["homes"]) == 0:
             return self.async_abort(reason="no_homes")
@@ -191,7 +191,7 @@ class OptionsFlowHandler(OptionsFlow):
         """Handle options flow."""
         if user_input:
             result = self.async_create_entry(data=user_input)
-            await self.hass.config_entries.async_reload(self.config_entry.entry_id)
+            await self.menuai.config_entries.async_reload(self.config_entry.entry_id)
             return result
 
         data_schema = vol.Schema(
@@ -207,5 +207,5 @@ class OptionsFlowHandler(OptionsFlow):
         return self.async_show_form(step_id="init", data_schema=data_schema)
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""

@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.cover import CoverEntity
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.cover import CoverEntity
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import (
     ATTR_DISCOVER_CONFIG,
@@ -19,7 +19,7 @@ from .entity import TellstickDevice
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -34,7 +34,7 @@ def setup_platform(
 
     add_entities(
         [
-            TellstickCover(hass.data[DATA_TELLSTICK][tellcore_id], signal_repetitions)
+            TellstickCover(menuai.data[DATA_TELLSTICK][tellcore_id], signal_repetitions)
             for tellcore_id in discovery_info[ATTR_DISCOVER_DEVICES]
         ],
         True,

@@ -6,8 +6,8 @@ from queue import Empty, Full, Queue
 import temescal
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_PORT
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_PORT
 
 from .const import DEFAULT_PORT, DOMAIN
 
@@ -79,7 +79,7 @@ class LGSoundbarConfigFlow(ConfigFlow, domain=DOMAIN):
 
         errors = {}
         try:
-            details = await self.hass.async_add_executor_job(
+            details = await self.menuai.async_add_executor_job(
                 test_connect, user_input[CONF_HOST], DEFAULT_PORT
             )
         except ConnectionError:

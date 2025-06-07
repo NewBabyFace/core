@@ -23,29 +23,29 @@ from mutagen.id3 import ID3, TextFrame as ID3Text
 from propcache.api import cached_property
 import voluptuous as vol
 
-from homeassistant.components import ffmpeg, websocket_api
-from homeassistant.components.http import HomeAssistantView
-from homeassistant.components.media_source import (
+from menuai.components import ffmpeg, websocket_api
+from menuai.components.http import menuaiView
+from menuai.components.media_source import (
     generate_media_source_id as ms_generate_media_source_id,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP, PLATFORM_FORMAT
-from homeassistant.core import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import EVENT_menuai_STOP, PLATFORM_FORMAT
+from menuai.core import (
     CALLBACK_TYPE,
     Event,
-    HassJob,
-    HassJobType,
-    HomeAssistant,
+    menuaiJob,
+    menuaiJobType,
+    menuai,
     ServiceCall,
     callback,
 )
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.event import async_call_later
-from homeassistant.helpers.network import get_url
-from homeassistant.helpers.typing import UNDEFINED, ConfigType
-from homeassistant.util import language as language_util, ulid as ulid_util
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.event import async_call_later
+from menuai.helpers.network import get_url
+from menuai.helpers.typing import UNDEFINED, ConfigType
+from menuai.util import language as language_util, ulid as ulid_util
 
 from .const import (
     ATTR_CACHE,
@@ -217,49 +217,49 @@ class TTSCache:
 
 
 @callback
-def async_default_engine(hass: HomeAssistant) -> str | None:
+def async_default_engine(menuai: menuai) -> str | None:
     """Return the domain or entity id of the default engine.
 
     Returns None if no engines found.
     """
     default_entity_id: str | None = None
 
-    for entity in hass.data[DATA_COMPONENT].entities:
+    for entity in menuai.data[DATA_COMPONENT].entities:
         if entity.platform and entity.platform.platform_name == "cloud":
             return entity.entity_id
 
         if default_entity_id is None:
             default_entity_id = entity.entity_id
 
-    return default_entity_id or next(iter(hass.data[DATA_TTS_MANAGER].providers), None)
+    return default_entity_id or next(iter(menuai.data[DATA_TTS_MANAGER].providers), None)
 
 
 @callback
-def async_resolve_engine(hass: HomeAssistant, engine: str | None) -> str | None:
+def async_resolve_engine(menuai: menuai, engine: str | None) -> str | None:
     """Resolve engine.
 
     Returns None if no engines found or invalid engine passed in.
     """
     if engine is not None:
         if (
-            not hass.data[DATA_COMPONENT].get_entity(engine)
-            and engine not in hass.data[DATA_TTS_MANAGER].providers
+            not menuai.data[DATA_COMPONENT].get_entity(engine)
+            and engine not in menuai.data[DATA_TTS_MANAGER].providers
         ):
             return None
         return engine
 
-    return async_default_engine(hass)
+    return async_default_engine(menuai)
 
 
 @callback
 def async_create_stream(
-    hass: HomeAssistant,
+    menuai: menuai,
     engine: str,
     language: str | None = None,
     options: dict | None = None,
 ) -> ResultStream:
     """Create a streaming URL where the rendered TTS can be retrieved."""
-    return hass.data[DATA_TTS_MANAGER].async_create_result_stream(
+    return menuai.data[DATA_TTS_MANAGER].async_create_result_stream(
         engine=engine,
         language=language,
         options=options,
@@ -267,17 +267,17 @@ def async_create_stream(
 
 
 @callback
-def async_get_stream(hass: HomeAssistant, token: str) -> ResultStream | None:
+def async_get_stream(menuai: menuai, token: str) -> ResultStream | None:
     """Return a result stream given a token."""
-    return hass.data[DATA_TTS_MANAGER].async_get_result_stream(token)
+    return menuai.data[DATA_TTS_MANAGER].async_get_result_stream(token)
 
 
 async def async_get_media_source_audio(
-    hass: HomeAssistant,
+    menuai: menuai,
     media_source_id: str,
 ) -> tuple[str, bytes]:
     """Get TTS audio as extension, data."""
-    manager = hass.data[DATA_TTS_MANAGER]
+    manager = menuai.data[DATA_TTS_MANAGER]
     parsed = parse_media_source_id(media_source_id)
     if "stream" in parsed:
         stream = manager.async_get_result_stream(
@@ -293,15 +293,15 @@ async def async_get_media_source_audio(
 
 
 @callback
-def async_get_text_to_speech_languages(hass: HomeAssistant) -> set[str]:
+def async_get_text_to_speech_languages(menuai: menuai) -> set[str]:
     """Return a set with the union of languages supported by tts engines."""
     languages = set()
 
-    for entity in hass.data[DATA_COMPONENT].entities:
+    for entity in menuai.data[DATA_COMPONENT].entities:
         for language_tag in entity.supported_languages:
             languages.add(language_tag)
 
-    for tts_engine in hass.data[DATA_TTS_MANAGER].providers.values():
+    for tts_engine in menuai.data[DATA_TTS_MANAGER].providers.values():
         for language_tag in tts_engine.supported_languages:
             languages.add(language_tag)
 
@@ -309,7 +309,7 @@ def async_get_text_to_speech_languages(hass: HomeAssistant) -> set[str]:
 
 
 async def _async_convert_audio(
-    hass: HomeAssistant,
+    menuai: menuai,
     from_extension: str,
     audio_bytes_gen: AsyncGenerator[bytes],
     to_extension: str,
@@ -318,7 +318,7 @@ async def _async_convert_audio(
     to_sample_bytes: int | None = None,
 ) -> AsyncGenerator[bytes]:
     """Convert audio to a preferred format using ffmpeg."""
-    ffmpeg_manager = ffmpeg.get_ffmpeg_manager(hass)
+    ffmpeg_manager = ffmpeg.get_ffmpeg_manager(menuai)
 
     command = [
         ffmpeg_manager.binary,
@@ -361,7 +361,7 @@ async def _async_convert_audio(
             if process.stdin:
                 process.stdin.close()
 
-    writer_task = hass.async_create_background_task(
+    writer_task = menuai.async_create_background_task(
         write_input(), "tts_ffmpeg_conversion"
     )
 
@@ -388,11 +388,11 @@ async def _async_convert_audio(
             )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up TTS."""
-    websocket_api.async_register_command(hass, websocket_list_engines)
-    websocket_api.async_register_command(hass, websocket_get_engine)
-    websocket_api.async_register_command(hass, websocket_list_engine_voices)
+    websocket_api.async_register_command(menuai, websocket_list_engines)
+    websocket_api.async_register_command(menuai, websocket_get_engine)
+    websocket_api.async_register_command(menuai, websocket_list_engine_voices)
 
     # Legacy config options
     conf = config[DOMAIN][0] if config.get(DOMAIN) else {}
@@ -400,25 +400,25 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     cache_dir: str = conf.get(CONF_CACHE_DIR, DEFAULT_CACHE_DIR)
     memory_cache_maxage: int = conf.get(CONF_TIME_MEMORY, DEFAULT_TIME_MEMORY)
 
-    tts = SpeechManager(hass, use_file_cache, cache_dir, memory_cache_maxage)
+    tts = SpeechManager(menuai, use_file_cache, cache_dir, memory_cache_maxage)
 
     try:
         await tts.async_init_cache()
-    except (HomeAssistantError, KeyError):
+    except (menuaiError, KeyError):
         _LOGGER.exception("Error on cache init")
         return False
 
-    hass.data[DATA_TTS_MANAGER] = tts
-    component = hass.data[DATA_COMPONENT] = EntityComponent[TextToSpeechEntity](
-        _LOGGER, DOMAIN, hass
+    menuai.data[DATA_TTS_MANAGER] = tts
+    component = menuai.data[DATA_COMPONENT] = EntityComponent[TextToSpeechEntity](
+        _LOGGER, DOMAIN, menuai
     )
 
     component.register_shutdown()
 
-    hass.http.register_view(TextToSpeechView(tts))
-    hass.http.register_view(TextToSpeechUrlView(tts))
+    menuai.http.register_view(TextToSpeechView(tts))
+    menuai.http.register_view(TextToSpeechUrlView(tts))
 
-    platform_setups = await async_setup_legacy(hass, config)
+    platform_setups = await async_setup_legacy(menuai, config)
 
     component.async_register_entity_service(
         "speak",
@@ -436,7 +436,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         """Handle clear cache service call."""
         await tts.async_clear_cache()
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_CLEAR_CACHE,
         async_clear_cache_handle,
@@ -450,19 +450,19 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         # any config entries that use tts as a base platform
         # to be able to start with out having to wait for the
         # legacy platforms to finish setting up.
-        hass.async_create_task(setup, eager_start=True)
+        menuai.async_create_task(setup, eager_start=True)
 
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up a config entry."""
-    return await hass.data[DATA_COMPONENT].async_setup_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_setup_entry(entry)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.data[DATA_COMPONENT].async_unload_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_unload_entry(entry)
 
 
 @dataclass
@@ -569,17 +569,17 @@ class DictCleaning(Generic[T]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         maxage: float,
         memcache: MutableMapping[str, T],
     ) -> None:
         """Initialize the cleanup."""
-        self.hass = hass
+        self.menuai = menuai
         self.maxage = maxage
         self.memcache = memcache
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, self._on_hass_stop)
-        self.cleanup_job = HassJob(
-            self._cleanup, "chat_session_cleanup", job_type=HassJobType.Callback
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, self._on_menuai_stop)
+        self.cleanup_job = menuaiJob(
+            self._cleanup, "chat_session_cleanup", job_type=menuaiJobType.Callback
         )
 
     @callback
@@ -588,13 +588,13 @@ class DictCleaning(Generic[T]):
         if self.unsub:
             return
         self.unsub = async_call_later(
-            self.hass,
+            self.menuai,
             self.maxage + 1,
             self.cleanup_job,
         )
 
     @callback
-    def _on_hass_stop(self, event: Event) -> None:
+    def _on_menuai_stop(self, event: Event) -> None:
         """Cancel the cleanup on shutdown."""
         if self.unsub:
             self.unsub()
@@ -623,13 +623,13 @@ class SpeechManager:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         use_file_cache: bool,
         cache_dir: str,
         memory_cache_maxage: int,
     ) -> None:
         """Initialize a speech store."""
-        self.hass = hass
+        self.menuai = menuai
         self.providers: dict[str, Provider] = {}
 
         self.use_file_cache = use_file_cache
@@ -638,26 +638,26 @@ class SpeechManager:
         self.file_cache: dict[str, str] = {}
         self.mem_cache: dict[str, TTSCache] = {}
         self.token_to_stream: dict[str, ResultStream] = {}
-        self.memcache_cleanup = DictCleaning(hass, memory_cache_maxage, self.mem_cache)
+        self.memcache_cleanup = DictCleaning(menuai, memory_cache_maxage, self.mem_cache)
         self.token_to_stream_cleanup = DictCleaning(
-            hass, memory_cache_maxage, self.token_to_stream
+            menuai, memory_cache_maxage, self.token_to_stream
         )
 
     def _init_cache(self) -> dict[str, str]:
         """Init cache folder and fetch files."""
         try:
-            self.cache_dir = _init_tts_cache_dir(self.hass, self.cache_dir)
+            self.cache_dir = _init_tts_cache_dir(self.menuai, self.cache_dir)
         except OSError as err:
-            raise HomeAssistantError(f"Can't init cache dir {err}") from err
+            raise menuaiError(f"Can't init cache dir {err}") from err
 
         try:
             return _get_cache_files(self.cache_dir)
         except OSError as err:
-            raise HomeAssistantError(f"Can't read cache dir {err}") from err
+            raise menuaiError(f"Can't read cache dir {err}") from err
 
     async def async_init_cache(self) -> None:
         """Init config folder and load file cache."""
-        self.file_cache.update(await self.hass.async_add_executor_job(self._init_cache))
+        self.file_cache.update(await self.menuai.async_add_executor_job(self._init_cache))
 
     async def async_clear_cache(self) -> None:
         """Read file cache and delete files."""
@@ -671,7 +671,7 @@ class SpeechManager:
                 except OSError as err:
                     _LOGGER.warning("Can't remove cache file '%s': %s", filename, err)
 
-        task = self.hass.async_add_executor_job(
+        task = self.menuai.async_add_executor_job(
             remove_files, list(self.file_cache.values())
         )
         self.file_cache.clear()
@@ -682,12 +682,12 @@ class SpeechManager:
         self, engine: str, provider: Provider, config: ConfigType
     ) -> None:
         """Register a legacy TTS engine."""
-        provider.hass = self.hass
+        provider.menuai = self.menuai
         if provider.name is None:
             provider.name = engine
         self.providers[engine] = provider
 
-        self.hass.config.components.add(
+        self.menuai.config.components.add(
             PLATFORM_FORMAT.format(domain=DOMAIN, platform=engine)
         )
 
@@ -706,7 +706,7 @@ class SpeechManager:
             or engine_instance.supported_languages is None
             or language not in engine_instance.supported_languages
         ):
-            raise HomeAssistantError(f"Language '{language}' not supported")
+            raise menuaiError(f"Language '{language}' not supported")
 
         options = options or {}
         supported_options = engine_instance.supported_options or []
@@ -726,7 +726,7 @@ class SpeechManager:
                 invalid_opts.append(option_name)
 
         if invalid_opts:
-            raise HomeAssistantError(f"Invalid options found: {invalid_opts}")
+            raise menuaiError(f"Invalid options found: {invalid_opts}")
 
         return language, merged_options
 
@@ -750,8 +750,8 @@ class SpeechManager:
         options: dict | None = None,
     ) -> ResultStream:
         """Create a streaming URL where the rendered TTS can be retrieved."""
-        if (engine_instance := get_engine_instance(self.hass, engine)) is None:
-            raise HomeAssistantError(f"Provider {engine} not found")
+        if (engine_instance := get_engine_instance(self.menuai, engine)) is None:
+            raise menuaiError(f"Provider {engine} not found")
 
         supports_streaming_input = (
             isinstance(engine_instance, TextToSpeechEntity)
@@ -791,8 +791,8 @@ class SpeechManager:
 
         Requires options, language to be processed.
         """
-        if (engine_instance := get_engine_instance(self.hass, engine)) is None:
-            raise HomeAssistantError(f"Provider {engine} not found")
+        if (engine_instance := get_engine_instance(self.menuai, engine)) is None:
+            raise menuaiError(f"Provider {engine} not found")
 
         cache_key = ulid_util.ulid_now()
         extension = options.get(ATTR_PREFERRED_FORMAT, _DEFAULT_FORMAT)
@@ -806,7 +806,7 @@ class SpeechManager:
             data_gen=data_gen,
         )
         self.mem_cache[cache_key] = cache
-        self.hass.async_create_background_task(
+        self.menuai.async_create_background_task(
             self._load_data_into_cache(
                 cache, engine_instance, "[Streaming TTS]", False, language, options
             ),
@@ -828,8 +828,8 @@ class SpeechManager:
 
         Requires options, language to be processed.
         """
-        if (engine_instance := get_engine_instance(self.hass, engine)) is None:
-            raise HomeAssistantError(f"Provider {engine} not found")
+        if (engine_instance := get_engine_instance(self.menuai, engine)) is None:
+            raise menuaiError(f"Provider {engine} not found")
 
         options_key = _hash_options(options) if options else "-"
         msg_hash = hashlib.sha1(bytes(message, "utf-8")).hexdigest()
@@ -863,7 +863,7 @@ class SpeechManager:
             data_gen=data_gen,
         )
         self.mem_cache[cache_key] = cache
-        self.hass.async_create_background_task(
+        self.menuai.async_create_background_task(
             self._load_data_into_cache(
                 cache, engine_instance, message, store_to_disk, language, options
             ),
@@ -901,7 +901,7 @@ class SpeechManager:
         if not _RE_VOICE_FILE.match(filename) and not _RE_LEGACY_VOICE_FILE.match(
             filename
         ):
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"TTS filename '{filename}' from {engine_instance.name} is invalid!"
             )
 
@@ -919,7 +919,7 @@ class SpeechManager:
                 speech.write(data)
 
         try:
-            await self.hass.async_add_executor_job(save_speech)
+            await self.menuai.async_add_executor_job(save_speech)
         except OSError as err:
             _LOGGER.error("Can't write %s: %s", filename, err)
         else:
@@ -974,7 +974,7 @@ class SpeechManager:
             sample_bytes = int(sample_bytes)
 
         if engine_instance.name is None or engine_instance.name is UNDEFINED:
-            raise HomeAssistantError("TTS engine name is not set.")
+            raise menuaiError("TTS engine name is not set.")
 
         if isinstance(engine_instance, Provider) or isinstance(message_or_stream, str):
             if isinstance(message_or_stream, str):
@@ -986,7 +986,7 @@ class SpeechManager:
             )
 
             if data is None or extension is None:
-                raise HomeAssistantError(
+                raise menuaiError(
                     f"No TTS from {engine_instance.name} for '{message}'"
                 )
 
@@ -1014,7 +1014,7 @@ class SpeechManager:
 
         if needs_conversion:
             data_gen = _async_convert_audio(
-                self.hass,
+                self.menuai,
                 extension,
                 data_gen,
                 to_extension=final_extension,
@@ -1029,7 +1029,7 @@ class SpeechManager:
     async def _async_load_file(self, cache_key: str) -> AsyncGenerator[bytes]:
         """Load TTS audio from disk."""
         if not (filename := self.file_cache.get(cache_key)):
-            raise HomeAssistantError(f"Key {cache_key} not in file cache!")
+            raise menuaiError(f"Key {cache_key} not in file cache!")
 
         voice_file = os.path.join(self.cache_dir, filename)
 
@@ -1039,10 +1039,10 @@ class SpeechManager:
                 return speech.read()
 
         try:
-            data = await self.hass.async_add_executor_job(load_speech)
+            data = await self.menuai.async_add_executor_job(load_speech)
         except OSError as err:
             del self.file_cache[cache_key]
-            raise HomeAssistantError(f"Can't read {voice_file}") from err
+            raise menuaiError(f"Can't read {voice_file}") from err
 
         yield data
 
@@ -1099,10 +1099,10 @@ class SpeechManager:
         return data_bytes.getvalue()
 
 
-def _init_tts_cache_dir(hass: HomeAssistant, cache_dir: str) -> str:
+def _init_tts_cache_dir(menuai: menuai, cache_dir: str) -> str:
     """Init cache folder."""
     if not os.path.isabs(cache_dir):
-        cache_dir = hass.config.path(cache_dir)
+        cache_dir = menuai.config.path(cache_dir)
     if not os.path.isdir(cache_dir):
         _LOGGER.info("Create cache dir %s", cache_dir)
         os.mkdir(cache_dir)
@@ -1125,7 +1125,7 @@ def _get_cache_files(cache_dir: str) -> dict[str, str]:
     return cache
 
 
-class TextToSpeechUrlView(HomeAssistantView):
+class TextToSpeechUrlView(menuaiView):
     """TTS view to get a url to a generated speech file."""
 
     requires_auth = True
@@ -1162,19 +1162,19 @@ class TextToSpeechUrlView(HomeAssistantView):
                 language=language,
                 options=options,
             )
-        except HomeAssistantError as err:
+        except menuaiError as err:
             _LOGGER.error("Error on init tts: %s", err)
             return self.json({"error": err}, HTTPStatus.BAD_REQUEST)
 
         stream.async_set_message(message)
 
-        base = get_url(self.manager.hass)
+        base = get_url(self.manager.menuai)
         url = base + stream.url
 
         return self.json({"url": url, "path": stream.url})
 
 
-class TextToSpeechView(HomeAssistantView):
+class TextToSpeechView(menuaiView):
     """TTS view to serve a speech audio."""
 
     requires_auth = False
@@ -1222,7 +1222,7 @@ class TextToSpeechView(HomeAssistantView):
 )
 @callback
 def websocket_list_engines(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict
 ) -> None:
     """List text to speech engines and, optionally, if they support a given language."""
     country = msg.get("country")
@@ -1231,7 +1231,7 @@ def websocket_list_engines(
     provider_info: dict[str, Any]
     entity_domains: set[str] = set()
 
-    for entity in hass.data[DATA_COMPONENT].entities:
+    for entity in menuai.data[DATA_COMPONENT].entities:
         provider_info = {
             "engine_id": entity.entity_id,
             "supported_languages": entity.supported_languages,
@@ -1243,7 +1243,7 @@ def websocket_list_engines(
         providers.append(provider_info)
         if entity.platform:
             entity_domains.add(entity.platform.platform_name)
-    for engine_id, provider in hass.data[DATA_TTS_MANAGER].providers.items():
+    for engine_id, provider in menuai.data[DATA_TTS_MANAGER].providers.items():
         if provider.has_entity:
             continue
 
@@ -1273,7 +1273,7 @@ def websocket_list_engines(
 )
 @callback
 def websocket_get_engine(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict
 ) -> None:
     """Get text to speech engine info."""
     engine_id = msg["engine_id"]
@@ -1282,13 +1282,13 @@ def websocket_get_engine(
     provider: TextToSpeechEntity | Provider | None = next(
         (
             entity
-            for entity in hass.data[DATA_COMPONENT].entities
+            for entity in menuai.data[DATA_COMPONENT].entities
             if entity.entity_id == engine_id
         ),
         None,
     )
     if not provider:
-        provider = hass.data[DATA_TTS_MANAGER].providers.get(engine_id)
+        provider = menuai.data[DATA_TTS_MANAGER].providers.get(engine_id)
 
     if not provider:
         connection.send_error(
@@ -1319,13 +1319,13 @@ def websocket_get_engine(
 )
 @callback
 def websocket_list_engine_voices(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict
 ) -> None:
     """List voices for a given language."""
     engine_id = msg["engine_id"]
     language = msg["language"]
 
-    engine_instance = get_engine_instance(hass, engine_id)
+    engine_instance = get_engine_instance(menuai, engine_id)
 
     if not engine_instance:
         connection.send_error(

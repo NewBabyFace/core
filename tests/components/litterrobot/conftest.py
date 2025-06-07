@@ -10,7 +10,7 @@ from pylitterbot.exceptions import InvalidCommandException
 from pylitterbot.robot.litterrobot4 import HopperStatus
 import pytest
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .common import (
     CONFIG,
@@ -139,20 +139,20 @@ def mock_account_with_side_effects() -> MagicMock:
 
 
 async def setup_integration(
-    hass: HomeAssistant, mock_account: MagicMock, platform_domain: str | None = None
+    menuai: menuai, mock_account: MagicMock, platform_domain: str | None = None
 ) -> MockConfigEntry:
     """Load a Litter-Robot platform with the provided coordinator."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         data=CONFIG[DOMAIN],
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.litterrobot.coordinator.Account",
+        "menuai.components.litterrobot.coordinator.Account",
         return_value=mock_account,
     ):
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     return entry

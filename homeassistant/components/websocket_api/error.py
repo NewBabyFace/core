@@ -1,7 +1,7 @@
 """WebSocket API related errors."""
 
-from homeassistant.exceptions import HomeAssistantError
+from menuai.exceptions import menuaiError
 
 
-class Disconnect(HomeAssistantError):
+class Disconnect(menuaiError):
     """Disconnect the current session."""

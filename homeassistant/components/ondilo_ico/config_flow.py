@@ -3,12 +3,12 @@
 import logging
 from typing import Any
 
-from homeassistant.components.application_credentials import (
+from menuai.components.application_credentials import (
     ClientCredential,
     async_import_client_credential,
 )
-from homeassistant.config_entries import ConfigFlowResult
-from homeassistant.helpers.config_entry_oauth2_flow import AbstractOAuth2FlowHandler
+from menuai.config_entries import ConfigFlowResult
+from menuai.helpers.config_entry_oauth2_flow import AbstractOAuth2FlowHandler
 
 from .const import DOMAIN, OAUTH2_CLIENT_ID, OAUTH2_CLIENT_SECRET
 
@@ -24,7 +24,7 @@ class OndiloIcoOAuth2FlowHandler(AbstractOAuth2FlowHandler, domain=DOMAIN):
         """Handle a flow start."""
         # Import the default client credential.
         await async_import_client_credential(
-            self.hass,
+            self.menuai,
             DOMAIN,
             ClientCredential(OAUTH2_CLIENT_ID, OAUTH2_CLIENT_SECRET, name="Ondilo ICO"),
         )

@@ -9,12 +9,12 @@ from aiohttp import ClientSession
 from switchbee.api import CentralUnitPolling, CentralUnitWsRPC, is_wsrpc_api
 from switchbee.api.central_unit import SwitchBeeError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME, Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME, Platform
+from menuai.core import menuai, callback
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN
 from .coordinator import SwitchBeeCoordinator
@@ -53,47 +53,47 @@ async def get_api_object(
     return api
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up SwitchBee Smart Home from a config entry."""
 
-    hass.data.setdefault(DOMAIN, {})
+    menuai.data.setdefault(DOMAIN, {})
     central_unit = entry.data[CONF_HOST]
     user = entry.data[CONF_USERNAME]
     password = entry.data[CONF_PASSWORD]
-    websession = async_get_clientsession(hass, verify_ssl=False)
+    websession = async_get_clientsession(menuai, verify_ssl=False)
     api = await get_api_object(central_unit, user, password, websession)
 
-    coordinator = SwitchBeeCoordinator(hass, entry, api)
+    coordinator = SwitchBeeCoordinator(menuai, entry, api)
 
     await coordinator.async_config_entry_first_refresh()
     entry.async_on_unload(entry.add_update_listener(update_listener))
-    hass.data[DOMAIN][entry.entry_id] = coordinator
+    menuai.data[DOMAIN][entry.entry_id] = coordinator
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        hass.data[DOMAIN].pop(entry.entry_id)
+    if unload_ok := await menuai.config_entries.async_unload_platforms(entry, PLATFORMS):
+        menuai.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok
 
 
-async def update_listener(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+async def update_listener(menuai: menuai, config_entry: ConfigEntry) -> None:
     """Update listener."""
-    await hass.config_entries.async_reload(config_entry.entry_id)
+    await menuai.config_entries.async_reload(config_entry.entry_id)
 
 
-async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+async def async_migrate_entry(menuai: menuai, config_entry: ConfigEntry) -> bool:
     """Migrate old entry."""
     _LOGGER.debug("Migrating from version %s", config_entry.version)
 
     if config_entry.version == 1:
-        dev_reg = dr.async_get(hass)
-        websession = async_get_clientsession(hass, verify_ssl=False)
+        dev_reg = dr.async_get(menuai)
+        websession = async_get_clientsession(menuai, verify_ssl=False)
         old_unique_id = config_entry.unique_id
         assert isinstance(old_unique_id, str)
         api = await get_api_object(
@@ -149,10 +149,10 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
 
             # Migrate entities
             await er.async_migrate_entries(
-                hass, config_entry.entry_id, update_unique_id
+                menuai, config_entry.entry_id, update_unique_id
             )
 
-            hass.config_entries.async_update_entry(config_entry, version=2)
+            menuai.config_entries.async_update_entry(config_entry, version=2)
 
         _LOGGER.debug("Migration to version %s successful", config_entry.version)
 

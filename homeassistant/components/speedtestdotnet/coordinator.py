@@ -6,9 +6,9 @@ from typing import Any, cast
 
 import speedtest
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import CONF_SERVER_ID, DEFAULT_SCAN_INTERVAL, DEFAULT_SERVER, DOMAIN
 
@@ -24,16 +24,16 @@ class SpeedTestDataCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: SpeedTestConfigEntry,
         api: speedtest.Speedtest,
     ) -> None:
         """Initialize the data object."""
-        self.hass = hass
+        self.menuai = menuai
         self.api = api
         self.servers: dict[str, dict] = {DEFAULT_SERVER: {}}
         super().__init__(
-            self.hass,
+            self.menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -78,7 +78,7 @@ class SpeedTestDataCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     async def _async_update_data(self) -> dict[str, Any]:
         """Update Speedtest data."""
         try:
-            return await self.hass.async_add_executor_job(self.update_data)
+            return await self.menuai.async_add_executor_job(self.update_data)
         except speedtest.NoMatchedServers as err:
             raise UpdateFailed("Selected server is not found.") from err
         except speedtest.SpeedtestException as err:

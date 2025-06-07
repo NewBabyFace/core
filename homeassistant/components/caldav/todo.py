@@ -12,16 +12,16 @@ import caldav
 from caldav.lib.error import DAVError, NotFoundError
 import requests
 
-from homeassistant.components.todo import (
+from menuai.components.todo import (
     TodoItem,
     TodoItemStatus,
     TodoListEntity,
     TodoListEntityFeature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import dt as dt_util
 
 from . import CalDavConfigEntry
 from .api import async_get_calendars, get_attr_value
@@ -44,12 +44,12 @@ TODO_STATUS_MAP_INV: dict[TodoItemStatus, str] = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: CalDavConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the CalDav todo platform for a config entry."""
-    calendars = await async_get_calendars(hass, entry.runtime_data, SUPPORTED_COMPONENT)
+    calendars = await async_get_calendars(menuai, entry.runtime_data, SUPPORTED_COMPONENT)
     async_add_entities(
         (
             WebDavTodoListEntity(
@@ -110,7 +110,7 @@ class WebDavTodoListEntity(TodoListEntity):
 
     async def async_update(self) -> None:
         """Update To-do list entity state."""
-        results = await self.hass.async_add_executor_job(
+        results = await self.menuai.async_add_executor_job(
             partial(
                 self._calendar.search,
                 todo=True,
@@ -135,25 +135,25 @@ class WebDavTodoListEntity(TodoListEntity):
         if description := item.description:
             item_data["description"] = description
         try:
-            await self.hass.async_add_executor_job(
+            await self.menuai.async_add_executor_job(
                 partial(self._calendar.save_todo, **item_data),
             )
             # refreshing async otherwise it would take too much time
-            self.hass.async_create_task(self.async_update_ha_state(force_refresh=True))
+            self.menuai.async_create_task(self.async_update_ha_state(force_refresh=True))
         except (requests.ConnectionError, DAVError) as err:
-            raise HomeAssistantError(f"CalDAV save error: {err}") from err
+            raise menuaiError(f"CalDAV save error: {err}") from err
 
     async def async_update_todo_item(self, item: TodoItem) -> None:
         """Update a To-do item."""
         uid: str = cast(str, item.uid)
         try:
-            todo = await self.hass.async_add_executor_job(
+            todo = await self.menuai.async_add_executor_job(
                 self._calendar.todo_by_uid, uid
             )
         except NotFoundError as err:
-            raise HomeAssistantError(f"Could not find To-do item {uid}") from err
+            raise menuaiError(f"Could not find To-do item {uid}") from err
         except (requests.ConnectionError, DAVError) as err:
-            raise HomeAssistantError(f"CalDAV lookup error: {err}") from err
+            raise menuaiError(f"CalDAV lookup error: {err}") from err
         vtodo = todo.icalendar_component  # type: ignore[attr-defined]
         vtodo["SUMMARY"] = item.summary or ""
         if status := item.status:
@@ -167,7 +167,7 @@ class WebDavTodoListEntity(TodoListEntity):
         else:
             vtodo.pop("DESCRIPTION", None)
         try:
-            await self.hass.async_add_executor_job(
+            await self.menuai.async_add_executor_job(
                 partial(
                     todo.save,
                     no_create=True,
@@ -175,29 +175,29 @@ class WebDavTodoListEntity(TodoListEntity):
                 ),
             )
             # refreshing async otherwise it would take too much time
-            self.hass.async_create_task(self.async_update_ha_state(force_refresh=True))
+            self.menuai.async_create_task(self.async_update_ha_state(force_refresh=True))
         except (requests.ConnectionError, DAVError) as err:
-            raise HomeAssistantError(f"CalDAV save error: {err}") from err
+            raise menuaiError(f"CalDAV save error: {err}") from err
 
     async def async_delete_todo_items(self, uids: list[str]) -> None:
         """Delete To-do items."""
         tasks = (
-            self.hass.async_add_executor_job(self._calendar.todo_by_uid, uid)
+            self.menuai.async_add_executor_job(self._calendar.todo_by_uid, uid)
             for uid in uids
         )
 
         try:
             items = await asyncio.gather(*tasks)
         except NotFoundError as err:
-            raise HomeAssistantError("Could not find To-do item") from err
+            raise menuaiError("Could not find To-do item") from err
         except (requests.ConnectionError, DAVError) as err:
-            raise HomeAssistantError(f"CalDAV lookup error: {err}") from err
+            raise menuaiError(f"CalDAV lookup error: {err}") from err
 
         # Run serially as some CalDAV servers do not support concurrent modifications
         for item in items:
             try:
-                await self.hass.async_add_executor_job(item.delete)
+                await self.menuai.async_add_executor_job(item.delete)
             except (requests.ConnectionError, DAVError) as err:
-                raise HomeAssistantError(f"CalDAV delete error: {err}") from err
+                raise menuaiError(f"CalDAV delete error: {err}") from err
         # refreshing async otherwise it would take too much time
-        self.hass.async_create_task(self.async_update_ha_state(force_refresh=True))
+        self.menuai.async_create_task(self.async_update_ha_state(force_refresh=True))

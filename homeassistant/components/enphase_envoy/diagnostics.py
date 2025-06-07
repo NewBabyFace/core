@@ -10,18 +10,18 @@ from attr import asdict
 from pyenphase.envoy import Envoy
 from pyenphase.exceptions import EnvoyError
 
-from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.const import (
+from menuai.components.diagnostics import async_redact_data
+from menuai.const import (
     CONF_NAME,
     CONF_PASSWORD,
     CONF_TOKEN,
     CONF_UNIQUE_ID,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.json import json_dumps
-from homeassistant.util.json import json_loads
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.json import json_dumps
+from menuai.util.json import json_loads
 
 from .const import OPTION_DIAGNOSTICS_INCLUDE_FIXTURES
 from .coordinator import EnphaseConfigEntry
@@ -85,7 +85,7 @@ async def _get_fixture_collection(envoy: Envoy, serial: str) -> dict[str, Any]:
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: EnphaseConfigEntry
+    menuai: menuai, entry: EnphaseConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     coordinator = entry.runtime_data
@@ -95,8 +95,8 @@ async def async_get_config_entry_diagnostics(
     envoy_data = coordinator.envoy.data
     envoy = coordinator.envoy
 
-    device_registry = dr.async_get(hass)
-    entity_registry = er.async_get(hass)
+    device_registry = dr.async_get(menuai)
+    entity_registry = er.async_get(menuai)
 
     device_entities = []
     # for each device associated with the envoy get entity and state information
@@ -106,7 +106,7 @@ async def async_get_config_entry_diagnostics(
             entity_registry, device_id=device.id, include_disabled_entities=True
         ):
             state_dict = None
-            if state := hass.states.get(entity.entity_id):
+            if state := menuai.states.get(entity.entity_id):
                 state_dict = dict(state.as_dict())
                 state_dict.pop("context", None)
             entity_dict = asdict(entity)

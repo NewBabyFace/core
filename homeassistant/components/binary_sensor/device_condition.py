@@ -4,22 +4,22 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant.components.device_automation import CONF_IS_OFF, CONF_IS_ON
-from homeassistant.const import (
+from menuai.components.device_automation import CONF_IS_OFF, CONF_IS_ON
+from menuai.const import (
     CONF_CONDITION,
     CONF_ENTITY_ID,
     CONF_FOR,
     CONF_STATE,
     CONF_TYPE,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import (
+from menuai.core import menuai, callback
+from menuai.helpers import (
     condition,
     config_validation as cv,
     entity_registry as er,
 )
-from homeassistant.helpers.entity import get_device_class
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers.entity import get_device_class
+from menuai.helpers.typing import ConfigType
 
 from . import DOMAIN, BinarySensorDeviceClass
 
@@ -265,11 +265,11 @@ CONDITION_SCHEMA = cv.DEVICE_CONDITION_BASE_SCHEMA.extend(
 
 
 async def async_get_conditions(
-    hass: HomeAssistant, device_id: str
+    menuai: menuai, device_id: str
 ) -> list[dict[str, str]]:
     """List device conditions."""
     conditions: list[dict[str, str]] = []
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
     entries = [
         entry
         for entry in er.async_entries_for_device(entity_registry, device_id)
@@ -277,7 +277,7 @@ async def async_get_conditions(
     ]
 
     for entry in entries:
-        device_class = get_device_class(hass, entry.entity_id) or DEVICE_CLASS_NONE
+        device_class = get_device_class(menuai, entry.entity_id) or DEVICE_CLASS_NONE
 
         templates = ENTITY_CONDITIONS.get(
             device_class, ENTITY_CONDITIONS[DEVICE_CLASS_NONE]
@@ -299,7 +299,7 @@ async def async_get_conditions(
 
 @callback
 def async_condition_from_config(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> condition.ConditionCheckerType:
     """Evaluate state based on configuration."""
     condition_type = config[CONF_TYPE]
@@ -315,13 +315,13 @@ def async_condition_from_config(
     if CONF_FOR in config:
         state_config[CONF_FOR] = config[CONF_FOR]
     state_config = cv.STATE_CONDITION_SCHEMA(state_config)
-    state_config = condition.state_validate_config(hass, state_config)
+    state_config = condition.state_validate_config(menuai, state_config)
 
     return condition.state_from_config(state_config)
 
 
 async def async_get_condition_capabilities(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> dict[str, vol.Schema]:
     """List condition capabilities."""
     return {

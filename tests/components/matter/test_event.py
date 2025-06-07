@@ -7,32 +7,32 @@ from matter_server.common.models import EventType, MatterNodeEvent
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.event import ATTR_EVENT_TYPE, ATTR_EVENT_TYPES
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.event import ATTR_EVENT_TYPE, ATTR_EVENT_TYPES
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .common import snapshot_matter_entities, trigger_subscription_callback
 
 
 @pytest.mark.usefixtures("matter_devices")
 async def test_events(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test events."""
-    snapshot_matter_entities(hass, entity_registry, snapshot, Platform.EVENT)
+    snapshot_matter_entities(menuai, entity_registry, snapshot, Platform.EVENT)
 
 
 @pytest.mark.parametrize("node_fixture", ["generic_switch"])
 async def test_generic_switch_node(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     matter_node: MatterNode,
 ) -> None:
     """Test event entity for a GenericSwitch node."""
-    state = hass.states.get("event.mock_generic_switch_button")
+    state = menuai.states.get("event.mock_generic_switch_button")
     assert state
     assert state.state == "unknown"
     assert state.name == "Mock Generic Switch Button"
@@ -45,7 +45,7 @@ async def test_generic_switch_node(
     ]
     # trigger firing a new event from the device
     await trigger_subscription_callback(
-        hass,
+        menuai,
         matter_client,
         EventType.NODE_EVENT,
         MatterNodeEvent(
@@ -60,18 +60,18 @@ async def test_generic_switch_node(
             data=None,
         ),
     )
-    state = hass.states.get("event.mock_generic_switch_button")
+    state = menuai.states.get("event.mock_generic_switch_button")
     assert state.attributes[ATTR_EVENT_TYPE] == "initial_press"
 
 
 @pytest.mark.parametrize("node_fixture", ["generic_switch_multi"])
 async def test_generic_switch_multi_node(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     matter_node: MatterNode,
 ) -> None:
     """Test event entity for a GenericSwitch node with multiple buttons."""
-    state_button_1 = hass.states.get("event.mock_generic_switch_button_1")
+    state_button_1 = menuai.states.get("event.mock_generic_switch_button_1")
     assert state_button_1
     assert state_button_1.state == "unknown"
     # name should be 'DeviceName Button (1)' due to the label set to just '1'
@@ -84,7 +84,7 @@ async def test_generic_switch_multi_node(
         "long_release",
     ]
     # check button 2
-    state_button_2 = hass.states.get("event.mock_generic_switch_fancy_button")
+    state_button_2 = menuai.states.get("event.mock_generic_switch_fancy_button")
     assert state_button_2
     assert state_button_2.state == "unknown"
     # name should be 'DeviceName Fancy Button' due to the label set to 'Fancy Button'
@@ -101,7 +101,7 @@ async def test_generic_switch_multi_node(
 
     # trigger firing a multi press event
     await trigger_subscription_callback(
-        hass,
+        menuai,
         matter_client,
         EventType.NODE_EVENT,
         MatterNodeEvent(
@@ -116,5 +116,5 @@ async def test_generic_switch_multi_node(
             data={"totalNumberOfPressesCounted": 2},
         ),
     )
-    state = hass.states.get("event.mock_generic_switch_button_1")
+    state = menuai.states.get("event.mock_generic_switch_button_1")
     assert state.attributes[ATTR_EVENT_TYPE] == "multi_press_2"

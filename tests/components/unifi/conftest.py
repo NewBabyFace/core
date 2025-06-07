@@ -13,10 +13,10 @@ from aiounifi.models.message import MessageKey
 import orjson
 import pytest
 
-from homeassistant.components.unifi import STORAGE_KEY, STORAGE_VERSION
-from homeassistant.components.unifi.const import CONF_SITE_ID, DOMAIN
-from homeassistant.components.unifi.hub.websocket import RETRY_TIMER
-from homeassistant.const import (
+from menuai.components.unifi import STORAGE_KEY, STORAGE_VERSION
+from menuai.components.unifi.const import CONF_SITE_ID, DOMAIN
+from menuai.components.unifi.hub.websocket import RETRY_TIMER
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
@@ -24,9 +24,9 @@ from homeassistant.const import (
     CONF_VERIFY_SSL,
     CONTENT_TYPE_JSON,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.util import dt as dt_util
 
 from tests.common import MockConfigEntry, async_fire_time_changed
 from tests.test_util.aiohttp import AiohttpClientMocker
@@ -70,17 +70,17 @@ class WebsocketMessageMock(Protocol):
 def fixture_discovery():
     """No real network traffic allowed."""
     with patch(
-        "homeassistant.components.unifi.config_flow._async_discover_unifi",
+        "menuai.components.unifi.config_flow._async_discover_unifi",
         return_value=None,
     ) as mock:
         yield mock
 
 
 @pytest.fixture(name="mock_device_registry")
-def fixture_device_registry(hass: HomeAssistant, device_registry: dr.DeviceRegistry):
+def fixture_device_registry(menuai: menuai, device_registry: dr.DeviceRegistry):
     """Mock device registry."""
     config_entry = MockConfigEntry(domain="something_else")
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     for idx, device in enumerate(
         (
@@ -106,7 +106,7 @@ def fixture_device_registry(hass: HomeAssistant, device_registry: dr.DeviceRegis
 
 @pytest.fixture(name="config_entry")
 def fixture_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry_data: MappingProxyType[str, Any],
     config_entry_options: MappingProxyType[str, Any],
 ) -> MockConfigEntry:
@@ -118,7 +118,7 @@ def fixture_config_entry(
         data=config_entry_data,
         options=config_entry_options,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     return config_entry
 
 
@@ -152,13 +152,13 @@ def fixture_known_wireless_clients() -> list[str]:
 
 @pytest.fixture(autouse=True, name="mock_wireless_client_storage")
 def fixture_wireless_client_storage(
-    hass_storage: dict[str, Any], known_wireless_clients: list[str]
+    menuai_storage: dict[str, Any], known_wireless_clients: list[str]
 ):
     """Mock the known wireless storage."""
     data: dict[str, list[str]] = (
         {"wireless_clients": known_wireless_clients} if known_wireless_clients else {}
     )
-    hass_storage[STORAGE_KEY] = {"version": STORAGE_VERSION, "data": data}
+    menuai_storage[STORAGE_KEY] = {"version": STORAGE_VERSION, "data": data}
 
 
 # UniFi request mocks
@@ -325,7 +325,7 @@ def fixture_default_requests(
 
 @pytest.fixture(name="config_entry_factory")
 async def fixture_config_entry_factory(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_requests: Callable[[str, str], None],
 ) -> ConfigEntryFactoryType:
@@ -333,8 +333,8 @@ async def fixture_config_entry_factory(
 
     async def __mock_setup_config_entry() -> MockConfigEntry:
         mock_requests(config_entry.data[CONF_HOST], config_entry.data[CONF_SITE_ID])
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
         return config_entry
 
     return __mock_setup_config_entry
@@ -358,10 +358,10 @@ class WebsocketStateManager(asyncio.Event):
     """
 
     def __init__(
-        self, hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+        self, menuai: menuai, aioclient_mock: AiohttpClientMocker
     ) -> None:
-        """Store hass object and initialize asyncio.Event."""
-        self.hass = hass
+        """Store menuai object and initialize asyncio.Event."""
+        self.menuai = menuai
         self.aioclient_mock = aioclient_mock
         super().__init__()
 
@@ -372,7 +372,7 @@ class WebsocketStateManager(asyncio.Event):
     async def disconnect(self) -> None:
         """Mark future as done to make 'await self.api.start_websocket' return."""
         self.set()
-        await self.hass.async_block_till_done()
+        await self.menuai.async_block_till_done()
 
     async def reconnect(self, fail: bool = False) -> None:
         """Set up new future to make 'await self.api.start_websocket' block.
@@ -391,8 +391,8 @@ class WebsocketStateManager(asyncio.Event):
         if not fail:
             self.clear()
         new_time = dt_util.utcnow() + timedelta(seconds=RETRY_TIMER)
-        async_fire_time_changed(self.hass, new_time)
-        await self.hass.async_block_till_done()
+        async_fire_time_changed(self.menuai, new_time)
+        await self.menuai.async_block_till_done()
 
 
 @pytest.fixture(autouse=True, name="_mock_websocket")
@@ -404,10 +404,10 @@ def fixture_aiounifi_websocket_method() -> Generator[AsyncMock]:
 
 @pytest.fixture(autouse=True, name="mock_websocket_state")
 def fixture_aiounifi_websocket_state(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker, _mock_websocket: AsyncMock
+    menuai: menuai, aioclient_mock: AiohttpClientMocker, _mock_websocket: AsyncMock
 ) -> WebsocketStateManager:
     """Provide a state manager for UniFi websocket."""
-    websocket_state_manager = WebsocketStateManager(hass, aioclient_mock)
+    websocket_state_manager = WebsocketStateManager(menuai, aioclient_mock)
     _mock_websocket.side_effect = websocket_state_manager.waiter
     return websocket_state_manager
 

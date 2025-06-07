@@ -8,8 +8,8 @@ from unittest.mock import patch
 import pytest
 import voluptuous as vol
 
-from homeassistant.components import vultr as base_vultr
-from homeassistant.components.vultr import (
+from menuai.components import vultr as base_vultr
+from menuai.components.vultr import (
     ATTR_ALLOWED_BANDWIDTH,
     ATTR_AUTO_BACKUPS,
     ATTR_COST_PER_MONTH,
@@ -19,8 +19,8 @@ from homeassistant.components.vultr import (
     CONF_SUBSCRIPTION,
     switch as vultr,
 )
-from homeassistant.const import CONF_NAME, CONF_PLATFORM
-from homeassistant.core import HomeAssistant
+from menuai.const import CONF_NAME, CONF_PLATFORM
+from menuai.core import menuai
 
 from tests.common import load_fixture
 
@@ -31,33 +31,33 @@ CONFIGS = [
 ]
 
 
-@pytest.fixture(name="hass_devices")
-def load_hass_devices(hass: HomeAssistant):
+@pytest.fixture(name="menuai_devices")
+def load_menuai_devices(menuai: menuai):
     """Load a valid config."""
-    hass_devices = []
+    menuai_devices = []
 
     def add_entities(devices, action):
         """Mock add devices."""
         for device in devices:
-            device.hass = hass
-            hass_devices.append(device)
+            device.menuai = menuai
+            menuai_devices.append(device)
 
     # Setup each of our test configs
     for config in CONFIGS:
-        vultr.setup_platform(hass, config, add_entities, None)
+        vultr.setup_platform(menuai, config, add_entities, None)
 
-    return hass_devices
+    return menuai_devices
 
 
 @pytest.mark.usefixtures("valid_config")
-def test_switch(hass: HomeAssistant, hass_devices: list[vultr.VultrSwitch]) -> None:
+def test_switch(menuai: menuai, menuai_devices: list[vultr.VultrSwitch]) -> None:
     """Test successful instance."""
 
-    assert len(hass_devices) == 3
+    assert len(menuai_devices) == 3
 
     tested = 0
 
-    for device in hass_devices:
+    for device in menuai_devices:
         if device.subscription == "555555":
             assert device.name == "Vultr {}"
             tested += 1
@@ -97,7 +97,7 @@ def test_switch(hass: HomeAssistant, hass_devices: list[vultr.VultrSwitch]) -> N
 
 
 @pytest.mark.usefixtures("valid_config")
-def test_turn_on(hass: HomeAssistant, hass_devices: list[vultr.VultrSwitch]) -> None:
+def test_turn_on(menuai: menuai, menuai_devices: list[vultr.VultrSwitch]) -> None:
     """Test turning a subscription on."""
     with (
         patch(
@@ -106,7 +106,7 @@ def test_turn_on(hass: HomeAssistant, hass_devices: list[vultr.VultrSwitch]) -> 
         ),
         patch("vultr.Vultr.server_start") as mock_start,
     ):
-        for device in hass_devices:
+        for device in menuai_devices:
             if device.name == "Failed Server":
                 device.update()
                 device.turn_on()
@@ -116,7 +116,7 @@ def test_turn_on(hass: HomeAssistant, hass_devices: list[vultr.VultrSwitch]) -> 
 
 
 @pytest.mark.usefixtures("valid_config")
-def test_turn_off(hass: HomeAssistant, hass_devices: list[vultr.VultrSwitch]) -> None:
+def test_turn_off(menuai: menuai, menuai_devices: list[vultr.VultrSwitch]) -> None:
     """Test turning a subscription off."""
     with (
         patch(
@@ -125,7 +125,7 @@ def test_turn_off(hass: HomeAssistant, hass_devices: list[vultr.VultrSwitch]) ->
         ),
         patch("vultr.Vultr.server_halt") as mock_halt,
     ):
-        for device in hass_devices:
+        for device in menuai_devices:
             if device.name == "A Server":
                 device.update()
                 device.turn_off()
@@ -141,21 +141,21 @@ def test_invalid_switch_config() -> None:
 
 
 @pytest.mark.usefixtures("valid_config")
-def test_invalid_switches(hass: HomeAssistant) -> None:
+def test_invalid_switches(menuai: menuai) -> None:
     """Test the VultrSwitch fails."""
-    hass_devices = []
+    menuai_devices = []
 
     def add_entities(devices, action):
         """Mock add devices."""
-        hass_devices.extend(devices)
+        menuai_devices.extend(devices)
 
     bad_conf = {}  # No subscription
 
-    vultr.setup_platform(hass, bad_conf, add_entities, None)
+    vultr.setup_platform(menuai, bad_conf, add_entities, None)
 
     bad_conf = {
         CONF_NAME: "Missing Server",
         CONF_SUBSCRIPTION: "665544",
     }  # Sub not associated with API key (not in server_list)
 
-    vultr.setup_platform(hass, bad_conf, add_entities, None)
+    vultr.setup_platform(menuai, bad_conf, add_entities, None)

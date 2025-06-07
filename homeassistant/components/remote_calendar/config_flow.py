@@ -7,9 +7,9 @@ from typing import Any
 from httpx import HTTPError, InvalidURL
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_URL
-from homeassistant.helpers.httpx_client import get_async_client
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_URL
+from menuai.helpers.httpx_client import get_async_client
 
 from .const import CONF_CALENDAR_NAME, DOMAIN
 from .ics import InvalidIcsException, parse_calendar
@@ -47,7 +47,7 @@ class RemoteCalendarConfigFlow(ConfigFlow, domain=DOMAIN):
                 "webcal://", "https://", 1
             )
         self._async_abort_entries_match({CONF_URL: user_input[CONF_URL]})
-        client = get_async_client(self.hass)
+        client = get_async_client(self.menuai)
         try:
             res = await client.get(user_input[CONF_URL], follow_redirects=True)
             if res.status_code == HTTPStatus.FORBIDDEN:
@@ -63,7 +63,7 @@ class RemoteCalendarConfigFlow(ConfigFlow, domain=DOMAIN):
             _LOGGER.debug("An error occurred: %s", err)
         else:
             try:
-                await parse_calendar(self.hass, res.text)
+                await parse_calendar(self.menuai, res.text)
             except InvalidIcsException:
                 errors["base"] = "invalid_ics_file"
             else:

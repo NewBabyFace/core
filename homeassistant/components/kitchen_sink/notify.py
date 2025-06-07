@@ -2,18 +2,18 @@
 
 from __future__ import annotations
 
-from homeassistant.components import persistent_notification
-from homeassistant.components.notify import NotifyEntity, NotifyEntityFeature
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components import persistent_notification
+from menuai.components.notify import NotifyEntity, NotifyEntityFeature
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import DOMAIN
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -60,5 +60,5 @@ class DemoNotify(NotifyEntity):
     async def async_send_message(self, message: str, title: str | None = None) -> None:
         """Send out a persistent notification."""
         persistent_notification.async_create(
-            self.hass, message, title or "Demo notification"
+            self.menuai, message, title or "Demo notification"
         )

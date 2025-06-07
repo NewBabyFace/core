@@ -8,14 +8,14 @@ from typing import Any
 
 from peblar import Peblar
 
-from homeassistant.components.button import (
+from menuai.components.button import (
     ButtonDeviceClass,
     ButtonEntity,
     ButtonEntityDescription,
 )
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import PeblarConfigEntry, PeblarUserConfigurationDataUpdateCoordinator
 from .entity import PeblarEntity
@@ -50,7 +50,7 @@ DESCRIPTIONS = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: PeblarConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

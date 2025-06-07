@@ -6,7 +6,7 @@ from datetime import timedelta
 import logging
 from typing import Final, Literal
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 DOMAIN: Final = "plugwise"
 

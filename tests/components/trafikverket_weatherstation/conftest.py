@@ -9,9 +9,9 @@ from unittest.mock import patch
 import pytest
 from pytrafikverket import WeatherStationInfoModel
 
-from homeassistant.components.trafikverket_weatherstation.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.core import HomeAssistant
+from menuai.components.trafikverket_weatherstation.const import DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.core import menuai
 
 from . import ENTRY_CONFIG
 
@@ -20,19 +20,19 @@ from tests.common import MockConfigEntry
 
 @pytest.fixture
 async def load_int(
-    hass: HomeAssistant, mock_response: WeatherStationInfoModel
+    menuai: menuai, mock_response: WeatherStationInfoModel
 ) -> MockConfigEntry:
-    """Set up the Trafikverket Weatherstation integration in Home Assistant."""
+    """Set up the Trafikverket Weatherstation integration in MenuAI."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
         source=SOURCE_USER,
         data=ENTRY_CONFIG,
     )
 
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     return config_entry
 
@@ -43,14 +43,14 @@ async def mock_weather_response(
 ) -> AsyncGenerator[None]:
     """Mock a successful response."""
     with patch(
-        "homeassistant.components.trafikverket_weatherstation.coordinator.TrafikverketWeather.async_get_weather",
+        "menuai.components.trafikverket_weatherstation.coordinator.TrafikverketWeather.async_get_weather",
         return_value=get_data,
     ):
         yield
 
 
 @pytest.fixture(name="get_data")
-async def get_data_from_library(hass: HomeAssistant) -> WeatherStationInfoModel:
+async def get_data_from_library(menuai: menuai) -> WeatherStationInfoModel:
     """Retrieve data from Trafikverket Weatherstation library."""
     return WeatherStationInfoModel(
         station_name="Arlanda",

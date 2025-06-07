@@ -1,12 +1,12 @@
-"""Base for Hass.io entities."""
+"""Base for menuai.io entities."""
 
 from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import EntityDescription
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import EntityDescription
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
     ATTR_SLUG,
@@ -21,17 +21,17 @@ from .const import (
     KEY_TO_UPDATE_TYPES,
     SUPERVISOR_CONTAINER,
 )
-from .coordinator import HassioDataUpdateCoordinator
+from .coordinator import menuaiioDataUpdateCoordinator
 
 
-class HassioAddonEntity(CoordinatorEntity[HassioDataUpdateCoordinator]):
-    """Base entity for a Hass.io add-on."""
+class menuaiioAddonEntity(CoordinatorEntity[menuaiioDataUpdateCoordinator]):
+    """Base entity for a menuai.io add-on."""
 
     _attr_has_entity_name = True
 
     def __init__(
         self,
-        coordinator: HassioDataUpdateCoordinator,
+        coordinator: menuaiioDataUpdateCoordinator,
         entity_description: EntityDescription,
         addon: dict[str, Any],
     ) -> None:
@@ -52,9 +52,9 @@ class HassioAddonEntity(CoordinatorEntity[HassioDataUpdateCoordinator]):
             in self.coordinator.data[DATA_KEY_ADDONS].get(self._addon_slug, {})
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to updates."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         update_types = KEY_TO_UPDATE_TYPES[self.entity_description.key]
         self.async_on_remove(
             self.coordinator.async_enable_container_updates(
@@ -65,14 +65,14 @@ class HassioAddonEntity(CoordinatorEntity[HassioDataUpdateCoordinator]):
             await self.coordinator.async_request_refresh()
 
 
-class HassioOSEntity(CoordinatorEntity[HassioDataUpdateCoordinator]):
-    """Base Entity for Hass.io OS."""
+class menuaiioOSEntity(CoordinatorEntity[menuaiioDataUpdateCoordinator]):
+    """Base Entity for menuai.io OS."""
 
     _attr_has_entity_name = True
 
     def __init__(
         self,
-        coordinator: HassioDataUpdateCoordinator,
+        coordinator: menuaiioDataUpdateCoordinator,
         entity_description: EntityDescription,
     ) -> None:
         """Initialize base entity."""
@@ -91,14 +91,14 @@ class HassioOSEntity(CoordinatorEntity[HassioDataUpdateCoordinator]):
         )
 
 
-class HassioHostEntity(CoordinatorEntity[HassioDataUpdateCoordinator]):
-    """Base Entity for Hass.io host."""
+class menuaiioHostEntity(CoordinatorEntity[menuaiioDataUpdateCoordinator]):
+    """Base Entity for menuai.io host."""
 
     _attr_has_entity_name = True
 
     def __init__(
         self,
-        coordinator: HassioDataUpdateCoordinator,
+        coordinator: menuaiioDataUpdateCoordinator,
         entity_description: EntityDescription,
     ) -> None:
         """Initialize base entity."""
@@ -117,14 +117,14 @@ class HassioHostEntity(CoordinatorEntity[HassioDataUpdateCoordinator]):
         )
 
 
-class HassioSupervisorEntity(CoordinatorEntity[HassioDataUpdateCoordinator]):
+class menuaiioSupervisorEntity(CoordinatorEntity[menuaiioDataUpdateCoordinator]):
     """Base Entity for Supervisor."""
 
     _attr_has_entity_name = True
 
     def __init__(
         self,
-        coordinator: HassioDataUpdateCoordinator,
+        coordinator: menuaiioDataUpdateCoordinator,
         entity_description: EntityDescription,
     ) -> None:
         """Initialize base entity."""
@@ -143,9 +143,9 @@ class HassioSupervisorEntity(CoordinatorEntity[HassioDataUpdateCoordinator]):
             in self.coordinator.data[DATA_KEY_SUPERVISOR]
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to updates."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         update_types = KEY_TO_UPDATE_TYPES[self.entity_description.key]
         self.async_on_remove(
             self.coordinator.async_enable_container_updates(
@@ -156,14 +156,14 @@ class HassioSupervisorEntity(CoordinatorEntity[HassioDataUpdateCoordinator]):
             await self.coordinator.async_request_refresh()
 
 
-class HassioCoreEntity(CoordinatorEntity[HassioDataUpdateCoordinator]):
+class menuaiioCoreEntity(CoordinatorEntity[menuaiioDataUpdateCoordinator]):
     """Base Entity for Core."""
 
     _attr_has_entity_name = True
 
     def __init__(
         self,
-        coordinator: HassioDataUpdateCoordinator,
+        coordinator: menuaiioDataUpdateCoordinator,
         entity_description: EntityDescription,
     ) -> None:
         """Initialize base entity."""
@@ -181,9 +181,9 @@ class HassioCoreEntity(CoordinatorEntity[HassioDataUpdateCoordinator]):
             and self.entity_description.key in self.coordinator.data[DATA_KEY_CORE]
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to updates."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         update_types = KEY_TO_UPDATE_TYPES[self.entity_description.key]
         self.async_on_remove(
             self.coordinator.async_enable_container_updates(

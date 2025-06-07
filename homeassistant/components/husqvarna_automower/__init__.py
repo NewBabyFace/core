@@ -5,11 +5,11 @@ import logging
 from aioautomower.session import AutomowerSession
 from aiohttp import ClientResponseError
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import aiohttp_client, config_entry_oauth2_flow
-from homeassistant.util import dt as dt_util
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import aiohttp_client, config_entry_oauth2_flow
+from menuai.util import dt as dt_util
 
 from . import api
 from .coordinator import AutomowerConfigEntry, AutomowerDataUpdateCoordinator
@@ -29,16 +29,16 @@ PLATFORMS: list[Platform] = [
 ]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: AutomowerConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: AutomowerConfigEntry) -> bool:
     """Set up this integration using UI."""
     implementation = (
         await config_entry_oauth2_flow.async_get_config_entry_implementation(
-            hass, entry
+            menuai, entry
         )
     )
-    session = config_entry_oauth2_flow.OAuth2Session(hass, entry, implementation)
+    session = config_entry_oauth2_flow.OAuth2Session(menuai, entry, implementation)
     api_api = api.AsyncConfigEntryAuth(
-        aiohttp_client.async_get_clientsession(hass),
+        aiohttp_client.async_get_clientsession(menuai),
         session,
     )
     time_zone_str = str(dt_util.DEFAULT_TIME_ZONE)
@@ -58,20 +58,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: AutomowerConfigEntry) ->
         # without the scope. So only polling would be possible.
         raise ConfigEntryAuthFailed
 
-    coordinator = AutomowerDataUpdateCoordinator(hass, entry, automower_api)
+    coordinator = AutomowerDataUpdateCoordinator(menuai, entry, automower_api)
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
 
     entry.async_create_background_task(
-        hass,
-        coordinator.client_listen(hass, entry, automower_api),
+        menuai,
+        coordinator.client_listen(menuai, entry, automower_api),
         "websocket_task",
     )
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: AutomowerConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: AutomowerConfigEntry) -> bool:
     """Handle unload of an entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

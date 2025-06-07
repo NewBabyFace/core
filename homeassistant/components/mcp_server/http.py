@@ -23,11 +23,11 @@ import anyio
 from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStream
 from mcp import types
 
-from homeassistant.components import conversation
-from homeassistant.components.http import KEY_HASS, HomeAssistantView
-from homeassistant.const import CONF_LLM_HASS_API
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import llm
+from menuai.components import conversation
+from menuai.components.http import KEY_menuai, menuaiView
+from menuai.const import CONF_LLM_menuai_API
+from menuai.core import menuai, callback
+from menuai.helpers import llm
 
 from .const import DOMAIN
 from .server import create_server
@@ -41,13 +41,13 @@ MESSAGES_API = f"/{DOMAIN}/messages/{{session_id}}"
 
 
 @callback
-def async_register(hass: HomeAssistant) -> None:
+def async_register(menuai: menuai) -> None:
     """Register the websocket API."""
-    hass.http.register_view(ModelContextProtocolSSEView())
-    hass.http.register_view(ModelContextProtocolMessagesView())
+    menuai.http.register_view(ModelContextProtocolSSEView())
+    menuai.http.register_view(ModelContextProtocolMessagesView())
 
 
-def async_get_config_entry(hass: HomeAssistant) -> MCPServerConfigEntry:
+def async_get_config_entry(menuai: menuai) -> MCPServerConfigEntry:
     """Get the first enabled MCP server config entry.
 
     The ConfigEntry contains a reference to the actual MCP server used to
@@ -56,7 +56,7 @@ def async_get_config_entry(hass: HomeAssistant) -> MCPServerConfigEntry:
     Will raise an HTTP error if the expected configuration is not present.
     """
     config_entries: list[MCPServerConfigEntry] = (
-        hass.config_entries.async_loaded_entries(DOMAIN)
+        menuai.config_entries.async_loaded_entries(DOMAIN)
     )
     if not config_entries:
         raise HTTPNotFound(text="Model Context Protocol server is not configured")
@@ -65,7 +65,7 @@ def async_get_config_entry(hass: HomeAssistant) -> MCPServerConfigEntry:
     return config_entries[0]
 
 
-class ModelContextProtocolSSEView(HomeAssistantView):
+class ModelContextProtocolSSEView(menuaiView):
     """Model Context Protocol SSE endpoint."""
 
     name = f"{DOMAIN}:sse"
@@ -81,8 +81,8 @@ class ModelContextProtocolSSEView(HomeAssistantView):
         (SSE over HTTP views) and the Model Context Protocol. The MCP SDK
         manages all protocol details and invokes commands on our MCP server.
         """
-        hass = request.app[KEY_HASS]
-        entry = async_get_config_entry(hass)
+        menuai = request.app[KEY_menuai]
+        entry = async_get_config_entry(menuai)
         session_manager = entry.runtime_data
 
         context = llm.LLMContext(
@@ -93,9 +93,9 @@ class ModelContextProtocolSSEView(HomeAssistantView):
             assistant=conversation.DOMAIN,
             device_id=None,
         )
-        llm_api_id = entry.data[CONF_LLM_HASS_API]
-        server = await create_server(hass, llm_api_id, context)
-        options = await hass.async_add_executor_job(
+        llm_api_id = entry.data[CONF_LLM_menuai_API]
+        server = await create_server(menuai, llm_api_id, context)
+        options = await menuai.async_add_executor_job(
             server.create_initialization_options  # Reads package for version info
         )
 
@@ -130,7 +130,7 @@ class ModelContextProtocolSSEView(HomeAssistantView):
                 return response
 
 
-class ModelContextProtocolMessagesView(HomeAssistantView):
+class ModelContextProtocolMessagesView(menuaiView):
     """Model Context Protocol messages endpoint."""
 
     name = f"{DOMAIN}:messages"
@@ -147,8 +147,8 @@ class ModelContextProtocolMessagesView(HomeAssistantView):
         SSE connection. This view parses incoming messages from the transport
         layer then writes them to the MCP server stream for the session.
         """
-        hass = request.app[KEY_HASS]
-        config_entry = async_get_config_entry(hass)
+        menuai = request.app[KEY_menuai]
+        config_entry = async_get_config_entry(menuai)
 
         session_manager = config_entry.runtime_data
         if (session := session_manager.get(session_id)) is None:

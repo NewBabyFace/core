@@ -1,12 +1,12 @@
-"""API for Google Photos bound to Home Assistant OAuth."""
+"""API for Google Photos bound to MenuAI OAuth."""
 
 from typing import cast
 
 import aiohttp
 from google_photos_library_api import api
 
-from homeassistant.const import CONF_ACCESS_TOKEN
-from homeassistant.helpers import config_entry_oauth2_flow
+from menuai.const import CONF_ACCESS_TOKEN
+from menuai.helpers import config_entry_oauth2_flow
 
 
 class AsyncConfigEntryAuth(api.AbstractAuth):

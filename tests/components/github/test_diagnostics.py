@@ -5,8 +5,8 @@ import json
 from aiogithubapi import GitHubException
 import pytest
 
-from homeassistant.components.github.const import CONF_REPOSITORIES, DOMAIN
-from homeassistant.core import HomeAssistant
+from menuai.components.github.const import CONF_REPOSITORIES, DOMAIN
+from menuai.core import menuai
 
 from .common import setup_github_integration
 
@@ -19,24 +19,24 @@ from tests.typing import ClientSessionGenerator
 # This tests needs to be adjusted to remove lingering tasks
 @pytest.mark.parametrize("expected_lingering_tasks", [True])
 async def test_entry_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     mock_config_entry: MockConfigEntry,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
     """Test config entry diagnostics."""
-    mock_config_entry.add_to_hass(hass)
-    hass.config_entries.async_update_entry(
+    mock_config_entry.add_to_menuai(menuai)
+    menuai.config_entries.async_update_entry(
         mock_config_entry,
         options={CONF_REPOSITORIES: ["home-assistant/core"]},
     )
-    response_json = json.loads(await async_load_fixture(hass, "graphql.json", DOMAIN))
+    response_json = json.loads(await async_load_fixture(menuai, "graphql.json", DOMAIN))
     response_json["data"]["repository"]["full_name"] = "home-assistant/core"
 
     aioclient_mock.post(
         "https://api.github.com/graphql",
         json=response_json,
-        headers=json.loads(await async_load_fixture(hass, "base_headers.json", DOMAIN)),
+        headers=json.loads(await async_load_fixture(menuai, "base_headers.json", DOMAIN)),
     )
     aioclient_mock.get(
         "https://api.github.com/rate_limit",
@@ -45,11 +45,11 @@ async def test_entry_diagnostics(
     )
 
     await setup_github_integration(
-        hass, mock_config_entry, aioclient_mock, add_entry_to_hass=False
+        menuai, mock_config_entry, aioclient_mock, add_entry_to_menuai=False
     )
     result = await get_diagnostics_for_config_entry(
-        hass,
-        hass_client,
+        menuai,
+        menuai_client,
         mock_config_entry,
     )
 
@@ -66,8 +66,8 @@ async def test_entry_diagnostics(
 # This tests needs to be adjusted to remove lingering tasks
 @pytest.mark.parametrize("expected_lingering_tasks", [True])
 async def test_entry_diagnostics_exception(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     init_integration: MockConfigEntry,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
@@ -78,8 +78,8 @@ async def test_entry_diagnostics_exception(
     )
 
     result = await get_diagnostics_for_config_entry(
-        hass,
-        hass_client,
+        menuai,
+        menuai_client,
         init_integration,
     )
 

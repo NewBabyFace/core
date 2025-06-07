@@ -5,7 +5,7 @@ from typing import Any, Concatenate
 
 from plugwise.exceptions import PlugwiseException
 
-from homeassistant.exceptions import HomeAssistantError
+from menuai.exceptions import menuaiError
 
 from .const import DOMAIN
 from .entity import PlugwiseEntity
@@ -26,7 +26,7 @@ def plugwise_command[_PlugwiseEntityT: PlugwiseEntity, **_P, _R](
         try:
             return await func(self, *args, **kwargs)
         except PlugwiseException as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="error_communicating_with_api",
                 translation_placeholders={

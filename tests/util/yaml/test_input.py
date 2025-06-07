@@ -2,7 +2,7 @@
 
 import pytest
 
-from homeassistant.util.yaml import (
+from menuai.util.yaml import (
     Input,
     UndefinedSubstitution,
     extract_inputs,

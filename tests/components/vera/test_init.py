@@ -6,15 +6,15 @@ import pytest
 import pyvera as pv
 from requests.exceptions import RequestException
 
-from homeassistant.components.vera import (
+from menuai.components.vera import (
     CONF_CONTROLLER,
     CONF_EXCLUDE,
     CONF_LIGHTS,
     DOMAIN,
 )
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .common import ComponentFactory, ConfigSource, new_simple_controller_config
 
@@ -22,7 +22,7 @@ from tests.common import MockConfigEntry
 
 
 async def test_init(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     vera_component_factory: ComponentFactory,
 ) -> None:
@@ -35,7 +35,7 @@ async def test_init(
     entity1_id = "binary_sensor.first_dev_1"
 
     await vera_component_factory.configure_component(
-        hass=hass,
+        menuai=menuai,
         controller_config=new_simple_controller_config(
             config={CONF_CONTROLLER: "http://127.0.0.1:111"},
             config_source=ConfigSource.CONFIG_FLOW,
@@ -50,7 +50,7 @@ async def test_init(
 
 
 async def test_init_from_file(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     vera_component_factory: ComponentFactory,
 ) -> None:
@@ -63,7 +63,7 @@ async def test_init_from_file(
     entity1_id = "binary_sensor.first_dev_1"
 
     await vera_component_factory.configure_component(
-        hass=hass,
+        menuai=menuai,
         controller_config=new_simple_controller_config(
             config={CONF_CONTROLLER: "http://127.0.0.1:111"},
             config_source=ConfigSource.FILE,
@@ -78,7 +78,7 @@ async def test_init_from_file(
 
 
 async def test_multiple_controllers_with_legacy_one(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     vera_component_factory: ComponentFactory,
 ) -> None:
@@ -103,7 +103,7 @@ async def test_multiple_controllers_with_legacy_one(
     )
 
     await vera_component_factory.configure_component(
-        hass=hass,
+        menuai=menuai,
         controller_config=new_simple_controller_config(
             config={CONF_CONTROLLER: "http://127.0.0.1:111"},
             config_source=ConfigSource.FILE,
@@ -113,7 +113,7 @@ async def test_multiple_controllers_with_legacy_one(
     )
 
     await vera_component_factory.configure_component(
-        hass=hass,
+        menuai=menuai,
         controller_config=new_simple_controller_config(
             config={CONF_CONTROLLER: "http://127.0.0.1:222"},
             config_source=ConfigSource.CONFIG_FLOW,
@@ -132,7 +132,7 @@ async def test_multiple_controllers_with_legacy_one(
 
 
 async def test_unload(
-    hass: HomeAssistant, vera_component_factory: ComponentFactory
+    menuai: menuai, vera_component_factory: ComponentFactory
 ) -> None:
     """Test function."""
     vera_device1: pv.VeraBinarySensor = MagicMock(spec=pv.VeraBinarySensor)
@@ -142,19 +142,19 @@ async def test_unload(
     vera_device1.is_tripped = False
 
     await vera_component_factory.configure_component(
-        hass=hass, controller_config=new_simple_controller_config()
+        menuai=menuai, controller_config=new_simple_controller_config()
     )
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert entries
 
     for config_entry in entries:
-        assert await hass.config_entries.async_unload(config_entry.entry_id)
+        assert await menuai.config_entries.async_unload(config_entry.entry_id)
         assert config_entry.state is ConfigEntryState.NOT_LOADED
 
 
 async def test_async_setup_entry_error(
-    hass: HomeAssistant, vera_component_factory: ComponentFactory
+    menuai: menuai, vera_component_factory: ComponentFactory
 ) -> None:
     """Test function."""
 
@@ -163,7 +163,7 @@ async def test_async_setup_entry_error(
         controller.get_scenes.side_effect = RequestException()
 
     await vera_component_factory.configure_component(
-        hass=hass,
+        menuai=menuai,
         controller_config=new_simple_controller_config(setup_callback=setup_callback),
     )
 
@@ -173,9 +173,9 @@ async def test_async_setup_entry_error(
         options={},
         unique_id="12345",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    assert not await hass.config_entries.async_setup(entry.entry_id)
+    assert not await menuai.config_entries.async_setup(entry.entry_id)
 
 
 @pytest.mark.parametrize(
@@ -186,7 +186,7 @@ async def test_async_setup_entry_error(
     ],
 )
 async def test_exclude_and_light_ids(
-    hass: HomeAssistant, vera_component_factory: ComponentFactory, options
+    menuai: menuai, vera_component_factory: ComponentFactory, options
 ) -> None:
     """Test device exclusion, marking switches as lights and fixing the data type."""
     vera_device1: pv.VeraBinarySensor = MagicMock(spec=pv.VeraBinarySensor)
@@ -225,7 +225,7 @@ async def test_exclude_and_light_ids(
     entity_id4 = "light.dev4_4"
 
     component_data = await vera_component_factory.configure_component(
-        hass=hass,
+        menuai=menuai,
         controller_config=new_simple_controller_config(
             config_source=ConfigSource.CONFIG_ENTRY,
             devices=(vera_device1, vera_device2, vera_device3, vera_device4),
@@ -234,7 +234,7 @@ async def test_exclude_and_light_ids(
     )
 
     # Assert the entries were setup correctly.
-    config_entry = next(iter(hass.config_entries.async_entries(DOMAIN)))
+    config_entry = next(iter(menuai.config_entries.async_entries(DOMAIN)))
     assert config_entry.options[CONF_LIGHTS] == [4, 10, 12]
     assert config_entry.options[CONF_EXCLUDE] == [1]
 
@@ -244,9 +244,9 @@ async def test_exclude_and_light_ids(
     update_callback(vera_device2)
     update_callback(vera_device3)
     update_callback(vera_device4)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(entity_id1) is None
-    assert hass.states.get(entity_id2) is not None
-    assert hass.states.get(entity_id3) is not None
-    assert hass.states.get(entity_id4) is not None
+    assert menuai.states.get(entity_id1) is None
+    assert menuai.states.get(entity_id2) is not None
+    assert menuai.states.get(entity_id3) is not None
+    assert menuai.states.get(entity_id4) is not None

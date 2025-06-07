@@ -7,12 +7,12 @@ from typing import Any
 from eufylife_ble_client import MODEL_TO_NAME
 import voluptuous as vol
 
-from homeassistant.components.bluetooth import (
+from menuai.components.bluetooth import (
     BluetoothServiceInfoBleak,
     async_discovered_service_info,
 )
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_ADDRESS, CONF_MODEL
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_ADDRESS, CONF_MODEL
 
 from .const import DOMAIN
 
@@ -78,7 +78,7 @@ class EufyLifeConfigFlow(ConfigFlow, domain=DOMAIN):
             )
 
         current_addresses = self._async_current_ids()
-        for discovery_info in async_discovered_service_info(self.hass, False):
+        for discovery_info in async_discovered_service_info(self.menuai, False):
             address = discovery_info.address
             if (
                 address in current_addresses

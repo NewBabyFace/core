@@ -5,13 +5,13 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Any
 
-from homeassistant.const import ATTR_ENTITY_ID, ENTITY_MATCH_ALL, ENTITY_MATCH_NONE
-from homeassistant.core import HomeAssistant
+from menuai.const import ATTR_ENTITY_ID, ENTITY_MATCH_ALL, ENTITY_MATCH_NONE
+from menuai.core import menuai
 
 ENTITY_PREFIX = "group."
 
 
-def expand_entity_ids(hass: HomeAssistant, entity_ids: Iterable[Any]) -> list[str]:
+def expand_entity_ids(menuai: menuai, entity_ids: Iterable[Any]) -> list[str]:
     """Return entity_ids with group entity ids replaced by their members.
 
     Async friendly.
@@ -27,13 +27,13 @@ def expand_entity_ids(hass: HomeAssistant, entity_ids: Iterable[Any]) -> list[st
         entity_id = entity_id.lower()
         # If entity_id points at a group, expand it
         if entity_id.startswith(ENTITY_PREFIX):
-            child_entities = get_entity_ids(hass, entity_id)
+            child_entities = get_entity_ids(menuai, entity_id)
             if entity_id in child_entities:
                 child_entities = list(child_entities)
                 child_entities.remove(entity_id)
             found_ids.extend(
                 ent_id
-                for ent_id in expand_entity_ids(hass, child_entities)
+                for ent_id in expand_entity_ids(menuai, child_entities)
                 if ent_id not in found_ids
             )
         elif entity_id not in found_ids:
@@ -43,13 +43,13 @@ def expand_entity_ids(hass: HomeAssistant, entity_ids: Iterable[Any]) -> list[st
 
 
 def get_entity_ids(
-    hass: HomeAssistant, entity_id: str, domain_filter: str | None = None
+    menuai: menuai, entity_id: str, domain_filter: str | None = None
 ) -> list[str]:
     """Get members of this group.
 
     Async friendly.
     """
-    group = hass.states.get(entity_id)
+    group = menuai.states.get(entity_id)
     if not group or ATTR_ENTITY_ID not in group.attributes:
         return []
     entity_ids: list[str] = group.attributes[ATTR_ENTITY_ID]

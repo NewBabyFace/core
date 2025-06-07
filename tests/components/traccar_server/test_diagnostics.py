@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock
 
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from .common import setup_integration
 
@@ -19,18 +19,18 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_entry_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     mock_traccar_api_client: Generator[AsyncMock],
     mock_config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test config entry diagnostics."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     result = await get_diagnostics_for_config_entry(
-        hass,
-        hass_client,
+        menuai,
+        menuai_client,
         mock_config_entry,
     )
     # Sort the list of entities
@@ -42,8 +42,8 @@ async def test_entry_diagnostics(
 
 
 async def test_device_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     mock_traccar_api_client: Generator[AsyncMock],
     mock_config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
@@ -51,7 +51,7 @@ async def test_device_diagnostics(
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test device diagnostics."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     devices = dr.async_entries_for_config_entry(
         device_registry,
@@ -73,7 +73,7 @@ async def test_device_diagnostics(
             entity_registry.async_update_entity(entity.entity_id, disabled_by=None)
 
         result = await get_diagnostics_for_device(
-            hass, hass_client, mock_config_entry, device=device
+            menuai, menuai_client, mock_config_entry, device=device
         )
         # Sort the list of entities
         result["entities"] = sorted(
@@ -84,8 +84,8 @@ async def test_device_diagnostics(
 
 
 async def test_device_diagnostics_with_disabled_entity(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     mock_traccar_api_client: Generator[AsyncMock],
     mock_config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
@@ -93,7 +93,7 @@ async def test_device_diagnostics_with_disabled_entity(
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test device diagnostics with disabled entity."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     devices = dr.async_entries_for_config_entry(
         device_registry,
@@ -116,7 +116,7 @@ async def test_device_diagnostics_with_disabled_entity(
             )
 
         result = await get_diagnostics_for_device(
-            hass, hass_client, mock_config_entry, device=device
+            menuai, menuai_client, mock_config_entry, device=device
         )
         # Sort the list of entities
         result["entities"] = sorted(

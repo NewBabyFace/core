@@ -2,8 +2,8 @@
 
 import pytest
 
-from homeassistant.components.diagnostics import REDACTED
-from homeassistant.core import HomeAssistant
+from menuai.components.diagnostics import REDACTED
+from menuai.core import menuai
 
 from . import init_integration
 from .consts import DUMMY_WATER_HEATER_DEVICE
@@ -14,19 +14,19 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     mock_bridge,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Test diagnostics."""
-    entry = await init_integration(hass)
+    entry = await init_integration(menuai)
     device = DUMMY_WATER_HEATER_DEVICE
     monkeypatch.setattr(device, "last_data_update", "2022-09-28T16:42:12.706017")
     mock_bridge.mock_callbacks([device])
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert await get_diagnostics_for_config_entry(hass, hass_client, entry) == {
+    assert await get_diagnostics_for_config_entry(menuai, menuai_client, entry) == {
         "devices": [
             {
                 "auto_shutdown": "02:00:00",

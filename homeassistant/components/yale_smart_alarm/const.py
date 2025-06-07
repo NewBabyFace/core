@@ -9,8 +9,8 @@ from yalesmartalarmclient.client import (
 )
 from yalesmartalarmclient.exceptions import AuthenticationError, UnknownError
 
-from homeassistant.components.alarm_control_panel import AlarmControlPanelState
-from homeassistant.const import Platform
+from menuai.components.alarm_control_panel import AlarmControlPanelState
+from menuai.const import Platform
 
 CONF_AREA_ID = "area_id"
 CONF_LOCK_CODE_DIGITS = "lock_code_digits"

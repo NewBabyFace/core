@@ -8,10 +8,10 @@ from pysmartthings.models import HealthStatus
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.event import ATTR_EVENT_TYPES
-from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.event import ATTR_EVENT_TYPES
+from menuai.const import STATE_UNAVAILABLE, STATE_UNKNOWN, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import (
     setup_integration,
@@ -24,36 +24,36 @@ from tests.common import MockConfigEntry
 
 
 async def test_all_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test all entities."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    snapshot_smartthings_entities(hass, entity_registry, snapshot, Platform.EVENT)
+    snapshot_smartthings_entities(menuai, entity_registry, snapshot, Platform.EVENT)
 
 
 @pytest.mark.parametrize("device_fixture", ["heatit_zpushwall"])
 async def test_state_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test state update."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     freezer.move_to("2023-10-21")
 
     assert (
-        hass.states.get("event.livingroom_smart_switch_button1").state == STATE_UNKNOWN
+        menuai.states.get("event.livingroom_smart_switch_button1").state == STATE_UNKNOWN
     )
 
     await trigger_update(
-        hass,
+        menuai,
         devices,
         "5e5b97f3-3094-44e6-abc0-f61283412d6a",
         Capability.BUTTON,
@@ -63,32 +63,32 @@ async def test_state_update(
     )
 
     assert (
-        hass.states.get("event.livingroom_smart_switch_button1").state
+        menuai.states.get("event.livingroom_smart_switch_button1").state
         == "2023-10-21T00:00:00.000+00:00"
     )
 
 
 @pytest.mark.parametrize("device_fixture", ["heatit_zpushwall"])
 async def test_supported_button_values_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test supported button values update."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     freezer.move_to("2023-10-21")
 
     assert (
-        hass.states.get("event.livingroom_smart_switch_button1").state == STATE_UNKNOWN
+        menuai.states.get("event.livingroom_smart_switch_button1").state == STATE_UNKNOWN
     )
-    assert hass.states.get("event.livingroom_smart_switch_button1").attributes[
+    assert menuai.states.get("event.livingroom_smart_switch_button1").attributes[
         ATTR_EVENT_TYPES
     ] == ["pushed", "held", "down_hold"]
 
     await trigger_update(
-        hass,
+        menuai,
         devices,
         "5e5b97f3-3094-44e6-abc0-f61283412d6a",
         Capability.BUTTON,
@@ -98,53 +98,53 @@ async def test_supported_button_values_update(
     )
 
     assert (
-        hass.states.get("event.livingroom_smart_switch_button1").state == STATE_UNKNOWN
+        menuai.states.get("event.livingroom_smart_switch_button1").state == STATE_UNKNOWN
     )
-    assert hass.states.get("event.livingroom_smart_switch_button1").attributes[
+    assert menuai.states.get("event.livingroom_smart_switch_button1").attributes[
         ATTR_EVENT_TYPES
     ] == ["pushed", "held", "down_hold", "pushed_2x"]
 
 
 @pytest.mark.parametrize("device_fixture", ["heatit_zpushwall"])
 async def test_availability(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test availability."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     assert (
-        hass.states.get("event.livingroom_smart_switch_button1").state == STATE_UNKNOWN
+        menuai.states.get("event.livingroom_smart_switch_button1").state == STATE_UNKNOWN
     )
 
     await trigger_health_update(
-        hass, devices, "5e5b97f3-3094-44e6-abc0-f61283412d6a", HealthStatus.OFFLINE
+        menuai, devices, "5e5b97f3-3094-44e6-abc0-f61283412d6a", HealthStatus.OFFLINE
     )
 
     assert (
-        hass.states.get("event.livingroom_smart_switch_button1").state
+        menuai.states.get("event.livingroom_smart_switch_button1").state
         == STATE_UNAVAILABLE
     )
 
     await trigger_health_update(
-        hass, devices, "5e5b97f3-3094-44e6-abc0-f61283412d6a", HealthStatus.ONLINE
+        menuai, devices, "5e5b97f3-3094-44e6-abc0-f61283412d6a", HealthStatus.ONLINE
     )
 
     assert (
-        hass.states.get("event.livingroom_smart_switch_button1").state == STATE_UNKNOWN
+        menuai.states.get("event.livingroom_smart_switch_button1").state == STATE_UNKNOWN
     )
 
 
 @pytest.mark.parametrize("device_fixture", ["heatit_zpushwall"])
 async def test_availability_at_start(
-    hass: HomeAssistant,
+    menuai: menuai,
     unavailable_device: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test unavailable at boot."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
     assert (
-        hass.states.get("event.livingroom_smart_switch_button1").state
+        menuai.states.get("event.livingroom_smart_switch_button1").state
         == STATE_UNAVAILABLE
     )

@@ -5,17 +5,17 @@ from unittest.mock import call
 from aiowebostv import WebOsTvCommandError
 import pytest
 
-from homeassistant.components.notify import (
+from menuai.components.notify import (
     ATTR_DATA,
     ATTR_MESSAGE,
     DOMAIN as NOTIFY_DOMAIN,
 )
-from homeassistant.components.webostv import DOMAIN
-from homeassistant.const import ATTR_ICON
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.setup import async_setup_component
-from homeassistant.util import slugify
+from menuai.components.webostv import DOMAIN
+from menuai.const import ATTR_ICON
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.setup import async_setup_component
+from menuai.util import slugify
 
 from . import setup_webostv
 from .const import TV_NAME
@@ -25,12 +25,12 @@ MESSAGE = "one, two, testing, testing"
 SERVICE_NAME = slugify(TV_NAME)
 
 
-async def test_notify(hass: HomeAssistant, client) -> None:
+async def test_notify(menuai: menuai, client) -> None:
     """Test sending a message."""
-    await setup_webostv(hass)
-    assert hass.services.has_service(NOTIFY_DOMAIN, SERVICE_NAME)
+    await setup_webostv(menuai)
+    assert menuai.services.has_service(NOTIFY_DOMAIN, SERVICE_NAME)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         NOTIFY_DOMAIN,
         SERVICE_NAME,
         {
@@ -45,7 +45,7 @@ async def test_notify(hass: HomeAssistant, client) -> None:
     assert client.connect.call_count == 1
     client.send_message.assert_called_with(MESSAGE, icon_path=ICON_PATH)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         NOTIFY_DOMAIN,
         SERVICE_NAME,
         {
@@ -60,7 +60,7 @@ async def test_notify(hass: HomeAssistant, client) -> None:
     assert client.connect.call_count == 1
     client.send_message.assert_called_with(MESSAGE, icon_path=None)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         NOTIFY_DOMAIN,
         SERVICE_NAME,
         {
@@ -96,21 +96,21 @@ async def test_notify(hass: HomeAssistant, client) -> None:
     ],
 )
 async def test_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     client,
     is_on: bool,
     exception: Exception,
     error_message: str,
 ) -> None:
     """Test error scenarios."""
-    await setup_webostv(hass)
+    await setup_webostv(menuai)
     client.tv_state.is_on = is_on
 
-    assert hass.services.has_service("notify", SERVICE_NAME)
+    assert menuai.services.has_service("notify", SERVICE_NAME)
 
     client.send_message.side_effect = exception
-    with pytest.raises(HomeAssistantError, match=error_message):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match=error_message):
+        await menuai.services.async_call(
             NOTIFY_DOMAIN,
             SERVICE_NAME,
             {
@@ -126,16 +126,16 @@ async def test_errors(
 
 
 async def test_no_discovery_info(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test setup without discovery info."""
-    assert NOTIFY_DOMAIN not in hass.config.components
+    assert NOTIFY_DOMAIN not in menuai.config.components
     assert await async_setup_component(
-        hass,
+        menuai,
         NOTIFY_DOMAIN,
         {"notify": {"platform": DOMAIN}},
     )
-    await hass.async_block_till_done()
-    assert NOTIFY_DOMAIN in hass.config.components
+    await menuai.async_block_till_done()
+    assert NOTIFY_DOMAIN in menuai.config.components
     assert f"Failed to initialize notification service {DOMAIN}" in caplog.text
-    assert not hass.services.has_service("notify", SERVICE_NAME)
+    assert not menuai.services.has_service("notify", SERVICE_NAME)

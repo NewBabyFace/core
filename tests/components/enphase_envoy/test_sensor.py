@@ -9,13 +9,13 @@ from pyenphase.const import PHASENAMES
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.enphase_envoy.const import Platform
-from homeassistant.components.enphase_envoy.coordinator import SCAN_INTERVAL
-from homeassistant.const import STATE_UNKNOWN, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.util import dt as dt_util
-from homeassistant.util.unit_conversion import TemperatureConverter
+from menuai.components.enphase_envoy.const import Platform
+from menuai.components.enphase_envoy.coordinator import SCAN_INTERVAL
+from menuai.const import STATE_UNKNOWN, UnitOfTemperature
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.util import dt as dt_util
+from menuai.util.unit_conversion import TemperatureConverter
 
 from . import setup_integration
 
@@ -37,16 +37,16 @@ from tests.common import MockConfigEntry, async_fire_time_changed, snapshot_plat
 )
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mock_envoy: AsyncMock,
     config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test sensor platform entities against snapshot."""
-    with patch("homeassistant.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
-        await setup_integration(hass, config_entry)
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    with patch("menuai.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
+        await setup_integration(menuai, config_entry)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
 
 PRODUCTION_NAMES: tuple[str, ...] = (
@@ -72,13 +72,13 @@ PRODUCTION_NAMES: tuple[str, ...] = (
 )
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensor_production_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_envoy: AsyncMock,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test production entities values."""
-    with patch("homeassistant.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
-        await setup_integration(hass, config_entry)
+    with patch("menuai.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
+        await setup_integration(menuai, config_entry)
 
     sn = mock_envoy.serial_number
     ENTITY_BASE: str = f"{Platform.SENSOR}.envoy_{sn}"
@@ -92,7 +92,7 @@ async def test_sensor_production_data(
     )
 
     for name, target in list(zip(PRODUCTION_NAMES, PRODUCTION_TARGETS, strict=False)):
-        assert (entity_state := hass.states.get(f"{ENTITY_BASE}_{name}"))
+        assert (entity_state := menuai.states.get(f"{ENTITY_BASE}_{name}"))
         assert float(entity_state.state) == target
 
 
@@ -111,13 +111,13 @@ PRODUCTION_PHASE_NAMES: list[str] = [
 )
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensor_production_phase_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_envoy: AsyncMock,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test production phase entities values."""
-    with patch("homeassistant.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
-        await setup_integration(hass, config_entry)
+    with patch("menuai.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
+        await setup_integration(menuai, config_entry)
 
     sn = mock_envoy.serial_number
     ENTITY_BASE: str = f"{Platform.SENSOR}.envoy_{sn}"
@@ -137,7 +137,7 @@ async def test_sensor_production_phase_data(
     for name, target in list(
         zip(PRODUCTION_PHASE_NAMES, PRODUCTION_PHASE_TARGET, strict=False)
     ):
-        assert (entity_state := hass.states.get(f"{ENTITY_BASE}_{name}"))
+        assert (entity_state := menuai.states.get(f"{ENTITY_BASE}_{name}"))
         assert float(entity_state.state) == target
 
 
@@ -162,13 +162,13 @@ CONSUMPTION_NAMES: tuple[str, ...] = (
 )
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensor_consumption_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_envoy: AsyncMock,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test consumption entities values."""
-    with patch("homeassistant.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
-        await setup_integration(hass, config_entry)
+    with patch("menuai.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
+        await setup_integration(menuai, config_entry)
 
     sn = mock_envoy.serial_number
     ENTITY_BASE: str = f"{Platform.SENSOR}.envoy_{sn}"
@@ -182,7 +182,7 @@ async def test_sensor_consumption_data(
     )
 
     for name, target in list(zip(CONSUMPTION_NAMES, CONSUMPTION_TARGETS, strict=False)):
-        assert (entity_state := hass.states.get(f"{ENTITY_BASE}_{name}"))
+        assert (entity_state := menuai.states.get(f"{ENTITY_BASE}_{name}"))
         assert float(entity_state.state) == target
 
 
@@ -206,13 +206,13 @@ NET_CONSUMPTION_NAMES: tuple[str, ...] = (
 )
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensor_net_consumption_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_envoy: AsyncMock,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test net consumption entities values."""
-    with patch("homeassistant.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
-        await setup_integration(hass, config_entry)
+    with patch("menuai.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
+        await setup_integration(menuai, config_entry)
 
     sn = mock_envoy.serial_number
     ENTITY_BASE: str = f"{Platform.SENSOR}.envoy_{sn}"
@@ -225,7 +225,7 @@ async def test_sensor_net_consumption_data(
     for name, target in list(
         zip(NET_CONSUMPTION_NAMES, NET_CONSUMPTION_TARGETS, strict=False)
     ):
-        assert (entity_state := hass.states.get(f"{ENTITY_BASE}_{name}"))
+        assert (entity_state := menuai.states.get(f"{ENTITY_BASE}_{name}"))
         assert float(entity_state.state) == target
 
 
@@ -244,13 +244,13 @@ CONSUMPTION_PHASE_NAMES: list[str] = [
 )
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensor_consumption_phase_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_envoy: AsyncMock,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test consumption phase entities values."""
-    with patch("homeassistant.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
-        await setup_integration(hass, config_entry)
+    with patch("menuai.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
+        await setup_integration(menuai, config_entry)
 
     sn = mock_envoy.serial_number
     ENTITY_BASE: str = f"{Platform.SENSOR}.envoy_{sn}"
@@ -270,7 +270,7 @@ async def test_sensor_consumption_phase_data(
     for name, target in list(
         zip(CONSUMPTION_PHASE_NAMES, CONSUMPTION_PHASE_TARGET, strict=False)
     ):
-        assert (entity_state := hass.states.get(f"{ENTITY_BASE}_{name}"))
+        assert (entity_state := menuai.states.get(f"{ENTITY_BASE}_{name}"))
         assert float(entity_state.state) == target
 
 
@@ -289,13 +289,13 @@ NET_CONSUMPTION_PHASE_NAMES: list[str] = [
 )
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensor_net_consumption_phase_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_envoy: AsyncMock,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test consumption phase entities values."""
-    with patch("homeassistant.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
-        await setup_integration(hass, config_entry)
+    with patch("menuai.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
+        await setup_integration(menuai, config_entry)
 
     sn = mock_envoy.serial_number
     ENTITY_BASE: str = f"{Platform.SENSOR}.envoy_{sn}"
@@ -312,7 +312,7 @@ async def test_sensor_net_consumption_phase_data(
     for name, target in list(
         zip(NET_CONSUMPTION_PHASE_NAMES, NET_CONSUMPTION_PHASE_TARGET, strict=False)
     ):
-        assert (entity_state := hass.states.get(f"{ENTITY_BASE}_{name}"))
+        assert (entity_state := menuai.states.get(f"{ENTITY_BASE}_{name}"))
         assert float(entity_state.state) == target
 
 
@@ -330,13 +330,13 @@ CT_PRODUCTION_NAMES_STR = ("metering_status_production_ct",)
 )
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensor_production_ct_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_envoy: AsyncMock,
 ) -> None:
     """Test production CT phase entities values."""
-    with patch("homeassistant.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
-        await setup_integration(hass, config_entry)
+    with patch("menuai.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
+        await setup_integration(menuai, config_entry)
 
     sn = mock_envoy.serial_number
     ENTITY_BASE: str = f"{Platform.SENSOR}.envoy_{sn}"
@@ -347,14 +347,14 @@ async def test_sensor_production_ct_data(
     for name, target in list(
         zip(CT_PRODUCTION_NAMES_INT, CT_PRODUCTION_TARGETS_INT, strict=False)
     ):
-        assert (entity_state := hass.states.get(f"{ENTITY_BASE}_{name}"))
+        assert (entity_state := menuai.states.get(f"{ENTITY_BASE}_{name}"))
         assert float(entity_state.state) == target
 
     CT_PRODUCTION_TARGETS_STR = (data.metering_status,)
     for name, target in list(
         zip(CT_PRODUCTION_NAMES_STR, CT_PRODUCTION_TARGETS_STR, strict=False)
     ):
-        assert (entity_state := hass.states.get(f"{ENTITY_BASE}_{name}"))
+        assert (entity_state := menuai.states.get(f"{ENTITY_BASE}_{name}"))
         assert entity_state.state == target
 
 
@@ -381,13 +381,13 @@ CT_PRODUCTION_NAMES_STR_PHASE = [
 )
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensor_production_ct_phase_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_envoy: AsyncMock,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test production ct phase entities values."""
-    with patch("homeassistant.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
-        await setup_integration(hass, config_entry)
+    with patch("menuai.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
+        await setup_integration(menuai, config_entry)
 
     sn = mock_envoy.serial_number
     ENTITY_BASE: str = f"{Platform.SENSOR}.envoy_{sn}"
@@ -404,7 +404,7 @@ async def test_sensor_production_ct_phase_data(
             strict=False,
         )
     ):
-        assert (entity_state := hass.states.get(f"{ENTITY_BASE}_{name}"))
+        assert (entity_state := menuai.states.get(f"{ENTITY_BASE}_{name}"))
         assert float(entity_state.state) == target
 
     CT_PRODUCTION_NAMES_STR_TARGET = [
@@ -419,7 +419,7 @@ async def test_sensor_production_ct_phase_data(
             strict=False,
         )
     ):
-        assert (entity_state := hass.states.get(f"{ENTITY_BASE}_{name}"))
+        assert (entity_state := menuai.states.get(f"{ENTITY_BASE}_{name}"))
         assert entity_state.state == target
 
 
@@ -445,13 +445,13 @@ CT_CONSUMPTION_NAMES_STR: tuple[str, ...] = ("metering_status_net_consumption_ct
 )
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensor_consumption_ct_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_envoy: AsyncMock,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test consumption CT phase entities values."""
-    with patch("homeassistant.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
-        await setup_integration(hass, config_entry)
+    with patch("menuai.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
+        await setup_integration(menuai, config_entry)
 
     sn = mock_envoy.serial_number
     ENTITY_BASE: str = f"{Platform.SENSOR}.envoy_{sn}"
@@ -469,14 +469,14 @@ async def test_sensor_consumption_ct_data(
     for name, target in list(
         zip(CT_CONSUMPTION_NAMES_FLOAT, CT_CONSUMPTION_TARGETS_FLOAT, strict=False)
     ):
-        assert (entity_state := hass.states.get(f"{ENTITY_BASE}_{name}"))
+        assert (entity_state := menuai.states.get(f"{ENTITY_BASE}_{name}"))
         assert float(entity_state.state) == target
 
     CT_CONSUMPTION_TARGETS_STR = (data.metering_status,)
     for name, target in list(
         zip(CT_CONSUMPTION_NAMES_STR, CT_CONSUMPTION_TARGETS_STR, strict=False)
     ):
-        assert (entity_state := hass.states.get(f"{ENTITY_BASE}_{name}"))
+        assert (entity_state := menuai.states.get(f"{ENTITY_BASE}_{name}"))
         assert entity_state.state == target
 
 
@@ -503,13 +503,13 @@ CT_CONSUMPTION_NAMES_STR_PHASE = [
 )
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensor_consumption_ct_phase_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_envoy: AsyncMock,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test consumption ct phase entities values."""
-    with patch("homeassistant.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
-        await setup_integration(hass, config_entry)
+    with patch("menuai.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
+        await setup_integration(menuai, config_entry)
 
     sn = mock_envoy.serial_number
     ENTITY_BASE: str = f"{Platform.SENSOR}.envoy_{sn}"
@@ -535,7 +535,7 @@ async def test_sensor_consumption_ct_phase_data(
             strict=False,
         )
     ):
-        assert (entity_state := hass.states.get(f"{ENTITY_BASE}_{name}"))
+        assert (entity_state := menuai.states.get(f"{ENTITY_BASE}_{name}"))
         assert float(entity_state.state) == target
 
     CT_CONSUMPTION_NAMES_STR_PHASE_TARGET = [
@@ -550,7 +550,7 @@ async def test_sensor_consumption_ct_phase_data(
             strict=False,
         )
     ):
-        assert (entity_state := hass.states.get(f"{ENTITY_BASE}_{name}"))
+        assert (entity_state := menuai.states.get(f"{ENTITY_BASE}_{name}"))
         assert entity_state.state == target
 
 
@@ -573,13 +573,13 @@ CT_STORAGE_NAMES_STR = ("metering_status_storage_ct",)
 )
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensor_storage_ct_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_envoy: AsyncMock,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test storage phase entities values."""
-    with patch("homeassistant.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
-        await setup_integration(hass, config_entry)
+    with patch("menuai.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
+        await setup_integration(menuai, config_entry)
 
     sn = mock_envoy.serial_number
     ENTITY_BASE: str = f"{Platform.SENSOR}.envoy_{sn}"
@@ -596,14 +596,14 @@ async def test_sensor_storage_ct_data(
     for name, target in list(
         zip(CT_STORAGE_NAMES_FLOAT, CT_STORAGE_TARGETS_FLOAT, strict=False)
     ):
-        assert (entity_state := hass.states.get(f"{ENTITY_BASE}_{name}"))
+        assert (entity_state := menuai.states.get(f"{ENTITY_BASE}_{name}"))
         assert float(entity_state.state) == target
 
     CT_STORAGE_TARGETS_STR = (data.metering_status,)
     for name, target in list(
         zip(CT_STORAGE_NAMES_STR, CT_STORAGE_TARGETS_STR, strict=False)
     ):
-        assert (entity_state := hass.states.get(f"{ENTITY_BASE}_{name}"))
+        assert (entity_state := menuai.states.get(f"{ENTITY_BASE}_{name}"))
         assert entity_state.state == target
 
 
@@ -627,13 +627,13 @@ CT_STORAGE_NAMES_STR_PHASE = [
 )
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensor_storage_ct_phase_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_envoy: AsyncMock,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test storage ct phase entities values."""
-    with patch("homeassistant.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
-        await setup_integration(hass, config_entry)
+    with patch("menuai.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
+        await setup_integration(menuai, config_entry)
 
     sn = mock_envoy.serial_number
     ENTITY_BASE: str = f"{Platform.SENSOR}.envoy_{sn}"
@@ -658,7 +658,7 @@ async def test_sensor_storage_ct_phase_data(
             strict=False,
         )
     ):
-        assert (entity_state := hass.states.get(f"{ENTITY_BASE}_{name}"))
+        assert (entity_state := menuai.states.get(f"{ENTITY_BASE}_{name}"))
         assert float(entity_state.state) == target
 
     CT_STORAGE_NAMES_STR_PHASE_TARGET = [
@@ -673,7 +673,7 @@ async def test_sensor_storage_ct_phase_data(
             strict=False,
         )
     ):
-        assert (entity_state := hass.states.get(f"{ENTITY_BASE}_{name}"))
+        assert (entity_state := menuai.states.get(f"{ENTITY_BASE}_{name}"))
         assert entity_state.state == target
 
 
@@ -686,14 +686,14 @@ async def test_sensor_storage_ct_phase_data(
     indirect=["mock_envoy"],
 )
 async def test_sensor_all_phase_entities_disabled_by_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_envoy: AsyncMock,
     config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test all phase entities are disabled by integration."""
-    with patch("homeassistant.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
-        await setup_integration(hass, config_entry)
+    with patch("menuai.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
+        await setup_integration(menuai, config_entry)
 
     sn = mock_envoy.serial_number
     ENTITY_BASE: str = f"{Platform.SENSOR}.envoy_{sn}"
@@ -720,14 +720,14 @@ async def test_sensor_all_phase_entities_disabled_by_integration(
     indirect=["mock_envoy"],
 )
 async def test_sensor_storage_phase_disabled_by_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
     mock_envoy: AsyncMock,
 ) -> None:
     """Test all storage CT phase entities are disabled by integration."""
-    with patch("homeassistant.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
-        await setup_integration(hass, config_entry)
+    with patch("menuai.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
+        await setup_integration(menuai, config_entry)
 
     sn = mock_envoy.serial_number
     ENTITY_BASE: str = f"{Platform.SENSOR}.envoy_{sn}"
@@ -753,20 +753,20 @@ async def test_sensor_storage_phase_disabled_by_integration(
 )
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensor_inverter_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_envoy: AsyncMock,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test enphase_envoy inverter entities values."""
-    with patch("homeassistant.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
-        await setup_integration(hass, config_entry)
+    with patch("menuai.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
+        await setup_integration(menuai, config_entry)
 
     entity_base = f"{Platform.SENSOR}.inverter"
 
     for sn, inverter in mock_envoy.data.inverters.items():
-        assert (entity_state := hass.states.get(f"{entity_base}_{sn}"))
+        assert (entity_state := menuai.states.get(f"{entity_base}_{sn}"))
         assert float(entity_state.state) == (inverter.last_report_watts)
-        assert (last_reported := hass.states.get(f"{entity_base}_{sn}_last_reported"))
+        assert (last_reported := menuai.states.get(f"{entity_base}_{sn}_last_reported"))
         assert dt_util.parse_datetime(
             last_reported.state
         ) == dt_util.utc_from_timestamp(inverter.last_report_date)
@@ -785,14 +785,14 @@ async def test_sensor_inverter_data(
     indirect=["mock_envoy"],
 )
 async def test_sensor_inverter_disabled_by_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_envoy: AsyncMock,
     config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test enphase_envoy inverter disabled by integration entities."""
-    with patch("homeassistant.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
-        await setup_integration(hass, config_entry)
+    with patch("menuai.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
+        await setup_integration(menuai, config_entry)
 
     INVERTER_BASE = f"{Platform.SENSOR}.inverter"
 
@@ -812,13 +812,13 @@ async def test_sensor_inverter_disabled_by_integration(
     indirect=["mock_envoy"],
 )
 async def test_sensor_encharge_aggregate_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_envoy: AsyncMock,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test enphase_envoy encharge aggregate entities values."""
-    with patch("homeassistant.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
-        await setup_integration(hass, config_entry)
+    with patch("menuai.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
+        await setup_integration(menuai, config_entry)
 
     sn = mock_envoy.serial_number
     ENTITY_BASE = f"{Platform.SENSOR}.envoy_{sn}"
@@ -832,7 +832,7 @@ async def test_sensor_encharge_aggregate_data(
         ("reserve_battery_energy", data.backup_reserve),
         ("battery_capacity", data.max_available_capacity),
     ):
-        assert (entity_state := hass.states.get(f"{ENTITY_BASE}_{target[0]}"))
+        assert (entity_state := menuai.states.get(f"{ENTITY_BASE}_{target[0]}"))
         assert float(entity_state.state) == target[1]
 
 
@@ -844,23 +844,23 @@ async def test_sensor_encharge_aggregate_data(
     indirect=["mock_envoy"],
 )
 async def test_sensor_encharge_enpower_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_envoy: AsyncMock,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test enphase_envoy encharge enpower entities values."""
-    with patch("homeassistant.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
-        await setup_integration(hass, config_entry)
+    with patch("menuai.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
+        await setup_integration(menuai, config_entry)
 
     sn = mock_envoy.data.enpower.serial_number
     ENTITY_BASE = f"{Platform.SENSOR}.enpower"
 
-    assert (entity_state := hass.states.get(f"{ENTITY_BASE}_{sn}_temperature"))
+    assert (entity_state := menuai.states.get(f"{ENTITY_BASE}_{sn}_temperature"))
     assert (
         round(
             TemperatureConverter.convert(
                 float(entity_state.state),
-                hass.config.units.temperature_unit,
+                menuai.config.units.temperature_unit,
                 UnitOfTemperature.FAHRENHEIT
                 if mock_envoy.data.enpower.temperature_unit == "F"
                 else UnitOfTemperature.CELSIUS,
@@ -868,7 +868,7 @@ async def test_sensor_encharge_enpower_data(
         )
         == mock_envoy.data.enpower.temperature
     )
-    assert (entity_state := hass.states.get(f"{ENTITY_BASE}_{sn}_last_reported"))
+    assert (entity_state := menuai.states.get(f"{ENTITY_BASE}_{sn}_last_reported"))
     assert dt_util.parse_datetime(entity_state.state) == dt_util.utc_from_timestamp(
         mock_envoy.data.enpower.last_report_date
     )
@@ -883,13 +883,13 @@ async def test_sensor_encharge_enpower_data(
     indirect=["mock_envoy"],
 )
 async def test_sensor_encharge_power_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_envoy: AsyncMock,
 ) -> None:
     """Test enphase_envoy encharge_power entities values."""
-    with patch("homeassistant.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
-        await setup_integration(hass, config_entry)
+    with patch("menuai.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
+        await setup_integration(menuai, config_entry)
 
     ENTITY_BASE = f"{Platform.SENSOR}.encharge"
 
@@ -913,16 +913,16 @@ async def test_sensor_encharge_power_data(
 
     for sn, sn_target in ENCHARGE_POWER_TARGETS:
         for name, target in list(zip(ENCHARGE_POWER_NAMES, sn_target, strict=False)):
-            assert (entity_state := hass.states.get(f"{ENTITY_BASE}_{sn}_{name}"))
+            assert (entity_state := menuai.states.get(f"{ENTITY_BASE}_{sn}_{name}"))
             assert float(entity_state.state) == target
 
     for sn, encharge_inventory in mock_envoy.data.encharge_inventory.items():
-        assert (entity_state := hass.states.get(f"{ENTITY_BASE}_{sn}_temperature"))
+        assert (entity_state := menuai.states.get(f"{ENTITY_BASE}_{sn}_temperature"))
         assert (
             round(
                 TemperatureConverter.convert(
                     float(entity_state.state),
-                    hass.config.units.temperature_unit,
+                    menuai.config.units.temperature_unit,
                     UnitOfTemperature.FAHRENHEIT
                     if encharge_inventory.temperature_unit == "F"
                     else UnitOfTemperature.CELSIUS,
@@ -930,7 +930,7 @@ async def test_sensor_encharge_power_data(
             )
             == encharge_inventory.temperature
         )
-        assert (entity_state := hass.states.get(f"{ENTITY_BASE}_{sn}_last_reported"))
+        assert (entity_state := menuai.states.get(f"{ENTITY_BASE}_{sn}_last_reported"))
         assert dt_util.parse_datetime(entity_state.state) == dt_util.utc_from_timestamp(
             encharge_inventory.last_report_date
         )
@@ -951,13 +951,13 @@ ACB_POWER_STR_NAMES: tuple[str, ...] = ("battery_state",)
     indirect=["mock_envoy"],
 )
 async def test_sensor_acb_power_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_envoy: AsyncMock,
 ) -> None:
     """Test enphase_envoy acb battery power entities values."""
-    with patch("homeassistant.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
-        await setup_integration(hass, config_entry)
+    with patch("menuai.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
+        await setup_integration(menuai, config_entry)
 
     sn = mock_envoy.serial_number
     ENTITY_BASE: str = f"{Platform.SENSOR}.acb_{sn}"
@@ -972,13 +972,13 @@ async def test_sensor_acb_power_data(
     for name, target in list(
         zip(ACB_POWER_INT_NAMES, ACB_POWER_INT_TARGETS, strict=False)
     ):
-        assert (entity_state := hass.states.get(f"{ENTITY_BASE}_{name}"))
+        assert (entity_state := menuai.states.get(f"{ENTITY_BASE}_{name}"))
         assert int(entity_state.state) == target
 
     for name, target in list(
         zip(ACB_POWER_STR_NAMES, ACB_POWER_STR_TARGETS, strict=False)
     ):
-        assert (entity_state := hass.states.get(f"{ENTITY_BASE}_{name}"))
+        assert (entity_state := menuai.states.get(f"{ENTITY_BASE}_{name}"))
         assert entity_state.state == target
 
 
@@ -998,13 +998,13 @@ AGGREGATED_ACB_BATTERY_NAMES: tuple[str, ...] = ("available_acb_battery_energy",
     indirect=["mock_envoy"],
 )
 async def test_sensor_aggegated_battery_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_envoy: AsyncMock,
 ) -> None:
     """Test enphase_envoy aggregated batteries entities values."""
-    with patch("homeassistant.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
-        await setup_integration(hass, config_entry)
+    with patch("menuai.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
+        await setup_integration(menuai, config_entry)
 
     sn = mock_envoy.serial_number
     ENTITY_BASE: str = f"{Platform.SENSOR}.envoy_{sn}"
@@ -1019,7 +1019,7 @@ async def test_sensor_aggegated_battery_data(
     for name, target in list(
         zip(AGGREGATED_BATTERY_NAMES, AGGREGATED_TARGETS, strict=False)
     ):
-        assert (entity_state := hass.states.get(f"{ENTITY_BASE}_{name}"))
+        assert (entity_state := menuai.states.get(f"{ENTITY_BASE}_{name}"))
         assert int(entity_state.state) == target
 
     data = mock_envoy.data.acb_power
@@ -1027,7 +1027,7 @@ async def test_sensor_aggegated_battery_data(
     for name, target in list(
         zip(AGGREGATED_ACB_BATTERY_NAMES, AGGREGATED_ACB_TARGETS, strict=False)
     ):
-        assert (entity_state := hass.states.get(f"{ENTITY_BASE}_{name}"))
+        assert (entity_state := menuai.states.get(f"{ENTITY_BASE}_{name}"))
         assert int(entity_state.state) == target
 
 
@@ -1053,15 +1053,15 @@ def integration_disabled_entities(
 )
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensor_missing_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_envoy: AsyncMock,
     entity_registry: er.EntityRegistry,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test enphase_envoy sensor platform midding data handling."""
-    with patch("homeassistant.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
-        await setup_integration(hass, config_entry)
+    with patch("menuai.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
+        await setup_integration(menuai, config_entry)
 
     ENTITY_BASE = f"{Platform.SENSOR}.envoy_{mock_envoy.serial_number}"
 
@@ -1084,8 +1084,8 @@ async def test_sensor_missing_data(
 
     # MOve time to next update
     freezer.tick(SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     # all these should now be in unknown state
     for entity in (
@@ -1098,11 +1098,11 @@ async def test_sensor_missing_data(
         "metering_status_net_consumption_ct_l2",
         "metering_status_storage_ct_l2",
     ):
-        assert (entity_state := hass.states.get(f"{ENTITY_BASE}_{entity}"))
+        assert (entity_state := menuai.states.get(f"{ENTITY_BASE}_{entity}"))
         assert entity_state.state == STATE_UNKNOWN
 
     # test the original inverter is now unknown
-    assert (entity_state := hass.states.get("sensor.inverter_1"))
+    assert (entity_state := menuai.states.get("sensor.inverter_1"))
     assert entity_state.state == STATE_UNKNOWN
 
 
@@ -1115,7 +1115,7 @@ async def test_sensor_missing_data(
 )
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_fw_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_envoy: AsyncMock,
     entity_registry: er.EntityRegistry,
@@ -1123,17 +1123,17 @@ async def test_fw_update(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test enphase_envoy sensor update over fw update."""
-    logging.getLogger("homeassistant.components.enphase_envoy").setLevel(logging.DEBUG)
-    with patch("homeassistant.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
-        await setup_integration(hass, config_entry)
+    logging.getLogger("menuai.components.enphase_envoy").setLevel(logging.DEBUG)
+    with patch("menuai.components.enphase_envoy.PLATFORMS", [Platform.SENSOR]):
+        await setup_integration(menuai, config_entry)
 
     # force HA to detect changed data by changing raw
     mock_envoy.firmware = "0.0.0"
 
     # Move time to next update
     freezer.tick(SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     assert "firmware changed from: " in caplog.text
     assert "to: 0.0.0, reloading enphase envoy integration" in caplog.text

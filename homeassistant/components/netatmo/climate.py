@@ -9,7 +9,7 @@ from pyatmo.modules import NATherm1
 from pyatmo.modules.device_types import DeviceType
 import voluptuous as vol
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_PRESET_MODE,
     DEFAULT_MIN_TEMP,
     PRESET_AWAY,
@@ -20,18 +20,18 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_TEMPERATURE,
     PRECISION_HALVES,
     STATE_OFF,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv, entity_platform
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import dt as dt_util
 
 from .const import (
     ATTR_END_DATETIME,
@@ -118,7 +118,7 @@ NA_VALVE = DeviceType.NRV
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -134,7 +134,7 @@ async def async_setup_entry(
         async_add_entities([entity])
 
     entry.async_on_unload(
-        async_dispatcher_connect(hass, NETATMO_CREATE_CLIMATE, _create_entity)
+        async_dispatcher_connect(menuai, NETATMO_CREATE_CLIMATE, _create_entity)
     )
 
     platform = entity_platform.async_get_current_platform()
@@ -222,9 +222,9 @@ class NetatmoThermostat(NetatmoRoomEntity, ClimateEntity):
 
         self._attr_unique_id = f"{self.device.entity_id}-{self.device_type}"
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Entity created."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         for event_type in (
             EVENT_TYPE_SET_POINT,
@@ -234,7 +234,7 @@ class NetatmoThermostat(NetatmoRoomEntity, ClimateEntity):
         ):
             self.async_on_remove(
                 async_dispatcher_connect(
-                    self.hass,
+                    self.menuai,
                     f"signal-{DOMAIN}-webhook-{event_type}",
                     self.handle_event,
                 )
@@ -252,7 +252,7 @@ class NetatmoThermostat(NetatmoRoomEntity, ClimateEntity):
             # handle schedule change
             if "schedule_id" in data:
                 self._selected_schedule = getattr(
-                    self.hass.data[DOMAIN][DATA_SCHEDULES][self.home.entity_id].get(
+                    self.menuai.data[DOMAIN][DATA_SCHEDULES][self.home.entity_id].get(
                         data["schedule_id"]
                     ),
                     "name",
@@ -442,7 +442,7 @@ class NetatmoThermostat(NetatmoRoomEntity, ClimateEntity):
     async def _async_service_set_schedule(self, **kwargs: Any) -> None:
         schedule_name = kwargs.get(ATTR_SCHEDULE_NAME)
         schedule_id = None
-        for sid, schedule in self.hass.data[DOMAIN][DATA_SCHEDULES][
+        for sid, schedule in self.menuai.data[DOMAIN][DATA_SCHEDULES][
             self.home.entity_id
         ].items():
             if schedule.name == schedule_name:

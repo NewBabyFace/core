@@ -4,9 +4,9 @@ import pytest
 import requests_mock
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.light import DOMAIN as LIGHT_DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.components.light import DOMAIN as LIGHT_DOMAIN
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from .common import ALL_DEVICE_NAMES, mock_devices_response
 
@@ -15,7 +15,7 @@ from tests.common import MockConfigEntry
 
 @pytest.mark.parametrize("device_name", ALL_DEVICE_NAMES)
 async def test_light_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     config_entry: MockConfigEntry,
     device_registry: dr.DeviceRegistry,
@@ -29,8 +29,8 @@ async def test_light_state(
     mock_devices_response(requests_mock, device_name)
 
     # setup platform - only including the named device
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Check device registry
     devices = dr.async_entries_for_config_entry(device_registry, config_entry.entry_id)
@@ -48,4 +48,4 @@ async def test_light_state(
 
     # Check states
     for entity in entities:
-        assert hass.states.get(entity.entity_id) == snapshot(name=entity.entity_id)
+        assert menuai.states.get(entity.entity_id) == snapshot(name=entity.entity_id)

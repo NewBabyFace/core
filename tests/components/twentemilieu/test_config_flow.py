@@ -5,18 +5,18 @@ from unittest.mock import MagicMock
 import pytest
 from twentemilieu import TwenteMilieuAddressError, TwenteMilieuConnectionError
 
-from homeassistant import config_entries
-from homeassistant.components.twentemilieu import config_flow
-from homeassistant.components.twentemilieu.const import (
+from menuai import config_entries
+from menuai.components.twentemilieu import config_flow
+from menuai.components.twentemilieu.const import (
     CONF_HOUSE_LETTER,
     CONF_HOUSE_NUMBER,
     CONF_POST_CODE,
     DOMAIN,
 )
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_ID
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
@@ -24,16 +24,16 @@ pytestmark = pytest.mark.usefixtures("mock_setup_entry")
 
 
 @pytest.mark.usefixtures("mock_twentemilieu")
-async def test_full_user_flow(hass: HomeAssistant) -> None:
+async def test_full_user_flow(menuai: menuai) -> None:
     """Test registering an integration and finishing flow works."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_POST_CODE: "1234AB",
@@ -56,7 +56,7 @@ async def test_full_user_flow(hass: HomeAssistant) -> None:
 
 
 async def test_invalid_address(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_twentemilieu: MagicMock,
 ) -> None:
     """Test full user flow when the user enters an incorrect address.
@@ -64,7 +64,7 @@ async def test_invalid_address(
     This tests also tests if the user recovers from it by entering a valid
     address in the second attempt.
     """
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
@@ -72,7 +72,7 @@ async def test_invalid_address(
     assert result["step_id"] == "user"
 
     mock_twentemilieu.unique_id.side_effect = TwenteMilieuAddressError
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_POST_CODE: "1234",
@@ -85,7 +85,7 @@ async def test_invalid_address(
     assert result["errors"] == {"base": "invalid_address"}
 
     mock_twentemilieu.unique_id.side_effect = None
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_POST_CODE: "1234AB",
@@ -107,13 +107,13 @@ async def test_invalid_address(
 
 
 async def test_connection_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_twentemilieu: MagicMock,
 ) -> None:
     """Test we show user form on Twente Milieu connection error."""
     mock_twentemilieu.unique_id.side_effect = TwenteMilieuConnectionError
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={
@@ -130,7 +130,7 @@ async def test_connection_error(
     # Recover from error
     mock_twentemilieu.unique_id.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_POST_CODE: "1234AB",
@@ -154,12 +154,12 @@ async def test_connection_error(
 
 @pytest.mark.usefixtures("mock_twentemilieu")
 async def test_address_already_set_up(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test we abort if address has already been set up."""
-    mock_config_entry.add_to_hass(hass)
-    result = await hass.config_entries.flow.async_init(
+    mock_config_entry.add_to_menuai(menuai)
+    result = await menuai.config_entries.flow.async_init(
         config_flow.DOMAIN,
         context={"source": config_entries.SOURCE_USER},
         data={

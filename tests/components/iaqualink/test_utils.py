@@ -3,14 +3,14 @@
 from iaqualink.exception import AqualinkServiceException
 import pytest
 
-from homeassistant.components.iaqualink.utils import await_or_reraise
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.components.iaqualink.utils import await_or_reraise
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from .conftest import async_raises, async_returns
 
 
-async def test_await_or_reraise(hass: HomeAssistant) -> None:
+async def test_await_or_reraise(menuai: menuai) -> None:
     """Test await_or_reraise for all values of awaitable."""
     async_noop = async_returns(None)
     await await_or_reraise(async_noop())
@@ -20,5 +20,5 @@ async def test_await_or_reraise(hass: HomeAssistant) -> None:
     assert str(exc_info.value) == "Test exception"
 
     async_ex = async_raises(AqualinkServiceException)
-    with pytest.raises(HomeAssistantError):
+    with pytest.raises(menuaiError):
         await await_or_reraise(async_ex())

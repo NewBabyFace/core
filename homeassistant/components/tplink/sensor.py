@@ -10,16 +10,16 @@ from typing import TYPE_CHECKING, Any, cast
 from kasa import Feature
 from kasa.smart.modules.clean import ErrorCode as VacuumError
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     DOMAIN as SENSOR_DOMAIN,
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import UnitOfTime
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import UnitOfTime
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import TPLinkConfigEntry
 from .const import UNIT_MAPPING
@@ -269,7 +269,7 @@ SENSOR_DESCRIPTIONS_MAP = {desc.key: desc for desc in SENSOR_DESCRIPTIONS}
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: TPLinkConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -282,7 +282,7 @@ async def async_setup_entry(
 
     def _check_device() -> None:
         entities = CoordinatedTPLinkFeatureEntity.entities_for_device_and_its_children(
-            hass=hass,
+            menuai=menuai,
             device=device,
             coordinator=parent_coordinator,
             feature_type=Feature.Type.Sensor,
@@ -323,7 +323,7 @@ class TPLinkSensorEntity(CoordinatedTPLinkFeatureEntity, SensorEntity):
             assert isinstance(value, str | int | float | date | datetime | None)
 
         self._attr_native_value = value
-        # Map to homeassistant units and fallback to upstream one if none found
+        # Map to menuai units and fallback to upstream one if none found
         if (unit := self._feature.unit) is not None:
             self._attr_native_unit_of_measurement = UNIT_MAPPING.get(unit, unit)
         return True

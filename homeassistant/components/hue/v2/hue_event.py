@@ -1,4 +1,4 @@
-"""Handle forward of events transmitted by Hue devices to HASS."""
+"""Handle forward of events transmitted by Hue devices to menuai."""
 
 from __future__ import annotations
 
@@ -10,10 +10,10 @@ from aiohue.v2.controllers.events import EventType
 from aiohue.v2.models.button import Button
 from aiohue.v2.models.relative_rotary import RelativeRotary
 
-from homeassistant.const import CONF_DEVICE_ID, CONF_ID, CONF_TYPE, CONF_UNIQUE_ID
-from homeassistant.core import callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.util import slugify
+from menuai.const import CONF_DEVICE_ID, CONF_ID, CONF_TYPE, CONF_UNIQUE_ID
+from menuai.core import callback
+from menuai.helpers import device_registry as dr
+from menuai.util import slugify
 
 from ..const import ATTR_HUE_EVENT, CONF_SUBTYPE, DOMAIN
 
@@ -29,10 +29,10 @@ LOGGER = logging.getLogger(__name__)
 
 async def async_setup_hue_events(bridge: HueBridge):
     """Manage listeners for stateless Hue sensors that emit events."""
-    hass = bridge.hass
+    menuai = bridge.menuai
     api: HueBridgeV2 = bridge.api  # to satisfy typing
     conf_entry = bridge.config_entry
-    dev_reg = dr.async_get(hass)
+    dev_reg = dr.async_get(menuai)
 
     btn_controller = api.sensors.button
     rotary_controller = api.sensors.relative_rotary
@@ -58,7 +58,7 @@ async def async_setup_hue_events(bridge: HueBridge):
             CONF_TYPE: hue_resource.button.button_report.event.value,
             CONF_SUBTYPE: hue_resource.metadata.control_id,
         }
-        hass.bus.async_fire(ATTR_HUE_EVENT, data)
+        menuai.bus.async_fire(ATTR_HUE_EVENT, data)
 
     # add listener for updates from `button` resource
     conf_entry.async_on_unload(
@@ -84,7 +84,7 @@ async def async_setup_hue_events(bridge: HueBridge):
             CONF_DURATION: hue_resource.relative_rotary.rotary_report.rotation.duration,
             CONF_STEPS: hue_resource.relative_rotary.rotary_report.rotation.steps,
         }
-        hass.bus.async_fire(ATTR_HUE_EVENT, data)
+        menuai.bus.async_fire(ATTR_HUE_EVENT, data)
 
     # add listener for updates from `relative_rotary` resource
     conf_entry.async_on_unload(

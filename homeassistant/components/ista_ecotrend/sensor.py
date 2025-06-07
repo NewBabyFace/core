@@ -8,32 +8,32 @@ import datetime
 from enum import StrEnum
 import logging
 
-from homeassistant.components.recorder.models import StatisticMeanType
-from homeassistant.components.recorder.models.statistics import (
+from menuai.components.recorder.models import StatisticMeanType
+from menuai.components.recorder.models.statistics import (
     StatisticData,
     StatisticMetaData,
 )
-from homeassistant.components.recorder.statistics import (
+from menuai.components.recorder.statistics import (
     async_add_external_statistics,
     get_instance,
     get_last_statistics,
 )
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import UnitOfEnergy, UnitOfVolume
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import (
+from menuai.const import UnitOfEnergy, UnitOfVolume
+from menuai.core import menuai
+from menuai.helpers.device_registry import (
     DeviceEntry,
     DeviceEntryType,
     DeviceInfo,
 )
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import IstaConfigEntry, IstaCoordinator
@@ -151,7 +151,7 @@ SENSOR_DESCRIPTIONS: tuple[IstaSensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: IstaConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -204,16 +204,16 @@ class IstaSensor(CoordinatorEntity[IstaCoordinator], SensorEntity):
             value_type=self.entity_description.value_type,
         )
 
-    async def async_added_to_hass(self) -> None:
-        """When added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """When added to menuai."""
         # perform initial statistics import when sensor is added, otherwise it would take
         # 1 day when _handle_coordinator_update is triggered for the first time.
         await self.update_statistics()
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
     def _handle_coordinator_update(self) -> None:
         """Handle coordinator update."""
-        asyncio.run_coroutine_threadsafe(self.update_statistics(), self.hass.loop)
+        asyncio.run_coroutine_threadsafe(self.update_statistics(), self.menuai.loop)
 
     async def update_statistics(self) -> None:
         """Import ista EcoTrend historical statistics."""
@@ -226,7 +226,7 @@ class IstaSensor(CoordinatorEntity[IstaCoordinator], SensorEntity):
         )
         if not name:
             name = self.entity_id.removeprefix("sensor.")
-            self.hass.config_entries.async_update_entry(
+            self.menuai.config_entries.async_update_entry(
                 entry=self.coordinator.config_entry,
                 options={
                     **self.coordinator.config_entry.options,
@@ -238,9 +238,9 @@ class IstaSensor(CoordinatorEntity[IstaCoordinator], SensorEntity):
         statistics_sum = 0.0
         statistics_since = None
 
-        last_stats = await get_instance(self.hass).async_add_executor_job(
+        last_stats = await get_instance(self.menuai).async_add_executor_job(
             get_last_statistics,
-            self.hass,
+            self.menuai,
             1,
             statistic_id,
             False,
@@ -280,4 +280,4 @@ class IstaSensor(CoordinatorEntity[IstaCoordinator], SensorEntity):
             }
             if statistics:
                 _LOGGER.debug("Insert statistics: %s %s", metadata, statistics)
-                async_add_external_statistics(self.hass, metadata, statistics)
+                async_add_external_statistics(self.menuai, metadata, statistics)

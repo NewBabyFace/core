@@ -11,13 +11,13 @@ import threading
 import traceback
 from typing import Any
 
-from homeassistant.core import async_get_hass_or_none
-from homeassistant.helpers.frame import (
+from menuai.core import async_get_menuai_or_none
+from menuai.helpers.frame import (
     MissingIntegrationFrame,
     get_current_frame,
     get_integration_frame,
 )
-from homeassistant.loader import async_suggest_report_issue
+from menuai.loader import async_suggest_report_issue
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -109,7 +109,7 @@ def raise_for_blocking_call(
     _PREVIOUSLY_REPORTED.add(report_key)
 
     report_issue = async_suggest_report_issue(
-        async_get_hass_or_none(),
+        async_get_menuai_or_none(),
         integration_domain=integration_frame.integration,
         module=integration_frame.module,
     )

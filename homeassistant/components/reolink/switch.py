@@ -8,11 +8,11 @@ from typing import Any
 
 from reolink_aio.api import Chime, Host
 
-from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er, issue_registry as ir
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchEntity, SwitchEntityDescription
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er, issue_registry as ir
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .entity import (
@@ -339,7 +339,7 @@ DEPRECATED_NVR_SWITCHES = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ReolinkConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -372,7 +372,7 @@ async def async_setup_entry(
             continue
         depricated_dict[f"{reolink_data.host.unique_id}_{desc.key}"] = desc
 
-    entity_reg = er.async_get(hass)
+    entity_reg = er.async_get(menuai)
     reg_entities = er.async_entries_for_config_entry(entity_reg, config_entry.entry_id)
     for entity in reg_entities:
         # Can be removed in HA 2025.4.0
@@ -382,7 +382,7 @@ async def async_setup_entry(
                 continue
 
             ir.async_create_issue(
-                hass,
+                menuai,
                 DOMAIN,
                 "hub_switch_deprecated",
                 is_fixable=False,

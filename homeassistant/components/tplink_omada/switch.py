@@ -19,10 +19,10 @@ from tplink_omada_client.devices import (
 )
 from tplink_omada_client.omadasiteclient import GatewayPortSettings
 
-from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchEntity, SwitchEntityDescription
+from menuai.const import EntityCategory
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import OmadaConfigEntry
 from .controller import OmadaGatewayCoordinator, OmadaSwitchPortCoordinator
@@ -35,7 +35,7 @@ TCoordinator = TypeVar("TCoordinator", bound="OmadaCoordinator[Any]")
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: OmadaConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -252,9 +252,9 @@ class OmadaDevicePortSwitchEntity(
         self._attr_unique_id = f"{device.mac}_{port_id}_{entity_description.key}"
         self._attr_translation_placeholders = {"port_name": port_name or port_id}
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai."""
+        await super().async_added_to_menuai()
         self._do_update()
 
     async def _async_turn_on_off(self, enable: bool) -> None:

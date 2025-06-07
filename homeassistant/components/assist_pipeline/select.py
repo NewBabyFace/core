@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
-from homeassistant.components.select import SelectEntity, SelectEntityDescription
-from homeassistant.const import EntityCategory, Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import collection, entity_registry as er, restore_state
+from menuai.components.select import SelectEntity, SelectEntityDescription
+from menuai.const import EntityCategory, Platform
+from menuai.core import menuai, callback
+from menuai.helpers import collection, entity_registry as er, restore_state
 
 from .const import OPTION_PREFERRED
 from .pipeline import KEY_ASSIST_PIPELINE, AssistDevice
@@ -16,21 +16,21 @@ from .vad import VadSensitivity
 
 @callback
 def get_chosen_pipeline(
-    hass: HomeAssistant, domain: str, unique_id_prefix: str
+    menuai: menuai, domain: str, unique_id_prefix: str
 ) -> str | None:
     """Get the chosen pipeline for a domain."""
-    ent_reg = er.async_get(hass)
+    ent_reg = er.async_get(menuai)
     pipeline_entity_id = ent_reg.async_get_entity_id(
         Platform.SELECT, domain, f"{unique_id_prefix}-pipeline"
     )
     if pipeline_entity_id is None:
         return None
 
-    state = hass.states.get(pipeline_entity_id)
+    state = menuai.states.get(pipeline_entity_id)
     if state is None or state.state == OPTION_PREFERRED:
         return None
 
-    pipeline_store = hass.data[KEY_ASSIST_PIPELINE].pipeline_store
+    pipeline_store = menuai.data[KEY_ASSIST_PIPELINE].pipeline_store
     return next(
         (item.id for item in pipeline_store.async_items() if item.name == state.state),
         None,
@@ -39,17 +39,17 @@ def get_chosen_pipeline(
 
 @callback
 def get_vad_sensitivity(
-    hass: HomeAssistant, domain: str, unique_id_prefix: str
+    menuai: menuai, domain: str, unique_id_prefix: str
 ) -> VadSensitivity:
     """Get the chosen vad sensitivity for a domain."""
-    ent_reg = er.async_get(hass)
+    ent_reg = er.async_get(menuai)
     sensitivity_entity_id = ent_reg.async_get_entity_id(
         Platform.SELECT, domain, f"{unique_id_prefix}-vad_sensitivity"
     )
     if sensitivity_entity_id is None:
         return VadSensitivity.DEFAULT
 
-    state = hass.states.get(sensitivity_entity_id)
+    state = menuai.states.get(sensitivity_entity_id)
     if state is None:
         return VadSensitivity.DEFAULT
 
@@ -68,19 +68,19 @@ class AssistPipelineSelect(SelectEntity, restore_state.RestoreEntity):
     _attr_current_option = OPTION_PREFERRED
     _attr_options = [OPTION_PREFERRED]
 
-    def __init__(self, hass: HomeAssistant, domain: str, unique_id_prefix: str) -> None:
+    def __init__(self, menuai: menuai, domain: str, unique_id_prefix: str) -> None:
         """Initialize a pipeline selector."""
         self._domain = domain
         self._unique_id_prefix = unique_id_prefix
         self._attr_unique_id = f"{unique_id_prefix}-pipeline"
-        self.hass = hass
+        self.menuai = menuai
         self._update_options()
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to Home Assistant."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to MenuAI."""
+        await super().async_added_to_menuai()
 
-        pipeline_data = self.hass.data[KEY_ASSIST_PIPELINE]
+        pipeline_data = self.menuai.data[KEY_ASSIST_PIPELINE]
         pipeline_store = pipeline_data.pipeline_store
         self.async_on_remove(
             pipeline_store.async_add_change_set_listener(self._pipelines_updated)
@@ -116,7 +116,7 @@ class AssistPipelineSelect(SelectEntity, restore_state.RestoreEntity):
     @callback
     def _update_options(self) -> None:
         """Handle pipeline update."""
-        pipeline_store = self.hass.data[KEY_ASSIST_PIPELINE].pipeline_store
+        pipeline_store = self.menuai.data[KEY_ASSIST_PIPELINE].pipeline_store
         options = [OPTION_PREFERRED]
         options.extend(sorted(item.name for item in pipeline_store.async_items()))
         self._attr_options = options
@@ -137,14 +137,14 @@ class VadSensitivitySelect(SelectEntity, restore_state.RestoreEntity):
     _attr_current_option = VadSensitivity.DEFAULT.value
     _attr_options = [vs.value for vs in VadSensitivity]
 
-    def __init__(self, hass: HomeAssistant, unique_id_prefix: str) -> None:
+    def __init__(self, menuai: menuai, unique_id_prefix: str) -> None:
         """Initialize a pipeline selector."""
         self._attr_unique_id = f"{unique_id_prefix}-vad_sensitivity"
-        self.hass = hass
+        self.menuai = menuai
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to Home Assistant."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to MenuAI."""
+        await super().async_added_to_menuai()
 
         state = await self.async_get_last_state()
         if state is not None and state.state in self.options:

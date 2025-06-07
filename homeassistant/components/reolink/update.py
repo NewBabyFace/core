@@ -8,17 +8,17 @@ from typing import Any
 from reolink_aio.exceptions import ReolinkError
 from reolink_aio.software_version import NewSoftwareVersion, SoftwareVersion
 
-from homeassistant.components.update import (
+from menuai.components.update import (
     UpdateDeviceClass,
     UpdateEntity,
     UpdateEntityDescription,
     UpdateEntityFeature,
 )
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.event import async_call_later
-from homeassistant.helpers.update_coordinator import (
+from menuai.core import CALLBACK_TYPE, menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.event import async_call_later
+from menuai.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
 )
@@ -73,7 +73,7 @@ HOST_UPDATE_ENTITIES = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ReolinkConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -192,14 +192,14 @@ class ReolinkUpdateBaseEntity(
         self._installing = True
         await self._pause_update_coordinator()
         self._cancel_progress = async_call_later(
-            self.hass, POLL_PROGRESS, self._async_update_progress
+            self.menuai, POLL_PROGRESS, self._async_update_progress
         )
         try:
             await self._host.api.update_firmware(self._channel)
         except ReolinkError as err:
             if err.translation_key:
                 raise
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="firmware_install_error",
                 translation_placeholders={"err": str(err)},
@@ -207,10 +207,10 @@ class ReolinkUpdateBaseEntity(
         finally:
             self.async_write_ha_state()
             self._cancel_update = async_call_later(
-                self.hass, POLL_AFTER_INSTALL, self._async_update_future
+                self.menuai, POLL_AFTER_INSTALL, self._async_update_future
             )
             self._cancel_resume = async_call_later(
-                self.hass, RESUME_AFTER_INSTALL, self._resume_update_coordinator
+                self.menuai, RESUME_AFTER_INSTALL, self._resume_update_coordinator
             )
             self._installing = False
 
@@ -232,7 +232,7 @@ class ReolinkUpdateBaseEntity(
         self.async_write_ha_state()
         if self._installing:
             self._cancel_progress = async_call_later(
-                self.hass, POLL_PROGRESS, self._async_update_progress
+                self.menuai, POLL_PROGRESS, self._async_update_progress
             )
 
     async def _async_update_future(self, *args: Any) -> None:
@@ -242,14 +242,14 @@ class ReolinkUpdateBaseEntity(
         finally:
             self._cancel_update = None
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Entity created."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self._host.firmware_ch_list.append(self._channel)
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Entity removed."""
-        await super().async_will_remove_from_hass()
+        await super().async_will_remove_from_menuai()
         if self._channel in self._host.firmware_ch_list:
             self._host.firmware_ch_list.remove(self._channel)
         if self._cancel_update is not None:

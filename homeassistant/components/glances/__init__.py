@@ -10,7 +10,7 @@ from glances_api.exceptions import (
     GlancesApiNoDataAvailable,
 )
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
@@ -19,14 +19,14 @@ from homeassistant.const import (
     CONF_VERIFY_SSL,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import (
+from menuai.core import menuai
+from menuai.exceptions import (
     ConfigEntryAuthFailed,
     ConfigEntryError,
     ConfigEntryNotReady,
-    HomeAssistantError,
+    menuaiError,
 )
-from homeassistant.helpers.httpx_client import get_async_client
+from menuai.helpers.httpx_client import get_async_client
 
 from .coordinator import GlancesConfigEntry, GlancesDataUpdateCoordinator
 
@@ -37,35 +37,35 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, config_entry: GlancesConfigEntry
+    menuai: menuai, config_entry: GlancesConfigEntry
 ) -> bool:
     """Set up Glances from config entry."""
     try:
-        api = await get_api(hass, dict(config_entry.data))
+        api = await get_api(menuai, dict(config_entry.data))
     except GlancesApiAuthorizationError as err:
         raise ConfigEntryAuthFailed from err
     except GlancesApiError as err:
         raise ConfigEntryNotReady from err
     except ServerVersionMismatch as err:
         raise ConfigEntryError(err) from err
-    coordinator = GlancesDataUpdateCoordinator(hass, config_entry, api)
+    coordinator = GlancesDataUpdateCoordinator(menuai, config_entry, api)
     await coordinator.async_config_entry_first_refresh()
 
     config_entry.runtime_data = coordinator
 
-    await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: GlancesConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: GlancesConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
-async def get_api(hass: HomeAssistant, entry_data: dict[str, Any]) -> Glances:
+async def get_api(menuai: menuai, entry_data: dict[str, Any]) -> Glances:
     """Return the api from glances_api."""
-    httpx_client = get_async_client(hass, verify_ssl=entry_data[CONF_VERIFY_SSL])
+    httpx_client = get_async_client(menuai, verify_ssl=entry_data[CONF_VERIFY_SSL])
     for version in (4, 3):
         api = Glances(
             host=entry_data[CONF_HOST],
@@ -86,5 +86,5 @@ async def get_api(hass: HomeAssistant, entry_data: dict[str, Any]) -> Glances:
     raise ServerVersionMismatch("Could not connect to Glances API version 3 or 4")
 
 
-class ServerVersionMismatch(HomeAssistantError):
+class ServerVersionMismatch(menuaiError):
     """Raise exception if we fail to connect to Glances API."""

@@ -4,9 +4,9 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components import remote
-from homeassistant.components.remote import ATTR_COMMAND
-from homeassistant.const import (
+from menuai.components import remote
+from menuai.components.remote import ATTR_COMMAND
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
@@ -14,8 +14,8 @@ from homeassistant.const import (
     STATE_ON,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 ENTITY_ID = "remote.remote_one"
 SERVICE_SEND_COMMAND = "send_command"
@@ -25,42 +25,42 @@ SERVICE_SEND_COMMAND = "send_command"
 async def remote_only() -> None:
     """Enable only the datetime platform."""
     with patch(
-        "homeassistant.components.demo.COMPONENTS_WITH_CONFIG_ENTRY_DEMO_PLATFORM",
+        "menuai.components.demo.COMPONENTS_WITH_CONFIG_ENTRY_DEMO_PLATFORM",
         [Platform.REMOTE],
     ):
         yield
 
 
 @pytest.fixture(autouse=True)
-async def setup_component(hass: HomeAssistant, remote_only: None):
+async def setup_component(menuai: menuai, remote_only: None):
     """Initialize components."""
     assert await async_setup_component(
-        hass, remote.DOMAIN, {"remote": {"platform": "demo"}}
+        menuai, remote.DOMAIN, {"remote": {"platform": "demo"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
-async def test_methods(hass: HomeAssistant) -> None:
+async def test_methods(menuai: menuai) -> None:
     """Test if services call the entity methods as expected."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         remote.DOMAIN, SERVICE_TURN_ON, {ATTR_ENTITY_ID: ENTITY_ID}
     )
-    await hass.async_block_till_done()
-    state = hass.states.get(ENTITY_ID)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(ENTITY_ID)
     assert state.state == STATE_ON
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         remote.DOMAIN, SERVICE_TURN_OFF, {ATTR_ENTITY_ID: ENTITY_ID}
     )
-    await hass.async_block_till_done()
-    state = hass.states.get(ENTITY_ID)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(ENTITY_ID)
     assert state.state == STATE_OFF
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         remote.DOMAIN, SERVICE_TURN_ON, {ATTR_ENTITY_ID: ENTITY_ID}
     )
-    await hass.async_block_till_done()
-    state = hass.states.get(ENTITY_ID)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(ENTITY_ID)
     assert state.state == STATE_ON
 
     data = {
@@ -68,9 +68,9 @@ async def test_methods(hass: HomeAssistant) -> None:
         ATTR_COMMAND: ["test"],
     }
 
-    await hass.services.async_call(remote.DOMAIN, SERVICE_SEND_COMMAND, data)
-    await hass.async_block_till_done()
-    state = hass.states.get(ENTITY_ID)
+    await menuai.services.async_call(remote.DOMAIN, SERVICE_SEND_COMMAND, data)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(ENTITY_ID)
     assert state.attributes == {
         "friendly_name": "Remote One",
         "last_command_sent": "test",

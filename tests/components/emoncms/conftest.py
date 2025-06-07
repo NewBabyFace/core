@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from homeassistant.components.emoncms.const import CONF_ONLY_INCLUDE_FEEDID, DOMAIN
-from homeassistant.const import CONF_API_KEY, CONF_URL
+from menuai.components.emoncms.const import CONF_ONLY_INCLUDE_FEEDID, DOMAIN
+from menuai.const import CONF_API_KEY, CONF_URL
 
 from tests.common import MockConfigEntry
 
@@ -102,7 +102,7 @@ def config_single_feed() -> MockConfigEntry:
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.emoncms.async_setup_entry", return_value=True
+        "menuai.components.emoncms.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -112,10 +112,10 @@ async def emoncms_client() -> AsyncGenerator[AsyncMock]:
     """Mock pyemoncms success response."""
     with (
         patch(
-            "homeassistant.components.emoncms.EmoncmsClient", autospec=True
+            "menuai.components.emoncms.EmoncmsClient", autospec=True
         ) as mock_client,
         patch(
-            "homeassistant.components.emoncms.config_flow.EmoncmsClient",
+            "menuai.components.emoncms.config_flow.EmoncmsClient",
             new=mock_client,
         ),
     ):

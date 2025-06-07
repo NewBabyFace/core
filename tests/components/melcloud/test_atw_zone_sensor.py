@@ -4,13 +4,13 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components.melcloud.sensor import ATW_ZONE_SENSORS, AtwZoneSensor
+from menuai.components.melcloud.sensor import ATW_ZONE_SENSORS, AtwZoneSensor
 
 
 @pytest.fixture
 def mock_device():
     """Mock MELCloud device."""
-    with patch("homeassistant.components.melcloud.MelCloudDevice") as mock:
+    with patch("menuai.components.melcloud.MelCloudDevice") as mock:
         mock.name = "name"
         mock.device.serial = 1234
         mock.device.mac = "11:11:11:11:11:11"

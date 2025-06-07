@@ -9,8 +9,8 @@ from typing import cast
 
 import pypck
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_ADDRESS,
     CONF_BINARY_SENSORS,
     CONF_COVERS,
@@ -22,9 +22,9 @@ from homeassistant.const import (
     CONF_SENSORS,
     CONF_SWITCHES,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     CONF_CLIMATES,
@@ -62,10 +62,10 @@ DOMAIN_LOOKUP = {
 
 
 def get_device_connection(
-    hass: HomeAssistant, address: AddressType, config_entry: ConfigEntry
+    menuai: menuai, address: AddressType, config_entry: ConfigEntry
 ) -> DeviceConnectionType:
     """Return a lcn device_connection."""
-    host_connection = hass.data[DOMAIN][config_entry.entry_id][CONNECTION]
+    host_connection = menuai.data[DOMAIN][config_entry.entry_id][CONNECTION]
     addr = pypck.lcn_addr.LcnAddr(*address)
     return host_connection.get_address_conn(addr)
 
@@ -100,10 +100,10 @@ def generate_unique_id(
 
 
 def purge_entity_registry(
-    hass: HomeAssistant, entry_id: str, imported_entry_data: ConfigType
+    menuai: menuai, entry_id: str, imported_entry_data: ConfigType
 ) -> None:
     """Remove orphans from entity registry which are not in entry data."""
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
 
     # Find all entities that are referenced in the config entry.
     references_config_entry = {
@@ -131,10 +131,10 @@ def purge_entity_registry(
 
 
 def purge_device_registry(
-    hass: HomeAssistant, entry_id: str, imported_entry_data: ConfigType
+    menuai: menuai, entry_id: str, imported_entry_data: ConfigType
 ) -> None:
     """Remove orphans from device registry which are not in entry data."""
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
 
     # Find device that references the host.
     references_host = set()
@@ -165,9 +165,9 @@ def purge_device_registry(
         device_registry.async_remove_device(device_id)
 
 
-def register_lcn_host_device(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+def register_lcn_host_device(menuai: menuai, config_entry: ConfigEntry) -> None:
     """Register LCN host for given config_entry in device registry."""
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
 
     device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
@@ -179,14 +179,14 @@ def register_lcn_host_device(hass: HomeAssistant, config_entry: ConfigEntry) -> 
 
 
 def register_lcn_address_devices(
-    hass: HomeAssistant, config_entry: ConfigEntry
+    menuai: menuai, config_entry: ConfigEntry
 ) -> None:
     """Register LCN modules and groups defined in config_entry as devices in device registry.
 
     The name of all given device_connections is collected and the devices
     are updated.
     """
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
 
     host_identifiers = (DOMAIN, config_entry.entry_id)
 
@@ -217,9 +217,9 @@ def register_lcn_address_devices(
             model=device_model,
         )
 
-        hass.data[DOMAIN][config_entry.entry_id][DEVICE_CONNECTIONS][
+        menuai.data[DOMAIN][config_entry.entry_id][DEVICE_CONNECTIONS][
             device_entry.id
-        ] = get_device_connection(hass, address, config_entry)
+        ] = get_device_connection(menuai, address, config_entry)
 
 
 async def async_update_device_config(
@@ -254,14 +254,14 @@ async def async_update_device_config(
 
 
 async def async_update_config_entry(
-    hass: HomeAssistant, config_entry: ConfigEntry
+    menuai: menuai, config_entry: ConfigEntry
 ) -> None:
     """Fill missing values in config_entry with infos from LCN bus."""
     device_configs = deepcopy(config_entry.data[CONF_DEVICES])
     coros = []
     for device_config in device_configs:
         device_connection = get_device_connection(
-            hass, device_config[CONF_ADDRESS], config_entry
+            menuai, device_config[CONF_ADDRESS], config_entry
         )
         coros.append(async_update_device_config(device_connection, device_config))
 
@@ -270,7 +270,7 @@ async def async_update_config_entry(
     new_data = {**config_entry.data, CONF_DEVICES: device_configs}
 
     # schedule config_entry for save
-    hass.config_entries.async_update_entry(config_entry, data=new_data)
+    menuai.config_entries.async_update_entry(config_entry, data=new_data)
 
 
 def get_device_config(

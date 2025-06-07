@@ -13,21 +13,21 @@ from pytautulli import (
     PyTautulliApiUser,
 )
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import SOURCE_IMPORT
-from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfInformation
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import EntityDescription
-from homeassistant.helpers.entity_platform import (
+from menuai.config_entries import SOURCE_IMPORT
+from menuai.const import PERCENTAGE, EntityCategory, UnitOfInformation
+from menuai.core import menuai
+from menuai.helpers.entity import EntityDescription
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     AddEntitiesCallback,
 )
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType, StateType
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType, StateType
 
 from .const import ATTR_TOP_USER, DOMAIN
 from .coordinator import TautulliConfigEntry, TautulliDataUpdateCoordinator
@@ -199,21 +199,21 @@ SESSION_SENSOR_TYPES: tuple[TautulliSessionSensorEntityDescription, ...] = (
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Create the Tautulli sensor."""
-    hass.async_create_task(
-        hass.config_entries.flow.async_init(
+    menuai.async_create_task(
+        menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": SOURCE_IMPORT}, data=config
         )
     )
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: TautulliConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

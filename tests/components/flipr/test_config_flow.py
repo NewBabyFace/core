@@ -5,26 +5,26 @@ from unittest.mock import AsyncMock
 import pytest
 from requests.exceptions import HTTPError, Timeout
 
-from homeassistant.components.flipr.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.flipr.const import DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_EMAIL, CONF_PASSWORD
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 
 async def test_full_flow(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock, mock_flipr_client: AsyncMock
+    menuai: menuai, mock_setup_entry: AsyncMock, mock_flipr_client: AsyncMock
 ) -> None:
     """Test the full flow."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
     assert not result["errors"]
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={
@@ -52,7 +52,7 @@ async def test_full_flow(
     ],
 )
 async def test_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_flipr_client: AsyncMock,
     exception: Exception,
@@ -61,7 +61,7 @@ async def test_errors(
     """Test we handle any error."""
     mock_flipr_client.search_all_ids.side_effect = exception
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={
@@ -76,7 +76,7 @@ async def test_errors(
 
     # Test of recover in normal state after correction of the 1st error
     mock_flipr_client.search_all_ids.side_effect = None
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_EMAIL: "dummylogin",
@@ -93,13 +93,13 @@ async def test_errors(
 
 
 async def test_no_flipr_found(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock, mock_flipr_client: AsyncMock
+    menuai: menuai, mock_setup_entry: AsyncMock, mock_flipr_client: AsyncMock
 ) -> None:
     """Test the case where there is no flipr found."""
 
     mock_flipr_client.search_all_ids.return_value = {"flipr": [], "hub": []}
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={
@@ -114,7 +114,7 @@ async def test_no_flipr_found(
     # Test of recover in normal state after correction of the 1st error
     mock_flipr_client.search_all_ids.return_value = {"flipr": ["myfliprid"], "hub": []}
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={

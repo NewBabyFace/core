@@ -7,13 +7,13 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_LATITUDE,
     CONF_LONGITUDE,
     DEGREE,
@@ -23,19 +23,19 @@ from homeassistant.const import (
     UnitOfSpeed,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import (
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import (
     CoordinatorEntity,
     TimestampDataUpdateCoordinator,
 )
-from homeassistant.util.dt import parse_datetime
-from homeassistant.util.unit_conversion import (
+from menuai.util.dt import parse_datetime
+from menuai.util.unit_conversion import (
     DistanceConverter,
     PressureConverter,
     SpeedConverter,
 )
-from homeassistant.util.unit_system import US_CUSTOMARY_SYSTEM
+from menuai.util.unit_system import US_CUSTOMARY_SYSTEM
 
 from . import NWSConfigEntry, NWSData, base_unique_id, device_info
 from .const import ATTRIBUTION, CONF_STATION
@@ -150,7 +150,7 @@ SENSOR_TYPES: tuple[NWSSensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: NWSConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -160,7 +160,7 @@ async def async_setup_entry(
 
     async_add_entities(
         NWSSensor(
-            hass=hass,
+            menuai=menuai,
             entry_data=entry.data,
             nws_data=nws_data,
             description=description,
@@ -179,7 +179,7 @@ class NWSSensor(CoordinatorEntity[TimestampDataUpdateCoordinator[None]], SensorE
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entry_data: Mapping[str, Any],
         nws_data: NWSData,
         description: NWSSensorEntityDescription,
@@ -193,7 +193,7 @@ class NWSSensor(CoordinatorEntity[TimestampDataUpdateCoordinator[None]], SensorE
         self.entity_description = description
 
         self._attr_name = f"{station} {description.name}"
-        if hass.config.units is US_CUSTOMARY_SYSTEM:
+        if menuai.config.units is US_CUSTOMARY_SYSTEM:
             self._attr_native_unit_of_measurement = description.unit_convert
         self._attr_device_info = device_info(latitude, longitude)
         self._attr_unique_id = (

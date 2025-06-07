@@ -10,8 +10,8 @@ from typing import TYPE_CHECKING, Any, Generic, TypeVar
 import broadlink as blk
 from broadlink.exceptions import AuthorizationError, BroadlinkException
 
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util import dt as dt_util
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.util import dt as dt_util
 
 if TYPE_CHECKING:
     from .device import BroadlinkDevice
@@ -60,7 +60,7 @@ class BroadlinkUpdateManager(ABC, Generic[_ApiT]):
         """Initialize the update manager."""
         self.device = device
         self.coordinator = DataUpdateCoordinator(
-            device.hass,
+            device.menuai,
             _LOGGER,
             name=f"{device.name} ({device.api.model} at {device.api.host[0]})",
             update_method=self.async_update,

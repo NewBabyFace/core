@@ -6,10 +6,10 @@ import logging
 
 from snapcast.control.server import Snapserver
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, CONF_PORT
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -19,19 +19,19 @@ class SnapcastUpdateCoordinator(DataUpdateCoordinator[None]):
 
     config_entry: ConfigEntry
 
-    def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: ConfigEntry) -> None:
         """Initialize coordinator."""
         host = config_entry.data[CONF_HOST]
         port = config_entry.data[CONF_PORT]
 
         super().__init__(
-            hass,
+            menuai,
             logger=_LOGGER,
             config_entry=config_entry,
             name=f"{host}:{port}",
             update_interval=None,  # Disable update interval as server pushes
         )
-        self._server = Snapserver(hass.loop, host, port, True)
+        self._server = Snapserver(menuai.loop, host, port, True)
         self.last_update_success = False
 
         self._server.set_on_update_callback(self._on_update)

@@ -14,18 +14,18 @@ from aiohomeconnect.model.error import (
 import aiohttp
 import pytest
 
-from homeassistant.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
-from homeassistant.components.home_connect.const import DOMAIN
-from homeassistant.components.home_connect.utils import bsh_key_to_translation_key
-from homeassistant.components.light import DOMAIN as LIGHT_DOMAIN
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from script.hassfest.translations import RE_TRANSLATION_KEY
+from menuai.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
+from menuai.components.home_connect.const import DOMAIN
+from menuai.components.home_connect.utils import bsh_key_to_translation_key
+from menuai.components.light import DOMAIN as LIGHT_DOMAIN
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.components.switch import DOMAIN as SWITCH_DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import device_registry as dr, entity_registry as er
+from script.menuaifest.translations import RE_TRANSLATION_KEY
 
 from .conftest import (
     CLIENT_ID,
@@ -40,7 +40,7 @@ from tests.test_util.aiohttp import AiohttpClientMocker
 
 
 async def test_entry_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
     config_entry: MockConfigEntry,
     integration_setup: Callable[[MagicMock], Awaitable[bool]],
@@ -49,15 +49,15 @@ async def test_entry_setup(
     assert await integration_setup(client)
     assert config_entry.state is ConfigEntryState.LOADED
 
-    assert await hass.config_entries.async_unload(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_unload(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.NOT_LOADED
 
 
 @pytest.mark.parametrize("token_expiration_time", [12345])
 async def test_token_refresh_success(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     client: MagicMock,
     integration_setup: Callable[[MagicMock], Awaitable[bool]],
@@ -87,12 +87,12 @@ async def test_token_refresh_success(
 
     assert config_entry.state is ConfigEntryState.NOT_LOADED
     with (
-        patch("homeassistant.components.home_connect.PLATFORMS", platforms),
-        patch("homeassistant.components.home_connect.HomeConnectClient") as client_mock,
+        patch("menuai.components.home_connect.PLATFORMS", platforms),
+        patch("menuai.components.home_connect.HomeConnectClient") as client_mock,
     ):
         client_mock.side_effect = MagicMock(side_effect=init_side_effect)
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
     assert config_entry.state is ConfigEntryState.LOADED
 
     # Verify token request
@@ -137,7 +137,7 @@ async def test_token_refresh_success(
     ],
 )
 async def test_token_refresh_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     client: MagicMock,
     config_entry: MockConfigEntry,
@@ -156,10 +156,10 @@ async def test_token_refresh_error(
 
     assert config_entry.state is ConfigEntryState.NOT_LOADED
     with patch(
-        "homeassistant.components.home_connect.HomeConnectClient", return_value=client
+        "menuai.components.home_connect.HomeConnectClient", return_value=client
     ):
         assert not await integration_setup(client)
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert config_entry.state == expected_config_entry_state
 
@@ -218,7 +218,7 @@ async def test_client_rate_limit_error(
 
     assert config_entry.state is ConfigEntryState.NOT_LOADED
     with patch(
-        "homeassistant.components.home_connect.coordinator.asyncio_sleep",
+        "menuai.components.home_connect.coordinator.asyncio_sleep",
     ) as asyncio_sleep_mock:
         assert await integration_setup(client)
     assert config_entry.state is ConfigEntryState.LOADED
@@ -228,7 +228,7 @@ async def test_client_rate_limit_error(
 
 @pytest.mark.parametrize("appliance", ["Washer"], indirect=True)
 async def test_required_program_or_at_least_an_option(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     client: MagicMock,
     config_entry: MockConfigEntry,
@@ -248,7 +248,7 @@ async def test_required_program_or_at_least_an_option(
     with pytest.raises(
         ServiceValidationError,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             "set_program_and_options",
             {
@@ -261,7 +261,7 @@ async def test_required_program_or_at_least_an_option(
 
 @pytest.mark.parametrize("appliance", ["Washer"], indirect=True)
 async def test_entity_migration(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     config_entry_v1_1: MockConfigEntry,
@@ -270,7 +270,7 @@ async def test_entity_migration(
 ) -> None:
     """Test entity migration."""
 
-    config_entry_v1_1.add_to_hass(hass)
+    config_entry_v1_1.add_to_menuai(menuai)
 
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry_v1_1.entry_id,
@@ -319,9 +319,9 @@ async def test_entity_migration(
             config_entry=config_entry_v1_1,
         )
 
-    with patch("homeassistant.components.home_connect.PLATFORMS", platforms):
-        await hass.config_entries.async_setup(config_entry_v1_1.entry_id)
-        await hass.async_block_till_done()
+    with patch("menuai.components.home_connect.PLATFORMS", platforms):
+        await menuai.config_entries.async_setup(config_entry_v1_1.entry_id)
+        await menuai.async_block_till_done()
 
     for domain, _, expected_unique_id_suffix in test_entities:
         assert entity_registry.async_get_entity_id(
@@ -338,17 +338,17 @@ async def test_bsh_key_transformations() -> None:
 
 
 async def test_config_entry_unique_id_migration(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry_v1_2: MockConfigEntry,
 ) -> None:
     """Test that old config entries use the unique id obtained from the JWT subject."""
-    config_entry_v1_2.add_to_hass(hass)
+    config_entry_v1_2.add_to_menuai(menuai)
 
     assert config_entry_v1_2.unique_id != "1234567890"
     assert config_entry_v1_2.minor_version == 2
 
-    await hass.config_entries.async_setup(config_entry_v1_2.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry_v1_2.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry_v1_2.unique_id == "1234567890"
     assert config_entry_v1_2.minor_version == 3

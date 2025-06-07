@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from homeassistant.const import ATTR_GPS_ACCURACY, STATE_HOME  # noqa: F401
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.loader import bind_hass
+from menuai.const import ATTR_GPS_ACCURACY, STATE_HOME  # noqa: F401
+from menuai.core import menuai
+from menuai.helpers.typing import ConfigType
+from menuai.loader import bind_menuai
 
 from .config_entry import (  # noqa: F401
     ScannerEntity,
@@ -51,13 +51,13 @@ from .legacy import (  # noqa: F401
 )
 
 
-@bind_hass
-def is_on(hass: HomeAssistant, entity_id: str) -> bool:
+@bind_menuai
+def is_on(menuai: menuai, entity_id: str) -> bool:
     """Return the state if any or a specified device is home."""
-    return hass.states.is_state(entity_id, STATE_HOME)
+    return menuai.states.is_state(entity_id, STATE_HOME)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the device tracker."""
-    async_setup_legacy_integration(hass, config)
+    async_setup_legacy_integration(menuai, config)
     return True

@@ -7,10 +7,10 @@ from dataclasses import dataclass
 
 from dremel3dpy import Dremel3DPrinter
 
-from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.button import ButtonEntity, ButtonEntityDescription
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import DremelConfigEntry
 from .entity import Dremel3DPrinterEntity
@@ -43,7 +43,7 @@ BUTTON_TYPES: tuple[Dremel3DPrinterButtonEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: DremelConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -65,6 +65,6 @@ class Dremel3DPrinterButtonEntity(Dremel3DPrinterEntity, ButtonEntity):
         try:
             self.entity_description.press_fn(self._api)
         except RuntimeError as ex:
-            raise HomeAssistantError(
+            raise menuaiError(
                 "An error occurred while submitting command"
             ) from ex

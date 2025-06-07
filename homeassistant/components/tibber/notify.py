@@ -4,21 +4,21 @@ from __future__ import annotations
 
 from tibber import Tibber
 
-from homeassistant.components.notify import (
+from menuai.components.notify import (
     ATTR_TITLE_DEFAULT,
     NotifyEntity,
     NotifyEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import DOMAIN
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -39,12 +39,12 @@ class TibberNotificationEntity(NotifyEntity):
 
     async def async_send_message(self, message: str, title: str | None = None) -> None:
         """Send a message to Tibber devices."""
-        tibber_connection: Tibber = self.hass.data[DOMAIN]
+        tibber_connection: Tibber = self.menuai.data[DOMAIN]
         try:
             await tibber_connection.send_notification(
                 title or ATTR_TITLE_DEFAULT, message
             )
         except TimeoutError as exc:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN, translation_key="send_message_timeout"
             ) from exc

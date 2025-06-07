@@ -10,18 +10,18 @@ from haffmpeg.tools import IMAGE_JPEG, FFVersion, ImageFrame
 from propcache.api import cached_property
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONTENT_TYPE_MULTIPART,
-    EVENT_HOMEASSISTANT_START,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_START,
+    EVENT_menuai_STOP,
 )
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.loader import bind_hass
-from homeassistant.util.system_info import is_official_image
+from menuai.core import Event, menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity import Entity
+from menuai.helpers.typing import ConfigType
+from menuai.loader import bind_menuai
+from menuai.util.system_info import is_official_image
 
 from .const import (
     DOMAIN,
@@ -57,31 +57,31 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the FFmpeg component."""
     conf = config.get(DOMAIN, {})
 
-    manager = FFmpegManager(hass, conf.get(CONF_FFMPEG_BIN, DEFAULT_BINARY))
+    manager = FFmpegManager(menuai, conf.get(CONF_FFMPEG_BIN, DEFAULT_BINARY))
 
     await manager.async_get_version()
 
-    async_setup_services(hass)
+    async_setup_services(menuai)
 
-    hass.data[DATA_FFMPEG] = manager
+    menuai.data[DATA_FFMPEG] = manager
     return True
 
 
-@bind_hass
-def get_ffmpeg_manager(hass: HomeAssistant) -> FFmpegManager:
+@bind_menuai
+def get_ffmpeg_manager(menuai: menuai) -> FFmpegManager:
     """Return the FFmpegManager."""
-    if DATA_FFMPEG not in hass.data:
+    if DATA_FFMPEG not in menuai.data:
         raise ValueError("ffmpeg component not initialized")
-    return hass.data[DATA_FFMPEG]
+    return menuai.data[DATA_FFMPEG]
 
 
-@bind_hass
+@bind_menuai
 async def async_get_image(
-    hass: HomeAssistant,
+    menuai: menuai,
     input_source: str,
     output_format: str = IMAGE_JPEG,
     extra_cmd: str | None = None,
@@ -89,7 +89,7 @@ async def async_get_image(
     height: int | None = None,
 ) -> bytes | None:
     """Get an image from a frame of an RTSP stream."""
-    manager = hass.data[DATA_FFMPEG]
+    manager = menuai.data[DATA_FFMPEG]
     ffmpeg = ImageFrame(manager.binary)
 
     if width and height and (extra_cmd is None or "-s" not in extra_cmd):
@@ -107,9 +107,9 @@ async def async_get_image(
 class FFmpegManager:
     """Helper for ha-ffmpeg."""
 
-    def __init__(self, hass: HomeAssistant, ffmpeg_bin: str) -> None:
+    def __init__(self, menuai: menuai, ffmpeg_bin: str) -> None:
         """Initialize helper."""
-        self.hass = hass
+        self.menuai = menuai
         self._cache = {}  # type: ignore[var-annotated]
         self._bin = ffmpeg_bin
         self._version: str | None = None
@@ -145,7 +145,7 @@ class FFmpegManager:
         return CONTENT_TYPE_MULTIPART.format("ffserver")
 
 
-class FFmpegBase[_HAFFmpegT: HAFFmpeg](Entity):  # pylint: disable=hass-enforce-class-module
+class FFmpegBase[_HAFFmpegT: HAFFmpeg](Entity):  # pylint: disable=menuai-enforce-class-module
     """Interface object for FFmpeg."""
 
     _attr_should_poll = False
@@ -155,24 +155,24 @@ class FFmpegBase[_HAFFmpegT: HAFFmpeg](Entity):  # pylint: disable=hass-enforce-
         self.ffmpeg = ffmpeg
         self.initial_state = initial_state
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register dispatcher & events.
 
         This method is a coroutine.
         """
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, SIGNAL_FFMPEG_START, self._async_start_ffmpeg
+                self.menuai, SIGNAL_FFMPEG_START, self._async_start_ffmpeg
             )
         )
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, SIGNAL_FFMPEG_STOP, self._async_stop_ffmpeg
+                self.menuai, SIGNAL_FFMPEG_STOP, self._async_stop_ffmpeg
             )
         )
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, SIGNAL_FFMPEG_RESTART, self._async_restart_ffmpeg
+                self.menuai, SIGNAL_FFMPEG_RESTART, self._async_restart_ffmpeg
             )
         )
 
@@ -216,7 +216,7 @@ class FFmpegBase[_HAFFmpegT: HAFFmpeg](Entity):  # pylint: disable=hass-enforce-
             """Stop FFmpeg process."""
             await self._async_stop_ffmpeg(None)
 
-        self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, async_shutdown_handle)
+        self.menuai.bus.async_listen_once(EVENT_menuai_STOP, async_shutdown_handle)
 
         # start on startup
         if not self.initial_state:
@@ -227,4 +227,4 @@ class FFmpegBase[_HAFFmpegT: HAFFmpeg](Entity):  # pylint: disable=hass-enforce-
             await self._async_start_ffmpeg(None)
             self.async_write_ha_state()
 
-        self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_START, async_start_handle)
+        self.menuai.bus.async_listen_once(EVENT_menuai_START, async_start_handle)

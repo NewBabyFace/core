@@ -5,8 +5,8 @@ from abc import abstractmethod
 from nhc.action import NHCAction
 from nhc.controller import NHCController
 
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity
 
 from .const import DOMAIN
 
@@ -32,7 +32,7 @@ class NikoHomeControlEntity(Entity):
         )
         self.update_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to updates."""
         self.async_on_remove(
             self._controller.register_callback(

@@ -17,7 +17,7 @@ from motioneye_client.const import (
 )
 import pytest
 
-from homeassistant.components.motioneye.const import (
+from menuai.components.motioneye.const import (
     ATTR_EVENT_TYPE,
     CONF_WEBHOOK_SET_OVERWRITE,
     DEFAULT_SCAN_INTERVAL,
@@ -25,13 +25,13 @@ from homeassistant.components.motioneye.const import (
     EVENT_FILE_STORED,
     EVENT_MOTION_DETECTED,
 )
-from homeassistant.components.webhook import URL_WEBHOOK_PATH
-from homeassistant.const import ATTR_DEVICE_ID, CONF_URL, CONF_WEBHOOK_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.network import NoURLAvailableError
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.components.webhook import URL_WEBHOOK_PATH
+from menuai.const import ATTR_DEVICE_ID, CONF_URL, CONF_WEBHOOK_ID
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.helpers.network import NoURLAvailableError
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from . import (
     TEST_CAMERA,
@@ -54,22 +54,22 @@ WEB_HOOK_MOTION_DETECTED_QUERY_STRING = (
     "camera_id=%t&changed_pixels=%D&despeckle_labels=%Q&event=%v&fps=%{fps}"
     "&frame_number=%q&height=%h&host=%{host}&motion_center_x=%K&motion_center_y=%L"
     "&motion_height=%J&motion_version=%{ver}&motion_width=%i&noise_level=%N"
-    "&threshold=%o&width=%w&src=hass-motioneye&event_type=motion_detected"
+    "&threshold=%o&width=%w&src=menuai-motioneye&event_type=motion_detected"
 )
 
 WEB_HOOK_FILE_STORED_QUERY_STRING = (
     "camera_id=%t&event=%v&file_path=%f&file_type=%n&fps=%{fps}&frame_number=%q"
     "&height=%h&host=%{host}&motion_version=%{ver}&noise_level=%N&threshold=%o&width=%w"
-    "&src=hass-motioneye&event_type=file_stored"
+    "&src=menuai-motioneye&event_type=file_stored"
 )
 
 
 async def test_setup_camera_without_webhook(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Test a camera with no webhook."""
     client = create_mock_motioneye_client()
-    config_entry = await setup_mock_motioneye_config_entry(hass, client=client)
+    config_entry = await setup_mock_motioneye_config_entry(menuai, client=client)
 
     device = device_registry.async_get_device(
         identifiers={TEST_CAMERA_DEVICE_IDENTIFIER}
@@ -96,7 +96,7 @@ async def test_setup_camera_without_webhook(
 
 
 async def test_setup_camera_with_wrong_webhook(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
 ) -> None:
     """Test camera with wrong web hook."""
@@ -108,9 +108,9 @@ async def test_setup_camera_with_wrong_webhook(
     cameras[KEY_CAMERAS][0][KEY_WEB_HOOK_STORAGE_URL] = wrong_url
     client.async_get_cameras = AsyncMock(return_value=cameras)
 
-    config_entry = create_mock_motioneye_config_entry(hass)
+    config_entry = create_mock_motioneye_config_entry(menuai)
     await setup_mock_motioneye_config_entry(
-        hass,
+        menuai,
         config_entry=config_entry,
         client=client,
     )
@@ -118,13 +118,13 @@ async def test_setup_camera_with_wrong_webhook(
 
     # Update the options, which will trigger a reload with the new behavior.
     with patch(
-        "homeassistant.components.motioneye.MotionEyeClient",
+        "menuai.components.motioneye.MotionEyeClient",
         return_value=client,
     ):
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             config_entry, options={CONF_WEBHOOK_SET_OVERWRITE: True}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     device = device_registry.async_get_device(
         identifiers={TEST_CAMERA_DEVICE_IDENTIFIER}
@@ -152,7 +152,7 @@ async def test_setup_camera_with_wrong_webhook(
 
 
 async def test_setup_camera_with_old_webhook(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
 ) -> None:
     """Verify that webhooks are overwritten if they are from this integration.
@@ -163,7 +163,7 @@ async def test_setup_camera_with_old_webhook(
     (To allow the web hook URL to be seamlessly updated in future versions)
     """
 
-    old_url = "http://old-url?src=hass-motioneye"
+    old_url = "http://old-url?src=menuai-motioneye"
 
     client = create_mock_motioneye_client()
     cameras = copy.deepcopy(TEST_CAMERAS)
@@ -171,9 +171,9 @@ async def test_setup_camera_with_old_webhook(
     cameras[KEY_CAMERAS][0][KEY_WEB_HOOK_STORAGE_URL] = old_url
     client.async_get_cameras = AsyncMock(return_value=cameras)
 
-    config_entry = create_mock_motioneye_config_entry(hass)
+    config_entry = create_mock_motioneye_config_entry(menuai)
     await setup_mock_motioneye_config_entry(
-        hass,
+        menuai,
         config_entry=config_entry,
         client=client,
     )
@@ -205,14 +205,14 @@ async def test_setup_camera_with_old_webhook(
 
 
 async def test_setup_camera_with_correct_webhook(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
 ) -> None:
     """Verify that webhooks are not overwritten if they are already correct."""
 
     client = create_mock_motioneye_client()
     config_entry = create_mock_motioneye_config_entry(
-        hass, data={CONF_URL: TEST_URL, CONF_WEBHOOK_ID: "webhook_secret_id"}
+        menuai, data={CONF_URL: TEST_URL, CONF_WEBHOOK_ID: "webhook_secret_id"}
     )
 
     device = device_registry.async_get_or_create(
@@ -242,7 +242,7 @@ async def test_setup_camera_with_correct_webhook(
     client.async_get_cameras = AsyncMock(return_value=cameras)
 
     await setup_mock_motioneye_config_entry(
-        hass,
+        menuai,
         config_entry=config_entry,
         client=client,
     )
@@ -252,43 +252,43 @@ async def test_setup_camera_with_correct_webhook(
 
 
 async def test_setup_camera_with_no_home_assistant_urls(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """Verify setup works without Home Assistant internal/external URLs."""
+    """Verify setup works without MenuAI internal/external URLs."""
 
     client = create_mock_motioneye_client()
-    config_entry = create_mock_motioneye_config_entry(hass, data={CONF_URL: TEST_URL})
+    config_entry = create_mock_motioneye_config_entry(menuai, data={CONF_URL: TEST_URL})
 
     with patch(
-        "homeassistant.components.motioneye.get_url", side_effect=NoURLAvailableError
+        "menuai.components.motioneye.get_url", side_effect=NoURLAvailableError
     ):
         await setup_mock_motioneye_config_entry(
-            hass,
+            menuai,
             config_entry=config_entry,
             client=client,
         )
 
     # Should log a warning ...
-    assert "Unable to get Home Assistant URL" in caplog.text
+    assert "Unable to get MenuAI URL" in caplog.text
 
     # ... should not set callbacks in the camera ...
     assert not client.async_set_camera.called
 
     # ... but camera should still be present.
-    entity_state = hass.states.get(TEST_CAMERA_ENTITY_ID)
+    entity_state = menuai.states.get(TEST_CAMERA_ENTITY_ID)
     assert entity_state
 
 
 async def test_good_query(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai_client_no_auth: ClientSessionGenerator,
 ) -> None:
     """Test good callbacks."""
-    await async_setup_component(hass, "http", {"http": {}})
+    await async_setup_component(menuai, "http", {"http": {}})
 
     client = create_mock_motioneye_client()
-    config_entry = await setup_mock_motioneye_config_entry(hass, client=client)
+    config_entry = await setup_mock_motioneye_config_entry(menuai, client=client)
 
     device = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
@@ -300,10 +300,10 @@ async def test_good_query(
         "two": "2",
         ATTR_DEVICE_ID: device.id,
     }
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
 
     for event in (EVENT_MOTION_DETECTED, EVENT_FILE_STORED):
-        events = async_capture_events(hass, f"{DOMAIN}.{event}")
+        events = async_capture_events(menuai, f"{DOMAIN}.{event}")
 
         resp = await client.post(
             URL_WEBHOOK_PATH.format(webhook_id=config_entry.data[CONF_WEBHOOK_ID]),
@@ -325,13 +325,13 @@ async def test_good_query(
 
 
 async def test_bad_query_missing_parameters(
-    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+    menuai: menuai, menuai_client_no_auth: ClientSessionGenerator
 ) -> None:
     """Test a query with missing parameters."""
-    await async_setup_component(hass, "http", {"http": {}})
-    config_entry = await setup_mock_motioneye_config_entry(hass)
+    await async_setup_component(menuai, "http", {"http": {}})
+    config_entry = await setup_mock_motioneye_config_entry(menuai)
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
 
     resp = await client.post(
         URL_WEBHOOK_PATH.format(webhook_id=config_entry.data[CONF_WEBHOOK_ID]), json={}
@@ -340,13 +340,13 @@ async def test_bad_query_missing_parameters(
 
 
 async def test_bad_query_no_such_device(
-    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+    menuai: menuai, menuai_client_no_auth: ClientSessionGenerator
 ) -> None:
     """Test a correct query with incorrect device."""
-    await async_setup_component(hass, "http", {"http": {}})
-    config_entry = await setup_mock_motioneye_config_entry(hass)
+    await async_setup_component(menuai, "http", {"http": {}})
+    config_entry = await setup_mock_motioneye_config_entry(menuai)
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
 
     resp = await client.post(
         URL_WEBHOOK_PATH.format(webhook_id=config_entry.data[CONF_WEBHOOK_ID]),
@@ -359,16 +359,16 @@ async def test_bad_query_no_such_device(
 
 
 async def test_bad_query_cannot_decode(
-    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+    menuai: menuai, menuai_client_no_auth: ClientSessionGenerator
 ) -> None:
     """Test a correct query with incorrect device."""
-    await async_setup_component(hass, "http", {"http": {}})
-    config_entry = await setup_mock_motioneye_config_entry(hass)
+    await async_setup_component(menuai, "http", {"http": {}})
+    config_entry = await setup_mock_motioneye_config_entry(menuai)
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
 
-    motion_events = async_capture_events(hass, f"{DOMAIN}.{EVENT_MOTION_DETECTED}")
-    storage_events = async_capture_events(hass, f"{DOMAIN}.{EVENT_FILE_STORED}")
+    motion_events = async_capture_events(menuai, f"{DOMAIN}.{EVENT_MOTION_DETECTED}")
+    storage_events = async_capture_events(menuai, f"{DOMAIN}.{EVENT_FILE_STORED}")
 
     resp = await client.post(
         URL_WEBHOOK_PATH.format(webhook_id=config_entry.data[CONF_WEBHOOK_ID]),
@@ -380,31 +380,31 @@ async def test_bad_query_cannot_decode(
 
 
 async def test_event_media_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai_client_no_auth: ClientSessionGenerator,
 ) -> None:
     """Test an event with a file path generates media data."""
-    await async_setup_component(hass, "http", {"http": {}})
+    await async_setup_component(menuai, "http", {"http": {}})
 
     client = create_mock_motioneye_client()
-    config_entry = await setup_mock_motioneye_config_entry(hass, client=client)
+    config_entry = await setup_mock_motioneye_config_entry(menuai, client=client)
 
     device = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         identifiers={TEST_CAMERA_DEVICE_IDENTIFIER},
     )
 
-    hass_client = await hass_client_no_auth()
+    menuai_client = await menuai_client_no_auth()
 
-    events = async_capture_events(hass, f"{DOMAIN}.{EVENT_FILE_STORED}")
+    events = async_capture_events(menuai, f"{DOMAIN}.{EVENT_FILE_STORED}")
 
     client.get_movie_url = Mock(return_value="http://movie-url")
     client.get_image_url = Mock(return_value="http://image-url")
 
     # Test: Movie storage.
     client.is_file_type_image = Mock(return_value=False)
-    resp = await hass_client.post(
+    resp = await menuai_client.post(
         URL_WEBHOOK_PATH.format(webhook_id=config_entry.data[CONF_WEBHOOK_ID]),
         json={
             ATTR_DEVICE_ID: device.id,
@@ -424,7 +424,7 @@ async def test_event_media_data(
 
     # Test: Image storage.
     client.is_file_type_image = Mock(return_value=True)
-    resp = await hass_client.post(
+    resp = await menuai_client.post(
         URL_WEBHOOK_PATH.format(webhook_id=config_entry.data[CONF_WEBHOOK_ID]),
         json={
             ATTR_DEVICE_ID: device.id,
@@ -443,7 +443,7 @@ async def test_event_media_data(
     assert client.get_image_url.call_args == call(TEST_CAMERA_ID, "/dir/two")
 
     # Test: Invalid file type.
-    resp = await hass_client.post(
+    resp = await menuai_client.post(
         URL_WEBHOOK_PATH.format(webhook_id=config_entry.data[CONF_WEBHOOK_ID]),
         json={
             ATTR_DEVICE_ID: device.id,
@@ -458,7 +458,7 @@ async def test_event_media_data(
     assert "media_content_id" not in events[-1].data
 
     # Test: Different file path.
-    resp = await hass_client.post(
+    resp = await menuai_client.post(
         URL_WEBHOOK_PATH.format(webhook_id=config_entry.data[CONF_WEBHOOK_ID]),
         json={
             ATTR_DEVICE_ID: device.id,
@@ -474,11 +474,11 @@ async def test_event_media_data(
 
     # Test: Not a loaded motionEye config entry.
     other_config_entry = MockConfigEntry()
-    other_config_entry.add_to_hass(hass)
+    other_config_entry.add_to_menuai(menuai)
     wrong_device = device_registry.async_get_or_create(
         config_entry_id=other_config_entry.entry_id, identifiers={("motioneye", "a_1")}
     )
-    resp = await hass_client.post(
+    resp = await menuai_client.post(
         URL_WEBHOOK_PATH.format(webhook_id=config_entry.data[CONF_WEBHOOK_ID]),
         json={
             ATTR_DEVICE_ID: wrong_device.id,
@@ -496,10 +496,10 @@ async def test_event_media_data(
     camera = copy.deepcopy(TEST_CAMERA)
     del camera[KEY_ROOT_DIRECTORY]
     client.async_get_cameras = AsyncMock(return_value={"cameras": [camera]})
-    async_fire_time_changed(hass, dt_util.utcnow() + DEFAULT_SCAN_INTERVAL)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + DEFAULT_SCAN_INTERVAL)
+    await menuai.async_block_till_done()
 
-    resp = await hass_client.post(
+    resp = await menuai_client.post(
         URL_WEBHOOK_PATH.format(webhook_id=config_entry.data[CONF_WEBHOOK_ID]),
         json={
             ATTR_DEVICE_ID: device.id,
@@ -517,7 +517,7 @@ async def test_event_media_data(
     device_registry.async_update_device(
         device_id=device.id, new_identifiers={("not", "motioneye")}
     )
-    resp = await hass_client.post(
+    resp = await menuai_client.post(
         URL_WEBHOOK_PATH.format(webhook_id=config_entry.data[CONF_WEBHOOK_ID]),
         json={
             ATTR_DEVICE_ID: device.id,

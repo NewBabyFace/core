@@ -4,7 +4,7 @@
     'agents': list([
       dict({
         'id': 'conversation.home_assistant',
-        'name': 'Home Assistant',
+        'name': 'MenuAI',
         'supported_languages': list([
           'ar',
           'bg',
@@ -84,7 +84,7 @@
     'agents': list([
       dict({
         'id': 'conversation.home_assistant',
-        'name': 'Home Assistant',
+        'name': 'MenuAI',
         'supported_languages': list([
         ]),
       }),
@@ -108,7 +108,7 @@
     'agents': list([
       dict({
         'id': 'conversation.home_assistant',
-        'name': 'Home Assistant',
+        'name': 'MenuAI',
         'supported_languages': list([
           'en',
         ]),
@@ -132,7 +132,7 @@
     'agents': list([
       dict({
         'id': 'conversation.home_assistant',
-        'name': 'Home Assistant',
+        'name': 'MenuAI',
         'supported_languages': list([
           'en',
         ]),
@@ -156,7 +156,7 @@
     'agents': list([
       dict({
         'id': 'conversation.home_assistant',
-        'name': 'Home Assistant',
+        'name': 'MenuAI',
         'supported_languages': list([
           'de',
           'de-CH',
@@ -181,7 +181,7 @@
     'agents': list([
       dict({
         'id': 'conversation.home_assistant',
-        'name': 'Home Assistant',
+        'name': 'MenuAI',
         'supported_languages': list([
           'de-CH',
           'de',
@@ -326,7 +326,7 @@
     }),
   })
 # ---
-# name: test_http_processing_intent[homeassistant]
+# name: test_http_processing_intent[menuai]
   dict({
     'continue_conversation': False,
     'conversation_id': <ANY>,
@@ -483,7 +483,7 @@
     }),
   })
 # ---
-# name: test_ws_hass_agent_debug
+# name: test_ws_menuai_agent_debug
   dict({
     'results': list([
       dict({
@@ -495,7 +495,7 @@
           }),
         }),
         'intent': dict({
-          'name': 'HassTurnOn',
+          'name': 'menuaiTurnOn',
         }),
         'match': True,
         'sentence_template': '<turn> on (<area> <name>|<name> [in <area>])',
@@ -520,7 +520,7 @@
           }),
         }),
         'intent': dict({
-          'name': 'HassTurnOff',
+          'name': 'menuaiTurnOff',
         }),
         'match': True,
         'sentence_template': '[<turn>] (<area> <name>|<name> [in <area>]) [to] off',
@@ -550,7 +550,7 @@
           }),
         }),
         'intent': dict({
-          'name': 'HassTurnOn',
+          'name': 'menuaiTurnOn',
         }),
         'match': True,
         'sentence_template': '<turn> on [(<all>|<the>)] <light> <in> <area>',
@@ -586,7 +586,7 @@
           }),
         }),
         'intent': dict({
-          'name': 'HassGetState',
+          'name': 'menuaiGetState',
         }),
         'match': True,
         'sentence_template': '[tell me] how many {on_off_domains:domain} (is|are) {on_off_states:state} [<in_area_floor>]',
@@ -608,7 +608,7 @@
     ]),
   })
 # ---
-# name: test_ws_hass_agent_debug_custom_sentence
+# name: test_ws_menuai_agent_debug_custom_sentence
   dict({
     'results': list([
       dict({
@@ -637,14 +637,14 @@
     ]),
   })
 # ---
-# name: test_ws_hass_agent_debug_null_result
+# name: test_ws_menuai_agent_debug_null_result
   dict({
     'results': list([
       None,
     ]),
   })
 # ---
-# name: test_ws_hass_agent_debug_out_of_range
+# name: test_ws_menuai_agent_debug_out_of_range
   dict({
     'results': list([
       dict({
@@ -661,7 +661,7 @@
           }),
         }),
         'intent': dict({
-          'name': 'HassLightSet',
+          'name': 'menuaiLightSet',
         }),
         'match': True,
         'sentence_template': '[<numeric_value_set>] <name> brightness [to] <brightness>',
@@ -681,7 +681,7 @@
     ]),
   })
 # ---
-# name: test_ws_hass_agent_debug_out_of_range.1
+# name: test_ws_menuai_agent_debug_out_of_range.1
   dict({
     'results': list([
       dict({
@@ -693,7 +693,7 @@
           }),
         }),
         'intent': dict({
-          'name': 'HassLightSet',
+          'name': 'menuaiLightSet',
         }),
         'match': False,
         'sentence_template': '[<numeric_value_set>] <name> brightness [to] <brightness>',
@@ -710,7 +710,7 @@
     ]),
   })
 # ---
-# name: test_ws_hass_agent_debug_sentence_trigger
+# name: test_ws_menuai_agent_debug_sentence_trigger
   dict({
     'trigger_sentences': list([
       'hello',
@@ -718,7 +718,7 @@
     ]),
   })
 # ---
-# name: test_ws_hass_agent_debug_sentence_trigger.1
+# name: test_ws_menuai_agent_debug_sentence_trigger.1
   dict({
     'results': list([
       dict({

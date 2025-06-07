@@ -14,10 +14,10 @@ from openai.types.images_response import ImagesResponse
 from openai.types.responses import Response, ResponseOutputMessage, ResponseOutputText
 import pytest
 
-from homeassistant.components.openai_conversation import CONF_FILENAMES
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.setup import async_setup_component
+from menuai.components.openai_conversation import CONF_FILENAMES
+from menuai.core import menuai
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 
@@ -65,7 +65,7 @@ from tests.common import MockConfigEntry
     ],
 )
 async def test_generate_image_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_init_component,
     service_data,
@@ -90,7 +90,7 @@ async def test_generate_image_service(
             ],
         ),
     ) as mock_create:
-        response = await hass.services.async_call(
+        response = await menuai.services.async_call(
             "openai_conversation",
             "generate_image",
             service_data,
@@ -108,7 +108,7 @@ async def test_generate_image_service(
 
 @pytest.mark.usefixtures("mock_init_component")
 async def test_generate_image_service_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test generate image service handles errors."""
@@ -123,9 +123,9 @@ async def test_generate_image_service_error(
                 message="Reason",
             ),
         ),
-        pytest.raises(HomeAssistantError, match="Error generating image: Reason"),
+        pytest.raises(menuaiError, match="Error generating image: Reason"),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "openai_conversation",
             "generate_image",
             {
@@ -150,9 +150,9 @@ async def test_generate_image_service_error(
                 ],
             ),
         ),
-        pytest.raises(HomeAssistantError, match="No image returned"),
+        pytest.raises(menuaiError, match="No image returned"),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "openai_conversation",
             "generate_image",
             {
@@ -166,15 +166,15 @@ async def test_generate_image_service_error(
 
 @pytest.mark.usefixtures("mock_init_component")
 async def test_generate_content_service_with_image_not_allowed_path(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test generate content service with an image in a not allowed path."""
     with (
         patch("pathlib.Path.exists", return_value=True),
-        patch.object(hass.config, "is_allowed_path", return_value=False),
+        patch.object(menuai.config, "is_allowed_path", return_value=False),
         pytest.raises(
-            HomeAssistantError,
+            menuaiError,
             match=(
                 "Cannot read `doorbell_snapshot.jpg`, no access to path; "
                 "`allowlist_external_dirs` may need to be adjusted in "
@@ -182,7 +182,7 @@ async def test_generate_content_service_with_image_not_allowed_path(
             ),
         ),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "openai_conversation",
             "generate_content",
             {
@@ -203,7 +203,7 @@ async def test_generate_content_service_with_image_not_allowed_path(
     ],
 )
 async def test_invalid_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_init_component,
     service_name: str,
@@ -215,7 +215,7 @@ async def test_invalid_config_entry(
         "config_entry": "invalid_entry",
     }
     with pytest.raises(ServiceValidationError, match=error):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "openai_conversation",
             service_name,
             service_data,
@@ -254,7 +254,7 @@ async def test_invalid_config_entry(
     ],
 )
 async def test_init_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     caplog: pytest.LogCaptureFixture,
     side_effect,
@@ -265,8 +265,8 @@ async def test_init_error(
         "openai.resources.models.AsyncModels.list",
         side_effect=side_effect,
     ):
-        assert await async_setup_component(hass, "openai_conversation", {})
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, "openai_conversation", {})
+        await menuai.async_block_till_done()
         assert error in caplog.text
 
 
@@ -363,7 +363,7 @@ async def test_init_error(
     ],
 )
 async def test_generate_content_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_init_component,
     service_data,
@@ -391,7 +391,7 @@ async def test_generate_content_service(
         ) as mock_b64encode,
         patch("builtins.open", mock_open(read_data="ABC")) as mock_file,
         patch("pathlib.Path.exists", return_value=True),
-        patch.object(hass.config, "is_allowed_path", return_value=True),
+        patch.object(menuai.config, "is_allowed_path", return_value=True),
     ):
         mock_create.return_value = Response(
             object="response",
@@ -418,7 +418,7 @@ async def test_generate_content_service(
             ],
         )
 
-        response = await hass.services.async_call(
+        response = await menuai.services.async_call(
             "openai_conversation",
             "generate_content",
             service_data,
@@ -469,7 +469,7 @@ async def test_generate_content_service(
     ],
 )
 async def test_generate_content_service_invalid(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_init_component,
     service_data,
@@ -492,11 +492,11 @@ async def test_generate_content_service_invalid(
         patch("builtins.open", mock_open(read_data="ABC")),
         patch("pathlib.Path.exists", side_effect=exists_side_effect),
         patch.object(
-            hass.config, "is_allowed_path", side_effect=is_allowed_side_effect
+            menuai.config, "is_allowed_path", side_effect=is_allowed_side_effect
         ),
     ):
-        with pytest.raises(HomeAssistantError, match=error):
-            await hass.services.async_call(
+        with pytest.raises(menuaiError, match=error):
+            await menuai.services.async_call(
                 "openai_conversation",
                 "generate_content",
                 service_data,
@@ -509,7 +509,7 @@ async def test_generate_content_service_invalid(
 
 @pytest.mark.usefixtures("mock_init_component")
 async def test_generate_content_service_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test generate content service handles errors."""
@@ -524,9 +524,9 @@ async def test_generate_content_service_error(
                 message="Reason",
             ),
         ),
-        pytest.raises(HomeAssistantError, match="Error generating content: Reason"),
+        pytest.raises(menuaiError, match="Error generating content: Reason"),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "openai_conversation",
             "generate_content",
             {

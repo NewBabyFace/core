@@ -1,10 +1,10 @@
 """Entity representing a Blue Current charge point."""
 
-from homeassistant.const import ATTR_NAME
-from homeassistant.core import callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import Entity
+from menuai.const import ATTR_NAME
+from menuai.core import callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity import Entity
 
 from . import Connector
 from .const import DOMAIN, MODEL_TYPE
@@ -22,7 +22,7 @@ class BlueCurrentEntity(Entity):
         self.connector = connector
         self.signal = signal
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
 
         @callback
@@ -31,7 +31,7 @@ class BlueCurrentEntity(Entity):
             self.update_from_latest_data()
             self.async_write_ha_state()
 
-        self.async_on_remove(async_dispatcher_connect(self.hass, self.signal, update))
+        self.async_on_remove(async_dispatcher_connect(self.menuai, self.signal, update))
 
         self.update_from_latest_data()
 

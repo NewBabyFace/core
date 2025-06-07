@@ -9,10 +9,10 @@ from eternalegypt import Error, Modem
 from eternalegypt.eternalegypt import Information
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_PASSWORD
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.aiohttp_client import async_create_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_PASSWORD
+from menuai.exceptions import menuaiError
+from menuai.helpers.aiohttp_client import async_create_clientsession
 
 from .const import DEFAULT_HOST, DOMAIN, LOGGER, MANUFACTURER
 
@@ -59,7 +59,7 @@ class NetgearLTEFlowHandler(ConfigFlow, domain=DOMAIN):
     async def _async_validate_input(self, host: str, password: str) -> Information:
         """Validate login credentials."""
         websession = async_create_clientsession(
-            self.hass, cookie_jar=CookieJar(unsafe=True)
+            self.menuai, cookie_jar=CookieJar(unsafe=True)
         )
 
         modem = Modem(
@@ -79,7 +79,7 @@ class NetgearLTEFlowHandler(ConfigFlow, domain=DOMAIN):
         return info
 
 
-class InputValidationError(HomeAssistantError):
+class InputValidationError(menuaiError):
     """Error to indicate we cannot proceed due to invalid input."""
 
     def __init__(self, base: str) -> None:

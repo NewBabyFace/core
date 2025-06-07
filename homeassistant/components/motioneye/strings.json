@@ -10,9 +10,9 @@
           "surveillance_password": "Surveillance password"
         }
       },
-      "hassio_confirm": {
-        "title": "motionEye via Home Assistant add-on",
-        "description": "Do you want to configure Home Assistant to connect to the motionEye service provided by the add-on: {addon}?"
+      "menuaiio_confirm": {
+        "title": "motionEye via MenuAI add-on",
+        "description": "Do you want to configure MenuAI to connect to the motionEye service provided by the add-on: {addon}?"
       }
     },
     "error": {
@@ -30,7 +30,7 @@
     "step": {
       "init": {
         "data": {
-          "webhook_set": "Configure motionEye webhooks to report events to Home Assistant",
+          "webhook_set": "Configure motionEye webhooks to report events to MenuAI",
           "webhook_set_overwrite": "Overwrite unrecognized webhooks",
           "stream_url_template": "Stream URL template"
         }

@@ -6,25 +6,25 @@ from unittest.mock import patch
 import pydeconz
 import pytest
 
-from homeassistant.components.deconz.config_flow import (
+from menuai.components.deconz.config_flow import (
     CONF_MANUAL_INPUT,
     CONF_SERIAL,
     DECONZ_MANUFACTURERURL,
 )
-from homeassistant.components.deconz.const import (
+from menuai.components.deconz.const import (
     CONF_ALLOW_CLIP_SENSOR,
     CONF_ALLOW_DECONZ_GROUPS,
     CONF_ALLOW_NEW_DEVICES,
     CONF_MASTER_GATEWAY,
     DOMAIN,
-    HASSIO_CONFIGURATION_URL,
+    menuaiIO_CONFIGURATION_URL,
 )
-from homeassistant.config_entries import SOURCE_HASSIO, SOURCE_SSDP, SOURCE_USER
-from homeassistant.const import CONF_API_KEY, CONF_HOST, CONF_PORT, CONTENT_TYPE_JSON
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.hassio import HassioServiceInfo
-from homeassistant.helpers.service_info.ssdp import (
+from menuai.config_entries import SOURCE_menuaiIO, SOURCE_SSDP, SOURCE_USER
+from menuai.const import CONF_API_KEY, CONF_HOST, CONF_PORT, CONTENT_TYPE_JSON
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.menuaiio import menuaiioServiceInfo
+from menuai.helpers.service_info.ssdp import (
     ATTR_UPNP_MANUFACTURER_URL,
     ATTR_UPNP_SERIAL,
     SsdpServiceInfo,
@@ -39,10 +39,10 @@ BAD_BRIDGEID = "0000000000000000"
 
 
 async def test_flow_discovered_bridges(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test that config flow works for discovered bridges."""
-    logging.getLogger("homeassistant.components.deconz").setLevel(logging.DEBUG)
+    logging.getLogger("menuai.components.deconz").setLevel(logging.DEBUG)
     aioclient_mock.get(
         pydeconz.utils.URL_DISCOVER,
         json=[
@@ -52,14 +52,14 @@ async def test_flow_discovered_bridges(
         headers={"content-type": CONTENT_TYPE_JSON},
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={CONF_HOST: "1.2.3.4"}
     )
 
@@ -72,7 +72,7 @@ async def test_flow_discovered_bridges(
         headers={"content-type": CONTENT_TYPE_JSON},
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
 
@@ -86,7 +86,7 @@ async def test_flow_discovered_bridges(
 
 
 async def test_flow_manual_configuration_decision(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test that config flow for one discovered bridge works."""
     aioclient_mock.get(
@@ -95,18 +95,18 @@ async def test_flow_manual_configuration_decision(
         headers={"content-type": CONTENT_TYPE_JSON},
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={CONF_HOST: CONF_MANUAL_INPUT}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "manual_input"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_HOST: "1.2.3.4", CONF_PORT: 80},
     )
@@ -126,7 +126,7 @@ async def test_flow_manual_configuration_decision(
         headers={"content-type": CONTENT_TYPE_JSON},
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
 
@@ -140,24 +140,24 @@ async def test_flow_manual_configuration_decision(
 
 
 async def test_flow_manual_configuration(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test that config flow works with manual configuration after no discovered bridges."""
-    logging.getLogger("homeassistant.components.deconz").setLevel(logging.DEBUG)
+    logging.getLogger("menuai.components.deconz").setLevel(logging.DEBUG)
     aioclient_mock.get(
         pydeconz.utils.URL_DISCOVER,
         json=[],
         headers={"content-type": CONTENT_TYPE_JSON},
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "manual_input"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_HOST: "1.2.3.4", CONF_PORT: 80},
     )
@@ -177,7 +177,7 @@ async def test_flow_manual_configuration(
         headers={"content-type": CONTENT_TYPE_JSON},
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
 
@@ -191,37 +191,37 @@ async def test_flow_manual_configuration(
 
 
 async def test_manual_configuration_after_discovery_timeout(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test failed discovery fallbacks to manual configuration."""
     aioclient_mock.get(pydeconz.utils.URL_DISCOVER, exc=TimeoutError)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "manual_input"
-    assert not hass.config_entries.flow._progress[result["flow_id"]].bridges
+    assert not menuai.config_entries.flow._progress[result["flow_id"]].bridges
 
 
 async def test_manual_configuration_after_discovery_ResponseError(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test failed discovery fallbacks to manual configuration."""
     aioclient_mock.get(pydeconz.utils.URL_DISCOVER, exc=pydeconz.errors.ResponseError)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "manual_input"
-    assert not hass.config_entries.flow._progress[result["flow_id"]].bridges
+    assert not menuai.config_entries.flow._progress[result["flow_id"]].bridges
 
 
 async def test_manual_configuration_update_configuration(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     config_entry_setup: MockConfigEntry,
 ) -> None:
@@ -232,14 +232,14 @@ async def test_manual_configuration_update_configuration(
         headers={"content-type": CONTENT_TYPE_JSON},
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "manual_input"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_HOST: "2.3.4.5", CONF_PORT: 80},
     )
@@ -259,7 +259,7 @@ async def test_manual_configuration_update_configuration(
         headers={"content-type": CONTENT_TYPE_JSON},
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
 
@@ -270,7 +270,7 @@ async def test_manual_configuration_update_configuration(
 
 @pytest.mark.usefixtures("config_entry_setup")
 async def test_manual_configuration_dont_update_configuration(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test that _create_entry work and that bridgeid can be requested."""
     aioclient_mock.get(
@@ -279,14 +279,14 @@ async def test_manual_configuration_dont_update_configuration(
         headers={"content-type": CONTENT_TYPE_JSON},
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "manual_input"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_HOST: "1.2.3.4", CONF_PORT: 80},
     )
@@ -306,7 +306,7 @@ async def test_manual_configuration_dont_update_configuration(
         headers={"content-type": CONTENT_TYPE_JSON},
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
 
@@ -315,7 +315,7 @@ async def test_manual_configuration_dont_update_configuration(
 
 
 async def test_manual_configuration_timeout_get_bridge(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test that _create_entry handles a timeout."""
     aioclient_mock.get(
@@ -324,14 +324,14 @@ async def test_manual_configuration_timeout_get_bridge(
         headers={"content-type": CONTENT_TYPE_JSON},
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "manual_input"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={CONF_HOST: "1.2.3.4", CONF_PORT: 80},
     )
@@ -347,7 +347,7 @@ async def test_manual_configuration_timeout_get_bridge(
 
     aioclient_mock.get(f"http://1.2.3.4:80/api/{API_KEY}/config", exc=TimeoutError)
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
 
@@ -365,7 +365,7 @@ async def test_manual_configuration_timeout_get_bridge(
     ],
 )
 async def test_link_step_fails(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     raised_error: Exception,
     error_string: str,
@@ -377,11 +377,11 @@ async def test_link_step_fails(
         headers={"content-type": CONTENT_TYPE_JSON},
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={CONF_HOST: "1.2.3.4"}
     )
 
@@ -390,7 +390,7 @@ async def test_link_step_fails(
 
     aioclient_mock.post("http://1.2.3.4:80/api", exc=raised_error)
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
 
@@ -400,12 +400,12 @@ async def test_link_step_fails(
 
 
 async def test_reauth_flow_update_configuration(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     config_entry_setup: MockConfigEntry,
 ) -> None:
     """Verify reauth flow can update gateway API key."""
-    result = await config_entry_setup.start_reauth_flow(hass)
+    result = await config_entry_setup.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "link"
 
@@ -423,7 +423,7 @@ async def test_reauth_flow_update_configuration(
         headers={"content-type": CONTENT_TYPE_JSON},
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
 
@@ -433,10 +433,10 @@ async def test_reauth_flow_update_configuration(
 
 
 async def test_flow_ssdp_discovery(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test that config flow for one discovered bridge works."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         data=SsdpServiceInfo(
             ssdp_usn="mock_usn",
@@ -453,7 +453,7 @@ async def test_flow_ssdp_discovery(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "link"
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
     assert flows[0].get("context", {}).get("configuration_url") == "http://1.2.3.4:80"
 
@@ -463,7 +463,7 @@ async def test_flow_ssdp_discovery(
         headers={"content-type": CONTENT_TYPE_JSON},
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
 
@@ -477,14 +477,14 @@ async def test_flow_ssdp_discovery(
 
 
 async def test_ssdp_discovery_update_configuration(
-    hass: HomeAssistant, config_entry_setup: MockConfigEntry
+    menuai: menuai, config_entry_setup: MockConfigEntry
 ) -> None:
     """Test if a discovered bridge is configured but updates with new attributes."""
     with patch(
-        "homeassistant.components.deconz.async_setup_entry",
+        "menuai.components.deconz.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             data=SsdpServiceInfo(
                 ssdp_usn="mock_usn",
@@ -497,7 +497,7 @@ async def test_ssdp_discovery_update_configuration(
             ),
             context={"source": SOURCE_SSDP},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
@@ -506,11 +506,11 @@ async def test_ssdp_discovery_update_configuration(
 
 
 async def test_ssdp_discovery_dont_update_configuration(
-    hass: HomeAssistant, config_entry_setup: MockConfigEntry
+    menuai: menuai, config_entry_setup: MockConfigEntry
 ) -> None:
     """Test if a discovered bridge has already been configured."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         data=SsdpServiceInfo(
             ssdp_usn="mock_usn",
@@ -529,12 +529,12 @@ async def test_ssdp_discovery_dont_update_configuration(
     assert config_entry_setup.data[CONF_HOST] == "1.2.3.4"
 
 
-@pytest.mark.parametrize("config_entry_source", [SOURCE_HASSIO])
-async def test_ssdp_discovery_dont_update_existing_hassio_configuration(
-    hass: HomeAssistant, config_entry_setup: MockConfigEntry
+@pytest.mark.parametrize("config_entry_source", [SOURCE_menuaiIO])
+async def test_ssdp_discovery_dont_update_existing_menuaiio_configuration(
+    menuai: menuai, config_entry_setup: MockConfigEntry
 ) -> None:
-    """Test to ensure the SSDP discovery does not update an Hass.io entry."""
-    result = await hass.config_entries.flow.async_init(
+    """Test to ensure the SSDP discovery does not update an menuai.io entry."""
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         data=SsdpServiceInfo(
             ssdp_usn="mock_usn",
@@ -553,11 +553,11 @@ async def test_ssdp_discovery_dont_update_existing_hassio_configuration(
     assert config_entry_setup.data[CONF_HOST] == "1.2.3.4"
 
 
-async def test_flow_hassio_discovery(hass: HomeAssistant) -> None:
-    """Test hassio discovery flow works."""
-    result = await hass.config_entries.flow.async_init(
+async def test_flow_menuaiio_discovery(menuai: menuai) -> None:
+    """Test menuaiio discovery flow works."""
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
-        data=HassioServiceInfo(
+        data=menuaiioServiceInfo(
             config={
                 "addon": "Mock Addon",
                 CONF_HOST: "mock-deconz",
@@ -569,26 +569,26 @@ async def test_flow_hassio_discovery(hass: HomeAssistant) -> None:
             slug="deconz",
             uuid="1234",
         ),
-        context={"source": SOURCE_HASSIO},
+        context={"source": SOURCE_menuaiIO},
     )
     assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == "hassio_confirm"
+    assert result["step_id"] == "menuaiio_confirm"
     assert result["description_placeholders"] == {"addon": "Mock Addon"}
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
     assert (
-        flows[0].get("context", {}).get("configuration_url") == HASSIO_CONFIGURATION_URL
+        flows[0].get("context", {}).get("configuration_url") == menuaiIO_CONFIGURATION_URL
     )
 
     with patch(
-        "homeassistant.components.deconz.async_setup_entry",
+        "menuai.components.deconz.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["result"].data == {
@@ -599,18 +599,18 @@ async def test_flow_hassio_discovery(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_hassio_discovery_update_configuration(
-    hass: HomeAssistant,
+async def test_menuaiio_discovery_update_configuration(
+    menuai: menuai,
     config_entry_setup: MockConfigEntry,
 ) -> None:
     """Test we can update an existing config entry."""
     with patch(
-        "homeassistant.components.deconz.async_setup_entry",
+        "menuai.components.deconz.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
-            data=HassioServiceInfo(
+            data=menuaiioServiceInfo(
                 config={
                     CONF_HOST: "2.3.4.5",
                     CONF_PORT: 8080,
@@ -621,9 +621,9 @@ async def test_hassio_discovery_update_configuration(
                 slug="deconz",
                 uuid="1234",
             ),
-            context={"source": SOURCE_HASSIO},
+            context={"source": SOURCE_menuaiIO},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
@@ -634,11 +634,11 @@ async def test_hassio_discovery_update_configuration(
 
 
 @pytest.mark.usefixtures("config_entry_setup")
-async def test_hassio_discovery_dont_update_configuration(hass: HomeAssistant) -> None:
+async def test_menuaiio_discovery_dont_update_configuration(menuai: menuai) -> None:
     """Test we can update an existing config entry."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
-        data=HassioServiceInfo(
+        data=menuaiioServiceInfo(
             config={
                 CONF_HOST: "1.2.3.4",
                 CONF_PORT: 80,
@@ -649,7 +649,7 @@ async def test_hassio_discovery_dont_update_configuration(hass: HomeAssistant) -
             slug="deconz",
             uuid="1234",
         ),
-        context={"source": SOURCE_HASSIO},
+        context={"source": SOURCE_menuaiIO},
     )
 
     assert result["type"] is FlowResultType.ABORT
@@ -657,15 +657,15 @@ async def test_hassio_discovery_dont_update_configuration(hass: HomeAssistant) -
 
 
 async def test_option_flow(
-    hass: HomeAssistant, config_entry_setup: MockConfigEntry
+    menuai: menuai, config_entry_setup: MockConfigEntry
 ) -> None:
     """Test config flow options."""
-    result = await hass.config_entries.options.async_init(config_entry_setup.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry_setup.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "deconz_devices"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             CONF_ALLOW_CLIP_SENSOR: False,

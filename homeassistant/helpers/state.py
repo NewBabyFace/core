@@ -9,9 +9,9 @@ import logging
 from types import ModuleType
 from typing import Any
 
-from homeassistant.components.lock import LockState
-from homeassistant.components.sun import STATE_ABOVE_HORIZON, STATE_BELOW_HORIZON
-from homeassistant.const import (
+from menuai.components.lock import LockState
+from menuai.components.sun import STATE_ABOVE_HORIZON, STATE_BELOW_HORIZON
+from menuai.const import (
     STATE_CLOSED,
     STATE_HOME,
     STATE_NOT_HOME,
@@ -20,15 +20,15 @@ from homeassistant.const import (
     STATE_OPEN,
     STATE_UNKNOWN,
 )
-from homeassistant.core import Context, HomeAssistant, State
-from homeassistant.loader import IntegrationNotFound, async_get_integration, bind_hass
+from menuai.core import Context, menuai, State
+from menuai.loader import IntegrationNotFound, async_get_integration, bind_menuai
 
 _LOGGER = logging.getLogger(__name__)
 
 
-@bind_hass
+@bind_menuai
 async def async_reproduce_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     states: State | Iterable[State],
     *,
     context: Context | None = None,
@@ -45,7 +45,7 @@ async def async_reproduce_state(
 
     async def worker(domain: str, states_by_domain: list[State]) -> None:
         try:
-            integration = await async_get_integration(hass, domain)
+            integration = await async_get_integration(menuai, domain)
         except IntegrationNotFound:
             _LOGGER.warning(
                 "Trying to reproduce state for unknown integration: %s", domain
@@ -61,7 +61,7 @@ async def async_reproduce_state(
             return
 
         await platform.async_reproduce_states(
-            hass, states_by_domain, context=context, reproduce_options=reproduce_options
+            menuai, states_by_domain, context=context, reproduce_options=reproduce_options
         )
 
     if to_call:

@@ -9,12 +9,12 @@ from pymochad import controller, device
 from pymochad.exceptions import MochadException
 import voluptuous as vol
 
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.const import CONF_ADDRESS, CONF_DEVICES, CONF_NAME, CONF_PLATFORM
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.switch import SwitchEntity
+from menuai.const import CONF_ADDRESS, CONF_DEVICES, CONF_NAME, CONF_PLATFORM
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import CONF_COMM_TYPE, DOMAIN, REQ_LOCK, MochadCtrl
 
@@ -36,22 +36,22 @@ PLATFORM_SCHEMA = vol.Schema(
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up X10 switches over a mochad controller."""
-    mochad_controller: MochadCtrl = hass.data[DOMAIN]
+    mochad_controller: MochadCtrl = menuai.data[DOMAIN]
     devs: list[dict[str, str]] = config[CONF_DEVICES]
-    add_entities([MochadSwitch(hass, mochad_controller.ctrl, dev) for dev in devs])
+    add_entities([MochadSwitch(menuai, mochad_controller.ctrl, dev) for dev in devs])
 
 
 class MochadSwitch(SwitchEntity):
     """Representation of a X10 switch over Mochad."""
 
     def __init__(
-        self, hass: HomeAssistant, ctrl: controller.PyMochad, dev: dict[str, str]
+        self, menuai: menuai, ctrl: controller.PyMochad, dev: dict[str, str]
     ) -> None:
         """Initialize a Mochad Switch Device."""
 

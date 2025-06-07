@@ -10,10 +10,10 @@ from matter_server.common.helpers.util import create_attribute_path_from_attribu
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
 
 from .common import (
     set_node_attribute,
@@ -24,26 +24,26 @@ from .common import (
 
 @pytest.mark.usefixtures("matter_devices")
 async def test_switches(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test switches."""
-    snapshot_matter_entities(hass, entity_registry, snapshot, Platform.SWITCH)
+    snapshot_matter_entities(menuai, entity_registry, snapshot, Platform.SWITCH)
 
 
 @pytest.mark.parametrize("node_fixture", ["on_off_plugin_unit"])
 async def test_turn_on(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     matter_node: MatterNode,
 ) -> None:
     """Test turning on a switch."""
-    state = hass.states.get("switch.mock_onoffpluginunit")
+    state = menuai.states.get("switch.mock_onoffpluginunit")
     assert state
     assert state.state == "off"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch",
         "turn_on",
         {
@@ -60,25 +60,25 @@ async def test_turn_on(
     )
 
     set_node_attribute(matter_node, 1, 6, 0, True)
-    await trigger_subscription_callback(hass, matter_client)
+    await trigger_subscription_callback(menuai, matter_client)
 
-    state = hass.states.get("switch.mock_onoffpluginunit")
+    state = menuai.states.get("switch.mock_onoffpluginunit")
     assert state
     assert state.state == "on"
 
 
 @pytest.mark.parametrize("node_fixture", ["on_off_plugin_unit"])
 async def test_turn_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     matter_node: MatterNode,
 ) -> None:
     """Test turning off a switch."""
-    state = hass.states.get("switch.mock_onoffpluginunit")
+    state = menuai.states.get("switch.mock_onoffpluginunit")
     assert state
     assert state.state == "off"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch",
         "turn_off",
         {
@@ -96,21 +96,21 @@ async def test_turn_off(
 
 
 @pytest.mark.parametrize("node_fixture", ["switch_unit"])
-async def test_switch_unit(hass: HomeAssistant, matter_node: MatterNode) -> None:
+async def test_switch_unit(menuai: menuai, matter_node: MatterNode) -> None:
     """Test if a switch entity is discovered from any (non-light) OnOf cluster device."""
     # A switch entity should be discovered as fallback for ANY Matter device (endpoint)
     # that has the OnOff cluster and does not fall into an explicit discovery schema
     # by another platform (e.g. light, lock etc.).
-    state = hass.states.get("switch.mock_switchunit")
+    state = menuai.states.get("switch.mock_switchunit")
     assert state
     assert state.state == "off"
     assert state.attributes["friendly_name"] == "Mock SwitchUnit"
 
 
 @pytest.mark.parametrize("node_fixture", ["room_airconditioner"])
-async def test_power_switch(hass: HomeAssistant, matter_node: MatterNode) -> None:
+async def test_power_switch(menuai: menuai, matter_node: MatterNode) -> None:
     """Test if a Power switch entity is created for a device that supports that."""
-    state = hass.states.get("switch.room_airconditioner_power")
+    state = menuai.states.get("switch.room_airconditioner_power")
     assert state
     assert state.state == "off"
     assert state.attributes["friendly_name"] == "Room AirConditioner Power"
@@ -118,27 +118,27 @@ async def test_power_switch(hass: HomeAssistant, matter_node: MatterNode) -> Non
 
 @pytest.mark.parametrize("node_fixture", ["eve_thermo"])
 async def test_numeric_switch(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     matter_node: MatterNode,
 ) -> None:
     """Test numeric switch entity is discovered and working using an Eve Thermo fixture ."""
-    state = hass.states.get("switch.eve_thermo_child_lock")
+    state = menuai.states.get("switch.eve_thermo_child_lock")
     assert state
     assert state.state == "off"
     # name should be derived from description attribute
     assert state.attributes["friendly_name"] == "Eve Thermo Child lock"
     # test attribute changes
     set_node_attribute(matter_node, 1, 516, 1, 1)
-    await trigger_subscription_callback(hass, matter_client)
-    state = hass.states.get("switch.eve_thermo_child_lock")
+    await trigger_subscription_callback(menuai, matter_client)
+    state = menuai.states.get("switch.eve_thermo_child_lock")
     assert state.state == "on"
     set_node_attribute(matter_node, 1, 516, 1, 0)
-    await trigger_subscription_callback(hass, matter_client)
-    state = hass.states.get("switch.eve_thermo_child_lock")
+    await trigger_subscription_callback(menuai, matter_client)
+    state = menuai.states.get("switch.eve_thermo_child_lock")
     assert state.state == "off"
     # test switch service
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch",
         "turn_on",
         {"entity_id": "switch.eve_thermo_child_lock"},
@@ -153,7 +153,7 @@ async def test_numeric_switch(
         ),
         value=1,
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch",
         "turn_off",
         {"entity_id": "switch.eve_thermo_child_lock"},
@@ -172,16 +172,16 @@ async def test_numeric_switch(
 
 @pytest.mark.parametrize("node_fixture", ["on_off_plugin_unit"])
 async def test_matter_exception_on_command(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     matter_node: MatterNode,
 ) -> None:
-    """Test if a MatterError gets converted to HomeAssistantError by using a switch fixture."""
-    state = hass.states.get("switch.mock_onoffpluginunit")
+    """Test if a MatterError gets converted to menuaiError by using a switch fixture."""
+    state = menuai.states.get("switch.mock_onoffpluginunit")
     assert state
     matter_client.send_device_command.side_effect = MatterError("Boom")
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             "switch",
             "turn_on",
             {
@@ -193,16 +193,16 @@ async def test_matter_exception_on_command(
 
 @pytest.mark.parametrize("node_fixture", ["silabs_evse_charging"])
 async def test_evse_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     matter_node: MatterNode,
 ) -> None:
     """Test evse sensors."""
-    state = hass.states.get("switch.evse_enable_charging")
+    state = menuai.states.get("switch.evse_enable_charging")
     assert state
     assert state.state == "on"
     # test switch service
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch",
         "turn_off",
         {"entity_id": "switch.evse_enable_charging"},
@@ -215,7 +215,7 @@ async def test_evse_sensor(
         command=clusters.EnergyEvse.Commands.Disable(),
         timed_request_timeout_ms=3000,
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch",
         "turn_on",
         {"entity_id": "switch.evse_enable_charging"},

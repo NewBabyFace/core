@@ -9,12 +9,12 @@ from pysmhi import SMHIForecast, SmhiForecastException, SMHIPointForecast
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.smhi.const import DOMAIN
-from homeassistant.components.smhi.weather import (
+from menuai.components.smhi.const import DOMAIN
+from menuai.components.smhi.weather import (
     ATTR_SMHI_THUNDER_PROBABILITY,
     CONDITION_CLASSES,
 )
-from homeassistant.components.weather import (
+from menuai.components.weather import (
     ATTR_CONDITION_CLEAR_NIGHT,
     ATTR_FORECAST_CONDITION,
     ATTR_WEATHER_WIND_GUST_SPEED,
@@ -22,16 +22,16 @@ from homeassistant.components.weather import (
     DOMAIN as WEATHER_DOMAIN,
     SERVICE_GET_FORECASTS,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ATTRIBUTION,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
     Platform,
     UnitOfSpeed,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.util import dt as dt_util
 
 from . import ENTITY_ID, TEST_CONFIG
 
@@ -43,14 +43,14 @@ from tests.typing import WebSocketGenerator
     "load_platforms",
     [[Platform.WEATHER]],
 )
-async def test_setup_hass(
-    hass: HomeAssistant,
+async def test_setup_menuai(
+    menuai: menuai,
     load_int: MockConfigEntry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test for successfully setting up the smhi integration."""
 
-    state = hass.states.get(ENTITY_ID)
+    state = menuai.states.get(ENTITY_ID)
 
     assert state
     assert state.state == "fog"
@@ -63,13 +63,13 @@ async def test_setup_hass(
 )
 @freeze_time(datetime(2023, 8, 7, 1, tzinfo=dt_util.UTC))
 async def test_clear_night(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: SMHIPointForecast,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test for successfully setting up the smhi integration."""
-    hass.config.latitude = "59.32624"
-    hass.config.longitude = "17.84197"
+    menuai.config.latitude = "59.32624"
+    menuai.config.longitude = "17.84197"
     config_entry = MockConfigEntry(
         domain=DOMAIN,
         data=TEST_CONFIG,
@@ -78,17 +78,17 @@ async def test_clear_night(
         version=3,
         title="Test",
     )
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(ENTITY_ID)
+    state = menuai.states.get(ENTITY_ID)
 
     assert state
     assert state.state == ATTR_CONDITION_CLEAR_NIGHT
     assert state.attributes == snapshot(name="clear_night")
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         WEATHER_DOMAIN,
         SERVICE_GET_FORECASTS,
         {"entity_id": ENTITY_ID, "type": "hourly"},
@@ -99,7 +99,7 @@ async def test_clear_night(
 
 
 async def test_properties_no_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: MockConfigEntry,
     mock_client: MagicMock,
     freezer: FrozenDateTimeFactory,
@@ -108,10 +108,10 @@ async def test_properties_no_data(
 
     mock_client.async_get_daily_forecast.side_effect = SmhiForecastException("boom")
     freezer.tick(timedelta(minutes=35))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(ENTITY_ID)
+    state = menuai.states.get(ENTITY_ID)
 
     assert state
     assert state.name == "Test"
@@ -121,10 +121,10 @@ async def test_properties_no_data(
     mock_client.async_get_daily_forecast.side_effect = None
     mock_client.async_get_daily_forecast.return_value = None
     freezer.tick(timedelta(minutes=35))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(ENTITY_ID)
+    state = menuai.states.get(ENTITY_ID)
 
     assert state
     assert state.name == "Test"
@@ -134,7 +134,7 @@ async def test_properties_no_data(
 
 
 async def test_properties_unknown_symbol(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: MagicMock,
 ) -> None:
     """Test behaviour when unknown symbol from API."""
@@ -216,17 +216,17 @@ async def test_properties_unknown_symbol(
     mock_client.async_get_daily_forecast.return_value = testdata
 
     entry = MockConfigEntry(domain="smhi", title="test", data=TEST_CONFIG, version=3)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(ENTITY_ID)
+    state = menuai.states.get(ENTITY_ID)
 
     assert state
     assert state.name == "test"
     assert state.state == STATE_UNKNOWN
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         WEATHER_DOMAIN,
         SERVICE_GET_FORECASTS,
         {"entity_id": ENTITY_ID, "type": "daily"},
@@ -241,7 +241,7 @@ async def test_properties_unknown_symbol(
 
 @pytest.mark.parametrize("error", [SmhiForecastException(), TimeoutError()])
 async def test_refresh_weather_forecast_retry(
-    hass: HomeAssistant,
+    menuai: menuai,
     error: Exception,
     load_int: MockConfigEntry,
     mock_client: MagicMock,
@@ -252,10 +252,10 @@ async def test_refresh_weather_forecast_retry(
     mock_client.async_get_daily_forecast.side_effect = error
 
     freezer.tick(timedelta(minutes=35))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(ENTITY_ID)
+    state = menuai.states.get(ENTITY_ID)
 
     assert state
     assert state.name == "Test"
@@ -263,10 +263,10 @@ async def test_refresh_weather_forecast_retry(
     assert mock_client.async_get_daily_forecast.call_count == 2
 
     freezer.tick(timedelta(minutes=35))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(ENTITY_ID)
+    state = menuai.states.get(ENTITY_ID)
     assert state
     assert state.state == STATE_UNAVAILABLE
     assert mock_client.async_get_daily_forecast.call_count == 3
@@ -339,12 +339,12 @@ def test_condition_class() -> None:
 
 
 async def test_custom_speed_unit(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     load_int: MockConfigEntry,
 ) -> None:
     """Test Wind Gust speed with custom unit."""
-    state = hass.states.get(ENTITY_ID)
+    state = menuai.states.get(ENTITY_ID)
 
     assert state
     assert state.name == "Test"
@@ -356,9 +356,9 @@ async def test_custom_speed_unit(
         {ATTR_WEATHER_WIND_SPEED_UNIT: UnitOfSpeed.METERS_PER_SECOND},
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(ENTITY_ID)
+    state = menuai.states.get(ENTITY_ID)
     assert state.attributes[ATTR_WEATHER_WIND_GUST_SPEED] == 6.2
 
 
@@ -367,13 +367,13 @@ async def test_custom_speed_unit(
     [[Platform.WEATHER]],
 )
 async def test_forecast_services(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     load_int: MockConfigEntry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test multiple forecast."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json_auto_id(
         {
@@ -427,13 +427,13 @@ async def test_forecast_services(
     [2],
 )
 async def test_forecast_services_lack_of_data(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     load_int: MockConfigEntry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test forecast lacking data."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json_auto_id(
         {
@@ -460,12 +460,12 @@ async def test_forecast_services_lack_of_data(
     [[Platform.WEATHER]],
 )
 async def test_forecast_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     load_int: MockConfigEntry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test forecast service."""
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         WEATHER_DOMAIN,
         SERVICE_GET_FORECASTS,
         {"entity_id": ENTITY_ID, "type": "daily"},

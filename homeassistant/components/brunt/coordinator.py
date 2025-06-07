@@ -8,12 +8,12 @@ import logging
 from aiohttp.client_exceptions import ClientResponseError, ServerDisconnectedError
 from brunt import BruntClientAsync, Thing
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import REGULAR_INTERVAL
 
@@ -30,12 +30,12 @@ class BruntCoordinator(DataUpdateCoordinator[dict[str | None, Thing]]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: BruntConfigEntry,
     ) -> None:
         """Initialize the Brunt coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name="brunt",
@@ -43,7 +43,7 @@ class BruntCoordinator(DataUpdateCoordinator[dict[str | None, Thing]]):
         )
 
     async def _async_setup(self) -> None:
-        session = async_get_clientsession(self.hass)
+        session = async_get_clientsession(self.menuai)
 
         self.bapi = BruntClientAsync(
             username=self.config_entry.data[CONF_USERNAME],
@@ -76,5 +76,5 @@ class BruntCoordinator(DataUpdateCoordinator[dict[str | None, Thing]]):
                 raise ConfigEntryAuthFailed from err
             if err.status == 401:
                 _LOGGER.warning("Device not found, will reload Brunt integration")
-                await self.hass.config_entries.async_reload(self.config_entry.entry_id)
+                await self.menuai.config_entries.async_reload(self.config_entry.entry_id)
             raise UpdateFailed from err

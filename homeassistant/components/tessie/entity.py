@@ -6,9 +6,9 @@ from typing import Any
 
 from aiohttp import ClientResponseError
 
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, TRANSLATED_ERRORS
 from .coordinator import (
@@ -103,12 +103,12 @@ class TessieEntity(TessieBaseEntity):
                 **kargs,
             )
         except ClientResponseError as e:
-            raise HomeAssistantError from e
+            raise menuaiError from e
         if response["result"] is False:
             name: str = getattr(self, "name", self.entity_id)
             reason: str = response.get("reason", "unknown")
             translation_key = TRANSLATED_ERRORS.get(reason, "command_failed")
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key=translation_key,
                 translation_placeholders={"name": name, "message": reason},

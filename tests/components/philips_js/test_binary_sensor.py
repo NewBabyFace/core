@@ -2,8 +2,8 @@
 
 import pytest
 
-from homeassistant.const import STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant
+from menuai.const import STATE_OFF, STATE_ON
+from menuai.core import menuai
 
 from . import MOCK_NAME, MOCK_RECORDINGS_LIST
 
@@ -43,42 +43,42 @@ async def mock_tv_recordings_list_unavailable(mock_tv):
 
 
 async def test_recordings_list_api_invalid(
-    mock_tv_api_invalid, mock_config_entry, hass: HomeAssistant
+    mock_tv_api_invalid, mock_config_entry, menuai: menuai
 ) -> None:
     """Test if sensors are not created if mock_tv is invalid."""
 
-    assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
 
-    state = hass.states.get(ID_RECORDING_AVAILABLE)
+    state = menuai.states.get(ID_RECORDING_AVAILABLE)
     assert state is None
 
-    state = hass.states.get(ID_RECORDING_ONGOING)
+    state = menuai.states.get(ID_RECORDING_ONGOING)
     assert state is None
 
 
 async def test_recordings_list_valid(
-    mock_tv_api_valid, mock_config_entry, hass: HomeAssistant
+    mock_tv_api_valid, mock_config_entry, menuai: menuai
 ) -> None:
     """Test if sensors are created correctly."""
 
-    assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
 
-    state = hass.states.get(ID_RECORDING_AVAILABLE)
+    state = menuai.states.get(ID_RECORDING_AVAILABLE)
     assert state.state == STATE_ON
 
-    state = hass.states.get(ID_RECORDING_ONGOING)
+    state = menuai.states.get(ID_RECORDING_ONGOING)
     assert state.state == STATE_ON
 
 
 async def test_recordings_list_unavailable(
-    mock_tv_recordings_list_unavailable, mock_config_entry, hass: HomeAssistant
+    mock_tv_recordings_list_unavailable, mock_config_entry, menuai: menuai
 ) -> None:
     """Test if sensors are created correctly."""
 
-    assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
 
-    state = hass.states.get(ID_RECORDING_AVAILABLE)
+    state = menuai.states.get(ID_RECORDING_AVAILABLE)
     assert state.state == STATE_OFF
 
-    state = hass.states.get(ID_RECORDING_ONGOING)
+    state = menuai.states.get(ID_RECORDING_ONGOING)
     assert state.state == STATE_OFF

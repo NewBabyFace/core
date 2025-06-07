@@ -16,11 +16,11 @@ import plexapi.server
 from requests import Session
 import requests.exceptions
 
-from homeassistant.components.media_player import DOMAIN as MP_DOMAIN, MediaType
-from homeassistant.const import CONF_CLIENT_ID, CONF_TOKEN, CONF_URL, CONF_VERIFY_SSL
-from homeassistant.core import callback
-from homeassistant.helpers.debounce import Debouncer
-from homeassistant.helpers.dispatcher import async_dispatcher_send
+from menuai.components.media_player import DOMAIN as MP_DOMAIN, MediaType
+from menuai.const import CONF_CLIENT_ID, CONF_TOKEN, CONF_URL, CONF_VERIFY_SSL
+from menuai.core import callback
+from menuai.helpers.debounce import Debouncer
+from menuai.helpers.dispatcher import async_dispatcher_send
 
 from .const import (
     CONF_IGNORE_NEW_SHARED_USERS,
@@ -67,10 +67,10 @@ class PlexServer:
     """Manages a single Plex server connection."""
 
     def __init__(
-        self, hass, server_config, known_server_id=None, options=None, entry_id=None
+        self, menuai, server_config, known_server_id=None, options=None, entry_id=None
     ):
         """Initialize a Plex server instance."""
-        self.hass = hass
+        self.menuai = menuai
         self.entry_id = entry_id
         self.active_sessions = {}
         self._plex_account = None
@@ -93,7 +93,7 @@ class PlexServer:
         self._use_plex_tv = self._token is not None
         self._version = None
         self.async_update_platforms = Debouncer(
-            hass,
+            menuai,
             _LOGGER,
             cooldown=DEBOUNCE_TIMEOUT,
             immediate=True,
@@ -251,7 +251,7 @@ class PlexServer:
         unique_id = f"{self.machine_identifier}:{machine_identifier}"
         _LOGGER.debug("Refreshing %s", unique_id)
         async_dispatcher_send(
-            self.hass,
+            self.menuai,
             PLEX_UPDATE_MEDIA_PLAYER_SIGNAL.format(unique_id),
             device,
             session,
@@ -297,16 +297,16 @@ class PlexServer:
             "playing",
             "paused",
         ):
-            await self.hass.async_add_executor_job(update_with_new_media)
+            await self.menuai.async_add_executor_job(update_with_new_media)
 
         async_dispatcher_send(
-            self.hass,
+            self.menuai,
             PLEX_UPDATE_MEDIA_PLAYER_SESSION_SIGNAL.format(unique_id),
             state,
         )
 
         async_dispatcher_send(
-            self.hass,
+            self.menuai,
             PLEX_UPDATE_SENSOR_SIGNAL.format(self.machine_identifier),
         )
 
@@ -322,7 +322,7 @@ class PlexServer:
         """Update the platform entities."""
         _LOGGER.debug("Updating devices")
 
-        await get_plex_data(self.hass)[GDM_DEBOUNCER]()
+        await get_plex_data(self.menuai)[GDM_DEBOUNCER]()
 
         available_clients = {}
         ignored_clients = set()
@@ -342,14 +342,14 @@ class PlexServer:
                 monitored_users.add(new_user)
 
         try:
-            devices, sessions, plextv_clients = await self.hass.async_add_executor_job(
+            devices, sessions, plextv_clients = await self.menuai.async_add_executor_job(
                 self._fetch_platform_data
             )
         except plexapi.exceptions.Unauthorized:
             _LOGGER.debug(
                 "Token has expired for '%s', reloading integration", self.friendly_name
             )
-            await self.hass.config_entries.async_reload(self.entry_id)
+            await self.menuai.config_entries.async_reload(self.entry_id)
             return
         except (
             plexapi.exceptions.BadRequest,
@@ -433,7 +433,7 @@ class PlexServer:
 
         def connect_new_clients():
             """Create connections to newly discovered clients."""
-            for gdm_entry in get_plex_data(self.hass)[GDM_SCANNER].entries:
+            for gdm_entry in get_plex_data(self.menuai)[GDM_SCANNER].entries:
                 machine_identifier = gdm_entry["data"]["Resource-Identifier"]
                 if machine_identifier in self._client_device_cache:
                     client = self._client_device_cache[machine_identifier]
@@ -493,7 +493,7 @@ class PlexServer:
             connect_new_clients()
             process_sessions()
 
-        await self.hass.async_add_executor_job(sync_tasks)
+        await self.menuai.async_add_executor_job(sync_tasks)
 
         new_entity_configs = []
         for client_id, client_data in available_clients.items():
@@ -522,13 +522,13 @@ class PlexServer:
 
         if new_entity_configs:
             async_dispatcher_send(
-                self.hass,
+                self.menuai,
                 PLEX_NEW_MP_SIGNAL.format(self.machine_identifier),
                 new_entity_configs,
             )
 
         async_dispatcher_send(
-            self.hass,
+            self.menuai,
             PLEX_UPDATE_SENSOR_SIGNAL.format(self.machine_identifier),
         )
 

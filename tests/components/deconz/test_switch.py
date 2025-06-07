@@ -4,16 +4,16 @@ from collections.abc import Callable
 
 import pytest
 
-from homeassistant.components.deconz.const import DOMAIN
-from homeassistant.components.light import DOMAIN as LIGHT_DOMAIN
-from homeassistant.components.switch import (
+from menuai.components.deconz.const import DOMAIN
+from menuai.components.light import DOMAIN as LIGHT_DOMAIN
+from menuai.components.switch import (
     DOMAIN as SWITCH_DOMAIN,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
 )
-from homeassistant.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .conftest import ConfigEntryFactoryType, WebsocketDataType
 
@@ -53,19 +53,19 @@ from tests.test_util.aiohttp import AiohttpClientMocker
 )
 @pytest.mark.usefixtures("config_entry_setup")
 async def test_power_plugs(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_put_request: Callable[[str, str], AiohttpClientMocker],
     light_ws_data: WebsocketDataType,
 ) -> None:
     """Test that all supported switch entities are created."""
-    assert len(hass.states.async_all()) == 4
-    assert hass.states.get("switch.on_off_switch").state == STATE_ON
-    assert hass.states.get("switch.smart_plug").state == STATE_OFF
-    assert hass.states.get("switch.on_off_relay").state == STATE_ON
-    assert hass.states.get("switch.unsupported_switch") is None
+    assert len(menuai.states.async_all()) == 4
+    assert menuai.states.get("switch.on_off_switch").state == STATE_ON
+    assert menuai.states.get("switch.smart_plug").state == STATE_OFF
+    assert menuai.states.get("switch.on_off_relay").state == STATE_ON
+    assert menuai.states.get("switch.unsupported_switch") is None
 
     await light_ws_data({"state": {"on": False}})
-    assert hass.states.get("switch.on_off_switch").state == STATE_OFF
+    assert menuai.states.get("switch.on_off_switch").state == STATE_OFF
 
     # Verify service calls
 
@@ -73,7 +73,7 @@ async def test_power_plugs(
 
     # Service turn on power plug
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "switch.on_off_switch"},
@@ -83,7 +83,7 @@ async def test_power_plugs(
 
     # Service turn off power plug
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: "switch.on_off_switch"},
@@ -104,7 +104,7 @@ async def test_power_plugs(
     ],
 )
 async def test_remove_legacy_on_off_output_as_light(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     config_entry_factory: ConfigEntryFactoryType,
 ) -> None:
@@ -117,4 +117,4 @@ async def test_remove_legacy_on_off_output_as_light(
 
     assert not entity_registry.async_get("light.on_off_output_device")
     assert entity_registry.async_get("switch.on_off_output_device")
-    assert len(hass.states.async_all()) == 1
+    assert len(menuai.states.async_all()) == 1

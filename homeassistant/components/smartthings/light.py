@@ -7,7 +7,7 @@ from typing import Any, cast
 
 from pysmartthings import Attribute, Capability, Command, DeviceEvent, SmartThings
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_MODE,
     ATTR_COLOR_TEMP_KELVIN,
@@ -18,9 +18,9 @@ from homeassistant.components.light import (
     LightEntityFeature,
     brightness_supported,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.restore_state import RestoreEntity
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.restore_state import RestoreEntity
 
 from . import FullDevice, SmartThingsConfigEntry
 from .const import MAIN
@@ -34,7 +34,7 @@ CAPABILITIES = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: SmartThingsConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -102,9 +102,9 @@ class SmartThingsLight(SmartThingsEntity, LightEntity, RestoreEntity):
             features |= LightEntityFeature.TRANSITION
         self._attr_supported_features = features
 
-    async def async_added_to_hass(self) -> None:
-        """Run when entity about to be added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Run when entity about to be added to menuai."""
+        await super().async_added_to_menuai()
         if (last_state := await self.async_get_last_extra_data()) is not None:
             self._attr_color_mode = last_state.as_dict()[ATTR_COLOR_MODE]
 

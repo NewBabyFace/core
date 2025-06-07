@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock
 
 from pyseventeentrack.errors import SeventeenTrackError
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from . import init_integration
 from .conftest import DEFAULT_SUMMARY, get_package
@@ -15,35 +15,35 @@ from tests.common import MockConfigEntry
 
 
 async def test_full_valid_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_seventeentrack: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Ensure everything starts correctly."""
-    await init_integration(hass, mock_config_entry)
-    assert len(hass.states.async_entity_ids()) == len(DEFAULT_SUMMARY.keys())
+    await init_integration(menuai, mock_config_entry)
+    assert len(menuai.states.async_entity_ids()) == len(DEFAULT_SUMMARY.keys())
 
 
 async def test_valid_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_seventeentrack: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Ensure everything starts correctly."""
-    await init_integration(hass, mock_config_entry)
-    assert len(hass.states.async_entity_ids()) == len(DEFAULT_SUMMARY.keys())
+    await init_integration(menuai, mock_config_entry)
+    assert len(menuai.states.async_entity_ids()) == len(DEFAULT_SUMMARY.keys())
 
 
 async def test_invalid_config(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_config_entry: MockConfigEntry
 ) -> None:
     """Ensure nothing is created when config is wrong."""
-    await init_integration(hass, mock_config_entry)
-    assert not hass.states.async_entity_ids("sensor")
+    await init_integration(menuai, mock_config_entry)
+    assert not menuai.states.async_entity_ids("sensor")
 
 
 async def test_login_exception(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_seventeentrack: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
@@ -51,12 +51,12 @@ async def test_login_exception(
     mock_seventeentrack.return_value.profile.login.side_effect = SeventeenTrackError(
         "Error"
     )
-    await init_integration(hass, mock_config_entry)
-    assert not hass.states.async_entity_ids("sensor")
+    await init_integration(menuai, mock_config_entry)
+    assert not menuai.states.async_entity_ids("sensor")
 
 
 async def test_package_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_seventeentrack: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
@@ -66,12 +66,12 @@ async def test_package_error(
     )
     mock_seventeentrack.return_value.profile.summary.return_value = {}
 
-    await init_integration(hass, mock_config_entry)
-    assert hass.states.get("sensor.17track_package_friendly_name_1") is None
+    await init_integration(menuai, mock_config_entry)
+    assert menuai.states.get("sensor.17track_package_friendly_name_1") is None
 
 
 async def test_summary_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_seventeentrack: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
@@ -82,10 +82,10 @@ async def test_summary_error(
         "Error"
     )
 
-    await init_integration(hass, mock_config_entry)
+    await init_integration(menuai, mock_config_entry)
 
-    assert len(hass.states.async_entity_ids()) == 0
+    assert len(menuai.states.async_entity_ids()) == 0
 
     assert (
-        hass.states.get("sensor.seventeentrack_packages_ready_to_be_picked_up") is None
+        menuai.states.get("sensor.seventeentrack_packages_ready_to_be_picked_up") is None
     )

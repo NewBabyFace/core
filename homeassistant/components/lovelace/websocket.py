@@ -8,11 +8,11 @@ from typing import TYPE_CHECKING, Any
 
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.json import json_fragment
+from menuai.components import websocket_api
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.json import json_fragment
 
 from .const import CONF_URL_PATH, LOVELACE_DATA, ConfigNotFound
 from .dashboard import LovelaceConfig
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from .resources import ResourceStorageCollection
 
 type AsyncLovelaceWebSocketCommandHandler[_R] = Callable[
-    [HomeAssistant, websocket_api.ActiveConnection, dict[str, Any], LovelaceConfig],
+    [menuai, websocket_api.ActiveConnection, dict[str, Any], LovelaceConfig],
     Awaitable[_R],
 ]
 
@@ -33,12 +33,12 @@ def _handle_errors[_R](
 
     @wraps(func)
     async def send_with_error_handling(
-        hass: HomeAssistant,
+        menuai: menuai,
         connection: websocket_api.ActiveConnection,
         msg: dict[str, Any],
     ) -> None:
         url_path = msg.get(CONF_URL_PATH)
-        config = hass.data[LOVELACE_DATA].dashboards.get(url_path)
+        config = menuai.data[LOVELACE_DATA].dashboards.get(url_path)
 
         if config is None:
             connection.send_error(
@@ -48,10 +48,10 @@ def _handle_errors[_R](
 
         error = None
         try:
-            result = await func(hass, connection, msg, config)
+            result = await func(menuai, connection, msg, config)
         except ConfigNotFound:
             error = "config_not_found", "No config found."
-        except HomeAssistantError as err:
+        except menuaiError as err:
             error = "error", str(err)
 
         if error is not None:
@@ -65,7 +65,7 @@ def _handle_errors[_R](
 
 @websocket_api.async_response
 async def websocket_lovelace_resources(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
@@ -73,11 +73,11 @@ async def websocket_lovelace_resources(
 
     This function is used in YAML mode.
     """
-    await websocket_lovelace_resources_impl(hass, connection, msg)
+    await websocket_lovelace_resources_impl(menuai, connection, msg)
 
 
 async def websocket_lovelace_resources_impl(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
@@ -85,11 +85,11 @@ async def websocket_lovelace_resources_impl(
 
     This function is called by both Storage and YAML mode WS handlers.
     """
-    resources = hass.data[LOVELACE_DATA].resources
+    resources = menuai.data[LOVELACE_DATA].resources
     if TYPE_CHECKING:
         assert isinstance(resources, ResourceStorageCollection)
 
-    if hass.config.safe_mode:
+    if menuai.config.safe_mode:
         connection.send_result(msg["id"], [])
         return
 
@@ -110,7 +110,7 @@ async def websocket_lovelace_resources_impl(
 @websocket_api.async_response
 @_handle_errors
 async def websocket_lovelace_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
     config: LovelaceConfig,
@@ -130,7 +130,7 @@ async def websocket_lovelace_config(
 @websocket_api.async_response
 @_handle_errors
 async def websocket_lovelace_save_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
     config: LovelaceConfig,
@@ -149,7 +149,7 @@ async def websocket_lovelace_save_config(
 @websocket_api.async_response
 @_handle_errors
 async def websocket_lovelace_delete_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
     config: LovelaceConfig,

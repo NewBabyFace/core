@@ -9,25 +9,25 @@ from typing import Any, Final, final
 
 import voluptuous as vol
 
-from homeassistant.components.light import ATTR_TRANSITION
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_PLATFORM, SERVICE_TURN_ON, STATE_UNAVAILABLE
-from homeassistant.core import DOMAIN as HOMEASSISTANT_DOMAIN, HomeAssistant
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util import dt as dt_util
-from homeassistant.util.hass_dict import HassKey
+from menuai.components.light import ATTR_TRANSITION
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_PLATFORM, SERVICE_TURN_ON, STATE_UNAVAILABLE
+from menuai.core import DOMAIN as menuai_DOMAIN, menuai
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.restore_state import RestoreEntity
+from menuai.helpers.typing import ConfigType
+from menuai.util import dt as dt_util
+from menuai.util.menuai_dict import menuaiKey
 
 DOMAIN: Final = "scene"
-DATA_COMPONENT: HassKey[EntityComponent[Scene]] = HassKey(DOMAIN)
+DATA_COMPONENT: menuaiKey[EntityComponent[Scene]] = menuaiKey(DOMAIN)
 STATES: Final = "states"
 
 
-def _hass_domain_validator(config: dict[str, Any]) -> dict[str, Any]:
-    """Validate platform in config for homeassistant domain."""
+def _menuai_domain_validator(config: dict[str, Any]) -> dict[str, Any]:
+    """Validate platform in config for menuai domain."""
     if CONF_PLATFORM not in config:
-        config = {CONF_PLATFORM: HOMEASSISTANT_DOMAIN, STATES: config}
+        config = {CONF_PLATFORM: menuai_DOMAIN, STATES: config}
 
     return config
 
@@ -37,7 +37,7 @@ def _platform_validator(config: dict[str, Any]) -> dict[str, Any]:
     platform_name = config[CONF_PLATFORM]
     try:
         platform = importlib.import_module(
-            f"homeassistant.components.{platform_name}.scene"
+            f"menuai.components.{platform_name}.scene"
         )
     except ImportError:
         raise vol.Invalid("Invalid platform specified") from None
@@ -50,7 +50,7 @@ def _platform_validator(config: dict[str, Any]) -> dict[str, Any]:
 
 PLATFORM_SCHEMA = vol.Schema(
     vol.All(
-        _hass_domain_validator,
+        _menuai_domain_validator,
         vol.Schema({vol.Required(CONF_PLATFORM): str}, extra=vol.ALLOW_EXTRA),
         _platform_validator,
     ),
@@ -60,17 +60,17 @@ PLATFORM_SCHEMA = vol.Schema(
 # mypy: disallow-any-generics
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the scenes."""
-    component = hass.data[DATA_COMPONENT] = EntityComponent[Scene](
-        logging.getLogger(__name__), DOMAIN, hass
+    component = menuai.data[DATA_COMPONENT] = EntityComponent[Scene](
+        logging.getLogger(__name__), DOMAIN, menuai
     )
 
     await component.async_setup(config)
-    # Ensure Home Assistant platform always loaded.
-    hass.async_create_task(
+    # Ensure MenuAI platform always loaded.
+    menuai.async_create_task(
         component.async_setup_platform(
-            HOMEASSISTANT_DOMAIN, {"platform": HOMEASSISTANT_DOMAIN, STATES: []}
+            menuai_DOMAIN, {"platform": menuai_DOMAIN, STATES: []}
         ),
         eager_start=True,
     )
@@ -83,14 +83,14 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up a config entry."""
-    return await hass.data[DATA_COMPONENT].async_setup_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_setup_entry(entry)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.data[DATA_COMPONENT].async_unload_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_unload_entry(entry)
 
 
 class Scene(RestoreEntity):
@@ -117,9 +117,9 @@ class Scene(RestoreEntity):
         self.async_write_ha_state()
         await self.async_activate(**kwargs)
 
-    async def async_internal_added_to_hass(self) -> None:
-        """Call when the scene is added to hass."""
-        await super().async_internal_added_to_hass()
+    async def async_internal_added_to_menuai(self) -> None:
+        """Call when the scene is added to menuai."""
+        await super().async_internal_added_to_menuai()
         state = await self.async_get_last_state()
         if (
             state is not None
@@ -134,6 +134,6 @@ class Scene(RestoreEntity):
 
     async def async_activate(self, **kwargs: Any) -> None:
         """Activate scene. Try to get entities into requested state."""
-        task = self.hass.async_add_executor_job(ft.partial(self.activate, **kwargs))
+        task = self.menuai.async_add_executor_job(ft.partial(self.activate, **kwargs))
         if task:
             await task

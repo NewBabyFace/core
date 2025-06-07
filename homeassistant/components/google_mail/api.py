@@ -1,4 +1,4 @@
-"""API for Google Mail bound to Home Assistant OAuth."""
+"""API for Google Mail bound to MenuAI OAuth."""
 
 from functools import partial
 
@@ -7,15 +7,15 @@ from google.auth.exceptions import RefreshError
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import Resource, build
 
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_ACCESS_TOKEN
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import (
+from menuai.config_entries import ConfigEntryState
+from menuai.const import CONF_ACCESS_TOKEN
+from menuai.core import menuai
+from menuai.exceptions import (
     ConfigEntryAuthFailed,
     ConfigEntryNotReady,
-    HomeAssistantError,
+    menuaiError,
 )
-from homeassistant.helpers import config_entry_oauth2_flow
+from menuai.helpers import config_entry_oauth2_flow
 
 
 class AsyncConfigEntryAuth:
@@ -23,11 +23,11 @@ class AsyncConfigEntryAuth:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         oauth2_session: config_entry_oauth2_flow.OAuth2Session,
     ) -> None:
         """Initialize Google Mail Auth."""
-        self._hass = hass
+        self._menuai = menuai
         self.oauth_session = oauth2_session
 
     @property
@@ -53,14 +53,14 @@ class AsyncConfigEntryAuth:
                 hasattr(ex, "status") and ex.status == 400
             ):
                 self.oauth_session.config_entry.async_start_reauth(
-                    self.oauth_session.hass
+                    self.oauth_session.menuai
                 )
-            raise HomeAssistantError(ex) from ex
+            raise menuaiError(ex) from ex
         return self.access_token
 
     async def get_resource(self) -> Resource:
         """Get current resource."""
         credentials = Credentials(await self.check_and_refresh_token())
-        return await self._hass.async_add_executor_job(
+        return await self._menuai.async_add_executor_job(
             partial(build, "gmail", "v1", credentials=credentials)
         )

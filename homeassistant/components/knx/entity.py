@@ -6,11 +6,11 @@ from typing import TYPE_CHECKING, Any
 
 from xknx.devices import Device as XknxDevice
 
-from homeassistant.const import CONF_ENTITY_CATEGORY, EntityCategory
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.entity_platform import EntityPlatform
-from homeassistant.helpers.entity_registry import RegistryEntry
+from menuai.const import CONF_ENTITY_CATEGORY, EntityCategory
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity
+from menuai.helpers.entity_platform import EntityPlatform
+from menuai.helpers.entity_registry import RegistryEntry
 
 from .const import DOMAIN
 from .storage.config_store import PlatformControllerBase
@@ -73,15 +73,15 @@ class _KnxEntityBase(Entity):
         """Call after device was updated."""
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Store register state change callback and start device object."""
         self._device.register_device_updated_cb(self.after_update_callback)
         self._device.xknx.devices.async_add(self._device)
         # super call needed to have methods of multi-inherited classes called
         # eg. for restoring state (like _KNXSwitch)
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Disconnect device object when removed."""
         self._device.unregister_device_updated_cb(self.after_update_callback)
         self._device.xknx.devices.async_remove(self._device)

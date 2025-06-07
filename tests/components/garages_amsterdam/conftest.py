@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, patch
 from odp_amsterdam import Garage, GarageCategory, VehicleType
 import pytest
 
-from homeassistant.components.garages_amsterdam.const import DOMAIN
+from menuai.components.garages_amsterdam.const import DOMAIN
 
 from tests.common import MockConfigEntry
 
@@ -16,7 +16,7 @@ from tests.common import MockConfigEntry
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override setup entry."""
     with patch(
-        "homeassistant.components.garages_amsterdam.async_setup_entry",
+        "menuai.components.garages_amsterdam.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
         yield mock_setup_entry
@@ -27,11 +27,11 @@ def mock_garages_amsterdam() -> Generator[AsyncMock]:
     """Mock garages_amsterdam garages."""
     with (
         patch(
-            "homeassistant.components.garages_amsterdam.ODPAmsterdam",
+            "menuai.components.garages_amsterdam.ODPAmsterdam",
             autospec=True,
         ) as mock_client,
         patch(
-            "homeassistant.components.garages_amsterdam.config_flow.ODPAmsterdam",
+            "menuai.components.garages_amsterdam.config_flow.ODPAmsterdam",
             new=mock_client,
         ),
     ):

@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from homeassistant.components.azure_devops.const import DOMAIN
+from menuai.components.azure_devops.const import DOMAIN
 
 from . import (
     DEVOPS_BUILD,
@@ -27,11 +27,11 @@ async def mock_devops_client() -> AsyncGenerator[MagicMock]:
 
     with (
         patch(
-            "homeassistant.components.azure_devops.coordinator.DevOpsClient",
+            "menuai.components.azure_devops.coordinator.DevOpsClient",
             autospec=True,
         ) as mock_client,
         patch(
-            "homeassistant.components.azure_devops.config_flow.DevOpsClient",
+            "menuai.components.azure_devops.config_flow.DevOpsClient",
             new=mock_client,
         ),
     ):
@@ -63,7 +63,7 @@ async def mock_config_entry() -> MockConfigEntry:
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.azure_devops.async_setup_entry",
+        "menuai.components.azure_devops.async_setup_entry",
         return_value=True,
     ) as mock_entry:
         yield mock_entry

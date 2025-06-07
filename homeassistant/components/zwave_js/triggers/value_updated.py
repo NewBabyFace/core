@@ -10,12 +10,12 @@ from zwave_js_server.const import CommandClass
 from zwave_js_server.model.driver import Driver
 from zwave_js_server.model.value import Value, get_value_id_str
 
-from homeassistant.const import ATTR_DEVICE_ID, ATTR_ENTITY_ID, CONF_PLATFORM, MATCH_ALL
-from homeassistant.core import CALLBACK_TYPE, HassJob, HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv, device_registry as dr
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import ATTR_DEVICE_ID, ATTR_ENTITY_ID, CONF_PLATFORM, MATCH_ALL
+from menuai.core import CALLBACK_TYPE, menuaiJob, menuai, callback
+from menuai.helpers import config_validation as cv, device_registry as dr
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.trigger import TriggerActionType, TriggerInfo
+from menuai.helpers.typing import ConfigType
 
 from ..config_validation import VALUE_SCHEMA
 from ..const import (
@@ -68,15 +68,15 @@ TRIGGER_SCHEMA = vol.All(
 
 
 async def async_validate_trigger_config(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> ConfigType:
     """Validate config."""
     config = TRIGGER_SCHEMA(config)
 
-    if async_bypass_dynamic_config_validation(hass, config):
+    if async_bypass_dynamic_config_validation(menuai, config):
         return config
 
-    if not async_get_nodes_from_targets(hass, config):
+    if not async_get_nodes_from_targets(menuai, config):
         raise vol.Invalid(
             f"No nodes found for given {ATTR_DEVICE_ID}s or {ATTR_ENTITY_ID}s."
         )
@@ -84,7 +84,7 @@ async def async_validate_trigger_config(
 
 
 async def async_attach_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     action: TriggerActionType,
     trigger_info: TriggerInfo,
@@ -92,8 +92,8 @@ async def async_attach_trigger(
     platform_type: str = PLATFORM_TYPE,
 ) -> CALLBACK_TYPE:
     """Listen for state changes based on configuration."""
-    dev_reg = dr.async_get(hass)
-    if not async_get_nodes_from_targets(hass, config, dev_reg=dev_reg):
+    dev_reg = dr.async_get(menuai)
+    if not async_get_nodes_from_targets(menuai, config, dev_reg=dev_reg):
         raise ValueError(
             f"No nodes found for given {ATTR_DEVICE_ID}s or {ATTR_ENTITY_ID}s."
         )
@@ -105,7 +105,7 @@ async def async_attach_trigger(
     endpoint = config.get(ATTR_ENDPOINT)
     property_key = config.get(ATTR_PROPERTY_KEY)
     unsubs: list[Callable] = []
-    job = HassJob(action)
+    job = menuaiJob(action)
 
     trigger_data = trigger_info["trigger_data"]
 
@@ -156,7 +156,7 @@ async def async_attach_trigger(
             "description": f"Z-Wave value {value.value_id} updated on {device_name}",
         }
 
-        hass.async_run_hass_job(job, {"trigger": payload})
+        menuai.async_run_menuai_job(job, {"trigger": payload})
 
     @callback
     def async_remove() -> None:
@@ -171,7 +171,7 @@ async def async_attach_trigger(
         # Nodes list can come from different drivers and we will need to listen to
         # server connections for all of them.
         drivers: set[Driver] = set()
-        for node in async_get_nodes_from_targets(hass, config, dev_reg=dev_reg):
+        for node in async_get_nodes_from_targets(menuai, config, dev_reg=dev_reg):
             driver = node.client.driver
             assert driver is not None  # The node comes from the driver.
             drivers.add(driver)
@@ -192,7 +192,7 @@ async def async_attach_trigger(
 
         unsubs.extend(
             async_dispatcher_connect(
-                hass,
+                menuai,
                 f"{DOMAIN}_{driver.controller.home_id}_connected_to_server",
                 _create_zwave_listeners,
             )

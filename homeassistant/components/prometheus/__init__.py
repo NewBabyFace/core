@@ -14,9 +14,9 @@ import prometheus_client
 from prometheus_client.metrics import MetricWrapperBase
 import voluptuous as vol
 
-from homeassistant import core as hacore
-from homeassistant.components.alarm_control_panel import AlarmControlPanelState
-from homeassistant.components.climate import (
+from menuai import core as hacore
+from menuai.components.alarm_control_panel import AlarmControlPanelState
+from menuai.components.climate import (
     ATTR_CURRENT_TEMPERATURE,
     ATTR_FAN_MODE,
     ATTR_FAN_MODES,
@@ -26,11 +26,11 @@ from homeassistant.components.climate import (
     ATTR_TARGET_TEMP_LOW,
     HVACAction,
 )
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     ATTR_CURRENT_POSITION,
     ATTR_CURRENT_TILT_POSITION,
 )
-from homeassistant.components.fan import (
+from menuai.components.fan import (
     ATTR_DIRECTION,
     ATTR_OSCILLATING,
     ATTR_PERCENTAGE,
@@ -39,11 +39,11 @@ from homeassistant.components.fan import (
     DIRECTION_FORWARD,
     DIRECTION_REVERSE,
 )
-from homeassistant.components.http import KEY_HASS, HomeAssistantView
-from homeassistant.components.humidifier import ATTR_AVAILABLE_MODES, ATTR_HUMIDITY
-from homeassistant.components.light import ATTR_BRIGHTNESS
-from homeassistant.components.sensor import SensorDeviceClass
-from homeassistant.const import (
+from menuai.components.http import KEY_menuai, menuaiView
+from menuai.components.humidifier import ATTR_AVAILABLE_MODES, ATTR_HUMIDITY
+from menuai.components.light import ATTR_BRIGHTNESS
+from menuai.components.sensor import SensorDeviceClass
+from menuai.const import (
     ATTR_BATTERY_LEVEL,
     ATTR_DEVICE_CLASS,
     ATTR_FRIENDLY_NAME,
@@ -62,20 +62,20 @@ from homeassistant.const import (
     STATE_UNKNOWN,
     UnitOfTemperature,
 )
-from homeassistant.core import Event, EventStateChangedData, HomeAssistant, State
-from homeassistant.helpers import (
+from menuai.core import Event, EventStateChangedData, menuai, State
+from menuai.helpers import (
     config_validation as cv,
     entityfilter,
     state as state_helper,
 )
-from homeassistant.helpers.entity_registry import (
+from menuai.helpers.entity_registry import (
     EVENT_ENTITY_REGISTRY_UPDATED,
     EventEntityRegistryUpdatedData,
 )
-from homeassistant.helpers.entity_values import EntityValues
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util.dt import as_timestamp
-from homeassistant.util.unit_conversion import TemperatureConverter
+from menuai.helpers.entity_values import EntityValues
+from menuai.helpers.typing import ConfigType
+from menuai.util.dt import as_timestamp
+from menuai.util.unit_conversion import TemperatureConverter
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -97,7 +97,7 @@ COMPONENT_CONFIG_SCHEMA_ENTRY = vol.Schema(
 )
 ALLOWED_METRIC_CHARS = set(string.ascii_letters + string.digits + "_:")
 
-DEFAULT_NAMESPACE = "homeassistant"
+DEFAULT_NAMESPACE = "menuai"
 
 CONFIG_SCHEMA = vol.Schema(
     {
@@ -124,14 +124,14 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Activate Prometheus component."""
-    hass.http.register_view(PrometheusView(config[DOMAIN][CONF_REQUIRES_AUTH]))
+    menuai.http.register_view(PrometheusView(config[DOMAIN][CONF_REQUIRES_AUTH]))
 
     conf: dict[str, Any] = config[DOMAIN]
     entity_filter: entityfilter.EntityFilter = conf[CONF_FILTER]
     namespace: str = conf[CONF_PROM_NAMESPACE]
-    climate_units = hass.config.units.temperature_unit
+    climate_units = menuai.config.units.temperature_unit
     override_metric: str | None = conf.get(CONF_OVERRIDE_METRIC)
     default_metric: str | None = conf.get(CONF_DEFAULT_METRIC)
     component_config = EntityValues(
@@ -149,13 +149,13 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
         default_metric,
     )
 
-    hass.bus.listen(EVENT_STATE_CHANGED, metrics.handle_state_changed_event)
-    hass.bus.listen(
+    menuai.bus.listen(EVENT_STATE_CHANGED, metrics.handle_state_changed_event)
+    menuai.bus.listen(
         EVENT_ENTITY_REGISTRY_UPDATED,
         metrics.handle_entity_registry_updated,
     )
 
-    for state in hass.states.all():
+    for state in menuai.states.all():
         if entity_filter(state.entity_id):
             metrics.handle_state(state)
 
@@ -854,7 +854,7 @@ class PrometheusMetrics:
                 ).set(float(alarm_state.value == current_state))
 
 
-class PrometheusView(HomeAssistantView):
+class PrometheusView(menuaiView):
     """Handle Prometheus requests."""
 
     url = API_ENDPOINT
@@ -868,8 +868,8 @@ class PrometheusView(HomeAssistantView):
         """Handle request for Prometheus metrics."""
         _LOGGER.debug("Received Prometheus metrics request")
 
-        hass = request.app[KEY_HASS]
-        body = await hass.async_add_executor_job(
+        menuai = request.app[KEY_menuai]
+        body = await menuai.async_add_executor_job(
             prometheus_client.generate_latest, prometheus_client.REGISTRY
         )
         return web.Response(

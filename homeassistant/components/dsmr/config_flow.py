@@ -18,15 +18,15 @@ import serial
 import serial.tools.list_ports
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_HOST, CONF_PORT, CONF_PROTOCOL, CONF_TYPE
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
+from menuai.const import CONF_HOST, CONF_PORT, CONF_PROTOCOL, CONF_TYPE
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
 
 from .const import (
     CONF_DSMR_VERSION,
@@ -80,7 +80,7 @@ class DSMRConnection:
             return identifier
         return None
 
-    async def validate_connect(self, hass: HomeAssistant) -> bool:
+    async def validate_connect(self, menuai: menuai) -> bool:
         """Test if we can validate connection with the device."""
 
         def update_telegram(telegram: dict[str, DSMRObject]) -> None:
@@ -102,7 +102,7 @@ class DSMRConnection:
                 self._port,
                 self._dsmr_version,
                 update_telegram,
-                loop=hass.loop,
+                loop=menuai.loop,
             )
         else:
             if self._protocol == DSMR_PROTOCOL:
@@ -115,7 +115,7 @@ class DSMRConnection:
                 self._port,
                 self._dsmr_version,
                 update_telegram,
-                loop=hass.loop,
+                loop=menuai.loop,
             )
 
         try:
@@ -136,7 +136,7 @@ class DSMRConnection:
 
 
 async def _validate_dsmr_connection(
-    hass: HomeAssistant, data: dict[str, Any], protocol: str
+    menuai: menuai, data: dict[str, Any], protocol: str
 ) -> dict[str, str | None]:
     """Validate the user input allows us to connect."""
     conn = DSMRConnection(
@@ -146,7 +146,7 @@ async def _validate_dsmr_connection(
         protocol,
     )
 
-    if not await conn.validate_connect(hass):
+    if not await conn.validate_connect(menuai):
         raise CannotConnect
 
     equipment_identifier = conn.equipment_identifier()
@@ -229,7 +229,7 @@ class DSMRFlowHandler(ConfigFlow, domain=DOMAIN):
                 self._dsmr_version = user_input[CONF_DSMR_VERSION]
                 return await self.async_step_setup_serial_manual_path()
 
-            dev_path = await self.hass.async_add_executor_job(
+            dev_path = await self.menuai.async_add_executor_job(
                 get_serial_by_id, user_selection
             )
 
@@ -242,7 +242,7 @@ class DSMRFlowHandler(ConfigFlow, domain=DOMAIN):
             if not errors:
                 return self.async_create_entry(title=data[CONF_PORT], data=data)
 
-        ports = await self.hass.async_add_executor_job(serial.tools.list_ports.comports)
+        ports = await self.menuai.async_add_executor_job(serial.tools.list_ports.comports)
         list_of_ports = {
             port.device: f"{port}, s/n: {port.serial_number or 'n/a'}"
             + (f" - {port.manufacturer}" if port.manufacturer else "")
@@ -292,10 +292,10 @@ class DSMRFlowHandler(ConfigFlow, domain=DOMAIN):
         try:
             try:
                 protocol = DSMR_PROTOCOL
-                info = await _validate_dsmr_connection(self.hass, data, protocol)
+                info = await _validate_dsmr_connection(self.menuai, data, protocol)
             except CannotCommunicate:
                 protocol = RFXTRX_DSMR_PROTOCOL
-                info = await _validate_dsmr_connection(self.hass, data, protocol)
+                info = await _validate_dsmr_connection(self.menuai, data, protocol)
 
             data = {**data, **info, CONF_PROTOCOL: protocol}
 
@@ -347,9 +347,9 @@ def get_serial_by_id(dev_path: str) -> str:
     return dev_path
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""
 
 
-class CannotCommunicate(HomeAssistantError):
+class CannotCommunicate(menuaiError):
     """Error to indicate we cannot connect."""

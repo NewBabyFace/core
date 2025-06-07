@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from lektricowifi import Device
 
-from homeassistant.const import CONF_TYPE, Platform
-from homeassistant.core import HomeAssistant
+from menuai.const import CONF_TYPE, Platform
+from menuai.core import menuai
 
 from .coordinator import LektricoConfigEntry, LektricoDeviceDataUpdateCoordinator
 
@@ -26,23 +26,23 @@ LB_DEVICES_PLATFORMS: list[Platform] = [
 ]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: LektricoConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: LektricoConfigEntry) -> bool:
     """Set up Lektrico Charging Station from a config entry."""
-    coordinator = LektricoDeviceDataUpdateCoordinator(hass, entry)
+    coordinator = LektricoDeviceDataUpdateCoordinator(menuai, entry)
 
     await coordinator.async_config_entry_first_refresh()
 
     entry.runtime_data = coordinator
 
-    await hass.config_entries.async_forward_entry_setups(entry, _get_platforms(entry))
+    await menuai.config_entries.async_forward_entry_setups(entry, _get_platforms(entry))
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: LektricoConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: LektricoConfigEntry) -> bool:
     """Unload a config entry."""
 
-    return await hass.config_entries.async_unload_platforms(
+    return await menuai.config_entries.async_unload_platforms(
         entry, _get_platforms(entry)
     )
 

@@ -8,10 +8,10 @@ from typing import Any
 import attr
 import tp_connected
 
-from homeassistant.components.notify import ATTR_TARGET, BaseNotificationService
-from homeassistant.const import CONF_RECIPIENT
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.notify import ATTR_TARGET, BaseNotificationService
+from menuai.const import CONF_RECIPIENT
+from menuai.core import menuai
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import DATA_KEY, LTEData
 
@@ -19,27 +19,27 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_get_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> TplinkNotifyService | None:
     """Get the notification service."""
     if discovery_info is None:
         return None
-    return TplinkNotifyService(hass, discovery_info)
+    return TplinkNotifyService(menuai, discovery_info)
 
 
 @attr.s
 class TplinkNotifyService(BaseNotificationService):
     """Implementation of a notification service."""
 
-    hass: HomeAssistant = attr.ib()
+    menuai: menuai = attr.ib()
     config: dict[str, Any] = attr.ib()
 
     async def async_send_message(self, message: str = "", **kwargs: Any) -> None:
         """Send a message to a user."""
 
-        lte_data: LTEData = self.hass.data[DATA_KEY]
+        lte_data: LTEData = self.menuai.data[DATA_KEY]
         modem_data = lte_data.get_modem_data(self.config)
         if not modem_data:
             _LOGGER.error("No modem available")

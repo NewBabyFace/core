@@ -26,8 +26,8 @@ from crownstone_sse.events import AbilityChangeEvent, SwitchStateUpdateEvent
 from crownstone_uart import UartEventBus, UartTopics
 from crownstone_uart.topics.SystemTopics import SystemTopics
 
-from homeassistant.core import callback
-from homeassistant.helpers.dispatcher import (
+from menuai.core import callback
+from menuai.helpers.dispatcher import (
     async_dispatcher_connect,
     async_dispatcher_send,
     dispatcher_send,
@@ -58,7 +58,7 @@ def async_update_crwn_state_sse(
     # only update on change.
     if updated_crownstone.state != switch_event.switch_state:
         updated_crownstone.state = switch_event.switch_state
-        async_dispatcher_send(manager.hass, SIG_CROWNSTONE_STATE_UPDATE)
+        async_dispatcher_send(manager.menuai, SIG_CROWNSTONE_STATE_UPDATE)
 
 
 @callback
@@ -82,17 +82,17 @@ def async_update_crwn_ability(
 
     if ability_event.sub_type == EVENT_ABILITY_CHANGE_DIMMING:
         # reload the config entry because dimming is part of supported features
-        manager.hass.async_create_task(
-            manager.hass.config_entries.async_reload(manager.config_entry.entry_id)
+        manager.menuai.async_create_task(
+            manager.menuai.config_entries.async_reload(manager.config_entry.entry_id)
         )
     else:
-        async_dispatcher_send(manager.hass, SIG_CROWNSTONE_STATE_UPDATE)
+        async_dispatcher_send(manager.menuai, SIG_CROWNSTONE_STATE_UPDATE)
 
 
 def update_uart_state(manager: CrownstoneEntryManager, _: bool | None) -> None:
     """Update the uart ready state for entities that use USB."""
     # update availability of power usage entities.
-    dispatcher_send(manager.hass, SIG_UART_STATE_CHANGE)
+    dispatcher_send(manager.menuai, SIG_UART_STATE_CHANGE)
 
 
 def update_crwn_state_uart(
@@ -115,7 +115,7 @@ def update_crwn_state_uart(
     if updated_crownstone.state != updated_state.intensity:
         updated_crownstone.state = updated_state.intensity
 
-        dispatcher_send(manager.hass, SIG_CROWNSTONE_STATE_UPDATE)
+        dispatcher_send(manager.menuai, SIG_CROWNSTONE_STATE_UPDATE)
 
 
 def setup_sse_listeners(manager: CrownstoneEntryManager) -> None:
@@ -123,12 +123,12 @@ def setup_sse_listeners(manager: CrownstoneEntryManager) -> None:
     # save unsub function for when entry removed
     manager.listeners[SSE_LISTENERS] = [
         async_dispatcher_connect(
-            manager.hass,
+            manager.menuai,
             f"{DOMAIN}_{EVENT_SWITCH_STATE_UPDATE}",
             partial(async_update_crwn_state_sse, manager),
         ),
         async_dispatcher_connect(
-            manager.hass,
+            manager.menuai,
             f"{DOMAIN}_{EVENT_ABILITY_CHANGE}",
             partial(async_update_crwn_ability, manager),
         ),

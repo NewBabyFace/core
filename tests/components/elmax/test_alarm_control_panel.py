@@ -5,10 +5,10 @@ from unittest.mock import patch
 
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.elmax.const import POLLING_SECONDS
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.elmax.const import POLLING_SECONDS
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import init_integration
 
@@ -18,14 +18,14 @@ WAIT = timedelta(seconds=POLLING_SECONDS)
 
 
 async def test_alarm_control_panels(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test alarm control panels."""
     with patch(
-        "homeassistant.components.elmax.ELMAX_PLATFORMS", [Platform.ALARM_CONTROL_PANEL]
+        "menuai.components.elmax.ELMAX_PLATFORMS", [Platform.ALARM_CONTROL_PANEL]
     ):
-        entry = await init_integration(hass)
+        entry = await init_integration(menuai)
 
-    await snapshot_platform(hass, entity_registry, snapshot, entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, entry.entry_id)

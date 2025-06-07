@@ -3,11 +3,11 @@
 from asyncio import TimeoutError
 from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
-from homeassistant import config_entries
-from homeassistant.components.upb.const import DOMAIN
-from homeassistant.config_entries import ConfigFlowResult
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.upb.const import DOMAIN
+from menuai.config_entries import ConfigFlowResult
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 
 def mocked_upb(sync_complete=True, config_ok=True):
@@ -28,42 +28,42 @@ def mocked_upb(sync_complete=True, config_ok=True):
         _add_handler if sync_complete else _dummy_add_handler
     )
     return patch(
-        "homeassistant.components.upb.config_flow.upb_lib.UpbPim", return_value=upb_mock
+        "menuai.components.upb.config_flow.upb_lib.UpbPim", return_value=upb_mock
     )
 
 
 async def valid_tcp_flow(
-    hass: HomeAssistant, sync_complete: bool = True, config_ok: bool = True
+    menuai: menuai, sync_complete: bool = True, config_ok: bool = True
 ) -> ConfigFlowResult:
     """Get result dict that are standard for most tests."""
 
     with (
         mocked_upb(sync_complete, config_ok),
-        patch("homeassistant.components.upb.async_setup_entry", return_value=True),
+        patch("menuai.components.upb.async_setup_entry", return_value=True),
     ):
-        flow = await hass.config_entries.flow.async_init(
+        flow = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-        return await hass.config_entries.flow.async_configure(
+        return await menuai.config_entries.flow.async_configure(
             flow["flow_id"],
             {"protocol": "TCP", "address": "1.2.3.4", "file_path": "upb.upe"},
         )
 
 
-async def test_full_upb_flow_with_serial_port(hass: HomeAssistant) -> None:
+async def test_full_upb_flow_with_serial_port(menuai: menuai) -> None:
     """Test a full UPB config flow with serial port."""
 
     with (
         mocked_upb(),
         patch(
-            "homeassistant.components.upb.async_setup_entry", return_value=True
+            "menuai.components.upb.async_setup_entry", return_value=True
         ) as mock_setup_entry,
     ):
-        flow = await hass.config_entries.flow.async_init(
+        flow = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             flow["flow_id"],
             {
                 "protocol": "Serial port",
@@ -71,7 +71,7 @@ async def test_full_upb_flow_with_serial_port(hass: HomeAssistant) -> None:
                 "file_path": "upb.upe",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert flow["type"] is FlowResultType.FORM
     assert flow["errors"] == {}
@@ -84,38 +84,38 @@ async def test_full_upb_flow_with_serial_port(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_form_user_with_tcp_upb(hass: HomeAssistant) -> None:
+async def test_form_user_with_tcp_upb(menuai: menuai) -> None:
     """Test we can setup a serial upb."""
-    result = await valid_tcp_flow(hass)
+    result = await valid_tcp_flow(menuai)
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"] == {"host": "tcp://1.2.3.4", "file_path": "upb.upe"}
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
-async def test_form_cannot_connect(hass: HomeAssistant) -> None:
+async def test_form_cannot_connect(menuai: menuai) -> None:
     """Test we handle cannot connect error."""
 
     with patch(
-        "homeassistant.components.upb.config_flow.asyncio.timeout",
+        "menuai.components.upb.config_flow.asyncio.timeout",
         side_effect=TimeoutError,
     ):
-        result = await valid_tcp_flow(hass, sync_complete=False)
+        result = await valid_tcp_flow(menuai, sync_complete=False)
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": "cannot_connect"}
 
 
-async def test_form_missing_upb_file(hass: HomeAssistant) -> None:
+async def test_form_missing_upb_file(menuai: menuai) -> None:
     """Test we handle cannot connect error."""
-    result = await valid_tcp_flow(hass, config_ok=False)
+    result = await valid_tcp_flow(menuai, config_ok=False)
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": "invalid_upb_file"}
 
 
-async def test_form_user_with_already_configured(hass: HomeAssistant) -> None:
+async def test_form_user_with_already_configured(menuai: menuai) -> None:
     """Test we can setup a TCP upb."""
-    _ = await valid_tcp_flow(hass)
-    result2 = await valid_tcp_flow(hass)
+    _ = await valid_tcp_flow(menuai)
+    result2 = await valid_tcp_flow(menuai)
     assert result2["type"] is FlowResultType.ABORT
     assert result2["reason"] == "already_configured"
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()

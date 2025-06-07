@@ -8,7 +8,7 @@ from unittest import mock
 
 import orjson
 
-from homeassistant.helpers import json as json_helper
+from menuai.helpers import json as json_helper
 
 real_json_encoder_default = json_helper.json_encoder_default
 
@@ -16,7 +16,7 @@ mock_objects = []
 
 
 def json_encoder_default(obj: Any) -> Any:
-    """Convert Home Assistant objects.
+    """Convert MenuAI objects.
 
     Hand other objects to the original method.
     """

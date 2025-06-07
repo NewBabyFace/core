@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 from israelrailapi.api import TrainRoute
 import pytest
 
-from homeassistant.components.israel_rail import CONF_DESTINATION, CONF_START, DOMAIN
+from menuai.components.israel_rail import CONF_DESTINATION, CONF_START, DOMAIN
 
 from tests.common import MockConfigEntry
 
@@ -24,7 +24,7 @@ SOURCE_DEST = "באר יעקב אשקלון"
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.israel_rail.async_setup_entry", return_value=True
+        "menuai.components.israel_rail.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -44,11 +44,11 @@ def mock_israelrail() -> AsyncMock:
     """Build a fixture for the Israel rail API."""
     with (
         patch(
-            "homeassistant.components.israel_rail.TrainSchedule",
+            "menuai.components.israel_rail.TrainSchedule",
             autospec=True,
         ) as mock_client,
         patch(
-            "homeassistant.components.israel_rail.config_flow.TrainSchedule",
+            "menuai.components.israel_rail.config_flow.TrainSchedule",
             new=mock_client,
         ),
     ):

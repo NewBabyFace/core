@@ -11,8 +11,8 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from todoist_api_python.models import Due
 
-from homeassistant import setup
-from homeassistant.components.todoist.const import (
+from menuai import setup
+from menuai.components.todoist.const import (
     ASSIGNEE,
     CONTENT,
     DOMAIN,
@@ -21,12 +21,12 @@ from homeassistant.components.todoist.const import (
     SECTION_NAME,
     SERVICE_NEW_TASK,
 )
-from homeassistant.const import CONF_TOKEN, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_component import async_update_entity
-from homeassistant.util import dt as dt_util
+from menuai.const import CONF_TOKEN, Platform
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity_component import async_update_entity
+from menuai.util import dt as dt_util
 
 from .conftest import PROJECT_ID, SECTION_ID, SUMMARY
 
@@ -45,9 +45,9 @@ def platforms() -> list[Platform]:
 
 
 @pytest.fixture(autouse=True)
-async def set_time_zone(hass: HomeAssistant):
+async def set_time_zone(menuai: menuai):
     """Set the time zone for the tests."""
-    await hass.config.async_set_time_zone(TZ_NAME)
+    await menuai.config.async_set_time_zone(TZ_NAME)
 
 
 def get_events_url(entity: str, start: str, end: str) -> str:
@@ -77,17 +77,17 @@ def mock_todoist_config() -> dict[str, Any]:
 
 @pytest.fixture(name="setup_platform", autouse=True)
 async def mock_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     api: AsyncMock,
     todoist_config: dict[str, Any],
 ) -> None:
     """Mock setup of the todoist integration."""
     with patch(
-        "homeassistant.components.todoist.calendar.TodoistAPIAsync"
+        "menuai.components.todoist.calendar.TodoistAPIAsync"
     ) as todoist_api:
         todoist_api.return_value = api
         assert await setup.async_setup_component(
-            hass,
+            menuai,
             "calendar",
             {
                 "calendar": {
@@ -97,13 +97,13 @@ async def mock_setup_platform(
                 }
             },
         )
-        await hass.async_block_till_done()
-        await async_update_entity(hass, "calendar.name")
+        await menuai.async_block_till_done()
+        await async_update_entity(menuai, "calendar.name")
         yield
 
 
 async def test_calendar_entity_unique_id(
-    hass: HomeAssistant, api: AsyncMock, entity_registry: er.EntityRegistry
+    menuai: menuai, api: AsyncMock, entity_registry: er.EntityRegistry
 ) -> None:
     """Test unique id is set to project id."""
     entity = entity_registry.async_get("calendar.name")
@@ -115,24 +115,24 @@ async def test_calendar_entity_unique_id(
     [{"custom_projects": [{"name": "All projects", "labels": ["Label1"]}]}],
 )
 async def test_update_entity_for_custom_project_with_labels_on(
-    hass: HomeAssistant,
+    menuai: menuai,
     api: AsyncMock,
 ) -> None:
     """Test that the calendar's state is on for a custom project using labels."""
-    await async_update_entity(hass, "calendar.all_projects")
-    state = hass.states.get("calendar.all_projects")
+    await async_update_entity(menuai, "calendar.all_projects")
+    state = menuai.states.get("calendar.all_projects")
     assert state.attributes["labels"] == ["Label1"]
     assert state.state == "on"
 
 
 @pytest.mark.parametrize("due", [None])
 async def test_update_entity_for_custom_project_no_due_date_on(
-    hass: HomeAssistant,
+    menuai: menuai,
     api: AsyncMock,
 ) -> None:
     """Test that a task without an explicit due date is considered to be in an on state."""
-    await async_update_entity(hass, "calendar.name")
-    state = hass.states.get("calendar.name")
+    await async_update_entity(menuai, "calendar.name")
+    state = menuai.states.get("calendar.name")
     assert state.state == "on"
 
 
@@ -148,13 +148,13 @@ async def test_update_entity_for_custom_project_no_due_date_on(
     ],
 )
 async def test_update_entity_for_calendar_with_due_date_in_the_future(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     api: AsyncMock,
 ) -> None:
     """Test that a task with a due date in the future has on state and correct end_time."""
-    await async_update_entity(hass, "calendar.name")
-    state = hass.states.get("calendar.name")
+    await async_update_entity(menuai, "calendar.name")
+    state = menuai.states.get("calendar.name")
     assert state.state == "on"
 
     # The end time should be in the user's timezone
@@ -165,12 +165,12 @@ async def test_update_entity_for_calendar_with_due_date_in_the_future(
 
 
 @pytest.mark.parametrize("setup_platform", [None])
-async def test_failed_coordinator_update(hass: HomeAssistant, api: AsyncMock) -> None:
+async def test_failed_coordinator_update(menuai: menuai, api: AsyncMock) -> None:
     """Test a failed data coordinator update is handled correctly."""
     api.get_tasks.side_effect = Exception("API error")
 
     assert await setup.async_setup_component(
-        hass,
+        menuai,
         "calendar",
         {
             "calendar": {
@@ -180,10 +180,10 @@ async def test_failed_coordinator_update(hass: HomeAssistant, api: AsyncMock) ->
             }
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await async_update_entity(hass, "calendar.all_projects")
-    state = hass.states.get("calendar.all_projects")
+    await async_update_entity(menuai, "calendar.all_projects")
+    state = menuai.states.get("calendar.all_projects")
     assert state is None
 
 
@@ -192,7 +192,7 @@ async def test_failed_coordinator_update(hass: HomeAssistant, api: AsyncMock) ->
     [{"custom_projects": [{"name": "All projects"}]}],
 )
 async def test_calendar_custom_project_unique_id(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test unique id is None for any custom projects."""
     entity = entity_registry.async_get("calendar.all_projects")
@@ -242,14 +242,14 @@ async def test_calendar_custom_project_unique_id(
     ids=("included", "exact", "overlap_start", "overlap_end", "after", "before"),
 )
 async def test_all_day_event(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     start: str,
     end: str,
     expected_response: dict[str, Any],
 ) -> None:
     """Test for an all day calendar event."""
-    client = await hass_client()
+    client = await menuai_client()
     response = await client.get(
         get_events_url("calendar.name", start, end),
     )
@@ -257,14 +257,14 @@ async def test_all_day_event(
     assert await response.json() == expected_response
 
 
-async def test_create_task_service_call(hass: HomeAssistant, api: AsyncMock) -> None:
+async def test_create_task_service_call(menuai: menuai, api: AsyncMock) -> None:
     """Test api is called correctly after a new task service call."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_NEW_TASK,
         {ASSIGNEE: "user", CONTENT: "task", LABELS: ["Label1"], PROJECT_NAME: "Name"},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     api.add_task.assert_called_with(
         "task", project_id=PROJECT_ID, labels=["Label1"], assignee_id="1"
@@ -272,12 +272,12 @@ async def test_create_task_service_call(hass: HomeAssistant, api: AsyncMock) -> 
 
 
 async def test_create_task_service_call_raises(
-    hass: HomeAssistant, api: AsyncMock
+    menuai: menuai, api: AsyncMock
 ) -> None:
     """Test adding an item to an invalid project raises an error."""
 
     with pytest.raises(ServiceValidationError, match="project_invalid"):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_NEW_TASK,
             {
@@ -291,10 +291,10 @@ async def test_create_task_service_call_raises(
 
 
 async def test_create_task_service_call_with_section(
-    hass: HomeAssistant, api: AsyncMock
+    menuai: menuai, api: AsyncMock
 ) -> None:
     """Test api is called correctly when section is included."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_NEW_TASK,
         {
@@ -305,7 +305,7 @@ async def test_create_task_service_call_with_section(
             SECTION_NAME: "Section Name",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     api.add_task.assert_called_with(
         "task",
@@ -345,11 +345,11 @@ async def test_create_task_service_call_with_section(
     ids=("in_local_timezone", "in_other_timezone", "floating"),
 )
 async def test_task_due_datetime(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test for task due at a specific time, using different time formats."""
-    client = await hass_client()
+    client = await menuai_client()
 
     has_task_response = [
         get_events_response(
@@ -465,14 +465,14 @@ async def test_task_due_datetime(
     ],
 )
 async def test_events_filtered_for_custom_projects(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     start: str,
     end: str,
     expected_response: dict[str, Any],
 ) -> None:
     """Test we filter out tasks from custom projects based on their config."""
-    client = await hass_client()
+    client = await menuai_client()
     response = await client.get(
         get_events_url("calendar.test", start, end),
     )
@@ -496,17 +496,17 @@ async def test_events_filtered_for_custom_projects(
     ],
 )
 async def test_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: None,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test for a calendar created with a config entry."""
 
-    await async_update_entity(hass, "calendar.name")
-    state = hass.states.get("calendar.name")
+    await async_update_entity(menuai, "calendar.name")
+    state = menuai.states.get("calendar.name")
     assert state
 
-    client = await hass_client()
+    client = await menuai_client()
     response = await client.get(
         get_events_url(
             "calendar.name", "2023-03-30T08:00:00.000Z", "2023-03-31T08:00:00.000Z"

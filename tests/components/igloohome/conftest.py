@@ -6,9 +6,9 @@ from unittest.mock import AsyncMock, patch
 from igloohome_api import GetDeviceInfoResponse, GetDevicesResponse, LinkedDevice
 import pytest
 
-from homeassistant.components.igloohome.const import DOMAIN
-from homeassistant.const import CONF_CLIENT_ID, CONF_CLIENT_SECRET
-from homeassistant.core import HomeAssistant
+from menuai.components.igloohome.const import DOMAIN
+from menuai.const import CONF_CLIENT_ID, CONF_CLIENT_SECRET
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -50,7 +50,7 @@ GET_DEVICE_INFO_RESPONSE_BRIDGE_NO_LINKED_DEVICE = GetDeviceInfoResponse(
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.igloohome.async_setup_entry", return_value=True
+        "menuai.components.igloohome.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -59,14 +59,14 @@ def mock_setup_entry() -> Generator[AsyncMock]:
 async def mock_auth() -> Generator[AsyncMock]:
     """Set up the mock usages of the igloohome_api.Auth class. Defaults to always successfully operate."""
     with patch(
-        "homeassistant.components.igloohome.config_flow.IgloohomeAuth.async_get_access_token",
+        "menuai.components.igloohome.config_flow.IgloohomeAuth.async_get_access_token",
         return_value="mock_access_token",
     ) as mock_auth:
         yield mock_auth
 
 
 @pytest.fixture
-def mock_config_entry(hass: HomeAssistant) -> MockConfigEntry:
+def mock_config_entry(menuai: menuai) -> MockConfigEntry:
     """Return the default mocked config entry."""
     return MockConfigEntry(
         title="Client Credentials",
@@ -81,7 +81,7 @@ def mock_api() -> Generator[AsyncMock]:
     """Set up the Api module. Defaults to always returning a single lock."""
     with (
         patch(
-            "homeassistant.components.igloohome.IgloohomeApi",
+            "menuai.components.igloohome.IgloohomeApi",
             autospec=True,
         ) as api_mock,
     ):

@@ -9,9 +9,9 @@ from typing import TYPE_CHECKING, Any
 
 import voluptuous as vol
 
-from homeassistant.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_DEVICE,
     CONF_DEVICE_ID,
     CONF_DOMAIN,
@@ -19,11 +19,11 @@ from homeassistant.const import (
     CONF_TYPE,
     CONF_VALUE_TEMPLATE,
 )
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import CALLBACK_TYPE, menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.trigger import TriggerActionType, TriggerInfo
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import debug_info, trigger as mqtt_trigger
 from .config import MQTT_BASE_SCHEMA
@@ -110,7 +110,7 @@ class TriggerInstance:
         if self.remove:
             self.remove()
         self.remove = await mqtt_trigger.async_attach_trigger(
-            self.trigger.hass,
+            self.trigger.menuai,
             mqtt_config,
             self.action,
             self.trigger_info,
@@ -124,7 +124,7 @@ class Trigger:
     device_id: str
     discovery_data: DiscoveryInfoType | None = None
     discovery_id: str | None = None
-    hass: HomeAssistant
+    menuai: menuai
     payload: str | None
     qos: int | None
     subtype: str
@@ -148,7 +148,7 @@ class Trigger:
         def async_remove() -> None:
             """Remove trigger."""
             if instance not in self.trigger_instances:
-                raise HomeAssistantError(
+                raise menuaiError(
                     translation_domain=DOMAIN,
                     translation_key="mqtt_trigger_cannot_remove_twice",
                 )
@@ -193,7 +193,7 @@ class MqttDeviceTrigger(MqttDiscoveryDeviceUpdateMixin):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config: ConfigType,
         device_id: str,
         discovery_data: DiscoveryInfoType,
@@ -204,13 +204,13 @@ class MqttDeviceTrigger(MqttDiscoveryDeviceUpdateMixin):
         self._config_entry = config_entry
         self.device_id = device_id
         self.discovery_data = discovery_data
-        self.hass = hass
-        self._mqtt_data = hass.data[DATA_MQTT]
+        self.menuai = menuai
+        self._mqtt_data = menuai.data[DATA_MQTT]
         self.trigger_id = f"{device_id}_{config[CONF_TYPE]}_{config[CONF_SUBTYPE]}"
 
         MqttDiscoveryDeviceUpdateMixin.__init__(
             self,
-            hass,
+            menuai,
             discovery_data,
             device_id,
             config_entry,
@@ -230,7 +230,7 @@ class MqttDeviceTrigger(MqttDiscoveryDeviceUpdateMixin):
                 break
         if self.trigger_id not in self._mqtt_data.device_triggers:
             self._mqtt_data.device_triggers[self.trigger_id] = Trigger(
-                hass=self.hass,
+                menuai=self.menuai,
                 device_id=self.device_id,
                 discovery_data=self.discovery_data,
                 discovery_id=discovery_id,
@@ -246,19 +246,19 @@ class MqttDeviceTrigger(MqttDiscoveryDeviceUpdateMixin):
                 self._config
             )
         debug_info.add_trigger_discovery_data(
-            self.hass, discovery_hash, self.discovery_data, self.device_id
+            self.menuai, discovery_hash, self.discovery_data, self.device_id
         )
 
     async def async_update(self, discovery_data: MQTTDiscoveryPayload) -> None:
         """Handle MQTT device trigger discovery updates."""
         discovery_hash = self.discovery_data[ATTR_DISCOVERY_HASH]
         debug_info.update_trigger_discovery_data(
-            self.hass, discovery_hash, discovery_data
+            self.menuai, discovery_hash, discovery_data
         )
         config = TRIGGER_DISCOVERY_SCHEMA(discovery_data)
         new_trigger_id = f"{self.device_id}_{config[CONF_TYPE]}_{config[CONF_SUBTYPE]}"
         if new_trigger_id != self.trigger_id:
-            mqtt_data = self.hass.data[DATA_MQTT]
+            mqtt_data = self.menuai.data[DATA_MQTT]
             if new_trigger_id in mqtt_data.device_triggers:
                 _LOGGER.error(
                     "Cannot update device trigger %s due to an existing duplicate "
@@ -274,7 +274,7 @@ class MqttDeviceTrigger(MqttDiscoveryDeviceUpdateMixin):
             )
             self.trigger_id = new_trigger_id
 
-        update_device(self.hass, self._config_entry, config)
+        update_device(self.menuai, self._config_entry, config)
         device_trigger: Trigger = self._mqtt_data.device_triggers[self.trigger_id]
         await device_trigger.update_trigger(config)
 
@@ -286,11 +286,11 @@ class MqttDeviceTrigger(MqttDiscoveryDeviceUpdateMixin):
             trigger: Trigger = self._mqtt_data.device_triggers[self.trigger_id]
             trigger.discovery_data = None
             trigger.detach_trigger()
-            debug_info.remove_trigger_discovery_data(self.hass, discovery_hash)
+            debug_info.remove_trigger_discovery_data(self.menuai, discovery_hash)
 
 
 async def async_setup_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     config_entry: ConfigEntry,
     discovery_data: DiscoveryInfoType,
@@ -302,12 +302,12 @@ async def async_setup_trigger(
     # In all cases the setup will lead to device entry to be created or updated.
     # If the trigger is a duplicate, trigger creation will be cancelled but we allow
     # the device data to be updated to not add additional complexity to the code.
-    device_id = update_device(hass, config_entry, config)
+    device_id = update_device(menuai, config_entry, config)
     discovery_id = discovery_data[ATTR_DISCOVERY_HASH][1]
     trigger_type = config[CONF_TYPE]
     trigger_subtype = config[CONF_SUBTYPE]
     trigger_id = f"{device_id}_{trigger_type}_{trigger_subtype}"
-    mqtt_data = hass.data[DATA_MQTT]
+    mqtt_data = menuai.data[DATA_MQTT]
     if (
         trigger_id in mqtt_data.device_triggers
         and mqtt_data.device_triggers[trigger_id].discovery_data is not None
@@ -318,23 +318,23 @@ async def async_setup_trigger(
             discovery_id,
             config,
         )
-        send_discovery_done(hass, discovery_data)
-        clear_discovery_hash(hass, discovery_data[ATTR_DISCOVERY_HASH])
+        send_discovery_done(menuai, discovery_data)
+        clear_discovery_hash(menuai, discovery_data[ATTR_DISCOVERY_HASH])
         return
 
     if TYPE_CHECKING:
         assert isinstance(device_id, str)
     mqtt_device_trigger = MqttDeviceTrigger(
-        hass, config, device_id, discovery_data, config_entry
+        menuai, config, device_id, discovery_data, config_entry
     )
     await mqtt_device_trigger.async_setup()
-    send_discovery_done(hass, discovery_data)
+    send_discovery_done(menuai, discovery_data)
 
 
-async def async_removed_from_device(hass: HomeAssistant, device_id: str) -> None:
+async def async_removed_from_device(menuai: menuai, device_id: str) -> None:
     """Handle Mqtt removed from a device."""
-    mqtt_data = hass.data[DATA_MQTT]
-    triggers = await async_get_triggers(hass, device_id)
+    mqtt_data = menuai.data[DATA_MQTT]
+    triggers = await async_get_triggers(menuai, device_id)
     for trig in triggers:
         trigger_id = f"{device_id}_{trig[CONF_TYPE]}_{trig[CONF_SUBTYPE]}"
         if trigger_id in mqtt_data.device_triggers:
@@ -344,14 +344,14 @@ async def async_removed_from_device(hass: HomeAssistant, device_id: str) -> None
             if TYPE_CHECKING:
                 assert discovery_data is not None
             discovery_hash = discovery_data[ATTR_DISCOVERY_HASH]
-            debug_info.remove_trigger_discovery_data(hass, discovery_hash)
+            debug_info.remove_trigger_discovery_data(menuai, discovery_hash)
 
 
 async def async_get_triggers(
-    hass: HomeAssistant, device_id: str
+    menuai: menuai, device_id: str
 ) -> list[dict[str, str]]:
     """List device triggers for MQTT devices."""
-    mqtt_data = hass.data[DATA_MQTT]
+    mqtt_data = menuai.data[DATA_MQTT]
 
     if not mqtt_data.device_triggers:
         return []
@@ -369,14 +369,14 @@ async def async_get_triggers(
 
 
 async def async_attach_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     action: TriggerActionType,
     trigger_info: TriggerInfo,
 ) -> CALLBACK_TYPE:
     """Attach a trigger."""
     trigger_id: str | None = None
-    mqtt_data = hass.data[DATA_MQTT]
+    mqtt_data = menuai.data[DATA_MQTT]
     device_id = config[CONF_DEVICE_ID]
 
     # The use of CONF_DISCOVERY_ID was deprecated in HA Core 2024.2.
@@ -398,7 +398,7 @@ async def async_attach_trigger(
 
     if trigger_id not in mqtt_data.device_triggers:
         mqtt_data.device_triggers[trigger_id] = Trigger(
-            hass=hass,
+            menuai=menuai,
             device_id=device_id,
             discovery_data=None,
             discovery_id=discovery_id,

@@ -12,9 +12,9 @@ from matter_server.common.helpers.util import dataclass_from_dict
 from matter_server.common.models import EventType, MatterNodeData
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry, load_fixture
 
@@ -31,7 +31,7 @@ def load_and_parse_node_fixture(fixture: str) -> dict[str, Any]:
 
 
 async def setup_integration_with_node_fixture(
-    hass: HomeAssistant,
+    menuai: menuai,
     node_fixture: str,
     client: MagicMock,
     override_attributes: dict[str, Any] | None = None,
@@ -43,10 +43,10 @@ async def setup_integration_with_node_fixture(
     config_entry = MockConfigEntry(
         domain="matter", data={"url": "http://mock-matter-server-url"}
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     return node
 
@@ -79,7 +79,7 @@ def set_node_attribute(
 
 
 async def trigger_subscription_callback(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
     event: EventType = EventType.ATTRIBUTE_UPDATED,
     data: Any = None,
@@ -91,17 +91,17 @@ async def trigger_subscription_callback(
         event_filter = sub.kwargs.get("event_filter")
         if event_filter in (None, event):
             callback(event, data)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
 def snapshot_matter_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
     platform: Platform,
 ) -> None:
     """Snapshot Matter entities."""
-    entities = hass.states.async_all(platform)
+    entities = menuai.states.async_all(platform)
     for entity_state in entities:
         entity_entry = entity_registry.async_get(entity_state.entity_id)
         assert entity_entry == snapshot(name=f"{entity_entry.entity_id}-entry")

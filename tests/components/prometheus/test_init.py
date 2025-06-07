@@ -11,7 +11,7 @@ import prometheus_client
 from prometheus_client.utils import floatToGoString
 import pytest
 
-from homeassistant.components import (
+from menuai.components import (
     alarm_control_panel,
     binary_sensor,
     climate,
@@ -31,8 +31,8 @@ from homeassistant.components import (
     switch,
     update,
 )
-from homeassistant.components.alarm_control_panel import AlarmControlPanelState
-from homeassistant.components.climate import (
+from menuai.components.alarm_control_panel import AlarmControlPanelState
+from menuai.components.climate import (
     ATTR_CURRENT_TEMPERATURE,
     ATTR_FAN_MODE,
     ATTR_FAN_MODES,
@@ -42,7 +42,7 @@ from homeassistant.components.climate import (
     ATTR_TARGET_TEMP_HIGH,
     ATTR_TARGET_TEMP_LOW,
 )
-from homeassistant.components.fan import (
+from menuai.components.fan import (
     ATTR_DIRECTION,
     ATTR_OSCILLATING,
     ATTR_PERCENTAGE,
@@ -51,10 +51,10 @@ from homeassistant.components.fan import (
     DIRECTION_FORWARD,
     DIRECTION_REVERSE,
 )
-from homeassistant.components.humidifier import ATTR_AVAILABLE_MODES
-from homeassistant.components.lock import LockState
-from homeassistant.components.sensor import SensorDeviceClass
-from homeassistant.const import (
+from menuai.components.humidifier import ATTR_AVAILABLE_MODES
+from menuai.components.lock import LockState
+from menuai.components.sensor import SensorDeviceClass
+from menuai.const import (
     ATTR_BATTERY_LEVEL,
     ATTR_DEVICE_CLASS,
     ATTR_FRIENDLY_NAME,
@@ -78,18 +78,18 @@ from homeassistant.const import (
     UnitOfEnergy,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from tests.typing import ClientSessionGenerator
 
-PROMETHEUS_PATH = "homeassistant.components.prometheus"
+PROMETHEUS_PATH = "menuai.components.prometheus"
 
 
 class EntityMetric:
-    """Represents a Prometheus metric for a Home Assistant entity."""
+    """Represents a Prometheus metric for a MenuAI entity."""
 
     metric_name: str
     labels: dict[str, str]
@@ -172,13 +172,13 @@ def test_entity_metric_generates_metric_name_string_without_value() -> None:
     domain = "sensor"
     object_id = "outside_temperature"
     entity_metric = EntityMetric(
-        metric_name="homeassistant_sensor_temperature_celsius",
+        metric_name="menuai_sensor_temperature_celsius",
         domain=domain,
         friendly_name="Outside Temperature",
         entity=f"{domain}.{object_id}",
     )
     assert entity_metric._metric_name_string == (
-        "homeassistant_sensor_temperature_celsius{"
+        "menuai_sensor_temperature_celsius{"
         'domain="sensor",'
         'entity="sensor.outside_temperature",'
         'friendly_name="Outside Temperature"}'
@@ -190,13 +190,13 @@ def test_entity_metric_generates_metric_string_with_value() -> None:
     domain = "sensor"
     object_id = "outside_temperature"
     entity_metric = EntityMetric(
-        metric_name="homeassistant_sensor_temperature_celsius",
+        metric_name="menuai_sensor_temperature_celsius",
         domain=domain,
         friendly_name="Outside Temperature",
         entity=f"{domain}.{object_id}",
     ).withValue(17.2)
     assert entity_metric._metric_string == (
-        "homeassistant_sensor_temperature_celsius{"
+        "menuai_sensor_temperature_celsius{"
         'domain="sensor",'
         'entity="sensor.outside_temperature",'
         'friendly_name="Outside Temperature"}'
@@ -209,7 +209,7 @@ def test_entity_metric_raises_exception_without_required_labels() -> None:
     domain = "sensor"
     object_id = "outside_temperature"
     test_kwargs = {
-        "metric_name": "homeassistant_sensor_temperature_celsius",
+        "metric_name": "menuai_sensor_temperature_celsius",
         "domain": domain,
         "friendly_name": "Outside Temperature",
         "entity": f"{domain}.{object_id}",
@@ -230,7 +230,7 @@ def test_entity_metric_raises_exception_if_required_label_is_empty_string() -> N
     domain = "sensor"
     object_id = "outside_temperature"
     test_kwargs = {
-        "metric_name": "homeassistant_sensor_temperature_celsius",
+        "metric_name": "menuai_sensor_temperature_celsius",
         "domain": domain,
         "friendly_name": "Outside Temperature",
         "entity": f"{domain}.{object_id}",
@@ -252,7 +252,7 @@ def test_entity_metric_generates_alphabetically_ordered_labels() -> None:
     object_id = "outside_temperature"
 
     static_metric_string = (
-        "homeassistant_sensor_temperature_celsius{"
+        "menuai_sensor_temperature_celsius{"
         'domain="sensor",'
         'entity="sensor.outside_temperature",'
         'friendly_name="Outside Temperature",'
@@ -262,7 +262,7 @@ def test_entity_metric_generates_alphabetically_ordered_labels() -> None:
     )
 
     ordered_entity_metric = EntityMetric(
-        metric_name="homeassistant_sensor_temperature_celsius",
+        metric_name="menuai_sensor_temperature_celsius",
         domain=domain,
         entity=f"{domain}.{object_id}",
         friendly_name="Outside Temperature",
@@ -271,7 +271,7 @@ def test_entity_metric_generates_alphabetically_ordered_labels() -> None:
     assert ordered_entity_metric._metric_string == static_metric_string
 
     unordered_entity_metric = EntityMetric(
-        metric_name="homeassistant_sensor_temperature_celsius",
+        metric_name="menuai_sensor_temperature_celsius",
         zed_label="foo",
         entity=f"{domain}.{object_id}",
         friendly_name="Outside Temperature",
@@ -334,14 +334,14 @@ def test_entity_metric_generates_metric_string_with_non_required_labels() -> Non
     )
 
     foo_entity_metric = EntityMetric(
-        metric_name="homeassistant_sensor_temperature_celsius",
+        metric_name="menuai_sensor_temperature_celsius",
         domain="sensor",
         friendly_name="Outside Temperature",
         entity="sensor.outside_temperature",
         foo="bar",
     ).withValue(17.2)
     assert foo_entity_metric._metric_string == (
-        "homeassistant_sensor_temperature_celsius{"
+        "menuai_sensor_temperature_celsius{"
         'domain="sensor",'
         'entity="sensor.outside_temperature",'
         'foo="bar",'
@@ -354,7 +354,7 @@ def test_entity_metric_generates_metric_string_with_non_required_labels() -> Non
 def test_entity_metric_assert_helpers() -> None:
     """Test using EntityMetric for both assert_in_metrics and assert_not_in_metrics."""
     temp_metric = (
-        "homeassistant_sensor_temperature_celsius{"
+        "menuai_sensor_temperature_celsius{"
         'domain="sensor",'
         'entity="sensor.outside_temperature",'
         'foo="bar",'
@@ -385,7 +385,7 @@ def test_entity_metric_assert_helpers() -> None:
     assert excluded_cover_metric not in metrics
     # now check for actual metrics
     temp_entity_metric = EntityMetric(
-        metric_name="homeassistant_sensor_temperature_celsius",
+        metric_name="menuai_sensor_temperature_celsius",
         domain="sensor",
         friendly_name="Outside Temperature",
         entity="sensor.outside_temperature",
@@ -418,7 +418,7 @@ def test_entity_metric_assert_helpers() -> None:
 def test_entity_metric_with_value_assert_helpers() -> None:
     """Test using EntityMetricWithValue helpers, which is only assert_in_metrics."""
     temp_metric = (
-        "homeassistant_sensor_temperature_celsius{"
+        "menuai_sensor_temperature_celsius{"
         'domain="sensor",'
         'entity="sensor.outside_temperature",'
         'foo="bar",'
@@ -440,7 +440,7 @@ def test_entity_metric_with_value_assert_helpers() -> None:
         climate_metric,
     ]
     temp_entity_metric = EntityMetric(
-        metric_name="homeassistant_sensor_temperature_celsius",
+        metric_name="menuai_sensor_temperature_celsius",
         domain="sensor",
         friendly_name="Outside Temperature",
         entity="sensor.outside_temperature",
@@ -462,11 +462,11 @@ def test_entity_metric_with_value_assert_helpers() -> None:
 
 @pytest.fixture(name="client")
 async def setup_prometheus_client(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     namespace: str,
 ):
-    """Initialize an hass_client with Prometheus component."""
+    """Initialize an menuai_client with Prometheus component."""
     # Reset registry
     prometheus_client.REGISTRY = prometheus_client.CollectorRegistry(auto_describe=True)
     prometheus_client.ProcessCollector(registry=prometheus_client.REGISTRY)
@@ -477,11 +477,11 @@ async def setup_prometheus_client(
     if namespace is not None:
         config[prometheus.CONF_PROM_NAMESPACE] = namespace
     assert await async_setup_component(
-        hass, prometheus.DOMAIN, {prometheus.DOMAIN: config}
+        menuai, prometheus.DOMAIN, {prometheus.DOMAIN: config}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    return await hass_client()
+    return await menuai_client()
 
 
 async def generate_latest_metrics(client):
@@ -499,8 +499,8 @@ async def generate_latest_metrics(client):
 
 @pytest.mark.parametrize("namespace", [""])
 async def test_setup_enumeration(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     entity_registry: er.EntityRegistry,
     namespace: str,
 ) -> None:
@@ -519,13 +519,13 @@ async def test_setup_enumeration(
         original_name="Outside Temperature",
     )
     state = 12.3
-    set_state_with_entry(hass, sensor_1, state, {})
-    assert await async_setup_component(hass, prometheus.DOMAIN, {prometheus.DOMAIN: {}})
+    set_state_with_entry(menuai, sensor_1, state, {})
+    assert await async_setup_component(menuai, prometheus.DOMAIN, {prometheus.DOMAIN: {}})
 
-    client = await hass_client()
+    client = await menuai_client()
     body = await generate_latest_metrics(client)
     EntityMetric(
-        metric_name="homeassistant_sensor_temperature_celsius",
+        metric_name="menuai_sensor_temperature_celsius",
         domain="sensor",
         friendly_name="Outside Temperature",
         entity="sensor.outside_temperature",
@@ -572,7 +572,7 @@ async def test_view_default_namespace(
     )
 
     EntityMetric(
-        metric_name="homeassistant_sensor_temperature_celsius",
+        metric_name="menuai_sensor_temperature_celsius",
         domain="sensor",
         friendly_name="Outside Temperature",
         entity="sensor.outside_temperature",
@@ -1252,7 +1252,7 @@ async def test_update(
 
 @pytest.mark.parametrize("namespace", [""])
 async def test_renaming_entity_name(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     client: ClientSessionGenerator,
     sensor_entities: dict[str, er.RegistryEntry],
@@ -1313,7 +1313,7 @@ async def test_renaming_entity_name(
         name="Outside Temperature Renamed",
     )
     set_state_with_entry(
-        hass,
+        menuai,
         data["sensor_1"],
         15.6,
         {ATTR_FRIENDLY_NAME: "Outside Temperature Renamed"},
@@ -1327,13 +1327,13 @@ async def test_renaming_entity_name(
         ATTR_FRIENDLY_NAME: "HeatPump Renamed",
     }
     set_state_with_entry(
-        hass,
+        menuai,
         data["climate_1"],
         climate.HVACAction.HEATING,
         data["climate_1_attributes"],
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     body = await generate_latest_metrics(client)
 
     # Check if old metrics deleted
@@ -1390,7 +1390,7 @@ async def test_renaming_entity_name(
 
 @pytest.mark.parametrize("namespace", [""])
 async def test_renaming_entity_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     client: ClientSessionGenerator,
     sensor_entities: dict[str, er.RegistryEntry],
@@ -1435,10 +1435,10 @@ async def test_renaming_entity_id(
         new_entity_id="sensor.outside_temperature_renamed",
     )
     set_state_with_entry(
-        hass, data["sensor_1"], 15.6, None, "sensor.outside_temperature_renamed"
+        menuai, data["sensor_1"], 15.6, None, "sensor.outside_temperature_renamed"
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     body = await generate_latest_metrics(client)
 
     # Check if old metrics deleted
@@ -1477,7 +1477,7 @@ async def test_renaming_entity_id(
 
 @pytest.mark.parametrize("namespace", [""])
 async def test_deleting_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     client: ClientSessionGenerator,
     sensor_entities: dict[str, er.RegistryEntry],
@@ -1536,7 +1536,7 @@ async def test_deleting_entity(
     entity_registry.async_remove(data["sensor_1"].entity_id)
     entity_registry.async_remove(data["climate_1"].entity_id)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     body = await generate_latest_metrics(client)
 
     # Check if old metrics deleted
@@ -1564,7 +1564,7 @@ async def test_deleting_entity(
 
 @pytest.mark.parametrize("namespace", [""])
 async def test_disabling_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     client: ClientSessionGenerator,
     sensor_entities: dict[str, er.RegistryEntry],
@@ -1573,7 +1573,7 @@ async def test_disabling_entity(
     """Test disabling a entity."""
     data = {**sensor_entities, **climate_entities}
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     body = await generate_latest_metrics(client)
 
     EntityMetric(
@@ -1638,7 +1638,7 @@ async def test_disabling_entity(
         disabled_by=er.RegistryEntryDisabler.USER,
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     body = await generate_latest_metrics(client)
 
     # Check if old metrics deleted
@@ -1667,7 +1667,7 @@ async def test_disabling_entity(
 @pytest.mark.parametrize("namespace", [""])
 @pytest.mark.parametrize("unavailable_state", [STATE_UNAVAILABLE, STATE_UNKNOWN])
 async def test_entity_becomes_unavailable(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     client: ClientSessionGenerator,
     sensor_entities: dict[str, er.RegistryEntry],
@@ -1676,7 +1676,7 @@ async def test_entity_becomes_unavailable(
     """Test an entity that becomes unavailable/unknown is no longer exported."""
     data = {**sensor_entities}
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     body = await generate_latest_metrics(client)
 
     EntityMetric(
@@ -1737,10 +1737,10 @@ async def test_entity_becomes_unavailable(
 
     # Make sensor_1 unavailable/unknown.
     set_state_with_entry(
-        hass, data["sensor_1"], unavailable_state, data["sensor_1_attributes"]
+        menuai, data["sensor_1"], unavailable_state, data["sensor_1_attributes"]
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     body = await generate_latest_metrics(client)
 
     # Check that the availability changed on sensor_1 and the metric with the value is gone.
@@ -1802,9 +1802,9 @@ async def test_entity_becomes_unavailable(
     ).withValue(1).assert_in_metrics(body)
 
     # Bring sensor_1 back and check that it returned.
-    set_state_with_entry(hass, data["sensor_1"], 201.0, data["sensor_1_attributes"])
+    set_state_with_entry(menuai, data["sensor_1"], 201.0, data["sensor_1_attributes"])
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     body = await generate_latest_metrics(client)
 
     EntityMetric(
@@ -1838,7 +1838,7 @@ async def test_entity_becomes_unavailable(
 
 @pytest.fixture(name="sensor_entities")
 async def sensor_fixture(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> dict[str, er.RegistryEntry]:
     """Simulate sensor entities."""
     data = {}
@@ -1852,7 +1852,7 @@ async def sensor_fixture(
         original_name="Outside Temperature",
     )
     sensor_1_attributes = {ATTR_BATTERY_LEVEL: 12}
-    set_state_with_entry(hass, sensor_1, 15.6, sensor_1_attributes)
+    set_state_with_entry(menuai, sensor_1, 15.6, sensor_1_attributes)
     data["sensor_1"] = sensor_1
     data["sensor_1_attributes"] = sensor_1_attributes
 
@@ -1865,7 +1865,7 @@ async def sensor_fixture(
         suggested_object_id="outside_humidity",
         original_name="Outside Humidity",
     )
-    set_state_with_entry(hass, sensor_2, 54.0)
+    set_state_with_entry(menuai, sensor_2, 54.0)
     data["sensor_2"] = sensor_2
 
     sensor_3 = entity_registry.async_get_or_create(
@@ -1878,7 +1878,7 @@ async def sensor_fixture(
         original_name="Radio Energy",
     )
     with freeze_time(datetime.datetime(1970, 1, 2, tzinfo=dt_util.UTC)):
-        set_state_with_entry(hass, sensor_3, 14)
+        set_state_with_entry(menuai, sensor_3, 14)
     data["sensor_3"] = sensor_3
 
     sensor_4 = entity_registry.async_get_or_create(
@@ -1889,7 +1889,7 @@ async def sensor_fixture(
         suggested_object_id="television_energy",
         original_name="Television Energy",
     )
-    set_state_with_entry(hass, sensor_4, 74)
+    set_state_with_entry(menuai, sensor_4, 74)
     data["sensor_4"] = sensor_4
 
     sensor_5 = entity_registry.async_get_or_create(
@@ -1900,7 +1900,7 @@ async def sensor_fixture(
         suggested_object_id="electricity_price",
         original_name="Electricity price",
     )
-    set_state_with_entry(hass, sensor_5, 0.123)
+    set_state_with_entry(menuai, sensor_5, 0.123)
     data["sensor_5"] = sensor_5
 
     sensor_6 = entity_registry.async_get_or_create(
@@ -1911,7 +1911,7 @@ async def sensor_fixture(
         suggested_object_id="wind_direction",
         original_name="Wind Direction",
     )
-    set_state_with_entry(hass, sensor_6, 25)
+    set_state_with_entry(menuai, sensor_6, 25)
     data["sensor_6"] = sensor_6
 
     sensor_7 = entity_registry.async_get_or_create(
@@ -1922,7 +1922,7 @@ async def sensor_fixture(
         suggested_object_id="sps30_pm_1um_weight_concentration",
         original_name="SPS30 PM <1µm Weight concentration",
     )
-    set_state_with_entry(hass, sensor_7, 3.7069)
+    set_state_with_entry(menuai, sensor_7, 3.7069)
     data["sensor_7"] = sensor_7
 
     sensor_8 = entity_registry.async_get_or_create(
@@ -1932,7 +1932,7 @@ async def sensor_fixture(
         suggested_object_id="trend_gradient",
         original_name="Trend Gradient",
     )
-    set_state_with_entry(hass, sensor_8, 0.002)
+    set_state_with_entry(menuai, sensor_8, 0.002)
     data["sensor_8"] = sensor_8
 
     sensor_9 = entity_registry.async_get_or_create(
@@ -1942,7 +1942,7 @@ async def sensor_fixture(
         suggested_object_id="text",
         original_name="Text",
     )
-    set_state_with_entry(hass, sensor_9, "should_not_work")
+    set_state_with_entry(menuai, sensor_9, "should_not_work")
     data["sensor_9"] = sensor_9
 
     sensor_10 = entity_registry.async_get_or_create(
@@ -1953,7 +1953,7 @@ async def sensor_fixture(
         suggested_object_id="text_unit",
         original_name="Text Unit",
     )
-    set_state_with_entry(hass, sensor_10, "should_not_work")
+    set_state_with_entry(menuai, sensor_10, "should_not_work")
     data["sensor_10"] = sensor_10
 
     sensor_11 = entity_registry.async_get_or_create(
@@ -1965,7 +1965,7 @@ async def sensor_fixture(
         suggested_object_id="fahrenheit",
         original_name="Fahrenheit",
     )
-    set_state_with_entry(hass, sensor_11, 50)
+    set_state_with_entry(menuai, sensor_11, 50)
     data["sensor_11"] = sensor_11
 
     sensor_12 = entity_registry.async_get_or_create(
@@ -1976,15 +1976,15 @@ async def sensor_fixture(
         suggested_object_id="Timestamp",
         original_name="Timestamp",
     )
-    set_state_with_entry(hass, sensor_12, "2023-08-07T15:03:28.136036-0700")
+    set_state_with_entry(menuai, sensor_12, "2023-08-07T15:03:28.136036-0700")
     data["sensor_12"] = sensor_12
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     return data
 
 
 @pytest.fixture(name="climate_entities")
 async def climate_fixture(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> dict[str, er.RegistryEntry | dict[str, Any]]:
     """Simulate climate entities."""
     data = {}
@@ -2002,7 +2002,7 @@ async def climate_fixture(
         ATTR_HVAC_ACTION: climate.HVACAction.HEATING,
     }
     set_state_with_entry(
-        hass, climate_1, climate.HVACAction.HEATING, climate_1_attributes
+        menuai, climate_1, climate.HVACAction.HEATING, climate_1_attributes
     )
     data["climate_1"] = climate_1
     data["climate_1_attributes"] = climate_1_attributes
@@ -2028,7 +2028,7 @@ async def climate_fixture(
         ATTR_FAN_MODES: ["auto", "on"],
     }
     set_state_with_entry(
-        hass, climate_2, climate.HVACAction.HEATING, climate_2_attributes
+        menuai, climate_2, climate.HVACAction.HEATING, climate_2_attributes
     )
     data["climate_2"] = climate_2
     data["climate_2_attributes"] = climate_2_attributes
@@ -2046,17 +2046,17 @@ async def climate_fixture(
         ATTR_CURRENT_TEMPERATURE: 22,
         ATTR_HVAC_ACTION: climate.HVACAction.OFF,
     }
-    set_state_with_entry(hass, climate_3, climate.HVACAction.OFF, climate_3_attributes)
+    set_state_with_entry(menuai, climate_3, climate.HVACAction.OFF, climate_3_attributes)
     data["climate_3"] = climate_3
     data["climate_3_attributes"] = climate_3_attributes
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     return data
 
 
 @pytest.fixture(name="humidifier_entities")
 async def humidifier_fixture(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> dict[str, er.RegistryEntry | dict[str, Any]]:
     """Simulate humidifier entities."""
     data = {}
@@ -2071,7 +2071,7 @@ async def humidifier_fixture(
     humidifier_1_attributes = {
         ATTR_HUMIDITY: 68,
     }
-    set_state_with_entry(hass, humidifier_1, STATE_ON, humidifier_1_attributes)
+    set_state_with_entry(menuai, humidifier_1, STATE_ON, humidifier_1_attributes)
     data["humidifier_1"] = humidifier_1
     data["humidifier_1_attributes"] = humidifier_1_attributes
 
@@ -2086,7 +2086,7 @@ async def humidifier_fixture(
     humidifier_2_attributes = {
         ATTR_HUMIDITY: 54,
     }
-    set_state_with_entry(hass, humidifier_2, STATE_ON, humidifier_2_attributes)
+    set_state_with_entry(menuai, humidifier_2, STATE_ON, humidifier_2_attributes)
     data["humidifier_2"] = humidifier_2
     data["humidifier_2_attributes"] = humidifier_2_attributes
 
@@ -2102,17 +2102,17 @@ async def humidifier_fixture(
         ATTR_MODE: "home",
         ATTR_AVAILABLE_MODES: ["home", "eco"],
     }
-    set_state_with_entry(hass, humidifier_3, STATE_ON, humidifier_3_attributes)
+    set_state_with_entry(menuai, humidifier_3, STATE_ON, humidifier_3_attributes)
     data["humidifier_3"] = humidifier_3
     data["humidifier_3_attributes"] = humidifier_3_attributes
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     return data
 
 
 @pytest.fixture(name="lock_entities")
 async def lock_fixture(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> dict[str, er.RegistryEntry]:
     """Simulate lock entities."""
     data = {}
@@ -2123,7 +2123,7 @@ async def lock_fixture(
         suggested_object_id="front_door",
         original_name="Front Door",
     )
-    set_state_with_entry(hass, lock_1, LockState.LOCKED)
+    set_state_with_entry(menuai, lock_1, LockState.LOCKED)
     data["lock_1"] = lock_1
 
     lock_2 = entity_registry.async_get_or_create(
@@ -2133,16 +2133,16 @@ async def lock_fixture(
         suggested_object_id="kitchen_door",
         original_name="Kitchen Door",
     )
-    set_state_with_entry(hass, lock_2, LockState.UNLOCKED)
+    set_state_with_entry(menuai, lock_2, LockState.UNLOCKED)
     data["lock_2"] = lock_2
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     return data
 
 
 @pytest.fixture(name="cover_entities")
 async def cover_fixture(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> dict[str, er.RegistryEntry]:
     """Simulate cover entities."""
     data = {}
@@ -2153,7 +2153,7 @@ async def cover_fixture(
         suggested_object_id="open_shade",
         original_name="Open Shade",
     )
-    set_state_with_entry(hass, cover_open, STATE_OPEN)
+    set_state_with_entry(menuai, cover_open, STATE_OPEN)
     data["cover_open"] = cover_open
 
     cover_closed = entity_registry.async_get_or_create(
@@ -2163,7 +2163,7 @@ async def cover_fixture(
         suggested_object_id="closed_shade",
         original_name="Closed Shade",
     )
-    set_state_with_entry(hass, cover_closed, STATE_CLOSED)
+    set_state_with_entry(menuai, cover_closed, STATE_CLOSED)
     data["cover_closed"] = cover_closed
 
     cover_closing = entity_registry.async_get_or_create(
@@ -2173,7 +2173,7 @@ async def cover_fixture(
         suggested_object_id="closing_shade",
         original_name="Closing Shade",
     )
-    set_state_with_entry(hass, cover_closing, STATE_CLOSING)
+    set_state_with_entry(menuai, cover_closing, STATE_CLOSING)
     data["cover_closing"] = cover_closing
 
     cover_opening = entity_registry.async_get_or_create(
@@ -2183,7 +2183,7 @@ async def cover_fixture(
         suggested_object_id="opening_shade",
         original_name="Opening Shade",
     )
-    set_state_with_entry(hass, cover_opening, STATE_OPENING)
+    set_state_with_entry(menuai, cover_opening, STATE_OPENING)
     data["cover_opening"] = cover_opening
 
     cover_position = entity_registry.async_get_or_create(
@@ -2194,7 +2194,7 @@ async def cover_fixture(
         original_name="Position Shade",
     )
     cover_position_attributes = {cover.ATTR_CURRENT_POSITION: 50}
-    set_state_with_entry(hass, cover_position, STATE_OPEN, cover_position_attributes)
+    set_state_with_entry(menuai, cover_position, STATE_OPEN, cover_position_attributes)
     data["cover_position"] = cover_position
 
     cover_tilt_position = entity_registry.async_get_or_create(
@@ -2206,17 +2206,17 @@ async def cover_fixture(
     )
     cover_tilt_position_attributes = {cover.ATTR_CURRENT_TILT_POSITION: 50}
     set_state_with_entry(
-        hass, cover_tilt_position, STATE_OPEN, cover_tilt_position_attributes
+        menuai, cover_tilt_position, STATE_OPEN, cover_tilt_position_attributes
     )
     data["cover_tilt_position"] = cover_tilt_position
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     return data
 
 
 @pytest.fixture(name="input_number_entities")
 async def input_number_fixture(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> dict[str, er.RegistryEntry]:
     """Simulate input_number entities."""
     data = {}
@@ -2227,7 +2227,7 @@ async def input_number_fixture(
         suggested_object_id="threshold",
         original_name="Threshold",
     )
-    set_state_with_entry(hass, input_number_1, 5.2)
+    set_state_with_entry(menuai, input_number_1, 5.2)
     data["input_number_1"] = input_number_1
 
     input_number_2 = entity_registry.async_get_or_create(
@@ -2236,7 +2236,7 @@ async def input_number_fixture(
         unique_id="input_number_2",
         suggested_object_id="brightness",
     )
-    set_state_with_entry(hass, input_number_2, 60)
+    set_state_with_entry(menuai, input_number_2, 60)
     data["input_number_2"] = input_number_2
 
     input_number_3 = entity_registry.async_get_or_create(
@@ -2247,7 +2247,7 @@ async def input_number_fixture(
         original_name="Target temperature",
         unit_of_measurement=UnitOfTemperature.CELSIUS,
     )
-    set_state_with_entry(hass, input_number_3, 22.7)
+    set_state_with_entry(menuai, input_number_3, 22.7)
     data["input_number_3"] = input_number_3
 
     input_number_4 = entity_registry.async_get_or_create(
@@ -2258,16 +2258,16 @@ async def input_number_fixture(
         original_name="Converted temperature",
         unit_of_measurement=UnitOfTemperature.FAHRENHEIT,
     )
-    set_state_with_entry(hass, input_number_4, 212)
+    set_state_with_entry(menuai, input_number_4, 212)
     data["input_number_4"] = input_number_4
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     return data
 
 
 @pytest.fixture(name="number_entities")
 async def number_fixture(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> dict[str, er.RegistryEntry]:
     """Simulate number entities."""
     data = {}
@@ -2278,7 +2278,7 @@ async def number_fixture(
         suggested_object_id="threshold",
         original_name="Threshold",
     )
-    set_state_with_entry(hass, number_1, 5.2)
+    set_state_with_entry(menuai, number_1, 5.2)
     data["number_1"] = number_1
 
     number_2 = entity_registry.async_get_or_create(
@@ -2287,7 +2287,7 @@ async def number_fixture(
         unique_id="number_2",
         suggested_object_id="brightness",
     )
-    set_state_with_entry(hass, number_2, 60)
+    set_state_with_entry(menuai, number_2, 60)
     data["number_2"] = number_2
 
     number_3 = entity_registry.async_get_or_create(
@@ -2298,16 +2298,16 @@ async def number_fixture(
         original_name="Target temperature",
         unit_of_measurement=UnitOfTemperature.CELSIUS,
     )
-    set_state_with_entry(hass, number_3, 22.7)
+    set_state_with_entry(menuai, number_3, 22.7)
     data["number_3"] = number_3
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     return data
 
 
 @pytest.fixture(name="input_boolean_entities")
 async def input_boolean_fixture(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> dict[str, er.RegistryEntry]:
     """Simulate input_boolean entities."""
     data = {}
@@ -2318,7 +2318,7 @@ async def input_boolean_fixture(
         suggested_object_id="test",
         original_name="Test",
     )
-    set_state_with_entry(hass, input_boolean_1, STATE_ON)
+    set_state_with_entry(menuai, input_boolean_1, STATE_ON)
     data["input_boolean_1"] = input_boolean_1
 
     input_boolean_2 = entity_registry.async_get_or_create(
@@ -2328,16 +2328,16 @@ async def input_boolean_fixture(
         suggested_object_id="helper",
         original_name="Helper",
     )
-    set_state_with_entry(hass, input_boolean_2, STATE_OFF)
+    set_state_with_entry(menuai, input_boolean_2, STATE_OFF)
     data["input_boolean_2"] = input_boolean_2
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     return data
 
 
 @pytest.fixture(name="binary_sensor_entities")
 async def binary_sensor_fixture(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> dict[str, er.RegistryEntry]:
     """Simulate binary_sensor entities."""
     data = {}
@@ -2348,7 +2348,7 @@ async def binary_sensor_fixture(
         suggested_object_id="door",
         original_name="Door",
     )
-    set_state_with_entry(hass, binary_sensor_1, STATE_ON)
+    set_state_with_entry(menuai, binary_sensor_1, STATE_ON)
     data["binary_sensor_1"] = binary_sensor_1
 
     binary_sensor_2 = entity_registry.async_get_or_create(
@@ -2358,16 +2358,16 @@ async def binary_sensor_fixture(
         suggested_object_id="window",
         original_name="Window",
     )
-    set_state_with_entry(hass, binary_sensor_2, STATE_OFF)
+    set_state_with_entry(menuai, binary_sensor_2, STATE_OFF)
     data["binary_sensor_2"] = binary_sensor_2
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     return data
 
 
 @pytest.fixture(name="light_entities")
 async def light_fixture(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> dict[str, er.RegistryEntry]:
     """Simulate light entities."""
     data = {}
@@ -2378,7 +2378,7 @@ async def light_fixture(
         suggested_object_id="desk",
         original_name="Desk",
     )
-    set_state_with_entry(hass, light_1, STATE_ON)
+    set_state_with_entry(menuai, light_1, STATE_ON)
     data["light_1"] = light_1
 
     light_2 = entity_registry.async_get_or_create(
@@ -2388,7 +2388,7 @@ async def light_fixture(
         suggested_object_id="wall",
         original_name="Wall",
     )
-    set_state_with_entry(hass, light_2, STATE_OFF)
+    set_state_with_entry(menuai, light_2, STATE_OFF)
     data["light_2"] = light_2
 
     light_3 = entity_registry.async_get_or_create(
@@ -2399,7 +2399,7 @@ async def light_fixture(
         original_name="TV",
     )
     light_3_attributes = {light.ATTR_BRIGHTNESS: 255}
-    set_state_with_entry(hass, light_3, STATE_ON, light_3_attributes)
+    set_state_with_entry(menuai, light_3, STATE_ON, light_3_attributes)
     data["light_3"] = light_3
     data["light_3_attributes"] = light_3_attributes
 
@@ -2411,7 +2411,7 @@ async def light_fixture(
         original_name="PC",
     )
     light_4_attributes = {light.ATTR_BRIGHTNESS: 180}
-    set_state_with_entry(hass, light_4, STATE_ON, light_4_attributes)
+    set_state_with_entry(menuai, light_4, STATE_ON, light_4_attributes)
     data["light_4"] = light_4
     data["light_4_attributes"] = light_4_attributes
 
@@ -2425,16 +2425,16 @@ async def light_fixture(
     # Light is on, but brightness is unset; expect metrics to report
     # brightness of 100%.
     light_5_attributes = {light.ATTR_BRIGHTNESS: None}
-    set_state_with_entry(hass, light_5, STATE_ON, light_5_attributes)
+    set_state_with_entry(menuai, light_5, STATE_ON, light_5_attributes)
     data["light_5"] = light_5
     data["light_5_attributes"] = light_5_attributes
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     return data
 
 
 @pytest.fixture(name="switch_entities")
 async def switch_fixture(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> dict[str, er.RegistryEntry | dict[str, Any]]:
     """Simulate switch entities."""
     data = {}
@@ -2446,7 +2446,7 @@ async def switch_fixture(
         original_name="Boolean",
     )
     switch_1_attributes = {"boolean": True}
-    set_state_with_entry(hass, switch_1, STATE_ON, switch_1_attributes)
+    set_state_with_entry(menuai, switch_1, STATE_ON, switch_1_attributes)
     data["switch_1"] = switch_1
     data["switch_1_attributes"] = switch_1_attributes
 
@@ -2458,17 +2458,17 @@ async def switch_fixture(
         original_name="Number",
     )
     switch_2_attributes = {"Number": 10.2}
-    set_state_with_entry(hass, switch_2, STATE_OFF, switch_2_attributes)
+    set_state_with_entry(menuai, switch_2, STATE_OFF, switch_2_attributes)
     data["switch_2"] = switch_2
     data["switch_2_attributes"] = switch_2_attributes
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     return data
 
 
 @pytest.fixture(name="fan_entities")
 async def fan_fixture(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> dict[str, er.RegistryEntry]:
     """Simulate fan entities."""
     data = {}
@@ -2486,7 +2486,7 @@ async def fan_fixture(
         ATTR_PRESET_MODE: "LO",
         ATTR_PRESET_MODES: ["LO", "OFF", "HI"],
     }
-    set_state_with_entry(hass, fan_1, STATE_ON, fan_1_attributes)
+    set_state_with_entry(menuai, fan_1, STATE_ON, fan_1_attributes)
     data["fan_1"] = fan_1
     data["fan_1_attributes"] = fan_1_attributes
 
@@ -2498,17 +2498,17 @@ async def fan_fixture(
         original_name="Reverse Fan",
     )
     fan_2_attributes = {ATTR_DIRECTION: DIRECTION_REVERSE}
-    set_state_with_entry(hass, fan_2, STATE_ON, fan_2_attributes)
+    set_state_with_entry(menuai, fan_2, STATE_ON, fan_2_attributes)
     data["fan_2"] = fan_2
     data["fan_2_attributes"] = fan_2_attributes
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     return data
 
 
 @pytest.fixture(name="alarm_control_panel_entities")
 async def alarm_control_panel_fixture(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> dict[str, er.RegistryEntry]:
     """Simulate alarm control panel entities."""
     data = {}
@@ -2519,7 +2519,7 @@ async def alarm_control_panel_fixture(
         suggested_object_id="alarm_control_panel_1",
         original_name="Alarm Control Panel 1",
     )
-    set_state_with_entry(hass, alarm_control_panel_1, AlarmControlPanelState.ARMED_AWAY)
+    set_state_with_entry(menuai, alarm_control_panel_1, AlarmControlPanelState.ARMED_AWAY)
     data["alarm_control_panel_1"] = alarm_control_panel_1
 
     alarm_control_panel_2 = entity_registry.async_get_or_create(
@@ -2529,16 +2529,16 @@ async def alarm_control_panel_fixture(
         suggested_object_id="alarm_control_panel_2",
         original_name="Alarm Control Panel 2",
     )
-    set_state_with_entry(hass, alarm_control_panel_2, AlarmControlPanelState.ARMED_HOME)
+    set_state_with_entry(menuai, alarm_control_panel_2, AlarmControlPanelState.ARMED_HOME)
     data["alarm_control_panel_2"] = alarm_control_panel_2
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     return data
 
 
 @pytest.fixture(name="person_entities")
 async def person_fixture(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> dict[str, er.RegistryEntry]:
     """Simulate person entities."""
     data = {}
@@ -2549,7 +2549,7 @@ async def person_fixture(
         suggested_object_id="bob",
         original_name="Bob",
     )
-    set_state_with_entry(hass, person_1, STATE_HOME)
+    set_state_with_entry(menuai, person_1, STATE_HOME)
     data["person_1"] = person_1
 
     person_2 = entity_registry.async_get_or_create(
@@ -2559,16 +2559,16 @@ async def person_fixture(
         suggested_object_id="alice",
         original_name="Alice",
     )
-    set_state_with_entry(hass, person_2, STATE_NOT_HOME)
+    set_state_with_entry(menuai, person_2, STATE_NOT_HOME)
     data["person_2"] = person_2
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     return data
 
 
 @pytest.fixture(name="device_tracker_entities")
 async def device_tracker_fixture(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> dict[str, er.RegistryEntry]:
     """Simulate device_tracker entities."""
     data = {}
@@ -2579,7 +2579,7 @@ async def device_tracker_fixture(
         suggested_object_id="phone",
         original_name="Phone",
     )
-    set_state_with_entry(hass, device_tracker_1, STATE_HOME)
+    set_state_with_entry(menuai, device_tracker_1, STATE_HOME)
     data["device_tracker_1"] = device_tracker_1
 
     device_tracker_2 = entity_registry.async_get_or_create(
@@ -2589,16 +2589,16 @@ async def device_tracker_fixture(
         suggested_object_id="watch",
         original_name="Watch",
     )
-    set_state_with_entry(hass, device_tracker_2, STATE_NOT_HOME)
+    set_state_with_entry(menuai, device_tracker_2, STATE_NOT_HOME)
     data["device_tracker_2"] = device_tracker_2
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     return data
 
 
 @pytest.fixture(name="counter_entities")
 async def counter_fixture(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> dict[str, er.RegistryEntry]:
     """Simulate counter entities."""
     data = {}
@@ -2608,16 +2608,16 @@ async def counter_fixture(
         unique_id="counter_1",
         suggested_object_id="counter",
     )
-    set_state_with_entry(hass, counter_1, 2)
+    set_state_with_entry(menuai, counter_1, 2)
     data["counter_1"] = counter_1
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     return data
 
 
 @pytest.fixture(name="update_entities")
 async def update_fixture(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> dict[str, er.RegistryEntry]:
     """Simulate update entities."""
     data = {}
@@ -2628,7 +2628,7 @@ async def update_fixture(
         suggested_object_id="firmware",
         original_name="Firmware",
     )
-    set_state_with_entry(hass, update_1, STATE_ON)
+    set_state_with_entry(menuai, update_1, STATE_ON)
     data["update_1"] = update_1
 
     update_2 = entity_registry.async_get_or_create(
@@ -2638,15 +2638,15 @@ async def update_fixture(
         suggested_object_id="addon",
         original_name="Addon",
     )
-    set_state_with_entry(hass, update_2, STATE_OFF)
+    set_state_with_entry(menuai, update_2, STATE_OFF)
     data["update_2"] = update_2
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     return data
 
 
 def set_state_with_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: er.RegistryEntry,
     state,
     additional_attributes=None,
@@ -2665,7 +2665,7 @@ def set_state_with_entry(
     if additional_attributes:
         attributes = {**attributes, **additional_attributes}
 
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id=new_entity_id if new_entity_id else entry.entity_id,
         new_state=state,
         attributes=attributes,
@@ -2682,14 +2682,14 @@ def mock_client_fixture():
         yield counter_client
 
 
-async def test_minimal_config(hass: HomeAssistant, mock_client: mock.MagicMock) -> None:
+async def test_minimal_config(menuai: menuai, mock_client: mock.MagicMock) -> None:
     """Test the minimal config and defaults of component."""
     config = {prometheus.DOMAIN: {}}
-    assert await async_setup_component(hass, prometheus.DOMAIN, config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, prometheus.DOMAIN, config)
+    await menuai.async_block_till_done()
 
 
-async def test_full_config(hass: HomeAssistant, mock_client: mock.MagicMock) -> None:
+async def test_full_config(menuai: menuai, mock_client: mock.MagicMock) -> None:
     """Test the full config of component."""
     config = {
         prometheus.DOMAIN: {
@@ -2710,21 +2710,21 @@ async def test_full_config(hass: HomeAssistant, mock_client: mock.MagicMock) -> 
             },
         }
     }
-    assert await async_setup_component(hass, prometheus.DOMAIN, config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, prometheus.DOMAIN, config)
+    await menuai.async_block_till_done()
 
 
-async def _setup(hass: HomeAssistant, filter_config):
+async def _setup(menuai: menuai, filter_config):
     """Shared set up for filtering tests."""
     config = {prometheus.DOMAIN: {"filter": filter_config}}
-    assert await async_setup_component(hass, prometheus.DOMAIN, config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, prometheus.DOMAIN, config)
+    await menuai.async_block_till_done()
 
 
-async def test_allowlist(hass: HomeAssistant, mock_client: mock.MagicMock) -> None:
+async def test_allowlist(menuai: menuai, mock_client: mock.MagicMock) -> None:
     """Test an allowlist only config."""
     await _setup(
-        hass,
+        menuai,
         {
             "include_domains": ["fake"],
             "include_entity_globs": ["test.included_*"],
@@ -2742,18 +2742,18 @@ async def test_allowlist(hass: HomeAssistant, mock_client: mock.MagicMock) -> No
     ]
 
     for test in tests:
-        hass.states.async_set(test.id, "not blank")
-        await hass.async_block_till_done()
+        menuai.states.async_set(test.id, "not blank")
+        await menuai.async_block_till_done()
 
         was_called = mock_client.labels.call_count == 1
         assert test.should_pass == was_called
         mock_client.labels.reset_mock()
 
 
-async def test_denylist(hass: HomeAssistant, mock_client: mock.MagicMock) -> None:
+async def test_denylist(menuai: menuai, mock_client: mock.MagicMock) -> None:
     """Test a denylist only config."""
     await _setup(
-        hass,
+        menuai,
         {
             "exclude_domains": ["fake"],
             "exclude_entity_globs": ["test.excluded_*"],
@@ -2771,8 +2771,8 @@ async def test_denylist(hass: HomeAssistant, mock_client: mock.MagicMock) -> Non
     ]
 
     for test in tests:
-        hass.states.async_set(test.id, "not blank")
-        await hass.async_block_till_done()
+        menuai.states.async_set(test.id, "not blank")
+        await menuai.async_block_till_done()
 
         was_called = mock_client.labels.call_count == 1
         assert test.should_pass == was_called
@@ -2780,11 +2780,11 @@ async def test_denylist(hass: HomeAssistant, mock_client: mock.MagicMock) -> Non
 
 
 async def test_filtered_denylist(
-    hass: HomeAssistant, mock_client: mock.MagicMock
+    menuai: menuai, mock_client: mock.MagicMock
 ) -> None:
     """Test a denylist config with a filtering allowlist."""
     await _setup(
-        hass,
+        menuai,
         {
             "include_entities": ["fake.included", "test.excluded_test"],
             "exclude_domains": ["fake"],
@@ -2803,8 +2803,8 @@ async def test_filtered_denylist(
     ]
 
     for test in tests:
-        hass.states.async_set(test.id, "not blank")
-        await hass.async_block_till_done()
+        menuai.states.async_set(test.id, "not blank")
+        await menuai.async_block_till_done()
 
         was_called = mock_client.labels.call_count == 1
         assert test.should_pass == was_called

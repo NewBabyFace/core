@@ -2,8 +2,8 @@
 
 from unittest.mock import MagicMock
 
-from homeassistant.components.kira import remote as kira
-from homeassistant.core import HomeAssistant
+from menuai.components.kira import remote as kira
+from menuai.core import menuai
 
 from tests.common import MockEntityPlatform
 
@@ -21,17 +21,17 @@ def add_entities(devices):
     DEVICES.extend(devices)
 
 
-def test_service_call(hass: HomeAssistant) -> None:
+def test_service_call(menuai: menuai) -> None:
     """Test Kira's ability to send commands."""
     mock_kira = MagicMock()
-    hass.data[kira.DOMAIN] = {kira.CONF_REMOTE: {}}
-    hass.data[kira.DOMAIN][kira.CONF_REMOTE]["kira"] = mock_kira
+    menuai.data[kira.DOMAIN] = {kira.CONF_REMOTE: {}}
+    menuai.data[kira.DOMAIN][kira.CONF_REMOTE]["kira"] = mock_kira
 
-    kira.setup_platform(hass, TEST_CONFIG, add_entities, DISCOVERY_INFO)
+    kira.setup_platform(menuai, TEST_CONFIG, add_entities, DISCOVERY_INFO)
     assert len(DEVICES) == 1
     remote = DEVICES[0]
-    remote.hass = hass
-    remote.platform = MockEntityPlatform(hass)
+    remote.menuai = menuai
+    remote.platform = MockEntityPlatform(menuai)
 
     assert remote.name == "kira"
 

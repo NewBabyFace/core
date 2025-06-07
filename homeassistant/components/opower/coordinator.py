@@ -15,24 +15,24 @@ from opower import (
 )
 from opower.exceptions import ApiException, CannotConnect, InvalidAuth
 
-from homeassistant.components.recorder import get_instance
-from homeassistant.components.recorder.models import (
+from menuai.components.recorder import get_instance
+from menuai.components.recorder.models import (
     StatisticData,
     StatisticMeanType,
     StatisticMetaData,
 )
-from homeassistant.components.recorder.statistics import (
+from menuai.components.recorder.statistics import (
     async_add_external_statistics,
     get_last_statistics,
     statistics_during_period,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, UnitOfEnergy, UnitOfVolume
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers import aiohttp_client, issue_registry as ir
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util import dt as dt_util
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_PASSWORD, CONF_USERNAME, UnitOfEnergy, UnitOfVolume
+from menuai.core import menuai, callback
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers import aiohttp_client, issue_registry as ir
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.util import dt as dt_util
 
 from .const import CONF_TOTP_SECRET, CONF_UTILITY, DOMAIN
 
@@ -48,12 +48,12 @@ class OpowerCoordinator(DataUpdateCoordinator[dict[str, Forecast]]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: OpowerConfigEntry,
     ) -> None:
         """Initialize the data handler."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name="Opower",
@@ -62,7 +62,7 @@ class OpowerCoordinator(DataUpdateCoordinator[dict[str, Forecast]]):
             update_interval=timedelta(hours=12),
         )
         self.api = Opower(
-            aiohttp_client.async_get_clientsession(hass),
+            aiohttp_client.async_get_clientsession(menuai),
             config_entry.data[CONF_UTILITY],
             config_entry.data[CONF_USERNAME],
             config_entry.data[CONF_PASSWORD],
@@ -178,8 +178,8 @@ class OpowerCoordinator(DataUpdateCoordinator[dict[str, Forecast]]):
                 unit_of_measurement=consumption_unit,
             )
 
-            last_stat = await get_instance(self.hass).async_add_executor_job(
-                get_last_statistics, self.hass, 1, consumption_statistic_id, True, set()
+            last_stat = await get_instance(self.menuai).async_add_executor_job(
+                get_last_statistics, self.menuai, 1, consumption_statistic_id, True, set()
             )
             if not last_stat:
                 _LOGGER.debug("Updating statistic for the first time")
@@ -225,9 +225,9 @@ class OpowerCoordinator(DataUpdateCoordinator[dict[str, Forecast]]):
                 # In the common case there should be a previous statistic at start time
                 # so we only need to fetch one statistic. If there isn't any, fetch all.
                 for end in (start + timedelta(seconds=1), None):
-                    stats = await get_instance(self.hass).async_add_executor_job(
+                    stats = await get_instance(self.menuai).async_add_executor_job(
                         statistics_during_period,
-                        self.hass,
+                        self.menuai,
                         start,
                         end,
                         {
@@ -306,14 +306,14 @@ class OpowerCoordinator(DataUpdateCoordinator[dict[str, Forecast]]):
                 len(cost_statistics),
                 cost_statistic_id,
             )
-            async_add_external_statistics(self.hass, cost_metadata, cost_statistics)
+            async_add_external_statistics(self.menuai, cost_metadata, cost_statistics)
             _LOGGER.debug(
                 "Adding %s statistics for %s",
                 len(compensation_statistics),
                 compensation_statistic_id,
             )
             async_add_external_statistics(
-                self.hass, compensation_metadata, compensation_statistics
+                self.menuai, compensation_metadata, compensation_statistics
             )
             _LOGGER.debug(
                 "Adding %s statistics for %s",
@@ -321,14 +321,14 @@ class OpowerCoordinator(DataUpdateCoordinator[dict[str, Forecast]]):
                 consumption_statistic_id,
             )
             async_add_external_statistics(
-                self.hass, consumption_metadata, consumption_statistics
+                self.menuai, consumption_metadata, consumption_statistics
             )
             _LOGGER.debug(
                 "Adding %s statistics for %s",
                 len(return_statistics),
                 return_statistic_id,
             )
-            async_add_external_statistics(self.hass, return_metadata, return_statistics)
+            async_add_external_statistics(self.menuai, return_metadata, return_statistics)
 
     async def _async_maybe_migrate_statistics(
         self,
@@ -352,9 +352,9 @@ class OpowerCoordinator(DataUpdateCoordinator[dict[str, Forecast]]):
 
         need_migration_source_ids = set()
         for source_id, target_id in migration_map.items():
-            last_target_stat = await get_instance(self.hass).async_add_executor_job(
+            last_target_stat = await get_instance(self.menuai).async_add_executor_job(
                 get_last_statistics,
-                self.hass,
+                self.menuai,
                 1,
                 target_id,
                 True,
@@ -369,9 +369,9 @@ class OpowerCoordinator(DataUpdateCoordinator[dict[str, Forecast]]):
 
         processed_stats: dict[str, list[StatisticData]] = {}
 
-        existing_stats = await get_instance(self.hass).async_add_executor_job(
+        existing_stats = await get_instance(self.menuai).async_add_executor_job(
             statistics_during_period,
-            self.hass,
+            self.menuai,
             dt_util.utc_from_timestamp(0),
             None,
             need_migration_source_ids,
@@ -429,10 +429,10 @@ class OpowerCoordinator(DataUpdateCoordinator[dict[str, Forecast]]):
 
         for stat_id, stats in processed_stats.items():
             _LOGGER.debug("Applying %d migrated stats for %s", len(stats), stat_id)
-            async_add_external_statistics(self.hass, metadata_map[stat_id], stats)
+            async_add_external_statistics(self.menuai, metadata_map[stat_id], stats)
 
         ir.async_create_issue(
-            self.hass,
+            self.menuai,
             DOMAIN,
             issue_id=f"return_to_grid_migration_{utility_account_id}",
             is_fixable=False,

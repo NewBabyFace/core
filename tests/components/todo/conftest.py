@@ -5,15 +5,15 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from homeassistant.components.todo import (
+from menuai.components.todo import (
     TodoItem,
     TodoItemStatus,
     TodoListEntity,
     TodoListEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai
 
 from . import TEST_DOMAIN, MockFlow, MockTodoListEntity
 
@@ -21,37 +21,37 @@ from tests.common import MockModule, mock_config_flow, mock_integration, mock_pl
 
 
 @pytest.fixture(autouse=True)
-def config_flow_fixture(hass: HomeAssistant) -> Generator[None]:
+def config_flow_fixture(menuai: menuai) -> Generator[None]:
     """Mock config flow."""
-    mock_platform(hass, f"{TEST_DOMAIN}.config_flow")
+    mock_platform(menuai, f"{TEST_DOMAIN}.config_flow")
 
     with mock_config_flow(TEST_DOMAIN, MockFlow):
         yield
 
 
 @pytest.fixture(autouse=True)
-def mock_setup_integration(hass: HomeAssistant) -> None:
+def mock_setup_integration(menuai: menuai) -> None:
     """Fixture to set up a mock integration."""
 
     async def async_setup_entry_init(
-        hass: HomeAssistant, config_entry: ConfigEntry
+        menuai: menuai, config_entry: ConfigEntry
     ) -> bool:
         """Set up test config entry."""
-        await hass.config_entries.async_forward_entry_setups(
+        await menuai.config_entries.async_forward_entry_setups(
             config_entry, [Platform.TODO]
         )
         return True
 
     async def async_unload_entry_init(
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
     ) -> bool:
-        await hass.config_entries.async_unload_platforms(config_entry, [Platform.TODO])
+        await menuai.config_entries.async_unload_platforms(config_entry, [Platform.TODO])
         return True
 
-    mock_platform(hass, f"{TEST_DOMAIN}.config_flow")
+    mock_platform(menuai, f"{TEST_DOMAIN}.config_flow")
     mock_integration(
-        hass,
+        menuai,
         MockModule(
             TEST_DOMAIN,
             async_setup_entry=async_setup_entry_init,
@@ -61,9 +61,9 @@ def mock_setup_integration(hass: HomeAssistant) -> None:
 
 
 @pytest.fixture(autouse=True)
-async def set_time_zone(hass: HomeAssistant) -> None:
+async def set_time_zone(menuai: menuai) -> None:
     """Set the time zone for the tests that keesp UTC-6 all year round."""
-    await hass.config.async_set_time_zone("America/Regina")
+    await menuai.config.async_set_time_zone("America/Regina")
 
 
 @pytest.fixture(name="test_entity_items")

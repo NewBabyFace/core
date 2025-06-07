@@ -6,9 +6,9 @@ import logging
 from py_nextbus import NextBusClient
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_STOP
-from homeassistant.helpers.selector import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_STOP
+from menuai.helpers.selector import (
     SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
@@ -101,7 +101,7 @@ class NextBusFlowHandler(ConfigFlow, domain=DOMAIN):
 
             return await self.async_step_route()
 
-        self._agency_tags = await self.hass.async_add_executor_job(
+        self._agency_tags = await self.menuai.async_add_executor_job(
             _get_agency_tags, self._client
         )
 
@@ -126,7 +126,7 @@ class NextBusFlowHandler(ConfigFlow, domain=DOMAIN):
 
             return await self.async_step_stop()
 
-        self._route_tags = await self.hass.async_add_executor_job(
+        self._route_tags = await self.menuai.async_add_executor_job(
             _get_route_tags, self._client, self.data[CONF_AGENCY]
         )
 
@@ -166,7 +166,7 @@ class NextBusFlowHandler(ConfigFlow, domain=DOMAIN):
                 data=self.data,
             )
 
-        self._stop_tags = await self.hass.async_add_executor_job(
+        self._stop_tags = await self.menuai.async_add_executor_job(
             _get_stop_tags,
             self._client,
             self.data[CONF_AGENCY],

@@ -8,11 +8,11 @@ from typing import Any
 
 from technove import Station as TechnoVEStation
 
-from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchEntity, SwitchEntityDescription
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import TechnoVEConfigEntry, TechnoVEDataUpdateCoordinator
@@ -77,7 +77,7 @@ SWITCHES = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: TechnoVEConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

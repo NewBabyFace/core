@@ -15,14 +15,14 @@ from oauth2client.client import OAuth2Credentials
 import pytest
 import yaml
 
-from homeassistant.components.application_credentials import (
+from menuai.components.application_credentials import (
     ClientCredential,
     async_import_client_credential,
 )
-from homeassistant.components.google import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.components.google import DOMAIN
+from menuai.core import menuai
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from tests.common import MockConfigEntry
 from tests.test_util.aiohttp import AiohttpClientMocker
@@ -157,14 +157,14 @@ def calendars_config(calendars_config_entity: dict[str, Any]) -> list[dict[str, 
 
 @pytest.fixture
 def mock_calendars_yaml(
-    hass: HomeAssistant,
+    menuai: menuai,
     calendars_config: list[dict[str, Any]],
 ) -> Generator[Mock]:
     """Fixture that prepares the google_calendars.yaml mocks."""
     mocked_open_function = mock_open(
         read_data=yaml.dump(calendars_config) if calendars_config else None
     )
-    with patch("homeassistant.components.google.open", mocked_open_function):
+    with patch("menuai.components.google.open", mocked_open_function):
         yield mocked_open_function
 
 
@@ -339,27 +339,27 @@ def mock_insert_event(
 
 
 @pytest.fixture(autouse=True)
-async def set_time_zone(hass: HomeAssistant) -> None:
+async def set_time_zone(menuai: menuai) -> None:
     """Set the time zone for the tests."""
     # Set our timezone to CST/Regina so we can check calculations
     # This keeps UTC-6 all year round
-    await hass.config.async_set_time_zone("America/Regina")
+    await menuai.config.async_set_time_zone("America/Regina")
 
 
 @pytest.fixture
 def component_setup(
-    hass: HomeAssistant, config_entry: MockConfigEntry
+    menuai: menuai, config_entry: MockConfigEntry
 ) -> ComponentSetup:
     """Fixture for setting up the integration."""
 
     async def _setup_func() -> bool:
-        assert await async_setup_component(hass, "application_credentials", {})
+        assert await async_setup_component(menuai, "application_credentials", {})
         await async_import_client_credential(
-            hass,
+            menuai,
             DOMAIN,
             ClientCredential("client-id", "client-secret"),
         )
-        config_entry.add_to_hass(hass)
-        return await hass.config_entries.async_setup(config_entry.entry_id)
+        config_entry.add_to_menuai(menuai)
+        return await menuai.config_entries.async_setup(config_entry.entry_id)
 
     return _setup_func

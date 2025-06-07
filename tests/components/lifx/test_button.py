@@ -4,13 +4,13 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components import lifx
-from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN
-from homeassistant.components.lifx.const import DOMAIN
-from homeassistant.const import ATTR_ENTITY_ID, CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.components import lifx
+from menuai.components.button import DOMAIN as BUTTON_DOMAIN
+from menuai.components.lifx.const import DOMAIN
+from menuai.const import ATTR_ENTITY_ID, CONF_HOST
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.setup import async_setup_component
 
 from . import (
     DEFAULT_ENTRY_TITLE,
@@ -28,12 +28,12 @@ from tests.common import MockConfigEntry
 @pytest.fixture(autouse=True)
 def mock_lifx_coordinator_sleep():
     """Mock out lifx coordinator sleeps."""
-    with patch("homeassistant.components.lifx.coordinator.LIFX_IDENTIFY_DELAY", 0):
+    with patch("menuai.components.lifx.coordinator.LIFX_IDENTIFY_DELAY", 0):
         yield
 
 
 async def test_button_restart(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test that a bulb can be restarted."""
     config_entry = MockConfigEntry(
@@ -42,15 +42,15 @@ async def test_button_restart(
         data={CONF_HOST: IP_ADDRESS},
         unique_id=SERIAL,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     bulb = _mocked_bulb()
     with (
         _patch_discovery(device=bulb),
         _patch_config_flow_try_connect(device=bulb),
         _patch_device(device=bulb),
     ):
-        await async_setup_component(hass, lifx.DOMAIN, {lifx.DOMAIN: {}})
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, lifx.DOMAIN, {lifx.DOMAIN: {}})
+        await menuai.async_block_till_done()
 
     unique_id = f"{SERIAL}_restart"
     entity_id = "button.my_bulb_restart"
@@ -60,7 +60,7 @@ async def test_button_restart(
     assert not entity.disabled
     assert entity.unique_id == unique_id
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         BUTTON_DOMAIN, "press", {ATTR_ENTITY_ID: entity_id}, blocking=True
     )
 
@@ -68,7 +68,7 @@ async def test_button_restart(
 
 
 async def test_button_identify(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test that a bulb can be identified."""
     config_entry = MockConfigEntry(
@@ -77,15 +77,15 @@ async def test_button_identify(
         data={CONF_HOST: IP_ADDRESS},
         unique_id=SERIAL,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     bulb = _mocked_bulb()
     with (
         _patch_discovery(device=bulb),
         _patch_config_flow_try_connect(device=bulb),
         _patch_device(device=bulb),
     ):
-        await async_setup_component(hass, lifx.DOMAIN, {lifx.DOMAIN: {}})
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, lifx.DOMAIN, {lifx.DOMAIN: {}})
+        await menuai.async_block_till_done()
 
     unique_id = f"{SERIAL}_identify"
     entity_id = "button.my_bulb_identify"
@@ -95,7 +95,7 @@ async def test_button_identify(
     assert not entity.disabled
     assert entity.unique_id == unique_id
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         BUTTON_DOMAIN, "press", {ATTR_ENTITY_ID: entity_id}, blocking=True
     )
 
@@ -123,7 +123,7 @@ async def test_button_identify(
     bulb.set_waveform_optional.reset_mock()
     bulb.power_level = 65535
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         BUTTON_DOMAIN, "press", {ATTR_ENTITY_ID: entity_id}, blocking=True
     )
 

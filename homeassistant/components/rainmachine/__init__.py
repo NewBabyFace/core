@@ -13,8 +13,8 @@ from regenmaschine.controller import Controller
 from regenmaschine.errors import RainMachineError, UnknownAPICallError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_DEVICE_ID,
     CONF_IP_ADDRESS,
     CONF_PASSWORD,
@@ -23,17 +23,17 @@ from homeassistant.const import (
     CONF_UNIT_OF_MEASUREMENT,
     Platform,
 )
-from homeassistant.core import HomeAssistant, ServiceCall, callback
-from homeassistant.exceptions import ConfigEntryNotReady, HomeAssistantError
-from homeassistant.helpers import (
+from menuai.core import menuai, ServiceCall, callback
+from menuai.exceptions import ConfigEntryNotReady, menuaiError
+from menuai.helpers import (
     aiohttp_client,
     config_validation as cv,
     device_registry as dr,
     entity_registry as er,
 )
-from homeassistant.helpers.update_coordinator import UpdateFailed
-from homeassistant.util.dt import as_timestamp, utcnow
-from homeassistant.util.network import is_ip_address
+from menuai.helpers.update_coordinator import UpdateFailed
+from menuai.util.dt import as_timestamp, utcnow
+from menuai.util.network import is_ip_address
 
 from .config_flow import get_client_controller
 from .const import (
@@ -179,17 +179,17 @@ class RainMachineData:
 
 @callback
 def async_get_entry_for_service_call(
-    hass: HomeAssistant, call: ServiceCall
+    menuai: menuai, call: ServiceCall
 ) -> RainMachineConfigEntry:
     """Get the controller related to a service call (by device ID)."""
     device_id = call.data[CONF_DEVICE_ID]
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
 
     if (device_entry := device_registry.async_get(device_id)) is None:
         raise ValueError(f"Invalid RainMachine device ID: {device_id}")
 
     for entry_id in device_entry.config_entries:
-        if (entry := hass.config_entries.async_get_entry(entry_id)) is None:
+        if (entry := menuai.config_entries.async_get_entry(entry_id)) is None:
             continue
         if entry.domain == DOMAIN:
             return cast(RainMachineConfigEntry, entry)
@@ -198,7 +198,7 @@ def async_get_entry_for_service_call(
 
 
 async def async_update_programs_and_zones(
-    hass: HomeAssistant, entry: RainMachineConfigEntry
+    menuai: menuai, entry: RainMachineConfigEntry
 ) -> None:
     """Update program and zone DataUpdateCoordinators.
 
@@ -213,10 +213,10 @@ async def async_update_programs_and_zones(
 
 
 async def async_setup_entry(  # noqa: C901
-    hass: HomeAssistant, entry: RainMachineConfigEntry
+    menuai: menuai, entry: RainMachineConfigEntry
 ) -> bool:
     """Set up RainMachine as config entry."""
-    websession = aiohttp_client.async_get_clientsession(hass)
+    websession = aiohttp_client.async_get_clientsession(menuai)
     client = Client(session=websession)
     ip_address = entry.data[CONF_IP_ADDRESS]
 
@@ -256,7 +256,7 @@ async def async_setup_entry(  # noqa: C901
     if CONF_ALLOW_INACTIVE_ZONES_TO_RUN not in entry.options:
         entry_updates["options"][CONF_ALLOW_INACTIVE_ZONES_TO_RUN] = False
     if entry_updates:
-        hass.config_entries.async_update_entry(entry, **entry_updates)
+        menuai.config_entries.async_update_entry(entry, **entry_updates)
 
     if entry.unique_id and controller.mac != entry.unique_id:
         # If the mac address of the device does not match the unique_id
@@ -302,7 +302,7 @@ async def async_setup_entry(  # noqa: C901
     coordinators = {}
     for api_category, update_interval in COORDINATOR_UPDATE_INTERVAL_MAP.items():
         coordinator = coordinators[api_category] = RainMachineDataUpdateCoordinator(
-            hass,
+            menuai,
             entry=entry,
             name=f'{controller.name} ("{api_category}")',
             api_category=api_category,
@@ -319,7 +319,7 @@ async def async_setup_entry(  # noqa: C901
         controller=controller, coordinators=coordinators
     )
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
 
@@ -339,18 +339,18 @@ async def async_setup_entry(  # noqa: C901
             @wraps(func)
             async def wrapper(call: ServiceCall) -> None:
                 """Wrap the service function."""
-                entry = async_get_entry_for_service_call(hass, call)
+                entry = async_get_entry_for_service_call(menuai, call)
                 data = entry.runtime_data
 
                 try:
                     await func(call, data.controller)
                 except RainMachineError as err:
-                    raise HomeAssistantError(
+                    raise menuaiError(
                         f"Error while executing {func.__name__}: {err}"
                     ) from err
 
                 if update_programs_and_zones:
-                    await async_update_programs_and_zones(hass, entry)
+                    await async_update_programs_and_zones(menuai, entry)
 
             return wrapper
 
@@ -453,19 +453,19 @@ async def async_setup_entry(  # noqa: C901
             async_unrestrict_watering,
         ),
     ):
-        if hass.services.has_service(DOMAIN, service_name):
+        if menuai.services.has_service(DOMAIN, service_name):
             continue
-        hass.services.async_register(DOMAIN, service_name, method, schema=schema)
+        menuai.services.async_register(DOMAIN, service_name, method, schema=schema)
 
     return True
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, entry: RainMachineConfigEntry
+    menuai: menuai, entry: RainMachineConfigEntry
 ) -> bool:
     """Unload an RainMachine config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-    if not hass.config_entries.async_loaded_entries(DOMAIN):
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
+    if not menuai.config_entries.async_loaded_entries(DOMAIN):
         # If this is the last loaded instance of RainMachine, deregister any services
         # defined during integration setup:
         for service_name in (
@@ -477,13 +477,13 @@ async def async_unload_entry(
             SERVICE_NAME_UNPAUSE_WATERING,
             SERVICE_NAME_UNRESTRICT_WATERING,
         ):
-            hass.services.async_remove(DOMAIN, service_name)
+            menuai.services.async_remove(DOMAIN, service_name)
 
     return unload_ok
 
 
 async def async_migrate_entry(
-    hass: HomeAssistant, entry: RainMachineConfigEntry
+    menuai: menuai, entry: RainMachineConfigEntry
 ) -> bool:
     """Migrate an old config entry."""
     version = entry.version
@@ -494,7 +494,7 @@ async def async_migrate_entry(
     # the silly removal of colons in the MAC address that was added originally):
     if version == 1:
         version = 2
-        hass.config_entries.async_update_entry(entry, version=version)
+        menuai.config_entries.async_update_entry(entry, version=version)
 
         @callback
         def migrate_unique_id(entity_entry: er.RegistryEntry) -> dict[str, Any]:
@@ -509,7 +509,7 @@ async def async_migrate_entry(
 
             return {"new_unique_id": "_".join(unique_id_pieces)}
 
-        await er.async_migrate_entries(hass, entry.entry_id, migrate_unique_id)
+        await er.async_migrate_entries(menuai, entry.entry_id, migrate_unique_id)
 
     LOGGER.debug("Migration to version %s successful", version)
 
@@ -517,7 +517,7 @@ async def async_migrate_entry(
 
 
 async def async_reload_entry(
-    hass: HomeAssistant, entry: RainMachineConfigEntry
+    menuai: menuai, entry: RainMachineConfigEntry
 ) -> None:
     """Handle an options update."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)

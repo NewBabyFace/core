@@ -12,8 +12,8 @@ import pytest
 from requests_mock.mocker import Mocker
 import voluptuous as vol
 
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from .conftest import (
     CONTENT,
@@ -28,7 +28,7 @@ from .conftest import (
 BASE_COMPONENT = "notify"
 
 
-async def test_signal_messenger_init(hass: HomeAssistant) -> None:
+async def test_signal_messenger_init(menuai: menuai) -> None:
     """Test that service loads successfully."""
     config = {
         BASE_COMPONENT: {
@@ -41,10 +41,10 @@ async def test_signal_messenger_init(hass: HomeAssistant) -> None:
     }
 
     with patch("pysignalclirestapi.SignalCliRestApi.send_message", return_value=None):
-        assert await async_setup_component(hass, BASE_COMPONENT, config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, BASE_COMPONENT, config)
+        await menuai.async_block_till_done()
 
-        assert hass.services.has_service(BASE_COMPONENT, "test")
+        assert menuai.services.has_service(BASE_COMPONENT, "test")
 
 
 def test_send_message(
@@ -55,7 +55,7 @@ def test_send_message(
     """Test send message."""
     signal_requests_mock = signal_requests_mock_factory()
     with caplog.at_level(
-        logging.DEBUG, logger="homeassistant.components.signal_messenger.notify"
+        logging.DEBUG, logger="menuai.components.signal_messenger.notify"
     ):
         signal_notification_service.send_message(MESSAGE)
     assert "Sending signal message" in caplog.text
@@ -72,7 +72,7 @@ def test_send_message_styled(
     """Test send styled message."""
     signal_requests_mock = signal_requests_mock_factory()
     with caplog.at_level(
-        logging.DEBUG, logger="homeassistant.components.signal_messenger.notify"
+        logging.DEBUG, logger="menuai.components.signal_messenger.notify"
     ):
         data = {"text_mode": "styled"}
         signal_notification_service.send_message(MESSAGE, data=data)
@@ -93,7 +93,7 @@ def test_send_message_to_api_with_bad_data_throws_error(
     signal_requests_mock = signal_requests_mock_factory(False)
     with (
         caplog.at_level(
-            logging.DEBUG, logger="homeassistant.components.signal_messenger.notify"
+            logging.DEBUG, logger="menuai.components.signal_messenger.notify"
         ),
         pytest.raises(SignalCliRestApiError) as exc,
     ):
@@ -113,7 +113,7 @@ def test_send_message_with_bad_data_throws_vol_error(
     """Test sending a message with bad data throws an error."""
     with (
         caplog.at_level(
-            logging.DEBUG, logger="homeassistant.components.signal_messenger.notify"
+            logging.DEBUG, logger="menuai.components.signal_messenger.notify"
         ),
         pytest.raises(vol.Invalid) as exc,
     ):
@@ -131,7 +131,7 @@ def test_send_message_styled_with_bad_data_throws_vol_error(
     """Test sending a styled message with bad data throws an error."""
     with (
         caplog.at_level(
-            logging.DEBUG, logger="homeassistant.components.signal_messenger.notify"
+            logging.DEBUG, logger="menuai.components.signal_messenger.notify"
         ),
         pytest.raises(vol.Invalid) as exc,
     ):
@@ -153,7 +153,7 @@ def test_send_message_with_attachment(
     signal_requests_mock = signal_requests_mock_factory()
     with (
         caplog.at_level(
-            logging.DEBUG, logger="homeassistant.components.signal_messenger.notify"
+            logging.DEBUG, logger="menuai.components.signal_messenger.notify"
         ),
         tempfile.NamedTemporaryFile(
             mode="w", suffix=".png", prefix=os.path.basename(__file__)
@@ -178,7 +178,7 @@ def test_send_message_styled_with_attachment(
     signal_requests_mock = signal_requests_mock_factory()
     with (
         caplog.at_level(
-            logging.DEBUG, logger="homeassistant.components.signal_messenger.notify"
+            logging.DEBUG, logger="menuai.components.signal_messenger.notify"
         ),
         tempfile.NamedTemporaryFile(
             mode="w", suffix=".png", prefix=os.path.basename(__file__)
@@ -203,7 +203,7 @@ def test_send_message_with_attachment_as_url(
     """Test send message with attachment as URL."""
     signal_requests_mock = signal_requests_mock_factory(True, str(len(CONTENT)))
     with caplog.at_level(
-        logging.DEBUG, logger="homeassistant.components.signal_messenger.notify"
+        logging.DEBUG, logger="menuai.components.signal_messenger.notify"
     ):
         data = {"urls": [URL_ATTACHMENT]}
         signal_notification_service.send_message(MESSAGE, data=data)
@@ -222,7 +222,7 @@ def test_send_message_styled_with_attachment_as_url(
     """Test send message with attachment as URL."""
     signal_requests_mock = signal_requests_mock_factory(True, str(len(CONTENT)))
     with caplog.at_level(
-        logging.DEBUG, logger="homeassistant.components.signal_messenger.notify"
+        logging.DEBUG, logger="menuai.components.signal_messenger.notify"
     ):
         data = {"urls": [URL_ATTACHMENT], "text_mode": "styled"}
         signal_notification_service.send_message(MESSAGE, data=data)
@@ -237,13 +237,13 @@ def test_send_message_styled_with_attachment_as_url(
 def test_get_attachments(
     signal_notification_service: SignalNotificationService,
     signal_requests_mock_factory: Mocker,
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test getting attachments as URL."""
     signal_requests_mock = signal_requests_mock_factory(True, str(len(CONTENT)))
     data = {"urls": [URL_ATTACHMENT]}
     result = signal_notification_service.get_attachments_as_bytes(
-        data, len(CONTENT), hass
+        data, len(CONTENT), menuai
     )
 
     assert signal_requests_mock.called
@@ -254,16 +254,16 @@ def test_get_attachments(
 def test_get_attachments_not_on_allowlist(
     signal_notification_service: SignalNotificationService,
     caplog: pytest.LogCaptureFixture,
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test getting attachments as URL that aren't on the allowlist."""
     url = "http://dodgyurl.com"
     data = {"urls": [url]}
     with caplog.at_level(
-        logging.ERROR, logger="homeassistant.components.signal_messenger.notify"
+        logging.ERROR, logger="menuai.components.signal_messenger.notify"
     ):
         result = signal_notification_service.get_attachments_as_bytes(
-            data, len(CONTENT), hass
+            data, len(CONTENT), menuai
         )
 
     assert f"URL '{url}' not in allow list" in caplog.text
@@ -273,13 +273,13 @@ def test_get_attachments_not_on_allowlist(
 def test_get_attachments_with_large_attachment(
     signal_notification_service: SignalNotificationService,
     signal_requests_mock_factory: Mocker,
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test getting attachments as URL with large attachment (per Content-Length header) throws error."""
     signal_requests_mock = signal_requests_mock_factory(True, str(len(CONTENT) + 1))
     with pytest.raises(ValueError) as exc:
         signal_notification_service.get_attachments_as_bytes(
-            {"urls": [URL_ATTACHMENT]}, len(CONTENT), hass
+            {"urls": [URL_ATTACHMENT]}, len(CONTENT), menuai
         )
 
     assert signal_requests_mock.called
@@ -290,13 +290,13 @@ def test_get_attachments_with_large_attachment(
 def test_get_attachments_with_large_attachment_no_header(
     signal_notification_service: SignalNotificationService,
     signal_requests_mock_factory: Mocker,
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test getting attachments as URL with large attachment (per content length) throws error."""
     signal_requests_mock = signal_requests_mock_factory()
     with pytest.raises(ValueError) as exc:
         signal_notification_service.get_attachments_as_bytes(
-            {"urls": [URL_ATTACHMENT]}, len(CONTENT) - 1, hass
+            {"urls": [URL_ATTACHMENT]}, len(CONTENT) - 1, menuai
         )
 
     assert signal_requests_mock.called
@@ -346,12 +346,12 @@ def test_get_filenames_with_non_list_returns_none(
 
 def test_get_attachments_with_non_list_returns_none(
     signal_notification_service: SignalNotificationService,
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test getting attachments with non list data."""
     data = {"urls": URL_ATTACHMENT}
     result = signal_notification_service.get_attachments_as_bytes(
-        data, len(CONTENT), hass
+        data, len(CONTENT), menuai
     )
 
     assert result is None
@@ -360,12 +360,12 @@ def test_get_attachments_with_non_list_returns_none(
 def test_get_attachments_with_verify_unset(
     signal_notification_service: SignalNotificationService,
     signal_requests_mock_factory: Mocker,
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test getting attachments as URL with verify_ssl unset results in verify=true."""
     signal_requests_mock = signal_requests_mock_factory()
     data = {"urls": [URL_ATTACHMENT]}
-    signal_notification_service.get_attachments_as_bytes(data, len(CONTENT), hass)
+    signal_notification_service.get_attachments_as_bytes(data, len(CONTENT), menuai)
 
     assert signal_requests_mock.called
     assert signal_requests_mock.call_count == 1
@@ -375,12 +375,12 @@ def test_get_attachments_with_verify_unset(
 def test_get_attachments_with_verify_set_true(
     signal_notification_service: SignalNotificationService,
     signal_requests_mock_factory: Mocker,
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test getting attachments as URL with verify_ssl set to true results in verify=true."""
     signal_requests_mock = signal_requests_mock_factory()
     data = {"verify_ssl": True, "urls": [URL_ATTACHMENT]}
-    signal_notification_service.get_attachments_as_bytes(data, len(CONTENT), hass)
+    signal_notification_service.get_attachments_as_bytes(data, len(CONTENT), menuai)
 
     assert signal_requests_mock.called
     assert signal_requests_mock.call_count == 1
@@ -390,12 +390,12 @@ def test_get_attachments_with_verify_set_true(
 def test_get_attachments_with_verify_set_false(
     signal_notification_service: SignalNotificationService,
     signal_requests_mock_factory: Mocker,
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test getting attachments as URL with verify_ssl set to false results in verify=false."""
     signal_requests_mock = signal_requests_mock_factory()
     data = {"verify_ssl": False, "urls": [URL_ATTACHMENT]}
-    signal_notification_service.get_attachments_as_bytes(data, len(CONTENT), hass)
+    signal_notification_service.get_attachments_as_bytes(data, len(CONTENT), menuai)
 
     assert signal_requests_mock.called
     assert signal_requests_mock.call_count == 1
@@ -404,12 +404,12 @@ def test_get_attachments_with_verify_set_false(
 
 def test_get_attachments_with_verify_set_garbage(
     signal_notification_service: SignalNotificationService,
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test getting attachments as URL with verify_ssl set to garbage results in None."""
     data = {"verify_ssl": "test", "urls": [URL_ATTACHMENT]}
     result = signal_notification_service.get_attachments_as_bytes(
-        data, len(CONTENT), hass
+        data, len(CONTENT), menuai
     )
 
     assert result is None

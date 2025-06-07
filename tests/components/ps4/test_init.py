@@ -2,14 +2,14 @@
 
 from unittest.mock import MagicMock, patch
 
-from homeassistant import config_entries
-from homeassistant.components import ps4
-from homeassistant.components.media_player import (
+from menuai import config_entries
+from menuai.components import ps4
+from menuai.components.media_player import (
     ATTR_MEDIA_CONTENT_TYPE,
     ATTR_MEDIA_TITLE,
     MediaType,
 )
-from homeassistant.components.ps4.const import (
+from menuai.components.ps4.const import (
     ATTR_MEDIA_IMAGE_URL,
     COMMANDS,
     CONFIG_ENTRY_VERSION as VERSION,
@@ -17,7 +17,7 @@ from homeassistant.components.ps4.const import (
     DOMAIN,
     PS4_DATA,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_COMMAND,
     ATTR_ENTITY_ID,
     ATTR_LOCKED,
@@ -26,12 +26,12 @@ from homeassistant.const import (
     CONF_REGION,
     CONF_TOKEN,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.setup import async_setup_component
-from homeassistant.util import location as location_util
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.setup import async_setup_component
+from menuai.util import location as location_util
 
 from tests.common import MockConfigEntry
 
@@ -112,41 +112,41 @@ MOCK_GAMES = {MOCK_ID: MOCK_GAMES_DATA}
 MOCK_GAMES_LOCKED = {MOCK_ID: MOCK_GAMES_DATA_LOCKED}
 
 
-async def test_ps4_integration_setup(hass: HomeAssistant) -> None:
+async def test_ps4_integration_setup(menuai: menuai) -> None:
     """Test PS4 integration is setup."""
-    await ps4.async_setup(hass, {})
-    await hass.async_block_till_done()
-    assert hass.data[PS4_DATA].protocol is not None
+    await ps4.async_setup(menuai, {})
+    await menuai.async_block_till_done()
+    assert menuai.data[PS4_DATA].protocol is not None
 
 
-async def test_creating_entry_sets_up_media_player(hass: HomeAssistant) -> None:
+async def test_creating_entry_sets_up_media_player(menuai: menuai) -> None:
     """Test setting up PS4 loads the media player."""
-    mock_flow = "homeassistant.components.ps4.PlayStation4FlowHandler.async_step_user"
+    mock_flow = "menuai.components.ps4.PlayStation4FlowHandler.async_step_user"
     with (
         patch(
-            "homeassistant.components.ps4.media_player.async_setup_entry",
+            "menuai.components.ps4.media_player.async_setup_entry",
             return_value=True,
         ) as mock_setup,
         patch(mock_flow, return_value=MOCK_FLOW_RESULT),
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
         assert result["type"] is FlowResultType.CREATE_ENTRY
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mock_setup.mock_calls) == 1
 
 
 async def test_config_flow_entry_migrate(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test that config flow entry is migrated correctly."""
     # Start with the config entry at Version 1.
-    manager = hass.config_entries
+    manager = menuai.config_entries
     mock_entry = MOCK_ENTRY_VERSION_1
     mock_entry.add_to_manager(manager)
     mock_device_entry = device_registry.async_get_or_create(
@@ -167,17 +167,17 @@ async def test_config_flow_entry_migrate(
 
     with (
         patch(
-            "homeassistant.util.location.async_detect_location_info",
+            "menuai.util.location.async_detect_location_info",
             return_value=MOCK_LOCATION,
         ),
         patch(
-            "homeassistant.helpers.entity_registry.async_get",
+            "menuai.helpers.entity_registry.async_get",
             return_value=entity_registry,
         ),
     ):
-        await ps4.async_migrate_entry(hass, mock_entry)
+        await ps4.async_migrate_entry(menuai, mock_entry)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(entity_registry.entities) == 1
     for entity in entity_registry.entities.values():
@@ -198,30 +198,30 @@ async def test_config_flow_entry_migrate(
     assert mock_entry.data["devices"][0][CONF_REGION] == DEFAULT_REGION
 
 
-async def test_media_player_is_setup(hass: HomeAssistant) -> None:
+async def test_media_player_is_setup(menuai: menuai) -> None:
     """Test media_player is setup correctly."""
-    await setup_mock_component(hass)
-    assert len(hass.data[PS4_DATA].devices) == 1
+    await setup_mock_component(menuai)
+    assert len(menuai.data[PS4_DATA].devices) == 1
 
 
-async def setup_mock_component(hass: HomeAssistant) -> None:
+async def setup_mock_component(menuai: menuai) -> None:
     """Set up Mock Media Player."""
     entry = MockConfigEntry(domain=ps4.DOMAIN, data=MOCK_DATA, version=VERSION)
-    entry.add_to_manager(hass.config_entries)
-    await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
-    await hass.async_block_till_done()
+    entry.add_to_manager(menuai.config_entries)
+    await async_setup_component(menuai, DOMAIN, {DOMAIN: {}})
+    await menuai.async_block_till_done()
 
 
 def test_games_reformat_to_dict(
-    hass: HomeAssistant, patch_load_json_object: MagicMock
+    menuai: menuai, patch_load_json_object: MagicMock
 ) -> None:
     """Test old data format is converted to new format."""
     patch_load_json_object.return_value = MOCK_GAMES_DATA_OLD_STR_FORMAT
     with (
-        patch("homeassistant.components.ps4.save_json", side_effect=MagicMock()),
+        patch("menuai.components.ps4.save_json", side_effect=MagicMock()),
         patch("os.path.isfile", return_value=True),
     ):
-        mock_games = ps4.load_games(hass, MOCK_ENTRY_ID)
+        mock_games = ps4.load_games(menuai, MOCK_ENTRY_ID)
 
     # New format is a nested dict.
     assert isinstance(mock_games, dict)
@@ -236,14 +236,14 @@ def test_games_reformat_to_dict(
         assert mock_data[ATTR_MEDIA_CONTENT_TYPE] == MediaType.GAME
 
 
-def test_load_games(hass: HomeAssistant, patch_load_json_object: MagicMock) -> None:
+def test_load_games(menuai: menuai, patch_load_json_object: MagicMock) -> None:
     """Test that games are loaded correctly."""
     patch_load_json_object.return_value = MOCK_GAMES
     with (
-        patch("homeassistant.components.ps4.save_json", side_effect=MagicMock()),
+        patch("menuai.components.ps4.save_json", side_effect=MagicMock()),
         patch("os.path.isfile", return_value=True),
     ):
-        mock_games = ps4.load_games(hass, MOCK_ENTRY_ID)
+        mock_games = ps4.load_games(menuai, MOCK_ENTRY_ID)
 
     assert isinstance(mock_games, dict)
 
@@ -256,27 +256,27 @@ def test_load_games(hass: HomeAssistant, patch_load_json_object: MagicMock) -> N
 
 
 def test_loading_games_returns_dict(
-    hass: HomeAssistant, patch_load_json_object: MagicMock
+    menuai: menuai, patch_load_json_object: MagicMock
 ) -> None:
     """Test that loading games always returns a dict."""
-    patch_load_json_object.side_effect = HomeAssistantError
+    patch_load_json_object.side_effect = menuaiError
     with (
-        patch("homeassistant.components.ps4.save_json", side_effect=MagicMock()),
+        patch("menuai.components.ps4.save_json", side_effect=MagicMock()),
         patch("os.path.isfile", return_value=True),
     ):
-        mock_games = ps4.load_games(hass, MOCK_ENTRY_ID)
+        mock_games = ps4.load_games(menuai, MOCK_ENTRY_ID)
 
     assert isinstance(mock_games, dict)
     assert not mock_games
 
 
-async def test_send_command(hass: HomeAssistant) -> None:
+async def test_send_command(menuai: menuai) -> None:
     """Test send_command service."""
-    await setup_mock_component(hass)
+    await setup_mock_component(menuai)
 
-    mock_func = "homeassistant.components.ps4.media_player.PS4Device.async_send_command"
+    mock_func = "menuai.components.ps4.media_player.PS4Device.async_send_command"
 
-    mock_devices = hass.data[PS4_DATA].devices
+    mock_devices = menuai.data[PS4_DATA].devices
     assert len(mock_devices) == 1
     mock_entity = mock_devices[0]
     assert mock_entity.entity_id == f"media_player.{MOCK_NAME}"
@@ -284,10 +284,10 @@ async def test_send_command(hass: HomeAssistant) -> None:
     # Test that all commands call service function.
     with patch(mock_func, return_value=True) as mock_service:
         for mock_command in COMMANDS:
-            await hass.services.async_call(
+            await menuai.services.async_call(
                 DOMAIN,
                 "send_command",
                 {ATTR_ENTITY_ID: mock_entity.entity_id, ATTR_COMMAND: mock_command},
             )
-            await hass.async_block_till_done()
+            await menuai.async_block_till_done()
     assert len(mock_service.mock_calls) == len(COMMANDS)

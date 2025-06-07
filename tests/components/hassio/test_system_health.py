@@ -1,4 +1,4 @@
-"""Test hassio system health."""
+"""Test menuaiio system health."""
 
 import asyncio
 import os
@@ -6,8 +6,8 @@ from unittest.mock import patch
 
 from aiohttp import ClientError
 
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from .test_init import MOCK_ENVIRON
 
@@ -15,10 +15,10 @@ from tests.common import get_system_health_info
 from tests.test_util.aiohttp import AiohttpClientMocker
 
 
-async def test_hassio_system_health(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+async def test_menuaiio_system_health(
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
-    """Test hassio system health."""
+    """Test menuaiio system health."""
     aioclient_mock.get("http://127.0.0.1/info", json={"result": "ok", "data": {}})
     aioclient_mock.get("http://127.0.0.1/host/info", json={"result": "ok", "data": {}})
     aioclient_mock.get("http://127.0.0.1/os/info", json={"result": "ok", "data": {}})
@@ -28,37 +28,37 @@ async def test_hassio_system_health(
         "http://127.0.0.1/supervisor/info", json={"result": "ok", "data": {}}
     )
 
-    hass.config.components.add("hassio")
-    assert await async_setup_component(hass, "system_health", {})
-    await hass.async_block_till_done()
+    menuai.config.components.add("menuaiio")
+    assert await async_setup_component(menuai, "system_health", {})
+    await menuai.async_block_till_done()
 
-    hass.data["hassio_info"] = {
+    menuai.data["menuaiio_info"] = {
         "channel": "stable",
         "supervisor": "2020.11.1",
         "docker": "19.0.3",
-        "hassos": True,
+        "menuaios": True,
     }
-    hass.data["hassio_host_info"] = {
-        "operating_system": "Home Assistant OS 5.9",
+    menuai.data["menuaiio_host_info"] = {
+        "operating_system": "MenuAI OS 5.9",
         "agent_version": "1337",
         "disk_total": "32.0",
         "disk_used": "30.0",
         "dt_synchronized": True,
         "virtualization": "qemu",
     }
-    hass.data["hassio_os_info"] = {"board": "odroid-n2"}
-    hass.data["hassio_supervisor_info"] = {
+    menuai.data["menuaiio_os_info"] = {"board": "odroid-n2"}
+    menuai.data["menuaiio_supervisor_info"] = {
         "healthy": True,
         "supported": True,
         "addons": [{"name": "Awesome Addon", "version": "1.0.0"}],
     }
-    hass.data["hassio_network_info"] = {
+    menuai.data["menuaiio_network_info"] = {
         "host_internet": True,
         "supervisor_internet": True,
     }
 
     with patch.dict(os.environ, MOCK_ENVIRON):
-        info = await get_system_health_info(hass, "hassio")
+        info = await get_system_health_info(menuai, "menuaiio")
 
     for key, val in info.items():
         if asyncio.iscoroutine(val):
@@ -73,7 +73,7 @@ async def test_hassio_system_health(
         "healthy": True,
         "host_connectivity": True,
         "supervisor_connectivity": True,
-        "host_os": "Home Assistant OS 5.9",
+        "host_os": "MenuAI OS 5.9",
         "installed_addons": "Awesome Addon (1.0.0)",
         "ntp_synchronized": True,
         "supervisor_api": "ok",
@@ -85,10 +85,10 @@ async def test_hassio_system_health(
     }
 
 
-async def test_hassio_system_health_with_issues(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+async def test_menuaiio_system_health_with_issues(
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
-    """Test hassio system health."""
+    """Test menuaiio system health."""
     aioclient_mock.get("http://127.0.0.1/info", json={"result": "ok", "data": {}})
     aioclient_mock.get("http://127.0.0.1/host/info", json={"result": "ok", "data": {}})
     aioclient_mock.get("http://127.0.0.1/os/info", json={"result": "ok", "data": {}})
@@ -98,21 +98,21 @@ async def test_hassio_system_health_with_issues(
         "http://127.0.0.1/supervisor/info", json={"result": "ok", "data": {}}
     )
 
-    hass.config.components.add("hassio")
-    assert await async_setup_component(hass, "system_health", {})
-    await hass.async_block_till_done()
+    menuai.config.components.add("menuaiio")
+    assert await async_setup_component(menuai, "system_health", {})
+    await menuai.async_block_till_done()
 
-    hass.data["hassio_info"] = {"channel": "stable"}
-    hass.data["hassio_host_info"] = {}
-    hass.data["hassio_os_info"] = {}
-    hass.data["hassio_supervisor_info"] = {
+    menuai.data["menuaiio_info"] = {"channel": "stable"}
+    menuai.data["menuaiio_host_info"] = {}
+    menuai.data["menuaiio_os_info"] = {}
+    menuai.data["menuaiio_supervisor_info"] = {
         "healthy": False,
         "supported": False,
     }
-    hass.data["hassio_network_info"] = {}
+    menuai.data["menuaiio_network_info"] = {}
 
     with patch.dict(os.environ, MOCK_ENVIRON):
-        info = await get_system_health_info(hass, "hassio")
+        info = await get_system_health_info(menuai, "menuaiio")
 
     for key, val in info.items():
         if asyncio.iscoroutine(val):

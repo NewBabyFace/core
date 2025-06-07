@@ -1,17 +1,17 @@
 """The lock tests for the august platform."""
 
-from homeassistant.components.climate import HVACMode
-from homeassistant.core import HomeAssistant
+from menuai.components.climate import HVACMode
+from menuai.core import menuai
 
 from .util import async_init_integration
 
 
-async def test_climate_zones(hass: HomeAssistant) -> None:
+async def test_climate_zones(menuai: menuai) -> None:
     """Test creation climate zones."""
 
-    await async_init_integration(hass)
+    await async_init_integration(menuai)
 
-    state = hass.states.get("climate.nick_office")
+    state = menuai.states.get("climate.nick_office")
     assert state.state == HVACMode.HEAT_COOL
     expected_attributes = {
         "attribution": "Data provided by Trane Technologies",
@@ -42,7 +42,7 @@ async def test_climate_zones(hass: HomeAssistant) -> None:
         state.attributes[key] == value for key, value in expected_attributes.items()
     )
 
-    state = hass.states.get("climate.kitchen")
+    state = menuai.states.get("climate.kitchen")
     assert state.state == HVACMode.HEAT_COOL
 
     expected_attributes = {

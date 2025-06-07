@@ -8,12 +8,12 @@ from typing import Any, cast
 
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.const import CONF_ENTITIES, CONF_TYPE
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er, selector
-from homeassistant.helpers.schema_config_entry_flow import (
+from menuai.components import websocket_api
+from menuai.const import CONF_ENTITIES, CONF_TYPE
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er, selector
+from menuai.helpers.schema_config_entry_flow import (
     SchemaCommonFlowHandler,
     SchemaConfigFlowHandler,
     SchemaFlowFormStep,
@@ -294,7 +294,7 @@ PREVIEW_OPTIONS_SCHEMA: dict[str, vol.Schema] = {}
 
 CREATE_PREVIEW_ENTITY: dict[
     str,
-    Callable[[HomeAssistant, str, dict[str, Any]], GroupEntity | MediaPlayerGroup],
+    Callable[[menuai, str, dict[str, Any]], GroupEntity | MediaPlayerGroup],
 ] = {
     "binary_sensor": async_create_preview_binary_sensor,
     "button": async_create_preview_button,
@@ -330,22 +330,22 @@ class GroupConfigFlowHandler(SchemaConfigFlowHandler, domain=DOMAIN):
         """Hide the group members if requested."""
         if options[CONF_HIDE_MEMBERS]:
             _async_hide_members(
-                self.hass, options[CONF_ENTITIES], er.RegistryEntryHider.INTEGRATION
+                self.menuai, options[CONF_ENTITIES], er.RegistryEntryHider.INTEGRATION
             )
 
     @callback
     @staticmethod
     def async_options_flow_finished(
-        hass: HomeAssistant, options: Mapping[str, Any]
+        menuai: menuai, options: Mapping[str, Any]
     ) -> None:
         """Hide or unhide the group members as requested."""
         hidden_by = (
             er.RegistryEntryHider.INTEGRATION if options[CONF_HIDE_MEMBERS] else None
         )
-        _async_hide_members(hass, options[CONF_ENTITIES], hidden_by)
+        _async_hide_members(menuai, options[CONF_ENTITIES], hidden_by)
 
     @staticmethod
-    async def async_setup_preview(hass: HomeAssistant) -> None:
+    async def async_setup_preview(menuai: menuai) -> None:
         """Set up preview WS API."""
         for group_type, form_step in OPTIONS_FLOW.items():
             if group_type not in GROUP_TYPES:
@@ -357,14 +357,14 @@ class GroupConfigFlowHandler(SchemaConfigFlowHandler, domain=DOMAIN):
                 form_step.schema,
             )
             PREVIEW_OPTIONS_SCHEMA[group_type] = await schema(None)
-        websocket_api.async_register_command(hass, ws_start_preview)
+        websocket_api.async_register_command(menuai, ws_start_preview)
 
 
 def _async_hide_members(
-    hass: HomeAssistant, members: list[str], hidden_by: er.RegistryEntryHider | None
+    menuai: menuai, members: list[str], hidden_by: er.RegistryEntryHider | None
 ) -> None:
     """Hide or unhide group members."""
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     for member in members:
         if not (entity_id := er.async_resolve_entity_id(registry, member)):
             continue
@@ -383,29 +383,29 @@ def _async_hide_members(
 )
 @callback
 def ws_start_preview(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Generate a preview."""
     entity_registry_entry: er.RegistryEntry | None = None
     if msg["flow_type"] == "config_flow":
-        flow_status = hass.config_entries.flow.async_get(msg["flow_id"])
+        flow_status = menuai.config_entries.flow.async_get(msg["flow_id"])
         group_type = flow_status["step_id"]
         form_step = cast(SchemaFlowFormStep, CONFIG_FLOW[group_type])
         schema = cast(vol.Schema, form_step.schema)
         validated = schema(msg["user_input"])
         name = validated["name"]
     else:
-        flow_status = hass.config_entries.options.async_get(msg["flow_id"])
+        flow_status = menuai.config_entries.options.async_get(msg["flow_id"])
         config_entry_id = flow_status["handler"]
-        config_entry = hass.config_entries.async_get_entry(config_entry_id)
+        config_entry = menuai.config_entries.async_get_entry(config_entry_id)
         if not config_entry:
-            raise HomeAssistantError
+            raise menuaiError
         group_type = config_entry.options["group_type"]
         name = config_entry.options["name"]
         validated = PREVIEW_OPTIONS_SCHEMA[group_type](msg["user_input"])
-        entity_registry = er.async_get(hass)
+        entity_registry = er.async_get(menuai)
         entries = er.async_entries_for_config_entry(entity_registry, config_entry_id)
         if entries:
             entity_registry_entry = entries[0]
@@ -420,9 +420,9 @@ def ws_start_preview(
         )
 
     preview_entity: GroupEntity | MediaPlayerGroup = CREATE_PREVIEW_ENTITY[group_type](
-        hass, name, validated
+        menuai, name, validated
     )
-    preview_entity.hass = hass
+    preview_entity.menuai = menuai
     preview_entity.registry_entry = entity_registry_entry
 
     connection.send_result(msg["id"])

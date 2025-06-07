@@ -4,8 +4,8 @@ from dataclasses import dataclass
 
 from spotifyaio import Device
 
-from homeassistant.helpers.config_entry_oauth2_flow import OAuth2Session
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.helpers.config_entry_oauth2_flow import OAuth2Session
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .coordinator import SpotifyCoordinator
 

@@ -10,29 +10,29 @@ from aiovodafone import (
 )
 import pytest
 
-from homeassistant.components.device_tracker import CONF_CONSIDER_HOME
-from homeassistant.components.vodafone_station.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.device_tracker import CONF_CONSIDER_HOME
+from menuai.components.vodafone_station.const import DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
 
 async def test_user(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_vodafone_station_router: AsyncMock,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test starting a flow by user."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_HOST: "fake_host",
@@ -62,7 +62,7 @@ async def test_user(
     ],
 )
 async def test_exception_connection(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_vodafone_station_router: AsyncMock,
     mock_setup_entry: AsyncMock,
     side_effect: Exception,
@@ -70,7 +70,7 @@ async def test_exception_connection(
 ) -> None:
     """Test starting a flow by user with a connection error."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result.get("type") is FlowResultType.FORM
@@ -78,7 +78,7 @@ async def test_exception_connection(
 
     mock_vodafone_station_router.login.side_effect = side_effect
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_HOST: "fake_host",
@@ -93,7 +93,7 @@ async def test_exception_connection(
 
     mock_vodafone_station_router.login.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_HOST: "fake_host",
@@ -112,19 +112,19 @@ async def test_exception_connection(
 
 
 async def test_duplicate_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_vodafone_station_router: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test starting a flow by user with a duplicate entry."""
-    mock_config_entry.add_to_hass(hass)
-    result = await hass.config_entries.flow.async_init(
+    mock_config_entry.add_to_menuai(menuai)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_HOST: "fake_host",
@@ -137,18 +137,18 @@ async def test_duplicate_entry(
 
 
 async def test_reauth_successful(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_vodafone_station_router: AsyncMock,
     mock_setup_entry: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test starting a reauthentication flow."""
-    mock_config_entry.add_to_hass(hass)
-    result = await mock_config_entry.start_reauth_flow(hass)
+    mock_config_entry.add_to_menuai(menuai)
+    result = await mock_config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_PASSWORD: "other_fake_password",
@@ -169,7 +169,7 @@ async def test_reauth_successful(
     ],
 )
 async def test_reauth_not_successful(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_vodafone_station_router: AsyncMock,
     mock_setup_entry: AsyncMock,
     mock_config_entry: MockConfigEntry,
@@ -177,13 +177,13 @@ async def test_reauth_not_successful(
     error: str,
 ) -> None:
     """Test starting a reauthentication flow but no connection found."""
-    mock_config_entry.add_to_hass(hass)
-    result = await mock_config_entry.start_reauth_flow(hass)
+    mock_config_entry.add_to_menuai(menuai)
+    result = await mock_config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
     mock_vodafone_station_router.login.side_effect = side_effect
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_PASSWORD: "other_fake_password",
@@ -196,7 +196,7 @@ async def test_reauth_not_successful(
 
     mock_vodafone_station_router.login.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_PASSWORD: "fake_password",
@@ -209,15 +209,15 @@ async def test_reauth_not_successful(
 
 
 async def test_options_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_vodafone_station_router: AsyncMock,
     mock_setup_entry: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test options flow."""
-    mock_config_entry.add_to_hass(hass)
-    result = await hass.config_entries.options.async_init(mock_config_entry.entry_id)
-    result = await hass.config_entries.options.async_configure(
+    mock_config_entry.add_to_menuai(menuai)
+    result = await menuai.config_entries.options.async_init(mock_config_entry.entry_id)
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             CONF_CONSIDER_HOME: 37,
@@ -231,14 +231,14 @@ async def test_options_flow(
 
 
 async def test_reconfigure_successful(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_vodafone_station_router: AsyncMock,
     mock_setup_entry: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test that the host can be reconfigured."""
-    mock_config_entry.add_to_hass(hass)
-    result = await mock_config_entry.start_reconfigure_flow(hass)
+    mock_config_entry.add_to_menuai(menuai)
+    result = await mock_config_entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reconfigure"
@@ -248,7 +248,7 @@ async def test_reconfigure_successful(
 
     new_host = "192.168.100.60"
 
-    reconfigure_result = await hass.config_entries.flow.async_configure(
+    reconfigure_result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_HOST: new_host,
@@ -274,7 +274,7 @@ async def test_reconfigure_successful(
     ],
 )
 async def test_reconfigure_fails(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_vodafone_station_router: AsyncMock,
     mock_setup_entry: AsyncMock,
     mock_config_entry: MockConfigEntry,
@@ -282,15 +282,15 @@ async def test_reconfigure_fails(
     error: str,
 ) -> None:
     """Test that the host can be reconfigured."""
-    mock_config_entry.add_to_hass(hass)
-    result = await mock_config_entry.start_reconfigure_flow(hass)
+    mock_config_entry.add_to_menuai(menuai)
+    result = await mock_config_entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reconfigure"
 
     mock_vodafone_station_router.login.side_effect = side_effect
 
-    reconfigure_result = await hass.config_entries.flow.async_configure(
+    reconfigure_result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_HOST: "192.168.100.60",
@@ -305,7 +305,7 @@ async def test_reconfigure_fails(
 
     mock_vodafone_station_router.login.side_effect = None
 
-    reconfigure_result = await hass.config_entries.flow.async_configure(
+    reconfigure_result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_HOST: "192.168.100.61",

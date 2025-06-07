@@ -13,8 +13,8 @@ from typing import TYPE_CHECKING, Any, TypedDict, TypeGuard, cast
 
 import voluptuous as vol
 
-from homeassistant.auth.permissions.const import CAT_ENTITIES, POLICY_CONTROL
-from homeassistant.const import (
+from menuai.auth.permissions.const import CAT_ENTITIES, POLICY_CONTROL
+from menuai.const import (
     ATTR_AREA_ID,
     ATTR_DEVICE_ID,
     ATTR_ENTITY_ID,
@@ -29,29 +29,29 @@ from homeassistant.const import (
     ENTITY_MATCH_ALL,
     ENTITY_MATCH_NONE,
 )
-from homeassistant.core import (
+from menuai.core import (
     Context,
     EntityServiceResponse,
-    HassJob,
-    HassJobType,
-    HomeAssistant,
+    menuaiJob,
+    menuaiJobType,
+    menuai,
     ServiceCall,
     ServiceResponse,
     SupportsResponse,
     callback,
 )
-from homeassistant.exceptions import (
-    HomeAssistantError,
+from menuai.exceptions import (
+    menuaiError,
     ServiceNotSupported,
     TemplateError,
     Unauthorized,
     UnknownUser,
 )
-from homeassistant.loader import Integration, async_get_integrations, bind_hass
-from homeassistant.util.async_ import create_eager_task
-from homeassistant.util.hass_dict import HassKey
-from homeassistant.util.yaml import load_yaml_dict
-from homeassistant.util.yaml.loader import JSON_TYPE
+from menuai.loader import Integration, async_get_integrations, bind_menuai
+from menuai.util.async_ import create_eager_task
+from menuai.util.menuai_dict import menuaiKey
+from menuai.util.yaml import load_yaml_dict
+from menuai.util.yaml.loader import JSON_TYPE
 
 from . import (
     area_registry,
@@ -74,19 +74,19 @@ CONF_SERVICE_ENTITY_ID = "entity_id"
 
 _LOGGER = logging.getLogger(__name__)
 
-SERVICE_DESCRIPTION_CACHE: HassKey[dict[tuple[str, str], dict[str, Any] | None]] = (
-    HassKey("service_description_cache")
+SERVICE_DESCRIPTION_CACHE: menuaiKey[dict[tuple[str, str], dict[str, Any] | None]] = (
+    menuaiKey("service_description_cache")
 )
-ALL_SERVICE_DESCRIPTIONS_CACHE: HassKey[
+ALL_SERVICE_DESCRIPTIONS_CACHE: menuaiKey[
     tuple[set[tuple[str, str]], dict[str, dict[str, Any]]]
-] = HassKey("all_service_descriptions_cache")
+] = menuaiKey("all_service_descriptions_cache")
 
 
 @cache
 def _base_components() -> dict[str, ModuleType]:
     """Return a cached lookup of base components."""
     # pylint: disable-next=import-outside-toplevel
-    from homeassistant.components import (
+    from menuai.components import (
         alarm_control_panel,
         assist_satellite,
         calendar,
@@ -167,7 +167,7 @@ def validate_supported_feature(supported_feature: str) -> Any:
 
 
 # Basic schemas which translate attribute and supported feature enum names
-# to their values. Full validation is done by hassfest.services
+# to their values. Full validation is done by menuaifest.services
 _FIELD_SCHEMA = vol.Schema(
     {
         vol.Optional("filter"): {
@@ -307,9 +307,9 @@ class SelectedEntities:
         )
 
 
-@bind_hass
+@bind_menuai
 def call_from_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     blocking: bool = False,
     variables: TemplateVarsType = None,
@@ -317,14 +317,14 @@ def call_from_config(
 ) -> None:
     """Call a service based on a config hash."""
     asyncio.run_coroutine_threadsafe(
-        async_call_from_config(hass, config, blocking, variables, validate_config),
-        hass.loop,
+        async_call_from_config(menuai, config, blocking, variables, validate_config),
+        menuai.loop,
     ).result()
 
 
-@bind_hass
+@bind_menuai
 async def async_call_from_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     blocking: bool = False,
     variables: TemplateVarsType = None,
@@ -334,20 +334,20 @@ async def async_call_from_config(
     """Call a service based on a config hash."""
     try:
         params = async_prepare_call_from_config(
-            hass, config, variables, validate_config
+            menuai, config, variables, validate_config
         )
-    except HomeAssistantError as ex:
+    except menuaiError as ex:
         if blocking:
             raise
         _LOGGER.error(ex)
     else:
-        await hass.services.async_call(**params, blocking=blocking, context=context)
+        await menuai.services.async_call(**params, blocking=blocking, context=context)
 
 
 @callback
-@bind_hass
+@bind_menuai
 def async_prepare_call_from_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     variables: TemplateVarsType = None,
     validate_config: bool = False,
@@ -357,7 +357,7 @@ def async_prepare_call_from_config(
         try:
             config = cv.SERVICE_SCHEMA(config)
         except vol.Invalid as ex:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Invalid config for calling service: {ex}"
             ) from ex
 
@@ -371,11 +371,11 @@ def async_prepare_call_from_config(
             domain_service = domain_service.async_render(variables)
             domain_service = cv.service(domain_service)
         except TemplateError as ex:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Error rendering service name template: {ex}"
             ) from ex
         except vol.Invalid as ex:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Template rendered invalid service: {domain_service}"
             ) from ex
 
@@ -391,7 +391,7 @@ def async_prepare_call_from_config(
                 target.update(template.render_complex(conf, variables))
 
             if CONF_ENTITY_ID in target:
-                registry = entity_registry.async_get(hass)
+                registry = entity_registry.async_get(menuai)
                 entity_ids = cv.comp_entity_ids_or_uuids(target[CONF_ENTITY_ID])
                 if entity_ids not in (ENTITY_MATCH_ALL, ENTITY_MATCH_NONE):
                     entity_ids = entity_registry.async_validate_entity_ids(
@@ -399,11 +399,11 @@ def async_prepare_call_from_config(
                     )
                 target[CONF_ENTITY_ID] = entity_ids
         except TemplateError as ex:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Error rendering service target template: {ex}"
             ) from ex
         except vol.Invalid as ex:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Template rendered invalid entity IDs: {target[CONF_ENTITY_ID]}"
             ) from ex
 
@@ -415,12 +415,12 @@ def async_prepare_call_from_config(
         try:
             render = template.render_complex(config[conf], variables)
             if not isinstance(render, dict):
-                raise HomeAssistantError(
+                raise menuaiError(
                     "Error rendering data template: Result is not a Dictionary"
                 )
             service_data.update(render)
         except TemplateError as ex:
-            raise HomeAssistantError(f"Error rendering data template: {ex}") from ex
+            raise menuaiError(f"Error rendering data template: {ex}") from ex
 
     if CONF_SERVICE_ENTITY_ID in config:
         if target:
@@ -436,22 +436,22 @@ def async_prepare_call_from_config(
     }
 
 
-@bind_hass
+@bind_menuai
 def extract_entity_ids(
-    hass: HomeAssistant, service_call: ServiceCall, expand_group: bool = True
+    menuai: menuai, service_call: ServiceCall, expand_group: bool = True
 ) -> set[str]:
     """Extract a list of entity ids from a service call.
 
     Will convert group entity ids to the entity ids it represents.
     """
     return asyncio.run_coroutine_threadsafe(
-        async_extract_entity_ids(hass, service_call, expand_group), hass.loop
+        async_extract_entity_ids(menuai, service_call, expand_group), menuai.loop
     ).result()
 
 
-@bind_hass
+@bind_menuai
 async def async_extract_entities[_EntityT: Entity](
-    hass: HomeAssistant,
+    menuai: menuai,
     entities: Iterable[_EntityT],
     service_call: ServiceCall,
     expand_group: bool = True,
@@ -465,7 +465,7 @@ async def async_extract_entities[_EntityT: Entity](
     if data_ent_id == ENTITY_MATCH_ALL:
         return [entity for entity in entities if entity.available]
 
-    referenced = async_extract_referenced_entity_ids(hass, service_call, expand_group)
+    referenced = async_extract_referenced_entity_ids(menuai, service_call, expand_group)
     combined = referenced.referenced | referenced.indirectly_referenced
 
     found = []
@@ -486,15 +486,15 @@ async def async_extract_entities[_EntityT: Entity](
     return found
 
 
-@bind_hass
+@bind_menuai
 async def async_extract_entity_ids(
-    hass: HomeAssistant, service_call: ServiceCall, expand_group: bool = True
+    menuai: menuai, service_call: ServiceCall, expand_group: bool = True
 ) -> set[str]:
     """Extract a set of entity ids from a service call.
 
     Will convert group entity ids to the entity ids it represents.
     """
-    referenced = async_extract_referenced_entity_ids(hass, service_call, expand_group)
+    referenced = async_extract_referenced_entity_ids(menuai, service_call, expand_group)
     return referenced.referenced | referenced.indirectly_referenced
 
 
@@ -503,9 +503,9 @@ def _has_match(ids: str | list[str] | None) -> TypeGuard[str | list[str]]:
     return ids not in (None, ENTITY_MATCH_NONE)
 
 
-@bind_hass
+@bind_menuai
 def async_extract_referenced_entity_ids(
-    hass: HomeAssistant, service_call: ServiceCall, expand_group: bool = True
+    menuai: menuai, service_call: ServiceCall, expand_group: bool = True
 ) -> SelectedEntities:
     """Extract referenced entity IDs from a service call."""
     selector = ServiceTargetSelector(service_call)
@@ -516,7 +516,7 @@ def async_extract_referenced_entity_ids(
 
     entity_ids: set[str] | list[str] = selector.entity_ids
     if expand_group:
-        entity_ids = expand_entity_ids(hass, entity_ids)
+        entity_ids = expand_entity_ids(menuai, entity_ids)
 
     selected.referenced.update(entity_ids)
 
@@ -528,12 +528,12 @@ def async_extract_referenced_entity_ids(
     ):
         return selected
 
-    entities = entity_registry.async_get(hass).entities
-    dev_reg = device_registry.async_get(hass)
-    area_reg = area_registry.async_get(hass)
+    entities = entity_registry.async_get(menuai).entities
+    dev_reg = device_registry.async_get(menuai)
+    area_reg = area_registry.async_get(menuai)
 
     if selector.floor_ids:
-        floor_reg = floor_registry.async_get(hass)
+        floor_reg = floor_registry.async_get(menuai)
         for floor_id in selector.floor_ids:
             if floor_id not in floor_reg.floors:
                 selected.missing_floors.add(floor_id)
@@ -547,7 +547,7 @@ def async_extract_referenced_entity_ids(
             selected.missing_devices.add(device_id)
 
     if selector.label_ids:
-        label_reg = label_registry.async_get(hass)
+        label_reg = label_registry.async_get(menuai)
         for label_id in selector.label_ids:
             if label_id not in label_reg.labels:
                 selected.missing_labels.add(label_id)
@@ -631,14 +631,14 @@ def async_extract_referenced_entity_ids(
     return selected
 
 
-@bind_hass
+@bind_menuai
 async def async_extract_config_entry_ids(
-    hass: HomeAssistant, service_call: ServiceCall, expand_group: bool = True
+    menuai: menuai, service_call: ServiceCall, expand_group: bool = True
 ) -> set[str]:
     """Extract referenced config entry ids from a service call."""
-    referenced = async_extract_referenced_entity_ids(hass, service_call, expand_group)
-    ent_reg = entity_registry.async_get(hass)
-    dev_reg = device_registry.async_get(hass)
+    referenced = async_extract_referenced_entity_ids(menuai, service_call, expand_group)
+    ent_reg = entity_registry.async_get(menuai)
+    dev_reg = device_registry.async_get(menuai)
     config_entry_ids: set[str] = set()
 
     # Some devices may have no entities
@@ -657,7 +657,7 @@ async def async_extract_config_entry_ids(
     return config_entry_ids
 
 
-def _load_services_file(hass: HomeAssistant, integration: Integration) -> JSON_TYPE:
+def _load_services_file(menuai: menuai, integration: Integration) -> JSON_TYPE:
     """Load services file for an integration."""
     try:
         return cast(
@@ -671,7 +671,7 @@ def _load_services_file(hass: HomeAssistant, integration: Integration) -> JSON_T
             "Unable to find services.yaml for the %s integration", integration.domain
         )
         return {}
-    except (HomeAssistantError, vol.Invalid) as ex:
+    except (menuaiError, vol.Invalid) as ex:
         _LOGGER.warning(
             "Unable to parse services.yaml for the %s integration: %s",
             integration.domain,
@@ -681,31 +681,31 @@ def _load_services_file(hass: HomeAssistant, integration: Integration) -> JSON_T
 
 
 def _load_services_files(
-    hass: HomeAssistant, integrations: Iterable[Integration]
+    menuai: menuai, integrations: Iterable[Integration]
 ) -> list[JSON_TYPE]:
     """Load service files for multiple integrations."""
-    return [_load_services_file(hass, integration) for integration in integrations]
+    return [_load_services_file(menuai, integration) for integration in integrations]
 
 
 @callback
 def async_get_cached_service_description(
-    hass: HomeAssistant, domain: str, service: str
+    menuai: menuai, domain: str, service: str
 ) -> dict[str, Any] | None:
     """Return the cached description for a service."""
-    return hass.data.get(SERVICE_DESCRIPTION_CACHE, {}).get((domain, service))
+    return menuai.data.get(SERVICE_DESCRIPTION_CACHE, {}).get((domain, service))
 
 
-@bind_hass
+@bind_menuai
 async def async_get_all_descriptions(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> dict[str, dict[str, Any]]:
     """Return descriptions (i.e. user documentation) for all service calls."""
-    descriptions_cache = hass.data.setdefault(SERVICE_DESCRIPTION_CACHE, {})
+    descriptions_cache = menuai.data.setdefault(SERVICE_DESCRIPTION_CACHE, {})
 
     # We don't mutate services here so we avoid calling
     # async_services which makes a copy of every services
     # dict.
-    services = hass.services.async_services_internal()
+    services = menuai.services.async_services_internal()
 
     # See if there are new services not seen before.
     # Any service that we saw before already has an entry in description_cache.
@@ -716,7 +716,7 @@ async def async_get_all_descriptions(
     }
     # If we have a complete cache, check if it is still valid
     all_cache: tuple[set[tuple[str, str]], dict[str, dict[str, Any]]] | None
-    if all_cache := hass.data.get(ALL_SERVICE_DESCRIPTIONS_CACHE):
+    if all_cache := menuai.data.get(ALL_SERVICE_DESCRIPTIONS_CACHE):
         previous_all_services, previous_descriptions_cache = all_cache
         # If the services are the same, we can return the cache
         if previous_all_services == all_services:
@@ -733,7 +733,7 @@ async def async_get_all_descriptions(
     if domains_with_missing_services := {
         domain for domain, _ in all_services.difference(descriptions_cache)
     }:
-        ints_or_excs = await async_get_integrations(hass, domains_with_missing_services)
+        ints_or_excs = await async_get_integrations(menuai, domains_with_missing_services)
         integrations: list[Integration] = []
         for domain, int_or_exc in ints_or_excs.items():
             if type(int_or_exc) is Integration and int_or_exc.has_services:
@@ -744,14 +744,14 @@ async def async_get_all_descriptions(
             _LOGGER.error("Failed to load integration: %s", domain, exc_info=int_or_exc)
 
         if integrations:
-            contents = await hass.async_add_executor_job(
-                _load_services_files, hass, integrations
+            contents = await menuai.async_add_executor_job(
+                _load_services_files, menuai, integrations
             )
             loaded = dict(zip(domains_with_missing_services, contents, strict=False))
 
     # Load translations for all service domains
     translations = await translation.async_get_translations(
-        hass, "en", "services", services
+        menuai, "en", "services", services
     )
 
     # Build response
@@ -825,7 +825,7 @@ async def async_get_all_descriptions(
 
             domain_descriptions[service_name] = description
 
-    hass.data[ALL_SERVICE_DESCRIPTIONS_CACHE] = (all_services, descriptions)
+    menuai.data[ALL_SERVICE_DESCRIPTIONS_CACHE] = (all_services, descriptions)
     return descriptions
 
 
@@ -840,15 +840,15 @@ def remove_entity_service_fields(call: ServiceCall) -> dict[Any, Any]:
 
 
 @callback
-@bind_hass
+@bind_menuai
 def async_set_service_schema(
-    hass: HomeAssistant, domain: str, service: str, schema: dict[str, Any]
+    menuai: menuai, domain: str, service: str, schema: dict[str, Any]
 ) -> None:
     """Register a description for a service."""
     domain = domain.lower()
     service = service.lower()
 
-    descriptions_cache = hass.data.setdefault(SERVICE_DESCRIPTION_CACHE, {})
+    descriptions_cache = menuai.data.setdefault(SERVICE_DESCRIPTION_CACHE, {})
 
     description = {
         "name": schema.get("name", ""),
@@ -860,13 +860,13 @@ def async_set_service_schema(
         description["target"] = schema["target"]
 
     if (
-        response := hass.services.supports_response(domain, service)
+        response := menuai.services.supports_response(domain, service)
     ) != SupportsResponse.NONE:
         description["response"] = {
             "optional": response == SupportsResponse.OPTIONAL,
         }
 
-    hass.data.pop(ALL_SERVICE_DESCRIPTIONS_CACHE, None)
+    menuai.data.pop(ALL_SERVICE_DESCRIPTIONS_CACHE, None)
     descriptions_cache[(domain, service)] = description
 
 
@@ -917,11 +917,11 @@ def _get_permissible_entity_candidates(
     return [entities[entity_id] for entity_id in all_referenced.intersection(entities)]
 
 
-@bind_hass
+@bind_menuai
 async def entity_service_call(
-    hass: HomeAssistant,
+    menuai: menuai,
     registered_entities: dict[str, Entity],
-    func: str | HassJob,
+    func: str | menuaiJob,
     call: ServiceCall,
     required_features: Iterable[int] | None = None,
 ) -> EntityServiceResponse | None:
@@ -933,7 +933,7 @@ async def entity_service_call(
     return_response = call.return_response
 
     if call.context.user_id:
-        user = await hass.auth.async_get_user(call.context.user_id)
+        user = await menuai.auth.async_get_user(call.context.user_id)
         if user is None:
             raise UnknownUser(context=call.context)
         if not user.is_admin:
@@ -946,7 +946,7 @@ async def entity_service_call(
         all_referenced: set[str] | None = None
     else:
         # A set of entities we're trying to target.
-        referenced = async_extract_referenced_entity_ids(hass, call, True)
+        referenced = async_extract_referenced_entity_ids(menuai, call, True)
         all_referenced = referenced.referenced | referenced.indirectly_referenced
 
     # If the service function is a string, we'll pass it the service call data
@@ -996,7 +996,7 @@ async def entity_service_call(
 
     if not entities:
         if return_response:
-            raise HomeAssistantError(
+            raise menuaiError(
                 "Service call requested response data but did not match any entities"
             )
         return None
@@ -1005,7 +1005,7 @@ async def entity_service_call(
         # Single entity case avoids creating task
         entity = entities[0]
         single_response = await _handle_entity_call(
-            hass, entity, func, data, call.context
+            menuai, entity, func, data, call.context
         )
         if entity.should_poll:
             # Context expires if the turn on commands took a long time.
@@ -1019,7 +1019,7 @@ async def entity_service_call(
     results: list[ServiceResponse | BaseException] = await asyncio.gather(
         *[
             entity.async_request_call(
-                _handle_entity_call(hass, entity, func, data, call.context)
+                _handle_entity_call(menuai, entity, func, data, call.context)
             )
             for entity in entities
         ],
@@ -1053,9 +1053,9 @@ async def entity_service_call(
 
 
 async def _handle_entity_call(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity: Entity,
-    func: str | HassJob,
+    func: str | menuaiJob,
     data: dict | ServiceCall,
     context: Context,
 ) -> ServiceResponse:
@@ -1064,13 +1064,13 @@ async def _handle_entity_call(
 
     task: asyncio.Future[ServiceResponse] | None
     if isinstance(func, str):
-        job = HassJob(
+        job = menuaiJob(
             partial(getattr(entity, func), **data),  # type: ignore[arg-type]
-            job_type=entity.get_hassjob_type(func),
+            job_type=entity.get_menuaijob_type(func),
         )
-        task = hass.async_run_hass_job(job)
+        task = menuai.async_run_menuai_job(job)
     else:
-        task = hass.async_run_hass_job(func, entity, data)
+        task = menuai.async_run_menuai_job(func, entity, data)
 
     # Guard because callback functions do not return a task when passed to
     # async_run_job.
@@ -1093,8 +1093,8 @@ async def _handle_entity_call(
 
 
 async def _async_admin_handler(
-    hass: HomeAssistant,
-    service_job: HassJob[
+    menuai: menuai,
+    service_job: menuaiJob[
         [ServiceCall],
         Coroutine[Any, Any, ServiceResponse | EntityServiceResponse]
         | ServiceResponse
@@ -1105,22 +1105,22 @@ async def _async_admin_handler(
 ) -> ServiceResponse | EntityServiceResponse | None:
     """Run an admin service."""
     if call.context.user_id:
-        user = await hass.auth.async_get_user(call.context.user_id)
+        user = await menuai.auth.async_get_user(call.context.user_id)
         if user is None:
             raise UnknownUser(context=call.context)
         if not user.is_admin:
             raise Unauthorized(context=call.context)
 
-    task = hass.async_run_hass_job(service_job, call)
+    task = menuai.async_run_menuai_job(service_job, call)
     if task is not None:
         return await task
     return None
 
 
-@bind_hass
+@bind_menuai
 @callback
 def async_register_admin_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     domain: str,
     service: str,
     service_func: Callable[
@@ -1134,23 +1134,23 @@ def async_register_admin_service(
     supports_response: SupportsResponse = SupportsResponse.NONE,
 ) -> None:
     """Register a service that requires admin access."""
-    hass.services.async_register(
+    menuai.services.async_register(
         domain,
         service,
         partial(
             _async_admin_handler,
-            hass,
-            HassJob(service_func, f"admin service {domain}.{service}"),
+            menuai,
+            menuaiJob(service_func, f"admin service {domain}.{service}"),
         ),
         schema,
         supports_response,
     )
 
 
-@bind_hass
+@bind_menuai
 @callback
 def verify_domain_control(
-    hass: HomeAssistant, domain: str
+    menuai: menuai, domain: str
 ) -> Callable[[Callable[[ServiceCall], Any]], Callable[[ServiceCall], Any]]:
     """Ensure permission to access any entity under domain in service call."""
 
@@ -1159,14 +1159,14 @@ def verify_domain_control(
     ) -> Callable[[ServiceCall], Any]:
         """Decorate."""
         if not asyncio.iscoroutinefunction(service_handler):
-            raise HomeAssistantError("Can only decorate async functions.")
+            raise menuaiError("Can only decorate async functions.")
 
         async def check_permissions(call: ServiceCall) -> Any:
             """Check user permission and raise before call if unauthorized."""
             if not call.context.user_id:
                 return await service_handler(call)
 
-            user = await hass.auth.async_get_user(call.context.user_id)
+            user = await menuai.auth.async_get_user(call.context.user_id)
 
             if user is None:
                 raise UnknownUser(
@@ -1175,7 +1175,7 @@ def verify_domain_control(
                     user_id=call.context.user_id,
                 )
 
-            reg = entity_registry.async_get(hass)
+            reg = entity_registry.async_get(menuai)
 
             authorized = False
 
@@ -1271,13 +1271,13 @@ class ReloadServiceHelper[_T]:
 
 @callback
 def async_register_entity_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     domain: str,
     name: str,
     *,
     entities: dict[str, Entity],
     func: str | Callable[..., Any],
-    job_type: HassJobType | None,
+    job_type: menuaiJobType | None,
     required_features: Iterable[int] | None = None,
     schema: VolDictType | VolSchemaType | None,
     supports_response: SupportsResponse = SupportsResponse.NONE,
@@ -1300,15 +1300,15 @@ def async_register_entity_service(
             breaks_in_ha_version="2025.9",
         )
 
-    service_func: str | HassJob[..., Any]
-    service_func = func if isinstance(func, str) else HassJob(func)
+    service_func: str | menuaiJob[..., Any]
+    service_func = func if isinstance(func, str) else menuaiJob(func)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         domain,
         name,
         partial(
             entity_service_call,
-            hass,
+            menuai,
             entities,
             service_func,
             required_features=required_features,

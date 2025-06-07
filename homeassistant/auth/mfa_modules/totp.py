@@ -8,10 +8,10 @@ from typing import Any, cast
 
 import voluptuous as vol
 
-from homeassistant.auth.models import User
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResult
-from homeassistant.helpers.storage import Store
+from menuai.auth.models import User
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResult
+from menuai.helpers.storage import Store
 
 from . import (
     MULTI_FACTOR_AUTH_MODULE_SCHEMA,
@@ -63,7 +63,7 @@ def _generate_secret_and_qr_code(username: str) -> tuple[str, str, str]:
 
     ota_secret = pyotp.random_base32()
     url = pyotp.totp.TOTP(ota_secret).provisioning_uri(
-        username, issuer_name="Home Assistant"
+        username, issuer_name="MenuAI"
     )
     image = _generate_qr_code(url)
     return ota_secret, url, image
@@ -76,12 +76,12 @@ class TotpAuthModule(MultiFactorAuthModule):
     DEFAULT_TITLE = "Time-based One Time Password"
     MAX_RETRY_TIME = 5
 
-    def __init__(self, hass: HomeAssistant, config: dict[str, Any]) -> None:
+    def __init__(self, menuai: menuai, config: dict[str, Any]) -> None:
         """Initialize the user data store."""
-        super().__init__(hass, config)
+        super().__init__(menuai, config)
         self._users: dict[str, str] | None = None
         self._user_store = Store[dict[str, dict[str, str]]](
-            hass, STORAGE_VERSION, STORAGE_KEY, private=True, atomic_writes=True
+            menuai, STORAGE_VERSION, STORAGE_KEY, private=True, atomic_writes=True
         )
         self._init_lock = asyncio.Lock()
 
@@ -119,7 +119,7 @@ class TotpAuthModule(MultiFactorAuthModule):
 
         Mfa module should extend SetupFlow
         """
-        user = await self.hass.auth.async_get_user(user_id)
+        user = await self.menuai.auth.async_get_user(user_id)
         assert user is not None
         return TotpSetupFlow(self, self.input_schema, user)
 
@@ -128,7 +128,7 @@ class TotpAuthModule(MultiFactorAuthModule):
         if self._users is None:
             await self._async_load()
 
-        result = await self.hass.async_add_executor_job(
+        result = await self.menuai.async_add_executor_job(
             self._add_ota_secret, user_id, setup_data.get("secret")
         )
 
@@ -157,7 +157,7 @@ class TotpAuthModule(MultiFactorAuthModule):
 
         # user_input has been validate in caller
         # set INPUT_FIELD_CODE as vol.Required is not user friendly
-        return await self.hass.async_add_executor_job(
+        return await self.menuai.async_add_executor_job(
             self._validate_2fa, user_id, user_input.get(INPUT_FIELD_CODE, "")
         )
 
@@ -201,7 +201,7 @@ class TotpSetupFlow(SetupFlow[TotpAuthModule]):
         errors: dict[str, str] = {}
 
         if user_input:
-            verified = await self.hass.async_add_executor_job(
+            verified = await self.menuai.async_add_executor_job(
                 pyotp.TOTP(self._ota_secret).verify, user_input["code"]
             )
             if verified:
@@ -217,7 +217,7 @@ class TotpSetupFlow(SetupFlow[TotpAuthModule]):
                 self._ota_secret,
                 self._url,
                 self._image,
-            ) = await self._auth_module.hass.async_add_executor_job(
+            ) = await self._auth_module.menuai.async_add_executor_job(
                 _generate_secret_and_qr_code,
                 str(self._user.name),
             )

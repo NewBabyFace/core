@@ -6,24 +6,24 @@ import logging
 
 import voluptuous as vol
 
-from homeassistant.components.alarm_control_panel import (
+from menuai.components.alarm_control_panel import (
     PLATFORM_SCHEMA as ALARM_CONTROL_PANEL_PLATFORM_SCHEMA,
     AlarmControlPanelEntity,
     AlarmControlPanelEntityFeature,
     AlarmControlPanelState,
     CodeFormat,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_STATE,
     CONF_CODE,
     CONF_NAME,
     CONF_OPTIMISTIC,
 )
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import ATTR_EVENT, DOMAIN, SERVICE_PUSH_ALARM_STATE, SERVICE_TRIGGER
 
@@ -70,14 +70,14 @@ PUSH_ALARM_STATE_SERVICE_SCHEMA = vol.Schema(
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up a control panel managed through IFTTT."""
-    if DATA_IFTTT_ALARM not in hass.data:
-        hass.data[DATA_IFTTT_ALARM] = []
+    if DATA_IFTTT_ALARM not in menuai.data:
+        menuai.data[DATA_IFTTT_ALARM] = []
 
     name: str = config[CONF_NAME]
     code: str | None = config.get(CONF_CODE)
@@ -98,14 +98,14 @@ def setup_platform(
         event_disarm,
         optimistic,
     )
-    hass.data[DATA_IFTTT_ALARM].append(alarmpanel)
+    menuai.data[DATA_IFTTT_ALARM].append(alarmpanel)
     add_entities([alarmpanel])
 
     async def push_state_update(service: ServiceCall) -> None:
         """Set the service state as device state attribute."""
         entity_ids = service.data.get(ATTR_ENTITY_ID)
         state = service.data.get(ATTR_STATE)
-        devices = hass.data[DATA_IFTTT_ALARM]
+        devices = menuai.data[DATA_IFTTT_ALARM]
         if entity_ids:
             devices = [d for d in devices if d.entity_id in entity_ids]
 
@@ -113,7 +113,7 @@ def setup_platform(
             device.push_alarm_state(state)
             device.async_schedule_update_ha_state()
 
-    hass.services.register(
+    menuai.services.register(
         DOMAIN,
         SERVICE_PUSH_ALARM_STATE,
         push_state_update,
@@ -189,7 +189,7 @@ class IFTTTAlarmPanel(AlarmControlPanelEntity):
         """Call the IFTTT trigger service to change the alarm state."""
         data = {ATTR_EVENT: event}
 
-        self.hass.services.call(DOMAIN, SERVICE_TRIGGER, data)
+        self.menuai.services.call(DOMAIN, SERVICE_TRIGGER, data)
         _LOGGER.debug("Called IFTTT integration to trigger event %s", event)
         if self._optimistic:
             self._attr_alarm_state = state

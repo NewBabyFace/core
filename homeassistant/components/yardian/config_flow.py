@@ -13,9 +13,9 @@ from pyyardian import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_HOST
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_ACCESS_TOKEN, CONF_HOST
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN, PRODUCT_NAME
 
@@ -37,7 +37,7 @@ class YardianConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_fetch_device_info(self, host: str, access_token: str) -> DeviceInfo:
         """Fetch device info from Yardian."""
         yarcli = AsyncYardianClient(
-            async_get_clientsession(self.hass),
+            async_get_clientsession(self.menuai),
             host,
             access_token,
         )

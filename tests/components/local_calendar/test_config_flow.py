@@ -8,8 +8,8 @@ from uuid import uuid4
 
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.local_calendar.const import (
+from menuai import config_entries
+from menuai.components.local_calendar.const import (
     ATTR_CREATE_EMPTY,
     ATTR_IMPORT_ICS_FILE,
     CONF_CALENDAR_NAME,
@@ -18,8 +18,8 @@ from homeassistant.components.local_calendar.const import (
     CONF_STORAGE_KEY,
     DOMAIN,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
@@ -43,7 +43,7 @@ def mock_process_uploaded_file(
 
     @contextmanager
     def _mock_process_uploaded_file(
-        hass: HomeAssistant, uploaded_file_id: str
+        menuai: menuai, uploaded_file_id: str
     ) -> Iterator[Path | None]:
         with open(tmp_path / uploaded_file_id, "wb") as icsfile:
             icsfile.write(mock_ics_content)
@@ -51,7 +51,7 @@ def mock_process_uploaded_file(
 
     with (
         patch(
-            "homeassistant.components.local_calendar.config_flow.process_uploaded_file",
+            "menuai.components.local_calendar.config_flow.process_uploaded_file",
             side_effect=_mock_process_uploaded_file,
         ) as mock_upload,
         patch(
@@ -64,25 +64,25 @@ def mock_process_uploaded_file(
         yield mock_upload
 
 
-async def test_form(hass: HomeAssistant) -> None:
+async def test_form(menuai: menuai) -> None:
     """Test we get the form."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] is None
 
     with patch(
-        "homeassistant.components.local_calendar.async_setup_entry",
+        "menuai.components.local_calendar.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_CALENDAR_NAME: "My Calendar",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "My Calendar"
@@ -95,56 +95,56 @@ async def test_form(hass: HomeAssistant) -> None:
 
 
 async def test_form_import_ics(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_process_uploaded_file: MagicMock,
 ) -> None:
     """Test we get the import form."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] is None
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_CALENDAR_NAME: "My Calendar", CONF_IMPORT: ATTR_IMPORT_ICS_FILE},
     )
     assert result2["type"] is FlowResultType.FORM
 
     with patch(
-        "homeassistant.components.local_calendar.async_setup_entry",
+        "menuai.components.local_calendar.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
         file_id = mock_process_uploaded_file.file_id
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_ICS_FILE: file_id[CONF_ICS_FILE]},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.CREATE_ENTRY
     assert len(mock_setup_entry.mock_calls) == 1
 
 
 async def test_duplicate_name(
-    hass: HomeAssistant, setup_integration: None, config_entry: MockConfigEntry
+    menuai: menuai, setup_integration: None, config_entry: MockConfigEntry
 ) -> None:
     """Test two calendars cannot be added with the same name."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert not result.get("errors")
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             # Pick a name that has the same slugify value as an existing config entry
             CONF_CALENDAR_NAME: "light schedule",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.ABORT
     assert result2["reason"] == "already_configured"
@@ -152,24 +152,24 @@ async def test_duplicate_name(
 
 @pytest.mark.parametrize("mock_ics_content", [b"invalid-ics-content"])
 async def test_invalid_ics(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_process_uploaded_file: MagicMock,
 ) -> None:
     """Test invalid ics content raises error."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] is None
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_CALENDAR_NAME: "My Calendar", CONF_IMPORT: ATTR_IMPORT_ICS_FILE},
     )
     assert result2["type"] is FlowResultType.FORM
 
     file_id = mock_process_uploaded_file.file_id
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_ICS_FILE: file_id[CONF_ICS_FILE]},
     )

@@ -6,24 +6,24 @@ from unittest.mock import AsyncMock
 from pyprosegur.exceptions import ProsegurException
 import pytest
 
-from homeassistant.components import camera
-from homeassistant.components.camera import Image
-from homeassistant.components.prosegur.const import DOMAIN
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.components import camera
+from menuai.components.camera import Image
+from menuai.components.prosegur.const import DOMAIN
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 
-async def test_camera(hass: HomeAssistant, init_integration) -> None:
+async def test_camera(menuai: menuai, init_integration) -> None:
     """Test prosegur get_image."""
 
-    image = await camera.async_get_image(hass, "camera.contract_1234abcd_test_cam")
+    image = await camera.async_get_image(menuai, "camera.contract_1234abcd_test_cam")
 
     assert image == Image(content_type="image/jpeg", content=b"ABC")
 
 
 async def test_camera_fail(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_integration,
     mock_install,
     caplog: pytest.LogCaptureFixture,
@@ -35,10 +35,10 @@ async def test_camera_fail(
     )
 
     with (
-        caplog.at_level(logging.ERROR, logger="homeassistant.components.prosegur"),
-        pytest.raises(HomeAssistantError) as exc,
+        caplog.at_level(logging.ERROR, logger="menuai.components.prosegur"),
+        pytest.raises(menuaiError) as exc,
     ):
-        await camera.async_get_image(hass, "camera.contract_1234abcd_test_cam")
+        await camera.async_get_image(menuai, "camera.contract_1234abcd_test_cam")
 
     assert "Unable to get image" in str(exc.value)
 
@@ -46,22 +46,22 @@ async def test_camera_fail(
 
 
 async def test_request_image(
-    hass: HomeAssistant, init_integration, mock_install
+    menuai: menuai, init_integration, mock_install
 ) -> None:
     """Test the camera request image service."""
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         "request_image",
         {ATTR_ENTITY_ID: "camera.contract_1234abcd_test_cam"},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert mock_install.request_image.called
 
 
 async def test_request_image_fail(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_integration,
     mock_install,
     caplog: pytest.LogCaptureFixture,
@@ -70,13 +70,13 @@ async def test_request_image_fail(
 
     mock_install.request_image = AsyncMock(side_effect=ProsegurException())
 
-    with caplog.at_level(logging.ERROR, logger="homeassistant.components.prosegur"):
-        await hass.services.async_call(
+    with caplog.at_level(logging.ERROR, logger="menuai.components.prosegur"):
+        await menuai.services.async_call(
             DOMAIN,
             "request_image",
             {ATTR_ENTITY_ID: "camera.contract_1234abcd_test_cam"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         assert mock_install.request_image.called
 

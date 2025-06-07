@@ -7,8 +7,8 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_TYPE
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_TYPE
 
 from .const import CONF_CLOUD_ID, CONF_HARDWARE_ADDRESS, CONF_INSTALL_CODE, DOMAIN
 from .data import CannotConnect, InvalidAuth, async_get_type
@@ -50,7 +50,7 @@ class RainforestEagleConfigFlow(ConfigFlow, domain=DOMAIN):
 
         try:
             eagle_type, hardware_address = await async_get_type(
-                self.hass,
+                self.menuai,
                 user_input[CONF_CLOUD_ID],
                 user_input[CONF_INSTALL_CODE],
                 user_input[CONF_HOST],

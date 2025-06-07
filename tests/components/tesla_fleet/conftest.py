@@ -11,7 +11,7 @@ import jwt
 import pytest
 from tesla_fleet_api.const import Scope
 
-from homeassistant.components.tesla_fleet.const import DOMAIN, SCOPES
+from menuai.components.tesla_fleet.const import DOMAIN, SCOPES
 
 from .const import (
     COMMAND_OK,
@@ -37,7 +37,7 @@ def mock_expires_at() -> int:
 def create_config_entry(
     expires_at: int, scopes: list[Scope], implementation: str = DOMAIN
 ) -> MockConfigEntry:
-    """Create Tesla Fleet entry in Home Assistant."""
+    """Create Tesla Fleet entry in MenuAI."""
     access_token = jwt.encode(
         {
             "sub": UID,
@@ -69,19 +69,19 @@ def create_config_entry(
 
 @pytest.fixture
 def normal_config_entry(expires_at: int) -> MockConfigEntry:
-    """Create Tesla Fleet entry in Home Assistant."""
+    """Create Tesla Fleet entry in MenuAI."""
     return create_config_entry(expires_at, SCOPES)
 
 
 @pytest.fixture
 def noscope_config_entry(expires_at: int) -> MockConfigEntry:
-    """Create Tesla Fleet entry in Home Assistant without scopes."""
+    """Create Tesla Fleet entry in MenuAI without scopes."""
     return create_config_entry(expires_at, [Scope.OPENID, Scope.OFFLINE_ACCESS])
 
 
 @pytest.fixture
 def readonly_config_entry(expires_at: int) -> MockConfigEntry:
-    """Create Tesla Fleet entry in Home Assistant without scopes."""
+    """Create Tesla Fleet entry in MenuAI without scopes."""
     return create_config_entry(
         expires_at,
         [
@@ -95,7 +95,7 @@ def readonly_config_entry(expires_at: int) -> MockConfigEntry:
 
 @pytest.fixture
 def bad_config_entry(expires_at: int) -> MockConfigEntry:
-    """Create Tesla Fleet entry in Home Assistant."""
+    """Create Tesla Fleet entry in MenuAI."""
     return create_config_entry(expires_at, SCOPES, "bad")
 
 
@@ -103,7 +103,7 @@ def bad_config_entry(expires_at: int) -> MockConfigEntry:
 def mock_products() -> Generator[AsyncMock]:
     """Mock Tesla Fleet Api products method."""
     with patch(
-        "homeassistant.components.tesla_fleet.TeslaFleetApi.products",
+        "menuai.components.tesla_fleet.TeslaFleetApi.products",
         return_value=PRODUCTS,
     ) as mock_products:
         yield mock_products
@@ -163,7 +163,7 @@ def mock_site_info() -> Generator[AsyncMock]:
 def mock_find_server() -> Generator[AsyncMock]:
     """Mock Tesla Fleet find server method."""
     with patch(
-        "homeassistant.components.tesla_fleet.TeslaFleetApi.find_server",
+        "menuai.components.tesla_fleet.TeslaFleetApi.find_server",
     ) as mock_find_server:
         yield mock_find_server
 
@@ -172,7 +172,7 @@ def mock_find_server() -> Generator[AsyncMock]:
 def mock_request():
     """Mock all Tesla Fleet API requests."""
     with patch(
-        "homeassistant.components.tesla_fleet.TeslaFleetApi._request",
+        "menuai.components.tesla_fleet.TeslaFleetApi._request",
         return_value=COMMAND_OK,
     ) as mock_request:
         yield mock_request

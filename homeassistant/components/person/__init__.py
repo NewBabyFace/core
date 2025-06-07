@@ -8,14 +8,14 @@ from typing import Any, Self
 
 import voluptuous as vol
 
-from homeassistant.auth import EVENT_USER_REMOVED
-from homeassistant.components import persistent_notification, websocket_api
-from homeassistant.components.device_tracker import (
+from menuai.auth import EVENT_USER_REMOVED
+from menuai.components import persistent_notification, websocket_api
+from menuai.components.device_tracker import (
     ATTR_SOURCE_TYPE,
     DOMAIN as DEVICE_TRACKER_DOMAIN,
     SourceType,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_EDITABLE,
     ATTR_GPS_ACCURACY,
     ATTR_ID,
@@ -24,34 +24,34 @@ from homeassistant.const import (
     ATTR_NAME,
     CONF_ID,
     CONF_NAME,
-    EVENT_HOMEASSISTANT_START,
+    EVENT_menuai_START,
     SERVICE_RELOAD,
     STATE_HOME,
     STATE_NOT_HOME,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import (
+from menuai.core import (
     Event,
     EventStateChangedData,
-    HomeAssistant,
+    menuai,
     ServiceCall,
     State,
     callback,
     split_entity_id,
 )
-from homeassistant.helpers import (
+from menuai.helpers import (
     collection,
     config_validation as cv,
     entity_registry as er,
     service,
 )
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.event import async_track_state_change_event
-from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.storage import Store
-from homeassistant.helpers.typing import ConfigType, VolDictType
-from homeassistant.loader import bind_hass
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.event import async_track_state_change_event
+from menuai.helpers.restore_state import RestoreEntity
+from menuai.helpers.storage import Store
+from menuai.helpers.typing import ConfigType, VolDictType
+from menuai.loader import bind_menuai
 
 from .const import DOMAIN
 
@@ -92,16 +92,16 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-@bind_hass
+@bind_menuai
 async def async_create_person(
-    hass: HomeAssistant,
+    menuai: menuai,
     name: str,
     *,
     user_id: str | None = None,
     device_trackers: list[str] | None = None,
 ) -> None:
     """Create a new person."""
-    await hass.data[DOMAIN][1].async_create_item(
+    await menuai.data[DOMAIN][1].async_create_item(
         {
             ATTR_NAME: name,
             ATTR_USER_ID: user_id,
@@ -110,12 +110,12 @@ async def async_create_person(
     )
 
 
-@bind_hass
+@bind_menuai
 async def async_add_user_device_tracker(
-    hass: HomeAssistant, user_id: str, device_tracker_entity_id: str
+    menuai: menuai, user_id: str, device_tracker_entity_id: str
 ) -> None:
     """Add a device tracker to a person linked to a user."""
-    coll: PersonStorageCollection = hass.data[DOMAIN][1]
+    coll: PersonStorageCollection = menuai.data[DOMAIN][1]
 
     for person in coll.async_items():
         if person.get(ATTR_USER_ID) != user_id:
@@ -134,15 +134,15 @@ async def async_add_user_device_tracker(
 
 
 @callback
-def persons_with_entity(hass: HomeAssistant, entity_id: str) -> list[str]:
+def persons_with_entity(menuai: menuai, entity_id: str) -> list[str]:
     """Return all persons that reference the entity."""
     if (
-        DOMAIN not in hass.data
+        DOMAIN not in menuai.data
         or split_entity_id(entity_id)[0] != DEVICE_TRACKER_DOMAIN
     ):
         return []
 
-    component: EntityComponent[Person] = hass.data[DOMAIN][2]
+    component: EntityComponent[Person] = menuai.data[DOMAIN][2]
 
     return [
         person_entity.entity_id
@@ -152,12 +152,12 @@ def persons_with_entity(hass: HomeAssistant, entity_id: str) -> list[str]:
 
 
 @callback
-def entities_in_person(hass: HomeAssistant, entity_id: str) -> list[str]:
+def entities_in_person(menuai: menuai, entity_id: str) -> list[str]:
     """Return all entities belonging to a person."""
-    if DOMAIN not in hass.data:
+    if DOMAIN not in menuai.data:
         return []
 
-    component: EntityComponent[Person] = hass.data[DOMAIN][2]
+    component: EntityComponent[Person] = menuai.data[DOMAIN][2]
 
     if (person_entity := component.get_entity(entity_id)) is None:
         return []
@@ -234,7 +234,7 @@ class PersonStorageCollection(collection.DictStorageCollection):
     async def async_load(self) -> None:
         """Load the Storage collection."""
         await super().async_load()
-        self.hass.bus.async_listen(
+        self.menuai.bus.async_listen(
             er.EVENT_ENTITY_REGISTRY_UPDATED,
             self._entity_registry_updated,
             event_filter=self._entity_registry_filter,
@@ -297,7 +297,7 @@ class PersonStorageCollection(collection.DictStorageCollection):
 
     async def _validate_user_id(self, user_id: str) -> None:
         """Validate the used user_id."""
-        if await self.hass.auth.async_get_user(user_id) is None:
+        if await self.menuai.auth.async_get_user(user_id) is None:
             raise ValueError("User does not exist")
 
         for persons in (self.data.values(), self.yaml_collection.async_items()):
@@ -310,19 +310,19 @@ class PersonStorageCollectionWebsocket(collection.DictStorageCollectionWebsocket
 
     def ws_list_item(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         connection: websocket_api.ActiveConnection,
         msg: dict[str, Any],
     ) -> None:
         """List persons."""
-        yaml, storage, _ = hass.data[DOMAIN]
+        yaml, storage, _ = menuai.data[DOMAIN]
         connection.send_result(
             msg[ATTR_ID],
             {"storage": storage.async_items(), "config": yaml.async_items()},
         )
 
 
-async def filter_yaml_data(hass: HomeAssistant, persons: list[dict]) -> list[dict]:
+async def filter_yaml_data(menuai: menuai, persons: list[dict]) -> list[dict]:
     """Validate YAML data that we can't validate via schema."""
     filtered = []
     person_invalid_user = []
@@ -330,7 +330,7 @@ async def filter_yaml_data(hass: HomeAssistant, persons: list[dict]) -> list[dic
     for person_conf in persons:
         user_id = person_conf.get(CONF_USER_ID)
 
-        if user_id is not None and await hass.auth.async_get_user(user_id) is None:
+        if user_id is not None and await menuai.auth.async_get_user(user_id) is None:
             _LOGGER.error(
                 "Invalid user_id detected for person %s",
                 person_conf[CONF_ID],
@@ -345,7 +345,7 @@ async def filter_yaml_data(hass: HomeAssistant, persons: list[dict]) -> list[dic
 
     if person_invalid_user:
         persistent_notification.async_create(
-            hass,
+            menuai,
             f"""
 The following persons point at invalid users:
 
@@ -358,36 +358,36 @@ The following persons point at invalid users:
     return filtered
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the person component."""
-    entity_component = EntityComponent[Person](_LOGGER, DOMAIN, hass)
+    entity_component = EntityComponent[Person](_LOGGER, DOMAIN, menuai)
     id_manager = collection.IDManager()
     yaml_collection = collection.YamlCollection(
         logging.getLogger(f"{__name__}.yaml_collection"), id_manager
     )
     storage_collection = PersonStorageCollection(
-        PersonStore(hass, STORAGE_VERSION, STORAGE_KEY),
+        PersonStore(menuai, STORAGE_VERSION, STORAGE_KEY),
         id_manager,
         yaml_collection,
     )
 
     collection.sync_entity_lifecycle(
-        hass, DOMAIN, DOMAIN, entity_component, yaml_collection, Person
+        menuai, DOMAIN, DOMAIN, entity_component, yaml_collection, Person
     )
     collection.sync_entity_lifecycle(
-        hass, DOMAIN, DOMAIN, entity_component, storage_collection, Person
+        menuai, DOMAIN, DOMAIN, entity_component, storage_collection, Person
     )
 
     await yaml_collection.async_load(
-        await filter_yaml_data(hass, config.get(DOMAIN, []))
+        await filter_yaml_data(menuai, config.get(DOMAIN, []))
     )
     await storage_collection.async_load()
 
-    hass.data[DOMAIN] = (yaml_collection, storage_collection, entity_component)
+    menuai.data[DOMAIN] = (yaml_collection, storage_collection, entity_component)
 
     PersonStorageCollectionWebsocket(
         storage_collection, DOMAIN, DOMAIN, CREATE_FIELDS, UPDATE_FIELDS
-    ).async_setup(hass)
+    ).async_setup(menuai)
 
     async def _handle_user_removed(event: Event) -> None:
         """Handle a user being removed."""
@@ -398,7 +398,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                     person[CONF_ID], {CONF_USER_ID: None}
                 )
 
-    hass.bus.async_listen(EVENT_USER_REMOVED, _handle_user_removed)
+    menuai.bus.async_listen(EVENT_USER_REMOVED, _handle_user_removed)
 
     async def async_reload_yaml(call: ServiceCall) -> None:
         """Reload YAML."""
@@ -406,11 +406,11 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         if conf is None:
             return
         await yaml_collection.async_load(
-            await filter_yaml_data(hass, conf.get(DOMAIN, []))
+            await filter_yaml_data(menuai, conf.get(DOMAIN, []))
         )
 
     service.async_register_admin_service(
-        hass, DOMAIN, SERVICE_RELOAD, async_reload_yaml
+        menuai, DOMAIN, SERVICE_RELOAD, async_reload_yaml
     )
 
     return True
@@ -461,24 +461,24 @@ class Person(
         person.editable = False
         return person
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register device trackers."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         if state := await self.async_get_last_state():
             self._parse_source_state(state)
 
-        if self.hass.is_running:
-            # Update person now if hass is already running.
+        if self.menuai.is_running:
+            # Update person now if menuai is already running.
             self._async_update_config(self._config)
         else:
-            # Wait for hass start to not have race between person
+            # Wait for menuai start to not have race between person
             # and device trackers finishing setup.
             @callback
-            def _async_person_start_hass(_: Event) -> None:
+            def _async_person_start_menuai(_: Event) -> None:
                 self._async_update_config(self._config)
 
-            self.hass.bus.async_listen_once(
-                EVENT_HOMEASSISTANT_START, _async_person_start_hass
+            self.menuai.bus.async_listen_once(
+                EVENT_menuai_START, _async_person_start_menuai
             )
             # Update extra state attributes now
             # as there are attributes that can already be set
@@ -502,7 +502,7 @@ class Person(
             _LOGGER.debug("Subscribe to device trackers for %s", self.entity_id)
 
             self._unsub_track_device = async_track_state_change_event(
-                self.hass, trackers, self._async_handle_tracker_update
+                self.menuai, trackers, self._async_handle_tracker_update
             )
 
         self._update_state()
@@ -517,7 +517,7 @@ class Person(
         """Update the state."""
         latest_non_gps_home = latest_not_home = latest_gps = latest = None
         for entity_id in self._config[CONF_DEVICE_TRACKERS]:
-            state = self.hass.states.get(entity_id)
+            state = self.menuai.states.get(entity_id)
 
             if not state or state.state in IGNORE_STATES:
                 continue

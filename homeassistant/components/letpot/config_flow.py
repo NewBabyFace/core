@@ -10,10 +10,10 @@ from letpot.client import LetPotClient
 from letpot.exceptions import LetPotAuthenticationException, LetPotConnectionException
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_EMAIL, CONF_PASSWORD
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.selector import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_ACCESS_TOKEN, CONF_EMAIL, CONF_PASSWORD
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.selector import (
     TextSelector,
     TextSelectorConfig,
     TextSelectorType,
@@ -61,7 +61,7 @@ class LetPotConfigFlow(ConfigFlow, domain=DOMAIN):
         self, email: str, password: str
     ) -> tuple[dict[str, str], dict[str, Any] | None]:
         """Try logging in to the LetPot account and returns credential info."""
-        websession = async_get_clientsession(self.hass)
+        websession = async_get_clientsession(self.menuai)
         client = LetPotClient(websession)
         try:
             auth = await client.login(email, password)

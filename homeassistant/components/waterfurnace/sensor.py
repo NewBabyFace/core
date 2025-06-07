@@ -2,18 +2,18 @@
 
 from __future__ import annotations
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     ENTITY_ID_FORMAT,
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
 )
-from homeassistant.const import PERCENTAGE, UnitOfPower, UnitOfTemperature
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import slugify
+from menuai.const import PERCENTAGE, UnitOfPower, UnitOfTemperature
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import slugify
 
 from . import DOMAIN, UPDATE_TOPIC, WaterFurnaceData
 
@@ -95,7 +95,7 @@ SENSORS = [
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -104,7 +104,7 @@ def setup_platform(
     if discovery_info is None:
         return
 
-    client = hass.data[DOMAIN]
+    client = menuai.data[DOMAIN]
 
     add_entities(WaterFurnaceSensor(client, description) for description in SENSORS)
 
@@ -126,11 +126,11 @@ class WaterFurnaceSensor(SensorEntity):
             f"wf_{slugify(self.client.unit)}_{slugify(description.key)}"
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, UPDATE_TOPIC, self.async_update_callback
+                self.menuai, UPDATE_TOPIC, self.async_update_callback
             )
         )
 

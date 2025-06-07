@@ -6,13 +6,13 @@ import logging
 import subprocess
 from typing import Any
 
-from homeassistant.components.notify import BaseNotificationService
-from homeassistant.const import CONF_COMMAND
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import TemplateError
-from homeassistant.helpers.template import Template
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util.process import kill_subprocess
+from menuai.components.notify import BaseNotificationService
+from menuai.const import CONF_COMMAND
+from menuai.core import menuai
+from menuai.exceptions import TemplateError
+from menuai.helpers.template import Template
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util.process import kill_subprocess
 
 from .const import CONF_COMMAND_TIMEOUT, LOGGER
 
@@ -20,7 +20,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def get_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> CommandLineNotificationService | None:
@@ -52,7 +52,7 @@ class CommandLineNotificationService(BaseNotificationService):
             args_compiled = None
         else:
             prog, args = command.split(" ", 1)
-            args_compiled = Template(args, self.hass)
+            args_compiled = Template(args, self.menuai)
 
         rendered_args = None
         if args_compiled:

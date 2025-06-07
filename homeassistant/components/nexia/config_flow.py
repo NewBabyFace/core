@@ -8,11 +8,11 @@ from nexia.const import BRAND_ASAIR, BRAND_NEXIA, BRAND_TRANE
 from nexia.home import NexiaHome
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
     BRAND_ASAIR_NAME,
@@ -40,22 +40,22 @@ DATA_SCHEMA = vol.Schema(
 )
 
 
-async def validate_input(hass: HomeAssistant, data):
+async def validate_input(menuai: menuai, data):
     """Validate the user input allows us to connect.
 
     Data has the keys from DATA_SCHEMA with values provided by the user.
     """
 
-    state_file = hass.config.path(
+    state_file = menuai.config.path(
         f"{data[CONF_BRAND]}_config_{data[CONF_USERNAME]}.conf"
     )
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
     nexia_home = NexiaHome(
         session,
         username=data[CONF_USERNAME],
         password=data[CONF_PASSWORD],
         brand=data[CONF_BRAND],
-        device_name=hass.config.location_name,
+        device_name=menuai.config.location_name,
         state_file=state_file,
     )
     try:
@@ -90,7 +90,7 @@ class NexiaConfigFlow(ConfigFlow, domain=DOMAIN):
         errors = {}
         if user_input is not None:
             try:
-                info = await validate_input(self.hass, user_input)
+                info = await validate_input(self.menuai, user_input)
             except CannotConnect:
                 errors["base"] = "cannot_connect"
             except InvalidAuth:
@@ -109,9 +109,9 @@ class NexiaConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(menuaiError):
     """Error to indicate there is invalid auth."""

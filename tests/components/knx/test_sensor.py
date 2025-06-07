@@ -1,16 +1,16 @@
 """Test KNX sensor."""
 
-from homeassistant.components.knx.const import CONF_STATE_ADDRESS, CONF_SYNC_STATE
-from homeassistant.components.knx.schema import SensorSchema
-from homeassistant.const import CONF_NAME, CONF_TYPE, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
+from menuai.components.knx.const import CONF_STATE_ADDRESS, CONF_SYNC_STATE
+from menuai.components.knx.schema import SensorSchema
+from menuai.const import CONF_NAME, CONF_TYPE, STATE_UNKNOWN
+from menuai.core import menuai
 
 from .conftest import KNXTestKit
 
 from tests.common import async_capture_events
 
 
-async def test_sensor(hass: HomeAssistant, knx: KNXTestKit) -> None:
+async def test_sensor(menuai: menuai, knx: KNXTestKit) -> None:
     """Test simple KNX sensor."""
 
     await knx.setup_integration(
@@ -22,18 +22,18 @@ async def test_sensor(hass: HomeAssistant, knx: KNXTestKit) -> None:
             }
         }
     )
-    state = hass.states.get("sensor.test")
+    state = menuai.states.get("sensor.test")
     assert state.state is STATE_UNKNOWN
 
     # StateUpdater initialize state
     await knx.assert_read("1/1/1")
     await knx.receive_response("1/1/1", (0, 40))
-    state = hass.states.get("sensor.test")
+    state = menuai.states.get("sensor.test")
     assert state.state == "40"
 
     # update from KNX
     await knx.receive_write("1/1/1", (0x03, 0xE8))
-    state = hass.states.get("sensor.test")
+    state = menuai.states.get("sensor.test")
     assert state.state == "1000"
 
     # don't answer to GroupValueRead requests
@@ -41,7 +41,7 @@ async def test_sensor(hass: HomeAssistant, knx: KNXTestKit) -> None:
     await knx.assert_no_telegram()
 
 
-async def test_always_callback(hass: HomeAssistant, knx: KNXTestKit) -> None:
+async def test_always_callback(menuai: menuai, knx: KNXTestKit) -> None:
     """Test KNX sensor with always_callback."""
 
     await knx.setup_integration(
@@ -63,7 +63,7 @@ async def test_always_callback(hass: HomeAssistant, knx: KNXTestKit) -> None:
             ]
         }
     )
-    events = async_capture_events(hass, "state_changed")
+    events = async_capture_events(menuai, "state_changed")
 
     # receive initial telegram
     await knx.receive_write("1/1/1", (0x42,))

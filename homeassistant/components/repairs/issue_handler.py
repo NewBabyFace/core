@@ -6,11 +6,11 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant import data_entry_flow
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import issue_registry as ir
-from homeassistant.helpers.integration_platform import (
+from menuai import data_entry_flow
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import issue_registry as ir
+from menuai.helpers.integration_platform import (
     async_process_integration_platforms,
 )
 
@@ -34,7 +34,7 @@ class ConfirmRepairFlow(RepairsFlow):
         if user_input is not None:
             return self.async_create_entry(data={})
 
-        issue_registry = ir.async_get(self.hass)
+        issue_registry = ir.async_get(self.menuai)
         description_placeholders = None
         if issue := issue_registry.async_get_issue(self.handler, self.issue_id):
             description_placeholders = issue.translation_placeholders
@@ -60,20 +60,20 @@ class RepairsFlowManager(data_entry_flow.FlowManager):
         assert data and "issue_id" in data
         issue_id = data["issue_id"]
 
-        issue_registry = ir.async_get(self.hass)
+        issue_registry = ir.async_get(self.menuai)
         issue = issue_registry.async_get_issue(handler_key, issue_id)
         if issue is None or not issue.is_fixable:
             raise data_entry_flow.UnknownStep
 
-        if "platforms" not in self.hass.data[DOMAIN]:
-            await async_process_repairs_platforms(self.hass)
+        if "platforms" not in self.menuai.data[DOMAIN]:
+            await async_process_repairs_platforms(self.menuai)
 
-        platforms: dict[str, RepairsProtocol] = self.hass.data[DOMAIN]["platforms"]
+        platforms: dict[str, RepairsProtocol] = self.menuai.data[DOMAIN]["platforms"]
         if handler_key not in platforms:
             flow: RepairsFlow = ConfirmRepairFlow()
         else:
             platform = platforms[handler_key]
-            flow = await platform.async_create_fix_flow(self.hass, issue_id, issue.data)
+            flow = await platform.async_create_fix_flow(self.menuai, issue_id, issue.data)
 
         flow.issue_id = issue_id
         flow.data = issue.data
@@ -88,32 +88,32 @@ class RepairsFlowManager(data_entry_flow.FlowManager):
         FlowResultType.CREATE_ENTRY.
         """
         if result.get("type") != data_entry_flow.FlowResultType.ABORT:
-            ir.async_delete_issue(self.hass, flow.handler, flow.init_data["issue_id"])
+            ir.async_delete_issue(self.menuai, flow.handler, flow.init_data["issue_id"])
         if "result" not in result:
             result["result"] = None
         return result
 
 
 @callback
-def async_setup(hass: HomeAssistant) -> None:
+def async_setup(menuai: menuai) -> None:
     """Initialize repairs."""
-    hass.data[DOMAIN]["flow_manager"] = RepairsFlowManager(hass)
+    menuai.data[DOMAIN]["flow_manager"] = RepairsFlowManager(menuai)
 
 
-async def async_process_repairs_platforms(hass: HomeAssistant) -> None:
+async def async_process_repairs_platforms(menuai: menuai) -> None:
     """Start processing repairs platforms."""
-    hass.data[DOMAIN]["platforms"] = {}
+    menuai.data[DOMAIN]["platforms"] = {}
 
     await async_process_integration_platforms(
-        hass, DOMAIN, _register_repairs_platform, wait_for_platforms=True
+        menuai, DOMAIN, _register_repairs_platform, wait_for_platforms=True
     )
 
 
 @callback
 def _register_repairs_platform(
-    hass: HomeAssistant, integration_domain: str, platform: RepairsProtocol
+    menuai: menuai, integration_domain: str, platform: RepairsProtocol
 ) -> None:
     """Register a repairs platform."""
     if not hasattr(platform, "async_create_fix_flow"):
-        raise HomeAssistantError(f"Invalid repairs platform {platform}")
-    hass.data[DOMAIN]["platforms"][integration_domain] = platform
+        raise menuaiError(f"Invalid repairs platform {platform}")
+    menuai.data[DOMAIN]["platforms"][integration_domain] = platform

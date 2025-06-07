@@ -19,9 +19,9 @@ from PyViCare.PyViCareUtils import (
 )
 import requests
 
-from homeassistant.const import CONF_CLIENT_ID, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.storage import STORAGE_DIR
+from menuai.const import CONF_CLIENT_ID, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.helpers.storage import STORAGE_DIR
 
 from .const import (
     CONF_HEATING_TYPE,
@@ -36,7 +36,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def login(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry_data: Mapping[str, Any],
     cache_duration=DEFAULT_CACHE_DURATION,
 ) -> PyViCare:
@@ -47,7 +47,7 @@ def login(
         entry_data[CONF_USERNAME],
         entry_data[CONF_PASSWORD],
         entry_data[CONF_CLIENT_ID],
-        hass.config.path(STORAGE_DIR, VICARE_TOKEN_FILENAME),
+        menuai.config.path(STORAGE_DIR, VICARE_TOKEN_FILENAME),
     )
     return vicare_api
 

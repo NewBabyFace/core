@@ -9,22 +9,22 @@ import pytest
 from telegram import Bot, Chat, ChatFullInfo, Message, User
 from telegram.constants import AccentColor, ChatType
 
-from homeassistant.components.telegram_bot import (
+from menuai.components.telegram_bot import (
     ATTR_PARSER,
     CONF_ALLOWED_CHAT_IDS,
     CONF_TRUSTED_NETWORKS,
     DOMAIN,
     PARSER_MD,
 )
-from homeassistant.components.telegram_bot.const import (
+from menuai.components.telegram_bot.const import (
     CONF_CHAT_ID,
     PLATFORM_BROADCAST,
     PLATFORM_WEBHOOKS,
 )
-from homeassistant.config_entries import ConfigSubentryData
-from homeassistant.const import CONF_API_KEY, CONF_PLATFORM, CONF_URL
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.config_entries import ConfigSubentryData
+from menuai.const import CONF_API_KEY, CONF_PLATFORM, CONF_URL
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 
@@ -74,11 +74,11 @@ def mock_register_webhook() -> Generator[None]:
     """Mock calls made by telegram_bot when (de)registering webhook."""
     with (
         patch(
-            "homeassistant.components.telegram_bot.webhooks.PushBot.register_webhook",
+            "menuai.components.telegram_bot.webhooks.PushBot.register_webhook",
             return_value=True,
         ),
         patch(
-            "homeassistant.components.telegram_bot.webhooks.PushBot.deregister_webhook",
+            "menuai.components.telegram_bot.webhooks.PushBot.deregister_webhook",
             return_value=True,
         ),
     ):
@@ -117,7 +117,7 @@ def mock_external_calls() -> Generator[None]:
             return True
 
     with (
-        patch("homeassistant.components.telegram_bot.bot.Bot", BotMock),
+        patch("menuai.components.telegram_bot.bot.Bot", BotMock),
         patch.object(BotMock, "get_chat", return_value=test_chat),
         patch.object(BotMock, "get_me", return_value=test_user),
         patch.object(BotMock, "bot", test_user),
@@ -140,7 +140,7 @@ def mock_generate_secret_token() -> Generator[str]:
     """Mock secret token generated for webhook."""
     mock_secret_token = "DEADBEEF12345678DEADBEEF87654321"
     with patch(
-        "homeassistant.components.telegram_bot.webhooks.secrets.choice",
+        "menuai.components.telegram_bot.webhooks.secrets.choice",
         side_effect=mock_secret_token,
     ):
         yield mock_secret_token
@@ -292,7 +292,7 @@ def mock_webhooks_config_entry() -> MockConfigEntry:
 
 @pytest.fixture
 async def webhook_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_webhooks: dict[str, Any],
     mock_register_webhook: None,
     mock_external_calls: None,
@@ -300,22 +300,22 @@ async def webhook_platform(
 ) -> AsyncGenerator[None]:
     """Fixture for setting up the webhooks platform using appropriate config and mocks."""
     await async_setup_component(
-        hass,
+        menuai,
         DOMAIN,
         config_webhooks,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     yield
-    await hass.async_stop()
+    await menuai.async_stop()
 
 
 @pytest.fixture
 async def polling_platform(
-    hass: HomeAssistant, config_polling: dict[str, Any], mock_external_calls: None
+    menuai: menuai, config_polling: dict[str, Any], mock_external_calls: None
 ) -> None:
     """Fixture for setting up the polling platform using appropriate config and mocks."""
     with patch(
-        "homeassistant.components.telegram_bot.polling.ApplicationBuilder"
+        "menuai.components.telegram_bot.polling.ApplicationBuilder"
     ) as application_builder_class:
         application = (
             application_builder_class.return_value.bot.return_value.build.return_value
@@ -328,9 +328,9 @@ async def polling_platform(
         application.shutdown = AsyncMock()
 
         await async_setup_component(
-            hass,
+            menuai,
             DOMAIN,
             config_polling,
         )
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()

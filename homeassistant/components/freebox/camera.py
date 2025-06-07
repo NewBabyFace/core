@@ -5,18 +5,18 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from homeassistant.components.camera import CameraEntityFeature
-from homeassistant.components.ffmpeg.camera import (
+from menuai.components.camera import CameraEntityFeature
+from menuai.components.ffmpeg.camera import (
     CONF_EXTRA_ARGUMENTS,
     CONF_INPUT,
     DEFAULT_ARGUMENTS,
     FFmpegCamera,
 )
-from homeassistant.const import CONF_NAME
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_platform
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import CONF_NAME
+from menuai.core import menuai, callback
+from menuai.helpers import entity_platform
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import ATTR_DETECTION, FreeboxHomeCategory
 from .entity import FreeboxHomeEntity
@@ -26,7 +26,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: FreeboxConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -36,10 +36,10 @@ async def async_setup_entry(
 
     @callback
     def update_callback() -> None:
-        add_entities(hass, router, async_add_entities, tracked)
+        add_entities(menuai, router, async_add_entities, tracked)
 
     router.listeners.append(
-        async_dispatcher_connect(hass, router.signal_home_device_new, update_callback)
+        async_dispatcher_connect(menuai, router.signal_home_device_new, update_callback)
     )
     update_callback()
 
@@ -48,7 +48,7 @@ async def async_setup_entry(
 
 @callback
 def add_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     router: FreeboxRouter,
     async_add_entities: AddConfigEntryEntitiesCallback,
     tracked: set[str],
@@ -59,7 +59,7 @@ def add_entities(
     for nodeid, node in router.home_devices.items():
         if (node["category"] != FreeboxHomeCategory.CAMERA) or (nodeid in tracked):
             continue
-        new_tracked.append(FreeboxCamera(hass, router, node))
+        new_tracked.append(FreeboxCamera(menuai, router, node))
         tracked.add(nodeid)
 
     if new_tracked:
@@ -70,17 +70,17 @@ class FreeboxCamera(FreeboxHomeEntity, FFmpegCamera):
     """Representation of a Freebox camera."""
 
     def __init__(
-        self, hass: HomeAssistant, router: FreeboxRouter, node: dict[str, Any]
+        self, menuai: menuai, router: FreeboxRouter, node: dict[str, Any]
     ) -> None:
         """Initialize a camera."""
 
-        super().__init__(hass, router, node)
+        super().__init__(menuai, router, node)
         device_info = {
             CONF_NAME: node["label"].strip(),
             CONF_INPUT: node["props"]["Stream"],
             CONF_EXTRA_ARGUMENTS: DEFAULT_ARGUMENTS,
         }
-        FFmpegCamera.__init__(self, hass, device_info)
+        FFmpegCamera.__init__(self, menuai, device_info)
 
         self._supported_features = (
             CameraEntityFeature.ON_OFF | CameraEntityFeature.STREAM

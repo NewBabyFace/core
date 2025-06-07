@@ -8,21 +8,21 @@ from pyqwikswitch.async_ import QSUsb
 from pyqwikswitch.qwikswitch import CMD_BUTTONS, QS_CMD, QS_ID, SENSORS, QSType
 import voluptuous as vol
 
-from homeassistant.components.binary_sensor import DEVICE_CLASSES_SCHEMA
-from homeassistant.const import (
+from menuai.components.binary_sensor import DEVICE_CLASSES_SCHEMA
+from menuai.const import (
     CONF_SENSORS,
     CONF_SWITCHES,
     CONF_URL,
-    EVENT_HOMEASSISTANT_START,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_START,
+    EVENT_menuai_STOP,
     Platform,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.discovery import load_platform
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.discovery import load_platform
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.typing import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -65,7 +65,7 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Qwiskswitch component setup."""
 
     # Add cmd's to in /&listen packets will fire events
@@ -82,9 +82,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     def callback_value_changed(_qsd, qsid, _val):
         """Update entity values based on device change."""
         _LOGGER.debug("Dispatch %s (update from devices)", qsid)
-        async_dispatcher_send(hass, qsid, None)
+        async_dispatcher_send(menuai, qsid, None)
 
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
     qsusb = QSUsb(
         url=url,
         dim_adj=dimmer_adjust,
@@ -96,7 +96,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     if not await qsusb.update_from_devices():
         return False
 
-    hass.data[DOMAIN] = qsusb
+    menuai.data[DOMAIN] = qsusb
 
     comps: dict[Platform, list] = {
         Platform.SWITCH: [],
@@ -141,35 +141,35 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     # Load platforms
     for comp_name, comp_conf in comps.items():
         if comp_conf:
-            load_platform(hass, comp_name, DOMAIN, {DOMAIN: comp_conf}, config)
+            load_platform(menuai, comp_name, DOMAIN, {DOMAIN: comp_conf}, config)
 
     def callback_qs_listen(qspacket):
         """Typically a button press or update signal."""
-        # If button pressed, fire a hass event
+        # If button pressed, fire a menuai event
         if QS_ID in qspacket:
             if qspacket.get(QS_CMD, "") in cmd_buttons:
-                hass.bus.async_fire(f"qwikswitch.button.{qspacket[QS_ID]}", qspacket)
+                menuai.bus.async_fire(f"qwikswitch.button.{qspacket[QS_ID]}", qspacket)
                 return
 
             if qspacket[QS_ID] in sensor_ids:
                 _LOGGER.debug("Dispatch %s ((%s))", qspacket[QS_ID], qspacket)
-                async_dispatcher_send(hass, qspacket[QS_ID], qspacket)
+                async_dispatcher_send(menuai, qspacket[QS_ID], qspacket)
 
         # Update all ha_objects
-        hass.async_create_task(qsusb.update_from_devices())
+        menuai.async_create_task(qsusb.update_from_devices())
 
     @callback
     def async_start(_):
         """Start listening."""
         qsusb.listen(callback_qs_listen)
 
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_START, async_start)
+    menuai.bus.async_listen_once(EVENT_menuai_START, async_start)
 
     @callback
     def async_stop(_):
         """Stop the listener."""
-        hass.data[DOMAIN].stop()
+        menuai.data[DOMAIN].stop()
 
-    hass.bus.async_listen(EVENT_HOMEASSISTANT_STOP, async_stop)
+    menuai.bus.async_listen(EVENT_menuai_STOP, async_stop)
 
     return True

@@ -9,11 +9,11 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from homeassistant.components import onboarding
-from homeassistant.components.onboarding import const, views
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import area_registry as ar
-from homeassistant.setup import async_set_domains_to_be_loaded, async_setup_component
+from menuai.components import onboarding
+from menuai.components.onboarding import const, views
+from menuai.core import menuai
+from menuai.helpers import area_registry as ar
+from menuai.setup import async_set_domains_to_be_loaded, async_setup_component
 
 from . import mock_storage
 
@@ -31,14 +31,14 @@ from tests.typing import ClientSessionGenerator
 
 
 @pytest.fixture(autouse=True)
-async def auth_active(hass: HomeAssistant) -> None:
+async def auth_active(menuai: menuai) -> None:
     """Ensure auth is always active."""
-    await register_auth_provider(hass, {"type": "homeassistant"})
+    await register_auth_provider(menuai, {"type": "menuai"})
 
 
 @pytest.fixture(name="rpi")
 async def rpi_fixture(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker, mock_supervisor
+    menuai: menuai, aioclient_mock: AiohttpClientMocker, mock_supervisor
 ) -> None:
     """Mock core info with rpi."""
     aioclient_mock.get(
@@ -48,13 +48,13 @@ async def rpi_fixture(
             "data": {"version_latest": "1.0.0", "machine": "raspberrypi3"},
         },
     )
-    assert await async_setup_component(hass, "hassio", {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "menuaiio", {})
+    await menuai.async_block_till_done()
 
 
 @pytest.fixture(name="no_rpi")
 async def no_rpi_fixture(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker, mock_supervisor
+    menuai: menuai, aioclient_mock: AiohttpClientMocker, mock_supervisor
 ) -> None:
     """Mock core info with rpi."""
     aioclient_mock.get(
@@ -64,8 +64,8 @@ async def no_rpi_fixture(
             "data": {"version_latest": "1.0.0", "machine": "odroid-n2"},
         },
     )
-    assert await async_setup_component(hass, "hassio", {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "menuaiio", {})
+    await menuai.async_block_till_done()
 
 
 @pytest.fixture(name="mock_supervisor")
@@ -76,7 +76,7 @@ async def mock_supervisor_fixture(
     resolution_info: AsyncMock,
 ) -> AsyncGenerator[None]:
     """Mock supervisor."""
-    aioclient_mock.post("http://127.0.0.1/homeassistant/options", json={"result": "ok"})
+    aioclient_mock.post("http://127.0.0.1/menuai/options", json={"result": "ok"})
     aioclient_mock.post("http://127.0.0.1/supervisor/options", json={"result": "ok"})
     aioclient_mock.get(
         "http://127.0.0.1/network/info",
@@ -91,23 +91,23 @@ async def mock_supervisor_fixture(
     with (
         patch.dict(os.environ, {"SUPERVISOR": "127.0.0.1"}),
         patch(
-            "homeassistant.components.hassio.HassIO.get_info",
+            "menuai.components.menuaiio.menuaiIO.get_info",
             return_value={},
         ),
         patch(
-            "homeassistant.components.hassio.HassIO.get_host_info",
+            "menuai.components.menuaiio.menuaiIO.get_host_info",
             return_value={},
         ),
         patch(
-            "homeassistant.components.hassio.HassIO.get_supervisor_info",
+            "menuai.components.menuaiio.menuaiIO.get_supervisor_info",
             return_value={"diagnostics": True},
         ),
         patch(
-            "homeassistant.components.hassio.HassIO.get_os_info",
+            "menuai.components.menuaiio.menuaiIO.get_os_info",
             return_value={},
         ),
         patch(
-            "homeassistant.components.hassio.HassIO.get_ingress_panels",
+            "menuai.components.menuaiio.menuaiIO.get_ingress_panels",
             return_value={"panels": {}},
         ),
         patch.dict(
@@ -122,15 +122,15 @@ async def mock_supervisor_fixture(
 def mock_default_integrations():
     """Mock the default integrations set up during onboarding."""
     with (
-        patch("homeassistant.components.rpi_power.config_flow.new_under_voltage"),
-        patch("homeassistant.components.rpi_power.binary_sensor.new_under_voltage"),
-        patch("homeassistant.components.met.async_setup_entry", return_value=True),
+        patch("menuai.components.rpi_power.config_flow.new_under_voltage"),
+        patch("menuai.components.rpi_power.binary_sensor.new_under_voltage"),
+        patch("menuai.components.met.async_setup_entry", return_value=True),
         patch(
-            "homeassistant.components.radio_browser.async_setup_entry",
+            "menuai.components.radio_browser.async_setup_entry",
             return_value=True,
         ),
         patch(
-            "homeassistant.components.shopping_list.async_setup_entry",
+            "menuai.components.shopping_list.async_setup_entry",
             return_value=True,
         ),
     ):
@@ -138,17 +138,17 @@ def mock_default_integrations():
 
 
 async def test_onboarding_progress(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
+    menuai_client_no_auth: ClientSessionGenerator,
 ) -> None:
     """Test fetching progress."""
-    mock_storage(hass_storage, {"done": ["hello"]})
+    mock_storage(menuai_storage, {"done": ["hello"]})
 
-    assert await async_setup_component(hass, "onboarding", {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "onboarding", {})
+    await menuai.async_block_till_done()
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
 
     with patch.object(views, "STEPS", ["hello", "world"]):
         resp = await client.get("/api/onboarding")
@@ -161,18 +161,18 @@ async def test_onboarding_progress(
 
 
 async def test_onboarding_user_already_done(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
+    menuai_client_no_auth: ClientSessionGenerator,
 ) -> None:
     """Test creating a new user when user step already done."""
-    mock_storage(hass_storage, {"done": [views.STEP_USER]})
+    mock_storage(menuai_storage, {"done": [views.STEP_USER]})
 
     with patch.object(onboarding, "STEPS", ["hello", "world"]):
-        assert await async_setup_component(hass, "onboarding", {})
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, "onboarding", {})
+        await menuai.async_block_till_done()
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
 
     resp = await client.post(
         "/api/onboarding/users",
@@ -189,9 +189,9 @@ async def test_onboarding_user_already_done(
 
 
 async def test_onboarding_user(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
+    menuai_client_no_auth: ClientSessionGenerator,
     area_registry: ar.AreaRegistry,
 ) -> None:
     """Test creating a new user."""
@@ -199,12 +199,12 @@ async def test_onboarding_user(
     # before onboarding is done.
     area_registry.async_create("Living Room")
 
-    assert await async_setup_component(hass, "person", {})
-    assert await async_setup_component(hass, "onboarding", {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "person", {})
+    assert await async_setup_component(menuai, "onboarding", {})
+    await menuai.async_block_till_done()
 
-    cur_users = len(await hass.auth.async_get_users())
-    client = await hass_client_no_auth()
+    cur_users = len(await menuai.auth.async_get_users())
+    client = await menuai_client_no_auth()
 
     resp = await client.post(
         "/api/onboarding/users",
@@ -218,18 +218,18 @@ async def test_onboarding_user(
     )
 
     assert resp.status == 200
-    assert const.STEP_USER in hass_storage[const.DOMAIN]["data"]["done"]
+    assert const.STEP_USER in menuai_storage[const.DOMAIN]["data"]["done"]
 
     data = await resp.json()
     assert "auth_code" in data
 
-    users = await hass.auth.async_get_users()
-    assert len(await hass.auth.async_get_users()) == cur_users + 1
+    users = await menuai.auth.async_get_users()
+    assert len(await menuai.auth.async_get_users()) == cur_users + 1
     user = next((user for user in users if user.name == "Test Name"), None)
     assert user is not None
     assert len(user.credentials) == 1
     assert user.credentials[0].data["username"] == "test-user"
-    assert len(hass.data["person"][1].async_items()) == 1
+    assert len(menuai.data["person"][1].async_items()) == 1
 
     # Validate refresh token 1
     resp = await client.post(
@@ -244,7 +244,7 @@ async def test_onboarding_user(
     assert resp.status == 200
     tokens = await resp.json()
 
-    assert hass.auth.async_validate_access_token(tokens["access_token"]) is not None
+    assert menuai.auth.async_validate_access_token(tokens["access_token"]) is not None
 
     # Validate created areas
     assert len(area_registry.areas) == 3
@@ -256,17 +256,17 @@ async def test_onboarding_user(
 
 
 async def test_onboarding_user_invalid_name(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
+    menuai_client_no_auth: ClientSessionGenerator,
 ) -> None:
     """Test not providing name."""
-    mock_storage(hass_storage, {"done": []})
+    mock_storage(menuai_storage, {"done": []})
 
-    assert await async_setup_component(hass, "onboarding", {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "onboarding", {})
+    await menuai.async_block_till_done()
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
 
     resp = await client.post(
         "/api/onboarding/users",
@@ -282,17 +282,17 @@ async def test_onboarding_user_invalid_name(
 
 
 async def test_onboarding_user_race(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
+    menuai_client_no_auth: ClientSessionGenerator,
 ) -> None:
     """Test race condition on creating new user."""
-    mock_storage(hass_storage, {"done": ["hello"]})
+    mock_storage(menuai_storage, {"done": ["hello"]})
 
-    assert await async_setup_component(hass, "onboarding", {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "onboarding", {})
+    await menuai.async_block_till_done()
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
 
     resp1 = client.post(
         "/api/onboarding/users",
@@ -321,18 +321,18 @@ async def test_onboarding_user_race(
 
 
 async def test_onboarding_integration(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
-    hass_client: ClientSessionGenerator,
-    hass_admin_user: MockUser,
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
+    menuai_client: ClientSessionGenerator,
+    menuai_admin_user: MockUser,
 ) -> None:
     """Test finishing integration step."""
-    mock_storage(hass_storage, {"done": [const.STEP_USER]})
+    mock_storage(menuai_storage, {"done": [const.STEP_USER]})
 
-    assert await async_setup_component(hass, "onboarding", {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "onboarding", {})
+    await menuai.async_block_till_done()
 
-    client = await hass_client()
+    client = await menuai_client()
 
     resp = await client.post(
         "/api/onboarding/integration",
@@ -354,32 +354,32 @@ async def test_onboarding_integration(
     )
 
     assert resp.status == 200
-    assert const.STEP_INTEGRATION in hass_storage[const.DOMAIN]["data"]["done"]
+    assert const.STEP_INTEGRATION in menuai_storage[const.DOMAIN]["data"]["done"]
     tokens = await resp.json()
 
-    assert hass.auth.async_validate_access_token(tokens["access_token"]) is not None
+    assert menuai.auth.async_validate_access_token(tokens["access_token"]) is not None
 
     # Onboarding refresh token and new refresh token
-    user = await hass.auth.async_get_user(hass_admin_user.id)
+    user = await menuai.auth.async_get_user(menuai_admin_user.id)
     assert len(user.refresh_tokens) == 2, user
 
 
 async def test_onboarding_integration_missing_credential(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
-    hass_client: ClientSessionGenerator,
-    hass_access_token: str,
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
+    menuai_client: ClientSessionGenerator,
+    menuai_access_token: str,
 ) -> None:
     """Test that we fail integration step if user is missing credentials."""
-    mock_storage(hass_storage, {"done": [const.STEP_USER]})
+    mock_storage(menuai_storage, {"done": [const.STEP_USER]})
 
-    assert await async_setup_component(hass, "onboarding", {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "onboarding", {})
+    await menuai.async_block_till_done()
 
-    refresh_token = hass.auth.async_validate_access_token(hass_access_token)
+    refresh_token = menuai.auth.async_validate_access_token(menuai_access_token)
     refresh_token.credential = None
 
-    client = await hass_client()
+    client = await menuai_client()
 
     resp = await client.post(
         "/api/onboarding/integration",
@@ -390,20 +390,20 @@ async def test_onboarding_integration_missing_credential(
 
 
 async def test_onboarding_integration_invalid_redirect_uri(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test finishing integration step."""
-    mock_storage(hass_storage, {"done": [const.STEP_USER]})
+    mock_storage(menuai_storage, {"done": [const.STEP_USER]})
 
-    assert await async_setup_component(hass, "onboarding", {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "onboarding", {})
+    await menuai.async_block_till_done()
 
-    client = await hass_client()
+    client = await menuai_client()
 
     with patch(
-        "homeassistant.components.auth.indieauth.fetch_redirect_uris", return_value=[]
+        "menuai.components.auth.indieauth.fetch_redirect_uris", return_value=[]
     ):
         resp = await client.post(
             "/api/onboarding/integration",
@@ -416,25 +416,25 @@ async def test_onboarding_integration_invalid_redirect_uri(
     assert resp.status == 400
 
     # We will still mark the last step as done because there is nothing left.
-    assert const.STEP_INTEGRATION in hass_storage[const.DOMAIN]["data"]["done"]
+    assert const.STEP_INTEGRATION in menuai_storage[const.DOMAIN]["data"]["done"]
 
     # Only refresh token from onboarding should be there
-    for user in await hass.auth.async_get_users():
+    for user in await menuai.auth.async_get_users():
         assert len(user.refresh_tokens) == 1, user
 
 
 async def test_onboarding_integration_requires_auth(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
+    menuai_client_no_auth: ClientSessionGenerator,
 ) -> None:
     """Test finishing integration step."""
-    mock_storage(hass_storage, {"done": [const.STEP_USER]})
+    mock_storage(menuai_storage, {"done": [const.STEP_USER]})
 
-    assert await async_setup_component(hass, "onboarding", {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "onboarding", {})
+    await menuai.async_block_till_done()
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
 
     resp = await client.post(
         "/api/onboarding/integration", json={"client_id": CLIENT_ID}
@@ -444,184 +444,184 @@ async def test_onboarding_integration_requires_auth(
 
 
 async def test_onboarding_core_sets_up_met(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
+    menuai_client: ClientSessionGenerator,
     mock_default_integrations,
 ) -> None:
     """Test finishing the core step."""
-    mock_storage(hass_storage, {"done": [const.STEP_USER]})
+    mock_storage(menuai_storage, {"done": [const.STEP_USER]})
 
-    assert await async_setup_component(hass, "onboarding", {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "onboarding", {})
+    await menuai.async_block_till_done()
 
-    client = await hass_client()
+    client = await menuai_client()
     resp = await client.post("/api/onboarding/core_config")
 
     assert resp.status == 200
 
-    await hass.async_block_till_done()
-    assert len(hass.config_entries.async_entries("met")) == 1
+    await menuai.async_block_till_done()
+    assert len(menuai.config_entries.async_entries("met")) == 1
 
 
 async def test_onboarding_core_sets_up_shopping_list(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
+    menuai_client: ClientSessionGenerator,
     mock_default_integrations,
 ) -> None:
     """Test finishing the core step set up the shopping list."""
-    mock_storage(hass_storage, {"done": [const.STEP_USER]})
+    mock_storage(menuai_storage, {"done": [const.STEP_USER]})
 
-    assert await async_setup_component(hass, "onboarding", {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "onboarding", {})
+    await menuai.async_block_till_done()
 
-    client = await hass_client()
+    client = await menuai_client()
     resp = await client.post("/api/onboarding/core_config")
 
     assert resp.status == 200
 
-    await hass.async_block_till_done()
-    assert len(hass.config_entries.async_entries("shopping_list")) == 1
+    await menuai.async_block_till_done()
+    assert len(menuai.config_entries.async_entries("shopping_list")) == 1
 
 
 async def test_onboarding_core_sets_up_google_translate(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
+    menuai_client: ClientSessionGenerator,
     mock_default_integrations,
 ) -> None:
     """Test finishing the core step sets up google translate."""
-    mock_storage(hass_storage, {"done": [const.STEP_USER]})
+    mock_storage(menuai_storage, {"done": [const.STEP_USER]})
 
-    assert await async_setup_component(hass, "onboarding", {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "onboarding", {})
+    await menuai.async_block_till_done()
 
-    client = await hass_client()
+    client = await menuai_client()
     resp = await client.post("/api/onboarding/core_config")
 
     assert resp.status == 200
 
-    await hass.async_block_till_done()
-    assert len(hass.config_entries.async_entries("google_translate")) == 1
+    await menuai.async_block_till_done()
+    assert len(menuai.config_entries.async_entries("google_translate")) == 1
 
 
 async def test_onboarding_core_sets_up_radio_browser(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
+    menuai_client: ClientSessionGenerator,
     mock_default_integrations,
 ) -> None:
     """Test finishing the core step set up the radio browser."""
-    mock_storage(hass_storage, {"done": [const.STEP_USER]})
+    mock_storage(menuai_storage, {"done": [const.STEP_USER]})
 
-    assert await async_setup_component(hass, "onboarding", {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "onboarding", {})
+    await menuai.async_block_till_done()
 
-    client = await hass_client()
+    client = await menuai_client()
     resp = await client.post("/api/onboarding/core_config")
 
     assert resp.status == 200
 
-    await hass.async_block_till_done()
-    assert len(hass.config_entries.async_entries("radio_browser")) == 1
+    await menuai.async_block_till_done()
+    assert len(menuai.config_entries.async_entries("radio_browser")) == 1
 
 
 async def test_onboarding_core_no_rpi_power(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
+    menuai_client: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     no_rpi,
     mock_default_integrations,
 ) -> None:
     """Test that the core step do not set up rpi_power on non RPi."""
-    mock_storage(hass_storage, {"done": [const.STEP_USER]})
+    mock_storage(menuai_storage, {"done": [const.STEP_USER]})
 
-    assert await async_setup_component(hass, "onboarding", {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "onboarding", {})
+    await menuai.async_block_till_done()
 
-    client = await hass_client()
+    client = await menuai_client()
 
     resp = await client.post("/api/onboarding/core_config")
 
     assert resp.status == 200
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    rpi_power_state = hass.states.get("binary_sensor.rpi_power_status")
+    rpi_power_state = menuai.states.get("binary_sensor.rpi_power_status")
     assert not rpi_power_state
 
 
 async def test_onboarding_core_ensures_analytics_loaded(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
+    menuai_client: ClientSessionGenerator,
     mock_default_integrations,
 ) -> None:
     """Test finishing the core step ensures analytics is ready."""
-    mock_storage(hass_storage, {"done": [const.STEP_USER]})
-    assert "analytics" not in hass.config.components
+    mock_storage(menuai_storage, {"done": [const.STEP_USER]})
+    assert "analytics" not in menuai.config.components
 
-    assert await async_setup_component(hass, "onboarding", {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "onboarding", {})
+    await menuai.async_block_till_done()
 
-    client = await hass_client()
+    client = await menuai_client()
     resp = await client.post("/api/onboarding/core_config")
 
     assert resp.status == 200
 
-    await hass.async_block_till_done()
-    assert "analytics" in hass.config.components
+    await menuai.async_block_till_done()
+    assert "analytics" in menuai.config.components
 
 
 async def test_onboarding_analytics(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
-    hass_client: ClientSessionGenerator,
-    hass_admin_user: MockUser,
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
+    menuai_client: ClientSessionGenerator,
+    menuai_admin_user: MockUser,
 ) -> None:
     """Test finishing analytics step."""
-    mock_storage(hass_storage, {"done": [const.STEP_USER]})
+    mock_storage(menuai_storage, {"done": [const.STEP_USER]})
 
-    assert await async_setup_component(hass, "onboarding", {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "onboarding", {})
+    await menuai.async_block_till_done()
 
-    client = await hass_client()
+    client = await menuai_client()
 
     resp = await client.post("/api/onboarding/analytics")
 
     assert resp.status == 200
 
-    assert const.STEP_ANALYTICS in hass_storage[const.DOMAIN]["data"]["done"]
+    assert const.STEP_ANALYTICS in menuai_storage[const.DOMAIN]["data"]["done"]
 
     resp = await client.post("/api/onboarding/analytics")
     assert resp.status == 403
 
 
 async def test_onboarding_installation_type(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test returning installation type during onboarding."""
-    mock_storage(hass_storage, {"done": []})
+    mock_storage(menuai_storage, {"done": []})
 
-    assert await async_setup_component(hass, "onboarding", {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "onboarding", {})
+    await menuai.async_block_till_done()
 
-    client = await hass_client()
+    client = await menuai_client()
 
     with patch(
-        "homeassistant.components.onboarding.views.async_get_system_info",
-        return_value={"installation_type": "Home Assistant Core"},
+        "menuai.components.onboarding.views.async_get_system_info",
+        return_value={"installation_type": "MenuAI Core"},
     ):
         resp = await client.get("/api/onboarding/installation_type")
 
         assert resp.status == 200
 
         resp_content = await resp.json()
-        assert resp_content["installation_type"] == "Home Assistant Core"
+        assert resp_content["installation_type"] == "MenuAI Core"
 
 
 @pytest.mark.parametrize(
@@ -631,20 +631,20 @@ async def test_onboarding_installation_type(
     ],
 )
 async def test_onboarding_view_after_done(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
+    menuai_client: ClientSessionGenerator,
     method: str,
     view: str,
     kwargs: dict[str, Any],
 ) -> None:
     """Test raising after onboarding."""
-    mock_storage(hass_storage, {"done": [const.STEP_USER]})
+    mock_storage(menuai_storage, {"done": [const.STEP_USER]})
 
-    assert await async_setup_component(hass, "onboarding", {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "onboarding", {})
+    await menuai.async_block_till_done()
 
-    client = await hass_client()
+    client = await menuai_client()
 
     resp = await client.request(method, f"/api/onboarding/{view}", **kwargs)
 
@@ -652,23 +652,23 @@ async def test_onboarding_view_after_done(
 
 
 async def test_complete_onboarding(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test completing onboarding calls listeners."""
     listener_1 = Mock()
-    onboarding.async_add_listener(hass, listener_1)
+    onboarding.async_add_listener(menuai, listener_1)
     listener_1.assert_not_called()
 
-    assert await async_setup_component(hass, "onboarding", {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "onboarding", {})
+    await menuai.async_block_till_done()
 
     listener_2 = Mock()
-    onboarding.async_add_listener(hass, listener_2)
+    onboarding.async_add_listener(menuai, listener_2)
     listener_2.assert_not_called()
 
-    client = await hass_client()
+    client = await menuai_client()
 
-    assert not onboarding.async_is_onboarded(hass)
+    assert not onboarding.async_is_onboarded(menuai)
 
     # Complete the user step
     resp = await client.post(
@@ -682,13 +682,13 @@ async def test_complete_onboarding(
         },
     )
     assert resp.status == 200
-    assert not onboarding.async_is_onboarded(hass)
+    assert not onboarding.async_is_onboarded(menuai)
     listener_2.assert_not_called()
 
     # Complete the core config step
     resp = await client.post("/api/onboarding/core_config")
     assert resp.status == 200
-    assert not onboarding.async_is_onboarded(hass)
+    assert not onboarding.async_is_onboarded(menuai)
     listener_2.assert_not_called()
 
     # Complete the integration step
@@ -697,18 +697,18 @@ async def test_complete_onboarding(
         json={"client_id": CLIENT_ID, "redirect_uri": CLIENT_REDIRECT_URI},
     )
     assert resp.status == 200
-    assert not onboarding.async_is_onboarded(hass)
+    assert not onboarding.async_is_onboarded(menuai)
     listener_2.assert_not_called()
 
     # Complete the analytics step
     resp = await client.post("/api/onboarding/analytics")
     assert resp.status == 200
-    assert onboarding.async_is_onboarded(hass)
+    assert onboarding.async_is_onboarded(menuai)
     listener_1.assert_not_called()  # Registered before the integration was setup
     listener_2.assert_called_once_with()
 
     listener_3 = Mock()
-    onboarding.async_add_listener(hass, listener_3)
+    onboarding.async_add_listener(menuai, listener_3)
     listener_3.assert_called_once_with()
 
 
@@ -720,19 +720,19 @@ async def test_complete_onboarding(
     ],
 )
 async def test_wait_integration(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
+    menuai_client: ClientSessionGenerator,
     domain: str,
     expected_result: dict[str, Any],
 ) -> None:
     """Test we can get wait for an integration to load."""
-    mock_storage(hass_storage, {"done": []})
+    mock_storage(menuai_storage, {"done": []})
 
-    assert await async_setup_component(hass, "onboarding", {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "onboarding", {})
+    await menuai.async_block_till_done()
 
-    client = await hass_client()
+    client = await menuai_client()
     req = await client.post("/api/onboarding/integration/wait", json={"domain": domain})
 
     assert req.status == HTTPStatus.OK
@@ -741,26 +741,26 @@ async def test_wait_integration(
 
 
 async def test_wait_integration_startup(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test we can get wait for an integration to load during startup."""
-    mock_storage(hass_storage, {"done": []})
+    mock_storage(menuai_storage, {"done": []})
 
-    assert await async_setup_component(hass, "onboarding", {})
-    await hass.async_block_till_done()
-    client = await hass_client()
+    assert await async_setup_component(menuai, "onboarding", {})
+    await menuai.async_block_till_done()
+    client = await menuai_client()
 
     setup_stall = asyncio.Event()
     setup_started = asyncio.Event()
 
-    async def mock_setup(hass: HomeAssistant, _) -> bool:
+    async def mock_setup(menuai: menuai, _) -> bool:
         setup_started.set()
         await setup_stall.wait()
         return True
 
-    mock_integration(hass, MockModule("test", async_setup=mock_setup))
+    mock_integration(menuai, MockModule("test", async_setup=mock_setup))
 
     # The integration is not loaded, and is also not scheduled to load
     req = await client.post("/api/onboarding/integration/wait", json={"domain": "test"})
@@ -769,14 +769,14 @@ async def test_wait_integration_startup(
     assert data == {"integration_loaded": False}
 
     # Mark the component as scheduled to be loaded
-    async_set_domains_to_be_loaded(hass, {"test"})
+    async_set_domains_to_be_loaded(menuai, {"test"})
 
     # Start loading the component, including its config entries
-    hass.async_create_task(async_setup_component(hass, "test", {}))
+    menuai.async_create_task(async_setup_component(menuai, "test", {}))
     await setup_started.wait()
 
     # The component is not yet loaded
-    assert "test" not in hass.config.components
+    assert "test" not in menuai.config.components
 
     # Allow setup to proceed
     setup_stall.set()
@@ -788,39 +788,39 @@ async def test_wait_integration_startup(
     assert data == {"integration_loaded": True}
 
     # The component has been loaded
-    assert "test" in hass.config.components
+    assert "test" in menuai.config.components
 
 
 async def test_not_setup_platform_if_onboarded(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
+    menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
     """Test if onboarding is done, we don't setup platforms."""
-    mock_storage(hass_storage, {"done": onboarding.STEPS})
+    mock_storage(menuai_storage, {"done": onboarding.STEPS})
 
     platform_mock = Mock(async_setup_views=AsyncMock(), spec=["async_setup_views"])
-    mock_platform(hass, "test.onboarding", platform_mock)
-    assert await async_setup_component(hass, "test", {})
-    await hass.async_block_till_done()
+    mock_platform(menuai, "test.onboarding", platform_mock)
+    assert await async_setup_component(menuai, "test", {})
+    await menuai.async_block_till_done()
 
-    assert await async_setup_component(hass, "onboarding", {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "onboarding", {})
+    await menuai.async_block_till_done()
 
     assert len(platform_mock.async_setup_views.mock_calls) == 0
 
 
 async def test_setup_platform_if_not_onboarded(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
+    menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
     """Test if onboarding is not done, we setup platforms."""
     platform_mock = Mock(async_setup_views=AsyncMock(), spec=["async_setup_views"])
-    mock_platform(hass, "test.onboarding", platform_mock)
-    assert await async_setup_component(hass, "test", {})
-    await hass.async_block_till_done()
+    mock_platform(menuai, "test.onboarding", platform_mock)
+    assert await async_setup_component(menuai, "test", {})
+    await menuai.async_block_till_done()
 
-    assert await async_setup_component(hass, "onboarding", {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "onboarding", {})
+    await menuai.async_block_till_done()
 
-    platform_mock.async_setup_views.assert_awaited_once_with(hass, {"done": []})
+    platform_mock.async_setup_views.assert_awaited_once_with(menuai, {"done": []})
 
 
 @pytest.mark.parametrize(
@@ -831,17 +831,17 @@ async def test_setup_platform_if_not_onboarded(
     ],
 )
 async def test_bad_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     platform_mock: Mock,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test loading onboarding platform which doesn't have the expected methods."""
-    mock_platform(hass, "test.onboarding", platform_mock)
-    assert await async_setup_component(hass, "test", {})
-    await hass.async_block_till_done()
+    mock_platform(menuai, "test.onboarding", platform_mock)
+    assert await async_setup_component(menuai, "test", {})
+    await menuai.async_block_till_done()
 
-    assert await async_setup_component(hass, "onboarding", {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "onboarding", {})
+    await menuai.async_block_till_done()
 
     assert platform_mock.mock_calls == []
     assert "'test.onboarding' is not a valid onboarding platform" in caplog.text

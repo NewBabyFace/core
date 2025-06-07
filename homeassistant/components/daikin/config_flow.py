@@ -14,11 +14,11 @@ from pydaikin.exceptions import DaikinException
 from pydaikin.factory import DaikinFactory
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_API_KEY, CONF_HOST, CONF_PASSWORD, CONF_UUID
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
-from homeassistant.util.ssl import client_context_no_verify
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_API_KEY, CONF_HOST, CONF_PASSWORD, CONF_UUID
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.util.ssl import client_context_no_verify
 
 from .const import DOMAIN, KEY_MAC, TIMEOUT
 
@@ -87,7 +87,7 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
             async with asyncio.timeout(TIMEOUT):
                 device: Appliance = await DaikinFactory(
                     host,
-                    async_get_clientsession(self.hass),
+                    async_get_clientsession(self.menuai),
                     key=key,
                     uuid=uuid,
                     password=password,

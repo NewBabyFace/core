@@ -4,28 +4,28 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-from homeassistant.components import media_player
-from homeassistant.components.fully_kiosk.const import DOMAIN, MEDIA_SUPPORT_FULLYKIOSK
-from homeassistant.components.media_source import DOMAIN as MS_DOMAIN
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.components import media_player
+from menuai.components.fully_kiosk.const import DOMAIN, MEDIA_SUPPORT_FULLYKIOSK
+from menuai.components.media_source import DOMAIN as MS_DOMAIN
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 from tests.typing import WebSocketGenerator
 
 
 async def test_media_player(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
     mock_fully_kiosk: MagicMock,
     init_integration: MockConfigEntry,
 ) -> None:
     """Test standard Fully Kiosk media player."""
-    state = hass.states.get("media_player.amazon_fire")
+    state = menuai.states.get("media_player.amazon_fire")
     assert state
 
     entry = entity_registry.async_get("media_player.amazon_fire")
@@ -33,7 +33,7 @@ async def test_media_player(
     assert entry.unique_id == "abcdef-123456-mediaplayer"
     assert entry.supported_features == MEDIA_SUPPORT_FULLYKIOSK
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         media_player.DOMAIN,
         "play_media",
         {
@@ -46,10 +46,10 @@ async def test_media_player(
     assert len(mock_fully_kiosk.playSound.mock_calls) == 1
 
     with patch(
-        "homeassistant.components.media_source.async_resolve_media",
+        "menuai.components.media_source.async_resolve_media",
         return_value=Mock(url="http://example.com/test.mp3"),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "media_player",
             "play_media",
             {
@@ -66,7 +66,7 @@ async def test_media_player(
             == "http://example.com/test.mp3"
         )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         media_player.DOMAIN,
         "media_stop",
         {
@@ -76,7 +76,7 @@ async def test_media_player(
     )
     assert len(mock_fully_kiosk.stopSound.mock_calls) == 1
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         media_player.DOMAIN,
         "volume_set",
         {
@@ -102,13 +102,13 @@ async def test_media_player(
 
 @pytest.mark.parametrize("media_content_type", ["video", "video/mp4"])
 async def test_media_player_video(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_fully_kiosk: MagicMock,
     init_integration: MockConfigEntry,
     media_content_type: str,
 ) -> None:
     """Test Fully Kiosk media player for videos."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         media_player.DOMAIN,
         "play_media",
         {
@@ -123,7 +123,7 @@ async def test_media_player_video(
         "playVideo", url="test.mp4", stream=3, showControls=1, exitOnCompletion=1
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         media_player.DOMAIN,
         "media_stop",
         {
@@ -135,13 +135,13 @@ async def test_media_player_video(
 
 
 async def test_media_player_unsupported(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_fully_kiosk: MagicMock,
     init_integration: MockConfigEntry,
 ) -> None:
     """Test Fully Kiosk media player for unsupported media."""
-    with pytest.raises(HomeAssistantError) as error:
-        await hass.services.async_call(
+    with pytest.raises(menuaiError) as error:
+        await menuai.services.async_call(
             media_player.DOMAIN,
             "play_media",
             {
@@ -155,17 +155,17 @@ async def test_media_player_unsupported(
 
 
 async def test_browse_media(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     mock_fully_kiosk: MagicMock,
     init_integration: MockConfigEntry,
 ) -> None:
     """Test Fully Kiosk browse media."""
 
-    await async_setup_component(hass, MS_DOMAIN, {MS_DOMAIN: {}})
-    await hass.async_block_till_done()
+    await async_setup_component(menuai, MS_DOMAIN, {MS_DOMAIN: {}})
+    await menuai.async_block_till_done()
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,

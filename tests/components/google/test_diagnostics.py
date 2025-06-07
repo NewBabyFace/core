@@ -9,8 +9,8 @@ from freezegun import freeze_time
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.auth.models import Credentials
-from homeassistant.core import HomeAssistant
+from menuai.auth.models import Credentials
+from menuai.core import menuai
 
 from .conftest import TEST_EVENT, ApiResult, ComponentSetup
 
@@ -29,26 +29,26 @@ def mock_test_setup(
     mock_calendars_list({"items": [test_api_calendar]})
 
 
-async def generate_new_hass_access_token(
-    hass: HomeAssistant, hass_admin_user: MockUser, hass_admin_credential: Credentials
+async def generate_new_menuai_access_token(
+    menuai: menuai, menuai_admin_user: MockUser, menuai_admin_credential: Credentials
 ) -> str:
-    """Return an access token to access Home Assistant."""
-    await hass.auth.async_link_user(hass_admin_user, hass_admin_credential)
+    """Return an access token to access MenuAI."""
+    await menuai.auth.async_link_user(menuai_admin_user, menuai_admin_credential)
 
-    refresh_token = await hass.auth.async_create_refresh_token(
-        hass_admin_user, CLIENT_ID, credential=hass_admin_credential
+    refresh_token = await menuai.auth.async_create_refresh_token(
+        menuai_admin_user, CLIENT_ID, credential=menuai_admin_credential
     )
-    return hass.auth.async_create_access_token(refresh_token)
+    return menuai.auth.async_create_access_token(refresh_token)
 
 
 def _get_test_client_generator(
-    hass: HomeAssistant, aiohttp_client: ClientSessionGenerator, new_token: str
+    menuai: menuai, aiohttp_client: ClientSessionGenerator, new_token: str
 ):
     """Return a test client generator.""."""
 
     async def auth_client() -> TestClient:
         return await aiohttp_client(
-            hass.http.app, headers={"Authorization": f"Bearer {new_token}"}
+            menuai.http.app, headers={"Authorization": f"Bearer {new_token}"}
         )
 
     return auth_client
@@ -57,11 +57,11 @@ def _get_test_client_generator(
 @freeze_time("2023-03-13 12:05:00-07:00")
 @pytest.mark.usefixtures("socket_enabled")
 async def test_diagnostics(
-    hass: HomeAssistant,
+    menuai: menuai,
     component_setup: ComponentSetup,
     mock_events_list_items: Callable[[list[dict[str, Any]]], None],
-    hass_admin_user: MockUser,
-    hass_admin_credential: Credentials,
+    menuai_admin_user: MockUser,
+    menuai_admin_credential: Credentials,
     config_entry: MockConfigEntry,
     aiohttp_client: ClientSessionGenerator,
     snapshot: SnapshotAssertion,
@@ -106,10 +106,10 @@ async def test_diagnostics(
     # Since we are freezing time only when we enter this test, we need to
     # manually create a new token and clients since the token created by
     # the fixtures would not be valid.
-    new_token = await generate_new_hass_access_token(
-        hass, hass_admin_user, hass_admin_credential
+    new_token = await generate_new_menuai_access_token(
+        menuai, menuai_admin_user, menuai_admin_credential
     )
     data = await get_diagnostics_for_config_entry(
-        hass, _get_test_client_generator(hass, aiohttp_client, new_token), config_entry
+        menuai, _get_test_client_generator(menuai, aiohttp_client, new_token), config_entry
     )
     assert data == snapshot

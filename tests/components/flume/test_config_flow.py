@@ -7,16 +7,16 @@ import pytest
 import requests.exceptions
 from requests_mock.mocker import Mocker
 
-from homeassistant import config_entries
-from homeassistant.components.flume.const import DOMAIN
-from homeassistant.const import (
+from menuai import config_entries
+from menuai.components.flume.const import DOMAIN
+from menuai.const import (
     CONF_CLIENT_ID,
     CONF_CLIENT_SECRET,
     CONF_PASSWORD,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from .conftest import DEVICE_LIST, DEVICE_LIST_URL
 
@@ -24,10 +24,10 @@ from tests.common import MockConfigEntry
 
 
 @pytest.mark.usefixtures("access_token", "device_list")
-async def test_form(hass: HomeAssistant) -> None:
+async def test_form(menuai: menuai) -> None:
     """Test we get the form and can setup from user input."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -35,11 +35,11 @@ async def test_form(hass: HomeAssistant) -> None:
 
     with (
         patch(
-            "homeassistant.components.flume.async_setup_entry",
+            "menuai.components.flume.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_USERNAME: "test-username",
@@ -48,7 +48,7 @@ async def test_form(hass: HomeAssistant) -> None:
                 CONF_CLIENT_SECRET: "client_secret",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "test-username"
@@ -62,9 +62,9 @@ async def test_form(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("access_token")
-async def test_form_invalid_auth(hass: HomeAssistant, requests_mock: Mocker) -> None:
+async def test_form_invalid_auth(menuai: menuai, requests_mock: Mocker) -> None:
     """Test we handle invalid auth."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -75,7 +75,7 @@ async def test_form_invalid_auth(hass: HomeAssistant, requests_mock: Mocker) -> 
         json={"message": "Failure"},
     )
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_USERNAME: "test-username",
@@ -90,13 +90,13 @@ async def test_form_invalid_auth(hass: HomeAssistant, requests_mock: Mocker) -> 
 
 
 @pytest.mark.usefixtures("access_token", "device_list_timeout")
-async def test_form_cannot_connect(hass: HomeAssistant) -> None:
+async def test_form_cannot_connect(menuai: menuai) -> None:
     """Test we handle cannot connect error."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_USERNAME: "test-username",
@@ -111,7 +111,7 @@ async def test_form_cannot_connect(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("access_token")
-async def test_reauth(hass: HomeAssistant, requests_mock: Mocker) -> None:
+async def test_reauth(menuai: menuai, requests_mock: Mocker) -> None:
     """Test we can reauth."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -122,13 +122,13 @@ async def test_reauth(hass: HomeAssistant, requests_mock: Mocker) -> None:
         },
         unique_id="test@test.org",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await entry.start_reauth_flow(hass)
+    result = await entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_PASSWORD: "test-password",
@@ -146,12 +146,12 @@ async def test_reauth(hass: HomeAssistant, requests_mock: Mocker) -> None:
 
     with (
         patch(
-            "homeassistant.components.flume.config_flow.os.path.exists",
+            "menuai.components.flume.config_flow.os.path.exists",
             return_value=True,
         ),
-        patch("homeassistant.components.flume.config_flow.os.unlink") as mock_unlink,
+        patch("menuai.components.flume.config_flow.os.unlink") as mock_unlink,
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {
                 CONF_PASSWORD: "test-password",
@@ -174,11 +174,11 @@ async def test_reauth(hass: HomeAssistant, requests_mock: Mocker) -> None:
 
     with (
         patch(
-            "homeassistant.components.flume.async_setup_entry",
+            "menuai.components.flume.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result4 = await hass.config_entries.flow.async_configure(
+        result4 = await menuai.config_entries.flow.async_configure(
             result3["flow_id"],
             {
                 CONF_PASSWORD: "test-password",
@@ -191,9 +191,9 @@ async def test_reauth(hass: HomeAssistant, requests_mock: Mocker) -> None:
 
 
 @pytest.mark.usefixtures("access_token")
-async def test_form_no_devices(hass: HomeAssistant, requests_mock: Mocker) -> None:
+async def test_form_no_devices(menuai: menuai, requests_mock: Mocker) -> None:
     """Test a device list response that contains no values will raise an error."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -204,7 +204,7 @@ async def test_form_no_devices(hass: HomeAssistant, requests_mock: Mocker) -> No
         json={"data": []},
     )
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_USERNAME: "test-username",

@@ -1,9 +1,9 @@
-"""API for Minut Point bound to Home Assistant OAuth."""
+"""API for Minut Point bound to MenuAI OAuth."""
 
 from aiohttp import ClientSession
 import pypoint
 
-from homeassistant.helpers import config_entry_oauth2_flow
+from menuai.helpers import config_entry_oauth2_flow
 
 
 class AsyncConfigEntryAuth(pypoint.AbstractAuth):

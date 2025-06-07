@@ -7,13 +7,13 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.rainbird import DOMAIN
-from homeassistant.components.rainbird.const import ATTR_DURATION
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_HOST, CONF_PASSWORD
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResult, FlowResultType
+from menuai import config_entries
+from menuai.components.rainbird import DOMAIN
+from menuai.components.rainbird.const import ATTR_DURATION
+from menuai.config_entries import ConfigEntryState
+from menuai.const import CONF_HOST, CONF_PASSWORD
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResult, FlowResultType
 
 from .conftest import (
     CONFIG_ENTRY_DATA,
@@ -50,15 +50,15 @@ async def mock_setup() -> AsyncGenerator[AsyncMock]:
     """Fixture for patching out integration setup."""
 
     with patch(
-        "homeassistant.components.rainbird.async_setup_entry",
+        "menuai.components.rainbird.async_setup_entry",
         return_value=True,
     ) as mock_setup:
         yield mock_setup
 
 
-async def complete_flow(hass: HomeAssistant, password: str = PASSWORD) -> FlowResult:
+async def complete_flow(menuai: menuai, password: str = PASSWORD) -> FlowResult:
     """Start the config flow and enter the host and password."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result.get("type") is FlowResultType.FORM
@@ -66,7 +66,7 @@ async def complete_flow(hass: HomeAssistant, password: str = PASSWORD) -> FlowRe
     assert not result.get("errors")
     assert "flow_id" in result
 
-    return await hass.config_entries.flow.async_configure(
+    return await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: HOST, CONF_PASSWORD: PASSWORD},
     )
@@ -94,14 +94,14 @@ async def complete_flow(hass: HomeAssistant, password: str = PASSWORD) -> FlowRe
     ],
 )
 async def test_controller_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup: Mock,
     expected_config_entry: dict[str, str],
     expected_unique_id: int | None,
 ) -> None:
     """Test the controller is setup correctly."""
 
-    result = await complete_flow(hass)
+    result = await complete_flow(menuai)
     assert result.get("type") is FlowResultType.CREATE_ENTRY
     assert result.get("title") == HOST
     assert "result" in result
@@ -151,24 +151,24 @@ async def test_controller_flow(
     ids=["with-serial", "with-mac-address", "zero-serial"],
 )
 async def test_multiple_config_entries(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     responses: list[AiohttpClientMockResponse],
     config_flow_responses: list[AiohttpClientMockResponse],
     expected_config_entry: dict[str, Any] | None,
 ) -> None:
     """Test setting up multiple config entries that refer to different devices."""
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
     assert config_entry.state is ConfigEntryState.LOADED
 
     responses.clear()
     responses.extend(config_flow_responses)
 
-    result = await complete_flow(hass)
+    result = await complete_flow(menuai)
     assert result.get("type") is FlowResultType.CREATE_ENTRY
     assert dict(result.get("result").data) == expected_config_entry
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 2
 
 
@@ -226,28 +226,28 @@ async def test_multiple_config_entries(
     ],
 )
 async def test_duplicate_config_entries(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     responses: list[AiohttpClientMockResponse],
     config_flow_responses: list[AiohttpClientMockResponse],
     expected_config_entry_data: dict[str, Any],
 ) -> None:
     """Test that a device can not be registered twice."""
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
     assert config_entry.state is ConfigEntryState.LOADED
 
     responses.clear()
     responses.extend(config_flow_responses)
 
-    result = await complete_flow(hass)
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    result = await complete_flow(menuai)
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
     assert result.get("type") is FlowResultType.ABORT
     assert result.get("reason") == "already_configured"
     assert dict(config_entry.data) == expected_config_entry_data
 
 
 async def test_controller_cannot_connect(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup: Mock,
     responses: list[AiohttpClientMockResponse],
     aioclient_mock: AiohttpClientMocker,
@@ -260,7 +260,7 @@ async def test_controller_cannot_connect(
         AiohttpClientMockResponse("POST", URL, status=HTTPStatus.SERVICE_UNAVAILABLE)
     )
 
-    result = await complete_flow(hass)
+    result = await complete_flow(menuai)
     assert result.get("type") is FlowResultType.FORM
     assert result.get("step_id") == "user"
     assert result.get("errors") == {"base": "cannot_connect"}
@@ -269,7 +269,7 @@ async def test_controller_cannot_connect(
 
 
 async def test_controller_invalid_auth(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup: Mock,
     responses: list[AiohttpClientMockResponse],
     aioclient_mock: AiohttpClientMocker,
@@ -288,7 +288,7 @@ async def test_controller_invalid_auth(
         ]
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result.get("type") is FlowResultType.FORM
@@ -297,7 +297,7 @@ async def test_controller_invalid_auth(
     assert "flow_id" in result
 
     # Simulate authentication error
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: HOST, CONF_PASSWORD: "wrong-password"},
     )
@@ -308,7 +308,7 @@ async def test_controller_invalid_auth(
     assert not mock_setup.mock_calls
 
     # Correct the form and enter the password again and setup completes
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: HOST, CONF_PASSWORD: PASSWORD},
     )
@@ -322,16 +322,16 @@ async def test_controller_invalid_auth(
 
 
 async def test_controller_timeout(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup: Mock,
 ) -> None:
     """Test an error talking to the controller."""
 
     with patch(
-        "homeassistant.components.rainbird.config_flow.asyncio.timeout",
+        "menuai.components.rainbird.config_flow.asyncio.timeout",
         side_effect=TimeoutError,
     ):
-        result = await complete_flow(hass)
+        result = await complete_flow(menuai)
         assert result.get("type") is FlowResultType.FORM
         assert result.get("step_id") == "user"
         assert result.get("errors") == {"base": "timeout_connect"}
@@ -359,23 +359,23 @@ async def test_controller_timeout(
     ],
 )
 async def test_reauth_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup: Mock,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test the controller is setup correctly."""
     assert config_entry.data.get(CONF_PASSWORD) == "old-password"
-    config_entry.async_start_reauth(hass)
-    await hass.async_block_till_done()
+    config_entry.async_start_reauth(menuai)
+    await menuai.async_block_till_done()
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
     result = flows[0]
     assert result.get("step_id") == "reauth_confirm"
     assert not result.get("errors")
 
     # Simluate the wrong password
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_PASSWORD: "incorrect_password"},
     )
@@ -384,14 +384,14 @@ async def test_reauth_flow(
     assert result.get("errors") == {"base": "invalid_auth"}
 
     # Enter the correct password and complete the flow
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_PASSWORD: PASSWORD},
     )
     assert result.get("type") == FlowResultType.ABORT
     assert result.get("reason") == "reauth_successful"
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     entry = entries[0]
     assert entry.unique_id == MAC_ADDRESS_UNIQUE_ID
@@ -400,11 +400,11 @@ async def test_reauth_flow(
     assert len(mock_setup.mock_calls) == 1
 
 
-async def test_options_flow(hass: HomeAssistant, mock_setup: Mock) -> None:
+async def test_options_flow(menuai: menuai, mock_setup: Mock) -> None:
     """Test config flow options."""
 
     # Setup config flow
-    result = await complete_flow(hass)
+    result = await complete_flow(menuai)
     assert result.get("type") is FlowResultType.CREATE_ENTRY
     assert result.get("title") == HOST
     assert "result" in result
@@ -412,16 +412,16 @@ async def test_options_flow(hass: HomeAssistant, mock_setup: Mock) -> None:
     assert result["result"].options == {ATTR_DURATION: 6}
 
     # Assert single config entry is loaded
-    config_entry = next(iter(hass.config_entries.async_entries(DOMAIN)))
+    config_entry = next(iter(menuai.config_entries.async_entries(DOMAIN)))
     assert config_entry.state is ConfigEntryState.LOADED
 
     # Initiate the options flow
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result.get("type") is FlowResultType.FORM
     assert result.get("step_id") == "init"
 
     # Change the default duration
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"], user_input={ATTR_DURATION: 5}
     )
     assert result.get("type") is FlowResultType.CREATE_ENTRY

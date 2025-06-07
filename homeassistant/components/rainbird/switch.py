@@ -8,14 +8,14 @@ from typing import Any
 from pyrainbird.exceptions import RainbirdApiException, RainbirdDeviceBusyException
 import voluptuous as vol
 
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import VolDictType
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.components.switch import SwitchEntity
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv, entity_platform
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import VolDictType
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import ATTR_DURATION, CONF_IMPORTED_NAMES, DOMAIN, MANUFACTURER
 from .coordinator import RainbirdUpdateCoordinator
@@ -31,7 +31,7 @@ SERVICE_SCHEMA_IRRIGATION: VolDictType = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: RainbirdConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -100,11 +100,11 @@ class RainBirdSwitch(CoordinatorEntity[RainbirdUpdateCoordinator], SwitchEntity)
                 int(kwargs.get(ATTR_DURATION, self._duration_minutes)),
             )
         except RainbirdDeviceBusyException as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 "Rain Bird device is busy; Wait and try again"
             ) from err
         except RainbirdApiException as err:
-            raise HomeAssistantError("Rain Bird device failure") from err
+            raise menuaiError("Rain Bird device failure") from err
 
         # The device reflects the old state for a few moments. Update the
         # state manually and trigger a refresh after a short debounced delay.
@@ -117,11 +117,11 @@ class RainBirdSwitch(CoordinatorEntity[RainbirdUpdateCoordinator], SwitchEntity)
         try:
             await self.coordinator.controller.stop_irrigation()
         except RainbirdDeviceBusyException as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 "Rain Bird device is busy; Wait and try again"
             ) from err
         except RainbirdApiException as err:
-            raise HomeAssistantError("Rain Bird device failure") from err
+            raise menuaiError("Rain Bird device failure") from err
 
         # The device reflects the old state for a few moments. Update the
         # state manually and trigger a refresh after a short debounced delay.

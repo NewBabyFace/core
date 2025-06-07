@@ -8,9 +8,9 @@ from tempfile import NamedTemporaryFile
 
 from go2rtc_client import Go2RtcRestClient
 
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import HA_MANAGED_API_PORT, HA_MANAGED_URL
 
@@ -26,7 +26,7 @@ _RESPAWN_COOLDOWN = 1
 # - Api is listening only on localhost
 # - Enable rtsp for localhost only as ffmpeg needs it
 # - Clear default ice servers
-_GO2RTC_CONFIG_FORMAT = r"""# This file is managed by Home Assistant
+_GO2RTC_CONFIG_FORMAT = r"""# This file is managed by MenuAI
 # Do not edit it manually
 
 api:
@@ -51,13 +51,13 @@ _LOG_LEVEL_MAP = {
 }
 
 
-class Go2RTCServerStartError(HomeAssistantError):
+class Go2RTCServerStartError(menuaiError):
     """Raised when server does not start."""
 
     _message = "Go2rtc server didn't start correctly"
 
 
-class Go2RTCWatchdogError(HomeAssistantError):
+class Go2RTCWatchdogError(menuaiError):
     """Raised on watchdog error."""
 
 
@@ -78,10 +78,10 @@ class Server:
     """Go2rtc server."""
 
     def __init__(
-        self, hass: HomeAssistant, binary: str, *, enable_ui: bool = False
+        self, menuai: menuai, binary: str, *, enable_ui: bool = False
     ) -> None:
         """Initialize the server."""
-        self._hass = hass
+        self._menuai = menuai
         self._binary = binary
         self._log_buffer: deque[str] = deque(maxlen=_LOG_BUFFER_SIZE)
         self._process: asyncio.subprocess.Process | None = None
@@ -103,7 +103,7 @@ class Server:
     async def _start(self) -> None:
         """Start the server."""
         _LOGGER.debug("Starting go2rtc server")
-        config_file = await self._hass.async_add_executor_job(
+        config_file = await self._menuai.async_add_executor_job(
             _create_temp_file, self._api_ip
         )
 
@@ -118,7 +118,7 @@ class Server:
             close_fds=False,  # required for posix_spawn on CPython < 3.13
         )
 
-        self._hass.async_create_background_task(
+        self._menuai.async_create_background_task(
             self._log_output(self._process), "Go2rtc log output"
         )
 
@@ -133,7 +133,7 @@ class Server:
             raise Go2RTCServerStartError from err
 
         # Check the server version
-        client = Go2RtcRestClient(async_get_clientsession(self._hass), HA_MANAGED_URL)
+        client = Go2RtcRestClient(async_get_clientsession(self._menuai), HA_MANAGED_URL)
         await client.validate_server_version()
 
     async def _log_output(self, process: asyncio.subprocess.Process) -> None:
@@ -205,7 +205,7 @@ class Server:
 
     async def _monitor_api(self) -> None:
         """Raise if the go2rtc process terminates."""
-        client = Go2RtcRestClient(async_get_clientsession(self._hass), HA_MANAGED_URL)
+        client = Go2RtcRestClient(async_get_clientsession(self._menuai), HA_MANAGED_URL)
 
         _LOGGER.debug("Monitoring go2rtc API")
         try:

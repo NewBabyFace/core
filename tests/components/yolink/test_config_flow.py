@@ -6,12 +6,12 @@ from unittest.mock import patch
 import pytest
 from yolink.const import OAUTH2_AUTHORIZE, OAUTH2_TOKEN
 
-from homeassistant import config_entries, setup
-from homeassistant.components import application_credentials
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import config_entry_oauth2_flow
+from menuai import config_entries, setup
+from menuai.components import application_credentials
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers import config_entry_oauth2_flow
 
 from tests.common import MockConfigEntry
 from tests.test_util.aiohttp import AiohttpClientMocker
@@ -22,19 +22,19 @@ CLIENT_SECRET = "6789"
 DOMAIN = "yolink"
 
 
-async def test_abort_if_no_configuration(hass: HomeAssistant) -> None:
+async def test_abort_if_no_configuration(menuai: menuai) -> None:
     """Check flow abort when no configuration."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "missing_credentials"
 
 
-async def test_abort_if_existing_entry(hass: HomeAssistant) -> None:
+async def test_abort_if_existing_entry(menuai: menuai) -> None:
     """Check flow abort when an entry already exist."""
-    MockConfigEntry(domain=DOMAIN, unique_id=DOMAIN).add_to_hass(hass)
-    result = await hass.config_entries.flow.async_init(
+    MockConfigEntry(domain=DOMAIN, unique_id=DOMAIN).add_to_menuai(menuai)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.ABORT
@@ -43,26 +43,26 @@ async def test_abort_if_existing_entry(hass: HomeAssistant) -> None:
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_full_flow(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
     """Check full flow."""
     assert await setup.async_setup_component(
-        hass,
+        menuai,
         DOMAIN,
         {},
     )
     await application_credentials.async_import_client_credential(
-        hass,
+        menuai,
         DOMAIN,
         application_credentials.ClientCredential(CLIENT_ID, CLIENT_SECRET),
     )
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
@@ -75,7 +75,7 @@ async def test_full_flow(
         f"&state={state}&scope=create"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == HTTPStatus.OK
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
@@ -91,12 +91,12 @@ async def test_full_flow(
     )
 
     with (
-        patch("homeassistant.components.yolink.api.ConfigEntryAuth"),
+        patch("menuai.components.yolink.api.ConfigEntryAuth"),
         patch(
-            "homeassistant.components.yolink.async_setup_entry", return_value=True
+            "menuai.components.yolink.async_setup_entry", return_value=True
         ) as mock_setup,
     ):
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["data"]["auth_implementation"] == DOMAIN
 
@@ -108,33 +108,33 @@ async def test_full_flow(
         "expires_in": 60,
     }
 
-    assert DOMAIN in hass.config.components
-    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    assert DOMAIN in menuai.config.components
+    entry = menuai.config_entries.async_entries(DOMAIN)[0]
     assert entry.state is ConfigEntryState.LOADED
 
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
     assert len(mock_setup.mock_calls) == 1
 
 
 @pytest.mark.usefixtures("current_request_with_host")
-async def test_abort_if_authorization_timeout(hass: HomeAssistant) -> None:
+async def test_abort_if_authorization_timeout(menuai: menuai) -> None:
     """Check yolink authorization timeout."""
     assert await setup.async_setup_component(
-        hass,
+        menuai,
         DOMAIN,
         {},
     )
     await application_credentials.async_import_client_credential(
-        hass,
+        menuai,
         DOMAIN,
         application_credentials.ClientCredential(CLIENT_ID, CLIENT_SECRET),
     )
     with patch(
-        "homeassistant.components.yolink.config_entry_oauth2_flow."
+        "menuai.components.yolink.config_entry_oauth2_flow."
         "LocalOAuth2Implementation.async_generate_authorize_url",
         side_effect=TimeoutError,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
 
@@ -144,19 +144,19 @@ async def test_abort_if_authorization_timeout(hass: HomeAssistant) -> None:
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_reauthentication(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
     """Test yolink reauthentication."""
     await setup.async_setup_component(
-        hass,
+        menuai,
         DOMAIN,
         {},
     )
 
     await application_credentials.async_import_client_credential(
-        hass,
+        menuai,
         DOMAIN,
         application_credentials.ClientCredential(CLIENT_ID, CLIENT_SECRET),
     )
@@ -170,23 +170,23 @@ async def test_reauthentication(
             "access_token": "outdated_access_token",
         },
     )
-    old_entry.add_to_hass(hass)
+    old_entry.add_to_menuai(menuai)
 
-    result = await old_entry.start_reauth_flow(hass)
+    result = await old_entry.start_reauth_flow(menuai)
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
 
-    result = await hass.config_entries.flow.async_configure(flows[0]["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(flows[0]["flow_id"], {})
 
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": "https://example.com/auth/external/callback",
         },
     )
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     await client.get(f"/auth/external/callback?code=abcd&state={state}")
 
     aioclient_mock.post(
@@ -200,12 +200,12 @@ async def test_reauthentication(
     )
 
     with (
-        patch("homeassistant.components.yolink.api.ConfigEntryAuth"),
+        patch("menuai.components.yolink.api.ConfigEntryAuth"),
         patch(
-            "homeassistant.components.yolink.async_setup_entry", return_value=True
+            "menuai.components.yolink.async_setup_entry", return_value=True
         ) as mock_setup,
     ):
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
     token_data = old_entry.data["token"]
     assert token_data["access_token"] == "mock-access-token"
     assert token_data["refresh_token"] == "mock-refresh-token"

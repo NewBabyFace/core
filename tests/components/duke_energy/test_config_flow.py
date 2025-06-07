@@ -5,29 +5,29 @@ from unittest.mock import AsyncMock, Mock
 from aiohttp import ClientError, ClientResponseError
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.duke_energy.const import DOMAIN
-from homeassistant.components.recorder import Recorder
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.duke_energy.const import DOMAIN
+from menuai.components.recorder import Recorder
+from menuai.const import CONF_EMAIL, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 
 async def test_user(
-    hass: HomeAssistant,
+    menuai: menuai,
     recorder_mock: Recorder,
     mock_api: AsyncMock,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test user config."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result.get("type") is FlowResultType.FORM
     assert result.get("step_id") == "user"
 
     # test with all provided
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_USERNAME: "test-username", CONF_PASSWORD: "test-password"},
     )
@@ -42,13 +42,13 @@ async def test_user(
 
 
 async def test_abort_if_already_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     recorder_mock: Recorder,
     mock_api: AsyncMock,
     mock_config_entry: AsyncMock,
 ) -> None:
     """Test we abort if the email is already setup."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USER},
         data={
@@ -62,13 +62,13 @@ async def test_abort_if_already_setup(
 
 
 async def test_abort_if_already_setup_alternate_username(
-    hass: HomeAssistant,
+    menuai: menuai,
     recorder_mock: Recorder,
     mock_api: AsyncMock,
     mock_config_entry: AsyncMock,
 ) -> None:
     """Test we abort if the email is already setup."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USER},
         data={
@@ -92,7 +92,7 @@ async def test_abort_if_already_setup_alternate_username(
     ],
 )
 async def test_api_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     recorder_mock: Recorder,
     mock_api: Mock,
     side_effect,
@@ -100,7 +100,7 @@ async def test_api_errors(
 ) -> None:
     """Test the failure scenarios."""
     mock_api.authenticate.side_effect = side_effect
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USER},
         data={CONF_USERNAME: "test-username", CONF_PASSWORD: "test-password"},
@@ -111,7 +111,7 @@ async def test_api_errors(
     mock_api.authenticate.side_effect = None
 
     # test with all provided
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_USERNAME: "test-username", CONF_PASSWORD: "test-password"},
     )

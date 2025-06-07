@@ -19,11 +19,11 @@ from mozart_api.models import (
 )
 from mozart_api.mozart_client import BaseWebSocketResponse, MozartClient
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.util.enum import try_parse_enum
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.util.enum import try_parse_enum
 
 from .const import (
     BANG_OLUFSEN_WEBSOCKET_EVENT,
@@ -41,14 +41,14 @@ class BangOlufsenWebsocket(BangOlufsenBase):
     """The WebSocket listeners."""
 
     def __init__(
-        self, hass: HomeAssistant, entry: ConfigEntry, client: MozartClient
+        self, menuai: menuai, entry: ConfigEntry, client: MozartClient
     ) -> None:
         """Initialize the WebSocket listeners."""
 
         BangOlufsenBase.__init__(self, entry, client)
 
-        self.hass = hass
-        self._device = get_device(hass, self._unique_id)
+        self.menuai = menuai
+        self._device = get_device(menuai, self._unique_id)
 
         # WebSocket callbacks
         self._client.get_notification_notifications(self.on_notification_notification)
@@ -86,7 +86,7 @@ class BangOlufsenWebsocket(BangOlufsenBase):
     def _update_connection_status(self) -> None:
         """Update all entities of the connection status."""
         async_dispatcher_send(
-            self.hass,
+            self.menuai,
             f"{self._unique_id}_{CONNECTION_STATUS}",
             self._client.websocket_connected,
         )
@@ -104,7 +104,7 @@ class BangOlufsenWebsocket(BangOlufsenBase):
     def on_active_listening_mode(self, notification: ListeningModeProps) -> None:
         """Send active_listening_mode dispatch."""
         async_dispatcher_send(
-            self.hass,
+            self.menuai,
             f"{self._unique_id}_{WebsocketNotification.ACTIVE_LISTENING_MODE}",
             notification,
         )
@@ -117,7 +117,7 @@ class BangOlufsenWebsocket(BangOlufsenBase):
 
         # Send to event entity
         async_dispatcher_send(
-            self.hass,
+            self.menuai,
             f"{self._unique_id}_{WebsocketNotification.BUTTON}_{notification.button}",
             EVENT_TRANSLATION_MAP[notification.state],
         )
@@ -135,24 +135,24 @@ class BangOlufsenWebsocket(BangOlufsenBase):
             WebsocketNotification.BEOLINK_AVAILABLE_LISTENERS,
         ):
             async_dispatcher_send(
-                self.hass,
+                self.menuai,
                 f"{self._unique_id}_{WebsocketNotification.BEOLINK}",
             )
         elif notification_type is WebsocketNotification.CONFIGURATION:
             async_dispatcher_send(
-                self.hass,
+                self.menuai,
                 f"{self._unique_id}_{WebsocketNotification.CONFIGURATION}",
             )
         elif notification_type is WebsocketNotification.REMOTE_MENU_CHANGED:
             async_dispatcher_send(
-                self.hass,
+                self.menuai,
                 f"{self._unique_id}_{WebsocketNotification.REMOTE_MENU_CHANGED}",
             )
 
     def on_playback_error_notification(self, notification: PlaybackError) -> None:
         """Send playback_error dispatch."""
         async_dispatcher_send(
-            self.hass,
+            self.menuai,
             f"{self._unique_id}_{WebsocketNotification.PLAYBACK_ERROR}",
             notification,
         )
@@ -162,7 +162,7 @@ class BangOlufsenWebsocket(BangOlufsenBase):
     ) -> None:
         """Send playback_metadata dispatch."""
         async_dispatcher_send(
-            self.hass,
+            self.menuai,
             f"{self._unique_id}_{WebsocketNotification.PLAYBACK_METADATA}",
             notification,
         )
@@ -170,7 +170,7 @@ class BangOlufsenWebsocket(BangOlufsenBase):
     def on_playback_progress_notification(self, notification: PlaybackProgress) -> None:
         """Send playback_progress dispatch."""
         async_dispatcher_send(
-            self.hass,
+            self.menuai,
             f"{self._unique_id}_{WebsocketNotification.PLAYBACK_PROGRESS}",
             notification,
         )
@@ -178,7 +178,7 @@ class BangOlufsenWebsocket(BangOlufsenBase):
     def on_playback_state_notification(self, notification: RenderingState) -> None:
         """Send playback_state dispatch."""
         async_dispatcher_send(
-            self.hass,
+            self.menuai,
             f"{self._unique_id}_{WebsocketNotification.PLAYBACK_STATE}",
             notification,
         )
@@ -186,7 +186,7 @@ class BangOlufsenWebsocket(BangOlufsenBase):
     def on_playback_source_notification(self, notification: Source) -> None:
         """Send playback_source dispatch."""
         async_dispatcher_send(
-            self.hass,
+            self.menuai,
             f"{self._unique_id}_{WebsocketNotification.PLAYBACK_SOURCE}",
             notification,
         )
@@ -194,7 +194,7 @@ class BangOlufsenWebsocket(BangOlufsenBase):
     def on_source_change_notification(self, notification: Source) -> None:
         """Send source_change dispatch."""
         async_dispatcher_send(
-            self.hass,
+            self.menuai,
             f"{self._unique_id}_{WebsocketNotification.SOURCE_CHANGE}",
             notification,
         )
@@ -202,7 +202,7 @@ class BangOlufsenWebsocket(BangOlufsenBase):
     def on_volume_notification(self, notification: VolumeState) -> None:
         """Send volume dispatch."""
         async_dispatcher_send(
-            self.hass,
+            self.menuai,
             f"{self._unique_id}_{WebsocketNotification.VOLUME}",
             notification,
         )
@@ -213,7 +213,7 @@ class BangOlufsenWebsocket(BangOlufsenBase):
 
         # Update the HA device if the sw version does not match
         if software_status.software_version != self._device.sw_version:
-            device_registry = dr.async_get(self.hass)
+            device_registry = dr.async_get(self.menuai)
 
             device_registry.async_update_device(
                 device_id=self._device.id,
@@ -229,4 +229,4 @@ class BangOlufsenWebsocket(BangOlufsenBase):
         }
 
         _LOGGER.debug("%s", debug_notification)
-        self.hass.bus.async_fire(BANG_OLUFSEN_WEBSOCKET_EVENT, debug_notification)
+        self.menuai.bus.async_fire(BANG_OLUFSEN_WEBSOCKET_EVENT, debug_notification)

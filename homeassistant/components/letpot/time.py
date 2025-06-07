@@ -8,10 +8,10 @@ from typing import Any
 from letpot.deviceclient import LetPotDeviceClient
 from letpot.models import LetPotDeviceStatus
 
-from homeassistant.components.time import TimeEntity, TimeEntityDescription
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.time import TimeEntity, TimeEntityDescription
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import LetPotConfigEntry, LetPotDeviceCoordinator
 from .entity import LetPotEntity, exception_handler
@@ -52,7 +52,7 @@ TIME_SENSORS: tuple[LetPotTimeEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: LetPotConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

@@ -2,7 +2,7 @@
 
 import pytest
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     ATTR_CURRENT_POSITION,
     ATTR_CURRENT_TILT_POSITION,
     ATTR_POSITION,
@@ -10,7 +10,7 @@ from homeassistant.components.cover import (
     CoverEntityFeature,
     CoverState,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_SUPPORTED_FEATURES,
     SERVICE_CLOSE_COVER,
     SERVICE_CLOSE_COVER_TILT,
@@ -19,56 +19,56 @@ from homeassistant.const import (
     SERVICE_SET_COVER_POSITION,
     SERVICE_SET_COVER_TILT_POSITION,
 )
-from homeassistant.core import HomeAssistant, State
-from homeassistant.helpers.state import async_reproduce_state
+from menuai.core import menuai, State
+from menuai.helpers.state import async_reproduce_state
 
 from tests.common import async_mock_service
 
 
 async def test_reproducing_states(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test reproducing Cover states."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "cover.entity_close",
         CoverState.CLOSED,
         {
             ATTR_SUPPORTED_FEATURES: CoverEntityFeature.CLOSE | CoverEntityFeature.OPEN,
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "cover.closed_only_supports_close_open",
         CoverState.CLOSED,
         {
             ATTR_SUPPORTED_FEATURES: CoverEntityFeature.CLOSE | CoverEntityFeature.OPEN,
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "cover.open_only_supports_close_open",
         CoverState.OPEN,
         {
             ATTR_SUPPORTED_FEATURES: CoverEntityFeature.CLOSE | CoverEntityFeature.OPEN,
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "cover.open_missing_all_features",
         CoverState.OPEN,
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "cover.closed_missing_all_features_has_position",
         CoverState.CLOSED,
         {
             ATTR_CURRENT_POSITION: 0,
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "cover.open_missing_all_features_has_tilt_position",
         CoverState.OPEN,
         {
             ATTR_CURRENT_TILT_POSITION: 50,
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "cover.closed_only_supports_tilt_close_open",
         CoverState.CLOSED,
         {
@@ -76,7 +76,7 @@ async def test_reproducing_states(
             | CoverEntityFeature.OPEN_TILT,
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "cover.open_only_supports_tilt_close_open",
         CoverState.OPEN,
         {
@@ -84,7 +84,7 @@ async def test_reproducing_states(
             | CoverEntityFeature.OPEN_TILT,
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "cover.closed_only_supports_position",
         CoverState.CLOSED,
         {
@@ -92,12 +92,12 @@ async def test_reproducing_states(
             ATTR_SUPPORTED_FEATURES: CoverEntityFeature.SET_POSITION,
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "cover.open_only_supports_position",
         CoverState.OPEN,
         {ATTR_SUPPORTED_FEATURES: CoverEntityFeature.SET_POSITION},
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "cover.entity_close_attr",
         CoverState.CLOSED,
         {
@@ -111,7 +111,7 @@ async def test_reproducing_states(
             | CoverEntityFeature.OPEN,
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "cover.entity_close_tilt",
         CoverState.CLOSED,
         {
@@ -121,12 +121,12 @@ async def test_reproducing_states(
             | CoverEntityFeature.SET_TILT_POSITION,
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "cover.entity_open",
         CoverState.OPEN,
         {ATTR_SUPPORTED_FEATURES: CoverEntityFeature.CLOSE | CoverEntityFeature.OPEN},
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "cover.entity_slightly_open",
         CoverState.OPEN,
         {
@@ -136,7 +136,7 @@ async def test_reproducing_states(
             | CoverEntityFeature.OPEN,
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "cover.entity_open_attr",
         CoverState.OPEN,
         {
@@ -150,7 +150,7 @@ async def test_reproducing_states(
             | CoverEntityFeature.OPEN,
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "cover.entity_open_tilt",
         CoverState.OPEN,
         {
@@ -164,7 +164,7 @@ async def test_reproducing_states(
             | CoverEntityFeature.OPEN,
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "cover.entity_entirely_open",
         CoverState.OPEN,
         {
@@ -178,7 +178,7 @@ async def test_reproducing_states(
             | CoverEntityFeature.OPEN,
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "cover.closed_supports_all_features",
         CoverState.CLOSED,
         {
@@ -194,7 +194,7 @@ async def test_reproducing_states(
             | CoverEntityFeature.SET_TILT_POSITION,
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "cover.tilt_only_open",
         CoverState.OPEN,
         {
@@ -202,7 +202,7 @@ async def test_reproducing_states(
             | CoverEntityFeature.OPEN_TILT,
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "cover.tilt_only_closed",
         CoverState.CLOSED,
         {
@@ -210,7 +210,7 @@ async def test_reproducing_states(
             | CoverEntityFeature.OPEN_TILT,
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "cover.tilt_only_tilt_position_100",
         CoverState.OPEN,
         {
@@ -220,7 +220,7 @@ async def test_reproducing_states(
             | CoverEntityFeature.SET_TILT_POSITION,
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "cover.tilt_only_tilt_position_0",
         CoverState.CLOSED,
         {
@@ -230,14 +230,14 @@ async def test_reproducing_states(
             | CoverEntityFeature.SET_TILT_POSITION,
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "cover.tilt_open_only_supports_tilt_position",
         CoverState.OPEN,
         {
             ATTR_SUPPORTED_FEATURES: CoverEntityFeature.SET_TILT_POSITION,
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "cover.tilt_partial_open_only_supports_tilt_position",
         CoverState.OPEN,
         {
@@ -245,25 +245,25 @@ async def test_reproducing_states(
             ATTR_CURRENT_TILT_POSITION: 50,
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "cover.tilt_closed_only_supports_tilt_position",
         CoverState.CLOSED,
         {
             ATTR_SUPPORTED_FEATURES: CoverEntityFeature.SET_TILT_POSITION,
         },
     )
-    close_calls = async_mock_service(hass, "cover", SERVICE_CLOSE_COVER)
-    open_calls = async_mock_service(hass, "cover", SERVICE_OPEN_COVER)
-    close_tilt_calls = async_mock_service(hass, "cover", SERVICE_CLOSE_COVER_TILT)
-    open_tilt_calls = async_mock_service(hass, "cover", SERVICE_OPEN_COVER_TILT)
-    position_calls = async_mock_service(hass, "cover", SERVICE_SET_COVER_POSITION)
+    close_calls = async_mock_service(menuai, "cover", SERVICE_CLOSE_COVER)
+    open_calls = async_mock_service(menuai, "cover", SERVICE_OPEN_COVER)
+    close_tilt_calls = async_mock_service(menuai, "cover", SERVICE_CLOSE_COVER_TILT)
+    open_tilt_calls = async_mock_service(menuai, "cover", SERVICE_OPEN_COVER_TILT)
+    position_calls = async_mock_service(menuai, "cover", SERVICE_SET_COVER_POSITION)
     position_tilt_calls = async_mock_service(
-        hass, "cover", SERVICE_SET_COVER_TILT_POSITION
+        menuai, "cover", SERVICE_SET_COVER_TILT_POSITION
     )
 
     # These calls should do nothing as entities already in desired state
     await async_reproduce_state(
-        hass,
+        menuai,
         [
             State(
                 "cover.closed_supports_all_features",
@@ -374,7 +374,7 @@ async def test_reproducing_states(
     assert len(position_tilt_calls) == 0
 
     # Test invalid state is handled
-    await async_reproduce_state(hass, [State("cover.entity_close", "not_supported")])
+    await async_reproduce_state(menuai, [State("cover.entity_close", "not_supported")])
 
     assert "not_supported" in caplog.text
     assert len(close_calls) == 0
@@ -386,7 +386,7 @@ async def test_reproducing_states(
 
     # Make sure correct services are called
     await async_reproduce_state(
-        hass,
+        menuai,
         [
             State(
                 "cover.closed_supports_all_features",

@@ -9,12 +9,12 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     ATTR_STATE_CLASS,
     SensorDeviceClass,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     ATTR_FRIENDLY_NAME,
     ATTR_UNIT_OF_MEASUREMENT,
@@ -22,8 +22,8 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from .common import DEVICE_ID, CreateDevice, PlatformSetup, create_nest_event
 
@@ -41,7 +41,7 @@ def device_traits() -> dict[str, Any]:
 
 
 async def test_thermostat_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     create_device: CreateDevice,
@@ -60,7 +60,7 @@ async def test_thermostat_device(
     )
     await setup_platform()
 
-    temperature = hass.states.get("sensor.my_sensor_temperature")
+    temperature = menuai.states.get("sensor.my_sensor_temperature")
     assert temperature is not None
     assert temperature.state == "25.1"
     assert (
@@ -73,7 +73,7 @@ async def test_thermostat_device(
     assert temperature.attributes.get(ATTR_STATE_CLASS) == SensorStateClass.MEASUREMENT
     assert temperature.attributes.get(ATTR_FRIENDLY_NAME) == "My Sensor Temperature"
 
-    humidity = hass.states.get("sensor.my_sensor_humidity")
+    humidity = menuai.states.get("sensor.my_sensor_humidity")
     assert humidity is not None
     assert humidity.state == "35"
     assert humidity.attributes.get(ATTR_UNIT_OF_MEASUREMENT) == PERCENTAGE
@@ -96,7 +96,7 @@ async def test_thermostat_device(
 
 
 async def test_thermostat_device_available(
-    hass: HomeAssistant, create_device: CreateDevice, setup_platform: PlatformSetup
+    menuai: menuai, create_device: CreateDevice, setup_platform: PlatformSetup
 ) -> None:
     """Test a thermostat with temperature and humidity sensors that is Online."""
     create_device.create(
@@ -112,17 +112,17 @@ async def test_thermostat_device_available(
     )
     await setup_platform()
 
-    temperature = hass.states.get("sensor.my_sensor_temperature")
+    temperature = menuai.states.get("sensor.my_sensor_temperature")
     assert temperature is not None
     assert temperature.state == "25.1"
 
-    humidity = hass.states.get("sensor.my_sensor_humidity")
+    humidity = menuai.states.get("sensor.my_sensor_humidity")
     assert humidity is not None
     assert humidity.state == "35"
 
 
 async def test_thermostat_device_unavailable(
-    hass: HomeAssistant, create_device: CreateDevice, setup_platform: PlatformSetup
+    menuai: menuai, create_device: CreateDevice, setup_platform: PlatformSetup
 ) -> None:
     """Test a thermostat with temperature and humidity sensors that is Offline."""
     create_device.create(
@@ -138,43 +138,43 @@ async def test_thermostat_device_unavailable(
     )
     await setup_platform()
 
-    temperature = hass.states.get("sensor.my_sensor_temperature")
+    temperature = menuai.states.get("sensor.my_sensor_temperature")
     assert temperature is not None
     assert temperature.state == STATE_UNAVAILABLE
 
-    humidity = hass.states.get("sensor.my_sensor_humidity")
+    humidity = menuai.states.get("sensor.my_sensor_humidity")
     assert humidity is not None
     assert humidity.state == STATE_UNAVAILABLE
 
 
-async def test_no_devices(hass: HomeAssistant, setup_platform: PlatformSetup) -> None:
+async def test_no_devices(menuai: menuai, setup_platform: PlatformSetup) -> None:
     """Test no devices returned by the api."""
     await setup_platform()
 
-    temperature = hass.states.get("sensor.my_sensor_temperature")
+    temperature = menuai.states.get("sensor.my_sensor_temperature")
     assert temperature is None
 
-    humidity = hass.states.get("sensor.my_sensor_humidity")
+    humidity = menuai.states.get("sensor.my_sensor_humidity")
     assert humidity is None
 
 
 async def test_device_no_sensor_traits(
-    hass: HomeAssistant, create_device: CreateDevice, setup_platform: PlatformSetup
+    menuai: menuai, create_device: CreateDevice, setup_platform: PlatformSetup
 ) -> None:
     """Test a device with applicable sensor traits."""
     create_device.create({})
     await setup_platform()
 
-    temperature = hass.states.get("sensor.my_sensor_temperature")
+    temperature = menuai.states.get("sensor.my_sensor_temperature")
     assert temperature is None
 
-    humidity = hass.states.get("sensor.my_sensor_humidity")
+    humidity = menuai.states.get("sensor.my_sensor_humidity")
     assert humidity is None
 
 
 @pytest.mark.parametrize("device_traits", [{}])  # Disable default name
 async def test_device_name_from_structure(
-    hass: HomeAssistant, create_device: CreateDevice, setup_platform: PlatformSetup
+    menuai: menuai, create_device: CreateDevice, setup_platform: PlatformSetup
 ) -> None:
     """Test a device without a custom name, inferring name from structure."""
     create_device.create(
@@ -191,13 +191,13 @@ async def test_device_name_from_structure(
     )
     await setup_platform()
 
-    temperature = hass.states.get("sensor.some_room_temperature")
+    temperature = menuai.states.get("sensor.some_room_temperature")
     assert temperature is not None
     assert temperature.state == "25.2"
 
 
 async def test_event_updates_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     subscriber: AsyncMock,
     create_device: CreateDevice,
     setup_platform: PlatformSetup,
@@ -212,7 +212,7 @@ async def test_event_updates_sensor(
     )
     await setup_platform()
 
-    temperature = hass.states.get("sensor.my_sensor_temperature")
+    temperature = menuai.states.get("sensor.my_sensor_temperature")
     assert temperature is not None
     assert temperature.state == "25.1"
 
@@ -232,16 +232,16 @@ async def test_event_updates_sensor(
         },
     )
     await subscriber.async_receive_event(event)
-    await hass.async_block_till_done()  # Process dispatch/update signal
+    await menuai.async_block_till_done()  # Process dispatch/update signal
 
-    temperature = hass.states.get("sensor.my_sensor_temperature")
+    temperature = menuai.states.get("sensor.my_sensor_temperature")
     assert temperature is not None
     assert temperature.state == "26.2"
 
 
 @pytest.mark.parametrize("device_type", ["some-unknown-type"])
 async def test_device_with_unknown_type(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     create_device: CreateDevice,
@@ -257,7 +257,7 @@ async def test_device_with_unknown_type(
     )
     await setup_platform()
 
-    temperature = hass.states.get("sensor.my_sensor_temperature")
+    temperature = menuai.states.get("sensor.my_sensor_temperature")
     assert temperature is not None
     assert temperature.state == "25.1"
     assert temperature.attributes.get(ATTR_FRIENDLY_NAME) == "My Sensor Temperature"
@@ -273,7 +273,7 @@ async def test_device_with_unknown_type(
 
 
 async def test_temperature_rounding(
-    hass: HomeAssistant, create_device: CreateDevice, setup_platform: PlatformSetup
+    menuai: menuai, create_device: CreateDevice, setup_platform: PlatformSetup
 ) -> None:
     """Test the rounding of overly precise temperatures."""
     create_device.create(
@@ -285,5 +285,5 @@ async def test_temperature_rounding(
     )
     await setup_platform()
 
-    temperature = hass.states.get("sensor.my_sensor_temperature")
+    temperature = menuai.states.get("sensor.my_sensor_temperature")
     assert temperature.state == "25.2"

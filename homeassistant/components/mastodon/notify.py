@@ -8,16 +8,16 @@ from mastodon import Mastodon
 from mastodon.Mastodon import MastodonAPIError, MediaAttachment
 import voluptuous as vol
 
-from homeassistant.components.notify import (
+from menuai.components.notify import (
     ATTR_DATA,
     PLATFORM_SCHEMA as NOTIFY_PLATFORM_SCHEMA,
     BaseNotificationService,
 )
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_CLIENT_ID, CONF_CLIENT_SECRET
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv, issue_registry as ir
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_ACCESS_TOKEN, CONF_CLIENT_ID, CONF_CLIENT_SECRET
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv, issue_registry as ir
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import (
     ATTR_CONTENT_WARNING,
@@ -44,7 +44,7 @@ INTEGRATION_TITLE = "Mastodon"
 
 
 async def async_get_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> MastodonNotificationService | None:
@@ -54,7 +54,7 @@ async def async_get_service(
 
     client = cast(Mastodon, discovery_info.get("client"))
 
-    return MastodonNotificationService(hass, client)
+    return MastodonNotificationService(menuai, client)
 
 
 class MastodonNotificationService(BaseNotificationService):
@@ -62,7 +62,7 @@ class MastodonNotificationService(BaseNotificationService):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         client: Mastodon,
     ) -> None:
         """Initialize the service."""
@@ -73,7 +73,7 @@ class MastodonNotificationService(BaseNotificationService):
         """Toot a message, with media perhaps."""
 
         ir.create_issue(
-            self.hass,
+            self.menuai,
             DOMAIN,
             "deprecated_notify_action_mastodon",
             breaks_in_ha_version="2025.9.0",
@@ -97,8 +97,8 @@ class MastodonNotificationService(BaseNotificationService):
         if data:
             media = data.get(ATTR_MEDIA)
             if media:
-                if not self.hass.config.is_allowed_path(media):
-                    raise HomeAssistantError(
+                if not self.menuai.config.is_allowed_path(media):
+                    raise menuaiError(
                         translation_domain=DOMAIN,
                         translation_key="not_whitelisted_directory",
                         translation_placeholders={"media": media},
@@ -118,7 +118,7 @@ class MastodonNotificationService(BaseNotificationService):
                     sensitive=sensitive,
                 )
             except MastodonAPIError as err:
-                raise HomeAssistantError(
+                raise menuaiError(
                     translation_domain=DOMAIN,
                     translation_key="unable_to_send_message",
                 ) from err
@@ -129,7 +129,7 @@ class MastodonNotificationService(BaseNotificationService):
                     message, visibility=target, spoiler_text=content_warning
                 )
             except MastodonAPIError as err:
-                raise HomeAssistantError(
+                raise menuaiError(
                     translation_domain=DOMAIN,
                     translation_key="unable_to_send_message",
                 ) from err
@@ -143,7 +143,7 @@ class MastodonNotificationService(BaseNotificationService):
                 media_path, mime_type=media_type
             )
         except MastodonAPIError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="unable_to_upload_image",
                 translation_placeholders={"media_path": media_path},

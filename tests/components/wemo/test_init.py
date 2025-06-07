@@ -6,18 +6,18 @@ from unittest.mock import create_autospec, patch
 
 import pywemo
 
-from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
-from homeassistant.components.wemo import (
+from menuai.components.switch import DOMAIN as SWITCH_DOMAIN
+from menuai.components.wemo import (
     CONF_DISCOVERY,
     CONF_STATIC,
     WemoDiscovery,
     async_wemo_dispatcher_connect,
 )
-from homeassistant.components.wemo.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.components.wemo.const import DOMAIN
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from . import entity_test_helpers
 from .conftest import (
@@ -31,23 +31,23 @@ from .conftest import (
 from tests.common import async_fire_time_changed
 
 
-async def test_config_no_config(hass: HomeAssistant) -> None:
+async def test_config_no_config(menuai: menuai) -> None:
     """Component setup succeeds when there are no config entry for the domain."""
-    assert await async_setup_component(hass, DOMAIN, {})
+    assert await async_setup_component(menuai, DOMAIN, {})
 
 
-async def test_config_no_static(hass: HomeAssistant) -> None:
+async def test_config_no_static(menuai: menuai) -> None:
     """Component setup succeeds when there are no static config entries."""
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_DISCOVERY: False}})
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_DISCOVERY: False}})
 
 
 async def test_static_duplicate_static_entry(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, pywemo_device
+    menuai: menuai, entity_registry: er.EntityRegistry, pywemo_device
 ) -> None:
     """Duplicate static entries are merged into a single entity."""
     static_config_entry = f"{MOCK_HOST}:{MOCK_PORT}"
     assert await async_setup_component(
-        hass,
+        menuai,
         DOMAIN,
         {
             DOMAIN: {
@@ -59,17 +59,17 @@ async def test_static_duplicate_static_entry(
             },
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     entity_entries = list(entity_registry.entities.values())
     assert len(entity_entries) == 1
 
 
 async def test_static_config_with_port(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, pywemo_device
+    menuai: menuai, entity_registry: er.EntityRegistry, pywemo_device
 ) -> None:
     """Static device with host and port is added and removed."""
     assert await async_setup_component(
-        hass,
+        menuai,
         DOMAIN,
         {
             DOMAIN: {
@@ -78,17 +78,17 @@ async def test_static_config_with_port(
             },
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     entity_entries = list(entity_registry.entities.values())
     assert len(entity_entries) == 1
 
 
 async def test_static_config_without_port(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, pywemo_device
+    menuai: menuai, entity_registry: er.EntityRegistry, pywemo_device
 ) -> None:
     """Static device with host and no port is added and removed."""
     assert await async_setup_component(
-        hass,
+        menuai,
         DOMAIN,
         {
             DOMAIN: {
@@ -97,20 +97,20 @@ async def test_static_config_without_port(
             },
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     entity_entries = list(entity_registry.entities.values())
     assert len(entity_entries) == 1
 
 
 async def test_reload_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     pywemo_device: pywemo.WeMoDevice,
     pywemo_registry: pywemo.SubscriptionRegistry,
 ) -> None:
     """Config entry can be reloaded without errors."""
     assert await async_setup_component(
-        hass,
+        menuai,
         DOMAIN,
         {
             DOMAIN: {
@@ -121,7 +121,7 @@ async def test_reload_config_entry(
     )
 
     async def _async_test_entry_and_entity() -> tuple[str, str]:
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         pywemo_device.get_state.assert_called()
         pywemo_device.get_state.reset_mock()
@@ -132,10 +132,10 @@ async def test_reload_config_entry(
         entity_entries = list(entity_registry.entities.values())
         assert len(entity_entries) == 1
         await entity_test_helpers.test_turn_off_state(
-            hass, entity_entries[0], SWITCH_DOMAIN
+            menuai, entity_entries[0], SWITCH_DOMAIN
         )
 
-        entries = hass.config_entries.async_entries(DOMAIN)
+        entries = menuai.config_entries.async_entries(DOMAIN)
         assert len(entries) == 1
 
         return entries[0].entry_id, entity_entries[0].entity_id
@@ -143,17 +143,17 @@ async def test_reload_config_entry(
     entry_id, entity_id = await _async_test_entry_and_entity()
     pywemo_registry.unregister.assert_not_called()
 
-    assert await hass.config_entries.async_reload(entry_id)
+    assert await menuai.config_entries.async_reload(entry_id)
 
     ids = await _async_test_entry_and_entity()
     pywemo_registry.unregister.assert_called_once_with(pywemo_device)
     assert ids == (entry_id, entity_id)
 
 
-async def test_static_config_with_invalid_host(hass: HomeAssistant) -> None:
+async def test_static_config_with_invalid_host(menuai: menuai) -> None:
     """Component setup fails if a static host is invalid."""
     setup_success = await async_setup_component(
-        hass,
+        menuai,
         DOMAIN,
         {
             DOMAIN: {
@@ -166,14 +166,14 @@ async def test_static_config_with_invalid_host(hass: HomeAssistant) -> None:
 
 
 async def test_static_with_upnp_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     pywemo_device: pywemo.WeMoDevice,
 ) -> None:
     """Device that fails to get state is not added."""
     pywemo_device.get_state.side_effect = pywemo.exceptions.ActionException("Failed")
     assert await async_setup_component(
-        hass,
+        menuai,
         DOMAIN,
         {
             DOMAIN: {
@@ -182,14 +182,14 @@ async def test_static_with_upnp_failure(
             },
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     entity_entries = list(entity_registry.entities.values())
     assert len(entity_entries) == 0
     pywemo_device.get_state.assert_called_once()
 
 
 async def test_discovery(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, pywemo_registry
+    menuai: menuai, entity_registry: er.EntityRegistry, pywemo_registry
 ) -> None:
     """Verify that discovery dispatches devices to the platform for setup."""
 
@@ -219,15 +219,15 @@ async def test_discovery(
     with (
         patch("pywemo.discover_devices", return_value=pywemo_devices) as mock_discovery,
         patch(
-            "homeassistant.components.wemo.WemoDiscovery.discover_statics"
+            "menuai.components.wemo.WemoDiscovery.discover_statics"
         ) as mock_discover_statics,
         patch(
-            "homeassistant.components.wemo.binary_sensor.async_wemo_dispatcher_connect",
+            "menuai.components.wemo.binary_sensor.async_wemo_dispatcher_connect",
             side_effect=async_connect,
         ),
     ):
         assert await async_setup_component(
-            hass, DOMAIN, {DOMAIN: {CONF_DISCOVERY: True}}
+            menuai, DOMAIN, {DOMAIN: {CONF_DISCOVERY: True}}
         )
         await semaphore.acquire()  # Returns after platform setup.
         mock_discovery.assert_called()
@@ -236,11 +236,11 @@ async def test_discovery(
 
         # Test that discovery runs periodically and the async_dispatcher_send code works.
         async_fire_time_changed(
-            hass,
+            menuai,
             dt_util.utcnow()
             + timedelta(seconds=WemoDiscovery.ADDITIONAL_SECONDS_BETWEEN_SCANS + 1),
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         # Test that discover_statics runs during discovery
         assert mock_discover_statics.call_count == 3
 
@@ -248,6 +248,6 @@ async def test_discovery(
     entity_entries = list(entity_registry.entities.values())
     assert len(entity_entries) == 3
 
-    # Verify that hass stops cleanly.
-    await hass.async_stop()
-    await hass.async_block_till_done()
+    # Verify that menuai stops cleanly.
+    await menuai.async_stop()
+    await menuai.async_block_till_done()

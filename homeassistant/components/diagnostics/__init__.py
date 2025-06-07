@@ -12,29 +12,29 @@ from typing import Any, Protocol
 from aiohttp import web
 import voluptuous as vol
 
-from homeassistant.components import http, websocket_api
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import (
+from menuai.components import http, websocket_api
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers import (
     config_validation as cv,
     device_registry as dr,
     integration_platform,
 )
-from homeassistant.helpers.device_registry import DeviceEntry
-from homeassistant.helpers.json import (
+from menuai.helpers.device_registry import DeviceEntry
+from menuai.helpers.json import (
     ExtendedJSONEncoder,
     find_paths_unserializable_data,
 )
-from homeassistant.helpers.system_info import async_get_system_info
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.loader import (
+from menuai.helpers.system_info import async_get_system_info
+from menuai.helpers.typing import ConfigType
+from menuai.loader import (
     Manifest,
     async_get_custom_components,
     async_get_integration,
 )
-from homeassistant.setup import async_get_domain_setup_times
-from homeassistant.util.hass_dict import HassKey
-from homeassistant.util.json import format_unserializable_data
+from menuai.setup import async_get_domain_setup_times
+from menuai.util.menuai_dict import menuaiKey
+from menuai.util.json import format_unserializable_data
 
 from .const import DOMAIN, REDACTED, DiagnosticsSubType, DiagnosticsType
 from .util import async_redact_data
@@ -45,7 +45,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)
-_DIAGNOSTICS_DATA: HassKey[DiagnosticsData] = HassKey(DOMAIN)
+_DIAGNOSTICS_DATA: menuaiKey[DiagnosticsData] = menuaiKey(DOMAIN)
 
 
 @dataclass(slots=True)
@@ -53,12 +53,12 @@ class DiagnosticsPlatformData:
     """Diagnostic platform data."""
 
     config_entry_diagnostics: (
-        Callable[[HomeAssistant, ConfigEntry], Coroutine[Any, Any, Mapping[str, Any]]]
+        Callable[[menuai, ConfigEntry], Coroutine[Any, Any, Mapping[str, Any]]]
         | None
     )
     device_diagnostics: (
         Callable[
-            [HomeAssistant, ConfigEntry, DeviceEntry],
+            [menuai, ConfigEntry, DeviceEntry],
             Coroutine[Any, Any, Mapping[str, Any]],
         ]
         | None
@@ -72,17 +72,17 @@ class DiagnosticsData:
     platforms: dict[str, DiagnosticsPlatformData] = field(default_factory=dict)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up Diagnostics from a config entry."""
-    hass.data[_DIAGNOSTICS_DATA] = DiagnosticsData()
+    menuai.data[_DIAGNOSTICS_DATA] = DiagnosticsData()
 
     await integration_platform.async_process_integration_platforms(
-        hass, DOMAIN, _register_diagnostics_platform
+        menuai, DOMAIN, _register_diagnostics_platform
     )
 
-    websocket_api.async_register_command(hass, handle_info)
-    websocket_api.async_register_command(hass, handle_get)
-    hass.http.register_view(DownloadDiagnosticsView)
+    websocket_api.async_register_command(menuai, handle_info)
+    websocket_api.async_register_command(menuai, handle_get)
+    menuai.http.register_view(DownloadDiagnosticsView)
 
     return True
 
@@ -91,22 +91,22 @@ class DiagnosticsProtocol(Protocol):
     """Define the format that diagnostics platforms can have."""
 
     async def async_get_config_entry_diagnostics(
-        self, hass: HomeAssistant, config_entry: ConfigEntry
+        self, menuai: menuai, config_entry: ConfigEntry
     ) -> Mapping[str, Any]:
         """Return diagnostics for a config entry."""
 
     async def async_get_device_diagnostics(
-        self, hass: HomeAssistant, config_entry: ConfigEntry, device: DeviceEntry
+        self, menuai: menuai, config_entry: ConfigEntry, device: DeviceEntry
     ) -> Mapping[str, Any]:
         """Return diagnostics for a device."""
 
 
 @callback
 def _register_diagnostics_platform(
-    hass: HomeAssistant, integration_domain: str, platform: DiagnosticsProtocol
+    menuai: menuai, integration_domain: str, platform: DiagnosticsProtocol
 ) -> None:
     """Register a diagnostics platform."""
-    diagnostics_data = hass.data[_DIAGNOSTICS_DATA]
+    diagnostics_data = menuai.data[_DIAGNOSTICS_DATA]
     diagnostics_data.platforms[integration_domain] = DiagnosticsPlatformData(
         getattr(platform, "async_get_config_entry_diagnostics", None),
         getattr(platform, "async_get_device_diagnostics", None),
@@ -117,10 +117,10 @@ def _register_diagnostics_platform(
 @websocket_api.websocket_command({vol.Required("type"): "diagnostics/list"})
 @callback
 def handle_info(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict
 ) -> None:
     """List all possible diagnostic handlers."""
-    diagnostics_data = hass.data[_DIAGNOSTICS_DATA]
+    diagnostics_data = menuai.data[_DIAGNOSTICS_DATA]
     result = [
         {
             "domain": domain,
@@ -143,11 +143,11 @@ def handle_info(
 )
 @callback
 def handle_get(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict
 ) -> None:
     """List all diagnostic handlers for a domain."""
     domain = msg["domain"]
-    diagnostics_data = hass.data[_DIAGNOSTICS_DATA]
+    diagnostics_data = menuai.data[_DIAGNOSTICS_DATA]
 
     if (info := diagnostics_data.platforms.get(domain)) is None:
         connection.send_error(
@@ -185,7 +185,7 @@ def async_format_manifest(manifest: Manifest) -> Manifest:
 
 
 async def _async_get_json_file_response(
-    hass: HomeAssistant,
+    menuai: menuai,
     data: Mapping[str, Any],
     filename: str,
     domain: str,
@@ -193,13 +193,13 @@ async def _async_get_json_file_response(
     sub_id: str | None = None,
 ) -> web.Response:
     """Return JSON file from dictionary."""
-    hass_sys_info = await async_get_system_info(hass)
-    hass_sys_info["run_as_root"] = hass_sys_info["user"] == "root"
-    del hass_sys_info["user"]
+    menuai_sys_info = await async_get_system_info(menuai)
+    menuai_sys_info["run_as_root"] = menuai_sys_info["user"] == "root"
+    del menuai_sys_info["user"]
 
-    integration = await async_get_integration(hass, domain)
+    integration = await async_get_integration(menuai, domain)
     custom_components = {}
-    all_custom_components = await async_get_custom_components(hass)
+    all_custom_components = await async_get_custom_components(menuai)
     for cc_domain, cc_obj in all_custom_components.items():
         custom_components[cc_domain] = {
             "documentation": cc_obj.documentation,
@@ -207,10 +207,10 @@ async def _async_get_json_file_response(
             "requirements": cc_obj.requirements,
         }
     payload = {
-        "home_assistant": hass_sys_info,
+        "home_assistant": menuai_sys_info,
         "custom_components": custom_components,
         "integration_manifest": async_format_manifest(integration.manifest),
-        "setup_times": async_get_domain_setup_times(hass, domain),
+        "setup_times": async_get_domain_setup_times(menuai, domain),
         "data": data,
     }
     try:
@@ -234,7 +234,7 @@ async def _async_get_json_file_response(
     )
 
 
-class DownloadDiagnosticsView(http.HomeAssistantView):
+class DownloadDiagnosticsView(http.menuaiView):
     """Download diagnostics view."""
 
     url = "/api/diagnostics/{d_type}/{d_id}"
@@ -264,12 +264,12 @@ class DownloadDiagnosticsView(http.HomeAssistantView):
 
         device_diagnostics = sub_type is not None
 
-        hass = request.app[http.KEY_HASS]
+        menuai = request.app[http.KEY_menuai]
 
-        if (config_entry := hass.config_entries.async_get_entry(d_id)) is None:
+        if (config_entry := menuai.config_entries.async_get_entry(d_id)) is None:
             return web.Response(status=HTTPStatus.NOT_FOUND)
 
-        diagnostics_data = hass.data[_DIAGNOSTICS_DATA]
+        diagnostics_data = menuai.data[_DIAGNOSTICS_DATA]
         if (info := diagnostics_data.platforms.get(config_entry.domain)) is None:
             return web.Response(status=HTTPStatus.NOT_FOUND)
 
@@ -279,14 +279,14 @@ class DownloadDiagnosticsView(http.HomeAssistantView):
             # Config entry diagnostics
             if info.config_entry_diagnostics is None:
                 return web.Response(status=HTTPStatus.NOT_FOUND)
-            data = await info.config_entry_diagnostics(hass, config_entry)
+            data = await info.config_entry_diagnostics(menuai, config_entry)
             filename = f"{DiagnosticsType.CONFIG_ENTRY}-{filename}"
             return await _async_get_json_file_response(
-                hass, data, filename, config_entry.domain, d_id
+                menuai, data, filename, config_entry.domain, d_id
             )
 
         # Device diagnostics
-        dev_reg = dr.async_get(hass)
+        dev_reg = dr.async_get(menuai)
         if sub_id is None:
             return web.Response(status=HTTPStatus.BAD_REQUEST)
 
@@ -298,7 +298,7 @@ class DownloadDiagnosticsView(http.HomeAssistantView):
         if info.device_diagnostics is None:
             return web.Response(status=HTTPStatus.NOT_FOUND)
 
-        data = await info.device_diagnostics(hass, config_entry, device)
+        data = await info.device_diagnostics(menuai, config_entry, device)
         return await _async_get_json_file_response(
-            hass, data, filename, config_entry.domain, d_id, sub_id
+            menuai, data, filename, config_entry.domain, d_id, sub_id
         )

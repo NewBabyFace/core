@@ -6,8 +6,8 @@ from typing import Any
 
 import greeneye
 
-from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
-from homeassistant.const import (
+from menuai.components.sensor import SensorDeviceClass, SensorEntity
+from menuai.const import (
     CONF_NAME,
     CONF_SENSORS,
     CONF_TEMPERATURE_UNIT,
@@ -15,9 +15,9 @@ from homeassistant.const import (
     UnitOfPower,
     UnitOfTime,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import (
     CONF_CHANNELS,
@@ -41,7 +41,7 @@ COUNTER_ICON = "mdi:counter"
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -109,7 +109,7 @@ async def async_setup_platform(
         if len(monitor_configs) == 0:
             monitors.remove_listener(on_new_monitor)
 
-    monitors = hass.data[DATA_GREENEYE_MONITOR]
+    monitors = menuai.data[DATA_GREENEYE_MONITOR]
     monitors.add_listener(on_new_monitor)
     for monitor in monitors.monitors.values():
         on_new_monitor(monitor)
@@ -147,11 +147,11 @@ class GEMSensor(SensorEntity):
             f"{self._monitor_serial_number}-{self._sensor_type}-{self._number}"
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Wait for and connect to the sensor."""
         self._sensor.add_listener(self.async_write_ha_state)
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Remove listener from the sensor."""
         if self._sensor:
             self._sensor.remove_listener(self.async_write_ha_state)

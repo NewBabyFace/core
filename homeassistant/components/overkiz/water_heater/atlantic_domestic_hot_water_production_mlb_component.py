@@ -4,7 +4,7 @@ from typing import Any, cast
 
 from pyoverkiz.enums import OverkizCommand, OverkizCommandParam, OverkizState
 
-from homeassistant.components.water_heater import (
+from menuai.components.water_heater import (
     STATE_ECO,
     STATE_ELECTRIC,
     STATE_OFF,
@@ -12,8 +12,8 @@ from homeassistant.components.water_heater import (
     WaterHeaterEntity,
     WaterHeaterEntityFeature,
 )
-from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
-from homeassistant.util import dt as dt_util
+from menuai.const import ATTR_TEMPERATURE, UnitOfTemperature
+from menuai.util import dt as dt_util
 
 from .. import OverkizDataUpdateCoordinator
 from ..entity import OverkizEntity
@@ -160,7 +160,7 @@ class AtlanticDomesticHotWaterProductionMBLComponent(OverkizEntity, WaterHeaterE
         The dict is then passed as an actual device date, the away mode start date, and then as an end date,
         but with the year incremented by 1, so the away mode is getting turned on for the next year.
         The weekday number seems to have no effect so the calculation of the future date's weekday number is redundant,
-        but possible via homeassistant dt_util to form both start and end dates dictionaries from scratch
+        but possible via menuai dt_util to form both start and end dates dictionaries from scratch
         based on datetime.now() and datetime.timedelta into the future.
         If you execute `setAbsenceStartDate`, `setAbsenceEndDate` and `setAbsenceMode`,
         the API answers with "too many requests", as there's a polling update after each command execution,

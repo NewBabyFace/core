@@ -15,16 +15,16 @@ from bring_api import (
 )
 import voluptuous as vol
 
-from homeassistant.components.todo import (
+from menuai.components.todo import (
     TodoItem,
     TodoItemStatus,
     TodoListEntity,
     TodoListEntityFeature,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers import config_validation as cv, entity_platform
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
     ATTR_ITEM_NAME,
@@ -39,7 +39,7 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: BringConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -138,7 +138,7 @@ class BringTodoListEntity(BringBaseEntity, TodoListEntity):
                 str(uuid.uuid4()),
             )
         except BringRequestException as e:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="todo_save_item_failed",
                 translation_placeholders={"name": item.summary or ""},
@@ -155,7 +155,7 @@ class BringTodoListEntity(BringBaseEntity, TodoListEntity):
 
         This results in following behaviour:
 
-        - Completed items will move to the "completed" section in home assistant todo
+        - Completed items will move to the "completed" section in MenuAI todo
             list and get moved to the recently list in bring
         - Bring shows some odd behaviour when renaming items. This is because Bring
             did not have unique identifiers for items in the past and this is still
@@ -196,7 +196,7 @@ class BringTodoListEntity(BringBaseEntity, TodoListEntity):
                     else BringItemOperation.COMPLETE,
                 )
             except BringRequestException as e:
-                raise HomeAssistantError(
+                raise menuaiError(
                     translation_domain=DOMAIN,
                     translation_key="todo_update_item_failed",
                     translation_placeholders={"name": item.summary or ""},
@@ -224,7 +224,7 @@ class BringTodoListEntity(BringBaseEntity, TodoListEntity):
                 )
 
             except BringRequestException as e:
-                raise HomeAssistantError(
+                raise menuaiError(
                     translation_domain=DOMAIN,
                     translation_key="todo_rename_item_failed",
                     translation_placeholders={"name": item.summary or ""},
@@ -249,7 +249,7 @@ class BringTodoListEntity(BringBaseEntity, TodoListEntity):
                 BringItemOperation.REMOVE,
             )
         except BringRequestException as e:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="todo_delete_item_failed",
                 translation_placeholders={"count": str(len(uids))},
@@ -267,7 +267,7 @@ class BringTodoListEntity(BringBaseEntity, TodoListEntity):
         try:
             await self.coordinator.bring.notify(self._list_uuid, message, item or None)
         except BringRequestException as e:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="notify_request_failed",
             ) from e

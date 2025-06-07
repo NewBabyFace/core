@@ -1,7 +1,7 @@
 {
   "domain": "raspberry_pi",
   "name": "Raspberry Pi",
-  "after_dependencies": ["hassio"],
+  "after_dependencies": ["menuaiio"],
   "codeowners": ["@home-assistant/core"],
   "config_flow": false,
   "dependencies": ["hardware"],

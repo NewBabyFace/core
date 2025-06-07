@@ -1,15 +1,15 @@
 """Support for Snoo Events."""
 
-from homeassistant.components.event import EventEntity, EventEntityDescription
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.event import EventEntity, EventEntityDescription
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import SnooConfigEntry
 from .entity import SnooDescriptionEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: SnooConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -50,9 +50,9 @@ class SnooEvent(SnooDescriptionEntity, EventEntity):
         )
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Add Event."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         if self.coordinator.data:
             # If we were able to get data on startup - set it
             # Otherwise, it will update when the coordinator gets data.

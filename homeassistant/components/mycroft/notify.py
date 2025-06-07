@@ -6,20 +6,20 @@ import logging
 
 from mycroftapi import MycroftAPI
 
-from homeassistant.components.notify import BaseNotificationService
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.notify import BaseNotificationService
+from menuai.core import menuai
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
 
 def get_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> MycroftNotificationService:
     """Get the Mycroft notification service."""
-    return MycroftNotificationService(hass.data["mycroft"])
+    return MycroftNotificationService(menuai.data["mycroft"])
 
 
 class MycroftNotificationService(BaseNotificationService):

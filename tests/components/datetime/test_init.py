@@ -5,10 +5,10 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-from homeassistant.components.datetime import ATTR_DATETIME, DOMAIN, SERVICE_SET_VALUE
-from homeassistant.const import ATTR_ENTITY_ID, ATTR_FRIENDLY_NAME, CONF_PLATFORM
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.datetime import ATTR_DATETIME, DOMAIN, SERVICE_SET_VALUE
+from menuai.const import ATTR_ENTITY_ID, ATTR_FRIENDLY_NAME, CONF_PLATFORM
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from .common import MockDateTimeEntity
 
@@ -17,11 +17,11 @@ from tests.common import setup_test_component_platform
 DEFAULT_VALUE = datetime(2020, 1, 1, 12, 0, 0, tzinfo=UTC)
 
 
-async def test_datetime(hass: HomeAssistant) -> None:
+async def test_datetime(menuai: menuai) -> None:
     """Test date/time entity."""
-    await hass.config.async_set_time_zone("UTC")
+    await menuai.config.async_set_time_zone("UTC")
     setup_test_component_platform(
-        hass,
+        menuai,
         DOMAIN,
         [
             MockDateTimeEntity(
@@ -32,47 +32,47 @@ async def test_datetime(hass: HomeAssistant) -> None:
         ],
     )
 
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("datetime.test")
+    state = menuai.states.get("datetime.test")
     assert state.state == "2020-01-01T01:02:03+00:00"
     assert state.attributes == {ATTR_FRIENDLY_NAME: "test"}
 
     # Test updating datetime
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_VALUE,
         {ATTR_DATETIME: datetime(2022, 3, 3, 3, 4, 5), ATTR_ENTITY_ID: "datetime.test"},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("datetime.test")
+    state = menuai.states.get("datetime.test")
     assert state.state == "2022-03-03T03:04:05+00:00"
 
     # Test updating datetime with UTC timezone
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_VALUE,
         {ATTR_DATETIME: "2022-03-03T03:04:05+00:00", ATTR_ENTITY_ID: "datetime.test"},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("datetime.test")
+    state = menuai.states.get("datetime.test")
     assert state.state == "2022-03-03T03:04:05+00:00"
 
     # Test updating datetime with non UTC timezone
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_VALUE,
         {ATTR_DATETIME: "2022-03-03T03:04:05-05:00", ATTR_ENTITY_ID: "datetime.test"},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("datetime.test")
+    state = menuai.states.get("datetime.test")
     assert state.state == "2022-03-03T08:04:05+00:00"
 
     # Test that non UTC timezone gets converted to UTC

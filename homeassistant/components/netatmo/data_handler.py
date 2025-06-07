@@ -17,14 +17,14 @@ from pyatmo.modules.device_types import (
     DeviceType as NetatmoDeviceType,
 )
 
-from homeassistant.components import cloud
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
-from homeassistant.helpers.dispatcher import (
+from menuai.components import cloud
+from menuai.config_entries import ConfigEntry
+from menuai.core import CALLBACK_TYPE, menuai, callback
+from menuai.helpers.dispatcher import (
     async_dispatcher_connect,
     async_dispatcher_send,
 )
-from homeassistant.helpers.event import async_track_time_interval
+from menuai.helpers.event import async_track_time_interval
 
 from .const import (
     AUTH,
@@ -135,11 +135,11 @@ class NetatmoDataHandler:
     account: pyatmo.AsyncAccount
     _interval_factor: int
 
-    def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: ConfigEntry) -> None:
         """Initialize self."""
-        self.hass = hass
+        self.menuai = menuai
         self.config_entry = config_entry
-        self._auth = hass.data[DOMAIN][config_entry.entry_id][AUTH]
+        self._auth = menuai.data[DOMAIN][config_entry.entry_id][AUTH]
         self.publisher: dict[str, NetatmoPublisher] = {}
         self._queue: deque = deque()
         self._webhook: bool = False
@@ -156,13 +156,13 @@ class NetatmoDataHandler:
         """Set up the Netatmo data handler."""
         self.config_entry.async_on_unload(
             async_track_time_interval(
-                self.hass, self.async_update, timedelta(seconds=SCAN_INTERVAL)
+                self.menuai, self.async_update, timedelta(seconds=SCAN_INTERVAL)
             )
         )
 
         self.config_entry.async_on_unload(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"signal-{DOMAIN}-webhook-None",
                 self.handle_event,
             )
@@ -172,7 +172,7 @@ class NetatmoDataHandler:
 
         await self.subscribe(ACCOUNT, ACCOUNT, None)
 
-        await self.hass.config_entries.async_forward_entry_setups(
+        await self.menuai.config_entries.async_forward_entry_setups(
             self.config_entry, PLATFORMS
         )
         await self.async_dispatch()
@@ -321,7 +321,7 @@ class NetatmoDataHandler:
             self.setup_rooms(home, signal_home)
             self.setup_modules(home, signal_home)
 
-            self.hass.data[DOMAIN][DATA_PERSONS][home.entity_id] = {
+            self.menuai.data[DOMAIN][DATA_PERSONS][home.entity_id] = {
                 person.entity_id: person.pseudo for person in home.persons.values()
             }
 
@@ -333,7 +333,7 @@ class NetatmoDataHandler:
         for module in self.account.modules.values():
             if module.device_category is NetatmoDeviceCategory.air_care:
                 async_dispatcher_send(
-                    self.hass,
+                    self.menuai,
                     NETATMO_CREATE_WEATHER_SENSOR,
                     NetatmoDevice(
                         self,
@@ -369,7 +369,7 @@ class NetatmoDataHandler:
 
             for signal in netatmo_type_signal_map.get(module.device_category, []):
                 async_dispatcher_send(
-                    self.hass,
+                    self.menuai,
                     signal,
                     NetatmoDevice(
                         self,
@@ -380,7 +380,7 @@ class NetatmoDataHandler:
                 )
             if module.device_category is NetatmoDeviceCategory.weather:
                 async_dispatcher_send(
-                    self.hass,
+                    self.menuai,
                     NETATMO_CREATE_WEATHER_SENSOR,
                     NetatmoDevice(
                         self,
@@ -395,7 +395,7 @@ class NetatmoDataHandler:
         for room in home.rooms.values():
             if NetatmoDeviceCategory.climate in room.features:
                 async_dispatcher_send(
-                    self.hass,
+                    self.menuai,
                     NETATMO_CREATE_CLIMATE,
                     NetatmoRoom(
                         self,
@@ -408,7 +408,7 @@ class NetatmoDataHandler:
                 for module in room.modules.values():
                     if module.device_category is NetatmoDeviceCategory.climate:
                         async_dispatcher_send(
-                            self.hass,
+                            self.menuai,
                             NETATMO_CREATE_BATTERY,
                             NetatmoDevice(
                                 self,
@@ -420,7 +420,7 @@ class NetatmoDataHandler:
 
                 if "humidity" in room.features:
                     async_dispatcher_send(
-                        self.hass,
+                        self.menuai,
                         NETATMO_CREATE_ROOM_SENSOR,
                         NetatmoRoom(
                             self,
@@ -437,12 +437,12 @@ class NetatmoDataHandler:
         if NetatmoDeviceCategory.climate in [
             next(iter(x)) for x in [room.features for room in home.rooms.values()] if x
         ]:
-            self.hass.data[DOMAIN][DATA_SCHEDULES][home.entity_id] = self.account.homes[
+            self.menuai.data[DOMAIN][DATA_SCHEDULES][home.entity_id] = self.account.homes[
                 home.entity_id
             ].schedules
 
             async_dispatcher_send(
-                self.hass,
+                self.menuai,
                 NETATMO_CREATE_SELECT,
                 NetatmoHome(
                     self,

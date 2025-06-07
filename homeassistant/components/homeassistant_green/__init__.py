@@ -1,34 +1,34 @@
-"""The Home Assistant Green integration."""
+"""The MenuAI Green integration."""
 
 from __future__ import annotations
 
-from homeassistant.components.hassio import get_os_info
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers.hassio import is_hassio
+from menuai.components.menuaiio import get_os_info
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers.menuaiio import is_menuaiio
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up a Home Assistant Green config entry."""
-    if not is_hassio(hass):
-        # Not running under supervisor, Home Assistant may have been migrated
-        hass.async_create_task(hass.config_entries.async_remove(entry.entry_id))
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
+    """Set up a MenuAI Green config entry."""
+    if not is_menuaiio(menuai):
+        # Not running under supervisor, MenuAI may have been migrated
+        menuai.async_create_task(menuai.config_entries.async_remove(entry.entry_id))
         return False
 
-    if (os_info := get_os_info(hass)) is None:
-        # The hassio integration has not yet fetched data from the supervisor
+    if (os_info := get_os_info(menuai)) is None:
+        # The menuaiio integration has not yet fetched data from the supervisor
         raise ConfigEntryNotReady
 
     board: str | None
     if (board := os_info.get("board")) is None or board != "green":
-        # Not running on a Home Assistant Green, Home Assistant may have been migrated
-        hass.async_create_task(hass.config_entries.async_remove(entry.entry_id))
+        # Not running on a MenuAI Green, MenuAI may have been migrated
+        menuai.async_create_task(menuai.config_entries.async_remove(entry.entry_id))
         return False
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     return True

@@ -4,19 +4,19 @@ from unittest.mock import call
 
 from aioesphomeapi import APIClient, DateInfo, DateState
 
-from homeassistant.components.date import (
+from menuai.components.date import (
     ATTR_DATE,
     DOMAIN as DATE_DOMAIN,
     SERVICE_SET_VALUE,
 )
-from homeassistant.const import ATTR_ENTITY_ID, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
+from menuai.const import ATTR_ENTITY_ID, STATE_UNKNOWN
+from menuai.core import menuai
 
 from .conftest import MockGenericDeviceEntryType
 
 
 async def test_generic_date_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -37,11 +37,11 @@ async def test_generic_date_entity(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("date.test_mydate")
+    state = menuai.states.get("date.test_mydate")
     assert state is not None
     assert state.state == "2024-12-31"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DATE_DOMAIN,
         SERVICE_SET_VALUE,
         {ATTR_ENTITY_ID: "date.test_mydate", ATTR_DATE: "1999-01-01"},
@@ -52,7 +52,7 @@ async def test_generic_date_entity(
 
 
 async def test_generic_date_missing_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -73,6 +73,6 @@ async def test_generic_date_missing_state(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("date.test_mydate")
+    state = menuai.states.get("date.test_mydate")
     assert state is not None
     assert state.state == STATE_UNKNOWN

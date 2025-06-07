@@ -13,11 +13,11 @@ from xknx.io import (
     SecureConfig,
 )
 
-from homeassistant.components.knx.config_flow import (
+from menuai.components.knx.config_flow import (
     DEFAULT_ENTRY_DATA,
     DEFAULT_ROUTING_IA,
 )
-from homeassistant.components.knx.const import (
+from menuai.components.knx.const import (
     CONF_KNX_AUTOMATIC,
     CONF_KNX_CONNECTION_TYPE,
     CONF_KNX_DEFAULT_RATE_LIMIT,
@@ -44,9 +44,9 @@ from homeassistant.components.knx.const import (
     DOMAIN,
     KNXConfigEntryData,
 )
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_HOST, CONF_PORT, Platform
-from homeassistant.core import HomeAssistant
+from menuai.config_entries import ConfigEntryState
+from menuai.const import CONF_HOST, CONF_PORT, Platform
+from menuai.core import menuai
 
 from . import KnxEntityGenerator
 from .conftest import KNXTestKit
@@ -213,7 +213,7 @@ from tests.common import MockConfigEntry, async_fire_time_changed
     ],
 )
 async def test_init_connection_handling(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXTestKit,
     config_entry_data: KNXConfigEntryData,
     connection_config: ConnectionConfig,
@@ -228,9 +228,9 @@ async def test_init_connection_handling(
     knx.mock_config_entry = config_entry
     await knx.setup_integration()
 
-    assert hass.data.get(DOMAIN) is not None
+    assert menuai.data.get(DOMAIN) is not None
 
-    original_connection_config = hass.data[DOMAIN].connection_config().__dict__.copy()
+    original_connection_config = menuai.data[DOMAIN].connection_config().__dict__.copy()
     del original_connection_config["secure_config"]
 
     connection_config_dict = connection_config.__dict__.copy()
@@ -240,19 +240,19 @@ async def test_init_connection_handling(
 
     if connection_config.secure_config is not None:
         assert (
-            hass.data[DOMAIN].connection_config().secure_config.knxkeys_password
+            menuai.data[DOMAIN].connection_config().secure_config.knxkeys_password
             == connection_config.secure_config.knxkeys_password
         )
         assert (
-            hass.data[DOMAIN].connection_config().secure_config.user_password
+            menuai.data[DOMAIN].connection_config().secure_config.user_password
             == connection_config.secure_config.user_password
         )
         assert (
-            hass.data[DOMAIN].connection_config().secure_config.user_id
+            menuai.data[DOMAIN].connection_config().secure_config.user_id
             == connection_config.secure_config.user_id
         )
         assert (
-            hass.data[DOMAIN]
+            menuai.data[DOMAIN]
             .connection_config()
             .secure_config.device_authentication_password
             == connection_config.secure_config.device_authentication_password
@@ -260,12 +260,12 @@ async def test_init_connection_handling(
         if connection_config.secure_config.knxkeys_file_path is not None:
             assert (
                 connection_config.secure_config.knxkeys_file_path
-                in hass.data[DOMAIN].connection_config().secure_config.knxkeys_file_path
+                in menuai.data[DOMAIN].connection_config().secure_config.knxkeys_file_path
             )
 
 
 async def _init_switch_and_wait_for_first_state_updater_run(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXTestKit,
     create_ui_entity: KnxEntityGenerator,
     freezer: FrozenDateTimeFactory,
@@ -289,19 +289,19 @@ async def _init_switch_and_wait_for_first_state_updater_run(
     await knx.receive_response("2/2/2", True)
 
     freezer.tick(timedelta(minutes=59))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
     await knx.assert_no_telegram()
 
     freezer.tick(timedelta(minutes=1))  # 60 minutes passed
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
 async def test_default_state_updater_enabled(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXTestKit,
     create_ui_entity: KnxEntityGenerator,
     freezer: FrozenDateTimeFactory,
@@ -312,14 +312,14 @@ async def test_default_state_updater_enabled(
         state_updater=True,
     )
     await _init_switch_and_wait_for_first_state_updater_run(
-        hass, knx, create_ui_entity, freezer, config_entry
+        menuai, knx, create_ui_entity, freezer, config_entry
     )
     await knx.assert_read("2/2/2")
     await knx.receive_response("2/2/2", True)
 
 
 async def test_default_state_updater_disabled(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXTestKit,
     create_ui_entity: KnxEntityGenerator,
     freezer: FrozenDateTimeFactory,
@@ -330,13 +330,13 @@ async def test_default_state_updater_disabled(
         state_updater=False,
     )
     await _init_switch_and_wait_for_first_state_updater_run(
-        hass, knx, create_ui_entity, freezer, config_entry
+        menuai, knx, create_ui_entity, freezer, config_entry
     )
     await knx.assert_no_telegram()
 
 
 async def test_async_remove_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXTestKit,
 ) -> None:
     """Test async_setup_entry (for coverage)."""
@@ -354,9 +354,9 @@ async def test_async_remove_entry(
         patch("pathlib.Path.unlink") as unlink_mock,
         patch("pathlib.Path.rmdir") as rmdir_mock,
     ):
-        assert await hass.config_entries.async_remove(config_entry.entry_id)
+        assert await menuai.config_entries.async_remove(config_entry.entry_id)
         assert unlink_mock.call_count == 4
         rmdir_mock.assert_called_once()
 
-    assert hass.config_entries.async_entries() == []
+    assert menuai.config_entries.async_entries() == []
     assert config_entry.state is ConfigEntryState.NOT_LOADED

@@ -9,11 +9,11 @@ from typing import TYPE_CHECKING, Any, Literal
 from aiohttp import web
 import voluptuous as vol
 
-from homeassistant.auth.models import RefreshToken, User
-from homeassistant.core import Context, HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError, Unauthorized
-from homeassistant.helpers.http import current_request
-from homeassistant.util.json import JsonValueType
+from menuai.auth.models import RefreshToken, User
+from menuai.core import Context, menuai, callback
+from menuai.exceptions import menuaiError, Unauthorized
+from menuai.helpers.http import current_request
+from menuai.util.json import JsonValueType
 
 from . import const, messages
 from .messages import (
@@ -32,8 +32,8 @@ current_connection = ContextVar["ActiveConnection | None"](
     "current_connection", default=None
 )
 
-type MessageHandler = Callable[[HomeAssistant, ActiveConnection, dict[str, Any]], None]
-type BinaryHandler = Callable[[HomeAssistant, ActiveConnection, bytes], None]
+type MessageHandler = Callable[[menuai, ActiveConnection, dict[str, Any]], None]
+type BinaryHandler = Callable[[menuai, ActiveConnection, bytes], None]
 
 
 class ActiveConnection:
@@ -43,7 +43,7 @@ class ActiveConnection:
         "binary_handlers",
         "can_coalesce",
         "handlers",
-        "hass",
+        "menuai",
         "last_id",
         "logger",
         "refresh_token_id",
@@ -56,14 +56,14 @@ class ActiveConnection:
     def __init__(
         self,
         logger: WebSocketAdapter,
-        hass: HomeAssistant,
+        menuai: menuai,
         send_message: Callable[[bytes | str | dict[str, Any]], None],
         user: User,
         refresh_token: RefreshToken,
     ) -> None:
         """Initialize an active connection."""
         self.logger = logger
-        self.hass = hass
+        self.menuai = menuai
         self.send_message = send_message
         self.user = user
         self.refresh_token_id = refresh_token.id
@@ -72,7 +72,7 @@ class ActiveConnection:
         self.can_coalesce = False
         self.supported_features: dict[str, float] = {}
         self.handlers: dict[str, tuple[MessageHandler, vol.Schema | Literal[False]]] = (
-            self.hass.data[const.DOMAIN]
+            self.menuai.data[const.DOMAIN]
         )
         self.binary_handlers: list[BinaryHandler | None] = []
         current_connection.set(self)
@@ -178,7 +178,7 @@ class ActiveConnection:
             return
 
         try:
-            handler(self.hass, self, payload)
+            handler(self.menuai, self, payload)
         except Exception:
             self.logger.exception("Error handling binary message")
             self.binary_handlers[index] = None
@@ -232,9 +232,9 @@ class ActiveConnection:
             if schema is False:
                 if len(msg) > 2:
                     raise vol.Invalid("extra keys not allowed")  # noqa: TRY301
-                handler(self.hass, self, msg)
+                handler(self.menuai, self, msg)
             else:
-                handler(self.hass, self, schema(msg))
+                handler(self.menuai, self, schema(msg))
         except Exception as err:  # noqa: BLE001
             self.async_handle_exception(msg, err)
 
@@ -283,7 +283,7 @@ class ActiveConnection:
         elif isinstance(err, TimeoutError):
             code = const.ERR_TIMEOUT
             err_message = "Timeout"
-        elif isinstance(err, HomeAssistantError):
+        elif isinstance(err, menuaiError):
             err_message = str(err)
             code = const.ERR_HOME_ASSISTANT_ERROR
             translation_domain = err.translation_domain

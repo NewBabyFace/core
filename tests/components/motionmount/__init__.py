@@ -2,8 +2,8 @@
 
 from ipaddress import ip_address
 
-from homeassistant.const import CONF_HOST, CONF_PIN, CONF_PORT
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.const import CONF_HOST, CONF_PIN, CONF_PORT
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 HOST = "192.168.1.31"
 PORT = 23

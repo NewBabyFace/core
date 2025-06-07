@@ -2,31 +2,31 @@
 
 import voluptuous as vol
 
-from homeassistant.components.device_automation import (
+from menuai.components.device_automation import (
     DEVICE_TRIGGER_BASE_SCHEMA,
     InvalidDeviceAutomationConfig,
     async_get_entity_registry_entry_or_raise,
 )
-from homeassistant.components.homeassistant.triggers import (
+from menuai.components.menuai.triggers import (
     numeric_state as numeric_state_trigger,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_ABOVE,
     CONF_BELOW,
     CONF_ENTITY_ID,
     CONF_FOR,
     CONF_TYPE,
 )
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.entity import (
+from menuai.core import CALLBACK_TYPE, menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.entity import (
     get_capability,
     get_device_class,
     get_unit_of_measurement,
 )
-from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers.trigger import TriggerActionType, TriggerInfo
+from menuai.helpers.typing import ConfigType
 
 from . import ATTR_STATE_CLASS, DOMAIN, SensorDeviceClass
 
@@ -224,7 +224,7 @@ TRIGGER_SCHEMA = vol.All(
 
 
 async def async_attach_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     action: TriggerActionType,
     trigger_info: TriggerInfo,
@@ -242,19 +242,19 @@ async def async_attach_trigger(
         numeric_state_config[CONF_FOR] = config[CONF_FOR]
 
     numeric_state_config = await numeric_state_trigger.async_validate_trigger_config(
-        hass, numeric_state_config
+        menuai, numeric_state_config
     )
     return await numeric_state_trigger.async_attach_trigger(
-        hass, numeric_state_config, action, trigger_info, platform_type="device"
+        menuai, numeric_state_config, action, trigger_info, platform_type="device"
     )
 
 
 async def async_get_triggers(
-    hass: HomeAssistant, device_id: str
+    menuai: menuai, device_id: str
 ) -> list[dict[str, str]]:
     """List device triggers."""
     triggers: list[dict[str, str]] = []
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
 
     entries = [
         entry
@@ -263,9 +263,9 @@ async def async_get_triggers(
     ]
 
     for entry in entries:
-        device_class = get_device_class(hass, entry.entity_id) or DEVICE_CLASS_NONE
-        state_class = get_capability(hass, entry.entity_id, ATTR_STATE_CLASS)
-        unit_of_measurement = get_unit_of_measurement(hass, entry.entity_id)
+        device_class = get_device_class(menuai, entry.entity_id) or DEVICE_CLASS_NONE
+        state_class = get_capability(menuai, entry.entity_id, ATTR_STATE_CLASS)
+        unit_of_measurement = get_unit_of_measurement(menuai, entry.entity_id)
 
         if not unit_of_measurement and not state_class:
             continue
@@ -289,14 +289,14 @@ async def async_get_triggers(
 
 
 async def async_get_trigger_capabilities(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> dict[str, vol.Schema]:
     """List trigger capabilities."""
 
     try:
-        entry = async_get_entity_registry_entry_or_raise(hass, config[CONF_ENTITY_ID])
-        unit_of_measurement = get_unit_of_measurement(hass, entry.entity_id)
-    except HomeAssistantError:
+        entry = async_get_entity_registry_entry_or_raise(menuai, config[CONF_ENTITY_ID])
+        unit_of_measurement = get_unit_of_measurement(menuai, entry.entity_id)
+    except menuaiError:
         unit_of_measurement = None
 
     if not unit_of_measurement:

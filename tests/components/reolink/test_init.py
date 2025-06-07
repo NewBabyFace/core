@@ -14,14 +14,14 @@ from reolink_aio.exceptions import (
     ReolinkError,
 )
 
-from homeassistant.components.reolink import (
+from menuai.components.reolink import (
     DEVICE_UPDATE_INTERVAL,
     FIRMWARE_UPDATE_INTERVAL,
     NUM_CRED_ERRORS,
 )
-from homeassistant.components.reolink.const import CONF_BC_PORT, DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import (
+from menuai.components.reolink.const import CONF_BC_PORT, DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
@@ -32,15 +32,15 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     Platform,
 )
-from homeassistant.core import DOMAIN as HOMEASSISTANT_DOMAIN, HomeAssistant
-from homeassistant.core_config import async_process_ha_core_config
-from homeassistant.helpers import (
+from menuai.core import DOMAIN as menuai_DOMAIN, menuai
+from menuai.core_config import async_process_ha_core_config
+from menuai.helpers import (
     device_registry as dr,
     entity_registry as er,
     issue_registry as ir,
 )
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, format_mac
-from homeassistant.setup import async_setup_component
+from menuai.helpers.device_registry import CONNECTION_NETWORK_MAC, format_mac
+from menuai.setup import async_setup_component
 
 from .conftest import (
     CONF_SUPPORTS_PRIVACY_MODE,
@@ -110,7 +110,7 @@ async def test_wait(*args, **key_args) -> None:
     ],
 )
 async def test_failures_parametrized(
-    hass: HomeAssistant,
+    menuai: menuai,
     reolink_connect: MagicMock,
     config_entry: MockConfigEntry,
     attr: str,
@@ -120,10 +120,10 @@ async def test_failures_parametrized(
     """Test outcomes when changing errors."""
     original = getattr(reolink_connect, attr)
     setattr(reolink_connect, attr, value)
-    assert await hass.config_entries.async_setup(config_entry.entry_id) is (
+    assert await menuai.config_entries.async_setup(config_entry.entry_id) is (
         expected is ConfigEntryState.LOADED
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert config_entry.state == expected
 
@@ -131,74 +131,74 @@ async def test_failures_parametrized(
 
 
 async def test_firmware_error_twice(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     reolink_connect: MagicMock,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test when the firmware update fails 2 times."""
     reolink_connect.check_new_firmware.side_effect = ReolinkError("Test error")
-    with patch("homeassistant.components.reolink.PLATFORMS", [Platform.UPDATE]):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    with patch("menuai.components.reolink.PLATFORMS", [Platform.UPDATE]):
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
     entity_id = f"{Platform.UPDATE}.{TEST_NVR_NAME}_firmware"
-    assert hass.states.get(entity_id).state == STATE_OFF
+    assert menuai.states.get(entity_id).state == STATE_OFF
 
     freezer.tick(FIRMWARE_UPDATE_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(entity_id).state == STATE_UNAVAILABLE
+    assert menuai.states.get(entity_id).state == STATE_UNAVAILABLE
 
     reolink_connect.check_new_firmware.reset_mock(side_effect=True)
 
 
 async def test_credential_error_three(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     reolink_connect: MagicMock,
     config_entry: MockConfigEntry,
     issue_registry: ir.IssueRegistry,
 ) -> None:
     """Test when the update gives credential error 3 times."""
-    with patch("homeassistant.components.reolink.PLATFORMS", [Platform.SWITCH]):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    with patch("menuai.components.reolink.PLATFORMS", [Platform.SWITCH]):
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
     assert config_entry.state is ConfigEntryState.LOADED
 
     reolink_connect.get_states.side_effect = CredentialsInvalidError("Test error")
 
     issue_id = f"config_entry_reauth_{DOMAIN}_{config_entry.entry_id}"
     for _ in range(NUM_CRED_ERRORS):
-        assert (HOMEASSISTANT_DOMAIN, issue_id) not in issue_registry.issues
+        assert (menuai_DOMAIN, issue_id) not in issue_registry.issues
         freezer.tick(DEVICE_UPDATE_INTERVAL)
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done()
 
-    assert (HOMEASSISTANT_DOMAIN, issue_id) in issue_registry.issues
+    assert (menuai_DOMAIN, issue_id) in issue_registry.issues
 
     reolink_connect.get_states.reset_mock(side_effect=True)
 
 
 async def test_entry_reloading(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     reolink_connect: MagicMock,
 ) -> None:
     """Test the entry is reloaded correctly when settings change."""
     reolink_connect.is_nvr = False
     reolink_connect.logout.reset_mock()
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert reolink_connect.logout.call_count == 0
     assert config_entry.title == "test_reolink_name"
 
-    hass.config_entries.async_update_entry(config_entry, title="New Name")
-    await hass.async_block_till_done()
+    menuai.config_entries.async_update_entry(config_entry, title="New Name")
+    await menuai.async_block_till_done()
 
     assert reolink_connect.logout.call_count == 1
     assert config_entry.title == "New Name"
@@ -233,8 +233,8 @@ async def test_entry_reloading(
     ],
 )
 async def test_removing_disconnected_cams(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     config_entry: MockConfigEntry,
     reolink_connect: MagicMock,
     device_registry: dr.DeviceRegistry,
@@ -245,12 +245,12 @@ async def test_removing_disconnected_cams(
 ) -> None:
     """Test device and entity registry are cleaned up when camera is removed."""
     reolink_connect.channels = [0]
-    assert await async_setup_component(hass, "config", {})
-    client = await hass_ws_client(hass)
+    assert await async_setup_component(menuai, "config", {})
+    client = await menuai_ws_client(menuai)
     # setup CH 0 and NVR switch entities/device
-    with patch("homeassistant.components.reolink.PLATFORMS", [Platform.SWITCH]):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    with patch("menuai.components.reolink.PLATFORMS", [Platform.SWITCH]):
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     device_entries = dr.async_entries_for_config_entry(
         device_registry, config_entry.entry_id
@@ -299,8 +299,8 @@ async def test_removing_disconnected_cams(
     ],
 )
 async def test_removing_chime(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     config_entry: MockConfigEntry,
     reolink_connect: MagicMock,
     test_chime: Chime,
@@ -312,12 +312,12 @@ async def test_removing_chime(
 ) -> None:
     """Test removing a chime."""
     reolink_connect.channels = [0]
-    assert await async_setup_component(hass, "config", {})
-    client = await hass_ws_client(hass)
+    assert await async_setup_component(menuai, "config", {})
+    client = await menuai_ws_client(menuai)
     # setup CH 0 and NVR switch entities/device
-    with patch("homeassistant.components.reolink.PLATFORMS", [Platform.SWITCH]):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    with patch("menuai.components.reolink.PLATFORMS", [Platform.SWITCH]):
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     device_entries = dr.async_entries_for_config_entry(
         device_registry, config_entry.entry_id
@@ -437,7 +437,7 @@ async def test_removing_chime(
     ],
 )
 async def test_migrate_entity_ids(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     reolink_connect: MagicMock,
     entity_registry: er.EntityRegistry,
@@ -489,9 +489,9 @@ async def test_migrate_entity_ids(
         )
 
     # setup CH 0 and host entities/device
-    with patch("homeassistant.components.reolink.PLATFORMS", [domain]):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    with patch("menuai.components.reolink.PLATFORMS", [domain]):
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     if original_id != new_id:
         assert entity_registry.async_get_entity_id(domain, DOMAIN, original_id) is None
@@ -506,7 +506,7 @@ async def test_migrate_entity_ids(
 
 
 async def test_migrate_with_already_existing_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     reolink_connect: MagicMock,
     entity_registry: er.EntityRegistry,
@@ -543,9 +543,9 @@ async def test_migrate_with_already_existing_device(
     assert device_registry.async_get_device(identifiers={(DOMAIN, new_dev_id)})
 
     # setup CH 0 and host entities/device
-    with patch("homeassistant.components.reolink.PLATFORMS", [domain]):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    with patch("menuai.components.reolink.PLATFORMS", [domain]):
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert (
         device_registry.async_get_device(identifiers={(DOMAIN, original_dev_id)})
@@ -555,7 +555,7 @@ async def test_migrate_with_already_existing_device(
 
 
 async def test_migrate_with_already_existing_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     reolink_connect: MagicMock,
     entity_registry: er.EntityRegistry,
@@ -607,16 +607,16 @@ async def test_migrate_with_already_existing_entity(
     assert entity_registry.async_get_entity_id(domain, DOMAIN, new_id)
 
     # setup CH 0 and host entities/device
-    with patch("homeassistant.components.reolink.PLATFORMS", [domain]):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    with patch("menuai.components.reolink.PLATFORMS", [domain]):
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert entity_registry.async_get_entity_id(domain, DOMAIN, original_id) is None
     assert entity_registry.async_get_entity_id(domain, DOMAIN, new_id)
 
 
 async def test_cleanup_mac_connection(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     reolink_connect: MagicMock,
     entity_registry: er.EntityRegistry,
@@ -652,9 +652,9 @@ async def test_cleanup_mac_connection(
     assert device.connections == {(CONNECTION_NETWORK_MAC, TEST_MAC)}
 
     # setup CH 0 and host entities/device
-    with patch("homeassistant.components.reolink.PLATFORMS", [domain]):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    with patch("menuai.components.reolink.PLATFORMS", [domain]):
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert entity_registry.async_get_entity_id(domain, DOMAIN, entity_id)
     device = device_registry.async_get_device(identifiers={(DOMAIN, dev_id)})
@@ -665,7 +665,7 @@ async def test_cleanup_mac_connection(
 
 
 async def test_cleanup_combined_with_NVR(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     reolink_connect: MagicMock,
     entity_registry: er.EntityRegistry,
@@ -706,9 +706,9 @@ async def test_cleanup_combined_with_NVR(
     assert device.identifiers == start_identifiers
 
     # setup CH 0 and host entities/device
-    with patch("homeassistant.components.reolink.PLATFORMS", [domain]):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    with patch("menuai.components.reolink.PLATFORMS", [domain]):
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert entity_registry.async_get_entity_id(domain, DOMAIN, entity_id)
     device = device_registry.async_get_device(identifiers={(DOMAIN, dev_id)})
@@ -725,7 +725,7 @@ async def test_cleanup_combined_with_NVR(
 
 
 async def test_cleanup_hub_and_direct_connection(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     reolink_connect: MagicMock,
     entity_registry: er.EntityRegistry,
@@ -765,9 +765,9 @@ async def test_cleanup_hub_and_direct_connection(
     assert device.identifiers == start_identifiers
 
     # setup CH 0 and host entities/device
-    with patch("homeassistant.components.reolink.PLATFORMS", [domain]):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    with patch("menuai.components.reolink.PLATFORMS", [domain]):
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert entity_registry.async_get_entity_id(domain, DOMAIN, entity_id)
     device = device_registry.async_get_device(identifiers={(DOMAIN, dev_id)})
@@ -776,15 +776,15 @@ async def test_cleanup_hub_and_direct_connection(
 
 
 async def test_no_repair_issue(
-    hass: HomeAssistant, config_entry: MockConfigEntry, issue_registry: ir.IssueRegistry
+    menuai: menuai, config_entry: MockConfigEntry, issue_registry: ir.IssueRegistry
 ) -> None:
     """Test no repairs issue is raised when http local url is used."""
     await async_process_ha_core_config(
-        hass, {"country": "GB", "internal_url": "http://test_homeassistant_address"}
+        menuai, {"country": "GB", "internal_url": "http://test_menuai_address"}
     )
 
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert (DOMAIN, "https_webhook") not in issue_registry.issues
     assert (DOMAIN, "webhook_url") not in issue_registry.issues
@@ -794,7 +794,7 @@ async def test_no_repair_issue(
 
 
 async def test_https_repair_issue(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     reolink_connect: MagicMock,
     issue_registry: ir.IssueRegistry,
@@ -802,57 +802,57 @@ async def test_https_repair_issue(
     """Test repairs issue is raised when https local url is used."""
     reolink_connect.get_states = test_wait
     await async_process_ha_core_config(
-        hass, {"country": "GB", "internal_url": "https://test_homeassistant_address"}
+        menuai, {"country": "GB", "internal_url": "https://test_menuai_address"}
     )
 
     with (
-        patch("homeassistant.components.reolink.host.FIRST_ONVIF_TIMEOUT", new=0),
+        patch("menuai.components.reolink.host.FIRST_ONVIF_TIMEOUT", new=0),
         patch(
-            "homeassistant.components.reolink.host.FIRST_ONVIF_LONG_POLL_TIMEOUT", new=0
+            "menuai.components.reolink.host.FIRST_ONVIF_LONG_POLL_TIMEOUT", new=0
         ),
         patch(
-            "homeassistant.components.reolink.host.ReolinkHost._async_long_polling",
+            "menuai.components.reolink.host.ReolinkHost._async_long_polling",
         ),
     ):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert (DOMAIN, "https_webhook") in issue_registry.issues
 
 
 async def test_ssl_repair_issue(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     reolink_connect: MagicMock,
     issue_registry: ir.IssueRegistry,
 ) -> None:
     """Test repairs issue is raised when global ssl certificate is used."""
     reolink_connect.get_states = test_wait
-    assert await async_setup_component(hass, "webhook", {})
-    hass.config.api.use_ssl = True
+    assert await async_setup_component(menuai, "webhook", {})
+    menuai.config.api.use_ssl = True
 
     await async_process_ha_core_config(
-        hass, {"country": "GB", "internal_url": "http://test_homeassistant_address"}
+        menuai, {"country": "GB", "internal_url": "http://test_menuai_address"}
     )
 
     with (
-        patch("homeassistant.components.reolink.host.FIRST_ONVIF_TIMEOUT", new=0),
+        patch("menuai.components.reolink.host.FIRST_ONVIF_TIMEOUT", new=0),
         patch(
-            "homeassistant.components.reolink.host.FIRST_ONVIF_LONG_POLL_TIMEOUT", new=0
+            "menuai.components.reolink.host.FIRST_ONVIF_LONG_POLL_TIMEOUT", new=0
         ),
         patch(
-            "homeassistant.components.reolink.host.ReolinkHost._async_long_polling",
+            "menuai.components.reolink.host.ReolinkHost._async_long_polling",
         ),
     ):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert (DOMAIN, "ssl") in issue_registry.issues
 
 
 @pytest.mark.parametrize("protocol", ["rtsp", "rtmp"])
 async def test_port_repair_issue(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     reolink_connect: MagicMock,
     protocol: str,
@@ -864,8 +864,8 @@ async def test_port_repair_issue(
     reolink_connect.rtsp_enabled = False
     reolink_connect.rtmp_enabled = False
     reolink_connect.protocol = protocol
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert (DOMAIN, "enable_port") in issue_registry.issues
 
@@ -873,7 +873,7 @@ async def test_port_repair_issue(
 
 
 async def test_webhook_repair_issue(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     reolink_connect: MagicMock,
     issue_registry: ir.IssueRegistry,
@@ -881,37 +881,37 @@ async def test_webhook_repair_issue(
     """Test repairs issue is raised when the webhook url is unreachable."""
     reolink_connect.get_states = test_wait
     with (
-        patch("homeassistant.components.reolink.host.FIRST_ONVIF_TIMEOUT", new=0),
+        patch("menuai.components.reolink.host.FIRST_ONVIF_TIMEOUT", new=0),
         patch(
-            "homeassistant.components.reolink.host.FIRST_ONVIF_LONG_POLL_TIMEOUT", new=0
+            "menuai.components.reolink.host.FIRST_ONVIF_LONG_POLL_TIMEOUT", new=0
         ),
         patch(
-            "homeassistant.components.reolink.host.ReolinkHost._async_long_polling",
+            "menuai.components.reolink.host.ReolinkHost._async_long_polling",
         ),
     ):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert (DOMAIN, "webhook_url") in issue_registry.issues
 
 
 async def test_firmware_repair_issue(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     reolink_connect: MagicMock,
     issue_registry: ir.IssueRegistry,
 ) -> None:
     """Test firmware issue is raised when too old firmware is used."""
     reolink_connect.camera_sw_version_update_required.return_value = True
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert (DOMAIN, "firmware_update_host") in issue_registry.issues
     reolink_connect.camera_sw_version_update_required.return_value = False
 
 
 async def test_password_too_long_repair_issue(
-    hass: HomeAssistant,
+    menuai: menuai,
     reolink_connect: MagicMock,
     issue_registry: ir.IssueRegistry,
 ) -> None:
@@ -933,9 +933,9 @@ async def test_password_too_long_repair_issue(
         },
         title=TEST_NVR_NAME,
     )
-    config_entry.add_to_hass(hass)
-    assert not await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert not await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert (
         DOMAIN,
@@ -945,15 +945,15 @@ async def test_password_too_long_repair_issue(
 
 
 async def test_new_device_discovered(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     reolink_connect: MagicMock,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test the entry is reloaded when a new camera or chime is detected."""
-    with patch("homeassistant.components.reolink.PLATFORMS", [Platform.SWITCH]):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    with patch("menuai.components.reolink.PLATFORMS", [Platform.SWITCH]):
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     reolink_connect.logout.reset_mock()
 
@@ -961,14 +961,14 @@ async def test_new_device_discovered(
     reolink_connect.new_devices = True
 
     freezer.tick(DEVICE_UPDATE_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     assert reolink_connect.logout.call_count == 1
 
 
 async def test_port_changed(
-    hass: HomeAssistant,
+    menuai: menuai,
     reolink_connect: MagicMock,
     config_entry: MockConfigEntry,
 ) -> None:
@@ -976,14 +976,14 @@ async def test_port_changed(
     assert config_entry.data[CONF_PORT] == TEST_PORT
     reolink_connect.port = 4567
 
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.data[CONF_PORT] == 4567
 
 
 async def test_baichuan_port_changed(
-    hass: HomeAssistant,
+    menuai: menuai,
     reolink_connect: MagicMock,
     config_entry: MockConfigEntry,
 ) -> None:
@@ -991,14 +991,14 @@ async def test_baichuan_port_changed(
     assert config_entry.data[CONF_BC_PORT] == TEST_BC_PORT
     reolink_connect.baichuan.port = 8901
 
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.data[CONF_BC_PORT] == 8901
 
 
 async def test_privacy_mode_on(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     reolink_connect: MagicMock,
     config_entry: MockConfigEntry,
@@ -1009,9 +1009,9 @@ async def test_privacy_mode_on(
         side_effect=LoginPrivacyModeError("Test error")
     )
 
-    with patch("homeassistant.components.reolink.PLATFORMS", [Platform.SWITCH]):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    with patch("menuai.components.reolink.PLATFORMS", [Platform.SWITCH]):
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state == ConfigEntryState.LOADED
 
@@ -1019,7 +1019,7 @@ async def test_privacy_mode_on(
 
 
 async def test_LoginPrivacyModeError(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     reolink_connect: MagicMock,
     config_entry: MockConfigEntry,
@@ -1030,22 +1030,22 @@ async def test_LoginPrivacyModeError(
         side_effect=LoginPrivacyModeError("Test error")
     )
 
-    with patch("homeassistant.components.reolink.PLATFORMS", [Platform.SWITCH]):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    with patch("menuai.components.reolink.PLATFORMS", [Platform.SWITCH]):
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     reolink_connect.baichuan.check_subscribe_events.reset_mock()
     assert reolink_connect.baichuan.check_subscribe_events.call_count == 0
 
     freezer.tick(DEVICE_UPDATE_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     assert reolink_connect.baichuan.check_subscribe_events.call_count >= 1
 
 
 async def test_privacy_mode_change_callback(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     config_entry: MockConfigEntry,
     reolink_connect: MagicMock,
@@ -1071,13 +1071,13 @@ async def test_privacy_mode_change_callback(
     reolink_connect.audio_record.return_value = True
     reolink_connect.get_states = AsyncMock()
 
-    with patch("homeassistant.components.reolink.PLATFORMS", [Platform.SWITCH]):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    with patch("menuai.components.reolink.PLATFORMS", [Platform.SWITCH]):
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
     assert config_entry.state is ConfigEntryState.LOADED
 
     entity_id = f"{Platform.SWITCH}.{TEST_NVR_NAME}_record_audio"
-    assert hass.states.get(entity_id).state == STATE_UNAVAILABLE
+    assert menuai.states.get(entity_id).state == STATE_UNAVAILABLE
 
     # simulate a TCP push callback signaling a privacy mode change
     reolink_connect.baichuan.privacy_mode.return_value = False
@@ -1089,35 +1089,35 @@ async def test_privacy_mode_change_callback(
     assert reolink_connect.get_states.call_count == 0
 
     freezer.tick(5)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     assert reolink_connect.get_states.call_count >= 1
-    assert hass.states.get(entity_id).state == STATE_ON
+    assert menuai.states.get(entity_id).state == STATE_ON
 
     # test cleanup during unloading, first reset to privacy mode ON
     reolink_connect.baichuan.privacy_mode.return_value = True
     callback_mock.callback_func()
     freezer.tick(5)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
     # now fire the callback again, but unload before refresh took place
     reolink_connect.baichuan.privacy_mode.return_value = False
     callback_mock.callback_func()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await hass.config_entries.async_unload(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(config_entry.entry_id)
+    await menuai.async_block_till_done()
     assert config_entry.state is ConfigEntryState.NOT_LOADED
 
 
 async def test_remove(
-    hass: HomeAssistant,
+    menuai: menuai,
     reolink_connect: MagicMock,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test removing of the reolink integration."""
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert await hass.config_entries.async_remove(config_entry.entry_id)
+    assert await menuai.config_entries.async_remove(config_entry.entry_id)

@@ -28,7 +28,7 @@ def generate_and_validate(integrations: dict[str, Integration]) -> str:
 
 def validate(integrations: dict[str, Integration], config: Config) -> None:
     """Validate bluetooth file."""
-    bluetooth_path = config.root / "homeassistant/generated/bluetooth.py"
+    bluetooth_path = config.root / "menuai/generated/bluetooth.py"
     config.cache["bluetooth"] = content = generate_and_validate(integrations)
 
     if config.specific_integrations:
@@ -37,12 +37,12 @@ def validate(integrations: dict[str, Integration], config: Config) -> None:
     if bluetooth_path.read_text() != content:
         config.add_error(
             "bluetooth",
-            "File bluetooth.py is not up to date. Run python3 -m script.hassfest",
+            "File bluetooth.py is not up to date. Run python3 -m script.menuaifest",
             fixable=True,
         )
 
 
 def generate(integrations: dict[str, Integration], config: Config) -> None:
     """Generate bluetooth file."""
-    bluetooth_path = config.root / "homeassistant/generated/bluetooth.py"
+    bluetooth_path = config.root / "menuai/generated/bluetooth.py"
     bluetooth_path.write_text(f"{config.cache['bluetooth']}")

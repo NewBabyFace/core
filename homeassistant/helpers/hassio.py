@@ -1,17 +1,17 @@
-"""Hass.io helper."""
+"""menuai.io helper."""
 
 import os
 
-from homeassistant.core import HomeAssistant, callback
+from menuai.core import menuai, callback
 
 
 @callback
-def is_hassio(hass: HomeAssistant) -> bool:
-    """Return true if Hass.io is loaded.
+def is_menuaiio(menuai: menuai) -> bool:
+    """Return true if menuai.io is loaded.
 
     Async friendly.
     """
-    return "hassio" in hass.config.components
+    return "menuaiio" in menuai.config.components
 
 
 @callback

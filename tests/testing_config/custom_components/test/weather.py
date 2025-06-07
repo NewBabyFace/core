@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.weather import (
+from menuai.components.weather import (
     ATTR_FORECAST_CLOUD_COVERAGE,
     ATTR_FORECAST_HUMIDITY,
     ATTR_FORECAST_IS_DAYTIME,
@@ -24,7 +24,7 @@ from homeassistant.components.weather import (
     Forecast,
     WeatherEntity,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from tests.common import MockEntity
 
@@ -39,7 +39,7 @@ def init(empty=False):
 
 
 async def async_setup_platform(
-    hass: HomeAssistant, config, async_add_entities_callback, discovery_info=None
+    menuai: menuai, config, async_add_entities_callback, discovery_info=None
 ):
     """Return mock entities."""
     async_add_entities_callback(ENTITIES)

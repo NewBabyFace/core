@@ -11,9 +11,9 @@ from pyfritzhome import Fritzhome, LoginError
 from requests.exceptions import HTTPError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.helpers.service_info.ssdp import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
+from menuai.helpers.service_info.ssdp import (
     ATTR_UPNP_FRIENDLY_NAME,
     ATTR_UPNP_UDN,
     SsdpServiceInfo,
@@ -67,7 +67,7 @@ class FritzboxConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_try_connect(self) -> str:
         """Try to connect and check auth."""
-        return await self.hass.async_add_executor_job(self._try_connect)
+        return await self.menuai.async_add_executor_job(self._try_connect)
 
     def _try_connect(self) -> str:
         """Try to connect and check auth."""
@@ -131,14 +131,14 @@ class FritzboxConfigFlow(ConfigFlow, domain=DOMAIN):
             self._abort_if_unique_id_configured({CONF_HOST: host})
 
         self._host = host
-        if self.hass.config_entries.flow.async_has_matching_flow(self):
+        if self.menuai.config_entries.flow.async_has_matching_flow(self):
             return self.async_abort(reason="already_in_progress")
 
         # update old and user-configured config entries
         for entry in self._async_current_entries(include_ignore=False):
             if entry.data[CONF_HOST] == host:
                 if uuid and not entry.unique_id:
-                    self.hass.config_entries.async_update_entry(entry, unique_id=uuid)
+                    self.menuai.config_entries.async_update_entry(entry, unique_id=uuid)
                 return self.async_abort(reason="already_configured")
 
         self._name = str(discovery_info.upnp.get(ATTR_UPNP_FRIENDLY_NAME) or host)

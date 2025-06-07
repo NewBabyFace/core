@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.const import CONF_DEVICE, CONF_MAC, CONF_TOKEN, CONF_UNIQUE_ID
-from homeassistant.core import HomeAssistant
+from menuai.components.diagnostics import async_redact_data
+from menuai.const import CONF_DEVICE, CONF_MAC, CONF_TOKEN, CONF_UNIQUE_ID
+from menuai.core import menuai
 
 from .const import CONF_CLOUD_PASSWORD, CONF_CLOUD_USERNAME, CONF_FLOW_TYPE
 from .typing import XiaomiMiioConfigEntry
@@ -21,7 +21,7 @@ TO_REDACT = {
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, config_entry: XiaomiMiioConfigEntry
+    menuai: menuai, config_entry: XiaomiMiioConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     diagnostics_data: dict[str, Any] = {

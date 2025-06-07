@@ -1,6 +1,6 @@
 """Constants for the elmax-cloud integration."""
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 DOMAIN = "elmax"
 CONF_ELMAX_USERNAME = "username"

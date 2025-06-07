@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from functools import partial
 
-from homeassistant.components.binary_sensor import BinarySensorEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.binary_sensor import BinarySensorEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import XboxUpdateCoordinator
@@ -18,19 +18,19 @@ PRESENCE_ATTRIBUTES = ["online", "in_party", "in_game", "in_multiplayer"]
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Xbox Live friends."""
-    coordinator: XboxUpdateCoordinator = hass.data[DOMAIN][entry.entry_id][
+    coordinator: XboxUpdateCoordinator = menuai.data[DOMAIN][entry.entry_id][
         "coordinator"
     ]
 
     update_friends = partial(async_update_friends, coordinator, {}, async_add_entities)
 
     unsub = coordinator.async_add_listener(update_friends)
-    hass.data[DOMAIN][entry.entry_id]["binary_sensor_unsub"] = unsub
+    menuai.data[DOMAIN][entry.entry_id]["binary_sensor_unsub"] = unsub
     update_friends()
 
 
@@ -56,7 +56,7 @@ def async_update_friends(
     new_ids = set(coordinator.data.presence)
     current_ids = set(current)
 
-    # Process new favorites, add them to Home Assistant
+    # Process new favorites, add them to MenuAI
     new_entities: list[XboxBinarySensorEntity] = []
     for xuid in new_ids - current_ids:
         current[xuid] = [
@@ -67,9 +67,9 @@ def async_update_friends(
 
     async_add_entities(new_entities)
 
-    # Process deleted favorites, remove them from Home Assistant
+    # Process deleted favorites, remove them from MenuAI
     for xuid in current_ids - new_ids:
-        coordinator.hass.async_create_task(
+        coordinator.menuai.async_create_task(
             async_remove_entities(xuid, coordinator, current)
         )
 
@@ -79,8 +79,8 @@ async def async_remove_entities(
     coordinator: XboxUpdateCoordinator,
     current: dict[str, list[XboxBinarySensorEntity]],
 ) -> None:
-    """Remove friend sensors from Home Assistant."""
-    registry = er.async_get(coordinator.hass)
+    """Remove friend sensors from MenuAI."""
+    registry = er.async_get(coordinator.menuai)
     entities = current[xuid]
     for entity in entities:
         if entity.entity_id in registry.entities:

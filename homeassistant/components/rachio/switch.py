@@ -8,16 +8,16 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.const import ATTR_ENTITY_ID, ATTR_ID
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, ServiceCall, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.event import async_track_point_in_utc_time
-from homeassistant.util.dt import as_timestamp, now, parse_datetime, utc_from_timestamp
+from menuai.components.switch import SwitchEntity
+from menuai.const import ATTR_ENTITY_ID, ATTR_ID
+from menuai.core import CALLBACK_TYPE, menuai, ServiceCall, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv, entity_platform
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity import Entity
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.event import async_track_point_in_utc_time
+from menuai.util.dt import as_timestamp, now, parse_datetime, utc_from_timestamp
 
 from .const import (
     CONF_MANUAL_RUN_MINS,
@@ -97,14 +97,14 @@ START_MULTIPLE_ZONES_SCHEMA = vol.Schema(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: RachioConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Rachio switches."""
     zone_entities = []
     has_flex_sched = False
-    entities = await hass.async_add_executor_job(_create_entities, hass, config_entry)
+    entities = await menuai.async_add_executor_job(_create_entities, menuai, config_entry)
     for entity in entities:
         if isinstance(entity, RachioZone):
             zone_entities.append(entity)
@@ -141,7 +141,7 @@ async def async_setup_entry(
             person.start_multiple_zones(zones_list)
             _LOGGER.debug("Starting zone(s) %s", entity_id)
         else:
-            raise HomeAssistantError("No matching zones found in given entity_ids")
+            raise menuaiError("No matching zones found in given entity_ids")
 
     platform = entity_platform.async_get_current_platform()
     platform.async_register_entity_service(
@@ -156,7 +156,7 @@ async def async_setup_entry(
     if not zone_entities:
         return
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_START_MULTIPLE_ZONES,
         start_multiple,
@@ -173,7 +173,7 @@ async def async_setup_entry(
 
 
 def _create_entities(
-    hass: HomeAssistant, config_entry: RachioConfigEntry
+    menuai: menuai, config_entry: RachioConfigEntry
 ) -> list[Entity]:
     entities: list[Entity] = []
     person = config_entry.runtime_data
@@ -248,14 +248,14 @@ class RachioStandbySwitch(RachioSwitch):
         """Resume controller functionality."""
         self._controller.rachio.device.turn_on(self._controller.controller_id)
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to updates."""
         if KEY_ON in self._controller.init_data:
             self._attr_is_on = not self._controller.init_data[KEY_ON]
 
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 SIGNAL_RACHIO_CONTROLLER_UPDATE,
                 self._async_handle_any_update,
             )
@@ -291,7 +291,7 @@ class RachioRainDelay(RachioSwitch):
             self._attr_is_on = True
             assert endtime is not None
             self._cancel_update = async_track_point_in_utc_time(
-                self.hass, self._delay_expiration, endtime
+                self.menuai, self._delay_expiration, endtime
             )
         elif args[0][0][KEY_SUBTYPE] == SUBTYPE_RAIN_DELAY_OFF:
             self._attr_is_on = False
@@ -315,7 +315,7 @@ class RachioRainDelay(RachioSwitch):
         self._controller.rachio.device.rain_delay(self._controller.controller_id, 0)
         _LOGGER.debug("Canceling rain delay")
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to updates."""
         if KEY_RAIN_DELAY in self._controller.init_data:
             self._attr_is_on = self._controller.init_data[
@@ -329,12 +329,12 @@ class RachioRainDelay(RachioSwitch):
             )
             _LOGGER.debug("Re-setting rain delay timer for %s", delay_end)
             self._cancel_update = async_track_point_in_utc_time(
-                self.hass, self._delay_expiration, delay_end
+                self.menuai, self._delay_expiration, delay_end
             )
 
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 SIGNAL_RACHIO_RAIN_DELAY_UPDATE,
                 self._async_handle_any_update,
             )
@@ -446,13 +446,13 @@ class RachioZone(RachioSwitch):
 
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to updates."""
         self._attr_is_on = self.zone_id == self._current_schedule.get(KEY_ZONE_ID)
 
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, SIGNAL_RACHIO_ZONE_UPDATE, self._async_handle_update
+                self.menuai, SIGNAL_RACHIO_ZONE_UPDATE, self._async_handle_update
             )
         )
 
@@ -523,7 +523,7 @@ class RachioSchedule(RachioSwitch):
 
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to updates."""
         self._attr_is_on = self._schedule_id == self._current_schedule.get(
             KEY_SCHEDULE_ID
@@ -531,7 +531,7 @@ class RachioSchedule(RachioSwitch):
 
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, SIGNAL_RACHIO_SCHEDULE_UPDATE, self._async_handle_update
+                self.menuai, SIGNAL_RACHIO_SCHEDULE_UPDATE, self._async_handle_update
             )
         )
 

@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from . import WebControlProConfigEntry
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: WebControlProConfigEntry
+    menuai: menuai, entry: WebControlProConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     return entry.runtime_data.diag()

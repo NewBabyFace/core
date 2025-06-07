@@ -2,10 +2,10 @@
 
 import pytest
 
-from homeassistant.components import freedns
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
-from homeassistant.util.dt import utcnow
+from menuai.components import freedns
+from menuai.core import menuai
+from menuai.setup import async_setup_component
+from menuai.util.dt import utcnow
 
 from tests.common import async_fire_time_changed
 from tests.test_util.aiohttp import AiohttpClientMocker
@@ -17,7 +17,7 @@ UPDATE_URL = freedns.UPDATE_URL
 
 @pytest.fixture
 async def setup_freedns(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Fixture that sets up FreeDNS."""
     params = {}
@@ -27,7 +27,7 @@ async def setup_freedns(
     )
 
     await async_setup_component(
-        hass,
+        menuai,
         freedns.DOMAIN,
         {
             freedns.DOMAIN: {
@@ -38,7 +38,7 @@ async def setup_freedns(
     )
 
 
-async def test_setup(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker) -> None:
+async def test_setup(menuai: menuai, aioclient_mock: AiohttpClientMocker) -> None:
     """Test setup works if update passes."""
     params = {}
     params[ACCESS_TOKEN] = ""
@@ -47,7 +47,7 @@ async def test_setup(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker) -
     )
 
     result = await async_setup_component(
-        hass,
+        menuai,
         freedns.DOMAIN,
         {
             freedns.DOMAIN: {
@@ -59,13 +59,13 @@ async def test_setup(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker) -
     assert result
     assert aioclient_mock.call_count == 1
 
-    async_fire_time_changed(hass, utcnow() + UPDATE_INTERVAL)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + UPDATE_INTERVAL)
+    await menuai.async_block_till_done()
     assert aioclient_mock.call_count == 2
 
 
 async def test_setup_fails_if_wrong_token(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test setup fails if first update fails through wrong token."""
     params = {}
@@ -73,7 +73,7 @@ async def test_setup_fails_if_wrong_token(
     aioclient_mock.get(UPDATE_URL, params=params, text="ERROR: Invalid update URL (2)")
 
     result = await async_setup_component(
-        hass,
+        menuai,
         freedns.DOMAIN,
         {
             freedns.DOMAIN: {

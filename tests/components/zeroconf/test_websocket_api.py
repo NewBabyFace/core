@@ -14,20 +14,20 @@ from zeroconf import (
     current_time_millis,
 )
 
-from homeassistant.components.zeroconf import DOMAIN, async_get_async_instance
-from homeassistant.core import HomeAssistant
-from homeassistant.generated import zeroconf as zc_gen
-from homeassistant.setup import async_setup_component
+from menuai.components.zeroconf import DOMAIN, async_get_async_instance
+from menuai.core import menuai
+from menuai.generated import zeroconf as zc_gen
+from menuai.setup import async_setup_component
 
 from tests.typing import WebSocketGenerator
 
 
 async def test_subscribe_discovery(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test zeroconf subscribe_discovery."""
-    instance = await async_get_async_instance(hass)
+    instance = await async_get_async_instance(menuai)
     instance.zeroconf.cache.async_add_records(
         [
             DNSPointer(
@@ -66,7 +66,7 @@ async def test_subscribe_discovery(
                 const._TYPE_TXT,
                 const._CLASS_IN,
                 const._DNS_HOST_TTL,
-                b"\x13md=HASS Bridge W9DN\x06pv=1.0\x14id=11:8E:DB:5B:5C:C5"
+                b"\x13md=menuai Bridge W9DN\x06pv=1.0\x14id=11:8E:DB:5B:5C:C5"
                 b"\x05c#=12\x04s#=1",
             ),
             DNSPointer(
@@ -91,7 +91,7 @@ async def test_subscribe_discovery(
                 const._TYPE_TXT,
                 const._CLASS_IN,
                 const._DNS_HOST_TTL,
-                b"\x13md=HASS Bridge W9DN\x06pv=1.0\x14id=11:8E:DB:5B:5C:C5"
+                b"\x13md=menuai Bridge W9DN\x06pv=1.0\x14id=11:8E:DB:5B:5C:C5"
                 b"\x05c#=12\x04s#=1",
             ),
         ]
@@ -101,9 +101,9 @@ async def test_subscribe_discovery(
         {"_fakeservice._tcp.local.": []},
         clear=True,
     ):
-        assert await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
-    await hass.async_block_till_done()
-    client = await hass_ws_client()
+        assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {}})
+    await menuai.async_block_till_done()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,

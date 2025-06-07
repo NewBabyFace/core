@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from triggercmd import client, ha
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
 
 from .const import CONF_TOKEN
 
@@ -18,7 +18,7 @@ PLATFORMS = [
 type TriggercmdConfigEntry = ConfigEntry[ha.Hub]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: TriggercmdConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: TriggercmdConfigEntry) -> bool:
     """Set up TRIGGERcmd from a config entry."""
     hub = ha.Hub(entry.data[CONF_TOKEN])
 
@@ -27,10 +27,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: TriggercmdConfigEntry) -
         raise ConfigEntryNotReady
 
     entry.runtime_data = hub
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: TriggercmdConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: TriggercmdConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

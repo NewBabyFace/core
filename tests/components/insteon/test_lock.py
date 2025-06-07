@@ -4,16 +4,16 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components import insteon
-from homeassistant.components.insteon import (
+from menuai.components import insteon
+from menuai.components.insteon import (
     DOMAIN,
     entity as insteon_entity,
     utils as insteon_utils,
 )
-from homeassistant.components.lock import DOMAIN as LOCK_DOMAIN, LockState
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.lock import DOMAIN as LOCK_DOMAIN, LockState
+from menuai.const import EVENT_menuai_STOP, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .const import MOCK_USER_INPUT_PLM
 from .mock_devices import MockDevices
@@ -27,7 +27,7 @@ devices = MockDevices()
 def lock_platform_only():
     """Only setup the lock and required base platforms to speed up tests."""
     with patch(
-        "homeassistant.components.insteon.INSTEON_PLATFORMS",
+        "menuai.components.insteon.INSTEON_PLATFORMS",
         (Platform.LOCK,),
     ):
         yield
@@ -52,56 +52,56 @@ async def mock_connection(*args, **kwargs):
 
 
 async def test_lock_lock(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test locking an Insteon lock device."""
 
     config_entry = MockConfigEntry(domain=DOMAIN, data=MOCK_USER_INPUT_PLM)
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     try:
         lock = entity_registry.async_get("lock.device_55_55_55_55_55_55")
-        state = hass.states.get(lock.entity_id)
+        state = menuai.states.get(lock.entity_id)
         assert state.state == LockState.UNLOCKED
 
         # lock via UI
-        await hass.services.async_call(
+        await menuai.services.async_call(
             LOCK_DOMAIN, "lock", {"entity_id": lock.entity_id}, blocking=True
         )
         assert devices["55.55.55"].async_lock.call_count == 1
     finally:
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
-        await hass.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STOP)
+        await menuai.async_block_till_done()
 
 
 async def test_lock_unlock(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test locking an Insteon lock device."""
 
     config_entry = MockConfigEntry(domain=DOMAIN, data=MOCK_USER_INPUT_PLM)
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
     devices["55.55.55"].groups[1].set_value(255)
 
     try:
         lock = entity_registry.async_get("lock.device_55_55_55_55_55_55")
-        state = hass.states.get(lock.entity_id)
+        state = menuai.states.get(lock.entity_id)
 
         assert state.state == LockState.LOCKED
 
         # lock via UI
-        await hass.services.async_call(
+        await menuai.services.async_call(
             LOCK_DOMAIN, "unlock", {"entity_id": lock.entity_id}, blocking=True
         )
         assert devices["55.55.55"].async_unlock.call_count == 1
     finally:
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
-        await hass.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STOP)
+        await menuai.async_block_till_done()

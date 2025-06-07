@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from . import TadoConfigEntry
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, config_entry: TadoConfigEntry
+    menuai: menuai, config_entry: TadoConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a Tado config entry."""
 

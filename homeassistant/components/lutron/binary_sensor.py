@@ -8,13 +8,13 @@ from typing import Any
 
 from pylutron import OccupancyGroup
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import DOMAIN, LutronData
 from .entity import LutronDevice
@@ -23,7 +23,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -32,7 +32,7 @@ async def async_setup_entry(
     Adds occupancy groups from the Main Repeater associated with the
     config_entry as binary_sensor entities.
     """
-    entry_data: LutronData = hass.data[DOMAIN][config_entry.entry_id]
+    entry_data: LutronData = menuai.data[DOMAIN][config_entry.entry_id]
     async_add_entities(
         [
             LutronOccupancySensor(area_name, device, entry_data.client)

@@ -19,25 +19,25 @@ from google.maps.routing_v2 import (
 )
 from google.protobuf import timestamp_pb2
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_API_KEY,
     CONF_LANGUAGE,
     CONF_MODE,
     CONF_NAME,
-    EVENT_HOMEASSISTANT_STARTED,
+    EVENT_menuai_STARTED,
     UnitOfTime,
 )
-from homeassistant.core import CoreState, HomeAssistant
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.location import find_coordinates
-from homeassistant.util import dt as dt_util
+from menuai.core import CoreState, menuai
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.location import find_coordinates
+from menuai.util import dt as dt_util
 
 from .const import (
     ATTRIBUTION,
@@ -92,7 +92,7 @@ def convert_time(time_str: str) -> timestamp_pb2.Timestamp | None:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -146,11 +146,11 @@ class GoogleTravelTimeSensor(SensorEntity):
         self._resolved_origin: str | None = None
         self._resolved_destination: str | None = None
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle when entity is added."""
-        if self.hass.state is not CoreState.running:
-            self.hass.bus.async_listen_once(
-                EVENT_HOMEASSISTANT_STARTED, self.first_update
+        if self.menuai.state is not CoreState.running:
+            self.menuai.bus.async_listen_once(
+                EVENT_menuai_STARTED, self.first_update
             )
         else:
             await self.first_update()
@@ -250,8 +250,8 @@ class GoogleTravelTimeSensor(SensorEntity):
         ) is not None:
             language = options_language
 
-        self._resolved_origin = find_coordinates(self.hass, self._origin)
-        self._resolved_destination = find_coordinates(self.hass, self._destination)
+        self._resolved_origin = find_coordinates(self.menuai, self._origin)
+        self._resolved_destination = find_coordinates(self.menuai, self._destination)
         _LOGGER.debug(
             "Getting update for origin: %s destination: %s",
             self._resolved_origin,
@@ -259,8 +259,8 @@ class GoogleTravelTimeSensor(SensorEntity):
         )
         if self._resolved_destination is not None and self._resolved_origin is not None:
             request = ComputeRoutesRequest(
-                origin=convert_to_waypoint(self.hass, self._resolved_origin),
-                destination=convert_to_waypoint(self.hass, self._resolved_destination),
+                origin=convert_to_waypoint(self.menuai, self._resolved_origin),
+                destination=convert_to_waypoint(self.menuai, self._resolved_destination),
                 travel_mode=travel_mode,
                 routing_preference=routing_preference,
                 departure_time=departure_time,
@@ -278,10 +278,10 @@ class GoogleTravelTimeSensor(SensorEntity):
                 _LOGGER.debug("Received response: %s", response)
                 if response is not None and len(response.routes) > 0:
                     self._route = response.routes[0]
-                delete_routes_api_disabled_issue(self.hass, self._config_entry)
+                delete_routes_api_disabled_issue(self.menuai, self._config_entry)
             except PermissionDenied:
                 _LOGGER.error("Routes API is disabled for this API key")
-                create_routes_api_disabled_issue(self.hass, self._config_entry)
+                create_routes_api_disabled_issue(self.menuai, self._config_entry)
                 self._route = None
             except GoogleAPIError as ex:
                 _LOGGER.error("Error getting travel time: %s", ex)

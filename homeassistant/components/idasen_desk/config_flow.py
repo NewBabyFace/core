@@ -11,12 +11,12 @@ from idasen_ha import Desk
 from idasen_ha.errors import AuthFailedError
 import voluptuous as vol
 
-from homeassistant.components.bluetooth import (
+from menuai.components.bluetooth import (
     BluetoothServiceInfoBleak,
     async_discovered_service_info,
 )
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_ADDRESS
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_ADDRESS
 
 from .const import DOMAIN, EXPECTED_SERVICE_UUID
 
@@ -88,7 +88,7 @@ class IdasenDeskConfigFlow(ConfigFlow, domain=DOMAIN):
             self._discovered_devices[discovery.address] = discovery
         else:
             current_addresses = self._async_current_ids(include_ignore=False)
-            for discovery in async_discovered_service_info(self.hass):
+            for discovery in async_discovered_service_info(self.menuai):
                 if (
                     discovery.address in current_addresses
                     or discovery.address in self._discovered_devices

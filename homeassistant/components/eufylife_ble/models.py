@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 from eufylife_ble_client import EufyLifeBLEDevice
 
-from homeassistant.config_entries import ConfigEntry
+from menuai.config_entries import ConfigEntry
 
 type EufyLifeConfigEntry = ConfigEntry[EufyLifeData]
 

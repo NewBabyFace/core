@@ -7,17 +7,17 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from pytest_unordered import unordered
 
-from homeassistant.components.config import entity_registry
-from homeassistant.const import ATTR_ICON, EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.device_registry import DeviceEntryDisabler
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.entity_registry import (
+from menuai.components.config import entity_registry
+from menuai.const import ATTR_ICON, EntityCategory
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.device_registry import DeviceEntryDisabler
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.entity_registry import (
     RegistryEntryDisabler,
     RegistryEntryHider,
 )
-from homeassistant.util.dt import utcnow
+from menuai.util.dt import utcnow
 
 from tests.common import (
     ANY,
@@ -32,20 +32,20 @@ from tests.typing import MockHAClientWebSocket, WebSocketGenerator
 
 @pytest.fixture
 async def client(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> MockHAClientWebSocket:
     """Fixture that can interact with the config manager API."""
-    entity_registry.async_setup(hass)
-    return await hass_ws_client(hass)
+    entity_registry.async_setup(menuai)
+    return await menuai_ws_client(menuai)
 
 
 @pytest.mark.usefixtures("freezer")
 async def test_list_entities(
-    hass: HomeAssistant, client: MockHAClientWebSocket
+    menuai: menuai, client: MockHAClientWebSocket
 ) -> None:
     """Test list entries."""
     mock_registry(
-        hass,
+        menuai,
         {
             "test_domain.name": RegistryEntryWithDefaults(
                 entity_id="test_domain.name",
@@ -117,7 +117,7 @@ async def test_list_entities(
         """Good luck serializing me."""
 
     mock_registry(
-        hass,
+        menuai,
         {
             "test_domain.name": RegistryEntryWithDefaults(
                 entity_id="test_domain.name",
@@ -165,11 +165,11 @@ async def test_list_entities(
 
 
 async def test_list_entities_for_display(
-    hass: HomeAssistant, client: MockHAClientWebSocket
+    menuai: menuai, client: MockHAClientWebSocket
 ) -> None:
     """Test list entries."""
     mock_registry(
-        hass,
+        menuai,
         {
             "test_domain.test": RegistryEntryWithDefaults(
                 area_id="area52",
@@ -303,7 +303,7 @@ async def test_list_entities_for_display(
         """Good luck serializing me."""
 
     mock_registry(
-        hass,
+        menuai,
         {
             "test_domain.test": RegistryEntryWithDefaults(
                 area_id="area52",
@@ -343,12 +343,12 @@ async def test_list_entities_for_display(
     }
 
 
-async def test_get_entity(hass: HomeAssistant, client: MockHAClientWebSocket) -> None:
+async def test_get_entity(menuai: menuai, client: MockHAClientWebSocket) -> None:
     """Test get entry."""
     name_created_at = datetime(1994, 2, 14, 12, 0, 0)
     no_name_created_at = datetime(2024, 2, 14, 12, 0, 1)
     mock_registry(
-        hass,
+        menuai,
         {
             "test_domain.name": RegistryEntryWithDefaults(
                 entity_id="test_domain.name",
@@ -440,12 +440,12 @@ async def test_get_entity(hass: HomeAssistant, client: MockHAClientWebSocket) ->
     }
 
 
-async def test_get_entities(hass: HomeAssistant, client: MockHAClientWebSocket) -> None:
+async def test_get_entities(menuai: menuai, client: MockHAClientWebSocket) -> None:
     """Test get entry."""
     name_created_at = datetime(1994, 2, 14, 12, 0, 0)
     no_name_created_at = datetime(2024, 2, 14, 12, 0, 1)
     mock_registry(
-        hass,
+        menuai,
         {
             "test_domain.name": RegistryEntryWithDefaults(
                 entity_id="test_domain.name",
@@ -539,13 +539,13 @@ async def test_get_entities(hass: HomeAssistant, client: MockHAClientWebSocket) 
 
 
 async def test_update_entity(
-    hass: HomeAssistant, client: MockHAClientWebSocket, freezer: FrozenDateTimeFactory
+    menuai: menuai, client: MockHAClientWebSocket, freezer: FrozenDateTimeFactory
 ) -> None:
     """Test updating entity."""
     created = datetime.fromisoformat("2024-02-14T12:00:00.900075+00:00")
     freezer.move_to(created)
     registry = mock_registry(
-        hass,
+        menuai,
         {
             "test_domain.world": RegistryEntryWithDefaults(
                 entity_id="test_domain.world",
@@ -557,11 +557,11 @@ async def test_update_entity(
             )
         },
     )
-    platform = MockEntityPlatform(hass)
+    platform = MockEntityPlatform(menuai)
     entity = MockEntity(unique_id="1234")
     await platform.async_add_entities([entity])
 
-    state = hass.states.get("test_domain.world")
+    state = menuai.states.get("test_domain.world")
     assert state is not None
     assert state.name == "before update"
     assert state.attributes[ATTR_ICON] == "icon:before update"
@@ -618,7 +618,7 @@ async def test_update_entity(
         }
     }
 
-    state = hass.states.get("test_domain.world")
+    state = menuai.states.get("test_domain.world")
     assert state.name == "after update"
     assert state.attributes[ATTR_ICON] == "icon:after update"
 
@@ -651,7 +651,7 @@ async def test_update_entity(
     msg = await client.receive_json()
     assert msg["success"]
 
-    assert hass.states.get("test_domain.world") is None
+    assert menuai.states.get("test_domain.world") is None
     entry = registry.entities["test_domain.world"]
     assert entry.disabled_by is RegistryEntryDisabler.USER
     assert entry.created_at == created
@@ -889,20 +889,20 @@ async def test_update_entity(
 
 
 async def test_update_entity_require_restart(
-    hass: HomeAssistant, client: MockHAClientWebSocket, freezer: FrozenDateTimeFactory
+    menuai: menuai, client: MockHAClientWebSocket, freezer: FrozenDateTimeFactory
 ) -> None:
     """Test updating entity."""
     created = datetime.fromisoformat("2024-02-14T12:00:00+00:00")
     freezer.move_to(created)
     entity_id = "test_domain.test_platform_1234"
     config_entry = MockConfigEntry(domain="test_platform")
-    config_entry.add_to_hass(hass)
-    platform = MockEntityPlatform(hass)
+    config_entry.add_to_menuai(menuai)
+    platform = MockEntityPlatform(menuai)
     platform.config_entry = config_entry
     entity = MockEntity(unique_id="1234")
     await platform.async_add_entities([entity])
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state is not None
 
     modified = datetime.fromisoformat("2024-07-20T13:30:00+00:00")
@@ -953,7 +953,7 @@ async def test_update_entity_require_restart(
 
 
 async def test_enable_entity_disabled_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MockHAClientWebSocket,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
@@ -961,7 +961,7 @@ async def test_enable_entity_disabled_device(
     """Test enabling entity of disabled device."""
     entity_id = "test_domain.test_platform_1234"
     config_entry = MockConfigEntry(domain="test_platform")
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     device = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
@@ -975,12 +975,12 @@ async def test_enable_entity_disabled_device(
         "connections": {("ethernet", "12:34:56:78:90:AB:CD:EF")},
     }
 
-    platform = MockEntityPlatform(hass)
+    platform = MockEntityPlatform(menuai)
     platform.config_entry = config_entry
     entity = MockEntity(unique_id="1234", device_info=device_info)
     await platform.async_add_entities([entity])
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state is None
 
     entity_entry = entity_registry.async_get(entity_id)
@@ -1003,13 +1003,13 @@ async def test_enable_entity_disabled_device(
 
 
 async def test_update_entity_no_changes(
-    hass: HomeAssistant, client: MockHAClientWebSocket, freezer: FrozenDateTimeFactory
+    menuai: menuai, client: MockHAClientWebSocket, freezer: FrozenDateTimeFactory
 ) -> None:
     """Test update entity with no changes."""
     created = datetime.fromisoformat("2024-02-14T12:00:00.900075+00:00")
     freezer.move_to(created)
     mock_registry(
-        hass,
+        menuai,
         {
             "test_domain.world": RegistryEntryWithDefaults(
                 entity_id="test_domain.world",
@@ -1020,11 +1020,11 @@ async def test_update_entity_no_changes(
             )
         },
     )
-    platform = MockEntityPlatform(hass)
+    platform = MockEntityPlatform(menuai)
     entity = MockEntity(unique_id="1234")
     await platform.async_add_entities([entity])
 
-    state = hass.states.get("test_domain.world")
+    state = menuai.states.get("test_domain.world")
     assert state is not None
     assert state.name == "name of entity"
 
@@ -1072,7 +1072,7 @@ async def test_update_entity_no_changes(
         }
     }
 
-    state = hass.states.get("test_domain.world")
+    state = menuai.states.get("test_domain.world")
     assert state.name == "name of entity"
 
 
@@ -1104,13 +1104,13 @@ async def test_update_nonexisting_entity(client: MockHAClientWebSocket) -> None:
 
 
 async def test_update_entity_id(
-    hass: HomeAssistant, client: MockHAClientWebSocket, freezer: FrozenDateTimeFactory
+    menuai: menuai, client: MockHAClientWebSocket, freezer: FrozenDateTimeFactory
 ) -> None:
     """Test update entity id."""
     created = datetime.fromisoformat("2024-02-14T12:00:00.900075+00:00")
     freezer.move_to(created)
     mock_registry(
-        hass,
+        menuai,
         {
             "test_domain.world": RegistryEntryWithDefaults(
                 entity_id="test_domain.world",
@@ -1120,11 +1120,11 @@ async def test_update_entity_id(
             )
         },
     )
-    platform = MockEntityPlatform(hass)
+    platform = MockEntityPlatform(menuai)
     entity = MockEntity(unique_id="1234")
     await platform.async_add_entities([entity])
 
-    assert hass.states.get("test_domain.world") is not None
+    assert menuai.states.get("test_domain.world") is not None
 
     modified = datetime.fromisoformat("2024-07-20T13:30:00.900075+00:00")
     freezer.move_to(modified)
@@ -1170,16 +1170,16 @@ async def test_update_entity_id(
         }
     }
 
-    assert hass.states.get("test_domain.world") is None
-    assert hass.states.get("test_domain.planet") is not None
+    assert menuai.states.get("test_domain.world") is None
+    assert menuai.states.get("test_domain.planet") is not None
 
 
 async def test_update_existing_entity_id(
-    hass: HomeAssistant, client: MockHAClientWebSocket
+    menuai: menuai, client: MockHAClientWebSocket
 ) -> None:
     """Test update entity id to an already registered entity id."""
     mock_registry(
-        hass,
+        menuai,
         {
             "test_domain.world": RegistryEntryWithDefaults(
                 entity_id="test_domain.world",
@@ -1195,7 +1195,7 @@ async def test_update_existing_entity_id(
             ),
         },
     )
-    platform = MockEntityPlatform(hass)
+    platform = MockEntityPlatform(menuai)
     entities = [MockEntity(unique_id="1234"), MockEntity(unique_id="2345")]
     await platform.async_add_entities(entities)
 
@@ -1213,11 +1213,11 @@ async def test_update_existing_entity_id(
 
 
 async def test_update_invalid_entity_id(
-    hass: HomeAssistant, client: MockHAClientWebSocket
+    menuai: menuai, client: MockHAClientWebSocket
 ) -> None:
     """Test update entity id to an invalid entity id."""
     mock_registry(
-        hass,
+        menuai,
         {
             "test_domain.world": RegistryEntryWithDefaults(
                 entity_id="test_domain.world",
@@ -1227,7 +1227,7 @@ async def test_update_invalid_entity_id(
             )
         },
     )
-    platform = MockEntityPlatform(hass)
+    platform = MockEntityPlatform(menuai)
     entities = [MockEntity(unique_id="1234"), MockEntity(unique_id="2345")]
     await platform.async_add_entities(entities)
 
@@ -1245,11 +1245,11 @@ async def test_update_invalid_entity_id(
 
 
 async def test_remove_entity(
-    hass: HomeAssistant, client: MockHAClientWebSocket
+    menuai: menuai, client: MockHAClientWebSocket
 ) -> None:
     """Test removing entity."""
     registry = mock_registry(
-        hass,
+        menuai,
         {
             "test_domain.world": RegistryEntryWithDefaults(
                 entity_id="test_domain.world",
@@ -1275,10 +1275,10 @@ async def test_remove_entity(
 
 
 async def test_remove_non_existing_entity(
-    hass: HomeAssistant, client: MockHAClientWebSocket
+    menuai: menuai, client: MockHAClientWebSocket
 ) -> None:
     """Test removing non existing entity."""
-    mock_registry(hass, {})
+    mock_registry(menuai, {})
 
     await client.send_json_auto_id(
         {
@@ -1297,11 +1297,11 @@ DOMAIN = "test_domain"
 
 
 async def test_get_automatic_entity_ids(
-    hass: HomeAssistant, client: MockHAClientWebSocket
+    menuai: menuai, client: MockHAClientWebSocket
 ) -> None:
     """Test get_automatic_entity_ids."""
     mock_registry(
-        hass,
+        menuai,
         {
             "test_domain.test_1": RegistryEntryWithDefaults(
                 entity_id="test_domain.test_1",
@@ -1380,7 +1380,7 @@ async def test_get_automatic_entity_ids(
         },
     )
 
-    component = EntityComponent(_LOGGER, DOMAIN, hass)
+    component = EntityComponent(_LOGGER, DOMAIN, menuai)
     await component.async_setup({})
     entity2 = MockEntity(unique_id="uniq2", name="Entity Name 2")
     entity3 = MockEntity(unique_id="uniq3", name="Entity Name 3")

@@ -5,12 +5,12 @@ from __future__ import annotations
 import logging
 import time
 
-from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import UNDEFINED, ConfigType, DiscoveryInfoType
-from homeassistant.util import dt as dt_util
+from menuai.components.sensor import SensorDeviceClass, SensorEntity
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import UNDEFINED, ConfigType, DiscoveryInfoType
+from menuai.util import dt as dt_util
 
 from . import REPETIER_API, SENSOR_TYPES, UPDATE_SIGNAL, RepetierSensorEntityDescription
 
@@ -18,7 +18,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -41,7 +41,7 @@ def setup_platform(
     entities = []
     for info in sensors_info:
         printer_name = info["printer_name"]
-        api = hass.data[REPETIER_API][printer_name]
+        api = menuai.data[REPETIER_API][printer_name]
         printer_id = info["printer_id"]
         sensor_type = info["sensor_type"]
         temp_id = info["temp_id"]
@@ -92,10 +92,10 @@ class RepetierSensor(SensorEntity):
         """Get new data and update state."""
         self.async_schedule_update_ha_state(True)
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Connect update callbacks."""
         self.async_on_remove(
-            async_dispatcher_connect(self.hass, UPDATE_SIGNAL, self.update_callback)
+            async_dispatcher_connect(self.menuai, UPDATE_SIGNAL, self.update_callback)
         )
 
     def _get_data(self):

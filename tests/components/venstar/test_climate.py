@@ -2,8 +2,8 @@
 
 from unittest.mock import patch
 
-from homeassistant.components.climate import ClimateEntityFeature
-from homeassistant.core import HomeAssistant
+from menuai.components.climate import ClimateEntityFeature
+from menuai.core import menuai
 
 from .util import async_init_integration, mock_venstar_devices
 
@@ -17,13 +17,13 @@ EXPECTED_BASE_SUPPORTED_FEATURES = (
 
 
 @mock_venstar_devices
-async def test_colortouch(hass: HomeAssistant) -> None:
+async def test_colortouch(menuai: menuai) -> None:
     """Test interfacing with a venstar colortouch with attached humidifier."""
 
-    with patch("homeassistant.components.venstar.coordinator.VENSTAR_SLEEP", new=0):
-        await async_init_integration(hass)
+    with patch("menuai.components.venstar.coordinator.VENSTAR_SLEEP", new=0):
+        await async_init_integration(menuai)
 
-    state = hass.states.get("climate.colortouch")
+    state = menuai.states.get("climate.colortouch")
     assert state.state == "heat"
 
     expected_attributes = {
@@ -53,13 +53,13 @@ async def test_colortouch(hass: HomeAssistant) -> None:
 
 
 @mock_venstar_devices
-async def test_t2000(hass: HomeAssistant) -> None:
+async def test_t2000(menuai: menuai) -> None:
     """Test interfacing with a venstar T2000 presently turned off."""
 
-    with patch("homeassistant.components.venstar.coordinator.VENSTAR_SLEEP", new=0):
-        await async_init_integration(hass)
+    with patch("menuai.components.venstar.coordinator.VENSTAR_SLEEP", new=0):
+        await async_init_integration(menuai)
 
-    state = hass.states.get("climate.t2000")
+    state = menuai.states.get("climate.t2000")
     assert state.state == "off"
 
     expected_attributes = {

@@ -10,8 +10,8 @@ from typing import Any, final
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (  # noqa: F401
+from menuai.config_entries import ConfigEntry
+from menuai.const import (  # noqa: F401
     SERVICE_CLOSE_VALVE,
     SERVICE_OPEN_VALVE,
     SERVICE_SET_VALVE_POSITION,
@@ -22,18 +22,18 @@ from homeassistant.const import (  # noqa: F401
     STATE_OPEN,
     STATE_OPENING,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity import Entity, EntityDescription
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util.hass_dict import HassKey
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity import Entity, EntityDescription
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.typing import ConfigType
+from menuai.util.menuai_dict import menuaiKey
 
 from .const import DOMAIN, ValveState
 
 _LOGGER = logging.getLogger(__name__)
 
-DATA_COMPONENT: HassKey[EntityComponent[ValveEntity]] = HassKey(DOMAIN)
+DATA_COMPONENT: menuaiKey[EntityComponent[ValveEntity]] = menuaiKey(DOMAIN)
 ENTITY_ID_FORMAT = DOMAIN + ".{}"
 PLATFORM_SCHEMA = cv.PLATFORM_SCHEMA
 PLATFORM_SCHEMA_BASE = cv.PLATFORM_SCHEMA_BASE
@@ -65,10 +65,10 @@ ATTR_CURRENT_POSITION = "current_position"
 ATTR_POSITION = "position"
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Track states and offer events for valves."""
-    component = hass.data[DATA_COMPONENT] = EntityComponent[ValveEntity](
-        _LOGGER, DOMAIN, hass, SCAN_INTERVAL
+    component = menuai.data[DATA_COMPONENT] = EntityComponent[ValveEntity](
+        _LOGGER, DOMAIN, menuai, SCAN_INTERVAL
     )
 
     await component.async_setup(config)
@@ -109,14 +109,14 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up a config entry."""
-    return await hass.data[DATA_COMPONENT].async_setup_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_setup_entry(entry)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.data[DATA_COMPONENT].async_unload_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_unload_entry(entry)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -221,7 +221,7 @@ class ValveEntity(Entity):
 
     async def async_open_valve(self) -> None:
         """Open the valve."""
-        await self.hass.async_add_executor_job(self.open_valve)
+        await self.menuai.async_add_executor_job(self.open_valve)
 
     @final
     async def async_handle_open_valve(self) -> None:
@@ -237,7 +237,7 @@ class ValveEntity(Entity):
 
     async def async_close_valve(self) -> None:
         """Close valve."""
-        await self.hass.async_add_executor_job(self.close_valve)
+        await self.menuai.async_add_executor_job(self.close_valve)
 
     @final
     async def async_handle_close_valve(self) -> None:
@@ -265,7 +265,7 @@ class ValveEntity(Entity):
 
     async def async_set_valve_position(self, position: int) -> None:
         """Move the valve to a specific position."""
-        await self.hass.async_add_executor_job(self.set_valve_position, position)
+        await self.menuai.async_add_executor_job(self.set_valve_position, position)
 
     def stop_valve(self) -> None:
         """Stop the valve."""
@@ -273,4 +273,4 @@ class ValveEntity(Entity):
 
     async def async_stop_valve(self) -> None:
         """Stop the valve."""
-        await self.hass.async_add_executor_job(self.stop_valve)
+        await self.menuai.async_add_executor_job(self.stop_valve)

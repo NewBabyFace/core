@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 import av
 import pytest
 
-from homeassistant.components.stream import (
+from menuai.components.stream import (
     SOURCE_TIMEOUT,
     StreamClientError,
     StreamOpenClientError,
@@ -15,34 +15,34 @@ from homeassistant.components.stream import (
     async_check_stream_client_error,
     create_stream,
 )
-from homeassistant.components.stream.const import ATTR_PREFER_TCP
-from homeassistant.const import EVENT_LOGGING_CHANGED
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.setup import async_setup_component
+from menuai.components.stream.const import ATTR_PREFER_TCP
+from menuai.const import EVENT_LOGGING_CHANGED
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.setup import async_setup_component
 
 from .common import dynamic_stream_settings
 
 
-async def test_stream_not_setup(hass: HomeAssistant, h264_video) -> None:
+async def test_stream_not_setup(menuai: menuai, h264_video) -> None:
     """Test hls stream.
 
     Purposefully not mocking anything here to test full
     integration with the stream component.
     """
-    with pytest.raises(HomeAssistantError, match="Stream integration is not set up"):
-        create_stream(hass, "rtsp://foobar", {}, dynamic_stream_settings())
+    with pytest.raises(menuaiError, match="Stream integration is not set up"):
+        create_stream(menuai, "rtsp://foobar", {}, dynamic_stream_settings())
 
-    with pytest.raises(HomeAssistantError, match="Stream integration is not set up"):
-        await async_check_stream_client_error(hass, "rtsp://foobar")
+    with pytest.raises(menuaiError, match="Stream integration is not set up"):
+        await async_check_stream_client_error(menuai, "rtsp://foobar")
 
 
 async def test_log_levels(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test that the worker logs the url without username and password."""
 
-    await async_setup_component(hass, "stream", {"stream": {}})
+    await async_setup_component(menuai, "stream", {"stream": {}})
 
     # These namespaces should only pass log messages when the stream logger
     # is at logging.DEBUG or below
@@ -58,16 +58,16 @@ async def test_log_levels(
     )
 
     logging.getLogger(stream_name).setLevel(logging.INFO)
-    hass.bus.async_fire(EVENT_LOGGING_CHANGED)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire(EVENT_LOGGING_CHANGED)
+    await menuai.async_block_till_done()
 
     # Since logging is at INFO, these should not pass
     for namespace in namespaces_to_toggle:
         av.logging.log(av.logging.ERROR, namespace, "SHOULD NOT PASS")
 
     logging.getLogger(stream_name).setLevel(logging.DEBUG)
-    hass.bus.async_fire(EVENT_LOGGING_CHANGED)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire(EVENT_LOGGING_CHANGED)
+    await menuai.async_block_till_done()
 
     # Since logging is now at DEBUG, these should now pass
     for namespace in namespaces_to_toggle:
@@ -81,15 +81,15 @@ async def test_log_levels(
     assert "SHOULD NOT PASS" not in caplog.text
 
 
-async def test_check_open_stream_params(hass: HomeAssistant) -> None:
+async def test_check_open_stream_params(menuai: menuai) -> None:
     """Test check open stream params."""
-    await async_setup_component(hass, "stream", {"stream": {}})
+    await async_setup_component(menuai, "stream", {"stream": {}})
 
     container_mock = MagicMock()
     source = "rtsp://foobar"
 
     with patch("av.open", return_value=container_mock) as open_mock:
-        await async_check_stream_client_error(hass, source)
+        await async_check_stream_client_error(menuai, source)
 
     options = {
         "rtsp_flags": ATTR_PREFER_TCP,
@@ -101,9 +101,9 @@ async def test_check_open_stream_params(hass: HomeAssistant) -> None:
     container_mock.reset_mock()
     with (
         patch("av.open", return_value=container_mock) as open_mock,
-        pytest.raises(HomeAssistantError, match="Invalid stream options"),
+        pytest.raises(menuaiError, match="Invalid stream options"),
     ):
-        await async_check_stream_client_error(hass, source, {"foo": "bar"})
+        await async_check_stream_client_error(menuai, source, {"foo": "bar"})
 
 
 @pytest.mark.parametrize(
@@ -131,16 +131,16 @@ async def test_check_open_stream_params(hass: HomeAssistant) -> None:
     ],
 )
 async def test_try_open_stream_error(
-    hass: HomeAssistant, error: av.HTTPClientError, enum_result: StreamClientError
+    menuai: menuai, error: av.HTTPClientError, enum_result: StreamClientError
 ) -> None:
     """Test trying to open a stream."""
-    await async_setup_component(hass, "stream", {"stream": {}})
+    await async_setup_component(menuai, "stream", {"stream": {}})
 
     with (
         patch("av.open", side_effect=error),
         pytest.raises(StreamOpenClientError) as ex,
     ):
-        await async_check_stream_client_error(hass, "rtsp://foobar")
+        await async_check_stream_client_error(menuai, "rtsp://foobar")
     assert ex.value.error_code is enum_result
 
 
@@ -170,18 +170,18 @@ async def test_try_open_stream_error(
     ],
 )
 async def test_convert_stream_options(
-    hass: HomeAssistant,
+    menuai: menuai,
     options: dict[str, Any],
     expected_pyav_options: dict[str, Any],
 ) -> None:
     """Test stream options."""
-    await async_setup_component(hass, "stream", {"stream": {}})
+    await async_setup_component(menuai, "stream", {"stream": {}})
 
     container_mock = MagicMock()
     source = "rtsp://foobar"
 
     with patch("av.open", return_value=container_mock) as open_mock:
-        await async_check_stream_client_error(hass, source, options)
+        await async_check_stream_client_error(menuai, source, options)
 
     open_mock.assert_called_once_with(
         source, options=expected_pyav_options, timeout=SOURCE_TIMEOUT

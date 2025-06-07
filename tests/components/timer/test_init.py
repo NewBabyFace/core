@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components.timer import (
+from menuai.components.timer import (
     ATTR_DURATION,
     ATTR_FINISHES_AT,
     ATTR_REMAINING,
@@ -35,7 +35,7 @@ from homeassistant.components.timer import (
     Timer,
     _format_timedelta,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_EDITABLE,
     ATTR_FRIENDLY_NAME,
     ATTR_ICON,
@@ -46,12 +46,12 @@ from homeassistant.const import (
     EVENT_STATE_CHANGED,
     SERVICE_RELOAD,
 )
-from homeassistant.core import Context, CoreState, Event, HomeAssistant, State, callback
-from homeassistant.exceptions import HomeAssistantError, Unauthorized
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.restore_state import StoredState, async_get
-from homeassistant.setup import async_setup_component
-from homeassistant.util.dt import utcnow
+from menuai.core import Context, CoreState, Event, menuai, State, callback
+from menuai.exceptions import menuaiError, Unauthorized
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.restore_state import StoredState, async_get
+from menuai.setup import async_setup_component
+from menuai.util.dt import utcnow
 
 from tests.common import MockUser, async_capture_events, async_fire_time_changed
 from tests.typing import WebSocketGenerator
@@ -60,12 +60,12 @@ _LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture
-def storage_setup(hass: HomeAssistant, hass_storage: dict[str, Any]):
+def storage_setup(menuai: menuai, menuai_storage: dict[str, Any]):
     """Storage setup."""
 
     async def _storage(items=None, config=None):
         if items is None:
-            hass_storage[DOMAIN] = {
+            menuai_storage[DOMAIN] = {
                 "key": DOMAIN,
                 "version": 1,
                 "data": {
@@ -80,31 +80,31 @@ def storage_setup(hass: HomeAssistant, hass_storage: dict[str, Any]):
                 },
             }
         else:
-            hass_storage[DOMAIN] = {
+            menuai_storage[DOMAIN] = {
                 "key": DOMAIN,
                 "version": 1,
                 "data": {"items": items},
             }
         if config is None:
             config = {DOMAIN: {}}
-        return await async_setup_component(hass, DOMAIN, config)
+        return await async_setup_component(menuai, DOMAIN, config)
 
     return _storage
 
 
-async def test_config(hass: HomeAssistant) -> None:
+async def test_config(menuai: menuai) -> None:
     """Test config."""
     invalid_configs = [None, 1, {}, {"name with space": None}]
 
     for cfg in invalid_configs:
-        assert not await async_setup_component(hass, DOMAIN, {DOMAIN: cfg})
+        assert not await async_setup_component(menuai, DOMAIN, {DOMAIN: cfg})
 
 
-async def test_config_options(hass: HomeAssistant) -> None:
+async def test_config_options(menuai: menuai) -> None:
     """Test configuration options."""
-    count_start = len(hass.states.async_entity_ids())
+    count_start = len(menuai.states.async_entity_ids())
 
-    _LOGGER.debug("ENTITIES @ start: %s", hass.states.async_entity_ids())
+    _LOGGER.debug("ENTITIES @ start: %s", menuai.states.async_entity_ids())
 
     config = {
         DOMAIN: {
@@ -118,15 +118,15 @@ async def test_config_options(hass: HomeAssistant) -> None:
         }
     }
 
-    assert await async_setup_component(hass, "timer", config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "timer", config)
+    await menuai.async_block_till_done()
 
-    assert count_start + 3 == len(hass.states.async_entity_ids())
-    await hass.async_block_till_done()
+    assert count_start + 3 == len(menuai.states.async_entity_ids())
+    await menuai.async_block_till_done()
 
-    state_1 = hass.states.get("timer.test_1")
-    state_2 = hass.states.get("timer.test_2")
-    state_3 = hass.states.get("timer.test_3")
+    state_1 = menuai.states.get("timer.test_1")
+    state_2 = menuai.states.get("timer.test_2")
+    state_3 = menuai.states.get("timer.test_3")
 
     assert state_1 is not None
     assert state_2 is not None
@@ -147,13 +147,13 @@ async def test_config_options(hass: HomeAssistant) -> None:
     )
 
 
-async def test_methods_and_events(hass: HomeAssistant) -> None:
+async def test_methods_and_events(menuai: menuai) -> None:
     """Test methods and events."""
-    hass.set_state(CoreState.starting)
+    menuai.set_state(CoreState.starting)
 
-    await async_setup_component(hass, DOMAIN, {DOMAIN: {"test1": {CONF_DURATION: 10}}})
+    await async_setup_component(menuai, DOMAIN, {DOMAIN: {"test1": {CONF_DURATION: 10}}})
 
-    state = hass.states.get("timer.test1")
+    state = menuai.states.get("timer.test1")
     assert state
     assert state.state == STATUS_IDLE
 
@@ -162,14 +162,14 @@ async def test_methods_and_events(hass: HomeAssistant) -> None:
     @callback
     def fake_event_listener(event: Event):
         """Fake event listener for trigger."""
-        results.append((event, hass.states.get("timer.test1").state))
+        results.append((event, menuai.states.get("timer.test1").state))
 
-    hass.bus.async_listen(EVENT_TIMER_STARTED, fake_event_listener)
-    hass.bus.async_listen(EVENT_TIMER_RESTARTED, fake_event_listener)
-    hass.bus.async_listen(EVENT_TIMER_PAUSED, fake_event_listener)
-    hass.bus.async_listen(EVENT_TIMER_FINISHED, fake_event_listener)
-    hass.bus.async_listen(EVENT_TIMER_CANCELLED, fake_event_listener)
-    hass.bus.async_listen(EVENT_TIMER_CHANGED, fake_event_listener)
+    menuai.bus.async_listen(EVENT_TIMER_STARTED, fake_event_listener)
+    menuai.bus.async_listen(EVENT_TIMER_RESTARTED, fake_event_listener)
+    menuai.bus.async_listen(EVENT_TIMER_PAUSED, fake_event_listener)
+    menuai.bus.async_listen(EVENT_TIMER_FINISHED, fake_event_listener)
+    menuai.bus.async_listen(EVENT_TIMER_CANCELLED, fake_event_listener)
+    menuai.bus.async_listen(EVENT_TIMER_CHANGED, fake_event_listener)
 
     steps = [
         {
@@ -273,15 +273,15 @@ async def test_methods_and_events(hass: HomeAssistant) -> None:
     expected_events = 0
     for step in steps:
         if step["call"] is not None:
-            await hass.services.async_call(
+            await menuai.services.async_call(
                 DOMAIN,
                 step["call"],
                 {CONF_ENTITY_ID: "timer.test1", **step["data"]},
                 blocking=True,
             )
-            await hass.async_block_till_done()
+            await menuai.async_block_till_done()
 
-        state = hass.states.get("timer.test1")
+        state = menuai.states.get("timer.test1")
         assert state
         if step["state"] is not None:
             assert state.state == step["state"]
@@ -296,61 +296,61 @@ async def test_methods_and_events(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.freeze_time("2023-06-05 17:47:50")
-async def test_start_service(hass: HomeAssistant) -> None:
+async def test_start_service(menuai: menuai) -> None:
     """Test the start/stop service."""
-    await async_setup_component(hass, DOMAIN, {DOMAIN: {"test1": {CONF_DURATION: 10}}})
+    await async_setup_component(menuai, DOMAIN, {DOMAIN: {"test1": {CONF_DURATION: 10}}})
 
-    state = hass.states.get("timer.test1")
+    state = menuai.states.get("timer.test1")
     assert state
     assert state.state == STATUS_IDLE
     assert state.attributes[ATTR_DURATION] == "0:00:10"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN, SERVICE_START, {CONF_ENTITY_ID: "timer.test1"}, blocking=True
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("timer.test1")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("timer.test1")
     assert state
     assert state.state == STATUS_ACTIVE
     assert state.attributes[ATTR_DURATION] == "0:00:10"
     assert state.attributes[ATTR_REMAINING] == "0:00:10"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN, SERVICE_CANCEL, {CONF_ENTITY_ID: "timer.test1"}, blocking=True
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("timer.test1")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("timer.test1")
     assert state
     assert state.state == STATUS_IDLE
     assert state.attributes[ATTR_DURATION] == "0:00:10"
     assert ATTR_REMAINING not in state.attributes
 
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_CHANGE,
             {CONF_ENTITY_ID: "timer.test1", CONF_DURATION: 10},
             blocking=True,
         )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_START,
         {CONF_ENTITY_ID: "timer.test1", CONF_DURATION: 15},
         blocking=True,
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("timer.test1")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("timer.test1")
     assert state
     assert state.state == STATUS_ACTIVE
     assert state.attributes[ATTR_DURATION] == "0:00:15"
     assert state.attributes[ATTR_REMAINING] == "0:00:15"
 
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match="Not possible to change timer timer.test1 beyond duration",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_CHANGE,
             {CONF_ENTITY_ID: "timer.test1", CONF_DURATION: 20},
@@ -358,75 +358,75 @@ async def test_start_service(hass: HomeAssistant) -> None:
         )
 
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match="Not possible to change timer timer.test1 to negative time remaining",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_CHANGE,
             {CONF_ENTITY_ID: "timer.test1", CONF_DURATION: -20},
             blocking=True,
         )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_CHANGE,
         {CONF_ENTITY_ID: "timer.test1", CONF_DURATION: -3},
         blocking=True,
     )
-    state = hass.states.get("timer.test1")
+    state = menuai.states.get("timer.test1")
     assert state
     assert state.state == STATUS_ACTIVE
     assert state.attributes[ATTR_DURATION] == "0:00:15"
     assert state.attributes[ATTR_REMAINING] == "0:00:12"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_CHANGE,
         {CONF_ENTITY_ID: "timer.test1", CONF_DURATION: 2},
         blocking=True,
     )
-    state = hass.states.get("timer.test1")
+    state = menuai.states.get("timer.test1")
     assert state
     assert state.state == STATUS_ACTIVE
     assert state.attributes[ATTR_DURATION] == "0:00:15"
     assert state.attributes[ATTR_REMAINING] == "0:00:14"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN, SERVICE_CANCEL, {CONF_ENTITY_ID: "timer.test1"}, blocking=True
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("timer.test1")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("timer.test1")
     assert state
     assert state.state == STATUS_IDLE
     assert state.attributes[ATTR_DURATION] == "0:00:10"
     assert ATTR_REMAINING not in state.attributes
 
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match="Timer timer.test1 is not running, only active timers can be changed",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_CHANGE,
             {CONF_ENTITY_ID: "timer.test1", CONF_DURATION: 2},
             blocking=True,
         )
 
-    state = hass.states.get("timer.test1")
+    state = menuai.states.get("timer.test1")
     assert state
     assert state.state == STATUS_IDLE
     assert state.attributes[ATTR_DURATION] == "0:00:10"
     assert ATTR_REMAINING not in state.attributes
 
 
-async def test_wait_till_timer_expires(hass: HomeAssistant) -> None:
+async def test_wait_till_timer_expires(menuai: menuai) -> None:
     """Test for a timer to end."""
-    hass.set_state(CoreState.starting)
+    menuai.set_state(CoreState.starting)
 
-    await async_setup_component(hass, DOMAIN, {DOMAIN: {"test1": {CONF_DURATION: 20}}})
+    await async_setup_component(menuai, DOMAIN, {DOMAIN: {"test1": {CONF_DURATION: 20}}})
 
-    state = hass.states.get("timer.test1")
+    state = menuai.states.get("timer.test1")
     assert state
     assert state.state == STATUS_IDLE
 
@@ -437,50 +437,50 @@ async def test_wait_till_timer_expires(hass: HomeAssistant) -> None:
         """Fake event listener for trigger."""
         results.append(event)
 
-    hass.bus.async_listen(EVENT_TIMER_STARTED, fake_event_listener)
-    hass.bus.async_listen(EVENT_TIMER_PAUSED, fake_event_listener)
-    hass.bus.async_listen(EVENT_TIMER_FINISHED, fake_event_listener)
-    hass.bus.async_listen(EVENT_TIMER_CANCELLED, fake_event_listener)
-    hass.bus.async_listen(EVENT_TIMER_CHANGED, fake_event_listener)
+    menuai.bus.async_listen(EVENT_TIMER_STARTED, fake_event_listener)
+    menuai.bus.async_listen(EVENT_TIMER_PAUSED, fake_event_listener)
+    menuai.bus.async_listen(EVENT_TIMER_FINISHED, fake_event_listener)
+    menuai.bus.async_listen(EVENT_TIMER_CANCELLED, fake_event_listener)
+    menuai.bus.async_listen(EVENT_TIMER_CHANGED, fake_event_listener)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN, SERVICE_START, {CONF_ENTITY_ID: "timer.test1"}, blocking=True
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("timer.test1")
+    state = menuai.states.get("timer.test1")
     assert state
     assert state.state == STATUS_ACTIVE
 
     assert results[-1].event_type == EVENT_TIMER_STARTED
     assert len(results) == 1
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_CHANGE,
         {CONF_ENTITY_ID: "timer.test1", CONF_DURATION: -5},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("timer.test1")
+    state = menuai.states.get("timer.test1")
     assert state
     assert state.state == STATUS_ACTIVE
 
     assert results[-1].event_type == EVENT_TIMER_CHANGED
     assert len(results) == 2
 
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=10))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=10))
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("timer.test1")
+    state = menuai.states.get("timer.test1")
     assert state
     assert state.state == STATUS_ACTIVE
 
-    async_fire_time_changed(hass, utcnow() + timedelta(seconds=20))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow() + timedelta(seconds=20))
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("timer.test1")
+    state = menuai.states.get("timer.test1")
     assert state
     assert state.state == STATUS_IDLE
 
@@ -488,27 +488,27 @@ async def test_wait_till_timer_expires(hass: HomeAssistant) -> None:
     assert len(results) == 3
 
 
-async def test_no_initial_state_and_no_restore_state(hass: HomeAssistant) -> None:
+async def test_no_initial_state_and_no_restore_state(menuai: menuai) -> None:
     """Ensure that entity is create without initial and restore feature."""
-    hass.set_state(CoreState.starting)
+    menuai.set_state(CoreState.starting)
 
-    await async_setup_component(hass, DOMAIN, {DOMAIN: {"test1": {CONF_DURATION: 10}}})
+    await async_setup_component(menuai, DOMAIN, {DOMAIN: {"test1": {CONF_DURATION: 10}}})
 
-    state = hass.states.get("timer.test1")
+    state = menuai.states.get("timer.test1")
     assert state
     assert state.state == STATUS_IDLE
 
 
 async def test_config_reload(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
-    hass_admin_user: MockUser,
-    hass_read_only_user: MockUser,
+    menuai_admin_user: MockUser,
+    menuai_read_only_user: MockUser,
 ) -> None:
     """Test reload service."""
-    count_start = len(hass.states.async_entity_ids())
+    count_start = len(menuai.states.async_entity_ids())
 
-    _LOGGER.debug("ENTITIES @ start: %s", hass.states.async_entity_ids())
+    _LOGGER.debug("ENTITIES @ start: %s", menuai.states.async_entity_ids())
 
     config = {
         DOMAIN: {
@@ -521,15 +521,15 @@ async def test_config_reload(
         }
     }
 
-    assert await async_setup_component(hass, "timer", config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "timer", config)
+    await menuai.async_block_till_done()
 
-    assert count_start + 2 == len(hass.states.async_entity_ids())
-    await hass.async_block_till_done()
+    assert count_start + 2 == len(menuai.states.async_entity_ids())
+    await menuai.async_block_till_done()
 
-    state_1 = hass.states.get("timer.test_1")
-    state_2 = hass.states.get("timer.test_2")
-    state_3 = hass.states.get("timer.test_3")
+    state_1 = menuai.states.get("timer.test_1")
+    state_2 = menuai.states.get("timer.test_2")
+    state_3 = menuai.states.get("timer.test_3")
 
     assert state_1 is not None
     assert state_2 is not None
@@ -548,7 +548,7 @@ async def test_config_reload(
     assert state_2.attributes.get(ATTR_DURATION) == "0:00:10"
 
     with patch(
-        "homeassistant.config.load_yaml_config_file",
+        "menuai.config.load_yaml_config_file",
         autospec=True,
         return_value={
             DOMAIN: {
@@ -562,25 +562,25 @@ async def test_config_reload(
         },
     ):
         with pytest.raises(Unauthorized):
-            await hass.services.async_call(
+            await menuai.services.async_call(
                 DOMAIN,
                 SERVICE_RELOAD,
                 blocking=True,
-                context=Context(user_id=hass_read_only_user.id),
+                context=Context(user_id=menuai_read_only_user.id),
             )
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_RELOAD,
             blocking=True,
-            context=Context(user_id=hass_admin_user.id),
+            context=Context(user_id=menuai_admin_user.id),
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    assert count_start + 2 == len(hass.states.async_entity_ids())
+    assert count_start + 2 == len(menuai.states.async_entity_ids())
 
-    state_1 = hass.states.get("timer.test_1")
-    state_2 = hass.states.get("timer.test_2")
-    state_3 = hass.states.get("timer.test_3")
+    state_1 = menuai.states.get("timer.test_1")
+    state_2 = menuai.states.get("timer.test_2")
+    state_3 = menuai.states.get("timer.test_3")
 
     assert state_1 is None
     assert state_2 is not None
@@ -599,13 +599,13 @@ async def test_config_reload(
     assert ATTR_FRIENDLY_NAME not in state_3.attributes
 
 
-async def test_timer_restarted_event(hass: HomeAssistant) -> None:
+async def test_timer_restarted_event(menuai: menuai) -> None:
     """Ensure restarted event is called after starting a paused or running timer."""
-    hass.set_state(CoreState.starting)
+    menuai.set_state(CoreState.starting)
 
-    await async_setup_component(hass, DOMAIN, {DOMAIN: {"test1": {CONF_DURATION: 10}}})
+    await async_setup_component(menuai, DOMAIN, {DOMAIN: {"test1": {CONF_DURATION: 10}}})
 
-    state = hass.states.get("timer.test1")
+    state = menuai.states.get("timer.test1")
     assert state
     assert state.state == STATUS_IDLE
 
@@ -616,50 +616,50 @@ async def test_timer_restarted_event(hass: HomeAssistant) -> None:
         """Fake event listener for trigger."""
         results.append(event)
 
-    hass.bus.async_listen(EVENT_TIMER_STARTED, fake_event_listener)
-    hass.bus.async_listen(EVENT_TIMER_RESTARTED, fake_event_listener)
-    hass.bus.async_listen(EVENT_TIMER_PAUSED, fake_event_listener)
-    hass.bus.async_listen(EVENT_TIMER_FINISHED, fake_event_listener)
-    hass.bus.async_listen(EVENT_TIMER_CANCELLED, fake_event_listener)
+    menuai.bus.async_listen(EVENT_TIMER_STARTED, fake_event_listener)
+    menuai.bus.async_listen(EVENT_TIMER_RESTARTED, fake_event_listener)
+    menuai.bus.async_listen(EVENT_TIMER_PAUSED, fake_event_listener)
+    menuai.bus.async_listen(EVENT_TIMER_FINISHED, fake_event_listener)
+    menuai.bus.async_listen(EVENT_TIMER_CANCELLED, fake_event_listener)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN, SERVICE_START, {CONF_ENTITY_ID: "timer.test1"}
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("timer.test1")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("timer.test1")
     assert state
     assert state.state == STATUS_ACTIVE
 
     assert results[-1].event_type == EVENT_TIMER_STARTED
     assert len(results) == 1
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN, SERVICE_START, {CONF_ENTITY_ID: "timer.test1"}
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("timer.test1")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("timer.test1")
     assert state
     assert state.state == STATUS_ACTIVE
 
     assert results[-1].event_type == EVENT_TIMER_RESTARTED
     assert len(results) == 2
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN, SERVICE_PAUSE, {CONF_ENTITY_ID: "timer.test1"}
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("timer.test1")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("timer.test1")
     assert state
     assert state.state == STATUS_PAUSED
 
     assert results[-1].event_type == EVENT_TIMER_PAUSED
     assert len(results) == 3
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN, SERVICE_START, {CONF_ENTITY_ID: "timer.test1"}
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("timer.test1")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("timer.test1")
     assert state
     assert state.state == STATUS_ACTIVE
 
@@ -667,13 +667,13 @@ async def test_timer_restarted_event(hass: HomeAssistant) -> None:
     assert len(results) == 4
 
 
-async def test_state_changed_when_timer_restarted(hass: HomeAssistant) -> None:
+async def test_state_changed_when_timer_restarted(menuai: menuai) -> None:
     """Ensure timer's state changes when it restarted."""
-    hass.set_state(CoreState.starting)
+    menuai.set_state(CoreState.starting)
 
-    await async_setup_component(hass, DOMAIN, {DOMAIN: {"test1": {CONF_DURATION: 10}}})
+    await async_setup_component(menuai, DOMAIN, {DOMAIN: {"test1": {CONF_DURATION: 10}}})
 
-    state = hass.states.get("timer.test1")
+    state = menuai.states.get("timer.test1")
     assert state
     assert state.state == STATUS_IDLE
 
@@ -684,24 +684,24 @@ async def test_state_changed_when_timer_restarted(hass: HomeAssistant) -> None:
         """Fake event listener for trigger."""
         results.append(event)
 
-    hass.bus.async_listen(EVENT_STATE_CHANGED, fake_event_listener)
+    menuai.bus.async_listen(EVENT_STATE_CHANGED, fake_event_listener)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN, SERVICE_START, {CONF_ENTITY_ID: "timer.test1"}
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("timer.test1")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("timer.test1")
     assert state
     assert state.state == STATUS_ACTIVE
 
     assert results[-1].event_type == EVENT_STATE_CHANGED
     assert len(results) == 1
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN, SERVICE_START, {CONF_ENTITY_ID: "timer.test1"}
     )
-    await hass.async_block_till_done()
-    state = hass.states.get("timer.test1")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("timer.test1")
     assert state
     assert state.state == STATUS_ACTIVE
 
@@ -709,36 +709,36 @@ async def test_state_changed_when_timer_restarted(hass: HomeAssistant) -> None:
     assert len(results) == 2
 
 
-async def test_load_from_storage(hass: HomeAssistant, storage_setup) -> None:
+async def test_load_from_storage(menuai: menuai, storage_setup) -> None:
     """Test set up from storage."""
     assert await storage_setup()
-    state = hass.states.get(f"{DOMAIN}.timer_from_storage")
+    state = menuai.states.get(f"{DOMAIN}.timer_from_storage")
     assert state.state == STATUS_IDLE
     assert state.attributes.get(ATTR_FRIENDLY_NAME) == "timer from storage"
     assert state.attributes.get(ATTR_EDITABLE)
 
 
-async def test_editable_state_attribute(hass: HomeAssistant, storage_setup) -> None:
+async def test_editable_state_attribute(menuai: menuai, storage_setup) -> None:
     """Test editable attribute."""
     assert await storage_setup(config={DOMAIN: {"from_yaml": None}})
 
-    state = hass.states.get(f"{DOMAIN}.{DOMAIN}_from_storage")
+    state = menuai.states.get(f"{DOMAIN}.{DOMAIN}_from_storage")
     assert state.state == STATUS_IDLE
     assert state.attributes.get(ATTR_FRIENDLY_NAME) == "timer from storage"
     assert state.attributes.get(ATTR_EDITABLE)
 
-    state = hass.states.get(f"{DOMAIN}.from_yaml")
+    state = menuai.states.get(f"{DOMAIN}.from_yaml")
     assert not state.attributes.get(ATTR_EDITABLE)
     assert state.state == STATUS_IDLE
 
 
 async def test_ws_list(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, storage_setup
+    menuai: menuai, menuai_ws_client: WebSocketGenerator, storage_setup
 ) -> None:
     """Test listing via WS."""
     assert await storage_setup(config={DOMAIN: {"from_yaml": None}})
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json({"id": 6, "type": f"{DOMAIN}/list"})
     resp = await client.receive_json()
@@ -755,9 +755,9 @@ async def test_ws_list(
 
 
 async def test_ws_delete(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     storage_setup,
 ) -> None:
     """Test WS delete cleans up entity registry."""
@@ -766,12 +766,12 @@ async def test_ws_delete(
     timer_id = "from_storage"
     timer_entity_id = f"{DOMAIN}.{DOMAIN}_{timer_id}"
 
-    state = hass.states.get(timer_entity_id)
+    state = menuai.states.get(timer_entity_id)
     assert state is not None
     from_reg = entity_registry.async_get_entity_id(DOMAIN, DOMAIN, timer_id)
     assert from_reg == timer_entity_id
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json(
         {"id": 6, "type": f"{DOMAIN}/delete", f"{DOMAIN}_id": f"{timer_id}"}
@@ -779,15 +779,15 @@ async def test_ws_delete(
     resp = await client.receive_json()
     assert resp["success"]
 
-    state = hass.states.get(timer_entity_id)
+    state = menuai.states.get(timer_entity_id)
     assert state is None
     assert entity_registry.async_get_entity_id(DOMAIN, DOMAIN, timer_id) is None
 
 
 async def test_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     storage_setup,
 ) -> None:
     """Test updating timer entity."""
@@ -797,13 +797,13 @@ async def test_update(
     timer_id = "from_storage"
     timer_entity_id = f"{DOMAIN}.{DOMAIN}_{timer_id}"
 
-    state = hass.states.get(timer_entity_id)
+    state = menuai.states.get(timer_entity_id)
     assert state.attributes[ATTR_FRIENDLY_NAME] == "timer from storage"
     assert (
         entity_registry.async_get_entity_id(DOMAIN, DOMAIN, timer_id) == timer_entity_id
     )
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     updated_settings = {
         CONF_NAME: "timer from storage",
@@ -827,15 +827,15 @@ async def test_update(
         CONF_RESTORE: True,
     }
 
-    state = hass.states.get(timer_entity_id)
+    state = menuai.states.get(timer_entity_id)
     assert state.attributes[ATTR_DURATION] == _format_timedelta(cv.time_period(33))
     assert state.attributes[ATTR_RESTORE]
 
 
 async def test_ws_create(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     storage_setup,
 ) -> None:
     """Test create WS."""
@@ -844,11 +844,11 @@ async def test_ws_create(
     timer_id = "new_timer"
     timer_entity_id = f"{DOMAIN}.{timer_id}"
 
-    state = hass.states.get(timer_entity_id)
+    state = menuai.states.get(timer_entity_id)
     assert state is None
     assert entity_registry.async_get_entity_id(DOMAIN, DOMAIN, timer_id) is None
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json(
         {
@@ -861,7 +861,7 @@ async def test_ws_create(
     resp = await client.receive_json()
     assert resp["success"]
 
-    state = hass.states.get(timer_entity_id)
+    state = menuai.states.get(timer_entity_id)
     assert state.state == STATUS_IDLE
     assert state.attributes[ATTR_DURATION] == _format_timedelta(cv.time_period(42))
     assert (
@@ -869,27 +869,27 @@ async def test_ws_create(
     )
 
 
-async def test_setup_no_config(hass: HomeAssistant, hass_admin_user: MockUser) -> None:
+async def test_setup_no_config(menuai: menuai, menuai_admin_user: MockUser) -> None:
     """Test component setup with no config."""
-    count_start = len(hass.states.async_entity_ids())
-    assert await async_setup_component(hass, DOMAIN, {})
+    count_start = len(menuai.states.async_entity_ids())
+    assert await async_setup_component(menuai, DOMAIN, {})
 
     with patch(
-        "homeassistant.config.load_yaml_config_file", autospec=True, return_value={}
+        "menuai.config.load_yaml_config_file", autospec=True, return_value={}
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_RELOAD,
             blocking=True,
-            context=Context(user_id=hass_admin_user.id),
+            context=Context(user_id=menuai_admin_user.id),
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    assert count_start == len(hass.states.async_entity_ids())
+    assert count_start == len(menuai.states.async_entity_ids())
 
 
 @pytest.mark.freeze_time("2023-06-05 17:47:50")
-async def test_restore_paused(hass: HomeAssistant) -> None:
+async def test_restore_paused(menuai: menuai) -> None:
     """Test entity restore logic when timer is paused."""
     utc_now = utcnow()
     stored_state = StoredState(
@@ -902,7 +902,7 @@ async def test_restore_paused(hass: HomeAssistant) -> None:
         utc_now,
     )
 
-    data = async_get(hass)
+    data = async_get(menuai)
     await data.store.async_save([stored_state.as_dict()])
     await data.async_load()
 
@@ -914,11 +914,11 @@ async def test_restore_paused(hass: HomeAssistant) -> None:
             CONF_RESTORE: True,
         }
     )
-    entity.hass = hass
+    entity.menuai = menuai
     entity.entity_id = "timer.test"
 
-    await entity.async_added_to_hass()
-    await hass.async_block_till_done()
+    await entity.async_added_to_menuai()
+    await menuai.async_block_till_done()
     assert entity.state == STATUS_PAUSED
     assert entity.extra_state_attributes[ATTR_DURATION] == "0:00:30"
     assert entity.extra_state_attributes[ATTR_REMAINING] == "0:00:15"
@@ -927,9 +927,9 @@ async def test_restore_paused(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.freeze_time("2023-06-05 17:47:50")
-async def test_restore_active_resume(hass: HomeAssistant) -> None:
+async def test_restore_active_resume(menuai: menuai) -> None:
     """Test entity restore logic when timer is active and end time is after startup."""
-    events = async_capture_events(hass, EVENT_TIMER_RESTARTED)
+    events = async_capture_events(menuai, EVENT_TIMER_RESTARTED)
     assert not events
     utc_now = utcnow()
     finish = utc_now + timedelta(seconds=30)
@@ -944,7 +944,7 @@ async def test_restore_active_resume(hass: HomeAssistant) -> None:
         utc_now,
     )
 
-    data = async_get(hass)
+    data = async_get(menuai)
     await data.store.async_save([stored_state.as_dict()])
     await data.async_load()
 
@@ -956,16 +956,16 @@ async def test_restore_active_resume(hass: HomeAssistant) -> None:
             CONF_RESTORE: True,
         }
     )
-    entity.hass = hass
+    entity.menuai = menuai
     entity.entity_id = "timer.test"
 
     # In patch make sure we ignore microseconds
     with patch(
-        "homeassistant.components.timer.dt_util.utcnow",
+        "menuai.components.timer.dt_util.utcnow",
         return_value=simulated_utc_now.replace(microsecond=999),
     ):
-        await entity.async_added_to_hass()
-        await hass.async_block_till_done()
+        await entity.async_added_to_menuai()
+        await menuai.async_block_till_done()
 
     assert entity.state == STATUS_ACTIVE
     assert entity.extra_state_attributes[ATTR_DURATION] == "0:00:30"
@@ -975,9 +975,9 @@ async def test_restore_active_resume(hass: HomeAssistant) -> None:
     assert len(events) == 1
 
 
-async def test_restore_active_finished_outside_grace(hass: HomeAssistant) -> None:
-    """Test entity restore logic: timer is active, ended while Home Assistant was stopped."""
-    events = async_capture_events(hass, EVENT_TIMER_FINISHED)
+async def test_restore_active_finished_outside_grace(menuai: menuai) -> None:
+    """Test entity restore logic: timer is active, ended while MenuAI was stopped."""
+    events = async_capture_events(menuai, EVENT_TIMER_FINISHED)
     assert not events
     utc_now = utcnow()
     finish = utc_now + timedelta(seconds=30)
@@ -992,7 +992,7 @@ async def test_restore_active_finished_outside_grace(hass: HomeAssistant) -> Non
         utc_now,
     )
 
-    data = async_get(hass)
+    data = async_get(menuai)
     await data.store.async_save([stored_state.as_dict()])
     await data.async_load()
 
@@ -1004,14 +1004,14 @@ async def test_restore_active_finished_outside_grace(hass: HomeAssistant) -> Non
             CONF_RESTORE: True,
         }
     )
-    entity.hass = hass
+    entity.menuai = menuai
     entity.entity_id = "timer.test"
 
     with patch(
-        "homeassistant.components.timer.dt_util.utcnow", return_value=simulated_utc_now
+        "menuai.components.timer.dt_util.utcnow", return_value=simulated_utc_now
     ):
-        await entity.async_added_to_hass()
-        await hass.async_block_till_done()
+        await entity.async_added_to_menuai()
+        await menuai.async_block_till_done()
 
     assert entity.state == STATUS_IDLE
     assert entity.extra_state_attributes[ATTR_DURATION] == "0:01:00"

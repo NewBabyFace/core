@@ -7,18 +7,18 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.core import HomeAssistant, callback
+from menuai.components import websocket_api
+from menuai.core import menuai, callback
 
 from .const import CONF_USER_ID, DATA_CONFIG_ENTRIES, DATA_PUSH_CHANNEL, DOMAIN
 from .push_notification import PushChannel
 
 
 @callback
-def async_setup_commands(hass):
+def async_setup_commands(menuai):
     """Set up the mobile app websocket API."""
-    websocket_api.async_register_command(hass, handle_push_notification_channel)
-    websocket_api.async_register_command(hass, handle_push_notification_confirm)
+    websocket_api.async_register_command(menuai, handle_push_notification_channel)
+    websocket_api.async_register_command(menuai, handle_push_notification_confirm)
 
 
 def _ensure_webhook_access(func):
@@ -26,9 +26,9 @@ def _ensure_webhook_access(func):
 
     @callback
     @wraps(func)
-    def with_webhook_access(hass, connection, msg):
+    def with_webhook_access(menuai, connection, msg):
         # Validate that the webhook ID is registered to the user of the websocket connection
-        config_entry = hass.data[DOMAIN][DATA_CONFIG_ENTRIES].get(msg["webhook_id"])
+        config_entry = menuai.data[DOMAIN][DATA_CONFIG_ENTRIES].get(msg["webhook_id"])
 
         if config_entry is None:
             connection.send_error(
@@ -44,7 +44,7 @@ def _ensure_webhook_access(func):
             )
             return
 
-        func(hass, connection, msg)
+        func(menuai, connection, msg)
 
     return with_webhook_access
 
@@ -59,12 +59,12 @@ def _ensure_webhook_access(func):
     }
 )
 def handle_push_notification_confirm(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Confirm receipt of a push notification."""
-    channel: PushChannel | None = hass.data[DOMAIN][DATA_PUSH_CHANNEL].get(
+    channel: PushChannel | None = menuai.data[DOMAIN][DATA_PUSH_CHANNEL].get(
         msg["webhook_id"]
     )
     if channel is None:
@@ -95,13 +95,13 @@ def handle_push_notification_confirm(
 @_ensure_webhook_access
 @websocket_api.async_response
 async def handle_push_notification_channel(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Set up a direct push notification channel."""
     webhook_id = msg["webhook_id"]
-    registered_channels: dict[str, PushChannel] = hass.data[DOMAIN][DATA_PUSH_CHANNEL]
+    registered_channels: dict[str, PushChannel] = menuai.data[DOMAIN][DATA_PUSH_CHANNEL]
 
     if webhook_id in registered_channels:
         await registered_channels[webhook_id].async_teardown()
@@ -113,7 +113,7 @@ async def handle_push_notification_channel(
             registered_channels.pop(webhook_id)
 
     channel = registered_channels[webhook_id] = PushChannel(
-        hass,
+        menuai,
         webhook_id,
         msg["support_confirm"],
         lambda data: connection.send_message(
@@ -122,7 +122,7 @@ async def handle_push_notification_channel(
         on_channel_teardown,
     )
 
-    connection.subscriptions[msg["id"]] = lambda: hass.async_create_task(
+    connection.subscriptions[msg["id"]] = lambda: menuai.async_create_task(
         channel.async_teardown()
     )
     connection.send_result(msg["id"])

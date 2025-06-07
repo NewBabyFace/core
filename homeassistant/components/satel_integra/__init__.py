@@ -6,12 +6,12 @@ import logging
 from satel_integra.satel_integra import AsyncSatel
 import voluptuous as vol
 
-from homeassistant.const import CONF_HOST, CONF_PORT, EVENT_HOMEASSISTANT_STOP, Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.discovery import async_load_platform
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import CONF_HOST, CONF_PORT, EVENT_menuai_STOP, Platform
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.discovery import async_load_platform
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.typing import ConfigType
 
 DEFAULT_ALARM_NAME = "satel_integra"
 DEFAULT_PORT = 7094
@@ -92,7 +92,7 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Satel Integra component."""
     conf = config[DOMAIN]
 
@@ -107,9 +107,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         list(outputs.items()) + list(switchable_outputs.items())
     )
 
-    controller = AsyncSatel(host, port, hass.loop, zones, monitored_outputs, partitions)
+    controller = AsyncSatel(host, port, menuai.loop, zones, monitored_outputs, partitions)
 
-    hass.data[DATA_SATEL] = controller
+    menuai.data[DATA_SATEL] = controller
 
     result = await controller.connect()
 
@@ -120,17 +120,17 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     def _close(*_):
         controller.close()
 
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _close)
+    menuai.bus.async_listen_once(EVENT_menuai_STOP, _close)
 
     _LOGGER.debug("Arm home config: %s, mode: %s ", conf, conf.get(CONF_ARM_HOME_MODE))
 
-    hass.async_create_task(
-        async_load_platform(hass, Platform.ALARM_CONTROL_PANEL, DOMAIN, conf, config)
+    menuai.async_create_task(
+        async_load_platform(menuai, Platform.ALARM_CONTROL_PANEL, DOMAIN, conf, config)
     )
 
-    hass.async_create_task(
+    menuai.async_create_task(
         async_load_platform(
-            hass,
+            menuai,
             Platform.BINARY_SENSOR,
             DOMAIN,
             {CONF_ZONES: zones, CONF_OUTPUTS: outputs},
@@ -138,9 +138,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         )
     )
 
-    hass.async_create_task(
+    menuai.async_create_task(
         async_load_platform(
-            hass,
+            menuai,
             Platform.SWITCH,
             DOMAIN,
             {
@@ -153,26 +153,26 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     @callback
     def alarm_status_update_callback():
-        """Send status update received from alarm to Home Assistant."""
+        """Send status update received from alarm to MenuAI."""
         _LOGGER.debug("Sending request to update panel state")
-        async_dispatcher_send(hass, SIGNAL_PANEL_MESSAGE)
+        async_dispatcher_send(menuai, SIGNAL_PANEL_MESSAGE)
 
     @callback
     def zones_update_callback(status):
         """Update zone objects as per notification from the alarm."""
         _LOGGER.debug("Zones callback, status: %s", status)
-        async_dispatcher_send(hass, SIGNAL_ZONES_UPDATED, status[ZONES])
+        async_dispatcher_send(menuai, SIGNAL_ZONES_UPDATED, status[ZONES])
 
     @callback
     def outputs_update_callback(status):
         """Update zone objects as per notification from the alarm."""
         _LOGGER.debug("Outputs updated callback , status: %s", status)
-        async_dispatcher_send(hass, SIGNAL_OUTPUTS_UPDATED, status["outputs"])
+        async_dispatcher_send(menuai, SIGNAL_OUTPUTS_UPDATED, status["outputs"])
 
     # Create a task instead of adding a tracking job, since this task will
     # run until the connection to satel_integra is closed.
-    hass.loop.create_task(controller.keep_alive())
-    hass.loop.create_task(
+    menuai.loop.create_task(controller.keep_alive())
+    menuai.loop.create_task(
         controller.monitor_status(
             alarm_status_update_callback, zones_update_callback, outputs_update_callback
         )

@@ -13,24 +13,24 @@ from todoist_api_python.headers import create_headers
 from todoist_api_python.models import Due, Label, Task
 import voluptuous as vol
 
-from homeassistant.components.calendar import (
+from menuai.components.calendar import (
     PLATFORM_SCHEMA as CALENDAR_PLATFORM_SCHEMA,
     CalendarEntity,
     CalendarEvent,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_ID, CONF_NAME, CONF_TOKEN, EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import Event, HomeAssistant, ServiceCall, callback
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.entity_platform import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_ID, CONF_NAME, CONF_TOKEN, EVENT_menuai_STOP
+from menuai.core import Event, menuai, ServiceCall, callback
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     AddEntitiesCallback,
 )
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.util import dt as dt_util
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.helpers.update_coordinator import CoordinatorEntity
+from menuai.util import dt as dt_util
 
 from .const import (
     ALL_DAY,
@@ -116,12 +116,12 @@ SCAN_INTERVAL = timedelta(minutes=1)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Todoist calendar platform config entry."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = menuai.data[DOMAIN][entry.entry_id]
     projects = await coordinator.async_get_projects()
     labels = await coordinator.async_get_labels()
 
@@ -131,11 +131,11 @@ async def async_setup_entry(
         entities.append(TodoistProjectEntity(coordinator, project_data, labels))
 
     async_add_entities(entities)
-    async_register_services(hass, coordinator)
+    async_register_services(menuai, coordinator)
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -147,13 +147,13 @@ async def async_setup_platform(
     project_id_lookup = {}
 
     api = TodoistAPIAsync(token)
-    coordinator = TodoistCoordinator(hass, _LOGGER, None, SCAN_INTERVAL, api, token)
+    coordinator = TodoistCoordinator(menuai, _LOGGER, None, SCAN_INTERVAL, api, token)
     await coordinator.async_refresh()
 
     async def _shutdown_coordinator(_: Event) -> None:
         await coordinator.async_shutdown()
 
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _shutdown_coordinator)
+    menuai.bus.async_listen_once(EVENT_menuai_STOP, _shutdown_coordinator)
 
     # Setup devices:
     # Grab all projects.
@@ -205,21 +205,21 @@ async def async_setup_platform(
 
     async_add_entities(project_devices, update_before_add=True)
 
-    async_register_services(hass, coordinator)
+    async_register_services(menuai, coordinator)
 
 
 def async_register_services(  # noqa: C901
-    hass: HomeAssistant, coordinator: TodoistCoordinator
+    menuai: menuai, coordinator: TodoistCoordinator
 ) -> None:
     """Register services."""
 
-    if hass.services.has_service(DOMAIN, SERVICE_NEW_TASK):
+    if menuai.services.has_service(DOMAIN, SERVICE_NEW_TASK):
         return
 
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
 
     async def handle_new_task(call: ServiceCall) -> None:  # noqa: C901
-        """Call when a user creates a new Todoist Task from Home Assistant."""
+        """Call when a user creates a new Todoist Task from MenuAI."""
         project_name = call.data[PROJECT_NAME]
         projects = await coordinator.async_get_projects()
         project_id: str | None = None
@@ -352,7 +352,7 @@ def async_register_services(  # noqa: C901
 
         _LOGGER.debug("Created Todoist task: %s", call.data[CONTENT])
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_NEW_TASK, handle_new_task, schema=NEW_TASK_SERVICE_SCHEMA
     )
 
@@ -408,7 +408,7 @@ class TodoistProjectEntity(CoordinatorEntity[TodoistCoordinator], CalendarEntity
 
     async def async_get_events(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         start_date: datetime,
         end_date: datetime,
     ) -> list[CalendarEvent]:

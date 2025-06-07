@@ -4,29 +4,29 @@ from unittest.mock import AsyncMock, patch
 
 from anthemav.device_error import DeviceError
 
-from homeassistant.components.anthemav.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.anthemav.const import DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
 
 async def test_form_with_valid_connection(
-    hass: HomeAssistant, mock_connection_create: AsyncMock, mock_anthemav: AsyncMock
+    menuai: menuai, mock_connection_create: AsyncMock, mock_anthemav: AsyncMock
 ) -> None:
     """Test we get the form."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] is None
 
     with patch(
-        "homeassistant.components.anthemav.async_setup_entry",
+        "menuai.components.anthemav.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "host": "1.1.1.1",
@@ -34,7 +34,7 @@ async def test_form_with_valid_connection(
             },
         )
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "Anthem AV"
@@ -47,9 +47,9 @@ async def test_form_with_valid_connection(
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_form_device_info_error(hass: HomeAssistant) -> None:
+async def test_form_device_info_error(menuai: menuai) -> None:
     """Test we handle DeviceError from library."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
@@ -57,7 +57,7 @@ async def test_form_device_info_error(hass: HomeAssistant) -> None:
         "anthemav.Connection.create",
         side_effect=DeviceError,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "host": "1.1.1.1",
@@ -65,15 +65,15 @@ async def test_form_device_info_error(hass: HomeAssistant) -> None:
             },
         )
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["errors"] == {"base": "cannot_receive_deviceinfo"}
 
 
-async def test_form_cannot_connect(hass: HomeAssistant) -> None:
+async def test_form_cannot_connect(menuai: menuai) -> None:
     """Test we handle cannot connect error."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
@@ -81,7 +81,7 @@ async def test_form_cannot_connect(hass: HomeAssistant) -> None:
         "anthemav.Connection.create",
         side_effect=OSError,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "host": "1.1.1.1",
@@ -89,14 +89,14 @@ async def test_form_cannot_connect(hass: HomeAssistant) -> None:
             },
         )
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["errors"] == {"base": "cannot_connect"}
 
 
 async def test_device_already_configured(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_connection_create: AsyncMock,
     mock_anthemav: AsyncMock,
     mock_config_entry: MockConfigEntry,
@@ -107,8 +107,8 @@ async def test_device_already_configured(
         "port": 14999,
     }
 
-    mock_config_entry.add_to_hass(hass)
-    result = await hass.config_entries.flow.async_init(
+    mock_config_entry.add_to_menuai(menuai)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}, data=config
     )
 

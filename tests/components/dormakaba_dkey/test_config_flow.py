@@ -7,32 +7,32 @@ from py_dormakaba_dkey import errors as dkey_errors
 from py_dormakaba_dkey.models import AssociationData
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.dormakaba_dkey.const import DOMAIN
-from homeassistant.config_entries import SOURCE_IGNORE
-from homeassistant.const import CONF_ADDRESS
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResult, FlowResultType
+from menuai import config_entries
+from menuai.components.dormakaba_dkey.const import DOMAIN
+from menuai.config_entries import SOURCE_IGNORE
+from menuai.const import CONF_ADDRESS
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResult, FlowResultType
 
 from . import DKEY_DISCOVERY_INFO, NOT_DKEY_DISCOVERY_INFO
 
 from tests.common import MockConfigEntry
 
 
-async def test_user_step_success(hass: HomeAssistant) -> None:
+async def test_user_step_success(menuai: menuai) -> None:
     """Test user step success path."""
     with patch(
-        "homeassistant.components.dormakaba_dkey.config_flow.async_discovered_service_info",
+        "menuai.components.dormakaba_dkey.config_flow.async_discovered_service_info",
         return_value=[NOT_DKEY_DISCOVERY_INFO, DKEY_DISCOVERY_INFO],
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_ADDRESS: DKEY_DISCOVERY_INFO.address,
@@ -42,23 +42,23 @@ async def test_user_step_success(hass: HomeAssistant) -> None:
     assert result["step_id"] == "associate"
     assert result["errors"] is None
 
-    await _test_common_success(hass, result)
+    await _test_common_success(menuai, result)
 
 
-async def test_user_step_no_devices_found(hass: HomeAssistant) -> None:
+async def test_user_step_no_devices_found(menuai: menuai) -> None:
     """Test user step with no devices found."""
     with patch(
-        "homeassistant.components.dormakaba_dkey.config_flow.async_discovered_service_info",
+        "menuai.components.dormakaba_dkey.config_flow.async_discovered_service_info",
         return_value=[NOT_DKEY_DISCOVERY_INFO],
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "no_devices_found"
 
 
-async def test_user_step_no_new_devices_found(hass: HomeAssistant) -> None:
+async def test_user_step_no_new_devices_found(menuai: menuai) -> None:
     """Test user step with only existing devices found."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -67,25 +67,25 @@ async def test_user_step_no_new_devices_found(hass: HomeAssistant) -> None:
         },
         unique_id=DKEY_DISCOVERY_INFO.address,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     with patch(
-        "homeassistant.components.dormakaba_dkey.config_flow.async_discovered_service_info",
+        "menuai.components.dormakaba_dkey.config_flow.async_discovered_service_info",
         return_value=[DKEY_DISCOVERY_INFO],
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "no_devices_found"
 
 
-async def test_user_step_device_added_between_steps_1(hass: HomeAssistant) -> None:
+async def test_user_step_device_added_between_steps_1(menuai: menuai) -> None:
     """Test the device gets added via another flow between steps."""
     with patch(
-        "homeassistant.components.dormakaba_dkey.config_flow.async_discovered_service_info",
+        "menuai.components.dormakaba_dkey.config_flow.async_discovered_service_info",
         return_value=[DKEY_DISCOVERY_INFO],
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_USER},
         )
@@ -96,9 +96,9 @@ async def test_user_step_device_added_between_steps_1(hass: HomeAssistant) -> No
         domain=DOMAIN,
         unique_id=DKEY_DISCOVERY_INFO.address,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={"address": DKEY_DISCOVERY_INFO.address},
     )
@@ -107,10 +107,10 @@ async def test_user_step_device_added_between_steps_1(hass: HomeAssistant) -> No
 
 
 async def test_async_step_user_takes_precedence_over_discovery(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test manual setup takes precedence over discovery."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_BLUETOOTH},
         data=DKEY_DISCOVERY_INFO,
@@ -119,16 +119,16 @@ async def test_async_step_user_takes_precedence_over_discovery(
     assert result["step_id"] == "bluetooth_confirm"
 
     with patch(
-        "homeassistant.components.dormakaba_dkey.config_flow.async_discovered_service_info",
+        "menuai.components.dormakaba_dkey.config_flow.async_discovered_service_info",
         return_value=[DKEY_DISCOVERY_INFO],
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_USER},
         )
         assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_ADDRESS: DKEY_DISCOVERY_INFO.address,
@@ -138,34 +138,34 @@ async def test_async_step_user_takes_precedence_over_discovery(
     assert result["step_id"] == "associate"
     assert result["errors"] is None
 
-    await _test_common_success(hass, result)
+    await _test_common_success(menuai, result)
 
     # Verify the discovery flow was aborted
-    assert not hass.config_entries.flow.async_progress(DOMAIN)
+    assert not menuai.config_entries.flow.async_progress(DOMAIN)
 
 
-async def test_user_setup_removes_ignored_entry(hass: HomeAssistant) -> None:
+async def test_user_setup_removes_ignored_entry(menuai: menuai) -> None:
     """Test the user initiated form can replace an ignored device."""
     ignored_entry = MockConfigEntry(
         domain=DOMAIN,
         unique_id=DKEY_DISCOVERY_INFO.address,
         source=SOURCE_IGNORE,
     )
-    ignored_entry.add_to_hass(hass)
-    assert hass.config_entries.async_entries(DOMAIN) == [ignored_entry]
+    ignored_entry.add_to_menuai(menuai)
+    assert menuai.config_entries.async_entries(DOMAIN) == [ignored_entry]
 
     with patch(
-        "homeassistant.components.dormakaba_dkey.config_flow.async_discovered_service_info",
+        "menuai.components.dormakaba_dkey.config_flow.async_discovered_service_info",
         return_value=[NOT_DKEY_DISCOVERY_INFO, DKEY_DISCOVERY_INFO],
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_ADDRESS: DKEY_DISCOVERY_INFO.address,
@@ -175,15 +175,15 @@ async def test_user_setup_removes_ignored_entry(hass: HomeAssistant) -> None:
     assert result["step_id"] == "associate"
     assert result["errors"] is None
 
-    await _test_common_success(hass, result)
+    await _test_common_success(menuai, result)
 
     # Check the ignored entry is removed
-    assert ignored_entry not in hass.config_entries.async_entries(DOMAIN)
+    assert ignored_entry not in menuai.config_entries.async_entries(DOMAIN)
 
 
-async def test_bluetooth_step_success(hass: HomeAssistant) -> None:
+async def test_bluetooth_step_success(menuai: menuai) -> None:
     """Test bluetooth step success path."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_BLUETOOTH},
         data=DKEY_DISCOVERY_INFO,
@@ -192,28 +192,28 @@ async def test_bluetooth_step_success(hass: HomeAssistant) -> None:
     assert result["step_id"] == "bluetooth_confirm"
     assert result["errors"] is None
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "associate"
     assert result["errors"] is None
 
-    await _test_common_success(hass, result)
+    await _test_common_success(menuai, result)
 
 
-async def _test_common_success(hass: HomeAssistant, result: FlowResult) -> None:
+async def _test_common_success(menuai: menuai, result: FlowResult) -> None:
     """Test bluetooth and user flow success paths."""
 
     with (
         patch(
-            "homeassistant.components.dormakaba_dkey.config_flow.DKEYLock.associate",
+            "menuai.components.dormakaba_dkey.config_flow.DKEYLock.associate",
             return_value=AssociationData(b"1234", b"AABBCCDD"),
         ) as mock_associate,
         patch(
-            "homeassistant.components.dormakaba_dkey.async_setup_entry",
+            "menuai.components.dormakaba_dkey.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], {"activation_code": "1234-1234"}
         )
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -228,12 +228,12 @@ async def _test_common_success(hass: HomeAssistant, result: FlowResult) -> None:
     mock_associate.assert_awaited_once_with("1234-1234")
 
 
-async def test_bluetooth_step_already_configured(hass: HomeAssistant) -> None:
+async def test_bluetooth_step_already_configured(menuai: menuai) -> None:
     """Test bluetooth step success path."""
     entry = MockConfigEntry(domain=DOMAIN, unique_id=DKEY_DISCOVERY_INFO.address)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_BLUETOOTH},
         data=DKEY_DISCOVERY_INFO,
@@ -242,9 +242,9 @@ async def test_bluetooth_step_already_configured(hass: HomeAssistant) -> None:
     assert result["reason"] == "already_configured"
 
 
-async def test_bluetooth_step_already_in_progress(hass: HomeAssistant) -> None:
+async def test_bluetooth_step_already_in_progress(menuai: menuai) -> None:
     """Test we can't start a flow for the same device twice."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_BLUETOOTH},
         data=DKEY_DISCOVERY_INFO,
@@ -252,7 +252,7 @@ async def test_bluetooth_step_already_in_progress(hass: HomeAssistant) -> None:
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "bluetooth_confirm"
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_BLUETOOTH},
         data=DKEY_DISCOVERY_INFO,
@@ -268,9 +268,9 @@ async def test_bluetooth_step_already_in_progress(hass: HomeAssistant) -> None:
         (Exception, "unknown"),
     ],
 )
-async def test_bluetooth_step_cannot_connect(hass: HomeAssistant, exc, error) -> None:
+async def test_bluetooth_step_cannot_connect(menuai: menuai, exc, error) -> None:
     """Test bluetooth step and we cannot connect."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_BLUETOOTH},
         data=DKEY_DISCOVERY_INFO,
@@ -279,21 +279,21 @@ async def test_bluetooth_step_cannot_connect(hass: HomeAssistant, exc, error) ->
     assert result["step_id"] == "bluetooth_confirm"
     assert result["errors"] is None
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "bluetooth_confirm"
     assert result["errors"] is None
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "associate"
     assert result["errors"] is None
 
     with patch(
-        "homeassistant.components.dormakaba_dkey.config_flow.DKEYLock.associate",
+        "menuai.components.dormakaba_dkey.config_flow.DKEYLock.associate",
         side_effect=exc,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], {"activation_code": "1234-1234"}
         )
     assert result["type"] is FlowResultType.ABORT
@@ -307,9 +307,9 @@ async def test_bluetooth_step_cannot_connect(hass: HomeAssistant, exc, error) ->
         (dkey_errors.WrongActivationCode, "wrong_code"),
     ],
 )
-async def test_bluetooth_step_cannot_associate(hass: HomeAssistant, exc, error) -> None:
+async def test_bluetooth_step_cannot_associate(menuai: menuai, exc, error) -> None:
     """Test bluetooth step and we cannot associate."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_BLUETOOTH},
         data=DKEY_DISCOVERY_INFO,
@@ -318,21 +318,21 @@ async def test_bluetooth_step_cannot_associate(hass: HomeAssistant, exc, error) 
     assert result["step_id"] == "bluetooth_confirm"
     assert result["errors"] is None
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "bluetooth_confirm"
     assert result["errors"] is None
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "associate"
     assert result["errors"] is None
 
     with patch(
-        "homeassistant.components.dormakaba_dkey.config_flow.DKEYLock.associate",
+        "menuai.components.dormakaba_dkey.config_flow.DKEYLock.associate",
         side_effect=exc,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], {"activation_code": "1234-1234"}
         )
     assert result["type"] is FlowResultType.FORM
@@ -340,41 +340,41 @@ async def test_bluetooth_step_cannot_associate(hass: HomeAssistant, exc, error) 
     assert result["errors"] == {"base": error}
 
 
-async def test_reauth(hass: HomeAssistant) -> None:
+async def test_reauth(menuai: menuai) -> None:
     """Test reauthentication."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         unique_id=DKEY_DISCOVERY_INFO.address,
         data={"address": DKEY_DISCOVERY_INFO.address},
     )
-    entry.add_to_hass(hass)
-    result = await entry.start_reauth_flow(hass)
+    entry.add_to_menuai(menuai)
+    result = await entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
     with patch(
-        "homeassistant.components.dormakaba_dkey.config_flow.async_last_service_info",
+        "menuai.components.dormakaba_dkey.config_flow.async_last_service_info",
         return_value=None,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
     assert result["errors"] == {"base": "no_longer_in_range"}
 
     with patch(
-        "homeassistant.components.dormakaba_dkey.config_flow.async_last_service_info",
+        "menuai.components.dormakaba_dkey.config_flow.async_last_service_info",
         return_value=DKEY_DISCOVERY_INFO,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "associate"
@@ -382,15 +382,15 @@ async def test_reauth(hass: HomeAssistant) -> None:
 
     with (
         patch(
-            "homeassistant.components.dormakaba_dkey.config_flow.DKEYLock.associate",
+            "menuai.components.dormakaba_dkey.config_flow.DKEYLock.associate",
             return_value=AssociationData(b"1234", b"AABBCCDD"),
         ) as mock_associate,
         patch(
-            "homeassistant.components.dormakaba_dkey.async_setup_entry",
+            "menuai.components.dormakaba_dkey.async_setup_entry",
             return_value=True,
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], {"activation_code": "1234-1234"}
         )
     assert result["type"] is FlowResultType.ABORT

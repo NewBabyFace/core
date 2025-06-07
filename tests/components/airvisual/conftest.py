@@ -6,14 +6,14 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from homeassistant.components.airvisual import (
+from menuai.components.airvisual import (
     CONF_CITY,
     CONF_INTEGRATION_TYPE,
     DOMAIN,
     INTEGRATION_TYPE_GEOGRAPHY_COORDS,
 )
-from homeassistant.components.airvisual.config_flow import async_get_geography_id
-from homeassistant.const import (
+from menuai.components.airvisual.config_flow import async_get_geography_id
+from menuai.const import (
     CONF_API_KEY,
     CONF_COUNTRY,
     CONF_LATITUDE,
@@ -21,8 +21,8 @@ from homeassistant.const import (
     CONF_SHOW_ON_MAP,
     CONF_STATE,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.util.json import JsonObjectType
+from menuai.core import menuai
+from menuai.util.json import JsonObjectType
 
 from tests.common import MockConfigEntry, load_json_object_fixture
 
@@ -69,7 +69,7 @@ def cloud_api_fixture(data_cloud: JsonObjectType) -> Mock:
 
 @pytest.fixture(name="config_entry")
 def config_entry_fixture(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: dict[str, Any],
     config_entry_version: int,
     integration_type: str,
@@ -83,7 +83,7 @@ def config_entry_fixture(
         options={CONF_SHOW_ON_MAP: True},
         version=config_entry_version,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     return entry
 
 
@@ -124,19 +124,19 @@ async def mock_pyairvisual_fixture(
     """Define a fixture to patch pyairvisual."""
     with (
         patch(
-            "homeassistant.components.airvisual.CloudAPI",
+            "menuai.components.airvisual.CloudAPI",
             return_value=cloud_api,
         ),
         patch(
-            "homeassistant.components.airvisual.config_flow.CloudAPI",
+            "menuai.components.airvisual.config_flow.CloudAPI",
             return_value=cloud_api,
         ),
         patch(
-            "homeassistant.components.airvisual_pro.NodeSamba",
+            "menuai.components.airvisual_pro.NodeSamba",
             return_value=node_samba,
         ),
         patch(
-            "homeassistant.components.airvisual_pro.config_flow.NodeSamba",
+            "menuai.components.airvisual_pro.config_flow.NodeSamba",
             return_value=node_samba,
         ),
     ):
@@ -155,17 +155,17 @@ def node_samba_fixture(data_pro: JsonObjectType) -> Mock:
 
 @pytest.fixture(name="setup_config_entry")
 async def setup_config_entry_fixture(
-    hass: HomeAssistant, config_entry: MockConfigEntry, mock_pyairvisual: None
+    menuai: menuai, config_entry: MockConfigEntry, mock_pyairvisual: None
 ) -> None:
     """Define a fixture to set up airvisual."""
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
 
 @pytest.fixture
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.airvisual.async_setup_entry", return_value=True
+        "menuai.components.airvisual.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry

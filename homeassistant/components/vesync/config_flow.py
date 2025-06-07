@@ -6,10 +6,10 @@ from typing import Any
 from pyvesync import VeSync
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import callback
-from homeassistant.helpers import config_validation as cv
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import callback
+from menuai.helpers import config_validation as cv
 
 from .const import DOMAIN
 
@@ -50,7 +50,7 @@ class VeSyncFlowHandler(ConfigFlow, domain=DOMAIN):
         password = user_input[CONF_PASSWORD]
 
         manager = VeSync(username, password)
-        login = await self.hass.async_add_executor_job(manager.login)
+        login = await self.menuai.async_add_executor_job(manager.login)
         if not login:
             return self._show_form(errors={"base": "invalid_auth"})
 
@@ -75,7 +75,7 @@ class VeSyncFlowHandler(ConfigFlow, domain=DOMAIN):
             password = user_input[CONF_PASSWORD]
 
             manager = VeSync(username, password)
-            login = await self.hass.async_add_executor_job(manager.login)
+            login = await self.menuai.async_add_executor_job(manager.login)
             if login:
                 return self.async_update_reload_and_abort(
                     self._get_reauth_entry(),

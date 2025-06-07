@@ -9,9 +9,9 @@ from typing import Any
 from meater import AuthenticationError, MeaterApi, ServiceUnavailableError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.helpers import aiohttp_client
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.helpers import aiohttp_client
 
 from .const import DOMAIN
 
@@ -76,7 +76,7 @@ class MeaterConfigFlow(ConfigFlow, domain=DOMAIN):
     async def _try_connect_meater(
         self, step_id, placeholders: dict[str, str] | None, username: str, password: str
     ) -> ConfigFlowResult:
-        session = aiohttp_client.async_get_clientsession(self.hass)
+        session = aiohttp_client.async_get_clientsession(self.menuai)
 
         api = MeaterApi(session)
         errors = {}
@@ -94,8 +94,8 @@ class MeaterConfigFlow(ConfigFlow, domain=DOMAIN):
             data = {"username": username, "password": password}
             existing_entry = await self.async_set_unique_id(username.lower())
             if existing_entry:
-                self.hass.config_entries.async_update_entry(existing_entry, data=data)
-                await self.hass.config_entries.async_reload(existing_entry.entry_id)
+                self.menuai.config_entries.async_update_entry(existing_entry, data=data)
+                await self.menuai.config_entries.async_reload(existing_entry.entry_id)
                 return self.async_abort(reason="reauth_successful")
             return self.async_create_entry(
                 title="Meater",

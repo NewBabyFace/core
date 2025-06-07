@@ -6,9 +6,9 @@ from typing import Any
 
 from aiogithubapi import GitHubAPI, GitHubException
 
-from homeassistant.const import CONF_ACCESS_TOKEN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import (
+from menuai.const import CONF_ACCESS_TOKEN
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import (
     SERVER_SOFTWARE,
     async_get_clientsession,
 )
@@ -17,14 +17,14 @@ from .coordinator import GithubConfigEntry
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: GithubConfigEntry,
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     data = {"options": {**config_entry.options}}
     client = GitHubAPI(
         token=config_entry.data[CONF_ACCESS_TOKEN],
-        session=async_get_clientsession(hass),
+        session=async_get_clientsession(menuai),
         client_name=SERVER_SOFTWARE,
     )
 

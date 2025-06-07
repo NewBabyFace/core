@@ -18,18 +18,18 @@ from aiohomeconnect.model import (
 from aiohomeconnect.model.error import HomeConnectApiError, HomeConnectError
 import pytest
 
-from homeassistant.components.home_connect.const import (
+from menuai.components.home_connect.const import (
     BSH_AMBIENT_LIGHT_COLOR_CUSTOM_COLOR,
     DOMAIN,
 )
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_HS_COLOR,
     ATTR_RGB_COLOR,
     DOMAIN as LIGHT_DOMAIN,
 )
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntryState
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
@@ -38,9 +38,9 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from tests.common import MockConfigEntry
 
@@ -55,7 +55,7 @@ def platforms() -> list[str]:
 
 @pytest.mark.parametrize("appliance", ["Hood"], indirect=True)
 async def test_paired_depaired_devices_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     client: MagicMock,
@@ -63,7 +63,7 @@ async def test_paired_depaired_devices_flow(
     integration_setup: Callable[[MagicMock], Awaitable[bool]],
     appliance: HomeAppliance,
 ) -> None:
-    """Test that removed devices are correctly removed from and added to hass on API events."""
+    """Test that removed devices are correctly removed from and added to menuai on API events."""
     assert await integration_setup(client)
     assert config_entry.state is ConfigEntryState.LOADED
 
@@ -81,7 +81,7 @@ async def test_paired_depaired_devices_flow(
             )
         ]
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     device = device_registry.async_get_device(identifiers={(DOMAIN, appliance.ha_id)})
     assert not device
@@ -98,7 +98,7 @@ async def test_paired_depaired_devices_flow(
             )
         ]
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert device_registry.async_get_device(identifiers={(DOMAIN, appliance.ha_id)})
     for entity_entry in entity_entries:
@@ -116,7 +116,7 @@ async def test_paired_depaired_devices_flow(
     indirect=["appliance"],
 )
 async def test_connected_devices(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     client: MagicMock,
@@ -162,7 +162,7 @@ async def test_connected_devices(
             )
         ]
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     for key in keys_to_check:
         assert entity_registry.async_get_entity_id(
@@ -174,7 +174,7 @@ async def test_connected_devices(
 
 @pytest.mark.parametrize("appliance", ["Hood"], indirect=True)
 async def test_light_availability(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
     config_entry: MockConfigEntry,
     integration_setup: Callable[[MagicMock], Awaitable[bool]],
@@ -188,7 +188,7 @@ async def test_light_availability(
     assert config_entry.state is ConfigEntryState.LOADED
 
     for entity_id in entity_ids:
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert state.state != STATE_UNAVAILABLE
 
@@ -201,10 +201,10 @@ async def test_light_availability(
             )
         ]
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     for entity_id in entity_ids:
-        assert hass.states.is_state(entity_id, STATE_UNAVAILABLE)
+        assert menuai.states.is_state(entity_id, STATE_UNAVAILABLE)
 
     await client.add_events(
         [
@@ -215,10 +215,10 @@ async def test_light_availability(
             )
         ]
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     for entity_id in entity_ids:
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert state.state != STATE_UNAVAILABLE
 
@@ -338,7 +338,7 @@ async def test_light_availability(
     indirect=["appliance"],
 )
 async def test_light_functionality(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
     config_entry: MockConfigEntry,
     integration_setup: Callable[[MagicMock], Awaitable[bool]],
@@ -355,19 +355,19 @@ async def test_light_functionality(
 
     service_data = exprected_attributes.copy()
     service_data[ATTR_ENTITY_ID] = entity_id
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         service,
         {key: value for key, value in service_data.items() if value is not None},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     client.set_setting.assert_has_calls(
         [
             call(appliance.ha_id, setting_key=setting_key, value=value)
             for setting_key, value in set_settings_args.items()
         ]
     )
-    entity_state = hass.states.get(entity_id)
+    entity_state = menuai.states.get(entity_id)
     assert entity_state is not None
     assert entity_state.state == state
     for key, value in exprected_attributes.items():
@@ -392,7 +392,7 @@ async def test_light_functionality(
     indirect=["appliance"],
 )
 async def test_light_color_different_than_custom(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
     config_entry: MockConfigEntry,
     integration_setup: Callable[[MagicMock], Awaitable[bool]],
@@ -403,7 +403,7 @@ async def test_light_color_different_than_custom(
     """Test that light color attributes are not set if color is different than custom."""
     assert await integration_setup(client)
     assert config_entry.state is ConfigEntryState.LOADED
-    await hass.services.async_call(
+    await menuai.services.async_call(
         LIGHT_DOMAIN,
         SERVICE_TURN_ON,
         {
@@ -411,8 +411,8 @@ async def test_light_color_different_than_custom(
             ATTR_ENTITY_ID: entity_id,
         },
     )
-    await hass.async_block_till_done()
-    entity_state = hass.states.get(entity_id)
+    await menuai.async_block_till_done()
+    entity_state = menuai.states.get(entity_id)
     assert entity_state is not None
     assert entity_state.state == STATE_ON
     assert entity_state.attributes[ATTR_RGB_COLOR] is not None
@@ -439,9 +439,9 @@ async def test_light_color_different_than_custom(
             )
         ]
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    entity_state = hass.states.get(entity_id)
+    entity_state = menuai.states.get(entity_id)
     assert entity_state is not None
     assert entity_state.state == STATE_ON
     assert entity_state.attributes[ATTR_RGB_COLOR] is None
@@ -555,7 +555,7 @@ async def test_light_color_different_than_custom(
     ],
 )
 async def test_light_exception_handling(
-    hass: HomeAssistant,
+    menuai: menuai,
     client_with_exception: MagicMock,
     config_entry: MockConfigEntry,
     integration_setup: Callable[[MagicMock], Awaitable[bool]],
@@ -589,8 +589,8 @@ async def test_light_exception_handling(
         await client_with_exception.set_setting()
 
     service_data[ATTR_ENTITY_ID] = entity_id
-    with pytest.raises(HomeAssistantError, match=exception_match):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError, match=exception_match):
+        await menuai.services.async_call(
             LIGHT_DOMAIN, service, service_data, blocking=True
         )
     assert client_with_exception.set_setting.call_count == len(attr_side_effect)

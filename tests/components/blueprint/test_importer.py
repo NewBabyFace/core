@@ -6,9 +6,9 @@ from pathlib import Path
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.blueprint import DOMAIN, importer
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.components.blueprint import DOMAIN, importer
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from tests.common import async_load_fixture, load_fixture
 from tests.test_util.aiohttp import AiohttpClientMocker
@@ -68,7 +68,7 @@ def test_extract_blueprint_from_community_topic(
 
 def test_extract_blueprint_from_community_topic_invalid_yaml() -> None:
     """Test extracting blueprint with invalid YAML."""
-    with pytest.raises(HomeAssistantError):
+    with pytest.raises(menuaiError):
         importer._extract_blueprint_from_community_topic(
             "http://example.com",
             {
@@ -83,7 +83,7 @@ def test_extract_blueprint_from_community_topic_invalid_yaml() -> None:
 
 def test_extract_blueprint_from_community_topic_wrong_lang() -> None:
     """Test extracting blueprint with invalid YAML."""
-    with pytest.raises(importer.HomeAssistantError):
+    with pytest.raises(importer.menuaiError):
         assert importer._extract_blueprint_from_community_topic(
             "http://example.com",
             {
@@ -97,7 +97,7 @@ def test_extract_blueprint_from_community_topic_wrong_lang() -> None:
 
 
 async def test_fetch_blueprint_from_community_url(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     community_post,
     snapshot: SnapshotAssertion,
@@ -107,7 +107,7 @@ async def test_fetch_blueprint_from_community_url(
         "https://community.home-assistant.io/t/test-topic/123.json", text=community_post
     )
     imported_blueprint = await importer.fetch_blueprint_from_url(
-        hass, "https://community.home-assistant.io/t/test-topic/123/2"
+        menuai, "https://community.home-assistant.io/t/test-topic/123/2"
     )
     assert isinstance(imported_blueprint, importer.ImportedBlueprint)
     assert imported_blueprint.blueprint.domain == "automation"
@@ -131,17 +131,17 @@ async def test_fetch_blueprint_from_community_url(
     ],
 )
 async def test_fetch_blueprint_from_github_url(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker, url: str
+    menuai: menuai, aioclient_mock: AiohttpClientMocker, url: str
 ) -> None:
     """Test fetching blueprint from url."""
     aioclient_mock.get(
         "https://raw.githubusercontent.com/balloob/home-assistant-config/main/blueprints/automation/motion_light.yaml",
         text=Path(
-            hass.config.path("blueprints/automation/test_event_service.yaml")
+            menuai.config.path("blueprints/automation/test_event_service.yaml")
         ).read_text(encoding="utf8"),
     )
 
-    imported_blueprint = await importer.fetch_blueprint_from_url(hass, url)
+    imported_blueprint = await importer.fetch_blueprint_from_url(menuai, url)
     assert isinstance(imported_blueprint, importer.ImportedBlueprint)
     assert imported_blueprint.blueprint.domain == "automation"
     assert imported_blueprint.blueprint.inputs == {
@@ -154,18 +154,18 @@ async def test_fetch_blueprint_from_github_url(
 
 
 async def test_fetch_blueprint_from_github_gist_url(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test fetching blueprint from url."""
     aioclient_mock.get(
         "https://api.github.com/gists/e717ce85dd0d2f1bdcdfc884ea25a344",
-        text=await async_load_fixture(hass, "github_gist.json", DOMAIN),
+        text=await async_load_fixture(menuai, "github_gist.json", DOMAIN),
     )
 
     url = "https://gist.github.com/balloob/e717ce85dd0d2f1bdcdfc884ea25a344"
-    imported_blueprint = await importer.fetch_blueprint_from_url(hass, url)
+    imported_blueprint = await importer.fetch_blueprint_from_url(menuai, url)
     assert isinstance(imported_blueprint, importer.ImportedBlueprint)
     assert imported_blueprint.blueprint.domain == "automation"
     assert imported_blueprint.blueprint.inputs == snapshot
@@ -174,37 +174,37 @@ async def test_fetch_blueprint_from_github_gist_url(
 
 
 async def test_fetch_blueprint_from_website_url(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test fetching blueprint from url."""
     aioclient_mock.get(
         "https://www.home-assistant.io/blueprints/awesome.yaml",
         text=Path(
-            hass.config.path("blueprints/automation/test_event_service.yaml")
+            menuai.config.path("blueprints/automation/test_event_service.yaml")
         ).read_text(encoding="utf8"),
     )
 
     url = "https://www.home-assistant.io/blueprints/awesome.yaml"
-    imported_blueprint = await importer.fetch_blueprint_from_url(hass, url)
+    imported_blueprint = await importer.fetch_blueprint_from_url(menuai, url)
     assert isinstance(imported_blueprint, importer.ImportedBlueprint)
     assert imported_blueprint.blueprint.domain == "automation"
-    assert imported_blueprint.suggested_filename == "homeassistant/awesome"
+    assert imported_blueprint.suggested_filename == "menuai/awesome"
     assert imported_blueprint.blueprint.metadata["source_url"] == url
 
 
 async def test_fetch_blueprint_from_generic_url(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test fetching blueprint from url."""
     aioclient_mock.get(
         "https://example.org/path/someblueprint.yaml",
         text=Path(
-            hass.config.path("blueprints/automation/test_event_service.yaml")
+            menuai.config.path("blueprints/automation/test_event_service.yaml")
         ).read_text(encoding="utf8"),
     )
 
     url = "https://example.org/path/someblueprint.yaml"
-    imported_blueprint = await importer.fetch_blueprint_from_url(hass, url)
+    imported_blueprint = await importer.fetch_blueprint_from_url(menuai, url)
     assert isinstance(imported_blueprint, importer.ImportedBlueprint)
     assert imported_blueprint.blueprint.domain == "automation"
     assert imported_blueprint.suggested_filename == "example.org/someblueprint"

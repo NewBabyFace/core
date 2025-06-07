@@ -1,7 +1,7 @@
 """Repair implementations."""
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import issue_registry as ir
+from menuai.core import menuai
+from menuai.helpers import issue_registry as ir
 
 from .const import (
     CONST_OVERLAY_MANUAL,
@@ -12,7 +12,7 @@ from .const import (
 
 
 def manage_water_heater_fallback_issue(
-    hass: HomeAssistant,
+    menuai: menuai,
     water_heater_names: list[str],
     integration_overlay_fallback: str | None,
 ) -> None:
@@ -23,7 +23,7 @@ def manage_water_heater_fallback_issue(
     ):
         for water_heater_name in water_heater_names:
             ir.async_create_issue(
-                hass=hass,
+                menuai=menuai,
                 domain=DOMAIN,
                 issue_id=f"{WATER_HEATER_FALLBACK_REPAIR}_{water_heater_name}",
                 is_fixable=False,

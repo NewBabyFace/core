@@ -12,23 +12,23 @@ from google.genai.types import File, FileState
 from requests.exceptions import Timeout
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_API_KEY, Platform
-from homeassistant.core import (
-    HomeAssistant,
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_API_KEY, Platform
+from menuai.core import (
+    menuai,
     ServiceCall,
     ServiceResponse,
     SupportsResponse,
 )
-from homeassistant.exceptions import (
+from menuai.exceptions import (
     ConfigEntryAuthFailed,
     ConfigEntryError,
     ConfigEntryNotReady,
-    HomeAssistantError,
+    menuaiError,
 )
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.issue_registry import IssueSeverity, async_create_issue
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers import config_validation as cv
+from menuai.helpers.issue_registry import IssueSeverity, async_create_issue
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     CONF_CHAT_MODEL,
@@ -50,7 +50,7 @@ PLATFORMS = (Platform.CONVERSATION,)
 type GoogleGenerativeAIConfigEntry = ConfigEntry[Client]
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up Google Generative AI Conversation."""
 
     async def generate_content(call: ServiceCall) -> ServiceResponse:
@@ -59,7 +59,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         if call.data[CONF_IMAGE_FILENAME]:
             # Deprecated in 2025.3, to remove in 2025.9
             async_create_issue(
-                hass,
+                menuai,
                 DOMAIN,
                 "deprecated_image_filename_parameter",
                 breaks_in_ha_version="2025.9.0",
@@ -71,7 +71,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         prompt_parts = [call.data[CONF_PROMPT]]
 
         config_entry: GoogleGenerativeAIConfigEntry = (
-            hass.config_entries.async_loaded_entries(DOMAIN)[0]
+            menuai.config_entries.async_loaded_entries(DOMAIN)[0]
         )
 
         client = config_entry.runtime_data
@@ -80,14 +80,14 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             image_filenames = call.data[CONF_IMAGE_FILENAME]
             filenames = call.data[CONF_FILENAMES]
             for filename in set(image_filenames + filenames):
-                if not hass.config.is_allowed_path(filename):
-                    raise HomeAssistantError(
+                if not menuai.config.is_allowed_path(filename):
+                    raise menuaiError(
                         f"Cannot read `{filename}`, no access to path; "
                         "`allowlist_external_dirs` may need to be adjusted in "
                         "`configuration.yaml`"
                     )
                 if not Path(filename).exists():
-                    raise HomeAssistantError(f"`{filename}` does not exist")
+                    raise menuaiError(f"`{filename}` does not exist")
                 mimetype = mimetypes.guess_type(filename)[0]
                 with open(filename, "rb") as file:
                     uploaded_file = client.files.upload(
@@ -115,11 +115,11 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                 await asyncio.sleep(FILE_POLLING_INTERVAL_SECONDS)
 
             if uploaded_file.state == FileState.FAILED:
-                raise HomeAssistantError(
+                raise menuaiError(
                     f"File `{uploaded_file.name}` processing failed, reason: {uploaded_file.error.message}"
                 )
 
-        await hass.async_add_executor_job(append_files_to_prompt)
+        await menuai.async_add_executor_job(append_files_to_prompt)
 
         tasks = [
             asyncio.create_task(wait_for_file_processing(part))
@@ -137,19 +137,19 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             APIError,
             ValueError,
         ) as err:
-            raise HomeAssistantError(f"Error generating content: {err}") from err
+            raise menuaiError(f"Error generating content: {err}") from err
 
         if response.prompt_feedback:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Error generating content due to content violations, reason: {response.prompt_feedback.block_reason_message}"
             )
 
         if not response.candidates[0].content.parts:
-            raise HomeAssistantError("Unknown error generating content")
+            raise menuaiError("Unknown error generating content")
 
         return {"text": response.text}
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_GENERATE_CONTENT,
         generate_content,
@@ -170,7 +170,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: GoogleGenerativeAIConfigEntry
+    menuai: menuai, entry: GoogleGenerativeAIConfigEntry
 ) -> bool:
     """Set up Google Generative AI Conversation from a config entry."""
 
@@ -179,7 +179,7 @@ async def async_setup_entry(
         def _init_client() -> Client:
             return Client(api_key=entry.data[CONF_API_KEY])
 
-        client = await hass.async_add_executor_job(_init_client)
+        client = await menuai.async_add_executor_job(_init_client)
         await client.aio.models.get(
             model=entry.options.get(CONF_CHAT_MODEL, RECOMMENDED_CHAT_MODEL),
             config={"http_options": {"timeout": TIMEOUT_MILLIS}},
@@ -193,16 +193,16 @@ async def async_setup_entry(
     else:
         entry.runtime_data = client
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, entry: GoogleGenerativeAIConfigEntry
+    menuai: menuai, entry: GoogleGenerativeAIConfigEntry
 ) -> bool:
     """Unload GoogleGenerativeAI."""
-    if not await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+    if not await menuai.config_entries.async_unload_platforms(entry, PLATFORMS):
         return False
 
     return True

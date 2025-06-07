@@ -7,7 +7,7 @@ from aioasuswrt.connection import TelnetConnection
 from pyasuswrt.asuswrt import AsusWrtError, AsusWrtHttp
 import pytest
 
-from homeassistant.components.asuswrt.const import PROTOCOL_HTTP, PROTOCOL_SSH
+from menuai.components.asuswrt.const import PROTOCOL_HTTP, PROTOCOL_SSH
 
 from .common import ASUSWRT_BASE, MOCK_MACS, ROUTER_MAC_ADDR, new_device
 

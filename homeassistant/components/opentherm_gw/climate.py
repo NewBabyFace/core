@@ -9,7 +9,7 @@ from typing import Any
 
 from pyotgw import vars as gw_vars
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     PRESET_AWAY,
     PRESET_NONE,
     ClimateEntity,
@@ -18,11 +18,11 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_TEMPERATURE, CONF_ID, UnitOfTemperature
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_TEMPERATURE, CONF_ID, UnitOfTemperature
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import OpenThermGatewayHub
 from .const import (
@@ -48,7 +48,7 @@ class OpenThermClimateEntityDescription(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -56,7 +56,7 @@ async def async_setup_entry(
     ents = []
     ents.append(
         OpenThermClimate(
-            hass.data[DATA_OPENTHERM_GW][DATA_GATEWAYS][config_entry.data[CONF_ID]],
+            menuai.data[DATA_OPENTHERM_GW][DATA_GATEWAYS][config_entry.data[CONF_ID]],
             OpenThermClimateEntityDescription(
                 key="thermostat_entity",
                 device_description=THERMOSTAT_DEVICE_DESCRIPTION,
@@ -109,12 +109,12 @@ class OpenThermClimate(OpenThermStatusEntity, ClimateEntity):
         self._attr_target_temperature_step = entry.options[CONF_SET_PRECISION]
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Connect to the OpenTherm Gateway device."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, self._gateway.options_update_signal, self.update_options
+                self.menuai, self._gateway.options_update_signal, self.update_options
             )
         )
 

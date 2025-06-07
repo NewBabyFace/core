@@ -13,19 +13,19 @@ from aemet_opendata.const import (
     AOD_WIND_SPEED_MAX,
 )
 
-from homeassistant.components.weather import (
+from menuai.components.weather import (
     Forecast,
     SingleCoordinatorWeatherEntity,
     WeatherEntityFeature,
 )
-from homeassistant.const import (
+from menuai.const import (
     UnitOfPrecipitationDepth,
     UnitOfPressure,
     UnitOfSpeed,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import CONDITIONS_MAP
 from .coordinator import AemetConfigEntry, WeatherUpdateCoordinator
@@ -33,7 +33,7 @@ from .entity import AemetEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: AemetConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

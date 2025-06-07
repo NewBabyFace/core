@@ -6,20 +6,20 @@ from unittest.mock import Mock, call, patch
 
 import pytest
 
-from homeassistant.components.google_assistant import helpers
-from homeassistant.components.google_assistant.const import (
+from menuai.components.google_assistant import helpers
+from menuai.components.google_assistant.const import (
     EVENT_COMMAND_RECEIVED,
     NOT_EXPOSE_LOCAL,
     SOURCE_CLOUD,
     SOURCE_LOCAL,
     STORE_GOOGLE_LOCAL_WEBHOOK_ID,
 )
-from homeassistant.components.matter import MatterDeviceInfo
-from homeassistant.core import HomeAssistant, State
-from homeassistant.core_config import async_process_ha_core_config
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.components.matter import MatterDeviceInfo
+from menuai.core import menuai, State
+from menuai.core_config import async_process_ha_core_config
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from . import MockConfig
 
@@ -27,25 +27,25 @@ from tests.common import MockConfigEntry, async_capture_events, async_mock_servi
 from tests.typing import ClientSessionGenerator
 
 
-async def test_google_entity_sync_serialize_with_local_sdk(hass: HomeAssistant) -> None:
+async def test_google_entity_sync_serialize_with_local_sdk(menuai: menuai) -> None:
     """Test sync serialize attributes of a GoogleEntity."""
-    hass.states.async_set("light.ceiling_lights", "off")
-    hass.config.api = Mock(port=1234, local_ip="192.168.123.123", use_ssl=False)
+    menuai.states.async_set("light.ceiling_lights", "off")
+    menuai.config.api = Mock(port=1234, local_ip="192.168.123.123", use_ssl=False)
     await async_process_ha_core_config(
-        hass,
+        menuai,
         {"external_url": "https://hostname:1234"},
     )
 
-    hass.http = Mock(server_port=1234)
+    menuai.http = Mock(server_port=1234)
     config = MockConfig(
-        hass=hass,
+        menuai=menuai,
         agent_user_ids={
             "mock-user-id": {
                 STORE_GOOGLE_LOCAL_WEBHOOK_ID: "mock-webhook-id",
             },
         },
     )
-    entity = helpers.GoogleEntity(hass, config, hass.states.get("light.ceiling_lights"))
+    entity = helpers.GoogleEntity(menuai, config, menuai.states.get("light.ceiling_lights"))
 
     serialized = entity.sync_serialize(None, "mock-uuid")
     assert "otherDeviceIds" not in serialized
@@ -63,7 +63,7 @@ async def test_google_entity_sync_serialize_with_local_sdk(hass: HomeAssistant) 
 
     for device_type in NOT_EXPOSE_LOCAL:
         with patch(
-            "homeassistant.components.google_assistant.helpers.get_google_type",
+            "menuai.components.google_assistant.helpers.get_google_type",
             return_value=device_type,
         ):
             serialized = entity.sync_serialize(None, "mock-uuid")
@@ -72,13 +72,13 @@ async def test_google_entity_sync_serialize_with_local_sdk(hass: HomeAssistant) 
 
 
 async def test_google_entity_sync_serialize_with_matter(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test sync serialize attributes of a GoogleEntity that is also a Matter device."""
     entry = MockConfigEntry()
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     device = device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         manufacturer="Someone",
@@ -94,10 +94,10 @@ async def test_google_entity_sync_serialize_with_matter(
         suggested_object_id="ceiling_lights",
         device_id=device.id,
     )
-    hass.states.async_set("light.ceiling_lights", "off")
+    menuai.states.async_set("light.ceiling_lights", "off")
 
     entity = helpers.GoogleEntity(
-        hass, MockConfig(hass=hass), hass.states.get("light.ceiling_lights")
+        menuai, MockConfig(menuai=menuai), menuai.states.get("light.ceiling_lights")
     )
 
     serialized = entity.sync_serialize(None, "mock-uuid")
@@ -105,10 +105,10 @@ async def test_google_entity_sync_serialize_with_matter(
     assert "matterOriginalVendorId" not in serialized
     assert "matterOriginalProductId" not in serialized
 
-    hass.config.components.add("matter")
+    menuai.config.components.add("matter")
 
     with patch(
-        "homeassistant.components.matter.get_matter_device_info",
+        "menuai.components.matter.get_matter_device_info",
         return_value=MatterDeviceInfo(
             unique_id="mock-unique-id",
             vendor_id="mock-vendor-id",
@@ -123,17 +123,17 @@ async def test_google_entity_sync_serialize_with_matter(
 
 
 async def test_config_local_sdk(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test the local SDK."""
-    command_events = async_capture_events(hass, EVENT_COMMAND_RECEIVED)
-    turn_on_calls = async_mock_service(hass, "light", "turn_on")
-    hass.states.async_set("light.ceiling_lights", "off")
+    command_events = async_capture_events(menuai, EVENT_COMMAND_RECEIVED)
+    turn_on_calls = async_mock_service(menuai, "light", "turn_on")
+    menuai.states.async_set("light.ceiling_lights", "off")
 
-    assert await async_setup_component(hass, "webhook", {})
+    assert await async_setup_component(menuai, "webhook", {})
 
     config = MockConfig(
-        hass=hass,
+        menuai=menuai,
         agent_user_ids={
             "mock-user-id": {
                 STORE_GOOGLE_LOCAL_WEBHOOK_ID: "mock-webhook-id",
@@ -141,7 +141,7 @@ async def test_config_local_sdk(
         },
     )
 
-    client = await hass_client()
+    client = await menuai_client()
 
     assert config.is_local_connected is False
     config.async_enable_local_sdk()
@@ -176,7 +176,7 @@ async def test_config_local_sdk(
 
     assert config.is_local_connected is True
     with patch(
-        "homeassistant.components.google_assistant.helpers.utcnow",
+        "menuai.components.google_assistant.helpers.utcnow",
         return_value=dt_util.utcnow() + timedelta(seconds=90),
     ):
         assert config.is_local_connected is False
@@ -200,13 +200,13 @@ async def test_config_local_sdk(
 
 
 async def test_config_local_sdk_if_disabled(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test the local SDK."""
-    assert await async_setup_component(hass, "webhook", {})
+    assert await async_setup_component(menuai, "webhook", {})
 
     config = MockConfig(
-        hass=hass,
+        menuai=menuai,
         agent_user_ids={
             "mock-user-id": {
                 STORE_GOOGLE_LOCAL_WEBHOOK_ID: "mock-webhook-id",
@@ -216,7 +216,7 @@ async def test_config_local_sdk_if_disabled(
     )
     assert not config.is_local_sdk_active
 
-    client = await hass_client()
+    client = await menuai_client()
 
     config.async_enable_local_sdk()
     assert config.is_local_sdk_active
@@ -241,14 +241,14 @@ async def test_config_local_sdk_if_disabled(
 
 
 async def test_config_local_sdk_if_ssl_enabled(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test the local SDK is not enabled when SSL is enabled."""
-    assert await async_setup_component(hass, "webhook", {})
-    hass.config.api.use_ssl = True
+    assert await async_setup_component(menuai, "webhook", {})
+    menuai.config.api.use_ssl = True
 
     config = MockConfig(
-        hass=hass,
+        menuai=menuai,
         agent_user_ids={
             "mock-user-id": {
                 STORE_GOOGLE_LOCAL_WEBHOOK_ID: "mock-webhook-id",
@@ -258,7 +258,7 @@ async def test_config_local_sdk_if_ssl_enabled(
     )
     assert not config.is_local_sdk_active
 
-    client = await hass_client()
+    client = await menuai_client()
 
     config.async_enable_local_sdk()
     assert not config.is_local_sdk_active
@@ -365,16 +365,16 @@ def test_request_data() -> None:
 
 
 async def test_config_local_sdk_allow_min_version(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test the local SDK."""
     version = str(helpers.LOCAL_SDK_MIN_VERSION)
-    assert await async_setup_component(hass, "webhook", {})
+    assert await async_setup_component(menuai, "webhook", {})
 
     config = MockConfig(
-        hass=hass,
+        menuai=menuai,
         agent_user_ids={
             "mock-user-id": {
                 STORE_GOOGLE_LOCAL_WEBHOOK_ID: "mock-webhook-id",
@@ -382,7 +382,7 @@ async def test_config_local_sdk_allow_min_version(
         },
     )
 
-    client = await hass_client()
+    client = await menuai_client()
 
     assert config._local_sdk_version_warn is False
     config.async_enable_local_sdk()
@@ -409,16 +409,16 @@ async def test_config_local_sdk_allow_min_version(
 
 @pytest.mark.parametrize("version", [None, "2.1.4"])
 async def test_config_local_sdk_warn_version(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     caplog: pytest.LogCaptureFixture,
     version,
 ) -> None:
     """Test the local SDK."""
-    assert await async_setup_component(hass, "webhook", {})
+    assert await async_setup_component(menuai, "webhook", {})
 
     config = MockConfig(
-        hass=hass,
+        menuai=menuai,
         agent_user_ids={
             "mock-user-id": {
                 STORE_GOOGLE_LOCAL_WEBHOOK_ID: "mock-webhook-id",
@@ -426,7 +426,7 @@ async def test_config_local_sdk_warn_version(
         },
     )
 
-    client = await hass_client()
+    client = await menuai_client()
 
     assert config._local_sdk_version_warn is False
     config.async_enable_local_sdk()
@@ -455,15 +455,15 @@ async def test_config_local_sdk_warn_version(
     ) in caplog.text
 
 
-def test_async_get_entities_cached(hass: HomeAssistant) -> None:
+def test_async_get_entities_cached(menuai: menuai) -> None:
     """Test async_get_entities is cached."""
     config = MockConfig()
 
-    hass.states.async_set("light.ceiling_lights", "off")
-    hass.states.async_set("light.bed_light", "off")
-    hass.states.async_set("not_supported.not_supported", "off")
+    menuai.states.async_set("light.ceiling_lights", "off")
+    menuai.states.async_set("light.bed_light", "off")
+    menuai.states.async_set("not_supported.not_supported", "off")
 
-    google_entities = helpers.async_get_entities(hass, config)
+    google_entities = helpers.async_get_entities(menuai, config)
     assert len(google_entities) == 2
     assert config.is_supported_cache == {
         "light.bed_light": (None, True),
@@ -472,10 +472,10 @@ def test_async_get_entities_cached(hass: HomeAssistant) -> None:
     }
 
     with patch(
-        "homeassistant.components.google_assistant.helpers.GoogleEntity.traits",
+        "menuai.components.google_assistant.helpers.GoogleEntity.traits",
         return_value=RuntimeError("Should not be called"),
     ):
-        google_entities = helpers.async_get_entities(hass, config)
+        google_entities = helpers.async_get_entities(menuai, config)
 
     assert len(google_entities) == 2
     assert config.is_supported_cache == {
@@ -484,8 +484,8 @@ def test_async_get_entities_cached(hass: HomeAssistant) -> None:
         "not_supported.not_supported": (None, False),
     }
 
-    hass.states.async_set("light.new", "on")
-    google_entities = helpers.async_get_entities(hass, config)
+    menuai.states.async_set("light.new", "on")
+    google_entities = helpers.async_get_entities(menuai, config)
 
     assert len(google_entities) == 3
     assert config.is_supported_cache == {
@@ -495,8 +495,8 @@ def test_async_get_entities_cached(hass: HomeAssistant) -> None:
         "not_supported.not_supported": (None, False),
     }
 
-    hass.states.async_set("light.new", "on", {"supported_features": 1})
-    google_entities = helpers.async_get_entities(hass, config)
+    menuai.states.async_set("light.new", "on", {"supported_features": 1})
+    google_entities = helpers.async_get_entities(menuai, config)
 
     assert len(google_entities) == 3
     assert config.is_supported_cache == {

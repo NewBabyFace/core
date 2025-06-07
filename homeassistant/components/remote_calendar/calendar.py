@@ -5,11 +5,11 @@ import logging
 
 from ical.event import Event
 
-from homeassistant.components.calendar import CalendarEntity, CalendarEvent
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.util import dt as dt_util
+from menuai.components.calendar import CalendarEntity, CalendarEvent
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
+from menuai.util import dt as dt_util
 
 from . import RemoteCalendarConfigEntry
 from .const import CONF_CALENDAR_NAME
@@ -22,7 +22,7 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: RemoteCalendarConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -56,7 +56,7 @@ class RemoteCalendarEntity(
         return self._event
 
     async def async_get_events(
-        self, hass: HomeAssistant, start_date: datetime, end_date: datetime
+        self, menuai: menuai, start_date: datetime, end_date: datetime
     ) -> list[CalendarEvent]:
         """Get all events in a specific time frame."""
 
@@ -68,7 +68,7 @@ class RemoteCalendarEntity(
             )
             return [_get_calendar_event(event) for event in events]
 
-        return await self.hass.async_add_executor_job(events_in_range)
+        return await self.menuai.async_add_executor_job(events_in_range)
 
     async def async_update(self) -> None:
         """Refresh the timeline.
@@ -87,7 +87,7 @@ class RemoteCalendarEntity(
                 return _get_calendar_event(event)
             return None
 
-        self._event = await self.hass.async_add_executor_job(next_timeline_event)
+        self._event = await self.menuai.async_add_executor_job(next_timeline_event)
 
 
 def _get_calendar_event(event: Event) -> CalendarEvent:

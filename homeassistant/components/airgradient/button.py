@@ -5,15 +5,15 @@ from dataclasses import dataclass
 
 from airgradient import AirGradientClient, ConfigurationControl
 
-from homeassistant.components.button import (
+from menuai.components.button import (
     DOMAIN as BUTTON_DOMAIN,
     ButtonEntity,
     ButtonEntityDescription,
 )
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import EntityCategory
+from menuai.core import menuai, callback
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import AirGradientConfigEntry
 from .const import DOMAIN
@@ -45,7 +45,7 @@ LED_BAR_TEST = AirGradientButtonEntityDescription(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: AirGradientConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -74,7 +74,7 @@ async def async_setup_entry(
             is not ConfigurationControl.LOCAL
             and added_entities
         ):
-            entity_registry = er.async_get(hass)
+            entity_registry = er.async_get(menuai)
             for entity_description in (CO2_CALIBRATION, LED_BAR_TEST):
                 unique_id = f"{coordinator.serial_number}-{entity_description.key}"
                 if entity_id := entity_registry.async_get_entity_id(

@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from pyrainbird.async_client import AsyncRainbirdController
 from pyrainbird.data import ModelAndVersion
 
-from homeassistant.config_entries import ConfigEntry
+from menuai.config_entries import ConfigEntry
 
 if TYPE_CHECKING:
     from .coordinator import (

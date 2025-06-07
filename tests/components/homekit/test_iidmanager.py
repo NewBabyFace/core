@@ -3,25 +3,25 @@
 from typing import Any
 from uuid import UUID
 
-from homeassistant.components.homekit.const import DOMAIN
-from homeassistant.components.homekit.iidmanager import (
+from menuai.components.homekit.const import DOMAIN
+from menuai.components.homekit.iidmanager import (
     AccessoryIIDStorage,
     get_iid_storage_filename_for_entry_id,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.util.json import json_loads
-from homeassistant.util.uuid import random_uuid_hex
+from menuai.core import menuai
+from menuai.util.json import json_loads
+from menuai.util.uuid import random_uuid_hex
 
 from tests.common import MockConfigEntry, async_load_fixture
 
 
 async def test_iid_generation_and_restore(
-    hass: HomeAssistant, iid_storage, hass_storage: dict[str, Any]
+    menuai: menuai, iid_storage, menuai_storage: dict[str, Any]
 ) -> None:
     """Test generating iids and restoring them from storage."""
     entry = MockConfigEntry(domain=DOMAIN)
 
-    iid_storage = AccessoryIIDStorage(hass, entry.entry_id)
+    iid_storage = AccessoryIIDStorage(menuai, entry.entry_id)
     await iid_storage.async_initialize()
 
     random_service_uuid = UUID(random_uuid_hex())
@@ -83,7 +83,7 @@ async def test_iid_generation_and_restore(
     )
     await iid_storage.async_save()
 
-    iid_storage2 = AccessoryIIDStorage(hass, entry.entry_id)
+    iid_storage2 = AccessoryIIDStorage(menuai, entry.entry_id)
     await iid_storage2.async_initialize()
     iid3 = iid_storage2.get_or_allocate_iid(
         1, random_service_uuid, None, random_characteristic_uuid, None
@@ -92,12 +92,12 @@ async def test_iid_generation_and_restore(
 
 
 async def test_iid_storage_filename(
-    hass: HomeAssistant, iid_storage, hass_storage: dict[str, Any]
+    menuai: menuai, iid_storage, menuai_storage: dict[str, Any]
 ) -> None:
     """Test iid storage uses the expected filename."""
     entry = MockConfigEntry(domain=DOMAIN)
 
-    iid_storage = AccessoryIIDStorage(hass, entry.entry_id)
+    iid_storage = AccessoryIIDStorage(menuai, entry.entry_id)
     await iid_storage.async_initialize()
     assert iid_storage.store.path.endswith(
         get_iid_storage_filename_for_entry_id(entry.entry_id)
@@ -105,18 +105,18 @@ async def test_iid_storage_filename(
 
 
 async def test_iid_migration_to_v2(
-    hass: HomeAssistant, iid_storage, hass_storage: dict[str, Any]
+    menuai: menuai, iid_storage, menuai_storage: dict[str, Any]
 ) -> None:
     """Test iid storage migration."""
-    v1_iids = json_loads(await async_load_fixture(hass, "iids_v1", DOMAIN))
-    v2_iids = json_loads(await async_load_fixture(hass, "iids_v2", DOMAIN))
-    hass_storage["homekit.v1.iids"] = v1_iids
-    hass_storage["homekit.v2.iids"] = v2_iids
+    v1_iids = json_loads(await async_load_fixture(menuai, "iids_v1", DOMAIN))
+    v2_iids = json_loads(await async_load_fixture(menuai, "iids_v2", DOMAIN))
+    menuai_storage["homekit.v1.iids"] = v1_iids
+    menuai_storage["homekit.v2.iids"] = v2_iids
 
-    iid_storage_v2 = AccessoryIIDStorage(hass, "v1")
+    iid_storage_v2 = AccessoryIIDStorage(menuai, "v1")
     await iid_storage_v2.async_initialize()
 
-    iid_storage_v1 = AccessoryIIDStorage(hass, "v2")
+    iid_storage_v1 = AccessoryIIDStorage(menuai, "v2")
     await iid_storage_v1.async_initialize()
 
     assert iid_storage_v1.allocations == iid_storage_v2.allocations
@@ -129,22 +129,22 @@ async def test_iid_migration_to_v2(
 
 
 async def test_iid_migration_to_v2_with_underscore(
-    hass: HomeAssistant, iid_storage, hass_storage: dict[str, Any]
+    menuai: menuai, iid_storage, menuai_storage: dict[str, Any]
 ) -> None:
     """Test iid storage migration with underscore."""
     v1_iids = json_loads(
-        await async_load_fixture(hass, "iids_v1_with_underscore", DOMAIN)
+        await async_load_fixture(menuai, "iids_v1_with_underscore", DOMAIN)
     )
     v2_iids = json_loads(
-        await async_load_fixture(hass, "iids_v2_with_underscore", DOMAIN)
+        await async_load_fixture(menuai, "iids_v2_with_underscore", DOMAIN)
     )
-    hass_storage["homekit.v1_with_underscore.iids"] = v1_iids
-    hass_storage["homekit.v2_with_underscore.iids"] = v2_iids
+    menuai_storage["homekit.v1_with_underscore.iids"] = v1_iids
+    menuai_storage["homekit.v2_with_underscore.iids"] = v2_iids
 
-    iid_storage_v2 = AccessoryIIDStorage(hass, "v1_with_underscore")
+    iid_storage_v2 = AccessoryIIDStorage(menuai, "v1_with_underscore")
     await iid_storage_v2.async_initialize()
 
-    iid_storage_v1 = AccessoryIIDStorage(hass, "v2_with_underscore")
+    iid_storage_v1 = AccessoryIIDStorage(menuai, "v2_with_underscore")
     await iid_storage_v1.async_initialize()
 
     assert iid_storage_v1.allocations == iid_storage_v2.allocations
@@ -157,12 +157,12 @@ async def test_iid_migration_to_v2_with_underscore(
 
 
 async def test_iid_generation_and_restore_v2(
-    hass: HomeAssistant, iid_storage, hass_storage: dict[str, Any]
+    menuai: menuai, iid_storage, menuai_storage: dict[str, Any]
 ) -> None:
     """Test generating iids and restoring them from storage."""
     entry = MockConfigEntry(domain=DOMAIN)
 
-    iid_storage = AccessoryIIDStorage(hass, entry.entry_id)
+    iid_storage = AccessoryIIDStorage(menuai, entry.entry_id)
     await iid_storage.async_initialize()
     not_accessory_info_service_iid = iid_storage.get_or_allocate_iid(
         1, "000000AA-0000-1000-8000-0026BB765291", None, None, None

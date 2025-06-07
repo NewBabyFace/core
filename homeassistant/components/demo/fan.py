@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.fan import FanEntity, FanEntityFeature
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.fan import FanEntity, FanEntityFeature
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 PRESET_MODE_AUTO = "auto"
 PRESET_MODE_SMART = "smart"
@@ -27,7 +27,7 @@ LIMITED_SUPPORT = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -35,7 +35,7 @@ async def async_setup_entry(
     async_add_entities(
         [
             DemoPercentageFan(
-                hass,
+                menuai,
                 "fan1",
                 "Living Room Fan",
                 FULL_SUPPORT,
@@ -47,14 +47,14 @@ async def async_setup_entry(
                 ],
             ),
             DemoPercentageFan(
-                hass,
+                menuai,
                 "fan2",
                 "Ceiling Fan",
                 LIMITED_SUPPORT,
                 None,
             ),
             AsyncDemoPercentageFan(
-                hass,
+                menuai,
                 "fan3",
                 "Percentage Full Fan",
                 FULL_SUPPORT,
@@ -66,7 +66,7 @@ async def async_setup_entry(
                 ],
             ),
             DemoPercentageFan(
-                hass,
+                menuai,
                 "fan4",
                 "Percentage Limited Fan",
                 LIMITED_SUPPORT,
@@ -78,7 +78,7 @@ async def async_setup_entry(
                 ],
             ),
             AsyncDemoPercentageFan(
-                hass,
+                menuai,
                 "fan5",
                 "Preset Only Limited Fan",
                 FanEntityFeature.PRESET_MODE
@@ -103,14 +103,14 @@ class BaseDemoFan(FanEntity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         unique_id: str,
         name: str,
         supported_features: FanEntityFeature,
         preset_modes: list[str] | None,
     ) -> None:
         """Initialize the entity."""
-        self.hass = hass
+        self.menuai = menuai
         self._unique_id = unique_id
         self._attr_supported_features = supported_features
         self._percentage: int | None = None

@@ -1,26 +1,26 @@
-"""Test the Home Assistant SkyConnect config flow."""
+"""Test the MenuAI SkyConnect config flow."""
 
 from unittest.mock import Mock, patch
 
 import pytest
 
-from homeassistant.components.hassio import AddonInfo, AddonState
-from homeassistant.components.homeassistant_hardware.firmware_config_flow import (
+from menuai.components.menuaiio import AddonInfo, AddonState
+from menuai.components.menuai_hardware.firmware_config_flow import (
     STEP_PICK_FIRMWARE_ZIGBEE,
 )
-from homeassistant.components.homeassistant_hardware.silabs_multiprotocol_addon import (
+from menuai.components.menuai_hardware.silabs_multiprotocol_addon import (
     CONF_DISABLE_MULTI_PAN,
     get_flasher_addon_manager,
     get_multiprotocol_addon_manager,
 )
-from homeassistant.components.homeassistant_hardware.util import (
+from menuai.components.menuai_hardware.util import (
     ApplicationType,
     FirmwareInfo,
 )
-from homeassistant.components.homeassistant_sky_connect.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.usb import UsbServiceInfo
+from menuai.components.menuai_sky_connect.const import DOMAIN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.usb import UsbServiceInfo
 
 from .common import USB_DATA_SKY, USB_DATA_ZBT1
 
@@ -30,15 +30,15 @@ from tests.common import MockConfigEntry
 @pytest.mark.parametrize(
     ("usb_data", "model"),
     [
-        (USB_DATA_SKY, "Home Assistant SkyConnect"),
-        (USB_DATA_ZBT1, "Home Assistant Connect ZBT-1"),
+        (USB_DATA_SKY, "MenuAI SkyConnect"),
+        (USB_DATA_ZBT1, "MenuAI Connect ZBT-1"),
     ],
 )
 async def test_config_flow(
-    usb_data: UsbServiceInfo, model: str, hass: HomeAssistant
+    usb_data: UsbServiceInfo, model: str, menuai: menuai
 ) -> None:
     """Test the config flow for SkyConnect."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": "usb"}, data=usb_data
     )
 
@@ -51,12 +51,12 @@ async def test_config_flow(
 
     with (
         patch(
-            "homeassistant.components.homeassistant_hardware.firmware_config_flow.BaseFirmwareConfigFlow.async_step_pick_firmware_zigbee",
+            "menuai.components.menuai_hardware.firmware_config_flow.BaseFirmwareConfigFlow.async_step_pick_firmware_zigbee",
             autospec=True,
             side_effect=mock_async_step_pick_firmware_zigbee,
         ),
         patch(
-            "homeassistant.components.homeassistant_hardware.firmware_config_flow.probe_silabs_firmware_info",
+            "menuai.components.menuai_hardware.firmware_config_flow.probe_silabs_firmware_info",
             return_value=FirmwareInfo(
                 device=usb_data.device,
                 firmware_type=ApplicationType.EZSP,
@@ -66,7 +66,7 @@ async def test_config_flow(
             ),
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={"next_step_id": STEP_PICK_FIRMWARE_ZIGBEE},
         )
@@ -87,7 +87,7 @@ async def test_config_flow(
     }
 
     # Ensure a ZHA discovery flow has been created
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
     zha_flow = flows[0]
     assert zha_flow["handler"] == "zha"
@@ -98,16 +98,16 @@ async def test_config_flow(
 @pytest.mark.parametrize(
     ("usb_data", "model"),
     [
-        (USB_DATA_SKY, "Home Assistant SkyConnect"),
-        (USB_DATA_ZBT1, "Home Assistant Connect ZBT-1"),
+        (USB_DATA_SKY, "MenuAI SkyConnect"),
+        (USB_DATA_ZBT1, "MenuAI Connect ZBT-1"),
     ],
 )
 async def test_options_flow(
-    usb_data: UsbServiceInfo, model: str, hass: HomeAssistant
+    usb_data: UsbServiceInfo, model: str, menuai: menuai
 ) -> None:
     """Test the options flow for SkyConnect."""
     config_entry = MockConfigEntry(
-        domain="homeassistant_sky_connect",
+        domain="menuai_sky_connect",
         data={
             "firmware": "spinel",
             "device": usb_data.device,
@@ -121,12 +121,12 @@ async def test_options_flow(
         version=1,
         minor_version=2,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
 
     # First step is confirmation
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "pick_firmware"
     assert result["description_placeholders"]["firmware_type"] == "spinel"
@@ -137,12 +137,12 @@ async def test_options_flow(
 
     with (
         patch(
-            "homeassistant.components.homeassistant_hardware.firmware_config_flow.BaseFirmwareOptionsFlow.async_step_pick_firmware_zigbee",
+            "menuai.components.menuai_hardware.firmware_config_flow.BaseFirmwareOptionsFlow.async_step_pick_firmware_zigbee",
             autospec=True,
             side_effect=mock_async_step_pick_firmware_zigbee,
         ),
         patch(
-            "homeassistant.components.homeassistant_hardware.firmware_config_flow.probe_silabs_firmware_info",
+            "menuai.components.menuai_hardware.firmware_config_flow.probe_silabs_firmware_info",
             return_value=FirmwareInfo(
                 device=usb_data.device,
                 firmware_type=ApplicationType.EZSP,
@@ -152,7 +152,7 @@ async def test_options_flow(
             ),
         ),
     ):
-        result = await hass.config_entries.options.async_configure(
+        result = await menuai.config_entries.options.async_configure(
             result["flow_id"],
             user_input={"next_step_id": STEP_PICK_FIRMWARE_ZIGBEE},
         )
@@ -177,16 +177,16 @@ async def test_options_flow(
 @pytest.mark.parametrize(
     ("usb_data", "model"),
     [
-        (USB_DATA_SKY, "Home Assistant SkyConnect"),
-        (USB_DATA_ZBT1, "Home Assistant Connect ZBT-1"),
+        (USB_DATA_SKY, "MenuAI SkyConnect"),
+        (USB_DATA_ZBT1, "MenuAI Connect ZBT-1"),
     ],
 )
 async def test_options_flow_multipan_uninstall(
-    usb_data: UsbServiceInfo, model: str, hass: HomeAssistant
+    usb_data: UsbServiceInfo, model: str, menuai: menuai
 ) -> None:
     """Test options flow for when multi-PAN firmware is installed."""
     config_entry = MockConfigEntry(
-        domain="homeassistant_sky_connect",
+        domain="menuai_sky_connect",
         data={
             "firmware": "cpc",
             "device": usb_data.device,
@@ -199,12 +199,12 @@ async def test_options_flow_multipan_uninstall(
         version=1,
         minor_version=2,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
 
     # Multi-PAN addon is running
-    mock_multipan_manager = Mock(spec_set=await get_multiprotocol_addon_manager(hass))
+    mock_multipan_manager = Mock(spec_set=await get_multiprotocol_addon_manager(menuai))
     mock_multipan_manager.async_get_addon_info.return_value = AddonInfo(
         available=True,
         hostname=None,
@@ -214,7 +214,7 @@ async def test_options_flow_multipan_uninstall(
         version="1.0.0",
     )
 
-    mock_flasher_manager = Mock(spec_set=get_flasher_addon_manager(hass))
+    mock_flasher_manager = Mock(spec_set=get_flasher_addon_manager(menuai))
     mock_flasher_manager.async_get_addon_info.return_value = AddonInfo(
         available=True,
         hostname=None,
@@ -226,40 +226,40 @@ async def test_options_flow_multipan_uninstall(
 
     with (
         patch(
-            "homeassistant.components.homeassistant_hardware.silabs_multiprotocol_addon.get_multiprotocol_addon_manager",
+            "menuai.components.menuai_hardware.silabs_multiprotocol_addon.get_multiprotocol_addon_manager",
             return_value=mock_multipan_manager,
         ),
         patch(
-            "homeassistant.components.homeassistant_hardware.silabs_multiprotocol_addon.get_flasher_addon_manager",
+            "menuai.components.menuai_hardware.silabs_multiprotocol_addon.get_flasher_addon_manager",
             return_value=mock_flasher_manager,
         ),
         patch(
-            "homeassistant.components.homeassistant_hardware.silabs_multiprotocol_addon.is_hassio",
+            "menuai.components.menuai_hardware.silabs_multiprotocol_addon.is_menuaiio",
             return_value=True,
         ),
     ):
-        result = await hass.config_entries.options.async_init(config_entry.entry_id)
+        result = await menuai.config_entries.options.async_init(config_entry.entry_id)
         assert result["type"] is FlowResultType.MENU
         assert result["step_id"] == "addon_menu"
         assert "uninstall_addon" in result["menu_options"]
 
         # Pick the uninstall option
-        result = await hass.config_entries.options.async_configure(
+        result = await menuai.config_entries.options.async_configure(
             result["flow_id"],
             user_input={"next_step_id": "uninstall_addon"},
         )
 
         # Check the box
-        result = await hass.config_entries.options.async_configure(
+        result = await menuai.config_entries.options.async_configure(
             result["flow_id"], user_input={CONF_DISABLE_MULTI_PAN: True}
         )
 
         # Finish the flow
-        result = await hass.config_entries.options.async_configure(result["flow_id"])
-        await hass.async_block_till_done(wait_background_tasks=True)
-        result = await hass.config_entries.options.async_configure(result["flow_id"])
-        await hass.async_block_till_done(wait_background_tasks=True)
-        result = await hass.config_entries.options.async_configure(result["flow_id"])
+        result = await menuai.config_entries.options.async_configure(result["flow_id"])
+        await menuai.async_block_till_done(wait_background_tasks=True)
+        result = await menuai.config_entries.options.async_configure(result["flow_id"])
+        await menuai.async_block_till_done(wait_background_tasks=True)
+        result = await menuai.config_entries.options.async_configure(result["flow_id"])
         assert result["type"] is FlowResultType.CREATE_ENTRY
 
     # We've reverted the firmware back to Zigbee

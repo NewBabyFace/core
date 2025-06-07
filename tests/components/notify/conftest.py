@@ -4,8 +4,8 @@ from collections.abc import Generator
 
 import pytest
 
-from homeassistant.config_entries import ConfigFlow
-from homeassistant.core import HomeAssistant
+from menuai.config_entries import ConfigFlow
+from menuai.core import menuai
 
 from tests.common import mock_config_flow, mock_platform
 
@@ -15,9 +15,9 @@ class MockFlow(ConfigFlow):
 
 
 @pytest.fixture
-def config_flow_fixture(hass: HomeAssistant) -> Generator[None]:
+def config_flow_fixture(menuai: menuai) -> Generator[None]:
     """Mock config flow."""
-    mock_platform(hass, "test.config_flow")
+    mock_platform(menuai, "test.config_flow")
 
     with mock_config_flow("test", MockFlow):
         yield

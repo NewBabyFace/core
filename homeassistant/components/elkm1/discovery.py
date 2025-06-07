@@ -8,10 +8,10 @@ import logging
 
 from elkm1_lib.discovery import AIOELKDiscovery, ElkSystem
 
-from homeassistant import config_entries
-from homeassistant.components import network
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr, discovery_flow
+from menuai import config_entries
+from menuai.components import network
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr, discovery_flow
 
 from .const import DISCOVER_SCAN_TIMEOUT, DOMAIN
 
@@ -24,14 +24,14 @@ def _short_mac(mac_address: str) -> str:
 
 @callback
 def async_update_entry_from_discovery(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: config_entries.ConfigEntry,
     device: ElkSystem,
 ) -> bool:
     """Update a config entry from a discovery."""
     if not entry.unique_id or ":" not in entry.unique_id:
         _LOGGER.debug("Adding unique id from discovery: %s", device)
-        return hass.config_entries.async_update_entry(
+        return menuai.config_entries.async_update_entry(
             entry, unique_id=dr.format_mac(device.mac_address)
         )
     _LOGGER.debug("Unique id is already present from discovery: %s", device)
@@ -39,7 +39,7 @@ def async_update_entry_from_discovery(
 
 
 async def async_discover_devices(
-    hass: HomeAssistant, timeout: int, address: str | None = None
+    menuai: menuai, timeout: int, address: str | None = None
 ) -> list[ElkSystem]:
     """Discover elkm1 devices."""
     if address:
@@ -48,7 +48,7 @@ async def async_discover_devices(
         targets = [
             str(broadcast_address)
             for broadcast_address in await network.async_get_ipv4_broadcast_addresses(
-                hass
+                menuai
             )
         ]
 
@@ -75,11 +75,11 @@ async def async_discover_devices(
     return list(combined_discoveries.values())
 
 
-async def async_discover_device(hass: HomeAssistant, host: str) -> ElkSystem | None:
+async def async_discover_device(menuai: menuai, host: str) -> ElkSystem | None:
     """Direct discovery at a single ip instead of broadcast."""
     # If we are missing the unique_id we should be able to fetch it
     # from the device by doing a directed discovery at the host only
-    for device in await async_discover_devices(hass, DISCOVER_SCAN_TIMEOUT, host):
+    for device in await async_discover_devices(menuai, DISCOVER_SCAN_TIMEOUT, host):
         if device.ip_address == host:
             return device
     return None
@@ -87,13 +87,13 @@ async def async_discover_device(hass: HomeAssistant, host: str) -> ElkSystem | N
 
 @callback
 def async_trigger_discovery(
-    hass: HomeAssistant,
+    menuai: menuai,
     discovered_devices: list[ElkSystem],
 ) -> None:
     """Trigger config flows for discovered devices."""
     for device in discovered_devices:
         discovery_flow.async_create_flow(
-            hass,
+            menuai,
             DOMAIN,
             context={"source": config_entries.SOURCE_INTEGRATION_DISCOVERY},
             data=asdict(device),

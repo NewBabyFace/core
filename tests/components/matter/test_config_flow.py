@@ -12,12 +12,12 @@ from aiohasupervisor.models import Discovery
 from matter_server.client.exceptions import CannotConnect, InvalidServerVersion
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.matter.const import ADDON_SLUG, DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.hassio import HassioServiceInfo
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai import config_entries
+from menuai.components.matter.const import ADDON_SLUG, DOMAIN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.menuaiio import menuaiioServiceInfo
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from tests.common import MockConfigEntry
 
@@ -63,7 +63,7 @@ ZEROCONF_INFO_UDP = ZeroconfServiceInfo(
 def setup_entry_fixture() -> Generator[AsyncMock]:
     """Mock entry setup."""
     with patch(
-        "homeassistant.components.matter.async_setup_entry", return_value=True
+        "menuai.components.matter.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -72,7 +72,7 @@ def setup_entry_fixture() -> Generator[AsyncMock]:
 def unload_entry_fixture() -> Generator[AsyncMock]:
     """Mock entry unload."""
     with patch(
-        "homeassistant.components.matter.async_unload_entry", return_value=True
+        "menuai.components.matter.async_unload_entry", return_value=True
     ) as mock_unload_entry:
         yield mock_unload_entry
 
@@ -81,7 +81,7 @@ def unload_entry_fixture() -> Generator[AsyncMock]:
 def client_connect_fixture() -> Generator[AsyncMock]:
     """Mock server version."""
     with patch(
-        "homeassistant.components.matter.config_flow.MatterClient.connect"
+        "menuai.components.matter.config_flow.MatterClient.connect"
     ) as client_connect:
         yield client_connect
 
@@ -90,9 +90,9 @@ def client_connect_fixture() -> Generator[AsyncMock]:
 def supervisor_fixture() -> Generator[MagicMock]:
     """Mock Supervisor."""
     with patch(
-        "homeassistant.components.matter.config_flow.is_hassio", return_value=True
-    ) as is_hassio:
-        yield is_hassio
+        "menuai.components.matter.config_flow.is_menuaiio", return_value=True
+    ) as is_menuaiio:
+        yield is_menuaiio
 
 
 @pytest.fixture(autouse=True)
@@ -104,40 +104,40 @@ def mock_get_addon_discovery_info(get_addon_discovery_info: AsyncMock) -> None:
 def addon_setup_time_fixture() -> Generator[int]:
     """Mock add-on setup sleep time."""
     with patch(
-        "homeassistant.components.matter.config_flow.ADDON_SETUP_TIMEOUT", new=0
+        "menuai.components.matter.config_flow.ADDON_SETUP_TIMEOUT", new=0
     ) as addon_setup_time:
         yield addon_setup_time
 
 
 @pytest.fixture(name="not_onboarded")
 def mock_onboarded_fixture() -> Generator[MagicMock]:
-    """Mock that Home Assistant is not yet onboarded."""
+    """Mock that MenuAI is not yet onboarded."""
     with patch(
-        "homeassistant.components.matter.config_flow.async_is_onboarded",
+        "menuai.components.matter.config_flow.async_is_onboarded",
         return_value=False,
     ) as mock_onboarded:
         yield mock_onboarded
 
 
 async def test_manual_create_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     client_connect: AsyncMock,
     setup_entry: AsyncMock,
 ) -> None:
     """Test user step create entry."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] is None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "url": "ws://localhost:5580/ws",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert client_connect.call_count == 1
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -159,18 +159,18 @@ async def test_manual_create_entry(
     ],
 )
 async def test_manual_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     client_connect: AsyncMock,
     error: str,
     side_effect: Exception,
 ) -> None:
     """Test user step cannot connect error."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     client_connect.side_effect = side_effect
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "url": "ws://localhost:5580/ws",
@@ -183,7 +183,7 @@ async def test_manual_errors(
 
 
 async def test_manual_already_configured(
-    hass: HomeAssistant,
+    menuai: menuai,
     client_connect: AsyncMock,
     setup_entry: AsyncMock,
 ) -> None:
@@ -191,22 +191,22 @@ async def test_manual_already_configured(
     entry = MockConfigEntry(
         domain=DOMAIN, data={"url": "ws://host1:5581/ws"}, title="Matter"
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] is None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "url": "ws://localhost:5580/ws",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert client_connect.call_count == 1
     assert result["type"] is FlowResultType.ABORT
@@ -220,13 +220,13 @@ async def test_manual_already_configured(
 
 @pytest.mark.parametrize("zeroconf_info", [ZEROCONF_INFO_TCP, ZEROCONF_INFO_UDP])
 async def test_zeroconf_discovery(
-    hass: HomeAssistant,
+    menuai: menuai,
     client_connect: AsyncMock,
     setup_entry: AsyncMock,
     zeroconf_info: ZeroconfServiceInfo,
 ) -> None:
     """Test flow started from Zeroconf discovery."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=zeroconf_info,
@@ -235,13 +235,13 @@ async def test_zeroconf_discovery(
     assert result["step_id"] == "manual"
     assert result["errors"] is None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "url": "ws://localhost:5580/ws",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert client_connect.call_count == 1
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -256,14 +256,14 @@ async def test_zeroconf_discovery(
 
 @pytest.mark.parametrize("zeroconf_info", [ZEROCONF_INFO_TCP, ZEROCONF_INFO_UDP])
 async def test_zeroconf_discovery_not_onboarded_not_supervisor(
-    hass: HomeAssistant,
+    menuai: menuai,
     client_connect: AsyncMock,
     setup_entry: AsyncMock,
     not_onboarded: MagicMock,
     zeroconf_info: ZeroconfServiceInfo,
 ) -> None:
     """Test flow started from Zeroconf discovery when not onboarded."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=zeroconf_info,
@@ -272,13 +272,13 @@ async def test_zeroconf_discovery_not_onboarded_not_supervisor(
     assert result["step_id"] == "manual"
     assert result["errors"] is None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "url": "ws://localhost:5580/ws",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert client_connect.call_count == 1
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -306,7 +306,7 @@ async def test_zeroconf_discovery_not_onboarded_not_supervisor(
     ],
 )
 async def test_zeroconf_not_onboarded_already_discovered(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor: MagicMock,
     addon_info: AsyncMock,
     addon_running: AsyncMock,
@@ -316,17 +316,17 @@ async def test_zeroconf_not_onboarded_already_discovered(
     zeroconf_info: ZeroconfServiceInfo,
 ) -> None:
     """Test flow Zeroconf discovery when not onboarded and already discovered."""
-    result_flow_1 = await hass.config_entries.flow.async_init(
+    result_flow_1 = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=zeroconf_info,
     )
-    result_flow_2 = await hass.config_entries.flow.async_init(
+    result_flow_2 = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=zeroconf_info,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result_flow_2["type"] is FlowResultType.ABORT
     assert result_flow_2["reason"] == "already_configured"
     assert addon_info.call_count == 1
@@ -356,7 +356,7 @@ async def test_zeroconf_not_onboarded_already_discovered(
     ],
 )
 async def test_zeroconf_not_onboarded_running(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor: MagicMock,
     addon_info: AsyncMock,
     addon_running: AsyncMock,
@@ -366,12 +366,12 @@ async def test_zeroconf_not_onboarded_running(
     zeroconf_info: ZeroconfServiceInfo,
 ) -> None:
     """Test flow Zeroconf discovery when not onboarded and add-on running."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=zeroconf_info,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert addon_info.call_count == 1
     assert client_connect.call_count == 1
@@ -400,7 +400,7 @@ async def test_zeroconf_not_onboarded_running(
     ],
 )
 async def test_zeroconf_not_onboarded_installed(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor: MagicMock,
     addon_info: AsyncMock,
     addon_installed: AsyncMock,
@@ -411,12 +411,12 @@ async def test_zeroconf_not_onboarded_installed(
     zeroconf_info: ZeroconfServiceInfo,
 ) -> None:
     """Test flow Zeroconf discovery when not onboarded and add-on installed."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=zeroconf_info,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert addon_info.call_count == 1
     assert start_addon.call_args == call("core_matter_server")
@@ -446,7 +446,7 @@ async def test_zeroconf_not_onboarded_installed(
     ],
 )
 async def test_zeroconf_not_onboarded_not_installed(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor: MagicMock,
     addon_info: AsyncMock,
     addon_store_info: AsyncMock,
@@ -459,12 +459,12 @@ async def test_zeroconf_not_onboarded_not_installed(
     zeroconf_info: ZeroconfServiceInfo,
 ) -> None:
     """Test flow Zeroconf discovery when not onboarded and add-on not installed."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=zeroconf_info,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert addon_info.call_count == 0
     assert addon_store_info.call_count == 2
@@ -495,7 +495,7 @@ async def test_zeroconf_not_onboarded_not_installed(
     ],
 )
 async def test_supervisor_discovery(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor: MagicMock,
     addon_running: AsyncMock,
     addon_info: AsyncMock,
@@ -503,10 +503,10 @@ async def test_supervisor_discovery(
     setup_entry: AsyncMock,
 ) -> None:
     """Test flow started from Supervisor discovery."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
-        context={"source": config_entries.SOURCE_HASSIO},
-        data=HassioServiceInfo(
+        context={"source": config_entries.SOURCE_menuaiIO},
+        data=menuaiioServiceInfo(
             config=ADDON_DISCOVERY_INFO,
             name="Matter Server",
             slug=ADDON_SLUG,
@@ -514,8 +514,8 @@ async def test_supervisor_discovery(
         ),
     )
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
-    await hass.async_block_till_done()
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
+    await menuai.async_block_till_done()
 
     assert addon_info.call_count == 1
     assert client_connect.call_count == 0
@@ -546,7 +546,7 @@ async def test_supervisor_discovery(
     ],
 )
 async def test_supervisor_discovery_addon_info_failed(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor: MagicMock,
     addon_running: AsyncMock,
     addon_info: AsyncMock,
@@ -555,10 +555,10 @@ async def test_supervisor_discovery_addon_info_failed(
     """Test Supervisor discovery and addon info failed."""
     addon_info.side_effect = error
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
-        context={"source": config_entries.SOURCE_HASSIO},
-        data=HassioServiceInfo(
+        context={"source": config_entries.SOURCE_menuaiIO},
+        data=menuaiioServiceInfo(
             config=ADDON_DISCOVERY_INFO,
             name="Matter Server",
             slug=ADDON_SLUG,
@@ -567,9 +567,9 @@ async def test_supervisor_discovery_addon_info_failed(
     )
 
     assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == "hassio_confirm"
+    assert result["step_id"] == "menuaiio_confirm"
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert addon_info.call_count == 1
     assert result["type"] is FlowResultType.ABORT
@@ -590,7 +590,7 @@ async def test_supervisor_discovery_addon_info_failed(
     ],
 )
 async def test_clean_supervisor_discovery_on_user_create(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor: MagicMock,
     addon_running: AsyncMock,
     addon_info: AsyncMock,
@@ -598,10 +598,10 @@ async def test_clean_supervisor_discovery_on_user_create(
     setup_entry: AsyncMock,
 ) -> None:
     """Test discovery flow is cleaned up when a user flow is finished."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
-        context={"source": config_entries.SOURCE_HASSIO},
-        data=HassioServiceInfo(
+        context={"source": config_entries.SOURCE_menuaiIO},
+        data=menuaiioServiceInfo(
             config=ADDON_DISCOVERY_INFO,
             name="Matter Server",
             slug=ADDON_SLUG,
@@ -610,16 +610,16 @@ async def test_clean_supervisor_discovery_on_user_create(
     )
 
     assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == "hassio_confirm"
+    assert result["step_id"] == "menuaiio_confirm"
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "on_supervisor"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"use_addon": False}
     )
 
@@ -627,15 +627,15 @@ async def test_clean_supervisor_discovery_on_user_create(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "manual"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "url": "ws://localhost:5580/ws",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert len(hass.config_entries.flow.async_progress()) == 0
+    assert len(menuai.config_entries.flow.async_progress()) == 0
     assert client_connect.call_count == 1
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "Matter"
@@ -648,7 +648,7 @@ async def test_clean_supervisor_discovery_on_user_create(
 
 
 async def test_abort_supervisor_discovery_with_existing_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor: MagicMock,
     addon_running: AsyncMock,
     addon_info: AsyncMock,
@@ -659,12 +659,12 @@ async def test_abort_supervisor_discovery_with_existing_entry(
         data={"url": "ws://localhost:5580/ws"},
         title="Matter",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
-        context={"source": config_entries.SOURCE_HASSIO},
-        data=HassioServiceInfo(
+        context={"source": config_entries.SOURCE_menuaiIO},
+        data=menuaiioServiceInfo(
             config=ADDON_DISCOVERY_INFO,
             name="Matter Server",
             slug=ADDON_SLUG,
@@ -678,23 +678,23 @@ async def test_abort_supervisor_discovery_with_existing_entry(
 
 
 async def test_abort_supervisor_discovery_with_existing_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor: MagicMock,
     addon_installed: AsyncMock,
     addon_info: AsyncMock,
 ) -> None:
-    """Test hassio discovery flow is aborted when another flow is in progress."""
-    result = await hass.config_entries.flow.async_init(
+    """Test menuaiio discovery flow is aborted when another flow is in progress."""
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USER},
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "on_supervisor"
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
-        context={"source": config_entries.SOURCE_HASSIO},
-        data=HassioServiceInfo(
+        context={"source": config_entries.SOURCE_menuaiIO},
+        data=menuaiioServiceInfo(
             config=ADDON_DISCOVERY_INFO,
             name="Matter Server",
             slug=ADDON_SLUG,
@@ -708,16 +708,16 @@ async def test_abort_supervisor_discovery_with_existing_flow(
 
 
 async def test_abort_supervisor_discovery_for_other_addon(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor: MagicMock,
     addon_installed: AsyncMock,
     addon_info: AsyncMock,
 ) -> None:
-    """Test hassio discovery flow is aborted for a non official add-on discovery."""
-    result = await hass.config_entries.flow.async_init(
+    """Test menuaiio discovery flow is aborted for a non official add-on discovery."""
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
-        context={"source": config_entries.SOURCE_HASSIO},
-        data=HassioServiceInfo(
+        context={"source": config_entries.SOURCE_menuaiIO},
+        data=menuaiioServiceInfo(
             config={
                 "addon": "Other Matter Server",
                 "host": "host1",
@@ -735,7 +735,7 @@ async def test_abort_supervisor_discovery_for_other_addon(
 
 
 async def test_supervisor_discovery_addon_not_running(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor: MagicMock,
     addon_installed: AsyncMock,
     addon_info: AsyncMock,
@@ -744,10 +744,10 @@ async def test_supervisor_discovery_addon_not_running(
     setup_entry: AsyncMock,
 ) -> None:
     """Test discovery with add-on already installed but not running."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
-        context={"source": config_entries.SOURCE_HASSIO},
-        data=HassioServiceInfo(
+        context={"source": config_entries.SOURCE_menuaiIO},
+        data=menuaiioServiceInfo(
             config=ADDON_DISCOVERY_INFO,
             name="Matter Server",
             slug=ADDON_SLUG,
@@ -756,18 +756,18 @@ async def test_supervisor_discovery_addon_not_running(
     )
 
     assert addon_info.call_count == 0
-    assert result["step_id"] == "hassio_confirm"
+    assert result["step_id"] == "menuaiio_confirm"
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert addon_info.call_count == 1
     assert result["type"] is FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "start_addon"
 
-    await hass.async_block_till_done()
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
+    await menuai.async_block_till_done()
 
     assert start_addon.call_args == call("core_matter_server")
     assert client_connect.call_count == 1
@@ -782,7 +782,7 @@ async def test_supervisor_discovery_addon_not_running(
 
 
 async def test_supervisor_discovery_addon_not_installed(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor: MagicMock,
     addon_not_installed: AsyncMock,
     install_addon: AsyncMock,
@@ -793,10 +793,10 @@ async def test_supervisor_discovery_addon_not_installed(
     setup_entry: AsyncMock,
 ) -> None:
     """Test discovery with add-on not installed."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
-        context={"source": config_entries.SOURCE_HASSIO},
-        data=HassioServiceInfo(
+        context={"source": config_entries.SOURCE_menuaiIO},
+        data=menuaiioServiceInfo(
             config=ADDON_DISCOVERY_INFO,
             name="Matter Server",
             slug=ADDON_SLUG,
@@ -806,26 +806,26 @@ async def test_supervisor_discovery_addon_not_installed(
 
     assert addon_info.call_count == 0
     assert addon_store_info.call_count == 0
-    assert result["step_id"] == "hassio_confirm"
+    assert result["step_id"] == "menuaiio_confirm"
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert addon_info.call_count == 0
     assert addon_store_info.call_count == 1
     assert result["step_id"] == "install_addon"
     assert result["type"] is FlowResultType.SHOW_PROGRESS
 
-    await hass.async_block_till_done()
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    await menuai.async_block_till_done()
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert install_addon.call_args == call("core_matter_server")
     assert result["type"] is FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "start_addon"
 
-    await hass.async_block_till_done()
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
+    await menuai.async_block_till_done()
 
     assert start_addon.call_args == call("core_matter_server")
     assert client_connect.call_count == 1
@@ -840,33 +840,33 @@ async def test_supervisor_discovery_addon_not_installed(
 
 
 async def test_not_addon(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor: MagicMock,
     client_connect: AsyncMock,
     setup_entry: AsyncMock,
 ) -> None:
     """Test opting out of add-on on Supervisor."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "on_supervisor"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"use_addon": False}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "manual"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "url": "ws://localhost:5581/ws",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert client_connect.call_count == 1
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -893,7 +893,7 @@ async def test_not_addon(
     ],
 )
 async def test_addon_running(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor: MagicMock,
     addon_running: AsyncMock,
     addon_info: AsyncMock,
@@ -901,17 +901,17 @@ async def test_addon_running(
     setup_entry: AsyncMock,
 ) -> None:
     """Test add-on already running on Supervisor."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "on_supervisor"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"use_addon": True}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert addon_info.call_count == 1
     assert client_connect.call_count == 1
@@ -996,7 +996,7 @@ async def test_addon_running(
     ],
 )
 async def test_addon_running_failures(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor: MagicMock,
     addon_running: AsyncMock,
     addon_info: AsyncMock,
@@ -1013,14 +1013,14 @@ async def test_addon_running_failures(
     get_addon_discovery_info.side_effect = discovery_info_error
     client_connect.side_effect = client_connect_error
     addon_info.side_effect = addon_info_error
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "on_supervisor"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"use_addon": True}
     )
 
@@ -1103,7 +1103,7 @@ async def test_addon_running_failures(
     ],
 )
 async def test_addon_running_failures_zeroconf(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor: MagicMock,
     addon_running: AsyncMock,
     addon_info: AsyncMock,
@@ -1122,12 +1122,12 @@ async def test_addon_running_failures_zeroconf(
     get_addon_discovery_info.side_effect = discovery_info_error
     client_connect.side_effect = client_connect_error
     addon_info.side_effect = addon_info_error
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=zeroconf_info,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert addon_info.call_count == 1
     assert get_addon_discovery_info.called is discovery_info_called
@@ -1150,7 +1150,7 @@ async def test_addon_running_failures_zeroconf(
     ],
 )
 async def test_addon_running_already_configured(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor: MagicMock,
     addon_running: AsyncMock,
     addon_info: AsyncMock,
@@ -1164,19 +1164,19 @@ async def test_addon_running_already_configured(
         },
         title="Matter",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "on_supervisor"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"use_addon": True}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert addon_info.call_count == 1
     assert result["type"] is FlowResultType.ABORT
@@ -1200,7 +1200,7 @@ async def test_addon_running_already_configured(
     ],
 )
 async def test_addon_installed(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor: MagicMock,
     addon_installed: AsyncMock,
     addon_info: AsyncMock,
@@ -1208,14 +1208,14 @@ async def test_addon_installed(
     setup_entry: AsyncMock,
 ) -> None:
     """Test add-on already installed but not running on Supervisor."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "on_supervisor"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"use_addon": True}
     )
 
@@ -1223,9 +1223,9 @@ async def test_addon_installed(
     assert result["type"] is FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "start_addon"
 
-    await hass.async_block_till_done()
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
+    await menuai.async_block_till_done()
 
     assert start_addon.call_args == call("core_matter_server")
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -1285,7 +1285,7 @@ async def test_addon_installed(
     ],
 )
 async def test_addon_installed_failures(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor: MagicMock,
     addon_installed: AsyncMock,
     addon_info: AsyncMock,
@@ -1301,14 +1301,14 @@ async def test_addon_installed_failures(
     start_addon.side_effect = start_addon_error
     client_connect.side_effect = client_connect_error
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "on_supervisor"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"use_addon": True}
     )
 
@@ -1316,8 +1316,8 @@ async def test_addon_installed_failures(
     assert result["type"] is FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "start_addon"
 
-    await hass.async_block_till_done()
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    await menuai.async_block_till_done()
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert start_addon.call_args == call("core_matter_server")
     assert get_addon_discovery_info.called is discovery_info_called
@@ -1374,7 +1374,7 @@ async def test_addon_installed_failures(
     ],
 )
 async def test_addon_installed_failures_zeroconf(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor: MagicMock,
     addon_installed: AsyncMock,
     addon_info: AsyncMock,
@@ -1392,10 +1392,10 @@ async def test_addon_installed_failures_zeroconf(
     start_addon.side_effect = start_addon_error
     client_connect.side_effect = client_connect_error
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_ZEROCONF}, data=zeroconf_info
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert addon_info.call_count == 1
     assert start_addon.call_args == call("core_matter_server")
@@ -1419,7 +1419,7 @@ async def test_addon_installed_failures_zeroconf(
     ],
 )
 async def test_addon_installed_already_configured(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor: MagicMock,
     addon_installed: AsyncMock,
     addon_info: AsyncMock,
@@ -1434,16 +1434,16 @@ async def test_addon_installed_already_configured(
         },
         title="Matter",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "on_supervisor"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"use_addon": True}
     )
 
@@ -1451,9 +1451,9 @@ async def test_addon_installed_already_configured(
     assert result["type"] is FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "start_addon"
 
-    await hass.async_block_till_done()
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
+    await menuai.async_block_till_done()
 
     assert start_addon.call_args == call("core_matter_server")
     assert result["type"] is FlowResultType.ABORT
@@ -1477,7 +1477,7 @@ async def test_addon_installed_already_configured(
     ],
 )
 async def test_addon_not_installed(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor: MagicMock,
     addon_not_installed: AsyncMock,
     install_addon: AsyncMock,
@@ -1487,14 +1487,14 @@ async def test_addon_not_installed(
     setup_entry: AsyncMock,
 ) -> None:
     """Test add-on not installed."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "on_supervisor"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"use_addon": True}
     )
 
@@ -1504,16 +1504,16 @@ async def test_addon_not_installed(
     assert result["step_id"] == "install_addon"
 
     # Make sure the flow continues when the progress task is done.
-    await hass.async_block_till_done()
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    await menuai.async_block_till_done()
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert install_addon.call_args == call("core_matter_server")
     assert result["type"] is FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "start_addon"
 
-    await hass.async_block_till_done()
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
+    await menuai.async_block_till_done()
 
     assert start_addon.call_args == call("core_matter_server")
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -1527,7 +1527,7 @@ async def test_addon_not_installed(
 
 
 async def test_addon_not_installed_failures(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor: MagicMock,
     addon_not_installed: AsyncMock,
     addon_info: AsyncMock,
@@ -1536,14 +1536,14 @@ async def test_addon_not_installed_failures(
     """Test add-on install failure."""
     install_addon.side_effect = SupervisorError()
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "on_supervisor"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"use_addon": True}
     )
 
@@ -1551,8 +1551,8 @@ async def test_addon_not_installed_failures(
     assert result["step_id"] == "install_addon"
 
     # Make sure the flow continues when the progress task is done.
-    await hass.async_block_till_done()
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    await menuai.async_block_till_done()
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert install_addon.call_args == call("core_matter_server")
     assert addon_info.call_count == 0
@@ -1562,7 +1562,7 @@ async def test_addon_not_installed_failures(
 
 @pytest.mark.parametrize("zeroconf_info", [ZEROCONF_INFO_TCP, ZEROCONF_INFO_UDP])
 async def test_addon_not_installed_failures_zeroconf(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor: MagicMock,
     addon_not_installed: AsyncMock,
     addon_info: AsyncMock,
@@ -1573,10 +1573,10 @@ async def test_addon_not_installed_failures_zeroconf(
     """Test add-on install failure."""
     install_addon.side_effect = SupervisorError()
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_ZEROCONF}, data=zeroconf_info
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert install_addon.call_args == call("core_matter_server")
     assert addon_info.call_count == 0
@@ -1598,7 +1598,7 @@ async def test_addon_not_installed_failures_zeroconf(
     ],
 )
 async def test_addon_not_installed_already_configured(
-    hass: HomeAssistant,
+    menuai: menuai,
     supervisor: MagicMock,
     addon_not_installed: AsyncMock,
     addon_info: AsyncMock,
@@ -1616,16 +1616,16 @@ async def test_addon_not_installed_already_configured(
         },
         title="Matter",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "on_supervisor"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"use_addon": True}
     )
 
@@ -1635,16 +1635,16 @@ async def test_addon_not_installed_already_configured(
     assert result["step_id"] == "install_addon"
 
     # Make sure the flow continues when the progress task is done.
-    await hass.async_block_till_done()
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    await menuai.async_block_till_done()
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert install_addon.call_args == call("core_matter_server")
     assert result["type"] is FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "start_addon"
 
-    await hass.async_block_till_done()
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
+    await menuai.async_block_till_done()
 
     assert start_addon.call_args == call("core_matter_server")
     assert client_connect.call_count == 1

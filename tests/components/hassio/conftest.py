@@ -1,4 +1,4 @@
-"""Fixtures for Hass.io."""
+"""Fixtures for menuai.io."""
 
 from collections.abc import Generator
 import os
@@ -9,10 +9,10 @@ from aiohasupervisor.models import AddonsStats, AddonState
 from aiohttp.test_utils import TestClient
 import pytest
 
-from homeassistant.auth.models import RefreshToken
-from homeassistant.components.hassio.handler import HassIO
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.auth.models import RefreshToken
+from menuai.components.menuaiio.handler import menuaiIO
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from . import SUPERVISOR_TOKEN
 
@@ -24,51 +24,51 @@ from tests.typing import ClientSessionGenerator
 def disable_security_filter() -> Generator[None]:
     """Disable the security filter to ensure the integration is secure."""
     with patch(
-        "homeassistant.components.http.security_filter.FILTERS",
+        "menuai.components.http.security_filter.FILTERS",
         re.compile("not-matching-anything"),
     ):
         yield
 
 
 @pytest.fixture
-async def hassio_client(
-    hassio_stubs: RefreshToken, hass: HomeAssistant, hass_client: ClientSessionGenerator
+async def menuaiio_client(
+    menuaiio_stubs: RefreshToken, menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> TestClient:
-    """Return a Hass.io HTTP client."""
-    return await hass_client()
+    """Return a menuai.io HTTP client."""
+    return await menuai_client()
 
 
 @pytest.fixture
-async def hassio_noauth_client(
-    hassio_stubs: RefreshToken,
-    hass: HomeAssistant,
+async def menuaiio_noauth_client(
+    menuaiio_stubs: RefreshToken,
+    menuai: menuai,
     aiohttp_client: ClientSessionGenerator,
 ) -> TestClient:
-    """Return a Hass.io HTTP client without auth."""
-    return await aiohttp_client(hass.http.app)
+    """Return a menuai.io HTTP client without auth."""
+    return await aiohttp_client(menuai.http.app)
 
 
 @pytest.fixture
-async def hassio_client_supervisor(
-    hass: HomeAssistant,
+async def menuaiio_client_supervisor(
+    menuai: menuai,
     aiohttp_client: ClientSessionGenerator,
-    hassio_stubs: RefreshToken,
+    menuaiio_stubs: RefreshToken,
 ) -> TestClient:
     """Return an authenticated HTTP client."""
-    access_token = hass.auth.async_create_access_token(hassio_stubs)
+    access_token = menuai.auth.async_create_access_token(menuaiio_stubs)
     return await aiohttp_client(
-        hass.http.app,
+        menuai.http.app,
         headers={"Authorization": f"Bearer {access_token}"},
     )
 
 
 @pytest.fixture
-async def hassio_handler(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
-) -> Generator[HassIO]:
-    """Create mock hassio handler."""
+async def menuaiio_handler(
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
+) -> Generator[menuaiIO]:
+    """Create mock menuaiio handler."""
     with patch.dict(os.environ, {"SUPERVISOR_TOKEN": SUPERVISOR_TOKEN}):
-        yield HassIO(hass.loop, async_get_clientsession(hass), "127.0.0.1")
+        yield menuaiIO(menuai.loop, async_get_clientsession(menuai), "127.0.0.1")
 
 
 @pytest.fixture
@@ -85,7 +85,7 @@ def all_setup_requests(
         "include_addons", False
     )
 
-    aioclient_mock.post("http://127.0.0.1/homeassistant/options", json={"result": "ok"})
+    aioclient_mock.post("http://127.0.0.1/menuai/options", json={"result": "ok"})
     aioclient_mock.post("http://127.0.0.1/supervisor/options", json={"result": "ok"})
     aioclient_mock.get(
         "http://127.0.0.1/info",
@@ -93,8 +93,8 @@ def all_setup_requests(
             "result": "ok",
             "data": {
                 "supervisor": "222",
-                "homeassistant": "0.110.0",
-                "hassos": "1.2.3",
+                "menuai": "0.110.0",
+                "menuaios": "1.2.3",
             },
         },
     )
@@ -105,7 +105,7 @@ def all_setup_requests(
             "data": {
                 "result": "ok",
                 "data": {
-                    "chassis": "vm",
+                    "cmenuaiis": "vm",
                     "operating_system": "Debian GNU/Linux 10 (buster)",
                     "kernel": "4.19.0-6-amd64",
                 },

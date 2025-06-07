@@ -2,7 +2,7 @@
 
 from aiopegelonline.models import Station, StationMeasurements
 
-from homeassistant.components.pegel_online.const import CONF_STATION
+from menuai.components.pegel_online.const import CONF_STATION
 
 MOCK_STATION_DETAILS_MEISSEN = Station(
     {

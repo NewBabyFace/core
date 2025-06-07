@@ -6,15 +6,15 @@ from dataclasses import dataclass
 from airgradient import AirGradientClient, Config
 from airgradient.models import ConfigurationControl, LedBarMode, TemperatureUnit
 
-from homeassistant.components.select import (
+from menuai.components.select import (
     DOMAIN as SELECT_DOMAIN,
     SelectEntity,
     SelectEntityDescription,
 )
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import EntityCategory
+from menuai.core import menuai, callback
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import AirGradientConfigEntry
 from .const import DOMAIN, PM_STANDARD, PM_STANDARD_REVERSE
@@ -140,7 +140,7 @@ CONTROL_ENTITIES: tuple[AirGradientSelectEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: AirGradientConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -183,7 +183,7 @@ async def async_setup_entry(
             is not ConfigurationControl.LOCAL
             and added_entities
         ):
-            entity_registry = er.async_get(hass)
+            entity_registry = er.async_get(menuai)
             for entity_description in (
                 DISPLAY_SELECT_TYPES + LED_BAR_ENTITIES + CONTROL_ENTITIES
             ):

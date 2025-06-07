@@ -1,6 +1,6 @@
 """Tests for Kaleidescape integration."""
 
-from homeassistant.helpers.service_info.ssdp import (
+from menuai.helpers.service_info.ssdp import (
     ATTR_UPNP_FRIENDLY_NAME,
     ATTR_UPNP_SERIAL,
     SsdpServiceInfo,

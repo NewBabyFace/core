@@ -9,9 +9,9 @@ from typing import Any
 from Tami4EdgeAPI import Tami4EdgeAPI, exceptions
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
 
 from .const import CONF_PHONE, CONF_REFRESH_TOKEN, DOMAIN
 
@@ -43,7 +43,7 @@ class Tami4ConfigFlow(ConfigFlow, domain=DOMAIN):
                     self.phone = f"+972{m.group('number')}"
                 else:
                     raise InvalidPhoneNumber  # noqa: TRY301
-                await self.hass.async_add_executor_job(
+                await self.menuai.async_add_executor_job(
                     Tami4EdgeAPI.request_otp, self.phone
                 )
             except InvalidPhoneNumber:
@@ -68,10 +68,10 @@ class Tami4ConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             otp = user_input["otp"]
             try:
-                refresh_token = await self.hass.async_add_executor_job(
+                refresh_token = await self.menuai.async_add_executor_job(
                     Tami4EdgeAPI.submit_otp, self.phone, otp
                 )
-                api = await self.hass.async_add_executor_job(
+                api = await self.menuai.async_add_executor_job(
                     Tami4EdgeAPI, refresh_token
                 )
             except exceptions.OTPFailedException:
@@ -95,5 +95,5 @@ class Tami4ConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class InvalidPhoneNumber(HomeAssistantError):
+class InvalidPhoneNumber(menuaiError):
     """Error to indicate that the phone number is invalid."""

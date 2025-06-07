@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.button import ButtonEntity, ButtonEntityDescription
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import YaleConfigEntry
 from .const import DOMAIN, YALE_ALL_ERRORS
@@ -23,7 +23,7 @@ BUTTON_TYPES = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: YaleConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -57,11 +57,11 @@ class YalePanicButton(YaleAlarmEntity, ButtonEntity):
             assert self.coordinator.yale, "Connection to API is missing"
 
         try:
-            await self.hass.async_add_executor_job(
+            await self.menuai.async_add_executor_job(
                 self.coordinator.yale.trigger_panic_button
             )
         except YALE_ALL_ERRORS as error:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="could_not_trigger_panic",
                 translation_placeholders={

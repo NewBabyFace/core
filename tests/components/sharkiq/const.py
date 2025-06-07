@@ -1,6 +1,6 @@
 """Constants used in shark iq tests."""
 
-from homeassistant.const import CONF_PASSWORD, CONF_REGION, CONF_USERNAME
+from menuai.const import CONF_PASSWORD, CONF_REGION, CONF_USERNAME
 
 # Dummy device dict of the form returned by AylaApi.list_devices()
 SHARK_DEVICE_DICT = {

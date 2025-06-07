@@ -13,11 +13,11 @@ from yalexs_ble import (
     local_name_is_unique,
 )
 
-from homeassistant.components import bluetooth
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_ADDRESS, EVENT_HOMEASSISTANT_STOP, Platform
-from homeassistant.core import CALLBACK_TYPE, CoreState, Event, HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.components import bluetooth
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_ADDRESS, EVENT_menuai_STOP, Platform
+from menuai.core import CALLBACK_TYPE, CoreState, Event, menuai, callback
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 
 from .const import (
     CONF_ALWAYS_CONNECTED,
@@ -35,7 +35,7 @@ type YALEXSBLEConfigEntry = ConfigEntry[YaleXSBLEData]
 PLATFORMS: list[Platform] = [Platform.BINARY_SENSOR, Platform.LOCK, Platform.SENSOR]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: YALEXSBLEConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: YALEXSBLEConfigEntry) -> bool:
     """Set up Yale Access Bluetooth from a config entry."""
     local_name = entry.data[CONF_LOCAL_NAME]
     address = entry.data[CONF_ADDRESS]
@@ -74,9 +74,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: YALEXSBLEConfigEntry) ->
     entry.async_on_unload(_async_shutdown)
 
     # We may already have the advertisement, so check for it.
-    if service_info := async_find_existing_service_info(hass, local_name, address):
+    if service_info := async_find_existing_service_info(menuai, local_name, address):
         push_lock.update_advertisement(service_info.device, service_info.advertisement)
-    elif hass.state is CoreState.starting:
+    elif menuai.state is CoreState.starting:
         # If we are starting and the advertisement is not found, do not delay
         # the setup. We will wait for the advertisement to be found and then
         # discovery will trigger setup retry.
@@ -84,7 +84,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: YALEXSBLEConfigEntry) ->
 
     entry.async_on_unload(
         bluetooth.async_register_callback(
-            hass,
+            menuai,
             _async_update_ble,
             bluetooth_callback_matcher(local_name, push_lock.address),
             bluetooth.BluetoothScanningMode.PASSIVE,
@@ -111,7 +111,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: YALEXSBLEConfigEntry) ->
 
     entry.async_on_unload(
         bluetooth.async_track_unavailable(
-            hass, _async_device_unavailable, push_lock.address
+            menuai, _async_device_unavailable, push_lock.address
         )
     )
 
@@ -121,28 +121,28 @@ async def async_setup_entry(hass: HomeAssistant, entry: YALEXSBLEConfigEntry) ->
     ) -> None:
         """Handle state changed."""
         if new_state.auth and not new_state.auth.successful:
-            entry.async_start_reauth(hass)
+            entry.async_start_reauth(menuai)
 
     entry.async_on_unload(push_lock.register_callback(_async_state_changed))
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
     entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _async_shutdown)
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, _async_shutdown)
     )
     return True
 
 
 async def _async_update_listener(
-    hass: HomeAssistant, entry: YALEXSBLEConfigEntry
+    menuai: menuai, entry: YALEXSBLEConfigEntry
 ) -> None:
     """Handle options update."""
     data = entry.runtime_data
     if entry.title != data.title or data.always_connected != entry.options.get(
         CONF_ALWAYS_CONNECTED
     ):
-        await hass.config_entries.async_reload(entry.entry_id)
+        await menuai.config_entries.async_reload(entry.entry_id)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: YALEXSBLEConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: YALEXSBLEConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

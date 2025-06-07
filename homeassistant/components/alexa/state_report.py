@@ -12,20 +12,20 @@ from uuid import uuid4
 
 import aiohttp
 
-from homeassistant.components import event
-from homeassistant.const import EVENT_STATE_CHANGED, STATE_ON
-from homeassistant.core import (
+from menuai.components import event
+from menuai.const import EVENT_STATE_CHANGED, STATE_ON
+from menuai.core import (
     CALLBACK_TYPE,
     Event,
     EventStateChangedData,
-    HomeAssistant,
+    menuai,
     State,
     callback,
 )
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.significant_change import create_checker
-from homeassistant.util import dt as dt_util
-from homeassistant.util.json import JsonObjectType, json_loads_object
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.significant_change import create_checker
+from menuai.util import dt as dt_util
+from menuai.util.json import JsonObjectType, json_loads_object
 
 from .const import (
     API_CHANGE,
@@ -71,7 +71,7 @@ class AlexaDirective:
         self.instance = None
         self.entity_id = None
 
-    def load_entity(self, hass: HomeAssistant, config: AbstractConfig) -> None:
+    def load_entity(self, menuai: menuai, config: AbstractConfig) -> None:
         """Set attributes related to the entity for this request.
 
         Sets these attributes when self.has_endpoint is True:
@@ -89,12 +89,12 @@ class AlexaDirective:
         _endpoint_id: str = self._directive[API_ENDPOINT]["endpointId"]
         self.entity_id = _endpoint_id.replace("#", ".")
 
-        entity: State | None = hass.states.get(self.entity_id)
+        entity: State | None = menuai.states.get(self.entity_id)
         if not entity or not config.should_expose(self.entity_id):
             raise AlexaInvalidEndpointError(_endpoint_id)
         self.entity = entity
 
-        self.endpoint = ENTITY_ADAPTERS[self.entity.domain](hass, config, self.entity)
+        self.endpoint = ENTITY_ADAPTERS[self.entity.domain](menuai, config, self.entity)
         if "instance" in self._directive[API_HEADER]:
             self.instance = self._directive[API_HEADER]["instance"]
 
@@ -247,7 +247,7 @@ class AlexaResponse:
 
 
 async def async_enable_proactive_mode(
-    hass: HomeAssistant, smart_home_config: AbstractConfig
+    menuai: menuai, smart_home_config: AbstractConfig
 ) -> CALLBACK_TYPE | None:
     """Enable the proactive mode.
 
@@ -258,7 +258,7 @@ async def async_enable_proactive_mode(
 
     @callback
     def extra_significant_check(
-        hass: HomeAssistant,
+        menuai: menuai,
         old_state: str,
         old_attrs: Mapping[Any, Any],
         old_extra_arg: Any,
@@ -269,11 +269,11 @@ async def async_enable_proactive_mode(
         """Check if the serialized data has changed."""
         return old_extra_arg is not None and old_extra_arg != new_extra_arg
 
-    checker = await create_checker(hass, DOMAIN, extra_significant_check)
+    checker = await create_checker(menuai, DOMAIN, extra_significant_check)
 
     @callback
     def _async_entity_state_filter(data: EventStateChangedData) -> bool:
-        if not hass.is_running:
+        if not menuai.is_running:
             return False
 
         if not (new_state := data["new_state"]):
@@ -298,7 +298,7 @@ async def async_enable_proactive_mode(
             assert new_state is not None
 
         alexa_changed_entity: AlexaEntity = ENTITY_ADAPTERS[new_state.domain](
-            hass, smart_home_config, new_state
+            menuai, smart_home_config, new_state
         )
         # Determine how entity should be reported on
         should_report = False
@@ -322,7 +322,7 @@ async def async_enable_proactive_mode(
                 and (old_state is None or old_state.state != STATE_ON)
             ):
                 await async_send_doorbell_event_message(
-                    hass, smart_home_config, alexa_changed_entity
+                    menuai, smart_home_config, alexa_changed_entity
                 )
             return
 
@@ -334,10 +334,10 @@ async def async_enable_proactive_mode(
             return
 
         await async_send_changereport_message(
-            hass, smart_home_config, alexa_changed_entity, alexa_properties
+            menuai, smart_home_config, alexa_changed_entity, alexa_properties
         )
 
-    return hass.bus.async_listen(
+    return menuai.bus.async_listen(
         EVENT_STATE_CHANGED,
         _async_entity_state_listener,
         event_filter=_async_entity_state_filter,
@@ -345,7 +345,7 @@ async def async_enable_proactive_mode(
 
 
 async def async_send_changereport_message(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: AbstractConfig,
     alexa_entity: AlexaEntity,
     alexa_properties: list[dict[str, Any]],
@@ -380,7 +380,7 @@ async def async_send_changereport_message(
     message.set_endpoint_full(token, endpoint)
 
     message_serialized = message.serialize()
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
 
     assert config.endpoint is not None
     try:
@@ -415,7 +415,7 @@ async def async_send_changereport_message(
             # Invalidate the access token and try again
             config.async_invalidate_access_token()
             await async_send_changereport_message(
-                hass,
+                menuai,
                 config,
                 alexa_entity,
                 alexa_properties,
@@ -433,7 +433,7 @@ async def async_send_changereport_message(
 
 
 async def async_send_add_or_update_message(
-    hass: HomeAssistant, config: AbstractConfig, entity_ids: list[str]
+    menuai: menuai, config: AbstractConfig, entity_ids: list[str]
 ) -> aiohttp.ClientResponse:
     """Send an AddOrUpdateReport message for entities.
 
@@ -449,10 +449,10 @@ async def async_send_add_or_update_message(
         if (domain := entity_id.split(".", 1)[0]) not in ENTITY_ADAPTERS:
             continue
 
-        if (state := hass.states.get(entity_id)) is None:
+        if (state := menuai.states.get(entity_id)) is None:
             continue
 
-        alexa_entity = ENTITY_ADAPTERS[domain](hass, config, state)
+        alexa_entity = ENTITY_ADAPTERS[domain](menuai, config, state)
         endpoints.append(alexa_entity.serialize_discovery())
 
     payload: dict[str, Any] = {
@@ -465,7 +465,7 @@ async def async_send_add_or_update_message(
     )
 
     message_serialized = message.serialize()
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
 
     assert config.endpoint is not None
     return await session.post(
@@ -474,7 +474,7 @@ async def async_send_add_or_update_message(
 
 
 async def async_send_delete_message(
-    hass: HomeAssistant, config: AbstractConfig, entity_ids: list[str]
+    menuai: menuai, config: AbstractConfig, entity_ids: list[str]
 ) -> aiohttp.ClientResponse:
     """Send an DeleteReport message for entities.
 
@@ -504,7 +504,7 @@ async def async_send_delete_message(
     )
 
     message_serialized = message.serialize()
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
 
     assert config.endpoint is not None
     return await session.post(
@@ -513,7 +513,7 @@ async def async_send_delete_message(
 
 
 async def async_send_doorbell_event_message(
-    hass: HomeAssistant, config: AbstractConfig, alexa_entity: AlexaEntity
+    menuai: menuai, config: AbstractConfig, alexa_entity: AlexaEntity
 ) -> None:
     """Send a DoorbellPress event message for an Alexa entity.
 
@@ -537,7 +537,7 @@ async def async_send_doorbell_event_message(
     message.set_endpoint_full(token, endpoint)
 
     message_serialized = message.serialize()
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
 
     assert config.endpoint is not None
     try:

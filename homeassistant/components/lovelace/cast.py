@@ -1,4 +1,4 @@
-"""Home Assistant Cast platform."""
+"""MenuAI Cast platform."""
 
 from __future__ import annotations
 
@@ -7,23 +7,23 @@ from typing import Any
 from pychromecast import Chromecast
 from pychromecast.const import CAST_TYPE_CHROMECAST
 
-from homeassistant.components.cast import DOMAIN as CAST_DOMAIN
-from homeassistant.components.cast.home_assistant_cast import (
+from menuai.components.cast import DOMAIN as CAST_DOMAIN
+from menuai.components.cast.home_assistant_cast import (
     ATTR_URL_PATH,
     ATTR_VIEW_PATH,
     NO_URL_AVAILABLE_ERROR,
     SERVICE_SHOW_VIEW,
 )
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     BrowseError,
     BrowseMedia,
     MediaClass,
     MediaType,
 )
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.network import NoURLAvailableError, get_url
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.network import NoURLAvailableError, get_url
 
 from .const import DOMAIN, LOVELACE_DATA, ConfigNotFound
 
@@ -31,7 +31,7 @@ DEFAULT_DASHBOARD = "_default_"
 
 
 async def async_get_media_browser_root_object(
-    hass: HomeAssistant, cast_type: str
+    menuai: menuai, cast_type: str
 ) -> list[BrowseMedia]:
     """Create a root object for media browsing."""
     if cast_type != CAST_TYPE_CHROMECAST:
@@ -50,7 +50,7 @@ async def async_get_media_browser_root_object(
 
 
 async def async_browse_media(
-    hass: HomeAssistant,
+    menuai: menuai,
     media_content_type: MediaType | str,
     media_content_id: str,
     cast_type: str,
@@ -60,7 +60,7 @@ async def async_browse_media(
         return None
 
     try:
-        get_url(hass, require_ssl=True, prefer_external=True)
+        get_url(menuai, require_ssl=True, prefer_external=True)
     except NoURLAvailableError as err:
         raise BrowseError(NO_URL_AVAILABLE_ERROR) from err
 
@@ -77,21 +77,21 @@ async def async_browse_media(
                 can_expand=False,
             )
         ]
-        for url_path in hass.data[LOVELACE_DATA].dashboards:
+        for url_path in menuai.data[LOVELACE_DATA].dashboards:
             if url_path is None:
                 continue
 
-            info = await _get_dashboard_info(hass, url_path)
+            info = await _get_dashboard_info(menuai, url_path)
             children.append(_item_from_info(info))
 
-        root = (await async_get_media_browser_root_object(hass, CAST_TYPE_CHROMECAST))[
+        root = (await async_get_media_browser_root_object(menuai, CAST_TYPE_CHROMECAST))[
             0
         ]
         root.children = children
         return root
 
     try:
-        info = await _get_dashboard_info(hass, media_content_id)
+        info = await _get_dashboard_info(menuai, media_content_id)
     except ValueError as err:
         raise BrowseError(f"Dashboard {media_content_id} not found") from err
 
@@ -116,7 +116,7 @@ async def async_browse_media(
 
 
 async def async_play_media(
-    hass: HomeAssistant,
+    menuai: menuai,
     cast_entity_id: str,
     chromecast: Chromecast,
     media_type: MediaType | str,
@@ -131,9 +131,9 @@ async def async_play_media(
     else:
         url_path = media_id
         try:
-            info = await _get_dashboard_info(hass, media_id)
+            info = await _get_dashboard_info(menuai, media_id)
         except ValueError as err:
-            raise HomeAssistantError(f"Invalid dashboard {media_id} specified") from err
+            raise menuaiError(f"Invalid dashboard {media_id} specified") from err
         view_path = info["views"][0]["path"] if info["views"] else "0"
 
     data = {
@@ -143,7 +143,7 @@ async def async_play_media(
     if url_path != DEFAULT_DASHBOARD:
         data[ATTR_URL_PATH] = url_path
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CAST_DOMAIN,
         SERVICE_SHOW_VIEW,
         data,
@@ -153,12 +153,12 @@ async def async_play_media(
 
 
 async def _get_dashboard_info(
-    hass: HomeAssistant, url_path: str | None
+    menuai: menuai, url_path: str | None
 ) -> dict[str, Any]:
     """Load a dashboard and return info on views."""
     if url_path == DEFAULT_DASHBOARD:
         url_path = None
-    dashboard = hass.data[LOVELACE_DATA].dashboards.get(url_path)
+    dashboard = menuai.data[LOVELACE_DATA].dashboards.get(url_path)
 
     if dashboard is None:
         raise ValueError("Invalid dashboard specified")

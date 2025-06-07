@@ -7,9 +7,9 @@ from typing import Any
 from advantage_air import ApiError, advantage_air
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_IP_ADDRESS, CONF_PORT
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_IP_ADDRESS, CONF_PORT
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import ADVANTAGE_AIR_RETRY, DOMAIN
 
@@ -43,7 +43,7 @@ class AdvantageAirConfigFlow(ConfigFlow, domain=DOMAIN):
                 data = await advantage_air(
                     ip_address,
                     port=port,
-                    session=async_get_clientsession(self.hass),
+                    session=async_get_clientsession(self.menuai),
                     retry=ADVANTAGE_AIR_RETRY,
                 ).async_get()
             except ApiError:

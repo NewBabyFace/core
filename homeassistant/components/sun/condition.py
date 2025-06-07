@@ -7,18 +7,18 @@ from typing import cast
 
 import voluptuous as vol
 
-from homeassistant.const import CONF_CONDITION, SUN_EVENT_SUNRISE, SUN_EVENT_SUNSET
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.condition import (
+from menuai.const import CONF_CONDITION, SUN_EVENT_SUNRISE, SUN_EVENT_SUNSET
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.condition import (
     ConditionCheckerType,
     condition_trace_set_result,
     condition_trace_update_result,
     trace_condition_function,
 )
-from homeassistant.helpers.sun import get_astral_event_date
-from homeassistant.helpers.typing import ConfigType, TemplateVarsType
-from homeassistant.util import dt as dt_util
+from menuai.helpers.sun import get_astral_event_date
+from menuai.helpers.typing import ConfigType, TemplateVarsType
+from menuai.util import dt as dt_util
 
 _CONDITION_SCHEMA = vol.All(
     vol.Schema(
@@ -38,14 +38,14 @@ _CONDITION_SCHEMA = vol.All(
 
 
 async def async_validate_condition_config(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> ConfigType:
     """Validate config."""
     return _CONDITION_SCHEMA(config)  # type: ignore[no-any-return]
 
 
 def sun(
-    hass: HomeAssistant,
+    menuai: menuai,
     before: str | None = None,
     after: str | None = None,
     before_offset: timedelta | None = None,
@@ -57,8 +57,8 @@ def sun(
     before_offset = before_offset or timedelta(0)
     after_offset = after_offset or timedelta(0)
 
-    sunrise = get_astral_event_date(hass, SUN_EVENT_SUNRISE, today)
-    sunset = get_astral_event_date(hass, SUN_EVENT_SUNSET, today)
+    sunrise = get_astral_event_date(menuai, SUN_EVENT_SUNRISE, today)
+    sunset = get_astral_event_date(menuai, SUN_EVENT_SUNSET, today)
 
     has_sunrise_condition = SUN_EVENT_SUNRISE in (before, after)
     has_sunset_condition = SUN_EVENT_SUNSET in (before, after)
@@ -66,12 +66,12 @@ def sun(
     after_sunrise = today > dt_util.as_local(cast(datetime, sunrise)).date()
     if after_sunrise and has_sunrise_condition:
         tomorrow = today + timedelta(days=1)
-        sunrise = get_astral_event_date(hass, SUN_EVENT_SUNRISE, tomorrow)
+        sunrise = get_astral_event_date(menuai, SUN_EVENT_SUNRISE, tomorrow)
 
     after_sunset = today > dt_util.as_local(cast(datetime, sunset)).date()
     if after_sunset and has_sunset_condition:
         tomorrow = today + timedelta(days=1)
-        sunset = get_astral_event_date(hass, SUN_EVENT_SUNSET, tomorrow)
+        sunset = get_astral_event_date(menuai, SUN_EVENT_SUNSET, tomorrow)
 
     # Special case: before sunrise OR after sunset
     # This will handle the very rare case in the polar region when the sun rises/sets
@@ -136,8 +136,8 @@ def async_condition_from_config(config: ConfigType) -> ConditionCheckerType:
     after_offset = config.get("after_offset")
 
     @trace_condition_function
-    def sun_if(hass: HomeAssistant, variables: TemplateVarsType = None) -> bool:
+    def sun_if(menuai: menuai, variables: TemplateVarsType = None) -> bool:
         """Validate time based if-condition."""
-        return sun(hass, before, after, before_offset, after_offset)
+        return sun(menuai, before, after, before_offset, after_offset)
 
     return sun_if

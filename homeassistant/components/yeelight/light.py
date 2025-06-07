@@ -14,7 +14,7 @@ from yeelight.aio import AsyncBulb
 from yeelight.enums import BulbType, LightType, PowerMode, SceneClass
 from yeelight.main import BulbException
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_TEMP_KELVIN,
     ATTR_EFFECT,
@@ -28,16 +28,16 @@ from homeassistant.components.light import (
     LightEntity,
     LightEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_ENTITY_ID, ATTR_MODE, CONF_NAME
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.event import async_call_later
-from homeassistant.helpers.typing import VolDictType
-from homeassistant.util import color as color_util
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_ENTITY_ID, ATTR_MODE, CONF_NAME
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv, entity_platform
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.event import async_call_later
+from menuai.helpers.typing import VolDictType
+from menuai.util import color as color_util
 
 from . import YEELIGHT_FLOW_TRANSITION_SCHEMA
 from .const import (
@@ -252,7 +252,7 @@ def _async_cmd[_YeelightBaseLightT: YeelightBaseLight, **_P, _R](
                 # python-yeelight will auto reconnect
                 if attempts == 0:
                     continue
-                raise HomeAssistantError(
+                raise menuaiError(
                     f"Timed out when calling {func.__name__} for bulb "
                     f"{self.device.name} at {self.device.host}: {str(ex) or type(ex)}"
                 ) from ex
@@ -260,13 +260,13 @@ def _async_cmd[_YeelightBaseLightT: YeelightBaseLight, **_P, _R](
                 # A network error happened, the bulb is likely offline now
                 self.device.async_mark_unavailable()
                 self.async_state_changed()
-                raise HomeAssistantError(
+                raise menuaiError(
                     f"Error when calling {func.__name__} for bulb "
                     f"{self.device.name} at {self.device.host}: {str(ex) or type(ex)}"
                 ) from ex
             except BulbException as ex:
                 # The bulb likely responded but had an error
-                raise HomeAssistantError(
+                raise menuaiError(
                     f"Error when calling {func.__name__} for bulb "
                     f"{self.device.name} at {self.device.host}: {str(ex) or type(ex)}"
                 ) from ex
@@ -276,14 +276,14 @@ def _async_cmd[_YeelightBaseLightT: YeelightBaseLight, **_P, _R](
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Yeelight from a config entry."""
-    custom_effects = _parse_custom_effects(hass.data[DOMAIN][DATA_CUSTOM_EFFECTS])
+    custom_effects = _parse_custom_effects(menuai.data[DOMAIN][DATA_CUSTOM_EFFECTS])
 
-    device = hass.data[DOMAIN][DATA_CONFIG_ENTRIES][config_entry.entry_id][DATA_DEVICE]
+    device = menuai.data[DOMAIN][DATA_CONFIG_ENTRIES][config_entry.entry_id][DATA_DEVICE]
     _LOGGER.debug("Adding %s", device.name)
 
     nl_switch_light = device.config.get(CONF_NIGHTLIGHT_SWITCH)
@@ -325,11 +325,11 @@ async def async_setup_entry(
         )
 
     async_add_entities(lights)
-    _async_setup_services(hass)
+    _async_setup_services(menuai)
 
 
 @callback
-def _async_setup_services(hass: HomeAssistant):
+def _async_setup_services(menuai: menuai):
     """Set up custom services."""
 
     async def _async_start_flow(entity, service_call):
@@ -454,16 +454,16 @@ class YeelightBaseLight(YeelightEntity, LightEntity):
             self._async_cancel_pending_state_check()
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 DATA_UPDATED.format(self._device.host),
                 self.async_state_changed,
             )
         )
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
     @property
     def effect_list(self) -> list[str]:
@@ -824,7 +824,7 @@ class YeelightBaseLight(YeelightEntity, LightEntity):
                 await self.device.async_update(True)
 
         self._unexpected_state_check = async_call_later(
-            self.hass, POWER_STATE_CHANGE_TIME, _async_update_if_state_unexpected
+            self.menuai, POWER_STATE_CHANGE_TIME, _async_update_if_state_unexpected
         )
 
     @_async_cmd

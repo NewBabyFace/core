@@ -11,7 +11,7 @@ from electrasmart.api import STATUS_SUCCESS, Attributes, ElectraAPI, ElectraApiE
 from electrasmart.device import ElectraAirConditioner, OperationMode
 from electrasmart.device.const import MAX_TEMP, MIN_TEMP, Feature
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     FAN_AUTO,
     FAN_HIGH,
     FAN_LOW,
@@ -24,11 +24,11 @@ from homeassistant.components.climate import (
     ClimateEntityFeature,
     HVACMode,
 )
-from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import ATTR_TEMPERATURE, UnitOfTemperature
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import ElectraSmartConfigEntry
 from .const import (
@@ -41,21 +41,21 @@ from .const import (
     UNAVAILABLE_THRESH_SEC,
 )
 
-FAN_ELECTRA_TO_HASS = {
+FAN_ELECTRA_TO_menuai = {
     OperationMode.FAN_SPEED_AUTO: FAN_AUTO,
     OperationMode.FAN_SPEED_LOW: FAN_LOW,
     OperationMode.FAN_SPEED_MED: FAN_MEDIUM,
     OperationMode.FAN_SPEED_HIGH: FAN_HIGH,
 }
 
-FAN_HASS_TO_ELECTRA = {
+FAN_menuai_TO_ELECTRA = {
     FAN_AUTO: OperationMode.FAN_SPEED_AUTO,
     FAN_LOW: OperationMode.FAN_SPEED_LOW,
     FAN_MEDIUM: OperationMode.FAN_SPEED_MED,
     FAN_HIGH: OperationMode.FAN_SPEED_HIGH,
 }
 
-HVAC_MODE_ELECTRA_TO_HASS = {
+HVAC_MODE_ELECTRA_TO_menuai = {
     OperationMode.MODE_COOL: HVACMode.COOL,
     OperationMode.MODE_HEAT: HVACMode.HEAT,
     OperationMode.MODE_FAN: HVACMode.FAN_ONLY,
@@ -63,7 +63,7 @@ HVAC_MODE_ELECTRA_TO_HASS = {
     OperationMode.MODE_AUTO: HVACMode.AUTO,
 }
 
-HVAC_MODE_HASS_TO_ELECTRA = {
+HVAC_MODE_menuai_TO_ELECTRA = {
     HVACMode.COOL: OperationMode.MODE_COOL,
     HVACMode.HEAT: OperationMode.MODE_HEAT,
     HVACMode.FAN_ONLY: OperationMode.MODE_FAN,
@@ -89,7 +89,7 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ElectraSmartConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -227,7 +227,7 @@ class ElectraClimateEntity(ClimateEntity):
             )
 
             if self._consecutive_failures >= CONSECUTIVE_FAILURE_THRESHOLD:
-                raise HomeAssistantError(
+                raise menuaiError(
                     f"Failed to get {self.name} state: {exp} for the {self._consecutive_failures} time",
                 ) from ElectraApiError
 
@@ -236,7 +236,7 @@ class ElectraClimateEntity(ClimateEntity):
 
     async def async_set_fan_mode(self, fan_mode: str) -> None:
         """Set AC fan mode."""
-        mode = FAN_HASS_TO_ELECTRA[fan_mode]
+        mode = FAN_menuai_TO_ELECTRA[fan_mode]
         self._electra_ac_device.set_fan_speed(mode)
         await self._async_operate_electra_ac()
 
@@ -246,7 +246,7 @@ class ElectraClimateEntity(ClimateEntity):
         if hvac_mode == HVACMode.OFF:
             self._electra_ac_device.turn_off()
         else:
-            self._electra_ac_device.set_mode(HVAC_MODE_HASS_TO_ELECTRA[hvac_mode])
+            self._electra_ac_device.set_mode(HVAC_MODE_menuai_TO_ELECTRA[hvac_mode])
             self._electra_ac_device.turn_on()
 
         await self._async_operate_electra_ac()
@@ -261,7 +261,7 @@ class ElectraClimateEntity(ClimateEntity):
         await self._async_operate_electra_ac()
 
     def _update_device_attrs(self) -> None:
-        self._attr_fan_mode = FAN_ELECTRA_TO_HASS[
+        self._attr_fan_mode = FAN_ELECTRA_TO_menuai[
             self._electra_ac_device.get_fan_speed()
         ]
         self._attr_current_temperature = (
@@ -272,7 +272,7 @@ class ElectraClimateEntity(ClimateEntity):
         self._attr_hvac_mode = (
             HVACMode.OFF
             if not self._electra_ac_device.is_on()
-            else HVAC_MODE_ELECTRA_TO_HASS[self._electra_ac_device.get_mode()]
+            else HVAC_MODE_ELECTRA_TO_menuai[self._electra_ac_device.get_mode()]
         )
 
         if (
@@ -325,7 +325,7 @@ class ElectraClimateEntity(ClimateEntity):
         try:
             resp = await self._api.set_state(self._electra_ac_device)
         except ElectraApiError as exp:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Error communicating with Electra API: {exp}"
             ) from exp
 
@@ -334,7 +334,7 @@ class ElectraClimateEntity(ClimateEntity):
             and resp[Attributes.DATA][Attributes.RES] == STATUS_SUCCESS
         ):
             self._async_write_ha_state()
-            raise HomeAssistantError(f"Failed to update {self.name}, error: {resp}")
+            raise menuaiError(f"Failed to update {self.name}, error: {resp}")
 
         self._update_device_attrs()
         self._last_state_update = int(time.time())

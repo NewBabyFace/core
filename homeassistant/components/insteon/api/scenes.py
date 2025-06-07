@@ -11,8 +11,8 @@ from pyinsteon.managers.scene_manager import (
 )
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.core import HomeAssistant
+from menuai.components import websocket_api
+from menuai.core import menuai
 
 from ..const import ID, TYPE
 
@@ -40,12 +40,12 @@ def _scene_to_dict(scene):
 @websocket_api.require_admin
 @websocket_api.async_response
 async def websocket_get_scenes(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.connection.ActiveConnection,
     msg: dict,
 ) -> None:
     """Get all Insteon scenes."""
-    scenes = await async_get_scenes(work_dir=hass.config.config_dir)
+    scenes = await async_get_scenes(work_dir=menuai.config.config_dir)
     scenes_dict = {
         scene_num: _scene_to_dict(scene) for scene_num, scene in scenes.items()
     }
@@ -58,13 +58,13 @@ async def websocket_get_scenes(
 @websocket_api.require_admin
 @websocket_api.async_response
 async def websocket_get_scene(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.connection.ActiveConnection,
     msg: dict,
 ) -> None:
     """Get an Insteon scene."""
     scene_id = msg["scene_id"]
-    scene = await async_get_scene(scene_num=scene_id, work_dir=hass.config.config_dir)
+    scene = await async_get_scene(scene_num=scene_id, work_dir=menuai.config.config_dir)
     connection.send_result(msg[ID], _scene_to_dict(scene))
 
 
@@ -79,7 +79,7 @@ async def websocket_get_scene(
 @websocket_api.require_admin
 @websocket_api.async_response
 async def websocket_save_scene(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.connection.ActiveConnection,
     msg: dict,
 ) -> None:
@@ -89,9 +89,9 @@ async def websocket_save_scene(
     links = msg["links"]
 
     scene_id, result = await async_add_or_update_scene(
-        scene_num=scene_id, links=links, name=name, work_dir=hass.config.config_dir
+        scene_num=scene_id, links=links, name=name, work_dir=menuai.config.config_dir
     )
-    await devices.async_save(workdir=hass.config.config_dir)
+    await devices.async_save(workdir=menuai.config.config_dir)
     connection.send_result(
         msg[ID], {"scene_id": scene_id, "result": result == ResponseStatus.SUCCESS}
     )
@@ -106,7 +106,7 @@ async def websocket_save_scene(
 @websocket_api.require_admin
 @websocket_api.async_response
 async def websocket_delete_scene(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.connection.ActiveConnection,
     msg: dict,
 ) -> None:
@@ -114,9 +114,9 @@ async def websocket_delete_scene(
     scene_id = msg["scene_id"]
 
     result = await async_delete_scene(
-        scene_num=scene_id, work_dir=hass.config.config_dir
+        scene_num=scene_id, work_dir=menuai.config.config_dir
     )
-    await devices.async_save(workdir=hass.config.config_dir)
+    await devices.async_save(workdir=menuai.config.config_dir)
     connection.send_result(
         msg[ID], {"scene_id": scene_id, "result": result == ResponseStatus.SUCCESS}
     )

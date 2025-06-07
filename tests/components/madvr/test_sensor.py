@@ -7,10 +7,10 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.madvr.sensor import get_temperature
-from homeassistant.const import STATE_UNKNOWN, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.madvr.sensor import get_temperature
+from menuai.const import STATE_UNKNOWN, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import setup_integration
 from .conftest import get_update_callback
@@ -20,15 +20,15 @@ from tests.common import MockConfigEntry, snapshot_platform
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensor_setup_and_states(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
     mock_madvr_client: AsyncMock,
 ) -> None:
     """Test setup of the sensor entities and their states."""
-    with patch("homeassistant.components.madvr.PLATFORMS", [Platform.SENSOR]):
-        await setup_integration(hass, mock_config_entry)
+    with patch("menuai.components.madvr.PLATFORMS", [Platform.SENSOR]):
+        await setup_integration(menuai, mock_config_entry)
 
     update_callback = get_update_callback(mock_madvr_client)
 
@@ -64,45 +64,45 @@ async def test_sensor_setup_and_states(
 
     # Update all sensors at once
     update_callback(update_data)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Snapshot all entity states
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
     # Test invalid temperature value
     update_callback({"temp_gpu": -1})
-    await hass.async_block_till_done()
-    assert hass.states.get("sensor.madvr_envy_gpu_temperature").state == STATE_UNKNOWN
+    await menuai.async_block_till_done()
+    assert menuai.states.get("sensor.madvr_envy_gpu_temperature").state == STATE_UNKNOWN
 
     # Test sensor unknown
     update_callback({"incoming_res": None})
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert (
-        hass.states.get("sensor.madvr_envy_incoming_resolution").state == STATE_UNKNOWN
+        menuai.states.get("sensor.madvr_envy_incoming_resolution").state == STATE_UNKNOWN
     )
 
     # Test sensor becomes known again
     update_callback({"incoming_res": "1920x1080"})
-    await hass.async_block_till_done()
-    assert hass.states.get("sensor.madvr_envy_incoming_resolution").state == "1920x1080"
+    await menuai.async_block_till_done()
+    assert menuai.states.get("sensor.madvr_envy_incoming_resolution").state == "1920x1080"
 
     # Test temperature sensor
     update_callback({"temp_gpu": 41.2})
-    await hass.async_block_till_done()
-    assert hass.states.get("sensor.madvr_envy_gpu_temperature").state == "41.2"
+    await menuai.async_block_till_done()
+    assert menuai.states.get("sensor.madvr_envy_gpu_temperature").state == "41.2"
 
     # test get_temperature ValueError
     assert get_temperature(None, "temp_key") is None
 
     # test startup placeholder values
     update_callback({"outgoing_bit_depth": "0bit"})
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert (
-        hass.states.get("sensor.madvr_envy_outgoing_bit_depth").state == STATE_UNKNOWN
+        menuai.states.get("sensor.madvr_envy_outgoing_bit_depth").state == STATE_UNKNOWN
     )
 
     update_callback({"outgoing_color_space": "?"})
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert (
-        hass.states.get("sensor.madvr_envy_outgoing_color_space").state == STATE_UNKNOWN
+        menuai.states.get("sensor.madvr_envy_outgoing_color_space").state == STATE_UNKNOWN
     )

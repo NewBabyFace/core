@@ -13,16 +13,16 @@ from pydeconz.models.sensor.presence import Presence, PresenceStatePresenceEvent
 from pydeconz.models.sensor.relative_rotary import RelativeRotary, RelativeRotaryEvent
 from pydeconz.models.sensor.switch import Switch
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_DEVICE_ID,
     CONF_EVENT,
     CONF_ID,
     CONF_UNIQUE_ID,
     CONF_XY,
 )
-from homeassistant.core import callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.util import slugify
+from menuai.core import callback
+from menuai.helpers import device_registry as dr
+from menuai.util import slugify
 
 from .const import ATTR_DURATION, ATTR_ROTATION, CONF_ANGLE, CONF_GESTURE, LOGGER
 from .entity import DeconzBase
@@ -83,7 +83,7 @@ async def async_setup_events(hub: DeconzHub) -> None:
         elif isinstance(sensor, RelativeRotary):
             new_event = DeconzRelativeRotaryEvent(sensor, hub)
 
-        hub.hass.async_create_task(new_event.async_update_device_registry())
+        hub.menuai.async_create_task(new_event.async_update_device_registry())
         hub.events.append(new_event)
 
     hub.register_platform_add_device_callback(
@@ -108,7 +108,7 @@ async def async_setup_events(hub: DeconzHub) -> None:
 def async_unload_events(hub: DeconzHub) -> None:
     """Unload all deCONZ events."""
     for event in hub.events:
-        event.async_will_remove_from_hass()
+        event.async_will_remove_from_menuai()
 
     hub.events.clear()
 
@@ -117,7 +117,7 @@ class DeconzEventBase(DeconzBase):
     """When you want signals instead of entities.
 
     Stateless sensors such as remotes are expected to generate an event
-    instead of a sensor entity in hass.
+    instead of a sensor entity in menuai.
     """
 
     def __init__(
@@ -136,7 +136,7 @@ class DeconzEventBase(DeconzBase):
         LOGGER.debug("deCONZ event created: %s", self.event_id)
 
     @callback
-    def async_will_remove_from_hass(self) -> None:
+    def async_will_remove_from_menuai(self) -> None:
         """Disconnect event object when removed."""
         self._unsubscribe()
 
@@ -150,7 +150,7 @@ class DeconzEventBase(DeconzBase):
         if not self.device_info:
             return
 
-        device_registry = dr.async_get(self.hub.hass)
+        device_registry = dr.async_get(self.hub.menuai)
 
         entry = device_registry.async_get_or_create(
             config_entry_id=self.hub.config_entry.entry_id, **self.device_info
@@ -162,7 +162,7 @@ class DeconzEvent(DeconzEventBase):
     """When you want signals instead of entities.
 
     Stateless sensors such as remotes are expected to generate an event
-    instead of a sensor entity in hass.
+    instead of a sensor entity in menuai.
     """
 
     _device: Switch
@@ -191,7 +191,7 @@ class DeconzEvent(DeconzEventBase):
         if self._device.xy is not None:
             data[CONF_XY] = self._device.xy
 
-        self.hub.hass.bus.async_fire(CONF_DECONZ_EVENT, data)
+        self.hub.menuai.bus.async_fire(CONF_DECONZ_EVENT, data)
 
 
 class DeconzAlarmEvent(DeconzEventBase):
@@ -216,7 +216,7 @@ class DeconzAlarmEvent(DeconzEventBase):
             CONF_EVENT: self._device.action.value,
         }
 
-        self.hub.hass.bus.async_fire(CONF_DECONZ_ALARM_EVENT, data)
+        self.hub.menuai.bus.async_fire(CONF_DECONZ_ALARM_EVENT, data)
 
 
 class DeconzPresenceEvent(DeconzEventBase):
@@ -241,7 +241,7 @@ class DeconzPresenceEvent(DeconzEventBase):
             CONF_EVENT: self._device.presence_event.value,
         }
 
-        self.hub.hass.bus.async_fire(CONF_DECONZ_PRESENCE_EVENT, data)
+        self.hub.menuai.bus.async_fire(CONF_DECONZ_PRESENCE_EVENT, data)
 
 
 class DeconzRelativeRotaryEvent(DeconzEventBase):
@@ -267,4 +267,4 @@ class DeconzRelativeRotaryEvent(DeconzEventBase):
             ATTR_DURATION: self._device.expected_event_duration,
         }
 
-        self.hub.hass.bus.async_fire(CONF_DECONZ_RELATIVE_ROTARY_EVENT, data)
+        self.hub.menuai.bus.async_fire(CONF_DECONZ_RELATIVE_ROTARY_EVENT, data)

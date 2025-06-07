@@ -6,11 +6,11 @@ from datetime import timedelta
 
 from forecast_solar import Estimate, ForecastSolar, ForecastSolarConnectionError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_API_KEY, CONF_LATITUDE, CONF_LONGITUDE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_API_KEY, CONF_LATITUDE, CONF_LONGITUDE
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
     CONF_AZIMUTH,
@@ -31,7 +31,7 @@ class ForecastSolarDataUpdateCoordinator(DataUpdateCoordinator[Estimate]):
 
     config_entry: ForecastSolarConfigEntry
 
-    def __init__(self, hass: HomeAssistant, entry: ForecastSolarConfigEntry) -> None:
+    def __init__(self, menuai: menuai, entry: ForecastSolarConfigEntry) -> None:
         """Initialize the Forecast.Solar coordinator."""
 
         # Our option flow may cause it to be an empty string,
@@ -45,7 +45,7 @@ class ForecastSolarDataUpdateCoordinator(DataUpdateCoordinator[Estimate]):
 
         self.forecast = ForecastSolar(
             api_key=api_key,
-            session=async_get_clientsession(hass),
+            session=async_get_clientsession(menuai),
             latitude=entry.data[CONF_LATITUDE],
             longitude=entry.data[CONF_LONGITUDE],
             declination=entry.options[CONF_DECLINATION],
@@ -63,7 +63,7 @@ class ForecastSolarDataUpdateCoordinator(DataUpdateCoordinator[Estimate]):
             update_interval = timedelta(minutes=30)
 
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=entry,
             name=DOMAIN,

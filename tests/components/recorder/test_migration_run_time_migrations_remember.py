@@ -10,43 +10,43 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from sqlalchemy.schema import Index
 
-from homeassistant.components import recorder
-from homeassistant.components.recorder import core, migration, statistics
-from homeassistant.components.recorder.db_schema import SCHEMA_VERSION
-from homeassistant.components.recorder.migration import MigrationTask
-from homeassistant.components.recorder.queries import get_migration_changes
-from homeassistant.components.recorder.util import (
+from menuai.components import recorder
+from menuai.components.recorder import core, migration, statistics
+from menuai.components.recorder.db_schema import SCHEMA_VERSION
+from menuai.components.recorder.migration import MigrationTask
+from menuai.components.recorder.queries import get_migration_changes
+from menuai.components.recorder.util import (
     execute_stmt_lambda_element,
     session_scope,
 )
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import HomeAssistant
+from menuai.const import EVENT_menuai_STOP
+from menuai.core import menuai
 
 from .common import async_recorder_block_till_done, async_wait_recording_done
 
 from tests.common import async_test_home_assistant
 from tests.typing import RecorderInstanceContextManager
 
-CREATE_ENGINE_TARGET = "homeassistant.components.recorder.core.create_engine"
+CREATE_ENGINE_TARGET = "menuai.components.recorder.core.create_engine"
 SCHEMA_MODULE_32 = "tests.components.recorder.db_schema_32"
-SCHEMA_MODULE_CURRENT = "homeassistant.components.recorder.db_schema"
+SCHEMA_MODULE_CURRENT = "menuai.components.recorder.db_schema"
 
 
 @pytest.fixture
-async def mock_recorder_before_hass(
+async def mock_recorder_before_menuai(
     async_test_recorder: RecorderInstanceContextManager,
 ) -> None:
     """Set up recorder."""
 
 
-async def _async_wait_migration_done(hass: HomeAssistant) -> None:
+async def _async_wait_migration_done(menuai: menuai) -> None:
     """Wait for the migration to be done."""
-    await recorder.get_instance(hass).async_block_till_done()
-    await async_recorder_block_till_done(hass)
+    await recorder.get_instance(menuai).async_block_till_done()
+    await async_recorder_block_till_done(menuai)
 
 
-def _get_migration_id(hass: HomeAssistant) -> dict[str, int]:
-    with session_scope(hass=hass, read_only=True) as session:
+def _get_migration_id(menuai: menuai) -> dict[str, int]:
+    with session_scope(menuai=menuai, read_only=True) as session:
         return dict(execute_stmt_lambda_element(session, get_migration_changes()))
 
 
@@ -86,7 +86,7 @@ def _create_engine_test(
     return _create_engine_test
 
 
-@pytest.mark.usefixtures("hass_storage")  # Prevent test hass from writing to storage
+@pytest.mark.usefixtures("menuai_storage")  # Prevent test menuai from writing to storage
 @pytest.mark.parametrize(
     ("initial_version", "expected_migrator_calls", "expected_created_indices"),
     # expected_migrator_calls is a dict of
@@ -279,15 +279,15 @@ async def test_data_migrator_logic(
         ) as wrapped_idx_create,
     ):
         async with (
-            async_test_home_assistant() as hass,
-            async_test_recorder(hass, config),
+            async_test_home_assistant() as menuai,
+            async_test_recorder(menuai, config),
         ):
-            await hass.async_block_till_done()
-            await async_wait_recording_done(hass)
-            await _async_wait_migration_done(hass)
-            hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
-            await hass.async_block_till_done()
-            await hass.async_stop()
+            await menuai.async_block_till_done()
+            await async_wait_recording_done(menuai)
+            await _async_wait_migration_done(menuai)
+            menuai.bus.async_fire(EVENT_menuai_STOP)
+            await menuai.async_block_till_done()
+            await menuai.async_stop()
 
     index_names = [call[1][0].name for call in wrapped_idx_create.mock_calls]
     assert index_names == expected_created_indices
@@ -308,13 +308,13 @@ async def test_data_migrator_logic(
 
 @pytest.mark.parametrize("enable_migrate_state_context_ids", [True])
 @pytest.mark.parametrize("persistent_database", [True])
-@pytest.mark.usefixtures("hass_storage")  # Prevent test hass from writing to storage
+@pytest.mark.usefixtures("menuai_storage")  # Prevent test menuai from writing to storage
 async def test_migration_changes_prevent_trying_to_migrate_again(
     async_test_recorder: RecorderInstanceContextManager,
 ) -> None:
     """Test that we do not try to migrate when migration_changes indicate its already migrated.
 
-    This test will start Home Assistant 3 times:
+    This test will start MenuAI 3 times:
 
     1. With schema 32 to populate the data
     2. With current schema so the migration happens
@@ -339,32 +339,32 @@ async def test_migration_changes_prevent_trying_to_migrate_again(
         patch(CREATE_ENGINE_TARGET, new=_create_engine_test(SCHEMA_MODULE_32)),
     ):
         async with (
-            async_test_home_assistant() as hass,
-            async_test_recorder(hass, config),
+            async_test_home_assistant() as menuai,
+            async_test_recorder(menuai, config),
         ):
-            await hass.async_block_till_done()
-            await async_wait_recording_done(hass)
-            await _async_wait_migration_done(hass)
-            hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
-            await hass.async_block_till_done()
-            await hass.async_stop()
+            await menuai.async_block_till_done()
+            await async_wait_recording_done(menuai)
+            await _async_wait_migration_done(menuai)
+            menuai.bus.async_fire(EVENT_menuai_STOP)
+            await menuai.async_block_till_done()
+            await menuai.async_stop()
 
     # Now start again with current db schema
-    async with async_test_home_assistant() as hass, async_test_recorder(hass, config):
-        await hass.async_block_till_done()
-        await async_wait_recording_done(hass)
-        await _async_wait_migration_done(hass)
-        instance = recorder.get_instance(hass)
+    async with async_test_home_assistant() as menuai, async_test_recorder(menuai, config):
+        await menuai.async_block_till_done()
+        await async_wait_recording_done(menuai)
+        await _async_wait_migration_done(menuai)
+        instance = recorder.get_instance(menuai)
         migration_changes = await instance.async_add_executor_job(
-            _get_migration_id, hass
+            _get_migration_id, menuai
         )
         assert (
             migration_changes[migration.StatesContextIDMigration.migration_id]
             == migration.StatesContextIDMigration.migration_version
         )
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
-        await hass.async_block_till_done()
-        await hass.async_stop()
+        menuai.bus.async_fire(EVENT_menuai_STOP)
+        await menuai.async_block_till_done()
+        await menuai.async_stop()
 
     original_queue_task = core.Recorder.queue_task
     tasks = []
@@ -376,7 +376,7 @@ async def test_migration_changes_prevent_trying_to_migrate_again(
     # Finally verify we did not call needs_migrate_query on StatesContextIDMigration
     with (
         patch(
-            "homeassistant.components.recorder.core.Recorder.queue_task",
+            "menuai.components.recorder.core.Recorder.queue_task",
             _queue_task,
         ),
         patch.object(
@@ -386,23 +386,23 @@ async def test_migration_changes_prevent_trying_to_migrate_again(
         ),
     ):
         async with (
-            async_test_home_assistant() as hass,
-            async_test_recorder(hass, config),
+            async_test_home_assistant() as menuai,
+            async_test_recorder(menuai, config),
         ):
-            await hass.async_block_till_done()
-            await async_wait_recording_done(hass)
-            await _async_wait_migration_done(hass)
-            instance = recorder.get_instance(hass)
+            await menuai.async_block_till_done()
+            await async_wait_recording_done(menuai)
+            await _async_wait_migration_done(menuai)
+            instance = recorder.get_instance(menuai)
             migration_changes = await instance.async_add_executor_job(
-                _get_migration_id, hass
+                _get_migration_id, menuai
             )
             assert (
                 migration_changes[migration.StatesContextIDMigration.migration_id]
                 == migration.StatesContextIDMigration.migration_version
             )
-            hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
-            await hass.async_block_till_done()
-            await hass.async_stop()
+            menuai.bus.async_fire(EVENT_menuai_STOP)
+            await menuai.async_block_till_done()
+            await menuai.async_stop()
 
     for task in tasks:
         if not isinstance(task, MigrationTask):

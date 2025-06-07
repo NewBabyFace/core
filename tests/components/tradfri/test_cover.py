@@ -8,38 +8,38 @@ import pytest
 from pytradfri.const import ATTR_REACHABLE_STATE
 from pytradfri.device import Device
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     ATTR_CURRENT_POSITION,
     DOMAIN as COVER_DOMAIN,
     CoverState,
 )
-from homeassistant.const import STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant
+from menuai.const import STATE_UNAVAILABLE
+from menuai.core import menuai
 
 from .common import CommandStore, setup_integration
 
 
 @pytest.mark.parametrize("device", ["blind"], indirect=True)
 async def test_cover_available(
-    hass: HomeAssistant,
+    menuai: menuai,
     command_store: CommandStore,
     device: Device,
 ) -> None:
     """Test cover available property."""
     entity_id = "cover.test"
-    await setup_integration(hass)
+    await setup_integration(menuai)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == CoverState.OPEN
     assert state.attributes[ATTR_CURRENT_POSITION] == 60
     assert state.attributes["model"] == "FYRTUR block-out roller blind"
 
     await command_store.trigger_observe_callback(
-        hass, device, {ATTR_REACHABLE_STATE: 0}
+        menuai, device, {ATTR_REACHABLE_STATE: 0}
     )
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_UNAVAILABLE
 
@@ -56,7 +56,7 @@ async def test_cover_available(
     ],
 )
 async def test_cover_services(
-    hass: HomeAssistant,
+    menuai: menuai,
     command_store: CommandStore,
     device: Device,
     service: str,
@@ -66,24 +66,24 @@ async def test_cover_services(
 ) -> None:
     """Test cover services."""
     entity_id = "cover.test"
-    await setup_integration(hass)
+    await setup_integration(menuai)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == CoverState.OPEN
     assert state.attributes[ATTR_CURRENT_POSITION] == 60
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         service,
         {"entity_id": entity_id, **service_data},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await command_store.trigger_observe_callback(hass, device)
+    await command_store.trigger_observe_callback(menuai, device)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == expected_state
     assert state.attributes[ATTR_CURRENT_POSITION] == expected_position

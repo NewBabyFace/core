@@ -2,10 +2,10 @@
 
 import pytest
 
-from homeassistant.components.bthome.const import DOMAIN
-from homeassistant.components.event import ATTR_EVENT_TYPE
-from homeassistant.const import ATTR_FRIENDLY_NAME, STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant
+from menuai.components.bthome.const import DOMAIN
+from menuai.components.event import ATTR_EVENT_TYPE
+from menuai.const import ATTR_FRIENDLY_NAME, STATE_UNAVAILABLE
+from menuai.core import menuai
 
 from . import make_bthome_v2_adv
 
@@ -57,7 +57,7 @@ from tests.components.bluetooth import (
     ],
 )
 async def test_v2_events(
-    hass: HomeAssistant,
+    menuai: menuai,
     mac_address: str,
     advertisement: BluetoothServiceInfoBleak,
     bind_key: str | None,
@@ -69,48 +69,48 @@ async def test_v2_events(
         unique_id=mac_address,
         data={"bindkey": bind_key},
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == 0
+    assert len(menuai.states.async_all()) == 0
 
     inject_bluetooth_service_info(
-        hass,
+        menuai,
         advertisement,
     )
-    await hass.async_block_till_done()
-    assert len(hass.states.async_all()) == len(result)
+    await menuai.async_block_till_done()
+    assert len(menuai.states.async_all()) == len(result)
 
     for meas in result:
-        state = hass.states.get(meas["entity"])
+        state = menuai.states.get(meas["entity"])
         attributes = state.attributes
         assert attributes[ATTR_FRIENDLY_NAME] == meas[ATTR_FRIENDLY_NAME]
         assert attributes[ATTR_EVENT_TYPE] == meas[ATTR_EVENT_TYPE]
-    assert await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Ensure entities are restored
     for meas in result:
-        state = hass.states.get(meas["entity"])
+        state = menuai.states.get(meas["entity"])
         assert state != STATE_UNAVAILABLE
 
     # Now inject again
     inject_bluetooth_service_info(
-        hass,
+        menuai,
         advertisement,
     )
-    await hass.async_block_till_done()
-    assert len(hass.states.async_all()) == len(result)
+    await menuai.async_block_till_done()
+    assert len(menuai.states.async_all()) == len(result)
 
     for meas in result:
-        state = hass.states.get(meas["entity"])
+        state = menuai.states.get(meas["entity"])
         attributes = state.attributes
         assert attributes[ATTR_FRIENDLY_NAME] == meas[ATTR_FRIENDLY_NAME]
         assert attributes[ATTR_EVENT_TYPE] == meas[ATTR_EVENT_TYPE]
-    assert await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()

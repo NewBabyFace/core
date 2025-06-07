@@ -10,14 +10,14 @@ from pyatmo.const import ALL_SCOPES
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components import cloud
-from homeassistant.components.netatmo import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_WEBHOOK_ID, Platform
-from homeassistant.core import CoreState, HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.components import cloud
+from menuai.components.netatmo import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.const import CONF_WEBHOOK_ID, Platform
+from menuai.core import CoreState, menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from .common import (
     FAKE_WEBHOOK_ACTIVATION,
@@ -57,45 +57,45 @@ FAKE_WEBHOOK = {
 
 
 async def test_setup_component(
-    hass: HomeAssistant, config_entry: MockConfigEntry
+    menuai: menuai, config_entry: MockConfigEntry
 ) -> None:
     """Test setup and teardown of the netatmo component."""
     with (
         patch(
-            "homeassistant.components.netatmo.api.AsyncConfigEntryNetatmoAuth",
+            "menuai.components.netatmo.api.AsyncConfigEntryNetatmoAuth",
         ) as mock_auth,
         patch(
-            "homeassistant.helpers.config_entry_oauth2_flow.async_get_config_entry_implementation",
+            "menuai.helpers.config_entry_oauth2_flow.async_get_config_entry_implementation",
         ) as mock_impl,
-        patch("homeassistant.components.netatmo.webhook_generate_url") as mock_webhook,
+        patch("menuai.components.netatmo.webhook_generate_url") as mock_webhook,
     ):
         mock_auth.return_value.async_post_api_request.side_effect = partial(
-            fake_post_request, hass
+            fake_post_request, menuai
         )
         mock_auth.return_value.async_addwebhook.side_effect = AsyncMock()
         mock_auth.return_value.async_dropwebhook.side_effect = AsyncMock()
-        assert await async_setup_component(hass, "netatmo", {})
+        assert await async_setup_component(menuai, "netatmo", {})
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     mock_auth.assert_called_once()
     mock_impl.assert_called_once()
     mock_webhook.assert_called_once()
 
     assert config_entry.state is ConfigEntryState.LOADED
-    assert hass.config_entries.async_entries(DOMAIN)
-    assert len(hass.states.async_all()) > 0
+    assert menuai.config_entries.async_entries(DOMAIN)
+    assert len(menuai.states.async_all()) > 0
 
-    for entry in hass.config_entries.async_entries("netatmo"):
-        await hass.config_entries.async_remove(entry.entry_id)
+    for entry in menuai.config_entries.async_entries("netatmo"):
+        await menuai.config_entries.async_remove(entry.entry_id)
 
-    await hass.async_block_till_done()
-    assert len(hass.states.async_all()) == 0
-    assert not hass.config_entries.async_entries(DOMAIN)
+    await menuai.async_block_till_done()
+    assert len(menuai.states.async_all()) == 0
+    assert not menuai.config_entries.async_entries(DOMAIN)
 
 
 async def test_setup_component_with_config(
-    hass: HomeAssistant, config_entry: MockConfigEntry
+    menuai: menuai, config_entry: MockConfigEntry
 ) -> None:
     """Test setup of the netatmo component with dev account."""
     fake_post_hits = 0
@@ -104,98 +104,98 @@ async def test_setup_component_with_config(
         """Fake error during requesting backend data."""
         nonlocal fake_post_hits
         fake_post_hits += 1
-        return await fake_post_request(hass, *args, **kwargs)
+        return await fake_post_request(menuai, *args, **kwargs)
 
     with (
         patch(
-            "homeassistant.helpers.config_entry_oauth2_flow.async_get_config_entry_implementation",
+            "menuai.helpers.config_entry_oauth2_flow.async_get_config_entry_implementation",
         ) as mock_impl,
-        patch("homeassistant.components.netatmo.webhook_generate_url") as mock_webhook,
+        patch("menuai.components.netatmo.webhook_generate_url") as mock_webhook,
         patch(
-            "homeassistant.components.netatmo.api.AsyncConfigEntryNetatmoAuth",
+            "menuai.components.netatmo.api.AsyncConfigEntryNetatmoAuth",
         ) as mock_auth,
-        patch("homeassistant.components.netatmo.data_handler.PLATFORMS", ["sensor"]),
+        patch("menuai.components.netatmo.data_handler.PLATFORMS", ["sensor"]),
     ):
         mock_auth.return_value.async_post_api_request.side_effect = fake_post
         mock_auth.return_value.async_addwebhook.side_effect = AsyncMock()
         mock_auth.return_value.async_dropwebhook.side_effect = AsyncMock()
 
         assert await async_setup_component(
-            hass, "netatmo", {"netatmo": {"client_id": "123", "client_secret": "abc"}}
+            menuai, "netatmo", {"netatmo": {"client_id": "123", "client_secret": "abc"}}
         )
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         assert fake_post_hits >= 8
         mock_impl.assert_called_once()
         mock_webhook.assert_called_once()
 
-    assert hass.config_entries.async_entries(DOMAIN)
-    assert len(hass.states.async_all()) > 0
+    assert menuai.config_entries.async_entries(DOMAIN)
+    assert len(menuai.states.async_all()) > 0
 
 
 async def test_setup_component_with_webhook(
-    hass: HomeAssistant, config_entry, netatmo_auth
+    menuai: menuai, config_entry, netatmo_auth
 ) -> None:
     """Test setup and teardown of the netatmo component with webhook registration."""
     with selected_platforms(
         [Platform.CAMERA, Platform.CLIMATE, Platform.LIGHT, Platform.SENSOR]
     ):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
 
-        await hass.async_block_till_done()
-
-    webhook_id = config_entry.data[CONF_WEBHOOK_ID]
-    await simulate_webhook(hass, webhook_id, FAKE_WEBHOOK_ACTIVATION)
-
-    assert len(hass.states.async_all()) > 0
+        await menuai.async_block_till_done()
 
     webhook_id = config_entry.data[CONF_WEBHOOK_ID]
-    await simulate_webhook(hass, webhook_id, FAKE_WEBHOOK_ACTIVATION)
+    await simulate_webhook(menuai, webhook_id, FAKE_WEBHOOK_ACTIVATION)
+
+    assert len(menuai.states.async_all()) > 0
+
+    webhook_id = config_entry.data[CONF_WEBHOOK_ID]
+    await simulate_webhook(menuai, webhook_id, FAKE_WEBHOOK_ACTIVATION)
 
     # Assert webhook is established successfully
     climate_entity_livingroom = "climate.livingroom"
-    assert hass.states.get(climate_entity_livingroom).state == "auto"
-    await simulate_webhook(hass, webhook_id, FAKE_WEBHOOK)
-    assert hass.states.get(climate_entity_livingroom).state == "heat"
+    assert menuai.states.get(climate_entity_livingroom).state == "auto"
+    await simulate_webhook(menuai, webhook_id, FAKE_WEBHOOK)
+    assert menuai.states.get(climate_entity_livingroom).state == "heat"
 
-    for entry in hass.config_entries.async_entries("netatmo"):
-        await hass.config_entries.async_remove(entry.entry_id)
+    for entry in menuai.config_entries.async_entries("netatmo"):
+        await menuai.config_entries.async_remove(entry.entry_id)
 
-    await hass.async_block_till_done()
-    assert len(hass.states.async_all()) == 0
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 0
+    await menuai.async_block_till_done()
+    assert len(menuai.states.async_all()) == 0
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 0
 
 
 async def test_setup_without_https(
-    hass: HomeAssistant, config_entry: MockConfigEntry, caplog: pytest.LogCaptureFixture
+    menuai: menuai, config_entry: MockConfigEntry, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test if set up with cloud link and without https."""
-    hass.config.components.add("cloud")
+    menuai.config.components.add("cloud")
     with (
         patch(
-            "homeassistant.helpers.network.get_url",
+            "menuai.helpers.network.get_url",
             return_value="http://example.nabu.casa",
         ),
         patch(
-            "homeassistant.components.netatmo.api.AsyncConfigEntryNetatmoAuth"
+            "menuai.components.netatmo.api.AsyncConfigEntryNetatmoAuth"
         ) as mock_auth,
         patch(
-            "homeassistant.helpers.config_entry_oauth2_flow.async_get_config_entry_implementation",
+            "menuai.helpers.config_entry_oauth2_flow.async_get_config_entry_implementation",
         ),
         patch(
-            "homeassistant.components.netatmo.webhook_generate_url"
+            "menuai.components.netatmo.webhook_generate_url"
         ) as mock_async_generate_url,
     ):
         mock_auth.return_value.async_post_api_request.side_effect = partial(
-            fake_post_request, hass
+            fake_post_request, menuai
         )
         mock_async_generate_url.return_value = "http://example.com"
         assert await async_setup_component(
-            hass, "netatmo", {"netatmo": {"client_id": "123", "client_secret": "abc"}}
+            menuai, "netatmo", {"netatmo": {"client_id": "123", "client_secret": "abc"}}
         )
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         mock_auth.assert_called_once()
         mock_async_generate_url.assert_called_once()
 
@@ -203,61 +203,61 @@ async def test_setup_without_https(
 
 
 async def test_setup_with_cloud(
-    hass: HomeAssistant, config_entry: MockConfigEntry
+    menuai: menuai, config_entry: MockConfigEntry
 ) -> None:
     """Test if set up with active cloud subscription."""
-    await mock_cloud(hass)
-    await hass.async_block_till_done()
+    await mock_cloud(menuai)
+    await menuai.async_block_till_done()
 
     with (
-        patch("homeassistant.components.cloud.async_is_logged_in", return_value=True),
+        patch("menuai.components.cloud.async_is_logged_in", return_value=True),
         patch.object(cloud, "async_is_connected", return_value=True),
         patch.object(cloud, "async_active_subscription", return_value=True),
         patch(
-            "homeassistant.components.cloud.async_create_cloudhook",
+            "menuai.components.cloud.async_create_cloudhook",
             return_value="https://hooks.nabu.casa/ABCD",
         ) as fake_create_cloudhook,
         patch(
-            "homeassistant.components.cloud.async_delete_cloudhook"
+            "menuai.components.cloud.async_delete_cloudhook"
         ) as fake_delete_cloudhook,
         patch(
-            "homeassistant.components.netatmo.api.AsyncConfigEntryNetatmoAuth"
+            "menuai.components.netatmo.api.AsyncConfigEntryNetatmoAuth"
         ) as mock_auth,
-        patch("homeassistant.components.netatmo.data_handler.PLATFORMS", []),
+        patch("menuai.components.netatmo.data_handler.PLATFORMS", []),
         patch(
-            "homeassistant.helpers.config_entry_oauth2_flow.async_get_config_entry_implementation",
+            "menuai.helpers.config_entry_oauth2_flow.async_get_config_entry_implementation",
         ),
         patch(
-            "homeassistant.components.netatmo.webhook_generate_url",
+            "menuai.components.netatmo.webhook_generate_url",
         ),
     ):
         mock_auth.return_value.async_post_api_request.side_effect = partial(
-            fake_post_request, hass
+            fake_post_request, menuai
         )
         assert await async_setup_component(
-            hass, "netatmo", {"netatmo": {"client_id": "123", "client_secret": "abc"}}
+            menuai, "netatmo", {"netatmo": {"client_id": "123", "client_secret": "abc"}}
         )
-        assert cloud.async_active_subscription(hass) is True
-        assert cloud.async_is_connected(hass) is True
+        assert cloud.async_active_subscription(menuai) is True
+        assert cloud.async_is_connected(menuai) is True
         fake_create_cloudhook.assert_called_once()
 
         assert (
-            hass.config_entries.async_entries("netatmo")[0].data["cloudhook_url"]
+            menuai.config_entries.async_entries("netatmo")[0].data["cloudhook_url"]
             == "https://hooks.nabu.casa/ABCD"
         )
 
-        await hass.async_block_till_done()
-        assert hass.config_entries.async_entries(DOMAIN)
+        await menuai.async_block_till_done()
+        assert menuai.config_entries.async_entries(DOMAIN)
 
-        for entry in hass.config_entries.async_entries("netatmo"):
-            await hass.config_entries.async_remove(entry.entry_id)
+        for entry in menuai.config_entries.async_entries("netatmo"):
+            await menuai.config_entries.async_remove(entry.entry_id)
             fake_delete_cloudhook.assert_called_once()
 
-        await hass.async_block_till_done()
-        assert not hass.config_entries.async_entries(DOMAIN)
+        await menuai.async_block_till_done()
+        assert not menuai.config_entries.async_entries(DOMAIN)
 
 
-async def test_setup_with_cloudhook(hass: HomeAssistant) -> None:
+async def test_setup_with_cloudhook(menuai: menuai) -> None:
     """Test if set up with active cloud subscription and cloud hook."""
     config_entry = MockConfigEntry(
         domain="netatmo",
@@ -274,63 +274,63 @@ async def test_setup_with_cloudhook(hass: HomeAssistant) -> None:
             },
         },
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    await mock_cloud(hass)
-    await hass.async_block_till_done()
+    await mock_cloud(menuai)
+    await menuai.async_block_till_done()
 
     with (
-        patch("homeassistant.components.cloud.async_is_logged_in", return_value=True),
-        patch("homeassistant.components.cloud.async_is_connected", return_value=True),
+        patch("menuai.components.cloud.async_is_logged_in", return_value=True),
+        patch("menuai.components.cloud.async_is_connected", return_value=True),
         patch.object(cloud, "async_active_subscription", return_value=True),
         patch(
-            "homeassistant.components.cloud.async_create_cloudhook",
+            "menuai.components.cloud.async_create_cloudhook",
             return_value="https://hooks.nabu.casa/ABCD",
         ) as fake_create_cloudhook,
         patch(
-            "homeassistant.components.cloud.async_delete_cloudhook"
+            "menuai.components.cloud.async_delete_cloudhook"
         ) as fake_delete_cloudhook,
         patch(
-            "homeassistant.components.netatmo.api.AsyncConfigEntryNetatmoAuth"
+            "menuai.components.netatmo.api.AsyncConfigEntryNetatmoAuth"
         ) as mock_auth,
-        patch("homeassistant.components.netatmo.data_handler.PLATFORMS", []),
+        patch("menuai.components.netatmo.data_handler.PLATFORMS", []),
         patch(
-            "homeassistant.helpers.config_entry_oauth2_flow.async_get_config_entry_implementation",
+            "menuai.helpers.config_entry_oauth2_flow.async_get_config_entry_implementation",
         ),
         patch(
-            "homeassistant.components.netatmo.webhook_generate_url",
+            "menuai.components.netatmo.webhook_generate_url",
         ),
     ):
         mock_auth.return_value.async_post_api_request.side_effect = partial(
-            fake_post_request, hass
+            fake_post_request, menuai
         )
         mock_auth.return_value.async_addwebhook.side_effect = AsyncMock()
         mock_auth.return_value.async_dropwebhook.side_effect = AsyncMock()
-        assert await async_setup_component(hass, "netatmo", {})
-        assert cloud.async_active_subscription(hass) is True
+        assert await async_setup_component(menuai, "netatmo", {})
+        assert cloud.async_active_subscription(menuai) is True
 
         assert (
-            hass.config_entries.async_entries("netatmo")[0].data["cloudhook_url"]
+            menuai.config_entries.async_entries("netatmo")[0].data["cloudhook_url"]
             == "https://hooks.nabu.casa/ABCD"
         )
 
-        await hass.async_block_till_done()
-        assert hass.config_entries.async_entries(DOMAIN)
+        await menuai.async_block_till_done()
+        assert menuai.config_entries.async_entries(DOMAIN)
         fake_create_cloudhook.assert_not_called()
 
-        for config_entry in hass.config_entries.async_entries("netatmo"):
-            await hass.config_entries.async_remove(config_entry.entry_id)
+        for config_entry in menuai.config_entries.async_entries("netatmo"):
+            await menuai.config_entries.async_remove(config_entry.entry_id)
             fake_delete_cloudhook.assert_called_once()
 
-        await hass.async_block_till_done()
-        assert not hass.config_entries.async_entries(DOMAIN)
+        await menuai.async_block_till_done()
+        assert not menuai.config_entries.async_entries(DOMAIN)
 
 
 async def test_setup_component_with_delay(
-    hass: HomeAssistant, config_entry: MockConfigEntry
+    menuai: menuai, config_entry: MockConfigEntry
 ) -> None:
     """Test setup of the netatmo component with delayed startup."""
-    hass.set_state(CoreState.not_running)
+    menuai.set_state(CoreState.not_running)
 
     with (
         patch(
@@ -340,53 +340,53 @@ async def test_setup_component_with_delay(
             "pyatmo.AbstractAsyncAuth.async_dropwebhook", side_effect=AsyncMock()
         ) as mock_dropwebhook,
         patch(
-            "homeassistant.helpers.config_entry_oauth2_flow.async_get_config_entry_implementation",
+            "menuai.helpers.config_entry_oauth2_flow.async_get_config_entry_implementation",
         ) as mock_impl,
-        patch("homeassistant.components.netatmo.webhook_generate_url") as mock_webhook,
+        patch("menuai.components.netatmo.webhook_generate_url") as mock_webhook,
         patch(
             "pyatmo.AbstractAsyncAuth.async_post_api_request",
-            side_effect=partial(fake_post_request, hass),
+            side_effect=partial(fake_post_request, menuai),
         ) as mock_post_api_request,
-        patch("homeassistant.components.netatmo.data_handler.PLATFORMS", ["light"]),
+        patch("menuai.components.netatmo.data_handler.PLATFORMS", ["light"]),
     ):
         assert await async_setup_component(
-            hass, "netatmo", {"netatmo": {"client_id": "123", "client_secret": "abc"}}
+            menuai, "netatmo", {"netatmo": {"client_id": "123", "client_secret": "abc"}}
         )
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         assert mock_post_api_request.call_count == 7
 
         mock_impl.assert_called_once()
         mock_webhook.assert_not_called()
 
-        await hass.async_start()
-        await hass.async_block_till_done()
+        await menuai.async_start()
+        await menuai.async_block_till_done()
         mock_webhook.assert_called_once()
 
         # Fake webhook activation
         await simulate_webhook(
-            hass, config_entry.data[CONF_WEBHOOK_ID], FAKE_WEBHOOK_ACTIVATION
+            menuai, config_entry.data[CONF_WEBHOOK_ID], FAKE_WEBHOOK_ACTIVATION
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         mock_addwebhook.assert_called_once()
         mock_dropwebhook.assert_not_awaited()
 
         async_fire_time_changed(
-            hass,
+            menuai,
             dt_util.utcnow() + timedelta(seconds=60),
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-        assert hass.config_entries.async_entries(DOMAIN)
-        assert len(hass.states.async_all()) > 0
+        assert menuai.config_entries.async_entries(DOMAIN)
+        assert len(menuai.states.async_all()) > 0
 
-        await hass.async_stop()
+        await menuai.async_stop()
         mock_dropwebhook.assert_called_once()
 
 
-async def test_setup_component_invalid_token_scope(hass: HomeAssistant) -> None:
+async def test_setup_component_invalid_token_scope(menuai: menuai) -> None:
     """Test handling of invalid token scope."""
     config_entry = MockConfigEntry(
         domain="netatmo",
@@ -403,42 +403,42 @@ async def test_setup_component_invalid_token_scope(hass: HomeAssistant) -> None:
         },
         options={},
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with (
         patch(
-            "homeassistant.components.netatmo.api.AsyncConfigEntryNetatmoAuth",
+            "menuai.components.netatmo.api.AsyncConfigEntryNetatmoAuth",
         ) as mock_auth,
         patch(
-            "homeassistant.helpers.config_entry_oauth2_flow.async_get_config_entry_implementation",
+            "menuai.helpers.config_entry_oauth2_flow.async_get_config_entry_implementation",
         ) as mock_impl,
-        patch("homeassistant.components.netatmo.webhook_generate_url") as mock_webhook,
+        patch("menuai.components.netatmo.webhook_generate_url") as mock_webhook,
     ):
         mock_auth.return_value.async_post_api_request.side_effect = partial(
-            fake_post_request, hass
+            fake_post_request, menuai
         )
         mock_auth.return_value.async_addwebhook.side_effect = AsyncMock()
         mock_auth.return_value.async_dropwebhook.side_effect = AsyncMock()
-        assert await async_setup_component(hass, "netatmo", {})
+        assert await async_setup_component(menuai, "netatmo", {})
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     mock_auth.assert_not_called()
     mock_impl.assert_called_once()
     mock_webhook.assert_not_called()
 
     assert config_entry.state is ConfigEntryState.SETUP_ERROR
-    assert hass.config_entries.async_entries(DOMAIN)
+    assert menuai.config_entries.async_entries(DOMAIN)
 
     # Test a reauth flow is initiated
-    assert len(list(config_entry.async_get_active_flows(hass, {"reauth"}))) == 1
+    assert len(list(config_entry.async_get_active_flows(menuai, {"reauth"}))) == 1
 
-    for config_entry in hass.config_entries.async_entries("netatmo"):
-        await hass.config_entries.async_remove(config_entry.entry_id)
+    for config_entry in menuai.config_entries.async_entries("netatmo"):
+        await menuai.config_entries.async_remove(config_entry.entry_id)
 
 
 async def test_setup_component_invalid_token(
-    hass: HomeAssistant, config_entry: MockConfigEntry
+    menuai: menuai, config_entry: MockConfigEntry
 ) -> None:
     """Test handling of invalid token."""
 
@@ -456,44 +456,44 @@ async def test_setup_component_invalid_token(
 
     with (
         patch(
-            "homeassistant.components.netatmo.api.AsyncConfigEntryNetatmoAuth",
+            "menuai.components.netatmo.api.AsyncConfigEntryNetatmoAuth",
         ) as mock_auth,
         patch(
-            "homeassistant.helpers.config_entry_oauth2_flow.async_get_config_entry_implementation",
+            "menuai.helpers.config_entry_oauth2_flow.async_get_config_entry_implementation",
         ) as mock_impl,
-        patch("homeassistant.components.netatmo.webhook_generate_url") as mock_webhook,
+        patch("menuai.components.netatmo.webhook_generate_url") as mock_webhook,
         patch(
-            "homeassistant.helpers.config_entry_oauth2_flow.OAuth2Session"
+            "menuai.helpers.config_entry_oauth2_flow.OAuth2Session"
         ) as mock_session,
     ):
         mock_auth.return_value.async_post_api_request.side_effect = partial(
-            fake_post_request, hass
+            fake_post_request, menuai
         )
         mock_auth.return_value.async_addwebhook.side_effect = AsyncMock()
         mock_auth.return_value.async_dropwebhook.side_effect = AsyncMock()
         mock_session.return_value.async_ensure_token_valid.side_effect = (
             fake_ensure_valid_token
         )
-        assert await async_setup_component(hass, "netatmo", {})
+        assert await async_setup_component(menuai, "netatmo", {})
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     mock_auth.assert_not_called()
     mock_impl.assert_called_once()
     mock_webhook.assert_not_called()
 
     assert config_entry.state is ConfigEntryState.SETUP_ERROR
-    assert hass.config_entries.async_entries(DOMAIN)
+    assert menuai.config_entries.async_entries(DOMAIN)
 
     # Test a reauth flow is initiated
-    assert len(list(config_entry.async_get_active_flows(hass, {"reauth"}))) == 1
+    assert len(list(config_entry.async_get_active_flows(menuai, {"reauth"}))) == 1
 
-    for entry in hass.config_entries.async_entries("netatmo"):
-        await hass.config_entries.async_remove(entry.entry_id)
+    for entry in menuai.config_entries.async_entries("netatmo"):
+        await menuai.config_entries.async_remove(entry.entry_id)
 
 
 async def test_devices(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
@@ -511,9 +511,9 @@ async def test_devices(
             Platform.SWITCH,
         ]
     ):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     device_entries = dr.async_entries_for_config_entry(
         device_registry, config_entry.entry_id
@@ -527,8 +527,8 @@ async def test_devices(
 
 
 async def test_device_remove_devices(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     config_entry: MockConfigEntry,
@@ -536,18 +536,18 @@ async def test_device_remove_devices(
 ) -> None:
     """Test we can only remove a device that no longer exists."""
 
-    assert await async_setup_component(hass, "config", {})
+    assert await async_setup_component(menuai, "config", {})
 
     with selected_platforms([Platform.CLIMATE]):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     climate_entity_livingroom = "climate.livingroom"
     entity = entity_registry.async_get(climate_entity_livingroom)
 
     device_entry = device_registry.async_get(entity.device_id)
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     response = await client.remove_device(device_entry.id, config_entry.entry_id)
     assert not response["success"]
 

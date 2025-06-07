@@ -10,13 +10,13 @@ from bthome_ble import BTHomeBluetoothDeviceData as DeviceData
 from bthome_ble.parser import EncryptionScheme
 import voluptuous as vol
 
-from homeassistant.components import onboarding
-from homeassistant.components.bluetooth import (
+from menuai.components import onboarding
+from menuai.components.bluetooth import (
     BluetoothServiceInfoBleak,
     async_discovered_service_info,
 )
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_ADDRESS
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_ADDRESS
 
 from .const import DOMAIN
 
@@ -103,7 +103,7 @@ class BTHomeConfigFlow(ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Confirm discovery."""
-        if user_input is not None or not onboarding.async_is_onboarded(self.hass):
+        if user_input is not None or not onboarding.async_is_onboarded(self.menuai):
             return self._async_get_or_create_entry()
 
         self._set_confirm_only()
@@ -133,7 +133,7 @@ class BTHomeConfigFlow(ConfigFlow, domain=DOMAIN):
             return self._async_get_or_create_entry()
 
         current_addresses = self._async_current_ids(include_ignore=False)
-        for discovery_info in async_discovered_service_info(self.hass, False):
+        for discovery_info in async_discovered_service_info(self.menuai, False):
             address = discovery_info.address
             if address in current_addresses or address in self._discovered_devices:
                 continue

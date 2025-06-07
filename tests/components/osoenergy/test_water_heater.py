@@ -5,54 +5,54 @@ from unittest.mock import ANY, MagicMock, patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.osoenergy.const import DOMAIN
-from homeassistant.components.osoenergy.water_heater import (
+from menuai.components.osoenergy.const import DOMAIN
+from menuai.components.osoenergy.water_heater import (
     ATTR_UNTIL_TEMP_LIMIT,
     ATTR_V40MIN,
     SERVICE_GET_PROFILE,
     SERVICE_SET_PROFILE,
     SERVICE_SET_V40MIN,
 )
-from homeassistant.components.water_heater import (
+from menuai.components.water_heater import (
     DOMAIN as WATER_HEATER_DOMAIN,
     SERVICE_SET_TEMPERATURE,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_TEMPERATURE,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from tests.common import snapshot_platform
 
 
-@patch("homeassistant.components.osoenergy.PLATFORMS", [Platform.WATER_HEATER])
+@patch("menuai.components.osoenergy.PLATFORMS", [Platform.WATER_HEATER])
 async def test_water_heater(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_osoenergy_client: MagicMock,
     snapshot: SnapshotAssertion,
     mock_config_entry: ConfigEntry,
 ) -> None:
     """Test states of the water heater."""
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
 
 @pytest.mark.freeze_time("2024-10-10 00:00:00")
 async def test_get_profile(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_osoenergy_client: MagicMock,
     mock_config_entry: ConfigEntry,
 ) -> None:
     """Test getting the heater profile."""
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    profile = await hass.services.async_call(
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    profile = await menuai.services.async_call(
         DOMAIN,
         SERVICE_GET_PROFILE,
         {ATTR_ENTITY_ID: "water_heater.test_device"},
@@ -98,13 +98,13 @@ async def test_get_profile(
 
 @pytest.mark.freeze_time("2024-10-10 00:00:00")
 async def test_set_profile(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_osoenergy_client: MagicMock,
     mock_config_entry: ConfigEntry,
 ) -> None:
     """Test getting the heater profile."""
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.services.async_call(
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_PROFILE,
         {ATTR_ENTITY_ID: "water_heater.test_device", "hour_01": 45},
@@ -147,13 +147,13 @@ async def test_set_profile(
 
 
 async def test_set_v40_min(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_osoenergy_client: MagicMock,
     mock_config_entry: ConfigEntry,
 ) -> None:
     """Test getting the heater profile."""
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.services.async_call(
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_V40MIN,
         {ATTR_ENTITY_ID: "water_heater.test_device", ATTR_V40MIN: 300},
@@ -164,13 +164,13 @@ async def test_set_v40_min(
 
 
 async def test_set_temperature(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_osoenergy_client: MagicMock,
     mock_config_entry: ConfigEntry,
 ) -> None:
     """Test getting the heater profile."""
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.services.async_call(
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.services.async_call(
         WATER_HEATER_DOMAIN,
         SERVICE_SET_TEMPERATURE,
         {ATTR_ENTITY_ID: "water_heater.test_device", ATTR_TEMPERATURE: 45},
@@ -209,13 +209,13 @@ async def test_set_temperature(
 
 
 async def test_turn_on(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_osoenergy_client: MagicMock,
     mock_config_entry: ConfigEntry,
 ) -> None:
     """Test turning the heater on."""
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.services.async_call(
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.services.async_call(
         WATER_HEATER_DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "water_heater.test_device"},
@@ -226,13 +226,13 @@ async def test_turn_on(
 
 
 async def test_turn_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_osoenergy_client: MagicMock,
     mock_config_entry: ConfigEntry,
 ) -> None:
     """Test getting the heater profile."""
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.services.async_call(
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.services.async_call(
         WATER_HEATER_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: "water_heater.test_device"},
@@ -243,13 +243,13 @@ async def test_turn_off(
 
 
 async def test_oso_turn_on(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_osoenergy_client: MagicMock,
     mock_config_entry: ConfigEntry,
 ) -> None:
     """Test turning the heater on."""
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.services.async_call(
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: "water_heater.test_device", ATTR_UNTIL_TEMP_LIMIT: False},
@@ -260,13 +260,13 @@ async def test_oso_turn_on(
 
 
 async def test_oso_turn_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_osoenergy_client: MagicMock,
     mock_config_entry: ConfigEntry,
 ) -> None:
     """Test getting the heater profile."""
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.services.async_call(
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: "water_heater.test_device", ATTR_UNTIL_TEMP_LIMIT: False},

@@ -2,8 +2,8 @@
 
 from datetime import datetime
 
-from homeassistant.const import CONF_LATITUDE, CONF_LOCATION, CONF_LONGITUDE, CONF_NAME
-from homeassistant.util import dt as dt_util
+from menuai.const import CONF_LATITUDE, CONF_LOCATION, CONF_LONGITUDE, CONF_NAME
+from menuai.util import dt as dt_util
 
 MOCK_USER_INPUT = {
     CONF_NAME: "Home",

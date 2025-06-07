@@ -6,21 +6,21 @@ from typing import Any
 
 from pyhap.const import CATEGORY_TELEVISION
 
-from homeassistant.components.remote import (
+from menuai.components.remote import (
     ATTR_ACTIVITY,
     ATTR_ACTIVITY_LIST,
     ATTR_CURRENT_ACTIVITY,
     DOMAIN as REMOTE_DOMAIN,
     RemoteEntityFeature,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_SUPPORTED_FEATURES,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
     STATE_ON,
 )
-from homeassistant.core import State, callback
+from menuai.core import State, callback
 
 from .accessories import TYPES, HomeAccessory
 from .const import (
@@ -91,7 +91,7 @@ class RemoteInputSelectAccessory(HomeAccessory, ABC):
     ) -> None:
         """Initialize a InputSelect accessory object."""
         super().__init__(*args, category=category, **kwargs)
-        state = self.hass.states.get(self.entity_id)
+        state = self.menuai.states.get(self.entity_id)
         assert state
         features = state.attributes.get(ATTR_SUPPORTED_FEATURES, 0)
         self._reload_on_change_attrs.extend((source_list_key,))
@@ -228,7 +228,7 @@ class ActivityRemote(RemoteInputSelectAccessory):
             ATTR_ACTIVITY_LIST,
             *args,
         )
-        state = self.hass.states.get(self.entity_id)
+        state = self.menuai.states.get(self.entity_id)
         assert state
         self.async_update_state(state)
 
@@ -252,7 +252,7 @@ class ActivityRemote(RemoteInputSelectAccessory):
         if (key_name := REMOTE_KEYS.get(value)) is None:
             _LOGGER.warning("%s: Unhandled key press for %s", self.entity_id, value)
             return
-        self.hass.bus.async_fire(
+        self.menuai.bus.async_fire(
             EVENT_HOMEKIT_TV_REMOTE_KEY_PRESSED,
             {ATTR_KEY_NAME: key_name, ATTR_ENTITY_ID: self.entity_id},
         )

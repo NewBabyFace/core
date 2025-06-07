@@ -1,6 +1,6 @@
 """Constants for Folder watcher."""
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 CONF_FOLDER = "folder"
 CONF_PATTERNS = "patterns"

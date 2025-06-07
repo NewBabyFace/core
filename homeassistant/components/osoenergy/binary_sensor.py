@@ -6,13 +6,13 @@ from dataclasses import dataclass
 from apyosoenergyapi import OSOEnergy
 from apyosoenergyapi.helper.const import OSOEnergyBinarySensorData
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .entity import OSOEnergyEntity
@@ -45,12 +45,12 @@ SENSOR_TYPES: dict[str, OSOEnergyBinarySensorEntityDescription] = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up OSO Energy binary sensor."""
-    osoenergy: OSOEnergy = hass.data[DOMAIN][entry.entry_id]
+    osoenergy: OSOEnergy = menuai.data[DOMAIN][entry.entry_id]
     entities = [
         OSOEnergyBinarySensor(osoenergy, sensor_type, dev)
         for dev in osoenergy.session.device_list.get("binary_sensor", [])

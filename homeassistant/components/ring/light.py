@@ -7,10 +7,10 @@ from typing import Any
 
 from ring_doorbell import RingStickUpCam
 
-from homeassistant.components.light import ColorMode, LightEntity
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import dt as dt_util
+from menuai.components.light import ColorMode, LightEntity
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import dt as dt_util
 
 from . import RingConfigEntry
 from .coordinator import RingDataCoordinator
@@ -38,7 +38,7 @@ class OnOffState(StrEnum):
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: RingConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -82,7 +82,7 @@ class RingLight(RingEntity[RingStickUpCam], LightEntity):
 
     @exception_wrap
     async def _async_set_light(self, new_state: OnOffState) -> None:
-        """Update light state, and causes Home Assistant to correctly update."""
+        """Update light state, and causes MenuAI to correctly update."""
         await self._device.async_set_lights(new_state)
 
         self._attr_is_on = new_state == OnOffState.ON

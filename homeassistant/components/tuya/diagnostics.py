@@ -8,46 +8,46 @@ from typing import Any, cast
 
 from tuya_sharing import CustomerDevice
 
-from homeassistant.components.diagnostics import REDACTED
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.device_registry import DeviceEntry
-from homeassistant.util import dt as dt_util
+from menuai.components.diagnostics import REDACTED
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.device_registry import DeviceEntry
+from menuai.util import dt as dt_util
 
 from . import TuyaConfigEntry
 from .const import DOMAIN, DPCode
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: TuyaConfigEntry
+    menuai: menuai, entry: TuyaConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
-    return _async_get_diagnostics(hass, entry)
+    return _async_get_diagnostics(menuai, entry)
 
 
 async def async_get_device_diagnostics(
-    hass: HomeAssistant, entry: TuyaConfigEntry, device: DeviceEntry
+    menuai: menuai, entry: TuyaConfigEntry, device: DeviceEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a device entry."""
-    return _async_get_diagnostics(hass, entry, device)
+    return _async_get_diagnostics(menuai, entry, device)
 
 
 @callback
 def _async_get_diagnostics(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: TuyaConfigEntry,
     device: DeviceEntry | None = None,
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
-    hass_data = entry.runtime_data
+    menuai_data = entry.runtime_data
 
     mqtt_connected = None
-    if hass_data.manager.mq.client:
-        mqtt_connected = hass_data.manager.mq.client.is_connected()
+    if menuai_data.manager.mq.client:
+        mqtt_connected = menuai_data.manager.mq.client.is_connected()
 
     data = {
-        "endpoint": hass_data.manager.customer_api.endpoint,
-        "terminal_id": hass_data.manager.terminal_id,
+        "endpoint": menuai_data.manager.customer_api.endpoint,
+        "terminal_id": menuai_data.manager.terminal_id,
         "mqtt_connected": mqtt_connected,
         "disabled_by": entry.disabled_by,
         "disabled_polling": entry.pref_disable_polling,
@@ -56,13 +56,13 @@ def _async_get_diagnostics(
     if device:
         tuya_device_id = next(iter(device.identifiers))[1]
         data |= _async_device_as_dict(
-            hass, hass_data.manager.device_map[tuya_device_id]
+            menuai, menuai_data.manager.device_map[tuya_device_id]
         )
     else:
         data.update(
             devices=[
-                _async_device_as_dict(hass, device)
-                for device in hass_data.manager.device_map.values()
+                _async_device_as_dict(menuai, device)
+                for device in menuai_data.manager.device_map.values()
             ]
         )
 
@@ -71,7 +71,7 @@ def _async_get_diagnostics(
 
 @callback
 def _async_device_as_dict(
-    hass: HomeAssistant, device: CustomerDevice
+    menuai: menuai, device: CustomerDevice
 ) -> dict[str, Any]:
     """Represent a Tuya device as a dictionary."""
 
@@ -129,27 +129,27 @@ def _async_device_as_dict(
             "value": value,
         }
 
-    # Gather information how this Tuya device is represented in Home Assistant
-    device_registry = dr.async_get(hass)
-    entity_registry = er.async_get(hass)
-    hass_device = device_registry.async_get_device(identifiers={(DOMAIN, device.id)})
-    if hass_device:
+    # Gather information how this Tuya device is represented in MenuAI
+    device_registry = dr.async_get(menuai)
+    entity_registry = er.async_get(menuai)
+    menuai_device = device_registry.async_get_device(identifiers={(DOMAIN, device.id)})
+    if menuai_device:
         data["home_assistant"] = {
-            "name": hass_device.name,
-            "name_by_user": hass_device.name_by_user,
-            "disabled": hass_device.disabled,
-            "disabled_by": hass_device.disabled_by,
+            "name": menuai_device.name,
+            "name_by_user": menuai_device.name_by_user,
+            "disabled": menuai_device.disabled,
+            "disabled_by": menuai_device.disabled_by,
             "entities": [],
         }
 
-        hass_entities = er.async_entries_for_device(
+        menuai_entities = er.async_entries_for_device(
             entity_registry,
-            device_id=hass_device.id,
+            device_id=menuai_device.id,
             include_disabled_entities=True,
         )
 
-        for entity_entry in hass_entities:
-            state = hass.states.get(entity_entry.entity_id)
+        for entity_entry in menuai_entities:
+            state = menuai.states.get(entity_entry.entity_id)
             state_dict: dict[str, Any] | None = None
             if state:
                 state_dict = dict(state.as_dict())

@@ -1,8 +1,8 @@
 """Test Guardian diagnostics."""
 
-from homeassistant.components.diagnostics import REDACTED
-from homeassistant.components.guardian import GuardianData
-from homeassistant.core import HomeAssistant
+from menuai.components.diagnostics import REDACTED
+from menuai.components.guardian import GuardianData
+from menuai.core import menuai
 
 from tests.common import ANY, MockConfigEntry
 from tests.components.diagnostics import get_diagnostics_for_config_entry
@@ -10,9 +10,9 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_entry_diagnostics(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     setup_guardian: None,  # relies on config_entry fixture
 ) -> None:
     """Test config entry diagnostics."""
@@ -21,7 +21,7 @@ async def test_entry_diagnostics(
     # Simulate the pairing of a paired sensor:
     await data.paired_sensor_manager.async_pair_sensor("AABBCCDDEEFF")
 
-    assert await get_diagnostics_for_config_entry(hass, hass_client, config_entry) == {
+    assert await get_diagnostics_for_config_entry(menuai, menuai_client, config_entry) == {
         "entry": {
             "entry_id": config_entry.entry_id,
             "version": 1,

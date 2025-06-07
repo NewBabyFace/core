@@ -10,14 +10,14 @@ from typing import Any
 from aiohttp import web
 import voluptuous as vol
 
-from homeassistant.components.http import KEY_HASS, HomeAssistantView
-from homeassistant.components.recorder import get_instance
-from homeassistant.components.recorder.filters import Filters
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import InvalidEntityFormatError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util import dt as dt_util
+from menuai.components.http import KEY_menuai, menuaiView
+from menuai.components.recorder import get_instance
+from menuai.components.recorder.filters import Filters
+from menuai.core import menuai, callback
+from menuai.exceptions import InvalidEntityFormatError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType
+from menuai.util import dt as dt_util
 
 from .helpers import async_determine_event_types
 from .processor import EventProcessor
@@ -25,16 +25,16 @@ from .processor import EventProcessor
 
 @callback
 def async_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     conf: ConfigType,
     filters: Filters | None,
     entities_filter: Callable[[str], bool] | None,
 ) -> None:
     """Set up the logbook rest API."""
-    hass.http.register_view(LogbookView(conf, filters, entities_filter))
+    menuai.http.register_view(LogbookView(conf, filters, entities_filter))
 
 
-class LogbookView(HomeAssistantView):
+class LogbookView(menuaiView):
     """Handle logbook view requests."""
 
     url = "/api/logbook"
@@ -87,7 +87,7 @@ class LogbookView(HomeAssistantView):
                 return self.json_message("Invalid end_time", HTTPStatus.BAD_REQUEST)
             end_day = end_day_dt
 
-        hass = request.app[KEY_HASS]
+        menuai = request.app[KEY_menuai]
 
         context_id = request.query.get("context_id")
 
@@ -96,9 +96,9 @@ class LogbookView(HomeAssistantView):
                 "Can't combine entity with context_id", HTTPStatus.BAD_REQUEST
             )
 
-        event_types = async_determine_event_types(hass, entity_ids, None)
+        event_types = async_determine_event_types(menuai, entity_ids, None)
         event_processor = EventProcessor(
-            hass,
+            menuai,
             event_types,
             entity_ids,
             None,
@@ -111,4 +111,4 @@ class LogbookView(HomeAssistantView):
             """Fetch events and generate JSON."""
             return self.json(event_processor.get_events(start_day, end_day))
 
-        return await get_instance(hass).async_add_executor_job(json_events)
+        return await get_instance(menuai).async_add_executor_job(json_events)

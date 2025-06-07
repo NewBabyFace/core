@@ -2,27 +2,27 @@
 
 from unittest.mock import AsyncMock
 
-from homeassistant.components.smarty.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.smarty.const import DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_HOST
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
 
 async def test_full_flow(
-    hass: HomeAssistant, mock_smarty: AsyncMock, mock_setup_entry: AsyncMock
+    menuai: menuai, mock_smarty: AsyncMock, mock_setup_entry: AsyncMock
 ) -> None:
     """Test the full flow."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: "192.168.0.2"},
     )
@@ -35,19 +35,19 @@ async def test_full_flow(
 
 
 async def test_cannot_connect(
-    hass: HomeAssistant, mock_smarty: AsyncMock, mock_setup_entry: AsyncMock
+    menuai: menuai, mock_smarty: AsyncMock, mock_setup_entry: AsyncMock
 ) -> None:
     """Test we handle cannot connect error."""
 
     mock_smarty.update.return_value = False
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: "192.168.0.2"},
     )
@@ -57,7 +57,7 @@ async def test_cannot_connect(
 
     mock_smarty.update.return_value = True
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: "192.168.0.2"},
     )
@@ -66,19 +66,19 @@ async def test_cannot_connect(
 
 
 async def test_unknown_error(
-    hass: HomeAssistant, mock_smarty: AsyncMock, mock_setup_entry: AsyncMock
+    menuai: menuai, mock_smarty: AsyncMock, mock_setup_entry: AsyncMock
 ) -> None:
     """Test we handle unknown error."""
 
     mock_smarty.update.side_effect = Exception
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: "192.168.0.2"},
     )
@@ -88,7 +88,7 @@ async def test_unknown_error(
 
     mock_smarty.update.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: "192.168.0.2"},
     )
@@ -97,17 +97,17 @@ async def test_unknown_error(
 
 
 async def test_existing_entry(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_config_entry: MockConfigEntry
 ) -> None:
     """Test we handle existing entry."""
-    mock_config_entry.add_to_hass(hass)
-    result = await hass.config_entries.flow.async_init(
+    mock_config_entry.add_to_menuai(menuai)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_HOST: "192.168.0.2"},
     )

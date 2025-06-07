@@ -4,7 +4,7 @@ from typing import Any, cast
 
 from apple_weatherkit import DataSetType
 
-from homeassistant.components.weather import (
+from menuai.components.weather import (
     ATTR_CONDITION_CLOUDY,
     ATTR_CONDITION_EXCEPTIONAL,
     ATTR_CONDITION_FOG,
@@ -21,15 +21,15 @@ from homeassistant.components.weather import (
     SingleCoordinatorWeatherEntity,
     WeatherEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     UnitOfLength,
     UnitOfPressure,
     UnitOfSpeed,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
     ATTR_CURRENT_WEATHER,
@@ -43,19 +43,19 @@ from .entity import WeatherKitEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Add a weather entity from a config_entry."""
-    coordinator: WeatherKitDataUpdateCoordinator = hass.data[DOMAIN][
+    coordinator: WeatherKitDataUpdateCoordinator = menuai.data[DOMAIN][
         config_entry.entry_id
     ]
 
     async_add_entities([WeatherKitWeather(coordinator)])
 
 
-condition_code_to_hass = {
+condition_code_to_menuai = {
     "BlowingDust": ATTR_CONDITION_WINDY,
     "Clear": ATTR_CONDITION_SUNNY,
     "Cloudy": ATTR_CONDITION_CLOUDY,
@@ -96,7 +96,7 @@ condition_code_to_hass = {
 def _map_daily_forecast(forecast: dict[str, Any]) -> Forecast:
     return {
         "datetime": forecast["forecastStart"],
-        "condition": condition_code_to_hass[forecast["conditionCode"]],
+        "condition": condition_code_to_menuai[forecast["conditionCode"]],
         "native_temperature": forecast["temperatureMax"],
         "native_templow": forecast["temperatureMin"],
         "native_precipitation": forecast["precipitationAmount"],
@@ -108,7 +108,7 @@ def _map_daily_forecast(forecast: dict[str, Any]) -> Forecast:
 def _map_hourly_forecast(forecast: dict[str, Any]) -> Forecast:
     return {
         "datetime": forecast["forecastStart"],
-        "condition": condition_code_to_hass[forecast["conditionCode"]],
+        "condition": condition_code_to_menuai[forecast["conditionCode"]],
         "native_temperature": forecast["temperature"],
         "native_apparent_temperature": forecast["temperatureApparent"],
         "native_dew_point": forecast.get("temperatureDewPoint"),
@@ -175,7 +175,7 @@ class WeatherKitWeather(
     def condition(self) -> str | None:
         """Return the current condition."""
         condition_code = cast(str, self.current_weather.get("conditionCode"))
-        condition = condition_code_to_hass[condition_code]
+        condition = condition_code_to_menuai[condition_code]
 
         if condition == "sunny" and self.current_weather.get("daylight") is False:
             condition = "clear-night"

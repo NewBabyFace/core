@@ -8,29 +8,29 @@ import logging
 
 from pysqueezebox import Player, Server
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
     CONF_USERNAME,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import (
+from menuai.core import menuai
+from menuai.exceptions import (
     ConfigEntryAuthFailed,
     ConfigEntryError,
     ConfigEntryNotReady,
 )
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.device_registry import (
+from menuai.helpers import device_registry as dr
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.device_registry import (
     CONNECTION_NETWORK_MAC,
     DeviceEntryType,
     format_mac,
 )
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.event import async_call_later
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.event import async_call_later
 
 from .const import (
     CONF_HTTPS,
@@ -77,10 +77,10 @@ class SqueezeboxData:
 type SqueezeboxConfigEntry = ConfigEntry[SqueezeboxData]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: SqueezeboxConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: SqueezeboxConfigEntry) -> bool:
     """Set up an LMS Server from a config entry."""
     config = entry.data
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
     _LOGGER.debug(
         "Reached async_setup_entry for host=%s(%s)", config[CONF_HOST], entry.entry_id
     )
@@ -168,7 +168,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: SqueezeboxConfigEntry) -
         else None
     )
 
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     device = device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, lms.uuid)},
@@ -181,12 +181,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: SqueezeboxConfigEntry) -
     )
     _LOGGER.debug("LMS Device %s", device)
 
-    server_coordinator = LMSStatusDataUpdateCoordinator(hass, entry, lms)
+    server_coordinator = LMSStatusDataUpdateCoordinator(menuai, entry, lms)
 
     entry.runtime_data = SqueezeboxData(coordinator=server_coordinator, server=lms)
 
     # set up player discovery
-    known_servers = hass.data.setdefault(DOMAIN, {}).setdefault(KNOWN_SERVERS, {})
+    known_servers = menuai.data.setdefault(DOMAIN, {}).setdefault(KNOWN_SERVERS, {})
     known_players = known_servers.setdefault(lms.uuid, {}).setdefault(KNOWN_PLAYERS, [])
 
     async def _player_discovery(now: datetime | None = None) -> None:
@@ -197,41 +197,41 @@ async def async_setup_entry(hass: HomeAssistant, entry: SqueezeboxConfigEntry) -
             if player.player_id in known_players:
                 await player.async_update()
                 async_dispatcher_send(
-                    hass, SIGNAL_PLAYER_REDISCOVERED, player.player_id, player.connected
+                    menuai, SIGNAL_PLAYER_REDISCOVERED, player.player_id, player.connected
                 )
             else:
                 _LOGGER.debug("Adding new entity: %s", player)
                 player_coordinator = SqueezeBoxPlayerUpdateCoordinator(
-                    hass, entry, player, lms.uuid
+                    menuai, entry, player, lms.uuid
                 )
                 await player_coordinator.async_refresh()
                 known_players.append(player.player_id)
                 async_dispatcher_send(
-                    hass, SIGNAL_PLAYER_DISCOVERED, player_coordinator
+                    menuai, SIGNAL_PLAYER_DISCOVERED, player_coordinator
                 )
 
         if players := await lms.async_get_players():
             for player in players:
-                hass.async_create_task(_discovered_player(player))
+                menuai.async_create_task(_discovered_player(player))
 
         entry.async_on_unload(
-            async_call_later(hass, DISCOVERY_INTERVAL, _player_discovery)
+            async_call_later(menuai, DISCOVERY_INTERVAL, _player_discovery)
         )
 
     await server_coordinator.async_config_entry_first_refresh()
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     _LOGGER.debug(
         "Adding player discovery job for LMS server: %s", entry.data[CONF_HOST]
     )
     entry.async_create_background_task(
-        hass, _player_discovery(), "squeezebox.media_player.player_discovery"
+        menuai, _player_discovery(), "squeezebox.media_player.player_discovery"
     )
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: SqueezeboxConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: SqueezeboxConfigEntry) -> bool:
     """Unload a config entry."""
     # Stop player discovery task for this config entry.
     _LOGGER.debug(
@@ -241,10 +241,10 @@ async def async_unload_entry(hass: HomeAssistant, entry: SqueezeboxConfigEntry) 
     )
 
     # Stop server discovery task if this is the last config entry.
-    current_entries = hass.config_entries.async_entries(DOMAIN)
+    current_entries = menuai.config_entries.async_entries(DOMAIN)
     if len(current_entries) == 1 and current_entries[0] == entry:
         _LOGGER.debug("Stopping server discovery task")
-        hass.data[DOMAIN][DISCOVERY_TASK].cancel()
-        hass.data[DOMAIN].pop(DISCOVERY_TASK)
+        menuai.data[DOMAIN][DISCOVERY_TASK].cancel()
+        menuai.data[DOMAIN].pop(DISCOVERY_TASK)
 
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

@@ -1,24 +1,24 @@
 """Test config flow."""
 
-from homeassistant.components.shopping_list.const import DOMAIN
-from homeassistant.config_entries import SOURCE_IMPORT, SOURCE_USER
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.shopping_list.const import DOMAIN
+from menuai.config_entries import SOURCE_IMPORT, SOURCE_USER
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 
-async def test_import(hass: HomeAssistant) -> None:
+async def test_import(menuai: menuai) -> None:
     """Test entry will be imported."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_IMPORT}, data={}
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
 
 
-async def test_user(hass: HomeAssistant) -> None:
+async def test_user(menuai: menuai) -> None:
     """Test we can start a config flow."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
@@ -26,10 +26,10 @@ async def test_user(hass: HomeAssistant) -> None:
     assert result["step_id"] == "user"
 
 
-async def test_user_confirm(hass: HomeAssistant) -> None:
+async def test_user_confirm(menuai: menuai) -> None:
     """Test we can finish a config flow."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}, data={}
     )
 
@@ -37,9 +37,9 @@ async def test_user_confirm(hass: HomeAssistant) -> None:
     assert result["result"].data == {}
 
 
-async def test_onboarding_flow(hass: HomeAssistant) -> None:
+async def test_onboarding_flow(menuai: menuai) -> None:
     """Test the onboarding configuration flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": "onboarding"}
     )
 

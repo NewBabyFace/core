@@ -7,12 +7,12 @@ import pytest
 from renault_api.kamereon import schemas
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
-from homeassistant.components.renault.const import DOMAIN
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
+from menuai.components.renault.const import DOMAIN
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from tests.common import async_load_fixture, snapshot_platform
 
@@ -22,92 +22,92 @@ pytestmark = pytest.mark.usefixtures("patch_renault_account", "patch_get_vehicle
 @pytest.fixture(autouse=True)
 def override_platforms() -> Generator[None]:
     """Override PLATFORMS."""
-    with patch("homeassistant.components.renault.PLATFORMS", [Platform.BUTTON]):
+    with patch("menuai.components.renault.PLATFORMS", [Platform.BUTTON]):
         yield
 
 
 @pytest.mark.usefixtures("fixtures_with_data")
 async def test_buttons(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test for Renault device trackers."""
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
 
 @pytest.mark.usefixtures("fixtures_with_no_data")
 @pytest.mark.parametrize("vehicle_type", ["zoe_40"], indirect=True)
 async def test_button_empty(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test for Renault device trackers with empty data from Renault."""
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
 
 @pytest.mark.usefixtures("fixtures_with_invalid_upstream_exception")
 @pytest.mark.parametrize("vehicle_type", ["zoe_40"], indirect=True)
 async def test_button_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test for Renault device trackers with temporary failure."""
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
 
 @pytest.mark.usefixtures("fixtures_with_access_denied_exception")
 @pytest.mark.parametrize("vehicle_type", ["zoe_40"], indirect=True)
 async def test_button_access_denied(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test for Renault device trackers with access denied failure."""
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
 
 @pytest.mark.usefixtures("fixtures_with_not_supported_exception")
 @pytest.mark.parametrize("vehicle_type", ["zoe_40"], indirect=True)
 async def test_button_not_supported(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test for Renault device trackers with not supported failure."""
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
 
 @pytest.mark.usefixtures("fixtures_with_data")
 @pytest.mark.parametrize("vehicle_type", ["zoe_40"], indirect=True)
 async def test_button_start_charge(
-    hass: HomeAssistant, config_entry: ConfigEntry
+    menuai: menuai, config_entry: ConfigEntry
 ) -> None:
     """Test that button invokes renault_api with correct data."""
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     data = {
         ATTR_ENTITY_ID: "button.reg_zoe_40_start_charge",
@@ -117,11 +117,11 @@ async def test_button_start_charge(
         "renault_api.renault_vehicle.RenaultVehicle.set_charge_start",
         return_value=(
             schemas.KamereonVehicleHvacStartActionDataSchema.loads(
-                await async_load_fixture(hass, "action.set_charge_start.json", DOMAIN)
+                await async_load_fixture(menuai, "action.set_charge_start.json", DOMAIN)
             )
         ),
     ) as mock_action:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             BUTTON_DOMAIN, SERVICE_PRESS, service_data=data, blocking=True
         )
     assert len(mock_action.mock_calls) == 1
@@ -131,11 +131,11 @@ async def test_button_start_charge(
 @pytest.mark.usefixtures("fixtures_with_data")
 @pytest.mark.parametrize("vehicle_type", ["zoe_40"], indirect=True)
 async def test_button_stop_charge(
-    hass: HomeAssistant, config_entry: ConfigEntry
+    menuai: menuai, config_entry: ConfigEntry
 ) -> None:
     """Test that button invokes renault_api with correct data."""
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     data = {
         ATTR_ENTITY_ID: "button.reg_zoe_40_stop_charge",
@@ -145,11 +145,11 @@ async def test_button_stop_charge(
         "renault_api.renault_vehicle.RenaultVehicle.set_charge_stop",
         return_value=(
             schemas.KamereonVehicleChargingStartActionDataSchema.loads(
-                await async_load_fixture(hass, "action.set_charge_stop.json", DOMAIN)
+                await async_load_fixture(menuai, "action.set_charge_stop.json", DOMAIN)
             )
         ),
     ) as mock_action:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             BUTTON_DOMAIN, SERVICE_PRESS, service_data=data, blocking=True
         )
     assert len(mock_action.mock_calls) == 1
@@ -159,11 +159,11 @@ async def test_button_stop_charge(
 @pytest.mark.usefixtures("fixtures_with_data")
 @pytest.mark.parametrize("vehicle_type", ["zoe_40"], indirect=True)
 async def test_button_start_air_conditioner(
-    hass: HomeAssistant, config_entry: ConfigEntry
+    menuai: menuai, config_entry: ConfigEntry
 ) -> None:
     """Test that button invokes renault_api with correct data."""
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     data = {
         ATTR_ENTITY_ID: "button.reg_zoe_40_start_air_conditioner",
@@ -173,11 +173,11 @@ async def test_button_start_air_conditioner(
         "renault_api.renault_vehicle.RenaultVehicle.set_ac_start",
         return_value=(
             schemas.KamereonVehicleHvacStartActionDataSchema.loads(
-                await async_load_fixture(hass, "action.set_ac_start.json", DOMAIN)
+                await async_load_fixture(menuai, "action.set_ac_start.json", DOMAIN)
             )
         ),
     ) as mock_action:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             BUTTON_DOMAIN, SERVICE_PRESS, service_data=data, blocking=True
         )
     assert len(mock_action.mock_calls) == 1

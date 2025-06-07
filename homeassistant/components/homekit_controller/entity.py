@@ -12,17 +12,17 @@ from aiohomekit.model.characteristics import (
 )
 from aiohomekit.model.services import Service, ServicesTypes
 
-from homeassistant.core import CALLBACK_TYPE, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import CALLBACK_TYPE, callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity
+from menuai.helpers.typing import ConfigType
 
 from .connection import HKDevice, valid_serial_number
 from .utils import folded_name
 
 
 class HomeKitEntity(Entity):
-    """Representation of a Home Assistant HomeKit device."""
+    """Representation of a MenuAI HomeKit device."""
 
     _attr_should_poll = False
     pollable_characteristics: list[tuple[int, int]]
@@ -53,10 +53,10 @@ class HomeKitEntity(Entity):
         # We call _async_unsubscribe_chars as soon as we
         # know the entity is about to be removed so we do not try to
         # update characteristics that no longer exist. It will get
-        # called in async_will_remove_from_hass as well, but that is
+        # called in async_will_remove_from_menuai as well, but that is
         # too late.
         self._async_unsubscribe_chars()
-        self.hass.async_create_task(self.async_remove(force_remove=True))
+        self.menuai.async_create_task(self.async_remove(force_remove=True))
 
     @callback
     def _async_remove_entity_if_accessory_or_service_disappeared(self) -> bool:
@@ -89,8 +89,8 @@ class HomeKitEntity(Entity):
         self._async_subscribe_chars()
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
-        """Entity added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Entity added to menuai."""
         self._async_subscribe_chars()
         self.async_on_remove(
             self._accessory.async_subscribe_config_changed(self._async_config_changed)
@@ -99,8 +99,8 @@ class HomeKitEntity(Entity):
             self._accessory.async_subscribe_availability(self._async_write_ha_state)
         )
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Prepare to be removed from hass."""
+    async def async_will_remove_from_menuai(self) -> None:
+        """Prepare to be removed from menuai."""
         self._async_unsubscribe_chars()
         self._accessory.async_entity_key_removed(self._entity_key)
 

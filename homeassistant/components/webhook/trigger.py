@@ -9,11 +9,11 @@ from typing import Any
 from aiohttp import hdrs, web
 import voluptuous as vol
 
-from homeassistant.const import CONF_PLATFORM, CONF_WEBHOOK_ID
-from homeassistant.core import CALLBACK_TYPE, HassJob, HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import CONF_PLATFORM, CONF_WEBHOOK_ID
+from menuai.core import CALLBACK_TYPE, menuaiJob, menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.trigger import TriggerActionType, TriggerInfo
+from menuai.helpers.typing import ConfigType
 
 from . import (
     DEFAULT_METHODS,
@@ -51,11 +51,11 @@ class TriggerInstance:
     """Attached trigger settings."""
 
     trigger_info: TriggerInfo
-    job: HassJob
+    job: menuaiJob
 
 
 async def _handle_webhook(
-    hass: HomeAssistant, webhook_id: str, request: web.Request
+    menuai: menuai, webhook_id: str, request: web.Request
 ) -> None:
     """Handle incoming webhook."""
     base_result: dict[str, Any] = {"platform": "webhook", "webhook_id": webhook_id}
@@ -68,16 +68,16 @@ async def _handle_webhook(
     base_result["query"] = request.query
     base_result["description"] = "webhook"
 
-    triggers: dict[str, list[TriggerInstance]] = hass.data.setdefault(
+    triggers: dict[str, list[TriggerInstance]] = menuai.data.setdefault(
         WEBHOOK_TRIGGERS, {}
     )
     for trigger in triggers[webhook_id]:
         result = {**base_result, **trigger.trigger_info["trigger_data"]}
-        hass.async_run_hass_job(trigger.job, {"trigger": result})
+        menuai.async_run_menuai_job(trigger.job, {"trigger": result})
 
 
 async def async_attach_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     action: TriggerActionType,
     trigger_info: TriggerInfo,
@@ -86,15 +86,15 @@ async def async_attach_trigger(
     webhook_id: str = config[CONF_WEBHOOK_ID]
     local_only = config.get(CONF_LOCAL_ONLY, True)
     allowed_methods = config.get(CONF_ALLOWED_METHODS, DEFAULT_METHODS)
-    job = HassJob(action)
+    job = menuaiJob(action)
 
-    triggers: dict[str, list[TriggerInstance]] = hass.data.setdefault(
+    triggers: dict[str, list[TriggerInstance]] = menuai.data.setdefault(
         WEBHOOK_TRIGGERS, {}
     )
 
     if webhook_id not in triggers:
         async_register(
-            hass,
+            menuai,
             trigger_info["domain"],
             trigger_info["name"],
             webhook_id,
@@ -112,7 +112,7 @@ async def async_attach_trigger(
         """Unregister webhook."""
         triggers[webhook_id].remove(trigger_instance)
         if not triggers[webhook_id]:
-            async_unregister(hass, webhook_id)
+            async_unregister(menuai, webhook_id)
             triggers.pop(webhook_id)
 
     return unregister

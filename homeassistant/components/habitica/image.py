@@ -6,10 +6,10 @@ from enum import StrEnum
 
 from habiticalib import Avatar, extract_avatar
 
-from homeassistant.components.image import ImageEntity, ImageEntityDescription
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import dt as dt_util
+from menuai.components.image import ImageEntity, ImageEntityDescription
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import dt as dt_util
 
 from .coordinator import HabiticaConfigEntry, HabiticaDataUpdateCoordinator
 from .entity import HabiticaBase
@@ -24,7 +24,7 @@ class HabiticaImageEntity(StrEnum):
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: HabiticaConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -32,7 +32,7 @@ async def async_setup_entry(
 
     coordinator = config_entry.runtime_data
 
-    async_add_entities([HabiticaImage(hass, coordinator)])
+    async_add_entities([HabiticaImage(menuai, coordinator)])
 
 
 class HabiticaImage(HabiticaBase, ImageEntity):
@@ -48,12 +48,12 @@ class HabiticaImage(HabiticaBase, ImageEntity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         coordinator: HabiticaDataUpdateCoordinator,
     ) -> None:
         """Initialize the image entity."""
         super().__init__(coordinator, self.entity_description)
-        ImageEntity.__init__(self, hass)
+        ImageEntity.__init__(self, menuai)
         self._attr_image_last_updated = dt_util.utcnow()
         self._avatar = extract_avatar(self.coordinator.data.user)
 

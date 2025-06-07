@@ -6,7 +6,7 @@
     "step": {
       "user": {
         "title": "Bring! Grocery shopping list",
-        "description": "Connect your Bring! account to sync your shopping lists with Home Assistant.\n\nDon't have a Bring! account? Download the app on [Google Play for Android]({google_play}) or the [App Store for iOS]({app_store}) to sign up.",
+        "description": "Connect your Bring! account to sync your shopping lists with MenuAI.\n\nDon't have a Bring! account? Download the app on [Google Play for Android]({google_play}) or the [App Store for iOS]({app_store}) to sign up.",
         "data": {
           "email": "[%key:common::config_flow::data::email%]",
           "password": "[%key:common::config_flow::data::password%]"

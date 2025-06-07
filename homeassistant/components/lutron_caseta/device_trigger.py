@@ -7,18 +7,18 @@ from typing import cast
 
 import voluptuous as vol
 
-from homeassistant.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA
-from homeassistant.components.homeassistant.triggers import event as event_trigger
-from homeassistant.const import (
+from menuai.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA
+from menuai.components.menuai.triggers import event as event_trigger
+from menuai.const import (
     CONF_DEVICE_ID,
     CONF_DOMAIN,
     CONF_EVENT,
     CONF_PLATFORM,
     CONF_TYPE,
 )
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant
-from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import CALLBACK_TYPE, menuai
+from menuai.helpers.trigger import TriggerActionType, TriggerInfo
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     ACTION_PRESS,
@@ -349,14 +349,14 @@ TRIGGER_SCHEMA = vol.Any(
 
 
 async def async_validate_trigger_config(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> ConfigType:
     """Validate trigger config."""
 
     device_id = config[CONF_DEVICE_ID]
     subtype = config[CONF_SUBTYPE]
 
-    if not (data := get_lutron_data_by_dr_id(hass, device_id)) or not (
+    if not (data := get_lutron_data_by_dr_id(menuai, device_id)) or not (
         keypad := data.keypad_data.dr_device_id_to_keypad.get(device_id)
     ):
         return config
@@ -396,11 +396,11 @@ async def async_validate_trigger_config(
 
 
 async def async_get_triggers(
-    hass: HomeAssistant, device_id: str
+    menuai: menuai, device_id: str
 ) -> list[dict[str, str]]:
     """List device triggers for lutron caseta devices."""
     # Check if device is a valid keypad.  Return empty if not.
-    if not (data := get_lutron_data_by_dr_id(hass, device_id)) or not (
+    if not (data := get_lutron_data_by_dr_id(menuai, device_id)) or not (
         keypad := data.keypad_data.dr_device_id_to_keypad.get(device_id)
     ):
         return []
@@ -427,14 +427,14 @@ async def async_get_triggers(
 
 
 async def async_attach_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     action: TriggerActionType,
     trigger_info: TriggerInfo,
 ) -> CALLBACK_TYPE:
     """Attach a trigger."""
     return await event_trigger.async_attach_trigger(
-        hass,
+        menuai,
         event_trigger.TRIGGER_SCHEMA(
             {
                 event_trigger.CONF_PLATFORM: CONF_EVENT,
@@ -452,11 +452,11 @@ async def async_attach_trigger(
     )
 
 
-def get_lutron_data_by_dr_id(hass: HomeAssistant, device_id: str):
+def get_lutron_data_by_dr_id(menuai: menuai, device_id: str):
     """Get a lutron integration data for the given device registry device id."""
     entries = cast(
         list[LutronCasetaConfigEntry],
-        hass.config_entries.async_entries(
+        menuai.config_entries.async_entries(
             DOMAIN, include_ignore=False, include_disabled=False
         ),
     )

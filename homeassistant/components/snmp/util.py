@@ -17,9 +17,9 @@ from pysnmp.hlapi.asyncio import (
 from pysnmp.hlapi.asyncio.cmdgen import lcd, vbProcessor
 from pysnmp.smi.builder import MibBuilder
 
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.helpers.singleton import singleton
+from menuai.const import EVENT_menuai_STOP
+from menuai.core import Event, menuai, callback
+from menuai.helpers.singleton import singleton
 
 DATA_SNMP_ENGINE = "snmp_engine"
 
@@ -43,7 +43,7 @@ type RequestArgsType = tuple[
 
 
 async def async_create_command_cmd_args(
-    hass: HomeAssistant,
+    menuai: menuai,
     auth_data: UsmUserData | CommunityData,
     target: UdpTransportTarget | Udp6TransportTarget,
 ) -> CommandArgsType:
@@ -51,12 +51,12 @@ async def async_create_command_cmd_args(
 
     The ObjectType needs to be created dynamically by the caller.
     """
-    engine = await async_get_snmp_engine(hass)
+    engine = await async_get_snmp_engine(menuai)
     return (engine, auth_data, target, ContextData())
 
 
 async def async_create_request_cmd_args(
-    hass: HomeAssistant,
+    menuai: menuai,
     auth_data: UsmUserData | CommunityData,
     target: UdpTransportTarget | Udp6TransportTarget,
     object_id: str,
@@ -66,23 +66,23 @@ async def async_create_request_cmd_args(
     The same ObjectType is used for all requests.
     """
     engine, auth_data, target, context_data = await async_create_command_cmd_args(
-        hass, auth_data, target
+        menuai, auth_data, target
     )
     object_type = ObjectType(ObjectIdentity(object_id))
     return (engine, auth_data, target, context_data, object_type)
 
 
 @singleton(DATA_SNMP_ENGINE)
-async def async_get_snmp_engine(hass: HomeAssistant) -> SnmpEngine:
+async def async_get_snmp_engine(menuai: menuai) -> SnmpEngine:
     """Get the SNMP engine."""
-    engine = await hass.async_add_executor_job(_get_snmp_engine)
+    engine = await menuai.async_add_executor_job(_get_snmp_engine)
 
     @callback
     def _async_shutdown_listener(ev: Event) -> None:
         _LOGGER.debug("Unconfiguring SNMP engine")
         lcd.unconfigure(engine, None)
 
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _async_shutdown_listener)
+    menuai.bus.async_listen_once(EVENT_menuai_STOP, _async_shutdown_listener)
     return engine
 
 

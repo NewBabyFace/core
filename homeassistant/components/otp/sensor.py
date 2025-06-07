@@ -6,13 +6,13 @@ import time
 
 import pyotp
 
-from homeassistant.components.sensor import SensorEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_NAME, CONF_TOKEN
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
+from menuai.components.sensor import SensorEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_NAME, CONF_TOKEN
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
 
 from .const import DOMAIN
 
@@ -20,7 +20,7 @@ TIME_STEP = 30  # Default time step assumed by Google Authenticator
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -54,8 +54,8 @@ class TOTPSensor(SensorEntity):
             identifiers={(DOMAIN, entry_id)},
         )
 
-    async def async_added_to_hass(self) -> None:
-        """Handle when an entity is about to be added to Home Assistant."""
+    async def async_added_to_menuai(self) -> None:
+        """Handle when an entity is about to be added to MenuAI."""
         self._call_loop()
 
     @callback
@@ -66,4 +66,4 @@ class TOTPSensor(SensorEntity):
         # Update must occur at even TIME_STEP, e.g. 12:00:00, 12:00:30,
         # 12:01:00, etc. in order to have synced time (see RFC6238)
         self._next_expiration = TIME_STEP - (time.time() % TIME_STEP)
-        self.hass.loop.call_later(self._next_expiration, self._call_loop)
+        self.menuai.loop.call_later(self._next_expiration, self._call_loop)

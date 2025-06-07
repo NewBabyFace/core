@@ -9,13 +9,13 @@ import pypck.module
 from pypck.module import GroupConnection, ModuleConnection
 import pytest
 
-from homeassistant.components.lcn import PchkConnectionManager
-from homeassistant.components.lcn.config_flow import LcnFlowHandler
-from homeassistant.components.lcn.const import DOMAIN
-from homeassistant.components.lcn.helpers import AddressType, generate_unique_id
-from homeassistant.const import CONF_ADDRESS, CONF_DEVICES, CONF_ENTITIES, CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.components.lcn import PchkConnectionManager
+from menuai.components.lcn.config_flow import LcnFlowHandler
+from menuai.components.lcn.const import DOMAIN
+from menuai.components.lcn.helpers import AddressType, generate_unique_id
+from menuai.const import CONF_ADDRESS, CONF_DEVICES, CONF_ENTITIES, CONF_HOST
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 from tests.common import MockConfigEntry, load_fixture
 
@@ -111,10 +111,10 @@ def create_config_entry_myhome() -> MockConfigEntry:
 
 
 async def init_integration(
-    hass: HomeAssistant, entry: MockConfigEntry
+    menuai: menuai, entry: MockConfigEntry
 ) -> MockPchkConnectionManager:
-    """Set up the LCN integration in Home Assistant."""
-    hass.http = Mock()  # needs to be mocked as hass.http.register_static_path is called when registering the frontend
+    """Set up the LCN integration in MenuAI."""
+    menuai.http = Mock()  # needs to be mocked as menuai.http.register_static_path is called when registering the frontend
     lcn_connection = None
 
     def lcn_connection_factory(*args, **kwargs):
@@ -122,22 +122,22 @@ async def init_integration(
         lcn_connection = MockPchkConnectionManager(*args, **kwargs)
         return lcn_connection
 
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     with patch(
-        "homeassistant.components.lcn.PchkConnectionManager",
+        "menuai.components.lcn.PchkConnectionManager",
         side_effect=lcn_connection_factory,
     ):
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     return lcn_connection
 
 
 def get_device(
-    hass: HomeAssistant, entry: MockConfigEntry, address: AddressType
+    menuai: menuai, entry: MockConfigEntry, address: AddressType
 ) -> dr.DeviceEntry:
     """Get LCN device for specified address."""
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     identifiers = {(DOMAIN, generate_unique_id(entry.entry_id, address))}
     device = device_registry.async_get_device(identifiers=identifiers)
     assert device

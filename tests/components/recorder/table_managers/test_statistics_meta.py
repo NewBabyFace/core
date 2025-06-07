@@ -7,25 +7,25 @@ import threading
 
 import pytest
 
-from homeassistant.components import recorder
-from homeassistant.components.recorder.db_schema import StatisticsMeta
-from homeassistant.components.recorder.models import (
+from menuai.components import recorder
+from menuai.components.recorder.db_schema import StatisticsMeta
+from menuai.components.recorder.models import (
     StatisticMeanType,
     StatisticMetaData,
 )
-from homeassistant.components.recorder.util import session_scope
-from homeassistant.const import DEGREE
-from homeassistant.core import HomeAssistant
+from menuai.components.recorder.util import session_scope
+from menuai.const import DEGREE
+from menuai.core import menuai
 
 from tests.typing import RecorderInstanceGenerator
 
 
 async def test_passing_mutually_exclusive_options_to_get_many(
-    async_setup_recorder_instance: RecorderInstanceGenerator, hass: HomeAssistant
+    async_setup_recorder_instance: RecorderInstanceGenerator, menuai: menuai
 ) -> None:
     """Test passing mutually exclusive options to get_many."""
     instance = await async_setup_recorder_instance(
-        hass, {recorder.CONF_COMMIT_INTERVAL: 0}
+        menuai, {recorder.CONF_COMMIT_INTERVAL: 0}
     )
     with session_scope(session=instance.get_session()) as session:
         with pytest.raises(ValueError):
@@ -48,11 +48,11 @@ async def test_passing_mutually_exclusive_options_to_get_many(
 
 
 async def test_unsafe_calls_to_statistics_meta_manager(
-    async_setup_recorder_instance: RecorderInstanceGenerator, hass: HomeAssistant
+    async_setup_recorder_instance: RecorderInstanceGenerator, menuai: menuai
 ) -> None:
     """Test we raise when trying to call non-threadsafe functions on statistics_meta_manager."""
     instance = await async_setup_recorder_instance(
-        hass, {recorder.CONF_COMMIT_INTERVAL: 0}
+        menuai, {recorder.CONF_COMMIT_INTERVAL: 0}
     )
     with (
         session_scope(session=instance.get_session()) as session,
@@ -68,12 +68,12 @@ async def test_unsafe_calls_to_statistics_meta_manager(
 
 async def test_invalid_mean_types(
     async_setup_recorder_instance: RecorderInstanceGenerator,
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test passing invalid mean types will be skipped and logged."""
     instance = await async_setup_recorder_instance(
-        hass, {recorder.CONF_COMMIT_INTERVAL: 0}
+        menuai, {recorder.CONF_COMMIT_INTERVAL: 0}
     )
     instance.recorder_and_worker_thread_ids.add(threading.get_ident())
 
@@ -135,7 +135,7 @@ async def test_invalid_mean_types(
         # Check that the invalid mean type was skipped
         assert manager.get_many(session) == valid_metadata
         assert (
-            "homeassistant.components.recorder.table_managers.statistics_meta",
+            "menuai.components.recorder.table_managers.statistics_meta",
             logging.WARNING,
             "Invalid mean type found for statistic_id: sensor.invalid, mean_type: 12345. Skipping",
         ) in caplog.record_tuples

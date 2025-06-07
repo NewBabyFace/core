@@ -23,7 +23,7 @@ from dateutil.rrule import (
 )
 from habiticalib import ContentData, Frequency, TaskData, UserData
 
-from homeassistant.util import dt as dt_util
+from menuai.util import dt as dt_util
 
 
 def next_due_date(task: TaskData, today: datetime.datetime) -> datetime.date | None:

@@ -9,18 +9,18 @@ from typing import Any
 from aiohttp.client import ClientSession
 from pyfreedompro import put_state
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_HVAC_MODE,
     ClimateEntity,
     ClimateEntityFeature,
     HVACMode,
 )
-from homeassistant.const import ATTR_TEMPERATURE, CONF_API_KEY, UnitOfTemperature
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import aiohttp_client
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.const import ATTR_TEMPERATURE, CONF_API_KEY, UnitOfTemperature
+from menuai.core import menuai, callback
+from menuai.helpers import aiohttp_client
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import FreedomproConfigEntry, FreedomproDataUpdateCoordinator
@@ -43,7 +43,7 @@ SUPPORTED_HVAC_MODES = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: FreedomproConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -52,7 +52,7 @@ async def async_setup_entry(
     coordinator = entry.runtime_data
     async_add_entities(
         Device(
-            aiohttp_client.async_get_clientsession(hass), api_key, device, coordinator
+            aiohttp_client.async_get_clientsession(menuai), api_key, device, coordinator
         )
         for device in coordinator.data
         if device["type"] == "thermostat"
@@ -118,9 +118,9 @@ class Device(CoordinatorEntity[FreedomproDataUpdateCoordinator], ClimateEntity):
                 self._attr_hvac_mode = HVAC_MAP[state["heatingCoolingState"]]
         super()._handle_coordinator_update()
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai."""
+        await super().async_added_to_menuai()
         self._handle_coordinator_update()
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:

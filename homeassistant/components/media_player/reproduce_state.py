@@ -6,7 +6,7 @@ import asyncio
 from collections.abc import Iterable
 from typing import Any
 
-from homeassistant.const import (
+from menuai.const import (
     ATTR_SUPPORTED_FEATURES,
     SERVICE_MEDIA_PAUSE,
     SERVICE_MEDIA_PLAY,
@@ -22,7 +22,7 @@ from homeassistant.const import (
     STATE_PAUSED,
     STATE_PLAYING,
 )
-from homeassistant.core import Context, HomeAssistant, State
+from menuai.core import Context, menuai, State
 
 from .const import (
     ATTR_INPUT_SOURCE,
@@ -40,14 +40,14 @@ from .const import (
 
 
 async def _async_reproduce_states(
-    hass: HomeAssistant,
+    menuai: menuai,
     state: State,
     *,
     context: Context | None = None,
     reproduce_options: dict[str, Any] | None = None,
 ) -> None:
     """Reproduce component states."""
-    cur_state = hass.states.get(state.entity_id)
+    cur_state = menuai.states.get(state.entity_id)
     features = cur_state.attributes[ATTR_SUPPORTED_FEATURES] if cur_state else 0
 
     async def call_service(service: str, keys: Iterable[str]) -> None:
@@ -57,7 +57,7 @@ async def _async_reproduce_states(
             if key in state.attributes:
                 data[key] = state.attributes[key]
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN, service, data, blocking=True, context=context
         )
 
@@ -80,7 +80,7 @@ async def _async_reproduce_states(
     ):
         await call_service(SERVICE_TURN_ON, [])
 
-    cur_state = hass.states.get(state.entity_id)
+    cur_state = menuai.states.get(state.entity_id)
     features = cur_state.attributes[ATTR_SUPPORTED_FEATURES] if cur_state else 0
 
     # First set source & sound mode to match the saved supported features
@@ -135,7 +135,7 @@ async def _async_reproduce_states(
 
 
 async def async_reproduce_states(
-    hass: HomeAssistant,
+    menuai: menuai,
     states: Iterable[State],
     *,
     context: Context | None = None,
@@ -145,7 +145,7 @@ async def async_reproduce_states(
     await asyncio.gather(
         *(
             _async_reproduce_states(
-                hass, state, context=context, reproduce_options=reproduce_options
+                menuai, state, context=context, reproduce_options=reproduce_options
             )
             for state in states
         )

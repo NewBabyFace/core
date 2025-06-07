@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.const import (
+from menuai.components.diagnostics import async_redact_data
+from menuai.const import (
     CONF_API_KEY,
     CONF_COUNTRY,
     CONF_LATITUDE,
@@ -13,7 +13,7 @@ from homeassistant.const import (
     CONF_STATE,
     CONF_UNIQUE_ID,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from . import AirVisualConfigEntry
 from .const import CONF_CITY
@@ -36,7 +36,7 @@ TO_REDACT = {
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: AirVisualConfigEntry
+    menuai: menuai, entry: AirVisualConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     coordinator = entry.runtime_data

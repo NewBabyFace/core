@@ -13,8 +13,8 @@ from aiohttp import web
 from gassist_text import TextAssistant
 from google.oauth2.credentials import Credentials
 
-from homeassistant.components.http import HomeAssistantView
-from homeassistant.components.media_player import (
+from menuai.components.http import menuaiView
+from menuai.components.media_player import (
     ATTR_MEDIA_ANNOUNCE,
     ATTR_MEDIA_CONTENT_ID,
     ATTR_MEDIA_CONTENT_TYPE,
@@ -22,11 +22,11 @@ from homeassistant.components.media_player import (
     SERVICE_PLAY_MEDIA,
     MediaType,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_ENTITY_ID, CONF_ACCESS_TOKEN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.config_entry_oauth2_flow import OAuth2Session
-from homeassistant.helpers.event import async_call_later
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_ENTITY_ID, CONF_ACCESS_TOKEN
+from menuai.core import menuai
+from menuai.helpers.config_entry_oauth2_flow import OAuth2Session
+from menuai.helpers.event import async_call_later
 
 from .const import CONF_LANGUAGE_CODE, DOMAIN, SUPPORTED_LANGUAGE_CODES
 
@@ -62,28 +62,28 @@ class CommandResponse:
 
 
 async def async_send_text_commands(
-    hass: HomeAssistant, commands: list[str], media_players: list[str] | None = None
+    menuai: menuai, commands: list[str], media_players: list[str] | None = None
 ) -> list[CommandResponse]:
     """Send text commands to Google Assistant Service."""
     # There can only be 1 entry (config_flow has single_instance_allowed)
-    entry: GoogleAssistantSDKConfigEntry = hass.config_entries.async_entries(DOMAIN)[0]
+    entry: GoogleAssistantSDKConfigEntry = menuai.config_entries.async_entries(DOMAIN)[0]
 
     session = entry.runtime_data.session
     try:
         await session.async_ensure_token_valid()
     except aiohttp.ClientResponseError as err:
         if 400 <= err.status < 500:
-            entry.async_start_reauth(hass)
+            entry.async_start_reauth(menuai)
         raise
 
     credentials = Credentials(session.token[CONF_ACCESS_TOKEN])  # type: ignore[no-untyped-call]
-    language_code = entry.options.get(CONF_LANGUAGE_CODE, default_language_code(hass))
+    language_code = entry.options.get(CONF_LANGUAGE_CODE, default_language_code(menuai))
     with TextAssistant(
         credentials, language_code, audio_out=bool(media_players)
     ) as assistant:
         command_response_list = []
         for command in commands:
-            resp = await hass.async_add_executor_job(assistant.assist, command)
+            resp = await menuai.async_add_executor_job(assistant.assist, command)
             text_response = resp[0]
             _LOGGER.debug("command: %s\nresponse: %s", command, text_response)
             audio_response = resp[2]
@@ -93,7 +93,7 @@ async def async_send_text_commands(
                         audio_response
                     )
                 )
-                await hass.services.async_call(
+                await menuai.services.async_call(
                     DOMAIN_MP,
                     SERVICE_PLAY_MEDIA,
                     {
@@ -108,16 +108,16 @@ async def async_send_text_commands(
         return command_response_list
 
 
-def default_language_code(hass: HomeAssistant) -> str:
-    """Get default language code based on Home Assistant config."""
-    language_code = f"{hass.config.language}-{hass.config.country}"
+def default_language_code(menuai: menuai) -> str:
+    """Get default language code based on MenuAI config."""
+    language_code = f"{menuai.config.language}-{menuai.config.country}"
     if language_code in SUPPORTED_LANGUAGE_CODES:
         return language_code
-    return DEFAULT_LANGUAGE_CODES.get(hass.config.language, "en-US")
+    return DEFAULT_LANGUAGE_CODES.get(menuai.config.language, "en-US")
 
 
 def best_matching_language_code(
-    hass: HomeAssistant, assist_language: str, agent_language: str | None = None
+    menuai: menuai, assist_language: str, agent_language: str | None = None
 ) -> str:
     """Get the best matching language, based on the preferred assist language and the configured agent language."""
 
@@ -128,7 +128,7 @@ def best_matching_language_code(
 
     # Use the agent language if assist and agent start with the same language part
     if agent_language is not None and agent_language.startswith(language):
-        return best_matching_language_code(hass, agent_language)
+        return best_matching_language_code(menuai, agent_language)
 
     # If assist and agent are not matching, try to find the default language
     default_language = DEFAULT_LANGUAGE_CODES.get(language)
@@ -137,18 +137,18 @@ def best_matching_language_code(
 
     # If no default agent is available, use the agent language
     if agent_language is not None:
-        return best_matching_language_code(hass, agent_language)
+        return best_matching_language_code(menuai, agent_language)
 
     # Fallback to the system default language
-    return default_language_code(hass)
+    return default_language_code(menuai)
 
 
 class InMemoryStorage:
     """Temporarily store and retrieve data from in memory storage."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize InMemoryStorage."""
-        self.hass: HomeAssistant = hass
+        self.menuai: menuai = menuai
         self.mem: dict[str, bytes] = {}
 
     def store_and_get_identifier(self, data: bytes) -> str:
@@ -164,7 +164,7 @@ class InMemoryStorage:
             self.mem.pop(identifier, None)
 
         # Remove the entry from memory 5 minutes later
-        async_call_later(self.hass, 5 * 60, async_remove_from_mem)
+        async_call_later(self.menuai, 5 * 60, async_remove_from_mem)
 
         return identifier
 
@@ -173,7 +173,7 @@ class InMemoryStorage:
         return self.mem.get(identifier)
 
 
-class GoogleAssistantSDKAudioView(HomeAssistantView):
+class GoogleAssistantSDKAudioView(menuaiView):
     """Google Assistant SDK view to serve audio responses."""
 
     requires_auth = True

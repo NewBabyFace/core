@@ -2,27 +2,27 @@
 
 from unittest.mock import AsyncMock, patch
 
-from homeassistant import config_entries
-from homeassistant.components.NEW_DOMAIN.config_flow import CannotConnect, InvalidAuth
-from homeassistant.components.NEW_DOMAIN.const import DOMAIN
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.NEW_DOMAIN.config_flow import CannotConnect, InvalidAuth
+from menuai.components.NEW_DOMAIN.const import DOMAIN
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 
-async def test_form(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
+async def test_form(menuai: menuai, mock_setup_entry: AsyncMock) -> None:
     """Test we get the form."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
     with patch(
-        "homeassistant.components.NEW_DOMAIN.config_flow.PlaceholderHub.authenticate",
+        "menuai.components.NEW_DOMAIN.config_flow.PlaceholderHub.authenticate",
         return_value=True,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_HOST: "1.1.1.1",
@@ -30,7 +30,7 @@ async def test_form(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
                 CONF_PASSWORD: "test-password",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "Name of the device"
@@ -43,18 +43,18 @@ async def test_form(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
 
 
 async def test_form_invalid_auth(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock
+    menuai: menuai, mock_setup_entry: AsyncMock
 ) -> None:
     """Test we handle invalid auth."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     with patch(
-        "homeassistant.components.NEW_DOMAIN.config_flow.PlaceholderHub.authenticate",
+        "menuai.components.NEW_DOMAIN.config_flow.PlaceholderHub.authenticate",
         side_effect=InvalidAuth,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_HOST: "1.1.1.1",
@@ -70,10 +70,10 @@ async def test_form_invalid_auth(
     # FlowResultType.CREATE_ENTRY or FlowResultType.ABORT so
     # we can show the config flow is able to recover from an error.
     with patch(
-        "homeassistant.components.NEW_DOMAIN.config_flow.PlaceholderHub.authenticate",
+        "menuai.components.NEW_DOMAIN.config_flow.PlaceholderHub.authenticate",
         return_value=True,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_HOST: "1.1.1.1",
@@ -81,7 +81,7 @@ async def test_form_invalid_auth(
                 CONF_PASSWORD: "test-password",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "Name of the device"
@@ -94,18 +94,18 @@ async def test_form_invalid_auth(
 
 
 async def test_form_cannot_connect(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock
+    menuai: menuai, mock_setup_entry: AsyncMock
 ) -> None:
     """Test we handle cannot connect error."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     with patch(
-        "homeassistant.components.NEW_DOMAIN.config_flow.PlaceholderHub.authenticate",
+        "menuai.components.NEW_DOMAIN.config_flow.PlaceholderHub.authenticate",
         side_effect=CannotConnect,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_HOST: "1.1.1.1",
@@ -122,10 +122,10 @@ async def test_form_cannot_connect(
     # we can show the config flow is able to recover from an error.
 
     with patch(
-        "homeassistant.components.NEW_DOMAIN.config_flow.PlaceholderHub.authenticate",
+        "menuai.components.NEW_DOMAIN.config_flow.PlaceholderHub.authenticate",
         return_value=True,
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_HOST: "1.1.1.1",
@@ -133,7 +133,7 @@ async def test_form_cannot_connect(
                 CONF_PASSWORD: "test-password",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "Name of the device"

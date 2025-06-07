@@ -4,20 +4,20 @@ from __future__ import annotations
 
 from weatherflow4py.models.rest.unified import WeatherFlowDataREST
 
-from homeassistant.components.weather import (
+from menuai.components.weather import (
     Forecast,
     SingleCoordinatorWeatherEntity,
     WeatherEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     UnitOfPrecipitationDepth,
     UnitOfPressure,
     UnitOfSpeed,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN, STATE_MAP
 from .coordinator import WeatherFlowCloudDataUpdateCoordinator
@@ -25,12 +25,12 @@ from .entity import WeatherFlowCloudEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Add a weather entity from a config_entry."""
-    coordinator: WeatherFlowCloudDataUpdateCoordinator = hass.data[DOMAIN][
+    coordinator: WeatherFlowCloudDataUpdateCoordinator = menuai.data[DOMAIN][
         config_entry.entry_id
     ]
 

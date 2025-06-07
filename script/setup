@@ -32,16 +32,16 @@ fi
 script/bootstrap
 
 pre-commit install
-uv pip install -e . --config-settings editable_mode=compat --constraint homeassistant/package_constraints.txt
+uv pip install -e . --config-settings editable_mode=compat --constraint menuai/package_constraints.txt
 python3 -m script.translations develop --all
 
-hass --script ensure_config -c config
+menuai --script ensure_config -c config
 
 if ! grep -R "logger" config/configuration.yaml >> /dev/null;then
 echo "
 logger:
   default: info
   logs:
-    homeassistant.components.cloud: debug
+    menuai.components.cloud: debug
 " >> config/configuration.yaml
 fi

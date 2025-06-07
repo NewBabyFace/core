@@ -10,10 +10,10 @@ import urllib
 from aiohttp import ClientWebSocketResponse
 import pytest
 
-from homeassistant.components.local_calendar import LocalCalendarStore
-from homeassistant.components.local_calendar.const import CONF_CALENDAR_NAME, DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.local_calendar import LocalCalendarStore
+from menuai.components.local_calendar.const import CONF_CALENDAR_NAME, DOMAIN
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 from tests.typing import ClientSessionGenerator, WebSocketGenerator
@@ -28,17 +28,17 @@ class FakeStore(LocalCalendarStore):
     """Mock storage implementation."""
 
     def __init__(
-        self, hass: HomeAssistant, path: Path, ics_content: str, read_side_effect: Any
+        self, menuai: menuai, path: Path, ics_content: str, read_side_effect: Any
     ) -> None:
         """Initialize FakeStore."""
-        super().__init__(hass, path)
+        super().__init__(menuai, path)
         mock_path = self._mock_path = Mock()
         mock_path.exists = self._mock_exists
         mock_path.read_text = Mock()
         mock_path.read_text.return_value = ics_content
         mock_path.read_text.side_effect = read_side_effect
         mock_path.write_text = self._mock_write_text
-        super().__init__(hass, mock_path)
+        super().__init__(menuai, mock_path)
 
     def _mock_exists(self) -> bool:
         return self._mock_path.read_text.return_value is not None
@@ -65,13 +65,13 @@ def mock_store(ics_content: str, store_read_side_effect: Any | None) -> Generato
 
     stores: dict[Path, FakeStore] = {}
 
-    def new_store(hass: HomeAssistant, path: Path) -> FakeStore:
+    def new_store(menuai: menuai, path: Path) -> FakeStore:
         if path not in stores:
-            stores[path] = FakeStore(hass, path, ics_content, store_read_side_effect)
+            stores[path] = FakeStore(menuai, path, ics_content, store_read_side_effect)
         return stores[path]
 
     with patch(
-        "homeassistant.components.local_calendar.LocalCalendarStore", new=new_store
+        "menuai.components.local_calendar.LocalCalendarStore", new=new_store
     ):
         yield
 
@@ -85,11 +85,11 @@ def mock_time_zone() -> str:
 
 
 @pytest.fixture(autouse=True)
-async def set_time_zone(hass: HomeAssistant, time_zone: str):
+async def set_time_zone(menuai: menuai, time_zone: str):
     """Set the time zone for the tests."""
     # Set our timezone to CST/Regina so we can check calculations
     # This keeps UTC-6 all year round
-    await hass.config.async_set_time_zone(time_zone)
+    await menuai.config.async_set_time_zone(time_zone)
 
 
 @pytest.fixture(name="config_entry")
@@ -99,22 +99,22 @@ def mock_config_entry() -> MockConfigEntry:
 
 
 @pytest.fixture(name="setup_integration")
-async def setup_integration(hass: HomeAssistant, config_entry: MockConfigEntry) -> None:
+async def setup_integration(menuai: menuai, config_entry: MockConfigEntry) -> None:
     """Set up the integration."""
-    config_entry.add_to_hass(hass)
-    assert await async_setup_component(hass, DOMAIN, {})
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await async_setup_component(menuai, DOMAIN, {})
+    await menuai.async_block_till_done()
 
 
 type GetEventsFn = Callable[[str, str], Awaitable[list[dict[str, Any]]]]
 
 
 @pytest.fixture(name="get_events")
-def get_events_fixture(hass_client: ClientSessionGenerator) -> GetEventsFn:
+def get_events_fixture(menuai_client: ClientSessionGenerator) -> GetEventsFn:
     """Fetch calendar events from the HTTP API."""
 
     async def _fetch(start: str, end: str) -> list[dict[str, Any]]:
-        client = await hass_client()
+        client = await menuai_client()
         response = await client.get(
             f"/api/calendars/{TEST_ENTITY}?start={urllib.parse.quote(start)}&end={urllib.parse.quote(end)}"
         )
@@ -172,13 +172,13 @@ type ClientFixture = Callable[[], Awaitable[Client]]
 
 @pytest.fixture
 async def ws_client(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
 ) -> ClientFixture:
     """Fixture for creating the test websocket client."""
 
     async def create_client() -> Client:
-        ws_client = await hass_ws_client(hass)
+        ws_client = await menuai_ws_client(menuai)
         return Client(ws_client)
 
     return create_client

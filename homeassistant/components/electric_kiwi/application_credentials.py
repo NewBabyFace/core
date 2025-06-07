@@ -1,29 +1,29 @@
 """application_credentials platform the Electric Kiwi integration."""
 
-from homeassistant.components.application_credentials import (
+from menuai.components.application_credentials import (
     AuthorizationServer,
     ClientCredential,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_entry_oauth2_flow
+from menuai.core import menuai
+from menuai.helpers import config_entry_oauth2_flow
 
 from .const import OAUTH2_AUTHORIZE, OAUTH2_TOKEN
 from .oauth2 import ElectricKiwiLocalOAuth2Implementation
 
 
 async def async_get_auth_implementation(
-    hass: HomeAssistant, auth_domain: str, credential: ClientCredential
+    menuai: menuai, auth_domain: str, credential: ClientCredential
 ) -> config_entry_oauth2_flow.AbstractOAuth2Implementation:
     """Return auth implementation."""
     return ElectricKiwiLocalOAuth2Implementation(
-        hass,
+        menuai,
         auth_domain,
         credential,
-        authorization_server=await async_get_authorization_server(hass),
+        authorization_server=await async_get_authorization_server(menuai),
     )
 
 
-async def async_get_authorization_server(hass: HomeAssistant) -> AuthorizationServer:
+async def async_get_authorization_server(menuai: menuai) -> AuthorizationServer:
     """Return authorization server."""
     return AuthorizationServer(
         authorize_url=OAUTH2_AUTHORIZE,
@@ -31,7 +31,7 @@ async def async_get_authorization_server(hass: HomeAssistant) -> AuthorizationSe
     )
 
 
-async def async_get_description_placeholders(hass: HomeAssistant) -> dict[str, str]:
+async def async_get_description_placeholders(menuai: menuai) -> dict[str, str]:
     """Return description placeholders for the credentials dialog."""
     return {
         "more_info_url": "https://www.home-assistant.io/integrations/electric_kiwi/"

@@ -4,22 +4,22 @@ from __future__ import annotations
 
 from knocki import Event, EventType, KnockiClient
 
-from homeassistant.const import CONF_TOKEN, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.const import CONF_TOKEN, Platform
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .coordinator import KnockiConfigEntry, KnockiCoordinator
 
 PLATFORMS: list[Platform] = [Platform.EVENT]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: KnockiConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: KnockiConfigEntry) -> bool:
     """Set up Knocki from a config entry."""
     client = KnockiClient(
-        session=async_get_clientsession(hass), token=entry.data[CONF_TOKEN]
+        session=async_get_clientsession(menuai), token=entry.data[CONF_TOKEN]
     )
 
-    coordinator = KnockiCoordinator(hass, entry, client)
+    coordinator = KnockiCoordinator(menuai, entry, client)
 
     await coordinator.async_config_entry_first_refresh()
 
@@ -36,14 +36,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: KnockiConfigEntry) -> bo
 
     entry.runtime_data = coordinator
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     await client.start_websocket()
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: KnockiConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: KnockiConfigEntry) -> bool:
     """Unload a config entry."""
     await entry.runtime_data.client.close()
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

@@ -7,12 +7,12 @@ from typing import Any
 from elgato import Elgato, ElgatoError
 import voluptuous as vol
 
-from homeassistant.components import onboarding
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_MAC
-from homeassistant.core import callback
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.components import onboarding
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_MAC
+from menuai.core import callback
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import DOMAIN
 
@@ -55,7 +55,7 @@ class ElgatoFlowHandler(ConfigFlow, domain=DOMAIN):
         except ElgatoError:
             return self.async_abort(reason="cannot_connect")
 
-        if not onboarding.async_is_onboarded(self.hass):
+        if not onboarding.async_is_onboarded(self.menuai):
             return self._async_create_entry()
 
         self._set_confirm_only()
@@ -97,7 +97,7 @@ class ElgatoFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def _get_elgato_serial_number(self, raise_on_progress: bool = True) -> None:
         """Get device information from an Elgato Light device."""
-        session = async_get_clientsession(self.hass)
+        session = async_get_clientsession(self.menuai)
         elgato = Elgato(
             host=self.host,
             session=session,

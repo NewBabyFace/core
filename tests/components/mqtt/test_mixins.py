@@ -5,21 +5,21 @@ from unittest.mock import call, patch
 
 import pytest
 
-from homeassistant.components import mqtt, sensor
-from homeassistant.components.mqtt.sensor import DEFAULT_NAME as DEFAULT_SENSOR_NAME
-from homeassistant.config_entries import ConfigSubentryData
-from homeassistant.const import (
+from menuai.components import mqtt, sensor
+from menuai.components.mqtt.sensor import DEFAULT_NAME as DEFAULT_SENSOR_NAME
+from menuai.config_entries import ConfigSubentryData
+from menuai.const import (
     ATTR_FRIENDLY_NAME,
-    EVENT_HOMEASSISTANT_STARTED,
+    EVENT_menuai_STARTED,
     EVENT_STATE_CHANGED,
 )
-from homeassistant.core import CoreState, HomeAssistant, callback
-from homeassistant.helpers import (
+from menuai.core import CoreState, menuai, callback
+from menuai.helpers import (
     device_registry as dr,
     entity_registry as er,
     issue_registry as ir,
 )
-from homeassistant.util import slugify
+from menuai.util import slugify
 
 from .common import (
     MOCK_NOTIFY_SUBENTRY_DATA_SINGLE,
@@ -32,7 +32,7 @@ from tests.typing import MqttMockHAClientGenerator
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -50,7 +50,7 @@ from tests.typing import MqttMockHAClientGenerator
     ],
 )
 async def test_availability_with_shared_state_topic(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test the state is not changed twice.
 
@@ -65,28 +65,28 @@ async def test_availability_with_shared_state_topic(
     def test_callback(event) -> None:
         events.append(event)
 
-    hass.bus.async_listen(EVENT_STATE_CHANGED, test_callback)
+    menuai.bus.async_listen(EVENT_STATE_CHANGED, test_callback)
 
-    async_fire_mqtt_message(hass, "test-topic", "100")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "test-topic", "100")
+    await menuai.async_block_till_done()
     # Initially the state and the availability change
     assert len(events) == 1
 
     events.clear()
-    async_fire_mqtt_message(hass, "test-topic", "50")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "test-topic", "50")
+    await menuai.async_block_till_done()
     assert len(events) == 1
 
     events.clear()
-    async_fire_mqtt_message(hass, "test-topic", "0")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "test-topic", "0")
+    await menuai.async_block_till_done()
     # Only the availability is changed since the template resukts in an empty payload
     # This does not change the state
     assert len(events) == 1
 
     events.clear()
-    async_fire_mqtt_message(hass, "test-topic", "10")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "test-topic", "10")
+    await menuai.async_block_till_done()
     # The availability is changed but the topic is shared,
     # hence there the state will be written when the value is updated
     assert len(events) == 1
@@ -94,7 +94,7 @@ async def test_availability_with_shared_state_topic(
 
 @pytest.mark.parametrize(
     (
-        "hass_config",
+        "menuai_config",
         "entity_id",
         "friendly_name",
         "device_name",
@@ -306,10 +306,10 @@ async def test_availability_with_shared_state_topic(
         "entity_name_startswith_device_name2",
     ],
 )
-@patch("homeassistant.components.mqtt.client.DISCOVERY_COOLDOWN", 0.0)
+@patch("menuai.components.mqtt.client.DISCOVERY_COOLDOWN", 0.0)
 @pytest.mark.usefixtures("mqtt_client_mock")
 async def test_default_entity_and_device_name(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     caplog: pytest.LogCaptureFixture,
     entity_id: str,
@@ -322,9 +322,9 @@ async def test_default_entity_and_device_name(
     This is a test helper for the _setup_common_attributes_from_config mixin.
     """
 
-    events = async_capture_events(hass, ir.EVENT_REPAIRS_ISSUE_REGISTRY_UPDATED)
-    hass.set_state(CoreState.starting)
-    await hass.async_block_till_done()
+    events = async_capture_events(menuai, ir.EVENT_REPAIRS_ISSUE_REGISTRY_UPDATED)
+    menuai.set_state(CoreState.starting)
+    await menuai.async_block_till_done()
 
     entry = MockConfigEntry(
         domain=mqtt.DOMAIN,
@@ -332,16 +332,16 @@ async def test_default_entity_and_device_name(
         version=mqtt.CONFIG_ENTRY_VERSION,
         minor_version=mqtt.CONFIG_ENTRY_MINOR_VERSION,
     )
-    entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(entry.entry_id)
+    menuai.bus.async_fire(EVENT_menuai_STARTED)
+    await menuai.async_block_till_done()
 
     device = device_registry.async_get_device({("mqtt", "helloworld")})
     assert device is not None
     assert device.name == device_name
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state is not None
     assert state.name == friendly_name
 
@@ -351,13 +351,13 @@ async def test_default_entity_and_device_name(
 
     # Assert that no issues ware registered
     assert len(events) == 0
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
     # Assert that no issues ware registered
     assert len(events) == 0
 
 
 async def test_name_attribute_is_set_or_not(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> None:
     """Test frendly name with device_class set.
 
@@ -365,55 +365,55 @@ async def test_name_attribute_is_set_or_not(
     """
     await mqtt_mock_entry()
     async_fire_mqtt_message(
-        hass,
-        "homeassistant/binary_sensor/bla/config",
+        menuai,
+        "menuai/binary_sensor/bla/config",
         '{ "name": "Gate", "state_topic": "test-topic", "device_class": "door", '
         '"object_id": "gate",'
         '"device": {"identifiers": "very_unique", "name": "xyz_door_sensor"}'
         "}",
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.gate")
+    state = menuai.states.get("binary_sensor.gate")
 
     assert state is not None
     assert state.attributes.get(ATTR_FRIENDLY_NAME) == "Gate"
 
     # Remove the name in a discovery update
     async_fire_mqtt_message(
-        hass,
-        "homeassistant/binary_sensor/bla/config",
+        menuai,
+        "menuai/binary_sensor/bla/config",
         '{ "state_topic": "test-topic", "device_class": "door", '
         '"object_id": "gate",'
         '"device": {"identifiers": "very_unique", "name": "xyz_door_sensor"}'
         "}",
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.gate")
+    state = menuai.states.get("binary_sensor.gate")
 
     assert state is not None
     assert state.attributes.get(ATTR_FRIENDLY_NAME) == "Door"
 
     # Set the name to `null` in a discovery update
     async_fire_mqtt_message(
-        hass,
-        "homeassistant/binary_sensor/bla/config",
+        menuai,
+        "menuai/binary_sensor/bla/config",
         '{ "name": null, "state_topic": "test-topic", "device_class": "door", '
         '"object_id": "gate",'
         '"device": {"identifiers": "very_unique", "name": "xyz_door_sensor"}'
         "}",
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("binary_sensor.gate")
+    state = menuai.states.get("binary_sensor.gate")
 
     assert state is not None
     assert state.attributes.get(ATTR_FRIENDLY_NAME) is None
 
 
 @pytest.mark.parametrize(
-    "hass_config",
+    "menuai_config",
     [
         {
             mqtt.DOMAIN: {
@@ -455,13 +455,13 @@ async def test_name_attribute_is_set_or_not(
     ],
 )
 async def test_value_template_fails(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test the rendering of MQTT value template fails."""
     await mqtt_mock_entry()
-    async_fire_mqtt_message(hass, "test-topic", '{"some_var": null }')
+    async_fire_mqtt_message(menuai, "test-topic", '{"some_var": null }')
     assert (
         "TypeError: unsupported operand type(s) for *: 'NoneType' and 'int' rendering template"
         in caplog.text
@@ -481,7 +481,7 @@ async def test_value_template_fails(
     ],
 )
 async def test_loading_subentries(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     mqtt_config_subentries_data: tuple[dict[str, Any]],
     device_registry: dr.DeviceRegistry,
@@ -489,7 +489,7 @@ async def test_loading_subentries(
 ) -> None:
     """Test loading subentries."""
     await mqtt_mock_entry()
-    entry = hass.config_entries.async_entries(mqtt.DOMAIN)[0]
+    entry = menuai.config_entries.async_entries(mqtt.DOMAIN)[0]
     subentry_id = next(iter(entry.subentries))
     # Each subentry has one device
     device = device_registry.async_get_device({("mqtt", subentry_id)})
@@ -503,7 +503,7 @@ async def test_loading_subentries(
             platform, mqtt.DOMAIN, f"{subentry_id}_{object_id}"
         )
         assert entity_entry_entity_id == entity_id
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state is not None
         assert (
             state.attributes.get("entity_picture") == f"https://example.com/{object_id}"
@@ -512,11 +512,11 @@ async def test_loading_subentries(
         assert state.state == "unavailable"
 
     # Make entities available
-    async_fire_mqtt_message(hass, "test/availability", '{"availability": "online"}')
+    async_fire_mqtt_message(menuai, "test/availability", '{"availability": "online"}')
     for component in mqtt_config_subentries_data[0]["data"]["components"].values():
         platform = component["platform"]
         entity_id = f"{platform}.{slugify(device.name)}_{slugify(component['name'])}"
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state is not None
         assert state.state == "unknown"
 
@@ -534,7 +534,7 @@ async def test_loading_subentries(
     ],
 )
 async def test_loading_subentry_with_bad_component_schema(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     mqtt_config_subentries_data: tuple[dict[str, Any]],
     device_registry: dr.DeviceRegistry,
@@ -542,7 +542,7 @@ async def test_loading_subentry_with_bad_component_schema(
 ) -> None:
     """Test loading subentries."""
     await mqtt_mock_entry()
-    entry = hass.config_entries.async_entries(mqtt.DOMAIN)[0]
+    entry = menuai.config_entries.async_entries(mqtt.DOMAIN)[0]
     subentry_id = next(iter(entry.subentries))
     # Each subentry has one device
     device = device_registry.async_get_device({("mqtt", subentry_id)})
@@ -566,24 +566,24 @@ async def test_loading_subentry_with_bad_component_schema(
     ],
 )
 async def test_qos_on_mqt_device_from_subentry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock_entry: MqttMockHAClientGenerator,
     mqtt_config_subentries_data: tuple[dict[str, Any]],
     device_registry: dr.DeviceRegistry,
 ) -> None:
     """Test QoS is set correctly on entities from MQTT device."""
     mqtt_mock = await mqtt_mock_entry()
-    entry = hass.config_entries.async_entries(mqtt.DOMAIN)[0]
+    entry = menuai.config_entries.async_entries(mqtt.DOMAIN)[0]
     subentry_id = next(iter(entry.subentries))
     # Each subentry has one device
     device = device_registry.async_get_device({("mqtt", subentry_id)})
     assert device is not None
-    assert hass.states.get("notify.milk_notifier_milkman_alert") is not None
-    await hass.services.async_call(
+    assert menuai.states.get("notify.milk_notifier_milkman_alert") is not None
+    await menuai.services.async_call(
         "notify",
         "send_message",
         {"entity_id": "notify.milk_notifier_milkman_alert", "message": "Test message"},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(mqtt_mock.async_publish.mock_calls) == 1
     mqtt_mock.async_publish.mock_calls[0] = call("test-topic", "Test message", 1, False)

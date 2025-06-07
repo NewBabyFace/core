@@ -17,11 +17,11 @@ from demetriek import (
 )
 import voluptuous as vol
 
-from homeassistant.const import CONF_DEVICE_ID, CONF_ICON
-from homeassistant.core import HomeAssistant, ServiceCall, callback
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.util.enum import try_parse_enum
+from menuai.const import CONF_DEVICE_ID, CONF_ICON
+from menuai.core import menuai, ServiceCall, callback
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers import config_validation as cv
+from menuai.util.enum import try_parse_enum
 
 from .const import (
     CONF_CYCLES,
@@ -68,13 +68,13 @@ SERVICE_CHART_SCHEMA = SERVICE_BASE_SCHEMA.extend(
 
 
 @callback
-def async_setup_services(hass: HomeAssistant) -> None:
+def async_setup_services(menuai: menuai) -> None:
     """Set up services for the LaMetric integration."""
 
     async def _async_service_chart(call: ServiceCall) -> None:
         """Send a chart to a LaMetric device."""
         coordinator = async_get_coordinator_by_device_id(
-            hass, call.data[CONF_DEVICE_ID]
+            menuai, call.data[CONF_DEVICE_ID]
         )
         await async_send_notification(
             coordinator, call, [Chart(data=call.data[CONF_DATA])]
@@ -83,7 +83,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
     async def _async_service_message(call: ServiceCall) -> None:
         """Send a message to a LaMetric device."""
         coordinator = async_get_coordinator_by_device_id(
-            hass, call.data[CONF_DEVICE_ID]
+            menuai, call.data[CONF_DEVICE_ID]
         )
         await async_send_notification(
             coordinator,
@@ -96,14 +96,14 @@ def async_setup_services(hass: HomeAssistant) -> None:
             ],
         )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_CHART,
         _async_service_chart,
         schema=SERVICE_CHART_SCHEMA,
     )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_MESSAGE,
         _async_service_message,
@@ -139,4 +139,4 @@ async def async_send_notification(
     try:
         await coordinator.lametric.notify(notification=notification)
     except LaMetricError as ex:
-        raise HomeAssistantError("Could not send LaMetric notification") from ex
+        raise menuaiError("Could not send LaMetric notification") from ex

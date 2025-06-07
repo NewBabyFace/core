@@ -4,9 +4,9 @@ from http import HTTPStatus
 
 import requests_mock
 
-from homeassistant.components.notify import DOMAIN as NOTIFY_DOMAIN
-from homeassistant.components.pushbullet.const import DOMAIN
-from homeassistant.core import HomeAssistant
+from menuai.components.notify import DOMAIN as NOTIFY_DOMAIN
+from menuai.components.pushbullet.const import DOMAIN
+from menuai.core import menuai
 
 from . import MOCK_CONFIG
 
@@ -14,7 +14,7 @@ from tests.common import MockConfigEntry
 
 
 async def test_pushbullet_push_default(
-    hass: HomeAssistant, requests_mock: requests_mock.Mocker
+    menuai: menuai, requests_mock: requests_mock.Mocker
 ) -> None:
     """Test pushbullet push to default target."""
     requests_mock.register_uri(
@@ -27,14 +27,14 @@ async def test_pushbullet_push_default(
         domain=DOMAIN,
         data=MOCK_CONFIG,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     data = {"title": "Test Title", "message": "Test Message"}
-    await hass.services.async_call(NOTIFY_DOMAIN, "pushbullet", data)
-    await hass.async_block_till_done()
+    await menuai.services.async_call(NOTIFY_DOMAIN, "pushbullet", data)
+    await menuai.async_block_till_done()
 
     expected_body = {"body": "Test Message", "title": "Test Title", "type": "note"}
     assert requests_mock.last_request
@@ -42,7 +42,7 @@ async def test_pushbullet_push_default(
 
 
 async def test_pushbullet_push_device(
-    hass: HomeAssistant, requests_mock: requests_mock.Mocker
+    menuai: menuai, requests_mock: requests_mock.Mocker
 ) -> None:
     """Test pushbullet push to default target."""
     requests_mock.register_uri(
@@ -55,17 +55,17 @@ async def test_pushbullet_push_device(
         domain=DOMAIN,
         data=MOCK_CONFIG,
     )
-    entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     data = {
         "title": "Test Title",
         "message": "Test Message",
         "target": ["device/DESKTOP"],
     }
-    await hass.services.async_call(NOTIFY_DOMAIN, "pushbullet", data)
-    await hass.async_block_till_done()
+    await menuai.services.async_call(NOTIFY_DOMAIN, "pushbullet", data)
+    await menuai.async_block_till_done()
 
     expected_body = {
         "body": "Test Message",
@@ -77,7 +77,7 @@ async def test_pushbullet_push_device(
 
 
 async def test_pushbullet_push_devices(
-    hass: HomeAssistant, requests_mock: requests_mock.Mocker
+    menuai: menuai, requests_mock: requests_mock.Mocker
 ) -> None:
     """Test pushbullet push to default target."""
     requests_mock.register_uri(
@@ -90,17 +90,17 @@ async def test_pushbullet_push_devices(
         domain=DOMAIN,
         data=MOCK_CONFIG,
     )
-    entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     data = {
         "title": "Test Title",
         "message": "Test Message",
         "target": ["device/DESKTOP", "device/My iPhone"],
     }
-    await hass.services.async_call(NOTIFY_DOMAIN, "pushbullet", data)
-    await hass.async_block_till_done()
+    await menuai.services.async_call(NOTIFY_DOMAIN, "pushbullet", data)
+    await menuai.async_block_till_done()
 
     expected_body = {
         "body": "Test Message",
@@ -119,7 +119,7 @@ async def test_pushbullet_push_devices(
 
 
 async def test_pushbullet_push_email(
-    hass: HomeAssistant, requests_mock: requests_mock.Mocker
+    menuai: menuai, requests_mock: requests_mock.Mocker
 ) -> None:
     """Test pushbullet push to default target."""
     requests_mock.register_uri(
@@ -132,17 +132,17 @@ async def test_pushbullet_push_email(
         domain=DOMAIN,
         data=MOCK_CONFIG,
     )
-    entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     data = {
         "title": "Test Title",
         "message": "Test Message",
         "target": ["email/user@host.net"],
     }
-    await hass.services.async_call(NOTIFY_DOMAIN, "pushbullet", data)
-    await hass.async_block_till_done()
+    await menuai.services.async_call(NOTIFY_DOMAIN, "pushbullet", data)
+    await menuai.async_block_till_done()
 
     expected_body = {
         "body": "Test Message",
@@ -154,7 +154,7 @@ async def test_pushbullet_push_email(
 
 
 async def test_pushbullet_push_mixed(
-    hass: HomeAssistant, requests_mock: requests_mock.Mocker
+    menuai: menuai, requests_mock: requests_mock.Mocker
 ) -> None:
     """Test pushbullet push to default target."""
     requests_mock.register_uri(
@@ -167,9 +167,9 @@ async def test_pushbullet_push_mixed(
         domain=DOMAIN,
         data=MOCK_CONFIG,
     )
-    entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     data = {
         "title": "Test Title",
@@ -177,8 +177,8 @@ async def test_pushbullet_push_mixed(
         "target": ["device/DESKTOP", "email/user@host.net"],
     }
 
-    await hass.services.async_call(NOTIFY_DOMAIN, "pushbullet", data)
-    await hass.async_block_till_done()
+    await menuai.services.async_call(NOTIFY_DOMAIN, "pushbullet", data)
+    await menuai.async_block_till_done()
 
     expected_body = {
         "body": "Test Message",

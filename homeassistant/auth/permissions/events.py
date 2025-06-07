@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Final
 
-from homeassistant.const import (
+from menuai.const import (
     EVENT_COMPONENT_LOADED,
     EVENT_CORE_CONFIG_UPDATE,
     EVENT_LOVELACE_UPDATED,
@@ -17,14 +17,14 @@ from homeassistant.const import (
     EVENT_STATE_CHANGED,
     EVENT_THEMES_UPDATED,
 )
-from homeassistant.helpers.area_registry import EVENT_AREA_REGISTRY_UPDATED
-from homeassistant.helpers.category_registry import EVENT_CATEGORY_REGISTRY_UPDATED
-from homeassistant.helpers.device_registry import EVENT_DEVICE_REGISTRY_UPDATED
-from homeassistant.helpers.entity_registry import EVENT_ENTITY_REGISTRY_UPDATED
-from homeassistant.helpers.floor_registry import EVENT_FLOOR_REGISTRY_UPDATED
-from homeassistant.helpers.issue_registry import EVENT_REPAIRS_ISSUE_REGISTRY_UPDATED
-from homeassistant.helpers.label_registry import EVENT_LABEL_REGISTRY_UPDATED
-from homeassistant.util.event_type import EventType
+from menuai.helpers.area_registry import EVENT_AREA_REGISTRY_UPDATED
+from menuai.helpers.category_registry import EVENT_CATEGORY_REGISTRY_UPDATED
+from menuai.helpers.device_registry import EVENT_DEVICE_REGISTRY_UPDATED
+from menuai.helpers.entity_registry import EVENT_ENTITY_REGISTRY_UPDATED
+from menuai.helpers.floor_registry import EVENT_FLOOR_REGISTRY_UPDATED
+from menuai.helpers.issue_registry import EVENT_REPAIRS_ISSUE_REGISTRY_UPDATED
+from menuai.helpers.label_registry import EVENT_LABEL_REGISTRY_UPDATED
+from menuai.util.event_type import EventType
 
 # These are events that do not contain any sensitive data
 # Except for state_changed, which is handled accordingly.

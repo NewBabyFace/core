@@ -7,11 +7,11 @@ from typing import Any
 
 import pytest
 
-from homeassistant.components.rainbird.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_MAC
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.components.rainbird.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.const import CONF_MAC
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from .conftest import (
     CONFIG_ENTRY_DATA,
@@ -31,16 +31,16 @@ from tests.test_util.aiohttp import AiohttpClientMockResponse
 
 
 async def test_init_success(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
 ) -> None:
     """Test successful setup and unload."""
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
     assert config_entry.state is ConfigEntryState.LOADED
 
-    await hass.config_entries.async_unload(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(config_entry.entry_id)
+    await menuai.async_block_till_done()
     assert config_entry.state is ConfigEntryState.NOT_LOADED
 
 
@@ -93,16 +93,16 @@ async def test_init_success(
     ],
 )
 async def test_communication_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     config_entry_state: list[ConfigEntryState],
     config_flow_steps: list[str],
 ) -> None:
     """Test unable to talk to device on startup, which fails setup."""
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
     assert config_entry.state == config_entry_state
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert [flow["step_id"] for flow in flows] == config_flow_steps
 
 
@@ -117,7 +117,7 @@ async def test_communication_failure(
     ids=["config_entry"],
 )
 async def test_fix_unique_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     responses: list[AiohttpClientMockResponse],
     config_entry: MockConfigEntry,
 ) -> None:
@@ -125,17 +125,17 @@ async def test_fix_unique_id(
 
     responses.insert(0, mock_json_response(WIFI_PARAMS_RESPONSE))
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     assert entries[0].state is ConfigEntryState.NOT_LOADED
     assert entries[0].unique_id is None
     assert entries[0].data.get(CONF_MAC) is None
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
     assert config_entry.state is ConfigEntryState.LOADED
 
     # Verify config entry now has a unique id
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     assert entries[0].state is ConfigEntryState.LOADED
     assert entries[0].unique_id == MAC_ADDRESS_UNIQUE_ID
@@ -172,7 +172,7 @@ async def test_fix_unique_id(
     ids=["service_unavailable", "not_found", "unexpected_response_format"],
 )
 async def test_fix_unique_id_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     initial_response: AiohttpClientMockResponse,
     responses: list[AiohttpClientMockResponse],
     expected_warning: str,
@@ -183,7 +183,7 @@ async def test_fix_unique_id_failure(
 
     responses.insert(0, initial_response)
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
     # Config entry is loaded, but not updated
     assert config_entry.state is ConfigEntryState.LOADED
     assert config_entry.unique_id is None
@@ -196,7 +196,7 @@ async def test_fix_unique_id_failure(
     [(MAC_ADDRESS_UNIQUE_ID)],
 )
 async def test_fix_unique_id_duplicate(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     responses: list[AiohttpClientMockResponse],
     caplog: pytest.LogCaptureFixture,
@@ -210,7 +210,7 @@ async def test_fix_unique_id_duplicate(
         domain=DOMAIN,
         data=CONFIG_ENTRY_DATA_OLD_FORMAT,
     )
-    other_entry.add_to_hass(hass)
+    other_entry.add_to_menuai(menuai)
 
     # Responses for the second config entry. This first fetches wifi params
     # to repair the unique id.
@@ -218,14 +218,14 @@ async def test_fix_unique_id_duplicate(
     responses.append(mock_json_response(WIFI_PARAMS_RESPONSE))
     responses.extend(responses_copy)
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
     assert config_entry.state is ConfigEntryState.LOADED
     assert config_entry.unique_id == MAC_ADDRESS_UNIQUE_ID
 
     assert "Unable to fix missing unique id (already exists)" in caplog.text
 
-    await hass.async_block_till_done()
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    await menuai.async_block_till_done()
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
 
 
 @pytest.mark.parametrize(
@@ -299,7 +299,7 @@ async def test_fix_unique_id_duplicate(
     ),
 )
 async def test_fix_entity_unique_ids(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     entity_unique_id: str,
     device_identifier: str,
@@ -319,7 +319,7 @@ async def test_fix_entity_unique_ids(
         serial_number=config_entry.data["serial_number"],
     )
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
     assert config_entry.state is ConfigEntryState.LOADED
 
     entity_entry = entity_registry.async_get(entity_entry.id)
@@ -406,7 +406,7 @@ async def test_fix_entity_unique_ids(
     ],
 )
 async def test_fix_duplicate_device_ids(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     device_registry: dr.DeviceRegistry,
     entry1_updates: dict[str, Any],
@@ -435,7 +435,7 @@ async def test_fix_duplicate_device_ids(
     )
     assert len(device_entries) == 2
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
     assert config_entry.state is ConfigEntryState.LOADED
 
     # Only the device with the new format exists

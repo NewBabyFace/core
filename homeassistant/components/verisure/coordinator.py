@@ -11,13 +11,13 @@ from verisure import (
     Session as Verisure,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.storage import STORAGE_DIR
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util import Throttle
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_EMAIL, CONF_PASSWORD
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.storage import STORAGE_DIR
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.util import Throttle
 
 from .const import CONF_GIID, DEFAULT_SCAN_INTERVAL, DOMAIN, LOGGER
 
@@ -27,7 +27,7 @@ class VerisureDataUpdateCoordinator(DataUpdateCoordinator):
 
     config_entry: ConfigEntry
 
-    def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
+    def __init__(self, menuai: menuai, entry: ConfigEntry) -> None:
         """Initialize the Verisure hub."""
         self.imageseries: list[dict[str, str]] = []
         self._overview: list[dict] = []
@@ -35,13 +35,13 @@ class VerisureDataUpdateCoordinator(DataUpdateCoordinator):
         self.verisure = Verisure(
             username=entry.data[CONF_EMAIL],
             password=entry.data[CONF_PASSWORD],
-            cookie_file_name=hass.config.path(
+            cookie_file_name=menuai.config.path(
                 STORAGE_DIR, f"verisure_{entry.data[CONF_EMAIL]}"
             ),
         )
 
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=entry,
             name=DOMAIN,
@@ -51,7 +51,7 @@ class VerisureDataUpdateCoordinator(DataUpdateCoordinator):
     async def async_login(self) -> bool:
         """Login to Verisure."""
         try:
-            await self.hass.async_add_executor_job(self.verisure.login_cookie)
+            await self.menuai.async_add_executor_job(self.verisure.login_cookie)
         except VerisureLoginError as ex:
             LOGGER.error("Credentials expired for Verisure, %s", ex)
             raise ConfigEntryAuthFailed("Credentials expired for Verisure") from ex
@@ -59,7 +59,7 @@ class VerisureDataUpdateCoordinator(DataUpdateCoordinator):
             LOGGER.error("Could not log in to verisure, %s", ex)
             return False
 
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             self.verisure.set_giid, self.config_entry.data[CONF_GIID]
         )
 
@@ -68,11 +68,11 @@ class VerisureDataUpdateCoordinator(DataUpdateCoordinator):
     async def _async_update_data(self) -> dict:
         """Fetch data from Verisure."""
         try:
-            await self.hass.async_add_executor_job(self.verisure.update_cookie)
+            await self.menuai.async_add_executor_job(self.verisure.update_cookie)
         except VerisureLoginError:
             LOGGER.debug("Cookie expired, acquiring new cookies")
             try:
-                await self.hass.async_add_executor_job(self.verisure.login_cookie)
+                await self.menuai.async_add_executor_job(self.verisure.login_cookie)
             except VerisureLoginError as ex:
                 LOGGER.error("Credentials expired for Verisure, %s", ex)
                 raise ConfigEntryAuthFailed("Credentials expired for Verisure") from ex
@@ -82,7 +82,7 @@ class VerisureDataUpdateCoordinator(DataUpdateCoordinator):
         except VerisureError as ex:
             raise UpdateFailed("Unable to update cookie") from ex
         try:
-            overview = await self.hass.async_add_executor_job(
+            overview = await self.menuai.async_add_executor_job(
                 self.verisure.request,
                 self.verisure.arm_state(),
                 self.verisure.broadband(),
@@ -107,7 +107,7 @@ class VerisureDataUpdateCoordinator(DataUpdateCoordinator):
             )
             return unpacked or []
 
-        # Store data in a way Home Assistant can easily consume it
+        # Store data in a way MenuAI can easily consume it
         self._overview = overview
         return {
             "alarm": unpack(overview, "armState"),

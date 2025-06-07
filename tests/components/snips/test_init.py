@@ -6,24 +6,24 @@ import logging
 import pytest
 import voluptuous as vol
 
-from homeassistant.components import snips
-from homeassistant.core import DOMAIN as HOMEASSISTANT_DOMAIN, HomeAssistant
-from homeassistant.helpers import issue_registry as ir
-from homeassistant.helpers.intent import ServiceIntentHandler, async_register
-from homeassistant.setup import async_setup_component
+from menuai.components import snips
+from menuai.core import DOMAIN as menuai_DOMAIN, menuai
+from menuai.helpers import issue_registry as ir
+from menuai.helpers.intent import ServiceIntentHandler, async_register
+from menuai.setup import async_setup_component
 
 from tests.common import async_fire_mqtt_message, async_mock_intent, async_mock_service
 from tests.typing import MqttMockHAClient
 
 
 async def test_snips_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_mock: MqttMockHAClient,
     issue_registry: ir.IssueRegistry,
 ) -> None:
     """Test Snips Config."""
     assert await async_setup_component(
-        hass,
+        menuai,
         "snips",
         {
             "snips": {
@@ -34,17 +34,17 @@ async def test_snips_config(
         },
     )
     assert (
-        HOMEASSISTANT_DOMAIN,
+        menuai_DOMAIN,
         f"deprecated_system_packages_yaml_integration_{snips.DOMAIN}",
     ) in issue_registry.issues
 
 
 async def test_snips_no_mqtt(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test Snips Config."""
     result = await async_setup_component(
-        hass,
+        menuai,
         "snips",
         {
             "snips": {
@@ -59,11 +59,11 @@ async def test_snips_no_mqtt(
 
 
 async def test_snips_bad_config(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Test Snips bad config."""
     result = await async_setup_component(
-        hass,
+        menuai,
         "snips",
         {
             "snips": {
@@ -77,14 +77,14 @@ async def test_snips_bad_config(
 
 
 async def test_snips_config_feedback_on(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Test Snips Config."""
     result = await async_setup_component(
-        hass, "snips", {"snips": {"feedback_sounds": True}}
+        menuai, "snips", {"snips": {"feedback_sounds": True}}
     )
     assert result
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert mqtt_mock.async_publish.call_count == 2
     topic = mqtt_mock.async_publish.call_args_list[0][0][0]
@@ -96,14 +96,14 @@ async def test_snips_config_feedback_on(
 
 
 async def test_snips_config_feedback_off(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Test Snips Config."""
     result = await async_setup_component(
-        hass, "snips", {"snips": {"feedback_sounds": False}}
+        menuai, "snips", {"snips": {"feedback_sounds": False}}
     )
     assert result
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert mqtt_mock.async_publish.call_count == 2
     topic = mqtt_mock.async_publish.call_args_list[0][0][0]
@@ -115,19 +115,19 @@ async def test_snips_config_feedback_off(
 
 
 async def test_snips_config_no_feedback(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Test Snips Config."""
-    calls = async_mock_service(hass, "snips", "say")
-    result = await async_setup_component(hass, "snips", {"snips": {}})
+    calls = async_mock_service(menuai, "snips", "say")
+    result = await async_setup_component(menuai, "snips", {"snips": {}})
     assert result
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(calls) == 0
 
 
-async def test_snips_intent(hass: HomeAssistant, mqtt_mock: MqttMockHAClient) -> None:
+async def test_snips_intent(menuai: menuai, mqtt_mock: MqttMockHAClient) -> None:
     """Test intent via Snips."""
-    result = await async_setup_component(hass, "snips", {"snips": {}})
+    result = await async_setup_component(menuai, "snips", {"snips": {}})
     assert result
     payload = """
     {
@@ -151,10 +151,10 @@ async def test_snips_intent(hass: HomeAssistant, mqtt_mock: MqttMockHAClient) ->
     }
     """
 
-    intents = async_mock_intent(hass, "Lights")
+    intents = async_mock_intent(menuai, "Lights")
 
-    async_fire_mqtt_message(hass, "hermes/intent/Lights", payload)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "hermes/intent/Lights", payload)
+    await menuai.async_block_till_done()
     assert len(intents) == 1
     intent = intents[0]
     assert intent.platform == "snips"
@@ -171,12 +171,12 @@ async def test_snips_intent(hass: HomeAssistant, mqtt_mock: MqttMockHAClient) ->
 
 
 async def test_snips_service_intent(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Test ServiceIntentHandler via Snips."""
-    hass.states.async_set("light.kitchen", "off")
-    calls = async_mock_service(hass, "light", "turn_on")
-    result = await async_setup_component(hass, "snips", {"snips": {}})
+    menuai.states.async_set("light.kitchen", "off")
+    calls = async_mock_service(menuai, "light", "turn_on")
+    result = await async_setup_component(menuai, "snips", {"snips": {}})
     assert result
     payload = """
     {
@@ -200,11 +200,11 @@ async def test_snips_service_intent(
     """
 
     async_register(
-        hass, ServiceIntentHandler("Lights", "light", "turn_on", "Turned {} on")
+        menuai, ServiceIntentHandler("Lights", "light", "turn_on", "Turned {} on")
     )
 
-    async_fire_mqtt_message(hass, "hermes/intent/Lights", payload)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "hermes/intent/Lights", payload)
+    await menuai.async_block_till_done()
 
     assert len(calls) == 1
     assert calls[0].domain == "light"
@@ -215,10 +215,10 @@ async def test_snips_service_intent(
 
 
 async def test_snips_intent_with_duration(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Test intent with Snips duration."""
-    result = await async_setup_component(hass, "snips", {"snips": {}})
+    result = await async_setup_component(menuai, "snips", {"snips": {}})
     assert result
     payload = """
     {
@@ -252,10 +252,10 @@ async def test_snips_intent_with_duration(
       ]
     }
     """
-    intents = async_mock_intent(hass, "SetTimer")
+    intents = async_mock_intent(menuai, "SetTimer")
 
-    async_fire_mqtt_message(hass, "hermes/intent/SetTimer", payload)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "hermes/intent/SetTimer", payload)
+    await menuai.async_block_till_done()
     assert len(intents) == 1
     intent = intents[0]
     assert intent.platform == "snips"
@@ -270,13 +270,13 @@ async def test_snips_intent_with_duration(
 
 
 async def test_intent_speech_response(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Test intent speech response via Snips."""
-    result = await async_setup_component(hass, "snips", {"snips": {}})
+    result = await async_setup_component(menuai, "snips", {"snips": {}})
     assert result
     result = await async_setup_component(
-        hass,
+        menuai,
         "intent_script",
         {
             "intent_script": {
@@ -298,8 +298,8 @@ async def test_intent_speech_response(
         "slots": []
     }
     """
-    async_fire_mqtt_message(hass, "hermes/intent/spokenIntent", payload)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "hermes/intent/spokenIntent", payload)
+    await menuai.async_block_till_done()
 
     assert mqtt_mock.async_publish.call_count == 1
     payload = json.loads(mqtt_mock.async_publish.call_args[0][1])
@@ -310,11 +310,11 @@ async def test_intent_speech_response(
 
 
 async def test_unknown_intent(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture, mqtt_mock: MqttMockHAClient
+    menuai: menuai, caplog: pytest.LogCaptureFixture, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Test unknown intent."""
     caplog.set_level(logging.WARNING)
-    result = await async_setup_component(hass, "snips", {"snips": {}})
+    result = await async_setup_component(menuai, "snips", {"snips": {}})
     assert result
     payload = """
     {
@@ -327,16 +327,16 @@ async def test_unknown_intent(
         "slots": []
     }
     """
-    async_fire_mqtt_message(hass, "hermes/intent/unknownIntent", payload)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "hermes/intent/unknownIntent", payload)
+    await menuai.async_block_till_done()
     assert "Received unknown intent unknownIntent" in caplog.text
 
 
 async def test_snips_intent_user(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Test intentName format user_XXX__intentName."""
-    result = await async_setup_component(hass, "snips", {"snips": {}})
+    result = await async_setup_component(menuai, "snips", {"snips": {}})
     assert result
     payload = """
     {
@@ -348,9 +348,9 @@ async def test_snips_intent_user(
         "slots": []
     }
     """
-    intents = async_mock_intent(hass, "Lights")
-    async_fire_mqtt_message(hass, "hermes/intent/user_ABCDEF123__Lights", payload)
-    await hass.async_block_till_done()
+    intents = async_mock_intent(menuai, "Lights")
+    async_fire_mqtt_message(menuai, "hermes/intent/user_ABCDEF123__Lights", payload)
+    await menuai.async_block_till_done()
 
     assert len(intents) == 1
     intent = intents[0]
@@ -359,10 +359,10 @@ async def test_snips_intent_user(
 
 
 async def test_snips_intent_username(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Test intentName format username:intentName."""
-    result = await async_setup_component(hass, "snips", {"snips": {}})
+    result = await async_setup_component(menuai, "snips", {"snips": {}})
     assert result
     payload = """
     {
@@ -374,9 +374,9 @@ async def test_snips_intent_username(
         "slots": []
     }
     """
-    intents = async_mock_intent(hass, "Lights")
-    async_fire_mqtt_message(hass, "hermes/intent/username:Lights", payload)
-    await hass.async_block_till_done()
+    intents = async_mock_intent(menuai, "Lights")
+    async_fire_mqtt_message(menuai, "hermes/intent/username:Lights", payload)
+    await menuai.async_block_till_done()
 
     assert len(intents) == 1
     intent = intents[0]
@@ -385,12 +385,12 @@ async def test_snips_intent_username(
 
 
 async def test_snips_low_probability(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture, mqtt_mock: MqttMockHAClient
+    menuai: menuai, caplog: pytest.LogCaptureFixture, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Test intent via Snips."""
     caplog.set_level(logging.WARNING)
     result = await async_setup_component(
-        hass, "snips", {"snips": {"probability_threshold": 0.5}}
+        menuai, "snips", {"snips": {"probability_threshold": 0.5}}
     )
     assert result
     payload = """
@@ -404,21 +404,21 @@ async def test_snips_low_probability(
     }
     """
 
-    async_mock_intent(hass, "LightsMaybe")
-    async_fire_mqtt_message(hass, "hermes/intent/LightsMaybe", payload)
-    await hass.async_block_till_done()
+    async_mock_intent(menuai, "LightsMaybe")
+    async_fire_mqtt_message(menuai, "hermes/intent/LightsMaybe", payload)
+    await menuai.async_block_till_done()
     assert "Intent below probaility threshold 0.49 < 0.5" in caplog.text
 
 
 async def test_intent_special_slots(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Test intent special slot values via Snips."""
-    calls = async_mock_service(hass, "light", "turn_on")
-    result = await async_setup_component(hass, "snips", {"snips": {}})
+    calls = async_mock_service(menuai, "light", "turn_on")
+    result = await async_setup_component(menuai, "snips", {"snips": {}})
     assert result
     result = await async_setup_component(
-        hass,
+        menuai,
         "intent_script",
         {
             "intent_script": {
@@ -446,8 +446,8 @@ async def test_intent_special_slots(
         "slots": []
     }
     """
-    async_fire_mqtt_message(hass, "hermes/intent/Lights", payload)
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "hermes/intent/Lights", payload)
+    await menuai.async_block_till_done()
 
     assert len(calls) == 1
     assert calls[0].domain == "light"
@@ -456,12 +456,12 @@ async def test_intent_special_slots(
     assert calls[0].data["site_id"] == "default"
 
 
-async def test_snips_say(hass: HomeAssistant) -> None:
+async def test_snips_say(menuai: menuai) -> None:
     """Test snips say with invalid config."""
-    calls = async_mock_service(hass, "snips", "say", snips.SERVICE_SCHEMA_SAY)
+    calls = async_mock_service(menuai, "snips", "say", snips.SERVICE_SCHEMA_SAY)
     data = {"text": "Hello"}
-    await hass.services.async_call("snips", "say", data)
-    await hass.async_block_till_done()
+    await menuai.services.async_call("snips", "say", data)
+    await menuai.async_block_till_done()
 
     assert len(calls) == 1
     assert calls[0].domain == "snips"
@@ -469,15 +469,15 @@ async def test_snips_say(hass: HomeAssistant) -> None:
     assert calls[0].data["text"] == "Hello"
 
 
-async def test_snips_say_action(hass: HomeAssistant) -> None:
+async def test_snips_say_action(menuai: menuai) -> None:
     """Test snips say_action with invalid config."""
     calls = async_mock_service(
-        hass, "snips", "say_action", snips.SERVICE_SCHEMA_SAY_ACTION
+        menuai, "snips", "say_action", snips.SERVICE_SCHEMA_SAY_ACTION
     )
 
     data = {"text": "Hello", "intent_filter": ["myIntent"]}
-    await hass.services.async_call("snips", "say_action", data)
-    await hass.async_block_till_done()
+    await menuai.services.async_call("snips", "say_action", data)
+    await menuai.async_block_till_done()
 
     assert len(calls) == 1
     assert calls[0].domain == "snips"
@@ -486,42 +486,42 @@ async def test_snips_say_action(hass: HomeAssistant) -> None:
     assert calls[0].data["intent_filter"] == ["myIntent"]
 
 
-async def test_snips_say_invalid_config(hass: HomeAssistant) -> None:
+async def test_snips_say_invalid_config(menuai: menuai) -> None:
     """Test snips say with invalid config."""
-    calls = async_mock_service(hass, "snips", "say", snips.SERVICE_SCHEMA_SAY)
+    calls = async_mock_service(menuai, "snips", "say", snips.SERVICE_SCHEMA_SAY)
 
     data = {"text": "Hello", "badKey": "boo"}
     with pytest.raises(vol.Invalid):
-        await hass.services.async_call("snips", "say", data)
-    await hass.async_block_till_done()
+        await menuai.services.async_call("snips", "say", data)
+    await menuai.async_block_till_done()
 
     assert len(calls) == 0
 
 
-async def test_snips_say_action_invalid(hass: HomeAssistant) -> None:
+async def test_snips_say_action_invalid(menuai: menuai) -> None:
     """Test snips say_action with invalid config."""
     calls = async_mock_service(
-        hass, "snips", "say_action", snips.SERVICE_SCHEMA_SAY_ACTION
+        menuai, "snips", "say_action", snips.SERVICE_SCHEMA_SAY_ACTION
     )
 
     data = {"text": "Hello", "can_be_enqueued": "notabool"}
 
     with pytest.raises(vol.Invalid):
-        await hass.services.async_call("snips", "say_action", data)
-    await hass.async_block_till_done()
+        await menuai.services.async_call("snips", "say_action", data)
+    await menuai.async_block_till_done()
 
     assert len(calls) == 0
 
 
-async def test_snips_feedback_on(hass: HomeAssistant) -> None:
+async def test_snips_feedback_on(menuai: menuai) -> None:
     """Test snips say with invalid config."""
     calls = async_mock_service(
-        hass, "snips", "feedback_on", snips.SERVICE_SCHEMA_FEEDBACK
+        menuai, "snips", "feedback_on", snips.SERVICE_SCHEMA_FEEDBACK
     )
 
     data = {"site_id": "remote"}
-    await hass.services.async_call("snips", "feedback_on", data)
-    await hass.async_block_till_done()
+    await menuai.services.async_call("snips", "feedback_on", data)
+    await menuai.async_block_till_done()
 
     assert len(calls) == 1
     assert calls[0].domain == "snips"
@@ -529,15 +529,15 @@ async def test_snips_feedback_on(hass: HomeAssistant) -> None:
     assert calls[0].data["site_id"] == "remote"
 
 
-async def test_snips_feedback_off(hass: HomeAssistant) -> None:
+async def test_snips_feedback_off(menuai: menuai) -> None:
     """Test snips say with invalid config."""
     calls = async_mock_service(
-        hass, "snips", "feedback_off", snips.SERVICE_SCHEMA_FEEDBACK
+        menuai, "snips", "feedback_off", snips.SERVICE_SCHEMA_FEEDBACK
     )
 
     data = {"site_id": "remote"}
-    await hass.services.async_call("snips", "feedback_off", data)
-    await hass.async_block_till_done()
+    await menuai.services.async_call("snips", "feedback_off", data)
+    await menuai.async_block_till_done()
 
     assert len(calls) == 1
     assert calls[0].domain == "snips"
@@ -545,15 +545,15 @@ async def test_snips_feedback_off(hass: HomeAssistant) -> None:
     assert calls[0].data["site_id"] == "remote"
 
 
-async def test_snips_feedback_config(hass: HomeAssistant) -> None:
+async def test_snips_feedback_config(menuai: menuai) -> None:
     """Test snips say with invalid config."""
     calls = async_mock_service(
-        hass, "snips", "feedback_on", snips.SERVICE_SCHEMA_FEEDBACK
+        menuai, "snips", "feedback_on", snips.SERVICE_SCHEMA_FEEDBACK
     )
 
     data = {"site_id": "remote", "test": "test"}
     with pytest.raises(vol.Invalid):
-        await hass.services.async_call("snips", "feedback_on", data)
-    await hass.async_block_till_done()
+        await menuai.services.async_call("snips", "feedback_on", data)
+    await menuai.async_block_till_done()
 
     assert len(calls) == 0

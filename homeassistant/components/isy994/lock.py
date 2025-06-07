@@ -6,11 +6,11 @@ from typing import Any
 
 from pyisy.constants import ISY_VALUE_UNKNOWN
 
-from homeassistant.components.lock import LockEntity
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import (
+from menuai.components.lock import LockEntity
+from menuai.const import Platform
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     async_get_current_platform,
 )
@@ -28,7 +28,7 @@ VALUE_TO_STATE = {0: False, 100: True}
 
 
 @callback
-def async_setup_lock_services(hass: HomeAssistant) -> None:
+def async_setup_lock_services(menuai: menuai) -> None:
     """Create lock-specific services for the ISY Integration."""
     platform = async_get_current_platform()
 
@@ -45,7 +45,7 @@ def async_setup_lock_services(hass: HomeAssistant) -> None:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: IsyConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -63,7 +63,7 @@ async def async_setup_entry(
     )
 
     async_add_entities(entities)
-    async_setup_lock_services(hass)
+    async_setup_lock_services(menuai)
 
 
 class ISYLockEntity(ISYNodeEntity, LockEntity):
@@ -79,24 +79,24 @@ class ISYLockEntity(ISYNodeEntity, LockEntity):
     async def async_lock(self, **kwargs: Any) -> None:
         """Send the lock command to the ISY device."""
         if not await self._node.secure_lock():
-            raise HomeAssistantError(f"Unable to lock device {self._node.address}")
+            raise menuaiError(f"Unable to lock device {self._node.address}")
 
     async def async_unlock(self, **kwargs: Any) -> None:
         """Send the unlock command to the ISY device."""
         if not await self._node.secure_unlock():
-            raise HomeAssistantError(f"Unable to unlock device {self._node.address}")
+            raise menuaiError(f"Unable to unlock device {self._node.address}")
 
     async def async_set_zwave_lock_user_code(self, user_num: int, code: int) -> None:
         """Set a user lock code for a Z-Wave Lock."""
         if not await self._node.set_zwave_lock_code(user_num, code):
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Could not set user code {user_num} for {self._node.address}"
             )
 
     async def async_delete_zwave_lock_user_code(self, user_num: int) -> None:
         """Delete a user lock code for a Z-Wave Lock."""
         if not await self._node.delete_zwave_lock_code(user_num):
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Could not delete user code {user_num} for {self._node.address}"
             )
 
@@ -112,9 +112,9 @@ class ISYLockProgramEntity(ISYProgramEntity, LockEntity):
     async def async_lock(self, **kwargs: Any) -> None:
         """Lock the device."""
         if not await self._actions.run_then():
-            raise HomeAssistantError(f"Unable to lock device {self._node.address}")
+            raise menuaiError(f"Unable to lock device {self._node.address}")
 
     async def async_unlock(self, **kwargs: Any) -> None:
         """Unlock the device."""
         if not await self._actions.run_else():
-            raise HomeAssistantError(f"Unable to unlock device {self._node.address}")
+            raise menuaiError(f"Unable to unlock device {self._node.address}")

@@ -4,44 +4,44 @@ from unittest.mock import patch
 
 from smarttub import LoginFailed
 
-from homeassistant.components.smarttub.const import DOMAIN
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.smarttub.const import DOMAIN
+from menuai.config_entries import SOURCE_REAUTH, ConfigEntryState
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 
 async def test_setup_with_no_config(
-    setup_component, hass: HomeAssistant, smarttub_api
+    setup_component, menuai: menuai, smarttub_api
 ) -> None:
     """Test that we do not discover anything."""
 
     # No flows started
-    assert len(hass.config_entries.flow.async_progress()) == 0
+    assert len(menuai.config_entries.flow.async_progress()) == 0
 
     smarttub_api.login.assert_not_called()
 
 
 async def test_setup_entry_not_ready(
-    setup_component, hass: HomeAssistant, config_entry, smarttub_api
+    setup_component, menuai: menuai, config_entry, smarttub_api
 ) -> None:
     """Test setup when the entry is not ready."""
     smarttub_api.login.side_effect = TimeoutError
 
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
     assert config_entry.state is ConfigEntryState.SETUP_RETRY
 
 
 async def test_setup_auth_failed(
-    setup_component, hass: HomeAssistant, config_entry, smarttub_api
+    setup_component, menuai: menuai, config_entry, smarttub_api
 ) -> None:
     """Test setup when the credentials are invalid."""
     smarttub_api.login.side_effect = LoginFailed
 
-    config_entry.add_to_hass(hass)
-    with patch.object(hass.config_entries.flow, "async_init") as mock_flow_init:
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    with patch.object(menuai.config_entries.flow, "async_init") as mock_flow_init:
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
         assert config_entry.state is ConfigEntryState.SETUP_ERROR
         mock_flow_init.assert_called_with(
             DOMAIN,
@@ -56,17 +56,17 @@ async def test_setup_auth_failed(
 
 
 async def test_config_passed_to_config_entry(
-    hass: HomeAssistant, config_entry, config_data
+    menuai: menuai, config_entry, config_data
 ) -> None:
     """Test that configured options are loaded via config entry."""
-    config_entry.add_to_hass(hass)
-    assert await async_setup_component(hass, DOMAIN, config_data)
+    config_entry.add_to_menuai(menuai)
+    assert await async_setup_component(menuai, DOMAIN, config_data)
 
 
-async def test_unload_entry(hass: HomeAssistant, config_entry) -> None:
+async def test_unload_entry(menuai: menuai, config_entry) -> None:
     """Test being able to unload an entry."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    assert await async_setup_component(hass, DOMAIN, {}) is True
+    assert await async_setup_component(menuai, DOMAIN, {}) is True
 
-    assert await hass.config_entries.async_unload(config_entry.entry_id)
+    assert await menuai.config_entries.async_unload(config_entry.entry_id)

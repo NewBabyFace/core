@@ -7,31 +7,31 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components import frontend
-from homeassistant.components.recorder import DOMAIN as RECORDER_DOMAIN
-from homeassistant.components.recorder.filters import (
+from menuai.components import frontend
+from menuai.components.recorder import DOMAIN as RECORDER_DOMAIN
+from menuai.components.recorder.filters import (
     extract_include_exclude_filter_conf,
     merge_include_exclude_filters,
     sqlalchemy_filter_from_include_exclude_conf,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_DOMAIN,
     ATTR_ENTITY_ID,
     ATTR_NAME,
     EVENT_LOGBOOK_ENTRY,
 )
-from homeassistant.core import Context, HomeAssistant, ServiceCall, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entityfilter import (
+from menuai.core import Context, menuai, ServiceCall, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entityfilter import (
     INCLUDE_EXCLUDE_BASE_FILTER_SCHEMA,
     convert_include_exclude_filter,
 )
-from homeassistant.helpers.integration_platform import (
+from menuai.helpers.integration_platform import (
     async_process_integration_platforms,
 )
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.loader import bind_hass
-from homeassistant.util.event_type import EventType
+from menuai.helpers.typing import ConfigType
+from menuai.loader import bind_menuai
+from menuai.util.event_type import EventType
 
 from . import rest_api, websocket_api
 from .const import (  # noqa: F401
@@ -62,9 +62,9 @@ LOG_MESSAGE_SCHEMA = vol.Schema(
 )
 
 
-@bind_hass
+@bind_menuai
 def log_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     name: str,
     message: str,
     domain: str | None = None,
@@ -72,13 +72,13 @@ def log_entry(
     context: Context | None = None,
 ) -> None:
     """Add an entry to the logbook."""
-    hass.add_job(async_log_entry, hass, name, message, domain, entity_id, context)
+    menuai.add_job(async_log_entry, menuai, name, message, domain, entity_id, context)
 
 
 @callback
-@bind_hass
+@bind_menuai
 def async_log_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     name: str,
     message: str,
     domain: str | None = None,
@@ -92,10 +92,10 @@ def async_log_entry(
         data[LOGBOOK_ENTRY_DOMAIN] = domain
     if entity_id is not None:
         data[LOGBOOK_ENTRY_ENTITY_ID] = entity_id
-    hass.bus.async_fire(EVENT_LOGBOOK_ENTRY, data, context=context)
+    menuai.bus.async_fire(EVENT_LOGBOOK_ENTRY, data, context=context)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Logbook setup."""
 
     @callback
@@ -112,10 +112,10 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             # away so we use the "logbook" domain
             domain = DOMAIN
 
-        async_log_entry(hass, name, message, domain, entity_id, service.context)
+        async_log_entry(menuai, name, message, domain, entity_id, service.context)
 
     frontend.async_register_built_in_panel(
-        hass, "logbook", "logbook", "hass:format-list-bulleted-type"
+        menuai, "logbook", "logbook", "menuai:format-list-bulleted-type"
     )
 
     recorder_conf = config.get(RECORDER_DOMAIN, {})
@@ -136,20 +136,20 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         EventType[Any] | str,
         tuple[str, Callable[[LazyEventPartialState], dict[str, Any]]],
     ] = {}
-    hass.data[DOMAIN] = LogbookConfig(external_events, filters, entities_filter)
-    websocket_api.async_setup(hass)
-    rest_api.async_setup(hass, config, filters, entities_filter)
-    hass.services.async_register(DOMAIN, "log", log_message, schema=LOG_MESSAGE_SCHEMA)
+    menuai.data[DOMAIN] = LogbookConfig(external_events, filters, entities_filter)
+    websocket_api.async_setup(menuai)
+    rest_api.async_setup(menuai, config, filters, entities_filter)
+    menuai.services.async_register(DOMAIN, "log", log_message, schema=LOG_MESSAGE_SCHEMA)
 
-    await async_process_integration_platforms(hass, DOMAIN, _process_logbook_platform)
+    await async_process_integration_platforms(menuai, DOMAIN, _process_logbook_platform)
 
     return True
 
 
 @callback
-def _process_logbook_platform(hass: HomeAssistant, domain: str, platform: Any) -> None:
+def _process_logbook_platform(menuai: menuai, domain: str, platform: Any) -> None:
     """Process a logbook platform."""
-    logbook_config: LogbookConfig = hass.data[DOMAIN]
+    logbook_config: LogbookConfig = menuai.data[DOMAIN]
     external_events = logbook_config.external_events
 
     @callback
@@ -161,4 +161,4 @@ def _process_logbook_platform(hass: HomeAssistant, domain: str, platform: Any) -
         """Teach logbook how to describe a new event."""
         external_events[event_name] = (domain, describe_callback)
 
-    platform.async_describe_events(hass, _async_describe_event)
+    platform.async_describe_events(menuai, _async_describe_event)

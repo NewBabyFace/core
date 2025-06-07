@@ -5,10 +5,10 @@ from unittest.mock import patch
 from syrupy.assertion import SnapshotAssertion
 from syrupy.filters import props
 
-from homeassistant.components.braviatv.const import CONF_USE_PSK, DOMAIN
-from homeassistant.const import CONF_HOST, CONF_MAC, CONF_PIN
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.braviatv.const import CONF_USE_PSK, DOMAIN
+from menuai.const import CONF_HOST, CONF_MAC, CONF_PIN
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 from tests.components.diagnostics import get_diagnostics_for_config_entry
@@ -38,8 +38,8 @@ INPUTS = [
 
 
 async def test_entry_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test config entry diagnostics."""
@@ -56,7 +56,7 @@ async def test_entry_diagnostics(
         entry_id="3bd2acb0e4f0476d40865546d0d91921",
     )
 
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     with (
         patch("pybravia.BraviaClient.connect"),
         patch("pybravia.BraviaClient.pair"),
@@ -69,7 +69,7 @@ async def test_entry_diagnostics(
         patch("pybravia.BraviaClient.get_app_list", return_value=[]),
         patch("pybravia.BraviaClient.get_content_list_all", return_value=[]),
     ):
-        assert await async_setup_component(hass, DOMAIN, {})
-        result = await get_diagnostics_for_config_entry(hass, hass_client, config_entry)
+        assert await async_setup_component(menuai, DOMAIN, {})
+        result = await get_diagnostics_for_config_entry(menuai, menuai_client, config_entry)
 
     assert result == snapshot(exclude=props("created_at", "modified_at"))

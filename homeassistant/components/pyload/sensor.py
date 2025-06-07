@@ -6,16 +6,16 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import UnitOfDataRate, UnitOfInformation
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
+from menuai.const import UnitOfDataRate, UnitOfInformation
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
 
 from .const import UNIT_DOWNLOADS
 from .coordinator import PyLoadConfigEntry, PyLoadData
@@ -85,7 +85,7 @@ SENSOR_DESCRIPTIONS: tuple[PyLoadSensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: PyLoadConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

@@ -4,13 +4,13 @@ from typing import Any
 
 import pytest
 
-from homeassistant.components import alarm_control_panel
-from homeassistant.components.alarm_control_panel import (
+from menuai.components import alarm_control_panel
+from menuai.components.alarm_control_panel import (
     DOMAIN,
     AlarmControlPanelEntityFeature,
     CodeFormat,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_CODE,
     SERVICE_ALARM_ARM_AWAY,
     SERVICE_ALARM_ARM_CUSTOM_BYPASS,
@@ -20,10 +20,10 @@ from homeassistant.const import (
     SERVICE_ALARM_DISARM,
     SERVICE_ALARM_TRIGGER,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.typing import UNDEFINED, UndefinedType
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import entity_registry as er
+from menuai.helpers.typing import UNDEFINED, UndefinedType
 
 from . import help_async_setup_entry_init, help_async_unload_entry
 from .conftest import MockAlarmControlPanel
@@ -37,7 +37,7 @@ from tests.common import (
 
 
 async def help_test_async_alarm_control_panel_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_id: str,
     service: str,
     code: str | None | UndefinedType = UNDEFINED,
@@ -47,14 +47,14 @@ async def help_test_async_alarm_control_panel_service(
     if code is not UNDEFINED:
         data[ATTR_CODE] = code
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         alarm_control_panel.DOMAIN, service, data, blocking=True
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
 async def test_set_mock_alarm_control_panel_options(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_alarm_control_panel_entity: MockAlarmControlPanel,
 ) -> None:
@@ -64,13 +64,13 @@ async def test_set_mock_alarm_control_panel_options(
         "alarm_control_panel",
         {alarm_control_panel.CONF_DEFAULT_CODE: "1234"},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert (
         mock_alarm_control_panel_entity._alarm_control_panel_option_default_code
         == "1234"
     )
-    state = hass.states.get(mock_alarm_control_panel_entity.entity_id)
+    state = menuai.states.get(mock_alarm_control_panel_entity.entity_id)
     assert state is not None
     assert state.attributes["code_format"] == CodeFormat.NUMBER
     assert (
@@ -85,7 +85,7 @@ async def test_set_mock_alarm_control_panel_options(
 
 
 async def test_default_code_option_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_alarm_control_panel_entity: MockAlarmControlPanel,
 ) -> None:
@@ -100,7 +100,7 @@ async def test_default_code_option_update(
         "alarm_control_panel",
         {alarm_control_panel.CONF_DEFAULT_CODE: "4321"},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert (
         mock_alarm_control_panel_entity._alarm_control_panel_option_default_code
@@ -113,25 +113,25 @@ async def test_default_code_option_update(
     [(CodeFormat.TEXT, AlarmControlPanelEntityFeature.ARM_AWAY)],
 )
 async def test_alarm_control_panel_arm_with_code(
-    hass: HomeAssistant, mock_alarm_control_panel_entity: MockAlarmControlPanel
+    menuai: menuai, mock_alarm_control_panel_entity: MockAlarmControlPanel
 ) -> None:
     """Test alarm control panel entity with open service."""
-    state = hass.states.get(mock_alarm_control_panel_entity.entity_id)
+    state = menuai.states.get(mock_alarm_control_panel_entity.entity_id)
     assert state.attributes["code_format"] == CodeFormat.TEXT
 
     with pytest.raises(ServiceValidationError):
         await help_test_async_alarm_control_panel_service(
-            hass, mock_alarm_control_panel_entity.entity_id, SERVICE_ALARM_ARM_AWAY
+            menuai, mock_alarm_control_panel_entity.entity_id, SERVICE_ALARM_ARM_AWAY
         )
     with pytest.raises(ServiceValidationError):
         await help_test_async_alarm_control_panel_service(
-            hass,
+            menuai,
             mock_alarm_control_panel_entity.entity_id,
             SERVICE_ALARM_ARM_AWAY,
             code="",
         )
     await help_test_async_alarm_control_panel_service(
-        hass,
+        menuai,
         mock_alarm_control_panel_entity.entity_id,
         SERVICE_ALARM_ARM_AWAY,
         code="1234",
@@ -145,35 +145,35 @@ async def test_alarm_control_panel_arm_with_code(
     [(CodeFormat.NUMBER, False)],
 )
 async def test_alarm_control_panel_with_no_code(
-    hass: HomeAssistant, mock_alarm_control_panel_entity: MockAlarmControlPanel
+    menuai: menuai, mock_alarm_control_panel_entity: MockAlarmControlPanel
 ) -> None:
     """Test alarm control panel entity without code."""
     await help_test_async_alarm_control_panel_service(
-        hass, mock_alarm_control_panel_entity.entity_id, SERVICE_ALARM_ARM_AWAY
+        menuai, mock_alarm_control_panel_entity.entity_id, SERVICE_ALARM_ARM_AWAY
     )
     mock_alarm_control_panel_entity.calls_arm_away.assert_called_with(None)
     await help_test_async_alarm_control_panel_service(
-        hass, mock_alarm_control_panel_entity.entity_id, SERVICE_ALARM_ARM_CUSTOM_BYPASS
+        menuai, mock_alarm_control_panel_entity.entity_id, SERVICE_ALARM_ARM_CUSTOM_BYPASS
     )
     mock_alarm_control_panel_entity.calls_arm_custom.assert_called_with(None)
     await help_test_async_alarm_control_panel_service(
-        hass, mock_alarm_control_panel_entity.entity_id, SERVICE_ALARM_ARM_HOME
+        menuai, mock_alarm_control_panel_entity.entity_id, SERVICE_ALARM_ARM_HOME
     )
     mock_alarm_control_panel_entity.calls_arm_home.assert_called_with(None)
     await help_test_async_alarm_control_panel_service(
-        hass, mock_alarm_control_panel_entity.entity_id, SERVICE_ALARM_ARM_NIGHT
+        menuai, mock_alarm_control_panel_entity.entity_id, SERVICE_ALARM_ARM_NIGHT
     )
     mock_alarm_control_panel_entity.calls_arm_night.assert_called_with(None)
     await help_test_async_alarm_control_panel_service(
-        hass, mock_alarm_control_panel_entity.entity_id, SERVICE_ALARM_ARM_VACATION
+        menuai, mock_alarm_control_panel_entity.entity_id, SERVICE_ALARM_ARM_VACATION
     )
     mock_alarm_control_panel_entity.calls_arm_vacation.assert_called_with(None)
     await help_test_async_alarm_control_panel_service(
-        hass, mock_alarm_control_panel_entity.entity_id, SERVICE_ALARM_DISARM
+        menuai, mock_alarm_control_panel_entity.entity_id, SERVICE_ALARM_DISARM
     )
     mock_alarm_control_panel_entity.calls_disarm.assert_called_with(None)
     await help_test_async_alarm_control_panel_service(
-        hass, mock_alarm_control_panel_entity.entity_id, SERVICE_ALARM_TRIGGER
+        menuai, mock_alarm_control_panel_entity.entity_id, SERVICE_ALARM_TRIGGER
     )
     mock_alarm_control_panel_entity.calls_trigger.assert_called_with(None)
 
@@ -183,7 +183,7 @@ async def test_alarm_control_panel_with_no_code(
     [(CodeFormat.NUMBER, True)],
 )
 async def test_alarm_control_panel_with_default_code(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_alarm_control_panel_entity: MockAlarmControlPanel,
 ) -> None:
@@ -193,41 +193,41 @@ async def test_alarm_control_panel_with_default_code(
         "alarm_control_panel",
         {alarm_control_panel.CONF_DEFAULT_CODE: "1234"},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     await help_test_async_alarm_control_panel_service(
-        hass, mock_alarm_control_panel_entity.entity_id, SERVICE_ALARM_ARM_AWAY
+        menuai, mock_alarm_control_panel_entity.entity_id, SERVICE_ALARM_ARM_AWAY
     )
     mock_alarm_control_panel_entity.calls_arm_away.assert_called_with("1234")
     await help_test_async_alarm_control_panel_service(
-        hass, mock_alarm_control_panel_entity.entity_id, SERVICE_ALARM_ARM_CUSTOM_BYPASS
+        menuai, mock_alarm_control_panel_entity.entity_id, SERVICE_ALARM_ARM_CUSTOM_BYPASS
     )
     mock_alarm_control_panel_entity.calls_arm_custom.assert_called_with("1234")
     await help_test_async_alarm_control_panel_service(
-        hass, mock_alarm_control_panel_entity.entity_id, SERVICE_ALARM_ARM_HOME
+        menuai, mock_alarm_control_panel_entity.entity_id, SERVICE_ALARM_ARM_HOME
     )
     mock_alarm_control_panel_entity.calls_arm_home.assert_called_with("1234")
     await help_test_async_alarm_control_panel_service(
-        hass, mock_alarm_control_panel_entity.entity_id, SERVICE_ALARM_ARM_NIGHT
+        menuai, mock_alarm_control_panel_entity.entity_id, SERVICE_ALARM_ARM_NIGHT
     )
     mock_alarm_control_panel_entity.calls_arm_night.assert_called_with("1234")
     await help_test_async_alarm_control_panel_service(
-        hass, mock_alarm_control_panel_entity.entity_id, SERVICE_ALARM_ARM_VACATION
+        menuai, mock_alarm_control_panel_entity.entity_id, SERVICE_ALARM_ARM_VACATION
     )
     mock_alarm_control_panel_entity.calls_arm_vacation.assert_called_with("1234")
     await help_test_async_alarm_control_panel_service(
-        hass, mock_alarm_control_panel_entity.entity_id, SERVICE_ALARM_DISARM
+        menuai, mock_alarm_control_panel_entity.entity_id, SERVICE_ALARM_DISARM
     )
     mock_alarm_control_panel_entity.calls_disarm.assert_called_with("1234")
 
 
 async def test_alarm_control_panel_not_log_deprecated_state_warning(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_alarm_control_panel_entity: MockAlarmControlPanel,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test correctly using alarm_state doesn't log issue or raise repair."""
-    state = hass.states.get(mock_alarm_control_panel_entity.entity_id)
+    state = menuai.states.get(mock_alarm_control_panel_entity.entity_id)
     assert state is not None
     assert (
         "the 'alarm_state' property and return its state using the AlarmControlPanelState enum"
@@ -237,7 +237,7 @@ async def test_alarm_control_panel_not_log_deprecated_state_warning(
 
 @pytest.mark.usefixtures("mock_as_custom_component")
 async def test_alarm_control_panel_log_deprecated_state_warning_using_state_prop(
-    hass: HomeAssistant,
+    menuai: menuai,
     code_format: CodeFormat | None,
     supported_features: AlarmControlPanelEntityFeature,
     code_arm_required: bool,
@@ -270,9 +270,9 @@ async def test_alarm_control_panel_log_deprecated_state_warning_using_state_prop
         code_arm_required=code_arm_required,
     )
     config_entry = MockConfigEntry(domain="test")
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     mock_integration(
-        hass,
+        menuai,
         MockModule(
             "test",
             async_setup_entry=help_async_setup_entry_init,
@@ -280,10 +280,10 @@ async def test_alarm_control_panel_log_deprecated_state_warning_using_state_prop
         ),
         built_in=False,
     )
-    setup_test_component_platform(hass, DOMAIN, [entity], from_config_entry=True)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    setup_test_component_platform(menuai, DOMAIN, [entity], from_config_entry=True)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
 
-    state = hass.states.get(entity.entity_id)
+    state = menuai.states.get(entity.entity_id)
     assert state is not None
 
     assert (
@@ -292,14 +292,14 @@ async def test_alarm_control_panel_log_deprecated_state_warning_using_state_prop
         "test_init.test_alarm_control_panel_log_deprecated_state_warning_using"
         "_state_prop.<locals>.MockLegacyAlarmControlPanel'>) should implement"
         " the 'alarm_state' property and return its state using the AlarmControlPanelState"
-        " enum. This will stop working in Home Assistant 2025.11, please report it to"
+        " enum. This will stop working in MenuAI 2025.11, please report it to"
         " the author of the 'test' custom integration" in caplog.text
     )
 
 
 @pytest.mark.usefixtures("mock_as_custom_component")
 async def test_alarm_control_panel_log_deprecated_state_warning_using_attr_state_attr(
-    hass: HomeAssistant,
+    menuai: menuai,
     code_format: CodeFormat | None,
     supported_features: AlarmControlPanelEntityFeature,
     code_arm_required: bool,
@@ -331,9 +331,9 @@ async def test_alarm_control_panel_log_deprecated_state_warning_using_attr_state
         code_arm_required=code_arm_required,
     )
     config_entry = MockConfigEntry(domain="test")
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     mock_integration(
-        hass,
+        menuai,
         MockModule(
             "test",
             async_setup_entry=help_async_setup_entry_init,
@@ -341,10 +341,10 @@ async def test_alarm_control_panel_log_deprecated_state_warning_using_attr_state
         ),
         built_in=False,
     )
-    setup_test_component_platform(hass, DOMAIN, [entity], from_config_entry=True)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    setup_test_component_platform(menuai, DOMAIN, [entity], from_config_entry=True)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
 
-    state = hass.states.get(entity.entity_id)
+    state = menuai.states.get(entity.entity_id)
     assert state is not None
 
     assert (
@@ -353,7 +353,7 @@ async def test_alarm_control_panel_log_deprecated_state_warning_using_attr_state
     )
 
     await help_test_async_alarm_control_panel_service(
-        hass, entity.entity_id, SERVICE_ALARM_DISARM
+        menuai, entity.entity_id, SERVICE_ALARM_DISARM
     )
 
     assert (
@@ -363,12 +363,12 @@ async def test_alarm_control_panel_log_deprecated_state_warning_using_attr_state
         "test_alarm_control_panel_log_deprecated_state_warning_using_attr_state_attr."
         "<locals>.MockLegacyAlarmControlPanel'>) should implement the 'alarm_state' property"
         " and return its state using the AlarmControlPanelState enum. "
-        "This will stop working in Home Assistant 2025.11, please report "
+        "This will stop working in MenuAI 2025.11, please report "
         "it to the author of the 'test' custom integration" in caplog.text
     )
     caplog.clear()
     await help_test_async_alarm_control_panel_service(
-        hass, entity.entity_id, SERVICE_ALARM_DISARM
+        menuai, entity.entity_id, SERVICE_ALARM_DISARM
     )
     # Test we only log once
     assert (
@@ -379,7 +379,7 @@ async def test_alarm_control_panel_log_deprecated_state_warning_using_attr_state
 
 @pytest.mark.usefixtures("mock_as_custom_component")
 async def test_alarm_control_panel_deprecated_state_does_not_break_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     code_format: CodeFormat | None,
     supported_features: AlarmControlPanelEntityFeature,
     code_arm_required: bool,
@@ -412,9 +412,9 @@ async def test_alarm_control_panel_deprecated_state_does_not_break_state(
         code_arm_required=code_arm_required,
     )
     config_entry = MockConfigEntry(domain="test")
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     mock_integration(
-        hass,
+        menuai,
         MockModule(
             "test",
             async_setup_entry=help_async_setup_entry_init,
@@ -422,17 +422,17 @@ async def test_alarm_control_panel_deprecated_state_does_not_break_state(
         ),
         built_in=False,
     )
-    setup_test_component_platform(hass, DOMAIN, [entity], from_config_entry=True)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    setup_test_component_platform(menuai, DOMAIN, [entity], from_config_entry=True)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
 
-    state = hass.states.get(entity.entity_id)
+    state = menuai.states.get(entity.entity_id)
     assert state is not None
     assert state.state == "armed_away"
 
     await help_test_async_alarm_control_panel_service(
-        hass, entity.entity_id, SERVICE_ALARM_DISARM
+        menuai, entity.entity_id, SERVICE_ALARM_DISARM
     )
 
-    state = hass.states.get(entity.entity_id)
+    state = menuai.states.get(entity.entity_id)
     assert state is not None
     assert state.state == "disarmed"

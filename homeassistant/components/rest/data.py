@@ -8,11 +8,11 @@ import ssl
 import httpx
 import xmltodict
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import template
-from homeassistant.helpers.httpx_client import create_async_httpx_client
-from homeassistant.helpers.json import json_dumps
-from homeassistant.util.ssl import SSLCipherList
+from menuai.core import menuai
+from menuai.helpers import template
+from menuai.helpers.httpx_client import create_async_httpx_client
+from menuai.helpers.json import json_dumps
+from menuai.util.ssl import SSLCipherList
 
 from .const import XML_MIME_TYPES
 
@@ -26,7 +26,7 @@ class RestData:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         method: str,
         resource: str,
         encoding: str,
@@ -39,7 +39,7 @@ class RestData:
         timeout: int = DEFAULT_TIMEOUT,
     ) -> None:
         """Initialize the data object."""
-        self._hass = hass
+        self._menuai = menuai
         self._method = method
         self._resource = resource
         self._encoding = encoding
@@ -86,7 +86,7 @@ class RestData:
         """Get the latest data from REST service with provided method."""
         if not self._async_client:
             self._async_client = create_async_httpx_client(
-                self._hass,
+                self._menuai,
                 verify_ssl=self._verify_ssl,
                 default_encoding=self._encoding,
                 ssl_cipher_list=self._ssl_cipher_list,

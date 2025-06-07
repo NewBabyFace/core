@@ -10,20 +10,20 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components import automation, group, person, script, websocket_api
-from homeassistant.components.homeassistant import scene
-from homeassistant.core import HomeAssistant, callback, split_entity_id
-from homeassistant.helpers import (
+from menuai.components import automation, group, person, script, websocket_api
+from menuai.components.menuai import scene
+from menuai.core import menuai, callback, split_entity_id
+from menuai.helpers import (
     area_registry as ar,
     config_validation as cv,
     device_registry as dr,
     entity_registry as er,
 )
-from homeassistant.helpers.entity import (
+from menuai.helpers.entity import (
     EntityInfo,
     entity_sources as get_entity_sources,
 )
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers.typing import ConfigType
 
 DOMAIN = "search"
 _LOGGER = logging.getLogger(__name__)
@@ -51,9 +51,9 @@ class ItemType(StrEnum):
     SCRIPT_BLUEPRINT = "script_blueprint"
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Search component."""
-    websocket_api.async_register_command(hass, websocket_search_related)
+    websocket_api.async_register_command(menuai, websocket_search_related)
     return True
 
 
@@ -66,12 +66,12 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 )
 @callback
 def websocket_search_related(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Handle search."""
-    searcher = Searcher(hass, get_entity_sources(hass))
+    searcher = Searcher(menuai, get_entity_sources(menuai))
     connection.send_result(
         msg["id"], searcher.async_search(msg["item_type"], msg["item_id"])
     )
@@ -84,14 +84,14 @@ class Searcher:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entity_sources: dict[str, EntityInfo],
     ) -> None:
         """Search results."""
-        self.hass = hass
-        self._area_registry = ar.async_get(hass)
-        self._device_registry = dr.async_get(hass)
-        self._entity_registry = er.async_get(hass)
+        self.menuai = menuai
+        self._area_registry = ar.async_get(menuai)
+        self._device_registry = dr.async_get(menuai)
+        self._entity_registry = er.async_get(menuai)
         self._entity_sources = entity_sources
         self.results: defaultdict[ItemType, set[str]] = defaultdict(set)
 
@@ -131,11 +131,11 @@ class Searcher:
 
         # Automations referencing this area
         self._add(
-            ItemType.AUTOMATION, automation.automations_with_area(self.hass, area_id)
+            ItemType.AUTOMATION, automation.automations_with_area(self.menuai, area_id)
         )
 
         # Scripts referencing this area
-        self._add(ItemType.SCRIPT, script.scripts_with_area(self.hass, area_id))
+        self._add(ItemType.SCRIPT, script.scripts_with_area(self.menuai, area_id))
 
         # Entity in this area, will extend this with the entities of the devices in this area
         entity_entries = er.async_entries_for_area(self._entity_registry, area_id)
@@ -151,11 +151,11 @@ class Searcher:
             # Automations referencing this device
             self._add(
                 ItemType.AUTOMATION,
-                automation.automations_with_device(self.hass, device.id),
+                automation.automations_with_device(self.menuai, device.id),
             )
 
             # Scripts referencing this device
-            self._add(ItemType.SCRIPT, script.scripts_with_device(self.hass, device.id))
+            self._add(ItemType.SCRIPT, script.scripts_with_device(self.menuai, device.id))
 
             # Entities of this device
             for entity_entry in er.async_entries_for_device(
@@ -177,31 +177,31 @@ class Searcher:
             # Automations referencing this entity
             self._add(
                 ItemType.AUTOMATION,
-                automation.automations_with_entity(self.hass, entity_entry.entity_id),
+                automation.automations_with_entity(self.menuai, entity_entry.entity_id),
             )
 
             # Scripts referencing this entity
             self._add(
                 ItemType.SCRIPT,
-                script.scripts_with_entity(self.hass, entity_entry.entity_id),
+                script.scripts_with_entity(self.menuai, entity_entry.entity_id),
             )
 
             # Groups that have this entity as a member
             self._add(
                 ItemType.GROUP,
-                group.groups_with_entity(self.hass, entity_entry.entity_id),
+                group.groups_with_entity(self.menuai, entity_entry.entity_id),
             )
 
             # Persons that use this entity
             self._add(
                 ItemType.PERSON,
-                person.persons_with_entity(self.hass, entity_entry.entity_id),
+                person.persons_with_entity(self.menuai, entity_entry.entity_id),
             )
 
             # Scenes that reference this entity
             self._add(
                 ItemType.SCENE,
-                scene.scenes_with_entity(self.hass, entity_entry.entity_id),
+                scene.scenes_with_entity(self.menuai, entity_entry.entity_id),
             )
 
             # Config entries for entities in this area
@@ -218,28 +218,28 @@ class Searcher:
         # Find the blueprint used in this automation
         self._add(
             ItemType.AUTOMATION_BLUEPRINT,
-            automation.blueprint_in_automation(self.hass, automation_entity_id),
+            automation.blueprint_in_automation(self.menuai, automation_entity_id),
         )
 
         # Floors referenced in this automation
         self._add(
             ItemType.FLOOR,
-            automation.floors_in_automation(self.hass, automation_entity_id),
+            automation.floors_in_automation(self.menuai, automation_entity_id),
         )
 
         # Areas referenced in this automation
-        for area in automation.areas_in_automation(self.hass, automation_entity_id):
+        for area in automation.areas_in_automation(self.menuai, automation_entity_id):
             self._add(ItemType.AREA, area)
             self._async_resolve_up_area(area)
 
         # Devices referenced in this automation
-        for device in automation.devices_in_automation(self.hass, automation_entity_id):
+        for device in automation.devices_in_automation(self.menuai, automation_entity_id):
             self._add(ItemType.DEVICE, device)
             self._async_resolve_up_device(device)
 
         # Entities referenced in this automation
         for entity_id in automation.entities_in_automation(
-            self.hass, automation_entity_id
+            self.menuai, automation_entity_id
         ):
             self._add(ItemType.ENTITY, entity_id)
             self._async_resolve_up_entity(entity_id)
@@ -252,14 +252,14 @@ class Searcher:
             # For an automation, we want to unwrap the groups, to ensure we
             # relate this automation to all those members as well.
             if domain == "group":
-                for group_entity_id in group.get_entity_ids(self.hass, entity_id):
+                for group_entity_id in group.get_entity_ids(self.menuai, entity_id):
                     self._add(ItemType.ENTITY, group_entity_id)
                     self._async_resolve_up_entity(group_entity_id)
 
             # For an automation, we want to unwrap the scenes, to ensure we
             # relate this automation to all referenced entities as well.
             if domain == "scene":
-                for scene_entity_id in scene.entities_in_scene(self.hass, entity_id):
+                for scene_entity_id in scene.entities_in_scene(self.menuai, entity_id):
                     self._add(ItemType.ENTITY, scene_entity_id)
                     self._async_resolve_up_entity(scene_entity_id)
 
@@ -273,7 +273,7 @@ class Searcher:
         """Find results for an automation blueprint."""
         self._add(
             ItemType.AUTOMATION,
-            automation.automations_with_blueprint(self.hass, blueprint_path),
+            automation.automations_with_blueprint(self.menuai, blueprint_path),
         )
 
     @callback
@@ -304,11 +304,11 @@ class Searcher:
         # Automations referencing this device
         self._add(
             ItemType.AUTOMATION,
-            automation.automations_with_device(self.hass, device_id),
+            automation.automations_with_device(self.menuai, device_id),
         )
 
         # Scripts referencing this device
-        self._add(ItemType.SCRIPT, script.scripts_with_device(self.hass, device_id))
+        self._add(ItemType.SCRIPT, script.scripts_with_device(self.menuai, device_id))
 
         # Entities of this device
         for entity_entry in er.async_entries_for_device(
@@ -331,20 +331,20 @@ class Searcher:
         # Automations referencing this entity
         self._add(
             ItemType.AUTOMATION,
-            automation.automations_with_entity(self.hass, entity_id),
+            automation.automations_with_entity(self.menuai, entity_id),
         )
 
         # Scripts referencing this entity
-        self._add(ItemType.SCRIPT, script.scripts_with_entity(self.hass, entity_id))
+        self._add(ItemType.SCRIPT, script.scripts_with_entity(self.menuai, entity_id))
 
         # Groups that have this entity as a member
-        self._add(ItemType.GROUP, group.groups_with_entity(self.hass, entity_id))
+        self._add(ItemType.GROUP, group.groups_with_entity(self.menuai, entity_id))
 
         # Persons referencing this entity
-        self._add(ItemType.PERSON, person.persons_with_entity(self.hass, entity_id))
+        self._add(ItemType.PERSON, person.persons_with_entity(self.menuai, entity_id))
 
         # Scenes referencing this entity
-        self._add(ItemType.SCENE, scene.scenes_with_entity(self.hass, entity_id))
+        self._add(ItemType.SCENE, scene.scenes_with_entity(self.menuai, entity_id))
 
     @callback
     def _async_search_floor(self, floor_id: str) -> None:
@@ -352,11 +352,11 @@ class Searcher:
         # Automations referencing this floor
         self._add(
             ItemType.AUTOMATION,
-            automation.automations_with_floor(self.hass, floor_id),
+            automation.automations_with_floor(self.menuai, floor_id),
         )
 
         # Scripts referencing this floor
-        self._add(ItemType.SCRIPT, script.scripts_with_floor(self.hass, floor_id))
+        self._add(ItemType.SCRIPT, script.scripts_with_floor(self.menuai, floor_id))
 
         for area_entry in ar.async_entries_for_floor(self._area_registry, floor_id):
             self._add(ItemType.AREA, area_entry.id)
@@ -372,19 +372,19 @@ class Searcher:
         # Automations referencing this group
         self._add(
             ItemType.AUTOMATION,
-            automation.automations_with_entity(self.hass, group_entity_id),
+            automation.automations_with_entity(self.menuai, group_entity_id),
         )
 
         # Scripts referencing this group
         self._add(
-            ItemType.SCRIPT, script.scripts_with_entity(self.hass, group_entity_id)
+            ItemType.SCRIPT, script.scripts_with_entity(self.menuai, group_entity_id)
         )
 
         # Scenes that reference this group
-        self._add(ItemType.SCENE, scene.scenes_with_entity(self.hass, group_entity_id))
+        self._add(ItemType.SCENE, scene.scenes_with_entity(self.menuai, group_entity_id))
 
         # Entities in this group
-        for entity_id in group.get_entity_ids(self.hass, group_entity_id):
+        for entity_id in group.get_entity_ids(self.menuai, group_entity_id):
             self._add(ItemType.ENTITY, entity_id)
             self._async_resolve_up_entity(entity_id)
 
@@ -412,11 +412,11 @@ class Searcher:
         # Automations referencing this label
         self._add(
             ItemType.AUTOMATION,
-            automation.automations_with_label(self.hass, label_id),
+            automation.automations_with_label(self.menuai, label_id),
         )
 
         # Scripts referencing this label
-        self._add(ItemType.SCRIPT, script.scripts_with_label(self.hass, label_id))
+        self._add(ItemType.SCRIPT, script.scripts_with_label(self.menuai, label_id))
 
     @callback
     def _async_search_person(self, person_entity_id: str) -> None:
@@ -429,17 +429,17 @@ class Searcher:
         # Automations referencing this person
         self._add(
             ItemType.AUTOMATION,
-            automation.automations_with_entity(self.hass, person_entity_id),
+            automation.automations_with_entity(self.menuai, person_entity_id),
         )
 
         # Scripts referencing this person
         self._add(
-            ItemType.SCRIPT, script.scripts_with_entity(self.hass, person_entity_id)
+            ItemType.SCRIPT, script.scripts_with_entity(self.menuai, person_entity_id)
         )
 
         # Add all member entities of this person
         self._add(
-            ItemType.ENTITY, person.entities_in_person(self.hass, person_entity_id)
+            ItemType.ENTITY, person.entities_in_person(self.menuai, person_entity_id)
         )
 
     @callback
@@ -453,16 +453,16 @@ class Searcher:
         # Automations referencing this scene
         self._add(
             ItemType.AUTOMATION,
-            automation.automations_with_entity(self.hass, scene_entity_id),
+            automation.automations_with_entity(self.menuai, scene_entity_id),
         )
 
         # Scripts referencing this scene
         self._add(
-            ItemType.SCRIPT, script.scripts_with_entity(self.hass, scene_entity_id)
+            ItemType.SCRIPT, script.scripts_with_entity(self.menuai, scene_entity_id)
         )
 
         # Add all entities in this scene
-        for entity in scene.entities_in_scene(self.hass, scene_entity_id):
+        for entity in scene.entities_in_scene(self.menuai, scene_entity_id):
             self._add(ItemType.ENTITY, entity)
             self._async_resolve_up_entity(entity)
 
@@ -481,24 +481,24 @@ class Searcher:
         # Find the blueprint used in this script
         self._add(
             ItemType.SCRIPT_BLUEPRINT,
-            script.blueprint_in_script(self.hass, script_entity_id),
+            script.blueprint_in_script(self.menuai, script_entity_id),
         )
 
         # Floors referenced in this script
-        self._add(ItemType.FLOOR, script.floors_in_script(self.hass, script_entity_id))
+        self._add(ItemType.FLOOR, script.floors_in_script(self.menuai, script_entity_id))
 
         # Areas referenced in this script
-        for area in script.areas_in_script(self.hass, script_entity_id):
+        for area in script.areas_in_script(self.menuai, script_entity_id):
             self._add(ItemType.AREA, area)
             self._async_resolve_up_area(area)
 
         # Devices referenced in this script
-        for device in script.devices_in_script(self.hass, script_entity_id):
+        for device in script.devices_in_script(self.menuai, script_entity_id):
             self._add(ItemType.DEVICE, device)
             self._async_resolve_up_device(device)
 
         # Entities referenced in this script
-        for entity_id in script.entities_in_script(self.hass, script_entity_id):
+        for entity_id in script.entities_in_script(self.menuai, script_entity_id):
             self._add(ItemType.ENTITY, entity_id)
             self._async_resolve_up_entity(entity_id)
 
@@ -510,14 +510,14 @@ class Searcher:
             # For an script, we want to unwrap the groups, to ensure we
             # relate this script to all those members as well.
             if domain == "group":
-                for group_entity_id in group.get_entity_ids(self.hass, entity_id):
+                for group_entity_id in group.get_entity_ids(self.menuai, entity_id):
                     self._add(ItemType.ENTITY, group_entity_id)
                     self._async_resolve_up_entity(group_entity_id)
 
             # For an script, we want to unwrap the scenes, to ensure we
             # relate this script to all referenced entities as well.
             if domain == "scene":
-                for scene_entity_id in scene.entities_in_scene(self.hass, entity_id):
+                for scene_entity_id in scene.entities_in_scene(self.menuai, entity_id):
                     self._add(ItemType.ENTITY, scene_entity_id)
                     self._async_resolve_up_entity(scene_entity_id)
 
@@ -530,7 +530,7 @@ class Searcher:
     def _async_search_script_blueprint(self, blueprint_path: str) -> None:
         """Find results for a script blueprint."""
         self._add(
-            ItemType.SCRIPT, script.scripts_with_blueprint(self.hass, blueprint_path)
+            ItemType.SCRIPT, script.scripts_with_blueprint(self.menuai, blueprint_path)
         )
 
     @callback
@@ -547,7 +547,7 @@ class Searcher:
 
             self._add(ItemType.CONFIG_ENTRY, device_entry.config_entries)
             for config_entry_id in device_entry.config_entries:
-                if entry := self.hass.config_entries.async_get_entry(config_entry_id):
+                if entry := self.menuai.config_entries.async_get_entry(config_entry_id):
                     self._add(ItemType.INTEGRATION, entry.domain)
 
         return device_entry
@@ -580,7 +580,7 @@ class Searcher:
             if entity_entry.config_entry_id:
                 self._add(ItemType.CONFIG_ENTRY, entity_entry.config_entry_id)
 
-                if entry := self.hass.config_entries.async_get_entry(
+                if entry := self.menuai.config_entries.async_get_entry(
                     entity_entry.config_entry_id
                 ):
                     # Add integration that provided this entity

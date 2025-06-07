@@ -4,7 +4,7 @@ from screenlogicpy.const.common import UNIT
 from screenlogicpy.device_const.circuit import FUNCTION
 from screenlogicpy.device_const.system import COLOR_MODE
 
-from homeassistant.const import (
+from menuai.const import (
     CONCENTRATION_PARTS_PER_MILLION,
     PERCENTAGE,
     REVOLUTIONS_PER_MINUTE,
@@ -13,7 +13,7 @@ from homeassistant.const import (
     UnitOfTemperature,
     UnitOfTime,
 )
-from homeassistant.util import slugify
+from menuai.util import slugify
 
 type ScreenLogicDataPath = tuple[str | int, ...]
 

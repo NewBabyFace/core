@@ -9,9 +9,9 @@ from huum.exceptions import Forbidden, NotAuthenticated
 from huum.huum import Huum
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN
 
@@ -40,7 +40,7 @@ class HuumConfigFlow(ConfigFlow, domain=DOMAIN):
                 huum_handler = Huum(
                     user_input[CONF_USERNAME],
                     user_input[CONF_PASSWORD],
-                    session=async_get_clientsession(self.hass),
+                    session=async_get_clientsession(self.menuai),
                 )
                 await huum_handler.status()
             except (Forbidden, NotAuthenticated):

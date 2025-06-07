@@ -13,15 +13,15 @@ from verisure import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_CODE, CONF_EMAIL, CONF_PASSWORD
-from homeassistant.core import callback
-from homeassistant.helpers.storage import STORAGE_DIR
+from menuai.const import CONF_CODE, CONF_EMAIL, CONF_PASSWORD
+from menuai.core import callback
+from menuai.helpers.storage import STORAGE_DIR
 
 from .const import (
     CONF_GIID,
@@ -61,17 +61,17 @@ class VerisureConfigFlowHandler(ConfigFlow, domain=DOMAIN):
             self.verisure = Verisure(
                 username=self.email,
                 password=self.password,
-                cookie_file_name=self.hass.config.path(
+                cookie_file_name=self.menuai.config.path(
                     STORAGE_DIR, f"verisure_{user_input[CONF_EMAIL]}"
                 ),
             )
 
             try:
-                await self.hass.async_add_executor_job(self.verisure.login)
+                await self.menuai.async_add_executor_job(self.verisure.login)
             except VerisureLoginError as ex:
                 if "Multifactor authentication enabled" in str(ex):
                     try:
-                        await self.hass.async_add_executor_job(
+                        await self.menuai.async_add_executor_job(
                             self.verisure.request_mfa
                         )
                     except (
@@ -114,7 +114,7 @@ class VerisureConfigFlowHandler(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             try:
-                await self.hass.async_add_executor_job(
+                await self.menuai.async_add_executor_job(
                     self.verisure.validate_mfa, user_input[CONF_CODE]
                 )
             except VerisureLoginError as ex:
@@ -142,7 +142,7 @@ class VerisureConfigFlowHandler(ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Select Verisure installation to add."""
-        installations_data = await self.hass.async_add_executor_job(
+        installations_data = await self.menuai.async_add_executor_job(
             self.verisure.get_installations
         )
         installations = {
@@ -195,17 +195,17 @@ class VerisureConfigFlowHandler(ConfigFlow, domain=DOMAIN):
             self.verisure = Verisure(
                 username=self.email,
                 password=self.password,
-                cookie_file_name=self.hass.config.path(
+                cookie_file_name=self.menuai.config.path(
                     STORAGE_DIR, f"verisure_{user_input[CONF_EMAIL]}"
                 ),
             )
 
             try:
-                await self.hass.async_add_executor_job(self.verisure.login)
+                await self.menuai.async_add_executor_job(self.verisure.login)
             except VerisureLoginError as ex:
                 if "Multifactor authentication enabled" in str(ex):
                     try:
-                        await self.hass.async_add_executor_job(
+                        await self.menuai.async_add_executor_job(
                             self.verisure.request_mfa
                         )
                     except (
@@ -256,10 +256,10 @@ class VerisureConfigFlowHandler(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             try:
-                await self.hass.async_add_executor_job(
+                await self.menuai.async_add_executor_job(
                     self.verisure.validate_mfa, user_input[CONF_CODE]
                 )
-                await self.hass.async_add_executor_job(self.verisure.login)
+                await self.menuai.async_add_executor_job(self.verisure.login)
             except VerisureLoginError as ex:
                 LOGGER.debug("Could not log in to Verisure, %s", ex)
                 errors["base"] = "invalid_auth"

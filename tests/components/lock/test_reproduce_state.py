@@ -2,27 +2,27 @@
 
 import pytest
 
-from homeassistant.core import HomeAssistant, State
-from homeassistant.helpers.state import async_reproduce_state
+from menuai.core import menuai, State
+from menuai.helpers.state import async_reproduce_state
 
 from tests.common import async_mock_service
 
 
 async def test_reproducing_states(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test reproducing Lock states."""
-    hass.states.async_set("lock.entity_locked", "locked", {})
-    hass.states.async_set("lock.entity_unlocked", "unlocked", {})
-    hass.states.async_set("lock.entity_opened", "open", {})
+    menuai.states.async_set("lock.entity_locked", "locked", {})
+    menuai.states.async_set("lock.entity_unlocked", "unlocked", {})
+    menuai.states.async_set("lock.entity_opened", "open", {})
 
-    lock_calls = async_mock_service(hass, "lock", "lock")
-    unlock_calls = async_mock_service(hass, "lock", "unlock")
-    open_calls = async_mock_service(hass, "lock", "open")
+    lock_calls = async_mock_service(menuai, "lock", "lock")
+    unlock_calls = async_mock_service(menuai, "lock", "unlock")
+    open_calls = async_mock_service(menuai, "lock", "open")
 
     # These calls should do nothing as entities already in desired state
     await async_reproduce_state(
-        hass,
+        menuai,
         [
             State("lock.entity_locked", "locked"),
             State("lock.entity_unlocked", "unlocked", {}),
@@ -35,7 +35,7 @@ async def test_reproducing_states(
     assert len(open_calls) == 0
 
     # Test invalid state is handled
-    await async_reproduce_state(hass, [State("lock.entity_locked", "not_supported")])
+    await async_reproduce_state(menuai, [State("lock.entity_locked", "not_supported")])
 
     assert "not_supported" in caplog.text
     assert len(lock_calls) == 0
@@ -44,7 +44,7 @@ async def test_reproducing_states(
 
     # Make sure correct services are called
     await async_reproduce_state(
-        hass,
+        menuai,
         [
             State("lock.entity_locked", "open"),
             State("lock.entity_unlocked", "locked"),

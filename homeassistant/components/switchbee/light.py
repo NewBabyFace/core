@@ -7,11 +7,11 @@ from typing import Any
 from switchbee.api.central_unit import SwitchBeeDeviceOfflineError, SwitchBeeError
 from switchbee.device import ApiStateCommand, DeviceType, SwitchBeeDimmer
 
-from homeassistant.components.light import ATTR_BRIGHTNESS, ColorMode, LightEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.light import ATTR_BRIGHTNESS, ColorMode, LightEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import SwitchBeeCoordinator
@@ -20,27 +20,27 @@ from .entity import SwitchBeeDeviceEntity
 MAX_BRIGHTNESS = 255
 
 
-def _hass_brightness_to_switchbee(value: int) -> int:
-    """Convert hass brightness to SwitchBee."""
+def _menuai_brightness_to_switchbee(value: int) -> int:
+    """Convert menuai brightness to SwitchBee."""
     sb_brightness = int(100 * value / MAX_BRIGHTNESS)
     # SwitchBee maximum brightness is 99
     return sb_brightness if sb_brightness != 100 else 99
 
 
-def _switchbee_brightness_to_hass(value: int) -> int:
-    """Convert SwitchBee brightness to hass."""
+def _switchbee_brightness_to_menuai(value: int) -> int:
+    """Convert SwitchBee brightness to menuai."""
     if value == 99:
         value = 100
     return round(value * MAX_BRIGHTNESS / 100)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up SwitchBee light."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = menuai.data[DOMAIN][entry.entry_id]
     async_add_entities(
         SwitchBeeLightEntity(switchbee_device, coordinator)
         for switchbee_device in coordinator.data.values()
@@ -87,21 +87,21 @@ class SwitchBeeLightEntity(SwitchBeeDeviceEntity[SwitchBeeDimmer], LightEntity):
 
         # 1-99 is the only valid SwitchBee brightness range
         if 0 < brightness < 100:
-            self._attr_brightness = _switchbee_brightness_to_hass(brightness)
+            self._attr_brightness = _switchbee_brightness_to_menuai(brightness)
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Async function to set on to light."""
         if ATTR_BRIGHTNESS in kwargs:
-            state: int | str = _hass_brightness_to_switchbee(kwargs[ATTR_BRIGHTNESS])
+            state: int | str = _menuai_brightness_to_switchbee(kwargs[ATTR_BRIGHTNESS])
         else:
             state = ApiStateCommand.ON
             if self.brightness:
-                state = _hass_brightness_to_switchbee(self.brightness)
+                state = _menuai_brightness_to_switchbee(self.brightness)
 
         try:
             await self.coordinator.api.set_state(self._device.id, state)
         except (SwitchBeeError, SwitchBeeDeviceOfflineError) as exp:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Failed to set {self.name} state {state}, {exp!s}"
             ) from exp
 
@@ -121,7 +121,7 @@ class SwitchBeeLightEntity(SwitchBeeDeviceEntity[SwitchBeeDimmer], LightEntity):
         try:
             await self.coordinator.api.set_state(self._device.id, ApiStateCommand.OFF)
         except (SwitchBeeError, SwitchBeeDeviceOfflineError) as exp:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Failed to turn off {self._attr_name}, {exp!s}"
             ) from exp
 

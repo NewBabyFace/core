@@ -8,13 +8,13 @@ from typing import Any
 import requests
 import voluptuous as vol
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     PLATFORM_SCHEMA as COVER_PLATFORM_SCHEMA,
     CoverDeviceClass,
     CoverEntity,
     CoverState,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_ACCESS_TOKEN,
     CONF_COVERS,
     CONF_DEVICE,
@@ -22,11 +22,11 @@ from homeassistant.const import (
     CONF_PASSWORD,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.event import track_utc_time_change
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.event import track_utc_time_change
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -64,7 +64,7 @@ PLATFORM_SCHEMA = COVER_PLATFORM_SCHEMA.extend(
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -82,7 +82,7 @@ def setup_platform(
             "access_token": device_config.get(CONF_ACCESS_TOKEN),
         }
 
-        covers.append(GaradgetCover(hass, args))
+        covers.append(GaradgetCover(menuai, args))
 
     add_entities(covers)
 
@@ -92,10 +92,10 @@ class GaradgetCover(CoverEntity):
 
     _attr_device_class = CoverDeviceClass.GARAGE
 
-    def __init__(self, hass, args):
+    def __init__(self, menuai, args):
         """Initialize the cover."""
         self.particle_url = "https://api.particle.io"
-        self.hass = hass
+        self.menuai = menuai
         self._name = args["name"]
         self.device_id = args["device_id"]
         self.access_token = args["access_token"]
@@ -200,7 +200,7 @@ class GaradgetCover(CoverEntity):
         _LOGGER.debug("Starting Watcher for command: %s ", command)
         if self._unsub_listener_cover is None:
             self._unsub_listener_cover = track_utc_time_change(
-                self.hass, self._check_state
+                self.menuai, self._check_state
             )
 
     def _check_state(self, now):

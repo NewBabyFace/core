@@ -2,7 +2,7 @@
 
 from ipaddress import ip_address
 
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 DISCOVERY_INFO = ZeroconfServiceInfo(
     ip_address=ip_address("192.168.0.1"),

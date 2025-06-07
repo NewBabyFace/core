@@ -7,28 +7,28 @@ from unittest.mock import ANY, patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.bootstrap import async_from_config_dict
-from homeassistant.components import sensor, template
-from homeassistant.components.template.sensor import TriggerSensorEntity
-from homeassistant.const import (
+from menuai.bootstrap import async_from_config_dict
+from menuai.components import sensor, template
+from menuai.components.template.sensor import TriggerSensorEntity
+from menuai.const import (
     ATTR_ENTITY_PICTURE,
     ATTR_FRIENDLY_NAME,
     ATTR_ICON,
     EVENT_COMPONENT_LOADED,
-    EVENT_HOMEASSISTANT_START,
+    EVENT_menuai_START,
     STATE_OFF,
     STATE_ON,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import Context, CoreState, HomeAssistant, State, callback
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.entity_component import async_update_entity
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.template import Template
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.setup import ATTR_COMPONENT, async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.core import Context, CoreState, menuai, State, callback
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.entity_component import async_update_entity
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.template import Template
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.setup import ATTR_COMPONENT, async_setup_component
+from menuai.util import dt as dt_util
 
 from tests.common import (
     MockConfigEntry,
@@ -53,7 +53,7 @@ TEST_NAME = "sensor.test_template_sensor"
     ],
 )
 async def test_setup_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     config_entry_extra_options: dict[str, str],
 ) -> None:
@@ -64,7 +64,7 @@ async def test_setup_config_entry(
     template_type = sensor.DOMAIN
 
     for input_entity in input_entities:
-        hass.states.async_set(
+        menuai.states.async_set(
             f"{template_type}.{input_entity}",
             input_states[input_entity],
             {},
@@ -81,12 +81,12 @@ async def test_setup_config_entry(
         | config_entry_extra_options,
         title="My template",
     )
-    template_config_entry.add_to_hass(hass)
+    template_config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(template_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(template_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(f"{template_type}.my_template")
+    state = menuai.states.get(f"{template_type}.my_template")
     assert state is not None
     assert state == snapshot
 
@@ -108,13 +108,13 @@ async def test_setup_config_entry(
     ],
 )
 @pytest.mark.usefixtures("start_ha")
-async def test_template_legacy(hass: HomeAssistant) -> None:
+async def test_template_legacy(menuai: menuai) -> None:
     """Test template."""
-    assert hass.states.get(TEST_NAME).state == "It ."
+    assert menuai.states.get(TEST_NAME).state == "It ."
 
-    hass.states.async_set("sensor.test_state", "Works")
-    await hass.async_block_till_done()
-    assert hass.states.get(TEST_NAME).state == "It Works."
+    menuai.states.async_set("sensor.test_state", "Works")
+    await menuai.async_block_till_done()
+    assert menuai.states.get(TEST_NAME).state == "It Works."
 
 
 @pytest.mark.parametrize(("count", "domain"), [(1, sensor.DOMAIN)])
@@ -138,13 +138,13 @@ async def test_template_legacy(hass: HomeAssistant) -> None:
     ],
 )
 @pytest.mark.usefixtures("start_ha")
-async def test_icon_template(hass: HomeAssistant) -> None:
+async def test_icon_template(menuai: menuai) -> None:
     """Test icon template."""
-    assert hass.states.get(TEST_NAME).attributes.get("icon") == ""
+    assert menuai.states.get(TEST_NAME).attributes.get("icon") == ""
 
-    hass.states.async_set("sensor.test_state", "Works")
-    await hass.async_block_till_done()
-    assert hass.states.get(TEST_NAME).attributes["icon"] == "mdi:check"
+    menuai.states.async_set("sensor.test_state", "Works")
+    await menuai.async_block_till_done()
+    assert menuai.states.get(TEST_NAME).attributes["icon"] == "mdi:check"
 
 
 @pytest.mark.parametrize(("count", "domain"), [(1, sensor.DOMAIN)])
@@ -168,14 +168,14 @@ async def test_icon_template(hass: HomeAssistant) -> None:
     ],
 )
 @pytest.mark.usefixtures("start_ha")
-async def test_entity_picture_template(hass: HomeAssistant) -> None:
+async def test_entity_picture_template(menuai: menuai) -> None:
     """Test entity_picture template."""
-    assert hass.states.get(TEST_NAME).attributes.get("entity_picture") == ""
+    assert menuai.states.get(TEST_NAME).attributes.get("entity_picture") == ""
 
-    hass.states.async_set("sensor.test_state", "Works")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test_state", "Works")
+    await menuai.async_block_till_done()
     assert (
-        hass.states.get(TEST_NAME).attributes["entity_picture"] == "/local/sensor.png"
+        menuai.states.get(TEST_NAME).attributes["entity_picture"] == "/local/sensor.png"
     )
 
 
@@ -248,13 +248,13 @@ async def test_entity_picture_template(hass: HomeAssistant) -> None:
     ],
 )
 @pytest.mark.usefixtures("start_ha")
-async def test_friendly_name_template(hass: HomeAssistant, attribute, expected) -> None:
+async def test_friendly_name_template(menuai: menuai, attribute, expected) -> None:
     """Test friendly_name template with an unknown value_template."""
-    assert hass.states.get(TEST_NAME).attributes.get(attribute) == expected[0]
+    assert menuai.states.get(TEST_NAME).attributes.get(attribute) == expected[0]
 
-    hass.states.async_set("sensor.test_state", "Works")
-    await hass.async_block_till_done()
-    assert hass.states.get(TEST_NAME).attributes[attribute] == expected[1]
+    menuai.states.async_set("sensor.test_state", "Works")
+    await menuai.async_block_till_done()
+    assert menuai.states.get(TEST_NAME).attributes[attribute] == expected[1]
 
 
 @pytest.mark.parametrize(("count", "domain"), [(0, sensor.DOMAIN)])
@@ -318,9 +318,9 @@ async def test_friendly_name_template(hass: HomeAssistant, attribute, expected) 
     ],
 )
 @pytest.mark.usefixtures("start_ha")
-async def test_template_syntax_error(hass: HomeAssistant) -> None:
+async def test_template_syntax_error(menuai: menuai) -> None:
     """Test setup with invalid device_class."""
-    assert hass.states.async_all("sensor") == []
+    assert menuai.states.async_all("sensor") == []
 
 
 @pytest.mark.parametrize(("count", "domain"), [(1, sensor.DOMAIN)])
@@ -341,9 +341,9 @@ async def test_template_syntax_error(hass: HomeAssistant) -> None:
     ],
 )
 @pytest.mark.usefixtures("start_ha")
-async def test_template_attribute_missing(hass: HomeAssistant) -> None:
+async def test_template_attribute_missing(menuai: menuai) -> None:
     """Test missing attribute template."""
-    assert hass.states.get(TEST_NAME).state == STATE_UNAVAILABLE
+    assert menuai.states.get(TEST_NAME).state == STATE_UNAVAILABLE
 
 
 @pytest.mark.parametrize(("count", "domain"), [(1, sensor.DOMAIN)])
@@ -368,21 +368,21 @@ async def test_template_attribute_missing(hass: HomeAssistant) -> None:
     ],
 )
 @pytest.mark.usefixtures("start_ha")
-async def test_setup_valid_device_class(hass: HomeAssistant) -> None:
+async def test_setup_valid_device_class(menuai: menuai) -> None:
     """Test setup with valid device_class."""
-    hass.states.async_set("sensor.test_sensor", "75")
-    await hass.async_block_till_done()
-    assert hass.states.get("sensor.test1").attributes["device_class"] == "temperature"
-    assert "device_class" not in hass.states.get("sensor.test2").attributes
+    menuai.states.async_set("sensor.test_sensor", "75")
+    await menuai.async_block_till_done()
+    assert menuai.states.get("sensor.test1").attributes["device_class"] == "temperature"
+    assert "device_class" not in menuai.states.get("sensor.test2").attributes
 
 
 @pytest.mark.parametrize("load_registries", [False])
-async def test_creating_sensor_loads_group(hass: HomeAssistant) -> None:
+async def test_creating_sensor_loads_group(menuai: menuai) -> None:
     """Test setting up template sensor loads group component first."""
     order = []
     after_dep_event = Event()
 
-    async def async_setup_group(hass: HomeAssistant, config: ConfigType) -> bool:
+    async def async_setup_group(menuai: menuai, config: ConfigType) -> bool:
         # Make sure group takes longer to load, so that it won't
         # be loaded first by chance
         await after_dep_event.wait()
@@ -391,7 +391,7 @@ async def test_creating_sensor_loads_group(hass: HomeAssistant) -> None:
         return True
 
     async def async_setup_template(
-        hass: HomeAssistant,
+        menuai: menuai,
         config: ConfigType,
         async_add_entities: AddConfigEntryEntitiesCallback,
         discovery_info: DiscoveryInfoType | None = None,
@@ -403,22 +403,22 @@ async def test_creating_sensor_loads_group(hass: HomeAssistant) -> None:
         if event.data[ATTR_COMPONENT] == "sensor":
             after_dep_event.set()
 
-    hass.bus.async_listen(EVENT_COMPONENT_LOADED, set_after_dep_event)
+    menuai.bus.async_listen(EVENT_COMPONENT_LOADED, set_after_dep_event)
 
     with (
         patch(
-            "homeassistant.components.group.async_setup",
+            "menuai.components.group.async_setup",
             new=async_setup_group,
         ),
         patch(
-            "homeassistant.components.template.sensor.async_setup_platform",
+            "menuai.components.template.sensor.async_setup_platform",
             new=async_setup_template,
         ),
     ):
         await async_from_config_dict(
-            {"sensor": {"platform": "template", "sensors": {}}, "group": {}}, hass
+            {"sensor": {"platform": "template", "sensors": {}}, "group": {}}, menuai
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert order == ["group", "sensor.template"]
 
@@ -441,23 +441,23 @@ async def test_creating_sensor_loads_group(hass: HomeAssistant) -> None:
     ],
 )
 @pytest.mark.usefixtures("start_ha")
-async def test_available_template_with_entities(hass: HomeAssistant) -> None:
+async def test_available_template_with_entities(menuai: menuai) -> None:
     """Test availability tempalates with values from other entities."""
-    hass.states.async_set("sensor.availability_sensor", STATE_OFF)
+    menuai.states.async_set("sensor.availability_sensor", STATE_OFF)
 
     # When template returns true..
-    hass.states.async_set("sensor.availability_sensor", STATE_ON)
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.availability_sensor", STATE_ON)
+    await menuai.async_block_till_done()
 
     # Device State should not be unavailable
-    assert hass.states.get(TEST_NAME).state != STATE_UNAVAILABLE
+    assert menuai.states.get(TEST_NAME).state != STATE_UNAVAILABLE
 
     # When Availability template returns false
-    hass.states.async_set("sensor.availability_sensor", STATE_OFF)
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.availability_sensor", STATE_OFF)
+    await menuai.async_block_till_done()
 
     # device state should be unavailable
-    assert hass.states.get(TEST_NAME).state == STATE_UNAVAILABLE
+    assert menuai.states.get(TEST_NAME).state == STATE_UNAVAILABLE
 
 
 @pytest.mark.parametrize(("count", "domain"), [(1, sensor.DOMAIN)])
@@ -481,22 +481,22 @@ async def test_available_template_with_entities(hass: HomeAssistant) -> None:
 )
 @pytest.mark.usefixtures("start_ha")
 async def test_invalid_attribute_template(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture, caplog_setup_text
+    menuai: menuai, caplog: pytest.LogCaptureFixture, caplog_setup_text
 ) -> None:
     """Test that errors are logged if rendering template fails."""
-    hass.states.async_set("sensor.test_sensor", "startup")
-    await hass.async_block_till_done()
-    assert len(hass.states.async_all()) == 2
+    menuai.states.async_set("sensor.test_sensor", "startup")
+    await menuai.async_block_till_done()
+    assert len(menuai.states.async_all()) == 2
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_START)
-    await hass.async_block_till_done()
-    await async_update_entity(hass, "sensor.invalid_template")
+    menuai.bus.async_fire(EVENT_menuai_START)
+    await menuai.async_block_till_done()
+    await async_update_entity(menuai, "sensor.invalid_template")
     assert "TemplateError" in caplog_setup_text
     assert (
         "Template variable error: 'None' has no attribute 'attributes' when rendering"
         in caplog.text
     )
-    assert hass.states.get("sensor.invalid_template").state == "startup"
+    assert menuai.states.get("sensor.invalid_template").state == "startup"
 
 
 @pytest.mark.parametrize(("count", "domain"), [(1, sensor.DOMAIN)])
@@ -518,23 +518,23 @@ async def test_invalid_attribute_template(
 )
 @pytest.mark.usefixtures("start_ha")
 async def test_invalid_availability_template_keeps_component_available(
-    hass: HomeAssistant, caplog_setup_text
+    menuai: menuai, caplog_setup_text
 ) -> None:
     """Test that an invalid availability keeps the device available."""
-    assert hass.states.get("sensor.my_sensor").state != STATE_UNAVAILABLE
+    assert menuai.states.get("sensor.my_sensor").state != STATE_UNAVAILABLE
     assert "UndefinedError: 'x' is undefined" in caplog_setup_text
 
 
 async def test_no_template_match_all(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test that we allow static templates."""
-    hass.states.async_set("sensor.test_sensor", "startup")
+    menuai.states.async_set("sensor.test_sensor", "startup")
 
-    hass.set_state(CoreState.not_running)
+    menuai.set_state(CoreState.not_running)
 
     await async_setup_component(
-        hass,
+        menuai,
         sensor.DOMAIN,
         {
             "sensor": {
@@ -561,52 +561,52 @@ async def test_no_template_match_all(
             }
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("sensor.invalid_state").state == "unknown"
-    assert hass.states.get("sensor.invalid_icon").state == "unknown"
-    assert hass.states.get("sensor.invalid_entity_picture").state == "unknown"
-    assert hass.states.get("sensor.invalid_friendly_name").state == "unknown"
+    assert menuai.states.get("sensor.invalid_state").state == "unknown"
+    assert menuai.states.get("sensor.invalid_icon").state == "unknown"
+    assert menuai.states.get("sensor.invalid_entity_picture").state == "unknown"
+    assert menuai.states.get("sensor.invalid_friendly_name").state == "unknown"
 
-    await hass.async_block_till_done()
-    assert len(hass.states.async_all()) == 6
+    await menuai.async_block_till_done()
+    assert len(menuai.states.async_all()) == 6
 
-    assert hass.states.get("sensor.invalid_state").state == "unknown"
-    assert hass.states.get("sensor.invalid_icon").state == "unknown"
-    assert hass.states.get("sensor.invalid_entity_picture").state == "unknown"
-    assert hass.states.get("sensor.invalid_friendly_name").state == "unknown"
-    assert hass.states.get("sensor.invalid_attribute").state == "unknown"
+    assert menuai.states.get("sensor.invalid_state").state == "unknown"
+    assert menuai.states.get("sensor.invalid_icon").state == "unknown"
+    assert menuai.states.get("sensor.invalid_entity_picture").state == "unknown"
+    assert menuai.states.get("sensor.invalid_friendly_name").state == "unknown"
+    assert menuai.states.get("sensor.invalid_attribute").state == "unknown"
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_START)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire(EVENT_menuai_START)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("sensor.invalid_state").state == "2"
-    assert hass.states.get("sensor.invalid_icon").state == "startup"
-    assert hass.states.get("sensor.invalid_entity_picture").state == "startup"
-    assert hass.states.get("sensor.invalid_friendly_name").state == "startup"
-    assert hass.states.get("sensor.invalid_attribute").state == "startup"
+    assert menuai.states.get("sensor.invalid_state").state == "2"
+    assert menuai.states.get("sensor.invalid_icon").state == "startup"
+    assert menuai.states.get("sensor.invalid_entity_picture").state == "startup"
+    assert menuai.states.get("sensor.invalid_friendly_name").state == "startup"
+    assert menuai.states.get("sensor.invalid_attribute").state == "startup"
 
-    hass.states.async_set("sensor.test_sensor", "hello")
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test_sensor", "hello")
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("sensor.invalid_state").state == "2"
+    assert menuai.states.get("sensor.invalid_state").state == "2"
     # Will now process because we have at least one valid template
-    assert hass.states.get("sensor.invalid_icon").state == "hello"
-    assert hass.states.get("sensor.invalid_entity_picture").state == "hello"
-    assert hass.states.get("sensor.invalid_friendly_name").state == "hello"
-    assert hass.states.get("sensor.invalid_attribute").state == "hello"
+    assert menuai.states.get("sensor.invalid_icon").state == "hello"
+    assert menuai.states.get("sensor.invalid_entity_picture").state == "hello"
+    assert menuai.states.get("sensor.invalid_friendly_name").state == "hello"
+    assert menuai.states.get("sensor.invalid_attribute").state == "hello"
 
-    await async_update_entity(hass, "sensor.invalid_state")
-    await async_update_entity(hass, "sensor.invalid_icon")
-    await async_update_entity(hass, "sensor.invalid_entity_picture")
-    await async_update_entity(hass, "sensor.invalid_friendly_name")
-    await async_update_entity(hass, "sensor.invalid_attribute")
+    await async_update_entity(menuai, "sensor.invalid_state")
+    await async_update_entity(menuai, "sensor.invalid_icon")
+    await async_update_entity(menuai, "sensor.invalid_entity_picture")
+    await async_update_entity(menuai, "sensor.invalid_friendly_name")
+    await async_update_entity(menuai, "sensor.invalid_attribute")
 
-    assert hass.states.get("sensor.invalid_state").state == "2"
-    assert hass.states.get("sensor.invalid_icon").state == "hello"
-    assert hass.states.get("sensor.invalid_entity_picture").state == "hello"
-    assert hass.states.get("sensor.invalid_friendly_name").state == "hello"
-    assert hass.states.get("sensor.invalid_attribute").state == "hello"
+    assert menuai.states.get("sensor.invalid_state").state == "2"
+    assert menuai.states.get("sensor.invalid_icon").state == "hello"
+    assert menuai.states.get("sensor.invalid_entity_picture").state == "hello"
+    assert menuai.states.get("sensor.invalid_friendly_name").state == "hello"
+    assert menuai.states.get("sensor.invalid_attribute").state == "hello"
 
 
 @pytest.mark.parametrize(("count", "domain"), [(1, "template")])
@@ -636,10 +636,10 @@ async def test_no_template_match_all(
 )
 @pytest.mark.usefixtures("start_ha")
 async def test_unique_id(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test unique_id option only creates one sensor per id."""
-    assert len(hass.states.async_all()) == 2
+    assert len(menuai.states.async_all()) == 2
 
     assert len(entity_registry.entities) == 2
     assert entity_registry.async_get_entity_id(
@@ -672,19 +672,19 @@ async def test_unique_id(
     ],
 )
 @pytest.mark.usefixtures("start_ha")
-async def test_sun_renders_once_per_sensor(hass: HomeAssistant) -> None:
+async def test_sun_renders_once_per_sensor(menuai: menuai) -> None:
     """Test sun change renders the template only once per sensor."""
 
     now = dt_util.utcnow()
-    hass.states.async_set(
+    menuai.states.async_set(
         "sun.sun", "above_horizon", {"elevation": 45.3, "next_rising": now}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == 3
+    assert len(menuai.states.async_all()) == 3
 
-    assert hass.states.get("sensor.solar_angle").state == "45.3"
-    assert hass.states.get("sensor.sunrise").state == str(now)
+    assert menuai.states.get("sensor.solar_angle").state == "45.3"
+    assert menuai.states.get("sensor.sunrise").state == str(now)
 
     async_render_calls = []
 
@@ -697,11 +697,11 @@ async def test_sun_renders_once_per_sensor(hass: HomeAssistant) -> None:
     later = dt_util.utcnow()
 
     with patch.object(Template, "async_render", _record_async_render):
-        hass.states.async_set("sun.sun", {"elevation": 50, "next_rising": later})
-        await hass.async_block_till_done()
+        menuai.states.async_set("sun.sun", {"elevation": 50, "next_rising": later})
+        await menuai.async_block_till_done()
 
-    assert hass.states.get("sensor.solar_angle").state == "75"
-    assert hass.states.get("sensor.sunrise").state == "75"
+    assert menuai.states.get("sensor.solar_angle").state == "75"
+    assert menuai.states.get("sensor.sunrise").state == "75"
 
     assert len(async_render_calls) == 2
     assert set(async_render_calls) == {
@@ -742,14 +742,14 @@ async def test_sun_renders_once_per_sensor(hass: HomeAssistant) -> None:
     ],
 )
 @pytest.mark.usefixtures("start_ha")
-async def test_this_variable(hass: HomeAssistant) -> None:
+async def test_this_variable(menuai: menuai) -> None:
     """Test template."""
-    assert hass.states.get(TEST_NAME).state == "It: " + TEST_NAME
+    assert menuai.states.get(TEST_NAME).state == "It: " + TEST_NAME
 
-    hass.states.async_set("sensor.test_state", "Works")
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
-    assert hass.states.get(TEST_NAME).state == "It Works: " + TEST_NAME
+    menuai.states.async_set("sensor.test_state", "Works")
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
+    assert menuai.states.get(TEST_NAME).state == "It Works: " + TEST_NAME
 
 
 @pytest.mark.parametrize(("count", "domain"), [(1, "template")])
@@ -769,31 +769,31 @@ async def test_this_variable(hass: HomeAssistant) -> None:
         },
     ],
 )
-async def test_this_variable_early_hass_not_running(
-    hass: HomeAssistant, config, count, domain
+async def test_this_variable_early_menuai_not_running(
+    menuai: menuai, config, count, domain
 ) -> None:
     """Test referencing 'this' variable before the entity is in the state machine.
 
-    Hass is not yet started when the entity is added.
+    menuai is not yet started when the entity is added.
     Icon, name and picture templates are rendered once in the constructor.
     """
     entity_id = "sensor.none_false"
 
-    hass.set_state(CoreState.not_running)
+    menuai.set_state(CoreState.not_running)
 
     # Setup template
     with assert_setup_component(count, domain):
         assert await async_setup_component(
-            hass,
+            menuai,
             domain,
             config,
         )
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Sensor state not rendered, icon, name and picture
     # templates rendered in constructor with entity_id set to None
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == "unknown"
     assert state.attributes == {
         "entity_picture": "None:False",
@@ -801,13 +801,13 @@ async def test_this_variable_early_hass_not_running(
         "icon": "mdi:None:False",
     }
 
-    # Signal hass started
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_START)
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    # Signal menuai started
+    menuai.bus.async_fire(EVENT_menuai_START)
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # icon, name, picture + other templates now re-rendered
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == "sensor.none_false: sensor.none_false"
     assert state.attributes == {
         "entity_picture": "sensor.none_false:False",
@@ -834,34 +834,34 @@ async def test_this_variable_early_hass_not_running(
         },
     ],
 )
-async def test_this_variable_early_hass_running(
-    hass: HomeAssistant, config, count, domain
+async def test_this_variable_early_menuai_running(
+    menuai: menuai, config, count, domain
 ) -> None:
     """Test referencing 'this' variable before the entity is in the state machine.
 
-    Hass is already started when the entity is added.
+    menuai is already started when the entity is added.
     Icon, name and picture templates are rendered in the constructor, and again
-    before the entity is added to hass.
+    before the entity is added to menuai.
     """
 
-    # Start hass
-    assert hass.state is CoreState.running
-    await hass.async_start()
-    await hass.async_block_till_done()
+    # Start menuai
+    assert menuai.state is CoreState.running
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
     # Setup template
     with assert_setup_component(count, domain):
         assert await async_setup_component(
-            hass,
+            menuai,
             domain,
             config,
         )
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     entity_id = "sensor.none_false"
     # All templated rendered
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == "sensor.none_false: sensor.none_false"
     assert state.attributes == {
         "entity_picture": "sensor.none_false:False",
@@ -889,16 +889,16 @@ async def test_this_variable_early_hass_running(
 )
 @pytest.mark.usefixtures("start_ha")
 async def test_self_referencing_sensor_loop(
-    hass: HomeAssistant, caplog_setup_text
+    menuai: menuai, caplog_setup_text
 ) -> None:
     """Test a self referencing sensor does not loop forever."""
-    assert len(hass.states.async_all()) == 1
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    assert len(menuai.states.async_all()) == 1
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
     assert "Template loop detected" in caplog_setup_text
-    assert int(hass.states.get("sensor.test").state) == 2
-    await hass.async_block_till_done()
-    assert int(hass.states.get("sensor.test").state) == 2
+    assert int(menuai.states.get("sensor.test").state) == 2
+    await menuai.async_block_till_done()
+    assert int(menuai.states.get("sensor.test").state) == 2
 
 
 @pytest.mark.parametrize(("count", "domain"), [(1, sensor.DOMAIN)])
@@ -920,19 +920,19 @@ async def test_self_referencing_sensor_loop(
 )
 @pytest.mark.usefixtures("start_ha")
 async def test_self_referencing_sensor_with_icon_loop(
-    hass: HomeAssistant, caplog_setup_text
+    menuai: menuai, caplog_setup_text
 ) -> None:
     """Test a self referencing sensor loops forever with a valid self referencing icon."""
-    assert len(hass.states.async_all()) == 1
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    assert len(menuai.states.async_all()) == 1
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
     assert "Template loop detected" in caplog_setup_text
 
-    state = hass.states.get("sensor.test")
+    state = menuai.states.get("sensor.test")
     assert int(state.state) == 3
     assert state.attributes[ATTR_ICON] == "mdi:greater"
-    await hass.async_block_till_done()
-    state = hass.states.get("sensor.test")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("sensor.test")
     assert int(state.state) == 3
 
 
@@ -956,20 +956,20 @@ async def test_self_referencing_sensor_with_icon_loop(
 )
 @pytest.mark.usefixtures("start_ha")
 async def test_self_referencing_sensor_with_icon_and_picture_entity_loop(
-    hass: HomeAssistant, caplog_setup_text
+    menuai: menuai, caplog_setup_text
 ) -> None:
     """Test a self referencing sensor loop forevers with a valid self referencing icon."""
-    assert len(hass.states.async_all()) == 1
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    assert len(menuai.states.async_all()) == 1
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
     assert "Template loop detected" in caplog_setup_text
 
-    state = hass.states.get("sensor.test")
+    state = menuai.states.get("sensor.test")
     assert int(state.state) == 4
     assert state.attributes[ATTR_ICON] == "mdi:less"
     assert state.attributes[ATTR_ENTITY_PICTURE] == "bigpic"
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert int(state.state) == 4
 
 
@@ -993,38 +993,38 @@ async def test_self_referencing_sensor_with_icon_and_picture_entity_loop(
 )
 @pytest.mark.usefixtures("start_ha")
 async def test_self_referencing_entity_picture_loop(
-    hass: HomeAssistant, caplog_setup_text
+    menuai: menuai, caplog_setup_text
 ) -> None:
     """Test a self referencing sensor does not loop forever with a looping self referencing entity picture."""
-    assert len(hass.states.async_all()) == 1
+    assert len(menuai.states.async_all()) == 1
     next_time = dt_util.utcnow() + timedelta(seconds=1.2)
     with patch(
-        "homeassistant.helpers.ratelimit.time.time", return_value=next_time.timestamp()
+        "menuai.helpers.ratelimit.time.time", return_value=next_time.timestamp()
     ):
-        async_fire_time_changed(hass, next_time)
-        await hass.async_block_till_done()
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, next_time)
+        await menuai.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert "Template loop detected" in caplog_setup_text
 
-    state = hass.states.get("sensor.test")
+    state = menuai.states.get("sensor.test")
     assert int(state.state) == 1
     assert state.attributes[ATTR_ENTITY_PICTURE] == "3"
     assert state.attributes[ATTR_FRIENDLY_NAME] == "3"
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert int(state.state) == 1
 
 
 async def test_self_referencing_icon_with_no_loop(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test a self referencing icon that does not loop."""
 
-    hass.states.async_set("sensor.heartworm_high_80", 10)
-    hass.states.async_set("sensor.heartworm_low_57", 10)
-    hass.states.async_set("sensor.heartworm_avg_64", 10)
-    hass.states.async_set("sensor.heartworm_avg_57", 10)
+    menuai.states.async_set("sensor.heartworm_high_80", 10)
+    menuai.states.async_set("sensor.heartworm_low_57", 10)
+    menuai.states.async_set("sensor.heartworm_avg_64", 10)
+    menuai.states.async_set("sensor.heartworm_avg_57", 10)
 
     value_template_str = """{% if (states.sensor.heartworm_high_80.state|int >= 10) and (states.sensor.heartworm_low_57.state|int >= 10) %}
             extreme
@@ -1055,7 +1055,7 @@ async def test_self_referencing_icon_with_no_loop(
           {% endif %}"""
 
     await async_setup_component(
-        hass,
+        menuai,
         sensor.DOMAIN,
         {
             "sensor": {
@@ -1070,24 +1070,24 @@ async def test_self_referencing_icon_with_no_loop(
         },
     )
 
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == 5
+    assert len(menuai.states.async_all()) == 5
 
-    hass.states.async_set("sensor.heartworm_high_80", 10)
+    menuai.states.async_set("sensor.heartworm_high_80", 10)
 
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert "Template loop detected" not in caplog.text
 
-    state = hass.states.get("sensor.heartworm_risk")
+    state = menuai.states.get("sensor.heartworm_risk")
     assert state.state == "extreme"
     assert state.attributes[ATTR_ICON] == "mdi:hazard-lights"
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert state.state == "extreme"
     assert state.attributes[ATTR_ICON] == "mdi:hazard-lights"
     assert "Template loop detected" not in caplog.text
@@ -1111,17 +1111,17 @@ async def test_self_referencing_icon_with_no_loop(
     ],
 )
 @pytest.mark.usefixtures("start_ha")
-async def test_duplicate_templates(hass: HomeAssistant) -> None:
+async def test_duplicate_templates(menuai: menuai) -> None:
     """Test template entity where the value and friendly name as the same template."""
-    hass.states.async_set("sensor.test_state", "Abc")
-    await hass.async_block_till_done()
-    state = hass.states.get(TEST_NAME)
+    menuai.states.async_set("sensor.test_state", "Abc")
+    await menuai.async_block_till_done()
+    state = menuai.states.get(TEST_NAME)
     assert state.attributes["friendly_name"] == "Abc"
     assert state.state == "Abc"
 
-    hass.states.async_set("sensor.test_state", "Def")
-    await hass.async_block_till_done()
-    state = hass.states.get(TEST_NAME)
+    menuai.states.async_set("sensor.test_state", "Def")
+    await menuai.async_block_till_done()
+    state = menuai.states.get(TEST_NAME)
     assert state.attributes["friendly_name"] == "Def"
     assert state.state == "Def"
 
@@ -1182,22 +1182,22 @@ async def test_duplicate_templates(hass: HomeAssistant) -> None:
 )
 @pytest.mark.usefixtures("start_ha")
 async def test_trigger_entity(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test trigger entity works."""
-    state = hass.states.get("sensor.hello_name")
+    state = menuai.states.get("sensor.hello_name")
     assert state is not None
     assert state.state == STATE_UNKNOWN
 
-    state = hass.states.get("sensor.bare_minimum")
+    state = menuai.states.get("sensor.bare_minimum")
     assert state is not None
     assert state.state == STATE_UNKNOWN
 
     context = Context()
-    hass.bus.async_fire("test_event", {"beer": 2}, context=context)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event", {"beer": 2}, context=context)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.hello_name")
+    state = menuai.states.get("sensor.hello_name")
     assert state.state == "2"
     assert state.attributes.get("device_class") == "battery"
     assert state.attributes.get("icon") == "mdi:pirate"
@@ -1216,7 +1216,7 @@ async def test_trigger_entity(
         == "listening-test-event-via_list-id"
     )
 
-    state = hass.states.get("sensor.via_list")
+    state = menuai.states.get("sensor.via_list")
     assert state.state == "3"
     assert state.attributes.get("device_class") == "battery"
     assert state.attributes.get("icon") == "mdi:pirate"
@@ -1255,22 +1255,22 @@ async def test_trigger_entity(
     ],
 )
 @pytest.mark.usefixtures("start_ha")
-async def test_trigger_conditional_entity(hass: HomeAssistant) -> None:
+async def test_trigger_conditional_entity(menuai: menuai) -> None:
     """Test conditional trigger entity works."""
-    state = hass.states.get("sensor.enough_name")
+    state = menuai.states.get("sensor.enough_name")
     assert state is not None
     assert state.state == STATE_UNKNOWN
 
-    hass.bus.async_fire("test_event", {"beer": 2})
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event", {"beer": 2})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.enough_name")
+    state = menuai.states.get("sensor.enough_name")
     assert state.state == STATE_UNKNOWN
 
-    hass.bus.async_fire("test_event", {"beer": 42})
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event", {"beer": 42})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.enough_name")
+    state = menuai.states.get("sensor.enough_name")
     assert state.state == "You had enough Beer."
 
 
@@ -1303,13 +1303,13 @@ async def test_trigger_conditional_entity(hass: HomeAssistant) -> None:
 )
 @pytest.mark.usefixtures("start_ha")
 async def test_trigger_conditional_entity_evaluation_error(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test trigger entity is not updated when condition evaluation fails."""
-    hass.bus.async_fire("test_event", {"beer": 1})
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event", {"beer": 1})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.enough_name")
+    state = menuai.states.get("sensor.enough_name")
     assert state is not None
     assert state.state == STATE_UNKNOWN
 
@@ -1341,10 +1341,10 @@ async def test_trigger_conditional_entity_evaluation_error(
 )
 @pytest.mark.usefixtures("start_ha")
 async def test_trigger_conditional_entity_invalid_condition(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test trigger entity is not created when condition is invalid."""
-    state = hass.states.get("sensor.will_not_exist_name")
+    state = menuai.states.get("sensor.will_not_exist_name")
     assert state is None
 
 
@@ -1374,16 +1374,16 @@ async def test_trigger_conditional_entity_invalid_condition(
     ],
 )
 @pytest.mark.usefixtures("start_ha")
-async def test_trigger_entity_runs_once(hass: HomeAssistant) -> None:
+async def test_trigger_entity_runs_once(menuai: menuai) -> None:
     """Test trigger entity handles a trigger once."""
-    state = hass.states.get("sensor.hello_name")
+    state = menuai.states.get("sensor.hello_name")
     assert state is not None
     assert state.state == STATE_UNKNOWN
 
-    hass.bus.async_fire("test_event", {"beer": 2})
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event", {"beer": 2})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.hello_name")
+    state = menuai.states.get("sensor.hello_name")
     assert state.state == "2"
     assert state.attributes.get("last") == ANY
     assert state.attributes.get("history_1") == "Not yet set"
@@ -1409,18 +1409,18 @@ async def test_trigger_entity_runs_once(hass: HomeAssistant) -> None:
 )
 @pytest.mark.usefixtures("start_ha")
 async def test_trigger_entity_render_error(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test trigger entity handles render error."""
-    state = hass.states.get("sensor.hello")
+    state = menuai.states.get("sensor.hello")
     assert state is not None
     assert state.state == STATE_UNKNOWN
 
     context = Context()
-    hass.bus.async_fire("test_event", {"beer": 2}, context=context)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event", {"beer": 2}, context=context)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.hello")
+    state = menuai.states.get("sensor.hello")
     assert state.state == STATE_UNAVAILABLE
 
     assert len(entity_registry.entities) == 1
@@ -1447,10 +1447,10 @@ async def test_trigger_entity_render_error(
 )
 @pytest.mark.usefixtures("start_ha")
 async def test_trigger_not_allowed_platform_config(
-    hass: HomeAssistant, caplog_setup_text
+    menuai: menuai, caplog_setup_text
 ) -> None:
     """Test we throw a helpful warning if a trigger is configured in platform config."""
-    state = hass.states.get(TEST_NAME)
+    state = menuai.states.get(TEST_NAME)
     assert state is None
     assert (
         "You can only add triggers to template entities if they are defined under `template:`."
@@ -1476,20 +1476,20 @@ async def test_trigger_not_allowed_platform_config(
     ],
 )
 @pytest.mark.usefixtures("start_ha")
-async def test_config_top_level(hass: HomeAssistant) -> None:
+async def test_config_top_level(menuai: menuai) -> None:
     """Test unique_id option only creates one sensor per id."""
-    assert len(hass.states.async_all()) == 1
-    state = hass.states.get("sensor.top_level")
+    assert len(menuai.states.async_all()) == 1
+    state = menuai.states.get("sensor.top_level")
     assert state is not None
     assert state.state == "5"
     assert state.attributes["device_class"] == "battery"
     assert state.attributes["state_class"] == "measurement"
 
 
-async def test_trigger_entity_available(hass: HomeAssistant) -> None:
+async def test_trigger_entity_available(menuai: menuai) -> None:
     """Test trigger entity availability works."""
     assert await async_setup_component(
-        hass,
+        menuai,
         "template",
         {
             "template": [
@@ -1507,32 +1507,32 @@ async def test_trigger_entity_available(hass: HomeAssistant) -> None:
         },
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Sensors are unknown if never triggered
-    state = hass.states.get("sensor.maybe_available")
+    state = menuai.states.get("sensor.maybe_available")
     assert state is not None
     assert state.state == STATE_UNKNOWN
 
-    hass.bus.async_fire("test_event", {"beer": 2})
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event", {"beer": 2})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.maybe_available")
+    state = menuai.states.get("sensor.maybe_available")
     assert state.state == "2"
 
-    hass.bus.async_fire("test_event", {"beer": 1})
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event", {"beer": 1})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.maybe_available")
+    state = menuai.states.get("sensor.maybe_available")
     assert state.state == "unavailable"
 
 
 async def test_trigger_entity_available_skips_state(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test trigger entity availability works."""
     assert await async_setup_component(
-        hass,
+        menuai,
         "template",
         {
             "template": [
@@ -1550,36 +1550,36 @@ async def test_trigger_entity_available_skips_state(
         },
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Sensors are unknown if never triggered
-    state = hass.states.get("sensor.never_available")
+    state = menuai.states.get("sensor.never_available")
     assert state is not None
     assert state.state == STATE_UNKNOWN
 
-    hass.bus.async_fire("test_event", {"beer": 1})
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event", {"beer": 1})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.never_available")
+    state = menuai.states.get("sensor.never_available")
     assert state.state == "unavailable"
 
     assert "'noexist' is undefined" not in caplog.text
 
-    hass.bus.async_fire("test_event", {"beer": 2})
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event", {"beer": 2})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.never_available")
+    state = menuai.states.get("sensor.never_available")
     assert state.state == "unavailable"
 
     assert "'noexist' is undefined" in caplog.text
 
 
 async def test_trigger_state_with_availability_syntax_error(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test trigger entity is available when attributes have syntax errors."""
     assert await async_setup_component(
-        hass,
+        menuai,
         "template",
         {
             "template": [
@@ -1597,17 +1597,17 @@ async def test_trigger_state_with_availability_syntax_error(
         },
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Sensors are unknown if never triggered
-    state = hass.states.get("sensor.test_sensor")
+    state = menuai.states.get("sensor.test_sensor")
     assert state is not None
     assert state.state == STATE_UNKNOWN
 
-    hass.bus.async_fire("test_event", {"beer": 2})
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event", {"beer": 2})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.test_sensor")
+    state = menuai.states.get("sensor.test_sensor")
     assert state.state == "2"
 
     assert (
@@ -1617,11 +1617,11 @@ async def test_trigger_state_with_availability_syntax_error(
 
 
 async def test_trigger_available_with_attribute_syntax_error(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test trigger entity is available when attributes have syntax errors."""
     assert await async_setup_component(
-        hass,
+        menuai,
         "template",
         {
             "template": [
@@ -1644,17 +1644,17 @@ async def test_trigger_available_with_attribute_syntax_error(
         },
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Sensors are unknown if never triggered
-    state = hass.states.get("sensor.test_sensor")
+    state = menuai.states.get("sensor.test_sensor")
     assert state is not None
     assert state.state == STATE_UNKNOWN
 
-    hass.bus.async_fire("test_event", {"beer": 2})
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event", {"beer": 2})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.test_sensor")
+    state = menuai.states.get("sensor.test_sensor")
     assert state.state == "2"
 
     assert state.attributes["beer"] == 2
@@ -1667,11 +1667,11 @@ async def test_trigger_available_with_attribute_syntax_error(
 
 
 async def test_trigger_attribute_order(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test trigger entity attributes order."""
     assert await async_setup_component(
-        hass,
+        menuai,
         "template",
         {
             "template": [
@@ -1695,17 +1695,17 @@ async def test_trigger_attribute_order(
         },
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Sensors are unknown if never triggered
-    state = hass.states.get("sensor.test_sensor")
+    state = menuai.states.get("sensor.test_sensor")
     assert state is not None
     assert state.state == STATE_UNKNOWN
 
-    hass.bus.async_fire("test_event", {"beer": 2})
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event", {"beer": 2})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.test_sensor")
+    state = menuai.states.get("sensor.test_sensor")
     assert state.state == "2"
 
     assert state.attributes["beer"] == 2
@@ -1720,10 +1720,10 @@ async def test_trigger_attribute_order(
         in caplog.text
     )
 
-    hass.bus.async_fire("test_event", {"beer": 2})
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event", {"beer": 2})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.test_sensor")
+    state = menuai.states.get("sensor.test_sensor")
     assert state.state == "2"
 
     assert state.attributes["beer"] == 2
@@ -1738,10 +1738,10 @@ async def test_trigger_attribute_order(
     )
 
 
-async def test_trigger_entity_device_class_parsing_works(hass: HomeAssistant) -> None:
+async def test_trigger_entity_device_class_parsing_works(menuai: menuai) -> None:
     """Test trigger entity device class parsing works."""
     assert await async_setup_component(
-        hass,
+        menuai,
         "template",
         {
             "template": [
@@ -1764,28 +1764,28 @@ async def test_trigger_entity_device_class_parsing_works(hass: HomeAssistant) ->
         },
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # State of timestamp sensors are always in UTC
     now = dt_util.utcnow()
 
-    with patch("homeassistant.util.dt.now", return_value=now):
-        hass.bus.async_fire("test_event")
-        await hass.async_block_till_done()
+    with patch("menuai.util.dt.now", return_value=now):
+        menuai.bus.async_fire("test_event")
+        await menuai.async_block_till_done()
 
-    date_state = hass.states.get("sensor.date_entity")
+    date_state = menuai.states.get("sensor.date_entity")
     assert date_state is not None
     assert date_state.state == now.date().isoformat()
 
-    ts_state = hass.states.get("sensor.timestamp_entity")
+    ts_state = menuai.states.get("sensor.timestamp_entity")
     assert ts_state is not None
     assert ts_state.state == now.isoformat(timespec="seconds")
 
 
-async def test_trigger_entity_device_class_errors_works(hass: HomeAssistant) -> None:
+async def test_trigger_entity_device_class_errors_works(menuai: menuai) -> None:
     """Test trigger entity device class errors works."""
     assert await async_setup_component(
-        hass,
+        menuai,
         "template",
         {
             "template": [
@@ -1808,33 +1808,33 @@ async def test_trigger_entity_device_class_errors_works(hass: HomeAssistant) -> 
         },
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     now = dt_util.now()
 
-    with patch("homeassistant.util.dt.now", return_value=now):
-        hass.bus.async_fire("test_event")
-        await hass.async_block_till_done()
+    with patch("menuai.util.dt.now", return_value=now):
+        menuai.bus.async_fire("test_event")
+        await menuai.async_block_till_done()
 
-    date_state = hass.states.get("sensor.date_entity")
+    date_state = menuai.states.get("sensor.date_entity")
     assert date_state is not None
     assert date_state.state == STATE_UNKNOWN
 
-    ts_state = hass.states.get("sensor.timestamp_entity")
+    ts_state = menuai.states.get("sensor.timestamp_entity")
     assert ts_state is not None
     assert ts_state.state == STATE_UNKNOWN
 
 
 async def test_entity_last_reset_total_increasing(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test last_reset is disallowed for total_increasing state_class."""
     # State of timestamp sensors are always in UTC
     now = dt_util.utcnow()
 
-    with patch("homeassistant.util.dt.now", return_value=now):
+    with patch("menuai.util.dt.now", return_value=now):
         assert await async_setup_component(
-            hass,
+            menuai,
             "template",
             {
                 "template": [
@@ -1851,9 +1851,9 @@ async def test_entity_last_reset_total_increasing(
                 ],
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    totalincreasing_state = hass.states.get("sensor.totalincreasing_entity")
+    totalincreasing_state = menuai.states.get("sensor.totalincreasing_entity")
     assert totalincreasing_state is None
 
     assert (
@@ -1863,15 +1863,15 @@ async def test_entity_last_reset_total_increasing(
 
 
 async def test_entity_last_reset_setup(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test last_reset works for template sensors."""
     # State of timestamp sensors are always in UTC
     now = dt_util.utcnow()
 
-    with patch("homeassistant.util.dt.now", return_value=now):
+    with patch("menuai.util.dt.now", return_value=now):
         assert await async_setup_component(
-            hass,
+            menuai,
             "template",
             {
                 "template": [
@@ -1908,14 +1908,14 @@ async def test_entity_last_reset_setup(
                 ],
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     # Trigger update
-    hass.states.async_set("sensor.test_state", "0")
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    menuai.states.async_set("sensor.test_state", "0")
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    static_state = hass.states.get("sensor.static_last_reset_entity")
+    static_state = menuai.states.get("sensor.static_last_reset_entity")
     assert static_state is not None
     assert static_state.state == "0"
     assert static_state.attributes.get("state_class") == "total"
@@ -1924,13 +1924,13 @@ async def test_entity_last_reset_setup(
         == datetime(2023, 1, 1, 0, 0, 0).isoformat()
     )
 
-    total_state = hass.states.get("sensor.total_entity")
+    total_state = menuai.states.get("sensor.total_entity")
     assert total_state is not None
     assert total_state.state == "1"
     assert total_state.attributes.get("state_class") == "total"
     assert total_state.attributes.get("last_reset") == now.isoformat()
 
-    total_trigger_state = hass.states.get("sensor.total_trigger_entity")
+    total_trigger_state = menuai.states.get("sensor.total_trigger_entity")
     assert total_trigger_state is not None
     assert total_trigger_state.state == "2"
     assert total_trigger_state.attributes.get("state_class") == "total"
@@ -1940,17 +1940,17 @@ async def test_entity_last_reset_setup(
     )
 
 
-async def test_entity_last_reset_static_value(hass: HomeAssistant) -> None:
+async def test_entity_last_reset_static_value(menuai: menuai) -> None:
     """Test static last_reset marked as static_rendered."""
 
     tse = TriggerSensorEntity(
-        hass,
+        menuai,
         None,
         {
-            "name": Template("Static last_reset entity", hass),
-            "state": Template("{{ states('sensor.test_state') | int(0) }}", hass),
+            "name": Template("Static last_reset entity", menuai),
+            "state": Template("{{ states('sensor.test_state') | int(0) }}", menuai),
             "state_class": "total",
-            "last_reset": Template("2023-01-01T00:00:00", hass),
+            "last_reset": Template("2023-01-01T00:00:00", menuai),
         },
     )
 
@@ -1958,7 +1958,7 @@ async def test_entity_last_reset_static_value(hass: HomeAssistant) -> None:
 
 
 async def test_entity_last_reset_parsing(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test last_reset works for template sensors."""
     # State of timestamp sensors are always in UTC
@@ -1966,15 +1966,15 @@ async def test_entity_last_reset_parsing(
 
     with (
         patch(
-            "homeassistant.components.template.sensor._LOGGER.warning"
+            "menuai.components.template.sensor._LOGGER.warning"
         ) as mocked_warning,
         patch(
-            "homeassistant.components.template.template_entity._LOGGER.error"
+            "menuai.components.template.template_entity._LOGGER.error"
         ) as mocked_error,
-        patch("homeassistant.util.dt.now", return_value=now),
+        patch("menuai.util.dt.now", return_value=now),
     ):
         assert await async_setup_component(
-            hass,
+            menuai,
             "template",
             {
                 "template": [
@@ -2005,12 +2005,12 @@ async def test_entity_last_reset_parsing(
                 ],
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         # Trigger update
-        hass.states.async_set("sensor.test_state", "0")
-        await hass.async_block_till_done()
-        await hass.async_block_till_done()
+        menuai.states.async_set("sensor.test_state", "0")
+        await menuai.async_block_till_done()
+        await menuai.async_block_till_done()
 
         # Trigger based datetime parsing warning:
         mocked_warning.assert_called_once_with(
@@ -2035,14 +2035,14 @@ async def test_entity_last_reset_parsing(
         assert args[5] == "Invalid datetime specified: not a datetime"
 
 
-async def test_entity_device_class_parsing_works(hass: HomeAssistant) -> None:
+async def test_entity_device_class_parsing_works(menuai: menuai) -> None:
     """Test entity device class parsing works."""
     # State of timestamp sensors are always in UTC
     now = dt_util.utcnow()
 
-    with patch("homeassistant.util.dt.now", return_value=now):
+    with patch("menuai.util.dt.now", return_value=now):
         assert await async_setup_component(
-            hass,
+            menuai,
             "template",
             {
                 "template": [
@@ -2063,21 +2063,21 @@ async def test_entity_device_class_parsing_works(hass: HomeAssistant) -> None:
                 ],
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    date_state = hass.states.get("sensor.date_entity")
+    date_state = menuai.states.get("sensor.date_entity")
     assert date_state is not None
     assert date_state.state == now.date().isoformat()
 
-    ts_state = hass.states.get("sensor.timestamp_entity")
+    ts_state = menuai.states.get("sensor.timestamp_entity")
     assert ts_state is not None
     assert ts_state.state == now.isoformat(timespec="seconds")
 
 
-async def test_entity_device_class_errors_works(hass: HomeAssistant) -> None:
+async def test_entity_device_class_errors_works(menuai: menuai) -> None:
     """Test entity device class errors works."""
     assert await async_setup_component(
-        hass,
+        menuai,
         "template",
         {
             "template": [
@@ -2099,19 +2099,19 @@ async def test_entity_device_class_errors_works(hass: HomeAssistant) -> None:
         },
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     now = dt_util.now()
 
-    with patch("homeassistant.util.dt.now", return_value=now):
-        hass.bus.async_fire("test_event")
-        await hass.async_block_till_done()
+    with patch("menuai.util.dt.now", return_value=now):
+        menuai.bus.async_fire("test_event")
+        await menuai.async_block_till_done()
 
-    date_state = hass.states.get("sensor.date_entity")
+    date_state = menuai.states.get("sensor.date_entity")
     assert date_state is not None
     assert date_state.state == STATE_UNKNOWN
 
-    ts_state = hass.states.get("sensor.timestamp_entity")
+    ts_state = menuai.states.get("sensor.timestamp_entity")
     assert ts_state is not None
     assert ts_state.state == STATE_UNKNOWN
 
@@ -2147,7 +2147,7 @@ async def test_entity_device_class_errors_works(hass: HomeAssistant) -> None:
     ],
 )
 async def test_trigger_entity_restore_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     count,
     domain,
     config,
@@ -2173,19 +2173,19 @@ async def test_trigger_entity_restore_state(
         "native_value": restored_native_value,
         "native_unit_of_measurement": None,
     }
-    mock_restore_cache_with_extra_data(hass, ((fake_state, fake_extra_data),))
+    mock_restore_cache_with_extra_data(menuai, ((fake_state, fake_extra_data),))
     with assert_setup_component(count, domain):
         assert await async_setup_component(
-            hass,
+            menuai,
             domain,
             config,
         )
 
-        await hass.async_block_till_done()
-        await hass.async_start()
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
+        await menuai.async_start()
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.test")
+    state = menuai.states.get("sensor.test")
     assert state.state == initial_state
     for attr, value in restored_attributes.items():
         if attr in initial_attributes:
@@ -2194,10 +2194,10 @@ async def test_trigger_entity_restore_state(
             assert attr not in state.attributes
     assert "another" not in state.attributes
 
-    hass.bus.async_fire("test_event", {"beer": 2})
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event", {"beer": 2})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.test")
+    state = menuai.states.get("sensor.test")
     assert state.state == "2"
     assert state.attributes["icon"] == "mdi:pirate"
     assert state.attributes["entity_picture"] == "/local/dogs.png"
@@ -2234,21 +2234,21 @@ async def test_trigger_entity_restore_state(
     ],
 )
 @pytest.mark.usefixtures("start_ha")
-async def test_trigger_action(hass: HomeAssistant) -> None:
+async def test_trigger_action(menuai: menuai) -> None:
     """Test trigger entity with an action works."""
     event = "test_event2"
     context = Context()
-    events = async_capture_events(hass, event)
+    events = async_capture_events(menuai, event)
 
-    state = hass.states.get("sensor.hello_name")
+    state = menuai.states.get("sensor.hello_name")
     assert state is not None
     assert state.state == STATE_UNKNOWN
 
     context = Context()
-    hass.bus.async_fire("test_event", {"beer": 1}, context=context)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event", {"beer": 1}, context=context)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.hello_name")
+    state = menuai.states.get("sensor.hello_name")
     assert state.state == "3"
     assert state.context is context
 
@@ -2286,19 +2286,19 @@ async def test_trigger_action(hass: HomeAssistant) -> None:
     ],
 )
 @pytest.mark.usefixtures("start_ha")
-async def test_trigger_conditional_action(hass: HomeAssistant) -> None:
+async def test_trigger_conditional_action(menuai: menuai) -> None:
     """Test conditional trigger entity with an action works."""
 
     event = "test_event_by_action"
-    events = async_capture_events(hass, event)
+    events = async_capture_events(menuai, event)
 
-    hass.bus.async_fire("test_event", {"beer": 1})
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event", {"beer": 1})
+    await menuai.async_block_till_done()
 
     assert len(events) == 0
 
-    hass.bus.async_fire("test_event", {"beer": 42})
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event", {"beer": 42})
+    await menuai.async_block_till_done()
 
     assert len(events) == 1
 
@@ -2307,12 +2307,12 @@ async def test_trigger_conditional_action(hass: HomeAssistant) -> None:
 @pytest.mark.parametrize("condition_field", ["condition", "conditions"])
 @pytest.mark.parametrize("action_field", ["action", "actions"])
 async def test_legacy_and_new_config_schema(
-    hass: HomeAssistant, trigger_field: str, condition_field: str, action_field: str
+    menuai: menuai, trigger_field: str, condition_field: str, action_field: str
 ) -> None:
     """Tests that both old and new config schema (singular -> plural) work."""
 
     assert await async_setup_component(
-        hass,
+        menuai,
         "template",
         {
             "template": [
@@ -2342,37 +2342,37 @@ async def test_legacy_and_new_config_schema(
         },
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     event = "test_event_by_action"
-    events = async_capture_events(hass, event)
+    events = async_capture_events(menuai, event)
 
-    hass.bus.async_fire("beer_event", {"beer": 1})
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("beer_event", {"beer": 1})
+    await menuai.async_block_till_done()
 
     assert len(events) == 0
 
-    hass.bus.async_fire("beer_event", {"beer": 42})
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("beer_event", {"beer": 42})
+    await menuai.async_block_till_done()
 
     assert len(events) == 1
 
 
 async def test_device_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test for device for Template."""
 
     device_config_entry = MockConfigEntry()
-    device_config_entry.add_to_hass(hass)
+    device_config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=device_config_entry.entry_id,
         identifiers={("sensor", "identifier_test")},
         connections={("mac", "30:31:32:33:34:35")},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert device_entry is not None
     assert device_entry.id is not None
 
@@ -2387,10 +2387,10 @@ async def test_device_id(
         },
         title="My template",
     )
-    template_config_entry.add_to_hass(hass)
+    template_config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(template_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(template_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     template_entity = entity_registry.async_get("sensor.my_template")
     assert template_entity is not None

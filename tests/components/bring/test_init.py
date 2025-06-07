@@ -12,12 +12,12 @@ from bring_api import (
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.components.bring import async_setup_entry
-from homeassistant.components.bring.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryDisabler, ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr
+from menuai.components.bring import async_setup_entry
+from menuai.components.bring.const import DOMAIN
+from menuai.config_entries import ConfigEntryDisabler, ConfigEntryState
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import device_registry as dr
 
 from .conftest import UUID
 
@@ -25,29 +25,29 @@ from tests.common import MockConfigEntry, async_fire_time_changed, async_load_fi
 
 
 async def setup_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     bring_config_entry: MockConfigEntry,
 ) -> None:
     """Mock setup of the bring integration."""
-    bring_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(bring_config_entry.entry_id)
-    await hass.async_block_till_done()
+    bring_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(bring_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
 
 @pytest.mark.usefixtures("mock_bring_client")
 async def test_load_unload(
-    hass: HomeAssistant,
+    menuai: menuai,
     bring_config_entry: MockConfigEntry,
 ) -> None:
     """Test loading and unloading of the config entry."""
-    await setup_integration(hass, bring_config_entry)
+    await setup_integration(menuai, bring_config_entry)
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
 
     assert bring_config_entry.state is ConfigEntryState.LOADED
 
-    assert await hass.config_entries.async_unload(bring_config_entry.entry_id)
+    assert await menuai.config_entries.async_unload(bring_config_entry.entry_id)
     assert bring_config_entry.state is ConfigEntryState.NOT_LOADED
 
 
@@ -60,7 +60,7 @@ async def test_load_unload(
     ],
 )
 async def test_init_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_bring_client: AsyncMock,
     status: ConfigEntryState,
     exception: Exception,
@@ -68,7 +68,7 @@ async def test_init_failure(
 ) -> None:
     """Test an initialization error on integration load."""
     mock_bring_client.login.side_effect = exception
-    await setup_integration(hass, bring_config_entry)
+    await setup_integration(menuai, bring_config_entry)
     assert bring_config_entry.state == status
 
 
@@ -81,18 +81,18 @@ async def test_init_failure(
     ],
 )
 async def test_init_exceptions(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_bring_client: AsyncMock,
     exception: Exception,
     expected: Exception,
     bring_config_entry: MockConfigEntry,
 ) -> None:
     """Test an initialization error on integration load."""
-    bring_config_entry.add_to_hass(hass)
+    bring_config_entry.add_to_menuai(menuai)
     mock_bring_client.login.side_effect = exception
 
     with pytest.raises(expected):
-        await async_setup_entry(hass, bring_config_entry)
+        await async_setup_entry(menuai, bring_config_entry)
 
 
 @pytest.mark.parametrize("exception", [BringRequestException, BringParseException])
@@ -105,7 +105,7 @@ async def test_init_exceptions(
     ],
 )
 async def test_config_entry_not_ready(
-    hass: HomeAssistant,
+    menuai: menuai,
     bring_config_entry: MockConfigEntry,
     mock_bring_client: AsyncMock,
     exception: Exception,
@@ -113,16 +113,16 @@ async def test_config_entry_not_ready(
 ) -> None:
     """Test config entry not ready."""
     getattr(mock_bring_client, bring_method).side_effect = exception
-    bring_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(bring_config_entry.entry_id)
-    await hass.async_block_till_done()
+    bring_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(bring_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert bring_config_entry.state is ConfigEntryState.SETUP_RETRY
 
 
 @pytest.mark.parametrize("exception", [BringRequestException, BringParseException])
 async def test_config_entry_not_ready_udpdate_failed(
-    hass: HomeAssistant,
+    menuai: menuai,
     bring_config_entry: MockConfigEntry,
     mock_bring_client: AsyncMock,
     exception: Exception,
@@ -132,9 +132,9 @@ async def test_config_entry_not_ready_udpdate_failed(
         mock_bring_client.load_lists.return_value,
         exception,
     ]
-    bring_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(bring_config_entry.entry_id)
-    await hass.async_block_till_done()
+    bring_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(bring_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert bring_config_entry.state is ConfigEntryState.SETUP_RETRY
 
@@ -148,7 +148,7 @@ async def test_config_entry_not_ready_udpdate_failed(
     ],
 )
 async def test_activity_coordinator_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     bring_config_entry: MockConfigEntry,
     mock_bring_client: AsyncMock,
     exception: Exception,
@@ -157,9 +157,9 @@ async def test_activity_coordinator_errors(
     """Test config entry not ready from update failed in _async_update_data."""
     mock_bring_client.get_activity.side_effect = exception
 
-    bring_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(bring_config_entry.entry_id)
-    await hass.async_block_till_done()
+    bring_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(bring_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert bring_config_entry.state is state
 
@@ -173,7 +173,7 @@ async def test_activity_coordinator_errors(
     ],
 )
 async def test_config_entry_not_ready_auth_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     bring_config_entry: MockConfigEntry,
     mock_bring_client: AsyncMock,
     exception: Exception | None,
@@ -186,23 +186,23 @@ async def test_config_entry_not_ready_auth_error(
         exception,
     ]
 
-    bring_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(bring_config_entry.entry_id)
-    await hass.async_block_till_done()
+    bring_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(bring_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert bring_config_entry.state is state
 
 
 @pytest.mark.usefixtures("mock_bring_client")
 async def test_coordinator_skips_deactivated(
-    hass: HomeAssistant,
+    menuai: menuai,
     bring_config_entry: MockConfigEntry,
     freezer: FrozenDateTimeFactory,
     mock_bring_client: AsyncMock,
     device_registry: dr.DeviceRegistry,
 ) -> None:
     """Test the coordinator skips fetching lists for deactivated lists."""
-    await setup_integration(hass, bring_config_entry)
+    await setup_integration(menuai, bring_config_entry)
 
     assert bring_config_entry.state is ConfigEntryState.LOADED
 
@@ -216,14 +216,14 @@ async def test_coordinator_skips_deactivated(
     mock_bring_client.get_list.reset_mock()
 
     freezer.tick(timedelta(seconds=90))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     assert mock_bring_client.get_list.await_count == 1
 
 
 async def test_purge_devices(
-    hass: HomeAssistant,
+    menuai: menuai,
     bring_config_entry: MockConfigEntry,
     mock_bring_client: AsyncMock,
     device_registry: dr.DeviceRegistry,
@@ -231,7 +231,7 @@ async def test_purge_devices(
 ) -> None:
     """Test removing device entry of deleted list."""
     list_uuid = "b4776778-7f6c-496e-951b-92a35d3db0dd"
-    await setup_integration(hass, bring_config_entry)
+    await setup_integration(menuai, bring_config_entry)
 
     assert bring_config_entry.state is ConfigEntryState.LOADED
 
@@ -240,12 +240,12 @@ async def test_purge_devices(
     )
 
     mock_bring_client.load_lists.return_value = BringListResponse.from_json(
-        await async_load_fixture(hass, "lists2.json", DOMAIN)
+        await async_load_fixture(menuai, "lists2.json", DOMAIN)
     )
 
     freezer.tick(timedelta(seconds=90))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     assert (
         device_registry.async_get_device(
@@ -256,7 +256,7 @@ async def test_purge_devices(
 
 
 async def test_create_devices(
-    hass: HomeAssistant,
+    menuai: menuai,
     bring_config_entry: MockConfigEntry,
     mock_bring_client: AsyncMock,
     device_registry: dr.DeviceRegistry,
@@ -265,9 +265,9 @@ async def test_create_devices(
     """Test create device entry for new lists."""
     list_uuid = "b4776778-7f6c-496e-951b-92a35d3db0dd"
     mock_bring_client.load_lists.return_value = BringListResponse.from_json(
-        await async_load_fixture(hass, "lists2.json", DOMAIN)
+        await async_load_fixture(menuai, "lists2.json", DOMAIN)
     )
-    await setup_integration(hass, bring_config_entry)
+    await setup_integration(menuai, bring_config_entry)
 
     assert bring_config_entry.state is ConfigEntryState.LOADED
 
@@ -279,11 +279,11 @@ async def test_create_devices(
     )
 
     mock_bring_client.load_lists.return_value = BringListResponse.from_json(
-        await async_load_fixture(hass, "lists.json", DOMAIN)
+        await async_load_fixture(menuai, "lists.json", DOMAIN)
     )
     freezer.tick(timedelta(seconds=90))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     assert device_registry.async_get_device(
         {(DOMAIN, f"{bring_config_entry.unique_id}_{list_uuid}")}
@@ -292,13 +292,13 @@ async def test_create_devices(
 
 @pytest.mark.usefixtures("mock_bring_client")
 async def test_coordinator_update_intervals(
-    hass: HomeAssistant,
+    menuai: menuai,
     bring_config_entry: MockConfigEntry,
     freezer: FrozenDateTimeFactory,
     mock_bring_client: AsyncMock,
 ) -> None:
     """Test the coordinator updates at the specified intervals."""
-    await setup_integration(hass, bring_config_entry)
+    await setup_integration(menuai, bring_config_entry)
 
     assert bring_config_entry.state is ConfigEntryState.LOADED
 
@@ -310,11 +310,11 @@ async def test_coordinator_update_intervals(
     mock_bring_client.get_activity.reset_mock()
 
     mock_bring_client.load_lists.return_value = BringListResponse.from_json(
-        await async_load_fixture(hass, "lists2.json", DOMAIN)
+        await async_load_fixture(menuai, "lists2.json", DOMAIN)
     )
     freezer.tick(timedelta(seconds=90))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     # main coordinator refreshes, activity does not
     assert mock_bring_client.load_lists.await_count == 1
@@ -324,8 +324,8 @@ async def test_coordinator_update_intervals(
     mock_bring_client.get_activity.reset_mock()
 
     freezer.tick(timedelta(seconds=510))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     # assert activity refreshes after 10min and has up-to-date lists data
     assert mock_bring_client.get_activity.await_count == 1

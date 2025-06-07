@@ -53,7 +53,7 @@ INTEGRATION_PLUGINS = [
     zeroconf,
     config_flow,  # This needs to run last, after translations are processed
 ]
-HASS_PLUGINS = [
+menuai_PLUGINS = [
     docker,
     mypy_config,
     metadata,
@@ -61,7 +61,7 @@ HASS_PLUGINS = [
 
 ALL_PLUGIN_NAMES = [
     plugin.__name__.rsplit(".", maxsplit=1)[-1]
-    for plugin in (*INTEGRATION_PLUGINS, *HASS_PLUGINS)
+    for plugin in (*INTEGRATION_PLUGINS, *menuai_PLUGINS)
 ]
 
 
@@ -87,7 +87,7 @@ def validate_plugins(plugin_names: str) -> list[str]:
 
 def get_config() -> Config:
     """Return config."""
-    parser = argparse.ArgumentParser(description="Hassfest")
+    parser = argparse.ArgumentParser(description="menuaifest")
     parser.add_argument(
         "--action", type=str, choices=["validate", "generate"], default=None
     )
@@ -135,7 +135,7 @@ def get_config() -> Config:
         not parsed.integration_path
         and not (parsed.core_path / "requirements_all.txt").is_file()
     ):
-        raise RuntimeError("Run from Home Assistant root")
+        raise RuntimeError("Run from MenuAI root")
 
     if parsed.skip_plugins:
         parsed.plugins = set(parsed.plugins) - set(parsed.skip_plugins)
@@ -169,7 +169,7 @@ def main() -> int:
 
     else:
         integrations = Integration.load_dir(config.core_integrations_path, config)
-        plugins += HASS_PLUGINS
+        plugins += menuai_PLUGINS
 
     for plugin in plugins:
         plugin_name = plugin.__name__.rsplit(".", maxsplit=1)[-1]

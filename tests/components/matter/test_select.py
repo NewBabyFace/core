@@ -8,9 +8,9 @@ from matter_server.common.helpers.util import create_attribute_path_from_attribu
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .common import (
     set_node_attribute,
@@ -21,22 +21,22 @@ from .common import (
 
 @pytest.mark.usefixtures("matter_devices")
 async def test_selects(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test selects."""
-    snapshot_matter_entities(hass, entity_registry, snapshot, Platform.SELECT)
+    snapshot_matter_entities(menuai, entity_registry, snapshot, Platform.SELECT)
 
 
 @pytest.mark.parametrize("node_fixture", ["dimmable_light"])
 async def test_mode_select_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     matter_node: MatterNode,
 ) -> None:
     """Test select entities are created for the ModeSelect cluster attributes."""
-    state = hass.states.get("select.mock_dimmable_light_led_color")
+    state = menuai.states.get("select.mock_dimmable_light_led_color")
     assert state
     assert state.state == "Aqua"
     assert state.attributes["options"] == [
@@ -57,11 +57,11 @@ async def test_mode_select_entities(
     # name should be derived from description attribute
     assert state.attributes["friendly_name"] == "Mock Dimmable Light LED Color"
     set_node_attribute(matter_node, 6, 80, 3, 1)
-    await trigger_subscription_callback(hass, matter_client)
-    state = hass.states.get("select.mock_dimmable_light_led_color")
+    await trigger_subscription_callback(menuai, matter_client)
+    state = menuai.states.get("select.mock_dimmable_light_led_color")
     assert state.state == "Orange"
     # test select option
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "select",
         "select_option",
         {
@@ -81,13 +81,13 @@ async def test_mode_select_entities(
 
 @pytest.mark.parametrize("node_fixture", ["dimmable_light"])
 async def test_attribute_select_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     matter_node: MatterNode,
 ) -> None:
     """Test select entities are created for attribute based discovery schema(s)."""
     entity_id = "select.mock_dimmable_light_power_on_behavior_on_startup"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == "previous"
     assert state.attributes["options"] == ["on", "off", "toggle", "previous"]
@@ -96,10 +96,10 @@ async def test_attribute_select_entities(
         == "Mock Dimmable Light Power-on behavior on startup"
     )
     set_node_attribute(matter_node, 1, 6, 16387, 1)
-    await trigger_subscription_callback(hass, matter_client)
-    state = hass.states.get(entity_id)
+    await trigger_subscription_callback(menuai, matter_client)
+    state = menuai.states.get(entity_id)
     assert state.state == "on"
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "select",
         "select_option",
         {
@@ -119,29 +119,29 @@ async def test_attribute_select_entities(
     )
     # test that an invalid value (e.g. 253) leads to an unknown state
     set_node_attribute(matter_node, 1, 6, 16387, 253)
-    await trigger_subscription_callback(hass, matter_client)
-    state = hass.states.get(entity_id)
+    await trigger_subscription_callback(menuai, matter_client)
+    state = menuai.states.get(entity_id)
     assert state.state == "unknown"
 
 
 @pytest.mark.parametrize("node_fixture", ["silabs_laundrywasher"])
 async def test_list_select_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     matter_node: MatterNode,
 ) -> None:
     """Test ListSelect entities are discovered and working from a laundrywasher fixture."""
-    state = hass.states.get("select.laundrywasher_temperature_level")
+    state = menuai.states.get("select.laundrywasher_temperature_level")
     assert state
     assert state.state == "Colors"
     assert state.attributes["options"] == ["Cold", "Colors", "Whites"]
     # Change temperature_level
     set_node_attribute(matter_node, 1, 86, 4, 0)
-    await trigger_subscription_callback(hass, matter_client)
-    state = hass.states.get("select.laundrywasher_temperature_level")
+    await trigger_subscription_callback(menuai, matter_client)
+    state = menuai.states.get("select.laundrywasher_temperature_level")
     assert state.state == "Cold"
     # test select option
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "select",
         "select_option",
         {
@@ -160,22 +160,22 @@ async def test_list_select_entities(
     )
     # test that an invalid value (e.g. 253) leads to an unknown state
     set_node_attribute(matter_node, 1, 86, 4, 253)
-    await trigger_subscription_callback(hass, matter_client)
-    state = hass.states.get("select.laundrywasher_temperature_level")
+    await trigger_subscription_callback(menuai, matter_client)
+    state = menuai.states.get("select.laundrywasher_temperature_level")
     assert state.state == "unknown"
 
     # SpinSpeedCurrent
     matter_client.write_attribute.reset_mock()
-    state = hass.states.get("select.laundrywasher_spin_speed")
+    state = menuai.states.get("select.laundrywasher_spin_speed")
     assert state
     assert state.state == "Off"
     assert state.attributes["options"] == ["Off", "Low", "Medium", "High"]
     set_node_attribute(matter_node, 1, 83, 1, 3)
-    await trigger_subscription_callback(hass, matter_client)
-    state = hass.states.get("select.laundrywasher_spin_speed")
+    await trigger_subscription_callback(menuai, matter_client)
+    state = menuai.states.get("select.laundrywasher_spin_speed")
     assert state.state == "High"
     # test select option
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "select",
         "select_option",
         {
@@ -195,43 +195,43 @@ async def test_list_select_entities(
     )
     # test that an invalid value (e.g. 253) leads to an unknown state
     set_node_attribute(matter_node, 1, 83, 1, 253)
-    await trigger_subscription_callback(hass, matter_client)
-    state = hass.states.get("select.laundrywasher_spin_speed")
+    await trigger_subscription_callback(menuai, matter_client)
+    state = menuai.states.get("select.laundrywasher_spin_speed")
     assert state.state == "unknown"
 
 
 @pytest.mark.parametrize("node_fixture", ["silabs_laundrywasher"])
 async def test_map_select_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     matter_node: MatterNode,
 ) -> None:
     """Test MatterMapSelectEntity entities are discovered and working from a laundrywasher fixture."""
     # NumberOfRinses
-    state = hass.states.get("select.laundrywasher_number_of_rinses")
+    state = menuai.states.get("select.laundrywasher_number_of_rinses")
     assert state
     assert state.state == "off"
     assert state.attributes["options"] == ["off", "normal"]
     set_node_attribute(matter_node, 1, 83, 2, 1)
-    await trigger_subscription_callback(hass, matter_client)
-    state = hass.states.get("select.laundrywasher_number_of_rinses")
+    await trigger_subscription_callback(menuai, matter_client)
+    state = menuai.states.get("select.laundrywasher_number_of_rinses")
     assert state.state == "normal"
 
 
 @pytest.mark.parametrize("node_fixture", ["pump"])
 async def test_pump(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     matter_node: MatterNode,
 ) -> None:
     """Test MatterAttributeSelectEntity entities are discovered and working from a pump fixture."""
     # OperationMode
-    state = hass.states.get("select.mock_pump_mode")
+    state = menuai.states.get("select.mock_pump_mode")
     assert state
     assert state.state == "normal"
     assert state.attributes["options"] == ["normal", "minimum", "maximum", "local"]
 
     set_node_attribute(matter_node, 1, 512, 32, 3)
-    await trigger_subscription_callback(hass, matter_client)
-    state = hass.states.get("select.mock_pump_mode")
+    await trigger_subscription_callback(menuai, matter_client)
+    state = menuai.states.get("select.mock_pump_mode")
     assert state.state == "local"

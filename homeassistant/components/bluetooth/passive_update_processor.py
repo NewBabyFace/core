@@ -10,23 +10,23 @@ from typing import TYPE_CHECKING, Any, Self, TypedDict, cast
 
 from habluetooth import BluetoothScanningMode
 
-from homeassistant import config_entries
-from homeassistant.const import (
+from menuai import config_entries
+from menuai.const import (
     ATTR_CONNECTIONS,
     ATTR_IDENTIFIERS,
     ATTR_NAME,
     CONF_ENTITY_CATEGORY,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     EntityCategory,
 )
-from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, callback
-from homeassistant.helpers.device_registry import CONNECTION_BLUETOOTH, DeviceInfo
-from homeassistant.helpers.entity import Entity, EntityDescription
-from homeassistant.helpers.entity_platform import async_get_current_platform
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.storage import Store
-from homeassistant.helpers.typing import UNDEFINED
-from homeassistant.util.enum import try_parse_enum
+from menuai.core import CALLBACK_TYPE, Event, menuai, callback
+from menuai.helpers.device_registry import CONNECTION_BLUETOOTH, DeviceInfo
+from menuai.helpers.entity import Entity, EntityDescription
+from menuai.helpers.entity_platform import async_get_current_platform
+from menuai.helpers.event import async_track_time_interval
+from menuai.helpers.storage import Store
+from menuai.helpers.typing import UNDEFINED
+from menuai.util.enum import try_parse_enum
 
 from .const import DOMAIN
 from .update_coordinator import BasePassiveBluetoothCoordinator
@@ -34,7 +34,7 @@ from .update_coordinator import BasePassiveBluetoothCoordinator
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from homeassistant.helpers.entity_platform import AddEntitiesCallback
+    from menuai.helpers.entity_platform import AddEntitiesCallback
 
     from .models import BluetoothChange, BluetoothServiceInfoBleak
 
@@ -218,10 +218,10 @@ class PassiveBluetoothDataUpdate[_T]:
 
 
 def async_register_coordinator_for_restore(
-    hass: HomeAssistant, coordinator: PassiveBluetoothProcessorCoordinator[Any]
+    menuai: menuai, coordinator: PassiveBluetoothProcessorCoordinator[Any]
 ) -> CALLBACK_TYPE:
     """Register a coordinator to have its processors data restored."""
-    data: PassiveBluetoothProcessorData = hass.data[PASSIVE_UPDATE_PROCESSOR]
+    data: PassiveBluetoothProcessorData = menuai.data[PASSIVE_UPDATE_PROCESSOR]
     coordinators = data.coordinators
     coordinators.add(coordinator)
     if restore_key := coordinator.restore_key:
@@ -235,16 +235,16 @@ def async_register_coordinator_for_restore(
     return _unregister_coordinator_for_restore
 
 
-async def async_setup(hass: HomeAssistant) -> None:
+async def async_setup(menuai: menuai) -> None:
     """Set up the passive update processor coordinators."""
     storage: Store[dict[str, dict[str, RestoredPassiveBluetoothDataUpdate]]] = Store(
-        hass, STORAGE_VERSION, STORAGE_KEY
+        menuai, STORAGE_VERSION, STORAGE_KEY
     )
     coordinators: set[PassiveBluetoothProcessorCoordinator[Any]] = set()
     all_restore_data: dict[str, dict[str, RestoredPassiveBluetoothDataUpdate]] = (
         await storage.async_load() or {}
     )
-    hass.data[PASSIVE_UPDATE_PROCESSOR] = PassiveBluetoothProcessorData(
+    menuai.data[PASSIVE_UPDATE_PROCESSOR] = PassiveBluetoothProcessorData(
         coordinators, all_restore_data
     )
 
@@ -259,7 +259,7 @@ async def async_setup(hass: HomeAssistant) -> None:
         )
 
     cancel_interval = async_track_time_interval(
-        hass, _async_save_processor_data, STORAGE_SAVE_INTERVAL
+        menuai, _async_save_processor_data, STORAGE_SAVE_INTERVAL
     )
 
     async def _async_save_processor_data_at_stop(_event: Event) -> None:
@@ -267,8 +267,8 @@ async def async_setup(hass: HomeAssistant) -> None:
         cancel_interval()
         await _async_save_processor_data(None)
 
-    hass.bus.async_listen_once(
-        EVENT_HOMEASSISTANT_STOP,
+    menuai.bus.async_listen_once(
+        EVENT_menuai_STOP,
         _async_save_processor_data_at_stop,
     )
 
@@ -286,7 +286,7 @@ class PassiveBluetoothProcessorCoordinator[_DataT](BasePassiveBluetoothCoordinat
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         logger: logging.Logger,
         address: str,
         mode: BluetoothScanningMode,
@@ -294,7 +294,7 @@ class PassiveBluetoothProcessorCoordinator[_DataT](BasePassiveBluetoothCoordinat
         connectable: bool = False,
     ) -> None:
         """Initialize the coordinator."""
-        super().__init__(hass, logger, address, mode, connectable)
+        super().__init__(menuai, logger, address, mode, connectable)
         self._processors: list[PassiveBluetoothDataProcessor[Any, _DataT]] = []
         self._update_method = update_method
         self.last_update_success = True
@@ -302,7 +302,7 @@ class PassiveBluetoothProcessorCoordinator[_DataT](BasePassiveBluetoothCoordinat
         self.restore_key = None
         if config_entry := config_entries.current_entry.get():
             self.restore_key = config_entry.entry_id
-        self._on_stop.append(async_register_coordinator_for_restore(self.hass, self))
+        self._on_stop.append(async_register_coordinator_for_restore(self.menuai, self))
 
     @property
     def available(self) -> bool:
@@ -364,7 +364,7 @@ class PassiveBluetoothProcessorCoordinator[_DataT](BasePassiveBluetoothCoordinat
         """Handle a Bluetooth event."""
         was_available = self._available
         self._available = True
-        if self.hass.is_stopping:
+        if self.menuai.is_stopping:
             return
 
         try:
@@ -618,7 +618,7 @@ class PassiveBluetoothDataProcessor[_T, _DataT]:
         self.async_update_listeners(new_data, was_available, changed_entity_keys)
 
 
-# pylint: disable-next=hass-enforce-class-module
+# pylint: disable-next=menuai-enforce-class-module
 class PassiveBluetoothProcessorEntity[
     _PassiveBluetoothDataProcessorT: PassiveBluetoothDataProcessor[Any, Any]
 ](Entity):
@@ -669,9 +669,9 @@ class PassiveBluetoothProcessorEntity[
         """Return if entity is available."""
         return self.processor.available
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai."""
+        await super().async_added_to_menuai()
         self.async_on_remove(
             self.processor.async_add_entity_key_listener(
                 self._handle_processor_update, self.entity_key

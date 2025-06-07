@@ -5,14 +5,14 @@ from __future__ import annotations
 import logging
 import time
 
-from homeassistant.components.bluetooth import (
+from menuai.components.bluetooth import (
     FALLBACK_MAXIMUM_STALE_ADVERTISEMENT_SECONDS,
     MONOTONIC_TIME,
     BaseHaRemoteScanner,
     async_register_scanner,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
+from menuai.config_entries import ConfigEntry
+from menuai.core import CALLBACK_TYPE, menuai, callback
 
 from .coordinator import RuuviGatewayUpdateCoordinator
 
@@ -67,7 +67,7 @@ class RuuviGatewayScanner(BaseHaRemoteScanner):
 
 
 def async_connect_scanner(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     coordinator: RuuviGatewayUpdateCoordinator,
 ) -> tuple[RuuviGatewayScanner, CALLBACK_TYPE]:
@@ -85,7 +85,7 @@ def async_connect_scanner(
         coordinator=coordinator,
     )
     unload_callbacks = [
-        async_register_scanner(hass, scanner),
+        async_register_scanner(menuai, scanner),
         scanner.async_setup(),
         scanner.start_polling(),
     ]

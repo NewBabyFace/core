@@ -8,11 +8,11 @@ from netdata import Netdata
 from netdata.exceptions import NetdataError
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
     SensorEntity,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_ICON,
     CONF_NAME,
@@ -20,12 +20,12 @@ from homeassistant.const import (
     CONF_RESOURCES,
     PERCENTAGE,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import PlatformNotReady
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.httpx_client import get_async_client
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai
+from menuai.exceptions import PlatformNotReady
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.httpx_client import get_async_client
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -59,7 +59,7 @@ PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -72,7 +72,7 @@ async def async_setup_platform(
     resources = config[CONF_RESOURCES]
 
     netdata = NetdataData(
-        Netdata(host, port=port, timeout=20.0, httpx_client=get_async_client(hass))
+        Netdata(host, port=port, timeout=20.0, httpx_client=get_async_client(menuai))
     )
     await netdata.async_update()
 

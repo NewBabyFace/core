@@ -1,25 +1,25 @@
 """Test the PG LAB Electronics config flow."""
 
-from homeassistant.components.mqtt import MQTT_CONNECTION_STATE
-from homeassistant.components.pglab.const import DOMAIN
-from homeassistant.config_entries import SOURCE_MQTT, SOURCE_USER
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.service_info.mqtt import MqttServiceInfo
+from menuai.components.mqtt import MQTT_CONNECTION_STATE
+from menuai.components.pglab.const import DOMAIN
+from menuai.config_entries import SOURCE_MQTT, SOURCE_USER
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.service_info.mqtt import MqttServiceInfo
 
 from tests.common import MockConfigEntry
 from tests.typing import MqttMockHAClient
 
 
 async def test_mqtt_config_single_instance(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Test MQTT flow aborts when an entry already exist."""
 
-    MockConfigEntry(domain=DOMAIN).add_to_hass(hass)
+    MockConfigEntry(domain=DOMAIN).add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_MQTT}
     )
 
@@ -28,7 +28,7 @@ async def test_mqtt_config_single_instance(
     assert result["reason"] == "single_instance_allowed"
 
 
-async def test_mqtt_setup(hass: HomeAssistant, mqtt_mock: MqttMockHAClient) -> None:
+async def test_mqtt_setup(menuai: menuai, mqtt_mock: MqttMockHAClient) -> None:
     """Test we can finish a config flow through MQTT with custom prefix."""
     discovery_info = MqttServiceInfo(
         topic="pglab/discovery/E-Board-DD53AC85/config",
@@ -42,19 +42,19 @@ async def test_mqtt_setup(hass: HomeAssistant, mqtt_mock: MqttMockHAClient) -> N
         subscribed_topic="pglab/discovery/#",
         timestamp=None,
     )
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_MQTT}, data=discovery_info
     )
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["result"].data == {"discovery_prefix": "pglab/discovery"}
 
 
 async def test_mqtt_abort_invalid_topic(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Check MQTT flow aborts if discovery topic is invalid."""
     discovery_info = MqttServiceInfo(
@@ -69,7 +69,7 @@ async def test_mqtt_abort_invalid_topic(
         subscribed_topic="pglab/discovery/#",
         timestamp=None,
     )
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_MQTT}, data=discovery_info
     )
     assert result["type"] is FlowResultType.ABORT
@@ -83,21 +83,21 @@ async def test_mqtt_abort_invalid_topic(
         subscribed_topic="pglab/discovery/#",
         timestamp=None,
     )
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_MQTT}, data=discovery_info
     )
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "invalid_discovery_info"
 
 
-async def test_user_setup(hass: HomeAssistant, mqtt_mock: MqttMockHAClient) -> None:
+async def test_user_setup(menuai: menuai, mqtt_mock: MqttMockHAClient) -> None:
     """Test if the user can finish a config flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["result"].data == {
@@ -106,15 +106,15 @@ async def test_user_setup(hass: HomeAssistant, mqtt_mock: MqttMockHAClient) -> N
 
 
 async def test_user_setup_mqtt_not_connected(
-    hass: HomeAssistant, mqtt_mock: MqttMockHAClient
+    menuai: menuai, mqtt_mock: MqttMockHAClient
 ) -> None:
     """Test that the user setup is aborted when MQTT is not connected."""
 
     mqtt_mock.connected = False
-    async_dispatcher_send(hass, MQTT_CONNECTION_STATE, False)
-    await hass.async_block_till_done()
+    async_dispatcher_send(menuai, MQTT_CONNECTION_STATE, False)
+    await menuai.async_block_till_done()
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
@@ -122,10 +122,10 @@ async def test_user_setup_mqtt_not_connected(
     assert result["reason"] == "mqtt_not_connected"
 
 
-async def test_user_setup_mqtt_not_configured(hass: HomeAssistant) -> None:
+async def test_user_setup_mqtt_not_configured(menuai: menuai) -> None:
     """Test that the user setup is aborted when MQTT is not configured."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 

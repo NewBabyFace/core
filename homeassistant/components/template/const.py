@@ -1,7 +1,7 @@
 """Constants for the Template Platform Components."""
 
-from homeassistant.const import Platform
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import Platform
+from menuai.helpers.typing import ConfigType
 
 CONF_ATTRIBUTE_TEMPLATES = "attribute_templates"
 CONF_ATTRIBUTES = "attributes"

@@ -9,19 +9,19 @@ from aiohue.v1 import HueBridgeV1
 from aiohue.v2 import HueBridgeV2
 import pytest
 
-from homeassistant.components.hue import bridge
-from homeassistant.components.hue.const import (
+from menuai.components.hue import bridge
+from menuai.components.hue.const import (
     CONF_ALLOW_HUE_GROUPS,
     CONF_ALLOW_UNREACHABLE,
     DOMAIN,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
 
 from tests.common import MockConfigEntry
 
 
-async def test_bridge_setup_v1(hass: HomeAssistant, mock_api_v1: Mock) -> None:
+async def test_bridge_setup_v1(menuai: menuai, mock_api_v1: Mock) -> None:
     """Test a successful setup for V1 bridge."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -31,9 +31,9 @@ async def test_bridge_setup_v1(hass: HomeAssistant, mock_api_v1: Mock) -> None:
 
     with (
         patch.object(bridge, "HueBridgeV1", return_value=mock_api_v1),
-        patch.object(hass.config_entries, "async_forward_entry_setups") as mock_forward,
+        patch.object(menuai.config_entries, "async_forward_entry_setups") as mock_forward,
     ):
-        hue_bridge = bridge.HueBridge(hass, config_entry)
+        hue_bridge = bridge.HueBridge(menuai, config_entry)
         async with config_entry.setup_lock:
             assert await hue_bridge.async_initialize_bridge() is True
 
@@ -45,7 +45,7 @@ async def test_bridge_setup_v1(hass: HomeAssistant, mock_api_v1: Mock) -> None:
     assert forward_entries == {"light", "binary_sensor", "sensor"}
 
 
-async def test_bridge_setup_v2(hass: HomeAssistant, mock_api_v2: Mock) -> None:
+async def test_bridge_setup_v2(menuai: menuai, mock_api_v2: Mock) -> None:
     """Test a successful setup for V2 bridge."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -54,9 +54,9 @@ async def test_bridge_setup_v2(hass: HomeAssistant, mock_api_v2: Mock) -> None:
 
     with (
         patch.object(bridge, "HueBridgeV2", return_value=mock_api_v2),
-        patch.object(hass.config_entries, "async_forward_entry_setups") as mock_forward,
+        patch.object(menuai.config_entries, "async_forward_entry_setups") as mock_forward,
     ):
-        hue_bridge = bridge.HueBridge(hass, config_entry)
+        hue_bridge = bridge.HueBridge(menuai, config_entry)
         assert await hue_bridge.async_initialize_bridge() is True
 
     assert hue_bridge.api is mock_api_v2
@@ -74,18 +74,18 @@ async def test_bridge_setup_v2(hass: HomeAssistant, mock_api_v2: Mock) -> None:
     }
 
 
-async def test_bridge_setup_invalid_api_key(hass: HomeAssistant) -> None:
+async def test_bridge_setup_invalid_api_key(menuai: menuai) -> None:
     """Test we start config flow if username is no longer whitelisted."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         data={"host": "1.2.3.4", "api_key": "mock-api-key", "api_version": 1},
         options={CONF_ALLOW_HUE_GROUPS: False, CONF_ALLOW_UNREACHABLE: False},
     )
-    hue_bridge = bridge.HueBridge(hass, entry)
+    hue_bridge = bridge.HueBridge(menuai, entry)
 
     with (
         patch.object(hue_bridge.api, "initialize", side_effect=Unauthorized),
-        patch.object(hass.config_entries.flow, "async_init") as mock_init,
+        patch.object(menuai.config_entries.flow, "async_init") as mock_init,
     ):
         assert await hue_bridge.async_initialize_bridge() is False
 
@@ -93,14 +93,14 @@ async def test_bridge_setup_invalid_api_key(hass: HomeAssistant) -> None:
     assert mock_init.mock_calls[0][2]["data"] == {"host": "1.2.3.4"}
 
 
-async def test_bridge_setup_timeout(hass: HomeAssistant) -> None:
+async def test_bridge_setup_timeout(menuai: menuai) -> None:
     """Test we retry to connect if we cannot connect."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         data={"host": "1.2.3.4", "api_key": "mock-api-key", "api_version": 1},
         options={CONF_ALLOW_HUE_GROUPS: False, CONF_ALLOW_UNREACHABLE: False},
     )
-    hue_bridge = bridge.HueBridge(hass, entry)
+    hue_bridge = bridge.HueBridge(menuai, entry)
 
     with (
         patch.object(
@@ -114,7 +114,7 @@ async def test_bridge_setup_timeout(hass: HomeAssistant) -> None:
 
 
 async def test_reset_unloads_entry_if_setup(
-    hass: HomeAssistant, mock_api_v1: Mock
+    menuai: menuai, mock_api_v1: Mock
 ) -> None:
     """Test calling reset while the entry has been setup."""
     config_entry = MockConfigEntry(
@@ -125,27 +125,27 @@ async def test_reset_unloads_entry_if_setup(
 
     with (
         patch.object(bridge, "HueBridgeV1", return_value=mock_api_v1),
-        patch.object(hass.config_entries, "async_forward_entry_setups") as mock_forward,
+        patch.object(menuai.config_entries, "async_forward_entry_setups") as mock_forward,
     ):
-        hue_bridge = bridge.HueBridge(hass, config_entry)
+        hue_bridge = bridge.HueBridge(menuai, config_entry)
         async with config_entry.setup_lock:
             assert await hue_bridge.async_initialize_bridge() is True
 
     await asyncio.sleep(0)
 
-    assert len(hass.services.async_services()) == 0
+    assert len(menuai.services.async_services()) == 0
     assert len(mock_forward.mock_calls) == 1
 
     with patch.object(
-        hass.config_entries, "async_forward_entry_unload", return_value=True
+        menuai.config_entries, "async_forward_entry_unload", return_value=True
     ) as mock_forward:
         assert await hue_bridge.async_reset()
 
     assert len(mock_forward.mock_calls) == 3
-    assert len(hass.services.async_services()) == 0
+    assert len(menuai.services.async_services()) == 0
 
 
-async def test_handle_unauthorized(hass: HomeAssistant, mock_api_v1: Mock) -> None:
+async def test_handle_unauthorized(menuai: menuai, mock_api_v1: Mock) -> None:
     """Test handling an unauthorized error on update."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -154,7 +154,7 @@ async def test_handle_unauthorized(hass: HomeAssistant, mock_api_v1: Mock) -> No
     )
 
     with patch.object(bridge, "HueBridgeV1", return_value=mock_api_v1):
-        hue_bridge = bridge.HueBridge(hass, config_entry)
+        hue_bridge = bridge.HueBridge(menuai, config_entry)
         async with config_entry.setup_lock:
             assert await hue_bridge.async_initialize_bridge() is True
 

@@ -11,11 +11,11 @@ from pymiele import OAUTH2_TOKEN
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.miele.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.setup import async_setup_component
+from menuai.components.miele.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.setup import async_setup_component
 
 from . import setup_integration
 
@@ -29,18 +29,18 @@ from tests.typing import WebSocketGenerator
 
 
 async def test_load_unload_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_miele_client: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test load and unload entry."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
     entry = mock_config_entry
 
     assert entry.state is ConfigEntryState.LOADED
 
-    await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert entry.state is ConfigEntryState.NOT_LOADED
 
@@ -62,7 +62,7 @@ async def test_load_unload_entry(
     ids=["unauthorized", "internal_server_error"],
 )
 async def test_expired_token_refresh_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     aioclient_mock: AiohttpClientMocker,
     status: http.HTTPStatus,
@@ -76,14 +76,14 @@ async def test_expired_token_refresh_failure(
         status=status,
     )
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     assert mock_config_entry.state is expected_state
 
 
 @pytest.mark.parametrize("expires_at", [time.time() - 3600], ids=["expired"])
 async def test_expired_token_refresh_connection_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
@@ -95,32 +95,32 @@ async def test_expired_token_refresh_connection_failure(
         exc=ClientConnectionError(),
     )
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     assert mock_config_entry.state is ConfigEntryState.SETUP_RETRY
 
 
 async def test_devices_multiple_created_count(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mock_miele_client: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test that multiple devices are created."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     assert len(device_registry.devices) == 4
 
 
 async def test_device_info(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mock_miele_client: MagicMock,
     mock_config_entry: MockConfigEntry,
     device_registry: dr.DeviceRegistry,
 ) -> None:
     """Test device registry integration."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
     device_entry = device_registry.async_get_device(
         identifiers={(DOMAIN, "Dummy_Appliance_1")}
     )
@@ -129,19 +129,19 @@ async def test_device_info(
 
 
 async def test_device_remove_devices(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     mock_config_entry: MockConfigEntry,
     mock_miele_client: MagicMock,
     device_registry: dr.DeviceRegistry,
 ) -> None:
     """Test we can only remove a device that no longer exists."""
-    assert await async_setup_component(hass, "config", {})
+    assert await async_setup_component(menuai, "config", {})
 
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     device_entry = device_registry.async_get_device(
         identifiers={
@@ -151,7 +151,7 @@ async def test_device_remove_devices(
             )
         },
     )
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     response = await client.remove_device(device_entry.id, mock_config_entry.entry_id)
     assert not response["success"]
 
@@ -167,7 +167,7 @@ async def test_device_remove_devices(
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_setup_all_platforms(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_miele_client: MagicMock,
     mock_config_entry: MockConfigEntry,
     device_registry: dr.DeviceRegistry,
@@ -176,35 +176,35 @@ async def test_setup_all_platforms(
 ) -> None:
     """Test that all platforms can be set up."""
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    assert hass.states.get("binary_sensor.freezer_door").state == "off"
-    assert hass.states.get("binary_sensor.hood_problem").state == "off"
+    assert menuai.states.get("binary_sensor.freezer_door").state == "off"
+    assert menuai.states.get("binary_sensor.hood_problem").state == "off"
 
     assert (
-        hass.states.get("button.washing_machine_start").object_id
+        menuai.states.get("button.washing_machine_start").object_id
         == "washing_machine_start"
     )
 
-    assert hass.states.get("climate.freezer").state == "cool"
-    assert hass.states.get("light.hood_light").state == "on"
+    assert menuai.states.get("climate.freezer").state == "cool"
+    assert menuai.states.get("light.hood_light").state == "on"
 
-    assert hass.states.get("sensor.freezer_temperature").state == "-18.0"
-    assert hass.states.get("sensor.washing_machine").state == "off"
+    assert menuai.states.get("sensor.freezer_temperature").state == "-18.0"
+    assert menuai.states.get("sensor.washing_machine").state == "off"
 
-    assert hass.states.get("switch.washing_machine_power").state == "off"
+    assert menuai.states.get("switch.washing_machine_power").state == "off"
 
     # Add two devices and let the clock tick for 130 seconds
     mock_miele_client.get_devices.return_value = await async_load_json_object_fixture(
-        hass, "5_devices.json", DOMAIN
+        menuai, "5_devices.json", DOMAIN
     )
     freezer.tick(timedelta(seconds=130))
 
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     assert len(device_registry.devices) == 6
 
     # Check a sample sensor for each new device
-    assert hass.states.get("sensor.dishwasher").state == "in_use"
-    assert hass.states.get("sensor.oven_temperature").state == "175.0"
+    assert menuai.states.get("sensor.dishwasher").state == "in_use"
+    assert menuai.states.get("sensor.oven_temperature").state == "175.0"

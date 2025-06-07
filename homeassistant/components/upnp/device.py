@@ -1,4 +1,4 @@
-"""Home Assistant representation of an UPnP/IGD."""
+"""MenuAI representation of an UPnP/IGD."""
 
 from __future__ import annotations
 
@@ -16,9 +16,9 @@ from async_upnp_client.profiles.igd import IgdDevice, IgdStateItem
 from async_upnp_client.utils import async_get_local_ip
 from getmac import get_mac_address
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
     BYTES_RECEIVED,
@@ -69,25 +69,25 @@ def get_preferred_location(locations: set[str]) -> str:
     raise ValueError("No location found")
 
 
-async def async_get_mac_address_from_host(hass: HomeAssistant, host: str) -> str | None:
+async def async_get_mac_address_from_host(menuai: menuai, host: str) -> str | None:
     """Get mac address from host."""
     ip_addr = ip_address(host)
     if ip_addr.version == 4:
-        mac_address = await hass.async_add_executor_job(
+        mac_address = await menuai.async_add_executor_job(
             partial(get_mac_address, ip=host)
         )
     else:
-        mac_address = await hass.async_add_executor_job(
+        mac_address = await menuai.async_add_executor_job(
             partial(get_mac_address, ip6=host)
         )
     return mac_address
 
 
 async def async_create_device(
-    hass: HomeAssistant, location: str, force_poll: bool
+    menuai: menuai, location: str, force_poll: bool
 ) -> Device:
     """Create UPnP/IGD device."""
-    session = async_get_clientsession(hass, verify_ssl=False)
+    session = async_get_clientsession(menuai, verify_ssl=False)
     requester = AiohttpSessionRequester(session, with_sleep=True, timeout=20)
 
     # Create UPnP device.
@@ -106,17 +106,17 @@ async def async_create_device(
 
     # Create profile wrapper.
     igd_device = IgdDevice(upnp_device, notify_server.event_handler)
-    return Device(hass, igd_device, force_poll)
+    return Device(menuai, igd_device, force_poll)
 
 
 class Device:
-    """Home Assistant representation of a UPnP/IGD device."""
+    """MenuAI representation of a UPnP/IGD device."""
 
     def __init__(
-        self, hass: HomeAssistant, igd_device: IgdDevice, force_poll: bool
+        self, menuai: menuai, igd_device: IgdDevice, force_poll: bool
     ) -> None:
         """Initialize UPnP/IGD device."""
-        self.hass = hass
+        self.menuai = menuai
         self._igd_device = igd_device
         self._force_poll = force_poll
 
@@ -130,7 +130,7 @@ class Device:
         if not self.host:
             return None
 
-        return await async_get_mac_address_from_host(self.hass, self.host)
+        return await async_get_mac_address_from_host(self.menuai, self.host)
 
     @property
     def udn(self) -> str:

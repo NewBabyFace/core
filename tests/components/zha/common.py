@@ -6,10 +6,10 @@ from unittest.mock import AsyncMock, Mock
 import zigpy.zcl
 import zigpy.zcl.foundation as zcl_f
 
-from homeassistant.components.zha.helpers import ZHADeviceProxy
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.util import dt as dt_util
+from menuai.components.zha.helpers import ZHADeviceProxy
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.util import dt as dt_util
 
 from tests.common import async_fire_time_changed
 
@@ -91,13 +91,13 @@ def make_attribute(attrid, value, status=0):
     return attr
 
 
-def send_attribute_report(hass: HomeAssistant, cluster, attrid, value):
+def send_attribute_report(menuai: menuai, cluster, attrid, value):
     """Send a single attribute report."""
-    return send_attributes_report(hass, cluster, {attrid: value})
+    return send_attributes_report(menuai, cluster, {attrid: value})
 
 
 async def send_attributes_report(
-    hass: HomeAssistant, cluster: zigpy.zcl.Cluster, attributes: dict
+    menuai: menuai, cluster: zigpy.zcl.Cluster, attributes: dict
 ):
     """Cause the sensor to receive an attribute report from the network.
 
@@ -121,18 +121,18 @@ async def send_attributes_report(
     hdr = make_zcl_header(zcl_f.GeneralCommand.Report_Attributes)
     hdr.frame_control = hdr.frame_control.replace(disable_default_response=True)
     cluster.handle_message(hdr, msg)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
 def find_entity_id(
-    domain: str, zha_device: ZHADeviceProxy, hass: HomeAssistant, qualifier=None
+    domain: str, zha_device: ZHADeviceProxy, menuai: menuai, qualifier=None
 ) -> str | None:
     """Find the entity id under the testing.
 
     This is used to get the entity id in order to get the state from the state
     machine so that we can test state changes.
     """
-    entities = find_entity_ids(domain, zha_device, hass)
+    entities = find_entity_ids(domain, zha_device, menuai)
     if not entities:
         return None
     if qualifier:
@@ -144,7 +144,7 @@ def find_entity_id(
 
 
 def find_entity_ids(
-    domain: str, zha_device: ZHADeviceProxy, hass: HomeAssistant
+    domain: str, zha_device: ZHADeviceProxy, menuai: menuai
 ) -> list[str]:
     """Find the entity ids under the testing.
 
@@ -152,7 +152,7 @@ def find_entity_ids(
     machine so that we can test state changes.
     """
 
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     return [
         entity.entity_id
         for entity in er.async_entries_for_device(registry, zha_device.device_id)
@@ -160,11 +160,11 @@ def find_entity_ids(
     ]
 
 
-def async_find_group_entity_id(hass: HomeAssistant, domain, group):
+def async_find_group_entity_id(menuai: menuai, domain, group):
     """Find the group entity id under test."""
     entity_id = f"{domain}.coordinator_manufacturer_coordinator_model_{group.name.lower().replace(' ', '_')}"
 
-    entity_ids = hass.states.async_entity_ids(domain)
+    entity_ids = menuai.states.async_entity_ids(domain)
     assert entity_id in entity_ids
     return entity_id
 
@@ -189,8 +189,8 @@ def reset_clusters(clusters):
         cluster.write_attributes.reset_mock()
 
 
-async def async_shift_time(hass: HomeAssistant):
+async def async_shift_time(menuai: menuai):
     """Shift time to cause call later tasks to run."""
     next_update = dt_util.utcnow() + timedelta(seconds=11)
-    async_fire_time_changed(hass, next_update)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, next_update)
+    await menuai.async_block_till_done()

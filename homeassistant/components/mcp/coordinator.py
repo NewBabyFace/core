@@ -12,13 +12,13 @@ from mcp.client.sse import sse_client
 import voluptuous as vol
 from voluptuous_openapi import convert_to_voluptuous
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_URL
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
-from homeassistant.helpers import llm
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util.json import JsonObjectType
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_URL
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, menuaiError
+from menuai.helpers import llm
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.util.json import JsonObjectType
 
 from .const import DOMAIN
 
@@ -76,7 +76,7 @@ class ModelContextProtocolTool(llm.Tool):
 
     async def async_call(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         tool_input: llm.ToolInput,
         llm_context: llm.LLMContext,
     ) -> JsonObjectType:
@@ -89,10 +89,10 @@ class ModelContextProtocolTool(llm.Tool):
                     )
         except TimeoutError as error:
             _LOGGER.debug("Timeout when calling tool: %s", error)
-            raise HomeAssistantError(f"Timeout when calling tool: {error}") from error
+            raise menuaiError(f"Timeout when calling tool: {error}") from error
         except httpx.HTTPStatusError as error:
             _LOGGER.debug("Error when calling tool: %s", error)
-            raise HomeAssistantError(f"Error when calling tool: {error}") from error
+            raise menuaiError(f"Error when calling tool: {error}") from error
         return result.model_dump(exclude_unset=True, exclude_none=True)
 
 
@@ -103,13 +103,13 @@ class ModelContextProtocolCoordinator(DataUpdateCoordinator[list[llm.Tool]]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         token_manager: TokenManager | None = None,
     ) -> None:
         """Initialize ModelContextProtocolCoordinator."""
         super().__init__(
-            hass,
+            menuai,
             logger=_LOGGER,
             name=DOMAIN,
             config_entry=config_entry,

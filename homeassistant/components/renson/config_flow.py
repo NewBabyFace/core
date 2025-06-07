@@ -8,10 +8,10 @@ from typing import Any
 from renson_endura_delta import renson
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from .const import DOMAIN
 
@@ -30,12 +30,12 @@ class RensonConfigFlow(ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
     async def validate_input(
-        self, hass: HomeAssistant, data: dict[str, Any]
+        self, menuai: menuai, data: dict[str, Any]
     ) -> dict[str, Any]:
         """Validate the user input allows us to connect."""
         api = renson.RensonVentilation(data[CONF_HOST])
 
-        if not await self.hass.async_add_executor_job(api.connect):
+        if not await self.menuai.async_add_executor_job(api.connect):
             raise CannotConnect
 
         return {"title": "Renson"}
@@ -52,7 +52,7 @@ class RensonConfigFlow(ConfigFlow, domain=DOMAIN):
         errors = {}
 
         try:
-            info = await self.validate_input(self.hass, user_input)
+            info = await self.validate_input(self.menuai, user_input)
         except CannotConnect:
             errors["base"] = "cannot_connect"
         except Exception:
@@ -66,5 +66,5 @@ class RensonConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""

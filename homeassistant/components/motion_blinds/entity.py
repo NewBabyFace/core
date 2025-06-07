@@ -5,11 +5,11 @@ from __future__ import annotations
 from motionblinds import DEVICE_TYPES_GATEWAY, DEVICE_TYPES_WIFI, MotionGateway
 from motionblinds.motion_blinds import MotionBlind
 
-from homeassistant.core import CALLBACK_TYPE
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.event import async_call_later
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.core import CALLBACK_TYPE
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.event import async_call_later
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
     ATTR_AVAILABLE,
@@ -98,15 +98,15 @@ class MotionCoordinatorEntity(CoordinatorEntity[DataUpdateCoordinatorMotionBlind
 
         return self.coordinator.data[self._blind.mac][ATTR_AVAILABLE]
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to multicast pushes and register signal handler."""
         self._blind.Register_callback(self.unique_id, self.schedule_update_ha_state)
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Unsubscribe when removed."""
         self._blind.Remove_callback(self.unique_id)
-        await super().async_will_remove_from_hass()
+        await super().async_will_remove_from_menuai()
 
     async def async_scheduled_update_request(self, *_) -> None:
         """Request a state update from the blind at a scheduled point in time."""
@@ -116,7 +116,7 @@ class MotionCoordinatorEntity(CoordinatorEntity[DataUpdateCoordinatorMotionBlind
             del self._previous_positions[: len(self._previous_positions) - 2]
 
         async with self._api_lock:
-            await self.hass.async_add_executor_job(self._blind.Update_trigger)
+            await self.menuai.async_add_executor_job(self._blind.Update_trigger)
 
         self.coordinator.async_update_listeners()
 
@@ -126,7 +126,7 @@ class MotionCoordinatorEntity(CoordinatorEntity[DataUpdateCoordinatorMotionBlind
         ):
             # keep updating the position @self._update_interval_moving until the position does not change.
             self._requesting_position = async_call_later(
-                self.hass,
+                self.menuai,
                 self._update_interval_moving,
                 self.async_scheduled_update_request,
             )
@@ -146,5 +146,5 @@ class MotionCoordinatorEntity(CoordinatorEntity[DataUpdateCoordinatorMotionBlind
             self._requesting_position()
 
         self._requesting_position = async_call_later(
-            self.hass, delay, self.async_scheduled_update_request
+            self.menuai, delay, self.async_scheduled_update_request
         )

@@ -16,9 +16,9 @@ import pytest
 from sqlalchemy.exc import DatabaseError, OperationalError, SQLAlchemyError
 from sqlalchemy.pool import QueuePool
 
-from homeassistant.components import recorder
-from homeassistant.components.lock import LockState
-from homeassistant.components.recorder import (
+from menuai.components import recorder
+from menuai.components.lock import LockState
+from menuai.components.recorder import (
     CONF_AUTO_PURGE,
     CONF_AUTO_REPACK,
     CONF_COMMIT_INTERVAL,
@@ -33,13 +33,13 @@ from homeassistant.components.recorder import (
     migration,
     statistics,
 )
-from homeassistant.components.recorder.const import (
+from menuai.components.recorder.const import (
     EVENT_RECORDER_5MIN_STATISTICS_GENERATED,
     EVENT_RECORDER_HOURLY_STATISTICS_GENERATED,
     KEEPALIVE_TIME,
     SupportedDialect,
 )
-from homeassistant.components.recorder.db_schema import (
+from menuai.components.recorder.db_schema import (
     SCHEMA_VERSION,
     EventData,
     Events,
@@ -50,38 +50,38 @@ from homeassistant.components.recorder.db_schema import (
     StatesMeta,
     StatisticsRuns,
 )
-from homeassistant.components.recorder.models import process_timestamp
-from homeassistant.components.recorder.queries import select_event_type_ids
-from homeassistant.components.recorder.services import (
+from menuai.components.recorder.models import process_timestamp
+from menuai.components.recorder.queries import select_event_type_ids
+from menuai.components.recorder.services import (
     SERVICE_DISABLE,
     SERVICE_ENABLE,
     SERVICE_PURGE,
     SERVICE_PURGE_ENTITIES,
 )
-from homeassistant.components.recorder.table_managers import (
+from menuai.components.recorder.table_managers import (
     state_attributes as state_attributes_table_manager,
     states_meta as states_meta_table_manager,
 )
-from homeassistant.components.recorder.util import session_scope
-from homeassistant.const import (
+from menuai.components.recorder.util import session_scope
+from menuai.const import (
     EVENT_COMPONENT_LOADED,
-    EVENT_HOMEASSISTANT_CLOSE,
-    EVENT_HOMEASSISTANT_FINAL_WRITE,
-    EVENT_HOMEASSISTANT_STARTED,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_CLOSE,
+    EVENT_menuai_FINAL_WRITE,
+    EVENT_menuai_STARTED,
+    EVENT_menuai_STOP,
     MATCH_ALL,
 )
-from homeassistant.core import Context, CoreState, Event, HomeAssistant, State, callback
-from homeassistant.helpers import (
+from menuai.core import Context, CoreState, Event, menuai, State, callback
+from menuai.helpers import (
     entity_registry as er,
     issue_registry as ir,
     recorder as recorder_helper,
 )
-from homeassistant.helpers.event import async_track_entity_registry_updated_event
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
-from homeassistant.util.json import json_loads
+from menuai.helpers.event import async_track_entity_registry_updated_event
+from menuai.helpers.typing import ConfigType
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
+from menuai.util.json import json_loads
 
 from .common import (
     async_block_recorder,
@@ -104,7 +104,7 @@ from tests.typing import RecorderInstanceContextManager, RecorderInstanceGenerat
 
 
 @pytest.fixture
-async def mock_recorder_before_hass(
+async def mock_recorder_before_menuai(
     async_test_recorder: RecorderInstanceContextManager,
 ) -> None:
     """Set up recorder."""
@@ -125,10 +125,10 @@ def small_cache_size() -> Generator[None]:
         yield
 
 
-def _default_recorder(hass: HomeAssistant) -> Recorder:
+def _default_recorder(menuai: menuai) -> Recorder:
     """Return a recorder with reasonable defaults."""
     return Recorder(
-        hass,
+        menuai,
         auto_purge=True,
         auto_repack=True,
         keep_days=7,
@@ -143,7 +143,7 @@ def _default_recorder(hass: HomeAssistant) -> Recorder:
 
 @pytest.mark.parametrize("persistent_database", [True])
 async def test_shutdown_before_startup_finishes(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_setup_recorder_instance: RecorderInstanceGenerator,
 ) -> None:
     """Test shutdown before recorder starts is clean.
@@ -153,19 +153,19 @@ async def test_shutdown_before_startup_finishes(
     config = {
         recorder.CONF_COMMIT_INTERVAL: 1,
     }
-    hass.set_state(CoreState.not_running)
+    menuai.set_state(CoreState.not_running)
 
-    recorder_helper.async_initialize_recorder(hass)
-    hass.async_create_task(async_setup_recorder_instance(hass, config))
-    await async_wait_recorder(hass)
-    instance = get_instance(hass)
+    recorder_helper.async_initialize_recorder(menuai)
+    menuai.async_create_task(async_setup_recorder_instance(menuai, config))
+    await async_wait_recorder(menuai)
+    instance = get_instance(menuai)
 
     session = await instance.async_add_executor_job(instance.get_session)
 
     with patch.object(instance, "engine"):
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_FINAL_WRITE)
-        await hass.async_block_till_done()
-        await hass.async_stop()
+        menuai.bus.async_fire(EVENT_menuai_FINAL_WRITE)
+        await menuai.async_block_till_done()
+        await menuai.async_stop()
 
     # The database executor is shutdown so we must run the
     # query in the main thread for testing
@@ -178,55 +178,55 @@ async def test_shutdown_before_startup_finishes(
     # We patched out engine to prevent the close from happening
     # so we need to manually close the session
     session.close()
-    await hass.async_add_executor_job(instance._shutdown)
+    await menuai.async_add_executor_job(instance._shutdown)
 
 
 async def test_canceled_before_startup_finishes(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_setup_recorder_instance: RecorderInstanceGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test recorder shuts down when its startup future is canceled out from under it."""
-    hass.set_state(CoreState.not_running)
-    recorder_helper.async_initialize_recorder(hass)
-    hass.async_create_task(async_setup_recorder_instance(hass))
-    await async_wait_recorder(hass)
+    menuai.set_state(CoreState.not_running)
+    recorder_helper.async_initialize_recorder(menuai)
+    menuai.async_create_task(async_setup_recorder_instance(menuai))
+    await async_wait_recorder(menuai)
 
-    instance = get_instance(hass)
-    instance._hass_started.cancel()
+    instance = get_instance(menuai)
+    instance._menuai_started.cancel()
     with patch.object(instance, "engine"):
-        await hass.async_block_till_done()
-        await hass.async_add_executor_job(instance.join)
+        await menuai.async_block_till_done()
+        await menuai.async_add_executor_job(instance.join)
     assert (
         "Recorder startup was externally canceled before it could complete"
         in caplog.text
     )
     # We patched out engine to prevent the close from happening
     # so we need to manually close the session
-    await hass.async_add_executor_job(instance._shutdown)
+    await menuai.async_add_executor_job(instance._shutdown)
 
 
 async def test_shutdown_closes_connections(
-    hass: HomeAssistant, setup_recorder: None
+    menuai: menuai, setup_recorder: None
 ) -> None:
     """Test shutdown closes connections."""
 
-    hass.set_state(CoreState.not_running)
+    menuai.set_state(CoreState.not_running)
 
-    instance = recorder.get_instance(hass)
+    instance = recorder.get_instance(menuai)
     await instance.async_db_ready
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     pool = instance.engine
 
     def _ensure_connected():
-        with session_scope(hass=hass, read_only=True) as session:
+        with session_scope(menuai=menuai, read_only=True) as session:
             list(session.query(States))
 
     await instance.async_add_executor_job(_ensure_connected)
 
     with patch.object(pool, "dispose", wraps=pool.dispose) as dispose:
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_FINAL_WRITE)
-        await hass.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_FINAL_WRITE)
+        await menuai.async_block_till_done()
 
     assert len(dispose.mock_calls) == 1
     with pytest.raises(RuntimeError):
@@ -234,43 +234,43 @@ async def test_shutdown_closes_connections(
 
 
 async def test_state_gets_saved_when_set_before_start_event(
-    hass: HomeAssistant, async_setup_recorder_instance: RecorderInstanceGenerator
+    menuai: menuai, async_setup_recorder_instance: RecorderInstanceGenerator
 ) -> None:
     """Test we can record an event when starting with not running."""
 
-    hass.set_state(CoreState.not_running)
+    menuai.set_state(CoreState.not_running)
 
-    recorder_helper.async_initialize_recorder(hass)
-    hass.async_create_task(async_setup_recorder_instance(hass))
-    await async_wait_recorder(hass)
+    recorder_helper.async_initialize_recorder(menuai)
+    menuai.async_create_task(async_setup_recorder_instance(menuai))
+    await async_wait_recorder(menuai)
 
     entity_id = "test.recorder"
     state = "restoring_from_db"
     attributes = {"test_attr": 5, "test_attr_10": "nice"}
 
-    hass.states.async_set(entity_id, state, attributes)
+    menuai.states.async_set(entity_id, state, attributes)
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
+    menuai.bus.async_fire(EVENT_menuai_STARTED)
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         db_states = list(session.query(States))
         assert len(db_states) == 1
         assert db_states[0].event_id is None
 
 
-async def test_saving_state(hass: HomeAssistant, setup_recorder: None) -> None:
+async def test_saving_state(menuai: menuai, setup_recorder: None) -> None:
     """Test saving and restoring a state."""
     entity_id = "test.recorder"
     state = "restoring_from_db"
     attributes = {"test_attr": 5, "test_attr_10": "nice"}
 
-    hass.states.async_set(entity_id, state, attributes)
+    menuai.states.async_set(entity_id, state, attributes)
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         db_states = []
         for db_state, db_state_attributes, states_meta in (
             session.query(States, StateAttributes, StatesMeta)
@@ -286,7 +286,7 @@ async def test_saving_state(hass: HomeAssistant, setup_recorder: None) -> None:
         assert len(db_states) == 1
         assert db_states[0].event_id is None
 
-    assert state.as_dict() == _state_with_context(hass, entity_id).as_dict()
+    assert state.as_dict() == _state_with_context(menuai, entity_id).as_dict()
 
 
 @pytest.mark.parametrize(
@@ -298,7 +298,7 @@ async def test_saving_state(hass: HomeAssistant, setup_recorder: None) -> None:
     ],
 )
 async def test_saving_state_with_nul(
-    hass: HomeAssistant,
+    menuai: menuai,
     db_engine: str,
     recorder_dialect_name: None,
     setup_recorder: None,
@@ -309,10 +309,10 @@ async def test_saving_state_with_nul(
     state = "restoring_from_db"
     attributes = {"test_attr": 5, "test_attr_10": "silly\0stuff"}
 
-    hass.states.async_set(entity_id, state, attributes)
-    await async_wait_recording_done(hass)
+    menuai.states.async_set(entity_id, state, attributes)
+    await async_wait_recording_done(menuai)
 
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         db_states = []
         for db_state, db_state_attributes, states_meta in (
             session.query(States, StateAttributes, StatesMeta)
@@ -328,17 +328,17 @@ async def test_saving_state_with_nul(
         assert len(db_states) == 1
         assert db_states[0].event_id is None
 
-    expected = _state_with_context(hass, entity_id)
+    expected = _state_with_context(menuai, entity_id)
     expected.attributes = expected_attributes
     assert state.as_dict() == expected.as_dict()
 
 
 async def test_saving_many_states(
-    hass: HomeAssistant, async_setup_recorder_instance: RecorderInstanceGenerator
+    menuai: menuai, async_setup_recorder_instance: RecorderInstanceGenerator
 ) -> None:
     """Test we expire after many commits."""
     instance = await async_setup_recorder_instance(
-        hass, {recorder.CONF_COMMIT_INTERVAL: 0}
+        menuai, {recorder.CONF_COMMIT_INTERVAL: 0}
     )
 
     entity_id = "test.recorder"
@@ -349,21 +349,21 @@ async def test_saving_many_states(
         patch.object(recorder.core, "EXPIRE_AFTER_COMMITS", 2),
     ):
         for _ in range(3):
-            hass.states.async_set(entity_id, "on", attributes)
-            await async_wait_recording_done(hass)
-            hass.states.async_set(entity_id, "off", attributes)
-            await async_wait_recording_done(hass)
+            menuai.states.async_set(entity_id, "on", attributes)
+            await async_wait_recording_done(menuai)
+            menuai.states.async_set(entity_id, "off", attributes)
+            await async_wait_recording_done(menuai)
 
     assert expire_all.called
 
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         db_states = list(session.query(States))
         assert len(db_states) == 6
         assert db_states[0].event_id is None
 
 
 async def test_saving_state_with_intermixed_time_changes(
-    hass: HomeAssistant, setup_recorder: None
+    menuai: menuai, setup_recorder: None
 ) -> None:
     """Test saving states with intermixed time changes."""
     entity_id = "test.recorder"
@@ -372,22 +372,22 @@ async def test_saving_state_with_intermixed_time_changes(
     attributes2 = {"test_attr": 10, "test_attr_10": "mean"}
 
     for _ in range(KEEPALIVE_TIME + 1):
-        async_fire_time_changed(hass, dt_util.utcnow())
-    hass.states.async_set(entity_id, state, attributes)
+        async_fire_time_changed(menuai, dt_util.utcnow())
+    menuai.states.async_set(entity_id, state, attributes)
     for _ in range(KEEPALIVE_TIME + 1):
-        async_fire_time_changed(hass, dt_util.utcnow())
-    hass.states.async_set(entity_id, state, attributes2)
+        async_fire_time_changed(menuai, dt_util.utcnow())
+    menuai.states.async_set(entity_id, state, attributes2)
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         db_states = list(session.query(States))
         assert len(db_states) == 2
         assert db_states[0].event_id is None
 
 
 async def test_saving_state_with_exception(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     setup_recorder: None,
 ) -> None:
@@ -397,7 +397,7 @@ async def test_saving_state_with_exception(
     attributes = {"test_attr": 5, "test_attr_10": "nice"}
 
     def _throw_if_state_in_session(*args, **kwargs):
-        for obj in get_instance(hass).event_session:
+        for obj in get_instance(menuai).event_session:
             if isinstance(obj, States):
                 raise OperationalError(
                     "insert the state", "fake params", "forced to fail"
@@ -406,22 +406,22 @@ async def test_saving_state_with_exception(
     with (
         patch("time.sleep"),
         patch.object(
-            get_instance(hass).event_session,
+            get_instance(menuai).event_session,
             "flush",
             side_effect=_throw_if_state_in_session,
         ),
     ):
-        hass.states.async_set(entity_id, "fail", attributes)
-        await async_wait_recording_done(hass)
+        menuai.states.async_set(entity_id, "fail", attributes)
+        await async_wait_recording_done(menuai)
 
     assert "Error executing query" in caplog.text
     assert "Error saving events" not in caplog.text
 
     caplog.clear()
-    hass.states.async_set(entity_id, state, attributes)
-    await async_wait_recording_done(hass)
+    menuai.states.async_set(entity_id, state, attributes)
+    await async_wait_recording_done(menuai)
 
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         db_states = list(session.query(States))
         assert len(db_states) >= 1
 
@@ -430,7 +430,7 @@ async def test_saving_state_with_exception(
 
 
 async def test_saving_state_with_sqlalchemy_exception(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     setup_recorder: None,
 ) -> None:
@@ -440,7 +440,7 @@ async def test_saving_state_with_sqlalchemy_exception(
     attributes = {"test_attr": 5, "test_attr_10": "nice"}
 
     def _throw_if_state_in_session(*args, **kwargs):
-        for obj in get_instance(hass).event_session:
+        for obj in get_instance(menuai).event_session:
             if isinstance(obj, States):
                 raise SQLAlchemyError(
                     "insert the state", "fake params", "forced to fail"
@@ -449,21 +449,21 @@ async def test_saving_state_with_sqlalchemy_exception(
     with (
         patch("time.sleep"),
         patch.object(
-            get_instance(hass).event_session,
+            get_instance(menuai).event_session,
             "flush",
             side_effect=_throw_if_state_in_session,
         ),
     ):
-        hass.states.async_set(entity_id, "fail", attributes)
-        await async_wait_recording_done(hass)
+        menuai.states.async_set(entity_id, "fail", attributes)
+        await async_wait_recording_done(menuai)
 
     assert "SQLAlchemyError error processing task" in caplog.text
 
     caplog.clear()
-    hass.states.async_set(entity_id, state, attributes)
-    await async_wait_recording_done(hass)
+    menuai.states.async_set(entity_id, state, attributes)
+    await async_wait_recording_done(menuai)
 
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         db_states = list(session.query(States))
         assert len(db_states) >= 1
 
@@ -473,17 +473,17 @@ async def test_saving_state_with_sqlalchemy_exception(
 
 
 async def test_force_shutdown_with_queue_of_writes_that_generate_exceptions(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_setup_recorder_instance: RecorderInstanceGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test forcing shutdown."""
-    instance = await async_setup_recorder_instance(hass)
+    instance = await async_setup_recorder_instance(menuai)
 
     entity_id = "test.recorder"
     attributes = {"test_attr": 5, "test_attr_10": "nice"}
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
     with (
         patch.object(instance, "db_retry_wait", 0.01),
@@ -496,18 +496,18 @@ async def test_force_shutdown_with_queue_of_writes_that_generate_exceptions(
         ),
     ):
         for _ in range(100):
-            hass.states.async_set(entity_id, "on", attributes)
-            hass.states.async_set(entity_id, "off", attributes)
+            menuai.states.async_set(entity_id, "on", attributes)
+            menuai.states.async_set(entity_id, "off", attributes)
 
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_FINAL_WRITE)
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_CLOSE)
-        await hass.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_FINAL_WRITE)
+        menuai.bus.async_fire(EVENT_menuai_CLOSE)
+        await menuai.async_block_till_done()
 
     assert "Error executing query" in caplog.text
     assert "Error saving events" not in caplog.text
 
 
-async def test_saving_event(hass: HomeAssistant, setup_recorder: None) -> None:
+async def test_saving_event(menuai: menuai, setup_recorder: None) -> None:
     """Test saving and restoring an event."""
     event_type = "EVENT_TEST"
     event_data = {"test_attr": 5, "test_attr_10": "nice"}
@@ -520,19 +520,19 @@ async def test_saving_event(hass: HomeAssistant, setup_recorder: None) -> None:
         if event.event_type == event_type:
             events.append(event)
 
-    hass.bus.async_listen(MATCH_ALL, event_listener)
+    menuai.bus.async_listen(MATCH_ALL, event_listener)
 
-    hass.bus.async_fire(event_type, event_data)
+    menuai.bus.async_fire(event_type, event_data)
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
     assert len(events) == 1
     event: Event = events[0]
 
-    await async_recorder_block_till_done(hass)
+    await async_recorder_block_till_done(menuai)
     events: list[Event] = []
 
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         for select_event, event_data, event_types in (
             session.query(Events, EventData, EventTypes)
             .filter(Events.event_type_id.in_(select_event_type_ids((event_type,))))
@@ -561,35 +561,35 @@ async def test_saving_event(hass: HomeAssistant, setup_recorder: None) -> None:
 
 
 async def test_saving_state_with_commit_interval_zero(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_setup_recorder_instance: RecorderInstanceGenerator,
 ) -> None:
     """Test saving a state with a commit interval of zero."""
-    await async_setup_recorder_instance(hass, {"commit_interval": 0})
-    assert get_instance(hass).commit_interval == 0
+    await async_setup_recorder_instance(menuai, {"commit_interval": 0})
+    assert get_instance(menuai).commit_interval == 0
 
     entity_id = "test.recorder"
     state = "restoring_from_db"
     attributes = {"test_attr": 5, "test_attr_10": "nice"}
 
-    hass.states.async_set(entity_id, state, attributes)
+    menuai.states.async_set(entity_id, state, attributes)
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         db_states = list(session.query(States))
         assert len(db_states) == 1
         assert db_states[0].event_id is None
 
 
-async def _add_entities(hass: HomeAssistant, entity_ids: list[str]) -> list[State]:
+async def _add_entities(menuai: menuai, entity_ids: list[str]) -> list[State]:
     """Add entities."""
     attributes = {"test_attr": 5, "test_attr_10": "nice"}
     for idx, entity_id in enumerate(entity_ids):
-        hass.states.async_set(entity_id, f"state{idx}", attributes)
-    await async_wait_recording_done(hass)
+        menuai.states.async_set(entity_id, f"state{idx}", attributes)
+    await async_wait_recording_done(menuai)
 
-    with session_scope(hass=hass) as session:
+    with session_scope(menuai=menuai) as session:
         states = []
         for db_state, db_state_attributes, states_meta in (
             session.query(States, StateAttributes, StatesMeta)
@@ -602,73 +602,73 @@ async def _add_entities(hass: HomeAssistant, entity_ids: list[str]) -> list[Stat
             native_state = db_state.to_native()
             native_state.attributes = db_state_attributes.to_native()
             states.append(native_state)
-        convert_pending_states_to_meta(get_instance(hass), session)
+        convert_pending_states_to_meta(get_instance(menuai), session)
         return states
 
 
-def _state_with_context(hass: HomeAssistant, entity_id: str) -> State | None:
+def _state_with_context(menuai: menuai, entity_id: str) -> State | None:
     # We don't restore context unless we need it by joining the
     # events table on the event_id for state_changed events
-    return hass.states.get(entity_id)
+    return menuai.states.get(entity_id)
 
 
 async def test_setup_without_migration(
-    hass: HomeAssistant, setup_recorder: None
+    menuai: menuai, setup_recorder: None
 ) -> None:
     """Verify the schema version without a migration."""
-    assert recorder.get_instance(hass).schema_version == SCHEMA_VERSION
+    assert recorder.get_instance(menuai).schema_version == SCHEMA_VERSION
 
 
 async def test_saving_state_include_domains(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_setup_recorder_instance: RecorderInstanceGenerator,
 ) -> None:
     """Test saving and restoring a state."""
-    await async_setup_recorder_instance(hass, {"include": {"domains": "test2"}})
-    states = await _add_entities(hass, ["test.recorder", "test2.recorder"])
+    await async_setup_recorder_instance(menuai, {"include": {"domains": "test2"}})
+    states = await _add_entities(menuai, ["test.recorder", "test2.recorder"])
     assert len(states) == 1
-    assert _state_with_context(hass, "test2.recorder").as_dict() == states[0].as_dict()
+    assert _state_with_context(menuai, "test2.recorder").as_dict() == states[0].as_dict()
 
 
 async def test_saving_state_include_domains_globs(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_setup_recorder_instance: RecorderInstanceGenerator,
 ) -> None:
     """Test saving and restoring a state."""
     await async_setup_recorder_instance(
-        hass, {"include": {"domains": "test2", "entity_globs": "*.included_*"}}
+        menuai, {"include": {"domains": "test2", "entity_globs": "*.included_*"}}
     )
     states = await _add_entities(
-        hass, ["test.recorder", "test2.recorder", "test3.included_entity"]
+        menuai, ["test.recorder", "test2.recorder", "test3.included_entity"]
     )
     assert len(states) == 2
     state_map = {state.entity_id: state for state in states}
 
     assert (
-        _state_with_context(hass, "test2.recorder").as_dict()
+        _state_with_context(menuai, "test2.recorder").as_dict()
         == state_map["test2.recorder"].as_dict()
     )
     assert (
-        _state_with_context(hass, "test3.included_entity").as_dict()
+        _state_with_context(menuai, "test3.included_entity").as_dict()
         == state_map["test3.included_entity"].as_dict()
     )
 
 
 async def test_saving_state_incl_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_setup_recorder_instance: RecorderInstanceGenerator,
 ) -> None:
     """Test saving and restoring a state."""
     await async_setup_recorder_instance(
-        hass, {"include": {"entities": "test2.recorder"}}
+        menuai, {"include": {"entities": "test2.recorder"}}
     )
-    states = await _add_entities(hass, ["test.recorder", "test2.recorder"])
+    states = await _add_entities(menuai, ["test.recorder", "test2.recorder"])
     assert len(states) == 1
-    assert _state_with_context(hass, "test2.recorder").as_dict() == states[0].as_dict()
+    assert _state_with_context(menuai, "test2.recorder").as_dict() == states[0].as_dict()
 
 
 async def test_saving_event_exclude_event_type(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_setup_recorder_instance: RecorderInstanceGenerator,
 ) -> None:
     """Test saving and restoring an event."""
@@ -676,23 +676,23 @@ async def test_saving_event_exclude_event_type(
         "exclude": {
             "event_types": [
                 "service_registered",
-                "homeassistant_start",
+                "menuai_start",
                 "component_loaded",
                 "core_config_updated",
-                "homeassistant_started",
+                "menuai_started",
                 "test",
             ]
         }
     }
-    instance = await async_setup_recorder_instance(hass, config)
+    instance = await async_setup_recorder_instance(menuai, config)
     events = ["test", "test2"]
     for event_type in events:
-        hass.bus.async_fire(event_type)
+        menuai.bus.async_fire(event_type)
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    def _get_events(hass: HomeAssistant, event_type_list: list[str]) -> list[Event]:
-        with session_scope(hass=hass, read_only=True) as session:
+    def _get_events(menuai: menuai, event_type_list: list[str]) -> list[Event]:
+        with session_scope(menuai=menuai, read_only=True) as session:
             events = []
             for event, event_data, event_types in (
                 session.query(Events, EventData, EventTypes)
@@ -713,135 +713,135 @@ async def test_saving_event_exclude_event_type(
                 events.append(native_event)
             return events
 
-    events = await instance.async_add_executor_job(_get_events, hass, ["test", "test2"])
+    events = await instance.async_add_executor_job(_get_events, menuai, ["test", "test2"])
     assert len(events) == 1
     assert events[0].event_type == "test2"
 
 
 async def test_saving_state_exclude_domains(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_setup_recorder_instance: RecorderInstanceGenerator,
 ) -> None:
     """Test saving and restoring a state."""
-    await async_setup_recorder_instance(hass, {"exclude": {"domains": "test"}})
-    states = await _add_entities(hass, ["test.recorder", "test2.recorder"])
+    await async_setup_recorder_instance(menuai, {"exclude": {"domains": "test"}})
+    states = await _add_entities(menuai, ["test.recorder", "test2.recorder"])
     assert len(states) == 1
-    assert _state_with_context(hass, "test2.recorder").as_dict() == states[0].as_dict()
+    assert _state_with_context(menuai, "test2.recorder").as_dict() == states[0].as_dict()
 
 
 async def test_saving_state_exclude_domains_globs(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_setup_recorder_instance: RecorderInstanceGenerator,
 ) -> None:
     """Test saving and restoring a state."""
     await async_setup_recorder_instance(
-        hass, {"exclude": {"domains": "test", "entity_globs": "*.excluded_*"}}
+        menuai, {"exclude": {"domains": "test", "entity_globs": "*.excluded_*"}}
     )
     states = await _add_entities(
-        hass, ["test.recorder", "test2.recorder", "test2.excluded_entity"]
+        menuai, ["test.recorder", "test2.recorder", "test2.excluded_entity"]
     )
     assert len(states) == 1
-    assert _state_with_context(hass, "test2.recorder").as_dict() == states[0].as_dict()
+    assert _state_with_context(menuai, "test2.recorder").as_dict() == states[0].as_dict()
 
 
 async def test_saving_state_exclude_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_setup_recorder_instance: RecorderInstanceGenerator,
 ) -> None:
     """Test saving and restoring a state."""
     await async_setup_recorder_instance(
-        hass, {"exclude": {"entities": "test.recorder"}}
+        menuai, {"exclude": {"entities": "test.recorder"}}
     )
-    states = await _add_entities(hass, ["test.recorder", "test2.recorder"])
+    states = await _add_entities(menuai, ["test.recorder", "test2.recorder"])
     assert len(states) == 1
-    assert _state_with_context(hass, "test2.recorder").as_dict() == states[0].as_dict()
+    assert _state_with_context(menuai, "test2.recorder").as_dict() == states[0].as_dict()
 
 
 async def test_saving_state_exclude_domain_include_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_setup_recorder_instance: RecorderInstanceGenerator,
 ) -> None:
     """Test saving and restoring a state."""
     await async_setup_recorder_instance(
-        hass,
+        menuai,
         {
             "include": {"entities": "test.recorder"},
             "exclude": {"domains": "test"},
         },
     )
-    states = await _add_entities(hass, ["test.recorder", "test2.recorder"])
+    states = await _add_entities(menuai, ["test.recorder", "test2.recorder"])
     assert len(states) == 2
 
 
 async def test_saving_state_exclude_domain_glob_include_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_setup_recorder_instance: RecorderInstanceGenerator,
 ) -> None:
     """Test saving and restoring a state."""
     await async_setup_recorder_instance(
-        hass,
+        menuai,
         {
             "include": {"entities": ["test.recorder", "test.excluded_entity"]},
             "exclude": {"domains": "test", "entity_globs": "*._excluded_*"},
         },
     )
     states = await _add_entities(
-        hass, ["test.recorder", "test2.recorder", "test.excluded_entity"]
+        menuai, ["test.recorder", "test2.recorder", "test.excluded_entity"]
     )
     assert len(states) == 3
 
 
 async def test_saving_state_include_domain_exclude_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_setup_recorder_instance: RecorderInstanceGenerator,
 ) -> None:
     """Test saving and restoring a state."""
     await async_setup_recorder_instance(
-        hass,
+        menuai,
         {
             "exclude": {"entities": "test.recorder"},
             "include": {"domains": "test"},
         },
     )
-    states = await _add_entities(hass, ["test.recorder", "test2.recorder", "test.ok"])
+    states = await _add_entities(menuai, ["test.recorder", "test2.recorder", "test.ok"])
     assert len(states) == 1
-    assert _state_with_context(hass, "test.ok").as_dict() == states[0].as_dict()
-    assert _state_with_context(hass, "test.ok").state == "state2"
+    assert _state_with_context(menuai, "test.ok").as_dict() == states[0].as_dict()
+    assert _state_with_context(menuai, "test.ok").state == "state2"
 
 
 async def test_saving_state_include_domain_glob_exclude_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_setup_recorder_instance: RecorderInstanceGenerator,
 ) -> None:
     """Test saving and restoring a state."""
     await async_setup_recorder_instance(
-        hass,
+        menuai,
         {
             "exclude": {"entities": ["test.recorder", "test2.included_entity"]},
             "include": {"domains": "test", "entity_globs": "*._included_*"},
         },
     )
     states = await _add_entities(
-        hass, ["test.recorder", "test2.recorder", "test.ok", "test2.included_entity"]
+        menuai, ["test.recorder", "test2.recorder", "test.ok", "test2.included_entity"]
     )
     assert len(states) == 1
-    assert _state_with_context(hass, "test.ok").as_dict() == states[0].as_dict()
-    assert _state_with_context(hass, "test.ok").state == "state2"
+    assert _state_with_context(menuai, "test.ok").as_dict() == states[0].as_dict()
+    assert _state_with_context(menuai, "test.ok").state == "state2"
 
 
 async def test_saving_state_and_removing_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_recorder: None,
 ) -> None:
     """Test saving the state of a removed entity."""
     entity_id = "lock.mine"
-    hass.states.async_set(entity_id, LockState.LOCKED)
-    hass.states.async_set(entity_id, LockState.UNLOCKED)
-    hass.states.async_remove(entity_id)
+    menuai.states.async_set(entity_id, LockState.LOCKED)
+    menuai.states.async_set(entity_id, LockState.UNLOCKED)
+    menuai.states.async_remove(entity_id)
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         states = list(
             session.query(StatesMeta.entity_id, States.state)
             .outerjoin(StatesMeta, States.metadata_id == StatesMeta.metadata_id)
@@ -857,19 +857,19 @@ async def test_saving_state_and_removing_entity(
 
 
 async def test_saving_state_with_oversized_attributes(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     setup_recorder: None,
 ) -> None:
     """Test saving states is limited to 16KiB of JSON encoded attributes."""
     massive_dict = {"a": "b" * 16384}
     attributes = {"test_attr": 5, "test_attr_10": "nice"}
-    hass.states.async_set("switch.sane", "on", attributes)
-    hass.states.async_set("switch.too_big", "on", massive_dict)
-    await async_wait_recording_done(hass)
+    menuai.states.async_set("switch.sane", "on", attributes)
+    menuai.states.async_set("switch.too_big", "on", massive_dict)
+    await async_wait_recording_done(menuai)
     states = []
 
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         for db_state, db_state_attributes, states_meta in (
             session.query(States, StateAttributes, StatesMeta)
             .outerjoin(
@@ -885,25 +885,25 @@ async def test_saving_state_with_oversized_attributes(
     assert "switch.too_big" in caplog.text
 
     assert len(states) == 2
-    assert _state_with_context(hass, "switch.sane").as_dict() == states[0].as_dict()
+    assert _state_with_context(menuai, "switch.sane").as_dict() == states[0].as_dict()
     assert states[1].state == "on"
     assert states[1].entity_id == "switch.too_big"
     assert states[1].attributes == {}
 
 
 async def test_saving_event_with_oversized_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     setup_recorder: None,
 ) -> None:
     """Test saving events is limited to 32KiB of JSON encoded data."""
     massive_dict = {"a": "b" * 32768}
     event_data = {"test_attr": 5, "test_attr_10": "nice"}
-    hass.bus.async_fire("test_event", event_data)
-    hass.bus.async_fire("test_event_too_big", massive_dict)
-    await async_wait_recording_done(hass)
+    menuai.bus.async_fire("test_event", event_data)
+    menuai.bus.async_fire("test_event_too_big", massive_dict)
+    await async_wait_recording_done(menuai)
 
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         events = {
             event_type: data
             for _, data, event_type in (
@@ -924,16 +924,16 @@ async def test_saving_event_with_oversized_data(
 
 
 async def test_saving_event_invalid_context_ulid(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     setup_recorder: None,
 ) -> None:
     """Test we handle invalid manually injected context ids."""
     event_data = {"test_attr": 5, "test_attr_10": "nice"}
-    hass.bus.async_fire("test_event", event_data, context=Context(id="invalid"))
-    await async_wait_recording_done(hass)
+    menuai.bus.async_fire("test_event", event_data, context=Context(id="invalid"))
+    await async_wait_recording_done(menuai)
 
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         events = {
             event_type: data
             for _, data, event_type in (
@@ -950,74 +950,74 @@ async def test_saving_event_invalid_context_ulid(
     assert json_loads(events["test_event"]) == event_data
 
 
-async def test_recorder_setup_failure(hass: HomeAssistant) -> None:
+async def test_recorder_setup_failure(menuai: menuai) -> None:
     """Test some exceptions."""
-    recorder_helper.async_initialize_recorder(hass)
+    recorder_helper.async_initialize_recorder(menuai)
     with (
         patch.object(Recorder, "_setup_connection") as setup,
-        patch("homeassistant.components.recorder.core.time.sleep"),
+        patch("menuai.components.recorder.core.time.sleep"),
     ):
         setup.side_effect = ImportError("driver not found")
-        rec = _default_recorder(hass)
+        rec = _default_recorder(menuai)
         rec.async_initialize()
         rec.start()
         rec.join()
 
-    hass.stop()
+    menuai.stop()
 
 
 @pytest.mark.parametrize(
     "function_to_patch", ["_get_current_schema_version", "_get_initial_schema_version"]
 )
 async def test_recorder_validate_schema_failure(
-    hass: HomeAssistant, function_to_patch: str
+    menuai: menuai, function_to_patch: str
 ) -> None:
     """Test some exceptions."""
-    recorder_helper.async_initialize_recorder(hass)
+    recorder_helper.async_initialize_recorder(menuai)
     with (
         patch(
-            f"homeassistant.components.recorder.migration.{function_to_patch}"
+            f"menuai.components.recorder.migration.{function_to_patch}"
         ) as inspect_schema_version,
-        patch("homeassistant.components.recorder.core.time.sleep"),
+        patch("menuai.components.recorder.core.time.sleep"),
     ):
         inspect_schema_version.side_effect = ImportError("driver not found")
-        rec = _default_recorder(hass)
+        rec = _default_recorder(menuai)
         rec.async_initialize()
         rec.start()
         rec.join()
 
-    hass.stop()
+    menuai.stop()
 
 
 async def test_recorder_setup_failure_without_event_listener(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test recorder setup failure when the event listener is not setup."""
-    recorder_helper.async_initialize_recorder(hass)
+    recorder_helper.async_initialize_recorder(menuai)
     with (
         patch.object(Recorder, "_setup_connection") as setup,
-        patch("homeassistant.components.recorder.core.time.sleep"),
+        patch("menuai.components.recorder.core.time.sleep"),
     ):
         setup.side_effect = ImportError("driver not found")
-        rec = _default_recorder(hass)
+        rec = _default_recorder(menuai)
         rec.start()
         rec.join()
 
-    hass.stop()
+    menuai.stop()
 
 
-async def test_defaults_set(hass: HomeAssistant) -> None:
+async def test_defaults_set(menuai: menuai) -> None:
     """Test the config defaults are set."""
     recorder_config = None
 
-    async def mock_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    async def mock_setup(menuai: menuai, config: ConfigType) -> bool:
         """Mock setup."""
         nonlocal recorder_config
         recorder_config = config["recorder"]
         return True
 
-    with patch("homeassistant.components.recorder.async_setup", side_effect=mock_setup):
-        assert await async_setup_component(hass, "history", {})
+    with patch("menuai.components.recorder.async_setup", side_effect=mock_setup):
+        assert await async_setup_component(menuai, "history", {})
 
     assert recorder_config is not None
     assert recorder_config["auto_purge"]
@@ -1025,19 +1025,19 @@ async def test_defaults_set(hass: HomeAssistant) -> None:
     assert recorder_config["purge_keep_days"] == 10
 
 
-async def run_tasks_at_time(hass: HomeAssistant, test_time: datetime) -> None:
+async def run_tasks_at_time(menuai: menuai, test_time: datetime) -> None:
     """Advance the clock and wait for any callbacks to finish."""
-    async_fire_time_changed(hass, test_time)
-    await hass.async_block_till_done(wait_background_tasks=True)
-    await async_recorder_block_till_done(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai, test_time)
+    await menuai.async_block_till_done(wait_background_tasks=True)
+    await async_recorder_block_till_done(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
 
 @pytest.mark.parametrize("enable_nightly_purge", [True])
-async def test_auto_purge(hass: HomeAssistant, setup_recorder: None) -> None:
+async def test_auto_purge(menuai: menuai, setup_recorder: None) -> None:
     """Test periodic purge scheduling."""
     timezone = "Europe/Copenhagen"
-    await hass.config.async_set_time_zone(timezone)
+    await menuai.config.async_set_time_zone(timezone)
     tz = dt_util.get_time_zone(timezone)
 
     # Purging is scheduled to happen at 4:12am every day. Exercise this behavior by
@@ -1048,14 +1048,14 @@ async def test_auto_purge(hass: HomeAssistant, setup_recorder: None) -> None:
     # The clock is started at 4:15am then advanced forward below
     now = dt_util.utcnow()
     test_time = datetime(now.year + 2, 1, 1, 4, 15, 0, tzinfo=tz)
-    await run_tasks_at_time(hass, test_time)
+    await run_tasks_at_time(menuai, test_time)
 
     with (
         patch(
-            "homeassistant.components.recorder.purge.purge_old_data", return_value=True
+            "menuai.components.recorder.purge.purge_old_data", return_value=True
         ) as purge_old_data,
         patch(
-            "homeassistant.components.recorder.tasks.periodic_db_cleanups"
+            "menuai.components.recorder.tasks.periodic_db_cleanups"
         ) as periodic_db_cleanups,
     ):
         assert len(purge_old_data.mock_calls) == 0
@@ -1063,7 +1063,7 @@ async def test_auto_purge(hass: HomeAssistant, setup_recorder: None) -> None:
 
         # Advance one day, and the purge task should run
         test_time = test_time + timedelta(days=1)
-        await run_tasks_at_time(hass, test_time)
+        await run_tasks_at_time(menuai, test_time)
         assert len(purge_old_data.mock_calls) == 1
         assert len(periodic_db_cleanups.mock_calls) == 1
 
@@ -1072,7 +1072,7 @@ async def test_auto_purge(hass: HomeAssistant, setup_recorder: None) -> None:
 
         # Advance one day, and the purge task should run again
         test_time = test_time + timedelta(days=1)
-        await run_tasks_at_time(hass, test_time)
+        await run_tasks_at_time(menuai, test_time)
         assert len(purge_old_data.mock_calls) == 1
         assert len(periodic_db_cleanups.mock_calls) == 1
 
@@ -1081,25 +1081,25 @@ async def test_auto_purge(hass: HomeAssistant, setup_recorder: None) -> None:
 
         # Advance less than one full day.  The alarm should not yet fire.
         test_time = test_time + timedelta(hours=23)
-        await run_tasks_at_time(hass, test_time)
+        await run_tasks_at_time(menuai, test_time)
         assert len(purge_old_data.mock_calls) == 0
         assert len(periodic_db_cleanups.mock_calls) == 0
 
         # Advance to the next day and fire the alarm again
         test_time = test_time + timedelta(hours=1)
-        await run_tasks_at_time(hass, test_time)
+        await run_tasks_at_time(menuai, test_time)
         assert len(purge_old_data.mock_calls) == 1
         assert len(periodic_db_cleanups.mock_calls) == 1
 
 
 @pytest.mark.parametrize("enable_nightly_purge", [True])
 async def test_auto_purge_auto_repack_on_second_sunday(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_recorder: None,
 ) -> None:
     """Test periodic purge scheduling does a repack on the 2nd sunday."""
     timezone = "Europe/Copenhagen"
-    await hass.config.async_set_time_zone(timezone)
+    await menuai.config.async_set_time_zone(timezone)
     tz = dt_util.get_time_zone(timezone)
 
     # Purging is scheduled to happen at 4:12am every day. Exercise this behavior by
@@ -1110,17 +1110,17 @@ async def test_auto_purge_auto_repack_on_second_sunday(
     # The clock is started at 4:15am then advanced forward below
     now = dt_util.utcnow()
     test_time = datetime(now.year + 2, 1, 1, 4, 15, 0, tzinfo=tz)
-    await run_tasks_at_time(hass, test_time)
+    await run_tasks_at_time(menuai, test_time)
 
     with (
         patch(
-            "homeassistant.components.recorder.core.is_second_sunday", return_value=True
+            "menuai.components.recorder.core.is_second_sunday", return_value=True
         ),
         patch(
-            "homeassistant.components.recorder.purge.purge_old_data", return_value=True
+            "menuai.components.recorder.purge.purge_old_data", return_value=True
         ) as purge_old_data,
         patch(
-            "homeassistant.components.recorder.tasks.periodic_db_cleanups"
+            "menuai.components.recorder.tasks.periodic_db_cleanups"
         ) as periodic_db_cleanups,
     ):
         assert len(purge_old_data.mock_calls) == 0
@@ -1128,7 +1128,7 @@ async def test_auto_purge_auto_repack_on_second_sunday(
 
         # Advance one day, and the purge task should run
         test_time = test_time + timedelta(days=1)
-        await run_tasks_at_time(hass, test_time)
+        await run_tasks_at_time(menuai, test_time)
         assert len(purge_old_data.mock_calls) == 1
         args, _ = purge_old_data.call_args_list[0]
         assert args[2] is True  # repack
@@ -1137,13 +1137,13 @@ async def test_auto_purge_auto_repack_on_second_sunday(
 
 @pytest.mark.parametrize("enable_nightly_purge", [True])
 async def test_auto_purge_auto_repack_disabled_on_second_sunday(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_setup_recorder_instance: RecorderInstanceGenerator,
 ) -> None:
     """Test periodic purge scheduling does not auto repack on the 2nd sunday if disabled."""
     timezone = "Europe/Copenhagen"
-    await hass.config.async_set_time_zone(timezone)
-    await async_setup_recorder_instance(hass, {CONF_AUTO_REPACK: False})
+    await menuai.config.async_set_time_zone(timezone)
+    await async_setup_recorder_instance(menuai, {CONF_AUTO_REPACK: False})
     tz = dt_util.get_time_zone(timezone)
 
     # Purging is scheduled to happen at 4:12am every day. Exercise this behavior by
@@ -1154,17 +1154,17 @@ async def test_auto_purge_auto_repack_disabled_on_second_sunday(
     # The clock is started at 4:15am then advanced forward below
     now = dt_util.utcnow()
     test_time = datetime(now.year + 2, 1, 1, 4, 15, 0, tzinfo=tz)
-    await run_tasks_at_time(hass, test_time)
+    await run_tasks_at_time(menuai, test_time)
 
     with (
         patch(
-            "homeassistant.components.recorder.core.is_second_sunday", return_value=True
+            "menuai.components.recorder.core.is_second_sunday", return_value=True
         ),
         patch(
-            "homeassistant.components.recorder.purge.purge_old_data", return_value=True
+            "menuai.components.recorder.purge.purge_old_data", return_value=True
         ) as purge_old_data,
         patch(
-            "homeassistant.components.recorder.tasks.periodic_db_cleanups"
+            "menuai.components.recorder.tasks.periodic_db_cleanups"
         ) as periodic_db_cleanups,
     ):
         assert len(purge_old_data.mock_calls) == 0
@@ -1172,7 +1172,7 @@ async def test_auto_purge_auto_repack_disabled_on_second_sunday(
 
         # Advance one day, and the purge task should run
         test_time = test_time + timedelta(days=1)
-        await run_tasks_at_time(hass, test_time)
+        await run_tasks_at_time(menuai, test_time)
         assert len(purge_old_data.mock_calls) == 1
         args, _ = purge_old_data.call_args_list[0]
         assert args[2] is False  # repack
@@ -1181,12 +1181,12 @@ async def test_auto_purge_auto_repack_disabled_on_second_sunday(
 
 @pytest.mark.parametrize("enable_nightly_purge", [True])
 async def test_auto_purge_no_auto_repack_on_not_second_sunday(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_recorder: None,
 ) -> None:
     """Test periodic purge scheduling does not do a repack unless its the 2nd sunday."""
     timezone = "Europe/Copenhagen"
-    await hass.config.async_set_time_zone(timezone)
+    await menuai.config.async_set_time_zone(timezone)
     tz = dt_util.get_time_zone(timezone)
 
     # Purging is scheduled to happen at 4:12am every day. Exercise this behavior by
@@ -1197,18 +1197,18 @@ async def test_auto_purge_no_auto_repack_on_not_second_sunday(
     # The clock is started at 4:15am then advanced forward below
     now = dt_util.utcnow()
     test_time = datetime(now.year + 2, 1, 1, 4, 15, 0, tzinfo=tz)
-    await run_tasks_at_time(hass, test_time)
+    await run_tasks_at_time(menuai, test_time)
 
     with (
         patch(
-            "homeassistant.components.recorder.core.is_second_sunday",
+            "menuai.components.recorder.core.is_second_sunday",
             return_value=False,
         ),
         patch(
-            "homeassistant.components.recorder.purge.purge_old_data", return_value=True
+            "menuai.components.recorder.purge.purge_old_data", return_value=True
         ) as purge_old_data,
         patch(
-            "homeassistant.components.recorder.tasks.periodic_db_cleanups"
+            "menuai.components.recorder.tasks.periodic_db_cleanups"
         ) as periodic_db_cleanups,
     ):
         assert len(purge_old_data.mock_calls) == 0
@@ -1216,7 +1216,7 @@ async def test_auto_purge_no_auto_repack_on_not_second_sunday(
 
         # Advance one day, and the purge task should run
         test_time = test_time + timedelta(days=1)
-        await run_tasks_at_time(hass, test_time)
+        await run_tasks_at_time(menuai, test_time)
         assert len(purge_old_data.mock_calls) == 1
         args, _ = purge_old_data.call_args_list[0]
         assert args[2] is False  # repack
@@ -1225,13 +1225,13 @@ async def test_auto_purge_no_auto_repack_on_not_second_sunday(
 
 @pytest.mark.parametrize("enable_nightly_purge", [True])
 async def test_auto_purge_disabled(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_setup_recorder_instance: RecorderInstanceGenerator,
 ) -> None:
     """Test periodic db cleanup still run when auto purge is disabled."""
     timezone = "Europe/Copenhagen"
-    await hass.config.async_set_time_zone(timezone)
-    await async_setup_recorder_instance(hass, {CONF_AUTO_PURGE: False})
+    await menuai.config.async_set_time_zone(timezone)
+    await async_setup_recorder_instance(menuai, {CONF_AUTO_PURGE: False})
     tz = dt_util.get_time_zone(timezone)
 
     # Purging is scheduled to happen at 4:12am every day. We want
@@ -1241,14 +1241,14 @@ async def test_auto_purge_disabled(
     # The clock is started at 4:15am then advanced forward below
     now = dt_util.utcnow()
     test_time = datetime(now.year + 2, 1, 1, 4, 15, 0, tzinfo=tz)
-    await run_tasks_at_time(hass, test_time)
+    await run_tasks_at_time(menuai, test_time)
 
     with (
         patch(
-            "homeassistant.components.recorder.purge.purge_old_data", return_value=True
+            "menuai.components.recorder.purge.purge_old_data", return_value=True
         ) as purge_old_data,
         patch(
-            "homeassistant.components.recorder.tasks.periodic_db_cleanups"
+            "menuai.components.recorder.tasks.periodic_db_cleanups"
         ) as periodic_db_cleanups,
     ):
         assert len(purge_old_data.mock_calls) == 0
@@ -1256,7 +1256,7 @@ async def test_auto_purge_disabled(
 
         # Advance one day, and the purge task should run
         test_time = test_time + timedelta(days=1)
-        await run_tasks_at_time(hass, test_time)
+        await run_tasks_at_time(menuai, test_time)
         assert len(purge_old_data.mock_calls) == 0
         assert len(periodic_db_cleanups.mock_calls) == 1
 
@@ -1266,13 +1266,13 @@ async def test_auto_purge_disabled(
 
 @pytest.mark.parametrize("enable_statistics", [True])
 async def test_auto_statistics(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_recorder: None,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test periodic statistics scheduling."""
     timezone = "Europe/Copenhagen"
-    await hass.config.async_set_time_zone(timezone)
+    await menuai.config.async_set_time_zone(timezone)
     tz = dt_util.get_time_zone(timezone)
 
     stats_5min = []
@@ -1297,25 +1297,25 @@ async def test_auto_statistics(
     now = dt_util.utcnow()
     test_time = datetime(now.year + 2, 1, 1, 4, 51, 0, tzinfo=tz)
     freezer.move_to(test_time.isoformat())
-    await run_tasks_at_time(hass, test_time)
+    await run_tasks_at_time(menuai, test_time)
 
-    hass.bus.async_listen(
+    menuai.bus.async_listen(
         EVENT_RECORDER_5MIN_STATISTICS_GENERATED, async_5min_stats_updated_listener
     )
-    hass.bus.async_listen(
+    menuai.bus.async_listen(
         EVENT_RECORDER_HOURLY_STATISTICS_GENERATED, async_hourly_stats_updated_listener
     )
 
     real_compile_statistics = statistics.compile_statistics
     with patch(
-        "homeassistant.components.recorder.statistics.compile_statistics",
+        "menuai.components.recorder.statistics.compile_statistics",
         side_effect=real_compile_statistics,
         autospec=True,
     ) as compile_statistics:
         # Advance 5 minutes, and the statistics task should run
         test_time = test_time + timedelta(minutes=5)
         freezer.move_to(test_time.isoformat())
-        await run_tasks_at_time(hass, test_time)
+        await run_tasks_at_time(menuai, test_time)
         assert len(compile_statistics.mock_calls) == 1
         assert len(stats_5min) == 1
         assert len(stats_hourly) == 0
@@ -1325,7 +1325,7 @@ async def test_auto_statistics(
         # Advance 5 minutes, and the statistics task should run again
         test_time = test_time + timedelta(minutes=5, seconds=1)
         freezer.move_to(test_time.isoformat())
-        await run_tasks_at_time(hass, test_time)
+        await run_tasks_at_time(menuai, test_time)
         assert len(compile_statistics.mock_calls) == 1
         assert len(stats_5min) == 2
         assert len(stats_hourly) == 1
@@ -1335,7 +1335,7 @@ async def test_auto_statistics(
         # Advance less than 5 minutes. The task should not run.
         test_time = test_time + timedelta(minutes=3)
         freezer.move_to(test_time.isoformat())
-        await run_tasks_at_time(hass, test_time)
+        await run_tasks_at_time(menuai, test_time)
         assert len(compile_statistics.mock_calls) == 0
         assert len(stats_5min) == 2
         assert len(stats_hourly) == 1
@@ -1343,25 +1343,25 @@ async def test_auto_statistics(
         # Advance 5 minutes, and the statistics task should run again
         test_time = test_time + timedelta(minutes=5, seconds=1)
         freezer.move_to(test_time.isoformat())
-        await run_tasks_at_time(hass, test_time)
+        await run_tasks_at_time(menuai, test_time)
         assert len(compile_statistics.mock_calls) == 1
         assert len(stats_5min) == 3
         assert len(stats_hourly) == 1
 
 
 async def test_statistics_runs_initiated(
-    hass: HomeAssistant, async_setup_recorder_instance: RecorderInstanceGenerator
+    menuai: menuai, async_setup_recorder_instance: RecorderInstanceGenerator
 ) -> None:
     """Test statistics_runs is initiated when DB is created."""
     now = dt_util.utcnow()
     with patch(
-        "homeassistant.components.recorder.core.dt_util.utcnow", return_value=now
+        "menuai.components.recorder.core.dt_util.utcnow", return_value=now
     ):
-        await async_setup_recorder_instance(hass)
+        await async_setup_recorder_instance(menuai)
 
-        await async_wait_recording_done(hass)
+        await async_wait_recording_done(menuai)
 
-        with session_scope(hass=hass, read_only=True) as session:
+        with session_scope(menuai=menuai, read_only=True) as session:
             statistics_runs = list(session.query(StatisticsRuns))
             assert len(statistics_runs) == 1
             last_run = process_timestamp(statistics_runs[0].start)
@@ -1373,37 +1373,37 @@ async def test_statistics_runs_initiated(
 @pytest.mark.freeze_time("2022-09-13 09:00:00+02:00")
 @pytest.mark.parametrize("persistent_database", [True])
 @pytest.mark.parametrize("enable_missing_statistics", [True])
-@pytest.mark.usefixtures("hass_storage")  # Prevent test hass from writing to storage
+@pytest.mark.usefixtures("menuai_storage")  # Prevent test menuai from writing to storage
 async def test_compile_missing_statistics(
     async_test_recorder: RecorderInstanceContextManager, freezer: FrozenDateTimeFactory
 ) -> None:
     """Test missing statistics are compiled on startup."""
     now = dt_util.utcnow().replace(minute=0, second=0, microsecond=0)
 
-    def get_statistic_runs(hass: HomeAssistant) -> list:
-        with session_scope(hass=hass, read_only=True) as session:
+    def get_statistic_runs(menuai: menuai) -> list:
+        with session_scope(menuai=menuai, read_only=True) as session:
             return list(session.query(StatisticsRuns))
 
     async with (
-        async_test_home_assistant() as hass,
-        async_test_recorder(hass, wait_recorder=False) as instance,
+        async_test_home_assistant() as menuai,
+        async_test_recorder(menuai, wait_recorder=False) as instance,
     ):
-        await hass.async_start()
-        await async_wait_recording_done(hass)
-        await async_wait_recording_done(hass)
+        await menuai.async_start()
+        await async_wait_recording_done(menuai)
+        await async_wait_recording_done(menuai)
 
         statistics_runs = await instance.async_add_executor_job(
-            get_statistic_runs, hass
+            get_statistic_runs, menuai
         )
         assert len(statistics_runs) == 1
         last_run = process_timestamp(statistics_runs[0].start)
         assert last_run == now - timedelta(minutes=5)
 
-        await async_wait_recording_done(hass)
-        await async_wait_recording_done(hass)
-        await hass.async_stop()
+        await async_wait_recording_done(menuai)
+        await async_wait_recording_done(menuai)
+        await menuai.async_stop()
 
-    # Start Home Assistant one hour later
+    # Start MenuAI one hour later
     stats_5min = []
     stats_hourly = []
 
@@ -1418,22 +1418,22 @@ async def test_compile_missing_statistics(
 
     freezer.tick(timedelta(hours=1))
     async with (
-        async_test_home_assistant() as hass,
-        async_test_recorder(hass, wait_recorder=False) as instance,
+        async_test_home_assistant() as menuai,
+        async_test_recorder(menuai, wait_recorder=False) as instance,
     ):
-        hass.bus.async_listen(
+        menuai.bus.async_listen(
             EVENT_RECORDER_5MIN_STATISTICS_GENERATED, async_5min_stats_updated_listener
         )
-        hass.bus.async_listen(
+        menuai.bus.async_listen(
             EVENT_RECORDER_HOURLY_STATISTICS_GENERATED,
             async_hourly_stats_updated_listener,
         )
 
-        await async_wait_recording_done(hass)
-        await async_wait_recording_done(hass)
+        await async_wait_recording_done(menuai)
+        await async_wait_recording_done(menuai)
 
         statistics_runs = await instance.async_add_executor_job(
-            get_statistic_runs, hass
+            get_statistic_runs, menuai
         )
         assert len(statistics_runs) == 13  # 12 5-minute runs
         last_run = process_timestamp(statistics_runs[1].start)
@@ -1442,20 +1442,20 @@ async def test_compile_missing_statistics(
         assert len(stats_5min) == 1
         assert len(stats_hourly) == 1
 
-        await async_wait_recording_done(hass)
-        await async_wait_recording_done(hass)
-        await hass.async_stop()
+        await async_wait_recording_done(menuai)
+        await async_wait_recording_done(menuai)
+        await menuai.async_stop()
 
 
-async def test_saving_sets_old_state(hass: HomeAssistant, setup_recorder: None) -> None:
+async def test_saving_sets_old_state(menuai: menuai, setup_recorder: None) -> None:
     """Test saving sets old state."""
-    hass.states.async_set("test.one", "s1", {})
-    hass.states.async_set("test.two", "s2", {})
-    hass.states.async_set("test.one", "s3", {})
-    hass.states.async_set("test.two", "s4", {})
-    await async_wait_recording_done(hass)
+    menuai.states.async_set("test.one", "s1", {})
+    menuai.states.async_set("test.two", "s2", {})
+    menuai.states.async_set("test.one", "s3", {})
+    menuai.states.async_set("test.two", "s4", {})
+    await async_wait_recording_done(menuai)
 
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         states = list(
             session.query(
                 StatesMeta.entity_id, States.state_id, States.old_state_id, States.state
@@ -1476,16 +1476,16 @@ async def test_saving_sets_old_state(hass: HomeAssistant, setup_recorder: None) 
 
 
 async def test_saving_state_with_serializable_data(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture, setup_recorder: None
+    menuai: menuai, caplog: pytest.LogCaptureFixture, setup_recorder: None
 ) -> None:
     """Test saving data that cannot be serialized does not crash."""
-    hass.bus.async_fire("bad_event", {"fail": CannotSerializeMe()})
-    hass.states.async_set("test.one", "s1", {"fail": CannotSerializeMe()})
-    hass.states.async_set("test.two", "s2", {})
-    hass.states.async_set("test.two", "s3", {})
-    await async_wait_recording_done(hass)
+    menuai.bus.async_fire("bad_event", {"fail": CannotSerializeMe()})
+    menuai.states.async_set("test.one", "s1", {"fail": CannotSerializeMe()})
+    menuai.states.async_set("test.two", "s2", {})
+    menuai.states.async_set("test.two", "s3", {})
+    await async_wait_recording_done(menuai)
 
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         states = list(
             session.query(
                 StatesMeta.entity_id, States.state_id, States.old_state_id, States.state
@@ -1501,20 +1501,20 @@ async def test_saving_state_with_serializable_data(
     assert "State is not JSON serializable" in caplog.text
 
 
-async def test_has_services(hass: HomeAssistant, setup_recorder: None) -> None:
+async def test_has_services(menuai: menuai, setup_recorder: None) -> None:
     """Test the services exist."""
-    assert hass.services.has_service(DOMAIN, SERVICE_DISABLE)
-    assert hass.services.has_service(DOMAIN, SERVICE_ENABLE)
-    assert hass.services.has_service(DOMAIN, SERVICE_PURGE)
-    assert hass.services.has_service(DOMAIN, SERVICE_PURGE_ENTITIES)
+    assert menuai.services.has_service(DOMAIN, SERVICE_DISABLE)
+    assert menuai.services.has_service(DOMAIN, SERVICE_ENABLE)
+    assert menuai.services.has_service(DOMAIN, SERVICE_PURGE)
+    assert menuai.services.has_service(DOMAIN, SERVICE_PURGE_ENTITIES)
 
 
 async def test_service_disable_events_not_recording(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_recorder: None,
 ) -> None:
     """Test that events are not recorded when recorder is disabled using service."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_DISABLE,
         {},
@@ -1531,16 +1531,16 @@ async def test_service_disable_events_not_recording(
         if event.event_type == event_type:
             events.append(event)
 
-    hass.bus.async_listen(MATCH_ALL, event_listener)
+    menuai.bus.async_listen(MATCH_ALL, event_listener)
 
     event_data1 = {"test_attr": 5, "test_attr_10": "nice"}
-    hass.bus.async_fire(event_type, event_data1)
-    await async_wait_recording_done(hass)
+    menuai.bus.async_fire(event_type, event_data1)
+    await async_wait_recording_done(menuai)
 
     assert len(events) == 1
     event = events[0]
 
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         db_events = list(
             session.query(Events)
             .filter(Events.event_type_id.in_(select_event_type_ids((event_type,))))
@@ -1548,7 +1548,7 @@ async def test_service_disable_events_not_recording(
         )
         assert len(db_events) == 0
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_ENABLE,
         {},
@@ -1556,15 +1556,15 @@ async def test_service_disable_events_not_recording(
     )
 
     event_data2 = {"attr_one": 5, "attr_two": "nice"}
-    hass.bus.async_fire(event_type, event_data2)
-    await async_wait_recording_done(hass)
+    menuai.bus.async_fire(event_type, event_data2)
+    await async_wait_recording_done(menuai)
 
     assert len(events) == 2
     assert events[0] != events[1]
     assert events[0].data != events[1].data
 
     db_events = []
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         for select_event, event_data, event_types in (
             session.query(Events, EventData, EventTypes)
             .filter(Events.event_type_id.in_(select_event_type_ids((event_type,))))
@@ -1593,92 +1593,92 @@ async def test_service_disable_events_not_recording(
 
 
 async def test_service_disable_states_not_recording(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_recorder: None,
 ) -> None:
     """Test that state changes are not recorded when recorder is disabled using service."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_DISABLE,
         {},
         blocking=True,
     )
 
-    hass.states.async_set("test.one", "on", {})
-    await async_wait_recording_done(hass)
+    menuai.states.async_set("test.one", "on", {})
+    await async_wait_recording_done(menuai)
 
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         assert len(list(session.query(States))) == 0
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_ENABLE,
         {},
         blocking=True,
     )
 
-    hass.states.async_set("test.two", "off", {})
-    await async_wait_recording_done(hass)
+    menuai.states.async_set("test.two", "off", {})
+    await async_wait_recording_done(menuai)
 
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         db_states = list(session.query(States))
         assert len(db_states) == 1
         assert db_states[0].event_id is None
         db_states[0].entity_id = "test.two"
         assert (
             db_states[0].to_native().as_dict()
-            == _state_with_context(hass, "test.two").as_dict()
+            == _state_with_context(menuai, "test.two").as_dict()
         )
 
 
 @pytest.mark.parametrize("persistent_database", [True])
-@pytest.mark.usefixtures("hass_storage")  # Prevent test hass from writing to storage
+@pytest.mark.usefixtures("menuai_storage")  # Prevent test menuai from writing to storage
 async def test_service_disable_run_information_recorded(
     async_test_recorder: RecorderInstanceContextManager,
 ) -> None:
     """Test that runs are still recorded when recorder is disabled."""
 
-    def get_recorder_runs(hass: HomeAssistant) -> list:
-        with session_scope(hass=hass, read_only=True) as session:
+    def get_recorder_runs(menuai: menuai) -> list:
+        with session_scope(menuai=menuai, read_only=True) as session:
             return list(session.query(RecorderRuns))
 
     async with (
-        async_test_home_assistant() as hass,
-        async_test_recorder(hass) as instance,
+        async_test_home_assistant() as menuai,
+        async_test_recorder(menuai) as instance,
     ):
-        await hass.async_start()
-        await async_wait_recording_done(hass)
+        await menuai.async_start()
+        await async_wait_recording_done(menuai)
 
-        db_run_info = await instance.async_add_executor_job(get_recorder_runs, hass)
+        db_run_info = await instance.async_add_executor_job(get_recorder_runs, menuai)
         assert len(db_run_info) == 1
         assert db_run_info[0].start is not None
         assert db_run_info[0].end is None
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_DISABLE,
             {},
             blocking=True,
         )
 
-        await async_wait_recording_done(hass)
-        await hass.async_stop()
+        await async_wait_recording_done(menuai)
+        await menuai.async_stop()
 
     async with (
-        async_test_home_assistant() as hass,
-        async_test_recorder(hass) as instance,
+        async_test_home_assistant() as menuai,
+        async_test_recorder(menuai) as instance,
     ):
-        await hass.async_start()
-        await async_wait_recording_done(hass)
+        await menuai.async_start()
+        await async_wait_recording_done(menuai)
 
-        db_run_info = await instance.async_add_executor_job(get_recorder_runs, hass)
+        db_run_info = await instance.async_add_executor_job(get_recorder_runs, menuai)
         assert len(db_run_info) == 2
         assert db_run_info[0].start is not None
         assert db_run_info[0].end is not None
         assert db_run_info[1].start is not None
         assert db_run_info[1].end is None
 
-        await hass.async_stop()
+        await menuai.async_stop()
 
 
 class CannotSerializeMe:
@@ -1690,57 +1690,57 @@ class CannotSerializeMe:
 @pytest.mark.parametrize("persistent_database", [True])
 @pytest.mark.parametrize("recorder_config", [{CONF_COMMIT_INTERVAL: 0}])
 async def test_database_corruption_while_running(
-    hass: HomeAssistant,
+    menuai: menuai,
     recorder_mock: Recorder,
     recorder_db_url: str,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test we can recover from sqlite3 db corruption."""
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     caplog.clear()
 
-    instance = get_instance(hass)
+    instance = get_instance(menuai)
     original_start_time = instance.recorder_runs_manager.recording_start
 
-    hass.states.async_set("test.lost", "on", {})
+    menuai.states.async_set("test.lost", "on", {})
 
     sqlite3_exception = DatabaseError("statement", {}, [])
     sqlite3_exception.__cause__ = sqlite3.DatabaseError(
         "database disk image is malformed"
     )
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
     with patch.object(
-        get_instance(hass).event_session,
+        get_instance(menuai).event_session,
         "close",
         side_effect=OperationalError("statement", {}, []),
     ):
-        await async_wait_recording_done(hass)
+        await async_wait_recording_done(menuai)
         test_db_file = recorder_db_url.removeprefix("sqlite:///")
-        await hass.async_add_executor_job(corrupt_db_file, test_db_file)
-        await async_wait_recording_done(hass)
+        await menuai.async_add_executor_job(corrupt_db_file, test_db_file)
+        await async_wait_recording_done(menuai)
 
         with patch.object(
-            get_instance(hass).event_session,
+            get_instance(menuai).event_session,
             "commit",
             side_effect=[sqlite3_exception, None],
         ):
             # This state will not be recorded because
             # the database corruption will be discovered
             # and we will have to rollback to recover
-            hass.states.async_set("test.one", "off", {})
-            await async_wait_recording_done(hass)
+            menuai.states.async_set("test.one", "off", {})
+            await async_wait_recording_done(menuai)
 
     assert "Unrecoverable sqlite3 database corruption detected" in caplog.text
     assert "The system will rename the corrupt database file" in caplog.text
     assert "Connected to recorder database" in caplog.text
 
     # This state should go into the new database
-    hass.states.async_set("test.two", "on", {})
-    await async_wait_recording_done(hass)
+    menuai.states.async_set("test.two", "on", {})
+    await async_wait_recording_done(menuai)
 
     def _get_last_state():
-        with session_scope(hass=hass, read_only=True) as session:
+        with session_scope(menuai=menuai, read_only=True) as session:
             db_states = list(session.query(States))
             assert len(db_states) == 1
             db_states[0].entity_id = "test.two"
@@ -1754,18 +1754,18 @@ async def test_database_corruption_while_running(
     new_start_time = instance.recorder_runs_manager.recording_start
     assert original_start_time < new_start_time
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
-    await hass.async_block_till_done()
-    hass.stop()
+    menuai.bus.async_fire(EVENT_menuai_STOP)
+    await menuai.async_block_till_done()
+    menuai.stop()
 
 
 async def test_entity_id_filter(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_setup_recorder_instance: RecorderInstanceGenerator,
 ) -> None:
     """Test that entity ID filtering filters string and list."""
     await async_setup_recorder_instance(
-        hass,
+        menuai,
         {
             "include": {"domains": "hello"},
             "exclude": {"domains": "hidden_domain"},
@@ -1782,10 +1782,10 @@ async def test_entity_id_filter(
             {"entity_id": {"unexpected": "data"}},
         )
     ):
-        hass.bus.async_fire("hello", data)
-        await async_wait_recording_done(hass)
+        menuai.bus.async_fire("hello", data)
+        await async_wait_recording_done(menuai)
 
-        with session_scope(hass=hass, read_only=True) as session:
+        with session_scope(menuai=menuai, read_only=True) as session:
             db_events = list(
                 session.query(Events).filter(
                     Events.event_type_id.in_(select_event_type_ids(event_types))
@@ -1797,10 +1797,10 @@ async def test_entity_id_filter(
         {"entity_id": "hidden_domain.person"},
         {"entity_id": ["hidden_domain.person"]},
     ):
-        hass.bus.async_fire("hello", data)
-        await async_wait_recording_done(hass)
+        menuai.bus.async_fire("hello", data)
+        await async_wait_recording_done(menuai)
 
-        with session_scope(hass=hass, read_only=True) as session:
+        with session_scope(menuai=menuai, read_only=True) as session:
             db_events = list(
                 session.query(Events).filter(
                     Events.event_type_id.in_(select_event_type_ids(event_types))
@@ -1814,7 +1814,7 @@ async def test_entity_id_filter(
 @pytest.mark.usefixtures("skip_by_db_engine")
 @pytest.mark.parametrize("persistent_database", [True])
 async def test_database_lock_and_unlock(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_setup_recorder_instance: RecorderInstanceGenerator,
 ) -> None:
     """Test writing events during lock getting written after unlocking.
@@ -1826,33 +1826,33 @@ async def test_database_lock_and_unlock(
     config = {
         recorder.CONF_COMMIT_INTERVAL: 0,
     }
-    await async_setup_recorder_instance(hass, config)
-    await hass.async_block_till_done()
+    await async_setup_recorder_instance(menuai, config)
+    await menuai.async_block_till_done()
     event_type = "EVENT_TEST"
     event_types = (event_type,)
 
     def _get_db_events():
-        with session_scope(hass=hass, read_only=True) as session:
+        with session_scope(menuai=menuai, read_only=True) as session:
             return list(
                 session.query(Events).filter(
                     Events.event_type_id.in_(select_event_type_ids(event_types))
                 )
             )
 
-    instance = get_instance(hass)
+    instance = get_instance(menuai)
 
     assert await instance.lock_database()
 
     assert not await instance.lock_database()
 
     event_data = {"test_attr": 5, "test_attr_10": "nice"}
-    hass.bus.async_fire(event_type, event_data)
-    task = asyncio.create_task(async_wait_recording_done(hass))
+    menuai.bus.async_fire(event_type, event_data)
+    task = asyncio.create_task(async_wait_recording_done(menuai))
 
     # Recording can't be finished while lock is held
     with pytest.raises(TimeoutError):
         await asyncio.wait_for(asyncio.shield(task), timeout=0.25)
-    db_events = await hass.async_add_executor_job(_get_db_events)
+    db_events = await menuai.async_add_executor_job(_get_db_events)
     assert len(db_events) == 0
 
     assert instance.unlock_database()
@@ -1866,7 +1866,7 @@ async def test_database_lock_and_unlock(
 @pytest.mark.usefixtures("skip_by_db_engine")
 @pytest.mark.parametrize("persistent_database", [True])
 async def test_database_lock_and_overflow(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_setup_recorder_instance: RecorderInstanceGenerator,
     caplog: pytest.LogCaptureFixture,
     issue_registry: ir.IssueRegistry,
@@ -1882,7 +1882,7 @@ async def test_database_lock_and_overflow(
     }
 
     def _get_db_events():
-        with session_scope(hass=hass, read_only=True) as session:
+        with session_scope(menuai=menuai, read_only=True) as session:
             return list(
                 session.query(Events).filter(
                     Events.event_type_id.in_(select_event_type_ids(event_types))
@@ -1896,21 +1896,21 @@ async def test_database_lock_and_overflow(
             recorder.core, "MIN_AVAILABLE_MEMORY_FOR_QUEUE_BACKLOG", sys.maxsize
         ),
     ):
-        await async_setup_recorder_instance(hass, config)
-        await hass.async_block_till_done()
+        await async_setup_recorder_instance(menuai, config)
+        await menuai.async_block_till_done()
         event_type = "EVENT_TEST"
         event_types = (event_type,)
 
-        instance = get_instance(hass)
+        instance = get_instance(menuai)
 
         await instance.lock_database()
 
         event_data = {"test_attr": 5, "test_attr_10": "nice"}
-        hass.bus.async_fire(event_type, event_data)
+        menuai.bus.async_fire(event_type, event_data)
 
         # Check that this causes the queue to overflow and write succeeds
         # even before unlocking.
-        await async_wait_recording_done(hass)
+        await async_wait_recording_done(menuai)
 
         db_events = await instance.async_add_executor_job(_get_db_events)
         assert len(db_events) == 1
@@ -1931,7 +1931,7 @@ async def test_database_lock_and_overflow(
 @pytest.mark.usefixtures("skip_by_db_engine")
 @pytest.mark.parametrize("persistent_database", [True])
 async def test_database_lock_and_overflow_checks_available_memory(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_setup_recorder_instance: RecorderInstanceGenerator,
     caplog: pytest.LogCaptureFixture,
     issue_registry: ir.IssueRegistry,
@@ -1947,7 +1947,7 @@ async def test_database_lock_and_overflow_checks_available_memory(
     }
 
     def _get_db_events():
-        with session_scope(hass=hass, read_only=True) as session:
+        with session_scope(menuai=menuai, read_only=True) as session:
             return list(
                 session.query(Events).filter(
                     Events.event_type_id.in_(select_event_type_ids(event_types))
@@ -1955,14 +1955,14 @@ async def test_database_lock_and_overflow_checks_available_memory(
             )
 
     with patch(
-        "homeassistant.components.recorder.core.QUEUE_CHECK_INTERVAL",
+        "menuai.components.recorder.core.QUEUE_CHECK_INTERVAL",
         timedelta(seconds=1),
     ):
-        await async_setup_recorder_instance(hass, config)
-        await hass.async_block_till_done()
+        await async_setup_recorder_instance(menuai, config)
+        await menuai.async_block_till_done()
     event_type = "EVENT_TEST"
     event_types = (event_type,)
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
     min_available_memory = 256 * 1024**2
 
     out_of_ram = False
@@ -1985,7 +1985,7 @@ async def test_database_lock_and_overflow_checks_available_memory(
             side_effect=_get_available_memory,
         ),
     ):
-        instance = get_instance(hass)
+        instance = get_instance(menuai)
 
         assert await instance.lock_database()
 
@@ -1994,12 +1994,12 @@ async def test_database_lock_and_overflow_checks_available_memory(
         # Record up to the extended limit (which takes into account the available memory)
         for _ in range(2):
             event_data = {"test_attr": 5, "test_attr_10": "nice"}
-            hass.bus.async_fire(event_type, event_data)
+            menuai.bus.async_fire(event_type, event_data)
 
         def _wait_database_unlocked():
             return instance._database_lock_task.database_unlock.wait(0.2)
 
-        databack_unlocked = await hass.async_add_executor_job(_wait_database_unlocked)
+        databack_unlocked = await menuai.async_add_executor_job(_wait_database_unlocked)
         assert not databack_unlocked
 
         db_events = await instance.async_add_executor_job(_get_db_events)
@@ -2011,11 +2011,11 @@ async def test_database_lock_and_overflow_checks_available_memory(
         # Record beyond the extended limit (which takes into account the available memory)
         for _ in range(20):
             event_data = {"test_attr": 5, "test_attr_10": "nice"}
-            hass.bus.async_fire(event_type, event_data)
+            menuai.bus.async_fire(event_type, event_data)
 
         # Check that this causes the queue to overflow and write succeeds
         # even before unlocking.
-        await async_wait_recording_done(hass)
+        await async_wait_recording_done(menuai)
 
         assert not instance.unlock_database()
 
@@ -2036,16 +2036,16 @@ async def test_database_lock_and_overflow_checks_available_memory(
 @pytest.mark.skip_on_db_engine(["mysql", "postgresql"])
 @pytest.mark.usefixtures("skip_by_db_engine")
 async def test_database_lock_timeout(
-    hass: HomeAssistant, setup_recorder: None, recorder_db_url: str
+    menuai: menuai, setup_recorder: None, recorder_db_url: str
 ) -> None:
     """Test locking database timeout when recorder stopped.
 
     This test is specific for SQLite: Locking is not implemented for other engines.
     """
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
+    menuai.bus.async_fire(EVENT_menuai_STOP)
 
-    instance = get_instance(hass)
+    instance = get_instance(menuai)
 
     class BlockQueue(recorder.tasks.RecorderTask):
         event: threading.Event = threading.Event()
@@ -2065,12 +2065,12 @@ async def test_database_lock_timeout(
 
 
 async def test_database_lock_without_instance(
-    hass: HomeAssistant, setup_recorder: None
+    menuai: menuai, setup_recorder: None
 ) -> None:
     """Test database lock doesn't fail if instance is not initialized."""
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
+    menuai.bus.async_fire(EVENT_menuai_STOP)
 
-    instance = get_instance(hass)
+    instance = get_instance(menuai)
     with patch.object(instance, "engine"):
         try:
             assert await instance.lock_database()
@@ -2079,40 +2079,40 @@ async def test_database_lock_without_instance(
 
 
 async def test_in_memory_database(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test connecting to an in-memory recorder is not allowed."""
     assert not await async_setup_component(
-        hass, recorder.DOMAIN, {recorder.DOMAIN: {recorder.CONF_DB_URL: "sqlite://"}}
+        menuai, recorder.DOMAIN, {recorder.DOMAIN: {recorder.CONF_DB_URL: "sqlite://"}}
     )
     assert "In-memory SQLite database is not supported" in caplog.text
 
 
 @pytest.mark.parametrize("db_engine", ["mysql"])
 async def test_database_connection_keep_alive(
-    hass: HomeAssistant,
+    menuai: menuai,
     recorder_dialect_name: None,
     async_setup_recorder_instance: RecorderInstanceGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test we keep alive socket based dialects."""
-    instance = await async_setup_recorder_instance(hass)
+    instance = await async_setup_recorder_instance(menuai)
     # We have to mock this since we don't have a mock
     # MySQL server available in tests.
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
+    menuai.bus.async_fire(EVENT_menuai_STARTED)
     await instance.async_recorder_ready.wait()
 
     async_fire_time_changed(
-        hass, dt_util.utcnow() + timedelta(seconds=recorder.core.KEEPALIVE_TIME)
+        menuai, dt_util.utcnow() + timedelta(seconds=recorder.core.KEEPALIVE_TIME)
     )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
     assert "Sending keepalive" in caplog.text
 
 
 @pytest.mark.skip_on_db_engine(["mysql", "postgresql"])
 @pytest.mark.usefixtures("skip_by_db_engine")
 async def test_database_connection_keep_alive_disabled_on_sqlite(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_setup_recorder_instance: RecorderInstanceGenerator,
     caplog: pytest.LogCaptureFixture,
     recorder_db_url: str,
@@ -2122,28 +2122,28 @@ async def test_database_connection_keep_alive_disabled_on_sqlite(
     This test is specific for SQLite, keepalive runs on other engines.
     """
 
-    instance = await async_setup_recorder_instance(hass)
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
+    instance = await async_setup_recorder_instance(menuai)
+    menuai.bus.async_fire(EVENT_menuai_STARTED)
     await instance.async_recorder_ready.wait()
 
     async_fire_time_changed(
-        hass, dt_util.utcnow() + timedelta(seconds=recorder.core.KEEPALIVE_TIME)
+        menuai, dt_util.utcnow() + timedelta(seconds=recorder.core.KEEPALIVE_TIME)
     )
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
     assert "Sending keepalive" not in caplog.text
 
 
 async def test_deduplication_event_data_inside_commit_interval(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture, setup_recorder: None
+    menuai: menuai, caplog: pytest.LogCaptureFixture, setup_recorder: None
 ) -> None:
     """Test deduplication of event data inside the commit interval."""
     for _ in range(10):
-        hass.bus.async_fire("this_event", {"de": "dupe"})
+        menuai.bus.async_fire("this_event", {"de": "dupe"})
     for _ in range(10):
-        hass.bus.async_fire("this_event", {"de": "dupe"})
-    await async_wait_recording_done(hass)
+        menuai.bus.async_fire("this_event", {"de": "dupe"})
+    await async_wait_recording_done(menuai)
 
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         event_types = ("this_event",)
         events = list(
             session.query(Events)
@@ -2158,7 +2158,7 @@ async def test_deduplication_event_data_inside_commit_interval(
 
 async def test_deduplication_state_attributes_inside_commit_interval(
     small_cache_size: None,
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     setup_recorder: None,
 ) -> None:
@@ -2166,19 +2166,19 @@ async def test_deduplication_state_attributes_inside_commit_interval(
     entity_id = "test.recorder"
     attributes = {"test_attr": 5, "test_attr_10": "nice"}
 
-    hass.states.async_set(entity_id, "on", attributes)
-    hass.states.async_set(entity_id, "off", attributes)
+    menuai.states.async_set(entity_id, "on", attributes)
+    menuai.states.async_set(entity_id, "off", attributes)
 
     # Now exhaust the cache to ensure we go back to the db
     for attr_id in range(5):
-        hass.states.async_set(entity_id, "on", {"test_attr": attr_id})
-        hass.states.async_set(entity_id, "off", {"test_attr": attr_id})
+        menuai.states.async_set(entity_id, "on", {"test_attr": attr_id})
+        menuai.states.async_set(entity_id, "off", {"test_attr": attr_id})
     for _ in range(5):
-        hass.states.async_set(entity_id, "on", attributes)
-        hass.states.async_set(entity_id, "off", attributes)
-    await async_wait_recording_done(hass)
+        menuai.states.async_set(entity_id, "on", attributes)
+        menuai.states.async_set(entity_id, "off", attributes)
+    await async_wait_recording_done(menuai)
 
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         states = list(
             session.query(States).outerjoin(
                 StateAttributes, (States.attributes_id == StateAttributes.attributes_id)
@@ -2191,27 +2191,27 @@ async def test_deduplication_state_attributes_inside_commit_interval(
 
 
 async def test_async_block_till_done(
-    hass: HomeAssistant, async_setup_recorder_instance: RecorderInstanceGenerator
+    menuai: menuai, async_setup_recorder_instance: RecorderInstanceGenerator
 ) -> None:
     """Test we can block until recordering is done."""
-    instance = await async_setup_recorder_instance(hass)
-    await async_wait_recording_done(hass)
+    instance = await async_setup_recorder_instance(menuai)
+    await async_wait_recording_done(menuai)
 
     entity_id = "test.recorder"
     attributes = {"test_attr": 5, "test_attr_10": "nice"}
 
-    hass.states.async_set(entity_id, "on", attributes)
-    hass.states.async_set(entity_id, "off", attributes)
+    menuai.states.async_set(entity_id, "on", attributes)
+    menuai.states.async_set(entity_id, "off", attributes)
 
     def _fetch_states():
-        with session_scope(hass=hass, read_only=True) as session:
+        with session_scope(menuai=menuai, read_only=True) as session:
             return list(session.query(States))
 
-    await async_block_recorder(hass, 0.1)
+    await async_block_recorder(menuai, 0.1)
     await instance.async_block_till_done()
     states = await instance.async_add_executor_job(_fetch_states)
     assert len(states) == 2
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
 @pytest.mark.parametrize(
@@ -2226,10 +2226,10 @@ async def test_async_block_till_done(
     ],
 )
 async def test_disable_echo(
-    hass: HomeAssistant, db_url, echo, caplog: pytest.LogCaptureFixture
+    menuai: menuai, db_url, echo, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test echo is disabled for non sqlite databases."""
-    recorder_helper.async_initialize_recorder(hass)
+    recorder_helper.async_initialize_recorder(menuai)
 
     class MockEvent:
         def listen(self, _, _2, callback):
@@ -2238,11 +2238,11 @@ async def test_disable_echo(
     mock_event = MockEvent()
     with (
         patch(
-            "homeassistant.components.recorder.core.create_engine"
+            "menuai.components.recorder.core.create_engine"
         ) as create_engine_mock,
-        patch("homeassistant.components.recorder.core.sqlalchemy_event", mock_event),
+        patch("menuai.components.recorder.core.sqlalchemy_event", mock_event),
     ):
-        await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_DB_URL: db_url}})
+        await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_DB_URL: db_url}})
         create_engine_mock.assert_called_once()
         assert create_engine_mock.mock_calls[0][2].get("echo") == echo
 
@@ -2285,10 +2285,10 @@ async def test_disable_echo(
     ],
 )
 async def test_mysql_missing_utf8mb4(
-    hass: HomeAssistant, config_url, expected_connect_args
+    menuai: menuai, config_url, expected_connect_args
 ) -> None:
     """Test recorder fails to setup if charset=utf8mb4 is missing from db_url."""
-    recorder_helper.async_initialize_recorder(hass)
+    recorder_helper.async_initialize_recorder(menuai)
 
     class MockEvent:
         def listen(self, _, _2, callback):
@@ -2297,11 +2297,11 @@ async def test_mysql_missing_utf8mb4(
     mock_event = MockEvent()
     with (
         patch(
-            "homeassistant.components.recorder.core.create_engine"
+            "menuai.components.recorder.core.create_engine"
         ) as create_engine_mock,
-        patch("homeassistant.components.recorder.core.sqlalchemy_event", mock_event),
+        patch("menuai.components.recorder.core.sqlalchemy_event", mock_event),
     ):
-        await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_DB_URL: config_url}})
+        await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_DB_URL: config_url}})
         create_engine_mock.assert_called_once()
 
         connect_args = create_engine_mock.mock_calls[0][2].get("connect_args", {})
@@ -2317,10 +2317,10 @@ async def test_mysql_missing_utf8mb4(
         "mysql://user:password@SERVER_IP/DB_NAME?blah=bleh&charset=other",
     ],
 )
-async def test_connect_args_priority(hass: HomeAssistant, config_url) -> None:
+async def test_connect_args_priority(menuai: menuai, config_url) -> None:
     """Test connect_args has priority over URL query."""
     connect_params = []
-    recorder_helper.async_initialize_recorder(hass)
+    recorder_helper.async_initialize_recorder(menuai)
 
     class MockDialect:
         """Non functioning dialect, good enough that SQLAlchemy tries connecting."""
@@ -2372,7 +2372,7 @@ async def test_connect_args_priority(hass: HomeAssistant, config_url) -> None:
         patch("sqlalchemy.engine.create.util.get_cls_kwargs", return_value=["echo"]),
     ):
         await async_setup_component(
-            hass,
+            menuai,
             DOMAIN,
             {
                 DOMAIN: {
@@ -2386,7 +2386,7 @@ async def test_connect_args_priority(hass: HomeAssistant, config_url) -> None:
 
 
 async def test_excluding_attributes_by_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     setup_recorder: None,
 ) -> None:
@@ -2394,30 +2394,30 @@ async def test_excluding_attributes_by_integration(
     state = "restoring_from_db"
     attributes = {"test_attr": 5, "excluded_component": 10, "excluded_integration": 20}
     mock_platform(
-        hass,
+        menuai,
         "fake_integration.recorder",
-        Mock(exclude_attributes=lambda hass: {"excluded"}),
+        Mock(exclude_attributes=lambda menuai: {"excluded"}),
     )
-    hass.config.components.add("fake_integration")
-    hass.bus.async_fire(EVENT_COMPONENT_LOADED, {"component": "fake_integration"})
-    await hass.async_block_till_done()
+    menuai.config.components.add("fake_integration")
+    menuai.bus.async_fire(EVENT_COMPONENT_LOADED, {"component": "fake_integration"})
+    await menuai.async_block_till_done()
 
     class EntityWithExcludedAttributes(MockEntity):
         _entity_component_unrecorded_attributes = frozenset({"excluded_component"})
         _unrecorded_attributes = frozenset({"excluded_integration"})
 
     entity_id = "test.fake_integration_recorder"
-    entity_platform = MockEntityPlatform(hass, platform_name="fake_integration")
+    entity_platform = MockEntityPlatform(menuai, platform_name="fake_integration")
     entity = EntityWithExcludedAttributes(
         entity_id=entity_id,
         extra_state_attributes=attributes,
     )
     await entity_platform.async_add_entities([entity])
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         db_states = []
         for db_state, db_state_attributes, states_meta in (
             session.query(States, StateAttributes, StatesMeta)
@@ -2433,13 +2433,13 @@ async def test_excluding_attributes_by_integration(
         assert len(db_states) == 1
         assert db_states[0].event_id is None
 
-    expected = _state_with_context(hass, entity_id)
+    expected = _state_with_context(menuai, entity_id)
     expected.attributes = {"test_attr": 5}
     assert state.as_dict() == expected.as_dict()
 
 
 async def test_excluding_all_attributes_by_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     setup_recorder: None,
 ) -> None:
@@ -2455,29 +2455,29 @@ async def test_excluding_all_attributes_by_integration(
         "unit_of_measurement": "mm",
     }
     mock_platform(
-        hass,
+        menuai,
         "fake_integration.recorder",
-        Mock(exclude_attributes=lambda hass: {"excluded"}),
+        Mock(exclude_attributes=lambda menuai: {"excluded"}),
     )
-    hass.config.components.add("fake_integration")
-    hass.bus.async_fire(EVENT_COMPONENT_LOADED, {"component": "fake_integration"})
-    await hass.async_block_till_done()
+    menuai.config.components.add("fake_integration")
+    menuai.bus.async_fire(EVENT_COMPONENT_LOADED, {"component": "fake_integration"})
+    await menuai.async_block_till_done()
 
     class EntityWithExcludedAttributes(MockEntity):
         _unrecorded_attributes = frozenset({MATCH_ALL})
 
     entity_id = "test.fake_integration_recorder"
-    entity_platform = MockEntityPlatform(hass, platform_name="fake_integration")
+    entity_platform = MockEntityPlatform(menuai, platform_name="fake_integration")
     entity = EntityWithExcludedAttributes(
         entity_id=entity_id,
         extra_state_attributes=attributes,
     )
     await entity_platform.async_add_entities([entity])
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await async_wait_recording_done(hass)
+    await async_wait_recording_done(menuai)
 
-    with session_scope(hass=hass, read_only=True) as session:
+    with session_scope(menuai=menuai, read_only=True) as session:
         db_states = []
         for db_state, db_state_attributes, states_meta in (
             session.query(States, StateAttributes, StatesMeta)
@@ -2493,7 +2493,7 @@ async def test_excluding_all_attributes_by_integration(
         assert len(db_states) == 1
         assert db_states[0].event_id is None
 
-    expected = _state_with_context(hass, entity_id)
+    expected = _state_with_context(menuai, entity_id)
     expected.attributes = {
         "device_class": "test",
         "state_class": "test",
@@ -2504,33 +2504,33 @@ async def test_excluding_all_attributes_by_integration(
 
 
 async def test_lru_increases_with_many_entities(
-    small_cache_size: None, hass: HomeAssistant, setup_recorder: None
+    small_cache_size: None, menuai: menuai, setup_recorder: None
 ) -> None:
     """Test that the recorder's internal LRU cache increases with many entities."""
     mock_entity_count = 16
     for idx in range(mock_entity_count):
-        hass.states.async_set(f"test.entity{idx}", "on")
+        menuai.states.async_set(f"test.entity{idx}", "on")
 
-    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=10))
-    await async_wait_recording_done(hass)
+    async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(minutes=10))
+    await async_wait_recording_done(menuai)
 
-    instance = get_instance(hass)
+    instance = get_instance(menuai)
     assert instance.state_attributes_manager._id_map.get_size() == mock_entity_count * 2
     assert instance.states_meta_manager._id_map.get_size() == mock_entity_count * 2
 
 
 async def test_clean_shutdown_when_recorder_thread_raises_during_initialize_database(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test we still shutdown cleanly when the recorder thread raises during initialize_database."""
     with (
         patch.object(migration, "initialize_database", side_effect=Exception),
-        patch("homeassistant.components.recorder.ALLOW_IN_MEMORY_DB", True),
+        patch("menuai.components.recorder.ALLOW_IN_MEMORY_DB", True),
     ):
-        if recorder.DOMAIN not in hass.data:
-            recorder_helper.async_initialize_recorder(hass)
+        if recorder.DOMAIN not in menuai.data:
+            recorder_helper.async_initialize_recorder(menuai)
         assert not await async_setup_component(
-            hass,
+            menuai,
             recorder.DOMAIN,
             {
                 recorder.DOMAIN: {
@@ -2540,25 +2540,25 @@ async def test_clean_shutdown_when_recorder_thread_raises_during_initialize_data
                 }
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    instance = recorder.get_instance(hass)
-    await hass.async_stop()
+    instance = recorder.get_instance(menuai)
+    await menuai.async_stop()
     assert instance.engine is None
 
 
 async def test_clean_shutdown_when_recorder_thread_raises_during_validate_db_schema(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test we still shutdown cleanly when the recorder thread raises during validate_db_schema."""
     with (
         patch.object(migration, "validate_db_schema", side_effect=Exception),
-        patch("homeassistant.components.recorder.ALLOW_IN_MEMORY_DB", True),
+        patch("menuai.components.recorder.ALLOW_IN_MEMORY_DB", True),
     ):
-        if recorder.DOMAIN not in hass.data:
-            recorder_helper.async_initialize_recorder(hass)
+        if recorder.DOMAIN not in menuai.data:
+            recorder_helper.async_initialize_recorder(menuai)
         assert not await async_setup_component(
-            hass,
+            menuai,
             recorder.DOMAIN,
             {
                 recorder.DOMAIN: {
@@ -2568,10 +2568,10 @@ async def test_clean_shutdown_when_recorder_thread_raises_during_validate_db_sch
                 }
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    instance = recorder.get_instance(hass)
-    await hass.async_stop()
+    instance = recorder.get_instance(menuai)
+    await menuai.async_stop()
     assert instance.engine is None
 
 
@@ -2583,7 +2583,7 @@ async def test_clean_shutdown_when_recorder_thread_raises_during_validate_db_sch
     ],
 )
 async def test_clean_shutdown_when_schema_migration_fails(
-    hass: HomeAssistant,
+    menuai: menuai,
     func_to_patch: str,
     expected_setup_result: bool,
     caplog: pytest.LogCaptureFixture,
@@ -2591,17 +2591,17 @@ async def test_clean_shutdown_when_schema_migration_fails(
     """Test we still shutdown cleanly when schema migration fails."""
     with (
         patch.object(migration, "_get_current_schema_version", side_effect=[None, 1]),
-        patch("homeassistant.components.recorder.ALLOW_IN_MEMORY_DB", True),
+        patch("menuai.components.recorder.ALLOW_IN_MEMORY_DB", True),
         patch.object(
             migration,
             func_to_patch,
             side_effect=Exception("Boom!"),
         ),
     ):
-        if recorder.DOMAIN not in hass.data:
-            recorder_helper.async_initialize_recorder(hass)
+        if recorder.DOMAIN not in menuai.data:
+            recorder_helper.async_initialize_recorder(menuai)
         setup_result = await async_setup_component(
-            hass,
+            menuai,
             recorder.DOMAIN,
             {
                 recorder.DOMAIN: {
@@ -2612,10 +2612,10 @@ async def test_clean_shutdown_when_schema_migration_fails(
             },
         )
         assert setup_result == expected_setup_result
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-        instance = recorder.get_instance(hass)
-        await hass.async_stop()
+        instance = recorder.get_instance(menuai)
+        await menuai.async_stop()
         assert instance.engine is None
 
         assert "Error during schema migration" in caplog.text
@@ -2624,7 +2624,7 @@ async def test_clean_shutdown_when_schema_migration_fails(
 
 
 async def test_setup_fails_after_downgrade(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test we fail to setup after a downgrade.
 
@@ -2636,12 +2636,12 @@ async def test_setup_fails_after_downgrade(
             "_get_current_schema_version",
             side_effect=[None, SCHEMA_VERSION + 1],
         ),
-        patch("homeassistant.components.recorder.ALLOW_IN_MEMORY_DB", True),
+        patch("menuai.components.recorder.ALLOW_IN_MEMORY_DB", True),
     ):
-        if recorder.DOMAIN not in hass.data:
-            recorder_helper.async_initialize_recorder(hass)
+        if recorder.DOMAIN not in menuai.data:
+            recorder_helper.async_initialize_recorder(menuai)
         assert not await async_setup_component(
-            hass,
+            menuai,
             recorder.DOMAIN,
             {
                 recorder.DOMAIN: {
@@ -2651,33 +2651,33 @@ async def test_setup_fails_after_downgrade(
                 }
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    instance = recorder.get_instance(hass)
-    await hass.async_stop()
+    instance = recorder.get_instance(menuai)
+    await menuai.async_stop()
     assert instance.engine is None
     assert (
         f"The database schema version {SCHEMA_VERSION + 1} is newer "
         f"than {SCHEMA_VERSION} which is the maximum database schema "
-        "version supported by the installed version of Home Assistant Core"
+        "version supported by the installed version of MenuAI Core"
     ) in caplog.text
 
 
 async def test_events_are_recorded_until_final_write(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_setup_recorder_instance: RecorderInstanceGenerator,
 ) -> None:
     """Test that events are recorded until the final write."""
-    instance = await async_setup_recorder_instance(hass, {})
-    await hass.async_block_till_done()
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
-    await hass.async_block_till_done()
-    hass.bus.async_fire("fake_event")
-    await async_wait_recording_done(hass)
+    instance = await async_setup_recorder_instance(menuai, {})
+    await menuai.async_block_till_done()
+    menuai.bus.async_fire(EVENT_menuai_STOP)
+    await menuai.async_block_till_done()
+    menuai.bus.async_fire("fake_event")
+    await async_wait_recording_done(menuai)
 
     def get_events() -> list[Event]:
         events: list[Event] = []
-        with session_scope(hass=hass, read_only=True) as session:
+        with session_scope(menuai=menuai, read_only=True) as session:
             for select_event, event_types in (
                 session.query(Events, EventTypes)
                 .filter(
@@ -2703,14 +2703,14 @@ async def test_events_are_recorded_until_final_write(
     db_event = events[0]
     assert db_event.event_type == "fake_event"
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_FINAL_WRITE)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire(EVENT_menuai_FINAL_WRITE)
+    await menuai.async_block_till_done()
 
     assert not instance.engine
 
 
 async def test_commit_before_commits_pending_writes(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_setup_recorder_instance: RecorderInstanceGenerator,
     recorder_db_url: str,
 ) -> None:
@@ -2724,13 +2724,13 @@ async def test_commit_before_commits_pending_writes(
         recorder.CONF_COMMIT_INTERVAL: 60,
     }
 
-    recorder_helper.async_initialize_recorder(hass)
-    hass.async_create_task(async_setup_recorder_instance(hass, config))
-    await async_wait_recorder(hass)
-    instance = get_instance(hass)
+    recorder_helper.async_initialize_recorder(menuai)
+    menuai.async_create_task(async_setup_recorder_instance(menuai, config))
+    await async_wait_recorder(menuai)
+    instance = get_instance(menuai)
     assert instance.commit_interval == 60
-    verify_states_in_queue_future = hass.loop.create_future()
-    verify_session_commit_future = hass.loop.create_future()
+    verify_states_in_queue_future = menuai.loop.create_future()
+    verify_session_commit_future = menuai.loop.create_future()
 
     class VerifyCommitBeforeTask(recorder.tasks.RecorderTask):
         """Task to verify that commit before ran.
@@ -2742,11 +2742,11 @@ async def test_commit_before_commits_pending_writes(
 
         def run(self, instance: Recorder) -> None:
             if not instance._event_session_has_pending_writes:
-                hass.loop.call_soon_threadsafe(
+                menuai.loop.call_soon_threadsafe(
                     verify_session_commit_future.set_result, None
                 )
                 return
-            hass.loop.call_soon_threadsafe(
+            menuai.loop.call_soon_threadsafe(
                 verify_session_commit_future.set_exception,
                 RuntimeError("Session still has pending write"),
             )
@@ -2758,11 +2758,11 @@ async def test_commit_before_commits_pending_writes(
 
         def run(self, instance: Recorder) -> None:
             if instance._event_session_has_pending_writes:
-                hass.loop.call_soon_threadsafe(
+                menuai.loop.call_soon_threadsafe(
                     verify_states_in_queue_future.set_result, None
                 )
                 return
-            hass.loop.call_soon_threadsafe(
+            menuai.loop.call_soon_threadsafe(
                 verify_states_in_queue_future.set_exception,
                 RuntimeError("Session has no pending write"),
             )
@@ -2778,42 +2778,42 @@ async def test_commit_before_commits_pending_writes(
     await verify_session_commit_future
 
 
-async def test_all_tables_use_default_table_args(hass: HomeAssistant) -> None:
+async def test_all_tables_use_default_table_args(menuai: menuai) -> None:
     """Test that all tables use the default table args."""
     for table in db_schema.Base.metadata.tables.values():
         assert table.kwargs.items() >= db_schema._DEFAULT_TABLE_ARGS.items()
 
 
 async def test_empty_entity_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_setup_recorder_instance: RecorderInstanceGenerator,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test the recorder can handle an empty entity_id."""
     await async_setup_recorder_instance(
-        hass,
+        menuai,
         {
             "exclude": {"domains": "hidden_domain"},
         },
     )
-    hass.bus.async_fire("hello", {"entity_id": ""})
-    await async_wait_recording_done(hass)
+    menuai.bus.async_fire("hello", {"entity_id": ""})
+    await async_wait_recording_done(menuai)
     assert "Invalid entity ID" not in caplog.text
 
 
 async def test_setting_up_recorder_fails_entity_registry_listener(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test recorder setup fails if an entity registry listener is in place."""
-    async_track_entity_registry_updated_event(hass, "test.test", lambda x: x)
-    recorder_helper.async_initialize_recorder(hass)
-    with patch("homeassistant.components.recorder.ALLOW_IN_MEMORY_DB", True):
+    async_track_entity_registry_updated_event(menuai, "test.test", lambda x: x)
+    recorder_helper.async_initialize_recorder(menuai)
+    with patch("menuai.components.recorder.ALLOW_IN_MEMORY_DB", True):
         assert not await async_setup_component(
-            hass,
+            menuai,
             recorder.DOMAIN,
             {recorder.DOMAIN: {recorder.CONF_DB_URL: "sqlite://"}},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     assert (
         "The recorder entity registry listener must be installed before "
         "async_track_entity_registry_updated_event is called" in caplog.text

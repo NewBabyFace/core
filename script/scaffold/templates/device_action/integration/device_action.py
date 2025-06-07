@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     CONF_DEVICE_ID,
     CONF_DOMAIN,
@@ -13,8 +13,8 @@ from homeassistant.const import (
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
 )
-from homeassistant.core import Context, HomeAssistant
-from homeassistant.helpers import config_validation as cv, entity_registry as er
+from menuai.core import Context, menuai
+from menuai.helpers import config_validation as cv, entity_registry as er
 
 from . import DOMAIN
 
@@ -30,17 +30,17 @@ ACTION_SCHEMA = cv.DEVICE_ACTION_BASE_SCHEMA.extend(
 
 
 async def async_get_actions(
-    hass: HomeAssistant, device_id: str
+    menuai: menuai, device_id: str
 ) -> list[dict[str, str]]:
     """List device actions for NEW_NAME devices."""
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     actions = []
 
     # TODO Read this comment and remove it.
     # This example shows how to iterate over the entities of this device
     # that match this integration. If your actions instead rely on
     # calling services, do something like:
-    # zha_device = await _async_get_zha_device(hass, device_id)
+    # zha_device = await _async_get_zha_device(menuai, device_id)
     # return zha_device.device_actions
 
     # Get all the integrations entities for this device
@@ -63,7 +63,7 @@ async def async_get_actions(
 
 
 async def async_call_action_from_config(
-    hass: HomeAssistant, config: dict, variables: dict, context: Context | None
+    menuai: menuai, config: dict, variables: dict, context: Context | None
 ) -> None:
     """Execute a device action."""
     service_data = {ATTR_ENTITY_ID: config[CONF_ENTITY_ID]}
@@ -73,6 +73,6 @@ async def async_call_action_from_config(
     elif config[CONF_TYPE] == "turn_off":
         service = SERVICE_TURN_OFF
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN, service, service_data, blocking=True, context=context
     )

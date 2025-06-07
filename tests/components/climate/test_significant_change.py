@@ -2,7 +2,7 @@
 
 import pytest
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_CURRENT_HUMIDITY,
     ATTR_CURRENT_TEMPERATURE,
     ATTR_FAN_MODE,
@@ -15,22 +15,22 @@ from homeassistant.components.climate import (
     ATTR_TARGET_TEMP_LOW,
     ATTR_TEMPERATURE,
 )
-from homeassistant.components.climate.significant_change import (
+from menuai.components.climate.significant_change import (
     async_check_significant_change,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.util.unit_system import (
+from menuai.core import menuai
+from menuai.util.unit_system import (
     METRIC_SYSTEM as METRIC,
     US_CUSTOMARY_SYSTEM as IMPERIAL,
     UnitSystem,
 )
 
 
-async def test_significant_state_change(hass: HomeAssistant) -> None:
+async def test_significant_state_change(menuai: menuai) -> None:
     """Detect Climate significant state_changes."""
     attrs = {}
-    assert not async_check_significant_change(hass, "on", attrs, "on", attrs)
-    assert async_check_significant_change(hass, "on", attrs, "off", attrs)
+    assert not async_check_significant_change(menuai, "on", attrs, "on", attrs)
+    assert async_check_significant_change(menuai, "on", attrs, "off", attrs)
 
 
 @pytest.mark.parametrize(
@@ -126,15 +126,15 @@ async def test_significant_state_change(hass: HomeAssistant) -> None:
     ],
 )
 async def test_significant_atributes_change(
-    hass: HomeAssistant,
+    menuai: menuai,
     unit_system: UnitSystem,
     old_attrs: dict,
     new_attrs: dict,
     expected_result: bool,
 ) -> None:
     """Detect Climate significant attribute changes."""
-    hass.config.units = unit_system
+    menuai.config.units = unit_system
     assert (
-        async_check_significant_change(hass, "state", old_attrs, "state", new_attrs)
+        async_check_significant_change(menuai, "state", old_attrs, "state", new_attrs)
         == expected_result
     )

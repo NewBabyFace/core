@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry, ConfigEntryState
-from homeassistant.const import ATTR_DEVICE_ID
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv, device_registry as dr
+from menuai.config_entries import ConfigEntry, ConfigEntryState
+from menuai.const import ATTR_DEVICE_ID
+from menuai.core import menuai, ServiceCall
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv, device_registry as dr
 
 from .const import (
     ATTR_APPLICATION,
@@ -23,35 +23,35 @@ from .const import (
 from .coordinator import FullyKioskDataUpdateCoordinator
 
 
-async def async_setup_services(hass: HomeAssistant) -> None:
+async def async_setup_services(menuai: menuai) -> None:
     """Set up the services for the Fully Kiosk Browser integration."""
 
     async def collect_coordinators(
         device_ids: list[str],
     ) -> list[FullyKioskDataUpdateCoordinator]:
         config_entries = list[ConfigEntry]()
-        registry = dr.async_get(hass)
+        registry = dr.async_get(menuai)
         for target in device_ids:
             device = registry.async_get(target)
             if device:
                 device_entries = list[ConfigEntry]()
                 for entry_id in device.config_entries:
-                    entry = hass.config_entries.async_get_entry(entry_id)
+                    entry = menuai.config_entries.async_get_entry(entry_id)
                     if entry and entry.domain == DOMAIN:
                         device_entries.append(entry)
                 if not device_entries:
-                    raise HomeAssistantError(
+                    raise menuaiError(
                         f"Device '{target}' is not a {DOMAIN} device"
                     )
                 config_entries.extend(device_entries)
             else:
-                raise HomeAssistantError(
+                raise menuaiError(
                     f"Device '{target}' not found in device registry"
                 )
         coordinators = list[FullyKioskDataUpdateCoordinator]()
         for config_entry in config_entries:
             if config_entry.state != ConfigEntryState.LOADED:
-                raise HomeAssistantError(f"{config_entry.title} is not loaded")
+                raise menuaiError(f"{config_entry.title} is not loaded")
             coordinators.append(config_entry.runtime_data)
         return coordinators
 
@@ -90,7 +90,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         (async_start_app, SERVICE_START_APPLICATION, ATTR_APPLICATION),
     ]
     for service_handler, service_name, attrib in service_mapping:
-        hass.services.async_register(
+        menuai.services.async_register(
             DOMAIN,
             service_name,
             service_handler,
@@ -104,7 +104,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             ),
         )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_SET_CONFIG,
         async_set_config,

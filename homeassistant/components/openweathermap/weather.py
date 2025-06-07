@@ -2,23 +2,23 @@
 
 from __future__ import annotations
 
-from homeassistant.components.weather import (
+from menuai.components.weather import (
     Forecast,
     SingleCoordinatorWeatherEntity,
     WeatherEntityFeature,
 )
-from homeassistant.const import (
+from menuai.const import (
     UnitOfLength,
     UnitOfPrecipitationDepth,
     UnitOfPressure,
     UnitOfSpeed,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant, SupportsResponse, callback
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import entity_platform
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, SupportsResponse, callback
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import entity_platform
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import OpenweathermapConfigEntry
 from .const import (
@@ -51,7 +51,7 @@ SERVICE_GET_MINUTE_FORECAST = "get_minute_forecast"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: OpenweathermapConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

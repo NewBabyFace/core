@@ -6,7 +6,7 @@ from collections.abc import Mapping
 import logging
 from typing import Final
 
-from homeassistant.components.media_player import MediaClass
+from menuai.components.media_player import MediaClass
 
 LOGGER = logging.getLogger(__package__)
 

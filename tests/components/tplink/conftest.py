@@ -7,8 +7,8 @@ from unittest.mock import DEFAULT, AsyncMock, patch
 from kasa import DeviceConfig, Module
 import pytest
 
-from homeassistant.components.tplink import DOMAIN
-from homeassistant.core import HomeAssistant
+from menuai.components.tplink import DOMAIN
+from menuai.core import menuai
 
 from . import _mocked_device
 from .const import (
@@ -72,7 +72,7 @@ def _get_mock_devices():
 def mock_discovery():
     """Mock python-kasa discovery."""
     with patch.multiple(
-        "homeassistant.components.tplink.Discover",
+        "menuai.components.tplink.Discover",
         discover=DEFAULT,
         discover_single=DEFAULT,
         try_connect_all=DEFAULT,
@@ -92,7 +92,7 @@ def mock_discovery():
 @pytest.fixture
 def mock_connect():
     """Mock python-kasa connect."""
-    with patch("homeassistant.components.tplink.Device.connect") as mock_connect:
+    with patch("menuai.components.tplink.Device.connect") as mock_connect:
         devices = _get_mock_devices()
 
         def get_device(config):
@@ -118,11 +118,11 @@ def mock_setup_entry() -> Generator[AsyncMock]:
 def mock_init() -> Generator[dict[str, AsyncMock]]:
     """Override async_setup and async_setup_entry.
 
-    This fixture must be declared before the hass fixture to avoid errors
-    in the logs during teardown of the hass fixture which calls async_unload.
+    This fixture must be declared before the menuai fixture to avoid errors
+    in the logs during teardown of the menuai fixture which calls async_unload.
     """
     with patch.multiple(
-        "homeassistant.components.tplink",
+        "menuai.components.tplink",
         async_setup=DEFAULT,
         async_setup_entry=DEFAULT,
         async_unload_entry=DEFAULT,
@@ -157,13 +157,13 @@ def mock_camera_config_entry() -> MockConfigEntry:
 
 @pytest.fixture
 async def mock_added_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_init,
 ) -> MockConfigEntry:
     """Mock ConfigEntry that's been added to HA."""
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
-    assert DOMAIN in hass.config_entries.async_domains()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
+    assert DOMAIN in menuai.config_entries.async_domains()
     return mock_config_entry

@@ -8,40 +8,40 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 import voluptuous as vol
 
-from homeassistant.components.kitchen_sink import DOMAIN
-from homeassistant.components.recorder import get_instance
-from homeassistant.components.recorder.statistics import (
+from menuai.components.kitchen_sink import DOMAIN
+from menuai.components.recorder import get_instance
+from menuai.components.recorder.statistics import (
     StatisticMeanType,
     async_add_external_statistics,
     get_last_statistics,
     list_statistic_ids,
 )
-from homeassistant.components.repairs import DOMAIN as REPAIRS_DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
-from homeassistant.util.unit_system import US_CUSTOMARY_SYSTEM
+from menuai.components.repairs import DOMAIN as REPAIRS_DOMAIN
+from menuai.core import menuai
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
+from menuai.util.unit_system import US_CUSTOMARY_SYSTEM
 
 from tests.components.recorder.common import async_wait_recording_done
 from tests.typing import ClientSessionGenerator, WebSocketGenerator
 
 
 @pytest.fixture
-def mock_history(hass: HomeAssistant) -> None:
+def mock_history(menuai: menuai) -> None:
     """Mock history component loaded."""
-    hass.config.components.add("history")
+    menuai.config.components.add("history")
 
 
 @pytest.mark.usefixtures("recorder_mock", "mock_history")
-async def test_demo_statistics(hass: HomeAssistant) -> None:
+async def test_demo_statistics(menuai: menuai) -> None:
     """Test that the kitchen sink component makes some statistics available."""
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await async_wait_recording_done(hass)
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {}})
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await async_wait_recording_done(menuai)
 
-    statistic_ids = await get_instance(hass).async_add_executor_job(
-        list_statistic_ids, hass
+    statistic_ids = await get_instance(menuai).async_add_executor_job(
+        list_statistic_ids, menuai
     )
     assert {
         "display_unit_of_measurement": "°C",
@@ -68,9 +68,9 @@ async def test_demo_statistics(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("recorder_mock", "mock_history")
-async def test_demo_statistics_growth(hass: HomeAssistant) -> None:
+async def test_demo_statistics_growth(menuai: menuai) -> None:
     """Test that the kitchen sink sum statistics adds to the previous state."""
-    hass.config.units = US_CUSTOMARY_SYSTEM
+    menuai.config.units = US_CUSTOMARY_SYSTEM
 
     now = dt_util.now()
     last_week = now - datetime.timedelta(days=7)
@@ -91,16 +91,16 @@ async def test_demo_statistics_growth(hass: HomeAssistant) -> None:
             "sum": 2**20,
         }
     ]
-    async_add_external_statistics(hass, metadata, statistics)
-    await async_wait_recording_done(hass)
+    async_add_external_statistics(menuai, metadata, statistics)
+    await async_wait_recording_done(menuai)
 
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await async_wait_recording_done(hass)
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {}})
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await async_wait_recording_done(menuai)
 
-    statistics = await get_instance(hass).async_add_executor_job(
-        get_last_statistics, hass, 1, statistic_id, False, {"sum"}
+    statistics = await get_instance(menuai).async_add_executor_job(
+        get_last_statistics, menuai, 1, statistic_id, False, {"sum"}
     )
     assert statistics[statistic_id][0]["sum"] > 2**20
     assert statistics[statistic_id][0]["sum"] <= (2**20 + 24)
@@ -108,17 +108,17 @@ async def test_demo_statistics_growth(hass: HomeAssistant) -> None:
 
 @pytest.mark.usefixtures("recorder_mock", "mock_history")
 async def test_statistics_issues(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test that the kitchen sink sum statistics causes statistics issues."""
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
-    await hass.async_block_till_done()
-    await hass.async_start()
-    await async_wait_recording_done(hass)
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {}})
+    await menuai.async_block_till_done()
+    await menuai.async_start()
+    await async_wait_recording_done(menuai)
 
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
     await ws_client.send_json_auto_id({"type": "recorder/validate_statistics"})
     response = await ws_client.receive_json()
     assert response["success"]
@@ -128,18 +128,18 @@ async def test_statistics_issues(
 @pytest.mark.freeze_time("2023-10-21")
 @pytest.mark.usefixtures("mock_history")
 async def test_issues_created(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test issues are created and can be fixed."""
-    assert await async_setup_component(hass, REPAIRS_DOMAIN, {REPAIRS_DOMAIN: {}})
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
-    await hass.async_block_till_done()
-    await hass.async_start()
+    assert await async_setup_component(menuai, REPAIRS_DOMAIN, {REPAIRS_DOMAIN: {}})
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {}})
+    await menuai.async_block_till_done()
+    await menuai.async_start()
 
-    ws_client = await hass_ws_client(hass)
-    client = await hass_client()
+    ws_client = await menuai_ws_client(menuai)
+    client = await menuai_client()
 
     await ws_client.send_json({"id": 1, "type": "repairs/list_issues"})
     msg = await ws_client.receive_json()
@@ -221,7 +221,7 @@ async def test_issues_created(
                 "breaks_in_ha_version": None,
                 "created": "2023-10-21T00:00:00+00:00",
                 "dismissed_version": None,
-                "domain": "homeassistant",
+                "domain": "menuai",
                 "is_fixable": False,
                 "issue_domain": DOMAIN,
                 "issue_id": ANY,
@@ -336,7 +336,7 @@ async def test_issues_created(
                 "breaks_in_ha_version": None,
                 "created": "2023-10-21T00:00:00+00:00",
                 "dismissed_version": None,
-                "domain": "homeassistant",
+                "domain": "menuai",
                 "is_fixable": False,
                 "issue_domain": DOMAIN,
                 "issue_id": ANY,
@@ -351,19 +351,19 @@ async def test_issues_created(
 
 
 async def test_service(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test we can call the service."""
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {}})
 
     with pytest.raises(vol.error.MultipleInvalid):
-        await hass.services.async_call(DOMAIN, "test_service_1", blocking=True)
+        await menuai.services.async_call(DOMAIN, "test_service_1", blocking=True)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN, "test_service_1", {"field_1": 1, "field_2": "auto"}, blocking=True
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         "test_service_1",
         {"field_1": 1, "field_2": "auto", "field_3": 1, "field_4": "forwards"},

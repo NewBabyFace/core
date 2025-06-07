@@ -13,9 +13,9 @@ _LOGGER = logging.getLogger(__name__)
 class ConnectXiaomiDevice:
     """Class to async connect to a Xiaomi Device."""
 
-    def __init__(self, hass):
+    def __init__(self, menuai):
         """Initialize the entity."""
-        self._hass = hass
+        self._menuai = menuai
         self._device = None
         self._device_info = None
 
@@ -36,7 +36,7 @@ class ConnectXiaomiDevice:
         try:
             self._device = Device(host, token)
             # get the device info
-            self._device_info = await self._hass.async_add_executor_job(
+            self._device_info = await self._menuai.async_add_executor_job(
                 self._device.info
             )
         except DeviceException as error:

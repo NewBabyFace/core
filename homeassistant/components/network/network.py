@@ -5,11 +5,11 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.singleton import singleton
-from homeassistant.helpers.storage import Store
-from homeassistant.util.async_ import create_eager_task
-from homeassistant.util.hass_dict import HassKey
+from menuai.core import menuai, callback
+from menuai.helpers.singleton import singleton
+from menuai.helpers.storage import Store
+from menuai.util.async_ import create_eager_task
+from menuai.util.menuai_dict import menuaiKey
 
 from .const import (
     ATTR_CONFIGURED_ADAPTERS,
@@ -23,19 +23,19 @@ from .util import async_load_adapters, enable_adapters, enable_auto_detected_ada
 
 _LOGGER = logging.getLogger(__name__)
 
-DATA_NETWORK: HassKey[Network] = HassKey(DOMAIN)
+DATA_NETWORK: menuaiKey[Network] = menuaiKey(DOMAIN)
 
 
 @callback
-def async_get_loaded_network(hass: HomeAssistant) -> Network:
+def async_get_loaded_network(menuai: menuai) -> Network:
     """Get network singleton."""
-    return hass.data[DATA_NETWORK]
+    return menuai.data[DATA_NETWORK]
 
 
 @singleton(DOMAIN)
-async def async_get_network(hass: HomeAssistant) -> Network:
+async def async_get_network(menuai: menuai) -> Network:
     """Get network singleton."""
-    network = Network(hass)
+    network = Network(menuai)
     await network.async_setup()
     network.async_configure()
 
@@ -46,10 +46,10 @@ async def async_get_network(hass: HomeAssistant) -> Network:
 class Network:
     """Network helper class for the network integration."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize the Network class."""
         self._store = Store[dict[str, list[str]]](
-            hass, STORAGE_VERSION, STORAGE_KEY, atomic_writes=True
+            menuai, STORAGE_VERSION, STORAGE_KEY, atomic_writes=True
         )
         self._data: dict[str, list[str]] = {}
         self.adapters: list[Adapter] = []

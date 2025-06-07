@@ -16,15 +16,15 @@ import time
 from typing import TYPE_CHECKING, Any, Literal, cast
 import wave
 
-import hass_nabucasa
+import menuai_nabucasa
 import voluptuous as vol
 
-from homeassistant.components import conversation, stt, tts, wake_word, websocket_api
-from homeassistant.const import ATTR_SUPPORTED_FEATURES, MATCH_ALL
-from homeassistant.core import Context, HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import chat_session, intent
-from homeassistant.helpers.collection import (
+from menuai.components import conversation, stt, tts, wake_word, websocket_api
+from menuai.const import ATTR_SUPPORTED_FEATURES, MATCH_ALL
+from menuai.core import Context, menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import chat_session, intent
+from menuai.helpers.collection import (
     CHANGE_UPDATED,
     CollectionError,
     ItemNotFound,
@@ -32,16 +32,16 @@ from homeassistant.helpers.collection import (
     StorageCollection,
     StorageCollectionWebsocket,
 )
-from homeassistant.helpers.singleton import singleton
-from homeassistant.helpers.storage import Store
-from homeassistant.helpers.typing import UNDEFINED, UndefinedType, VolDictType
-from homeassistant.util import (
+from menuai.helpers.singleton import singleton
+from menuai.helpers.storage import Store
+from menuai.helpers.typing import UNDEFINED, UndefinedType, VolDictType
+from menuai.util import (
     dt as dt_util,
     language as language_util,
     ulid as ulid_util,
 )
-from homeassistant.util.hass_dict import HassKey
-from homeassistant.util.limited_size_dict import LimitedSizeDict
+from menuai.util.menuai_dict import menuaiKey
+from menuai.util.limited_size_dict import LimitedSizeDict
 
 from .audio_enhancer import AudioEnhancer, EnhancedAudioChunk, MicroVadSpeexEnhancer
 from .const import (
@@ -72,7 +72,7 @@ from .error import (
 from .vad import AudioBuffer, VoiceActivityTimeout, VoiceCommandSegmenter, chunk_samples
 
 if TYPE_CHECKING:
-    from hassil.recognize import RecognizeResult
+    from menuaiil.recognize import RecognizeResult
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -85,8 +85,8 @@ ENGINE_LANGUAGE_PAIRS = (
     ("tts_engine", "tts_language"),
 )
 
-KEY_ASSIST_PIPELINE: HassKey[PipelineData] = HassKey(DOMAIN)
-KEY_PIPELINE_CONVERSATION_DATA: HassKey[dict[str, PipelineConversationData]] = HassKey(
+KEY_ASSIST_PIPELINE: menuaiKey[PipelineData] = menuaiKey(DOMAIN)
+KEY_PIPELINE_CONVERSATION_DATA: menuaiKey[dict[str, PipelineConversationData]] = menuaiKey(
     "pipeline_conversation_data"
 )
 # Number of response parts to handle before streaming the response
@@ -129,7 +129,7 @@ def _async_local_fallback_intent_filter(result: RecognizeResult) -> bool:
 
 @callback
 def _async_resolve_default_pipeline_settings(
-    hass: HomeAssistant,
+    menuai: menuai,
     *,
     conversation_engine_id: str | None = None,
     stt_engine_id: str | None = None,
@@ -138,7 +138,7 @@ def _async_resolve_default_pipeline_settings(
 ) -> dict[str, str | None]:
     """Resolve settings for a default pipeline.
 
-    The default pipeline will use the homeassistant conversation agent and the
+    The default pipeline will use the menuai conversation agent and the
     default stt / tts engines if none are specified.
     """
     conversation_language = "en"
@@ -154,21 +154,21 @@ def _async_resolve_default_pipeline_settings(
     if conversation_engine_id is None:
         conversation_engine_id = conversation.HOME_ASSISTANT_AGENT
 
-    # Find a matching language supported by the Home Assistant conversation agent
+    # Find a matching language supported by the MenuAI conversation agent
     conversation_languages = language_util.matches(
-        hass.config.language,
-        conversation.async_get_conversation_languages(hass, conversation_engine_id),
-        country=hass.config.country,
+        menuai.config.language,
+        conversation.async_get_conversation_languages(menuai, conversation_engine_id),
+        country=menuai.config.country,
     )
     if conversation_languages:
-        pipeline_language = hass.config.language
+        pipeline_language = menuai.config.language
         conversation_language = conversation_languages[0]
 
     if stt_engine_id is None:
-        stt_engine_id = stt.async_default_engine(hass)
+        stt_engine_id = stt.async_default_engine(menuai)
 
     if stt_engine_id is not None:
-        stt_engine = stt.async_get_speech_to_text_engine(hass, stt_engine_id)
+        stt_engine = stt.async_get_speech_to_text_engine(menuai, stt_engine_id)
         if stt_engine is None:
             stt_engine_id = None
 
@@ -176,7 +176,7 @@ def _async_resolve_default_pipeline_settings(
         stt_languages = language_util.matches(
             pipeline_language,
             stt_engine.supported_languages,
-            country=hass.config.country,
+            country=menuai.config.country,
         )
         if stt_languages:
             stt_language = stt_languages[0]
@@ -189,10 +189,10 @@ def _async_resolve_default_pipeline_settings(
             stt_engine_id = None
 
     if tts_engine_id is None:
-        tts_engine_id = tts.async_default_engine(hass)
+        tts_engine_id = tts.async_default_engine(menuai)
 
     if tts_engine_id is not None:
-        tts_engine = tts.get_engine_instance(hass, tts_engine_id)
+        tts_engine = tts.get_engine_instance(menuai, tts_engine_id)
         if tts_engine is None:
             tts_engine_id = None
 
@@ -200,7 +200,7 @@ def _async_resolve_default_pipeline_settings(
         tts_languages = language_util.matches(
             pipeline_language,
             tts_engine.supported_languages,
-            country=hass.config.country,
+            country=menuai.config.country,
         )
         if tts_languages:
             tts_language = tts_languages[0]
@@ -218,7 +218,7 @@ def _async_resolve_default_pipeline_settings(
     return {
         "conversation_engine": conversation_engine_id,
         "conversation_language": conversation_language,
-        "language": hass.config.language,
+        "language": menuai.config.language,
         "name": pipeline_name,
         "stt_engine": stt_engine_id,
         "stt_language": stt_language,
@@ -231,34 +231,34 @@ def _async_resolve_default_pipeline_settings(
 
 
 async def _async_create_default_pipeline(
-    hass: HomeAssistant, pipeline_store: PipelineStorageCollection
+    menuai: menuai, pipeline_store: PipelineStorageCollection
 ) -> Pipeline:
     """Create a default pipeline.
 
-    The default pipeline will use the homeassistant conversation agent and the
+    The default pipeline will use the menuai conversation agent and the
     default stt / tts engines.
     """
     pipeline_settings = _async_resolve_default_pipeline_settings(
-        hass, pipeline_name="Home Assistant"
+        menuai, pipeline_name="MenuAI"
     )
     return await pipeline_store.async_create_item(pipeline_settings)
 
 
 async def async_create_default_pipeline(
-    hass: HomeAssistant,
+    menuai: menuai,
     stt_engine_id: str,
     tts_engine_id: str,
     pipeline_name: str,
 ) -> Pipeline | None:
     """Create a pipeline with default settings.
 
-    The default pipeline will use the homeassistant conversation agent and the
+    The default pipeline will use the menuai conversation agent and the
     specified stt / tts engines.
     """
-    pipeline_data = hass.data[KEY_ASSIST_PIPELINE]
+    pipeline_data = menuai.data[KEY_ASSIST_PIPELINE]
     pipeline_store = pipeline_data.pipeline_store
     pipeline_settings = _async_resolve_default_pipeline_settings(
-        hass,
+        menuai,
         stt_engine_id=stt_engine_id,
         tts_engine_id=tts_engine_id,
         pipeline_name=pipeline_name,
@@ -273,12 +273,12 @@ async def async_create_default_pipeline(
 
 @callback
 def _async_get_pipeline_from_conversation_entity(
-    hass: HomeAssistant, entity_id: str
+    menuai: menuai, entity_id: str
 ) -> Pipeline:
     """Get a pipeline by conversation entity ID."""
-    entity = hass.states.get(entity_id)
+    entity = menuai.states.get(entity_id)
     settings = _async_resolve_default_pipeline_settings(
-        hass,
+        menuai,
         pipeline_name=entity.name if entity else entity_id,
         conversation_engine_id=entity_id,
     )
@@ -288,16 +288,16 @@ def _async_get_pipeline_from_conversation_entity(
 
 
 @callback
-def async_get_pipeline(hass: HomeAssistant, pipeline_id: str | None = None) -> Pipeline:
+def async_get_pipeline(menuai: menuai, pipeline_id: str | None = None) -> Pipeline:
     """Get a pipeline by id or the preferred pipeline."""
-    pipeline_data = hass.data[KEY_ASSIST_PIPELINE]
+    pipeline_data = menuai.data[KEY_ASSIST_PIPELINE]
 
     if pipeline_id is None:
         # A pipeline was not specified, use the preferred one
         pipeline_id = pipeline_data.pipeline_store.async_get_preferred_item()
 
     if pipeline_id.startswith("conversation."):
-        return _async_get_pipeline_from_conversation_entity(hass, pipeline_id)
+        return _async_get_pipeline_from_conversation_entity(menuai, pipeline_id)
 
     pipeline = pipeline_data.pipeline_store.data.get(pipeline_id)
 
@@ -311,15 +311,15 @@ def async_get_pipeline(hass: HomeAssistant, pipeline_id: str | None = None) -> P
 
 
 @callback
-def async_get_pipelines(hass: HomeAssistant) -> list[Pipeline]:
+def async_get_pipelines(menuai: menuai) -> list[Pipeline]:
     """Get all pipelines."""
-    pipeline_data = hass.data[KEY_ASSIST_PIPELINE]
+    pipeline_data = menuai.data[KEY_ASSIST_PIPELINE]
 
     return list(pipeline_data.pipeline_store.data.values())
 
 
 async def async_update_pipeline(
-    hass: HomeAssistant,
+    menuai: menuai,
     pipeline: Pipeline,
     *,
     conversation_engine: str | UndefinedType = UNDEFINED,
@@ -336,7 +336,7 @@ async def async_update_pipeline(
     prefer_local_intents: bool | UndefinedType = UNDEFINED,
 ) -> None:
     """Update a pipeline."""
-    pipeline_data = hass.data[KEY_ASSIST_PIPELINE]
+    pipeline_data = menuai.data[KEY_ASSIST_PIPELINE]
 
     updates: dict[str, Any] = pipeline.to_json()
     updates.pop("id")
@@ -546,7 +546,7 @@ class AudioSettings:
 class PipelineRun:
     """Running context for a pipeline."""
 
-    hass: HomeAssistant
+    menuai: menuai
     context: Context
     pipeline: Pipeline
     start_stage: PipelineStage
@@ -595,7 +595,7 @@ class PipelineRun:
 
     def __post_init__(self) -> None:
         """Set language for pipeline."""
-        self.language = self.pipeline.language or self.hass.config.language
+        self.language = self.pipeline.language or self.menuai.config.language
 
         # wake -> stt -> intent -> tts
         if PIPELINE_STAGE_ORDER.index(self.end_stage) < PIPELINE_STAGE_ORDER.index(
@@ -603,7 +603,7 @@ class PipelineRun:
         ):
             raise InvalidPipelineStagesError(self.start_stage, self.end_stage)
 
-        pipeline_data = self.hass.data[KEY_ASSIST_PIPELINE]
+        pipeline_data = self.menuai.data[KEY_ASSIST_PIPELINE]
         if self.pipeline.id not in pipeline_data.pipeline_debug:
             pipeline_data.pipeline_debug[self.pipeline.id] = LimitedSizeDict(
                 size_limit=STORED_PIPELINE_RUNS
@@ -631,7 +631,7 @@ class PipelineRun:
     def process_event(self, event: PipelineEvent) -> None:
         """Log an event and call listener."""
         self.event_callback(event)
-        pipeline_data = self.hass.data[KEY_ASSIST_PIPELINE]
+        pipeline_data = self.menuai.data[KEY_ASSIST_PIPELINE]
         if self.id not in pipeline_data.pipeline_debug[self.pipeline.id]:
             # This run has been evicted from the logged pipeline runs already
             return
@@ -678,13 +678,13 @@ class PipelineRun:
             )
         )
 
-        pipeline_data = self.hass.data[KEY_ASSIST_PIPELINE]
+        pipeline_data = self.menuai.data[KEY_ASSIST_PIPELINE]
         pipeline_data.pipeline_runs.remove_run(self)
 
     async def prepare_wake_word_detection(self) -> None:
         """Prepare wake-word-detection."""
         entity_id = self.pipeline.wake_word_entity or wake_word.async_default_entity(
-            self.hass
+            self.menuai
         )
         if entity_id is None:
             raise WakeWordDetectionError(
@@ -693,7 +693,7 @@ class PipelineRun:
             )
 
         wake_word_entity = wake_word.async_get_wake_word_detection_entity(
-            self.hass, entity_id
+            self.menuai, entity_id
         )
         if wake_word_entity is None:
             raise WakeWordDetectionError(
@@ -791,7 +791,7 @@ class PipelineRun:
             wake_word_output: dict[str, Any] = {}
         else:
             # Avoid duplicate detections by checking cooldown
-            last_wake_up = self.hass.data[DATA_LAST_WAKE_UP].get(
+            last_wake_up = self.menuai.data[DATA_LAST_WAKE_UP].get(
                 result.wake_word_phrase
             )
             if last_wake_up is not None:
@@ -804,7 +804,7 @@ class PipelineRun:
                     raise DuplicateWakeUpDetectedError(result.wake_word_phrase)
 
             # Record last wake up time to block duplicate detections
-            self.hass.data[DATA_LAST_WAKE_UP][result.wake_word_phrase] = (
+            self.menuai.data[DATA_LAST_WAKE_UP][result.wake_word_phrase] = (
                 time.monotonic()
             )
 
@@ -875,7 +875,7 @@ class PipelineRun:
         """Prepare speech-to-text."""
         # pipeline.stt_engine can't be None or this function is not called
         stt_provider = stt.async_get_speech_to_text_engine(
-            self.hass,
+            self.menuai,
             self.pipeline.stt_engine,  # type: ignore[arg-type]
         )
 
@@ -907,9 +907,9 @@ class PipelineRun:
         """Run speech-to-text portion of pipeline. Returns the spoken text."""
         # Create a background task to prepare the conversation agent
         if self.end_stage >= PipelineStage.INTENT and self.intent_agent:
-            self.hass.async_create_background_task(
+            self.menuai.async_create_background_task(
                 conversation.async_prepare_agent(
-                    self.hass, self.intent_agent.id, self.language
+                    self.menuai, self.intent_agent.id, self.language
                 ),
                 f"prepare conversation agent {self.intent_agent.id}",
             )
@@ -947,10 +947,10 @@ class PipelineRun:
             )
         except (asyncio.CancelledError, TimeoutError):
             raise  # expected
-        except hass_nabucasa.auth.Unauthenticated as src_error:
+        except menuai_nabucasa.auth.Unauthenticated as src_error:
             raise SpeechToTextError(
                 code="cloud-auth-failed",
-                message="Home Assistant Cloud authentication failed",
+                message="MenuAI Cloud authentication failed",
             ) from src_error
         except Exception as src_error:
             _LOGGER.exception("Unexpected error during speech-to-text")
@@ -1024,12 +1024,12 @@ class PipelineRun:
     async def prepare_recognize_intent(self, session: chat_session.ChatSession) -> None:
         """Prepare recognizing an intent."""
         self._conversation_data = async_get_pipeline_conversation_data(
-            self.hass, session
+            self.menuai, session
         )
 
         if self._conversation_data.continue_conversation_agent is not None:
             agent_info = conversation.async_get_agent_info(
-                self.hass, self._conversation_data.continue_conversation_agent
+                self.menuai, self._conversation_data.continue_conversation_agent
             )
             self._conversation_data.continue_conversation_agent = None
             if agent_info is None:
@@ -1041,7 +1041,7 @@ class PipelineRun:
 
         else:
             agent_info = conversation.async_get_agent_info(
-                self.hass,
+                self.menuai,
                 self.pipeline.conversation_engine or conversation.HOME_ASSISTANT_AGENT,
             )
 
@@ -1114,7 +1114,7 @@ class PipelineRun:
                 if (
                     trigger_response_text
                     := await conversation.async_handle_sentence_triggers(
-                        self.hass, user_input
+                        self.menuai, user_input
                     )
                 ) is not None:
                     # Sentence trigger matched
@@ -1128,7 +1128,7 @@ class PipelineRun:
                 # If the LLM has API access, we filter out some sentences that are
                 # interfering with LLM operation.
                 if (
-                    intent_agent_state := self.hass.states.get(self.intent_agent.id)
+                    intent_agent_state := self.menuai.states.get(self.intent_agent.id)
                 ) and intent_agent_state.attributes.get(
                     ATTR_SUPPORTED_FEATURES, 0
                 ) & conversation.ConversationEntityFeature.CONTROL:
@@ -1140,7 +1140,7 @@ class PipelineRun:
                     and self.pipeline.prefer_local_intents
                     and (
                         intent_response := await conversation.async_handle_intents(
-                            self.hass,
+                            self.menuai,
                             user_input,
                             intent_filter=intent_filter,
                         )
@@ -1228,10 +1228,10 @@ class PipelineRun:
 
             with (
                 chat_session.async_get_chat_session(
-                    self.hass, user_input.conversation_id
+                    self.menuai, user_input.conversation_id
                 ) as session,
                 conversation.async_get_chat_log(
-                    self.hass,
+                    self.menuai,
                     session,
                     user_input,
                     chat_log_delta_listener=chat_log_delta_listener,
@@ -1256,7 +1256,7 @@ class PipelineRun:
                 else:
                     # Fall back to pipeline conversation agent
                     conversation_result = await conversation.async_converse(
-                        hass=self.hass,
+                        menuai=self.menuai,
                         text=user_input.text,
                         conversation_id=user_input.conversation_id,
                         device_id=user_input.device_id,
@@ -1316,12 +1316,12 @@ class PipelineRun:
 
         try:
             self.tts_stream = tts.async_create_stream(
-                hass=self.hass,
+                menuai=self.menuai,
                 engine=engine,
                 language=self.pipeline.tts_language,
                 options=tts_options,
             )
-        except HomeAssistantError as err:
+        except menuaiError as err:
             raise TextToSpeechError(
                 code="tts-not-supported",
                 message=(
@@ -1371,7 +1371,7 @@ class PipelineRun:
             return
 
         # Forward to device audio capture
-        pipeline_data = self.hass.data[KEY_ASSIST_PIPELINE]
+        pipeline_data = self.menuai.data[KEY_ASSIST_PIPELINE]
         audio_queue = pipeline_data.device_audio_queues.get(self._device_id)
         if audio_queue is None:
             return
@@ -1390,7 +1390,7 @@ class PipelineRun:
 
         # Directory to save audio for each pipeline run.
         # Configured in YAML for assist_pipeline.
-        if debug_recording_dir := self.hass.data[DATA_CONFIG].get(
+        if debug_recording_dir := self.menuai.data[DATA_CONFIG].get(
             CONF_DEBUG_RECORDING_DIR
         ):
             if self._device_id is None:
@@ -1429,7 +1429,7 @@ class PipelineRun:
         # in self.end() to signal the thread to stop.
 
         # Wait until the thread has finished to ensure that files are fully written
-        await self.hass.async_add_executor_job(self.debug_recording_thread.join)
+        await self.menuai.async_add_executor_job(self.debug_recording_thread.join)
 
         self.debug_recording_queue = None
         self.debug_recording_thread = None
@@ -1596,7 +1596,7 @@ class PipelineInput:
 
                 if self.wake_word_phrase is not None:
                     # Avoid duplicate wake-ups by checking cooldown
-                    last_wake_up = self.run.hass.data[DATA_LAST_WAKE_UP].get(
+                    last_wake_up = self.run.menuai.data[DATA_LAST_WAKE_UP].get(
                         self.wake_word_phrase
                     )
                     if last_wake_up is not None:
@@ -1609,7 +1609,7 @@ class PipelineInput:
                             raise DuplicateWakeUpDetectedError(self.wake_word_phrase)
 
                     # Record last wake up time to block duplicate detections
-                    self.run.hass.data[DATA_LAST_WAKE_UP][self.wake_word_phrase] = (
+                    self.run.menuai.data[DATA_LAST_WAKE_UP][self.wake_word_phrase] = (
                         time.monotonic()
                     )
 
@@ -1768,7 +1768,7 @@ class PipelineStorageCollection(
     async def _async_load_data(self) -> SerializedPipelineStorageCollection | None:
         """Load the data."""
         if not (data := await super()._async_load_data()):
-            pipeline = await _async_create_default_pipeline(self.hass, self)
+            pipeline = await _async_create_default_pipeline(self.menuai, self)
             self._preferred_item = pipeline.id
             return data
 
@@ -1838,12 +1838,12 @@ class PipelineStorageCollectionWebsocket(
     """Class to expose storage collection management over websocket."""
 
     @callback
-    def async_setup(self, hass: HomeAssistant) -> None:
+    def async_setup(self, menuai: menuai) -> None:
         """Set up the websocket commands."""
-        super().async_setup(hass)
+        super().async_setup(menuai)
 
         websocket_api.async_register_command(
-            hass,
+            menuai,
             f"{self.api_prefix}/get",
             self.ws_get_item,
             websocket_api.BASE_COMMAND_MESSAGE_SCHEMA.extend(
@@ -1855,7 +1855,7 @@ class PipelineStorageCollectionWebsocket(
         )
 
         websocket_api.async_register_command(
-            hass,
+            menuai,
             f"{self.api_prefix}/set_preferred",
             websocket_api.require_admin(
                 websocket_api.async_response(self.ws_set_preferred_item)
@@ -1869,26 +1869,26 @@ class PipelineStorageCollectionWebsocket(
         )
 
     async def ws_delete_item(
-        self, hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict
+        self, menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict
     ) -> None:
         """Delete an item."""
         try:
-            await super().ws_delete_item(hass, connection, msg)
+            await super().ws_delete_item(menuai, connection, msg)
         except PipelinePreferred as exc:
             connection.send_error(msg["id"], websocket_api.ERR_NOT_ALLOWED, str(exc))
 
     @callback
     def ws_get_item(
-        self, hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict
+        self, menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict
     ) -> None:
         """Get an item."""
         item_id = msg.get(self.item_id_key)
         if item_id is None:
             item_id = self.storage_collection.async_get_preferred_item()
 
-        if item_id.startswith("conversation.") and hass.states.get(item_id):
+        if item_id.startswith("conversation.") and menuai.states.get(item_id):
             connection.send_result(
-                msg["id"], _async_get_pipeline_from_conversation_entity(hass, item_id)
+                msg["id"], _async_get_pipeline_from_conversation_entity(menuai, item_id)
             )
             return
 
@@ -1904,20 +1904,20 @@ class PipelineStorageCollectionWebsocket(
 
     @callback
     def ws_list_item(
-        self, hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict
+        self, menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict
     ) -> None:
         """List items."""
         connection.send_result(
             msg["id"],
             {
-                "pipelines": async_get_pipelines(hass),
+                "pipelines": async_get_pipelines(menuai),
                 "preferred_pipeline": self.storage_collection.async_get_preferred_item(),
             },
         )
 
     async def ws_set_preferred_item(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         connection: websocket_api.ActiveConnection,
         msg: dict[str, Any],
     ) -> None:
@@ -1986,7 +1986,7 @@ class AssistDevice:
 
 
 class PipelineData:
-    """Store and debug data stored in hass.data."""
+    """Store and debug data stored in menuai.data."""
 
     def __init__(self, pipeline_store: PipelineStorageCollection) -> None:
         """Initialize."""
@@ -2031,11 +2031,11 @@ class PipelineStore(Store[SerializedPipelineStorageCollection]):
 
 
 @singleton(KEY_ASSIST_PIPELINE, async_=True)
-async def async_setup_pipeline_store(hass: HomeAssistant) -> PipelineData:
+async def async_setup_pipeline_store(menuai: menuai) -> PipelineData:
     """Set up the pipeline storage collection."""
     pipeline_store = PipelineStorageCollection(
         PipelineStore(
-            hass, STORAGE_VERSION, STORAGE_KEY, minor_version=STORAGE_VERSION_MINOR
+            menuai, STORAGE_VERSION, STORAGE_KEY, minor_version=STORAGE_VERSION_MINOR
         )
     )
     await pipeline_store.async_load()
@@ -2045,30 +2045,30 @@ async def async_setup_pipeline_store(hass: HomeAssistant) -> PipelineData:
         "pipeline",
         PIPELINE_FIELDS,
         PIPELINE_FIELDS,
-    ).async_setup(hass)
+    ).async_setup(menuai)
     return PipelineData(pipeline_store)
 
 
 @callback
 def async_migrate_engine(
-    hass: HomeAssistant,
+    menuai: menuai,
     engine_type: Literal["conversation", "stt", "tts", "wake_word"],
     old_value: str,
     new_value: str,
 ) -> None:
     """Register a migration of an engine used in pipelines."""
-    hass.data.setdefault(DATA_MIGRATIONS, {})[engine_type] = (old_value, new_value)
+    menuai.data.setdefault(DATA_MIGRATIONS, {})[engine_type] = (old_value, new_value)
 
     # Run migrations when config is already loaded
-    if DATA_CONFIG in hass.data:
-        hass.async_create_background_task(
-            async_run_migrations(hass), "assist_pipeline_migration", eager_start=True
+    if DATA_CONFIG in menuai.data:
+        menuai.async_create_background_task(
+            async_run_migrations(menuai), "assist_pipeline_migration", eager_start=True
         )
 
 
-async def async_run_migrations(hass: HomeAssistant) -> None:
+async def async_run_migrations(menuai: menuai) -> None:
     """Run pipeline migrations."""
-    if not (migrations := hass.data.get(DATA_MIGRATIONS)):
+    if not (migrations := menuai.data.get(DATA_MIGRATIONS)):
         return
 
     engine_attr = {
@@ -2080,7 +2080,7 @@ async def async_run_migrations(hass: HomeAssistant) -> None:
 
     updates = []
 
-    for pipeline in async_get_pipelines(hass):
+    for pipeline in async_get_pipelines(menuai):
         attr_updates = {}
         for engine_type, (old_value, new_value) in migrations.items():
             if getattr(pipeline, engine_attr[engine_type]) == old_value:
@@ -2090,7 +2090,7 @@ async def async_run_migrations(hass: HomeAssistant) -> None:
             updates.append((pipeline, attr_updates))
 
     for pipeline, attr_updates in updates:
-        await async_update_pipeline(hass, pipeline, **attr_updates)
+        await async_update_pipeline(menuai, pipeline, **attr_updates)
 
 
 @dataclass
@@ -2103,13 +2103,13 @@ class PipelineConversationData:
 
 @callback
 def async_get_pipeline_conversation_data(
-    hass: HomeAssistant, session: chat_session.ChatSession
+    menuai: menuai, session: chat_session.ChatSession
 ) -> PipelineConversationData:
     """Get the pipeline data for a specific conversation."""
-    all_conversation_data = hass.data.get(KEY_PIPELINE_CONVERSATION_DATA)
+    all_conversation_data = menuai.data.get(KEY_PIPELINE_CONVERSATION_DATA)
     if all_conversation_data is None:
         all_conversation_data = {}
-        hass.data[KEY_PIPELINE_CONVERSATION_DATA] = all_conversation_data
+        menuai.data[KEY_PIPELINE_CONVERSATION_DATA] = all_conversation_data
 
     data = all_conversation_data.get(session.conversation_id)
 

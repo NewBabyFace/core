@@ -5,15 +5,15 @@ from __future__ import annotations
 from devolo_plc_api.device import Device
 from devolo_plc_api.device_api import ConnectedStationInfo
 
-from homeassistant.components.device_tracker import (
+from menuai.components.device_tracker import (
     DOMAIN as DEVICE_TRACKER_DOMAIN,
     ScannerEntity,
 )
-from homeassistant.const import STATE_UNKNOWN, UnitOfFrequency
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.const import STATE_UNKNOWN, UnitOfFrequency
+from menuai.core import menuai, callback
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import CONNECTED_WIFI_CLIENTS, DOMAIN, WIFI_APTYPE, WIFI_BANDS
 from .coordinator import DevoloDataUpdateCoordinator, DevoloHomeNetworkConfigEntry
@@ -22,7 +22,7 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: DevoloHomeNetworkConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -31,7 +31,7 @@ async def async_setup_entry(
     coordinators: dict[str, DevoloDataUpdateCoordinator[list[ConnectedStationInfo]]] = (
         entry.runtime_data.coordinators
     )
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     tracked = set()
 
     @callback
@@ -81,7 +81,7 @@ async def async_setup_entry(
 
 
 # The pylint disable is needed because of https://github.com/pylint-dev/pylint/issues/9138
-class DevoloScannerEntity(  # pylint: disable=hass-enforce-class-module
+class DevoloScannerEntity(  # pylint: disable=menuai-enforce-class-module
     CoordinatorEntity[DevoloDataUpdateCoordinator[list[ConnectedStationInfo]]],
     ScannerEntity,
 ):

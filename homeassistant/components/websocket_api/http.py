@@ -13,13 +13,13 @@ from typing import TYPE_CHECKING, Any, Final
 from aiohttp import WSMsgType, web
 from aiohttp.http_websocket import WebSocketWriter
 
-from homeassistant.components.http import KEY_HASS, HomeAssistantView
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP, EVENT_LOGGING_CHANGED
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.event import async_call_later
-from homeassistant.util.async_ import create_eager_task
-from homeassistant.util.json import json_loads
+from menuai.components.http import KEY_menuai, menuaiView
+from menuai.const import EVENT_menuai_STOP, EVENT_LOGGING_CHANGED
+from menuai.core import Event, menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.event import async_call_later
+from menuai.util.async_ import create_eager_task
+from menuai.util.json import json_loads
 
 from .auth import AUTH_REQUIRED_MESSAGE, AuthPhase
 from .const import (
@@ -45,7 +45,7 @@ if TYPE_CHECKING:
 _WS_LOGGER: Final = logging.getLogger(f"{__name__}.connection")
 
 
-class WebsocketAPIView(HomeAssistantView):
+class WebsocketAPIView(menuaiView):
     """View to serve a websockets endpoint."""
 
     name: str = "websocketapi"
@@ -54,7 +54,7 @@ class WebsocketAPIView(HomeAssistantView):
 
     async def get(self, request: web.Request) -> web.WebSocketResponse:
         """Handle an incoming websocket connection."""
-        return await WebSocketHandler(request.app[KEY_HASS], request).async_handle()
+        return await WebSocketHandler(request.app[KEY_menuai], request).async_handle()
 
 
 class WebSocketAdapter(logging.LoggerAdapter):
@@ -75,7 +75,7 @@ class WebSocketHandler:
         "_connection",
         "_debug",
         "_handle_task",
-        "_hass",
+        "_menuai",
         "_logger",
         "_loop",
         "_message_queue",
@@ -87,10 +87,10 @@ class WebSocketHandler:
         "_wsock",
     )
 
-    def __init__(self, hass: HomeAssistant, request: web.Request) -> None:
+    def __init__(self, menuai: menuai, request: web.Request) -> None:
         """Initialize an active connection."""
-        self._hass = hass
-        self._loop = hass.loop
+        self._menuai = menuai
+        self._loop = menuai.loop
         self._request: web.Request = request
         self._wsock = web.WebSocketResponse(heartbeat=55)
         self._handle_task: asyncio.Task | None = None
@@ -239,7 +239,7 @@ class WebSocketHandler:
 
         if not peak_checker_active:
             self._peak_checker_unsub = async_call_later(
-                self._hass, PENDING_MSG_PEAK_TIME, self._check_write_peak
+                self._menuai, PENDING_MSG_PEAK_TIME, self._check_write_peak
             )
 
     @callback
@@ -300,7 +300,7 @@ class WebSocketHandler:
             self._writer_task.cancel()
 
     @callback
-    def _async_handle_hass_stop(self, event: Event) -> None:
+    def _async_handle_menuai_stop(self, event: Event) -> None:
         """Cancel this connection."""
         self._cancel()
 
@@ -309,7 +309,7 @@ class WebSocketHandler:
         request = self._request
         wsock = self._wsock
         logger = self._logger
-        hass = self._hass
+        menuai = self._menuai
 
         try:
             async with asyncio.timeout(10):
@@ -328,10 +328,10 @@ class WebSocketHandler:
         logger.debug("%s: Connected from %s", self.description, request.remote)
         self._handle_task = asyncio.current_task()
 
-        unsub_stop = hass.bus.async_listen(
-            EVENT_HOMEASSISTANT_STOP, self._async_handle_hass_stop
+        unsub_stop = menuai.bus.async_listen(
+            EVENT_menuai_STOP, self._async_handle_menuai_stop
         )
-        cancel_logging_listener = hass.bus.async_listen(
+        cancel_logging_listener = menuai.bus.async_listen(
             EVENT_LOGGING_CHANGED, self._async_logging_changed
         )
 
@@ -341,7 +341,7 @@ class WebSocketHandler:
 
         send_bytes_text = partial(writer.send_frame, opcode=WSMsgType.TEXT)
         auth = AuthPhase(
-            logger, hass, self._send_message, self._cancel, request, send_bytes_text
+            logger, menuai, self._send_message, self._cancel, request, send_bytes_text
         )
         connection: ActiveConnection | None = None
         disconnect_warn: str | None = None
@@ -421,8 +421,8 @@ class WebSocketHandler:
         # since there is no need to queue messages before the auth phase
         self._connection = connection
         self._writer_task = create_eager_task(self._writer(connection, send_bytes_text))
-        self._hass.data[DATA_CONNECTIONS] = self._hass.data.get(DATA_CONNECTIONS, 0) + 1
-        async_dispatcher_send(self._hass, SIGNAL_WEBSOCKET_CONNECTED)
+        self._menuai.data[DATA_CONNECTIONS] = self._menuai.data.get(DATA_CONNECTIONS, 0) + 1
+        async_dispatcher_send(self._menuai, SIGNAL_WEBSOCKET_CONNECTED)
 
         self._authenticated = True
         return connection
@@ -526,7 +526,7 @@ class WebSocketHandler:
         # so we have another finally block to make sure we close the websocket
         # if the writer gets canceled.
         wsock = self._wsock
-        hass = self._hass
+        menuai = self._menuai
         logger = self._logger
         try:
             if self._writer_task:
@@ -544,15 +544,15 @@ class WebSocketHandler:
                     )
 
                 if connection is not None:
-                    hass.data[DATA_CONNECTIONS] -= 1
+                    menuai.data[DATA_CONNECTIONS] -= 1
                     self._connection = None
 
-                async_dispatcher_send(hass, SIGNAL_WEBSOCKET_DISCONNECTED)
+                async_dispatcher_send(menuai, SIGNAL_WEBSOCKET_DISCONNECTED)
 
                 # Break reference cycles to make sure GC can happen sooner
                 self._wsock = None  # type: ignore[assignment]
                 self._request = None  # type: ignore[assignment]
-                self._hass = None  # type: ignore[assignment]
+                self._menuai = None  # type: ignore[assignment]
                 self._logger = None  # type: ignore[assignment]
                 self._message_queue = None  # type: ignore[assignment]
                 self._handle_task = None

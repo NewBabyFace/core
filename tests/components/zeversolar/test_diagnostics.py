@@ -2,9 +2,9 @@
 
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.zeversolar import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.components.zeversolar import DOMAIN
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 from . import MOCK_SERIAL_NUMBER, init_integration
 
@@ -16,31 +16,31 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_entry_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test config entry diagnostics."""
 
-    entry = await init_integration(hass)
+    entry = await init_integration(menuai)
 
-    assert await get_diagnostics_for_config_entry(hass, hass_client, entry) == snapshot
+    assert await get_diagnostics_for_config_entry(menuai, menuai_client, entry) == snapshot
 
 
 async def test_device_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     device_registry: dr.DeviceRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test device diagnostics."""
 
-    entry = await init_integration(hass)
+    entry = await init_integration(menuai)
 
     device = device_registry.async_get_device(
         identifiers={(DOMAIN, MOCK_SERIAL_NUMBER)}
     )
 
     assert (
-        await get_diagnostics_for_device(hass, hass_client, entry, device) == snapshot
+        await get_diagnostics_for_device(menuai, menuai_client, entry, device) == snapshot
     )

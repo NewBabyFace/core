@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
-from homeassistant.helpers.update_coordinator import (
+from menuai.core import CALLBACK_TYPE, menuai, callback
+from menuai.helpers.update_coordinator import (
     BaseCoordinatorEntity,
     BaseDataUpdateCoordinatorProtocol,
 )
@@ -30,14 +30,14 @@ class PassiveBluetoothDataUpdateCoordinator(
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         logger: logging.Logger,
         address: str,
         mode: BluetoothScanningMode,
         connectable: bool = False,
     ) -> None:
         """Initialize PassiveBluetoothDataUpdateCoordinator."""
-        super().__init__(hass, logger, address, mode, connectable)
+        super().__init__(menuai, logger, address, mode, connectable)
         self._listeners: dict[CALLBACK_TYPE, tuple[CALLBACK_TYPE, object | None]] = {}
 
     @property
@@ -92,7 +92,7 @@ class PassiveBluetoothDataUpdateCoordinator(
 
 class PassiveBluetoothCoordinatorEntity[
     _PassiveBluetoothDataUpdateCoordinatorT: PassiveBluetoothDataUpdateCoordinator = PassiveBluetoothDataUpdateCoordinator
-](  # pylint: disable=hass-enforce-class-module
+](  # pylint: disable=menuai-enforce-class-module
     BaseCoordinatorEntity[_PassiveBluetoothDataUpdateCoordinatorT]
 ):
     """A class for entities using DataUpdateCoordinator."""

@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceEntry
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceEntry
 
 from .const import DOMAIN, PLATFORMS
 from .coordinator import IBeaconCoordinator
@@ -13,23 +13,23 @@ from .coordinator import IBeaconCoordinator
 type IBeaconConfigEntry = ConfigEntry[IBeaconCoordinator]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: IBeaconConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: IBeaconConfigEntry) -> bool:
     """Set up Bluetooth LE Tracker from a config entry."""
     entry.runtime_data = coordinator = IBeaconCoordinator(
-        hass, entry, dr.async_get(hass)
+        menuai, entry, dr.async_get(menuai)
     )
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     await coordinator.async_start()
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 async def async_remove_config_entry_device(
-    hass: HomeAssistant, config_entry: IBeaconConfigEntry, device_entry: DeviceEntry
+    menuai: menuai, config_entry: IBeaconConfigEntry, device_entry: DeviceEntry
 ) -> bool:
     """Remove iBeacon config entry from a device."""
     coordinator = config_entry.runtime_data

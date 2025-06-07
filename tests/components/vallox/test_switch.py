@@ -2,9 +2,9 @@
 
 import pytest
 
-from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
-from homeassistant.const import ATTR_ENTITY_ID, SERVICE_TURN_OFF, SERVICE_TURN_ON
-from homeassistant.core import HomeAssistant
+from menuai.components.switch import DOMAIN as SWITCH_DOMAIN
+from menuai.const import ATTR_ENTITY_ID, SERVICE_TURN_OFF, SERVICE_TURN_ON
+from menuai.core import menuai
 
 from .conftest import patch_set_values
 
@@ -24,7 +24,7 @@ async def test_switch_entities(
     value: int,
     expected_state: str,
     mock_entry: MockConfigEntry,
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_fetch_metric_data_mock,
 ) -> None:
     """Test switch entities."""
@@ -32,11 +32,11 @@ async def test_switch_entities(
     setup_fetch_metric_data_mock(metrics={metric_key: value})
 
     # Act
-    await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Assert
-    sensor = hass.states.get(entity_id)
+    sensor = menuai.states.get(entity_id)
     assert sensor
     assert sensor.state == expected_state
 
@@ -53,17 +53,17 @@ async def test_bypass_lock_switch_entitity_set(
     metric_key: str,
     value: int,
     mock_entry: MockConfigEntry,
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test bypass lock switch set."""
     # Act
     with patch_set_values() as set_values:
-        await hass.config_entries.async_setup(mock_entry.entry_id)
-        await hass.async_block_till_done()
-        await hass.services.async_call(
+        await menuai.config_entries.async_setup(mock_entry.entry_id)
+        await menuai.async_block_till_done()
+        await menuai.services.async_call(
             SWITCH_DOMAIN,
             service,
             service_data={ATTR_ENTITY_ID: "switch.vallox_bypass_locked"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         set_values.assert_called_once_with({metric_key: value})

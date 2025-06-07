@@ -16,11 +16,11 @@ from pytraccar import (
     TraccarException,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util import dt as dt_util
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.util import dt as dt_util
 
 from .const import (
     CONF_CUSTOM_ATTRIBUTES,
@@ -53,13 +53,13 @@ class TraccarServerCoordinator(DataUpdateCoordinator[TraccarServerCoordinatorDat
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         client: ApiClient,
     ) -> None:
         """Initialize global Traccar Server data updater."""
         super().__init__(
-            hass=hass,
+            menuai=menuai,
             logger=LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -192,7 +192,7 @@ class TraccarServerCoordinator(DataUpdateCoordinator[TraccarServerCoordinatorDat
             update_devices.add(device_id)
 
         for device_id in update_devices:
-            async_dispatcher_send(self.hass, f"{DOMAIN}_{device_id}")
+            async_dispatcher_send(self.menuai, f"{DOMAIN}_{device_id}")
 
     async def import_events(self, _: datetime) -> None:
         """Import events from Traccar."""
@@ -214,7 +214,7 @@ class TraccarServerCoordinator(DataUpdateCoordinator[TraccarServerCoordinatorDat
         self._last_event_import = start_time
         for event in events:
             device = self.data[event["deviceId"]]["device"]
-            self.hass.bus.async_fire(
+            self.menuai.bus.async_fire(
                 # This goes against two of the HA core guidelines:
                 # 1. Event names should be prefixed with the domain name of
                 #    the integration

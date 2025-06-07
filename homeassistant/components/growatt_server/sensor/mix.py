@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
-from homeassistant.const import (
+from menuai.components.sensor import SensorDeviceClass, SensorStateClass
+from menuai.const import (
     PERCENTAGE,
     UnitOfElectricPotential,
     UnitOfEnergy,

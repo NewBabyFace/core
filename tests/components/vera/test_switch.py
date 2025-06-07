@@ -4,13 +4,13 @@ from unittest.mock import MagicMock
 
 import pyvera as pv
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .common import ComponentFactory, new_simple_controller_config
 
 
 async def test_switch(
-    hass: HomeAssistant, vera_component_factory: ComponentFactory
+    menuai: menuai, vera_component_factory: ComponentFactory
 ) -> None:
     """Test function."""
     vera_device: pv.VeraSwitch = MagicMock(spec=pv.VeraSwitch)
@@ -23,35 +23,35 @@ async def test_switch(
     entity_id = "switch.dev1_1"
 
     component_data = await vera_component_factory.configure_component(
-        hass=hass,
+        menuai=menuai,
         controller_config=new_simple_controller_config(
             devices=(vera_device,), legacy_entity_unique_id=False
         ),
     )
     update_callback = component_data.controller_data[0].update_callback
 
-    assert hass.states.get(entity_id).state == "off"
+    assert menuai.states.get(entity_id).state == "off"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch",
         "turn_on",
         {"entity_id": entity_id},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     vera_device.switch_on.assert_called()
     vera_device.is_switched_on.return_value = True
     update_callback(vera_device)
-    await hass.async_block_till_done()
-    assert hass.states.get(entity_id).state == "on"
+    await menuai.async_block_till_done()
+    assert menuai.states.get(entity_id).state == "on"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch",
         "turn_off",
         {"entity_id": entity_id},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     vera_device.switch_off.assert_called()
     vera_device.is_switched_on.return_value = False
     update_callback(vera_device)
-    await hass.async_block_till_done()
-    assert hass.states.get(entity_id).state == "off"
+    await menuai.async_block_till_done()
+    assert menuai.states.get(entity_id).state == "off"

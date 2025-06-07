@@ -7,19 +7,19 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.schema_config_entry_flow import (
+from menuai.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
+from menuai.helpers import entity_registry as er
+from menuai.helpers.schema_config_entry_flow import (
     SchemaCommonFlowHandler,
     SchemaConfigFlowHandler,
     SchemaFlowFormStep,
 )
-from homeassistant.helpers.selector import (
+from menuai.helpers.selector import (
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
 )
-from homeassistant.util import slugify
+from menuai.util import slugify
 
 from .const import CONF_PROCESS, DOMAIN
 from .util import get_all_running_processes
@@ -37,7 +37,7 @@ async def validate_sensor_setup(
     processes.clear()
     processes.extend(user_input[CONF_PROCESS])
 
-    entity_registry = er.async_get(handler.parent_handler.hass)
+    entity_registry = er.async_get(handler.parent_handler.menuai)
     for process in previous_processes:
         if process not in processes and (
             entity_id := entity_registry.async_get_entity_id(
@@ -51,8 +51,8 @@ async def validate_sensor_setup(
 
 async def get_sensor_setup_schema(handler: SchemaCommonFlowHandler) -> vol.Schema:
     """Return process sensor setup schema."""
-    hass = handler.parent_handler.hass
-    processes = list(await hass.async_add_executor_job(get_all_running_processes, hass))
+    menuai = handler.parent_handler.menuai
+    processes = list(await menuai.async_add_executor_job(get_all_running_processes, menuai))
     return vol.Schema(
         {
             vol.Required(CONF_PROCESS): SelectSelector(

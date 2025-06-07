@@ -9,16 +9,16 @@ from typing import Any
 from androidtv import state_detection_rules_validator
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_DEVICE_CLASS, CONF_HOST, CONF_PORT
-from homeassistant.core import callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.selector import (
+from menuai.const import CONF_DEVICE_CLASS, CONF_HOST, CONF_PORT
+from menuai.core import callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.selector import (
     ObjectSelector,
     SelectOptionDict,
     SelectSelector,
@@ -119,7 +119,7 @@ class AndroidTVFlowHandler(ConfigFlow, domain=DOMAIN):
         """Attempt to connect the Android device."""
 
         try:
-            aftv, error_message = await async_connect_androidtv(self.hass, user_input)
+            aftv, error_message = await async_connect_androidtv(self.menuai, user_input)
         except Exception:
             _LOGGER.exception(
                 "Unknown error connecting with Android device at %s",
@@ -160,7 +160,7 @@ class AndroidTVFlowHandler(ConfigFlow, domain=DOMAIN):
                 user_input.pop(CONF_ADB_SERVER_PORT, None)
 
             if adb_key:
-                if not await self.hass.async_add_executor_job(_is_file, adb_key):
+                if not await self.menuai.async_add_executor_job(_is_file, adb_key):
                     return self._show_setup_form(user_input, "adbkey_not_file")
 
             self._async_abort_entries_match({CONF_HOST: host})

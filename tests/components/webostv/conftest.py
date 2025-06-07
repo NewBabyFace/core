@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, Mock, patch
 from aiowebostv import WebOsTvInfo, WebOsTvState
 import pytest
 
-from homeassistant.components.webostv.const import LIVE_TV_APP_ID
+from menuai.components.webostv.const import LIVE_TV_APP_ID
 
 from .const import (
     CHANNEL_1,
@@ -23,7 +23,7 @@ from .const import (
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.webostv.async_setup_entry", return_value=True
+        "menuai.components.webostv.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -33,10 +33,10 @@ def client_fixture():
     """Patch of client library for tests."""
     with (
         patch(
-            "homeassistant.components.webostv.WebOsClient", autospec=True
+            "menuai.components.webostv.WebOsClient", autospec=True
         ) as mock_client_class,
         patch(
-            "homeassistant.components.webostv.config_flow.WebOsClient",
+            "menuai.components.webostv.config_flow.WebOsClient",
             new=mock_client_class,
         ),
     ):

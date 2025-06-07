@@ -5,9 +5,9 @@ from unittest.mock import patch
 
 from freezegun.api import FrozenDateTimeFactory
 
-from homeassistant.components.geo_location import ATTR_SOURCE
-from homeassistant.components.geonetnz_quakes import DEFAULT_SCAN_INTERVAL, DOMAIN
-from homeassistant.components.geonetnz_quakes.geo_location import (
+from menuai.components.geo_location import ATTR_SOURCE
+from menuai.components.geonetnz_quakes import DEFAULT_SCAN_INTERVAL, DOMAIN
+from menuai.components.geonetnz_quakes.geo_location import (
     ATTR_DEPTH,
     ATTR_EXTERNAL_ID,
     ATTR_LOCALITY,
@@ -15,7 +15,7 @@ from homeassistant.components.geonetnz_quakes.geo_location import (
     ATTR_MMI,
     ATTR_QUALITY,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ATTRIBUTION,
     ATTR_FRIENDLY_NAME,
     ATTR_ICON,
@@ -24,14 +24,14 @@ from homeassistant.const import (
     ATTR_TIME,
     ATTR_UNIT_OF_MEASUREMENT,
     CONF_RADIUS,
-    EVENT_HOMEASSISTANT_START,
+    EVENT_menuai_START,
     UnitOfLength,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
-from homeassistant.util.unit_system import US_CUSTOMARY_SYSTEM
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
+from menuai.util.unit_system import US_CUSTOMARY_SYSTEM
 
 from . import _generate_mock_feed_entry
 
@@ -41,7 +41,7 @@ CONFIG = {DOMAIN: {CONF_RADIUS: 200}}
 
 
 async def test_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     freezer: FrozenDateTimeFactory,
 ) -> None:
@@ -73,21 +73,21 @@ async def test_setup(
     freezer.move_to(utcnow)
     with patch("aio_geojson_client.feed.GeoJsonFeed.update") as mock_feed_update:
         mock_feed_update.return_value = "OK", [mock_entry_1, mock_entry_2, mock_entry_3]
-        assert await async_setup_component(hass, DOMAIN, CONFIG)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, CONFIG)
+        await menuai.async_block_till_done()
         # Artificially trigger update and collect events.
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_START)
-        await hass.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_START)
+        await menuai.async_block_till_done()
 
         # 3 geolocation and 1 sensor entities
         assert (
-            len(hass.states.async_entity_ids("geo_location"))
-            + len(hass.states.async_entity_ids("sensor"))
+            len(menuai.states.async_entity_ids("geo_location"))
+            + len(menuai.states.async_entity_ids("sensor"))
             == 4
         )
         assert len(entity_registry.entities) == 4
 
-        state = hass.states.get("geo_location.title_1")
+        state = menuai.states.get("geo_location.title_1")
         assert state is not None
         assert state.name == "Title 1"
         assert state.attributes == {
@@ -108,7 +108,7 @@ async def test_setup(
         }
         assert float(state.state) == 15.5
 
-        state = hass.states.get("geo_location.title_2")
+        state = menuai.states.get("geo_location.title_2")
         assert state is not None
         assert state.name == "Title 2"
         assert state.attributes == {
@@ -123,7 +123,7 @@ async def test_setup(
         }
         assert float(state.state) == 20.5
 
-        state = hass.states.get("geo_location.title_3")
+        state = menuai.states.get("geo_location.title_3")
         assert state is not None
         assert state.name == "Title 3"
         assert state.attributes == {
@@ -140,43 +140,43 @@ async def test_setup(
 
         # Simulate an update - two existing, one new entry, one outdated entry
         mock_feed_update.return_value = "OK", [mock_entry_1, mock_entry_4, mock_entry_3]
-        async_fire_time_changed(hass, utcnow + DEFAULT_SCAN_INTERVAL)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, utcnow + DEFAULT_SCAN_INTERVAL)
+        await menuai.async_block_till_done()
 
         assert (
-            len(hass.states.async_entity_ids("geo_location"))
-            + len(hass.states.async_entity_ids("sensor"))
+            len(menuai.states.async_entity_ids("geo_location"))
+            + len(menuai.states.async_entity_ids("sensor"))
             == 4
         )
         # Simulate an update - empty data, but successful update,
         # so no changes to entities.
         mock_feed_update.return_value = "OK_NO_DATA", None
-        async_fire_time_changed(hass, utcnow + 2 * DEFAULT_SCAN_INTERVAL)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, utcnow + 2 * DEFAULT_SCAN_INTERVAL)
+        await menuai.async_block_till_done()
 
         assert (
-            len(hass.states.async_entity_ids("geo_location"))
-            + len(hass.states.async_entity_ids("sensor"))
+            len(menuai.states.async_entity_ids("geo_location"))
+            + len(menuai.states.async_entity_ids("sensor"))
             == 4
         )
         # Simulate an update - empty data, removes all entities
         mock_feed_update.return_value = "ERROR", None
-        async_fire_time_changed(hass, utcnow + 3 * DEFAULT_SCAN_INTERVAL)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, utcnow + 3 * DEFAULT_SCAN_INTERVAL)
+        await menuai.async_block_till_done()
 
         assert (
-            len(hass.states.async_entity_ids("geo_location"))
-            + len(hass.states.async_entity_ids("sensor"))
+            len(menuai.states.async_entity_ids("geo_location"))
+            + len(menuai.states.async_entity_ids("sensor"))
             == 1
         )
         assert len(entity_registry.entities) == 1
 
 
 async def test_setup_imperial(
-    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+    menuai: menuai, freezer: FrozenDateTimeFactory
 ) -> None:
     """Test the setup of the integration using imperial unit system."""
-    hass.config.units = US_CUSTOMARY_SYSTEM
+    menuai.config.units = US_CUSTOMARY_SYSTEM
     # Set up some mock feed entries for this test.
     mock_entry_1 = _generate_mock_feed_entry("1234", "Title 1", 15.5, (38.0, -3.0))
 
@@ -187,24 +187,24 @@ async def test_setup_imperial(
         patch("aio_geojson_client.feed.GeoJsonFeed.last_timestamp", create=True),
     ):
         mock_feed_update.return_value = "OK", [mock_entry_1]
-        assert await async_setup_component(hass, DOMAIN, CONFIG)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, CONFIG)
+        await menuai.async_block_till_done()
         # Artificially trigger update and collect events.
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_START)
-        await hass.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_START)
+        await menuai.async_block_till_done()
 
         assert (
-            len(hass.states.async_entity_ids("geo_location"))
-            + len(hass.states.async_entity_ids("sensor"))
+            len(menuai.states.async_entity_ids("geo_location"))
+            + len(menuai.states.async_entity_ids("sensor"))
             == 2
         )
 
         # Test conversion of 200 miles to kilometers.
-        manager = hass.config_entries.async_loaded_entries(DOMAIN)[0].runtime_data
+        manager = menuai.config_entries.async_loaded_entries(DOMAIN)[0].runtime_data
         # Ensure that the filter value in km is correctly set.
         assert manager._feed_manager._feed._filter_radius == 321.8688
 
-        state = hass.states.get("geo_location.title_1")
+        state = menuai.states.get("geo_location.title_1")
         assert state is not None
         assert state.name == "Title 1"
         assert state.attributes == {

@@ -9,10 +9,10 @@ from typing import Any
 
 from jvcprojector import const
 
-from homeassistant.components.remote import RemoteEntity
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.remote import RemoteEntity
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import JVCConfigEntry
 from .entity import JvcProjectorEntity
@@ -54,7 +54,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: JVCConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -89,6 +89,6 @@ class JvcProjectorRemote(JvcProjectorEntity, RemoteEntity):
         """Send a remote command to the device."""
         for cmd in command:
             if cmd not in COMMANDS:
-                raise HomeAssistantError(f"{cmd} is not a known command")
+                raise menuaiError(f"{cmd} is not a known command")
             _LOGGER.debug("Sending command '%s'", cmd)
             await self.device.remote(COMMANDS[cmd])

@@ -5,8 +5,8 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components.auth import indieauth
-from homeassistant.core import HomeAssistant
+from menuai.components.auth import indieauth
+from menuai.core import menuai
 
 from tests.test_util.aiohttp import AiohttpClientMocker
 
@@ -131,7 +131,7 @@ async def test_verify_redirect_uri() -> None:
         )
 
 
-async def test_find_link_tag(hass: HomeAssistant, mock_session) -> None:
+async def test_find_link_tag(menuai: menuai, mock_session) -> None:
     """Test finding link tag."""
     mock_session.get(
         "http://127.0.0.1:8000",
@@ -139,20 +139,20 @@ async def test_find_link_tag(hass: HomeAssistant, mock_session) -> None:
 <!doctype html>
 <html>
   <head>
-    <link rel="redirect_uri" href="hass://oauth2_redirect">
-    <link rel="other_value" href="hass://oauth2_redirect">
+    <link rel="redirect_uri" href="menuai://oauth2_redirect">
+    <link rel="other_value" href="menuai://oauth2_redirect">
     <link rel="redirect_uri" href="/beer">
   </head>
   ...
 </html>
 """,
     )
-    redirect_uris = await indieauth.fetch_redirect_uris(hass, "http://127.0.0.1:8000")
+    redirect_uris = await indieauth.fetch_redirect_uris(menuai, "http://127.0.0.1:8000")
 
-    assert redirect_uris == ["hass://oauth2_redirect", "http://127.0.0.1:8000/beer"]
+    assert redirect_uris == ["menuai://oauth2_redirect", "http://127.0.0.1:8000/beer"]
 
 
-async def test_find_link_tag_max_size(hass: HomeAssistant, mock_session) -> None:
+async def test_find_link_tag_max_size(menuai: menuai, mock_session) -> None:
     """Test finding link tag."""
     text = "".join(
         [
@@ -162,7 +162,7 @@ async def test_find_link_tag_max_size(hass: HomeAssistant, mock_session) -> None
         ]
     )
     mock_session.get("http://127.0.0.1:8000", text=text)
-    redirect_uris = await indieauth.fetch_redirect_uris(hass, "http://127.0.0.1:8000")
+    redirect_uris = await indieauth.fetch_redirect_uris(menuai, "http://127.0.0.1:8000")
 
     assert redirect_uris == ["http://127.0.0.1:8000/wine"]
 
@@ -175,36 +175,36 @@ async def test_verify_redirect_uri_android_ios(client_id) -> None:
     """Test that we verify redirect uri correctly for Android/iOS."""
     with patch.object(indieauth, "fetch_redirect_uris", return_value=[]):
         assert await indieauth.verify_redirect_uri(
-            None, client_id, "homeassistant://auth-callback"
+            None, client_id, "menuai://auth-callback"
         )
 
         assert not await indieauth.verify_redirect_uri(
-            None, client_id, "homeassistant://something-else"
+            None, client_id, "menuai://something-else"
         )
 
         assert not await indieauth.verify_redirect_uri(
-            None, "https://incorrect.com", "homeassistant://auth-callback"
+            None, "https://incorrect.com", "menuai://auth-callback"
         )
 
         if client_id == "https://home-assistant.io/android":
             assert await indieauth.verify_redirect_uri(
                 None,
                 client_id,
-                "https://wear.googleapis.com/3p_auth/io.homeassistant.companion.android",
+                "https://wear.googleapis.com/3p_auth/io.menuai.companion.android",
             )
             assert await indieauth.verify_redirect_uri(
                 None,
                 client_id,
-                "https://wear.googleapis-cn.com/3p_auth/io.homeassistant.companion.android",
+                "https://wear.googleapis-cn.com/3p_auth/io.menuai.companion.android",
             )
         else:
             assert not await indieauth.verify_redirect_uri(
                 None,
                 client_id,
-                "https://wear.googleapis.com/3p_auth/io.homeassistant.companion.android",
+                "https://wear.googleapis.com/3p_auth/io.menuai.companion.android",
             )
             assert not await indieauth.verify_redirect_uri(
                 None,
                 client_id,
-                "https://wear.googleapis-cn.com/3p_auth/io.homeassistant.companion.android",
+                "https://wear.googleapis-cn.com/3p_auth/io.menuai.companion.android",
             )

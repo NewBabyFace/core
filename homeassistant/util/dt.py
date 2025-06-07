@@ -1,4 +1,4 @@
-"""Helper methods to handle the time in Home Assistant."""
+"""Helper methods to handle the time in MenuAI."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ import zoneinfo
 from aiozoneinfo import async_get_time_zone as _async_get_time_zone
 import ciso8601
 
-from homeassistant.helpers.deprecation import deprecated_function
+from menuai.helpers.deprecation import deprecated_function
 
 DATE_STR_FORMAT = "%Y-%m-%d"
 UTC = dt.UTC

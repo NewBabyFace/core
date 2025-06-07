@@ -6,11 +6,11 @@ from unittest.mock import AsyncMock, patch
 import aiohttp
 import pytest
 
-from homeassistant import core
-from homeassistant.components.alexa import errors, state_report
-from homeassistant.components.alexa.resources import AlexaGlobalCatalog
-from homeassistant.const import PERCENTAGE, UnitOfLength, UnitOfTemperature
-from homeassistant.core import HomeAssistant
+from menuai import core
+from menuai.components.alexa import errors, state_report
+from menuai.components.alexa.resources import AlexaGlobalCatalog
+from menuai.const import PERCENTAGE, UnitOfLength, UnitOfTemperature
+from menuai.core import menuai
 
 from .test_common import TEST_URL, get_default_config
 
@@ -18,27 +18,27 @@ from tests.test_util.aiohttp import AiohttpClientMocker
 
 
 async def test_report_state(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test proactive state reports."""
     aioclient_mock.post(TEST_URL, text="", status=202)
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "binary_sensor.test_contact",
         "on",
         {"friendly_name": "Test Contact Sensor", "device_class": "door"},
     )
 
-    await state_report.async_enable_proactive_mode(hass, get_default_config(hass))
+    await state_report.async_enable_proactive_mode(menuai, get_default_config(menuai))
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "binary_sensor.test_contact",
         "off",
         {"friendly_name": "Test Contact Sensor", "device_class": "door"},
     )
 
     # To trigger event listener
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(aioclient_mock.mock_calls) == 1
     call = aioclient_mock.mock_calls
@@ -54,7 +54,7 @@ async def test_report_state(
 
 
 async def test_report_state_fail(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -72,22 +72,22 @@ async def test_report_state_fail(
         status=403,
     )
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "binary_sensor.test_contact",
         "on",
         {"friendly_name": "Test Contact Sensor", "device_class": "door"},
     )
 
-    await state_report.async_enable_proactive_mode(hass, get_default_config(hass))
+    await state_report.async_enable_proactive_mode(menuai, get_default_config(menuai))
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "binary_sensor.test_contact",
         "off",
         {"friendly_name": "Test Contact Sensor", "device_class": "door"},
     )
 
     # To trigger event listener
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # No retry on errors not related to expired access token
     assert len(aioclient_mock.mock_calls) == 1
@@ -100,7 +100,7 @@ async def test_report_state_fail(
 
 
 async def test_report_state_timeout(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -110,22 +110,22 @@ async def test_report_state_timeout(
         exc=aiohttp.ClientError(),
     )
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "binary_sensor.test_contact",
         "on",
         {"friendly_name": "Test Contact Sensor", "device_class": "door"},
     )
 
-    await state_report.async_enable_proactive_mode(hass, get_default_config(hass))
+    await state_report.async_enable_proactive_mode(menuai, get_default_config(menuai))
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "binary_sensor.test_contact",
         "off",
         {"friendly_name": "Test Contact Sensor", "device_class": "door"},
     )
 
     # To trigger event listener
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # No retry on errors not related to expired access token
     assert len(aioclient_mock.mock_calls) == 1
@@ -137,7 +137,7 @@ async def test_report_state_timeout(
 
 
 async def test_report_state_retry(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test proactive state retries once."""
     aioclient_mock.post(
@@ -146,28 +146,28 @@ async def test_report_state_retry(
         status=403,
     )
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "binary_sensor.test_contact",
         "on",
         {"friendly_name": "Test Contact Sensor", "device_class": "door"},
     )
 
-    await state_report.async_enable_proactive_mode(hass, get_default_config(hass))
+    await state_report.async_enable_proactive_mode(menuai, get_default_config(menuai))
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "binary_sensor.test_contact",
         "off",
         {"friendly_name": "Test Contact Sensor", "device_class": "door"},
     )
 
     # To trigger event listener
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(aioclient_mock.mock_calls) == 2
 
 
 async def test_report_state_unsets_authorized_on_error(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test proactive state unsets authorized on error."""
     aioclient_mock.post(
@@ -176,66 +176,66 @@ async def test_report_state_unsets_authorized_on_error(
         status=403,
     )
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "binary_sensor.test_contact",
         "on",
         {"friendly_name": "Test Contact Sensor", "device_class": "door"},
     )
 
-    config = get_default_config(hass)
-    await state_report.async_enable_proactive_mode(hass, config)
+    config = get_default_config(menuai)
+    await state_report.async_enable_proactive_mode(menuai, config)
 
     config._store.set_authorized.assert_not_called()
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "binary_sensor.test_contact",
         "off",
         {"friendly_name": "Test Contact Sensor", "device_class": "door"},
     )
 
     # To trigger event listener
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     config._store.set_authorized.assert_called_once_with(False)
 
 
 @pytest.mark.parametrize("exc", [errors.NoTokenAvailable, errors.RequireRelink])
 async def test_report_state_unsets_authorized_on_access_token_error(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker, exc: Exception
+    menuai: menuai, aioclient_mock: AiohttpClientMocker, exc: Exception
 ) -> None:
     """Test proactive state unsets authorized on error."""
     aioclient_mock.post(TEST_URL, text="", status=202)
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "binary_sensor.test_contact",
         "on",
         {"friendly_name": "Test Contact Sensor", "device_class": "door"},
     )
 
-    config = get_default_config(hass)
+    config = get_default_config(menuai)
 
-    await state_report.async_enable_proactive_mode(hass, config)
+    await state_report.async_enable_proactive_mode(menuai, config)
 
     config._store.set_authorized.assert_not_called()
 
     with patch.object(config, "async_get_access_token", AsyncMock(side_effect=exc)):
-        hass.states.async_set(
+        menuai.states.async_set(
             "binary_sensor.test_contact",
             "off",
             {"friendly_name": "Test Contact Sensor", "device_class": "door"},
         )
 
         # To trigger event listener
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         config._store.set_authorized.assert_called_once_with(False)
 
 
 async def test_report_state_fan(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test proactive state reports with fan instance."""
     aioclient_mock.post(TEST_URL, text="", status=202)
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "fan.test_fan",
         "off",
         {
@@ -248,9 +248,9 @@ async def test_report_state_fan(
         },
     )
 
-    await state_report.async_enable_proactive_mode(hass, get_default_config(hass))
+    await state_report.async_enable_proactive_mode(menuai, get_default_config(menuai))
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "fan.test_fan",
         "on",
         {
@@ -264,7 +264,7 @@ async def test_report_state_fan(
     )
 
     # To trigger event listener
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(aioclient_mock.mock_calls) == 1
     call = aioclient_mock.mock_calls
@@ -298,12 +298,12 @@ async def test_report_state_fan(
 
 
 async def test_report_state_humidifier(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test proactive state reports with humidifier instance."""
     aioclient_mock.post(TEST_URL, text="", status=202)
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "humidifier.test_humidifier",
         "off",
         {
@@ -314,9 +314,9 @@ async def test_report_state_humidifier(
         },
     )
 
-    await state_report.async_enable_proactive_mode(hass, get_default_config(hass))
+    await state_report.async_enable_proactive_mode(menuai, get_default_config(menuai))
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "humidifier.test_humidifier",
         "on",
         {
@@ -329,7 +329,7 @@ async def test_report_state_humidifier(
     )
 
     # To trigger event listener
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(aioclient_mock.mock_calls) == 1
     call = aioclient_mock.mock_calls
@@ -393,7 +393,7 @@ async def test_report_state_humidifier(
     ],
 )
 async def test_report_state_number(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     domain: str,
     value: float,
@@ -412,22 +412,22 @@ async def test_report_state_number(
     if unit:
         state["unit_of_measurement"] = unit
 
-    hass.states.async_set(
+    menuai.states.async_set(
         f"{domain}.test_{domain}",
         None,
         state,
     )
 
-    await state_report.async_enable_proactive_mode(hass, get_default_config(hass))
+    await state_report.async_enable_proactive_mode(menuai, get_default_config(menuai))
 
-    hass.states.async_set(
+    menuai.states.async_set(
         f"{domain}.test_{domain}",
         value,
         state,
     )
 
     # To trigger event listener
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(aioclient_mock.mock_calls) == 1
     call = aioclient_mock.mock_calls
@@ -455,18 +455,18 @@ async def test_report_state_number(
 
 
 async def test_send_add_or_update_message(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test sending an AddOrUpdateReport message."""
     aioclient_mock.post(TEST_URL, text="")
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "binary_sensor.test_contact",
         "on",
         {"friendly_name": "Test Contact Sensor", "device_class": "door"},
     )
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "zwave.bla",
         "wow_such_unsupported",
     )
@@ -477,7 +477,7 @@ async def test_send_add_or_update_message(
         "zwave.bla",  # Unsupported
     ]
     await state_report.async_send_add_or_update_message(
-        hass, get_default_config(hass), entities
+        menuai, get_default_config(menuai), entities
     )
 
     assert len(aioclient_mock.mock_calls) == 1
@@ -494,19 +494,19 @@ async def test_send_add_or_update_message(
 
 
 async def test_send_delete_message(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test sending an AddOrUpdateReport message."""
     aioclient_mock.post(TEST_URL, json={"data": "is irrelevant"})
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "binary_sensor.test_contact",
         "on",
         {"friendly_name": "Test Contact Sensor", "device_class": "door"},
     )
 
     await state_report.async_send_delete_message(
-        hass, get_default_config(hass), ["binary_sensor.test_contact", "zwave.bla"]
+        menuai, get_default_config(menuai), ["binary_sensor.test_contact", "zwave.bla"]
     )
 
     assert len(aioclient_mock.mock_calls) == 1
@@ -523,12 +523,12 @@ async def test_send_delete_message(
 
 
 async def test_doorbell_event(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test doorbell press reports."""
     aioclient_mock.post(TEST_URL, text="", status=202)
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "binary_sensor.test_doorbell",
         "off",
         {
@@ -538,9 +538,9 @@ async def test_doorbell_event(
         },
     )
 
-    await state_report.async_enable_proactive_mode(hass, get_default_config(hass))
+    await state_report.async_enable_proactive_mode(menuai, get_default_config(menuai))
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "binary_sensor.test_doorbell",
         "on",
         {
@@ -550,7 +550,7 @@ async def test_doorbell_event(
         },
     )
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "binary_sensor.test_doorbell",
         "on",
         {
@@ -561,7 +561,7 @@ async def test_doorbell_event(
     )
 
     # To trigger event listener
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(aioclient_mock.mock_calls) == 1
     call = aioclient_mock.mock_calls
@@ -572,32 +572,32 @@ async def test_doorbell_event(
     assert call_json["event"]["payload"]["cause"]["type"] == "PHYSICAL_INTERACTION"
     assert call_json["event"]["endpoint"]["endpointId"] == "binary_sensor#test_doorbell"
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "binary_sensor.test_doorbell",
         "off",
         {"friendly_name": "Test Doorbell Sensor", "device_class": "occupancy"},
     )
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "binary_sensor.test_doorbell",
         "on",
         {"friendly_name": "Test Doorbell Sensor", "device_class": "occupancy"},
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(aioclient_mock.mock_calls) == 2
 
 
 async def test_doorbell_event_from_unknown(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test doorbell press reports."""
     aioclient_mock.post(TEST_URL, text="", status=202)
 
-    await state_report.async_enable_proactive_mode(hass, get_default_config(hass))
+    await state_report.async_enable_proactive_mode(menuai, get_default_config(menuai))
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "binary_sensor.test_doorbell",
         "on",
         {
@@ -607,7 +607,7 @@ async def test_doorbell_event_from_unknown(
     )
 
     # To trigger event listener
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(aioclient_mock.mock_calls) == 1
     call = aioclient_mock.mock_calls
@@ -620,7 +620,7 @@ async def test_doorbell_event_from_unknown(
 
 
 async def test_doorbell_event_fail(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -638,22 +638,22 @@ async def test_doorbell_event_fail(
         status=403,
     )
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "binary_sensor.test_doorbell",
         "off",
         {"friendly_name": "Test Doorbell Sensor", "device_class": "occupancy"},
     )
 
-    await state_report.async_enable_proactive_mode(hass, get_default_config(hass))
+    await state_report.async_enable_proactive_mode(menuai, get_default_config(menuai))
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "binary_sensor.test_doorbell",
         "on",
         {"friendly_name": "Test Doorbell Sensor", "device_class": "occupancy"},
     )
 
     # To trigger event listener
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # No retry on errors not related to expired access token
     assert len(aioclient_mock.mock_calls) == 1
@@ -667,7 +667,7 @@ async def test_doorbell_event_fail(
 
 
 async def test_doorbell_event_timeout(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -677,22 +677,22 @@ async def test_doorbell_event_timeout(
         exc=aiohttp.ClientError(),
     )
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "binary_sensor.test_doorbell",
         "off",
         {"friendly_name": "Test Doorbell Sensor", "device_class": "occupancy"},
     )
 
-    await state_report.async_enable_proactive_mode(hass, get_default_config(hass))
+    await state_report.async_enable_proactive_mode(menuai, get_default_config(menuai))
 
-    hass.states.async_set(
+    menuai.states.async_set(
         "binary_sensor.test_doorbell",
         "on",
         {"friendly_name": "Test Doorbell Sensor", "device_class": "occupancy"},
     )
 
     # To trigger event listener
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # No retry on errors not related to expired access token
     assert len(aioclient_mock.mock_calls) == 1
@@ -704,93 +704,93 @@ async def test_doorbell_event_timeout(
 
 
 async def test_proactive_mode_filter_states(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test all the cases that filter states."""
     aioclient_mock.post(TEST_URL, text="", status=202)
-    config = get_default_config(hass)
-    await state_report.async_enable_proactive_mode(hass, config)
+    config = get_default_config(menuai)
+    await state_report.async_enable_proactive_mode(menuai, config)
 
     # First state should report
-    hass.states.async_set(
+    menuai.states.async_set(
         "binary_sensor.test_contact",
         "on",
         {"friendly_name": "Test Contact Sensor", "device_class": "door"},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(aioclient_mock.mock_calls) == 1
 
     aioclient_mock.clear_requests()
 
     # Second one shouldn't
-    hass.states.async_set(
+    menuai.states.async_set(
         "binary_sensor.test_contact",
         "on",
         {"friendly_name": "Test Contact Sensor", "device_class": "door"},
     )
     assert len(aioclient_mock.mock_calls) == 0
 
-    # hass not running should not report
-    current_state = hass.state
-    hass.set_state(core.CoreState.stopping)
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
-    hass.states.async_set(
+    # menuai not running should not report
+    current_state = menuai.state
+    menuai.set_state(core.CoreState.stopping)
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
+    menuai.states.async_set(
         "binary_sensor.test_contact",
         "off",
         {"friendly_name": "Test Contact Sensor", "device_class": "door"},
     )
 
-    hass.set_state(current_state)
+    menuai.set_state(current_state)
     assert len(aioclient_mock.mock_calls) == 0
 
     # unsupported entity should not report
     with patch.dict(
-        "homeassistant.components.alexa.state_report.ENTITY_ADAPTERS", {}, clear=True
+        "menuai.components.alexa.state_report.ENTITY_ADAPTERS", {}, clear=True
     ):
-        hass.states.async_set(
+        menuai.states.async_set(
             "binary_sensor.test_contact",
             "on",
             {"friendly_name": "Test Contact Sensor", "device_class": "door"},
         )
-        await hass.async_block_till_done()
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
+        await menuai.async_block_till_done()
     assert len(aioclient_mock.mock_calls) == 0
 
     # Not exposed by config should not report
     with patch.object(config, "should_expose", return_value=False):
-        hass.states.async_set(
+        menuai.states.async_set(
             "binary_sensor.test_contact",
             "off",
             {"friendly_name": "Test Contact Sensor", "device_class": "door"},
         )
-        await hass.async_block_till_done()
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
+        await menuai.async_block_till_done()
     assert len(aioclient_mock.mock_calls) == 0
 
     # Removing an entity
-    hass.states.async_remove("binary_sensor.test_contact")
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    menuai.states.async_remove("binary_sensor.test_contact")
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(aioclient_mock.mock_calls) == 0
 
     # If serializes to same properties, it should not report
     aioclient_mock.post(TEST_URL, text="", status=202)
     with patch(
-        "homeassistant.components.alexa.entities.AlexaEntity.serialize_properties",
+        "menuai.components.alexa.entities.AlexaEntity.serialize_properties",
         return_value=[{"same": "info"}],
     ):
-        hass.states.async_set(
+        menuai.states.async_set(
             "binary_sensor.same_serialize",
             "off",
             {"friendly_name": "Test Contact Sensor", "device_class": "door"},
         )
-        await hass.async_block_till_done()
-        hass.states.async_set(
+        await menuai.async_block_till_done()
+        menuai.states.async_set(
             "binary_sensor.same_serialize",
             "off",
             {"friendly_name": "Test Contact Sensor", "device_class": "door"},
         )
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
     assert len(aioclient_mock.mock_calls) == 1

@@ -7,9 +7,9 @@ from plexapi.exceptions import NotFound
 import voluptuous as vol
 from yarl import URL
 
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.dispatcher import async_dispatcher_send
+from menuai.core import menuai, ServiceCall
+from menuai.exceptions import menuaiError
+from menuai.helpers.dispatcher import async_dispatcher_send
 
 from .const import (
     DOMAIN,
@@ -31,11 +31,11 @@ REFRESH_LIBRARY_SCHEMA = vol.Schema(
 _LOGGER = logging.getLogger(__package__)
 
 
-async def async_setup_services(hass: HomeAssistant) -> None:
+async def async_setup_services(menuai: menuai) -> None:
     """Set up services for the Plex component."""
 
     async def async_refresh_library_service(service_call: ServiceCall) -> None:
-        await hass.async_add_executor_job(refresh_library, hass, service_call)
+        await menuai.async_add_executor_job(refresh_library, menuai, service_call)
 
     async def async_scan_clients_service(_: ServiceCall) -> None:
         _LOGGER.warning(
@@ -43,26 +43,26 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             " Service calls will still work for now but the service will be removed in"
             " a future release"
         )
-        for server_id in get_plex_data(hass)[SERVERS]:
-            async_dispatcher_send(hass, PLEX_UPDATE_PLATFORMS_SIGNAL.format(server_id))
+        for server_id in get_plex_data(menuai)[SERVERS]:
+            async_dispatcher_send(menuai, PLEX_UPDATE_PLATFORMS_SIGNAL.format(server_id))
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_REFRESH_LIBRARY,
         async_refresh_library_service,
         schema=REFRESH_LIBRARY_SCHEMA,
     )
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_SCAN_CLIENTS, async_scan_clients_service
     )
 
 
-def refresh_library(hass: HomeAssistant, service_call: ServiceCall) -> None:
+def refresh_library(menuai: menuai, service_call: ServiceCall) -> None:
     """Scan a Plex library for new and updated media."""
     plex_server_name = service_call.data.get("server_name")
     library_name = service_call.data["library_name"]
 
-    plex_server = get_plex_server(hass, plex_server_name)
+    plex_server = get_plex_server(menuai, plex_server_name)
 
     try:
         library = plex_server.library.section(title=library_name)
@@ -79,16 +79,16 @@ def refresh_library(hass: HomeAssistant, service_call: ServiceCall) -> None:
 
 
 def get_plex_server(
-    hass: HomeAssistant,
+    menuai: menuai,
     plex_server_name: str | None = None,
     plex_server_id: str | None = None,
 ) -> PlexServer:
     """Retrieve a configured Plex server by name."""
-    if DOMAIN not in hass.data:
-        raise HomeAssistantError("Plex integration not configured")
-    servers: dict[str, PlexServer] = get_plex_data(hass)[SERVERS]
+    if DOMAIN not in menuai.data:
+        raise menuaiError("Plex integration not configured")
+    servers: dict[str, PlexServer] = get_plex_data(menuai)[SERVERS]
     if not servers:
-        raise HomeAssistantError("No Plex servers available")
+        raise menuaiError("No Plex servers available")
 
     if plex_server_id:
         return servers[plex_server_id]
@@ -101,7 +101,7 @@ def get_plex_server(
         if plex_server is not None:
             return plex_server
         friendly_names = [x.friendly_name for x in plex_servers]
-        raise HomeAssistantError(
+        raise menuaiError(
             f"Requested Plex server '{plex_server_name}' not found in {friendly_names}"
         )
 
@@ -109,14 +109,14 @@ def get_plex_server(
         return next(iter(plex_servers))
 
     friendly_names = [x.friendly_name for x in plex_servers]
-    raise HomeAssistantError(
+    raise menuaiError(
         "Multiple Plex servers configured, choose with 'plex_server' key:"
         f" {friendly_names}"
     )
 
 
 def process_plex_payload(
-    hass: HomeAssistant,
+    menuai: menuai,
     content_type: str,
     content_id: str,
     default_plex_server: PlexServer | None = None,
@@ -145,7 +145,7 @@ def process_plex_payload(
                 # For "special" items like radio stations
                 content = plex_url.path
             server_id = plex_url.host
-            plex_server = get_plex_server(hass, plex_server_id=server_id)
+            plex_server = get_plex_server(menuai, plex_server_id=server_id)
         else:  # noqa: PLR5501
             # Handle legacy payloads without server_id in URL host position
             if plex_url.host == "search":
@@ -158,10 +158,10 @@ def process_plex_payload(
 
     if isinstance(content, dict):
         if plex_server_name := content.pop("plex_server", None):
-            plex_server = get_plex_server(hass, plex_server_name)
+            plex_server = get_plex_server(menuai, plex_server_name)
 
     if not plex_server:
-        plex_server = get_plex_server(hass)
+        plex_server = get_plex_server(menuai)
 
     if isinstance(content, dict):
         if plex_user := content.pop("username", None):
@@ -170,7 +170,7 @@ def process_plex_payload(
 
     if content_type == "station":
         if not supports_playqueues:
-            raise HomeAssistantError("Plex stations are not supported on this device")
+            raise menuaiError("Plex stations are not supported on this device")
         playqueue = plex_server.create_station_playqueue(content)
         return PlexMediaSearchResult(playqueue)
 
@@ -182,7 +182,7 @@ def process_plex_payload(
 
     if playqueue_id := content.pop("playqueue_id", None):
         if not supports_playqueues:
-            raise HomeAssistantError("Plex playqueues are not supported on this device")
+            raise menuaiError("Plex playqueues are not supported on this device")
         try:
             playqueue = plex_server.get_playqueue(playqueue_id)
         except NotFound as err:

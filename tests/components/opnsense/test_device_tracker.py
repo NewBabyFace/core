@@ -4,12 +4,12 @@ from unittest import mock
 
 import pytest
 
-from homeassistant.components import opnsense
-from homeassistant.components.device_tracker import legacy
-from homeassistant.components.opnsense import CONF_API_SECRET, DOMAIN
-from homeassistant.const import CONF_API_KEY, CONF_URL, CONF_VERIFY_SSL
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components import opnsense
+from menuai.components.device_tracker import legacy
+from menuai.components.opnsense import CONF_API_SECRET, DOMAIN
+from menuai.const import CONF_API_KEY, CONF_URL, CONF_VERIFY_SSL
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 
 @pytest.fixture(name="mocked_opnsense")
@@ -20,7 +20,7 @@ def mocked_opnsense():
 
 
 async def test_get_scanner(
-    hass: HomeAssistant, mocked_opnsense, mock_device_tracker_conf: list[legacy.Device]
+    menuai: menuai, mocked_opnsense, mock_device_tracker_conf: list[legacy.Device]
 ) -> None:
     """Test creating an opnsense scanner."""
     interface_client = mock.MagicMock()
@@ -48,7 +48,7 @@ async def test_get_scanner(
     network_insight_client.get_interfaces.return_value = {"igb0": "WAN", "igb1": "LAN"}
 
     result = await async_setup_component(
-        hass,
+        menuai,
         DOMAIN,
         {
             DOMAIN: {
@@ -59,10 +59,10 @@ async def test_get_scanner(
             }
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result
-    device_1 = hass.states.get("device_tracker.desktop")
+    device_1 = menuai.states.get("device_tracker.desktop")
     assert device_1 is not None
     assert device_1.state == "home"
-    device_2 = hass.states.get("device_tracker.ff_ff_ff_ff_ff_ff")
+    device_2 = menuai.states.get("device_tracker.ff_ff_ff_ff_ff_ff")
     assert device_2.state == "home"

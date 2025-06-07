@@ -7,16 +7,16 @@ from bimmer_connected.const import (
 )
 import respx
 
-from homeassistant import config_entries
-from homeassistant.components.bmw_connected_drive.const import (
+from menuai import config_entries
+from menuai.components.bmw_connected_drive.const import (
     CONF_CAPTCHA_TOKEN,
     CONF_GCID,
     CONF_READ_ONLY,
     CONF_REFRESH_TOKEN,
     DOMAIN,
 )
-from homeassistant.const import CONF_PASSWORD, CONF_REGION, CONF_USERNAME
-from homeassistant.core import HomeAssistant
+from menuai.const import CONF_PASSWORD, CONF_REGION, CONF_USERNAME
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -54,22 +54,22 @@ REMOTE_SERVICE_EXC_TRANSLATION = (
 )
 
 BIMMER_CONNECTED_LOGIN_PATCH = (
-    "homeassistant.components.bmw_connected_drive.config_flow.MyBMWAuthentication.login"
+    "menuai.components.bmw_connected_drive.config_flow.MyBMWAuthentication.login"
 )
 BIMMER_CONNECTED_VEHICLE_PATCH = (
-    "homeassistant.components.bmw_connected_drive.coordinator.MyBMWAccount.get_vehicles"
+    "menuai.components.bmw_connected_drive.coordinator.MyBMWAccount.get_vehicles"
 )
 
 
-async def setup_mocked_integration(hass: HomeAssistant) -> MockConfigEntry:
+async def setup_mocked_integration(menuai: menuai) -> MockConfigEntry:
     """Mock a fully setup config entry and all components based on fixtures."""
 
     # Mock config entry and add to HA
     mock_config_entry = MockConfigEntry(**FIXTURE_CONFIG_ENTRY)
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     return mock_config_entry
 

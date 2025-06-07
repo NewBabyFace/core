@@ -13,12 +13,12 @@ from typing import Any, cast
 import attr
 import voluptuous as vol
 
-from homeassistant.const import CONF_EXCLUDE, CONF_INCLUDE
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.data_entry_flow import FlowResult
-from homeassistant.exceptions import ServiceNotFound
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.storage import Store
+from menuai.const import CONF_EXCLUDE, CONF_INCLUDE
+from menuai.core import menuai, callback
+from menuai.data_entry_flow import FlowResult
+from menuai.exceptions import ServiceNotFound
+from menuai.helpers import config_validation as cv
+from menuai.helpers.storage import Store
 
 from . import (
     MULTI_FACTOR_AUTH_MODULE_SCHEMA,
@@ -35,7 +35,7 @@ CONFIG_SCHEMA = MULTI_FACTOR_AUTH_MODULE_SCHEMA.extend(
     {
         vol.Optional(CONF_INCLUDE): vol.All(cv.ensure_list, [cv.string]),
         vol.Optional(CONF_EXCLUDE): vol.All(cv.ensure_list, [cv.string]),
-        vol.Optional(CONF_MESSAGE, default="{} is your Home Assistant login code"): str,
+        vol.Optional(CONF_MESSAGE, default="{} is your MenuAI login code"): str,
     },
     extra=vol.PREVENT_EXTRA,
 )
@@ -97,12 +97,12 @@ class NotifyAuthModule(MultiFactorAuthModule):
 
     DEFAULT_TITLE = "Notify One-Time Password"
 
-    def __init__(self, hass: HomeAssistant, config: dict[str, Any]) -> None:
+    def __init__(self, menuai: menuai, config: dict[str, Any]) -> None:
         """Initialize the user data store."""
-        super().__init__(hass, config)
+        super().__init__(menuai, config)
         self._user_settings: _UsersDict | None = None
         self._user_store = Store[dict[str, dict[str, Any]]](
-            hass, STORAGE_VERSION, STORAGE_KEY, private=True, atomic_writes=True
+            menuai, STORAGE_VERSION, STORAGE_KEY, private=True, atomic_writes=True
         )
         self._include = config.get(CONF_INCLUDE, [])
         self._exclude = config.get(CONF_EXCLUDE, [])
@@ -153,7 +153,7 @@ class NotifyAuthModule(MultiFactorAuthModule):
         """Return list of notify services."""
         unordered_services = set()
 
-        for service in self.hass.services.async_services_for_domain("notify"):
+        for service in self.menuai.services.async_services_for_domain("notify"):
             if service not in self._exclude:
                 unordered_services.add(service)
 
@@ -211,7 +211,7 @@ class NotifyAuthModule(MultiFactorAuthModule):
             return False
 
         # user_input has been validate in caller
-        return await self.hass.async_add_executor_job(
+        return await self.menuai.async_add_executor_job(
             _verify_otp,
             notify_setting.secret,
             user_input.get(INPUT_FIELD_CODE, ""),
@@ -235,7 +235,7 @@ class NotifyAuthModule(MultiFactorAuthModule):
             notify_setting.counter = _generate_random()
             return _generate_otp(notify_setting.secret, notify_setting.counter)
 
-        code = await self.hass.async_add_executor_job(
+        code = await self.menuai.async_add_executor_job(
             generate_secret_and_one_time_password
         )
 
@@ -265,7 +265,7 @@ class NotifyAuthModule(MultiFactorAuthModule):
         if target:
             data["target"] = [target]
 
-        await self.hass.services.async_call("notify", notify_service, data)
+        await self.menuai.services.async_call("notify", notify_service, data)
 
 
 class NotifySetupFlow(SetupFlow[NotifyAuthModule]):
@@ -292,12 +292,12 @@ class NotifySetupFlow(SetupFlow[NotifyAuthModule]):
         """Let user select available notify services."""
         errors: dict[str, str] = {}
 
-        hass = self._auth_module.hass
+        menuai = self._auth_module.menuai
         if user_input:
             self._notify_service = user_input["notify_service"]
             self._target = user_input.get("target")
-            self._secret = await hass.async_add_executor_job(_generate_secret)
-            self._count = await hass.async_add_executor_job(_generate_random)
+            self._secret = await menuai.async_add_executor_job(_generate_secret)
+            self._count = await menuai.async_add_executor_job(_generate_random)
 
             return await self.async_step_setup()
 
@@ -318,10 +318,10 @@ class NotifySetupFlow(SetupFlow[NotifyAuthModule]):
         """Verify user can receive one-time password."""
         errors: dict[str, str] = {}
 
-        hass = self._auth_module.hass
+        menuai = self._auth_module.menuai
         assert self._secret and self._count
         if user_input:
-            verified = await hass.async_add_executor_job(
+            verified = await menuai.async_add_executor_job(
                 _verify_otp, self._secret, user_input["code"], self._count
             )
             if verified:
@@ -334,7 +334,7 @@ class NotifySetupFlow(SetupFlow[NotifyAuthModule]):
             errors["base"] = "invalid_code"
 
         # generate code every time, no retry logic
-        code = await hass.async_add_executor_job(
+        code = await menuai.async_add_executor_job(
             _generate_otp, self._secret, self._count
         )
 

@@ -1,7 +1,7 @@
 """Config flow to configure Nest.
 
 This configuration flow supports the following:
-  - SDM API with Web OAuth flow with redirect back to Home Assistant
+  - SDM API with Web OAuth flow with redirect back to MenuAI
   - Legacy Nest API auth flow with where user enters an auth code manually
 
 NestFlowHandler is an implementation of AbstractOAuth2FlowHandler with
@@ -24,15 +24,15 @@ from google_nest_sdm.exceptions import ApiException
 from google_nest_sdm.structure import Structure
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlowResult
-from homeassistant.helpers import config_entry_oauth2_flow
-from homeassistant.helpers.selector import (
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlowResult
+from menuai.helpers import config_entry_oauth2_flow
+from menuai.helpers.selector import (
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
 )
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
-from homeassistant.util import get_random_string
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.util import get_random_string
 
 from . import api
 from .const import (
@@ -180,7 +180,7 @@ class NestFlowHandler(
     ) -> ConfigFlowResult:
         """Handle initial step in app credentials flow."""
         implementations = await config_entry_oauth2_flow.async_get_implementations(
-            self.hass, self.DOMAIN
+            self.menuai, self.DOMAIN
         )
         if implementations:
             return await self.async_step_cloud_project()
@@ -265,7 +265,7 @@ class NestFlowHandler(
         if self._admin_client is None:
             access_token = self._data["token"]["access_token"]
             self._admin_client = api.new_pubsub_admin_client(
-                self.hass,
+                self.menuai,
                 access_token=access_token,
                 cloud_project_id=cloud_project_id,
             )
@@ -374,7 +374,7 @@ class NestFlowHandler(
             if not errors:
                 self._data.update(user_input)
                 subscriber = api.new_subscriber_with_token(
-                    self.hass,
+                    self.menuai,
                     self._data["token"]["access_token"],
                     self._data[CONF_PROJECT_ID],
                     subscription_name,

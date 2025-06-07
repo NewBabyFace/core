@@ -1,4 +1,4 @@
-"""Home Assistant hardware firmware update coordinator."""
+"""MenuAI hardware firmware update coordinator."""
 
 from __future__ import annotations
 
@@ -12,8 +12,8 @@ from ha_silabs_firmware_client import (
     ManifestMissing,
 )
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -24,15 +24,15 @@ FIRMWARE_REFRESH_INTERVAL = timedelta(hours=8)
 class FirmwareUpdateCoordinator(DataUpdateCoordinator[FirmwareManifest]):
     """Coordinator to manage firmware updates."""
 
-    def __init__(self, hass: HomeAssistant, session: ClientSession, url: str) -> None:
+    def __init__(self, menuai: menuai, session: ClientSession, url: str) -> None:
         """Initialize the firmware update coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             name="firmware update coordinator",
             update_interval=FIRMWARE_REFRESH_INTERVAL,
         )
-        self.hass = hass
+        self.menuai = menuai
         self.session = session
 
         self.client = FirmwareUpdateClient(url, session)

@@ -2,18 +2,18 @@
 
 import pytest
 
-from homeassistant.components import automation
-from homeassistant.components.device_automation import DeviceAutomationType
-from homeassistant.components.device_automation.exceptions import (
+from menuai.components import automation
+from menuai.components.device_automation import DeviceAutomationType
+from menuai.components.device_automation.exceptions import (
     InvalidDeviceAutomationConfig,
 )
-from homeassistant.components.samsungtv import device_trigger
-from homeassistant.components.samsungtv.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr
-from homeassistant.setup import async_setup_component
+from menuai.components.samsungtv import device_trigger
+from menuai.components.samsungtv.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai, ServiceCall
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr
+from menuai.setup import async_setup_component
 
 from . import setup_samsungtv_entry
 from .const import ENTRYDATA_ENCRYPTED_WEBSOCKET
@@ -23,10 +23,10 @@ from tests.common import MockConfigEntry, async_get_device_automations
 
 @pytest.mark.usefixtures("remote_encrypted_websocket", "rest_api")
 async def test_get_triggers(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Test we get the expected triggers."""
-    await setup_samsungtv_entry(hass, ENTRYDATA_ENCRYPTED_WEBSOCKET)
+    await setup_samsungtv_entry(menuai, ENTRYDATA_ENCRYPTED_WEBSOCKET)
 
     device = device_registry.async_get_device(
         identifiers={(DOMAIN, "be9554b9-c9fb-41f4-8920-22da015376a4")}
@@ -41,19 +41,19 @@ async def test_get_triggers(
     }
 
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device.id
+        menuai, DeviceAutomationType.TRIGGER, device.id
     )
     assert turn_on_trigger in triggers
 
 
 @pytest.mark.usefixtures("remote_encrypted_websocket", "rest_api")
 async def test_if_fires_on_turn_on_request(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     service_calls: list[ServiceCall],
 ) -> None:
     """Test for turn_on and turn_off triggers firing."""
-    await setup_samsungtv_entry(hass, ENTRYDATA_ENCRYPTED_WEBSOCKET)
+    await setup_samsungtv_entry(menuai, ENTRYDATA_ENCRYPTED_WEBSOCKET)
     entity_id = "media_player.mock_title"
 
     device = device_registry.async_get_device(
@@ -61,7 +61,7 @@ async def test_if_fires_on_turn_on_request(
     )
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -97,10 +97,10 @@ async def test_if_fires_on_turn_on_request(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "media_player", "turn_on", {"entity_id": entity_id}, blocking=True
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(service_calls) == 3
     assert service_calls[1].data["some"] == device.id
@@ -111,21 +111,21 @@ async def test_if_fires_on_turn_on_request(
 
 @pytest.mark.usefixtures("remote_encrypted_websocket", "rest_api")
 async def test_failure_scenarios(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Test failure scenarios."""
-    await setup_samsungtv_entry(hass, ENTRYDATA_ENCRYPTED_WEBSOCKET)
+    await setup_samsungtv_entry(menuai, ENTRYDATA_ENCRYPTED_WEBSOCKET)
 
     # Test wrong trigger platform type
-    with pytest.raises(HomeAssistantError):
+    with pytest.raises(menuaiError):
         await device_trigger.async_attach_trigger(
-            hass, {"type": "wrong.type", "device_id": "invalid_device_id"}, None, {}
+            menuai, {"type": "wrong.type", "device_id": "invalid_device_id"}, None, {}
         )
 
     # Test invalid device id
     with pytest.raises(InvalidDeviceAutomationConfig):
         await device_trigger.async_validate_trigger_config(
-            hass,
+            menuai,
             {
                 "platform": "device",
                 "domain": DOMAIN,
@@ -135,7 +135,7 @@ async def test_failure_scenarios(
         )
 
     entry = MockConfigEntry(domain="fake", state=ConfigEntryState.LOADED, data={})
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     device = device_registry.async_get_or_create(
         config_entry_id=entry.entry_id, identifiers={("fake", "fake")}
@@ -150,4 +150,4 @@ async def test_failure_scenarios(
 
     # Test that device id from non samsungtv domain raises exception
     with pytest.raises(InvalidDeviceAutomationConfig):
-        await device_trigger.async_validate_trigger_config(hass, config)
+        await device_trigger.async_validate_trigger_config(menuai, config)

@@ -11,11 +11,11 @@ from zha.application.gateway import Gateway
 from zigpy.config import CONF_NWK_EXTENDED_PAN_ID
 from zigpy.types import Channels
 
-from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_UNIQUE_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.components.diagnostics import async_redact_data
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_UNIQUE_ID
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 from .const import CONF_ALARM_MASTER_CODE
 from .helpers import (
@@ -64,11 +64,11 @@ def shallow_asdict(obj: Any) -> dict:
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, config_entry: ConfigEntry
+    menuai: menuai, config_entry: ConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
-    zha_data = get_zha_data(hass)
-    gateway: Gateway = get_zha_gateway(hass)
+    zha_data = get_zha_data(menuai)
+    gateway: Gateway = get_zha_gateway(menuai)
     app = gateway.application_controller
 
     energy_scan = await app.energy_scan(
@@ -107,9 +107,9 @@ async def async_get_config_entry_diagnostics(
 
 
 async def async_get_device_diagnostics(
-    hass: HomeAssistant, config_entry: ConfigEntry, device: dr.DeviceEntry
+    menuai: menuai, config_entry: ConfigEntry, device: dr.DeviceEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a device."""
-    zha_device_proxy: ZHADeviceProxy = async_get_zha_device_proxy(hass, device.id)
+    zha_device_proxy: ZHADeviceProxy = async_get_zha_device_proxy(menuai, device.id)
     diagnostics_json: dict[str, Any] = zha_device_proxy.device.get_diagnostics_json()
     return async_redact_data(diagnostics_json, KEYS_TO_REDACT)

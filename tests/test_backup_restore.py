@@ -9,7 +9,7 @@ from unittest import mock
 
 import pytest
 
-from homeassistant import backup_restore
+from menuai import backup_restore
 
 from .common import get_test_config_dir
 
@@ -43,24 +43,24 @@ def restore_result_file_content() -> dict[str, Any] | None:
         ),
         (
             None,
-            '{"path": "test", "password": "psw", "remove_after_restore": false, "restore_database": false, "restore_homeassistant": true}',
+            '{"path": "test", "password": "psw", "remove_after_restore": false, "restore_database": false, "restore_menuai": true}',
             backup_restore.RestoreBackupFileContent(
                 backup_file_path=Path("test"),
                 password="psw",
                 remove_after_restore=False,
                 restore_database=False,
-                restore_homeassistant=True,
+                restore_menuai=True,
             ),
         ),
         (
             None,
-            '{"path": "test", "password": null, "remove_after_restore": true, "restore_database": true, "restore_homeassistant": false}',
+            '{"path": "test", "password": null, "remove_after_restore": true, "restore_database": true, "restore_menuai": false}',
             backup_restore.RestoreBackupFileContent(
                 backup_file_path=Path("test"),
                 password=None,
                 remove_after_restore=True,
                 restore_database=True,
-                restore_homeassistant=False,
+                restore_menuai=False,
             ),
         ),
     ],
@@ -92,13 +92,13 @@ def test_restoring_backup_that_does_not_exist() -> None:
     backup_file_path = Path(get_test_config_dir("backups", "test"))
     with (
         mock.patch(
-            "homeassistant.backup_restore.restore_backup_file_content",
+            "menuai.backup_restore.restore_backup_file_content",
             return_value=backup_restore.RestoreBackupFileContent(
                 backup_file_path=backup_file_path,
                 password=None,
                 remove_after_restore=False,
                 restore_database=True,
-                restore_homeassistant=True,
+                restore_menuai=True,
             ),
         ),
         mock.patch("pathlib.Path.read_text", side_effect=FileNotFoundError),
@@ -118,7 +118,7 @@ def test_restoring_backup_when_instructions_can_not_be_read() -> None:
     """Test restoring a backup when instructions can not be read."""
     with (
         mock.patch(
-            "homeassistant.backup_restore.restore_backup_file_content",
+            "menuai.backup_restore.restore_backup_file_content",
             return_value=None,
         ),
     ):
@@ -131,13 +131,13 @@ def test_restoring_backup_that_is_not_a_file() -> None:
     backup_file_path = Path(get_test_config_dir("backups", "test"))
     with (
         mock.patch(
-            "homeassistant.backup_restore.restore_backup_file_content",
+            "menuai.backup_restore.restore_backup_file_content",
             return_value=backup_restore.RestoreBackupFileContent(
                 backup_file_path=backup_file_path,
                 password=None,
                 remove_after_restore=False,
                 restore_database=True,
-                restore_homeassistant=True,
+                restore_menuai=True,
             ),
         ),
         mock.patch("pathlib.Path.exists", return_value=True),
@@ -160,32 +160,32 @@ def test_aborting_for_older_versions() -> None:
     backup_file_path = Path(config_dir, "backups", "test.tar")
 
     def _patched_path_read_text(path: Path, **kwargs):
-        return '{"homeassistant": {"version": "9999.99.99"}, "compressed": false}'
+        return '{"menuai": {"version": "9999.99.99"}, "compressed": false}'
 
     with (
         mock.patch(
-            "homeassistant.backup_restore.restore_backup_file_content",
+            "menuai.backup_restore.restore_backup_file_content",
             return_value=backup_restore.RestoreBackupFileContent(
                 backup_file_path=backup_file_path,
                 password=None,
                 remove_after_restore=False,
                 restore_database=True,
-                restore_homeassistant=True,
+                restore_menuai=True,
             ),
         ),
         mock.patch("securetar.SecureTarFile"),
-        mock.patch("homeassistant.backup_restore.TemporaryDirectory"),
+        mock.patch("menuai.backup_restore.TemporaryDirectory"),
         mock.patch("pathlib.Path.read_text", _patched_path_read_text),
-        mock.patch("homeassistant.backup_restore.HA_VERSION", "2013.09.17"),
+        mock.patch("menuai.backup_restore.HA_VERSION", "2013.09.17"),
         pytest.raises(
             ValueError,
-            match="You need at least Home Assistant version 9999.99.99 to restore this backup",
+            match="You need at least MenuAI version 9999.99.99 to restore this backup",
         ),
     ):
         assert backup_restore.restore_backup(config_dir) is True
     assert restore_result_file_content() == {
         "error": (
-            "You need at least Home Assistant version 9999.99.99 to restore this backup"
+            "You need at least MenuAI version 9999.99.99 to restore this backup"
         ),
         "error_type": "ValueError",
         "success": False,
@@ -207,7 +207,7 @@ def test_aborting_for_older_versions() -> None:
                 password=None,
                 remove_after_restore=False,
                 restore_database=True,
-                restore_homeassistant=True,
+                restore_menuai=True,
             ),
             (
                 ".HA_RESTORE",
@@ -225,7 +225,7 @@ def test_aborting_for_older_versions() -> None:
                 password=None,
                 restore_database=False,
                 remove_after_restore=False,
-                restore_homeassistant=True,
+                restore_menuai=True,
             ),
             (".HA_RESTORE", ".HA_VERSION"),
             ("tmp_backups", "www"),
@@ -238,7 +238,7 @@ def test_aborting_for_older_versions() -> None:
                 password=None,
                 restore_database=True,
                 remove_after_restore=False,
-                restore_homeassistant=False,
+                restore_menuai=False,
             ),
             ("home-assistant_v2.db", "home-assistant_v2.db-wal"),
             (),
@@ -268,7 +268,7 @@ def test_removal_of_current_configuration_when_restoring(
     ]
 
     def _patched_path_read_text(path: Path, **kwargs):
-        return '{"homeassistant": {"version": "2013.09.17"}, "compressed": false}'
+        return '{"menuai": {"version": "2013.09.17"}, "compressed": false}'
 
     def _patched_path_is_file(path: Path, **kwargs):
         return [x for x in mock_config_dir if x["path"] == path][0]["is_file"]
@@ -278,12 +278,12 @@ def test_removal_of_current_configuration_when_restoring(
 
     with (
         mock.patch(
-            "homeassistant.backup_restore.restore_backup_file_content",
+            "menuai.backup_restore.restore_backup_file_content",
             return_value=restore_backup_content,
         ),
         mock.patch("securetar.SecureTarFile"),
-        mock.patch("homeassistant.backup_restore.TemporaryDirectory") as temp_dir_mock,
-        mock.patch("homeassistant.backup_restore.HA_VERSION", "2013.09.17"),
+        mock.patch("menuai.backup_restore.TemporaryDirectory") as temp_dir_mock,
+        mock.patch("menuai.backup_restore.HA_VERSION", "2013.09.17"),
         mock.patch("pathlib.Path.read_text", _patched_path_read_text),
         mock.patch("pathlib.Path.is_file", _patched_path_is_file),
         mock.patch("pathlib.Path.is_dir", _patched_path_is_dir),
@@ -300,7 +300,7 @@ def test_removal_of_current_configuration_when_restoring(
 
         assert backup_restore.restore_backup(config_dir) is True
 
-        tmp_ha = Path("tmp", "homeassistant")
+        tmp_ha = Path("tmp", "menuai")
         assert copy_mock.call_count == len(expected_copied_files)
         copied_files = {Path(call.args[0]) for call in copy_mock.mock_calls}
         assert copied_files == {Path(tmp_ha, "data", f) for f in expected_copied_files}
@@ -331,7 +331,7 @@ def test_extracting_the_contents_of_a_backup_file() -> None:
     backup_file_path = Path(config_dir, "backups", "test.tar")
 
     def _patched_path_read_text(path: Path, **kwargs):
-        return '{"homeassistant": {"version": "2013.09.17"}, "compressed": false}'
+        return '{"menuai": {"version": "2013.09.17"}, "compressed": false}'
 
     getmembers_mock = mock.MagicMock(
         return_value=[
@@ -346,13 +346,13 @@ def test_extracting_the_contents_of_a_backup_file() -> None:
 
     with (
         mock.patch(
-            "homeassistant.backup_restore.restore_backup_file_content",
+            "menuai.backup_restore.restore_backup_file_content",
             return_value=backup_restore.RestoreBackupFileContent(
                 backup_file_path=backup_file_path,
                 password=None,
                 remove_after_restore=False,
                 restore_database=True,
-                restore_homeassistant=True,
+                restore_menuai=True,
             ),
         ),
         mock.patch(
@@ -363,7 +363,7 @@ def test_extracting_the_contents_of_a_backup_file() -> None:
                 __iter__=lambda x: iter(getmembers_mock.return_value),
             ),
         ),
-        mock.patch("homeassistant.backup_restore.TemporaryDirectory"),
+        mock.patch("menuai.backup_restore.TemporaryDirectory"),
         mock.patch("pathlib.Path.read_text", _patched_path_read_text),
         mock.patch("pathlib.Path.is_file", return_value=False),
         mock.patch("pathlib.Path.iterdir", return_value=[]),
@@ -394,16 +394,16 @@ def test_remove_backup_file_after_restore(
 
     with (
         mock.patch(
-            "homeassistant.backup_restore.restore_backup_file_content",
+            "menuai.backup_restore.restore_backup_file_content",
             return_value=backup_restore.RestoreBackupFileContent(
                 backup_file_path=backup_file_path,
                 password=None,
                 remove_after_restore=remove_after_restore,
                 restore_database=True,
-                restore_homeassistant=True,
+                restore_menuai=True,
             ),
         ),
-        mock.patch("homeassistant.backup_restore._extract_backup"),
+        mock.patch("menuai.backup_restore._extract_backup"),
         mock.patch("pathlib.Path.unlink", autospec=True) as mock_unlink,
     ):
         assert backup_restore.restore_backup(config_dir) is True

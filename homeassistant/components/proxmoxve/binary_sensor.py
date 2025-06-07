@@ -2,21 +2,21 @@
 
 from __future__ import annotations
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import COORDINATORS, DOMAIN, PROXMOX_CLIENTS
 from .entity import ProxmoxEntity
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -29,9 +29,9 @@ async def async_setup_platform(
 
     for host_config in discovery_info["config"][DOMAIN]:
         host_name = host_config["host"]
-        host_name_coordinators = hass.data[DOMAIN][COORDINATORS][host_name]
+        host_name_coordinators = menuai.data[DOMAIN][COORDINATORS][host_name]
 
-        if hass.data[PROXMOX_CLIENTS][host_name] is None:
+        if menuai.data[PROXMOX_CLIENTS][host_name] is None:
             continue
 
         for node_config in host_config["nodes"]:

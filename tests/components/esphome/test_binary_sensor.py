@@ -3,8 +3,8 @@
 from aioesphomeapi import APIClient, BinarySensorInfo, BinarySensorState
 import pytest
 
-from homeassistant.const import STATE_OFF, STATE_ON, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
+from menuai.const import STATE_OFF, STATE_ON, STATE_UNKNOWN
+from menuai.core import menuai
 
 from .conftest import MockESPHomeDeviceType, MockGenericDeviceEntryType
 
@@ -13,7 +13,7 @@ from .conftest import MockESPHomeDeviceType, MockGenericDeviceEntryType
     "binary_state", [(True, STATE_ON), (False, STATE_OFF), (None, STATE_UNKNOWN)]
 )
 async def test_binary_sensor_generic_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     binary_state: tuple[bool, str],
     mock_generic_device_entry: MockGenericDeviceEntryType,
@@ -27,7 +27,7 @@ async def test_binary_sensor_generic_entity(
             unique_id="my_binary_sensor",
         )
     ]
-    esphome_state, hass_state = binary_state
+    esphome_state, menuai_state = binary_state
     states = [BinarySensorState(key=1, state=esphome_state)]
     user_service = []
     await mock_generic_device_entry(
@@ -36,13 +36,13 @@ async def test_binary_sensor_generic_entity(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("binary_sensor.test_mybinary_sensor")
+    state = menuai.states.get("binary_sensor.test_mybinary_sensor")
     assert state is not None
-    assert state.state == hass_state
+    assert state.state == menuai_state
 
 
 async def test_status_binary_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -64,13 +64,13 @@ async def test_status_binary_sensor(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("binary_sensor.test_mybinary_sensor")
+    state = menuai.states.get("binary_sensor.test_mybinary_sensor")
     assert state is not None
     assert state.state == STATE_ON
 
 
 async def test_binary_sensor_missing_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_generic_device_entry: MockGenericDeviceEntryType,
 ) -> None:
@@ -91,13 +91,13 @@ async def test_binary_sensor_missing_state(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("binary_sensor.test_mybinary_sensor")
+    state = menuai.states.get("binary_sensor.test_mybinary_sensor")
     assert state is not None
     assert state.state == STATE_UNKNOWN
 
 
 async def test_binary_sensor_has_state_false(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_esphome_device: MockESPHomeDeviceType,
 ) -> None:
@@ -118,12 +118,12 @@ async def test_binary_sensor_has_state_false(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("binary_sensor.test_mybinary_sensor")
+    state = menuai.states.get("binary_sensor.test_mybinary_sensor")
     assert state is not None
     assert state.state == STATE_UNKNOWN
 
     mock_device.set_state(BinarySensorState(key=1, state=True, missing_state=False))
-    await hass.async_block_till_done()
-    state = hass.states.get("binary_sensor.test_mybinary_sensor")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("binary_sensor.test_mybinary_sensor")
     assert state is not None
     assert state.state == STATE_ON

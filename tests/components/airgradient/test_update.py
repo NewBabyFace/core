@@ -6,9 +6,9 @@ from unittest.mock import AsyncMock, patch
 from freezegun.api import FrozenDateTimeFactory
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.const import STATE_OFF, STATE_ON, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import STATE_OFF, STATE_ON, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import setup_integration
 
@@ -16,29 +16,29 @@ from tests.common import MockConfigEntry, async_fire_time_changed, snapshot_plat
 
 
 async def test_all_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mock_airgradient_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test all entities."""
-    with patch("homeassistant.components.airgradient.PLATFORMS", [Platform.UPDATE]):
-        await setup_integration(hass, mock_config_entry)
+    with patch("menuai.components.airgradient.PLATFORMS", [Platform.UPDATE]):
+        await setup_integration(menuai, mock_config_entry)
 
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
 
 async def test_update_mechanism(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_airgradient_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test update entity."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    state = hass.states.get("update.airgradient_firmware")
+    state = menuai.states.get("update.airgradient_firmware")
     assert state.state == STATE_ON
     assert state.attributes["installed_version"] == "3.1.1"
     assert state.attributes["latest_version"] == "3.1.4"
@@ -48,10 +48,10 @@ async def test_update_mechanism(
     mock_airgradient_client.get_current_measures.return_value.firmware_version = "3.1.4"
 
     freezer.tick(timedelta(minutes=1))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("update.airgradient_firmware")
+    state = menuai.states.get("update.airgradient_firmware")
     assert state.state == STATE_OFF
     assert state.attributes["installed_version"] == "3.1.4"
     assert state.attributes["latest_version"] == "3.1.4"
@@ -59,11 +59,11 @@ async def test_update_mechanism(
     mock_airgradient_client.get_latest_firmware_version.return_value = "3.1.5"
 
     freezer.tick(timedelta(minutes=59))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     mock_airgradient_client.get_latest_firmware_version.assert_called_once()
-    state = hass.states.get("update.airgradient_firmware")
+    state = menuai.states.get("update.airgradient_firmware")
     assert state.state == STATE_ON
     assert state.attributes["installed_version"] == "3.1.4"
     assert state.attributes["latest_version"] == "3.1.5"

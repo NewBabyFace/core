@@ -1,4 +1,4 @@
-"""Helpers to help with encoding Home Assistant objects in JSON."""
+"""Helpers to help with encoding MenuAI objects in JSON."""
 
 from collections import deque
 from collections.abc import Callable
@@ -11,8 +11,8 @@ from typing import TYPE_CHECKING, Any, Final
 
 import orjson
 
-from homeassistant.util.file import write_utf8_file, write_utf8_file_atomic
-from homeassistant.util.json import (
+from menuai.util.file import write_utf8_file, write_utf8_file_atomic
+from menuai.util.json import (
     JSON_DECODE_EXCEPTIONS as _JSON_DECODE_EXCEPTIONS,
     JSON_ENCODE_EXCEPTIONS as _JSON_ENCODE_EXCEPTIONS,
     SerializationError,
@@ -29,13 +29,13 @@ from .deprecation import (
 )
 
 _DEPRECATED_JSON_DECODE_EXCEPTIONS = DeprecatedConstant(
-    _JSON_DECODE_EXCEPTIONS, "homeassistant.util.json.JSON_DECODE_EXCEPTIONS", "2025.8"
+    _JSON_DECODE_EXCEPTIONS, "menuai.util.json.JSON_DECODE_EXCEPTIONS", "2025.8"
 )
 _DEPRECATED_JSON_ENCODE_EXCEPTIONS = DeprecatedConstant(
-    _JSON_ENCODE_EXCEPTIONS, "homeassistant.util.json.JSON_ENCODE_EXCEPTIONS", "2025.8"
+    _JSON_ENCODE_EXCEPTIONS, "menuai.util.json.JSON_ENCODE_EXCEPTIONS", "2025.8"
 )
 json_loads = deprecated_function(
-    "homeassistant.util.json.json_loads", breaks_in_ha_version="2025.8"
+    "menuai.util.json.json_loads", breaks_in_ha_version="2025.8"
 )(_json_loads)
 
 # These can be removed if no deprecated constant are in this module anymore
@@ -50,10 +50,10 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class JSONEncoder(json.JSONEncoder):
-    """JSONEncoder that supports Home Assistant objects."""
+    """JSONEncoder that supports MenuAI objects."""
 
     def default(self, o: Any) -> Any:
-        """Convert Home Assistant objects.
+        """Convert MenuAI objects.
 
         Hand other objects to the original method.
         """
@@ -68,7 +68,7 @@ class JSONEncoder(json.JSONEncoder):
 
 
 def json_encoder_default(obj: Any) -> Any:
-    """Convert Home Assistant objects.
+    """Convert MenuAI objects.
 
     Hand other objects to the original method.
     """
@@ -100,7 +100,7 @@ else:
 
 
 class ExtendedJSONEncoder(JSONEncoder):
-    """JSONEncoder that supports Home Assistant objects and falls back to repr(o)."""
+    """JSONEncoder that supports MenuAI objects and falls back to repr(o)."""
 
     def default(self, o: Any) -> Any:
         """Convert certain objects.
@@ -139,7 +139,7 @@ def json_bytes_strip_null(data: Any) -> bytes:
         return result
 
     # We work on the processed result so we don't need to worry about
-    # Home Assistant extensions which allows encoding sets, tuples, etc.
+    # MenuAI extensions which allows encoding sets, tuples, etc.
     return json_bytes(_strip_null(orjson.loads(result)))
 
 
@@ -179,12 +179,12 @@ JSON_DUMP: Final = json_dumps
 
 
 def _orjson_default_encoder(data: Any) -> str:
-    """JSON encoder that uses orjson with hass defaults and returns a str."""
+    """JSON encoder that uses orjson with menuai defaults and returns a str."""
     return _orjson_bytes_default_encoder(data).decode("utf-8")
 
 
 def _orjson_bytes_default_encoder(data: Any) -> bytes:
-    """JSON encoder that uses orjson with hass defaults and returns bytes."""
+    """JSON encoder that uses orjson with menuai defaults and returns bytes."""
     return orjson.dumps(
         data,
         option=orjson.OPT_INDENT_2 | orjson.OPT_NON_STR_KEYS,
@@ -235,7 +235,7 @@ def find_paths_unserializable_data(
 
     This method is slow! Only use for error handling.
     """
-    from homeassistant.core import (  # pylint: disable=import-outside-toplevel
+    from menuai.core import (  # pylint: disable=import-outside-toplevel
         Event,
         State,
     )

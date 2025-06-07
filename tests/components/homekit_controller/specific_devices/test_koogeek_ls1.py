@@ -8,11 +8,11 @@ from aiohomekit.model import CharacteristicsTypes, ServicesTypes
 from aiohomekit.testing import FakeController, FakePairing
 import pytest
 
-from homeassistant.components.homekit_controller.connection import (
+from menuai.components.homekit_controller.connection import (
     MAX_POLL_FAILURES_TO_DECLARE_UNAVAILABLE,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.util import dt as dt_util
 
 from ..common import Helper, setup_accessories_from_file, setup_test_accessories
 
@@ -22,16 +22,16 @@ LIGHT_ON = ("lightbulb", "on")
 
 
 @pytest.mark.parametrize("failure_cls", [AccessoryDisconnectedError, EncryptionError])
-async def test_recover_from_failure(hass: HomeAssistant, failure_cls) -> None:
+async def test_recover_from_failure(menuai: menuai, failure_cls) -> None:
     """Test that entity actually recovers from a network connection drop.
 
     See https://github.com/home-assistant/core/issues/18949
     """
-    accessories = await setup_accessories_from_file(hass, "koogeek_ls1.json")
-    config_entry, pairing = await setup_test_accessories(hass, accessories)
+    accessories = await setup_accessories_from_file(menuai, "koogeek_ls1.json")
+    config_entry, pairing = await setup_test_accessories(menuai, accessories)
 
     helper = Helper(
-        hass,
+        menuai,
         "light.koogeek_ls1_20833f_light_strip",
         pairing,
         accessories[0],
@@ -68,8 +68,8 @@ async def test_recover_from_failure(hass: HomeAssistant, failure_cls) -> None:
 
     # Test that entity changes state when network error goes away
     next_update += timedelta(seconds=60)
-    async_fire_time_changed(hass, next_update)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, next_update)
+    await menuai.async_block_till_done()
 
     state = await helper.async_update(
         ServicesTypes.LIGHTBULB, {CharacteristicsTypes.ON: True}

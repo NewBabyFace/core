@@ -12,14 +12,14 @@ from hatasmota.entity import (
 )
 from hatasmota.models import DiscoveryHashType
 
-from homeassistant.components.mqtt import (
+from menuai.components.mqtt import (
     async_subscribe_connection_status,
     is_connected as mqtt_connected,
 )
-from homeassistant.core import callback
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import Entity
+from menuai.core import callback
+from menuai.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity import Entity
 
 from .discovery import (
     TASMOTA_DISCOVERY_ENTITY_UPDATED,
@@ -43,14 +43,14 @@ class TasmotaEntity(Entity):
             connections={(CONNECTION_NETWORK_MAC, tasmota_entity.mac)}
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to MQTT events."""
         await self._subscribe_topics()
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Unsubscribe when removed."""
         await self._tasmota_entity.unsubscribe_topics()
-        await super().async_will_remove_from_hass()
+        await super().async_will_remove_from_menuai()
 
     async def discovery_update(
         self, update: TasmotaEntityConfig, write_state: bool = True
@@ -89,10 +89,10 @@ class TasmotaOnOffEntity(TasmotaEntity):
         self._on_off_state: bool = False
         super().__init__(**kwds)
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to MQTT events."""
         self._tasmota_entity.set_on_state_callback(self.state_updated)
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
     @callback
     def state_updated(self, state: bool, **kwargs: Any) -> None:
@@ -119,13 +119,13 @@ class TasmotaAvailability(TasmotaEntity):
         else:
             self._available = False
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to MQTT events."""
         self._tasmota_entity.set_on_availability_callback(self.availability_updated)
         self.async_on_remove(
-            async_subscribe_connection_status(self.hass, self.async_mqtt_connected)
+            async_subscribe_connection_status(self.menuai, self.async_mqtt_connected)
         )
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         if self._tasmota_entity.deep_sleep_enabled:
             await self._tasmota_entity.poll_status()
 
@@ -138,8 +138,8 @@ class TasmotaAvailability(TasmotaEntity):
     @callback
     def async_mqtt_connected(self, _: bool) -> None:
         """Update state on connection/disconnection to MQTT broker."""
-        if not self.hass.is_stopping:
-            if not mqtt_connected(self.hass):
+        if not self.menuai.is_stopping:
+            if not mqtt_connected(self.menuai):
                 self._available = False
             elif self._tasmota_entity.deep_sleep_enabled:
                 self._available = True
@@ -157,13 +157,13 @@ class TasmotaDiscoveryUpdate(TasmotaEntity):
     def __init__(self, discovery_hash: DiscoveryHashType, **kwds: Any) -> None:
         """Initialize the discovery update mixin."""
         self._discovery_hash = discovery_hash
-        self._removed_from_hass = False
+        self._removed_from_menuai = False
         super().__init__(**kwds)
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to discovery updates."""
-        self._removed_from_hass = False
-        await super().async_added_to_hass()
+        self._removed_from_menuai = False
+        await super().async_added_to_menuai()
 
         @callback
         def discovery_callback(config: TasmotaEntityConfig) -> None:
@@ -183,17 +183,17 @@ class TasmotaDiscoveryUpdate(TasmotaEntity):
             if not self._tasmota_entity.config_same(config):
                 # Changed payload: Notify component
                 _LOGGER.debug("Updating component: %s", self.entity_id)
-                self.hass.async_create_task(self.discovery_update(config))
+                self.menuai.async_create_task(self.discovery_update(config))
             else:
                 # Unchanged payload: Ignore to avoid changing states
                 _LOGGER.debug("Ignoring unchanged update for: %s", self.entity_id)
 
         # Set in case the entity has been removed and is re-added,
         # for example when changing entity_id
-        set_discovery_hash(self.hass, self._discovery_hash)
+        set_discovery_hash(self.menuai, self._discovery_hash)
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 TASMOTA_DISCOVERY_ENTITY_UPDATED.format(*self._discovery_hash),
                 discovery_callback,
             )
@@ -202,12 +202,12 @@ class TasmotaDiscoveryUpdate(TasmotaEntity):
     @callback
     def add_to_platform_abort(self) -> None:
         """Abort adding an entity to a platform."""
-        clear_discovery_hash(self.hass, self._discovery_hash)
+        clear_discovery_hash(self.menuai, self._discovery_hash)
         super().add_to_platform_abort()
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Stop listening to signal and cleanup discovery data.."""
-        if not self._removed_from_hass:
-            clear_discovery_hash(self.hass, self._discovery_hash)
-            self._removed_from_hass = True
-        await super().async_will_remove_from_hass()
+        if not self._removed_from_menuai:
+            clear_discovery_hash(self.menuai, self._discovery_hash)
+            self._removed_from_menuai = True
+        await super().async_will_remove_from_menuai()

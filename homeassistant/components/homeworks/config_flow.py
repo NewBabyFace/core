@@ -10,34 +10,34 @@ from pyhomeworks import exceptions as hw_exceptions
 from pyhomeworks.pyhomeworks import Homeworks
 import voluptuous as vol
 
-from homeassistant.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
-from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN
-from homeassistant.components.light import DOMAIN as LIGHT_DOMAIN
-from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
-from homeassistant.const import (
+from menuai.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
+from menuai.components.button import DOMAIN as BUTTON_DOMAIN
+from menuai.components.light import DOMAIN as LIGHT_DOMAIN
+from menuai.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
+from menuai.const import (
     CONF_HOST,
     CONF_NAME,
     CONF_PASSWORD,
     CONF_PORT,
     CONF_USERNAME,
 )
-from homeassistant.core import async_get_hass, callback
-from homeassistant.data_entry_flow import AbortFlow
-from homeassistant.helpers import (
+from menuai.core import async_get_menuai, callback
+from menuai.data_entry_flow import AbortFlow
+from menuai.helpers import (
     config_validation as cv,
     entity_registry as er,
     selector,
 )
-from homeassistant.helpers.schema_config_entry_flow import (
+from menuai.helpers.schema_config_entry_flow import (
     SchemaCommonFlowHandler,
     SchemaFlowError,
     SchemaFlowFormStep,
     SchemaFlowMenuStep,
     SchemaOptionsFlowHandler,
 )
-from homeassistant.helpers.selector import TextSelector
-from homeassistant.helpers.typing import VolDictType
-from homeassistant.util import slugify
+from menuai.helpers.selector import TextSelector
+from menuai.helpers.typing import VolDictType
+from menuai.util import slugify
 
 from .const import (
     CONF_ADDR,
@@ -157,9 +157,9 @@ async def _try_connection(user_input: dict[str, Any]) -> None:
         controller.connect()
         controller.close()
 
-    hass = async_get_hass()
+    menuai = async_get_menuai()
     try:
-        await hass.async_add_executor_job(
+        await menuai.async_add_executor_job(
             _try_connect, user_input[CONF_HOST], user_input[CONF_PORT]
         )
     except hw_exceptions.HomeworksConnectionFailed as err:
@@ -384,7 +384,7 @@ async def validate_remove_button(
 
     # Standard behavior is to merge the result with the options.
     # In this case, we want to remove sub-items so we update the options directly.
-    entity_registry = er.async_get(handler.parent_handler.hass)
+    entity_registry = er.async_get(handler.parent_handler.menuai)
     keypad_idx: int = handler.flow_state["_idx"]
     keypad: dict = handler.options[CONF_KEYPADS][keypad_idx]
     items: list[dict[str, Any]] = []
@@ -416,7 +416,7 @@ async def validate_remove_keypad_light(
 
     # Standard behavior is to merge the result with the options.
     # In this case, we want to remove sub-items so we update the options directly.
-    entity_registry = er.async_get(handler.parent_handler.hass)
+    entity_registry = er.async_get(handler.parent_handler.menuai)
     items: list[dict[str, Any]] = []
     item: dict[str, Any]
     for index, item in enumerate(handler.options[key]):

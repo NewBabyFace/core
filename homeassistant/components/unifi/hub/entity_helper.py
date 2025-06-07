@@ -7,22 +7,22 @@ from datetime import datetime, timedelta
 import aiounifi
 from aiounifi.models.device import DeviceSetPoePortModeRequest
 
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.event import async_call_later, async_track_time_interval
-from homeassistant.util import dt as dt_util
+from menuai.core import CALLBACK_TYPE, menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.event import async_call_later, async_track_time_interval
+from menuai.util import dt as dt_util
 
 
 class UnifiEntityHelper:
     """UniFi Network integration handling platforms for entity registration."""
 
-    def __init__(self, hass: HomeAssistant, api: aiounifi.Controller) -> None:
+    def __init__(self, menuai: menuai, api: aiounifi.Controller) -> None:
         """Initialize the UniFi entity loader."""
-        self.hass = hass
+        self.menuai = menuai
         self.api = api
 
-        self._device_command = UnifiDeviceCommand(hass, api)
-        self._heartbeat = UnifiEntityHeartbeat(hass)
+        self._device_command = UnifiDeviceCommand(menuai, api)
+        self._heartbeat = UnifiEntityHeartbeat(menuai)
 
     @callback
     def reset(self) -> None:
@@ -63,9 +63,9 @@ class UnifiEntityHeartbeat:
 
     CHECK_HEARTBEAT_INTERVAL = timedelta(seconds=1)
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize the heartbeat monitor."""
-        self.hass = hass
+        self.menuai = menuai
 
         self._cancel_heartbeat_check: CALLBACK_TYPE | None = None
         self._heartbeat_time: dict[str, datetime] = {}
@@ -81,7 +81,7 @@ class UnifiEntityHeartbeat:
     def initialize(self) -> None:
         """Initialize heartbeat monitor."""
         self._cancel_heartbeat_check = async_track_time_interval(
-            self.hass, self._check_for_stale, self.CHECK_HEARTBEAT_INTERVAL
+            self.menuai, self._check_for_stale, self.CHECK_HEARTBEAT_INTERVAL
         )
 
     @property
@@ -107,7 +107,7 @@ class UnifiEntityHeartbeat:
         unique_ids_to_remove = []
         for unique_id, heartbeat_expire_time in self._heartbeat_time.items():
             if now > heartbeat_expire_time:
-                async_dispatcher_send(self.hass, f"{self.signal}_{unique_id}")
+                async_dispatcher_send(self.menuai, f"{self.signal}_{unique_id}")
                 unique_ids_to_remove.append(unique_id)
 
         for unique_id in unique_ids_to_remove:
@@ -119,9 +119,9 @@ class UnifiDeviceCommand:
 
     COMMAND_DELAY = 5
 
-    def __init__(self, hass: HomeAssistant, api: aiounifi.Controller) -> None:
+    def __init__(self, menuai: menuai, api: aiounifi.Controller) -> None:
         """Initialize device command helper."""
-        self.hass = hass
+        self.menuai = menuai
         self.api = api
 
         self._command_queue: dict[str, dict[int, str]] = {}
@@ -153,4 +153,4 @@ class UnifiDeviceCommand:
                     DeviceSetPoePortModeRequest.create(device, targets=commands)
                 )
 
-        self._cancel_command = async_call_later(self.hass, self.COMMAND_DELAY, _command)
+        self._cancel_command = async_call_later(self.menuai, self.COMMAND_DELAY, _command)

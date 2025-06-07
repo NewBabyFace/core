@@ -9,8 +9,8 @@ from typing import Any, cast
 
 import voluptuous as vol
 
-from homeassistant.components import light
-from homeassistant.components.light import (
+from menuai.components import light
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_MODE,
     ATTR_COLOR_TEMP_KELVIN,
@@ -33,8 +33,8 @@ from homeassistant.components.light import (
     LightEntityFeature,
     filter_supported_color_modes,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_SUPPORTED_FEATURES,
     CONF_ENTITIES,
@@ -46,13 +46,13 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.entity_platform import (
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     AddEntitiesCallback,
 )
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .entity import GroupEntity
 from .util import find_state_attributes, mean_tuple, reduce_attribute
@@ -80,7 +80,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -99,12 +99,12 @@ async def async_setup_platform(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Initialize Light Group config entry."""
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     entities = er.async_validate_entity_ids(
         registry, config_entry.options[CONF_ENTITIES]
     )
@@ -117,7 +117,7 @@ async def async_setup_entry(
 
 @callback
 def async_create_preview_light(
-    hass: HomeAssistant, name: str, validated_config: dict[str, Any]
+    menuai: menuai, name: str, validated_config: dict[str, Any]
 ) -> LightGroup:
     """Create a preview sensor."""
     return LightGroup(
@@ -179,7 +179,7 @@ class LightGroup(GroupEntity, LightEntity):
 
         _LOGGER.debug("Forwarded turn_on command: %s", data)
 
-        await self.hass.services.async_call(
+        await self.menuai.services.async_call(
             light.DOMAIN,
             SERVICE_TURN_ON,
             data,
@@ -194,7 +194,7 @@ class LightGroup(GroupEntity, LightEntity):
         if ATTR_TRANSITION in kwargs:
             data[ATTR_TRANSITION] = kwargs[ATTR_TRANSITION]
 
-        await self.hass.services.async_call(
+        await self.menuai.services.async_call(
             light.DOMAIN,
             SERVICE_TURN_OFF,
             data,
@@ -208,7 +208,7 @@ class LightGroup(GroupEntity, LightEntity):
         states = [
             state
             for entity_id in self._entity_ids
-            if (state := self.hass.states.get(entity_id)) is not None
+            if (state := self.menuai.states.get(entity_id)) is not None
         ]
         on_states = [state for state in states if state.state == STATE_ON]
 

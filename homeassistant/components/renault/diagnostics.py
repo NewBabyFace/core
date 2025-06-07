@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceEntry
+from menuai.components.diagnostics import async_redact_data
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceEntry
 
 from . import RenaultConfigEntry
 from .const import CONF_KAMEREON_ACCOUNT_ID
@@ -26,7 +26,7 @@ TO_REDACT = {
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: RenaultConfigEntry
+    menuai: menuai, entry: RenaultConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     return {
@@ -42,7 +42,7 @@ async def async_get_config_entry_diagnostics(
 
 
 async def async_get_device_diagnostics(
-    hass: HomeAssistant, entry: RenaultConfigEntry, device: DeviceEntry
+    menuai: menuai, entry: RenaultConfigEntry, device: DeviceEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a device."""
     vin = next(iter(device.identifiers))[1]

@@ -8,16 +8,16 @@ from aiohttp.hdrs import AUTHORIZATION
 from aiohttp.test_utils import TestClient
 import pytest
 
-from homeassistant import const, core, setup
-from homeassistant.components import (
+from menuai import const, core, setup
+from menuai.components import (
     google_assistant as ga,
     humidifier,
     light,
     media_player,
 )
-from homeassistant.const import CLOUD_NEVER_EXPOSED_ENTITIES, EntityCategory, Platform
-from homeassistant.helpers import entity_registry as er
-from homeassistant.util.unit_system import US_CUSTOMARY_SYSTEM
+from menuai.const import CLOUD_NEVER_EXPOSED_ENTITIES, EntityCategory, Platform
+from menuai.helpers import entity_registry as er
+from menuai.util.unit_system import US_CUSTOMARY_SYSTEM
 
 from . import DEMO_DEVICES
 
@@ -25,25 +25,25 @@ from tests.typing import ClientSessionGenerator
 
 API_PASSWORD = "test1234"
 
-PROJECT_ID = "hasstest-1234"
+PROJECT_ID = "menuaitest-1234"
 CLIENT_ID = "helloworld"
 ACCESS_TOKEN = "superdoublesecret"
 
 
 @pytest.fixture
-def auth_header(hass_access_token: str) -> dict[str, str]:
+def auth_header(menuai_access_token: str) -> dict[str, str]:
     """Generate an HTTP header with bearer token authorization."""
-    return {AUTHORIZATION: f"Bearer {hass_access_token}"}
+    return {AUTHORIZATION: f"Bearer {menuai_access_token}"}
 
 
 @pytest.fixture
 async def assistant_client(
-    hass: core.HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: core.menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
 ) -> TestClient:
     """Create web client for the Google Assistant API."""
     await setup.async_setup_component(
-        hass,
+        menuai,
         "google_assistant",
         {
             "google_assistant": {
@@ -58,14 +58,14 @@ async def assistant_client(
         },
     )
 
-    return await hass_client_no_auth()
+    return await menuai_client_no_auth()
 
 
 @pytest.fixture(autouse=True)
 async def wanted_platforms_only() -> None:
     """Enable only the wanted demo platforms."""
     with patch(
-        "homeassistant.components.demo.COMPONENTS_WITH_CONFIG_ENTRY_DEMO_PLATFORM",
+        "menuai.components.demo.COMPONENTS_WITH_CONFIG_ENTRY_DEMO_PLATFORM",
         [
             Platform.ALARM_CONTROL_PANEL,
             Platform.CLIMATE,
@@ -82,18 +82,18 @@ async def wanted_platforms_only() -> None:
 
 
 @pytest.fixture
-async def hass_fixture(hass: core.HomeAssistant) -> core.HomeAssistant:
-    """Set up a Home Assistant instance for these tests."""
-    # We need to do this to get access to homeassistant/turn_(on,off)
-    await setup.async_setup_component(hass, core.DOMAIN, {})
+async def menuai_fixture(menuai: core.menuai) -> core.menuai:
+    """Set up a MenuAI instance for these tests."""
+    # We need to do this to get access to menuai/turn_(on,off)
+    await setup.async_setup_component(menuai, core.DOMAIN, {})
 
-    await setup.async_setup_component(hass, "demo", {})
+    await setup.async_setup_component(menuai, "demo", {})
 
-    return hass
+    return menuai
 
 
 async def test_sync_request(
-    hass_fixture, assistant_client, auth_header, entity_registry: er.EntityRegistry
+    menuai_fixture, assistant_client, auth_header, entity_registry: er.EntityRegistry
 ) -> None:
     """Test a sync request."""
     entity_entry1 = entity_registry.async_get_or_create(
@@ -126,10 +126,10 @@ async def test_sync_request(
     )
 
     # These should not show up in the sync request
-    hass_fixture.states.async_set(entity_entry1.entity_id, "on")
-    hass_fixture.states.async_set(entity_entry2.entity_id, "something_else")
-    hass_fixture.states.async_set(entity_entry3.entity_id, "blah")
-    hass_fixture.states.async_set(entity_entry4.entity_id, "foo")
+    menuai_fixture.states.async_set(entity_entry1.entity_id, "on")
+    menuai_fixture.states.async_set(entity_entry2.entity_id, "something_else")
+    menuai_fixture.states.async_set(entity_entry3.entity_id, "blah")
+    menuai_fixture.states.async_set(entity_entry4.entity_id, "foo")
 
     reqid = "5711642932632160983"
     data = {"requestId": reqid, "inputs": [{"intent": "action.devices.SYNC"}]}
@@ -159,7 +159,7 @@ async def test_sync_request(
         assert dev["type"] == demo["type"]
 
 
-async def test_query_request(hass_fixture, assistant_client, auth_header) -> None:
+async def test_query_request(menuai_fixture, assistant_client, auth_header) -> None:
     """Test a query request."""
     reqid = "5711642932632160984"
     data = {
@@ -201,7 +201,7 @@ async def test_query_request(hass_fixture, assistant_client, auth_header) -> Non
 
 
 async def test_query_climate_request(
-    hass_fixture, assistant_client, auth_header
+    menuai_fixture, assistant_client, auth_header
 ) -> None:
     """Test a query request."""
     reqid = "5711642932632160984"
@@ -258,15 +258,15 @@ async def test_query_climate_request(
 
 
 async def test_query_climate_request_f(
-    hass_fixture, assistant_client, auth_header
+    menuai_fixture, assistant_client, auth_header
 ) -> None:
     """Test a query request."""
     # Mock demo devices as fahrenheit to see if we convert to celsius
-    hass_fixture.config.units = US_CUSTOMARY_SYSTEM
+    menuai_fixture.config.units = US_CUSTOMARY_SYSTEM
     for entity_id in ("climate.hvac", "climate.heatpump", "climate.ecobee"):
-        state = hass_fixture.states.get(entity_id)
+        state = menuai_fixture.states.get(entity_id)
         attr = dict(state.attributes)
-        hass_fixture.states.async_set(entity_id, state.state, attr)
+        menuai_fixture.states.async_set(entity_id, state.state, attr)
 
     reqid = "5711642932632160984"
     data = {
@@ -322,7 +322,7 @@ async def test_query_climate_request_f(
 
 
 async def test_query_humidifier_request(
-    hass_fixture, assistant_client, auth_header
+    menuai_fixture, assistant_client, auth_header
 ) -> None:
     """Test a query request."""
     reqid = "5711642932632160984"
@@ -371,7 +371,7 @@ async def test_query_humidifier_request(
     }
 
 
-async def test_execute_request(hass_fixture, assistant_client, auth_header) -> None:
+async def test_execute_request(menuai_fixture, assistant_client, auth_header) -> None:
     """Test an execute request."""
     reqid = "5711642932632160985"
     data = {
@@ -470,29 +470,29 @@ async def test_execute_request(hass_fixture, assistant_client, auth_header) -> N
 
     assert not any(result["status"] == "ERROR" for result in commands)
 
-    ceiling = hass_fixture.states.get("light.ceiling_lights")
+    ceiling = menuai_fixture.states.get("light.ceiling_lights")
     assert ceiling.state == "off"
 
-    kitchen = hass_fixture.states.get("light.kitchen_lights")
+    kitchen = menuai_fixture.states.get("light.kitchen_lights")
     assert kitchen.attributes.get(light.ATTR_RGB_COLOR) == (255, 0, 0)
 
-    bed = hass_fixture.states.get("light.bed_light")
+    bed = menuai_fixture.states.get("light.bed_light")
     assert bed.attributes.get(light.ATTR_COLOR_TEMP_KELVIN) == 4700
 
-    assert hass_fixture.states.get("switch.decorative_lights").state == "off"
+    assert menuai_fixture.states.get("switch.decorative_lights").state == "off"
 
-    walkman = hass_fixture.states.get("media_player.walkman")
+    walkman = menuai_fixture.states.get("media_player.walkman")
     assert walkman.state == "playing"
     assert walkman.attributes.get(media_player.ATTR_MEDIA_VOLUME_LEVEL) == 0.7
 
-    lounge = hass_fixture.states.get("media_player.lounge_room")
+    lounge = menuai_fixture.states.get("media_player.lounge_room")
     assert lounge.state == "off"
 
-    humidifier_state = hass_fixture.states.get("humidifier.humidifier")
+    humidifier_state = menuai_fixture.states.get("humidifier.humidifier")
     assert humidifier_state.state == "off"
 
-    dehumidifier = hass_fixture.states.get("humidifier.dehumidifier")
+    dehumidifier = menuai_fixture.states.get("humidifier.dehumidifier")
     assert dehumidifier.attributes.get(humidifier.ATTR_HUMIDITY) == 45
 
-    hygrostat = hass_fixture.states.get("humidifier.hygrostat")
+    hygrostat = menuai_fixture.states.get("humidifier.hygrostat")
     assert hygrostat.attributes.get(const.ATTR_MODE) == "eco"

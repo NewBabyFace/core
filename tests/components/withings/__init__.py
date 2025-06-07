@@ -9,9 +9,9 @@ from aiohttp.test_utils import TestClient
 from aiowithings import Activity, Device, Goals, MeasurementGroup, SleepSummary, Workout
 from freezegun.api import FrozenDateTimeFactory
 
-from homeassistant.components.webhook import async_generate_url
-from homeassistant.core import HomeAssistant
-from homeassistant.core_config import async_process_ha_core_config
+from menuai.components.webhook import async_generate_url
+from menuai.core import menuai
+from menuai.core_config import async_process_ha_core_config
 
 from tests.common import (
     MockConfigEntry,
@@ -30,10 +30,10 @@ class WebhookResponse:
 
 
 async def call_webhook(
-    hass: HomeAssistant, webhook_id: str, data: dict[str, Any], client: TestClient
+    menuai: menuai, webhook_id: str, data: dict[str, Any], client: TestClient
 ) -> WebhookResponse:
     """Call the webhook."""
-    webhook_url = async_generate_url(hass, webhook_id)
+    webhook_url = async_generate_url(menuai, webhook_id)
 
     resp = await client.post(
         urlparse(webhook_url).path,
@@ -41,7 +41,7 @@ async def call_webhook(
     )
 
     # Wait for remaining tasks to complete.
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     data = await resp.json()
     resp.close()
@@ -50,27 +50,27 @@ async def call_webhook(
 
 
 async def setup_integration(
-    hass: HomeAssistant, config_entry: MockConfigEntry, enable_webhooks: bool = True
+    menuai: menuai, config_entry: MockConfigEntry, enable_webhooks: bool = True
 ) -> None:
     """Fixture for setting up the component."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     if enable_webhooks:
         await async_process_ha_core_config(
-            hass,
+            menuai,
             {"external_url": "https://example.com"},
         )
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
 
 
 async def prepare_webhook_setup(
-    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+    menuai: menuai, freezer: FrozenDateTimeFactory
 ) -> None:
     """Prepare webhooks are registered by waiting a second."""
     freezer.tick(timedelta(seconds=1))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
 
 def load_goals_fixture(fixture: str = "withings/goals.json") -> Goals:

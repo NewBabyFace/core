@@ -9,33 +9,33 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 from webrtc_models import RTCIceCandidateInit
 
-from homeassistant.components import camera
-from homeassistant.components.camera import (
+from menuai.components import camera
+from menuai.components.camera import (
     Camera,
     CameraWebRTCProvider,
     WebRTCAnswer,
     WebRTCSendMessage,
     async_register_webrtc_provider,
 )
-from homeassistant.components.camera.const import (
+from menuai.components.camera.const import (
     DOMAIN,
     PREF_ORIENTATION,
     PREF_PRELOAD_STREAM,
     StreamType,
 )
-from homeassistant.components.camera.helper import get_camera_from_entity_id
-from homeassistant.components.websocket_api import TYPE_RESULT
-from homeassistant.const import (
+from menuai.components.camera.helper import get_camera_from_entity_id
+from menuai.components.websocket_api import TYPE_RESULT
+from menuai.const import (
     ATTR_ENTITY_ID,
-    EVENT_HOMEASSISTANT_STARTED,
+    EVENT_menuai_STARTED,
     STATE_UNAVAILABLE,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.core_config import async_process_ha_core_config
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er, issue_registry as ir
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai, callback
+from menuai.core_config import async_process_ha_core_config
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er, issue_registry as ir
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from .common import EMPTY_8_6_JPEG, STREAM_SOURCE, mock_turbo_jpeg
 
@@ -49,31 +49,31 @@ from tests.typing import ClientSessionGenerator, WebSocketGenerator
 
 
 @pytest.fixture(name="image_mock_url")
-async def image_mock_url_fixture(hass: HomeAssistant) -> None:
+async def image_mock_url_fixture(menuai: menuai) -> None:
     """Fixture for get_image tests."""
     await async_setup_component(
-        hass, camera.DOMAIN, {camera.DOMAIN: {"platform": "demo"}}
+        menuai, camera.DOMAIN, {camera.DOMAIN: {"platform": "demo"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
 @pytest.mark.usefixtures("image_mock_url")
-async def test_get_image_from_camera(hass: HomeAssistant) -> None:
+async def test_get_image_from_camera(menuai: menuai) -> None:
     """Grab an image from camera entity."""
 
     with patch(
-        "homeassistant.components.demo.camera.Path.read_bytes",
+        "menuai.components.demo.camera.Path.read_bytes",
         autospec=True,
         return_value=b"Test",
     ) as mock_camera:
-        image = await camera.async_get_image(hass, "camera.demo_camera")
+        image = await camera.async_get_image(menuai, "camera.demo_camera")
 
     assert mock_camera.called
     assert image.content == b"Test"
 
 
 @pytest.mark.usefixtures("image_mock_url")
-async def test_get_image_from_camera_with_width_height(hass: HomeAssistant) -> None:
+async def test_get_image_from_camera_with_width_height(menuai: menuai) -> None:
     """Grab an image from camera entity with width and height."""
 
     turbo_jpeg = mock_turbo_jpeg(
@@ -81,17 +81,17 @@ async def test_get_image_from_camera_with_width_height(hass: HomeAssistant) -> N
     )
     with (
         patch(
-            "homeassistant.components.camera.img_util.TurboJPEGSingleton.instance",
+            "menuai.components.camera.img_util.TurboJPEGSingleton.instance",
             return_value=turbo_jpeg,
         ),
         patch(
-            "homeassistant.components.demo.camera.Path.read_bytes",
+            "menuai.components.demo.camera.Path.read_bytes",
             autospec=True,
             return_value=b"Test",
         ) as mock_camera,
     ):
         image = await camera.async_get_image(
-            hass, "camera.demo_camera", width=640, height=480
+            menuai, "camera.demo_camera", width=640, height=480
         )
 
     assert mock_camera.called
@@ -100,7 +100,7 @@ async def test_get_image_from_camera_with_width_height(hass: HomeAssistant) -> N
 
 @pytest.mark.usefixtures("image_mock_url")
 async def test_get_image_from_camera_with_width_height_scaled(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Grab an image from camera entity with width and height and scale it."""
 
@@ -109,17 +109,17 @@ async def test_get_image_from_camera_with_width_height_scaled(
     )
     with (
         patch(
-            "homeassistant.components.camera.img_util.TurboJPEGSingleton.instance",
+            "menuai.components.camera.img_util.TurboJPEGSingleton.instance",
             return_value=turbo_jpeg,
         ),
         patch(
-            "homeassistant.components.demo.camera.Path.read_bytes",
+            "menuai.components.demo.camera.Path.read_bytes",
             autospec=True,
             return_value=b"Valid jpeg",
         ) as mock_camera,
     ):
         image = await camera.async_get_image(
-            hass, "camera.demo_camera", width=4, height=3
+            menuai, "camera.demo_camera", width=4, height=3
         )
 
     assert mock_camera.called
@@ -128,7 +128,7 @@ async def test_get_image_from_camera_with_width_height_scaled(
 
 
 @pytest.mark.usefixtures("image_mock_url")
-async def test_get_image_from_camera_not_jpeg(hass: HomeAssistant) -> None:
+async def test_get_image_from_camera_not_jpeg(menuai: menuai) -> None:
     """Grab an image from camera entity that we cannot scale."""
 
     turbo_jpeg = mock_turbo_jpeg(
@@ -136,17 +136,17 @@ async def test_get_image_from_camera_not_jpeg(hass: HomeAssistant) -> None:
     )
     with (
         patch(
-            "homeassistant.components.camera.img_util.TurboJPEGSingleton.instance",
+            "menuai.components.camera.img_util.TurboJPEGSingleton.instance",
             return_value=turbo_jpeg,
         ),
         patch(
-            "homeassistant.components.demo.camera.Path.read_bytes",
+            "menuai.components.demo.camera.Path.read_bytes",
             autospec=True,
             return_value=b"png",
         ) as mock_camera,
     ):
         image = await camera.async_get_image(
-            hass, "camera.demo_camera_png", width=4, height=3
+            menuai, "camera.demo_camera_png", width=4, height=3
         )
 
     assert mock_camera.called
@@ -156,53 +156,53 @@ async def test_get_image_from_camera_not_jpeg(hass: HomeAssistant) -> None:
 
 @pytest.mark.usefixtures("mock_camera")
 async def test_get_stream_source_from_camera(
-    hass: HomeAssistant, mock_stream_source: AsyncMock
+    menuai: menuai, mock_stream_source: AsyncMock
 ) -> None:
     """Fetch stream source from camera entity."""
 
-    stream_source = await camera.async_get_stream_source(hass, "camera.demo_camera")
+    stream_source = await camera.async_get_stream_source(menuai, "camera.demo_camera")
 
     assert mock_stream_source.called
     assert stream_source == STREAM_SOURCE
 
 
 @pytest.mark.usefixtures("image_mock_url")
-async def test_get_image_without_exists_camera(hass: HomeAssistant) -> None:
+async def test_get_image_without_exists_camera(menuai: menuai) -> None:
     """Try to get image without exists camera."""
     with (
         patch(
-            "homeassistant.helpers.entity_component.EntityComponent.get_entity",
+            "menuai.helpers.entity_component.EntityComponent.get_entity",
             return_value=None,
         ),
-        pytest.raises(HomeAssistantError),
+        pytest.raises(menuaiError),
     ):
-        await camera.async_get_image(hass, "camera.demo_camera")
+        await camera.async_get_image(menuai, "camera.demo_camera")
 
 
 @pytest.mark.usefixtures("image_mock_url")
-async def test_get_image_with_timeout(hass: HomeAssistant) -> None:
+async def test_get_image_with_timeout(menuai: menuai) -> None:
     """Try to get image with timeout."""
     with (
         patch(
-            "homeassistant.components.demo.camera.DemoCamera.async_camera_image",
+            "menuai.components.demo.camera.DemoCamera.async_camera_image",
             side_effect=TimeoutError,
         ),
-        pytest.raises(HomeAssistantError),
+        pytest.raises(menuaiError),
     ):
-        await camera.async_get_image(hass, "camera.demo_camera")
+        await camera.async_get_image(menuai, "camera.demo_camera")
 
 
 @pytest.mark.usefixtures("image_mock_url")
-async def test_get_image_fails(hass: HomeAssistant) -> None:
+async def test_get_image_fails(menuai: menuai) -> None:
     """Try to get image with timeout."""
     with (
         patch(
-            "homeassistant.components.demo.camera.DemoCamera.async_camera_image",
+            "menuai.components.demo.camera.DemoCamera.async_camera_image",
             return_value=None,
         ),
-        pytest.raises(HomeAssistantError),
+        pytest.raises(menuaiError),
     ):
-        await camera.async_get_image(hass, "camera.demo_camera")
+        await camera.async_get_image(menuai, "camera.demo_camera")
 
 
 @pytest.mark.usefixtures("mock_camera")
@@ -232,7 +232,7 @@ async def test_get_image_fails(hass: HomeAssistant) -> None:
     ],
 )
 async def test_snapshot_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     filename_template: str,
     expected_filename: str,
     expected_issues: list,
@@ -243,13 +243,13 @@ async def test_snapshot_service(
     mopen = mock_open()
 
     with (
-        patch("homeassistant.components.camera.open", mopen, create=True),
+        patch("menuai.components.camera.open", mopen, create=True),
         patch(
-            "homeassistant.components.camera.os.makedirs",
+            "menuai.components.camera.os.makedirs",
         ),
-        patch.object(hass.config, "is_allowed_path", return_value=True),
+        patch.object(menuai.config, "is_allowed_path", return_value=True),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             camera.DOMAIN,
             camera.SERVICE_SNAPSHOT,
             {
@@ -273,21 +273,21 @@ async def test_snapshot_service(
 
 
 @pytest.mark.usefixtures("mock_camera")
-async def test_snapshot_service_not_allowed_path(hass: HomeAssistant) -> None:
+async def test_snapshot_service_not_allowed_path(menuai: menuai) -> None:
     """Test snapshot service with a not allowed path."""
     mopen = mock_open()
 
     with (
-        patch("homeassistant.components.camera.open", mopen, create=True),
+        patch("menuai.components.camera.open", mopen, create=True),
         patch(
-            "homeassistant.components.camera.os.makedirs",
+            "menuai.components.camera.os.makedirs",
         ),
         pytest.raises(
-            HomeAssistantError,
+            menuaiError,
             match="Cannot write `/test/snapshot.jpg`, no access to path",
         ),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             camera.DOMAIN,
             camera.SERVICE_SNAPSHOT,
             {
@@ -302,23 +302,23 @@ async def test_snapshot_service_not_allowed_path(hass: HomeAssistant) -> None:
 @pytest.mark.parametrize(
     ("target", "side_effect"),
     [
-        ("homeassistant.components.camera.os.makedirs", OSError),
+        ("menuai.components.camera.os.makedirs", OSError),
         (
-            "homeassistant.components.demo.camera.DemoCamera.async_camera_image",
+            "menuai.components.demo.camera.DemoCamera.async_camera_image",
             TimeoutError,
         ),
     ],
 )
 async def test_snapshot_service_error(
-    hass: HomeAssistant, target: str, side_effect: Exception
+    menuai: menuai, target: str, side_effect: Exception
 ) -> None:
     """Test snapshot service with error."""
     with (
-        patch.object(hass.config, "is_allowed_path", return_value=True),
+        patch.object(menuai.config, "is_allowed_path", return_value=True),
         patch(target, side_effect=side_effect),
-        pytest.raises(HomeAssistantError),
+        pytest.raises(menuaiError),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             camera.DOMAIN,
             camera.SERVICE_SNAPSHOT,
             {
@@ -331,13 +331,13 @@ async def test_snapshot_service_error(
 
 @pytest.mark.usefixtures("mock_camera", "mock_stream")
 async def test_websocket_stream_no_source(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test camera/stream websocket command with camera with no source."""
-    await async_setup_component(hass, "camera", {})
+    await async_setup_component(menuai, "camera", {})
 
     # Request playlist through WebSocket
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json(
         {"id": 6, "type": "camera/stream", "entity_id": "camera.demo_camera"}
     )
@@ -351,23 +351,23 @@ async def test_websocket_stream_no_source(
 
 @pytest.mark.usefixtures("mock_camera", "mock_stream")
 async def test_websocket_camera_stream(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test camera/stream websocket command."""
-    await async_setup_component(hass, "camera", {})
+    await async_setup_component(menuai, "camera", {})
 
     with (
         patch(
-            "homeassistant.components.camera.Stream.endpoint_url",
+            "menuai.components.camera.Stream.endpoint_url",
             return_value="http://home.assistant/playlist.m3u8",
         ) as mock_stream_view_url,
         patch(
-            "homeassistant.components.demo.camera.DemoCamera.stream_source",
+            "menuai.components.demo.camera.DemoCamera.stream_source",
             return_value="http://example.com",
         ),
     ):
         # Request playlist through WebSocket
-        client = await hass_ws_client(hass)
+        client = await menuai_ws_client(menuai)
         await client.send_json(
             {"id": 6, "type": "camera/stream", "entity_id": "camera.demo_camera"}
         )
@@ -383,13 +383,13 @@ async def test_websocket_camera_stream(
 
 @pytest.mark.usefixtures("mock_camera")
 async def test_websocket_get_prefs(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test get camera preferences websocket command."""
-    await async_setup_component(hass, "camera", {})
+    await async_setup_component(menuai, "camera", {})
 
     # Request preferences through websocket
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json(
         {"id": 7, "type": "camera/get_prefs", "entity_id": "camera.demo_camera"}
     )
@@ -401,11 +401,11 @@ async def test_websocket_get_prefs(
 
 @pytest.mark.usefixtures("mock_camera")
 async def test_websocket_update_preload_prefs(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Test updating camera preferences."""
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json(
         {"id": 7, "type": "camera/get_prefs", "entity_id": "camera.demo_camera"}
     )
@@ -439,14 +439,14 @@ async def test_websocket_update_preload_prefs(
 
 @pytest.mark.usefixtures("mock_camera")
 async def test_websocket_update_orientation_prefs(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test updating camera preferences."""
-    await async_setup_component(hass, "homeassistant", {})
+    await async_setup_component(menuai, "menuai", {})
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     # Try sending orientation update for entity not in entity registry
     await client.send_json(
@@ -496,38 +496,38 @@ async def test_websocket_update_orientation_prefs(
 
 
 @pytest.mark.usefixtures("mock_camera", "mock_stream")
-async def test_play_stream_service_no_source(hass: HomeAssistant) -> None:
+async def test_play_stream_service_no_source(menuai: menuai) -> None:
     """Test camera play_stream service."""
     data = {
         ATTR_ENTITY_ID: "camera.demo_camera",
         camera.ATTR_MEDIA_PLAYER: "media_player.test",
     }
-    with pytest.raises(HomeAssistantError):
+    with pytest.raises(menuaiError):
         # Call service
-        await hass.services.async_call(
+        await menuai.services.async_call(
             camera.DOMAIN, camera.SERVICE_PLAY_STREAM, data, blocking=True
         )
 
 
 @pytest.mark.usefixtures("mock_camera", "mock_stream")
-async def test_handle_play_stream_service(hass: HomeAssistant) -> None:
+async def test_handle_play_stream_service(menuai: menuai) -> None:
     """Test camera play_stream service."""
     await async_process_ha_core_config(
-        hass,
+        menuai,
         {"external_url": "https://example.com"},
     )
-    await async_setup_component(hass, "media_player", {})
+    await async_setup_component(menuai, "media_player", {})
     with (
         patch(
-            "homeassistant.components.camera.Stream.endpoint_url",
+            "menuai.components.camera.Stream.endpoint_url",
         ) as mock_request_stream,
         patch(
-            "homeassistant.components.demo.camera.DemoCamera.stream_source",
+            "menuai.components.demo.camera.DemoCamera.stream_source",
             return_value="http://example.com",
         ),
     ):
         # Call service
-        await hass.services.async_call(
+        await menuai.services.async_call(
             camera.DOMAIN,
             camera.SERVICE_PLAY_STREAM,
             {
@@ -542,63 +542,63 @@ async def test_handle_play_stream_service(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("mock_stream")
-async def test_no_preload_stream(hass: HomeAssistant) -> None:
+async def test_no_preload_stream(menuai: menuai) -> None:
     """Test camera preload preference."""
     demo_settings = camera.DynamicStreamSettings()
     with (
         patch(
-            "homeassistant.components.camera.Stream.endpoint_url",
+            "menuai.components.camera.Stream.endpoint_url",
         ) as mock_request_stream,
         patch(
-            "homeassistant.components.camera.prefs.CameraPreferences.get_dynamic_stream_settings",
+            "menuai.components.camera.prefs.CameraPreferences.get_dynamic_stream_settings",
             return_value=demo_settings,
         ),
         patch(
-            "homeassistant.components.demo.camera.DemoCamera.stream_source",
+            "menuai.components.demo.camera.DemoCamera.stream_source",
             new_callable=PropertyMock,
         ) as mock_stream_source,
     ):
         mock_stream_source.return_value = io.BytesIO()
-        await async_setup_component(hass, "camera", {DOMAIN: {"platform": "demo"}})
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, "camera", {DOMAIN: {"platform": "demo"}})
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
+        await menuai.async_block_till_done()
         assert not mock_request_stream.called
 
 
 @pytest.mark.usefixtures("mock_stream")
-async def test_preload_stream(hass: HomeAssistant) -> None:
+async def test_preload_stream(menuai: menuai) -> None:
     """Test camera preload preference."""
     demo_settings = camera.DynamicStreamSettings(preload_stream=True)
     with (
-        patch("homeassistant.components.camera.create_stream") as mock_create_stream,
+        patch("menuai.components.camera.create_stream") as mock_create_stream,
         patch(
-            "homeassistant.components.camera.prefs.CameraPreferences.get_dynamic_stream_settings",
+            "menuai.components.camera.prefs.CameraPreferences.get_dynamic_stream_settings",
             return_value=demo_settings,
         ),
         patch(
-            "homeassistant.components.demo.camera.DemoCamera.stream_source",
+            "menuai.components.demo.camera.DemoCamera.stream_source",
             return_value="http://example.com",
         ),
     ):
         mock_create_stream.return_value.start = AsyncMock()
         assert await async_setup_component(
-            hass, "camera", {DOMAIN: {"platform": "demo"}}
+            menuai, "camera", {DOMAIN: {"platform": "demo"}}
         )
-        await hass.async_block_till_done()
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
+        await menuai.async_block_till_done()
         assert mock_create_stream.called
 
 
 @pytest.mark.usefixtures("mock_camera")
-async def test_record_service_invalid_path(hass: HomeAssistant) -> None:
+async def test_record_service_invalid_path(menuai: menuai) -> None:
     """Test record service with invalid path."""
     with (
-        patch.object(hass.config, "is_allowed_path", return_value=False),
-        pytest.raises(HomeAssistantError),
+        patch.object(menuai.config, "is_allowed_path", return_value=False),
+        pytest.raises(menuaiError),
     ):
         # Call service
-        await hass.services.async_call(
+        await menuai.services.async_call(
             camera.DOMAIN,
             camera.SERVICE_RECORD,
             {
@@ -632,7 +632,7 @@ async def test_record_service_invalid_path(hass: HomeAssistant) -> None:
     ],
 )
 async def test_record_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     filename_template: str,
     expected_filename: str,
     expected_issues: list,
@@ -642,16 +642,16 @@ async def test_record_service(
     """Test record service."""
     with (
         patch(
-            "homeassistant.components.demo.camera.DemoCamera.stream_source",
+            "menuai.components.demo.camera.DemoCamera.stream_source",
             return_value="http://example.com",
         ),
         patch(
-            "homeassistant.components.stream.Stream.async_record",
+            "menuai.components.stream.Stream.async_record",
             autospec=True,
         ) as mock_record,
     ):
         # Call service
-        await hass.services.async_call(
+        await menuai.services.async_call(
             camera.DOMAIN,
             camera.SERVICE_RECORD,
             {
@@ -673,16 +673,16 @@ async def test_record_service(
 
 
 @pytest.mark.usefixtures("mock_camera")
-async def test_camera_proxy_stream(hass_client: ClientSessionGenerator) -> None:
+async def test_camera_proxy_stream(menuai_client: ClientSessionGenerator) -> None:
     """Test record service."""
 
-    client = await hass_client()
+    client = await menuai_client()
 
     async with client.get("/api/camera_proxy_stream/camera.demo_camera") as response:
         assert response.status == HTTPStatus.OK
 
     with patch(
-        "homeassistant.components.demo.camera.DemoCamera.handle_async_mjpeg_stream",
+        "menuai.components.demo.camera.DemoCamera.handle_async_mjpeg_stream",
         return_value=None,
     ):
         async with await client.get(
@@ -692,36 +692,36 @@ async def test_camera_proxy_stream(hass_client: ClientSessionGenerator) -> None:
 
 
 @pytest.mark.usefixtures("mock_camera")
-async def test_state_streaming(hass: HomeAssistant) -> None:
+async def test_state_streaming(menuai: menuai) -> None:
     """Camera state."""
-    demo_camera = hass.states.get("camera.demo_camera")
+    demo_camera = menuai.states.get("camera.demo_camera")
     assert demo_camera is not None
     assert demo_camera.state == camera.CameraState.STREAMING
 
 
 @pytest.mark.usefixtures("mock_camera", "mock_stream")
 async def test_stream_unavailable(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> None:
     """Camera state."""
-    await async_setup_component(hass, "camera", {})
+    await async_setup_component(menuai, "camera", {})
 
     with (
         patch(
-            "homeassistant.components.camera.Stream.endpoint_url",
+            "menuai.components.camera.Stream.endpoint_url",
             return_value="http://home.assistant/playlist.m3u8",
         ),
         patch(
-            "homeassistant.components.demo.camera.DemoCamera.stream_source",
+            "menuai.components.demo.camera.DemoCamera.stream_source",
             return_value="http://example.com",
         ),
         patch(
-            "homeassistant.components.camera.Stream.set_update_callback",
+            "menuai.components.camera.Stream.set_update_callback",
         ) as mock_update_callback,
     ):
         # Request playlist through WebSocket. We just want to create the stream
         # but don't care about the result.
-        client = await hass_ws_client(hass)
+        client = await menuai_ws_client(menuai)
         await client.send_json(
             {"id": 10, "type": "camera/stream", "entity_id": "camera.demo_camera"}
         )
@@ -731,64 +731,64 @@ async def test_stream_unavailable(
     # Simulate the stream going unavailable
     callback = mock_update_callback.call_args.args[0]
     with patch(
-        "homeassistant.components.camera.Stream.available", new_callable=lambda: False
+        "menuai.components.camera.Stream.available", new_callable=lambda: False
     ):
         callback()
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    demo_camera = hass.states.get("camera.demo_camera")
+    demo_camera = menuai.states.get("camera.demo_camera")
     assert demo_camera is not None
     assert demo_camera.state == STATE_UNAVAILABLE
 
     # Simulate stream becomes available
     with patch(
-        "homeassistant.components.camera.Stream.available", new_callable=lambda: True
+        "menuai.components.camera.Stream.available", new_callable=lambda: True
     ):
         callback()
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    demo_camera = hass.states.get("camera.demo_camera")
+    demo_camera = menuai.states.get("camera.demo_camera")
     assert demo_camera is not None
     assert demo_camera.state == camera.CameraState.STREAMING
 
 
 @pytest.mark.usefixtures("mock_camera")
 async def test_use_stream_for_stills(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test that the component can grab images from stream."""
 
-    client = await hass_client()
+    client = await menuai_client()
 
     with (
         patch(
-            "homeassistant.components.demo.camera.DemoCamera.stream_source",
+            "menuai.components.demo.camera.DemoCamera.stream_source",
             return_value=None,
         ) as mock_stream_source,
         patch(
-            "homeassistant.components.demo.camera.DemoCamera.use_stream_for_stills",
+            "menuai.components.demo.camera.DemoCamera.use_stream_for_stills",
             return_value=True,
         ),
     ):
         # First test when the integration does not support stream should fail
         resp = await client.get("/api/camera_proxy/camera.demo_camera_without_stream")
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         mock_stream_source.assert_not_called()
         assert resp.status == HTTPStatus.INTERNAL_SERVER_ERROR
         # Test when the integration does not provide a stream_source should fail
         resp = await client.get("/api/camera_proxy/camera.demo_camera")
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         mock_stream_source.assert_called_once()
         assert resp.status == HTTPStatus.INTERNAL_SERVER_ERROR
 
     with (
         patch(
-            "homeassistant.components.demo.camera.DemoCamera.stream_source",
+            "menuai.components.demo.camera.DemoCamera.stream_source",
             return_value="rtsp://some_source",
         ) as mock_stream_source,
-        patch("homeassistant.components.camera.create_stream") as mock_create_stream,
+        patch("menuai.components.camera.create_stream") as mock_create_stream,
         patch(
-            "homeassistant.components.demo.camera.DemoCamera.use_stream_for_stills",
+            "menuai.components.demo.camera.DemoCamera.use_stream_for_stills",
             return_value=True,
         ),
     ):
@@ -800,7 +800,7 @@ async def test_use_stream_for_stills(
 
         # should start the stream and get the image
         resp = await client.get("/api/camera_proxy/camera.demo_camera")
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         mock_create_stream.assert_called_once()
         mock_stream.async_get_image.assert_called_once()
         assert resp.status == HTTPStatus.OK
@@ -834,7 +834,7 @@ def test_deprecated_state_constants(
 
 
 def test_deprecated_supported_features_ints(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test deprecated supported features ints."""
 
@@ -845,8 +845,8 @@ def test_deprecated_supported_features_ints(
             return 1
 
     entity = MockCamera()
-    entity.hass = hass
-    entity.platform = MockEntityPlatform(hass)
+    entity.menuai = menuai
+    entity.platform = MockEntityPlatform(menuai)
     assert entity.supported_features_compat is camera.CameraEntityFeature(1)
     assert "MockCamera" in caplog.text
     assert "is using deprecated supported features values" in caplog.text
@@ -858,42 +858,42 @@ def test_deprecated_supported_features_ints(
 
 
 @pytest.mark.usefixtures("mock_camera")
-async def test_entity_picture_url_changes_on_token_update(hass: HomeAssistant) -> None:
+async def test_entity_picture_url_changes_on_token_update(menuai: menuai) -> None:
     """Test the token is rotated and entity entity picture cache is cleared."""
-    await async_setup_component(hass, "camera", {})
-    await hass.async_block_till_done()
+    await async_setup_component(menuai, "camera", {})
+    await menuai.async_block_till_done()
 
-    camera_state = hass.states.get("camera.demo_camera")
+    camera_state = menuai.states.get("camera.demo_camera")
     original_picture = camera_state.attributes["entity_picture"]
     assert "token=" in original_picture
 
-    async_fire_time_changed(hass, dt_util.utcnow() + camera.TOKEN_CHANGE_INTERVAL)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai, dt_util.utcnow() + camera.TOKEN_CHANGE_INTERVAL)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    camera_state = hass.states.get("camera.demo_camera")
+    camera_state = menuai.states.get("camera.demo_camera")
     new_entity_picture = camera_state.attributes["entity_picture"]
     assert new_entity_picture != original_picture
     assert "token=" in new_entity_picture
 
 
 async def _test_capabilities(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     entity_id: str,
     expected_stream_types: set[StreamType],
     expected_stream_types_with_webrtc_provider: set[StreamType],
 ) -> None:
     """Test camera capabilities."""
-    await async_setup_component(hass, "camera", {})
-    await hass.async_block_till_done()
+    await async_setup_component(menuai, "camera", {})
+    await menuai.async_block_till_done()
 
     async def test(expected_types: set[StreamType]) -> None:
-        camera_obj = get_camera_from_entity_id(hass, entity_id)
+        camera_obj = get_camera_from_entity_id(menuai, entity_id)
         capabilities = camera_obj.camera_capabilities
         assert capabilities == camera.CameraCapabilities(expected_types)
 
         # Request capabilities through WebSocket
-        client = await hass_ws_client(hass)
+        client = await menuai_ws_client(menuai)
         await client.send_json_auto_id(
             {"type": "camera/capabilities", "entity_id": entity_id}
         )
@@ -938,20 +938,20 @@ async def _test_capabilities(
             """Handle the WebRTC candidate."""
 
     provider = SomeTestProvider()
-    async_register_webrtc_provider(hass, provider)
-    await hass.async_block_till_done()
+    async_register_webrtc_provider(menuai, provider)
+    await menuai.async_block_till_done()
     await test(expected_stream_types_with_webrtc_provider)
 
 
 @pytest.mark.usefixtures("mock_camera", "mock_stream_source")
 async def test_camera_capabilities_hls(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test HLS camera capabilities."""
     await _test_capabilities(
-        hass,
-        hass_ws_client,
+        menuai,
+        menuai_ws_client,
         "camera.demo_camera",
         {StreamType.HLS},
         {StreamType.HLS, StreamType.WEB_RTC},
@@ -960,22 +960,22 @@ async def test_camera_capabilities_hls(
 
 @pytest.mark.usefixtures("mock_test_webrtc_cameras")
 async def test_camera_capabilities_webrtc(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test WebRTC camera capabilities."""
 
     await _test_capabilities(
-        hass, hass_ws_client, "camera.async", {StreamType.WEB_RTC}, {StreamType.WEB_RTC}
+        menuai, menuai_ws_client, "camera.async", {StreamType.WEB_RTC}, {StreamType.WEB_RTC}
     )
 
 
 @pytest.mark.usefixtures("mock_test_webrtc_cameras", "register_test_provider")
 async def test_webrtc_provider_not_added_for_native_webrtc(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test that a WebRTC provider is not added to a camera when the camera has native WebRTC support."""
-    camera_obj = get_camera_from_entity_id(hass, "camera.async")
+    camera_obj = get_camera_from_entity_id(menuai, "camera.async")
     assert camera_obj
     assert camera_obj._webrtc_provider is None
     assert camera_obj._supports_native_async_webrtc is True
@@ -983,19 +983,19 @@ async def test_webrtc_provider_not_added_for_native_webrtc(
 
 @pytest.mark.usefixtures("mock_camera", "mock_stream_source")
 async def test_camera_capabilities_changing_non_native_support(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test WebRTC camera capabilities."""
-    cam = get_camera_from_entity_id(hass, "camera.demo_camera")
+    cam = get_camera_from_entity_id(menuai, "camera.demo_camera")
     assert (
         cam.supported_features
         == camera.CameraEntityFeature.ON_OFF | camera.CameraEntityFeature.STREAM
     )
 
     await _test_capabilities(
-        hass,
-        hass_ws_client,
+        menuai,
+        menuai_ws_client,
         cam.entity_id,
         {StreamType.HLS},
         {StreamType.HLS, StreamType.WEB_RTC},
@@ -1003,26 +1003,26 @@ async def test_camera_capabilities_changing_non_native_support(
 
     cam._attr_supported_features = camera.CameraEntityFeature(0)
     cam.async_write_ha_state()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await _test_capabilities(hass, hass_ws_client, cam.entity_id, set(), set())
+    await _test_capabilities(menuai, menuai_ws_client, cam.entity_id, set(), set())
 
 
 @pytest.mark.usefixtures("mock_test_webrtc_cameras")
 async def test_camera_capabilities_changing_native_support(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test WebRTC camera capabilities."""
-    cam = get_camera_from_entity_id(hass, "camera.async")
+    cam = get_camera_from_entity_id(menuai, "camera.async")
     assert cam.supported_features == camera.CameraEntityFeature.STREAM
 
     await _test_capabilities(
-        hass, hass_ws_client, cam.entity_id, {StreamType.WEB_RTC}, {StreamType.WEB_RTC}
+        menuai, menuai_ws_client, cam.entity_id, {StreamType.WEB_RTC}, {StreamType.WEB_RTC}
     )
 
     cam._attr_supported_features = camera.CameraEntityFeature(0)
     cam.async_write_ha_state()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await _test_capabilities(hass, hass_ws_client, cam.entity_id, set(), set())
+    await _test_capabilities(menuai, menuai_ws_client, cam.entity_id, set(), set())

@@ -2,10 +2,10 @@
 
 import aiohttp
 
-from homeassistant import config_entries
-from homeassistant.components.adguard.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import (
+from menuai import config_entries
+from menuai.components.adguard.const import DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
@@ -14,9 +14,9 @@ from homeassistant.const import (
     CONF_VERIFY_SSL,
     CONTENT_TYPE_JSON,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.hassio import HassioServiceInfo
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.menuaiio import menuaiioServiceInfo
 
 from tests.common import MockConfigEntry
 from tests.test_util.aiohttp import AiohttpClientMocker
@@ -31,9 +31,9 @@ FIXTURE_USER_INPUT = {
 }
 
 
-async def test_show_authenticate_form(hass: HomeAssistant) -> None:
+async def test_show_authenticate_form(menuai: menuai) -> None:
     """Test that the setup form is served."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
@@ -42,7 +42,7 @@ async def test_show_authenticate_form(hass: HomeAssistant) -> None:
 
 
 async def test_connection_error(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test we show user form on AdGuard Home connection error."""
     aioclient_mock.get(
@@ -54,7 +54,7 @@ async def test_connection_error(
         exc=aiohttp.ClientError,
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}, data=FIXTURE_USER_INPUT
     )
 
@@ -65,7 +65,7 @@ async def test_connection_error(
 
 
 async def test_full_flow_implementation(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test registering an integration and finishing flow works."""
     aioclient_mock.get(
@@ -78,7 +78,7 @@ async def test_full_flow_implementation(
         headers={"Content-Type": CONTENT_TYPE_JSON},
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
@@ -87,7 +87,7 @@ async def test_full_flow_implementation(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input=FIXTURE_USER_INPUT
     )
     assert result
@@ -106,13 +106,13 @@ async def test_full_flow_implementation(
     assert not config_entry.options
 
 
-async def test_integration_already_exists(hass: HomeAssistant) -> None:
+async def test_integration_already_exists(menuai: menuai) -> None:
     """Test we only allow a single config flow."""
     MockConfigEntry(
         domain=DOMAIN, data={"host": "mock-adguard", "port": "3000"}
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         data={"host": "mock-adguard", "port": "3000"},
         context={"source": config_entries.SOURCE_USER},
@@ -122,15 +122,15 @@ async def test_integration_already_exists(hass: HomeAssistant) -> None:
     assert result["reason"] == "already_configured"
 
 
-async def test_hassio_already_configured(hass: HomeAssistant) -> None:
+async def test_menuaiio_already_configured(menuai: menuai) -> None:
     """Test we only allow a single config flow."""
     MockConfigEntry(
         domain=DOMAIN, data={"host": "mock-adguard", "port": "3000"}
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
-        data=HassioServiceInfo(
+        data=menuaiioServiceInfo(
             config={
                 "addon": "AdGuard Home Addon",
                 "host": "mock-adguard",
@@ -140,22 +140,22 @@ async def test_hassio_already_configured(hass: HomeAssistant) -> None:
             slug="adguard",
             uuid="1234",
         ),
-        context={"source": config_entries.SOURCE_HASSIO},
+        context={"source": config_entries.SOURCE_menuaiIO},
     )
     assert result
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
 
 
-async def test_hassio_ignored(hass: HomeAssistant) -> None:
+async def test_menuaiio_ignored(menuai: menuai) -> None:
     """Test we supervisor discovered instance can be ignored."""
-    MockConfigEntry(domain=DOMAIN, source=config_entries.SOURCE_IGNORE).add_to_hass(
-        hass
+    MockConfigEntry(domain=DOMAIN, source=config_entries.SOURCE_IGNORE).add_to_menuai(
+        menuai
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
-        data=HassioServiceInfo(
+        data=menuaiioServiceInfo(
             config={
                 "addon": "AdGuard Home Addon",
                 "host": "mock-adguard",
@@ -165,15 +165,15 @@ async def test_hassio_ignored(hass: HomeAssistant) -> None:
             slug="adguard",
             uuid="1234",
         ),
-        context={"source": config_entries.SOURCE_HASSIO},
+        context={"source": config_entries.SOURCE_menuaiIO},
     )
     assert result
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
 
 
-async def test_hassio_confirm(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+async def test_menuaiio_confirm(
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test we can finish a config flow."""
     aioclient_mock.get(
@@ -182,9 +182,9 @@ async def test_hassio_confirm(
         headers={"Content-Type": CONTENT_TYPE_JSON},
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
-        data=HassioServiceInfo(
+        data=menuaiioServiceInfo(
             config={
                 "addon": "AdGuard Home Addon",
                 "host": "mock-adguard",
@@ -194,14 +194,14 @@ async def test_hassio_confirm(
             slug="adguard",
             uuid="1234",
         ),
-        context={"source": config_entries.SOURCE_HASSIO},
+        context={"source": config_entries.SOURCE_menuaiIO},
     )
     assert result
     assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == "hassio_confirm"
+    assert result["step_id"] == "menuaiio_confirm"
     assert result["description_placeholders"] == {"addon": "AdGuard Home Addon"}
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -218,17 +218,17 @@ async def test_hassio_confirm(
     }
 
 
-async def test_hassio_connection_error(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+async def test_menuaiio_connection_error(
+    menuai: menuai, aioclient_mock: AiohttpClientMocker
 ) -> None:
-    """Test we show Hass.io confirm form on AdGuard Home connection error."""
+    """Test we show menuai.io confirm form on AdGuard Home connection error."""
     aioclient_mock.get(
         "http://mock-adguard:3000/control/status", exc=aiohttp.ClientError
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
-        data=HassioServiceInfo(
+        data=menuaiioServiceInfo(
             config={
                 "addon": "AdGuard Home Addon",
                 "host": "mock-adguard",
@@ -238,12 +238,12 @@ async def test_hassio_connection_error(
             slug="adguard",
             uuid="1234",
         ),
-        context={"source": config_entries.SOURCE_HASSIO},
+        context={"source": config_entries.SOURCE_menuaiIO},
     )
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
 
     assert result
     assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == "hassio_confirm"
+    assert result["step_id"] == "menuaiio_confirm"
     assert result["errors"] == {"base": "cannot_connect"}

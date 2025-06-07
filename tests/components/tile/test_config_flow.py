@@ -5,11 +5,11 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from pytile.errors import InvalidAuthError, TileError
 
-from homeassistant.components.tile.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.tile.const import DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from .conftest import TEST_PASSWORD, TEST_USERNAME
 
@@ -17,16 +17,16 @@ from tests.common import MockConfigEntry
 
 
 async def test_full_flow(
-    hass: HomeAssistant, mock_pytile: AsyncMock, mock_setup_entry: AsyncMock
+    menuai: menuai, mock_pytile: AsyncMock, mock_setup_entry: AsyncMock
 ) -> None:
     """Test a full flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_USERNAME: TEST_USERNAME,
@@ -50,23 +50,23 @@ async def test_full_flow(
     ],
 )
 async def test_create_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_pytile: AsyncMock,
     mock_setup_entry: AsyncMock,
     exception: Exception,
     errors: dict[str, str],
 ) -> None:
     """Test creating an entry."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
     with patch(
-        "homeassistant.components.tile.config_flow.async_login", side_effect=exception
+        "menuai.components.tile.config_flow.async_login", side_effect=exception
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={
                 CONF_USERNAME: TEST_USERNAME,
@@ -77,7 +77,7 @@ async def test_create_entry(
         assert result["step_id"] == "user"
         assert result["errors"] == errors
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_USERNAME: TEST_USERNAME,
@@ -88,17 +88,17 @@ async def test_create_entry(
 
 
 async def test_duplicate_error(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_config_entry: MockConfigEntry
 ) -> None:
     """Test that errors are shown when duplicates are added."""
-    mock_config_entry.add_to_hass(hass)
-    result = await hass.config_entries.flow.async_init(
+    mock_config_entry.add_to_menuai(menuai)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_USERNAME: TEST_USERNAME,
@@ -110,23 +110,23 @@ async def test_duplicate_error(
 
 
 async def test_step_reauth(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_setup_entry: AsyncMock,
     mock_pytile: AsyncMock,
 ) -> None:
     """Test that the reauth step works."""
-    mock_config_entry.add_to_hass(hass)
-    result = await mock_config_entry.start_reauth_flow(hass)
+    mock_config_entry.add_to_menuai(menuai)
+    result = await mock_config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={CONF_PASSWORD: "password"}
     )
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"
-    assert len(hass.config_entries.async_entries()) == 1
+    assert len(menuai.config_entries.async_entries()) == 1
 
 
 @pytest.mark.parametrize(
@@ -137,7 +137,7 @@ async def test_step_reauth(
     ],
 )
 async def test_step_reauth_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_setup_entry: AsyncMock,
     mock_pytile: AsyncMock,
@@ -145,15 +145,15 @@ async def test_step_reauth_errors(
     errors: dict[str, str],
 ) -> None:
     """Test that the reauth step can recover from an error."""
-    mock_config_entry.add_to_hass(hass)
-    result = await mock_config_entry.start_reauth_flow(hass)
+    mock_config_entry.add_to_menuai(menuai)
+    result = await mock_config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
     with patch(
-        "homeassistant.components.tile.config_flow.async_login", side_effect=exception
+        "menuai.components.tile.config_flow.async_login", side_effect=exception
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={
                 CONF_PASSWORD: TEST_PASSWORD,
@@ -163,9 +163,9 @@ async def test_step_reauth_errors(
         assert result["step_id"] == "reauth_confirm"
         assert result["errors"] == errors
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={CONF_PASSWORD: "password"}
     )
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"
-    assert len(hass.config_entries.async_entries()) == 1
+    assert len(menuai.config_entries.async_entries()) == 1

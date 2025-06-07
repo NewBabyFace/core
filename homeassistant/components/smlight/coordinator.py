@@ -10,14 +10,14 @@ from pysmlight.const import Settings, SettingsProp
 from pysmlight.exceptions import SmlightAuthError, SmlightConnectionError
 from pysmlight.models import FirmwareList
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers import issue_registry as ir
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.issue_registry import IssueSeverity
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers import issue_registry as ir
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.issue_registry import IssueSeverity
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN, LOGGER, SCAN_FIRMWARE_INTERVAL, SCAN_INTERVAL
 
@@ -56,11 +56,11 @@ class SmBaseDataUpdateCoordinator[_DataT](DataUpdateCoordinator[_DataT]):
     config_entry: SmConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: SmConfigEntry, client: Api2
+        self, menuai: menuai, config_entry: SmConfigEntry, client: Api2
     ) -> None:
         """Initialize the coordinator."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name=f"{DOMAIN}_{config_entry.data[CONF_HOST]}",
@@ -94,7 +94,7 @@ class SmBaseDataUpdateCoordinator[_DataT](DataUpdateCoordinator[_DataT]):
         self.legacy_api = info.legacy_api
         if info.legacy_api == 2:
             ir.async_create_issue(
-                self.hass,
+                self.menuai,
                 DOMAIN,
                 "unsupported_firmware",
                 is_fixable=False,
@@ -149,10 +149,10 @@ class SmFirmwareUpdateCoordinator(SmBaseDataUpdateCoordinator[SmFwData]):
     """Class to manage fetching SMLIGHT firmware update data from cloud."""
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: SmConfigEntry, client: Api2
+        self, menuai: menuai, config_entry: SmConfigEntry, client: Api2
     ) -> None:
         """Initialize the coordinator."""
-        super().__init__(hass, config_entry, client)
+        super().__init__(menuai, config_entry, client)
 
         self.update_interval = SCAN_FIRMWARE_INTERVAL
         # only one update can run at a time (core or zibgee)

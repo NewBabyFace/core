@@ -10,16 +10,16 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 import voluptuous as vol
 
-from homeassistant import config_entries
-from homeassistant.const import (
-    EVENT_HOMEASSISTANT_START,
+from menuai import config_entries
+from menuai.const import (
+    EVENT_menuai_START,
     STATE_UNAVAILABLE,
     EntityCategory,
 )
-from homeassistant.core import CoreState, HomeAssistant, callback
-from homeassistant.exceptions import MaxLengthExceeded
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.util.dt import utc_from_timestamp, utcnow
+from menuai.core import CoreState, menuai, callback
+from menuai.exceptions import MaxLengthExceeded
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.util.dt import utc_from_timestamp, utcnow
 
 from tests.common import (
     ANY,
@@ -30,7 +30,7 @@ from tests.common import (
     flush_store,
 )
 
-YAML__OPEN_PATH = "homeassistant.util.yaml.loader.open"
+YAML__OPEN_PATH = "menuai.util.yaml.loader.open"
 
 
 async def test_get(entity_registry: er.EntityRegistry) -> None:
@@ -44,14 +44,14 @@ async def test_get(entity_registry: er.EntityRegistry) -> None:
 
 
 async def test_get_or_create_returns_same_entry(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Make sure we do not duplicate entries."""
-    update_events = async_capture_events(hass, er.EVENT_ENTITY_REGISTRY_UPDATED)
+    update_events = async_capture_events(menuai, er.EVENT_ENTITY_REGISTRY_UPDATED)
     entry = entity_registry.async_get_or_create("light", "hue", "1234")
     entry2 = entity_registry.async_get_or_create("light", "hue", "1234")
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(entity_registry.entities) == 1
     assert entry is entry2
@@ -73,7 +73,7 @@ def test_get_or_create_suggested_object_id(entity_registry: er.EntityRegistry) -
 
 
 def test_get_or_create_updates_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     freezer: FrozenDateTimeFactory,
@@ -92,7 +92,7 @@ def test_get_or_create_updates_data(
             )
         ],
     )
-    orig_config_entry.add_to_hass(hass)
+    orig_config_entry.add_to_menuai(menuai)
     orig_device_entry = device_registry.async_get_or_create(
         config_entry_id=orig_config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -108,7 +108,7 @@ def test_get_or_create_updates_data(
         config_entry=orig_config_entry,
         config_subentry_id=config_subentry_id,
         device_id=orig_device_entry.id,
-        disabled_by=er.RegistryEntryDisabler.HASS,
+        disabled_by=er.RegistryEntryDisabler.menuai,
         entity_category=EntityCategory.CONFIG,
         has_entity_name=True,
         hidden_by=er.RegistryEntryHider.INTEGRATION,
@@ -132,7 +132,7 @@ def test_get_or_create_updates_data(
         created_at=created,
         device_class=None,
         device_id=orig_device_entry.id,
-        disabled_by=er.RegistryEntryDisabler.HASS,
+        disabled_by=er.RegistryEntryDisabler.menuai,
         entity_category=EntityCategory.CONFIG,
         has_entity_name=True,
         hidden_by=er.RegistryEntryHider.INTEGRATION,
@@ -151,7 +151,7 @@ def test_get_or_create_updates_data(
     )
 
     new_config_entry = MockConfigEntry(domain="light")
-    new_config_entry.add_to_hass(hass)
+    new_config_entry.add_to_menuai(menuai)
     new_device_entry = device_registry.async_get_or_create(
         config_entry_id=new_config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "34:56:AB:CD:EF:12")},
@@ -191,7 +191,7 @@ def test_get_or_create_updates_data(
         created_at=created,
         device_class=None,
         device_id=new_device_entry.id,
-        disabled_by=er.RegistryEntryDisabler.HASS,  # Should not be updated
+        disabled_by=er.RegistryEntryDisabler.menuai,  # Should not be updated
         entity_category=EntityCategory.DIAGNOSTIC,
         has_entity_name=False,
         hidden_by=er.RegistryEntryHider.INTEGRATION,  # Should not be updated
@@ -244,7 +244,7 @@ def test_get_or_create_updates_data(
         created_at=created,
         device_class=None,
         device_id=None,
-        disabled_by=er.RegistryEntryDisabler.HASS,  # Should not be updated
+        disabled_by=er.RegistryEntryDisabler.menuai,  # Should not be updated
         entity_category=None,
         has_entity_name=None,
         hidden_by=er.RegistryEntryHider.INTEGRATION,  # Should not be updated
@@ -281,10 +281,10 @@ def test_get_or_create_suggested_object_id_conflict_register(
 
 
 def test_get_or_create_suggested_object_id_conflict_existing(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test that we don't generate an entity id that currently exists."""
-    hass.states.async_set("light.hue_1234", "on")
+    menuai.states.async_set("light.hue_1234", "on")
     entry = entity_registry.async_get_or_create("light", "hue", "1234")
     assert entry.entity_id == "light.hue_1234_2"
 
@@ -298,13 +298,13 @@ def test_create_triggers_save(entity_registry: er.EntityRegistry) -> None:
 
 
 async def test_loading_saving_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test that we load/save data correctly."""
     mock_config = MockConfigEntry(domain="light")
-    mock_config.add_to_hass(hass)
+    mock_config.add_to_menuai(menuai)
 
     device_entry = device_registry.async_get_or_create(
         config_entry_id=mock_config.entry_id,
@@ -319,12 +319,12 @@ async def test_loading_saving_data(
         capabilities={"max": 100},
         config_entry=mock_config,
         device_id=device_entry.id,
-        disabled_by=er.RegistryEntryDisabler.HASS,
+        disabled_by=er.RegistryEntryDisabler.menuai,
         entity_category=EntityCategory.CONFIG,
         hidden_by=er.RegistryEntryHider.INTEGRATION,
         has_entity_name=True,
         original_device_class="mock-device-class",
-        original_icon="hass:original-icon",
+        original_icon="menuai:original-icon",
         original_name="Original Name",
         supported_features=5,
         translation_key="initial-translation_key",
@@ -336,7 +336,7 @@ async def test_loading_saving_data(
         area_id="mock-area-id",
         device_class="user-class",
         name="User Name",
-        icon="hass:user-icon",
+        icon="menuai:user-icon",
     )
     entity_registry.async_update_entity_options(
         orig_entry2.entity_id, "light", {"minimum_brightness": 20}
@@ -356,7 +356,7 @@ async def test_loading_saving_data(
     assert len(entity_registry.deleted_entities) == 2
 
     # Now load written data in new registry
-    registry2 = er.EntityRegistry(hass)
+    registry2 = er.EntityRegistry(menuai)
     await flush_store(entity_registry._store)
     await registry2.async_load()
 
@@ -383,16 +383,16 @@ async def test_loading_saving_data(
     assert new_entry2.config_entry_id == mock_config.entry_id
     assert new_entry2.device_class == "user-class"
     assert new_entry2.device_id == device_entry.id
-    assert new_entry2.disabled_by is er.RegistryEntryDisabler.HASS
+    assert new_entry2.disabled_by is er.RegistryEntryDisabler.menuai
     assert new_entry2.entity_category == "config"
-    assert new_entry2.icon == "hass:user-icon"
+    assert new_entry2.icon == "menuai:user-icon"
     assert new_entry2.hidden_by == er.RegistryEntryHider.INTEGRATION
     assert new_entry2.has_entity_name is True
     assert new_entry2.labels == {"label1", "label2"}
     assert new_entry2.name == "User Name"
     assert new_entry2.options == {"light": {"minimum_brightness": 20}}
     assert new_entry2.original_device_class == "mock-device-class"
-    assert new_entry2.original_icon == "hass:original-icon"
+    assert new_entry2.original_icon == "menuai:original-icon"
     assert new_entry2.original_name == "Original Name"
     assert new_entry2.supported_features == 5
     assert new_entry2.translation_key == "initial-translation_key"
@@ -412,10 +412,10 @@ def test_generate_entity_considers_registered_entities(
 
 
 def test_generate_entity_considers_existing_entities(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test that we don't create entity id that currently exists."""
-    hass.states.async_set("light.kitchen", "on")
+    menuai.states.async_set("light.kitchen", "on")
     assert (
         entity_registry.async_generate_entity_id("light", "kitchen")
         == "light.kitchen_2"
@@ -431,10 +431,10 @@ def test_is_registered(entity_registry: er.EntityRegistry) -> None:
 
 @pytest.mark.parametrize("load_registries", [False])
 async def test_filter_on_load(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
+    menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
     """Test we transform some data when loading from storage."""
-    hass_storage[er.STORAGE_KEY] = {
+    menuai_storage[er.STORAGE_KEY] = {
         "version": er.STORAGE_VERSION_MAJOR,
         "minor_version": 1,
         "data": {
@@ -458,21 +458,21 @@ async def test_filter_on_load(
                     "disabled_by": "user",  # We store the string representation
                 },
                 {
-                    "entity_id": "test.disabled_hass",
+                    "entity_id": "test.disabled_menuai",
                     "platform": "super_platform",
-                    "unique_id": "disabled-hass",
-                    "disabled_by": "hass",  # We store the string representation
+                    "unique_id": "disabled-menuai",
+                    "disabled_by": "menuai",  # We store the string representation
                 },
             ]
         },
     }
 
-    await er.async_load(hass)
-    registry = er.async_get(hass)
+    await er.async_load(menuai)
+    registry = er.async_get(menuai)
 
     assert len(registry.entities) == 4
     assert set(registry.entities.keys()) == {
-        "test.disabled_hass",
+        "test.disabled_menuai",
         "test.disabled_user",
         "test.named",
         "test.no_name",
@@ -490,26 +490,26 @@ async def test_filter_on_load(
     assert entry_with_name.created_at == utc_from_timestamp(0)
     assert entry_with_name.modified_at == utc_from_timestamp(0)
 
-    entry_disabled_hass = registry.async_get_or_create(
-        "test", "super_platform", "disabled-hass"
+    entry_disabled_menuai = registry.async_get_or_create(
+        "test", "super_platform", "disabled-menuai"
     )
     entry_disabled_user = registry.async_get_or_create(
         "test", "super_platform", "disabled-user"
     )
-    assert entry_disabled_hass.disabled
-    assert entry_disabled_hass.disabled_by is er.RegistryEntryDisabler.HASS
+    assert entry_disabled_menuai.disabled
+    assert entry_disabled_menuai.disabled_by is er.RegistryEntryDisabler.menuai
     assert entry_disabled_user.disabled
     assert entry_disabled_user.disabled_by is er.RegistryEntryDisabler.USER
 
 
 @pytest.mark.parametrize("load_registries", [False])
 async def test_load_bad_data(
-    hass: HomeAssistant,
-    hass_storage: dict[str, Any],
+    menuai: menuai,
+    menuai_storage: dict[str, Any],
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test loading invalid data."""
-    hass_storage[er.STORAGE_KEY] = {
+    menuai_storage[er.STORAGE_KEY] = {
         "version": er.STORAGE_VERSION_MAJOR,
         "minor_version": er.STORAGE_VERSION_MINOR,
         "data": {
@@ -608,8 +608,8 @@ async def test_load_bad_data(
         },
     }
 
-    await er.async_load(hass)
-    registry = er.async_get(hass)
+    await er.async_load(menuai)
+    registry = er.async_get(menuai)
 
     assert len(registry.entities) == 1
     assert set(registry.entities.keys()) == {"test.test1"}
@@ -643,25 +643,25 @@ def test_async_get_entity_id(entity_registry: er.EntityRegistry) -> None:
 
 
 async def test_updating_config_entry_id(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test that we update config entry id in registry."""
-    update_events = async_capture_events(hass, er.EVENT_ENTITY_REGISTRY_UPDATED)
+    update_events = async_capture_events(menuai, er.EVENT_ENTITY_REGISTRY_UPDATED)
     mock_config_1 = MockConfigEntry(domain="light", entry_id="mock-id-1")
-    mock_config_1.add_to_hass(hass)
+    mock_config_1.add_to_menuai(menuai)
     entry = entity_registry.async_get_or_create(
         "light", "hue", "5678", config_entry=mock_config_1
     )
 
     mock_config_2 = MockConfigEntry(domain="light", entry_id="mock-id-2")
-    mock_config_2.add_to_hass(hass)
+    mock_config_2.add_to_menuai(menuai)
     entry2 = entity_registry.async_get_or_create(
         "light", "hue", "5678", config_entry=mock_config_2
     )
     assert entry.entity_id == entry2.entity_id
     assert entry2.config_entry_id == "mock-id-2"
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(update_events) == 2
     assert update_events[0].data == {
@@ -676,12 +676,12 @@ async def test_updating_config_entry_id(
 
 
 async def test_removing_config_entry_id(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test that we update config entry id in registry."""
-    update_events = async_capture_events(hass, er.EVENT_ENTITY_REGISTRY_UPDATED)
+    update_events = async_capture_events(menuai, er.EVENT_ENTITY_REGISTRY_UPDATED)
     mock_config = MockConfigEntry(domain="light", entry_id="mock-id-1")
-    mock_config.add_to_hass(hass)
+    mock_config.add_to_menuai(menuai)
 
     entry = entity_registry.async_get_or_create(
         "light", "hue", "5678", config_entry=mock_config
@@ -691,7 +691,7 @@ async def test_removing_config_entry_id(
 
     assert not entity_registry.entities
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(update_events) == 2
     assert update_events[0].data == {
@@ -705,14 +705,14 @@ async def test_removing_config_entry_id(
 
 
 async def test_deleted_entity_removing_config_entry_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test that we update config entry id in registry on deleted entity."""
     mock_config1 = MockConfigEntry(domain="light", entry_id="mock-id-1")
     mock_config2 = MockConfigEntry(domain="light", entry_id="mock-id-2")
-    mock_config1.add_to_hass(hass)
-    mock_config2.add_to_hass(hass)
+    mock_config1.add_to_menuai(menuai)
+    mock_config2.add_to_menuai(menuai)
 
     entry1 = entity_registry.async_get_or_create(
         "light", "hue", "5678", config_entry=mock_config1
@@ -744,10 +744,10 @@ async def test_deleted_entity_removing_config_entry_id(
 
 
 async def test_removing_config_subentry_id(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test that we update config subentry id in registry."""
-    update_events = async_capture_events(hass, er.EVENT_ENTITY_REGISTRY_UPDATED)
+    update_events = async_capture_events(menuai, er.EVENT_ENTITY_REGISTRY_UPDATED)
     mock_config = MockConfigEntry(
         domain="light",
         entry_id="mock-id-1",
@@ -761,7 +761,7 @@ async def test_removing_config_subentry_id(
             )
         ],
     )
-    mock_config.add_to_hass(hass)
+    mock_config.add_to_menuai(menuai)
 
     entry = entity_registry.async_get_or_create(
         "light",
@@ -771,11 +771,11 @@ async def test_removing_config_subentry_id(
         config_subentry_id="mock-subentry-id-1",
     )
     assert entry.config_subentry_id == "mock-subentry-id-1"
-    hass.config_entries.async_remove_subentry(mock_config, "mock-subentry-id-1")
+    menuai.config_entries.async_remove_subentry(mock_config, "mock-subentry-id-1")
 
     assert not entity_registry.entities
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(update_events) == 2
     assert update_events[0].data == {
@@ -789,7 +789,7 @@ async def test_removing_config_subentry_id(
 
 
 async def test_deleted_entity_removing_config_subentry_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test that we update config subentry id in registry on deleted entity."""
@@ -813,7 +813,7 @@ async def test_deleted_entity_removing_config_subentry_id(
             ),
         ],
     )
-    mock_config.add_to_hass(hass)
+    mock_config.add_to_menuai(menuai)
 
     entry1 = entity_registry.async_get_or_create(
         "light",
@@ -845,7 +845,7 @@ async def test_deleted_entity_removing_config_subentry_id(
     assert deleted_entry2.config_subentry_id == "mock-subentry-id-2"
     assert deleted_entry2.orphaned_timestamp is None
 
-    hass.config_entries.async_remove_subentry(mock_config, "mock-subentry-id-1")
+    menuai.config_entries.async_remove_subentry(mock_config, "mock-subentry-id-1")
     assert len(entity_registry.entities) == 0
     assert len(entity_registry.deleted_entities) == 2
     deleted_entry1 = entity_registry.deleted_entities[("light", "hue", "5678")]
@@ -871,9 +871,9 @@ async def test_removing_area_id(entity_registry: er.EntityRegistry) -> None:
 
 
 @pytest.mark.parametrize("load_registries", [False])
-async def test_migration_1_1(hass: HomeAssistant, hass_storage: dict[str, Any]) -> None:
+async def test_migration_1_1(menuai: menuai, menuai_storage: dict[str, Any]) -> None:
     """Test migration from version 1.1."""
-    hass_storage[er.STORAGE_KEY] = {
+    menuai_storage[er.STORAGE_KEY] = {
         "version": 1,
         "minor_version": 1,
         "data": {
@@ -888,8 +888,8 @@ async def test_migration_1_1(hass: HomeAssistant, hass_storage: dict[str, Any]) 
         },
     }
 
-    await er.async_load(hass)
-    registry = er.async_get(hass)
+    await er.async_load(menuai)
+    registry = er.async_get(menuai)
 
     entry = registry.async_get_or_create("test", "super_platform", "very_unique")
 
@@ -898,7 +898,7 @@ async def test_migration_1_1(hass: HomeAssistant, hass_storage: dict[str, Any]) 
 
     # Check we store migrated data
     await flush_store(registry._store)
-    assert hass_storage[er.STORAGE_KEY] == {
+    assert menuai_storage[er.STORAGE_KEY] == {
         "version": er.STORAGE_VERSION_MAJOR,
         "minor_version": er.STORAGE_VERSION_MINOR,
         "key": er.STORAGE_KEY,
@@ -943,7 +943,7 @@ async def test_migration_1_1(hass: HomeAssistant, hass_storage: dict[str, Any]) 
 
 
 @pytest.mark.parametrize("load_registries", [False])
-async def test_migration_1_7(hass: HomeAssistant, hass_storage: dict[str, Any]) -> None:
+async def test_migration_1_7(menuai: menuai, menuai_storage: dict[str, Any]) -> None:
     """Test migration from version 1.7.
 
     This tests cleanup after frontend bug which incorrectly updated device_class
@@ -969,7 +969,7 @@ async def test_migration_1_7(hass: HomeAssistant, hass_storage: dict[str, Any]) 
         "unit_of_measurement": None,
     }
 
-    hass_storage[er.STORAGE_KEY] = {
+    menuai_storage[er.STORAGE_KEY] = {
         "version": 1,
         "minor_version": 7,
         "data": {
@@ -996,8 +996,8 @@ async def test_migration_1_7(hass: HomeAssistant, hass_storage: dict[str, Any]) 
         },
     }
 
-    await er.async_load(hass)
-    registry = er.async_get(hass)
+    await er.async_load(menuai)
+    registry = er.async_get(menuai)
 
     entry = registry.async_get_or_create("test", "super_platform", "very_unique")
     assert entry.device_class is None
@@ -1016,14 +1016,14 @@ async def test_migration_1_7(hass: HomeAssistant, hass_storage: dict[str, Any]) 
 
 @pytest.mark.parametrize("load_registries", [False])
 async def test_migration_1_11(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
+    menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
     """Test migration from version 1.11.
 
     This is the first version which has deleted entities, make sure deleted entities
     are updated.
     """
-    hass_storage[er.STORAGE_KEY] = {
+    menuai_storage[er.STORAGE_KEY] = {
         "version": 1,
         "minor_version": 11,
         "data": {
@@ -1068,8 +1068,8 @@ async def test_migration_1_11(
         },
     }
 
-    await er.async_load(hass)
-    registry = er.async_get(hass)
+    await er.async_load(menuai)
+    registry = er.async_get(menuai)
 
     entry = registry.async_get_or_create("test", "super_platform", "very_unique")
 
@@ -1078,7 +1078,7 @@ async def test_migration_1_11(
 
     # Check migrated data
     await flush_store(registry._store)
-    assert hass_storage[er.STORAGE_KEY] == {
+    assert menuai_storage[er.STORAGE_KEY] == {
         "version": er.STORAGE_VERSION_MAJOR,
         "minor_version": er.STORAGE_VERSION_MINOR,
         "key": er.STORAGE_KEY,
@@ -1135,11 +1135,11 @@ async def test_migration_1_11(
 
 
 async def test_update_entity_unique_id(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test entity's unique_id is updated."""
     mock_config = MockConfigEntry(domain="light", entry_id="mock-id-1")
-    mock_config.add_to_hass(hass)
+    mock_config.add_to_menuai(menuai)
 
     entry = entity_registry.async_get_or_create(
         "light", "hue", "5678", config_entry=mock_config
@@ -1165,12 +1165,12 @@ async def test_update_entity_unique_id(
 
 
 async def test_update_entity_unique_id_conflict(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test migration raises when unique_id already in use."""
     mock_config = MockConfigEntry(domain="light", entry_id="mock-id-1")
-    mock_config.add_to_hass(hass)
+    mock_config.add_to_menuai(menuai)
     entry = entity_registry.async_get_or_create(
         "light", "hue", "5678", config_entry=mock_config
     )
@@ -1215,13 +1215,13 @@ async def test_update_entity_entity_id(entity_registry: er.EntityRegistry) -> No
 
 
 async def test_update_entity_entity_id_entity_id(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test update raises when entity_id already in use."""
     entry = entity_registry.async_get_or_create("light", "hue", "5678")
     entry2 = entity_registry.async_get_or_create("light", "hue", "1234")
     state_entity_id = "light.blah"
-    hass.states.async_set(state_entity_id, "on")
+    menuai.states.async_set(state_entity_id, "on")
     assert entry.entity_id != state_entity_id
     assert entry2.entity_id != state_entity_id
 
@@ -1260,11 +1260,11 @@ async def test_update_entity_entity_id_entity_id(
 
 
 async def test_update_entity(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test updating entity."""
     mock_config = MockConfigEntry(domain="light", entry_id="mock-id-1")
-    mock_config.add_to_hass(hass)
+    mock_config.add_to_menuai(menuai)
     entry = entity_registry.async_get_or_create(
         "light", "hue", "5678", config_entry=mock_config
     )
@@ -1290,11 +1290,11 @@ async def test_update_entity(
 
 
 async def test_update_entity_options(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test updating entity."""
     mock_config = MockConfigEntry(domain="light", entry_id="mock-id-1")
-    mock_config.add_to_hass(hass)
+    mock_config.add_to_menuai(menuai)
     entry = entity_registry.async_get_or_create(
         "light", "hue", "5678", config_entry=mock_config
     )
@@ -1330,15 +1330,15 @@ async def test_update_entity_options(
 async def test_disabled_by(entity_registry: er.EntityRegistry) -> None:
     """Test that we can disable an entry when we create it."""
     entry = entity_registry.async_get_or_create(
-        "light", "hue", "5678", disabled_by=er.RegistryEntryDisabler.HASS
+        "light", "hue", "5678", disabled_by=er.RegistryEntryDisabler.menuai
     )
-    assert entry.disabled_by is er.RegistryEntryDisabler.HASS
+    assert entry.disabled_by is er.RegistryEntryDisabler.menuai
     assert entry.disabled is True
 
     entry = entity_registry.async_get_or_create(
         "light", "hue", "5678", disabled_by=er.RegistryEntryDisabler.INTEGRATION
     )
-    assert entry.disabled_by is er.RegistryEntryDisabler.HASS
+    assert entry.disabled_by is er.RegistryEntryDisabler.menuai
     assert entry.disabled is True
 
     entry2 = entity_registry.async_get_or_create("light", "hue", "1234")
@@ -1347,7 +1347,7 @@ async def test_disabled_by(entity_registry: er.EntityRegistry) -> None:
 
 
 async def test_disabled_by_config_entry_pref(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test config entry preference setting disabled_by."""
@@ -1356,7 +1356,7 @@ async def test_disabled_by_config_entry_pref(
         entry_id="mock-id-1",
         pref_disable_new_entities=True,
     )
-    mock_config.add_to_hass(hass)
+    mock_config.add_to_menuai(menuai)
     entry = entity_registry.async_get_or_create(
         "light", "hue", "AAAA", config_entry=mock_config
     )
@@ -1392,10 +1392,10 @@ async def test_hidden_by(entity_registry: er.EntityRegistry) -> None:
 
 
 async def test_restore_states(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test restoring states."""
-    hass.set_state(CoreState.not_running)
+    menuai.set_state(CoreState.not_running)
 
     entity_registry.async_get_or_create(
         "light",
@@ -1409,7 +1409,7 @@ async def test_restore_states(
         "hue",
         "5678",
         suggested_object_id="disabled",
-        disabled_by=er.RegistryEntryDisabler.HASS,
+        disabled_by=er.RegistryEntryDisabler.menuai,
     )
     entity_registry.async_get_or_create(
         "light",
@@ -1420,21 +1420,21 @@ async def test_restore_states(
         supported_features=5,
         original_device_class="mock-device-class",
         original_name="Mock Original Name",
-        original_icon="hass:original-icon",
+        original_icon="menuai:original-icon",
     )
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_START, {})
-    await hass.async_block_till_done()
+    menuai.bus.async_fire(EVENT_menuai_START, {})
+    await menuai.async_block_till_done()
 
-    simple = hass.states.get("light.simple")
+    simple = menuai.states.get("light.simple")
     assert simple is not None
     assert simple.state == STATE_UNAVAILABLE
     assert simple.attributes == {"restored": True, "supported_features": 0}
 
-    disabled = hass.states.get("light.disabled")
+    disabled = menuai.states.get("light.disabled")
     assert disabled is None
 
-    all_info_set = hass.states.get("light.all_info_set")
+    all_info_set = menuai.states.get("light.all_info_set")
     assert all_info_set is not None
     assert all_info_set.state == STATE_UNAVAILABLE
     assert all_info_set.attributes == {
@@ -1443,28 +1443,28 @@ async def test_restore_states(
         "device_class": "mock-device-class",
         "restored": True,
         "friendly_name": "Mock Original Name",
-        "icon": "hass:original-icon",
+        "icon": "menuai:original-icon",
     }
 
     entity_registry.async_remove("light.disabled")
     entity_registry.async_remove("light.simple")
     entity_registry.async_remove("light.all_info_set")
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("light.simple") is None
-    assert hass.states.get("light.disabled") is None
-    assert hass.states.get("light.all_info_set") is None
+    assert menuai.states.get("light.simple") is None
+    assert menuai.states.get("light.disabled") is None
+    assert menuai.states.get("light.all_info_set") is None
 
 
 async def test_remove_device_removes_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
 ) -> None:
     """Test that we remove entities tied to a device."""
     config_entry = MockConfigEntry(domain="light")
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
@@ -1482,21 +1482,21 @@ async def test_remove_device_removes_entities(
     assert entity_registry.async_is_registered(entry.entity_id)
 
     device_registry.async_remove_device(device_entry.id)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert not entity_registry.async_is_registered(entry.entity_id)
 
 
 async def test_remove_config_entry_from_device_removes_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test that we remove entities tied to a device when config entry is removed."""
     config_entry_1 = MockConfigEntry(domain="hue")
-    config_entry_1.add_to_hass(hass)
+    config_entry_1.add_to_menuai(menuai)
     config_entry_2 = MockConfigEntry(domain="device_tracker")
-    config_entry_2.add_to_hass(hass)
+    config_entry_2.add_to_menuai(menuai)
 
     # Create device with two config entries
     device_registry.async_get_or_create(
@@ -1537,7 +1537,7 @@ async def test_remove_config_entry_from_device_removes_entities(
     device_registry.async_update_device(
         device_entry.id, remove_config_entry_id=config_entry_1.entry_id
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert device_registry.async_get(device_entry.id)
     assert not entity_registry.async_is_registered(entry_1.entity_id)
@@ -1548,7 +1548,7 @@ async def test_remove_config_entry_from_device_removes_entities(
     device_registry.async_update_device(
         device_entry.id, remove_config_entry_id=config_entry_2.entry_id
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert not device_registry.async_get(device_entry.id)
     assert not entity_registry.async_is_registered(entry_1.entity_id)
@@ -1556,15 +1556,15 @@ async def test_remove_config_entry_from_device_removes_entities(
 
 
 async def test_remove_config_entry_from_device_removes_entities_2(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test that we don't remove entities with no config entry when device is modified."""
     config_entry_1 = MockConfigEntry(domain="hue")
-    config_entry_1.add_to_hass(hass)
+    config_entry_1.add_to_menuai(menuai)
     config_entry_2 = MockConfigEntry(domain="device_tracker")
-    config_entry_2.add_to_hass(hass)
+    config_entry_2.add_to_menuai(menuai)
 
     # Create device with two config entries
     device_registry.async_get_or_create(
@@ -1594,14 +1594,14 @@ async def test_remove_config_entry_from_device_removes_entities_2(
     device_registry.async_update_device(
         device_entry.id, remove_config_entry_id=config_entry_1.entry_id
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert device_registry.async_get(device_entry.id)
     assert entity_registry.async_is_registered(entry_1.entity_id)
 
 
 async def test_remove_config_subentry_from_device_removes_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
@@ -1625,7 +1625,7 @@ async def test_remove_config_subentry_from_device_removes_entities(
             ),
         ],
     )
-    config_entry_1.add_to_hass(hass)
+    config_entry_1.add_to_menuai(menuai)
 
     # Create device with three config subentries
     device_registry.async_get_or_create(
@@ -1686,7 +1686,7 @@ async def test_remove_config_subentry_from_device_removes_entities(
         remove_config_entry_id=config_entry_1.entry_id,
         remove_config_subentry_id="mock-subentry-id-1",
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert device_registry.async_get(device_entry.id)
     assert not entity_registry.async_is_registered(entry_1.entity_id)
@@ -1700,7 +1700,7 @@ async def test_remove_config_subentry_from_device_removes_entities(
         remove_config_entry_id=config_entry_1.entry_id,
         remove_config_subentry_id=None,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert device_registry.async_get(device_entry.id)
     assert not entity_registry.async_is_registered(entry_1.entity_id)
@@ -1714,7 +1714,7 @@ async def test_remove_config_subentry_from_device_removes_entities(
         remove_config_entry_id=config_entry_1.entry_id,
         remove_config_subentry_id="mock-subentry-id-2",
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert not device_registry.async_get(device_entry.id)
     assert not entity_registry.async_is_registered(entry_1.entity_id)
@@ -1723,7 +1723,7 @@ async def test_remove_config_subentry_from_device_removes_entities(
 
 
 async def test_remove_config_subentry_from_device_removes_entities_2(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
@@ -1747,7 +1747,7 @@ async def test_remove_config_subentry_from_device_removes_entities_2(
             ),
         ],
     )
-    config_entry_1.add_to_hass(hass)
+    config_entry_1.add_to_menuai(menuai)
 
     # Create device with three config subentries
     device_registry.async_get_or_create(
@@ -1785,7 +1785,7 @@ async def test_remove_config_subentry_from_device_removes_entities_2(
         remove_config_entry_id=config_entry_1.entry_id,
         remove_config_subentry_id=None,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert device_registry.async_get(device_entry.id)
     assert entity_registry.async_is_registered(entry_1.entity_id)
@@ -1796,20 +1796,20 @@ async def test_remove_config_subentry_from_device_removes_entities_2(
         remove_config_entry_id=config_entry_1.entry_id,
         remove_config_subentry_id="mock-subentry-id-1",
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert device_registry.async_get(device_entry.id)
     assert entity_registry.async_is_registered(entry_1.entity_id)
 
 
 async def test_update_device_race(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test race when a device is created, updated and removed."""
     config_entry = MockConfigEntry(domain="light")
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     # Create device
     device_entry = device_registry.async_get_or_create(
@@ -1834,19 +1834,19 @@ async def test_update_device_race(
     assert entity_registry.async_is_registered(entry.entity_id)
 
     device_registry.async_remove_device(device_entry.id)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert not entity_registry.async_is_registered(entry.entity_id)
 
 
 async def test_disable_device_disables_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test that we disable entities tied to a device."""
     config_entry = MockConfigEntry(domain="light")
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
@@ -1884,7 +1884,7 @@ async def test_disable_device_disables_entities(
     device_registry.async_update_device(
         device_entry.id, disabled_by=dr.DeviceEntryDisabler.USER
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     entry1 = entity_registry.async_get(entry1.entity_id)
     assert entry1.disabled
@@ -1897,7 +1897,7 @@ async def test_disable_device_disables_entities(
     assert entry3.disabled_by is er.RegistryEntryDisabler.CONFIG_ENTRY
 
     device_registry.async_update_device(device_entry.id, disabled_by=None)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     entry1 = entity_registry.async_get(entry1.entity_id)
     assert not entry1.disabled
@@ -1910,13 +1910,13 @@ async def test_disable_device_disables_entities(
 
 
 async def test_disable_config_entry_disables_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test that we disable entities tied to a config entry."""
     config_entry = MockConfigEntry(domain="light")
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
@@ -1951,10 +1951,10 @@ async def test_disable_config_entry_disables_entities(
     assert entry2.disabled
     assert entry3.disabled
 
-    await hass.config_entries.async_set_disabled_by(
+    await menuai.config_entries.async_set_disabled_by(
         config_entry.entry_id, config_entries.ConfigEntryDisabler.USER
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     entry1 = entity_registry.async_get(entry1.entity_id)
     assert entry1.disabled
@@ -1966,8 +1966,8 @@ async def test_disable_config_entry_disables_entities(
     assert entry3.disabled
     assert entry3.disabled_by is er.RegistryEntryDisabler.DEVICE
 
-    await hass.config_entries.async_set_disabled_by(config_entry.entry_id, None)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_set_disabled_by(config_entry.entry_id, None)
+    await menuai.async_block_till_done()
 
     entry1 = entity_registry.async_get(entry1.entity_id)
     assert not entry1.disabled
@@ -1980,13 +1980,13 @@ async def test_disable_config_entry_disables_entities(
 
 
 async def test_disabled_entities_excluded_from_entity_list(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test that disabled entities are excluded from async_entries_for_device."""
     config_entry = MockConfigEntry(domain="light")
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
@@ -2018,7 +2018,7 @@ async def test_disabled_entities_excluded_from_entity_list(
     )
     assert entries == [entry1, entry2]
 
-    ent_reg = er.async_get(hass)
+    ent_reg = er.async_get(menuai)
     assert ent_reg.entities.get_entries_for_device_id(device_entry.id) == [entry1]
 
     assert ent_reg.entities.get_entries_for_device_id(
@@ -2027,7 +2027,7 @@ async def test_disabled_entities_excluded_from_entity_list(
 
 
 async def test_entity_max_length_exceeded(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test that an exception is raised when the max character length is exceeded."""
 
@@ -2055,10 +2055,10 @@ async def test_entity_max_length_exceeded(
 
     new_id = entity_registry.async_generate_entity_id("sensor", long_entity_id_name)
     assert new_id == "sensor." + long_entity_id_name[: 255 - 7]
-    hass.states.async_reserve(new_id)
+    menuai.states.async_reserve(new_id)
     new_id = entity_registry.async_generate_entity_id("sensor", long_entity_id_name)
     assert new_id == "sensor." + long_entity_id_name[: 255 - 7 - 2] + "_2"
-    hass.states.async_reserve(new_id)
+    menuai.states.async_reserve(new_id)
     new_id = entity_registry.async_generate_entity_id("sensor", long_entity_id_name)
     assert new_id == "sensor." + long_entity_id_name[: 255 - 7 - 2] + "_3"
 
@@ -2251,7 +2251,7 @@ async def test_unique_id_non_string(
     ],
 )
 def test_migrate_entity_to_new_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     create_kwargs: dict,
     migrate_kwargs: dict,
@@ -2270,7 +2270,7 @@ def test_migrate_entity_to_new_platform(
             ),
         ],
     )
-    orig_config_entry.add_to_hass(hass)
+    orig_config_entry.add_to_menuai(menuai)
     orig_unique_id = "5678"
 
     orig_entry = entity_registry.async_get_or_create(
@@ -2305,7 +2305,7 @@ def test_migrate_entity_to_new_platform(
             ),
         ],
     )
-    new_config_entry.add_to_hass(hass)
+    new_config_entry.add_to_menuai(menuai)
     new_unique_id = "1234"
 
     assert entity_registry.async_update_entity_platform(
@@ -2344,7 +2344,7 @@ def test_migrate_entity_to_new_platform(
         )
 
     # Test entity with a state
-    hass.states.async_set("light.light", "on")
+    menuai.states.async_set("light.light", "on")
     with pytest.raises(ValueError):
         entity_registry.async_update_entity_platform(
             "light.light",
@@ -2355,7 +2355,7 @@ def test_migrate_entity_to_new_platform(
 
 
 def test_migrate_entity_to_new_platform_error_handling(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test migrate_entity_to_new_platform."""
@@ -2371,7 +2371,7 @@ def test_migrate_entity_to_new_platform_error_handling(
             ),
         ],
     )
-    orig_config_entry.add_to_hass(hass)
+    orig_config_entry.add_to_menuai(menuai)
     orig_unique_id = "5678"
 
     orig_entry = entity_registry.async_get_or_create(
@@ -2401,7 +2401,7 @@ def test_migrate_entity_to_new_platform_error_handling(
             ),
         ],
     )
-    new_config_entry.add_to_hass(hass)
+    new_config_entry.add_to_menuai(menuai)
     new_unique_id = "1234"
 
     # Test migrating nonexisting entity
@@ -2435,7 +2435,7 @@ def test_migrate_entity_to_new_platform_error_handling(
         )
 
     # Test entity with a state
-    hass.states.async_set("light.light", "on")
+    menuai.states.async_set("light.light", "on")
     with pytest.raises(
         ValueError, match="Only entities that haven't been loaded can be migrated"
     ):
@@ -2448,13 +2448,13 @@ def test_migrate_entity_to_new_platform_error_handling(
 
 
 async def test_restore_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Make sure entity registry id is stable."""
-    update_events = async_capture_events(hass, er.EVENT_ENTITY_REGISTRY_UPDATED)
+    update_events = async_capture_events(menuai, er.EVENT_ENTITY_REGISTRY_UPDATED)
     config_entry = MockConfigEntry(
         domain="light",
         subentries_data=[
@@ -2474,7 +2474,7 @@ async def test_restore_entity(
             ),
         ],
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry_1 = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -2604,8 +2604,8 @@ async def test_restore_entity(
     assert len(entity_registry.entities) == 0
     assert len(entity_registry.deleted_entities) == 2
     freezer.tick(timedelta(seconds=er.ORPHANED_ENTITY_KEEP_SECONDS + 1))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     # Re-add two entities, expect to get a new id after the purge for entity w/o config entry
     entry1_restored = entity_registry.async_get_or_create(
@@ -2623,8 +2623,8 @@ async def test_restore_entity(
     assert len(entity_registry.deleted_entities) == 1
     entity_registry.async_clear_config_entry(config_entry.entry_id)
     freezer.tick(timedelta(seconds=er.ORPHANED_ENTITY_KEEP_SECONDS + 1))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     # Re-add the entity, expect to get a new id after the purge
     entry1_restored = entity_registry.async_get_or_create(
@@ -2635,7 +2635,7 @@ async def test_restore_entity(
     assert entry1.id != entry1_restored.id
 
     # Check the events
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(update_events) == 14
     assert update_events[0].data == {
         "action": "create",
@@ -2666,13 +2666,13 @@ async def test_restore_entity(
 
 
 async def test_async_migrate_entry_delete_self(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test async_migrate_entry."""
     config_entry1 = MockConfigEntry(domain="test1")
     config_entry2 = MockConfigEntry(domain="test2")
-    config_entry1.add_to_hass(hass)
-    config_entry2.add_to_hass(hass)
+    config_entry1.add_to_menuai(menuai)
+    config_entry2.add_to_menuai(menuai)
     entry1 = entity_registry.async_get_or_create(
         "light", "hue", "1234", config_entry=config_entry1, original_name="Entry 1"
     )
@@ -2694,7 +2694,7 @@ async def test_async_migrate_entry_delete_self(
         return None
 
     entries = set()
-    await er.async_migrate_entries(hass, config_entry1.entry_id, _async_migrator)
+    await er.async_migrate_entries(menuai, config_entry1.entry_id, _async_migrator)
     assert entries == {entry1.entity_id, entry2.entity_id}
     assert not entity_registry.async_is_registered(entry1.entity_id)
     entry2 = entity_registry.async_get(entry2.entity_id)
@@ -2703,13 +2703,13 @@ async def test_async_migrate_entry_delete_self(
 
 
 async def test_async_migrate_entry_delete_other(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test async_migrate_entry."""
     config_entry1 = MockConfigEntry(domain="test1")
     config_entry2 = MockConfigEntry(domain="test2")
-    config_entry1.add_to_hass(hass)
-    config_entry2.add_to_hass(hass)
+    config_entry1.add_to_menuai(menuai)
+    config_entry2.add_to_menuai(menuai)
     entry1 = entity_registry.async_get_or_create(
         "light", "hue", "1234", config_entry=config_entry1, original_name="Entry 1"
     )
@@ -2731,7 +2731,7 @@ async def test_async_migrate_entry_delete_other(
         return None
 
     entries = set()
-    await er.async_migrate_entries(hass, config_entry1.entry_id, _async_migrator)
+    await er.async_migrate_entries(menuai, config_entry1.entry_id, _async_migrator)
     assert entries == {entry1.entity_id}
     assert not entity_registry.async_is_registered(entry2.entity_id)
 
@@ -2877,20 +2877,20 @@ async def test_entries_for_category(entity_registry: er.EntityRegistry) -> None:
 
 
 async def test_get_or_create_thread_safety(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test call async_get_or_create_from a thread."""
     with pytest.raises(
         RuntimeError,
         match="Detected code that calls entity_registry.async_get_or_create from a thread.",
     ):
-        await hass.async_add_executor_job(
+        await menuai.async_add_executor_job(
             entity_registry.async_get_or_create, "light", "hue", "1234"
         )
 
 
 async def test_async_update_entity_thread_safety(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test call async_get_or_create from a thread."""
     entry = entity_registry.async_get_or_create("light", "hue", "1234")
@@ -2898,7 +2898,7 @@ async def test_async_update_entity_thread_safety(
         RuntimeError,
         match="Detected code that calls entity_registry.async_update_entity from a thread.",
     ):
-        await hass.async_add_executor_job(
+        await menuai.async_add_executor_job(
             partial(
                 entity_registry.async_update_entity,
                 entry.entity_id,
@@ -2908,7 +2908,7 @@ async def test_async_update_entity_thread_safety(
 
 
 async def test_async_remove_thread_safety(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test call async_remove from a thread."""
     entry = entity_registry.async_get_or_create("light", "hue", "1234")
@@ -2916,11 +2916,11 @@ async def test_async_remove_thread_safety(
         RuntimeError,
         match="Detected code that calls entity_registry.async_remove from a thread.",
     ):
-        await hass.async_add_executor_job(entity_registry.async_remove, entry.entity_id)
+        await menuai.async_add_executor_job(entity_registry.async_remove, entry.entity_id)
 
 
 async def test_subentry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test subentry error handling."""
@@ -2944,7 +2944,7 @@ async def test_subentry(
             ),
         ],
     )
-    entry1.add_to_hass(hass)
+    entry1.add_to_menuai(menuai)
     entry2 = MockConfigEntry(
         domain="light",
         entry_id="mock-id-2",
@@ -2958,7 +2958,7 @@ async def test_subentry(
             )
         ],
     )
-    entry2.add_to_hass(hass)
+    entry2.add_to_menuai(menuai)
 
     with pytest.raises(
         ValueError, match="Config entry mock-id-1 has no subentry bad-subentry-id"

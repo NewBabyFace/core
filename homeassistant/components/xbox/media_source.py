@@ -12,15 +12,15 @@ from xbox.webapi.api.provider.gameclips.models import GameclipsResponse
 from xbox.webapi.api.provider.screenshots.models import ScreenshotResponse
 from xbox.webapi.api.provider.smartglass.models import InstalledPackage
 
-from homeassistant.components.media_player import MediaClass
-from homeassistant.components.media_source import (
+from menuai.components.media_player import MediaClass
+from menuai.components.media_source import (
     BrowseMediaSource,
     MediaSource,
     MediaSourceItem,
     PlayMedia,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai, callback
+from menuai.util import dt as dt_util
 
 from .browse_media import _find_media_image
 from .const import DOMAIN
@@ -36,11 +36,11 @@ MEDIA_CLASS_MAP = {
 }
 
 
-async def async_get_media_source(hass: HomeAssistant):
+async def async_get_media_source(menuai: menuai):
     """Set up Xbox media source."""
-    entry = hass.config_entries.async_entries(DOMAIN)[0]
-    client = hass.data[DOMAIN][entry.entry_id]["client"]
-    return XboxSource(hass, client)
+    entry = menuai.config_entries.async_entries(DOMAIN)[0]
+    client = menuai.data[DOMAIN][entry.entry_id]["client"]
+    return XboxSource(menuai, client)
 
 
 @callback
@@ -69,11 +69,11 @@ class XboxSource(MediaSource):
 
     name: str = "Xbox Game Media"
 
-    def __init__(self, hass: HomeAssistant, client: XboxLiveClient) -> None:
+    def __init__(self, menuai: menuai, client: XboxLiveClient) -> None:
         """Initialize Xbox source."""
         super().__init__(DOMAIN)
 
-        self.hass: HomeAssistant = hass
+        self.menuai: menuai = menuai
         self.client: XboxLiveClient = client
 
     async def async_resolve_media(self, item: MediaSourceItem) -> PlayMedia:

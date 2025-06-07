@@ -16,15 +16,15 @@ from pysnooz.commands import (
 )
 import voluptuous as vol
 
-from homeassistant.components.fan import ATTR_PERCENTAGE, FanEntity, FanEntityFeature
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_platform
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.restore_state import RestoreEntity
+from menuai.components.fan import ATTR_PERCENTAGE, FanEntity, FanEntityFeature
+from menuai.config_entries import ConfigEntry
+from menuai.const import STATE_OFF, STATE_ON
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_platform
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.restore_state import RestoreEntity
 
 from .const import (
     ATTR_DURATION,
@@ -38,7 +38,7 @@ from .models import SnoozConfigurationData
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -67,7 +67,7 @@ async def async_setup_entry(
         "async_transition_off",
     )
 
-    data: SnoozConfigurationData = hass.data[DOMAIN][entry.entry_id]
+    data: SnoozConfigurationData = menuai.data[DOMAIN][entry.entry_id]
 
     async_add_entities([SnoozFan(data)])
 
@@ -101,9 +101,9 @@ class SnoozFan(FanEntity, RestoreEntity):
 
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Restore state and subscribe to device events."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         if last_state := await self.async_get_last_state():
             if last_state.state in (STATE_ON, STATE_OFF):
@@ -170,7 +170,7 @@ class SnoozFan(FanEntity, RestoreEntity):
         if result.status == SnoozCommandResultStatus.SUCCESSFUL:
             self._async_write_state_changed()
         elif result.status != SnoozCommandResultStatus.CANCELLED:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Command {command} failed with status {result.status.name} after"
                 f" {result.duration}"
             )

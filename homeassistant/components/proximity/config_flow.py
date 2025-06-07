@@ -6,25 +6,25 @@ from typing import Any, cast
 
 import voluptuous as vol
 
-from homeassistant.components.device_tracker import DOMAIN as DEVICE_TRACKER_DOMAIN
-from homeassistant.components.person import DOMAIN as PERSON_DOMAIN
-from homeassistant.components.zone import DOMAIN as ZONE_DOMAIN
-from homeassistant.config_entries import (
+from menuai.components.device_tracker import DOMAIN as DEVICE_TRACKER_DOMAIN
+from menuai.components.person import DOMAIN as PERSON_DOMAIN
+from menuai.components.zone import DOMAIN as ZONE_DOMAIN
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_ZONE, UnitOfLength
-from homeassistant.core import State, callback
-from homeassistant.helpers.selector import (
+from menuai.const import CONF_ZONE, UnitOfLength
+from menuai.core import State, callback
+from menuai.helpers.selector import (
     EntitySelector,
     EntitySelectorConfig,
     NumberSelector,
     NumberSelectorConfig,
 )
-from homeassistant.helpers.typing import VolDictType
-from homeassistant.util import slugify
+from menuai.helpers.typing import VolDictType
+from menuai.util import slugify
 
 from .const import (
     CONF_IGNORED_ZONES,
@@ -98,7 +98,7 @@ class ProximityConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             self._async_abort_entries_match(user_input)
 
-            title = cast(State, self.hass.states.get(user_input[CONF_ZONE])).name
+            title = cast(State, self.menuai.states.get(user_input[CONF_ZONE])).name
 
             slugified_existing_entry_titles = [
                 slugify(e.title) for e in self._async_current_entries()
@@ -129,7 +129,7 @@ class ProximityOptionsFlow(OptionsFlow):
     ) -> ConfigFlowResult:
         """Handle options flow."""
         if user_input is not None:
-            self.hass.config_entries.async_update_entry(
+            self.menuai.config_entries.async_update_entry(
                 self.config_entry, data={**self.config_entry.data, **user_input}
             )
             return self.async_create_entry(title=self.config_entry.title, data={})

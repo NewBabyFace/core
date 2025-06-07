@@ -33,13 +33,13 @@ from openai.types.responses.response_input_param import FunctionCallOutput
 from openai.types.responses.web_search_tool_param import UserLocation
 from voluptuous_openapi import convert
 
-from homeassistant.components import assist_pipeline, conversation
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_LLM_HASS_API, MATCH_ALL
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr, intent, llm
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components import assist_pipeline, conversation
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_LLM_menuai_API, MATCH_ALL
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr, intent, llm
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import OpenAIConfigEntry
 from .const import (
@@ -71,7 +71,7 @@ MAX_TOOL_ITERATIONS = 10
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: OpenAIConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -205,7 +205,7 @@ async def _transform_stream(
             elif reason == "content_filter":
                 reason = "content filter triggered"
 
-            raise HomeAssistantError(f"OpenAI response incomplete: {reason}")
+            raise menuaiError(f"OpenAI response incomplete: {reason}")
         elif isinstance(event, ResponseFailedEvent):
             if event.response.usage is not None:
                 chat_log.async_trace(
@@ -219,9 +219,9 @@ async def _transform_stream(
             reason = "unknown reason"
             if event.response.error is not None:
                 reason = event.response.error.message
-            raise HomeAssistantError(f"OpenAI response failed: {reason}")
+            raise menuaiError(f"OpenAI response failed: {reason}")
         elif isinstance(event, ResponseErrorEvent):
-            raise HomeAssistantError(f"OpenAI response error: {event.message}")
+            raise menuaiError(f"OpenAI response error: {event.message}")
 
 
 class OpenAIConversationEntity(
@@ -244,7 +244,7 @@ class OpenAIConversationEntity(
             model="ChatGPT",
             entry_type=dr.DeviceEntryType.SERVICE,
         )
-        if self.entry.options.get(CONF_LLM_HASS_API):
+        if self.entry.options.get(CONF_LLM_menuai_API):
             self._attr_supported_features = (
                 conversation.ConversationEntityFeature.CONTROL
             )
@@ -254,21 +254,21 @@ class OpenAIConversationEntity(
         """Return a list of supported languages."""
         return MATCH_ALL
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to Home Assistant."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to MenuAI."""
+        await super().async_added_to_menuai()
         assist_pipeline.async_migrate_engine(
-            self.hass, "conversation", self.entry.entry_id, self.entity_id
+            self.menuai, "conversation", self.entry.entry_id, self.entity_id
         )
-        conversation.async_set_agent(self.hass, self.entry, self)
+        conversation.async_set_agent(self.menuai, self.entry, self)
         self.entry.async_on_unload(
             self.entry.add_update_listener(self._async_entry_update_listener)
         )
 
-    async def async_will_remove_from_hass(self) -> None:
-        """When entity will be removed from Home Assistant."""
-        conversation.async_unset_agent(self.hass, self.entry)
-        await super().async_will_remove_from_hass()
+    async def async_will_remove_from_menuai(self) -> None:
+        """When entity will be removed from MenuAI."""
+        conversation.async_unset_agent(self.menuai, self.entry)
+        await super().async_will_remove_from_menuai()
 
     async def _async_handle_message(
         self,
@@ -282,7 +282,7 @@ class OpenAIConversationEntity(
             await chat_log.async_update_llm_data(
                 DOMAIN,
                 user_input,
-                options.get(CONF_LLM_HASS_API),
+                options.get(CONF_LLM_menuai_API),
                 options.get(CONF_PROMPT),
             )
         except conversation.ConverseError as err:
@@ -370,10 +370,10 @@ class OpenAIConversationEntity(
                 result = await client.responses.create(**model_args)
             except openai.RateLimitError as err:
                 LOGGER.error("Rate limited by OpenAI: %s", err)
-                raise HomeAssistantError("Rate limited or insufficient funds") from err
+                raise menuaiError("Rate limited or insufficient funds") from err
             except openai.OpenAIError as err:
                 LOGGER.error("Error talking to OpenAI: %s", err)
-                raise HomeAssistantError("Error talking to OpenAI") from err
+                raise menuaiError("Error talking to OpenAI") from err
 
             async for content in chat_log.async_add_delta_content_stream(
                 self.entity_id, _transform_stream(chat_log, result, messages)
@@ -385,8 +385,8 @@ class OpenAIConversationEntity(
                 break
 
     async def _async_entry_update_listener(
-        self, hass: HomeAssistant, entry: ConfigEntry
+        self, menuai: menuai, entry: ConfigEntry
     ) -> None:
         """Handle options update."""
         # Reload as we update device info + entity name + supported features
-        await hass.config_entries.async_reload(entry.entry_id)
+        await menuai.config_entries.async_reload(entry.entry_id)

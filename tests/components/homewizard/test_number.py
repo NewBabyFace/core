@@ -7,14 +7,14 @@ from homewizard_energy.models import CombinedModels, Measurement, State, System
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components import number
-from homeassistant.components.homewizard.const import UPDATE_INTERVAL
-from homeassistant.components.number import ATTR_VALUE, SERVICE_SET_VALUE
-from homeassistant.const import ATTR_ENTITY_ID, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.util import dt as dt_util
+from menuai.components import number
+from menuai.components.homewizard.const import UPDATE_INTERVAL
+from menuai.components.number import ATTR_VALUE, SERVICE_SET_VALUE
+from menuai.const import ATTR_ENTITY_ID, STATE_UNKNOWN
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.util import dt as dt_util
 
 from tests.common import async_fire_time_changed
 
@@ -25,14 +25,14 @@ pytestmark = [
 
 @pytest.mark.parametrize("device_fixture", ["HWE-SKT-11", "HWE-SKT-21"])
 async def test_number_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     mock_homewizardenergy: MagicMock,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test number handles state changes correctly."""
-    assert (state := hass.states.get("number.device_status_light_brightness"))
+    assert (state := menuai.states.get("number.device_status_light_brightness"))
     assert snapshot == state
 
     assert (entity_entry := entity_registry.async_get(state.entity_id))
@@ -49,15 +49,15 @@ async def test_number_entities(
         device=None, measurement=Measurement(), system=System(), state=State()
     )
 
-    async_fire_time_changed(hass, dt_util.utcnow() + UPDATE_INTERVAL)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + UPDATE_INTERVAL)
+    await menuai.async_block_till_done()
 
-    assert (state := hass.states.get(state.entity_id))
+    assert (state := menuai.states.get(state.entity_id))
     assert state.state == STATE_UNKNOWN
 
     # Test service methods
     assert len(mock_homewizardenergy.state.mock_calls) == 0
-    await hass.services.async_call(
+    await menuai.services.async_call(
         number.DOMAIN,
         SERVICE_SET_VALUE,
         {
@@ -72,10 +72,10 @@ async def test_number_entities(
 
     mock_homewizardenergy.system.side_effect = RequestError
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match=r"^An error occurred while communicating with HomeWizard device$",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             number.DOMAIN,
             SERVICE_SET_VALUE,
             {
@@ -87,10 +87,10 @@ async def test_number_entities(
 
     mock_homewizardenergy.system.side_effect = DisabledError
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match=r"^The local API is disabled$",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             number.DOMAIN,
             SERVICE_SET_VALUE,
             {
@@ -104,6 +104,6 @@ async def test_number_entities(
 @pytest.mark.parametrize(
     "device_fixture", ["HWE-P1", "HWE-WTR", "SDM230", "SDM630", "HWE-KWH1", "HWE-KWH3"]
 )
-async def test_entities_not_created_for_device(hass: HomeAssistant) -> None:
+async def test_entities_not_created_for_device(menuai: menuai) -> None:
     """Does not load number when device has no support for it."""
-    assert not hass.states.get("number.device_status_light_brightness")
+    assert not menuai.states.get("number.device_status_light_brightness")

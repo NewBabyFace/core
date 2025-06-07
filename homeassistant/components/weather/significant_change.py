@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.const import UnitOfPressure, UnitOfSpeed, UnitOfTemperature
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.significant_change import (
+from menuai.const import UnitOfPressure, UnitOfSpeed, UnitOfTemperature
+from menuai.core import menuai, callback
+from menuai.helpers.significant_change import (
     check_absolute_change,
     check_valid_float,
 )
@@ -77,7 +77,7 @@ def _cardinal_to_degrees(value: str | float | None) -> int | float | None:
 
 @callback
 def async_check_significant_change(
-    hass: HomeAssistant,
+    menuai: menuai,
     old_state: str,
     old_attrs: dict,
     new_state: str,

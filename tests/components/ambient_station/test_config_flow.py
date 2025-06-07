@@ -5,11 +5,11 @@ from unittest.mock import AsyncMock, patch
 from aioambient.errors import AmbientError
 import pytest
 
-from homeassistant.components.ambient_station.const import CONF_APP_KEY, DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_API_KEY
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.ambient_station.const import CONF_APP_KEY, DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_API_KEY
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 
 @pytest.mark.parametrize(
@@ -20,10 +20,10 @@ from homeassistant.data_entry_flow import FlowResultType
     ],
 )
 async def test_create_entry(
-    hass: HomeAssistant, api, config, devices_response, errors, mock_aioambient
+    menuai: menuai, api, config, devices_response, errors, mock_aioambient
 ) -> None:
     """Test creating an entry."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -31,14 +31,14 @@ async def test_create_entry(
 
     # Test errors that can arise:
     with patch.object(api, "get_devices", devices_response):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input=config
         )
         assert result["type"] is FlowResultType.FORM
         assert result["errors"] == errors
 
     # Test that we can recover and finish the flow after errors occur:
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input=config
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -50,10 +50,10 @@ async def test_create_entry(
 
 
 async def test_duplicate_error(
-    hass: HomeAssistant, config, config_entry, setup_config_entry
+    menuai: menuai, config, config_entry, setup_config_entry
 ) -> None:
     """Test that errors are shown when duplicates are added."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}, data=config
     )
     assert result["type"] is FlowResultType.ABORT

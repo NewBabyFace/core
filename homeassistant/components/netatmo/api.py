@@ -1,4 +1,4 @@
-"""API for Netatmo bound to HASS OAuth."""
+"""API for Netatmo bound to menuai OAuth."""
 
 from collections.abc import Iterable
 from typing import cast
@@ -6,8 +6,8 @@ from typing import cast
 from aiohttp import ClientSession
 import pyatmo
 
-from homeassistant.components import cloud
-from homeassistant.helpers import config_entry_oauth2_flow
+from menuai.components import cloud
+from menuai.helpers import config_entry_oauth2_flow
 
 from .const import API_SCOPES_EXCLUDED_FROM_CLOUD
 

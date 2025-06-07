@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from homeassistant.components.swiss_public_transport.const import (
+from menuai.components.swiss_public_transport.const import (
     CONF_DESTINATION,
     CONF_START,
     CONF_TIME_FIXED,
@@ -13,11 +13,11 @@ from homeassistant.components.swiss_public_transport.const import (
     CONF_VIA,
     DOMAIN,
 )
-from homeassistant.components.swiss_public_transport.helper import unique_id_from_config
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.swiss_public_transport.helper import unique_id_from_config
+from menuai.config_entries import ConfigEntryState
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry
 
@@ -89,7 +89,7 @@ CONNECTIONS = [
     ],
 )
 async def test_migration_from(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     from_version,
     from_minor_version,
@@ -106,18 +106,18 @@ async def test_migration_from(
         minor_version=from_minor_version,
         unique_id=overwrite_unique_id or unique_id_from_config(config_data),
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.swiss_public_transport.OpendataTransport",
+        "menuai.components.swiss_public_transport.OpendataTransport",
         return_value=AsyncMock(),
     ) as mock:
         mock().connections = CONNECTIONS
 
         # Setup the config entry
         unique_id = unique_id_from_config(config_entry.data)
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
         assert entity_registry.async_is_registered(
             entity_registry.entities.get_entity_id(
                 (
@@ -141,7 +141,7 @@ async def test_migration_from(
         )
 
 
-async def test_migrate_error_from_future(hass: HomeAssistant) -> None:
+async def test_migrate_error_from_future(menuai: menuai) -> None:
     """Test a future version isn't migrated."""
 
     mock_entry = MockConfigEntry(
@@ -152,16 +152,16 @@ async def test_migrate_error_from_future(hass: HomeAssistant) -> None:
         data=MOCK_DATA_STEP_BASE,
     )
 
-    mock_entry.add_to_hass(hass)
+    mock_entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.swiss_public_transport.OpendataTransport",
+        "menuai.components.swiss_public_transport.OpendataTransport",
         return_value=AsyncMock(),
     ) as mock:
         mock().connections = CONNECTIONS
 
-        await hass.config_entries.async_setup(mock_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(mock_entry.entry_id)
+        await menuai.async_block_till_done()
 
-        entry = hass.config_entries.async_get_entry(mock_entry.entry_id)
+        entry = menuai.config_entries.async_get_entry(mock_entry.entry_id)
         assert entry.state is ConfigEntryState.MIGRATION_ERROR

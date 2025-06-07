@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.button import ButtonEntity, ButtonEntityDescription
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .api import (
     PterodactylAuthorizationError,
@@ -59,7 +59,7 @@ BUTTON_DESCRIPTIONS = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: PterodactylConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -97,10 +97,10 @@ class PterodactylButtonEntity(PterodactylEntity, ButtonEntity):
                 self.identifier, self.entity_description.command
             )
         except PterodactylConnectionError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Failed to send action '{self.entity_description.key}': Connection error"
             ) from err
         except PterodactylAuthorizationError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Failed to send action '{self.entity_description.key}': Unauthorized"
             ) from err

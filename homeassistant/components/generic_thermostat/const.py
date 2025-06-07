@@ -1,6 +1,6 @@
 """Constants for the Generic Thermostat helper."""
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     PRESET_ACTIVITY,
     PRESET_AWAY,
     PRESET_COMFORT,
@@ -8,7 +8,7 @@ from homeassistant.components.climate import (
     PRESET_HOME,
     PRESET_SLEEP,
 )
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 DOMAIN = "generic_thermostat"
 

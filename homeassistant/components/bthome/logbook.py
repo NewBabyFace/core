@@ -4,22 +4,22 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from homeassistant.components.logbook import LOGBOOK_ENTRY_MESSAGE, LOGBOOK_ENTRY_NAME
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
+from menuai.components.logbook import LOGBOOK_ENTRY_MESSAGE, LOGBOOK_ENTRY_NAME
+from menuai.core import Event, menuai, callback
+from menuai.helpers import device_registry as dr
 
 from .const import BTHOME_BLE_EVENT, DOMAIN, BTHomeBleEvent
 
 
 @callback
 def async_describe_events(
-    hass: HomeAssistant,
+    menuai: menuai,
     async_describe_event: Callable[
         [str, str, Callable[[Event[BTHomeBleEvent]], dict[str, str]]], None
     ],
 ) -> None:
     """Describe logbook events."""
-    dev_reg = dr.async_get(hass)
+    dev_reg = dr.async_get(menuai)
 
     @callback
     def async_describe_bthome_event(event: Event[BTHomeBleEvent]) -> dict[str, str]:

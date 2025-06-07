@@ -17,14 +17,14 @@ from voip_utils import (
     VoipDatagramProtocol,
 )
 
-from homeassistant.components.assist_pipeline import (
+from menuai.components.assist_pipeline import (
     Pipeline,
     PipelineNotFound,
     async_get_pipeline,
     select as pipeline_select,
 )
-from homeassistant.const import __version__
-from homeassistant.core import HomeAssistant
+from menuai.const import __version__
+from menuai.core import menuai
 
 from .const import CHANNELS, DOMAIN, RATE, RTP_AUDIO_SETTINGS, WIDTH
 
@@ -35,7 +35,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def make_protocol(
-    hass: HomeAssistant,
+    menuai: menuai,
     devices: VoIPDevices,
     call_info: CallInfo,
     rtcp_state: RtcpState | None = None,
@@ -43,9 +43,9 @@ def make_protocol(
     """Plays a pre-recorded message if pipeline is misconfigured."""
     voip_device = devices.async_get_or_create(call_info)
 
-    pipeline_id = pipeline_select.get_chosen_pipeline(hass, DOMAIN, voip_device.voip_id)
+    pipeline_id = pipeline_select.get_chosen_pipeline(menuai, DOMAIN, voip_device.voip_id)
     try:
-        pipeline: Pipeline | None = async_get_pipeline(hass, pipeline_id)
+        pipeline: Pipeline | None = async_get_pipeline(menuai, pipeline_id)
     except PipelineNotFound:
         pipeline = None
 
@@ -56,7 +56,7 @@ def make_protocol(
     ):
         # Play pre-recorded message instead of failing
         return PreRecordMessageProtocol(
-            hass,
+            menuai,
             "problem.pcm",
             opus_payload_type=call_info.opus_payload_type,
             rtcp_state=rtcp_state,
@@ -76,42 +76,42 @@ def make_protocol(
     return protocol
 
 
-class HassVoipDatagramProtocol(VoipDatagramProtocol):
+class menuaiVoipDatagramProtocol(VoipDatagramProtocol):
     """HA UDP server for Voice over IP (VoIP)."""
 
-    def __init__(self, hass: HomeAssistant, devices: VoIPDevices) -> None:
+    def __init__(self, menuai: menuai, devices: VoIPDevices) -> None:
         """Set up VoIP call handler."""
         super().__init__(
             sdp_info=SdpInfo(
-                username="homeassistant",
+                username="menuai",
                 id=time.monotonic_ns(),
-                session_name="voip_hass",
+                session_name="voip_menuai",
                 version=__version__,
             ),
             valid_protocol_factory=lambda call_info, rtcp_state: make_protocol(
-                hass, devices, call_info, rtcp_state
+                menuai, devices, call_info, rtcp_state
             ),
             invalid_protocol_factory=(
                 lambda call_info, rtcp_state: PreRecordMessageProtocol(
-                    hass,
+                    menuai,
                     "not_configured.pcm",
                     opus_payload_type=call_info.opus_payload_type,
                     rtcp_state=rtcp_state,
                 )
             ),
         )
-        self.hass = hass
+        self.menuai = menuai
         self.devices = devices
         self._closed_event = asyncio.Event()
 
     def is_valid_call(self, call_info: CallInfo) -> bool:
         """Filter calls."""
         device = self.devices.async_get_or_create(call_info)
-        return device.async_allow_call(self.hass)
+        return device.async_allow_call(self.menuai)
 
     def connection_lost(self, exc):
         """Signal wait_closed when transport is completely closed."""
-        self.hass.loop.call_soon_threadsafe(self._closed_event.set)
+        self.menuai.loop.call_soon_threadsafe(self._closed_event.set)
 
     async def wait_closed(self) -> None:
         """Wait for connection_lost to be called."""
@@ -123,7 +123,7 @@ class PreRecordMessageProtocol(RtpDatagramProtocol):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         file_name: str,
         opus_payload_type: int,
         message_delay: float = 1.0,
@@ -138,7 +138,7 @@ class PreRecordMessageProtocol(RtpDatagramProtocol):
             opus_payload_type=opus_payload_type,
             rtcp_state=rtcp_state,
         )
-        self.hass = hass
+        self.menuai = menuai
         self.file_name = file_name
         self.message_delay = message_delay
         self.loop_delay = loop_delay
@@ -156,13 +156,13 @@ class PreRecordMessageProtocol(RtpDatagramProtocol):
             self._audio_bytes = file_path.read_bytes()
 
         if self._audio_task is None:
-            self._audio_task = self.hass.async_create_background_task(
+            self._audio_task = self.menuai.async_create_background_task(
                 self._play_message(),
                 "voip_not_connected",
             )
 
     async def _play_message(self) -> None:
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             partial(
                 self.send_audio,
                 self._audio_bytes,

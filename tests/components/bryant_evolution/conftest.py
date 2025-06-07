@@ -6,10 +6,10 @@ from unittest.mock import AsyncMock, patch
 from evolutionhttp import BryantEvolutionLocalClient
 import pytest
 
-from homeassistant.components.bryant_evolution.const import CONF_SYSTEM_ZONE, DOMAIN
-from homeassistant.const import CONF_FILENAME
-from homeassistant.core import HomeAssistant
-from homeassistant.util.unit_system import US_CUSTOMARY_SYSTEM
+from menuai.components.bryant_evolution.const import CONF_SYSTEM_ZONE, DOMAIN
+from menuai.const import CONF_FILENAME
+from menuai.core import menuai
+from menuai.util.unit_system import US_CUSTOMARY_SYSTEM
 
 from tests.common import MockConfigEntry
 
@@ -18,7 +18,7 @@ from tests.common import MockConfigEntry
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.bryant_evolution.async_setup_entry", return_value=True
+        "menuai.components.bryant_evolution.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -54,17 +54,17 @@ def mock_evolution_client_factory() -> Generator[AsyncMock]:
 
 @pytest.fixture
 async def mock_evolution_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_evolution_client_factory: AsyncMock,
 ) -> MockConfigEntry:
     """Configure and return a Bryant evolution integration."""
-    hass.config.units = US_CUSTOMARY_SYSTEM
+    menuai.config.units = US_CUSTOMARY_SYSTEM
     entry = MockConfigEntry(
         entry_id="01J3XJZSTEF6G5V0QJX6HBC94T",  # For determinism in snapshot tests
         domain=DOMAIN,
         data={CONF_FILENAME: "/dev/ttyUSB0", CONF_SYSTEM_ZONE: [(1, 1)]},
     )
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
     return entry

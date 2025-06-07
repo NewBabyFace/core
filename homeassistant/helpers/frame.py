@@ -16,14 +16,14 @@ from typing import Any, cast
 
 from propcache.api import cached_property
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.loader import (
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.loader import (
     Integration,
     async_get_issue_integration,
     async_suggest_report_issue,
 )
-from homeassistant.util.async_ import run_callback_threadsafe
+from menuai.util.async_ import run_callback_threadsafe
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -31,19 +31,19 @@ _LOGGER = logging.getLogger(__name__)
 _REPORTED_INTEGRATIONS: set[str] = set()
 
 
-class _Hass:
-    """Container which makes a HomeAssistant instance available to frame helper."""
+class _menuai:
+    """Container which makes a menuai instance available to frame helper."""
 
-    hass: HomeAssistant | None = None
+    menuai: menuai | None = None
 
 
-_hass = _Hass()
+_menuai = _menuai()
 
 
 @callback
-def async_setup(hass: HomeAssistant) -> None:
+def async_setup(menuai: menuai) -> None:
     """Set up the frame helper."""
-    _hass.hass = hass
+    _menuai.menuai = menuai
 
 
 @dataclass(kw_only=True)
@@ -87,7 +87,7 @@ def get_integration_logger(fallback_name: str) -> logging.Logger:
     if integration_frame.custom_integration:
         logger_name = f"custom_components.{integration_frame.integration}"
     else:
-        logger_name = f"homeassistant.components.{integration_frame.integration}"
+        logger_name = f"menuai.components.{integration_frame.integration}"
 
     return logging.getLogger(logger_name)
 
@@ -108,7 +108,7 @@ def get_integration_frame(exclude_integrations: set | None = None) -> Integratio
     while frame is not None:
         filename = frame.f_code.co_filename
 
-        for path in ("custom_components/", "homeassistant/components/"):
+        for path in ("custom_components/", "menuai/components/"):
             try:
                 index = filename.index(path)
                 start = index + len(path)
@@ -146,7 +146,7 @@ def get_integration_frame(exclude_integrations: set | None = None) -> Integratio
     )
 
 
-class MissingIntegrationFrame(HomeAssistantError):
+class MissingIntegrationFrame(menuaiError):
     """Raised when no integration is found in the frame."""
 
 
@@ -183,11 +183,11 @@ def report_usage(
     :param integration_domain: domain of the integration causing the issue. If None, the
     stack frame will be searched to identify the integration causing the issue.
     """
-    if (hass := _hass.hass) is None:
+    if (menuai := _menuai.menuai) is None:
         raise RuntimeError("Frame helper not set up")
     _report_usage_partial = functools.partial(
         _report_usage,
-        hass,
+        menuai,
         what,
         breaks_in_ha_version=breaks_in_ha_version,
         core_behavior=core_behavior,
@@ -197,15 +197,15 @@ def report_usage(
         integration_domain=integration_domain,
         level=level,
     )
-    if hass.loop_thread_id != threading.get_ident():
-        future = run_callback_threadsafe(hass.loop, _report_usage_partial)
+    if menuai.loop_thread_id != threading.get_ident():
+        future = run_callback_threadsafe(menuai.loop, _report_usage_partial)
         future.result()
         return
     _report_usage_partial()
 
 
 def _report_usage(
-    hass: HomeAssistant,
+    menuai: menuai,
     what: str,
     *,
     breaks_in_ha_version: str | None,
@@ -221,9 +221,9 @@ def _report_usage(
     Must be called from the event loop.
     """
     if integration_domain:
-        if integration := async_get_issue_integration(hass, integration_domain):
+        if integration := async_get_issue_integration(menuai, integration_domain):
             _report_usage_integration_domain(
-                hass,
+                menuai,
                 what,
                 breaks_in_ha_version,
                 integration,
@@ -249,7 +249,7 @@ def _report_usage(
 
     if integration_behavior is not ReportBehavior.IGNORE:
         _report_usage_integration_frame(
-            hass,
+            menuai,
             what,
             breaks_in_ha_version,
             integration_frame,
@@ -259,7 +259,7 @@ def _report_usage(
 
 
 def _report_usage_integration_domain(
-    hass: HomeAssistant | None,
+    menuai: menuai | None,
     what: str,
     breaks_in_ha_version: str | None,
     integration: Integration,
@@ -287,7 +287,7 @@ def _report_usage_integration_domain(
         return
     _REPORTED_INTEGRATIONS.add(key)
 
-    report_issue = async_suggest_report_issue(hass, integration=integration)
+    report_issue = async_suggest_report_issue(menuai, integration=integration)
     integration_type = "" if integration.is_built_in else "custom "
     _LOGGER.log(
         level,
@@ -295,7 +295,7 @@ def _report_usage_integration_domain(
         integration_type,
         integration.domain,
         what,
-        f"This will stop working in Home Assistant {breaks_in_ha_version}, please"
+        f"This will stop working in MenuAI {breaks_in_ha_version}, please"
         if breaks_in_ha_version
         else "Please",
         report_issue,
@@ -309,7 +309,7 @@ def _report_usage_integration_domain(
 
 
 def _report_usage_integration_frame(
-    hass: HomeAssistant,
+    menuai: menuai,
     what: str,
     breaks_in_ha_version: str | None,
     integration_frame: IntegrationFrame,
@@ -327,7 +327,7 @@ def _report_usage_integration_frame(
     _REPORTED_INTEGRATIONS.add(key)
 
     report_issue = async_suggest_report_issue(
-        hass,
+        menuai,
         integration_domain=integration_frame.integration,
         module=integration_frame.module,
     )
@@ -341,7 +341,7 @@ def _report_usage_integration_frame(
         integration_frame.relative_filename,
         integration_frame.line_number,
         integration_frame.line,
-        f"This will stop working in Home Assistant {breaks_in_ha_version}, please"
+        f"This will stop working in MenuAI {breaks_in_ha_version}, please"
         if breaks_in_ha_version
         else "Please",
         report_issue,
@@ -401,7 +401,7 @@ def report_non_thread_safe_operation(what: str) -> None:
     """Report a non-thread safe operation."""
     report_usage(
         f"calls {what} from a thread other than the event loop, "
-        "which may cause Home Assistant to crash or data to corrupt. "
+        "which may cause MenuAI to crash or data to corrupt. "
         "For more information, see "
         "https://developers.home-assistant.io/docs/asyncio_thread_safety/"
         f"#{what.replace('.', '')}",

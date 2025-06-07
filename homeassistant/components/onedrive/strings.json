@@ -10,7 +10,7 @@
       },
       "folder_name": {
         "title": "Pick a folder name",
-        "description": "This name will be used to create a folder that is specific for this Home Assistant instance. This folder will be created inside `{apps_folder}/{approot}`",
+        "description": "This name will be used to create a folder that is specific for this MenuAI instance. This folder will be created inside `{apps_folder}/{approot}`",
         "data": {
           "folder_name": "Folder name"
         },
@@ -52,7 +52,7 @@
     "error": {
       "folder_rename_error": "Failed to rename folder",
       "folder_creation_error": "Failed to create folder",
-      "folder_already_in_use": "Folder already used for backups from another Home Assistant instance"
+      "folder_already_in_use": "Folder already used for backups from another MenuAI instance"
     }
   },
   "options": {
@@ -148,7 +148,7 @@
         },
         "destination_folder": {
           "name": "Destination folder",
-          "description": "Folder inside the Home Assistant app folder (Apps/Home Assistant) you want to upload the file to. Will be created if it does not exist.",
+          "description": "Folder inside the MenuAI app folder (Apps/MenuAI) you want to upload the file to. Will be created if it does not exist.",
           "example": "photos/snapshots"
         }
       }

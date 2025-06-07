@@ -8,8 +8,8 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_IMPORT, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_PORT
+from menuai.config_entries import SOURCE_IMPORT, ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_PORT
 
 from .const import DEFAULT_PORT, DOMAIN
 from .errors import (
@@ -39,7 +39,7 @@ class CertexpiryConfigFlow(ConfigFlow, domain=DOMAIN):
         """Test connection to the server and try to get the certificate."""
         try:
             await get_cert_expiry_timestamp(
-                self.hass,
+                self.menuai,
                 user_input[CONF_HOST],
                 user_input.get(CONF_PORT, DEFAULT_PORT),
             )

@@ -12,13 +12,13 @@ from async_upnp_client.exceptions import UpnpConnectionError, UpnpError
 from didl_lite import didl_lite
 import pytest
 
-from homeassistant.components import media_source, ssdp
-from homeassistant.components.dlna_dms.const import DOMAIN
-from homeassistant.components.dlna_dms.dms import get_domain_data
-from homeassistant.components.media_player import BrowseError
-from homeassistant.components.media_source import Unresolvable
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.service_info.ssdp import SsdpServiceInfo
+from menuai.components import media_source, ssdp
+from menuai.components.dlna_dms.const import DOMAIN
+from menuai.components.dlna_dms.dms import get_domain_data
+from menuai.components.media_player import BrowseError
+from menuai.components.media_source import Unresolvable
+from menuai.core import menuai
+from menuai.helpers.service_info.ssdp import SsdpServiceInfo
 
 from .conftest import (
     MOCK_DEVICE_LOCATION,
@@ -60,7 +60,7 @@ async def connected_source_mock(
 
 @pytest.fixture
 async def disconnected_source_mock(
-    hass: HomeAssistant,
+    menuai: menuai,
     upnp_factory_mock: Mock,
     config_entry_mock: MockConfigEntry,
     ssdp_scanner_mock: Mock,
@@ -70,9 +70,9 @@ async def disconnected_source_mock(
     # Cause the connection attempt to fail
     upnp_factory_mock.async_create_device.side_effect = UpnpConnectionError
 
-    config_entry_mock.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry_mock.entry_id)
-    await hass.async_block_till_done()
+    config_entry_mock.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry_mock.entry_id)
+    await menuai.async_block_till_done()
 
     # Check the DmsDeviceSource has registered all needed listeners
     assert len(config_entry_mock.update_listeners) == 0
@@ -93,7 +93,7 @@ async def disconnected_source_mock(
     yield
 
     # Unload config entry to clean up
-    assert await hass.config_entries.async_remove(config_entry_mock.entry_id) == {
+    assert await menuai.config_entries.async_remove(config_entry_mock.entry_id) == {
         "require_restart": False
     }
 
@@ -105,23 +105,23 @@ async def disconnected_source_mock(
     )
 
 
-async def assert_source_available(hass: HomeAssistant) -> None:
+async def assert_source_available(menuai: menuai) -> None:
     """Assert that the DmsDeviceSource under test can be used."""
     assert await media_source.async_browse_media(
-        hass, f"media-source://{DOMAIN}/{MOCK_SOURCE_ID}/:{DUMMY_OBJECT_ID}"
+        menuai, f"media-source://{DOMAIN}/{MOCK_SOURCE_ID}/:{DUMMY_OBJECT_ID}"
     )
 
 
-async def assert_source_unavailable(hass: HomeAssistant) -> None:
+async def assert_source_unavailable(menuai: menuai) -> None:
     """Assert that the DmsDeviceSource under test cannot be used."""
     with pytest.raises(Unresolvable, match="DMS is not connected"):
         await media_source.async_browse_media(
-            hass, f"media-source://{DOMAIN}/{MOCK_SOURCE_ID}/:{DUMMY_OBJECT_ID}"
+            menuai, f"media-source://{DOMAIN}/{MOCK_SOURCE_ID}/:{DUMMY_OBJECT_ID}"
         )
 
 
 async def test_unavailable_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     upnp_factory_mock: Mock,
     ssdp_scanner_mock: Mock,
     disconnected_source_mock: None,
@@ -137,37 +137,37 @@ async def test_unavailable_device(
         ANY, {"_udn": MOCK_DEVICE_UDN, "NTS": "ssdp:byebye"}
     )
     # Quick check of the state to verify the entity has no connected DmsDevice
-    await assert_source_unavailable(hass)
+    await assert_source_unavailable(menuai)
 
     # Check attempts to browse and resolve media give errors
     with pytest.raises(BrowseError, match="DMS is not connected"):
         await media_source.async_browse_media(
-            hass, f"media-source://{DOMAIN}/{MOCK_SOURCE_ID}//browse_path"
+            menuai, f"media-source://{DOMAIN}/{MOCK_SOURCE_ID}//browse_path"
         )
     with pytest.raises(BrowseError, match="DMS is not connected"):
         await media_source.async_browse_media(
-            hass, f"media-source://{DOMAIN}/{MOCK_SOURCE_ID}/:browse_object"
+            menuai, f"media-source://{DOMAIN}/{MOCK_SOURCE_ID}/:browse_object"
         )
     with pytest.raises(BrowseError, match="DMS is not connected"):
         await media_source.async_browse_media(
-            hass, f"media-source://{DOMAIN}/{MOCK_SOURCE_ID}/?browse_search"
+            menuai, f"media-source://{DOMAIN}/{MOCK_SOURCE_ID}/?browse_search"
         )
     with pytest.raises(Unresolvable, match="DMS is not connected"):
         await media_source.async_resolve_media(
-            hass, f"media-source://{DOMAIN}/{MOCK_SOURCE_ID}//resolve_path", None
+            menuai, f"media-source://{DOMAIN}/{MOCK_SOURCE_ID}//resolve_path", None
         )
     with pytest.raises(Unresolvable, match="DMS is not connected"):
         await media_source.async_resolve_media(
-            hass, f"media-source://{DOMAIN}/{MOCK_SOURCE_ID}/:resolve_object", None
+            menuai, f"media-source://{DOMAIN}/{MOCK_SOURCE_ID}/:resolve_object", None
         )
     with pytest.raises(Unresolvable):
         await media_source.async_resolve_media(
-            hass, f"media-source://{DOMAIN}/{MOCK_SOURCE_ID}/?resolve_search", None
+            menuai, f"media-source://{DOMAIN}/{MOCK_SOURCE_ID}/?resolve_search", None
         )
 
 
 async def test_become_available(
-    hass: HomeAssistant,
+    menuai: menuai,
     upnp_factory_mock: Mock,
     ssdp_scanner_mock: Mock,
     disconnected_source_mock: None,
@@ -188,16 +188,16 @@ async def test_become_available(
         ),
         ssdp.SsdpChange.ALIVE,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Check device was created from the supplied URL
     upnp_factory_mock.async_create_device.assert_awaited_once_with(NEW_DEVICE_LOCATION)
     # Quick check of the state to verify the entity has a connected DmsDevice
-    await assert_source_available(hass)
+    await assert_source_available(menuai)
 
 
 async def test_alive_but_gone(
-    hass: HomeAssistant,
+    menuai: menuai,
     upnp_factory_mock: Mock,
     ssdp_scanner_mock: Mock,
     disconnected_source_mock: None,
@@ -217,13 +217,13 @@ async def test_alive_but_gone(
         ),
         ssdp.SsdpChange.ALIVE,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # There should be a connection attempt to the device
     upnp_factory_mock.async_create_device.assert_awaited()
 
     # Device should still be unavailable
-    await assert_source_unavailable(hass)
+    await assert_source_unavailable(menuai)
 
     # Send the same SSDP notification, expecting no extra connection attempts
     upnp_factory_mock.async_create_device.reset_mock()
@@ -237,10 +237,10 @@ async def test_alive_but_gone(
         ),
         ssdp.SsdpChange.ALIVE,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     upnp_factory_mock.async_create_device.assert_not_called()
     upnp_factory_mock.async_create_device.assert_not_awaited()
-    await assert_source_unavailable(hass)
+    await assert_source_unavailable(menuai)
 
     # Send an SSDP notification with a new BOOTID, indicating the device has rebooted
     upnp_factory_mock.async_create_device.reset_mock()
@@ -254,11 +254,11 @@ async def test_alive_but_gone(
         ),
         ssdp.SsdpChange.ALIVE,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Rebooted device (seen via BOOTID) should mean a new connection attempt
     upnp_factory_mock.async_create_device.assert_awaited()
-    await assert_source_unavailable(hass)
+    await assert_source_unavailable(menuai)
 
     # Send byebye message to indicate device is going away. Next alive message
     # should result in a reconnect attempt even with same BOOTID.
@@ -281,15 +281,15 @@ async def test_alive_but_gone(
         ),
         ssdp.SsdpChange.ALIVE,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Rebooted device (seen via byebye/alive) should mean a new connection attempt
     upnp_factory_mock.async_create_device.assert_awaited()
-    await assert_source_unavailable(hass)
+    await assert_source_unavailable(menuai)
 
 
 async def test_multiple_ssdp_alive(
-    hass: HomeAssistant,
+    menuai: menuai,
     upnp_factory_mock: Mock,
     ssdp_scanner_mock: Mock,
     disconnected_source_mock: None,
@@ -328,17 +328,17 @@ async def test_multiple_ssdp_alive(
         ),
         ssdp.SsdpChange.ALIVE,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Check device is contacted exactly once
     upnp_factory_mock.async_create_device.assert_awaited_once_with(NEW_DEVICE_LOCATION)
 
     # Device should be available
-    await assert_source_available(hass)
+    await assert_source_available(menuai)
 
 
 async def test_ssdp_byebye(
-    hass: HomeAssistant,
+    menuai: menuai,
     ssdp_scanner_mock: Mock,
     connected_source_mock: None,
 ) -> None:
@@ -357,7 +357,7 @@ async def test_ssdp_byebye(
     )
 
     # Device should be gone
-    await assert_source_unavailable(hass)
+    await assert_source_unavailable(menuai)
 
     # Second byebye will do nothing
     await ssdp_callback(
@@ -373,14 +373,14 @@ async def test_ssdp_byebye(
 
 
 async def test_ssdp_update_seen_bootid(
-    hass: HomeAssistant,
+    menuai: menuai,
     ssdp_scanner_mock: Mock,
     upnp_factory_mock: Mock,
     disconnected_source_mock: None,
 ) -> None:
     """Test device does not reconnect when it gets ssdp:update with next bootid."""
     # Start with a disconnected device
-    await assert_source_unavailable(hass)
+    await assert_source_unavailable(menuai)
 
     # "Reconnect" the device
     upnp_factory_mock.async_create_device.reset_mock()
@@ -398,10 +398,10 @@ async def test_ssdp_update_seen_bootid(
         ),
         ssdp.SsdpChange.ALIVE,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Device should be connected
-    await assert_source_available(hass)
+    await assert_source_available(menuai)
     assert upnp_factory_mock.async_create_device.await_count == 1
 
     # Send SSDP update with next boot ID
@@ -419,10 +419,10 @@ async def test_ssdp_update_seen_bootid(
         ),
         ssdp.SsdpChange.UPDATE,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Device was not reconnected, even with a new boot ID
-    await assert_source_available(hass)
+    await assert_source_available(menuai)
     assert upnp_factory_mock.async_create_device.await_count == 1
 
     # Send SSDP update with same next boot ID, again
@@ -440,10 +440,10 @@ async def test_ssdp_update_seen_bootid(
         ),
         ssdp.SsdpChange.UPDATE,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Nothing should change
-    await assert_source_available(hass)
+    await assert_source_available(menuai)
     assert upnp_factory_mock.async_create_device.await_count == 1
 
     # Send SSDP update with bad next boot ID
@@ -461,10 +461,10 @@ async def test_ssdp_update_seen_bootid(
         ),
         ssdp.SsdpChange.UPDATE,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Nothing should change
-    await assert_source_available(hass)
+    await assert_source_available(menuai)
     assert upnp_factory_mock.async_create_device.await_count == 1
 
     # Send a new SSDP alive with the new boot ID, device should not reconnect
@@ -478,21 +478,21 @@ async def test_ssdp_update_seen_bootid(
         ),
         ssdp.SsdpChange.ALIVE,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await assert_source_available(hass)
+    await assert_source_available(menuai)
     assert upnp_factory_mock.async_create_device.await_count == 1
 
 
 async def test_ssdp_update_missed_bootid(
-    hass: HomeAssistant,
+    menuai: menuai,
     ssdp_scanner_mock: Mock,
     upnp_factory_mock: Mock,
     disconnected_source_mock: None,
 ) -> None:
     """Test device disconnects when it gets ssdp:update bootid it wasn't expecting."""
     # Start with a disconnected device
-    await assert_source_unavailable(hass)
+    await assert_source_unavailable(menuai)
 
     # "Reconnect" the device
     upnp_factory_mock.async_create_device.reset_mock()
@@ -510,10 +510,10 @@ async def test_ssdp_update_missed_bootid(
         ),
         ssdp.SsdpChange.ALIVE,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Device should be connected
-    await assert_source_available(hass)
+    await assert_source_available(menuai)
     assert upnp_factory_mock.async_create_device.await_count == 1
 
     # Send SSDP update with skipped boot ID (not previously seen)
@@ -531,10 +531,10 @@ async def test_ssdp_update_missed_bootid(
         ),
         ssdp.SsdpChange.UPDATE,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Device should not *re*-connect yet
-    await assert_source_available(hass)
+    await assert_source_available(menuai)
     assert upnp_factory_mock.async_create_device.await_count == 1
 
     # Send a new SSDP alive with the new boot ID, device should reconnect
@@ -548,21 +548,21 @@ async def test_ssdp_update_missed_bootid(
         ),
         ssdp.SsdpChange.ALIVE,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await assert_source_available(hass)
+    await assert_source_available(menuai)
     assert upnp_factory_mock.async_create_device.await_count == 2
 
 
 async def test_ssdp_bootid(
-    hass: HomeAssistant,
+    menuai: menuai,
     upnp_factory_mock: Mock,
     ssdp_scanner_mock: Mock,
     disconnected_source_mock: None,
 ) -> None:
     """Test an alive with a new BOOTID.UPNP.ORG header causes a reconnect."""
     # Start with a disconnected device
-    await assert_source_unavailable(hass)
+    await assert_source_unavailable(menuai)
 
     # "Reconnect" the device
     upnp_factory_mock.async_create_device.side_effect = None
@@ -580,9 +580,9 @@ async def test_ssdp_bootid(
         ),
         ssdp.SsdpChange.ALIVE,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await assert_source_available(hass)
+    await assert_source_available(menuai)
     assert upnp_factory_mock.async_create_device.await_count == 1
 
     # Send SSDP alive with same boot ID, nothing should happen
@@ -596,9 +596,9 @@ async def test_ssdp_bootid(
         ),
         ssdp.SsdpChange.ALIVE,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await assert_source_available(hass)
+    await assert_source_available(menuai)
     assert upnp_factory_mock.async_create_device.await_count == 1
 
     # Send a new SSDP alive with an incremented boot ID, device should be dis/reconnected
@@ -612,15 +612,15 @@ async def test_ssdp_bootid(
         ),
         ssdp.SsdpChange.ALIVE,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await assert_source_available(hass)
+    await assert_source_available(menuai)
     assert upnp_factory_mock.async_create_device.await_count == 2
 
 
 async def test_repeated_connect(
     caplog: pytest.LogCaptureFixture,
-    hass: HomeAssistant,
+    menuai: menuai,
     upnp_factory_mock: Mock,
     connected_source_mock: None,
 ) -> None:
@@ -628,17 +628,17 @@ async def test_repeated_connect(
     upnp_factory_mock.async_create_device.reset_mock()
 
     # Calling internal function directly to skip trying to time 2 SSDP messages carefully
-    domain_data = get_domain_data(hass)
+    domain_data = get_domain_data(menuai)
     device_source = domain_data.sources[MOCK_SOURCE_ID]
     with caplog.at_level(logging.DEBUG):
         await device_source.device_connect()
 
     assert not upnp_factory_mock.async_create_device.await_count
-    await assert_source_available(hass)
+    await assert_source_available(menuai)
 
 
 async def test_become_unavailable(
-    hass: HomeAssistant,
+    menuai: menuai,
     connected_source_mock: None,
     dms_device_mock: Mock,
 ) -> None:
@@ -653,7 +653,7 @@ async def test_become_unavailable(
 
     # Check async_resolve_object currently works
     assert await media_source.async_resolve_media(
-        hass, f"media-source://{DOMAIN}/{MOCK_SOURCE_ID}/:object_id", None
+        menuai, f"media-source://{DOMAIN}/{MOCK_SOURCE_ID}/:object_id", None
     )
 
     # Now break the network connection
@@ -662,8 +662,8 @@ async def test_become_unavailable(
     # async_resolve_object should fail
     with pytest.raises(Unresolvable):
         await media_source.async_resolve_media(
-            hass, f"media-source://{DOMAIN}/{MOCK_SOURCE_ID}/:object_id", None
+            menuai, f"media-source://{DOMAIN}/{MOCK_SOURCE_ID}/:object_id", None
         )
 
     # The device should now be unavailable
-    await assert_source_unavailable(hass)
+    await assert_source_unavailable(menuai)

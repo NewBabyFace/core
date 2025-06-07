@@ -4,27 +4,27 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 import voluptuous as vol
 
-from homeassistant.components.easyenergy.const import DOMAIN
-from homeassistant.components.easyenergy.services import (
+from menuai.components.easyenergy.const import DOMAIN
+from menuai.components.easyenergy.services import (
     ATTR_CONFIG_ENTRY,
     ENERGY_RETURN_SERVICE_NAME,
     ENERGY_USAGE_SERVICE_NAME,
     GAS_SERVICE_NAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
 
 from tests.common import MockConfigEntry
 
 
 @pytest.mark.usefixtures("init_integration")
 async def test_has_services(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test the existence of the easyEnergy Service."""
-    assert hass.services.has_service(DOMAIN, GAS_SERVICE_NAME)
-    assert hass.services.has_service(DOMAIN, ENERGY_USAGE_SERVICE_NAME)
-    assert hass.services.has_service(DOMAIN, ENERGY_RETURN_SERVICE_NAME)
+    assert menuai.services.has_service(DOMAIN, GAS_SERVICE_NAME)
+    assert menuai.services.has_service(DOMAIN, ENERGY_USAGE_SERVICE_NAME)
+    assert menuai.services.has_service(DOMAIN, ENERGY_RETURN_SERVICE_NAME)
 
 
 @pytest.mark.usefixtures("init_integration")
@@ -40,7 +40,7 @@ async def test_has_services(
 @pytest.mark.parametrize("start", [{"start": "2023-01-01 00:00:00"}, {}])
 @pytest.mark.parametrize("end", [{"end": "2023-01-01 00:00:00"}, {}])
 async def test_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
     service: str,
@@ -53,7 +53,7 @@ async def test_service(
 
     data = entry | incl_vat | start | end
 
-    assert snapshot == await hass.services.async_call(
+    assert snapshot == await menuai.services.async_call(
         DOMAIN,
         service,
         data,
@@ -132,7 +132,7 @@ def config_entry_data(
     indirect=["config_entry_data"],
 )
 async def test_service_validation(
-    hass: HomeAssistant,
+    menuai: menuai,
     service: str,
     config_entry_data: dict[str, str],
     service_data: dict[str, str | bool],
@@ -142,7 +142,7 @@ async def test_service_validation(
     """Test the easyEnergy Service."""
 
     with pytest.raises(error, match=error_message):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             service,
             config_entry_data | service_data,

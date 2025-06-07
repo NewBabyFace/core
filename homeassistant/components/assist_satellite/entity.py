@@ -10,8 +10,8 @@ import logging
 import time
 from typing import Any, Literal, final
 
-from homeassistant.components import conversation, media_source, stt, tts
-from homeassistant.components.assist_pipeline import (
+from menuai.components import conversation, media_source, stt, tts
+from menuai.components.assist_pipeline import (
     OPTION_PREFERRED,
     AudioSettings,
     PipelineEvent,
@@ -22,11 +22,11 @@ from homeassistant.components.assist_pipeline import (
     async_pipeline_from_audio_stream,
     vad,
 )
-from homeassistant.components.media_player import async_process_play_media_url
-from homeassistant.core import Context, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import chat_session, entity
-from homeassistant.helpers.entity import EntityDescription
+from menuai.components.media_player import async_process_play_media_url
+from menuai.core import Context, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import chat_session, entity
+from menuai.helpers.entity import EntityDescription
 
 from .const import PREANNOUNCE_URL, AssistSatelliteEntityFeature
 from .errors import AssistSatelliteError, SatelliteBusyError
@@ -41,10 +41,10 @@ class AssistSatelliteState(StrEnum):
     """Device is waiting for user input, such as a wake word or a button press."""
 
     LISTENING = "listening"
-    """Device is streaming audio with the voice command to Home Assistant."""
+    """Device is streaming audio with the voice command to MenuAI."""
 
     PROCESSING = "processing"
-    """Home Assistant is processing the voice command."""
+    """MenuAI is processing the voice command."""
 
     RESPONDING = "responding"
     """Device is speaking the response."""
@@ -250,10 +250,10 @@ class AssistSatelliteEntity(entity.Entity):
         """
         await self._cancel_running_pipeline()
 
-        # The Home Assistant built-in agent doesn't support conversations.
-        pipeline = async_get_pipeline(self.hass, self._resolve_pipeline())
+        # The MenuAI built-in agent doesn't support conversations.
+        pipeline = async_get_pipeline(self.menuai, self._resolve_pipeline())
         if pipeline.conversation_engine == conversation.HOME_ASSISTANT_AGENT:
-            raise HomeAssistantError(
+            raise menuaiError(
                 "Built-in conversation agent does not support starting conversations"
             )
 
@@ -280,8 +280,8 @@ class AssistSatelliteEntity(entity.Entity):
 
         with (
             # Not passing in a conversation ID will force a new one to be created
-            chat_session.async_get_chat_session(self.hass) as session,
-            conversation.async_get_chat_log(self.hass, session) as chat_log,
+            chat_session.async_get_chat_session(self.menuai) as session,
+            conversation.async_get_chat_log(self.menuai, session) as chat_log,
         ):
             self._conversation_id = session.conversation_id
 
@@ -316,7 +316,7 @@ class AssistSatelliteEntity(entity.Entity):
         end_stage: PipelineStage = PipelineStage.TTS,
         wake_word_phrase: str | None = None,
     ) -> None:
-        """Triggers an Assist pipeline in Home Assistant from a satellite."""
+        """Triggers an Assist pipeline in MenuAI from a satellite."""
         await self._cancel_running_pipeline()
 
         # Consume system prompt in first pipeline
@@ -369,15 +369,15 @@ class AssistSatelliteEntity(entity.Entity):
         assert self.platform.config_entry is not None
 
         with chat_session.async_get_chat_session(
-            self.hass, self._conversation_id
+            self.menuai, self._conversation_id
         ) as session:
             # Store the conversation ID. If it is no longer valid, get_chat_session will reset it
             self._conversation_id = session.conversation_id
             self._pipeline_task = (
                 self.platform.config_entry.async_create_background_task(
-                    self.hass,
+                    self.menuai,
                     async_pipeline_from_audio_stream(
-                        self.hass,
+                        self.menuai,
                         context=self._context,
                         event_callback=self._internal_on_pipeline_event,
                         stt_metadata=stt.SpeechMetadata(
@@ -465,12 +465,12 @@ class AssistSatelliteEntity(entity.Entity):
         if not (pipeline_entity_id := self.pipeline_entity_id):
             return None
 
-        if (pipeline_entity_state := self.hass.states.get(pipeline_entity_id)) is None:
+        if (pipeline_entity_state := self.menuai.states.get(pipeline_entity_id)) is None:
             raise RuntimeError("Pipeline entity not found")
 
         if pipeline_entity_state.state != OPTION_PREFERRED:
             # Resolve pipeline by name
-            for pipeline in async_get_pipelines(self.hass):
+            for pipeline in async_get_pipelines(self.menuai):
                 if pipeline.name == pipeline_entity_state.state:
                     return pipeline.id
 
@@ -483,7 +483,7 @@ class AssistSatelliteEntity(entity.Entity):
 
         if vad_sensitivity_entity_id := self.vad_sensitivity_entity_id:
             if (
-                vad_sensitivity_state := self.hass.states.get(vad_sensitivity_entity_id)
+                vad_sensitivity_state := self.menuai.states.get(vad_sensitivity_entity_id)
             ) is None:
                 raise RuntimeError("VAD sensitivity entity not found")
 
@@ -507,11 +507,11 @@ class AssistSatelliteEntity(entity.Entity):
             media_id_source = "tts"
             # Synthesize audio and get URL
             pipeline_id = self._resolve_pipeline()
-            pipeline = async_get_pipeline(self.hass, pipeline_id)
+            pipeline = async_get_pipeline(self.menuai, pipeline_id)
 
-            engine = tts.async_resolve_engine(self.hass, pipeline.tts_engine)
+            engine = tts.async_resolve_engine(self.menuai, pipeline.tts_engine)
             if engine is None:
-                raise HomeAssistantError(f"TTS engine {pipeline.tts_engine} not found")
+                raise menuaiError(f"TTS engine {pipeline.tts_engine} not found")
 
             tts_options: dict[str, Any] = {}
             if pipeline.tts_voice is not None:
@@ -521,7 +521,7 @@ class AssistSatelliteEntity(entity.Entity):
                 tts_options.update(self.tts_options)
 
             stream = tts.async_create_stream(
-                self.hass,
+                self.menuai,
                 engine=engine,
                 language=pipeline.tts_language,
                 options=tts_options,
@@ -531,7 +531,7 @@ class AssistSatelliteEntity(entity.Entity):
             tts_token = stream.token
             media_id = stream.url
             original_media_id = tts.generate_media_source_id(
-                self.hass,
+                self.menuai,
                 message,
                 engine=engine,
                 language=pipeline.tts_language,
@@ -542,7 +542,7 @@ class AssistSatelliteEntity(entity.Entity):
             if not media_id_source:
                 media_id_source = "media_id"
             media = await media_source.async_resolve_media(
-                self.hass,
+                self.menuai,
                 media_id,
                 None,
             )
@@ -552,13 +552,13 @@ class AssistSatelliteEntity(entity.Entity):
             media_id_source = "url"
 
         # Resolve to full URL
-        media_id = async_process_play_media_url(self.hass, media_id)
+        media_id = async_process_play_media_url(self.menuai, media_id)
 
         # Resolve preannounce media id
         if preannounce_media_id:
             if media_source.is_media_source_id(preannounce_media_id):
                 preannounce_media = await media_source.async_resolve_media(
-                    self.hass,
+                    self.menuai,
                     preannounce_media_id,
                     None,
                 )
@@ -566,7 +566,7 @@ class AssistSatelliteEntity(entity.Entity):
 
             # Resolve to full URL
             preannounce_media_id = async_process_play_media_url(
-                self.hass, preannounce_media_id
+                self.menuai, preannounce_media_id
             )
 
         return AssistSatelliteAnnouncement(

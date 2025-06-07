@@ -3,12 +3,12 @@
 from dataclasses import dataclass
 from typing import Any
 
-from homeassistant.components.event import EventEntity, EventEntityDescription
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.event import EventEntity, EventEntityDescription
+from menuai.const import Platform
+from menuai.core import menuai, callback
+from menuai.helpers import entity_registry as er
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import DOMAIN, EVENT_KEY
 from .coordinator import OverseerrConfigEntry, OverseerrCoordinator
@@ -42,14 +42,14 @@ EVENTS: tuple[OverseerrEventEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: OverseerrConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Overseerr sensor entities based on a config entry."""
 
     coordinator = entry.runtime_data
-    ent_reg = er.async_get(hass)
+    ent_reg = er.async_get(menuai)
 
     event_entities_setup_before = ent_reg.async_get_entity_id(
         Platform.EVENT, DOMAIN, f"{entry.entry_id}-media"
@@ -76,11 +76,11 @@ class OverseerrEvent(OverseerrEntity, EventEntity):
         self.entity_description = description
         self._attr_available = True
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to updates."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self.async_on_remove(
-            async_dispatcher_connect(self.hass, EVENT_KEY, self._handle_update)
+            async_dispatcher_connect(self.menuai, EVENT_KEY, self._handle_update)
         )
 
     async def _handle_update(self, event: dict[str, Any]) -> None:

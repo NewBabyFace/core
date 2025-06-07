@@ -7,28 +7,28 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from verisure import Error as VerisureError, LoginError as VerisureLoginError
 
-from homeassistant import config_entries
-from homeassistant.components.verisure.const import (
+from menuai import config_entries
+from menuai.components.verisure.const import (
     CONF_GIID,
     CONF_LOCK_CODE_DIGITS,
     DEFAULT_LOCK_CODE_DIGITS,
     DOMAIN,
 )
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.const import CONF_EMAIL, CONF_PASSWORD
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
 
 from tests.common import MockConfigEntry
 
 
 async def test_full_user_flow_single_installation(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_verisure_config_flow: MagicMock,
 ) -> None:
     """Test a full user initiated configuration flow with a single installation."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result.get("step_id") == "user"
@@ -40,14 +40,14 @@ async def test_full_user_flow_single_installation(
         for k1, v1 in mock_verisure_config_flow.get_installations.return_value.items()
     }
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "email": "verisure_my_pages@example.com",
             "password": "SuperS3cr3t!",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2.get("type") is FlowResultType.CREATE_ENTRY
     assert result2.get("title") == "ascending (12345th street)"
@@ -62,35 +62,35 @@ async def test_full_user_flow_single_installation(
 
 
 async def test_full_user_flow_multiple_installations(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_verisure_config_flow: MagicMock,
 ) -> None:
     """Test a full user initiated configuration flow with multiple installations."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result.get("step_id") == "user"
     assert result.get("type") is FlowResultType.FORM
     assert result.get("errors") == {}
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "email": "verisure_my_pages@example.com",
             "password": "SuperS3cr3t!",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2.get("step_id") == "installation"
     assert result2.get("type") is FlowResultType.FORM
     assert result2.get("errors") is None
 
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result2["flow_id"], {"giid": "54321"}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result3.get("type") is FlowResultType.CREATE_ENTRY
     assert result3.get("title") == "descending (54321th street)"
@@ -105,12 +105,12 @@ async def test_full_user_flow_multiple_installations(
 
 
 async def test_full_user_flow_single_installation_with_mfa(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_verisure_config_flow: MagicMock,
 ) -> None:
     """Test a full user initiated flow with a single installation and mfa."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result.get("step_id") == "user"
@@ -121,14 +121,14 @@ async def test_full_user_flow_single_installation_with_mfa(
         "Multifactor authentication enabled, disable or create MFA cookie"
     )
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "email": "verisure_my_pages@example.com",
             "password": "SuperS3cr3t!",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2.get("type") is FlowResultType.FORM
     assert result2.get("step_id") == "mfa"
@@ -139,13 +139,13 @@ async def test_full_user_flow_single_installation_with_mfa(
         for k1, v1 in mock_verisure_config_flow.get_installations.return_value.items()
     }
 
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "code": "123456",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result3.get("type") is FlowResultType.CREATE_ENTRY
     assert result3.get("title") == "ascending (12345th street)"
@@ -162,12 +162,12 @@ async def test_full_user_flow_single_installation_with_mfa(
 
 
 async def test_full_user_flow_multiple_installations_with_mfa(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_verisure_config_flow: MagicMock,
 ) -> None:
     """Test a full user initiated configuration flow with a single installation."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result.get("step_id") == "user"
@@ -178,36 +178,36 @@ async def test_full_user_flow_multiple_installations_with_mfa(
         "Multifactor authentication enabled, disable or create MFA cookie"
     )
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "email": "verisure_my_pages@example.com",
             "password": "SuperS3cr3t!",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2.get("type") is FlowResultType.FORM
     assert result2.get("step_id") == "mfa"
 
     mock_verisure_config_flow.login.side_effect = None
 
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "code": "123456",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result3.get("step_id") == "installation"
     assert result3.get("type") is FlowResultType.FORM
     assert result3.get("errors") is None
 
-    result4 = await hass.config_entries.flow.async_configure(
+    result4 = await menuai.config_entries.flow.async_configure(
         result3["flow_id"], {"giid": "54321"}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result4.get("type") is FlowResultType.CREATE_ENTRY
     assert result4.get("title") == "descending (54321th street)"
@@ -231,26 +231,26 @@ async def test_full_user_flow_multiple_installations_with_mfa(
     ],
 )
 async def test_verisure_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_verisure_config_flow: MagicMock,
     side_effect: Exception,
     error: str,
 ) -> None:
     """Test a flow with an invalid Verisure My Pages login."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     mock_verisure_config_flow.login.side_effect = side_effect
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "email": "verisure_my_pages@example.com",
             "password": "SuperS3cr3t!",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2.get("type") is FlowResultType.FORM
     assert result2.get("step_id") == "user"
@@ -261,14 +261,14 @@ async def test_verisure_errors(
     )
     mock_verisure_config_flow.request_mfa.side_effect = side_effect
 
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result2["flow_id"],
         {
             "email": "verisure_my_pages@example.com",
             "password": "SuperS3cr3t!",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     mock_verisure_config_flow.request_mfa.side_effect = None
 
@@ -276,21 +276,21 @@ async def test_verisure_errors(
     assert result3.get("step_id") == "user"
     assert result3.get("errors") == {"base": "unknown_mfa"}
 
-    result4 = await hass.config_entries.flow.async_configure(
+    result4 = await menuai.config_entries.flow.async_configure(
         result3["flow_id"],
         {
             "email": "verisure_my_pages@example.com",
             "password": "SuperS3cr3t!",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result4.get("type") is FlowResultType.FORM
     assert result4.get("step_id") == "mfa"
 
     mock_verisure_config_flow.validate_mfa.side_effect = side_effect
 
-    result5 = await hass.config_entries.flow.async_configure(
+    result5 = await menuai.config_entries.flow.async_configure(
         result4["flow_id"],
         {
             "code": "123456",
@@ -307,13 +307,13 @@ async def test_verisure_errors(
     mock_verisure_config_flow.validate_mfa.side_effect = None
     mock_verisure_config_flow.login.side_effect = None
 
-    result6 = await hass.config_entries.flow.async_configure(
+    result6 = await menuai.config_entries.flow.async_configure(
         result5["flow_id"],
         {
             "code": "654321",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result6.get("type") is FlowResultType.CREATE_ENTRY
     assert result6.get("title") == "ascending (12345th street)"
@@ -329,9 +329,9 @@ async def test_verisure_errors(
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_dhcp(hass: HomeAssistant) -> None:
+async def test_dhcp(menuai: menuai) -> None:
     """Test that DHCP discovery works."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         data=DhcpServiceInfo(
             ip="1.2.3.4", macaddress="0123456789ab", hostname="mock_hostname"
@@ -344,27 +344,27 @@ async def test_dhcp(hass: HomeAssistant) -> None:
 
 
 async def test_reauth_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_verisure_config_flow: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test a reauthentication flow."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await mock_config_entry.start_reauth_flow(hass)
+    result = await mock_config_entry.start_reauth_flow(menuai)
     assert result.get("step_id") == "reauth_confirm"
     assert result.get("type") is FlowResultType.FORM
     assert result.get("errors") == {}
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "email": "verisure_my_pages@example.com",
             "password": "correct horse battery staple",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2.get("type") is FlowResultType.ABORT
     assert result2.get("reason") == "reauth_successful"
@@ -379,15 +379,15 @@ async def test_reauth_flow(
 
 
 async def test_reauth_flow_with_mfa(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_verisure_config_flow: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test a reauthentication flow."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await mock_config_entry.start_reauth_flow(hass)
+    result = await mock_config_entry.start_reauth_flow(menuai)
     assert result.get("step_id") == "reauth_confirm"
     assert result.get("type") is FlowResultType.FORM
     assert result.get("errors") == {}
@@ -396,27 +396,27 @@ async def test_reauth_flow_with_mfa(
         "Multifactor authentication enabled, disable or create MFA cookie"
     )
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "email": "verisure_my_pages@example.com",
             "password": "correct horse battery staple!",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2.get("type") is FlowResultType.FORM
     assert result2.get("step_id") == "reauth_mfa"
 
     mock_verisure_config_flow.login.side_effect = None
 
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result2["flow_id"],
         {
             "code": "123456",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result3.get("type") is FlowResultType.ABORT
     assert result3.get("reason") == "reauth_successful"
@@ -440,7 +440,7 @@ async def test_reauth_flow_with_mfa(
     ],
 )
 async def test_reauth_flow_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_verisure_config_flow: MagicMock,
     mock_config_entry: MockConfigEntry,
@@ -448,19 +448,19 @@ async def test_reauth_flow_errors(
     error: str,
 ) -> None:
     """Test a reauthentication flow."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await mock_config_entry.start_reauth_flow(hass)
+    result = await mock_config_entry.start_reauth_flow(menuai)
 
     mock_verisure_config_flow.login.side_effect = side_effect
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "email": "verisure_my_pages@example.com",
             "password": "WrOngP4ssw0rd!",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2.get("step_id") == "reauth_confirm"
     assert result2.get("type") is FlowResultType.FORM
@@ -471,14 +471,14 @@ async def test_reauth_flow_errors(
     )
     mock_verisure_config_flow.request_mfa.side_effect = side_effect
 
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result2["flow_id"],
         {
             "email": "verisure_my_pages@example.com",
             "password": "SuperS3cr3t!",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result3.get("type") is FlowResultType.FORM
     assert result3.get("step_id") == "reauth_confirm"
@@ -486,21 +486,21 @@ async def test_reauth_flow_errors(
 
     mock_verisure_config_flow.request_mfa.side_effect = None
 
-    result4 = await hass.config_entries.flow.async_configure(
+    result4 = await menuai.config_entries.flow.async_configure(
         result3["flow_id"],
         {
             "email": "verisure_my_pages@example.com",
             "password": "SuperS3cr3t!",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result4.get("type") is FlowResultType.FORM
     assert result4.get("step_id") == "reauth_mfa"
 
     mock_verisure_config_flow.validate_mfa.side_effect = side_effect
 
-    result5 = await hass.config_entries.flow.async_configure(
+    result5 = await menuai.config_entries.flow.async_configure(
         result4["flow_id"],
         {
             "code": "123456",
@@ -517,13 +517,13 @@ async def test_reauth_flow_errors(
         for k1, v1 in mock_verisure_config_flow.get_installations.return_value.items()
     }
 
-    await hass.config_entries.flow.async_configure(
+    await menuai.config_entries.flow.async_configure(
         result5["flow_id"],
         {
             "code": "654321",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert mock_config_entry.data == {
         CONF_GIID: "12345",
@@ -537,24 +537,24 @@ async def test_reauth_flow_errors(
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_options_flow(hass: HomeAssistant) -> None:
+async def test_options_flow(menuai: menuai) -> None:
     """Test options config flow."""
     entry = MockConfigEntry(domain=DOMAIN, unique_id="12345", data={}, version=2)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.verisure.async_setup_entry",
+        "menuai.components.verisure.async_setup_entry",
         return_value=True,
     ):
-        assert await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
-    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await menuai.config_entries.options.async_init(entry.entry_id)
 
     assert result.get("type") is FlowResultType.FORM
     assert result.get("step_id") == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={CONF_LOCK_CODE_DIGITS: 4},
     )

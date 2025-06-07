@@ -13,10 +13,10 @@ from zwave_js_server.const.command_class.meter import CC_SPECIFIC_METER_TYPE
 from zwave_js_server.model.value import get_value_id_str
 from zwave_js_server.util.command_class.meter import get_meter_type
 
-from homeassistant.components.device_automation import async_validate_entity_schema
-from homeassistant.components.lock import DOMAIN as LOCK_DOMAIN
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.const import (
+from menuai.components.device_automation import async_validate_entity_schema
+from menuai.components.lock import DOMAIN as LOCK_DOMAIN
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.const import (
     ATTR_DEVICE_ID,
     ATTR_DOMAIN,
     CONF_DEVICE_ID,
@@ -25,10 +25,10 @@ from homeassistant.const import (
     CONF_TYPE,
     STATE_UNAVAILABLE,
 )
-from homeassistant.core import Context, HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.typing import ConfigType, TemplateVarsType
+from menuai.core import Context, menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.typing import ConfigType, TemplateVarsType
 
 from .config_validation import VALUE_SCHEMA
 from .const import (
@@ -143,20 +143,20 @@ _ACTION_SCHEMA = vol.Any(
 
 
 async def async_validate_action_config(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> ConfigType:
     """Validate config."""
-    return async_validate_entity_schema(hass, config, _ACTION_SCHEMA)
+    return async_validate_entity_schema(menuai, config, _ACTION_SCHEMA)
 
 
 async def async_get_actions(
-    hass: HomeAssistant, device_id: str
+    menuai: menuai, device_id: str
 ) -> list[dict[str, Any]]:
     """List device actions for Z-Wave JS devices."""
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     actions: list[dict] = []
 
-    node = async_get_node_from_device_id(hass, device_id)
+    node = async_get_node_from_device_id(menuai, device_id)
 
     if node.client.driver and node.client.driver.controller.own_node == node:
         return actions
@@ -196,7 +196,7 @@ async def async_get_actions(
         # underlying value is not being monitored by HA so we shouldn't allow
         # actions against it.
         if (
-            not (state := hass.states.get(entry.entity_id))
+            not (state := menuai.states.get(entry.entity_id))
             or state.state == STATE_UNAVAILABLE
         ):
             continue
@@ -252,7 +252,7 @@ async def async_get_actions(
 
 
 async def async_call_action_from_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     variables: TemplateVarsType,
     context: Context | None,
@@ -260,7 +260,7 @@ async def async_call_action_from_config(
     """Execute a device action."""
     action_type = service = config[CONF_TYPE]
     if action_type not in ACTION_TYPES:
-        raise HomeAssistantError(f"Unhandled action type {action_type}")
+        raise menuaiError(f"Unhandled action type {action_type}")
 
     # Don't include domain, subtype or any null/empty values in the service call
     service_data = {
@@ -278,17 +278,17 @@ async def async_call_action_from_config(
         SERVICE_RESET_METER,
     ):
         service_data.pop(ATTR_DEVICE_ID)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN, service, service_data, blocking=True, context=context
     )
 
 
 async def async_get_action_capabilities(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> dict[str, vol.Schema]:
     """List action capabilities."""
     action_type = config[CONF_TYPE]
-    node = async_get_node_from_device_id(hass, config[CONF_DEVICE_ID])
+    node = async_get_node_from_device_id(menuai, config[CONF_DEVICE_ID])
 
     # Add additional fields to the automation action UI
     if action_type == SERVICE_CLEAR_LOCK_USERCODE:

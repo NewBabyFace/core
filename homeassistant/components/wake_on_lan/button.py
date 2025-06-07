@@ -8,18 +8,18 @@ from typing import Any
 
 import wakeonlan
 
-from homeassistant.components.button import ButtonEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_BROADCAST_ADDRESS, CONF_BROADCAST_PORT, CONF_MAC
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.button import ButtonEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_BROADCAST_ADDRESS, CONF_BROADCAST_PORT, CONF_MAC
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -78,6 +78,6 @@ class WolButton(ButtonEntity):
             self._broadcast_port,
         )
 
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             partial(wakeonlan.send_magic_packet, self._mac_address, **service_kwargs)
         )

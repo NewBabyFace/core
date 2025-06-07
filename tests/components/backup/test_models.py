@@ -1,6 +1,6 @@
 """Tests for the Backup integration."""
 
-from homeassistant.components.backup import AgentBackup
+from menuai.components.backup import AgentBackup
 
 from .common import TEST_BACKUP_ABC123
 

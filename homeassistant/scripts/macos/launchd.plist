@@ -3,7 +3,7 @@
 <plist version="1.0">
   <dict>
     <key>Label</key>
-    <string>org.homeassistant</string>
+    <string>org.menuai</string>
 
     <key>EnvironmentVariables</key>
     <dict>
@@ -14,7 +14,7 @@
     </dict>
 
     <key>Program</key>
-    <string>$HASS_PATH$</string>
+    <string>$menuai_PATH$</string>
 
     <key>AbandonProcessGroup</key>
     <false/>
@@ -29,10 +29,10 @@
     </dict>
 
     <key>StandardErrorPath</key>
-    <string>/Users/$USER$/Library/Logs/homeassistant.log</string>
+    <string>/Users/$USER$/Library/Logs/menuai.log</string>
 
     <key>StandardOutPath</key>
-    <string>/Users/$USER$/Library/Logs/homeassistant.log</string>
+    <string>/Users/$USER$/Library/Logs/menuai.log</string>
 
   </dict>
 </plist>

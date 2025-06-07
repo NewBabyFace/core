@@ -2,10 +2,10 @@
 
 import voluptuous as vol
 
-from homeassistant.const import CONF_TOKEN, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, discovery
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import CONF_TOKEN, Platform
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, discovery
+from menuai.helpers.typing import ConfigType
 
 from .const import DOMAIN
 
@@ -14,9 +14,9 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the notify_events component."""
 
-    hass.data[DOMAIN] = config[DOMAIN]
-    discovery.load_platform(hass, Platform.NOTIFY, DOMAIN, {}, config)
+    menuai.data[DOMAIN] = config[DOMAIN]
+    discovery.load_platform(menuai, Platform.NOTIFY, DOMAIN, {}, config)
     return True

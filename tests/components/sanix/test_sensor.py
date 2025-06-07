@@ -5,9 +5,9 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import setup_integration
 
@@ -16,7 +16,7 @@ from tests.common import MockConfigEntry
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_all_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mock_sanix: AsyncMock,
     mock_config_entry: MockConfigEntry,
@@ -24,10 +24,10 @@ async def test_all_entities(
 ) -> None:
     """Test all entities."""
     with patch(
-        "homeassistant.components.sanix.PLATFORMS",
+        "menuai.components.sanix.PLATFORMS",
         [Platform.SENSOR],
     ):
-        await setup_integration(hass, mock_config_entry)
+        await setup_integration(menuai, mock_config_entry)
         entity_entries = er.async_entries_for_config_entry(
             entity_registry, mock_config_entry.entry_id
         )
@@ -35,5 +35,5 @@ async def test_all_entities(
         assert entity_entries
         for entity_entry in entity_entries:
             assert entity_entry == snapshot(name=f"{entity_entry.entity_id}-entry")
-            assert (state := hass.states.get(entity_entry.entity_id))
+            assert (state := menuai.states.get(entity_entry.entity_id))
             assert state == snapshot(name=f"{entity_entry.entity_id}-state")

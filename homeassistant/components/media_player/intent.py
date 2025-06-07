@@ -8,16 +8,16 @@ from typing import cast
 
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     SERVICE_MEDIA_NEXT_TRACK,
     SERVICE_MEDIA_PAUSE,
     SERVICE_MEDIA_PLAY,
     SERVICE_MEDIA_PREVIOUS_TRACK,
     SERVICE_VOLUME_SET,
 )
-from homeassistant.core import Context, HomeAssistant, State
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv, intent
+from menuai.core import Context, menuai, State
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv, intent
 
 from . import (
     ATTR_MEDIA_VOLUME_LEVEL,
@@ -29,12 +29,12 @@ from . import (
 )
 from .const import MediaPlayerEntityFeature, MediaPlayerState
 
-INTENT_MEDIA_PAUSE = "HassMediaPause"
-INTENT_MEDIA_UNPAUSE = "HassMediaUnpause"
-INTENT_MEDIA_NEXT = "HassMediaNext"
-INTENT_MEDIA_PREVIOUS = "HassMediaPrevious"
-INTENT_SET_VOLUME = "HassSetVolume"
-INTENT_MEDIA_SEARCH_AND_PLAY = "HassMediaSearchAndPlay"
+INTENT_MEDIA_PAUSE = "menuaiMediaPause"
+INTENT_MEDIA_UNPAUSE = "menuaiMediaUnpause"
+INTENT_MEDIA_NEXT = "menuaiMediaNext"
+INTENT_MEDIA_PREVIOUS = "menuaiMediaPrevious"
+INTENT_SET_VOLUME = "menuaiSetVolume"
+INTENT_MEDIA_SEARCH_AND_PLAY = "menuaiMediaSearchAndPlay"
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -65,14 +65,14 @@ class LastPaused:
         return self.timestamp is not None
 
 
-async def async_setup_intents(hass: HomeAssistant) -> None:
+async def async_setup_intents(menuai: menuai) -> None:
     """Set up the media_player intents."""
     last_paused = LastPaused()
 
-    intent.async_register(hass, MediaUnpauseHandler(last_paused))
-    intent.async_register(hass, MediaPauseHandler(last_paused))
+    intent.async_register(menuai, MediaUnpauseHandler(last_paused))
+    intent.async_register(menuai, MediaPauseHandler(last_paused))
     intent.async_register(
-        hass,
+        menuai,
         intent.ServiceIntentHandler(
             INTENT_MEDIA_NEXT,
             DOMAIN,
@@ -86,7 +86,7 @@ async def async_setup_intents(hass: HomeAssistant) -> None:
         ),
     )
     intent.async_register(
-        hass,
+        menuai,
         intent.ServiceIntentHandler(
             INTENT_MEDIA_PREVIOUS,
             DOMAIN,
@@ -100,7 +100,7 @@ async def async_setup_intents(hass: HomeAssistant) -> None:
         ),
     )
     intent.async_register(
-        hass,
+        menuai,
         intent.ServiceIntentHandler(
             INTENT_SET_VOLUME,
             DOMAIN,
@@ -122,7 +122,7 @@ async def async_setup_intents(hass: HomeAssistant) -> None:
             device_classes={MediaPlayerDeviceClass},
         ),
     )
-    intent.async_register(hass, MediaSearchAndPlayHandler())
+    intent.async_register(menuai, MediaSearchAndPlayHandler())
 
 
 class MediaPauseHandler(intent.ServiceIntentHandler):
@@ -224,7 +224,7 @@ class MediaUnpauseHandler(intent.ServiceIntentHandler):
 
 
 class MediaSearchAndPlayHandler(intent.IntentHandler):
-    """Handle HassMediaSearchAndPlay intents."""
+    """Handle menuaiMediaSearchAndPlay intents."""
 
     description = "Searches for media and plays the first result"
 
@@ -242,7 +242,7 @@ class MediaSearchAndPlayHandler(intent.IntentHandler):
 
     async def async_handle(self, intent_obj: intent.Intent) -> intent.IntentResponse:
         """Handle the intent."""
-        hass = intent_obj.hass
+        menuai = intent_obj.menuai
         slots = self.async_validate_slots(intent_obj.slots)
         search_query = slots["search_query"]["value"]
 
@@ -269,7 +269,7 @@ class MediaSearchAndPlayHandler(intent.IntentHandler):
             single_target=True,
         )
         match_result = intent.async_match_targets(
-            hass,
+            menuai,
             match_constraints,
             intent.MatchTargetsPreferences(
                 area_id=slots.get("preferred_area_id", {}).get("value"),
@@ -287,7 +287,7 @@ class MediaSearchAndPlayHandler(intent.IntentHandler):
 
         # 1. Search Media
         try:
-            search_response = await hass.services.async_call(
+            search_response = await menuai.services.async_call(
                 DOMAIN,
                 SERVICE_SEARCH_MEDIA,
                 {
@@ -300,7 +300,7 @@ class MediaSearchAndPlayHandler(intent.IntentHandler):
                 context=intent_obj.context,
                 return_response=True,
             )
-        except HomeAssistantError as err:
+        except menuaiError as err:
             _LOGGER.error("Error calling search_media: %s", err)
             raise intent.IntentHandleError(f"Error searching media: {err}") from err
 
@@ -319,7 +319,7 @@ class MediaSearchAndPlayHandler(intent.IntentHandler):
         # 2. Play Media (first result)
         first_result = results[0]
         try:
-            await hass.services.async_call(
+            await menuai.services.async_call(
                 DOMAIN,
                 SERVICE_PLAY_MEDIA,
                 {
@@ -330,7 +330,7 @@ class MediaSearchAndPlayHandler(intent.IntentHandler):
                 blocking=True,
                 context=intent_obj.context,
             )
-        except HomeAssistantError as err:
+        except menuaiError as err:
             _LOGGER.error("Error calling play_media: %s", err)
             raise intent.IntentHandleError(f"Error playing media: {err}") from err
 

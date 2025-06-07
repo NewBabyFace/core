@@ -1,6 +1,6 @@
 """Config flow for Sun WEG integration."""
 
-from homeassistant.config_entries import ConfigFlow
+from menuai.config_entries import ConfigFlow
 
 from . import DOMAIN
 

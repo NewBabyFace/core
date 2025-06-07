@@ -5,7 +5,7 @@ import sys
 
 import pytest
 
-from homeassistant.bootstrap import (
+from menuai.bootstrap import (
     CORE_INTEGRATIONS,
     DEFAULT_INTEGRATIONS,
     STAGE_0_INTEGRATIONS,
@@ -32,7 +32,7 @@ from homeassistant.bootstrap import (
 async def test_circular_imports(component: str) -> None:
     """Check that components can be imported without circular imports."""
     process = await asyncio.create_subprocess_exec(
-        sys.executable, "-c", f"import homeassistant.components.{component}"
+        sys.executable, "-c", f"import menuai.components.{component}"
     )
     await process.communicate()
     assert process.returncode == 0

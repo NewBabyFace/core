@@ -9,19 +9,19 @@ from typing import Any
 
 from aioguardian import Client
 
-from homeassistant.components.valve import (
+from menuai.components.valve import (
     ValveDeviceClass,
     ValveEntity,
     ValveEntityDescription,
     ValveEntityFeature,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import GuardianConfigEntry, GuardianData
 from .const import API_VALVE_STATUS
 from .entity import ValveControllerEntity, ValveControllerEntityDescription
-from .util import convert_exceptions_to_homeassistant_error
+from .util import convert_exceptions_to_menuai_error
 
 VALVE_KIND_VALVE = "valve"
 
@@ -108,7 +108,7 @@ VALVE_CONTROLLER_DESCRIPTIONS = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: GuardianConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -155,19 +155,19 @@ class ValveControllerValve(ValveControllerEntity, ValveEntity):
         """Return if the valve is opening or not."""
         return self.entity_description.is_opening_fn(self.coordinator.data)
 
-    @convert_exceptions_to_homeassistant_error
+    @convert_exceptions_to_menuai_error
     async def async_close_valve(self) -> None:
         """Close the valve."""
         await self.entity_description.close_coro_fn(self._client)
         await self.coordinator.async_request_refresh()
 
-    @convert_exceptions_to_homeassistant_error
+    @convert_exceptions_to_menuai_error
     async def async_open_valve(self) -> None:
         """Open the valve."""
         await self.entity_description.open_coro_fn(self._client)
         await self.coordinator.async_request_refresh()
 
-    @convert_exceptions_to_homeassistant_error
+    @convert_exceptions_to_menuai_error
     async def async_stop_valve(self) -> None:
         """Stop the valve."""
         await self.entity_description.halt_coro_fn(self._client)

@@ -13,9 +13,9 @@ from nextdns import (
     Settings,
 )
 
-from homeassistant.components.nextdns.const import CONF_PROFILE_ID, DOMAIN
-from homeassistant.const import CONF_API_KEY
-from homeassistant.core import HomeAssistant
+from menuai.components.nextdns.const import CONF_PROFILE_ID, DOMAIN
+from menuai.const import CONF_API_KEY
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -119,43 +119,43 @@ def mock_nextdns():
     """Mock the NextDNS class."""
     with (
         patch(
-            "homeassistant.components.nextdns.NextDns.get_profiles",
+            "menuai.components.nextdns.NextDns.get_profiles",
             return_value=PROFILES,
         ),
         patch(
-            "homeassistant.components.nextdns.NextDns.get_analytics_status",
+            "menuai.components.nextdns.NextDns.get_analytics_status",
             return_value=STATUS,
         ),
         patch(
-            "homeassistant.components.nextdns.NextDns.get_analytics_encryption",
+            "menuai.components.nextdns.NextDns.get_analytics_encryption",
             return_value=ENCRYPTION,
         ),
         patch(
-            "homeassistant.components.nextdns.NextDns.get_analytics_dnssec",
+            "menuai.components.nextdns.NextDns.get_analytics_dnssec",
             return_value=DNSSEC,
         ),
         patch(
-            "homeassistant.components.nextdns.NextDns.get_analytics_ip_versions",
+            "menuai.components.nextdns.NextDns.get_analytics_ip_versions",
             return_value=IP_VERSIONS,
         ),
         patch(
-            "homeassistant.components.nextdns.NextDns.get_analytics_protocols",
+            "menuai.components.nextdns.NextDns.get_analytics_protocols",
             return_value=PROTOCOLS,
         ),
         patch(
-            "homeassistant.components.nextdns.NextDns.get_settings",
+            "menuai.components.nextdns.NextDns.get_settings",
             return_value=SETTINGS,
         ),
         patch(
-            "homeassistant.components.nextdns.NextDns.connection_status",
+            "menuai.components.nextdns.NextDns.connection_status",
             return_value=CONNECTION_STATUS,
         ),
     ):
         yield
 
 
-async def init_integration(hass: HomeAssistant) -> MockConfigEntry:
-    """Set up the NextDNS integration in Home Assistant."""
+async def init_integration(menuai: menuai) -> MockConfigEntry:
+    """Set up the NextDNS integration in MenuAI."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         title="Fake Profile",
@@ -164,10 +164,10 @@ async def init_integration(hass: HomeAssistant) -> MockConfigEntry:
         entry_id="d9aa37407ddac7b964a99e86312288d6",
     )
 
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with mock_nextdns():
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     return entry

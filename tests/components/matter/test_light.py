@@ -7,10 +7,10 @@ from matter_server.client.models.node import MatterNode
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.light import ColorMode
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.light import ColorMode
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .common import (
     set_node_attribute,
@@ -21,12 +21,12 @@ from .common import (
 
 @pytest.mark.usefixtures("matter_devices")
 async def test_lights(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test lights."""
-    snapshot_matter_entities(hass, entity_registry, snapshot, Platform.LIGHT)
+    snapshot_matter_entities(menuai, entity_registry, snapshot, Platform.LIGHT)
 
 
 @pytest.mark.parametrize(
@@ -48,7 +48,7 @@ async def test_lights(
     ],
 )
 async def test_light_turn_on_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     matter_node: MatterNode,
     entity_id: str,
@@ -58,9 +58,9 @@ async def test_light_turn_on_off(
 
     # Test that the light is off
     set_node_attribute(matter_node, 1, 6, 0, False)
-    await trigger_subscription_callback(hass, matter_client)
+    await trigger_subscription_callback(menuai, matter_client)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state is not None
     assert state.state == "off"
 
@@ -71,14 +71,14 @@ async def test_light_turn_on_off(
 
     # Test that the light is on
     set_node_attribute(matter_node, 1, 6, 0, True)
-    await trigger_subscription_callback(hass, matter_client)
+    await trigger_subscription_callback(menuai, matter_client)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state is not None
     assert state.state == "on"
 
     # Turn the light off
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_off",
         {
@@ -96,7 +96,7 @@ async def test_light_turn_on_off(
     matter_client.send_device_command.reset_mock()
 
     # Turn the light on
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {
@@ -124,7 +124,7 @@ async def test_light_turn_on_off(
     ],
 )
 async def test_dimmable_light(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     matter_node: MatterNode,
     entity_id: str,
@@ -133,15 +133,15 @@ async def test_dimmable_light(
 
     # Test that the light brightness is 50 (out of 254)
     set_node_attribute(matter_node, 1, 8, 0, 50)
-    await trigger_subscription_callback(hass, matter_client)
+    await trigger_subscription_callback(menuai, matter_client)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state is not None
     assert state.state == "on"
     assert state.attributes["brightness"] == 49
 
     # Change brightness
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {
@@ -163,7 +163,7 @@ async def test_dimmable_light(
     matter_client.send_device_command.reset_mock()
 
     # Change brightness with custom transition
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": entity_id, "brightness": 128, "transition": 3},
@@ -190,7 +190,7 @@ async def test_dimmable_light(
     ],
 )
 async def test_color_temperature_light(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     matter_node: MatterNode,
     entity_id: str,
@@ -199,16 +199,16 @@ async def test_color_temperature_light(
     # Test that the light color temperature is 3000 (out of 50000)
     set_node_attribute(matter_node, 1, 768, 8, 2)
     set_node_attribute(matter_node, 1, 768, 7, 3000)
-    await trigger_subscription_callback(hass, matter_client)
+    await trigger_subscription_callback(menuai, matter_client)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state is not None
     assert state.state == "on"
     assert state.attributes["color_mode"] == ColorMode.COLOR_TEMP
     assert state.attributes["color_temp"] == 3003
 
     # Change color temperature
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {
@@ -241,7 +241,7 @@ async def test_color_temperature_light(
     matter_client.send_device_command.reset_mock()
 
     # Change color temperature with custom transition
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": entity_id, "color_temp": 300, "transition": 4.0},
@@ -278,7 +278,7 @@ async def test_color_temperature_light(
     ],
 )
 async def test_extended_color_light(
-    hass: HomeAssistant,
+    menuai: menuai,
     matter_client: MagicMock,
     matter_node: MatterNode,
     entity_id: str,
@@ -289,9 +289,9 @@ async def test_extended_color_light(
     set_node_attribute(matter_node, 1, 768, 8, 1)
     set_node_attribute(matter_node, 1, 768, 3, 50)
     set_node_attribute(matter_node, 1, 768, 4, 100)
-    await trigger_subscription_callback(hass, matter_client)
+    await trigger_subscription_callback(menuai, matter_client)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state is not None
     assert state.state == "on"
     assert state.attributes["color_mode"] == ColorMode.XY
@@ -301,16 +301,16 @@ async def test_extended_color_light(
     set_node_attribute(matter_node, 1, 768, 8, 0)
     set_node_attribute(matter_node, 1, 768, 1, 50)
     set_node_attribute(matter_node, 1, 768, 0, 100)
-    await trigger_subscription_callback(hass, matter_client)
+    await trigger_subscription_callback(menuai, matter_client)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state is not None
     assert state.state == "on"
     assert state.attributes["color_mode"] == ColorMode.HS
     assert state.attributes["hs_color"] == (141.732, 19.685)
 
     # Turn the light on with XY color
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {
@@ -344,7 +344,7 @@ async def test_extended_color_light(
     matter_client.send_device_command.reset_mock()
 
     # Turn the light on with XY color and custom transition
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {"entity_id": entity_id, "xy_color": (0.5, 0.5), "transition": 4.0},
@@ -375,7 +375,7 @@ async def test_extended_color_light(
     matter_client.send_device_command.reset_mock()
 
     # Turn the light on with HS color
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {
@@ -409,7 +409,7 @@ async def test_extended_color_light(
     matter_client.send_device_command.reset_mock()
 
     # Turn the light on with HS color and custom transition
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {

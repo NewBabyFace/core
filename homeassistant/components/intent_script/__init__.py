@@ -7,18 +7,18 @@ from typing import Any, TypedDict
 
 import voluptuous as vol
 
-from homeassistant.components.script import CONF_MODE
-from homeassistant.const import CONF_DESCRIPTION, CONF_TYPE, SERVICE_RELOAD
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import (
+from menuai.components.script import CONF_MODE
+from menuai.const import CONF_DESCRIPTION, CONF_TYPE, SERVICE_RELOAD
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import (
     config_validation as cv,
     intent,
     script,
     service,
     template,
 )
-from homeassistant.helpers.reload import async_integration_yaml_config
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers.reload import async_integration_yaml_config
+from menuai.helpers.typing import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -71,51 +71,51 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_reload(hass: HomeAssistant, service_call: ServiceCall) -> None:
+async def async_reload(menuai: menuai, service_call: ServiceCall) -> None:
     """Handle reload Intent Script service call."""
-    new_config = await async_integration_yaml_config(hass, DOMAIN)
-    existing_intents = hass.data[DOMAIN]
+    new_config = await async_integration_yaml_config(menuai, DOMAIN)
+    existing_intents = menuai.data[DOMAIN]
 
     for intent_type in existing_intents:
-        intent.async_remove(hass, intent_type)
+        intent.async_remove(menuai, intent_type)
 
     if not new_config or DOMAIN not in new_config:
-        hass.data[DOMAIN] = {}
+        menuai.data[DOMAIN] = {}
         return
 
     new_intents = new_config[DOMAIN]
 
-    async_load_intents(hass, new_intents)
+    async_load_intents(menuai, new_intents)
 
 
-def async_load_intents(hass: HomeAssistant, intents: dict[str, ConfigType]) -> None:
+def async_load_intents(menuai: menuai, intents: dict[str, ConfigType]) -> None:
     """Load YAML intents into the intent system."""
-    hass.data[DOMAIN] = intents
+    menuai.data[DOMAIN] = intents
 
     for intent_type, conf in intents.items():
         if CONF_ACTION in conf:
             script_mode: str = conf.get(CONF_MODE, script.DEFAULT_SCRIPT_MODE)
             conf[CONF_ACTION] = script.Script(
-                hass,
+                menuai,
                 conf[CONF_ACTION],
                 f"Intent Script {intent_type}",
                 DOMAIN,
                 script_mode=script_mode,
             )
-        intent.async_register(hass, ScriptIntentHandler(intent_type, conf))
+        intent.async_register(menuai, ScriptIntentHandler(intent_type, conf))
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the intent script component."""
     intents = config[DOMAIN]
 
-    async_load_intents(hass, intents)
+    async_load_intents(menuai, intents)
 
     async def _handle_reload(service_call: ServiceCall) -> None:
-        return await async_reload(hass, service_call)
+        return await async_reload(menuai, service_call)
 
     service.async_register_admin_service(
-        hass,
+        menuai,
         DOMAIN,
         SERVICE_RELOAD,
         _handle_reload,
@@ -166,7 +166,7 @@ class ScriptIntentHandler(intent.IntentHandler):
         card: _IntentCardData | None = self.config.get(CONF_CARD)
         action: script.Script | None = self.config.get(CONF_ACTION)
         is_async_action: bool = self.config[CONF_ASYNC_ACTION]
-        hass: HomeAssistant = intent_obj.hass
+        menuai: menuai = intent_obj.menuai
         intent_slots = self.async_validate_slots(intent_obj.slots)
         slots: dict[str, Any] = {
             key: value["value"] for key, value in intent_slots.items()
@@ -213,7 +213,7 @@ class ScriptIntentHandler(intent.IntentHandler):
             )
 
             match_result = intent.async_match_targets(
-                hass, match_constraints, match_preferences
+                menuai, match_constraints, match_preferences
             )
             if match_result.is_match:
                 targets = {}
@@ -236,7 +236,7 @@ class ScriptIntentHandler(intent.IntentHandler):
 
         if action is not None:
             if is_async_action:
-                intent_obj.hass.async_create_task(
+                intent_obj.menuai.async_create_task(
                     action.async_run(slots, intent_obj.context)
                 )
             else:

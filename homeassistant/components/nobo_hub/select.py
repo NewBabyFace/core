@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from pynobo import nobo
 
-from homeassistant.components.select import SelectEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_NAME
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.select import SelectEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_NAME
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
     ATTR_HARDWARE_VERSION,
@@ -24,14 +24,14 @@ from .const import (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up any temperature sensors connected to the Nobø Ecohub."""
 
     # Setup connection with hub
-    hub: nobo = hass.data[DOMAIN][config_entry.entry_id]
+    hub: nobo = menuai.data[DOMAIN][config_entry.entry_id]
 
     override_type = (
         nobo.API.OVERRIDE_TYPE_NOW
@@ -75,11 +75,11 @@ class NoboGlobalSelector(SelectEntity):
             sw_version=hub.hub_info[ATTR_SOFTWARE_VERSION],
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callback from hub."""
         self._nobo.register_callback(self._after_update)
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Deregister callback from hub."""
         self._nobo.deregister_callback(self._after_update)
 
@@ -91,7 +91,7 @@ class NoboGlobalSelector(SelectEntity):
                 mode, self._override_type, nobo.API.OVERRIDE_TARGET_GLOBAL
             )
         except Exception as exp:
-            raise HomeAssistantError from exp
+            raise menuaiError from exp
 
     async def async_update(self) -> None:
         """Fetch new state data for this zone."""
@@ -132,11 +132,11 @@ class NoboProfileSelector(SelectEntity):
             suggested_area=hub.zones[zone_id][ATTR_NAME],
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callback from hub."""
         self._nobo.register_callback(self._after_update)
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Deregister callback from hub."""
         self._nobo.deregister_callback(self._after_update)
 
@@ -148,7 +148,7 @@ class NoboProfileSelector(SelectEntity):
                 self._id, week_profile_id=week_profile_id
             )
         except Exception as exp:
-            raise HomeAssistantError from exp
+            raise menuaiError from exp
 
     async def async_update(self) -> None:
         """Fetch new state data for this zone."""

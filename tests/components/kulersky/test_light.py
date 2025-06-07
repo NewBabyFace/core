@@ -7,8 +7,8 @@ from bleak.backends.device import BLEDevice
 import pykulersky
 import pytest
 
-from homeassistant.components.kulersky.const import DOMAIN
-from homeassistant.components.light import (
+from menuai.components.kulersky.const import DOMAIN
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_MODE,
     ATTR_HS_COLOR,
@@ -19,7 +19,7 @@ from homeassistant.components.light import (
     SCAN_INTERVAL,
     ColorMode,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_FRIENDLY_NAME,
     ATTR_SUPPORTED_FEATURES,
@@ -28,9 +28,9 @@ from homeassistant.const import (
     STATE_ON,
     STATE_UNAVAILABLE,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_component import async_update_entity
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.helpers.entity_component import async_update_entity
+from menuai.util import dt as dt_util
 
 from tests.common import MockConfigEntry, async_fire_time_changed
 
@@ -39,7 +39,7 @@ from tests.common import MockConfigEntry, async_fire_time_changed
 def mock_ble_device() -> Generator[MagicMock]:
     """Mock BLEDevice."""
     with patch(
-        "homeassistant.components.kulersky.async_ble_device_from_address",
+        "menuai.components.kulersky.async_ble_device_from_address",
         return_value=BLEDevice(
             address="AA:BB:CC:11:22:33", name="Bedroom", rssi=-50, details={}
         ),
@@ -60,7 +60,7 @@ async def mock_entry() -> MockConfigEntry:
 
 @pytest.fixture
 async def mock_light(
-    hass: HomeAssistant, mock_entry: MockConfigEntry, mock_ble_device: MagicMock
+    menuai: menuai, mock_entry: MockConfigEntry, mock_ble_device: MagicMock
 ) -> Generator[AsyncMock]:
     """Mock pykulersky light."""
     light = AsyncMock()
@@ -73,18 +73,18 @@ async def mock_light(
         "pykulersky.Light",
         return_value=light,
     ):
-        mock_entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(mock_entry.entry_id)
-        await hass.async_block_till_done()
+        mock_entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(mock_entry.entry_id)
+        await menuai.async_block_till_done()
 
         assert light.connect.called
 
         yield light
 
 
-async def test_init(hass: HomeAssistant, mock_light: AsyncMock) -> None:
+async def test_init(menuai: menuai, mock_light: AsyncMock) -> None:
     """Test platform setup."""
-    state = hass.states.get("light.bedroom")
+    state = menuai.states.get("light.bedroom")
     assert state.state == STATE_OFF
     assert dict(state.attributes) == {
         ATTR_FRIENDLY_NAME: "Bedroom",
@@ -100,109 +100,109 @@ async def test_init(hass: HomeAssistant, mock_light: AsyncMock) -> None:
 
 
 async def test_remove_entry(
-    hass: HomeAssistant, mock_light: MagicMock, mock_entry: MockConfigEntry
+    menuai: menuai, mock_light: MagicMock, mock_entry: MockConfigEntry
 ) -> None:
     """Test platform setup."""
-    await hass.config_entries.async_remove(mock_entry.entry_id)
+    await menuai.config_entries.async_remove(mock_entry.entry_id)
 
     assert mock_light.disconnect.called
 
 
 async def test_remove_entry_exceptions_caught(
-    hass: HomeAssistant, mock_light: MagicMock, mock_entry: MockConfigEntry
+    menuai: menuai, mock_light: MagicMock, mock_entry: MockConfigEntry
 ) -> None:
     """Assert that disconnect exceptions are caught."""
     mock_light.disconnect.side_effect = pykulersky.PykulerskyException("Mock error")
-    await hass.config_entries.async_remove(mock_entry.entry_id)
+    await menuai.config_entries.async_remove(mock_entry.entry_id)
 
     assert mock_light.disconnect.called
 
 
-async def test_update_exception(hass: HomeAssistant, mock_light: MagicMock) -> None:
+async def test_update_exception(menuai: menuai, mock_light: MagicMock) -> None:
     """Test platform setup."""
 
     mock_light.get_color.side_effect = pykulersky.PykulerskyException
-    await async_update_entity(hass, "light.bedroom")
-    state = hass.states.get("light.bedroom")
+    await async_update_entity(menuai, "light.bedroom")
+    state = menuai.states.get("light.bedroom")
     assert state is not None
     assert state.state == STATE_UNAVAILABLE
 
 
-async def test_light_turn_on(hass: HomeAssistant, mock_light: MagicMock) -> None:
+async def test_light_turn_on(menuai: menuai, mock_light: MagicMock) -> None:
     """Test KulerSkyLight turn_on."""
     mock_light.get_color.return_value = (255, 255, 255, 255)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {ATTR_ENTITY_ID: "light.bedroom"},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     mock_light.set_color.assert_called_with(255, 255, 255, 255)
 
     mock_light.get_color.return_value = (50, 50, 50, 50)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {ATTR_ENTITY_ID: "light.bedroom", ATTR_BRIGHTNESS: 50},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     mock_light.set_color.assert_called_with(50, 50, 50, 50)
 
     mock_light.get_color.return_value = (50, 25, 13, 6)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {ATTR_ENTITY_ID: "light.bedroom", ATTR_RGBW_COLOR: (255, 128, 64, 32)},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     mock_light.set_color.assert_called_with(50, 25, 13, 6)
 
     # RGB color is converted to RGBW by assigning the white component to the white
     # channel, see color_rgb_to_rgbw
     mock_light.get_color.return_value = (0, 17, 50, 17)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {ATTR_ENTITY_ID: "light.bedroom", ATTR_RGB_COLOR: (64, 128, 255)},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     mock_light.set_color.assert_called_with(0, 17, 50, 17)
 
     # HS color is converted to RGBW by assigning the white component to the white
     # channel, see color_rgb_to_rgbw
     mock_light.get_color.return_value = (50, 41, 0, 50)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_on",
         {ATTR_ENTITY_ID: "light.bedroom", ATTR_HS_COLOR: (50, 50)},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     mock_light.set_color.assert_called_with(50, 41, 0, 50)
 
 
-async def test_light_turn_off(hass: HomeAssistant, mock_light: MagicMock) -> None:
+async def test_light_turn_off(menuai: menuai, mock_light: MagicMock) -> None:
     """Test KulerSkyLight turn_on."""
     mock_light.get_color.return_value = (0, 0, 0, 0)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         "turn_off",
         {ATTR_ENTITY_ID: "light.bedroom"},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     mock_light.set_color.assert_called_with(0, 0, 0, 0)
 
 
-async def test_light_update(hass: HomeAssistant, mock_light: MagicMock) -> None:
+async def test_light_update(menuai: menuai, mock_light: MagicMock) -> None:
     """Test KulerSkyLight update."""
     utcnow = dt_util.utcnow()
 
-    state = hass.states.get("light.bedroom")
+    state = menuai.states.get("light.bedroom")
     assert state.state == STATE_OFF
     assert dict(state.attributes) == {
         ATTR_FRIENDLY_NAME: "Bedroom",
@@ -219,10 +219,10 @@ async def test_light_update(hass: HomeAssistant, mock_light: MagicMock) -> None:
     # Test an exception during discovery
     mock_light.get_color.side_effect = pykulersky.PykulerskyException("TEST")
     utcnow = utcnow + SCAN_INTERVAL
-    async_fire_time_changed(hass, utcnow)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("light.bedroom")
+    state = menuai.states.get("light.bedroom")
     assert state.state == STATE_UNAVAILABLE
     assert dict(state.attributes) == {
         ATTR_FRIENDLY_NAME: "Bedroom",
@@ -233,10 +233,10 @@ async def test_light_update(hass: HomeAssistant, mock_light: MagicMock) -> None:
     mock_light.get_color.side_effect = None
     mock_light.get_color.return_value = (80, 160, 255, 0)
     utcnow = utcnow + SCAN_INTERVAL
-    async_fire_time_changed(hass, utcnow)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("light.bedroom")
+    state = menuai.states.get("light.bedroom")
     assert state.state == STATE_ON
     assert dict(state.attributes) == {
         ATTR_FRIENDLY_NAME: "Bedroom",
@@ -253,10 +253,10 @@ async def test_light_update(hass: HomeAssistant, mock_light: MagicMock) -> None:
     mock_light.get_color.side_effect = None
     mock_light.get_color.return_value = (80, 160, 200, 255)
     utcnow = utcnow + SCAN_INTERVAL
-    async_fire_time_changed(hass, utcnow)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("light.bedroom")
+    state = menuai.states.get("light.bedroom")
     assert state.state == STATE_ON
     assert dict(state.attributes) == {
         ATTR_FRIENDLY_NAME: "Bedroom",
@@ -273,10 +273,10 @@ async def test_light_update(hass: HomeAssistant, mock_light: MagicMock) -> None:
     mock_light.get_color.side_effect = None
     mock_light.get_color.return_value = (80, 160, 200, 240)
     utcnow = utcnow + SCAN_INTERVAL
-    async_fire_time_changed(hass, utcnow)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, utcnow)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("light.bedroom")
+    state = menuai.states.get("light.bedroom")
     assert state.state == STATE_ON
     assert dict(state.attributes) == {
         ATTR_FRIENDLY_NAME: "Bedroom",

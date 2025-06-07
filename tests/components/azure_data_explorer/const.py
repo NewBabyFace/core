@@ -1,6 +1,6 @@
 """Constants for testing Azure Data Explorer."""
 
-from homeassistant.components.azure_data_explorer.const import (
+from menuai.components.azure_data_explorer.const import (
     CONF_ADX_CLUSTER_INGEST_URI,
     CONF_ADX_DATABASE_NAME,
     CONF_ADX_TABLE_NAME,
@@ -11,7 +11,7 @@ from homeassistant.components.azure_data_explorer.const import (
     CONF_USE_QUEUED_CLIENT,
 )
 
-AZURE_DATA_EXPLORER_PATH = "homeassistant.components.azure_data_explorer"
+AZURE_DATA_EXPLORER_PATH = "menuai.components.azure_data_explorer"
 CLIENT_PATH = f"{AZURE_DATA_EXPLORER_PATH}.AzureDataExplorer"
 
 

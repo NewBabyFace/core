@@ -9,7 +9,7 @@ from typing import Self
 
 import boto3
 
-from .hassfest.serializer import format_python_namespace
+from .menuaifest.serializer import format_python_namespace
 
 
 @dataclass(frozen=True)
@@ -53,7 +53,7 @@ voices = get_all_voices(polly_client)
 supported_voices = set({v.id for v in voices})
 supported_engines = set().union(*[v.supported_engines for v in voices])
 
-Path("homeassistant/generated/amazon_polly.py").write_text(
+Path("menuai/generated/amazon_polly.py").write_text(
     format_python_namespace(
         {
             "SUPPORTED_VOICES": supported_voices,

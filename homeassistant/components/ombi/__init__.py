@@ -5,7 +5,7 @@ import logging
 import pyombi
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     ATTR_NAME,
     CONF_API_KEY,
     CONF_HOST,
@@ -15,10 +15,10 @@ from homeassistant.const import (
     CONF_USERNAME,
     Platform,
 )
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.discovery import load_platform
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import config_validation as cv
+from menuai.helpers.discovery import load_platform
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     ATTR_SEASON,
@@ -80,7 +80,7 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Ombi component platform."""
 
     ombi = pyombi.Ombi(
@@ -100,7 +100,7 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
         _LOGGER.warning("Unable to setup Ombi: %s", err)
         return False
 
-    hass.data[DOMAIN] = {"instance": ombi}
+    menuai.data[DOMAIN] = {"instance": ombi}
 
     def submit_movie_request(call: ServiceCall) -> None:
         """Submit request for movie."""
@@ -138,24 +138,24 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
         else:
             raise Warning("No music album found.")
 
-    hass.services.register(
+    menuai.services.register(
         DOMAIN,
         SERVICE_MOVIE_REQUEST,
         submit_movie_request,
         schema=SUBMIT_MOVIE_REQUEST_SERVICE_SCHEMA,
     )
-    hass.services.register(
+    menuai.services.register(
         DOMAIN,
         SERVICE_MUSIC_REQUEST,
         submit_music_request,
         schema=SUBMIT_MUSIC_REQUEST_SERVICE_SCHEMA,
     )
-    hass.services.register(
+    menuai.services.register(
         DOMAIN,
         SERVICE_TV_REQUEST,
         submit_tv_request,
         schema=SUBMIT_TV_REQUEST_SERVICE_SCHEMA,
     )
-    load_platform(hass, Platform.SENSOR, DOMAIN, {}, config)
+    load_platform(menuai, Platform.SENSOR, DOMAIN, {}, config)
 
     return True

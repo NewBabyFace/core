@@ -7,18 +7,18 @@ from unittest.mock import AsyncMock
 from pyenphase import EnvoyAuthenticationError, EnvoyError
 import pytest
 
-from homeassistant.components.enphase_envoy.const import (
+from menuai.components.enphase_envoy.const import (
     DOMAIN,
     OPTION_DIAGNOSTICS_INCLUDE_FIXTURES,
     OPTION_DIAGNOSTICS_INCLUDE_FIXTURES_DEFAULT_VALUE,
     OPTION_DISABLE_KEEP_ALIVE,
     OPTION_DISABLE_KEEP_ALIVE_DEFAULT_VALUE,
 )
-from homeassistant.config_entries import SOURCE_USER, SOURCE_ZEROCONF
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.config_entries import SOURCE_USER, SOURCE_ZEROCONF
+from menuai.const import CONF_HOST, CONF_NAME, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from . import setup_integration
 
@@ -28,18 +28,18 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def test_form(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_envoy: AsyncMock,
 ) -> None:
     """Test we get the form."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_HOST: "1.1.1.1",
@@ -59,19 +59,19 @@ async def test_form(
 
 
 async def test_user_no_serial_number(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_envoy: AsyncMock,
 ) -> None:
     """Test user setup without a serial number."""
     mock_envoy.serial_number = None
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_HOST: "1.1.1.1",
@@ -100,7 +100,7 @@ async def test_user_no_serial_number(
     ],
 )
 async def test_form_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_envoy: AsyncMock,
     exception: Exception,
@@ -108,12 +108,12 @@ async def test_form_errors(
 ) -> None:
     """Test we handle form errors."""
     mock_envoy.setup.side_effect = exception
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_HOST: "1.1.1.1",
@@ -126,7 +126,7 @@ async def test_form_errors(
 
     mock_envoy.setup.side_effect = None
     # mock successful authentication and update of credentials
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_HOST: "1.1.1.1",
@@ -153,14 +153,14 @@ def _get_schema_default(schema, key_name):
     ],
 )
 async def test_zeroconf(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_envoy: AsyncMock,
     version: str,
     schema_username: str,
 ) -> None:
     """Test we can setup from zeroconf."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -180,7 +180,7 @@ async def test_zeroconf(
         == schema_username
     )
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_HOST: "1.1.1.1",
@@ -200,14 +200,14 @@ async def test_zeroconf(
 
 
 async def test_form_host_already_exists(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_setup_entry: AsyncMock,
     mock_envoy: AsyncMock,
 ) -> None:
     """Test changing credentials for existing host."""
-    config_entry.add_to_hass(hass)
-    result = await hass.config_entries.flow.async_init(
+    config_entry.add_to_menuai(menuai)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -223,7 +223,7 @@ async def test_form_host_already_exists(
     )
 
     # mock failing authentication on first try
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_HOST: "1.1.1.2",
@@ -242,7 +242,7 @@ async def test_form_host_already_exists(
     assert config_entry.data[CONF_PASSWORD] == "test-password"
 
     # mock successful authentication and update of credentials
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_HOST: "1.1.1.2",
@@ -250,7 +250,7 @@ async def test_form_host_already_exists(
             CONF_PASSWORD: "changed-password",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"
 
@@ -261,7 +261,7 @@ async def test_form_host_already_exists(
 
 
 async def test_zeroconf_serial_already_exists(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_setup_entry: AsyncMock,
     mock_envoy: AsyncMock,
@@ -269,8 +269,8 @@ async def test_zeroconf_serial_already_exists(
 ) -> None:
     """Test serial number already exists from zeroconf."""
     _LOGGER.setLevel(logging.DEBUG)
-    await setup_integration(hass, config_entry)
-    result = await hass.config_entries.flow.async_init(
+    await setup_integration(menuai, config_entry)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -291,14 +291,14 @@ async def test_zeroconf_serial_already_exists(
 
 
 async def test_zeroconf_serial_already_exists_ignores_ipv6(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_setup_entry: AsyncMock,
     mock_envoy: AsyncMock,
 ) -> None:
     """Test serial number already exists from zeroconf but the discovery is ipv6."""
-    await setup_integration(hass, config_entry)
-    result = await hass.config_entries.flow.async_init(
+    await setup_integration(menuai, config_entry)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -311,7 +311,7 @@ async def test_zeroconf_serial_already_exists_ignores_ipv6(
             type="mock_type",
         ),
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "not_ipv4_address"
 
@@ -319,15 +319,15 @@ async def test_zeroconf_serial_already_exists_ignores_ipv6(
 
 
 async def test_zeroconf_host_already_exists(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_setup_entry: AsyncMock,
     mock_envoy: AsyncMock,
 ) -> None:
     """Test hosts already exists from zeroconf."""
     mock_envoy.serial_number = None
-    await setup_integration(hass, config_entry)
-    result = await hass.config_entries.flow.async_init(
+    await setup_integration(menuai, config_entry)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -348,19 +348,19 @@ async def test_zeroconf_host_already_exists(
 
 
 async def test_zero_conf_while_form(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_setup_entry: AsyncMock,
     mock_envoy: AsyncMock,
 ) -> None:
     """Test zeroconf while form is active."""
-    await setup_integration(hass, config_entry)
-    result = await hass.config_entries.flow.async_init(
+    await setup_integration(menuai, config_entry)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -381,19 +381,19 @@ async def test_zero_conf_while_form(
 
 
 async def test_zero_conf_second_envoy_while_form(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_setup_entry: AsyncMock,
     mock_envoy: AsyncMock,
 ) -> None:
     """Test zeroconf while form is active."""
-    await setup_integration(hass, config_entry)
-    result = await hass.config_entries.flow.async_init(
+    await setup_integration(menuai, config_entry)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
 
-    result2 = await hass.config_entries.flow.async_init(
+    result2 = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -411,7 +411,7 @@ async def test_zero_conf_second_envoy_while_form(
     assert config_entry.unique_id == "1234"
     assert config_entry.title == "Envoy 1234"
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result2["flow_id"],
         {
             CONF_HOST: "4.4.4.4",
@@ -423,7 +423,7 @@ async def test_zero_conf_second_envoy_while_form(
     assert result2["title"] == "Envoy 4321"
     assert result2["result"].unique_id == "4321"
 
-    result4 = await hass.config_entries.flow.async_configure(
+    result4 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_HOST: "1.1.1.1",
@@ -435,7 +435,7 @@ async def test_zero_conf_second_envoy_while_form(
 
 
 async def test_zero_conf_old_blank_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_envoy: AsyncMock,
 ) -> None:
@@ -451,8 +451,8 @@ async def test_zero_conf_old_blank_entry(
         unique_id=None,
         title="Envoy",
     )
-    entry.add_to_hass(hass)
-    result = await hass.config_entries.flow.async_init(
+    entry.add_to_menuai(menuai)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -474,7 +474,7 @@ async def test_zero_conf_old_blank_entry(
 
 
 async def test_zero_conf_old_blank_entry_standard_title(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_envoy: AsyncMock,
 ) -> None:
@@ -490,10 +490,10 @@ async def test_zero_conf_old_blank_entry_standard_title(
         unique_id=None,
         title="Envoy",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     # test if shorthand title Envoy gets serial appended
-    hass.config_entries.async_update_entry(entry, title="Envoy")
-    result = await hass.config_entries.flow.async_init(
+    menuai.config_entries.async_update_entry(entry, title="Envoy")
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -515,7 +515,7 @@ async def test_zero_conf_old_blank_entry_standard_title(
 
 
 async def test_zero_conf_old_blank_entry_user_title(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_envoy: AsyncMock,
 ) -> None:
@@ -531,10 +531,10 @@ async def test_zero_conf_old_blank_entry_user_title(
         unique_id=None,
         title="Envoy",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     # set user title on entry
-    hass.config_entries.async_update_entry(entry, title="Envoy Backyard")
-    result = await hass.config_entries.flow.async_init(
+    menuai.config_entries.async_update_entry(entry, title="Envoy Backyard")
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -556,17 +556,17 @@ async def test_zero_conf_old_blank_entry_user_title(
 
 
 async def test_reauth(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_setup_entry: AsyncMock,
     mock_envoy: AsyncMock,
 ) -> None:
     """Test we reauth auth."""
-    await setup_integration(hass, config_entry)
-    result = await config_entry.start_reauth_flow(hass)
+    await setup_integration(menuai, config_entry)
+    result = await config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_USERNAME: "test-username",
@@ -578,18 +578,18 @@ async def test_reauth(
 
 
 async def test_options_default(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_setup_entry: AsyncMock,
     mock_envoy: AsyncMock,
 ) -> None:
     """Test we can configure options."""
-    await setup_integration(hass, config_entry)
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    await setup_integration(menuai, config_entry)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"], user_input={}
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -600,18 +600,18 @@ async def test_options_default(
 
 
 async def test_options_set(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_setup_entry: AsyncMock,
     mock_envoy: AsyncMock,
 ) -> None:
     """Test we can configure options."""
-    await setup_integration(hass, config_entry)
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    await setup_integration(menuai, config_entry)
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             OPTION_DIAGNOSTICS_INCLUDE_FIXTURES: True,
@@ -626,14 +626,14 @@ async def test_options_set(
 
 
 async def test_reconfigure(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_setup_entry: AsyncMock,
     mock_envoy: AsyncMock,
 ) -> None:
     """Test we can reconfiger the entry."""
-    await setup_integration(hass, config_entry)
-    result = await config_entry.start_reconfigure_flow(hass)
+    await setup_integration(menuai, config_entry)
+    result = await config_entry.start_reconfigure_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reconfigure"
     assert result["errors"] == {}
@@ -643,7 +643,7 @@ async def test_reconfigure(
     assert config_entry.data[CONF_USERNAME] == "test-username"
     assert config_entry.data[CONF_PASSWORD] == "test-password"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_HOST: "1.1.1.2",
@@ -651,7 +651,7 @@ async def test_reconfigure(
             CONF_PASSWORD: "test-password2",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reconfigure_successful"
 
@@ -662,14 +662,14 @@ async def test_reconfigure(
 
 
 async def test_reconfigure_nochange(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_setup_entry: AsyncMock,
     mock_envoy: AsyncMock,
 ) -> None:
     """Test we get the reconfigure form and apply nochange."""
-    await setup_integration(hass, config_entry)
-    result = await config_entry.start_reconfigure_flow(hass)
+    await setup_integration(menuai, config_entry)
+    result = await config_entry.start_reconfigure_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reconfigure"
     assert result["errors"] == {}
@@ -679,7 +679,7 @@ async def test_reconfigure_nochange(
     assert config_entry.data[CONF_USERNAME] == "test-username"
     assert config_entry.data[CONF_PASSWORD] == "test-password"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_HOST: "1.1.1.1",
@@ -687,7 +687,7 @@ async def test_reconfigure_nochange(
             CONF_PASSWORD: "test-password",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reconfigure_successful"
 
@@ -698,14 +698,14 @@ async def test_reconfigure_nochange(
 
 
 async def test_reconfigure_otherenvoy(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_setup_entry: AsyncMock,
     mock_envoy: AsyncMock,
 ) -> None:
     """Test entering ip of other envoy and prevent changing it based on serial."""
-    await setup_integration(hass, config_entry)
-    result = await config_entry.start_reconfigure_flow(hass)
+    await setup_integration(menuai, config_entry)
+    result = await config_entry.start_reconfigure_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reconfigure"
     assert result["errors"] == {}
@@ -713,7 +713,7 @@ async def test_reconfigure_otherenvoy(
     # let mock return different serial from first time, sim it's other one on changed ip
     mock_envoy.serial_number = "45678"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_HOST: "1.1.1.2",
@@ -740,7 +740,7 @@ async def test_reconfigure_otherenvoy(
     ],
 )
 async def test_reconfigure_auth_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_setup_entry: AsyncMock,
     mock_envoy: AsyncMock,
@@ -748,9 +748,9 @@ async def test_reconfigure_auth_failure(
     error: str,
 ) -> None:
     """Test changing credentials for existing host with auth failure."""
-    await setup_integration(hass, config_entry)
+    await setup_integration(menuai, config_entry)
 
-    result = await config_entry.start_reconfigure_flow(hass)
+    result = await config_entry.start_reconfigure_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
@@ -762,7 +762,7 @@ async def test_reconfigure_auth_failure(
     mock_envoy.authenticate.side_effect = exception
 
     # mock failing authentication on first try
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_HOST: "1.1.1.2",
@@ -775,7 +775,7 @@ async def test_reconfigure_auth_failure(
 
     mock_envoy.authenticate.side_effect = None
     # mock successful authentication and update of credentials
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_HOST: "1.1.1.2",
@@ -793,13 +793,13 @@ async def test_reconfigure_auth_failure(
 
 
 async def test_reconfigure_change_ip_to_existing(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_setup_entry: AsyncMock,
     mock_envoy: AsyncMock,
 ) -> None:
     """Test reconfiguration to existing entry with same ip does not harm existing one."""
-    await setup_integration(hass, config_entry)
+    await setup_integration(menuai, config_entry)
     other_entry = MockConfigEntry(
         domain=DOMAIN,
         entry_id="65432155aaddb2007c5f6602e0c38e72",
@@ -812,14 +812,14 @@ async def test_reconfigure_change_ip_to_existing(
             CONF_PASSWORD: "other-password",
         },
     )
-    other_entry.add_to_hass(hass)
+    other_entry.add_to_menuai(menuai)
 
     # original other entry
     assert other_entry.data[CONF_HOST] == "1.1.1.2"
     assert other_entry.data[CONF_USERNAME] == "other-username"
     assert other_entry.data[CONF_PASSWORD] == "other-password"
 
-    result = await config_entry.start_reconfigure_flow(hass)
+    result = await config_entry.start_reconfigure_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reconfigure"
     assert result["errors"] == {}
@@ -829,7 +829,7 @@ async def test_reconfigure_change_ip_to_existing(
     assert config_entry.data[CONF_USERNAME] == "test-username"
     assert config_entry.data[CONF_PASSWORD] == "test-password"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_HOST: "1.1.1.2",

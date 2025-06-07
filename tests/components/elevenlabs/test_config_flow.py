@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from homeassistant.components.elevenlabs.const import (
+from menuai.components.elevenlabs.const import (
     CONF_CONFIGURE_VOICE,
     CONF_MODEL,
     CONF_OPTIMIZE_LATENCY,
@@ -21,27 +21,27 @@ from homeassistant.components.elevenlabs.const import (
     DEFAULT_USE_SPEAKER_BOOST,
     DOMAIN,
 )
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_API_KEY
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_API_KEY
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
 
 async def test_user_step(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_async_client: AsyncMock,
 ) -> None:
     """Test user step create entry result."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert not result["errors"]
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_API_KEY: "api_key",
@@ -58,20 +58,20 @@ async def test_user_step(
 
 
 async def test_invalid_api_key(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_async_client_api_error: AsyncMock,
     request: pytest.FixtureRequest,
 ) -> None:
     """Test user step with invalid api key."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert not result["errors"]
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_API_KEY: "api_key",
@@ -85,7 +85,7 @@ async def test_invalid_api_key(
     # Use a working client
     request.getfixturevalue("mock_async_client")
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_API_KEY: "api_key",
@@ -102,22 +102,22 @@ async def test_invalid_api_key(
 
 
 async def test_options_flow_init(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_async_client: AsyncMock,
     mock_entry: MockConfigEntry,
 ) -> None:
     """Test options flow init."""
-    mock_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(mock_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    result = await hass.config_entries.options.async_init(mock_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(mock_entry.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={CONF_MODEL: "model1", CONF_VOICE: "voice1"},
     )
@@ -132,21 +132,21 @@ async def test_options_flow_init(
 
 
 async def test_options_flow_voice_settings_default(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_async_client: AsyncMock,
     mock_entry: MockConfigEntry,
 ) -> None:
     """Test options flow voice settings."""
-    mock_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(mock_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(mock_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    result = await hass.config_entries.options.async_init(mock_entry.entry_id)
+    result = await menuai.config_entries.options.async_init(mock_entry.entry_id)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             CONF_MODEL: "model1",
@@ -158,7 +158,7 @@ async def test_options_flow_voice_settings_default(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "voice_settings"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={},
     )

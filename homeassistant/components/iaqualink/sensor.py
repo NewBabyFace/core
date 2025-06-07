@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from iaqualink.device import AqualinkSensor
 
-from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
-from homeassistant.const import UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.sensor import SensorDeviceClass, SensorEntity
+from menuai.const import UnitOfTemperature
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import AqualinkConfigEntry
 from .entity import AqualinkEntity
@@ -16,18 +16,18 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: AqualinkConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up discovered sensors."""
     async_add_entities(
-        (HassAqualinkSensor(dev) for dev in config_entry.runtime_data.sensors),
+        (menuaiAqualinkSensor(dev) for dev in config_entry.runtime_data.sensors),
         True,
     )
 
 
-class HassAqualinkSensor(AqualinkEntity[AqualinkSensor], SensorEntity):
+class menuaiAqualinkSensor(AqualinkEntity[AqualinkSensor], SensorEntity):
     """Representation of a sensor."""
 
     def __init__(self, dev: AqualinkSensor) -> None:

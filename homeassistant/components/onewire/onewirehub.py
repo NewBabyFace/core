@@ -9,14 +9,14 @@ import os
 
 from pyownet import protocol
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_VIA_DEVICE, CONF_HOST, CONF_PORT
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.util.signal_type import SignalType
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_VIA_DEVICE, CONF_HOST, CONF_PORT
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.event import async_track_time_interval
+from menuai.util.signal_type import SignalType
 
 from .const import (
     DEVICE_SUPPORT,
@@ -61,9 +61,9 @@ class OneWireHub:
     devices: list[OWDeviceDescription]
     _version: str | None = None
 
-    def __init__(self, hass: HomeAssistant, config_entry: OneWireConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: OneWireConfigEntry) -> None:
         """Initialize."""
-        self._hass = hass
+        self._menuai = menuai
         self._config_entry = config_entry
 
     def _initialize(self) -> None:
@@ -82,13 +82,13 @@ class OneWireHub:
 
     async def initialize(self) -> None:
         """Initialize a config entry."""
-        await self._hass.async_add_executor_job(self._initialize)
+        await self._menuai.async_add_executor_job(self._initialize)
         self._populate_device_registry(self.devices)
 
     @callback
     def _populate_device_registry(self, devices: list[OWDeviceDescription]) -> None:
         """Populate the device registry."""
-        device_registry = dr.async_get(self._hass)
+        device_registry = dr.async_get(self._menuai)
         for device in devices:
             device.device_info["sw_version"] = self._version
             device_registry.async_get_or_create(
@@ -100,13 +100,13 @@ class OneWireHub:
         """Schedule a regular scan of the bus for new devices."""
         self._config_entry.async_on_unload(
             async_track_time_interval(
-                self._hass, self._scan_for_new_devices, _DEVICE_SCAN_INTERVAL
+                self._menuai, self._scan_for_new_devices, _DEVICE_SCAN_INTERVAL
             )
         )
 
     async def _scan_for_new_devices(self, _: datetime) -> None:
         """Scan the bus for new devices."""
-        devices = await self._hass.async_add_executor_job(
+        devices = await self._menuai.async_add_executor_job(
             _discover_devices, self.owproxy
         )
         existing_device_ids = [device.id for device in self.devices]
@@ -117,7 +117,7 @@ class OneWireHub:
             self.devices.extend(new_devices)
             self._populate_device_registry(new_devices)
             async_dispatcher_send(
-                self._hass, SIGNAL_NEW_DEVICE_CONNECTED, self, new_devices
+                self._menuai, SIGNAL_NEW_DEVICE_CONNECTED, self, new_devices
             )
 
 

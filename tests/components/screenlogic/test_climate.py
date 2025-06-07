@@ -7,7 +7,7 @@ import pytest
 from screenlogicpy import ScreenLogicGateway
 from screenlogicpy.device_const.heat import HEAT_MODE
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_CURRENT_TEMPERATURE,
     ATTR_HVAC_ACTION,
     ATTR_HVAC_MODES,
@@ -18,8 +18,8 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.util import slugify
+from menuai.core import menuai
+from menuai.util import slugify
 
 from . import (
     DATA_MISSING_VALUES_CHEM_CHLOR,
@@ -69,7 +69,7 @@ _LOGGER = logging.getLogger(__name__)
     ],
 )
 async def test_climate_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     tested_dataset: dict,
     expected_entity_states: dict,
@@ -79,7 +79,7 @@ async def test_climate_state(
     def stub_connect(*args, **kwargs):
         return stub_async_connect(tested_dataset, *args, **kwargs)
 
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     with (
         patch(
@@ -93,11 +93,11 @@ async def test_climate_state(
             _async_connected_request=DEFAULT,
         ),
     ):
-        assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
         for entity_id, state_data in expected_entity_states.items():
-            assert (climate_state := hass.states.get(entity_id)) is not None
+            assert (climate_state := menuai.states.get(entity_id)) is not None
             assert climate_state.state == state_data["state"]
             for attribute, value in state_data["attributes"].items():
                 assert climate_state.attributes[attribute] == value

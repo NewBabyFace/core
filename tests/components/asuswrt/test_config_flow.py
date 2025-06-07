@@ -6,7 +6,7 @@ from unittest.mock import patch
 from pyasuswrt import AsusWrtError
 import pytest
 
-from homeassistant.components.asuswrt.const import (
+from menuai.components.asuswrt.const import (
     CONF_DNSMASQ,
     CONF_INTERFACE,
     CONF_REQUIRE_IP,
@@ -19,9 +19,9 @@ from homeassistant.components.asuswrt.const import (
     PROTOCOL_SSH,
     PROTOCOL_TELNET,
 )
-from homeassistant.components.device_tracker import CONF_CONSIDER_HOME
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import (
+from menuai.components.device_tracker import CONF_CONSIDER_HOME
+from menuai.config_entries import SOURCE_USER
+from menuai.const import (
     CONF_BASE,
     CONF_HOST,
     CONF_MODE,
@@ -30,8 +30,8 @@ from homeassistant.const import (
     CONF_PROTOCOL,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from .common import ASUSWRT_BASE, HOST, ROUTER_MAC_ADDR
 
@@ -84,10 +84,10 @@ def mock_controller_patch_is_file():
 
 @pytest.mark.parametrize("unique_id", [{}, {"label_mac": ROUTER_MAC_ADDR}])
 async def test_user_legacy(
-    hass: HomeAssistant, connect_legacy, patch_setup_entry, unique_id
+    menuai: menuai, connect_legacy, patch_setup_entry, unique_id
 ) -> None:
     """Test user config."""
-    flow_result = await hass.config_entries.flow.async_init(
+    flow_result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER, "show_advanced_options": True}
     )
     assert flow_result["type"] is FlowResultType.FORM
@@ -96,19 +96,19 @@ async def test_user_legacy(
     connect_legacy.return_value.async_get_nvram.return_value = unique_id
 
     # test with all provided
-    legacy_result = await hass.config_entries.flow.async_configure(
+    legacy_result = await menuai.config_entries.flow.async_configure(
         flow_result["flow_id"], user_input=CONFIG_DATA_TELNET
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert legacy_result["type"] is FlowResultType.FORM
     assert legacy_result["step_id"] == "legacy"
 
     # complete configuration
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         legacy_result["flow_id"], user_input={CONF_MODE: MODE_AP}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == HOST
@@ -119,10 +119,10 @@ async def test_user_legacy(
 
 @pytest.mark.parametrize("unique_id", [None, ROUTER_MAC_ADDR])
 async def test_user_http(
-    hass: HomeAssistant, connect_http, patch_setup_entry, unique_id
+    menuai: menuai, connect_http, patch_setup_entry, unique_id
 ) -> None:
     """Test user config http."""
-    flow_result = await hass.config_entries.flow.async_init(
+    flow_result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER, "show_advanced_options": True}
     )
     assert flow_result["type"] is FlowResultType.FORM
@@ -131,10 +131,10 @@ async def test_user_http(
     connect_http.return_value.mac = unique_id
 
     # test with all provided
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         flow_result["flow_id"], user_input=CONFIG_DATA_HTTP
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == HOST
@@ -144,10 +144,10 @@ async def test_user_http(
 
 
 @pytest.mark.parametrize("config", [CONFIG_DATA_TELNET, CONFIG_DATA_HTTP])
-async def test_error_pwd_required(hass: HomeAssistant, config) -> None:
+async def test_error_pwd_required(menuai: menuai, config) -> None:
     """Test we abort for missing password."""
     config_data = {k: v for k, v in config.items() if k != CONF_PASSWORD}
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER, "show_advanced_options": True},
         data=config_data,
@@ -157,10 +157,10 @@ async def test_error_pwd_required(hass: HomeAssistant, config) -> None:
     assert result["errors"] == {CONF_BASE: "pwd_required"}
 
 
-async def test_error_no_password_ssh(hass: HomeAssistant) -> None:
+async def test_error_no_password_ssh(menuai: menuai) -> None:
     """Test we abort for wrong password and ssh file combination."""
     config_data = {k: v for k, v in CONFIG_DATA_SSH.items() if k != CONF_PASSWORD}
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER, "show_advanced_options": True},
         data=config_data,
@@ -170,13 +170,13 @@ async def test_error_no_password_ssh(hass: HomeAssistant) -> None:
     assert result["errors"] == {CONF_BASE: "pwd_or_ssh"}
 
 
-async def test_error_invalid_ssh(hass: HomeAssistant, patch_is_file) -> None:
+async def test_error_invalid_ssh(menuai: menuai, patch_is_file) -> None:
     """Test we abort if invalid ssh file is provided."""
     config_data = {k: v for k, v in CONFIG_DATA_SSH.items() if k != CONF_PASSWORD}
     config_data[CONF_SSH_KEY] = SSH_KEY
 
     patch_is_file.return_value = False
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER, "show_advanced_options": True},
         data=config_data,
@@ -186,10 +186,10 @@ async def test_error_invalid_ssh(hass: HomeAssistant, patch_is_file) -> None:
     assert result["errors"] == {CONF_BASE: "ssh_not_file"}
 
 
-async def test_error_invalid_host(hass: HomeAssistant, patch_get_host) -> None:
+async def test_error_invalid_host(menuai: menuai, patch_get_host) -> None:
     """Test we abort if host name is invalid."""
     patch_get_host.side_effect = gaierror
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data=CONFIG_DATA_TELNET,
@@ -199,14 +199,14 @@ async def test_error_invalid_host(hass: HomeAssistant, patch_get_host) -> None:
     assert result["errors"] == {CONF_BASE: "invalid_host"}
 
 
-async def test_abort_if_not_unique_id_setup(hass: HomeAssistant) -> None:
+async def test_abort_if_not_unique_id_setup(menuai: menuai) -> None:
     """Test we abort if component without uniqueid is already setup."""
     MockConfigEntry(
         domain=DOMAIN,
         data=CONFIG_DATA_TELNET,
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data=CONFIG_DATA_TELNET,
@@ -216,7 +216,7 @@ async def test_abort_if_not_unique_id_setup(hass: HomeAssistant) -> None:
 
 
 async def test_update_uniqueid_exist(
-    hass: HomeAssistant, connect_http, patch_setup_entry
+    menuai: menuai, connect_http, patch_setup_entry
 ) -> None:
     """Test we update entry if uniqueid is already configured."""
     existing_entry = MockConfigEntry(
@@ -224,33 +224,33 @@ async def test_update_uniqueid_exist(
         data={**CONFIG_DATA_HTTP, CONF_HOST: "10.10.10.10"},
         unique_id=ROUTER_MAC_ADDR,
     )
-    existing_entry.add_to_hass(hass)
+    existing_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER, "show_advanced_options": True},
         data=CONFIG_DATA_HTTP,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == HOST
     assert result["data"] == CONFIG_DATA_HTTP
-    prev_entry = hass.config_entries.async_get_entry(existing_entry.entry_id)
+    prev_entry = menuai.config_entries.async_get_entry(existing_entry.entry_id)
     assert not prev_entry
 
 
-async def test_abort_invalid_unique_id(hass: HomeAssistant, connect_legacy) -> None:
+async def test_abort_invalid_unique_id(menuai: menuai, connect_legacy) -> None:
     """Test we abort if uniqueid not available."""
     MockConfigEntry(
         domain=DOMAIN,
         data=CONFIG_DATA_TELNET,
         unique_id=ROUTER_MAC_ADDR,
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
     connect_legacy.return_value.async_get_nvram.return_value = {}
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data=CONFIG_DATA_TELNET,
@@ -268,10 +268,10 @@ async def test_abort_invalid_unique_id(hass: HomeAssistant, connect_legacy) -> N
     ],
 )
 async def test_on_connect_legacy_failed(
-    hass: HomeAssistant, connect_legacy, side_effect, error
+    menuai: menuai, connect_legacy, side_effect, error
 ) -> None:
     """Test when we have errors connecting the router with legacy library."""
-    flow_result = await hass.config_entries.flow.async_init(
+    flow_result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER, "show_advanced_options": True},
     )
@@ -280,10 +280,10 @@ async def test_on_connect_legacy_failed(
     connect_legacy.return_value.connection.async_connect.side_effect = side_effect
 
     # go to legacy form
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         flow_result["flow_id"], user_input=CONFIG_DATA_TELNET
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {CONF_BASE: error}
@@ -298,10 +298,10 @@ async def test_on_connect_legacy_failed(
     ],
 )
 async def test_on_connect_http_failed(
-    hass: HomeAssistant, connect_http, side_effect, error
+    menuai: menuai, connect_http, side_effect, error
 ) -> None:
     """Test when we have errors connecting the router with http library."""
-    flow_result = await hass.config_entries.flow.async_init(
+    flow_result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER, "show_advanced_options": True},
     )
@@ -309,33 +309,33 @@ async def test_on_connect_http_failed(
     connect_http.return_value.is_connected = False
     connect_http.return_value.async_connect.side_effect = side_effect
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         flow_result["flow_id"], user_input=CONFIG_DATA_HTTP
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {CONF_BASE: error}
 
 
-async def test_options_flow_ap(hass: HomeAssistant, patch_setup_entry) -> None:
+async def test_options_flow_ap(menuai: menuai, patch_setup_entry) -> None:
     """Test config flow options for ap mode."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
         data={**CONFIG_DATA_TELNET, CONF_MODE: MODE_AP},
         options={CONF_REQUIRE_IP: True},
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
     assert CONF_REQUIRE_IP in result["data_schema"].schema
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             CONF_CONSIDER_HOME: 20,
@@ -356,23 +356,23 @@ async def test_options_flow_ap(hass: HomeAssistant, patch_setup_entry) -> None:
     }
 
 
-async def test_options_flow_router(hass: HomeAssistant, patch_setup_entry) -> None:
+async def test_options_flow_router(menuai: menuai, patch_setup_entry) -> None:
     """Test config flow options for router mode."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
         data={**CONFIG_DATA_TELNET, CONF_MODE: MODE_ROUTER},
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
     assert CONF_REQUIRE_IP not in result["data_schema"].schema
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             CONF_CONSIDER_HOME: 20,
@@ -391,17 +391,17 @@ async def test_options_flow_router(hass: HomeAssistant, patch_setup_entry) -> No
     }
 
 
-async def test_options_flow_http(hass: HomeAssistant, patch_setup_entry) -> None:
+async def test_options_flow_http(menuai: menuai, patch_setup_entry) -> None:
     """Test config flow options for http mode."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
         data={**CONFIG_DATA_HTTP, CONF_MODE: MODE_ROUTER},
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
+    result = await menuai.config_entries.options.async_init(config_entry.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
@@ -409,7 +409,7 @@ async def test_options_flow_http(hass: HomeAssistant, patch_setup_entry) -> None
     assert CONF_DNSMASQ not in result["data_schema"].schema
     assert CONF_REQUIRE_IP not in result["data_schema"].schema
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
             CONF_CONSIDER_HOME: 20,

@@ -7,15 +7,15 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_REAUTH,
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
 )
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import callback
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import callback
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from . import configure_mydevolo
 from .const import DOMAIN, SUPPORTED_MODEL_TYPES
@@ -101,12 +101,12 @@ class DevoloHomeControlFlowHandler(ConfigFlow, domain=DOMAIN):
     async def _connect_mydevolo(self, user_input: dict[str, Any]) -> ConfigFlowResult:
         """Connect to mydevolo."""
         mydevolo = configure_mydevolo(conf=user_input)
-        credentials_valid = await self.hass.async_add_executor_job(
+        credentials_valid = await self.menuai.async_add_executor_job(
             mydevolo.credentials_valid
         )
         if not credentials_valid:
             raise CredentialsInvalid
-        uuid = await self.hass.async_add_executor_job(mydevolo.uuid)
+        uuid = await self.menuai.async_add_executor_job(mydevolo.uuid)
 
         if self.source != SOURCE_REAUTH:
             await self.async_set_unique_id(uuid)

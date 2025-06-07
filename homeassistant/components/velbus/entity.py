@@ -8,9 +8,9 @@ from typing import Any, Concatenate
 
 from velbusaio.channels import Channel as VelbusChannel
 
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity
 
 from .const import DOMAIN
 
@@ -57,11 +57,11 @@ class VelbusEntity(Entity):
             return self._module_adress
         return f"{self._module_adress}-{self._channel.get_channel_number()}"
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Add listener for state changes."""
         self._channel.on_status_update(self._on_update)
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Remove listener for state changes."""
         self._channel.remove_on_status_update(self._on_update)
 
@@ -80,7 +80,7 @@ def api_call[_T: VelbusEntity, **_P](
         try:
             await func(self, *args, **kwargs)
         except OSError as exc:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Could not execute {func.__name__} service for {self.name}"
             ) from exc
 

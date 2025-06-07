@@ -21,23 +21,23 @@ from pyhap.service import Service
 import voluptuous as vol
 from zeroconf.asyncio import AsyncZeroconf
 
-from homeassistant.components import device_automation, network, zeroconf
-from homeassistant.components.binary_sensor import (
+from menuai.components import device_automation, network, zeroconf
+from menuai.components.binary_sensor import (
     DOMAIN as BINARY_SENSOR_DOMAIN,
     BinarySensorDeviceClass,
 )
-from homeassistant.components.camera import DOMAIN as CAMERA_DOMAIN
-from homeassistant.components.device_automation.trigger import (
+from menuai.components.camera import DOMAIN as CAMERA_DOMAIN
+from menuai.components.device_automation.trigger import (
     async_validate_trigger_config,
 )
-from homeassistant.components.event import DOMAIN as EVENT_DOMAIN, EventDeviceClass
-from homeassistant.components.fan import DOMAIN as FAN_DOMAIN
-from homeassistant.components.http import KEY_HASS, HomeAssistantView
-from homeassistant.components.humidifier import DOMAIN as HUMIDIFIER_DOMAIN
-from homeassistant.components.lock import DOMAIN as LOCK_DOMAIN
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN, SensorDeviceClass
-from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
-from homeassistant.const import (
+from menuai.components.event import DOMAIN as EVENT_DOMAIN, EventDeviceClass
+from menuai.components.fan import DOMAIN as FAN_DOMAIN
+from menuai.components.http import KEY_menuai, menuaiView
+from menuai.components.humidifier import DOMAIN as HUMIDIFIER_DOMAIN
+from menuai.components.lock import DOMAIN as LOCK_DOMAIN
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN, SensorDeviceClass
+from menuai.config_entries import SOURCE_IMPORT, ConfigEntry
+from menuai.const import (
     ATTR_BATTERY_CHARGING,
     ATTR_BATTERY_LEVEL,
     ATTR_DEVICE_ID,
@@ -51,38 +51,38 @@ from homeassistant.const import (
     CONF_NAME,
     CONF_PORT,
     CONF_TYPE,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     SERVICE_RELOAD,
 )
-from homeassistant.core import (
+from menuai.core import (
     CALLBACK_TYPE,
-    HomeAssistant,
+    menuai,
     ServiceCall,
     State,
     callback,
 )
-from homeassistant.exceptions import HomeAssistantError, Unauthorized
-from homeassistant.helpers import (
+from menuai.exceptions import menuaiError, Unauthorized
+from menuai.helpers import (
     config_validation as cv,
     device_registry as dr,
     entity_registry as er,
     instance_id,
 )
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entityfilter import (
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entityfilter import (
     BASE_FILTER_SCHEMA,
     FILTER_SCHEMA,
     EntityFilter,
 )
-from homeassistant.helpers.reload import async_integration_yaml_config
-from homeassistant.helpers.service import (
+from menuai.helpers.reload import async_integration_yaml_config
+from menuai.helpers.service import (
     async_extract_referenced_entity_ids,
     async_register_admin_service,
 )
-from homeassistant.helpers.start import async_at_started
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.loader import IntegrationNotFound, async_get_integration
-from homeassistant.util.async_ import create_eager_task
+from menuai.helpers.start import async_at_started
+from menuai.helpers.typing import ConfigType
+from menuai.loader import IntegrationNotFound, async_get_integration
+from menuai.util.async_ import create_eager_task
 
 from . import (  # noqa: F401
     type_air_purifiers,
@@ -231,9 +231,9 @@ UNPAIR_SERVICE_SCHEMA = vol.All(
 
 @callback
 def _async_update_entries_from_yaml(
-    hass: HomeAssistant, config: ConfigType, start_import_flow: bool
+    menuai: menuai, config: ConfigType, start_import_flow: bool
 ) -> None:
-    current_entries = hass.config_entries.async_entries(DOMAIN)
+    current_entries = menuai.config_entries.async_entries(DOMAIN)
     entries_by_name, entries_by_port = _async_get_imported_entries_indices(
         current_entries
     )
@@ -241,14 +241,14 @@ def _async_update_entries_from_yaml(
 
     for index, conf in enumerate(hk_config):
         if _async_update_config_entry_from_yaml(
-            hass, entries_by_name, entries_by_port, conf
+            menuai, entries_by_name, entries_by_port, conf
         ):
             continue
 
         if start_import_flow:
             conf[CONF_ENTRY_INDEX] = index
-            hass.async_create_task(
-                hass.config_entries.flow.async_init(
+            menuai.async_create_task(
+                menuai.config_entries.flow.async_init(
                     DOMAIN,
                     context={"source": SOURCE_IMPORT},
                     data=conf,
@@ -257,12 +257,12 @@ def _async_update_entries_from_yaml(
             )
 
 
-def _async_all_homekit_instances(hass: HomeAssistant) -> list[HomeKit]:
+def _async_all_homekit_instances(menuai: menuai) -> list[HomeKit]:
     """All active HomeKit instances."""
     hk_data: HomeKitEntryData | None
     return [
         hk_data.homekit
-        for entry in hass.config_entries.async_entries(DOMAIN)
+        for entry in menuai.config_entries.async_entries(DOMAIN)
         if (hk_data := getattr(entry, "runtime_data", None))
     ]
 
@@ -284,26 +284,26 @@ def _async_get_imported_entries_indices(
     return entries_by_name, entries_by_port
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the HomeKit from yaml."""
-    hass.data[PERSIST_LOCK_DATA] = asyncio.Lock()
+    menuai.data[PERSIST_LOCK_DATA] = asyncio.Lock()
 
     # Initialize the loader before loading entries to ensure
     # there is no race where multiple entries try to load it
     # at the same time.
-    await hass.async_add_executor_job(get_loader)
+    await menuai.async_add_executor_job(get_loader)
 
-    _async_register_events_and_services(hass)
+    _async_register_events_and_services(menuai)
     if DOMAIN not in config:
         return True
 
-    _async_update_entries_from_yaml(hass, config, start_import_flow=True)
+    _async_update_entries_from_yaml(menuai, config, start_import_flow=True)
     return True
 
 
 @callback
 def _async_update_config_entry_from_yaml(
-    hass: HomeAssistant,
+    menuai: menuai,
     entries_by_name: dict[str, ConfigEntry],
     entries_by_port: dict[int, ConfigEntry],
     conf: ConfigType,
@@ -330,13 +330,13 @@ def _async_update_config_entry_from_yaml(
             options[key] = data[key]
             del data[key]
 
-    hass.config_entries.async_update_entry(matching_entry, data=data, options=options)
+    menuai.config_entries.async_update_entry(matching_entry, data=data, options=options)
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: HomeKitConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: HomeKitConfigEntry) -> bool:
     """Set up HomeKit from a config entry."""
-    _async_import_options_from_data_if_missing(hass, entry)
+    _async_import_options_from_data_if_missing(menuai, entry)
 
     conf = entry.data
     options = entry.options
@@ -348,7 +348,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HomeKitConfigEntry) -> b
     advertise_ips: list[str]
     advertise_ips = conf.get(
         CONF_ADVERTISE_IP
-    ) or await network.async_get_announce_addresses(hass)
+    ) or await network.async_get_announce_addresses(menuai)
 
     # exclude_accessory_mode is only used for config flow
     # to indicate that the config entry was setup after
@@ -367,7 +367,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HomeKitConfigEntry) -> b
     devices: list[str] = options.get(CONF_DEVICES, [])
 
     homekit = HomeKit(
-        hass,
+        menuai,
         name,
         port,
         ip_address,
@@ -383,7 +383,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HomeKitConfigEntry) -> b
 
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
     entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, homekit.async_stop)
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, homekit.async_stop)
     )
 
     entry_data = HomeKitEntryData(
@@ -391,26 +391,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: HomeKitConfigEntry) -> b
     )
     entry.runtime_data = entry_data
 
-    async def _async_start_homekit(hass: HomeAssistant) -> None:
+    async def _async_start_homekit(menuai: menuai) -> None:
         await homekit.async_start()
 
-    entry.async_on_unload(async_at_started(hass, _async_start_homekit))
+    entry.async_on_unload(async_at_started(menuai, _async_start_homekit))
 
     return True
 
 
 async def _async_update_listener(
-    hass: HomeAssistant, entry: HomeKitConfigEntry
+    menuai: menuai, entry: HomeKitConfigEntry
 ) -> None:
     """Handle options update."""
     if entry.source == SOURCE_IMPORT:
         return
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: HomeKitConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: HomeKitConfigEntry) -> bool:
     """Unload a config entry."""
-    async_dismiss_setup_message(hass, entry.entry_id)
+    async_dismiss_setup_message(menuai, entry.entry_id)
     entry_data = entry.runtime_data
     homekit = entry_data.homekit
 
@@ -431,16 +431,16 @@ async def async_unload_entry(hass: HomeAssistant, entry: HomeKitConfigEntry) -> 
     return True
 
 
-async def async_remove_entry(hass: HomeAssistant, entry: HomeKitConfigEntry) -> None:
+async def async_remove_entry(menuai: menuai, entry: HomeKitConfigEntry) -> None:
     """Remove a config entry."""
-    await hass.async_add_executor_job(
-        remove_state_files_for_entry_id, hass, entry.entry_id
+    await menuai.async_add_executor_job(
+        remove_state_files_for_entry_id, menuai, entry.entry_id
     )
 
 
 @callback
 def _async_import_options_from_data_if_missing(
-    hass: HomeAssistant, entry: HomeKitConfigEntry
+    menuai: menuai, entry: HomeKitConfigEntry
 ) -> None:
     options = deepcopy(dict(entry.options))
     data = deepcopy(dict(entry.data))
@@ -452,17 +452,17 @@ def _async_import_options_from_data_if_missing(
             modified = True
 
     if modified:
-        hass.config_entries.async_update_entry(entry, data=data, options=options)
+        menuai.config_entries.async_update_entry(entry, data=data, options=options)
 
 
 @callback
-def _async_register_events_and_services(hass: HomeAssistant) -> None:
+def _async_register_events_and_services(menuai: menuai) -> None:
     """Register events and services for HomeKit."""
-    hass.http.register_view(HomeKitPairingQRView)
+    menuai.http.register_view(HomeKitPairingQRView)
 
     async def async_handle_homekit_reset_accessory(service: ServiceCall) -> None:
         """Handle reset accessory HomeKit service call."""
-        for homekit in _async_all_homekit_instances(hass):
+        for homekit in _async_all_homekit_instances(menuai):
             if homekit.status != STATUS_RUNNING:
                 _LOGGER.warning(
                     "HomeKit is not running. Either it is waiting to be "
@@ -473,7 +473,7 @@ def _async_register_events_and_services(hass: HomeAssistant) -> None:
             entity_ids = cast(list[str], service.data.get("entity_id"))
             await homekit.async_reset_accessories(entity_ids)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_HOMEKIT_RESET_ACCESSORY,
         async_handle_homekit_reset_accessory,
@@ -482,11 +482,11 @@ def _async_register_events_and_services(hass: HomeAssistant) -> None:
 
     async def async_handle_homekit_unpair(service: ServiceCall) -> None:
         """Handle unpair HomeKit service call."""
-        referenced = async_extract_referenced_entity_ids(hass, service)
-        dev_reg = dr.async_get(hass)
+        referenced = async_extract_referenced_entity_ids(menuai, service)
+        dev_reg = dr.async_get(menuai)
         for device_id in referenced.referenced_devices:
             if not (dev_reg_ent := dev_reg.async_get(device_id)):
-                raise HomeAssistantError(f"No device found for device id: {device_id}")
+                raise menuaiError(f"No device found for device id: {device_id}")
             macs = [
                 cval
                 for ctype, cval in dev_reg_ent.connections
@@ -494,17 +494,17 @@ def _async_register_events_and_services(hass: HomeAssistant) -> None:
             ]
             matching_instances = [
                 homekit
-                for homekit in _async_all_homekit_instances(hass)
+                for homekit in _async_all_homekit_instances(menuai)
                 if homekit.driver and dr.format_mac(homekit.driver.state.mac) in macs
             ]
             if not matching_instances:
-                raise HomeAssistantError(
+                raise menuaiError(
                     f"No homekit accessory found for device id: {device_id}"
                 )
             for homekit in matching_instances:
                 homekit.async_unpair()
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_HOMEKIT_UNPAIR,
         async_handle_homekit_unpair,
@@ -513,19 +513,19 @@ def _async_register_events_and_services(hass: HomeAssistant) -> None:
 
     async def _handle_homekit_reload(service: ServiceCall) -> None:
         """Handle start HomeKit service call."""
-        config = await async_integration_yaml_config(hass, DOMAIN)
+        config = await async_integration_yaml_config(menuai, DOMAIN)
         if not config or DOMAIN not in config:
             return
-        _async_update_entries_from_yaml(hass, config, start_import_flow=False)
+        _async_update_entries_from_yaml(menuai, config, start_import_flow=False)
         await asyncio.gather(
             *(
-                create_eager_task(hass.config_entries.async_reload(entry.entry_id))
-                for entry in hass.config_entries.async_entries(DOMAIN)
+                create_eager_task(menuai.config_entries.async_reload(entry.entry_id))
+                for entry in menuai.config_entries.async_entries(DOMAIN)
             )
         )
 
     async_register_admin_service(
-        hass,
+        menuai,
         DOMAIN,
         SERVICE_RELOAD,
         _handle_homekit_reload,
@@ -533,11 +533,11 @@ def _async_register_events_and_services(hass: HomeAssistant) -> None:
 
 
 class HomeKit:
-    """Class to handle all actions between HomeKit and Home Assistant."""
+    """Class to handle all actions between HomeKit and MenuAI."""
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         name: str,
         port: int,
         ip_address: list[str] | str | None,
@@ -551,7 +551,7 @@ class HomeKit:
         devices: list[str] | None = None,
     ) -> None:
         """Initialize a HomeKit object."""
-        self.hass = hass
+        self.menuai = menuai
         self._name = name
         self._port = port
         self._ip_address = ip_address
@@ -581,13 +581,13 @@ class HomeKit:
         Returns False if the persistent data was not loaded
         """
         assert self.iid_storage is not None
-        persist_file = get_persist_fullpath_for_entry_id(self.hass, self._entry_id)
+        persist_file = get_persist_fullpath_for_entry_id(self.menuai, self._entry_id)
         self.driver = HomeDriver(
-            self.hass,
+            self.menuai,
             self._entry_id,
             self._name,
             self._entry_title,
-            loop=self.hass.loop,
+            loop=self.menuai.loop,
             address=self._ip_address,
             port=self._port,
             persist_file=persist_file,
@@ -649,7 +649,7 @@ class HomeKit:
         acc = cast(HomeAccessory, self.driver.accessory)
         if acc.entity_id not in entity_ids:
             return
-        if not (state := self.hass.states.get(acc.entity_id)):
+        if not (state := self.menuai.states.get(acc.entity_id)):
             _LOGGER.warning(
                 "The underlying entity %s disappeared during reload", acc.entity_id
             )
@@ -704,7 +704,7 @@ class HomeKit:
     ) -> None:
         """Recreate removed accessories in bridge mode."""
         for entity_id in removed:
-            if not (state := self.hass.states.get(entity_id)):
+            if not (state := self.menuai.states.get(entity_id)):
                 _LOGGER.warning(
                     "The underlying entity %s disappeared during reload", entity_id
                 )
@@ -759,7 +759,7 @@ class HomeKit:
         # of any kind (usually in pyhap) it should not prevent
         # the rest of the accessories from being created
         try:
-            acc = get_accessory(self.hass, self.driver, state, aid, conf)
+            acc = get_accessory(self.menuai, self.driver, state, aid, conf)
             if acc is not None:
                 self.bridge.add_accessory(acc)
                 return acc
@@ -801,7 +801,7 @@ class HomeKit:
         config: dict[str, Any] = {}
         self._fill_config_from_device_registry_entry(device, config)
         trigger_accessory = DeviceTriggerAccessory(
-            self.hass,
+            self.menuai,
             self.driver,
             device.name,
             None,
@@ -823,13 +823,13 @@ class HomeKit:
 
     async def async_configure_accessories(self) -> list[State]:
         """Configure accessories for the included states."""
-        dev_reg = dr.async_get(self.hass)
-        ent_reg = er.async_get(self.hass)
+        dev_reg = dr.async_get(self.menuai)
+        ent_reg = er.async_get(self.menuai)
         device_lookup: dict[str, dict[tuple[str, str | None], str]] = {}
         entity_states: list[State] = []
         entity_filter = self._filter.get_filter()
         entries = ent_reg.entities
-        for state in self.hass.states.async_all():
+        for state in self.menuai.states.async_all():
             entity_id = state.entity_id
             if not entity_filter(entity_id):
                 continue
@@ -867,18 +867,18 @@ class HomeKit:
             return
         self.status = STATUS_WAIT
         self._cancel_reload_dispatcher = async_dispatcher_connect(
-            self.hass,
+            self.menuai,
             SIGNAL_RELOAD_ENTITIES.format(self._entry_id),
             self.async_reload_accessories,
         )
-        async_zc_instance = await zeroconf.async_get_async_instance(self.hass)
-        uuid = await instance_id.async_get(self.hass)
-        self.aid_storage = AccessoryAidStorage(self.hass, self._entry_id)
-        self.iid_storage = AccessoryIIDStorage(self.hass, self._entry_id)
+        async_zc_instance = await zeroconf.async_get_async_instance(self.menuai)
+        uuid = await instance_id.async_get(self.menuai)
+        self.aid_storage = AccessoryAidStorage(self.menuai, self._entry_id)
+        self.iid_storage = AccessoryIIDStorage(self.menuai, self._entry_id)
         # Avoid gather here since it will be I/O bound anyways
         await self.aid_storage.async_initialize()
         await self.iid_storage.async_initialize()
-        loaded_from_disk = await self.hass.async_add_executor_job(
+        loaded_from_disk = await self.menuai.async_add_executor_job(
             self.setup, async_zc_instance, uuid
         )
         assert self.driver is not None
@@ -892,8 +892,8 @@ class HomeKit:
             # If the state was not loaded from disk, it means this is the
             # first time the bridge is ever starting up. In this case, we
             # need to make sure its persisted to disk.
-            async with self.hass.data[PERSIST_LOCK_DATA]:
-                await self.hass.async_add_executor_job(self.driver.persist)
+            async with self.menuai.data[PERSIST_LOCK_DATA]:
+                await self.menuai.async_add_executor_job(self.driver.persist)
         self.status = STATUS_RUNNING
 
         if self.driver.state.paired:
@@ -906,7 +906,7 @@ class HomeKit:
         assert self.driver is not None
 
         async_show_setup_message(
-            self.hass,
+            self.menuai,
             self._entry_id,
             accessory_friendly_name(self._entry_title, self.driver.accessory),
             self.driver.state.pincode,
@@ -934,7 +934,7 @@ class HomeKit:
     def _async_register_bridge(self) -> None:
         """Register the bridge as a device so homekit_controller and exclude it from discovery."""
         assert self.driver is not None
-        dev_reg = dr.async_get(self.hass)
+        dev_reg = dr.async_get(self.menuai)
         formatted_mac = dr.format_mac(self.driver.state.mac)
         # Connections and identifiers are both used here.
         #
@@ -1000,7 +1000,7 @@ class HomeKit:
             return None
         state = entity_states[0]
         conf = self._config.get(state.entity_id, {}).copy()
-        acc = get_accessory(self.hass, self.driver, state, STANDALONE_AID, conf)
+        acc = get_accessory(self.menuai, self.driver, state, STANDALONE_AID, conf)
         if acc is None:
             _LOGGER.error(
                 "HomeKit %s cannot startup: entity not supported: %s",
@@ -1015,7 +1015,7 @@ class HomeKit:
         """Create a HomeKit bridge with accessories. (bridge mode)."""
         assert self.driver is not None
 
-        self.bridge = HomeBridge(self.hass, self.driver, self._name)
+        self.bridge = HomeBridge(self.menuai, self.driver, self._name)
         for state in entity_states:
             self.add_bridge_accessory(state)
         if self._devices:
@@ -1024,7 +1024,7 @@ class HomeKit:
 
     async def _async_add_trigger_accessories(self) -> None:
         """Add devices with triggers to the bridge."""
-        dev_reg = dr.async_get(self.hass)
+        dev_reg = dr.async_get(self.menuai)
         valid_device_ids = []
         for device_id in self._devices:
             if not dev_reg.async_get(device_id):
@@ -1040,7 +1040,7 @@ class HomeKit:
                 valid_device_ids.append(device_id)
         for device_id, device_triggers in (
             await device_automation.async_get_device_automations(
-                self.hass,
+                self.menuai,
                 device_automation.DeviceAutomationType.TRIGGER,
                 valid_device_ids,
             )
@@ -1050,7 +1050,7 @@ class HomeKit:
             valid_device_triggers: list[dict[str, Any]] = []
             for trigger in device_triggers:
                 try:
-                    await async_validate_trigger_config(self.hass, trigger)
+                    await async_validate_trigger_config(self.menuai, trigger)
                 except vol.Invalid as ex:
                     _LOGGER.debug(
                         (
@@ -1180,7 +1180,7 @@ class HomeKit:
         if ATTR_MANUFACTURER not in ent_cfg:
             try:
                 integration = await async_get_integration(
-                    self.hass, ent_reg_ent.platform
+                    self.menuai, ent_reg_ent.platform
                 )
                 ent_cfg[ATTR_INTEGRATION] = integration.name
             except IntegrationNotFound:
@@ -1200,11 +1200,11 @@ class HomeKit:
             config[ATTR_HW_VERSION] = device_entry.hw_version
         if device_entry.config_entries:
             first_entry = list(device_entry.config_entries)[0]
-            if entry := self.hass.config_entries.async_get_entry(first_entry):
+            if entry := self.menuai.config_entries.async_get_entry(first_entry):
                 config[ATTR_INTEGRATION] = entry.domain
 
 
-class HomeKitPairingQRView(HomeAssistantView):
+class HomeKitPairingQRView(menuaiView):
     """Display the homekit pairing code at a protected url."""
 
     url = "/api/homekit/pairingqr"
@@ -1216,10 +1216,10 @@ class HomeKitPairingQRView(HomeAssistantView):
         if not request.query_string:
             raise Unauthorized
         entry_id, secret = request.query_string.split("-")
-        hass = request.app[KEY_HASS]
+        menuai = request.app[KEY_menuai]
         entry_data: HomeKitEntryData | None
         if (
-            not (entry := hass.config_entries.async_get_entry(entry_id))
+            not (entry := menuai.config_entries.async_get_entry(entry_id))
             or not (entry_data := getattr(entry, "runtime_data", None))
             or not secret
             or not entry_data.pairing_qr_secret

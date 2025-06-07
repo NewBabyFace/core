@@ -14,7 +14,7 @@ from demetriek import (
 )
 import pytest
 
-from homeassistant.components.lametric.const import (
+from menuai.components.lametric.const import (
     CONF_CYCLES,
     CONF_DATA,
     CONF_ICON_TYPE,
@@ -25,16 +25,16 @@ from homeassistant.components.lametric.const import (
     SERVICE_CHART,
     SERVICE_MESSAGE,
 )
-from homeassistant.const import CONF_DEVICE_ID, CONF_ICON
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from menuai.const import CONF_DEVICE_ID, CONF_ICON
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
 
 pytestmark = pytest.mark.usefixtures("init_integration")
 
 
 async def test_service_chart(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_lametric: MagicMock,
 ) -> None:
@@ -44,7 +44,7 @@ async def test_service_chart(
     assert entry
     assert entry.device_id
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_CHART,
         {
@@ -70,7 +70,7 @@ async def test_service_chart(
     assert type(frame) is Chart
     assert frame.data == [1, 2, 3, 4, 5, 4, 3, 2, 1]
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_CHART,
         {
@@ -105,9 +105,9 @@ async def test_service_chart(
 
     mock_lametric.notify.side_effect = LaMetricError
     with pytest.raises(
-        HomeAssistantError, match="Could not send LaMetric notification"
+        menuaiError, match="Could not send LaMetric notification"
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_CHART,
             {
@@ -121,7 +121,7 @@ async def test_service_chart(
 
 
 async def test_service_message(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_lametric: MagicMock,
 ) -> None:
@@ -131,7 +131,7 @@ async def test_service_message(
     assert entry
     assert entry.device_id
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_MESSAGE,
         {
@@ -158,7 +158,7 @@ async def test_service_message(
     assert frame.icon is None
     assert frame.text == "Hi!"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_MESSAGE,
         {
@@ -195,9 +195,9 @@ async def test_service_message(
 
     mock_lametric.notify.side_effect = LaMetricError
     with pytest.raises(
-        HomeAssistantError, match="Could not send LaMetric notification"
+        menuaiError, match="Could not send LaMetric notification"
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_MESSAGE,
             {

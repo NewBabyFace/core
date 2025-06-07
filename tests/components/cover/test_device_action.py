@@ -3,14 +3,14 @@
 import pytest
 from pytest_unordered import unordered
 
-from homeassistant.components import automation
-from homeassistant.components.cover import DOMAIN, CoverEntityFeature
-from homeassistant.components.device_automation import DeviceAutomationType
-from homeassistant.const import CONF_PLATFORM, EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.entity_registry import RegistryEntryHider
-from homeassistant.setup import async_setup_component
+from menuai.components import automation
+from menuai.components.cover import DOMAIN, CoverEntityFeature
+from menuai.components.device_automation import DeviceAutomationType
+from menuai.const import CONF_PLATFORM, EntityCategory
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.entity_registry import RegistryEntryHider
+from menuai.setup import async_setup_component
 
 from .common import MockCover
 
@@ -50,7 +50,7 @@ def stub_blueprint_populate_autouse(stub_blueprint_populate: None) -> None:
     ],
 )
 async def test_get_actions(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     set_state,
@@ -60,7 +60,7 @@ async def test_get_actions(
 ) -> None:
     """Test we get the expected actions from a cover."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -73,10 +73,10 @@ async def test_get_actions(
         supported_features=features_reg,
     )
     if set_state:
-        hass.states.async_set(
+        menuai.states.async_set(
             entity_entry.entity_id, "attributes", {"supported_features": features_state}
         )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     expected_actions = []
     expected_actions += [
@@ -90,7 +90,7 @@ async def test_get_actions(
         for action in expected_action_types
     ]
     actions = await async_get_device_automations(
-        hass, DeviceAutomationType.ACTION, device_entry.id
+        menuai, DeviceAutomationType.ACTION, device_entry.id
     )
     assert actions == unordered(expected_actions)
 
@@ -105,7 +105,7 @@ async def test_get_actions(
     ],
 )
 async def test_get_actions_hidden_auxiliary(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     hidden_by,
@@ -113,7 +113,7 @@ async def test_get_actions_hidden_auxiliary(
 ) -> None:
     """Test we get the expected actions from a hidden or auxiliary entity."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -139,13 +139,13 @@ async def test_get_actions_hidden_auxiliary(
         for action in ("close",)
     ]
     actions = await async_get_device_automations(
-        hass, DeviceAutomationType.ACTION, device_entry.id
+        menuai, DeviceAutomationType.ACTION, device_entry.id
     )
     assert actions == unordered(expected_actions)
 
 
 async def test_get_action_capabilities(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
@@ -161,12 +161,12 @@ async def test_get_action_capabilities(
         | CoverEntityFeature.CLOSE_TILT
         | CoverEntityFeature.STOP_TILT,
     )
-    setup_test_component_platform(hass, DOMAIN, [ent])
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
-    await hass.async_block_till_done()
+    setup_test_component_platform(menuai, DOMAIN, [ent])
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
+    await menuai.async_block_till_done()
 
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -176,20 +176,20 @@ async def test_get_action_capabilities(
     )
 
     actions = await async_get_device_automations(
-        hass, DeviceAutomationType.ACTION, device_entry.id
+        menuai, DeviceAutomationType.ACTION, device_entry.id
     )
     assert len(actions) == 5  # open, close, open_tilt, close_tilt
     action_types = {action["type"] for action in actions}
     assert action_types == {"open", "close", "stop", "open_tilt", "close_tilt"}
     for action in actions:
         capabilities = await async_get_device_automation_capabilities(
-            hass, DeviceAutomationType.ACTION, action
+            menuai, DeviceAutomationType.ACTION, action
         )
         assert capabilities == {"extra_fields": []}
 
 
 async def test_get_action_capabilities_legacy(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
@@ -205,12 +205,12 @@ async def test_get_action_capabilities_legacy(
         | CoverEntityFeature.CLOSE_TILT
         | CoverEntityFeature.STOP_TILT,
     )
-    setup_test_component_platform(hass, DOMAIN, [ent])
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
-    await hass.async_block_till_done()
+    setup_test_component_platform(menuai, DOMAIN, [ent])
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
+    await menuai.async_block_till_done()
 
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -220,7 +220,7 @@ async def test_get_action_capabilities_legacy(
     )
 
     actions = await async_get_device_automations(
-        hass, DeviceAutomationType.ACTION, device_entry.id
+        menuai, DeviceAutomationType.ACTION, device_entry.id
     )
     assert len(actions) == 5  # open, close, open_tilt, close_tilt
     action_types = {action["type"] for action in actions}
@@ -228,25 +228,25 @@ async def test_get_action_capabilities_legacy(
     for action in actions:
         action["entity_id"] = entity_registry.async_get(action["entity_id"]).entity_id
         capabilities = await async_get_device_automation_capabilities(
-            hass, DeviceAutomationType.ACTION, action
+            menuai, DeviceAutomationType.ACTION, action
         )
         assert capabilities == {"extra_fields": []}
 
 
 async def test_get_action_capabilities_set_pos(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     mock_cover_entities: list[MockCover],
 ) -> None:
     """Test we get the expected capabilities from a cover action."""
-    setup_test_component_platform(hass, DOMAIN, mock_cover_entities)
+    setup_test_component_platform(menuai, DOMAIN, mock_cover_entities)
     ent = mock_cover_entities[1]
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
+    await menuai.async_block_till_done()
 
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -268,14 +268,14 @@ async def test_get_action_capabilities_set_pos(
         ]
     }
     actions = await async_get_device_automations(
-        hass, DeviceAutomationType.ACTION, device_entry.id
+        menuai, DeviceAutomationType.ACTION, device_entry.id
     )
     assert len(actions) == 4  # set_position, open, close, stop
     action_types = {action["type"] for action in actions}
     assert action_types == {"set_position", "open", "close", "stop"}
     for action in actions:
         capabilities = await async_get_device_automation_capabilities(
-            hass, DeviceAutomationType.ACTION, action
+            menuai, DeviceAutomationType.ACTION, action
         )
         if action["type"] == "set_position":
             assert capabilities == expected_capabilities
@@ -284,19 +284,19 @@ async def test_get_action_capabilities_set_pos(
 
 
 async def test_get_action_capabilities_set_tilt_pos(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     mock_cover_entities: list[MockCover],
 ) -> None:
     """Test we get the expected capabilities from a cover action."""
-    setup_test_component_platform(hass, DOMAIN, mock_cover_entities)
+    setup_test_component_platform(menuai, DOMAIN, mock_cover_entities)
     ent = mock_cover_entities[3]
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {CONF_PLATFORM: "test"}})
+    await menuai.async_block_till_done()
 
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -318,7 +318,7 @@ async def test_get_action_capabilities_set_tilt_pos(
         ]
     }
     actions = await async_get_device_automations(
-        hass, DeviceAutomationType.ACTION, device_entry.id
+        menuai, DeviceAutomationType.ACTION, device_entry.id
     )
     assert len(actions) == 5
     action_types = {action["type"] for action in actions}
@@ -331,7 +331,7 @@ async def test_get_action_capabilities_set_tilt_pos(
     }
     for action in actions:
         capabilities = await async_get_device_automation_capabilities(
-            hass, DeviceAutomationType.ACTION, action
+            menuai, DeviceAutomationType.ACTION, action
         )
         if action["type"] == "set_tilt_position":
             assert capabilities == expected_capabilities
@@ -340,14 +340,14 @@ async def test_get_action_capabilities_set_tilt_pos(
 
 
 async def test_action(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     mock_cover_entities: list[MockCover],
 ) -> None:
     """Test for cover actions."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -357,7 +357,7 @@ async def test_action(
     )
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -391,26 +391,26 @@ async def test_action(
             ]
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    open_calls = async_mock_service(hass, "cover", "open_cover")
-    close_calls = async_mock_service(hass, "cover", "close_cover")
-    stop_calls = async_mock_service(hass, "cover", "stop_cover")
+    open_calls = async_mock_service(menuai, "cover", "open_cover")
+    close_calls = async_mock_service(menuai, "cover", "close_cover")
+    stop_calls = async_mock_service(menuai, "cover", "stop_cover")
 
-    hass.bus.async_fire("test_event_open")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event_open")
+    await menuai.async_block_till_done()
     assert len(open_calls) == 1
     assert len(close_calls) == 0
     assert len(stop_calls) == 0
 
-    hass.bus.async_fire("test_event_close")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event_close")
+    await menuai.async_block_till_done()
     assert len(open_calls) == 1
     assert len(close_calls) == 1
     assert len(stop_calls) == 0
 
-    hass.bus.async_fire("test_event_stop")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event_stop")
+    await menuai.async_block_till_done()
     assert len(open_calls) == 1
     assert len(close_calls) == 1
     assert len(stop_calls) == 1
@@ -427,14 +427,14 @@ async def test_action(
 
 
 async def test_action_legacy(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     mock_cover_entities: list[MockCover],
 ) -> None:
     """Test for cover actions."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -444,7 +444,7 @@ async def test_action_legacy(
     )
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -460,12 +460,12 @@ async def test_action_legacy(
             ]
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    open_calls = async_mock_service(hass, "cover", "open_cover")
+    open_calls = async_mock_service(menuai, "cover", "open_cover")
 
-    hass.bus.async_fire("test_event_open")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event_open")
+    await menuai.async_block_till_done()
     assert len(open_calls) == 1
 
     assert open_calls[0].domain == DOMAIN
@@ -474,14 +474,14 @@ async def test_action_legacy(
 
 
 async def test_action_tilt(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     mock_cover_entities: list[MockCover],
 ) -> None:
     """Test for cover tilt actions."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -491,7 +491,7 @@ async def test_action_tilt(
     )
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -516,23 +516,23 @@ async def test_action_tilt(
             ]
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    open_calls = async_mock_service(hass, "cover", "open_cover_tilt")
-    close_calls = async_mock_service(hass, "cover", "close_cover_tilt")
+    open_calls = async_mock_service(menuai, "cover", "open_cover_tilt")
+    close_calls = async_mock_service(menuai, "cover", "close_cover_tilt")
 
-    hass.bus.async_fire("test_event_open")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event_open")
+    await menuai.async_block_till_done()
     assert len(open_calls) == 1
     assert len(close_calls) == 0
 
-    hass.bus.async_fire("test_event_close")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event_close")
+    await menuai.async_block_till_done()
     assert len(open_calls) == 1
     assert len(close_calls) == 1
 
-    hass.bus.async_fire("test_event_stop")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event_stop")
+    await menuai.async_block_till_done()
     assert len(open_calls) == 1
     assert len(close_calls) == 1
 
@@ -545,14 +545,14 @@ async def test_action_tilt(
 
 
 async def test_action_set_position(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     mock_cover_entities: list[MockCover],
 ) -> None:
     """Test for cover set position actions."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -562,7 +562,7 @@ async def test_action_set_position(
     )
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -595,18 +595,18 @@ async def test_action_set_position(
             ]
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    cover_pos_calls = async_mock_service(hass, "cover", "set_cover_position")
-    tilt_pos_calls = async_mock_service(hass, "cover", "set_cover_tilt_position")
+    cover_pos_calls = async_mock_service(menuai, "cover", "set_cover_position")
+    tilt_pos_calls = async_mock_service(menuai, "cover", "set_cover_tilt_position")
 
-    hass.bus.async_fire("test_event_set_pos")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event_set_pos")
+    await menuai.async_block_till_done()
     assert len(cover_pos_calls) == 1
     assert len(tilt_pos_calls) == 0
 
-    hass.bus.async_fire("test_event_set_tilt_pos")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event_set_tilt_pos")
+    await menuai.async_block_till_done()
     assert len(cover_pos_calls) == 1
     assert len(tilt_pos_calls) == 1
 

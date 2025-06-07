@@ -12,17 +12,17 @@ from google.genai.errors import APIError, ClientError
 from requests.exceptions import Timeout
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_REAUTH,
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_API_KEY, CONF_LLM_HASS_API, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import llm
-from homeassistant.helpers.selector import (
+from menuai.const import CONF_API_KEY, CONF_LLM_menuai_API, CONF_NAME
+from menuai.core import menuai
+from menuai.helpers import llm
+from menuai.helpers.selector import (
     NumberSelector,
     NumberSelectorConfig,
     SelectOptionDict,
@@ -66,7 +66,7 @@ STEP_API_DATA_SCHEMA = vol.Schema(
 
 RECOMMENDED_OPTIONS = {
     CONF_RECOMMENDED: True,
-    CONF_LLM_HASS_API: llm.LLM_API_ASSIST,
+    CONF_LLM_menuai_API: llm.LLM_API_ASSIST,
     CONF_PROMPT: llm.DEFAULT_INSTRUCTIONS_PROMPT,
 }
 
@@ -183,10 +183,10 @@ class GoogleGenerativeAIOptionsFlow(OptionsFlow):
 
         if user_input is not None:
             if user_input[CONF_RECOMMENDED] == self.last_rendered_recommended:
-                if not user_input.get(CONF_LLM_HASS_API):
-                    user_input.pop(CONF_LLM_HASS_API, None)
+                if not user_input.get(CONF_LLM_menuai_API):
+                    user_input.pop(CONF_LLM_menuai_API, None)
                 if not (
-                    user_input.get(CONF_LLM_HASS_API)
+                    user_input.get(CONF_LLM_menuai_API)
                     and user_input.get(CONF_USE_GOOGLE_SEARCH_TOOL, False) is True
                 ):
                     # Don't allow to save options that enable the Google Seearch tool with an Assist API
@@ -199,7 +199,7 @@ class GoogleGenerativeAIOptionsFlow(OptionsFlow):
             options = user_input
 
         schema = await google_generative_ai_config_option_schema(
-            self.hass, options, self._genai_client
+            self.menuai, options, self._genai_client
         )
         return self.async_show_form(
             step_id="init", data_schema=vol.Schema(schema), errors=errors
@@ -207,19 +207,19 @@ class GoogleGenerativeAIOptionsFlow(OptionsFlow):
 
 
 async def google_generative_ai_config_option_schema(
-    hass: HomeAssistant,
+    menuai: menuai,
     options: Mapping[str, Any],
     genai_client: genai.Client,
 ) -> dict:
     """Return a schema for Google Generative AI completion options."""
-    hass_apis: list[SelectOptionDict] = [
+    menuai_apis: list[SelectOptionDict] = [
         SelectOptionDict(
             label=api.name,
             value=api.id,
         )
-        for api in llm.async_get_apis(hass)
+        for api in llm.async_get_apis(menuai)
     ]
-    if (suggested_llm_apis := options.get(CONF_LLM_HASS_API)) and isinstance(
+    if (suggested_llm_apis := options.get(CONF_LLM_menuai_API)) and isinstance(
         suggested_llm_apis, str
     ):
         suggested_llm_apis = [suggested_llm_apis]
@@ -234,9 +234,9 @@ async def google_generative_ai_config_option_schema(
             },
         ): TemplateSelector(),
         vol.Optional(
-            CONF_LLM_HASS_API,
+            CONF_LLM_menuai_API,
             description={"suggested_value": suggested_llm_apis},
-        ): SelectSelector(SelectSelectorConfig(options=hass_apis, multiple=True)),
+        ): SelectSelector(SelectSelectorConfig(options=menuai_apis, multiple=True)),
         vol.Required(
             CONF_RECOMMENDED, default=options.get(CONF_RECOMMENDED, False)
         ): bool,

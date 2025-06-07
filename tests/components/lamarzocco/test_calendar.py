@@ -7,16 +7,16 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.calendar import (
+from menuai.components.calendar import (
     DOMAIN as CALENDAR_DOMAIN,
     EVENT_END_DATETIME,
     EVENT_START_DATETIME,
     SERVICE_GET_EVENTS,
 )
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.util import dt as dt_util
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.util import dt as dt_util
 
 from . import WAKE_UP_SLEEP_ENTRY_IDS, async_init_integration
 
@@ -24,7 +24,7 @@ from tests.common import MockConfigEntry
 
 
 async def test_calendar_events(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_lamarzocco: MagicMock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
@@ -36,13 +36,13 @@ async def test_calendar_events(
     test_time = datetime(2024, 1, 12, 11, tzinfo=dt_util.get_default_time_zone())
     freezer.move_to(test_time)
 
-    await async_init_integration(hass, mock_config_entry)
+    await async_init_integration(menuai, mock_config_entry)
 
     serial_number = mock_lamarzocco.serial_number
 
     for identifier in WAKE_UP_SLEEP_ENTRY_IDS:
         identifier = identifier.lower()
-        state = hass.states.get(
+        state = menuai.states.get(
             f"calendar.{serial_number}_auto_on_off_schedule_{identifier}"
         )
         assert state
@@ -56,7 +56,7 @@ async def test_calendar_events(
             name=f"entry.{serial_number}_auto_on_off_schedule_{identifier}"
         )
 
-        events = await hass.services.async_call(
+        events = await menuai.services.async_call(
             CALENDAR_DOMAIN,
             SERVICE_GET_EVENTS,
             {
@@ -88,7 +88,7 @@ async def test_calendar_events(
     ],
 )
 async def test_calendar_edge_cases(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_lamarzocco: MagicMock,
     mock_config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
@@ -99,9 +99,9 @@ async def test_calendar_edge_cases(
     start_date = start_date.replace(tzinfo=dt_util.get_default_time_zone())
     end_date = end_date.replace(tzinfo=dt_util.get_default_time_zone())
 
-    await async_init_integration(hass, mock_config_entry)
+    await async_init_integration(menuai, mock_config_entry)
 
-    events = await hass.services.async_call(
+    events = await menuai.services.async_call(
         CALENDAR_DOMAIN,
         SERVICE_GET_EVENTS,
         {
@@ -117,7 +117,7 @@ async def test_calendar_edge_cases(
 
 
 async def test_no_calendar_events_global_disable(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_lamarzocco: MagicMock,
     mock_config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
@@ -136,16 +136,16 @@ async def test_no_calendar_events_global_disable(
     test_time = datetime(2024, 1, 12, 11, tzinfo=dt_util.get_default_time_zone())
     freezer.move_to(test_time)
 
-    await async_init_integration(hass, mock_config_entry)
+    await async_init_integration(menuai, mock_config_entry)
 
     serial_number = mock_lamarzocco.serial_number
 
-    state = hass.states.get(
+    state = menuai.states.get(
         f"calendar.{serial_number}_auto_on_off_schedule_{wake_up_sleep_entry_id.lower()}"
     )
     assert state
 
-    events = await hass.services.async_call(
+    events = await menuai.services.async_call(
         CALENDAR_DOMAIN,
         SERVICE_GET_EVENTS,
         {

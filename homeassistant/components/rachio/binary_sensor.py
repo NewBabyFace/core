@@ -5,16 +5,16 @@ from dataclasses import dataclass
 import logging
 from typing import Any
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import EntityCategory
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity import Entity
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
     KEY_BATTERY,
@@ -106,17 +106,17 @@ HOSE_TIMER_BINARY_SENSOR_TYPES: tuple[RachioHoseTimerBinarySensorDescription, ..
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: RachioConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Rachio binary sensors."""
-    entities = await hass.async_add_executor_job(_create_entities, hass, config_entry)
+    entities = await menuai.async_add_executor_job(_create_entities, menuai, config_entry)
     async_add_entities(entities)
 
 
 def _create_entities(
-    hass: HomeAssistant, config_entry: RachioConfigEntry
+    menuai: menuai, config_entry: RachioConfigEntry
 ) -> list[Entity]:
     entities: list[Entity] = []
     person = config_entry.runtime_data
@@ -173,13 +173,13 @@ class RachioControllerBinarySensor(RachioDevice, BinarySensorEntity):
 
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to updates."""
         self._attr_is_on = self.entity_description.is_on(self._controller)
 
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 self.entity_description.signal_string,
                 self._async_handle_any_update,
             )

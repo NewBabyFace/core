@@ -7,15 +7,15 @@ from aiopyarr import ArrException
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.const import (
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.const import (
     ATTR_UNIT_OF_MEASUREMENT,
     STATE_UNAVAILABLE,
     UnitOfInformation,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.util import dt as dt_util
 
 from tests.common import MockConfigEntry, async_fire_time_changed
 
@@ -24,7 +24,7 @@ UPCOMING_ENTITY_ID = f"{SENSOR_DOMAIN}.sonarr_upcoming"
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_config_entry: MockConfigEntry,
     mock_sonarr: MagicMock,
@@ -38,45 +38,45 @@ async def test_sensors(
         "wanted": "sonarr_wanted",
     }
 
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     for unique, oid in sensors.items():
         entity = entity_registry.async_get(f"sensor.{oid}")
         assert entity
         assert entity.unique_id == f"{mock_config_entry.entry_id}_{unique}"
 
-    state = hass.states.get("sensor.sonarr_commands")
+    state = menuai.states.get("sensor.sonarr_commands")
     assert state
     assert state.attributes.get(ATTR_UNIT_OF_MEASUREMENT) == "commands"
     assert state.state == "2"
 
-    state = hass.states.get("sensor.sonarr_disk_space")
+    state = menuai.states.get("sensor.sonarr_disk_space")
     assert state
     assert state.attributes.get(ATTR_UNIT_OF_MEASUREMENT) == UnitOfInformation.GIGABYTES
     assert state.attributes.get("C:\\") == "263.10/465.42GB (56.53%)"
     assert state.state == "263.10"
 
-    state = hass.states.get("sensor.sonarr_queue")
+    state = menuai.states.get("sensor.sonarr_queue")
     assert state
     assert state.attributes.get(ATTR_UNIT_OF_MEASUREMENT) == "episodes"
     assert state.attributes.get("The Andy Griffith Show S01E01") == "100.00%"
     assert state.state == "1"
 
-    state = hass.states.get("sensor.sonarr_shows")
+    state = menuai.states.get("sensor.sonarr_shows")
     assert state
     assert state.attributes.get(ATTR_UNIT_OF_MEASUREMENT) == "series"
     assert state.attributes.get("The Andy Griffith Show") == "0/0 Episodes"
     assert state.state == "1"
 
-    state = hass.states.get("sensor.sonarr_upcoming")
+    state = menuai.states.get("sensor.sonarr_upcoming")
     assert state
     assert state.attributes.get(ATTR_UNIT_OF_MEASUREMENT) == "episodes"
     assert state.attributes.get("Bob's Burgers") == "S04E11"
     assert state.state == "1"
 
-    state = hass.states.get("sensor.sonarr_wanted")
+    state = menuai.states.get("sensor.sonarr_wanted")
     assert state
     assert state.attributes.get(ATTR_UNIT_OF_MEASUREMENT) == "episodes"
     assert state.attributes.get("Bob's Burgers S04E11") == "2014-01-26T17:30:00-08:00"
@@ -98,13 +98,13 @@ async def test_sensors(
     ],
 )
 async def test_disabled_by_default_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     init_integration: MockConfigEntry,
     entity_id: str,
 ) -> None:
     """Test the disabled by default sensors."""
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state is None
 
     entry = entity_registry.async_get(entity_id)
@@ -114,7 +114,7 @@ async def test_disabled_by_default_sensors(
 
 
 async def test_availability(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     mock_config_entry: MockConfigEntry,
     mock_sonarr: MagicMock,
@@ -122,54 +122,54 @@ async def test_availability(
     """Test entity availability."""
     now = dt_util.utcnow()
 
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
     freezer.move_to(now)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(UPCOMING_ENTITY_ID)
-    assert hass.states.get(UPCOMING_ENTITY_ID).state == "1"
+    assert menuai.states.get(UPCOMING_ENTITY_ID)
+    assert menuai.states.get(UPCOMING_ENTITY_ID).state == "1"
 
     # state to unavailable
     mock_sonarr.async_get_calendar.side_effect = ArrException
 
     future = now + timedelta(minutes=1)
     freezer.move_to(future)
-    async_fire_time_changed(hass, future)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, future)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(UPCOMING_ENTITY_ID)
-    assert hass.states.get(UPCOMING_ENTITY_ID).state == STATE_UNAVAILABLE
+    assert menuai.states.get(UPCOMING_ENTITY_ID)
+    assert menuai.states.get(UPCOMING_ENTITY_ID).state == STATE_UNAVAILABLE
 
     # state to available
     mock_sonarr.async_get_calendar.side_effect = None
 
     future += timedelta(minutes=1)
     freezer.move_to(future)
-    async_fire_time_changed(hass, future)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, future)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(UPCOMING_ENTITY_ID)
-    assert hass.states.get(UPCOMING_ENTITY_ID).state == "1"
+    assert menuai.states.get(UPCOMING_ENTITY_ID)
+    assert menuai.states.get(UPCOMING_ENTITY_ID).state == "1"
 
     # state to unavailable
     mock_sonarr.async_get_calendar.side_effect = ArrException
 
     future += timedelta(minutes=1)
     freezer.move_to(future)
-    async_fire_time_changed(hass, future)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, future)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(UPCOMING_ENTITY_ID)
-    assert hass.states.get(UPCOMING_ENTITY_ID).state == STATE_UNAVAILABLE
+    assert menuai.states.get(UPCOMING_ENTITY_ID)
+    assert menuai.states.get(UPCOMING_ENTITY_ID).state == STATE_UNAVAILABLE
 
     # state to available
     mock_sonarr.async_get_calendar.side_effect = None
 
     future += timedelta(minutes=1)
     freezer.move_to(future)
-    async_fire_time_changed(hass, future)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, future)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(UPCOMING_ENTITY_ID)
-    assert hass.states.get(UPCOMING_ENTITY_ID).state == "1"
+    assert menuai.states.get(UPCOMING_ENTITY_ID)
+    assert menuai.states.get(UPCOMING_ENTITY_ID).state == "1"

@@ -6,11 +6,11 @@ import asyncio
 
 from pyhomeworks.pyhomeworks import Homeworks
 
-from homeassistant.components.button import ButtonEntity
-from homeassistant.const import CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.button import ButtonEntity
+from menuai.const import CONF_NAME
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import HomeworksConfigEntry
 from .const import (
@@ -26,7 +26,7 @@ from .entity import HomeworksEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: HomeworksConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -71,14 +71,14 @@ class HomeworksButton(HomeworksEntity, ButtonEntity):
 
     async def async_press(self) -> None:
         """Press the button."""
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             self._controller._send,  # noqa: SLF001
             f"KBP, {self._addr}, {self._idx}",
         )
         if not self._release_delay:
             return
         await asyncio.sleep(self._release_delay)
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             self._controller._send,  # noqa: SLF001
             f"KBR, {self._addr}, {self._idx}",
         )

@@ -10,18 +10,18 @@ from aioshelly.const import MODEL_25
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.components.shelly.const import (
+from menuai.components.shelly.const import (
     CONF_GEN,
     CONF_SLEEP_PERIOD,
     DOMAIN,
     REST_SENSORS_UPDATE_INTERVAL,
     RPC_SENSORS_POLLING_INTERVAL,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_MODEL
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.device_registry import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, CONF_MODEL
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.helpers.device_registry import (
     CONNECTION_NETWORK_MAC,
     DeviceEntry,
     DeviceRegistry,
@@ -34,7 +34,7 @@ MOCK_MAC = "123456789ABC"
 
 
 async def init_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     gen: int | None,
     model=MODEL_25,
     sleep_period=0,
@@ -42,7 +42,7 @@ async def init_integration(
     skip_setup: bool = False,
     data: dict[str, Any] | None = None,
 ) -> MockConfigEntry:
-    """Set up the Shelly integration in Home Assistant."""
+    """Set up the Shelly integration in MenuAI."""
     if data is None:
         data = {
             CONF_HOST: "192.168.1.37",
@@ -55,11 +55,11 @@ async def init_integration(
     entry = MockConfigEntry(
         domain=DOMAIN, data=data, unique_id=MOCK_MAC, options=options, title="Test name"
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     if not skip_setup:
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     return entry
 
@@ -88,27 +88,27 @@ def inject_rpc_device_event(
 
 
 async def mock_rest_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     seconds=REST_SENSORS_UPDATE_INTERVAL,
 ) -> None:
     """Move time to create REST sensors update event."""
     freezer.tick(timedelta(seconds=seconds))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
 
 async def mock_polling_rpc_update(
-    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+    menuai: menuai, freezer: FrozenDateTimeFactory
 ) -> None:
     """Move time to create polling RPC sensors update event."""
     freezer.tick(timedelta(seconds=RPC_SENSORS_POLLING_INTERVAL))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
 
 def register_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     domain: str,
     object_id: str,
     unique_id: str,
@@ -117,7 +117,7 @@ def register_entity(
     device_id: str | None = None,
 ) -> str:
     """Register enabled entity, return entity_id."""
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
     entity_registry.async_get_or_create(
         domain,
         DOMAIN,
@@ -132,12 +132,12 @@ def register_entity(
 
 
 def get_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     domain: str,
     unique_id: str,
 ) -> str | None:
     """Get Shelly entity."""
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
     return entity_registry.async_get_entity_id(
         domain, DOMAIN, f"{MOCK_MAC}-{unique_id}"
     )

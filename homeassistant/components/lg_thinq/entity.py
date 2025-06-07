@@ -10,11 +10,11 @@ from thinqconnect import ThinQAPIException
 from thinqconnect.devices.const import Location
 from thinqconnect.integration import PropertyState
 
-from homeassistant.core import callback
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.entity import EntityDescription
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.core import callback
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import device_registry as dr
+from menuai.helpers.entity import EntityDescription
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import COMPANY, DEVICE_UNIT_TO_HA, DOMAIN
 from .coordinator import DeviceDataUpdateCoordinator
@@ -83,9 +83,9 @@ class ThinQEntity(CoordinatorEntity[DeviceDataUpdateCoordinator]):
         self._update_status()
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
-        """Call when entity is added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Call when entity is added to menuai."""
+        await super().async_added_to_menuai()
         self._handle_coordinator_update()
 
     async def async_call_api(

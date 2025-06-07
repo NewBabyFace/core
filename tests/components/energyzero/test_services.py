@@ -6,25 +6,25 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 import voluptuous as vol
 
-from homeassistant.components.energyzero.const import DOMAIN
-from homeassistant.components.energyzero.services import (
+from menuai.components.energyzero.const import DOMAIN
+from menuai.components.energyzero.services import (
     ATTR_CONFIG_ENTRY,
     ENERGY_SERVICE_NAME,
     GAS_SERVICE_NAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
 
 from tests.common import MockConfigEntry
 
 
 @pytest.mark.usefixtures("init_integration")
 async def test_has_services(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test the existence of the EnergyZero Service."""
-    assert hass.services.has_service(DOMAIN, GAS_SERVICE_NAME)
-    assert hass.services.has_service(DOMAIN, ENERGY_SERVICE_NAME)
+    assert menuai.services.has_service(DOMAIN, GAS_SERVICE_NAME)
+    assert menuai.services.has_service(DOMAIN, ENERGY_SERVICE_NAME)
 
 
 @pytest.mark.usefixtures("init_integration")
@@ -33,7 +33,7 @@ async def test_has_services(
 @pytest.mark.parametrize("start", [{"start": "2023-01-01 00:00:00"}, {}])
 @pytest.mark.parametrize("end", [{"end": "2023-01-01 00:00:00"}, {}])
 async def test_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
     service: str,
@@ -46,7 +46,7 @@ async def test_service(
 
     data = entry | incl_vat | start | end
 
-    assert snapshot == await hass.services.async_call(
+    assert snapshot == await menuai.services.async_call(
         DOMAIN,
         service,
         data,
@@ -118,7 +118,7 @@ def config_entry_data(
     indirect=["config_entry_data"],
 )
 async def test_service_validation(
-    hass: HomeAssistant,
+    menuai: menuai,
     service: str,
     config_entry_data: dict[str, str],
     service_data: dict[str, str],
@@ -128,7 +128,7 @@ async def test_service_validation(
     """Test the EnergyZero Service validation."""
 
     with pytest.raises(error) as exc:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             service,
             config_entry_data | service_data,
@@ -141,19 +141,19 @@ async def test_service_validation(
 @pytest.mark.usefixtures("init_integration")
 @pytest.mark.parametrize("service", [GAS_SERVICE_NAME, ENERGY_SERVICE_NAME])
 async def test_service_called_with_unloaded_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     service: str,
 ) -> None:
     """Test service calls with unloaded config entry."""
-    await hass.config_entries.async_unload(mock_config_entry.entry_id)
+    await menuai.config_entries.async_unload(mock_config_entry.entry_id)
 
     data = {"config_entry": mock_config_entry.entry_id, "incl_vat": True}
 
     with pytest.raises(
         ServiceValidationError, match=f"{mock_config_entry.title} is not loaded"
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             service,
             data,

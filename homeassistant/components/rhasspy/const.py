@@ -1,3 +1,3 @@
-"""Constants for the Rhasspy integration."""
+"""Constants for the Rmenuaipy integration."""
 
-DOMAIN = "rhasspy"
+DOMAIN = "rmenuaipy"

@@ -1,9 +1,9 @@
 """Constants for Blink."""
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 DOMAIN = "blink"
-DEVICE_ID = "Home Assistant"
+DEVICE_ID = "MenuAI"
 
 CONF_MIGRATE = "migrate"
 CONF_CAMERA = "camera"

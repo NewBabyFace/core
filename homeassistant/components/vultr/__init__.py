@@ -6,12 +6,12 @@ import logging
 import voluptuous as vol
 from vultr import Vultr as VultrAPI
 
-from homeassistant.components import persistent_notification
-from homeassistant.const import CONF_API_KEY, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util import Throttle
+from menuai.components import persistent_notification
+from menuai.const import CONF_API_KEY, Platform
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType
+from menuai.util import Throttle
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -48,7 +48,7 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Vultr component."""
     api_key = config[DOMAIN].get(CONF_API_KEY)
 
@@ -59,14 +59,14 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
     except RuntimeError as ex:
         _LOGGER.error("Failed to make update API request because: %s", ex)
         persistent_notification.create(
-            hass,
+            menuai,
             f"Error: {ex}",
             title=NOTIFICATION_TITLE,
             notification_id=NOTIFICATION_ID,
         )
         return False
 
-    hass.data[DATA_VULTR] = vultr
+    menuai.data[DATA_VULTR] = vultr
     return True
 
 

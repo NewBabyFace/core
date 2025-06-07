@@ -12,15 +12,15 @@ from awesomeversion import AwesomeVersion
 from fortiosapi import FortiOSAPI
 import voluptuous as vol
 
-from homeassistant.components.device_tracker import (
+from menuai.components.device_tracker import (
     DOMAIN as DEVICE_TRACKER_DOMAIN,
     PLATFORM_SCHEMA as DEVICE_TRACKER_PLATFORM_SCHEMA,
     DeviceScanner,
 )
-from homeassistant.const import CONF_HOST, CONF_TOKEN, CONF_VERIFY_SSL
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import CONF_HOST, CONF_TOKEN, CONF_VERIFY_SSL
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
 DEFAULT_VERIFY_SSL = False
@@ -35,7 +35,7 @@ PLATFORM_SCHEMA = DEVICE_TRACKER_PLATFORM_SCHEMA.extend(
 )
 
 
-def get_scanner(hass: HomeAssistant, config: ConfigType) -> FortiOSDeviceScanner | None:
+def get_scanner(menuai: menuai, config: ConfigType) -> FortiOSDeviceScanner | None:
     """Validate the configuration and return a FortiOSDeviceScanner."""
     config = config[DEVICE_TRACKER_DOMAIN]
 

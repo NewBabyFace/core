@@ -7,11 +7,11 @@ import pytest
 import requests_mock
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
-from homeassistant.const import ATTR_ENTITY_ID, SERVICE_TURN_OFF, SERVICE_TURN_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.components.switch import DOMAIN as SWITCH_DOMAIN
+from menuai.const import ATTR_ENTITY_ID, SERVICE_TURN_OFF, SERVICE_TURN_ON
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from .common import ALL_DEVICE_NAMES, ENTITY_SWITCH_DISPLAY, mock_devices_response
 
@@ -22,7 +22,7 @@ NoException = nullcontext()
 
 @pytest.mark.parametrize("device_name", ALL_DEVICE_NAMES)
 async def test_switch_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     config_entry: MockConfigEntry,
     device_registry: dr.DeviceRegistry,
@@ -36,8 +36,8 @@ async def test_switch_state(
     mock_devices_response(requests_mock, device_name)
 
     # setup platform - only including the named device
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Check device registry
     devices = dr.async_entries_for_config_entry(device_registry, config_entry.entry_id)
@@ -55,7 +55,7 @@ async def test_switch_state(
 
     # Check states
     for entity in entities:
-        assert hass.states.get(entity.entity_id) == snapshot(name=entity.entity_id)
+        assert menuai.states.get(entity.entity_id) == snapshot(name=entity.entity_id)
 
 
 @pytest.mark.parametrize(
@@ -66,7 +66,7 @@ async def test_switch_state(
     ],
 )
 async def test_turn_on_off_display_success(
-    hass: HomeAssistant,
+    menuai: menuai,
     humidifier_config_entry: MockConfigEntry,
     action: str,
     command: str,
@@ -79,17 +79,17 @@ async def test_turn_on_off_display_success(
             return_value=True,
         ) as method_mock,
         patch(
-            "homeassistant.components.vesync.switch.VeSyncSwitchEntity.schedule_update_ha_state"
+            "menuai.components.vesync.switch.VeSyncSwitchEntity.schedule_update_ha_state"
         ) as update_mock,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SWITCH_DOMAIN,
             action,
             {ATTR_ENTITY_ID: ENTITY_SWITCH_DISPLAY},
             blocking=True,
         )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     method_mock.assert_called_once()
     update_mock.assert_called_once()
 
@@ -102,26 +102,26 @@ async def test_turn_on_off_display_success(
     ],
 )
 async def test_turn_on_off_display_raises_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     humidifier_config_entry: MockConfigEntry,
     action: str,
     command: str,
 ) -> None:
-    """Test switch turn on and off command raises HomeAssistantError."""
+    """Test switch turn on and off command raises menuaiError."""
 
     with (
         patch(
             command,
             return_value=False,
         ) as method_mock,
-        pytest.raises(HomeAssistantError),
+        pytest.raises(menuaiError),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SWITCH_DOMAIN,
             action,
             {ATTR_ENTITY_ID: ENTITY_SWITCH_DISPLAY},
             blocking=True,
         )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     method_mock.assert_called_once()

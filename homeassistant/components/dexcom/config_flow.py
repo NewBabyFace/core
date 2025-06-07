@@ -8,8 +8,8 @@ from typing import Any
 from pydexcom import AccountError, Dexcom, SessionError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
 
 from .const import CONF_SERVER, DOMAIN, SERVER_OUS, SERVER_US
 
@@ -36,7 +36,7 @@ class DexcomConfigFlow(ConfigFlow, domain=DOMAIN):
         errors = {}
         if user_input is not None:
             try:
-                await self.hass.async_add_executor_job(
+                await self.menuai.async_add_executor_job(
                     Dexcom,
                     user_input[CONF_USERNAME],
                     user_input[CONF_PASSWORD],

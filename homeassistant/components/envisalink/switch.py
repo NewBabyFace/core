@@ -5,11 +5,11 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.switch import SwitchEntity
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import CONF_ZONENAME, DATA_EVL, SIGNAL_ZONE_BYPASS_UPDATE, ZONE_SCHEMA
 from .entity import EnvisalinkEntity
@@ -18,7 +18,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -35,11 +35,11 @@ async def async_setup_platform(
         _LOGGER.debug("Setting up zone_bypass switch: %s", zone_name)
 
         entity = EnvisalinkSwitch(
-            hass,
+            menuai,
             zone_num,
             zone_name,
-            hass.data[DATA_EVL].alarm_state["zone"][zone_num],
-            hass.data[DATA_EVL],
+            menuai.data[DATA_EVL].alarm_state["zone"][zone_num],
+            menuai.data[DATA_EVL],
         )
         entities.append(entity)
 
@@ -49,17 +49,17 @@ async def async_setup_platform(
 class EnvisalinkSwitch(EnvisalinkEntity, SwitchEntity):
     """Representation of an Envisalink switch."""
 
-    def __init__(self, hass, zone_number, zone_name, info, controller):
+    def __init__(self, menuai, zone_number, zone_name, info, controller):
         """Initialize the switch."""
         self._zone_number = zone_number
 
         super().__init__(zone_name, info, controller)
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, SIGNAL_ZONE_BYPASS_UPDATE, self.async_update_callback
+                self.menuai, SIGNAL_ZONE_BYPASS_UPDATE, self.async_update_callback
             )
         )
 

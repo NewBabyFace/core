@@ -5,8 +5,8 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components.sensor import ATTR_OPTIONS, SensorDeviceClass
-from homeassistant.components.zodiac.const import (
+from menuai.components.sensor import ATTR_OPTIONS, SensorDeviceClass
+from menuai.components.zodiac.const import (
     ATTR_ELEMENT,
     ATTR_MODALITY,
     DOMAIN,
@@ -19,11 +19,11 @@ from homeassistant.components.zodiac.const import (
     SIGN_SCORPIO,
     SIGN_TAURUS,
 )
-from homeassistant.const import ATTR_DEVICE_CLASS
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.const import ATTR_DEVICE_CLASS
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from tests.common import MockConfigEntry
 
@@ -41,7 +41,7 @@ DAY3 = datetime(2020, 4, 21, tzinfo=dt_util.UTC)
     ],
 )
 async def test_zodiac_day(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     now: datetime,
     sign: str,
@@ -49,16 +49,16 @@ async def test_zodiac_day(
     modality: str,
 ) -> None:
     """Test the zodiac sensor."""
-    await hass.config.async_set_time_zone("UTC")
+    await menuai.config.async_set_time_zone("UTC")
     MockConfigEntry(
         domain=DOMAIN,
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
-    with patch("homeassistant.components.zodiac.sensor.utcnow", return_value=now):
-        assert await async_setup_component(hass, DOMAIN, {})
-        await hass.async_block_till_done()
+    with patch("menuai.components.zodiac.sensor.utcnow", return_value=now):
+        assert await async_setup_component(menuai, DOMAIN, {})
+        await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.zodiac")
+    state = menuai.states.get("sensor.zodiac")
     assert state
     assert state.state == sign
     assert state.attributes

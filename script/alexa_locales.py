@@ -6,7 +6,7 @@ import re
 from bs4 import BeautifulSoup
 import requests
 
-from homeassistant.components.alexa import capabilities
+from menuai.components.alexa import capabilities
 
 SITE = (
     "https://developer.amazon.com/en-GB/docs/alexa/device-apis/list-of-interfaces.html"

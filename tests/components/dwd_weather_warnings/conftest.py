@@ -5,14 +5,14 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
-from homeassistant.components.dwd_weather_warnings.const import (
+from menuai.components.dwd_weather_warnings.const import (
     ADVANCE_WARNING_SENSOR,
     CONF_REGION_DEVICE_TRACKER,
     CONF_REGION_IDENTIFIER,
     CURRENT_WARNING_SENSOR,
     DOMAIN,
 )
-from homeassistant.const import CONF_MONITORED_CONDITIONS, CONF_NAME
+from menuai.const import CONF_MONITORED_CONDITIONS, CONF_NAME
 
 from tests.common import MockConfigEntry
 
@@ -26,7 +26,7 @@ MOCK_CONDITIONS = [CURRENT_WARNING_SENSOR, ADVANCE_WARNING_SENSOR]
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.dwd_weather_warnings.async_setup_entry",
+        "menuai.components.dwd_weather_warnings.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
         yield mock_setup_entry
@@ -63,11 +63,11 @@ def mock_dwdwfsapi() -> Generator[MagicMock]:
     """Return a mocked dwdwfsapi API client."""
     with (
         patch(
-            "homeassistant.components.dwd_weather_warnings.coordinator.DwdWeatherWarningsAPI",
+            "menuai.components.dwd_weather_warnings.coordinator.DwdWeatherWarningsAPI",
             autospec=True,
         ) as mock_api,
         patch(
-            "homeassistant.components.dwd_weather_warnings.config_flow.DwdWeatherWarningsAPI",
+            "menuai.components.dwd_weather_warnings.config_flow.DwdWeatherWarningsAPI",
             new=mock_api,
         ),
     ):

@@ -7,18 +7,18 @@ from typing import Any
 
 import pykulersky
 
-from homeassistant.components import bluetooth
-from homeassistant.components.light import (
+from menuai.components import bluetooth
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_RGBW_COLOR,
     ColorMode,
     LightEntity,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_ADDRESS
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import CONNECTION_BLUETOOTH, DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_ADDRESS
+from menuai.core import menuai
+from menuai.helpers.device_registry import CONNECTION_BLUETOOTH, DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 
@@ -26,13 +26,13 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Kuler sky light devices."""
     ble_device = bluetooth.async_ble_device_from_address(
-        hass, config_entry.data[CONF_ADDRESS], connectable=True
+        menuai, config_entry.data[CONF_ADDRESS], connectable=True
     )
     entity = KulerskyLight(
         config_entry.title,
@@ -62,8 +62,8 @@ class KulerskyLight(LightEntity):
             name=name,
         )
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Run when entity will be removed from hass."""
+    async def async_will_remove_from_menuai(self) -> None:
+        """Run when entity will be removed from menuai."""
         try:
             await self._light.disconnect()
         except pykulersky.PykulerskyException:

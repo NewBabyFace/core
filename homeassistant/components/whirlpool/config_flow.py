@@ -12,10 +12,10 @@ from whirlpool.appliancesmanager import AppliancesManager
 from whirlpool.auth import AccountLockedError as WhirlpoolAccountLocked, Auth
 from whirlpool.backendselector import BackendSelector
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_PASSWORD, CONF_REGION, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_PASSWORD, CONF_REGION, CONF_USERNAME
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import BRANDS_CONF_MAP, CONF_BRAND, DOMAIN, REGIONS_CONF_MAP
 
@@ -40,14 +40,14 @@ REAUTH_SCHEMA = vol.Schema(
 
 
 async def authenticate(
-    hass: HomeAssistant, data: dict[str, str], check_appliances_exist: bool
+    menuai: menuai, data: dict[str, str], check_appliances_exist: bool
 ) -> str | None:
     """Authenticate with the api.
 
     data has the keys from STEP_USER_DATA_SCHEMA with values provided by the user.
     Returns the error translation key if authentication fails, or None on success.
     """
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
     region = REGIONS_CONF_MAP[data[CONF_REGION]]
     brand = BRANDS_CONF_MAP[data[CONF_BRAND]]
     backend_selector = BackendSelector(brand, region)
@@ -99,7 +99,7 @@ class WhirlpoolConfigFlow(ConfigFlow, domain=DOMAIN):
             brand = user_input[CONF_BRAND]
             data = {**reauth_entry.data, CONF_PASSWORD: password, CONF_BRAND: brand}
 
-            error_key = await authenticate(self.hass, data, False)
+            error_key = await authenticate(self.menuai, data, False)
             if not error_key:
                 return self.async_update_reload_and_abort(reauth_entry, data=data)
             errors["base"] = error_key
@@ -118,7 +118,7 @@ class WhirlpoolConfigFlow(ConfigFlow, domain=DOMAIN):
                 step_id="user", data_schema=STEP_USER_DATA_SCHEMA
             )
 
-        error_key = await authenticate(self.hass, user_input, True)
+        error_key = await authenticate(self.menuai, user_input, True)
         if not error_key:
             await self.async_set_unique_id(
                 user_input[CONF_USERNAME].lower(), raise_on_progress=False

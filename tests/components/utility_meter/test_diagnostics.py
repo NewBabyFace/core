@@ -6,10 +6,10 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 from syrupy.filters import props
 
-from homeassistant.auth.models import Credentials
-from homeassistant.components.utility_meter.const import DOMAIN
-from homeassistant.components.utility_meter.sensor import ATTR_LAST_RESET
-from homeassistant.core import HomeAssistant, State
+from menuai.auth.models import Credentials
+from menuai.components.utility_meter.const import DOMAIN
+from menuai.components.utility_meter.sensor import ATTR_LAST_RESET
+from menuai.core import menuai, State
 
 from tests.common import (
     CLIENT_ID,
@@ -21,26 +21,26 @@ from tests.components.diagnostics import get_diagnostics_for_config_entry
 from tests.typing import ClientSessionGenerator
 
 
-async def generate_new_hass_access_token(
-    hass: HomeAssistant, hass_admin_user: MockUser, hass_admin_credential: Credentials
+async def generate_new_menuai_access_token(
+    menuai: menuai, menuai_admin_user: MockUser, menuai_admin_credential: Credentials
 ) -> str:
-    """Return an access token to access Home Assistant."""
-    await hass.auth.async_link_user(hass_admin_user, hass_admin_credential)
+    """Return an access token to access MenuAI."""
+    await menuai.auth.async_link_user(menuai_admin_user, menuai_admin_credential)
 
-    refresh_token = await hass.auth.async_create_refresh_token(
-        hass_admin_user, CLIENT_ID, credential=hass_admin_credential
+    refresh_token = await menuai.auth.async_create_refresh_token(
+        menuai_admin_user, CLIENT_ID, credential=menuai_admin_credential
     )
-    return hass.auth.async_create_access_token(refresh_token)
+    return menuai.auth.async_create_access_token(refresh_token)
 
 
 def _get_test_client_generator(
-    hass: HomeAssistant, aiohttp_client: ClientSessionGenerator, new_token: str
+    menuai: menuai, aiohttp_client: ClientSessionGenerator, new_token: str
 ):
     """Return a test client generator.""."""
 
     async def auth_client() -> TestClient:
         return await aiohttp_client(
-            hass.http.app, headers={"Authorization": f"Bearer {new_token}"}
+            menuai.http.app, headers={"Authorization": f"Bearer {new_token}"}
         )
 
     return auth_client
@@ -49,10 +49,10 @@ def _get_test_client_generator(
 @freeze_time("2024-04-06 00:00:00+00:00")
 @pytest.mark.usefixtures("socket_enabled")
 async def test_diagnostics(
-    hass: HomeAssistant,
+    menuai: menuai,
     aiohttp_client: ClientSessionGenerator,
-    hass_admin_user: MockUser,
-    hass_admin_credential: Credentials,
+    menuai_admin_user: MockUser,
+    menuai_admin_credential: Credentials,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test generating diagnostics for a config entry."""
@@ -81,7 +81,7 @@ async def test_diagnostics(
 
     # Set up the sensors restore data
     mock_restore_cache_with_extra_data(
-        hass,
+        menuai,
         [
             (
                 State(
@@ -126,19 +126,19 @@ async def test_diagnostics(
         ],
     )
 
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Since we are freezing time only when we enter this test, we need to
     # manually create a new token and clients since the token created by
     # the fixtures would not be valid.
-    new_token = await generate_new_hass_access_token(
-        hass, hass_admin_user, hass_admin_credential
+    new_token = await generate_new_menuai_access_token(
+        menuai, menuai_admin_user, menuai_admin_credential
     )
 
     diag = await get_diagnostics_for_config_entry(
-        hass, _get_test_client_generator(hass, aiohttp_client, new_token), config_entry
+        menuai, _get_test_client_generator(menuai, aiohttp_client, new_token), config_entry
     )
 
     assert diag == snapshot(exclude=props("entry_id", "created_at", "modified_at"))

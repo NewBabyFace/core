@@ -35,11 +35,11 @@ from aiohomeconnect.model.error import (
 from aiohomeconnect.model.program import EnumerateProgram, ProgramDefinitionOption
 from propcache.api import cached_property
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr, issue_registry as ir
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import CALLBACK_TYPE, menuai, callback
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import device_registry as dr, issue_registry as ir
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import API_DEFAULT_RETRY_AFTER, APPLIANCES_WITH_PROGRAMS, DOMAIN
 from .utils import get_dict_from_home_connect_error
@@ -99,13 +99,13 @@ class HomeConnectCoordinator(
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: HomeConnectConfigEntry,
         client: HomeConnectClient,
     ) -> None:
         """Initialize."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=config_entry.entry_id,
@@ -114,7 +114,7 @@ class HomeConnectCoordinator(
         self._special_listeners: dict[
             CALLBACK_TYPE, tuple[CALLBACK_TYPE, tuple[EventKey, ...]]
         ] = {}
-        self.device_registry = dr.async_get(self.hass)
+        self.device_registry = dr.async_get(self.menuai)
         self.data = {}
         self._execution_tracker: dict[str, list[float]] = defaultdict(list)
 
@@ -167,7 +167,7 @@ class HomeConnectCoordinator(
     def start_event_listener(self) -> None:
         """Start event listener."""
         self.config_entry.async_create_background_task(
-            self.hass,
+            self.menuai,
             self._event_listener(),
             f"home_connect-events_listener_task-{self.config_entry.entry_id}",
         )
@@ -292,7 +292,7 @@ class HomeConnectCoordinator(
                 retry_time = min(retry_time * 2, 3600)
             except HomeConnectApiError as error:
                 _LOGGER.error("Error while listening for events: %s", error)
-                self.hass.config_entries.async_schedule_reload(
+                self.menuai.config_entries.async_schedule_reload(
                     self.config_entry.entry_id
                 )
                 break
@@ -597,7 +597,7 @@ class HomeConnectCoordinator(
     def refreshed_too_often_recently(self, appliance_ha_id: str) -> bool:
         """Check if the appliance data hasn't been refreshed too often recently."""
 
-        now = self.hass.loop.time()
+        now = self.menuai.loop.time()
         if len(self._execution_tracker[appliance_ha_id]) >= MAX_EXECUTIONS:
             return True
 
@@ -611,7 +611,7 @@ class HomeConnectCoordinator(
 
         if len(execution_tracker) >= MAX_EXECUTIONS:
             ir.async_create_issue(
-                self.hass,
+                self.menuai,
                 DOMAIN,
                 f"home_connect_too_many_connected_paired_events_{appliance_ha_id}",
                 is_fixable=True,

@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant.const import ATTR_COMMAND, ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv
+from menuai.const import ATTR_COMMAND, ATTR_ENTITY_ID
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import config_validation as cv
 
 from .const import COMMANDS, DOMAIN, PS4_DATA
 
@@ -24,14 +24,14 @@ async def async_service_command(call: ServiceCall) -> None:
     """Service for sending commands."""
     entity_ids = call.data[ATTR_ENTITY_ID]
     command = call.data[ATTR_COMMAND]
-    for device in call.hass.data[PS4_DATA].devices:
+    for device in call.menuai.data[PS4_DATA].devices:
         if device.entity_id in entity_ids:
             await device.async_send_command(command)
 
 
-def async_setup_services(hass: HomeAssistant) -> None:
+def async_setup_services(menuai: menuai) -> None:
     """Handle for services."""
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN, SERVICE_COMMAND, async_service_command, schema=PS4_COMMAND_SCHEMA
     )

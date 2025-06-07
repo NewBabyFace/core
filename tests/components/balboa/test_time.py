@@ -8,14 +8,14 @@ from unittest.mock import MagicMock, patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.time import (
+from menuai.components.time import (
     ATTR_TIME,
     DOMAIN as TIME_DOMAIN,
     SERVICE_SET_VALUE,
 )
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import init_integration
 
@@ -25,16 +25,16 @@ ENTITY_TIME = "time.fakespa_"
 
 
 async def test_times(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: MagicMock,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test spa times."""
-    with patch("homeassistant.components.balboa.PLATFORMS", [Platform.TIME]):
-        entry = await init_integration(hass)
+    with patch("menuai.components.balboa.PLATFORMS", [Platform.TIME]):
+        entry = await init_integration(menuai)
 
-    await snapshot_platform(hass, entity_registry, snapshot, entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, entry.entry_id)
 
 
 @pytest.mark.parametrize(
@@ -47,20 +47,20 @@ async def test_times(
     ],
 )
 async def test_time(
-    hass: HomeAssistant, client: MagicMock, filter_cycle: int, period: str, value: str
+    menuai: menuai, client: MagicMock, filter_cycle: int, period: str, value: str
 ) -> None:
     """Test spa filter cycle time."""
-    await init_integration(hass)
+    await init_integration(menuai)
 
     time_entity = f"{ENTITY_TIME}filter_cycle_{filter_cycle}_{period}"
 
     # check the expected state of the time entity
-    state = hass.states.get(time_entity)
+    state = menuai.states.get(time_entity)
     assert state.state == value
 
     new_time = time(hour=7, minute=0)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TIME_DOMAIN,
         SERVICE_SET_VALUE,
         service_data={ATTR_TIME: new_time},

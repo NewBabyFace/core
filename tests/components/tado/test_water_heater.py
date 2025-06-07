@@ -1,16 +1,16 @@
 """The sensor tests for the tado platform."""
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .util import async_init_integration
 
 
-async def test_water_heater_create_sensors(hass: HomeAssistant) -> None:
+async def test_water_heater_create_sensors(menuai: menuai) -> None:
     """Test creation of water heater."""
 
-    await async_init_integration(hass)
+    await async_init_integration(menuai)
 
-    state = hass.states.get("water_heater.water_heater")
+    state = menuai.states.get("water_heater.water_heater")
     assert state.state == "auto"
 
     expected_attributes = {
@@ -29,7 +29,7 @@ async def test_water_heater_create_sensors(hass: HomeAssistant) -> None:
     # HA changes the implementation and a new one appears
     assert all(item in state.attributes.items() for item in expected_attributes.items())
 
-    state = hass.states.get("water_heater.second_water_heater")
+    state = menuai.states.get("water_heater.second_water_heater")
     assert state.state == "heat"
 
     expected_attributes = {

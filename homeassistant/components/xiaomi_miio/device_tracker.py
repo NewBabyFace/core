@@ -7,15 +7,15 @@ import logging
 from miio import DeviceException, WifiRepeater
 import voluptuous as vol
 
-from homeassistant.components.device_tracker import (
+from menuai.components.device_tracker import (
     DOMAIN as DEVICE_TRACKER_DOMAIN,
     PLATFORM_SCHEMA as DEVICE_TRACKER_PLATFORM_SCHEMA,
     DeviceScanner,
 )
-from homeassistant.const import CONF_HOST, CONF_TOKEN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import CONF_HOST, CONF_TOKEN
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -28,7 +28,7 @@ PLATFORM_SCHEMA = DEVICE_TRACKER_PLATFORM_SCHEMA.extend(
 
 
 def get_scanner(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> XiaomiMiioDeviceScanner | None:
     """Return a Xiaomi MiIO device scanner."""
     scanner = None
@@ -65,7 +65,7 @@ class XiaomiMiioDeviceScanner(DeviceScanner):
     async def async_scan_devices(self):
         """Scan for devices and return a list containing found device IDs."""
         try:
-            station_info = await self.hass.async_add_executor_job(self.device.status)
+            station_info = await self.menuai.async_add_executor_job(self.device.status)
             _LOGGER.debug("Got new station info: %s", station_info)
         except DeviceException as ex:
             _LOGGER.error("Unable to fetch the state: %s", ex)

@@ -4,10 +4,10 @@ from typing import cast
 
 import voluptuous as vol
 
-from homeassistant import data_entry_flow
-from homeassistant.components.repairs import ConfirmRepairFlow, RepairsFlow
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import issue_registry as ir
+from menuai import data_entry_flow
+from menuai.components.repairs import ConfirmRepairFlow, RepairsFlow
+from menuai.core import menuai
+from menuai.helpers import issue_registry as ir
 
 from .coordinator import HomeConnectConfigEntry
 
@@ -27,7 +27,7 @@ class EnableApplianceUpdatesFlow(RepairsFlow):
         """Handle the confirm step of a fix flow."""
         if user_input is not None:
             assert self.data
-            entry = self.hass.config_entries.async_get_entry(
+            entry = self.menuai.config_entries.async_get_entry(
                 cast(str, self.data["entry_id"])
             )
             assert entry
@@ -37,7 +37,7 @@ class EnableApplianceUpdatesFlow(RepairsFlow):
             )
             return self.async_create_entry(data={})
 
-        issue_registry = ir.async_get(self.hass)
+        issue_registry = ir.async_get(self.menuai)
         description_placeholders = None
         if issue := issue_registry.async_get_issue(self.handler, self.issue_id):
             description_placeholders = issue.translation_placeholders
@@ -50,7 +50,7 @@ class EnableApplianceUpdatesFlow(RepairsFlow):
 
 
 async def async_create_fix_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     issue_id: str,
     data: dict[str, str | int | float | None] | None,
 ) -> RepairsFlow:

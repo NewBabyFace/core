@@ -2,7 +2,7 @@
 
 import pytest
 
-from homeassistant.helpers.normalized_name_base_registry import (
+from menuai.helpers.normalized_name_base_registry import (
     NormalizedNameBaseRegistryEntry,
     NormalizedNameBaseRegistryItems,
     normalize_name,

@@ -2,17 +2,17 @@
 
 from unittest.mock import MagicMock
 
-from homeassistant.components import button
-from homeassistant.components.fully_kiosk.const import DOMAIN
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.components import button
+from menuai.components.fully_kiosk.const import DOMAIN
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from tests.common import MockConfigEntry
 
 
 async def test_buttons(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
     mock_fully_kiosk: MagicMock,
@@ -22,7 +22,7 @@ async def test_buttons(
     entry = entity_registry.async_get("button.amazon_fire_restart_browser")
     assert entry
     assert entry.unique_id == "abcdef-123456-restartApp"
-    await hass.services.async_call(
+    await menuai.services.async_call(
         button.DOMAIN,
         button.SERVICE_PRESS,
         {ATTR_ENTITY_ID: "button.amazon_fire_restart_browser"},
@@ -33,7 +33,7 @@ async def test_buttons(
     entry = entity_registry.async_get("button.amazon_fire_restart_device")
     assert entry
     assert entry.unique_id == "abcdef-123456-rebootDevice"
-    await hass.services.async_call(
+    await menuai.services.async_call(
         button.DOMAIN,
         button.SERVICE_PRESS,
         {ATTR_ENTITY_ID: "button.amazon_fire_restart_device"},
@@ -44,7 +44,7 @@ async def test_buttons(
     entry = entity_registry.async_get("button.amazon_fire_bring_to_foreground")
     assert entry
     assert entry.unique_id == "abcdef-123456-toForeground"
-    await hass.services.async_call(
+    await menuai.services.async_call(
         button.DOMAIN,
         button.SERVICE_PRESS,
         {ATTR_ENTITY_ID: "button.amazon_fire_bring_to_foreground"},
@@ -55,7 +55,7 @@ async def test_buttons(
     entry = entity_registry.async_get("button.amazon_fire_send_to_background")
     assert entry
     assert entry.unique_id == "abcdef-123456-toBackground"
-    await hass.services.async_call(
+    await menuai.services.async_call(
         button.DOMAIN,
         button.SERVICE_PRESS,
         {ATTR_ENTITY_ID: "button.amazon_fire_send_to_background"},
@@ -66,7 +66,7 @@ async def test_buttons(
     entry = entity_registry.async_get("button.amazon_fire_load_start_url")
     assert entry
     assert entry.unique_id == "abcdef-123456-loadStartUrl"
-    await hass.services.async_call(
+    await menuai.services.async_call(
         button.DOMAIN,
         button.SERVICE_PRESS,
         {ATTR_ENTITY_ID: "button.amazon_fire_load_start_url"},

@@ -1,6 +1,6 @@
 """Tests for sensors."""
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .conftest import (
     EntityAndExpectedValues,
@@ -10,7 +10,7 @@ from .conftest import (
 )
 
 
-async def test_sensors(hass: HomeAssistant) -> None:
+async def test_sensors(menuai: menuai) -> None:
     """Test all sensors."""
 
     entity_and_expected_values = [
@@ -81,7 +81,7 @@ async def test_sensors(hass: HomeAssistant) -> None:
     lifetime_mock_second_update.energy_wh = 989000
 
     await _test_sensors(
-        hass,
+        menuai,
         entities_and_expected_values=entity_and_expected_values,
         vitals_first_update=mock_vitals_first_update,
         vitals_second_update=mock_vitals_second_update,

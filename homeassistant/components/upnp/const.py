@@ -3,7 +3,7 @@
 from datetime import timedelta
 import logging
 
-from homeassistant.const import UnitOfTime
+from menuai.const import UnitOfTime
 
 LOGGER = logging.getLogger(__package__)
 

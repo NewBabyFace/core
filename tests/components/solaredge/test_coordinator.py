@@ -5,14 +5,14 @@ from unittest.mock import AsyncMock, patch
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.components.solaredge.const import (
+from menuai.components.solaredge.const import (
     CONF_SITE_ID,
     DEFAULT_NAME,
     DOMAIN,
     OVERVIEW_UPDATE_DELAY,
 )
-from homeassistant.const import CONF_API_KEY, CONF_NAME, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
+from menuai.const import CONF_API_KEY, CONF_NAME, STATE_UNKNOWN
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry, async_fire_time_changed
 
@@ -25,9 +25,9 @@ def enable_all_entities(entity_registry_enabled_by_default: None) -> None:
     """Make sure all entities are enabled."""
 
 
-@patch("homeassistant.components.solaredge.SolarEdge")
+@patch("menuai.components.solaredge.SolarEdge")
 async def test_solaredgeoverviewdataservice_energy_values_validity(
-    mock_solaredge, hass: HomeAssistant, freezer: FrozenDateTimeFactory
+    mock_solaredge, menuai: menuai, freezer: FrozenDateTimeFactory
 ) -> None:
     """Test overview energy data validity."""
     mock_config_entry = MockConfigEntry(
@@ -38,9 +38,9 @@ async def test_solaredgeoverviewdataservice_energy_values_validity(
     mock_solaredge().get_details = AsyncMock(
         return_value={"details": {"status": "active"}}
     )
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
 
     # Valid energy values update
     mock_overview_data = {
@@ -54,9 +54,9 @@ async def test_solaredgeoverviewdataservice_energy_values_validity(
     }
     mock_solaredge().get_overview = AsyncMock(return_value=mock_overview_data)
     freezer.tick(OVERVIEW_UPDATE_DELAY)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
-    state = hass.states.get("sensor.solaredge_lifetime_energy")
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
+    state = menuai.states.get("sensor.solaredge_lifetime_energy")
     assert state
     assert state.state == str(mock_overview_data["overview"]["lifeTimeData"]["energy"])
 
@@ -64,10 +64,10 @@ async def test_solaredgeoverviewdataservice_energy_values_validity(
     mock_overview_data["overview"]["lifeTimeData"]["energy"] = 0
     mock_solaredge().get_overview = AsyncMock(return_value=mock_overview_data)
     freezer.tick(OVERVIEW_UPDATE_DELAY)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get("sensor.solaredge_lifetime_energy")
+    state = menuai.states.get("sensor.solaredge_lifetime_energy")
     assert state
     assert state.state == STATE_UNKNOWN
 
@@ -75,10 +75,10 @@ async def test_solaredgeoverviewdataservice_energy_values_validity(
     mock_overview_data["overview"]["lifeTimeData"]["energy"] = 100001
     mock_solaredge().get_overview = AsyncMock(return_value=mock_overview_data)
     freezer.tick(OVERVIEW_UPDATE_DELAY)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get("sensor.solaredge_lifetime_energy")
+    state = menuai.states.get("sensor.solaredge_lifetime_energy")
     assert state
     assert state.state == str(mock_overview_data["overview"]["lifeTimeData"]["energy"])
 
@@ -86,14 +86,14 @@ async def test_solaredgeoverviewdataservice_energy_values_validity(
     mock_overview_data["overview"]["lastYearData"]["energy"] = 0
     mock_solaredge().get_overview = AsyncMock(return_value=mock_overview_data)
     freezer.tick(OVERVIEW_UPDATE_DELAY)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get("sensor.solaredge_energy_this_year")
+    state = menuai.states.get("sensor.solaredge_energy_this_year")
     assert state
     assert state.state == STATE_UNKNOWN
     # Check that the valid lastMonthData is still available
-    state = hass.states.get("sensor.solaredge_energy_this_month")
+    state = menuai.states.get("sensor.solaredge_energy_this_month")
     assert state
     assert state.state == str(mock_overview_data["overview"]["lastMonthData"]["energy"])
 
@@ -104,9 +104,9 @@ async def test_solaredgeoverviewdataservice_energy_values_validity(
     mock_overview_data["overview"]["lastDayData"]["energy"] = 0.0
     mock_solaredge().get_overview = AsyncMock(return_value=mock_overview_data)
     freezer.tick(OVERVIEW_UPDATE_DELAY)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get("sensor.solaredge_lifetime_energy")
+    state = menuai.states.get("sensor.solaredge_lifetime_energy")
     assert state
     assert state.state == str(mock_overview_data["overview"]["lifeTimeData"]["energy"])

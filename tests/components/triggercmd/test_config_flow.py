@@ -5,10 +5,10 @@ from unittest.mock import patch
 import pytest
 from triggercmd import TRIGGERcmdConnectionError
 
-from homeassistant.components.triggercmd.const import CONF_TOKEN, DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.triggercmd.const import CONF_TOKEN, DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
@@ -18,10 +18,10 @@ invalid_token_with_length_100_or_more_and_no_id = "eyJhbGciOiJIUzI1NiIsInR5cCI6I
 
 
 async def test_full_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test config flow happy path."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
@@ -32,14 +32,14 @@ async def test_full_flow(
 
     with (
         patch(
-            "homeassistant.components.triggercmd.client.async_connection_test",
+            "menuai.components.triggercmd.client.async_connection_test",
             return_value=200,
         ),
         patch(
-            "homeassistant.components.triggercmd.ha.Hub",
+            "menuai.components.triggercmd.ha.Hub",
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_TOKEN: invalid_token_with_length_100_or_more},
         )
@@ -57,26 +57,26 @@ async def test_full_flow(
     ],
 )
 async def test_config_flow_user_invalid_token(
-    hass: HomeAssistant,
+    menuai: menuai,
     test_input: str,
     expected: dict,
 ) -> None:
     """Test the initial step of the config flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
 
     with (
         patch(
-            "homeassistant.components.triggercmd.client.async_connection_test",
+            "menuai.components.triggercmd.client.async_connection_test",
             return_value=200,
         ),
         patch(
-            "homeassistant.components.triggercmd.ha.Hub",
+            "menuai.components.triggercmd.ha.Hub",
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_TOKEN: test_input},
         )
@@ -85,7 +85,7 @@ async def test_config_flow_user_invalid_token(
         assert result["step_id"] == "user"
         assert result["type"] is FlowResultType.FORM
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_TOKEN: invalid_token_with_length_100_or_more},
         )
@@ -93,9 +93,9 @@ async def test_config_flow_user_invalid_token(
         assert result["type"] is FlowResultType.CREATE_ENTRY
 
 
-async def test_config_flow_entry_already_configured(hass: HomeAssistant) -> None:
+async def test_config_flow_entry_already_configured(menuai: menuai) -> None:
     """Test user input for config_entry that already exists."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
@@ -104,15 +104,15 @@ async def test_config_flow_entry_already_configured(hass: HomeAssistant) -> None
         domain=DOMAIN,
         data={CONF_TOKEN: invalid_token_with_length_100_or_more},
         unique_id=invalid_token_id,
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
     with (
         patch(
-            "homeassistant.components.triggercmd.client.async_connection_test",
+            "menuai.components.triggercmd.client.async_connection_test",
             return_value=200,
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_TOKEN: invalid_token_with_length_100_or_more},
         )
@@ -121,20 +121,20 @@ async def test_config_flow_entry_already_configured(hass: HomeAssistant) -> None
     assert result["type"] is FlowResultType.ABORT
 
 
-async def test_config_flow_connection_error(hass: HomeAssistant) -> None:
+async def test_config_flow_connection_error(menuai: menuai) -> None:
     """Test a connection error."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
 
     with (
         patch(
-            "homeassistant.components.triggercmd.client.async_connection_test",
+            "menuai.components.triggercmd.client.async_connection_test",
             side_effect=TRIGGERcmdConnectionError,
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_TOKEN: invalid_token_with_length_100_or_more},
         )
@@ -146,14 +146,14 @@ async def test_config_flow_connection_error(hass: HomeAssistant) -> None:
 
     with (
         patch(
-            "homeassistant.components.triggercmd.client.async_connection_test",
+            "menuai.components.triggercmd.client.async_connection_test",
             return_value=200,
         ),
         patch(
-            "homeassistant.components.triggercmd.ha.Hub",
+            "menuai.components.triggercmd.ha.Hub",
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_TOKEN: invalid_token_with_length_100_or_more},
         )

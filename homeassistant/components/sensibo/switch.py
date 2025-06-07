@@ -8,14 +8,14 @@ from typing import Any
 
 from pysensibo.model import SensiboDevice
 
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     SwitchDeviceClass,
     SwitchEntity,
     SwitchEntityDescription,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import SensiboConfigEntry
 from .const import DOMAIN
@@ -76,7 +76,7 @@ DESCRIPTION_BY_MODELS = {"pure": PURE_SWITCH_TYPES}
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: SensiboConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -189,7 +189,7 @@ class SensiboDeviceSwitch(SensiboDeviceBaseEntity, SwitchEntity):
     async def async_turn_on_off_smart(self, key: str, value: bool) -> bool:
         """Make service call to api for setting Climate React."""
         if self.device_data.smart_type is None:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="climate_react_not_available",
             )

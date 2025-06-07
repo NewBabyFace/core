@@ -9,9 +9,9 @@ from typing import Any, cast
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlowResult
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_TOKEN
-from homeassistant.helpers import config_entry_oauth2_flow
+from menuai.config_entries import SOURCE_REAUTH, ConfigFlowResult
+from menuai.const import CONF_ACCESS_TOKEN, CONF_TOKEN
+from menuai.helpers import config_entry_oauth2_flow
 
 from .const import DEFAULT_ACCESS, DOMAIN
 
@@ -61,7 +61,7 @@ class OAuth2FlowHandler(
             return users.getProfile(userId="me").execute()["emailAddress"]
 
         credentials = Credentials(data[CONF_TOKEN][CONF_ACCESS_TOKEN])
-        email = await self.hass.async_add_executor_job(_get_profile)
+        email = await self.menuai.async_add_executor_job(_get_profile)
 
         await self.async_set_unique_id(email)
         if self.source != SOURCE_REAUTH:

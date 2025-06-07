@@ -8,11 +8,11 @@ from unittest.mock import patch
 import pytest
 from requests_mock.mocker import Mocker
 
-from homeassistant import config_entries
-from homeassistant.components.fitbit.const import DOMAIN, OAUTH2_AUTHORIZE, OAUTH2_TOKEN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import config_entry_oauth2_flow
+from menuai import config_entries
+from menuai.components.fitbit.const import DOMAIN, OAUTH2_AUTHORIZE, OAUTH2_TOKEN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers import config_entry_oauth2_flow
 
 from .conftest import (
     CLIENT_ID,
@@ -33,18 +33,18 @@ REDIRECT_URL = "https://example.com/auth/external/callback"
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_full_flow(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     profile: None,
     setup_credentials: None,
 ) -> None:
     """Check full flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": REDIRECT_URL,
@@ -58,7 +58,7 @@ async def test_full_flow(
         "&scope=activity+heartrate+nutrition+profile+settings+sleep+weight&prompt=consent"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == 200
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
@@ -69,12 +69,12 @@ async def test_full_flow(
     )
 
     with patch(
-        "homeassistant.components.fitbit.async_setup_entry", return_value=True
+        "menuai.components.fitbit.async_setup_entry", return_value=True
     ) as mock_setup:
-        await hass.config_entries.flow.async_configure(result["flow_id"])
+        await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert len(mock_setup.mock_calls) == 1
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     config_entry = entries[0]
     assert config_entry.title == DISPLAY_NAME
@@ -98,8 +98,8 @@ async def test_full_flow(
 )
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_token_error(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     profile: None,
     setup_credentials: None,
@@ -107,11 +107,11 @@ async def test_token_error(
     error_reason: str,
 ) -> None:
     """Check full flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": REDIRECT_URL,
@@ -125,7 +125,7 @@ async def test_token_error(
         "&scope=activity+heartrate+nutrition+profile+settings+sleep+weight&prompt=consent"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == 200
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
@@ -135,7 +135,7 @@ async def test_token_error(
         status=status_code,
     )
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
     assert result.get("type") is FlowResultType.ABORT
     assert result.get("reason") == error_reason
 
@@ -156,8 +156,8 @@ async def test_token_error(
 )
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_api_failure(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     requests_mock: Mocker,
     setup_credentials: None,
@@ -166,11 +166,11 @@ async def test_api_failure(
     error_reason: str,
 ) -> None:
     """Test a failure to fetch the profile during the setup flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": REDIRECT_URL,
@@ -184,7 +184,7 @@ async def test_api_failure(
         "&scope=activity+heartrate+nutrition+profile+settings+sleep+weight&prompt=consent"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == 200
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
@@ -201,15 +201,15 @@ async def test_api_failure(
         json=json,
     )
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
     assert result.get("type") is FlowResultType.ABORT
     assert result.get("reason") == error_reason
 
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_config_entry_already_exists(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     setup_credentials: None,
     integration_setup: Callable[[], Awaitable[bool]],
@@ -218,14 +218,14 @@ async def test_config_entry_already_exists(
     """Test that an account may only be configured once."""
 
     # Verify existing config entry
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": REDIRECT_URL,
@@ -239,7 +239,7 @@ async def test_config_entry_already_exists(
         "&scope=activity+heartrate+nutrition+profile+settings+sleep+weight&prompt=consent"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == 200
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
@@ -249,38 +249,38 @@ async def test_config_entry_already_exists(
         json=SERVER_ACCESS_TOKEN,
     )
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"])
     assert result.get("type") is FlowResultType.ABORT
     assert result.get("reason") == "already_configured"
 
 
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_reauth_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     profile: None,
     setup_credentials: None,
 ) -> None:
     """Test OAuth reauthentication flow will update existing config entry."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
 
     # config_entry.req initiates reauth
-    result = await config_entry.start_reauth_flow(hass)
+    result = await config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         flow_id=result["flow_id"],
         user_input={},
     )
     assert result["type"] is FlowResultType.EXTERNAL_STEP
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": REDIRECT_URL,
@@ -293,7 +293,7 @@ async def test_reauth_flow(
         "&scope=activity+heartrate+nutrition+profile+settings+sleep+weight&prompt=none"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == 200
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
@@ -309,14 +309,14 @@ async def test_reauth_flow(
     )
 
     with patch(
-        "homeassistant.components.fitbit.async_setup_entry", return_value=True
+        "menuai.components.fitbit.async_setup_entry", return_value=True
     ) as mock_setup:
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result.get("type") is FlowResultType.ABORT
     assert result.get("reason") == "reauth_successful"
 
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
     assert len(mock_setup.mock_calls) == 1
 
     assert config_entry.data["token"]["refresh_token"] == "updated-refresh-token"
@@ -325,30 +325,30 @@ async def test_reauth_flow(
 @pytest.mark.parametrize("profile_id", ["other-user-id"])
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_reauth_wrong_user_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     profile: None,
     setup_credentials: None,
 ) -> None:
     """Test OAuth reauthentication where the wrong user is selected."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
 
-    result = await config_entry.start_reauth_flow(hass)
+    result = await config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         flow_id=result["flow_id"],
         user_input={},
     )
     assert result["type"] is FlowResultType.EXTERNAL_STEP
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": REDIRECT_URL,
@@ -361,7 +361,7 @@ async def test_reauth_wrong_user_id(
         "&scope=activity+heartrate+nutrition+profile+settings+sleep+weight&prompt=none"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == 200
     assert resp.headers["content-type"] == "text/html; charset=utf-8"
@@ -377,9 +377,9 @@ async def test_reauth_wrong_user_id(
     )
 
     with patch(
-        "homeassistant.components.fitbit.async_setup_entry", return_value=True
+        "menuai.components.fitbit.async_setup_entry", return_value=True
     ) as mock_setup:
-        result = await hass.config_entries.flow.async_configure(result["flow_id"])
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert result.get("type") is FlowResultType.ABORT
     assert result.get("reason") == "wrong_account"
@@ -397,19 +397,19 @@ async def test_reauth_wrong_user_id(
 )
 @pytest.mark.usefixtures("current_request_with_host")
 async def test_partial_profile_data(
-    hass: HomeAssistant,
-    hass_client_no_auth: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
     profile: None,
     setup_credentials: None,
     expected_title: str,
 ) -> None:
     """Check full flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     state = config_entry_oauth2_flow._encode_jwt(
-        hass,
+        menuai,
         {
             "flow_id": result["flow_id"],
             "redirect_uri": REDIRECT_URL,
@@ -423,7 +423,7 @@ async def test_partial_profile_data(
         "&scope=activity+heartrate+nutrition+profile+settings+sleep+weight&prompt=consent"
     )
 
-    client = await hass_client_no_auth()
+    client = await menuai_client_no_auth()
     resp = await client.get(f"/auth/external/callback?code=abcd&state={state}")
     assert resp.status == 200
 
@@ -433,12 +433,12 @@ async def test_partial_profile_data(
     )
 
     with patch(
-        "homeassistant.components.fitbit.async_setup_entry", return_value=True
+        "menuai.components.fitbit.async_setup_entry", return_value=True
     ) as mock_setup:
-        await hass.config_entries.flow.async_configure(result["flow_id"])
+        await menuai.config_entries.flow.async_configure(result["flow_id"])
 
     assert len(mock_setup.mock_calls) == 1
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     assert len(entries) == 1
     config_entry = entries[0]
     assert config_entry.title == expected_title

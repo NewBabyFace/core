@@ -6,7 +6,7 @@ from astroid import nodes
 from pylint.checkers import BaseChecker
 from pylint.lint import PyLinter
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 _BASE_ENTITY_MODULES: set[str] = {
     "BaseCoordinatorEntity",
@@ -109,15 +109,15 @@ _MODULE_CLASSES = {
 }
 
 
-class HassEnforceClassModule(BaseChecker):
+class menuaiEnforceClassModule(BaseChecker):
     """Checker for class in correct module."""
 
-    name = "hass_enforce_class_module"
+    name = "menuai_enforce_class_module"
     priority = -1
     msgs = {
         "C7461": (
             "Derived %s is recommended to be placed in the '%s' module",
-            "hass-enforce-class-module",
+            "menuai-enforce-class-module",
             "Used when derived class should be placed in its own module.",
         ),
     }
@@ -127,7 +127,7 @@ class HassEnforceClassModule(BaseChecker):
         root_name = node.root().name
 
         # we only want to check components
-        if not root_name.startswith("homeassistant.components."):
+        if not root_name.startswith("menuai.components."):
             return
         parts = root_name.split(".")
         current_integration = parts[2]
@@ -143,7 +143,7 @@ class HassEnforceClassModule(BaseChecker):
                     parent.name in _MODULE_CLASSES for parent in ancestors
                 ):
                     self.add_message(
-                        "hass-enforce-class-module",
+                        "menuai-enforce-class-module",
                         node=node,
                         args=(ancestor.name, "entity"),
                     )
@@ -156,7 +156,7 @@ class HassEnforceClassModule(BaseChecker):
             for ancestor in ancestors:
                 if ancestor.name in classes:
                     self.add_message(
-                        "hass-enforce-class-module",
+                        "menuai-enforce-class-module",
                         node=node,
                         args=(ancestor.name, expected_module),
                     )
@@ -165,4 +165,4 @@ class HassEnforceClassModule(BaseChecker):
 
 def register(linter: PyLinter) -> None:
     """Register the checker."""
-    linter.register_checker(HassEnforceClassModule(linter))
+    linter.register_checker(menuaiEnforceClassModule(linter))

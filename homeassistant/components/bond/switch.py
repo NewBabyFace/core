@@ -8,11 +8,11 @@ from aiohttp.client_exceptions import ClientResponseError
 from bond_async import Action, DeviceType
 import voluptuous as vol
 
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchEntity
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv, entity_platform
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import BondConfigEntry
 from .const import ATTR_POWER_STATE, SERVICE_SET_POWER_TRACKED_STATE
@@ -20,7 +20,7 @@ from .entity import BondEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: BondConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -61,7 +61,7 @@ class BondSwitch(BondEntity, SwitchEntity):
                 self._device_id, Action.set_power_state_belief(power_state)
             )
         except ClientResponseError as ex:
-            raise HomeAssistantError(
+            raise menuaiError(
                 "The bond API returned an error calling set_power_state_belief for"
                 f" {self.entity_id}.  Code: {ex.status}  Message: {ex.message}"
             ) from ex

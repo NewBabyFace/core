@@ -10,30 +10,30 @@ import pylacrosse
 from serial import SerialException
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     ENTITY_ID_FORMAT,
     PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
     SensorDeviceClass,
     SensorEntity,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_DEVICE,
     CONF_ID,
     CONF_NAME,
     CONF_SENSORS,
     CONF_TYPE,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     PERCENTAGE,
     UnitOfTemperature,
 )
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity import async_generate_entity_id
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.event import async_track_point_in_utc_time
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import dt as dt_util
+from menuai.core import CALLBACK_TYPE, menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity import async_generate_entity_id
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.event import async_track_point_in_utc_time
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import dt as dt_util
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -75,7 +75,7 @@ PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -94,7 +94,7 @@ def setup_platform(
         _LOGGER.warning("Unable to open serial port: %s", exc)
         return
 
-    hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, lambda event: lacrosse.close())
+    menuai.bus.listen_once(EVENT_menuai_STOP, lambda event: lacrosse.close())
 
     if CONF_JEELINK_LED in config:
         lacrosse.led_mode_state(config.get(CONF_JEELINK_LED))
@@ -118,7 +118,7 @@ def setup_platform(
         name: str = device_config.get(CONF_NAME, device)
 
         sensors.append(
-            sensor_class(hass, lacrosse, device, name, expire_after, device_config)
+            sensor_class(menuai, lacrosse, device, name, expire_after, device_config)
         )
 
     add_entities(sensors)
@@ -134,7 +134,7 @@ class LaCrosseSensor(SensorEntity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         lacrosse: pylacrosse.LaCrosse,
         device_id: str,
         name: str,
@@ -142,9 +142,9 @@ class LaCrosseSensor(SensorEntity):
         config: ConfigType,
     ) -> None:
         """Initialize the sensor."""
-        self.hass = hass
+        self.menuai = menuai
         self.entity_id = async_generate_entity_id(
-            ENTITY_ID_FORMAT, device_id, hass=hass
+            ENTITY_ID_FORMAT, device_id, menuai=menuai
         )
         self._config = config
         self._expire_after = expire_after
@@ -177,7 +177,7 @@ class LaCrosseSensor(SensorEntity):
             expiration_at = dt_util.utcnow() + timedelta(seconds=self._expire_after)
 
             self._expiration_trigger = async_track_point_in_utc_time(
-                self.hass, self.value_is_expired, expiration_at
+                self.menuai, self.value_is_expired, expiration_at
             )
 
         self._temperature = lacrosse_sensor.temperature

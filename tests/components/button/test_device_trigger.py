@@ -5,25 +5,25 @@ from __future__ import annotations
 import pytest
 from pytest_unordered import unordered
 
-from homeassistant.components import automation
-from homeassistant.components.button import DOMAIN
-from homeassistant.components.device_automation import DeviceAutomationType
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.components import automation
+from menuai.components.button import DOMAIN
+from menuai.components.device_automation import DeviceAutomationType
+from menuai.const import EntityCategory
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry, async_get_device_automations
 
 
 async def test_get_triggers(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test we get the expected triggers from a button."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -42,7 +42,7 @@ async def test_get_triggers(
         }
     ]
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device_entry.id
+        menuai, DeviceAutomationType.TRIGGER, device_entry.id
     )
     assert triggers == unordered(expected_triggers)
 
@@ -57,7 +57,7 @@ async def test_get_triggers(
     ],
 )
 async def test_get_triggers_hidden_auxiliary(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     hidden_by: er.RegistryEntryHider | None,
@@ -65,7 +65,7 @@ async def test_get_triggers_hidden_auxiliary(
 ) -> None:
     """Test we get the expected triggers from a hidden or auxiliary entity."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -90,20 +90,20 @@ async def test_get_triggers_hidden_auxiliary(
         for trigger in ("pressed",)
     ]
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device_entry.id
+        menuai, DeviceAutomationType.TRIGGER, device_entry.id
     )
     assert triggers == unordered(expected_triggers)
 
 
 async def test_if_fires_on_state_change(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     service_calls: list[ServiceCall],
 ) -> None:
     """Test for turn_on and turn_off triggers firing."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -112,10 +112,10 @@ async def test_if_fires_on_state_change(
         DOMAIN, "test", "5678", device_id=device_entry.id
     )
 
-    hass.states.async_set(entry.entity_id, "unknown")
+    menuai.states.async_set(entry.entity_id, "unknown")
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -146,8 +146,8 @@ async def test_if_fires_on_state_change(
     )
 
     # Test triggering device trigger with a to state
-    hass.states.async_set(entry.entity_id, "2021-01-01T23:59:59+00:00")
-    await hass.async_block_till_done()
+    menuai.states.async_set(entry.entity_id, "2021-01-01T23:59:59+00:00")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
     assert (
         service_calls[0].data["some"]
@@ -156,14 +156,14 @@ async def test_if_fires_on_state_change(
 
 
 async def test_if_fires_on_state_change_legacy(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     service_calls: list[ServiceCall],
 ) -> None:
     """Test for turn_on and turn_off triggers firing."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -172,10 +172,10 @@ async def test_if_fires_on_state_change_legacy(
         DOMAIN, "test", "5678", device_id=device_entry.id
     )
 
-    hass.states.async_set(entry.entity_id, "unknown")
+    menuai.states.async_set(entry.entity_id, "unknown")
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -206,8 +206,8 @@ async def test_if_fires_on_state_change_legacy(
     )
 
     # Test triggering device trigger with a to state
-    hass.states.async_set(entry.entity_id, "2021-01-01T23:59:59+00:00")
-    await hass.async_block_till_done()
+    menuai.states.async_set(entry.entity_id, "2021-01-01T23:59:59+00:00")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
     assert (
         service_calls[0].data["some"]

@@ -6,9 +6,9 @@ from unittest.mock import patch
 from aiohttp import ClientSession
 import pytest
 
-from homeassistant.components import media_source
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components import media_source
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from . import TEST_IMAGE
 
@@ -16,25 +16,25 @@ from tests.typing import ClientSessionGenerator
 
 
 @pytest.fixture(autouse=True)
-async def setup_media_source(hass: HomeAssistant) -> None:
+async def setup_media_source(menuai: menuai) -> None:
     """Set up media source."""
-    assert await async_setup_component(hass, "media_source", {})
+    assert await async_setup_component(menuai, "media_source", {})
 
 
 async def __upload_test_image(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
 ) -> str:
     with (
         tempfile.TemporaryDirectory() as tempdir,
-        patch.object(hass.config, "path", return_value=tempdir),
+        patch.object(menuai.config, "path", return_value=tempdir),
     ):
-        assert await async_setup_component(hass, "image_upload", {})
-        client: ClientSession = await hass_client()
+        assert await async_setup_component(menuai, "image_upload", {})
+        client: ClientSession = await menuai_client()
 
-        file = await hass.async_add_executor_job(TEST_IMAGE.open, "rb")
+        file = await menuai.async_add_executor_job(TEST_IMAGE.open, "rb")
         res = await client.post("/api/image/upload", data={"file": file})
-        hass.async_add_executor_job(file.close)
+        menuai.async_add_executor_job(file.close)
 
         assert res.status == 200
         item = await res.json()
@@ -44,13 +44,13 @@ async def __upload_test_image(
 
 
 async def test_browsing(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test browsing image media source."""
-    image_id = await __upload_test_image(hass, hass_client)
+    image_id = await __upload_test_image(menuai, menuai_client)
 
-    item = await media_source.async_browse_media(hass, "media-source://image_upload")
+    item = await media_source.async_browse_media(menuai, "media-source://image_upload")
 
     assert item is not None
     assert item.title == "Image Upload"
@@ -64,17 +64,17 @@ async def test_browsing(
         match="Unknown item",
     ):
         await media_source.async_browse_media(
-            hass, "media-source://image_upload/invalid_path"
+            menuai, "media-source://image_upload/invalid_path"
         )
 
 
 async def test_resolving(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test resolving."""
-    image_id = await __upload_test_image(hass, hass_client)
+    image_id = await __upload_test_image(menuai, menuai_client)
     item = await media_source.async_resolve_media(
-        hass, f"media-source://image_upload/{image_id}", None
+        menuai, f"media-source://image_upload/{image_id}", None
     )
     assert item is not None
     assert item.url == f"/api/image/serve/{image_id}/original"
@@ -86,5 +86,5 @@ async def test_resolving(
         match=f"Could not resolve media item: {invalid_id}",
     ):
         await media_source.async_resolve_media(
-            hass, f"media-source://image_upload/{invalid_id}", None
+            menuai, f"media-source://image_upload/{invalid_id}", None
         )

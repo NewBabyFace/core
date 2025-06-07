@@ -6,15 +6,15 @@ from pyspcwebgw import SpcWebGateway
 from pyspcwebgw.area import Area
 from pyspcwebgw.const import AreaMode
 
-from homeassistant.components.alarm_control_panel import (
+from menuai.components.alarm_control_panel import (
     AlarmControlPanelEntity,
     AlarmControlPanelEntityFeature,
     AlarmControlPanelState,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import DATA_API, SIGNAL_UPDATE_ALARM
 
@@ -35,7 +35,7 @@ def _get_alarm_state(area: Area) -> AlarmControlPanelState | None:
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -43,7 +43,7 @@ async def async_setup_platform(
     """Set up the SPC alarm control panel platform."""
     if discovery_info is None:
         return
-    api: SpcWebGateway = hass.data[DATA_API]
+    api: SpcWebGateway = menuai.data[DATA_API]
     async_add_entities([SpcAlarm(area=area, api=api) for area in api.areas.values()])
 
 
@@ -64,11 +64,11 @@ class SpcAlarm(AlarmControlPanelEntity):
         self._api = api
         self._attr_name = area.name
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Call for adding new entities."""
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 SIGNAL_UPDATE_ALARM.format(self._area.id),
                 self._update_callback,
             )

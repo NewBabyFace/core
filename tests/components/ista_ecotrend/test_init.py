@@ -6,28 +6,28 @@ from pyecotrend_ista import KeycloakError, LoginError, ParserError, ServerError
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.ista_ecotrend.const import DOMAIN
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.components.ista_ecotrend.const import DOMAIN
+from menuai.config_entries import SOURCE_REAUTH, ConfigEntryState
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 from tests.common import MockConfigEntry
 
 
 @pytest.mark.usefixtures("mock_ista")
 async def test_entry_setup_unload(
-    hass: HomeAssistant, ista_config_entry: MockConfigEntry
+    menuai: menuai, ista_config_entry: MockConfigEntry
 ) -> None:
     """Test integration setup and unload."""
 
-    ista_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(ista_config_entry.entry_id)
-    await hass.async_block_till_done()
+    ista_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(ista_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert ista_config_entry.state is ConfigEntryState.LOADED
 
-    await hass.config_entries.async_unload(ista_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(ista_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert ista_config_entry.state is ConfigEntryState.NOT_LOADED
 
@@ -37,16 +37,16 @@ async def test_entry_setup_unload(
     [ServerError, ParserError],
 )
 async def test_config_entry_not_ready(
-    hass: HomeAssistant,
+    menuai: menuai,
     ista_config_entry: MockConfigEntry,
     mock_ista: MagicMock,
     side_effect: Exception,
 ) -> None:
     """Test config entry not ready."""
     mock_ista.login.side_effect = side_effect
-    ista_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(ista_config_entry.entry_id)
-    await hass.async_block_till_done()
+    ista_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(ista_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert ista_config_entry.state is ConfigEntryState.SETUP_RETRY
 
@@ -56,32 +56,32 @@ async def test_config_entry_not_ready(
     [LoginError, KeycloakError],
 )
 async def test_config_entry_auth_failed(
-    hass: HomeAssistant,
+    menuai: menuai,
     ista_config_entry: MockConfigEntry,
     mock_ista: MagicMock,
     side_effect: Exception,
 ) -> None:
     """Test config entry auth failed."""
     mock_ista.login.side_effect = side_effect
-    ista_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(ista_config_entry.entry_id)
-    await hass.async_block_till_done()
+    ista_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(ista_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert ista_config_entry.state is ConfigEntryState.SETUP_ERROR
-    assert any(ista_config_entry.async_get_active_flows(hass, {SOURCE_REAUTH}))
+    assert any(ista_config_entry.async_get_active_flows(menuai, {SOURCE_REAUTH}))
 
 
 @pytest.mark.usefixtures("mock_ista")
 async def test_device_registry(
-    hass: HomeAssistant,
+    menuai: menuai,
     ista_config_entry: MockConfigEntry,
     device_registry: dr.DeviceRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test device registry."""
-    ista_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(ista_config_entry.entry_id)
-    await hass.async_block_till_done()
+    ista_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(ista_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert ista_config_entry.state is ConfigEntryState.LOADED
 
@@ -92,40 +92,40 @@ async def test_device_registry(
 
 
 async def test_update_failed(
-    hass: HomeAssistant,
+    menuai: menuai,
     ista_config_entry: MockConfigEntry,
     mock_ista: MagicMock,
 ) -> None:
     """Test coordinator update failed."""
 
     with patch(
-        "homeassistant.components.ista_ecotrend.PLATFORMS",
+        "menuai.components.ista_ecotrend.PLATFORMS",
         [],
     ):
         mock_ista.get_consumption_data.side_effect = ServerError
-        ista_config_entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(ista_config_entry.entry_id)
-        await hass.async_block_till_done()
+        ista_config_entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(ista_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
         assert ista_config_entry.state is ConfigEntryState.SETUP_RETRY
 
 
 async def test_auth_failed(
-    hass: HomeAssistant, ista_config_entry: MockConfigEntry, mock_ista: MagicMock
+    menuai: menuai, ista_config_entry: MockConfigEntry, mock_ista: MagicMock
 ) -> None:
     """Test coordinator auth failed and reauth flow started."""
     with patch(
-        "homeassistant.components.ista_ecotrend.PLATFORMS",
+        "menuai.components.ista_ecotrend.PLATFORMS",
         [],
     ):
         mock_ista.get_consumption_data.side_effect = LoginError
-        ista_config_entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(ista_config_entry.entry_id)
-        await hass.async_block_till_done()
+        ista_config_entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(ista_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
         assert ista_config_entry.state is ConfigEntryState.SETUP_ERROR
 
-        flows = hass.config_entries.flow.async_progress()
+        flows = menuai.config_entries.flow.async_progress()
         assert len(flows) == 1
 
         flow = flows[0]

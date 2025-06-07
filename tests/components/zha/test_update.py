@@ -16,11 +16,11 @@ from zigpy.zcl import foundation
 from zigpy.zcl.clusters import general
 import zigpy.zdo.types as zdo_t
 
-from homeassistant.components.homeassistant import (
+from menuai.components.menuai import (
     DOMAIN as HA_DOMAIN,
     SERVICE_UPDATE_ENTITY,
 )
-from homeassistant.components.update import (
+from menuai.components.update import (
     ATTR_IN_PROGRESS,
     ATTR_INSTALLED_VERSION,
     ATTR_LATEST_VERSION,
@@ -28,26 +28,26 @@ from homeassistant.components.update import (
     DOMAIN as UPDATE_DOMAIN,
     SERVICE_INSTALL,
 )
-from homeassistant.components.zha.helpers import (
+from menuai.components.zha.helpers import (
     ZHADeviceProxy,
     ZHAGatewayProxy,
     get_zha_gateway,
     get_zha_gateway_proxy,
 )
-from homeassistant.components.zha.update import (
+from menuai.components.zha.update import (
     OTA_MESSAGE_BATTERY_POWERED,
     OTA_MESSAGE_RELIABILITY,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     STATE_OFF,
     STATE_ON,
     STATE_UNKNOWN,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.setup import async_setup_component
 
 from .common import find_entity_id, update_attribute_cache
 from .conftest import SIG_EP_INPUT, SIG_EP_OUTPUT, SIG_EP_PROFILE, SIG_EP_TYPE
@@ -59,7 +59,7 @@ from tests.typing import WebSocketGenerator
 def update_platform_only():
     """Only set up the update and required base platforms to speed up tests."""
     with patch(
-        "homeassistant.components.zha.PLATFORMS",
+        "menuai.components.zha.PLATFORMS",
         (
             Platform.UPDATE,
             Platform.SENSOR,
@@ -71,14 +71,14 @@ def update_platform_only():
 
 
 async def setup_test_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     zigpy_device_mock,
     skip_attribute_plugs=False,
     file_not_found=False,
 ):
     """Set up test data for the tests."""
-    gateway = get_zha_gateway(hass)
-    gateway_proxy: ZHAGatewayProxy = get_zha_gateway_proxy(hass)
+    gateway = get_zha_gateway(menuai)
+    gateway_proxy: ZHAGatewayProxy = get_zha_gateway_proxy(menuai)
 
     zigpy_device = zigpy_device_mock(
         {
@@ -113,7 +113,7 @@ async def setup_test_data(
 
     gateway.get_or_create_device(zigpy_device)
     await gateway.async_device_initialized(zigpy_device)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     fw_version = 0x12345678
     installed_fw_version = fw_version - 10
@@ -162,21 +162,21 @@ async def setup_test_data(
 
 
 async def test_firmware_update_notification_from_zigpy(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_zha,
     zigpy_device_mock,
 ) -> None:
     """Test ZHA update platform - firmware update notification."""
     await setup_zha()
     zha_device, cluster, fw_image, installed_fw_version = await setup_test_data(
-        hass,
+        menuai,
         zigpy_device_mock,
     )
 
-    entity_id = find_entity_id(Platform.UPDATE, zha_device, hass)
+    entity_id = find_entity_id(Platform.UPDATE, zha_device, menuai)
     assert entity_id is not None
 
-    assert hass.states.get(entity_id).state == STATE_UNKNOWN
+    assert menuai.states.get(entity_id).state == STATE_UNKNOWN
 
     # simulate an image available notification
     await cluster._handle_query_next_image(
@@ -192,8 +192,8 @@ async def test_firmware_update_notification_from_zigpy(
         ),
     )
 
-    await hass.async_block_till_done()
-    state = hass.states.get(entity_id)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_ON
     attrs = state.attributes
     assert attrs[ATTR_INSTALLED_VERSION] == f"0x{installed_fw_version:08x}"
@@ -205,20 +205,20 @@ async def test_firmware_update_notification_from_zigpy(
 
 
 async def test_firmware_update_notification_from_service_call(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_zha,
     zigpy_device_mock,
 ) -> None:
     """Test ZHA update platform - firmware update manual check."""
     await setup_zha()
     zha_device, cluster, fw_image, installed_fw_version = await setup_test_data(
-        hass,
+        menuai,
         zigpy_device_mock,
     )
 
-    entity_id = find_entity_id(Platform.UPDATE, zha_device, hass)
+    entity_id = find_entity_id(Platform.UPDATE, zha_device, menuai)
     assert entity_id is not None
-    assert hass.states.get(entity_id).state == STATE_UNKNOWN
+    assert menuai.states.get(entity_id).state == STATE_UNKNOWN
 
     async def _async_image_notify_side_effect(*args, **kwargs):
         await cluster._handle_query_next_image(
@@ -234,11 +234,11 @@ async def test_firmware_update_notification_from_service_call(
             ),
         )
 
-    await async_setup_component(hass, HA_DOMAIN, {})
+    await async_setup_component(menuai, HA_DOMAIN, {})
     with patch(
         "zigpy.ota.OTA.broadcast_notify", side_effect=_async_image_notify_side_effect
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             HA_DOMAIN,
             SERVICE_UPDATE_ENTITY,
             service_data={ATTR_ENTITY_ID: entity_id},
@@ -252,8 +252,8 @@ async def test_firmware_update_notification_from_service_call(
             jitter=100,
         )
 
-        await hass.async_block_till_done()
-        state = hass.states.get(entity_id)
+        await menuai.async_block_till_done()
+        state = menuai.states.get(entity_id)
         assert state.state == STATE_ON
         attrs = state.attributes
         assert attrs[ATTR_INSTALLED_VERSION] == f"0x{installed_fw_version:08x}"
@@ -293,22 +293,22 @@ def make_packet(zigpy_device, cluster, cmd_name: str, **kwargs):
 
 @patch("zigpy.device.AFTER_OTA_ATTR_READ_DELAY", 0.01)
 async def test_firmware_update_success(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_zha,
     zigpy_device_mock,
 ) -> None:
     """Test ZHA update platform - firmware update success."""
     await setup_zha()
     zha_device, ota_cluster, fw_image, installed_fw_version = await setup_test_data(
-        hass, zigpy_device_mock
+        menuai, zigpy_device_mock
     )
 
     assert installed_fw_version < fw_image.firmware.header.file_version
 
-    entity_id = find_entity_id(Platform.UPDATE, zha_device, hass)
+    entity_id = find_entity_id(Platform.UPDATE, zha_device, menuai)
     assert entity_id is not None
 
-    assert hass.states.get(entity_id).state == STATE_UNKNOWN
+    assert menuai.states.get(entity_id).state == STATE_UNKNOWN
 
     # simulate an image available notification
     await ota_cluster._handle_query_next_image(
@@ -323,8 +323,8 @@ async def test_firmware_update_success(
         ),
     )
 
-    await hass.async_block_till_done()
-    state = hass.states.get(entity_id)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_ON
     attrs = state.attributes
     assert attrs[ATTR_INSTALLED_VERSION] == f"0x{installed_fw_version:08x}"
@@ -411,7 +411,7 @@ async def test_firmware_update_success(
                     assert cmd.image_data == fw_image.firmware.serialize()[40:70]
 
                     # make sure the state machine gets progress reports
-                    state = hass.states.get(entity_id)
+                    state = menuai.states.get(entity_id)
                     assert state.state == STATE_ON
                     attrs = state.attributes
                     assert (
@@ -459,7 +459,7 @@ async def test_firmware_update_success(
                 ota_cluster.read_attributes.side_effect = read_new_fw_version
 
     ota_cluster.endpoint.reply = AsyncMock(side_effect=endpoint_reply)
-    await hass.services.async_call(
+    await menuai.services.async_call(
         UPDATE_DOMAIN,
         SERVICE_INSTALL,
         {
@@ -468,7 +468,7 @@ async def test_firmware_update_success(
         blocking=True,
     )
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_OFF
     attrs = state.attributes
     assert (
@@ -480,30 +480,30 @@ async def test_firmware_update_success(
     assert attrs[ATTR_LATEST_VERSION] == attrs[ATTR_INSTALLED_VERSION]
 
     # If we send a progress notification incorrectly, it won't be handled
-    entity = hass.data[UPDATE_DOMAIN].get_entity(entity_id)
+    entity = menuai.data[UPDATE_DOMAIN].get_entity(entity_id)
     entity.entity_data.entity._update_progress(50, 100, 0.50)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert attrs[ATTR_IN_PROGRESS] is False
     assert attrs[ATTR_UPDATE_PERCENTAGE] is None
     assert state.state == STATE_OFF
 
 
 async def test_firmware_update_raises(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_zha,
     zigpy_device_mock,
 ) -> None:
     """Test ZHA update platform - firmware update raises."""
     await setup_zha()
     zha_device, ota_cluster, fw_image, installed_fw_version = await setup_test_data(
-        hass, zigpy_device_mock
+        menuai, zigpy_device_mock
     )
 
-    entity_id = find_entity_id(Platform.UPDATE, zha_device, hass)
+    entity_id = find_entity_id(Platform.UPDATE, zha_device, menuai)
     assert entity_id is not None
 
-    assert hass.states.get(entity_id).state == STATE_UNKNOWN
+    assert menuai.states.get(entity_id).state == STATE_UNKNOWN
 
     # simulate an image available notification
     await ota_cluster._handle_query_next_image(
@@ -519,8 +519,8 @@ async def test_firmware_update_raises(
         ),
     )
 
-    await hass.async_block_till_done()
-    state = hass.states.get(entity_id)
+    await menuai.async_block_till_done()
+    state = menuai.states.get(entity_id)
     assert state.state == STATE_ON
     attrs = state.attributes
     assert attrs[ATTR_INSTALLED_VERSION] == f"0x{installed_fw_version:08x}"
@@ -557,8 +557,8 @@ async def test_firmware_update_raises(
                 raise DeliveryError("failed to deliver")
 
     ota_cluster.endpoint.reply = AsyncMock(side_effect=endpoint_reply)
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             UPDATE_DOMAIN,
             SERVICE_INSTALL,
             {
@@ -572,9 +572,9 @@ async def test_firmware_update_raises(
             "zigpy.device.Device.update_firmware",
             AsyncMock(side_effect=DeliveryError("failed to deliver")),
         ),
-        pytest.raises(HomeAssistantError),
+        pytest.raises(menuaiError),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             UPDATE_DOMAIN,
             SERVICE_INSTALL,
             {
@@ -585,14 +585,14 @@ async def test_firmware_update_raises(
 
 
 async def test_update_release_notes(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     setup_zha,
     zigpy_device_mock,
 ) -> None:
     """Test ZHA update platform release notes."""
     await setup_zha()
-    zha_device, _, _, _ = await setup_test_data(hass, zigpy_device_mock)
+    zha_device, _, _, _ = await setup_test_data(menuai, zigpy_device_mock)
 
     zha_lib_entity = next(
         e
@@ -601,12 +601,12 @@ async def test_update_release_notes(
     )
     zha_lib_entity._attr_release_notes = "Some lengthy release notes"
     zha_lib_entity.maybe_emit_state_changed_event()
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    entity_id = find_entity_id(Platform.UPDATE, zha_device, hass)
+    entity_id = find_entity_id(Platform.UPDATE, zha_device, menuai)
     assert entity_id is not None
 
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
     # Mains-powered devices
     with patch(

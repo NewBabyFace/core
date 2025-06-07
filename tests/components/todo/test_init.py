@@ -7,7 +7,7 @@ import zoneinfo
 import pytest
 import voluptuous as vol
 
-from homeassistant.components.todo import (
+from menuai.components.todo import (
     ATTR_DESCRIPTION,
     ATTR_DUE_DATE,
     ATTR_DUE_DATETIME,
@@ -21,15 +21,15 @@ from homeassistant.components.todo import (
     TodoListEntityFeature,
     TodoServices,
 )
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import ATTR_ENTITY_ID, ATTR_SUPPORTED_FEATURES
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import (
-    HomeAssistantError,
+from menuai.config_entries import ConfigEntryState
+from menuai.const import ATTR_ENTITY_ID, ATTR_SUPPORTED_FEATURES
+from menuai.core import menuai
+from menuai.exceptions import (
+    menuaiError,
     ServiceNotSupported,
     ServiceValidationError,
 )
-from homeassistant.setup import async_setup_component
+from menuai.setup import async_setup_component
 
 from . import create_mock_platform
 
@@ -50,40 +50,40 @@ TEST_OFFSET = "-06:00"
 
 
 async def test_unload_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     test_entity: TodoListEntity,
 ) -> None:
     """Test unloading a config entry with a todo entity."""
 
-    config_entry = await create_mock_platform(hass, [test_entity])
+    config_entry = await create_mock_platform(menuai, [test_entity])
     assert config_entry.state is ConfigEntryState.LOADED
 
-    state = hass.states.get("todo.entity1")
+    state = menuai.states.get("todo.entity1")
     assert state
 
-    assert await hass.config_entries.async_unload(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_unload(config_entry.entry_id)
+    await menuai.async_block_till_done()
     assert config_entry.state is ConfigEntryState.NOT_LOADED
 
-    state = hass.states.get("todo.entity1")
+    state = menuai.states.get("todo.entity1")
     assert not state
 
 
 async def test_list_todo_items(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     test_entity: TodoListEntity,
 ) -> None:
     """Test listing items in a To-do list."""
 
-    await create_mock_platform(hass, [test_entity])
+    await create_mock_platform(menuai, [test_entity])
 
-    state = hass.states.get("todo.entity1")
+    state = menuai.states.get("todo.entity1")
     assert state
     assert state.state == "1"
     assert state.attributes == {"supported_features": 15}
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json(
         {"id": 1, "type": "todo/item/list", "entity_id": "todo.entity1"}
     )
@@ -111,22 +111,22 @@ async def test_list_todo_items(
     ],
 )
 async def test_get_items_service(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     test_entity: TodoListEntity,
     service_data: dict[str, Any],
     expected_items: list[dict[str, Any]],
 ) -> None:
     """Test listing items in a To-do list from a service call."""
 
-    await create_mock_platform(hass, [test_entity])
+    await create_mock_platform(menuai, [test_entity])
 
-    state = hass.states.get("todo.entity1")
+    state = menuai.states.get("todo.entity1")
     assert state
     assert state.state == "1"
     assert state.attributes == {ATTR_SUPPORTED_FEATURES: 15}
 
-    result = await hass.services.async_call(
+    result = await menuai.services.async_call(
         DOMAIN,
         TodoServices.GET_ITEMS,
         service_data,
@@ -138,16 +138,16 @@ async def test_get_items_service(
 
 
 async def test_unsupported_websocket(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test a To-do list for an entity that does not exist."""
 
     entity1 = TodoListEntity()
     entity1.entity_id = "todo.entity1"
-    await create_mock_platform(hass, [entity1])
+    await create_mock_platform(menuai, [entity1])
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json(
         {
             "id": 1,
@@ -169,15 +169,15 @@ async def test_unsupported_websocket(
     ],
 )
 async def test_add_item_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     test_entity: TodoListEntity,
     new_item_name: str,
 ) -> None:
     """Test adding an item in a To-do list."""
 
-    await create_mock_platform(hass, [test_entity])
+    await create_mock_platform(menuai, [test_entity])
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         TodoServices.ADD_ITEM,
         {ATTR_ITEM: new_item_name},
@@ -195,16 +195,16 @@ async def test_add_item_service(
 
 
 async def test_add_item_service_raises(
-    hass: HomeAssistant,
+    menuai: menuai,
     test_entity: TodoListEntity,
 ) -> None:
     """Test adding an item in a To-do list that raises an error."""
 
-    await create_mock_platform(hass, [test_entity])
+    await create_mock_platform(menuai, [test_entity])
 
-    test_entity.async_create_todo_item.side_effect = HomeAssistantError("Ooops")
-    with pytest.raises(HomeAssistantError, match="Ooops"):
-        await hass.services.async_call(
+    test_entity.async_create_todo_item.side_effect = menuaiError("Ooops")
+    with pytest.raises(menuaiError, match="Ooops"):
+        await menuai.services.async_call(
             DOMAIN,
             TodoServices.ADD_ITEM,
             {ATTR_ITEM: "New item"},
@@ -240,7 +240,7 @@ async def test_add_item_service_raises(
     ],
 )
 async def test_add_item_service_invalid_input(
-    hass: HomeAssistant,
+    menuai: menuai,
     test_entity: TodoListEntity,
     item_data: dict[str, Any],
     expected_exception: str,
@@ -248,10 +248,10 @@ async def test_add_item_service_invalid_input(
 ) -> None:
     """Test invalid input to the add item service."""
 
-    await create_mock_platform(hass, [test_entity])
+    await create_mock_platform(menuai, [test_entity])
 
     with pytest.raises(expected_exception) as exc:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             TodoServices.ADD_ITEM,
             item_data,
@@ -316,7 +316,7 @@ async def test_add_item_service_invalid_input(
     ],
 )
 async def test_add_item_service_extended_fields(
-    hass: HomeAssistant,
+    menuai: menuai,
     test_entity: TodoListEntity,
     supported_entity_feature: int,
     item_data: dict[str, Any],
@@ -325,9 +325,9 @@ async def test_add_item_service_extended_fields(
     """Test adding an item in a To-do list."""
 
     test_entity._attr_supported_features |= supported_entity_feature
-    await create_mock_platform(hass, [test_entity])
+    await create_mock_platform(menuai, [test_entity])
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         TodoServices.ADD_ITEM,
         {ATTR_ITEM: "New item", **item_data},
@@ -350,15 +350,15 @@ async def test_add_item_service_extended_fields(
     ],
 )
 async def test_update_todo_item_service_by_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     test_entity: TodoListEntity,
     new_item_name: str,
 ) -> None:
     """Test updating an item in a To-do list."""
 
-    await create_mock_platform(hass, [test_entity])
+    await create_mock_platform(menuai, [test_entity])
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         TodoServices.UPDATE_ITEM,
         {ATTR_ITEM: "1", ATTR_RENAME: new_item_name, ATTR_STATUS: "completed"},
@@ -376,14 +376,14 @@ async def test_update_todo_item_service_by_id(
 
 
 async def test_update_todo_item_service_by_id_status_only(
-    hass: HomeAssistant,
+    menuai: menuai,
     test_entity: TodoListEntity,
 ) -> None:
     """Test updating an item in a To-do list."""
 
-    await create_mock_platform(hass, [test_entity])
+    await create_mock_platform(menuai, [test_entity])
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         TodoServices.UPDATE_ITEM,
         {ATTR_ITEM: "1", ATTR_STATUS: "completed"},
@@ -401,14 +401,14 @@ async def test_update_todo_item_service_by_id_status_only(
 
 
 async def test_update_todo_item_service_by_id_rename(
-    hass: HomeAssistant,
+    menuai: menuai,
     test_entity: TodoListEntity,
 ) -> None:
     """Test updating an item in a To-do list."""
 
-    await create_mock_platform(hass, [test_entity])
+    await create_mock_platform(menuai, [test_entity])
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         TodoServices.UPDATE_ITEM,
         {ATTR_ITEM: "1", "rename": "Updated item"},
@@ -426,14 +426,14 @@ async def test_update_todo_item_service_by_id_rename(
 
 
 async def test_update_todo_item_service_raises(
-    hass: HomeAssistant,
+    menuai: menuai,
     test_entity: TodoListEntity,
 ) -> None:
     """Test updating an item in a To-do list that raises an error."""
 
-    await create_mock_platform(hass, [test_entity])
+    await create_mock_platform(menuai, [test_entity])
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         TodoServices.UPDATE_ITEM,
         {ATTR_ITEM: "1", "rename": "Updated item", "status": "completed"},
@@ -441,9 +441,9 @@ async def test_update_todo_item_service_raises(
         blocking=True,
     )
 
-    test_entity.async_update_todo_item.side_effect = HomeAssistantError("Ooops")
-    with pytest.raises(HomeAssistantError, match="Ooops"):
-        await hass.services.async_call(
+    test_entity.async_update_todo_item.side_effect = menuaiError("Ooops")
+    with pytest.raises(menuaiError, match="Ooops"):
+        await menuai.services.async_call(
             DOMAIN,
             TodoServices.UPDATE_ITEM,
             {ATTR_ITEM: "1", "rename": "Updated item", "status": "completed"},
@@ -453,14 +453,14 @@ async def test_update_todo_item_service_raises(
 
 
 async def test_update_todo_item_service_by_summary(
-    hass: HomeAssistant,
+    menuai: menuai,
     test_entity: TodoListEntity,
 ) -> None:
     """Test updating an item in a To-do list by summary."""
 
-    await create_mock_platform(hass, [test_entity])
+    await create_mock_platform(menuai, [test_entity])
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         TodoServices.UPDATE_ITEM,
         {ATTR_ITEM: "Item #1", "rename": "Something else", "status": "completed"},
@@ -478,14 +478,14 @@ async def test_update_todo_item_service_by_summary(
 
 
 async def test_update_todo_item_service_by_summary_only_status(
-    hass: HomeAssistant,
+    menuai: menuai,
     test_entity: TodoListEntity,
 ) -> None:
     """Test updating an item in a To-do list by summary."""
 
-    await create_mock_platform(hass, [test_entity])
+    await create_mock_platform(menuai, [test_entity])
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         TodoServices.UPDATE_ITEM,
         {ATTR_ITEM: "Item #1", "rename": "Something else"},
@@ -503,15 +503,15 @@ async def test_update_todo_item_service_by_summary_only_status(
 
 
 async def test_update_todo_item_service_by_summary_not_found(
-    hass: HomeAssistant,
+    menuai: menuai,
     test_entity: TodoListEntity,
 ) -> None:
     """Test updating an item in a To-do list by summary which is not found."""
 
-    await create_mock_platform(hass, [test_entity])
+    await create_mock_platform(menuai, [test_entity])
 
     with pytest.raises(ServiceValidationError, match="Unable to find"):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             TodoServices.UPDATE_ITEM,
             {ATTR_ITEM: "Item #7", "status": "completed"},
@@ -533,17 +533,17 @@ async def test_update_todo_item_service_by_summary_not_found(
     ],
 )
 async def test_update_item_service_invalid_input(
-    hass: HomeAssistant,
+    menuai: menuai,
     test_entity: TodoListEntity,
     item_data: dict[str, Any],
     expected_error: str,
 ) -> None:
     """Test invalid input to the update item service."""
 
-    await create_mock_platform(hass, [test_entity])
+    await create_mock_platform(menuai, [test_entity])
 
     with pytest.raises(vol.Invalid, match=expected_error):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             "update_item",
             item_data,
@@ -561,16 +561,16 @@ async def test_update_item_service_invalid_input(
     ],
 )
 async def test_update_todo_item_field_unsupported(
-    hass: HomeAssistant,
+    menuai: menuai,
     test_entity: TodoListEntity,
     update_data: dict[str, Any],
 ) -> None:
     """Test updating an item in a To-do list."""
 
-    await create_mock_platform(hass, [test_entity])
+    await create_mock_platform(menuai, [test_entity])
 
     with pytest.raises(ServiceValidationError, match="does not support"):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             TodoServices.UPDATE_ITEM,
             {ATTR_ITEM: "1", **update_data},
@@ -615,7 +615,7 @@ async def test_update_todo_item_field_unsupported(
     ],
 )
 async def test_update_todo_item_extended_fields(
-    hass: HomeAssistant,
+    menuai: menuai,
     test_entity: TodoListEntity,
     supported_entity_feature: int,
     update_data: dict[str, Any],
@@ -624,9 +624,9 @@ async def test_update_todo_item_extended_fields(
     """Test updating an item in a To-do list."""
 
     test_entity._attr_supported_features |= supported_entity_feature
-    await create_mock_platform(hass, [test_entity])
+    await create_mock_platform(menuai, [test_entity])
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         TodoServices.UPDATE_ITEM,
         {ATTR_ITEM: "1", **update_data},
@@ -702,7 +702,7 @@ async def test_update_todo_item_extended_fields(
     ],
 )
 async def test_update_todo_item_extended_fields_overwrite_existing_values(
-    hass: HomeAssistant,
+    menuai: menuai,
     test_entity: TodoListEntity,
     update_data: dict[str, Any],
     expected_update: TodoItem,
@@ -714,9 +714,9 @@ async def test_update_todo_item_extended_fields_overwrite_existing_values(
         | TodoListEntityFeature.SET_DUE_DATE_ON_ITEM
         | TodoListEntityFeature.SET_DUE_DATETIME_ON_ITEM
     )
-    await create_mock_platform(hass, [test_entity])
+    await create_mock_platform(menuai, [test_entity])
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         TodoServices.UPDATE_ITEM,
         {ATTR_ITEM: "1", **update_data},
@@ -731,14 +731,14 @@ async def test_update_todo_item_extended_fields_overwrite_existing_values(
 
 
 async def test_remove_todo_item_service_by_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     test_entity: TodoListEntity,
 ) -> None:
     """Test removing an item in a To-do list."""
 
-    await create_mock_platform(hass, [test_entity])
+    await create_mock_platform(menuai, [test_entity])
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         TodoServices.REMOVE_ITEM,
         {ATTR_ITEM: ["1", "2"]},
@@ -752,16 +752,16 @@ async def test_remove_todo_item_service_by_id(
 
 
 async def test_remove_todo_item_service_raises(
-    hass: HomeAssistant,
+    menuai: menuai,
     test_entity: TodoListEntity,
 ) -> None:
     """Test removing an item in a To-do list that raises an error."""
 
-    await create_mock_platform(hass, [test_entity])
+    await create_mock_platform(menuai, [test_entity])
 
-    test_entity.async_delete_todo_items.side_effect = HomeAssistantError("Ooops")
-    with pytest.raises(HomeAssistantError, match="Ooops"):
-        await hass.services.async_call(
+    test_entity.async_delete_todo_items.side_effect = menuaiError("Ooops")
+    with pytest.raises(menuaiError, match="Ooops"):
+        await menuai.services.async_call(
             DOMAIN,
             TodoServices.REMOVE_ITEM,
             {ATTR_ITEM: ["1", "2"]},
@@ -771,17 +771,17 @@ async def test_remove_todo_item_service_raises(
 
 
 async def test_remove_todo_item_service_invalid_input(
-    hass: HomeAssistant,
+    menuai: menuai,
     test_entity: TodoListEntity,
 ) -> None:
     """Test invalid input to the remove item service."""
 
-    await create_mock_platform(hass, [test_entity])
+    await create_mock_platform(menuai, [test_entity])
 
     with pytest.raises(
         vol.Invalid, match=r"required key not provided @ data\['item'\]"
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             TodoServices.REMOVE_ITEM,
             {},
@@ -791,14 +791,14 @@ async def test_remove_todo_item_service_invalid_input(
 
 
 async def test_remove_todo_item_service_by_summary(
-    hass: HomeAssistant,
+    menuai: menuai,
     test_entity: TodoListEntity,
 ) -> None:
     """Test removing an item in a To-do list by summary."""
 
-    await create_mock_platform(hass, [test_entity])
+    await create_mock_platform(menuai, [test_entity])
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         TodoServices.REMOVE_ITEM,
         {ATTR_ITEM: ["Item #1"]},
@@ -812,15 +812,15 @@ async def test_remove_todo_item_service_by_summary(
 
 
 async def test_remove_todo_item_service_by_summary_not_found(
-    hass: HomeAssistant,
+    menuai: menuai,
     test_entity: TodoListEntity,
 ) -> None:
     """Test removing an item in a To-do list by summary which is not found."""
 
-    await create_mock_platform(hass, [test_entity])
+    await create_mock_platform(menuai, [test_entity])
 
     with pytest.raises(ServiceValidationError, match="Unable to find"):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             TodoServices.REMOVE_ITEM,
             {ATTR_ITEM: ["Item #7"]},
@@ -830,15 +830,15 @@ async def test_remove_todo_item_service_by_summary_not_found(
 
 
 async def test_move_todo_item_service_by_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     test_entity: TodoListEntity,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test moving an item in a To-do list."""
 
-    await create_mock_platform(hass, [test_entity])
+    await create_mock_platform(menuai, [test_entity])
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -859,16 +859,16 @@ async def test_move_todo_item_service_by_id(
 
 
 async def test_move_todo_item_service_raises(
-    hass: HomeAssistant,
+    menuai: menuai,
     test_entity: TodoListEntity,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test moving an item in a To-do list that raises an error."""
 
-    await create_mock_platform(hass, [test_entity])
+    await create_mock_platform(menuai, [test_entity])
 
-    test_entity.async_move_todo_item.side_effect = HomeAssistantError("Ooops")
-    client = await hass_ws_client()
+    test_entity.async_move_todo_item.side_effect = menuaiError("Ooops")
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -901,18 +901,18 @@ async def test_move_todo_item_service_raises(
     ],
 )
 async def test_move_todo_item_service_invalid_input(
-    hass: HomeAssistant,
+    menuai: menuai,
     test_entity: TodoListEntity,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     item_data: dict[str, Any],
     expected_status: str,
     expected_error: str,
 ) -> None:
     """Test invalid input for the move item service."""
 
-    await create_mock_platform(hass, [test_entity])
+    await create_mock_platform(menuai, [test_entity])
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -955,22 +955,22 @@ async def test_move_todo_item_service_invalid_input(
     ],
 )
 async def test_unsupported_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     service_name: str,
     payload: dict[str, Any] | None,
 ) -> None:
     """Test a To-do list that does not support features."""
     # Fetch translations
-    await async_setup_component(hass, "homeassistant", "")
+    await async_setup_component(menuai, "menuai", "")
     entity1 = TodoListEntity()
     entity1.entity_id = "todo.entity1"
-    await create_mock_platform(hass, [entity1])
+    await create_mock_platform(menuai, [entity1])
 
     with pytest.raises(
         ServiceNotSupported,
         match=f"Entity todo.entity1 does not support action {DOMAIN}.{service_name}",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             service_name,
             payload,
@@ -980,16 +980,16 @@ async def test_unsupported_service(
 
 
 async def test_move_item_unsupported(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test invalid input for the move item service."""
 
     entity1 = TodoListEntity()
     entity1.entity_id = "todo.entity1"
-    await create_mock_platform(hass, [entity1])
+    await create_mock_platform(menuai, [entity1])
 
-    client = await hass_ws_client()
+    client = await menuai_ws_client()
     await client.send_json(
         {
             "id": 1,
@@ -1005,13 +1005,13 @@ async def test_move_item_unsupported(
 
 
 async def test_remove_completed_items_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     test_entity: TodoListEntity,
 ) -> None:
     """Test remove completed todo items service."""
-    await create_mock_platform(hass, [test_entity])
+    await create_mock_platform(menuai, [test_entity])
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         TodoServices.REMOVE_COMPLETED_ITEMS,
         target={ATTR_ENTITY_ID: "todo.entity1"},
@@ -1025,7 +1025,7 @@ async def test_remove_completed_items_service(
     test_entity.async_delete_todo_items.reset_mock()
 
     # calling service multiple times will not call the entity method
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         TodoServices.REMOVE_COMPLETED_ITEMS,
         target={ATTR_ENTITY_ID: "todo.entity1"},
@@ -1035,16 +1035,16 @@ async def test_remove_completed_items_service(
 
 
 async def test_remove_completed_items_service_raises(
-    hass: HomeAssistant,
+    menuai: menuai,
     test_entity: TodoListEntity,
 ) -> None:
     """Test removing all completed item from a To-do list that raises an error."""
 
-    await create_mock_platform(hass, [test_entity])
+    await create_mock_platform(menuai, [test_entity])
 
-    test_entity.async_delete_todo_items.side_effect = HomeAssistantError("Ooops")
-    with pytest.raises(HomeAssistantError, match="Ooops"):
-        await hass.services.async_call(
+    test_entity.async_delete_todo_items.side_effect = menuaiError("Ooops")
+    with pytest.raises(menuaiError, match="Ooops"):
+        await menuai.services.async_call(
             DOMAIN,
             TodoServices.REMOVE_COMPLETED_ITEMS,
             target={ATTR_ENTITY_ID: "todo.entity1"},
@@ -1053,15 +1053,15 @@ async def test_remove_completed_items_service_raises(
 
 
 async def test_subscribe(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     test_entity: TodoListEntity,
 ) -> None:
     """Test subscribing to todo updates."""
 
-    await create_mock_platform(hass, [test_entity])
+    await create_mock_platform(menuai, [test_entity])
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json_auto_id(
         {
@@ -1140,15 +1140,15 @@ async def test_subscribe(
 
 
 async def test_subscribe_entity_does_not_exist(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     test_entity: TodoListEntity,
 ) -> None:
     """Test failure to subscribe to an entity that does not exist."""
 
-    await create_mock_platform(hass, [test_entity])
+    await create_mock_platform(menuai, [test_entity])
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json_auto_id(
         {
@@ -1176,8 +1176,8 @@ async def test_subscribe_entity_does_not_exist(
     ],
 )
 async def test_list_todo_items_extended_fields(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     test_entity: TodoListEntity,
     item_data: dict[str, Any],
     expected_item_data: dict[str, Any],
@@ -1190,9 +1190,9 @@ async def test_list_todo_items_extended_fields(
             **item_data,
         ),
     ]
-    await create_mock_platform(hass, [test_entity])
+    await create_mock_platform(menuai, [test_entity])
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json(
         {"id": 1, "type": "todo/item/list", "entity_id": "todo.entity1"}
     )
@@ -1208,7 +1208,7 @@ async def test_list_todo_items_extended_fields(
         ]
     }
 
-    result = await hass.services.async_call(
+    result = await menuai.services.async_call(
         DOMAIN,
         "get_items",
         {},

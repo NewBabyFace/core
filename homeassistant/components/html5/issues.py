@@ -2,8 +2,8 @@
 
 import logging
 
-from homeassistant.core import DOMAIN as HOMEASSISTANT_DOMAIN, HomeAssistant, callback
-from homeassistant.helpers.issue_registry import IssueSeverity, async_create_issue
+from menuai.core import DOMAIN as menuai_DOMAIN, menuai, callback
+from menuai.helpers.issue_registry import IssueSeverity, async_create_issue
 
 from .const import DOMAIN
 
@@ -16,12 +16,12 @@ INTEGRATION_TITLE = "HTML5 Push Notifications"
 
 
 @callback
-def async_create_html5_issue(hass: HomeAssistant, import_success: bool) -> None:
+def async_create_html5_issue(menuai: menuai, import_success: bool) -> None:
     """Create issues for HTML5."""
     if import_success:
         async_create_issue(
-            hass,
-            HOMEASSISTANT_DOMAIN,
+            menuai,
+            menuai_DOMAIN,
             f"deprecated_yaml_{DOMAIN}",
             breaks_in_ha_version="2025.4.0",
             is_fixable=False,
@@ -35,7 +35,7 @@ def async_create_html5_issue(hass: HomeAssistant, import_success: bool) -> None:
         )
     else:
         async_create_issue(
-            hass,
+            menuai,
             DOMAIN,
             f"deprecated_yaml_{DOMAIN}",
             breaks_in_ha_version="2025.4.0",

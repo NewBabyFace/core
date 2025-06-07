@@ -8,13 +8,13 @@ import pytest
 from ring_doorbell import Ring
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.ring.const import DOMAIN, SCAN_INTERVAL
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.components.ring.const import DOMAIN, SCAN_INTERVAL
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.setup import async_setup_component
 
 from .common import MockConfigEntry, async_check_entity_translations, setup_platform
 from .device_mocks import (
@@ -30,12 +30,12 @@ from tests.common import async_fire_time_changed, snapshot_platform
 
 @pytest.fixture
 def create_deprecated_and_disabled_sensor_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: ConfigEntry,
     entity_registry: er.EntityRegistry,
 ):
     """Create the entity so it is not ignored by the deprecation check."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     def create_entry(
         device_name,
@@ -72,7 +72,7 @@ def create_deprecated_and_disabled_sensor_entities(
 
 
 async def test_states(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_ring_client: Mock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
@@ -80,12 +80,12 @@ async def test_states(
     create_deprecated_and_disabled_sensor_entities,
 ) -> None:
     """Test states."""
-    mock_config_entry.add_to_hass(hass)
-    await setup_platform(hass, Platform.SENSOR)
+    mock_config_entry.add_to_menuai(menuai)
+    await setup_platform(menuai, Platform.SENSOR)
     await async_check_entity_translations(
-        hass, entity_registry, mock_config_entry.entry_id, SENSOR_DOMAIN
+        menuai, entity_registry, mock_config_entry.entry_id, SENSOR_DOMAIN
     )
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
 
 @pytest.mark.parametrize(
@@ -108,7 +108,7 @@ async def test_states(
     ],
 )
 async def test_health_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_ring_client,
     freezer: FrozenDateTimeFactory,
     entity_registry: er.EntityRegistry,
@@ -130,17 +130,17 @@ async def test_health_sensor(
     assert entity_entry.disabled is False
     assert entity_entry.entity_id == entity_id
 
-    await setup_platform(hass, "sensor")
-    await hass.async_block_till_done()
+    await setup_platform(menuai, "sensor")
+    await menuai.async_block_till_done()
 
-    sensor_state = hass.states.get(entity_id)
+    sensor_state = menuai.states.get(entity_id)
     assert sensor_state is not None
     assert sensor_state.state == "unknown"
 
     freezer.tick(SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
-    sensor_state = hass.states.get(entity_id)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
+    sensor_state = menuai.states.get(entity_id)
     assert sensor_state is not None
     assert sensor_state.state == expected_value
 
@@ -173,7 +173,7 @@ async def test_health_sensor(
     ],
 )
 async def test_history_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_ring_client: Ring,
     mock_config_entry: ConfigEntry,
     entity_registry: er.EntityRegistry,
@@ -185,7 +185,7 @@ async def test_history_sensor(
 ) -> None:
     """Test the Ring sensors."""
     # Create the entity so it is not ignored by the deprecation check
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     entity_id = f"sensor.{device_name}_{sensor_name}"
     unique_id = f"{device_id}-{sensor_name}"
@@ -197,41 +197,41 @@ async def test_history_sensor(
         suggested_object_id=f"{device_name}_{sensor_name}",
         config_entry=mock_config_entry,
     )
-    with patch("homeassistant.components.ring.PLATFORMS", [Platform.SENSOR]):
-        assert await async_setup_component(hass, DOMAIN, {})
+    with patch("menuai.components.ring.PLATFORMS", [Platform.SENSOR]):
+        assert await async_setup_component(menuai, DOMAIN, {})
 
     entity_id = f"sensor.{device_name}_{sensor_name}"
-    sensor_state = hass.states.get(entity_id)
+    sensor_state = menuai.states.get(entity_id)
     assert sensor_state is not None
     assert sensor_state.state == "unknown"
 
     freezer.tick(SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
-    sensor_state = hass.states.get(entity_id)
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done(wait_background_tasks=True)
+    sensor_state = menuai.states.get(entity_id)
     assert sensor_state is not None
     assert sensor_state.state == expected_value
 
 
 async def test_only_chime_devices(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_ring_client,
     mock_ring_devices,
     freezer: FrozenDateTimeFactory,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Tests the update service works correctly if only chimes are returned."""
-    await hass.config.async_set_time_zone("UTC")
+    await menuai.config.async_set_time_zone("UTC")
     freezer.move_to("2021-01-09 12:00:00+00:00")
 
     mock_ring_devices.all_devices = mock_ring_devices.chimes
 
-    await setup_platform(hass, Platform.SENSOR)
-    await hass.async_block_till_done()
+    await setup_platform(menuai, Platform.SENSOR)
+    await menuai.async_block_till_done()
     caplog.set_level(logging.DEBUG)
     caplog.clear()
     freezer.tick(SCAN_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     assert "UnboundLocalError" not in caplog.text  # For issue #109210

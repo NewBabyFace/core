@@ -9,11 +9,11 @@ from typing import Any
 from aiohttp import ClientError
 from py_nightscout import Api as NightscoutAPI
 
-from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_DATE, UnitOfBloodGlucoseConcentration
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.sensor import SensorDeviceClass, SensorEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_DATE, UnitOfBloodGlucoseConcentration
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import ATTR_DELTA, ATTR_DEVICE, ATTR_DIRECTION, DOMAIN
 
@@ -25,12 +25,12 @@ DEFAULT_NAME = "Blood Glucose"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Glucose Sensor."""
-    api = hass.data[DOMAIN][entry.entry_id]
+    api = menuai.data[DOMAIN][entry.entry_id]
     async_add_entities([NightscoutSensor(api, "Blood Sugar", entry.unique_id)], True)
 
 

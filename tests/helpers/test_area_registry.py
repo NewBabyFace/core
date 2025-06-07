@@ -7,28 +7,28 @@ from typing import Any
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.components.sensor import SensorDeviceClass
-from homeassistant.const import (
+from menuai.components.sensor import SensorDeviceClass
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     ATTR_UNIT_OF_MEASUREMENT,
     PERCENTAGE,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import (
+from menuai.core import menuai
+from menuai.helpers import (
     area_registry as ar,
     floor_registry as fr,
     label_registry as lr,
 )
-from homeassistant.util.dt import utcnow
+from menuai.util.dt import utcnow
 
 from tests.common import ANY, async_capture_events, flush_store
 
 
 @pytest.fixture
-async def mock_temperature_humidity_entity(hass: HomeAssistant) -> None:
+async def mock_temperature_humidity_entity(menuai: menuai) -> None:
     """Mock temperature and humidity sensors."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.mock_temperature",
         "20",
         {
@@ -36,7 +36,7 @@ async def mock_temperature_humidity_entity(hass: HomeAssistant) -> None:
             ATTR_UNIT_OF_MEASUREMENT: UnitOfTemperature.CELSIUS,
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.mock_humidity",
         "50",
         {
@@ -56,13 +56,13 @@ async def test_list_areas(area_registry: ar.AreaRegistry) -> None:
 
 
 async def test_create_area(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     area_registry: ar.AreaRegistry,
     mock_temperature_humidity_entity: None,
 ) -> None:
     """Make sure that we can create an area."""
-    update_events = async_capture_events(hass, ar.EVENT_AREA_REGISTRY_UPDATED)
+    update_events = async_capture_events(menuai, ar.EVENT_AREA_REGISTRY_UPDATED)
 
     # Create area with only mandatory parameters
     area = area_registry.async_create("mock")
@@ -84,7 +84,7 @@ async def test_create_area(
 
     freezer.tick(timedelta(minutes=5))
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(update_events) == 1
     assert update_events[-1].data == {
@@ -119,7 +119,7 @@ async def test_create_area(
     assert area.created_at != area2.created_at
     assert area.modified_at != area2.modified_at
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(update_events) == 2
     assert update_events[-1].data == {
@@ -129,17 +129,17 @@ async def test_create_area(
 
 
 async def test_create_area_with_name_already_in_use(
-    hass: HomeAssistant, area_registry: ar.AreaRegistry
+    menuai: menuai, area_registry: ar.AreaRegistry
 ) -> None:
     """Make sure that we can't create an area with a name already in use."""
-    update_events = async_capture_events(hass, ar.EVENT_AREA_REGISTRY_UPDATED)
+    update_events = async_capture_events(menuai, ar.EVENT_AREA_REGISTRY_UPDATED)
     area_registry.async_create("mock")
 
     with pytest.raises(ValueError) as e_info:
         area_registry.async_create("mock")
     assert str(e_info.value) == "The name mock (mock) is already in use"
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(area_registry.areas) == 1
     assert len(update_events) == 1
@@ -159,18 +159,18 @@ async def test_create_area_with_id_already_in_use(
 
 
 async def test_delete_area(
-    hass: HomeAssistant,
+    menuai: menuai,
     area_registry: ar.AreaRegistry,
 ) -> None:
     """Make sure that we can delete an area."""
-    update_events = async_capture_events(hass, ar.EVENT_AREA_REGISTRY_UPDATED)
+    update_events = async_capture_events(menuai, ar.EVENT_AREA_REGISTRY_UPDATED)
     area = area_registry.async_create("mock")
 
     area_registry.async_delete(area.id)
 
     assert not area_registry.areas
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(update_events) == 2
     assert update_events[0].data == {
@@ -194,7 +194,7 @@ async def test_delete_non_existing_area(area_registry: ar.AreaRegistry) -> None:
 
 
 async def test_update_area(
-    hass: HomeAssistant,
+    menuai: menuai,
     area_registry: ar.AreaRegistry,
     floor_registry: fr.FloorRegistry,
     label_registry: lr.LabelRegistry,
@@ -204,7 +204,7 @@ async def test_update_area(
     """Make sure that we can read areas."""
     created_at = datetime.fromisoformat("2024-01-01T01:00:00+00:00")
     freezer.move_to(created_at)
-    update_events = async_capture_events(hass, ar.EVENT_AREA_REGISTRY_UPDATED)
+    update_events = async_capture_events(menuai, ar.EVENT_AREA_REGISTRY_UPDATED)
     floor_registry.async_create("first")
     area = area_registry.async_create("mock")
     assert area.modified_at == created_at
@@ -240,7 +240,7 @@ async def test_update_area(
     )
     assert len(area_registry.areas) == 1
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert len(update_events) == 2
     assert update_events[0].data == {
@@ -344,7 +344,7 @@ async def test_update_area_with_normalized_name_already_in_use(
     ],
 )
 async def test_update_area_entity_validation(
-    hass: HomeAssistant,
+    menuai: menuai,
     area_registry: ar.AreaRegistry,
     mock_temperature_humidity_entity: None,
     create_kwargs: dict[str, Any],
@@ -352,8 +352,8 @@ async def test_update_area_entity_validation(
 ) -> None:
     """Make sure that we can't update an area with an invalid entity."""
     area = area_registry.async_create("mock")
-    hass.states.async_set("light.kitchen", "on", {})
-    hass.states.async_set("sensor.random", "3", {})
+    menuai.states.async_set("light.kitchen", "on", {})
+    menuai.states.async_set("sensor.random", "3", {})
 
     with pytest.raises(ValueError) as e_info:
         area_registry.async_update(area.id, **create_kwargs)
@@ -363,14 +363,14 @@ async def test_update_area_entity_validation(
     assert area.humidity_entity_id is None
 
 
-async def test_load_area(hass: HomeAssistant, area_registry: ar.AreaRegistry) -> None:
+async def test_load_area(menuai: menuai, area_registry: ar.AreaRegistry) -> None:
     """Make sure that we can load/save data correctly."""
     area1 = area_registry.async_create("mock1")
     area2 = area_registry.async_create("mock2")
 
     assert len(area_registry.areas) == 2
 
-    registry2 = ar.AreaRegistry(hass)
+    registry2 = ar.AreaRegistry(menuai)
     await flush_store(area_registry._store)
     await registry2.async_load()
 
@@ -384,12 +384,12 @@ async def test_load_area(hass: HomeAssistant, area_registry: ar.AreaRegistry) ->
 
 @pytest.mark.parametrize("load_registries", [False])
 async def test_loading_area_from_storage(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
+    menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
     """Test loading stored areas on start."""
     created_at = datetime.fromisoformat("2024-01-01T01:00:00+00:00")
     modified_at = datetime.fromisoformat("2024-02-01T01:00:00+00:00")
-    hass_storage[ar.STORAGE_KEY] = {
+    menuai_storage[ar.STORAGE_KEY] = {
         "version": ar.STORAGE_VERSION_MAJOR,
         "minor_version": ar.STORAGE_VERSION_MINOR,
         "data": {
@@ -411,8 +411,8 @@ async def test_loading_area_from_storage(
         },
     }
 
-    await ar.async_load(hass)
-    registry = ar.async_get(hass)
+    await ar.async_load(menuai)
+    registry = ar.async_get(menuai)
 
     assert len(registry.areas) == 1
     area = registry.areas["12345A"]
@@ -433,16 +433,16 @@ async def test_loading_area_from_storage(
 
 @pytest.mark.parametrize("load_registries", [False])
 async def test_migration_from_1_1(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
+    menuai: menuai, menuai_storage: dict[str, Any]
 ) -> None:
     """Test migration from version 1.1."""
-    hass_storage[ar.STORAGE_KEY] = {
+    menuai_storage[ar.STORAGE_KEY] = {
         "version": 1,
         "data": {"areas": [{"id": "12345A", "name": "mock"}]},
     }
 
-    await ar.async_load(hass)
-    registry = ar.async_get(hass)
+    await ar.async_load(menuai)
+    registry = ar.async_get(menuai)
 
     # Test data was loaded
     entry = registry.async_get_or_create("mock")
@@ -450,7 +450,7 @@ async def test_migration_from_1_1(
 
     # Check we store migrated data
     await flush_store(registry._store)
-    assert hass_storage[ar.STORAGE_KEY] == {
+    assert menuai_storage[ar.STORAGE_KEY] == {
         "version": ar.STORAGE_VERSION_MAJOR,
         "minor_version": ar.STORAGE_VERSION_MINOR,
         "key": ar.STORAGE_KEY,
@@ -536,7 +536,7 @@ async def test_async_get_area(area_registry: ar.AreaRegistry) -> None:
 
 
 async def test_removing_floors(
-    hass: HomeAssistant,
+    menuai: menuai,
     area_registry: ar.AreaRegistry,
     floor_registry: fr.FloorRegistry,
 ) -> None:
@@ -550,17 +550,17 @@ async def test_removing_floors(
     bedroom = area_registry.async_update(bedroom.id, floor_id=second_floor.floor_id)
 
     floor_registry.async_delete(first_floor.floor_id)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert area_registry.async_get_area(kitchen.id).floor_id is None
     assert area_registry.async_get_area(bedroom.id).floor_id == second_floor.floor_id
 
     floor_registry.async_delete(second_floor.floor_id)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert area_registry.async_get_area(kitchen.id).floor_id is None
     assert area_registry.async_get_area(bedroom.id).floor_id is None
 
 
-@pytest.mark.usefixtures("hass")
+@pytest.mark.usefixtures("menuai")
 async def test_entries_for_floor(
     area_registry: ar.AreaRegistry,
     floor_registry: fr.FloorRegistry,
@@ -591,7 +591,7 @@ async def test_entries_for_floor(
 
 
 async def test_removing_labels(
-    hass: HomeAssistant,
+    menuai: menuai,
     area_registry: ar.AreaRegistry,
     label_registry: lr.LabelRegistry,
 ) -> None:
@@ -614,19 +614,19 @@ async def test_removing_labels(
     assert area_registry.async_get_area(bedroom.id).labels == {label2.label_id}
 
     label_registry.async_delete(label1.label_id)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert area_registry.async_get_area(kitchen.id).labels == {label2.label_id}
     assert area_registry.async_get_area(bedroom.id).labels == {label2.label_id}
 
     label_registry.async_delete(label2.label_id)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert not area_registry.async_get_area(kitchen.id).labels
     assert not area_registry.async_get_area(bedroom.id).labels
 
 
-@pytest.mark.usefixtures("hass")
+@pytest.mark.usefixtures("menuai")
 async def test_entries_for_label(
     area_registry: ar.AreaRegistry, label_registry: lr.LabelRegistry
 ) -> None:
@@ -656,18 +656,18 @@ async def test_entries_for_label(
 
 
 async def test_async_get_or_create_thread_checks(
-    hass: HomeAssistant, area_registry: ar.AreaRegistry
+    menuai: menuai, area_registry: ar.AreaRegistry
 ) -> None:
     """We raise when trying to create in the wrong thread."""
     with pytest.raises(
         RuntimeError,
         match="Detected code that calls area_registry.async_create from a thread.",
     ):
-        await hass.async_add_executor_job(area_registry.async_create, "Mock1")
+        await menuai.async_add_executor_job(area_registry.async_create, "Mock1")
 
 
 async def test_async_update_thread_checks(
-    hass: HomeAssistant, area_registry: ar.AreaRegistry
+    menuai: menuai, area_registry: ar.AreaRegistry
 ) -> None:
     """We raise when trying to update in the wrong thread."""
     area = area_registry.async_create("Mock1")
@@ -675,13 +675,13 @@ async def test_async_update_thread_checks(
         RuntimeError,
         match="Detected code that calls area_registry.async_update from a thread.",
     ):
-        await hass.async_add_executor_job(
+        await menuai.async_add_executor_job(
             partial(area_registry.async_update, area.id, name="Mock2")
         )
 
 
 async def test_async_delete_thread_checks(
-    hass: HomeAssistant, area_registry: ar.AreaRegistry
+    menuai: menuai, area_registry: ar.AreaRegistry
 ) -> None:
     """We raise when trying to delete in the wrong thread."""
     area = area_registry.async_create("Mock1")
@@ -689,4 +689,4 @@ async def test_async_delete_thread_checks(
         RuntimeError,
         match="Detected code that calls area_registry.async_delete from a thread.",
     ):
-        await hass.async_add_executor_job(area_registry.async_delete, area.id)
+        await menuai.async_add_executor_job(area_registry.async_delete, area.id)

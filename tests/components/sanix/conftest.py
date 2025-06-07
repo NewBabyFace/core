@@ -18,8 +18,8 @@ from sanix import (
 )
 from sanix.models import Measurement
 
-from homeassistant.components.sanix.const import CONF_SERIAL_NUMBER, DOMAIN
-from homeassistant.const import CONF_TOKEN
+from menuai.components.sanix.const import CONF_SERIAL_NUMBER, DOMAIN
+from menuai.const import CONF_TOKEN
 
 from tests.common import MockConfigEntry, load_json_object_fixture
 
@@ -30,11 +30,11 @@ def mock_sanix():
     fixture = load_json_object_fixture("get_measurements.json", DOMAIN)
     with (
         patch(
-            "homeassistant.components.sanix.config_flow.Sanix",
+            "menuai.components.sanix.config_flow.Sanix",
             autospec=True,
         ) as mock_sanix_api,
         patch(
-            "homeassistant.components.sanix.Sanix",
+            "menuai.components.sanix.Sanix",
             new=mock_sanix_api,
         ),
     ):
@@ -70,7 +70,7 @@ def mock_config_entry() -> MockConfigEntry:
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.sanix.async_setup_entry",
+        "menuai.components.sanix.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
         yield mock_setup_entry

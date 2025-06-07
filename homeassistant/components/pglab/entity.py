@@ -5,10 +5,10 @@ from __future__ import annotations
 from pypglab.device import Device as PyPGLabDevice
 from pypglab.entity import Entity as PyPGLabEntity
 
-from homeassistant.core import callback
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.core import callback
+from menuai.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
+from menuai.helpers.entity import Entity
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import PGLabSensorsCoordinator
@@ -16,7 +16,7 @@ from .discovery import PGLabDiscovery
 
 
 class PGLabBaseEntity(Entity):
-    """Base class of a PGLab entity in Home Assistant."""
+    """Base class of a PGLab entity in MenuAI."""
 
     _attr_has_entity_name = True
 
@@ -42,7 +42,7 @@ class PGLabBaseEntity(Entity):
             connections={(CONNECTION_NETWORK_MAC, pglab_device.mac)},
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Update the device discovery info."""
 
         # Inform PGLab discovery instance that a new entity is available.
@@ -54,12 +54,12 @@ class PGLabBaseEntity(Entity):
             self._device_id,
         )
 
-        # propagate the async_added_to_hass to the super class
-        await super().async_added_to_hass()
+        # propagate the async_added_to_menuai to the super class
+        await super().async_added_to_menuai()
 
 
 class PGLabEntity(PGLabBaseEntity):
-    """Representation of a PGLab entity in Home Assistant."""
+    """Representation of a PGLab entity in MenuAI."""
 
     def __init__(
         self,
@@ -74,7 +74,7 @@ class PGLabEntity(PGLabBaseEntity):
         self._id = pglab_entity.id
         self._entity: PyPGLabEntity = pglab_entity
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe pypglab entity to be updated from mqtt when pypglab entity internal state change."""
 
         # set the callback to be called when pypglab entity state is changed
@@ -82,12 +82,12 @@ class PGLabEntity(PGLabBaseEntity):
 
         # subscribe to the pypglab entity to receive updates from the mqtt broker
         await self._entity.subscribe_topics()
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Unsubscribe when removed."""
 
-        await super().async_will_remove_from_hass()
+        await super().async_will_remove_from_menuai()
         await self._entity.unsubscribe_topics()
         self._entity.set_on_state_callback(None)
 
@@ -98,7 +98,7 @@ class PGLabEntity(PGLabBaseEntity):
 
 
 class PGLabSensorEntity(PGLabBaseEntity, CoordinatorEntity[PGLabSensorsCoordinator]):
-    """Representation of a PGLab sensor entity in Home Assistant."""
+    """Representation of a PGLab sensor entity in MenuAI."""
 
     def __init__(
         self,

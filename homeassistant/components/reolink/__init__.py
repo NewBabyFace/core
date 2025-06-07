@@ -1,4 +1,4 @@
-"""Reolink integration for HomeAssistant."""
+"""Reolink integration for menuai."""
 
 from __future__ import annotations
 
@@ -14,19 +14,19 @@ from reolink_aio.exceptions import (
     ReolinkError,
 )
 
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_PORT, EVENT_HOMEASSISTANT_STOP, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers import (
+from menuai.config_entries import ConfigEntryState
+from menuai.const import CONF_PORT, EVENT_menuai_STOP, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers import (
     config_validation as cv,
     device_registry as dr,
     entity_registry as er,
 )
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, format_mac
-from homeassistant.helpers.event import async_call_later
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.helpers.device_registry import CONNECTION_NETWORK_MAC, format_mac
+from menuai.helpers.event import async_call_later
+from menuai.helpers.typing import ConfigType
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import CONF_BC_PORT, CONF_SUPPORTS_PRIVACY_MODE, CONF_USE_HTTPS, DOMAIN
 from .exceptions import PasswordIncompatible, ReolinkException, UserNotAdmin
@@ -56,18 +56,18 @@ NUM_CRED_ERRORS = 3
 CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up Reolink shared code."""
 
-    async_setup_services(hass)
+    async_setup_services(menuai)
     return True
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, config_entry: ReolinkConfigEntry
+    menuai: menuai, config_entry: ReolinkConfigEntry
 ) -> bool:
     """Set up Reolink from a config entry."""
-    host = ReolinkHost(hass, config_entry.data, config_entry.options, config_entry)
+    host = ReolinkHost(menuai, config_entry.data, config_entry.options, config_entry)
 
     try:
         await host.async_init()
@@ -89,7 +89,7 @@ async def async_setup_entry(
         raise
 
     config_entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, host.stop)
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, host.stop)
     )
 
     # update the config info if needed for the next time
@@ -124,7 +124,7 @@ async def async_setup_entry(
             CONF_BC_PORT: host.api.baichuan.port,
             CONF_SUPPORTS_PRIVACY_MODE: host.api.supported(None, "privacy_mode"),
         }
-        hass.config_entries.async_update_entry(config_entry, data=data)
+        menuai.config_entries.async_update_entry(config_entry, data=data)
 
     async def async_device_config_update() -> None:
         """Update the host state cache and renew the ONVIF-subscription."""
@@ -154,8 +154,8 @@ async def async_setup_entry(
                 "Reloading Reolink %s to add new device (capabilities)",
                 host.api.nvr_name,
             )
-            hass.async_create_task(
-                hass.config_entries.async_reload(config_entry.entry_id)
+            menuai.async_create_task(
+                menuai.config_entries.async_reload(config_entry.entry_id)
             )
 
     async def async_check_firmware_update() -> None:
@@ -181,7 +181,7 @@ async def async_setup_entry(
                 host.starting = False
 
     device_coordinator = DataUpdateCoordinator(
-        hass,
+        menuai,
         _LOGGER,
         config_entry=config_entry,
         name=f"reolink.{host.api.nvr_name}",
@@ -189,7 +189,7 @@ async def async_setup_entry(
         update_interval=DEVICE_UPDATE_INTERVAL,
     )
     firmware_coordinator = DataUpdateCoordinator(
-        hass,
+        menuai,
         _LOGGER,
         config_entry=config_entry,
         name=f"reolink.{host.api.nvr_name}.firmware",
@@ -199,7 +199,7 @@ async def async_setup_entry(
 
     # If camera WAN blocked, firmware check fails and takes long, do not prevent setup
     config_entry.async_create_background_task(
-        hass,
+        menuai,
         firmware_coordinator.async_refresh(),
         f"Reolink firmware check {config_entry.entry_id}",
     )
@@ -216,9 +216,9 @@ async def async_setup_entry(
         firmware_coordinator=firmware_coordinator,
     )
 
-    migrate_entity_ids(hass, config_entry.entry_id, host)
+    migrate_entity_ids(menuai, config_entry.entry_id, host)
 
-    hass.http.register_view(PlaybackProxyView(hass))
+    menuai.http.register_view(PlaybackProxyView(menuai))
 
     async def refresh(*args: Any) -> None:
         """Request refresh of coordinator."""
@@ -230,7 +230,7 @@ async def async_setup_entry(
         if host.privacy_mode and not host.api.baichuan.privacy_mode():
             # The privacy mode just turned off, give the API 2 seconds to start
             if host.cancel_refresh_privacy_mode is None:
-                host.cancel_refresh_privacy_mode = async_call_later(hass, 2, refresh)
+                host.cancel_refresh_privacy_mode = async_call_later(menuai, 2, refresh)
         host.privacy_mode = host.api.baichuan.privacy_mode()
 
     host.api.baichuan.register_callback(
@@ -238,14 +238,14 @@ async def async_setup_entry(
     )
 
     # ensure host device is setup before connected camera devices that use via_device
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         identifiers={(DOMAIN, host.unique_id)},
         connections={(dr.CONNECTION_NETWORK_MAC, host.api.mac_address)},
     )
 
-    await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 
     config_entry.async_on_unload(
         config_entry.add_update_listener(entry_update_listener)
@@ -255,14 +255,14 @@ async def async_setup_entry(
 
 
 async def entry_update_listener(
-    hass: HomeAssistant, config_entry: ReolinkConfigEntry
+    menuai: menuai, config_entry: ReolinkConfigEntry
 ) -> None:
     """Update the configuration of the host entity."""
-    await hass.config_entries.async_reload(config_entry.entry_id)
+    await menuai.config_entries.async_reload(config_entry.entry_id)
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, config_entry: ReolinkConfigEntry
+    menuai: menuai, config_entry: ReolinkConfigEntry
 ) -> bool:
     """Unload a config entry."""
     host: ReolinkHost = config_entry.runtime_data.host
@@ -273,19 +273,19 @@ async def async_unload_entry(
     if host.cancel_refresh_privacy_mode is not None:
         host.cancel_refresh_privacy_mode()
 
-    return await hass.config_entries.async_unload_platforms(config_entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(config_entry, PLATFORMS)
 
 
 async def async_remove_entry(
-    hass: HomeAssistant, config_entry: ReolinkConfigEntry
+    menuai: menuai, config_entry: ReolinkConfigEntry
 ) -> None:
     """Handle removal of an entry."""
-    store = get_store(hass, config_entry.entry_id)
+    store = get_store(menuai, config_entry.entry_id)
     await store.async_remove()
 
 
 async def async_remove_config_entry_device(
-    hass: HomeAssistant, config_entry: ReolinkConfigEntry, device: dr.DeviceEntry
+    menuai: menuai, config_entry: ReolinkConfigEntry, device: dr.DeviceEntry
 ) -> bool:
     """Remove a device from a config entry."""
     host: ReolinkHost = config_entry.runtime_data.host
@@ -369,10 +369,10 @@ async def async_remove_config_entry_device(
 
 
 def migrate_entity_ids(
-    hass: HomeAssistant, config_entry_id: str, host: ReolinkHost
+    menuai: menuai, config_entry_id: str, host: ReolinkHost
 ) -> None:
     """Migrate entity IDs if needed."""
-    device_reg = dr.async_get(hass)
+    device_reg = dr.async_get(menuai)
     devices = dr.async_entries_for_config_entry(device_reg, config_entry_id)
     ch_device_ids = {}
     for device in devices:
@@ -459,7 +459,7 @@ def migrate_entity_ids(
                 )
                 device_reg.async_remove_device(device.id)
 
-    entity_reg = er.async_get(hass)
+    entity_reg = er.async_get(menuai)
     entities = er.async_entries_for_config_entry(entity_reg, config_entry_id)
     for entity in entities:
         # Can be removed in HA 2025.1.0

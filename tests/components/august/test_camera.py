@@ -6,8 +6,8 @@ from unittest.mock import patch
 from yalexs.const import Brand
 from yalexs.doorbell import ContentTokenExpired
 
-from homeassistant.components.camera import CameraState
-from homeassistant.core import HomeAssistant
+from menuai.components.camera import CameraState
+from menuai.core import menuai
 
 from .mocks import _create_august_with_devices, _mock_doorbell_from_fixture
 
@@ -15,22 +15,22 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_create_doorbell(
-    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+    menuai: menuai, menuai_client_no_auth: ClientSessionGenerator
 ) -> None:
     """Test creation of a doorbell."""
-    doorbell_one = await _mock_doorbell_from_fixture(hass, "get_doorbell.json")
+    doorbell_one = await _mock_doorbell_from_fixture(menuai, "get_doorbell.json")
 
     with patch.object(
         doorbell_one, "async_get_doorbell_image", create=False, return_value="image"
     ):
-        await _create_august_with_devices(hass, [doorbell_one], brand=Brand.AUGUST)
+        await _create_august_with_devices(menuai, [doorbell_one], brand=Brand.AUGUST)
 
-        camera_state = hass.states.get("camera.k98gidt45gul_name_camera")
+        camera_state = menuai.states.get("camera.k98gidt45gul_name_camera")
         assert camera_state.state == CameraState.IDLE
 
         url = camera_state.attributes["entity_picture"]
 
-        client = await hass_client_no_auth()
+        client = await menuai_client_no_auth()
         resp = await client.get(url)
         assert resp.status == HTTPStatus.OK
         body = await resp.text()
@@ -38,10 +38,10 @@ async def test_create_doorbell(
 
 
 async def test_doorbell_refresh_content_token_recover(
-    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+    menuai: menuai, menuai_client_no_auth: ClientSessionGenerator
 ) -> None:
     """Test camera image content token expired."""
-    doorbell_two = await _mock_doorbell_from_fixture(hass, "get_doorbell.json")
+    doorbell_two = await _mock_doorbell_from_fixture(menuai, "get_doorbell.json")
     with patch.object(
         doorbell_two,
         "async_get_doorbell_image",
@@ -49,15 +49,15 @@ async def test_doorbell_refresh_content_token_recover(
         side_effect=[ContentTokenExpired, "image"],
     ):
         await _create_august_with_devices(
-            hass,
+            menuai,
             [doorbell_two],
             brand=Brand.YALE_HOME,
         )
-        url = hass.states.get("camera.k98gidt45gul_name_camera").attributes[
+        url = menuai.states.get("camera.k98gidt45gul_name_camera").attributes[
             "entity_picture"
         ]
 
-        client = await hass_client_no_auth()
+        client = await menuai_client_no_auth()
         resp = await client.get(url)
         assert resp.status == HTTPStatus.OK
         body = await resp.text()
@@ -65,10 +65,10 @@ async def test_doorbell_refresh_content_token_recover(
 
 
 async def test_doorbell_refresh_content_token_fail(
-    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+    menuai: menuai, menuai_client_no_auth: ClientSessionGenerator
 ) -> None:
     """Test camera image content token expired."""
-    doorbell_two = await _mock_doorbell_from_fixture(hass, "get_doorbell.json")
+    doorbell_two = await _mock_doorbell_from_fixture(menuai, "get_doorbell.json")
     with patch.object(
         doorbell_two,
         "async_get_doorbell_image",
@@ -76,14 +76,14 @@ async def test_doorbell_refresh_content_token_fail(
         side_effect=ContentTokenExpired,
     ):
         await _create_august_with_devices(
-            hass,
+            menuai,
             [doorbell_two],
             brand=Brand.YALE_HOME,
         )
-        url = hass.states.get("camera.k98gidt45gul_name_camera").attributes[
+        url = menuai.states.get("camera.k98gidt45gul_name_camera").attributes[
             "entity_picture"
         ]
 
-        client = await hass_client_no_auth()
+        client = await menuai_client_no_auth()
         resp = await client.get(url)
         assert resp.status == HTTPStatus.INTERNAL_SERVER_ERROR

@@ -2,12 +2,12 @@
 
 import pytest
 
-from homeassistant.components.climate import HVACMode
-from homeassistant.components.knx.schema import ClimateSchema
-from homeassistant.const import CONF_NAME, STATE_IDLE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.components.climate import HVACMode
+from menuai.components.knx.schema import ClimateSchema
+from menuai.const import CONF_NAME, STATE_IDLE
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
+from menuai.setup import async_setup_component
 
 from .conftest import KNXTestKit
 
@@ -19,7 +19,7 @@ RAW_FLOAT_22_0 = (0x0C, 0x4C)
 
 
 async def test_climate_basic_temperature_set(
-    hass: HomeAssistant, knx: KNXTestKit
+    menuai: menuai, knx: KNXTestKit
 ) -> None:
     """Test KNX climate basic."""
     await knx.setup_integration(
@@ -32,7 +32,7 @@ async def test_climate_basic_temperature_set(
             }
         }
     )
-    events = async_capture_events(hass, "state_changed")
+    events = async_capture_events(menuai, "state_changed")
 
     # read temperature
     await knx.assert_read("1/2/3")
@@ -44,7 +44,7 @@ async def test_climate_basic_temperature_set(
     events.clear()
 
     # set new temperature
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "climate",
         "set_temperature",
         {"entity_id": "climate.test", "temperature": 20},
@@ -56,7 +56,7 @@ async def test_climate_basic_temperature_set(
 
 @pytest.mark.parametrize("heat_cool_ga", [None, "4/4/4"])
 async def test_climate_on_off(
-    hass: HomeAssistant, knx: KNXTestKit, heat_cool_ga: str | None
+    menuai: menuai, knx: KNXTestKit, heat_cool_ga: str | None
 ) -> None:
     """Test KNX climate on/off."""
     on_off_ga = "3/3/3"
@@ -95,17 +95,17 @@ async def test_climate_on_off(
         await knx.receive_response("1/2/11", 0)  # cool
 
     # turn off
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "climate",
         "turn_off",
         {"entity_id": "climate.test"},
         blocking=True,
     )
     await knx.assert_write(on_off_ga, 0)
-    assert hass.states.get("climate.test").state == "off"
+    assert menuai.states.get("climate.test").state == "off"
 
     # turn on
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "climate",
         "turn_on",
         {"entity_id": "climate.test"},
@@ -114,22 +114,22 @@ async def test_climate_on_off(
     await knx.assert_write(on_off_ga, 1)
     if heat_cool_ga:
         # does not fall back to default hvac mode after turn_on
-        assert hass.states.get("climate.test").state == "cool"
+        assert menuai.states.get("climate.test").state == "cool"
     else:
-        assert hass.states.get("climate.test").state == "heat"
+        assert menuai.states.get("climate.test").state == "heat"
 
     # set hvac mode to off triggers turn_off if no controller_mode is available
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "climate",
         "set_hvac_mode",
         {"entity_id": "climate.test", "hvac_mode": HVACMode.OFF},
         blocking=True,
     )
     await knx.assert_write(on_off_ga, 0)
-    assert hass.states.get("climate.test").state == "off"
+    assert menuai.states.get("climate.test").state == "off"
 
     # set hvac mode to heat
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "climate",
         "set_hvac_mode",
         {"entity_id": "climate.test", "hvac_mode": HVACMode.HEAT},
@@ -140,12 +140,12 @@ async def test_climate_on_off(
         await knx.assert_write(on_off_ga, 1)
     else:
         await knx.assert_write(on_off_ga, 1)
-    assert hass.states.get("climate.test").state == "heat"
+    assert menuai.states.get("climate.test").state == "heat"
 
 
 @pytest.mark.parametrize("on_off_ga", [None, "4/4/4"])
 async def test_climate_hvac_mode(
-    hass: HomeAssistant, knx: KNXTestKit, on_off_ga: str | None
+    menuai: menuai, knx: KNXTestKit, on_off_ga: str | None
 ) -> None:
     """Test KNX climate hvac mode."""
     controller_mode_ga = "3/3/3"
@@ -180,7 +180,7 @@ async def test_climate_hvac_mode(
     await knx.receive_response("1/2/7", (0x01,))
 
     # turn hvac mode to off - set_hvac_mode() doesn't send to on_off if dedicated hvac mode is available
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "climate",
         "set_hvac_mode",
         {"entity_id": "climate.test", "hvac_mode": HVACMode.OFF},
@@ -189,10 +189,10 @@ async def test_climate_hvac_mode(
     await knx.assert_write(controller_mode_ga, (0x06,))
     if on_off_ga:
         await knx.assert_write(on_off_ga, 0)
-    assert hass.states.get("climate.test").state == "off"
+    assert menuai.states.get("climate.test").state == "off"
 
     # set hvac to non default mode
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "climate",
         "set_hvac_mode",
         {"entity_id": "climate.test", "hvac_mode": HVACMode.COOL},
@@ -201,10 +201,10 @@ async def test_climate_hvac_mode(
     await knx.assert_write(controller_mode_ga, (0x03,))
     if on_off_ga:
         await knx.assert_write(on_off_ga, 1)
-    assert hass.states.get("climate.test").state == "cool"
+    assert menuai.states.get("climate.test").state == "cool"
 
     # turn off
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "climate",
         "turn_off",
         {"entity_id": "climate.test"},
@@ -214,10 +214,10 @@ async def test_climate_hvac_mode(
         await knx.assert_write(on_off_ga, 0)
     else:
         await knx.assert_write(controller_mode_ga, (0x06,))
-    assert hass.states.get("climate.test").state == "off"
+    assert menuai.states.get("climate.test").state == "off"
 
     # turn on
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "climate",
         "turn_on",
         {"entity_id": "climate.test"},
@@ -228,11 +228,11 @@ async def test_climate_hvac_mode(
     else:
         # restore last hvac mode
         await knx.assert_write(controller_mode_ga, (0x03,))
-    assert hass.states.get("climate.test").state == "cool"
+    assert menuai.states.get("climate.test").state == "cool"
 
 
 async def test_climate_heat_cool_read_only(
-    hass: HomeAssistant, knx: KNXTestKit
+    menuai: menuai, knx: KNXTestKit
 ) -> None:
     """Test KNX climate hvac mode."""
     heat_cool_state_ga = "3/3/3"
@@ -257,20 +257,20 @@ async def test_climate_heat_cool_read_only(
     await knx.assert_read(heat_cool_state_ga)
     await knx.receive_response(heat_cool_state_ga, True)  # heat
 
-    state = hass.states.get("climate.test")
+    state = menuai.states.get("climate.test")
     assert state.state == "heat"
     assert state.attributes["hvac_modes"] == ["heat"]
     assert state.attributes["hvac_action"] == "heating"
 
     await knx.receive_write(heat_cool_state_ga, False)  # cool
-    state = hass.states.get("climate.test")
+    state = menuai.states.get("climate.test")
     assert state.state == "cool"
     assert state.attributes["hvac_modes"] == ["cool"]
     assert state.attributes["hvac_action"] == "cooling"
 
 
 async def test_climate_heat_cool_read_only_on_off(
-    hass: HomeAssistant, knx: KNXTestKit
+    menuai: menuai, knx: KNXTestKit
 ) -> None:
     """Test KNX climate hvac mode."""
     on_off_ga = "2/2/2"
@@ -297,26 +297,26 @@ async def test_climate_heat_cool_read_only_on_off(
     await knx.assert_read(heat_cool_state_ga)
     await knx.receive_response(heat_cool_state_ga, True)  # heat
 
-    state = hass.states.get("climate.test")
+    state = menuai.states.get("climate.test")
     assert state.state == "off"
     assert set(state.attributes["hvac_modes"]) == {"off", "heat"}
     assert state.attributes["hvac_action"] == "off"
 
     await knx.receive_write(heat_cool_state_ga, False)  # cool
-    state = hass.states.get("climate.test")
+    state = menuai.states.get("climate.test")
     assert state.state == "off"
     assert set(state.attributes["hvac_modes"]) == {"off", "cool"}
     assert state.attributes["hvac_action"] == "off"
 
     await knx.receive_write(on_off_ga, True)
-    state = hass.states.get("climate.test")
+    state = menuai.states.get("climate.test")
     assert state.state == "cool"
     assert set(state.attributes["hvac_modes"]) == {"off", "cool"}
     assert state.attributes["hvac_action"] == "cooling"
 
 
 async def test_climate_preset_mode(
-    hass: HomeAssistant, knx: KNXTestKit, entity_registry: er.EntityRegistry
+    menuai: menuai, knx: KNXTestKit, entity_registry: er.EntityRegistry
 ) -> None:
     """Test KNX climate preset mode."""
     await knx.setup_integration(
@@ -343,7 +343,7 @@ async def test_climate_preset_mode(
 
     knx.assert_state("climate.test", HVACMode.HEAT, preset_mode="comfort")
     # set preset mode
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "climate",
         "set_preset_mode",
         {"entity_id": "climate.test", "preset_mode": "building_protection"},
@@ -353,7 +353,7 @@ async def test_climate_preset_mode(
     knx.assert_state("climate.test", HVACMode.HEAT, preset_mode="building_protection")
 
     # set preset mode
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "climate",
         "set_preset_mode",
         {"entity_id": "climate.test", "preset_mode": "economy"},
@@ -371,7 +371,7 @@ async def test_climate_preset_mode(
     assert len(knx.xknx.devices) == 0
 
 
-async def test_update_entity(hass: HomeAssistant, knx: KNXTestKit) -> None:
+async def test_update_entity(menuai: menuai, knx: KNXTestKit) -> None:
     """Test update climate entity for KNX."""
     await knx.setup_integration(
         {
@@ -385,7 +385,7 @@ async def test_update_entity(hass: HomeAssistant, knx: KNXTestKit) -> None:
             }
         }
     )
-    assert await async_setup_component(hass, "homeassistant", {})
+    assert await async_setup_component(menuai, "menuai", {})
 
     # read states state updater
     await knx.assert_read("1/2/3")
@@ -397,8 +397,8 @@ async def test_update_entity(hass: HomeAssistant, knx: KNXTestKit) -> None:
     await knx.receive_response("1/2/7", (0x01,))
 
     # verify update entity retriggers group value reads to the bus
-    await hass.services.async_call(
-        "homeassistant",
+    await menuai.services.async_call(
+        "menuai",
         "update_entity",
         target={"entity_id": "climate.test"},
         blocking=True,
@@ -409,7 +409,7 @@ async def test_update_entity(hass: HomeAssistant, knx: KNXTestKit) -> None:
     await knx.assert_read("1/2/7")
 
 
-async def test_command_value_idle_mode(hass: HomeAssistant, knx: KNXTestKit) -> None:
+async def test_command_value_idle_mode(menuai: menuai, knx: KNXTestKit) -> None:
     """Test KNX climate command_value."""
     await knx.setup_integration(
         {
@@ -441,7 +441,7 @@ async def test_command_value_idle_mode(hass: HomeAssistant, knx: KNXTestKit) -> 
     )
 
 
-async def test_fan_speed_3_steps(hass: HomeAssistant, knx: KNXTestKit) -> None:
+async def test_fan_speed_3_steps(menuai: menuai, knx: KNXTestKit) -> None:
     """Test KNX climate fan speed 3 steps."""
     await knx.setup_integration(
         {
@@ -477,7 +477,7 @@ async def test_fan_speed_3_steps(hass: HomeAssistant, knx: KNXTestKit) -> None:
     )
 
     # set fan mode
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "climate",
         "set_fan_mode",
         {"entity_id": "climate.test", "fan_mode": "medium"},
@@ -487,7 +487,7 @@ async def test_fan_speed_3_steps(hass: HomeAssistant, knx: KNXTestKit) -> None:
     knx.assert_state("climate.test", HVACMode.HEAT, fan_mode="medium")
 
     # turn off
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "climate",
         "set_fan_mode",
         {"entity_id": "climate.test", "fan_mode": "off"},
@@ -497,7 +497,7 @@ async def test_fan_speed_3_steps(hass: HomeAssistant, knx: KNXTestKit) -> None:
     knx.assert_state("climate.test", HVACMode.HEAT, fan_mode="off")
 
 
-async def test_fan_speed_2_steps(hass: HomeAssistant, knx: KNXTestKit) -> None:
+async def test_fan_speed_2_steps(menuai: menuai, knx: KNXTestKit) -> None:
     """Test KNX climate fan speed 2 steps."""
     await knx.setup_integration(
         {
@@ -530,7 +530,7 @@ async def test_fan_speed_2_steps(hass: HomeAssistant, knx: KNXTestKit) -> None:
     )
 
     # set fan mode
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "climate",
         "set_fan_mode",
         {"entity_id": "climate.test", "fan_mode": "high"},
@@ -540,7 +540,7 @@ async def test_fan_speed_2_steps(hass: HomeAssistant, knx: KNXTestKit) -> None:
     knx.assert_state("climate.test", HVACMode.HEAT, fan_mode="high")
 
     # turn off
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "climate",
         "set_fan_mode",
         {"entity_id": "climate.test", "fan_mode": "off"},
@@ -550,7 +550,7 @@ async def test_fan_speed_2_steps(hass: HomeAssistant, knx: KNXTestKit) -> None:
     knx.assert_state("climate.test", HVACMode.HEAT, fan_mode="off")
 
 
-async def test_fan_speed_1_step(hass: HomeAssistant, knx: KNXTestKit) -> None:
+async def test_fan_speed_1_step(menuai: menuai, knx: KNXTestKit) -> None:
     """Test KNX climate fan speed 1 step."""
     await knx.setup_integration(
         {
@@ -583,7 +583,7 @@ async def test_fan_speed_1_step(hass: HomeAssistant, knx: KNXTestKit) -> None:
     )
 
     # turn off
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "climate",
         "set_fan_mode",
         {"entity_id": "climate.test", "fan_mode": "off"},
@@ -593,7 +593,7 @@ async def test_fan_speed_1_step(hass: HomeAssistant, knx: KNXTestKit) -> None:
     knx.assert_state("climate.test", HVACMode.HEAT, fan_mode="off")
 
 
-async def test_fan_speed_5_steps(hass: HomeAssistant, knx: KNXTestKit) -> None:
+async def test_fan_speed_5_steps(menuai: menuai, knx: KNXTestKit) -> None:
     """Test KNX climate fan speed 5 steps."""
     await knx.setup_integration(
         {
@@ -629,7 +629,7 @@ async def test_fan_speed_5_steps(hass: HomeAssistant, knx: KNXTestKit) -> None:
     )
 
     # set fan mode
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "climate",
         "set_fan_mode",
         {"entity_id": "climate.test", "fan_mode": "4"},
@@ -639,7 +639,7 @@ async def test_fan_speed_5_steps(hass: HomeAssistant, knx: KNXTestKit) -> None:
     knx.assert_state("climate.test", HVACMode.HEAT, fan_mode="4")
 
     # turn off
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "climate",
         "set_fan_mode",
         {"entity_id": "climate.test", "fan_mode": "off"},
@@ -649,7 +649,7 @@ async def test_fan_speed_5_steps(hass: HomeAssistant, knx: KNXTestKit) -> None:
     knx.assert_state("climate.test", HVACMode.HEAT, fan_mode="off")
 
 
-async def test_fan_speed_percentage(hass: HomeAssistant, knx: KNXTestKit) -> None:
+async def test_fan_speed_percentage(menuai: menuai, knx: KNXTestKit) -> None:
     """Test KNX climate fan speed percentage."""
     await knx.setup_integration(
         {
@@ -684,7 +684,7 @@ async def test_fan_speed_percentage(hass: HomeAssistant, knx: KNXTestKit) -> Non
     )
 
     # set fan mode
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "climate",
         "set_fan_mode",
         {"entity_id": "climate.test", "fan_mode": "medium"},
@@ -694,7 +694,7 @@ async def test_fan_speed_percentage(hass: HomeAssistant, knx: KNXTestKit) -> Non
     knx.assert_state("climate.test", HVACMode.HEAT, fan_mode="medium")
 
     # turn off
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "climate",
         "set_fan_mode",
         {"entity_id": "climate.test", "fan_mode": "off"},
@@ -713,7 +713,7 @@ async def test_fan_speed_percentage(hass: HomeAssistant, knx: KNXTestKit) -> Non
 
 
 async def test_fan_speed_percentage_4_steps(
-    hass: HomeAssistant, knx: KNXTestKit
+    menuai: menuai, knx: KNXTestKit
 ) -> None:
     """Test KNX climate fan speed percentage with 4 steps."""
     await knx.setup_integration(
@@ -750,7 +750,7 @@ async def test_fan_speed_percentage_4_steps(
     )
 
     # set fan mode
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "climate",
         "set_fan_mode",
         {"entity_id": "climate.test", "fan_mode": "50%"},
@@ -760,7 +760,7 @@ async def test_fan_speed_percentage_4_steps(
     knx.assert_state("climate.test", HVACMode.HEAT, fan_mode="50%")
 
     # turn off
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "climate",
         "set_fan_mode",
         {"entity_id": "climate.test", "fan_mode": "off"},
@@ -774,7 +774,7 @@ async def test_fan_speed_percentage_4_steps(
     knx.assert_state("climate.test", HVACMode.HEAT, fan_mode="75%")
 
 
-async def test_fan_speed_zero_mode_auto(hass: HomeAssistant, knx: KNXTestKit) -> None:
+async def test_fan_speed_zero_mode_auto(menuai: menuai, knx: KNXTestKit) -> None:
     """Test KNX climate fan speed 3 steps."""
     await knx.setup_integration(
         {
@@ -811,7 +811,7 @@ async def test_fan_speed_zero_mode_auto(hass: HomeAssistant, knx: KNXTestKit) ->
     )
 
     # set auto
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "climate",
         "set_fan_mode",
         {"entity_id": "climate.test", "fan_mode": "auto"},
@@ -821,7 +821,7 @@ async def test_fan_speed_zero_mode_auto(hass: HomeAssistant, knx: KNXTestKit) ->
     knx.assert_state("climate.test", HVACMode.HEAT, fan_mode="auto")
 
 
-async def test_climate_humidity(hass: HomeAssistant, knx: KNXTestKit) -> None:
+async def test_climate_humidity(menuai: menuai, knx: KNXTestKit) -> None:
     """Test KNX climate humidity."""
     await knx.setup_integration(
         {
@@ -852,7 +852,7 @@ async def test_climate_humidity(hass: HomeAssistant, knx: KNXTestKit) -> None:
     )
 
 
-async def test_swing(hass: HomeAssistant, knx: KNXTestKit) -> None:
+async def test_swing(menuai: menuai, knx: KNXTestKit) -> None:
     """Test KNX climate swing."""
     await knx.setup_integration(
         {
@@ -886,7 +886,7 @@ async def test_swing(hass: HomeAssistant, knx: KNXTestKit) -> None:
     )
 
     # turn off
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "climate",
         "set_swing_mode",
         {"entity_id": "climate.test", "swing_mode": "off"},
@@ -896,7 +896,7 @@ async def test_swing(hass: HomeAssistant, knx: KNXTestKit) -> None:
     knx.assert_state("climate.test", HVACMode.HEAT, swing_mode="off")
 
 
-async def test_horizontal_swing(hass: HomeAssistant, knx: KNXTestKit) -> None:
+async def test_horizontal_swing(menuai: menuai, knx: KNXTestKit) -> None:
     """Test KNX climate horizontal swing."""
     await knx.setup_integration(
         {
@@ -930,7 +930,7 @@ async def test_horizontal_swing(hass: HomeAssistant, knx: KNXTestKit) -> None:
     )
 
     # turn off
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "climate",
         "set_swing_horizontal_mode",
         {"entity_id": "climate.test", "swing_horizontal_mode": "off"},

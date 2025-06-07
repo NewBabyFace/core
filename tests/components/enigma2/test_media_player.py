@@ -8,9 +8,9 @@ from openwebif.api import OpenWebIfServiceEvent, OpenWebIfStatus
 from openwebif.enums import PowerState, RemoteControlCodes, SetVolumeOption
 import pytest
 
-from homeassistant.components.enigma2.const import DOMAIN
-from homeassistant.components.enigma2.media_player import ATTR_MEDIA_CURRENTLY_RECORDING
-from homeassistant.components.media_player import (
+from menuai.components.enigma2.const import DOMAIN
+from menuai.components.enigma2.media_player import ATTR_MEDIA_CURRENTLY_RECORDING
+from menuai.components.media_player import (
     ATTR_INPUT_SOURCE,
     ATTR_MEDIA_VOLUME_LEVEL,
     ATTR_MEDIA_VOLUME_MUTED,
@@ -18,7 +18,7 @@ from homeassistant.components.media_player import (
     SERVICE_SELECT_SOURCE,
     MediaPlayerState,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_MEDIA_NEXT_TRACK,
     SERVICE_MEDIA_PAUSE,
@@ -32,7 +32,7 @@ from homeassistant.const import (
     SERVICE_VOLUME_SET,
     SERVICE_VOLUME_UP,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from tests.common import (
     MockConfigEntry,
@@ -46,7 +46,7 @@ from tests.common import (
     [(False, PowerState.STANDBY), (True, PowerState.DEEP_STANDBY)],
 )
 async def test_turn_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     openwebif_device_mock: AsyncMock,
     deep_standby: bool,
@@ -54,12 +54,12 @@ async def test_turn_off(
 ) -> None:
     """Test turning off the media player."""
     openwebif_device_mock.turn_off_to_deep = deep_standby
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN, SERVICE_TURN_OFF, {ATTR_ENTITY_ID: "media_player.1_1_1_1"}
     )
 
@@ -67,17 +67,17 @@ async def test_turn_off(
 
 
 async def test_turn_on(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     openwebif_device_mock: AsyncMock,
 ) -> None:
     """Test turning on the media player."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN, SERVICE_TURN_ON, {ATTR_ENTITY_ID: "media_player.1_1_1_1"}
     )
 
@@ -85,17 +85,17 @@ async def test_turn_on(
 
 
 async def test_set_volume_level(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     openwebif_device_mock: AsyncMock,
 ) -> None:
     """Test setting the volume of the media player."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_VOLUME_SET,
         {ATTR_ENTITY_ID: "media_player.1_1_1_1", ATTR_MEDIA_VOLUME_LEVEL: 0.2},
@@ -105,17 +105,17 @@ async def test_set_volume_level(
 
 
 async def test_volume_up(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     openwebif_device_mock: AsyncMock,
 ) -> None:
     """Test increasing the volume of the media player."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN, SERVICE_VOLUME_UP, {ATTR_ENTITY_ID: "media_player.1_1_1_1"}
     )
 
@@ -123,17 +123,17 @@ async def test_volume_up(
 
 
 async def test_volume_down(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     openwebif_device_mock: AsyncMock,
 ) -> None:
     """Test decreasing the volume of the media player."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_VOLUME_DOWN,
         {ATTR_ENTITY_ID: "media_player.1_1_1_1"},
@@ -153,19 +153,19 @@ async def test_volume_down(
     ],
 )
 async def test_remote_control_actions(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     openwebif_device_mock: AsyncMock,
     service: str,
     remote_code: RemoteControlCodes,
 ) -> None:
     """Test media stop."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         service,
         {ATTR_ENTITY_ID: "media_player.1_1_1_1"},
@@ -178,18 +178,18 @@ async def test_remote_control_actions(
 
 @pytest.mark.parametrize("mute", [False, True])
 async def test_volume_mute(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     openwebif_device_mock: AsyncMock,
     mute: bool,
 ) -> None:
     """Test mute."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_VOLUME_MUTE,
         {ATTR_ENTITY_ID: "media_player.1_1_1_1", ATTR_MEDIA_VOLUME_MUTED: mute},
@@ -199,19 +199,19 @@ async def test_volume_mute(
 
 
 async def test_select_source(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     openwebif_device_mock: AsyncMock,
 ) -> None:
     """Test media previous track."""
     openwebif_device_mock.return_value.sources = {"Test": "1"}
 
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_SELECT_SOURCE,
         {ATTR_ENTITY_ID: "media_player.1_1_1_1", ATTR_INPUT_SOURCE: "Test"},
@@ -221,7 +221,7 @@ async def test_select_source(
 
 
 async def test_update_data_standby(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     openwebif_device_mock: AsyncMock,
     freezer: FrozenDateTimeFactory,
@@ -230,31 +230,31 @@ async def test_update_data_standby(
 
     openwebif_device_mock.get_status_info.return_value = (
         await async_load_json_object_fixture(
-            hass, "device_statusinfo_standby.json", DOMAIN
+            menuai, "device_statusinfo_standby.json", DOMAIN
         )
     )
     openwebif_device_mock.status = OpenWebIfStatus(
         currservice=OpenWebIfServiceEvent(), in_standby=True
     )
 
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     freezer.tick(timedelta(seconds=30))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     assert (
         ATTR_MEDIA_CURRENTLY_RECORDING
-        not in hass.states.get("media_player.1_1_1_1").attributes
+        not in menuai.states.get("media_player.1_1_1_1").attributes
     )
-    assert hass.states.get("media_player.1_1_1_1").state == MediaPlayerState.OFF
+    assert menuai.states.get("media_player.1_1_1_1").state == MediaPlayerState.OFF
 
 
 async def test_update_volume(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     openwebif_device_mock: AsyncMock,
     freezer: FrozenDateTimeFactory,
@@ -265,23 +265,23 @@ async def test_update_volume(
         currservice=OpenWebIfServiceEvent(), in_standby=False, volume=100
     )
 
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     freezer.tick(timedelta(seconds=30))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     assert (
-        hass.states.get("media_player.1_1_1_1").attributes[ATTR_MEDIA_VOLUME_LEVEL]
+        menuai.states.get("media_player.1_1_1_1").attributes[ATTR_MEDIA_VOLUME_LEVEL]
         > 0.99
     )
 
 
 async def test_update_volume_none(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     openwebif_device_mock: AsyncMock,
     freezer: FrozenDateTimeFactory,
@@ -292,16 +292,16 @@ async def test_update_volume_none(
         currservice=OpenWebIfServiceEvent(), in_standby=False, volume=None
     )
 
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     freezer.tick(timedelta(seconds=30))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     assert (
         ATTR_MEDIA_VOLUME_LEVEL
-        not in hass.states.get("media_player.1_1_1_1").attributes
+        not in menuai.states.get("media_player.1_1_1_1").attributes
     )

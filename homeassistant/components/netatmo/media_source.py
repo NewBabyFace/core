@@ -6,8 +6,8 @@ import datetime as dt
 import logging
 import re
 
-from homeassistant.components.media_player import BrowseError, MediaClass, MediaType
-from homeassistant.components.media_source import (
+from menuai.components.media_player import BrowseError, MediaClass, MediaType
+from menuai.components.media_source import (
     BrowseMediaSource,
     MediaSource,
     MediaSourceError,
@@ -15,7 +15,7 @@ from homeassistant.components.media_source import (
     PlayMedia,
     Unresolvable,
 )
-from homeassistant.core import HomeAssistant, callback
+from menuai.core import menuai, callback
 
 from .const import DATA_CAMERAS, DATA_EVENTS, DOMAIN, MANUFACTURER
 
@@ -27,9 +27,9 @@ class IncompatibleMediaSource(MediaSourceError):
     """Incompatible media source attributes."""
 
 
-async def async_get_media_source(hass: HomeAssistant) -> NetatmoSource:
+async def async_get_media_source(menuai: menuai) -> NetatmoSource:
     """Set up Netatmo media source."""
-    return NetatmoSource(hass)
+    return NetatmoSource(menuai)
 
 
 class NetatmoSource(MediaSource):
@@ -37,11 +37,11 @@ class NetatmoSource(MediaSource):
 
     name: str = MANUFACTURER
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize Netatmo source."""
         super().__init__(DOMAIN)
-        self.hass = hass
-        self.events = self.hass.data[DOMAIN][DATA_EVENTS]
+        self.menuai = menuai
+        self.events = self.menuai.data[DOMAIN][DATA_EVENTS]
 
     async def async_resolve_media(self, item: MediaSourceItem) -> PlayMedia:
         """Resolve media to a url."""
@@ -83,7 +83,7 @@ class NetatmoSource(MediaSource):
             )
             title = f"{created} - {message}"
         else:
-            title = self.hass.data[DOMAIN][DATA_CAMERAS].get(camera_id, MANUFACTURER)
+            title = self.menuai.data[DOMAIN][DATA_CAMERAS].get(camera_id, MANUFACTURER)
             thumbnail = None
 
         if event_id:

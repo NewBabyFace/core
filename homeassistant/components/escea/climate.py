@@ -8,7 +8,7 @@ from typing import Any
 
 from pescea import Controller
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     FAN_AUTO,
     FAN_HIGH,
     FAN_LOW,
@@ -16,12 +16,12 @@ from homeassistant.components.climate import (
     ClimateEntityFeature,
     HVACMode,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_TEMPERATURE, PRECISION_WHOLE, UnitOfTemperature
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_TEMPERATURE, PRECISION_WHOLE, UnitOfTemperature
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
     DATA_DISCOVERY_SERVICE,
@@ -45,12 +45,12 @@ _HA_FAN_TO_ESCEA = {v: k for k, v in _ESCEA_FAN_TO_HA.items()}
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Initialize an Escea Controller."""
-    discovery_service = hass.data[DATA_DISCOVERY_SERVICE]
+    discovery_service = menuai.data[DATA_DISCOVERY_SERVICE]
 
     @callback
     def init_controller(ctrl: Controller) -> None:
@@ -67,7 +67,7 @@ async def async_setup_entry(
 
     # connect to register any further components
     config_entry.async_on_unload(
-        async_dispatcher_connect(hass, DISPATCH_CONTROLLER_DISCOVERED, init_controller)
+        async_dispatcher_connect(menuai, DISPATCH_CONTROLLER_DISCOVERED, init_controller)
     )
 
 
@@ -110,8 +110,8 @@ class ControllerEntity(ClimateEntity):
 
         self._attr_available = True
 
-    async def async_added_to_hass(self) -> None:
-        """Call on adding to hass.
+    async def async_added_to_menuai(self) -> None:
+        """Call on adding to menuai.
 
         Registers for connect/disconnect/update events
         """
@@ -125,7 +125,7 @@ class ControllerEntity(ClimateEntity):
 
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, DISPATCH_CONTROLLER_DISCONNECTED, controller_disconnected
+                self.menuai, DISPATCH_CONTROLLER_DISCONNECTED, controller_disconnected
             )
         )
 
@@ -138,7 +138,7 @@ class ControllerEntity(ClimateEntity):
 
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, DISPATCH_CONTROLLER_RECONNECTED, controller_reconnected
+                self.menuai, DISPATCH_CONTROLLER_RECONNECTED, controller_reconnected
             )
         )
 
@@ -151,7 +151,7 @@ class ControllerEntity(ClimateEntity):
 
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, DISPATCH_CONTROLLER_UPDATE, controller_update
+                self.menuai, DISPATCH_CONTROLLER_UPDATE, controller_update
             )
         )
 

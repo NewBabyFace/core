@@ -5,11 +5,11 @@ import logging
 import voluptuous as vol
 from voluptuous import All, Range
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_DEVICE_ID, CONF_LATITUDE, CONF_LONGITUDE
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import config_validation as cv, device_registry as dr
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_DEVICE_ID, CONF_LATITUDE, CONF_LONGITUDE
+from menuai.core import menuai, ServiceCall
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers import config_validation as cv, device_registry as dr
 
 from .const import DOMAIN
 from .helpers import handle_command, handle_vehicle_command
@@ -47,11 +47,11 @@ SERVICE_TIME_OF_USE = "time_of_use"
 
 
 def async_get_device_for_service_call(
-    hass: HomeAssistant, call: ServiceCall
+    menuai: menuai, call: ServiceCall
 ) -> dr.DeviceEntry:
     """Get the device entry related to a service call."""
     device_id = call.data[CONF_DEVICE_ID]
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     if (device_entry := device_registry.async_get(device_id)) is None:
         raise ServiceValidationError(
             translation_domain=DOMAIN,
@@ -63,19 +63,19 @@ def async_get_device_for_service_call(
 
 
 def async_get_config_for_device(
-    hass: HomeAssistant, device_entry: dr.DeviceEntry
+    menuai: menuai, device_entry: dr.DeviceEntry
 ) -> ConfigEntry:
     """Get the config entry related to a device entry."""
     config_entry: ConfigEntry
     for entry_id in device_entry.config_entries:
-        if entry := hass.config_entries.async_get_entry(entry_id):
+        if entry := menuai.config_entries.async_get_entry(entry_id):
             if entry.domain == DOMAIN:
                 config_entry = entry
     return config_entry
 
 
 def async_get_vehicle_for_entry(
-    hass: HomeAssistant, device: dr.DeviceEntry, config: ConfigEntry
+    menuai: menuai, device: dr.DeviceEntry, config: ConfigEntry
 ) -> TeslemetryVehicleData:
     """Get the vehicle data for a config entry."""
     vehicle_data: TeslemetryVehicleData
@@ -87,7 +87,7 @@ def async_get_vehicle_for_entry(
 
 
 def async_get_energy_site_for_entry(
-    hass: HomeAssistant, device: dr.DeviceEntry, config: ConfigEntry
+    menuai: menuai, device: dr.DeviceEntry, config: ConfigEntry
 ) -> TeslemetryEnergyData:
     """Get the energy site data for a config entry."""
     energy_data: TeslemetryEnergyData
@@ -98,14 +98,14 @@ def async_get_energy_site_for_entry(
     return energy_data
 
 
-def async_setup_services(hass: HomeAssistant) -> None:
+def async_setup_services(menuai: menuai) -> None:
     """Set up the Teslemetry services."""
 
     async def navigate_gps_request(call: ServiceCall) -> None:
         """Send lat,lon,order with a vehicle."""
-        device = async_get_device_for_service_call(hass, call)
-        config = async_get_config_for_device(hass, device)
-        vehicle = async_get_vehicle_for_entry(hass, device, config)
+        device = async_get_device_for_service_call(menuai, call)
+        config = async_get_config_for_device(menuai, device)
+        vehicle = async_get_vehicle_for_entry(menuai, device, config)
 
         await handle_vehicle_command(
             vehicle.api.navigation_gps_request(
@@ -115,7 +115,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
             )
         )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_NAVIGATE_ATTR_GPS_REQUEST,
         navigate_gps_request,
@@ -133,9 +133,9 @@ def async_setup_services(hass: HomeAssistant) -> None:
 
     async def set_scheduled_charging(call: ServiceCall) -> None:
         """Configure fleet telemetry."""
-        device = async_get_device_for_service_call(hass, call)
-        config = async_get_config_for_device(hass, device)
-        vehicle = async_get_vehicle_for_entry(hass, device, config)
+        device = async_get_device_for_service_call(menuai, call)
+        config = async_get_config_for_device(menuai, device)
+        vehicle = async_get_vehicle_for_entry(menuai, device, config)
 
         time: int | None = None
         # Convert time to minutes since minute
@@ -151,7 +151,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
             vehicle.api.set_scheduled_charging(enable=call.data["enable"], time=time)
         )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_SET_SCHEDULED_CHARGING,
         set_scheduled_charging,
@@ -166,9 +166,9 @@ def async_setup_services(hass: HomeAssistant) -> None:
 
     async def set_scheduled_departure(call: ServiceCall) -> None:
         """Configure fleet telemetry."""
-        device = async_get_device_for_service_call(hass, call)
-        config = async_get_config_for_device(hass, device)
-        vehicle = async_get_vehicle_for_entry(hass, device, config)
+        device = async_get_device_for_service_call(menuai, call)
+        config = async_get_config_for_device(menuai, device)
+        vehicle = async_get_vehicle_for_entry(menuai, device, config)
 
         enable = call.data.get("enable", True)
 
@@ -215,7 +215,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
             )
         )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_SET_SCHEDULED_DEPARTURE,
         set_scheduled_departure,
@@ -235,9 +235,9 @@ def async_setup_services(hass: HomeAssistant) -> None:
 
     async def valet_mode(call: ServiceCall) -> None:
         """Configure fleet telemetry."""
-        device = async_get_device_for_service_call(hass, call)
-        config = async_get_config_for_device(hass, device)
-        vehicle = async_get_vehicle_for_entry(hass, device, config)
+        device = async_get_device_for_service_call(menuai, call)
+        config = async_get_config_for_device(menuai, device)
+        vehicle = async_get_vehicle_for_entry(menuai, device, config)
 
         await handle_vehicle_command(
             vehicle.api.set_valet_mode(
@@ -245,7 +245,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
             )
         )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_VALET_MODE,
         valet_mode,
@@ -260,9 +260,9 @@ def async_setup_services(hass: HomeAssistant) -> None:
 
     async def speed_limit(call: ServiceCall) -> None:
         """Configure fleet telemetry."""
-        device = async_get_device_for_service_call(hass, call)
-        config = async_get_config_for_device(hass, device)
-        vehicle = async_get_vehicle_for_entry(hass, device, config)
+        device = async_get_device_for_service_call(menuai, call)
+        config = async_get_config_for_device(menuai, device)
+        vehicle = async_get_vehicle_for_entry(menuai, device, config)
 
         enable = call.data.get("enable")
         if enable is True:
@@ -274,7 +274,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
                 vehicle.api.speed_limit_deactivate(call.data.get("pin"))
             )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_SPEED_LIMIT,
         speed_limit,
@@ -289,21 +289,21 @@ def async_setup_services(hass: HomeAssistant) -> None:
 
     async def time_of_use(call: ServiceCall) -> None:
         """Configure time of use settings."""
-        device = async_get_device_for_service_call(hass, call)
-        config = async_get_config_for_device(hass, device)
-        site = async_get_energy_site_for_entry(hass, device, config)
+        device = async_get_device_for_service_call(menuai, call)
+        config = async_get_config_for_device(menuai, device)
+        site = async_get_energy_site_for_entry(menuai, device, config)
 
         resp = await handle_command(
             site.api.time_of_use_settings(call.data.get(ATTR_TOU_SETTINGS))
         )
         if "error" in resp:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="command_error",
                 translation_placeholders={"error": resp["error"]},
             )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_TIME_OF_USE,
         time_of_use,

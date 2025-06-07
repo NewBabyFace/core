@@ -1,20 +1,20 @@
 """Tests for the litejet component."""
 
-from homeassistant.components import scene, switch
-from homeassistant.components.litejet import DOMAIN
-from homeassistant.const import CONF_PORT
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components import scene, switch
+from menuai.components.litejet import DOMAIN
+from menuai.const import CONF_PORT
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry
 
 
 async def async_init_integration(
-    hass: HomeAssistant, use_switch: bool = False, use_scene: bool = False
+    menuai: menuai, use_switch: bool = False, use_scene: bool = False
 ) -> MockConfigEntry:
-    """Set up the LiteJet integration in Home Assistant."""
+    """Set up the LiteJet integration in MenuAI."""
 
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
 
     entry_data = {CONF_PORT: "/dev/mock"}
 
@@ -47,8 +47,8 @@ async def async_init_integration(
             disabled_by=None,
         )
 
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     return entry

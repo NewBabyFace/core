@@ -2,9 +2,9 @@
 
 import pytest
 
-from homeassistant.components import light
-from homeassistant.core import HomeAssistant, State
-from homeassistant.helpers.state import async_reproduce_state
+from menuai.components import light
+from menuai.core import menuai, State
+from menuai.helpers.state import async_reproduce_state
 
 from tests.common import async_mock_service
 
@@ -28,23 +28,23 @@ NONE_XY_COLOR = {"xy_color": None}
 
 
 async def test_reproducing_states(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test reproducing Light states."""
-    hass.states.async_set("light.entity_off", "off", {})
-    hass.states.async_set("light.entity_bright", "on", VALID_BRIGHTNESS)
-    hass.states.async_set("light.entity_effect", "on", VALID_EFFECT)
-    hass.states.async_set("light.entity_temp", "on", VALID_COLOR_TEMP_KELVIN)
-    hass.states.async_set("light.entity_hs", "on", VALID_HS_COLOR)
-    hass.states.async_set("light.entity_rgb", "on", VALID_RGB_COLOR)
-    hass.states.async_set("light.entity_xy", "on", VALID_XY_COLOR)
+    menuai.states.async_set("light.entity_off", "off", {})
+    menuai.states.async_set("light.entity_bright", "on", VALID_BRIGHTNESS)
+    menuai.states.async_set("light.entity_effect", "on", VALID_EFFECT)
+    menuai.states.async_set("light.entity_temp", "on", VALID_COLOR_TEMP_KELVIN)
+    menuai.states.async_set("light.entity_hs", "on", VALID_HS_COLOR)
+    menuai.states.async_set("light.entity_rgb", "on", VALID_RGB_COLOR)
+    menuai.states.async_set("light.entity_xy", "on", VALID_XY_COLOR)
 
-    turn_on_calls = async_mock_service(hass, "light", "turn_on")
-    turn_off_calls = async_mock_service(hass, "light", "turn_off")
+    turn_on_calls = async_mock_service(menuai, "light", "turn_on")
+    turn_off_calls = async_mock_service(menuai, "light", "turn_off")
 
     # These calls should do nothing as entities already in desired state
     await async_reproduce_state(
-        hass,
+        menuai,
         [
             State("light.entity_off", "off"),
             State("light.entity_bright", "on", VALID_BRIGHTNESS),
@@ -60,7 +60,7 @@ async def test_reproducing_states(
     assert len(turn_off_calls) == 0
 
     # Test invalid state is handled
-    await async_reproduce_state(hass, [State("light.entity_off", "not_supported")])
+    await async_reproduce_state(menuai, [State("light.entity_off", "not_supported")])
 
     assert "not_supported" in caplog.text
     assert len(turn_on_calls) == 0
@@ -68,7 +68,7 @@ async def test_reproducing_states(
 
     # Make sure correct services are called
     await async_reproduce_state(
-        hass,
+        menuai,
         [
             State("light.entity_xy", "off"),
             State("light.entity_off", "on", VALID_BRIGHTNESS),
@@ -141,10 +141,10 @@ async def test_reproducing_states(
     ],
 )
 async def test_filter_color_modes(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture, color_mode
+    menuai: menuai, caplog: pytest.LogCaptureFixture, color_mode
 ) -> None:
     """Test filtering of parameters according to color mode."""
-    hass.states.async_set("light.entity", "off", {})
+    menuai.states.async_set("light.entity", "off", {})
     all_colors = {
         **VALID_COLOR_TEMP_KELVIN,
         **VALID_HS_COLOR,
@@ -155,10 +155,10 @@ async def test_filter_color_modes(
         **VALID_BRIGHTNESS,
     }
 
-    turn_on_calls = async_mock_service(hass, "light", "turn_on")
+    turn_on_calls = async_mock_service(menuai, "light", "turn_on")
 
     await async_reproduce_state(
-        hass, [State("light.entity", "on", {**all_colors, "color_mode": color_mode})]
+        menuai, [State("light.entity", "on", {**all_colors, "color_mode": color_mode})]
     )
 
     expected_map = {
@@ -186,26 +186,26 @@ async def test_filter_color_modes(
     assert dict(turn_on_calls[0].data) == {"entity_id": "light.entity", **expected}
 
     # This should do nothing, the light is already in the desired state
-    hass.states.async_set("light.entity", "on", {"color_mode": color_mode, **expected})
+    menuai.states.async_set("light.entity", "on", {"color_mode": color_mode, **expected})
     await async_reproduce_state(
-        hass, [State("light.entity", "on", {**expected, "color_mode": color_mode})]
+        menuai, [State("light.entity", "on", {**expected, "color_mode": color_mode})]
     )
     assert len(turn_on_calls) == 1
 
 
 async def test_filter_color_modes_missing_attributes(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test warning on missing attribute when filtering for color mode."""
     color_mode = light.ColorMode.COLOR_TEMP
-    hass.states.async_set("light.entity", "off", {})
+    menuai.states.async_set("light.entity", "off", {})
     expected_log = (
         "Color mode color_temp specified "
         "but attribute color_temp_kelvin missing for: light.entity"
     )
     expected_fallback_log = "using color_temp (mireds) as fallback"
 
-    turn_on_calls = async_mock_service(hass, "light", "turn_on")
+    turn_on_calls = async_mock_service(menuai, "light", "turn_on")
 
     all_colors = {
         **VALID_COLOR_TEMP_KELVIN,
@@ -222,7 +222,7 @@ async def test_filter_color_modes_missing_attributes(
     stored_attributes.pop("color_temp_kelvin")
     caplog.clear()
     await async_reproduce_state(
-        hass,
+        menuai,
         [State("light.entity", "on", {**stored_attributes, "color_mode": color_mode})],
     )
     assert len(turn_on_calls) == 0
@@ -234,7 +234,7 @@ async def test_filter_color_modes_missing_attributes(
     expected = {"brightness": 180, "color_temp_kelvin": 4000}
     caplog.clear()
     await async_reproduce_state(
-        hass,
+        menuai,
         [State("light.entity", "on", {**stored_attributes, "color_mode": color_mode})],
     )
 
@@ -247,7 +247,7 @@ async def test_filter_color_modes_missing_attributes(
     caplog.clear()
     turn_on_calls.clear()
     await async_reproduce_state(
-        hass,
+        menuai,
         [State("light.entity", "on", {**all_colors, "color_mode": color_mode})],
     )
     assert len(turn_on_calls) == 1
@@ -270,19 +270,19 @@ async def test_filter_color_modes_missing_attributes(
         NONE_XY_COLOR,
     ],
 )
-async def test_filter_none(hass: HomeAssistant, saved_state) -> None:
+async def test_filter_none(menuai: menuai, saved_state) -> None:
     """Test filtering of parameters which are None."""
-    hass.states.async_set("light.entity", "off", {})
+    menuai.states.async_set("light.entity", "off", {})
 
-    turn_on_calls = async_mock_service(hass, "light", "turn_on")
+    turn_on_calls = async_mock_service(menuai, "light", "turn_on")
 
-    await async_reproduce_state(hass, [State("light.entity", "on", saved_state)])
+    await async_reproduce_state(menuai, [State("light.entity", "on", saved_state)])
 
     assert len(turn_on_calls) == 1
     assert turn_on_calls[0].domain == "light"
     assert dict(turn_on_calls[0].data) == {"entity_id": "light.entity"}
 
     # This should do nothing, the light is already in the desired state
-    hass.states.async_set("light.entity", "on", {})
-    await async_reproduce_state(hass, [State("light.entity", "on", saved_state)])
+    menuai.states.async_set("light.entity", "on", {})
+    await async_reproduce_state(menuai, [State("light.entity", "on", saved_state)])
     assert len(turn_on_calls) == 1

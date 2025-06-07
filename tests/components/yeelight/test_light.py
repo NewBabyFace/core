@@ -21,7 +21,7 @@ from yeelight import (
 from yeelight.flow import Action, Flow
 from yeelight.main import _MODEL_SPECS
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_BRIGHTNESS_PCT,
     ATTR_COLOR_TEMP_KELVIN,
@@ -37,7 +37,7 @@ from homeassistant.components.light import (
     ColorMode,
     LightEntityFeature,
 )
-from homeassistant.components.yeelight.const import (
+from menuai.components.yeelight.const import (
     ATTR_COUNT,
     ATTR_MODE_MUSIC,
     ATTR_TRANSITIONS,
@@ -57,7 +57,7 @@ from homeassistant.components.yeelight.const import (
     YEELIGHT_SLEEP_TRANSACTION,
     YEELIGHT_TEMPERATURE_TRANSACTION,
 )
-from homeassistant.components.yeelight.light import (
+from menuai.components.yeelight.light import (
     ATTR_KELVIN,
     ATTR_MINUTES,
     ATTR_MODE,
@@ -88,7 +88,7 @@ from homeassistant.components.yeelight.light import (
     YEELIGHT_MONO_EFFECT_LIST,
     YEELIGHT_TEMP_ONLY_EFFECT_LIST,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     CONF_HOST,
     CONF_NAME,
@@ -96,12 +96,12 @@ from homeassistant.const import (
     STATE_ON,
     STATE_UNAVAILABLE,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
-from homeassistant.util.color import (
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
+from menuai.util.color import (
     color_hs_to_RGB,
     color_hs_to_xy,
     color_RGB_to_hs,
@@ -138,9 +138,9 @@ SUPPORT_YEELIGHT = (
 )
 
 
-async def test_services(hass: HomeAssistant, caplog: pytest.LogCaptureFixture) -> None:
+async def test_services(menuai: menuai, caplog: pytest.LogCaptureFixture) -> None:
     """Test Yeelight services."""
-    assert await async_setup_component(hass, "homeassistant", {})
+    assert await async_setup_component(menuai, "menuai", {})
     config_entry = MockConfigEntry(
         domain=DOMAIN,
         data={
@@ -150,7 +150,7 @@ async def test_services(hass: HomeAssistant, caplog: pytest.LogCaptureFixture) -
             CONF_NIGHTLIGHT_SWITCH: True,
         },
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     mocked_bulb = _mocked_bulb()
     with (
@@ -158,11 +158,11 @@ async def test_services(hass: HomeAssistant, caplog: pytest.LogCaptureFixture) -
         _patch_discovery_interval(),
         patch(f"{MODULE}.AsyncBulb", return_value=mocked_bulb),
     ):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
-    assert hass.states.get(ENTITY_LIGHT).state == STATE_ON
-    assert hass.states.get(ENTITY_NIGHTLIGHT).state == STATE_OFF
+    assert menuai.states.get(ENTITY_LIGHT).state == STATE_ON
+    assert menuai.states.get(ENTITY_NIGHTLIGHT).state == STATE_OFF
 
     async def _async_test_service(
         service,
@@ -170,7 +170,7 @@ async def test_services(hass: HomeAssistant, caplog: pytest.LogCaptureFixture) -
         method,
         payload=None,
         domain=DOMAIN,
-        failure_side_effect=HomeAssistantError,
+        failure_side_effect=menuaiError,
     ):
         err_count = len([x for x in caplog.records if x.levelno == logging.ERROR])
 
@@ -180,7 +180,7 @@ async def test_services(hass: HomeAssistant, caplog: pytest.LogCaptureFixture) -
         else:
             mocked_method = MagicMock()
         setattr(mocked_bulb, method, mocked_method)
-        await hass.services.async_call(domain, service, data, blocking=True)
+        await menuai.services.async_call(domain, service, data, blocking=True)
         if payload is None:
             mocked_method.assert_called_once()
         elif isinstance(payload, list):
@@ -199,14 +199,14 @@ async def test_services(hass: HomeAssistant, caplog: pytest.LogCaptureFixture) -
                 mocked_method = MagicMock(side_effect=failure_side_effect)
             setattr(mocked_bulb, method, mocked_method)
             with pytest.raises(failure_side_effect):
-                await hass.services.async_call(domain, service, data, blocking=True)
+                await menuai.services.async_call(domain, service, data, blocking=True)
 
     # turn_on rgb_color
     brightness = 100
     rgb_color = (0, 128, 255)
     transition = 2
     mocked_bulb.last_properties["power"] = "off"
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         SERVICE_TURN_ON,
         {
@@ -248,7 +248,7 @@ async def test_services(hass: HomeAssistant, caplog: pytest.LogCaptureFixture) -
     brightness = 100
     hs_color = (180, 100)
     transition = 2
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         SERVICE_TURN_ON,
         {
@@ -291,7 +291,7 @@ async def test_services(hass: HomeAssistant, caplog: pytest.LogCaptureFixture) -
     color_temp = 5000
     transition = 1
     mocked_bulb.last_properties["power"] = "off"
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         SERVICE_TURN_ON,
         {
@@ -335,7 +335,7 @@ async def test_services(hass: HomeAssistant, caplog: pytest.LogCaptureFixture) -
     mocked_bulb.async_stop_flow.reset_mock()
 
     mocked_bulb.last_properties["power"] = "off"
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         SERVICE_TURN_ON,
         {
@@ -382,7 +382,7 @@ async def test_services(hass: HomeAssistant, caplog: pytest.LogCaptureFixture) -
     )
 
     mocked_bulb.last_properties["power"] = "on"
-    assert hass.states.get(ENTITY_LIGHT).state != STATE_UNAVAILABLE
+    assert menuai.states.get(ENTITY_LIGHT).state != STATE_UNAVAILABLE
     # turn_off
     await _async_test_service(
         SERVICE_TURN_OFF,
@@ -460,7 +460,7 @@ async def test_services(hass: HomeAssistant, caplog: pytest.LogCaptureFixture) -
     # set_music_mode failure enable
     mocked_bulb.async_start_music = MagicMock(side_effect=AssertionError)
     assert "Unable to turn on music mode, consider disabling it" not in caplog.text
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_MUSIC_MODE,
         {ATTR_ENTITY_ID: ENTITY_LIGHT, ATTR_MODE_MUSIC: "true"},
@@ -487,51 +487,51 @@ async def test_services(hass: HomeAssistant, caplog: pytest.LogCaptureFixture) -
     # test _cmd wrapper error handler
     mocked_bulb.last_properties["power"] = "off"
     mocked_bulb.available = True
-    await hass.services.async_call(
-        "homeassistant",
+    await menuai.services.async_call(
+        "menuai",
         "update_entity",
         {ATTR_ENTITY_ID: ENTITY_LIGHT},
         blocking=True,
     )
-    assert hass.states.get(ENTITY_LIGHT).state == STATE_OFF
+    assert menuai.states.get(ENTITY_LIGHT).state == STATE_OFF
 
     mocked_bulb.async_turn_on = AsyncMock()
     mocked_bulb.async_set_brightness = AsyncMock(side_effect=BulbException)
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             "light",
             SERVICE_TURN_ON,
             {ATTR_ENTITY_ID: ENTITY_LIGHT, ATTR_BRIGHTNESS: 50},
             blocking=True,
         )
-    assert hass.states.get(ENTITY_LIGHT).state == STATE_OFF
+    assert menuai.states.get(ENTITY_LIGHT).state == STATE_OFF
 
     mocked_bulb.async_set_brightness = AsyncMock(side_effect=TimeoutError)
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             "light",
             SERVICE_TURN_ON,
             {ATTR_ENTITY_ID: ENTITY_LIGHT, ATTR_BRIGHTNESS: 55},
             blocking=True,
         )
-    assert hass.states.get(ENTITY_LIGHT).state == STATE_OFF
+    assert menuai.states.get(ENTITY_LIGHT).state == STATE_OFF
 
     mocked_bulb.async_set_brightness = AsyncMock(side_effect=socket.error)
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             "light",
             SERVICE_TURN_ON,
             {ATTR_ENTITY_ID: ENTITY_LIGHT, ATTR_BRIGHTNESS: 55},
             blocking=True,
         )
-    assert hass.states.get(ENTITY_LIGHT).state == STATE_UNAVAILABLE
+    assert menuai.states.get(ENTITY_LIGHT).state == STATE_UNAVAILABLE
 
 
 async def test_update_errors(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test update errors."""
-    assert await async_setup_component(hass, "homeassistant", {})
+    assert await async_setup_component(menuai, "menuai", {})
     config_entry = MockConfigEntry(
         domain=DOMAIN,
         data={
@@ -541,7 +541,7 @@ async def test_update_errors(
             CONF_NIGHTLIGHT_SWITCH: True,
         },
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     mocked_bulb = _mocked_bulb()
     with (
@@ -549,39 +549,39 @@ async def test_update_errors(
         _patch_discovery_interval(),
         patch(f"{MODULE}.AsyncBulb", return_value=mocked_bulb),
     ):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
-    assert hass.states.get(ENTITY_LIGHT).state == STATE_ON
-    assert hass.states.get(ENTITY_NIGHTLIGHT).state == STATE_OFF
+    assert menuai.states.get(ENTITY_LIGHT).state == STATE_ON
+    assert menuai.states.get(ENTITY_NIGHTLIGHT).state == STATE_OFF
 
     # Timeout usually means the bulb is overloaded with commands
     # but will still respond eventually.
     mocked_bulb.async_turn_off = AsyncMock(side_effect=TimeoutError)
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             "light",
             SERVICE_TURN_OFF,
             {ATTR_ENTITY_ID: ENTITY_LIGHT},
             blocking=True,
         )
-    assert hass.states.get(ENTITY_LIGHT).state == STATE_ON
+    assert menuai.states.get(ENTITY_LIGHT).state == STATE_ON
 
     # socket.error usually means the bulb dropped the connection
     # or lost wifi, then came back online and forced the existing
     # connection closed with a TCP RST
     mocked_bulb.async_turn_off = AsyncMock(side_effect=socket.error)
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             "light",
             SERVICE_TURN_OFF,
             {ATTR_ENTITY_ID: ENTITY_LIGHT},
             blocking=True,
         )
-    assert hass.states.get(ENTITY_LIGHT).state == STATE_UNAVAILABLE
+    assert menuai.states.get(ENTITY_LIGHT).state == STATE_UNAVAILABLE
 
 
-async def test_state_already_set_avoid_ratelimit(hass: HomeAssistant) -> None:
+async def test_state_already_set_avoid_ratelimit(menuai: menuai) -> None:
     """Ensure we suppress state changes that will increase the rate limit when there is no change."""
     mocked_bulb = _mocked_bulb()
     properties = {**PROPERTIES}
@@ -593,19 +593,19 @@ async def test_state_already_set_avoid_ratelimit(hass: HomeAssistant) -> None:
     config_entry = MockConfigEntry(
         domain=DOMAIN, data={**CONFIG_ENTRY_DATA, CONF_NIGHTLIGHT_SWITCH: False}
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     with (
         _patch_discovery(),
         _patch_discovery_interval(),
         patch(f"{MODULE}.AsyncBulb", return_value=mocked_bulb),
     ):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
         # We use asyncio.create_task now to avoid
         # blocking starting so we need to block again
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         SERVICE_TURN_ON,
         {
@@ -625,7 +625,7 @@ async def test_state_already_set_avoid_ratelimit(hass: HomeAssistant) -> None:
     green = (rgb >> 8) & 0xFF
     red = (rgb >> 16) & 0xFF
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: ENTITY_LIGHT, ATTR_RGB_COLOR: (red, green, blue)},
@@ -638,7 +638,7 @@ async def test_state_already_set_avoid_ratelimit(hass: HomeAssistant) -> None:
     mocked_bulb.async_set_rgb.reset_mock()
 
     mocked_bulb.last_properties["flowing"] = "1"
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: ENTITY_LIGHT, ATTR_RGB_COLOR: (red, green, blue)},
@@ -655,7 +655,7 @@ async def test_state_already_set_avoid_ratelimit(hass: HomeAssistant) -> None:
 
     # color model needs a workaround (see MODELS_WITH_DELAYED_ON_TRANSITION)
     mocked_bulb.model = "color"
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         SERVICE_TURN_ON,
         {
@@ -673,7 +673,7 @@ async def test_state_already_set_avoid_ratelimit(hass: HomeAssistant) -> None:
     mocked_bulb.async_set_brightness.reset_mock()
 
     mocked_bulb.model = "colora"  # colora does not need a workaround
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         SERVICE_TURN_ON,
         {
@@ -687,7 +687,7 @@ async def test_state_already_set_avoid_ratelimit(hass: HomeAssistant) -> None:
     assert mocked_bulb.async_set_color_temp.mock_calls == []
     assert mocked_bulb.async_set_brightness.mock_calls == []
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: ENTITY_LIGHT, ATTR_COLOR_TEMP_KELVIN: 4000},
@@ -703,7 +703,7 @@ async def test_state_already_set_avoid_ratelimit(hass: HomeAssistant) -> None:
     mocked_bulb.async_set_color_temp.reset_mock()
 
     mocked_bulb.last_properties["color_mode"] = 2
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: ENTITY_LIGHT, ATTR_COLOR_TEMP_KELVIN: 4000},
@@ -716,7 +716,7 @@ async def test_state_already_set_avoid_ratelimit(hass: HomeAssistant) -> None:
 
     mocked_bulb.last_properties["flowing"] = "1"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: ENTITY_LIGHT, ATTR_COLOR_TEMP_KELVIN: 4000},
@@ -734,7 +734,7 @@ async def test_state_already_set_avoid_ratelimit(hass: HomeAssistant) -> None:
     mocked_bulb.last_properties["color_mode"] = 3
     # This last change should generate a call even though
     # the color mode is the same since the HSV has changed
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: ENTITY_LIGHT, ATTR_HS_COLOR: (5, 5)},
@@ -748,7 +748,7 @@ async def test_state_already_set_avoid_ratelimit(hass: HomeAssistant) -> None:
     assert mocked_bulb.async_set_brightness.mock_calls == []
     mocked_bulb.async_set_hsv.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: ENTITY_LIGHT, ATTR_HS_COLOR: (100, 35)},
@@ -760,7 +760,7 @@ async def test_state_already_set_avoid_ratelimit(hass: HomeAssistant) -> None:
     assert mocked_bulb.async_set_brightness.mock_calls == []
 
     mocked_bulb.last_properties["flowing"] = "1"
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         SERVICE_TURN_ON,
         {ATTR_ENTITY_ID: ENTITY_LIGHT, ATTR_HS_COLOR: (100, 35)},
@@ -776,7 +776,7 @@ async def test_state_already_set_avoid_ratelimit(hass: HomeAssistant) -> None:
 
 
 async def test_device_types(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -789,11 +789,11 @@ async def test_device_types(
 
     async def _async_setup(config_entry):
         with _patch_discovery(), patch(f"{MODULE}.AsyncBulb", return_value=mocked_bulb):
-            assert await hass.config_entries.async_setup(config_entry.entry_id)
-            await hass.async_block_till_done()
+            assert await menuai.config_entries.async_setup(config_entry.entry_id)
+            await menuai.async_block_till_done()
             # We use asyncio.create_task now to avoid
             # blocking starting so we need to block again
-            await hass.async_block_till_done()
+            await menuai.async_block_till_done()
 
     async def _async_test(
         bulb_type,
@@ -807,7 +807,7 @@ async def test_device_types(
         config_entry = MockConfigEntry(
             domain=DOMAIN, data={**CONFIG_ENTRY_DATA, CONF_NIGHTLIGHT_SWITCH: False}
         )
-        config_entry.add_to_hass(hass)
+        config_entry.add_to_menuai(menuai)
 
         mocked_bulb.bulb_type = bulb_type
         model_specs = _MODEL_SPECS.get(model)
@@ -817,7 +817,7 @@ async def test_device_types(
         mocked_bulb.last_properties["nl_br"] = "0"
         await _async_setup(config_entry)
 
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
 
         assert state.state == "on"
         target_properties["friendly_name"] = name
@@ -825,8 +825,8 @@ async def test_device_types(
         target_properties["night_light"] = False
         target_properties["music_mode"] = False
         assert dict(state.attributes) == target_properties
-        await hass.config_entries.async_unload(config_entry.entry_id)
-        await hass.config_entries.async_remove(config_entry.entry_id)
+        await menuai.config_entries.async_unload(config_entry.entry_id)
+        await menuai.config_entries.async_remove(config_entry.entry_id)
         entity_registry.async_clear_config_entry(config_entry.entry_id)
         mocked_bulb.last_properties["nl_br"] = original_nightlight_brightness
 
@@ -836,9 +836,9 @@ async def test_device_types(
             config_entry = MockConfigEntry(
                 domain=DOMAIN, data={**CONFIG_ENTRY_DATA, CONF_NIGHTLIGHT_SWITCH: False}
             )
-            config_entry.add_to_hass(hass)
+            config_entry.add_to_menuai(menuai)
             await _async_setup(config_entry)
-            state = hass.states.get(entity_id)
+            state = menuai.states.get(entity_id)
             assert state.state == "on"
             nightlight_mode_properties["friendly_name"] = name
             nightlight_mode_properties["flowing"] = False
@@ -846,10 +846,10 @@ async def test_device_types(
             nightlight_mode_properties["music_mode"] = False
             assert dict(state.attributes) == nightlight_mode_properties
 
-            await hass.config_entries.async_unload(config_entry.entry_id)
-            await hass.config_entries.async_remove(config_entry.entry_id)
+            await menuai.config_entries.async_unload(config_entry.entry_id)
+            await menuai.config_entries.async_remove(config_entry.entry_id)
             entity_registry.async_clear_config_entry(config_entry.entry_id)
-            await hass.async_block_till_done()
+            await menuai.async_block_till_done()
             mocked_bulb.last_properties.pop("active_mode")
 
         # nightlight as a separate entity
@@ -857,11 +857,11 @@ async def test_device_types(
             config_entry = MockConfigEntry(
                 domain=DOMAIN, data={**CONFIG_ENTRY_DATA, CONF_NIGHTLIGHT_SWITCH: True}
             )
-            config_entry.add_to_hass(hass)
+            config_entry.add_to_menuai(menuai)
             await _async_setup(config_entry)
 
-            assert hass.states.get(entity_id).state == "off"
-            state = hass.states.get(f"{entity_id}_nightlight")
+            assert menuai.states.get(entity_id).state == "off"
+            state = menuai.states.get(f"{entity_id}_nightlight")
             assert state.state == "on"
             nightlight_entity_properties["friendly_name"] = f"{name} Nightlight"
             nightlight_entity_properties["flowing"] = False
@@ -869,10 +869,10 @@ async def test_device_types(
             nightlight_entity_properties["music_mode"] = False
             assert dict(state.attributes) == nightlight_entity_properties
 
-            await hass.config_entries.async_unload(config_entry.entry_id)
-            await hass.config_entries.async_remove(config_entry.entry_id)
+            await menuai.config_entries.async_unload(config_entry.entry_id)
+            await menuai.config_entries.async_remove(config_entry.entry_id)
             entity_registry.async_clear_config_entry(config_entry.entry_id)
-            await hass.async_block_till_done()
+            await menuai.async_block_till_done()
 
     bright = round(255 * int(PROPERTIES["bright"]) / 100)
     ct = int(PROPERTIES["ct"])
@@ -1362,10 +1362,10 @@ async def test_device_types(
     )
 
 
-async def test_effects(hass: HomeAssistant) -> None:
+async def test_effects(menuai: menuai) -> None:
     """Test effects."""
     assert await async_setup_component(
-        hass,
+        menuai,
         DOMAIN,
         {
             DOMAIN: {
@@ -1386,10 +1386,10 @@ async def test_effects(hass: HomeAssistant) -> None:
             }
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     config_entry = MockConfigEntry(domain=DOMAIN, data=CONFIG_ENTRY_DATA)
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     mocked_bulb = _mocked_bulb()
     with (
@@ -1397,10 +1397,10 @@ async def test_effects(hass: HomeAssistant) -> None:
         _patch_discovery_interval(),
         patch(f"{MODULE}.AsyncBulb", return_value=mocked_bulb),
     ):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
-    assert hass.states.get(ENTITY_LIGHT).attributes.get("effect_list") == [
+    assert menuai.states.get(ENTITY_LIGHT).attributes.get("effect_list") == [
         *YEELIGHT_COLOR_EFFECT_LIST,
         "mock_effect",
     ]
@@ -1408,7 +1408,7 @@ async def test_effects(hass: HomeAssistant) -> None:
     async def _async_test_effect(name, target=None, called=True):
         async_mocked_start_flow = AsyncMock()
         mocked_bulb.async_start_flow = async_mocked_start_flow
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "light",
             SERVICE_TURN_ON,
             {ATTR_ENTITY_ID: ENTITY_LIGHT, ATTR_EFFECT: name},
@@ -1537,7 +1537,7 @@ async def test_effects(hass: HomeAssistant) -> None:
     await _async_test_effect("not_existed", called=False)
 
 
-async def test_ambilight_with_nightlight_disabled(hass: HomeAssistant) -> None:
+async def test_ambilight_with_nightlight_disabled(menuai: menuai) -> None:
     """Test that main light on ambilights with the nightlight disabled shows the correct brightness."""
     mocked_bulb = _mocked_bulb()
     properties = {**PROPERTIES}
@@ -1555,24 +1555,24 @@ async def test_ambilight_with_nightlight_disabled(hass: HomeAssistant) -> None:
         data={**CONFIG_ENTRY_DATA, CONF_NIGHTLIGHT_SWITCH: False},
         options={**CONFIG_ENTRY_DATA, CONF_NIGHTLIGHT_SWITCH: False},
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     with (
         _patch_discovery(capabilities=capabilities),
         patch(f"{MODULE}.AsyncBulb", return_value=mocked_bulb),
     ):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
         # We use asyncio.create_task now to avoid
         # blocking starting so we need to block again
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    state = hass.states.get(main_light_entity_id)
+    state = menuai.states.get(main_light_entity_id)
     assert state.state == "on"
     # bg_power off should not set the brightness to 0
     assert state.attributes[ATTR_BRIGHTNESS] == 128
 
 
-async def test_state_fails_to_update_triggers_update(hass: HomeAssistant) -> None:
+async def test_state_fails_to_update_triggers_update(menuai: menuai) -> None:
     """Ensure we call async_get_properties if the turn on/off fails to update the state."""
     mocked_bulb = _mocked_bulb()
     properties = {**PROPERTIES}
@@ -1583,22 +1583,22 @@ async def test_state_fails_to_update_triggers_update(hass: HomeAssistant) -> Non
     config_entry = MockConfigEntry(
         domain=DOMAIN, data={**CONFIG_ENTRY_DATA, CONF_NIGHTLIGHT_SWITCH: False}
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     with (
         _patch_discovery(),
         _patch_discovery_interval(),
         patch(f"{MODULE}.AsyncBulb", return_value=mocked_bulb),
     ):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
         # We use asyncio.create_task now to avoid
         # blocking starting so we need to block again
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert len(mocked_bulb.async_get_properties.mock_calls) == 1
 
     mocked_bulb.last_properties["power"] = "off"
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         SERVICE_TURN_ON,
         {
@@ -1607,13 +1607,13 @@ async def test_state_fails_to_update_triggers_update(hass: HomeAssistant) -> Non
         blocking=True,
     )
     assert len(mocked_bulb.async_turn_on.mock_calls) == 1
-    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=1))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(seconds=1))
+    await menuai.async_block_till_done()
     assert len(mocked_bulb.async_get_properties.mock_calls) == 2
 
     mocked_bulb.last_properties["power"] = "on"
     for _ in range(5):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "light",
             SERVICE_TURN_OFF,
             {
@@ -1625,12 +1625,12 @@ async def test_state_fails_to_update_triggers_update(hass: HomeAssistant) -> Non
     # Even with five calls we only do one state request
     # since each successive call should cancel the unexpected
     # state check
-    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=2))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(seconds=2))
+    await menuai.async_block_till_done()
     assert len(mocked_bulb.async_get_properties.mock_calls) == 3
 
     # But if the state is correct no calls
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "light",
         SERVICE_TURN_ON,
         {
@@ -1639,6 +1639,6 @@ async def test_state_fails_to_update_triggers_update(hass: HomeAssistant) -> Non
         blocking=True,
     )
     assert len(mocked_bulb.async_turn_on.mock_calls) == 1
-    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=3))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(seconds=3))
+    await menuai.async_block_till_done()
     assert len(mocked_bulb.async_get_properties.mock_calls) == 3

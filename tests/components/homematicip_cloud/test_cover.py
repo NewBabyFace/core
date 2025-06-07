@@ -2,19 +2,19 @@
 
 from homematicip.base.enums import DoorCommand, DoorState
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     ATTR_CURRENT_POSITION,
     ATTR_CURRENT_TILT_POSITION,
     CoverState,
 )
-from homeassistant.const import STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
+from menuai.const import STATE_UNKNOWN
+from menuai.core import menuai
 
 from .helper import HomeFactory, async_manipulate_test_data, get_and_check_entity_basics
 
 
 async def test_hmip_cover_shutter(
-    hass: HomeAssistant, default_mock_hap_factory: HomeFactory
+    menuai: menuai, default_mock_hap_factory: HomeFactory
 ) -> None:
     """Test HomematicipCoverShutte."""
     entity_id = "cover.broll_1"
@@ -25,25 +25,25 @@ async def test_hmip_cover_shutter(
     )
 
     ha_state, hmip_device = get_and_check_entity_basics(
-        hass, mock_hap, entity_id, entity_name, device_model
+        menuai, mock_hap, entity_id, entity_name, device_model
     )
 
     assert ha_state.state == "closed"
     assert ha_state.attributes["current_position"] == 0
     service_call_counter = len(hmip_device.mock_calls)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover", "open_cover", {"entity_id": entity_id}, blocking=True
     )
     assert len(hmip_device.mock_calls) == service_call_counter + 1
     assert hmip_device.mock_calls[-1][0] == "set_shutter_level_async"
     assert hmip_device.mock_calls[-1][1] == (0, 1)
-    await async_manipulate_test_data(hass, hmip_device, "shutterLevel", 0)
-    ha_state = hass.states.get(entity_id)
+    await async_manipulate_test_data(menuai, hmip_device, "shutterLevel", 0)
+    ha_state = menuai.states.get(entity_id)
     assert ha_state.state == CoverState.OPEN
     assert ha_state.attributes[ATTR_CURRENT_POSITION] == 100
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover",
         "set_cover_position",
         {"entity_id": entity_id, "position": "50"},
@@ -52,36 +52,36 @@ async def test_hmip_cover_shutter(
     assert len(hmip_device.mock_calls) == service_call_counter + 3
     assert hmip_device.mock_calls[-1][0] == "set_shutter_level_async"
     assert hmip_device.mock_calls[-1][1] == (0.5, 1)
-    await async_manipulate_test_data(hass, hmip_device, "shutterLevel", 0.5)
-    ha_state = hass.states.get(entity_id)
+    await async_manipulate_test_data(menuai, hmip_device, "shutterLevel", 0.5)
+    ha_state = menuai.states.get(entity_id)
     assert ha_state.state == CoverState.OPEN
     assert ha_state.attributes[ATTR_CURRENT_POSITION] == 50
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover", "close_cover", {"entity_id": entity_id}, blocking=True
     )
     assert len(hmip_device.mock_calls) == service_call_counter + 5
     assert hmip_device.mock_calls[-1][0] == "set_shutter_level_async"
     assert hmip_device.mock_calls[-1][1] == (1, 1)
-    await async_manipulate_test_data(hass, hmip_device, "shutterLevel", 1)
-    ha_state = hass.states.get(entity_id)
+    await async_manipulate_test_data(menuai, hmip_device, "shutterLevel", 1)
+    ha_state = menuai.states.get(entity_id)
     assert ha_state.state == CoverState.CLOSED
     assert ha_state.attributes[ATTR_CURRENT_POSITION] == 0
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover", "stop_cover", {"entity_id": entity_id}, blocking=True
     )
     assert len(hmip_device.mock_calls) == service_call_counter + 7
     assert hmip_device.mock_calls[-1][0] == "set_shutter_stop_async"
     assert hmip_device.mock_calls[-1][1] == (1,)
 
-    await async_manipulate_test_data(hass, hmip_device, "shutterLevel", None)
-    ha_state = hass.states.get(entity_id)
+    await async_manipulate_test_data(menuai, hmip_device, "shutterLevel", None)
+    ha_state = menuai.states.get(entity_id)
     assert ha_state.state == STATE_UNKNOWN
 
 
 async def test_hmip_cover_slats(
-    hass: HomeAssistant, default_mock_hap_factory: HomeFactory
+    menuai: menuai, default_mock_hap_factory: HomeFactory
 ) -> None:
     """Test HomematicipCoverSlats."""
     entity_id = "cover.sofa_links"
@@ -92,7 +92,7 @@ async def test_hmip_cover_slats(
     )
 
     ha_state, hmip_device = get_and_check_entity_basics(
-        hass, mock_hap, entity_id, entity_name, device_model
+        menuai, mock_hap, entity_id, entity_name, device_model
     )
 
     assert ha_state.state == CoverState.CLOSED
@@ -100,20 +100,20 @@ async def test_hmip_cover_slats(
     assert ha_state.attributes[ATTR_CURRENT_TILT_POSITION] == 0
     service_call_counter = len(hmip_device.mock_calls)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover", "open_cover_tilt", {"entity_id": entity_id}, blocking=True
     )
     assert len(hmip_device.mock_calls) == service_call_counter + 1
     assert hmip_device.mock_calls[-1][0] == "set_slats_level_async"
     assert hmip_device.mock_calls[-1][2] == {"channelIndex": 1, "slatsLevel": 0}
-    await async_manipulate_test_data(hass, hmip_device, "shutterLevel", 0)
-    await async_manipulate_test_data(hass, hmip_device, "slatsLevel", 0)
-    ha_state = hass.states.get(entity_id)
+    await async_manipulate_test_data(menuai, hmip_device, "shutterLevel", 0)
+    await async_manipulate_test_data(menuai, hmip_device, "slatsLevel", 0)
+    ha_state = menuai.states.get(entity_id)
     assert ha_state.state == CoverState.OPEN
     assert ha_state.attributes[ATTR_CURRENT_POSITION] == 100
     assert ha_state.attributes[ATTR_CURRENT_TILT_POSITION] == 100
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover",
         "set_cover_tilt_position",
         {"entity_id": entity_id, "tilt_position": "50"},
@@ -122,42 +122,42 @@ async def test_hmip_cover_slats(
     assert len(hmip_device.mock_calls) == service_call_counter + 4
     assert hmip_device.mock_calls[-1][0] == "set_slats_level_async"
     assert hmip_device.mock_calls[-1][2] == {"channelIndex": 1, "slatsLevel": 0.5}
-    await async_manipulate_test_data(hass, hmip_device, "slatsLevel", 0.5)
-    ha_state = hass.states.get(entity_id)
+    await async_manipulate_test_data(menuai, hmip_device, "slatsLevel", 0.5)
+    ha_state = menuai.states.get(entity_id)
     assert ha_state.state == CoverState.OPEN
     assert ha_state.attributes[ATTR_CURRENT_POSITION] == 100
     assert ha_state.attributes[ATTR_CURRENT_TILT_POSITION] == 50
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover", "close_cover_tilt", {"entity_id": entity_id}, blocking=True
     )
     assert len(hmip_device.mock_calls) == service_call_counter + 6
     assert hmip_device.mock_calls[-1][0] == "set_slats_level_async"
     assert hmip_device.mock_calls[-1][2] == {"channelIndex": 1, "slatsLevel": 1}
-    await async_manipulate_test_data(hass, hmip_device, "slatsLevel", 1)
-    ha_state = hass.states.get(entity_id)
+    await async_manipulate_test_data(menuai, hmip_device, "slatsLevel", 1)
+    ha_state = menuai.states.get(entity_id)
     assert ha_state.state == CoverState.OPEN
     assert ha_state.attributes[ATTR_CURRENT_POSITION] == 100
     assert ha_state.attributes[ATTR_CURRENT_TILT_POSITION] == 0
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover", "stop_cover_tilt", {"entity_id": entity_id}, blocking=True
     )
     assert len(hmip_device.mock_calls) == service_call_counter + 8
     assert hmip_device.mock_calls[-1][0] == "set_shutter_stop_async"
     assert hmip_device.mock_calls[-1][1] == (1,)
 
-    await async_manipulate_test_data(hass, hmip_device, "slatsLevel", None)
-    ha_state = hass.states.get(entity_id)
+    await async_manipulate_test_data(menuai, hmip_device, "slatsLevel", None)
+    ha_state = menuai.states.get(entity_id)
     assert not ha_state.attributes.get(ATTR_CURRENT_TILT_POSITION)
 
-    await async_manipulate_test_data(hass, hmip_device, "shutterLevel", None)
-    ha_state = hass.states.get(entity_id)
+    await async_manipulate_test_data(menuai, hmip_device, "shutterLevel", None)
+    ha_state = menuai.states.get(entity_id)
     assert ha_state.state == STATE_UNKNOWN
 
 
 async def test_hmip_multi_cover_slats(
-    hass: HomeAssistant, default_mock_hap_factory: HomeFactory
+    menuai: menuai, default_mock_hap_factory: HomeFactory
 ) -> None:
     """Test HomematicipCoverSlats."""
     entity_id = "cover.wohnzimmer_fenster"
@@ -168,32 +168,32 @@ async def test_hmip_multi_cover_slats(
     )
 
     ha_state, hmip_device = get_and_check_entity_basics(
-        hass, mock_hap, entity_id, entity_name, device_model
+        menuai, mock_hap, entity_id, entity_name, device_model
     )
 
-    await async_manipulate_test_data(hass, hmip_device, "shutterLevel", 1, channel=4)
-    await async_manipulate_test_data(hass, hmip_device, "slatsLevel", 1, channel=4)
-    ha_state = hass.states.get(entity_id)
+    await async_manipulate_test_data(menuai, hmip_device, "shutterLevel", 1, channel=4)
+    await async_manipulate_test_data(menuai, hmip_device, "slatsLevel", 1, channel=4)
+    ha_state = menuai.states.get(entity_id)
 
     assert ha_state.state == CoverState.CLOSED
     assert ha_state.attributes[ATTR_CURRENT_POSITION] == 0
     assert ha_state.attributes[ATTR_CURRENT_TILT_POSITION] == 0
     service_call_counter = len(hmip_device.mock_calls)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover", "open_cover_tilt", {"entity_id": entity_id}, blocking=True
     )
     assert len(hmip_device.mock_calls) == service_call_counter + 1
     assert hmip_device.mock_calls[-1][0] == "set_slats_level_async"
     assert hmip_device.mock_calls[-1][2] == {"channelIndex": 4, "slatsLevel": 0}
-    await async_manipulate_test_data(hass, hmip_device, "shutterLevel", 0, channel=4)
-    await async_manipulate_test_data(hass, hmip_device, "slatsLevel", 0, channel=4)
-    ha_state = hass.states.get(entity_id)
+    await async_manipulate_test_data(menuai, hmip_device, "shutterLevel", 0, channel=4)
+    await async_manipulate_test_data(menuai, hmip_device, "slatsLevel", 0, channel=4)
+    ha_state = menuai.states.get(entity_id)
     assert ha_state.state == CoverState.OPEN
     assert ha_state.attributes[ATTR_CURRENT_POSITION] == 100
     assert ha_state.attributes[ATTR_CURRENT_TILT_POSITION] == 100
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover",
         "set_cover_tilt_position",
         {"entity_id": entity_id, "tilt_position": "50"},
@@ -202,42 +202,42 @@ async def test_hmip_multi_cover_slats(
     assert len(hmip_device.mock_calls) == service_call_counter + 4
     assert hmip_device.mock_calls[-1][0] == "set_slats_level_async"
     assert hmip_device.mock_calls[-1][2] == {"channelIndex": 4, "slatsLevel": 0.5}
-    await async_manipulate_test_data(hass, hmip_device, "slatsLevel", 0.5, channel=4)
-    ha_state = hass.states.get(entity_id)
+    await async_manipulate_test_data(menuai, hmip_device, "slatsLevel", 0.5, channel=4)
+    ha_state = menuai.states.get(entity_id)
     assert ha_state.state == CoverState.OPEN
     assert ha_state.attributes[ATTR_CURRENT_POSITION] == 100
     assert ha_state.attributes[ATTR_CURRENT_TILT_POSITION] == 50
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover", "close_cover_tilt", {"entity_id": entity_id}, blocking=True
     )
     assert len(hmip_device.mock_calls) == service_call_counter + 6
     assert hmip_device.mock_calls[-1][0] == "set_slats_level_async"
     assert hmip_device.mock_calls[-1][2] == {"channelIndex": 4, "slatsLevel": 1}
-    await async_manipulate_test_data(hass, hmip_device, "slatsLevel", 1, channel=4)
-    ha_state = hass.states.get(entity_id)
+    await async_manipulate_test_data(menuai, hmip_device, "slatsLevel", 1, channel=4)
+    ha_state = menuai.states.get(entity_id)
     assert ha_state.state == CoverState.OPEN
     assert ha_state.attributes[ATTR_CURRENT_POSITION] == 100
     assert ha_state.attributes[ATTR_CURRENT_TILT_POSITION] == 0
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover", "stop_cover_tilt", {"entity_id": entity_id}, blocking=True
     )
     assert len(hmip_device.mock_calls) == service_call_counter + 8
     assert hmip_device.mock_calls[-1][0] == "set_shutter_stop_async"
     assert hmip_device.mock_calls[-1][1] == (4,)
 
-    await async_manipulate_test_data(hass, hmip_device, "slatsLevel", None, channel=4)
-    ha_state = hass.states.get(entity_id)
+    await async_manipulate_test_data(menuai, hmip_device, "slatsLevel", None, channel=4)
+    ha_state = menuai.states.get(entity_id)
     assert not ha_state.attributes.get(ATTR_CURRENT_TILT_POSITION)
 
-    await async_manipulate_test_data(hass, hmip_device, "shutterLevel", None, channel=4)
-    ha_state = hass.states.get(entity_id)
+    await async_manipulate_test_data(menuai, hmip_device, "shutterLevel", None, channel=4)
+    ha_state = menuai.states.get(entity_id)
     assert ha_state.state == STATE_UNKNOWN
 
 
 async def test_hmip_blind_module(
-    hass: HomeAssistant, default_mock_hap_factory: HomeFactory
+    menuai: menuai, default_mock_hap_factory: HomeFactory
 ) -> None:
     """Test HomematicipBlindModule."""
     entity_id = "cover.sonnenschutz_balkontur"
@@ -248,7 +248,7 @@ async def test_hmip_blind_module(
     )
 
     ha_state, hmip_device = get_and_check_entity_basics(
-        hass, mock_hap, entity_id, entity_name, device_model
+        menuai, mock_hap, entity_id, entity_name, device_model
     )
 
     assert ha_state.state == CoverState.OPEN
@@ -256,7 +256,7 @@ async def test_hmip_blind_module(
     assert ha_state.attributes[ATTR_CURRENT_TILT_POSITION] == 100
     service_call_counter = len(hmip_device.mock_calls)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover", "open_cover_tilt", {"entity_id": entity_id}, blocking=True
     )
     assert len(hmip_device.mock_calls) == service_call_counter + 1
@@ -266,9 +266,9 @@ async def test_hmip_blind_module(
         "secondaryShadingLevel": 0,
     }
 
-    await async_manipulate_test_data(hass, hmip_device, "primaryShadingLevel", 0)
-    await async_manipulate_test_data(hass, hmip_device, "secondaryShadingLevel", 0)
-    await hass.services.async_call(
+    await async_manipulate_test_data(menuai, hmip_device, "primaryShadingLevel", 0)
+    await async_manipulate_test_data(menuai, hmip_device, "secondaryShadingLevel", 0)
+    await menuai.services.async_call(
         "cover", "open_cover", {"entity_id": entity_id}, blocking=True
     )
     assert len(hmip_device.mock_calls) == service_call_counter + 4
@@ -276,20 +276,20 @@ async def test_hmip_blind_module(
     assert hmip_device.mock_calls[-1][0] == "set_primary_shading_level_async"
     assert hmip_device.mock_calls[-1][2] == {"primaryShadingLevel": 0}
 
-    ha_state = hass.states.get(entity_id)
+    ha_state = menuai.states.get(entity_id)
     assert ha_state.state == CoverState.OPEN
     assert ha_state.attributes[ATTR_CURRENT_POSITION] == 100
     assert ha_state.attributes[ATTR_CURRENT_TILT_POSITION] == 100
 
-    await async_manipulate_test_data(hass, hmip_device, "primaryShadingLevel", 0.5)
-    await async_manipulate_test_data(hass, hmip_device, "secondaryShadingLevel", 0.5)
-    await hass.services.async_call(
+    await async_manipulate_test_data(menuai, hmip_device, "primaryShadingLevel", 0.5)
+    await async_manipulate_test_data(menuai, hmip_device, "secondaryShadingLevel", 0.5)
+    await menuai.services.async_call(
         "cover",
         "set_cover_tilt_position",
         {"entity_id": entity_id, "tilt_position": "50"},
         blocking=True,
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover",
         "set_cover_position",
         {"entity_id": entity_id, "position": "50"},
@@ -299,17 +299,17 @@ async def test_hmip_blind_module(
 
     assert hmip_device.mock_calls[-1][0] == "set_primary_shading_level_async"
     assert hmip_device.mock_calls[-1][2] == {"primaryShadingLevel": 0.5}
-    ha_state = hass.states.get(entity_id)
+    ha_state = menuai.states.get(entity_id)
     assert ha_state.state == CoverState.OPEN
     assert ha_state.attributes[ATTR_CURRENT_POSITION] == 50
     assert ha_state.attributes[ATTR_CURRENT_TILT_POSITION] == 50
 
-    await async_manipulate_test_data(hass, hmip_device, "primaryShadingLevel", 1)
-    await async_manipulate_test_data(hass, hmip_device, "secondaryShadingLevel", 1)
-    await hass.services.async_call(
+    await async_manipulate_test_data(menuai, hmip_device, "primaryShadingLevel", 1)
+    await async_manipulate_test_data(menuai, hmip_device, "secondaryShadingLevel", 1)
+    await menuai.services.async_call(
         "cover", "close_cover", {"entity_id": entity_id}, blocking=True
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover", "close_cover_tilt", {"entity_id": entity_id}, blocking=True
     )
     assert len(hmip_device.mock_calls) == service_call_counter + 12
@@ -320,36 +320,36 @@ async def test_hmip_blind_module(
         "secondaryShadingLevel": 1,
     }
 
-    ha_state = hass.states.get(entity_id)
+    ha_state = menuai.states.get(entity_id)
     assert ha_state.state == CoverState.CLOSED
     assert ha_state.attributes[ATTR_CURRENT_POSITION] == 0
     assert ha_state.attributes[ATTR_CURRENT_TILT_POSITION] == 0
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover", "stop_cover", {"entity_id": entity_id}, blocking=True
     )
     assert len(hmip_device.mock_calls) == service_call_counter + 13
     assert hmip_device.mock_calls[-1][0] == "stop_async"
     assert hmip_device.mock_calls[-1][1] == ()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover", "stop_cover_tilt", {"entity_id": entity_id}, blocking=True
     )
     assert len(hmip_device.mock_calls) == service_call_counter + 14
     assert hmip_device.mock_calls[-1][0] == "stop_async"
     assert hmip_device.mock_calls[-1][1] == ()
 
-    await async_manipulate_test_data(hass, hmip_device, "secondaryShadingLevel", None)
-    ha_state = hass.states.get(entity_id)
+    await async_manipulate_test_data(menuai, hmip_device, "secondaryShadingLevel", None)
+    ha_state = menuai.states.get(entity_id)
     assert not ha_state.attributes.get(ATTR_CURRENT_TILT_POSITION)
 
-    await async_manipulate_test_data(hass, hmip_device, "primaryShadingLevel", None)
-    ha_state = hass.states.get(entity_id)
+    await async_manipulate_test_data(menuai, hmip_device, "primaryShadingLevel", None)
+    ha_state = menuai.states.get(entity_id)
     assert ha_state.state == STATE_UNKNOWN
 
 
 async def test_hmip_garage_door_tormatic(
-    hass: HomeAssistant, default_mock_hap_factory: HomeFactory
+    menuai: menuai, default_mock_hap_factory: HomeFactory
 ) -> None:
     """Test HomematicipCoverShutte."""
     entity_id = "cover.garage_door_module"
@@ -360,36 +360,36 @@ async def test_hmip_garage_door_tormatic(
     )
 
     ha_state, hmip_device = get_and_check_entity_basics(
-        hass, mock_hap, entity_id, entity_name, device_model
+        menuai, mock_hap, entity_id, entity_name, device_model
     )
 
     assert ha_state.state == "closed"
     assert ha_state.attributes["current_position"] == 0
     service_call_counter = len(hmip_device.mock_calls)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover", "open_cover", {"entity_id": entity_id}, blocking=True
     )
     assert len(hmip_device.mock_calls) == service_call_counter + 1
     assert hmip_device.mock_calls[-1][0] == "send_door_command_async"
     assert hmip_device.mock_calls[-1][1] == (DoorCommand.OPEN,)
-    await async_manipulate_test_data(hass, hmip_device, "doorState", DoorState.OPEN)
-    ha_state = hass.states.get(entity_id)
+    await async_manipulate_test_data(menuai, hmip_device, "doorState", DoorState.OPEN)
+    ha_state = menuai.states.get(entity_id)
     assert ha_state.state == CoverState.OPEN
     assert ha_state.attributes[ATTR_CURRENT_POSITION] == 100
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover", "close_cover", {"entity_id": entity_id}, blocking=True
     )
     assert len(hmip_device.mock_calls) == service_call_counter + 3
     assert hmip_device.mock_calls[-1][0] == "send_door_command_async"
     assert hmip_device.mock_calls[-1][1] == (DoorCommand.CLOSE,)
-    await async_manipulate_test_data(hass, hmip_device, "doorState", DoorState.CLOSED)
-    ha_state = hass.states.get(entity_id)
+    await async_manipulate_test_data(menuai, hmip_device, "doorState", DoorState.CLOSED)
+    ha_state = menuai.states.get(entity_id)
     assert ha_state.state == CoverState.CLOSED
     assert ha_state.attributes[ATTR_CURRENT_POSITION] == 0
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover", "stop_cover", {"entity_id": entity_id}, blocking=True
     )
     assert len(hmip_device.mock_calls) == service_call_counter + 5
@@ -398,7 +398,7 @@ async def test_hmip_garage_door_tormatic(
 
 
 async def test_hmip_garage_door_hoermann(
-    hass: HomeAssistant, default_mock_hap_factory: HomeFactory
+    menuai: menuai, default_mock_hap_factory: HomeFactory
 ) -> None:
     """Test HomematicipCoverShutte."""
     entity_id = "cover.garage_door"
@@ -409,36 +409,36 @@ async def test_hmip_garage_door_hoermann(
     )
 
     ha_state, hmip_device = get_and_check_entity_basics(
-        hass, mock_hap, entity_id, entity_name, device_model
+        menuai, mock_hap, entity_id, entity_name, device_model
     )
 
     assert ha_state.state == "closed"
     assert ha_state.attributes["current_position"] == 0
     service_call_counter = len(hmip_device.mock_calls)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover", "open_cover", {"entity_id": entity_id}, blocking=True
     )
     assert len(hmip_device.mock_calls) == service_call_counter + 1
     assert hmip_device.mock_calls[-1][0] == "send_door_command_async"
     assert hmip_device.mock_calls[-1][1] == (DoorCommand.OPEN,)
-    await async_manipulate_test_data(hass, hmip_device, "doorState", DoorState.OPEN)
-    ha_state = hass.states.get(entity_id)
+    await async_manipulate_test_data(menuai, hmip_device, "doorState", DoorState.OPEN)
+    ha_state = menuai.states.get(entity_id)
     assert ha_state.state == CoverState.OPEN
     assert ha_state.attributes[ATTR_CURRENT_POSITION] == 100
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover", "close_cover", {"entity_id": entity_id}, blocking=True
     )
     assert len(hmip_device.mock_calls) == service_call_counter + 3
     assert hmip_device.mock_calls[-1][0] == "send_door_command_async"
     assert hmip_device.mock_calls[-1][1] == (DoorCommand.CLOSE,)
-    await async_manipulate_test_data(hass, hmip_device, "doorState", DoorState.CLOSED)
-    ha_state = hass.states.get(entity_id)
+    await async_manipulate_test_data(menuai, hmip_device, "doorState", DoorState.CLOSED)
+    ha_state = menuai.states.get(entity_id)
     assert ha_state.state == CoverState.CLOSED
     assert ha_state.attributes[ATTR_CURRENT_POSITION] == 0
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover", "stop_cover", {"entity_id": entity_id}, blocking=True
     )
     assert len(hmip_device.mock_calls) == service_call_counter + 5
@@ -447,7 +447,7 @@ async def test_hmip_garage_door_hoermann(
 
 
 async def test_hmip_cover_shutter_group(
-    hass: HomeAssistant, default_mock_hap_factory: HomeFactory
+    menuai: menuai, default_mock_hap_factory: HomeFactory
 ) -> None:
     """Test HomematicipCoverShutteGroup."""
     entity_id = "cover.rollos_shuttergroup"
@@ -456,25 +456,25 @@ async def test_hmip_cover_shutter_group(
     mock_hap = await default_mock_hap_factory.async_get_mock_hap(test_groups=["Rollos"])
 
     ha_state, hmip_device = get_and_check_entity_basics(
-        hass, mock_hap, entity_id, entity_name, device_model
+        menuai, mock_hap, entity_id, entity_name, device_model
     )
 
     assert ha_state.state == "closed"
     assert ha_state.attributes[ATTR_CURRENT_POSITION] == 0
     service_call_counter = len(hmip_device.mock_calls)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover", "open_cover", {"entity_id": entity_id}, blocking=True
     )
     assert len(hmip_device.mock_calls) == service_call_counter + 1
     assert hmip_device.mock_calls[-1][0] == "set_shutter_level_async"
     assert hmip_device.mock_calls[-1][1] == (0,)
-    await async_manipulate_test_data(hass, hmip_device, "shutterLevel", 0)
-    ha_state = hass.states.get(entity_id)
+    await async_manipulate_test_data(menuai, hmip_device, "shutterLevel", 0)
+    ha_state = menuai.states.get(entity_id)
     assert ha_state.state == CoverState.OPEN
     assert ha_state.attributes[ATTR_CURRENT_POSITION] == 100
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover",
         "set_cover_position",
         {"entity_id": entity_id, "position": "50"},
@@ -483,36 +483,36 @@ async def test_hmip_cover_shutter_group(
     assert len(hmip_device.mock_calls) == service_call_counter + 3
     assert hmip_device.mock_calls[-1][0] == "set_shutter_level_async"
     assert hmip_device.mock_calls[-1][1] == (0.5,)
-    await async_manipulate_test_data(hass, hmip_device, "shutterLevel", 0.5)
-    ha_state = hass.states.get(entity_id)
+    await async_manipulate_test_data(menuai, hmip_device, "shutterLevel", 0.5)
+    ha_state = menuai.states.get(entity_id)
     assert ha_state.state == CoverState.OPEN
     assert ha_state.attributes[ATTR_CURRENT_POSITION] == 50
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover", "close_cover", {"entity_id": entity_id}, blocking=True
     )
     assert len(hmip_device.mock_calls) == service_call_counter + 5
     assert hmip_device.mock_calls[-1][0] == "set_shutter_level_async"
     assert hmip_device.mock_calls[-1][1] == (1,)
-    await async_manipulate_test_data(hass, hmip_device, "shutterLevel", 1)
-    ha_state = hass.states.get(entity_id)
+    await async_manipulate_test_data(menuai, hmip_device, "shutterLevel", 1)
+    ha_state = menuai.states.get(entity_id)
     assert ha_state.state == CoverState.CLOSED
     assert ha_state.attributes[ATTR_CURRENT_POSITION] == 0
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover", "stop_cover", {"entity_id": entity_id}, blocking=True
     )
     assert len(hmip_device.mock_calls) == service_call_counter + 7
     assert hmip_device.mock_calls[-1][0] == "set_shutter_stop_async"
     assert hmip_device.mock_calls[-1][1] == ()
 
-    await async_manipulate_test_data(hass, hmip_device, "shutterLevel", None)
-    ha_state = hass.states.get(entity_id)
+    await async_manipulate_test_data(menuai, hmip_device, "shutterLevel", None)
+    ha_state = menuai.states.get(entity_id)
     assert ha_state.state == STATE_UNKNOWN
 
 
 async def test_hmip_cover_slats_group(
-    hass: HomeAssistant, default_mock_hap_factory: HomeFactory
+    menuai: menuai, default_mock_hap_factory: HomeFactory
 ) -> None:
     """Test slats with HomematicipCoverShutteGroup."""
     entity_id = "cover.rollos_shuttergroup"
@@ -521,37 +521,37 @@ async def test_hmip_cover_slats_group(
     mock_hap = await default_mock_hap_factory.async_get_mock_hap(test_groups=["Rollos"])
 
     ha_state, hmip_device = get_and_check_entity_basics(
-        hass, mock_hap, entity_id, entity_name, device_model
+        menuai, mock_hap, entity_id, entity_name, device_model
     )
-    await async_manipulate_test_data(hass, hmip_device, "slatsLevel", 1)
-    ha_state = hass.states.get(entity_id)
+    await async_manipulate_test_data(menuai, hmip_device, "slatsLevel", 1)
+    ha_state = menuai.states.get(entity_id)
 
     assert ha_state.state == CoverState.CLOSED
     assert ha_state.attributes[ATTR_CURRENT_POSITION] == 0
     assert ha_state.attributes[ATTR_CURRENT_TILT_POSITION] == 0
     service_call_counter = len(hmip_device.mock_calls)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover",
         "set_cover_position",
         {"entity_id": entity_id, "position": "50"},
         blocking=True,
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover", "open_cover_tilt", {"entity_id": entity_id}, blocking=True
     )
 
     assert len(hmip_device.mock_calls) == service_call_counter + 2
     assert hmip_device.mock_calls[-1][0] == "set_slats_level_async"
     assert hmip_device.mock_calls[-1][1] == (0,)
-    await async_manipulate_test_data(hass, hmip_device, "shutterLevel", 0.5)
-    await async_manipulate_test_data(hass, hmip_device, "slatsLevel", 0)
-    ha_state = hass.states.get(entity_id)
+    await async_manipulate_test_data(menuai, hmip_device, "shutterLevel", 0.5)
+    await async_manipulate_test_data(menuai, hmip_device, "slatsLevel", 0)
+    ha_state = menuai.states.get(entity_id)
     assert ha_state.state == CoverState.OPEN
     assert ha_state.attributes[ATTR_CURRENT_POSITION] == 50
     assert ha_state.attributes[ATTR_CURRENT_TILT_POSITION] == 100
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover",
         "set_cover_tilt_position",
         {"entity_id": entity_id, "tilt_position": "50"},
@@ -560,25 +560,25 @@ async def test_hmip_cover_slats_group(
     assert len(hmip_device.mock_calls) == service_call_counter + 5
     assert hmip_device.mock_calls[-1][0] == "set_slats_level_async"
     assert hmip_device.mock_calls[-1][1] == (0.5,)
-    await async_manipulate_test_data(hass, hmip_device, "slatsLevel", 0.5)
-    ha_state = hass.states.get(entity_id)
+    await async_manipulate_test_data(menuai, hmip_device, "slatsLevel", 0.5)
+    ha_state = menuai.states.get(entity_id)
     assert ha_state.state == CoverState.OPEN
     assert ha_state.attributes[ATTR_CURRENT_POSITION] == 50
     assert ha_state.attributes[ATTR_CURRENT_TILT_POSITION] == 50
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover", "close_cover_tilt", {"entity_id": entity_id}, blocking=True
     )
     assert len(hmip_device.mock_calls) == service_call_counter + 7
     assert hmip_device.mock_calls[-1][0] == "set_slats_level_async"
     assert hmip_device.mock_calls[-1][1] == (1,)
-    await async_manipulate_test_data(hass, hmip_device, "slatsLevel", 1)
-    ha_state = hass.states.get(entity_id)
+    await async_manipulate_test_data(menuai, hmip_device, "slatsLevel", 1)
+    ha_state = menuai.states.get(entity_id)
     assert ha_state.state == CoverState.OPEN
     assert ha_state.attributes[ATTR_CURRENT_POSITION] == 50
     assert ha_state.attributes[ATTR_CURRENT_TILT_POSITION] == 0
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "cover", "stop_cover_tilt", {"entity_id": entity_id}, blocking=True
     )
     assert len(hmip_device.mock_calls) == service_call_counter + 9

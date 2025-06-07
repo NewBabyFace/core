@@ -11,7 +11,7 @@ from pyipma.api import IPMA_API
 from pyipma.forecast import Forecast as IPMAForecast
 from pyipma.location import Location
 
-from homeassistant.components.weather import (
+from menuai.components.weather import (
     ATTR_FORECAST_CONDITION,
     ATTR_FORECAST_NATIVE_TEMP,
     ATTR_FORECAST_NATIVE_TEMP_LOW,
@@ -23,16 +23,16 @@ from homeassistant.components.weather import (
     WeatherEntity,
     WeatherEntityFeature,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_MODE,
     UnitOfPressure,
     UnitOfSpeed,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.sun import is_up
-from homeassistant.util import Throttle
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.sun import is_up
+from menuai.util import Throttle
 
 from . import IpmaConfigEntry
 from .const import ATTRIBUTION, CONDITION_MAP, MIN_TIME_BETWEEN_UPDATES
@@ -42,7 +42,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: IpmaConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -123,7 +123,7 @@ class IPMAWeather(WeatherEntity, IPMADevice):
 
     def _condition_conversion(self, identifier, forecast_dt):
         """Convert from IPMA weather_type id to HA."""
-        if identifier == 1 and not is_up(self.hass, forecast_dt):
+        if identifier == 1 and not is_up(self.menuai, forecast_dt):
             identifier = -identifier
 
         return CONDITION_MAP.get(identifier)

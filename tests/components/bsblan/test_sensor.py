@@ -5,9 +5,9 @@ from unittest.mock import AsyncMock
 from freezegun.api import FrozenDateTimeFactory
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import setup_with_selected_platforms
 
@@ -18,7 +18,7 @@ ENTITY_OUTSIDE_TEMP = "sensor.bsb_lan_outside_temperature"
 
 
 async def test_sensor_entity_properties(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_bsblan: AsyncMock,
     mock_config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
@@ -26,5 +26,5 @@ async def test_sensor_entity_properties(
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test the sensor entity properties."""
-    await setup_with_selected_platforms(hass, mock_config_entry, [Platform.SENSOR])
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await setup_with_selected_platforms(menuai, mock_config_entry, [Platform.SENSOR])
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)

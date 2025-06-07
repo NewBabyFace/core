@@ -1,6 +1,6 @@
 """The tests for the litejet component."""
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from . import async_init_integration
 
@@ -9,13 +9,13 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_diagnostics(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator, mock_litejet
+    menuai: menuai, menuai_client: ClientSessionGenerator, mock_litejet
 ) -> None:
     """Test getting the LiteJet diagnostics."""
 
-    config_entry = await async_init_integration(hass)
+    config_entry = await async_init_integration(menuai)
 
-    diag = await get_diagnostics_for_config_entry(hass, hass_client, config_entry)
+    diag = await get_diagnostics_for_config_entry(menuai, menuai_client, config_entry)
 
     assert diag == {
         "model": "MockJet",

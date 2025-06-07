@@ -17,8 +17,8 @@ from aioesphomeapi import (
     MediaPlayerSupportedFormat,
 )
 
-from homeassistant.components import media_source
-from homeassistant.components.media_player import (
+from menuai.components import media_source
+from menuai.components.media_player import (
     ATTR_MEDIA_ANNOUNCE,
     ATTR_MEDIA_EXTRA,
     BrowseMedia,
@@ -29,7 +29,7 @@ from homeassistant.components.media_player import (
     MediaType,
     async_process_play_media_url,
 )
-from homeassistant.core import callback
+from menuai.core import callback
 
 from .entity import (
     EsphomeEntity,
@@ -107,11 +107,11 @@ class EsphomeMediaPlayer(
         """Send the play command with media url to the media player."""
         if media_source.is_media_source_id(media_id):
             sourced_media = await media_source.async_resolve_media(
-                self.hass, media_id, self.entity_id
+                self.menuai, media_id, self.entity_id
             )
             media_id = sourced_media.url
 
-        media_id = async_process_play_media_url(self.hass, media_id)
+        media_id = async_process_play_media_url(self.menuai, media_id)
         announcement = kwargs.get(ATTR_MEDIA_ANNOUNCE)
         bypass_proxy = kwargs.get(ATTR_MEDIA_EXTRA, {}).get(ATTR_BYPASS_PROXY)
 
@@ -136,9 +136,9 @@ class EsphomeMediaPlayer(
             self._key, media_url=media_id, announcement=announcement
         )
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Handle entity being removed."""
-        await super().async_will_remove_from_hass()
+        await super().async_will_remove_from_menuai()
         self._entry_data.media_player_formats.pop(self.entity_id, None)
 
     def _get_proxy_url(
@@ -168,7 +168,7 @@ class EsphomeMediaPlayer(
             return None
 
         # Replace the media URL with a proxy URL pointing to Home
-        # Assistant. When requested, Home Assistant will use ffmpeg to
+        # Assistant. When requested, MenuAI will use ffmpeg to
         # convert the source URL to the supported format.
         _LOGGER.debug("Proxying media url %s with format %s", url, format_to_use)
         device_id = self.device_entry.id
@@ -188,7 +188,7 @@ class EsphomeMediaPlayer(
             width = format_to_use.sample_bytes
 
         proxy_url = async_create_proxy_url(
-            self.hass,
+            self.menuai,
             device_id,
             url,
             media_format=media_format,
@@ -198,7 +198,7 @@ class EsphomeMediaPlayer(
         )
 
         # Resolve URL
-        return async_process_play_media_url(self.hass, proxy_url)
+        return async_process_play_media_url(self.menuai, proxy_url)
 
     async def async_browse_media(
         self,
@@ -207,7 +207,7 @@ class EsphomeMediaPlayer(
     ) -> BrowseMedia:
         """Implement the websocket media browsing helper."""
         return await media_source.async_browse_media(
-            self.hass,
+            self.menuai,
             media_content_id,
             content_filter=lambda item: item.media_content_type.startswith("audio/"),
         )

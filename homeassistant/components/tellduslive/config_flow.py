@@ -8,9 +8,9 @@ from typing import Any
 from tellduslive import Session, supports_local_api
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST
-from homeassistant.util.json import load_json_object
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST
+from menuai.util.json import load_json_object
 
 from .const import (
     APPLICATION_NAME,
@@ -77,7 +77,7 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
         """Handle the submitted configuration."""
         errors = {}
         if user_input is not None:
-            if await self.hass.async_add_executor_job(self._session.authorize):
+            if await self.menuai.async_add_executor_job(self._session.authorize):
                 host = self._host or CLOUD_NAME
                 if self._host:
                     session = {CONF_HOST: host, KEY_TOKEN: self._session.access_token}
@@ -98,7 +98,7 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
 
         try:
             async with asyncio.timeout(10):
-                auth_url = await self.hass.async_add_executor_job(self._get_auth_url)
+                auth_url = await self.menuai.async_add_executor_job(self._get_auth_url)
             if not auth_url:
                 return self.async_abort(reason="unknown_authorize_url_generation")
         except TimeoutError:
@@ -140,13 +140,13 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
         if import_data[CONF_HOST] != DOMAIN:
             self._hosts.append(import_data[CONF_HOST])
 
-        if not await self.hass.async_add_executor_job(
-            os.path.isfile, self.hass.config.path(TELLDUS_CONFIG_FILE)
+        if not await self.menuai.async_add_executor_job(
+            os.path.isfile, self.menuai.config.path(TELLDUS_CONFIG_FILE)
         ):
             return await self.async_step_user()
 
-        conf = await self.hass.async_add_executor_job(
-            load_json_object, self.hass.config.path(TELLDUS_CONFIG_FILE)
+        conf = await self.menuai.async_add_executor_job(
+            load_json_object, self.menuai.config.path(TELLDUS_CONFIG_FILE)
         )
         host = next(iter(conf))
 

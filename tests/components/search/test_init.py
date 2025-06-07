@@ -3,17 +3,17 @@
 import pytest
 from pytest_unordered import unordered
 
-from homeassistant.components.search import ItemType, Searcher
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import (
+from menuai.components.search import ItemType, Searcher
+from menuai.core import menuai
+from menuai.helpers import (
     area_registry as ar,
     device_registry as dr,
     entity_registry as er,
     floor_registry as fr,
     label_registry as lr,
 )
-from homeassistant.helpers.entity import EntityInfo
-from homeassistant.setup import async_setup_component
+from menuai.helpers.entity import EntityInfo
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 from tests.typing import WebSocketGenerator
@@ -25,16 +25,16 @@ def stub_blueprint_populate_autouse(stub_blueprint_populate: None) -> None:
 
 
 async def test_search(
-    hass: HomeAssistant,
+    menuai: menuai,
     area_registry: ar.AreaRegistry,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     floor_registry: fr.FloorRegistry,
     label_registry: lr.LabelRegistry,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test search."""
-    assert await async_setup_component(hass, "search", {})
+    assert await async_setup_component(menuai, "search", {})
 
     # Labels
     label_energy = label_registry.async_create("Energy")
@@ -56,9 +56,9 @@ async def test_search(
 
     # Config entries
     hue_config_entry = MockConfigEntry(domain="hue")
-    hue_config_entry.add_to_hass(hass)
+    hue_config_entry.add_to_menuai(menuai)
     wled_config_entry = MockConfigEntry(domain="wled")
-    wled_config_entry.add_to_hass(hass)
+    wled_config_entry.add_to_menuai(menuai)
 
     # Devices
     hue_device = device_registry.async_get_or_create(
@@ -119,7 +119,7 @@ async def test_search(
 
     scene_wled_hue_entity = entity_registry.async_get_or_create(
         "scene",
-        "homeassistant",
+        "menuai",
         "wled_hue",
         suggested_object_id="scene_wled_hue",
     )
@@ -167,7 +167,7 @@ async def test_search(
 
     # Groups
     await async_setup_component(
-        hass,
+        menuai,
         "group",
         {
             "group": {
@@ -200,7 +200,7 @@ async def test_search(
 
     # Persons
     assert await async_setup_component(
-        hass,
+        menuai,
         "person",
         {
             "person": [
@@ -215,7 +215,7 @@ async def test_search(
 
     # Scenes
     await async_setup_component(
-        hass,
+        menuai,
         "scene",
         {
             "scene": [
@@ -243,7 +243,7 @@ async def test_search(
 
     # Automations
     assert await async_setup_component(
-        hass,
+        menuai,
         "automation",
         {
             "automation": [
@@ -319,7 +319,7 @@ async def test_search(
                     "trigger": {"platform": "template", "value_template": "true"},
                     "action": [
                         {
-                            "service": "homeassistant.turn_on",
+                            "service": "menuai.turn_on",
                             "target": {"entity_id": "group.wled_hue"},
                         },
                     ],
@@ -359,7 +359,7 @@ async def test_search(
 
     # Scripts
     assert await async_setup_component(
-        hass,
+        menuai,
         "script",
         {
             "script": {
@@ -472,7 +472,7 @@ async def test_search(
 
     def search(item_type: ItemType, item_id: str) -> dict[str, set[str]]:
         """Search."""
-        searcher = Searcher(hass, entity_sources)
+        searcher = Searcher(menuai, entity_sources)
         return searcher.async_search(item_type, item_id)
 
     #
@@ -980,7 +980,7 @@ async def test_search(
     }
 
     # WebSocket
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json(
         {
             "id": 1,

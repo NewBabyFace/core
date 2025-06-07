@@ -10,16 +10,16 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from pytest_unordered import unordered
 
-from homeassistant.components.homeassistant_alerts.const import (
+from menuai.components.menuai_alerts.const import (
     COMPONENT_LOADED_COOLDOWN,
     DOMAIN,
     UPDATE_INTERVAL,
 )
-from homeassistant.components.repairs import DOMAIN as REPAIRS_DOMAIN
-from homeassistant.const import EVENT_COMPONENT_LOADED
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import ATTR_COMPONENT, async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.components.repairs import DOMAIN as REPAIRS_DOMAIN
+from menuai.const import EVENT_COMPONENT_LOADED
+from menuai.core import menuai
+from menuai.setup import ATTR_COMPONENT, async_setup_component
+from menuai.util import dt as dt_util
 
 from tests.common import async_fire_time_changed, async_load_fixture
 from tests.test_util.aiohttp import AiohttpClientMocker
@@ -35,9 +35,9 @@ def stub_alert(aioclient_mock: AiohttpClientMocker, alert_id) -> None:
 
 
 @pytest.fixture(autouse=True)
-async def setup_repairs(hass: HomeAssistant) -> None:
+async def setup_repairs(menuai: menuai) -> None:
     """Set up the repairs integration."""
-    assert await async_setup_component(hass, REPAIRS_DOMAIN, {REPAIRS_DOMAIN: {}})
+    assert await async_setup_component(menuai, REPAIRS_DOMAIN, {REPAIRS_DOMAIN: {}})
 
 
 @pytest.mark.parametrize(
@@ -49,7 +49,7 @@ async def setup_repairs(hass: HomeAssistant) -> None:
             [
                 ("aladdin_connect", "aladdin_connect"),
                 ("dark_sky", "darksky"),
-                ("hassio", "hassio"),
+                ("menuaiio", "menuaiio"),
                 ("hikvision", "hikvision"),
                 ("hikvision", "hikvisioncam"),
                 ("hive_us", "hive"),
@@ -96,8 +96,8 @@ async def setup_repairs(hass: HomeAssistant) -> None:
     ],
 )
 async def test_alerts(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     aioclient_mock: AiohttpClientMocker,
     ha_version: str,
     supervisor_info: dict[str, str] | None,
@@ -108,7 +108,7 @@ async def test_alerts(
     aioclient_mock.clear_requests()
     aioclient_mock.get(
         "https://alerts.home-assistant.io/alerts.json",
-        text=await async_load_fixture(hass, "alerts_1.json", DOMAIN),
+        text=await async_load_fixture(menuai, "alerts_1.json", DOMAIN),
     )
     for alert in expected_alerts:
         stub_alert(aioclient_mock, alert[0])
@@ -127,28 +127,28 @@ async def test_alerts(
         "sochain",
     )
     for domain in activated_components:
-        hass.config.components.add(domain)
+        menuai.config.components.add(domain)
 
     if supervisor_info is not None:
-        hass.config.components.add("hassio")
+        menuai.config.components.add("menuaiio")
 
     with (
         patch(
-            "homeassistant.components.homeassistant_alerts.coordinator.__version__",
+            "menuai.components.menuai_alerts.coordinator.__version__",
             ha_version,
         ),
         patch(
-            "homeassistant.components.homeassistant_alerts.coordinator.is_hassio",
+            "menuai.components.menuai_alerts.coordinator.is_menuaiio",
             return_value=supervisor_info is not None,
         ),
         patch(
-            "homeassistant.components.homeassistant_alerts.coordinator.get_supervisor_info",
+            "menuai.components.menuai_alerts.coordinator.get_supervisor_info",
             return_value=supervisor_info,
         ),
     ):
-        assert await async_setup_component(hass, DOMAIN, {})
+        assert await async_setup_component(menuai, DOMAIN, {})
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json({"id": 1, "type": "repairs/list_issues"})
     msg = await client.receive_json()
@@ -192,7 +192,7 @@ async def test_alerts(
             {"version": "2022.11.0"},
             ["aladdin_connect", "darksky"],
             [
-                "hassio",
+                "menuaiio",
                 "hikvision",
                 "hikvisioncam",
                 "hive",
@@ -210,7 +210,7 @@ async def test_alerts(
             [
                 ("aladdin_connect", "aladdin_connect"),
                 ("dark_sky", "darksky"),
-                ("hassio", "hassio"),
+                ("menuaiio", "menuaiio"),
                 ("hikvision", "hikvision"),
                 ("hikvision", "hikvisioncam"),
                 ("hive_us", "hive"),
@@ -227,7 +227,7 @@ async def test_alerts(
             {"version": "2022.11.1"},
             ["aladdin_connect", "darksky"],
             [
-                "hassio",
+                "menuaiio",
                 "hikvision",
                 "hikvisioncam",
                 "hive",
@@ -289,8 +289,8 @@ async def test_alerts(
     ],
 )
 async def test_alerts_refreshed_on_component_load(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     aioclient_mock: AiohttpClientMocker,
     ha_version: str,
     supervisor_info: dict[str, str] | None,
@@ -305,7 +305,7 @@ async def test_alerts_refreshed_on_component_load(
     aioclient_mock.clear_requests()
     aioclient_mock.get(
         "https://alerts.home-assistant.io/alerts.json",
-        text=await async_load_fixture(hass, "alerts_1.json", DOMAIN),
+        text=await async_load_fixture(menuai, "alerts_1.json", DOMAIN),
     )
     for alert in initial_alerts:
         stub_alert(aioclient_mock, alert[0])
@@ -313,25 +313,25 @@ async def test_alerts_refreshed_on_component_load(
         stub_alert(aioclient_mock, alert[0])
 
     for domain in initial_components:
-        hass.config.components.add(domain)
+        menuai.config.components.add(domain)
 
     with (
         patch(
-            "homeassistant.components.homeassistant_alerts.coordinator.__version__",
+            "menuai.components.menuai_alerts.coordinator.__version__",
             ha_version,
         ),
         patch(
-            "homeassistant.components.homeassistant_alerts.coordinator.is_hassio",
+            "menuai.components.menuai_alerts.coordinator.is_menuaiio",
             return_value=supervisor_info is not None,
         ),
         patch(
-            "homeassistant.components.homeassistant_alerts.coordinator.get_supervisor_info",
+            "menuai.components.menuai_alerts.coordinator.get_supervisor_info",
             return_value=supervisor_info,
         ),
     ):
-        assert await async_setup_component(hass, DOMAIN, {})
+        assert await async_setup_component(menuai, DOMAIN, {})
 
-        client = await hass_ws_client(hass)
+        client = await menuai_ws_client(menuai)
 
         await client.send_json({"id": 1, "type": "repairs/list_issues"})
         msg = await client.receive_json()
@@ -361,26 +361,26 @@ async def test_alerts_refreshed_on_component_load(
 
     with (
         patch(
-            "homeassistant.components.homeassistant_alerts.coordinator.__version__",
+            "menuai.components.menuai_alerts.coordinator.__version__",
             ha_version,
         ),
         patch(
-            "homeassistant.components.homeassistant_alerts.coordinator.is_hassio",
+            "menuai.components.menuai_alerts.coordinator.is_menuaiio",
             return_value=supervisor_info is not None,
         ),
         patch(
-            "homeassistant.components.homeassistant_alerts.coordinator.get_supervisor_info",
+            "menuai.components.menuai_alerts.coordinator.get_supervisor_info",
             return_value=supervisor_info,
         ),
     ):
         # Fake component_loaded events and wait for debounce
         for domain in late_components:
-            hass.config.components.add(domain)
-            hass.bus.async_fire(EVENT_COMPONENT_LOADED, {ATTR_COMPONENT: domain})
+            menuai.config.components.add(domain)
+            menuai.bus.async_fire(EVENT_COMPONENT_LOADED, {ATTR_COMPONENT: domain})
         freezer.tick(COMPONENT_LOADED_COOLDOWN + 1)
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-        client = await hass_ws_client(hass)
+        client = await menuai_ws_client(menuai)
 
         await client.send_json({"id": 2, "type": "repairs/list_issues"})
         msg = await client.receive_json()
@@ -430,15 +430,15 @@ async def test_alerts_refreshed_on_component_load(
     ],
 )
 async def test_bad_alerts(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     aioclient_mock: AiohttpClientMocker,
     ha_version: str,
     fixture: str,
     expected_alerts: list[tuple[str, str]],
 ) -> None:
     """Test creating issues based on alerts."""
-    fixture_content = await async_load_fixture(hass, fixture, DOMAIN)
+    fixture_content = await async_load_fixture(menuai, fixture, DOMAIN)
     aioclient_mock.clear_requests()
     aioclient_mock.get(
         "https://alerts.home-assistant.io/alerts.json",
@@ -453,15 +453,15 @@ async def test_bad_alerts(
         "hikvisioncam",
     )
     for domain in activated_components:
-        hass.config.components.add(domain)
+        menuai.config.components.add(domain)
 
     with patch(
-        "homeassistant.components.homeassistant_alerts.coordinator.__version__",
+        "menuai.components.menuai_alerts.coordinator.__version__",
         ha_version,
     ):
-        assert await async_setup_component(hass, DOMAIN, {})
+        assert await async_setup_component(menuai, DOMAIN, {})
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json({"id": 1, "type": "repairs/list_issues"})
     msg = await client.receive_json()
@@ -491,8 +491,8 @@ async def test_bad_alerts(
 
 
 async def test_no_alerts(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
     """Test creating issues based on alerts."""
@@ -503,9 +503,9 @@ async def test_no_alerts(
         text="",
     )
 
-    assert await async_setup_component(hass, DOMAIN, {})
+    assert await async_setup_component(menuai, DOMAIN, {})
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json({"id": 1, "type": "repairs/list_issues"})
     msg = await client.receive_json()
@@ -579,8 +579,8 @@ async def test_no_alerts(
     ],
 )
 async def test_alerts_change(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     aioclient_mock: AiohttpClientMocker,
     ha_version: str,
     fixture_1: str,
@@ -589,7 +589,7 @@ async def test_alerts_change(
     expected_alerts_2: list[tuple[str, str]],
 ) -> None:
     """Test creating issues based on alerts."""
-    fixture_1_content = await async_load_fixture(hass, fixture_1, DOMAIN)
+    fixture_1_content = await async_load_fixture(menuai, fixture_1, DOMAIN)
     aioclient_mock.clear_requests()
     aioclient_mock.get(
         "https://alerts.home-assistant.io/alerts.json",
@@ -612,17 +612,17 @@ async def test_alerts_change(
         "sochain",
     )
     for domain in activated_components:
-        hass.config.components.add(domain)
+        menuai.config.components.add(domain)
 
     with patch(
-        "homeassistant.components.homeassistant_alerts.coordinator.__version__",
+        "menuai.components.menuai_alerts.coordinator.__version__",
         ha_version,
     ):
-        assert await async_setup_component(hass, DOMAIN, {})
+        assert await async_setup_component(menuai, DOMAIN, {})
 
     now = dt_util.utcnow()
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json({"id": 1, "type": "repairs/list_issues"})
     msg = await client.receive_json()
@@ -650,7 +650,7 @@ async def test_alerts_change(
         ]
     )
 
-    fixture_2_content = await async_load_fixture(hass, fixture_2, DOMAIN)
+    fixture_2_content = await async_load_fixture(menuai, fixture_2, DOMAIN)
     aioclient_mock.clear_requests()
     aioclient_mock.get(
         "https://alerts.home-assistant.io/alerts.json",
@@ -660,8 +660,8 @@ async def test_alerts_change(
         stub_alert(aioclient_mock, alert["id"])
 
     future = now + UPDATE_INTERVAL + timedelta(seconds=1)
-    async_fire_time_changed(hass, future)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, future)
+    await menuai.async_block_till_done()
 
     await client.send_json({"id": 2, "type": "repairs/list_issues"})
     msg = await client.receive_json()

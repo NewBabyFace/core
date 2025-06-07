@@ -5,17 +5,17 @@ from unittest.mock import MagicMock
 from demetriek import LaMetricConnectionError, LaMetricError
 import pytest
 
-from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
-from homeassistant.components.lametric.const import DOMAIN
-from homeassistant.const import (
+from menuai.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
+from menuai.components.lametric.const import DOMAIN
+from menuai.const import (
     ATTR_ENTITY_ID,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
     EntityCategory,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 pytestmark = [
     pytest.mark.usefixtures("init_integration"),
@@ -24,13 +24,13 @@ pytestmark = [
 
 
 async def test_button_app_next(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_lametric: MagicMock,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test the LaMetric next app button."""
-    state = hass.states.get("button.frenck_s_lametric_next_app")
+    state = menuai.states.get("button.frenck_s_lametric_next_app")
     assert state
     assert state.state == STATE_UNKNOWN
 
@@ -55,7 +55,7 @@ async def test_button_app_next(
     assert device_entry.serial_number == "SA110405124500W00BS9"
     assert device_entry.hw_version is None
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         BUTTON_DOMAIN,
         SERVICE_PRESS,
         {ATTR_ENTITY_ID: "button.frenck_s_lametric_next_app"},
@@ -65,19 +65,19 @@ async def test_button_app_next(
     assert len(mock_lametric.app_next.mock_calls) == 1
     mock_lametric.app_next.assert_called_with()
 
-    state = hass.states.get("button.frenck_s_lametric_next_app")
+    state = menuai.states.get("button.frenck_s_lametric_next_app")
     assert state
     assert state.state == "2022-09-19T12:07:30+00:00"
 
 
 async def test_button_app_previous(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_lametric: MagicMock,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test the LaMetric previous app button."""
-    state = hass.states.get("button.frenck_s_lametric_previous_app")
+    state = menuai.states.get("button.frenck_s_lametric_previous_app")
     assert state
     assert state.state == STATE_UNKNOWN
 
@@ -101,7 +101,7 @@ async def test_button_app_previous(
     assert device_entry.sw_version == "2.2.2"
     assert device_entry.hw_version is None
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         BUTTON_DOMAIN,
         SERVICE_PRESS,
         {ATTR_ENTITY_ID: "button.frenck_s_lametric_previous_app"},
@@ -111,19 +111,19 @@ async def test_button_app_previous(
     assert len(mock_lametric.app_previous.mock_calls) == 1
     mock_lametric.app_previous.assert_called_with()
 
-    state = hass.states.get("button.frenck_s_lametric_previous_app")
+    state = menuai.states.get("button.frenck_s_lametric_previous_app")
     assert state
     assert state.state == "2022-09-19T12:07:30+00:00"
 
 
 async def test_button_dismiss_current_notification(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_lametric: MagicMock,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test the LaMetric dismiss current notification button."""
-    state = hass.states.get("button.frenck_s_lametric_dismiss_current_notification")
+    state = menuai.states.get("button.frenck_s_lametric_dismiss_current_notification")
     assert state
     assert state.state == STATE_UNKNOWN
 
@@ -149,7 +149,7 @@ async def test_button_dismiss_current_notification(
     assert device_entry.sw_version == "2.2.2"
     assert device_entry.hw_version is None
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         BUTTON_DOMAIN,
         SERVICE_PRESS,
         {ATTR_ENTITY_ID: "button.frenck_s_lametric_dismiss_current_notification"},
@@ -159,19 +159,19 @@ async def test_button_dismiss_current_notification(
     assert len(mock_lametric.dismiss_current_notification.mock_calls) == 1
     mock_lametric.dismiss_current_notification.assert_called_with()
 
-    state = hass.states.get("button.frenck_s_lametric_dismiss_current_notification")
+    state = menuai.states.get("button.frenck_s_lametric_dismiss_current_notification")
     assert state
     assert state.state == "2022-09-19T12:07:30+00:00"
 
 
 async def test_button_dismiss_all_notifications(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_lametric: MagicMock,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test the LaMetric dismiss all notifications button."""
-    state = hass.states.get("button.frenck_s_lametric_dismiss_all_notifications")
+    state = menuai.states.get("button.frenck_s_lametric_dismiss_all_notifications")
     assert state
     assert state.state == STATE_UNKNOWN
 
@@ -197,7 +197,7 @@ async def test_button_dismiss_all_notifications(
     assert device_entry.sw_version == "2.2.2"
     assert device_entry.hw_version is None
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         BUTTON_DOMAIN,
         SERVICE_PRESS,
         {ATTR_ENTITY_ID: "button.frenck_s_lametric_dismiss_all_notifications"},
@@ -207,50 +207,50 @@ async def test_button_dismiss_all_notifications(
     assert len(mock_lametric.dismiss_all_notifications.mock_calls) == 1
     mock_lametric.dismiss_all_notifications.assert_called_with()
 
-    state = hass.states.get("button.frenck_s_lametric_dismiss_all_notifications")
+    state = menuai.states.get("button.frenck_s_lametric_dismiss_all_notifications")
     assert state
     assert state.state == "2022-09-19T12:07:30+00:00"
 
 
 async def test_button_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_lametric: MagicMock,
 ) -> None:
     """Test error handling of the LaMetric buttons."""
     mock_lametric.app_next.side_effect = LaMetricError
 
     with pytest.raises(
-        HomeAssistantError, match="Invalid response from the LaMetric device"
+        menuaiError, match="Invalid response from the LaMetric device"
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             BUTTON_DOMAIN,
             SERVICE_PRESS,
             {ATTR_ENTITY_ID: "button.frenck_s_lametric_next_app"},
             blocking=True,
         )
 
-    state = hass.states.get("button.frenck_s_lametric_next_app")
+    state = menuai.states.get("button.frenck_s_lametric_next_app")
     assert state
     assert state.state == "2022-09-19T12:07:30+00:00"
 
 
 async def test_button_connection_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_lametric: MagicMock,
 ) -> None:
     """Test connection error handling of the LaMetric buttons."""
     mock_lametric.app_next.side_effect = LaMetricConnectionError
 
     with pytest.raises(
-        HomeAssistantError, match="Error communicating with the LaMetric device"
+        menuaiError, match="Error communicating with the LaMetric device"
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             BUTTON_DOMAIN,
             SERVICE_PRESS,
             {ATTR_ENTITY_ID: "button.frenck_s_lametric_next_app"},
             blocking=True,
         )
 
-    state = hass.states.get("button.frenck_s_lametric_next_app")
+    state = menuai.states.get("button.frenck_s_lametric_next_app")
     assert state
     assert state.state == STATE_UNAVAILABLE

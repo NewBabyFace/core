@@ -6,11 +6,11 @@ from unittest.mock import ANY, AsyncMock, MagicMock, patch
 from pykoplenti import ApiClient, AuthenticationException, SettingsData
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.kostal_plenticore.const import DOMAIN
-from homeassistant.const import CONF_HOST, CONF_PASSWORD
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components.kostal_plenticore.const import DOMAIN
+from menuai.const import CONF_HOST, CONF_PASSWORD
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
@@ -29,7 +29,7 @@ def mock_apiclient() -> ApiClient:
 def mock_apiclient_class(mock_apiclient) -> Generator[type[ApiClient]]:
     """Return a mocked ApiClient class."""
     with patch(
-        "homeassistant.components.kostal_plenticore.config_flow.ApiClient",
+        "menuai.components.kostal_plenticore.config_flow.ApiClient",
         autospec=True,
     ) as mock_api_class:
         mock_api_class.return_value = mock_apiclient
@@ -37,20 +37,20 @@ def mock_apiclient_class(mock_apiclient) -> Generator[type[ApiClient]]:
 
 
 async def test_form_g1(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_apiclient_class: type[ApiClient],
     mock_apiclient: ApiClient,
 ) -> None:
     """Test the config flow for G1 models."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
     with patch(
-        "homeassistant.components.kostal_plenticore.async_setup_entry",
+        "menuai.components.kostal_plenticore.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
         # mock of the context manager instance
@@ -75,14 +75,14 @@ async def test_form_g1(
             return_value={"scb:network": {"Hostname": "scb"}}
         )
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "host": "1.1.1.1",
                 "password": "test-password",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         mock_apiclient_class.assert_called_once_with(ANY, "1.1.1.1")
         mock_apiclient.__aenter__.assert_called_once()
@@ -103,20 +103,20 @@ async def test_form_g1(
 
 
 async def test_form_g2(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_apiclient_class: type[ApiClient],
     mock_apiclient: ApiClient,
 ) -> None:
     """Test the config flow for G2 models."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
     with patch(
-        "homeassistant.components.kostal_plenticore.async_setup_entry",
+        "menuai.components.kostal_plenticore.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
         # mock of the context manager instance
@@ -141,14 +141,14 @@ async def test_form_g2(
             return_value={"scb:network": {"Network:Hostname": "scb"}}
         )
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "host": "1.1.1.1",
                 "password": "test-password",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         mock_apiclient_class.assert_called_once_with(ANY, "1.1.1.1")
         mock_apiclient.__aenter__.assert_called_once()
@@ -169,20 +169,20 @@ async def test_form_g2(
 
 
 async def test_form_g2_with_service_code(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_apiclient_class: type[ApiClient],
     mock_apiclient: ApiClient,
 ) -> None:
     """Test the config flow for G2 models with a Service Code."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
     with patch(
-        "homeassistant.components.kostal_plenticore.async_setup_entry",
+        "menuai.components.kostal_plenticore.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
         # mock of the context manager instance
@@ -207,7 +207,7 @@ async def test_form_g2_with_service_code(
             return_value={"scb:network": {"Network:Hostname": "scb"}}
         )
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "host": "1.1.1.1",
@@ -215,7 +215,7 @@ async def test_form_g2_with_service_code(
                 "service_code": "test-service-code",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         mock_apiclient_class.assert_called_once_with(ANY, "1.1.1.1")
         mock_apiclient.__aenter__.assert_called_once()
@@ -238,14 +238,14 @@ async def test_form_g2_with_service_code(
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_form_invalid_auth(hass: HomeAssistant) -> None:
+async def test_form_invalid_auth(menuai: menuai) -> None:
     """Test we handle invalid auth."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     with patch(
-        "homeassistant.components.kostal_plenticore.config_flow.ApiClient"
+        "menuai.components.kostal_plenticore.config_flow.ApiClient"
     ) as mock_api_class:
         # mock of the context manager instance
         mock_api_ctx = MagicMock()
@@ -260,7 +260,7 @@ async def test_form_invalid_auth(hass: HomeAssistant) -> None:
 
         mock_api_class.return_value = mock_api
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "host": "1.1.1.1",
@@ -272,14 +272,14 @@ async def test_form_invalid_auth(hass: HomeAssistant) -> None:
     assert result["errors"] == {"password": "invalid_auth"}
 
 
-async def test_form_cannot_connect(hass: HomeAssistant) -> None:
+async def test_form_cannot_connect(menuai: menuai) -> None:
     """Test we handle cannot connect error."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     with patch(
-        "homeassistant.components.kostal_plenticore.config_flow.ApiClient"
+        "menuai.components.kostal_plenticore.config_flow.ApiClient"
     ) as mock_api_class:
         # mock of the context manager instance
         mock_api_ctx = MagicMock()
@@ -294,7 +294,7 @@ async def test_form_cannot_connect(hass: HomeAssistant) -> None:
 
         mock_api_class.return_value = mock_api
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "host": "1.1.1.1",
@@ -306,14 +306,14 @@ async def test_form_cannot_connect(hass: HomeAssistant) -> None:
     assert result["errors"] == {"host": "cannot_connect"}
 
 
-async def test_form_unexpected_error(hass: HomeAssistant) -> None:
+async def test_form_unexpected_error(menuai: menuai) -> None:
     """Test we handle unexpected error."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     with patch(
-        "homeassistant.components.kostal_plenticore.config_flow.ApiClient"
+        "menuai.components.kostal_plenticore.config_flow.ApiClient"
     ) as mock_api_class:
         # mock of the context manager instance
         mock_api_ctx = MagicMock()
@@ -328,7 +328,7 @@ async def test_form_unexpected_error(hass: HomeAssistant) -> None:
 
         mock_api_class.return_value = mock_api
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "host": "1.1.1.1",
@@ -340,19 +340,19 @@ async def test_form_unexpected_error(hass: HomeAssistant) -> None:
     assert result["errors"] == {"base": "unknown"}
 
 
-async def test_already_configured(hass: HomeAssistant) -> None:
+async def test_already_configured(menuai: menuai) -> None:
     """Test we handle already configured error."""
     MockConfigEntry(
         domain="kostal_plenticore",
         data={"host": "1.1.1.1", "password": "foobar"},
         unique_id="112233445566",
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "host": "1.1.1.1",
@@ -365,15 +365,15 @@ async def test_already_configured(hass: HomeAssistant) -> None:
 
 
 async def test_reconfigure(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_apiclient_class: type[ApiClient],
     mock_apiclient: ApiClient,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test the config flow for G1 models."""
 
-    mock_config_entry.add_to_hass(hass)
-    result = await mock_config_entry.start_reconfigure_flow(hass)
+    mock_config_entry.add_to_menuai(menuai)
+    result = await mock_config_entry.start_reconfigure_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reconfigure"
     assert result["errors"] == {}
@@ -400,14 +400,14 @@ async def test_reconfigure(
         return_value={"scb:network": {"Hostname": "scb"}}
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             "host": "1.1.1.1",
             "password": "test-password",
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     mock_apiclient_class.assert_called_once_with(ANY, "1.1.1.1")
     mock_apiclient.__aenter__.assert_called_once()
@@ -425,14 +425,14 @@ async def test_reconfigure(
 
 
 async def test_reconfigure_invalid_auth(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_config_entry: MockConfigEntry
 ) -> None:
     """Test we handle invalid auth while reconfiguring."""
-    mock_config_entry.add_to_hass(hass)
-    result = await mock_config_entry.start_reconfigure_flow(hass)
+    mock_config_entry.add_to_menuai(menuai)
+    result = await mock_config_entry.start_reconfigure_flow(menuai)
 
     with patch(
-        "homeassistant.components.kostal_plenticore.config_flow.ApiClient"
+        "menuai.components.kostal_plenticore.config_flow.ApiClient"
     ) as mock_api_class:
         # mock of the context manager instance
         mock_api_ctx = MagicMock()
@@ -447,7 +447,7 @@ async def test_reconfigure_invalid_auth(
 
         mock_api_class.return_value = mock_api
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "host": "1.1.1.1",
@@ -455,21 +455,21 @@ async def test_reconfigure_invalid_auth(
             },
         )
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"password": "invalid_auth"}
 
 
 async def test_reconfigure_cannot_connect(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_config_entry: MockConfigEntry
 ) -> None:
     """Test we handle cannot connect error."""
-    mock_config_entry.add_to_hass(hass)
-    result = await mock_config_entry.start_reconfigure_flow(hass)
+    mock_config_entry.add_to_menuai(menuai)
+    result = await mock_config_entry.start_reconfigure_flow(menuai)
 
     with patch(
-        "homeassistant.components.kostal_plenticore.config_flow.ApiClient"
+        "menuai.components.kostal_plenticore.config_flow.ApiClient"
     ) as mock_api_class:
         # mock of the context manager instance
         mock_api_ctx = MagicMock()
@@ -484,7 +484,7 @@ async def test_reconfigure_cannot_connect(
 
         mock_api_class.return_value = mock_api
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "host": "1.1.1.1",
@@ -497,14 +497,14 @@ async def test_reconfigure_cannot_connect(
 
 
 async def test_reconfigure_unexpected_error(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_config_entry: MockConfigEntry
 ) -> None:
     """Test we handle unexpected error."""
-    mock_config_entry.add_to_hass(hass)
-    result = await mock_config_entry.start_reconfigure_flow(hass)
+    mock_config_entry.add_to_menuai(menuai)
+    result = await mock_config_entry.start_reconfigure_flow(menuai)
 
     with patch(
-        "homeassistant.components.kostal_plenticore.config_flow.ApiClient"
+        "menuai.components.kostal_plenticore.config_flow.ApiClient"
     ) as mock_api_class:
         # mock of the context manager instance
         mock_api_ctx = MagicMock()
@@ -519,7 +519,7 @@ async def test_reconfigure_unexpected_error(
 
         mock_api_class.return_value = mock_api
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "host": "1.1.1.1",
@@ -532,19 +532,19 @@ async def test_reconfigure_unexpected_error(
 
 
 async def test_reconfigure_already_configured(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_config_entry: MockConfigEntry
 ) -> None:
     """Test we handle already configured error."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
     MockConfigEntry(
         domain="kostal_plenticore",
         data={CONF_HOST: "1.1.1.1", CONF_PASSWORD: "foobar"},
         unique_id="112233445566",
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
-    result = await mock_config_entry.start_reconfigure_flow(hass)
+    result = await mock_config_entry.start_reconfigure_flow(menuai)
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_HOST: "1.1.1.1",

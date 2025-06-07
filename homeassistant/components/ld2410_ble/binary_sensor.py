@@ -1,16 +1,16 @@
 """LD2410 BLE integration binary sensor platform."""
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from . import LD2410BLE, LD2410BLECoordinator
 from .const import DOMAIN
@@ -29,12 +29,12 @@ ENTITY_DESCRIPTIONS = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the platform for LD2410BLE."""
-    data: LD2410BLEData = hass.data[DOMAIN][entry.entry_id]
+    data: LD2410BLEData = menuai.data[DOMAIN][entry.entry_id]
     async_add_entities(
         LD2410BLEBinarySensor(data.coordinator, data.device, entry.title, description)
         for description in ENTITY_DESCRIPTIONS

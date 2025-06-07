@@ -22,13 +22,13 @@ from pyheos import (
     const,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME, Platform
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.debounce import Debouncer
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME, Platform
+from menuai.core import CALLBACK_TYPE, menuai, callback
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.debounce import Debouncer
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN
 
@@ -40,7 +40,7 @@ type HeosConfigEntry = ConfigEntry[HeosCoordinator]
 class HeosCoordinator(DataUpdateCoordinator[None]):
     """Define the HEOS integration coordinator."""
 
-    def __init__(self, hass: HomeAssistant, config_entry: HeosConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: HeosConfigEntry) -> None:
         """Set up the coordinator and set in config_entry."""
         credentials: Credentials | None = None
         if config_entry.options:
@@ -60,7 +60,7 @@ class HeosCoordinator(DataUpdateCoordinator[None]):
         )
         self._platform_callbacks: list[Callable[[Sequence[HeosPlayer]], None]] = []
         self._update_sources_debouncer = Debouncer(
-            hass,
+            menuai,
             _LOGGER,
             immediate=True,
             cooldown=2.0,
@@ -69,7 +69,7 @@ class HeosCoordinator(DataUpdateCoordinator[None]):
         self._source_list: list[str] = []
         self._favorites: dict[int, MediaItem] = {}
         self._inputs: Sequence[MediaItem] = []
-        super().__init__(hass, _LOGGER, config_entry=config_entry, name=DOMAIN)
+        super().__init__(menuai, _LOGGER, config_entry=config_entry, name=DOMAIN)
 
     @property
     def host(self) -> str:
@@ -160,7 +160,7 @@ class HeosCoordinator(DataUpdateCoordinator[None]):
     async def _async_on_auth_failure(self) -> None:
         """Handle when the user credentials are no longer valid."""
         assert self.config_entry is not None
-        self.config_entry.async_start_reauth(self.hass)
+        self.config_entry.async_start_reauth(self.menuai)
 
     async def _async_on_disconnected(self) -> None:
         """Handle when disconnected so entities are marked unavailable."""
@@ -171,7 +171,7 @@ class HeosCoordinator(DataUpdateCoordinator[None]):
         """Handle when reconnected so resources are updated and entities marked available."""
         assert self.config_entry is not None
         if self.host != self.config_entry.data[CONF_HOST]:
-            self.hass.config_entries.async_update_entry(
+            self.menuai.config_entries.async_update_entry(
                 self.config_entry, data={CONF_HOST: self.host}
             )
             _LOGGER.warning("Successfully failed over to HEOS host %s", self.host)
@@ -194,8 +194,8 @@ class HeosCoordinator(DataUpdateCoordinator[None]):
 
     def _async_update_player_ids(self, updated_player_ids: dict[int, int]) -> None:
         """Update the IDs in the device and entity registry."""
-        device_registry = dr.async_get(self.hass)
-        entity_registry = er.async_get(self.hass)
+        device_registry = dr.async_get(self.menuai)
+        entity_registry = er.async_get(self.menuai)
         # updated_player_ids contains the mapped IDs in format old:new
         for old_id, new_id in updated_player_ids.items():
             # update device registry

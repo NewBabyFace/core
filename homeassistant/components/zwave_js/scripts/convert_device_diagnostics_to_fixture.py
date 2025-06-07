@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from homeassistant.util import slugify
+from menuai.util import slugify
 
 
 def get_arguments() -> argparse.Namespace:
@@ -35,7 +35,7 @@ def get_fixtures_dir_path(data: dict) -> Path:
         f"{device_config['manufacturer']}-{device_config['label']}_state"
     )
     path = Path(__file__).parents[1]
-    index = path.parts.index("homeassistant")
+    index = path.parts.index("menuai")
     return Path(
         *path.parts[:index],
         "tests",

@@ -9,9 +9,9 @@ from aiohttp import ClientError
 from igloohome_api import Auth as IgloohomeAuth, AuthException
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_CLIENT_ID, CONF_CLIENT_SECRET
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_CLIENT_ID, CONF_CLIENT_SECRET
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN
 
@@ -41,7 +41,7 @@ class IgloohomeConfigFlow(ConfigFlow, domain=DOMAIN):
                 }
             )
             auth = IgloohomeAuth(
-                session=async_get_clientsession(self.hass),
+                session=async_get_clientsession(self.menuai),
                 client_id=user_input[CONF_CLIENT_ID],
                 client_secret=user_input[CONF_CLIENT_SECRET],
             )

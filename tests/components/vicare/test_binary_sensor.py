@@ -5,9 +5,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import MODULE, setup_integration
 from .conftest import Fixture, MockPyViCare
@@ -24,18 +24,18 @@ from tests.common import MockConfigEntry, snapshot_platform
     ],
 )
 async def test_binary_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_vicare_gas_boiler: MagicMock,
     snapshot: SnapshotAssertion,
     entity_id: str,
 ) -> None:
     """Test the ViCare binary sensor."""
-    assert hass.states.get(f"binary_sensor.model0_{entity_id}") == snapshot
+    assert menuai.states.get(f"binary_sensor.model0_{entity_id}") == snapshot
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_all_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
@@ -46,6 +46,6 @@ async def test_all_entities(
         patch(f"{MODULE}.login", return_value=MockPyViCare(fixtures)),
         patch(f"{MODULE}.PLATFORMS", [Platform.BINARY_SENSOR]),
     ):
-        await setup_integration(hass, mock_config_entry)
+        await setup_integration(menuai, mock_config_entry)
 
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)

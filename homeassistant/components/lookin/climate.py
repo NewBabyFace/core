@@ -8,7 +8,7 @@ from typing import Any, Final, cast
 from aiolookin import Climate, MeteoSensor, Remote
 from aiolookin.models import UDPCommandType, UDPEvent
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_HVAC_MODE,
     FAN_AUTO,
     FAN_HIGH,
@@ -20,24 +20,24 @@ from homeassistant.components.climate import (
     ClimateEntityFeature,
     HVACMode,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_TEMPERATURE,
     PRECISION_WHOLE,
     Platform,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN, TYPE_TO_PLATFORM
 from .coordinator import LookinDataUpdateCoordinator
 from .entity import LookinCoordinatorEntity
 from .models import LookinData
 
-LOOKIN_FAN_MODE_IDX_TO_HASS: Final = [FAN_AUTO, FAN_LOW, FAN_MIDDLE, FAN_HIGH]
-LOOKIN_SWING_MODE_IDX_TO_HASS: Final = [SWING_OFF, SWING_BOTH]
-LOOKIN_HVAC_MODE_IDX_TO_HASS: Final = [
+LOOKIN_FAN_MODE_IDX_TO_menuai: Final = [FAN_AUTO, FAN_LOW, FAN_MIDDLE, FAN_HIGH]
+LOOKIN_SWING_MODE_IDX_TO_menuai: Final = [SWING_OFF, SWING_BOTH]
+LOOKIN_HVAC_MODE_IDX_TO_menuai: Final = [
     HVACMode.OFF,
     HVACMode.AUTO,
     HVACMode.COOL,
@@ -46,14 +46,14 @@ LOOKIN_HVAC_MODE_IDX_TO_HASS: Final = [
     HVACMode.FAN_ONLY,
 ]
 
-HASS_TO_LOOKIN_HVAC_MODE: dict[str, int] = {
-    mode: idx for idx, mode in enumerate(LOOKIN_HVAC_MODE_IDX_TO_HASS)
+menuai_TO_LOOKIN_HVAC_MODE: dict[str, int] = {
+    mode: idx for idx, mode in enumerate(LOOKIN_HVAC_MODE_IDX_TO_menuai)
 }
-HASS_TO_LOOKIN_FAN_MODE: dict[str, int] = {
-    mode: idx for idx, mode in enumerate(LOOKIN_FAN_MODE_IDX_TO_HASS)
+menuai_TO_LOOKIN_FAN_MODE: dict[str, int] = {
+    mode: idx for idx, mode in enumerate(LOOKIN_FAN_MODE_IDX_TO_menuai)
 }
-HASS_TO_LOOKIN_SWING_MODE: dict[str, int] = {
-    mode: idx for idx, mode in enumerate(LOOKIN_SWING_MODE_IDX_TO_HASS)
+menuai_TO_LOOKIN_SWING_MODE: dict[str, int] = {
+    mode: idx for idx, mode in enumerate(LOOKIN_SWING_MODE_IDX_TO_menuai)
 }
 
 
@@ -63,12 +63,12 @@ LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the climate platform for lookin from a config entry."""
-    lookin_data: LookinData = hass.data[DOMAIN][config_entry.entry_id]
+    lookin_data: LookinData = menuai.data[DOMAIN][config_entry.entry_id]
     entities = []
 
     for remote in lookin_data.devices:
@@ -101,9 +101,9 @@ class ConditionerEntity(LookinCoordinatorEntity, ClimateEntity):
         | ClimateEntityFeature.TURN_OFF
         | ClimateEntityFeature.TURN_ON
     )
-    _attr_fan_modes: list[str] = LOOKIN_FAN_MODE_IDX_TO_HASS
-    _attr_swing_modes: list[str] = LOOKIN_SWING_MODE_IDX_TO_HASS
-    _attr_hvac_modes: list[HVACMode] = LOOKIN_HVAC_MODE_IDX_TO_HASS
+    _attr_fan_modes: list[str] = LOOKIN_FAN_MODE_IDX_TO_menuai
+    _attr_swing_modes: list[str] = LOOKIN_SWING_MODE_IDX_TO_menuai
+    _attr_hvac_modes: list[HVACMode] = LOOKIN_HVAC_MODE_IDX_TO_menuai
     _attr_min_temp = MIN_TEMP
     _attr_max_temp = MAX_TEMP
     _attr_target_temperature_step = PRECISION_WHOLE
@@ -125,7 +125,7 @@ class ConditionerEntity(LookinCoordinatorEntity, ClimateEntity):
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Set the hvac mode of the device."""
-        if (mode := HASS_TO_LOOKIN_HVAC_MODE.get(hvac_mode)) is None:
+        if (mode := menuai_TO_LOOKIN_HVAC_MODE.get(hvac_mode)) is None:
             return
         self._climate.hvac_mode = mode
         await self._async_update_conditioner()
@@ -135,9 +135,9 @@ class ConditionerEntity(LookinCoordinatorEntity, ClimateEntity):
         if (temperature := kwargs.get(ATTR_TEMPERATURE)) is None:
             return
         self._climate.temp_celsius = int(temperature)
-        lookin_index = LOOKIN_HVAC_MODE_IDX_TO_HASS
+        lookin_index = LOOKIN_HVAC_MODE_IDX_TO_menuai
         if hvac_mode := kwargs.get(ATTR_HVAC_MODE):
-            self._climate.hvac_mode = HASS_TO_LOOKIN_HVAC_MODE[hvac_mode]
+            self._climate.hvac_mode = menuai_TO_LOOKIN_HVAC_MODE[hvac_mode]
         elif self._climate.hvac_mode == lookin_index.index(HVACMode.OFF):
             #
             # If the device is off, and the user didn't specify an HVAC mode
@@ -165,14 +165,14 @@ class ConditionerEntity(LookinCoordinatorEntity, ClimateEntity):
 
     async def async_set_fan_mode(self, fan_mode: str) -> None:
         """Set the fan mode of the device."""
-        if (mode := HASS_TO_LOOKIN_FAN_MODE.get(fan_mode)) is None:
+        if (mode := menuai_TO_LOOKIN_FAN_MODE.get(fan_mode)) is None:
             return
         self._climate.fan_mode = mode
         await self._async_update_conditioner()
 
     async def async_set_swing_mode(self, swing_mode: str) -> None:
         """Set the swing mode of the device."""
-        if (mode := HASS_TO_LOOKIN_SWING_MODE.get(swing_mode)) is None:
+        if (mode := menuai_TO_LOOKIN_SWING_MODE.get(swing_mode)) is None:
             return
         self._climate.swing_mode = mode
         await self._async_update_conditioner()
@@ -195,9 +195,9 @@ class ConditionerEntity(LookinCoordinatorEntity, ClimateEntity):
         self._attr_current_temperature = temperature
         self._attr_current_humidity = humidity
         self._attr_target_temperature = self._climate.temp_celsius
-        self._attr_fan_mode = LOOKIN_FAN_MODE_IDX_TO_HASS[self._climate.fan_mode]
-        self._attr_swing_mode = LOOKIN_SWING_MODE_IDX_TO_HASS[self._climate.swing_mode]
-        self._attr_hvac_mode = LOOKIN_HVAC_MODE_IDX_TO_HASS[self._climate.hvac_mode]
+        self._attr_fan_mode = LOOKIN_FAN_MODE_IDX_TO_menuai[self._climate.fan_mode]
+        self._attr_swing_mode = LOOKIN_SWING_MODE_IDX_TO_menuai[self._climate.swing_mode]
+        self._attr_hvac_mode = LOOKIN_HVAC_MODE_IDX_TO_menuai[self._climate.hvac_mode]
 
     @callback
     def _async_update_meteo_from_value(self, event: UDPEvent) -> None:
@@ -218,8 +218,8 @@ class ConditionerEntity(LookinCoordinatorEntity, ClimateEntity):
         self._climate.update_from_status(event.value)
         self.coordinator.async_set_updated_data(self._climate)
 
-    async def async_added_to_hass(self) -> None:
-        """Call when the entity is added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Call when the entity is added to menuai."""
         self.async_on_remove(
             self._lookin_udp_subs.subscribe_event(
                 self._lookin_device.id,
@@ -236,4 +236,4 @@ class ConditionerEntity(LookinCoordinatorEntity, ClimateEntity):
                 self._async_update_meteo_from_value,
             )
         )
-        return await super().async_added_to_hass()
+        return await super().async_added_to_menuai()

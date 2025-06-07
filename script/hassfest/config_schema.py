@@ -4,16 +4,16 @@ from __future__ import annotations
 
 import ast
 
-from homeassistant.core import DOMAIN as HOMEASSISTANT_DOMAIN
+from menuai.core import DOMAIN as menuai_DOMAIN
 
 from . import ast_parse_module
 from .model import Config, Integration
 
 CONFIG_SCHEMA_IGNORE = {
-    # Configuration under the homeassistant key is a special case, it's handled by
+    # Configuration under the menuai key is a special case, it's handled by
     # core_config.async_process_ha_core_config already during bootstrapping, not by
-    # a schema in the homeassistant integration.
-    HOMEASSISTANT_DOMAIN,
+    # a schema in the menuai integration.
+    menuai_DOMAIN,
 }
 
 

@@ -1,7 +1,7 @@
 """Config flow."""
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 
-async def _async_has_devices(hass: HomeAssistant) -> bool:
+async def _async_has_devices(menuai: menuai) -> bool:
     return True

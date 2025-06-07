@@ -5,19 +5,19 @@ from __future__ import annotations
 from aioshelly.ble.const import BLE_SCAN_RESULT_EVENT
 import pytest
 
-from homeassistant.components import bluetooth
-from homeassistant.components.shelly.const import CONF_BLE_SCANNER_MODE, BLEScannerMode
-from homeassistant.core import HomeAssistant
+from menuai.components import bluetooth
+from menuai.components.shelly.const import CONF_BLE_SCANNER_MODE, BLEScannerMode
+from menuai.core import menuai
 
 from .. import init_integration, inject_rpc_device_event
 
 
 async def test_scanner_v1(
-    hass: HomeAssistant, mock_rpc_device, monkeypatch: pytest.MonkeyPatch
+    menuai: menuai, mock_rpc_device, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test injecting data into the scanner v1."""
     await init_integration(
-        hass, 2, options={CONF_BLE_SCANNER_MODE: BLEScannerMode.ACTIVE}
+        menuai, 2, options={CONF_BLE_SCANNER_MODE: BLEScannerMode.ACTIVE}
     )
     assert mock_rpc_device.initialized is True
     inject_rpc_device_event(
@@ -43,21 +43,21 @@ async def test_scanner_v1(
         },
     )
     ble_device = bluetooth.async_ble_device_from_address(
-        hass, "AA:BB:CC:DD:EE:FF", connectable=False
+        menuai, "AA:BB:CC:DD:EE:FF", connectable=False
     )
     assert ble_device is not None
     ble_device = bluetooth.async_ble_device_from_address(
-        hass, "AA:BB:CC:DD:EE:FF", connectable=True
+        menuai, "AA:BB:CC:DD:EE:FF", connectable=True
     )
     assert ble_device is None
 
 
 async def test_scanner_v2(
-    hass: HomeAssistant, mock_rpc_device, monkeypatch: pytest.MonkeyPatch
+    menuai: menuai, mock_rpc_device, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test injecting data into the scanner v2."""
     await init_integration(
-        hass, 2, options={CONF_BLE_SCANNER_MODE: BLEScannerMode.ACTIVE}
+        menuai, 2, options={CONF_BLE_SCANNER_MODE: BLEScannerMode.ACTIVE}
     )
     assert mock_rpc_device.initialized is True
     inject_rpc_device_event(
@@ -87,21 +87,21 @@ async def test_scanner_v2(
         },
     )
     ble_device = bluetooth.async_ble_device_from_address(
-        hass, "AA:BB:CC:DD:EE:FF", connectable=False
+        menuai, "AA:BB:CC:DD:EE:FF", connectable=False
     )
     assert ble_device is not None
     ble_device = bluetooth.async_ble_device_from_address(
-        hass, "AA:BB:CC:DD:EE:FF", connectable=True
+        menuai, "AA:BB:CC:DD:EE:FF", connectable=True
     )
     assert ble_device is None
 
 
 async def test_scanner_ignores_non_ble_events(
-    hass: HomeAssistant, mock_rpc_device, monkeypatch: pytest.MonkeyPatch
+    menuai: menuai, mock_rpc_device, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test injecting non ble data into the scanner."""
     await init_integration(
-        hass, 2, options={CONF_BLE_SCANNER_MODE: BLEScannerMode.ACTIVE}
+        menuai, 2, options={CONF_BLE_SCANNER_MODE: BLEScannerMode.ACTIVE}
     )
     assert mock_rpc_device.initialized is True
     inject_rpc_device_event(
@@ -123,14 +123,14 @@ async def test_scanner_ignores_non_ble_events(
 
 
 async def test_scanner_ignores_wrong_version_and_logs(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_rpc_device,
     monkeypatch: pytest.MonkeyPatch,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test injecting wrong version of ble data into the scanner."""
     await init_integration(
-        hass, 2, options={CONF_BLE_SCANNER_MODE: BLEScannerMode.ACTIVE}
+        menuai, 2, options={CONF_BLE_SCANNER_MODE: BLEScannerMode.ACTIVE}
     )
     assert mock_rpc_device.initialized is True
     inject_rpc_device_event(
@@ -159,14 +159,14 @@ async def test_scanner_ignores_wrong_version_and_logs(
 
 
 async def test_scanner_warns_on_corrupt_event(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_rpc_device,
     monkeypatch: pytest.MonkeyPatch,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test injecting garbage ble data into the scanner."""
     await init_integration(
-        hass, 2, options={CONF_BLE_SCANNER_MODE: BLEScannerMode.ACTIVE}
+        menuai, 2, options={CONF_BLE_SCANNER_MODE: BLEScannerMode.ACTIVE}
     )
     assert mock_rpc_device.initialized is True
     inject_rpc_device_event(

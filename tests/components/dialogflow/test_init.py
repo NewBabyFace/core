@@ -6,12 +6,12 @@ import json
 
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components import dialogflow, intent_script
-from homeassistant.core import HomeAssistant, ServiceCall, callback
-from homeassistant.core_config import async_process_ha_core_config
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.setup import async_setup_component
+from menuai import config_entries
+from menuai.components import dialogflow, intent_script
+from menuai.core import menuai, ServiceCall, callback
+from menuai.core_config import async_process_ha_core_config
+from menuai.data_entry_flow import FlowResultType
+from menuai.setup import async_setup_component
 
 from tests.typing import ClientSessionGenerator
 
@@ -24,7 +24,7 @@ CONTEXT_NAME = "78a5db95-b7d6-4d50-9c9b-2fc73a5e34c3_id_dialog_context"
 
 
 @pytest.fixture
-async def calls(hass: HomeAssistant, fixture) -> list[ServiceCall]:
+async def calls(menuai: menuai, fixture) -> list[ServiceCall]:
     """Return a list of Dialogflow calls triggered."""
     calls: list[ServiceCall] = []
 
@@ -33,17 +33,17 @@ async def calls(hass: HomeAssistant, fixture) -> list[ServiceCall]:
         """Mock action call."""
         calls.append(call)
 
-    hass.services.async_register("test", "dialogflow", mock_service)
+    menuai.services.async_register("test", "dialogflow", mock_service)
 
     return calls
 
 
 @pytest.fixture
-async def fixture(hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator):
-    """Initialize a Home Assistant server for testing this module."""
-    await async_setup_component(hass, dialogflow.DOMAIN, {"dialogflow": {}})
+async def fixture(menuai: menuai, menuai_client_no_auth: ClientSessionGenerator):
+    """Initialize a MenuAI server for testing this module."""
+    await async_setup_component(menuai, dialogflow.DOMAIN, {"dialogflow": {}})
     await async_setup_component(
-        hass,
+        menuai,
         intent_script.DOMAIN,
         {
             "intent_script": {
@@ -84,20 +84,20 @@ async def fixture(hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerat
     )
 
     await async_process_ha_core_config(
-        hass,
+        menuai,
         {"internal_url": "http://example.local:8123"},
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         "dialogflow", context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM, result
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
     assert result["type"] is FlowResultType.CREATE_ENTRY
     webhook_id = result["result"].data["webhook_id"]
 
-    return await hass_client_no_auth(), webhook_id
+    return await menuai_client_no_auth(), webhook_id
 
 
 class _Data:
@@ -285,7 +285,7 @@ async def test_intent_request_with_parameters_but_empty_v2(fixture) -> None:
     assert text == "You told us your sign is ."
 
 
-async def test_intent_request_without_slots_v1(hass: HomeAssistant, fixture) -> None:
+async def test_intent_request_without_slots_v1(menuai: menuai, fixture) -> None:
     """Test a request without slots."""
     mock_client, webhook_id = fixture
     data = Data.v1
@@ -304,8 +304,8 @@ async def test_intent_request_without_slots_v1(hass: HomeAssistant, fixture) -> 
 
     assert text == "Anne Therese is at unknown and Paulus is at unknown"
 
-    hass.states.async_set("device_tracker.paulus", "home")
-    hass.states.async_set("device_tracker.anne_therese", "home")
+    menuai.states.async_set("device_tracker.paulus", "home")
+    menuai.states.async_set("device_tracker.anne_therese", "home")
 
     response = await mock_client.post(
         f"/api/webhook/{webhook_id}", data=json.dumps(data)
@@ -315,7 +315,7 @@ async def test_intent_request_without_slots_v1(hass: HomeAssistant, fixture) -> 
     assert text == "You are both home, you silly"
 
 
-async def test_intent_request_without_slots_v2(hass: HomeAssistant, fixture) -> None:
+async def test_intent_request_without_slots_v2(menuai: menuai, fixture) -> None:
     """Test a request without slots."""
     mock_client, webhook_id = fixture
     data = Data.v2
@@ -334,8 +334,8 @@ async def test_intent_request_without_slots_v2(hass: HomeAssistant, fixture) -> 
 
     assert text == "Anne Therese is at unknown and Paulus is at unknown"
 
-    hass.states.async_set("device_tracker.paulus", "home")
-    hass.states.async_set("device_tracker.anne_therese", "home")
+    menuai.states.async_set("device_tracker.paulus", "home")
+    menuai.states.async_set("device_tracker.anne_therese", "home")
 
     response = await mock_client.post(
         f"/api/webhook/{webhook_id}", data=json.dumps(data)
@@ -431,7 +431,7 @@ async def test_intent_with_unknown_action_v1(fixture) -> None:
     )
     assert response.status == HTTPStatus.OK
     text = (await response.json()).get("speech")
-    assert text == "This intent is not yet configured within Home Assistant."
+    assert text == "This intent is not yet configured within MenuAI."
 
 
 async def test_intent_with_unknown_action_v2(fixture) -> None:
@@ -444,4 +444,4 @@ async def test_intent_with_unknown_action_v2(fixture) -> None:
     )
     assert response.status == HTTPStatus.OK
     text = (await response.json()).get("fulfillmentText")
-    assert text == "This intent is not yet configured within Home Assistant."
+    assert text == "This intent is not yet configured within MenuAI."

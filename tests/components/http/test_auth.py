@@ -1,4 +1,4 @@
-"""The tests for the Home Assistant HTTP component."""
+"""The tests for the MenuAI HTTP component."""
 
 from datetime import timedelta
 from http import HTTPStatus
@@ -13,12 +13,12 @@ import jwt
 import pytest
 import yarl
 
-from homeassistant.auth.const import GROUP_ID_READ_ONLY
-from homeassistant.auth.models import User
-from homeassistant.auth.providers import trusted_networks
-from homeassistant.auth.providers.homeassistant import HassAuthProvider
-from homeassistant.components import websocket_api
-from homeassistant.components.http.auth import (
+from menuai.auth.const import GROUP_ID_READ_ONLY
+from menuai.auth.models import User
+from menuai.auth.providers import trusted_networks
+from menuai.auth.providers.menuai import menuaiAuthProvider
+from menuai.components import websocket_api
+from menuai.components.http.auth import (
     CONTENT_USER_NAME,
     DATA_SIGN_SECRET,
     SIGN_QUERY_PARAM,
@@ -27,14 +27,14 @@ from homeassistant.components.http.auth import (
     async_sign_path,
     async_user_not_allowed_do_auth,
 )
-from homeassistant.components.http.forwarded import async_setup_forwarded
-from homeassistant.components.http.request_context import (
+from menuai.components.http.forwarded import async_setup_forwarded
+from menuai.components.http.request_context import (
     current_request,
     setup_request_context,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.http import KEY_AUTHENTICATED, KEY_HASS
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai, callback
+from menuai.helpers.http import KEY_AUTHENTICATED, KEY_menuai
+from menuai.setup import async_setup_component
 
 from . import HTTP_HEADER_HA_AUTH
 
@@ -68,49 +68,49 @@ async def mock_handler(request: web.Request) -> web.Response:
     if not request[KEY_AUTHENTICATED]:
         raise HTTPUnauthorized
 
-    user = request.get("hass_user")
+    user = request.get("menuai_user")
     user_id = user.id if user else None
 
     return web.json_response(data={"user_id": user_id})
 
 
 @pytest.fixture
-def app(hass: HomeAssistant) -> web.Application:
+def app(menuai: menuai) -> web.Application:
     """Fixture to set up a web.Application."""
     app = web.Application()
-    app[KEY_HASS] = hass
+    app[KEY_menuai] = menuai
     app.router.add_get("/", mock_handler)
     async_setup_forwarded(app, True, [])
     return app
 
 
 @pytest.fixture
-def app2(hass: HomeAssistant) -> web.Application:
+def app2(menuai: menuai) -> web.Application:
     """Fixture to set up a web.Application without real_ip middleware."""
     app = web.Application()
-    app[KEY_HASS] = hass
+    app[KEY_menuai] = menuai
     app.router.add_get("/", mock_handler)
     return app
 
 
 @pytest.fixture
 def trusted_networks_auth(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> trusted_networks.TrustedNetworksAuthProvider:
     """Load trusted networks auth provider."""
     prv = trusted_networks.TrustedNetworksAuthProvider(
-        hass,
-        hass.auth._store,
+        menuai,
+        menuai.auth._store,
         {"type": "trusted_networks", "trusted_networks": TRUSTED_NETWORKS},
     )
-    hass.auth._providers[(prv.type, prv.id)] = prv
+    menuai.auth._providers[(prv.type, prv.id)] = prv
     return prv
 
 
-async def test_auth_middleware_loaded_by_default(hass: HomeAssistant) -> None:
+async def test_auth_middleware_loaded_by_default(menuai: menuai) -> None:
     """Test accessing to server from banned IP when feature is off."""
-    with patch("homeassistant.components.http.async_setup_auth") as mock_setup:
-        await async_setup_component(hass, "http", {"http": {}})
+    with patch("menuai.components.http.async_setup_auth") as mock_setup:
+        await async_setup_component(menuai, "http", {"http": {}})
 
     assert len(mock_setup.mock_calls) == 1
 
@@ -118,11 +118,11 @@ async def test_auth_middleware_loaded_by_default(hass: HomeAssistant) -> None:
 async def test_cant_access_with_password_in_header(
     app: web.Application,
     aiohttp_client: ClientSessionGenerator,
-    local_auth: HassAuthProvider,
-    hass: HomeAssistant,
+    local_auth: menuaiAuthProvider,
+    menuai: menuai,
 ) -> None:
     """Test access with password in header."""
-    await async_setup_auth(hass, app)
+    await async_setup_auth(menuai, app)
     client = await aiohttp_client(app)
 
     req = await client.get("/", headers={HTTP_HEADER_HA_AUTH: API_PASSWORD})
@@ -135,11 +135,11 @@ async def test_cant_access_with_password_in_header(
 async def test_cant_access_with_password_in_query(
     app: web.Application,
     aiohttp_client: ClientSessionGenerator,
-    local_auth: HassAuthProvider,
-    hass: HomeAssistant,
+    local_auth: menuaiAuthProvider,
+    menuai: menuai,
 ) -> None:
     """Test access with password in URL."""
-    await async_setup_auth(hass, app)
+    await async_setup_auth(menuai, app)
     client = await aiohttp_client(app)
 
     resp = await client.get("/", params={"api_password": API_PASSWORD})
@@ -155,20 +155,20 @@ async def test_cant_access_with_password_in_query(
 async def test_basic_auth_does_not_work(
     app: web.Application,
     aiohttp_client: ClientSessionGenerator,
-    hass: HomeAssistant,
-    local_auth: HassAuthProvider,
+    menuai: menuai,
+    local_auth: menuaiAuthProvider,
 ) -> None:
     """Test access with basic authentication."""
-    await async_setup_auth(hass, app)
+    await async_setup_auth(menuai, app)
     client = await aiohttp_client(app)
 
-    req = await client.get("/", auth=BasicAuth("homeassistant", API_PASSWORD))
+    req = await client.get("/", auth=BasicAuth("menuai", API_PASSWORD))
     assert req.status == HTTPStatus.UNAUTHORIZED
 
     req = await client.get("/", auth=BasicAuth("wrong_username", API_PASSWORD))
     assert req.status == HTTPStatus.UNAUTHORIZED
 
-    req = await client.get("/", auth=BasicAuth("homeassistant", "wrong password"))
+    req = await client.get("/", auth=BasicAuth("menuai", "wrong password"))
     assert req.status == HTTPStatus.UNAUTHORIZED
 
     req = await client.get("/", headers={"authorization": "NotBasic abcdefg"})
@@ -176,14 +176,14 @@ async def test_basic_auth_does_not_work(
 
 
 async def test_cannot_access_with_trusted_ip(
-    hass: HomeAssistant,
+    menuai: menuai,
     app2: web.Application,
     trusted_networks_auth: trusted_networks.TrustedNetworksAuthProvider,
     aiohttp_client: ClientSessionGenerator,
-    hass_owner_user: MockUser,
+    menuai_owner_user: MockUser,
 ) -> None:
     """Test access with an untrusted ip address."""
-    await async_setup_auth(hass, app2)
+    await async_setup_auth(menuai, app2)
 
     set_mock_ip = mock_real_ip(app2)
     client = await aiohttp_client(app2)
@@ -204,16 +204,16 @@ async def test_cannot_access_with_trusted_ip(
 
 
 async def test_auth_active_access_with_access_token_in_header(
-    hass: HomeAssistant,
+    menuai: menuai,
     app: web.Application,
     aiohttp_client: ClientSessionGenerator,
-    hass_access_token: str,
+    menuai_access_token: str,
 ) -> None:
     """Test access with access token in header."""
-    token = hass_access_token
-    await async_setup_auth(hass, app)
+    token = menuai_access_token
+    await async_setup_auth(menuai, app)
     client = await aiohttp_client(app)
-    refresh_token = hass.auth.async_validate_access_token(hass_access_token)
+    refresh_token = menuai.auth.async_validate_access_token(menuai_access_token)
 
     req = await client.get("/", headers={"Authorization": f"Bearer {token}"})
     assert req.status == HTTPStatus.OK
@@ -233,21 +233,21 @@ async def test_auth_active_access_with_access_token_in_header(
     req = await client.get("/", headers={"Authorization": f"BEARER {token}"})
     assert req.status == HTTPStatus.UNAUTHORIZED
 
-    refresh_token = hass.auth.async_validate_access_token(hass_access_token)
+    refresh_token = menuai.auth.async_validate_access_token(menuai_access_token)
     refresh_token.user.is_active = False
     req = await client.get("/", headers={"Authorization": f"Bearer {token}"})
     assert req.status == HTTPStatus.UNAUTHORIZED
 
 
 async def test_auth_active_access_with_trusted_ip(
-    hass: HomeAssistant,
+    menuai: menuai,
     app2: web.Application,
     trusted_networks_auth: trusted_networks.TrustedNetworksAuthProvider,
     aiohttp_client: ClientSessionGenerator,
-    hass_owner_user: MockUser,
+    menuai_owner_user: MockUser,
 ) -> None:
     """Test access with an untrusted ip address."""
-    await async_setup_auth(hass, app2)
+    await async_setup_auth(menuai, app2)
 
     set_mock_ip = mock_real_ip(app2)
     client = await aiohttp_client(app2)
@@ -270,11 +270,11 @@ async def test_auth_active_access_with_trusted_ip(
 async def test_auth_legacy_support_api_password_cannot_access(
     app: web.Application,
     aiohttp_client: ClientSessionGenerator,
-    local_auth: HassAuthProvider,
-    hass: HomeAssistant,
+    local_auth: menuaiAuthProvider,
+    menuai: menuai,
 ) -> None:
     """Test access using api_password if auth.support_legacy."""
-    await async_setup_auth(hass, app)
+    await async_setup_auth(menuai, app)
     client = await aiohttp_client(app)
 
     req = await client.get("/", headers={HTTP_HEADER_HA_AUTH: API_PASSWORD})
@@ -283,26 +283,26 @@ async def test_auth_legacy_support_api_password_cannot_access(
     resp = await client.get("/", params={"api_password": API_PASSWORD})
     assert resp.status == HTTPStatus.UNAUTHORIZED
 
-    req = await client.get("/", auth=BasicAuth("homeassistant", API_PASSWORD))
+    req = await client.get("/", auth=BasicAuth("menuai", API_PASSWORD))
     assert req.status == HTTPStatus.UNAUTHORIZED
 
 
 async def test_auth_access_signed_path_with_refresh_token(
-    hass: HomeAssistant,
+    menuai: menuai,
     app: web.Application,
     aiohttp_client: ClientSessionGenerator,
-    hass_access_token: str,
+    menuai_access_token: str,
 ) -> None:
     """Test access with signed url."""
     app.router.add_post("/", mock_handler)
     app.router.add_get("/another_path", mock_handler)
-    await async_setup_auth(hass, app)
+    await async_setup_auth(menuai, app)
     client = await aiohttp_client(app)
 
-    refresh_token = hass.auth.async_validate_access_token(hass_access_token)
+    refresh_token = menuai.auth.async_validate_access_token(menuai_access_token)
 
     signed_path = async_sign_path(
-        hass, "/", timedelta(seconds=5), refresh_token_id=refresh_token.id
+        menuai, "/", timedelta(seconds=5), refresh_token_id=refresh_token.id
     )
 
     req = await client.get(signed_path)
@@ -320,34 +320,34 @@ async def test_auth_access_signed_path_with_refresh_token(
 
     # Never valid as expired in the past.
     expired_signed_path = async_sign_path(
-        hass, "/", timedelta(seconds=-5), refresh_token_id=refresh_token.id
+        menuai, "/", timedelta(seconds=-5), refresh_token_id=refresh_token.id
     )
 
     req = await client.get(expired_signed_path)
     assert req.status == HTTPStatus.UNAUTHORIZED
 
     # refresh token gone should also invalidate signature
-    hass.auth.async_remove_refresh_token(refresh_token)
+    menuai.auth.async_remove_refresh_token(refresh_token)
     req = await client.get(signed_path)
     assert req.status == HTTPStatus.UNAUTHORIZED
 
 
 async def test_auth_access_signed_path_with_query_param(
-    hass: HomeAssistant,
+    menuai: menuai,
     app: web.Application,
     aiohttp_client: ClientSessionGenerator,
-    hass_access_token: str,
+    menuai_access_token: str,
 ) -> None:
     """Test access with signed url and query params."""
     app.router.add_post("/", mock_handler)
     app.router.add_get("/another_path", mock_handler)
-    await async_setup_auth(hass, app)
+    await async_setup_auth(menuai, app)
     client = await aiohttp_client(app)
 
-    refresh_token = hass.auth.async_validate_access_token(hass_access_token)
+    refresh_token = menuai.auth.async_validate_access_token(menuai_access_token)
 
     signed_path = async_sign_path(
-        hass, "/?test=test", timedelta(seconds=5), refresh_token_id=refresh_token.id
+        menuai, "/?test=test", timedelta(seconds=5), refresh_token_id=refresh_token.id
     )
 
     req = await client.get(signed_path)
@@ -363,21 +363,21 @@ async def test_auth_access_signed_path_with_query_param(
 
 
 async def test_auth_access_signed_path_with_query_param_order(
-    hass: HomeAssistant,
+    menuai: menuai,
     app: web.Application,
     aiohttp_client: ClientSessionGenerator,
-    hass_access_token: str,
+    menuai_access_token: str,
 ) -> None:
     """Test access with signed url and query params different order."""
     app.router.add_post("/", mock_handler)
     app.router.add_get("/another_path", mock_handler)
-    await async_setup_auth(hass, app)
+    await async_setup_auth(menuai, app)
     client = await aiohttp_client(app)
 
-    refresh_token = hass.auth.async_validate_access_token(hass_access_token)
+    refresh_token = menuai.auth.async_validate_access_token(menuai_access_token)
 
     signed_path = async_sign_path(
-        hass,
+        menuai,
         "/?test=test&foo=bar",
         timedelta(seconds=5),
         refresh_token_id=refresh_token.id,
@@ -404,21 +404,21 @@ async def test_auth_access_signed_path_with_query_param_order(
 
 
 async def test_auth_access_signed_path_with_query_param_safe_param(
-    hass: HomeAssistant,
+    menuai: menuai,
     app: web.Application,
     aiohttp_client: ClientSessionGenerator,
-    hass_access_token: str,
+    menuai_access_token: str,
 ) -> None:
     """Test access with signed url and changing a safe param."""
     app.router.add_post("/", mock_handler)
     app.router.add_get("/another_path", mock_handler)
-    await async_setup_auth(hass, app)
+    await async_setup_auth(menuai, app)
     client = await aiohttp_client(app)
 
-    refresh_token = hass.auth.async_validate_access_token(hass_access_token)
+    refresh_token = menuai.auth.async_validate_access_token(menuai_access_token)
 
     signed_path = async_sign_path(
-        hass,
+        menuai,
         "/?test=test&foo=bar",
         timedelta(seconds=5),
         refresh_token_id=refresh_token.id,
@@ -441,23 +441,23 @@ async def test_auth_access_signed_path_with_query_param_safe_param(
     ],
 )
 async def test_auth_access_signed_path_with_query_param_tamper(
-    hass: HomeAssistant,
+    menuai: menuai,
     app: web.Application,
     aiohttp_client: ClientSessionGenerator,
-    hass_access_token: str,
+    menuai_access_token: str,
     base_url: str,
     test_url: str,
 ) -> None:
     """Test access with signed url and query params that have been tampered with."""
     app.router.add_post("/", mock_handler)
     app.router.add_get("/another_path", mock_handler)
-    await async_setup_auth(hass, app)
+    await async_setup_auth(menuai, app)
     client = await aiohttp_client(app)
 
-    refresh_token = hass.auth.async_validate_access_token(hass_access_token)
+    refresh_token = menuai.auth.async_validate_access_token(menuai_access_token)
 
     signed_path = async_sign_path(
-        hass, base_url, timedelta(seconds=5), refresh_token_id=refresh_token.id
+        menuai, base_url, timedelta(seconds=5), refresh_token_id=refresh_token.id
     )
     url = yarl.URL(signed_path)
     token = url.query.get(SIGN_QUERY_PARAM)
@@ -467,28 +467,28 @@ async def test_auth_access_signed_path_with_query_param_tamper(
 
 
 async def test_auth_access_signed_path_via_websocket(
-    hass: HomeAssistant,
+    menuai: menuai,
     app: web.Application,
-    hass_ws_client: WebSocketGenerator,
-    hass_read_only_access_token: str,
+    menuai_ws_client: WebSocketGenerator,
+    menuai_read_only_access_token: str,
 ) -> None:
     """Test signed url via websockets uses connection user."""
 
     @websocket_api.websocket_command({"type": "diagnostics/list"})
     @callback
     def get_signed_path(
-        hass: HomeAssistant,
+        menuai: menuai,
         connection: websocket_api.ActiveConnection,
         msg: dict[str, Any],
     ) -> None:
         connection.send_result(
-            msg["id"], {"path": async_sign_path(hass, "/", timedelta(seconds=5))}
+            msg["id"], {"path": async_sign_path(menuai, "/", timedelta(seconds=5))}
         )
 
-    websocket_api.async_register_command(hass, get_signed_path)
+    websocket_api.async_register_command(menuai, get_signed_path)
 
-    # We use hass_read_only_access_token to make sure the connection WS is used.
-    client = await hass_ws_client(access_token=hass_read_only_access_token)
+    # We use menuai_read_only_access_token to make sure the connection WS is used.
+    client = await menuai_ws_client(access_token=menuai_read_only_access_token)
 
     await client.send_json({"id": 5, "type": "diagnostics/list"})
 
@@ -497,11 +497,11 @@ async def test_auth_access_signed_path_via_websocket(
     assert msg["id"] == 5
     assert msg["success"]
 
-    refresh_token = hass.auth.async_validate_access_token(hass_read_only_access_token)
+    refresh_token = menuai.auth.async_validate_access_token(menuai_read_only_access_token)
     signature = yarl.URL(msg["result"]["path"]).query["authSig"]
     claims = jwt.decode(
         signature,
-        hass.data[DATA_SIGN_SECRET],
+        menuai.data[DATA_SIGN_SECRET],
         algorithms=["HS256"],
         options={"verify_signature": False},
     )
@@ -509,10 +509,10 @@ async def test_auth_access_signed_path_via_websocket(
 
 
 async def test_auth_access_signed_path_with_http(
-    hass: HomeAssistant,
+    menuai: menuai,
     app: web.Application,
     aiohttp_client: ClientSessionGenerator,
-    hass_access_token: str,
+    menuai_access_token: str,
 ) -> None:
     """Test signed url via HTTP uses HTTP user."""
     setup_request_context(app, current_request)
@@ -520,24 +520,24 @@ async def test_auth_access_signed_path_with_http(
     async def mock_handler(request):
         """Return signed path."""
         return web.json_response(
-            data={"path": async_sign_path(hass, "/", timedelta(seconds=-5))}
+            data={"path": async_sign_path(menuai, "/", timedelta(seconds=-5))}
         )
 
     app.router.add_get("/hello", mock_handler)
-    await async_setup_auth(hass, app)
+    await async_setup_auth(menuai, app)
     client = await aiohttp_client(app)
 
-    refresh_token = hass.auth.async_validate_access_token(hass_access_token)
+    refresh_token = menuai.auth.async_validate_access_token(menuai_access_token)
 
     req = await client.get(
-        "/hello", headers={"Authorization": f"Bearer {hass_access_token}"}
+        "/hello", headers={"Authorization": f"Bearer {menuai_access_token}"}
     )
     assert req.status == HTTPStatus.OK
     data = await req.json()
     signature = yarl.URL(data["path"]).query["authSig"]
     claims = jwt.decode(
         signature,
-        hass.data[DATA_SIGN_SECRET],
+        menuai.data[DATA_SIGN_SECRET],
         algorithms=["HS256"],
         options={"verify_signature": False},
     )
@@ -545,33 +545,33 @@ async def test_auth_access_signed_path_with_http(
 
 
 async def test_auth_access_signed_path_with_content_user(
-    hass: HomeAssistant, app: web.Application, aiohttp_client: ClientSessionGenerator
+    menuai: menuai, app: web.Application, aiohttp_client: ClientSessionGenerator
 ) -> None:
     """Test access signed url uses content user."""
-    await async_setup_auth(hass, app)
-    signed_path = async_sign_path(hass, "/", timedelta(seconds=5))
+    await async_setup_auth(menuai, app)
+    signed_path = async_sign_path(menuai, "/", timedelta(seconds=5))
     signature = yarl.URL(signed_path).query["authSig"]
     claims = jwt.decode(
         signature,
-        hass.data[DATA_SIGN_SECRET],
+        menuai.data[DATA_SIGN_SECRET],
         algorithms=["HS256"],
         options={"verify_signature": False},
     )
-    assert claims["iss"] == hass.data[STORAGE_KEY]
+    assert claims["iss"] == menuai.data[STORAGE_KEY]
 
 
 async def test_local_only_user_rejected(
-    hass: HomeAssistant,
+    menuai: menuai,
     app: web.Application,
     aiohttp_client: ClientSessionGenerator,
-    hass_access_token: str,
+    menuai_access_token: str,
 ) -> None:
     """Test access with access token in header."""
-    token = hass_access_token
-    await async_setup_auth(hass, app)
+    token = menuai_access_token
+    await async_setup_auth(menuai, app)
     set_mock_ip = mock_real_ip(app)
     client = await aiohttp_client(app)
-    refresh_token = hass.auth.async_validate_access_token(hass_access_token)
+    refresh_token = menuai.auth.async_validate_access_token(menuai_access_token)
 
     req = await client.get("/", headers={"Authorization": f"Bearer {token}"})
     assert req.status == HTTPStatus.OK
@@ -586,21 +586,21 @@ async def test_local_only_user_rejected(
 
 
 async def test_async_user_not_allowed_do_auth(
-    hass: HomeAssistant, app: web.Application
+    menuai: menuai, app: web.Application
 ) -> None:
     """Test for not allowing auth."""
-    user = await hass.auth.async_create_user("Hello")
+    user = await menuai.auth.async_create_user("Hello")
     user.is_active = False
 
     # User not active
-    assert async_user_not_allowed_do_auth(hass, user) == "User is not active"
+    assert async_user_not_allowed_do_auth(menuai, user) == "User is not active"
 
     user.is_active = True
     user.local_only = True
 
     # No current request
     assert (
-        async_user_not_allowed_do_auth(hass, user)
+        async_user_not_allowed_do_auth(menuai, user)
         == "No request available to validate local access"
     )
 
@@ -608,36 +608,36 @@ async def test_async_user_not_allowed_do_auth(
     untrusted_request = Mock(remote=UNTRUSTED_ADDRESSES[0])
 
     # Is Remote IP and local only (cloud not loaded)
-    assert async_user_not_allowed_do_auth(hass, user, trusted_request) is None
+    assert async_user_not_allowed_do_auth(menuai, user, trusted_request) is None
     assert (
-        async_user_not_allowed_do_auth(hass, user, untrusted_request)
+        async_user_not_allowed_do_auth(menuai, user, untrusted_request)
         == "User cannot authenticate remotely"
     )
 
     # Mimic cloud loaded and validate local IP again
-    hass.config.components.add("cloud")
-    assert async_user_not_allowed_do_auth(hass, user, trusted_request) is None
+    menuai.config.components.add("cloud")
+    assert async_user_not_allowed_do_auth(menuai, user, trusted_request) is None
     assert (
-        async_user_not_allowed_do_auth(hass, user, untrusted_request)
+        async_user_not_allowed_do_auth(menuai, user, untrusted_request)
         == "User cannot authenticate remotely"
     )
 
     # Is Cloud request and local only, even a local IP will fail
     with patch(
-        "hass_nabucasa.remote.is_cloud_request", Mock(get=Mock(return_value=True))
+        "menuai_nabucasa.remote.is_cloud_request", Mock(get=Mock(return_value=True))
     ):
         assert (
-            async_user_not_allowed_do_auth(hass, user, trusted_request)
+            async_user_not_allowed_do_auth(menuai, user, trusted_request)
             == "User is local only"
         )
 
 
-async def test_create_user_once(hass: HomeAssistant) -> None:
+async def test_create_user_once(menuai: menuai) -> None:
     """Test that we reuse the user."""
-    cur_users = len(await hass.auth.async_get_users())
+    cur_users = len(await menuai.auth.async_get_users())
     app = web.Application()
-    await async_setup_auth(hass, app)
-    users = await hass.auth.async_get_users()
+    await async_setup_auth(menuai, app)
+    users = await menuai.auth.async_get_users()
     assert len(users) == cur_users + 1
 
     user: User = next((user for user in users if user.name == CONTENT_USER_NAME), None)
@@ -648,7 +648,7 @@ async def test_create_user_once(hass: HomeAssistant) -> None:
     assert len(user.refresh_tokens) == 1
     assert user.system_generated
 
-    await async_setup_auth(hass, app)
+    await async_setup_auth(menuai, app)
 
     # test it did not create a user
-    assert len(await hass.auth.async_get_users()) == cur_users + 1
+    assert len(await menuai.auth.async_get_users()) == cur_users + 1

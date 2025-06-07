@@ -25,7 +25,7 @@ from .common import (
 def mock_get_state():
     """Mock get_state function."""
     with patch(
-        "homeassistant.components.tessie.coordinator.get_state",
+        "menuai.components.tessie.coordinator.get_state",
         return_value=TEST_VEHICLE_STATE_ONLINE,
     ) as mock_get_state:
         yield mock_get_state
@@ -35,7 +35,7 @@ def mock_get_state():
 def mock_get_status():
     """Mock get_status function."""
     with patch(
-        "homeassistant.components.tessie.coordinator.get_status",
+        "menuai.components.tessie.coordinator.get_status",
         return_value=TEST_VEHICLE_STATUS_AWAKE,
     ) as mock_get_status:
         yield mock_get_status
@@ -45,7 +45,7 @@ def mock_get_status():
 def mock_get_state_of_all_vehicles():
     """Mock get_state_of_all_vehicles function."""
     with patch(
-        "homeassistant.components.tessie.get_state_of_all_vehicles",
+        "menuai.components.tessie.get_state_of_all_vehicles",
         return_value=TEST_STATE_OF_ALL_VEHICLES,
     ) as mock_get_state_of_all_vehicles:
         yield mock_get_state_of_all_vehicles
@@ -56,7 +56,7 @@ def mock_get_state_of_all_vehicles():
 def mock_scopes():
     """Mock scopes function."""
     with patch(
-        "homeassistant.components.tessie.Tessie.scopes",
+        "menuai.components.tessie.Tessie.scopes",
         return_value=SCOPES,
     ) as mock_scopes:
         yield mock_scopes
@@ -66,7 +66,7 @@ def mock_scopes():
 def mock_products():
     """Mock Tesla Fleet Api products method."""
     with patch(
-        "homeassistant.components.tessie.Tessie.products", return_value=PRODUCTS
+        "menuai.components.tessie.Tessie.products", return_value=PRODUCTS
     ) as mock_products:
         yield mock_products
 
@@ -75,7 +75,7 @@ def mock_products():
 def mock_request():
     """Mock Tesla Fleet API request method."""
     with patch(
-        "homeassistant.components.tessie.Tessie._request",
+        "menuai.components.tessie.Tessie._request",
         return_value=COMMAND_OK,
     ) as mock_request:
         yield mock_request

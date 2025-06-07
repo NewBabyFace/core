@@ -4,19 +4,19 @@ import logging
 
 from serial import SerialException
 
-from homeassistant import core
-from homeassistant.components.media_player import (
+from menuai import core
+from menuai.components.media_player import (
     MediaPlayerDeviceClass,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_PORT
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, entity_platform, service
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_PORT
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, entity_platform, service
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
     CONF_SOURCES,
@@ -56,14 +56,14 @@ def _get_sources(config_entry):
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Monoprice 6-zone amplifier platform."""
     port = config_entry.data[CONF_PORT]
 
-    monoprice = hass.data[DOMAIN][config_entry.entry_id][MONOPRICE_OBJECT]
+    monoprice = menuai.data[DOMAIN][config_entry.entry_id][MONOPRICE_OBJECT]
 
     sources = _get_sources(config_entry)
 
@@ -77,7 +77,7 @@ async def async_setup_entry(
             )
 
     # only call update before add if it's the first run so we can try to detect zones
-    first_run = hass.data[DOMAIN][config_entry.entry_id][FIRST_RUN]
+    first_run = menuai.data[DOMAIN][config_entry.entry_id][FIRST_RUN]
     async_add_entities(entities, first_run)
 
     platform = entity_platform.async_get_current_platform()
@@ -89,7 +89,7 @@ async def async_setup_entry(
             elif service_call.service == SERVICE_RESTORE:
                 entity.restore()
 
-    @service.verify_domain_control(hass, DOMAIN)
+    @service.verify_domain_control(menuai, DOMAIN)
     async def async_service_handle(service_call: core.ServiceCall) -> None:
         """Handle for services."""
         entities = await platform.async_extract_from_service(service_call)
@@ -97,16 +97,16 @@ async def async_setup_entry(
         if not entities:
             return
 
-        hass.async_add_executor_job(_call_service, entities, service_call)
+        menuai.async_add_executor_job(_call_service, entities, service_call)
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_SNAPSHOT,
         async_service_handle,
         schema=cv.make_entity_service_schema({}),
     )
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_RESTORE,
         async_service_handle,

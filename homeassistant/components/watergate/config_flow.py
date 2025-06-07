@@ -8,9 +8,9 @@ from watergate_local_api.watergate_api import (
     WatergateLocalApiClient,
 )
 
-from homeassistant.components.webhook import async_generate_id as webhook_generate_id
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_IP_ADDRESS, CONF_WEBHOOK_ID
+from menuai.components.webhook import async_generate_id as webhook_generate_id
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_IP_ADDRESS, CONF_WEBHOOK_ID
 
 from .const import DOMAIN
 

@@ -6,20 +6,20 @@ import pytest
 import voluptuous as vol
 import yaml
 
-from homeassistant import config, core as ha
-from homeassistant.components.homeassistant import (
+from menuai import config, core as ha
+from menuai.components.menuai import (
     ATTR_ENTRY_ID,
     ATTR_SAFE_MODE,
     DOMAIN,
     SERVICE_CHECK_CONFIG,
-    SERVICE_HOMEASSISTANT_RESTART,
-    SERVICE_HOMEASSISTANT_STOP,
+    SERVICE_menuai_RESTART,
+    SERVICE_menuai_STOP,
     SERVICE_RELOAD_ALL,
     SERVICE_RELOAD_CORE_CONFIG,
     SERVICE_RELOAD_CUSTOM_TEMPLATES,
     SERVICE_SET_LOCATION,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     ENTITY_MATCH_ALL,
     ENTITY_MATCH_NONE,
@@ -31,10 +31,10 @@ from homeassistant.const import (
     STATE_OFF,
     STATE_ON,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, Unauthorized
-from homeassistant.helpers import entity, entity_registry as er, issue_registry as ir
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.exceptions import menuaiError, Unauthorized
+from menuai.helpers import entity, entity_registry as er, issue_registry as ir
+from menuai.setup import async_setup_component
 
 from tests.common import (
     MockConfigEntry,
@@ -46,56 +46,56 @@ from tests.common import (
 )
 
 
-async def test_turn_on_without_entities(hass: HomeAssistant) -> None:
+async def test_turn_on_without_entities(menuai: menuai) -> None:
     """Test turn_on method without entities."""
-    await async_setup_component(hass, ha.DOMAIN, {})
-    calls = async_mock_service(hass, "light", SERVICE_TURN_ON)
-    await hass.services.async_call(ha.DOMAIN, SERVICE_TURN_ON, blocking=True)
+    await async_setup_component(menuai, ha.DOMAIN, {})
+    calls = async_mock_service(menuai, "light", SERVICE_TURN_ON)
+    await menuai.services.async_call(ha.DOMAIN, SERVICE_TURN_ON, blocking=True)
     assert len(calls) == 0
 
 
-async def test_turn_on(hass: HomeAssistant) -> None:
+async def test_turn_on(menuai: menuai) -> None:
     """Test turn_on method."""
-    await async_setup_component(hass, ha.DOMAIN, {})
-    calls = async_mock_service(hass, "light", SERVICE_TURN_ON)
-    await hass.services.async_call(
+    await async_setup_component(menuai, ha.DOMAIN, {})
+    calls = async_mock_service(menuai, "light", SERVICE_TURN_ON)
+    await menuai.services.async_call(
         ha.DOMAIN, SERVICE_TURN_ON, {ATTR_ENTITY_ID: "light.Ceiling"}, blocking=True
     )
     assert len(calls) == 1
 
 
-async def test_turn_off(hass: HomeAssistant) -> None:
+async def test_turn_off(menuai: menuai) -> None:
     """Test turn_off method."""
-    await async_setup_component(hass, ha.DOMAIN, {})
-    calls = async_mock_service(hass, "light", SERVICE_TURN_OFF)
-    await hass.services.async_call(
+    await async_setup_component(menuai, ha.DOMAIN, {})
+    calls = async_mock_service(menuai, "light", SERVICE_TURN_OFF)
+    await menuai.services.async_call(
         ha.DOMAIN, SERVICE_TURN_OFF, {ATTR_ENTITY_ID: "light.Bowl"}, blocking=True
     )
     assert len(calls) == 1
 
 
-async def test_toggle(hass: HomeAssistant) -> None:
+async def test_toggle(menuai: menuai) -> None:
     """Test toggle method."""
-    await async_setup_component(hass, ha.DOMAIN, {})
-    calls = async_mock_service(hass, "light", SERVICE_TOGGLE)
-    await hass.services.async_call(
+    await async_setup_component(menuai, ha.DOMAIN, {})
+    calls = async_mock_service(menuai, "light", SERVICE_TOGGLE)
+    await menuai.services.async_call(
         ha.DOMAIN, SERVICE_TOGGLE, {ATTR_ENTITY_ID: "light.Bowl"}, blocking=True
     )
     assert len(calls) == 1
 
 
-@patch("homeassistant.config.os.path.isfile", Mock(return_value=True))
-async def test_reload_core_conf(hass: HomeAssistant) -> None:
+@patch("menuai.config.os.path.isfile", Mock(return_value=True))
+async def test_reload_core_conf(menuai: menuai) -> None:
     """Test reload core conf service."""
-    await async_setup_component(hass, ha.DOMAIN, {})
+    await async_setup_component(menuai, ha.DOMAIN, {})
     ent = entity.Entity()
     ent.entity_id = "test.entity"
-    ent.hass = hass
-    platform = MockEntityPlatform(hass, domain="test", platform_name="test")
+    ent.menuai = menuai
+    platform = MockEntityPlatform(menuai, domain="test", platform_name="test")
     await platform.async_add_entities([ent])
     ent.async_write_ha_state()
 
-    state = hass.states.get("test.entity")
+    state = menuai.states.get("test.entity")
     assert state is not None
     assert state.state == "unknown"
     assert state.attributes == {}
@@ -113,32 +113,32 @@ async def test_reload_core_conf(hass: HomeAssistant) -> None:
         )
     }
     with patch_yaml_files(files, True):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             ha.DOMAIN, SERVICE_RELOAD_CORE_CONFIG, blocking=True
         )
 
-    assert hass.config.latitude == 10
-    assert hass.config.longitude == 20
+    assert menuai.config.latitude == 10
+    assert menuai.config.longitude == 20
 
     ent.async_write_ha_state()
 
-    state = hass.states.get("test.entity")
+    state = menuai.states.get("test.entity")
     assert state is not None
     assert state.state == "unknown"
     assert state.attributes.get("hello") == "world"
 
 
-@patch("homeassistant.config.os.path.isfile", Mock(return_value=True))
-@patch("homeassistant.components.homeassistant._LOGGER.error")
-@patch("homeassistant.core_config.async_process_ha_core_config")
+@patch("menuai.config.os.path.isfile", Mock(return_value=True))
+@patch("menuai.components.menuai._LOGGER.error")
+@patch("menuai.core_config.async_process_ha_core_config")
 async def test_reload_core_with_wrong_conf(
-    mock_process, mock_error, hass: HomeAssistant
+    mock_process, mock_error, menuai: menuai
 ) -> None:
     """Test reload core conf service."""
     files = {config.YAML_CONFIG_FILE: yaml.dump(["invalid", "config"])}
-    await async_setup_component(hass, ha.DOMAIN, {})
+    await async_setup_component(menuai, ha.DOMAIN, {})
     with patch_yaml_files(files, True):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             ha.DOMAIN, SERVICE_RELOAD_CORE_CONFIG, blocking=True
         )
 
@@ -146,56 +146,56 @@ async def test_reload_core_with_wrong_conf(
     assert mock_process.called is False
 
 
-@patch("homeassistant.core.HomeAssistant.async_stop", return_value=None)
+@patch("menuai.core.menuai.async_stop", return_value=None)
 @patch(
-    "homeassistant.config.async_check_ha_config_file",
-    side_effect=HomeAssistantError("Test error"),
+    "menuai.config.async_check_ha_config_file",
+    side_effect=menuaiError("Test error"),
 )
-async def test_restart_homeassistant_wrong_conf(
-    mock_check, mock_restart, hass: HomeAssistant
+async def test_restart_menuai_wrong_conf(
+    mock_check, mock_restart, menuai: menuai
 ) -> None:
     """Test restart service with error."""
-    await async_setup_component(hass, ha.DOMAIN, {})
-    with pytest.raises(HomeAssistantError, match="Test error"):
-        await hass.services.async_call(
-            ha.DOMAIN, SERVICE_HOMEASSISTANT_RESTART, blocking=True
+    await async_setup_component(menuai, ha.DOMAIN, {})
+    with pytest.raises(menuaiError, match="Test error"):
+        await menuai.services.async_call(
+            ha.DOMAIN, SERVICE_menuai_RESTART, blocking=True
         )
     assert mock_check.called
     assert not mock_restart.called
 
 
-@patch("homeassistant.core.HomeAssistant.async_stop", return_value=None)
-@patch("homeassistant.config.async_check_ha_config_file", return_value=None)
-async def test_check_config(mock_check, mock_stop, hass: HomeAssistant) -> None:
+@patch("menuai.core.menuai.async_stop", return_value=None)
+@patch("menuai.config.async_check_ha_config_file", return_value=None)
+async def test_check_config(mock_check, mock_stop, menuai: menuai) -> None:
     """Test stop service."""
-    await async_setup_component(hass, ha.DOMAIN, {})
-    await hass.services.async_call(ha.DOMAIN, SERVICE_CHECK_CONFIG, blocking=True)
+    await async_setup_component(menuai, ha.DOMAIN, {})
+    await menuai.services.async_call(ha.DOMAIN, SERVICE_CHECK_CONFIG, blocking=True)
     assert mock_check.called
     assert not mock_stop.called
 
 
 async def test_turn_on_skips_domains_without_service(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test if turn_on is blocking domain with no service."""
-    await async_setup_component(hass, "homeassistant", {})
-    async_mock_service(hass, "light", SERVICE_TURN_ON)
-    hass.states.async_set("light.Bowl", STATE_ON)
-    hass.states.async_set("light.Ceiling", STATE_OFF)
+    await async_setup_component(menuai, "menuai", {})
+    async_mock_service(menuai, "light", SERVICE_TURN_ON)
+    menuai.states.async_set("light.Bowl", STATE_ON)
+    menuai.states.async_set("light.Ceiling", STATE_OFF)
 
     # We can't test if our service call results in services being called
     # because by mocking out the call service method, we mock out all
     # So we mimic how the service registry calls services
     service_call = ha.ServiceCall(
-        hass,
-        "homeassistant",
+        menuai,
+        "menuai",
         "turn_on",
         {"entity_id": ["light.test", "sensor.bla", "binary_sensor.blub", "light.bla"]},
     )
-    service = hass.services.async_services_for_domain("homeassistant")["turn_on"]
+    service = menuai.services.async_services_for_domain("menuai")["turn_on"]
 
     with patch(
-        "homeassistant.core.ServiceRegistry.async_call",
+        "menuai.core.ServiceRegistry.async_call",
         return_value=None,
     ) as mock_call:
         await service.job.target(service_call)
@@ -211,21 +211,21 @@ async def test_turn_on_skips_domains_without_service(
         "context": service_call.context,
     }
     assert (
-        "The service homeassistant.turn_on does not support entities binary_sensor.blub, sensor.bla"
+        "The service menuai.turn_on does not support entities binary_sensor.blub, sensor.bla"
         in caplog.text
     )
 
 
-async def test_entity_update(hass: HomeAssistant) -> None:
+async def test_entity_update(menuai: menuai) -> None:
     """Test being able to call entity update."""
-    await async_setup_component(hass, "homeassistant", {})
+    await async_setup_component(menuai, "menuai", {})
 
     with patch(
-        "homeassistant.components.homeassistant.async_update_entity",
+        "menuai.components.menuai.async_update_entity",
         return_value=None,
     ) as mock_update:
-        await hass.services.async_call(
-            "homeassistant",
+        await menuai.services.async_call(
+            "menuai",
             "update_entity",
             {"entity_id": ["light.kitchen"]},
             blocking=True,
@@ -235,124 +235,124 @@ async def test_entity_update(hass: HomeAssistant) -> None:
     assert mock_update.mock_calls[0][1][1] == "light.kitchen"
 
 
-async def test_setting_location(hass: HomeAssistant) -> None:
+async def test_setting_location(menuai: menuai) -> None:
     """Test setting the location."""
-    await async_setup_component(hass, "homeassistant", {})
-    events = async_capture_events(hass, EVENT_CORE_CONFIG_UPDATE)
+    await async_setup_component(menuai, "menuai", {})
+    events = async_capture_events(menuai, EVENT_CORE_CONFIG_UPDATE)
     # Just to make sure that we are updating values.
-    assert hass.config.latitude != 30
-    assert hass.config.longitude != 40
-    elevation = hass.config.elevation
+    assert menuai.config.latitude != 30
+    assert menuai.config.longitude != 40
+    elevation = menuai.config.elevation
     assert elevation != 50
-    await hass.services.async_call(
-        "homeassistant",
+    await menuai.services.async_call(
+        "menuai",
         SERVICE_SET_LOCATION,
         {"latitude": 30, "longitude": 40},
         blocking=True,
     )
     assert len(events) == 1
-    assert hass.config.latitude == 30
-    assert hass.config.longitude == 40
-    assert hass.config.elevation == elevation
+    assert menuai.config.latitude == 30
+    assert menuai.config.longitude == 40
+    assert menuai.config.elevation == elevation
 
-    await hass.services.async_call(
-        "homeassistant",
+    await menuai.services.async_call(
+        "menuai",
         SERVICE_SET_LOCATION,
         {"latitude": 30, "longitude": 40, "elevation": 50},
         blocking=True,
     )
-    assert hass.config.latitude == 30
-    assert hass.config.longitude == 40
-    assert hass.config.elevation == 50
+    assert menuai.config.latitude == 30
+    assert menuai.config.longitude == 40
+    assert menuai.config.elevation == 50
 
-    await hass.services.async_call(
-        "homeassistant",
+    await menuai.services.async_call(
+        "menuai",
         SERVICE_SET_LOCATION,
         {"latitude": 30, "longitude": 40, "elevation": 0},
         blocking=True,
     )
-    assert hass.config.latitude == 30
-    assert hass.config.longitude == 40
-    assert hass.config.elevation == 0
+    assert menuai.config.latitude == 30
+    assert menuai.config.longitude == 40
+    assert menuai.config.elevation == 0
 
 
 async def test_require_admin(
-    hass: HomeAssistant, hass_read_only_user: MockUser
+    menuai: menuai, menuai_read_only_user: MockUser
 ) -> None:
     """Test services requiring admin."""
-    await async_setup_component(hass, "homeassistant", {})
+    await async_setup_component(menuai, "menuai", {})
 
     for service in (
-        SERVICE_HOMEASSISTANT_RESTART,
-        SERVICE_HOMEASSISTANT_STOP,
+        SERVICE_menuai_RESTART,
+        SERVICE_menuai_STOP,
         SERVICE_CHECK_CONFIG,
         SERVICE_RELOAD_CORE_CONFIG,
     ):
         with pytest.raises(Unauthorized):
-            await hass.services.async_call(
+            await menuai.services.async_call(
                 ha.DOMAIN,
                 service,
                 {},
-                context=ha.Context(user_id=hass_read_only_user.id),
+                context=ha.Context(user_id=menuai_read_only_user.id),
                 blocking=True,
             )
 
     with pytest.raises(Unauthorized):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             ha.DOMAIN,
             SERVICE_SET_LOCATION,
             {"latitude": 0, "longitude": 0},
-            context=ha.Context(user_id=hass_read_only_user.id),
+            context=ha.Context(user_id=menuai_read_only_user.id),
             blocking=True,
         )
 
 
 async def test_turn_on_off_toggle_schema(
-    hass: HomeAssistant, hass_read_only_user: MockUser
+    menuai: menuai, menuai_read_only_user: MockUser
 ) -> None:
     """Test the schemas for the turn on/off/toggle services."""
-    await async_setup_component(hass, "homeassistant", {})
+    await async_setup_component(menuai, "menuai", {})
 
     for service in SERVICE_TURN_ON, SERVICE_TURN_OFF, SERVICE_TOGGLE:
         for invalid in None, "nothing", ENTITY_MATCH_ALL, ENTITY_MATCH_NONE:
             with pytest.raises(vol.Invalid):
-                await hass.services.async_call(
+                await menuai.services.async_call(
                     ha.DOMAIN,
                     service,
                     {"entity_id": invalid},
-                    context=ha.Context(user_id=hass_read_only_user.id),
+                    context=ha.Context(user_id=menuai_read_only_user.id),
                     blocking=True,
                 )
 
 
 async def test_not_allowing_recursion(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test we do not allow recursion."""
-    await async_setup_component(hass, "homeassistant", {})
+    await async_setup_component(menuai, "menuai", {})
 
     for service in SERVICE_TURN_ON, SERVICE_TURN_OFF, SERVICE_TOGGLE:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             ha.DOMAIN,
             service,
-            {"entity_id": "homeassistant.light"},
+            {"entity_id": "menuai.light"},
             blocking=True,
         )
         assert (
-            f"Called service homeassistant.{service} with invalid entities homeassistant.light"
+            f"Called service menuai.{service} with invalid entities menuai.light"
             in caplog.text
         ), service
 
 
 async def test_reload_config_entry_by_entity_id(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test being able to reload a config entry by entity_id."""
-    await async_setup_component(hass, "homeassistant", {})
+    await async_setup_component(menuai, "menuai", {})
     entry1 = MockConfigEntry(domain="mockdomain")
-    entry1.add_to_hass(hass)
+    entry1.add_to_menuai(menuai)
     entry2 = MockConfigEntry(domain="mockdomain")
-    entry2.add_to_hass(hass)
+    entry2.add_to_menuai(menuai)
     reg_entity1 = entity_registry.async_get_or_create(
         "binary_sensor", "powerwall", "battery_charging", config_entry=entry1
     )
@@ -360,11 +360,11 @@ async def test_reload_config_entry_by_entity_id(
         "binary_sensor", "powerwall", "battery_status", config_entry=entry2
     )
     with patch(
-        "homeassistant.config_entries.ConfigEntries.async_reload",
+        "menuai.config_entries.ConfigEntries.async_reload",
         return_value=None,
     ) as mock_reload:
-        await hass.services.async_call(
-            "homeassistant",
+        await menuai.services.async_call(
+            "menuai",
             "reload_config_entry",
             {"entity_id": f"{reg_entity1.entity_id},{reg_entity2.entity_id}"},
             blocking=True,
@@ -377,24 +377,24 @@ async def test_reload_config_entry_by_entity_id(
     }
 
     with pytest.raises(ValueError):
-        await hass.services.async_call(
-            "homeassistant",
+        await menuai.services.async_call(
+            "menuai",
             "reload_config_entry",
             {"entity_id": "unknown.entity_id"},
             blocking=True,
         )
 
 
-async def test_reload_config_entry_by_entry_id(hass: HomeAssistant) -> None:
+async def test_reload_config_entry_by_entry_id(menuai: menuai) -> None:
     """Test being able to reload a config entry by config entry id."""
-    await async_setup_component(hass, "homeassistant", {})
+    await async_setup_component(menuai, "menuai", {})
 
     with patch(
-        "homeassistant.config_entries.ConfigEntries.async_reload",
+        "menuai.config_entries.ConfigEntries.async_reload",
         return_value=None,
     ) as mock_reload:
-        await hass.services.async_call(
-            "homeassistant",
+        await menuai.services.async_call(
+            "menuai",
             "reload_config_entry",
             {ATTR_ENTRY_ID: "8955375327824e14ba89e4b29cc3ec9a"},
             blocking=True,
@@ -405,23 +405,23 @@ async def test_reload_config_entry_by_entry_id(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.parametrize(
-    "service", [SERVICE_HOMEASSISTANT_RESTART, SERVICE_HOMEASSISTANT_STOP]
+    "service", [SERVICE_menuai_RESTART, SERVICE_menuai_STOP]
 )
 async def test_raises_when_db_upgrade_in_progress(
-    hass: HomeAssistant, service, caplog: pytest.LogCaptureFixture
+    menuai: menuai, service, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test an exception is raised when the database migration is in progress."""
-    await async_setup_component(hass, "homeassistant", {})
+    await async_setup_component(menuai, "menuai", {})
 
     with (
-        pytest.raises(HomeAssistantError),
+        pytest.raises(menuaiError),
         patch(
-            "homeassistant.helpers.recorder.async_migration_in_progress",
+            "menuai.helpers.recorder.async_migration_in_progress",
             return_value=True,
         ) as mock_async_migration_in_progress,
     ):
-        await hass.services.async_call(
-            "homeassistant",
+        await menuai.services.async_call(
+            "menuai",
             service,
             blocking=True,
         )
@@ -433,13 +433,13 @@ async def test_raises_when_db_upgrade_in_progress(
 
     with (
         patch(
-            "homeassistant.helpers.recorder.async_migration_in_progress",
+            "menuai.helpers.recorder.async_migration_in_progress",
             return_value=False,
         ) as mock_async_migration_in_progress,
-        patch("homeassistant.config.async_check_ha_config_file", return_value=None),
+        patch("menuai.config.async_check_ha_config_file", return_value=None),
     ):
-        await hass.services.async_call(
-            "homeassistant",
+        await menuai.services.async_call(
+            "menuai",
             service,
             blocking=True,
         )
@@ -450,24 +450,24 @@ async def test_raises_when_db_upgrade_in_progress(
 
 
 async def test_raises_when_config_is_invalid(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test an exception is raised when the configuration is invalid."""
-    await async_setup_component(hass, "homeassistant", {})
+    await async_setup_component(menuai, "menuai", {})
 
     with (
-        pytest.raises(HomeAssistantError),
+        pytest.raises(menuaiError),
         patch(
-            "homeassistant.helpers.recorder.async_migration_in_progress",
+            "menuai.helpers.recorder.async_migration_in_progress",
             return_value=False,
         ),
         patch(
-            "homeassistant.config.async_check_ha_config_file", return_value=["Error 1"]
+            "menuai.config.async_check_ha_config_file", return_value=["Error 1"]
         ) as mock_async_check_ha_config_file,
     ):
-        await hass.services.async_call(
-            "homeassistant",
-            SERVICE_HOMEASSISTANT_RESTART,
+        await menuai.services.async_call(
+            "menuai",
+            SERVICE_menuai_RESTART,
             blocking=True,
         )
     assert "The system cannot" in caplog.text
@@ -479,16 +479,16 @@ async def test_raises_when_config_is_invalid(
 
     with (
         patch(
-            "homeassistant.helpers.recorder.async_migration_in_progress",
+            "menuai.helpers.recorder.async_migration_in_progress",
             return_value=False,
         ),
         patch(
-            "homeassistant.config.async_check_ha_config_file", return_value=None
+            "menuai.config.async_check_ha_config_file", return_value=None
         ) as mock_async_check_ha_config_file,
     ):
-        await hass.services.async_call(
-            "homeassistant",
-            SERVICE_HOMEASSISTANT_RESTART,
+        await menuai.services.async_call(
+            "menuai",
+            SERVICE_menuai_RESTART,
             blocking=True,
         )
 
@@ -499,77 +499,77 @@ async def test_raises_when_config_is_invalid(
     ("service_data", "safe_mode_enabled"),
     [({}, False), ({ATTR_SAFE_MODE: False}, False), ({ATTR_SAFE_MODE: True}, True)],
 )
-async def test_restart_homeassistant(
-    hass: HomeAssistant, service_data: dict, safe_mode_enabled: bool
+async def test_restart_menuai(
+    menuai: menuai, service_data: dict, safe_mode_enabled: bool
 ) -> None:
     """Test we can restart when there is no configuration error."""
-    await async_setup_component(hass, "homeassistant", {})
+    await async_setup_component(menuai, "menuai", {})
     with (
         patch(
-            "homeassistant.config.async_check_ha_config_file", return_value=None
+            "menuai.config.async_check_ha_config_file", return_value=None
         ) as mock_check,
-        patch("homeassistant.config.async_enable_safe_mode") as mock_safe_mode,
+        patch("menuai.config.async_enable_safe_mode") as mock_safe_mode,
         patch(
-            "homeassistant.core.HomeAssistant.async_stop", return_value=None
+            "menuai.core.menuai.async_stop", return_value=None
         ) as mock_restart,
     ):
-        await hass.services.async_call(
-            "homeassistant",
-            SERVICE_HOMEASSISTANT_RESTART,
+        await menuai.services.async_call(
+            "menuai",
+            SERVICE_menuai_RESTART,
             service_data,
             blocking=True,
         )
         assert mock_check.called
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         assert mock_restart.called
         assert mock_safe_mode.called == safe_mode_enabled
 
 
-async def test_stop_homeassistant(hass: HomeAssistant) -> None:
+async def test_stop_menuai(menuai: menuai) -> None:
     """Test we can stop when there is a configuration error."""
-    await async_setup_component(hass, "homeassistant", {})
+    await async_setup_component(menuai, "menuai", {})
     with (
         patch(
-            "homeassistant.config.async_check_ha_config_file", return_value=None
+            "menuai.config.async_check_ha_config_file", return_value=None
         ) as mock_check,
         patch(
-            "homeassistant.core.HomeAssistant.async_stop", return_value=None
+            "menuai.core.menuai.async_stop", return_value=None
         ) as mock_restart,
     ):
-        await hass.services.async_call(
-            "homeassistant",
-            SERVICE_HOMEASSISTANT_STOP,
+        await menuai.services.async_call(
+            "menuai",
+            SERVICE_menuai_STOP,
             blocking=True,
         )
         assert not mock_check.called
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         assert mock_restart.called
 
 
-async def test_save_persistent_states(hass: HomeAssistant) -> None:
+async def test_save_persistent_states(menuai: menuai) -> None:
     """Test we can call save_persistent_states."""
-    await async_setup_component(hass, "homeassistant", {})
+    await async_setup_component(menuai, "menuai", {})
     with patch(
-        "homeassistant.helpers.restore_state.RestoreStateData.async_save_persistent_states",
+        "menuai.helpers.restore_state.RestoreStateData.async_save_persistent_states",
         return_value=None,
     ) as mock_save:
-        await hass.services.async_call(
-            "homeassistant",
+        await menuai.services.async_call(
+            "menuai",
             SERVICE_SAVE_PERSISTENT_STATES,
             blocking=True,
         )
         assert mock_save.called
 
 
-async def test_reload_custom_templates(hass: HomeAssistant) -> None:
+async def test_reload_custom_templates(menuai: menuai) -> None:
     """Test we can call reload_custom_templates."""
-    await async_setup_component(hass, "homeassistant", {})
+    await async_setup_component(menuai, "menuai", {})
     with patch(
-        "homeassistant.components.homeassistant.async_load_custom_templates",
+        "menuai.components.menuai.async_load_custom_templates",
         return_value=None,
     ) as mock_load_custom_templates:
-        await hass.services.async_call(
-            "homeassistant",
+        await menuai.services.async_call(
+            "menuai",
             SERVICE_RELOAD_CUSTOM_TEMPLATES,
             blocking=True,
         )
@@ -577,24 +577,24 @@ async def test_reload_custom_templates(hass: HomeAssistant) -> None:
 
 
 async def test_reload_all(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test reload_all service."""
-    await async_setup_component(hass, "homeassistant", {})
-    test1 = async_mock_service(hass, "test1", "reload")
-    test2 = async_mock_service(hass, "test2", "reload")
-    no_reload = async_mock_service(hass, "test3", "not_reload")
-    notify = async_mock_service(hass, "notify", "reload")
-    core_config = async_mock_service(hass, "homeassistant", "reload_core_config")
-    themes = async_mock_service(hass, "frontend", "reload_themes")
-    jinja = async_mock_service(hass, "homeassistant", "reload_custom_templates")
+    await async_setup_component(menuai, "menuai", {})
+    test1 = async_mock_service(menuai, "test1", "reload")
+    test2 = async_mock_service(menuai, "test2", "reload")
+    no_reload = async_mock_service(menuai, "test3", "not_reload")
+    notify = async_mock_service(menuai, "notify", "reload")
+    core_config = async_mock_service(menuai, "menuai", "reload_core_config")
+    themes = async_mock_service(menuai, "frontend", "reload_themes")
+    jinja = async_mock_service(menuai, "menuai", "reload_custom_templates")
 
     with patch(
-        "homeassistant.config.async_check_ha_config_file",
+        "menuai.config.async_check_ha_config_file",
         return_value=None,
     ) as mock_async_check_ha_config_file:
-        await hass.services.async_call(
-            "homeassistant",
+        await menuai.services.async_call(
+            "menuai",
             SERVICE_RELOAD_ALL,
             blocking=True,
         )
@@ -609,19 +609,19 @@ async def test_reload_all(
 
     with (
         pytest.raises(
-            HomeAssistantError,
+            menuaiError,
             match=(
                 "Cannot quick reload all YAML configurations because the configuration is "
                 "not valid: Oh no, drama!"
             ),
         ),
         patch(
-            "homeassistant.config.async_check_ha_config_file",
+            "menuai.config.async_check_ha_config_file",
             return_value="Oh no, drama!",
         ) as mock_async_check_ha_config_file,
     ):
-        await hass.services.async_call(
-            "homeassistant",
+        await menuai.services.async_call(
+            "menuai",
             SERVICE_RELOAD_ALL,
             blocking=True,
         )
@@ -643,8 +643,8 @@ async def test_reload_all(
 @pytest.mark.parametrize(
     "installation_type",
     [
-        "Home Assistant Core",
-        "Home Assistant Supervised",
+        "MenuAI Core",
+        "MenuAI Supervised",
     ],
 )
 @pytest.mark.parametrize(
@@ -656,21 +656,21 @@ async def test_reload_all(
     ],
 )
 async def test_deprecated_installation_issue_32bit_method(
-    hass: HomeAssistant,
+    menuai: menuai,
     issue_registry: ir.IssueRegistry,
     installation_type: str,
     arch: str,
 ) -> None:
     """Test deprecated installation issue."""
     with patch(
-        "homeassistant.components.homeassistant.async_get_system_info",
+        "menuai.components.menuai.async_get_system_info",
         return_value={
             "installation_type": installation_type,
             "arch": arch,
         },
     ):
-        assert await async_setup_component(hass, DOMAIN, {})
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, {})
+        await menuai.async_block_till_done()
 
     assert len(issue_registry.issues) == 1
     issue = issue_registry.async_get_issue(DOMAIN, "deprecated_method_architecture")
@@ -685,8 +685,8 @@ async def test_deprecated_installation_issue_32bit_method(
 @pytest.mark.parametrize(
     "installation_type",
     [
-        "Home Assistant Container",
-        "Home Assistant OS",
+        "MenuAI Container",
+        "MenuAI OS",
     ],
 )
 @pytest.mark.parametrize(
@@ -697,21 +697,21 @@ async def test_deprecated_installation_issue_32bit_method(
     ],
 )
 async def test_deprecated_installation_issue_32bit(
-    hass: HomeAssistant,
+    menuai: menuai,
     issue_registry: ir.IssueRegistry,
     installation_type: str,
     arch: str,
 ) -> None:
     """Test deprecated installation issue."""
     with patch(
-        "homeassistant.components.homeassistant.async_get_system_info",
+        "menuai.components.menuai.async_get_system_info",
         return_value={
             "installation_type": installation_type,
             "arch": arch,
         },
     ):
-        assert await async_setup_component(hass, DOMAIN, {})
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, {})
+        await menuai.async_block_till_done()
 
     assert len(issue_registry.issues) == 1
     issue = issue_registry.async_get_issue(DOMAIN, "deprecated_architecture")
@@ -726,25 +726,25 @@ async def test_deprecated_installation_issue_32bit(
 @pytest.mark.parametrize(
     "installation_type",
     [
-        "Home Assistant Core",
-        "Home Assistant Supervised",
+        "MenuAI Core",
+        "MenuAI Supervised",
     ],
 )
 async def test_deprecated_installation_issue_method(
-    hass: HomeAssistant,
+    menuai: menuai,
     issue_registry: ir.IssueRegistry,
     installation_type: str,
 ) -> None:
     """Test deprecated installation issue."""
     with patch(
-        "homeassistant.components.homeassistant.async_get_system_info",
+        "menuai.components.menuai.async_get_system_info",
         return_value={
             "installation_type": installation_type,
             "arch": "generic-x86-64",
         },
     ):
-        assert await async_setup_component(hass, DOMAIN, {})
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, {})
+        await menuai.async_block_till_done()
 
     assert len(issue_registry.issues) == 1
     issue = issue_registry.async_get_issue(DOMAIN, "deprecated_method")
@@ -767,7 +767,7 @@ async def test_deprecated_installation_issue_method(
     ],
 )
 async def test_deprecated_installation_issue_aarch64(
-    hass: HomeAssistant,
+    menuai: menuai,
     issue_registry: ir.IssueRegistry,
     board: str,
     issue_id: str,
@@ -775,18 +775,18 @@ async def test_deprecated_installation_issue_aarch64(
     """Test deprecated installation issue."""
     with (
         patch(
-            "homeassistant.components.homeassistant.async_get_system_info",
+            "menuai.components.menuai.async_get_system_info",
             return_value={
-                "installation_type": "Home Assistant OS",
+                "installation_type": "MenuAI OS",
                 "arch": "armv7",
             },
         ),
         patch(
-            "homeassistant.components.hassio.get_os_info", return_value={"board": board}
+            "menuai.components.menuaiio.get_os_info", return_value={"board": board}
         ),
     ):
-        assert await async_setup_component(hass, DOMAIN, {})
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, {})
+        await menuai.async_block_till_done()
 
     assert len(issue_registry.issues) == 1
     issue = issue_registry.async_get_issue(DOMAIN, issue_id)
@@ -798,19 +798,19 @@ async def test_deprecated_installation_issue_aarch64(
 
 
 async def test_deprecated_installation_issue_armv7_container(
-    hass: HomeAssistant,
+    menuai: menuai,
     issue_registry: ir.IssueRegistry,
 ) -> None:
     """Test deprecated installation issue."""
     with patch(
-        "homeassistant.components.homeassistant.async_get_system_info",
+        "menuai.components.menuai.async_get_system_info",
         return_value={
-            "installation_type": "Home Assistant Container",
+            "installation_type": "MenuAI Container",
             "arch": "armv7",
         },
     ):
-        assert await async_setup_component(hass, DOMAIN, {})
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, {})
+        await menuai.async_block_till_done()
 
     assert len(issue_registry.issues) == 1
     issue = issue_registry.async_get_issue(DOMAIN, "deprecated_container_armv7")

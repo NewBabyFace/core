@@ -6,15 +6,15 @@ from collections.abc import Callable, Coroutine
 from functools import partial
 from typing import Any
 
-from homeassistant.core import HassJob, HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.deprecation import (
+from menuai.core import menuaiJob, menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.deprecation import (
     DeprecatedConstant,
     all_with_deprecated_constants,
     check_if_deprecated_constant,
     dir_with_deprecated_constants,
 )
-from homeassistant.helpers.service_info.ssdp import (
+from menuai.helpers.service_info.ssdp import (
     ATTR_NT as _ATTR_NT,
     ATTR_ST as _ATTR_ST,
     ATTR_UPNP_DEVICE_TYPE as _ATTR_UPNP_DEVICE_TYPE,
@@ -32,9 +32,9 @@ from homeassistant.helpers.service_info.ssdp import (
     ATTR_UPNP_UPC as _ATTR_UPNP_UPC,
     SsdpServiceInfo as _SsdpServiceInfo,
 )
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.loader import async_get_ssdp, bind_hass
-from homeassistant.util.logging import catch_log_exception
+from menuai.helpers.typing import ConfigType
+from menuai.loader import async_get_ssdp, bind_menuai
+from menuai.util.logging import catch_log_exception
 
 from . import websocket_api
 from .const import DOMAIN, SSDP_SCANNER, UPNP_SERVER
@@ -42,7 +42,7 @@ from .scanner import (
     IntegrationMatchers,
     Scanner,
     SsdpChange,
-    SsdpHassJobCallback,  # noqa: F401
+    SsdpmenuaiJobCallback,  # noqa: F401
 )
 from .server import Server
 
@@ -59,87 +59,87 @@ ATTR_SSDP_NEXTBOOTID = "NEXTBOOTID.UPNP.ORG"
 # Attributes for accessing info from retrieved UPnP device description
 _DEPRECATED_ATTR_ST = DeprecatedConstant(
     _ATTR_ST,
-    "homeassistant.helpers.service_info.ssdp.ATTR_ST",
+    "menuai.helpers.service_info.ssdp.ATTR_ST",
     "2026.2",
 )
 _DEPRECATED_ATTR_NT = DeprecatedConstant(
     _ATTR_NT,
-    "homeassistant.helpers.service_info.ssdp.ATTR_NT",
+    "menuai.helpers.service_info.ssdp.ATTR_NT",
     "2026.2",
 )
 _DEPRECATED_ATTR_UPNP_DEVICE_TYPE = DeprecatedConstant(
     _ATTR_UPNP_DEVICE_TYPE,
-    "homeassistant.helpers.service_info.ssdp.ATTR_UPNP_DEVICE_TYPE",
+    "menuai.helpers.service_info.ssdp.ATTR_UPNP_DEVICE_TYPE",
     "2026.2",
 )
 _DEPRECATED_ATTR_UPNP_FRIENDLY_NAME = DeprecatedConstant(
     _ATTR_UPNP_FRIENDLY_NAME,
-    "homeassistant.helpers.service_info.ssdp.ATTR_UPNP_FRIENDLY_NAME",
+    "menuai.helpers.service_info.ssdp.ATTR_UPNP_FRIENDLY_NAME",
     "2026.2",
 )
 _DEPRECATED_ATTR_UPNP_MANUFACTURER = DeprecatedConstant(
     _ATTR_UPNP_MANUFACTURER,
-    "homeassistant.helpers.service_info.ssdp.ATTR_UPNP_MANUFACTURER",
+    "menuai.helpers.service_info.ssdp.ATTR_UPNP_MANUFACTURER",
     "2026.2",
 )
 _DEPRECATED_ATTR_UPNP_MANUFACTURER_URL = DeprecatedConstant(
     _ATTR_UPNP_MANUFACTURER_URL,
-    "homeassistant.helpers.service_info.ssdp.ATTR_UPNP_MANUFACTURER_URL",
+    "menuai.helpers.service_info.ssdp.ATTR_UPNP_MANUFACTURER_URL",
     "2026.2",
 )
 _DEPRECATED_ATTR_UPNP_MODEL_DESCRIPTION = DeprecatedConstant(
     _ATTR_UPNP_MODEL_DESCRIPTION,
-    "homeassistant.helpers.service_info.ssdp.ATTR_UPNP_MODEL_DESCRIPTION",
+    "menuai.helpers.service_info.ssdp.ATTR_UPNP_MODEL_DESCRIPTION",
     "2026.2",
 )
 _DEPRECATED_ATTR_UPNP_MODEL_NAME = DeprecatedConstant(
     _ATTR_UPNP_MODEL_NAME,
-    "homeassistant.helpers.service_info.ssdp.ATTR_UPNP_MODEL_NAME",
+    "menuai.helpers.service_info.ssdp.ATTR_UPNP_MODEL_NAME",
     "2026.2",
 )
 _DEPRECATED_ATTR_UPNP_MODEL_NUMBER = DeprecatedConstant(
     _ATTR_UPNP_MODEL_NUMBER,
-    "homeassistant.helpers.service_info.ssdp.ATTR_UPNP_MODEL_NUMBER",
+    "menuai.helpers.service_info.ssdp.ATTR_UPNP_MODEL_NUMBER",
     "2026.2",
 )
 _DEPRECATED_ATTR_UPNP_MODEL_URL = DeprecatedConstant(
     _ATTR_UPNP_MODEL_URL,
-    "homeassistant.helpers.service_info.ssdp.ATTR_UPNP_MODEL_URL",
+    "menuai.helpers.service_info.ssdp.ATTR_UPNP_MODEL_URL",
     "2026.2",
 )
 _DEPRECATED_ATTR_UPNP_SERIAL = DeprecatedConstant(
     _ATTR_UPNP_SERIAL,
-    "homeassistant.helpers.service_info.ssdp.ATTR_UPNP_SERIAL",
+    "menuai.helpers.service_info.ssdp.ATTR_UPNP_SERIAL",
     "2026.2",
 )
 _DEPRECATED_ATTR_UPNP_SERVICE_LIST = DeprecatedConstant(
     _ATTR_UPNP_SERVICE_LIST,
-    "homeassistant.helpers.service_info.ssdp.ATTR_UPNP_SERVICE_LIST",
+    "menuai.helpers.service_info.ssdp.ATTR_UPNP_SERVICE_LIST",
     "2026.2",
 )
 _DEPRECATED_ATTR_UPNP_UDN = DeprecatedConstant(
     _ATTR_UPNP_UDN,
-    "homeassistant.helpers.service_info.ssdp.ATTR_UPNP_UDN",
+    "menuai.helpers.service_info.ssdp.ATTR_UPNP_UDN",
     "2026.2",
 )
 _DEPRECATED_ATTR_UPNP_UPC = DeprecatedConstant(
     _ATTR_UPNP_UPC,
-    "homeassistant.helpers.service_info.ssdp.ATTR_UPNP_UPC",
+    "menuai.helpers.service_info.ssdp.ATTR_UPNP_UPC",
     "2026.2",
 )
 _DEPRECATED_ATTR_UPNP_PRESENTATION_URL = DeprecatedConstant(
     _ATTR_UPNP_PRESENTATION_URL,
-    "homeassistant.helpers.service_info.ssdp.ATTR_UPNP_PRESENTATION_URL",
+    "menuai.helpers.service_info.ssdp.ATTR_UPNP_PRESENTATION_URL",
     "2026.2",
 )
-# Attributes for accessing info added by Home Assistant
-ATTR_HA_MATCHING_DOMAINS = "x_homeassistant_matching_domains"
+# Attributes for accessing info added by MenuAI
+ATTR_HA_MATCHING_DOMAINS = "x_menuai_matching_domains"
 
 CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)
 
 _DEPRECATED_SsdpServiceInfo = DeprecatedConstant(
     _SsdpServiceInfo,
-    "homeassistant.helpers.service_info.ssdp.SsdpServiceInfo",
+    "menuai.helpers.service_info.ssdp.SsdpServiceInfo",
     "2026.2",
 )
 
@@ -149,9 +149,9 @@ def _format_err(name: str, *args: Any) -> str:
     return f"Exception in SSDP callback {name}: {args}"
 
 
-@bind_hass
+@bind_menuai
 async def async_register_callback(
-    hass: HomeAssistant,
+    menuai: menuai,
     callback: Callable[
         [_SsdpServiceInfo, SsdpChange], Coroutine[Any, Any, None] | None
     ],
@@ -161,8 +161,8 @@ async def async_register_callback(
 
     Returns a callback that can be used to cancel the registration.
     """
-    scanner: Scanner = hass.data[DOMAIN][SSDP_SCANNER]
-    job = HassJob(
+    scanner: Scanner = menuai.data[DOMAIN][SSDP_SCANNER]
+    job = menuaiJob(
         catch_log_exception(
             callback,
             partial(_format_err, str(callback)),
@@ -172,49 +172,49 @@ async def async_register_callback(
     return await scanner.async_register_callback(job, match_dict)
 
 
-@bind_hass
+@bind_menuai
 async def async_get_discovery_info_by_udn_st(
-    hass: HomeAssistant, udn: str, st: str
+    menuai: menuai, udn: str, st: str
 ) -> _SsdpServiceInfo | None:
     """Fetch the discovery info cache."""
-    scanner: Scanner = hass.data[DOMAIN][SSDP_SCANNER]
+    scanner: Scanner = menuai.data[DOMAIN][SSDP_SCANNER]
     return await scanner.async_get_discovery_info_by_udn_st(udn, st)
 
 
-@bind_hass
+@bind_menuai
 async def async_get_discovery_info_by_st(
-    hass: HomeAssistant, st: str
+    menuai: menuai, st: str
 ) -> list[_SsdpServiceInfo]:
     """Fetch all the entries matching the st."""
-    scanner: Scanner = hass.data[DOMAIN][SSDP_SCANNER]
+    scanner: Scanner = menuai.data[DOMAIN][SSDP_SCANNER]
     return await scanner.async_get_discovery_info_by_st(st)
 
 
-@bind_hass
+@bind_menuai
 async def async_get_discovery_info_by_udn(
-    hass: HomeAssistant, udn: str
+    menuai: menuai, udn: str
 ) -> list[_SsdpServiceInfo]:
     """Fetch all the entries matching the udn."""
-    scanner: Scanner = hass.data[DOMAIN][SSDP_SCANNER]
+    scanner: Scanner = menuai.data[DOMAIN][SSDP_SCANNER]
     return await scanner.async_get_discovery_info_by_udn(udn)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the SSDP integration."""
 
     integration_matchers = IntegrationMatchers()
-    integration_matchers.async_setup(await async_get_ssdp(hass))
+    integration_matchers.async_setup(await async_get_ssdp(menuai))
 
-    scanner = Scanner(hass, integration_matchers)
-    server = Server(hass)
-    hass.data[DOMAIN] = {
+    scanner = Scanner(menuai, integration_matchers)
+    server = Server(menuai)
+    menuai.data[DOMAIN] = {
         SSDP_SCANNER: scanner,
         UPNP_SERVER: server,
     }
 
     await scanner.async_start()
     await server.async_start()
-    websocket_api.async_setup(hass)
+    websocket_api.async_setup(menuai)
 
     return True
 

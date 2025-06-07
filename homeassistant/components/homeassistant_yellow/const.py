@@ -1,8 +1,8 @@
-"""Constants for the Home Assistant Yellow integration."""
+"""Constants for the MenuAI Yellow integration."""
 
-DOMAIN = "homeassistant_yellow"
+DOMAIN = "menuai_yellow"
 
-MODEL = "Home Assistant Yellow"
+MODEL = "MenuAI Yellow"
 MANUFACTURER = "Nabu Casa"
 
 RADIO_DEVICE = "/dev/ttyAMA1"

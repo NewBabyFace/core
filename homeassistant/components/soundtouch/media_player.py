@@ -9,8 +9,8 @@ from typing import Any
 from libsoundtouch.device import SoundTouchDevice
 from libsoundtouch.utils import Source
 
-from homeassistant.components import media_source
-from homeassistant.components.media_player import (
+from menuai.components import media_source
+from menuai.components.media_player import (
     BrowseMedia,
     MediaPlayerDeviceClass,
     MediaPlayerEntity,
@@ -19,15 +19,15 @@ from homeassistant.components.media_player import (
     MediaType,
     async_process_play_media_url,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EVENT_HOMEASSISTANT_START
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import EVENT_menuai_START
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import (
     CONNECTION_NETWORK_MAC,
     DeviceInfo,
     format_mac,
 )
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 
@@ -45,17 +45,17 @@ ATTR_SOUNDTOUCH_ZONE = "soundtouch_zone"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Bose SoundTouch media player based on a config entry."""
-    device = hass.data[DOMAIN][entry.entry_id].device
+    device = menuai.data[DOMAIN][entry.entry_id].device
     media_player = SoundTouchMediaPlayer(device)
 
     async_add_entities([media_player], True)
 
-    hass.data[DOMAIN][entry.entry_id].media_player = media_player
+    menuai.data[DOMAIN][entry.entry_id].media_player = media_player
 
 
 class SoundTouchMediaPlayer(MediaPlayerEntity):
@@ -219,7 +219,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         """Album name of current playing media."""
         return self._status.album
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Populate zone info which requires entity_id."""
 
         @callback
@@ -227,8 +227,8 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             """Schedule an update when all platform entities have been added."""
             self.async_schedule_update_ha_state(True)
 
-        self.hass.bus.async_listen_once(
-            EVENT_HOMEASSISTANT_START, async_update_on_start
+        self.menuai.bus.async_listen_once(
+            EVENT_menuai_START, async_update_on_start
         )
 
     async def async_play_media(
@@ -237,11 +237,11 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         """Play a piece of media."""
         if media_source.is_media_source_id(media_id):
             play_item = await media_source.async_resolve_media(
-                self.hass, media_id, self.entity_id
+                self.menuai, media_id, self.entity_id
             )
-            media_id = async_process_play_media_url(self.hass, play_item.url)
+            media_id = async_process_play_media_url(self.menuai, play_item.url)
 
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             partial(self.play_media, media_type, media_id, **kwargs)
         )
 
@@ -352,7 +352,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         media_content_id: str | None = None,
     ) -> BrowseMedia:
         """Implement the websocket media browsing helper."""
-        return await media_source.async_browse_media(self.hass, media_content_id)
+        return await media_source.async_browse_media(self.menuai, media_content_id)
 
     def get_zone_info(self):
         """Return the current zone info."""
@@ -388,14 +388,14 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
 
     def _get_instance_by_ip(self, ip_address):
         """Search and return a SoundTouchDevice instance by it's IP address."""
-        for data in self.hass.data[DOMAIN].values():
+        for data in self.menuai.data[DOMAIN].values():
             if data.device.config.device_ip == ip_address:
                 return data.media_player
         return None
 
     def _get_instance_by_id(self, instance_id):
         """Search and return a SoundTouchDevice instance by it's ID (aka MAC address)."""
-        for data in self.hass.data[DOMAIN].values():
+        for data in self.menuai.data[DOMAIN].values():
             if data.device.config.device_id == instance_id:
                 return data.media_player
         return None

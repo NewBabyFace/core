@@ -4,9 +4,9 @@ from unittest.mock import MagicMock, patch
 
 from aiopyarr import ArrAuthenticationException, ArrException
 
-from homeassistant.components.sonarr.const import CONF_BASE_PATH, DOMAIN
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
-from homeassistant.const import (
+from menuai.components.sonarr.const import CONF_BASE_PATH, DOMAIN
+from menuai.config_entries import SOURCE_REAUTH, ConfigEntryState
+from menuai.const import (
     CONF_API_KEY,
     CONF_HOST,
     CONF_PORT,
@@ -15,38 +15,38 @@ from homeassistant.const import (
     CONF_URL,
     CONF_VERIFY_SSL,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
 
 async def test_config_entry_not_ready(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_sonarr: MagicMock,
 ) -> None:
     """Test the configuration entry not ready."""
     mock_sonarr.async_get_system_status.side_effect = ArrException
 
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert mock_config_entry.state is ConfigEntryState.SETUP_RETRY
 
 
 async def test_config_entry_reauth(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_sonarr: MagicMock,
 ) -> None:
     """Test the configuration entry needing to be re-authenticated."""
     mock_sonarr.async_get_system_status.side_effect = ArrAuthenticationException
 
-    with patch.object(hass.config_entries.flow, "async_init") as mock_flow_init:
-        mock_config_entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+    with patch.object(menuai.config_entries.flow, "async_init") as mock_flow_init:
+        mock_config_entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     assert mock_config_entry.state is ConfigEntryState.SETUP_ERROR
 
@@ -63,32 +63,32 @@ async def test_config_entry_reauth(
 
 
 async def test_unload_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_sonarr: MagicMock,
 ) -> None:
     """Test the configuration entry unloading."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.sonarr.sensor.async_setup_entry",
+        "menuai.components.sonarr.sensor.async_setup_entry",
         return_value=True,
     ):
-        await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+        await menuai.async_block_till_done()
 
-    assert hass.data[DOMAIN]
+    assert menuai.data[DOMAIN]
     assert mock_config_entry.state is ConfigEntryState.LOADED
-    assert mock_config_entry.entry_id in hass.data[DOMAIN]
+    assert mock_config_entry.entry_id in menuai.data[DOMAIN]
 
-    await hass.config_entries.async_unload(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_unload(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert mock_config_entry.state is ConfigEntryState.NOT_LOADED
-    assert mock_config_entry.entry_id not in hass.data[DOMAIN]
+    assert mock_config_entry.entry_id not in menuai.data[DOMAIN]
 
 
-async def test_migrate_config_entry(hass: HomeAssistant) -> None:
+async def test_migrate_config_entry(menuai: menuai) -> None:
     """Test successful migration of entry data."""
     legacy_config = {
         CONF_API_KEY: "MOCK_API_KEY",
@@ -99,15 +99,15 @@ async def test_migrate_config_entry(hass: HomeAssistant) -> None:
         CONF_BASE_PATH: "/base/",
     }
     entry = MockConfigEntry(domain=DOMAIN, data=legacy_config)
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     assert entry.data == legacy_config
     assert entry.version == 1
     assert not entry.unique_id
 
-    with patch("homeassistant.components.sonarr.async_setup_entry", return_value=True):
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+    with patch("menuai.components.sonarr.async_setup_entry", return_value=True):
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     assert entry.data == {
         CONF_API_KEY: "MOCK_API_KEY",

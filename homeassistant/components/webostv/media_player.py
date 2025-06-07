@@ -14,24 +14,24 @@ from typing import Any, Concatenate, cast
 from aiowebostv import WebOsTvPairError, WebOsTvState
 import voluptuous as vol
 
-from homeassistant import util
-from homeassistant.components.media_player import (
+from menuai import util
+from menuai.components.media_player import (
     MediaPlayerDeviceClass,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
     MediaType,
 )
-from homeassistant.const import ATTR_COMMAND, ATTR_SUPPORTED_FEATURES
-from homeassistant.core import HomeAssistant, ServiceResponse, SupportsResponse
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.trigger import PluggableAction
-from homeassistant.helpers.typing import VolDictType
+from menuai.const import ATTR_COMMAND, ATTR_SUPPORTED_FEATURES
+from menuai.core import menuai, ServiceResponse, SupportsResponse
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv, entity_platform
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.restore_state import RestoreEntity
+from menuai.helpers.trigger import PluggableAction
+from menuai.helpers.typing import VolDictType
 
 from .const import (
     ATTR_BUTTON,
@@ -100,7 +100,7 @@ SERVICES = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: WebOsTvConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -126,7 +126,7 @@ def cmd[_R, **_P](
     ) -> _R:
         """Wrap all command methods."""
         if self.state is MediaPlayerState.OFF and func.__name__ != "async_turn_off":
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="device_off",
                 translation_placeholders={
@@ -137,7 +137,7 @@ def cmd[_R, **_P](
         try:
             return await func(self, *args, **kwargs)
         except WEBOSTV_EXCEPTIONS as error:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="communication_error",
                 translation_placeholders={
@@ -175,14 +175,14 @@ class LgWebOSMediaPlayerEntity(RestoreEntity, MediaPlayerEntity):
         self._supported_features = MediaPlayerEntityFeature(0)
         self._update_states()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Connect and subscribe to dispatcher signals and state updates."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         if (entry := self.registry_entry) and entry.device_id:
             self.async_on_remove(
                 self._turn_on.async_register(
-                    self.hass, async_get_turn_on_trigger(entry.device_id)
+                    self.menuai, async_get_turn_on_trigger(entry.device_id)
                 )
             )
 
@@ -201,7 +201,7 @@ class LgWebOSMediaPlayerEntity(RestoreEntity, MediaPlayerEntity):
                 & ~MediaPlayerEntityFeature.TURN_ON
             )
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Call disconnect on removal."""
         self._client.unregister_state_update_callback(self.async_handle_state_update)
 
@@ -358,9 +358,9 @@ class LgWebOSMediaPlayerEntity(RestoreEntity, MediaPlayerEntity):
             try:
                 await self._client.connect()
             except WebOsTvPairError:
-                self._entry.async_start_reauth(self.hass)
+                self._entry.async_start_reauth(self.menuai)
             else:
-                update_client_key(self.hass, self._entry)
+                update_client_key(self.menuai, self._entry)
 
     @property
     def supported_features(self) -> MediaPlayerEntityFeature:
@@ -377,7 +377,7 @@ class LgWebOSMediaPlayerEntity(RestoreEntity, MediaPlayerEntity):
 
     async def async_turn_on(self) -> None:
         """Turn on media player."""
-        await self._turn_on.async_run(self.hass, self._context)
+        await self._turn_on.async_run(self.menuai, self._context)
 
     @cmd
     async def async_volume_up(self) -> None:
@@ -417,7 +417,7 @@ class LgWebOSMediaPlayerEntity(RestoreEntity, MediaPlayerEntity):
     async def async_select_source(self, source: str) -> None:
         """Select input source."""
         if (source_dict := self._source_list.get(source)) is None:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="source_not_found",
                 translation_placeholders={
@@ -518,7 +518,7 @@ class LgWebOSMediaPlayerEntity(RestoreEntity, MediaPlayerEntity):
         """
         content = None
 
-        websession = async_get_clientsession(self.hass)
+        websession = async_get_clientsession(self.menuai)
         with suppress(TimeoutError):
             async with asyncio.timeout(10):
                 response = await websession.get(url, ssl=False)

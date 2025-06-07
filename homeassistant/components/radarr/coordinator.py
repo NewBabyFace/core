@@ -19,11 +19,11 @@ from aiopyarr import (
 from aiopyarr.models.host_configuration import PyArrHostConfiguration
 from aiopyarr.radarr_client import RadarrClient
 
-from homeassistant.components.calendar import CalendarEvent
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.components.calendar import CalendarEvent
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DEFAULT_MAX_RECORDS, DOMAIN, LOGGER
 
@@ -65,14 +65,14 @@ class RadarrDataUpdateCoordinator(DataUpdateCoordinator[T], Generic[T], ABC):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: RadarrConfigEntry,
         host_configuration: PyArrHostConfiguration,
         api_client: RadarrClient,
     ) -> None:
         """Initialize the coordinator."""
         super().__init__(
-            hass=hass,
+            menuai=menuai,
             logger=LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -154,13 +154,13 @@ class CalendarUpdateCoordinator(RadarrDataUpdateCoordinator[None]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: RadarrConfigEntry,
         host_configuration: PyArrHostConfiguration,
         api_client: RadarrClient,
     ) -> None:
         """Initialize."""
-        super().__init__(hass, config_entry, host_configuration, api_client)
+        super().__init__(menuai, config_entry, host_configuration, api_client)
         self.event: RadarrEvent | None = None
         self._events: list[RadarrEvent] = []
 

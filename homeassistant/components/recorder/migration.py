@@ -29,9 +29,9 @@ from sqlalchemy.schema import AddConstraint, CreateTable, DropConstraint
 from sqlalchemy.sql.expression import true
 from sqlalchemy.sql.lambdas import StatementLambdaElement
 
-from homeassistant.core import HomeAssistant
-from homeassistant.util.enum import try_parse_enum
-from homeassistant.util.ulid import ulid_at_time, ulid_to_bytes
+from menuai.core import menuai
+from menuai.util.enum import try_parse_enum
+from menuai.util.ulid import ulid_at_time, ulid_to_bytes
 
 from .auto_repairs.events.schema import (
     correct_db_schema as events_correct_db_schema,
@@ -124,8 +124,8 @@ LIVE_MIGRATION_MIN_SCHEMA_VERSION = 42
 
 MIGRATION_NOTE_OFFLINE = (
     "Note: this may take several hours on large databases and slow machines. "
-    "Home Assistant will not start until the upgrade is completed. Please be patient "
-    "and do not turn off or restart Home Assistant while the upgrade is in progress!"
+    "MenuAI will not start until the upgrade is completed. Please be patient "
+    "and do not turn off or restart MenuAI while the upgrade is in progress!"
 )
 MIGRATION_NOTE_MINUTES = (
     "Note: this may take several minutes on large databases and slow machines. "
@@ -266,7 +266,7 @@ def _schema_is_current(current_version: int) -> bool:
 
 
 def validate_db_schema(
-    hass: HomeAssistant, instance: Recorder, session_maker: Callable[[], Session]
+    menuai: menuai, instance: Recorder, session_maker: Callable[[], Session]
 ) -> SchemaValidationStatus | None:
     """Check if the schema is valid.
 
@@ -284,7 +284,7 @@ def validate_db_schema(
     if is_current := _schema_is_current(current_version):
         # We can only check for further errors if the schema is current, because
         # columns may otherwise not exist etc.
-        schema_errors = _find_schema_errors(hass, instance, session_maker)
+        schema_errors = _find_schema_errors(menuai, instance, session_maker)
 
     schema_migration_needed = not is_current
     _non_live_data_migration_needed = non_live_data_migration_needed(
@@ -305,7 +305,7 @@ def validate_db_schema(
 
 
 def _find_schema_errors(
-    hass: HomeAssistant, instance: Recorder, session_maker: Callable[[], Session]
+    menuai: menuai, instance: Recorder, session_maker: Callable[[], Session]
 ) -> set[str]:
     """Find schema errors."""
     schema_errors: set[str] = set()
@@ -342,7 +342,7 @@ def pre_migrate_schema(engine: Engine) -> None:
 
 def _migrate_schema(
     instance: Recorder,
-    hass: HomeAssistant,
+    menuai: menuai,
     engine: Engine,
     session_maker: Callable[[], Session],
     schema_status: SchemaValidationStatus,
@@ -368,7 +368,7 @@ def _migrate_schema(
     for version in range(current_version, end_version):
         new_version = version + 1
         _LOGGER.warning("Upgrading recorder db schema to version %s", new_version)
-        _apply_update(instance, hass, engine, session_maker, new_version, start_version)
+        _apply_update(instance, menuai, engine, session_maker, new_version, start_version)
         with session_scope(session=session_maker()) as session:
             session.add(SchemaChanges(schema_version=new_version))
 
@@ -381,7 +381,7 @@ def _migrate_schema(
 
 def migrate_schema_non_live(
     instance: Recorder,
-    hass: HomeAssistant,
+    menuai: menuai,
     engine: Engine,
     session_maker: Callable[[], Session],
     schema_status: SchemaValidationStatus,
@@ -389,13 +389,13 @@ def migrate_schema_non_live(
     """Check if the schema needs to be upgraded."""
     end_version = LIVE_MIGRATION_MIN_SCHEMA_VERSION
     return _migrate_schema(
-        instance, hass, engine, session_maker, schema_status, end_version
+        instance, menuai, engine, session_maker, schema_status, end_version
     )
 
 
 def migrate_schema_live(
     instance: Recorder,
-    hass: HomeAssistant,
+    menuai: menuai,
     engine: Engine,
     session_maker: Callable[[], Session],
     schema_status: SchemaValidationStatus,
@@ -403,7 +403,7 @@ def migrate_schema_live(
     """Check if the schema needs to be upgraded."""
     end_version = SCHEMA_VERSION
     schema_status = _migrate_schema(
-        instance, hass, engine, session_maker, schema_status, end_version
+        instance, menuai, engine, session_maker, schema_status, end_version
     )
 
     # Repairs are currently done during the live migration
@@ -1015,7 +1015,7 @@ def _delete_foreign_key_violations(
 @database_job_retry_wrapper("Apply migration update", 10)
 def _apply_update(
     instance: Recorder,
-    hass: HomeAssistant,
+    menuai: menuai,
     engine: Engine,
     session_maker: Callable[[], Session],
     new_version: int,
@@ -1023,7 +1023,7 @@ def _apply_update(
 ) -> None:
     """Perform operations to bring schema up to date."""
     migrator_cls = _SchemaVersionMigrator.get_migrator(new_version)
-    migrator_cls(instance, hass, engine, session_maker, old_version).apply_update()
+    migrator_cls(instance, menuai, engine, session_maker, old_version).apply_update()
 
 
 class _SchemaVersionMigrator(ABC):
@@ -1041,14 +1041,14 @@ class _SchemaVersionMigrator(ABC):
     def __init__(
         self,
         instance: Recorder,
-        hass: HomeAssistant,
+        menuai: menuai,
         engine: Engine,
         session_maker: Callable[[], Session],
         old_version: int,
     ) -> None:
         """Initialize."""
         self.instance = instance
-        self.hass = hass
+        self.menuai = menuai
         self.engine = engine
         self.session_maker = session_maker
         self.old_version = old_version
@@ -1665,7 +1665,7 @@ class _SchemaVersion34Migrator(_SchemaVersionMigrator, target_version=34):
             "ix_statistics_short_term_statistic_id_start_ts",
         )
         _migrate_statistics_columns_to_timestamp_removing_duplicates(
-            self.hass, self.instance, self.session_maker, self.engine
+            self.menuai, self.instance, self.session_maker, self.engine
         )
 
 
@@ -1856,7 +1856,7 @@ class _SchemaVersion42Migrator(_SchemaVersionMigrator, target_version=42):
         # one last time since compiling the statistics will be slow
         # or fail if we have unmigrated statistics.
         _migrate_statistics_columns_to_timestamp_removing_duplicates(
-            self.hass, self.instance, self.session_maker, self.engine
+            self.menuai, self.instance, self.session_maker, self.engine
         )
 
 
@@ -2038,7 +2038,7 @@ class _SchemaVersion50Migrator(_SchemaVersionMigrator, target_version=50):
 
 
 def _migrate_statistics_columns_to_timestamp_removing_duplicates(
-    hass: HomeAssistant,
+    menuai: menuai,
     instance: Recorder,
     session_maker: Callable[[], Session],
     engine: Engine,
@@ -2056,7 +2056,7 @@ def _migrate_statistics_columns_to_timestamp_removing_duplicates(
         # There may be duplicated statistics entries, delete duplicates
         # and try again
         with session_scope(session=session_maker()) as session:
-            delete_statistics_duplicates(instance, hass, session)
+            delete_statistics_duplicates(instance, menuai, session)
         try:
             _migrate_statistics_columns_to_timestamp(instance, session_maker, engine)
         except IntegrityError:

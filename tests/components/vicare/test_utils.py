@@ -2,7 +2,7 @@
 
 import pytest
 
-from homeassistant.components.vicare.utils import filter_state
+from menuai.components.vicare.utils import filter_state
 
 
 @pytest.mark.parametrize(

@@ -8,11 +8,11 @@ from typing import Any
 
 from deluge_client.client import DelugeRPCClient, FailedToReconnectException
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import LOGGER, DelugeGetSessionStatusKeys
 
@@ -27,11 +27,11 @@ class DelugeDataUpdateCoordinator(
     config_entry: DelugeConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, api: DelugeRPCClient, entry: DelugeConfigEntry
+        self, menuai: menuai, api: DelugeRPCClient, entry: DelugeConfigEntry
     ) -> None:
         """Initialize the coordinator."""
         super().__init__(
-            hass=hass,
+            menuai=menuai,
             logger=LOGGER,
             config_entry=entry,
             name=entry.title,
@@ -43,13 +43,13 @@ class DelugeDataUpdateCoordinator(
         """Get the latest data from Deluge and updates the state."""
         data = {}
         try:
-            _data = await self.hass.async_add_executor_job(
+            _data = await self.menuai.async_add_executor_job(
                 self.api.call,
                 "core.get_session_status",
                 [iter_member.value for iter_member in list(DelugeGetSessionStatusKeys)],
             )
             data[Platform.SENSOR] = {k.decode(): v for k, v in _data.items()}
-            data[Platform.SWITCH] = await self.hass.async_add_executor_job(
+            data[Platform.SWITCH] = await self.menuai.async_add_executor_job(
                 self.api.call, "core.get_torrents_status", {}, ["paused"]
             )
         except (

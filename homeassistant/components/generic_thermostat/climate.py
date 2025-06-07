@@ -11,7 +11,7 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_PRESET_MODE,
     PLATFORM_SCHEMA as CLIMATE_PLATFORM_SCHEMA,
     PRESET_NONE,
@@ -20,13 +20,13 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_TEMPERATURE,
     CONF_NAME,
     CONF_UNIQUE_ID,
-    EVENT_HOMEASSISTANT_START,
+    EVENT_menuai_START,
     PRECISION_HALVES,
     PRECISION_TENTHS,
     PRECISION_WHOLE,
@@ -37,29 +37,29 @@ from homeassistant.const import (
     STATE_UNKNOWN,
     UnitOfTemperature,
 )
-from homeassistant.core import (
-    DOMAIN as HOMEASSISTANT_DOMAIN,
+from menuai.core import (
+    DOMAIN as menuai_DOMAIN,
     CoreState,
     Event,
     EventStateChangedData,
-    HomeAssistant,
+    menuai,
     State,
     callback,
 )
-from homeassistant.exceptions import ConditionError
-from homeassistant.helpers import condition, config_validation as cv
-from homeassistant.helpers.device import async_device_info_to_link_from_entity
-from homeassistant.helpers.entity_platform import (
+from menuai.exceptions import ConditionError
+from menuai.helpers import condition, config_validation as cv
+from menuai.helpers.device import async_device_info_to_link_from_entity
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     AddEntitiesCallback,
 )
-from homeassistant.helpers.event import (
+from menuai.helpers.event import (
     async_track_state_change_event,
     async_track_time_interval,
 )
-from homeassistant.helpers.reload import async_setup_reload_service
-from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType, VolDictType
+from menuai.helpers.reload import async_setup_reload_service
+from menuai.helpers.restore_state import RestoreEntity
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType, VolDictType
 
 from .const import (
     CONF_AC_MODE,
@@ -124,13 +124,13 @@ PLATFORM_SCHEMA = CLIMATE_PLATFORM_SCHEMA.extend(PLATFORM_SCHEMA_COMMON.schema)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Initialize config entry."""
     await _async_setup_config(
-        hass,
+        menuai,
         PLATFORM_SCHEMA_COMMON(dict(config_entry.options)),
         config_entry.entry_id,
         async_add_entities,
@@ -138,21 +138,21 @@ async def async_setup_entry(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the generic thermostat platform."""
 
-    await async_setup_reload_service(hass, DOMAIN, PLATFORMS)
+    await async_setup_reload_service(menuai, DOMAIN, PLATFORMS)
     await _async_setup_config(
-        hass, config, config.get(CONF_UNIQUE_ID), async_add_entities
+        menuai, config, config.get(CONF_UNIQUE_ID), async_add_entities
     )
 
 
 async def _async_setup_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: Mapping[str, Any],
     unique_id: str | None,
     async_add_entities: AddEntitiesCallback | AddConfigEntryEntitiesCallback,
@@ -176,12 +176,12 @@ async def _async_setup_config(
     }
     precision: float | None = config.get(CONF_PRECISION)
     target_temperature_step: float | None = config.get(CONF_TEMP_STEP)
-    unit = hass.config.units.temperature_unit
+    unit = menuai.config.units.temperature_unit
 
     async_add_entities(
         [
             GenericThermostat(
-                hass,
+                menuai,
                 name,
                 heater_entity_id,
                 sensor_entity_id,
@@ -211,7 +211,7 @@ class GenericThermostat(ClimateEntity, RestoreEntity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         name: str,
         heater_entity_id: str,
         sensor_entity_id: str,
@@ -235,7 +235,7 @@ class GenericThermostat(ClimateEntity, RestoreEntity):
         self.heater_entity_id = heater_entity_id
         self.sensor_entity_id = sensor_entity_id
         self._attr_device_info = async_device_info_to_link_from_entity(
-            hass,
+            menuai,
             heater_entity_id,
         )
         self.ac_mode = ac_mode
@@ -273,52 +273,52 @@ class GenericThermostat(ClimateEntity, RestoreEntity):
         self._presets = presets
         self._presets_inv = {v: k for k, v in presets.items()}
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Run when entity about to be added."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         # Add listener
         self.async_on_remove(
             async_track_state_change_event(
-                self.hass, [self.sensor_entity_id], self._async_sensor_changed
+                self.menuai, [self.sensor_entity_id], self._async_sensor_changed
             )
         )
         self.async_on_remove(
             async_track_state_change_event(
-                self.hass, [self.heater_entity_id], self._async_switch_changed
+                self.menuai, [self.heater_entity_id], self._async_switch_changed
             )
         )
 
         if self._keep_alive:
             self.async_on_remove(
                 async_track_time_interval(
-                    self.hass, self._async_control_heating, self._keep_alive
+                    self.menuai, self._async_control_heating, self._keep_alive
                 )
             )
 
         @callback
         def _async_startup(_: Event | None = None) -> None:
             """Init on startup."""
-            sensor_state = self.hass.states.get(self.sensor_entity_id)
+            sensor_state = self.menuai.states.get(self.sensor_entity_id)
             if sensor_state and sensor_state.state not in (
                 STATE_UNAVAILABLE,
                 STATE_UNKNOWN,
             ):
                 self._async_update_temp(sensor_state)
                 self.async_write_ha_state()
-            switch_state = self.hass.states.get(self.heater_entity_id)
+            switch_state = self.menuai.states.get(self.heater_entity_id)
             if switch_state and switch_state.state not in (
                 STATE_UNAVAILABLE,
                 STATE_UNKNOWN,
             ):
-                self.hass.async_create_task(
+                self.menuai.async_create_task(
                     self._check_switch_initial_state(), eager_start=True
                 )
 
-        if self.hass.state is CoreState.running:
+        if self.menuai.state is CoreState.running:
             _async_startup()
         else:
-            self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_START, _async_startup)
+            self.menuai.bus.async_listen_once(EVENT_menuai_START, _async_startup)
 
         # Check If we have an old state
         if (old_state := await self.async_get_last_state()) is not None:
@@ -478,7 +478,7 @@ class GenericThermostat(ClimateEntity, RestoreEntity):
         if new_state is None:
             return
         if old_state is None:
-            self.hass.async_create_task(
+            self.menuai.async_create_task(
                 self._check_switch_initial_state(), eager_start=True
             )
         self.async_write_ha_state()
@@ -527,7 +527,7 @@ class GenericThermostat(ClimateEntity, RestoreEntity):
                     current_state = HVACMode.OFF
                 try:
                     long_enough = condition.state(
-                        self.hass,
+                        self.menuai,
                         self.heater_entity_id,
                         current_state,
                         self.min_cycle_duration,
@@ -571,23 +571,23 @@ class GenericThermostat(ClimateEntity, RestoreEntity):
     @property
     def _is_device_active(self) -> bool | None:
         """If the toggleable device is currently active."""
-        if not self.hass.states.get(self.heater_entity_id):
+        if not self.menuai.states.get(self.heater_entity_id):
             return None
 
-        return self.hass.states.is_state(self.heater_entity_id, STATE_ON)
+        return self.menuai.states.is_state(self.heater_entity_id, STATE_ON)
 
     async def _async_heater_turn_on(self) -> None:
         """Turn heater toggleable device on."""
         data = {ATTR_ENTITY_ID: self.heater_entity_id}
-        await self.hass.services.async_call(
-            HOMEASSISTANT_DOMAIN, SERVICE_TURN_ON, data, context=self._context
+        await self.menuai.services.async_call(
+            menuai_DOMAIN, SERVICE_TURN_ON, data, context=self._context
         )
 
     async def _async_heater_turn_off(self) -> None:
         """Turn heater toggleable device off."""
         data = {ATTR_ENTITY_ID: self.heater_entity_id}
-        await self.hass.services.async_call(
-            HOMEASSISTANT_DOMAIN, SERVICE_TURN_OFF, data, context=self._context
+        await self.menuai.services.async_call(
+            menuai_DOMAIN, SERVICE_TURN_OFF, data, context=self._context
         )
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:

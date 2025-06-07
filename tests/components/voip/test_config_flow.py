@@ -2,32 +2,32 @@
 
 from unittest.mock import patch
 
-from homeassistant import config_entries
-from homeassistant.components import voip
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai import config_entries
+from menuai.components import voip
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
 
-async def test_form_user(hass: HomeAssistant) -> None:
+async def test_form_user(menuai: menuai) -> None:
     """Test user form config flow."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         voip.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert not result["errors"]
 
     with patch(
-        "homeassistant.components.voip.async_setup_entry",
+        "menuai.components.voip.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"] == {}
@@ -35,35 +35,35 @@ async def test_form_user(hass: HomeAssistant) -> None:
 
 
 async def test_single_instance(
-    hass: HomeAssistant, config_entry: config_entries.ConfigEntry
+    menuai: menuai, config_entry: config_entries.ConfigEntry
 ) -> None:
     """Test that only one instance can be created."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         voip.DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "single_instance_allowed"
 
 
-async def test_options_flow(hass: HomeAssistant) -> None:
+async def test_options_flow(menuai: menuai) -> None:
     """Test config flow options."""
     config_entry = MockConfigEntry(
         domain=voip.DOMAIN,
         data={},
         unique_id="1234",
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     assert config_entry.options == {}
 
-    result = await hass.config_entries.options.async_init(
+    result = await menuai.config_entries.options.async_init(
         config_entry.entry_id,
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
     # Default
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={},
     )
@@ -71,10 +71,10 @@ async def test_options_flow(hass: HomeAssistant) -> None:
     assert config_entry.options == {"sip_port": 5060}
 
     # Manual
-    result = await hass.config_entries.options.async_init(
+    result = await menuai.config_entries.options.async_init(
         config_entry.entry_id,
     )
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={"sip_port": 5061},
     )
@@ -82,10 +82,10 @@ async def test_options_flow(hass: HomeAssistant) -> None:
     assert config_entry.options == {"sip_port": 5061}
 
     # Manual with user
-    result = await hass.config_entries.options.async_init(
+    result = await menuai.config_entries.options.async_init(
         config_entry.entry_id,
     )
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={"sip_port": 5061, "sip_user": "HA"},
     )
@@ -93,17 +93,17 @@ async def test_options_flow(hass: HomeAssistant) -> None:
     assert config_entry.options == {"sip_port": 5061, "sip_user": "HA"}
 
     # Manual remove user
-    result = await hass.config_entries.options.async_init(
+    result = await menuai.config_entries.options.async_init(
         config_entry.entry_id,
     )
 
     assert config_entry.options == {"sip_port": 5061, "sip_user": "HA"}
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={"sip_port": 5060, "sip_user": ""},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert config_entry.options == {"sip_port": 5060}

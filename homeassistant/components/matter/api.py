@@ -11,9 +11,9 @@ from matter_server.common.errors import MatterError
 from matter_server.common.helpers.util import dataclass_to_dict
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.components.websocket_api import ActiveConnection
-from homeassistant.core import HomeAssistant, callback
+from menuai.components import websocket_api
+from menuai.components.websocket_api import ActiveConnection
+from menuai.core import menuai, callback
 
 from .adapter import MatterAdapter
 from .helpers import MissingNode, get_matter, node_from_ha_device_id
@@ -27,84 +27,84 @@ ERROR_NODE_NOT_FOUND = "node_not_found"
 
 
 @callback
-def async_register_api(hass: HomeAssistant) -> None:
+def async_register_api(menuai: menuai) -> None:
     """Register all of our api endpoints."""
-    websocket_api.async_register_command(hass, websocket_commission)
-    websocket_api.async_register_command(hass, websocket_commission_on_network)
-    websocket_api.async_register_command(hass, websocket_set_thread_dataset)
-    websocket_api.async_register_command(hass, websocket_set_wifi_credentials)
-    websocket_api.async_register_command(hass, websocket_node_diagnostics)
-    websocket_api.async_register_command(hass, websocket_ping_node)
-    websocket_api.async_register_command(hass, websocket_open_commissioning_window)
-    websocket_api.async_register_command(hass, websocket_remove_matter_fabric)
-    websocket_api.async_register_command(hass, websocket_interview_node)
+    websocket_api.async_register_command(menuai, websocket_commission)
+    websocket_api.async_register_command(menuai, websocket_commission_on_network)
+    websocket_api.async_register_command(menuai, websocket_set_thread_dataset)
+    websocket_api.async_register_command(menuai, websocket_set_wifi_credentials)
+    websocket_api.async_register_command(menuai, websocket_node_diagnostics)
+    websocket_api.async_register_command(menuai, websocket_ping_node)
+    websocket_api.async_register_command(menuai, websocket_open_commissioning_window)
+    websocket_api.async_register_command(menuai, websocket_remove_matter_fabric)
+    websocket_api.async_register_command(menuai, websocket_interview_node)
 
 
 def async_get_node(
     func: Callable[
-        [HomeAssistant, ActiveConnection, dict[str, Any], MatterAdapter, MatterNode],
+        [menuai, ActiveConnection, dict[str, Any], MatterAdapter, MatterNode],
         Coroutine[Any, Any, None],
     ],
 ) -> Callable[
-    [HomeAssistant, ActiveConnection, dict[str, Any], MatterAdapter],
+    [menuai, ActiveConnection, dict[str, Any], MatterAdapter],
     Coroutine[Any, Any, None],
 ]:
     """Decorate async function to get node."""
 
     @wraps(func)
     async def async_get_node_func(
-        hass: HomeAssistant,
+        menuai: menuai,
         connection: ActiveConnection,
         msg: dict[str, Any],
         matter: MatterAdapter,
     ) -> None:
         """Provide user specific data and store to function."""
-        node = node_from_ha_device_id(hass, msg[DEVICE_ID])
+        node = node_from_ha_device_id(menuai, msg[DEVICE_ID])
         if not node:
             raise MissingNode(
                 f"Could not resolve Matter node from device id {msg[DEVICE_ID]}"
             )
-        await func(hass, connection, msg, matter, node)
+        await func(menuai, connection, msg, matter, node)
 
     return async_get_node_func
 
 
 def async_get_matter_adapter(
     func: Callable[
-        [HomeAssistant, ActiveConnection, dict[str, Any], MatterAdapter],
+        [menuai, ActiveConnection, dict[str, Any], MatterAdapter],
         Coroutine[Any, Any, None],
     ],
 ) -> Callable[
-    [HomeAssistant, ActiveConnection, dict[str, Any]], Coroutine[Any, Any, None]
+    [menuai, ActiveConnection, dict[str, Any]], Coroutine[Any, Any, None]
 ]:
     """Decorate function to get the MatterAdapter."""
 
     @wraps(func)
     async def _get_matter(
-        hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+        menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
     ) -> None:
         """Provide the Matter client to the function."""
-        matter = get_matter(hass)
+        matter = get_matter(menuai)
 
-        await func(hass, connection, msg, matter)
+        await func(menuai, connection, msg, matter)
 
     return _get_matter
 
 
 def async_handle_failed_command[**_P](
     func: Callable[
-        Concatenate[HomeAssistant, ActiveConnection, dict[str, Any], _P],
+        Concatenate[menuai, ActiveConnection, dict[str, Any], _P],
         Coroutine[Any, Any, None],
     ],
 ) -> Callable[
-    Concatenate[HomeAssistant, ActiveConnection, dict[str, Any], _P],
+    Concatenate[menuai, ActiveConnection, dict[str, Any], _P],
     Coroutine[Any, Any, None],
 ]:
     """Decorate function to handle MatterError and send relevant error."""
 
     @wraps(func)
     async def async_handle_failed_command_func(
-        hass: HomeAssistant,
+        menuai: menuai,
         connection: ActiveConnection,
         msg: dict[str, Any],
         *args: _P.args,
@@ -112,7 +112,7 @@ def async_handle_failed_command[**_P](
     ) -> None:
         """Handle MatterError within function and send relevant error."""
         try:
-            await func(hass, connection, msg, *args, **kwargs)
+            await func(menuai, connection, msg, *args, **kwargs)
         except MatterError as err:
             connection.send_error(msg[ID], str(err.error_code), err.args[0])
         except MissingNode as err:
@@ -133,7 +133,7 @@ def async_handle_failed_command[**_P](
 @async_handle_failed_command
 @async_get_matter_adapter
 async def websocket_commission(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     matter: MatterAdapter,
@@ -157,7 +157,7 @@ async def websocket_commission(
 @async_handle_failed_command
 @async_get_matter_adapter
 async def websocket_commission_on_network(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     matter: MatterAdapter,
@@ -180,7 +180,7 @@ async def websocket_commission_on_network(
 @async_handle_failed_command
 @async_get_matter_adapter
 async def websocket_set_thread_dataset(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     matter: MatterAdapter,
@@ -204,7 +204,7 @@ async def websocket_set_thread_dataset(
 @async_handle_failed_command
 @async_get_matter_adapter
 async def websocket_set_wifi_credentials(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     matter: MatterAdapter,
@@ -227,7 +227,7 @@ async def websocket_set_wifi_credentials(
 @async_get_matter_adapter
 @async_get_node
 async def websocket_node_diagnostics(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     matter: MatterAdapter,
@@ -249,7 +249,7 @@ async def websocket_node_diagnostics(
 @async_get_matter_adapter
 @async_get_node
 async def websocket_ping_node(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     matter: MatterAdapter,
@@ -272,7 +272,7 @@ async def websocket_ping_node(
 @async_get_matter_adapter
 @async_get_node
 async def websocket_open_commissioning_window(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     matter: MatterAdapter,
@@ -296,7 +296,7 @@ async def websocket_open_commissioning_window(
 @async_get_matter_adapter
 @async_get_node
 async def websocket_remove_matter_fabric(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     matter: MatterAdapter,
@@ -321,7 +321,7 @@ async def websocket_remove_matter_fabric(
 @async_get_matter_adapter
 @async_get_node
 async def websocket_interview_node(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: ActiveConnection,
     msg: dict[str, Any],
     matter: MatterAdapter,

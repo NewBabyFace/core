@@ -17,13 +17,13 @@ from aioshelly.const import (
 )
 import pytest
 
-from homeassistant.components.shelly.const import (
+from menuai.components.shelly.const import (
     GEN1_RELEASE_URL,
     GEN2_BETA_RELEASE_URL,
     GEN2_RELEASE_URL,
     UPTIME_DEVIATION,
 )
-from homeassistant.components.shelly.utils import (
+from menuai.components.shelly.utils import (
     get_block_channel_name,
     get_block_device_sleep_period,
     get_block_input_triggers,
@@ -35,7 +35,7 @@ from homeassistant.components.shelly.utils import (
     get_rpc_input_triggers,
     is_block_momentary_input,
 )
-from homeassistant.util import dt as dt_util
+from menuai.util import dt as dt_util
 
 DEVICE_BLOCK_ID = 4
 

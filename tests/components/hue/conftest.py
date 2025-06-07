@@ -12,14 +12,14 @@ import aiohue.v2 as aiohue_v2
 from aiohue.v2.controllers.events import EventType
 import pytest
 
-from homeassistant.components import hue
-from homeassistant.components.hue.v1 import sensor_base as hue_sensor_base
-from homeassistant.components.hue.v2.device import async_setup_devices
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
-from homeassistant.util.json import JsonArrayType
+from menuai.components import hue
+from menuai.components.hue.v1 import sensor_base as hue_sensor_base
+from menuai.components.hue.v2.device import async_setup_devices
+from menuai.config_entries import ConfigEntryState
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.setup import async_setup_component
+from menuai.util.json import JsonArrayType
 
 from .const import FAKE_BRIDGE, FAKE_BRIDGE_DEVICE
 
@@ -29,14 +29,14 @@ from tests.common import MockConfigEntry, load_json_array_fixture
 @pytest.fixture(autouse=True)
 def no_request_delay() -> Generator[None]:
     """Make the request refresh delay 0 for instant tests."""
-    with patch("homeassistant.components.hue.const.REQUEST_REFRESH_DELAY", 0):
+    with patch("menuai.components.hue.const.REQUEST_REFRESH_DELAY", 0):
         yield
 
 
-def create_mock_bridge(hass: HomeAssistant, api_version: int = 1) -> Mock:
+def create_mock_bridge(menuai: menuai, api_version: int = 1) -> Mock:
     """Create a mocked HueBridge instance."""
     bridge = Mock(
-        hass=hass,
+        menuai=menuai,
         authorized=True,
         config_entry=None,
         reset_jobs=[],
@@ -195,15 +195,15 @@ def create_mock_api_v2() -> Mock:
 
 
 @pytest.fixture
-def mock_bridge_v1(hass: HomeAssistant) -> Mock:
+def mock_bridge_v1(menuai: menuai) -> Mock:
     """Mock a Hue bridge with V1 api."""
-    return create_mock_bridge(hass, api_version=1)
+    return create_mock_bridge(menuai, api_version=1)
 
 
 @pytest.fixture
-def mock_bridge_v2(hass: HomeAssistant) -> Mock:
+def mock_bridge_v2(menuai: menuai) -> Mock:
     """Mock a Hue bridge with V2 api."""
-    return create_mock_bridge(hass, api_version=2)
+    return create_mock_bridge(menuai, api_version=2)
 
 
 @pytest.fixture
@@ -229,12 +229,12 @@ def create_config_entry(
     )
 
 
-async def setup_component(hass: HomeAssistant) -> None:
+async def setup_component(menuai: menuai) -> None:
     """Mock setup Hue component."""
     with patch.object(hue, "async_setup_entry", return_value=True):
         assert (
             await async_setup_component(
-                hass,
+                menuai,
                 hue.DOMAIN,
                 {},
             )
@@ -243,22 +243,22 @@ async def setup_component(hass: HomeAssistant) -> None:
 
 
 async def setup_bridge(
-    hass: HomeAssistant, mock_bridge: Mock, config_entry: MockConfigEntry
+    menuai: menuai, mock_bridge: Mock, config_entry: MockConfigEntry
 ) -> None:
     """Load the Hue integration with the provided bridge."""
     mock_bridge.config_entry = config_entry
     with patch.object(
         hue.migration, "is_v2_bridge", return_value=mock_bridge.api_version == 2
     ):
-        config_entry.add_to_hass(hass)
-        with patch("homeassistant.components.hue.HueBridge", return_value=mock_bridge):
-            await hass.config_entries.async_setup(config_entry.entry_id)
+        config_entry.add_to_menuai(menuai)
+        with patch("menuai.components.hue.HueBridge", return_value=mock_bridge):
+            await menuai.config_entries.async_setup(config_entry.entry_id)
 
     assert config_entry.state == ConfigEntryState.LOADED
 
 
 async def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_bridge: Mock,
     platforms: list[Platform] | tuple[Platform] | Platform,
     hostname: str | None = None,
@@ -268,7 +268,7 @@ async def setup_platform(
         platforms = [platforms]
     if hostname is None:
         hostname = "mock-host"
-    hass.config.components.add(hue.DOMAIN)
+    menuai.config.components.add(hue.DOMAIN)
     config_entry = create_config_entry(
         api_version=mock_bridge.api_version, host=hostname
     )
@@ -276,12 +276,12 @@ async def setup_platform(
     config_entry.runtime_data = {config_entry.entry_id: mock_bridge}
 
     # simulate a full setup by manually adding the bridge config entry
-    await setup_bridge(hass, mock_bridge, config_entry)
-    assert await async_setup_component(hass, hue.DOMAIN, {}) is True
-    await hass.async_block_till_done()
+    await setup_bridge(menuai, mock_bridge, config_entry)
+    assert await async_setup_component(menuai, hue.DOMAIN, {}) is True
+    await menuai.async_block_till_done()
 
-    config_entry.mock_state(hass, ConfigEntryState.LOADED)
-    await hass.config_entries.async_forward_entry_setups(config_entry, platforms)
+    config_entry.mock_state(menuai, ConfigEntryState.LOADED)
+    await menuai.config_entries.async_forward_entry_setups(config_entry, platforms)
 
     # and make sure it completes before going further
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()

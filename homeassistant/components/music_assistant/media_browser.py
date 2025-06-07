@@ -12,8 +12,8 @@ from music_assistant_models.media_items import (
     SearchResults,
 )
 
-from homeassistant.components import media_source
-from homeassistant.components.media_player import (
+from menuai.components import media_source
+from menuai.components.media_player import (
     BrowseError,
     BrowseMedia,
     MediaClass,
@@ -22,7 +22,7 @@ from homeassistant.components.media_player import (
     SearchMedia,
     SearchMediaQuery,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from .const import DEFAULT_NAME, DOMAIN
 
@@ -84,20 +84,20 @@ def media_source_filter(item: BrowseMedia) -> bool:
 
 
 async def async_browse_media(
-    hass: HomeAssistant,
+    menuai: menuai,
     mass: MusicAssistantClient,
     media_content_id: str | None,
     media_content_type: str | None,
 ) -> BrowseMedia:
     """Browse media."""
     if media_content_id is None:
-        return await build_main_listing(hass)
+        return await build_main_listing(menuai)
 
     assert media_content_type is not None
 
     if media_source.is_media_source_id(media_content_id):
         return await media_source.async_browse_media(
-            hass, media_content_id, content_filter=media_source_filter
+            menuai, media_content_id, content_filter=media_source_filter
         )
 
     if media_content_id == LIBRARY_ARTISTS:
@@ -123,7 +123,7 @@ async def async_browse_media(
     raise BrowseError(f"Media not found: {media_content_type} / {media_content_id}")
 
 
-async def build_main_listing(hass: HomeAssistant) -> BrowseMedia:
+async def build_main_listing(menuai: menuai) -> BrowseMedia:
     """Build main browse listing."""
     children: list[BrowseMedia] = []
     for library, media_class in LIBRARY_MEDIA_CLASS_MAP.items():
@@ -140,7 +140,7 @@ async def build_main_listing(hass: HomeAssistant) -> BrowseMedia:
 
     try:
         item = await media_source.async_browse_media(
-            hass, None, content_filter=media_source_filter
+            menuai, None, content_filter=media_source_filter
         )
         # If domain is None, it's overview of available sources
         if item.domain is None and item.children is not None:

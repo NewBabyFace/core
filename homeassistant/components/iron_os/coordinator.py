@@ -21,13 +21,13 @@ from pynecil import (
     UpdateException,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers.debounce import Debouncer
-import homeassistant.helpers.device_registry as dr
-from homeassistant.helpers.device_registry import CONNECTION_BLUETOOTH
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers.debounce import Debouncer
+import menuai.helpers.device_registry as dr
+from menuai.helpers.device_registry import CONNECTION_BLUETOOTH
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN
 
@@ -59,7 +59,7 @@ class IronOSBaseCoordinator[_DataT](DataUpdateCoordinator[_DataT]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: IronOSConfigEntry,
         device: Pynecil,
         update_interval: timedelta,
@@ -67,13 +67,13 @@ class IronOSBaseCoordinator[_DataT](DataUpdateCoordinator[_DataT]):
         """Initialize IronOS coordinator."""
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
             update_interval=update_interval,
             request_refresh_debouncer=Debouncer(
-                hass, _LOGGER, cooldown=3, immediate=False
+                menuai, _LOGGER, cooldown=3, immediate=False
             ),
         )
         self.device = device
@@ -97,10 +97,10 @@ class IronOSLiveDataCoordinator(IronOSBaseCoordinator[LiveDataResponse]):
     """IronOS coordinator."""
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: IronOSConfigEntry, device: Pynecil
+        self, menuai: menuai, config_entry: IronOSConfigEntry, device: Pynecil
     ) -> None:
         """Initialize IronOS coordinator."""
-        super().__init__(hass, config_entry, device, SCAN_INTERVAL)
+        super().__init__(menuai, config_entry, device, SCAN_INTERVAL)
         self.device_info = DeviceInfoResponse()
 
     async def _async_update_data(self) -> LiveDataResponse:
@@ -137,7 +137,7 @@ class IronOSLiveDataCoordinator(IronOSBaseCoordinator[LiveDataResponse]):
 
         if build == self.device_info.build:
             return
-        device_registry = dr.async_get(self.hass)
+        device_registry = dr.async_get(self.menuai)
         if TYPE_CHECKING:
             assert self.config_entry.unique_id
         device = device_registry.async_get_device(
@@ -156,10 +156,10 @@ class IronOSSettingsCoordinator(IronOSBaseCoordinator[SettingsDataResponse]):
     """IronOS coordinator."""
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: IronOSConfigEntry, device: Pynecil
+        self, menuai: menuai, config_entry: IronOSConfigEntry, device: Pynecil
     ) -> None:
         """Initialize IronOS coordinator."""
-        super().__init__(hass, config_entry, device, SCAN_INTERVAL_SETTINGS)
+        super().__init__(menuai, config_entry, device, SCAN_INTERVAL_SETTINGS)
 
     async def _async_update_data(self) -> SettingsDataResponse:
         """Fetch data from Device."""
@@ -200,10 +200,10 @@ class IronOSSettingsCoordinator(IronOSBaseCoordinator[SettingsDataResponse]):
 class IronOSFirmwareUpdateCoordinator(DataUpdateCoordinator[LatestRelease]):
     """IronOS coordinator for retrieving update information from github."""
 
-    def __init__(self, hass: HomeAssistant, github: IronOSUpdate) -> None:
+    def __init__(self, menuai: menuai, github: IronOSUpdate) -> None:
         """Initialize IronOS coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=None,
             name=DOMAIN,

@@ -5,19 +5,19 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from homeassistant.components.binary_sensor import BinarySensorEntity
-from homeassistant.const import (
+from menuai.components.binary_sensor import BinarySensorEntity
+from menuai.const import (
     CONF_BINARY_SENSORS,
     CONF_DEVICE_CLASS,
     CONF_NAME,
     CONF_UNIQUE_ID,
     STATE_ON,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.helpers.update_coordinator import (
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.restore_state import RestoreEntity
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
 )
@@ -38,7 +38,7 @@ PARALLEL_UPDATES = 1
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -49,14 +49,14 @@ async def async_setup_platform(
         return
 
     sensors: list[ModbusBinarySensor | SlaveSensor] = []
-    hub = get_hub(hass, discovery_info[CONF_NAME])
+    hub = get_hub(menuai, discovery_info[CONF_NAME])
     for entry in discovery_info[CONF_BINARY_SENSORS]:
         slave_count = entry.get(CONF_SLAVE_COUNT, None) or entry.get(
             CONF_VIRTUAL_COUNT, 0
         )
-        sensor = ModbusBinarySensor(hass, hub, entry, slave_count)
+        sensor = ModbusBinarySensor(menuai, hub, entry, slave_count)
         if slave_count > 0:
-            sensors.extend(await sensor.async_setup_slaves(hass, slave_count, entry))
+            sensors.extend(await sensor.async_setup_slaves(menuai, slave_count, entry))
         sensors.append(sensor)
     async_add_entities(sensors)
 
@@ -66,7 +66,7 @@ class ModbusBinarySensor(BasePlatform, RestoreEntity, BinarySensorEntity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         hub: ModbusHub,
         entry: dict[str, Any],
         slave_count: int,
@@ -75,10 +75,10 @@ class ModbusBinarySensor(BasePlatform, RestoreEntity, BinarySensorEntity):
         self._count = slave_count + 1
         self._coordinator: DataUpdateCoordinator[list[int] | None] | None = None
         self._result: list[int] = []
-        super().__init__(hass, hub, entry)
+        super().__init__(menuai, hub, entry)
 
     async def async_setup_slaves(
-        self, hass: HomeAssistant, slave_count: int, entry: dict[str, Any]
+        self, menuai: menuai, slave_count: int, entry: dict[str, Any]
     ) -> list[SlaveSensor]:
         """Add slaves as needed (1 read for multiple sensors)."""
 
@@ -87,7 +87,7 @@ class ModbusBinarySensor(BasePlatform, RestoreEntity, BinarySensorEntity):
         # polling is done with the base class
         name = self._attr_name if self._attr_name else "modbus_sensor"
         self._coordinator = DataUpdateCoordinator(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=None,
             name=name,
@@ -97,9 +97,9 @@ class ModbusBinarySensor(BasePlatform, RestoreEntity, BinarySensorEntity):
             SlaveSensor(self._coordinator, idx, entry) for idx in range(slave_count)
         ]
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
-        await self.async_base_added_to_hass()
+        await self.async_base_added_to_menuai()
         if state := await self.async_get_last_state():
             self._attr_is_on = state.state == STATE_ON
 
@@ -149,11 +149,11 @@ class SlaveSensor(
         self._result_inx = idx
         super().__init__(coordinator)
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
         if state := await self.async_get_last_state():
             self._attr_is_on = state.state == STATE_ON
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
     @callback
     def _handle_coordinator_update(self) -> None:

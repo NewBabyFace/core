@@ -7,9 +7,9 @@ from logging import getLogger
 from aiohttp.web import HTTPNotFound, Request, Response, StreamResponse
 from aioimmich.exceptions import ImmichError
 
-from homeassistant.components.http import HomeAssistantView
-from homeassistant.components.media_player import MediaClass
-from homeassistant.components.media_source import (
+from menuai.components.http import menuaiView
+from menuai.components.media_player import MediaClass
+from menuai.components.media_source import (
     BrowseError,
     BrowseMediaSource,
     MediaSource,
@@ -17,9 +17,9 @@ from homeassistant.components.media_source import (
     PlayMedia,
     Unresolvable,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import ChunkAsyncStreamIterator
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import ChunkAsyncStreamIterator
 
 from .const import DOMAIN
 from .coordinator import ImmichConfigEntry
@@ -27,10 +27,10 @@ from .coordinator import ImmichConfigEntry
 LOGGER = getLogger(__name__)
 
 
-async def async_get_media_source(hass: HomeAssistant) -> MediaSource:
+async def async_get_media_source(menuai: menuai) -> MediaSource:
     """Set up Immich media source."""
-    hass.http.register_view(ImmichMediaView(hass))
-    return ImmichMediaSource(hass)
+    menuai.http.register_view(ImmichMediaView(menuai))
+    return ImmichMediaSource(menuai)
 
 
 class ImmichMediaSourceIdentifier:
@@ -53,17 +53,17 @@ class ImmichMediaSource(MediaSource):
 
     name = "Immich"
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize Immich media source."""
         super().__init__(DOMAIN)
-        self.hass = hass
+        self.menuai = menuai
 
     async def async_browse_media(
         self,
         item: MediaSourceItem,
     ) -> BrowseMediaSource:
         """Return media."""
-        if not (entries := self.hass.config_entries.async_loaded_entries(DOMAIN)):
+        if not (entries := self.menuai.config_entries.async_loaded_entries(DOMAIN)):
             raise BrowseError("Immich is not configured")
         return BrowseMediaSource(
             domain=DOMAIN,
@@ -99,7 +99,7 @@ class ImmichMediaSource(MediaSource):
             ]
         identifier = ImmichMediaSourceIdentifier(item.identifier)
         entry: ImmichConfigEntry | None = (
-            self.hass.config_entries.async_entry_for_domain_unique_id(
+            self.menuai.config_entries.async_entry_for_domain_unique_id(
                 DOMAIN, identifier.unique_id
             )
         )
@@ -212,21 +212,21 @@ class ImmichMediaSource(MediaSource):
         )
 
 
-class ImmichMediaView(HomeAssistantView):
+class ImmichMediaView(menuaiView):
     """Immich Media Finder View."""
 
     url = "/immich/{source_dir_id}/{location:.*}"
     name = "immich"
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize the media view."""
-        self.hass = hass
+        self.menuai = menuai
 
     async def get(
         self, request: Request, source_dir_id: str, location: str
     ) -> Response | StreamResponse:
         """Start a GET request."""
-        if not self.hass.config_entries.async_loaded_entries(DOMAIN):
+        if not self.menuai.config_entries.async_loaded_entries(DOMAIN):
             raise HTTPNotFound
 
         try:
@@ -235,7 +235,7 @@ class ImmichMediaView(HomeAssistantView):
             raise HTTPNotFound from err
 
         entry: ImmichConfigEntry | None = (
-            self.hass.config_entries.async_entry_for_domain_unique_id(
+            self.menuai.config_entries.async_entry_for_domain_unique_id(
                 DOMAIN, source_dir_id
             )
         )

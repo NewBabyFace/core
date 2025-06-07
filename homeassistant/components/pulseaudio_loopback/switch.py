@@ -8,15 +8,15 @@ from typing import Any
 from pulsectl import Pulse, PulseError
 import voluptuous as vol
 
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     PLATFORM_SCHEMA as SWITCH_PLATFORM_SCHEMA,
     SwitchEntity,
 )
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_HOST, CONF_NAME, CONF_PORT
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 DOMAIN = "pulseaudio_loopback"
 
@@ -42,7 +42,7 @@ PLATFORM_SCHEMA = SWITCH_PLATFORM_SCHEMA.extend(
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -54,7 +54,7 @@ def setup_platform(
     host = config.get(CONF_HOST)
     port = config.get(CONF_PORT)
 
-    hass.data.setdefault(DOMAIN, {})
+    menuai.data.setdefault(DOMAIN, {})
 
     server_id = str.format("{0}:{1}", host, port)
 
@@ -63,11 +63,11 @@ def setup_platform(
     else:
         connect_to_server = None
 
-    if server_id in hass.data[DOMAIN]:
-        server = hass.data[DOMAIN][server_id]
+    if server_id in menuai.data[DOMAIN]:
+        server = menuai.data[DOMAIN][server_id]
     else:
         server = Pulse(server=connect_to_server, connect=False, threading_lock=True)
-        hass.data[DOMAIN][server_id] = server
+        menuai.data[DOMAIN][server_id] = server
 
     add_entities([PALoopbackSwitch(name, server, sink_name, source_name)], True)
 

@@ -9,14 +9,14 @@ from typing import Any, cast
 from soco.alarms import Alarm
 from soco.exceptions import SoCoSlaveException, SoCoUPnPException
 
-from homeassistant.components.switch import ENTITY_ID_FORMAT, SwitchEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_TIME, EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.event import async_track_time_change
+from menuai.components.switch import ENTITY_ID_FORMAT, SwitchEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_TIME, EntityCategory
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.event import async_track_time_change
 
 from .const import (
     DATA_SONOS,
@@ -72,7 +72,7 @@ WEEKEND_DAYS = (0, 6)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -81,7 +81,7 @@ async def async_setup_entry(
     async def _async_create_alarms(speaker: SonosSpeaker, alarm_ids: list[str]) -> None:
         entities = []
         created_alarms = (
-            hass.data[DATA_SONOS].alarms[speaker.household_id].created_alarm_ids
+            menuai.data[DATA_SONOS].alarms[speaker.household_id].created_alarm_ids
         )
         for alarm_id in alarm_ids:
             if alarm_id in created_alarms:
@@ -104,7 +104,7 @@ async def async_setup_entry(
 
     async def _async_create_switches(speaker: SonosSpeaker) -> None:
         entities = []
-        available_features = await hass.async_add_executor_job(
+        available_features = await menuai.async_add_executor_job(
             available_soco_attributes, speaker
         )
         for feature_type in available_features:
@@ -117,10 +117,10 @@ async def async_setup_entry(
         async_add_entities(entities)
 
     config_entry.async_on_unload(
-        async_dispatcher_connect(hass, SONOS_CREATE_ALARM, _async_create_alarms)
+        async_dispatcher_connect(menuai, SONOS_CREATE_ALARM, _async_create_alarms)
     )
     config_entry.async_on_unload(
-        async_dispatcher_connect(hass, SONOS_CREATE_SWITCHES, _async_create_switches)
+        async_dispatcher_connect(menuai, SONOS_CREATE_SWITCHES, _async_create_switches)
     )
 
 
@@ -143,7 +143,7 @@ class SonosSwitchEntity(SonosPollingEntity, SwitchEntity):
     async def _async_fallback_poll(self) -> None:
         """Handle polling for subscription-based switches when subscription fails."""
         if not self.should_poll:
-            await self.hass.async_add_executor_job(self.poll_state)
+            await self.menuai.async_add_executor_job(self.poll_state)
 
     @soco_error()
     def poll_state(self) -> None:
@@ -193,12 +193,12 @@ class SonosAlarmEntity(SonosEntity, SwitchEntity):
         self.household_id = speaker.household_id
         self.entity_id = ENTITY_ID_FORMAT.format(f"sonos_alarm_{self.alarm_id}")
 
-    async def async_added_to_hass(self) -> None:
-        """Handle switch setup when added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Handle switch setup when added to menuai."""
+        await super().async_added_to_menuai()
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"{SONOS_ALARMS_UPDATED}-{self.household_id}",
                 self.async_update_state,
             )
@@ -211,14 +211,14 @@ class SonosAlarmEntity(SonosEntity, SwitchEntity):
 
         self.async_on_remove(
             async_track_time_change(
-                self.hass, async_write_state_daily, hour=0, minute=0, second=0
+                self.menuai, async_write_state_daily, hour=0, minute=0, second=0
             )
         )
 
     @property
     def alarm(self) -> Alarm:
         """Return the alarm instance."""
-        return self.hass.data[DATA_SONOS].alarms[self.household_id].get(self.alarm_id)
+        return self.menuai.data[DATA_SONOS].alarms[self.household_id].get(self.alarm_id)
 
     @property
     def name(self) -> str:
@@ -230,7 +230,7 @@ class SonosAlarmEntity(SonosEntity, SwitchEntity):
 
     async def _async_fallback_poll(self) -> None:
         """Call the central alarm polling method."""
-        await self.hass.data[DATA_SONOS].alarms[self.household_id].async_poll()
+        await self.menuai.data[DATA_SONOS].alarms[self.household_id].async_poll()
 
     @callback
     def async_check_if_available(self) -> bool:
@@ -240,7 +240,7 @@ class SonosAlarmEntity(SonosEntity, SwitchEntity):
 
         _LOGGER.debug("%s has been deleted", self.entity_id)
 
-        entity_registry = er.async_get(self.hass)
+        entity_registry = er.async_get(self.menuai)
         if entity_registry.async_get(self.entity_id):
             entity_registry.async_remove(self.entity_id)
 
@@ -252,7 +252,7 @@ class SonosAlarmEntity(SonosEntity, SwitchEntity):
             return
 
         if self.speaker.soco.uid != self.alarm.zone.uid:
-            self.speaker = self.hass.data[DATA_SONOS].discovered.get(
+            self.speaker = self.menuai.data[DATA_SONOS].discovered.get(
                 self.alarm.zone.uid
             )
             if self.speaker is None:
@@ -267,8 +267,8 @@ class SonosAlarmEntity(SonosEntity, SwitchEntity):
     @callback
     def _async_update_device(self) -> None:
         """Update the device, since this alarm moved to a different player."""
-        device_registry = dr.async_get(self.hass)
-        entity_registry = er.async_get(self.hass)
+        device_registry = dr.async_get(self.menuai)
+        entity_registry = er.async_get(self.menuai)
         entity = entity_registry.async_get(self.entity_id)
 
         if entity is None:

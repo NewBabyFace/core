@@ -7,12 +7,12 @@ from mficlient.client import FailedToLogin
 import pytest
 import requests
 
-from homeassistant.components import sensor as sensor_component
-from homeassistant.components.mfi import sensor as mfi
-from homeassistant.components.sensor import SensorDeviceClass
-from homeassistant.const import UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components import sensor as sensor_component
+from menuai.components.mfi import sensor as mfi
+from menuai.components.sensor import SensorDeviceClass
+from menuai.const import UnitOfTemperature
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 PLATFORM = mfi
 COMPONENT = sensor_component
@@ -30,73 +30,73 @@ GOOD_CONFIG = {
 }
 
 
-async def test_setup_missing_config(hass: HomeAssistant) -> None:
+async def test_setup_missing_config(menuai: menuai) -> None:
     """Test setup with missing configuration."""
-    with mock.patch("homeassistant.components.mfi.sensor.MFiClient") as mock_client:
+    with mock.patch("menuai.components.mfi.sensor.MFiClient") as mock_client:
         config = {"sensor": {"platform": "mfi"}}
-        assert await async_setup_component(hass, "sensor", config)
+        assert await async_setup_component(menuai, "sensor", config)
         assert not mock_client.called
 
 
-async def test_setup_failed_login(hass: HomeAssistant) -> None:
+async def test_setup_failed_login(menuai: menuai) -> None:
     """Test setup with login failure."""
-    with mock.patch("homeassistant.components.mfi.sensor.MFiClient") as mock_client:
+    with mock.patch("menuai.components.mfi.sensor.MFiClient") as mock_client:
         mock_client.side_effect = FailedToLogin
-        assert not PLATFORM.setup_platform(hass, GOOD_CONFIG, None)
+        assert not PLATFORM.setup_platform(menuai, GOOD_CONFIG, None)
 
 
-async def test_setup_failed_connect(hass: HomeAssistant) -> None:
+async def test_setup_failed_connect(menuai: menuai) -> None:
     """Test setup with connection failure."""
-    with mock.patch("homeassistant.components.mfi.sensor.MFiClient") as mock_client:
+    with mock.patch("menuai.components.mfi.sensor.MFiClient") as mock_client:
         mock_client.side_effect = requests.exceptions.ConnectionError
-        assert not PLATFORM.setup_platform(hass, GOOD_CONFIG, None)
+        assert not PLATFORM.setup_platform(menuai, GOOD_CONFIG, None)
 
 
-async def test_setup_minimum(hass: HomeAssistant) -> None:
+async def test_setup_minimum(menuai: menuai) -> None:
     """Test setup with minimum configuration."""
-    with mock.patch("homeassistant.components.mfi.sensor.MFiClient") as mock_client:
+    with mock.patch("menuai.components.mfi.sensor.MFiClient") as mock_client:
         config = deepcopy(GOOD_CONFIG)
         del config[THING]["port"]
-        assert await async_setup_component(hass, COMPONENT.DOMAIN, config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, COMPONENT.DOMAIN, config)
+        await menuai.async_block_till_done()
         assert mock_client.call_count == 1
         assert mock_client.call_args == mock.call(
             "foo", "user", "pass", port=6443, use_tls=True, verify=True
         )
 
 
-async def test_setup_with_port(hass: HomeAssistant) -> None:
+async def test_setup_with_port(menuai: menuai) -> None:
     """Test setup with port."""
-    with mock.patch("homeassistant.components.mfi.sensor.MFiClient") as mock_client:
-        assert await async_setup_component(hass, COMPONENT.DOMAIN, GOOD_CONFIG)
-        await hass.async_block_till_done()
+    with mock.patch("menuai.components.mfi.sensor.MFiClient") as mock_client:
+        assert await async_setup_component(menuai, COMPONENT.DOMAIN, GOOD_CONFIG)
+        await menuai.async_block_till_done()
         assert mock_client.call_count == 1
         assert mock_client.call_args == mock.call(
             "foo", "user", "pass", port=6123, use_tls=True, verify=True
         )
 
 
-async def test_setup_with_tls_disabled(hass: HomeAssistant) -> None:
+async def test_setup_with_tls_disabled(menuai: menuai) -> None:
     """Test setup without TLS."""
-    with mock.patch("homeassistant.components.mfi.sensor.MFiClient") as mock_client:
+    with mock.patch("menuai.components.mfi.sensor.MFiClient") as mock_client:
         config = deepcopy(GOOD_CONFIG)
         del config[THING]["port"]
         config[THING]["ssl"] = False
         config[THING]["verify_ssl"] = False
-        assert await async_setup_component(hass, COMPONENT.DOMAIN, config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, COMPONENT.DOMAIN, config)
+        await menuai.async_block_till_done()
         assert mock_client.call_count == 1
         assert mock_client.call_args == mock.call(
             "foo", "user", "pass", port=6080, use_tls=False, verify=False
         )
 
 
-async def test_setup_adds_proper_devices(hass: HomeAssistant) -> None:
+async def test_setup_adds_proper_devices(menuai: menuai) -> None:
     """Test if setup adds devices."""
     with (
-        mock.patch("homeassistant.components.mfi.sensor.MFiClient") as mock_client,
+        mock.patch("menuai.components.mfi.sensor.MFiClient") as mock_client,
         mock.patch(
-            "homeassistant.components.mfi.sensor.MfiSensor", side_effect=mfi.MfiSensor
+            "menuai.components.mfi.sensor.MfiSensor", side_effect=mfi.MfiSensor
         ) as mock_sensor,
     ):
         ports = {
@@ -107,12 +107,12 @@ async def test_setup_adds_proper_devices(hass: HomeAssistant) -> None:
         mock_client.return_value.get_devices.return_value = [
             mock.MagicMock(ports=ports)
         ]
-        assert await async_setup_component(hass, COMPONENT.DOMAIN, GOOD_CONFIG)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, COMPONENT.DOMAIN, GOOD_CONFIG)
+        await menuai.async_block_till_done()
         for ident, port in ports.items():
             if ident != "bad":
-                mock_sensor.assert_any_call(port, hass)
-        assert mock.call(ports["bad"], hass) not in mock_sensor.mock_calls
+                mock_sensor.assert_any_call(port, menuai)
+        assert mock.call(ports["bad"], menuai) not in mock_sensor.mock_calls
 
 
 @pytest.fixture(name="port")
@@ -122,10 +122,10 @@ def port_fixture() -> mock.MagicMock:
 
 
 @pytest.fixture(name="sensor")
-def sensor_fixture(hass: HomeAssistant, port: mock.MagicMock) -> mfi.MfiSensor:
+def sensor_fixture(menuai: menuai, port: mock.MagicMock) -> mfi.MfiSensor:
     """Sensor fixture."""
-    sensor = mfi.MfiSensor(port, hass)
-    sensor.hass = hass
+    sensor = mfi.MfiSensor(port, menuai)
+    sensor.menuai = menuai
     return sensor
 
 

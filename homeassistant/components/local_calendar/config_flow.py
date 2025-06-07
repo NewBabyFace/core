@@ -11,12 +11,12 @@ from ical.calendar_stream import CalendarStream
 from ical.exceptions import CalendarParseError
 import voluptuous as vol
 
-from homeassistant.components.file_upload import process_uploaded_file
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import selector
-from homeassistant.util import slugify
+from menuai.components.file_upload import process_uploaded_file
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import selector
+from menuai.util import slugify
 
 from .const import (
     ATTR_CREATE_EMPTY,
@@ -91,9 +91,9 @@ class LocalCalendarConfigFlow(ConfigFlow, domain=DOMAIN):
         errors = {}
         if user_input is not None:
             try:
-                await self.hass.async_add_executor_job(
+                await self.menuai.async_add_executor_job(
                     save_uploaded_ics_file,
-                    self.hass,
+                    self.menuai,
                     user_input[CONF_ICS_FILE],
                     self.data[CONF_STORAGE_KEY],
                 )
@@ -111,16 +111,16 @@ class LocalCalendarConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class InvalidIcsFile(HomeAssistantError):
+class InvalidIcsFile(menuaiError):
     """Error to indicate that the uploaded file is not a valid ICS file."""
 
 
 def save_uploaded_ics_file(
-    hass: HomeAssistant, uploaded_file_id: str, storage_key: str
+    menuai: menuai, uploaded_file_id: str, storage_key: str
 ):
     """Validate the uploaded file and move it to the storage directory."""
 
-    with process_uploaded_file(hass, uploaded_file_id) as file:
+    with process_uploaded_file(menuai, uploaded_file_id) as file:
         ics = file.read_text(encoding="utf8")
         try:
             CalendarStream.from_ics(ics)
@@ -130,5 +130,5 @@ def save_uploaded_ics_file(
                 "Additional calendar error detail: %s", str(err.detailed_error)
             )
             raise InvalidIcsFile("Failed to upload file: Invalid ICS file") from err
-        dest_path = Path(hass.config.path(STORAGE_PATH.format(key=storage_key)))
+        dest_path = Path(menuai.config.path(STORAGE_PATH.format(key=storage_key)))
         shutil.move(file, dest_path)

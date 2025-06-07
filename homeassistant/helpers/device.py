@@ -1,18 +1,18 @@
 """Provides useful helpers for handling devices."""
 
-from homeassistant.core import HomeAssistant, callback
+from menuai.core import menuai, callback
 
 from . import device_registry as dr, entity_registry as er
 
 
 @callback
 def async_entity_id_to_device_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_id_or_uuid: str,
 ) -> str | None:
     """Resolve the device id to the entity id or entity uuid."""
 
-    ent_reg = er.async_get(hass)
+    ent_reg = er.async_get(menuai)
 
     entity_id = er.async_validate_entity_id(ent_reg, entity_id_or_uuid)
     if (entity := ent_reg.async_get(entity_id)) is None:
@@ -23,7 +23,7 @@ def async_entity_id_to_device_id(
 
 @callback
 def async_device_info_to_link_from_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_id_or_uuid: str,
 ) -> dr.DeviceInfo | None:
     """DeviceInfo with information to link a device from an entity.
@@ -32,14 +32,14 @@ def async_device_info_to_link_from_entity(
     """
 
     return async_device_info_to_link_from_device_id(
-        hass,
-        async_entity_id_to_device_id(hass, entity_id_or_uuid),
+        menuai,
+        async_entity_id_to_device_id(menuai, entity_id_or_uuid),
     )
 
 
 @callback
 def async_device_info_to_link_from_device_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_id: str | None,
 ) -> dr.DeviceInfo | None:
     """DeviceInfo with information to link a device from a device id.
@@ -47,7 +47,7 @@ def async_device_info_to_link_from_device_id(
     DeviceInfo will only return information to categorize as a link.
     """
 
-    dev_reg = dr.async_get(hass)
+    dev_reg = dr.async_get(menuai)
 
     if device_id is None or (device := dev_reg.async_get(device_id=device_id)) is None:
         return None
@@ -60,7 +60,7 @@ def async_device_info_to_link_from_device_id(
 
 @callback
 def async_remove_stale_devices_links_keep_entity_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry_id: str,
     source_entity_id_or_uuid: str,
 ) -> None:
@@ -71,22 +71,22 @@ def async_remove_stale_devices_links_keep_entity_device(
     """
 
     async_remove_stale_devices_links_keep_current_device(
-        hass=hass,
+        menuai=menuai,
         entry_id=entry_id,
-        current_device_id=async_entity_id_to_device_id(hass, source_entity_id_or_uuid),
+        current_device_id=async_entity_id_to_device_id(menuai, source_entity_id_or_uuid),
     )
 
 
 @callback
 def async_remove_stale_devices_links_keep_current_device(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry_id: str,
     current_device_id: str | None,
 ) -> None:
     """Remove entry_id from all devices except current_device_id."""
 
-    dev_reg = dr.async_get(hass)
-    ent_reg = er.async_get(hass)
+    dev_reg = dr.async_get(menuai)
+    ent_reg = er.async_get(menuai)
 
     # Make sure all entities are linked to the correct device
     for entity in ent_reg.entities.get_entries_for_config_entry_id(entry_id):

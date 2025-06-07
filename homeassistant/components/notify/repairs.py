@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
-from homeassistant.components.repairs import ConfirmRepairFlow, RepairsFlow
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import issue_registry as ir
+from menuai.components.repairs import ConfirmRepairFlow, RepairsFlow
+from menuai.core import menuai, callback
+from menuai.helpers import issue_registry as ir
 
 from .const import DOMAIN
 
 
 @callback
 def migrate_notify_issue(
-    hass: HomeAssistant,
+    menuai: menuai,
     domain: str,
     integration_title: str,
     breaks_in_ha_version: str,
@@ -20,7 +20,7 @@ def migrate_notify_issue(
     """Ensure an issue is registered."""
     if service_name is not None:
         ir.async_create_issue(
-            hass,
+            menuai,
             DOMAIN,
             f"migrate_notify_{domain}_{service_name}",
             breaks_in_ha_version=breaks_in_ha_version,
@@ -37,7 +37,7 @@ def migrate_notify_issue(
         )
         return
     ir.async_create_issue(
-        hass,
+        menuai,
         DOMAIN,
         f"migrate_notify_{domain}",
         breaks_in_ha_version=breaks_in_ha_version,
@@ -54,7 +54,7 @@ def migrate_notify_issue(
 
 
 async def async_create_fix_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     issue_id: str,
     data: dict[str, str | int | float | None] | None,
 ) -> RepairsFlow:

@@ -6,21 +6,21 @@ import logging
 
 import voluptuous as vol
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     DEVICE_CLASSES_SCHEMA as BINARY_SENSOR_DEVICE_CLASSES_SCHEMA,
 )
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     DEVICE_CLASSES_SCHEMA as COVER_DEVICE_CLASSES_SCHEMA,
 )
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     CONF_STATE_CLASS,
     DEVICE_CLASSES_SCHEMA as SENSOR_DEVICE_CLASSES_SCHEMA,
     STATE_CLASSES_SCHEMA as SENSOR_STATE_CLASSES_SCHEMA,
 )
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     DEVICE_CLASSES_SCHEMA as SWITCH_DEVICE_CLASSES_SCHEMA,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_ADDRESS,
     CONF_BINARY_SENSORS,
     CONF_COMMAND_OFF,
@@ -47,12 +47,12 @@ from homeassistant.const import (
     CONF_UNIT_OF_MEASUREMENT,
     SERVICE_RELOAD,
 )
-from homeassistant.core import Event, HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import async_get_platforms
-from homeassistant.helpers.reload import async_integration_yaml_config
-from homeassistant.helpers.service import async_register_admin_service
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import Event, menuai, ServiceCall
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import async_get_platforms
+from menuai.helpers.reload import async_integration_yaml_config
+from menuai.helpers.service import async_register_admin_service
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     CALL_TYPE_COIL,
@@ -515,35 +515,35 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def get_hub(hass: HomeAssistant, name: str) -> ModbusHub:
+def get_hub(menuai: menuai, name: str) -> ModbusHub:
     """Return modbus hub with name."""
-    return hass.data[DATA_MODBUS_HUBS][name]
+    return menuai.data[DATA_MODBUS_HUBS][name]
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up Modbus component."""
     if DOMAIN not in config:
         return True
 
     async def _reload_config(call: Event | ServiceCall) -> None:
         """Reload Modbus."""
-        if DATA_MODBUS_HUBS not in hass.data:
+        if DATA_MODBUS_HUBS not in menuai.data:
             _LOGGER.error("Modbus cannot reload, because it was never loaded")
             return
-        hubs = hass.data[DATA_MODBUS_HUBS]
+        hubs = menuai.data[DATA_MODBUS_HUBS]
         for hub in hubs.values():
             await hub.async_close()
-        reset_platforms = async_get_platforms(hass, DOMAIN)
+        reset_platforms = async_get_platforms(menuai, DOMAIN)
         for reset_platform in reset_platforms:
             _LOGGER.debug("Reload modbus resetting platform: %s", reset_platform.domain)
             await reset_platform.async_reset()
-        reload_config = await async_integration_yaml_config(hass, DOMAIN)
+        reload_config = await async_integration_yaml_config(menuai, DOMAIN)
         if not reload_config:
             _LOGGER.debug("Modbus not present anymore")
             return
         _LOGGER.debug("Modbus reloading")
-        await async_modbus_setup(hass, reload_config)
+        await async_modbus_setup(menuai, reload_config)
 
-    async_register_admin_service(hass, DOMAIN, SERVICE_RELOAD, _reload_config)
+    async_register_admin_service(menuai, DOMAIN, SERVICE_RELOAD, _reload_config)
 
-    return await async_modbus_setup(hass, config)
+    return await async_modbus_setup(menuai, config)

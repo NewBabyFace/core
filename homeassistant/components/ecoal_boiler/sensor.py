@@ -2,17 +2,17 @@
 
 from __future__ import annotations
 
-from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
-from homeassistant.const import UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.sensor import SensorDeviceClass, SensorEntity
+from menuai.const import UnitOfTemperature
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import AVAILABLE_SENSORS, DATA_ECOAL_BOILER
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -21,7 +21,7 @@ def setup_platform(
     if discovery_info is None:
         return
     devices = []
-    ecoal_contr = hass.data[DATA_ECOAL_BOILER]
+    ecoal_contr = menuai.data[DATA_ECOAL_BOILER]
     for sensor_id in discovery_info:
         name = AVAILABLE_SENSORS[sensor_id]
         devices.append(EcoalTempSensor(ecoal_contr, name, sensor_id))
@@ -43,7 +43,7 @@ class EcoalTempSensor(SensorEntity):
     def update(self) -> None:
         """Fetch new state data for the sensor.
 
-        This is the only method that should fetch new data for Home Assistant.
+        This is the only method that should fetch new data for MenuAI.
         """
         # Old values read 0.5 back can still be used
         status = self._ecoal_contr.get_cached_status()

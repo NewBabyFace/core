@@ -26,9 +26,9 @@ from zigpy.zcl.clusters.general import Basic, Groups
 from zigpy.zcl.foundation import Status
 import zigpy.zdo.types as zdo_t
 
-from homeassistant.components.zha import const as zha_const
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.zha import const as zha_const
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from .common import patch_cluster as common_patch_cluster
 
@@ -238,7 +238,7 @@ def mock_zigpy_connect(
 
 @pytest.fixture
 def setup_zha(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_zigpy_connect: ControllerApplication,
 ):
@@ -246,14 +246,14 @@ def setup_zha(
     zha_config = {zha_const.CONF_ENABLE_QUIRKS: False}
 
     async def _setup(config=None):
-        config_entry.add_to_hass(hass)
+        config_entry.add_to_menuai(menuai)
         config = config or {}
 
         status = await async_setup_component(
-            hass, zha_const.DOMAIN, {zha_const.DOMAIN: {**zha_config, **config}}
+            menuai, zha_const.DOMAIN, {zha_const.DOMAIN: {**zha_config, **config}}
         )
         assert status is True
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     return _setup
 
@@ -277,7 +277,7 @@ def cluster_handler():
 @pytest.fixture(autouse=True)
 def speed_up_radio_mgr():
     """Speed up the radio manager connection time by removing delays."""
-    with patch("homeassistant.components.zha.radio_manager.CONNECT_DELAY_S", 0.00001):
+    with patch("menuai.components.zha.radio_manager.CONNECT_DELAY_S", 0.00001):
         yield
 
 

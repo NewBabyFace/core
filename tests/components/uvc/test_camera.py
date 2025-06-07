@@ -6,7 +6,7 @@ from unittest.mock import call, patch
 import pytest
 from uvcclient import camera, nvr
 
-from homeassistant.components.camera import (
+from menuai.components.camera import (
     DEFAULT_CONTENT_TYPE,
     SERVICE_DISABLE_MOTION,
     SERVICE_ENABLE_MOTION,
@@ -15,11 +15,11 @@ from homeassistant.components.camera import (
     async_get_image,
     async_get_stream_source,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
-from homeassistant.setup import async_setup_component
-from homeassistant.util.dt import utcnow
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
+from menuai.setup import async_setup_component
+from menuai.util.dt import utcnow
 
 from tests.common import async_fire_time_changed
 
@@ -27,7 +27,7 @@ from tests.common import async_fire_time_changed
 @pytest.fixture(name="mock_remote")
 def mock_remote_fixture(camera_info):
     """Mock the nvr.UVCRemote class."""
-    with patch("homeassistant.components.uvc.camera.nvr.UVCRemote") as mock_remote:
+    with patch("menuai.components.uvc.camera.nvr.UVCRemote") as mock_remote:
 
         def setup(host, port, apikey, ssl=False):
             """Set instance attributes."""
@@ -95,7 +95,7 @@ def camera_info_fixture():
 def camera_v320_fixture():
     """Mock the v320 camera."""
     with patch(
-        "homeassistant.components.uvc.camera.uvc_camera.UVCCameraClientV320"
+        "menuai.components.uvc.camera.uvc_camera.UVCCameraClientV320"
     ) as camera:
         camera.return_value.get_snapshot.return_value = "test_image"
         yield camera
@@ -105,14 +105,14 @@ def camera_v320_fixture():
 def camera_v313_fixture():
     """Mock the v320 camera."""
     with patch(
-        "homeassistant.components.uvc.camera.uvc_camera.UVCCameraClient"
+        "menuai.components.uvc.camera.uvc_camera.UVCCameraClient"
     ) as camera:
         camera.return_value.get_snapshot.return_value = "test_image"
         yield camera
 
 
 async def test_setup_full_config(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, mock_remote, camera_info
+    menuai: menuai, entity_registry: er.EntityRegistry, mock_remote, camera_info
 ) -> None:
     """Test the setup with full configuration."""
     config = {
@@ -135,22 +135,22 @@ async def test_setup_full_config(
     )
     mock_remote.return_value.get_camera.side_effect = mock_get_camera
 
-    assert await async_setup_component(hass, "camera", {"camera": config})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "camera", {"camera": config})
+    await menuai.async_block_till_done()
 
     assert mock_remote.call_count == 1
     assert mock_remote.call_args == call("foo", 123, "secret", ssl=False)
 
-    camera_states = hass.states.async_all("camera")
+    camera_states = menuai.states.async_all("camera")
 
     assert len(camera_states) == 2
 
-    state = hass.states.get("camera.front")
+    state = menuai.states.get("camera.front")
 
     assert state
     assert state.name == "Front"
 
-    state = hass.states.get("camera.back")
+    state = menuai.states.get("camera.back")
 
     assert state
     assert state.name == "Back"
@@ -165,27 +165,27 @@ async def test_setup_full_config(
 
 
 async def test_setup_partial_config(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, mock_remote
+    menuai: menuai, entity_registry: er.EntityRegistry, mock_remote
 ) -> None:
     """Test the setup with partial configuration."""
     config = {"platform": "uvc", "nvr": "foo", "key": "secret"}
 
-    assert await async_setup_component(hass, "camera", {"camera": config})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "camera", {"camera": config})
+    await menuai.async_block_till_done()
 
     assert mock_remote.call_count == 1
     assert mock_remote.call_args == call("foo", 7080, "secret", ssl=False)
 
-    camera_states = hass.states.async_all("camera")
+    camera_states = menuai.states.async_all("camera")
 
     assert len(camera_states) == 2
 
-    state = hass.states.get("camera.front")
+    state = menuai.states.get("camera.front")
 
     assert state
     assert state.name == "Front"
 
-    state = hass.states.get("camera.back")
+    state = menuai.states.get("camera.back")
 
     assert state
     assert state.name == "Back"
@@ -200,29 +200,29 @@ async def test_setup_partial_config(
 
 
 async def test_setup_partial_config_v31x(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry, mock_remote
+    menuai: menuai, entity_registry: er.EntityRegistry, mock_remote
 ) -> None:
     """Test the setup with a v3.1.x server."""
     config = {"platform": "uvc", "nvr": "foo", "key": "secret"}
     mock_remote.return_value.server_version = (3, 1, 3)
     mock_remote.return_value.camera_identifier = "uuid"
 
-    assert await async_setup_component(hass, "camera", {"camera": config})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "camera", {"camera": config})
+    await menuai.async_block_till_done()
 
     assert mock_remote.call_count == 1
     assert mock_remote.call_args == call("foo", 7080, "secret", ssl=False)
 
-    camera_states = hass.states.async_all("camera")
+    camera_states = menuai.states.async_all("camera")
 
     assert len(camera_states) == 2
 
-    state = hass.states.get("camera.front")
+    state = menuai.states.get("camera.front")
 
     assert state
     assert state.name == "Front"
 
-    state = hass.states.get("camera.back")
+    state = menuai.states.get("camera.back")
 
     assert state
     assert state.name == "Back"
@@ -245,13 +245,13 @@ async def test_setup_partial_config_v31x(
     ],
 )
 async def test_setup_incomplete_config(
-    hass: HomeAssistant, mock_remote, config
+    menuai: menuai, mock_remote, config
 ) -> None:
     """Test the setup with incomplete or invalid configuration."""
-    assert await async_setup_component(hass, "camera", config)
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "camera", config)
+    await menuai.async_block_till_done()
 
-    camera_states = hass.states.async_all("camera")
+    camera_states = menuai.states.async_all("camera")
 
     assert not camera_states
 
@@ -264,26 +264,26 @@ async def test_setup_incomplete_config(
     ],
 )
 async def test_setup_nvr_errors_during_indexing(
-    hass: HomeAssistant, mock_remote, error, ready_states
+    menuai: menuai, mock_remote, error, ready_states
 ) -> None:
     """Set up test for NVR errors during indexing."""
     config = {"platform": "uvc", "nvr": "foo", "key": "secret"}
     now = utcnow()
     mock_remote.return_value.index.side_effect = error
-    assert await async_setup_component(hass, "camera", {"camera": config})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "camera", {"camera": config})
+    await menuai.async_block_till_done()
 
-    camera_states = hass.states.async_all("camera")
+    camera_states = menuai.states.async_all("camera")
 
     assert not camera_states
 
     # resolve the error
     mock_remote.return_value.index.side_effect = None
 
-    async_fire_time_changed(hass, now + timedelta(seconds=31))
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai, now + timedelta(seconds=31))
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    camera_states = hass.states.async_all("camera")
+    camera_states = menuai.states.async_all("camera")
 
     assert len(camera_states) == ready_states
 
@@ -296,43 +296,43 @@ async def test_setup_nvr_errors_during_indexing(
     ],
 )
 async def test_setup_nvr_errors_during_initialization(
-    hass: HomeAssistant, mock_remote, error, ready_states
+    menuai: menuai, mock_remote, error, ready_states
 ) -> None:
     """Set up test for NVR errors during initialization."""
     config = {"platform": "uvc", "nvr": "foo", "key": "secret"}
     now = utcnow()
     mock_remote.side_effect = error
-    assert await async_setup_component(hass, "camera", {"camera": config})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "camera", {"camera": config})
+    await menuai.async_block_till_done()
 
     assert not mock_remote.index.called
 
-    camera_states = hass.states.async_all("camera")
+    camera_states = menuai.states.async_all("camera")
 
     assert not camera_states
 
     # resolve the error
     mock_remote.side_effect = None
 
-    async_fire_time_changed(hass, now + timedelta(seconds=31))
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai, now + timedelta(seconds=31))
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    camera_states = hass.states.async_all("camera")
+    camera_states = menuai.states.async_all("camera")
 
     assert len(camera_states) == ready_states
 
 
-async def test_properties(hass: HomeAssistant, mock_remote) -> None:
+async def test_properties(menuai: menuai, mock_remote) -> None:
     """Test the properties."""
     config = {"platform": "uvc", "nvr": "foo", "key": "secret"}
-    assert await async_setup_component(hass, "camera", {"camera": config})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "camera", {"camera": config})
+    await menuai.async_block_till_done()
 
-    camera_states = hass.states.async_all("camera")
+    camera_states = menuai.states.async_all("camera")
 
     assert len(camera_states) == 2
 
-    state = hass.states.get("camera.front")
+    state = menuai.states.get("camera.front")
 
     assert state
     assert state.name == "Front"
@@ -343,15 +343,15 @@ async def test_properties(hass: HomeAssistant, mock_remote) -> None:
 
 
 async def test_motion_recording_mode_properties(
-    hass: HomeAssistant, mock_remote
+    menuai: menuai, mock_remote
 ) -> None:
     """Test the properties."""
     config = {"platform": "uvc", "nvr": "foo", "key": "secret"}
     now = utcnow()
-    assert await async_setup_component(hass, "camera", {"camera": config})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "camera", {"camera": config})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("camera.front")
+    state = menuai.states.get("camera.front")
 
     assert state
     assert state.state == CameraState.RECORDING
@@ -363,10 +363,10 @@ async def test_motion_recording_mode_properties(
         "motionRecordEnabled"
     ] = True
 
-    async_fire_time_changed(hass, now + timedelta(seconds=31))
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai, now + timedelta(seconds=31))
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get("camera.front")
+    state = menuai.states.get("camera.front")
 
     assert state
     assert state.state != CameraState.RECORDING
@@ -376,10 +376,10 @@ async def test_motion_recording_mode_properties(
 
     mock_remote.return_value.get_camera.return_value["recordingIndicator"] = "DISABLED"
 
-    async_fire_time_changed(hass, now + timedelta(seconds=61))
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai, now + timedelta(seconds=61))
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get("camera.front")
+    state = menuai.states.get("camera.front")
 
     assert state
     assert state.state != CameraState.RECORDING
@@ -388,10 +388,10 @@ async def test_motion_recording_mode_properties(
         "MOTION_INPROGRESS"
     )
 
-    async_fire_time_changed(hass, now + timedelta(seconds=91))
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai, now + timedelta(seconds=91))
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get("camera.front")
+    state = menuai.states.get("camera.front")
 
     assert state
     assert state.state == CameraState.RECORDING
@@ -400,33 +400,33 @@ async def test_motion_recording_mode_properties(
         "MOTION_FINISHED"
     )
 
-    async_fire_time_changed(hass, now + timedelta(seconds=121))
-    await hass.async_block_till_done(wait_background_tasks=True)
+    async_fire_time_changed(menuai, now + timedelta(seconds=121))
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get("camera.front")
+    state = menuai.states.get("camera.front")
 
     assert state
     assert state.state == CameraState.RECORDING
 
 
-async def test_stream(hass: HomeAssistant, mock_remote) -> None:
+async def test_stream(menuai: menuai, mock_remote) -> None:
     """Test the RTSP stream URI."""
     config = {"platform": "uvc", "nvr": "foo", "key": "secret"}
-    assert await async_setup_component(hass, "camera", {"camera": config})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "camera", {"camera": config})
+    await menuai.async_block_till_done()
 
-    stream_source = await async_get_stream_source(hass, "camera.front")
+    stream_source = await async_get_stream_source(menuai, "camera.front")
 
     assert stream_source == "rtsp://foo:7447/uuid_rtspchannel_0"
 
 
-async def test_login(hass: HomeAssistant, mock_remote, camera_v320) -> None:
+async def test_login(menuai: menuai, mock_remote, camera_v320) -> None:
     """Test the login."""
     config = {"platform": "uvc", "nvr": "foo", "key": "secret"}
-    assert await async_setup_component(hass, "camera", {"camera": config})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "camera", {"camera": config})
+    await menuai.async_block_till_done()
 
-    image = await async_get_image(hass, "camera.front")
+    image = await async_get_image(menuai, "camera.front")
 
     assert camera_v320.call_count == 1
     assert camera_v320.call_args == call("host-a", "admin", "ubnt")
@@ -435,14 +435,14 @@ async def test_login(hass: HomeAssistant, mock_remote, camera_v320) -> None:
     assert image.content == "test_image"
 
 
-async def test_login_v31x(hass: HomeAssistant, mock_remote, camera_v313) -> None:
+async def test_login_v31x(menuai: menuai, mock_remote, camera_v313) -> None:
     """Test login with v3.1.x server."""
     mock_remote.return_value.server_version = (3, 1, 3)
     config = {"platform": "uvc", "nvr": "foo", "key": "secret"}
-    assert await async_setup_component(hass, "camera", {"camera": config})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "camera", {"camera": config})
+    await menuai.async_block_till_done()
 
-    image = await async_get_image(hass, "camera.front")
+    image = await async_get_image(menuai, "camera.front")
 
     assert camera_v313.call_count == 1
     assert camera_v313.call_args == call("host-a", "admin", "ubnt")
@@ -455,7 +455,7 @@ async def test_login_v31x(hass: HomeAssistant, mock_remote, camera_v313) -> None
     "error", [OSError, camera.CameraConnectError, camera.CameraAuthError]
 )
 async def test_login_tries_both_addrs_and_caches(
-    hass: HomeAssistant, mock_remote, camera_v320, error
+    menuai: menuai, mock_remote, camera_v320, error
 ) -> None:
     """Test the login tries."""
     responses = [0]
@@ -482,10 +482,10 @@ async def test_login_tries_both_addrs_and_caches(
     camera_v320.return_value.login.side_effect = mock_login
 
     config = {"platform": "uvc", "nvr": "foo", "key": "secret"}
-    assert await async_setup_component(hass, "camera", {"camera": config})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "camera", {"camera": config})
+    await menuai.async_block_till_done()
 
-    image = await async_get_image(hass, "camera.front")
+    image = await async_get_image(menuai, "camera.front")
 
     assert camera_v320.call_count == 2
     assert camera_v320.call_args == call("host-b", "admin", "ubnt")
@@ -495,7 +495,7 @@ async def test_login_tries_both_addrs_and_caches(
     camera_v320.reset_mock()
     camera_v320.return_value.get_snapshot.side_effect = mock_snapshots
 
-    image = await async_get_image(hass, "camera.front")
+    image = await async_get_image(menuai, "camera.front")
 
     assert camera_v320.call_count == 1
     assert camera_v320.call_args == call("host-b", "admin", "ubnt")
@@ -505,16 +505,16 @@ async def test_login_tries_both_addrs_and_caches(
 
 
 async def test_login_fails_both_properly(
-    hass: HomeAssistant, mock_remote, camera_v320
+    menuai: menuai, mock_remote, camera_v320
 ) -> None:
     """Test if login fails properly."""
     camera_v320.return_value.login.side_effect = OSError
     config = {"platform": "uvc", "nvr": "foo", "key": "secret"}
-    assert await async_setup_component(hass, "camera", {"camera": config})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "camera", {"camera": config})
+    await menuai.async_block_till_done()
 
-    with pytest.raises(HomeAssistantError):
-        await async_get_image(hass, "camera.front")
+    with pytest.raises(menuaiError):
+        await async_get_image(menuai, "camera.front")
 
     assert camera_v320.return_value.get_snapshot.call_count == 0
 
@@ -522,12 +522,12 @@ async def test_login_fails_both_properly(
 @pytest.mark.parametrize(
     ("source_error", "raised_error", "snapshot_calls"),
     [
-        (camera.CameraConnectError, HomeAssistantError, 1),
+        (camera.CameraConnectError, menuaiError, 1),
         (camera.CameraAuthError, camera.CameraAuthError, 2),
     ],
 )
 async def test_camera_image_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_remote,
     camera_v320,
     source_error,
@@ -537,17 +537,17 @@ async def test_camera_image_error(
     """Test the camera image error."""
     camera_v320.return_value.get_snapshot.side_effect = source_error
     config = {"platform": "uvc", "nvr": "foo", "key": "secret"}
-    assert await async_setup_component(hass, "camera", {"camera": config})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "camera", {"camera": config})
+    await menuai.async_block_till_done()
 
     with pytest.raises(raised_error):
-        await async_get_image(hass, "camera.front")
+        await async_get_image(menuai, "camera.front")
 
     assert camera_v320.return_value.get_snapshot.call_count == snapshot_calls
 
 
 async def test_enable_disable_motion_detection(
-    hass: HomeAssistant, mock_remote, camera_info
+    menuai: menuai, mock_remote, camera_info
 ) -> None:
     """Test enable and disable motion detection."""
 
@@ -558,66 +558,66 @@ async def test_enable_disable_motion_detection(
 
     mock_remote.return_value.set_recordmode.side_effect = set_recordmode
     config = {"platform": "uvc", "nvr": "foo", "key": "secret"}
-    assert await async_setup_component(hass, "camera", {"camera": config})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "camera", {"camera": config})
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("camera.front")
+    state = menuai.states.get("camera.front")
 
     assert state
     assert "motion_detection" not in state.attributes
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "camera", SERVICE_ENABLE_MOTION, {"entity_id": "camera.front"}, True
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("camera.front")
+    state = menuai.states.get("camera.front")
 
     assert state
     assert state.attributes["motion_detection"]
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "camera", SERVICE_DISABLE_MOTION, {"entity_id": "camera.front"}, True
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("camera.front")
+    state = menuai.states.get("camera.front")
 
     assert state
     assert "motion_detection" not in state.attributes
 
     mock_remote.return_value.set_recordmode.side_effect = nvr.NvrError
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "camera", SERVICE_ENABLE_MOTION, {"entity_id": "camera.front"}, True
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("camera.front")
+    state = menuai.states.get("camera.front")
 
     assert state
     assert "motion_detection" not in state.attributes
 
     mock_remote.return_value.set_recordmode.side_effect = set_recordmode
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "camera", SERVICE_ENABLE_MOTION, {"entity_id": "camera.front"}, True
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("camera.front")
+    state = menuai.states.get("camera.front")
 
     assert state
     assert state.attributes["motion_detection"]
 
     mock_remote.return_value.set_recordmode.side_effect = nvr.NvrError
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "camera", SERVICE_DISABLE_MOTION, {"entity_id": "camera.front"}, True
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("camera.front")
+    state = menuai.states.get("camera.front")
 
     assert state
     assert state.attributes["motion_detection"]

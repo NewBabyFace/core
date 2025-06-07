@@ -6,9 +6,9 @@ from typing import Any
 
 from libpyfoscam import FoscamCamera
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN, LOGGER
 
@@ -20,13 +20,13 @@ class FoscamCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entry: FoscamConfigEntry,
         session: FoscamCamera,
     ) -> None:
         """Initialize my coordinator."""
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=entry,
             name=DOMAIN,
@@ -39,18 +39,18 @@ class FoscamCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         async with asyncio.timeout(30):
             data = {}
-            ret, dev_info = await self.hass.async_add_executor_job(
+            ret, dev_info = await self.menuai.async_add_executor_job(
                 self.session.get_dev_info
             )
             if ret == 0:
                 data["dev_info"] = dev_info
 
-            all_info = await self.hass.async_add_executor_job(
+            all_info = await self.menuai.async_add_executor_job(
                 self.session.get_product_all_info
             )
             data["product_info"] = all_info[1]
 
-            ret, is_asleep = await self.hass.async_add_executor_job(
+            ret, is_asleep = await self.menuai.async_add_executor_job(
                 self.session.is_asleep
             )
             data["is_asleep"] = {"supported": ret == 0, "status": is_asleep}

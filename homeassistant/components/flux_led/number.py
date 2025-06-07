@@ -16,14 +16,14 @@ from flux_led.protocol import (
     SEGMENTS_MAX,
 )
 
-from homeassistant.components.light import EFFECT_RANDOM
-from homeassistant.components.number import NumberEntity, NumberMode
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.debounce import Debouncer
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.components.light import EFFECT_RANDOM
+from menuai.components.number import NumberEntity, NumberMode
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.debounce import Debouncer
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .coordinator import FluxLedConfigEntry, FluxLedUpdateCoordinator
 from .entity import FluxEntity
@@ -35,7 +35,7 @@ DEBOUNCE_TIME = 1
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: FluxLedConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -100,11 +100,11 @@ class FluxSpeedNumber(
         current_effect = self._device.effect
         new_speed = int(value)
         if not current_effect:
-            raise HomeAssistantError(
+            raise menuaiError(
                 "Speed can only be adjusted when an effect is active"
             )
         if not self._device.speed_adjust_off and not self._device.is_on:
-            raise HomeAssistantError("Speed can only be adjusted when the light is on")
+            raise menuaiError("Speed can only be adjusted when the light is on")
         await self._device.async_set_effect(
             current_effect, new_speed, _effect_brightness(self._device.brightness)
         )
@@ -132,16 +132,16 @@ class FluxConfigNumber(
         self._debouncer: Debouncer[Coroutine[Any, Any, None]] | None = None
         self._pending_value: int | None = None
 
-    async def async_added_to_hass(self) -> None:
-        """Set up the debouncer when adding to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Set up the debouncer when adding to menuai."""
         self._debouncer = Debouncer(
-            hass=self.hass,
+            menuai=self.menuai,
             logger=_LOGGER,
             cooldown=DEBOUNCE_TIME,
             immediate=False,
             function=self._async_set_native_value,
         )
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
     async def async_set_native_value(self, value: float) -> None:
         """Set the value."""

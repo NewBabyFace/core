@@ -11,16 +11,16 @@ from goslideapi.goslideapi import (
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     DOMAIN as SWITCH_DOMAIN,
     SERVICE_TOGGLE,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
 )
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
 
 from . import setup_platform
 
@@ -28,16 +28,16 @@ from tests.common import MockConfigEntry, snapshot_platform
 
 
 async def test_all_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mock_slide_api: AsyncMock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test all entities."""
-    await setup_platform(hass, mock_config_entry, [Platform.SWITCH])
+    await setup_platform(menuai, mock_config_entry, [Platform.SWITCH])
 
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
 
 @pytest.mark.parametrize(
@@ -49,15 +49,15 @@ async def test_all_entities(
     ],
 )
 async def test_services(
-    hass: HomeAssistant,
+    menuai: menuai,
     service: str,
     mock_slide_api: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test switch."""
-    await setup_platform(hass, mock_config_entry, [Platform.SWITCH])
+    await setup_platform(menuai, mock_config_entry, [Platform.SWITCH])
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         service,
         {
@@ -78,22 +78,22 @@ async def test_services(
     ],
 )
 async def test_service_exception(
-    hass: HomeAssistant,
+    menuai: menuai,
     exception: Exception,
     service: str,
     mock_slide_api: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test pressing button."""
-    await setup_platform(hass, mock_config_entry, [Platform.SWITCH])
+    await setup_platform(menuai, mock_config_entry, [Platform.SWITCH])
 
     mock_slide_api.slide_set_touchgo.side_effect = exception
 
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match=f"Error while sending the request setting Touch&Go to {service[5:]} to the device",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SWITCH_DOMAIN,
             service,
             {

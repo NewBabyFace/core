@@ -11,14 +11,14 @@ from medcom_ble import MedcomBleDevice, MedcomBleDeviceData
 from medcom_ble.const import INSPECTOR_SERVICE_UUID
 import voluptuous as vol
 
-from homeassistant.components import bluetooth
-from homeassistant.components.bluetooth import (
+from menuai.components import bluetooth
+from menuai.components.bluetooth import (
     BluetoothServiceInfo,
     async_discovered_service_info,
 )
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_ADDRESS
-from homeassistant.data_entry_flow import AbortFlow
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_ADDRESS
+from menuai.data_entry_flow import AbortFlow
 
 from .const import DOMAIN
 
@@ -39,7 +39,7 @@ class InspectorBLEConfigFlow(ConfigFlow, domain=DOMAIN):
         self, service_info: BluetoothServiceInfo
     ) -> MedcomBleDevice:
         ble_device = bluetooth.async_ble_device_from_address(
-            self.hass, service_info.address
+            self.menuai, service_info.address
         )
         if ble_device is None:
             _LOGGER.debug("no ble_device in _get_device_data")
@@ -94,7 +94,7 @@ class InspectorBLEConfigFlow(ConfigFlow, domain=DOMAIN):
             return await self.async_step_check_connection()
 
         current_addresses = self._async_current_ids()
-        for discovery_info in async_discovered_service_info(self.hass):
+        for discovery_info in async_discovered_service_info(self.menuai):
             address = discovery_info.address
             if address in current_addresses or address in self._discovered_devices:
                 _LOGGER.debug(

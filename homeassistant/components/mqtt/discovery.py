@@ -14,23 +14,23 @@ from typing import TYPE_CHECKING, Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_MQTT,
     ConfigEntry,
     signal_discovered_config_entry_removed,
 )
-from homeassistant.const import CONF_DEVICE, CONF_PLATFORM
-from homeassistant.core import HassJobType, HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv, discovery_flow
-from homeassistant.helpers.dispatcher import (
+from menuai.const import CONF_DEVICE, CONF_PLATFORM
+from menuai.core import menuaiJobType, menuai, callback
+from menuai.helpers import config_validation as cv, discovery_flow
+from menuai.helpers.dispatcher import (
     async_dispatcher_connect,
     async_dispatcher_send,
 )
-from homeassistant.helpers.service_info.mqtt import MqttServiceInfo, ReceivePayloadType
-from homeassistant.helpers.typing import DiscoveryInfoType
-from homeassistant.loader import async_get_mqtt
-from homeassistant.util.json import json_loads_object
-from homeassistant.util.signal_type import SignalTypeFormat
+from menuai.helpers.service_info.mqtt import MqttServiceInfo, ReceivePayloadType
+from menuai.helpers.typing import DiscoveryInfoType
+from menuai.loader import async_get_mqtt
+from menuai.util.json import json_loads_object
+from menuai.util.signal_type import SignalTypeFormat
 
 from .abbreviations import ABBREVIATIONS, DEVICE_ABBREVIATIONS, ORIGIN_ABBREVIATIONS
 from .client import async_subscribe_internal
@@ -113,14 +113,14 @@ def _async_process_discovery_migration(payload: MQTTDiscoveryPayload) -> bool:
     return False
 
 
-def clear_discovery_hash(hass: HomeAssistant, discovery_hash: tuple[str, str]) -> None:
+def clear_discovery_hash(menuai: menuai, discovery_hash: tuple[str, str]) -> None:
     """Clear entry from already discovered list."""
-    hass.data[DATA_MQTT].discovery_already_discovered.discard(discovery_hash)
+    menuai.data[DATA_MQTT].discovery_already_discovered.discard(discovery_hash)
 
 
-def set_discovery_hash(hass: HomeAssistant, discovery_hash: tuple[str, str]) -> None:
+def set_discovery_hash(menuai: menuai, discovery_hash: tuple[str, str]) -> None:
     """Add entry to already discovered list."""
-    hass.data[DATA_MQTT].discovery_already_discovered.add(discovery_hash)
+    menuai.data[DATA_MQTT].discovery_already_discovered.add(discovery_hash)
 
 
 @callback
@@ -237,7 +237,7 @@ def _replace_topic_base(discovery_payload: MQTTDiscoveryPayload) -> None:
 
 @callback
 def _generate_device_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     object_id: str,
     node_id: str | None,
     migrate_discovery: bool = False,
@@ -247,7 +247,7 @@ def _generate_device_config(
     If an empty payload, or a migrate discovery request is received for a device,
     we forward an empty payload for all previously discovered components.
     """
-    mqtt_data = hass.data[DATA_MQTT]
+    mqtt_data = menuai.data[DATA_MQTT]
     device_node_id: str = f"{node_id} {object_id}" if node_id else object_id
     config = MQTTDiscoveryPayload({CONF_DEVICE: {}, CONF_COMPONENTS: {}})
     config.migrate_discovery = migrate_discovery
@@ -266,7 +266,7 @@ def _generate_device_config(
 
 @callback
 def _parse_device_payload(
-    hass: HomeAssistant,
+    menuai: menuai,
     payload: ReceivePayloadType,
     object_id: str,
     node_id: str | None,
@@ -280,7 +280,7 @@ def _parse_device_payload(
     """
     device_payload = MQTTDiscoveryPayload()
     if payload == "":
-        if not (device_payload := _generate_device_config(hass, object_id, node_id)):
+        if not (device_payload := _generate_device_config(menuai, object_id, node_id)):
             _LOGGER.warning(
                 "No device components to cleanup for %s, node_id '%s'",
                 object_id,
@@ -293,7 +293,7 @@ def _parse_device_payload(
         _LOGGER.warning("Unable to parse JSON %s: '%s'", object_id, payload)
         return device_payload
     if _async_process_discovery_migration(device_payload):
-        return _generate_device_config(hass, object_id, node_id, migrate_discovery=True)
+        return _generate_device_config(menuai, object_id, node_id, migrate_discovery=True)
     _replace_all_abbreviations(device_payload)
     try:
         DEVICE_DISCOVERY_SCHEMA(device_payload)
@@ -350,10 +350,10 @@ def _merge_common_device_options(
 
 
 async def async_start(  # noqa: C901
-    hass: HomeAssistant, discovery_topic: str, config_entry: ConfigEntry
+    menuai: menuai, discovery_topic: str, config_entry: ConfigEntry
 ) -> None:
     """Start MQTT Discovery."""
-    mqtt_data = hass.data[DATA_MQTT]
+    mqtt_data = menuai.data[DATA_MQTT]
     platform_setup_lock: dict[str, asyncio.Lock] = {}
     integration_discovery_messages: dict[str, MQTTIntegrationDiscoveryConfig] = {}
 
@@ -366,7 +366,7 @@ async def async_start(  # noqa: C901
         async_log_discovery_origin_info(message, discovery_payload)
         mqtt_data.discovery_already_discovered.add(discovery_hash)
         async_dispatcher_send(
-            hass, MQTT_DISCOVERY_NEW.format(component, "mqtt"), discovery_payload
+            menuai, MQTT_DISCOVERY_NEW.format(component, "mqtt"), discovery_payload
         )
 
     async def _async_component_setup(
@@ -376,7 +376,7 @@ async def async_start(  # noqa: C901
         async with platform_setup_lock.setdefault(component, asyncio.Lock()):
             if component not in mqtt_data.platforms_loaded:
                 await async_forward_entry_setup_and_setup_discovery(
-                    hass, config_entry, {component}
+                    menuai, config_entry, {component}
                 )
         _async_add_component(discovery_payload)
 
@@ -411,7 +411,7 @@ async def async_start(  # noqa: C901
             # In that case this will regenerate a cleanup message for all every already
             # discovered components that were linked to the initial device discovery.
             device_discovery_payload = _parse_device_payload(
-                hass, payload, object_id, node_id
+                menuai, payload, object_id, node_id
             )
             if not device_discovery_payload:
                 return
@@ -543,7 +543,7 @@ async def async_start(  # noqa: C901
 
             discovery_pending_discovered[discovery_hash] = {
                 "unsub": async_dispatcher_connect(
-                    hass,
+                    menuai,
                     MQTT_DISCOVERY_DONE.format(*discovery_hash),
                     discovery_done,
                 ),
@@ -553,30 +553,30 @@ async def async_start(  # noqa: C901
         if component not in mqtt_data.platforms_loaded and payload:
             # Load component first
             config_entry.async_create_task(
-                hass, _async_component_setup(component, payload)
+                menuai, _async_component_setup(component, payload)
             )
         elif already_discovered:
             # Dispatch update
             message = f"Component has already been discovered: {component} {discovery_id}, sending update"
             async_log_discovery_origin_info(message, payload)
             async_dispatcher_send(
-                hass, MQTT_DISCOVERY_UPDATED.format(*discovery_hash), payload
+                menuai, MQTT_DISCOVERY_UPDATED.format(*discovery_hash), payload
             )
         elif payload:
             _async_add_component(payload)
         else:
             # Unhandled discovery message
             async_dispatcher_send(
-                hass, MQTT_DISCOVERY_DONE.format(*discovery_hash), None
+                menuai, MQTT_DISCOVERY_DONE.format(*discovery_hash), None
             )
 
     mqtt_data.discovery_unsubscribe = [
         async_subscribe_internal(
-            hass,
+            menuai,
             topic,
             async_discovery_message_received,
             0,
-            job_type=HassJobType.Callback,
+            job_type=menuaiJobType.Callback,
         )
         # Subscribe first for platform discovery wildcard topics first,
         # and then subscribe device discovery wildcard topics.
@@ -597,7 +597,7 @@ async def async_start(  # noqa: C901
     ]
 
     mqtt_data.last_discovery = time.monotonic()
-    mqtt_integrations = await async_get_mqtt(hass)
+    mqtt_integrations = await async_get_mqtt(menuai)
     integration_unsubscribe = mqtt_data.integration_unsubscribe
 
     async def _async_handle_config_entry_removed(entry: ConfigEntry) -> None:
@@ -620,7 +620,7 @@ async def async_start(  # noqa: C901
 
     mqtt_data.discovery_unsubscribe.append(
         async_dispatcher_connect(
-            hass,
+            menuai,
             signal_discovered_config_entry_removed(DOMAIN),
             _async_handle_config_entry_removed,
         )
@@ -659,7 +659,7 @@ async def async_start(  # noqa: C901
                 domain=DOMAIN, key=msg.topic, version=1
             )
             discovery_flow.async_create_flow(
-                hass,
+                menuai,
                 integration,
                 {"source": SOURCE_MQTT},
                 data,
@@ -677,11 +677,11 @@ async def async_start(  # noqa: C901
     integration_unsubscribe.update(
         {
             f"{integration}_{topic}": async_subscribe_internal(
-                hass,
+                menuai,
                 topic,
                 functools.partial(async_integration_message_received, integration),
                 0,
-                job_type=HassJobType.Coroutinefunction,
+                job_type=menuaiJobType.Coroutinefunction,
             )
             for integration, topics in mqtt_integrations.items()
             for topic in topics
@@ -689,9 +689,9 @@ async def async_start(  # noqa: C901
     )
 
 
-async def async_stop(hass: HomeAssistant) -> None:
+async def async_stop(menuai: menuai) -> None:
     """Stop MQTT Discovery."""
-    mqtt_data = hass.data[DATA_MQTT]
+    mqtt_data = menuai.data[DATA_MQTT]
     for unsub in mqtt_data.discovery_unsubscribe:
         unsub()
     mqtt_data.discovery_unsubscribe = []

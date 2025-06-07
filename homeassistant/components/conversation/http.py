@@ -7,17 +7,17 @@ from dataclasses import asdict
 from typing import Any
 
 from aiohttp import web
-from hassil.recognize import MISSING_ENTITY, RecognizeResult
-from hassil.string_matcher import UnmatchedRangeEntity, UnmatchedTextEntity
+from menuaiil.recognize import MISSING_ENTITY, RecognizeResult
+from menuaiil.string_matcher import UnmatchedRangeEntity, UnmatchedTextEntity
 from home_assistant_intents import get_language_scores
 import voluptuous as vol
 
-from homeassistant.components import http, websocket_api
-from homeassistant.components.http.data_validator import RequestDataValidator
-from homeassistant.const import MATCH_ALL
-from homeassistant.core import HomeAssistant, State, callback
-from homeassistant.helpers import config_validation as cv, intent
-from homeassistant.util import language as language_util
+from menuai.components import http, websocket_api
+from menuai.components.http.data_validator import RequestDataValidator
+from menuai.const import MATCH_ALL
+from menuai.core import menuai, State, callback
+from menuai.helpers import config_validation as cv, intent
+from menuai.util import language as language_util
 
 from .agent_manager import (
     agent_id_validator,
@@ -32,15 +32,15 @@ from .models import ConversationInput
 
 
 @callback
-def async_setup(hass: HomeAssistant) -> None:
+def async_setup(menuai: menuai) -> None:
     """Set up the HTTP API for the conversation integration."""
-    hass.http.register_view(ConversationProcessView())
-    websocket_api.async_register_command(hass, websocket_process)
-    websocket_api.async_register_command(hass, websocket_prepare)
-    websocket_api.async_register_command(hass, websocket_list_agents)
-    websocket_api.async_register_command(hass, websocket_list_sentences)
-    websocket_api.async_register_command(hass, websocket_hass_agent_debug)
-    websocket_api.async_register_command(hass, websocket_hass_agent_language_scores)
+    menuai.http.register_view(ConversationProcessView())
+    websocket_api.async_register_command(menuai, websocket_process)
+    websocket_api.async_register_command(menuai, websocket_prepare)
+    websocket_api.async_register_command(menuai, websocket_list_agents)
+    websocket_api.async_register_command(menuai, websocket_list_sentences)
+    websocket_api.async_register_command(menuai, websocket_menuai_agent_debug)
+    websocket_api.async_register_command(menuai, websocket_menuai_agent_language_scores)
 
 
 @websocket_api.websocket_command(
@@ -54,13 +54,13 @@ def async_setup(hass: HomeAssistant) -> None:
 )
 @websocket_api.async_response
 async def websocket_process(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Process text."""
     result = await async_converse(
-        hass=hass,
+        menuai=menuai,
         text=msg["text"],
         conversation_id=msg.get("conversation_id"),
         context=connection.context(msg),
@@ -79,12 +79,12 @@ async def websocket_process(
 )
 @websocket_api.async_response
 async def websocket_prepare(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Reload intents."""
-    agent = async_get_agent(hass, msg.get("agent_id"))
+    agent = async_get_agent(menuai, msg.get("agent_id"))
 
     if agent is None:
         connection.send_error(msg["id"], websocket_api.ERR_NOT_FOUND, "Agent not found")
@@ -103,14 +103,14 @@ async def websocket_prepare(
 )
 @websocket_api.async_response
 async def websocket_list_agents(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict
 ) -> None:
     """List conversation agents and, optionally, if they support a given language."""
     country = msg.get("country")
     language = msg.get("language")
     agents = []
 
-    for entity in hass.data[DATA_COMPONENT].entities:
+    for entity in menuai.data[DATA_COMPONENT].entities:
         supported_languages = entity.supported_languages
         if language and supported_languages != MATCH_ALL:
             supported_languages = language_util.matches(
@@ -118,7 +118,7 @@ async def websocket_list_agents(
             )
 
         name = entity.entity_id
-        if state := hass.states.get(entity.entity_id):
+        if state := menuai.states.get(entity.entity_id):
             name = state.name
 
         agents.append(
@@ -129,7 +129,7 @@ async def websocket_list_agents(
             }
         )
 
-    manager = get_agent_manager(hass)
+    manager = get_agent_manager(menuai)
 
     for agent_info in manager.async_get_agent_info():
         agent = manager.async_get_agent(agent_info.id)
@@ -162,10 +162,10 @@ async def websocket_list_agents(
 @websocket_api.require_admin
 @websocket_api.async_response
 async def websocket_list_sentences(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict
 ) -> None:
     """List custom registered sentences."""
-    agent = hass.data[DATA_DEFAULT_ENTITY]
+    agent = menuai.data[DATA_DEFAULT_ENTITY]
 
     sentences = []
     for trigger_data in agent.trigger_sentences:
@@ -176,18 +176,18 @@ async def websocket_list_sentences(
 
 @websocket_api.websocket_command(
     {
-        vol.Required("type"): "conversation/agent/homeassistant/debug",
+        vol.Required("type"): "conversation/agent/menuai/debug",
         vol.Required("sentences"): [str],
         vol.Optional("language"): str,
         vol.Optional("device_id"): vol.Any(str, None),
     }
 )
 @websocket_api.async_response
-async def websocket_hass_agent_debug(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict
+async def websocket_menuai_agent_debug(
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict
 ) -> None:
     """Return intents that would be matched by the default agent for a list of sentences."""
-    agent = hass.data[DATA_DEFAULT_ENTITY]
+    agent = menuai.data[DATA_DEFAULT_ENTITY]
 
     # Return results for each sentence in the same order as the input.
     result_dicts: list[dict[str, Any] | None] = []
@@ -197,7 +197,7 @@ async def websocket_hass_agent_debug(
             context=connection.context(msg),
             conversation_id=None,
             device_id=msg.get("device_id"),
-            language=msg.get("language", hass.config.language),
+            language=msg.get("language", menuai.config.language),
             agent_id=agent.entity_id,
         )
         result_dict: dict[str, Any] | None = None
@@ -245,7 +245,7 @@ async def websocket_hass_agent_debug(
             if successful_match:
                 result_dict["targets"] = {
                     state.entity_id: {"matched": is_matched}
-                    for state, is_matched in _get_debug_targets(hass, intent_result)
+                    for state, is_matched in _get_debug_targets(menuai, intent_result)
                 }
 
             if intent_result.intent_sentence is not None:
@@ -268,10 +268,10 @@ async def websocket_hass_agent_debug(
 
 
 def _get_debug_targets(
-    hass: HomeAssistant,
+    menuai: menuai,
     result: RecognizeResult,
 ) -> Iterable[tuple[State, bool]]:
-    """Yield state/is_matched pairs for a hassil recognition."""
+    """Yield state/is_matched pairs for a menuaiil recognition."""
     entities = result.entities
 
     name: str | None = None
@@ -293,7 +293,7 @@ def _get_debug_targets(
         device_classes = set(cv.ensure_list(entities["device_class"].value))
 
     if "state" in entities:
-        # HassGetState only
+        # menuaiGetState only
         state_names = set(cv.ensure_list(entities["state"].value))
 
     if (
@@ -307,7 +307,7 @@ def _get_debug_targets(
         return
 
     states = intent.async_match_states(
-        hass,
+        menuai,
         name=name,
         area_name=area_name,
         domains=domains,
@@ -341,22 +341,22 @@ def _get_unmatched_slots(
 
 @websocket_api.websocket_command(
     {
-        vol.Required("type"): "conversation/agent/homeassistant/language_scores",
+        vol.Required("type"): "conversation/agent/menuai/language_scores",
         vol.Optional("language"): str,
         vol.Optional("country"): str,
     }
 )
 @websocket_api.async_response
-async def websocket_hass_agent_language_scores(
-    hass: HomeAssistant,
+async def websocket_menuai_agent_language_scores(
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Get support scores per language."""
-    language = msg.get("language", hass.config.language)
-    country = msg.get("country", hass.config.country)
+    language = msg.get("language", menuai.config.language)
+    country = msg.get("country", menuai.config.country)
 
-    scores = await hass.async_add_executor_job(get_language_scores)
+    scores = await menuai.async_add_executor_job(get_language_scores)
     matching_langs = language_util.matches(language, scores.keys(), country=country)
     preferred_lang = matching_langs[0] if matching_langs else language
     result = {
@@ -369,7 +369,7 @@ async def websocket_hass_agent_language_scores(
     connection.send_result(msg["id"], result)
 
 
-class ConversationProcessView(http.HomeAssistantView):
+class ConversationProcessView(http.menuaiView):
     """View to process text."""
 
     url = "/api/conversation/process"
@@ -387,10 +387,10 @@ class ConversationProcessView(http.HomeAssistantView):
     )
     async def post(self, request: web.Request, data: dict[str, str]) -> web.Response:
         """Send a request for processing."""
-        hass = request.app[http.KEY_HASS]
+        menuai = request.app[http.KEY_menuai]
 
         result = await async_converse(
-            hass,
+            menuai,
             text=data["text"],
             conversation_id=data.get("conversation_id"),
             context=self.context(request),

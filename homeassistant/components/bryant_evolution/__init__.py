@@ -6,11 +6,11 @@ import logging
 
 from evolutionhttp import BryantEvolutionLocalClient
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_FILENAME, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_FILENAME, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import device_registry as dr
 
 from . import names
 from .const import CONF_SYSTEM_ZONE, DOMAIN
@@ -30,13 +30,13 @@ async def _can_reach_device(client: BryantEvolutionLocalClient) -> bool:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: BryantEvolutionConfigEntry
+    menuai: menuai, entry: BryantEvolutionConfigEntry
 ) -> bool:
     """Set up Bryant Evolution from a config entry."""
 
     # Add a device for the SAM itself.
     sam_uid = names.sam_device_uid(entry)
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, sam_uid)},
@@ -73,12 +73,12 @@ async def async_setup_entry(
             entry.runtime_data[tuple(sz)] = client
         except FileNotFoundError as f:
             raise ConfigEntryNotReady from f
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, entry: BryantEvolutionConfigEntry
+    menuai: menuai, entry: BryantEvolutionConfigEntry
 ) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

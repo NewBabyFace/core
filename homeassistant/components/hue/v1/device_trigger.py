@@ -6,12 +6,12 @@ from typing import TYPE_CHECKING
 
 import voluptuous as vol
 
-from homeassistant.components.device_automation import (
+from menuai.components.device_automation import (
     DEVICE_TRIGGER_BASE_SCHEMA,
     InvalidDeviceAutomationConfig,
 )
-from homeassistant.components.homeassistant.triggers import event as event_trigger
-from homeassistant.const import (
+from menuai.components.menuai.triggers import event as event_trigger
+from menuai.const import (
     CONF_DEVICE_ID,
     CONF_DOMAIN,
     CONF_EVENT,
@@ -19,10 +19,10 @@ from homeassistant.const import (
     CONF_TYPE,
     CONF_UNIQUE_ID,
 )
-from homeassistant.core import CALLBACK_TYPE, callback
-from homeassistant.helpers.device_registry import DeviceEntry
-from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import CALLBACK_TYPE, callback
+from menuai.helpers.device_registry import DeviceEntry
+from menuai.helpers.trigger import TriggerActionType, TriggerInfo
+from menuai.helpers.typing import ConfigType
 
 from ..const import ATTR_HUE_EVENT, CONF_SUBTYPE, DOMAIN
 
@@ -109,9 +109,9 @@ REMOTES: dict[str, dict[tuple[str, str], dict[str, int]]] = {
 }
 
 
-def _get_hue_event_from_device_id(hass, device_id):
+def _get_hue_event_from_device_id(menuai, device_id):
     """Resolve hue event from device id."""
-    entries: list[HueConfigEntry] = hass.config_entries.async_loaded_entries(DOMAIN)
+    entries: list[HueConfigEntry] = menuai.config_entries.async_loaded_entries(DOMAIN)
     for entry in entries:
         for hue_event in entry.runtime_data.sensor_manager.current_events.values():
             if device_id == hue_event.device_registry_id:
@@ -153,9 +153,9 @@ async def async_attach_trigger(
     trigger_info: TriggerInfo,
 ) -> CALLBACK_TYPE:
     """Listen for state changes based on configuration."""
-    hass = bridge.hass
+    menuai = bridge.menuai
 
-    hue_event = _get_hue_event_from_device_id(hass, device_entry.id)
+    hue_event = _get_hue_event_from_device_id(menuai, device_entry.id)
     if hue_event is None:
         raise InvalidDeviceAutomationConfig
 
@@ -172,7 +172,7 @@ async def async_attach_trigger(
 
     event_config = event_trigger.TRIGGER_SCHEMA(event_config)
     return await event_trigger.async_attach_trigger(
-        hass, event_config, action, trigger_info, platform_type="device"
+        menuai, event_config, action, trigger_info, platform_type="device"
     )
 
 

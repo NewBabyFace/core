@@ -6,16 +6,16 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_CLIENT_ID,
     CONF_CLIENT_SECRET,
     CONF_DESCRIPTION,
     CONF_NAME,
     CONF_PASSWORD,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, entityfilter
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, entityfilter
+from menuai.helpers.typing import ConfigType
 
 from . import flash_briefings, intent, smart_home
 from .const import (
@@ -94,22 +94,22 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Activate the Alexa component."""
     if DOMAIN not in config:
         return True
 
     config = config[DOMAIN]
 
-    intent.async_setup(hass)
+    intent.async_setup(menuai)
 
     if flash_briefings_config := config.get(CONF_FLASH_BRIEFINGS):
-        flash_briefings.async_setup(hass, flash_briefings_config)
+        flash_briefings.async_setup(menuai, flash_briefings_config)
 
     # smart_home being absent is not the same as smart_home being None
     if CONF_SMART_HOME in config:
         smart_home_config: dict[str, Any] | None = config[CONF_SMART_HOME]
         smart_home_config = smart_home_config or SMART_HOME_SCHEMA({})
-        await smart_home.async_setup(hass, smart_home_config)
+        await smart_home.async_setup(menuai, smart_home_config)
 
     return True

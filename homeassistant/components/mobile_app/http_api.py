@@ -10,12 +10,12 @@ from aiohttp.web import Request, Response
 from nacl.secret import SecretBox
 import voluptuous as vol
 
-from homeassistant.components import cloud
-from homeassistant.components.http import KEY_HASS, HomeAssistantView
-from homeassistant.components.http.data_validator import RequestDataValidator
-from homeassistant.const import ATTR_DEVICE_ID, CONF_WEBHOOK_ID
-from homeassistant.helpers import config_validation as cv
-from homeassistant.util import slugify
+from menuai.components import cloud
+from menuai.components.http import KEY_menuai, menuaiView
+from menuai.components.http.data_validator import RequestDataValidator
+from menuai.const import ATTR_DEVICE_ID, CONF_WEBHOOK_ID
+from menuai.helpers import config_validation as cv
+from menuai.util import slugify
 
 from .const import (
     ATTR_APP_DATA,
@@ -38,7 +38,7 @@ from .const import (
 from .util import async_create_cloud_hook
 
 
-class RegistrationsView(HomeAssistantView):
+class RegistrationsView(menuaiView):
     """A view that accepts registration requests."""
 
     url = "/api/mobile_app/registrations"
@@ -65,13 +65,13 @@ class RegistrationsView(HomeAssistantView):
     )
     async def post(self, request: Request, data: dict) -> Response:
         """Handle the POST request for registration."""
-        hass = request.app[KEY_HASS]
+        menuai = request.app[KEY_menuai]
 
         webhook_id = secrets.token_hex()
 
-        if cloud.async_active_subscription(hass):
+        if cloud.async_active_subscription(menuai):
             data[CONF_CLOUDHOOK_URL] = await async_create_cloud_hook(
-                hass, webhook_id, None
+                menuai, webhook_id, None
             )
 
         data[CONF_WEBHOOK_ID] = webhook_id
@@ -79,22 +79,22 @@ class RegistrationsView(HomeAssistantView):
         if data[ATTR_SUPPORTS_ENCRYPTION]:
             data[CONF_SECRET] = secrets.token_hex(SecretBox.KEY_SIZE)
 
-        data[CONF_USER_ID] = request["hass_user"].id
+        data[CONF_USER_ID] = request["menuai_user"].id
 
         # Fallback to DEVICE_ID if slug is empty.
         if not slugify(data[ATTR_DEVICE_NAME], separator=""):
             data[ATTR_DEVICE_NAME] = data[ATTR_DEVICE_ID]
 
-        await hass.async_create_task(
-            hass.config_entries.flow.async_init(
+        await menuai.async_create_task(
+            menuai.config_entries.flow.async_init(
                 DOMAIN, data=data, context={"source": "registration"}
             )
         )
 
         remote_ui_url = None
-        if cloud.async_active_subscription(hass):
+        if cloud.async_active_subscription(menuai):
             with suppress(cloud.CloudNotAvailable):
-                remote_ui_url = cloud.async_remote_ui_url(hass)
+                remote_ui_url = cloud.async_remote_ui_url(menuai)
 
         return self.json(
             {

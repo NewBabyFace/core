@@ -1,9 +1,9 @@
 """Errors for the cert_expiry integration."""
 
-from homeassistant.exceptions import HomeAssistantError
+from menuai.exceptions import menuaiError
 
 
-class CertExpiryException(HomeAssistantError):
+class CertExpiryException(menuaiError):
     """Base class for cert_expiry exceptions."""
 
 

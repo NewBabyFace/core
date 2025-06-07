@@ -2,9 +2,9 @@
 
 from aioesphomeapi import APIClient, CameraInfo, CameraState as ESPHomeCameraState
 
-from homeassistant.components.camera import CameraState
-from homeassistant.const import STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant
+from menuai.components.camera import CameraState
+from menuai.const import STATE_UNAVAILABLE
+from menuai.core import menuai
 
 from .conftest import MockESPHomeDeviceType
 
@@ -19,10 +19,10 @@ SMALLEST_VALID_JPEG_BYTES = bytes.fromhex(SMALLEST_VALID_JPEG)
 
 
 async def test_camera_single_image(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_esphome_device: MockESPHomeDeviceType,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test a generic camera single image request."""
     entity_info = [
@@ -41,7 +41,7 @@ async def test_camera_single_image(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("camera.test_mycamera")
+    state = menuai.states.get("camera.test_mycamera")
     assert state is not None
     assert state.state == CameraState.IDLE
 
@@ -50,10 +50,10 @@ async def test_camera_single_image(
 
     mock_client.request_single_image = _mock_camera_image
 
-    client = await hass_client()
+    client = await menuai_client()
     resp = await client.get("/api/camera_proxy/camera.test_mycamera")
-    await hass.async_block_till_done()
-    state = hass.states.get("camera.test_mycamera")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("camera.test_mycamera")
     assert state is not None
     assert state.state == CameraState.IDLE
 
@@ -64,10 +64,10 @@ async def test_camera_single_image(
 
 
 async def test_camera_single_image_unavailable_before_requested(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_esphome_device: MockESPHomeDeviceType,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test a generic camera that goes unavailable before the request."""
     entity_info = [
@@ -86,15 +86,15 @@ async def test_camera_single_image_unavailable_before_requested(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("camera.test_mycamera")
+    state = menuai.states.get("camera.test_mycamera")
     assert state is not None
     assert state.state == CameraState.IDLE
     await mock_device.mock_disconnect(False)
 
-    client = await hass_client()
+    client = await menuai_client()
     resp = await client.get("/api/camera_proxy/camera.test_mycamera")
-    await hass.async_block_till_done()
-    state = hass.states.get("camera.test_mycamera")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("camera.test_mycamera")
     assert state is not None
     assert state.state == STATE_UNAVAILABLE
 
@@ -102,10 +102,10 @@ async def test_camera_single_image_unavailable_before_requested(
 
 
 async def test_camera_single_image_unavailable_during_request(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_esphome_device: MockESPHomeDeviceType,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test a generic camera that goes unavailable before the request."""
     entity_info = [
@@ -124,19 +124,19 @@ async def test_camera_single_image_unavailable_during_request(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("camera.test_mycamera")
+    state = menuai.states.get("camera.test_mycamera")
     assert state is not None
     assert state.state == CameraState.IDLE
 
     def _mock_camera_image():
-        hass.async_create_task(mock_device.mock_disconnect(False))
+        menuai.async_create_task(mock_device.mock_disconnect(False))
 
     mock_client.request_single_image = _mock_camera_image
 
-    client = await hass_client()
+    client = await menuai_client()
     resp = await client.get("/api/camera_proxy/camera.test_mycamera")
-    await hass.async_block_till_done()
-    state = hass.states.get("camera.test_mycamera")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("camera.test_mycamera")
     assert state is not None
     assert state.state == STATE_UNAVAILABLE
 
@@ -144,10 +144,10 @@ async def test_camera_single_image_unavailable_during_request(
 
 
 async def test_camera_stream(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_esphome_device: MockESPHomeDeviceType,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test a generic camera stream."""
     entity_info = [
@@ -166,7 +166,7 @@ async def test_camera_stream(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("camera.test_mycamera")
+    state = menuai.states.get("camera.test_mycamera")
     assert state is not None
     assert state.state == CameraState.IDLE
     remaining_responses = 3
@@ -181,10 +181,10 @@ async def test_camera_stream(
     mock_client.request_image_stream = _mock_camera_image
     mock_client.request_single_image = _mock_camera_image
 
-    client = await hass_client()
+    client = await menuai_client()
     resp = await client.get("/api/camera_proxy_stream/camera.test_mycamera")
-    await hass.async_block_till_done()
-    state = hass.states.get("camera.test_mycamera")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("camera.test_mycamera")
     assert state is not None
     assert state.state == CameraState.IDLE
 
@@ -201,10 +201,10 @@ async def test_camera_stream(
 
 
 async def test_camera_stream_unavailable(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_esphome_device: MockESPHomeDeviceType,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test a generic camera stream when the device is disconnected."""
     entity_info = [
@@ -223,25 +223,25 @@ async def test_camera_stream_unavailable(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("camera.test_mycamera")
+    state = menuai.states.get("camera.test_mycamera")
     assert state is not None
     assert state.state == CameraState.IDLE
 
     await mock_device.mock_disconnect(False)
 
-    client = await hass_client()
+    client = await menuai_client()
     await client.get("/api/camera_proxy_stream/camera.test_mycamera")
-    await hass.async_block_till_done()
-    state = hass.states.get("camera.test_mycamera")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("camera.test_mycamera")
     assert state is not None
     assert state.state == STATE_UNAVAILABLE
 
 
 async def test_camera_stream_with_disconnection(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: APIClient,
     mock_esphome_device: MockESPHomeDeviceType,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
 ) -> None:
     """Test a generic camera stream that goes unavailable during the request."""
     entity_info = [
@@ -260,7 +260,7 @@ async def test_camera_stream_with_disconnection(
         user_service=user_service,
         states=states,
     )
-    state = hass.states.get("camera.test_mycamera")
+    state = menuai.states.get("camera.test_mycamera")
     assert state is not None
     assert state.state == CameraState.IDLE
     remaining_responses = 3
@@ -270,16 +270,16 @@ async def test_camera_stream_with_disconnection(
         if remaining_responses == 0:
             return
         if remaining_responses == 2:
-            hass.async_create_task(mock_device.mock_disconnect(False))
+            menuai.async_create_task(mock_device.mock_disconnect(False))
         remaining_responses -= 1
         mock_device.set_state(ESPHomeCameraState(key=1, data=SMALLEST_VALID_JPEG_BYTES))
 
     mock_client.request_image_stream = _mock_camera_image
     mock_client.request_single_image = _mock_camera_image
 
-    client = await hass_client()
+    client = await menuai_client()
     await client.get("/api/camera_proxy_stream/camera.test_mycamera")
-    await hass.async_block_till_done()
-    state = hass.states.get("camera.test_mycamera")
+    await menuai.async_block_till_done()
+    state = menuai.states.get("camera.test_mycamera")
     assert state is not None
     assert state.state == STATE_UNAVAILABLE

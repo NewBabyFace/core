@@ -1,9 +1,9 @@
 """Support for Nanoleaf event entity."""
 
-from homeassistant.components.event import EventEntity
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.event import EventEntity
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import TOUCH_MODELS
 from .coordinator import NanoleafConfigEntry, NanoleafCoordinator
@@ -11,7 +11,7 @@ from .entity import NanoleafEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: NanoleafConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -37,12 +37,12 @@ class NanoleafGestureEvent(NanoleafEntity, EventEntity):
         super().__init__(coordinator)
         self._attr_unique_id = f"{self._nanoleaf.serial_no}_gesture"
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to Nanoleaf events."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"nanoleaf_gesture_{self._nanoleaf.serial_no}",
                 self._async_handle_event,
             )

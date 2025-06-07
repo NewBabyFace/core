@@ -12,13 +12,13 @@ from requests.exceptions import ConnectTimeout, HTTPError
 from solaredge_local import SolarEdge
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_IP_ADDRESS,
     CONF_NAME,
     UnitOfElectricCurrent,
@@ -28,11 +28,11 @@ from homeassistant.const import (
     UnitOfPower,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import Throttle
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import Throttle
 
 DOMAIN = "solaredge_local"
 UPDATE_DELAY = timedelta(seconds=10)
@@ -204,7 +204,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -228,7 +228,7 @@ def setup_platform(
         return
 
     # Create solaredge data service which will retrieve and update the data.
-    data = SolarEdgeData(hass, api)
+    data = SolarEdgeData(menuai, api)
 
     # Changing inverter temperature unit.
     inverter_temp_description = SENSOR_TYPE_INVERTER_TEMPERATURE
@@ -307,9 +307,9 @@ class SolarEdgeSensor(SensorEntity):
 class SolarEdgeData:
     """Get and update the latest data."""
 
-    def __init__(self, hass, api):
+    def __init__(self, menuai, api):
         """Initialize the data object."""
-        self.hass = hass
+        self.menuai = menuai
         self.api = api
         self.data = {}
         self.info = {}

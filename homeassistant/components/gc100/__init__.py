@@ -5,18 +5,18 @@ from __future__ import annotations
 import gc100
 import voluptuous as vol
 
-from homeassistant.const import CONF_HOST, CONF_PORT, EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util.hass_dict import HassKey
+from menuai.const import CONF_HOST, CONF_PORT, EVENT_menuai_STOP
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType
+from menuai.util.menuai_dict import menuaiKey
 
 CONF_PORTS = "ports"
 
 DEFAULT_PORT = 4998
 DOMAIN = "gc100"
 
-DATA_GC100: HassKey[GC100Device] = HassKey("gc100")
+DATA_GC100: menuaiKey[GC100Device] = menuaiKey("gc100")
 
 CONFIG_SCHEMA = vol.Schema(
     {
@@ -31,7 +31,7 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def setup(hass: HomeAssistant, base_config: ConfigType) -> bool:
+def setup(menuai: menuai, base_config: ConfigType) -> bool:
     """Set up the gc100 component."""
     config = base_config[DOMAIN]
     host = config[CONF_HOST]
@@ -43,9 +43,9 @@ def setup(hass: HomeAssistant, base_config: ConfigType) -> bool:
         """Stuff to do before stopping."""
         gc_device.quit()
 
-    hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, cleanup_gc100)
+    menuai.bus.listen_once(EVENT_menuai_STOP, cleanup_gc100)
 
-    hass.data[DATA_GC100] = GC100Device(hass, gc_device)
+    menuai.data[DATA_GC100] = GC100Device(menuai, gc_device)
 
     return True
 
@@ -53,9 +53,9 @@ def setup(hass: HomeAssistant, base_config: ConfigType) -> bool:
 class GC100Device:
     """The GC100 component."""
 
-    def __init__(self, hass, gc_device):
+    def __init__(self, menuai, gc_device):
         """Init a gc100 device."""
-        self.hass = hass
+        self.menuai = menuai
         self.gc_device = gc_device
 
     def read_sensor(self, port_addr, callback):

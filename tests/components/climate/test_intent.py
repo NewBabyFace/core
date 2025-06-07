@@ -5,8 +5,8 @@ from typing import Any
 
 import pytest
 
-from homeassistant.components import conversation
-from homeassistant.components.climate import (
+from menuai.components import conversation
+from menuai.components.climate import (
     ATTR_TEMPERATURE,
     DOMAIN,
     ClimateEntity,
@@ -14,17 +14,17 @@ from homeassistant.components.climate import (
     HVACMode,
     intent as climate_intent,
 )
-from homeassistant.config_entries import ConfigEntry, ConfigFlow
-from homeassistant.const import Platform, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import (
+from menuai.config_entries import ConfigEntry, ConfigFlow
+from menuai.const import Platform, UnitOfTemperature
+from menuai.core import menuai
+from menuai.helpers import (
     area_registry as ar,
     entity_registry as er,
     floor_registry as fr,
     intent,
 )
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.setup import async_setup_component
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.setup import async_setup_component
 
 from tests.common import (
     MockConfigEntry,
@@ -43,37 +43,37 @@ class MockFlow(ConfigFlow):
 
 
 @pytest.fixture(autouse=True)
-def config_flow_fixture(hass: HomeAssistant) -> Generator[None]:
+def config_flow_fixture(menuai: menuai) -> Generator[None]:
     """Mock config flow."""
-    mock_platform(hass, f"{TEST_DOMAIN}.config_flow")
+    mock_platform(menuai, f"{TEST_DOMAIN}.config_flow")
 
     with mock_config_flow(TEST_DOMAIN, MockFlow):
         yield
 
 
 @pytest.fixture(autouse=True)
-def mock_setup_integration(hass: HomeAssistant) -> None:
+def mock_setup_integration(menuai: menuai) -> None:
     """Fixture to set up a mock integration."""
 
     async def async_setup_entry_init(
-        hass: HomeAssistant, config_entry: ConfigEntry
+        menuai: menuai, config_entry: ConfigEntry
     ) -> bool:
         """Set up test config entry."""
-        await hass.config_entries.async_forward_entry_setups(
+        await menuai.config_entries.async_forward_entry_setups(
             config_entry, [Platform.CLIMATE]
         )
         return True
 
     async def async_unload_entry_init(
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
     ) -> bool:
-        await hass.config_entries.async_unload_platforms(config_entry, [Platform.TODO])
+        await menuai.config_entries.async_unload_platforms(config_entry, [Platform.TODO])
         return True
 
-    mock_platform(hass, f"{TEST_DOMAIN}.config_flow")
+    mock_platform(menuai, f"{TEST_DOMAIN}.config_flow")
     mock_integration(
-        hass,
+        menuai,
         MockModule(
             TEST_DOMAIN,
             async_setup_entry=async_setup_entry_init,
@@ -83,13 +83,13 @@ def mock_setup_integration(hass: HomeAssistant) -> None:
 
 
 async def create_mock_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     entities: list[ClimateEntity],
 ) -> MockConfigEntry:
     """Create a todo platform with the specified entities."""
 
     async def async_setup_entry_platform(
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         async_add_entities: AddConfigEntryEntitiesCallback,
     ) -> None:
@@ -97,15 +97,15 @@ async def create_mock_platform(
         async_add_entities(entities)
 
     mock_platform(
-        hass,
+        menuai,
         f"{TEST_DOMAIN}.{DOMAIN}",
         MockPlatform(async_setup_entry=async_setup_entry_platform),
     )
 
     config_entry = MockConfigEntry(domain=TEST_DOMAIN)
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     return config_entry
 
@@ -133,14 +133,14 @@ class MockClimateEntityNoSetTemperature(ClimateEntity):
 
 
 async def test_set_temperature(
-    hass: HomeAssistant,
+    menuai: menuai,
     area_registry: ar.AreaRegistry,
     entity_registry: er.EntityRegistry,
     floor_registry: fr.FloorRegistry,
 ) -> None:
-    """Test HassClimateSetTemperature intent."""
-    assert await async_setup_component(hass, "homeassistant", {})
-    await climate_intent.async_setup_intents(hass)
+    """Test menuaiClimateSetTemperature intent."""
+    assert await async_setup_component(menuai, "menuai", {})
+    await climate_intent.async_setup_intents(menuai)
 
     climate_1 = MockClimateEntity()
     climate_1._attr_name = "Climate 1"
@@ -160,7 +160,7 @@ async def test_set_temperature(
         DOMAIN, "test", "5678", suggested_object_id="climate_2"
     )
 
-    await create_mock_platform(hass, [climate_1, climate_2])
+    await create_mock_platform(menuai, [climate_1, climate_2])
 
     # Add climate entities to different areas:
     # climate_1 => living room
@@ -178,7 +178,7 @@ async def test_set_temperature(
     # Put areas on different floors:
     # first floor => living room and office
     # upstairs => bedroom
-    floor_registry = fr.async_get(hass)
+    floor_registry = fr.async_get(menuai)
     first_floor = floor_registry.async_create("First floor")
     living_room_area = area_registry.async_update(
         living_room_area.id, floor_id=first_floor.floor_id
@@ -195,7 +195,7 @@ async def test_set_temperature(
     # Cannot target multiple climate devices
     with pytest.raises(intent.MatchFailedError) as err:
         await intent.async_handle(
-            hass,
+            menuai,
             "test",
             climate_intent.INTENT_SET_TEMPERATURE,
             {"temperature": {"value": 20}},
@@ -205,7 +205,7 @@ async def test_set_temperature(
 
     # Select by area explicitly (climate_2)
     response = await intent.async_handle(
-        hass,
+        menuai,
         "test",
         climate_intent.INTENT_SET_TEMPERATURE,
         {"area": {"value": bedroom_area.name}, "temperature": {"value": 20.1}},
@@ -214,12 +214,12 @@ async def test_set_temperature(
     assert response.response_type == intent.IntentResponseType.ACTION_DONE
     assert len(response.matched_states) == 1
     assert response.matched_states[0].entity_id == climate_2.entity_id
-    state = hass.states.get(climate_2.entity_id)
+    state = menuai.states.get(climate_2.entity_id)
     assert state.attributes[ATTR_TEMPERATURE] == 20.1
 
     # Select by area implicitly (climate_2)
     response = await intent.async_handle(
-        hass,
+        menuai,
         "test",
         climate_intent.INTENT_SET_TEMPERATURE,
         {
@@ -231,12 +231,12 @@ async def test_set_temperature(
     assert response.response_type == intent.IntentResponseType.ACTION_DONE
     assert response.matched_states
     assert response.matched_states[0].entity_id == climate_2.entity_id
-    state = hass.states.get(climate_2.entity_id)
+    state = menuai.states.get(climate_2.entity_id)
     assert state.attributes[ATTR_TEMPERATURE] == 20.2
 
     # Select by floor explicitly (climate_2)
     response = await intent.async_handle(
-        hass,
+        menuai,
         "test",
         climate_intent.INTENT_SET_TEMPERATURE,
         {"floor": {"value": second_floor.name}, "temperature": {"value": 20.3}},
@@ -245,12 +245,12 @@ async def test_set_temperature(
     assert response.response_type == intent.IntentResponseType.ACTION_DONE
     assert response.matched_states
     assert response.matched_states[0].entity_id == climate_2.entity_id
-    state = hass.states.get(climate_2.entity_id)
+    state = menuai.states.get(climate_2.entity_id)
     assert state.attributes[ATTR_TEMPERATURE] == 20.3
 
     # Select by floor implicitly (climate_2)
     response = await intent.async_handle(
-        hass,
+        menuai,
         "test",
         climate_intent.INTENT_SET_TEMPERATURE,
         {
@@ -262,12 +262,12 @@ async def test_set_temperature(
     assert response.response_type == intent.IntentResponseType.ACTION_DONE
     assert response.matched_states
     assert response.matched_states[0].entity_id == climate_2.entity_id
-    state = hass.states.get(climate_2.entity_id)
+    state = menuai.states.get(climate_2.entity_id)
     assert state.attributes[ATTR_TEMPERATURE] == 20.4
 
     # Select by name (climate_2)
     response = await intent.async_handle(
-        hass,
+        menuai,
         "test",
         climate_intent.INTENT_SET_TEMPERATURE,
         {"name": {"value": "Climate 2"}, "temperature": {"value": 20.5}},
@@ -276,13 +276,13 @@ async def test_set_temperature(
     assert response.response_type == intent.IntentResponseType.ACTION_DONE
     assert len(response.matched_states) == 1
     assert response.matched_states[0].entity_id == climate_2.entity_id
-    state = hass.states.get(climate_2.entity_id)
+    state = menuai.states.get(climate_2.entity_id)
     assert state.attributes[ATTR_TEMPERATURE] == 20.5
 
     # Check area with no climate entities (explicit)
     with pytest.raises(intent.MatchFailedError) as error:
         response = await intent.async_handle(
-            hass,
+            menuai,
             "test",
             climate_intent.INTENT_SET_TEMPERATURE,
             {"area": {"value": office_area.name}, "temperature": {"value": 20.6}},
@@ -301,7 +301,7 @@ async def test_set_temperature(
     # Implicit area with no climate entities will fail with multiple targets
     with pytest.raises(intent.MatchFailedError) as err:
         await intent.async_handle(
-            hass,
+            menuai,
             "test",
             climate_intent.INTENT_SET_TEMPERATURE,
             {
@@ -314,17 +314,17 @@ async def test_set_temperature(
 
 
 async def test_set_temperature_no_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
-    """Test HassClimateSetTemperature intent with no climate entities."""
-    assert await async_setup_component(hass, "homeassistant", {})
-    await climate_intent.async_setup_intents(hass)
+    """Test menuaiClimateSetTemperature intent with no climate entities."""
+    assert await async_setup_component(menuai, "menuai", {})
+    await climate_intent.async_setup_intents(menuai)
 
-    await create_mock_platform(hass, [])
+    await create_mock_platform(menuai, [])
 
     with pytest.raises(intent.MatchFailedError) as err:
         await intent.async_handle(
-            hass,
+            menuai,
             "test",
             climate_intent.INTENT_SET_TEMPERATURE,
             {"temperature": {"value": 20}},
@@ -333,10 +333,10 @@ async def test_set_temperature_no_entities(
     assert err.value.result.no_match_reason == intent.MatchFailedReason.DOMAIN
 
 
-async def test_set_temperature_not_supported(hass: HomeAssistant) -> None:
-    """Test HassClimateSetTemperature intent when climate entity doesn't support required feature."""
-    assert await async_setup_component(hass, "homeassistant", {})
-    await climate_intent.async_setup_intents(hass)
+async def test_set_temperature_not_supported(menuai: menuai) -> None:
+    """Test menuaiClimateSetTemperature intent when climate entity doesn't support required feature."""
+    assert await async_setup_component(menuai, "menuai", {})
+    await climate_intent.async_setup_intents(menuai)
 
     climate_1 = MockClimateEntityNoSetTemperature()
     climate_1._attr_name = "Climate 1"
@@ -344,11 +344,11 @@ async def test_set_temperature_not_supported(hass: HomeAssistant) -> None:
     climate_1._attr_current_temperature = 10.0
     climate_1._attr_target_temperature = 10.0
 
-    await create_mock_platform(hass, [climate_1])
+    await create_mock_platform(menuai, [climate_1])
 
     with pytest.raises(intent.MatchFailedError) as error:
         await intent.async_handle(
-            hass,
+            menuai,
             "test",
             climate_intent.INTENT_SET_TEMPERATURE,
             {"temperature": {"value": 20.0}},

@@ -7,10 +7,10 @@ from unittest.mock import patch
 from aiohttp import ClientSession, ClientWebSocketResponse
 from freezegun.api import FrozenDateTimeFactory
 
-from homeassistant.components.websocket_api import TYPE_RESULT
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.components.websocket_api import TYPE_RESULT
+from menuai.core import menuai
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from . import TEST_IMAGE
 
@@ -18,10 +18,10 @@ from tests.typing import ClientSessionGenerator, WebSocketGenerator
 
 
 async def test_upload_image(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
-    hass_client: ClientSessionGenerator,
-    hass_ws_client: WebSocketGenerator,
+    menuai_client: ClientSessionGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test we can upload an image."""
     now = dt_util.utcnow()
@@ -29,11 +29,11 @@ async def test_upload_image(
 
     with (
         tempfile.TemporaryDirectory() as tempdir,
-        patch.object(hass.config, "path", return_value=tempdir),
+        patch.object(menuai.config, "path", return_value=tempdir),
     ):
-        assert await async_setup_component(hass, "image_upload", {})
-        ws_client: ClientWebSocketResponse = await hass_ws_client()
-        client: ClientSession = await hass_client()
+        assert await async_setup_component(menuai, "image_upload", {})
+        ws_client: ClientWebSocketResponse = await menuai_ws_client()
+        client: ClientSession = await menuai_client()
 
         with TEST_IMAGE.open("rb") as fp:
             res = await client.post("/api/image/upload", data={"file": fp})

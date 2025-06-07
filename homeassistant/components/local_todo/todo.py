@@ -9,17 +9,17 @@ from ical.calendar_stream import IcsCalendarStream
 from ical.store import TodoStore
 from ical.todo import Todo, TodoStatus
 
-from homeassistant.components.todo import (
+from menuai.components.todo import (
     TodoItem,
     TodoItemStatus,
     TodoListEntity,
     TodoListEntityFeature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.setup import SetupPhases, async_pause_setup
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.setup import SetupPhases, async_pause_setup
+from menuai.util import dt as dt_util
 
 from . import LocalTodoConfigEntry
 from .const import CONF_TODO_LIST_NAME
@@ -28,8 +28,8 @@ from .store import LocalTodoListStore
 _LOGGER = logging.getLogger(__name__)
 
 
-PRODID = "-//homeassistant.io//local_todo 2.0//EN"
-PRODID_REQUIRES_MIGRATION = "-//homeassistant.io//local_todo 1.0//EN"
+PRODID = "-//menuai.io//local_todo 2.0//EN"
+PRODID_REQUIRES_MIGRATION = "-//menuai.io//local_todo 1.0//EN"
 
 ICS_TODO_STATUS_MAP = {
     TodoStatus.IN_PROCESS: TodoItemStatus.NEEDS_ACTION,
@@ -63,7 +63,7 @@ def _migrate_calendar(calendar: Calendar) -> bool:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: LocalTodoConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -72,11 +72,11 @@ async def async_setup_entry(
     store = config_entry.runtime_data
     ics = await store.async_load()
 
-    with async_pause_setup(hass, SetupPhases.WAIT_IMPORT_PACKAGES):
+    with async_pause_setup(menuai, SetupPhases.WAIT_IMPORT_PACKAGES):
         # calendar_from_ics will dynamically load packages
         # the first time it is called, so we need to do it
         # in a separate thread to avoid blocking the event loop
-        calendar: Calendar = await hass.async_add_import_executor_job(
+        calendar: Calendar = await menuai.async_add_import_executor_job(
             IcsCalendarStream.calendar_from_ics, ics
         )
     migrated = _migrate_calendar(calendar)
@@ -91,7 +91,7 @@ async def async_setup_entry(
 
 
 def _convert_item(item: TodoItem) -> Todo:
-    """Convert a HomeAssistant TodoItem to an ical Todo."""
+    """Convert a menuai TodoItem to an ical Todo."""
     todo = Todo()
     if item.uid:
         todo.uid = item.uid
@@ -163,7 +163,7 @@ class LocalTodoListEntity(TodoListEntity):
         todo = _convert_item(item)
         async with self._calendar_lock:
             todo_store = self._new_todo_store()
-            await self.hass.async_add_executor_job(todo_store.add, todo)
+            await self.menuai.async_add_executor_job(todo_store.add, todo)
             await self.async_save()
         await self.async_update_ha_state(force_refresh=True)
 
@@ -172,7 +172,7 @@ class LocalTodoListEntity(TodoListEntity):
         todo = _convert_item(item)
         async with self._calendar_lock:
             todo_store = self._new_todo_store()
-            await self.hass.async_add_executor_job(todo_store.edit, todo.uid, todo)
+            await self.menuai.async_add_executor_job(todo_store.edit, todo.uid, todo)
             await self.async_save()
         await self.async_update_ha_state(force_refresh=True)
 
@@ -195,11 +195,11 @@ class LocalTodoListEntity(TodoListEntity):
             todos = self._calendar.todos
             item_idx: dict[str, int] = {itm.uid: idx for idx, itm in enumerate(todos)}
             if uid not in item_idx:
-                raise HomeAssistantError(
+                raise menuaiError(
                     "Item '{uid}' not found in todo list {self.entity_id}"
                 )
             if previous_uid and previous_uid not in item_idx:
-                raise HomeAssistantError(
+                raise menuaiError(
                     "Item '{previous_uid}' not found in todo list {self.entity_id}"
                 )
             dst_idx = item_idx[previous_uid] + 1 if previous_uid else 0

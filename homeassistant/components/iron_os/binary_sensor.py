@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from enum import StrEnum
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import IronOSConfigEntry
 from .coordinator import IronOSLiveDataCoordinator
@@ -27,7 +27,7 @@ class PinecilBinarySensor(StrEnum):
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: IronOSConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

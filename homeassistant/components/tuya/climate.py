@@ -7,7 +7,7 @@ from typing import Any
 
 from tuya_sharing import CustomerDevice, Manager
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     SWING_BOTH,
     SWING_HORIZONTAL,
     SWING_OFF,
@@ -18,10 +18,10 @@ from homeassistant.components.climate import (
     ClimateEntityFeature,
     HVACMode,
 )
-from homeassistant.const import UnitOfTemperature
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import UnitOfTemperature
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import TuyaConfigEntry
 from .const import TUYA_DISCOVERY_NEW, DPCode, DPType
@@ -84,34 +84,34 @@ CLIMATE_DESCRIPTIONS: dict[str, TuyaClimateEntityDescription] = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: TuyaConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Tuya climate dynamically through Tuya discovery."""
-    hass_data = entry.runtime_data
+    menuai_data = entry.runtime_data
 
     @callback
     def async_discover_device(device_ids: list[str]) -> None:
         """Discover and add a discovered Tuya climate."""
         entities: list[TuyaClimateEntity] = []
         for device_id in device_ids:
-            device = hass_data.manager.device_map[device_id]
+            device = menuai_data.manager.device_map[device_id]
             if device and device.category in CLIMATE_DESCRIPTIONS:
                 entities.append(
                     TuyaClimateEntity(
                         device,
-                        hass_data.manager,
+                        menuai_data.manager,
                         CLIMATE_DESCRIPTIONS[device.category],
-                        hass.config.units.temperature_unit,
+                        menuai.config.units.temperature_unit,
                     )
                 )
         async_add_entities(entities)
 
-    async_discover_device([*hass_data.manager.device_map])
+    async_discover_device([*menuai_data.manager.device_map])
 
     entry.async_on_unload(
-        async_dispatcher_connect(hass, TUYA_DISCOVERY_NEW, async_discover_device)
+        async_dispatcher_connect(menuai, TUYA_DISCOVERY_NEW, async_discover_device)
     )
 
 
@@ -280,9 +280,9 @@ class TuyaClimateEntity(TuyaEntity, ClimateEntity):
                 ClimateEntityFeature.TURN_OFF | ClimateEntityFeature.TURN_ON
             )
 
-    async def async_added_to_hass(self) -> None:
-        """Call when entity is added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Call when entity is added to menuai."""
+        await super().async_added_to_menuai()
 
     def set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Set new target hvac mode."""
@@ -374,7 +374,7 @@ class TuyaClimateEntity(TuyaEntity, ClimateEntity):
 
         if self._current_temperature.scale == 0 and self._current_temperature.step != 1:
             # The current temperature can have a scale of 0 or 1 and is used for
-            # rounding, Home Assistant doesn't need to round but we will always
+            # rounding, MenuAI doesn't need to round but we will always
             # need to divide the value by 10^1 in case of 0 as scale.
             # https://developer.tuya.com/en/docs/iot/shift-temperature-scale-follow-the-setting-of-app-account-center?id=Ka9qo7so58efq#title-7-Round%20values
             temperature = temperature / 10

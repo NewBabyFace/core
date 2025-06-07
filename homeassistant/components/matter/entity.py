@@ -18,12 +18,12 @@ from matter_server.common.helpers.util import (
 from matter_server.common.models import EventType, ServerInfoMessage
 from propcache.api import cached_property
 
-from homeassistant.core import callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity, EntityDescription
-from homeassistant.helpers.typing import UndefinedType
+from menuai.core import callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity, EntityDescription
+from menuai.helpers.typing import UndefinedType
 
 from .const import DOMAIN, FEATUREMAP_ATTRIBUTE_ID, ID_TYPE_DEVICE_ID
 from .helpers import get_device_id
@@ -40,16 +40,16 @@ LOGGER = logging.getLogger(__name__)
 def catch_matter_error[_R, **P](
     func: Callable[Concatenate[MatterEntity, P], Coroutine[Any, Any, _R]],
 ) -> Callable[Concatenate[MatterEntity, P], Coroutine[Any, Any, _R]]:
-    """Catch Matter errors and convert to Home Assistant error."""
+    """Catch Matter errors and convert to MenuAI error."""
 
     @functools.wraps(func)
     async def wrapper(self: MatterEntity, *args: P.args, **kwargs: P.kwargs) -> _R:
-        """Catch Matter errors and convert to Home Assistant error."""
+        """Catch Matter errors and convert to MenuAI error."""
         try:
             return await func(self, *args, **kwargs)
         except MatterError as err:
             error_msg = str(err) or err.__class__.__name__
-            raise HomeAssistantError(error_msg) from err
+            raise menuaiError(error_msg) from err
 
     return wrapper
 
@@ -136,9 +136,9 @@ class MatterEntity(Entity):
         # make sure to update the attributes once
         self._update_from_device()
 
-    async def async_added_to_hass(self) -> None:
-        """Handle being added to Home Assistant."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Handle being added to MenuAI."""
+        await super().async_added_to_menuai()
 
         # Subscribe to attribute updates.
         sub_paths: list[str] = []
@@ -213,7 +213,7 @@ class MatterEntity(Entity):
             )
         ):
             # this entity is no longer supported by the device
-            ent_reg = er.async_get(self.hass)
+            ent_reg = er.async_get(self.menuai)
             ent_reg.async_remove(self.entity_id)
 
             return

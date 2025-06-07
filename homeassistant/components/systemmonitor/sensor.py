@@ -14,27 +14,27 @@ import sys
 import time
 from typing import Any, Literal
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     DOMAIN as SENSOR_DOMAIN,
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     PERCENTAGE,
     EntityCategory,
     UnitOfDataRate,
     UnitOfInformation,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.util import slugify
+from menuai.core import menuai, callback
+from menuai.helpers import entity_registry as er
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
+from menuai.helpers.update_coordinator import CoordinatorEntity
+from menuai.util import slugify
 
 from . import SystemMonitorConfigEntry
 from .const import DOMAIN, NET_IO_TYPES
@@ -395,7 +395,7 @@ IF_ADDRS_FAMILY = {"ipv4_address": socket.AF_INET, "ipv6_address": socket.AF_INE
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: SystemMonitorConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -410,15 +410,15 @@ async def async_setup_entry(
     def get_arguments() -> dict[str, Any]:
         """Return startup information."""
         return {
-            "disk_arguments": get_all_disk_mounts(hass, psutil_wrapper),
-            "network_arguments": get_all_network_interfaces(hass, psutil_wrapper),
+            "disk_arguments": get_all_disk_mounts(menuai, psutil_wrapper),
+            "network_arguments": get_all_network_interfaces(menuai, psutil_wrapper),
         }
 
     cpu_temperature: float | None = None
     with contextlib.suppress(AttributeError):
         cpu_temperature = read_cpu_temperature(sensor_data.temperatures)
 
-    startup_arguments = await hass.async_add_executor_job(get_arguments)
+    startup_arguments = await menuai.async_add_executor_job(get_arguments)
     startup_arguments["cpu_temperature"] = cpu_temperature
 
     _LOGGER.debug("Setup from options %s", entry.options)
@@ -596,7 +596,7 @@ async def async_setup_entry(
     @callback
     def clean_obsolete_entities() -> None:
         """Remove entities which are disabled and not supported from setup."""
-        entity_registry = er.async_get(hass)
+        entity_registry = er.async_get(menuai)
         entities = entity_registry.entities.get_entries_for_config_entry_id(
             entry.entry_id
         )
@@ -653,19 +653,19 @@ class SystemMonitorSensor(CoordinatorEntity[SystemMonitorCoordinator], SensorEnt
         self.update_time: float | None = None
         self._attr_native_value = self.entity_description.value_fn(self)
 
-    async def async_added_to_hass(self) -> None:
-        """When added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """When added to menuai."""
         self.coordinator.update_subscribers[
             self.entity_description.add_to_update(self)
         ].add(self.entity_id)
-        return await super().async_added_to_hass()
+        return await super().async_added_to_menuai()
 
-    async def async_will_remove_from_hass(self) -> None:
-        """When removed from hass."""
+    async def async_will_remove_from_menuai(self) -> None:
+        """When removed from menuai."""
         self.coordinator.update_subscribers[
             self.entity_description.add_to_update(self)
         ].remove(self.entity_id)
-        return await super().async_will_remove_from_hass()
+        return await super().async_will_remove_from_menuai()
 
     @callback
     def _handle_coordinator_update(self) -> None:

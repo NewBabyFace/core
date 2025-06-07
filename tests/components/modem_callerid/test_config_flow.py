@@ -4,13 +4,13 @@ from unittest.mock import MagicMock, patch
 
 import phone_modem
 
-from homeassistant.components import usb
-from homeassistant.components.modem_callerid.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USB, SOURCE_USER
-from homeassistant.const import CONF_DEVICE, CONF_SOURCE
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.usb import UsbServiceInfo
+from menuai.components import usb
+from menuai.components.modem_callerid.const import DOMAIN
+from menuai.config_entries import SOURCE_USB, SOURCE_USER
+from menuai.const import CONF_DEVICE, CONF_SOURCE
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.usb import UsbServiceInfo
 
 from . import com_port, patch_config_flow_modem
 
@@ -26,15 +26,15 @@ DISCOVERY_INFO = UsbServiceInfo(
 
 def _patch_setup():
     return patch(
-        "homeassistant.components.modem_callerid.async_setup_entry",
+        "menuai.components.modem_callerid.async_setup_entry",
     )
 
 
 @patch("serial.tools.list_ports.comports", MagicMock(return_value=[com_port()]))
-async def test_flow_usb(hass: HomeAssistant) -> None:
+async def test_flow_usb(menuai: menuai) -> None:
     """Test usb discovery flow."""
     with patch_config_flow_modem(), _patch_setup():
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={CONF_SOURCE: SOURCE_USB},
             data=DISCOVERY_INFO,
@@ -42,7 +42,7 @@ async def test_flow_usb(hass: HomeAssistant) -> None:
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "usb_confirm"
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={CONF_DEVICE: phone_modem.DEFAULT_PORT},
         )
@@ -51,11 +51,11 @@ async def test_flow_usb(hass: HomeAssistant) -> None:
 
 
 @patch("serial.tools.list_ports.comports", MagicMock(return_value=[com_port()]))
-async def test_flow_usb_cannot_connect(hass: HomeAssistant) -> None:
+async def test_flow_usb_cannot_connect(menuai: menuai) -> None:
     """Test usb flow connection error."""
     with patch_config_flow_modem() as modemmock:
         modemmock.side_effect = phone_modem.exceptions.SerialError
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={CONF_SOURCE: SOURCE_USB}, data=DISCOVERY_INFO
         )
         assert result["type"] is FlowResultType.ABORT
@@ -63,7 +63,7 @@ async def test_flow_usb_cannot_connect(hass: HomeAssistant) -> None:
 
 
 @patch("serial.tools.list_ports.comports", MagicMock(return_value=[com_port()]))
-async def test_flow_user(hass: HomeAssistant) -> None:
+async def test_flow_user(menuai: menuai) -> None:
     """Test user initialized flow."""
     port = com_port()
     port_select = usb.human_readable_device_name(
@@ -75,7 +75,7 @@ async def test_flow_user(hass: HomeAssistant) -> None:
         port.pid,
     )
     with patch_config_flow_modem(), _patch_setup():
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={CONF_SOURCE: SOURCE_USER},
             data={CONF_DEVICE: port_select},
@@ -83,7 +83,7 @@ async def test_flow_user(hass: HomeAssistant) -> None:
         assert result["type"] is FlowResultType.CREATE_ENTRY
         assert result["data"] == {CONF_DEVICE: port.device}
 
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={CONF_SOURCE: SOURCE_USER},
             data={CONF_DEVICE: port_select},
@@ -93,7 +93,7 @@ async def test_flow_user(hass: HomeAssistant) -> None:
 
 
 @patch("serial.tools.list_ports.comports", MagicMock(return_value=[com_port()]))
-async def test_flow_user_error(hass: HomeAssistant) -> None:
+async def test_flow_user_error(menuai: menuai) -> None:
     """Test user initialized flow with unreachable device."""
     port = com_port()
     port_select = usb.human_readable_device_name(
@@ -106,7 +106,7 @@ async def test_flow_user_error(hass: HomeAssistant) -> None:
     )
     with patch_config_flow_modem() as modemmock:
         modemmock.side_effect = phone_modem.exceptions.SerialError
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={CONF_SOURCE: SOURCE_USER}, data={CONF_DEVICE: port_select}
         )
         assert result["type"] is FlowResultType.FORM
@@ -114,7 +114,7 @@ async def test_flow_user_error(hass: HomeAssistant) -> None:
         assert result["errors"] == {"base": "cannot_connect"}
 
         modemmock.side_effect = None
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             user_input={CONF_DEVICE: port_select},
         )
@@ -123,10 +123,10 @@ async def test_flow_user_error(hass: HomeAssistant) -> None:
 
 
 @patch("serial.tools.list_ports.comports", MagicMock())
-async def test_flow_user_no_port_list(hass: HomeAssistant) -> None:
+async def test_flow_user_no_port_list(menuai: menuai) -> None:
     """Test user with no list of ports."""
     with patch_config_flow_modem():
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={CONF_SOURCE: SOURCE_USER},
             data={CONF_DEVICE: phone_modem.DEFAULT_PORT},
@@ -135,10 +135,10 @@ async def test_flow_user_no_port_list(hass: HomeAssistant) -> None:
         assert result["reason"] == "no_devices_found"
 
 
-async def test_abort_user_with_existing_flow(hass: HomeAssistant) -> None:
+async def test_abort_user_with_existing_flow(menuai: menuai) -> None:
     """Test user flow is aborted when another discovery has happened."""
     with patch_config_flow_modem():
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={CONF_SOURCE: SOURCE_USB},
             data=DISCOVERY_INFO,
@@ -146,7 +146,7 @@ async def test_abort_user_with_existing_flow(hass: HomeAssistant) -> None:
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "usb_confirm"
 
-        result2 = await hass.config_entries.flow.async_init(
+        result2 = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={CONF_SOURCE: SOURCE_USER},
             data={},

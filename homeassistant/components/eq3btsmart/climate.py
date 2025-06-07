@@ -6,7 +6,7 @@ from typing import Any
 from eq3btsmart.const import EQ3BT_MAX_TEMP, EQ3BT_OFF_TEMP, Eq3Preset, OperationMode
 from eq3btsmart.exceptions import Eq3Exception
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_HVAC_MODE,
     PRESET_NONE,
     ClimateEntity,
@@ -14,12 +14,12 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.const import ATTR_TEMPERATURE, PRECISION_HALVES, UnitOfTemperature
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import CONNECTION_BLUETOOTH
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import ATTR_TEMPERATURE, PRECISION_HALVES, UnitOfTemperature
+from menuai.core import menuai, callback
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import CONNECTION_BLUETOOTH
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import Eq3ConfigEntry
 from .const import (
@@ -35,7 +35,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: Eq3ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -102,7 +102,7 @@ class Eq3Climate(Eq3Entity, ClimateEntity):
         if self._thermostat.device_data is None:
             return
 
-        device_registry = dr.async_get(self.hass)
+        device_registry = dr.async_get(self.menuai)
         if device := device_registry.async_get_device(
             connections={(CONNECTION_BLUETOOTH, self._eq3_config.mac_address)},
         ):
@@ -131,7 +131,7 @@ class Eq3Climate(Eq3Entity, ClimateEntity):
 
                 return float(self._thermostat.status.target_temperature.value)
             case CurrentTemperatureSelector.ENTITY:
-                state = self.hass.states.get(self._eq3_config.external_temp_sensor)
+                state = self.menuai.states.get(self._eq3_config.external_temp_sensor)
                 if state is not None:
                     try:
                         return float(state.state)

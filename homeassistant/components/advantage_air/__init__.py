@@ -5,12 +5,12 @@ import logging
 
 from advantage_air import ApiError, advantage_air
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_IP_ADDRESS, CONF_PORT, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.debounce import Debouncer
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_IP_ADDRESS, CONF_PORT, Platform
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.debounce import Debouncer
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import ADVANTAGE_AIR_RETRY
 from .models import AdvantageAirData
@@ -34,7 +34,7 @@ REQUEST_REFRESH_DELAY = 0.5
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: AdvantageAirDataConfigEntry
+    menuai: menuai, entry: AdvantageAirDataConfigEntry
 ) -> bool:
     """Set up Advantage Air config."""
     ip_address = entry.data[CONF_IP_ADDRESS]
@@ -42,7 +42,7 @@ async def async_setup_entry(
     api = advantage_air(
         ip_address,
         port=port,
-        session=async_get_clientsession(hass),
+        session=async_get_clientsession(menuai),
         retry=ADVANTAGE_AIR_RETRY,
     )
 
@@ -53,14 +53,14 @@ async def async_setup_entry(
             raise UpdateFailed(err) from err
 
     coordinator = DataUpdateCoordinator(
-        hass,
+        menuai,
         _LOGGER,
         config_entry=entry,
         name="Advantage Air",
         update_method=async_get,
         update_interval=timedelta(seconds=ADVANTAGE_AIR_SYNC_INTERVAL),
         request_refresh_debouncer=Debouncer(
-            hass, _LOGGER, cooldown=REQUEST_REFRESH_DELAY, immediate=False
+            menuai, _LOGGER, cooldown=REQUEST_REFRESH_DELAY, immediate=False
         ),
     )
 
@@ -68,13 +68,13 @@ async def async_setup_entry(
 
     entry.runtime_data = AdvantageAirData(coordinator, api)
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, entry: AdvantageAirDataConfigEntry
+    menuai: menuai, entry: AdvantageAirDataConfigEntry
 ) -> bool:
     """Unload Advantage Air Config."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

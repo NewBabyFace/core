@@ -8,11 +8,11 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.util import dt as dt_util
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai, ServiceCall
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers import config_validation as cv
+from menuai.util import dt as dt_util
 
 from .const import ATTR_CONFIG_ENTRY_ID, ATTR_DATETIME, DOMAIN, SERVICE_SET_DATE_TIME
 from .types import BoschAlarmConfigEntry
@@ -43,14 +43,14 @@ async def async_set_panel_date(call: ServiceCall) -> None:
     config_entry: BoschAlarmConfigEntry | None
     value: dt.datetime = call.data.get(ATTR_DATETIME, dt_util.now())
     entry_id = call.data[ATTR_CONFIG_ENTRY_ID]
-    if not (config_entry := call.hass.config_entries.async_get_entry(entry_id)):
+    if not (config_entry := call.menuai.config_entries.async_get_entry(entry_id)):
         raise ServiceValidationError(
             translation_domain=DOMAIN,
             translation_key="integration_not_found",
             translation_placeholders={"target": entry_id},
         )
     if config_entry.state is not ConfigEntryState.LOADED:
-        raise HomeAssistantError(
+        raise menuaiError(
             translation_domain=DOMAIN,
             translation_key="not_loaded",
             translation_placeholders={"target": config_entry.title},
@@ -59,17 +59,17 @@ async def async_set_panel_date(call: ServiceCall) -> None:
     try:
         await panel.set_panel_date(value)
     except asyncio.InvalidStateError as err:
-        raise HomeAssistantError(
+        raise menuaiError(
             translation_domain=DOMAIN,
             translation_key="connection_error",
             translation_placeholders={"target": config_entry.title},
         ) from err
 
 
-def setup_services(hass: HomeAssistant) -> None:
+def setup_services(menuai: menuai) -> None:
     """Set up the services for the bosch alarm integration."""
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_SET_DATE_TIME,
         async_set_panel_date,

@@ -362,18 +362,18 @@
                   "location_name=Home",
                   "uuid=6b45123412341234123412341234aa64",
                   "version=2024.3.0.dev0",
-                  "external_url=https://hass.my-domain.com",
+                  "external_url=https://menuai.my-domain.com",
                   "internal_url=http://192.168.0.5:8123",
-                  "base_url=https://hass.my-domain.com",
+                  "base_url=https://menuai.my-domain.com",
                   "requires_api_password=True"
                 ],
                 "txt": {
                   "location_name": "Home",
                   "uuid": "6b45123412341234123412341234aa64",
                   "version": "2024.3.0.dev0",
-                  "external_url": "https://hass.my-domain.com",
+                  "external_url": "https://menuai.my-domain.com",
                   "internal_url": "http://192.168.0.5:8123",
-                  "base_url": "https://hass.my-domain.com",
+                  "base_url": "https://menuai.my-domain.com",
                   "requires_api_password": "True"
                 }
               }
@@ -483,8 +483,8 @@
         "isProxy": true,
         "deviceInfo": {
           "hwVersion": "UNKNOWN_HW_VERSION",
-          "manufacturer": "Home Assistant",
-          "model": "Home Assistant",
+          "manufacturer": "MenuAI",
+          "model": "MenuAI",
           "swVersion": "2024.3.0.dev0"
         }
       }
@@ -496,8 +496,8 @@
         "isProxy": true,
         "deviceInfo": {
           "hwVersion": "UNKNOWN_HW_VERSION",
-          "manufacturer": "Home Assistant",
-          "model": "Home Assistant",
+          "manufacturer": "MenuAI",
+          "model": "MenuAI",
           "swVersion": "2024.3.0.dev0"
         }
       }
@@ -539,9 +539,9 @@
                 "location_name=Home",
                 "uuid=6b45123412341234123412341234aa64",
                 "version=2024.3.0.dev0",
-                "external_url=https://hass.my-domain.com",
+                "external_url=https://menuai.my-domain.com",
                 "internal_url=http://192.168.0.5:8123",
-                "base_url=https://hass.my-domain.com",
+                "base_url=https://menuai.my-domain.com",
                 "requires_api_password=True"
               ]
             }
@@ -681,9 +681,9 @@
                 "location_name=Home",
                 "uuid=6b45123412341234123412341234aa64",
                 "version=2024.3.0.dev0",
-                "external_url=https://hass.my-domain.com",
+                "external_url=https://menuai.my-domain.com",
                 "internal_url=http://192.168.0.5:8123",
-                "base_url=https://hass.my-domain.com",
+                "base_url=https://menuai.my-domain.com",
                 "requires_api_password=True"
               ]
             }
@@ -788,9 +788,9 @@
                   "location_name=Home",
                   "uuid=6b45123412341234123412341234aa64",
                   "version=2024.3.0.dev0",
-                  "external_url=https://hass.my-domain.com",
+                  "external_url=https://menuai.my-domain.com",
                   "internal_url=http://192.168.0.5:8123",
-                  "base_url=https://hass.my-domain.com",
+                  "base_url=https://menuai.my-domain.com",
                   "requires_api_password=True"
                 ],
                 "txt": "unexpected"

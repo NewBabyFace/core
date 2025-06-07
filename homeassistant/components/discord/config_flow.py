@@ -10,8 +10,8 @@ from aiohttp.client_exceptions import ClientConnectorError
 import nextcord
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_API_TOKEN, CONF_NAME
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_API_TOKEN, CONF_NAME
 
 from .const import DOMAIN, URL_PLACEHOLDER
 

@@ -24,8 +24,8 @@ from pyisy.constants import (
 from pyisy.nodes import Group, Node, Nodes
 from pyisy.programs import Programs
 
-from homeassistant.const import ATTR_MANUFACTURER, ATTR_MODEL, Platform
-from homeassistant.helpers.device_registry import DeviceInfo
+from menuai.const import ATTR_MANUFACTURER, ATTR_MODEL, Platform
+from menuai.helpers.device_registry import DeviceInfo
 
 from .const import (
     _LOGGER,
@@ -429,7 +429,7 @@ def _categorize_programs(isy_data: IsyData, programs: Programs) -> None:
             isy_data.programs[platform].append(entity)
 
 
-def convert_isy_value_to_hass(
+def convert_isy_value_to_menuai(
     value: float | None,
     uom: str | None,
     precision: int | str,

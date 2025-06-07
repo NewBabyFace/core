@@ -11,20 +11,20 @@ from typing import cast
 from aiohttp import web
 import voluptuous as vol
 
-from homeassistant.components import webhook
-from homeassistant.components.camera import (
+from menuai.components import webhook
+from menuai.components.camera import (
     DOMAIN as CAMERA_DOMAIN,
     PLATFORM_SCHEMA as CAMERA_PLATFORM_SCHEMA,
     Camera,
     CameraState,
 )
-from homeassistant.const import CONF_NAME, CONF_TIMEOUT, CONF_WEBHOOK_ID
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.event import async_track_point_in_utc_time
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import dt as dt_util
+from menuai.const import CONF_NAME, CONF_TIMEOUT, CONF_WEBHOOK_ID
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.event import async_track_point_in_utc_time
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import dt as dt_util
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -52,20 +52,20 @@ PLATFORM_SCHEMA = CAMERA_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the Push Camera platform."""
-    if PUSH_CAMERA_DATA not in hass.data:
-        hass.data[PUSH_CAMERA_DATA] = {}
+    if PUSH_CAMERA_DATA not in menuai.data:
+        menuai.data[PUSH_CAMERA_DATA] = {}
 
     webhook_id = config[CONF_WEBHOOK_ID]
 
     cameras = [
         PushCamera(
-            hass,
+            menuai,
             config[CONF_NAME],
             config[CONF_BUFFER_SIZE],
             config[CONF_TIMEOUT],
@@ -78,7 +78,7 @@ async def async_setup_platform(
 
 
 async def handle_webhook(
-    hass: HomeAssistant, webhook_id: str, request: web.Request
+    menuai: menuai, webhook_id: str, request: web.Request
 ) -> None:
     """Handle incoming webhook POST with image files."""
     try:
@@ -88,7 +88,7 @@ async def handle_webhook(
         _LOGGER.error("Could not get information from POST <%s>", error)
         return
 
-    camera = hass.data[PUSH_CAMERA_DATA][webhook_id]
+    camera = menuai.data[PUSH_CAMERA_DATA][webhook_id]
 
     if camera.image_field not in data:
         _LOGGER.warning("Webhook call without POST parameter <%s>", camera.image_field)
@@ -106,7 +106,7 @@ class PushCamera(Camera):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         name: str,
         buffer_size: int,
         timeout: timedelta,
@@ -124,15 +124,15 @@ class PushCamera(Camera):
         self._current_image: bytes | None = None
         self._image_field = image_field
         self.webhook_id = webhook_id
-        self.webhook_url = webhook.async_generate_url(hass, webhook_id)
+        self.webhook_url = webhook.async_generate_url(menuai, webhook_id)
 
-    async def async_added_to_hass(self) -> None:
-        """Call when entity is added to hass."""
-        self.hass.data[PUSH_CAMERA_DATA][self.webhook_id] = self
+    async def async_added_to_menuai(self) -> None:
+        """Call when entity is added to menuai."""
+        self.menuai.data[PUSH_CAMERA_DATA][self.webhook_id] = self
 
         try:
             webhook.async_register(
-                self.hass, CAMERA_DOMAIN, self.name, self.webhook_id, handle_webhook
+                self.menuai, CAMERA_DOMAIN, self.name, self.webhook_id, handle_webhook
             )
         except ValueError:
             _LOGGER.error(
@@ -166,7 +166,7 @@ class PushCamera(Camera):
             self._expired_listener()
 
         self._expired_listener = async_track_point_in_utc_time(
-            self.hass, reset_state, dt_util.utcnow() + self._timeout
+            self.menuai, reset_state, dt_util.utcnow() + self._timeout
         )
 
         self.async_write_ha_state()

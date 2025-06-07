@@ -6,10 +6,10 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.zone import DOMAIN as ZONE_DOMAIN
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_ZONE
-from homeassistant.helpers.selector import EntitySelector, EntitySelectorConfig
+from menuai.components.zone import DOMAIN as ZONE_DOMAIN
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_ZONE
+from menuai.helpers.selector import EntitySelector, EntitySelectorConfig
 
 from .const import DOMAIN
 
@@ -27,7 +27,7 @@ class OpenMeteoFlowHandler(ConfigFlow, domain=DOMAIN):
             await self.async_set_unique_id(user_input[CONF_ZONE])
             self._abort_if_unique_id_configured()
 
-            state = self.hass.states.get(user_input[CONF_ZONE])
+            state = self.menuai.states.get(user_input[CONF_ZONE])
             return self.async_create_entry(
                 title=state.name if state else "Open-Meteo",
                 data={CONF_ZONE: user_input[CONF_ZONE]},

@@ -6,17 +6,17 @@ from pylamarzocco.exceptions import RequestNotSuccessful
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from menuai.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
 
 pytestmark = pytest.mark.usefixtures("init_integration")
 
 
 async def test_start_backflush(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_lamarzocco: MagicMock,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
@@ -25,7 +25,7 @@ async def test_start_backflush(
 
     serial_number = mock_lamarzocco.serial_number
 
-    state = hass.states.get(f"button.{serial_number}_start_backflush")
+    state = menuai.states.get(f"button.{serial_number}_start_backflush")
     assert state
     assert state == snapshot
 
@@ -34,10 +34,10 @@ async def test_start_backflush(
     assert entry == snapshot
 
     with patch(
-        "homeassistant.components.lamarzocco.button.asyncio.sleep",
+        "menuai.components.lamarzocco.button.asyncio.sleep",
         new_callable=AsyncMock,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             BUTTON_DOMAIN,
             SERVICE_PRESS,
             {
@@ -51,18 +51,18 @@ async def test_start_backflush(
 
 
 async def test_button_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_lamarzocco: MagicMock,
 ) -> None:
     """Test the La Marzocco button error."""
     serial_number = mock_lamarzocco.serial_number
 
-    state = hass.states.get(f"button.{serial_number}_start_backflush")
+    state = menuai.states.get(f"button.{serial_number}_start_backflush")
     assert state
 
     mock_lamarzocco.start_backflush.side_effect = RequestNotSuccessful("Boom.")
-    with pytest.raises(HomeAssistantError) as exc_info:
-        await hass.services.async_call(
+    with pytest.raises(menuaiError) as exc_info:
+        await menuai.services.async_call(
             BUTTON_DOMAIN,
             SERVICE_PRESS,
             {

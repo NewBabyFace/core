@@ -13,7 +13,7 @@ import logging
 from anyio.streams.memory import MemoryObjectSendStream
 from mcp import types
 
-from homeassistant.util import ulid as ulid_util
+from menuai.util import ulid as ulid_util
 
 _LOGGER = logging.getLogger(__name__)
 

@@ -7,11 +7,11 @@ from pynecil import CommunicationError, UpdateException
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.update import ATTR_INSTALLED_VERSION
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import STATE_ON, STATE_UNAVAILABLE, Platform
-from homeassistant.core import HomeAssistant, State
-from homeassistant.helpers import entity_registry as er
+from menuai.components.update import ATTR_INSTALLED_VERSION
+from menuai.config_entries import ConfigEntryState
+from menuai.const import STATE_ON, STATE_UNAVAILABLE, Platform
+from menuai.core import menuai, State
+from menuai.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry, mock_restore_cache, snapshot_platform
 from tests.typing import WebSocketGenerator
@@ -21,7 +21,7 @@ from tests.typing import WebSocketGenerator
 async def update_only() -> AsyncGenerator[None]:
     """Enable only the update platform."""
     with patch(
-        "homeassistant.components.iron_os.PLATFORMS",
+        "menuai.components.iron_os.PLATFORMS",
         [Platform.UPDATE],
     ):
         yield
@@ -29,22 +29,22 @@ async def update_only() -> AsyncGenerator[None]:
 
 @pytest.mark.usefixtures("mock_pynecil", "ble_device", "mock_ironosupdate")
 async def test_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test the IronOS update platform."""
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
     await ws_client.send_json(
         {
@@ -59,7 +59,7 @@ async def test_update(
 
 @pytest.mark.usefixtures("ble_device", "mock_pynecil")
 async def test_update_unavailable(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_ironosupdate: AsyncMock,
 ) -> None:
@@ -67,20 +67,20 @@ async def test_update_unavailable(
 
     mock_ironosupdate.latest_release.side_effect = UpdateException
 
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
-    state = hass.states.get("update.pinecil_firmware")
+    state = menuai.states.get("update.pinecil_firmware")
     assert state is not None
     assert state.state == STATE_UNAVAILABLE
 
 
 @pytest.mark.usefixtures("ble_device")
 async def test_update_restore_last_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     mock_pynecil: AsyncMock,
 ) -> None:
@@ -88,7 +88,7 @@ async def test_update_restore_last_state(
 
     mock_pynecil.get_device_info.side_effect = CommunicationError
     mock_restore_cache(
-        hass,
+        menuai,
         (
             State(
                 "update.pinecil_firmware",
@@ -97,13 +97,13 @@ async def test_update_restore_last_state(
             ),
         ),
     )
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
-    state = hass.states.get("update.pinecil_firmware")
+    state = menuai.states.get("update.pinecil_firmware")
     assert state is not None
     assert state.state == STATE_ON
     assert state.attributes[ATTR_INSTALLED_VERSION] == "v2.21"

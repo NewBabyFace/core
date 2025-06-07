@@ -6,17 +6,17 @@ from unittest.mock import Mock, patch
 import pytest
 import requests_mock
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     ATTR_MEDIA_CONTENT_ID,
     ATTR_MEDIA_CONTENT_TYPE,
     DOMAIN as MP_DOMAIN,
     SERVICE_PLAY_MEDIA,
     MediaType,
 )
-from homeassistant.components.plex.const import CONF_SERVER_IDENTIFIER, PLEX_URI_SCHEME
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from menuai.components.plex.const import CONF_SERVER_IDENTIFIER, PLEX_URI_SCHEME
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
 
 from .const import DEFAULT_DATA, PLEX_DIRECT_URL
 
@@ -46,7 +46,7 @@ class MockPlexLibrarySection:
 
 
 async def test_media_player_playback(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_plex_server,
     requests_mock: requests_mock.Mocker,
     playqueue_created,
@@ -71,9 +71,9 @@ async def test_media_player_playback(
             return_value=None,
             __qualname__="search",
         ),
-        pytest.raises(HomeAssistantError) as excinfo,
+        pytest.raises(menuaiError) as excinfo,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MP_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {
@@ -97,7 +97,7 @@ async def test_media_player_playback(
         return_value=movies,
         __qualname__="search",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MP_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {
@@ -116,7 +116,7 @@ async def test_media_player_playback(
         return_value=movies,
         __qualname__="search",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MP_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {
@@ -131,7 +131,7 @@ async def test_media_player_playback(
 
     # Test movie success with media browser URL
     playmedia_mock.reset()
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_PLAY_MEDIA,
         {
@@ -146,7 +146,7 @@ async def test_media_player_playback(
 
     # Test movie success with media browser URL and resuming
     playmedia_mock.reset()
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_PLAY_MEDIA,
         {
@@ -162,7 +162,7 @@ async def test_media_player_playback(
 
     # Test movie success with legacy media browser URL
     playmedia_mock.reset()
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_PLAY_MEDIA,
         {
@@ -182,7 +182,7 @@ async def test_media_player_playback(
         return_value=movies,
         __qualname__="search",
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MP_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {
@@ -198,14 +198,14 @@ async def test_media_player_playback(
     playmedia_mock.reset()
     movies = [movie2, movie3]
     with (
-        pytest.raises(HomeAssistantError) as excinfo,
+        pytest.raises(menuaiError) as excinfo,
         patch(
             "plexapi.library.LibrarySection.search",
             return_value=movies,
             __qualname__="search",
         ),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MP_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {
@@ -227,10 +227,10 @@ async def test_media_player_playback(
             __qualname__="search",
         ),
         patch(
-            "homeassistant.components.plex.server.PlexServer.create_playqueue"
+            "menuai.components.plex.server.PlexServer.create_playqueue"
         ) as mock_create_playqueue,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             MP_DOMAIN,
             SERVICE_PLAY_MEDIA,
             {
@@ -246,7 +246,7 @@ async def test_media_player_playback(
     # Test radio station
     playmedia_mock.reset()
     radio_id = "/library/sections/3/stations/1"
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_PLAY_MEDIA,
         {

@@ -10,11 +10,11 @@ from crownstone_cloud.const import DIMMING_ABILITY
 from crownstone_cloud.exceptions import CrownstoneAbilityError
 from crownstone_uart import CrownstoneUart
 
-from homeassistant.components.light import ATTR_BRIGHTNESS, ColorMode, LightEntity
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.light import ATTR_BRIGHTNESS, ColorMode, LightEntity
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
     CROWNSTONE_INCLUDE_TYPES,
@@ -28,7 +28,7 @@ from .helpers import map_from_to
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: CrownstoneConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -51,13 +51,13 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-def crownstone_state_to_hass(value: int) -> int:
-    """Crownstone 0..100 to hass 0..255."""
+def crownstone_state_to_menuai(value: int) -> int:
+    """Crownstone 0..100 to menuai 0..255."""
     return map_from_to(value, 0, 100, 0, 255)
 
 
-def hass_to_crownstone_state(value: int) -> int:
-    """Hass 0..255 to Crownstone 0..100."""
+def menuai_to_crownstone_state(value: int) -> int:
+    """menuai 0..255 to Crownstone 0..100."""
     return map_from_to(value, 0, 255, 0, 100)
 
 
@@ -82,12 +82,12 @@ class CrownstoneLightEntity(CrownstoneEntity, LightEntity):
     @property
     def brightness(self) -> int | None:
         """Return the brightness if dimming enabled."""
-        return crownstone_state_to_hass(self.device.state)
+        return crownstone_state_to_menuai(self.device.state)
 
     @property
     def is_on(self) -> bool:
         """Return if the device is on."""
-        return crownstone_state_to_hass(self.device.state) > 0
+        return crownstone_state_to_menuai(self.device.state) > 0
 
     @property
     def color_mode(self) -> str:
@@ -101,18 +101,18 @@ class CrownstoneLightEntity(CrownstoneEntity, LightEntity):
         """Flag supported color modes."""
         return {self.color_mode}
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Set up a listener when this entity is added to HA."""
         # new state received
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, SIG_CROWNSTONE_STATE_UPDATE, self.async_write_ha_state
+                self.menuai, SIG_CROWNSTONE_STATE_UPDATE, self.async_write_ha_state
             )
         )
         # updates state attributes when usb connects/disconnects
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, SIG_UART_STATE_CHANGE, self.async_write_ha_state
+                self.menuai, SIG_UART_STATE_CHANGE, self.async_write_ha_state
             )
         )
 
@@ -120,27 +120,27 @@ class CrownstoneLightEntity(CrownstoneEntity, LightEntity):
         """Turn on this light via dongle or cloud."""
         if ATTR_BRIGHTNESS in kwargs:
             if self.usb is not None and self.usb.is_ready():
-                await self.hass.async_add_executor_job(
+                await self.menuai.async_add_executor_job(
                     partial(
                         self.usb.dim_crownstone,
                         self.device.unique_id,
-                        hass_to_crownstone_state(kwargs[ATTR_BRIGHTNESS]),
+                        menuai_to_crownstone_state(kwargs[ATTR_BRIGHTNESS]),
                     )
                 )
             else:
                 try:
                     await self.device.async_set_brightness(
-                        hass_to_crownstone_state(kwargs[ATTR_BRIGHTNESS])
+                        menuai_to_crownstone_state(kwargs[ATTR_BRIGHTNESS])
                     )
                 except CrownstoneAbilityError as ability_error:
-                    raise HomeAssistantError(ability_error) from ability_error
+                    raise menuaiError(ability_error) from ability_error
 
             # assume brightness is set on device
-            self.device.state = hass_to_crownstone_state(kwargs[ATTR_BRIGHTNESS])
+            self.device.state = menuai_to_crownstone_state(kwargs[ATTR_BRIGHTNESS])
             self.async_write_ha_state()
 
         elif self.usb is not None and self.usb.is_ready():
-            await self.hass.async_add_executor_job(
+            await self.menuai.async_add_executor_job(
                 partial(self.usb.switch_crownstone, self.device.unique_id, on=True)
             )
             self.device.state = 100
@@ -154,7 +154,7 @@ class CrownstoneLightEntity(CrownstoneEntity, LightEntity):
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off this device via dongle or cloud."""
         if self.usb is not None and self.usb.is_ready():
-            await self.hass.async_add_executor_job(
+            await self.menuai.async_add_executor_job(
                 partial(self.usb.switch_crownstone, self.device.unique_id, on=False)
             )
 

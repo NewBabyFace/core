@@ -5,10 +5,10 @@ import logging
 from ayla_iot_unofficial import AylaApi, AylaAuthError
 from ayla_iot_unofficial.fujitsu_hvac import FujitsuHVAC
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import API_REFRESH
 
@@ -23,11 +23,11 @@ class FGLairCoordinator(DataUpdateCoordinator[dict[str, FujitsuHVAC]]):
     config_entry: FGLairConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: FGLairConfigEntry, api: AylaApi
+        self, menuai: menuai, config_entry: FGLairConfigEntry, api: AylaApi
     ) -> None:
         """Initialize coordinator for Fujitsu HVAC integration."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name="Fujitsu HVAC data",

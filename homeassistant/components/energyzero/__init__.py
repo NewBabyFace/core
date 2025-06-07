@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType
 
 from .const import DOMAIN
 from .coordinator import EnergyZeroConfigEntry, EnergyZeroDataUpdateCoordinator
@@ -16,18 +16,18 @@ PLATFORMS: list[Platform] = [Platform.SENSOR]
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up EnergyZero services."""
 
-    async_setup_services(hass)
+    async_setup_services(menuai)
 
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: EnergyZeroConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: EnergyZeroConfigEntry) -> bool:
     """Set up EnergyZero from a config entry."""
 
-    coordinator = EnergyZeroDataUpdateCoordinator(hass, entry)
+    coordinator = EnergyZeroDataUpdateCoordinator(menuai, entry)
     try:
         await coordinator.async_config_entry_first_refresh()
     except ConfigEntryNotReady:
@@ -36,10 +36,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: EnergyZeroConfigEntry) -
 
     entry.runtime_data = coordinator
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: EnergyZeroConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: EnergyZeroConfigEntry) -> bool:
     """Unload EnergyZero config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

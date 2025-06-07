@@ -3,11 +3,11 @@
 from datetime import datetime
 import logging
 
-from homeassistant.components.image import ImageEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.image import ImageEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import RoborockConfigEntry, RoborockDataUpdateCoordinator
 from .entity import RoborockCoordinatedEntityV1
@@ -18,7 +18,7 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: RoborockConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -56,7 +56,7 @@ class RoborockMap(RoborockCoordinatedEntityV1, ImageEntity):
     ) -> None:
         """Initialize a Roborock map."""
         RoborockCoordinatedEntityV1.__init__(self, unique_id, coordinator)
-        ImageEntity.__init__(self, coordinator.hass)
+        ImageEntity.__init__(self, coordinator.menuai)
         self.config_entry = config_entry
         self._attr_name = map_name
         self.map_flag = map_flag
@@ -68,9 +68,9 @@ class RoborockMap(RoborockCoordinatedEntityV1, ImageEntity):
         """Return if this map is the currently selected map."""
         return self.map_flag == self.coordinator.current_map
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass load any previously cached maps from disk."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai load any previously cached maps from disk."""
+        await super().async_added_to_menuai()
         self._attr_image_last_updated = self.coordinator.maps[
             self.map_flag
         ].last_updated

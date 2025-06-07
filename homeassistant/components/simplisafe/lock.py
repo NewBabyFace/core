@@ -9,11 +9,11 @@ from simplipy.errors import SimplipyError
 from simplipy.system.v3 import SystemV3
 from simplipy.websocket import EVENT_LOCK_LOCKED, EVENT_LOCK_UNLOCKED, WebsocketEvent
 
-from homeassistant.components.lock import LockEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.lock import LockEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import SimpliSafe
 from .const import DOMAIN, LOGGER
@@ -31,12 +31,12 @@ WEBSOCKET_EVENTS_TO_LISTEN_FOR = (EVENT_LOCK_LOCKED, EVENT_LOCK_UNLOCKED)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up SimpliSafe locks based on a config entry."""
-    simplisafe = hass.data[DOMAIN][entry.entry_id]
+    simplisafe = menuai.data[DOMAIN][entry.entry_id]
     locks: list[SimpliSafeLock] = []
 
     for system in simplisafe.systems.values():
@@ -71,7 +71,7 @@ class SimpliSafeLock(SimpliSafeEntity, LockEntity):
         try:
             await self._device.async_lock()
         except SimplipyError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f'Error while locking "{self._device.name}": {err}'
             ) from err
 
@@ -83,7 +83,7 @@ class SimpliSafeLock(SimpliSafeEntity, LockEntity):
         try:
             await self._device.async_unlock()
         except SimplipyError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f'Error while unlocking "{self._device.name}": {err}'
             ) from err
 

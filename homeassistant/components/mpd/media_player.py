@@ -15,8 +15,8 @@ import mpd
 from mpd.asyncio import MPDClient
 import voluptuous as vol
 
-from homeassistant.components import media_source
-from homeassistant.components.media_player import (
+from menuai.components import media_source
+from menuai.components.media_player import (
     PLATFORM_SCHEMA as MEDIA_PLAYER_PLATFORM_SCHEMA,
     BrowseMedia,
     MediaPlayerEntity,
@@ -26,13 +26,13 @@ from homeassistant.components.media_player import (
     RepeatMode,
     async_process_play_media_url,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PASSWORD, CONF_PORT
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import Throttle, dt as dt_util
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, CONF_NAME, CONF_PASSWORD, CONF_PORT
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import Throttle, dt as dt_util
 
 from .const import DOMAIN, LOGGER
 
@@ -68,7 +68,7 @@ PLATFORM_SCHEMA = MEDIA_PLAYER_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -457,9 +457,9 @@ class MpdDevice(MediaPlayerEntity):
             if media_source.is_media_source_id(media_id):
                 media_type = MediaType.MUSIC
                 play_item = await media_source.async_resolve_media(
-                    self.hass, media_id, self.entity_id
+                    self.menuai, media_id, self.entity_id
                 )
-                media_id = async_process_play_media_url(self.hass, play_item.url)
+                media_id = async_process_play_media_url(self.menuai, play_item.url)
 
             if media_type == MediaType.PLAYLIST:
                 LOGGER.debug("Playing playlist: %s", media_id)
@@ -538,7 +538,7 @@ class MpdDevice(MediaPlayerEntity):
         """Implement the websocket media browsing helper."""
         async with self.connection():
             return await media_source.async_browse_media(
-                self.hass,
+                self.menuai,
                 media_content_id,
                 content_filter=lambda item: item.media_content_type.startswith(
                     "audio/"

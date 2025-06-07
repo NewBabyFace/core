@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceEntry
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceEntry
 
 from .const import DOMAIN
 from .coordinator import HomeConnectApplianceData, HomeConnectConfigEntry
@@ -25,7 +25,7 @@ async def _generate_appliance_diagnostics(
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: HomeConnectConfigEntry
+    menuai: menuai, entry: HomeConnectConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     return {
@@ -35,7 +35,7 @@ async def async_get_config_entry_diagnostics(
 
 
 async def async_get_device_diagnostics(
-    hass: HomeAssistant, entry: HomeConnectConfigEntry, device: DeviceEntry
+    menuai: menuai, entry: HomeConnectConfigEntry, device: DeviceEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a device."""
     ha_id = next(

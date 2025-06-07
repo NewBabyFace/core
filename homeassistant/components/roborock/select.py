@@ -8,10 +8,10 @@ from roborock.code_mappings import RoborockDockDustCollectionModeCode
 from roborock.roborock_message import RoborockDataProtocol
 from roborock.roborock_typing import DeviceProp, RoborockCommand
 
-from homeassistant.components.select import SelectEntity, SelectEntityDescription
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.select import SelectEntity, SelectEntityDescription
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import MAP_SLEEP
 from .coordinator import RoborockConfigEntry, RoborockDataUpdateCoordinator
@@ -80,7 +80,7 @@ SELECT_DESCRIPTIONS: list[RoborockSelectDescription] = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: RoborockConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

@@ -6,25 +6,25 @@ from PyTado.interface.api.my_tado import TadoZone
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_HVAC_MODE,
     DOMAIN as CLIMATE_DOMAIN,
     SERVICE_SET_HVAC_MODE,
     SERVICE_SET_TEMPERATURE,
     HVACMode,
 )
-from homeassistant.const import ATTR_ENTITY_ID, ATTR_TEMPERATURE
-from homeassistant.core import HomeAssistant
+from menuai.const import ATTR_ENTITY_ID, ATTR_TEMPERATURE
+from menuai.core import menuai
 
 from .util import async_init_integration
 
 
-async def test_air_con(hass: HomeAssistant) -> None:
+async def test_air_con(menuai: menuai) -> None:
     """Test creation of aircon climate."""
 
-    await async_init_integration(hass)
+    await async_init_integration(menuai)
 
-    state = hass.states.get("climate.air_conditioning")
+    state = menuai.states.get("climate.air_conditioning")
     assert state.state == "cool"
 
     expected_attributes = {
@@ -48,12 +48,12 @@ async def test_air_con(hass: HomeAssistant) -> None:
     assert all(item in state.attributes.items() for item in expected_attributes.items())
 
 
-async def test_heater(hass: HomeAssistant) -> None:
+async def test_heater(menuai: menuai) -> None:
     """Test creation of heater climate."""
 
-    await async_init_integration(hass)
+    await async_init_integration(menuai)
 
-    state = hass.states.get("climate.baseboard_heater")
+    state = menuai.states.get("climate.baseboard_heater")
     assert state.state == "heat"
 
     expected_attributes = {
@@ -75,12 +75,12 @@ async def test_heater(hass: HomeAssistant) -> None:
     assert all(item in state.attributes.items() for item in expected_attributes.items())
 
 
-async def test_smartac_with_swing(hass: HomeAssistant) -> None:
+async def test_smartac_with_swing(menuai: menuai) -> None:
     """Test creation of smart ac with swing climate."""
 
-    await async_init_integration(hass)
+    await async_init_integration(menuai)
 
-    state = hass.states.get("climate.air_conditioning_with_swing")
+    state = menuai.states.get("climate.air_conditioning_with_swing")
     assert state.state == "auto"
 
     expected_attributes = {
@@ -106,13 +106,13 @@ async def test_smartac_with_swing(hass: HomeAssistant) -> None:
 
 
 async def test_smartac_with_fanlevel_vertical_and_horizontal_swing(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test creation of smart ac with swing climate."""
 
-    await async_init_integration(hass)
+    await async_init_integration(menuai)
 
-    state = hass.states.get("climate.air_conditioning_with_fanlevel")
+    state = menuai.states.get("climate.air_conditioning_with_fanlevel")
     assert state.state == "heat"
 
     expected_attributes = {
@@ -138,22 +138,22 @@ async def test_smartac_with_fanlevel_vertical_and_horizontal_swing(
 
 
 async def test_heater_set_temperature(
-    hass: HomeAssistant, snapshot: SnapshotAssertion
+    menuai: menuai, snapshot: SnapshotAssertion
 ) -> None:
     """Test the set temperature of the heater."""
 
-    await async_init_integration(hass)
+    await async_init_integration(menuai)
 
     with (
         patch(
-            "homeassistant.components.tado.PyTado.interface.api.Tado.set_zone_overlay"
+            "menuai.components.tado.PyTado.interface.api.Tado.set_zone_overlay"
         ) as mock_set_state,
         patch(
-            "homeassistant.components.tado.PyTado.interface.api.Tado.get_zone_state",
+            "menuai.components.tado.PyTado.interface.api.Tado.get_zone_state",
             return_value={"setting": {"temperature": {"celsius": 22.0}}},
         ),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             CLIMATE_DOMAIN,
             SERVICE_SET_TEMPERATURE,
             {ATTR_ENTITY_ID: "climate.baseboard_heater", ATTR_TEMPERATURE: 22.0},
@@ -175,21 +175,21 @@ async def test_heater_set_temperature(
     ],
 )
 async def test_aircon_set_hvac_mode(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     hvac_mode: HVACMode,
     set_hvac_mode: str,
 ) -> None:
     """Test the set hvac mode of the air conditioning."""
 
-    await async_init_integration(hass)
+    await async_init_integration(menuai)
 
     with (
         patch(
-            "homeassistant.components.tado.__init__.PyTado.interface.api.Tado.set_zone_overlay"
+            "menuai.components.tado.__init__.PyTado.interface.api.Tado.set_zone_overlay"
         ) as mock_set_state,
         patch(
-            "homeassistant.components.tado.__init__.PyTado.interface.api.Tado.get_zone_state",
+            "menuai.components.tado.__init__.PyTado.interface.api.Tado.get_zone_state",
             return_value=TadoZone(
                 zone_id=1,
                 current_temp=18.7,
@@ -227,7 +227,7 @@ async def test_aircon_set_hvac_mode(
             ),
         ),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             CLIMATE_DOMAIN,
             SERVICE_SET_HVAC_MODE,
             {ATTR_ENTITY_ID: "climate.air_conditioning", ATTR_HVAC_MODE: hvac_mode},

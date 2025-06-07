@@ -2,9 +2,9 @@
 
 from myuplink import DevicePoint
 
-from homeassistant.components.number import NumberEntityDescription
-from homeassistant.components.sensor import SensorEntityDescription
-from homeassistant.const import Platform
+from menuai.components.number import NumberEntityDescription
+from menuai.components.sensor import SensorEntityDescription
+from menuai.const import Platform
 
 from .const import F_SERIES
 

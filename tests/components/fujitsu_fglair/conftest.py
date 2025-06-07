@@ -7,13 +7,13 @@ from ayla_iot_unofficial import AylaApi
 from ayla_iot_unofficial.fujitsu_hvac import FanSpeed, FujitsuHVAC, OpMode, SwingMode
 import pytest
 
-from homeassistant.components.fujitsu_fglair.const import (
+from menuai.components.fujitsu_fglair.const import (
     CONF_REGION,
     DOMAIN,
     REGION_DEFAULT,
 )
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, Platform
-from homeassistant.core import HomeAssistant
+from menuai.const import CONF_PASSWORD, CONF_USERNAME, Platform
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -44,7 +44,7 @@ def platforms() -> list[Platform]:
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.fujitsu_fglair.async_setup_entry", return_value=True
+        "menuai.components.fujitsu_fglair.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -56,10 +56,10 @@ def mock_ayla_api(mock_devices: list[AsyncMock]) -> Generator[AsyncMock]:
 
     with (
         patch(
-            "homeassistant.components.fujitsu_fglair.new_ayla_api", return_value=my_mock
+            "menuai.components.fujitsu_fglair.new_ayla_api", return_value=my_mock
         ),
         patch(
-            "homeassistant.components.fujitsu_fglair.config_flow.new_ayla_api",
+            "menuai.components.fujitsu_fglair.config_flow.new_ayla_api",
             return_value=my_mock,
         ),
     ):
@@ -87,17 +87,17 @@ def mock_config_entry(request: pytest.FixtureRequest) -> MockConfigEntry:
 
 @pytest.fixture(name="integration_setup")
 async def mock_integration_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     platforms: list[Platform],
     mock_config_entry: MockConfigEntry,
 ) -> Callable[[], Awaitable[bool]]:
     """Fixture to set up the integration."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     async def run() -> bool:
-        with patch("homeassistant.components.fujitsu_fglair.PLATFORMS", platforms):
-            result = await hass.config_entries.async_setup(mock_config_entry.entry_id)
-            await hass.async_block_till_done()
+        with patch("menuai.components.fujitsu_fglair.PLATFORMS", platforms):
+            result = await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+            await menuai.async_block_till_done()
         return result
 
     return run

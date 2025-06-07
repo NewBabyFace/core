@@ -31,9 +31,9 @@ from uiprotect.data import (
 )
 from uiprotect.websocket import WebsocketState
 
-from homeassistant.components.unifiprotect.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
+from menuai.components.unifiprotect.const import DOMAIN
+from menuai.core import menuai
+from menuai.util import dt as dt_util
 
 from . import _patch_discovery
 from .utils import MockUFPFixture
@@ -134,17 +134,17 @@ def mock_ufp_client(bootstrap: Bootstrap):
 
 @pytest.fixture(name="ufp")
 def mock_entry(
-    hass: HomeAssistant, ufp_config_entry: MockConfigEntry, ufp_client: ProtectApiClient
+    menuai: menuai, ufp_config_entry: MockConfigEntry, ufp_client: ProtectApiClient
 ):
     """Mock ProtectApiClient for testing."""
 
     with (
         _patch_discovery(no_device=True),
         patch(
-            "homeassistant.components.unifiprotect.utils.ProtectApiClient"
+            "menuai.components.unifiprotect.utils.ProtectApiClient"
         ) as mock_api,
     ):
-        ufp_config_entry.add_to_hass(hass)
+        ufp_config_entry.add_to_menuai(menuai)
 
         mock_api.return_value = ufp_client
 

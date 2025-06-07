@@ -9,13 +9,13 @@ from typing import Any
 import pyitachip2ir
 import voluptuous as vol
 
-from homeassistant.components import remote
-from homeassistant.components.remote import (
+from menuai.components import remote
+from menuai.components.remote import (
     ATTR_NUM_REPEATS,
     DEFAULT_NUM_REPEATS,
     PLATFORM_SCHEMA as REMOTE_PLATFORM_SCHEMA,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_DEVICES,
     CONF_HOST,
     CONF_MAC,
@@ -23,10 +23,10 @@ from homeassistant.const import (
     CONF_PORT,
     DEVICE_DEFAULT_NAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -72,7 +72,7 @@ PLATFORM_SCHEMA = REMOTE_PLATFORM_SCHEMA.extend(
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,

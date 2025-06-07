@@ -4,7 +4,7 @@ All containing methods are legacy helpers that should not be used by new
 components. Instead call the service directly.
 """
 
-from homeassistant.components.device_tracker import (
+from menuai.components.device_tracker import (
     ATTR_ATTRIBUTES,
     ATTR_BATTERY,
     ATTR_DEV_ID,
@@ -19,17 +19,17 @@ from homeassistant.components.device_tracker import (
     ScannerEntity,
     SourceType,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.typing import ConfigType, GPSType
-from homeassistant.loader import bind_hass
+from menuai.core import menuai, callback
+from menuai.helpers.typing import ConfigType, GPSType
+from menuai.loader import bind_menuai
 
 from tests.common import MockPlatform, mock_platform
 
 
 @callback
-@bind_hass
+@bind_menuai
 def async_see(
-    hass: HomeAssistant,
+    menuai: menuai,
     mac: str | None = None,
     dev_id: str | None = None,
     host_name: str | None = None,
@@ -55,7 +55,7 @@ def async_see(
     }
     if attributes:
         data[ATTR_ATTRIBUTES] = attributes
-    hass.async_create_task(hass.services.async_call(DOMAIN, SERVICE_SEE, data))
+    menuai.async_create_task(menuai.services.async_call(DOMAIN, SERVICE_SEE, data))
 
 
 class MockScannerEntity(ScannerEntity):
@@ -139,16 +139,16 @@ class MockScanner(DeviceScanner):
 
 
 def mock_legacy_device_tracker_setup(
-    hass: HomeAssistant, legacy_device_scanner: MockScanner
+    menuai: menuai, legacy_device_scanner: MockScanner
 ) -> None:
     """Mock legacy device tracker platform setup."""
 
     async def _async_get_scanner(
-        hass: HomeAssistant, config: ConfigType
+        menuai: menuai, config: ConfigType
     ) -> MockScanner:
         """Return the test scanner."""
         return legacy_device_scanner
 
     mocked_platform = MockPlatform()
     mocked_platform.async_get_scanner = _async_get_scanner
-    mock_platform(hass, "test.device_tracker", mocked_platform)
+    mock_platform(menuai, "test.device_tracker", mocked_platform)

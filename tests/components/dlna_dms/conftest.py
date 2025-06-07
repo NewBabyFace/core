@@ -10,15 +10,15 @@ from async_upnp_client.client import UpnpDevice, UpnpService
 from async_upnp_client.utils import absolute_url
 import pytest
 
-from homeassistant.components.dlna_dms.const import (
+from menuai.components.dlna_dms.const import (
     CONF_SOURCE_ID,
     CONFIG_VERSION,
     DOMAIN,
 )
-from homeassistant.components.dlna_dms.dms import DlnaDmsData
-from homeassistant.const import CONF_DEVICE_ID, CONF_URL
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.dlna_dms.dms import DlnaDmsData
+from menuai.const import CONF_DEVICE_ID, CONF_URL
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 
@@ -38,16 +38,16 @@ NEW_DEVICE_LOCATION: Final = "http://192.88.99.7" + "/dmr_description.xml"
 
 
 @pytest.fixture
-async def setup_media_source(hass: HomeAssistant) -> None:
+async def setup_media_source(menuai: menuai) -> None:
     """Set up media source."""
-    assert await async_setup_component(hass, "media_source", {})
+    assert await async_setup_component(menuai, "media_source", {})
 
 
 @pytest.fixture
 def upnp_factory_mock() -> Generator[Mock]:
     """Mock the UpnpFactory class to construct DMS-style UPnP devices."""
     with patch(
-        "homeassistant.components.dlna_dms.dms.UpnpFactory",
+        "menuai.components.dlna_dms.dms.UpnpFactory",
         autospec=True,
         spec_set=True,
     ) as upnp_factory:
@@ -85,7 +85,7 @@ def upnp_factory_mock() -> Generator[Mock]:
 def aiohttp_session_requester_mock() -> Generator[Mock]:
     """Mock the AiohttpSessionRequester to prevent network use."""
     with patch(
-        "homeassistant.components.dlna_dms.dms.AiohttpSessionRequester", autospec=True
+        "menuai.components.dlna_dms.dms.AiohttpSessionRequester", autospec=True
     ) as requester_mock:
         requester_mock.return_value = mock = AsyncMock()
         mock.async_http_request.return_value.body = MagicMock()
@@ -112,7 +112,7 @@ def config_entry_mock() -> MockConfigEntry:
 def dms_device_mock(upnp_factory_mock: Mock) -> Generator[Mock]:
     """Mock the async_upnp_client DMS device, initially connected."""
     with patch(
-        "homeassistant.components.dlna_dms.dms.DmsDevice", autospec=True
+        "menuai.components.dlna_dms.dms.DmsDevice", autospec=True
     ) as constructor:
         device = constructor.return_value
         device.on_event = None
@@ -132,7 +132,7 @@ def dms_device_mock(upnp_factory_mock: Mock) -> Generator[Mock]:
 @pytest.fixture(autouse=True)
 def ssdp_scanner_mock() -> Generator[Mock]:
     """Mock the SSDP Scanner."""
-    with patch("homeassistant.components.ssdp.Scanner", autospec=True) as mock_scanner:
+    with patch("menuai.components.ssdp.Scanner", autospec=True) as mock_scanner:
         reg_callback = mock_scanner.return_value.async_register_callback
         reg_callback.return_value = Mock(return_value=None)
         yield mock_scanner.return_value
@@ -141,21 +141,21 @@ def ssdp_scanner_mock() -> Generator[Mock]:
 @pytest.fixture(autouse=True)
 def ssdp_server_mock() -> Generator[None]:
     """Mock the SSDP Server."""
-    with patch("homeassistant.components.ssdp.Server", autospec=True):
+    with patch("menuai.components.ssdp.Server", autospec=True):
         yield
 
 
 @pytest.fixture
 async def device_source_mock(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry_mock: MockConfigEntry,
     ssdp_scanner_mock: Mock,
     dms_device_mock: Mock,
 ) -> AsyncGenerator[None]:
     """Fixture to set up a DmsDeviceSource in a connected state and cleanup at completion."""
-    config_entry_mock.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry_mock.entry_id)
-    await hass.async_block_till_done()
+    config_entry_mock.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry_mock.entry_id)
+    await menuai.async_block_till_done()
 
     # Check the DmsDeviceSource has registered all needed listeners
     assert len(config_entry_mock.update_listeners) == 0
@@ -166,7 +166,7 @@ async def device_source_mock(
     yield None
 
     # Unload config entry to clean up
-    assert await hass.config_entries.async_remove(config_entry_mock.entry_id) == {
+    assert await menuai.config_entries.async_remove(config_entry_mock.entry_id) == {
         "require_restart": False
     }
 
@@ -177,6 +177,6 @@ async def device_source_mock(
         == ssdp_scanner_mock.async_register_callback.return_value.call_count
     )
 
-    domain_data = cast(DlnaDmsData, hass.data[DOMAIN])
+    domain_data = cast(DlnaDmsData, menuai.data[DOMAIN])
     assert MOCK_DEVICE_USN not in domain_data.devices
     assert MOCK_SOURCE_ID not in domain_data.sources

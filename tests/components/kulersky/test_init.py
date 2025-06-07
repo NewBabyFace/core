@@ -1,16 +1,16 @@
 """Tests for init methods."""
 
-from homeassistant.components.kulersky.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_ADDRESS
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.components.kulersky.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.const import CONF_ADDRESS
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 from tests.common import MockConfigEntry
 
 
 async def test_migrate_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test migrate config entry from v1 to v2."""
 
@@ -20,9 +20,9 @@ async def test_migrate_entry(
         title="KulerSky",
     )
 
-    mock_config_entry_v1.add_to_hass(hass)
+    mock_config_entry_v1.add_to_menuai(menuai)
 
-    dev_reg = dr.async_get(hass)
+    dev_reg = dr.async_get(menuai)
     # Create device registry entries for old integration
     dev_reg.async_get_or_create(
         config_entry_id=mock_config_entry_v1.entry_id,
@@ -34,8 +34,8 @@ async def test_migrate_entry(
         identifiers={(DOMAIN, "AA:BB:CC:44:55:66")},
         name="KuLight 2",
     )
-    await hass.config_entries.async_setup(mock_config_entry_v1.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry_v1.entry_id)
+    await menuai.async_block_till_done()
 
     assert mock_config_entry_v1.state is ConfigEntryState.SETUP_RETRY
     assert mock_config_entry_v1.version == 2
@@ -46,7 +46,7 @@ async def test_migrate_entry(
 
 
 async def test_migrate_entry_no_devices_found(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test migrate config entry from v1 to v2."""
 
@@ -56,10 +56,10 @@ async def test_migrate_entry_no_devices_found(
         title="KulerSky",
     )
 
-    mock_config_entry_v1.add_to_hass(hass)
+    mock_config_entry_v1.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(mock_config_entry_v1.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry_v1.entry_id)
+    await menuai.async_block_till_done()
 
     assert mock_config_entry_v1.state is ConfigEntryState.MIGRATION_ERROR
     assert mock_config_entry_v1.version == 1

@@ -7,16 +7,16 @@ from typing import Any
 
 from verisure import Error as VerisureError
 
-from homeassistant.components.lock import LockEntity, LockState
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_CODE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import (
+from menuai.components.lock import LockEntity, LockState
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_CODE
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     async_get_current_platform,
 )
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
     CONF_GIID,
@@ -31,12 +31,12 @@ from .coordinator import VerisureDataUpdateCoordinator
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Verisure alarm control panel from a config entry."""
-    coordinator: VerisureDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: VerisureDataUpdateCoordinator = menuai.data[DOMAIN][entry.entry_id]
 
     platform = async_get_current_platform()
     platform.async_register_entity_service(
@@ -145,7 +145,7 @@ class VerisureDoorlock(CoordinatorEntity[VerisureDataUpdateCoordinator], LockEnt
             if state == LockState.LOCKED
             else self.coordinator.verisure.door_unlock(self.serial_number, code)
         )
-        lock_request = await self.hass.async_add_executor_job(
+        lock_request = await self.menuai.async_add_executor_job(
             self.coordinator.verisure.request,
             command,
         )
@@ -160,7 +160,7 @@ class VerisureDoorlock(CoordinatorEntity[VerisureDataUpdateCoordinator], LockEnt
             if attempts > 1:
                 await asyncio.sleep(0.5)
             attempts += 1
-            poll_data = await self.hass.async_add_executor_job(
+            poll_data = await self.menuai.async_add_executor_job(
                 self.coordinator.verisure.request,
                 self.coordinator.verisure.poll_lock_state(
                     transaction_id, self.serial_number, target_state

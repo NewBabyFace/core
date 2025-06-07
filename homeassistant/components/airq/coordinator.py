@@ -7,12 +7,12 @@ import logging
 
 from aioairq.core import AirQ, identify_warming_up_sensors
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_IP_ADDRESS, CONF_PASSWORD
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_IP_ADDRESS, CONF_PASSWORD
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN, MANUFACTURER, UPDATE_INTERVAL
 
@@ -26,20 +26,20 @@ class AirQCoordinator(DataUpdateCoordinator):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entry: ConfigEntry,
         clip_negative: bool = True,
         return_average: bool = True,
     ) -> None:
         """Initialise a custom coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
             name=DOMAIN,
             update_interval=timedelta(seconds=UPDATE_INTERVAL),
         )
-        session = async_get_clientsession(hass)
+        session = async_get_clientsession(menuai)
         self.airq = AirQ(
             entry.data[CONF_IP_ADDRESS], entry.data[CONF_PASSWORD], session
         )

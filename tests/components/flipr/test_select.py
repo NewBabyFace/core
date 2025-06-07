@@ -5,15 +5,15 @@ from unittest.mock import AsyncMock
 
 from flipr_api.exceptions import FliprError
 
-from homeassistant.components.select import (
+from menuai.components.select import (
     ATTR_OPTION,
     ATTR_OPTIONS,
     DOMAIN as SELECT_DOMAIN,
     SERVICE_SELECT_OPTION,
 )
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import setup_integration
 
@@ -25,7 +25,7 @@ SELECT_ENTITY_ID = "select.flipr_hub_myhubid_mode"
 
 
 async def test_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
     mock_flipr_client: AsyncMock,
@@ -34,14 +34,14 @@ async def test_entities(
 
     mock_flipr_client.search_all_ids.return_value = {"flipr": [], "hub": ["myhubid"]}
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     # Check entity unique_id value that is generated in FliprEntity base class.
     entity = entity_registry.async_get(SELECT_ENTITY_ID)
     _LOGGER.debug("Found entity = %s", entity)
     assert entity.unique_id == "myhubid-hubMode"
 
-    mode = hass.states.get(SELECT_ENTITY_ID)
+    mode = menuai.states.get(SELECT_ENTITY_ID)
     _LOGGER.debug("Found mode = %s", mode)
     assert mode
     assert mode.state == "planning"
@@ -49,7 +49,7 @@ async def test_entities(
 
 
 async def test_select_actions(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_flipr_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
@@ -58,23 +58,23 @@ async def test_select_actions(
 
     mock_flipr_client.search_all_ids.return_value = {"flipr": [], "hub": ["myhubid"]}
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    state = hass.states.get(SELECT_ENTITY_ID)
+    state = menuai.states.get(SELECT_ENTITY_ID)
     assert state.state == "planning"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SELECT_DOMAIN,
         SERVICE_SELECT_OPTION,
         {ATTR_ENTITY_ID: SELECT_ENTITY_ID, ATTR_OPTION: "manual"},
         blocking=True,
     )
-    state = hass.states.get(SELECT_ENTITY_ID)
+    state = menuai.states.get(SELECT_ENTITY_ID)
     assert state.state == "manual"
 
 
 async def test_no_select_found(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_flipr_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
@@ -83,13 +83,13 @@ async def test_no_select_found(
 
     mock_flipr_client.search_all_ids.return_value = {"flipr": [], "hub": []}
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    assert not hass.states.async_entity_ids(SELECT_ENTITY_ID)
+    assert not menuai.states.async_entity_ids(SELECT_ENTITY_ID)
 
 
 async def test_error_flipr_api(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
     mock_flipr_client: AsyncMock,
@@ -102,7 +102,7 @@ async def test_error_flipr_api(
         "Error during flipr data retrieval..."
     )
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     # Check entity is not generated because of the FliprError raised.
     entity = entity_registry.async_get(SELECT_ENTITY_ID)

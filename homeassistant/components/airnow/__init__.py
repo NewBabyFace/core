@@ -3,17 +3,17 @@
 import datetime
 import logging
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_API_KEY,
     CONF_LATITUDE,
     CONF_LONGITUDE,
     CONF_RADIUS,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .coordinator import AirNowConfigEntry, AirNowDataUpdateCoordinator
 
@@ -21,7 +21,7 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORMS = [Platform.SENSOR]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: AirNowConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: AirNowConfigEntry) -> bool:
     """Set up AirNow from a config entry."""
     api_key = entry.data[CONF_API_KEY]
     latitude = entry.data[CONF_LATITUDE]
@@ -34,9 +34,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: AirNowConfigEntry) -> bo
     update_interval = datetime.timedelta(minutes=30)
 
     # Setup the Coordinator
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
     coordinator = AirNowDataUpdateCoordinator(
-        hass, entry, session, api_key, latitude, longitude, distance, update_interval
+        menuai, entry, session, api_key, latitude, longitude, distance, update_interval
     )
 
     # Sync with Coordinator
@@ -48,11 +48,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: AirNowConfigEntry) -> bo
     # Listen for option changes
     entry.async_on_unload(entry.add_update_listener(update_listener))
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     # Clean up unused device entries with no entities
-    device_registry = dr.async_get(hass)
-    entity_registry = er.async_get(hass)
+    device_registry = dr.async_get(menuai)
+    entity_registry = er.async_get(menuai)
 
     device_entries = dr.async_entries_for_config_entry(
         device_registry, config_entry_id=entry.entry_id
@@ -67,7 +67,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: AirNowConfigEntry) -> bo
     return True
 
 
-async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_migrate_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Migrate old entry."""
     _LOGGER.debug("Migrating from version %s", entry.version)
 
@@ -76,7 +76,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         new_data = entry.data.copy()
         del new_data[CONF_RADIUS]
 
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry, data=new_data, options=new_options, version=2
         )
 
@@ -85,11 +85,11 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: AirNowConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: AirNowConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
-async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def update_listener(menuai: menuai, entry: ConfigEntry) -> None:
     """Handle options update."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)

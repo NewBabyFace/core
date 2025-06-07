@@ -2,19 +2,19 @@
 
 import pytest
 
-from homeassistant.components import geo_location
-from homeassistant.components.geo_location import GeolocationEvent
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components import geo_location
+from menuai.components.geo_location import GeolocationEvent
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 
-async def test_setup_component(hass: HomeAssistant) -> None:
+async def test_setup_component(menuai: menuai) -> None:
     """Simple test setup of component."""
-    result = await async_setup_component(hass, geo_location.DOMAIN, {})
+    result = await async_setup_component(menuai, geo_location.DOMAIN, {})
     assert result
 
 
-async def test_event(hass: HomeAssistant) -> None:
+async def test_event(menuai: menuai) -> None:
     """Simple test of the geolocation event class."""
     entity = GeolocationEvent()
 

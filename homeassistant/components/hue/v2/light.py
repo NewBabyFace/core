@@ -11,7 +11,7 @@ from aiohue.v2.controllers.lights import LightsController
 from aiohue.v2.models.feature import EffectStatus, TimedEffectStatus
 from aiohue.v2.models.light import Light
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_TEMP_KELVIN,
     ATTR_EFFECT,
@@ -26,10 +26,10 @@ from homeassistant.components.light import (
     LightEntityFeature,
     filter_supported_color_modes,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.issue_registry import IssueSeverity, async_create_issue
-from homeassistant.util import color as color_util
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.issue_registry import IssueSeverity, async_create_issue
+from menuai.util import color as color_util
 
 from ..bridge import HueBridge, HueConfigEntry
 from ..const import DOMAIN
@@ -49,7 +49,7 @@ DEPRECATED_EFFECT_NONE = "None"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: HueConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -72,7 +72,7 @@ async def async_setup_entry(
     )
 
 
-# pylint: disable-next=hass-enforce-class-module
+# pylint: disable-next=menuai-enforce-class-module
 class HueLight(HueBaseEntity, LightEntity):
     """Representation of a Hue light."""
 
@@ -240,7 +240,7 @@ class HueLight(HueBaseEntity, LightEntity):
             # deprecated effect "None" is now "off"
             effect_str = EFFECT_OFF
             async_create_issue(
-                self.hass,
+                self.menuai,
                 DOMAIN,
                 "deprecated_effect_none",
                 breaks_in_ha_version="2025.10.0",

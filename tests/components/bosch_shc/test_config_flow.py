@@ -12,12 +12,12 @@ from boschshcpy.exceptions import (
 from boschshcpy.information import SHCInformation
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.bosch_shc.config_flow import write_tls_asset
-from homeassistant.components.bosch_shc.const import CONF_SHC_CERT, CONF_SHC_KEY, DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai import config_entries
+from menuai.components.bosch_shc.config_flow import write_tls_asset
+from menuai.components.bosch_shc.const import CONF_SHC_CERT, CONF_SHC_KEY, DOMAIN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from tests.common import MockConfigEntry
 
@@ -37,10 +37,10 @@ DISCOVERY_INFO = ZeroconfServiceInfo(
 
 
 @pytest.mark.usefixtures("mock_zeroconf")
-async def test_form_user(hass: HomeAssistant) -> None:
+async def test_form_user(menuai: menuai) -> None:
     """Test we get the form."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -63,7 +63,7 @@ async def test_form_user(hass: HomeAssistant) -> None:
             return_value="test-mac",
         ),
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {"host": "1.1.1.1"},
         )
@@ -82,25 +82,25 @@ async def test_form_user(hass: HomeAssistant) -> None:
             },
         ),
         patch("os.mkdir"),
-        patch("homeassistant.components.bosch_shc.config_flow.open"),
+        patch("menuai.components.bosch_shc.config_flow.open"),
         patch("boschshcpy.session.SHCSession.authenticate") as mock_authenticate,
         patch(
-            "homeassistant.components.bosch_shc.async_setup_entry",
+            "menuai.components.bosch_shc.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {"password": "test"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.CREATE_ENTRY
     assert result3["title"] == "shc012345"
     assert result3["data"] == {
         "host": "1.1.1.1",
-        "ssl_certificate": hass.config.path(DOMAIN, "test-mac", CONF_SHC_CERT),
-        "ssl_key": hass.config.path(DOMAIN, "test-mac", CONF_SHC_KEY),
+        "ssl_certificate": menuai.config.path(DOMAIN, "test-mac", CONF_SHC_CERT),
+        "ssl_key": menuai.config.path(DOMAIN, "test-mac", CONF_SHC_KEY),
         "token": "abc:123",
         "hostname": "123",
     }
@@ -110,9 +110,9 @@ async def test_form_user(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("mock_zeroconf")
-async def test_form_get_info_connection_error(hass: HomeAssistant) -> None:
+async def test_form_get_info_connection_error(menuai: menuai) -> None:
     """Test we handle connection error."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -120,7 +120,7 @@ async def test_form_get_info_connection_error(hass: HomeAssistant) -> None:
         "boschshcpy.session.SHCSession.mdns_info",
         side_effect=SHCConnectionError,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "host": "1.1.1.1",
@@ -132,9 +132,9 @@ async def test_form_get_info_connection_error(hass: HomeAssistant) -> None:
     assert result2["errors"] == {"base": "cannot_connect"}
 
 
-async def test_form_get_info_exception(hass: HomeAssistant) -> None:
+async def test_form_get_info_exception(menuai: menuai) -> None:
     """Test we handle exceptions."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -142,7 +142,7 @@ async def test_form_get_info_exception(hass: HomeAssistant) -> None:
         "boschshcpy.session.SHCSession.mdns_info",
         side_effect=Exception,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 "host": "1.1.1.1",
@@ -155,9 +155,9 @@ async def test_form_get_info_exception(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("mock_zeroconf")
-async def test_form_pairing_error(hass: HomeAssistant) -> None:
+async def test_form_pairing_error(menuai: menuai) -> None:
     """Test we handle pairing error."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -177,7 +177,7 @@ async def test_form_pairing_error(hass: HomeAssistant) -> None:
             return_value="test-mac",
         ),
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {"host": "1.1.1.1"},
         )
@@ -190,11 +190,11 @@ async def test_form_pairing_error(hass: HomeAssistant) -> None:
         "boschshcpy.register_client.SHCRegisterClient.register",
         side_effect=SHCRegistrationError(""),
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {"password": "test"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.FORM
     assert result3["step_id"] == "credentials"
@@ -202,9 +202,9 @@ async def test_form_pairing_error(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("mock_zeroconf")
-async def test_form_user_invalid_auth(hass: HomeAssistant) -> None:
+async def test_form_user_invalid_auth(menuai: menuai) -> None:
     """Test we handle invalid auth."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -224,7 +224,7 @@ async def test_form_user_invalid_auth(hass: HomeAssistant) -> None:
             return_value="test-mac",
         ),
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {"host": "1.1.1.1"},
         )
@@ -243,17 +243,17 @@ async def test_form_user_invalid_auth(hass: HomeAssistant) -> None:
             },
         ),
         patch("os.mkdir"),
-        patch("homeassistant.components.bosch_shc.config_flow.open"),
+        patch("menuai.components.bosch_shc.config_flow.open"),
         patch(
             "boschshcpy.session.SHCSession.authenticate",
             side_effect=SHCAuthenticationError,
         ),
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {"password": "test"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.FORM
     assert result3["step_id"] == "credentials"
@@ -261,9 +261,9 @@ async def test_form_user_invalid_auth(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("mock_zeroconf")
-async def test_form_validate_connection_error(hass: HomeAssistant) -> None:
+async def test_form_validate_connection_error(menuai: menuai) -> None:
     """Test we handle connection error."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -283,7 +283,7 @@ async def test_form_validate_connection_error(hass: HomeAssistant) -> None:
             return_value="test-mac",
         ),
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {"host": "1.1.1.1"},
         )
@@ -302,17 +302,17 @@ async def test_form_validate_connection_error(hass: HomeAssistant) -> None:
             },
         ),
         patch("os.mkdir"),
-        patch("homeassistant.components.bosch_shc.config_flow.open"),
+        patch("menuai.components.bosch_shc.config_flow.open"),
         patch(
             "boschshcpy.session.SHCSession.authenticate",
             side_effect=SHCConnectionError,
         ),
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {"password": "test"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.FORM
     assert result3["step_id"] == "credentials"
@@ -320,9 +320,9 @@ async def test_form_validate_connection_error(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("mock_zeroconf")
-async def test_form_validate_session_error(hass: HomeAssistant) -> None:
+async def test_form_validate_session_error(menuai: menuai) -> None:
     """Test we handle session error."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -342,7 +342,7 @@ async def test_form_validate_session_error(hass: HomeAssistant) -> None:
             return_value="test-mac",
         ),
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {"host": "1.1.1.1"},
         )
@@ -361,17 +361,17 @@ async def test_form_validate_session_error(hass: HomeAssistant) -> None:
             },
         ),
         patch("os.mkdir"),
-        patch("homeassistant.components.bosch_shc.config_flow.open"),
+        patch("menuai.components.bosch_shc.config_flow.open"),
         patch(
             "boschshcpy.session.SHCSession.authenticate",
             side_effect=SHCSessionError(""),
         ),
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {"password": "test"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.FORM
     assert result3["step_id"] == "credentials"
@@ -379,9 +379,9 @@ async def test_form_validate_session_error(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("mock_zeroconf")
-async def test_form_validate_exception(hass: HomeAssistant) -> None:
+async def test_form_validate_exception(menuai: menuai) -> None:
     """Test we handle exception."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -401,7 +401,7 @@ async def test_form_validate_exception(hass: HomeAssistant) -> None:
             return_value="test-mac",
         ),
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {"host": "1.1.1.1"},
         )
@@ -420,17 +420,17 @@ async def test_form_validate_exception(hass: HomeAssistant) -> None:
             },
         ),
         patch("os.mkdir"),
-        patch("homeassistant.components.bosch_shc.config_flow.open"),
+        patch("menuai.components.bosch_shc.config_flow.open"),
         patch(
             "boschshcpy.session.SHCSession.authenticate",
             side_effect=Exception,
         ),
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {"password": "test"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.FORM
     assert result3["step_id"] == "credentials"
@@ -438,15 +438,15 @@ async def test_form_validate_exception(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("mock_zeroconf")
-async def test_form_already_configured(hass: HomeAssistant) -> None:
+async def test_form_already_configured(menuai: menuai) -> None:
     """Test we get the form."""
 
     entry = MockConfigEntry(
         domain="bosch_shc", unique_id="test-mac", data={"host": "0.0.0.0"}
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -466,7 +466,7 @@ async def test_form_already_configured(hass: HomeAssistant) -> None:
             return_value="test-mac",
         ),
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {"host": "1.1.1.1"},
         )
@@ -479,7 +479,7 @@ async def test_form_already_configured(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("mock_zeroconf")
-async def test_zeroconf(hass: HomeAssistant) -> None:
+async def test_zeroconf(menuai: menuai) -> None:
     """Test we get the form."""
 
     with (
@@ -498,7 +498,7 @@ async def test_zeroconf(hass: HomeAssistant) -> None:
             return_value="test-mac",
         ),
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             data=DISCOVERY_INFO,
             context={"source": config_entries.SOURCE_ZEROCONF},
@@ -508,12 +508,12 @@ async def test_zeroconf(hass: HomeAssistant) -> None:
         assert result["errors"] == {}
         context = next(
             flow["context"]
-            for flow in hass.config_entries.flow.async_progress()
+            for flow in menuai.config_entries.flow.async_progress()
             if flow["flow_id"] == result["flow_id"]
         )
         assert context["title_placeholders"]["name"] == "shc012345"
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {},
     )
@@ -530,27 +530,27 @@ async def test_zeroconf(hass: HomeAssistant) -> None:
             },
         ),
         patch("os.mkdir"),
-        patch("homeassistant.components.bosch_shc.config_flow.open"),
+        patch("menuai.components.bosch_shc.config_flow.open"),
         patch(
             "boschshcpy.session.SHCSession.authenticate",
         ),
         patch(
-            "homeassistant.components.bosch_shc.async_setup_entry",
+            "menuai.components.bosch_shc.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {"password": "test"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.CREATE_ENTRY
     assert result3["title"] == "shc012345"
     assert result3["data"] == {
         "host": "1.1.1.1",
-        "ssl_certificate": hass.config.path(DOMAIN, "test-mac", CONF_SHC_CERT),
-        "ssl_key": hass.config.path(DOMAIN, "test-mac", CONF_SHC_KEY),
+        "ssl_certificate": menuai.config.path(DOMAIN, "test-mac", CONF_SHC_CERT),
+        "ssl_key": menuai.config.path(DOMAIN, "test-mac", CONF_SHC_KEY),
         "token": "abc:123",
         "hostname": "123",
     }
@@ -558,13 +558,13 @@ async def test_zeroconf(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("mock_zeroconf")
-async def test_zeroconf_already_configured(hass: HomeAssistant) -> None:
+async def test_zeroconf_already_configured(menuai: menuai) -> None:
     """Test we get the form."""
 
     entry = MockConfigEntry(
         domain="bosch_shc", unique_id="test-mac", data={"host": "0.0.0.0"}
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with (
         patch(
@@ -582,7 +582,7 @@ async def test_zeroconf_already_configured(hass: HomeAssistant) -> None:
             return_value="test-mac",
         ),
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             data=DISCOVERY_INFO,
             context={"source": config_entries.SOURCE_ZEROCONF},
@@ -596,12 +596,12 @@ async def test_zeroconf_already_configured(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("mock_zeroconf")
-async def test_zeroconf_cannot_connect(hass: HomeAssistant) -> None:
+async def test_zeroconf_cannot_connect(menuai: menuai) -> None:
     """Test we get the form."""
     with patch(
         "boschshcpy.session.SHCSession.mdns_info", side_effect=SHCConnectionError
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             data=DISCOVERY_INFO,
             context={"source": config_entries.SOURCE_ZEROCONF},
@@ -611,9 +611,9 @@ async def test_zeroconf_cannot_connect(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("mock_zeroconf")
-async def test_zeroconf_not_bosch_shc(hass: HomeAssistant) -> None:
+async def test_zeroconf_not_bosch_shc(menuai: menuai) -> None:
     """Test we filter out non-bosch_shc devices."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         data=ZeroconfServiceInfo(
             ip_address=ip_address("1.1.1.1"),
@@ -631,7 +631,7 @@ async def test_zeroconf_not_bosch_shc(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("mock_zeroconf")
-async def test_reauth(hass: HomeAssistant) -> None:
+async def test_reauth(menuai: menuai) -> None:
     """Test we get the form."""
 
     mock_config = MockConfigEntry(
@@ -645,8 +645,8 @@ async def test_reauth(hass: HomeAssistant) -> None:
         },
         title="shc012345",
     )
-    mock_config.add_to_hass(hass)
-    result = await mock_config.start_reauth_flow(hass)
+    mock_config.add_to_menuai(menuai)
+    result = await mock_config.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
@@ -666,7 +666,7 @@ async def test_reauth(hass: HomeAssistant) -> None:
             return_value="test-mac",
         ),
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {"host": "2.2.2.2"},
         )
@@ -685,18 +685,18 @@ async def test_reauth(hass: HomeAssistant) -> None:
             },
         ),
         patch("os.mkdir"),
-        patch("homeassistant.components.bosch_shc.config_flow.open"),
+        patch("menuai.components.bosch_shc.config_flow.open"),
         patch("boschshcpy.session.SHCSession.authenticate"),
         patch(
-            "homeassistant.components.bosch_shc.async_setup_entry",
+            "menuai.components.bosch_shc.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {"password": "test"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.ABORT
     assert result3["reason"] == "reauth_successful"
@@ -706,7 +706,7 @@ async def test_reauth(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_tls_assets_writer(hass: HomeAssistant) -> None:
+async def test_tls_assets_writer(menuai: menuai) -> None:
     """Test we write tls assets to correct location."""
     unique_id = "test-mac"
     assets = {
@@ -717,24 +717,24 @@ async def test_tls_assets_writer(hass: HomeAssistant) -> None:
     with (
         patch("os.mkdir"),
         patch(
-            "homeassistant.components.bosch_shc.config_flow.open", mock_open()
+            "menuai.components.bosch_shc.config_flow.open", mock_open()
         ) as mocked_file,
     ):
-        write_tls_asset(hass, unique_id, CONF_SHC_CERT, assets["cert"])
+        write_tls_asset(menuai, unique_id, CONF_SHC_CERT, assets["cert"])
         mocked_file.assert_called_with(
-            hass.config.path(DOMAIN, unique_id, CONF_SHC_CERT), "w", encoding="utf8"
+            menuai.config.path(DOMAIN, unique_id, CONF_SHC_CERT), "w", encoding="utf8"
         )
         mocked_file().write.assert_called_with("content_cert")
 
-        write_tls_asset(hass, unique_id, CONF_SHC_KEY, assets["key"])
+        write_tls_asset(menuai, unique_id, CONF_SHC_KEY, assets["key"])
         mocked_file.assert_called_with(
-            hass.config.path(DOMAIN, unique_id, CONF_SHC_KEY), "w", encoding="utf8"
+            menuai.config.path(DOMAIN, unique_id, CONF_SHC_KEY), "w", encoding="utf8"
         )
         mocked_file().write.assert_called_with("content_key")
 
 
 @pytest.mark.usefixtures("mock_zeroconf")
-async def test_register_multiple_controllers(hass: HomeAssistant) -> None:
+async def test_register_multiple_controllers(menuai: menuai) -> None:
     """Test register multiple controllers.
 
     Each registered controller must get its own key/certificate pair,
@@ -763,7 +763,7 @@ async def test_register_multiple_controllers(hass: HomeAssistant) -> None:
     }
 
     # Set up controller 1
-    ctrl_1_result = await hass.config_entries.flow.async_init(
+    ctrl_1_result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -783,7 +783,7 @@ async def test_register_multiple_controllers(hass: HomeAssistant) -> None:
             return_value=controller_1["mac"],
         ),
     ):
-        ctrl_1_result2 = await hass.config_entries.flow.async_configure(
+        ctrl_1_result2 = await menuai.config_entries.flow.async_configure(
             ctrl_1_result["flow_id"],
             {"host": controller_1["host"]},
         )
@@ -794,32 +794,32 @@ async def test_register_multiple_controllers(hass: HomeAssistant) -> None:
             return_value=controller_1["register"],
         ),
         patch("os.mkdir"),
-        patch("homeassistant.components.bosch_shc.config_flow.open"),
+        patch("menuai.components.bosch_shc.config_flow.open"),
         patch("boschshcpy.session.SHCSession.authenticate"),
         patch(
-            "homeassistant.components.bosch_shc.async_setup_entry",
+            "menuai.components.bosch_shc.async_setup_entry",
             return_value=True,
         ),
     ):
-        ctrl_1_result3 = await hass.config_entries.flow.async_configure(
+        ctrl_1_result3 = await menuai.config_entries.flow.async_configure(
             ctrl_1_result2["flow_id"],
             {"password": "test"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert ctrl_1_result3["type"] is FlowResultType.CREATE_ENTRY
     assert ctrl_1_result3["title"] == "shc111111"
     assert ctrl_1_result3["context"]["unique_id"] == controller_1["mac"]
     assert ctrl_1_result3["data"] == {
         "host": "1.1.1.1",
-        "ssl_certificate": hass.config.path(DOMAIN, controller_1["mac"], CONF_SHC_CERT),
-        "ssl_key": hass.config.path(DOMAIN, controller_1["mac"], CONF_SHC_KEY),
+        "ssl_certificate": menuai.config.path(DOMAIN, controller_1["mac"], CONF_SHC_CERT),
+        "ssl_key": menuai.config.path(DOMAIN, controller_1["mac"], CONF_SHC_KEY),
         "token": "abc:shc111111",
         "hostname": "shc111111",
     }
 
     # Set up controller 2
-    ctrl_2_result = await hass.config_entries.flow.async_init(
+    ctrl_2_result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -839,7 +839,7 @@ async def test_register_multiple_controllers(hass: HomeAssistant) -> None:
             return_value=controller_2["mac"],
         ),
     ):
-        ctrl_2_result2 = await hass.config_entries.flow.async_configure(
+        ctrl_2_result2 = await menuai.config_entries.flow.async_configure(
             ctrl_2_result["flow_id"],
             {"host": controller_2["host"]},
         )
@@ -850,26 +850,26 @@ async def test_register_multiple_controllers(hass: HomeAssistant) -> None:
             return_value=controller_2["register"],
         ),
         patch("os.mkdir"),
-        patch("homeassistant.components.bosch_shc.config_flow.open"),
+        patch("menuai.components.bosch_shc.config_flow.open"),
         patch("boschshcpy.session.SHCSession.authenticate"),
         patch(
-            "homeassistant.components.bosch_shc.async_setup_entry",
+            "menuai.components.bosch_shc.async_setup_entry",
             return_value=True,
         ),
     ):
-        ctrl_2_result3 = await hass.config_entries.flow.async_configure(
+        ctrl_2_result3 = await menuai.config_entries.flow.async_configure(
             ctrl_2_result2["flow_id"],
             {"password": "test"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert ctrl_2_result3["type"] is FlowResultType.CREATE_ENTRY
     assert ctrl_2_result3["title"] == "shc222222"
     assert ctrl_2_result3["context"]["unique_id"] == controller_2["mac"]
     assert ctrl_2_result3["data"] == {
         "host": "2.2.2.2",
-        "ssl_certificate": hass.config.path(DOMAIN, controller_2["mac"], CONF_SHC_CERT),
-        "ssl_key": hass.config.path(DOMAIN, controller_2["mac"], CONF_SHC_KEY),
+        "ssl_certificate": menuai.config.path(DOMAIN, controller_2["mac"], CONF_SHC_CERT),
+        "ssl_key": menuai.config.path(DOMAIN, controller_2["mac"], CONF_SHC_KEY),
         "token": "abc:shc222222",
         "hostname": "shc222222",
     }

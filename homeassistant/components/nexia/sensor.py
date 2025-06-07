@@ -5,14 +5,14 @@ from __future__ import annotations
 from nexia.const import UNIT_CELSIUS
 from nexia.thermostat import NexiaThermostat
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorStateClass,
 )
-from homeassistant.const import PERCENTAGE, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import PERCENTAGE, UnitOfTemperature
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .entity import NexiaThermostatEntity, NexiaThermostatZoneEntity
 from .types import NexiaConfigEntry
@@ -20,7 +20,7 @@ from .util import percent_conv
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: NexiaConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

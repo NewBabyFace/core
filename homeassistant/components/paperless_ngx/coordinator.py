@@ -16,10 +16,10 @@ from pypaperless.exceptions import (
 )
 from pypaperless.models import Statistic, Status
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN, LOGGER
 
@@ -46,7 +46,7 @@ class PaperlessCoordinator(DataUpdateCoordinator[TData]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entry: PaperlessConfigEntry,
         api: Paperless,
         name: str,
@@ -56,7 +56,7 @@ class PaperlessCoordinator(DataUpdateCoordinator[TData]):
         self.api = api
 
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=entry,
             name=name,
@@ -98,13 +98,13 @@ class PaperlessStatisticCoordinator(PaperlessCoordinator[Statistic]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entry: PaperlessConfigEntry,
         api: Paperless,
     ) -> None:
         """Initialize Paperless-ngx status coordinator."""
         super().__init__(
-            hass,
+            menuai,
             entry,
             api,
             name="Statistics Coordinator",
@@ -121,13 +121,13 @@ class PaperlessStatusCoordinator(PaperlessCoordinator[Status]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entry: PaperlessConfigEntry,
         api: Paperless,
     ) -> None:
         """Initialize Paperless-ngx status coordinator."""
         super().__init__(
-            hass,
+            menuai,
             entry,
             api,
             name="Status Coordinator",

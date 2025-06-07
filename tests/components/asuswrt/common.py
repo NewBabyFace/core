@@ -3,7 +3,7 @@
 from aioasuswrt.asuswrt import Device as LegacyDevice
 from pyasuswrt.asuswrt import Device as HttpDevice
 
-from homeassistant.components.asuswrt.const import (
+from menuai.components.asuswrt.const import (
     CONF_SSH_KEY,
     MODE_ROUTER,
     PROTOCOL_HTTP,
@@ -11,7 +11,7 @@ from homeassistant.components.asuswrt.const import (
     PROTOCOL_SSH,
     PROTOCOL_TELNET,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_MODE,
     CONF_PASSWORD,
@@ -20,7 +20,7 @@ from homeassistant.const import (
     CONF_USERNAME,
 )
 
-ASUSWRT_BASE = "homeassistant.components.asuswrt"
+ASUSWRT_BASE = "menuai.components.asuswrt"
 
 HOST = "myrouter.asuswrt.com"
 ROUTER_MAC_ADDR = "a1:b2:c3:d4:e5:f6"

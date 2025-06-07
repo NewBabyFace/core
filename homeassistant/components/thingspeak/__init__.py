@@ -6,16 +6,16 @@ from requests.exceptions import RequestException
 import thingspeak
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_API_KEY,
     CONF_ID,
     CONF_WHITELIST,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, event, state as state_helper
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, event, state as state_helper
+from menuai.helpers.typing import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Thingspeak environment."""
     conf = config[DOMAIN]
     api_key = conf.get(CONF_API_KEY)
@@ -73,6 +73,6 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
         except RequestException:
             _LOGGER.error("Error while sending value '%s' to Thingspeak", _state)
 
-    event.track_state_change(hass, entity, thingspeak_listener)
+    event.track_state_change(menuai, entity, thingspeak_listener)
 
     return True

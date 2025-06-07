@@ -4,10 +4,10 @@ from typing import Any
 
 from pydeako import Deako
 
-from homeassistant.components.light import ATTR_BRIGHTNESS, ColorMode, LightEntity
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.light import ATTR_BRIGHTNESS, ColorMode, LightEntity
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import DeakoConfigEntry
 from .const import DOMAIN
@@ -18,7 +18,7 @@ MODEL_DIMMER = "dimmer"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: DeakoConfigEntry,
     add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

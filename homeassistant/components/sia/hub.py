@@ -8,11 +8,11 @@ from typing import Any
 
 from pysiaalarm.aio import CommunicationsProtocol, SIAAccount, SIAClient, SIAEvent
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_PORT, CONF_PROTOCOL, EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.dispatcher import async_dispatcher_send
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_PORT, CONF_PROTOCOL, EVENT_menuai_STOP
+from menuai.core import Event, menuai, callback
+from menuai.helpers import device_registry as dr
+from menuai.helpers.dispatcher import async_dispatcher_send
 
 from .const import (
     CONF_ACCOUNT,
@@ -36,11 +36,11 @@ class SIAHub:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entry: ConfigEntry,
     ) -> None:
         """Create the SIAHub."""
-        self._hass: HomeAssistant = hass
+        self._menuai: menuai = menuai
         self._entry: ConfigEntry = entry
         self._port: int = entry.data[CONF_PORT]
         self._title: str = entry.title
@@ -53,7 +53,7 @@ class SIAHub:
     def async_setup_hub(self) -> None:
         """Add a device to the device_registry, register shutdown listener, load reactions."""
         self.update_accounts()
-        device_registry = dr.async_get(self._hass)
+        device_registry = dr.async_get(self._menuai)
         for acc in self._accounts:
             account = acc[CONF_ACCOUNT]
             device_registry.async_get_or_create(
@@ -65,7 +65,7 @@ class SIAHub:
             self._entry.add_update_listener(self.async_config_entry_updated)
         )
         self._entry.async_on_unload(
-            self._hass.bus.async_listen(EVENT_HOMEASSISTANT_STOP, self.async_shutdown)
+            self._menuai.bus.async_listen(EVENT_menuai_STOP, self.async_shutdown)
         )
 
     async def async_shutdown(self, _: Event | None = None) -> None:
@@ -86,9 +86,9 @@ class SIAHub:
             event.account,
         )
         async_dispatcher_send(
-            self._hass, SIA_EVENT.format(self._port, event.account), event
+            self._menuai, SIA_EVENT.format(self._port, event.account), event
         )
-        self._hass.bus.async_fire(
+        self._menuai.bus.async_fire(
             event_type=SIA_EVENT.format(self._port, event.account),
             event_data=get_event_data_from_sia_event(event),
         )
@@ -131,7 +131,7 @@ class SIAHub:
 
     @staticmethod
     async def async_config_entry_updated(
-        hass: HomeAssistant, config_entry: ConfigEntry
+        menuai: menuai, config_entry: ConfigEntry
     ) -> None:
         """Handle signals of config entry being updated.
 
@@ -139,8 +139,8 @@ class SIAHub:
         Second, unload underlying platforms, and then setup platforms, this reflects any changes in number of zones.
 
         """
-        if not (hub := hass.data[DOMAIN].get(config_entry.entry_id)):
+        if not (hub := menuai.data[DOMAIN].get(config_entry.entry_id)):
             return
         hub.update_accounts()
-        await hass.config_entries.async_unload_platforms(config_entry, PLATFORMS)
-        await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
+        await menuai.config_entries.async_unload_platforms(config_entry, PLATFORMS)
+        await menuai.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)

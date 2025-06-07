@@ -10,11 +10,11 @@ import boto3
 import requests
 import voluptuous as vol
 
-from homeassistant.const import CONF_DOMAIN, CONF_TTL, CONF_ZONE
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.event import track_time_interval
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import CONF_DOMAIN, CONF_TTL, CONF_ZONE
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import config_validation as cv
+from menuai.helpers.event import track_time_interval
+from menuai.helpers.typing import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -44,7 +44,7 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Route53 component."""
     domain = config[DOMAIN][CONF_DOMAIN]
     records = config[DOMAIN][CONF_RECORDS]
@@ -65,9 +65,9 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
             aws_access_key_id, aws_secret_access_key, zone, domain, records, ttl
         )
 
-    track_time_interval(hass, update_records_interval, INTERVAL)
+    track_time_interval(menuai, update_records_interval, INTERVAL)
 
-    hass.services.register(DOMAIN, "update_records", update_records_service)
+    menuai.services.register(DOMAIN, "update_records", update_records_service)
     return True
 
 

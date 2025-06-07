@@ -1,6 +1,6 @@
 """Constants for the samsungtv tests."""
 
-from homeassistant.components.samsungtv.const import (
+from menuai.components.samsungtv.const import (
     CONF_SESSION_ID,
     DOMAIN,
     ENCRYPTED_WEBSOCKET_PORT,
@@ -10,7 +10,7 @@ from homeassistant.components.samsungtv.const import (
     METHOD_WEBSOCKET,
     WEBSOCKET_SSL_PORT,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_MAC,
     CONF_METHOD,
@@ -18,7 +18,7 @@ from homeassistant.const import (
     CONF_PORT,
     CONF_TOKEN,
 )
-from homeassistant.helpers.service_info.ssdp import SsdpServiceInfo
+from menuai.helpers.service_info.ssdp import SsdpServiceInfo
 
 from tests.common import load_json_object_fixture
 

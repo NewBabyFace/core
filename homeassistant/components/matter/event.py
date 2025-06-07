@@ -8,15 +8,15 @@ from chip.clusters import Objects as clusters
 from matter_server.client.models import device_types
 from matter_server.common.models import EventType, MatterNodeEvent
 
-from homeassistant.components.event import (
+from menuai.components.event import (
     EventDeviceClass,
     EventEntity,
     EventEntityDescription,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .entity import MatterEntity
 from .helpers import get_matter
@@ -37,12 +37,12 @@ EVENT_TYPES_MAP = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Matter switches from Config Entry."""
-    matter = get_matter(hass)
+    matter = get_matter(menuai)
     matter.register_platform_handler(Platform.EVENT, async_add_entities)
 
 
@@ -86,9 +86,9 @@ class MatterEventEntity(MatterEntity, EventEntity):
 
         self._attr_event_types = event_types
 
-    async def async_added_to_hass(self) -> None:
-        """Handle being added to Home Assistant."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Handle being added to MenuAI."""
+        await super().async_added_to_menuai()
 
         # subscribe to NodeEvent events
         self._unsubscribes.append(

@@ -3,15 +3,15 @@
 import pytest
 import voluptuous as vol
 
-from homeassistant.components import vultr as base_vultr
-from homeassistant.components.vultr import CONF_SUBSCRIPTION, sensor as vultr
-from homeassistant.const import (
+from menuai.components import vultr as base_vultr
+from menuai.components.vultr import CONF_SUBSCRIPTION, sensor as vultr
+from menuai.const import (
     CONF_MONITORED_CONDITIONS,
     CONF_NAME,
     CONF_PLATFORM,
     UnitOfInformation,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 CONFIGS = [
     {
@@ -33,24 +33,24 @@ CONFIGS = [
 
 
 @pytest.mark.usefixtures("valid_config")
-def test_sensor(hass: HomeAssistant) -> None:
+def test_sensor(menuai: menuai) -> None:
     """Test the Vultr sensor class and methods."""
-    hass_devices = []
+    menuai_devices = []
 
     def add_entities(devices, action):
         """Mock add devices."""
         for device in devices:
-            device.hass = hass
-            hass_devices.append(device)
+            device.menuai = menuai
+            menuai_devices.append(device)
 
     for config in CONFIGS:
-        vultr.setup_platform(hass, config, add_entities, None)
+        vultr.setup_platform(menuai, config, add_entities, None)
 
-    assert len(hass_devices) == 5
+    assert len(menuai_devices) == 5
 
     tested = 0
 
-    for device in hass_devices:
+    for device in menuai_devices:
         # Test pre update
         if device.subscription == "576965":
             assert device.name == vultr.DEFAULT_NAME
@@ -113,15 +113,15 @@ def test_invalid_sensor_config() -> None:
 
 
 @pytest.mark.usefixtures("valid_config")
-def test_invalid_sensors(hass: HomeAssistant) -> None:
+def test_invalid_sensors(menuai: menuai) -> None:
     """Test the VultrSensor fails."""
-    hass_devices = []
+    menuai_devices = []
 
     def add_entities(devices, action):
         """Mock add devices."""
         for device in devices:
-            device.hass = hass
-            hass_devices.append(device)
+            device.menuai = menuai
+            menuai_devices.append(device)
 
     bad_conf = {
         CONF_NAME: "Vultr {} {}",
@@ -129,6 +129,6 @@ def test_invalid_sensors(hass: HomeAssistant) -> None:
         CONF_MONITORED_CONDITIONS: vultr.SENSOR_KEYS,
     }  # No subs at all
 
-    vultr.setup_platform(hass, bad_conf, add_entities, None)
+    vultr.setup_platform(menuai, bad_conf, add_entities, None)
 
-    assert len(hass_devices) == 0
+    assert len(menuai_devices) == 0

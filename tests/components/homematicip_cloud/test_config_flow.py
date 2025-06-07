@@ -2,16 +2,16 @@
 
 from unittest.mock import patch
 
-from homeassistant import config_entries
-from homeassistant.components.homematicip_cloud.const import (
+from menuai import config_entries
+from menuai.components.homematicip_cloud.const import (
     DOMAIN,
     HMIPC_AUTHTOKEN,
     HMIPC_HAPID,
     HMIPC_NAME,
     HMIPC_PIN,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
@@ -20,20 +20,20 @@ DEFAULT_CONFIG = {HMIPC_HAPID: "ABC123", HMIPC_PIN: "123", HMIPC_NAME: "hmip"}
 IMPORT_CONFIG = {HMIPC_HAPID: "ABC123", HMIPC_AUTHTOKEN: "123", HMIPC_NAME: "hmip"}
 
 
-async def test_flow_works(hass: HomeAssistant, simple_mock_home) -> None:
+async def test_flow_works(menuai: menuai, simple_mock_home) -> None:
     """Test config flow."""
 
     with (
         patch(
-            "homeassistant.components.homematicip_cloud.hap.HomematicipAuth.async_checkbutton",
+            "menuai.components.homematicip_cloud.hap.HomematicipAuth.async_checkbutton",
             return_value=False,
         ),
         patch(
-            "homeassistant.components.homematicip_cloud.hap.HomematicipAuth.get_auth",
+            "menuai.components.homematicip_cloud.hap.HomematicipAuth.get_auth",
             return_value=True,
         ),
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_USER},
             data=DEFAULT_CONFIG,
@@ -45,29 +45,29 @@ async def test_flow_works(hass: HomeAssistant, simple_mock_home) -> None:
 
     flow = next(
         flow
-        for flow in hass.config_entries.flow.async_progress()
+        for flow in menuai.config_entries.flow.async_progress()
         if flow["flow_id"] == result["flow_id"]
     )
     assert flow["context"]["unique_id"] == "ABC123"
 
     with (
         patch(
-            "homeassistant.components.homematicip_cloud.hap.HomematicipAuth.async_checkbutton",
+            "menuai.components.homematicip_cloud.hap.HomematicipAuth.async_checkbutton",
             return_value=True,
         ),
         patch(
-            "homeassistant.components.homematicip_cloud.hap.HomematicipAuth.async_setup",
+            "menuai.components.homematicip_cloud.hap.HomematicipAuth.async_setup",
             return_value=True,
         ),
         patch(
-            "homeassistant.components.homematicip_cloud.hap.HomematicipAuth.async_register",
+            "menuai.components.homematicip_cloud.hap.HomematicipAuth.async_register",
             return_value=True,
         ),
         patch(
-            "homeassistant.components.homematicip_cloud.hap.HomematicipHAP.async_connect",
+            "menuai.components.homematicip_cloud.hap.HomematicipHAP.async_connect",
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={}
         )
 
@@ -77,13 +77,13 @@ async def test_flow_works(hass: HomeAssistant, simple_mock_home) -> None:
     assert result["result"].unique_id == "ABC123"
 
 
-async def test_flow_init_connection_error(hass: HomeAssistant) -> None:
+async def test_flow_init_connection_error(menuai: menuai) -> None:
     """Test config flow with accesspoint connection error."""
     with patch(
-        "homeassistant.components.homematicip_cloud.hap.HomematicipAuth.async_setup",
+        "menuai.components.homematicip_cloud.hap.HomematicipAuth.async_setup",
         return_value=False,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_USER},
             data=DEFAULT_CONFIG,
@@ -93,23 +93,23 @@ async def test_flow_init_connection_error(hass: HomeAssistant) -> None:
     assert result["step_id"] == "init"
 
 
-async def test_flow_link_connection_error(hass: HomeAssistant) -> None:
+async def test_flow_link_connection_error(menuai: menuai) -> None:
     """Test config flow client registration connection error."""
     with (
         patch(
-            "homeassistant.components.homematicip_cloud.hap.HomematicipAuth.async_checkbutton",
+            "menuai.components.homematicip_cloud.hap.HomematicipAuth.async_checkbutton",
             return_value=True,
         ),
         patch(
-            "homeassistant.components.homematicip_cloud.hap.HomematicipAuth.async_setup",
+            "menuai.components.homematicip_cloud.hap.HomematicipAuth.async_setup",
             return_value=True,
         ),
         patch(
-            "homeassistant.components.homematicip_cloud.hap.HomematicipAuth.async_register",
+            "menuai.components.homematicip_cloud.hap.HomematicipAuth.async_register",
             return_value=False,
         ),
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_USER},
             data=DEFAULT_CONFIG,
@@ -119,19 +119,19 @@ async def test_flow_link_connection_error(hass: HomeAssistant) -> None:
     assert result["reason"] == "connection_aborted"
 
 
-async def test_flow_link_press_button(hass: HomeAssistant) -> None:
+async def test_flow_link_press_button(menuai: menuai) -> None:
     """Test config flow ask for pressing the blue button."""
     with (
         patch(
-            "homeassistant.components.homematicip_cloud.hap.HomematicipAuth.async_checkbutton",
+            "menuai.components.homematicip_cloud.hap.HomematicipAuth.async_checkbutton",
             return_value=False,
         ),
         patch(
-            "homeassistant.components.homematicip_cloud.hap.HomematicipAuth.async_setup",
+            "menuai.components.homematicip_cloud.hap.HomematicipAuth.async_setup",
             return_value=True,
         ),
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_USER},
             data=DEFAULT_CONFIG,
@@ -142,24 +142,24 @@ async def test_flow_link_press_button(hass: HomeAssistant) -> None:
     assert result["errors"] == {"base": "press_the_button"}
 
 
-async def test_init_flow_show_form(hass: HomeAssistant) -> None:
+async def test_init_flow_show_form(menuai: menuai) -> None:
     """Test config flow shows up with a form."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
 
-async def test_init_already_configured(hass: HomeAssistant) -> None:
+async def test_init_already_configured(menuai: menuai) -> None:
     """Test accesspoint is already configured."""
-    MockConfigEntry(domain=DOMAIN, unique_id="ABC123").add_to_hass(hass)
+    MockConfigEntry(domain=DOMAIN, unique_id="ABC123").add_to_menuai(menuai)
     with patch(
-        "homeassistant.components.homematicip_cloud.hap.HomematicipAuth.async_checkbutton",
+        "menuai.components.homematicip_cloud.hap.HomematicipAuth.async_checkbutton",
         return_value=True,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_USER},
             data=DEFAULT_CONFIG,
@@ -169,26 +169,26 @@ async def test_init_already_configured(hass: HomeAssistant) -> None:
     assert result["reason"] == "already_configured"
 
 
-async def test_import_config(hass: HomeAssistant, simple_mock_home) -> None:
+async def test_import_config(menuai: menuai, simple_mock_home) -> None:
     """Test importing a host with an existing config file."""
     with (
         patch(
-            "homeassistant.components.homematicip_cloud.hap.HomematicipAuth.async_checkbutton",
+            "menuai.components.homematicip_cloud.hap.HomematicipAuth.async_checkbutton",
             return_value=True,
         ),
         patch(
-            "homeassistant.components.homematicip_cloud.hap.HomematicipAuth.async_setup",
+            "menuai.components.homematicip_cloud.hap.HomematicipAuth.async_setup",
             return_value=True,
         ),
         patch(
-            "homeassistant.components.homematicip_cloud.hap.HomematicipAuth.async_register",
+            "menuai.components.homematicip_cloud.hap.HomematicipAuth.async_register",
             return_value=True,
         ),
         patch(
-            "homeassistant.components.homematicip_cloud.hap.HomematicipHAP.async_connect",
+            "menuai.components.homematicip_cloud.hap.HomematicipHAP.async_connect",
         ),
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_IMPORT},
             data=IMPORT_CONFIG,
@@ -200,24 +200,24 @@ async def test_import_config(hass: HomeAssistant, simple_mock_home) -> None:
     assert result["result"].unique_id == "ABC123"
 
 
-async def test_import_existing_config(hass: HomeAssistant) -> None:
+async def test_import_existing_config(menuai: menuai) -> None:
     """Test abort of an existing accesspoint from config."""
-    MockConfigEntry(domain=DOMAIN, unique_id="ABC123").add_to_hass(hass)
+    MockConfigEntry(domain=DOMAIN, unique_id="ABC123").add_to_menuai(menuai)
     with (
         patch(
-            "homeassistant.components.homematicip_cloud.hap.HomematicipAuth.async_checkbutton",
+            "menuai.components.homematicip_cloud.hap.HomematicipAuth.async_checkbutton",
             return_value=True,
         ),
         patch(
-            "homeassistant.components.homematicip_cloud.hap.HomematicipAuth.async_setup",
+            "menuai.components.homematicip_cloud.hap.HomematicipAuth.async_setup",
             return_value=True,
         ),
         patch(
-            "homeassistant.components.homematicip_cloud.hap.HomematicipAuth.async_register",
+            "menuai.components.homematicip_cloud.hap.HomematicipAuth.async_register",
             return_value=True,
         ),
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": config_entries.SOURCE_IMPORT},
             data=IMPORT_CONFIG,

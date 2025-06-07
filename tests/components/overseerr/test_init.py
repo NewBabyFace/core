@@ -8,17 +8,17 @@ from python_overseerr import OverseerrAuthenticationError, OverseerrConnectionEr
 from python_overseerr.models import WebhookNotificationOptions
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components import cloud
-from homeassistant.components.cloud import CloudNotAvailable
-from homeassistant.components.overseerr import (
+from menuai.components import cloud
+from menuai.components.cloud import CloudNotAvailable
+from menuai.components.overseerr import (
     CONF_CLOUDHOOK_URL,
     JSON_PAYLOAD,
     REGISTERED_NOTIFICATIONS,
 )
-from homeassistant.components.overseerr.const import DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.components.overseerr.const import DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 from . import setup_integration
 
@@ -34,7 +34,7 @@ from tests.components.cloud import mock_cloud
     ],
 )
 async def test_initialization_errors(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_overseerr_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     exception: Exception,
@@ -43,20 +43,20 @@ async def test_initialization_errors(
     """Test the Overseerr integration initialization errors."""
     mock_overseerr_client.get_request_count.side_effect = exception
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     assert mock_config_entry.state == config_entry_state
 
 
 async def test_device_info(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mock_overseerr_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     device_registry: dr.DeviceRegistry,
 ) -> None:
     """Test device registry integration."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
     device_entry = device_registry.async_get_device(
         identifiers={(DOMAIN, mock_config_entry.entry_id)}
     )
@@ -65,12 +65,12 @@ async def test_device_info(
 
 
 async def test_proper_webhook_configuration(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_overseerr_client: AsyncMock,
 ) -> None:
     """Test the webhook configuration."""
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     assert REGISTERED_NOTIFICATIONS == 222
 
@@ -105,7 +105,7 @@ async def test_proper_webhook_configuration(
     ],
 )
 async def test_webhook_configuration_need_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_overseerr_client: AsyncMock,
     update_mock: dict[str, Any],
@@ -113,7 +113,7 @@ async def test_webhook_configuration_need_update(
     """Test the webhook configuration."""
     mock_overseerr_client.get_webhook_notification_config.configure_mock(**update_mock)
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     mock_overseerr_client.test_webhook_notification_config.assert_called_once()
     mock_overseerr_client.set_webhook_notification_config.assert_called_once()
@@ -146,7 +146,7 @@ async def test_webhook_configuration_need_update(
     ],
 )
 async def test_webhook_failing_test(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_overseerr_client: AsyncMock,
     update_mock: dict[str, Any],
@@ -155,23 +155,23 @@ async def test_webhook_failing_test(
     mock_overseerr_client.test_webhook_notification_config.return_value = False
     mock_overseerr_client.get_webhook_notification_config.configure_mock(**update_mock)
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     mock_overseerr_client.test_webhook_notification_config.assert_called_once()
     mock_overseerr_client.set_webhook_notification_config.assert_not_called()
 
 
 async def test_prefer_internal_ip(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_overseerr_client: AsyncMock,
 ) -> None:
     """Test the integration prefers internal IP."""
     mock_overseerr_client.test_webhook_notification_config.return_value = False
-    hass.config.internal_url = "http://192.168.0.123:8123"
-    hass.config.external_url = "https://www.example.com"
-    await hass.async_block_till_done(wait_background_tasks=True)
-    await setup_integration(hass, mock_config_entry)
+    menuai.config.internal_url = "http://192.168.0.123:8123"
+    menuai.config.external_url = "https://www.example.com"
+    await menuai.async_block_till_done(wait_background_tasks=True)
+    await setup_integration(menuai, mock_config_entry)
 
     assert (
         mock_overseerr_client.test_webhook_notification_config.call_args_list[0][0][0]
@@ -184,14 +184,14 @@ async def test_prefer_internal_ip(
 
 
 async def test_cloudhook_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_overseerr_client_needs_change: AsyncMock,
 ) -> None:
     """Test if set up with active cloud subscription and cloud hook."""
 
-    await mock_cloud(hass)
-    await hass.async_block_till_done()
+    await mock_cloud(menuai)
+    await menuai.async_block_till_done()
 
     mock_overseerr_client_needs_change.test_webhook_notification_config.side_effect = [
         False,
@@ -199,20 +199,20 @@ async def test_cloudhook_setup(
     ]
 
     with (
-        patch("homeassistant.components.cloud.async_is_logged_in", return_value=True),
-        patch("homeassistant.components.cloud.async_is_connected", return_value=True),
+        patch("menuai.components.cloud.async_is_logged_in", return_value=True),
+        patch("menuai.components.cloud.async_is_connected", return_value=True),
         patch.object(cloud, "async_active_subscription", return_value=True),
         patch(
-            "homeassistant.components.cloud.async_create_cloudhook",
+            "menuai.components.cloud.async_create_cloudhook",
             return_value="https://hooks.nabu.casa/ABCD",
         ) as fake_create_cloudhook,
         patch(
-            "homeassistant.components.cloud.async_delete_cloudhook"
+            "menuai.components.cloud.async_delete_cloudhook"
         ) as fake_delete_cloudhook,
     ):
-        await setup_integration(hass, mock_config_entry)
+        await setup_integration(menuai, mock_config_entry)
 
-        assert cloud.async_active_subscription(hass) is True
+        assert cloud.async_active_subscription(menuai) is True
 
         assert (
             mock_config_entry.data[CONF_CLOUDHOOK_URL] == "https://hooks.nabu.casa/ABCD"
@@ -225,26 +225,26 @@ async def test_cloudhook_setup(
             == 2
         )
 
-        assert hass.config_entries.async_entries(DOMAIN)
+        assert menuai.config_entries.async_entries(DOMAIN)
         fake_create_cloudhook.assert_called()
 
-        for config_entry in hass.config_entries.async_entries(DOMAIN):
-            await hass.config_entries.async_remove(config_entry.entry_id)
+        for config_entry in menuai.config_entries.async_entries(DOMAIN):
+            await menuai.config_entries.async_remove(config_entry.entry_id)
             fake_delete_cloudhook.assert_called_once()
 
-        await hass.async_block_till_done()
-        assert not hass.config_entries.async_entries(DOMAIN)
+        await menuai.async_block_till_done()
+        assert not menuai.config_entries.async_entries(DOMAIN)
 
 
 async def test_cloudhook_consistent(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_cloudhook_config_entry: MockConfigEntry,
     mock_overseerr_client_needs_change: AsyncMock,
 ) -> None:
     """Test if we keep the cloudhook if it is already set up."""
 
-    await mock_cloud(hass)
-    await hass.async_block_till_done()
+    await mock_cloud(menuai)
+    await menuai.async_block_till_done()
 
     mock_overseerr_client_needs_change.test_webhook_notification_config.side_effect = [
         False,
@@ -252,17 +252,17 @@ async def test_cloudhook_consistent(
     ]
 
     with (
-        patch("homeassistant.components.cloud.async_is_logged_in", return_value=True),
-        patch("homeassistant.components.cloud.async_is_connected", return_value=True),
+        patch("menuai.components.cloud.async_is_logged_in", return_value=True),
+        patch("menuai.components.cloud.async_is_connected", return_value=True),
         patch.object(cloud, "async_active_subscription", return_value=True),
         patch(
-            "homeassistant.components.cloud.async_create_cloudhook",
+            "menuai.components.cloud.async_create_cloudhook",
             return_value="https://hooks.nabu.casa/ABCD",
         ) as fake_create_cloudhook,
     ):
-        await setup_integration(hass, mock_cloudhook_config_entry)
+        await setup_integration(menuai, mock_cloudhook_config_entry)
 
-        assert cloud.async_active_subscription(hass) is True
+        assert cloud.async_active_subscription(menuai) is True
 
         assert (
             mock_cloudhook_config_entry.data[CONF_CLOUDHOOK_URL]
@@ -276,18 +276,18 @@ async def test_cloudhook_consistent(
             == 2
         )
 
-        assert hass.config_entries.async_entries(DOMAIN)
+        assert menuai.config_entries.async_entries(DOMAIN)
         fake_create_cloudhook.assert_not_called()
 
 
 async def test_cloudhook_needs_no_change(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_cloudhook_config_entry: MockConfigEntry,
     mock_overseerr_client_cloudhook: AsyncMock,
 ) -> None:
     """Test if we keep the cloudhook if it is already set up."""
 
-    await setup_integration(hass, mock_cloudhook_config_entry)
+    await setup_integration(menuai, mock_cloudhook_config_entry)
 
     assert (
         len(mock_overseerr_client_cloudhook.test_webhook_notification_config.mock_calls)
@@ -296,20 +296,20 @@ async def test_cloudhook_needs_no_change(
 
 
 async def test_cloudhook_not_needed(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_overseerr_client_needs_change: AsyncMock,
 ) -> None:
     """Test if we prefer local webhook over cloudhook."""
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     with (
         patch.object(cloud, "async_active_subscription", return_value=True),
     ):
-        await setup_integration(hass, mock_config_entry)
+        await setup_integration(menuai, mock_config_entry)
 
-        assert cloud.async_active_subscription(hass) is True
+        assert cloud.async_active_subscription(menuai) is True
 
         assert CONF_CLOUDHOOK_URL not in mock_config_entry.data
 
@@ -328,31 +328,31 @@ async def test_cloudhook_not_needed(
 
 
 async def test_cloudhook_not_connecting(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_cloudhook_config_entry: MockConfigEntry,
     mock_overseerr_client_needs_change: AsyncMock,
 ) -> None:
     """Test the cloudhook is not registered if Overseerr cannot connect to it."""
 
-    await mock_cloud(hass)
-    await hass.async_block_till_done()
+    await mock_cloud(menuai)
+    await menuai.async_block_till_done()
 
     mock_overseerr_client_needs_change.test_webhook_notification_config.return_value = (
         False
     )
 
     with (
-        patch("homeassistant.components.cloud.async_is_logged_in", return_value=True),
-        patch("homeassistant.components.cloud.async_is_connected", return_value=True),
+        patch("menuai.components.cloud.async_is_logged_in", return_value=True),
+        patch("menuai.components.cloud.async_is_connected", return_value=True),
         patch.object(cloud, "async_active_subscription", return_value=True),
         patch(
-            "homeassistant.components.cloud.async_create_cloudhook",
+            "menuai.components.cloud.async_create_cloudhook",
             return_value="https://hooks.nabu.casa/ABCD",
         ) as fake_create_cloudhook,
     ):
-        await setup_integration(hass, mock_cloudhook_config_entry)
+        await setup_integration(menuai, mock_cloudhook_config_entry)
 
-        assert cloud.async_active_subscription(hass) is True
+        assert cloud.async_active_subscription(menuai) is True
 
         assert (
             mock_cloudhook_config_entry.data[CONF_CLOUDHOOK_URL]
@@ -368,45 +368,45 @@ async def test_cloudhook_not_connecting(
 
         mock_overseerr_client_needs_change.set_webhook_notification_config.assert_not_called()
 
-        assert hass.config_entries.async_entries(DOMAIN)
+        assert menuai.config_entries.async_entries(DOMAIN)
         fake_create_cloudhook.assert_not_called()
 
 
 async def test_removing_entry_with_cloud_unavailable(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_cloudhook_config_entry: MockConfigEntry,
     mock_overseerr_client: AsyncMock,
 ) -> None:
     """Test handling cloud unavailable when deleting entry."""
 
-    await mock_cloud(hass)
-    await hass.async_block_till_done()
+    await mock_cloud(menuai)
+    await menuai.async_block_till_done()
 
     with (
-        patch("homeassistant.components.cloud.async_is_logged_in", return_value=True),
-        patch("homeassistant.components.cloud.async_is_connected", return_value=True),
+        patch("menuai.components.cloud.async_is_logged_in", return_value=True),
+        patch("menuai.components.cloud.async_is_connected", return_value=True),
         patch.object(cloud, "async_active_subscription", return_value=True),
         patch(
-            "homeassistant.components.cloud.async_create_cloudhook",
+            "menuai.components.cloud.async_create_cloudhook",
             return_value="https://hooks.nabu.casa/ABCD",
         ),
         patch(
-            "homeassistant.helpers.config_entry_oauth2_flow.async_get_config_entry_implementation",
+            "menuai.helpers.config_entry_oauth2_flow.async_get_config_entry_implementation",
         ),
         patch(
-            "homeassistant.components.cloud.async_delete_cloudhook",
+            "menuai.components.cloud.async_delete_cloudhook",
             side_effect=CloudNotAvailable(),
         ),
     ):
-        await setup_integration(hass, mock_cloudhook_config_entry)
+        await setup_integration(menuai, mock_cloudhook_config_entry)
 
-        assert cloud.async_active_subscription(hass) is True
+        assert cloud.async_active_subscription(menuai) is True
 
-        await hass.async_block_till_done()
-        assert hass.config_entries.async_entries(DOMAIN)
+        await menuai.async_block_till_done()
+        assert menuai.config_entries.async_entries(DOMAIN)
 
-        for config_entry in hass.config_entries.async_entries(DOMAIN):
-            await hass.config_entries.async_remove(config_entry.entry_id)
+        for config_entry in menuai.config_entries.async_entries(DOMAIN):
+            await menuai.config_entries.async_remove(config_entry.entry_id)
 
-        await hass.async_block_till_done()
-        assert not hass.config_entries.async_entries(DOMAIN)
+        await menuai.async_block_till_done()
+        assert not menuai.config_entries.async_entries(DOMAIN)

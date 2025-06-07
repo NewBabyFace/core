@@ -2,7 +2,7 @@
 
 import logging
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 DOMAIN = "amberelectric"
 CONF_SITE_NAME = "site_name"

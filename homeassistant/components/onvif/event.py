@@ -18,12 +18,12 @@ from onvif.exceptions import ONVIFError
 from onvif.util import stringify_onvif_error
 from zeep.exceptions import Fault, ValidationError, XMLParseError
 
-from homeassistant.components import webhook
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import CALLBACK_TYPE, HassJob, HomeAssistant, callback
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.event import async_call_later
-from homeassistant.helpers.network import NoURLAvailableError, get_url
+from menuai.components import webhook
+from menuai.config_entries import ConfigEntry
+from menuai.core import CALLBACK_TYPE, menuaiJob, menuai, callback
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.event import async_call_later
+from menuai.helpers.network import NoURLAvailableError, get_url
 
 from .const import DOMAIN, LOGGER
 from .models import Event, PullPointManagerState, WebHookManagerState
@@ -73,13 +73,13 @@ class EventManager:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         device: ONVIFCamera,
         config_entry: ConfigEntry,
         name: str,
     ) -> None:
         """Initialize event manager."""
-        self.hass = hass
+        self.menuai = menuai
         self.device = device
         self.config_entry = config_entry
         self.unique_id = config_entry.unique_id
@@ -247,13 +247,13 @@ class PullPointManager:
 
         self._event_manager = event_manager
         self._device = event_manager.device
-        self._hass = event_manager.hass
+        self._menuai = event_manager.menuai
         self._name = event_manager.name
 
         self._pullpoint_manager: ONVIFPullPointManager | None = None
 
         self._cancel_pull_messages: CALLBACK_TYPE | None = None
-        self._pull_messages_job = HassJob(
+        self._pull_messages_job = menuaiJob(
             self._async_background_pull_messages_or_reschedule,
             f"{self._name}: pull messages",
         )
@@ -360,7 +360,7 @@ class PullPointManager:
         next_pull_delay = None
         response = None
         try:
-            if self._hass.is_running:
+            if self._menuai.is_running:
                 response = await service.PullMessages(
                     {
                         "MessageLimit": PULLPOINT_MESSAGE_LIMIT,
@@ -369,7 +369,7 @@ class PullPointManager:
                 )
             else:
                 LOGGER.debug(
-                    "%s: PullPoint skipped because Home Assistant is not running yet",
+                    "%s: PullPoint skipped because MenuAI is not running yet",
                     self._name,
                 )
         except RemoteProtocolError as err:
@@ -456,7 +456,7 @@ class PullPointManager:
         if self._pullpoint_manager:
             when = delay if delay is not None else PULLPOINT_COOLDOWN_TIME
             self._cancel_pull_messages = async_call_later(
-                self._hass, when, self._pull_messages_job
+                self._menuai, when, self._pull_messages_job
             )
 
     @callback
@@ -471,7 +471,7 @@ class PullPointManager:
             )
             self.async_schedule_pull_messages()
             return
-        self._pull_messages_task = self._hass.async_create_background_task(
+        self._pull_messages_task = self._menuai.async_create_background_task(
             self._async_pull_messages(),
             f"{self._name} background pull messages",
         )
@@ -491,7 +491,7 @@ class WebHookManager:
 
         self._event_manager = event_manager
         self._device = event_manager.device
-        self._hass = event_manager.hass
+        self._menuai = event_manager.menuai
         config_entry = event_manager.config_entry
 
         self._old_webhook_unique_id = f"{DOMAIN}_{config_entry.entry_id}"
@@ -577,17 +577,17 @@ class WebHookManager:
         LOGGER.debug("%s: Registering webhook: %s", self._name, self._webhook_unique_id)
 
         try:
-            base_url = get_url(self._hass, prefer_external=False)
+            base_url = get_url(self._menuai, prefer_external=False)
         except NoURLAvailableError:
             try:
-                base_url = get_url(self._hass, prefer_external=True)
+                base_url = get_url(self._menuai, prefer_external=True)
             except NoURLAvailableError:
                 return
 
         webhook_id = self._webhook_unique_id
         self._async_unregister_webhook()
         webhook.async_register(
-            self._hass, DOMAIN, webhook_id, webhook_id, self._async_handle_webhook
+            self._menuai, DOMAIN, webhook_id, webhook_id, self._async_handle_webhook
         )
         webhook_path = webhook.async_generate_path(webhook_id)
         self._webhook_url = f"{base_url}{webhook_path}"
@@ -599,12 +599,12 @@ class WebHookManager:
         LOGGER.debug(
             "%s: Unregistering webhook %s", self._name, self._webhook_unique_id
         )
-        webhook.async_unregister(self._hass, self._old_webhook_unique_id)
-        webhook.async_unregister(self._hass, self._webhook_unique_id)
+        webhook.async_unregister(self._menuai, self._old_webhook_unique_id)
+        webhook.async_unregister(self._menuai, self._webhook_unique_id)
         self._webhook_url = None
 
     async def _async_handle_webhook(
-        self, hass: HomeAssistant, webhook_id: str, request: Request
+        self, menuai: menuai, webhook_id: str, request: Request
     ) -> None:
         """Handle incoming webhook."""
         content: bytes | None = None
@@ -617,13 +617,13 @@ class WebHookManager:
             LOGGER.error("Error reading webhook: %s", ex)
             raise
         finally:
-            self._hass.async_create_background_task(
-                self._async_process_webhook(hass, webhook_id, content),
+            self._menuai.async_create_background_task(
+                self._async_process_webhook(menuai, webhook_id, content),
                 f"ONVIF event webhook for {self._name}",
             )
 
     async def _async_process_webhook(
-        self, hass: HomeAssistant, webhook_id: str, content: bytes | None
+        self, menuai: menuai, webhook_id: str, content: bytes | None
     ) -> None:
         """Process incoming webhook data in the background."""
         event_manager = self._event_manager

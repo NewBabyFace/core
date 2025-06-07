@@ -7,19 +7,19 @@ from pyotgw import OpenThermGateway
 import pyotgw.vars as gw_vars
 from serial import SerialException
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_DEVICE,
     CONF_ID,
     CONF_NAME,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import config_validation as cv, device_registry as dr
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import config_validation as cv, device_registry as dr
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     CONF_TEMPORARY_OVRD_MODE,
@@ -45,28 +45,28 @@ PLATFORMS = [
 ]
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up OpenTherm Gateway integration."""
 
-    async_setup_services(hass)
+    async_setup_services(menuai)
 
     return True
 
 
-async def options_updated(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def options_updated(menuai: menuai, entry: ConfigEntry) -> None:
     """Handle options update."""
-    gateway = hass.data[DATA_OPENTHERM_GW][DATA_GATEWAYS][entry.data[CONF_ID]]
+    gateway = menuai.data[DATA_OPENTHERM_GW][DATA_GATEWAYS][entry.data[CONF_ID]]
     gateway.options = entry.options
-    async_dispatcher_send(hass, gateway.options_update_signal, entry)
+    async_dispatcher_send(menuai, gateway.options_update_signal, entry)
 
 
-async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, config_entry: ConfigEntry) -> bool:
     """Set up the OpenTherm Gateway component."""
-    if DATA_OPENTHERM_GW not in hass.data:
-        hass.data[DATA_OPENTHERM_GW] = {DATA_GATEWAYS: {}}
+    if DATA_OPENTHERM_GW not in menuai.data:
+        menuai.data[DATA_OPENTHERM_GW] = {DATA_GATEWAYS: {}}
 
-    gateway = OpenThermGatewayHub(hass, config_entry)
-    hass.data[DATA_OPENTHERM_GW][DATA_GATEWAYS][config_entry.data[CONF_ID]] = gateway
+    gateway = OpenThermGatewayHub(menuai, config_entry)
+    menuai.data[DATA_OPENTHERM_GW][DATA_GATEWAYS][config_entry.data[CONF_ID]] = gateway
 
     config_entry.add_update_listener(options_updated)
 
@@ -79,15 +79,15 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
             f"Could not connect to gateway at {gateway.device_path}: {ex}"
         ) from ex
 
-    await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Cleanup and disconnect from gateway."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-    gateway = hass.data[DATA_OPENTHERM_GW][DATA_GATEWAYS][entry.data[CONF_ID]]
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
+    gateway = menuai.data[DATA_OPENTHERM_GW][DATA_GATEWAYS][entry.data[CONF_ID]]
     await gateway.cleanup()
     return unload_ok
 
@@ -95,9 +95,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 class OpenThermGatewayHub:
     """OpenTherm Gateway hub class."""
 
-    def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: ConfigEntry) -> None:
         """Initialize the OpenTherm Gateway."""
-        self.hass = hass
+        self.menuai = menuai
         self.device_path = config_entry.data[CONF_DEVICE]
         self.hub_id = config_entry.data[CONF_ID]
         self.name = config_entry.data[CONF_NAME]
@@ -125,7 +125,7 @@ class OpenThermGatewayHub:
         _LOGGER.debug(
             "Connected to OpenTherm Gateway %s at %s", self.gw_version, self.device_path
         )
-        dev_reg = dr.async_get(self.hass)
+        dev_reg = dr.async_get(self.menuai)
         gw_dev = dev_reg.async_get_or_create(
             config_entry_id=self.config_entry_id,
             identifiers={
@@ -152,12 +152,12 @@ class OpenThermGatewayHub:
             translation_key="thermostat_device",
         )
 
-        self.hass.bus.async_listen(EVENT_HOMEASSISTANT_STOP, self.cleanup)
+        self.menuai.bus.async_listen(EVENT_menuai_STOP, self.cleanup)
 
         async def handle_report(status):
             """Handle reports from the OpenTherm Gateway."""
             _LOGGER.debug("Received report: %s", status)
-            async_dispatcher_send(self.hass, self.update_signal, status)
+            async_dispatcher_send(self.menuai, self.update_signal, status)
 
             dev_reg.async_update_device(
                 boiler_device.id,

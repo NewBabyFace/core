@@ -1,12 +1,12 @@
-"""API for Electric Kiwi bound to Home Assistant OAuth."""
+"""API for Electric Kiwi bound to MenuAI OAuth."""
 
 from __future__ import annotations
 
 from aiohttp import ClientSession
 from electrickiwi_api import AbstractAuth
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import aiohttp_client, config_entry_oauth2_flow
+from menuai.core import menuai
+from menuai.helpers import aiohttp_client, config_entry_oauth2_flow
 
 from .const import API_BASE_URL
 
@@ -36,11 +36,11 @@ class ConfigFlowElectricKiwiAuth(AbstractAuth):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         token: str,
     ) -> None:
         """Initialize ConfigFlowFitbitApi."""
-        super().__init__(aiohttp_client.async_get_clientsession(hass), API_BASE_URL)
+        super().__init__(aiohttp_client.async_get_clientsession(menuai), API_BASE_URL)
         self._token = token
 
     async def async_get_access_token(self) -> str:

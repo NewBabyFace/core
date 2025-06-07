@@ -11,10 +11,10 @@ from typing import Any
 import voluptuous as vol
 from voluptuous.humanize import humanize_error
 
-from homeassistant.const import CONF_SELECTOR
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv, selector, service
-from homeassistant.util.yaml import load_yaml_dict
+from menuai.const import CONF_SELECTOR
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv, selector, service
+from menuai.util.yaml import load_yaml_dict
 
 from .model import Config, Integration
 
@@ -170,7 +170,7 @@ def validate_services(config: Config, integration: Integration) -> None:  # noqa
         has_services = grep_dir(
             integration.path,
             "**/*.py",
-            r"(hass\.services\.(register|async_register))|async_register_entity_service|async_register_admin_service",
+            r"(menuai\.services\.(register|async_register))|async_register_entity_service|async_register_admin_service",
         )
 
         if has_services:
@@ -178,7 +178,7 @@ def validate_services(config: Config, integration: Integration) -> None:  # noqa
                 "services", "Registers services but has no services.yaml"
             )
         return
-    except HomeAssistantError:
+    except menuaiError:
         integration.add_error("services", "Invalid services.yaml")
         return
 

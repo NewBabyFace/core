@@ -8,23 +8,23 @@ from typing import Any, cast
 from tesla_fleet_api.const import CabinOverheatProtectionTemp, Scope
 from tesla_fleet_api.teslemetry import Vehicle
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_HVAC_MODE,
     HVAC_MODES,
     ClimateEntity,
     ClimateEntityFeature,
     HVACMode,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_TEMPERATURE,
     PRECISION_HALVES,
     PRECISION_WHOLE,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.restore_state import RestoreEntity
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.restore_state import RestoreEntity
 
 from . import TeslemetryConfigEntry
 from .const import DOMAIN, TeslemetryClimateSide
@@ -55,7 +55,7 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: TeslemetryConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -274,9 +274,9 @@ class TeslemetryStreamingClimateEntity(
         )
         self.rhd: bool = data.coordinator.data.get("vehicle_config_rhd", False)
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         if (state := await self.async_get_last_state()) is not None:
             self._attr_hvac_mode = (
                 HVACMode(state.state) if state.state in HVAC_MODES else None
@@ -510,9 +510,9 @@ class TeslemetryStreamingCabinOverheatProtectionEntity(
         if not self.scoped:
             self._attr_supported_features = ClimateEntityFeature(0)
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         if (state := await self.async_get_last_state()) is not None:
             self._attr_hvac_mode = (
                 HVACMode(state.state) if state.state in HVAC_MODES else None

@@ -10,18 +10,18 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.const import CONF_ENTITY_ID, CONF_EVENT, CONF_OFFSET, CONF_PLATFORM
-from homeassistant.core import CALLBACK_TYPE, HassJob, HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.event import (
+from menuai.const import CONF_ENTITY_ID, CONF_EVENT, CONF_OFFSET, CONF_PLATFORM
+from menuai.core import CALLBACK_TYPE, menuaiJob, menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.event import (
     async_track_point_in_time,
     async_track_time_interval,
 )
-from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util import dt as dt_util
+from menuai.helpers.trigger import TriggerActionType, TriggerInfo
+from menuai.helpers.typing import ConfigType
+from menuai.util import dt as dt_util
 
 from . import CalendarEntity, CalendarEvent
 from .const import DATA_COMPONENT, DOMAIN
@@ -93,27 +93,27 @@ type EventFetcher = Callable[[Timespan], Awaitable[list[CalendarEvent]]]
 type QueuedEventFetcher = Callable[[Timespan], Awaitable[list[QueuedCalendarEvent]]]
 
 
-def get_entity(hass: HomeAssistant, entity_id: str) -> CalendarEntity:
+def get_entity(menuai: menuai, entity_id: str) -> CalendarEntity:
     """Get the calendar entity for the provided entity_id."""
-    component: EntityComponent[CalendarEntity] = hass.data[DATA_COMPONENT]
+    component: EntityComponent[CalendarEntity] = menuai.data[DATA_COMPONENT]
     if not (entity := component.get_entity(entity_id)) or not isinstance(
         entity, CalendarEntity
     ):
-        raise HomeAssistantError(
+        raise menuaiError(
             f"Entity does not exist {entity_id} or is not a calendar entity"
         )
     return entity
 
 
-def event_fetcher(hass: HomeAssistant, entity_id: str) -> EventFetcher:
+def event_fetcher(menuai: menuai, entity_id: str) -> EventFetcher:
     """Build an async_get_events wrapper to fetch events during a time span."""
 
     async def async_get_events(timespan: Timespan) -> list[CalendarEvent]:
         """Return events active in the specified time span."""
-        entity = get_entity(hass, entity_id)
+        entity = get_entity(menuai, entity_id)
         # Expand by one second to make the end time exclusive
         end_time = timespan.end + datetime.timedelta(seconds=1)
-        return await entity.async_get_events(hass, timespan.start, end_time)
+        return await entity.async_get_events(menuai, timespan.start, end_time)
 
     return async_get_events
 
@@ -168,13 +168,13 @@ class CalendarEventListener:
 
     def __init__(
         self,
-        hass: HomeAssistant,
-        job: HassJob[..., Coroutine[Any, Any, None]],
+        menuai: menuai,
+        job: menuaiJob[..., Coroutine[Any, Any, None]],
         trigger_data: dict[str, Any],
         fetcher: QueuedEventFetcher,
     ) -> None:
         """Initialize CalendarEventListener."""
-        self._hass = hass
+        self._menuai = menuai
         self._job = job
         self._trigger_data = trigger_data
         self._unsub_event: CALLBACK_TYPE | None = None
@@ -188,7 +188,7 @@ class CalendarEventListener:
         """Attach a calendar event listener."""
         self._events.extend(await self._fetcher(self._timespan))
         self._unsub_refresh = async_track_time_interval(
-            self._hass, self._handle_refresh, UPDATE_INTERVAL
+            self._menuai, self._handle_refresh, UPDATE_INTERVAL
         )
         self._listen_next_calendar_event()
 
@@ -210,7 +210,7 @@ class CalendarEventListener:
             "Scheduled next event trigger for %s", self._events[0].trigger_time
         )
         self._unsub_event = async_track_point_in_time(
-            self._hass,
+            self._menuai,
             self._handle_calendar_event,
             self._events[0].trigger_time,
         )
@@ -233,7 +233,7 @@ class CalendarEventListener:
         while self._events and self._events[0].trigger_time <= now:
             queued_event = self._events.pop(0)
             _LOGGER.debug("Dispatching event: %s", queued_event.event)
-            self._hass.async_run_hass_job(
+            self._menuai.async_run_menuai_job(
                 self._job,
                 {
                     "trigger": {
@@ -254,13 +254,13 @@ class CalendarEventListener:
         self._timespan = self._timespan.next_upcoming(now, UPDATE_INTERVAL)
         try:
             self._events.extend(await self._fetcher(self._timespan))
-        except HomeAssistantError as ex:
+        except menuaiError as ex:
             _LOGGER.error("Calendar trigger failed to fetch events: %s", ex)
         self._listen_next_calendar_event()
 
 
 async def async_attach_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     action: TriggerActionType,
     trigger_info: TriggerInfo,
@@ -271,7 +271,7 @@ async def async_attach_trigger(
     offset = config[CONF_OFFSET]
 
     # Validate the entity id is valid
-    get_entity(hass, entity_id)
+    get_entity(menuai, entity_id)
 
     trigger_data = {
         **trigger_info["trigger_data"],
@@ -280,10 +280,10 @@ async def async_attach_trigger(
         "offset": offset,
     }
     listener = CalendarEventListener(
-        hass,
-        HassJob(action),
+        menuai,
+        menuaiJob(action),
         trigger_data,
-        queued_event_fetcher(event_fetcher(hass, entity_id), event_type, offset),
+        queued_event_fetcher(event_fetcher(menuai, entity_id), event_type, offset),
     )
     await listener.async_attach()
     return listener.async_detach

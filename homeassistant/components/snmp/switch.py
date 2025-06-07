@@ -31,11 +31,11 @@ from pysnmp.proto.rfc1902 import (
 )
 import voluptuous as vol
 
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     PLATFORM_SCHEMA as SWITCH_PLATFORM_SCHEMA,
     SwitchEntity,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_NAME,
     CONF_PAYLOAD_OFF,
@@ -43,10 +43,10 @@ from homeassistant.const import (
     CONF_PORT,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import (
     CONF_AUTH_KEY,
@@ -129,7 +129,7 @@ PLATFORM_SCHEMA = SWITCH_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -171,9 +171,9 @@ async def async_setup_platform(
 
     transport = UdpTransportTarget((host, port))
     request_args = await async_create_request_cmd_args(
-        hass, auth_data, transport, baseoid
+        menuai, auth_data, transport, baseoid
     )
-    command_args = await async_create_command_cmd_args(hass, auth_data, transport)
+    command_args = await async_create_command_cmd_args(menuai, auth_data, transport)
 
     async_add_entities(
         [

@@ -7,7 +7,7 @@ from py_aosmith.models import OperationMode
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.water_heater import (
+from menuai.components.water_heater import (
     ATTR_AWAY_MODE,
     ATTR_OPERATION_MODE,
     ATTR_TEMPERATURE,
@@ -20,10 +20,10 @@ from homeassistant.components.water_heater import (
     STATE_HEAT_PUMP,
     WaterHeaterEntityFeature,
 )
-from homeassistant.const import ATTR_ENTITY_ID, ATTR_SUPPORTED_FEATURES, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_ENTITY_ID, ATTR_SUPPORTED_FEATURES, Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry, snapshot_platform
 
@@ -31,7 +31,7 @@ from tests.common import MockConfigEntry, snapshot_platform
 @pytest.fixture(autouse=True)
 async def platforms() -> AsyncGenerator[None]:
     """Return the platforms to be loaded for this test."""
-    with patch("homeassistant.components.aosmith.PLATFORMS", [Platform.WATER_HEATER]):
+    with patch("menuai.components.aosmith.PLATFORMS", [Platform.WATER_HEATER]):
         yield
 
 
@@ -40,13 +40,13 @@ async def platforms() -> AsyncGenerator[None]:
     [False, True],
 )
 async def test_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_integration: MockConfigEntry,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test the state of the water heater entities."""
-    await snapshot_platform(hass, entity_registry, snapshot, init_integration.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, init_integration.entry_id)
 
 
 @pytest.mark.parametrize(
@@ -54,10 +54,10 @@ async def test_state(
     [False],
 )
 async def test_state_away_mode_unsupported(
-    hass: HomeAssistant, init_integration: MockConfigEntry
+    menuai: menuai, init_integration: MockConfigEntry
 ) -> None:
     """Test that away mode is not supported if the water heater does not support vacation mode."""
-    state = hass.states.get("water_heater.my_water_heater")
+    state = menuai.states.get("water_heater.my_water_heater")
     assert (
         state.attributes.get(ATTR_SUPPORTED_FEATURES)
         == WaterHeaterEntityFeature.TARGET_TEMPERATURE
@@ -66,7 +66,7 @@ async def test_state_away_mode_unsupported(
 
 
 @pytest.mark.parametrize(
-    ("hass_mode", "aosmith_mode"),
+    ("menuai_mode", "aosmith_mode"),
     [
         (STATE_HEAT_PUMP, OperationMode.HEAT_PUMP),
         (STATE_ECO, OperationMode.HYBRID),
@@ -74,34 +74,34 @@ async def test_state_away_mode_unsupported(
     ],
 )
 async def test_set_operation_mode(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: MagicMock,
     init_integration: MockConfigEntry,
-    hass_mode: str,
+    menuai_mode: str,
     aosmith_mode: str,
 ) -> None:
     """Test setting the operation mode."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         WATER_HEATER_DOMAIN,
         SERVICE_SET_OPERATION_MODE,
         {
             ATTR_ENTITY_ID: "water_heater.my_water_heater",
-            ATTR_OPERATION_MODE: hass_mode,
+            ATTR_OPERATION_MODE: menuai_mode,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     mock_client.update_mode.assert_called_once_with("junctionId", aosmith_mode)
 
 
 async def test_unsupported_operation_mode(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: MagicMock,
     init_integration: MockConfigEntry,
 ) -> None:
     """Test setting the operation mode with an unsupported mode."""
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             WATER_HEATER_DOMAIN,
             SERVICE_SET_OPERATION_MODE,
             {
@@ -113,23 +113,23 @@ async def test_unsupported_operation_mode(
 
 
 async def test_set_temperature(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: MagicMock,
     init_integration: MockConfigEntry,
 ) -> None:
     """Test setting the target temperature."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         WATER_HEATER_DOMAIN,
         SERVICE_SET_TEMPERATURE,
         {ATTR_ENTITY_ID: "water_heater.my_water_heater", ATTR_TEMPERATURE: 120},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     mock_client.update_setpoint.assert_called_once_with("junctionId", 120)
 
 
 @pytest.mark.parametrize(
-    ("get_devices_fixture_heat_pump", "hass_away_mode", "aosmith_mode"),
+    ("get_devices_fixture_heat_pump", "menuai_away_mode", "aosmith_mode"),
     [
         (True, True, OperationMode.VACATION),
         (True, False, OperationMode.HYBRID),
@@ -138,21 +138,21 @@ async def test_set_temperature(
     ],
 )
 async def test_away_mode(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: MagicMock,
     init_integration: MockConfigEntry,
-    hass_away_mode: bool,
+    menuai_away_mode: bool,
     aosmith_mode: str,
 ) -> None:
     """Test turning away mode on/off."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         WATER_HEATER_DOMAIN,
         SERVICE_SET_AWAY_MODE,
         {
             ATTR_ENTITY_ID: "water_heater.my_water_heater",
-            ATTR_AWAY_MODE: hass_away_mode,
+            ATTR_AWAY_MODE: menuai_away_mode,
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     mock_client.update_mode.assert_called_once_with("junctionId", aosmith_mode)

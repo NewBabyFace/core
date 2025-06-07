@@ -1,17 +1,17 @@
 """WeatherKit sensors."""
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import UnitOfVolumetricFlux
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import UnitOfVolumetricFlux
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
+from menuai.helpers.update_coordinator import CoordinatorEntity
 
 from .const import ATTR_CURRENT_WEATHER, DOMAIN
 from .coordinator import WeatherKitDataUpdateCoordinator
@@ -34,12 +34,12 @@ SENSORS = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Add sensor entities from a config_entry."""
-    coordinator: WeatherKitDataUpdateCoordinator = hass.data[DOMAIN][
+    coordinator: WeatherKitDataUpdateCoordinator = menuai.data[DOMAIN][
         config_entry.entry_id
     ]
 

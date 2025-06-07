@@ -7,8 +7,8 @@ import pytest
 from sfrbox_api.models import SystemInfo
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
 
 from tests.components.diagnostics import get_diagnostics_for_config_entry
 from tests.typing import ClientSessionGenerator
@@ -21,25 +21,25 @@ pytestmark = pytest.mark.usefixtures(
 @pytest.fixture(autouse=True)
 def override_platforms() -> Generator[None]:
     """Override PLATFORMS."""
-    with patch("homeassistant.components.sfr_box.PLATFORMS", []):
+    with patch("menuai.components.sfr_box.PLATFORMS", []):
         yield
 
 
 @pytest.mark.parametrize("net_infra", ["adsl", "ftth"])
 async def test_entry_diagnostics(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     snapshot: SnapshotAssertion,
     system_get_info: SystemInfo,
     net_infra: str,
 ) -> None:
     """Test config entry diagnostics."""
     system_get_info.net_infra = net_infra
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert (
-        await get_diagnostics_for_config_entry(hass, hass_client, config_entry)
+        await get_diagnostics_for_config_entry(menuai, menuai_client, config_entry)
         == snapshot
     )

@@ -9,16 +9,16 @@ import os
 
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
     SensorDeviceClass,
     SensorEntity,
 )
-from homeassistant.const import UnitOfInformation
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import UnitOfInformation
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -49,7 +49,7 @@ def get_size(files_list: list[str]) -> int:
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -57,7 +57,7 @@ def setup_platform(
     """Set up the folder sensor."""
     path: str = config[CONF_FOLDER_PATHS]
 
-    if not hass.config.is_allowed_path(path):
+    if not menuai.config.is_allowed_path(path):
         _LOGGER.error("Folder %s is not valid or allowed", path)
     else:
         folder = Folder(path, config[CONF_FILTER])

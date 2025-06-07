@@ -5,16 +5,16 @@ from unittest.mock import MagicMock
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.jellyfin.const import DOMAIN
-from homeassistant.components.media_player import BrowseError
-from homeassistant.components.media_source import (
+from menuai.components.jellyfin.const import DOMAIN
+from menuai.components.media_player import BrowseError
+from menuai.components.media_source import (
     DOMAIN as MEDIA_SOURCE_DOMAIN,
     URI_SCHEME,
     async_browse_media,
     async_resolve_media,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from . import load_json_fixture
 
@@ -22,13 +22,13 @@ from tests.common import MockConfigEntry
 
 
 @pytest.fixture(autouse=True)
-async def setup_component(hass: HomeAssistant) -> None:
+async def setup_component(menuai: menuai) -> None:
     """Set up component."""
-    assert await async_setup_component(hass, MEDIA_SOURCE_DOMAIN, {})
+    assert await async_setup_component(menuai, MEDIA_SOURCE_DOMAIN, {})
 
 
 async def test_resolve(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: MagicMock,
     init_integration: MockConfigEntry,
     mock_jellyfin: MagicMock,
@@ -42,7 +42,7 @@ async def test_resolve(
     mock_api.get_item.return_value = load_json_fixture("track.json")
 
     play_media = await async_resolve_media(
-        hass, f"{URI_SCHEME}{DOMAIN}/TRACK-UUID", "media_player.jellyfin_device"
+        menuai, f"{URI_SCHEME}{DOMAIN}/TRACK-UUID", "media_player.jellyfin_device"
     )
 
     assert play_media.mime_type == "audio/flac"
@@ -57,7 +57,7 @@ async def test_resolve(
     mock_api.get_item.return_value = load_json_fixture("movie.json")
 
     play_media = await async_resolve_media(
-        hass, f"{URI_SCHEME}{DOMAIN}/MOVIE-UUID", "media_player.jellyfin_device"
+        menuai, f"{URI_SCHEME}{DOMAIN}/MOVIE-UUID", "media_player.jellyfin_device"
     )
 
     assert play_media.mime_type == "video/mp4"
@@ -69,7 +69,7 @@ async def test_resolve(
 
     with pytest.raises(BrowseError):
         await async_resolve_media(
-            hass,
+            menuai,
             f"{URI_SCHEME}{DOMAIN}/UNSUPPORTED-ITEM-UUID",
             "media_player.jellyfin_device",
         )
@@ -80,7 +80,7 @@ async def test_resolve(
     [("aac"), ("wma"), ("vorbis"), ("mp3")],
 )
 async def test_audio_codec_resolve(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: MagicMock,
     init_integration: MockConfigEntry,
     mock_jellyfin: MagicMock,
@@ -94,14 +94,14 @@ async def test_audio_codec_resolve(
     mock_api.get_item.side_effect = None
     mock_api.get_item.return_value = load_json_fixture("track.json")
 
-    result = await hass.config_entries.options.async_init(init_integration.entry_id)
-    await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_init(init_integration.entry_id)
+    await menuai.config_entries.options.async_configure(
         result["flow_id"], user_input={"audio_codec": audio_codec}
     )
     assert init_integration.options["audio_codec"] == audio_codec
 
     play_media = await async_resolve_media(
-        hass, f"{URI_SCHEME}{DOMAIN}/TRACK-UUID", "media_player.jellyfin_device"
+        menuai, f"{URI_SCHEME}{DOMAIN}/TRACK-UUID", "media_player.jellyfin_device"
     )
 
     assert play_media.mime_type == "audio/flac"
@@ -112,7 +112,7 @@ async def test_audio_codec_resolve(
 
 
 async def test_root(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: MagicMock,
     init_integration: MockConfigEntry,
     mock_jellyfin: MagicMock,
@@ -121,7 +121,7 @@ async def test_root(
 ) -> None:
     """Test browsing the Jellyfin root."""
 
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}")
 
     assert browse.domain == DOMAIN
     assert browse.identifier is None
@@ -130,7 +130,7 @@ async def test_root(
 
 
 async def test_tv_library(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: MagicMock,
     init_integration: MockConfigEntry,
     mock_jellyfin: MagicMock,
@@ -146,7 +146,7 @@ async def test_tv_library(
     mock_api.user_items.return_value = {"Items": []}
 
     browse = await async_browse_media(
-        hass, f"{URI_SCHEME}{DOMAIN}/TV-COLLECTION-FOLDER-UUID"
+        menuai, f"{URI_SCHEME}{DOMAIN}/TV-COLLECTION-FOLDER-UUID"
     )
 
     assert browse.domain == DOMAIN
@@ -159,7 +159,7 @@ async def test_tv_library(
     mock_api.user_items.return_value = load_json_fixture("series-list.json")
 
     browse = await async_browse_media(
-        hass, f"{URI_SCHEME}{DOMAIN}/TV-COLLECTION-FOLDER-UUID"
+        menuai, f"{URI_SCHEME}{DOMAIN}/TV-COLLECTION-FOLDER-UUID"
     )
 
     assert browse.domain == DOMAIN
@@ -173,7 +173,7 @@ async def test_tv_library(
     mock_api.user_items.side_effect = None
     mock_api.user_items.return_value = load_json_fixture("seasons.json")
 
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}/SERIES-UUID")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}/SERIES-UUID")
 
     assert browse.domain == DOMAIN
     assert browse.identifier == "SERIES-UUID"
@@ -186,7 +186,7 @@ async def test_tv_library(
     mock_api.user_items.side_effect = None
     mock_api.user_items.return_value = load_json_fixture("episodes.json")
 
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}/SEASON-UUID")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}/SEASON-UUID")
 
     assert browse.domain == DOMAIN
     assert browse.identifier == "SEASON-UUID"
@@ -195,7 +195,7 @@ async def test_tv_library(
 
 
 async def test_movie_library(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: MagicMock,
     init_integration: MockConfigEntry,
     mock_jellyfin: MagicMock,
@@ -211,7 +211,7 @@ async def test_movie_library(
     mock_api.user_items.return_value = {"Items": []}
 
     browse = await async_browse_media(
-        hass, f"{URI_SCHEME}{DOMAIN}/MOVIE-COLLECTION-FOLDER-UUID"
+        menuai, f"{URI_SCHEME}{DOMAIN}/MOVIE-COLLECTION-FOLDER-UUID"
     )
 
     assert browse.domain == DOMAIN
@@ -224,7 +224,7 @@ async def test_movie_library(
     mock_api.user_items.return_value = load_json_fixture("movies.json")
 
     browse = await async_browse_media(
-        hass, f"{URI_SCHEME}{DOMAIN}/MOVIE-COLLECTION-FOLDER-UUID"
+        menuai, f"{URI_SCHEME}{DOMAIN}/MOVIE-COLLECTION-FOLDER-UUID"
     )
 
     assert browse.domain == DOMAIN
@@ -234,7 +234,7 @@ async def test_movie_library(
 
 
 async def test_music_library(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: MagicMock,
     init_integration: MockConfigEntry,
     mock_jellyfin: MagicMock,
@@ -250,7 +250,7 @@ async def test_music_library(
     mock_api.user_items.return_value = {"Items": []}
 
     browse = await async_browse_media(
-        hass, f"{URI_SCHEME}{DOMAIN}/MUSIC-COLLECTION-FOLDER-UUID"
+        menuai, f"{URI_SCHEME}{DOMAIN}/MUSIC-COLLECTION-FOLDER-UUID"
     )
 
     assert browse.domain == DOMAIN
@@ -263,7 +263,7 @@ async def test_music_library(
     mock_api.user_items.return_value = load_json_fixture("albums.json")
 
     browse = await async_browse_media(
-        hass, f"{URI_SCHEME}{DOMAIN}/MUSIC-COLLECTION-FOLDER-UUID"
+        menuai, f"{URI_SCHEME}{DOMAIN}/MUSIC-COLLECTION-FOLDER-UUID"
     )
 
     assert browse.domain == DOMAIN
@@ -277,7 +277,7 @@ async def test_music_library(
     mock_api.user_items.side_effect = None
     mock_api.user_items.return_value = load_json_fixture("albums.json")
 
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}/ARTIST-UUID")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}/ARTIST-UUID")
 
     assert browse.domain == DOMAIN
     assert browse.identifier == "ARTIST-UUID"
@@ -290,7 +290,7 @@ async def test_music_library(
     mock_api.user_items.side_effect = None
     mock_api.user_items.return_value = load_json_fixture("tracks.json")
 
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}/ALBUM-UUID")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}/ALBUM-UUID")
 
     assert browse.domain == DOMAIN
     assert browse.identifier == "ALBUM-UUID"
@@ -301,7 +301,7 @@ async def test_music_library(
     mock_api.user_items.side_effect = None
     mock_api.user_items.return_value = load_json_fixture("tracks-nosource.json")
 
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}/ALBUM-UUID")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}/ALBUM-UUID")
 
     assert browse.domain == DOMAIN
     assert browse.identifier == "ALBUM-UUID"
@@ -313,7 +313,7 @@ async def test_music_library(
     mock_api.user_items.side_effect = None
     mock_api.user_items.return_value = load_json_fixture("tracks-nopath.json")
 
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}/ALBUM-UUID")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}/ALBUM-UUID")
 
     assert browse.domain == DOMAIN
     assert browse.identifier == "ALBUM-UUID"
@@ -327,7 +327,7 @@ async def test_music_library(
         "tracks-unknown-extension.json"
     )
 
-    browse = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}/ALBUM-UUID")
+    browse = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}/ALBUM-UUID")
 
     assert browse.domain == DOMAIN
     assert browse.identifier == "ALBUM-UUID"
@@ -337,7 +337,7 @@ async def test_music_library(
 
 
 async def test_browse_unsupported(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_client: MagicMock,
     init_integration: MockConfigEntry,
     mock_jellyfin: MagicMock,
@@ -349,4 +349,4 @@ async def test_browse_unsupported(
     mock_api.get_item.return_value = load_json_fixture("unsupported-item.json")
 
     with pytest.raises(BrowseError):
-        await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}/UNSUPPORTED-ITEM-UUID")
+        await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}/UNSUPPORTED-ITEM-UUID")

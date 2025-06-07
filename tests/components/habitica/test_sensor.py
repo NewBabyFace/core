@@ -6,13 +6,13 @@ from unittest.mock import patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.habitica.const import DOMAIN
-from homeassistant.components.habitica.sensor import HabiticaSensorEntity
-from homeassistant.components.sensor.const import DOMAIN as SENSOR_DOMAIN
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er, issue_registry as ir
+from menuai.components.habitica.const import DOMAIN
+from menuai.components.habitica.sensor import HabiticaSensorEntity
+from menuai.components.sensor.const import DOMAIN as SENSOR_DOMAIN
+from menuai.config_entries import ConfigEntryState
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er, issue_registry as ir
 
 from tests.common import MockConfigEntry, snapshot_platform
 
@@ -21,7 +21,7 @@ from tests.common import MockConfigEntry, snapshot_platform
 def sensor_only() -> Generator[None]:
     """Enable only the sensor platform."""
     with patch(
-        "homeassistant.components.habitica.PLATFORMS",
+        "menuai.components.habitica.PLATFORMS",
         [Platform.SENSOR],
     ):
         yield
@@ -29,7 +29,7 @@ def sensor_only() -> Generator[None]:
 
 @pytest.mark.usefixtures("habitica", "entity_registry_enabled_by_default")
 async def test_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
@@ -49,13 +49,13 @@ async def test_sensors(
             disabled_by=None,
         )
 
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.state is ConfigEntryState.LOADED
 
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
 
 @pytest.mark.parametrize(
@@ -68,7 +68,7 @@ async def test_sensors(
 )
 @pytest.mark.usefixtures("habitica", "entity_registry_enabled_by_default")
 async def test_sensor_deprecation_issue(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     issue_registry: ir.IssueRegistry,
     entity_registry: er.EntityRegistry,
@@ -86,12 +86,12 @@ async def test_sensor_deprecation_issue(
 
     assert entity_registry is not None
     with patch(
-        "homeassistant.components.habitica.sensor.entity_used_in", return_value=True
+        "menuai.components.habitica.sensor.entity_used_in", return_value=True
     ):
-        config_entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(config_entry.entry_id)
+        config_entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(config_entry.entry_id)
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         assert config_entry.state is ConfigEntryState.LOADED
 
@@ -112,7 +112,7 @@ async def test_sensor_deprecation_issue(
 )
 @pytest.mark.usefixtures("habitica", "entity_registry_enabled_by_default")
 async def test_sensor_deprecation_delete_disabled(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     issue_registry: ir.IssueRegistry,
     entity_registry: er.EntityRegistry,
@@ -131,12 +131,12 @@ async def test_sensor_deprecation_delete_disabled(
 
     assert entity_registry is not None
     with patch(
-        "homeassistant.components.habitica.sensor.entity_used_in", return_value=True
+        "menuai.components.habitica.sensor.entity_used_in", return_value=True
     ):
-        config_entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(config_entry.entry_id)
+        config_entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(config_entry.entry_id)
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         assert config_entry.state is ConfigEntryState.LOADED
 

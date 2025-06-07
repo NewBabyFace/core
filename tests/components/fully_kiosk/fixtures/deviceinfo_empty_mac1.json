@@ -45,7 +45,7 @@
   "isInForcedSleep": false,
   "maintenanceMode": false,
   "kioskMode": true,
-  "startUrl": "https://homeassistant.local",
+  "startUrl": "https://menuai.local",
   "currentTabIndex": 0,
   "mqttConnected": true,
   "deviceID": "abcdef-111111",
@@ -55,7 +55,7 @@
   "deviceModel": "KFDOWI",
   "deviceManufacturer": "amzn",
   "foregroundApp": "de.ozerov.fully",
-  "currentPage": "https://homeassistant.local",
+  "currentPage": "https://menuai.local",
   "lastAppStart": "8/13/2022 1:00:47 AM",
   "sensorInfo": [
     {

@@ -1,6 +1,6 @@
 """Support for Envisalink devices."""
 
-from homeassistant.helpers.entity import Entity
+from menuai.helpers.entity import Entity
 
 
 class EnvisalinkEntity(Entity):

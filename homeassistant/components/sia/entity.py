@@ -8,16 +8,16 @@ import logging
 
 from pysiaalarm import SIAEvent
 
-from homeassistant.components.alarm_control_panel import AlarmControlPanelState
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_PORT
-from homeassistant.core import CALLBACK_TYPE, State, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import EntityDescription
-from homeassistant.helpers.event import async_call_later
-from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.typing import StateType
+from menuai.components.alarm_control_panel import AlarmControlPanelState
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_PORT
+from menuai.core import CALLBACK_TYPE, State, callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity import EntityDescription
+from menuai.helpers.event import async_call_later
+from menuai.helpers.restore_state import RestoreEntity
+from menuai.helpers.typing import StateType
 
 from .const import (
     AVAILABILITY_EVENT_CODE,
@@ -85,8 +85,8 @@ class SIABaseEntity(RestoreEntity):
         self._attr_extra_state_attributes = {}
         self._attr_should_poll = False
 
-    async def async_added_to_hass(self) -> None:
-        """Run when entity about to be added to hass.
+    async def async_added_to_menuai(self) -> None:
+        """Run when entity about to be added to menuai.
 
         Overridden from Entity.
 
@@ -96,7 +96,7 @@ class SIABaseEntity(RestoreEntity):
         """
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 SIA_EVENT.format(self.port, self.account),
                 self.async_handle_event,
             )
@@ -109,8 +109,8 @@ class SIABaseEntity(RestoreEntity):
     def handle_last_state(self, last_state: State | None) -> None:
         """Handle the last state."""
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Run when entity will be removed from hass.
+    async def async_will_remove_from_menuai(self) -> None:
+        """Run when entity will be removed from menuai.
 
         Overridden from Entity.
         """
@@ -155,7 +155,7 @@ class SIABaseEntity(RestoreEntity):
     def async_create_post_interval_update_cb(self) -> None:
         """Create a port interval update cb and store the callback."""
         self._post_interval_update_cb_canceller = async_call_later(
-            self.hass,
+            self.menuai,
             get_unavailability_interval(self.ping_interval),
             self.async_post_interval_update,
         )

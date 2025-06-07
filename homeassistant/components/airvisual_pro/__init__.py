@@ -15,16 +15,16 @@ from pyairvisual.node import (
     NodeSamba,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_IP_ADDRESS,
     CONF_PASSWORD,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     Platform,
 )
-from homeassistant.core import Event, HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.core import Event, menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import LOGGER
 
@@ -44,7 +44,7 @@ class AirVisualProData:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: AirVisualProConfigEntry
+    menuai: menuai, entry: AirVisualProConfigEntry
 ) -> bool:
     """Set up AirVisual Pro from a config entry."""
     node = NodeSamba(entry.data[CONF_IP_ADDRESS], entry.data[CONF_PASSWORD])
@@ -69,8 +69,8 @@ async def async_setup_entry(
         except NodeConnectionError as err:
             nonlocal reload_task
             if not reload_task:
-                reload_task = hass.async_create_task(
-                    hass.config_entries.async_reload(entry.entry_id)
+                reload_task = menuai.async_create_task(
+                    menuai.config_entries.async_reload(entry.entry_id)
                 )
             raise UpdateFailed(f"Connection to Pro unit lost: {err}") from err
         except NodeProError as err:
@@ -79,7 +79,7 @@ async def async_setup_entry(
         return data
 
     coordinator = DataUpdateCoordinator(
-        hass,
+        menuai,
         LOGGER,
         config_entry=entry,
         name="Node/Pro data",
@@ -99,19 +99,19 @@ async def async_setup_entry(
         await node.async_disconnect()
 
     entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, async_shutdown)
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, async_shutdown)
     )
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, entry: AirVisualProConfigEntry
+    menuai: menuai, entry: AirVisualProConfigEntry
 ) -> bool:
     """Unload a config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+    if unload_ok := await menuai.config_entries.async_unload_platforms(entry, PLATFORMS):
         await entry.runtime_data.node.async_disconnect()
 
     return unload_ok

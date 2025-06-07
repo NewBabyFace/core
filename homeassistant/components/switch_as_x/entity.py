@@ -4,20 +4,20 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.homeassistant import exposed_entities
-from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
-from homeassistant.const import (
+from menuai.components.menuai import exposed_entities
+from menuai.components.switch import DOMAIN as SWITCH_DOMAIN
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
     STATE_ON,
     STATE_UNAVAILABLE,
 )
-from homeassistant.core import Event, EventStateChangedData, HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity, ToggleEntity
-from homeassistant.helpers.event import async_track_state_change_event
+from menuai.core import Event, EventStateChangedData, menuai, callback
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity, ToggleEntity
+from menuai.helpers.event import async_track_state_change_event
 
 from .const import DOMAIN
 
@@ -30,15 +30,15 @@ class BaseEntity(Entity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry_title: str,
         domain: str,
         switch_entity_id: str,
         unique_id: str,
     ) -> None:
         """Initialize Switch as an X."""
-        registry = er.async_get(hass)
-        device_registry = dr.async_get(hass)
+        registry = er.async_get(menuai)
+        device_registry = dr.async_get(menuai)
         wrapped_switch = registry.async_get(switch_entity_id)
         device_id = wrapped_switch.device_id if wrapped_switch else None
         entity_category = wrapped_switch.entity_category if wrapped_switch else None
@@ -70,14 +70,14 @@ class BaseEntity(Entity):
     ) -> None:
         """Handle child updates."""
         if (
-            state := self.hass.states.get(self._switch_entity_id)
+            state := self.menuai.states.get(self._switch_entity_id)
         ) is None or state.state == STATE_UNAVAILABLE:
             self._attr_available = False
             return
 
         self._attr_available = True
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks and copy the wrapped entity's custom name if set."""
 
         @callback
@@ -90,7 +90,7 @@ class BaseEntity(Entity):
 
         self.async_on_remove(
             async_track_state_change_event(
-                self.hass, [self._switch_entity_id], _async_state_changed_listener
+                self.menuai, [self._switch_entity_id], _async_state_changed_listener
             )
         )
 
@@ -98,7 +98,7 @@ class BaseEntity(Entity):
         _async_state_changed_listener()
 
         # Update entity options
-        registry = er.async_get(self.hass)
+        registry = er.async_get(self.menuai)
         if registry.async_get(self.entity_id) is not None:
             registry.async_update_entity_options(
                 self.entity_id,
@@ -123,16 +123,16 @@ class BaseEntity(Entity):
             Also unexpose the wrapped entity if exposed.
             """
             expose_settings = exposed_entities.async_get_entity_settings(
-                self.hass, self._switch_entity_id
+                self.menuai, self._switch_entity_id
             )
             for assistant, settings in expose_settings.items():
                 if (should_expose := settings.get("should_expose")) is None:
                     continue
                 exposed_entities.async_expose_entity(
-                    self.hass, assistant, self.entity_id, should_expose
+                    self.menuai, assistant, self.entity_id, should_expose
                 )
                 exposed_entities.async_expose_entity(
-                    self.hass, assistant, self._switch_entity_id, False
+                    self.menuai, assistant, self._switch_entity_id, False
                 )
 
         copy_custom_name(wrapped_switch)
@@ -149,7 +149,7 @@ class BaseToggleEntity(BaseEntity, ToggleEntity):
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Forward the turn_on command to the switch in this light switch."""
-        await self.hass.services.async_call(
+        await self.menuai.services.async_call(
             SWITCH_DOMAIN,
             SERVICE_TURN_ON,
             {ATTR_ENTITY_ID: self._switch_entity_id},
@@ -159,7 +159,7 @@ class BaseToggleEntity(BaseEntity, ToggleEntity):
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Forward the turn_off command to the switch in this light switch."""
-        await self.hass.services.async_call(
+        await self.menuai.services.async_call(
             SWITCH_DOMAIN,
             SERVICE_TURN_OFF,
             {ATTR_ENTITY_ID: self._switch_entity_id},
@@ -175,7 +175,7 @@ class BaseToggleEntity(BaseEntity, ToggleEntity):
         super().async_state_changed_listener(event)
         if (
             not self.available
-            or (state := self.hass.states.get(self._switch_entity_id)) is None
+            or (state := self.menuai.states.get(self._switch_entity_id)) is None
         ):
             return
 
@@ -187,7 +187,7 @@ class BaseInvertableEntity(BaseEntity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry_title: str,
         domain: str,
         invert: bool,
@@ -195,7 +195,7 @@ class BaseInvertableEntity(BaseEntity):
         unique_id: str,
     ) -> None:
         """Initialize Switch as an X."""
-        super().__init__(hass, config_entry_title, domain, switch_entity_id, unique_id)
+        super().__init__(menuai, config_entry_title, domain, switch_entity_id, unique_id)
         self._invert_state = invert
 
     @callback

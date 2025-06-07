@@ -6,18 +6,18 @@ from unittest.mock import AsyncMock
 import pytest
 from python_snoo.containers import SnooData
 
-from homeassistant.components.snoo.const import DOMAIN
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
+from menuai.components.snoo.const import DOMAIN
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
 
 def create_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> ConfigEntry:
-    """Add config entry in Home Assistant."""
+    """Add config entry in MenuAI."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         title="test-username",
@@ -29,17 +29,17 @@ def create_entry(
         unique_id="123e4567-e89b-12d3-a456-426614174000",
         version=1,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     return entry
 
 
-async def async_init_integration(hass: HomeAssistant) -> ConfigEntry:
-    """Set up the Snoo integration in Home Assistant."""
+async def async_init_integration(menuai: menuai) -> ConfigEntry:
+    """Set up the Snoo integration in MenuAI."""
 
-    entry = create_entry(hass)
+    entry = create_entry(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     return entry
 

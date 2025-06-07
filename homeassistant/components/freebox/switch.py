@@ -7,10 +7,10 @@ from typing import Any
 
 from freebox_api.exceptions import InsufficientPermissionsError
 
-from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchEntity, SwitchEntityDescription
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .router import FreeboxConfigEntry, FreeboxRouter
 
@@ -27,7 +27,7 @@ SWITCH_DESCRIPTIONS = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: FreeboxConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -58,7 +58,7 @@ class FreeboxSwitch(SwitchEntity):
             await self._router.wifi.set_global_config({"enabled": enabled})
         except InsufficientPermissionsError:
             _LOGGER.warning(
-                "Home Assistant does not have permissions to modify the Freebox"
+                "MenuAI does not have permissions to modify the Freebox"
                 " settings. Please refer to documentation"
             )
 

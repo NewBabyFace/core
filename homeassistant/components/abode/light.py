@@ -7,7 +7,7 @@ from typing import Any
 
 from jaraco.abode.devices.light import Light
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_TEMP_KELVIN,
     ATTR_HS_COLOR,
@@ -16,9 +16,9 @@ from homeassistant.components.light import (
     ColorMode,
     LightEntity,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import AbodeSystem
 from .const import DOMAIN
@@ -26,12 +26,12 @@ from .entity import AbodeDevice
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Abode light devices."""
-    data: AbodeSystem = hass.data[DOMAIN]
+    data: AbodeSystem = menuai.data[DOMAIN]
 
     async_add_entities(
         AbodeLight(data, device)
@@ -58,7 +58,7 @@ class AbodeLight(AbodeDevice, LightEntity):
             return
 
         if ATTR_BRIGHTNESS in kwargs and self._device.is_dimmable:
-            # Convert Home Assistant brightness (0-255) to Abode brightness (0-99)
+            # Convert MenuAI brightness (0-255) to Abode brightness (0-99)
             # If 100 is sent to Abode, response is 99 causing an error
             self._device.set_level(ceil(kwargs[ATTR_BRIGHTNESS] * 99 / 255.0))
             return
@@ -80,7 +80,7 @@ class AbodeLight(AbodeDevice, LightEntity):
         if self._device.is_dimmable and self._device.has_brightness:
             brightness = int(self._device.brightness)
             # Abode returns 100 during device initialization and device refresh
-            # Convert Abode brightness (0-99) to Home Assistant brightness (0-255)
+            # Convert Abode brightness (0-99) to MenuAI brightness (0-255)
             return 255 if brightness == 100 else ceil(brightness * 255 / 99.0)
         return None
 

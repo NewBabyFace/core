@@ -7,16 +7,16 @@ import re
 from aiohttp import web
 import voluptuous as vol
 
-from homeassistant.components.http import HomeAssistantView
-from homeassistant.components.sensor import (
+from menuai.components.http import menuaiView
+from menuai.components.sensor import (
     PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
     SensorEntity,
 )
-from homeassistant.const import CONF_EMAIL, CONF_NAME, DEGREE
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_EMAIL, CONF_NAME, DEGREE
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 API_PATH = "/api/torque"
 
@@ -48,7 +48,7 @@ def convert_pid(value):
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -58,12 +58,12 @@ async def async_setup_platform(
     email: str | None = config.get(CONF_EMAIL)
     sensors: dict[int, TorqueSensor] = {}
 
-    hass.http.register_view(
+    menuai.http.register_view(
         TorqueReceiveDataView(email, vehicle, sensors, async_add_entities)
     )
 
 
-class TorqueReceiveDataView(HomeAssistantView):
+class TorqueReceiveDataView(menuaiView):
     """Handle data from Torque requests."""
 
     url = API_PATH

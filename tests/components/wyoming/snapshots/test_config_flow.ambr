@@ -1,9 +1,9 @@
 # serializer version: 1
-# name: test_hassio_addon_discovery[info0]
+# name: test_menuaiio_addon_discovery[info0]
   FlowResultSnapshot({
     'context': dict({
-      'configuration_url': 'homeassistant://hassio/addon/mock_piper/info',
-      'source': 'hassio',
+      'configuration_url': 'menuai://menuaiio/addon/mock_piper/info',
+      'source': 'menuaiio',
       'title_placeholders': dict({
         'name': 'Piper',
       }),
@@ -35,7 +35,7 @@
       }),
       'pref_disable_new_entities': False,
       'pref_disable_polling': False,
-      'source': 'hassio',
+      'source': 'menuaiio',
       'subentries': list([
       ]),
       'title': 'Piper',
@@ -49,11 +49,11 @@
     'version': 1,
   })
 # ---
-# name: test_hassio_addon_discovery[info1]
+# name: test_menuaiio_addon_discovery[info1]
   FlowResultSnapshot({
     'context': dict({
-      'configuration_url': 'homeassistant://hassio/addon/mock_piper/info',
-      'source': 'hassio',
+      'configuration_url': 'menuai://menuaiio/addon/mock_piper/info',
+      'source': 'menuaiio',
       'title_placeholders': dict({
         'name': 'Piper',
       }),
@@ -85,7 +85,7 @@
       }),
       'pref_disable_new_entities': False,
       'pref_disable_polling': False,
-      'source': 'hassio',
+      'source': 'menuaiio',
       'subentries': list([
       ]),
       'title': 'Piper',

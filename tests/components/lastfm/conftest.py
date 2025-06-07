@@ -6,10 +6,10 @@ from unittest.mock import patch
 from pylast import Track, WSError
 import pytest
 
-from homeassistant.components.lastfm.const import CONF_MAIN_USER, CONF_USERS, DOMAIN
-from homeassistant.const import CONF_API_KEY
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.lastfm.const import CONF_MAIN_USER, CONF_USERS, DOMAIN
+from menuai.const import CONF_API_KEY
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from . import API_KEY, USERNAME_1, USERNAME_2, MockNetwork, MockUser
 
@@ -20,7 +20,7 @@ type ComponentSetup = Callable[[MockConfigEntry, MockUser], Awaitable[None]]
 
 @pytest.fixture(name="config_entry")
 def mock_config_entry() -> MockConfigEntry:
-    """Create LastFM entry in Home Assistant."""
+    """Create LastFM entry in MenuAI."""
     return MockConfigEntry(
         domain=DOMAIN,
         data={},
@@ -34,7 +34,7 @@ def mock_config_entry() -> MockConfigEntry:
 
 @pytest.fixture(name="imported_config_entry")
 def mock_imported_config_entry() -> MockConfigEntry:
-    """Create LastFM entry in Home Assistant."""
+    """Create LastFM entry in MenuAI."""
     return MockConfigEntry(
         domain=DOMAIN,
         data={},
@@ -48,15 +48,15 @@ def mock_imported_config_entry() -> MockConfigEntry:
 
 @pytest.fixture(name="setup_integration")
 async def mock_setup_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> Callable[[MockConfigEntry, MockUser], Awaitable[None]]:
     """Fixture for setting up the component."""
 
     async def func(mock_config_entry: MockConfigEntry, mock_user: MockUser) -> None:
-        mock_config_entry.add_to_hass(hass)
+        mock_config_entry.add_to_menuai(menuai)
         with patch("pylast.User", return_value=mock_user):
-            assert await async_setup_component(hass, DOMAIN, {})
-            await hass.async_block_till_done()
+            assert await async_setup_component(menuai, DOMAIN, {})
+            await menuai.async_block_till_done()
 
     return func
 

@@ -19,11 +19,11 @@ from aioshelly.exceptions import NotInitialized
 from aioshelly.rpc_device import RpcDevice, RpcUpdateType
 import pytest
 
-from homeassistant.components.shelly.const import (
+from menuai.components.shelly.const import (
     EVENT_SHELLY_CLICK,
     REST_SENSORS_UPDATE_INTERVAL,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from . import MOCK_MAC
 
@@ -414,7 +414,7 @@ Shelly.emitEvent("script_start");
 def mock_coap():
     """Mock out coap."""
     with patch(
-        "homeassistant.components.shelly.utils.COAP",
+        "menuai.components.shelly.utils.COAP",
         return_value=Mock(
             initialize=AsyncMock(),
             close=Mock(),
@@ -426,14 +426,14 @@ def mock_coap():
 @pytest.fixture(autouse=True)
 def mock_ws_server():
     """Mock out ws_server."""
-    with patch("homeassistant.components.shelly.utils.get_ws_context"):
+    with patch("menuai.components.shelly.utils.get_ws_context"):
         yield
 
 
 @pytest.fixture
-def events(hass: HomeAssistant):
+def events(menuai: menuai):
     """Yield caught shelly_click events."""
-    return async_capture_events(hass, EVENT_SHELLY_CLICK)
+    return async_capture_events(menuai, EVENT_SHELLY_CLICK)
 
 
 @pytest.fixture
@@ -534,7 +534,7 @@ async def mock_rpc_device():
     """Mock rpc (Gen2, Websocket) device with BLE support."""
     with (
         patch("aioshelly.rpc_device.RpcDevice.create") as rpc_device_mock,
-        patch("homeassistant.components.shelly.bluetooth.async_start_scanner"),
+        patch("menuai.components.shelly.bluetooth.async_start_scanner"),
     ):
 
         def update():
@@ -584,7 +584,7 @@ async def mock_blu_trv():
 
     with (
         patch("aioshelly.rpc_device.RpcDevice.create") as blu_trv_device_mock,
-        patch("homeassistant.components.shelly.bluetooth.async_start_scanner"),
+        patch("menuai.components.shelly.bluetooth.async_start_scanner"),
     ):
 
         def update():
@@ -699,7 +699,7 @@ async def mock_sleepy_rpc_device():
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.shelly.async_setup_entry", return_value=True
+        "menuai.components.shelly.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -708,6 +708,6 @@ def mock_setup_entry() -> Generator[AsyncMock]:
 def mock_setup() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.shelly.async_setup", return_value=True
+        "menuai.components.shelly.async_setup", return_value=True
     ) as mock_setup:
         yield mock_setup

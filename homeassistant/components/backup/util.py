@@ -19,23 +19,23 @@ from typing import IO, Any, Self, cast
 import aiohttp
 from securetar import SecureTarError, SecureTarFile, SecureTarReadError
 
-from homeassistant.backup_restore import password_to_key
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.util import dt as dt_util
-from homeassistant.util.json import JsonObjectType, json_loads_object
+from menuai.backup_restore import password_to_key
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.util import dt as dt_util
+from menuai.util.json import JsonObjectType, json_loads_object
 
 from .const import BUF_SIZE, LOGGER
 from .models import AddonInfo, AgentBackup, Folder
 
 
-class DecryptError(HomeAssistantError):
+class DecryptError(menuaiError):
     """Error during decryption."""
 
     _message = "Unexpected error during decryption."
 
 
-class EncryptError(HomeAssistantError):
+class EncryptError(menuaiError):
     """Error during encryption."""
 
     _message = "Unexpected error during encryption."
@@ -59,7 +59,7 @@ class BackupEmpty(DecryptError):
     _message = "No tar files found in the backup."
 
 
-class AbortCipher(HomeAssistantError):
+class AbortCipher(menuaiError):
     """Abort the cipher operation."""
 
     _message = "Abort cipher operation."
@@ -89,19 +89,19 @@ def read_backup(backup_path: Path) -> AgentBackup:
         folders = [
             Folder(folder)
             for folder in cast(list[str], data.get("folders", []))
-            if folder != "homeassistant"
+            if folder != "menuai"
         ]
 
-        homeassistant_included = False
-        homeassistant_version: str | None = None
+        menuai_included = False
+        menuai_version: str | None = None
         database_included = False
         if (
-            homeassistant := cast(JsonObjectType, data.get("homeassistant"))
-        ) and "version" in homeassistant:
-            homeassistant_included = True
-            homeassistant_version = cast(str, homeassistant["version"])
+            menuai := cast(JsonObjectType, data.get("menuai"))
+        ) and "version" in menuai:
+            menuai_included = True
+            menuai_version = cast(str, menuai["version"])
             database_included = not cast(
-                bool, homeassistant.get("exclude_database", False)
+                bool, menuai.get("exclude_database", False)
             )
 
         extra_metadata = cast(dict[str, bool | str], data.get("extra", {}))
@@ -114,8 +114,8 @@ def read_backup(backup_path: Path) -> AgentBackup:
             date=cast(str, date),
             extra_metadata=extra_metadata,
             folders=folders,
-            homeassistant_included=homeassistant_included,
-            homeassistant_version=homeassistant_version,
+            menuai_included=menuai_included,
+            menuai_version=menuai_version,
             name=cast(str, data["name"]),
             protected=cast(bool, data.get("protected", False)),
             size=backup_path.stat().st_size,
@@ -137,16 +137,16 @@ def validate_password(path: Path, password: str | None) -> bool:
     """Validate the password."""
     with tarfile.open(path, "r:", bufsize=BUF_SIZE) as backup_file:
         compressed = False
-        ha_tar_name = "homeassistant.tar"
+        ha_tar_name = "menuai.tar"
         try:
             ha_tar = backup_file.extractfile(ha_tar_name)
         except KeyError:
             compressed = True
-            ha_tar_name = "homeassistant.tar.gz"
+            ha_tar_name = "menuai.tar.gz"
             try:
                 ha_tar = backup_file.extractfile(ha_tar_name)
             except KeyError:
-                LOGGER.error("No homeassistant.tar or homeassistant.tar.gz found")
+                LOGGER.error("No menuai.tar or menuai.tar.gz found")
                 return False
         try:
             with SecureTarFile(
@@ -169,10 +169,10 @@ def validate_password(path: Path, password: str | None) -> bool:
 class AsyncIteratorReader:
     """Wrap an AsyncIterator."""
 
-    def __init__(self, hass: HomeAssistant, stream: AsyncIterator[bytes]) -> None:
+    def __init__(self, menuai: menuai, stream: AsyncIterator[bytes]) -> None:
         """Initialize the wrapper."""
         self._aborted = False
-        self._hass = hass
+        self._menuai = menuai
         self._stream = stream
         self._buffer: bytes | None = None
         self._next_future: Future[bytes | None] | None = None
@@ -194,7 +194,7 @@ class AsyncIteratorReader:
         while n < 0 or len(result) < n:
             if not self._buffer:
                 self._next_future = asyncio.run_coroutine_threadsafe(
-                    self._next(), self._hass.loop
+                    self._next(), self._menuai.loop
                 )
                 if self._aborted:
                     self._next_future.cancel()
@@ -222,10 +222,10 @@ class AsyncIteratorReader:
 class AsyncIteratorWriter:
     """Wrap an AsyncIterator."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize the wrapper."""
         self._aborted = False
-        self._hass = hass
+        self._menuai = menuai
         self._pos: int = 0
         self._queue: asyncio.Queue[bytes | None] = asyncio.Queue(maxsize=1)
         self._write_future: Future[bytes | None] | None = None
@@ -253,7 +253,7 @@ class AsyncIteratorWriter:
     def write(self, s: bytes, /) -> int:
         """Write data to the iterator."""
         self._write_future = asyncio.run_coroutine_threadsafe(
-            self._queue.put(s), self._hass.loop
+            self._queue.put(s), self._menuai.loop
         )
         if self._aborted:
             self._write_future.cancel()
@@ -298,8 +298,8 @@ def validate_password_stream(
 def _get_expected_archives(backup: AgentBackup) -> set[str]:
     """Get the expected archives in the backup."""
     expected_archives = set()
-    if backup.homeassistant_included:
-        expected_archives.add("homeassistant")
+    if backup.menuai_included:
+        expected_archives.add("menuai")
     for addon in backup.addons:
         expected_archives.add(addon.slug)
     for folder in backup.folders:
@@ -526,7 +526,7 @@ class _CipherBackupStreamer:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         backup: AgentBackup,
         open_stream: Callable[[], Coroutine[Any, Any, AsyncIterator[bytes]]],
         password: str | None,
@@ -534,7 +534,7 @@ class _CipherBackupStreamer:
         """Initialize."""
         self._workers: list[_CipherWorkerStatus] = []
         self._backup = backup
-        self._hass = hass
+        self._menuai = menuai
         self._open_stream = open_stream
         self._password = password
         self._nonces = NonceGenerator()
@@ -546,7 +546,7 @@ class _CipherBackupStreamer:
     def _num_tar_files(self) -> int:
         """Return the number of inner tar files."""
         b = self._backup
-        return len(b.addons) + len(b.folders) + b.homeassistant_included + 1
+        return len(b.addons) + len(b.folders) + b.menuai_included + 1
 
     async def open_stream(self) -> AsyncIterator[bytes]:
         """Open a stream."""
@@ -554,11 +554,11 @@ class _CipherBackupStreamer:
         def on_done(error: Exception | None) -> None:
             """Call by the worker thread when it's done."""
             worker_status.error = error
-            self._hass.loop.call_soon_threadsafe(worker_status.done.set)
+            self._menuai.loop.call_soon_threadsafe(worker_status.done.set)
 
         stream = await self._open_stream()
-        reader = AsyncIteratorReader(self._hass, stream)
-        writer = AsyncIteratorWriter(self._hass)
+        reader = AsyncIteratorReader(self._menuai, stream)
+        writer = AsyncIteratorWriter(self._menuai)
         worker = threading.Thread(
             target=self._cipher_func,
             args=[
@@ -607,7 +607,7 @@ class EncryptedBackupStreamer(_CipherBackupStreamer):
 
 
 async def receive_file(
-    hass: HomeAssistant, contents: aiohttp.BodyPartReader, path: Path
+    menuai: menuai, contents: aiohttp.BodyPartReader, path: Path
 ) -> None:
     """Receive a file from a stream and write it to a file."""
     queue: SimpleQueue[tuple[bytes, asyncio.Future[None] | None] | None] = SimpleQueue()
@@ -619,12 +619,12 @@ async def receive_file(
                     break
                 _chunk, _future = _chunk_future
                 if _future is not None:
-                    hass.loop.call_soon_threadsafe(_future.set_result, None)
+                    menuai.loop.call_soon_threadsafe(_future.set_result, None)
                 file_handle.write(_chunk)
 
     fut: asyncio.Future[None] | None = None
     try:
-        fut = hass.async_add_executor_job(_sync_queue_consumer)
+        fut = menuai.async_add_executor_job(_sync_queue_consumer)
         megabytes_sending = 0
         while chunk := await contents.read_chunk(BUF_SIZE):
             megabytes_sending += 1
@@ -632,7 +632,7 @@ async def receive_file(
                 queue.put_nowait((chunk, None))
                 continue
 
-            chunk_future = hass.loop.create_future()
+            chunk_future = menuai.loop.create_future()
             queue.put_nowait((chunk, chunk_future))
             await asyncio.wait(
                 (fut, chunk_future),

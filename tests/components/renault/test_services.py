@@ -10,8 +10,8 @@ from renault_api.kamereon import schemas
 from renault_api.kamereon.models import ChargeSchedule, HvacSchedule
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.renault.const import DOMAIN
-from homeassistant.components.renault.services import (
+from menuai.components.renault.const import DOMAIN
+from menuai.components.renault.services import (
     ATTR_SCHEDULES,
     ATTR_TEMPERATURE,
     ATTR_VEHICLE,
@@ -21,10 +21,10 @@ from homeassistant.components.renault.services import (
     SERVICE_AC_START,
     SERVICE_CHARGE_SET_SCHEDULES,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import device_registry as dr
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.helpers import device_registry as dr
 
 from tests.common import async_load_fixture
 
@@ -34,7 +34,7 @@ pytestmark = pytest.mark.usefixtures("patch_renault_account", "patch_get_vehicle
 @pytest.fixture(autouse=True)
 def override_platforms() -> Generator[None]:
     """Override PLATFORMS."""
-    with patch("homeassistant.components.renault.PLATFORMS", []):
+    with patch("menuai.components.renault.PLATFORMS", []):
         yield
 
 
@@ -44,34 +44,34 @@ def override_vehicle_type(request: pytest.FixtureRequest) -> str:
     return request.param
 
 
-def get_device_id(hass: HomeAssistant) -> str:
+def get_device_id(menuai: menuai) -> str:
     """Get device_id."""
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     identifiers = {(DOMAIN, "VF1ZOE40VIN")}
     device = device_registry.async_get_device(identifiers=identifiers)
     return device.id
 
 
 async def test_service_set_ac_cancel(
-    hass: HomeAssistant, config_entry: ConfigEntry
+    menuai: menuai, config_entry: ConfigEntry
 ) -> None:
     """Test that service invokes renault_api with correct data."""
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     data = {
-        ATTR_VEHICLE: get_device_id(hass),
+        ATTR_VEHICLE: get_device_id(menuai),
     }
 
     with patch(
         "renault_api.renault_vehicle.RenaultVehicle.set_ac_stop",
         return_value=(
             schemas.KamereonVehicleHvacStartActionDataSchema.loads(
-                await async_load_fixture(hass, "action.set_ac_stop.json", DOMAIN)
+                await async_load_fixture(menuai, "action.set_ac_stop.json", DOMAIN)
             )
         ),
     ) as mock_action:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN, SERVICE_AC_CANCEL, service_data=data, blocking=True
         )
     assert len(mock_action.mock_calls) == 1
@@ -79,15 +79,15 @@ async def test_service_set_ac_cancel(
 
 
 async def test_service_set_ac_start_simple(
-    hass: HomeAssistant, config_entry: ConfigEntry
+    menuai: menuai, config_entry: ConfigEntry
 ) -> None:
     """Test that service invokes renault_api with correct data."""
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     temperature = 13.5
     data = {
-        ATTR_VEHICLE: get_device_id(hass),
+        ATTR_VEHICLE: get_device_id(menuai),
         ATTR_TEMPERATURE: temperature,
     }
 
@@ -95,11 +95,11 @@ async def test_service_set_ac_start_simple(
         "renault_api.renault_vehicle.RenaultVehicle.set_ac_start",
         return_value=(
             schemas.KamereonVehicleHvacStartActionDataSchema.loads(
-                await async_load_fixture(hass, "action.set_ac_start.json", DOMAIN)
+                await async_load_fixture(menuai, "action.set_ac_start.json", DOMAIN)
             )
         ),
     ) as mock_action:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN, SERVICE_AC_START, service_data=data, blocking=True
         )
     assert len(mock_action.mock_calls) == 1
@@ -107,16 +107,16 @@ async def test_service_set_ac_start_simple(
 
 
 async def test_service_set_ac_start_with_date(
-    hass: HomeAssistant, config_entry: ConfigEntry
+    menuai: menuai, config_entry: ConfigEntry
 ) -> None:
     """Test that service invokes renault_api with correct data."""
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     temperature = 13.5
     when = datetime(2025, 8, 23, 17, 12, 45)
     data = {
-        ATTR_VEHICLE: get_device_id(hass),
+        ATTR_VEHICLE: get_device_id(menuai),
         ATTR_TEMPERATURE: temperature,
         ATTR_WHEN: when,
     }
@@ -125,11 +125,11 @@ async def test_service_set_ac_start_with_date(
         "renault_api.renault_vehicle.RenaultVehicle.set_ac_start",
         return_value=(
             schemas.KamereonVehicleHvacStartActionDataSchema.loads(
-                await async_load_fixture(hass, "action.set_ac_start.json", DOMAIN)
+                await async_load_fixture(menuai, "action.set_ac_start.json", DOMAIN)
             )
         ),
     ) as mock_action:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN, SERVICE_AC_START, service_data=data, blocking=True
         )
     assert len(mock_action.mock_calls) == 1
@@ -137,15 +137,15 @@ async def test_service_set_ac_start_with_date(
 
 
 async def test_service_set_charge_schedule(
-    hass: HomeAssistant, config_entry: ConfigEntry, snapshot: SnapshotAssertion
+    menuai: menuai, config_entry: ConfigEntry, snapshot: SnapshotAssertion
 ) -> None:
     """Test that service invokes renault_api with correct data."""
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     schedules = {"id": 2}
     data = {
-        ATTR_VEHICLE: get_device_id(hass),
+        ATTR_VEHICLE: get_device_id(menuai),
         ATTR_SCHEDULES: schedules,
     }
 
@@ -154,7 +154,7 @@ async def test_service_set_charge_schedule(
         patch(
             "renault_api.renault_vehicle.RenaultVehicle.http_get",
             return_value=schemas.KamereonResponseSchema.loads(
-                await async_load_fixture(hass, "charging_settings.json", DOMAIN)
+                await async_load_fixture(menuai, "charging_settings.json", DOMAIN)
             ),
         ),
         patch(
@@ -162,13 +162,13 @@ async def test_service_set_charge_schedule(
             return_value=(
                 schemas.KamereonVehicleHvacStartActionDataSchema.loads(
                     await async_load_fixture(
-                        hass, "action.set_charge_schedules.json", DOMAIN
+                        menuai, "action.set_charge_schedules.json", DOMAIN
                     )
                 )
             ),
         ) as mock_action,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN, SERVICE_CHARGE_SET_SCHEDULES, service_data=data, blocking=True
         )
     assert len(mock_action.mock_calls) == 1
@@ -177,11 +177,11 @@ async def test_service_set_charge_schedule(
 
 
 async def test_service_set_charge_schedule_multi(
-    hass: HomeAssistant, config_entry: ConfigEntry, snapshot: SnapshotAssertion
+    menuai: menuai, config_entry: ConfigEntry, snapshot: SnapshotAssertion
 ) -> None:
     """Test that service invokes renault_api with correct data."""
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     schedules = [
         {
@@ -197,7 +197,7 @@ async def test_service_set_charge_schedule_multi(
         {"id": 3},
     ]
     data = {
-        ATTR_VEHICLE: get_device_id(hass),
+        ATTR_VEHICLE: get_device_id(menuai),
         ATTR_SCHEDULES: schedules,
     }
 
@@ -206,7 +206,7 @@ async def test_service_set_charge_schedule_multi(
         patch(
             "renault_api.renault_vehicle.RenaultVehicle.http_get",
             return_value=schemas.KamereonResponseSchema.loads(
-                await async_load_fixture(hass, "charging_settings.json", DOMAIN)
+                await async_load_fixture(menuai, "charging_settings.json", DOMAIN)
             ),
         ),
         patch(
@@ -214,13 +214,13 @@ async def test_service_set_charge_schedule_multi(
             return_value=(
                 schemas.KamereonVehicleHvacStartActionDataSchema.loads(
                     await async_load_fixture(
-                        hass, "action.set_charge_schedules.json", DOMAIN
+                        menuai, "action.set_charge_schedules.json", DOMAIN
                     )
                 )
             ),
         ) as mock_action,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN, SERVICE_CHARGE_SET_SCHEDULES, service_data=data, blocking=True
         )
     assert len(mock_action.mock_calls) == 1
@@ -238,15 +238,15 @@ async def test_service_set_charge_schedule_multi(
 
 
 async def test_service_set_ac_schedule(
-    hass: HomeAssistant, config_entry: ConfigEntry, snapshot: SnapshotAssertion
+    menuai: menuai, config_entry: ConfigEntry, snapshot: SnapshotAssertion
 ) -> None:
     """Test that service invokes renault_api with correct data."""
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     schedules = {"id": 2}
     data = {
-        ATTR_VEHICLE: get_device_id(hass),
+        ATTR_VEHICLE: get_device_id(menuai),
         ATTR_SCHEDULES: schedules,
     }
 
@@ -254,7 +254,7 @@ async def test_service_set_ac_schedule(
         patch(
             "renault_api.renault_vehicle.RenaultVehicle.get_hvac_settings",
             return_value=schemas.KamereonVehicleDataResponseSchema.loads(
-                await async_load_fixture(hass, "hvac_settings.json", DOMAIN)
+                await async_load_fixture(menuai, "hvac_settings.json", DOMAIN)
             ).get_attributes(schemas.KamereonVehicleHvacSettingsDataSchema),
         ),
         patch(
@@ -262,13 +262,13 @@ async def test_service_set_ac_schedule(
             return_value=(
                 schemas.KamereonVehicleHvacScheduleActionDataSchema.loads(
                     await async_load_fixture(
-                        hass, "action.set_ac_schedules.json", DOMAIN
+                        menuai, "action.set_ac_schedules.json", DOMAIN
                     )
                 )
             ),
         ) as mock_action,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN, SERVICE_AC_SET_SCHEDULES, service_data=data, blocking=True
         )
     assert len(mock_action.mock_calls) == 1
@@ -277,11 +277,11 @@ async def test_service_set_ac_schedule(
 
 
 async def test_service_set_ac_schedule_multi(
-    hass: HomeAssistant, config_entry: ConfigEntry, snapshot: SnapshotAssertion
+    menuai: menuai, config_entry: ConfigEntry, snapshot: SnapshotAssertion
 ) -> None:
     """Test that service invokes renault_api with correct data."""
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     schedules = [
         {
@@ -297,7 +297,7 @@ async def test_service_set_ac_schedule_multi(
         {"id": 4},
     ]
     data = {
-        ATTR_VEHICLE: get_device_id(hass),
+        ATTR_VEHICLE: get_device_id(menuai),
         ATTR_SCHEDULES: schedules,
     }
 
@@ -305,7 +305,7 @@ async def test_service_set_ac_schedule_multi(
         patch(
             "renault_api.renault_vehicle.RenaultVehicle.get_hvac_settings",
             return_value=schemas.KamereonVehicleDataResponseSchema.loads(
-                await async_load_fixture(hass, "hvac_settings.json", DOMAIN)
+                await async_load_fixture(menuai, "hvac_settings.json", DOMAIN)
             ).get_attributes(schemas.KamereonVehicleHvacSettingsDataSchema),
         ),
         patch(
@@ -313,13 +313,13 @@ async def test_service_set_ac_schedule_multi(
             return_value=(
                 schemas.KamereonVehicleHvacScheduleActionDataSchema.loads(
                     await async_load_fixture(
-                        hass, "action.set_ac_schedules.json", DOMAIN
+                        menuai, "action.set_ac_schedules.json", DOMAIN
                     )
                 )
             ),
         ) as mock_action,
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN, SERVICE_AC_SET_SCHEDULES, service_data=data, blocking=True
         )
     assert len(mock_action.mock_calls) == 1
@@ -337,16 +337,16 @@ async def test_service_set_ac_schedule_multi(
 
 
 async def test_service_invalid_device_id(
-    hass: HomeAssistant, config_entry: ConfigEntry
+    menuai: menuai, config_entry: ConfigEntry
 ) -> None:
     """Test that service fails if device_id not found in registry."""
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     data = {ATTR_VEHICLE: "some_random_id"}
 
     with pytest.raises(ServiceValidationError) as err:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN, SERVICE_AC_CANCEL, service_data=data, blocking=True
         )
     assert err.value.translation_key == "invalid_device_id"
@@ -354,11 +354,11 @@ async def test_service_invalid_device_id(
 
 
 async def test_service_invalid_device_id2(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry, config_entry: ConfigEntry
+    menuai: menuai, device_registry: dr.DeviceRegistry, config_entry: ConfigEntry
 ) -> None:
     """Test that service fails if device_id not available in the hub."""
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Create a fake second vehicle in the device registry, but
     # not initialised by the hub.
@@ -374,7 +374,7 @@ async def test_service_invalid_device_id2(
     data = {ATTR_VEHICLE: device_id}
 
     with pytest.raises(ServiceValidationError) as err:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN, SERVICE_AC_CANCEL, service_data=data, blocking=True
         )
     assert err.value.translation_key == "no_config_entry_for_device"
@@ -382,14 +382,14 @@ async def test_service_invalid_device_id2(
 
 
 async def test_service_exception(
-    hass: HomeAssistant, config_entry: ConfigEntry
+    menuai: menuai, config_entry: ConfigEntry
 ) -> None:
     """Test that service invokes renault_api with correct data."""
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     data = {
-        ATTR_VEHICLE: get_device_id(hass),
+        ATTR_VEHICLE: get_device_id(menuai),
     }
 
     with (
@@ -397,9 +397,9 @@ async def test_service_exception(
             "renault_api.renault_vehicle.RenaultVehicle.set_ac_stop",
             side_effect=RenaultException("Didn't work"),
         ) as mock_action,
-        pytest.raises(HomeAssistantError, match="Didn't work"),
+        pytest.raises(menuaiError, match="Didn't work"),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN, SERVICE_AC_CANCEL, service_data=data, blocking=True
         )
     assert len(mock_action.mock_calls) == 1

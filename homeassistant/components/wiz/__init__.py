@@ -9,16 +9,16 @@ from typing import Any
 from pywizlight import PilotParser, wizlight
 from pywizlight.bulb import PIR_SOURCE
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, EVENT_HOMEASSISTANT_STOP, Platform
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.debounce import Debouncer
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, EVENT_menuai_STOP, Platform
+from menuai.core import Event, menuai, callback
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import config_validation as cv
+from menuai.helpers.debounce import Debouncer
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.event import async_track_time_interval
+from menuai.helpers.typing import ConfigType
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
     DISCOVER_SCAN_TIMEOUT,
@@ -48,27 +48,27 @@ REQUEST_REFRESH_DELAY = 0.35
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
-async def async_setup(hass: HomeAssistant, hass_config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, menuai_config: ConfigType) -> bool:
     """Set up the wiz integration."""
 
     async def _async_discovery(*_: Any) -> None:
         async_trigger_discovery(
-            hass, await async_discover_devices(hass, DISCOVER_SCAN_TIMEOUT)
+            menuai, await async_discover_devices(menuai, DISCOVER_SCAN_TIMEOUT)
         )
 
-    hass.async_create_background_task(_async_discovery(), "wiz-discovery")
+    menuai.async_create_background_task(_async_discovery(), "wiz-discovery")
     async_track_time_interval(
-        hass, _async_discovery, DISCOVERY_INTERVAL, cancel_on_shutdown=True
+        menuai, _async_discovery, DISCOVERY_INTERVAL, cancel_on_shutdown=True
     )
     return True
 
 
-async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def _async_update_listener(menuai: menuai, entry: ConfigEntry) -> None:
     """Handle options update."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up the wiz integration from a config entry."""
     ip_address = entry.data[CONF_HOST]
     _LOGGER.debug("Get bulb with IP: %s", ip_address)
@@ -101,7 +101,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         return None
 
     coordinator = DataUpdateCoordinator(
-        hass=hass,
+        menuai=menuai,
         logger=_LOGGER,
         config_entry=entry,
         name=entry.title,
@@ -110,7 +110,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # We don't want an immediate refresh since the device
         # takes a moment to reflect the state change
         request_refresh_debouncer=Debouncer(
-            hass, _LOGGER, cooldown=REQUEST_REFRESH_DELAY, immediate=False
+            menuai, _LOGGER, cooldown=REQUEST_REFRESH_DELAY, immediate=False
         ),
     )
 
@@ -124,7 +124,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await bulb.async_close()
 
     entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _async_shutdown_on_stop)
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, _async_shutdown_on_stop)
     )
 
     @callback
@@ -133,20 +133,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.debug("%s: Got push update: %s", bulb.mac, state.pilotResult)
         coordinator.async_set_updated_data(coordinator.data)
         if state.get_source() == PIR_SOURCE:
-            async_dispatcher_send(hass, SIGNAL_WIZ_PIR.format(bulb.mac))
+            async_dispatcher_send(menuai, SIGNAL_WIZ_PIR.format(bulb.mac))
 
     await bulb.start_push(_async_push_update)
-    bulb.set_discovery_callback(lambda bulb: async_trigger_discovery(hass, [bulb]))
+    bulb.set_discovery_callback(lambda bulb: async_trigger_discovery(menuai, [bulb]))
 
     entry.runtime_data = WizData(coordinator=coordinator, bulb=bulb, scenes=scenes)
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+    if unload_ok := await menuai.config_entries.async_unload_platforms(entry, PLATFORMS):
         await entry.runtime_data.bulb.async_close()
     return unload_ok

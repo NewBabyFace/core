@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from homeassistant.components.sensor import DEVICE_CLASS_UNITS, SensorDeviceClass
-from homeassistant.const import (
+from menuai.components.sensor import DEVICE_CLASS_UNITS, SensorDeviceClass
+from menuai.const import (
     ACCUMULATED_PRECIPITATION,
     AREA,
     LENGTH,
@@ -24,10 +24,10 @@ from homeassistant.const import (
     UnitOfVolume,
     UnitOfVolumetricFlux,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.core_config import async_process_ha_core_config
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.util.unit_system import (  # pylint: disable=hass-deprecated-import
+from menuai.core import menuai
+from menuai.core_config import async_process_ha_core_config
+from menuai.exceptions import menuaiError
+from menuai.util.unit_system import (  # pylint: disable=menuai-deprecated-import
     _CONF_UNIT_SYSTEM_IMPERIAL,
     _CONF_UNIT_SYSTEM_METRIC,
     _CONF_UNIT_SYSTEM_US_CUSTOMARY,
@@ -198,7 +198,7 @@ def test_temperature_same_unit() -> None:
 
 def test_temperature_unknown_unit() -> None:
     """Test no conversion happens if unknown unit."""
-    with pytest.raises(HomeAssistantError, match="is not a recognized .* unit"):
+    with pytest.raises(menuaiError, match="is not a recognized .* unit"):
         METRIC_SYSTEM.temperature(5, "abc")
 
 
@@ -219,7 +219,7 @@ def test_temperature_to_imperial() -> None:
 
 def test_length_unknown_unit() -> None:
     """Test length conversion with unknown from unit."""
-    with pytest.raises(HomeAssistantError, match="is not a recognized .* unit"):
+    with pytest.raises(menuaiError, match="is not a recognized .* unit"):
         METRIC_SYSTEM.length(5, "fr")
 
 
@@ -241,7 +241,7 @@ def test_length_to_imperial() -> None:
 
 def test_wind_speed_unknown_unit() -> None:
     """Test wind_speed conversion with unknown from unit."""
-    with pytest.raises(HomeAssistantError, match="is not a recognized .* unit"):
+    with pytest.raises(menuaiError, match="is not a recognized .* unit"):
         METRIC_SYSTEM.length(5, "turtles")
 
 
@@ -269,7 +269,7 @@ def test_pressure_same_unit() -> None:
 
 def test_pressure_unknown_unit() -> None:
     """Test no conversion happens if unknown unit."""
-    with pytest.raises(HomeAssistantError, match="is not a recognized .* unit"):
+    with pytest.raises(menuaiError, match="is not a recognized .* unit"):
         METRIC_SYSTEM.pressure(5, "K")
 
 
@@ -301,7 +301,7 @@ def test_accumulated_precipitation_same_unit() -> None:
 
 def test_accumulated_precipitation_unknown_unit() -> None:
     """Test no conversion happens if unknown unit."""
-    with pytest.raises(HomeAssistantError, match="is not a recognized .* unit"):
+    with pytest.raises(menuaiError, match="is not a recognized .* unit"):
         METRIC_SYSTEM.accumulated_precipitation(5, "K")
 
 
@@ -338,7 +338,7 @@ def test_area_same_unit() -> None:
 
 def test_area_unknown_unit() -> None:
     """Test no conversion happens if unknown unit."""
-    with pytest.raises(HomeAssistantError, match="is not a recognized .* unit"):
+    with pytest.raises(menuaiError, match="is not a recognized .* unit"):
         METRIC_SYSTEM.area(5, "abc")
 
 
@@ -887,11 +887,11 @@ def test_imperial_converted_units(device_class: SensorDeviceClass) -> None:
 
 
 async def test_imperial_deprecated_log_warning(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test deprecated imperial unit system logs warning."""
     await async_process_ha_core_config(
-        hass,
+        menuai,
         {
             "latitude": 60,
             "longitude": 50,
@@ -906,13 +906,13 @@ async def test_imperial_deprecated_log_warning(
         },
     )
 
-    assert hass.config.latitude == 60
-    assert hass.config.longitude == 50
-    assert hass.config.elevation == 25
-    assert hass.config.location_name == "Home"
-    assert hass.config.units is US_CUSTOMARY_SYSTEM
-    assert hass.config.time_zone == "America/New_York"
-    assert hass.config.currency == "USD"
-    assert hass.config.country == "US"
-    assert hass.config.language == "en"
-    assert hass.config.radius == 150
+    assert menuai.config.latitude == 60
+    assert menuai.config.longitude == 50
+    assert menuai.config.elevation == 25
+    assert menuai.config.location_name == "Home"
+    assert menuai.config.units is US_CUSTOMARY_SYSTEM
+    assert menuai.config.time_zone == "America/New_York"
+    assert menuai.config.currency == "USD"
+    assert menuai.config.country == "US"
+    assert menuai.config.language == "en"
+    assert menuai.config.radius == 150

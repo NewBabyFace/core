@@ -18,8 +18,8 @@ from aioshelly.exceptions import (
 from aioshelly.rpc_device import RpcDevice
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
-from homeassistant.const import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
+from menuai.const import (
     CONF_HOST,
     CONF_MAC,
     CONF_MODEL,
@@ -27,10 +27,10 @@ from homeassistant.const import (
     CONF_PORT,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.selector import SelectSelector, SelectSelectorConfig
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.core import menuai, callback
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.selector import SelectSelector, SelectSelectorConfig
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import (
     CONF_BLE_SCANNER_MODE,
@@ -72,7 +72,7 @@ INTERNAL_WIFI_AP_IP = "192.168.33.1"
 
 
 async def validate_input(
-    hass: HomeAssistant,
+    menuai: menuai,
     host: str,
     port: int,
     info: dict[str, Any],
@@ -93,9 +93,9 @@ async def validate_input(
     gen = get_info_gen(info)
 
     if gen in RPC_GENERATIONS:
-        ws_context = await get_ws_context(hass)
+        ws_context = await get_ws_context(menuai)
         rpc_device = await RpcDevice.create(
-            async_get_clientsession(hass),
+            async_get_clientsession(menuai),
             ws_context,
             options,
         )
@@ -115,9 +115,9 @@ async def validate_input(
         }
 
     # Gen1
-    coap_context = await get_coap_context(hass)
+    coap_context = await get_coap_context(menuai)
     block_device = await BlockDevice.create(
-        async_get_clientsession(hass),
+        async_get_clientsession(menuai),
         coap_context,
         options,
     )
@@ -175,7 +175,7 @@ class ShellyConfigFlow(ConfigFlow, domain=DOMAIN):
 
                 try:
                     device_info = await validate_input(
-                        self.hass, host, port, self.info, {}
+                        self.menuai, host, port, self.info, {}
                     )
                 except DeviceConnectionError:
                     errors["base"] = "cannot_connect"
@@ -214,7 +214,7 @@ class ShellyConfigFlow(ConfigFlow, domain=DOMAIN):
                 user_input[CONF_USERNAME] = "admin"
             try:
                 device_info = await validate_input(
-                    self.hass, self.host, self.port, self.info, user_input
+                    self.menuai, self.host, self.port, self.info, user_input
                 )
             except InvalidAuthError:
                 errors["base"] = "invalid_auth"
@@ -268,7 +268,7 @@ class ShellyConfigFlow(ConfigFlow, domain=DOMAIN):
             current_entry := await self.async_set_unique_id(mac)
         ) and current_entry.data.get(CONF_HOST) == host:
             LOGGER.debug("async_reconnect_soon: host: %s, mac: %s", host, mac)
-            await async_reconnect_soon(self.hass, current_entry)
+            await async_reconnect_soon(self.menuai, current_entry)
         if host == INTERNAL_WIFI_AP_IP:
             # If the device is broadcasting the internal wifi ap ip
             # we can't connect to it, so we should not update the
@@ -319,7 +319,7 @@ class ShellyConfigFlow(ConfigFlow, domain=DOMAIN):
 
         try:
             self.device_info = await validate_input(
-                self.hass, self.host, self.port, self.info, {}
+                self.menuai, self.host, self.port, self.info, {}
             )
         except DeviceConnectionError:
             return self.async_abort(reason="cannot_connect")
@@ -380,7 +380,7 @@ class ShellyConfigFlow(ConfigFlow, domain=DOMAIN):
             if get_device_entry_gen(reauth_entry) != 1:
                 user_input[CONF_USERNAME] = "admin"
             try:
-                await validate_input(self.hass, host, port, info, user_input)
+                await validate_input(self.menuai, host, port, info, user_input)
             except (DeviceConnectionError, InvalidAuthError):
                 return self.async_abort(reason="reauth_unsuccessful")
             except MacAddressMismatchError:
@@ -445,7 +445,7 @@ class ShellyConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def _async_get_info(self, host: str, port: int) -> dict[str, Any]:
         """Get info from shelly device."""
-        return await get_info(async_get_clientsession(self.hass), host, port=port)
+        return await get_info(async_get_clientsession(self.menuai), host, port=port)
 
     @staticmethod
     @callback

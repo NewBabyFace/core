@@ -1,1 +1,1 @@
-"""Tests for the Home Assistant integration to provide core functionality."""
+"""Tests for the MenuAI integration to provide core functionality."""

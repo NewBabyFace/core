@@ -1,4 +1,4 @@
-"""Handles Hue resource of type `device` mapping to Home Assistant device."""
+"""Handles Hue resource of type `device` mapping to MenuAI device."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from aiohue.v2.controllers.groups import Room, Zone
 from aiohue.v2.models.device import Device, DeviceArchetypes
 from aiohue.v2.models.resource import ResourceTypes
 
-from homeassistant.const import (
+from menuai.const import (
     ATTR_CONNECTIONS,
     ATTR_IDENTIFIERS,
     ATTR_MANUFACTURER,
@@ -20,8 +20,8 @@ from homeassistant.const import (
     ATTR_SW_VERSION,
     ATTR_VIA_DEVICE,
 )
-from homeassistant.core import callback
-from homeassistant.helpers import device_registry as dr
+from menuai.core import callback
+from menuai.helpers import device_registry as dr
 
 from ..const import DOMAIN
 
@@ -32,9 +32,9 @@ if TYPE_CHECKING:
 async def async_setup_devices(bridge: HueBridge):
     """Manage setup of devices from Hue devices."""
     entry = bridge.config_entry
-    hass = bridge.hass
+    menuai = bridge.menuai
     api: HueBridgeV2 = bridge.api  # to satisfy typing
-    dev_reg = dr.async_get(hass)
+    dev_reg = dr.async_get(menuai)
     dev_controller = api.devices
 
     @callback

@@ -9,27 +9,27 @@ from urllib.parse import urlparse
 from pynetgear import DEFAULT_HOST, DEFAULT_PORT, DEFAULT_USER
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
     CONF_SSL,
     CONF_USERNAME,
 )
-from homeassistant.core import callback
-from homeassistant.helpers.service_info.ssdp import (
+from menuai.core import callback
+from menuai.helpers.service_info.ssdp import (
     ATTR_UPNP_MODEL_NAME,
     ATTR_UPNP_MODEL_NUMBER,
     ATTR_UPNP_SERIAL,
     SsdpServiceInfo,
 )
-from homeassistant.util.network import is_ipv4_address
+from menuai.util.network import is_ipv4_address
 
 from .const import (
     CONF_CONSIDER_HOME,
@@ -197,7 +197,7 @@ class NetgearFlowHandler(ConfigFlow, domain=DOMAIN):
 
         # Open connection and check authentication
         try:
-            api = await self.hass.async_add_executor_job(
+            api = await self.menuai.async_add_executor_job(
                 get_api, password, host, username, port, ssl
             )
         except CannotLoginException:
@@ -213,7 +213,7 @@ class NetgearFlowHandler(ConfigFlow, domain=DOMAIN):
         }
 
         # Check if already configured
-        info = await self.hass.async_add_executor_job(api.get_info)
+        info = await self.menuai.async_add_executor_job(api.get_info)
         if info is None:
             errors["base"] = "info"
             return await self._show_setup_form(user_input, errors)

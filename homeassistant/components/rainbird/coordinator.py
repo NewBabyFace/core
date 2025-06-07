@@ -15,10 +15,10 @@ from pyrainbird.async_client import (
 )
 from pyrainbird.data import ModelAndVersion, Schedule
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.debounce import Debouncer
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.core import menuai
+from menuai.helpers.debounce import Debouncer
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN, MANUFACTURER, TIMEOUT_SECONDS
 from .types import RainbirdConfigEntry
@@ -62,20 +62,20 @@ class RainbirdUpdateCoordinator(DataUpdateCoordinator[RainbirdDeviceState]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: RainbirdConfigEntry,
         controller: AsyncRainbirdController,
         model_info: ModelAndVersion,
     ) -> None:
         """Initialize RainbirdUpdateCoordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=config_entry.title,
             update_interval=UPDATE_INTERVAL,
             request_refresh_debouncer=Debouncer(
-                hass, _LOGGER, cooldown=DEBOUNCER_COOLDOWN, immediate=False
+                menuai, _LOGGER, cooldown=DEBOUNCER_COOLDOWN, immediate=False
             ),
         )
         self._controller = controller
@@ -146,13 +146,13 @@ class RainbirdScheduleUpdateCoordinator(DataUpdateCoordinator[Schedule]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: RainbirdConfigEntry,
         controller: AsyncRainbirdController,
     ) -> None:
         """Initialize ZoneStateUpdateCoordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=f"{config_entry.title} Schedule",

@@ -11,17 +11,17 @@ from pyControl4.director import C4Director
 from pyControl4.error_handling import NotFound, Unauthorized
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
-from homeassistant.const import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_SCAN_INTERVAL,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import aiohttp_client, config_validation as cv
-from homeassistant.helpers.device_registry import format_mac
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import aiohttp_client, config_validation as cv
+from menuai.helpers.device_registry import format_mac
 
 from . import Control4ConfigEntry
 from .const import (
@@ -46,7 +46,7 @@ class Control4Validator:
     """Validates that config details can be used to authenticate and communicate with Control4."""
 
     def __init__(
-        self, host: str, username: str, password: str, hass: HomeAssistant
+        self, host: str, username: str, password: str, menuai: menuai
     ) -> None:
         """Initialize."""
         self.host = host
@@ -54,12 +54,12 @@ class Control4Validator:
         self.password = password
         self.controller_unique_id = None
         self.director_bearer_token = None
-        self.hass = hass
+        self.menuai = menuai
 
     async def authenticate(self) -> bool:
         """Test if we can authenticate with the Control4 account API."""
         try:
-            account_session = aiohttp_client.async_get_clientsession(self.hass)
+            account_session = aiohttp_client.async_get_clientsession(self.menuai)
             account = C4Account(self.username, self.password, account_session)
             # Authenticate with Control4 account
             await account.getAccountBearerToken()
@@ -80,7 +80,7 @@ class Control4Validator:
         """Test if we can connect to the local Control4 Director."""
         try:
             director_session = aiohttp_client.async_get_clientsession(
-                self.hass, verify_ssl=False
+                self.menuai, verify_ssl=False
             )
             director = C4Director(
                 self.host, self.director_bearer_token, director_session
@@ -107,7 +107,7 @@ class Control4ConfigFlow(ConfigFlow, domain=DOMAIN):
                 user_input[CONF_HOST],
                 user_input[CONF_USERNAME],
                 user_input[CONF_PASSWORD],
-                self.hass,
+                self.menuai,
             )
             try:
                 if not await hub.authenticate():
@@ -176,9 +176,9 @@ class OptionsFlowHandler(OptionsFlow):
         return self.async_show_form(step_id="init", data_schema=data_schema)
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""
 
 
-class InvalidAuth(HomeAssistantError):
+class InvalidAuth(menuaiError):
     """Error to indicate there is invalid auth."""

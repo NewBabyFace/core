@@ -15,31 +15,31 @@ from aiohttp import web
 from dateutil.rrule import rrulestr
 import voluptuous as vol
 
-from homeassistant.components import frontend, http, websocket_api
-from homeassistant.components.websocket_api import (
+from menuai.components import frontend, http, websocket_api
+from menuai.components.websocket_api import (
     ERR_NOT_FOUND,
     ERR_NOT_SUPPORTED,
     ActiveConnection,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import STATE_OFF, STATE_ON
-from homeassistant.core import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import STATE_OFF, STATE_ON
+from menuai.core import (
     CALLBACK_TYPE,
-    HomeAssistant,
+    menuai,
     ServiceCall,
     ServiceResponse,
     SupportsResponse,
     callback,
 )
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity import Entity, EntityDescription
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.event import async_track_point_in_time
-from homeassistant.helpers.template import DATE_STR_FORMAT
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util import dt as dt_util
-from homeassistant.util.json import JsonValueType
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity import Entity, EntityDescription
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.event import async_track_point_in_time
+from menuai.helpers.template import DATE_STR_FORMAT
+from menuai.helpers.typing import ConfigType
+from menuai.util import dt as dt_util
+from menuai.util.json import JsonValueType
 
 from .const import (
     CONF_EVENT,
@@ -80,7 +80,7 @@ SCAN_INTERVAL = datetime.timedelta(seconds=60)
 # Don't support rrules more often than daily
 VALID_FREQS = {"DAILY", "WEEKLY", "MONTHLY", "YEARLY"}
 
-# Ensure events created in Home Assistant have a positive duration
+# Ensure events created in MenuAI have a positive duration
 MIN_NEW_EVENT_DURATION = datetime.timedelta(seconds=1)
 
 # Events must have a non-negative duration e.g. Google Calendar can create zero
@@ -306,22 +306,22 @@ SERVICE_GET_EVENTS_SCHEMA: Final = vol.All(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Track states and offer events for calendars."""
-    component = hass.data[DATA_COMPONENT] = EntityComponent[CalendarEntity](
-        _LOGGER, DOMAIN, hass, SCAN_INTERVAL
+    component = menuai.data[DATA_COMPONENT] = EntityComponent[CalendarEntity](
+        _LOGGER, DOMAIN, menuai, SCAN_INTERVAL
     )
 
-    hass.http.register_view(CalendarListView(component))
-    hass.http.register_view(CalendarEventView(component))
+    menuai.http.register_view(CalendarListView(component))
+    menuai.http.register_view(CalendarEventView(component))
 
     frontend.async_register_built_in_panel(
-        hass, "calendar", "calendar", "hass:calendar"
+        menuai, "calendar", "calendar", "menuai:calendar"
     )
 
-    websocket_api.async_register_command(hass, handle_calendar_event_create)
-    websocket_api.async_register_command(hass, handle_calendar_event_delete)
-    websocket_api.async_register_command(hass, handle_calendar_event_update)
+    websocket_api.async_register_command(menuai, handle_calendar_event_create)
+    websocket_api.async_register_command(menuai, handle_calendar_event_delete)
+    websocket_api.async_register_command(menuai, handle_calendar_event_update)
 
     component.async_register_entity_service(
         CREATE_EVENT_SERVICE,
@@ -339,14 +339,14 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up a config entry."""
-    return await hass.data[DATA_COMPONENT].async_setup_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_setup_entry(entry)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.data[DATA_COMPONENT].async_unload_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_unload_entry(entry)
 
 
 def get_date(date: dict[str, Any]) -> datetime.datetime:
@@ -407,7 +407,7 @@ class CalendarEvent:
         try:
             CALENDAR_EVENT_SCHEMA(dataclasses.asdict(self, dict_factory=skip_none))
         except vol.Invalid as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Failed to validate CalendarEvent: {err}"
             ) from err
 
@@ -585,13 +585,13 @@ class CalendarEntity(Entity):
         if now < event.start_datetime_local:
             self._alarm_unsubs.append(
                 async_track_point_in_time(
-                    self.hass,
+                    self.menuai,
                     update,
                     event.start_datetime_local,
                 )
             )
         self._alarm_unsubs.append(
-            async_track_point_in_time(self.hass, update, event.end_datetime_local)
+            async_track_point_in_time(self.menuai, update, event.end_datetime_local)
         )
         _LOGGER.debug(
             "Scheduled %d updates for %s (%s, %s)",
@@ -601,8 +601,8 @@ class CalendarEntity(Entity):
             event.end_datetime_local,
         )
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Run when entity will be removed from hass.
+    async def async_will_remove_from_menuai(self) -> None:
+        """Run when entity will be removed from menuai.
 
         To be extended by integrations.
         """
@@ -612,7 +612,7 @@ class CalendarEntity(Entity):
 
     async def async_get_events(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         start_date: datetime.datetime,
         end_date: datetime.datetime,
     ) -> list[CalendarEvent]:
@@ -643,7 +643,7 @@ class CalendarEntity(Entity):
         raise NotImplementedError
 
 
-class CalendarEventView(http.HomeAssistantView):
+class CalendarEventView(http.menuaiView):
     """View to retrieve calendar content."""
 
     url = "/api/calendars/{entity_id}"
@@ -676,11 +676,11 @@ class CalendarEventView(http.HomeAssistantView):
 
         try:
             calendar_event_list = await entity.async_get_events(
-                request.app[http.KEY_HASS],
+                request.app[http.KEY_menuai],
                 dt_util.as_local(start_date),
                 dt_util.as_local(end_date),
             )
-        except HomeAssistantError as err:
+        except menuaiError as err:
             _LOGGER.debug("Error reading events: %s", err)
             return self.json_message(
                 f"Error reading events: {err}", HTTPStatus.INTERNAL_SERVER_ERROR
@@ -694,7 +694,7 @@ class CalendarEventView(http.HomeAssistantView):
         )
 
 
-class CalendarListView(http.HomeAssistantView):
+class CalendarListView(http.menuaiView):
     """View to retrieve calendar list."""
 
     url = "/api/calendars"
@@ -706,11 +706,11 @@ class CalendarListView(http.HomeAssistantView):
 
     async def get(self, request: web.Request) -> web.Response:
         """Retrieve calendar list."""
-        hass = request.app[http.KEY_HASS]
+        menuai = request.app[http.KEY_menuai]
         calendar_list: list[dict[str, str]] = []
 
         for entity in self.component.entities:
-            state = hass.states.get(entity.entity_id)
+            state = menuai.states.get(entity.entity_id)
             assert state
             calendar_list.append({"name": state.name, "entity_id": entity.entity_id})
 
@@ -726,10 +726,10 @@ class CalendarListView(http.HomeAssistantView):
 )
 @websocket_api.async_response
 async def handle_calendar_event_create(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle creation of a calendar event."""
-    if not (entity := hass.data[DATA_COMPONENT].get_entity(msg["entity_id"])):
+    if not (entity := menuai.data[DATA_COMPONENT].get_entity(msg["entity_id"])):
         connection.send_error(msg["id"], ERR_NOT_FOUND, "Entity not found")
         return
 
@@ -746,7 +746,7 @@ async def handle_calendar_event_create(
 
     try:
         await entity.async_create_event(**msg[CONF_EVENT])
-    except HomeAssistantError as ex:
+    except menuaiError as ex:
         connection.send_error(msg["id"], "failed", str(ex))
     else:
         connection.send_result(msg["id"])
@@ -765,11 +765,11 @@ async def handle_calendar_event_create(
 )
 @websocket_api.async_response
 async def handle_calendar_event_delete(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle delete of a calendar event."""
 
-    if not (entity := hass.data[DATA_COMPONENT].get_entity(msg["entity_id"])):
+    if not (entity := menuai.data[DATA_COMPONENT].get_entity(msg["entity_id"])):
         connection.send_error(msg["id"], ERR_NOT_FOUND, "Entity not found")
         return
 
@@ -790,7 +790,7 @@ async def handle_calendar_event_delete(
             recurrence_id=msg.get(EVENT_RECURRENCE_ID),
             recurrence_range=msg.get(EVENT_RECURRENCE_RANGE),
         )
-    except (HomeAssistantError, ValueError) as ex:
+    except (menuaiError, ValueError) as ex:
         _LOGGER.error("Error handling Calendar Event call: %s", ex)
         connection.send_error(msg["id"], "failed", str(ex))
     else:
@@ -811,10 +811,10 @@ async def handle_calendar_event_delete(
 )
 @websocket_api.async_response
 async def handle_calendar_event_update(
-    hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle creation of a calendar event."""
-    if not (entity := hass.data[DATA_COMPONENT].get_entity(msg["entity_id"])):
+    if not (entity := menuai.data[DATA_COMPONENT].get_entity(msg["entity_id"])):
         connection.send_error(msg["id"], ERR_NOT_FOUND, "Entity not found")
         return
 
@@ -836,7 +836,7 @@ async def handle_calendar_event_update(
             recurrence_id=msg.get(EVENT_RECURRENCE_ID),
             recurrence_range=msg.get(EVENT_RECURRENCE_RANGE),
         )
-    except (HomeAssistantError, ValueError) as ex:
+    except (menuaiError, ValueError) as ex:
         _LOGGER.error("Error handling Calendar Event call: %s", ex)
         connection.send_error(msg["id"], "failed", str(ex))
     else:
@@ -894,7 +894,7 @@ async def async_get_events_service(
         end = service_call.data[EVENT_END_DATETIME]
 
     calendar_event_list = await calendar.async_get_events(
-        calendar.hass, dt_util.as_local(start), dt_util.as_local(end)
+        calendar.menuai, dt_util.as_local(start), dt_util.as_local(end)
     )
     return {
         "events": [

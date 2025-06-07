@@ -9,20 +9,20 @@ import logging
 from ndms2_client import Client, ConnectionException, Device, TelnetConnection
 from ndms2_client.client import RouterInfo
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
     CONF_SCAN_INTERVAL,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.event import async_call_later
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.event import async_call_later
+from menuai.util import dt as dt_util
 
 from .const import (
     CONF_CONSIDER_HOME,
@@ -39,9 +39,9 @@ _LOGGER = logging.getLogger(__name__)
 class KeeneticRouter:
     """Keenetic client Object."""
 
-    def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: ConfigEntry) -> None:
         """Initialize the Client."""
-        self.hass = hass
+        self.menuai = menuai
         self.config_entry = config_entry
         self._last_devices: dict[str, Device] = {}
         self._router_info: RouterInfo | None = None
@@ -124,15 +124,15 @@ class KeeneticRouter:
             await self._progress
             return
 
-        self._progress = self.hass.async_create_task(self.async_update())
+        self._progress = self.menuai.async_create_task(self.async_update())
         await self._progress
 
         self._progress = None
 
     async def async_update(self):
         """Update devices information."""
-        await self.hass.async_add_executor_job(self._update_devices)
-        async_dispatcher_send(self.hass, self.signal_update)
+        await self.menuai.async_add_executor_job(self._update_devices)
+        async_dispatcher_send(self.menuai, self.signal_update)
 
     async def async_setup(self):
         """Set up the connection."""
@@ -145,14 +145,14 @@ class KeeneticRouter:
         self._client = Client(self._connection)
 
         try:
-            await self.hass.async_add_executor_job(self._update_router_info)
+            await self.menuai.async_add_executor_job(self._update_router_info)
         except ConnectionException as error:
             raise ConfigEntryNotReady from error
 
         async def async_update_data(_now):
             await self.request_update()
             self._cancel_periodic_update = async_call_later(
-                self.hass,
+                self.menuai,
                 self.config_entry.options[CONF_SCAN_INTERVAL],
                 async_update_data,
             )

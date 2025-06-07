@@ -25,7 +25,7 @@ def generate_and_validate(integrations: dict[str, Integration], config: Config) 
 def validate(integrations: dict[str, Integration], config: Config) -> None:
     """Validate application_credentials data."""
     application_credentials_path = (
-        config.root / "homeassistant/generated/application_credentials.py"
+        config.root / "menuai/generated/application_credentials.py"
     )
     config.cache["application_credentials"] = content = generate_and_validate(
         integrations, config
@@ -37,7 +37,7 @@ def validate(integrations: dict[str, Integration], config: Config) -> None:
     if application_credentials_path.read_text(encoding="utf-8") != content:
         config.add_error(
             "application_credentials",
-            "File application_credentials.py is not up to date. Run python3 -m script.hassfest",
+            "File application_credentials.py is not up to date. Run python3 -m script.menuaifest",
             fixable=True,
         )
 
@@ -45,7 +45,7 @@ def validate(integrations: dict[str, Integration], config: Config) -> None:
 def generate(integrations: dict[str, Integration], config: Config) -> None:
     """Generate application_credentials data."""
     application_credentials_path = (
-        config.root / "homeassistant/generated/application_credentials.py"
+        config.root / "menuai/generated/application_credentials.py"
     )
     application_credentials_path.write_text(
         f"{config.cache['application_credentials']}", encoding="utf-8"

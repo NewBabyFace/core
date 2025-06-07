@@ -6,17 +6,17 @@ import logging
 
 from anthemav.protocol import AVR
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     MediaPlayerDeviceClass,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
 )
-from homeassistant.const import CONF_MAC, CONF_MODEL
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import CONF_MAC, CONF_MODEL
+from menuai.core import menuai, callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import AnthemavConfigEntry
 from .const import ANTHEMAV_UPDATE_SIGNAL, DOMAIN, MANUFACTURER
@@ -26,7 +26,7 @@ VOLUME_STEP = 0.01
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: AnthemavConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -98,11 +98,11 @@ class AnthemAVR(MediaPlayerEntity):
             )
         self.set_states()
 
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """When entity is added to menuai."""
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"{ANTHEMAV_UPDATE_SIGNAL}_{self._entry_id}",
                 self.update_states,
             )

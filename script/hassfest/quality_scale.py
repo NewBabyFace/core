@@ -7,9 +7,9 @@ from dataclasses import dataclass
 import voluptuous as vol
 from voluptuous.humanize import humanize_error
 
-from homeassistant.const import Platform
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.util.yaml import load_yaml_dict
+from menuai.const import Platform
+from menuai.exceptions import menuaiError
+from menuai.util.yaml import load_yaml_dict
 
 from .model import Config, Integration, ScaledQualityScaleTiers
 from .quality_scale_validation import (
@@ -465,7 +465,7 @@ INTEGRATIONS_WITHOUT_QUALITY_SCALE_FILE = [
     "guardian",
     "harman_kardon_avr",
     "harmony",
-    "hassio",
+    "menuaiio",
     "haveibeenpwned",
     "hddtemp",
     "hdmi_cec",
@@ -842,7 +842,7 @@ INTEGRATIONS_WITHOUT_QUALITY_SCALE_FILE = [
     "rest_command",
     "rflink",
     "rfxtrx",
-    "rhasspy",
+    "rmenuaipy",
     "ridwell",
     "ring",
     "ripple",
@@ -1514,7 +1514,7 @@ INTEGRATIONS_WITHOUT_SCALE = [
     "guardian",
     "harman_kardon_avr",
     "harmony",
-    "hassio",
+    "menuaiio",
     "haveibeenpwned",
     "hddtemp",
     "hdmi_cec",
@@ -1905,7 +1905,7 @@ INTEGRATIONS_WITHOUT_SCALE = [
     "rest_command",
     "rflink",
     "rfxtrx",
-    "rhasspy",
+    "rmenuaipy",
     "ridwell",
     "ring",
     "ripple",
@@ -2246,12 +2246,12 @@ NO_QUALITY_SCALE = [
     "hardkernel",
     "hardware",
     "history",
-    "homeassistant",
-    "homeassistant_alerts",
-    "homeassistant_green",
-    "homeassistant_hardware",
-    "homeassistant_sky_connect",
-    "homeassistant_yellow",
+    "menuai",
+    "menuai_alerts",
+    "menuai_green",
+    "menuai_hardware",
+    "menuai_sky_connect",
+    "menuai_yellow",
     "image_upload",
     "input_boolean",
     "input_button",
@@ -2355,7 +2355,7 @@ def validate_iqs_file(config: Config, integration: Integration) -> None:
         integration.add_error(
             "quality_scale",
             "Quality scale file found! Please remove from `INTEGRATIONS_WITHOUT_QUALITY_SCALE_FILE`"
-            " in script/hassfest/quality_scale.py",
+            " in script/menuaifest/quality_scale.py",
         )
         return
     if (
@@ -2365,7 +2365,7 @@ def validate_iqs_file(config: Config, integration: Integration) -> None:
         integration.add_error(
             "quality_scale",
             "This integration is graded and should be removed from `INTEGRATIONS_WITHOUT_SCALE`"
-            " in script/hassfest/quality_scale.py",
+            " in script/menuaifest/quality_scale.py",
         )
         return
     if (
@@ -2381,7 +2381,7 @@ def validate_iqs_file(config: Config, integration: Integration) -> None:
 
     try:
         data = load_yaml_dict(name)
-    except HomeAssistantError:
+    except menuaiError:
         integration.add_error("quality_scale", "Invalid quality_scale.yaml")
         return
 

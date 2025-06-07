@@ -8,15 +8,15 @@ import logging
 from clearpasspy import ClearPass
 import voluptuous as vol
 
-from homeassistant.components.device_tracker import (
+from menuai.components.device_tracker import (
     DOMAIN as DEVICE_TRACKER_DOMAIN,
     PLATFORM_SCHEMA as DEVICE_TRACKER_PLATFORM_SCHEMA,
     DeviceScanner,
 )
-from homeassistant.const import CONF_API_KEY, CONF_CLIENT_ID, CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import CONF_API_KEY, CONF_CLIENT_ID, CONF_HOST
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType
 
 SCAN_INTERVAL = timedelta(seconds=120)
 
@@ -33,7 +33,7 @@ PLATFORM_SCHEMA = DEVICE_TRACKER_PLATFORM_SCHEMA.extend(
 _LOGGER = logging.getLogger(__name__)
 
 
-def get_scanner(hass: HomeAssistant, config: ConfigType) -> CPPMDeviceScanner | None:
+def get_scanner(menuai: menuai, config: ConfigType) -> CPPMDeviceScanner | None:
     """Initialize Scanner."""
 
     config = config[DEVICE_TRACKER_DOMAIN]

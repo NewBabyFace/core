@@ -14,10 +14,10 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components import recorder
-from homeassistant.components.recorder import get_instance
-from homeassistant.components.recorder.util import session_scope
-from homeassistant.util import dt as dt_util
+from menuai.components import recorder
+from menuai.components.recorder import get_instance
+from menuai.components.recorder.util import session_scope
+from menuai.util import dt as dt_util
 
 from .common import (
     CREATE_ENGINE_TARGET,
@@ -180,12 +180,12 @@ async def test_delete_duplicates(
             ),
         ),
     ):
-        async with async_test_home_assistant() as hass, async_test_recorder(hass):
-            get_instance(hass).recorder_and_worker_thread_ids.add(threading.get_ident())
-            await async_wait_recording_done(hass)
-            await async_wait_recording_done(hass)
+        async with async_test_home_assistant() as menuai, async_test_recorder(menuai):
+            get_instance(menuai).recorder_and_worker_thread_ids.add(threading.get_ident())
+            await async_wait_recording_done(menuai)
+            await async_wait_recording_done(menuai)
 
-            with session_scope(hass=hass) as session:
+            with session_scope(menuai=menuai) as session:
                 session.add(
                     recorder.db_schema.StatisticsMeta.from_meta(
                         external_energy_metadata_1
@@ -199,7 +199,7 @@ async def test_delete_duplicates(
                 session.add(
                     recorder.db_schema.StatisticsMeta.from_meta(external_co2_metadata)
                 )
-            with session_scope(hass=hass) as session:
+            with session_scope(menuai=menuai) as session:
                 for stat in external_energy_statistics_1:
                     session.add(recorder.db_schema.Statistics.from_stats(1, stat))
                 for stat in external_energy_statistics_2:
@@ -207,14 +207,14 @@ async def test_delete_duplicates(
                 for stat in external_co2_statistics:
                     session.add(recorder.db_schema.Statistics.from_stats(3, stat))
 
-            await hass.async_stop()
+            await menuai.async_stop()
 
     # Test that the duplicates are removed during migration from schema 23
-    async with async_test_home_assistant() as hass, async_test_recorder(hass):
-        await hass.async_start()
-        await async_wait_recording_done(hass)
-        await async_wait_recording_done(hass)
-        await hass.async_stop()
+    async with async_test_home_assistant() as menuai, async_test_recorder(menuai):
+        await menuai.async_start()
+        await async_wait_recording_done(menuai)
+        await async_wait_recording_done(menuai)
+        await menuai.async_stop()
 
     assert "Deleted 2 duplicated statistics rows" in caplog.text
     assert "Found non identical" not in caplog.text
@@ -368,12 +368,12 @@ async def test_delete_duplicates_many(
             ),
         ),
     ):
-        async with async_test_home_assistant() as hass, async_test_recorder(hass):
-            get_instance(hass).recorder_and_worker_thread_ids.add(threading.get_ident())
-            await async_wait_recording_done(hass)
-            await async_wait_recording_done(hass)
+        async with async_test_home_assistant() as menuai, async_test_recorder(menuai):
+            get_instance(menuai).recorder_and_worker_thread_ids.add(threading.get_ident())
+            await async_wait_recording_done(menuai)
+            await async_wait_recording_done(menuai)
 
-            with session_scope(hass=hass) as session:
+            with session_scope(menuai=menuai) as session:
                 session.add(
                     recorder.db_schema.StatisticsMeta.from_meta(
                         external_energy_metadata_1
@@ -387,7 +387,7 @@ async def test_delete_duplicates_many(
                 session.add(
                     recorder.db_schema.StatisticsMeta.from_meta(external_co2_metadata)
                 )
-            with session_scope(hass=hass) as session:
+            with session_scope(menuai=menuai) as session:
                 for stat in external_energy_statistics_1:
                     session.add(recorder.db_schema.Statistics.from_stats(1, stat))
                 for _ in range(3000):
@@ -401,14 +401,14 @@ async def test_delete_duplicates_many(
                 for stat in external_co2_statistics:
                     session.add(recorder.db_schema.Statistics.from_stats(3, stat))
 
-            await hass.async_stop()
+            await menuai.async_stop()
 
     # Test that the duplicates are removed during migration from schema 23
-    async with async_test_home_assistant() as hass, async_test_recorder(hass):
-        await hass.async_start()
-        await async_wait_recording_done(hass)
-        await async_wait_recording_done(hass)
-        await hass.async_stop()
+    async with async_test_home_assistant() as menuai, async_test_recorder(menuai):
+        await menuai.async_start()
+        await async_wait_recording_done(menuai)
+        await async_wait_recording_done(menuai)
+        await menuai.async_stop()
 
     assert "Deleted 3002 duplicated statistics rows" in caplog.text
     assert "Found non identical" not in caplog.text
@@ -534,12 +534,12 @@ async def test_delete_duplicates_non_identical(
             ),
         ),
     ):
-        async with async_test_home_assistant() as hass, async_test_recorder(hass):
-            get_instance(hass).recorder_and_worker_thread_ids.add(threading.get_ident())
-            await async_wait_recording_done(hass)
-            await async_wait_recording_done(hass)
+        async with async_test_home_assistant() as menuai, async_test_recorder(menuai):
+            get_instance(menuai).recorder_and_worker_thread_ids.add(threading.get_ident())
+            await async_wait_recording_done(menuai)
+            await async_wait_recording_done(menuai)
 
-            with session_scope(hass=hass) as session:
+            with session_scope(menuai=menuai) as session:
                 session.add(
                     recorder.db_schema.StatisticsMeta.from_meta(
                         external_energy_metadata_1
@@ -550,23 +550,23 @@ async def test_delete_duplicates_non_identical(
                         external_energy_metadata_2
                     )
                 )
-            with session_scope(hass=hass) as session:
+            with session_scope(menuai=menuai) as session:
                 for stat in external_energy_statistics_1:
                     session.add(recorder.db_schema.Statistics.from_stats(1, stat))
                 for stat in external_energy_statistics_2:
                     session.add(recorder.db_schema.Statistics.from_stats(2, stat))
 
-            await hass.async_stop()
+            await menuai.async_stop()
 
     # Test that the duplicates are removed during migration from schema 23
     async with (
-        async_test_home_assistant(config_dir=tmp_path) as hass,
-        async_test_recorder(hass),
+        async_test_home_assistant(config_dir=tmp_path) as menuai,
+        async_test_recorder(menuai),
     ):
-        await hass.async_start()
-        await async_wait_recording_done(hass)
-        await async_wait_recording_done(hass)
-        await hass.async_stop()
+        await menuai.async_start()
+        await async_wait_recording_done(menuai)
+        await async_wait_recording_done(menuai)
+        await menuai.async_stop()
 
     assert "Deleted 2 duplicated statistics rows" in caplog.text
     assert "Deleted 1 non identical" in caplog.text
@@ -576,10 +576,10 @@ async def test_delete_duplicates_non_identical(
     backup_file_name = f".storage/deleted_statistics.{isotime}.json"
 
     def read_backup():
-        with open(hass.config.path(backup_file_name), encoding="utf8") as backup_file:
+        with open(menuai.config.path(backup_file_name), encoding="utf8") as backup_file:
             return json.load(backup_file)
 
-    backup = await hass.async_add_executor_job(read_backup)
+    backup = await menuai.async_add_executor_job(read_backup)
 
     assert backup == [
         {
@@ -660,18 +660,18 @@ async def test_delete_duplicates_short_term(
             ),
         ),
     ):
-        async with async_test_home_assistant() as hass, async_test_recorder(hass):
-            get_instance(hass).recorder_and_worker_thread_ids.add(threading.get_ident())
-            await async_wait_recording_done(hass)
-            await async_wait_recording_done(hass)
+        async with async_test_home_assistant() as menuai, async_test_recorder(menuai):
+            get_instance(menuai).recorder_and_worker_thread_ids.add(threading.get_ident())
+            await async_wait_recording_done(menuai)
+            await async_wait_recording_done(menuai)
 
-            with session_scope(hass=hass) as session:
+            with session_scope(menuai=menuai) as session:
                 session.add(
                     recorder.db_schema.StatisticsMeta.from_meta(
                         external_energy_metadata_1
                     )
                 )
-            with session_scope(hass=hass) as session:
+            with session_scope(menuai=menuai) as session:
                 session.add(
                     recorder.db_schema.StatisticsShortTerm.from_stats(1, statistic_row)
                 )
@@ -679,17 +679,17 @@ async def test_delete_duplicates_short_term(
                     recorder.db_schema.StatisticsShortTerm.from_stats(1, statistic_row)
                 )
 
-            await hass.async_stop()
+            await menuai.async_stop()
 
     # Test that the duplicates are removed during migration from schema 23
     async with (
-        async_test_home_assistant(config_dir=tmp_path) as hass,
-        async_test_recorder(hass),
+        async_test_home_assistant(config_dir=tmp_path) as menuai,
+        async_test_recorder(menuai),
     ):
-        await hass.async_start()
-        await async_wait_recording_done(hass)
-        await async_wait_recording_done(hass)
-        await hass.async_stop()
+        await menuai.async_start()
+        await async_wait_recording_done(menuai)
+        await async_wait_recording_done(menuai)
+        await menuai.async_stop()
 
     assert "duplicated statistics rows" not in caplog.text
     assert "Found non identical" not in caplog.text

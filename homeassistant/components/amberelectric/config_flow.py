@@ -7,9 +7,9 @@ from amberelectric.models.site import Site
 from amberelectric.models.site_status import SiteStatus
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_API_TOKEN
-from homeassistant.helpers.selector import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_API_TOKEN
+from menuai.helpers.selector import (
     SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
@@ -87,7 +87,7 @@ class AmberElectricConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             token = user_input[CONF_API_TOKEN]
-            self._sites = await self.hass.async_add_executor_job(
+            self._sites = await self.menuai.async_add_executor_job(
                 self._fetch_sites, token
             )
 

@@ -3,11 +3,11 @@
 from dynalite_panel import get_build_id, locate_dir
 import voluptuous as vol
 
-from homeassistant.components import panel_custom, websocket_api
-from homeassistant.components.cover import DEVICE_CLASSES
-from homeassistant.components.http import StaticPathConfig
-from homeassistant.const import CONF_DEFAULT, CONF_HOST, CONF_NAME, CONF_PORT
-from homeassistant.core import HomeAssistant, callback
+from menuai.components import panel_custom, websocket_api
+from menuai.components.cover import DEVICE_CLASSES
+from menuai.components.http import StaticPathConfig
+from menuai.const import CONF_DEFAULT, CONF_HOST, CONF_NAME, CONF_PORT
+from menuai.core import menuai, callback
 
 from .const import (
     CONF_ACTIVE,
@@ -45,10 +45,10 @@ RELEVANT_CONFS = [
 @websocket_api.require_admin
 @callback
 def get_dynalite_config(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict
 ) -> None:
     """Retrieve the Dynalite config for the frontend."""
-    entries = hass.config_entries.async_entries(DOMAIN)
+    entries = menuai.config_entries.async_entries(DOMAIN)
     relevant_config = {
         entry.entry_id: {
             conf: entry.data[conf] for conf in RELEVANT_CONFS if conf in entry.data
@@ -75,11 +75,11 @@ def get_dynalite_config(
 @websocket_api.require_admin
 @callback
 def save_dynalite_config(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict
 ) -> None:
     """Retrieve the Dynalite config for the frontend."""
     entry_id = msg["entry_id"]
-    entry = hass.config_entries.async_get_entry(entry_id)
+    entry = menuai.config_entries.async_get_entry(entry_id)
     if not entry:
         LOGGER.error(
             "Dynalite - received updated config for invalid entry - %s", entry_id
@@ -91,22 +91,22 @@ def save_dynalite_config(
         conf: message_conf[conf] for conf in RELEVANT_CONFS if conf in message_conf
     }
     LOGGER.debug("Updating Dynalite config entry")
-    hass.config_entries.async_update_entry(entry, data=message_data)
+    menuai.config_entries.async_update_entry(entry, data=message_data)
     connection.send_result(msg["id"], {})
 
 
-async def async_register_dynalite_frontend(hass: HomeAssistant):
+async def async_register_dynalite_frontend(menuai: menuai):
     """Register the Dynalite frontend configuration panel."""
-    websocket_api.async_register_command(hass, get_dynalite_config)
-    websocket_api.async_register_command(hass, save_dynalite_config)
+    websocket_api.async_register_command(menuai, get_dynalite_config)
+    websocket_api.async_register_command(menuai, save_dynalite_config)
     path = locate_dir()
     build_id = get_build_id()
-    await hass.http.async_register_static_paths(
+    await menuai.http.async_register_static_paths(
         [StaticPathConfig(URL_BASE, path, cache_headers=(build_id != "dev"))]
     )
 
     await panel_custom.async_register_panel(
-        hass=hass,
+        menuai=menuai,
         frontend_url_path=DOMAIN,
         config_panel_domain=DOMAIN,
         webcomponent_name="dynalite-panel",

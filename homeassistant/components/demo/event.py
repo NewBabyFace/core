@@ -2,17 +2,17 @@
 
 from __future__ import annotations
 
-from homeassistant.components.event import EventDeviceClass, EventEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.event import EventDeviceClass, EventEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import Event, menuai, callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import DOMAIN
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -37,9 +37,9 @@ class DemoEvent(EventEntity):
             identifiers={(DOMAIN, "push")},
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
-        self.hass.bus.async_listen("demo_button_pressed", self._async_handle_event)
+        self.menuai.bus.async_listen("demo_button_pressed", self._async_handle_event)
 
     @callback
     def _async_handle_event(self, _: Event) -> None:

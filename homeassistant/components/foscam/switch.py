@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchEntity
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import LOGGER
 from .coordinator import FoscamConfigEntry, FoscamCoordinator
@@ -15,7 +15,7 @@ from .entity import FoscamEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: FoscamConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -55,12 +55,12 @@ class FoscamSleepSwitch(FoscamEntity, SwitchEntity):
         """Wake camera."""
         LOGGER.debug("Wake camera")
 
-        ret, _ = await self.hass.async_add_executor_job(
+        ret, _ = await self.menuai.async_add_executor_job(
             self.coordinator.session.wake_up
         )
 
         if ret != 0:
-            raise HomeAssistantError(f"Error waking up: {ret}")
+            raise menuaiError(f"Error waking up: {ret}")
 
         await self.coordinator.async_request_refresh()
 
@@ -68,10 +68,10 @@ class FoscamSleepSwitch(FoscamEntity, SwitchEntity):
         """But camera is sleep."""
         LOGGER.debug("Sleep camera")
 
-        ret, _ = await self.hass.async_add_executor_job(self.coordinator.session.sleep)
+        ret, _ = await self.menuai.async_add_executor_job(self.coordinator.session.sleep)
 
         if ret != 0:
-            raise HomeAssistantError(f"Error sleeping: {ret}")
+            raise menuaiError(f"Error sleeping: {ret}")
 
         await self.coordinator.async_request_refresh()
 

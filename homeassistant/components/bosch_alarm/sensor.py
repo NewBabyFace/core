@@ -9,9 +9,9 @@ from bosch_alarm_mode2 import Panel
 from bosch_alarm_mode2.const import ALARM_MEMORY_PRIORITIES
 from bosch_alarm_mode2.panel import Area
 
-from homeassistant.components.sensor import SensorEntity, SensorEntityDescription
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.sensor import SensorEntity, SensorEntityDescription
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import BoschAlarmConfigEntry
 from .entity import BoschAlarmAreaEntity
@@ -73,7 +73,7 @@ SENSOR_TYPES: list[BoschAlarmSensorEntityDescription] = [
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: BoschAlarmConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

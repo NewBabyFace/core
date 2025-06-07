@@ -16,24 +16,24 @@ from pyhomeworks.pyhomeworks import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     CONF_HOST,
     CONF_ID,
     CONF_NAME,
     CONF_PASSWORD,
     CONF_PORT,
     CONF_USERNAME,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     Platform,
 )
-from homeassistant.core import Event, HomeAssistant, ServiceCall, callback
-from homeassistant.exceptions import ConfigEntryNotReady, ServiceValidationError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.debounce import Debouncer
-from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util import slugify
+from menuai.core import Event, menuai, ServiceCall, callback
+from menuai.exceptions import ConfigEntryNotReady, ServiceValidationError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.debounce import Debouncer
+from menuai.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
+from menuai.helpers.typing import ConfigType
+from menuai.util import slugify
 
 from .const import CONF_ADDR, CONF_CONTROLLER_ID, CONF_KEYPADS, DOMAIN
 
@@ -70,10 +70,10 @@ class HomeworksData:
 
 
 @callback
-def async_setup_services(hass: HomeAssistant) -> None:
+def async_setup_services(menuai: menuai) -> None:
     """Set up services for Lutron Homeworks Series 4 and 8 integration."""
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         "send_command",
         async_send_command,
@@ -88,13 +88,13 @@ async def async_send_command(service_call: ServiceCall) -> None:
         """Get homeworks data for the specified controller ID."""
         return [
             entry.runtime_data.controller_id
-            for entry in service_call.hass.config_entries.async_loaded_entries(DOMAIN)
+            for entry in service_call.menuai.config_entries.async_loaded_entries(DOMAIN)
         ]
 
     def get_homeworks_data(controller_id: str) -> HomeworksData | None:
         """Get homeworks data for the specified controller ID."""
         entry: HomeworksConfigEntry
-        for entry in service_call.hass.config_entries.async_loaded_entries(DOMAIN):
+        for entry in service_call.menuai.config_entries.async_loaded_entries(DOMAIN):
             if entry.runtime_data.controller_id == controller_id:
                 return entry.runtime_data
         return None
@@ -119,20 +119,20 @@ async def async_send_command(service_call: ServiceCall) -> None:
             await asyncio.sleep(delay / 1000)
         else:
             _LOGGER.debug("Sending command '%s'", command)
-            await service_call.hass.async_add_executor_job(
+            await service_call.menuai.async_add_executor_job(
                 homeworks_data.controller._send,  # noqa: SLF001
                 command,
             )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Start Homeworks controller."""
-    async_setup_services(hass)
+    async_setup_services(menuai)
 
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: HomeworksConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: HomeworksConfigEntry) -> bool:
     """Set up Homeworks from a config entry."""
 
     controller_id = entry.options[CONF_CONTROLLER_ID]
@@ -145,7 +145,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HomeworksConfigEntry) ->
             return
         addr = values[0]
         signal = f"homeworks_entity_{controller_id}_{addr}"
-        dispatcher_send(hass, signal, msg_type, values)
+        dispatcher_send(menuai, signal, msg_type, values)
 
     config = entry.options
     controller = Homeworks(
@@ -156,7 +156,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HomeworksConfigEntry) ->
         entry.data.get(CONF_PASSWORD),
     )
     try:
-        await hass.async_add_executor_job(controller.connect)
+        await menuai.async_add_executor_job(controller.connect)
     except hw_exceptions.HomeworksException as err:
         _LOGGER.debug("Failed to connect: %s", err, exc_info=True)
         raise ConfigEntryNotReady from err
@@ -165,48 +165,48 @@ async def async_setup_entry(hass: HomeAssistant, entry: HomeworksConfigEntry) ->
     def cleanup(event: Event) -> None:
         controller.stop()
 
-    entry.async_on_unload(hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, cleanup))
+    entry.async_on_unload(menuai.bus.async_listen_once(EVENT_menuai_STOP, cleanup))
 
     keypads: dict[str, HomeworksKeypad] = {}
     for key_config in config.get(CONF_KEYPADS, []):
         addr = key_config[CONF_ADDR]
         name = key_config[CONF_NAME]
-        keypads[addr] = HomeworksKeypad(hass, controller, controller_id, addr, name)
+        keypads[addr] = HomeworksKeypad(menuai, controller, controller_id, addr, name)
 
     entry.runtime_data = HomeworksData(controller, controller_id, keypads)
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(update_listener))
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: HomeworksConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: HomeworksConfigEntry) -> bool:
     """Unload a config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+    if unload_ok := await menuai.config_entries.async_unload_platforms(entry, PLATFORMS):
         for keypad in entry.runtime_data.keypads.values():
             keypad.unsubscribe()
 
-        await hass.async_add_executor_job(entry.runtime_data.controller.stop)
+        await menuai.async_add_executor_job(entry.runtime_data.controller.stop)
 
     return unload_ok
 
 
-async def update_listener(hass: HomeAssistant, entry: HomeworksConfigEntry) -> None:
+async def update_listener(menuai: menuai, entry: HomeworksConfigEntry) -> None:
     """Handle options update."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)
 
 
 class HomeworksKeypad:
     """When you want signals instead of entities.
 
     Stateless sensors such as keypads are expected to generate an event
-    instead of a sensor entity in hass.
+    instead of a sensor entity in menuai.
     """
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         controller: Homeworks,
         controller_id: str,
         addr: str,
@@ -216,19 +216,19 @@ class HomeworksKeypad:
         self._addr = addr
         self._controller = controller
         self._debouncer = Debouncer(
-            hass,
+            menuai,
             _LOGGER,
             cooldown=KEYPAD_LEDSTATE_POLL_COOLDOWN,
             immediate=False,
             function=self._request_keypad_led_states,
         )
-        self._hass = hass
+        self._menuai = menuai
         self._name = name
         self._id = slugify(self._name)
         signal = f"homeworks_entity_{controller_id}_{self._addr}"
         _LOGGER.debug("connecting %s", signal)
         self.unsubscribe = async_dispatcher_connect(
-            self._hass, signal, self._update_callback
+            self._menuai, signal, self._update_callback
         )
 
     @callback
@@ -242,7 +242,7 @@ class HomeworksKeypad:
         else:
             return
         data = {CONF_ID: self._id, CONF_NAME: self._name, "button": values[1]}
-        self._hass.bus.async_fire(event, data)
+        self._menuai.bus.async_fire(event, data)
 
     def _request_keypad_led_states(self) -> None:
         """Query keypad led state."""

@@ -1,4 +1,4 @@
-"""Selectors for Home Assistant."""
+"""Selectors for MenuAI."""
 
 from __future__ import annotations
 
@@ -11,11 +11,11 @@ from uuid import UUID
 
 import voluptuous as vol
 
-from homeassistant.const import CONF_MODE, CONF_UNIT_OF_MEASUREMENT
-from homeassistant.core import split_entity_id, valid_entity_id
-from homeassistant.generated.countries import COUNTRIES
-from homeassistant.util import decorator
-from homeassistant.util.yaml import dumper
+from menuai.const import CONF_MODE, CONF_UNIT_OF_MEASUREMENT
+from menuai.core import split_entity_id, valid_entity_id
+from menuai.generated.countries import COUNTRIES
+from menuai.util import decorator
+from menuai.util.yaml import dumper
 
 from . import config_validation as cv
 
@@ -94,7 +94,7 @@ def _entity_feature_flag(domain: str, enum_name: str, feature_name: str) -> int:
     This will import a module from disk and is run from an executor when
     loading the services schema files.
     """
-    module = importlib.import_module(f"homeassistant.components.{domain}")
+    module = importlib.import_module(f"menuai.components.{domain}")
     enum = getattr(module, enum_name)
     feature = getattr(enum, feature_name)
     return cast(int, feature.value)

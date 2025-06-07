@@ -6,13 +6,13 @@ from typing import Protocol
 
 from pychromecast import Chromecast
 
-from homeassistant.components.media_player import BrowseMedia, MediaType
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.integration_platform import (
+from menuai.components.media_player import BrowseMedia, MediaType
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr
+from menuai.helpers.integration_platform import (
     async_process_integration_platforms,
 )
 
@@ -22,12 +22,12 @@ from .const import DOMAIN
 PLATFORMS = [Platform.MEDIA_PLAYER]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up Cast from a config entry."""
-    hass.data[DOMAIN] = {"cast_platform": {}, "unknown_models": {}}
-    await home_assistant_cast.async_setup_ha_cast(hass, entry)
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-    await async_process_integration_platforms(hass, DOMAIN, _register_cast_platform)
+    menuai.data[DOMAIN] = {"cast_platform": {}, "unknown_models": {}}
+    await home_assistant_cast.async_setup_ha_cast(menuai, entry)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await async_process_integration_platforms(menuai, DOMAIN, _register_cast_platform)
     return True
 
 
@@ -35,13 +35,13 @@ class CastProtocol(Protocol):
     """Define the format of cast platforms."""
 
     async def async_get_media_browser_root_object(
-        self, hass: HomeAssistant, cast_type: str
+        self, menuai: menuai, cast_type: str
     ) -> list[BrowseMedia]:
         """Create a list of root objects for media browsing."""
 
     async def async_browse_media(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         media_content_type: MediaType | str,
         media_content_id: str,
         cast_type: str,
@@ -54,7 +54,7 @@ class CastProtocol(Protocol):
 
     async def async_play_media(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         cast_entity_id: str,
         chromecast: Chromecast,
         media_type: MediaType | str,
@@ -68,7 +68,7 @@ class CastProtocol(Protocol):
 
 @callback
 def _register_cast_platform(
-    hass: HomeAssistant, integration_domain: str, platform: CastProtocol
+    menuai: menuai, integration_domain: str, platform: CastProtocol
 ):
     """Register a cast platform."""
     if (
@@ -76,20 +76,20 @@ def _register_cast_platform(
         or not hasattr(platform, "async_browse_media")
         or not hasattr(platform, "async_play_media")
     ):
-        raise HomeAssistantError(f"Invalid cast platform {platform}")
-    hass.data[DOMAIN]["cast_platform"][integration_domain] = platform
+        raise menuaiError(f"Invalid cast platform {platform}")
+    menuai.data[DOMAIN]["cast_platform"][integration_domain] = platform
 
 
-async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Remove Home Assistant Cast user."""
-    await home_assistant_cast.async_remove_user(hass, entry)
+async def async_remove_entry(menuai: menuai, entry: ConfigEntry) -> None:
+    """Remove MenuAI Cast user."""
+    await home_assistant_cast.async_remove_user(menuai, entry)
 
 
 async def async_remove_config_entry_device(
-    hass: HomeAssistant, config_entry: ConfigEntry, device_entry: dr.DeviceEntry
+    menuai: menuai, config_entry: ConfigEntry, device_entry: dr.DeviceEntry
 ) -> bool:
     """Remove cast config entry from a device.
 
-    The actual cleanup is done in CastMediaPlayerEntity.async_will_remove_from_hass.
+    The actual cleanup is done in CastMediaPlayerEntity.async_will_remove_from_menuai.
     """
     return True

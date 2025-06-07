@@ -25,26 +25,26 @@ from cryptography.hazmat.primitives.serialization import (
 from cryptography.x509 import load_der_x509_certificate, load_pem_x509_certificate
 import voluptuous as vol
 
-from homeassistant.components.binary_sensor import BinarySensorDeviceClass
-from homeassistant.components.button import ButtonDeviceClass
-from homeassistant.components.cover import CoverDeviceClass
-from homeassistant.components.file_upload import process_uploaded_file
-from homeassistant.components.hassio import AddonError, AddonManager, AddonState
-from homeassistant.components.light import (
+from menuai.components.binary_sensor import BinarySensorDeviceClass
+from menuai.components.button import ButtonDeviceClass
+from menuai.components.cover import CoverDeviceClass
+from menuai.components.file_upload import process_uploaded_file
+from menuai.components.menuaiio import AddonError, AddonManager, AddonState
+from menuai.components.light import (
     DEFAULT_MAX_KELVIN,
     DEFAULT_MIN_KELVIN,
     VALID_COLOR_MODES,
     valid_supported_color_modes,
 )
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     CONF_STATE_CLASS,
     DEVICE_CLASS_UNITS,
     STATE_CLASS_UNITS,
     SensorDeviceClass,
     SensorStateClass,
 )
-from homeassistant.components.switch import SwitchDeviceClass
-from homeassistant.config_entries import (
+from menuai.components.switch import SwitchDeviceClass
+from menuai.config_entries import (
     SOURCE_RECONFIGURE,
     ConfigEntry,
     ConfigFlow,
@@ -53,7 +53,7 @@ from homeassistant.config_entries import (
     OptionsFlow,
     SubentryFlowResult,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_CONFIGURATION_URL,
     ATTR_HW_VERSION,
     ATTR_MODEL,
@@ -85,12 +85,12 @@ from homeassistant.const import (
     STATE_OPEN,
     STATE_OPENING,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.data_entry_flow import AbortFlow, SectionConfig, section
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.hassio import is_hassio
-from homeassistant.helpers.json import json_dumps
-from homeassistant.helpers.selector import (
+from menuai.core import menuai, callback
+from menuai.data_entry_flow import AbortFlow, SectionConfig, section
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.menuaiio import is_menuaiio
+from menuai.helpers.json import json_dumps
+from menuai.helpers.selector import (
     BooleanSelector,
     FileSelector,
     FileSelectorConfig,
@@ -108,8 +108,8 @@ from homeassistant.helpers.selector import (
     TextSelectorConfig,
     TextSelectorType,
 )
-from homeassistant.helpers.service_info.hassio import HassioServiceInfo
-from homeassistant.util.json import JSON_DECODE_EXCEPTIONS, json_loads
+from menuai.helpers.service_info.menuaiio import menuaiioServiceInfo
+from menuai.util.json import JSON_DECODE_EXCEPTIONS, json_loads
 
 from .addon import get_addon_manager
 from .client import MqttClientSetup
@@ -2124,7 +2124,7 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
     VERSION = CONFIG_ENTRY_VERSION  # 1
     MINOR_VERSION = CONFIG_ENTRY_MINOR_VERSION  # 2
 
-    _hassio_discovery: dict[str, Any] | None = None
+    _menuaiio_discovery: dict[str, Any] | None = None
     _addon_manager: AddonManager
 
     def __init__(self) -> None:
@@ -2150,7 +2150,7 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def _async_install_addon(self) -> None:
         """Install the Mosquitto Mqtt broker add-on."""
-        addon_manager: AddonManager = get_addon_manager(self.hass)
+        addon_manager: AddonManager = get_addon_manager(self.menuai)
         await addon_manager.async_schedule_install_addon()
 
     async def async_step_install_failed(
@@ -2167,7 +2167,7 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Install Mosquitto Broker add-on."""
         if self.install_task is None:
-            self.install_task = self.hass.async_create_task(self._async_install_addon())
+            self.install_task = self.menuai.async_create_task(self._async_install_addon())
 
         if not self.install_task.done():
             return self.async_show_progress(
@@ -2200,7 +2200,7 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Start Mosquitto Broker add-on."""
         if not self.start_task:
-            self.start_task = self.hass.async_create_task(self._async_start_addon())
+            self.start_task = self.menuai.async_create_task(self._async_start_addon())
         if not self.start_task.done():
             return self.async_show_progress(
                 step_id="start_addon",
@@ -2219,9 +2219,9 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def _async_get_config_and_try(self) -> dict[str, Any] | None:
         """Get the MQTT add-on discovery info and try the connection."""
-        if self._hassio_discovery is not None:
-            return self._hassio_discovery
-        addon_manager: AddonManager = get_addon_manager(self.hass)
+        if self._menuaiio_discovery is not None:
+            return self._menuaiio_discovery
+        addon_manager: AddonManager = get_addon_manager(self.menuai)
         try:
             addon_discovery_config = (
                 await addon_manager.async_get_addon_discovery_info()
@@ -2236,17 +2236,17 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
         except AddonError:
             # We do not have discovery information yet
             return None
-        if await self.hass.async_add_executor_job(
+        if await self.menuai.async_add_executor_job(
             try_connection,
             config,
         ):
-            self._hassio_discovery = config
+            self._menuaiio_discovery = config
             return config
         return None
 
     async def _async_start_addon(self) -> None:
         """Start the Mosquitto Broker add-on."""
-        addon_manager: AddonManager = get_addon_manager(self.hass)
+        addon_manager: AddonManager = get_addon_manager(self.menuai)
         await addon_manager.async_schedule_start_addon()
 
         # Sleep some seconds to let the add-on start properly before connecting.
@@ -2266,9 +2266,9 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle a flow initialized by the user."""
-        if is_hassio(self.hass):
+        if is_menuaiio(self.menuai):
             # Offer to set up broker add-on if supervisor is available
-            self._addon_manager = get_addon_manager(self.hass)
+            self._addon_manager = get_addon_manager(self.menuai)
             return self.async_show_menu(
                 step_id="user",
                 menu_options=["addon", "broker"],
@@ -2321,9 +2321,9 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
         self, entry_data: Mapping[str, Any]
     ) -> ConfigFlowResult:
         """Handle re-authentication with MQTT broker."""
-        if is_hassio(self.hass):
+        if is_menuaiio(self.menuai):
             # Check if entry setup matches the add-on discovery config
-            addon_manager = get_addon_manager(self.hass)
+            addon_manager = get_addon_manager(self.menuai)
             try:
                 addon_discovery_config = (
                     await addon_manager.async_get_addon_discovery_info()
@@ -2365,7 +2365,7 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
                 reauth_entry.data.get(CONF_PASSWORD), user_input
             )
             new_entry_data = {**reauth_entry.data, **substituted_used_data}
-            if await self.hass.async_add_executor_job(
+            if await self.menuai.async_add_executor_job(
                 try_connection,
                 new_entry_data,
             ):
@@ -2410,7 +2410,7 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
                     reconfigure_entry.data.get(CONF_PASSWORD), validated_user_input
                 )
 
-            can_connect = await self.hass.async_add_executor_job(
+            can_connect = await self.menuai.async_add_executor_job(
                 try_connection,
                 validated_user_input,
             )
@@ -2438,28 +2438,28 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
         """Handle a reconfiguration flow initialized by the user."""
         return await self.async_step_broker()
 
-    async def async_step_hassio(
-        self, discovery_info: HassioServiceInfo
+    async def async_step_menuaiio(
+        self, discovery_info: menuaiioServiceInfo
     ) -> ConfigFlowResult:
-        """Receive a Hass.io discovery or process setup after addon install."""
+        """Receive a menuai.io discovery or process setup after addon install."""
         await self._async_handle_discovery_without_unique_id()
 
-        self._hassio_discovery = discovery_info.config
+        self._menuaiio_discovery = discovery_info.config
 
-        return await self.async_step_hassio_confirm()
+        return await self.async_step_menuaiio_confirm()
 
-    async def async_step_hassio_confirm(
+    async def async_step_menuaiio_confirm(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Confirm a Hass.io discovery."""
+        """Confirm a menuai.io discovery."""
         errors: dict[str, str] = {}
         if TYPE_CHECKING:
-            assert self._hassio_discovery
+            assert self._menuaiio_discovery
 
         if user_input is not None:
-            data: dict[str, Any] = self._hassio_discovery.copy()
+            data: dict[str, Any] = self._menuaiio_discovery.copy()
             data[CONF_BROKER] = data.pop(CONF_HOST)
-            can_connect = await self.hass.async_add_executor_job(
+            can_connect = await self.menuai.async_add_executor_job(
                 try_connection,
                 data,
             )
@@ -2479,8 +2479,8 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
             errors["base"] = "cannot_connect"
 
         return self.async_show_form(
-            step_id="hassio_confirm",
-            description_placeholders={"addon": self._hassio_discovery["addon"]},
+            step_id="menuaiio_confirm",
+            description_placeholders={"addon": self._menuaiio_discovery["addon"]},
             errors=errors,
         )
 
@@ -3054,7 +3054,7 @@ class MQTTSubentryFlowHandler(ConfigSubentryFlow):
         """Save the changes made to the subentry."""
         entry = self._get_entry()
         subentry = self._get_reconfigure_subentry()
-        entity_registry = er.async_get(self.hass)
+        entity_registry = er.async_get(self.menuai)
 
         # When a component is removed from the MQTT device,
         # And we save the changes to the subentry,
@@ -3143,14 +3143,14 @@ def async_convert_to_pem(
         return None
 
 
-async def _get_uploaded_file(hass: HomeAssistant, id: str) -> bytes:
+async def _get_uploaded_file(menuai: menuai, id: str) -> bytes:
     """Get file content from uploaded certificate or key file."""
 
     def _proces_uploaded_file() -> bytes:
-        with process_uploaded_file(hass, id) as file_path:
+        with process_uploaded_file(menuai, id) as file_path:
             return file_path.read_bytes()
 
-    return await hass.async_add_executor_job(_proces_uploaded_file)
+    return await menuai.async_add_executor_job(_proces_uploaded_file)
 
 
 def _validate_pki_file(
@@ -3177,7 +3177,7 @@ async def async_get_broker_settings(  # noqa: C901
     or when the advanced_broker_options checkbox was selected.
     Returns True when settings are collected successfully.
     """
-    hass = flow.hass
+    menuai = flow.menuai
     advanced_broker_options: bool = False
     user_input_basic: dict[str, Any] = {}
     current_config: dict[str, Any] = (
@@ -3222,7 +3222,7 @@ async def async_get_broker_settings(  # noqa: C901
             return False
         certificate_id: str | None = user_input.get(CONF_CERTIFICATE)
         if certificate_id:
-            certificate_data_raw = await _get_uploaded_file(hass, certificate_id)
+            certificate_data_raw = await _get_uploaded_file(menuai, certificate_id)
             certificate = async_convert_to_pem(
                 certificate_data_raw, PEMType.CERTIFICATE
             )
@@ -3252,7 +3252,7 @@ async def async_get_broker_settings(  # noqa: C901
 
         if client_certificate_id:
             client_certificate_data = await _get_uploaded_file(
-                hass, client_certificate_id
+                menuai, client_certificate_id
             )
             client_certificate = async_convert_to_pem(
                 client_certificate_data, PEMType.CERTIFICATE
@@ -3263,7 +3263,7 @@ async def async_get_broker_settings(  # noqa: C901
             return False
 
         if client_key_id:
-            client_key_data = await _get_uploaded_file(hass, client_key_id)
+            client_key_data = await _get_uploaded_file(menuai, client_key_id)
             client_key = async_convert_to_pem(
                 client_key_data, PEMType.PRIVATE_KEY, password=client_key_password
             )
@@ -3280,8 +3280,8 @@ async def async_get_broker_settings(  # noqa: C901
             certificate_data[CONF_CLIENT_KEY] = client_key
 
         validated_user_input.update(certificate_data)
-        await async_create_certificate_temp_files(hass, certificate_data)
-        if error := await hass.async_add_executor_job(
+        await async_create_certificate_temp_files(menuai, certificate_data)
+        if error := await menuai.async_add_executor_job(
             check_certicate_chain,
         ):
             errors["base"] = error

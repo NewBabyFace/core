@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from homeassistant.const import CONF_API_KEY, CONF_MODE, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.start import async_at_started
-from homeassistant.util import dt as dt_util
+from menuai.const import CONF_API_KEY, CONF_MODE, Platform
+from menuai.core import menuai
+from menuai.helpers.start import async_at_started
+from menuai.util import dt as dt_util
 
 from .const import (
     CONF_ARRIVAL_TIME,
@@ -29,7 +29,7 @@ from .model import HERETravelTimeConfig
 PLATFORMS = [Platform.SENSOR]
 
 
-async def async_setup_entry(hass: HomeAssistant, config_entry: HereConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, config_entry: HereConfigEntry) -> bool:
     """Set up HERE Travel Time from a config entry."""
     api_key = config_entry.data[CONF_API_KEY]
 
@@ -55,20 +55,20 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: HereConfigEntry) 
     else:
         cls = HERERoutingDataUpdateCoordinator
 
-    data_coordinator = cls(hass, config_entry, api_key, here_travel_time_config)
+    data_coordinator = cls(menuai, config_entry, api_key, here_travel_time_config)
     config_entry.runtime_data = data_coordinator
 
-    async def _async_update_at_start(_: HomeAssistant) -> None:
+    async def _async_update_at_start(_: menuai) -> None:
         await data_coordinator.async_refresh()
 
-    config_entry.async_on_unload(async_at_started(hass, _async_update_at_start))
-    await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
+    config_entry.async_on_unload(async_at_started(menuai, _async_update_at_start))
+    await menuai.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 
     return True
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, config_entry: HereConfigEntry
+    menuai: menuai, config_entry: HereConfigEntry
 ) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(config_entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(config_entry, PLATFORMS)

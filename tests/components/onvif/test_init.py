@@ -4,8 +4,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import MAC, setup_mock_device
 
@@ -13,12 +13,12 @@ from tests.common import MockConfigEntry
 
 
 @pytest.mark.asyncio
-async def test_migrate_camera_entities_unique_ids(hass: HomeAssistant) -> None:
+async def test_migrate_camera_entities_unique_ids(menuai: menuai) -> None:
     """Test that camera entities unique ids get migrated properly."""
     config_entry = MockConfigEntry(domain="onvif", unique_id=MAC)
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
 
     entity_with_only_mac = entity_registry.async_get_or_create(
         domain="camera",
@@ -61,7 +61,7 @@ async def test_migrate_camera_entities_unique_ids(hass: HomeAssistant) -> None:
         config_entry=config_entry,
     )
 
-    with patch("homeassistant.components.onvif.ONVIFDevice") as mock_device:
+    with patch("menuai.components.onvif.ONVIFDevice") as mock_device:
         setup_mock_device(
             mock_device,
             capabilities=None,
@@ -71,8 +71,8 @@ async def test_migrate_camera_entities_unique_ids(hass: HomeAssistant) -> None:
                 MagicMock(token="profile_token_2"),
             ],
         )
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     entity_with_only_mac = entity_registry.async_get(entity_with_only_mac.entity_id)
     entity_with_index = entity_registry.async_get(entity_with_index.entity_id)

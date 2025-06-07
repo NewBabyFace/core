@@ -6,14 +6,14 @@ from datetime import timedelta
 from typing import Any
 from unittest.mock import patch
 
-from homeassistant import setup
-from homeassistant.components import lifx
-from homeassistant.components.lifx import DOMAIN, discovery
-from homeassistant.const import CONF_HOST, EVENT_HOMEASSISTANT_STARTED
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai import setup
+from menuai.components import lifx
+from menuai.components.lifx import DOMAIN, discovery
+from menuai.const import CONF_HOST, EVENT_menuai_STARTED
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from . import (
     IP_ADDRESS,
@@ -30,7 +30,7 @@ from tests.common import MockConfigEntry, async_fire_time_changed
 
 
 async def test_migration_device_online_end_to_end(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
@@ -38,7 +38,7 @@ async def test_migration_device_online_end_to_end(
     config_entry = MockConfigEntry(
         domain=DOMAIN, title="LEGACY", data={}, unique_id=DOMAIN
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         identifiers={(DOMAIN, SERIAL)},
@@ -55,11 +55,11 @@ async def test_migration_device_online_end_to_end(
     )
 
     with _patch_discovery(), _patch_config_flow_try_connect(), _patch_device():
-        await setup.async_setup_component(hass, DOMAIN, {})
-        await hass.async_block_till_done()
+        await setup.async_setup_component(menuai, DOMAIN, {})
+        await menuai.async_block_till_done()
 
         migrated_entry = None
-        for entry in hass.config_entries.async_entries(DOMAIN):
+        for entry in menuai.config_entries.async_entries(DOMAIN):
             if entry.unique_id == DOMAIN:
                 migrated_entry = entry
                 break
@@ -70,13 +70,13 @@ async def test_migration_device_online_end_to_end(
         assert light_entity_reg.config_entry_id == migrated_entry.entry_id
         assert er.async_entries_for_config_entry(entity_registry, config_entry) == []
 
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-        await hass.async_block_till_done()
-        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=20))
-        await hass.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
+        await menuai.async_block_till_done()
+        async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(minutes=20))
+        await menuai.async_block_till_done()
 
         legacy_entry = None
-        for entry in hass.config_entries.async_entries(DOMAIN):
+        for entry in menuai.config_entries.async_entries(DOMAIN):
             if entry.unique_id == DOMAIN:
                 legacy_entry = entry
                 break
@@ -85,7 +85,7 @@ async def test_migration_device_online_end_to_end(
 
 
 async def test_discovery_is_more_frequent_during_migration(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
@@ -93,7 +93,7 @@ async def test_discovery_is_more_frequent_during_migration(
     config_entry = MockConfigEntry(
         domain=DOMAIN, title="LEGACY", data={}, unique_id=DOMAIN
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         identifiers={(DOMAIN, SERIAL)},
@@ -138,32 +138,32 @@ async def test_discovery_is_more_frequent_during_migration(
         _patch_config_flow_try_connect(device=bulb),
         patch.object(discovery, "DEFAULT_TIMEOUT", 0),
         patch(
-            "homeassistant.components.lifx.discovery.LifxDiscovery", MockLifxDiscovery
+            "menuai.components.lifx.discovery.LifxDiscovery", MockLifxDiscovery
         ),
     ):
-        await async_setup_component(hass, lifx.DOMAIN, {lifx.DOMAIN: {}})
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, lifx.DOMAIN, {lifx.DOMAIN: {}})
+        await menuai.async_block_till_done()
         assert start_calls == 0
 
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-        await hass.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
+        await menuai.async_block_till_done()
         assert start_calls == 1
 
-        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=5))
-        await hass.async_block_till_done(wait_background_tasks=True)
+        async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(minutes=5))
+        await menuai.async_block_till_done(wait_background_tasks=True)
         assert start_calls == 3
 
-        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=10))
-        await hass.async_block_till_done(wait_background_tasks=True)
+        async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(minutes=10))
+        await menuai.async_block_till_done(wait_background_tasks=True)
         assert start_calls == 4
 
-        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=15))
-        await hass.async_block_till_done(wait_background_tasks=True)
+        async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(minutes=15))
+        await menuai.async_block_till_done(wait_background_tasks=True)
         assert start_calls == 5
 
 
 async def test_migration_device_online_end_to_end_after_downgrade(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
@@ -171,12 +171,12 @@ async def test_migration_device_online_end_to_end_after_downgrade(
     config_entry = MockConfigEntry(
         domain=DOMAIN, title="LEGACY", data={}, unique_id=DOMAIN
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     already_migrated_config_entry = MockConfigEntry(
         domain=DOMAIN, data={CONF_HOST: IP_ADDRESS}, unique_id=SERIAL
     )
-    already_migrated_config_entry.add_to_hass(hass)
+    already_migrated_config_entry.add_to_menuai(menuai)
     device = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         identifiers={(DOMAIN, SERIAL)},
@@ -193,19 +193,19 @@ async def test_migration_device_online_end_to_end_after_downgrade(
     )
 
     with _patch_discovery(), _patch_config_flow_try_connect(), _patch_device():
-        await setup.async_setup_component(hass, DOMAIN, {})
-        await hass.async_block_till_done()
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-        await hass.async_block_till_done()
-        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=20))
-        await hass.async_block_till_done()
+        await setup.async_setup_component(menuai, DOMAIN, {})
+        await menuai.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
+        await menuai.async_block_till_done()
+        async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(minutes=20))
+        await menuai.async_block_till_done()
 
         assert device.config_entries == {config_entry.entry_id}
         assert light_entity_reg.config_entry_id == config_entry.entry_id
         assert er.async_entries_for_config_entry(entity_registry, config_entry) == []
 
         legacy_entry = None
-        for entry in hass.config_entries.async_entries(DOMAIN):
+        for entry in menuai.config_entries.async_entries(DOMAIN):
             if entry.unique_id == DOMAIN:
                 legacy_entry = entry
                 break
@@ -214,7 +214,7 @@ async def test_migration_device_online_end_to_end_after_downgrade(
 
 
 async def test_migration_device_online_end_to_end_ignores_other_devices(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
@@ -222,12 +222,12 @@ async def test_migration_device_online_end_to_end_ignores_other_devices(
     legacy_config_entry = MockConfigEntry(
         domain=DOMAIN, title="LEGACY", data={}, unique_id=DOMAIN
     )
-    legacy_config_entry.add_to_hass(hass)
+    legacy_config_entry.add_to_menuai(menuai)
 
     other_domain_config_entry = MockConfigEntry(
         domain="other_domain", data={}, unique_id="other_domain"
     )
-    other_domain_config_entry.add_to_hass(hass)
+    other_domain_config_entry.add_to_menuai(menuai)
     device = device_registry.async_get_or_create(
         config_entry_id=legacy_config_entry.entry_id,
         identifiers={(DOMAIN, SERIAL)},
@@ -265,16 +265,16 @@ async def test_migration_device_online_end_to_end_ignores_other_devices(
     )
 
     with _patch_discovery(), _patch_config_flow_try_connect(), _patch_device():
-        await setup.async_setup_component(hass, DOMAIN, {})
-        await hass.async_block_till_done()
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-        await hass.async_block_till_done()
-        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=20))
-        await hass.async_block_till_done()
+        await setup.async_setup_component(menuai, DOMAIN, {})
+        await menuai.async_block_till_done()
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
+        await menuai.async_block_till_done()
+        async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(minutes=20))
+        await menuai.async_block_till_done()
 
         new_entry = None
         legacy_entry = None
-        for entry in hass.config_entries.async_entries(DOMAIN):
+        for entry in menuai.config_entries.async_entries(DOMAIN):
             if entry.unique_id == DOMAIN:
                 legacy_entry = entry
             else:

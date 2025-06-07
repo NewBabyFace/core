@@ -6,8 +6,8 @@ from collections.abc import Generator
 from contextlib import contextmanager
 import contextvars
 
-from homeassistant.components.application_credentials import AuthorizationServer
-from homeassistant.core import HomeAssistant
+from menuai.components.application_credentials import AuthorizationServer
+from menuai.core import menuai
 
 CONF_ACTIVE_AUTHORIZATION_SERVER = "active_authorization_server"
 
@@ -28,7 +28,7 @@ def authorization_server_context(
         _mcp_context.reset(token)
 
 
-async def async_get_authorization_server(hass: HomeAssistant) -> AuthorizationServer:
+async def async_get_authorization_server(menuai: menuai) -> AuthorizationServer:
     """Return authorization server, for the default auth implementation."""
     if _mcp_context.get() is None:
         raise RuntimeError("No MCP authorization server set in context")

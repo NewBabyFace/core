@@ -11,17 +11,17 @@ from peblar import (
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.peblar.const import DOMAIN
-from homeassistant.components.select import (
+from menuai.components.peblar.const import DOMAIN
+from menuai.components.select import (
     ATTR_OPTION,
     DOMAIN as SELECT_DOMAIN,
     SERVICE_SELECT_OPTION,
 )
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.config_entries import SOURCE_REAUTH, ConfigEntryState
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from tests.common import MockConfigEntry, snapshot_platform
 
@@ -32,14 +32,14 @@ pytestmark = [
 
 
 async def test_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test the select entities."""
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)
 
     # Ensure all entities are correctly assigned to the Peblar EV charger
     device_entry = device_registry.async_get_device(
@@ -55,7 +55,7 @@ async def test_entities(
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_select_option(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_peblar: MagicMock,
 ) -> None:
     """Test the Peblar EV charger selects."""
@@ -64,7 +64,7 @@ async def test_select_option(
     mocked_method.reset_mock()
 
     # Test normal happy path for changing the select option
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SELECT_DOMAIN,
         SERVICE_SELECT_OPTION,
         {
@@ -103,7 +103,7 @@ async def test_select_option(
 )
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_select_option_communication_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_peblar: MagicMock,
     mock_config_entry: MockConfigEntry,
     error: Exception,
@@ -116,10 +116,10 @@ async def test_select_option_communication_error(
     mock_peblar.smart_charging.side_effect = error
 
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match=error_match,
     ) as excinfo:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SELECT_DOMAIN,
             SERVICE_SELECT_OPTION,
             {
@@ -135,7 +135,7 @@ async def test_select_option_communication_error(
 
 
 async def test_select_option_authentication_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_peblar: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
@@ -147,13 +147,13 @@ async def test_select_option_authentication_error(
     mock_peblar.login.side_effect = PeblarAuthenticationError("Authentication error")
 
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match=(
             r"An authentication failure occurred while communicating "
             r"with the Peblar EV charger"
         ),
     ) as excinfo:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SELECT_DOMAIN,
             SERVICE_SELECT_OPTION,
             {
@@ -169,10 +169,10 @@ async def test_select_option_authentication_error(
 
     # Ensure the device is reloaded on authentication error and triggers
     # a reauthentication flow.
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert mock_config_entry.state is ConfigEntryState.SETUP_ERROR
 
-    flows = hass.config_entries.flow.async_progress()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
 
     flow = flows[0]

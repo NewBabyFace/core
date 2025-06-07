@@ -8,15 +8,15 @@ from typing import Any, cast
 
 from opengarage import OpenGarage
 
-from homeassistant.components.button import (
+from menuai.components.button import (
     ButtonDeviceClass,
     ButtonEntity,
     ButtonEntityDescription,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import OpenGarageDataUpdateCoordinator
@@ -41,12 +41,12 @@ BUTTONS: tuple[OpenGarageButtonEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the OpenGarage button entities."""
-    coordinator: OpenGarageDataUpdateCoordinator = hass.data[DOMAIN][
+    coordinator: OpenGarageDataUpdateCoordinator = menuai.data[DOMAIN][
         config_entry.entry_id
     ]
 

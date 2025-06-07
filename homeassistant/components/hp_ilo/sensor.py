@@ -8,11 +8,11 @@ import logging
 import hpilo
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
     SensorEntity,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_MONITORED_VARIABLES,
     CONF_NAME,
@@ -23,11 +23,11 @@ from homeassistant.const import (
     CONF_USERNAME,
     CONF_VALUE_TEMPLATE,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import Throttle
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import Throttle
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -77,7 +77,7 @@ PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -101,7 +101,7 @@ def setup_platform(
     devices = []
     for monitored_variable in monitored_variables:
         new_device = HpIloSensor(
-            hass=hass,
+            menuai=menuai,
             hp_ilo_data=hp_ilo_data,
             sensor_name=f"{config[CONF_NAME]} {monitored_variable[CONF_NAME]}",
             sensor_type=monitored_variable[CONF_SENSOR_TYPE],
@@ -118,7 +118,7 @@ class HpIloSensor(SensorEntity):
 
     def __init__(
         self,
-        hass,
+        menuai,
         hp_ilo_data,
         sensor_type,
         sensor_name,
@@ -126,7 +126,7 @@ class HpIloSensor(SensorEntity):
         unit_of_measurement,
     ):
         """Initialize the HP iLO sensor."""
-        self._hass = hass
+        self._menuai = menuai
         self._name = sensor_name
         self._unit_of_measurement = unit_of_measurement
         self._ilo_function = SENSOR_TYPES[sensor_type][1]

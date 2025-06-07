@@ -12,13 +12,13 @@ from pyebox import EboxClient
 from pyebox.client import PyEboxError
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_MONITORED_VARIABLES,
     CONF_NAME,
     CONF_PASSWORD,
@@ -27,13 +27,13 @@ from homeassistant.const import (
     UnitOfInformation,
     UnitOfTime,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import PlatformNotReady
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util import Throttle
+from menuai.core import menuai
+from menuai.exceptions import PlatformNotReady
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util import Throttle
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -152,7 +152,7 @@ PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -161,7 +161,7 @@ async def async_setup_platform(
     username = config.get(CONF_USERNAME)
     password = config.get(CONF_PASSWORD)
 
-    httpsession = async_get_clientsession(hass)
+    httpsession = async_get_clientsession(menuai)
     ebox_data = EBoxData(username, password, httpsession)
 
     name = config.get(CONF_NAME)

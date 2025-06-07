@@ -5,10 +5,10 @@ from __future__ import annotations
 from dataclasses import asdict
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_MAC
-from homeassistant.core import HomeAssistant
+from menuai.components.diagnostics import async_redact_data
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_MAC
+from menuai.core import menuai
 
 from .const import DOMAIN
 from .coordinator import ModernFormsDataUpdateCoordinator
@@ -18,10 +18,10 @@ REDACT_DEVICE_INFO = {"mac_address", "owner"}
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: ConfigEntry
+    menuai: menuai, entry: ConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
-    coordinator: ModernFormsDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: ModernFormsDataUpdateCoordinator = menuai.data[DOMAIN][entry.entry_id]
     if TYPE_CHECKING:
         assert coordinator is not None
 

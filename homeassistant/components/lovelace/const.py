@@ -6,25 +6,25 @@ from typing import TYPE_CHECKING
 
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_ICON,
     CONF_MODE,
     CONF_TYPE,
     CONF_URL,
     EVENT_LOVELACE_UPDATED,  # noqa: F401
 )
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import VolDictType
-from homeassistant.util.hass_dict import HassKey
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import VolDictType
+from menuai.util.menuai_dict import menuaiKey
 
 if TYPE_CHECKING:
     from . import LovelaceData
 
 DOMAIN = "lovelace"
-LOVELACE_DATA: HassKey[LovelaceData] = HassKey(DOMAIN)
+LOVELACE_DATA: menuaiKey[LovelaceData] = menuaiKey(DOMAIN)
 
-DEFAULT_ICON = "hass:view-dashboard"
+DEFAULT_ICON = "menuai:view-dashboard"
 
 MODE_YAML = "yaml"
 MODE_STORAGE = "storage"
@@ -90,5 +90,5 @@ STORAGE_DASHBOARD_CREATE_FIELDS: VolDictType = {
 STORAGE_DASHBOARD_UPDATE_FIELDS = DASHBOARD_BASE_UPDATE_FIELDS
 
 
-class ConfigNotFound(HomeAssistantError):
+class ConfigNotFound(menuaiError):
     """When no config available."""

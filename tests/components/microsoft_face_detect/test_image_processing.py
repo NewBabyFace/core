@@ -4,11 +4,11 @@ from unittest.mock import PropertyMock, patch
 
 import pytest
 
-from homeassistant.components.image_processing import DOMAIN as IP_DOMAIN
-from homeassistant.components.microsoft_face import DOMAIN as MF_DOMAIN, FACE_API_URL
-from homeassistant.const import ATTR_ENTITY_PICTURE
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.setup import async_setup_component
+from menuai.components.image_processing import DOMAIN as IP_DOMAIN
+from menuai.components.microsoft_face import DOMAIN as MF_DOMAIN, FACE_API_URL
+from menuai.const import ATTR_ENTITY_PICTURE
+from menuai.core import menuai, callback
+from menuai.setup import async_setup_component
 
 from tests.common import assert_setup_component, async_load_fixture
 from tests.components.image_processing import common
@@ -28,16 +28,16 @@ ENDPOINT_URL = f"https://westus.{FACE_API_URL}"
 
 
 @pytest.fixture(autouse=True)
-async def setup_homeassistant(hass: HomeAssistant):
-    """Set up the homeassistant integration."""
-    await async_setup_component(hass, "homeassistant", {})
+async def setup_menuai(menuai: menuai):
+    """Set up the menuai integration."""
+    await async_setup_component(menuai, "menuai", {})
 
 
 @pytest.fixture
 def store_mock():
     """Mock update store."""
     with patch(
-        "homeassistant.components.microsoft_face.MicrosoftFace.update_store",
+        "menuai.components.microsoft_face.MicrosoftFace.update_store",
         return_value=None,
     ) as mock_update_store:
         yield mock_update_store
@@ -47,14 +47,14 @@ def store_mock():
 def poll_mock():
     """Disable polling."""
     with patch(
-        "homeassistant.components.microsoft_face_detect.image_processing."
+        "menuai.components.microsoft_face_detect.image_processing."
         "MicrosoftFaceDetectEntity.should_poll",
         new_callable=PropertyMock(return_value=False),
     ):
         yield
 
 
-async def test_setup_platform(hass: HomeAssistant, store_mock) -> None:
+async def test_setup_platform(menuai: menuai, store_mock) -> None:
     """Set up platform with one entity."""
     config = {
         IP_DOMAIN: {
@@ -67,13 +67,13 @@ async def test_setup_platform(hass: HomeAssistant, store_mock) -> None:
     }
 
     with assert_setup_component(1, IP_DOMAIN):
-        await async_setup_component(hass, IP_DOMAIN, config)
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, IP_DOMAIN, config)
+        await menuai.async_block_till_done()
 
-    assert hass.states.get("image_processing.microsoftface_demo_camera")
+    assert menuai.states.get("image_processing.microsoftface_demo_camera")
 
 
-async def test_setup_platform_name(hass: HomeAssistant, store_mock) -> None:
+async def test_setup_platform_name(menuai: menuai, store_mock) -> None:
     """Set up platform with one entity and set name."""
     config = {
         IP_DOMAIN: {
@@ -85,36 +85,36 @@ async def test_setup_platform_name(hass: HomeAssistant, store_mock) -> None:
     }
 
     with assert_setup_component(1, IP_DOMAIN):
-        await async_setup_component(hass, IP_DOMAIN, config)
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, IP_DOMAIN, config)
+        await menuai.async_block_till_done()
 
-    assert hass.states.get("image_processing.test_local")
+    assert menuai.states.get("image_processing.test_local")
 
 
 async def test_ms_detect_process_image(
-    hass: HomeAssistant, poll_mock, aioclient_mock: AiohttpClientMocker
+    menuai: menuai, poll_mock, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Set up and scan a picture and test plates from event."""
     aioclient_mock.get(
         ENDPOINT_URL.format("persongroups"),
         text=await async_load_fixture(
-            hass, "persongroups.json", "microsoft_face_detect"
+            menuai, "persongroups.json", "microsoft_face_detect"
         ),
     )
     aioclient_mock.get(
         ENDPOINT_URL.format("persongroups/test_group1/persons"),
-        text=await async_load_fixture(hass, "persons.json", "microsoft_face_detect"),
+        text=await async_load_fixture(menuai, "persons.json", "microsoft_face_detect"),
     )
     aioclient_mock.get(
         ENDPOINT_URL.format("persongroups/test_group2/persons"),
-        text=await async_load_fixture(hass, "persons.json", "microsoft_face_detect"),
+        text=await async_load_fixture(menuai, "persons.json", "microsoft_face_detect"),
     )
 
-    await async_setup_component(hass, IP_DOMAIN, CONFIG)
-    await hass.async_block_till_done()
+    await async_setup_component(menuai, IP_DOMAIN, CONFIG)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("camera.demo_camera")
-    url = f"{hass.config.internal_url}{state.attributes.get(ATTR_ENTITY_PICTURE)}"
+    state = menuai.states.get("camera.demo_camera")
+    url = f"{menuai.config.internal_url}{state.attributes.get(ATTR_ENTITY_PICTURE)}"
 
     face_events = []
 
@@ -123,20 +123,20 @@ async def test_ms_detect_process_image(
         """Mock event."""
         face_events.append(event)
 
-    hass.bus.async_listen("image_processing.detect_face", mock_face_event)
+    menuai.bus.async_listen("image_processing.detect_face", mock_face_event)
 
     aioclient_mock.get(url, content=b"image")
 
     aioclient_mock.post(
         ENDPOINT_URL.format("detect"),
-        text=await async_load_fixture(hass, "detect.json", "microsoft_face_detect"),
+        text=await async_load_fixture(menuai, "detect.json", "microsoft_face_detect"),
         params={"returnFaceAttributes": "age,gender"},
     )
 
-    common.async_scan(hass, entity_id="image_processing.test_local")
-    await hass.async_block_till_done()
+    common.async_scan(menuai, entity_id="image_processing.test_local")
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("image_processing.test_local")
+    state = menuai.states.get("image_processing.test_local")
 
     assert len(face_events) == 1
     assert state.attributes.get("total_faces") == 1
@@ -155,10 +155,10 @@ async def test_ms_detect_process_image(
         params={"returnFaceAttributes": "age,gender"},
     )
 
-    common.async_scan(hass, entity_id="image_processing.test_local")
-    await hass.async_block_till_done()
+    common.async_scan(menuai, entity_id="image_processing.test_local")
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("image_processing.test_local")
+    state = menuai.states.get("image_processing.test_local")
 
     # No more face events were fired
     assert len(face_events) == 1

@@ -4,9 +4,9 @@ from typing import Any
 
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.environment_canada.const import CONF_STATION
-from homeassistant.const import CONF_LANGUAGE, CONF_LATITUDE, CONF_LONGITUDE
-from homeassistant.core import HomeAssistant
+from menuai.components.environment_canada.const import CONF_STATION
+from menuai.const import CONF_LANGUAGE, CONF_LATITUDE, CONF_LONGITUDE
+from menuai.core import menuai
 
 from . import init_integration
 
@@ -22,16 +22,16 @@ FIXTURE_USER_INPUT = {
 
 
 async def test_entry_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     snapshot: SnapshotAssertion,
     ec_data: dict[str, Any],
 ) -> None:
     """Test config entry diagnostics."""
 
-    config_entry = await init_integration(hass, ec_data)
+    config_entry = await init_integration(menuai, ec_data)
     diagnostics = await get_diagnostics_for_config_entry(
-        hass, hass_client, config_entry
+        menuai, menuai_client, config_entry
     )
 
     assert diagnostics == snapshot

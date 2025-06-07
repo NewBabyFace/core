@@ -9,10 +9,10 @@ from typing import Any
 
 from unifi_discovery import AIOUnifiScanner, UnifiDevice, UnifiService
 
-from homeassistant import config_entries
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import discovery_flow
-from homeassistant.helpers.event import async_track_time_interval
+from menuai import config_entries
+from menuai.core import menuai, callback
+from menuai.helpers import discovery_flow
+from menuai.helpers.event import async_track_time_interval
 
 from .const import DOMAIN
 
@@ -23,25 +23,25 @@ DISCOVERY_INTERVAL = timedelta(minutes=60)
 
 
 @callback
-def async_start_discovery(hass: HomeAssistant) -> None:
+def async_start_discovery(menuai: menuai) -> None:
     """Start discovery."""
-    domain_data = hass.data.setdefault(DOMAIN, {})
+    domain_data = menuai.data.setdefault(DOMAIN, {})
     if DISCOVERY in domain_data:
         return
     domain_data[DISCOVERY] = True
 
     async def _async_discovery() -> None:
-        async_trigger_discovery(hass, await async_discover_devices())
+        async_trigger_discovery(menuai, await async_discover_devices())
 
     @callback
     def _async_start_background_discovery(*_: Any) -> None:
         """Run discovery in the background."""
-        hass.async_create_background_task(_async_discovery(), "unifiprotect-discovery")
+        menuai.async_create_background_task(_async_discovery(), "unifiprotect-discovery")
 
     # Do not block startup since discovery takes 31s or more
     _async_start_background_discovery()
     async_track_time_interval(
-        hass,
+        menuai,
         _async_start_background_discovery,
         DISCOVERY_INTERVAL,
         cancel_on_shutdown=True,
@@ -58,14 +58,14 @@ async def async_discover_devices() -> list[UnifiDevice]:
 
 @callback
 def async_trigger_discovery(
-    hass: HomeAssistant,
+    menuai: menuai,
     discovered_devices: list[UnifiDevice],
 ) -> None:
     """Trigger config flows for discovered devices."""
     for device in discovered_devices:
         if device.services[UnifiService.Protect] and device.hw_addr:
             discovery_flow.async_create_flow(
-                hass,
+                menuai,
                 DOMAIN,
                 context={"source": config_entries.SOURCE_INTEGRATION_DISCOVERY},
                 data=asdict(device),

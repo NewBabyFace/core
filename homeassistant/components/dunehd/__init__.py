@@ -6,9 +6,9 @@ from typing import Final
 
 from pdunehd import DuneHDPlayer
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, Platform
-from homeassistant.core import HomeAssistant
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, Platform
+from menuai.core import menuai
 
 PLATFORMS: Final[list[Platform]] = [Platform.MEDIA_PLAYER]
 
@@ -16,15 +16,15 @@ PLATFORMS: Final[list[Platform]] = [Platform.MEDIA_PLAYER]
 type DuneHDConfigEntry = ConfigEntry[DuneHDPlayer]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: DuneHDConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: DuneHDConfigEntry) -> bool:
     """Set up a config entry."""
     entry.runtime_data = DuneHDPlayer(entry.data[CONF_HOST])
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: DuneHDConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: DuneHDConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

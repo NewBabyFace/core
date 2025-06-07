@@ -7,13 +7,13 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.const import CONF_ENTITY_ID, CONF_NAME
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import selector
-from homeassistant.helpers.schema_config_entry_flow import (
+from menuai.components import websocket_api
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.const import CONF_ENTITY_ID, CONF_NAME
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import selector
+from menuai.helpers.schema_config_entry_flow import (
     SchemaCommonFlowHandler,
     SchemaConfigFlowHandler,
     SchemaFlowError,
@@ -89,9 +89,9 @@ class ConfigFlowHandler(SchemaConfigFlowHandler, domain=DOMAIN):
         return name
 
     @staticmethod
-    async def async_setup_preview(hass: HomeAssistant) -> None:
+    async def async_setup_preview(menuai: menuai) -> None:
         """Set up preview WS API."""
-        websocket_api.async_register_command(hass, ws_start_preview)
+        websocket_api.async_register_command(menuai, ws_start_preview)
 
 
 @websocket_api.websocket_command(
@@ -104,7 +104,7 @@ class ConfigFlowHandler(SchemaConfigFlowHandler, domain=DOMAIN):
 )
 @callback
 def ws_start_preview(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
@@ -114,10 +114,10 @@ def ws_start_preview(
         entity_id = msg["user_input"][CONF_ENTITY_ID]
         name = msg["user_input"][CONF_NAME]
     else:
-        flow_status = hass.config_entries.options.async_get(msg["flow_id"])
-        config_entry = hass.config_entries.async_get_entry(flow_status["handler"])
+        flow_status = menuai.config_entries.options.async_get(msg["flow_id"])
+        config_entry = menuai.config_entries.async_get_entry(flow_status["handler"])
         if not config_entry:
-            raise HomeAssistantError("Config entry not found")
+            raise menuaiError("Config entry not found")
         entity_id = config_entry.options[CONF_ENTITY_ID]
         name = config_entry.options[CONF_NAME]
 
@@ -139,7 +139,7 @@ def ws_start_preview(
         None,
         None,
     )
-    preview_entity.hass = hass
+    preview_entity.menuai = menuai
 
     connection.send_result(msg["id"])
     connection.subscriptions[msg["id"]] = preview_entity.async_start_preview(

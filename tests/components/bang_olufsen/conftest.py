@@ -28,8 +28,8 @@ from mozart_api.models import (
 )
 import pytest
 
-from homeassistant.components.bang_olufsen.const import DOMAIN
-from homeassistant.core import HomeAssistant
+from menuai.components.bang_olufsen.const import DOMAIN
+from menuai.core import menuai
 
 from .const import (
     TEST_DATA_CREATE_ENTRY,
@@ -78,15 +78,15 @@ def mock_config_entry_core() -> MockConfigEntry:
 
 @pytest.fixture(name="integration")
 async def integration_fixture(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mozart_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Set up the Bang & Olufsen integration."""
 
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
 
 @pytest.fixture
@@ -94,10 +94,10 @@ def mock_mozart_client() -> Generator[AsyncMock]:
     """Mock MozartClient."""
     with (
         patch(
-            "homeassistant.components.bang_olufsen.MozartClient", autospec=True
+            "menuai.components.bang_olufsen.MozartClient", autospec=True
         ) as mock_client,
         patch(
-            "homeassistant.components.bang_olufsen.config_flow.MozartClient",
+            "menuai.components.bang_olufsen.config_flow.MozartClient",
             new=mock_client,
         ),
     ):
@@ -364,6 +364,6 @@ def mock_mozart_client() -> Generator[AsyncMock]:
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Mock successful setup entry."""
     with patch(
-        "homeassistant.components.bang_olufsen.async_setup_entry", return_value=True
+        "menuai.components.bang_olufsen.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry

@@ -6,10 +6,10 @@ from unittest.mock import patch
 
 from anova_wifi import APCUpdate, APCUpdateBinary, APCUpdateSensor
 
-from homeassistant.components.anova.const import DOMAIN
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
+from menuai.components.anova.const import DOMAIN
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -25,8 +25,8 @@ ONLINE_UPDATE = APCUpdate(
 )
 
 
-def create_entry(hass: HomeAssistant, device_id: str = DEVICE_UNIQUE_ID) -> ConfigEntry:
-    """Add config entry in Home Assistant."""
+def create_entry(menuai: menuai, device_id: str = DEVICE_UNIQUE_ID) -> ConfigEntry:
+    """Add config entry in MenuAI."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         title="Anova",
@@ -38,21 +38,21 @@ def create_entry(hass: HomeAssistant, device_id: str = DEVICE_UNIQUE_ID) -> Conf
         version=1,
         minor_version=2,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
     return entry
 
 
 async def async_init_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     skip_setup: bool = False,
 ) -> ConfigEntry:
-    """Set up the Anova integration in Home Assistant."""
+    """Set up the Anova integration in MenuAI."""
 
-    with patch("homeassistant.components.anova.AnovaApi.authenticate"):
-        entry = create_entry(hass)
+    with patch("menuai.components.anova.AnovaApi.authenticate"):
+        entry = create_entry(menuai)
 
         if not skip_setup:
-            await hass.config_entries.async_setup(entry.entry_id)
-            await hass.async_block_till_done()
+            await menuai.config_entries.async_setup(entry.entry_id)
+            await menuai.async_block_till_done()
 
         return entry

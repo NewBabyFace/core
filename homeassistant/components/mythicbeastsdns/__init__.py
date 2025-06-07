@@ -5,17 +5,17 @@ from datetime import timedelta
 import mbddns
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_DOMAIN,
     CONF_HOST,
     CONF_PASSWORD,
     CONF_SCAN_INTERVAL,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.event import async_track_time_interval
+from menuai.helpers.typing import ConfigType
 
 DOMAIN = "mythicbeastsdns"
 
@@ -38,14 +38,14 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Initialize the Mythic Beasts component."""
     domain = config[DOMAIN][CONF_DOMAIN]
     password = config[DOMAIN][CONF_PASSWORD]
     host = config[DOMAIN][CONF_HOST]
     update_interval = config[DOMAIN][CONF_SCAN_INTERVAL]
 
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
 
     result = await mbddns.update(domain, password, host, session=session)
 
@@ -56,6 +56,6 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         """Update the DNS entry."""
         await mbddns.update(domain, password, host, session=session)
 
-    async_track_time_interval(hass, update_domain_interval, update_interval)
+    async_track_time_interval(menuai, update_domain_interval, update_interval)
 
     return True

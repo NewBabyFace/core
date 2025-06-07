@@ -15,12 +15,12 @@ from tesla_fleet_api.exceptions import (
 from tesla_fleet_api.tessie import Tessie
 from tessie_api import get_state_of_all_vehicles
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_ACCESS_TOKEN, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.device_registry import DeviceInfo
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_ACCESS_TOKEN, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.device_registry import DeviceInfo
 
 from .const import DOMAIN, MODELS
 from .coordinator import (
@@ -50,10 +50,10 @@ _LOGGER = logging.getLogger(__name__)
 type TessieConfigEntry = ConfigEntry[TessieData]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: TessieConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: TessieConfigEntry) -> bool:
     """Set up Tessie config."""
     api_key = entry.data[CONF_ACCESS_TOKEN]
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
 
     try:
         state_of_all_vehicles = await get_state_of_all_vehicles(
@@ -73,7 +73,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: TessieConfigEntry) -> bo
         TessieVehicleData(
             vin=vehicle["vin"],
             data_coordinator=TessieStateUpdateCoordinator(
-                hass,
+                menuai,
                 entry,
                 api_key=api_key,
                 vin=vehicle["vin"],
@@ -143,13 +143,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: TessieConfigEntry) -> bo
                         id=site_id,
                         live_coordinator=(
                             TessieEnergySiteLiveCoordinator(
-                                hass, entry, api, live_status
+                                menuai, entry, api, live_status
                             )
                             if isinstance(live_status, dict)
                             else None
                         ),
                         info_coordinator=TessieEnergySiteInfoCoordinator(
-                            hass, entry, api
+                            menuai, entry, api
                         ),
                         device=DeviceInfo(
                             identifiers={(DOMAIN, str(site_id))},
@@ -173,11 +173,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: TessieConfigEntry) -> bo
         )
 
     entry.runtime_data = TessieData(vehicles, energysites)
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: TessieConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: TessieConfigEntry) -> bool:
     """Unload Tessie Config."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

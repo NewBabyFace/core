@@ -8,26 +8,26 @@ from zwave_js_server.client import Client
 from zwave_js_server.const import CommandClass
 from zwave_js_server.model.node import Node
 
-from homeassistant.components import automation
-from homeassistant.components.device_automation import DeviceAutomationType
-from homeassistant.components.zwave_js import DOMAIN, device_action
-from homeassistant.components.zwave_js.helpers import get_device_id
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import (
+from menuai.components import automation
+from menuai.components.device_automation import DeviceAutomationType
+from menuai.components.zwave_js import DOMAIN, device_action
+from menuai.components.zwave_js.helpers import get_device_id
+from menuai.config_entries import ConfigEntry
+from menuai.const import STATE_UNAVAILABLE
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import (
     config_validation as cv,
     device_registry as dr,
     entity_registry as er,
 )
-from homeassistant.setup import async_setup_component
+from menuai.setup import async_setup_component
 
 from tests.common import async_get_device_automations
 
 
 async def test_get_actions(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: Client,
     lock_schlage_be469: Node,
     integration: ConfigEntry,
@@ -99,7 +99,7 @@ async def test_get_actions(
         },
     ]
     actions = await async_get_device_automations(
-        hass, DeviceAutomationType.ACTION, device.id
+        menuai, DeviceAutomationType.ACTION, device.id
     )
     for action in expected_actions:
         assert action in actions
@@ -110,13 +110,13 @@ async def test_get_actions(
     )
     assert device
     assert (
-        await async_get_device_automations(hass, DeviceAutomationType.ACTION, device.id)
+        await async_get_device_automations(menuai, DeviceAutomationType.ACTION, device.id)
         == []
     )
 
 
 async def test_get_actions_meter(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: Client,
     aeon_smart_switch_6: Node,
     integration: ConfigEntry,
@@ -129,14 +129,14 @@ async def test_get_actions_meter(
     device = device_registry.async_get_device(identifiers={get_device_id(driver, node)})
     assert device
     actions = await async_get_device_automations(
-        hass, DeviceAutomationType.ACTION, device.id
+        menuai, DeviceAutomationType.ACTION, device.id
     )
     filtered_actions = [action for action in actions if action["type"] == "reset_meter"]
     assert len(filtered_actions) > 0
 
 
 async def test_actions(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: Client,
     climate_radio_thermostat_ct100_plus: Node,
     integration: ConfigEntry,
@@ -155,7 +155,7 @@ async def test_actions(
     assert climate
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -232,8 +232,8 @@ async def test_actions(
     )
 
     with patch("zwave_js_server.model.node.Node.async_poll_value") as mock_call:
-        hass.bus.async_fire("test_event_refresh_value")
-        await hass.async_block_till_done()
+        menuai.bus.async_fire("test_event_refresh_value")
+        await menuai.async_block_till_done()
         mock_call.assert_called_once()
         args = mock_call.call_args_list[0][0]
         assert len(args) == 1
@@ -241,23 +241,23 @@ async def test_actions(
 
     # Call action a second time to confirm that it works (this was previously a bug)
     with patch("zwave_js_server.model.node.Node.async_poll_value") as mock_call:
-        hass.bus.async_fire("test_event_refresh_value")
-        await hass.async_block_till_done()
+        menuai.bus.async_fire("test_event_refresh_value")
+        await menuai.async_block_till_done()
         mock_call.assert_called_once()
         args = mock_call.call_args_list[0][0]
         assert len(args) == 1
         assert args[0].value_id == "13-64-1-mode"
 
     with patch("zwave_js_server.model.node.Node.async_ping") as mock_call:
-        hass.bus.async_fire("test_event_ping")
-        await hass.async_block_till_done()
+        menuai.bus.async_fire("test_event_ping")
+        await menuai.async_block_till_done()
         mock_call.assert_called_once()
         args = mock_call.call_args_list[0][0]
         assert len(args) == 0
 
     with patch("zwave_js_server.model.node.Node.async_set_value") as mock_call:
-        hass.bus.async_fire("test_event_set_value")
-        await hass.async_block_till_done()
+        menuai.bus.async_fire("test_event_set_value")
+        await menuai.async_block_till_done()
         mock_call.assert_called_once()
         args = mock_call.call_args_list[0][0]
         assert len(args) == 2
@@ -265,10 +265,10 @@ async def test_actions(
         assert args[1] == 1
 
     with patch(
-        "homeassistant.components.zwave_js.services.async_set_config_parameter"
+        "menuai.components.zwave_js.services.async_set_config_parameter"
     ) as mock_call:
-        hass.bus.async_fire("test_event_set_config_parameter")
-        await hass.async_block_till_done()
+        menuai.bus.async_fire("test_event_set_config_parameter")
+        await menuai.async_block_till_done()
         mock_call.assert_called_once()
         args = mock_call.call_args_list[0][0]
         assert len(args) == 3
@@ -277,10 +277,10 @@ async def test_actions(
         assert args[2] == 1
 
     with patch(
-        "homeassistant.components.zwave_js.services.async_set_config_parameter"
+        "menuai.components.zwave_js.services.async_set_config_parameter"
     ) as mock_call:
-        hass.bus.async_fire("test_event_set_config_parameter_no_endpoint")
-        await hass.async_block_till_done()
+        menuai.bus.async_fire("test_event_set_config_parameter_no_endpoint")
+        await menuai.async_block_till_done()
         mock_call.assert_called_once()
         args = mock_call.call_args_list[0][0]
         assert len(args) == 3
@@ -290,7 +290,7 @@ async def test_actions(
 
 
 async def test_actions_legacy(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: Client,
     climate_radio_thermostat_ct100_plus: Node,
     integration: ConfigEntry,
@@ -309,7 +309,7 @@ async def test_actions_legacy(
     assert climate
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -330,8 +330,8 @@ async def test_actions_legacy(
     )
 
     with patch("zwave_js_server.model.node.Node.async_poll_value") as mock_call:
-        hass.bus.async_fire("test_event_refresh_value")
-        await hass.async_block_till_done()
+        menuai.bus.async_fire("test_event_refresh_value")
+        await menuai.async_block_till_done()
         mock_call.assert_called_once()
         args = mock_call.call_args_list[0][0]
         assert len(args) == 1
@@ -339,8 +339,8 @@ async def test_actions_legacy(
 
     # Call action a second time to confirm that it works (this was previously a bug)
     with patch("zwave_js_server.model.node.Node.async_poll_value") as mock_call:
-        hass.bus.async_fire("test_event_refresh_value")
-        await hass.async_block_till_done()
+        menuai.bus.async_fire("test_event_refresh_value")
+        await menuai.async_block_till_done()
         mock_call.assert_called_once()
         args = mock_call.call_args_list[0][0]
         assert len(args) == 1
@@ -348,7 +348,7 @@ async def test_actions_legacy(
 
 
 async def test_actions_multiple_calls(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: Client,
     climate_radio_thermostat_ct100_plus: Node,
     integration: ConfigEntry,
@@ -366,7 +366,7 @@ async def test_actions_multiple_calls(
     assert climate
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -389,8 +389,8 @@ async def test_actions_multiple_calls(
     # Trigger automation multiple times to confirm that it works each time
     for _ in range(5):
         with patch("zwave_js_server.model.node.Node.async_poll_value") as mock_call:
-            hass.bus.async_fire("test_event_refresh_value")
-            await hass.async_block_till_done()
+            menuai.bus.async_fire("test_event_refresh_value")
+            await menuai.async_block_till_done()
             mock_call.assert_called_once()
             args = mock_call.call_args_list[0][0]
             assert len(args) == 1
@@ -398,7 +398,7 @@ async def test_actions_multiple_calls(
 
 
 async def test_lock_actions(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: Client,
     lock_schlage_be469: Node,
     integration: ConfigEntry,
@@ -416,7 +416,7 @@ async def test_lock_actions(
     assert lock
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -451,18 +451,18 @@ async def test_lock_actions(
         },
     )
 
-    with patch("homeassistant.components.zwave_js.lock.clear_usercode") as mock_call:
-        hass.bus.async_fire("test_event_clear_lock_usercode")
-        await hass.async_block_till_done()
+    with patch("menuai.components.zwave_js.lock.clear_usercode") as mock_call:
+        menuai.bus.async_fire("test_event_clear_lock_usercode")
+        await menuai.async_block_till_done()
         mock_call.assert_called_once()
         args = mock_call.call_args_list[0][0]
         assert len(args) == 2
         assert args[0].node_id == node.node_id
         assert args[1] == 1
 
-    with patch("homeassistant.components.zwave_js.lock.set_usercode") as mock_call:
-        hass.bus.async_fire("test_event_set_lock_usercode")
-        await hass.async_block_till_done()
+    with patch("menuai.components.zwave_js.lock.set_usercode") as mock_call:
+        menuai.bus.async_fire("test_event_set_lock_usercode")
+        await menuai.async_block_till_done()
         mock_call.assert_called_once()
         args = mock_call.call_args_list[0][0]
         assert len(args) == 3
@@ -472,7 +472,7 @@ async def test_lock_actions(
 
 
 async def test_reset_meter_action(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: Client,
     aeon_smart_switch_6: Node,
     integration: ConfigEntry,
@@ -490,7 +490,7 @@ async def test_reset_meter_action(
     assert sensor
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -513,8 +513,8 @@ async def test_reset_meter_action(
     with patch(
         "zwave_js_server.model.endpoint.Endpoint.async_invoke_cc_api"
     ) as mock_call:
-        hass.bus.async_fire("test_event_reset_meter")
-        await hass.async_block_till_done()
+        menuai.bus.async_fire("test_event_reset_meter")
+        await menuai.async_block_till_done()
         mock_call.assert_called_once()
         args = mock_call.call_args_list[0][0]
         assert len(args) == 2
@@ -523,7 +523,7 @@ async def test_reset_meter_action(
 
 
 async def test_get_action_capabilities(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: Client,
     climate_radio_thermostat_ct100_plus: Node,
     integration: ConfigEntry,
@@ -537,7 +537,7 @@ async def test_get_action_capabilities(
 
     # Test refresh_value
     capabilities = await device_action.async_get_action_capabilities(
-        hass,
+        menuai,
         {
             "platform": "device",
             "domain": DOMAIN,
@@ -553,7 +553,7 @@ async def test_get_action_capabilities(
 
     # Test ping
     capabilities = await device_action.async_get_action_capabilities(
-        hass,
+        menuai,
         {
             "platform": "device",
             "domain": DOMAIN,
@@ -565,7 +565,7 @@ async def test_get_action_capabilities(
 
     # Test set_value
     capabilities = await device_action.async_get_action_capabilities(
-        hass,
+        menuai,
         {
             "platform": "device",
             "domain": DOMAIN,
@@ -616,7 +616,7 @@ async def test_get_action_capabilities(
 
     # Test enumerated type param
     capabilities = await device_action.async_get_action_capabilities(
-        hass,
+        menuai,
         {
             "platform": "device",
             "domain": DOMAIN,
@@ -649,7 +649,7 @@ async def test_get_action_capabilities(
 
     # Test range type param
     capabilities = await device_action.async_get_action_capabilities(
-        hass,
+        menuai,
         {
             "platform": "device",
             "domain": DOMAIN,
@@ -677,7 +677,7 @@ async def test_get_action_capabilities(
 
     # Test undefined type param
     capabilities = await device_action.async_get_action_capabilities(
-        hass,
+        menuai,
         {
             "platform": "device",
             "domain": DOMAIN,
@@ -693,7 +693,7 @@ async def test_get_action_capabilities(
 
 
 async def test_get_action_capabilities_lock_triggers(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: Client,
     lock_schlage_be469: Node,
     integration: ConfigEntry,
@@ -707,7 +707,7 @@ async def test_get_action_capabilities_lock_triggers(
 
     # Test clear_lock_usercode
     capabilities = await device_action.async_get_action_capabilities(
-        hass,
+        menuai,
         {
             "platform": "device",
             "domain": DOMAIN,
@@ -724,7 +724,7 @@ async def test_get_action_capabilities_lock_triggers(
 
     # Test set_lock_usercode
     capabilities = await device_action.async_get_action_capabilities(
-        hass,
+        menuai,
         {
             "platform": "device",
             "domain": DOMAIN,
@@ -744,7 +744,7 @@ async def test_get_action_capabilities_lock_triggers(
 
 
 async def test_get_action_capabilities_meter_triggers(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: Client,
     aeon_smart_switch_6: Node,
     integration: ConfigEntry,
@@ -758,7 +758,7 @@ async def test_get_action_capabilities_meter_triggers(
     device = device_registry.async_get_device(identifiers={get_device_id(driver, node)})
     assert device
     capabilities = await device_action.async_get_action_capabilities(
-        hass,
+        menuai,
         {
             "platform": "device",
             "domain": DOMAIN,
@@ -775,7 +775,7 @@ async def test_get_action_capabilities_meter_triggers(
 
 
 async def test_failure_scenarios(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: Client,
     hank_binary_switch: Node,
     integration: ConfigEntry,
@@ -784,21 +784,21 @@ async def test_failure_scenarios(
     """Test failure scenarios."""
     device = dr.async_entries_for_config_entry(device_registry, integration.entry_id)[0]
 
-    with pytest.raises(HomeAssistantError):
+    with pytest.raises(menuaiError):
         await device_action.async_call_action_from_config(
-            hass, {"type": "failed.test", "device_id": device.id}, {}, None
+            menuai, {"type": "failed.test", "device_id": device.id}, {}, None
         )
 
     assert (
         await device_action.async_get_action_capabilities(
-            hass, {"type": "failed.test", "device_id": device.id}
+            menuai, {"type": "failed.test", "device_id": device.id}
         )
         == {}
     )
 
 
 async def test_unavailable_entity_actions(
-    hass: HomeAssistant,
+    menuai: menuai,
     client: Client,
     lock_schlage_be469: Node,
     integration: ConfigEntry,
@@ -807,8 +807,8 @@ async def test_unavailable_entity_actions(
 ) -> None:
     """Test unavailable entities are not included in actions list."""
     entity_id_unavailable = "binary_sensor.touchscreen_deadbolt_low_battery_level"
-    hass.states.async_set(entity_id_unavailable, STATE_UNAVAILABLE, force_update=True)
-    await hass.async_block_till_done()
+    menuai.states.async_set(entity_id_unavailable, STATE_UNAVAILABLE, force_update=True)
+    await menuai.async_block_till_done()
     node = lock_schlage_be469
     driver = client.driver
     assert driver
@@ -817,7 +817,7 @@ async def test_unavailable_entity_actions(
     binary_sensor = entity_registry.async_get(entity_id_unavailable)
     assert binary_sensor
     actions = await async_get_device_automations(
-        hass, DeviceAutomationType.ACTION, device.id
+        menuai, DeviceAutomationType.ACTION, device.id
     )
     assert not any(
         action.get("entity_id") == entity_id_unavailable for action in actions

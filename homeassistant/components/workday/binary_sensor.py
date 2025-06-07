@@ -13,25 +13,25 @@ from holidays import (
 )
 import voluptuous as vol
 
-from homeassistant.components.binary_sensor import BinarySensorEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_COUNTRY, CONF_LANGUAGE, CONF_NAME
-from homeassistant.core import (
+from menuai.components.binary_sensor import BinarySensorEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_COUNTRY, CONF_LANGUAGE, CONF_NAME
+from menuai.core import (
     CALLBACK_TYPE,
-    HomeAssistant,
+    menuai,
     ServiceResponse,
     SupportsResponse,
     callback,
 )
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.entity_platform import (
+from menuai.helpers import config_validation as cv
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     async_get_current_platform,
 )
-from homeassistant.helpers.event import async_track_point_in_utc_time
-from homeassistant.helpers.issue_registry import IssueSeverity, async_create_issue
-from homeassistant.util import dt as dt_util, slugify
+from menuai.helpers.event import async_track_point_in_utc_time
+from menuai.helpers.issue_registry import IssueSeverity, async_create_issue
+from menuai.util import dt as dt_util, slugify
 
 from .const import (
     ALLOWED_DAYS,
@@ -151,7 +151,7 @@ def _get_obj_holidays(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -168,7 +168,7 @@ async def async_setup_entry(
     categories: list[str] | None = entry.options.get(CONF_CATEGORY)
 
     year: int = (dt_util.now() + timedelta(days=days_offset)).year
-    obj_holidays: HolidayBase = await hass.async_add_executor_job(
+    obj_holidays: HolidayBase = await menuai.async_add_executor_job(
         _get_obj_holidays, country, province, year, language, categories
     )
     calc_add_holidays: list[str] = validate_dates(add_holidays)
@@ -201,7 +201,7 @@ async def async_setup_entry(
                 if _date.year <= next_year:
                     # Only check and raise issues for current and next year
                     async_create_issue(
-                        hass,
+                        menuai,
                         DOMAIN,
                         f"bad_date_holiday-{entry.entry_id}-{slugify(remove_holiday)}",
                         is_fixable=True,
@@ -221,7 +221,7 @@ async def async_setup_entry(
                     )
             else:
                 async_create_issue(
-                    hass,
+                    menuai,
                     DOMAIN,
                     f"bad_named_holiday-{entry.entry_id}-{slugify(remove_holiday)}",
                     is_fixable=True,
@@ -334,7 +334,7 @@ class IsWorkdaySensor(BinarySensorEntity):
         now = dt_util.now()
         self.update_data(now)
         self.unsub = async_track_point_in_utc_time(
-            self.hass, self.point_in_time_listener, self.get_next_interval(now)
+            self.menuai, self.point_in_time_listener, self.get_next_interval(now)
         )
 
     @callback
@@ -343,7 +343,7 @@ class IsWorkdaySensor(BinarySensorEntity):
         self._update_state_and_setup_listener()
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Set up first update."""
         self._update_state_and_setup_listener()
 

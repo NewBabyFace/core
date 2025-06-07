@@ -7,15 +7,15 @@ from syrupy.assertion import SnapshotAssertion
 from tesla_fleet_api.const import EnergyExportMode, EnergyOperationMode
 from teslemetry_stream.const import Signal
 
-from homeassistant.components.select import (
+from menuai.components.select import (
     ATTR_OPTION,
     DOMAIN as SELECT_DOMAIN,
     SERVICE_SELECT_OPTION,
 )
-from homeassistant.components.teslemetry.select import LOW
-from homeassistant.const import ATTR_ENTITY_ID, STATE_UNKNOWN, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.teslemetry.select import LOW
+from menuai.const import ATTR_ENTITY_ID, STATE_UNKNOWN, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import assert_entities, reload_platform, setup_platform
 from .const import COMMAND_OK, VEHICLE_DATA_ALT
@@ -23,34 +23,34 @@ from .const import COMMAND_OK, VEHICLE_DATA_ALT
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_select(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
     mock_legacy: AsyncMock,
 ) -> None:
     """Tests that the select entities are correct."""
 
-    entry = await setup_platform(hass, [Platform.SELECT])
-    assert_entities(hass, entry.entry_id, entity_registry, snapshot)
+    entry = await setup_platform(menuai, [Platform.SELECT])
+    assert_entities(menuai, entry.entry_id, entity_registry, snapshot)
 
 
-async def test_select_services(hass: HomeAssistant, mock_vehicle_data) -> None:
+async def test_select_services(menuai: menuai, mock_vehicle_data) -> None:
     """Tests that the select services work."""
     mock_vehicle_data.return_value = VEHICLE_DATA_ALT
-    await setup_platform(hass, [Platform.SELECT])
+    await setup_platform(menuai, [Platform.SELECT])
 
     entity_id = "select.test_seat_heater_front_left"
     with patch(
         "tesla_fleet_api.teslemetry.Vehicle.remote_seat_heater_request",
         return_value=COMMAND_OK,
     ) as call:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SELECT_DOMAIN,
             SERVICE_SELECT_OPTION,
             {ATTR_ENTITY_ID: entity_id, ATTR_OPTION: LOW},
             blocking=True,
         )
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state.state == LOW
         call.assert_called_once()
 
@@ -59,13 +59,13 @@ async def test_select_services(hass: HomeAssistant, mock_vehicle_data) -> None:
         "tesla_fleet_api.teslemetry.Vehicle.remote_steering_wheel_heat_level_request",
         return_value=COMMAND_OK,
     ) as call:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SELECT_DOMAIN,
             SERVICE_SELECT_OPTION,
             {ATTR_ENTITY_ID: entity_id, ATTR_OPTION: LOW},
             blocking=True,
         )
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state.state == LOW
         call.assert_called_once()
 
@@ -74,7 +74,7 @@ async def test_select_services(hass: HomeAssistant, mock_vehicle_data) -> None:
         "tesla_fleet_api.teslemetry.EnergySite.operation",
         return_value=COMMAND_OK,
     ) as call:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SELECT_DOMAIN,
             SERVICE_SELECT_OPTION,
             {
@@ -83,7 +83,7 @@ async def test_select_services(hass: HomeAssistant, mock_vehicle_data) -> None:
             },
             blocking=True,
         )
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state.state == EnergyOperationMode.AUTONOMOUS.value
         call.assert_called_once()
 
@@ -92,19 +92,19 @@ async def test_select_services(hass: HomeAssistant, mock_vehicle_data) -> None:
         "tesla_fleet_api.teslemetry.EnergySite.grid_import_export",
         return_value=COMMAND_OK,
     ) as call:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SELECT_DOMAIN,
             SERVICE_SELECT_OPTION,
             {ATTR_ENTITY_ID: entity_id, ATTR_OPTION: EnergyExportMode.BATTERY_OK.value},
             blocking=True,
         )
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state.state == EnergyExportMode.BATTERY_OK.value
         call.assert_called_once()
 
 
 async def test_select_invalid_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
     mock_vehicle_data: AsyncMock,
@@ -117,23 +117,23 @@ async def test_select_invalid_data(
     broken_data["response"]["climate_state"]["steering_wheel_heat_level"] = "yellow"
 
     mock_vehicle_data.return_value = broken_data
-    await setup_platform(hass, [Platform.SELECT])
-    state = hass.states.get("select.test_seat_heater_front_left")
+    await setup_platform(menuai, [Platform.SELECT])
+    state = menuai.states.get("select.test_seat_heater_front_left")
     assert state.state == STATE_UNKNOWN
-    state = hass.states.get("select.test_steering_wheel_heater")
+    state = menuai.states.get("select.test_steering_wheel_heater")
     assert state.state == STATE_UNKNOWN
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_select_streaming(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mock_vehicle_data: AsyncMock,
     mock_add_listener: AsyncMock,
 ) -> None:
     """Tests that the select entities with streaming are correct."""
 
-    entry = await setup_platform(hass, [Platform.SELECT])
+    entry = await setup_platform(menuai, [Platform.SELECT])
 
     # Stream update
     mock_add_listener.send(
@@ -149,9 +149,9 @@ async def test_select_streaming(
             "createdAt": "2024-10-04T10:45:17.537Z",
         }
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await reload_platform(hass, entry, [Platform.SELECT])
+    await reload_platform(menuai, entry, [Platform.SELECT])
 
     # Assert the entities restored their values
     for entity_id in (
@@ -162,5 +162,5 @@ async def test_select_streaming(
         "select.test_seat_heater_rear_right",
         "select.test_steering_wheel_heater",
     ):
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state.state == snapshot(name=entity_id)

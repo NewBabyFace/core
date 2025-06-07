@@ -11,13 +11,13 @@ from aiohttp import ClientConnectionError, ClientResponseError
 from pymelcloud import Device, get_devices
 from pymelcloud.atw_device import Zone
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_TOKEN, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
-from homeassistant.util import Throttle
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_TOKEN, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
+from menuai.util import Throttle
 
 from .const import DOMAIN
 
@@ -28,11 +28,11 @@ MIN_TIME_BETWEEN_UPDATES = timedelta(minutes=15)
 PLATFORMS = [Platform.CLIMATE, Platform.SENSOR, Platform.WATER_HEATER]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Establish connection with MELClooud."""
     conf = entry.data
     try:
-        mel_devices = await mel_devices_setup(hass, conf[CONF_TOKEN])
+        mel_devices = await mel_devices_setup(menuai, conf[CONF_TOKEN])
     except ClientResponseError as ex:
         if isinstance(ex, ClientResponseError) and ex.code == 401:
             raise ConfigEntryAuthFailed from ex
@@ -40,19 +40,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except (TimeoutError, ClientConnectionError) as ex:
         raise ConfigEntryNotReady from ex
 
-    hass.data.setdefault(DOMAIN, {}).update({entry.entry_id: mel_devices})
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    menuai.data.setdefault(DOMAIN, {}).update({entry.entry_id: mel_devices})
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, config_entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(
+    unload_ok = await menuai.config_entries.async_unload_platforms(
         config_entry, PLATFORMS
     )
-    hass.data[DOMAIN].pop(config_entry.entry_id)
-    if not hass.data[DOMAIN]:
-        hass.data.pop(DOMAIN)
+    menuai.data[DOMAIN].pop(config_entry.entry_id)
+    if not menuai.data[DOMAIN]:
+        menuai.data.pop(DOMAIN)
     return unload_ok
 
 
@@ -126,10 +126,10 @@ class MelCloudDevice:
 
 
 async def mel_devices_setup(
-    hass: HomeAssistant, token: str
+    menuai: menuai, token: str
 ) -> dict[str, list[MelCloudDevice]]:
     """Query connected devices from MELCloud."""
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
     async with asyncio.timeout(10):
         all_devices = await get_devices(
             token,

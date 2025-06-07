@@ -7,9 +7,9 @@ from typing import Any
 
 from madvr.madvr import Madvr
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN
 
@@ -25,12 +25,12 @@ class MadVRCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: MadVRConfigEntry,
         client: Madvr,
     ) -> None:
         """Initialize madvr coordinator."""
-        super().__init__(hass, _LOGGER, config_entry=config_entry, name=DOMAIN)
+        super().__init__(menuai, _LOGGER, config_entry=config_entry, name=DOMAIN)
         assert self.config_entry.unique_id
         self.mac = self.config_entry.unique_id
         self.client = client

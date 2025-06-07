@@ -6,11 +6,11 @@ from typing import Any
 from omnilogic import OmniLogicException
 import voluptuous as vol
 
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, entity_platform
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .common import check_guard
 from .const import COORDINATOR, DOMAIN, PUMP_TYPES
@@ -22,13 +22,13 @@ OMNILOGIC_SWITCH_OFF = 7
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the light platform."""
 
-    coordinator: OmniLogicUpdateCoordinator = hass.data[DOMAIN][entry.entry_id][
+    coordinator: OmniLogicUpdateCoordinator = menuai.data[DOMAIN][entry.entry_id][
         COORDINATOR
     ]
     entities = []

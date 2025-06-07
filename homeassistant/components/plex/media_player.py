@@ -11,7 +11,7 @@ from plexapi.client import PlexClient
 import plexapi.exceptions
 import requests.exceptions
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     DOMAIN as MP_DOMAIN,
     BrowseMedia,
     MediaPlayerEntity,
@@ -19,17 +19,17 @@ from homeassistant.components.media_player import (
     MediaPlayerState,
     MediaType,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.dispatcher import (
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.dispatcher import (
     async_dispatcher_connect,
     async_dispatcher_send,
 )
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.network import is_internal_request
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.network import is_internal_request
 
 from .const import (
     COMMON_PLAYERS,
@@ -67,31 +67,31 @@ def needs_session[_PlexMediaPlayerT: PlexMediaPlayer, **_P, _R](
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Plex media_player from a config entry."""
     server_id = config_entry.data[CONF_SERVER_IDENTIFIER]
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
 
     @callback
     def async_new_media_players(new_entities):
-        _async_add_entities(hass, registry, async_add_entities, server_id, new_entities)
+        _async_add_entities(menuai, registry, async_add_entities, server_id, new_entities)
 
     unsub = async_dispatcher_connect(
-        hass, PLEX_NEW_MP_SIGNAL.format(server_id), async_new_media_players
+        menuai, PLEX_NEW_MP_SIGNAL.format(server_id), async_new_media_players
     )
-    get_plex_data(hass)[DISPATCHERS][server_id].append(unsub)
+    get_plex_data(menuai)[DISPATCHERS][server_id].append(unsub)
     _LOGGER.debug("New entity listener created")
 
 
 @callback
-def _async_add_entities(hass, registry, async_add_entities, server_id, new_entities):
+def _async_add_entities(menuai, registry, async_add_entities, server_id, new_entities):
     """Set up Plex media_player entities."""
     _LOGGER.debug("New entities: %s", new_entities)
     entities = []
-    plexserver = get_plex_server(hass, server_id)
+    plexserver = get_plex_server(menuai, server_id)
     for entity_params in new_entities:
         plex_mp = PlexMediaPlayer(plexserver, **entity_params)
         entities.append(plex_mp)
@@ -145,12 +145,12 @@ class PlexMediaPlayer(MediaPlayerEntity):
         # Initializes other attributes
         self.session = session
 
-    async def async_added_to_hass(self) -> None:
-        """Run when about to be added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Run when about to be added to menuai."""
         _LOGGER.debug("Added %s [%s]", self.entity_id, self.unique_id)
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 PLEX_UPDATE_MEDIA_PLAYER_SIGNAL.format(self.unique_id),
                 self.async_refresh_media_player,
             )
@@ -158,7 +158,7 @@ class PlexMediaPlayer(MediaPlayerEntity):
 
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 PLEX_UPDATE_MEDIA_PLAYER_SESSION_SIGNAL.format(self.unique_id),
                 self.async_update_from_websocket,
             )
@@ -175,7 +175,7 @@ class PlexMediaPlayer(MediaPlayerEntity):
         self.async_schedule_update_ha_state(True)
 
         async_dispatcher_send(
-            self.hass,
+            self.menuai,
             PLEX_UPDATE_SENSOR_SIGNAL.format(self.plex_server.machine_identifier),
         )
 
@@ -186,7 +186,7 @@ class PlexMediaPlayer(MediaPlayerEntity):
         self.async_write_ha_state()
 
         async_dispatcher_send(
-            self.hass,
+            self.menuai,
             PLEX_UPDATE_SENSOR_SIGNAL.format(self.plex_server.machine_identifier),
         )
 
@@ -483,19 +483,19 @@ class PlexMediaPlayer(MediaPlayerEntity):
     ) -> None:
         """Play a piece of media."""
         if not (self.device and "playback" in self._device_protocol_capabilities):
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Client is not currently accepting playback controls: {self.name}"
             )
 
         result = process_plex_payload(
-            self.hass, media_type, media_id, default_plex_server=self.plex_server
+            self.menuai, media_type, media_id, default_plex_server=self.plex_server
         )
         _LOGGER.debug("Attempting to play %s on %s", result.media, self.name)
 
         try:
             self.device.playMedia(result.media, offset=result.offset)
         except requests.exceptions.ConnectTimeout as exc:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Request failed when playing on {self.name}"
             ) from exc
 
@@ -548,10 +548,10 @@ class PlexMediaPlayer(MediaPlayerEntity):
         media_content_id: str | None = None,
     ) -> BrowseMedia:
         """Implement the websocket media browsing helper."""
-        is_internal = is_internal_request(self.hass)
-        return await self.hass.async_add_executor_job(
+        is_internal = is_internal_request(self.menuai)
+        return await self.menuai.async_add_executor_job(
             browse_media,
-            self.hass,
+            self.menuai,
             is_internal,
             media_content_type,
             media_content_id,

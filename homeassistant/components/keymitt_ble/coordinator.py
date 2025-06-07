@@ -1,4 +1,4 @@
-"""Integration to integrate Keymitt BLE devices with Home Assistant."""
+"""Integration to integrate Keymitt BLE devices with MenuAI."""
 
 from __future__ import annotations
 
@@ -7,12 +7,12 @@ from typing import TYPE_CHECKING, Any
 
 from microbot import MicroBotApiClient, parse_advertisement_data
 
-from homeassistant.components import bluetooth
-from homeassistant.components.bluetooth.passive_update_coordinator import (
+from menuai.components import bluetooth
+from menuai.components.bluetooth.passive_update_coordinator import (
     PassiveBluetoothDataUpdateCoordinator,
 )
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
+from menuai.const import Platform
+from menuai.core import menuai, callback
 
 if TYPE_CHECKING:
     from bleak.backends.device import BLEDevice
@@ -26,7 +26,7 @@ class MicroBotDataUpdateCoordinator(PassiveBluetoothDataUpdateCoordinator):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         client: MicroBotApiClient,
         ble_device: BLEDevice,
     ) -> None:
@@ -35,7 +35,7 @@ class MicroBotDataUpdateCoordinator(PassiveBluetoothDataUpdateCoordinator):
         self.data: dict[str, Any] = {}
         self.ble_device = ble_device
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             ble_device.address,
             bluetooth.BluetoothScanningMode.ACTIVE,

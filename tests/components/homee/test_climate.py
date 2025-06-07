@@ -6,7 +6,7 @@ from pyHomee.const import AttributeType
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_HVAC_ACTION,
     ATTR_HVAC_MODE,
     ATTR_HVAC_MODES,
@@ -26,10 +26,10 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.components.homee.const import PRESET_MANUAL
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.homee.const import PRESET_MANUAL
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import build_mock_node, setup_integration
 
@@ -37,7 +37,7 @@ from tests.common import MockConfigEntry, snapshot_platform
 
 
 async def setup_mock_climate(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_homee: MagicMock,
     file: str,
@@ -45,7 +45,7 @@ async def setup_mock_climate(
     """Setups a climate node for the tests."""
     mock_homee.nodes = [build_mock_node(file)]
     mock_homee.get_node_by_id.return_value = mock_homee.nodes[0]
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
 
 @pytest.mark.parametrize(
@@ -83,7 +83,7 @@ async def setup_mock_climate(
     ],
 )
 async def test_climate_features(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_homee: MagicMock,
     file: str,
@@ -92,24 +92,24 @@ async def test_climate_features(
     hvac_modes: list[HVACMode],
 ) -> None:
     """Test available features of climate entities."""
-    await setup_mock_climate(hass, mock_config_entry, mock_homee, file)
+    await setup_mock_climate(menuai, mock_config_entry, mock_homee, file)
 
-    attributes = hass.states.get(entity_id).attributes
+    attributes = menuai.states.get(entity_id).attributes
     assert attributes["supported_features"] == features
     assert attributes[ATTR_HVAC_MODES] == hvac_modes
 
 
 async def test_climate_preset_modes(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_homee: MagicMock,
 ) -> None:
     """Test available preset modes of climate entities."""
     await setup_mock_climate(
-        hass, mock_config_entry, mock_homee, "thermostat_with_preset.json"
+        menuai, mock_config_entry, mock_homee, "thermostat_with_preset.json"
     )
 
-    attributes = hass.states.get("climate.test_thermostat_4").attributes
+    attributes = menuai.states.get("climate.test_thermostat_4").attributes
     assert attributes[ATTR_PRESET_MODES] == [
         PRESET_NONE,
         PRESET_ECO,
@@ -128,7 +128,7 @@ async def test_climate_preset_modes(
     ],
 )
 async def test_hvac_action(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_homee: MagicMock,
     attribute_type: AttributeType,
@@ -143,9 +143,9 @@ async def test_hvac_action(
     node.attributes[0].current_value = 24.0
     attribute = node.get_attribute_by_type(attribute_type)
     attribute.current_value = value
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    attributes = hass.states.get("climate.test_thermostat_3").attributes
+    attributes = menuai.states.get("climate.test_thermostat_3").attributes
     assert attributes[ATTR_HVAC_ACTION] == expected
 
 
@@ -160,7 +160,7 @@ async def test_hvac_action(
     ],
 )
 async def test_current_preset_mode(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_homee: MagicMock,
     preset_mode_int: int,
@@ -171,9 +171,9 @@ async def test_current_preset_mode(
     mock_homee.get_node_by_id.return_value = mock_homee.nodes[0]
     node = mock_homee.nodes[0]
     node.attributes[2].current_value = preset_mode_int
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    attributes = hass.states.get("climate.test_thermostat_4").attributes
+    attributes = menuai.states.get("climate.test_thermostat_4").attributes
     assert attributes[ATTR_PRESET_MODE] == expected
 
 
@@ -228,7 +228,7 @@ async def test_current_preset_mode(
     ],
 )
 async def test_climate_services(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_homee: MagicMock,
     service: str,
@@ -237,10 +237,10 @@ async def test_climate_services(
 ) -> None:
     """Test available services of climate entities."""
     await setup_mock_climate(
-        hass, mock_config_entry, mock_homee, "thermostat_with_preset.json"
+        menuai, mock_config_entry, mock_homee, "thermostat_with_preset.json"
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         CLIMATE_DOMAIN,
         service,
         {ATTR_ENTITY_ID: "climate.test_thermostat_4", **service_data},
@@ -251,7 +251,7 @@ async def test_climate_services(
 
 
 async def test_climate_snapshot(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_homee: MagicMock,
     mock_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
@@ -264,7 +264,7 @@ async def test_climate_snapshot(
         build_mock_node("thermostat_with_heating_mode.json"),
         build_mock_node("thermostat_with_preset.json"),
     ]
-    with patch("homeassistant.components.homee.PLATFORMS", [Platform.CLIMATE]):
-        await setup_integration(hass, mock_config_entry)
+    with patch("menuai.components.homee.PLATFORMS", [Platform.CLIMATE]):
+        await setup_integration(menuai, mock_config_entry)
 
-    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, mock_config_entry.entry_id)

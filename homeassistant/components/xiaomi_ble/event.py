@@ -4,15 +4,15 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from homeassistant.components.event import (
+from menuai.components.event import (
     EventDeviceClass,
     EventEntity,
     EventEntityDescription,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import format_discovered_event_class, format_event_dispatcher_name
 from .const import (
@@ -163,12 +163,12 @@ class XiaomiEventEntity(EventEntity):
         if event:
             self._trigger_event(event[EVENT_TYPE], event[EVENT_PROPERTIES])
 
-    async def async_added_to_hass(self) -> None:
-        """Entity added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Entity added to menuai."""
+        await super().async_added_to_menuai()
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 self._update_signal,
                 self._async_handle_event,
             )
@@ -181,14 +181,14 @@ class XiaomiEventEntity(EventEntity):
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: XiaomiBLEConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Xiaomi event."""
     coordinator = entry.runtime_data
     address = coordinator.address
-    ent_reg = er.async_get(hass)
+    ent_reg = er.async_get(menuai)
     async_add_entities(
         # Matches logic in PassiveBluetoothProcessorEntity
         XiaomiEventEntity(address_event_class[0], address_event_class[2], None)
@@ -204,7 +204,7 @@ async def async_setup_entry(
 
     entry.async_on_unload(
         async_dispatcher_connect(
-            hass,
+            menuai,
             format_discovered_event_class(address),
             _async_discovered_event_class,
         )

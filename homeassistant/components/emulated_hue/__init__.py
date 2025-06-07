@@ -7,17 +7,17 @@ import logging
 from aiohttp import web
 import voluptuous as vol
 
-from homeassistant.components.http import KEY_HASS
-from homeassistant.components.network import async_get_source_ip
-from homeassistant.const import (
+from menuai.components.http import KEY_menuai
+from menuai.components.network import async_get_source_ip
+from menuai.const import (
     CONF_ENTITIES,
     CONF_TYPE,
-    EVENT_HOMEASSISTANT_STARTED,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STARTED,
+    EVENT_menuai_STOP,
 )
-from homeassistant.core import Event, HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import Event, menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType
 
 from .config import (
     CONF_ADVERTISE_IP,
@@ -92,7 +92,7 @@ CONFIG_SCHEMA = vol.Schema(
 
 
 async def start_emulated_hue_bridge(
-    hass: HomeAssistant, config: Config, app: web.Application
+    menuai: menuai, config: Config, app: web.Application
 ) -> None:
     """Start the emulated hue bridge."""
     protocol = await async_create_upnp_datagram_endpoint(
@@ -122,38 +122,38 @@ async def start_emulated_hue_bridge(
         await site.stop()
         await runner.cleanup()
 
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, stop_emulated_hue_bridge)
+    menuai.bus.async_listen_once(EVENT_menuai_STOP, stop_emulated_hue_bridge)
 
 
-async def async_setup(hass: HomeAssistant, yaml_config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, yaml_config: ConfigType) -> bool:
     """Activate the emulated_hue component."""
-    local_ip = await async_get_source_ip(hass)
-    config = Config(hass, yaml_config.get(DOMAIN, {}), local_ip)
+    local_ip = await async_get_source_ip(menuai)
+    config = Config(menuai, yaml_config.get(DOMAIN, {}), local_ip)
     await config.async_setup()
 
     app = web.Application()
-    app[KEY_HASS] = hass
+    app[KEY_menuai] = menuai
 
     # We misunderstood the startup signal. You're not allowed to change
     # anything during startup. Temp workaround.
     app._on_startup.freeze()  # noqa: SLF001
     await app.startup()
 
-    DescriptionXmlView(config).register(hass, app, app.router)
-    HueUsernameView().register(hass, app, app.router)
-    HueConfigView(config).register(hass, app, app.router)
-    HueUnauthorizedUser().register(hass, app, app.router)
-    HueAllLightsStateView(config).register(hass, app, app.router)
-    HueOneLightStateView(config).register(hass, app, app.router)
-    HueOneLightChangeView(config).register(hass, app, app.router)
-    HueAllGroupsStateView(config).register(hass, app, app.router)
-    HueGroupView(config).register(hass, app, app.router)
-    HueFullStateView(config).register(hass, app, app.router)
+    DescriptionXmlView(config).register(menuai, app, app.router)
+    HueUsernameView().register(menuai, app, app.router)
+    HueConfigView(config).register(menuai, app, app.router)
+    HueUnauthorizedUser().register(menuai, app, app.router)
+    HueAllLightsStateView(config).register(menuai, app, app.router)
+    HueOneLightStateView(config).register(menuai, app, app.router)
+    HueOneLightChangeView(config).register(menuai, app, app.router)
+    HueAllGroupsStateView(config).register(menuai, app, app.router)
+    HueGroupView(config).register(menuai, app, app.router)
+    HueFullStateView(config).register(menuai, app, app.router)
 
     async def _start(event: Event) -> None:
         """Start the bridge."""
-        await start_emulated_hue_bridge(hass, config, app)
+        await start_emulated_hue_bridge(menuai, config, app)
 
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, _start)
+    menuai.bus.async_listen_once(EVENT_menuai_STARTED, _start)
 
     return True

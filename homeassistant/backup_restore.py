@@ -1,4 +1,4 @@
-"""Home Assistant module to handle restoring backups."""
+"""MenuAI module to handle restoring backups."""
 
 from __future__ import annotations
 
@@ -37,7 +37,7 @@ class RestoreBackupFileContent:
     password: str | None
     remove_after_restore: bool
     restore_database: bool
-    restore_homeassistant: bool
+    restore_menuai: bool
 
 
 def password_to_key(password: str) -> bytes:
@@ -61,7 +61,7 @@ def restore_backup_file_content(config_dir: Path) -> RestoreBackupFileContent | 
             password=instruction_content["password"],
             remove_after_restore=instruction_content["remove_after_restore"],
             restore_database=instruction_content["restore_database"],
-            restore_homeassistant=instruction_content["restore_homeassistant"],
+            restore_menuai=instruction_content["restore_menuai"],
         )
     except FileNotFoundError:
         return None
@@ -112,18 +112,18 @@ def _extract_backup(
 
         if (
             backup_meta_version := AwesomeVersion(
-                backup_meta["homeassistant"]["version"]
+                backup_meta["menuai"]["version"]
             )
         ) > HA_VERSION:
             raise ValueError(
-                f"You need at least Home Assistant version {backup_meta_version} to restore this backup"
+                f"You need at least MenuAI version {backup_meta_version} to restore this backup"
             )
 
         with securetar.SecureTarFile(
             Path(
                 tempdir,
                 "extracted",
-                f"homeassistant.tar{'.gz' if backup_meta['compressed'] else ''}",
+                f"menuai.tar{'.gz' if backup_meta['compressed'] else ''}",
             ),
             gzip=backup_meta["compressed"],
             key=password_to_key(restore_content.password)
@@ -132,17 +132,17 @@ def _extract_backup(
             mode="r",
         ) as istf:
             istf.extractall(
-                path=Path(tempdir, "homeassistant"),
+                path=Path(tempdir, "menuai"),
                 members=securetar.secure_path(istf),
                 filter="fully_trusted",
             )
-            if restore_content.restore_homeassistant:
+            if restore_content.restore_menuai:
                 keep = list(KEEP_BACKUPS)
                 if not restore_content.restore_database:
                     keep.extend(KEEP_DATABASE)
                 _clear_configuration_directory(config_dir, keep)
                 shutil.copytree(
-                    Path(tempdir, "homeassistant", "data"),
+                    Path(tempdir, "menuai", "data"),
                     config_dir,
                     dirs_exist_ok=True,
                     ignore=shutil.ignore_patterns(*(keep)),
@@ -159,7 +159,7 @@ def _extract_backup(
 
                 for entry in KEEP_DATABASE:
                     shutil.copy(
-                        Path(tempdir, "homeassistant", "data", entry),
+                        Path(tempdir, "menuai", "data", entry),
                         config_dir,
                     )
 

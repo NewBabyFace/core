@@ -6,10 +6,10 @@ from typing import Any
 
 from aioamazondevices.api import AmazonDevice
 
-from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.const import CONF_NAME, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceEntry
+from menuai.components.diagnostics import async_redact_data
+from menuai.const import CONF_NAME, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceEntry
 
 from .coordinator import AmazonConfigEntry
 
@@ -17,7 +17,7 @@ TO_REDACT = {CONF_PASSWORD, CONF_USERNAME, CONF_NAME, "title"}
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: AmazonConfigEntry
+    menuai: menuai, entry: AmazonConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
 
@@ -38,7 +38,7 @@ async def async_get_config_entry_diagnostics(
 
 
 async def async_get_device_diagnostics(
-    hass: HomeAssistant, entry: AmazonConfigEntry, device_entry: DeviceEntry
+    menuai: menuai, entry: AmazonConfigEntry, device_entry: DeviceEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a device."""
 

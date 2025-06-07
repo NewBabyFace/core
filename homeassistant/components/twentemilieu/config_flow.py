@@ -11,9 +11,9 @@ from twentemilieu import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_ID
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_ID
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import CONF_HOUSE_LETTER, CONF_HOUSE_NUMBER, CONF_POST_CODE, DOMAIN
 
@@ -48,7 +48,7 @@ class TwenteMilieuFlowHandler(ConfigFlow, domain=DOMAIN):
 
         errors = {}
 
-        session = async_get_clientsession(self.hass)
+        session = async_get_clientsession(self.menuai)
 
         twentemilieu = TwenteMilieu(
             post_code=user_input[CONF_POST_CODE],

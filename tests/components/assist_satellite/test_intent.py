@@ -4,10 +4,10 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import intent
-from homeassistant.setup import async_setup_component
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers import intent
+from menuai.setup import async_setup_component
 
 from .conftest import TEST_DOMAIN, MockAssistSatellite
 
@@ -15,24 +15,24 @@ from tests.components.tts.common import MockResultStream
 
 
 @pytest.fixture
-async def mock_tts(hass: HomeAssistant):
+async def mock_tts(menuai: menuai):
     """Mock TTS service."""
-    assert await async_setup_component(hass, "tts", {})
+    assert await async_setup_component(menuai, "tts", {})
     with (
         patch(
-            "homeassistant.components.tts.generate_media_source_id",
+            "menuai.components.tts.generate_media_source_id",
             return_value="media-source://bla",
         ),
         patch(
-            "homeassistant.components.tts.async_create_stream",
-            return_value=MockResultStream(hass, "wav", b""),
+            "menuai.components.tts.async_create_stream",
+            return_value=MockResultStream(menuai, "wav", b""),
         ),
     ):
         yield
 
 
 async def test_broadcast_intent(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_components: ConfigEntry,
     entity: MockAssistSatellite,
     entity2: MockAssistSatellite,
@@ -42,11 +42,11 @@ async def test_broadcast_intent(
     """Test we can invoke a broadcast intent."""
 
     with patch(
-        "homeassistant.components.tts.async_resolve_engine",
+        "menuai.components.tts.async_resolve_engine",
         return_value="tts.cloud",
     ):
         result = await intent.async_handle(
-            hass, "test", intent.INTENT_BROADCAST, {"message": {"value": "Hello"}}
+            menuai, "test", intent.INTENT_BROADCAST, {"message": {"value": "Hello"}}
         )
 
     assert result.as_dict() == {
@@ -76,11 +76,11 @@ async def test_broadcast_intent(
     assert len(entity_no_features.announcements) == 0
 
     with patch(
-        "homeassistant.components.tts.async_resolve_engine",
+        "menuai.components.tts.async_resolve_engine",
         return_value="tts.cloud",
     ):
         result = await intent.async_handle(
-            hass,
+            menuai,
             "test",
             intent.INTENT_BROADCAST,
             {"message": {"value": "Hello"}},
@@ -109,7 +109,7 @@ async def test_broadcast_intent(
 
 
 async def test_broadcast_intent_excluded_domains(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_components: ConfigEntry,
     entity: MockAssistSatellite,
     entity2: MockAssistSatellite,
@@ -119,11 +119,11 @@ async def test_broadcast_intent_excluded_domains(
 
     # Exclude the "test" domain
     with patch(
-        "homeassistant.components.assist_satellite.intent.EXCLUDED_DOMAINS",
+        "menuai.components.assist_satellite.intent.EXCLUDED_DOMAINS",
         new={TEST_DOMAIN},
     ):
         result = await intent.async_handle(
-            hass, "test", intent.INTENT_BROADCAST, {"message": {"value": "Hello"}}
+            menuai, "test", intent.INTENT_BROADCAST, {"message": {"value": "Hello"}}
         )
         assert result.as_dict() == {
             "card": {},

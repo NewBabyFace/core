@@ -3,12 +3,12 @@
 import logging
 from typing import Any
 
-from homeassistant.components.cover import CoverDeviceClass, CoverEntity, CoverState
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.restore_state import RestoreEntity
+from menuai.components.cover import CoverDeviceClass, CoverEntity, CoverState
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.restore_state import RestoreEntity
 
 from .const import (
     CONF_REVERSED_TARGET_IDS,
@@ -27,14 +27,14 @@ MYLINK_COVER_TYPE_TO_DEVICE_CLASS = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Discover and configure Somfy covers."""
     reversed_target_ids = config_entry.options.get(CONF_REVERSED_TARGET_IDS, {})
 
-    data = hass.data[DOMAIN][config_entry.entry_id]
+    data = menuai.data[DOMAIN][config_entry.entry_id]
     mylink_status = data[MYLINK_STATUS]
     somfy_mylink = data[DATA_SOMFY_MYLINK]
     cover_list = []
@@ -123,9 +123,9 @@ class SomfyShade(RestoreEntity, CoverEntity):
         """Stop the cover."""
         await self.somfy_mylink.move_stop(self._target_id)
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Complete the initialization."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         # Restore the last state
         last_state = await self.async_get_last_state()
 

@@ -60,9 +60,9 @@ from aioairzone.const import (
     DEFAULT_SYSTEM_ID,
 )
 
-from homeassistant.components.airzone.const import DOMAIN
-from homeassistant.const import CONF_HOST, CONF_ID, CONF_PORT
-from homeassistant.core import HomeAssistant
+from menuai.components.airzone.const import DOMAIN
+from menuai.const import CONF_HOST, CONF_ID, CONF_PORT
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -370,9 +370,9 @@ HVAC_WEBSERVER_MOCK = {
 
 
 async def async_init_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> MockConfigEntry:
-    """Set up the Airzone integration in Home Assistant."""
+    """Set up the Airzone integration in MenuAI."""
 
     config_entry = MockConfigEntry(
         minor_version=2,
@@ -381,31 +381,31 @@ async def async_init_integration(
         domain=DOMAIN,
         unique_id="airzone_unique_id",
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with (
         patch(
-            "homeassistant.components.airzone.AirzoneLocalApi.get_dhw",
+            "menuai.components.airzone.AirzoneLocalApi.get_dhw",
             return_value=HVAC_DHW_MOCK,
         ),
         patch(
-            "homeassistant.components.airzone.AirzoneLocalApi.get_hvac",
+            "menuai.components.airzone.AirzoneLocalApi.get_hvac",
             return_value=HVAC_MOCK,
         ),
         patch(
-            "homeassistant.components.airzone.AirzoneLocalApi.get_hvac_systems",
+            "menuai.components.airzone.AirzoneLocalApi.get_hvac_systems",
             return_value=HVAC_SYSTEMS_MOCK,
         ),
         patch(
-            "homeassistant.components.airzone.AirzoneLocalApi.get_version",
+            "menuai.components.airzone.AirzoneLocalApi.get_version",
             return_value=HVAC_VERSION_MOCK,
         ),
         patch(
-            "homeassistant.components.airzone.AirzoneLocalApi.get_webserver",
+            "menuai.components.airzone.AirzoneLocalApi.get_webserver",
             return_value=HVAC_WEBSERVER_MOCK,
         ),
     ):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
 
     return config_entry

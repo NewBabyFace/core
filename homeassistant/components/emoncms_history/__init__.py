@@ -7,7 +7,7 @@ import logging
 import requests
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_API_KEY,
     CONF_SCAN_INTERVAL,
     CONF_URL,
@@ -15,11 +15,11 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, state as state_helper
-from homeassistant.helpers.event import track_point_in_time
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, state as state_helper
+from menuai.helpers.event import track_point_in_time
+from menuai.helpers.typing import ConfigType
+from menuai.util import dt as dt_util
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -42,7 +42,7 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+def setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Emoncms history component."""
     conf = config[DOMAIN]
     whitelist = conf.get(CONF_WHITELIST)
@@ -74,7 +74,7 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
         payload_dict = {}
 
         for entity_id in whitelist:
-            state = hass.states.get(entity_id)
+            state = menuai.states.get(entity_id)
 
             if state is None or state.state in (STATE_UNKNOWN, "", STATE_UNAVAILABLE):
                 continue
@@ -95,7 +95,7 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
             )
 
         track_point_in_time(
-            hass, update_emoncms, time + timedelta(seconds=conf.get(CONF_SCAN_INTERVAL))
+            menuai, update_emoncms, time + timedelta(seconds=conf.get(CONF_SCAN_INTERVAL))
         )
 
     update_emoncms(dt_util.utcnow())

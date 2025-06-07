@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-from homeassistant.components.assist_pipeline.repair_flows import (
+from menuai.components.assist_pipeline.repair_flows import (
     AssistInProgressDeprecatedRepairFlow,
 )
-from homeassistant.components.repairs import RepairsFlow
-from homeassistant.core import HomeAssistant
+from menuai.components.repairs import RepairsFlow
+from menuai.core import menuai
 
 
 async def async_create_fix_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     issue_id: str,
     data: dict[str, str | int | float | None] | None,
 ) -> RepairsFlow:

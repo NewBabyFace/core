@@ -7,14 +7,14 @@ import logging
 import aiohttp
 import voluptuous as vol
 
-from homeassistant.components.tts import (
+from menuai.components.tts import (
     CONF_LANG,
     PLATFORM_SCHEMA as TTS_PLATFORM_SCHEMA,
     Provider,
 )
-from homeassistant.const import CONF_API_KEY
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.const import CONF_API_KEY
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -84,17 +84,17 @@ PLATFORM_SCHEMA = TTS_PLATFORM_SCHEMA.extend(
 SUPPORTED_OPTIONS = [CONF_CODEC, CONF_VOICE, CONF_EMOTION, CONF_SPEED]
 
 
-async def async_get_engine(hass, config, discovery_info=None):
+async def async_get_engine(menuai, config, discovery_info=None):
     """Set up VoiceRSS speech component."""
-    return YandexSpeechKitProvider(hass, config)
+    return YandexSpeechKitProvider(menuai, config)
 
 
 class YandexSpeechKitProvider(Provider):
     """VoiceRSS speech api provider."""
 
-    def __init__(self, hass, conf):
+    def __init__(self, menuai, conf):
         """Init VoiceRSS TTS service."""
-        self.hass = hass
+        self.menuai = menuai
         self._codec = conf.get(CONF_CODEC)
         self._key = conf.get(CONF_API_KEY)
         self._speaker = conf.get(CONF_VOICE)
@@ -120,7 +120,7 @@ class YandexSpeechKitProvider(Provider):
 
     async def async_get_tts_audio(self, message, language, options):
         """Load TTS from yandex."""
-        websession = async_get_clientsession(self.hass)
+        websession = async_get_clientsession(self.menuai)
         actual_language = language
 
         try:

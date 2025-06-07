@@ -5,8 +5,8 @@ from typing import Any
 
 from pysmarlaapi import Federwiege
 
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity, EntityDescription
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity, EntityDescription
 
 from .const import DEVICE_MODEL_NAME, DOMAIN, MANUFACTURER_NAME
 
@@ -44,10 +44,10 @@ class SmarlaBaseEntity(Entity):
         """Notify ha when state changes."""
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Run when this Entity has been added to HA."""
         await self._property.add_listener(self.on_change)
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Entity being removed from hass."""
+    async def async_will_remove_from_menuai(self) -> None:
+        """Entity being removed from menuai."""
         await self._property.remove_listener(self.on_change)

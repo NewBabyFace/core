@@ -6,16 +6,16 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.devolo_home_network.const import (
+from menuai.components.devolo_home_network.const import (
     DOMAIN,
     FIRMWARE_UPDATE_INTERVAL,
 )
-from homeassistant.components.update import DOMAIN as PLATFORM, SERVICE_INSTALL
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
-from homeassistant.const import ATTR_ENTITY_ID, STATE_OFF, STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.components.update import DOMAIN as PLATFORM, SERVICE_INSTALL
+from menuai.config_entries import SOURCE_REAUTH, ConfigEntryState
+from menuai.const import ATTR_ENTITY_ID, STATE_OFF, STATE_UNAVAILABLE
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from . import configure_integration
 from .const import FIRMWARE_UPDATE_AVAILABLE
@@ -26,21 +26,21 @@ from tests.common import async_fire_time_changed
 
 @pytest.mark.usefixtures("mock_device")
 async def test_update_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test default setup of the update component."""
-    entry = configure_integration(hass)
+    entry = configure_integration(menuai)
     device_name = entry.title.replace(" ", "_").lower()
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
     assert entry.state is ConfigEntryState.LOADED
 
     assert not entity_registry.async_get(f"{PLATFORM}.{device_name}_firmware").disabled
 
 
 async def test_update_firmware(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_device: MockDevice,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
@@ -48,17 +48,17 @@ async def test_update_firmware(
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test updating a device."""
-    entry = configure_integration(hass)
+    entry = configure_integration(menuai)
     device_name = entry.title.replace(" ", "_").lower()
     state_key = f"{PLATFORM}.{device_name}_firmware"
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(state_key) == snapshot
+    assert menuai.states.get(state_key) == snapshot
     assert entity_registry.async_get(state_key) == snapshot
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         PLATFORM,
         SERVICE_INSTALL,
         {ATTR_ENTITY_ID: state_key},
@@ -74,10 +74,10 @@ async def test_update_firmware(
         UpdateFirmwareCheck(result=UPDATE_NOT_AVAILABLE)
     )
     freezer.tick(FIRMWARE_UPDATE_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(state_key)
+    state = menuai.states.get(state_key)
     assert state is not None
     assert state.state == STATE_OFF
 
@@ -89,48 +89,48 @@ async def test_update_firmware(
 
 
 async def test_device_failure_check(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_device: MockDevice,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test device failure during check."""
-    entry = configure_integration(hass)
+    entry = configure_integration(menuai)
     device_name = entry.title.replace(" ", "_").lower()
     state_key = f"{PLATFORM}.{device_name}_firmware"
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(state_key)
+    state = menuai.states.get(state_key)
     assert state is not None
 
     mock_device.device.async_check_firmware_available.side_effect = DeviceUnavailable
     freezer.tick(FIRMWARE_UPDATE_INTERVAL)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(state_key)
+    state = menuai.states.get(state_key)
     assert state is not None
     assert state.state == STATE_UNAVAILABLE
 
 
 async def test_device_failure_update(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_device: MockDevice,
 ) -> None:
     """Test device failure when starting update."""
-    entry = configure_integration(hass)
+    entry = configure_integration(menuai)
     device_name = entry.title.replace(" ", "_").lower()
     state_key = f"{PLATFORM}.{device_name}_firmware"
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     mock_device.device.async_start_firmware_update.side_effect = DeviceUnavailable
 
     # Emulate update start
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             PLATFORM,
             SERVICE_INSTALL,
             {ATTR_ENTITY_ID: state_key},
@@ -138,26 +138,26 @@ async def test_device_failure_update(
         )
 
 
-async def test_auth_failed(hass: HomeAssistant, mock_device: MockDevice) -> None:
+async def test_auth_failed(menuai: menuai, mock_device: MockDevice) -> None:
     """Test updating unauthorized triggers the reauth flow."""
-    entry = configure_integration(hass)
+    entry = configure_integration(menuai)
     device_name = entry.title.replace(" ", "_").lower()
     state_key = f"{PLATFORM}.{device_name}_firmware"
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     mock_device.device.async_start_firmware_update.side_effect = DevicePasswordProtected
 
-    with pytest.raises(HomeAssistantError):
-        assert await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        assert await menuai.services.async_call(
             PLATFORM,
             SERVICE_INSTALL,
             {ATTR_ENTITY_ID: state_key},
             blocking=True,
         )
-    await hass.async_block_till_done()
-    flows = hass.config_entries.flow.async_progress()
+    await menuai.async_block_till_done()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
 
     flow = flows[0]

@@ -8,8 +8,8 @@ from pydiscovergy.error import DiscovergyClientError, HTTPError, InvalidLogin
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 
 @pytest.mark.parametrize(
@@ -31,7 +31,7 @@ from homeassistant.helpers import entity_registry as er
 )
 @pytest.mark.usefixtures("setup_integration")
 async def test_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     state_name: str,
     snapshot: SnapshotAssertion,
@@ -41,7 +41,7 @@ async def test_sensor(
     entry = entity_registry.async_get(state_name)
     assert entry == snapshot
 
-    state = hass.states.get(state_name)
+    state = menuai.states.get(state_name)
     assert state == snapshot
 
 
@@ -56,21 +56,21 @@ async def test_sensor(
 )
 @pytest.mark.usefixtures("setup_integration")
 async def test_sensor_update_fail(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     discovergy: AsyncMock,
     error: Exception,
 ) -> None:
     """Test sensor errors."""
-    state = hass.states.get("sensor.electricity_teststrasse_1_total_consumption")
+    state = menuai.states.get("sensor.electricity_teststrasse_1_total_consumption")
     assert state
     assert state.state == "11934.8699715"
 
     discovergy.meter_last_reading.side_effect = error
 
     freezer.tick(timedelta(minutes=1))
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.electricity_teststrasse_1_total_consumption")
+    state = menuai.states.get("sensor.electricity_teststrasse_1_total_consumption")
     assert state
     assert state.state == "unavailable"

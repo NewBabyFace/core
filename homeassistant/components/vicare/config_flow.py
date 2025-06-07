@@ -12,11 +12,11 @@ from PyViCare.PyViCareUtils import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_CLIENT_ID, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_CLIENT_ID, CONF_PASSWORD, CONF_USERNAME
+from menuai.helpers import config_validation as cv
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
 
 from .const import (
     CONF_HEATING_TYPE,
@@ -62,7 +62,7 @@ class ViCareConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             try:
-                await self.hass.async_add_executor_job(login, self.hass, user_input)
+                await self.menuai.async_add_executor_job(login, self.menuai, user_input)
             except (PyViCareInvalidConfigurationError, PyViCareInvalidCredentialsError):
                 errors["base"] = "invalid_auth"
             else:
@@ -94,7 +94,7 @@ class ViCareConfigFlow(ConfigFlow, domain=DOMAIN):
             }
 
             try:
-                await self.hass.async_add_executor_job(login, self.hass, data)
+                await self.menuai.async_add_executor_job(login, self.menuai, data)
             except (PyViCareInvalidConfigurationError, PyViCareInvalidCredentialsError):
                 errors["base"] = "invalid_auth"
             else:

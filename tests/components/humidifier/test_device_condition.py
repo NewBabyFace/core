@@ -4,18 +4,18 @@ import pytest
 from pytest_unordered import unordered
 import voluptuous_serialize
 
-from homeassistant.components import automation
-from homeassistant.components.device_automation import DeviceAutomationType
-from homeassistant.components.humidifier import DOMAIN, const, device_condition
-from homeassistant.const import ATTR_MODE, STATE_OFF, STATE_ON, EntityCategory
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import (
+from menuai.components import automation
+from menuai.components.device_automation import DeviceAutomationType
+from menuai.components.humidifier import DOMAIN, const, device_condition
+from menuai.const import ATTR_MODE, STATE_OFF, STATE_ON, EntityCategory
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import (
     config_validation as cv,
     device_registry as dr,
     entity_registry as er,
 )
-from homeassistant.helpers.entity_registry import RegistryEntryHider
-from homeassistant.setup import async_setup_component
+from menuai.helpers.entity_registry import RegistryEntryHider
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry, async_get_device_automations
 
@@ -35,7 +35,7 @@ def stub_blueprint_populate_autouse(stub_blueprint_populate: None) -> None:
     ],
 )
 async def test_get_conditions(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     set_state,
@@ -45,7 +45,7 @@ async def test_get_conditions(
 ) -> None:
     """Test we get the expected conditions from a humidifier."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -58,7 +58,7 @@ async def test_get_conditions(
         supported_features=features_reg,
     )
     if set_state:
-        hass.states.async_set(
+        menuai.states.async_set(
             f"{DOMAIN}.test_5678", "attributes", {"supported_features": features_state}
         )
     expected_conditions = []
@@ -86,7 +86,7 @@ async def test_get_conditions(
         for condition in expected_condition_types
     ]
     conditions = await async_get_device_automations(
-        hass, DeviceAutomationType.CONDITION, device_entry.id
+        menuai, DeviceAutomationType.CONDITION, device_entry.id
     )
     assert conditions == unordered(expected_conditions)
 
@@ -101,7 +101,7 @@ async def test_get_conditions(
     ],
 )
 async def test_get_conditions_hidden_auxiliary(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     hidden_by,
@@ -109,7 +109,7 @@ async def test_get_conditions_hidden_auxiliary(
 ) -> None:
     """Test we get the expected conditions from a hidden or auxiliary entity."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -134,20 +134,20 @@ async def test_get_conditions_hidden_auxiliary(
         for condition in ("is_off", "is_on")
     ]
     conditions = await async_get_device_automations(
-        hass, DeviceAutomationType.CONDITION, device_entry.id
+        menuai, DeviceAutomationType.CONDITION, device_entry.id
     )
     assert conditions == unordered(expected_conditions)
 
 
 async def test_if_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     service_calls: list[ServiceCall],
 ) -> None:
     """Test for turn_on and turn_off conditions."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -156,10 +156,10 @@ async def test_if_state(
         DOMAIN, "test", "5678", device_id=device_entry.id
     )
 
-    hass.states.async_set(entry.entity_id, STATE_ON, {ATTR_MODE: const.MODE_AWAY})
+    menuai.states.async_set(entry.entity_id, STATE_ON, {ATTR_MODE: const.MODE_AWAY})
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -227,47 +227,47 @@ async def test_if_state(
             ]
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 0
 
-    hass.bus.async_fire("test_event1")
-    hass.bus.async_fire("test_event2")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event1")
+    menuai.bus.async_fire("test_event2")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
     assert service_calls[0].data["some"] == "is_on event - test_event1"
 
-    hass.states.async_set(entry.entity_id, STATE_OFF)
-    hass.bus.async_fire("test_event1")
-    hass.bus.async_fire("test_event2")
-    await hass.async_block_till_done()
+    menuai.states.async_set(entry.entity_id, STATE_OFF)
+    menuai.bus.async_fire("test_event1")
+    menuai.bus.async_fire("test_event2")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 2
     assert service_calls[1].data["some"] == "is_off event - test_event2"
 
-    hass.states.async_set(entry.entity_id, STATE_ON, {ATTR_MODE: const.MODE_AWAY})
+    menuai.states.async_set(entry.entity_id, STATE_ON, {ATTR_MODE: const.MODE_AWAY})
 
-    hass.bus.async_fire("test_event3")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event3")
+    await menuai.async_block_till_done()
 
     assert len(service_calls) == 3
     assert service_calls[2].data["some"] == "is_mode - event - test_event3"
 
-    hass.states.async_set(entry.entity_id, STATE_ON, {ATTR_MODE: const.MODE_HOME})
+    menuai.states.async_set(entry.entity_id, STATE_ON, {ATTR_MODE: const.MODE_HOME})
 
     # Should not fire
-    hass.bus.async_fire("test_event3")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event3")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 3
 
 
 async def test_if_state_legacy(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     service_calls: list[ServiceCall],
 ) -> None:
     """Test for turn_on and turn_off conditions."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -276,10 +276,10 @@ async def test_if_state_legacy(
         DOMAIN, "test", "5678", device_id=device_entry.id
     )
 
-    hass.states.async_set(entry.entity_id, STATE_ON, {ATTR_MODE: const.MODE_AWAY})
+    menuai.states.async_set(entry.entity_id, STATE_ON, {ATTR_MODE: const.MODE_AWAY})
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -305,13 +305,13 @@ async def test_if_state_legacy(
             ]
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 0
 
-    hass.states.async_set(entry.entity_id, STATE_ON, {ATTR_MODE: const.MODE_AWAY})
+    menuai.states.async_set(entry.entity_id, STATE_ON, {ATTR_MODE: const.MODE_AWAY})
 
-    hass.bus.async_fire("test_event1")
-    await hass.async_block_till_done()
+    menuai.bus.async_fire("test_event1")
+    await menuai.async_block_till_done()
 
     assert len(service_calls) == 1
     assert service_calls[0].data["some"] == "is_mode - event - test_event1"
@@ -437,7 +437,7 @@ async def test_if_state_legacy(
     ],
 )
 async def test_capabilities(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     set_state,
@@ -448,7 +448,7 @@ async def test_capabilities(
 ) -> None:
     """Test getting capabilities."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -461,14 +461,14 @@ async def test_capabilities(
         capabilities=capabilities_reg,
     )
     if set_state:
-        hass.states.async_set(
+        menuai.states.async_set(
             entity_entry.entity_id,
             STATE_ON,
             capabilities_state,
         )
 
     capabilities = await device_condition.async_get_condition_capabilities(
-        hass,
+        menuai,
         {
             "domain": DOMAIN,
             "device_id": "abcdefgh",
@@ -607,7 +607,7 @@ async def test_capabilities(
     ],
 )
 async def test_capabilities_legacy(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     set_state,
@@ -618,7 +618,7 @@ async def test_capabilities_legacy(
 ) -> None:
     """Test getting capabilities."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, "12:34:56:AB:CD:EF")},
@@ -631,14 +631,14 @@ async def test_capabilities_legacy(
         capabilities=capabilities_reg,
     )
     if set_state:
-        hass.states.async_set(
+        menuai.states.async_set(
             entity_entry.entity_id,
             STATE_ON,
             capabilities_state,
         )
 
     capabilities = await device_condition.async_get_condition_capabilities(
-        hass,
+        menuai,
         {
             "domain": DOMAIN,
             "device_id": "abcdefgh",
@@ -664,14 +664,14 @@ async def test_capabilities_legacy(
     ],
 )
 async def test_capabilities_missing_entity(
-    hass: HomeAssistant, condition, capability_name, extra
+    menuai: menuai, condition, capability_name, extra
 ) -> None:
     """Test getting capabilities."""
     config_entry = MockConfigEntry(domain="test", data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     capabilities = await device_condition.async_get_condition_capabilities(
-        hass,
+        menuai,
         {
             "domain": DOMAIN,
             "device_id": "abcdefgh",

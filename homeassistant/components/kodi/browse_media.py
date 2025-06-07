@@ -4,8 +4,8 @@ import asyncio
 import contextlib
 import logging
 
-from homeassistant.components import media_source
-from homeassistant.components.media_player import (
+from menuai.components import media_source
+from menuai.components.media_player import (
     BrowseError,
     BrowseMedia,
     MediaClass,
@@ -181,7 +181,7 @@ def media_source_content_filter(item: BrowseMedia) -> bool:
     )
 
 
-async def library_payload(hass):
+async def library_payload(menuai):
     """Create response payload to describe contents of a specific library.
 
     Used by async_browse_media.
@@ -223,7 +223,7 @@ async def library_payload(hass):
 
     with contextlib.suppress(media_source.BrowseError):
         item = await media_source.async_browse_media(
-            hass, None, content_filter=media_source_content_filter
+            menuai, None, content_filter=media_source_content_filter
         )
         # If domain is None, it's overview of available sources
         if item.domain is None:

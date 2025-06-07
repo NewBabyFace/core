@@ -13,29 +13,29 @@ from typing import TYPE_CHECKING, Any, Final, Self, cast, final
 from propcache.api import cached_property
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     SERVICE_TOGGLE,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
     STATE_ON,
 )
-from homeassistant.core import HomeAssistant, ServiceCall, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.deprecation import (
+from menuai.core import menuai, ServiceCall, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.deprecation import (
     DeprecatedConstant,
     DeprecatedConstantEnum,
     all_with_deprecated_constants,
     check_if_deprecated_constant,
     dir_with_deprecated_constants,
 )
-from homeassistant.helpers.entity import ToggleEntity, ToggleEntityDescription
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.frame import ReportBehavior, report_usage
-from homeassistant.helpers.typing import ConfigType, VolDictType
-from homeassistant.loader import bind_hass
-from homeassistant.util import color as color_util
+from menuai.helpers.entity import ToggleEntity, ToggleEntityDescription
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.frame import ReportBehavior, report_usage
+from menuai.helpers.typing import ConfigType, VolDictType
+from menuai.loader import bind_menuai
+from menuai.util import color as color_util
 
 from .const import (  # noqa: F401
     COLOR_MODES_BRIGHTNESS,
@@ -56,7 +56,7 @@ PLATFORM_SCHEMA = cv.PLATFORM_SCHEMA
 PLATFORM_SCHEMA_BASE = cv.PLATFORM_SCHEMA_BASE
 
 
-# These SUPPORT_* constants are deprecated as of Home Assistant 2022.5.
+# These SUPPORT_* constants are deprecated as of MenuAI 2022.5.
 # Please use the LightEntityFeature enum instead.
 _DEPRECATED_SUPPORT_BRIGHTNESS: Final = DeprecatedConstant(
     1, "supported_color_modes", "2026.1"
@@ -82,7 +82,7 @@ ATTR_COLOR_MODE = "color_mode"
 # List of color modes supported by the light
 ATTR_SUPPORTED_COLOR_MODES = "supported_color_modes"
 
-# These COLOR_MODE_* constants are deprecated as of Home Assistant 2022.5.
+# These COLOR_MODE_* constants are deprecated as of MenuAI 2022.5.
 # Please use the LightEntityFeature enum instead.
 _DEPRECATED_COLOR_MODE_UNKNOWN: Final = DeprecatedConstantEnum(
     ColorMode.UNKNOWN, "2026.1"
@@ -113,7 +113,7 @@ def filter_supported_color_modes(color_modes: Iterable[ColorMode]) -> set[ColorM
         or ColorMode.UNKNOWN in color_modes
         or (ColorMode.WHITE in color_modes and not color_supported(color_modes))
     ):
-        raise HomeAssistantError
+        raise menuaiError
 
     if ColorMode.ONOFF in color_modes and len(color_modes) > 1:
         color_modes.remove(ColorMode.ONOFF)
@@ -159,18 +159,18 @@ def color_temp_supported(color_modes: Iterable[ColorMode | str] | None) -> bool:
     return ColorMode.COLOR_TEMP in color_modes
 
 
-def get_supported_color_modes(hass: HomeAssistant, entity_id: str) -> set[str] | None:
+def get_supported_color_modes(menuai: menuai, entity_id: str) -> set[str] | None:
     """Get supported color modes for a light entity.
 
     First try the statemachine, then entity registry.
     This is the equivalent of entity helper get_supported_features.
     """
-    if state := hass.states.get(entity_id):
+    if state := menuai.states.get(entity_id):
         return state.attributes.get(ATTR_SUPPORTED_COLOR_MODES)
 
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
     if not (entry := entity_registry.async_get(entity_id)):
-        raise HomeAssistantError(f"Unknown entity {entity_id}")
+        raise menuaiError(f"Unknown entity {entity_id}")
     if not entry.capabilities:
         return None
 
@@ -290,14 +290,14 @@ LIGHT_TURN_OFF_SCHEMA: VolDictType = {
 _LOGGER = logging.getLogger(__name__)
 
 
-@bind_hass
-def is_on(hass: HomeAssistant, entity_id: str) -> bool:
+@bind_menuai
+def is_on(menuai: menuai, entity_id: str) -> bool:
     """Return if the lights are on based on the statemachine."""
-    return hass.states.is_state(entity_id, STATE_ON)
+    return menuai.states.is_state(entity_id, STATE_ON)
 
 
 def preprocess_turn_on_alternatives(
-    hass: HomeAssistant, params: dict[str, Any]
+    menuai: menuai, params: dict[str, Any]
 ) -> None:
     """Process extra data for turn light on request.
 
@@ -308,7 +308,7 @@ def preprocess_turn_on_alternatives(
         return
 
     if ATTR_PROFILE in params:
-        hass.data[DATA_PROFILES].apply_profile(params.pop(ATTR_PROFILE), params)
+        menuai.data[DATA_PROFILES].apply_profile(params.pop(ATTR_PROFILE), params)
 
     if (color_name := params.pop(ATTR_COLOR_NAME, None)) is not None:
         try:
@@ -320,7 +320,7 @@ def preprocess_turn_on_alternatives(
     if (mired := params.pop(_DEPRECATED_ATTR_COLOR_TEMP.value, None)) is not None:
         _LOGGER.warning(
             "Got `color_temp` argument in `turn_on` service, which is deprecated "
-            "and will break in Home Assistant 2026.1, please use "
+            "and will break in MenuAI 2026.1, please use "
             "`color_temp_kelvin` argument"
         )
         kelvin = color_util.color_temperature_mired_to_kelvin(mired)
@@ -330,7 +330,7 @@ def preprocess_turn_on_alternatives(
     if (kelvin := params.pop(_DEPRECATED_ATTR_KELVIN.value, None)) is not None:
         _LOGGER.warning(
             "Got `kelvin` argument in `turn_on` service, which is deprecated "
-            "and will break in Home Assistant 2026.1, please use "
+            "and will break in MenuAI 2026.1, please use "
             "`color_temp_kelvin` argument"
         )
         mired = color_util.color_temperature_kelvin_to_mired(kelvin)
@@ -399,17 +399,17 @@ def filter_turn_on_params(light: LightEntity, params: dict[str, Any]) -> dict[st
     return params
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa: C901
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:  # noqa: C901
     """Expose light control via state machine and services."""
-    component = hass.data[DATA_COMPONENT] = EntityComponent[LightEntity](
-        _LOGGER, DOMAIN, hass, SCAN_INTERVAL
+    component = menuai.data[DATA_COMPONENT] = EntityComponent[LightEntity](
+        _LOGGER, DOMAIN, menuai, SCAN_INTERVAL
     )
     await component.async_setup(config)
 
-    profiles = hass.data[DATA_PROFILES] = Profiles(hass)
+    profiles = menuai.data[DATA_PROFILES] = Profiles(menuai)
     # Profiles are loaded in a separate task to avoid delaying the setup
     # of the light base platform.
-    hass.async_create_task(profiles.async_initialize(), eager_start=True)
+    menuai.async_create_task(profiles.async_initialize(), eager_start=True)
 
     def preprocess_data(data: dict[str, Any]) -> VolDictType:
         """Preprocess the service data."""
@@ -419,7 +419,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
             if entity_field in data
         }
 
-        preprocess_turn_on_alternatives(hass, data)
+        preprocess_turn_on_alternatives(menuai, data)
         base["params"] = data
         return base
 
@@ -449,7 +449,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
 
             params[ATTR_BRIGHTNESS] = max(0, min(255, brightness))
 
-            preprocess_turn_on_alternatives(hass, params)
+            preprocess_turn_on_alternatives(menuai, params)
 
         if (not params or not light.is_on) or (
             params and ATTR_TRANSITION not in params
@@ -631,7 +631,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
                 )
 
         # If white is set to True, set it to the light's brightness
-        # Add a warning in Home Assistant Core 2024.3 if the brightness is set to an
+        # Add a warning in MenuAI Core 2024.3 if the brightness is set to an
         # integer.
         if params.get(ATTR_WHITE) is True:
             params[ATTR_WHITE] = light.brightness
@@ -693,14 +693,14 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up a config entry."""
-    return await hass.data[DATA_COMPONENT].async_setup_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_setup_entry(entry)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.data[DATA_COMPONENT].async_unload_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_unload_entry(entry)
 
 
 def _coerce_none(value: str) -> None:
@@ -773,16 +773,16 @@ class Profiles:
     until otherwise decided in an architecture discussion.
     """
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize profiles."""
-        self.hass = hass
+        self.menuai = menuai
         self.data: dict[str, Profile] = {}
 
     def _load_profile_data(self) -> dict[str, Profile]:
         """Load built-in profiles and custom profiles."""
         profile_paths = [
             os.path.join(os.path.dirname(__file__), LIGHT_PROFILES_FILE),
-            self.hass.config.path(LIGHT_PROFILES_FILE),
+            self.menuai.config.path(LIGHT_PROFILES_FILE),
         ]
         profiles = {}
 
@@ -812,7 +812,7 @@ class Profiles:
 
     async def async_initialize(self) -> None:
         """Load and cache profiles."""
-        self.data = await self.hass.async_add_executor_job(self._load_profile_data)
+        self.data = await self.menuai.async_add_executor_job(self._load_profile_data)
 
     @callback
     def apply_default(
@@ -948,7 +948,7 @@ class LightEntity(ToggleEntity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
                 _LOGGER.warning(
                     (
                         "%s (%s) does not report a color mode, this will stop working "
-                        "in Home Assistant Core 2025.3, please %s"
+                        "in MenuAI Core 2025.3, please %s"
                     ),
                     self.entity_id,
                     type(self),
@@ -1191,7 +1191,7 @@ class LightEntity(ToggleEntity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
                 _LOGGER.warning(
                     (
                         "%s (%s) set to unsupported color mode %s, expected one of %s, "
-                        "this will stop working in Home Assistant Core 2025.3, "
+                        "this will stop working in MenuAI Core 2025.3, "
                         "please %s"
                     ),
                     self.entity_id,
@@ -1220,7 +1220,7 @@ class LightEntity(ToggleEntity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
             _LOGGER.warning(
                 (
                     "%s (%s) set to unsupported color mode %s when rendering an effect,"
-                    " expected one of %s, this will stop working in Home Assistant "
+                    " expected one of %s, this will stop working in MenuAI "
                     "Core 2025.3, please %s"
                 ),
                 self.entity_id,
@@ -1249,7 +1249,7 @@ class LightEntity(ToggleEntity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
                 _LOGGER.warning(
                     (
                         "%s (%s) sets invalid supported color modes %s, this will stop "
-                        "working in Home Assistant Core 2025.3, please %s"
+                        "working in MenuAI Core 2025.3, please %s"
                     ),
                     self.entity_id,
                     type(self),
@@ -1353,7 +1353,7 @@ class LightEntity(ToggleEntity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
             _LOGGER.warning(
                 (
                     "%s (%s) does not set supported color modes, this will stop working"
-                    " in Home Assistant Core 2025.3, please %s"
+                    " in MenuAI Core 2025.3, please %s"
                 ),
                 self.entity_id,
                 type(self),

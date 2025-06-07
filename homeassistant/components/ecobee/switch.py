@@ -6,14 +6,14 @@ from datetime import tzinfo
 import logging
 from typing import Any
 
-from homeassistant.components.climate import HVACMode
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import dt as dt_util
+from menuai.components.climate import HVACMode
+from menuai.components.switch import SwitchEntity
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import dt as dt_util
 
 from . import EcobeeConfigEntry, EcobeeData
-from .climate import HASS_TO_ECOBEE_HVAC
+from .climate import menuai_TO_ECOBEE_HVAC
 from .const import ECOBEE_AUX_HEAT_ONLY
 from .entity import EcobeeBaseEntity
 
@@ -23,7 +23,7 @@ DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: EcobeeConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -90,14 +90,14 @@ class EcobeeVentilator20MinSwitch(EcobeeBaseEntity, SwitchEntity):
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Set ventilator 20 min timer on."""
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             self.data.ecobee.set_ventilator_timer, self.thermostat_index, True
         )
         self.update_without_throttle = True
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Set ventilator 20 min timer off."""
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             self.data.ecobee.set_ventilator_timer, self.thermostat_index, False
         )
         self.update_without_throttle = True
@@ -118,7 +118,7 @@ class EcobeeSwitchAuxHeatOnly(EcobeeBaseEntity, SwitchEntity):
         super().__init__(data, thermostat_index)
         self._attr_unique_id = f"{self.base_unique_id}_aux_heat_only"
 
-        self._last_hvac_mode_before_aux_heat = HASS_TO_ECOBEE_HVAC.get(
+        self._last_hvac_mode_before_aux_heat = menuai_TO_ECOBEE_HVAC.get(
             HVACMode.HEAT_COOL
         )
 

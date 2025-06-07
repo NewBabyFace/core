@@ -2,19 +2,19 @@
 
 from typing import Any
 
-from homeassistant.components import switch
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components import switch
+from menuai.components.switch import SwitchEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN, TELLDUS_DISCOVERY_NEW
 from .entity import TelldusLiveEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -22,11 +22,11 @@ async def async_setup_entry(
 
     async def async_discover_switch(device_id):
         """Discover and add a discovered sensor."""
-        client = hass.data[DOMAIN]
+        client = menuai.data[DOMAIN]
         async_add_entities([TelldusLiveSwitch(client, device_id)])
 
     async_dispatcher_connect(
-        hass,
+        menuai,
         TELLDUS_DISCOVERY_NEW.format(switch.DOMAIN, DOMAIN),
         async_discover_switch,
     )

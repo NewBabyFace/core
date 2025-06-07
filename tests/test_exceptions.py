@@ -1,4 +1,4 @@
-"""Test to verify that Home Assistant exceptions work."""
+"""Test to verify that MenuAI exceptions work."""
 
 from __future__ import annotations
 
@@ -7,12 +7,12 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import (
+from menuai.core import menuai
+from menuai.exceptions import (
     ConditionErrorContainer,
     ConditionErrorIndex,
     ConditionErrorMessage,
-    HomeAssistantError,
+    menuaiError,
     TemplateError,
 )
 
@@ -101,33 +101,33 @@ def test_template_message(arg: str | Exception, expected: str) -> None:
     ],
 )
 async def test_home_assistant_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     exception_args: tuple[Any, ...],
     exception_kwargs: dict[str, Any],
     args_base_class: tuple[Any],
     message: str,
 ) -> None:
-    """Test edge cases with HomeAssistantError."""
+    """Test edge cases with menuaiError."""
 
     with patch(
-        "homeassistant.helpers.translation.async_get_cached_translations",
+        "menuai.helpers.translation.async_get_cached_translations",
         return_value={"component.test.exceptions.bla.message": "{bla} from cache"},
     ):
-        with pytest.raises(HomeAssistantError) as exc:
-            raise HomeAssistantError(*exception_args, **exception_kwargs)
+        with pytest.raises(menuaiError) as exc:
+            raise menuaiError(*exception_args, **exception_kwargs)
         assert exc.value.args == args_base_class
         assert str(exc.value) == message
         # Get string of exception again from the cache
         assert str(exc.value) == message
 
 
-async def test_home_assistant_error_subclass(hass: HomeAssistant) -> None:
-    """Test __str__ method on an HomeAssistantError subclass."""
+async def test_home_assistant_error_subclass(menuai: menuai) -> None:
+    """Test __str__ method on an menuaiError subclass."""
 
-    class _SubExceptionDefault(HomeAssistantError):
+    class _SubExceptionDefault(menuaiError):
         """Sub class, default with generated message."""
 
-    class _SubExceptionConstructor(HomeAssistantError):
+    class _SubExceptionConstructor(menuaiError):
         """Sub class with constructor, no generated message."""
 
         def __init__(
@@ -144,7 +144,7 @@ async def test_home_assistant_error_subclass(hass: HomeAssistant) -> None:
             )
             self.custom_arg = custom_arg
 
-    class _SubExceptionConstructorGenerate(HomeAssistantError):
+    class _SubExceptionConstructorGenerate(menuaiError):
         """Sub class with constructor, with generated message."""
 
         generate_message: bool = True
@@ -163,25 +163,25 @@ async def test_home_assistant_error_subclass(hass: HomeAssistant) -> None:
             )
             self.custom_arg = custom_arg
 
-    class _SubExceptionGenerate(HomeAssistantError):
+    class _SubExceptionGenerate(menuaiError):
         """Sub class, no generated message."""
 
         generate_message: bool = True
 
-    class _SubClassWithExceptionGroup(HomeAssistantError, BaseExceptionGroup):
+    class _SubClassWithExceptionGroup(menuaiError, BaseExceptionGroup):
         """Sub class with exception group, no generated message."""
 
-    class _SubClassWithExceptionGroupGenerate(HomeAssistantError, BaseExceptionGroup):
+    class _SubClassWithExceptionGroupGenerate(menuaiError, BaseExceptionGroup):
         """Sub class with exception group and generated message."""
 
         generate_message: bool = True
 
     with patch(
-        "homeassistant.helpers.translation.async_get_cached_translations",
+        "menuai.helpers.translation.async_get_cached_translations",
         return_value={"component.test.exceptions.bla.message": "{bla} from cache"},
     ):
         # A subclass without a constructor generates a message by default
-        with pytest.raises(HomeAssistantError) as exc:
+        with pytest.raises(menuaiError) as exc:
             raise _SubExceptionDefault(
                 translation_domain="test",
                 translation_key="bla",
@@ -190,7 +190,7 @@ async def test_home_assistant_error_subclass(hass: HomeAssistant) -> None:
         assert str(exc.value) == "Bla from cache"
 
         # A subclass with a constructor that does not parse `args` to the super class
-        with pytest.raises(HomeAssistantError) as exc:
+        with pytest.raises(menuaiError) as exc:
             raise _SubExceptionConstructor(
                 "custom arg",
                 translation_domain="test",
@@ -198,14 +198,14 @@ async def test_home_assistant_error_subclass(hass: HomeAssistant) -> None:
                 translation_placeholders={"bla": "Bla"},
             )
         assert str(exc.value) == "Bla from cache"
-        with pytest.raises(HomeAssistantError) as exc:
+        with pytest.raises(menuaiError) as exc:
             raise _SubExceptionConstructor(
                 "custom arg",
             )
         assert str(exc.value) == ""
 
         # A subclass with a constructor that generates the message
-        with pytest.raises(HomeAssistantError) as exc:
+        with pytest.raises(menuaiError) as exc:
             raise _SubExceptionConstructorGenerate(
                 "custom arg",
                 translation_domain="test",
@@ -216,7 +216,7 @@ async def test_home_assistant_error_subclass(hass: HomeAssistant) -> None:
 
         # A subclass without overridden constructors and passed args
         # defaults to the passed args
-        with pytest.raises(HomeAssistantError) as exc:
+        with pytest.raises(menuaiError) as exc:
             raise _SubExceptionDefault(
                 ValueError("wrong value"),
                 translation_domain="test",
@@ -227,7 +227,7 @@ async def test_home_assistant_error_subclass(hass: HomeAssistant) -> None:
 
         # A subclass without overridden constructors and passed args
         # and generate_message = True,  generates a message
-        with pytest.raises(HomeAssistantError) as exc:
+        with pytest.raises(menuaiError) as exc:
             raise _SubExceptionGenerate(
                 ValueError("wrong value"),
                 translation_domain="test",
@@ -239,7 +239,7 @@ async def test_home_assistant_error_subclass(hass: HomeAssistant) -> None:
         # A subclass with an ExceptionGroup subclass requires a message to be passed.
         # As we pass args, we will not generate the message.
         # The __str__ constructor defaults to that of the super class.
-        with pytest.raises(HomeAssistantError) as exc:
+        with pytest.raises(menuaiError) as exc:
             raise _SubClassWithExceptionGroup(
                 "group message",
                 [ValueError("wrong value"), TypeError("wrong type")],
@@ -248,7 +248,7 @@ async def test_home_assistant_error_subclass(hass: HomeAssistant) -> None:
                 translation_placeholders={"bla": "Bla"},
             )
         assert str(exc.value) == "group message (2 sub-exceptions)"
-        with pytest.raises(HomeAssistantError) as exc:
+        with pytest.raises(menuaiError) as exc:
             raise _SubClassWithExceptionGroup(
                 "group message",
                 [ValueError("wrong value"), TypeError("wrong type")],
@@ -258,7 +258,7 @@ async def test_home_assistant_error_subclass(hass: HomeAssistant) -> None:
         # A subclass with an ExceptionGroup subclass requires a message to be passed.
         # The `generate_message` flag is set.`
         # The __str__ constructor will return the generated message.
-        with pytest.raises(HomeAssistantError) as exc:
+        with pytest.raises(menuaiError) as exc:
             raise _SubClassWithExceptionGroupGenerate(
                 "group message",
                 [ValueError("wrong value"), TypeError("wrong type")],

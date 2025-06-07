@@ -7,12 +7,12 @@ import logging
 
 from pybalboa import SpaClient
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.util import dt as dt_util
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers.event import async_track_time_interval
+from menuai.util import dt as dt_util
 
 from .const import CONF_SYNC_TIME, DEFAULT_SYNC_TIME
 
@@ -35,7 +35,7 @@ SYNC_TIME_INTERVAL = timedelta(hours=1)
 type BalboaConfigEntry = ConfigEntry[SpaClient]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: BalboaConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: BalboaConfigEntry) -> bool:
     """Set up Balboa Spa from a config entry."""
     host = entry.data[CONF_HOST]
 
@@ -50,26 +50,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: BalboaConfigEntry) -> bo
 
     entry.runtime_data = spa
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    await async_setup_time_sync(hass, entry)
+    await async_setup_time_sync(menuai, entry)
     entry.async_on_unload(entry.add_update_listener(update_listener))
     entry.async_on_unload(spa.disconnect)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: BalboaConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: BalboaConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
-async def update_listener(hass: HomeAssistant, entry: BalboaConfigEntry) -> None:
+async def update_listener(menuai: menuai, entry: BalboaConfigEntry) -> None:
     """Handle options update."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)
 
 
-async def async_setup_time_sync(hass: HomeAssistant, entry: BalboaConfigEntry) -> None:
+async def async_setup_time_sync(menuai: menuai, entry: BalboaConfigEntry) -> None:
     """Set up the time sync."""
     if not entry.options.get(CONF_SYNC_TIME, DEFAULT_SYNC_TIME):
         return
@@ -80,10 +80,10 @@ async def async_setup_time_sync(hass: HomeAssistant, entry: BalboaConfigEntry) -
     async def sync_time(now: datetime) -> None:
         now = dt_util.as_local(now)
         if (now.hour, now.minute) != (spa.time_hour, spa.time_minute):
-            _LOGGER.debug("Syncing time with Home Assistant")
+            _LOGGER.debug("Syncing time with MenuAI")
             await spa.set_time(now.hour, now.minute)
 
     await sync_time(dt_util.utcnow())
     entry.async_on_unload(
-        async_track_time_interval(hass, sync_time, SYNC_TIME_INTERVAL)
+        async_track_time_interval(menuai, sync_time, SYNC_TIME_INTERVAL)
     )

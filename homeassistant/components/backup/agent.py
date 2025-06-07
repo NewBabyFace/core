@@ -9,7 +9,7 @@ from typing import Any, Protocol
 
 from propcache.api import cached_property
 
-from homeassistant.core import HomeAssistant, callback
+from menuai.core import menuai, callback
 
 from .models import AgentBackup, BackupAgentError
 
@@ -111,7 +111,7 @@ class BackupAgentPlatformProtocol(Protocol):
 
     async def async_get_backup_agents(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         **kwargs: Any,
     ) -> list[BackupAgent]:
         """Return a list of backup agents."""
@@ -119,7 +119,7 @@ class BackupAgentPlatformProtocol(Protocol):
     @callback
     def async_register_backup_agents_listener(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         *,
         listener: Callable[[], None],
         **kwargs: Any,

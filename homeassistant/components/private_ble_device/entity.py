@@ -5,11 +5,11 @@ from __future__ import annotations
 from abc import abstractmethod
 import binascii
 
-from homeassistant.components import bluetooth
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity
+from menuai.components import bluetooth
+from menuai.config_entries import ConfigEntry
+from menuai.core import callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity
 
 from .const import DOMAIN
 from .coordinator import async_get_coordinator, async_last_service_info
@@ -39,9 +39,9 @@ class BasePrivateDeviceEntity(Entity):
         self._irk = binascii.unhexlify(irk)
         self._last_info: bluetooth.BluetoothServiceInfoBleak | None = None
 
-    async def async_added_to_hass(self) -> None:
-        """Configure entity when it is added to Home Assistant."""
-        coordinator = async_get_coordinator(self.hass)
+    async def async_added_to_menuai(self) -> None:
+        """Configure entity when it is added to MenuAI."""
+        coordinator = async_get_coordinator(self.menuai)
         self.async_on_remove(
             coordinator.async_track_service_info(
                 self._async_track_service_info, self._irk
@@ -53,7 +53,7 @@ class BasePrivateDeviceEntity(Entity):
             )
         )
 
-        if service_info := async_last_service_info(self.hass, self._irk):
+        if service_info := async_last_service_info(self.menuai, self._irk):
             self._async_track_service_info(
                 service_info, bluetooth.BluetoothChange.ADVERTISEMENT
             )

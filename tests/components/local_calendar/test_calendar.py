@@ -5,10 +5,10 @@ import textwrap
 
 import pytest
 
-from homeassistant.const import STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.template import DATE_STR_FORMAT
-from homeassistant.util import dt as dt_util
+from menuai.const import STATE_OFF, STATE_ON
+from menuai.core import menuai
+from menuai.helpers.template import DATE_STR_FORMAT
+from menuai.util import dt as dt_util
 
 from .conftest import (
     FRIENDLY_NAME,
@@ -22,13 +22,13 @@ from tests.common import MockConfigEntry
 
 
 async def test_empty_calendar(
-    hass: HomeAssistant, setup_integration: None, get_events: GetEventsFn
+    menuai: menuai, setup_integration: None, get_events: GetEventsFn
 ) -> None:
     """Test querying the API and fetching events."""
     events = await get_events("1997-07-14T00:00:00", "1997-07-16T00:00:00")
     assert len(events) == 0
 
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
     assert state
     assert state.name == FRIENDLY_NAME
     assert state.state == STATE_OFF
@@ -57,7 +57,7 @@ async def test_api_date_time_event(
     """Test an event with a start/end date time.
 
     Events created in various timezones are ultimately returned relative
-    to local home assistant timezone.
+    to local MenuAI timezone.
     """
     client = await ws_client()
     await client.cmd_result(
@@ -146,7 +146,7 @@ async def test_api_date_event(
 
 
 async def test_active_event(
-    hass: HomeAssistant,
+    menuai: menuai,
     ws_client: ClientFixture,
     setup_integration: None,
 ) -> None:
@@ -166,7 +166,7 @@ async def test_active_event(
         },
     )
 
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
     assert state
     assert state.name == FRIENDLY_NAME
     assert state.state == STATE_ON
@@ -183,7 +183,7 @@ async def test_active_event(
 
 
 async def test_upcoming_event(
-    hass: HomeAssistant,
+    menuai: menuai,
     ws_client: ClientFixture,
     setup_integration: None,
 ) -> None:
@@ -203,7 +203,7 @@ async def test_upcoming_event(
         },
     )
 
-    state = hass.states.get(TEST_ENTITY)
+    state = menuai.states.get(TEST_ENTITY)
     assert state
     assert state.name == FRIENDLY_NAME
     assert state.state == STATE_OFF
@@ -222,7 +222,7 @@ async def test_upcoming_event(
 async def test_recurring_event(
     ws_client: ClientFixture,
     setup_integration: None,
-    hass: HomeAssistant,
+    menuai: menuai,
     get_events: GetEventsFn,
 ) -> None:
     """Test an event with a recurrence rule."""
@@ -746,7 +746,7 @@ async def test_websocket_update_recurring(
 async def test_invalid_rrule(
     ws_client: ClientFixture,
     setup_integration: None,
-    hass: HomeAssistant,
+    menuai: menuai,
     get_events: GetEventsFn,
     rrule: str,
 ) -> None:
@@ -780,7 +780,7 @@ async def test_invalid_rrule(
     ],
 )
 async def test_all_day_iter_order(
-    hass: HomeAssistant,
+    menuai: menuai,
     ws_client: ClientFixture,
     setup_integration: None,
     get_events: GetEventsFn,
@@ -926,7 +926,7 @@ async def test_invalid_date_formats(
 async def test_update_invalid_event_id(
     ws_client: ClientFixture,
     setup_integration: None,
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test updating an event with an invalid event uid."""
     client = await ws_client()
@@ -951,7 +951,7 @@ async def test_update_invalid_event_id(
 async def test_delete_invalid_event_id(
     ws_client: ClientFixture,
     setup_integration: None,
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test deleting an event with an invalid event uid."""
     client = await ws_client()
@@ -976,7 +976,7 @@ async def test_delete_invalid_event_id(
     ],
 )
 async def test_create_event_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     setup_integration: None,
     get_events: GetEventsFn,
     start_date_time: str,
@@ -985,7 +985,7 @@ async def test_create_event_service(
 ) -> None:
     """Test creating an event using the create_event service."""
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "calendar",
         "create_event",
         {
@@ -998,7 +998,7 @@ async def test_create_event_service(
         blocking=True,
     )
     # Ensure data is written to disk
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     events = await get_events("1997-07-14T00:00:00Z", "1997-07-16T00:00:00Z")
     assert list(map(event_fields, events)) == [
@@ -1022,8 +1022,8 @@ async def test_create_event_service(
 
     # Reload the config entry, which reloads the content from the store and
     # verifies that the persisted data can be parsed correctly.
-    await hass.config_entries.async_reload(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_reload(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     events = await get_events("1997-07-13T00:00:00Z", "1997-07-14T18:00:00Z")
     assert list(map(event_fields, events)) == [

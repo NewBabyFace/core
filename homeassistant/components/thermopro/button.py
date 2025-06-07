@@ -8,22 +8,22 @@ from typing import Any
 
 from thermopro_ble import SensorUpdate, ThermoProBluetoothDeviceData, ThermoProDevice
 
-from homeassistant.components.bluetooth import (
+from menuai.components.bluetooth import (
     BluetoothServiceInfoBleak,
     async_ble_device_from_address,
     async_track_unavailable,
 )
-from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.dispatcher import (
+from menuai.components.button import ButtonEntity, ButtonEntityDescription
+from menuai.config_entries import ConfigEntry
+from menuai.const import EntityCategory
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr
+from menuai.helpers.dispatcher import (
     async_dispatcher_connect,
     async_dispatcher_send,
 )
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util.dt import now
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util.dt import now
 
 from .const import DOMAIN, SIGNAL_AVAILABILITY_UPDATED, SIGNAL_DATA_UPDATED
 
@@ -34,12 +34,12 @@ PARALLEL_UPDATES = 1  # one connection at a time
 class ThermoProButtonEntityDescription(ButtonEntityDescription):
     """Describe a ThermoPro button entity."""
 
-    press_action_fn: Callable[[HomeAssistant, str], Coroutine[None, Any, Any]]
+    press_action_fn: Callable[[menuai, str], Coroutine[None, Any, Any]]
 
 
-async def _async_set_datetime(hass: HomeAssistant, address: str) -> None:
+async def _async_set_datetime(menuai: menuai, address: str) -> None:
     """Set Date&Time for a given device."""
-    ble_device = async_ble_device_from_address(hass, address, connectable=True)
+    ble_device = async_ble_device_from_address(menuai, address, connectable=True)
     assert ble_device is not None
     await ThermoProDevice(ble_device).set_datetime(now(), am_pm=False)
 
@@ -58,7 +58,7 @@ MODELS_THAT_SUPPORT_BUTTONS = {"TP358", "TP393"}
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -94,11 +94,11 @@ async def async_setup_entry(
             )
 
         if service_info.connectable:
-            async_dispatcher_send(hass, availability_signal, True)
+            async_dispatcher_send(menuai, availability_signal, True)
 
     entry.async_on_unload(
         async_dispatcher_connect(
-            hass, f"{SIGNAL_DATA_UPDATED}_{entry.entry_id}", _async_on_data_updated
+            menuai, f"{SIGNAL_DATA_UPDATED}_{entry.entry_id}", _async_on_data_updated
         )
     )
 
@@ -127,19 +127,19 @@ class ThermoProButtonEntity(ButtonEntity):
             connections={(dr.CONNECTION_BLUETOOTH, address)},
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Connect availability dispatcher."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 self._availability_signal,
                 self._async_on_availability_changed,
             )
         )
         self.async_on_remove(
             async_track_unavailable(
-                self.hass, self._async_on_unavailable, self._address, connectable=True
+                self.menuai, self._async_on_unavailable, self._address, connectable=True
             )
         )
 
@@ -154,4 +154,4 @@ class ThermoProButtonEntity(ButtonEntity):
 
     async def async_press(self) -> None:
         """Execute the press action for the entity."""
-        await self.entity_description.press_action_fn(self.hass, self._address)
+        await self.entity_description.press_action_fn(self.menuai, self._address)

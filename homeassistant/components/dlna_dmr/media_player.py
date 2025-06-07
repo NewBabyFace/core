@@ -16,9 +16,9 @@ from async_upnp_client.profiles.dlna import DmrDevice, PlayMode, TransportState
 from async_upnp_client.utils import async_get_local_ip
 from didl_lite import didl_lite
 
-from homeassistant import config_entries
-from homeassistant.components import media_source, ssdp
-from homeassistant.components.media_player import (
+from menuai import config_entries
+from menuai.components import media_source, ssdp
+from menuai.components.media_player import (
     ATTR_MEDIA_EXTRA,
     DOMAIN as MEDIA_PLAYER_DOMAIN,
     BrowseMedia,
@@ -29,11 +29,11 @@ from homeassistant.components.media_player import (
     RepeatMode,
     async_process_play_media_url,
 )
-from homeassistant.const import CONF_DEVICE_ID, CONF_MAC, CONF_TYPE, CONF_URL
-from homeassistant.core import CoreState, HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.service_info.ssdp import SsdpServiceInfo
+from menuai.const import CONF_DEVICE_ID, CONF_MAC, CONF_TYPE, CONF_URL
+from menuai.core import CoreState, menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.service_info.ssdp import SsdpServiceInfo
 
 from .const import (
     CONF_BROWSE_UNFILTERED,
@@ -90,7 +90,7 @@ def catch_request_errors[_DlnaDmrEntityT: DlnaDmrEntity, **_P, _R](
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: config_entries.ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -98,8 +98,8 @@ async def async_setup_entry(
     _LOGGER.debug("media_player.async_setup_entry %s (%s)", entry.entry_id, entry.title)
 
     udn = entry.data[CONF_DEVICE_ID]
-    ent_reg = er.async_get(hass)
-    dev_reg = dr.async_get(hass)
+    ent_reg = er.async_get(menuai)
+    dev_reg = dr.async_get(menuai)
 
     if (
         (
@@ -145,7 +145,7 @@ class DlnaDmrEntity(MediaPlayerEntity):
 
     _event_addr: EventListenAddr
     poll_availability: bool
-    # Last known URL for the device, used when adding this entity to hass to try
+    # Last known URL for the device, used when adding this entity to menuai to try
     # to connect before SSDP has rediscovered it, or when SSDP discovery fails.
     location: str
     # Should the async_browse_media function *not* filter out incompatible media?
@@ -195,7 +195,7 @@ class DlnaDmrEntity(MediaPlayerEntity):
         self._attr_device_info = dr.DeviceInfo(connections={(dr.CONNECTION_UPNP, udn)})
         self._attr_supported_features = self._supported_features()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle addition."""
         # Update this entity when the associated config entry is modified
         self.async_on_remove(
@@ -205,7 +205,7 @@ class DlnaDmrEntity(MediaPlayerEntity):
         # Get SSDP notifications for only this device
         self.async_on_remove(
             await ssdp.async_register_callback(
-                self.hass, self.async_ssdp_callback, {"USN": self.usn}
+                self.menuai, self.async_ssdp_callback, {"USN": self.usn}
             )
         )
 
@@ -215,17 +215,17 @@ class DlnaDmrEntity(MediaPlayerEntity):
         # the UDN, which is reported in the _udn field of the combined_headers.
         self.async_on_remove(
             await ssdp.async_register_callback(
-                self.hass,
+                self.menuai,
                 self.async_ssdp_callback,
                 {"_udn": self.udn, "NTS": NotificationSubType.SSDP_BYEBYE},
             )
         )
 
         if not self._device:
-            if self.hass.state is CoreState.running:
+            if self.menuai.state is CoreState.running:
                 await self._async_setup()
             else:
-                self._background_setup_task = self.hass.async_create_background_task(
+                self._background_setup_task = self.menuai.async_create_background_task(
                     self._async_setup(), f"dlna_dmr {self.name} setup"
                 )
 
@@ -236,7 +236,7 @@ class DlnaDmrEntity(MediaPlayerEntity):
         except UpnpError as err:
             _LOGGER.debug("Couldn't connect immediately: %r", err)
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Handle removal."""
         if self._background_setup_task:
             self._background_setup_task.cancel()
@@ -312,7 +312,7 @@ class DlnaDmrEntity(MediaPlayerEntity):
         self.async_write_ha_state()
 
     async def async_config_update_listener(
-        self, hass: HomeAssistant, entry: config_entries.ConfigEntry
+        self, menuai: menuai, entry: config_entries.ConfigEntry
     ) -> None:
         """Handle options update by modifying self in-place."""
         _LOGGER.debug(
@@ -367,17 +367,17 @@ class DlnaDmrEntity(MediaPlayerEntity):
                 _LOGGER.debug("Trying to connect when device already connected")
                 return
 
-            domain_data = get_domain_data(self.hass)
+            domain_data = get_domain_data(self.menuai)
 
             # Connect to the base UPNP device
             upnp_device = await domain_data.upnp_factory.async_create_device(location)
 
             # Create/get event handler that is reachable by the device, using
             # the connection's local IP to listen only on the relevant interface
-            _, event_ip = await async_get_local_ip(location, self.hass.loop)
+            _, event_ip = await async_get_local_ip(location, self.menuai.loop)
             self._event_addr = self._event_addr._replace(host=event_ip)
             event_handler = await domain_data.async_get_event_notifier(
-                self._event_addr, self.hass
+                self._event_addr, self.menuai
             )
 
             # Create profile wrapper
@@ -445,12 +445,12 @@ class DlnaDmrEntity(MediaPlayerEntity):
 
         self._updated_registry = True
         # Create linked HA DeviceEntry now the information is known.
-        device_entry = dr.async_get(self.hass).async_get_or_create(
+        device_entry = dr.async_get(self.menuai).async_get_or_create(
             config_entry_id=self._config_entry.entry_id, **device_info
         )
 
         # Update entity registry to link to the device
-        er.async_get(self.hass).async_get_or_create(
+        er.async_get(self.menuai).async_get_or_create(
             MEDIA_PLAYER_DOMAIN,
             DOMAIN,
             self.unique_id,
@@ -461,7 +461,7 @@ class DlnaDmrEntity(MediaPlayerEntity):
     async def _device_disconnect(self) -> None:
         """Destroy connections to the device now that it's not available.
 
-        Also call when removing this entity from hass to clean up connections.
+        Also call when removing this entity from menuai to clean up connections.
         """
         async with self._device_lock:
             if not self._device:
@@ -475,7 +475,7 @@ class DlnaDmrEntity(MediaPlayerEntity):
             self._device = None
             await old_device.async_unsubscribe_services()
 
-        domain_data = get_domain_data(self.hass)
+        domain_data = get_domain_data(self.menuai)
         await domain_data.async_release_event_notifier(self._event_addr)
 
     async def async_update(self) -> None:
@@ -666,7 +666,7 @@ class DlnaDmrEntity(MediaPlayerEntity):
         # If media is media_source, resolve it to url and MIME type, and maybe metadata
         if media_source.is_media_source_id(media_id):
             sourced_media = await media_source.async_resolve_media(
-                self.hass, media_id, self.entity_id
+                self.menuai, media_id, self.entity_id
             )
             media_type = sourced_media.mime_type
             media_id = sourced_media.url
@@ -678,20 +678,20 @@ class DlnaDmrEntity(MediaPlayerEntity):
                 title = sourced_metadata.title
 
         # If media ID is a relative URL, we serve it from HA.
-        media_id = async_process_play_media_url(self.hass, media_id)
+        media_id = async_process_play_media_url(self.menuai, media_id)
 
         extra: dict[str, Any] = kwargs.get(ATTR_MEDIA_EXTRA) or {}
         metadata: dict[str, Any] = extra.get("metadata") or {}
 
         if not title:
-            title = extra.get("title") or metadata.get("title") or "Home Assistant"
+            title = extra.get("title") or metadata.get("title") or "MenuAI"
         if thumb := extra.get("thumb"):
             metadata["album_art_uri"] = thumb
 
         # Translate metadata keys from HA names to DIDL-Lite names
-        for hass_key, didl_key in MEDIA_METADATA_DIDL.items():
-            if hass_key in metadata:
-                metadata[didl_key] = metadata.pop(hass_key)
+        for menuai_key, didl_key in MEDIA_METADATA_DIDL.items():
+            if menuai_key in metadata:
+                metadata[didl_key] = metadata.pop(menuai_key)
 
         if not didl_metadata:
             # Create metadata specific to the given media type; different fields are
@@ -840,7 +840,7 @@ class DlnaDmrEntity(MediaPlayerEntity):
             content_filter = self._get_content_filter()
 
         return await media_source.async_browse_media(
-            self.hass, media_content_id, content_filter=content_filter
+            self.menuai, media_content_id, content_filter=content_filter
         )
 
     def _get_content_filter(self) -> Callable[[BrowseMedia], bool]:
@@ -926,7 +926,7 @@ class DlnaDmrEntity(MediaPlayerEntity):
     def media_position_updated_at(self) -> datetime | None:
         """When was the position of the current playing media valid.
 
-        Returns value from homeassistant.util.dt.utcnow().
+        Returns value from menuai.util.dt.utcnow().
         """
         if not self._device:
             return None

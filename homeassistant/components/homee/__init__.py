@@ -4,11 +4,11 @@ import logging
 
 from pyHomee import Homee, HomeeAuthFailedException, HomeeConnectionFailedException
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers import device_registry as dr
 
 from .const import DOMAIN
 
@@ -35,7 +35,7 @@ PLATFORMS = [
 type HomeeConfigEntry = ConfigEntry[Homee]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: HomeeConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: HomeeConfigEntry) -> bool:
     """Set up homee from a config entry."""
     # Create the Homee api object using host, user,
     # password & pyHomee instance from the config
@@ -43,7 +43,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HomeeConfigEntry) -> boo
         host=entry.data[CONF_HOST],
         user=entry.data[CONF_USERNAME],
         password=entry.data[CONF_PASSWORD],
-        device="HA_" + hass.config.location_name,
+        device="HA_" + menuai.config.location_name,
         reconnect_interval=10,
         max_retries=100,
     )
@@ -61,7 +61,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HomeeConfigEntry) -> boo
             f"Authentication to Homee failed: {exc.__cause__}"
         ) from exc
 
-    hass.loop.create_task(homee.run())
+    menuai.loop.create_task(homee.run())
     await homee.wait_until_connected()
 
     entry.runtime_data = homee
@@ -77,7 +77,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HomeeConfigEntry) -> boo
     homee.add_connection_listener(_connection_update_callback)
 
     # create device register entry
-    device_registry = dr.async_get(hass)
+    device_registry = dr.async_get(menuai)
     device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         connections={
@@ -90,12 +90,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: HomeeConfigEntry) -> boo
         sw_version=homee.settings.version,
     )
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: HomeeConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: HomeeConfigEntry) -> bool:
     """Unload a homee config entry."""
     # Unload platforms
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

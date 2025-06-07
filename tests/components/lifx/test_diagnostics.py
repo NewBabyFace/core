@@ -1,9 +1,9 @@
 """Test LIFX diagnostics."""
 
-from homeassistant.components import lifx
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components import lifx
+from menuai.const import CONF_HOST
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from . import (
     DEFAULT_ENTRY_TITLE,
@@ -25,7 +25,7 @@ from tests.typing import ClientSessionGenerator
 
 
 async def test_bulb_diagnostics(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test diagnostics for a standard bulb."""
     config_entry = MockConfigEntry(
@@ -34,17 +34,17 @@ async def test_bulb_diagnostics(
         data={CONF_HOST: IP_ADDRESS},
         unique_id=SERIAL,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     bulb = _mocked_bulb()
     with (
         _patch_discovery(device=bulb),
         _patch_config_flow_try_connect(device=bulb),
         _patch_device(device=bulb),
     ):
-        await async_setup_component(hass, lifx.DOMAIN, {lifx.DOMAIN: {}})
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, lifx.DOMAIN, {lifx.DOMAIN: {}})
+        await menuai.async_block_till_done()
 
-    diag = await get_diagnostics_for_config_entry(hass, hass_client, config_entry)
+    diag = await get_diagnostics_for_config_entry(menuai, menuai_client, config_entry)
     assert diag == {
         "data": {
             "brightness": 3,
@@ -74,7 +74,7 @@ async def test_bulb_diagnostics(
 
 
 async def test_clean_bulb_diagnostics(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test diagnostics for a standard bulb."""
     config_entry = MockConfigEntry(
@@ -83,17 +83,17 @@ async def test_clean_bulb_diagnostics(
         data={CONF_HOST: IP_ADDRESS},
         unique_id=SERIAL,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     bulb = _mocked_clean_bulb()
     with (
         _patch_discovery(device=bulb),
         _patch_config_flow_try_connect(device=bulb),
         _patch_device(device=bulb),
     ):
-        await async_setup_component(hass, lifx.DOMAIN, {lifx.DOMAIN: {}})
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, lifx.DOMAIN, {lifx.DOMAIN: {}})
+        await menuai.async_block_till_done()
 
-    diag = await get_diagnostics_for_config_entry(hass, hass_client, config_entry)
+    diag = await get_diagnostics_for_config_entry(menuai, menuai_client, config_entry)
     assert diag == {
         "data": {
             "brightness": 3,
@@ -128,7 +128,7 @@ async def test_clean_bulb_diagnostics(
 
 
 async def test_infrared_bulb_diagnostics(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test diagnostics for a standard bulb."""
     config_entry = MockConfigEntry(
@@ -137,17 +137,17 @@ async def test_infrared_bulb_diagnostics(
         data={CONF_HOST: IP_ADDRESS},
         unique_id=SERIAL,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     bulb = _mocked_infrared_bulb()
     with (
         _patch_discovery(device=bulb),
         _patch_config_flow_try_connect(device=bulb),
         _patch_device(device=bulb),
     ):
-        await async_setup_component(hass, lifx.DOMAIN, {lifx.DOMAIN: {}})
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, lifx.DOMAIN, {lifx.DOMAIN: {}})
+        await menuai.async_block_till_done()
 
-    diag = await get_diagnostics_for_config_entry(hass, hass_client, config_entry)
+    diag = await get_diagnostics_for_config_entry(menuai, menuai_client, config_entry)
     assert diag == {
         "data": {
             "brightness": 3,
@@ -178,7 +178,7 @@ async def test_infrared_bulb_diagnostics(
 
 
 async def test_legacy_multizone_bulb_diagnostics(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test diagnostics for a standard bulb."""
     config_entry = MockConfigEntry(
@@ -187,7 +187,7 @@ async def test_legacy_multizone_bulb_diagnostics(
         data={CONF_HOST: IP_ADDRESS},
         unique_id=SERIAL,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     bulb = _mocked_light_strip()
     bulb.get_color_zones = MockLifxCommand(
         bulb,
@@ -221,10 +221,10 @@ async def test_legacy_multizone_bulb_diagnostics(
         _patch_config_flow_try_connect(device=bulb),
         _patch_device(device=bulb),
     ):
-        await async_setup_component(hass, lifx.DOMAIN, {lifx.DOMAIN: {}})
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, lifx.DOMAIN, {lifx.DOMAIN: {}})
+        await menuai.async_block_till_done()
 
-    diag = await get_diagnostics_for_config_entry(hass, hass_client, config_entry)
+    diag = await get_diagnostics_for_config_entry(menuai, menuai_client, config_entry)
     assert diag == {
         "data": {
             "brightness": 3,
@@ -307,7 +307,7 @@ async def test_legacy_multizone_bulb_diagnostics(
 
 
 async def test_multizone_bulb_diagnostics(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator
+    menuai: menuai, menuai_client: ClientSessionGenerator
 ) -> None:
     """Test diagnostics for a standard bulb."""
     config_entry = MockConfigEntry(
@@ -316,7 +316,7 @@ async def test_multizone_bulb_diagnostics(
         data={CONF_HOST: IP_ADDRESS},
         unique_id=SERIAL,
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     bulb = _mocked_light_strip()
     bulb.product = 38
     bulb.get_color_zones = MockLifxCommand(
@@ -351,10 +351,10 @@ async def test_multizone_bulb_diagnostics(
         _patch_config_flow_try_connect(device=bulb),
         _patch_device(device=bulb),
     ):
-        await async_setup_component(hass, lifx.DOMAIN, {lifx.DOMAIN: {}})
-        await hass.async_block_till_done()
+        await async_setup_component(menuai, lifx.DOMAIN, {lifx.DOMAIN: {}})
+        await menuai.async_block_till_done()
 
-    diag = await get_diagnostics_for_config_entry(hass, hass_client, config_entry)
+    diag = await get_diagnostics_for_config_entry(menuai, menuai_client, config_entry)
     assert diag == {
         "data": {
             "brightness": 3,

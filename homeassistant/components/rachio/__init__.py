@@ -6,10 +6,10 @@ import secrets
 from rachiopy import Rachio
 from requests.exceptions import ConnectTimeout
 
-from homeassistant.components import cloud
-from homeassistant.const import CONF_API_KEY, CONF_WEBHOOK_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from menuai.components import cloud
+from menuai.const import CONF_API_KEY, CONF_WEBHOOK_ID, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 
 from .const import CONF_CLOUDHOOK_URL, CONF_MANUAL_RUN_MINS
 from .device import RachioConfigEntry, RachioPerson
@@ -24,20 +24,20 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORMS = [Platform.BINARY_SENSOR, Platform.CALENDAR, Platform.SWITCH]
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: RachioConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: RachioConfigEntry) -> bool:
     """Unload a config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        async_unregister_webhook(hass, entry)
+    if unload_ok := await menuai.config_entries.async_unload_platforms(entry, PLATFORMS):
+        async_unregister_webhook(menuai, entry)
     return unload_ok
 
 
-async def async_remove_entry(hass: HomeAssistant, entry: RachioConfigEntry) -> None:
+async def async_remove_entry(menuai: menuai, entry: RachioConfigEntry) -> None:
     """Remove a rachio config entry."""
     if CONF_CLOUDHOOK_URL in entry.data:
-        await cloud.async_delete_cloudhook(hass, entry.data[CONF_WEBHOOK_ID])
+        await cloud.async_delete_cloudhook(menuai, entry.data[CONF_WEBHOOK_ID])
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: RachioConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: RachioConfigEntry) -> bool:
     """Set up the Rachio config entry."""
 
     config = entry.data
@@ -47,7 +47,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: RachioConfigEntry) -> bo
     if not options.get(CONF_MANUAL_RUN_MINS) and config.get(CONF_MANUAL_RUN_MINS):
         options_copy = options.copy()
         options_copy[CONF_MANUAL_RUN_MINS] = config[CONF_MANUAL_RUN_MINS]
-        hass.config_entries.async_update_entry(entry, options=options_copy)
+        menuai.config_entries.async_update_entry(entry, options=options_copy)
 
     # Configure API
     api_key = config[CONF_API_KEY]
@@ -57,7 +57,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: RachioConfigEntry) -> bo
     rachio.webhook_auth = secrets.token_hex()
     try:
         webhook_url = await async_get_or_create_registered_webhook_id_and_url(
-            hass, entry
+            menuai, entry
         )
     except cloud.CloudNotConnected as exc:
         # User has an active cloud subscription, but the connection to the cloud is down
@@ -68,7 +68,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: RachioConfigEntry) -> bo
 
     # Get the API user
     try:
-        await person.async_setup(hass)
+        await person.async_setup(menuai)
     except ConfigEntryAuthFailed as error:
         # Reauth is not yet implemented
         _LOGGER.error("Authentication failed: %s", error)
@@ -96,8 +96,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: RachioConfigEntry) -> bo
 
     # Enable platform
     entry.runtime_data = person
-    async_register_webhook(hass, entry)
+    async_register_webhook(menuai, entry)
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True

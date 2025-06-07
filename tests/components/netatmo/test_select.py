@@ -5,19 +5,19 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.select import (
+from menuai.components.select import (
     ATTR_OPTION,
     ATTR_OPTIONS,
     DOMAIN as SELECT_DOMAIN,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     CONF_WEBHOOK_ID,
     SERVICE_SELECT_OPTION,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .common import selected_platforms, simulate_webhook, snapshot_platform_entities
 
@@ -25,7 +25,7 @@ from tests.common import MockConfigEntry
 
 
 async def test_entity(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     netatmo_auth: AsyncMock,
     snapshot: SnapshotAssertion,
@@ -33,7 +33,7 @@ async def test_entity(
 ) -> None:
     """Test entities."""
     await snapshot_platform_entities(
-        hass,
+        menuai,
         config_entry,
         Platform.SELECT,
         entity_registry,
@@ -42,21 +42,21 @@ async def test_entity(
 
 
 async def test_select_schedule_thermostats(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     caplog: pytest.LogCaptureFixture,
     netatmo_auth: AsyncMock,
 ) -> None:
     """Test service for selecting Netatmo schedule with thermostats."""
     with selected_platforms(["climate", "select"]):
-        assert await hass.config_entries.async_setup(config_entry.entry_id)
+        assert await menuai.config_entries.async_setup(config_entry.entry_id)
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     webhook_id = config_entry.data[CONF_WEBHOOK_ID]
     select_entity = "select.myhome"
 
-    assert hass.states.get(select_entity).state == "Default"
+    assert menuai.states.get(select_entity).state == "Default"
 
     # Fake backend response changing schedule
     response = {
@@ -65,18 +65,18 @@ async def test_select_schedule_thermostats(
         "previous_schedule_id": "59d32176d183948b05ab4dce",
         "push_type": "home_event_changed",
     }
-    await simulate_webhook(hass, webhook_id, response)
-    await hass.async_block_till_done()
+    await simulate_webhook(menuai, webhook_id, response)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(select_entity).state == "Winter"
-    assert hass.states.get(select_entity).attributes[ATTR_OPTIONS] == [
+    assert menuai.states.get(select_entity).state == "Winter"
+    assert menuai.states.get(select_entity).attributes[ATTR_OPTIONS] == [
         "Default",
         "Winter",
     ]
 
     # Test setting a different schedule
     with patch("pyatmo.home.Home.async_switch_schedule") as mock_switch_home_schedule:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SELECT_DOMAIN,
             SERVICE_SELECT_OPTION,
             {
@@ -85,7 +85,7 @@ async def test_select_schedule_thermostats(
             },
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         mock_switch_home_schedule.assert_called_once_with(
             schedule_id="591b54a2764ff4d50d8b5795"
         )
@@ -97,6 +97,6 @@ async def test_select_schedule_thermostats(
         "previous_schedule_id": "b1b54a2f45795764f59d50d8",
         "push_type": "home_event_changed",
     }
-    await simulate_webhook(hass, webhook_id, response)
+    await simulate_webhook(menuai, webhook_id, response)
 
-    assert hass.states.get(select_entity).state == "Default"
+    assert menuai.states.get(select_entity).state == "Default"

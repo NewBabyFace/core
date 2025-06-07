@@ -11,8 +11,8 @@ from typing import Any, cast
 from propcache.api import under_cached_property
 import voluptuous as vol
 
-from homeassistant.components.blueprint import CONF_USE_BLUEPRINT
-from homeassistant.const import (
+from menuai.components.blueprint import CONF_USE_BLUEPRINT
+from menuai.const import (
     CONF_ENTITY_PICTURE_TEMPLATE,
     CONF_FRIENDLY_NAME,
     CONF_ICON,
@@ -22,36 +22,36 @@ from homeassistant.const import (
     CONF_VARIABLES,
     STATE_UNKNOWN,
 )
-from homeassistant.core import (
+from menuai.core import (
     CALLBACK_TYPE,
     Event,
     EventStateChangedData,
-    HomeAssistant,
+    menuai,
     State,
     callback,
     validate_state,
 )
-from homeassistant.exceptions import TemplateError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.event import (
+from menuai.exceptions import TemplateError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity import Entity
+from menuai.helpers.event import (
     TrackTemplate,
     TrackTemplateResult,
     TrackTemplateResultInfo,
     async_track_template_result,
 )
-from homeassistant.helpers.script_variables import ScriptVariables
-from homeassistant.helpers.start import async_at_start
-from homeassistant.helpers.template import (
+from menuai.helpers.script_variables import ScriptVariables
+from menuai.helpers.start import async_at_start
+from menuai.helpers.template import (
     Template,
     TemplateStateFromEntityId,
     result_as_boolean,
 )
-from homeassistant.helpers.trigger_template_entity import (
+from menuai.helpers.trigger_template_entity import (
     TEMPLATE_ENTITY_BASE_SCHEMA,
     make_template_entity_base_schema,
 )
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     CONF_ATTRIBUTE_TEMPLATES,
@@ -139,7 +139,7 @@ LEGACY_FIELDS = {
 
 
 def rewrite_common_legacy_to_modern_conf(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_cfg: dict[str, Any],
     extra_legacy_fields: dict[str, str] | None = None,
 ) -> dict[str, Any]:
@@ -156,11 +156,11 @@ def rewrite_common_legacy_to_modern_conf(
 
         val = entity_cfg.pop(from_key)
         if isinstance(val, str):
-            val = Template(val, hass)
+            val = Template(val, menuai)
         entity_cfg[to_key] = val
 
     if CONF_NAME in entity_cfg and isinstance(entity_cfg[CONF_NAME], str):
-        entity_cfg[CONF_NAME] = Template(entity_cfg[CONF_NAME], hass)
+        entity_cfg[CONF_NAME] = Template(entity_cfg[CONF_NAME], menuai)
 
     return entity_cfg
 
@@ -269,7 +269,7 @@ class TemplateEntity(AbstractTemplateEntity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         *,
         availability_template: Template | None = None,
         icon_template: Template | None = None,
@@ -280,7 +280,7 @@ class TemplateEntity(AbstractTemplateEntity):
         unique_id: str | None = None,
     ) -> None:
         """Template Entity."""
-        AbstractTemplateEntity.__init__(self, hass)
+        AbstractTemplateEntity.__init__(self, menuai)
         self._template_attrs: dict[Template, list[_TemplateAttribute]] = {}
         self._template_result_info: TrackTemplateResultInfo | None = None
         self._attr_extra_state_attributes = {}
@@ -395,9 +395,9 @@ class TemplateEntity(AbstractTemplateEntity):
             return self._run_variables
 
         return self._run_variables.async_render(
-            self.hass,
+            self.menuai,
             {
-                "this": TemplateStateFromEntityId(self.hass, self.entity_id),
+                "this": TemplateStateFromEntityId(self.menuai, self.entity_id),
             },
         )
 
@@ -428,10 +428,10 @@ class TemplateEntity(AbstractTemplateEntity):
             If True, the attribute will be set to None if the template errors.
 
         """
-        if self.hass is None:
-            raise ValueError("hass cannot be None")
-        if template.hass is None:
-            raise ValueError("template.hass cannot be None")
+        if self.menuai is None:
+            raise ValueError("menuai cannot be None")
+        if template.menuai is None:
+            raise ValueError("template.menuai cannot be None")
         template_attribute = _TemplateAttribute(
             self, attribute, template, validator, on_update, none_on_template_error
         )
@@ -494,14 +494,14 @@ class TemplateEntity(AbstractTemplateEntity):
     @callback
     def _async_template_startup(
         self,
-        _hass: HomeAssistant | None,
+        _menuai: menuai | None,
         log_fn: Callable[[int, str], None] | None = None,
     ) -> None:
         template_var_tups: list[TrackTemplate] = []
         has_availability_template = False
 
         variables = {
-            "this": TemplateStateFromEntityId(self.hass, self.entity_id),
+            "this": TemplateStateFromEntityId(self.menuai, self.entity_id),
             **self._render_script_variables(),
         }
 
@@ -520,7 +520,7 @@ class TemplateEntity(AbstractTemplateEntity):
                 template_var_tups.append(template_var_tup)
 
         result_info = async_track_template_result(
-            self.hass,
+            self.menuai,
             template_var_tups,
             self._handle_results,
             log_fn=log_fn,
@@ -585,11 +585,11 @@ class TemplateEntity(AbstractTemplateEntity):
             preview_callback(None, None, None, str(err))
         return self._call_on_remove_callbacks
 
-    async def async_added_to_hass(self) -> None:
-        """Run when entity about to be added to hass."""
+    async def async_added_to_menuai(self) -> None:
+        """Run when entity about to be added to menuai."""
         self._async_setup_templates()
 
-        async_at_start(self.hass, self._async_template_startup)
+        async_at_start(self.menuai, self._async_template_startup)
 
     async def async_update(self) -> None:
         """Call for forced update."""

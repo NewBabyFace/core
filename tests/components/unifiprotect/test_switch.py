@@ -7,8 +7,8 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 from uiprotect.data import Camera, Light, Permission, RecordingMode, VideoMode
 
-from homeassistant.components.unifiprotect.const import DEFAULT_ATTRIBUTION
-from homeassistant.components.unifiprotect.switch import (
+from menuai.components.unifiprotect.const import DEFAULT_ATTRIBUTION
+from menuai.components.unifiprotect.switch import (
     ATTR_PREV_MIC,
     ATTR_PREV_RECORD,
     CAMERA_SWITCHES,
@@ -16,9 +16,9 @@ from homeassistant.components.unifiprotect.switch import (
     PRIVACY_MODE_SWITCH,
     ProtectSwitchEntityDescription,
 )
-from homeassistant.const import ATTR_ATTRIBUTION, ATTR_ENTITY_ID, STATE_OFF, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.const import ATTR_ATTRIBUTION, ATTR_ENTITY_ID, STATE_OFF, Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .utils import (
     MockUFPFixture,
@@ -53,52 +53,52 @@ CAMERA_SWITCHES_NO_EXTRA = [
 
 
 async def test_switch_camera_remove(
-    hass: HomeAssistant, ufp: MockUFPFixture, doorbell: Camera, unadopted_camera: Camera
+    menuai: menuai, ufp: MockUFPFixture, doorbell: Camera, unadopted_camera: Camera
 ) -> None:
     """Test removing and re-adding a camera device."""
 
     ufp.api.bootstrap.nvr.system_info.ustorage = None
-    await init_entry(hass, ufp, [doorbell, unadopted_camera])
-    assert_entity_counts(hass, Platform.SWITCH, 17, 15)
-    await remove_entities(hass, ufp, [doorbell, unadopted_camera])
-    assert_entity_counts(hass, Platform.SWITCH, 2, 2)
-    await adopt_devices(hass, ufp, [doorbell, unadopted_camera])
-    assert_entity_counts(hass, Platform.SWITCH, 17, 15)
+    await init_entry(menuai, ufp, [doorbell, unadopted_camera])
+    assert_entity_counts(menuai, Platform.SWITCH, 17, 15)
+    await remove_entities(menuai, ufp, [doorbell, unadopted_camera])
+    assert_entity_counts(menuai, Platform.SWITCH, 2, 2)
+    await adopt_devices(menuai, ufp, [doorbell, unadopted_camera])
+    assert_entity_counts(menuai, Platform.SWITCH, 17, 15)
 
 
 async def test_switch_light_remove(
-    hass: HomeAssistant, ufp: MockUFPFixture, light: Light
+    menuai: menuai, ufp: MockUFPFixture, light: Light
 ) -> None:
     """Test removing and re-adding a light device."""
 
     ufp.api.bootstrap.nvr.system_info.ustorage = None
-    await init_entry(hass, ufp, [light])
-    assert_entity_counts(hass, Platform.SWITCH, 4, 3)
-    await remove_entities(hass, ufp, [light])
-    assert_entity_counts(hass, Platform.SWITCH, 2, 2)
-    await adopt_devices(hass, ufp, [light])
-    assert_entity_counts(hass, Platform.SWITCH, 4, 3)
+    await init_entry(menuai, ufp, [light])
+    assert_entity_counts(menuai, Platform.SWITCH, 4, 3)
+    await remove_entities(menuai, ufp, [light])
+    assert_entity_counts(menuai, Platform.SWITCH, 2, 2)
+    await adopt_devices(menuai, ufp, [light])
+    assert_entity_counts(menuai, Platform.SWITCH, 4, 3)
 
 
-async def test_switch_nvr(hass: HomeAssistant, ufp: MockUFPFixture) -> None:
+async def test_switch_nvr(menuai: menuai, ufp: MockUFPFixture) -> None:
     """Test switch entity setup for light devices."""
 
-    await init_entry(hass, ufp, [])
+    await init_entry(menuai, ufp, [])
 
-    assert_entity_counts(hass, Platform.SWITCH, 2, 2)
+    assert_entity_counts(menuai, Platform.SWITCH, 2, 2)
 
     nvr = ufp.api.bootstrap.nvr
     nvr.__pydantic_fields__["set_insights"] = Mock(final=False, frozen=False)
     nvr.set_insights = AsyncMock()
     entity_id = "switch.unifiprotect_insights_enabled"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch", "turn_on", {ATTR_ENTITY_ID: entity_id}, blocking=True
     )
 
     nvr.set_insights.assert_called_once_with(True)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch", "turn_off", {ATTR_ENTITY_ID: entity_id}, blocking=True
     )
 
@@ -106,7 +106,7 @@ async def test_switch_nvr(hass: HomeAssistant, ufp: MockUFPFixture) -> None:
 
 
 async def test_switch_setup_no_perm(
-    hass: HomeAssistant,
+    menuai: menuai,
     ufp: MockUFPFixture,
     light: Light,
     doorbell: Camera,
@@ -117,21 +117,21 @@ async def test_switch_setup_no_perm(
         Permission.unifi_dict_to_dict({"rawPermission": "light:read:*"})
     ]
 
-    await init_entry(hass, ufp, [light, doorbell])
+    await init_entry(menuai, ufp, [light, doorbell])
 
-    assert_entity_counts(hass, Platform.SWITCH, 0, 0)
+    assert_entity_counts(menuai, Platform.SWITCH, 0, 0)
 
 
 async def test_switch_setup_light(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     ufp: MockUFPFixture,
     light: Light,
 ) -> None:
     """Test switch entity setup for light devices."""
 
-    await init_entry(hass, ufp, [light])
-    assert_entity_counts(hass, Platform.SWITCH, 4, 3)
+    await init_entry(menuai, ufp, [light])
+    assert_entity_counts(menuai, Platform.SWITCH, 4, 3)
 
     description = LIGHT_SWITCHES[1]
 
@@ -143,7 +143,7 @@ async def test_switch_setup_light(
     assert entity
     assert entity.unique_id == unique_id
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_ATTRIBUTION] == DEFAULT_ATTRIBUTION
@@ -158,24 +158,24 @@ async def test_switch_setup_light(
     assert entity.disabled is True
     assert entity.unique_id == unique_id
 
-    await enable_entity(hass, ufp.entry.entry_id, entity_id)
+    await enable_entity(menuai, ufp.entry.entry_id, entity_id)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_ATTRIBUTION] == DEFAULT_ATTRIBUTION
 
 
 async def test_switch_setup_camera_all(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     ufp: MockUFPFixture,
     doorbell: Camera,
 ) -> None:
     """Test switch entity setup for camera devices (all enabled feature flags)."""
 
-    await init_entry(hass, ufp, [doorbell])
-    assert_entity_counts(hass, Platform.SWITCH, 17, 15)
+    await init_entry(menuai, ufp, [doorbell])
+    assert_entity_counts(menuai, Platform.SWITCH, 17, 15)
 
     for description in CAMERA_SWITCHES_BASIC:
         unique_id, entity_id = ids_from_device_description(
@@ -186,7 +186,7 @@ async def test_switch_setup_camera_all(
         assert entity
         assert entity.unique_id == unique_id
 
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert state.state == STATE_OFF
         assert state.attributes[ATTR_ATTRIBUTION] == DEFAULT_ATTRIBUTION
@@ -201,24 +201,24 @@ async def test_switch_setup_camera_all(
     assert entity.disabled is True
     assert entity.unique_id == unique_id
 
-    await enable_entity(hass, ufp.entry.entry_id, entity_id)
+    await enable_entity(menuai, ufp.entry.entry_id, entity_id)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_ATTRIBUTION] == DEFAULT_ATTRIBUTION
 
 
 async def test_switch_setup_camera_none(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     ufp: MockUFPFixture,
     camera: Camera,
 ) -> None:
     """Test switch entity setup for camera devices (no enabled feature flags)."""
 
-    await init_entry(hass, ufp, [camera])
-    assert_entity_counts(hass, Platform.SWITCH, 8, 7)
+    await init_entry(menuai, ufp, [camera])
+    assert_entity_counts(menuai, Platform.SWITCH, 8, 7)
 
     for description in CAMERA_SWITCHES_BASIC:
         if description.ufp_required_field is not None:
@@ -232,7 +232,7 @@ async def test_switch_setup_camera_none(
         assert entity
         assert entity.unique_id == unique_id
 
-        state = hass.states.get(entity_id)
+        state = menuai.states.get(entity_id)
         assert state
         assert state.state == STATE_OFF
         assert state.attributes[ATTR_ATTRIBUTION] == DEFAULT_ATTRIBUTION
@@ -247,21 +247,21 @@ async def test_switch_setup_camera_none(
     assert entity.disabled is True
     assert entity.unique_id == unique_id
 
-    await enable_entity(hass, ufp.entry.entry_id, entity_id)
+    await enable_entity(menuai, ufp.entry.entry_id, entity_id)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_ATTRIBUTION] == DEFAULT_ATTRIBUTION
 
 
 async def test_switch_light_status(
-    hass: HomeAssistant, ufp: MockUFPFixture, light: Light
+    menuai: menuai, ufp: MockUFPFixture, light: Light
 ) -> None:
     """Tests status light switch for lights."""
 
-    await init_entry(hass, ufp, [light])
-    assert_entity_counts(hass, Platform.SWITCH, 4, 3)
+    await init_entry(menuai, ufp, [light])
+    assert_entity_counts(menuai, Platform.SWITCH, 4, 3)
 
     description = LIGHT_SWITCHES[1]
 
@@ -270,13 +270,13 @@ async def test_switch_light_status(
 
     _, entity_id = ids_from_device_description(Platform.SWITCH, light, description)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch", "turn_on", {ATTR_ENTITY_ID: entity_id}, blocking=True
     )
 
     light.set_status_light.assert_called_once_with(True)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch", "turn_off", {ATTR_ENTITY_ID: entity_id}, blocking=True
     )
 
@@ -284,12 +284,12 @@ async def test_switch_light_status(
 
 
 async def test_switch_camera_ssh(
-    hass: HomeAssistant, ufp: MockUFPFixture, doorbell: Camera
+    menuai: menuai, ufp: MockUFPFixture, doorbell: Camera
 ) -> None:
     """Tests SSH switch for cameras."""
 
-    await init_entry(hass, ufp, [doorbell])
-    assert_entity_counts(hass, Platform.SWITCH, 17, 15)
+    await init_entry(menuai, ufp, [doorbell])
+    assert_entity_counts(menuai, Platform.SWITCH, 17, 15)
 
     description = CAMERA_SWITCHES[0]
 
@@ -297,15 +297,15 @@ async def test_switch_camera_ssh(
     doorbell.set_ssh = AsyncMock()
 
     _, entity_id = ids_from_device_description(Platform.SWITCH, doorbell, description)
-    await enable_entity(hass, ufp.entry.entry_id, entity_id)
+    await enable_entity(menuai, ufp.entry.entry_id, entity_id)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch", "turn_on", {ATTR_ENTITY_ID: entity_id}, blocking=True
     )
 
     doorbell.set_ssh.assert_called_once_with(True)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch", "turn_off", {ATTR_ENTITY_ID: entity_id}, blocking=True
     )
 
@@ -314,15 +314,15 @@ async def test_switch_camera_ssh(
 
 @pytest.mark.parametrize("description", CAMERA_SWITCHES_NO_EXTRA)
 async def test_switch_camera_simple(
-    hass: HomeAssistant,
+    menuai: menuai,
     ufp: MockUFPFixture,
     doorbell: Camera,
     description: ProtectSwitchEntityDescription,
 ) -> None:
     """Tests all simple switches for cameras."""
 
-    await init_entry(hass, ufp, [doorbell])
-    assert_entity_counts(hass, Platform.SWITCH, 17, 15)
+    await init_entry(menuai, ufp, [doorbell])
+    assert_entity_counts(menuai, Platform.SWITCH, 17, 15)
 
     assert description.ufp_set_method is not None
 
@@ -334,13 +334,13 @@ async def test_switch_camera_simple(
 
     _, entity_id = ids_from_device_description(Platform.SWITCH, doorbell, description)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch", "turn_on", {ATTR_ENTITY_ID: entity_id}, blocking=True
     )
 
     set_method.assert_called_once_with(True)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch", "turn_off", {ATTR_ENTITY_ID: entity_id}, blocking=True
     )
 
@@ -348,12 +348,12 @@ async def test_switch_camera_simple(
 
 
 async def test_switch_camera_highfps(
-    hass: HomeAssistant, ufp: MockUFPFixture, doorbell: Camera
+    menuai: menuai, ufp: MockUFPFixture, doorbell: Camera
 ) -> None:
     """Tests High FPS switch for cameras."""
 
-    await init_entry(hass, ufp, [doorbell])
-    assert_entity_counts(hass, Platform.SWITCH, 17, 15)
+    await init_entry(menuai, ufp, [doorbell])
+    assert_entity_counts(menuai, Platform.SWITCH, 17, 15)
 
     description = CAMERA_SWITCHES[3]
 
@@ -362,13 +362,13 @@ async def test_switch_camera_highfps(
 
     _, entity_id = ids_from_device_description(Platform.SWITCH, doorbell, description)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch", "turn_on", {ATTR_ENTITY_ID: entity_id}, blocking=True
     )
 
     doorbell.set_video_mode.assert_called_once_with(VideoMode.HIGH_FPS)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch", "turn_off", {ATTR_ENTITY_ID: entity_id}, blocking=True
     )
 
@@ -376,15 +376,15 @@ async def test_switch_camera_highfps(
 
 
 async def test_switch_camera_privacy(
-    hass: HomeAssistant, ufp: MockUFPFixture, doorbell: Camera
+    menuai: menuai, ufp: MockUFPFixture, doorbell: Camera
 ) -> None:
     """Tests Privacy Mode switch for cameras with privacy mode defaulted on."""
 
     previous_mic = doorbell.mic_volume = 53
     previous_record = doorbell.recording_settings.mode = RecordingMode.DETECTIONS
 
-    await init_entry(hass, ufp, [doorbell])
-    assert_entity_counts(hass, Platform.SWITCH, 17, 15)
+    await init_entry(menuai, ufp, [doorbell])
+    assert_entity_counts(menuai, Platform.SWITCH, 17, 15)
 
     description = PRIVACY_MODE_SWITCH
 
@@ -393,12 +393,12 @@ async def test_switch_camera_privacy(
 
     _, entity_id = ids_from_device_description(Platform.SWITCH, doorbell, description)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state and state.state == "off"
     assert ATTR_PREV_MIC not in state.attributes
     assert ATTR_PREV_RECORD not in state.attributes
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch", "turn_on", {ATTR_ENTITY_ID: entity_id}, blocking=True
     )
 
@@ -415,14 +415,14 @@ async def test_switch_camera_privacy(
     mock_msg.new_obj = new_doorbell
     ufp.ws_msg(mock_msg)
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state and state.state == "on"
     assert state.attributes[ATTR_PREV_MIC] == previous_mic
     assert state.attributes[ATTR_PREV_RECORD] == previous_record.value
 
     doorbell.set_privacy.reset_mock()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch", "turn_off", {ATTR_ENTITY_ID: entity_id}, blocking=True
     )
 
@@ -430,13 +430,13 @@ async def test_switch_camera_privacy(
 
 
 async def test_switch_camera_privacy_already_on(
-    hass: HomeAssistant, ufp: MockUFPFixture, doorbell: Camera
+    menuai: menuai, ufp: MockUFPFixture, doorbell: Camera
 ) -> None:
     """Tests Privacy Mode switch for cameras with privacy mode defaulted on."""
 
     doorbell.add_privacy_zone()
-    await init_entry(hass, ufp, [doorbell])
-    assert_entity_counts(hass, Platform.SWITCH, 17, 15)
+    await init_entry(menuai, ufp, [doorbell])
+    assert_entity_counts(menuai, Platform.SWITCH, 17, 15)
 
     description = PRIVACY_MODE_SWITCH
 
@@ -445,7 +445,7 @@ async def test_switch_camera_privacy_already_on(
 
     _, entity_id = ids_from_device_description(Platform.SWITCH, doorbell, description)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch", "turn_off", {ATTR_ENTITY_ID: entity_id}, blocking=True
     )
 

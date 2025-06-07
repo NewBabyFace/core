@@ -2,7 +2,7 @@ blueprint:
   name: Create Sensor from Event
   description: Creates a timestamp sensor from an event
   domain: template
-  source_url: https://github.com/home-assistant/core/blob/dev/homeassistant/components/template/blueprints/event_sensor.yaml
+  source_url: https://github.com/home-assistant/core/blob/dev/menuai/components/template/blueprints/event_sensor.yaml
   input:
     event_type:
       name: Name of the event_type

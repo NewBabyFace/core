@@ -1,4 +1,4 @@
-"""Tests for pylint hass_imports plugin."""
+"""Tests for pylint menuai_imports plugin."""
 
 from __future__ import annotations
 
@@ -15,26 +15,26 @@ from . import assert_adds_messages, assert_no_messages
     ("module_name", "import_from", "import_what"),
     [
         (
-            "homeassistant.components.pylint_test.sensor",
-            "homeassistant.const",
+            "menuai.components.pylint_test.sensor",
+            "menuai.const",
             "CONSTANT",
         ),
         (
-            "homeassistant.components.pylint_test.sensor",
-            "homeassistant.components.pylint_testing",
+            "menuai.components.pylint_test.sensor",
+            "menuai.components.pylint_testing",
             "CONSTANT",
         ),
-        ("homeassistant.components.pylint_test.sensor", ".const", "CONSTANT"),
-        ("homeassistant.components.pylint_test.sensor", ".", "CONSTANT"),
-        ("homeassistant.components.pylint_test.sensor", "..", "pylint_test"),
+        ("menuai.components.pylint_test.sensor", ".const", "CONSTANT"),
+        ("menuai.components.pylint_test.sensor", ".", "CONSTANT"),
+        ("menuai.components.pylint_test.sensor", "..", "pylint_test"),
         (
-            "homeassistant.components.pylint_test.api.hub",
-            "homeassistant.const",
+            "menuai.components.pylint_test.api.hub",
+            "menuai.const",
             "CONSTANT",
         ),
-        ("homeassistant.components.pylint_test.api.hub", "..const", "CONSTANT"),
-        ("homeassistant.components.pylint_test.api.hub", "..", "CONSTANT"),
-        ("homeassistant.components.pylint_test.api.hub", "...", "pylint_test"),
+        ("menuai.components.pylint_test.api.hub", "..const", "CONSTANT"),
+        ("menuai.components.pylint_test.api.hub", "..", "CONSTANT"),
+        ("menuai.components.pylint_test.api.hub", "...", "pylint_test"),
         ("tests.components.pylint_test.api.hub", "..const", "CONSTANT"),
     ],
 )
@@ -61,58 +61,58 @@ def test_good_import(
     ("module_name", "import_from", "import_what", "error_code"),
     [
         (
-            "homeassistant.components.pylint_test.sensor",
-            "homeassistant.components.pylint_test.const",
+            "menuai.components.pylint_test.sensor",
+            "menuai.components.pylint_test.const",
             "CONSTANT",
-            "hass-relative-import",
+            "menuai-relative-import",
         ),
         (
-            "homeassistant.components.pylint_test.sensor",
+            "menuai.components.pylint_test.sensor",
             "..const",
             "CONSTANT",
-            "hass-absolute-import",
+            "menuai-absolute-import",
         ),
         (
-            "homeassistant.components.pylint_test.sensor",
+            "menuai.components.pylint_test.sensor",
             "...const",
             "CONSTANT",
-            "hass-absolute-import",
+            "menuai-absolute-import",
         ),
         (
-            "homeassistant.components.pylint_test.api.hub",
-            "homeassistant.components.pylint_test.api.const",
+            "menuai.components.pylint_test.api.hub",
+            "menuai.components.pylint_test.api.const",
             "CONSTANT",
-            "hass-relative-import",
+            "menuai-relative-import",
         ),
         (
-            "homeassistant.components.pylint_test.api.hub",
+            "menuai.components.pylint_test.api.hub",
             "...const",
             "CONSTANT",
-            "hass-absolute-import",
+            "menuai-absolute-import",
         ),
         (
-            "homeassistant.components.pylint_test.api.hub",
-            "homeassistant.components",
+            "menuai.components.pylint_test.api.hub",
+            "menuai.components",
             "pylint_test",
-            "hass-relative-import",
+            "menuai-relative-import",
         ),
         (
-            "homeassistant.components.pylint_test.api.hub",
-            "homeassistant.components.pylint_test.const",
+            "menuai.components.pylint_test.api.hub",
+            "menuai.components.pylint_test.const",
             "CONSTANT",
-            "hass-relative-import",
+            "menuai-relative-import",
         ),
         (
             "tests.components.pylint_test.api.hub",
             "tests.components.pylint_test.const",
             "CONSTANT",
-            "hass-relative-import",
+            "menuai-relative-import",
         ),
         (
             "tests.components.pylint_test.api.hub",
             "...const",
             "CONSTANT",
-            "hass-absolute-import",
+            "menuai-absolute-import",
         ),
     ],
 )
@@ -151,23 +151,23 @@ def test_bad_import(
     ("import_node", "module_name"),
     [
         (
-            "from homeassistant.components import climate",
-            "homeassistant.components.pylint_test.climate",
+            "from menuai.components import climate",
+            "menuai.components.pylint_test.climate",
         ),
         (
-            "from homeassistant.components.climate import ClimateEntityFeature",
-            "homeassistant.components.pylint_test.climate",
+            "from menuai.components.climate import ClimateEntityFeature",
+            "menuai.components.pylint_test.climate",
         ),
         (
-            "from homeassistant.components.pylint_test import const",
+            "from menuai.components.pylint_test import const",
             "tests.components.pylint_test.climate",
         ),
         (
-            "from homeassistant.components.pylint_test.const import CONSTANT",
+            "from menuai.components.pylint_test.const import CONSTANT",
             "tests.components.pylint_test.climate",
         ),
         (
-            "import homeassistant.components.pylint_test.const as climate",
+            "import menuai.components.pylint_test.const as climate",
             "tests.components.pylint_test.climate",
         ),
     ],
@@ -197,35 +197,35 @@ def test_good_root_import(
     ("import_node", "module_name"),
     [
         (
-            "import homeassistant.components.climate.const as climate",
-            "homeassistant.components.pylint_test.climate",
+            "import menuai.components.climate.const as climate",
+            "menuai.components.pylint_test.climate",
         ),
         (
-            "from homeassistant.components.climate import const",
-            "homeassistant.components.pylint_test.climate",
+            "from menuai.components.climate import const",
+            "menuai.components.pylint_test.climate",
         ),
         (
-            "from homeassistant.components.climate.const import ClimateEntityFeature",
-            "homeassistant.components.pylint_test.climate",
+            "from menuai.components.climate.const import ClimateEntityFeature",
+            "menuai.components.pylint_test.climate",
         ),
         (
-            "from homeassistant.components.climate.entity import ClimateEntityFeature",
-            "homeassistant.components.pylint_test.climate",
+            "from menuai.components.climate.entity import ClimateEntityFeature",
+            "menuai.components.pylint_test.climate",
         ),
         (
-            "from homeassistant.components.climate import const",
+            "from menuai.components.climate import const",
             "tests.components.pylint_test.climate",
         ),
         (
-            "from homeassistant.components.climate.const import CONSTANT",
+            "from menuai.components.climate.const import CONSTANT",
             "tests.components.pylint_test.climate",
         ),
         (
-            "import homeassistant.components.climate.const as climate",
+            "import menuai.components.climate.const as climate",
             "tests.components.pylint_test.climate",
         ),
         (
-            "import homeassistant.components.climate.entity as climate",
+            "import menuai.components.climate.entity as climate",
             "tests.components.pylint_test.climate",
         ),
     ],
@@ -247,7 +247,7 @@ def test_bad_root_import(
     with assert_adds_messages(
         linter,
         pylint.testutils.MessageTest(
-            msg_id="hass-component-root-import",
+            msg_id="menuai-component-root-import",
             node=node,
             args=None,
             line=1,
@@ -266,22 +266,22 @@ def test_bad_root_import(
     ("import_node", "module_name", "expected_args"),
     [
         (
-            "from homeassistant.helpers.issue_registry import async_get",
+            "from menuai.helpers.issue_registry import async_get",
             "tests.components.pylint_test.climate",
             (
                 "async_get",
-                "homeassistant.helpers.issue_registry",
+                "menuai.helpers.issue_registry",
                 "ir",
                 "ir",
                 "async_get",
             ),
         ),
         (
-            "from homeassistant.helpers.issue_registry import async_get as async_get_issue_registry",
+            "from menuai.helpers.issue_registry import async_get as async_get_issue_registry",
             "tests.components.pylint_test.climate",
             (
                 "async_get",
-                "homeassistant.helpers.issue_registry",
+                "menuai.helpers.issue_registry",
                 "ir",
                 "ir",
                 "async_get",
@@ -307,7 +307,7 @@ def test_bad_namespace_import(
     with assert_adds_messages(
         linter,
         pylint.testutils.MessageTest(
-            msg_id="hass-helper-namespace-import",
+            msg_id="menuai-helper-namespace-import",
             node=node,
             args=expected_args,
             line=1,
@@ -323,13 +323,13 @@ def test_bad_namespace_import(
     ("module_name", "import_string", "end_col_offset"),
     [
         (
-            "homeassistant.components.pylint_test.sensor",
-            "from homeassistant.components.other import DOMAIN as OTHER_DOMAIN",
+            "menuai.components.pylint_test.sensor",
+            "from menuai.components.other import DOMAIN as OTHER_DOMAIN",
             -1,
         ),
         (
-            "homeassistant.components.pylint_test.sensor",
-            "from homeassistant.components.other import DOMAIN",
+            "menuai.components.pylint_test.sensor",
+            "from menuai.components.other import DOMAIN",
             49,
         ),
     ],
@@ -353,7 +353,7 @@ def test_domain_alias(
     if end_col_offset > 0:
         expected_messages.append(
             pylint.testutils.MessageTest(
-                msg_id="hass-import-constant-alias",
+                msg_id="menuai-import-constant-alias",
                 node=import_node,
                 args=("DOMAIN", "DOMAIN", "OTHER_DOMAIN"),
                 line=1,

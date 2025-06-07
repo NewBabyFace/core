@@ -1,4 +1,4 @@
-"""Test Home Assistant executor util."""
+"""Test MenuAI executor util."""
 
 import concurrent.futures
 import time
@@ -6,8 +6,8 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.util import executor
-from homeassistant.util.executor import InterruptibleThreadPoolExecutor
+from menuai.util import executor
+from menuai.util.executor import InterruptibleThreadPoolExecutor
 
 
 async def test_executor_shutdown_can_interrupt_threads(

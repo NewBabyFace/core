@@ -9,21 +9,21 @@ from urllib.parse import urlparse
 
 import getmac
 
-from homeassistant.components import ssdp
-from homeassistant.const import (
+from menuai.components import ssdp
+from menuai.const import (
     CONF_HOST,
     CONF_MAC,
     CONF_METHOD,
     CONF_MODEL,
     CONF_PORT,
     CONF_TOKEN,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     Platform,
 )
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.debounce import Debouncer
+from menuai.core import Event, menuai, callback
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.debounce import Debouncer
 
 from .bridge import SamsungTVBridge, mac_from_device_info, model_requires_encryption
 from .const import (
@@ -44,11 +44,11 @@ PLATFORMS = [Platform.MEDIA_PLAYER, Platform.REMOTE]
 
 @callback
 def _async_get_device_bridge(
-    hass: HomeAssistant, data: Mapping[str, Any]
+    menuai: menuai, data: Mapping[str, Any]
 ) -> SamsungTVBridge:
     """Get device bridge."""
     return SamsungTVBridge.get_bridge(
-        hass,
+        menuai,
         data[CONF_METHOD],
         data[CONF_HOST],
         data[CONF_PORT],
@@ -59,13 +59,13 @@ def _async_get_device_bridge(
 class DebouncedEntryReloader:
     """Reload only after the timer expires."""
 
-    def __init__(self, hass: HomeAssistant, entry: SamsungTVConfigEntry) -> None:
+    def __init__(self, menuai: menuai, entry: SamsungTVConfigEntry) -> None:
         """Init the debounced entry reloader."""
-        self.hass = hass
+        self.menuai = menuai
         self.entry = entry
         self.token = self.entry.data.get(CONF_TOKEN)
         self._debounced_reload: Debouncer[Coroutine[Any, Any, None]] = Debouncer(
-            hass,
+            menuai,
             LOGGER,
             cooldown=ENTRY_RELOAD_COOLDOWN,
             immediate=False,
@@ -73,7 +73,7 @@ class DebouncedEntryReloader:
         )
 
     async def async_call(
-        self, hass: HomeAssistant, entry: SamsungTVConfigEntry
+        self, menuai: menuai, entry: SamsungTVConfigEntry
     ) -> None:
         """Start the countdown for a reload."""
         if (new_token := entry.data.get(CONF_TOKEN)) != self.token:
@@ -91,11 +91,11 @@ class DebouncedEntryReloader:
     async def _async_reload_entry(self) -> None:
         """Reload entry."""
         LOGGER.debug("Reloading entry %s", self.entry.title)
-        await self.hass.config_entries.async_reload(self.entry.entry_id)
+        await self.menuai.config_entries.async_reload(self.entry.entry_id)
 
 
 async def _async_update_ssdp_locations(
-    hass: HomeAssistant, entry: SamsungTVConfigEntry
+    menuai: menuai, entry: SamsungTVConfigEntry
 ) -> None:
     """Update ssdp locations from discovery cache."""
     updates = {}
@@ -103,7 +103,7 @@ async def _async_update_ssdp_locations(
         (UPNP_SVC_RENDERING_CONTROL, CONF_SSDP_RENDERING_CONTROL_LOCATION),
         (UPNP_SVC_MAIN_TV_AGENT, CONF_SSDP_MAIN_TV_AGENT_LOCATION),
     ):
-        for discovery_info in await ssdp.async_get_discovery_info_by_st(hass, ssdp_st):
+        for discovery_info in await ssdp.async_get_discovery_info_by_st(menuai, ssdp_st):
             location = discovery_info.ssdp_location
             host = urlparse(location).hostname
             if host == entry.data[CONF_HOST]:
@@ -111,10 +111,10 @@ async def _async_update_ssdp_locations(
                 break
 
     if updates:
-        hass.config_entries.async_update_entry(entry, data={**entry.data, **updates})
+        menuai.config_entries.async_update_entry(entry, data={**entry.data, **updates})
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: SamsungTVConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: SamsungTVConfigEntry) -> bool:
     """Set up the Samsung TV platform."""
     # Initialize bridge
     if entry.data.get(CONF_METHOD) == METHOD_ENCRYPTED_WEBSOCKET:
@@ -122,13 +122,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: SamsungTVConfigEntry) ->
             raise ConfigEntryAuthFailed(
                 translation_domain=DOMAIN, translation_key="encrypted_mode_auth_failed"
             )
-    bridge = await _async_create_bridge_with_updated_data(hass, entry)
+    bridge = await _async_create_bridge_with_updated_data(menuai, entry)
 
     @callback
     def _access_denied() -> None:
         """Access denied callback."""
         LOGGER.debug("Access denied in getting remote object")
-        entry.async_start_reauth(hass)
+        entry.async_start_reauth(menuai)
 
     bridge.register_reauth_callback(_access_denied)
 
@@ -136,7 +136,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: SamsungTVConfigEntry) ->
     @callback
     def _update_config_entry(updates: Mapping[str, Any]) -> None:
         """Update config entry with the new token."""
-        hass.config_entries.async_update_entry(entry, data={**entry.data, **updates})
+        menuai.config_entries.async_update_entry(entry, data={**entry.data, **updates})
 
     bridge.register_update_config_entry_callback(_update_config_entry)
 
@@ -146,29 +146,29 @@ async def async_setup_entry(hass: HomeAssistant, entry: SamsungTVConfigEntry) ->
         await bridge.async_close_remote()
 
     entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, stop_bridge)
+        menuai.bus.async_listen_once(EVENT_menuai_STOP, stop_bridge)
     )
     entry.async_on_unload(stop_bridge)
 
-    await _async_update_ssdp_locations(hass, entry)
+    await _async_update_ssdp_locations(menuai, entry)
 
     # We must not await after we setup the reload or there
     # will be a race where the config flow will see the entry
     # as not loaded and may reload it
-    debounced_reloader = DebouncedEntryReloader(hass, entry)
+    debounced_reloader = DebouncedEntryReloader(menuai, entry)
     entry.async_on_unload(debounced_reloader.async_shutdown)
     entry.async_on_unload(entry.add_update_listener(debounced_reloader.async_call))
 
-    coordinator = SamsungTVDataUpdateCoordinator(hass, entry, bridge)
+    coordinator = SamsungTVDataUpdateCoordinator(menuai, entry, bridge)
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
 async def _async_create_bridge_with_updated_data(
-    hass: HomeAssistant, entry: SamsungTVConfigEntry
+    menuai: menuai, entry: SamsungTVConfigEntry
 ) -> SamsungTVBridge:
     """Create a bridge object and update any missing data in the config entry."""
     updated_data: dict[str, str] = {}
@@ -176,7 +176,7 @@ async def _async_create_bridge_with_updated_data(
     method: str = entry.data[CONF_METHOD]
     info: dict[str, Any] | None = None
 
-    bridge = _async_get_device_bridge(hass, entry.data)
+    bridge = _async_get_device_bridge(menuai, entry.data)
 
     mac: str | None = entry.data.get(CONF_MAC)
     model: str | None = entry.data.get(CONF_MODEL)
@@ -191,7 +191,7 @@ async def _async_create_bridge_with_updated_data(
             mac = mac_from_device_info(info)
 
         if not mac:
-            mac = await hass.async_add_executor_job(
+            mac = await menuai.async_add_executor_job(
                 partial(getmac.get_mac_address, ip=host)
             )
 
@@ -224,18 +224,18 @@ async def _async_create_bridge_with_updated_data(
 
     if updated_data:
         data = {**entry.data, **updated_data}
-        hass.config_entries.async_update_entry(entry, data=data)
+        menuai.config_entries.async_update_entry(entry, data=data)
 
     return bridge
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: SamsungTVConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: SamsungTVConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 async def async_migrate_entry(
-    hass: HomeAssistant, config_entry: SamsungTVConfigEntry
+    menuai: menuai, config_entry: SamsungTVConfigEntry
 ) -> bool:
     """Migrate old entry."""
     version = config_entry.version
@@ -245,14 +245,14 @@ async def async_migrate_entry(
 
     # 1 -> 2: Unique ID format changed, so delete and re-import:
     if version == 1:
-        dev_reg = dr.async_get(hass)
+        dev_reg = dr.async_get(menuai)
         dev_reg.async_clear_config_entry(config_entry.entry_id)
 
-        en_reg = er.async_get(hass)
+        en_reg = er.async_get(menuai)
         en_reg.async_clear_config_entry(config_entry.entry_id)
 
         version = 2
-        hass.config_entries.async_update_entry(config_entry, version=2)
+        menuai.config_entries.async_update_entry(config_entry, version=2)
 
     if version == 2:
         if minor_version < 2:
@@ -260,7 +260,7 @@ async def async_migrate_entry(
             # Reverted due to device registry collisions - see #119082 / #119249
 
             minor_version = 2
-            hass.config_entries.async_update_entry(config_entry, minor_version=2)
+            menuai.config_entries.async_update_entry(config_entry, minor_version=2)
 
     LOGGER.debug("Migration to version %s.%s successful", version, minor_version)
 

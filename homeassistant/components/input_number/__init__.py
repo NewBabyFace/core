@@ -8,7 +8,7 @@ from typing import Self
 
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     ATTR_EDITABLE,
     ATTR_MODE,
     CONF_ICON,
@@ -18,13 +18,13 @@ from homeassistant.const import (
     CONF_UNIT_OF_MEASUREMENT,
     SERVICE_RELOAD,
 )
-from homeassistant.core import HomeAssistant, ServiceCall, callback
-from homeassistant.helpers import collection, config_validation as cv
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.restore_state import RestoreEntity
-import homeassistant.helpers.service
-from homeassistant.helpers.storage import Store
-from homeassistant.helpers.typing import ConfigType, VolDictType
+from menuai.core import menuai, ServiceCall, callback
+from menuai.helpers import collection, config_validation as cv
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.restore_state import RestoreEntity
+import menuai.helpers.service
+from menuai.helpers.storage import Store
+from menuai.helpers.typing import ConfigType, VolDictType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -103,9 +103,9 @@ STORAGE_KEY = DOMAIN
 STORAGE_VERSION = 1
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up an input slider."""
-    component = EntityComponent[InputNumber](_LOGGER, DOMAIN, hass)
+    component = EntityComponent[InputNumber](_LOGGER, DOMAIN, menuai)
 
     id_manager = collection.IDManager()
 
@@ -113,15 +113,15 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         logging.getLogger(f"{__name__}.yaml_collection"), id_manager
     )
     collection.sync_entity_lifecycle(
-        hass, DOMAIN, DOMAIN, component, yaml_collection, InputNumber
+        menuai, DOMAIN, DOMAIN, component, yaml_collection, InputNumber
     )
 
     storage_collection = NumberStorageCollection(
-        Store(hass, STORAGE_VERSION, STORAGE_KEY),
+        Store(menuai, STORAGE_VERSION, STORAGE_KEY),
         id_manager,
     )
     collection.sync_entity_lifecycle(
-        hass, DOMAIN, DOMAIN, component, storage_collection, InputNumber
+        menuai, DOMAIN, DOMAIN, component, storage_collection, InputNumber
     )
 
     await yaml_collection.async_load(
@@ -131,7 +131,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     collection.DictStorageCollectionWebsocket(
         storage_collection, DOMAIN, DOMAIN, STORAGE_FIELDS, STORAGE_FIELDS
-    ).async_setup(hass)
+    ).async_setup(menuai)
 
     async def reload_service_handler(service_call: ServiceCall) -> None:
         """Reload yaml entities."""
@@ -142,8 +142,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             [{CONF_ID: id_, **conf} for id_, conf in conf.get(DOMAIN, {}).items()]
         )
 
-    homeassistant.helpers.service.async_register_admin_service(
-        hass,
+    menuai.helpers.service.async_register_admin_service(
+        menuai,
         DOMAIN,
         SERVICE_RELOAD,
         reload_service_handler,
@@ -281,9 +281,9 @@ class InputNumber(collection.CollectionEntity, RestoreEntity):
             ATTR_MODE: self._config[CONF_MODE],
         }
 
-    async def async_added_to_hass(self):
-        """Run when entity about to be added to hass."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self):
+        """Run when entity about to be added to menuai."""
+        await super().async_added_to_menuai()
         if self._current_value is not None:
             return
 

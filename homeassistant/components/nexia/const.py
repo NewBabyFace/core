@@ -1,6 +1,6 @@
 """Nexia constants."""
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 PLATFORMS = [
     Platform.BINARY_SENSOR,

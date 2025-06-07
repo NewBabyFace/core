@@ -6,18 +6,18 @@ from typing import Any
 
 from whois import Domain
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: ConfigEntry
+    menuai: menuai, entry: ConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
-    coordinator: DataUpdateCoordinator[Domain] = hass.data[DOMAIN][entry.entry_id]
+    coordinator: DataUpdateCoordinator[Domain] = menuai.data[DOMAIN][entry.entry_id]
     return {
         "creation_date": coordinator.data.creation_date,
         "expiration_date": coordinator.data.expiration_date,

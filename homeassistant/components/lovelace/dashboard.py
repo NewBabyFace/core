@@ -11,14 +11,14 @@ from typing import TYPE_CHECKING, Any
 
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.components.frontend import DATA_PANELS
-from homeassistant.const import CONF_FILENAME
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import collection, storage
-from homeassistant.helpers.json import json_bytes, json_fragment
-from homeassistant.util.yaml import Secrets, load_yaml_dict
+from menuai.components import websocket_api
+from menuai.components.frontend import DATA_PANELS
+from menuai.const import CONF_FILENAME
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import collection, storage
+from menuai.helpers.json import json_bytes, json_fragment
+from menuai.util.yaml import Secrets, load_yaml_dict
 
 from .const import (
     CONF_ALLOW_SINGLE_WORD,
@@ -47,10 +47,10 @@ class LovelaceConfig(ABC):
     """Base class for Lovelace config."""
 
     def __init__(
-        self, hass: HomeAssistant, url_path: str | None, config: dict[str, Any] | None
+        self, menuai: menuai, url_path: str | None, config: dict[str, Any] | None
     ) -> None:
         """Initialize Lovelace config."""
-        self.hass = hass
+        self.menuai = menuai
         if config:
             self.config: dict[str, Any] | None = {**config, CONF_URL_PATH: url_path}
         else:
@@ -76,11 +76,11 @@ class LovelaceConfig(ABC):
 
     async def async_save(self, config: dict[str, Any]) -> None:
         """Save config."""
-        raise HomeAssistantError("Not supported")
+        raise menuaiError("Not supported")
 
     async def async_delete(self) -> None:
         """Delete config."""
-        raise HomeAssistantError("Not supported")
+        raise menuaiError("Not supported")
 
     @abstractmethod
     async def async_json(self, force: bool) -> json_fragment:
@@ -89,13 +89,13 @@ class LovelaceConfig(ABC):
     @callback
     def _config_updated(self) -> None:
         """Fire config updated event."""
-        self.hass.bus.async_fire(EVENT_LOVELACE_UPDATED, {"url_path": self.url_path})
+        self.menuai.bus.async_fire(EVENT_LOVELACE_UPDATED, {"url_path": self.url_path})
 
 
 class LovelaceStorage(LovelaceConfig):
     """Class to handle Storage based Lovelace config."""
 
-    def __init__(self, hass: HomeAssistant, config: dict[str, Any] | None) -> None:
+    def __init__(self, menuai: menuai, config: dict[str, Any] | None) -> None:
         """Initialize Lovelace config based on storage helper."""
         if config is None:
             url_path: str | None = None
@@ -104,10 +104,10 @@ class LovelaceStorage(LovelaceConfig):
             url_path = config[CONF_URL_PATH]
             storage_key = CONFIG_STORAGE_KEY.format(config["id"])
 
-        super().__init__(hass, url_path, config)
+        super().__init__(menuai, url_path, config)
 
         self._store = storage.Store[dict[str, Any]](
-            hass, CONFIG_STORAGE_VERSION, storage_key
+            menuai, CONFIG_STORAGE_VERSION, storage_key
         )
         self._data: dict[str, Any] | None = None
         self._json_config: json_fragment | None = None
@@ -126,7 +126,7 @@ class LovelaceStorage(LovelaceConfig):
 
     async def async_load(self, force: bool) -> dict[str, Any]:
         """Load config."""
-        if self.hass.config.recovery_mode:
+        if self.menuai.config.recovery_mode:
             raise ConfigNotFound
 
         data = self._data or await self._load()
@@ -137,7 +137,7 @@ class LovelaceStorage(LovelaceConfig):
 
     async def async_json(self, force: bool) -> json_fragment:
         """Return JSON representation of the config."""
-        if self.hass.config.recovery_mode:
+        if self.menuai.config.recovery_mode:
             raise ConfigNotFound
         if self._data is None:
             await self._load()
@@ -145,8 +145,8 @@ class LovelaceStorage(LovelaceConfig):
 
     async def async_save(self, config: dict[str, Any]) -> None:
         """Save config."""
-        if self.hass.config.recovery_mode:
-            raise HomeAssistantError("Saving not supported in recovery mode")
+        if self.menuai.config.recovery_mode:
+            raise menuaiError("Saving not supported in recovery mode")
 
         if self._data is None:
             await self._load()
@@ -159,8 +159,8 @@ class LovelaceStorage(LovelaceConfig):
 
     async def async_delete(self) -> None:
         """Delete config."""
-        if self.hass.config.recovery_mode:
-            raise HomeAssistantError("Deleting not supported in recovery mode")
+        if self.menuai.config.recovery_mode:
+            raise menuaiError("Deleting not supported in recovery mode")
 
         await self._store.async_remove()
         self._data = None
@@ -186,12 +186,12 @@ class LovelaceYAML(LovelaceConfig):
     """Class to handle YAML-based Lovelace config."""
 
     def __init__(
-        self, hass: HomeAssistant, url_path: str | None, config: dict[str, Any] | None
+        self, menuai: menuai, url_path: str | None, config: dict[str, Any] | None
     ) -> None:
         """Initialize the YAML config."""
-        super().__init__(hass, url_path, config)
+        super().__init__(menuai, url_path, config)
 
-        self.path = hass.config.path(
+        self.path = menuai.config.path(
             config[CONF_FILENAME] if config else LOVELACE_CONFIG_FILE
         )
         self._cache: tuple[dict[str, Any], float, json_fragment] | None = None
@@ -227,7 +227,7 @@ class LovelaceYAML(LovelaceConfig):
         self, force: bool
     ) -> tuple[dict[str, Any], json_fragment]:
         """Load the config or return a cached version."""
-        is_updated, config, json = await self.hass.async_add_executor_job(
+        is_updated, config, json = await self.menuai.async_add_executor_job(
             self._load_config, force
         )
         if is_updated:
@@ -247,7 +247,7 @@ class LovelaceYAML(LovelaceConfig):
 
         try:
             config = load_yaml_dict(
-                self.path, Secrets(Path(self.hass.config.config_dir))
+                self.path, Secrets(Path(self.menuai.config.config_dir))
             )
         except FileNotFoundError:
             raise ConfigNotFound from None
@@ -271,10 +271,10 @@ class DashboardsCollection(collection.DictStorageCollection):
     CREATE_SCHEMA = vol.Schema(STORAGE_DASHBOARD_CREATE_FIELDS)
     UPDATE_SCHEMA = vol.Schema(STORAGE_DASHBOARD_UPDATE_FIELDS)
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize the dashboards collection."""
         super().__init__(
-            storage.Store(hass, DASHBOARDS_STORAGE_VERSION, DASHBOARDS_STORAGE_KEY),
+            storage.Store(menuai, DASHBOARDS_STORAGE_VERSION, DASHBOARDS_STORAGE_KEY),
         )
 
     async def _process_create_data(self, data: dict) -> dict:
@@ -286,7 +286,7 @@ class DashboardsCollection(collection.DictStorageCollection):
         if not allow_single_word and "-" not in url_path:
             raise vol.Invalid("Url path needs to contain a hyphen (-)")
 
-        if url_path in self.hass.data[DATA_PANELS]:
+        if url_path in self.menuai.data[DATA_PANELS]:
             raise vol.Invalid("Panel url path needs to be unique")
 
         return self.CREATE_SCHEMA(data)  # type: ignore[no-any-return]
@@ -313,7 +313,7 @@ class DashboardsCollectionWebSocket(collection.DictStorageCollectionWebsocket):
     @callback
     def ws_list_item(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         connection: websocket_api.ActiveConnection,
         msg: dict[str, Any],
     ) -> None:
@@ -322,7 +322,7 @@ class DashboardsCollectionWebSocket(collection.DictStorageCollectionWebsocket):
             msg["id"],
             [
                 dashboard.config
-                for dashboard in hass.data[LOVELACE_DATA].dashboards.values()
+                for dashboard in menuai.data[LOVELACE_DATA].dashboards.values()
                 if dashboard.config
             ],
         )

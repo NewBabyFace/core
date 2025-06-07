@@ -12,11 +12,11 @@ from xknx.exceptions import XKNXException
 from xknx.telegram import Telegram, TelegramDirection
 from xknx.telegram.apci import GroupValueResponse, GroupValueWrite
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.storage import Store
-from homeassistant.util import dt as dt_util
-from homeassistant.util.signal_type import SignalType
+from menuai.core import menuai
+from menuai.helpers.dispatcher import async_dispatcher_send
+from menuai.helpers.storage import Store
+from menuai.util import dt as dt_util
+from menuai.util.signal_type import SignalType
 
 from .const import DOMAIN
 from .project import KNXProject
@@ -57,16 +57,16 @@ class Telegrams:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         xknx: XKNX,
         project: KNXProject,
         log_size: int,
     ) -> None:
         """Initialize Telegrams class."""
-        self.hass = hass
+        self.menuai = menuai
         self.project = project
         self._history_store = Store[list[TelegramDict]](
-            hass, STORAGE_VERSION, STORAGE_KEY
+            menuai, STORAGE_VERSION, STORAGE_KEY
         )
         self._xknx_telegram_cb_handle = (
             xknx.telegram_queue.register_telegram_received_cb(
@@ -105,7 +105,7 @@ class Telegrams:
         if telegram_dict["payload"] is not None:
             # exclude GroupValueRead telegrams
             self.last_ga_telegrams[telegram_dict["destination"]] = telegram_dict
-        async_dispatcher_send(self.hass, SIGNAL_KNX_TELEGRAM, telegram, telegram_dict)
+        async_dispatcher_send(self.menuai, SIGNAL_KNX_TELEGRAM, telegram, telegram_dict)
 
     def telegram_to_dict(self, telegram: Telegram) -> TelegramDict:
         """Convert a Telegram to a dict."""
@@ -127,7 +127,7 @@ class Telegrams:
         ) is not None:
             src_name = f"{device['manufacturer_name']} {device['name']}"
         elif telegram.direction is TelegramDirection.OUTGOING:
-            src_name = "Home Assistant"
+            src_name = "MenuAI"
 
         if isinstance(telegram.payload, (GroupValueWrite, GroupValueResponse)):
             payload_data = telegram.payload.value.value

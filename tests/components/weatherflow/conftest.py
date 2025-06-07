@@ -8,7 +8,7 @@ import pytest
 from pyweatherflowudp.client import EVENT_DEVICE_DISCOVERED
 from pyweatherflowudp.device import WeatherFlowDevice
 
-from homeassistant.components.weatherflow.const import DOMAIN
+from menuai.components.weatherflow.const import DOMAIN
 
 from tests.common import MockConfigEntry, load_json_object_fixture
 
@@ -17,7 +17,7 @@ from tests.common import MockConfigEntry, load_json_object_fixture
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Mock setting up a config entry."""
     with patch(
-        "homeassistant.components.weatherflow.async_setup_entry", return_value=True
+        "menuai.components.weatherflow.async_setup_entry", return_value=True
     ) as mock_setup:
         yield mock_setup
 
@@ -32,7 +32,7 @@ def mock_config_entry() -> MockConfigEntry:
 def mock_has_devices() -> Generator[AsyncMock]:
     """Return a mock has_devices function."""
     with patch(
-        "homeassistant.components.weatherflow.config_flow.WeatherFlowListener.on",
+        "menuai.components.weatherflow.config_flow.WeatherFlowListener.on",
         return_value=True,
     ) as mock_has_devices:
         yield mock_has_devices
@@ -46,7 +46,7 @@ def mock_stop() -> Generator[AsyncMock]:
         self._udp_task.cancel()
 
     with patch(
-        "homeassistant.components.weatherflow.config_flow.WeatherFlowListener.stop_listening",
+        "menuai.components.weatherflow.config_flow.WeatherFlowListener.stop_listening",
         autospec=True,
         side_effect=mock_stop_listening,
     ) as mock_function:
@@ -73,7 +73,7 @@ def mock_start() -> Generator[AsyncMock]:
         self._udp_task = asyncio.create_task(device_discovery_task(self))
 
     with patch(
-        "homeassistant.components.weatherflow.config_flow.WeatherFlowListener.start_listening",
+        "menuai.components.weatherflow.config_flow.WeatherFlowListener.start_listening",
         autospec=True,
         side_effect=mock_start_listening,
     ) as mock_function:

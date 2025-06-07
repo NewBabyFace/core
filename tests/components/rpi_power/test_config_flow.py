@@ -2,19 +2,19 @@
 
 from unittest.mock import MagicMock
 
-from homeassistant.components.rpi_power.const import DOMAIN
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.rpi_power.const import DOMAIN
+from menuai.config_entries import SOURCE_USER
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import patch
 
-MODULE = "homeassistant.components.rpi_power.config_flow.new_under_voltage"
+MODULE = "menuai.components.rpi_power.config_flow.new_under_voltage"
 
 
-async def test_setup(hass: HomeAssistant) -> None:
+async def test_setup(menuai: menuai) -> None:
     """Test setting up manually."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
@@ -23,37 +23,37 @@ async def test_setup(hass: HomeAssistant) -> None:
     assert not result["errors"]
 
     with patch(MODULE, return_value=MagicMock()):
-        result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
     assert result["type"] is FlowResultType.CREATE_ENTRY
 
 
-async def test_not_supported(hass: HomeAssistant) -> None:
+async def test_not_supported(menuai: menuai) -> None:
     """Test setting up on not supported system."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
     )
 
     with patch(MODULE, return_value=None):
-        result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+        result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "no_devices_found"
 
 
-async def test_onboarding(hass: HomeAssistant) -> None:
+async def test_onboarding(menuai: menuai) -> None:
     """Test setting up via onboarding."""
     with patch(MODULE, return_value=MagicMock()):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": "onboarding"},
         )
     assert result["type"] is FlowResultType.CREATE_ENTRY
 
 
-async def test_onboarding_not_supported(hass: HomeAssistant) -> None:
+async def test_onboarding_not_supported(menuai: menuai) -> None:
     """Test setting up via onboarding with unsupported system."""
     with patch(MODULE, return_value=None):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN,
             context={"source": "onboarding"},
         )

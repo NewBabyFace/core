@@ -15,17 +15,17 @@ from zwave_js_server.const.command_class.thermostat import (
 from zwave_js_server.model.driver import Driver
 from zwave_js_server.model.value import Value as ZwaveValue
 
-from homeassistant.components.fan import (
+from menuai.components.fan import (
     DOMAIN as FAN_DOMAIN,
     FanEntity,
     FanEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util.percentage import (
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util.percentage import (
     percentage_to_ranged_value,
     ranged_value_to_percentage,
 )
@@ -44,7 +44,7 @@ ATTR_FAN_STATE = "fan_state"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -68,7 +68,7 @@ async def async_setup_entry(
 
     config_entry.async_on_unload(
         async_dispatcher_connect(
-            hass,
+            menuai,
             f"{DOMAIN}_{config_entry.entry_id}_add_{FAN_DOMAIN}",
             async_add_fan,
         )
@@ -119,7 +119,7 @@ class ZwaveFan(ZWaveBaseEntity, FanEntity):
             await self.async_set_preset_mode(preset_mode)
         else:
             if self.info.primary_value.command_class != CommandClass.SWITCH_MULTILEVEL:
-                raise HomeAssistantError(
+                raise menuaiError(
                     "`percentage` or `preset_mode` must be provided"
                 )
             # If this is a Multilevel Switch CC value, we do an optimistic state update
@@ -342,13 +342,13 @@ class ZwaveThermostatFan(ZWaveBaseEntity, FanEntity):
     ) -> None:
         """Turn the device on."""
         if not self._fan_off:
-            raise HomeAssistantError("Unhandled action turn_on")
+            raise menuaiError("Unhandled action turn_on")
         await self._async_set_value(self._fan_off, False)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the device off."""
         if not self._fan_off:
-            raise HomeAssistantError("Unhandled action turn_off")
+            raise menuaiError("Unhandled action turn_off")
         await self._async_set_value(self._fan_off, True)
 
     @property

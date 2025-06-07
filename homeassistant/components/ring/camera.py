@@ -13,8 +13,8 @@ from haffmpeg.camera import CameraMjpeg
 from ring_doorbell import RingDoorBell
 from ring_doorbell.webrtcstream import RingWebRtcMessage
 
-from homeassistant.components import ffmpeg
-from homeassistant.components.camera import (
+from menuai.components import ffmpeg
+from menuai.components.camera import (
     Camera,
     CameraEntityDescription,
     CameraEntityFeature,
@@ -24,11 +24,11 @@ from homeassistant.components.camera import (
     WebRTCError,
     WebRTCSendMessage,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.aiohttp_client import async_aiohttp_proxy_stream
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.aiohttp_client import async_aiohttp_proxy_stream
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util import dt as dt_util
 
 from . import RingConfigEntry
 from .const import DOMAIN
@@ -74,14 +74,14 @@ CAMERA_DESCRIPTIONS: tuple[RingCameraEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: RingConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up a Ring Door Bell and StickUp Camera."""
     ring_data = entry.runtime_data
     devices_coordinator = ring_data.devices_coordinator
-    ffmpeg_manager = ffmpeg.get_ffmpeg_manager(hass)
+    ffmpeg_manager = ffmpeg.get_ffmpeg_manager(menuai)
 
     cams = [
         RingCam(camera, devices_coordinator, description, ffmpeg_manager=ffmpeg_manager)
@@ -157,7 +157,7 @@ class RingCam(RingEntity[RingDoorBell], Camera):
         key = (width, height)
         if not (image := self._images.get(key)) and self._video_url is not None:
             image = await ffmpeg.async_get_image(
-                self.hass,
+                self.menuai,
                 self._video_url,
                 width=width,
                 height=height,
@@ -181,7 +181,7 @@ class RingCam(RingEntity[RingDoorBell], Camera):
         try:
             stream_reader = await stream.get_reader()
             return await async_aiohttp_proxy_stream(
-                self.hass,
+                self.menuai,
                 request,
                 stream_reader,
                 self._ffmpeg_manager.ffmpeg_stream_content_type,
@@ -219,7 +219,7 @@ class RingCam(RingEntity[RingDoorBell], Camera):
     ) -> None:
         """Handle a WebRTC candidate."""
         if candidate.sdp_m_line_index is None:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="sdp_m_line_index_required",
                 translation_placeholders={

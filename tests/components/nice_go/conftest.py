@@ -7,12 +7,12 @@ from unittest.mock import AsyncMock, patch
 from nice_go import Barrier, BarrierState, ConnectionState
 import pytest
 
-from homeassistant.components.nice_go.const import (
+from menuai.components.nice_go.const import (
     CONF_REFRESH_TOKEN,
     CONF_REFRESH_TOKEN_CREATION_TIME,
     DOMAIN,
 )
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
+from menuai.const import CONF_EMAIL, CONF_PASSWORD
 
 from tests.common import MockConfigEntry, load_json_array_fixture
 
@@ -21,7 +21,7 @@ from tests.common import MockConfigEntry, load_json_array_fixture
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.nice_go.async_setup_entry",
+        "menuai.components.nice_go.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
         yield mock_setup_entry
@@ -32,11 +32,11 @@ def mock_nice_go() -> Generator[AsyncMock]:
     """Mock a Nice G.O. client."""
     with (
         patch(
-            "homeassistant.components.nice_go.coordinator.NiceGOApi",
+            "menuai.components.nice_go.coordinator.NiceGOApi",
             autospec=True,
         ) as mock_client,
         patch(
-            "homeassistant.components.nice_go.config_flow.NiceGOApi",
+            "menuai.components.nice_go.config_flow.NiceGOApi",
             new=mock_client,
         ),
     ):

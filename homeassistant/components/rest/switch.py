@@ -9,12 +9,12 @@ from typing import Any
 import httpx
 import voluptuous as vol
 
-from homeassistant.components.switch import (
+from menuai.components.switch import (
     DEVICE_CLASSES_SCHEMA,
     PLATFORM_SCHEMA as SWITCH_PLATFORM_SCHEMA,
     SwitchEntity,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_DEVICE_CLASS,
     CONF_HEADERS,
     CONF_ICON,
@@ -28,19 +28,19 @@ from homeassistant.const import (
     CONF_USERNAME,
     CONF_VERIFY_SSL,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import PlatformNotReady
-from homeassistant.helpers import config_validation as cv, template
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.httpx_client import get_async_client
-from homeassistant.helpers.trigger_template_entity import (
+from menuai.core import menuai
+from menuai.exceptions import PlatformNotReady
+from menuai.helpers import config_validation as cv, template
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.httpx_client import get_async_client
+from menuai.helpers.trigger_template_entity import (
     CONF_AVAILABILITY,
     CONF_PICTURE,
     TEMPLATE_ENTITY_BASE_SCHEMA,
     ManualTriggerEntity,
     ValueTemplate,
 )
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 CONF_BODY_OFF = "body_off"
@@ -91,14 +91,14 @@ PLATFORM_SCHEMA = SWITCH_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the RESTful switch."""
     resource: str = config[CONF_RESOURCE]
-    name = config.get(CONF_NAME) or template.Template(DEFAULT_NAME, hass)
+    name = config.get(CONF_NAME) or template.Template(DEFAULT_NAME, menuai)
 
     trigger_entity_config = {CONF_NAME: name}
 
@@ -108,9 +108,9 @@ async def async_setup_platform(
         trigger_entity_config[key] = config[key]
 
     try:
-        switch = RestSwitch(hass, config, trigger_entity_config)
+        switch = RestSwitch(menuai, config, trigger_entity_config)
 
-        req = await switch.get_response(hass)
+        req = await switch.get_response(menuai)
         if req.status_code >= HTTPStatus.BAD_REQUEST:
             _LOGGER.error("Got non-ok response from resource: %s", req.status_code)
         else:
@@ -129,12 +129,12 @@ class RestSwitch(ManualTriggerEntity, SwitchEntity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config: ConfigType,
         trigger_entity_config: ConfigType,
     ) -> None:
         """Initialize the REST switch."""
-        ManualTriggerEntity.__init__(self, hass, trigger_entity_config)
+        ManualTriggerEntity.__init__(self, menuai, trigger_entity_config)
 
         auth: httpx.BasicAuth | None = None
         username: str | None = None
@@ -154,9 +154,9 @@ class RestSwitch(ManualTriggerEntity, SwitchEntity):
         self._timeout: int = config[CONF_TIMEOUT]
         self._verify_ssl: bool = config[CONF_VERIFY_SSL]
 
-    async def async_added_to_hass(self) -> None:
-        """Handle adding to Home Assistant."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Handle adding to MenuAI."""
+        await super().async_added_to_menuai()
         await self.async_update()
 
     async def async_turn_on(self, **kwargs: Any) -> None:
@@ -192,7 +192,7 @@ class RestSwitch(ManualTriggerEntity, SwitchEntity):
 
     async def set_device_state(self, body: Any) -> httpx.Response:
         """Send a state update to the device."""
-        websession = get_async_client(self.hass, self._verify_ssl)
+        websession = get_async_client(self.menuai, self._verify_ssl)
 
         rendered_headers = template.render_complex(self._headers, parse_result=False)
         rendered_params = template.render_complex(self._params)
@@ -211,7 +211,7 @@ class RestSwitch(ManualTriggerEntity, SwitchEntity):
         """Get the current state, catching errors."""
         req = None
         try:
-            req = await self.get_response(self.hass)
+            req = await self.get_response(self.menuai)
         except (TimeoutError, httpx.TimeoutException):
             _LOGGER.exception("Timed out while fetching data")
         except httpx.RequestError:
@@ -220,9 +220,9 @@ class RestSwitch(ManualTriggerEntity, SwitchEntity):
         if req:
             self._async_update(req.text)
 
-    async def get_response(self, hass: HomeAssistant) -> httpx.Response:
+    async def get_response(self, menuai: menuai) -> httpx.Response:
         """Get the latest data from REST API and update the state."""
-        websession = get_async_client(hass, self._verify_ssl)
+        websession = get_async_client(menuai, self._verify_ssl)
 
         rendered_headers = template.render_complex(self._headers, parse_result=False)
         rendered_params = template.render_complex(self._params)

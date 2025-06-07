@@ -6,15 +6,15 @@ from typing import Any, cast
 from python_overseerr import OverseerrClient, OverseerrConnectionError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import (
-    HomeAssistant,
+from menuai.config_entries import ConfigEntryState
+from menuai.core import (
+    menuai,
     ServiceCall,
     ServiceResponse,
     SupportsResponse,
 )
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.util.json import JsonValueType
+from menuai.exceptions import menuaiError, ServiceValidationError
+from menuai.util.json import JsonValueType
 
 from .const import (
     ATTR_CONFIG_ENTRY_ID,
@@ -39,9 +39,9 @@ SERVICE_GET_REQUESTS_SCHEMA = vol.Schema(
 )
 
 
-def async_get_entry(hass: HomeAssistant, config_entry_id: str) -> OverseerrConfigEntry:
+def async_get_entry(menuai: menuai, config_entry_id: str) -> OverseerrConfigEntry:
     """Get the Overseerr config entry."""
-    if not (entry := hass.config_entries.async_get_entry(config_entry_id)):
+    if not (entry := menuai.config_entries.async_get_entry(config_entry_id)):
         raise ServiceValidationError(
             translation_domain=DOMAIN,
             translation_key="integration_not_found",
@@ -73,12 +73,12 @@ async def get_media(
     return media
 
 
-def setup_services(hass: HomeAssistant) -> None:
+def setup_services(menuai: menuai) -> None:
     """Set up the services for the Overseerr integration."""
 
     async def async_get_requests(call: ServiceCall) -> ServiceResponse:
         """Get requests made to Overseerr."""
-        entry = async_get_entry(hass, call.data[ATTR_CONFIG_ENTRY_ID])
+        entry = async_get_entry(menuai, call.data[ATTR_CONFIG_ENTRY_ID])
         client = entry.runtime_data.client
         kwargs: dict[str, Any] = {}
         if status := call.data.get(ATTR_STATUS):
@@ -90,7 +90,7 @@ def setup_services(hass: HomeAssistant) -> None:
         try:
             requests = await client.get_requests(**kwargs)
         except OverseerrConnectionError as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="connection_error",
                 translation_placeholders={"error": str(err)},
@@ -106,7 +106,7 @@ def setup_services(hass: HomeAssistant) -> None:
 
         return {"requests": cast(list[JsonValueType], result)}
 
-    hass.services.async_register(
+    menuai.services.async_register(
         DOMAIN,
         SERVICE_GET_REQUESTS,
         async_get_requests,

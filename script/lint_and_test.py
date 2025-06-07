@@ -164,7 +164,7 @@ async def lint(files):
 
 async def main():
     """Run the main loop."""
-    # Ensure we are in the homeassistant root
+    # Ensure we are in the menuai root
     os.chdir(Path(__file__).parent.parent)
 
     files = await git()
@@ -191,7 +191,7 @@ async def main():
     test_files = set()
     gen_req = False
     for fname in pyfiles:
-        if fname.startswith("homeassistant/components/"):
+        if fname.startswith("menuai/components/"):
             gen_req = True  # requirements script for components
         # Find test files...
         if fname.startswith("tests/"):

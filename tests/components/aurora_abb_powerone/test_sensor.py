@@ -6,7 +6,7 @@ from aurorapy.client import AuroraError, AuroraTimeoutError
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.components.aurora_abb_powerone.const import (
+from menuai.components.aurora_abb_powerone.const import (
     ATTR_DEVICE_NAME,
     ATTR_FIRMWARE,
     ATTR_MODEL,
@@ -14,10 +14,10 @@ from homeassistant.components.aurora_abb_powerone.const import (
     DOMAIN,
     SCAN_INTERVAL,
 )
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import ATTR_SERIAL_NUMBER, CONF_ADDRESS, CONF_PORT
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_registry import EntityRegistry, RegistryEntryDisabler
+from menuai.config_entries import ConfigEntryState
+from menuai.const import ATTR_SERIAL_NUMBER, CONF_ADDRESS, CONF_PORT
+from menuai.core import menuai
+from menuai.helpers.entity_registry import EntityRegistry, RegistryEntryDisabler
 
 from tests.common import MockConfigEntry, async_fire_time_changed
 
@@ -64,7 +64,7 @@ def _mock_config_entry():
     )
 
 
-async def test_sensors(hass: HomeAssistant, entity_registry: EntityRegistry) -> None:
+async def test_sensors(menuai: menuai, entity_registry: EntityRegistry) -> None:
     """Test data coming back from inverter."""
     mock_entry = _mock_config_entry()
 
@@ -96,19 +96,19 @@ async def test_sensors(hass: HomeAssistant, entity_registry: EntityRegistry) -> 
             side_effect=_simulated_returns,
         ),
     ):
-        mock_entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(mock_entry.entry_id)
-        await hass.async_block_till_done()
+        mock_entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(mock_entry.entry_id)
+        await menuai.async_block_till_done()
 
-        power = hass.states.get("sensor.mydevicename_power_output")
+        power = menuai.states.get("sensor.mydevicename_power_output")
         assert power
         assert power.state == "45.7"
 
-        temperature = hass.states.get("sensor.mydevicename_temperature")
+        temperature = menuai.states.get("sensor.mydevicename_temperature")
         assert temperature
         assert temperature.state == "9.9"
 
-        energy = hass.states.get("sensor.mydevicename_total_energy")
+        energy = menuai.states.get("sensor.mydevicename_total_energy")
         assert energy
         assert energy.state == "12.35"
 
@@ -122,7 +122,7 @@ async def test_sensors(hass: HomeAssistant, entity_registry: EntityRegistry) -> 
             ("sensor.mydevicename_isolation_resistance", "0.1234"),
         ]
         for entity_id, _ in sensors:
-            assert not hass.states.get(entity_id)
+            assert not menuai.states.get(entity_id)
             assert (entry := entity_registry.async_get(entity_id)), (
                 f"Entity registry entry for {entity_id} is missing"
             )
@@ -133,20 +133,20 @@ async def test_sensors(hass: HomeAssistant, entity_registry: EntityRegistry) -> 
             entity_registry.async_update_entity(entity_id=entity_id, disabled_by=None)
 
         # must reload the integration when enabling an entity
-        await hass.config_entries.async_unload(mock_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_unload(mock_entry.entry_id)
+        await menuai.async_block_till_done()
         assert mock_entry.state is ConfigEntryState.NOT_LOADED
-        mock_entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(mock_entry.entry_id)
-        await hass.async_block_till_done()
+        mock_entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(mock_entry.entry_id)
+        await menuai.async_block_till_done()
 
         for entity_id, value in sensors:
-            item = hass.states.get(entity_id)
+            item = menuai.states.get(entity_id)
             assert item
             assert item.state == value
 
 
-async def test_sensor_dark(hass: HomeAssistant, freezer: FrozenDateTimeFactory) -> None:
+async def test_sensor_dark(menuai: menuai, freezer: FrozenDateTimeFactory) -> None:
     """Test that darkness (no comms) is handled correctly."""
     mock_entry = _mock_config_entry()
 
@@ -178,11 +178,11 @@ async def test_sensor_dark(hass: HomeAssistant, freezer: FrozenDateTimeFactory) 
             return_value="1.234",
         ),
     ):
-        mock_entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(mock_entry.entry_id)
-        await hass.async_block_till_done()
+        mock_entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(mock_entry.entry_id)
+        await menuai.async_block_till_done()
 
-        power = hass.states.get("sensor.mydevicename_power_output")
+        power = menuai.states.get("sensor.mydevicename_power_output")
         assert power is not None
         assert power.state == "45.7"
 
@@ -200,9 +200,9 @@ async def test_sensor_dark(hass: HomeAssistant, freezer: FrozenDateTimeFactory) 
         patch("aurorapy.client.AuroraSerialClient.alarms", return_value=["No alarm"]),
     ):
         freezer.tick(SCAN_INTERVAL * 2)
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done(wait_background_tasks=True)
-        power = hass.states.get("sensor.mydevicename_total_energy")
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done(wait_background_tasks=True)
+        power = menuai.states.get("sensor.mydevicename_total_energy")
         assert power.state == "unknown"
     # sun rose again
     with (
@@ -217,9 +217,9 @@ async def test_sensor_dark(hass: HomeAssistant, freezer: FrozenDateTimeFactory) 
         patch("aurorapy.client.AuroraSerialClient.alarms", return_value=["No alarm"]),
     ):
         freezer.tick(SCAN_INTERVAL * 4)
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done(wait_background_tasks=True)
-        power = hass.states.get("sensor.mydevicename_power_output")
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done(wait_background_tasks=True)
+        power = menuai.states.get("sensor.mydevicename_power_output")
         assert power is not None
         assert power.state == "45.7"
     # sunset
@@ -236,14 +236,14 @@ async def test_sensor_dark(hass: HomeAssistant, freezer: FrozenDateTimeFactory) 
         patch("aurorapy.client.AuroraSerialClient.alarms", return_value=["No alarm"]),
     ):
         freezer.tick(SCAN_INTERVAL * 6)
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done(wait_background_tasks=True)
-        power = hass.states.get("sensor.mydevicename_power_output")
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done(wait_background_tasks=True)
+        power = menuai.states.get("sensor.mydevicename_power_output")
         assert power.state == "unknown"  # should this be 'available'?
 
 
 async def test_sensor_unknown_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     freezer: FrozenDateTimeFactory,
 ) -> None:
@@ -262,9 +262,9 @@ async def test_sensor_unknown_error(
             side_effect=_simulated_returns,
         ),
     ):
-        mock_entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(mock_entry.entry_id)
-        await hass.async_block_till_done()
+        mock_entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(mock_entry.entry_id)
+        await menuai.async_block_till_done()
 
     with (
         patch("aurorapy.client.AuroraSerialClient.connect", return_value=None),
@@ -276,11 +276,11 @@ async def test_sensor_unknown_error(
         patch("serial.Serial.isOpen", return_value=True),
     ):
         freezer.tick(SCAN_INTERVAL * 2)
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done(wait_background_tasks=True)
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done(wait_background_tasks=True)
         assert (
             "Exception: AuroraError('another error') occurred, 2 retries remaining"
             in caplog.text
         )
-        power = hass.states.get("sensor.mydevicename_power_output")
+        power = menuai.states.get("sensor.mydevicename_power_output")
         assert power.state == "unavailable"

@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from homeassistant.components.event import EventDeviceClass, EventEntity
-from homeassistant.const import CONF_MODEL
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.event import EventDeviceClass, EventEntity
+from menuai.const import CONF_MODEL
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import BangOlufsenConfigEntry
 from .const import (
@@ -23,7 +23,7 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: BangOlufsenConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -49,23 +49,23 @@ class BangOlufsenButtonEvent(BangOlufsenEntity, EventEntity):
 
         self._attr_unique_id = f"{self._unique_id}_{button_type}"
 
-        # Make the native button name Home Assistant compatible
+        # Make the native button name MenuAI compatible
         self._attr_translation_key = button_type.lower()
 
         self._button_type = button_type
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Listen to WebSocket button events."""
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"{self._unique_id}_{CONNECTION_STATUS}",
                 self._async_update_connection_state,
             )
         )
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"{self._unique_id}_{WebsocketNotification.BUTTON}_{self._button_type}",
                 self._async_handle_event,
             )

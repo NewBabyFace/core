@@ -4,10 +4,10 @@ from unittest.mock import ANY
 
 import pytest
 
-from homeassistant.components import automation
-from homeassistant.const import ATTR_ENTITY_ID, ENTITY_MATCH_ALL, SERVICE_TURN_OFF
-from homeassistant.core import HassJobType, HomeAssistant, ServiceCall
-from homeassistant.setup import async_setup_component
+from menuai.components import automation
+from menuai.const import ATTR_ENTITY_ID, ENTITY_MATCH_ALL, SERVICE_TURN_OFF
+from menuai.core import menuaiJobType, menuai, ServiceCall
+from menuai.setup import async_setup_component
 
 from tests.common import async_fire_mqtt_message, mock_component
 from tests.typing import MqttMockHAClient, MqttMockHAClientGenerator
@@ -20,19 +20,19 @@ def stub_blueprint_populate_autouse(stub_blueprint_populate: None) -> None:
 
 @pytest.fixture(autouse=True)
 async def setup_comp(
-    hass: HomeAssistant, mqtt_mock_entry: MqttMockHAClientGenerator
+    menuai: menuai, mqtt_mock_entry: MqttMockHAClientGenerator
 ) -> MqttMockHAClient:
     """Initialize components."""
-    mock_component(hass, "group")
+    mock_component(menuai, "group")
     return await mqtt_mock_entry()
 
 
 async def test_if_fires_on_topic_match(
-    hass: HomeAssistant, service_calls: list[ServiceCall]
+    menuai: menuai, service_calls: list[ServiceCall]
 ) -> None:
     """Test if message is fired on topic match."""
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -49,15 +49,15 @@ async def test_if_fires_on_topic_match(
         },
     )
 
-    async_fire_mqtt_message(hass, "test-topic", '{ "hello": "world" }')
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "test-topic", '{ "hello": "world" }')
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
     assert (
         service_calls[0].data["some"]
         == 'mqtt - test-topic - { "hello": "world" } - world - 0'
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         automation.DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: ENTITY_MATCH_ALL},
@@ -65,17 +65,17 @@ async def test_if_fires_on_topic_match(
     )
     assert len(service_calls) == 2
 
-    async_fire_mqtt_message(hass, "test-topic", "test_payload")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "test-topic", "test_payload")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 2
 
 
 async def test_if_fires_on_topic_and_payload_match(
-    hass: HomeAssistant, service_calls: list[ServiceCall]
+    menuai: menuai, service_calls: list[ServiceCall]
 ) -> None:
     """Test if message is fired on topic and payload match."""
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -89,20 +89,20 @@ async def test_if_fires_on_topic_and_payload_match(
         },
     )
 
-    async_fire_mqtt_message(hass, "test-topic", "hello")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "test-topic", "hello")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
 
 
 async def test_if_fires_on_topic_and_payload_match2(
-    hass: HomeAssistant, service_calls: list[ServiceCall]
+    menuai: menuai, service_calls: list[ServiceCall]
 ) -> None:
     """Test if message is fired on topic and payload match.
 
     Make sure a payload which would render as a non string can still be matched.
     """
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -116,17 +116,17 @@ async def test_if_fires_on_topic_and_payload_match2(
         },
     )
 
-    async_fire_mqtt_message(hass, "test-topic", "0")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "test-topic", "0")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
 
 
 async def test_if_fires_on_templated_topic_and_payload_match(
-    hass: HomeAssistant, service_calls: list[ServiceCall]
+    menuai: menuai, service_calls: list[ServiceCall]
 ) -> None:
     """Test if message is fired on templated topic and payload match."""
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -140,25 +140,25 @@ async def test_if_fires_on_templated_topic_and_payload_match(
         },
     )
 
-    async_fire_mqtt_message(hass, "test-topic-", "foo")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "test-topic-", "foo")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 0
 
-    async_fire_mqtt_message(hass, "test-topic-4", "foo")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "test-topic-4", "foo")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 0
 
-    async_fire_mqtt_message(hass, "test-topic-4", "bar")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "test-topic-4", "bar")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
 
 
 async def test_if_fires_on_payload_template(
-    hass: HomeAssistant, service_calls: list[ServiceCall]
+    menuai: menuai, service_calls: list[ServiceCall]
 ) -> None:
     """Test if message is fired on templated topic and payload match."""
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -173,27 +173,27 @@ async def test_if_fires_on_payload_template(
         },
     )
 
-    async_fire_mqtt_message(hass, "test-topic", "hello")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "test-topic", "hello")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 0
 
-    async_fire_mqtt_message(hass, "test-topic", '{"unwanted_key":"hello"}')
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "test-topic", '{"unwanted_key":"hello"}')
+    await menuai.async_block_till_done()
     assert len(service_calls) == 0
 
-    async_fire_mqtt_message(hass, "test-topic", '{"wanted_key":"hello"}')
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "test-topic", '{"wanted_key":"hello"}')
+    await menuai.async_block_till_done()
     assert len(service_calls) == 1
 
 
 async def test_non_allowed_templates(
-    hass: HomeAssistant,
+    menuai: menuai,
     service_calls: list[ServiceCall],
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test non allowed function in template."""
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -213,11 +213,11 @@ async def test_non_allowed_templates(
 
 
 async def test_if_not_fires_on_topic_but_no_payload_match(
-    hass: HomeAssistant, service_calls: list[ServiceCall]
+    menuai: menuai, service_calls: list[ServiceCall]
 ) -> None:
     """Test if message is not fired on topic but no payload."""
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -231,17 +231,17 @@ async def test_if_not_fires_on_topic_but_no_payload_match(
         },
     )
 
-    async_fire_mqtt_message(hass, "test-topic", "no-hello")
-    await hass.async_block_till_done()
+    async_fire_mqtt_message(menuai, "test-topic", "no-hello")
+    await menuai.async_block_till_done()
     assert len(service_calls) == 0
 
 
 async def test_encoding_default(
-    hass: HomeAssistant, service_calls: list[ServiceCall], setup_comp
+    menuai: menuai, service_calls: list[ServiceCall], setup_comp
 ) -> None:
     """Test default encoding."""
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -252,16 +252,16 @@ async def test_encoding_default(
     )
 
     setup_comp.async_subscribe.assert_called_with(
-        "test-topic", ANY, 0, "utf-8", HassJobType.Callback
+        "test-topic", ANY, 0, "utf-8", menuaiJobType.Callback
     )
 
 
 async def test_encoding_custom(
-    hass: HomeAssistant, service_calls: list[ServiceCall], setup_comp
+    menuai: menuai, service_calls: list[ServiceCall], setup_comp
 ) -> None:
     """Test default encoding."""
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: {
@@ -272,5 +272,5 @@ async def test_encoding_custom(
     )
 
     setup_comp.async_subscribe.assert_called_with(
-        "test-topic", ANY, 0, None, HassJobType.Callback
+        "test-topic", ANY, 0, None, menuaiJobType.Callback
     )

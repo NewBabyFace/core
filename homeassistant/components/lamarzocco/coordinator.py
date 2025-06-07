@@ -11,11 +11,11 @@ from typing import Any
 from pylamarzocco import LaMarzoccoMachine
 from pylamarzocco.exceptions import AuthFail, RequestNotSuccessful
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import EVENT_menuai_STOP
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN
 
@@ -48,13 +48,13 @@ class LaMarzoccoUpdateCoordinator(DataUpdateCoordinator[None]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entry: LaMarzoccoConfigEntry,
         device: LaMarzoccoMachine,
     ) -> None:
         """Initialize coordinator."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
             name=DOMAIN,
@@ -94,7 +94,7 @@ class LaMarzoccoConfigUpdateCoordinator(LaMarzoccoUpdateCoordinator):
         _LOGGER.debug("Current status: %s", self.device.dashboard.to_dict())
 
         self.config_entry.async_create_background_task(
-            hass=self.hass,
+            menuai=self.menuai,
             target=self.connect_websocket(),
             name="lm_websocket_task",
         )
@@ -103,7 +103,7 @@ class LaMarzoccoConfigUpdateCoordinator(LaMarzoccoUpdateCoordinator):
             await self.device.websocket.disconnect()
 
         self.config_entry.async_on_unload(
-            self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, websocket_close)
+            self.menuai.bus.async_listen_once(EVENT_menuai_STOP, websocket_close)
         )
         self.config_entry.async_on_unload(websocket_close)
 

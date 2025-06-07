@@ -15,12 +15,12 @@ from evohomeasync2.zone import Zone
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.components.evohome.const import DOMAIN
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util, slugify
-from homeassistant.util.json import JsonArrayType, JsonObjectType
+from menuai.components.evohome.const import DOMAIN
+from menuai.const import CONF_PASSWORD, CONF_USERNAME, Platform
+from menuai.core import menuai
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util, slugify
+from menuai.util.json import JsonArrayType, JsonObjectType
 
 from .const import ACCESS_TOKEN, REFRESH_TOKEN, SESSION_ID, USERNAME
 
@@ -139,7 +139,7 @@ def config() -> dict[str, str]:
 
 
 async def setup_evohome(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: dict[str, str],
     install: str = "default",
 ) -> AsyncGenerator[MagicMock]:
@@ -162,8 +162,8 @@ async def setup_evohome(
     dt_util.set_default_time_zone(timezone(timedelta(minutes=utc_offset)))
 
     with (
-        # patch("homeassistant.components.evohome.ec1.EvohomeClient", return_value=None),
-        patch("homeassistant.components.evohome.ec2.EvohomeClient") as mock_client,
+        # patch("menuai.components.evohome.ec1.EvohomeClient", return_value=None),
+        patch("menuai.components.evohome.ec2.EvohomeClient") as mock_client,
         patch(
             "evohomeasync2.auth.CredentialsManagerBase._post_request",
             mock_post_request(install),
@@ -179,8 +179,8 @@ async def setup_evohome(
 
         mock_client.side_effect = evohome_client
 
-        assert await async_setup_component(hass, DOMAIN, {DOMAIN: config})
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, {DOMAIN: config})
+        await menuai.async_block_till_done()
 
         mock_client.assert_called_once()
 
@@ -196,7 +196,7 @@ async def setup_evohome(
 
 @pytest.fixture
 async def evohome(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: dict[str, str],
     freezer: FrozenDateTimeFactory,
     install: str,
@@ -205,7 +205,7 @@ async def evohome(
 
     freezer.move_to("2024-07-10T12:00:00Z")  # so schedules are as expected
 
-    async for mock_client in setup_evohome(hass, config, install=install):
+    async for mock_client in setup_evohome(menuai, config, install=install):
         yield mock_client
 
 

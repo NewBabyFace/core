@@ -2,22 +2,22 @@
 
 from unittest.mock import Mock, patch
 
-from homeassistant.components import hue
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.util.json import JsonArrayType
+from menuai.components import hue
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.util.json import JsonArrayType
 
 from tests.common import MockConfigEntry
 
 
-async def test_migrate_api_key(hass: HomeAssistant) -> None:
+async def test_migrate_api_key(menuai: menuai) -> None:
     """Test if username gets migrated to api_key."""
     config_entry = MockConfigEntry(
         domain=hue.DOMAIN,
         data={"host": "0.0.0.0", "api_version": 2, "username": "abcdefgh"},
     )
-    config_entry.add_to_hass(hass)
-    await hue.migration.check_migration(hass, config_entry)
+    config_entry.add_to_menuai(menuai)
+    await hue.migration.check_migration(menuai, config_entry)
     # the username property should have been migrated to api_key
     assert config_entry.data == {
         "host": "0.0.0.0",
@@ -26,19 +26,19 @@ async def test_migrate_api_key(hass: HomeAssistant) -> None:
     }
 
 
-async def test_auto_switchover(hass: HomeAssistant) -> None:
+async def test_auto_switchover(menuai: menuai) -> None:
     """Test if config entry from v1 automatically switches to v2."""
     config_entry = MockConfigEntry(
         domain=hue.DOMAIN,
         data={"host": "0.0.0.0", "api_version": 1, "username": "abcdefgh"},
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with (
         patch.object(hue.migration, "is_v2_bridge", retun_value=True),
         patch.object(hue.migration, "handle_v2_migration") as mock_mig,
     ):
-        await hue.migration.check_migration(hass, config_entry)
+        await hue.migration.check_migration(menuai, config_entry)
         assert len(mock_mig.mock_calls) == 1
         # the api version should now be version 2
         assert config_entry.data == {
@@ -49,7 +49,7 @@ async def test_auto_switchover(hass: HomeAssistant) -> None:
 
 
 async def test_light_entity_migration(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
     mock_bridge_v2: Mock,
@@ -58,7 +58,7 @@ async def test_light_entity_migration(
 ) -> None:
     """Test if entity schema for lights migrates from v1 to v2."""
     config_entry = mock_bridge_v2.config_entry = mock_config_entry_v2
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     # create device/entity with V1 schema in registry
     device = device_registry.async_get_or_create(
@@ -75,13 +75,13 @@ async def test_light_entity_migration(
 
     # now run the migration and check results
     await mock_bridge_v2.api.load_test_data(v2_resources_test_data)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     with patch(
-        "homeassistant.components.hue.migration.HueBridgeV2",
+        "menuai.components.hue.migration.HueBridgeV2",
         return_value=mock_bridge_v2.api,
     ):
-        await hue.migration.handle_v2_migration(hass, config_entry)
+        await hue.migration.handle_v2_migration(menuai, config_entry)
 
     # migrated device should now have the new identifier (guid) instead of old style (mac)
     migrated_device = device_registry.async_get(device.id)
@@ -96,7 +96,7 @@ async def test_light_entity_migration(
 
 
 async def test_sensor_entity_migration(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
     mock_bridge_v2: Mock,
@@ -105,7 +105,7 @@ async def test_sensor_entity_migration(
 ) -> None:
     """Test if entity schema for sensors migrates from v1 to v2."""
     config_entry = mock_bridge_v2.config_entry = mock_config_entry_v2
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     # create device with V1 schema in registry for Hue motion sensor
     device_mac = "00:17:aa:bb:cc:09:ac:c3"
@@ -134,13 +134,13 @@ async def test_sensor_entity_migration(
 
     # now run the migration and check results
     await mock_bridge_v2.api.load_test_data(v2_resources_test_data)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     with patch(
-        "homeassistant.components.hue.migration.HueBridgeV2",
+        "menuai.components.hue.migration.HueBridgeV2",
         return_value=mock_bridge_v2.api,
     ):
-        await hue.migration.handle_v2_migration(hass, config_entry)
+        await hue.migration.handle_v2_migration(menuai, config_entry)
 
     # migrated device should now have the new identifier (guid) instead of old style (mac)
     migrated_device = device_registry.async_get(device.id)
@@ -158,7 +158,7 @@ async def test_sensor_entity_migration(
 
 
 async def test_group_entity_migration_with_v1_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_bridge_v2: Mock,
     mock_config_entry_v2: MockConfigEntry,
@@ -166,7 +166,7 @@ async def test_group_entity_migration_with_v1_id(
 ) -> None:
     """Test if entity schema for grouped_lights migrates from v1 to v2."""
     config_entry = mock_bridge_v2.config_entry = mock_config_entry_v2
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     # create (deviceless) entity with V1 schema in registry
     # using the legacy style group id as unique id
@@ -180,12 +180,12 @@ async def test_group_entity_migration_with_v1_id(
 
     # now run the migration and check results
     await mock_bridge_v2.api.load_test_data(v2_resources_test_data)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     with patch(
-        "homeassistant.components.hue.migration.HueBridgeV2",
+        "menuai.components.hue.migration.HueBridgeV2",
         return_value=mock_bridge_v2.api,
     ):
-        await hue.migration.handle_v2_migration(hass, config_entry)
+        await hue.migration.handle_v2_migration(menuai, config_entry)
 
     # the entity should have the new identifier (guid)
     migrated_entity = entity_registry.async_get("light.hue_migrated_grouped_light")
@@ -194,7 +194,7 @@ async def test_group_entity_migration_with_v1_id(
 
 
 async def test_group_entity_migration_with_v2_group_id(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     mock_bridge_v2: Mock,
     mock_config_entry_v2: MockConfigEntry,
@@ -202,7 +202,7 @@ async def test_group_entity_migration_with_v2_group_id(
 ) -> None:
     """Test if entity schema for grouped_lights migrates from v1 to v2."""
     config_entry = mock_bridge_v2.config_entry = mock_config_entry_v2
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     # create (deviceless) entity with V1 schema in registry
     # using the V2 group id as unique id
@@ -216,12 +216,12 @@ async def test_group_entity_migration_with_v2_group_id(
 
     # now run the migration and check results
     await mock_bridge_v2.api.load_test_data(v2_resources_test_data)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     with patch(
-        "homeassistant.components.hue.migration.HueBridgeV2",
+        "menuai.components.hue.migration.HueBridgeV2",
         return_value=mock_bridge_v2.api,
     ):
-        await hue.migration.handle_v2_migration(hass, config_entry)
+        await hue.migration.handle_v2_migration(menuai, config_entry)
 
     # the entity should have the new identifier (guid)
     migrated_entity = entity_registry.async_get("light.hue_migrated_grouped_light")

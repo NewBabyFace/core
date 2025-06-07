@@ -11,27 +11,27 @@ from typing import Any
 from miio import ChuangmiIr, DeviceException
 import voluptuous as vol
 
-from homeassistant.components import persistent_notification
-from homeassistant.components.remote import (
+from menuai.components import persistent_notification
+from menuai.components.remote import (
     ATTR_DELAY_SECS,
     ATTR_NUM_REPEATS,
     DEFAULT_DELAY_SECS,
     PLATFORM_SCHEMA as REMOTE_PLATFORM_SCHEMA,
     RemoteEntity,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_COMMAND,
     CONF_HOST,
     CONF_NAME,
     CONF_TIMEOUT,
     CONF_TOKEN,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import PlatformNotReady
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.util.dt import utcnow
+from menuai.core import menuai
+from menuai.exceptions import PlatformNotReady
+from menuai.helpers import config_validation as cv, entity_platform
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.util.dt import utcnow
 
 from .const import SERVICE_LEARN, SERVICE_SET_REMOTE_LED_OFF, SERVICE_SET_REMOTE_LED_ON
 
@@ -67,7 +67,7 @@ PLATFORM_SCHEMA = REMOTE_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -86,7 +86,7 @@ async def async_setup_platform(
 
     # Check that we can communicate with device.
     try:
-        device_info = await hass.async_add_executor_job(device.info)
+        device_info = await menuai.async_add_executor_job(device.info)
         model = device_info.model
         unique_id = f"{model}-{device_info.mac_address}"
         _LOGGER.debug(
@@ -99,8 +99,8 @@ async def async_setup_platform(
         _LOGGER.error("Device unavailable or token incorrect: %s", ex)
         raise PlatformNotReady from ex
 
-    if DATA_KEY not in hass.data:
-        hass.data[DATA_KEY] = {}
+    if DATA_KEY not in menuai.data:
+        menuai.data[DATA_KEY] = {}
 
     friendly_name = config.get(CONF_NAME, f"xiaomi_miio_{host.replace('.', '_')}")
     slot = config.get(CONF_SLOT)
@@ -110,17 +110,17 @@ async def async_setup_platform(
         friendly_name, device, unique_id, slot, timeout, config.get(CONF_COMMANDS)
     )
 
-    hass.data[DATA_KEY][host] = xiaomi_miio_remote
+    menuai.data[DATA_KEY][host] = xiaomi_miio_remote
 
     async_add_entities([xiaomi_miio_remote])
 
     async def async_service_led_off_handler(entity, service):
         """Handle set_led_off command."""
-        await hass.async_add_executor_job(entity.device.set_indicator_led, False)
+        await menuai.async_add_executor_job(entity.device.set_indicator_led, False)
 
     async def async_service_led_on_handler(entity, service):
         """Handle set_led_on command."""
-        await hass.async_add_executor_job(entity.device.set_indicator_led, True)
+        await menuai.async_add_executor_job(entity.device.set_indicator_led, True)
 
     async def async_service_learn_handler(entity, service):
         """Handle a learn command."""
@@ -128,32 +128,32 @@ async def async_setup_platform(
 
         slot = service.data.get(CONF_SLOT, entity.slot)
 
-        await hass.async_add_executor_job(device.learn, slot)
+        await menuai.async_add_executor_job(device.learn, slot)
 
         timeout = service.data.get(CONF_TIMEOUT, entity.timeout)
 
-        _LOGGER.info("Press the key you want Home Assistant to learn")
+        _LOGGER.info("Press the key you want MenuAI to learn")
         start_time = utcnow()
         while (utcnow() - start_time) < timedelta(seconds=timeout):
-            message = await hass.async_add_executor_job(device.read, slot)
+            message = await menuai.async_add_executor_job(device.read, slot)
             _LOGGER.debug("Message received from device: '%s'", message)
 
             if code := message.get("code"):
                 log_msg = f"Received command is: {code}"
                 _LOGGER.info(log_msg)
                 persistent_notification.async_create(
-                    hass, log_msg, title="Xiaomi Miio Remote"
+                    menuai, log_msg, title="Xiaomi Miio Remote"
                 )
                 return
 
             if "error" in message and message["error"]["message"] == "learn timeout":
-                await hass.async_add_executor_job(device.learn, slot)
+                await menuai.async_add_executor_job(device.learn, slot)
 
             await asyncio.sleep(1)
 
         _LOGGER.error("Timeout. No infrared command captured")
         persistent_notification.async_create(
-            hass, "Timeout. No infrared command captured", title="Xiaomi Miio Remote"
+            menuai, "Timeout. No infrared command captured", title="Xiaomi Miio Remote"
         )
 
     platform = entity_platform.async_get_current_platform()

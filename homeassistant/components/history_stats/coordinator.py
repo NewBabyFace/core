@@ -6,18 +6,18 @@ from datetime import timedelta
 import logging
 from typing import Any
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import (
+from menuai.config_entries import ConfigEntry
+from menuai.core import (
     CALLBACK_TYPE,
     Event,
     EventStateChangedData,
-    HomeAssistant,
+    menuai,
     callback,
 )
-from homeassistant.exceptions import TemplateError
-from homeassistant.helpers.event import async_track_state_change_event
-from homeassistant.helpers.start import async_at_start
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.exceptions import TemplateError
+from menuai.helpers.event import async_track_state_change_event
+from menuai.helpers.start import async_at_start
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .data import HistoryStats, HistoryStatsState
 
@@ -32,7 +32,7 @@ class HistoryStatsUpdateCoordinator(DataUpdateCoordinator[HistoryStatsState]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         history_stats: HistoryStats,
         config_entry: ConfigEntry | None,
         name: str,
@@ -43,7 +43,7 @@ class HistoryStatsUpdateCoordinator(DataUpdateCoordinator[HistoryStatsState]):
         self._at_start_listener: CALLBACK_TYPE | None = None
         self._track_events_listener: CALLBACK_TYPE | None = None
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=name,
@@ -81,15 +81,15 @@ class HistoryStatsUpdateCoordinator(DataUpdateCoordinator[HistoryStatsState]):
     def _async_add_listener(self) -> None:
         """Add a listener to start tracking state changes after start."""
         self._at_start_listener = async_at_start(
-            self.hass, self._async_add_events_listener
+            self.menuai, self._async_add_events_listener
         )
 
     @callback
     def _async_add_events_listener(self, *_: Any) -> None:
-        """Handle hass starting and start tracking events."""
+        """Handle menuai starting and start tracking events."""
         self._at_start_listener = None
         self._track_events_listener = async_track_state_change_event(
-            self.hass, [self._history_stats.entity_id], self._async_update_from_event
+            self.menuai, [self._history_stats.entity_id], self._async_update_from_event
         )
 
     async def _async_update_from_event(

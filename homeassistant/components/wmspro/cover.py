@@ -11,9 +11,9 @@ from wmspro.const import (
     WMS_WebControl_pro_API_actionType,
 )
 
-from homeassistant.components.cover import ATTR_POSITION, CoverDeviceClass, CoverEntity
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.cover import ATTR_POSITION, CoverDeviceClass, CoverEntity
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import WebControlProConfigEntry
 from .entity import WebControlProGenericEntity
@@ -24,7 +24,7 @@ PARALLEL_UPDATES = 1
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: WebControlProConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

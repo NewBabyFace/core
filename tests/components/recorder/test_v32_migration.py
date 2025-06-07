@@ -11,13 +11,13 @@ from sqlalchemy import create_engine, inspect
 from sqlalchemy.exc import OperationalError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from homeassistant.components import recorder
-from homeassistant.components.recorder import core, migration, statistics
-from homeassistant.components.recorder.queries import select_event_type_ids
-from homeassistant.components.recorder.util import session_scope
-from homeassistant.const import EVENT_STATE_CHANGED
-from homeassistant.core import Event, EventOrigin, State
-from homeassistant.util import dt as dt_util
+from menuai.components import recorder
+from menuai.components.recorder import core, migration, statistics
+from menuai.components.recorder.queries import select_event_type_ids
+from menuai.components.recorder.util import session_scope
+from menuai.const import EVENT_STATE_CHANGED
+from menuai.core import Event, EventOrigin, State
+from menuai.util import dt as dt_util
 
 from .common import async_wait_recording_done
 from .conftest import instrument_migration
@@ -25,7 +25,7 @@ from .conftest import instrument_migration
 from tests.common import async_test_home_assistant
 from tests.typing import RecorderInstanceContextManager
 
-CREATE_ENGINE_TARGET = "homeassistant.components.recorder.core.create_engine"
+CREATE_ENGINE_TARGET = "menuai.components.recorder.core.create_engine"
 SCHEMA_MODULE_30 = "tests.components.recorder.db_schema_30"
 SCHEMA_MODULE_32 = "tests.components.recorder.db_schema_32"
 
@@ -71,7 +71,7 @@ def _create_engine_test(
 @pytest.mark.parametrize("enable_migrate_event_type_ids", [True])
 @pytest.mark.parametrize("enable_migrate_entity_ids", [True])
 @pytest.mark.parametrize("persistent_database", [True])
-@pytest.mark.usefixtures("hass_storage")  # Prevent test hass from writing to storage
+@pytest.mark.usefixtures("menuai_storage")  # Prevent test menuai from writing to storage
 async def test_migrate_times(
     async_test_recorder: RecorderInstanceContextManager,
     caplog: pytest.LogCaptureFixture,
@@ -113,7 +113,7 @@ async def test_migrate_times(
     number_of_migrations = 5
 
     def _get_states_index_names():
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             return inspect(session.connection()).get_indexes("states")
 
     with (
@@ -140,20 +140,20 @@ async def test_migrate_times(
         ),
     ):
         async with (
-            async_test_home_assistant() as hass,
-            async_test_recorder(hass) as instance,
+            async_test_home_assistant() as menuai,
+            async_test_recorder(menuai) as instance,
         ):
-            await hass.async_block_till_done()
-            await async_wait_recording_done(hass)
-            await async_wait_recording_done(hass)
+            await menuai.async_block_till_done()
+            await async_wait_recording_done(menuai)
+            await async_wait_recording_done(menuai)
 
             def _add_data():
-                with session_scope(hass=hass) as session:
+                with session_scope(menuai=menuai) as session:
                     session.add(old_db_schema.Events.from_event(custom_event))
                     session.add(old_db_schema.States.from_event(state_changed_event))
 
             await instance.async_add_executor_job(_add_data)
-            await hass.async_block_till_done()
+            await menuai.async_block_till_done()
             await instance.async_block_till_done()
 
             states_indexes = await instance.async_add_executor_job(
@@ -162,26 +162,26 @@ async def test_migrate_times(
             states_index_names = {index["name"] for index in states_indexes}
             assert instance.use_legacy_events_index is True
 
-            await hass.async_stop()
-            await hass.async_block_till_done()
+            await menuai.async_stop()
+            await menuai.async_block_till_done()
 
     assert "ix_states_event_id" in states_index_names
 
     # Test that the duplicates are removed during migration from schema 23
     async with (
-        async_test_home_assistant() as hass,
-        async_test_recorder(hass) as instance,
+        async_test_home_assistant() as menuai,
+        async_test_recorder(menuai) as instance,
     ):
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         # We need to wait for all the migration tasks to complete
         # before we can check the database.
         for _ in range(number_of_migrations):
             await instance.async_block_till_done()
-            await async_wait_recording_done(hass)
+            await async_wait_recording_done(menuai)
 
         def _get_test_data_from_db():
-            with session_scope(hass=hass) as session:
+            with session_scope(menuai=menuai) as session:
                 events_result = list(
                     session.query(recorder.db_schema.Events).filter(
                         recorder.db_schema.Events.event_type_id.in_(
@@ -215,7 +215,7 @@ async def test_migrate_times(
         assert states_result[0].last_updated is None
 
         def _get_events_index_names():
-            with session_scope(hass=hass) as session:
+            with session_scope(menuai=menuai) as session:
                 return inspect(session.connection()).get_indexes("events")
 
         events_indexes = await instance.async_add_executor_job(_get_events_index_names)
@@ -233,12 +233,12 @@ async def test_migrate_times(
 
         assert instance.use_legacy_events_index is False
 
-        await hass.async_stop()
+        await menuai.async_stop()
 
 
 @pytest.mark.parametrize("enable_migrate_entity_ids", [True])
 @pytest.mark.parametrize("persistent_database", [True])
-@pytest.mark.usefixtures("hass_storage")  # Prevent test hass from writing to storage
+@pytest.mark.usefixtures("menuai_storage")  # Prevent test menuai from writing to storage
 async def test_migrate_can_resume_entity_id_post_migration(
     async_test_recorder: RecorderInstanceContextManager,
     caplog: pytest.LogCaptureFixture,
@@ -275,7 +275,7 @@ async def test_migrate_can_resume_entity_id_post_migration(
     number_of_migrations = 5
 
     def _get_states_index_names():
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             return inspect(session.connection()).get_indexes("states")
 
     with (
@@ -298,20 +298,20 @@ async def test_migrate_can_resume_entity_id_post_migration(
         ),
     ):
         async with (
-            async_test_home_assistant() as hass,
-            async_test_recorder(hass) as instance,
+            async_test_home_assistant() as menuai,
+            async_test_recorder(menuai) as instance,
         ):
-            await hass.async_block_till_done()
-            await async_wait_recording_done(hass)
-            await async_wait_recording_done(hass)
+            await menuai.async_block_till_done()
+            await async_wait_recording_done(menuai)
+            await async_wait_recording_done(menuai)
 
             def _add_data():
-                with session_scope(hass=hass) as session:
+                with session_scope(menuai=menuai) as session:
                     session.add(old_db_schema.Events.from_event(custom_event))
                     session.add(old_db_schema.States.from_event(state_changed_event))
 
             await instance.async_add_executor_job(_add_data)
-            await hass.async_block_till_done()
+            await menuai.async_block_till_done()
             await instance.async_block_till_done()
 
             states_indexes = await instance.async_add_executor_job(
@@ -320,36 +320,36 @@ async def test_migrate_can_resume_entity_id_post_migration(
             states_index_names = {index["name"] for index in states_indexes}
             assert instance.use_legacy_events_index is True
 
-            await hass.async_stop()
-            await hass.async_block_till_done()
+            await menuai.async_stop()
+            await menuai.async_block_till_done()
 
     assert "ix_states_event_id" in states_index_names
     assert "ix_states_entity_id_last_updated_ts" in states_index_names
 
     async with (
-        async_test_home_assistant() as hass,
-        async_test_recorder(hass) as instance,
+        async_test_home_assistant() as menuai,
+        async_test_recorder(menuai) as instance,
     ):
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         # We need to wait for all the migration tasks to complete
         # before we can check the database.
         for _ in range(number_of_migrations):
             await instance.async_block_till_done()
-            await async_wait_recording_done(hass)
+            await async_wait_recording_done(menuai)
 
         states_indexes = await instance.async_add_executor_job(_get_states_index_names)
         states_index_names = {index["name"] for index in states_indexes}
         assert "ix_states_entity_id_last_updated_ts" not in states_index_names
         assert "ix_states_event_id" not in states_index_names
 
-        await hass.async_stop()
+        await menuai.async_stop()
 
 
 @pytest.mark.parametrize("enable_migrate_entity_ids", [True])
 @pytest.mark.parametrize("enable_migrate_event_ids", [True])
 @pytest.mark.parametrize("persistent_database", [True])
-@pytest.mark.usefixtures("hass_storage")  # Prevent test hass from writing to storage
+@pytest.mark.usefixtures("menuai_storage")  # Prevent test menuai from writing to storage
 async def test_migrate_can_resume_ix_states_event_id_removed(
     async_test_recorder: RecorderInstanceContextManager,
     caplog: pytest.LogCaptureFixture,
@@ -401,7 +401,7 @@ async def test_migrate_can_resume_ix_states_event_id_removed(
         )
 
     def _get_states_index_names():
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             return inspect(session.connection()).get_indexes("states")
 
     with (
@@ -424,20 +424,20 @@ async def test_migrate_can_resume_ix_states_event_id_removed(
         ),
     ):
         async with (
-            async_test_home_assistant() as hass,
-            async_test_recorder(hass) as instance,
+            async_test_home_assistant() as menuai,
+            async_test_recorder(menuai) as instance,
         ):
-            await hass.async_block_till_done()
-            await async_wait_recording_done(hass)
-            await async_wait_recording_done(hass)
+            await menuai.async_block_till_done()
+            await async_wait_recording_done(menuai)
+            await async_wait_recording_done(menuai)
 
             def _add_data():
-                with session_scope(hass=hass) as session:
+                with session_scope(menuai=menuai) as session:
                     session.add(old_db_schema.Events.from_event(custom_event))
                     session.add(old_db_schema.States.from_event(state_changed_event))
 
             await instance.async_add_executor_job(_add_data)
-            await hass.async_block_till_done()
+            await menuai.async_block_till_done()
             await instance.async_block_till_done()
 
             await instance.async_add_executor_job(
@@ -457,22 +457,22 @@ async def test_migrate_can_resume_ix_states_event_id_removed(
                 is not None
             )
 
-            await hass.async_stop()
-            await hass.async_block_till_done()
+            await menuai.async_stop()
+            await menuai.async_block_till_done()
 
     assert "ix_states_entity_id_last_updated_ts" in states_index_names
 
     async with (
-        async_test_home_assistant() as hass,
-        async_test_recorder(hass) as instance,
+        async_test_home_assistant() as menuai,
+        async_test_recorder(menuai) as instance,
     ):
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         # We need to wait for all the migration tasks to complete
         # before we can check the database.
         for _ in range(number_of_migrations):
             await instance.async_block_till_done()
-            await async_wait_recording_done(hass)
+            await async_wait_recording_done(menuai)
 
         states_indexes = await instance.async_add_executor_job(_get_states_index_names)
         states_index_names = {index["name"] for index in states_indexes}
@@ -481,14 +481,14 @@ async def test_migrate_can_resume_ix_states_event_id_removed(
         assert "ix_states_event_id" not in states_index_names
         assert await instance.async_add_executor_job(_get_event_id_foreign_keys) is None
 
-        await hass.async_stop()
+        await menuai.async_stop()
 
 
 @pytest.mark.usefixtures("skip_by_db_engine")
 @pytest.mark.skip_on_db_engine(["mysql", "postgresql"])
 @pytest.mark.parametrize("enable_migrate_event_ids", [True])
 @pytest.mark.parametrize("persistent_database", [True])
-@pytest.mark.usefixtures("hass_storage")  # Prevent test hass from writing to storage
+@pytest.mark.usefixtures("menuai_storage")  # Prevent test menuai from writing to storage
 async def test_out_of_disk_space_while_rebuild_states_table(
     async_test_recorder: RecorderInstanceContextManager,
     caplog: pytest.LogCaptureFixture,
@@ -540,7 +540,7 @@ async def test_out_of_disk_space_while_rebuild_states_table(
         )
 
     def _get_states_index_names():
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             return inspect(session.connection()).get_indexes("states")
 
     with (
@@ -563,20 +563,20 @@ async def test_out_of_disk_space_while_rebuild_states_table(
         ),
     ):
         async with (
-            async_test_home_assistant() as hass,
-            async_test_recorder(hass) as instance,
+            async_test_home_assistant() as menuai,
+            async_test_recorder(menuai) as instance,
         ):
-            await hass.async_block_till_done()
-            await async_wait_recording_done(hass)
-            await async_wait_recording_done(hass)
+            await menuai.async_block_till_done()
+            await async_wait_recording_done(menuai)
+            await async_wait_recording_done(menuai)
 
             def _add_data():
-                with session_scope(hass=hass) as session:
+                with session_scope(menuai=menuai) as session:
                     session.add(old_db_schema.Events.from_event(custom_event))
                     session.add(old_db_schema.States.from_event(state_changed_event))
 
             await instance.async_add_executor_job(_add_data)
-            await hass.async_block_till_done()
+            await menuai.async_block_till_done()
             await instance.async_block_till_done()
 
             await instance.async_add_executor_job(
@@ -596,8 +596,8 @@ async def test_out_of_disk_space_while_rebuild_states_table(
                 is not None
             )
 
-            await hass.async_stop()
-            await hass.async_block_till_done()
+            await menuai.async_stop()
+            await menuai.async_block_till_done()
 
     assert "ix_states_entity_id_last_updated_ts" in states_index_names
 
@@ -606,27 +606,27 @@ async def test_out_of_disk_space_while_rebuild_states_table(
     # - patching DropConstraint to raise InternalError for MySQL and PostgreSQL
     with (
         patch(
-            "homeassistant.components.recorder.migration.CreateTable",
+            "menuai.components.recorder.migration.CreateTable",
             side_effect=SQLAlchemyError,
         ),
         patch(
-            "homeassistant.components.recorder.migration.DropConstraint",
+            "menuai.components.recorder.migration.DropConstraint",
             side_effect=OperationalError(
                 None, None, OSError("No space left on device")
             ),
         ),
     ):
         async with (
-            async_test_home_assistant() as hass,
-            async_test_recorder(hass) as instance,
+            async_test_home_assistant() as menuai,
+            async_test_recorder(menuai) as instance,
         ):
-            await hass.async_block_till_done()
+            await menuai.async_block_till_done()
 
             # We need to wait for all the migration tasks to complete
             # before we can check the database.
             for _ in range(number_of_migrations):
                 await instance.async_block_till_done()
-                await async_wait_recording_done(hass)
+                await async_wait_recording_done(menuai)
 
             states_indexes = await instance.async_add_executor_job(
                 _get_states_index_names
@@ -636,21 +636,21 @@ async def test_out_of_disk_space_while_rebuild_states_table(
             assert "Error recreating SQLite table states" in caplog.text
             assert await instance.async_add_executor_job(_get_event_id_foreign_keys)
 
-            await hass.async_stop()
+            await menuai.async_stop()
 
     # Now run it again to verify the table rebuild tries again
     caplog.clear()
     async with (
-        async_test_home_assistant() as hass,
-        async_test_recorder(hass) as instance,
+        async_test_home_assistant() as menuai,
+        async_test_recorder(menuai) as instance,
     ):
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         # We need to wait for all the migration tasks to complete
         # before we can check the database.
         for _ in range(number_of_migrations):
             await instance.async_block_till_done()
-            await async_wait_recording_done(hass)
+            await async_wait_recording_done(menuai)
 
         states_indexes = await instance.async_add_executor_job(_get_states_index_names)
         states_index_names = {index["name"] for index in states_indexes}
@@ -660,7 +660,7 @@ async def test_out_of_disk_space_while_rebuild_states_table(
         assert "Rebuilding SQLite table states finished" in caplog.text
         assert await instance.async_add_executor_job(_get_event_id_foreign_keys) is None
 
-        await hass.async_stop()
+        await menuai.async_stop()
 
 
 @pytest.mark.usefixtures("skip_by_db_engine")
@@ -668,7 +668,7 @@ async def test_out_of_disk_space_while_rebuild_states_table(
 @pytest.mark.parametrize("enable_migrate_entity_ids", [True])
 @pytest.mark.parametrize("enable_migrate_event_ids", [True])
 @pytest.mark.parametrize("persistent_database", [True])
-@pytest.mark.usefixtures("hass_storage")  # Prevent test hass from writing to storage
+@pytest.mark.usefixtures("menuai_storage")  # Prevent test menuai from writing to storage
 async def test_out_of_disk_space_while_removing_foreign_key(
     async_test_recorder: RecorderInstanceContextManager,
     caplog: pytest.LogCaptureFixture,
@@ -724,7 +724,7 @@ async def test_out_of_disk_space_while_removing_foreign_key(
         )
 
     def _get_states_index_names():
-        with session_scope(hass=hass) as session:
+        with session_scope(menuai=menuai) as session:
             return inspect(session.connection()).get_indexes("states")
 
     with (
@@ -747,20 +747,20 @@ async def test_out_of_disk_space_while_removing_foreign_key(
         ),
     ):
         async with (
-            async_test_home_assistant() as hass,
-            async_test_recorder(hass) as instance,
+            async_test_home_assistant() as menuai,
+            async_test_recorder(menuai) as instance,
         ):
-            await hass.async_block_till_done()
-            await async_wait_recording_done(hass)
-            await async_wait_recording_done(hass)
+            await menuai.async_block_till_done()
+            await async_wait_recording_done(menuai)
+            await async_wait_recording_done(menuai)
 
             def _add_data():
-                with session_scope(hass=hass) as session:
+                with session_scope(menuai=menuai) as session:
                     session.add(old_db_schema.Events.from_event(custom_event))
                     session.add(old_db_schema.States.from_event(state_changed_event))
 
             await instance.async_add_executor_job(_add_data)
-            await hass.async_block_till_done()
+            await menuai.async_block_till_done()
             await instance.async_block_till_done()
 
             await instance.async_add_executor_job(
@@ -780,22 +780,22 @@ async def test_out_of_disk_space_while_removing_foreign_key(
                 is not None
             )
 
-            await hass.async_stop()
-            await hass.async_block_till_done()
+            await menuai.async_stop()
+            await menuai.async_block_till_done()
 
     assert "ix_states_entity_id_last_updated_ts" in states_index_names
 
-    async with async_test_home_assistant() as hass:
-        with instrument_migration(hass) as instrumented_migration:
+    async with async_test_home_assistant() as menuai:
+        with instrument_migration(menuai) as instrumented_migration:
             # Allow migration to start, but stall when live migration is completed
             instrumented_migration.migration_stall.set()
             instrumented_migration.live_migration_done_stall.clear()
 
-            async with async_test_recorder(hass, wait_recorder=False) as instance:
-                await hass.async_block_till_done()
+            async with async_test_recorder(menuai, wait_recorder=False) as instance:
+                await menuai.async_block_till_done()
 
                 # Wait for live migration to complete
-                await hass.async_add_executor_job(
+                await menuai.async_add_executor_job(
                     instrumented_migration.live_migration_done.wait
                 )
 
@@ -803,7 +803,7 @@ async def test_out_of_disk_space_while_removing_foreign_key(
                 # - patching DropConstraint to raise InternalError for MySQL and PostgreSQL
                 with (
                     patch(
-                        "homeassistant.components.recorder.migration.sqlalchemy.inspect",
+                        "menuai.components.recorder.migration.sqlalchemy.inspect",
                         side_effect=OperationalError(
                             None, None, OSError("No space left on device")
                         ),
@@ -814,7 +814,7 @@ async def test_out_of_disk_space_while_removing_foreign_key(
                     # before we can check the database.
                     for _ in range(number_of_migrations):
                         await instance.async_block_till_done()
-                        await async_wait_recording_done(hass)
+                        await async_wait_recording_done(menuai)
 
                     states_indexes = await instance.async_add_executor_job(
                         _get_states_index_names
@@ -830,21 +830,21 @@ async def test_out_of_disk_space_while_removing_foreign_key(
                         is None
                     )
 
-                    await hass.async_stop()
+                    await menuai.async_stop()
 
     # Now run it again to verify the table rebuild tries again
     caplog.clear()
     async with (
-        async_test_home_assistant() as hass,
-        async_test_recorder(hass) as instance,
+        async_test_home_assistant() as menuai,
+        async_test_recorder(menuai) as instance,
     ):
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         # We need to wait for all the migration tasks to complete
         # before we can check the database.
         for _ in range(number_of_migrations):
             await instance.async_block_till_done()
-            await async_wait_recording_done(hass)
+            await async_wait_recording_done(menuai)
 
         states_indexes = await instance.async_add_executor_job(_get_states_index_names)
         states_index_names = {index["name"] for index in states_indexes}
@@ -853,4 +853,4 @@ async def test_out_of_disk_space_while_removing_foreign_key(
         assert "ix_states_event_id" not in states_index_names
         assert await instance.async_add_executor_job(_get_event_id_foreign_keys) is None
 
-        await hass.async_stop()
+        await menuai.async_stop()

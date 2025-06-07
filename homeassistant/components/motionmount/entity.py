@@ -5,10 +5,10 @@ from typing import TYPE_CHECKING
 
 import motionmount
 
-from homeassistant.const import ATTR_CONNECTIONS, ATTR_IDENTIFIERS, CONF_PIN
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo, format_mac
-from homeassistant.helpers.entity import Entity
+from menuai.const import ATTR_CONNECTIONS, ATTR_IDENTIFIERS, CONF_PIN
+from menuai.helpers import device_registry as dr
+from menuai.helpers.device_registry import DeviceInfo, format_mac
+from menuai.helpers.entity import Entity
 
 from . import MotionMountConfigEntry
 from .const import DOMAIN, EMPTY_MAC
@@ -66,17 +66,17 @@ class MotionMountEntity(Entity):
             assert self.device_entry
         # Update the name in the device registry if needed
         if self.device_entry.name != self.mm.name:
-            device_registry = dr.async_get(self.hass)
+            device_registry = dr.async_get(self.menuai)
             device_registry.async_update_device(self.device_entry.id, name=self.mm.name)
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Store register state change callback."""
         self.mm.add_listener(self.async_write_ha_state)
         self.mm.add_listener(self.update_name)
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
-    async def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_menuai(self) -> None:
         """Remove register state change callback."""
         self.mm.remove_listener(self.async_write_ha_state)
         self.mm.remove_listener(self.update_name)
-        await super().async_will_remove_from_hass()
+        await super().async_will_remove_from_menuai()

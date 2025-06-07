@@ -4,10 +4,10 @@ from typing import Any
 
 from nexia.automation import NexiaAutomation
 
-from homeassistant.components.scene import Scene
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.event import async_call_later
+from menuai.components.scene import Scene
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.event import async_call_later
 
 from .const import ATTR_DESCRIPTION
 from .coordinator import NexiaDataUpdateCoordinator
@@ -18,7 +18,7 @@ SCENE_ACTIVATION_TIME = 5
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: NexiaConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -54,4 +54,4 @@ class NexiaAutomationScene(NexiaEntity, Scene):
         async def refresh_callback(_):
             await self.coordinator.async_refresh()
 
-        async_call_later(self.hass, SCENE_ACTIVATION_TIME, refresh_callback)
+        async_call_later(self.menuai, SCENE_ACTIVATION_TIME, refresh_callback)

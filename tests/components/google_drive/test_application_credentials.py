@@ -2,11 +2,11 @@
 
 import pytest
 
-from homeassistant import setup
-from homeassistant.components.google_drive.application_credentials import (
+from menuai import setup
+from menuai.components.google_drive.application_credentials import (
     async_get_description_placeholders,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 
 @pytest.mark.parametrize(
@@ -18,16 +18,16 @@ from homeassistant.core import HomeAssistant
     ],
 )
 async def test_description_placeholders(
-    hass: HomeAssistant,
+    menuai: menuai,
     additional_components: list[str],
     external_url: str | None,
     expected_redirect_uri: str,
 ) -> None:
     """Test description placeholders."""
     for component in additional_components:
-        assert await setup.async_setup_component(hass, component, {})
-    hass.config.external_url = external_url
-    placeholders = await async_get_description_placeholders(hass)
+        assert await setup.async_setup_component(menuai, component, {})
+    menuai.config.external_url = external_url
+    placeholders = await async_get_description_placeholders(menuai)
     assert placeholders == {
         "oauth_consent_url": "https://console.cloud.google.com/apis/credentials/consent",
         "more_info_url": "https://www.home-assistant.io/integrations/google_drive/",

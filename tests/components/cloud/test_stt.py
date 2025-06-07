@@ -6,14 +6,14 @@ from http import HTTPStatus
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from hass_nabucasa.voice import STTResponse, VoiceError
+from menuai_nabucasa.voice import STTResponse, VoiceError
 import pytest
 
-from homeassistant.components.assist_pipeline.pipeline import STORAGE_KEY
-from homeassistant.components.cloud.const import DOMAIN
-from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.assist_pipeline.pipeline import STORAGE_KEY
+from menuai.components.cloud.const import DOMAIN
+from menuai.const import STATE_UNAVAILABLE, STATE_UNKNOWN
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from . import PIPELINE_DATA
 
@@ -22,8 +22,8 @@ from tests.typing import ClientSessionGenerator
 
 @pytest.fixture(autouse=True)
 async def delay_save_fixture() -> AsyncGenerator[None]:
-    """Load the homeassistant integration."""
-    with patch("homeassistant.helpers.collection.SAVE_DELAY", new=0):
+    """Load the menuai integration."""
+    with patch("menuai.helpers.collection.SAVE_DELAY", new=0):
         yield
 
 
@@ -38,26 +38,26 @@ async def delay_save_fixture() -> AsyncGenerator[None]:
     ],
 )
 async def test_cloud_speech(
-    hass: HomeAssistant,
+    menuai: menuai,
     cloud: MagicMock,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     mock_process_stt: AsyncMock,
     expected_response_data: dict[str, Any],
 ) -> None:
     """Test cloud text-to-speech."""
     cloud.voice.process_stt = mock_process_stt
 
-    assert await async_setup_component(hass, DOMAIN, {"cloud": {}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {"cloud": {}})
+    await menuai.async_block_till_done()
 
     on_start_callback = cloud.register_on_start.call_args[0][0]
     await on_start_callback()
 
-    state = hass.states.get("stt.home_assistant_cloud")
+    state = menuai.states.get("stt.home_assistant_cloud")
     assert state
     assert state.state == STATE_UNKNOWN
 
-    client = await hass_client()
+    client = await menuai_client()
 
     response = await client.post(
         "/api/stt/stt.home_assistant_cloud",
@@ -80,71 +80,71 @@ async def test_cloud_speech(
     assert response.status == HTTPStatus.OK
     assert response_data == expected_response_data
 
-    state = hass.states.get("stt.home_assistant_cloud")
+    state = menuai.states.get("stt.home_assistant_cloud")
     assert state
     assert state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN)
 
 
 async def test_migrating_pipelines(
-    hass: HomeAssistant,
+    menuai: menuai,
     cloud: MagicMock,
-    hass_client: ClientSessionGenerator,
-    hass_storage: dict[str, Any],
+    menuai_client: ClientSessionGenerator,
+    menuai_storage: dict[str, Any],
 ) -> None:
     """Test migrating pipelines when cloud stt entity is added."""
     entity_id = "stt.home_assistant_cloud"
     cloud.voice.process_stt = AsyncMock(
         return_value=STTResponse(True, "Turn the Kitchen Lights on")
     )
-    hass_storage[STORAGE_KEY] = {
+    menuai_storage[STORAGE_KEY] = {
         "version": 1,
         "minor_version": 1,
         "key": "assist_pipeline.pipelines",
         "data": deepcopy(PIPELINE_DATA),
     }
 
-    assert await async_setup_component(hass, "assist_pipeline", {})
-    assert await async_setup_component(hass, DOMAIN, {"cloud": {}})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "assist_pipeline", {})
+    assert await async_setup_component(menuai, DOMAIN, {"cloud": {}})
+    await menuai.async_block_till_done()
 
     await cloud.login("test-user", "test-pass")
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == STATE_UNKNOWN
 
     # The stt/tts engines should have been updated to the new cloud engine ids.
-    assert hass_storage[STORAGE_KEY]["data"]["items"][0]["stt_engine"] == entity_id
+    assert menuai_storage[STORAGE_KEY]["data"]["items"][0]["stt_engine"] == entity_id
     assert (
-        hass_storage[STORAGE_KEY]["data"]["items"][0]["tts_engine"]
+        menuai_storage[STORAGE_KEY]["data"]["items"][0]["tts_engine"]
         == "tts.home_assistant_cloud"
     )
 
     # The other items should stay the same.
     assert (
-        hass_storage[STORAGE_KEY]["data"]["items"][0]["conversation_engine"]
+        menuai_storage[STORAGE_KEY]["data"]["items"][0]["conversation_engine"]
         == "conversation_engine_1"
     )
     assert (
-        hass_storage[STORAGE_KEY]["data"]["items"][0]["conversation_language"]
+        menuai_storage[STORAGE_KEY]["data"]["items"][0]["conversation_language"]
         == "language_1"
     )
     assert (
-        hass_storage[STORAGE_KEY]["data"]["items"][0]["id"]
+        menuai_storage[STORAGE_KEY]["data"]["items"][0]["id"]
         == "01GX8ZWBAQYWNB1XV3EXEZ75DY"
     )
-    assert hass_storage[STORAGE_KEY]["data"]["items"][0]["language"] == "language_1"
+    assert menuai_storage[STORAGE_KEY]["data"]["items"][0]["language"] == "language_1"
     assert (
-        hass_storage[STORAGE_KEY]["data"]["items"][0]["name"] == "Home Assistant Cloud"
+        menuai_storage[STORAGE_KEY]["data"]["items"][0]["name"] == "MenuAI Cloud"
     )
-    assert hass_storage[STORAGE_KEY]["data"]["items"][0]["stt_language"] == "language_1"
-    assert hass_storage[STORAGE_KEY]["data"]["items"][0]["tts_language"] == "language_1"
+    assert menuai_storage[STORAGE_KEY]["data"]["items"][0]["stt_language"] == "language_1"
+    assert menuai_storage[STORAGE_KEY]["data"]["items"][0]["tts_language"] == "language_1"
     assert (
-        hass_storage[STORAGE_KEY]["data"]["items"][0]["tts_voice"]
+        menuai_storage[STORAGE_KEY]["data"]["items"][0]["tts_voice"]
         == "Arnold Schwarzenegger"
     )
-    assert hass_storage[STORAGE_KEY]["data"]["items"][0]["wake_word_entity"] is None
-    assert hass_storage[STORAGE_KEY]["data"]["items"][0]["wake_word_id"] is None
-    assert hass_storage[STORAGE_KEY]["data"]["items"][1] == PIPELINE_DATA["items"][1]
-    assert hass_storage[STORAGE_KEY]["data"]["items"][2] == PIPELINE_DATA["items"][2]
+    assert menuai_storage[STORAGE_KEY]["data"]["items"][0]["wake_word_entity"] is None
+    assert menuai_storage[STORAGE_KEY]["data"]["items"][0]["wake_word_id"] is None
+    assert menuai_storage[STORAGE_KEY]["data"]["items"][1] == PIPELINE_DATA["items"][1]
+    assert menuai_storage[STORAGE_KEY]["data"]["items"][2] == PIPELINE_DATA["items"][2]

@@ -10,17 +10,17 @@ from aiontfy.exceptions import (
 )
 from yarl import URL
 
-from homeassistant.components.notify import (
+from menuai.components.notify import (
     NotifyEntity,
     NotifyEntityDescription,
     NotifyEntityFeature,
 )
-from homeassistant.config_entries import ConfigSubentry
-from homeassistant.const import CONF_NAME, CONF_URL
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigSubentry
+from menuai.const import CONF_NAME, CONF_URL
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import NtfyConfigEntry
 from .const import CONF_TOPIC, DOMAIN
@@ -29,7 +29,7 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: NtfyConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -79,19 +79,19 @@ class NtfyNotifyEntity(NotifyEntity):
         try:
             await self.ntfy.publish(msg)
         except NtfyUnauthorizedAuthenticationError as e:
-            self.config_entry.async_start_reauth(self.hass)
-            raise HomeAssistantError(
+            self.config_entry.async_start_reauth(self.menuai)
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="authentication_error",
             ) from e
         except NtfyHTTPError as e:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_key="publish_failed_request_error",
                 translation_domain=DOMAIN,
                 translation_placeholders={"error_msg": e.error},
             ) from e
         except NtfyException as e:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_key="publish_failed_exception",
                 translation_domain=DOMAIN,
             ) from e

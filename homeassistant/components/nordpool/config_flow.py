@@ -13,17 +13,17 @@ from pynordpool import (
 from pynordpool.const import AREAS
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_CURRENCY
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.selector import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_CURRENCY
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.selector import (
     SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
 )
-from homeassistant.util import dt as dt_util
+from menuai.util import dt as dt_util
 
 from .const import CONF_AREAS, DEFAULT_NAME, DOMAIN
 
@@ -54,9 +54,9 @@ DATA_SCHEMA = vol.Schema(
 )
 
 
-async def test_api(hass: HomeAssistant, user_input: dict[str, Any]) -> dict[str, str]:
+async def test_api(menuai: menuai, user_input: dict[str, Any]) -> dict[str, str]:
     """Test fetch data from Nord Pool."""
-    client = NordPoolClient(async_get_clientsession(hass))
+    client = NordPoolClient(async_get_clientsession(menuai))
     try:
         await client.async_get_delivery_period(
             dt_util.now(),
@@ -82,7 +82,7 @@ class NordpoolConfigFlow(ConfigFlow, domain=DOMAIN):
         """Handle the initial step."""
         errors: dict[str, str] = {}
         if user_input:
-            errors = await test_api(self.hass, user_input)
+            errors = await test_api(self.menuai, user_input)
             if not errors:
                 return self.async_create_entry(
                     title=DEFAULT_NAME,
@@ -102,7 +102,7 @@ class NordpoolConfigFlow(ConfigFlow, domain=DOMAIN):
         reconfigure_entry = self._get_reconfigure_entry()
         errors: dict[str, str] = {}
         if user_input:
-            errors = await test_api(self.hass, user_input)
+            errors = await test_api(self.menuai, user_input)
             if not errors:
                 return self.async_update_reload_and_abort(
                     reconfigure_entry, data_updates=user_input

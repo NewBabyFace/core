@@ -1,6 +1,6 @@
 """Tests for the rapt_ble integration."""
 
-from homeassistant.helpers.service_info.bluetooth import BluetoothServiceInfo
+from menuai.helpers.service_info.bluetooth import BluetoothServiceInfo
 
 RAPT_MAC = "78:E3:6D:3C:06:66"
 

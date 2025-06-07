@@ -8,8 +8,8 @@ from pyiqvia import Client
 from pyiqvia.errors import InvalidZipError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.helpers import aiohttp_client
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.helpers import aiohttp_client
 
 from .const import CONF_ZIP_CODE, DOMAIN
 
@@ -33,7 +33,7 @@ class IqviaConfigFlow(ConfigFlow, domain=DOMAIN):
         await self.async_set_unique_id(user_input[CONF_ZIP_CODE])
         self._abort_if_unique_id_configured()
 
-        websession = aiohttp_client.async_get_clientsession(self.hass)
+        websession = aiohttp_client.async_get_clientsession(self.menuai)
 
         try:
             Client(user_input[CONF_ZIP_CODE], session=websession)

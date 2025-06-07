@@ -6,11 +6,11 @@ import logging
 
 from numato_gpio import NumatoGpioError
 
-from homeassistant.components.sensor import SensorEntity
-from homeassistant.const import CONF_ID, CONF_NAME, CONF_SENSORS
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.sensor import SensorEntity
+from menuai.const import CONF_ID, CONF_NAME, CONF_SENSORS
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import (
     CONF_DEVICES,
@@ -26,7 +26,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -35,9 +35,9 @@ def setup_platform(
     if discovery_info is None:
         return
 
-    api = hass.data[DOMAIN][DATA_API]
+    api = menuai.data[DOMAIN][DATA_API]
     sensors = []
-    devices = hass.data[DOMAIN][CONF_DEVICES]
+    devices = menuai.data[DOMAIN][CONF_DEVICES]
     for device in [d for d in devices if CONF_SENSORS in d]:
         device_id = device[CONF_ID]
         ports = device[CONF_SENSORS][CONF_PORTS]

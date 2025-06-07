@@ -7,22 +7,22 @@ import PyTado
 import PyTado.exceptions
 from PyTado.interface import Tado
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     APPLICATION_NAME,
     CONF_PASSWORD,
     CONF_USERNAME,
     Platform,
     __version__ as HA_VERSION,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import (
+from menuai.core import menuai, callback
+from menuai.exceptions import (
     ConfigEntryAuthFailed,
     ConfigEntryError,
     ConfigEntryNotReady,
 )
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType
+from menuai.helpers import config_validation as cv
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     CONF_FALLBACK,
@@ -55,22 +55,22 @@ CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up Tado."""
 
-    setup_services(hass)
+    setup_services(menuai)
     return True
 
 
 type TadoConfigEntry = ConfigEntry[TadoData]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: TadoConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: TadoConfigEntry) -> bool:
     """Set up Tado from a config entry."""
     if CONF_REFRESH_TOKEN not in entry.data:
         raise ConfigEntryAuthFailed
 
-    _async_import_options_from_data_if_missing(hass, entry)
+    _async_import_options_from_data_if_missing(menuai, entry)
 
     _LOGGER.debug("Setting up Tado connection")
     _LOGGER.debug(
@@ -87,7 +87,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: TadoConfigEntry) -> bool
         return tado, tado.device_activation_status()
 
     try:
-        tado, device_status = await hass.async_add_executor_job(create_tado_instance)
+        tado, device_status = await menuai.async_add_executor_job(create_tado_instance)
     except PyTado.exceptions.TadoWrongCredentialsException as err:
         raise ConfigEntryError(f"Invalid Tado credentials. Error: {err}") from err
     except PyTado.exceptions.TadoException as err:
@@ -99,19 +99,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: TadoConfigEntry) -> bool
 
     _LOGGER.debug("Tado connection established")
 
-    coordinator = TadoDataUpdateCoordinator(hass, entry, tado)
+    coordinator = TadoDataUpdateCoordinator(menuai, entry, tado)
     await coordinator.async_config_entry_first_refresh()
 
-    mobile_coordinator = TadoMobileDeviceUpdateCoordinator(hass, entry, tado)
+    mobile_coordinator = TadoMobileDeviceUpdateCoordinator(menuai, entry, tado)
     await mobile_coordinator.async_config_entry_first_refresh()
 
     entry.runtime_data = TadoData(coordinator, mobile_coordinator)
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_migrate_entry(hass: HomeAssistant, entry: TadoConfigEntry) -> bool:
+async def async_migrate_entry(menuai: menuai, entry: TadoConfigEntry) -> bool:
     """Migrate old entry."""
 
     if entry.version < 2:
@@ -119,30 +119,30 @@ async def async_migrate_entry(hass: HomeAssistant, entry: TadoConfigEntry) -> bo
         data = dict(entry.data)
         data.pop(CONF_USERNAME, None)
         data.pop(CONF_PASSWORD, None)
-        hass.config_entries.async_update_entry(entry=entry, data=data, version=2)
+        menuai.config_entries.async_update_entry(entry=entry, data=data, version=2)
         _LOGGER.debug("Migration to version 2 successful")
     return True
 
 
 @callback
 def _async_import_options_from_data_if_missing(
-    hass: HomeAssistant, entry: TadoConfigEntry
+    menuai: menuai, entry: TadoConfigEntry
 ):
     options = dict(entry.options)
     if CONF_FALLBACK not in options:
         options[CONF_FALLBACK] = entry.data.get(
             CONF_FALLBACK, CONST_OVERLAY_TADO_DEFAULT
         )
-        hass.config_entries.async_update_entry(entry, options=options)
+        menuai.config_entries.async_update_entry(entry, options=options)
 
     if options[CONF_FALLBACK] not in CONST_OVERLAY_TADO_OPTIONS:
         if options[CONF_FALLBACK]:
             options[CONF_FALLBACK] = CONST_OVERLAY_TADO_MODE
         else:
             options[CONF_FALLBACK] = CONST_OVERLAY_MANUAL
-        hass.config_entries.async_update_entry(entry, options=options)
+        menuai.config_entries.async_update_entry(entry, options=options)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: TadoConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: TadoConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

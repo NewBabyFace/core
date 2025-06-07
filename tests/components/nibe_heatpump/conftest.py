@@ -8,7 +8,7 @@ from freezegun.api import FrozenDateTimeFactory
 from nibe.exceptions import CoilNotFoundException
 import pytest
 
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from . import MockConnection
 
@@ -19,7 +19,7 @@ from tests.common import async_fire_time_changed
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Make sure we never actually run setup."""
     with patch(
-        "homeassistant.components.nibe_heatpump.async_setup_entry", return_value=True
+        "menuai.components.nibe_heatpump.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -42,10 +42,10 @@ async def fixture_mock_connection(mock_connection_construct):
 
     with ExitStack() as stack:
         places = [
-            "homeassistant.components.nibe_heatpump.config_flow.NibeGW",
-            "homeassistant.components.nibe_heatpump.config_flow.Modbus",
-            "homeassistant.components.nibe_heatpump.NibeGW",
-            "homeassistant.components.nibe_heatpump.Modbus",
+            "menuai.components.nibe_heatpump.config_flow.NibeGW",
+            "menuai.components.nibe_heatpump.config_flow.Modbus",
+            "menuai.components.nibe_heatpump.NibeGW",
+            "menuai.components.nibe_heatpump.Modbus",
         ]
         for place in places:
             stack.enter_context(patch(place, new=construct))
@@ -56,7 +56,7 @@ async def fixture_mock_connection(mock_connection_construct):
 async def fixture_coils(mock_connection: MockConnection):
     """Return a dict with coil data."""
     # pylint: disable-next=import-outside-toplevel
-    from homeassistant.components.nibe_heatpump import HeatPump
+    from menuai.components.nibe_heatpump import HeatPump
 
     get_coils_original = HeatPump.get_coils
     get_coil_by_address_original = HeatPump.get_coil_by_address
@@ -79,13 +79,13 @@ async def fixture_coils(mock_connection: MockConnection):
 
 
 @pytest.fixture(name="freezer_ticker")
-async def fixture_freezer_ticker(hass: HomeAssistant, freezer: FrozenDateTimeFactory):
+async def fixture_freezer_ticker(menuai: menuai, freezer: FrozenDateTimeFactory):
     """Tick time and perform actions."""
 
     async def ticker(delay, block=True):
         freezer.tick(delay)
-        async_fire_time_changed(hass)
+        async_fire_time_changed(menuai)
         if block:
-            await hass.async_block_till_done()
+            await menuai.async_block_till_done()
 
     return ticker

@@ -12,12 +12,12 @@ from zwave_js_server.model.node import Node
 from zwave_js_server.model.value import ValueDataType
 from zwave_js_server.util.node import dump_node_state
 
-from homeassistant.components.diagnostics import REDACTED, async_redact_data
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_URL
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.components.diagnostics import REDACTED, async_redact_data
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_URL
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DATA_CLIENT, USER_AGENT
 from .helpers import (
@@ -73,11 +73,11 @@ def redact_node_state(node_state: dict) -> dict:
 
 
 def get_device_entities(
-    hass: HomeAssistant, node: Node, config_entry: ConfigEntry, device: dr.DeviceEntry
+    menuai: menuai, node: Node, config_entry: ConfigEntry, device: dr.DeviceEntry
 ) -> list[dict[str, Any]]:
     """Get entities for a device."""
     entity_entries = er.async_entries_for_device(
-        er.async_get(hass), device.id, include_disabled_entities=True
+        er.async_get(menuai), device.id, include_disabled_entities=True
     )
     entities = []
     for entry in sorted(entity_entries):
@@ -125,12 +125,12 @@ def get_device_entities(
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, config_entry: ConfigEntry
+    menuai: menuai, config_entry: ConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     msgs: list[dict] = async_redact_data(
         await dump_msgs(
-            config_entry.data[CONF_URL], async_get_clientsession(hass), USER_AGENT
+            config_entry.data[CONF_URL], async_get_clientsession(menuai), USER_AGENT
         ),
         KEYS_TO_REDACT,
     )
@@ -144,7 +144,7 @@ async def async_get_config_entry_diagnostics(
 
 
 async def async_get_device_diagnostics(
-    hass: HomeAssistant, config_entry: ConfigEntry, device: dr.DeviceEntry
+    menuai: menuai, config_entry: ConfigEntry, device: dr.DeviceEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a device."""
     client: Client = config_entry.runtime_data[DATA_CLIENT]
@@ -155,7 +155,7 @@ async def async_get_device_diagnostics(
     if node_id is None or node_id not in driver.controller.nodes:
         raise ValueError(f"Node for device {device.id} can't be found")
     node = driver.controller.nodes[node_id]
-    entities = get_device_entities(hass, node, config_entry, device)
+    entities = get_device_entities(menuai, node, config_entry, device)
     assert client.version
     node_state = redact_node_state(
         async_redact_data(dump_node_state(node), KEYS_TO_REDACT)

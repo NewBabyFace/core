@@ -4,14 +4,14 @@ from datetime import timedelta
 
 from pyoverkiz.enums import OverkizCommand, OverkizCommandParam, OverkizState
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     PRESET_NONE,
     ClimateEntity,
     ClimateEntityFeature,
     HVACMode,
 )
-from homeassistant.const import UnitOfTemperature
-from homeassistant.util import dt as dt_util
+from menuai.const import UnitOfTemperature
+from menuai.util import dt as dt_util
 
 from ..entity import OverkizDataUpdateCoordinator, OverkizEntity
 

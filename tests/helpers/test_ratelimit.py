@@ -3,11 +3,11 @@
 import asyncio
 import time
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import ratelimit
+from menuai.core import menuai, callback
+from menuai.helpers import ratelimit
 
 
-async def test_hit(hass: HomeAssistant) -> None:
+async def test_hit(menuai: menuai) -> None:
     """Test hitting the rate limit."""
 
     refresh_called = False
@@ -17,7 +17,7 @@ async def test_hit(hass: HomeAssistant) -> None:
         nonlocal refresh_called
         refresh_called = True
 
-    rate_limiter = ratelimit.KeyedRateLimit(hass)
+    rate_limiter = ratelimit.KeyedRateLimit(menuai)
     rate_limiter.async_triggered("key1", time.time())
 
     assert (
@@ -38,7 +38,7 @@ async def test_hit(hass: HomeAssistant) -> None:
     rate_limiter.async_remove()
 
 
-async def test_miss(hass: HomeAssistant) -> None:
+async def test_miss(menuai: menuai) -> None:
     """Test missing the rate limit."""
 
     refresh_called = False
@@ -48,7 +48,7 @@ async def test_miss(hass: HomeAssistant) -> None:
         nonlocal refresh_called
         refresh_called = True
 
-    rate_limiter = ratelimit.KeyedRateLimit(hass)
+    rate_limiter = ratelimit.KeyedRateLimit(menuai)
     assert (
         rate_limiter.async_schedule_action("key1", 0.1, time.time(), _refresh) is None
     )
@@ -63,7 +63,7 @@ async def test_miss(hass: HomeAssistant) -> None:
     rate_limiter.async_remove()
 
 
-async def test_no_limit(hass: HomeAssistant) -> None:
+async def test_no_limit(menuai: menuai) -> None:
     """Test async_schedule_action always return None when there is no rate limit."""
 
     refresh_called = False
@@ -73,7 +73,7 @@ async def test_no_limit(hass: HomeAssistant) -> None:
         nonlocal refresh_called
         refresh_called = True
 
-    rate_limiter = ratelimit.KeyedRateLimit(hass)
+    rate_limiter = ratelimit.KeyedRateLimit(menuai)
     rate_limiter.async_triggered("key1", time.time())
 
     assert (

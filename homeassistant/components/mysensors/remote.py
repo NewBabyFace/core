@@ -5,16 +5,16 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Any, cast
 
-from homeassistant.components.remote import (
+from menuai.components.remote import (
     ATTR_COMMAND,
     RemoteEntity,
     RemoteEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import setup_mysensors_platform
 from .const import MYSENSORS_DISCOVERY, DiscoveryInfo
@@ -22,7 +22,7 @@ from .entity import MySensorsChildEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -32,7 +32,7 @@ async def async_setup_entry(
     def async_discover(discovery_info: DiscoveryInfo) -> None:
         """Discover and add a MySensors remote."""
         setup_mysensors_platform(
-            hass,
+            menuai,
             Platform.REMOTE,
             discovery_info,
             MySensorsRemote,
@@ -41,7 +41,7 @@ async def async_setup_entry(
 
     config_entry.async_on_unload(
         async_dispatcher_connect(
-            hass,
+            menuai,
             MYSENSORS_DISCOVERY.format(config_entry.entry_id, Platform.REMOTE),
             async_discover,
         ),

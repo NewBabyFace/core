@@ -11,13 +11,13 @@ from unittest.mock import MagicMock, patch
 from gtts import gTTSError
 import pytest
 
-from homeassistant.components import tts
-from homeassistant.components.google_translate.const import CONF_TLD, DOMAIN
-from homeassistant.components.media_player import ATTR_MEDIA_CONTENT_ID
-from homeassistant.const import ATTR_ENTITY_ID, CONF_PLATFORM
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.core_config import async_process_ha_core_config
-from homeassistant.setup import async_setup_component
+from menuai.components import tts
+from menuai.components.google_translate.const import CONF_TLD, DOMAIN
+from menuai.components.media_player import ATTR_MEDIA_CONTENT_ID
+from menuai.const import ATTR_ENTITY_ID, CONF_PLATFORM
+from menuai.core import menuai, ServiceCall
+from menuai.core_config import async_process_ha_core_config
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 from tests.components.tts.common import retrieve_media
@@ -35,35 +35,35 @@ def mock_tts_cache_dir_autouse(mock_tts_cache_dir: Path) -> None:
 
 
 @pytest.fixture(autouse=True)
-async def setup_internal_url(hass: HomeAssistant) -> None:
+async def setup_internal_url(menuai: menuai) -> None:
     """Set up internal url."""
     await async_process_ha_core_config(
-        hass, {"internal_url": "http://example.local:8123"}
+        menuai, {"internal_url": "http://example.local:8123"}
     )
 
 
 @pytest.fixture
 def mock_gtts() -> Generator[MagicMock]:
     """Mock gtts."""
-    with patch("homeassistant.components.google_translate.tts.gTTS") as mock_gtts:
+    with patch("menuai.components.google_translate.tts.gTTS") as mock_gtts:
         yield mock_gtts
 
 
 @pytest.fixture(name="setup")
 async def setup_fixture(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: dict[str, Any],
     request: pytest.FixtureRequest,
 ) -> None:
     """Set up the test environment."""
     if request.param == "mock_setup":
-        await mock_setup(hass, config)
+        await mock_setup(menuai, config)
     elif request.param == "mock_config_entry_setup":
-        await mock_config_entry_setup(hass, config)
+        await mock_config_entry_setup(menuai, config)
     else:
         raise RuntimeError("Invalid setup fixture")
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
 @pytest.fixture(name="config")
@@ -72,20 +72,20 @@ def config_fixture() -> dict[str, Any]:
     return {}
 
 
-async def mock_setup(hass: HomeAssistant, config: dict[str, Any]) -> None:
+async def mock_setup(menuai: menuai, config: dict[str, Any]) -> None:
     """Mock setup."""
     assert await async_setup_component(
-        hass, tts.DOMAIN, {tts.DOMAIN: {CONF_PLATFORM: DOMAIN} | config}
+        menuai, tts.DOMAIN, {tts.DOMAIN: {CONF_PLATFORM: DOMAIN} | config}
     )
 
 
-async def mock_config_entry_setup(hass: HomeAssistant, config: dict[str, Any]) -> None:
+async def mock_config_entry_setup(menuai: menuai, config: dict[str, Any]) -> None:
     """Mock config entry setup."""
     default_config = {tts.CONF_LANG: "en", CONF_TLD: "com"}
     config_entry = MockConfigEntry(domain=DOMAIN, data=default_config | config)
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
 
 
 @pytest.mark.parametrize(
@@ -112,16 +112,16 @@ async def mock_config_entry_setup(hass: HomeAssistant, config: dict[str, Any]) -
     indirect=["setup"],
 )
 async def test_tts_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_gtts: MagicMock,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     service_calls: list[ServiceCall],
     setup: str,
     tts_service: str,
     service_data: dict[str, Any],
 ) -> None:
     """Test tts service."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         tts.DOMAIN,
         tts_service,
         service_data,
@@ -131,7 +131,7 @@ async def test_tts_service(
     assert len(service_calls) == 2
     assert (
         await retrieve_media(
-            hass, hass_client, service_calls[1].data[ATTR_MEDIA_CONTENT_ID]
+            menuai, menuai_client, service_calls[1].data[ATTR_MEDIA_CONTENT_ID]
         )
         == HTTPStatus.OK
     )
@@ -169,16 +169,16 @@ async def test_tts_service(
     indirect=["setup"],
 )
 async def test_service_say_german_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_gtts: MagicMock,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     service_calls: list[ServiceCall],
     setup: str,
     tts_service: str,
     service_data: dict[str, Any],
 ) -> None:
     """Test service call say with german code in the config."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         tts.DOMAIN,
         tts_service,
         service_data,
@@ -188,7 +188,7 @@ async def test_service_say_german_config(
     assert len(service_calls) == 2
     assert (
         await retrieve_media(
-            hass, hass_client, service_calls[1].data[ATTR_MEDIA_CONTENT_ID]
+            menuai, menuai_client, service_calls[1].data[ATTR_MEDIA_CONTENT_ID]
         )
         == HTTPStatus.OK
     )
@@ -226,16 +226,16 @@ async def test_service_say_german_config(
     indirect=["setup"],
 )
 async def test_service_say_german_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_gtts: MagicMock,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     service_calls: list[ServiceCall],
     setup: str,
     tts_service: str,
     service_data: dict[str, Any],
 ) -> None:
     """Test service call say with german code in the service."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         tts.DOMAIN,
         tts_service,
         service_data,
@@ -245,7 +245,7 @@ async def test_service_say_german_service(
     assert len(service_calls) == 2
     assert (
         await retrieve_media(
-            hass, hass_client, service_calls[1].data[ATTR_MEDIA_CONTENT_ID]
+            menuai, menuai_client, service_calls[1].data[ATTR_MEDIA_CONTENT_ID]
         )
         == HTTPStatus.OK
     )
@@ -282,16 +282,16 @@ async def test_service_say_german_service(
     indirect=["setup"],
 )
 async def test_service_say_en_uk_config(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_gtts: MagicMock,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     service_calls: list[ServiceCall],
     setup: str,
     tts_service: str,
     service_data: dict[str, Any],
 ) -> None:
     """Test service call say with en-uk code in the config."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         tts.DOMAIN,
         tts_service,
         service_data,
@@ -301,7 +301,7 @@ async def test_service_say_en_uk_config(
     assert len(service_calls) == 2
     assert (
         await retrieve_media(
-            hass, hass_client, service_calls[1].data[ATTR_MEDIA_CONTENT_ID]
+            menuai, menuai_client, service_calls[1].data[ATTR_MEDIA_CONTENT_ID]
         )
         == HTTPStatus.OK
     )
@@ -339,16 +339,16 @@ async def test_service_say_en_uk_config(
     indirect=["setup"],
 )
 async def test_service_say_en_uk_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_gtts: MagicMock,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     service_calls: list[ServiceCall],
     setup: str,
     tts_service: str,
     service_data: dict[str, Any],
 ) -> None:
     """Test service call say with en-uk code in the config."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         tts.DOMAIN,
         tts_service,
         service_data,
@@ -358,7 +358,7 @@ async def test_service_say_en_uk_service(
     assert len(service_calls) == 2
     assert (
         await retrieve_media(
-            hass, hass_client, service_calls[1].data[ATTR_MEDIA_CONTENT_ID]
+            menuai, menuai_client, service_calls[1].data[ATTR_MEDIA_CONTENT_ID]
         )
         == HTTPStatus.OK
     )
@@ -396,16 +396,16 @@ async def test_service_say_en_uk_service(
     indirect=["setup"],
 )
 async def test_service_say_en_couk(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_gtts: MagicMock,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     service_calls: list[ServiceCall],
     setup: str,
     tts_service: str,
     service_data: dict[str, Any],
 ) -> None:
     """Test service call say in co.uk tld accent."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         tts.DOMAIN,
         tts_service,
         service_data,
@@ -415,7 +415,7 @@ async def test_service_say_en_couk(
     assert len(service_calls) == 2
     assert (
         await retrieve_media(
-            hass, hass_client, service_calls[1].data[ATTR_MEDIA_CONTENT_ID]
+            menuai, menuai_client, service_calls[1].data[ATTR_MEDIA_CONTENT_ID]
         )
         == HTTPStatus.OK
     )
@@ -452,9 +452,9 @@ async def test_service_say_en_couk(
     indirect=["setup"],
 )
 async def test_service_say_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_gtts: MagicMock,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     service_calls: list[ServiceCall],
     setup: str,
     tts_service: str,
@@ -463,7 +463,7 @@ async def test_service_say_error(
     """Test service call say with http response 400."""
     mock_gtts.return_value.write_to_fp.side_effect = gTTSError
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         tts.DOMAIN,
         tts_service,
         service_data,
@@ -473,7 +473,7 @@ async def test_service_say_error(
     assert len(service_calls) == 2
     assert (
         await retrieve_media(
-            hass, hass_client, service_calls[1].data[ATTR_MEDIA_CONTENT_ID]
+            menuai, menuai_client, service_calls[1].data[ATTR_MEDIA_CONTENT_ID]
         )
         == HTTPStatus.INTERNAL_SERVER_ERROR
     )

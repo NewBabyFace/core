@@ -22,23 +22,23 @@ from typing import IO, TYPE_CHECKING, Any, Protocol, TypedDict, cast
 import aiohttp
 from securetar import SecureTarFile, atomic_contents_add
 
-from homeassistant.backup_restore import (
+from menuai.backup_restore import (
     RESTORE_BACKUP_FILE,
     RESTORE_BACKUP_RESULT_FILE,
     password_to_key,
 )
-from homeassistant.const import __version__ as HAVERSION
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import (
+from menuai.const import __version__ as HAVERSION
+from menuai.core import menuai, callback
+from menuai.helpers import (
     frame,
     instance_id,
     integration_platform,
     issue_registry as ir,
     start,
 )
-from homeassistant.helpers.backup import DATA_BACKUP
-from homeassistant.helpers.json import json_bytes
-from homeassistant.util import dt as dt_util, json as json_util
+from menuai.helpers.backup import DATA_BACKUP
+from menuai.helpers.json import json_bytes
+from menuai.util import dt as dt_util, json as json_util
 
 from . import util as backup_util
 from .agent import (
@@ -251,7 +251,7 @@ class BackupPlatformEvent:
 
 @dataclass(frozen=True, kw_only=True, slots=True)
 class BlockedEvent(ManagerStateEvent):
-    """Backup manager blocked, Home Assistant is starting."""
+    """Backup manager blocked, MenuAI is starting."""
 
     manager_state: BackupManagerState = BackupManagerState.BLOCKED
 
@@ -259,10 +259,10 @@ class BlockedEvent(ManagerStateEvent):
 class BackupPlatformProtocol(Protocol):
     """Define the format that backup platforms can have."""
 
-    async def async_pre_backup(self, hass: HomeAssistant) -> None:
+    async def async_pre_backup(self, menuai: menuai) -> None:
         """Perform operations before a backup starts."""
 
-    async def async_post_backup(self, hass: HomeAssistant) -> None:
+    async def async_post_backup(self, menuai: menuai) -> None:
         """Perform operations after a backup finishes."""
 
 
@@ -280,7 +280,7 @@ class BackupReaderWriter(abc.ABC):
         include_all_addons: bool,
         include_database: bool,
         include_folders: list[Folder] | None,
-        include_homeassistant: bool,
+        include_menuai: bool,
         on_progress: Callable[[CreateBackupEvent], None],
         password: str | None,
     ) -> tuple[NewBackup, asyncio.Task[WrittenBackup]]:
@@ -308,7 +308,7 @@ class BackupReaderWriter(abc.ABC):
         restore_addons: list[str] | None,
         restore_database: bool,
         restore_folders: list[Folder] | None,
-        restore_homeassistant: bool,
+        restore_menuai: bool,
     ) -> None:
         """Restore a backup."""
 
@@ -348,18 +348,18 @@ class BackupManagerExceptionGroup(BackupManagerError, ExceptionGroup):
 class BackupManager:
     """Define the format that backup managers can have."""
 
-    def __init__(self, hass: HomeAssistant, reader_writer: BackupReaderWriter) -> None:
+    def __init__(self, menuai: menuai, reader_writer: BackupReaderWriter) -> None:
         """Initialize the backup manager."""
-        self.hass = hass
+        self.menuai = menuai
         self.platforms: dict[str, BackupPlatformProtocol] = {}
         self.backup_agent_platforms: dict[str, BackupAgentPlatformProtocol] = {}
         self.backup_agents: dict[str, BackupAgent] = {}
         self.local_backup_agents: dict[str, LocalBackupAgent] = {}
 
-        self.config = BackupConfig(hass, self)
+        self.config = BackupConfig(menuai, self)
         self._reader_writer = reader_writer
         self.known_backups = KnownBackups(self)
-        self.store = BackupStore(hass, self)
+        self.store = BackupStore(menuai, self)
 
         # Tasks and flags tracking backup and restore progress
         self._backup_task: asyncio.Task[WrittenBackup] | None = None
@@ -372,10 +372,10 @@ class BackupManager:
         # Latest backup event and backup event subscribers
         self.last_event: ManagerStateEvent = BlockedEvent()
         self.last_action_event: ManagerStateEvent | None = None
-        self._backup_event_subscriptions = hass.data[
+        self._backup_event_subscriptions = menuai.data[
             DATA_BACKUP
         ].backup_event_subscriptions
-        self._backup_platform_event_subscriptions = hass.data[
+        self._backup_platform_event_subscriptions = menuai.data[
             DATA_BACKUP
         ].backup_platform_event_subscriptions
 
@@ -392,13 +392,13 @@ class BackupManager:
             on_progress=self.async_on_backup_event
         )
 
-        async def set_manager_idle_after_start(hass: HomeAssistant) -> None:
+        async def set_manager_idle_after_start(menuai: menuai) -> None:
             """Set manager to idle after start."""
             self.async_on_backup_event(IdleEvent())
 
         if self.state == BackupManagerState.BLOCKED:
             # If we're not finishing a restore job, set the manager to idle after start
-            start.async_at_started(self.hass, set_manager_idle_after_start)
+            start.async_at_started(self.menuai, set_manager_idle_after_start)
 
         await self.load_platforms()
 
@@ -436,12 +436,12 @@ class BackupManager:
         @callback
         def listener() -> None:
             LOGGER.debug("Loading backup agents for %s", integration_domain)
-            self.hass.async_create_task(
+            self.menuai.async_create_task(
                 self._async_reload_backup_agents(integration_domain)
             )
 
         if hasattr(platform, "async_register_backup_agents_listener"):
-            platform.async_register_backup_agents_listener(self.hass, listener=listener)
+            platform.async_register_backup_agents_listener(self.menuai, listener=listener)
 
         listener()
 
@@ -458,7 +458,7 @@ class BackupManager:
                 del self.local_backup_agents[agent_id]
 
         # Add new agents
-        agents = await platform.async_get_backup_agents(self.hass)
+        agents = await platform.async_get_backup_agents(self.menuai)
         self.backup_agents.update({agent.agent_id: agent for agent in agents})
         self.local_backup_agents.update(
             {
@@ -469,15 +469,15 @@ class BackupManager:
         )
 
         @callback
-        def check_unavailable_agents_after_start(hass: HomeAssistant) -> None:
+        def check_unavailable_agents_after_start(menuai: menuai) -> None:
             """Check unavailable agents after start."""
-            check_unavailable_agents(hass, self)
+            check_unavailable_agents(menuai, self)
 
-        start.async_at_started(self.hass, check_unavailable_agents_after_start)
+        start.async_at_started(self.menuai, check_unavailable_agents_after_start)
 
     async def _add_platform(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         integration_domain: str,
         platform: Any,
     ) -> None:
@@ -496,7 +496,7 @@ class BackupManager:
         """Perform pre backup actions."""
         pre_backup_results = await asyncio.gather(
             *(
-                platform.async_pre_backup(self.hass)
+                platform.async_pre_backup(self.menuai)
                 for platform in self.platforms.values()
             ),
             return_exceptions=True,
@@ -511,7 +511,7 @@ class BackupManager:
         """Perform post backup actions."""
         post_backup_results = await asyncio.gather(
             *(
-                platform.async_post_backup(self.hass)
+                platform.async_post_backup(self.menuai)
                 for platform in self.platforms.values()
             ),
             return_exceptions=True,
@@ -525,7 +525,7 @@ class BackupManager:
     async def load_platforms(self) -> None:
         """Load backup platforms."""
         await integration_platform.async_process_integration_platforms(
-            self.hass,
+            self.menuai,
             DOMAIN,
             self._add_platform,
             wait_for_platforms=True,
@@ -567,7 +567,7 @@ class BackupManager:
                     agent_id,
                 )
                 streamer = EncryptedBackupStreamer(
-                    self.hass, backup, open_stream, password
+                    self.menuai, backup, open_stream, password
                 )
             else:
                 # The backup we're uploading is encrypted, but the agent requires it
@@ -578,7 +578,7 @@ class BackupManager:
                     agent_id,
                 )
                 streamer = DecryptedBackupStreamer(
-                    self.hass, backup, open_stream, password
+                    self.menuai, backup, open_stream, password
                 )
             if streamer:
                 open_stream_func = streamer.open_stream
@@ -657,7 +657,7 @@ class BackupManager:
                         failed_agent_ids = []
                         failed_folders = []
                     with_automatic_settings = self.is_our_automatic_backup(
-                        agent_backup, await instance_id.async_get(self.hass)
+                        agent_backup, await instance_id.async_get(self.menuai)
                     )
                     backups[backup_id] = ManagerBackup(
                         agents={},
@@ -670,8 +670,8 @@ class BackupManager:
                         failed_agent_ids=failed_agent_ids,
                         failed_folders=failed_folders,
                         folders=agent_backup.folders,
-                        homeassistant_included=agent_backup.homeassistant_included,
-                        homeassistant_version=agent_backup.homeassistant_version,
+                        menuai_included=agent_backup.menuai_included,
+                        menuai_version=agent_backup.menuai_version,
                         name=agent_backup.name,
                         with_automatic_settings=with_automatic_settings,
                     )
@@ -731,7 +731,7 @@ class BackupManager:
                     failed_agent_ids = []
                     failed_folders = []
                 with_automatic_settings = self.is_our_automatic_backup(
-                    result, await instance_id.async_get(self.hass)
+                    result, await instance_id.async_get(self.menuai)
                 )
                 backup = ManagerBackup(
                     agents={},
@@ -744,8 +744,8 @@ class BackupManager:
                     failed_agent_ids=failed_agent_ids,
                     failed_folders=failed_folders,
                     folders=result.folders,
-                    homeassistant_included=result.homeassistant_included,
-                    homeassistant_version=result.homeassistant_version,
+                    menuai_included=result.menuai_included,
+                    menuai_version=result.menuai_version,
                     name=result.name,
                     with_automatic_settings=with_automatic_settings,
                 )
@@ -997,7 +997,7 @@ class BackupManager:
         include_all_addons: bool,
         include_database: bool,
         include_folders: list[Folder] | None,
-        include_homeassistant: bool,
+        include_menuai: bool,
         name: str | None,
         password: str | None,
         with_automatic_settings: bool = False,
@@ -1010,7 +1010,7 @@ class BackupManager:
             include_all_addons=include_all_addons,
             include_database=include_database,
             include_folders=include_folders,
-            include_homeassistant=include_homeassistant,
+            include_menuai=include_menuai,
             name=name,
             password=password,
             raise_task_error=True,
@@ -1029,7 +1029,7 @@ class BackupManager:
             include_all_addons=config_data.create_backup.include_all_addons,
             include_database=config_data.create_backup.include_database,
             include_folders=config_data.create_backup.include_folders,
-            include_homeassistant=True,  # always include HA
+            include_menuai=True,  # always include HA
             name=config_data.create_backup.name,
             password=config_data.create_backup.password,
             with_automatic_settings=True,
@@ -1044,7 +1044,7 @@ class BackupManager:
         include_all_addons: bool,
         include_database: bool,
         include_folders: list[Folder] | None,
-        include_homeassistant: bool,
+        include_menuai: bool,
         name: str | None,
         password: str | None,
         raise_task_error: bool = False,
@@ -1073,7 +1073,7 @@ class BackupManager:
                 include_all_addons=include_all_addons,
                 include_database=include_database,
                 include_folders=include_folders,
-                include_homeassistant=include_homeassistant,
+                include_menuai=include_menuai,
                 name=name,
                 password=password,
                 raise_task_error=raise_task_error,
@@ -1102,7 +1102,7 @@ class BackupManager:
         include_all_addons: bool,
         include_database: bool,
         include_folders: list[Folder] | None,
-        include_homeassistant: bool,
+        include_menuai: bool,
         name: str | None,
         password: str | None,
         raise_task_error: bool,
@@ -1146,21 +1146,21 @@ class BackupManager:
                 backup_name=backup_name,
                 extra_metadata=extra_metadata
                 | {
-                    "instance_id": await instance_id.async_get(self.hass),
+                    "instance_id": await instance_id.async_get(self.menuai),
                     "with_automatic_settings": with_automatic_settings,
                 },
                 include_addons=include_addons,
                 include_all_addons=include_all_addons,
                 include_database=include_database,
                 include_folders=include_folders,
-                include_homeassistant=include_homeassistant,
+                include_menuai=include_menuai,
                 on_progress=self.async_on_backup_event,
                 password=password,
             )
         except BackupReaderWriterError as err:
             raise BackupManagerError(str(err)) from err
 
-        backup_finish_task = self._backup_finish_task = self.hass.async_create_task(
+        backup_finish_task = self._backup_finish_task = self.menuai.async_create_task(
             self._async_finish_backup(
                 available_agents, unavailable_agents, with_automatic_settings, password
             ),
@@ -1274,7 +1274,7 @@ class BackupManager:
         restore_addons: list[str] | None,
         restore_database: bool,
         restore_folders: list[Folder] | None,
-        restore_homeassistant: bool,
+        restore_menuai: bool,
     ) -> None:
         """Initiate restoring a backup."""
         if self.state is not BackupManagerState.IDLE:
@@ -1295,7 +1295,7 @@ class BackupManager:
                 restore_addons=restore_addons,
                 restore_database=restore_database,
                 restore_folders=restore_folders,
-                restore_homeassistant=restore_homeassistant,
+                restore_menuai=restore_menuai,
             )
             self.async_on_backup_event(
                 RestoreBackupEvent(
@@ -1334,7 +1334,7 @@ class BackupManager:
         restore_addons: list[str] | None,
         restore_database: bool,
         restore_folders: list[Folder] | None,
-        restore_homeassistant: bool,
+        restore_menuai: bool,
     ) -> None:
         """Initiate restoring a backup."""
         agent = self.backup_agents[agent_id]
@@ -1368,7 +1368,7 @@ class BackupManager:
             restore_addons=restore_addons,
             restore_database=restore_database,
             restore_folders=restore_folders,
-            restore_homeassistant=restore_homeassistant,
+            restore_menuai=restore_menuai,
         )
 
     @callback
@@ -1390,12 +1390,12 @@ class BackupManager:
     ) -> None:
         """Create an issue in the issue registry for automatic backup failures."""
         ir.async_create_issue(
-            self.hass,
+            self.menuai,
             DOMAIN,
             "automatic_backup_failed",
             is_fixable=False,
             is_persistent=True,
-            learn_more_url="homeassistant://config/backup",
+            learn_more_url="menuai://config/backup",
             severity=ir.IssueSeverity.WARNING,
             translation_key=translation_key,
             translation_placeholders=translation_placeholders,
@@ -1423,7 +1423,7 @@ class BackupManager:
 
         if not failed_agents and not addon_errors and not folder_errors:
             # No issues to report, clear previous error
-            ir.async_delete_issue(self.hass, DOMAIN, "automatic_backup_failed")
+            ir.async_delete_issue(self.menuai, DOMAIN, "automatic_backup_failed")
             return
         if failed_agents and not (addon_errors or folder_errors):
             # No issues with add-ons or folders, but issues with agents
@@ -1498,12 +1498,12 @@ class BackupManager:
         if agent_id in self.local_backup_agents:
             local_agent = self.local_backup_agents[agent_id]
             path = local_agent.get_backup_path(backup_id)
-            reader = await self.hass.async_add_executor_job(open, path.as_posix(), "rb")
+            reader = await self.menuai.async_add_executor_job(open, path.as_posix(), "rb")
         else:
             backup_stream = await agent.async_download_backup(backup_id)
-            reader = cast(IO[bytes], AsyncIteratorReader(self.hass, backup_stream))
+            reader = cast(IO[bytes], AsyncIteratorReader(self.menuai, backup_stream))
         try:
-            await self.hass.async_add_executor_job(
+            await self.menuai.async_add_executor_job(
                 validate_password_stream, reader, password
             )
         except backup_util.IncorrectPassword as err:
@@ -1616,10 +1616,10 @@ class CoreBackupReaderWriter(BackupReaderWriter):
 
     _local_agent_id = f"{DOMAIN}.local"
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize the backup reader/writer."""
-        self._hass = hass
-        self.temp_backup_dir = Path(hass.config.path("tmp_backups"))
+        self._menuai = menuai
+        self.temp_backup_dir = Path(menuai.config.path("tmp_backups"))
 
     async def async_create_backup(
         self,
@@ -1631,7 +1631,7 @@ class CoreBackupReaderWriter(BackupReaderWriter):
         include_all_addons: bool,
         include_database: bool,
         include_folders: list[Folder] | None,
-        include_homeassistant: bool,
+        include_menuai: bool,
         on_progress: Callable[[CreateBackupEvent], None],
         password: str | None,
     ) -> tuple[NewBackup, asyncio.Task[WrittenBackup]]:
@@ -1643,10 +1643,10 @@ class CoreBackupReaderWriter(BackupReaderWriter):
             raise BackupReaderWriterError(
                 "Addons and folders are not supported by core backup"
             )
-        if not include_homeassistant:
-            raise BackupReaderWriterError("Home Assistant must be included in backup")
+        if not include_menuai:
+            raise BackupReaderWriterError("MenuAI must be included in backup")
 
-        backup_task = self._hass.async_create_task(
+        backup_task = self._menuai.async_create_task(
             self._async_create_backup(
                 agent_ids=agent_ids,
                 backup_id=backup_id,
@@ -1676,7 +1676,7 @@ class CoreBackupReaderWriter(BackupReaderWriter):
         password: str | None,
     ) -> WrittenBackup:
         """Generate a backup."""
-        manager = self._hass.data[DATA_MANAGER]
+        manager = self._menuai.data[DATA_MANAGER]
 
         agent_config = manager.config.data.agents.get(self._local_agent_id)
         if (
@@ -1693,8 +1693,8 @@ class CoreBackupReaderWriter(BackupReaderWriter):
             date=date_str,
             extra_metadata=extra_metadata,
             folders=[],
-            homeassistant_included=True,
-            homeassistant_version=HAVERSION,
+            menuai_included=True,
+            menuai_version=HAVERSION,
             name=backup_name,
             protected=password is not None,
             size=0,
@@ -1720,7 +1720,7 @@ class CoreBackupReaderWriter(BackupReaderWriter):
                 "compressed": True,
                 "date": date_str,
                 "extra": extra_metadata,
-                "homeassistant": {
+                "menuai": {
                     "exclude_database": not include_database,
                     "version": HAVERSION,
                 },
@@ -1731,7 +1731,7 @@ class CoreBackupReaderWriter(BackupReaderWriter):
                 "version": 2,
             }
 
-            tar_file_path, size_in_bytes = await self._hass.async_add_executor_job(
+            tar_file_path, size_in_bytes = await self._menuai.async_add_executor_job(
                 self._mkdir_and_generate_backup_contents,
                 backup_data,
                 include_database,
@@ -1747,7 +1747,7 @@ class CoreBackupReaderWriter(BackupReaderWriter):
         else:
             backup = replace(backup, size=size_in_bytes)
 
-            async_add_executor_job = self._hass.async_add_executor_job
+            async_add_executor_job = self._menuai.async_add_executor_job
 
             async def send_backup() -> AsyncIterator[bytes]:
                 try:
@@ -1825,7 +1825,7 @@ class CoreBackupReaderWriter(BackupReaderWriter):
             """Filter to filter excludes."""
 
             for exclude in excludes:
-                # The home assistant core configuration directory is added as "data"
+                # The MenuAI core configuration directory is added as "data"
                 # in the tar file, so we need to prefix that path to the filters.
                 if not path.full_match(f"data/{exclude}"):
                     continue
@@ -1845,13 +1845,13 @@ class CoreBackupReaderWriter(BackupReaderWriter):
             tar_info.mtime = int(time.time())
             outer_secure_tarfile_tarfile.addfile(tar_info, fileobj=fileobj)
             with outer_secure_tarfile.create_inner_tar(
-                "./homeassistant.tar.gz",
+                "./menuai.tar.gz",
                 gzip=True,
                 key=password_to_key(password) if password is not None else None,
             ) as core_tar:
                 atomic_contents_add(
                     tar_file=core_tar,
-                    origin_path=Path(self._hass.config.path()),
+                    origin_path=Path(self._menuai.config.path()),
                     file_filter=is_excluded_by_filter,
                     arcname="data",
                 )
@@ -1874,7 +1874,7 @@ class CoreBackupReaderWriter(BackupReaderWriter):
         """Receive a backup."""
         temp_file = Path(self.temp_backup_dir, suggested_filename)
 
-        async_add_executor_job = self._hass.async_add_executor_job
+        async_add_executor_job = self._menuai.async_add_executor_job
         await async_add_executor_job(make_backup_dir, self.temp_backup_dir)
         f = await async_add_executor_job(temp_file.open, "wb")
         try:
@@ -1889,7 +1889,7 @@ class CoreBackupReaderWriter(BackupReaderWriter):
             LOGGER.warning("Unable to parse backup %s: %s", temp_file, err)
             raise
 
-        manager = self._hass.data[DATA_MANAGER]
+        manager = self._menuai.data[DATA_MANAGER]
         if self._local_agent_id in agent_ids:
             local_agent = manager.local_backup_agents[self._local_agent_id]
             tar_file_path = local_agent.get_new_backup_path(backup)
@@ -1933,7 +1933,7 @@ class CoreBackupReaderWriter(BackupReaderWriter):
         restore_addons: list[str] | None,
         restore_database: bool,
         restore_folders: list[Folder] | None,
-        restore_homeassistant: bool,
+        restore_menuai: bool,
     ) -> None:
         """Restore a backup.
 
@@ -1945,18 +1945,18 @@ class CoreBackupReaderWriter(BackupReaderWriter):
             raise BackupReaderWriterError(
                 "Addons and folders are not supported in core restore"
             )
-        if not restore_homeassistant and not restore_database:
+        if not restore_menuai and not restore_database:
             raise BackupReaderWriterError(
-                "Home Assistant or database must be included in restore"
+                "MenuAI or database must be included in restore"
             )
 
-        manager = self._hass.data[DATA_MANAGER]
+        manager = self._menuai.data[DATA_MANAGER]
         if agent_id in manager.local_backup_agents:
             local_agent = manager.local_backup_agents[agent_id]
             path = local_agent.get_backup_path(backup_id)
             remove_after_restore = False
         else:
-            async_add_executor_job = self._hass.async_add_executor_job
+            async_add_executor_job = self._menuai.async_add_executor_job
             path = self.temp_backup_dir / f"{backup_id}.tar"
             stream = await open_stream()
             await async_add_executor_job(make_backup_dir, self.temp_backup_dir)
@@ -1969,7 +1969,7 @@ class CoreBackupReaderWriter(BackupReaderWriter):
 
             remove_after_restore = True
 
-        password_valid = await self._hass.async_add_executor_job(
+        password_valid = await self._menuai.async_add_executor_job(
             validate_password, path, password
         )
         if not password_valid:
@@ -1977,20 +1977,20 @@ class CoreBackupReaderWriter(BackupReaderWriter):
 
         def _write_restore_file() -> None:
             """Write the restore file."""
-            Path(self._hass.config.path(RESTORE_BACKUP_FILE)).write_text(
+            Path(self._menuai.config.path(RESTORE_BACKUP_FILE)).write_text(
                 json.dumps(
                     {
                         "path": path.as_posix(),
                         "password": password,
                         "remove_after_restore": remove_after_restore,
                         "restore_database": restore_database,
-                        "restore_homeassistant": restore_homeassistant,
+                        "restore_menuai": restore_menuai,
                     }
                 ),
                 encoding="utf-8",
             )
 
-        await self._hass.async_add_executor_job(_write_restore_file)
+        await self._menuai.async_add_executor_job(_write_restore_file)
         on_progress(
             RestoreBackupEvent(
                 reason=None,
@@ -1998,7 +1998,7 @@ class CoreBackupReaderWriter(BackupReaderWriter):
                 state=RestoreBackupState.CORE_RESTART,
             )
         )
-        await self._hass.services.async_call("homeassistant", "restart", blocking=True)
+        await self._menuai.services.async_call("menuai", "restart", blocking=True)
 
     async def async_resume_restore_progress_after_restart(
         self,
@@ -2009,7 +2009,7 @@ class CoreBackupReaderWriter(BackupReaderWriter):
 
         def _read_restore_file() -> json_util.JsonObjectType | None:
             """Read the restore file."""
-            result_path = Path(self._hass.config.path(RESTORE_BACKUP_RESULT_FILE))
+            result_path = Path(self._menuai.config.path(RESTORE_BACKUP_RESULT_FILE))
 
             try:
                 restore_result = json_util.json_loads_object(result_path.read_bytes())
@@ -2027,7 +2027,7 @@ class CoreBackupReaderWriter(BackupReaderWriter):
 
             return restore_result
 
-        restore_result = await self._hass.async_add_executor_job(_read_restore_file)
+        restore_result = await self._menuai.async_add_executor_job(_read_restore_file)
         if not restore_result:
             return
 
@@ -2052,14 +2052,14 @@ class CoreBackupReaderWriter(BackupReaderWriter):
         """Validate backup config.
 
         Update automatic backup settings to not include addons or folders and remove
-        hassio agents in case a backup created by supervisor was restored.
+        menuaiio agents in case a backup created by supervisor was restored.
         """
         create_backup = config.data.create_backup
         if (
             not create_backup.include_addons
             and not create_backup.include_all_addons
             and not create_backup.include_folders
-            and not any(a_id.startswith("hassio.") for a_id in create_backup.agent_ids)
+            and not any(a_id.startswith("menuaiio.") for a_id in create_backup.agent_ids)
         ):
             LOGGER.debug("Backup settings don't need to be adjusted")
             return
@@ -2070,11 +2070,11 @@ class CoreBackupReaderWriter(BackupReaderWriter):
         automatic_agents = [
             agent_id
             for agent_id in create_backup.agent_ids
-            if not agent_id.startswith("hassio.")
+            if not agent_id.startswith("menuaiio.")
         ]
         if (
             self._local_agent_id not in automatic_agents
-            and "hassio.local" in create_backup.agent_ids
+            and "menuaiio.local" in create_backup.agent_ids
         ):
             automatic_agents = [self._local_agent_id, *automatic_agents]
         config.update(

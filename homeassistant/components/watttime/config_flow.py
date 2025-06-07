@@ -9,21 +9,21 @@ from aiowatttime import Client
 from aiowatttime.errors import CoordinatesNotFoundError, InvalidCredentialsError
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_LATITUDE,
     CONF_LONGITUDE,
     CONF_PASSWORD,
     CONF_SHOW_ON_MAP,
     CONF_USERNAME,
 )
-from homeassistant.core import callback
-from homeassistant.helpers import aiohttp_client, config_validation as cv
+from menuai.core import callback
+from menuai.helpers import aiohttp_client, config_validation as cv
 
 from .const import (
     CONF_BALANCING_AUTHORITY,
@@ -86,7 +86,7 @@ class WattTimeConfigFlow(ConfigFlow, domain=DOMAIN):
         self, username: str, password: str, error_step_id: str, error_schema: vol.Schema
     ) -> ConfigFlowResult:
         """Validate input credentials and proceed accordingly."""
-        session = aiohttp_client.async_get_clientsession(self.hass)
+        session = aiohttp_client.async_get_clientsession(self.menuai)
 
         try:
             self._client = await Client.async_login(username, password, session=session)
@@ -111,11 +111,11 @@ class WattTimeConfigFlow(ConfigFlow, domain=DOMAIN):
             # should reauth:
             entry_unique_id = get_unique_id(self._data)
             if existing_entry := await self.async_set_unique_id(entry_unique_id):
-                self.hass.config_entries.async_update_entry(
+                self.menuai.config_entries.async_update_entry(
                     existing_entry, data=self._data
                 )
-                self.hass.async_create_task(
-                    self.hass.config_entries.async_reload(existing_entry.entry_id)
+                self.menuai.async_create_task(
+                    self.menuai.config_entries.async_reload(existing_entry.entry_id)
                 )
                 return self.async_abort(reason="reauth_successful")
 
@@ -190,8 +190,8 @@ class WattTimeConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input[CONF_LOCATION_TYPE] == LOCATION_TYPE_HOME:
             return await self.async_step_coordinates(
                 {
-                    CONF_LATITUDE: self.hass.config.latitude,
-                    CONF_LONGITUDE: self.hass.config.longitude,
+                    CONF_LATITUDE: self.menuai.config.latitude,
+                    CONF_LONGITUDE: self.menuai.config.longitude,
                 }
             )
         return await self.async_step_coordinates()

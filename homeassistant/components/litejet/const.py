@@ -1,6 +1,6 @@
 """LiteJet constants."""
 
-from homeassistant.const import Platform
+from menuai.const import Platform
 
 DOMAIN = "litejet"
 

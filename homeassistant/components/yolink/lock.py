@@ -7,10 +7,10 @@ from typing import Any
 from yolink.client_request import ClientRequest
 from yolink.const import ATTR_DEVICE_LOCK, ATTR_DEVICE_LOCK_V2
 
-from homeassistant.components.lock import LockEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.lock import LockEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import YoLinkCoordinator
@@ -18,12 +18,12 @@ from .entity import YoLinkEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up YoLink lock from a config entry."""
-    device_coordinators = hass.data[DOMAIN][config_entry.entry_id].device_coordinators
+    device_coordinators = menuai.data[DOMAIN][config_entry.entry_id].device_coordinators
     entities = [
         YoLinkLockEntity(config_entry, device_coordinator)
         for device_coordinator in device_coordinators.values()

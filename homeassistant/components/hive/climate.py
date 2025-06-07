@@ -7,7 +7,7 @@ from typing import Any
 from apyhiveapi import Hive
 import voluptuous as vol
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     PRESET_BOOST,
     PRESET_NONE,
     ClimateEntity,
@@ -15,28 +15,28 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import ATTR_TEMPERATURE, UnitOfTemperature
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, entity_platform
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import HiveConfigEntry, refresh_system
 from .const import ATTR_TIME_PERIOD, SERVICE_BOOST_HEATING_OFF, SERVICE_BOOST_HEATING_ON
 from .entity import HiveEntity
 
-HIVE_TO_HASS_STATE = {
+HIVE_TO_menuai_STATE = {
     "SCHEDULE": HVACMode.AUTO,
     "MANUAL": HVACMode.HEAT,
     "OFF": HVACMode.OFF,
 }
 
-HASS_TO_HIVE_STATE = {
+menuai_TO_HIVE_STATE = {
     HVACMode.AUTO: "SCHEDULE",
     HVACMode.HEAT: "MANUAL",
     HVACMode.OFF: "OFF",
 }
 
-HIVE_TO_HASS_HVAC_ACTION = {
+HIVE_TO_menuai_HVAC_ACTION = {
     "UNKNOWN": HVACAction.OFF,
     False: HVACAction.IDLE,
     True: HVACAction.HEATING,
@@ -52,7 +52,7 @@ _LOGGER = logging.getLogger()
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: HiveConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -106,7 +106,7 @@ class HiveClimateEntity(HiveEntity, ClimateEntity):
     @refresh_system
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Set new target hvac mode."""
-        new_mode = HASS_TO_HIVE_STATE[hvac_mode]
+        new_mode = menuai_TO_HIVE_STATE[hvac_mode]
         await self.hive.heating.setMode(self.device, new_mode)
 
     @refresh_system
@@ -142,8 +142,8 @@ class HiveClimateEntity(HiveEntity, ClimateEntity):
         self.device = await self.hive.heating.getClimate(self.device)
         self._attr_available = self.device["deviceData"].get("online")
         if self._attr_available:
-            self._attr_hvac_mode = HIVE_TO_HASS_STATE.get(self.device["status"]["mode"])
-            self._attr_hvac_action = HIVE_TO_HASS_HVAC_ACTION.get(
+            self._attr_hvac_mode = HIVE_TO_menuai_STATE.get(self.device["status"]["mode"])
+            self._attr_hvac_action = HIVE_TO_menuai_HVAC_ACTION.get(
                 self.device["status"]["action"]
             )
             self._attr_current_temperature = self.device["status"][

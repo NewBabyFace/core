@@ -8,7 +8,7 @@ from pyps4_2ndscreen.errors import NotReady, PSDataIncomplete
 from pyps4_2ndscreen.media_art import TYPE_APP as PS_TYPE_APP
 import pyps4_2ndscreen.ps4 as pyps4
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     ATTR_MEDIA_CONTENT_TYPE,
     ATTR_MEDIA_TITLE,
     MediaPlayerEntity,
@@ -16,19 +16,19 @@ from homeassistant.components.media_player import (
     MediaPlayerState,
     MediaType,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_LOCKED,
     CONF_HOST,
     CONF_NAME,
     CONF_REGION,
     CONF_TOKEN,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util.json import JsonObjectType
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util.json import JsonObjectType
 
 from . import format_unique_id, load_games, save_games
 from .const import (
@@ -46,7 +46,7 @@ DEFAULT_RETRIES = 2
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -104,12 +104,12 @@ class PS4Device(MediaPlayerEntity):
     @callback
     def subscribe_to_protocol(self) -> None:
         """Notify protocol to callback with update changes."""
-        self.hass.data[PS4_DATA].protocol.add_callback(self._ps4, self.status_callback)
+        self.menuai.data[PS4_DATA].protocol.add_callback(self._ps4, self.status_callback)
 
     @callback
     def unsubscribe_to_protocol(self) -> None:
         """Notify protocol to remove callback."""
-        self.hass.data[PS4_DATA].protocol.remove_callback(
+        self.menuai.data[PS4_DATA].protocol.remove_callback(
             self._ps4, self.status_callback
         )
 
@@ -125,9 +125,9 @@ class PS4Device(MediaPlayerEntity):
                 self._region,
             )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe PS4 events."""
-        self.hass.data[PS4_DATA].devices.append(self)
+        self.menuai.data[PS4_DATA].devices.append(self)
         self.check_region()
 
     async def async_update(self) -> None:
@@ -149,20 +149,20 @@ class PS4Device(MediaPlayerEntity):
         # Try to ensure correct status is set on startup for device info.
         if self._ps4.ddp_protocol is None:
             # Use socket.socket.
-            await self.hass.async_add_executor_job(self._ps4.get_status)
+            await self.menuai.async_add_executor_job(self._ps4.get_status)
             if self._attr_device_info is None:
                 # Add entity to registry.
                 await self.async_get_device_info(self._ps4.status)
-            self._ps4.ddp_protocol = self.hass.data[PS4_DATA].protocol
+            self._ps4.ddp_protocol = self.menuai.data[PS4_DATA].protocol
             self.subscribe_to_protocol()
 
-        await self.hass.async_add_executor_job(self._parse_status)
+        await self.menuai.async_add_executor_job(self._parse_status)
 
     def _parse_status(self) -> None:
         """Parse status."""
         status: dict[str, Any] | None = self._ps4.status
         if status is not None:
-            self._games = load_games(self.hass, cast(str, self.unique_id))
+            self._games = load_games(self.menuai, cast(str, self.unique_id))
             if self._games:
                 self.get_source_list()
 
@@ -185,7 +185,7 @@ class PS4Device(MediaPlayerEntity):
                         self._attr_source = self._attr_media_title
                         self._attr_media_content_type = None
                         # Get data from PS Store.
-                        self.hass.async_create_background_task(
+                        self.menuai.async_create_background_task(
                             self.async_get_title_data(title_id, name),
                             "ps4.media_player-get_title_data",
                         )
@@ -280,7 +280,7 @@ class PS4Device(MediaPlayerEntity):
             self._media_image = art or None
             self._attr_media_content_type = media_type
 
-            await self.hass.async_add_executor_job(self.update_list)
+            await self.menuai.async_add_executor_job(self.update_list)
             self.async_write_ha_state()
 
     def update_list(self) -> None:
@@ -301,7 +301,7 @@ class PS4Device(MediaPlayerEntity):
                 self._media_image,
                 self._attr_media_content_type,
             )
-            self._games = load_games(self.hass, cast(str, self.unique_id))
+            self._games = load_games(self.menuai, cast(str, self.unique_id))
 
         self.get_source_list()
 
@@ -333,15 +333,15 @@ class PS4Device(MediaPlayerEntity):
                 }
             }
             games.update(game)
-            save_games(self.hass, games, cast(str, self.unique_id))
+            save_games(self.menuai, games, cast(str, self.unique_id))
 
     async def async_get_device_info(self, status: dict[str, Any] | None) -> None:
         """Set device info for registry."""
         # If cannot get status on startup, assume info from registry.
         if status is None:
             _LOGGER.debug("Assuming status from registry")
-            e_registry = er.async_get(self.hass)
-            d_registry = dr.async_get(self.hass)
+            e_registry = er.async_get(self.menuai)
+            d_registry = dr.async_get(self.menuai)
 
             for entry in e_registry.entities.get_entries_for_config_entry_id(
                 self._entry_id
@@ -375,13 +375,13 @@ class PS4Device(MediaPlayerEntity):
 
             self._attr_unique_id = format_unique_id(self._creds, status["host-id"])
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Remove Entity from Home Assistant."""
+    async def async_will_remove_from_menuai(self) -> None:
+        """Remove Entity from MenuAI."""
         # Close TCP Transport.
         if self._ps4.connected:
             await self._ps4.close()
         self.unsubscribe_to_protocol()
-        self.hass.data[PS4_DATA].devices.remove(self)
+        self.menuai.data[PS4_DATA].devices.remove(self)
 
     @property
     def entity_picture(self) -> str | None:

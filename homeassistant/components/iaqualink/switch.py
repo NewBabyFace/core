@@ -6,9 +6,9 @@ from typing import Any
 
 from iaqualink.device import AqualinkSwitch
 
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchEntity
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import AqualinkConfigEntry, refresh_system
 from .entity import AqualinkEntity
@@ -18,18 +18,18 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: AqualinkConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up discovered switches."""
     async_add_entities(
-        (HassAqualinkSwitch(dev) for dev in config_entry.runtime_data.switches),
+        (menuaiAqualinkSwitch(dev) for dev in config_entry.runtime_data.switches),
         True,
     )
 
 
-class HassAqualinkSwitch(AqualinkEntity[AqualinkSwitch], SwitchEntity):
+class menuaiAqualinkSwitch(AqualinkEntity[AqualinkSwitch], SwitchEntity):
     """Representation of a switch."""
 
     def __init__(self, dev: AqualinkSwitch) -> None:

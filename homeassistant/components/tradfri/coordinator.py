@@ -10,9 +10,9 @@ from pytradfri.command import Command
 from pytradfri.device import Device
 from pytradfri.error import RequestError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import LOGGER
 
@@ -26,7 +26,7 @@ class TradfriDeviceDataUpdateCoordinator(DataUpdateCoordinator[Device]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         api: Callable[[Command | list[Command]], Any],
         device: Device,
@@ -37,7 +37,7 @@ class TradfriDeviceDataUpdateCoordinator(DataUpdateCoordinator[Device]):
         self._exception: Exception | None = None
 
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name=f"Update coordinator for {device}",
@@ -59,7 +59,7 @@ class TradfriDeviceDataUpdateCoordinator(DataUpdateCoordinator[Device]):
     @callback
     def _exception_callback(self, exc: Exception) -> None:
         """Schedule handling exception.."""
-        self.hass.async_create_task(self._handle_exception(exc))
+        self.menuai.async_create_task(self._handle_exception(exc))
 
     async def _handle_exception(self, exc: Exception) -> None:
         """Handle observe exceptions in a coroutine."""

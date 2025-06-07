@@ -10,12 +10,12 @@ import pytest
 from pytrafikverket.exceptions import InvalidAuthentication, NoFerryFound
 from pytrafikverket.models import FerryStopModel
 
-from homeassistant.components.trafikverket_ferry.const import DOMAIN
-from homeassistant.components.trafikverket_ferry.coordinator import next_departuredate
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import STATE_UNAVAILABLE, WEEKDAYS
-from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
+from menuai.components.trafikverket_ferry.const import DOMAIN
+from menuai.components.trafikverket_ferry.coordinator import next_departuredate
+from menuai.config_entries import SOURCE_USER
+from menuai.const import STATE_UNAVAILABLE, WEEKDAYS
+from menuai.core import menuai
+from menuai.util import dt as dt_util
 
 from . import ENTRY_CONFIG
 
@@ -24,7 +24,7 @@ from tests.common import MockConfigEntry, async_fire_time_changed
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_coordinator(
-    hass: HomeAssistant,
+    menuai: menuai,
     freezer: FrozenDateTimeFactory,
     monkeypatch: pytest.MonkeyPatch,
     get_ferries: list[FerryStopModel],
@@ -37,19 +37,19 @@ async def test_coordinator(
         entry_id="1",
         unique_id="123",
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     with patch(
-        "homeassistant.components.trafikverket_ferry.coordinator.TrafikverketFerry.async_get_next_ferry_stops",
+        "menuai.components.trafikverket_ferry.coordinator.TrafikverketFerry.async_get_next_ferry_stops",
         return_value=get_ferries,
     ) as mock_data:
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
         mock_data.assert_called_once()
-        state1 = hass.states.get("sensor.harbor1_departure_from")
-        state2 = hass.states.get("sensor.harbor1_departure_to")
-        state3 = hass.states.get("sensor.harbor1_departure_time")
+        state1 = menuai.states.get("sensor.harbor1_departure_from")
+        state2 = menuai.states.get("sensor.harbor1_departure_to")
+        state3 = menuai.states.get("sensor.harbor1_departure_time")
         assert state1.state == "Harbor 1"
         assert state2.state == "Harbor 2"
         assert state3.state == str(dt_util.now().year + 1) + "-05-01T12:00:00+00:00"
@@ -62,12 +62,12 @@ async def test_coordinator(
         )
 
         freezer.tick(timedelta(minutes=6))
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done()
         mock_data.assert_called_once()
-        state1 = hass.states.get("sensor.harbor1_departure_from")
-        state2 = hass.states.get("sensor.harbor1_departure_to")
-        state3 = hass.states.get("sensor.harbor1_departure_time")
+        state1 = menuai.states.get("sensor.harbor1_departure_from")
+        state2 = menuai.states.get("sensor.harbor1_departure_to")
+        state3 = menuai.states.get("sensor.harbor1_departure_time")
         assert state1.state == "Harbor 1"
         assert state2.state == "Harbor 2"
         assert state3.state == str(dt_util.now().year + 2) + "-05-01T12:00:00+00:00"
@@ -75,29 +75,29 @@ async def test_coordinator(
 
         mock_data.side_effect = NoFerryFound()
         freezer.tick(timedelta(minutes=6))
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done()
         mock_data.assert_called_once()
-        state1 = hass.states.get("sensor.harbor1_departure_from")
+        state1 = menuai.states.get("sensor.harbor1_departure_from")
         assert state1.state == STATE_UNAVAILABLE
         mock_data.reset_mock()
 
         mock_data.return_value = get_ferries
         mock_data.side_effect = None
         freezer.tick(timedelta(minutes=6))
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done()
         # mock_data.assert_called_once()
-        state1 = hass.states.get("sensor.harbor1_departure_from")
+        state1 = menuai.states.get("sensor.harbor1_departure_from")
         assert state1.state == "Harbor 1"
         mock_data.reset_mock()
 
         mock_data.side_effect = InvalidAuthentication()
         freezer.tick(timedelta(minutes=6))
-        async_fire_time_changed(hass)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai)
+        await menuai.async_block_till_done()
         mock_data.assert_called_once()
-        state1 = hass.states.get("sensor.harbor1_departure_from")
+        state1 = menuai.states.get("sensor.harbor1_departure_from")
         assert state1.state == STATE_UNAVAILABLE
         mock_data.reset_mock()
 

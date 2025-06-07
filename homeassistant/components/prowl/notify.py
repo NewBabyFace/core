@@ -8,18 +8,18 @@ import logging
 
 import voluptuous as vol
 
-from homeassistant.components.notify import (
+from menuai.components.notify import (
     ATTR_DATA,
     ATTR_TITLE,
     ATTR_TITLE_DEFAULT,
     PLATFORM_SCHEMA as NOTIFY_PLATFORM_SCHEMA,
     BaseNotificationService,
 )
-from homeassistant.const import CONF_API_KEY
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_API_KEY
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 _RESOURCE = "https://api.prowlapp.com/publicapi/"
@@ -28,20 +28,20 @@ PLATFORM_SCHEMA = NOTIFY_PLATFORM_SCHEMA.extend({vol.Required(CONF_API_KEY): cv.
 
 
 async def async_get_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> ProwlNotificationService:
     """Get the Prowl notification service."""
-    return ProwlNotificationService(hass, config[CONF_API_KEY])
+    return ProwlNotificationService(menuai, config[CONF_API_KEY])
 
 
 class ProwlNotificationService(BaseNotificationService):
     """Implement the notification service for Prowl."""
 
-    def __init__(self, hass, api_key):
+    def __init__(self, menuai, api_key):
         """Initialize the service."""
-        self._hass = hass
+        self._menuai = menuai
         self._api_key = api_key
 
     async def async_send_message(self, message, **kwargs):
@@ -61,7 +61,7 @@ class ProwlNotificationService(BaseNotificationService):
             payload["url"] = data["url"]
 
         _LOGGER.debug("Attempting call Prowl service at %s", url)
-        session = async_get_clientsession(self._hass)
+        session = async_get_clientsession(self._menuai)
 
         try:
             async with asyncio.timeout(10):

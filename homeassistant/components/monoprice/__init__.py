@@ -5,10 +5,10 @@ import logging
 from pymonoprice import get_monoprice
 from serial import SerialException
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_PORT, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_PORT, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
 
 from .const import (
     CONF_NOT_FIRST_RUN,
@@ -23,12 +23,12 @@ PLATFORMS = [Platform.MEDIA_PLAYER]
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up Monoprice 6-Zone Amplifier from a config entry."""
     port = entry.data[CONF_PORT]
 
     try:
-        monoprice = await hass.async_add_executor_job(get_monoprice, port)
+        monoprice = await menuai.async_add_executor_job(get_monoprice, port)
     except SerialException as err:
         _LOGGER.error("Error connecting to Monoprice controller at %s", port)
         raise ConfigEntryNotReady from err
@@ -37,30 +37,30 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     first_run = not bool(entry.data.get(CONF_NOT_FIRST_RUN))
 
     if first_run:
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry, data={**entry.data, CONF_NOT_FIRST_RUN: True}
         )
 
     undo_listener = entry.add_update_listener(_update_listener)
 
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
+    menuai.data.setdefault(DOMAIN, {})[entry.entry_id] = {
         MONOPRICE_OBJECT: monoprice,
         UNDO_UPDATE_LISTENER: undo_listener,
         FIRST_RUN: first_run,
     }
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
     if not unload_ok:
         return False
 
-    hass.data[DOMAIN][entry.entry_id][UNDO_UPDATE_LISTENER]()
+    menuai.data[DOMAIN][entry.entry_id][UNDO_UPDATE_LISTENER]()
 
     def _cleanup(monoprice) -> None:
         """Destroy the Monoprice object.
@@ -70,14 +70,14 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         """
         del monoprice
 
-    monoprice = hass.data[DOMAIN][entry.entry_id][MONOPRICE_OBJECT]
-    hass.data[DOMAIN].pop(entry.entry_id)
+    monoprice = menuai.data[DOMAIN][entry.entry_id][MONOPRICE_OBJECT]
+    menuai.data[DOMAIN].pop(entry.entry_id)
 
-    await hass.async_add_executor_job(_cleanup, monoprice)
+    await menuai.async_add_executor_job(_cleanup, monoprice)
 
     return True
 
 
-async def _update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def _update_listener(menuai: menuai, entry: ConfigEntry) -> None:
     """Handle options update."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    await menuai.config_entries.async_reload(entry.entry_id)

@@ -14,25 +14,25 @@ from pymediaroom import (
 )
 import voluptuous as vol
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     PLATFORM_SCHEMA as MEDIA_PLAYER_PLATFORM_SCHEMA,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
     MediaType,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_NAME,
     CONF_OPTIMISTIC,
     CONF_TIMEOUT,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -57,14 +57,14 @@ PLATFORM_SCHEMA = MEDIA_PLAYER_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the Mediaroom platform."""
-    if (known_hosts := hass.data.get(DATA_MEDIAROOM)) is None:
-        known_hosts = hass.data[DATA_MEDIAROOM] = []
+    if (known_hosts := menuai.data.get(DATA_MEDIAROOM)) is None:
+        known_hosts = menuai.data[DATA_MEDIAROOM] = []
     if host := config.get(CONF_HOST):
         async_add_entities(
             [
@@ -83,7 +83,7 @@ async def async_setup_platform(
     def callback_notify(notify):
         """Process NOTIFY message from STB."""
         if notify.ip_address in known_hosts:
-            dispatcher_send(hass, SIGNAL_STB_NOTIFY, notify)
+            dispatcher_send(menuai, SIGNAL_STB_NOTIFY, notify)
             return
 
         _LOGGER.debug("Discovered new stb %s", notify.ip_address)
@@ -94,9 +94,9 @@ async def async_setup_platform(
         async_add_entities([new_stb])
 
     if not config[CONF_OPTIMISTIC]:
-        already_installed = hass.data.get(DISCOVERY_MEDIAROOM)
+        already_installed = menuai.data.get(DISCOVERY_MEDIAROOM)
         if not already_installed:
-            hass.data[DISCOVERY_MEDIAROOM] = await install_mediaroom_protocol(
+            menuai.data[DISCOVERY_MEDIAROOM] = await install_mediaroom_protocol(
                 responses_callback=callback_notify
             )
 
@@ -104,9 +104,9 @@ async def async_setup_platform(
             def stop_discovery(event):
                 """Stop discovery of new mediaroom STB's."""
                 _LOGGER.debug("Stopping internal pymediaroom discovery")
-                hass.data[DISCOVERY_MEDIAROOM].close()
+                menuai.data[DISCOVERY_MEDIAROOM].close()
 
-            hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, stop_discovery)
+            menuai.bus.async_listen_once(EVENT_menuai_STOP, stop_discovery)
 
             _LOGGER.debug("Auto discovery installed")
 
@@ -169,7 +169,7 @@ class MediaroomDevice(MediaPlayerEntity):
         """Return True if entity is available."""
         return self._available
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Retrieve latest state."""
 
         async def async_notify_received(notify):
@@ -185,7 +185,7 @@ class MediaroomDevice(MediaPlayerEntity):
 
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, SIGNAL_STB_NOTIFY, async_notify_received
+                self.menuai, SIGNAL_STB_NOTIFY, async_notify_received
             )
         )
 

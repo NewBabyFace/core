@@ -3,7 +3,7 @@
 DOMAIN = "aws"
 
 DATA_CONFIG = "aws_config"
-DATA_HASS_CONFIG = "aws_hass_config"
+DATA_menuai_CONFIG = "aws_menuai_config"
 DATA_SESSIONS = "aws_sessions"
 
 CONF_ACCESS_KEY_ID = "aws_access_key_id"

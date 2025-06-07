@@ -16,10 +16,10 @@ from simplipy.websocket import (
     WebsocketEvent,
 )
 
-from homeassistant.core import callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.update_coordinator import (
+from menuai.core import callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
 )
@@ -197,13 +197,13 @@ class SimpliSafeEntity(CoordinatorEntity[DataUpdateCoordinator[None]]):
         self.async_update_from_websocket_event(event)
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 DISPATCHER_TOPIC_WEBSOCKET_EVENT.format(self._system.system_id),
                 self._handle_websocket_update,
             )

@@ -6,17 +6,17 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from pytest_unordered import unordered
 
-from homeassistant.components.config import area_registry
-from homeassistant.components.sensor import SensorDeviceClass
-from homeassistant.const import (
+from menuai.components.config import area_registry
+from menuai.components.sensor import SensorDeviceClass
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     ATTR_UNIT_OF_MEASUREMENT,
     PERCENTAGE,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import area_registry as ar
-from homeassistant.util.dt import utcnow
+from menuai.core import menuai
+from menuai.helpers import area_registry as ar
+from menuai.util.dt import utcnow
 
 from tests.common import ANY
 from tests.typing import MockHAClientWebSocket, WebSocketGenerator
@@ -24,17 +24,17 @@ from tests.typing import MockHAClientWebSocket, WebSocketGenerator
 
 @pytest.fixture(name="client")
 async def client_fixture(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
+    menuai: menuai, menuai_ws_client: WebSocketGenerator
 ) -> MockHAClientWebSocket:
     """Fixture that can interact with the config manager API."""
-    area_registry.async_setup(hass)
-    return await hass_ws_client(hass)
+    area_registry.async_setup(menuai)
+    return await menuai_ws_client(menuai)
 
 
 @pytest.fixture
-async def mock_temperature_humidity_entity(hass: HomeAssistant) -> None:
+async def mock_temperature_humidity_entity(menuai: menuai) -> None:
     """Mock temperature and humidity sensors."""
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.mock_temperature",
         "20",
         {
@@ -42,7 +42,7 @@ async def mock_temperature_humidity_entity(hass: HomeAssistant) -> None:
             ATTR_UNIT_OF_MEASUREMENT: UnitOfTemperature.CELSIUS,
         },
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "sensor.mock_humidity",
         "50",
         {

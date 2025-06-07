@@ -12,14 +12,14 @@ from amberelectric.models.tariff_information import TariffInformation
 from dateutil import parser
 import pytest
 
-from homeassistant.components.amberelectric.const import (
+from menuai.components.amberelectric.const import (
     CONF_SITE_ID,
     CONF_SITE_NAME,
     DOMAIN,
 )
-from homeassistant.const import CONF_API_TOKEN
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.const import CONF_API_TOKEN
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from .helpers import GENERAL_CHANNEL, GENERAL_ONLY_SITE_ID, generate_current_interval
 
@@ -29,7 +29,7 @@ MOCK_API_TOKEN = "psk_0000000000000000"
 
 
 @pytest.fixture
-async def setup_no_spike(hass: HomeAssistant) -> AsyncGenerator[Mock]:
+async def setup_no_spike(menuai: menuai) -> AsyncGenerator[Mock]:
     """Set up general channel."""
     MockConfigEntry(
         domain="amberelectric",
@@ -38,7 +38,7 @@ async def setup_no_spike(hass: HomeAssistant) -> AsyncGenerator[Mock]:
             CONF_API_TOKEN: MOCK_API_TOKEN,
             CONF_SITE_ID: GENERAL_ONLY_SITE_ID,
         },
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
     instance = Mock()
     with patch(
@@ -46,13 +46,13 @@ async def setup_no_spike(hass: HomeAssistant) -> AsyncGenerator[Mock]:
         return_value=instance,
     ) as mock_update:
         instance.get_current_prices = Mock(return_value=GENERAL_CHANNEL)
-        assert await async_setup_component(hass, DOMAIN, {})
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, {})
+        await menuai.async_block_till_done()
         yield mock_update.return_value
 
 
 @pytest.fixture
-async def setup_potential_spike(hass: HomeAssistant) -> AsyncGenerator[Mock]:
+async def setup_potential_spike(menuai: menuai) -> AsyncGenerator[Mock]:
     """Set up general channel."""
     MockConfigEntry(
         domain="amberelectric",
@@ -61,7 +61,7 @@ async def setup_potential_spike(hass: HomeAssistant) -> AsyncGenerator[Mock]:
             CONF_API_TOKEN: MOCK_API_TOKEN,
             CONF_SITE_ID: GENERAL_ONLY_SITE_ID,
         },
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
     instance = Mock()
     with patch(
@@ -75,13 +75,13 @@ async def setup_potential_spike(hass: HomeAssistant) -> AsyncGenerator[Mock]:
         ]
         general_channel[0].actual_instance.spike_status = SpikeStatus.POTENTIAL
         instance.get_current_prices = Mock(return_value=general_channel)
-        assert await async_setup_component(hass, DOMAIN, {})
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, {})
+        await menuai.async_block_till_done()
         yield mock_update.return_value
 
 
 @pytest.fixture
-async def setup_spike(hass: HomeAssistant) -> AsyncGenerator[Mock]:
+async def setup_spike(menuai: menuai) -> AsyncGenerator[Mock]:
     """Set up general channel."""
     MockConfigEntry(
         domain="amberelectric",
@@ -90,7 +90,7 @@ async def setup_spike(hass: HomeAssistant) -> AsyncGenerator[Mock]:
             CONF_API_TOKEN: MOCK_API_TOKEN,
             CONF_SITE_ID: GENERAL_ONLY_SITE_ID,
         },
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
     instance = Mock()
     with patch(
@@ -104,16 +104,16 @@ async def setup_spike(hass: HomeAssistant) -> AsyncGenerator[Mock]:
         ]
         general_channel[0].actual_instance.spike_status = SpikeStatus.SPIKE
         instance.get_current_prices = Mock(return_value=general_channel)
-        assert await async_setup_component(hass, DOMAIN, {})
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, {})
+        await menuai.async_block_till_done()
         yield mock_update.return_value
 
 
 @pytest.mark.usefixtures("setup_no_spike")
-def test_no_spike_sensor(hass: HomeAssistant) -> None:
+def test_no_spike_sensor(menuai: menuai) -> None:
     """Testing the creation of the Amber renewables sensor."""
-    assert len(hass.states.async_all()) == 6
-    sensor = hass.states.get("binary_sensor.mock_title_price_spike")
+    assert len(menuai.states.async_all()) == 6
+    sensor = menuai.states.get("binary_sensor.mock_title_price_spike")
     assert sensor
     assert sensor.state == "off"
     assert sensor.attributes["icon"] == "mdi:power-plug"
@@ -121,10 +121,10 @@ def test_no_spike_sensor(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("setup_potential_spike")
-def test_potential_spike_sensor(hass: HomeAssistant) -> None:
+def test_potential_spike_sensor(menuai: menuai) -> None:
     """Testing the creation of the Amber renewables sensor."""
-    assert len(hass.states.async_all()) == 6
-    sensor = hass.states.get("binary_sensor.mock_title_price_spike")
+    assert len(menuai.states.async_all()) == 6
+    sensor = menuai.states.get("binary_sensor.mock_title_price_spike")
     assert sensor
     assert sensor.state == "off"
     assert sensor.attributes["icon"] == "mdi:power-plug-outline"
@@ -132,10 +132,10 @@ def test_potential_spike_sensor(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("setup_spike")
-def test_spike_sensor(hass: HomeAssistant) -> None:
+def test_spike_sensor(menuai: menuai) -> None:
     """Testing the creation of the Amber renewables sensor."""
-    assert len(hass.states.async_all()) == 6
-    sensor = hass.states.get("binary_sensor.mock_title_price_spike")
+    assert len(menuai.states.async_all()) == 6
+    sensor = menuai.states.get("binary_sensor.mock_title_price_spike")
     assert sensor
     assert sensor.state == "on"
     assert sensor.attributes["icon"] == "mdi:power-plug-off"
@@ -143,7 +143,7 @@ def test_spike_sensor(hass: HomeAssistant) -> None:
 
 
 @pytest.fixture
-async def setup_inactive_demand_window(hass: HomeAssistant) -> AsyncGenerator[Mock]:
+async def setup_inactive_demand_window(menuai: menuai) -> AsyncGenerator[Mock]:
     """Set up general channel."""
     MockConfigEntry(
         domain="amberelectric",
@@ -152,7 +152,7 @@ async def setup_inactive_demand_window(hass: HomeAssistant) -> AsyncGenerator[Mo
             CONF_API_TOKEN: MOCK_API_TOKEN,
             CONF_SITE_ID: GENERAL_ONLY_SITE_ID,
         },
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
     instance = Mock()
     with patch(
@@ -168,13 +168,13 @@ async def setup_inactive_demand_window(hass: HomeAssistant) -> AsyncGenerator[Mo
             demandWindow=False
         )
         instance.get_current_prices = Mock(return_value=general_channel)
-        assert await async_setup_component(hass, DOMAIN, {})
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, {})
+        await menuai.async_block_till_done()
         yield mock_update.return_value
 
 
 @pytest.fixture
-async def setup_active_demand_window(hass: HomeAssistant) -> AsyncGenerator[Mock]:
+async def setup_active_demand_window(menuai: menuai) -> AsyncGenerator[Mock]:
     """Set up general channel."""
     MockConfigEntry(
         domain="amberelectric",
@@ -183,7 +183,7 @@ async def setup_active_demand_window(hass: HomeAssistant) -> AsyncGenerator[Mock
             CONF_API_TOKEN: MOCK_API_TOKEN,
             CONF_SITE_ID: GENERAL_ONLY_SITE_ID,
         },
-    ).add_to_hass(hass)
+    ).add_to_menuai(menuai)
 
     instance = Mock()
     with patch(
@@ -199,24 +199,24 @@ async def setup_active_demand_window(hass: HomeAssistant) -> AsyncGenerator[Mock
             demandWindow=True
         )
         instance.get_current_prices = Mock(return_value=general_channel)
-        assert await async_setup_component(hass, DOMAIN, {})
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, {})
+        await menuai.async_block_till_done()
         yield mock_update.return_value
 
 
 @pytest.mark.usefixtures("setup_inactive_demand_window")
-def test_inactive_demand_window_sensor(hass: HomeAssistant) -> None:
+def test_inactive_demand_window_sensor(menuai: menuai) -> None:
     """Testing the creation of the Amber demand_window sensor."""
-    assert len(hass.states.async_all()) == 6
-    sensor = hass.states.get("binary_sensor.mock_title_demand_window")
+    assert len(menuai.states.async_all()) == 6
+    sensor = menuai.states.get("binary_sensor.mock_title_demand_window")
     assert sensor
     assert sensor.state == "off"
 
 
 @pytest.mark.usefixtures("setup_active_demand_window")
-def test_active_demand_window_sensor(hass: HomeAssistant) -> None:
+def test_active_demand_window_sensor(menuai: menuai) -> None:
     """Testing the creation of the Amber demand_window sensor."""
-    assert len(hass.states.async_all()) == 6
-    sensor = hass.states.get("binary_sensor.mock_title_demand_window")
+    assert len(menuai.states.async_all()) == 6
+    sensor = menuai.states.get("binary_sensor.mock_title_demand_window")
     assert sensor
     assert sensor.state == "on"

@@ -10,7 +10,7 @@ from xmlrpc.client import Fault
 from aiohttp.client_exceptions import ClientConnectionError, ClientResponseError
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
@@ -18,8 +18,8 @@ from homeassistant.const import (
     CONF_USERNAME,
     CONF_VERIFY_SSL,
 )
-from homeassistant.helpers import selector
-from homeassistant.helpers.schema_config_entry_flow import (
+from menuai.helpers import selector
+from menuai.helpers.schema_config_entry_flow import (
     SchemaCommonFlowHandler,
     SchemaConfigFlowHandler,
     SchemaFlowError,
@@ -37,7 +37,7 @@ async def validate_user_input(
     handler.parent_handler._async_abort_entries_match(  # noqa: SLF001
         {CONF_HOST: user_input[CONF_HOST]}
     )
-    instance, _ = get_instance_from_options(handler.parent_handler.hass, user_input)
+    instance, _ = get_instance_from_options(handler.parent_handler.menuai, user_input)
     try:
         data = await instance.update()
     except ClientResponseError as err:

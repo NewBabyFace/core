@@ -8,18 +8,18 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from homeassistant.components import template
-from homeassistant.components.blueprint import (
+from menuai.components import template
+from menuai.components.blueprint import (
     BLUEPRINT_SCHEMA,
     Blueprint,
     BlueprintInUse,
     DomainBlueprints,
 )
-from homeassistant.components.template import DOMAIN, SERVICE_RELOAD
-from homeassistant.core import Context, HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util, yaml as yaml_util
+from menuai.components.template import DOMAIN, SERVICE_RELOAD
+from menuai.core import Context, menuai, callback
+from menuai.helpers import device_registry as dr
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util, yaml as yaml_util
 
 from tests.common import async_mock_service
 
@@ -47,7 +47,7 @@ def patch_blueprint(
         )
 
     with patch(
-        "homeassistant.components.blueprint.models.DomainBlueprints._load_blueprint",
+        "menuai.components.blueprint.models.DomainBlueprints._load_blueprint",
         mock_load_blueprint,
     ):
         yield
@@ -74,25 +74,25 @@ def patch_invalid_blueprint() -> Iterator[None]:
         )
 
     with patch(
-        "homeassistant.components.blueprint.models.DomainBlueprints._load_blueprint",
+        "menuai.components.blueprint.models.DomainBlueprints._load_blueprint",
         mock_load_blueprint,
     ):
         yield
 
 
 async def test_inverted_binary_sensor(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Test inverted binary sensor blueprint."""
-    hass.states.async_set("binary_sensor.foo", "on", {"friendly_name": "Foo"})
-    hass.states.async_set("binary_sensor.bar", "off", {"friendly_name": "Bar"})
+    menuai.states.async_set("binary_sensor.foo", "on", {"friendly_name": "Foo"})
+    menuai.states.async_set("binary_sensor.bar", "off", {"friendly_name": "Bar"})
 
     with patch_blueprint(
         "inverted_binary_sensor.yaml",
         BUILTIN_BLUEPRINT_FOLDER / "inverted_binary_sensor.yaml",
     ):
         assert await async_setup_component(
-            hass,
+            menuai,
             "template",
             {
                 "template": [
@@ -114,44 +114,44 @@ async def test_inverted_binary_sensor(
             },
         )
 
-    hass.states.async_set("binary_sensor.foo", "off", {"friendly_name": "Foo"})
-    hass.states.async_set("binary_sensor.bar", "on", {"friendly_name": "Bar"})
-    await hass.async_block_till_done()
+    menuai.states.async_set("binary_sensor.foo", "off", {"friendly_name": "Foo"})
+    menuai.states.async_set("binary_sensor.bar", "on", {"friendly_name": "Bar"})
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("binary_sensor.foo").state == "off"
-    assert hass.states.get("binary_sensor.bar").state == "on"
+    assert menuai.states.get("binary_sensor.foo").state == "off"
+    assert menuai.states.get("binary_sensor.bar").state == "on"
 
-    inverted_foo = hass.states.get("binary_sensor.inverted_foo")
+    inverted_foo = menuai.states.get("binary_sensor.inverted_foo")
     assert inverted_foo
     assert inverted_foo.state == "on"
 
-    inverted_bar = hass.states.get("binary_sensor.inverted_bar")
+    inverted_bar = menuai.states.get("binary_sensor.inverted_bar")
     assert inverted_bar
     assert inverted_bar.state == "off"
 
-    foo_template = template.helpers.blueprint_in_template(hass, "binary_sensor.foo")
+    foo_template = template.helpers.blueprint_in_template(menuai, "binary_sensor.foo")
     inverted_foo_template = template.helpers.blueprint_in_template(
-        hass, "binary_sensor.inverted_foo"
+        menuai, "binary_sensor.inverted_foo"
     )
     assert foo_template is None
     assert inverted_foo_template == "inverted_binary_sensor.yaml"
 
     inverted_binary_sensor_blueprint_entity_ids = (
-        template.helpers.templates_with_blueprint(hass, "inverted_binary_sensor.yaml")
+        template.helpers.templates_with_blueprint(menuai, "inverted_binary_sensor.yaml")
     )
     assert len(inverted_binary_sensor_blueprint_entity_ids) == 2
 
-    assert len(template.helpers.templates_with_blueprint(hass, "dummy.yaml")) == 0
+    assert len(template.helpers.templates_with_blueprint(menuai, "dummy.yaml")) == 0
 
     with pytest.raises(BlueprintInUse):
-        await template.async_get_blueprints(hass).async_remove_blueprint(
+        await template.async_get_blueprints(menuai).async_remove_blueprint(
             "inverted_binary_sensor.yaml"
         )
 
 
-async def test_reload_template_when_blueprint_changes(hass: HomeAssistant) -> None:
+async def test_reload_template_when_blueprint_changes(menuai: menuai) -> None:
     """Test a template is updated at reload if the blueprint has changed."""
-    hass.states.async_set("binary_sensor.foo", "on", {"friendly_name": "Foo"})
+    menuai.states.async_set("binary_sensor.foo", "on", {"friendly_name": "Foo"})
     config = {
         DOMAIN: [
             {
@@ -167,14 +167,14 @@ async def test_reload_template_when_blueprint_changes(hass: HomeAssistant) -> No
         "inverted_binary_sensor.yaml",
         BUILTIN_BLUEPRINT_FOLDER / "inverted_binary_sensor.yaml",
     ):
-        assert await async_setup_component(hass, DOMAIN, config)
+        assert await async_setup_component(menuai, DOMAIN, config)
 
-    hass.states.async_set("binary_sensor.foo", "off", {"friendly_name": "Foo"})
-    await hass.async_block_till_done()
+    menuai.states.async_set("binary_sensor.foo", "off", {"friendly_name": "Foo"})
+    await menuai.async_block_till_done()
 
-    assert hass.states.get("binary_sensor.foo").state == "off"
+    assert menuai.states.get("binary_sensor.foo").state == "off"
 
-    inverted = hass.states.get("binary_sensor.inverted_foo")
+    inverted = menuai.states.get("binary_sensor.inverted_foo")
     assert inverted
     assert inverted.state == "on"
 
@@ -185,29 +185,29 @@ async def test_reload_template_when_blueprint_changes(hass: HomeAssistant) -> No
     blueprint_config["binary_sensor"]["state"] = "{{ states(reference_entity) }}"
     with (
         patch(
-            "homeassistant.config.load_yaml_config_file",
+            "menuai.config.load_yaml_config_file",
             autospec=True,
             return_value=config,
         ),
         patch(
-            "homeassistant.components.blueprint.models.yaml_util.load_yaml_dict",
+            "menuai.components.blueprint.models.yaml_util.load_yaml_dict",
             autospec=True,
             return_value=blueprint_config,
         ),
     ):
-        await hass.services.async_call(DOMAIN, SERVICE_RELOAD, blocking=True)
+        await menuai.services.async_call(DOMAIN, SERVICE_RELOAD, blocking=True)
 
-    hass.states.async_set("binary_sensor.foo", "off", {"friendly_name": "Foo"})
-    await hass.async_block_till_done()
+    menuai.states.async_set("binary_sensor.foo", "off", {"friendly_name": "Foo"})
+    await menuai.async_block_till_done()
 
-    not_inverted = hass.states.get("binary_sensor.inverted_foo")
+    not_inverted = menuai.states.get("binary_sensor.inverted_foo")
     assert not_inverted
     assert not_inverted.state == "off"
 
-    hass.states.async_set("binary_sensor.foo", "on", {"friendly_name": "Foo"})
-    await hass.async_block_till_done()
+    menuai.states.async_set("binary_sensor.foo", "on", {"friendly_name": "Foo"})
+    await menuai.async_block_till_done()
 
-    not_inverted = hass.states.get("binary_sensor.inverted_foo")
+    not_inverted = menuai.states.get("binary_sensor.inverted_foo")
     assert not_inverted
     assert not_inverted.state == "on"
 
@@ -217,13 +217,13 @@ async def test_reload_template_when_blueprint_changes(hass: HomeAssistant) -> No
     ["test_event_sensor.yaml", "test_event_sensor_legacy_schema.yaml"],
 )
 async def test_trigger_event_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     blueprint: str,
 ) -> None:
     """Test event sensor blueprint."""
     assert await async_setup_component(
-        hass,
+        menuai,
         "template",
         {
             "template": [
@@ -243,13 +243,13 @@ async def test_trigger_event_sensor(
 
     context = Context()
     now = dt_util.utcnow()
-    with patch("homeassistant.util.dt.now", return_value=now):
-        hass.bus.async_fire(
+    with patch("menuai.util.dt.now", return_value=now):
+        menuai.bus.async_fire(
             "my_custom_event", {"foo": "bar", "beer": 2}, context=context
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    date_state = hass.states.get("sensor.my_custom_event")
+    date_state = menuai.states.get("sensor.my_custom_event")
     assert date_state is not None
     assert date_state.state == now.isoformat(timespec="seconds")
     data = date_state.attributes.get("data")
@@ -259,17 +259,17 @@ async def test_trigger_event_sensor(
     assert data.get("beer") == 2
 
     inverted_foo_template = template.helpers.blueprint_in_template(
-        hass, "sensor.my_custom_event"
+        menuai, "sensor.my_custom_event"
     )
     assert inverted_foo_template == blueprint
 
     inverted_binary_sensor_blueprint_entity_ids = (
-        template.helpers.templates_with_blueprint(hass, blueprint)
+        template.helpers.templates_with_blueprint(menuai, blueprint)
     )
     assert len(inverted_binary_sensor_blueprint_entity_ids) == 1
 
     with pytest.raises(BlueprintInUse):
-        await template.async_get_blueprints(hass).async_remove_blueprint(blueprint)
+        await template.async_get_blueprints(menuai).async_remove_blueprint(blueprint)
 
 
 @pytest.mark.parametrize(
@@ -298,11 +298,11 @@ async def test_trigger_event_sensor(
     ],
 )
 async def test_blueprint_template_override(
-    hass: HomeAssistant, blueprint: str, override: dict
+    menuai: menuai, blueprint: str, override: dict
 ) -> None:
     """Test blueprint template where the template config overrides the blueprint."""
     assert await async_setup_component(
-        hass,
+        menuai,
         "template",
         {
             "template": [
@@ -320,31 +320,31 @@ async def test_blueprint_template_override(
             ]
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    date_state = hass.states.get("sensor.my_custom_event")
+    date_state = menuai.states.get("sensor.my_custom_event")
     assert date_state is not None
     assert date_state.state == "unknown"
 
     context = Context()
     now = dt_util.utcnow()
-    with patch("homeassistant.util.dt.now", return_value=now):
-        hass.bus.async_fire(
+    with patch("menuai.util.dt.now", return_value=now):
+        menuai.bus.async_fire(
             "my_custom_event", {"foo": "bar", "beer": 2}, context=context
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
-    date_state = hass.states.get("sensor.my_custom_event")
+    date_state = menuai.states.get("sensor.my_custom_event")
     assert date_state is not None
     assert date_state.state == "unknown"
 
     context = Context()
     now = dt_util.utcnow()
-    with patch("homeassistant.util.dt.now", return_value=now):
-        hass.bus.async_fire("override", {"foo": "bar", "beer": 2}, context=context)
-        await hass.async_block_till_done()
+    with patch("menuai.util.dt.now", return_value=now):
+        menuai.bus.async_fire("override", {"foo": "bar", "beer": 2}, context=context)
+        await menuai.async_block_till_done()
 
-    date_state = hass.states.get("sensor.my_custom_event")
+    date_state = menuai.states.get("sensor.my_custom_event")
     assert date_state is not None
     assert date_state.state == now.isoformat(timespec="seconds")
     data = date_state.attributes.get("data")
@@ -354,30 +354,30 @@ async def test_blueprint_template_override(
     assert data.get("beer") == 2
 
     inverted_foo_template = template.helpers.blueprint_in_template(
-        hass, "sensor.my_custom_event"
+        menuai, "sensor.my_custom_event"
     )
     assert inverted_foo_template == blueprint
 
     inverted_binary_sensor_blueprint_entity_ids = (
-        template.helpers.templates_with_blueprint(hass, blueprint)
+        template.helpers.templates_with_blueprint(menuai, blueprint)
     )
     assert len(inverted_binary_sensor_blueprint_entity_ids) == 1
 
     with pytest.raises(BlueprintInUse):
-        await template.async_get_blueprints(hass).async_remove_blueprint(blueprint)
+        await template.async_get_blueprints(menuai).async_remove_blueprint(blueprint)
 
 
-async def test_domain_blueprint(hass: HomeAssistant) -> None:
+async def test_domain_blueprint(menuai: menuai) -> None:
     """Test DomainBlueprint services."""
-    reload_handler_calls = async_mock_service(hass, DOMAIN, SERVICE_RELOAD)
+    reload_handler_calls = async_mock_service(menuai, DOMAIN, SERVICE_RELOAD)
     mock_create_file = MagicMock()
     mock_create_file.return_value = True
 
     with patch(
-        "homeassistant.components.blueprint.models.DomainBlueprints._create_file",
+        "menuai.components.blueprint.models.DomainBlueprints._create_file",
         mock_create_file,
     ):
-        await template.async_get_blueprints(hass).async_add_blueprint(
+        await template.async_get_blueprints(menuai).async_add_blueprint(
             Blueprint(
                 {
                     "blueprint": {
@@ -396,13 +396,13 @@ async def test_domain_blueprint(hass: HomeAssistant) -> None:
 
 
 async def test_invalid_blueprint(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test an invalid blueprint definition."""
 
     with patch_invalid_blueprint():
         assert await async_setup_component(
-            hass,
+            menuai,
             "template",
             {
                 "template": [
@@ -417,18 +417,18 @@ async def test_invalid_blueprint(
         )
 
     assert "more than one platform defined per blueprint" in caplog.text
-    blueprints = await template.async_get_blueprints(hass).async_get_blueprints()
+    blueprints = await template.async_get_blueprints(menuai).async_get_blueprints()
     assert "invalid.yaml" not in blueprints
 
 
-async def test_no_blueprint(hass: HomeAssistant) -> None:
+async def test_no_blueprint(menuai: menuai) -> None:
     """Test templates without blueprints."""
     with patch_blueprint(
         "inverted_binary_sensor.yaml",
         BUILTIN_BLUEPRINT_FOLDER / "inverted_binary_sensor.yaml",
     ):
         assert await async_setup_component(
-            hass,
+            menuai,
             "template",
             {
                 "template": [
@@ -444,18 +444,18 @@ async def test_no_blueprint(hass: HomeAssistant) -> None:
             },
         )
 
-    hass.states.async_set("binary_sensor.foo", "off", {"friendly_name": "Foo"})
-    await hass.async_block_till_done()
+    menuai.states.async_set("binary_sensor.foo", "off", {"friendly_name": "Foo"})
+    await menuai.async_block_till_done()
 
     assert (
         len(
             template.helpers.templates_with_blueprint(
-                hass, "inverted_binary_sensor.yaml"
+                menuai, "inverted_binary_sensor.yaml"
             )
         )
         == 1
     )
     assert (
-        template.helpers.blueprint_in_template(hass, "binary_sensor.test_entity")
+        template.helpers.blueprint_in_template(menuai, "binary_sensor.test_entity")
         is None
     )

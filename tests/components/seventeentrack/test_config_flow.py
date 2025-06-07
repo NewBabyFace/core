@@ -5,16 +5,16 @@ from unittest.mock import AsyncMock
 from pyseventeentrack.errors import SeventeenTrackError
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components.seventeentrack import DOMAIN
-from homeassistant.components.seventeentrack.const import (
+from menuai import config_entries
+from menuai.components.seventeentrack import DOMAIN
+from menuai.components.seventeentrack.const import (
     CONF_SHOW_ARCHIVED,
     CONF_SHOW_DELIVERED,
 )
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.config_entries import SOURCE_USER
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
@@ -32,20 +32,20 @@ VALID_CONFIG_OLD = {
 
 
 async def test_create_entry(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock, mock_seventeentrack: AsyncMock
+    menuai: menuai, mock_setup_entry: AsyncMock, mock_seventeentrack: AsyncMock
 ) -> None:
     """Test that the user step works."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         VALID_CONFIG,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "someemail@gmail.com"
@@ -71,7 +71,7 @@ async def test_create_entry(
     ],
 )
 async def test_flow_fails(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_seventeentrack: AsyncMock,
     return_value,
     side_effect,
@@ -80,7 +80,7 @@ async def test_flow_fails(
     """Test that the user step fails."""
     mock_seventeentrack.return_value.profile.login.return_value = return_value
     mock_seventeentrack.return_value.profile.login.side_effect = side_effect
-    failed_result = await hass.config_entries.flow.async_init(
+    failed_result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data=VALID_CONFIG,
@@ -91,11 +91,11 @@ async def test_flow_fails(
     mock_seventeentrack.return_value.profile.login.return_value = True
     mock_seventeentrack.return_value.profile.login.side_effect = None
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         failed_result["flow_id"],
         VALID_CONFIG,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "someemail@gmail.com"
@@ -105,7 +105,7 @@ async def test_flow_fails(
     }
 
 
-async def test_option_flow(hass: HomeAssistant, mock_seventeentrack: AsyncMock) -> None:
+async def test_option_flow(menuai: menuai, mock_seventeentrack: AsyncMock) -> None:
     """Test option flow."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -115,16 +115,16 @@ async def test_option_flow(hass: HomeAssistant, mock_seventeentrack: AsyncMock) 
             CONF_SHOW_DELIVERED: False,
         },
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
-    result = await hass.config_entries.options.async_init(entry.entry_id)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
+    result = await menuai.config_entries.options.async_init(entry.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input={CONF_SHOW_ARCHIVED: True, CONF_SHOW_DELIVERED: False},
     )

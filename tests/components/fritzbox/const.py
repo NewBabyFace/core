@@ -1,7 +1,7 @@
 """Constants for fritzbox tests."""
 
-from homeassistant.components.fritzbox.const import DOMAIN
-from homeassistant.const import CONF_DEVICES, CONF_HOST, CONF_PASSWORD, CONF_USERNAME
+from menuai.components.fritzbox.const import DOMAIN
+from menuai.const import CONF_DEVICES, CONF_HOST, CONF_PASSWORD, CONF_USERNAME
 
 MOCK_CONFIG = {
     DOMAIN: {

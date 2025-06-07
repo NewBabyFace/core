@@ -7,10 +7,10 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 from zeroconf import DNSCache, ServiceInfo
 
-from homeassistant.components.thread import dataset_store
-from homeassistant.components.thread.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.components.thread import dataset_store
+from menuai.components.thread.const import DOMAIN
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from . import DATASET_1
 
@@ -19,12 +19,12 @@ from tests.typing import ClientSessionGenerator
 
 TEST_ZEROCONF_RECORD_1 = ServiceInfo(
     type_="_meshcop._udp.local.",
-    name="HomeAssistant OpenThreadBorderRouter #0BBF._meshcop._udp.local.",
+    name="menuai OpenThreadBorderRouter #0BBF._meshcop._udp.local.",
     addresses=["127.0.0.1", "fe80::10ed:6406:4ee9:85e5"],
     port=8080,
     properties={
         "rv": "1",
-        "vn": "HomeAssistant",
+        "vn": "menuai",
         "mn": "OpenThreadBorderRouter",
         "nn": "OpenThread HC",
         "xp": "\xe6\x0f\xc7\xc1\x86!,\xe5",
@@ -181,10 +181,10 @@ def ndb() -> Mock:
 
 
 async def test_diagnostics(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_async_zeroconf: MagicMock,
     ndb: Mock,
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test diagnostics for thread routers."""
@@ -235,12 +235,12 @@ async def test_diagnostics(
             TEST_ZEROCONF_RECORD_6.dns_pointer(),
         ]
     )
-    assert await async_setup_component(hass, DOMAIN, {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, DOMAIN, {})
+    await menuai.async_block_till_done()
 
-    config_entry = hass.config_entries.async_entries(DOMAIN)[0]
+    config_entry = menuai.config_entries.async_entries(DOMAIN)[0]
 
-    await dataset_store.async_add_dataset(hass, "source", DATASET_1)
+    await dataset_store.async_add_dataset(menuai, "source", DATASET_1)
 
     ndb.neighbours.append(
         MockNeighbour(
@@ -275,6 +275,6 @@ async def test_diagnostics(
         )
     )
 
-    diag = await get_diagnostics_for_config_entry(hass, hass_client, config_entry)
+    diag = await get_diagnostics_for_config_entry(menuai, menuai_client, config_entry)
 
     assert diag == snapshot

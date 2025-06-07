@@ -1,4 +1,4 @@
-"""The exceptions used by Home Assistant."""
+"""The exceptions used by MenuAI."""
 
 from __future__ import annotations
 
@@ -31,8 +31,8 @@ def import_async_get_exception_message() -> Callable[
     return async_get_exception_message_import
 
 
-class HomeAssistantError(Exception):
-    """General Home Assistant exception occurred."""
+class menuaiError(Exception):
+    """General MenuAI exception occurred."""
 
     _message: str | None = None
     generate_message: bool = False
@@ -84,7 +84,7 @@ class HomeAssistantError(Exception):
         return self._message
 
 
-class ConfigValidationError(HomeAssistantError, ExceptionGroup[Exception]):
+class ConfigValidationError(menuaiError, ExceptionGroup[Exception]):
     """A validation exception occurred when validating the configuration."""
 
     def __init__(
@@ -104,19 +104,19 @@ class ConfigValidationError(HomeAssistantError, ExceptionGroup[Exception]):
         self.generate_message = True
 
 
-class ServiceValidationError(HomeAssistantError):
+class ServiceValidationError(menuaiError):
     """A validation exception occurred when calling a service."""
 
 
-class InvalidEntityFormatError(HomeAssistantError):
+class InvalidEntityFormatError(menuaiError):
     """When an invalid formatted entity is encountered."""
 
 
-class NoEntitySpecifiedError(HomeAssistantError):
+class NoEntitySpecifiedError(menuaiError):
     """When no entity is specified."""
 
 
-class TemplateError(HomeAssistantError):
+class TemplateError(menuaiError):
     """Error during template rendering."""
 
     def __init__(self, exception: Exception | str) -> None:
@@ -128,7 +128,7 @@ class TemplateError(HomeAssistantError):
 
 
 @dataclass(slots=True)
-class ConditionError(HomeAssistantError):
+class ConditionError(menuaiError):
     """Error during condition evaluation."""
 
     type: str
@@ -195,7 +195,7 @@ class ConditionErrorContainer(ConditionError):
             yield from item.output(indent)
 
 
-class IntegrationError(HomeAssistantError):
+class IntegrationError(menuaiError):
     """Base class for platform and config entry exceptions."""
 
     def __str__(self) -> str:
@@ -219,11 +219,11 @@ class ConfigEntryAuthFailed(IntegrationError):
     """Error to indicate that config entry could not authenticate."""
 
 
-class InvalidStateError(HomeAssistantError):
+class InvalidStateError(menuaiError):
     """When an invalid state is encountered."""
 
 
-class Unauthorized(HomeAssistantError):
+class Unauthorized(menuaiError):
     """When an action is unauthorized."""
 
     def __init__(
@@ -261,7 +261,7 @@ class ServiceNotFound(ServiceValidationError):
     def __init__(self, domain: str, service: str) -> None:
         """Initialize error."""
         super().__init__(
-            translation_domain="homeassistant",
+            translation_domain="menuai",
             translation_key="service_not_found",
             translation_placeholders={"domain": domain, "service": service},
         )
@@ -276,7 +276,7 @@ class ServiceNotSupported(ServiceValidationError):
     def __init__(self, domain: str, service: str, entity_id: str) -> None:
         """Initialize ServiceNotSupported exception."""
         super().__init__(
-            translation_domain="homeassistant",
+            translation_domain="menuai",
             translation_key="service_not_supported",
             translation_placeholders={
                 "domain": domain,
@@ -289,7 +289,7 @@ class ServiceNotSupported(ServiceValidationError):
         self.generate_message = True
 
 
-class MaxLengthExceeded(HomeAssistantError):
+class MaxLengthExceeded(menuaiError):
     """Raised when a property value has exceeded the max character length."""
 
     def __init__(
@@ -299,7 +299,7 @@ class MaxLengthExceeded(HomeAssistantError):
         if TYPE_CHECKING:
             value = str(value)
         super().__init__(
-            translation_domain="homeassistant",
+            translation_domain="menuai",
             translation_key="max_length_exceeded",
             translation_placeholders={
                 "value": value,
@@ -313,7 +313,7 @@ class MaxLengthExceeded(HomeAssistantError):
         self.generate_message = True
 
 
-class DependencyError(HomeAssistantError):
+class DependencyError(menuaiError):
     """Raised when dependencies cannot be setup."""
 
     def __init__(self, failed_dependencies: list[str]) -> None:

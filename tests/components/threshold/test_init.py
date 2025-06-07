@@ -2,21 +2,21 @@
 
 import pytest
 
-from homeassistant.components.threshold.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.components.threshold.const import DOMAIN
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from tests.common import MockConfigEntry
 
 
 @pytest.mark.parametrize("platform", ["binary_sensor"])
 async def test_setup_and_remove_config_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     platform: str,
 ) -> None:
     """Test setting up and removing a config entry."""
-    hass.states.async_set("sensor.input", "-10")
+    menuai.states.async_set("sensor.input", "-10")
 
     input_sensor = "sensor.input"
 
@@ -35,15 +35,15 @@ async def test_setup_and_remove_config_entry(
         },
         title="Input threshold",
     )
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Check the entity is registered in the entity registry
     assert entity_registry.async_get(threshold_entity_id) is not None
 
     # Check the platform is setup correctly
-    state = hass.states.get(threshold_entity_id)
+    state = menuai.states.get(threshold_entity_id)
     assert state
     assert state.state == "on"
     assert state.attributes["entity_id"] == input_sensor
@@ -55,20 +55,20 @@ async def test_setup_and_remove_config_entry(
     assert state.attributes["upper"] is None
 
     # Remove the config entry
-    assert await hass.config_entries.async_remove(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_remove(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Check the state and entity registry entry are removed
-    assert hass.states.get(threshold_entity_id) is None
+    assert menuai.states.get(threshold_entity_id) is None
     assert entity_registry.async_get(threshold_entity_id) is None
 
 
 @pytest.mark.parametrize("platform", ["sensor"])
-async def test_entry_changed(hass: HomeAssistant, platform) -> None:
+async def test_entry_changed(menuai: menuai, platform) -> None:
     """Test reconfiguring."""
 
-    device_registry = dr.async_get(hass)
-    entity_registry = er.async_get(hass)
+    device_registry = dr.async_get(menuai)
+    entity_registry = er.async_get(menuai)
 
     def _create_mock_entity(domain: str, name: str) -> er.RegistryEntry:
         config_entry = MockConfigEntry(
@@ -76,7 +76,7 @@ async def test_entry_changed(hass: HomeAssistant, platform) -> None:
             domain="test",
             title=f"{name}",
         )
-        config_entry.add_to_hass(hass)
+        config_entry.add_to_menuai(menuai)
         device_entry = device_registry.async_get_or_create(
             identifiers={("test", name)}, config_entry_id=config_entry.entry_id
         )
@@ -107,17 +107,17 @@ async def test_entry_changed(hass: HomeAssistant, platform) -> None:
         },
         title="My integration",
     )
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.entry_id in _get_device_config_entries(run1_entry)
     assert config_entry.entry_id not in _get_device_config_entries(run2_entry)
 
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         config_entry, options={**config_entry.options, "entity_id": "sensor.changed"}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Check that the config entry association has updated
     assert config_entry.entry_id not in _get_device_config_entries(run1_entry)
@@ -125,7 +125,7 @@ async def test_entry_changed(hass: HomeAssistant, platform) -> None:
 
 
 async def test_device_cleaning(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
@@ -133,7 +133,7 @@ async def test_device_cleaning(
 
     # Source entity device config entry
     source_config_entry = MockConfigEntry()
-    source_config_entry.add_to_hass(hass)
+    source_config_entry.add_to_menuai(menuai)
 
     # Device entry of the source entity
     source_device1_entry = device_registry.async_get_or_create(
@@ -150,7 +150,7 @@ async def test_device_cleaning(
         config_entry=source_config_entry,
         device_id=source_device1_entry.id,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert entity_registry.async_get("sensor.test_source") is not None
 
     # Configure the configuration entry for Threshold
@@ -166,9 +166,9 @@ async def test_device_cleaning(
         },
         title="Threshold",
     )
-    threshold_config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(threshold_config_entry.entry_id)
-    await hass.async_block_till_done()
+    threshold_config_entry.add_to_menuai(menuai)
+    assert await menuai.config_entries.async_setup(threshold_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Confirm the link between the source entity device and the threshold sensor
     threshold_entity = entity_registry.async_get("binary_sensor.threshold")
@@ -186,7 +186,7 @@ async def test_device_cleaning(
         identifiers={("sensor", "identifier_test3")},
         connections={("mac", "30:31:32:33:34:03")},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Before reloading the config entry, two devices are expected to be linked
     devices_before_reload = device_registry.devices.get_devices_for_config_entry_id(
@@ -195,8 +195,8 @@ async def test_device_cleaning(
     assert len(devices_before_reload) == 3
 
     # Config entry reload
-    await hass.config_entries.async_reload(threshold_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_reload(threshold_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Confirm the link between the source entity device and the threshold sensor after reload
     threshold_entity = entity_registry.async_get("binary_sensor.threshold")

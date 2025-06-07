@@ -8,10 +8,10 @@ from unittest.mock import patch
 import pytest
 from voluptuous import MultipleInvalid
 
-from homeassistant.components import pilight
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.components import pilight
+from menuai.core import menuai
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from tests.common import (
     assert_setup_component,
@@ -48,7 +48,7 @@ class PilightDaemonSim:
         _LOGGER.error("PilightDaemonSim payload: %s", call)
 
     def start(self):
-        """Handle homeassistant.start callback.
+        """Handle menuai.start callback.
 
         Also sends one test message after start up
         """
@@ -59,7 +59,7 @@ class PilightDaemonSim:
             self.called = True
 
     def stop(self):
-        """Handle homeassistant.stop callback."""
+        """Handle menuai.stop callback."""
         _LOGGER.error("PilightDaemonSim stop")
 
     def set_callback(self, function):
@@ -68,15 +68,15 @@ class PilightDaemonSim:
         _LOGGER.error("PilightDaemonSim callback: %s", function)
 
 
-@patch("homeassistant.components.pilight._LOGGER.error")
-async def test_connection_failed_error(mock_error, hass: HomeAssistant) -> None:
+@patch("menuai.components.pilight._LOGGER.error")
+async def test_connection_failed_error(mock_error, menuai: menuai) -> None:
     """Try to connect at 127.0.0.1:5001 with socket error."""
     with (
         assert_setup_component(4),
         patch("pilight.pilight.Client", side_effect=socket.error) as mock_client,
     ):
         assert not await async_setup_component(
-            hass, pilight.DOMAIN, {pilight.DOMAIN: {}}
+            menuai, pilight.DOMAIN, {pilight.DOMAIN: {}}
         )
         mock_client.assert_called_once_with(
             host=pilight.DEFAULT_HOST, port=pilight.DEFAULT_PORT
@@ -84,15 +84,15 @@ async def test_connection_failed_error(mock_error, hass: HomeAssistant) -> None:
         assert mock_error.call_count == 1
 
 
-@patch("homeassistant.components.pilight._LOGGER.error")
-async def test_connection_timeout_error(mock_error, hass: HomeAssistant) -> None:
+@patch("menuai.components.pilight._LOGGER.error")
+async def test_connection_timeout_error(mock_error, menuai: menuai) -> None:
     """Try to connect at 127.0.0.1:5001 with socket timeout."""
     with (
         assert_setup_component(4),
         patch("pilight.pilight.Client", side_effect=socket.timeout) as mock_client,
     ):
         assert not await async_setup_component(
-            hass, pilight.DOMAIN, {pilight.DOMAIN: {}}
+            menuai, pilight.DOMAIN, {pilight.DOMAIN: {}}
         )
         mock_client.assert_called_once_with(
             host=pilight.DEFAULT_HOST, port=pilight.DEFAULT_PORT
@@ -101,14 +101,14 @@ async def test_connection_timeout_error(mock_error, hass: HomeAssistant) -> None
 
 
 @patch("pilight.pilight.Client", PilightDaemonSim)
-async def test_send_code_no_protocol(hass: HomeAssistant) -> None:
+async def test_send_code_no_protocol(menuai: menuai) -> None:
     """Try to send data without protocol information, should give error."""
     with assert_setup_component(4):
-        assert await async_setup_component(hass, pilight.DOMAIN, {pilight.DOMAIN: {}})
+        assert await async_setup_component(menuai, pilight.DOMAIN, {pilight.DOMAIN: {}})
 
         # Call without protocol info, should raise an error
         with pytest.raises(MultipleInvalid) as excinfo:
-            await hass.services.async_call(
+            await menuai.services.async_call(
                 pilight.DOMAIN,
                 pilight.SERVICE_NAME,
                 service_data={"noprotocol": "test", "value": 42},
@@ -117,59 +117,59 @@ async def test_send_code_no_protocol(hass: HomeAssistant) -> None:
         assert "required key not provided @ data['protocol']" in str(excinfo.value)
 
 
-@patch("homeassistant.components.pilight._LOGGER.error")
-@patch("homeassistant.components.pilight._LOGGER", _LOGGER)
+@patch("menuai.components.pilight._LOGGER.error")
+@patch("menuai.components.pilight._LOGGER", _LOGGER)
 @patch("pilight.pilight.Client", PilightDaemonSim)
-async def test_send_code(mock_pilight_error, hass: HomeAssistant) -> None:
+async def test_send_code(mock_pilight_error, menuai: menuai) -> None:
     """Try to send proper data."""
     with assert_setup_component(4):
-        assert await async_setup_component(hass, pilight.DOMAIN, {pilight.DOMAIN: {}})
+        assert await async_setup_component(menuai, pilight.DOMAIN, {pilight.DOMAIN: {}})
 
         # Call with protocol info, should not give error
         service_data = {"protocol": "test", "value": 42}
-        await hass.services.async_call(
+        await menuai.services.async_call(
             pilight.DOMAIN,
             pilight.SERVICE_NAME,
             service_data=service_data,
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         error_log_call = mock_pilight_error.call_args_list[-1]
         service_data["protocol"] = [service_data["protocol"]]
         assert str(service_data) in str(error_log_call)
 
 
 @patch("pilight.pilight.Client", PilightDaemonSim)
-@patch("homeassistant.components.pilight._LOGGER.error")
-async def test_send_code_fail(mock_pilight_error, hass: HomeAssistant) -> None:
+@patch("menuai.components.pilight._LOGGER.error")
+async def test_send_code_fail(mock_pilight_error, menuai: menuai) -> None:
     """Check IOError exception error message."""
     with (
         assert_setup_component(4),
         patch("pilight.pilight.Client.send_code", side_effect=IOError),
     ):
-        assert await async_setup_component(hass, pilight.DOMAIN, {pilight.DOMAIN: {}})
+        assert await async_setup_component(menuai, pilight.DOMAIN, {pilight.DOMAIN: {}})
 
         # Call with protocol info, should not give error
         service_data = {"protocol": "test", "value": 42}
-        await hass.services.async_call(
+        await menuai.services.async_call(
             pilight.DOMAIN,
             pilight.SERVICE_NAME,
             service_data=service_data,
             blocking=True,
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         error_log_call = mock_pilight_error.call_args_list[-1]
         assert "Pilight send failed" in str(error_log_call)
 
 
-@patch("homeassistant.components.pilight._LOGGER.error")
-@patch("homeassistant.components.pilight._LOGGER", _LOGGER)
+@patch("menuai.components.pilight._LOGGER.error")
+@patch("menuai.components.pilight._LOGGER", _LOGGER)
 @patch("pilight.pilight.Client", PilightDaemonSim)
-async def test_send_code_delay(mock_pilight_error, hass: HomeAssistant) -> None:
+async def test_send_code_delay(mock_pilight_error, menuai: menuai) -> None:
     """Try to send proper data with delay afterwards."""
     with assert_setup_component(4):
         assert await async_setup_component(
-            hass,
+            menuai,
             pilight.DOMAIN,
             {pilight.DOMAIN: {pilight.CONF_SEND_DELAY: 5.0}},
         )
@@ -177,13 +177,13 @@ async def test_send_code_delay(mock_pilight_error, hass: HomeAssistant) -> None:
         # Call with protocol info, should not give error
         service_data1 = {"protocol": "test11", "value": 42}
         service_data2 = {"protocol": "test22", "value": 42}
-        await hass.services.async_call(
+        await menuai.services.async_call(
             pilight.DOMAIN,
             pilight.SERVICE_NAME,
             service_data=service_data1,
             blocking=True,
         )
-        await hass.services.async_call(
+        await menuai.services.async_call(
             pilight.DOMAIN,
             pilight.SERVICE_NAME,
             service_data=service_data2,
@@ -192,29 +192,29 @@ async def test_send_code_delay(mock_pilight_error, hass: HomeAssistant) -> None:
         service_data1["protocol"] = [service_data1["protocol"]]
         service_data2["protocol"] = [service_data2["protocol"]]
 
-        async_fire_time_changed(hass, dt_util.utcnow())
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, dt_util.utcnow())
+        await menuai.async_block_till_done()
         error_log_call = mock_pilight_error.call_args_list[-1]
         assert str(service_data1) in str(error_log_call)
 
         new_time = dt_util.utcnow() + timedelta(seconds=5)
-        async_fire_time_changed(hass, new_time)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, new_time)
+        await menuai.async_block_till_done()
         error_log_call = mock_pilight_error.call_args_list[-1]
         assert str(service_data2) in str(error_log_call)
 
 
-@patch("homeassistant.components.pilight._LOGGER.error")
-@patch("homeassistant.components.pilight._LOGGER", _LOGGER)
+@patch("menuai.components.pilight._LOGGER.error")
+@patch("menuai.components.pilight._LOGGER", _LOGGER)
 @patch("pilight.pilight.Client", PilightDaemonSim)
-async def test_start_stop(mock_pilight_error, hass: HomeAssistant) -> None:
+async def test_start_stop(mock_pilight_error, menuai: menuai) -> None:
     """Check correct startup and stop of pilight daemon."""
     with assert_setup_component(4):
-        assert await async_setup_component(hass, pilight.DOMAIN, {pilight.DOMAIN: {}})
+        assert await async_setup_component(menuai, pilight.DOMAIN, {pilight.DOMAIN: {}})
 
         # Test startup
-        await hass.async_start()
-        await hass.async_block_till_done()
+        await menuai.async_start()
+        await menuai.async_block_till_done()
 
         error_log_call = mock_pilight_error.call_args_list[-2]
         assert "PilightDaemonSim callback" in str(error_log_call)
@@ -222,22 +222,22 @@ async def test_start_stop(mock_pilight_error, hass: HomeAssistant) -> None:
         assert "PilightDaemonSim start" in str(error_log_call)
 
         # Test stop
-        with patch.object(hass.loop, "stop"):
-            await hass.async_stop()
+        with patch.object(menuai.loop, "stop"):
+            await menuai.async_stop()
         error_log_call = mock_pilight_error.call_args_list[-1]
         assert "PilightDaemonSim stop" in str(error_log_call)
 
 
 @patch("pilight.pilight.Client", PilightDaemonSim)
-async def test_receive_code(hass: HomeAssistant) -> None:
+async def test_receive_code(menuai: menuai) -> None:
     """Check if code receiving via pilight daemon works."""
-    events = async_capture_events(hass, pilight.EVENT)
+    events = async_capture_events(menuai, pilight.EVENT)
     with assert_setup_component(4):
-        assert await async_setup_component(hass, pilight.DOMAIN, {pilight.DOMAIN: {}})
+        assert await async_setup_component(menuai, pilight.DOMAIN, {pilight.DOMAIN: {}})
 
         # Test startup
-        await hass.async_start()
-        await hass.async_block_till_done()
+        await menuai.async_start()
+        await menuai.async_block_till_done()
 
         expected_message = dict(
             {
@@ -250,9 +250,9 @@ async def test_receive_code(hass: HomeAssistant) -> None:
 
 
 @patch("pilight.pilight.Client", PilightDaemonSim)
-async def test_whitelist_exact_match(hass: HomeAssistant) -> None:
+async def test_whitelist_exact_match(menuai: menuai) -> None:
     """Check whitelist filter with matched data."""
-    events = async_capture_events(hass, pilight.EVENT)
+    events = async_capture_events(menuai, pilight.EVENT)
     with assert_setup_component(4):
         whitelist = {
             "protocol": [PilightDaemonSim.test_message["protocol"]],
@@ -261,11 +261,11 @@ async def test_whitelist_exact_match(hass: HomeAssistant) -> None:
             "unit": [PilightDaemonSim.test_message["message"]["unit"]],
         }
         assert await async_setup_component(
-            hass, pilight.DOMAIN, {pilight.DOMAIN: {"whitelist": whitelist}}
+            menuai, pilight.DOMAIN, {pilight.DOMAIN: {"whitelist": whitelist}}
         )
 
-        await hass.async_start()
-        await hass.async_block_till_done()
+        await menuai.async_start()
+        await menuai.async_block_till_done()
 
         expected_message = dict(
             {
@@ -279,20 +279,20 @@ async def test_whitelist_exact_match(hass: HomeAssistant) -> None:
 
 
 @patch("pilight.pilight.Client", PilightDaemonSim)
-async def test_whitelist_partial_match(hass: HomeAssistant) -> None:
+async def test_whitelist_partial_match(menuai: menuai) -> None:
     """Check whitelist filter with partially matched data, should work."""
-    events = async_capture_events(hass, pilight.EVENT)
+    events = async_capture_events(menuai, pilight.EVENT)
     with assert_setup_component(4):
         whitelist = {
             "protocol": [PilightDaemonSim.test_message["protocol"]],
             "id": [PilightDaemonSim.test_message["message"]["id"]],
         }
         assert await async_setup_component(
-            hass, pilight.DOMAIN, {pilight.DOMAIN: {"whitelist": whitelist}}
+            menuai, pilight.DOMAIN, {pilight.DOMAIN: {"whitelist": whitelist}}
         )
 
-        await hass.async_start()
-        await hass.async_block_till_done()
+        await menuai.async_start()
+        await menuai.async_block_till_done()
 
         expected_message = dict(
             {
@@ -306,9 +306,9 @@ async def test_whitelist_partial_match(hass: HomeAssistant) -> None:
 
 
 @patch("pilight.pilight.Client", PilightDaemonSim)
-async def test_whitelist_or_match(hass: HomeAssistant) -> None:
+async def test_whitelist_or_match(menuai: menuai) -> None:
     """Check whitelist filter with several subsection, should work."""
-    events = async_capture_events(hass, pilight.EVENT)
+    events = async_capture_events(menuai, pilight.EVENT)
 
     with assert_setup_component(4):
         whitelist = {
@@ -319,11 +319,11 @@ async def test_whitelist_or_match(hass: HomeAssistant) -> None:
             "id": [PilightDaemonSim.test_message["message"]["id"]],
         }
         assert await async_setup_component(
-            hass, pilight.DOMAIN, {pilight.DOMAIN: {"whitelist": whitelist}}
+            menuai, pilight.DOMAIN, {pilight.DOMAIN: {"whitelist": whitelist}}
         )
 
-        await hass.async_start()
-        await hass.async_block_till_done()
+        await menuai.async_start()
+        await menuai.async_block_till_done()
 
         expected_message = dict(
             {
@@ -337,9 +337,9 @@ async def test_whitelist_or_match(hass: HomeAssistant) -> None:
 
 
 @patch("pilight.pilight.Client", PilightDaemonSim)
-async def test_whitelist_no_match(hass: HomeAssistant) -> None:
+async def test_whitelist_no_match(menuai: menuai) -> None:
     """Check whitelist filter with unmatched data, should not work."""
-    events = async_capture_events(hass, pilight.EVENT)
+    events = async_capture_events(menuai, pilight.EVENT)
 
     with assert_setup_component(4):
         whitelist = {
@@ -347,28 +347,28 @@ async def test_whitelist_no_match(hass: HomeAssistant) -> None:
             "id": [PilightDaemonSim.test_message["message"]["id"]],
         }
         assert await async_setup_component(
-            hass, pilight.DOMAIN, {pilight.DOMAIN: {"whitelist": whitelist}}
+            menuai, pilight.DOMAIN, {pilight.DOMAIN: {"whitelist": whitelist}}
         )
 
-        await hass.async_start()
-        await hass.async_block_till_done()
+        await menuai.async_start()
+        await menuai.async_block_till_done()
 
         assert len(events) == 0
 
 
-async def test_call_rate_delay_throttle_enabled(hass: HomeAssistant) -> None:
+async def test_call_rate_delay_throttle_enabled(menuai: menuai) -> None:
     """Test that throttling actually work."""
     runs = []
     delay = 5.0
 
-    limit = pilight.CallRateDelayThrottle(hass, delay)
+    limit = pilight.CallRateDelayThrottle(menuai, delay)
     # pylint: disable-next=unnecessary-lambda
     action = limit.limited(lambda x: runs.append(x))
 
     for i in range(3):
-        await hass.async_add_executor_job(action, i)
+        await menuai.async_add_executor_job(action, i)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert runs == [0]
 
     exp = []
@@ -376,16 +376,16 @@ async def test_call_rate_delay_throttle_enabled(hass: HomeAssistant) -> None:
     for i in range(3):
         exp.append(i)
         shifted_time = now + (timedelta(seconds=delay + 0.1) * i)
-        async_fire_time_changed(hass, shifted_time)
-        await hass.async_block_till_done()
+        async_fire_time_changed(menuai, shifted_time)
+        await menuai.async_block_till_done()
         assert runs == exp
 
 
-def test_call_rate_delay_throttle_disabled(hass: HomeAssistant) -> None:
+def test_call_rate_delay_throttle_disabled(menuai: menuai) -> None:
     """Test that the limiter is a noop if no delay set."""
     runs = []
 
-    limit = pilight.CallRateDelayThrottle(hass, 0.0)
+    limit = pilight.CallRateDelayThrottle(menuai, 0.0)
     # pylint: disable-next=unnecessary-lambda
     action = limit.limited(lambda x: runs.append(x))
 

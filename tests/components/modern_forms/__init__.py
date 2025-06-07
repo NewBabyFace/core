@@ -5,9 +5,9 @@ import json
 
 from aiomodernforms.const import COMMAND_QUERY_STATIC_DATA
 
-from homeassistant.components.modern_forms.const import DOMAIN
-from homeassistant.const import CONF_HOST, CONF_MAC, CONTENT_TYPE_JSON
-from homeassistant.core import HomeAssistant
+from menuai.components.modern_forms.const import DOMAIN
+from menuai.const import CONF_HOST, CONF_MAC, CONTENT_TYPE_JSON
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry, load_fixture
 from tests.test_util.aiohttp import AiohttpClientMocker, AiohttpClientMockResponse
@@ -47,13 +47,13 @@ async def modern_forms_timers_set_mock(method, url, data):
 
 
 async def init_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     rgbw: bool = False,
     skip_setup: bool = False,
     mock_type: Callable = modern_forms_call_mock,
 ) -> MockConfigEntry:
-    """Set up the Modern Forms integration in Home Assistant."""
+    """Set up the Modern Forms integration in MenuAI."""
 
     aioclient_mock.post(
         "http://192.168.1.123:80/mf",
@@ -67,10 +67,10 @@ async def init_integration(
         unique_id="AA:BB:CC:DD:EE:FF",
     )
 
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     if not skip_setup:
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
 
     return entry

@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from tuya_sharing import CustomerDevice, Manager
 
-from homeassistant.components import ffmpeg
-from homeassistant.components.camera import Camera as CameraEntity, CameraEntityFeature
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components import ffmpeg
+from menuai.components.camera import Camera as CameraEntity, CameraEntityFeature
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import TuyaConfigEntry
 from .const import TUYA_DISCOVERY_NEW, DPCode
@@ -27,28 +27,28 @@ CAMERAS: tuple[str, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: TuyaConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Tuya cameras dynamically through Tuya discovery."""
-    hass_data = entry.runtime_data
+    menuai_data = entry.runtime_data
 
     @callback
     def async_discover_device(device_ids: list[str]) -> None:
         """Discover and add a discovered Tuya camera."""
         entities: list[TuyaCameraEntity] = []
         for device_id in device_ids:
-            device = hass_data.manager.device_map[device_id]
+            device = menuai_data.manager.device_map[device_id]
             if device.category in CAMERAS:
-                entities.append(TuyaCameraEntity(device, hass_data.manager))
+                entities.append(TuyaCameraEntity(device, menuai_data.manager))
 
         async_add_entities(entities)
 
-    async_discover_device([*hass_data.manager.device_map])
+    async_discover_device([*menuai_data.manager.device_map])
 
     entry.async_on_unload(
-        async_dispatcher_connect(hass, TUYA_DISCOVERY_NEW, async_discover_device)
+        async_dispatcher_connect(menuai, TUYA_DISCOVERY_NEW, async_discover_device)
     )
 
 
@@ -81,7 +81,7 @@ class TuyaCameraEntity(TuyaEntity, CameraEntity):
 
     async def stream_source(self) -> str | None:
         """Return the source of the stream."""
-        return await self.hass.async_add_executor_job(
+        return await self.menuai.async_add_executor_job(
             self.device_manager.get_device_stream_allocate,
             self.device.id,
             "rtsp",
@@ -95,7 +95,7 @@ class TuyaCameraEntity(TuyaEntity, CameraEntity):
         if not stream_source:
             return None
         return await ffmpeg.async_get_image(
-            self.hass,
+            self.menuai,
             stream_source,
             width=width,
             height=height,

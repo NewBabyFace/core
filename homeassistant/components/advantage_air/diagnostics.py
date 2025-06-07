@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.core import HomeAssistant
+from menuai.components.diagnostics import async_redact_data
+from menuai.core import menuai
 
 from . import AdvantageAirDataConfigEntry
 
@@ -24,7 +24,7 @@ TO_REDACT = [
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, config_entry: AdvantageAirDataConfigEntry
+    menuai: menuai, config_entry: AdvantageAirDataConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     data = config_entry.runtime_data.coordinator.data

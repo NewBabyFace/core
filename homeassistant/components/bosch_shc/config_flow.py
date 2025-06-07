@@ -16,11 +16,11 @@ from boschshcpy.exceptions import (
 )
 import voluptuous as vol
 
-from homeassistant.components import zeroconf
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_TOKEN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.components import zeroconf
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_TOKEN
+from menuai.core import menuai
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import (
     CONF_HOSTNAME,
@@ -41,18 +41,18 @@ HOST_SCHEMA = vol.Schema(
 
 
 def write_tls_asset(
-    hass: HomeAssistant, folder: str, filename: str, asset: bytes
+    menuai: menuai, folder: str, filename: str, asset: bytes
 ) -> None:
     """Write the tls assets to disk."""
-    makedirs(hass.config.path(DOMAIN, folder), exist_ok=True)
+    makedirs(menuai.config.path(DOMAIN, folder), exist_ok=True)
     with open(
-        hass.config.path(DOMAIN, folder, filename), "w", encoding="utf8"
+        menuai.config.path(DOMAIN, folder, filename), "w", encoding="utf8"
     ) as file_handle:
         file_handle.write(asset.decode("utf-8"))
 
 
 def create_credentials_and_validate(
-    hass: HomeAssistant,
+    menuai: menuai,
     host: str,
     unique_id: str,
     user_input: dict[str, Any],
@@ -60,18 +60,18 @@ def create_credentials_and_validate(
 ) -> dict[str, Any] | None:
     """Create and store credentials and validate session."""
     helper = SHCRegisterClient(host, user_input[CONF_PASSWORD])
-    result = helper.register(host, "HomeAssistant")
+    result = helper.register(host, "menuai")
 
     if result is not None:
         # Save key/certificate pair for each registered host separately
         # otherwise only the last registered host is accessible.
-        write_tls_asset(hass, unique_id, CONF_SHC_CERT, result["cert"])
-        write_tls_asset(hass, unique_id, CONF_SHC_KEY, result["key"])
+        write_tls_asset(menuai, unique_id, CONF_SHC_CERT, result["cert"])
+        write_tls_asset(menuai, unique_id, CONF_SHC_KEY, result["key"])
 
         session = SHCSession(
             host,
-            hass.config.path(DOMAIN, unique_id, CONF_SHC_CERT),
-            hass.config.path(DOMAIN, unique_id, CONF_SHC_KEY),
+            menuai.config.path(DOMAIN, unique_id, CONF_SHC_CERT),
+            menuai.config.path(DOMAIN, unique_id, CONF_SHC_KEY),
             True,
             zeroconf_instance,
         )
@@ -81,7 +81,7 @@ def create_credentials_and_validate(
 
 
 def get_info_from_host(
-    hass: HomeAssistant, host: str, zeroconf_instance: zeroconf.HaZeroconf
+    menuai: menuai, host: str, zeroconf_instance: zeroconf.HaZeroconf
 ) -> dict[str, str | None]:
     """Get information from host."""
     session = SHCSession(
@@ -150,15 +150,15 @@ class BoschSHCConfigFlow(ConfigFlow, domain=DOMAIN):
         """Handle the credentials step."""
         errors: dict[str, str] = {}
         if user_input is not None:
-            zeroconf_instance = await zeroconf.async_get_instance(self.hass)
+            zeroconf_instance = await zeroconf.async_get_instance(self.menuai)
             # unique_id uniquely identifies the registered controller and is used
             # to save the key/certificate pair for each controller separately
             unique_id = self.info["unique_id"]
             assert unique_id
             try:
-                result = await self.hass.async_add_executor_job(
+                result = await self.menuai.async_add_executor_job(
                     create_credentials_and_validate,
-                    self.hass,
+                    self.menuai,
                     self.host,
                     unique_id,
                     user_input,
@@ -181,10 +181,10 @@ class BoschSHCConfigFlow(ConfigFlow, domain=DOMAIN):
                 assert result
                 entry_data = {
                     # Each host has its own key/certificate pair
-                    CONF_SSL_CERTIFICATE: self.hass.config.path(
+                    CONF_SSL_CERTIFICATE: self.menuai.config.path(
                         DOMAIN, unique_id, CONF_SHC_CERT
                     ),
-                    CONF_SSL_KEY: self.hass.config.path(
+                    CONF_SSL_KEY: self.menuai.config.path(
                         DOMAIN, unique_id, CONF_SHC_KEY
                     ),
                     CONF_HOST: self.host,
@@ -257,11 +257,11 @@ class BoschSHCConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def _get_info(self, host: str) -> dict[str, str | None]:
         """Get additional information."""
-        zeroconf_instance = await zeroconf.async_get_instance(self.hass)
+        zeroconf_instance = await zeroconf.async_get_instance(self.menuai)
 
-        return await self.hass.async_add_executor_job(
+        return await self.menuai.async_add_executor_job(
             get_info_from_host,
-            self.hass,
+            self.menuai,
             host,
             zeroconf_instance,
         )

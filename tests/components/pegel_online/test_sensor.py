@@ -5,9 +5,9 @@ from unittest.mock import patch
 from aiopegelonline.models import Station, StationMeasurements
 import pytest
 
-from homeassistant.components.pegel_online.const import CONF_STATION, DOMAIN
-from homeassistant.const import ATTR_LATITUDE, ATTR_LONGITUDE, ATTR_UNIT_OF_MEASUREMENT
-from homeassistant.core import HomeAssistant
+from menuai.components.pegel_online.const import CONF_STATION, DOMAIN
+from menuai.const import ATTR_LATITUDE, ATTR_LONGITUDE, ATTR_UNIT_OF_MEASUREMENT
+from menuai.core import menuai
 
 from . import PegelOnlineMock
 from .const import (
@@ -108,7 +108,7 @@ from tests.common import MockConfigEntry
 )
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_sensor(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry_data: dict,
     mock_station_details: Station,
     mock_station_measurement: StationMeasurements,
@@ -120,20 +120,20 @@ async def test_sensor(
         data=mock_config_entry_data,
         unique_id=mock_config_entry_data[CONF_STATION],
     )
-    entry.add_to_hass(hass)
-    with patch("homeassistant.components.pegel_online.PegelOnline") as pegelonline:
+    entry.add_to_menuai(menuai)
+    with patch("menuai.components.pegel_online.PegelOnline") as pegelonline:
         pegelonline.return_value = PegelOnlineMock(
             station_details=mock_station_details,
             station_measurements=mock_station_measurement,
         )
-        assert await hass.config_entries.async_setup(entry.entry_id)
+        assert await menuai.config_entries.async_setup(entry.entry_id)
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert len(hass.states.async_all()) == len(expected_states)
+    assert len(menuai.states.async_all()) == len(expected_states)
 
     for state_name, state_data in expected_states.items():
-        state = hass.states.get(state_name)
+        state = menuai.states.get(state_name)
         assert state.name == state_data[0]
         assert state.state == state_data[1]
         assert state.attributes.get(ATTR_UNIT_OF_MEASUREMENT) == state_data[2]

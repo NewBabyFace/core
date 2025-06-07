@@ -4,15 +4,15 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant.components.device_automation import (
+from menuai.components.device_automation import (
     DEVICE_TRIGGER_BASE_SCHEMA,
     InvalidDeviceAutomationConfig,
 )
-from homeassistant.const import CONF_DEVICE_ID, CONF_PLATFORM, CONF_TYPE
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
-from homeassistant.helpers.typing import ConfigType
+from menuai.const import CONF_DEVICE_ID, CONF_PLATFORM, CONF_TYPE
+from menuai.core import CALLBACK_TYPE, menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.trigger import TriggerActionType, TriggerInfo
+from menuai.helpers.typing import ConfigType
 
 from . import DOMAIN, trigger
 from .helpers import (
@@ -33,7 +33,7 @@ TRIGGER_SCHEMA = DEVICE_TRIGGER_BASE_SCHEMA.extend(
 
 
 async def async_validate_trigger_config(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> ConfigType:
     """Validate config."""
     config = TRIGGER_SCHEMA(config)
@@ -41,8 +41,8 @@ async def async_validate_trigger_config(
     if config[CONF_TYPE] == TURN_ON_PLATFORM_TYPE:
         device_id = config[CONF_DEVICE_ID]
         try:
-            device = async_get_device_entry_by_device_id(hass, device_id)
-            async_get_client_by_device_entry(hass, device)
+            device = async_get_device_entry_by_device_id(menuai, device_id)
+            async_get_client_by_device_entry(menuai, device)
         except ValueError as err:
             raise InvalidDeviceAutomationConfig(err) from err
 
@@ -50,14 +50,14 @@ async def async_validate_trigger_config(
 
 
 async def async_get_triggers(
-    _hass: HomeAssistant, device_id: str
+    _menuai: menuai, device_id: str
 ) -> list[dict[str, str]]:
     """List device triggers for device."""
     return [async_get_turn_on_trigger(device_id)]
 
 
 async def async_attach_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     action: TriggerActionType,
     trigger_info: TriggerInfo,
@@ -69,13 +69,13 @@ async def async_attach_trigger(
             CONF_DEVICE_ID: config[CONF_DEVICE_ID],
         }
         trigger_config = await trigger.async_validate_trigger_config(
-            hass, trigger_config
+            menuai, trigger_config
         )
         return await trigger.async_attach_trigger(
-            hass, trigger_config, action, trigger_info
+            menuai, trigger_config, action, trigger_info
         )
 
-    raise HomeAssistantError(
+    raise menuaiError(
         translation_domain=DOMAIN,
         translation_key="unhandled_trigger_type",
         translation_placeholders={"trigger_type": trigger_type},

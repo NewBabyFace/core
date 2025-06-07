@@ -1,31 +1,31 @@
 """The tests for bthome logbook."""
 
-from homeassistant.components.bthome.const import (
+from menuai.components.bthome.const import (
     BTHOME_BLE_EVENT,
     DOMAIN,
     BTHomeBleEvent,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 from tests.common import MockConfigEntry
 from tests.components.logbook.common import MockRow, mock_humanify
 
 
-async def test_humanify_bthome_event(hass: HomeAssistant) -> None:
+async def test_humanify_bthome_event(menuai: menuai) -> None:
     """Test humanifying bthome button presses."""
-    hass.config.components.add("recorder")
-    assert await async_setup_component(hass, "logbook", {})
+    menuai.config.components.add("recorder")
+    assert await async_setup_component(menuai, "logbook", {})
     config_entry = MockConfigEntry(
         domain=DOMAIN,
         unique_id="A4:C1:38:8D:18:B2",
     )
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     (event1, event2) = mock_humanify(
-        hass,
+        menuai,
         [
             MockRow(
                 BTHOME_BLE_EVENT,

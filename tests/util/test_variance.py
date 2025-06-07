@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from homeassistant.util.variance import ignore_variance
+from menuai.util.variance import ignore_variance
 
 
 @pytest.mark.parametrize(

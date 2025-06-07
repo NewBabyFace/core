@@ -10,10 +10,10 @@ from typing import Any
 from pyhomematic import HMConnection
 from pyhomematic.devicetypes.generic import HMGeneric
 
-from homeassistant.const import ATTR_NAME
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity import Entity, EntityDescription
-from homeassistant.helpers.event import track_time_interval
+from menuai.const import ATTR_NAME
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity import Entity, EntityDescription
+from menuai.helpers.event import track_time_interval
 
 from .const import (
     ATTR_ADDRESS,
@@ -63,7 +63,7 @@ class HMDevice(Entity):
         if self._state:
             self._state = self._state.upper()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Load data init callbacks."""
         self._subscribe_homematic_events()
 
@@ -106,7 +106,7 @@ class HMDevice(Entity):
             return
 
         # Initialize
-        self._homematic = self.hass.data[DATA_HOMEMATIC]
+        self._homematic = self.menuai.data[DATA_HOMEMATIC]
         self._hmdevice = self._homematic.devices[self._interface][self._address]
         self._connected = True
 
@@ -135,7 +135,7 @@ class HMDevice(Entity):
             self._available = not self._hmdevice.UNREACH
             has_changed = True
 
-        # If it has changed data point, update Home Assistant
+        # If it has changed data point, update MenuAI
         if has_changed:
             self.schedule_update_ha_state()
 
@@ -213,9 +213,9 @@ class HMHub(Entity):
 
     _attr_should_poll = False
 
-    def __init__(self, hass, homematic, name):
+    def __init__(self, menuai, homematic, name):
         """Initialize HomeMatic hub."""
-        self.hass = hass
+        self.menuai = menuai
         self.entity_id = f"{DOMAIN}.{name.lower()}"
         self._homematic = homematic
         self._variables = {}
@@ -223,11 +223,11 @@ class HMHub(Entity):
         self._state = None
 
         # Load data
-        track_time_interval(self.hass, self._update_hub, SCAN_INTERVAL_HUB)
-        self.hass.add_job(self._update_hub, None)
+        track_time_interval(self.menuai, self._update_hub, SCAN_INTERVAL_HUB)
+        self.menuai.add_job(self._update_hub, None)
 
-        track_time_interval(self.hass, self._update_variables, SCAN_INTERVAL_VARIABLES)
-        self.hass.add_job(self._update_variables, None)
+        track_time_interval(self.menuai, self._update_variables, SCAN_INTERVAL_VARIABLES)
+        self.menuai.add_job(self._update_variables, None)
 
     @property
     def name(self):

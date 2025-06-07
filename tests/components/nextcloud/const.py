@@ -1,6 +1,6 @@
 """Constants for nextcloud tests."""
 
-from homeassistant.const import CONF_PASSWORD, CONF_URL, CONF_USERNAME, CONF_VERIFY_SSL
+from menuai.const import CONF_PASSWORD, CONF_URL, CONF_USERNAME, CONF_VERIFY_SSL
 
 MOCKED_ENTRY_ID = "1234567890abcdef"
 

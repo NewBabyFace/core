@@ -9,7 +9,7 @@ from zwave_js_server.event import Event
 from zwave_js_server.exceptions import FailedZWaveCommand
 from zwave_js_server.model.node.firmware import NodeFirmwareUpdateStatus
 
-from homeassistant.components.update import (
+from menuai.components.update import (
     ATTR_AUTO_UPDATE,
     ATTR_IN_PROGRESS,
     ATTR_INSTALLED_VERSION,
@@ -21,13 +21,13 @@ from homeassistant.components.update import (
     SERVICE_INSTALL,
     SERVICE_SKIP,
 )
-from homeassistant.components.zwave_js.const import DOMAIN, SERVICE_REFRESH_VALUE
-from homeassistant.components.zwave_js.helpers import get_valueless_base_unique_id
-from homeassistant.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON, STATE_UNKNOWN
-from homeassistant.core import CoreState, HomeAssistant, State
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
-from homeassistant.util import dt as dt_util
+from menuai.components.zwave_js.const import DOMAIN, SERVICE_REFRESH_VALUE
+from menuai.components.zwave_js.helpers import get_valueless_base_unique_id
+from menuai.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON, STATE_UNKNOWN
+from menuai.core import CoreState, menuai, State
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
+from menuai.util import dt as dt_util
 
 from tests.common import (
     MockConfigEntry,
@@ -113,25 +113,25 @@ FIRMWARE_UPDATES = {
 
 
 async def test_update_entity_states(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     client,
     climate_radio_thermostat_ct100_plus_different_endpoints,
     integration,
     caplog: pytest.LogCaptureFixture,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test update entity states."""
-    ws_client = await hass_ws_client(hass)
+    ws_client = await menuai_ws_client(menuai)
 
-    assert hass.states.get(UPDATE_ENTITY).state == STATE_OFF
+    assert menuai.states.get(UPDATE_ENTITY).state == STATE_OFF
 
     client.async_send_command.return_value = {"updates": []}
 
-    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=5, days=1))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(minutes=5, days=1))
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(UPDATE_ENTITY)
+    state = menuai.states.get(UPDATE_ENTITY)
     assert state
     assert state.state == STATE_OFF
 
@@ -147,10 +147,10 @@ async def test_update_entity_states(
 
     client.async_send_command.return_value = FIRMWARE_UPDATES
 
-    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=5, days=2))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(minutes=5, days=2))
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(UPDATE_ENTITY)
+    state = menuai.states.get(UPDATE_ENTITY)
     assert state
     assert state.state == STATE_ON
     attrs = state.attributes
@@ -172,7 +172,7 @@ async def test_update_entity_states(
     assert result["result"] == "blah 2"
 
     # Refresh value should not be supported by this entity
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_REFRESH_VALUE,
         {
@@ -180,15 +180,15 @@ async def test_update_entity_states(
         },
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert "There is no value to refresh for this entity" in caplog.text
 
     client.async_send_command.return_value = {"updates": []}
 
-    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=5, days=3))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(minutes=5, days=3))
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(UPDATE_ENTITY)
+    state = menuai.states.get(UPDATE_ENTITY)
     assert state
     assert state.state == STATE_OFF
 
@@ -209,7 +209,7 @@ async def test_update_entity_states(
 
 
 async def test_update_entity_install_raises(
-    hass: HomeAssistant,
+    menuai: menuai,
     client,
     climate_radio_thermostat_ct100_plus_different_endpoints,
     integration,
@@ -217,14 +217,14 @@ async def test_update_entity_install_raises(
     """Test update entity install raises exception."""
     client.async_send_command.return_value = FIRMWARE_UPDATES
 
-    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=5, days=1))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(minutes=5, days=1))
+    await menuai.async_block_till_done()
 
     # Test failed installation by driver
     client.async_send_command.side_effect = FailedZWaveCommand("test", 12, "test")
 
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             UPDATE_DOMAIN,
             SERVICE_INSTALL,
             {
@@ -235,7 +235,7 @@ async def test_update_entity_install_raises(
 
 
 async def test_update_entity_sleep(
-    hass: HomeAssistant,
+    menuai: menuai,
     client,
     zen_31,
     integration,
@@ -250,8 +250,8 @@ async def test_update_entity_sleep(
 
     client.async_send_command.return_value = FIRMWARE_UPDATES
 
-    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=5, days=1))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(minutes=5, days=1))
+    await menuai.async_block_till_done()
 
     # Because node is asleep we shouldn't attempt to check for firmware updates
     assert len(client.async_send_command.call_args_list) == 0
@@ -261,7 +261,7 @@ async def test_update_entity_sleep(
         data={"source": "node", "event": "wake up", "nodeId": zen_31.node_id},
     )
     zen_31.receive_event(event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Now that the node is up we can check for updates
     assert len(client.async_send_command.call_args_list) > 0
@@ -272,7 +272,7 @@ async def test_update_entity_sleep(
 
 
 async def test_update_entity_dead(
-    hass: HomeAssistant,
+    menuai: menuai,
     client,
     zen_31,
     integration,
@@ -287,8 +287,8 @@ async def test_update_entity_dead(
 
     client.async_send_command.return_value = FIRMWARE_UPDATES
 
-    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=5, days=1))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(minutes=5, days=1))
+    await menuai.async_block_till_done()
 
     # Because node is asleep we shouldn't attempt to check for firmware updates
     assert len(client.async_send_command.call_args_list) == 0
@@ -298,7 +298,7 @@ async def test_update_entity_dead(
         data={"source": "node", "event": "alive", "nodeId": zen_31.node_id},
     )
     zen_31.receive_event(event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Now that the node is up we can check for updates
     assert len(client.async_send_command.call_args_list) > 0
@@ -309,40 +309,40 @@ async def test_update_entity_dead(
 
 
 async def test_update_entity_ha_not_running(
-    hass: HomeAssistant,
+    menuai: menuai,
     client,
     zen_31,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test update occurs only after HA is running."""
-    hass.set_state(CoreState.not_running)
+    menuai.set_state(CoreState.not_running)
 
     client.async_send_command.return_value = {"updates": []}
 
     entry = MockConfigEntry(domain="zwave_js", data={"url": "ws://test.org"})
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert len(client.async_send_command.call_args_list) == 4
 
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
     assert len(client.async_send_command.call_args_list) == 4
 
     # Update should be delayed by a day because HA is not running
-    hass.set_state(CoreState.starting)
+    menuai.set_state(CoreState.starting)
 
-    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=5))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(minutes=5))
+    await menuai.async_block_till_done()
 
     assert len(client.async_send_command.call_args_list) == 4
 
-    hass.set_state(CoreState.running)
+    menuai.set_state(CoreState.running)
 
-    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=5, days=1))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(minutes=5, days=1))
+    await menuai.async_block_till_done()
 
     assert len(client.async_send_command.call_args_list) == 5
     args = client.async_send_command.call_args_list[4][0][0]
@@ -351,7 +351,7 @@ async def test_update_entity_ha_not_running(
 
 
 async def test_update_entity_update_failure(
-    hass: HomeAssistant,
+    menuai: menuai,
     client,
     climate_radio_thermostat_ct100_plus_different_endpoints,
     integration,
@@ -360,10 +360,10 @@ async def test_update_entity_update_failure(
     assert len(client.async_send_command.call_args_list) == 0
     client.async_send_command.side_effect = FailedZWaveCommand("test", 260, "test")
 
-    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=5, days=1))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(minutes=5, days=1))
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(UPDATE_ENTITY)
+    state = menuai.states.get(UPDATE_ENTITY)
     assert state
     assert state.state == STATE_OFF
     assert len(client.async_send_command.call_args_list) == 1
@@ -376,7 +376,7 @@ async def test_update_entity_update_failure(
 
 
 async def test_update_entity_progress(
-    hass: HomeAssistant,
+    menuai: menuai,
     client,
     climate_radio_thermostat_ct100_plus_different_endpoints,
     integration,
@@ -385,10 +385,10 @@ async def test_update_entity_progress(
     node = climate_radio_thermostat_ct100_plus_different_endpoints
     client.async_send_command.return_value = FIRMWARE_UPDATES
 
-    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=5, days=1))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(minutes=5, days=1))
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(UPDATE_ENTITY)
+    state = menuai.states.get(UPDATE_ENTITY)
     assert state
     assert state.state == STATE_ON
     attrs = state.attributes
@@ -401,8 +401,8 @@ async def test_update_entity_progress(
     }
 
     # Test successful install call without a version
-    install_task = hass.async_create_task(
-        hass.services.async_call(
+    install_task = menuai.async_create_task(
+        menuai.services.async_call(
             UPDATE_DOMAIN,
             SERVICE_INSTALL,
             {
@@ -415,7 +415,7 @@ async def test_update_entity_progress(
     # Sleep so that task starts
     await asyncio.sleep(0.1)
 
-    state = hass.states.get(UPDATE_ENTITY)
+    state = menuai.states.get(UPDATE_ENTITY)
     assert state
     attrs = state.attributes
     assert attrs[ATTR_IN_PROGRESS] is True
@@ -439,7 +439,7 @@ async def test_update_entity_progress(
     node.receive_event(event)
 
     # Validate that the progress is updated
-    state = hass.states.get(UPDATE_ENTITY)
+    state = menuai.states.get(UPDATE_ENTITY)
     assert state
     attrs = state.attributes
     assert attrs[ATTR_IN_PROGRESS] is True
@@ -460,10 +460,10 @@ async def test_update_entity_progress(
     )
 
     node.receive_event(event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Validate that progress is reset and entity reflects new version
-    state = hass.states.get(UPDATE_ENTITY)
+    state = menuai.states.get(UPDATE_ENTITY)
     assert state
     attrs = state.attributes
     assert attrs[ATTR_IN_PROGRESS] is False
@@ -476,7 +476,7 @@ async def test_update_entity_progress(
 
 
 async def test_update_entity_install_failed(
-    hass: HomeAssistant,
+    menuai: menuai,
     client,
     climate_radio_thermostat_ct100_plus_different_endpoints,
     integration,
@@ -486,10 +486,10 @@ async def test_update_entity_install_failed(
     node = climate_radio_thermostat_ct100_plus_different_endpoints
     client.async_send_command.return_value = FIRMWARE_UPDATES
 
-    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=5, days=1))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(minutes=5, days=1))
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(UPDATE_ENTITY)
+    state = menuai.states.get(UPDATE_ENTITY)
     assert state
     assert state.state == STATE_ON
     attrs = state.attributes
@@ -502,8 +502,8 @@ async def test_update_entity_install_failed(
     }
 
     # Test install call - we expect it to finish fail
-    install_task = hass.async_create_task(
-        hass.services.async_call(
+    install_task = menuai.async_create_task(
+        menuai.services.async_call(
             UPDATE_DOMAIN,
             SERVICE_INSTALL,
             {
@@ -534,7 +534,7 @@ async def test_update_entity_install_failed(
     node.receive_event(event)
 
     # Validate that the progress is updated
-    state = hass.states.get(UPDATE_ENTITY)
+    state = menuai.states.get(UPDATE_ENTITY)
     assert state
     attrs = state.attributes
     assert attrs[ATTR_IN_PROGRESS] is True
@@ -555,10 +555,10 @@ async def test_update_entity_install_failed(
     )
 
     node.receive_event(event)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Validate that progress is reset and entity reflects old version
-    state = hass.states.get(UPDATE_ENTITY)
+    state = menuai.states.get(UPDATE_ENTITY)
     assert state
     attrs = state.attributes
     assert attrs[ATTR_IN_PROGRESS] is False
@@ -568,34 +568,34 @@ async def test_update_entity_install_failed(
     assert state.state == STATE_ON
 
     # validate that the install task failed
-    with pytest.raises(HomeAssistantError):
+    with pytest.raises(menuaiError):
         await install_task
 
 
 async def test_update_entity_reload(
-    hass: HomeAssistant,
+    menuai: menuai,
     client,
     climate_radio_thermostat_ct100_plus_different_endpoints,
     integration,
 ) -> None:
     """Test update entity maintains state after reload."""
-    assert hass.states.get(UPDATE_ENTITY).state == STATE_OFF
+    assert menuai.states.get(UPDATE_ENTITY).state == STATE_OFF
 
     client.async_send_command.return_value = {"updates": []}
 
-    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=5, days=1))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(minutes=5, days=1))
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(UPDATE_ENTITY)
+    state = menuai.states.get(UPDATE_ENTITY)
     assert state
     assert state.state == STATE_OFF
 
     client.async_send_command.return_value = FIRMWARE_UPDATES
 
-    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=5, days=2))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(minutes=5, days=2))
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(UPDATE_ENTITY)
+    state = menuai.states.get(UPDATE_ENTITY)
     assert state
     assert state.state == STATE_ON
     attrs = state.attributes
@@ -606,7 +606,7 @@ async def test_update_entity_reload(
     assert attrs[ATTR_LATEST_VERSION] == "11.2.4"
     assert attrs[ATTR_RELEASE_URL] is None
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         UPDATE_DOMAIN,
         SERVICE_SKIP,
         {
@@ -615,53 +615,53 @@ async def test_update_entity_reload(
         blocking=True,
     )
 
-    state = hass.states.get(UPDATE_ENTITY)
+    state = menuai.states.get(UPDATE_ENTITY)
     assert state
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_SKIPPED_VERSION] == "11.2.4"
 
-    await hass.config_entries.async_reload(integration.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_reload(integration.entry_id)
+    await menuai.async_block_till_done()
 
     # Trigger another update and make sure the skipped version is still skipped
-    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=5, days=4))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(minutes=5, days=4))
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(UPDATE_ENTITY)
+    state = menuai.states.get(UPDATE_ENTITY)
     assert state
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_SKIPPED_VERSION] == "11.2.4"
 
 
 async def test_update_entity_delay(
-    hass: HomeAssistant,
+    menuai: menuai,
     client,
     ge_in_wall_dimmer_switch,
     zen_31,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test update occurs on a delay after HA starts."""
     client.async_send_command.reset_mock()
     client.async_send_command.return_value = {"updates": []}
-    hass.set_state(CoreState.not_running)
+    menuai.set_state(CoreState.not_running)
 
     entry = MockConfigEntry(domain="zwave_js", data={"url": "ws://test.org"})
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert len(client.async_send_command.call_args_list) == 6
 
-    await hass.async_start()
-    await hass.async_block_till_done()
+    await menuai.async_start()
+    await menuai.async_block_till_done()
 
     assert len(client.async_send_command.call_args_list) == 6
 
     update_interval = timedelta(minutes=5)
     freezer.tick(update_interval)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     nodes: set[int] = set()
 
@@ -671,8 +671,8 @@ async def test_update_entity_delay(
     nodes.add(args["nodeId"])
 
     freezer.tick(update_interval)
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
     assert len(client.async_send_command.call_args_list) == 8
     args = client.async_send_command.call_args_list[7][0][0]
@@ -684,14 +684,14 @@ async def test_update_entity_delay(
 
 
 async def test_update_entity_partial_restore_data(
-    hass: HomeAssistant,
+    menuai: menuai,
     client,
     climate_radio_thermostat_ct100_plus_different_endpoints,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test update entity with partial restore data resets state."""
     mock_restore_cache(
-        hass,
+        menuai,
         [
             State(
                 UPDATE_ENTITY,
@@ -705,24 +705,24 @@ async def test_update_entity_partial_restore_data(
         ],
     )
     entry = MockConfigEntry(domain="zwave_js", data={"url": "ws://test.org"})
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(UPDATE_ENTITY)
+    state = menuai.states.get(UPDATE_ENTITY)
     assert state
     assert state.state == STATE_UNKNOWN
 
 
 async def test_update_entity_partial_restore_data_2(
-    hass: HomeAssistant,
+    menuai: menuai,
     client,
     climate_radio_thermostat_ct100_plus_different_endpoints,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test second scenario where update entity has partial restore data."""
     mock_restore_cache_with_extra_data(
-        hass,
+        menuai,
         [
             (
                 State(
@@ -739,11 +739,11 @@ async def test_update_entity_partial_restore_data_2(
         ],
     )
     entry = MockConfigEntry(domain="zwave_js", data={"url": "ws://test.org"})
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(UPDATE_ENTITY)
+    state = menuai.states.get(UPDATE_ENTITY)
     assert state
     assert state.state == STATE_UNKNOWN
     assert state.attributes[ATTR_SKIPPED_VERSION] is None
@@ -751,14 +751,14 @@ async def test_update_entity_partial_restore_data_2(
 
 
 async def test_update_entity_full_restore_data_skipped_version(
-    hass: HomeAssistant,
+    menuai: menuai,
     client,
     climate_radio_thermostat_ct100_plus_different_endpoints,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test update entity with full restore data (skipped version) restores state."""
     mock_restore_cache_with_extra_data(
-        hass,
+        menuai,
         [
             (
                 State(
@@ -775,11 +775,11 @@ async def test_update_entity_full_restore_data_skipped_version(
         ],
     )
     entry = MockConfigEntry(domain="zwave_js", data={"url": "ws://test.org"})
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(UPDATE_ENTITY)
+    state = menuai.states.get(UPDATE_ENTITY)
     assert state
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_SKIPPED_VERSION] == "11.2.4"
@@ -787,14 +787,14 @@ async def test_update_entity_full_restore_data_skipped_version(
 
 
 async def test_update_entity_full_restore_data_update_available(
-    hass: HomeAssistant,
+    menuai: menuai,
     client,
     climate_radio_thermostat_ct100_plus_different_endpoints,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test update entity with full restore data (update available) restores state."""
     mock_restore_cache_with_extra_data(
-        hass,
+        menuai,
         [
             (
                 State(
@@ -811,11 +811,11 @@ async def test_update_entity_full_restore_data_update_available(
         ],
     )
     entry = MockConfigEntry(domain="zwave_js", data={"url": "ws://test.org"})
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(UPDATE_ENTITY)
+    state = menuai.states.get(UPDATE_ENTITY)
     assert state
     assert state.state == STATE_ON
     assert state.attributes[ATTR_SKIPPED_VERSION] is None
@@ -826,8 +826,8 @@ async def test_update_entity_full_restore_data_update_available(
     }
 
     # Test successful install call without a version
-    install_task = hass.async_create_task(
-        hass.services.async_call(
+    install_task = menuai.async_create_task(
+        menuai.services.async_call(
             UPDATE_DOMAIN,
             SERVICE_INSTALL,
             {
@@ -840,7 +840,7 @@ async def test_update_entity_full_restore_data_update_available(
     # Sleep so that task starts
     await asyncio.sleep(0.1)
 
-    state = hass.states.get(UPDATE_ENTITY)
+    state = menuai.states.get(UPDATE_ENTITY)
     assert state
     attrs = state.attributes
     assert attrs[ATTR_IN_PROGRESS] is True
@@ -873,14 +873,14 @@ async def test_update_entity_full_restore_data_update_available(
 
 
 async def test_update_entity_full_restore_data_no_update_available(
-    hass: HomeAssistant,
+    menuai: menuai,
     client,
     climate_radio_thermostat_ct100_plus_different_endpoints,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test entity with full restore data (no update available) restores state."""
     mock_restore_cache_with_extra_data(
-        hass,
+        menuai,
         [
             (
                 State(
@@ -897,11 +897,11 @@ async def test_update_entity_full_restore_data_no_update_available(
         ],
     )
     entry = MockConfigEntry(domain="zwave_js", data={"url": "ws://test.org"})
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(UPDATE_ENTITY)
+    state = menuai.states.get(UPDATE_ENTITY)
     assert state
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_SKIPPED_VERSION] is None
@@ -909,14 +909,14 @@ async def test_update_entity_full_restore_data_no_update_available(
 
 
 async def test_update_entity_no_latest_version(
-    hass: HomeAssistant,
+    menuai: menuai,
     client,
     climate_radio_thermostat_ct100_plus_different_endpoints,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test entity with no `latest_version` attr restores state."""
     mock_restore_cache_with_extra_data(
-        hass,
+        menuai,
         [
             (
                 State(
@@ -933,11 +933,11 @@ async def test_update_entity_no_latest_version(
         ],
     )
     entry = MockConfigEntry(domain="zwave_js", data={"url": "ws://test.org"})
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(entry.entry_id)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(UPDATE_ENTITY)
+    state = menuai.states.get(UPDATE_ENTITY)
     assert state
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_SKIPPED_VERSION] is None
@@ -945,16 +945,16 @@ async def test_update_entity_no_latest_version(
 
 
 async def test_update_entity_unload_asleep_node(
-    hass: HomeAssistant, client, wallmote_central_scene, integration
+    menuai: menuai, client, wallmote_central_scene, integration
 ) -> None:
     """Test unloading config entry after attempting an update for an asleep node."""
     assert len(client.async_send_command.call_args_list) == 0
 
-    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=5, days=1))
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + timedelta(minutes=5, days=1))
+    await menuai.async_block_till_done()
 
     assert len(client.async_send_command.call_args_list) == 0
     assert len(wallmote_central_scene._listeners["wake up"]) == 2
 
-    await hass.config_entries.async_unload(integration.entry_id)
+    await menuai.config_entries.async_unload(integration.entry_id)
     assert len(wallmote_central_scene._listeners["wake up"]) == 0

@@ -4,14 +4,14 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components.time import (
+from menuai.components.time import (
     ATTR_TIME,
     DOMAIN as TIME_DOMAIN,
     SERVICE_SET_VALUE,
 )
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.setup import async_setup_component
 
 ENTITY_TIME = "time.time"
 
@@ -20,34 +20,34 @@ ENTITY_TIME = "time.time"
 async def time_only() -> None:
     """Enable only the time platform."""
     with patch(
-        "homeassistant.components.demo.COMPONENTS_WITH_CONFIG_ENTRY_DEMO_PLATFORM",
+        "menuai.components.demo.COMPONENTS_WITH_CONFIG_ENTRY_DEMO_PLATFORM",
         [Platform.TIME],
     ):
         yield
 
 
 @pytest.fixture(autouse=True)
-async def setup_demo_datetime(hass: HomeAssistant, time_only) -> None:
+async def setup_demo_datetime(menuai: menuai, time_only) -> None:
     """Initialize setup demo time."""
     assert await async_setup_component(
-        hass, TIME_DOMAIN, {"time": {"platform": "demo"}}
+        menuai, TIME_DOMAIN, {"time": {"platform": "demo"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
-def test_setup_params(hass: HomeAssistant) -> None:
+def test_setup_params(menuai: menuai) -> None:
     """Test the initial parameters."""
-    state = hass.states.get(ENTITY_TIME)
+    state = menuai.states.get(ENTITY_TIME)
     assert state.state == "12:00:00"
 
 
-async def test_set_value(hass: HomeAssistant) -> None:
+async def test_set_value(menuai: menuai) -> None:
     """Test set value service."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TIME_DOMAIN,
         SERVICE_SET_VALUE,
         {ATTR_ENTITY_ID: ENTITY_TIME, ATTR_TIME: "01:02:03"},
         blocking=True,
     )
-    state = hass.states.get(ENTITY_TIME)
+    state = menuai.states.get(ENTITY_TIME)
     assert state.state == "01:02:03"

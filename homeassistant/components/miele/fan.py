@@ -9,19 +9,19 @@ from typing import Any, Final
 
 from aiohttp import ClientResponseError
 
-from homeassistant.components.fan import (
+from menuai.components.fan import (
     FanEntity,
     FanEntityDescription,
     FanEntityFeature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util.percentage import (
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util.percentage import (
     percentage_to_ranged_value,
     ranged_value_to_percentage,
 )
-from homeassistant.util.scaling import int_states_in_range
+from menuai.util.scaling import int_states_in_range
 
 from .const import DOMAIN, POWER_OFF, POWER_ON, VENTILATION_STEP, MieleAppliance
 from .coordinator import MieleConfigEntry, MieleDataUpdateCoordinator
@@ -61,7 +61,7 @@ FAN_TYPES: Final[tuple[MieleFanDefinition, ...]] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MieleConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -143,7 +143,7 @@ class MieleFan(MieleEntity, FanEntity):
                     self._device_id, {VENTILATION_STEP: ventilation_step}
                 )
             except ClientResponseError as ex:
-                raise HomeAssistantError(
+                raise menuaiError(
                     translation_domain=DOMAIN,
                     translation_key="set_state_error",
                     translation_placeholders={
@@ -166,7 +166,7 @@ class MieleFan(MieleEntity, FanEntity):
         try:
             await self.api.send_action(self._device_id, {POWER_ON: True})
         except ClientResponseError as ex:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="set_state_error",
                 translation_placeholders={
@@ -183,7 +183,7 @@ class MieleFan(MieleEntity, FanEntity):
         try:
             await self.api.send_action(self._device_id, {POWER_OFF: True})
         except ClientResponseError as ex:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="set_state_error",
                 translation_placeholders={

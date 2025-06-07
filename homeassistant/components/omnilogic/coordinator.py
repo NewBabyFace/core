@@ -6,9 +6,9 @@ from typing import Any
 
 from omnilogic import OmniLogic, OmniLogicException
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import ALL_ITEM_KINDS
 
@@ -22,7 +22,7 @@ class OmniLogicUpdateCoordinator(DataUpdateCoordinator[dict[tuple, dict[str, Any
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         api: OmniLogic,
         name: str,
         config_entry: ConfigEntry,
@@ -32,7 +32,7 @@ class OmniLogicUpdateCoordinator(DataUpdateCoordinator[dict[tuple, dict[str, Any
         self.api = api
 
         super().__init__(
-            hass=hass,
+            menuai=menuai,
             logger=_LOGGER,
             config_entry=config_entry,
             name=name,

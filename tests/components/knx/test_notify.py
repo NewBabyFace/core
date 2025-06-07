@@ -1,15 +1,15 @@
 """Test KNX notify."""
 
-from homeassistant.components import notify
-from homeassistant.components.knx.const import KNX_ADDRESS
-from homeassistant.components.knx.schema import NotifySchema
-from homeassistant.const import CONF_NAME, CONF_TYPE
-from homeassistant.core import HomeAssistant
+from menuai.components import notify
+from menuai.components.knx.const import KNX_ADDRESS
+from menuai.components.knx.schema import NotifySchema
+from menuai.const import CONF_NAME, CONF_TYPE
+from menuai.core import menuai
 
 from .conftest import KNXTestKit
 
 
-async def test_notify_simple(hass: HomeAssistant, knx: KNXTestKit) -> None:
+async def test_notify_simple(menuai: menuai, knx: KNXTestKit) -> None:
     """Test KNX notify can send to one device."""
     await knx.setup_integration(
         {
@@ -19,7 +19,7 @@ async def test_notify_simple(hass: HomeAssistant, knx: KNXTestKit) -> None:
             }
         }
     )
-    await hass.services.async_call(
+    await menuai.services.async_call(
         notify.DOMAIN,
         notify.SERVICE_SEND_MESSAGE,
         {
@@ -32,7 +32,7 @@ async def test_notify_simple(hass: HomeAssistant, knx: KNXTestKit) -> None:
         (73, 32, 108, 111, 118, 101, 32, 75, 78, 88, 0, 0, 0, 0),
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         notify.DOMAIN,
         notify.SERVICE_SEND_MESSAGE,
         {
@@ -47,7 +47,7 @@ async def test_notify_simple(hass: HomeAssistant, knx: KNXTestKit) -> None:
 
 
 async def test_notify_multiple_sends_with_different_encodings(
-    hass: HomeAssistant, knx: KNXTestKit
+    menuai: menuai, knx: KNXTestKit
 ) -> None:
     """Test KNX notify `type` configuration."""
     await knx.setup_integration(
@@ -68,7 +68,7 @@ async def test_notify_multiple_sends_with_different_encodings(
     )
     message = {notify.ATTR_MESSAGE: "Gänsefüßchen"}
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         notify.DOMAIN,
         notify.SERVICE_SEND_MESSAGE,
         {
@@ -82,7 +82,7 @@ async def test_notify_multiple_sends_with_different_encodings(
         (71, 63, 110, 115, 101, 102, 63, 63, 99, 104, 101, 110, 0, 0),
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         notify.DOMAIN,
         notify.SERVICE_SEND_MESSAGE,
         {

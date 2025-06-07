@@ -8,19 +8,19 @@ from bring_api import BringItemOperation, BringItemsResponse, BringRequestExcept
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.bring.const import DOMAIN
-from homeassistant.components.todo import (
+from menuai.components.bring.const import DOMAIN
+from menuai.components.todo import (
     ATTR_DESCRIPTION,
     ATTR_ITEM,
     ATTR_RENAME,
     DOMAIN as TODO_DOMAIN,
     TodoServices,
 )
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from menuai.config_entries import ConfigEntryState
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry, async_load_fixture, snapshot_platform
 
@@ -29,7 +29,7 @@ from tests.common import MockConfigEntry, async_load_fixture, snapshot_platform
 def todo_only() -> Generator[None]:
     """Enable only the todo platform."""
     with patch(
-        "homeassistant.components.bring.PLATFORMS",
+        "menuai.components.bring.PLATFORMS",
         [Platform.TODO],
     ):
         yield
@@ -37,7 +37,7 @@ def todo_only() -> Generator[None]:
 
 @pytest.mark.usefixtures("mock_bring_client")
 async def test_todo(
-    hass: HomeAssistant,
+    menuai: menuai,
     bring_config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
@@ -46,38 +46,38 @@ async def test_todo(
     """Snapshot test states of todo platform."""
     mock_bring_client.get_list.side_effect = [
         BringItemsResponse.from_json(
-            await async_load_fixture(hass, "items.json", DOMAIN)
+            await async_load_fixture(menuai, "items.json", DOMAIN)
         ),
         BringItemsResponse.from_json(
-            await async_load_fixture(hass, "items2.json", DOMAIN)
+            await async_load_fixture(menuai, "items2.json", DOMAIN)
         ),
     ]
-    bring_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(bring_config_entry.entry_id)
-    await hass.async_block_till_done()
+    bring_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(bring_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert bring_config_entry.state is ConfigEntryState.LOADED
 
     await snapshot_platform(
-        hass, entity_registry, snapshot, bring_config_entry.entry_id
+        menuai, entity_registry, snapshot, bring_config_entry.entry_id
     )
 
 
 @pytest.mark.usefixtures("mock_uuid")
 async def test_add_item(
-    hass: HomeAssistant,
+    menuai: menuai,
     bring_config_entry: MockConfigEntry,
     mock_bring_client: AsyncMock,
 ) -> None:
     """Test add item to list."""
 
-    bring_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(bring_config_entry.entry_id)
-    await hass.async_block_till_done()
+    bring_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(bring_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert bring_config_entry.state is ConfigEntryState.LOADED
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.ADD_ITEM,
         service_data={ATTR_ITEM: "Äpfel", ATTR_DESCRIPTION: "rot"},
@@ -94,23 +94,23 @@ async def test_add_item(
 
 
 async def test_add_item_exception(
-    hass: HomeAssistant,
+    menuai: menuai,
     bring_config_entry: MockConfigEntry,
     mock_bring_client: AsyncMock,
 ) -> None:
     """Test add item to list with exception."""
 
-    bring_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(bring_config_entry.entry_id)
-    await hass.async_block_till_done()
+    bring_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(bring_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert bring_config_entry.state is ConfigEntryState.LOADED
 
     mock_bring_client.save_item.side_effect = BringRequestException
     with pytest.raises(
-        HomeAssistantError, match="Failed to save item Äpfel to Bring! list"
+        menuaiError, match="Failed to save item Äpfel to Bring! list"
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             TODO_DOMAIN,
             TodoServices.ADD_ITEM,
             service_data={ATTR_ITEM: "Äpfel", ATTR_DESCRIPTION: "rot"},
@@ -121,19 +121,19 @@ async def test_add_item_exception(
 
 @pytest.mark.usefixtures("mock_uuid")
 async def test_update_item(
-    hass: HomeAssistant,
+    menuai: menuai,
     bring_config_entry: MockConfigEntry,
     mock_bring_client: AsyncMock,
 ) -> None:
     """Test update item."""
 
-    bring_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(bring_config_entry.entry_id)
-    await hass.async_block_till_done()
+    bring_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(bring_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert bring_config_entry.state is ConfigEntryState.LOADED
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.UPDATE_ITEM,
         service_data={
@@ -157,23 +157,23 @@ async def test_update_item(
 
 
 async def test_update_item_exception(
-    hass: HomeAssistant,
+    menuai: menuai,
     bring_config_entry: MockConfigEntry,
     mock_bring_client: AsyncMock,
 ) -> None:
     """Test update item with exception."""
 
-    bring_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(bring_config_entry.entry_id)
-    await hass.async_block_till_done()
+    bring_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(bring_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert bring_config_entry.state is ConfigEntryState.LOADED
 
     mock_bring_client.batch_update_list.side_effect = BringRequestException
     with pytest.raises(
-        HomeAssistantError, match="Failed to update item Paprika to Bring! list"
+        menuaiError, match="Failed to update item Paprika to Bring! list"
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             TODO_DOMAIN,
             TodoServices.UPDATE_ITEM,
             service_data={
@@ -188,19 +188,19 @@ async def test_update_item_exception(
 
 @pytest.mark.usefixtures("mock_uuid")
 async def test_rename_item(
-    hass: HomeAssistant,
+    menuai: menuai,
     bring_config_entry: MockConfigEntry,
     mock_bring_client: AsyncMock,
 ) -> None:
     """Test rename item."""
 
-    bring_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(bring_config_entry.entry_id)
-    await hass.async_block_till_done()
+    bring_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(bring_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert bring_config_entry.state is ConfigEntryState.LOADED
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.UPDATE_ITEM,
         service_data={
@@ -232,23 +232,23 @@ async def test_rename_item(
 
 
 async def test_rename_item_exception(
-    hass: HomeAssistant,
+    menuai: menuai,
     bring_config_entry: MockConfigEntry,
     mock_bring_client: AsyncMock,
 ) -> None:
     """Test rename item with exception."""
 
-    bring_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(bring_config_entry.entry_id)
-    await hass.async_block_till_done()
+    bring_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(bring_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert bring_config_entry.state is ConfigEntryState.LOADED
 
     mock_bring_client.batch_update_list.side_effect = BringRequestException
     with pytest.raises(
-        HomeAssistantError, match="Failed to rename item Gurke to Bring! list"
+        menuaiError, match="Failed to rename item Gurke to Bring! list"
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             TODO_DOMAIN,
             TodoServices.UPDATE_ITEM,
             service_data={
@@ -263,19 +263,19 @@ async def test_rename_item_exception(
 
 @pytest.mark.usefixtures("mock_uuid")
 async def test_delete_items(
-    hass: HomeAssistant,
+    menuai: menuai,
     bring_config_entry: MockConfigEntry,
     mock_bring_client: AsyncMock,
 ) -> None:
     """Test delete item."""
 
-    bring_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(bring_config_entry.entry_id)
-    await hass.async_block_till_done()
+    bring_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(bring_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert bring_config_entry.state is ConfigEntryState.LOADED
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         TODO_DOMAIN,
         TodoServices.REMOVE_ITEM,
         service_data={ATTR_ITEM: "b5d0790b-5f32-4d5c-91da-e29066f167de"},
@@ -297,23 +297,23 @@ async def test_delete_items(
 
 
 async def test_delete_items_exception(
-    hass: HomeAssistant,
+    menuai: menuai,
     bring_config_entry: MockConfigEntry,
     mock_bring_client: AsyncMock,
 ) -> None:
     """Test delete item."""
 
-    bring_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(bring_config_entry.entry_id)
-    await hass.async_block_till_done()
+    bring_config_entry.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(bring_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert bring_config_entry.state is ConfigEntryState.LOADED
     mock_bring_client.batch_update_list.side_effect = BringRequestException
     with pytest.raises(
-        HomeAssistantError,
+        menuaiError,
         match=re.escape("Failed to delete 1 item(s) from Bring! list"),
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             TODO_DOMAIN,
             TodoServices.REMOVE_ITEM,
             service_data={ATTR_ITEM: "b5d0790b-5f32-4d5c-91da-e29066f167de"},

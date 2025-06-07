@@ -11,8 +11,8 @@ from decora_wifi.models.residence import Residence
 from decora_wifi.models.residential_account import ResidentialAccount
 import voluptuous as vol
 
-from homeassistant.components import persistent_notification
-from homeassistant.components.light import (
+from menuai.components import persistent_notification
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_TRANSITION,
     PLATFORM_SCHEMA as LIGHT_PLATFORM_SCHEMA,
@@ -20,11 +20,11 @@ from homeassistant.components.light import (
     LightEntity,
     LightEntityFeature,
 )
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_PASSWORD, CONF_USERNAME, EVENT_menuai_STOP
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ NOTIFICATION_TITLE = "myLeviton Decora Setup"
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -57,7 +57,7 @@ def setup_platform(
             msg = "Failed to log into myLeviton Services. Check credentials."
             _LOGGER.error(msg)
             persistent_notification.create(
-                hass, msg, title=NOTIFICATION_TITLE, notification_id=NOTIFICATION_ID
+                menuai, msg, title=NOTIFICATION_TITLE, notification_id=NOTIFICATION_ID
             )
             return
 
@@ -89,7 +89,7 @@ def setup_platform(
         except ValueError:
             _LOGGER.error("Failed to log out of myLeviton Service")
 
-    hass.bus.listen(EVENT_HOMEASSISTANT_STOP, logout)
+    menuai.bus.listen(EVENT_menuai_STOP, logout)
 
 
 class DecoraWifiLight(LightEntity):

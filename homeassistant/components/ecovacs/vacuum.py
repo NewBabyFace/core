@@ -12,18 +12,18 @@ from deebot_client.events import BatteryEvent, FanSpeedEvent, RoomsEvent, StateE
 from deebot_client.models import CleanAction, CleanMode, Room, State
 import sucks
 
-from homeassistant.components.vacuum import (
+from menuai.components.vacuum import (
     StateVacuumEntity,
     StateVacuumEntityDescription,
     VacuumActivity,
     VacuumEntityFeature,
 )
-from homeassistant.core import HomeAssistant, SupportsResponse
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import entity_platform
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.icon import icon_for_battery_level
-from homeassistant.util import slugify
+from menuai.core import menuai, SupportsResponse
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import entity_platform
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.icon import icon_for_battery_level
+from menuai.util import slugify
 
 from . import EcovacsConfigEntry
 from .const import DOMAIN
@@ -39,7 +39,7 @@ SERVICE_RAW_GET_POSITIONS = "raw_get_positions"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: EcovacsConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -54,7 +54,7 @@ async def async_setup_entry(
     vacuums.extend(
         [EcovacsLegacyVacuum(device) for device in controller.legacy_devices]
     )
-    _LOGGER.debug("Adding Ecovacs Vacuums to Home Assistant: %s", vacuums)
+    _LOGGER.debug("Adding Ecovacs Vacuums to MenuAI: %s", vacuums)
     async_add_entities(vacuums)
 
     platform = entity_platform.async_get_current_platform()
@@ -82,8 +82,8 @@ class EcovacsLegacyVacuum(EcovacsLegacyEntity, StateVacuumEntity):
         | VacuumEntityFeature.FAN_SPEED
     )
 
-    async def async_added_to_hass(self) -> None:
-        """Set up the event listeners now that hass is ready."""
+    async def async_added_to_menuai(self) -> None:
+        """Set up the event listeners now that menuai is ready."""
         self._event_listeners.append(
             self.device.statusEvents.subscribe(
                 lambda _: self.schedule_update_ha_state()
@@ -112,7 +112,7 @@ class EcovacsLegacyVacuum(EcovacsLegacyEntity, StateVacuumEntity):
         else:
             self.error = error
 
-        self.hass.bus.fire(
+        self.menuai.bus.fire(
             "ecovacs_error", {"entity_id": self.entity_id, "error": error}
         )
         self.schedule_update_ha_state()
@@ -261,9 +261,9 @@ class EcovacsVacuum(
                 get_name_key(level) for level in fan_speed.types
             ]
 
-    async def async_added_to_hass(self) -> None:
-        """Set up the event listeners now that hass is ready."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Set up the event listeners now that menuai is ready."""
+        await super().async_added_to_menuai()
 
         async def on_battery(event: BatteryEvent) -> None:
             self._attr_battery_level = event.value

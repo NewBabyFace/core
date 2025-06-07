@@ -7,16 +7,16 @@ from typing import Any
 from aiopegelonline import CONNECT_ERRORS, PegelOnline
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import (
     CONF_LATITUDE,
     CONF_LOCATION,
     CONF_LONGITUDE,
     CONF_RADIUS,
     UnitOfLength,
 )
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.selector import (
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.selector import (
     LocationSelector,
     NumberSelector,
     NumberSelectorConfig,
@@ -47,7 +47,7 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
         if not user_input:
             return self._show_form_user()
 
-        api = PegelOnline(async_get_clientsession(self.hass))
+        api = PegelOnline(async_get_clientsession(self.menuai))
         try:
             stations = await api.async_get_nearby_stations(
                 user_input[CONF_LOCATION][CONF_LATITUDE],
@@ -113,8 +113,8 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
                         default=user_input.get(
                             CONF_LOCATION,
                             {
-                                "latitude": self.hass.config.latitude,
-                                "longitude": self.hass.config.longitude,
+                                "latitude": self.menuai.config.latitude,
+                                "longitude": self.menuai.config.longitude,
                             },
                         ),
                     ): LocationSelector(),

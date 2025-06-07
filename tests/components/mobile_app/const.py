@@ -12,7 +12,7 @@ FIRE_EVENT = {
 
 REGISTER = {
     "app_data": {"foo": "bar"},
-    "app_id": "io.homeassistant.mobile_app_test",
+    "app_id": "io.menuai.mobile_app_test",
     "app_name": "Mobile App Tests",
     "app_version": "1.0.0",
     "device_name": "Test 1",
@@ -25,7 +25,7 @@ REGISTER = {
 
 REGISTER_CLEARTEXT = {
     "app_data": {"foo": "bar"},
-    "app_id": "io.homeassistant.mobile_app_test",
+    "app_id": "io.menuai.mobile_app_test",
     "app_name": "Mobile App Tests",
     "app_version": "1.0.0",
     "device_name": "Test 1",

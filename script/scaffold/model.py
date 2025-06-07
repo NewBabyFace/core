@@ -55,7 +55,7 @@ class Info:
         """Update the integration manifest."""
         print(f"Updating {self.domain} manifest: {kwargs}")
 
-        # Sort keys in manifest so we don't trigger hassfest errors.
+        # Sort keys in manifest so we don't trigger menuaifest errors.
         manifest: dict[str, Any] = {**self.manifest(), **kwargs}
         sort_manifest(manifest)
 

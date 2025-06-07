@@ -1,12 +1,12 @@
-"""Test Home Assistant util methods."""
+"""Test MenuAI util methods."""
 
 from datetime import datetime, timedelta
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from homeassistant import util
-from homeassistant.util import dt as dt_util
+from menuai import util
+from menuai.util import dt as dt_util
 
 
 def test_raise_if_invalid_filename() -> None:
@@ -70,7 +70,7 @@ def test_repr_helper() -> None:
     assert util.repr_helper({"test": 1}) == "test=1"
 
     tz = dt_util.get_time_zone("Europe/Copenhagen")
-    with patch("homeassistant.util.dt.DEFAULT_TIME_ZONE", tz):
+    with patch("menuai.util.dt.DEFAULT_TIME_ZONE", tz):
         assert (
             util.repr_helper(datetime(1986, 7, 9, 12, 0, 0))
             == "1986-07-09T12:00:00+02:00"
@@ -131,14 +131,14 @@ def test_throttle() -> None:
     assert len(calls1) == 2
     assert len(calls2) == 1
 
-    with patch("homeassistant.util.utcnow", return_value=plus3):
+    with patch("menuai.util.utcnow", return_value=plus3):
         test_throttle1()
         test_throttle2()
 
     assert len(calls1) == 2
     assert len(calls2) == 1
 
-    with patch("homeassistant.util.utcnow", return_value=plus5):
+    with patch("menuai.util.utcnow", return_value=plus5):
         test_throttle1()
         test_throttle2()
 

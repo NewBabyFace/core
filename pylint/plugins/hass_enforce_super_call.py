@@ -8,19 +8,19 @@ from pylint.interfaces import INFERENCE
 from pylint.lint import PyLinter
 
 METHODS = {
-    "async_added_to_hass",
+    "async_added_to_menuai",
 }
 
 
-class HassEnforceSuperCallChecker(BaseChecker):
+class menuaiEnforceSuperCallChecker(BaseChecker):
     """Checker for super calls."""
 
-    name = "hass_enforce_super_call"
+    name = "menuai_enforce_super_call"
     priority = -1
     msgs = {
         "W7441": (
             "Missing call to: super().%s",
-            "hass-missing-super-call",
+            "menuai-missing-super-call",
             "Used when method should call its parent implementation.",
         ),
     }
@@ -65,7 +65,7 @@ class HassEnforceSuperCallChecker(BaseChecker):
 
             if found_base_implementation:
                 self.add_message(
-                    "hass-missing-super-call",
+                    "menuai-missing-super-call",
                     node=node,
                     args=(node.name,),
                     confidence=INFERENCE,
@@ -77,4 +77,4 @@ class HassEnforceSuperCallChecker(BaseChecker):
 
 def register(linter: PyLinter) -> None:
     """Register the checker."""
-    linter.register_checker(HassEnforceSuperCallChecker(linter))
+    linter.register_checker(menuaiEnforceSuperCallChecker(linter))

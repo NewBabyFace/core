@@ -9,14 +9,14 @@ from iottycloud.device import Device
 from iottycloud.shutter import Shutter, ShutterState
 from iottycloud.verbs import SH_DEVICE_TYPE_UID
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     ATTR_POSITION,
     CoverDeviceClass,
     CoverEntity,
     CoverEntityFeature,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .api import IottyProxy
 from .coordinator import IottyConfigEntry, IottyDataUpdateCoordinator
@@ -26,7 +26,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: IottyConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

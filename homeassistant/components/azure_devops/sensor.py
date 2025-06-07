@@ -11,15 +11,15 @@ from typing import Any
 from aioazuredevops.helper import WorkItemState, WorkItemTypeAndState
 from aioazuredevops.models.build import Build
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
+from menuai.util import dt as dt_util
 
 from .coordinator import AzureDevOpsConfigEntry, AzureDevOpsDataUpdateCoordinator
 from .entity import AzureDevOpsEntity
@@ -143,7 +143,7 @@ def parse_datetime(value: str | None) -> datetime | None:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: AzureDevOpsConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

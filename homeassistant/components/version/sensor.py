@@ -1,14 +1,14 @@
-"""Sensor that can display the current Home Assistant versions."""
+"""Sensor that can display the current MenuAI versions."""
 
 from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.sensor import SensorEntity, SensorEntityDescription
-from homeassistant.const import CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
+from menuai.components.sensor import SensorEntity, SensorEntityDescription
+from menuai.const import CONF_NAME
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
 
 from .const import CONF_SOURCE, DEFAULT_NAME
 from .coordinator import VersionConfigEntry
@@ -16,7 +16,7 @@ from .entity import VersionEntity
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: VersionConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

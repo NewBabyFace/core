@@ -2,8 +2,8 @@
 
 import pytest
 
-from homeassistant.const import STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant
+from menuai.const import STATE_OFF, STATE_ON
+from menuai.core import menuai
 
 
 @pytest.mark.parametrize(
@@ -15,7 +15,7 @@ from homeassistant.core import HomeAssistant
     ],
 )
 async def test_pumps(
-    spa, setup_entry, hass: HomeAssistant, pump_id, pump_state, entity_suffix
+    spa, setup_entry, menuai: menuai, pump_id, pump_state, entity_suffix
 ) -> None:
     """Test pump entities."""
 
@@ -23,11 +23,11 @@ async def test_pumps(
     pump = next(pump for pump in status.pumps if pump.id == pump_id)
 
     entity_id = f"switch.{spa.brand}_{spa.model}_{entity_suffix}"
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state is not None
     assert state.state == pump_state
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "switch",
         "toggle",
         {"entity_id": entity_id},
@@ -36,7 +36,7 @@ async def test_pumps(
     pump.toggle.assert_called()
 
     if state.state == STATE_OFF:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "switch",
             "turn_on",
             {"entity_id": entity_id},
@@ -46,7 +46,7 @@ async def test_pumps(
     else:
         assert state.state == STATE_ON
 
-        await hass.services.async_call(
+        await menuai.services.async_call(
             "switch",
             "turn_off",
             {"entity_id": entity_id},

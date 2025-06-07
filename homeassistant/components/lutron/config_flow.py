@@ -9,15 +9,15 @@ from urllib.error import HTTPError
 from pylutron import Lutron
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import callback
-from homeassistant.helpers.selector import (
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import callback
+from menuai.helpers.selector import (
     NumberSelector,
     NumberSelectorConfig,
     NumberSelectorMode,
@@ -49,7 +49,7 @@ class LutronConfigFlow(ConfigFlow, domain=DOMAIN):
             )
 
             try:
-                await self.hass.async_add_executor_job(main_repeater.load_xml_db)
+                await self.menuai.async_add_executor_job(main_repeater.load_xml_db)
             except HTTPError:
                 _LOGGER.exception("Http error")
                 errors["base"] = "cannot_connect"

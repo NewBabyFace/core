@@ -8,16 +8,16 @@ import logging
 
 from satel_integra.satel_integra import AlarmState
 
-from homeassistant.components.alarm_control_panel import (
+from menuai.components.alarm_control_panel import (
     AlarmControlPanelEntity,
     AlarmControlPanelEntityFeature,
     AlarmControlPanelState,
     CodeFormat,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai, callback
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import (
     CONF_ARM_HOME_MODE,
@@ -31,7 +31,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -41,7 +41,7 @@ async def async_setup_platform(
         return
 
     configured_partitions = discovery_info[CONF_DEVICE_PARTITIONS]
-    controller = hass.data[DATA_SATEL]
+    controller = menuai.data[DATA_SATEL]
 
     devices = []
 
@@ -74,13 +74,13 @@ class SatelIntegraAlarmPanel(AlarmControlPanelEntity):
         self._partition_id = partition_id
         self._satel = controller
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Update alarm status and register callbacks for future updates."""
         _LOGGER.debug("Starts listening for panel messages")
         self._update_alarm_status()
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, SIGNAL_PANEL_MESSAGE, self._update_alarm_status
+                self.menuai, SIGNAL_PANEL_MESSAGE, self._update_alarm_status
             )
         )
 
@@ -99,7 +99,7 @@ class SatelIntegraAlarmPanel(AlarmControlPanelEntity):
         """Read current status of the alarm and translate it into HA status."""
 
         # Default - disarmed:
-        hass_alarm_status = AlarmControlPanelState.DISARMED
+        menuai_alarm_status = AlarmControlPanelState.DISARMED
 
         if not self._satel.connected:
             return None
@@ -130,10 +130,10 @@ class SatelIntegraAlarmPanel(AlarmControlPanelEntity):
                 satel_state in self._satel.partition_states
                 and self._partition_id in self._satel.partition_states[satel_state]
             ):
-                hass_alarm_status = ha_state
+                menuai_alarm_status = ha_state
                 break
 
-        return hass_alarm_status
+        return menuai_alarm_status
 
     async def async_alarm_disarm(self, code: str | None = None) -> None:
         """Send disarm command."""

@@ -4,16 +4,16 @@ from __future__ import annotations
 
 from datetime import timedelta
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import EntityCategory
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import ATTR_RSSI, DOMAIN
 from .coordinator import LIFXUpdateCoordinator
@@ -32,12 +32,12 @@ RSSI_SENSOR = SensorEntityDescription(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up LIFX sensor from config entry."""
-    coordinator: LIFXUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: LIFXUpdateCoordinator = menuai.data[DOMAIN][entry.entry_id]
     async_add_entities([LIFXRssiSensor(coordinator, RSSI_SENSOR)])
 
 
@@ -67,7 +67,7 @@ class LIFXRssiSensor(LIFXEntity, SensorEntity):
         """Handle coordinator updates."""
         self._attr_native_value = self.coordinator.rssi
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Enable RSSI updates."""
         self.async_on_remove(self.coordinator.async_enable_rssi_updates())
-        return await super().async_added_to_hass()
+        return await super().async_added_to_menuai()

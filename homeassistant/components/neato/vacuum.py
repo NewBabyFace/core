@@ -10,18 +10,18 @@ from pybotvac import Robot
 from pybotvac.exceptions import NeatoRobotException
 import voluptuous as vol
 
-from homeassistant.components.vacuum import (
+from menuai.components.vacuum import (
     ATTR_STATUS,
     StateVacuumEntity,
     VacuumActivity,
     VacuumEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_MODE
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.const import ATTR_MODE
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, entity_platform
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
     ACTION,
@@ -58,17 +58,17 @@ ATTR_ZONE = "zone"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Neato vacuum with config entry."""
-    neato: NeatoHub = hass.data[NEATO_LOGIN]
-    mapdata: dict[str, Any] | None = hass.data.get(NEATO_MAP_DATA)
-    persistent_maps: dict[str, Any] | None = hass.data.get(NEATO_PERSISTENT_MAPS)
+    neato: NeatoHub = menuai.data[NEATO_LOGIN]
+    mapdata: dict[str, Any] | None = menuai.data.get(NEATO_MAP_DATA)
+    persistent_maps: dict[str, Any] | None = menuai.data.get(NEATO_PERSISTENT_MAPS)
     dev = [
         NeatoConnectedVacuum(neato, robot, mapdata, persistent_maps)
-        for robot in hass.data[NEATO_ROBOTS]
+        for robot in menuai.data[NEATO_ROBOTS]
     ]
 
     if not dev:

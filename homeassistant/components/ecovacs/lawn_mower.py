@@ -9,14 +9,14 @@ from deebot_client.device import Device
 from deebot_client.events import StateEvent
 from deebot_client.models import CleanAction, State
 
-from homeassistant.components.lawn_mower import (
+from menuai.components.lawn_mower import (
     LawnMowerActivity,
     LawnMowerEntity,
     LawnMowerEntityEntityDescription,
     LawnMowerEntityFeature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import EcovacsConfigEntry
 from .entity import EcovacsEntity
@@ -35,7 +35,7 @@ _STATE_TO_MOWER_STATE = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: EcovacsConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -46,7 +46,7 @@ async def async_setup_entry(
         for device in controller.devices
         if device.capabilities.device_type is DeviceType.MOWER
     ]
-    _LOGGER.debug("Adding Ecovacs Mowers to Home Assistant: %s", mowers)
+    _LOGGER.debug("Adding Ecovacs Mowers to MenuAI: %s", mowers)
     async_add_entities(mowers)
 
 
@@ -68,9 +68,9 @@ class EcovacsMower(
         """Initialize the mower."""
         super().__init__(device, device.capabilities)
 
-    async def async_added_to_hass(self) -> None:
-        """Set up the event listeners now that hass is ready."""
-        await super().async_added_to_hass()
+    async def async_added_to_menuai(self) -> None:
+        """Set up the event listeners now that menuai is ready."""
+        await super().async_added_to_menuai()
 
         async def on_status(event: StateEvent) -> None:
             self._attr_activity = _STATE_TO_MOWER_STATE[event.state]

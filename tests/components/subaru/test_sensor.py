@@ -5,15 +5,15 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.components.subaru.sensor import (
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.components.subaru.sensor import (
     API_GEN_2_SENSORS,
     DOMAIN,
     EV_SENSORS,
     SAFETY_SENSORS,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .api_responses import (
     EXPECTED_STATE_EV_METRIC,
@@ -30,18 +30,18 @@ from .conftest import (
 from tests.common import get_sensor_display_state
 
 
-async def test_sensors_ev_metric(hass: HomeAssistant, ev_entry) -> None:
+async def test_sensors_ev_metric(menuai: menuai, ev_entry) -> None:
     """Test sensors supporting metric units."""
-    _assert_data(hass, EXPECTED_STATE_EV_METRIC)
+    _assert_data(menuai, EXPECTED_STATE_EV_METRIC)
 
 
-async def test_sensors_missing_vin_data(hass: HomeAssistant, ev_entry) -> None:
+async def test_sensors_missing_vin_data(menuai: menuai, ev_entry) -> None:
     """Test for missing VIN dataset."""
     with patch(MOCK_API_FETCH), patch(MOCK_API_GET_DATA, return_value=None):
-        advance_time_to_next_fetch(hass)
-        await hass.async_block_till_done()
+        advance_time_to_next_fetch(menuai)
+        await menuai.async_block_till_done()
 
-    _assert_data(hass, EXPECTED_STATE_EV_UNAVAILABLE)
+    _assert_data(menuai, EXPECTED_STATE_EV_UNAVAILABLE)
 
 
 @pytest.mark.parametrize(
@@ -59,7 +59,7 @@ async def test_sensors_missing_vin_data(hass: HomeAssistant, ev_entry) -> None:
     ],
 )
 async def test_sensor_migrate_unique_ids(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     entitydata,
     old_unique_id,
@@ -73,7 +73,7 @@ async def test_sensor_migrate_unique_ids(
     )
     assert entity.unique_id == old_unique_id
 
-    await setup_subaru_config_entry(hass, subaru_config_entry)
+    await setup_subaru_config_entry(menuai, subaru_config_entry)
 
     entity_migrated = entity_registry.async_get(entity.entity_id)
     assert entity_migrated
@@ -95,7 +95,7 @@ async def test_sensor_migrate_unique_ids(
     ],
 )
 async def test_sensor_migrate_unique_ids_duplicate(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     entitydata,
     old_unique_id,
@@ -117,7 +117,7 @@ async def test_sensor_migrate_unique_ids_duplicate(
         config_entry=subaru_config_entry,
     )
 
-    await setup_subaru_config_entry(hass, subaru_config_entry)
+    await setup_subaru_config_entry(menuai, subaru_config_entry)
 
     entity_migrated = entity_registry.async_get(entity.entity_id)
     assert entity_migrated
@@ -130,12 +130,12 @@ async def test_sensor_migrate_unique_ids_duplicate(
     assert entity_migrated != entity_not_changed
 
 
-def _assert_data(hass: HomeAssistant, expected_state: dict[str, Any]) -> None:
+def _assert_data(menuai: menuai, expected_state: dict[str, Any]) -> None:
     sensor_list = EV_SENSORS
     sensor_list.extend(API_GEN_2_SENSORS)
     sensor_list.extend(SAFETY_SENSORS)
     expected_states = {}
-    entity_registry = er.async_get(hass)
+    entity_registry = er.async_get(menuai)
     for item in sensor_list:
         entity = entity_registry.async_get_entity_id(
             SENSOR_DOMAIN, DOMAIN, f"{TEST_VIN_2_EV}_{item.key}"
@@ -143,5 +143,5 @@ def _assert_data(hass: HomeAssistant, expected_state: dict[str, Any]) -> None:
         expected_states[entity] = expected_state[item.key]
 
     for sensor, value in expected_states.items():
-        state = get_sensor_display_state(hass, entity_registry, sensor)
+        state = get_sensor_display_state(menuai, entity_registry, sensor)
         assert state == value

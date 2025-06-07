@@ -11,14 +11,14 @@ from fritzconnection.core.exceptions import FritzConnectionException, FritzSecur
 from requests.exceptions import ConnectionError as RequestsConnectionError
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_PORT, CONF_USERNAME
-from homeassistant.core import callback
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_PORT, CONF_USERNAME
+from menuai.core import callback
 
 from .base import FritzBoxPhonebook
 from .const import (
@@ -116,7 +116,7 @@ class FritzBoxCallMonitorConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def _get_name_of_phonebook(self, phonebook_id: int) -> str:
         """Return name of phonebook for given phonebook_id."""
-        phonebook_info = await self.hass.async_add_executor_job(
+        phonebook_info = await self.menuai.async_add_executor_job(
             self._fritzbox_phonebook.fph.phonebook_info, phonebook_id
         )
         return cast(str, phonebook_info[FRITZ_ATTR_NAME])
@@ -151,7 +151,7 @@ class FritzBoxCallMonitorConfigFlow(ConfigFlow, domain=DOMAIN):
         self._password = user_input[CONF_PASSWORD]
         self._username = user_input[CONF_USERNAME]
 
-        result = await self.hass.async_add_executor_job(self._try_connect)
+        result = await self.menuai.async_add_executor_job(self._try_connect)
 
         if result == ConnectResult.INVALID_AUTH:
             return self.async_show_form(
@@ -242,13 +242,13 @@ class FritzBoxCallMonitorConfigFlow(ConfigFlow, domain=DOMAIN):
         self._password = user_input[CONF_PASSWORD]
 
         if (
-            error := await self.hass.async_add_executor_job(self._try_connect)
+            error := await self.menuai.async_add_executor_job(self._try_connect)
         ) is not ConnectResult.SUCCESS:
             return self._show_setup_form_reauth_confirm(
                 user_input=user_input, errors={"base": error}
             )
 
-        self.hass.config_entries.async_update_entry(
+        self.menuai.config_entries.async_update_entry(
             self._entry,
             data={
                 CONF_HOST: self._host,
@@ -259,7 +259,7 @@ class FritzBoxCallMonitorConfigFlow(ConfigFlow, domain=DOMAIN):
                 SERIAL_NUMBER: self._serial_number,
             },
         )
-        await self.hass.config_entries.async_reload(self._entry.entry_id)
+        await self.menuai.config_entries.async_reload(self._entry.entry_id)
         return self.async_abort(reason="reauth_successful")
 
 

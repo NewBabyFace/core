@@ -1,11 +1,11 @@
 """Errors for the Mikrotik component."""
 
-from homeassistant.exceptions import HomeAssistantError
+from menuai.exceptions import menuaiError
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Unable to connect to the hub."""
 
 
-class LoginError(HomeAssistantError):
+class LoginError(menuaiError):
     """Component got logged out."""

@@ -6,9 +6,9 @@ from typing import Any
 
 from stookwijzer import Stookwijzer
 
-from homeassistant.const import CONF_LATITUDE, CONF_LOCATION, CONF_LONGITUDE, Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er, issue_registry as ir
+from menuai.const import CONF_LATITUDE, CONF_LOCATION, CONF_LONGITUDE, Platform
+from menuai.core import menuai, callback
+from menuai.helpers import entity_registry as er, issue_registry as ir
 
 from .const import DOMAIN, LOGGER
 from .coordinator import StookwijzerConfigEntry, StookwijzerCoordinator
@@ -16,27 +16,27 @@ from .coordinator import StookwijzerConfigEntry, StookwijzerCoordinator
 PLATFORMS = [Platform.SENSOR]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: StookwijzerConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: StookwijzerConfigEntry) -> bool:
     """Set up Stookwijzer from a config entry."""
-    await er.async_migrate_entries(hass, entry.entry_id, async_migrate_entity_entry)
+    await er.async_migrate_entries(menuai, entry.entry_id, async_migrate_entity_entry)
 
-    coordinator = StookwijzerCoordinator(hass, entry)
+    coordinator = StookwijzerCoordinator(menuai, entry)
     await coordinator.async_config_entry_first_refresh()
 
     entry.runtime_data = coordinator
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
 async def async_unload_entry(
-    hass: HomeAssistant, entry: StookwijzerConfigEntry
+    menuai: menuai, entry: StookwijzerConfigEntry
 ) -> bool:
     """Unload Stookwijzer config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 async def async_migrate_entry(
-    hass: HomeAssistant, entry: StookwijzerConfigEntry
+    menuai: menuai, entry: StookwijzerConfigEntry
 ) -> bool:
     """Migrate old entry."""
     LOGGER.debug("Migrating from version %s", entry.version)
@@ -49,7 +49,7 @@ async def async_migrate_entry(
 
         if not xy:
             ir.async_create_issue(
-                hass,
+                menuai,
                 DOMAIN,
                 "location_migration_failed",
                 is_fixable=False,
@@ -61,7 +61,7 @@ async def async_migrate_entry(
             )
             return False
 
-        hass.config_entries.async_update_entry(
+        menuai.config_entries.async_update_entry(
             entry,
             version=2,
             data={

@@ -2,5 +2,5 @@
 
 DOMAIN = "cover"
 
-INTENT_OPEN_COVER = "HassOpenCover"
-INTENT_CLOSE_COVER = "HassCloseCover"
+INTENT_OPEN_COVER = "menuaiOpenCover"
+INTENT_CLOSE_COVER = "menuaiCloseCover"

@@ -8,7 +8,7 @@ from typing import Any, cast
 
 import voluptuous as vol
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     _DEPRECATED_ATTR_COLOR_TEMP,
     _DEPRECATED_ATTR_MAX_MIREDS,
     _DEPRECATED_ATTR_MIN_MIREDS,
@@ -34,19 +34,19 @@ from homeassistant.components.light import (
     LightEntityFeature,
     valid_supported_color_modes,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_NAME,
     CONF_OPTIMISTIC,
     CONF_PAYLOAD_OFF,
     CONF_PAYLOAD_ON,
     STATE_ON,
 )
-from homeassistant.core import callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.service_info.mqtt import ReceivePayloadType
-from homeassistant.helpers.typing import ConfigType, VolSchemaType
-from homeassistant.util import color as color_util
+from menuai.core import callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.restore_state import RestoreEntity
+from menuai.helpers.service_info.mqtt import ReceivePayloadType
+from menuai.helpers.typing import ConfigType, VolSchemaType
+from menuai.util import color as color_util
 
 from .. import subscription
 from ..config import MQTT_RW_SCHEMA
@@ -630,7 +630,7 @@ class MqttLight(MqttEntity, LightEntity, RestoreEntity):
 
     async def _subscribe_topics(self) -> None:
         """(Re)Subscribe to topics."""
-        subscription.async_subscribe_topics_internal(self.hass, self._sub_state)
+        subscription.async_subscribe_topics_internal(self.menuai, self._sub_state)
         last_state = await self.async_get_last_state()
 
         def restore_state(

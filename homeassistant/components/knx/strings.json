@@ -44,7 +44,7 @@
           "host": "IP address or hostname of the KNX/IP tunneling device.",
           "port": "Port used by the KNX/IP tunneling device.",
           "route_back": "Enable if your KNXnet/IP tunneling server is behind NAT. Only applies for UDP connections.",
-          "local_ip": "Local IP or interface name used for the connection from Home Assistant. Leave blank to use auto-discovery."
+          "local_ip": "Local IP or interface name used for the connection from MenuAI. Leave blank to use auto-discovery."
         }
       },
       "secure_key_source_menu_tunnel": {
@@ -121,7 +121,7 @@
           "local_ip": "[%key:component::knx::config::step::manual_tunnel::data::local_ip%]"
         },
         "data_description": {
-          "individual_address": "KNX address to be used by Home Assistant, e.g. `0.0.4`",
+          "individual_address": "KNX address to be used by MenuAI, e.g. `0.0.4`",
           "routing_secure": "Select if your installation uses encrypted communication according to the KNX IP Secure standard. This setting requires compatible devices and configuration. You'll be prompted for credentials in the next step.",
           "multicast_group": "Multicast group used by your installation. Default is `224.0.23.12`",
           "multicast_port": "Multicast port used by your installation. Default is `3671`",
@@ -175,7 +175,7 @@
           "telegram_log_size": "Telegram history limit"
         },
         "data_description": {
-          "state_updater": "Sets the default behavior for reading state addresses from the KNX Bus.\nWhen enabled, Home Assistant will monitor each group address and read it from the bus if no value has been received for one hour.\nWhen disabled, state addresses will only be read once after a bus connection is established.\nThis behavior can be overridden for individual entities using the `sync_state` option.",
+          "state_updater": "Sets the default behavior for reading state addresses from the KNX Bus.\nWhen enabled, MenuAI will monitor each group address and read it from the bus if no value has been received for one hour.\nWhen disabled, state addresses will only be read once after a bus connection is established.\nThis behavior can be overridden for individual entities using the `sync_state` option.",
           "rate_limit": "Maximum outgoing telegrams per second.\n`0` to disable limit. Recommended: `0` or between `20` and `40`",
           "telegram_log_size": "Telegrams to keep in memory for KNX panel group monitor. Maximum: {telegram_log_size_max}"
         }

@@ -8,11 +8,11 @@ import re
 import aiohttp
 from loqedAPI import loqed
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.config_entries import ConfigEntry
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryNotReady
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN
 from .coordinator import LoqedDataCoordinator
@@ -23,9 +23,9 @@ PLATFORMS: list[str] = [Platform.LOCK, Platform.SENSOR]
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up loqed from a config entry."""
-    websession = async_get_clientsession(hass)
+    websession = async_get_clientsession(menuai)
     host = entry.data["bridge_ip"]
     apiclient = loqed.APIClient(websession, f"http://{host}")
     api = loqed.LoqedAPI(apiclient)
@@ -44,23 +44,23 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         aiohttp.ClientError,
     ) as ex:
         raise ConfigEntryNotReady(f"Unable to connect to bridge at {host}") from ex
-    coordinator = LoqedDataCoordinator(hass, entry, api, lock)
+    coordinator = LoqedDataCoordinator(menuai, entry, api, lock)
     await coordinator.ensure_webhooks()
 
     await coordinator.async_config_entry_first_refresh()
 
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
+    menuai.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    coordinator: LoqedDataCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: LoqedDataCoordinator = menuai.data[DOMAIN][entry.entry_id]
 
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        hass.data[DOMAIN].pop(entry.entry_id)
+    if unload_ok := await menuai.config_entries.async_unload_platforms(entry, PLATFORMS):
+        menuai.data[DOMAIN].pop(entry.entry_id)
 
     await coordinator.remove_webhooks()
 

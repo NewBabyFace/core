@@ -6,18 +6,18 @@ from unittest.mock import patch
 from aiohttp.test_utils import TestClient
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components import traccar, zone
-from homeassistant.components.device_tracker import DOMAIN as DEVICE_TRACKER_DOMAIN
-from homeassistant.components.device_tracker.legacy import Device
-from homeassistant.components.traccar import DOMAIN, TRACKER_UPDATE
-from homeassistant.const import STATE_HOME, STATE_NOT_HOME
-from homeassistant.core import HomeAssistant
-from homeassistant.core_config import async_process_ha_core_config
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.dispatcher import DATA_DISPATCHER
-from homeassistant.setup import async_setup_component
+from menuai import config_entries
+from menuai.components import traccar, zone
+from menuai.components.device_tracker import DOMAIN as DEVICE_TRACKER_DOMAIN
+from menuai.components.device_tracker.legacy import Device
+from menuai.components.traccar import DOMAIN, TRACKER_UPDATE
+from menuai.const import STATE_HOME, STATE_NOT_HOME
+from menuai.core import menuai
+from menuai.core_config import async_process_ha_core_config
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.dispatcher import DATA_DISPATCHER
+from menuai.setup import async_setup_component
 
 from tests.typing import ClientSessionGenerator
 
@@ -32,23 +32,23 @@ def mock_dev_track(mock_device_tracker_conf: list[Device]) -> None:
 
 @pytest.fixture(name="client")
 async def traccar_client(
-    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+    menuai: menuai, menuai_client_no_auth: ClientSessionGenerator
 ) -> TestClient:
     """Mock client for Traccar (unauthenticated)."""
 
-    assert await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
+    assert await async_setup_component(menuai, DOMAIN, {DOMAIN: {}})
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    with patch("homeassistant.components.device_tracker.legacy.update_config"):
-        return await hass_client_no_auth()
+    with patch("menuai.components.device_tracker.legacy.update_config"):
+        return await menuai_client_no_auth()
 
 
 @pytest.fixture(autouse=True)
-async def setup_zones(hass: HomeAssistant) -> None:
+async def setup_zones(menuai: menuai) -> None:
     """Set up Zone config in HA."""
     assert await async_setup_component(
-        hass,
+        menuai,
         zone.DOMAIN,
         {
             "zone": {
@@ -59,55 +59,55 @@ async def setup_zones(hass: HomeAssistant) -> None:
             }
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
 @pytest.fixture(name="webhook_id")
-async def webhook_id_fixture(hass: HomeAssistant, client: TestClient) -> str:
+async def webhook_id_fixture(menuai: menuai, client: TestClient) -> str:
     """Initialize the Traccar component and get the webhook_id."""
     await async_process_ha_core_config(
-        hass,
+        menuai,
         {"external_url": "http://example.com"},
     )
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM, result
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await menuai.config_entries.flow.async_configure(result["flow_id"], {})
     assert result["type"] is FlowResultType.CREATE_ENTRY
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     return result["result"].data["webhook_id"]
 
 
-async def test_missing_data(hass: HomeAssistant, client, webhook_id) -> None:
+async def test_missing_data(menuai: menuai, client, webhook_id) -> None:
     """Test missing data."""
     url = f"/api/webhook/{webhook_id}"
     data = {"lat": "1.0", "lon": "1.1", "id": "123"}
 
     # No data
     req = await client.post(url)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert req.status == HTTPStatus.UNPROCESSABLE_ENTITY
 
     # No latitude
     copy = data.copy()
     del copy["lat"]
     req = await client.post(url, params=copy)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert req.status == HTTPStatus.UNPROCESSABLE_ENTITY
 
     # No device
     copy = data.copy()
     del copy["id"]
     req = await client.post(url, params=copy)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert req.status == HTTPStatus.UNPROCESSABLE_ENTITY
 
 
 async def test_enter_and_exit(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     client,
@@ -119,16 +119,16 @@ async def test_enter_and_exit(
 
     # Enter the Home
     req = await client.post(url, params=data)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert req.status == HTTPStatus.OK
-    state_name = hass.states.get(f"{DEVICE_TRACKER_DOMAIN}.{data['id']}").state
+    state_name = menuai.states.get(f"{DEVICE_TRACKER_DOMAIN}.{data['id']}").state
     assert state_name == STATE_HOME
 
     # Enter Home again
     req = await client.post(url, params=data)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert req.status == HTTPStatus.OK
-    state_name = hass.states.get(f"{DEVICE_TRACKER_DOMAIN}.{data['id']}").state
+    state_name = menuai.states.get(f"{DEVICE_TRACKER_DOMAIN}.{data['id']}").state
     assert state_name == STATE_HOME
 
     data["lon"] = 0
@@ -136,9 +136,9 @@ async def test_enter_and_exit(
 
     # Enter Somewhere else
     req = await client.post(url, params=data)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert req.status == HTTPStatus.OK
-    state_name = hass.states.get(f"{DEVICE_TRACKER_DOMAIN}.{data['id']}").state
+    state_name = menuai.states.get(f"{DEVICE_TRACKER_DOMAIN}.{data['id']}").state
     assert state_name == STATE_NOT_HOME
 
     assert len(device_registry.devices) == 1
@@ -146,7 +146,7 @@ async def test_enter_and_exit(
     assert len(entity_registry.entities) == 1
 
 
-async def test_enter_with_attrs(hass: HomeAssistant, client, webhook_id) -> None:
+async def test_enter_with_attrs(menuai: menuai, client, webhook_id) -> None:
     """Test when additional attributes are present."""
     url = f"/api/webhook/{webhook_id}"
     data = {
@@ -163,9 +163,9 @@ async def test_enter_with_attrs(hass: HomeAssistant, client, webhook_id) -> None
     }
 
     req = await client.post(url, params=data)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert req.status == HTTPStatus.OK
-    state = hass.states.get(f"{DEVICE_TRACKER_DOMAIN}.{data['id']}")
+    state = menuai.states.get(f"{DEVICE_TRACKER_DOMAIN}.{data['id']}")
     assert state.state == STATE_NOT_HOME
     assert state.attributes["gps_accuracy"] == 10.5
     assert state.attributes["battery_level"] == 10.0
@@ -186,9 +186,9 @@ async def test_enter_with_attrs(hass: HomeAssistant, client, webhook_id) -> None
     }
 
     req = await client.post(url, params=data)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert req.status == HTTPStatus.OK
-    state = hass.states.get(f"{DEVICE_TRACKER_DOMAIN}.{data['id']}")
+    state = menuai.states.get(f"{DEVICE_TRACKER_DOMAIN}.{data['id']}")
     assert state.state == STATE_HOME
     assert state.attributes["gps_accuracy"] == 123
     assert state.attributes["battery_level"] == 23
@@ -197,7 +197,7 @@ async def test_enter_with_attrs(hass: HomeAssistant, client, webhook_id) -> None
     assert state.attributes["altitude"] == 123
 
 
-async def test_two_devices(hass: HomeAssistant, client, webhook_id) -> None:
+async def test_two_devices(menuai: menuai, client, webhook_id) -> None:
     """Test updating two different devices."""
     url = f"/api/webhook/{webhook_id}"
 
@@ -205,10 +205,10 @@ async def test_two_devices(hass: HomeAssistant, client, webhook_id) -> None:
 
     # Exit Home
     req = await client.post(url, params=data_device_1)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert req.status == HTTPStatus.OK
 
-    state = hass.states.get(f"{DEVICE_TRACKER_DOMAIN}.{data_device_1['id']}")
+    state = menuai.states.get(f"{DEVICE_TRACKER_DOMAIN}.{data_device_1['id']}")
     assert state.state == "not_home"
 
     # Enter Home
@@ -217,33 +217,33 @@ async def test_two_devices(hass: HomeAssistant, client, webhook_id) -> None:
     data_device_2["lon"] = str(HOME_LONGITUDE)
     data_device_2["id"] = "device_2"
     req = await client.post(url, params=data_device_2)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert req.status == HTTPStatus.OK
 
-    state = hass.states.get(f"{DEVICE_TRACKER_DOMAIN}.{data_device_2['id']}")
+    state = menuai.states.get(f"{DEVICE_TRACKER_DOMAIN}.{data_device_2['id']}")
     assert state.state == "home"
-    state = hass.states.get(f"{DEVICE_TRACKER_DOMAIN}.{data_device_1['id']}")
+    state = menuai.states.get(f"{DEVICE_TRACKER_DOMAIN}.{data_device_1['id']}")
     assert state.state == "not_home"
 
 
 @pytest.mark.xfail(
     reason="The device_tracker component does not support unloading yet."
 )
-async def test_load_unload_entry(hass: HomeAssistant, client, webhook_id) -> None:
+async def test_load_unload_entry(menuai: menuai, client, webhook_id) -> None:
     """Test that the appropriate dispatch signals are added and removed."""
     url = f"/api/webhook/{webhook_id}"
     data = {"lat": str(HOME_LATITUDE), "lon": str(HOME_LONGITUDE), "id": "123"}
 
     # Enter the Home
     req = await client.post(url, params=data)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert req.status == HTTPStatus.OK
-    state_name = hass.states.get(f"{DEVICE_TRACKER_DOMAIN}.{data['id']}").state
+    state_name = menuai.states.get(f"{DEVICE_TRACKER_DOMAIN}.{data['id']}").state
     assert state_name == STATE_HOME
-    assert len(hass.data[DATA_DISPATCHER][TRACKER_UPDATE]) == 1
+    assert len(menuai.data[DATA_DISPATCHER][TRACKER_UPDATE]) == 1
 
-    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    entry = menuai.config_entries.async_entries(DOMAIN)[0]
 
-    assert await traccar.async_unload_entry(hass, entry)
-    await hass.async_block_till_done()
-    assert not hass.data[DATA_DISPATCHER][TRACKER_UPDATE]
+    assert await traccar.async_unload_entry(menuai, entry)
+    await menuai.async_block_till_done()
+    assert not menuai.data[DATA_DISPATCHER][TRACKER_UPDATE]

@@ -4,7 +4,7 @@ All containing methods are legacy helpers that should not be used by new
 components. Instead call the service directly.
 """
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     ATTR_INPUT_SOURCE,
     ATTR_MEDIA_CONTENT_ID,
     ATTR_MEDIA_CONTENT_TYPE,
@@ -18,7 +18,7 @@ from homeassistant.components.media_player import (
     SERVICE_SELECT_SOURCE,
     MediaPlayerEnqueue,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     ENTITY_MATCH_ALL,
     SERVICE_MEDIA_NEXT_TRACK,
@@ -36,78 +36,78 @@ from homeassistant.const import (
     SERVICE_VOLUME_SET,
     SERVICE_VOLUME_UP,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.loader import bind_hass
+from menuai.core import menuai
+from menuai.loader import bind_menuai
 
 
-async def async_turn_on(hass: HomeAssistant, entity_id: str = ENTITY_MATCH_ALL) -> None:
+async def async_turn_on(menuai: menuai, entity_id: str = ENTITY_MATCH_ALL) -> None:
     """Turn on specified media player or all."""
     data = {ATTR_ENTITY_ID: entity_id} if entity_id else {}
-    await hass.services.async_call(DOMAIN, SERVICE_TURN_ON, data, blocking=True)
+    await menuai.services.async_call(DOMAIN, SERVICE_TURN_ON, data, blocking=True)
 
 
-@bind_hass
-def turn_on(hass: HomeAssistant, entity_id: str = ENTITY_MATCH_ALL) -> None:
+@bind_menuai
+def turn_on(menuai: menuai, entity_id: str = ENTITY_MATCH_ALL) -> None:
     """Turn on specified media player or all."""
-    hass.add_job(async_turn_on, hass, entity_id)
+    menuai.add_job(async_turn_on, menuai, entity_id)
 
 
 async def async_turn_off(
-    hass: HomeAssistant, entity_id: str = ENTITY_MATCH_ALL
+    menuai: menuai, entity_id: str = ENTITY_MATCH_ALL
 ) -> None:
     """Turn off specified media player or all."""
     data = {ATTR_ENTITY_ID: entity_id} if entity_id else {}
-    await hass.services.async_call(DOMAIN, SERVICE_TURN_OFF, data, blocking=True)
+    await menuai.services.async_call(DOMAIN, SERVICE_TURN_OFF, data, blocking=True)
 
 
-@bind_hass
-def turn_off(hass: HomeAssistant, entity_id: str = ENTITY_MATCH_ALL) -> None:
+@bind_menuai
+def turn_off(menuai: menuai, entity_id: str = ENTITY_MATCH_ALL) -> None:
     """Turn off specified media player or all."""
-    hass.add_job(async_turn_off, hass, entity_id)
+    menuai.add_job(async_turn_off, menuai, entity_id)
 
 
-async def async_toggle(hass: HomeAssistant, entity_id: str = ENTITY_MATCH_ALL) -> None:
+async def async_toggle(menuai: menuai, entity_id: str = ENTITY_MATCH_ALL) -> None:
     """Toggle specified media player or all."""
     data = {ATTR_ENTITY_ID: entity_id} if entity_id else {}
-    await hass.services.async_call(DOMAIN, SERVICE_TOGGLE, data, blocking=True)
+    await menuai.services.async_call(DOMAIN, SERVICE_TOGGLE, data, blocking=True)
 
 
-@bind_hass
-def toggle(hass: HomeAssistant, entity_id: str = ENTITY_MATCH_ALL) -> None:
+@bind_menuai
+def toggle(menuai: menuai, entity_id: str = ENTITY_MATCH_ALL) -> None:
     """Toggle specified media player or all."""
-    hass.add_job(async_toggle, hass, entity_id)
+    menuai.add_job(async_toggle, menuai, entity_id)
 
 
 async def async_volume_up(
-    hass: HomeAssistant, entity_id: str = ENTITY_MATCH_ALL
+    menuai: menuai, entity_id: str = ENTITY_MATCH_ALL
 ) -> None:
     """Send the media player the command for volume up."""
     data = {ATTR_ENTITY_ID: entity_id} if entity_id else {}
-    await hass.services.async_call(DOMAIN, SERVICE_VOLUME_UP, data, blocking=True)
+    await menuai.services.async_call(DOMAIN, SERVICE_VOLUME_UP, data, blocking=True)
 
 
-@bind_hass
-def volume_up(hass: HomeAssistant, entity_id: str = ENTITY_MATCH_ALL) -> None:
+@bind_menuai
+def volume_up(menuai: menuai, entity_id: str = ENTITY_MATCH_ALL) -> None:
     """Send the media player the command for volume up."""
-    hass.add_job(async_volume_up, hass, entity_id)
+    menuai.add_job(async_volume_up, menuai, entity_id)
 
 
 async def async_volume_down(
-    hass: HomeAssistant, entity_id: str = ENTITY_MATCH_ALL
+    menuai: menuai, entity_id: str = ENTITY_MATCH_ALL
 ) -> None:
     """Send the media player the command for volume down."""
     data = {ATTR_ENTITY_ID: entity_id} if entity_id else {}
-    await hass.services.async_call(DOMAIN, SERVICE_VOLUME_DOWN, data, blocking=True)
+    await menuai.services.async_call(DOMAIN, SERVICE_VOLUME_DOWN, data, blocking=True)
 
 
-@bind_hass
-def volume_down(hass: HomeAssistant, entity_id: str = ENTITY_MATCH_ALL) -> None:
+@bind_menuai
+def volume_down(menuai: menuai, entity_id: str = ENTITY_MATCH_ALL) -> None:
     """Send the media player the command for volume down."""
-    hass.add_job(async_volume_down, hass, entity_id)
+    menuai.add_job(async_volume_down, menuai, entity_id)
 
 
 async def async_mute_volume(
-    hass: HomeAssistant, mute: bool, entity_id: str = ENTITY_MATCH_ALL
+    menuai: menuai, mute: bool, entity_id: str = ENTITY_MATCH_ALL
 ) -> None:
     """Send the media player the command for muting the volume."""
     data = {ATTR_MEDIA_VOLUME_MUTED: mute}
@@ -115,19 +115,19 @@ async def async_mute_volume(
     if entity_id:
         data[ATTR_ENTITY_ID] = entity_id
 
-    await hass.services.async_call(DOMAIN, SERVICE_VOLUME_MUTE, data, blocking=True)
+    await menuai.services.async_call(DOMAIN, SERVICE_VOLUME_MUTE, data, blocking=True)
 
 
-@bind_hass
+@bind_menuai
 def mute_volume(
-    hass: HomeAssistant, mute: bool, entity_id: str = ENTITY_MATCH_ALL
+    menuai: menuai, mute: bool, entity_id: str = ENTITY_MATCH_ALL
 ) -> None:
     """Send the media player the command for muting the volume."""
-    hass.add_job(async_mute_volume, hass, mute, entity_id)
+    menuai.add_job(async_mute_volume, menuai, mute, entity_id)
 
 
 async def async_set_volume_level(
-    hass: HomeAssistant, volume: float, entity_id: str = ENTITY_MATCH_ALL
+    menuai: menuai, volume: float, entity_id: str = ENTITY_MATCH_ALL
 ) -> None:
     """Send the media player the command for setting the volume."""
     data = {ATTR_MEDIA_VOLUME_LEVEL: volume}
@@ -135,128 +135,128 @@ async def async_set_volume_level(
     if entity_id:
         data[ATTR_ENTITY_ID] = entity_id
 
-    await hass.services.async_call(DOMAIN, SERVICE_VOLUME_SET, data, blocking=True)
+    await menuai.services.async_call(DOMAIN, SERVICE_VOLUME_SET, data, blocking=True)
 
 
-@bind_hass
+@bind_menuai
 def set_volume_level(
-    hass: HomeAssistant, volume: float, entity_id: str = ENTITY_MATCH_ALL
+    menuai: menuai, volume: float, entity_id: str = ENTITY_MATCH_ALL
 ) -> None:
     """Send the media player the command for setting the volume."""
-    hass.add_job(async_set_volume_level, hass, volume, entity_id)
+    menuai.add_job(async_set_volume_level, menuai, volume, entity_id)
 
 
 async def async_media_play_pause(
-    hass: HomeAssistant, entity_id: str = ENTITY_MATCH_ALL
+    menuai: menuai, entity_id: str = ENTITY_MATCH_ALL
 ) -> None:
     """Send the media player the command for play/pause."""
     data = {ATTR_ENTITY_ID: entity_id} if entity_id else {}
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN, SERVICE_MEDIA_PLAY_PAUSE, data, blocking=True
     )
 
 
-@bind_hass
-def media_play_pause(hass: HomeAssistant, entity_id: str = ENTITY_MATCH_ALL) -> None:
+@bind_menuai
+def media_play_pause(menuai: menuai, entity_id: str = ENTITY_MATCH_ALL) -> None:
     """Send the media player the command for play/pause."""
-    hass.add_job(async_media_play_pause, hass, entity_id)
+    menuai.add_job(async_media_play_pause, menuai, entity_id)
 
 
 async def async_media_play(
-    hass: HomeAssistant, entity_id: str = ENTITY_MATCH_ALL
+    menuai: menuai, entity_id: str = ENTITY_MATCH_ALL
 ) -> None:
     """Send the media player the command for play/pause."""
     data = {ATTR_ENTITY_ID: entity_id} if entity_id else {}
-    await hass.services.async_call(DOMAIN, SERVICE_MEDIA_PLAY, data, blocking=True)
+    await menuai.services.async_call(DOMAIN, SERVICE_MEDIA_PLAY, data, blocking=True)
 
 
-@bind_hass
-def media_play(hass: HomeAssistant, entity_id: str = ENTITY_MATCH_ALL) -> None:
+@bind_menuai
+def media_play(menuai: menuai, entity_id: str = ENTITY_MATCH_ALL) -> None:
     """Send the media player the command for play/pause."""
-    hass.add_job(async_media_play, hass, entity_id)
+    menuai.add_job(async_media_play, menuai, entity_id)
 
 
 async def async_media_pause(
-    hass: HomeAssistant, entity_id: str = ENTITY_MATCH_ALL
+    menuai: menuai, entity_id: str = ENTITY_MATCH_ALL
 ) -> None:
     """Send the media player the command for pause."""
     data = {ATTR_ENTITY_ID: entity_id} if entity_id else {}
-    await hass.services.async_call(DOMAIN, SERVICE_MEDIA_PAUSE, data, blocking=True)
+    await menuai.services.async_call(DOMAIN, SERVICE_MEDIA_PAUSE, data, blocking=True)
 
 
-@bind_hass
-def media_pause(hass: HomeAssistant, entity_id: str = ENTITY_MATCH_ALL) -> None:
+@bind_menuai
+def media_pause(menuai: menuai, entity_id: str = ENTITY_MATCH_ALL) -> None:
     """Send the media player the command for pause."""
-    hass.add_job(async_media_pause, hass, entity_id)
+    menuai.add_job(async_media_pause, menuai, entity_id)
 
 
 async def async_media_stop(
-    hass: HomeAssistant, entity_id: str = ENTITY_MATCH_ALL
+    menuai: menuai, entity_id: str = ENTITY_MATCH_ALL
 ) -> None:
     """Send the media player the command for stop."""
     data = {ATTR_ENTITY_ID: entity_id} if entity_id else {}
-    await hass.services.async_call(DOMAIN, SERVICE_MEDIA_STOP, data, blocking=True)
+    await menuai.services.async_call(DOMAIN, SERVICE_MEDIA_STOP, data, blocking=True)
 
 
-@bind_hass
-def media_stop(hass: HomeAssistant, entity_id: str = ENTITY_MATCH_ALL) -> None:
+@bind_menuai
+def media_stop(menuai: menuai, entity_id: str = ENTITY_MATCH_ALL) -> None:
     """Send the media player the command for stop."""
-    hass.add_job(async_media_stop, hass, entity_id)
+    menuai.add_job(async_media_stop, menuai, entity_id)
 
 
 async def async_media_next_track(
-    hass: HomeAssistant, entity_id: str = ENTITY_MATCH_ALL
+    menuai: menuai, entity_id: str = ENTITY_MATCH_ALL
 ) -> None:
     """Send the media player the command for next track."""
     data = {ATTR_ENTITY_ID: entity_id} if entity_id else {}
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN, SERVICE_MEDIA_NEXT_TRACK, data, blocking=True
     )
 
 
-@bind_hass
-def media_next_track(hass: HomeAssistant, entity_id: str = ENTITY_MATCH_ALL) -> None:
+@bind_menuai
+def media_next_track(menuai: menuai, entity_id: str = ENTITY_MATCH_ALL) -> None:
     """Send the media player the command for next track."""
-    hass.add_job(async_media_next_track, hass, entity_id)
+    menuai.add_job(async_media_next_track, menuai, entity_id)
 
 
 async def async_media_previous_track(
-    hass: HomeAssistant, entity_id: str = ENTITY_MATCH_ALL
+    menuai: menuai, entity_id: str = ENTITY_MATCH_ALL
 ) -> None:
     """Send the media player the command for prev track."""
     data = {ATTR_ENTITY_ID: entity_id} if entity_id else {}
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN, SERVICE_MEDIA_PREVIOUS_TRACK, data, blocking=True
     )
 
 
-@bind_hass
+@bind_menuai
 def media_previous_track(
-    hass: HomeAssistant, entity_id: str = ENTITY_MATCH_ALL
+    menuai: menuai, entity_id: str = ENTITY_MATCH_ALL
 ) -> None:
     """Send the media player the command for prev track."""
-    hass.add_job(async_media_previous_track, hass, entity_id)
+    menuai.add_job(async_media_previous_track, menuai, entity_id)
 
 
 async def async_media_seek(
-    hass: HomeAssistant, position: float, entity_id: str = ENTITY_MATCH_ALL
+    menuai: menuai, position: float, entity_id: str = ENTITY_MATCH_ALL
 ) -> None:
     """Send the media player the command to seek in current playing media."""
     data = {ATTR_ENTITY_ID: entity_id} if entity_id else {}
     data[ATTR_MEDIA_SEEK_POSITION] = position
-    await hass.services.async_call(DOMAIN, SERVICE_MEDIA_SEEK, data, blocking=True)
+    await menuai.services.async_call(DOMAIN, SERVICE_MEDIA_SEEK, data, blocking=True)
 
 
-@bind_hass
+@bind_menuai
 def media_seek(
-    hass: HomeAssistant, position: float, entity_id: str = ENTITY_MATCH_ALL
+    menuai: menuai, position: float, entity_id: str = ENTITY_MATCH_ALL
 ) -> None:
     """Send the media player the command to seek in current playing media."""
-    hass.add_job(async_media_seek, hass, position, entity_id)
+    menuai.add_job(async_media_seek, menuai, position, entity_id)
 
 
 async def async_play_media(
-    hass: HomeAssistant,
+    menuai: menuai,
     media_type: str,
     media_id: str,
     entity_id: str = ENTITY_MATCH_ALL,
@@ -271,23 +271,23 @@ async def async_play_media(
     if enqueue:
         data[ATTR_MEDIA_ENQUEUE] = enqueue
 
-    await hass.services.async_call(DOMAIN, SERVICE_PLAY_MEDIA, data, blocking=True)
+    await menuai.services.async_call(DOMAIN, SERVICE_PLAY_MEDIA, data, blocking=True)
 
 
-@bind_hass
+@bind_menuai
 def play_media(
-    hass: HomeAssistant,
+    menuai: menuai,
     media_type: str,
     media_id: str,
     entity_id: str = ENTITY_MATCH_ALL,
     enqueue: MediaPlayerEnqueue | bool | None = None,
 ) -> None:
     """Send the media player the command for playing media."""
-    hass.add_job(async_play_media, hass, media_type, media_id, entity_id, enqueue)
+    menuai.add_job(async_play_media, menuai, media_type, media_id, entity_id, enqueue)
 
 
 async def async_select_source(
-    hass: HomeAssistant, source: str, entity_id: str = ENTITY_MATCH_ALL
+    menuai: menuai, source: str, entity_id: str = ENTITY_MATCH_ALL
 ) -> None:
     """Send the media player the command to select input source."""
     data = {ATTR_INPUT_SOURCE: source}
@@ -295,26 +295,26 @@ async def async_select_source(
     if entity_id:
         data[ATTR_ENTITY_ID] = entity_id
 
-    await hass.services.async_call(DOMAIN, SERVICE_SELECT_SOURCE, data, blocking=True)
+    await menuai.services.async_call(DOMAIN, SERVICE_SELECT_SOURCE, data, blocking=True)
 
 
-@bind_hass
+@bind_menuai
 def select_source(
-    hass: HomeAssistant, source: str, entity_id: str = ENTITY_MATCH_ALL
+    menuai: menuai, source: str, entity_id: str = ENTITY_MATCH_ALL
 ) -> None:
     """Send the media player the command to select input source."""
-    hass.add_job(async_select_source, hass, source, entity_id)
+    menuai.add_job(async_select_source, menuai, source, entity_id)
 
 
 async def async_clear_playlist(
-    hass: HomeAssistant, entity_id: str = ENTITY_MATCH_ALL
+    menuai: menuai, entity_id: str = ENTITY_MATCH_ALL
 ) -> None:
     """Send the media player the command for clear playlist."""
     data = {ATTR_ENTITY_ID: entity_id} if entity_id else {}
-    await hass.services.async_call(DOMAIN, SERVICE_CLEAR_PLAYLIST, data, blocking=True)
+    await menuai.services.async_call(DOMAIN, SERVICE_CLEAR_PLAYLIST, data, blocking=True)
 
 
-@bind_hass
-def clear_playlist(hass: HomeAssistant, entity_id: str = ENTITY_MATCH_ALL) -> None:
+@bind_menuai
+def clear_playlist(menuai: menuai, entity_id: str = ENTITY_MATCH_ALL) -> None:
     """Send the media player the command for clear playlist."""
-    hass.add_job(async_clear_playlist, hass, entity_id)
+    menuai.add_job(async_clear_playlist, menuai, entity_id)

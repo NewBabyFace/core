@@ -5,7 +5,7 @@ from typing import Any
 
 import pytest
 
-from homeassistant.components.device_tracker import (
+from menuai.components.device_tracker import (
     ATTR_HOST_NAME,
     ATTR_IP,
     ATTR_MAC,
@@ -13,15 +13,15 @@ from homeassistant.components.device_tracker import (
     DOMAIN,
     SourceType,
 )
-from homeassistant.components.device_tracker.config_entry import (
+from menuai.components.device_tracker.config_entry import (
     CONNECTED_DEVICE_REGISTERED,
     BaseTrackerEntity,
     ScannerEntity,
     TrackerEntity,
 )
-from homeassistant.components.zone import ATTR_RADIUS
-from homeassistant.config_entries import ConfigEntry, ConfigEntryState, ConfigFlow
-from homeassistant.const import (
+from menuai.components.zone import ATTR_RADIUS
+from menuai.config_entries import ConfigEntry, ConfigEntryState, ConfigFlow
+from menuai.const import (
     ATTR_BATTERY_LEVEL,
     ATTR_GPS_ACCURACY,
     ATTR_LATITUDE,
@@ -31,11 +31,11 @@ from homeassistant.const import (
     STATE_UNKNOWN,
     Platform,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity import Entity
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from tests.common import (
     MockConfigEntry,
@@ -55,39 +55,39 @@ class MockFlow(ConfigFlow):
 
 
 @pytest.fixture(autouse=True)
-def config_flow_fixture(hass: HomeAssistant) -> Generator[None]:
+def config_flow_fixture(menuai: menuai) -> Generator[None]:
     """Mock config flow."""
-    mock_platform(hass, f"{TEST_DOMAIN}.config_flow")
+    mock_platform(menuai, f"{TEST_DOMAIN}.config_flow")
 
     with mock_config_flow(TEST_DOMAIN, MockFlow):
         yield
 
 
 @pytest.fixture(autouse=True)
-def mock_setup_integration(hass: HomeAssistant) -> None:
+def mock_setup_integration(menuai: menuai) -> None:
     """Fixture to set up a mock integration."""
 
     async def async_setup_entry_init(
-        hass: HomeAssistant, config_entry: ConfigEntry
+        menuai: menuai, config_entry: ConfigEntry
     ) -> bool:
         """Set up test config entry."""
-        await hass.config_entries.async_forward_entry_setups(
+        await menuai.config_entries.async_forward_entry_setups(
             config_entry, [Platform.DEVICE_TRACKER]
         )
         return True
 
     async def async_unload_entry_init(
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
     ) -> bool:
-        await hass.config_entries.async_unload_platforms(
+        await menuai.config_entries.async_unload_platforms(
             config_entry, [Platform.DEVICE_TRACKER]
         )
         return True
 
-    mock_platform(hass, f"{TEST_DOMAIN}.config_flow")
+    mock_platform(menuai, f"{TEST_DOMAIN}.config_flow")
     mock_integration(
-        hass,
+        menuai,
         MockModule(
             TEST_DOMAIN,
             async_setup_entry=async_setup_entry_init,
@@ -97,22 +97,22 @@ def mock_setup_integration(hass: HomeAssistant) -> None:
 
 
 @pytest.fixture(name="config_entry")
-def config_entry_fixture(hass: HomeAssistant) -> MockConfigEntry:
+def config_entry_fixture(menuai: menuai) -> MockConfigEntry:
     """Return the config entry used for the tests."""
     config_entry = MockConfigEntry(domain=TEST_DOMAIN)
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     return config_entry
 
 
 async def create_mock_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     entities: list[Entity],
 ) -> MockConfigEntry:
     """Create a device tracker platform with the specified entities."""
 
     async def async_setup_entry_platform(
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         async_add_entities: AddConfigEntryEntitiesCallback,
     ) -> None:
@@ -120,13 +120,13 @@ async def create_mock_platform(
         async_add_entities(entities)
 
     mock_platform(
-        hass,
+        menuai,
         f"{TEST_DOMAIN}.{DOMAIN}",
         MockPlatform(async_setup_entry=async_setup_entry_platform),
     )
 
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     return config_entry
 
@@ -344,23 +344,23 @@ def scanner_entity_fixture(
 
 
 async def test_load_unload_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     entity_id: str,
     tracker_entity: MockTrackerEntity,
 ) -> None:
     """Test loading and unloading a config entry with a device tracker entity."""
-    config_entry = await create_mock_platform(hass, config_entry, [tracker_entity])
+    config_entry = await create_mock_platform(menuai, config_entry, [tracker_entity])
     assert config_entry.state is ConfigEntryState.LOADED
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
 
-    assert await hass.config_entries.async_unload(config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_unload(config_entry.entry_id)
+    await menuai.async_block_till_done()
     assert config_entry.state is ConfigEntryState.NOT_LOADED
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert not state
 
 
@@ -442,7 +442,7 @@ async def test_load_unload_entry(
     ],
 )
 async def test_tracker_entity_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     entity_id: str,
     tracker_entity: MockTrackerEntity,
@@ -450,23 +450,23 @@ async def test_tracker_entity_state(
     expected_attributes: dict[str, Any],
 ) -> None:
     """Test tracker entity state and state attributes."""
-    config_entry = await create_mock_platform(hass, config_entry, [tracker_entity])
+    config_entry = await create_mock_platform(menuai, config_entry, [tracker_entity])
     assert config_entry.state is ConfigEntryState.LOADED
-    hass.states.async_set(
+    menuai.states.async_set(
         "zone.home",
         "0",
         {ATTR_LATITUDE: 50.0, ATTR_LONGITUDE: 60.0, ATTR_RADIUS: 200},
     )
-    hass.states.async_set(
+    menuai.states.async_set(
         "zone.other_zone",
         "0",
         {ATTR_LATITUDE: -50.0, ATTR_LONGITUDE: -60.0, ATTR_RADIUS: 300},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     # Write state again to ensure the zone state is taken into account.
     tracker_entity.async_write_ha_state()
 
-    state = hass.states.get(entity_id)
+    state = menuai.states.get(entity_id)
     assert state
     assert state.state == expected_state
     assert state.attributes == expected_attributes
@@ -477,7 +477,7 @@ async def test_tracker_entity_state(
     [("0.0.0.0", "ad:de:ef:be:ed:fe", "test.hostname.org")],
 )
 async def test_scanner_entity_state(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     device_registry: dr.DeviceRegistry,
     entity_id: str,
@@ -489,17 +489,17 @@ async def test_scanner_entity_state(
     """Test ScannerEntity based device tracker."""
     # Make device tied to other integration so device tracker entities get enabled
     other_config_entry = MockConfigEntry(domain="not_fake_integration")
-    other_config_entry.add_to_hass(hass)
+    other_config_entry.add_to_menuai(menuai)
     device_registry.async_get_or_create(
         name="Device from other integration",
         config_entry_id=other_config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, mac_address)},
     )
 
-    config_entry = await create_mock_platform(hass, config_entry, [scanner_entity])
+    config_entry = await create_mock_platform(menuai, config_entry, [scanner_entity])
     assert config_entry.state is ConfigEntryState.LOADED
 
-    entity_state = hass.states.get(entity_id)
+    entity_state = menuai.states.get(entity_id)
     assert entity_state
     assert entity_state.attributes == {
         ATTR_SOURCE_TYPE: SourceType.ROUTER,
@@ -510,9 +510,9 @@ async def test_scanner_entity_state(
     assert entity_state.state == STATE_NOT_HOME
 
     scanner_entity.set_connected(True)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    entity_state = hass.states.get(entity_id)
+    entity_state = menuai.states.get(entity_id)
     assert entity_state
     assert entity_state.state == STATE_HOME
 
@@ -599,7 +599,7 @@ def test_base_tracker_entity() -> None:
     ("mac_address", "unique_id"), [(TEST_MAC_ADDRESS, f"{TEST_MAC_ADDRESS}_yo1")]
 )
 async def test_register_mac(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
@@ -609,7 +609,7 @@ async def test_register_mac(
     unique_id: str,
 ) -> None:
     """Test registering a mac."""
-    await create_mock_platform(hass, config_entry, [scanner_entity])
+    await create_mock_platform(menuai, config_entry, [scanner_entity])
 
     entity_entry = entity_registry.async_get(entity_id)
     assert entity_entry is not None
@@ -619,7 +619,7 @@ async def test_register_mac(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, mac_address)},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     entity_entry = entity_registry.async_get(entity_id)
     assert entity_entry is not None
@@ -642,7 +642,7 @@ async def test_register_mac(
     ],
 )
 async def test_register_mac_not_found(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
@@ -657,7 +657,7 @@ async def test_register_mac_not_found(
     registering_scanner_entity.entity_id = f"{DOMAIN}.registering_scanner_entity"
 
     await create_mock_platform(
-        hass, config_entry, [registering_scanner_entity, scanner_entity]
+        menuai, config_entry, [registering_scanner_entity, scanner_entity]
     )
 
     test_entity_entry = entity_registry.async_get(entity_id)
@@ -669,7 +669,7 @@ async def test_register_mac_not_found(
         connections=connections,
         identifiers={(TEST_DOMAIN, "device1")},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # The entity entry under test should still be disabled.
     test_entity_entry = entity_registry.async_get(entity_id)
@@ -681,7 +681,7 @@ async def test_register_mac_not_found(
     ("mac_address", "unique_id"), [(TEST_MAC_ADDRESS, f"{TEST_MAC_ADDRESS}_yo1")]
 )
 async def test_register_mac_ignored(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
     scanner_entity: MockScannerEntity,
@@ -691,9 +691,9 @@ async def test_register_mac_ignored(
 ) -> None:
     """Test ignoring registering a mac."""
     config_entry = MockConfigEntry(domain=TEST_DOMAIN, pref_disable_new_entities=True)
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    await create_mock_platform(hass, config_entry, [scanner_entity])
+    await create_mock_platform(menuai, config_entry, [scanner_entity])
 
     entity_entry = entity_registry.async_get(entity_id)
     assert entity_entry is not None
@@ -703,7 +703,7 @@ async def test_register_mac_ignored(
         config_entry_id=config_entry.entry_id,
         connections={(dr.CONNECTION_NETWORK_MAC, mac_address)},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     entity_entry = entity_registry.async_get(entity_id)
     assert entity_entry is not None
@@ -711,7 +711,7 @@ async def test_register_mac_ignored(
 
 
 async def test_connected_device_registered(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
 ) -> None:
@@ -723,7 +723,7 @@ async def test_connected_device_registered(
         """Save dispatched message."""
         dispatches.append(msg)
 
-    unsub = async_dispatcher_connect(hass, CONNECTED_DEVICE_REGISTERED, _save_dispatch)
+    unsub = async_dispatcher_connect(menuai, CONNECTED_DEVICE_REGISTERED, _save_dispatch)
 
     connected_scanner_entity = MockScannerEntity(
         ip_address="5.4.3.2",
@@ -745,7 +745,7 @@ async def test_connected_device_registered(
     )
 
     config_entry = await create_mock_platform(
-        hass,
+        menuai,
         config_entry,
         [
             connected_scanner_entity,
@@ -755,9 +755,9 @@ async def test_connected_device_registered(
     )
 
     full_name = f"{config_entry.domain}.{DOMAIN}"
-    assert full_name in hass.config.components
+    assert full_name in menuai.config.components
     assert (
-        len(hass.states.async_entity_ids(domain_filter=DOMAIN)) == 0
+        len(menuai.states.async_entity_ids(domain_filter=DOMAIN)) == 0
     )  # should be disabled
     assert len(entity_registry.entities) == 3
     assert (
@@ -773,7 +773,7 @@ async def test_connected_device_registered(
 
 
 async def test_entity_has_device_info(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
 ) -> None:
@@ -797,10 +797,10 @@ async def test_entity_has_device_info(
         mac_address=TEST_MAC_ADDRESS,
     )
 
-    config_entry = await create_mock_platform(hass, config_entry, [scanner_entity])
+    config_entry = await create_mock_platform(menuai, config_entry, [scanner_entity])
 
     assert (
-        len(hass.states.async_entity_ids(domain_filter=DOMAIN)) == 1
+        len(menuai.states.async_entity_ids(domain_filter=DOMAIN)) == 1
     )  # should be enabled
     assert len(entity_registry.entities) == 1
     assert (

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_ENTITY_ID,
     CONF_NAME,
     CONF_REPEAT,
@@ -14,10 +14,10 @@ from homeassistant.const import (
     SERVICE_TURN_ON,
     STATE_ON,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     CONF_ALERT_MESSAGE,
@@ -62,9 +62,9 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Alert component."""
-    component = EntityComponent[AlertEntity](LOGGER, DOMAIN, hass)
+    component = EntityComponent[AlertEntity](LOGGER, DOMAIN, menuai)
 
     entities: list[AlertEntity] = []
 
@@ -86,7 +86,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
         entities.append(
             AlertEntity(
-                hass,
+                menuai,
                 object_id,
                 name,
                 watched_entity_id,

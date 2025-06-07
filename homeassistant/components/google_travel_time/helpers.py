@@ -20,27 +20,27 @@ from google.maps.routing_v2 import (
 from google.type import latlng_pb2
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.issue_registry import (
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.issue_registry import (
     IssueSeverity,
     async_create_issue,
     async_delete_issue,
 )
-from homeassistant.helpers.location import find_coordinates
+from menuai.helpers.location import find_coordinates
 
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
 
-def convert_to_waypoint(hass: HomeAssistant, location: str) -> Waypoint | None:
+def convert_to_waypoint(menuai: menuai, location: str) -> Waypoint | None:
     """Convert a location to a Waypoint.
 
     Will either use coordinates or if none are found, use the location as an address.
     """
-    coordinates = find_coordinates(hass, location)
+    coordinates = find_coordinates(menuai, location)
     if coordinates is None:
         return None
     try:
@@ -59,11 +59,11 @@ def convert_to_waypoint(hass: HomeAssistant, location: str) -> Waypoint | None:
 
 
 async def validate_config_entry(
-    hass: HomeAssistant, api_key: str, origin: str, destination: str
+    menuai: menuai, api_key: str, origin: str, destination: str
 ) -> None:
     """Return whether the config entry data is valid."""
-    resolved_origin = convert_to_waypoint(hass, origin)
-    resolved_destination = convert_to_waypoint(hass, destination)
+    resolved_origin = convert_to_waypoint(menuai, origin)
+    resolved_destination = convert_to_waypoint(menuai, destination)
     client_options = ClientOptions(api_key=api_key)
     client = RoutesAsyncClient(client_options=client_options)
     field_mask = "routes.duration"
@@ -102,10 +102,10 @@ class PermissionDeniedException(Exception):
     """Permission Denied Error."""
 
 
-def create_routes_api_disabled_issue(hass: HomeAssistant, entry: ConfigEntry) -> None:
+def create_routes_api_disabled_issue(menuai: menuai, entry: ConfigEntry) -> None:
     """Create an issue for the Routes API being disabled."""
     async_create_issue(
-        hass,
+        menuai,
         DOMAIN,
         f"routes_api_disabled_{entry.entry_id}",
         learn_more_url="https://www.home-assistant.io/integrations/google_travel_time#setup",
@@ -120,6 +120,6 @@ def create_routes_api_disabled_issue(hass: HomeAssistant, entry: ConfigEntry) ->
     )
 
 
-def delete_routes_api_disabled_issue(hass: HomeAssistant, entry: ConfigEntry) -> None:
+def delete_routes_api_disabled_issue(menuai: menuai, entry: ConfigEntry) -> None:
     """Delete the issue for the Routes API being disabled."""
-    async_delete_issue(hass, DOMAIN, f"routes_api_disabled_{entry.entry_id}")
+    async_delete_issue(menuai, DOMAIN, f"routes_api_disabled_{entry.entry_id}")

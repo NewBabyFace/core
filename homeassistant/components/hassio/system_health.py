@@ -5,8 +5,8 @@ from __future__ import annotations
 import os
 from typing import Any
 
-from homeassistant.components import system_health
-from homeassistant.core import HomeAssistant, callback
+from menuai.components import system_health
+from menuai.core import menuai, callback
 
 from .coordinator import (
     get_host_info,
@@ -22,19 +22,19 @@ OBSERVER_URL = "http://{ip_address}:4357"
 
 @callback
 def async_register(
-    hass: HomeAssistant, register: system_health.SystemHealthRegistration
+    menuai: menuai, register: system_health.SystemHealthRegistration
 ) -> None:
     """Register system health callbacks."""
     register.async_register_info(system_health_info)
 
 
-async def system_health_info(hass: HomeAssistant) -> dict[str, Any]:
+async def system_health_info(menuai: menuai) -> dict[str, Any]:
     """Get info for the info page."""
     ip_address = os.environ["SUPERVISOR"]
-    info = get_info(hass) or {}
-    host_info = get_host_info(hass) or {}
-    supervisor_info = get_supervisor_info(hass)
-    network_info = get_network_info(hass) or {}
+    info = get_info(menuai) or {}
+    host_info = get_host_info(menuai) or {}
+    supervisor_info = get_supervisor_info(menuai)
+    network_info = get_network_info(menuai) or {}
 
     healthy: bool | dict[str, str]
     if supervisor_info is not None and supervisor_info.get("healthy"):
@@ -70,17 +70,17 @@ async def system_health_info(hass: HomeAssistant) -> dict[str, Any]:
         "virtualization": host_info.get("virtualization"),
     }
 
-    if info.get("hassos") is not None:
-        os_info = get_os_info(hass) or {}
+    if info.get("menuaios") is not None:
+        os_info = get_os_info(menuai) or {}
         information["board"] = os_info.get("board")
 
     information["supervisor_api"] = system_health.async_check_can_reach_url(
-        hass,
+        menuai,
         SUPERVISOR_PING.format(ip_address=ip_address),
         OBSERVER_URL.format(ip_address=ip_address),
     )
     information["version_api"] = system_health.async_check_can_reach_url(
-        hass,
+        menuai,
         f"https://version.home-assistant.io/{info.get('channel')}.json",
     )
 

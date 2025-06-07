@@ -13,10 +13,10 @@ from sharkiq import (
     SharkIqVacuum,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import API_TIMEOUT, DOMAIN, LOGGER, UPDATE_INTERVAL
 
@@ -28,7 +28,7 @@ class SharkIqUpdateCoordinator(DataUpdateCoordinator[bool]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         ayla_api: AylaApi,
         shark_vacs: list[SharkIqVacuum],
@@ -41,7 +41,7 @@ class SharkIqUpdateCoordinator(DataUpdateCoordinator[bool]):
         self._online_dsns: set[str] = set()
 
         super().__init__(
-            hass,
+            menuai,
             LOGGER,
             config_entry=config_entry,
             name=DOMAIN,

@@ -3,7 +3,7 @@
 from watergate_local_api.models import DeviceState, NetworkingData, TelemetryData
 from watergate_local_api.models.water_meter import WaterMeter
 
-from homeassistant.const import CONF_IP_ADDRESS, CONF_NAME, CONF_WEBHOOK_ID
+from menuai.const import CONF_IP_ADDRESS, CONF_NAME, CONF_WEBHOOK_ID
 
 MOCK_WEBHOOK_ID = "webhook_id"
 

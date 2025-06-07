@@ -8,19 +8,19 @@ from typing import Any, cast
 
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.const import CONF_ENTITY_ID, CONF_NAME
-from homeassistant.core import HomeAssistant, callback, split_entity_id
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.schema_config_entry_flow import (
+from menuai.components import websocket_api
+from menuai.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
+from menuai.components.sensor import DOMAIN as SENSOR_DOMAIN
+from menuai.const import CONF_ENTITY_ID, CONF_NAME
+from menuai.core import menuai, callback, split_entity_id
+from menuai.exceptions import menuaiError
+from menuai.helpers.schema_config_entry_flow import (
     SchemaCommonFlowHandler,
     SchemaConfigFlowHandler,
     SchemaFlowError,
     SchemaFlowFormStep,
 )
-from homeassistant.helpers.selector import (
+from menuai.helpers.selector import (
     BooleanSelector,
     DurationSelector,
     DurationSelectorConfig,
@@ -169,9 +169,9 @@ class StatisticsConfigFlowHandler(SchemaConfigFlowHandler, domain=DOMAIN):
         return cast(str, options[CONF_NAME])
 
     @staticmethod
-    async def async_setup_preview(hass: HomeAssistant) -> None:
+    async def async_setup_preview(menuai: menuai) -> None:
         """Set up preview WS API."""
-        websocket_api.async_register_command(hass, ws_start_preview)
+        websocket_api.async_register_command(menuai, ws_start_preview)
 
 
 @websocket_api.websocket_command(
@@ -184,30 +184,30 @@ class StatisticsConfigFlowHandler(SchemaConfigFlowHandler, domain=DOMAIN):
 )
 @websocket_api.async_response
 async def ws_start_preview(
-    hass: HomeAssistant,
+    menuai: menuai,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     """Generate a preview."""
 
     if msg["flow_type"] == "config_flow":
-        flow_status = hass.config_entries.flow.async_get(msg["flow_id"])
-        flow_sets = hass.config_entries.flow._handler_progress_index.get(  # noqa: SLF001
+        flow_status = menuai.config_entries.flow.async_get(msg["flow_id"])
+        flow_sets = menuai.config_entries.flow._handler_progress_index.get(  # noqa: SLF001
             flow_status["handler"]
         )
         options = {}
         assert flow_sets
         for active_flow in flow_sets:
             options = active_flow._common_handler.options  # type: ignore [attr-defined] # noqa: SLF001
-        config_entry = hass.config_entries.async_get_entry(flow_status["handler"])
+        config_entry = menuai.config_entries.async_get_entry(flow_status["handler"])
         entity_id = options[CONF_ENTITY_ID]
         name = options[CONF_NAME]
         state_characteristic = options[CONF_STATE_CHARACTERISTIC]
     else:
-        flow_status = hass.config_entries.options.async_get(msg["flow_id"])
-        config_entry = hass.config_entries.async_get_entry(flow_status["handler"])
+        flow_status = menuai.config_entries.options.async_get(msg["flow_id"])
+        config_entry = menuai.config_entries.async_get_entry(flow_status["handler"])
         if not config_entry:
-            raise HomeAssistantError("Config entry not found")
+            raise menuaiError("Config entry not found")
         entity_id = config_entry.options[CONF_ENTITY_ID]
         name = config_entry.options[CONF_NAME]
         state_characteristic = config_entry.options[CONF_STATE_CHARACTERISTIC]
@@ -233,7 +233,7 @@ async def ws_start_preview(
             seconds=max_age_input["seconds"],
         )
     preview_entity = StatisticsSensor(
-        hass,
+        menuai,
         entity_id,
         name,
         None,
@@ -244,7 +244,7 @@ async def ws_start_preview(
         msg["user_input"].get(CONF_PRECISION),
         msg["user_input"].get(CONF_PERCENTILE),
     )
-    preview_entity.hass = hass
+    preview_entity.menuai = menuai
 
     connection.send_result(msg["id"])
     connection.subscriptions[msg["id"]] = await preview_entity.async_start_preview(

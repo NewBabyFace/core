@@ -5,7 +5,7 @@ from typing import Any
 
 from pyhap.const import CATEGORY_THERMOSTAT
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     ATTR_CURRENT_HUMIDITY,
     ATTR_CURRENT_TEMPERATURE,
     ATTR_FAN_MODE,
@@ -48,11 +48,11 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.components.water_heater import (
+from menuai.components.water_heater import (
     DOMAIN as DOMAIN_WATER_HEATER,
     SERVICE_SET_TEMPERATURE as SERVICE_SET_TEMPERATURE_WATER_HEATER,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_SUPPORTED_FEATURES,
     ATTR_TEMPERATURE,
@@ -61,9 +61,9 @@ from homeassistant.const import (
     STATE_UNKNOWN,
     UnitOfTemperature,
 )
-from homeassistant.core import State, callback
-from homeassistant.util.enum import try_parse_enum
-from homeassistant.util.percentage import (
+from menuai.core import State, callback
+from menuai.util.enum import try_parse_enum
+from menuai.util.percentage import (
     ordered_list_item_to_percentage,
     percentage_to_ordered_list_item,
 )
@@ -104,7 +104,7 @@ DEFAULT_HVAC_MODES = [
 ]
 
 HC_HOMEKIT_VALID_MODES_WATER_HEATER = {"Heat": 1}
-UNIT_HASS_TO_HOMEKIT = {UnitOfTemperature.CELSIUS: 0, UnitOfTemperature.FAHRENHEIT: 1}
+UNIT_menuai_TO_HOMEKIT = {UnitOfTemperature.CELSIUS: 0, UnitOfTemperature.FAHRENHEIT: 1}
 
 HC_HEAT_COOL_OFF = 0
 HC_HEAT_COOL_HEAT = 1
@@ -133,8 +133,8 @@ PRE_DEFINED_SWING_MODES = set(SWING_MODE_PREFERRED_ORDER)
 HC_MIN_TEMP = 10
 HC_MAX_TEMP = 38
 
-UNIT_HOMEKIT_TO_HASS = {c: s for s, c in UNIT_HASS_TO_HOMEKIT.items()}
-HC_HASS_TO_HOMEKIT = {
+UNIT_HOMEKIT_TO_menuai = {c: s for s, c in UNIT_menuai_TO_HOMEKIT.items()}
+HC_menuai_TO_HOMEKIT = {
     HVACMode.OFF: HC_HEAT_COOL_OFF,
     HVACMode.HEAT: HC_HEAT_COOL_HEAT,
     HVACMode.COOL: HC_HEAT_COOL_COOL,
@@ -143,9 +143,9 @@ HC_HASS_TO_HOMEKIT = {
     HVACMode.DRY: HC_HEAT_COOL_COOL,
     HVACMode.FAN_ONLY: HC_HEAT_COOL_COOL,
 }
-HC_HOMEKIT_TO_HASS = {c: s for s, c in HC_HASS_TO_HOMEKIT.items()}
+HC_HOMEKIT_TO_menuai = {c: s for s, c in HC_menuai_TO_HOMEKIT.items()}
 
-HC_HASS_TO_HOMEKIT_ACTION = {
+HC_menuai_TO_HOMEKIT_ACTION = {
     HVACAction.OFF: HC_HEAT_COOL_OFF,
     HVACAction.IDLE: HC_HEAT_COOL_OFF,
     HVACAction.HEATING: HC_HEAT_COOL_HEAT,
@@ -160,7 +160,7 @@ FAN_STATE_INACTIVE = 0
 FAN_STATE_IDLE = 1
 FAN_STATE_ACTIVE = 2
 
-HC_HASS_TO_HOMEKIT_FAN_STATE = {
+HC_menuai_TO_HOMEKIT_FAN_STATE = {
     HVACAction.OFF: FAN_STATE_INACTIVE,
     HVACAction.IDLE: FAN_STATE_IDLE,
     HVACAction.HEATING: FAN_STATE_ACTIVE,
@@ -183,7 +183,7 @@ def _hk_hvac_mode_from_state(state: State) -> int | None:
             "%s: Received invalid HVAC mode: %s", state.entity_id, state.state
         )
         return None
-    return HC_HASS_TO_HOMEKIT.get(hvac_mode)
+    return HC_menuai_TO_HOMEKIT.get(hvac_mode)
 
 
 @TYPES.register("Thermostat")
@@ -193,8 +193,8 @@ class Thermostat(HomeAccessory):
     def __init__(self, *args: Any) -> None:
         """Initialize a Thermostat accessory object."""
         super().__init__(*args, category=CATEGORY_THERMOSTAT)
-        self._unit = self.hass.config.units.temperature_unit
-        state = self.hass.states.get(self.entity_id)
+        self._unit = self.menuai.config.units.temperature_unit
+        state = self.menuai.states.get(self.entity_id)
         assert state
         hc_min_temp, hc_max_temp = self.get_temperature_range(state)
         self._reload_on_change_attrs.extend(
@@ -246,10 +246,10 @@ class Thermostat(HomeAccessory):
         # the value and if 0 is not a valid
         # value this will throw
         self.char_target_heat_cool = serv_thermostat.configure_char(
-            CHAR_TARGET_HEATING_COOLING, value=list(self.hc_homekit_to_hass)[0]
+            CHAR_TARGET_HEATING_COOLING, value=list(self.hc_homekit_to_menuai)[0]
         )
         self.char_target_heat_cool.override_properties(
-            valid_values=self.hc_hass_to_homekit
+            valid_values=self.hc_menuai_to_homekit
         )
         self.char_target_heat_cool.allow_invalid_client_values = True
         # Current and target temperature characteristics
@@ -431,7 +431,7 @@ class Thermostat(HomeAccessory):
         events = []
         params: dict[str, Any] = {ATTR_ENTITY_ID: self.entity_id}
         service = None
-        state = self.hass.states.get(self.entity_id)
+        state = self.menuai.states.get(self.entity_id)
         assert state
         features = state.attributes.get(ATTR_SUPPORTED_FEATURES, 0)
         homekit_hvac_mode = _hk_hvac_mode_from_state(state)
@@ -442,7 +442,7 @@ class Thermostat(HomeAccessory):
             and char_values[CHAR_TARGET_HEATING_COOLING] != homekit_hvac_mode
         ):
             target_hc = char_values[CHAR_TARGET_HEATING_COOLING]
-            if target_hc not in self.hc_homekit_to_hass:
+            if target_hc not in self.hc_homekit_to_menuai:
                 # If the target heating cooling state we want does not
                 # exist on the device, we have to sort it out
                 # based on the current and target temperature since
@@ -458,7 +458,7 @@ class Thermostat(HomeAccessory):
                 ):
                     hc_fallback_order = HC_HEAT_COOL_PREFER_COOL
                 for hc_fallback in hc_fallback_order:
-                    if hc_fallback in self.hc_homekit_to_hass:
+                    if hc_fallback in self.hc_homekit_to_menuai:
                         _LOGGER.debug(
                             (
                                 "Siri requested target mode: %s and the device does not"
@@ -470,7 +470,7 @@ class Thermostat(HomeAccessory):
                         self.char_target_heat_cool.value = target_hc = hc_fallback
                         break
 
-            params[ATTR_HVAC_MODE] = self.hc_homekit_to_hass[target_hc]
+            params[ATTR_HVAC_MODE] = self.hc_homekit_to_menuai[target_hc]
             events.append(
                 f"{CHAR_TARGET_HEATING_COOLING} to"
                 f" {char_values[CHAR_TARGET_HEATING_COOLING]}"
@@ -575,12 +575,12 @@ class Thermostat(HomeAccessory):
         #
         # HEAT_COOL is preferred over auto because HomeKit Accessory Protocol describes
         # heating or cooling comes on to maintain a target temp which is closest to
-        # the Home Assistant spec
+        # the MenuAI spec
         #
         # HVACMode.HEAT_COOL: The device supports heating/cooling to a range
-        self.hc_homekit_to_hass = {
+        self.hc_homekit_to_menuai = {
             c: s
-            for s, c in HC_HASS_TO_HOMEKIT.items()
+            for s, c in HC_menuai_TO_HOMEKIT.items()
             if (
                 s in hc_modes
                 and not (
@@ -592,7 +592,7 @@ class Thermostat(HomeAccessory):
                 )
             )
         }
-        self.hc_hass_to_homekit = {k: v for v, k in self.hc_homekit_to_hass.items()}
+        self.hc_menuai_to_homekit = {k: v for v, k in self.hc_homekit_to_menuai.items()}
 
     def get_temperature_range(self, state: State) -> tuple[float, float]:
         """Return min and max temperature range."""
@@ -619,7 +619,7 @@ class Thermostat(HomeAccessory):
 
         # Update target operation mode FIRST
         if (homekit_hvac_mode := _hk_hvac_mode_from_state(new_state)) is not None:
-            if homekit_hvac_mode in self.hc_homekit_to_hass:
+            if homekit_hvac_mode in self.hc_homekit_to_menuai:
                 self.char_target_heat_cool.set_value(homekit_hvac_mode)
             else:
                 _LOGGER.error(
@@ -628,13 +628,13 @@ class Thermostat(HomeAccessory):
                         " are supported"
                     ),
                     new_state.state,
-                    self.hc_homekit_to_hass,
+                    self.hc_homekit_to_menuai,
                 )
 
         # Set current operation mode for supported thermostats
         if hvac_action := attributes.get(ATTR_HVAC_ACTION):
             self.char_current_heat_cool.set_value(
-                HC_HASS_TO_HOMEKIT_ACTION.get(hvac_action, HC_HEAT_COOL_OFF)
+                HC_menuai_TO_HOMEKIT_ACTION.get(hvac_action, HC_HEAT_COOL_OFF)
             )
 
         # Update current temperature
@@ -691,8 +691,8 @@ class Thermostat(HomeAccessory):
             self.char_target_temp.set_value(target_temp)
 
         # Update display units
-        if self._unit and self._unit in UNIT_HASS_TO_HOMEKIT:
-            unit = UNIT_HASS_TO_HOMEKIT[self._unit]
+        if self._unit and self._unit in UNIT_menuai_TO_HOMEKIT:
+            unit = UNIT_menuai_TO_HOMEKIT[self._unit]
             self.char_display_units.set_value(unit)
 
         if self.fan_chars:
@@ -726,7 +726,7 @@ class Thermostat(HomeAccessory):
             hvac_action := attributes.get(ATTR_HVAC_ACTION)
         ):
             self.char_current_fan_state.set_value(
-                HC_HASS_TO_HOMEKIT_FAN_STATE[hvac_action]
+                HC_menuai_TO_HOMEKIT_FAN_STATE[hvac_action]
             )
 
         self.char_active.set_value(
@@ -747,8 +747,8 @@ class WaterHeater(HomeAccessory):
                 ATTR_MIN_TEMP,
             )
         )
-        self._unit = self.hass.config.units.temperature_unit
-        state = self.hass.states.get(self.entity_id)
+        self._unit = self.menuai.config.units.temperature_unit
+        state = self.menuai.states.get(self.entity_id)
         assert state
         min_temp, max_temp = self.get_temperature_range(state)
 
@@ -795,7 +795,7 @@ class WaterHeater(HomeAccessory):
     def set_heat_cool(self, value: int) -> None:
         """Change operation mode to value if call came from HomeKit."""
         _LOGGER.debug("%s: Set heat-cool to %d", self.entity_id, value)
-        if HC_HOMEKIT_TO_HASS[value] != HVACMode.HEAT:
+        if HC_HOMEKIT_TO_menuai[value] != HVACMode.HEAT:
             self.char_target_heat_cool.set_value(1)  # Heat
 
     def set_target_temperature(self, value: float) -> None:
@@ -823,8 +823,8 @@ class WaterHeater(HomeAccessory):
             self.char_current_temp.set_value(current_temperature)
 
         # Update display units
-        if self._unit and self._unit in UNIT_HASS_TO_HOMEKIT:
-            unit = UNIT_HASS_TO_HOMEKIT[self._unit]
+        if self._unit and self._unit in UNIT_menuai_TO_HOMEKIT:
+            unit = UNIT_menuai_TO_HOMEKIT[self._unit]
             self.char_display_units.set_value(unit)
 
         # Update target operation mode

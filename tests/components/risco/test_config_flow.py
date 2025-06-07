@@ -5,15 +5,15 @@ from unittest.mock import PropertyMock, patch
 import pytest
 import voluptuous as vol
 
-from homeassistant import config_entries
-from homeassistant.components.risco.config_flow import (
+from menuai import config_entries
+from menuai.components.risco.config_flow import (
     CannotConnectError,
     UnauthorizedError,
 )
-from homeassistant.components.risco.const import CONF_COMMUNICATION_DELAY, DOMAIN
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from menuai.components.risco.const import CONF_COMMUNICATION_DELAY, DOMAIN
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
 
 from tests.common import MockConfigEntry
 
@@ -56,14 +56,14 @@ TEST_ADVANCED_OPTIONS = {
 }
 
 
-async def test_cloud_form(hass: HomeAssistant) -> None:
+async def test_cloud_form(menuai: menuai) -> None:
     """Test we get the cloud form."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.MENU
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "cloud"}
     )
 
@@ -72,25 +72,25 @@ async def test_cloud_form(hass: HomeAssistant) -> None:
 
     with (
         patch(
-            "homeassistant.components.risco.config_flow.RiscoCloud.login",
+            "menuai.components.risco.config_flow.RiscoCloud.login",
             return_value=True,
         ),
         patch(
-            "homeassistant.components.risco.config_flow.RiscoCloud.site_name",
+            "menuai.components.risco.config_flow.RiscoCloud.site_name",
             new_callable=PropertyMock(return_value=TEST_SITE_NAME),
         ),
         patch(
-            "homeassistant.components.risco.config_flow.RiscoCloud.close"
+            "menuai.components.risco.config_flow.RiscoCloud.close"
         ) as mock_close,
         patch(
-            "homeassistant.components.risco.async_setup_entry",
+            "menuai.components.risco.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"], TEST_CLOUD_DATA
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.CREATE_ENTRY
     assert result3["title"] == TEST_SITE_NAME
@@ -107,19 +107,19 @@ async def test_cloud_form(hass: HomeAssistant) -> None:
         (Exception, "unknown"),
     ],
 )
-async def test_cloud_error(hass: HomeAssistant, login_with_error, error) -> None:
+async def test_cloud_error(menuai: menuai, login_with_error, error) -> None:
     """Test we handle config flow errors."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "cloud"}
     )
 
     with patch(
-        "homeassistant.components.risco.config_flow.RiscoCloud.close"
+        "menuai.components.risco.config_flow.RiscoCloud.close"
     ) as mock_close:
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"], TEST_CLOUD_DATA
         )
 
@@ -128,7 +128,7 @@ async def test_cloud_error(hass: HomeAssistant, login_with_error, error) -> None
     assert result3["errors"] == {"base": error}
 
 
-async def test_form_cloud_already_exists(hass: HomeAssistant) -> None:
+async def test_form_cloud_already_exists(menuai: menuai) -> None:
     """Test that a flow with an existing username aborts."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -136,17 +136,17 @@ async def test_form_cloud_already_exists(hass: HomeAssistant) -> None:
         data=TEST_CLOUD_DATA,
     )
 
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "cloud"}
     )
 
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result2["flow_id"], TEST_CLOUD_DATA
     )
 
@@ -155,35 +155,35 @@ async def test_form_cloud_already_exists(hass: HomeAssistant) -> None:
 
 
 async def test_form_reauth(
-    hass: HomeAssistant, cloud_config_entry: MockConfigEntry
+    menuai: menuai, cloud_config_entry: MockConfigEntry
 ) -> None:
     """Test reauthenticate."""
 
-    result = await cloud_config_entry.start_reauth_flow(hass)
+    result = await cloud_config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
     with (
         patch(
-            "homeassistant.components.risco.config_flow.RiscoCloud.login",
+            "menuai.components.risco.config_flow.RiscoCloud.login",
             return_value=True,
         ),
         patch(
-            "homeassistant.components.risco.config_flow.RiscoCloud.site_name",
+            "menuai.components.risco.config_flow.RiscoCloud.site_name",
             new_callable=PropertyMock(return_value=TEST_SITE_NAME),
         ),
         patch(
-            "homeassistant.components.risco.config_flow.RiscoCloud.close",
+            "menuai.components.risco.config_flow.RiscoCloud.close",
         ),
         patch(
-            "homeassistant.components.risco.async_setup_entry",
+            "menuai.components.risco.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"], {**TEST_CLOUD_DATA, CONF_PASSWORD: "new_password"}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.ABORT
     assert result2["reason"] == "reauth_successful"
@@ -192,35 +192,35 @@ async def test_form_reauth(
 
 
 async def test_form_reauth_with_new_username(
-    hass: HomeAssistant, cloud_config_entry: MockConfigEntry
+    menuai: menuai, cloud_config_entry: MockConfigEntry
 ) -> None:
     """Test reauthenticate with new username."""
 
-    result = await cloud_config_entry.start_reauth_flow(hass)
+    result = await cloud_config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
     with (
         patch(
-            "homeassistant.components.risco.config_flow.RiscoCloud.login",
+            "menuai.components.risco.config_flow.RiscoCloud.login",
             return_value=True,
         ),
         patch(
-            "homeassistant.components.risco.config_flow.RiscoCloud.site_name",
+            "menuai.components.risco.config_flow.RiscoCloud.site_name",
             new_callable=PropertyMock(return_value=TEST_SITE_NAME),
         ),
         patch(
-            "homeassistant.components.risco.config_flow.RiscoCloud.close",
+            "menuai.components.risco.config_flow.RiscoCloud.close",
         ),
         patch(
-            "homeassistant.components.risco.async_setup_entry",
+            "menuai.components.risco.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"], {**TEST_CLOUD_DATA, CONF_USERNAME: "new_user"}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.ABORT
     assert result2["reason"] == "reauth_successful"
@@ -229,14 +229,14 @@ async def test_form_reauth_with_new_username(
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_local_form(hass: HomeAssistant) -> None:
+async def test_local_form(menuai: menuai) -> None:
     """Test we get the local form."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.MENU
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "local"}
     )
 
@@ -245,25 +245,25 @@ async def test_local_form(hass: HomeAssistant) -> None:
 
     with (
         patch(
-            "homeassistant.components.risco.config_flow.RiscoLocal.connect",
+            "menuai.components.risco.config_flow.RiscoLocal.connect",
             return_value=True,
         ),
         patch(
-            "homeassistant.components.risco.config_flow.RiscoLocal.id",
+            "menuai.components.risco.config_flow.RiscoLocal.id",
             new_callable=PropertyMock(return_value=TEST_SITE_NAME),
         ),
         patch(
-            "homeassistant.components.risco.config_flow.RiscoLocal.disconnect"
+            "menuai.components.risco.config_flow.RiscoLocal.disconnect"
         ) as mock_close,
         patch(
-            "homeassistant.components.risco.async_setup_entry",
+            "menuai.components.risco.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"], TEST_LOCAL_DATA
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     expected_data = {
         **TEST_LOCAL_DATA,
@@ -285,16 +285,16 @@ async def test_local_form(hass: HomeAssistant) -> None:
         (Exception, "unknown"),
     ],
 )
-async def test_local_error(hass: HomeAssistant, connect_with_error, error) -> None:
+async def test_local_error(menuai: menuai, connect_with_error, error) -> None:
     """Test we handle config flow errors."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "local"}
     )
 
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result2["flow_id"], TEST_LOCAL_DATA
     )
 
@@ -302,7 +302,7 @@ async def test_local_error(hass: HomeAssistant, connect_with_error, error) -> No
     assert result3["errors"] == {"base": error}
 
 
-async def test_form_local_already_exists(hass: HomeAssistant) -> None:
+async def test_form_local_already_exists(menuai: menuai) -> None:
     """Test that a flow with an existing host aborts."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -310,30 +310,30 @@ async def test_form_local_already_exists(hass: HomeAssistant) -> None:
         data=TEST_LOCAL_DATA,
     )
 
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "local"}
     )
 
     with (
         patch(
-            "homeassistant.components.risco.config_flow.RiscoLocal.connect",
+            "menuai.components.risco.config_flow.RiscoLocal.connect",
             return_value=True,
         ),
         patch(
-            "homeassistant.components.risco.config_flow.RiscoLocal.id",
+            "menuai.components.risco.config_flow.RiscoLocal.id",
             new_callable=PropertyMock(return_value=TEST_SITE_NAME),
         ),
         patch(
-            "homeassistant.components.risco.config_flow.RiscoLocal.disconnect",
+            "menuai.components.risco.config_flow.RiscoLocal.disconnect",
         ),
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"], TEST_LOCAL_DATA
         )
 
@@ -341,7 +341,7 @@ async def test_form_local_already_exists(hass: HomeAssistant) -> None:
     assert result3["reason"] == "already_configured"
 
 
-async def test_options_flow(hass: HomeAssistant) -> None:
+async def test_options_flow(menuai: menuai) -> None:
     """Test options flow."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -349,21 +349,21 @@ async def test_options_flow(hass: HomeAssistant) -> None:
         data=TEST_CLOUD_DATA,
     )
 
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await menuai.config_entries.options.async_init(entry.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input=TEST_OPTIONS,
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "risco_to_ha"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input=TEST_RISCO_TO_HA,
     )
@@ -371,8 +371,8 @@ async def test_options_flow(hass: HomeAssistant) -> None:
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "ha_to_risco"
 
-    with patch("homeassistant.components.risco.async_setup_entry", return_value=True):
-        result = await hass.config_entries.options.async_configure(
+    with patch("menuai.components.risco.async_setup_entry", return_value=True):
+        result = await menuai.config_entries.options.async_configure(
             result["flow_id"],
             user_input=TEST_HA_TO_RISCO,
         )
@@ -385,7 +385,7 @@ async def test_options_flow(hass: HomeAssistant) -> None:
     }
 
 
-async def test_advanced_options_flow(hass: HomeAssistant) -> None:
+async def test_advanced_options_flow(menuai: menuai) -> None:
     """Test options flow."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -393,9 +393,9 @@ async def test_advanced_options_flow(hass: HomeAssistant) -> None:
         data=TEST_CLOUD_DATA,
     )
 
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.options.async_init(
+    result = await menuai.config_entries.options.async_init(
         entry.entry_id, context={"show_advanced_options": True}
     )
 
@@ -403,13 +403,13 @@ async def test_advanced_options_flow(hass: HomeAssistant) -> None:
     assert result["step_id"] == "init"
     assert "concurrency" in result["data_schema"].schema
     assert "scan_interval" in result["data_schema"].schema
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"], user_input={**TEST_OPTIONS, **TEST_ADVANCED_OPTIONS}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "risco_to_ha"
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input=TEST_RISCO_TO_HA,
     )
@@ -417,8 +417,8 @@ async def test_advanced_options_flow(hass: HomeAssistant) -> None:
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "ha_to_risco"
 
-    with patch("homeassistant.components.risco.async_setup_entry", return_value=True):
-        result = await hass.config_entries.options.async_configure(
+    with patch("menuai.components.risco.async_setup_entry", return_value=True):
+        result = await menuai.config_entries.options.async_configure(
             result["flow_id"],
             user_input=TEST_HA_TO_RISCO,
         )
@@ -432,7 +432,7 @@ async def test_advanced_options_flow(hass: HomeAssistant) -> None:
     }
 
 
-async def test_ha_to_risco_schema(hass: HomeAssistant) -> None:
+async def test_ha_to_risco_schema(menuai: menuai) -> None:
     """Test that the schema for the ha-to-risco mapping step is generated properly."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -440,29 +440,29 @@ async def test_ha_to_risco_schema(hass: HomeAssistant) -> None:
         data=TEST_CLOUD_DATA,
     )
 
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await menuai.config_entries.options.async_init(entry.entry_id)
 
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input=TEST_OPTIONS,
     )
-    result = await hass.config_entries.options.async_configure(
+    result = await menuai.config_entries.options.async_configure(
         result["flow_id"],
         user_input=TEST_RISCO_TO_HA,
     )
 
     # Test an HA state that isn't used
     with pytest.raises(vol.error.Invalid):
-        await hass.config_entries.options.async_configure(
+        await menuai.config_entries.options.async_configure(
             result["flow_id"],
             user_input={**TEST_HA_TO_RISCO, "armed_custom_bypass": "D"},
         )
 
     # Test a combo that can't be selected
     with pytest.raises(vol.error.Invalid):
-        await hass.config_entries.options.async_configure(
+        await menuai.config_entries.options.async_configure(
             result["flow_id"],
             user_input={**TEST_HA_TO_RISCO, "armed_night": "A"},
         )

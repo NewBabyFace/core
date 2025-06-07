@@ -5,13 +5,13 @@ from dataclasses import dataclass
 from aiovlc.client import Client
 from aiovlc.exceptions import AuthError, ConnectError
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     SCAN_INTERVAL as MEDIAPLAYER_SCAN_INTERVAL,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_PORT, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_PORT, Platform
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
 
 from .const import LOGGER
 
@@ -28,7 +28,7 @@ class VlcData:
     available: bool
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: VlcConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: VlcConfigEntry) -> bool:
     """Set up VLC media player Telnet from a config entry."""
     config = entry.data
 
@@ -70,11 +70,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: VlcConfigEntry) -> bool:
 
     entry.async_on_unload(_disconnect_vlc)
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

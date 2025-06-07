@@ -8,15 +8,15 @@ from typing import Any
 from omnilogic import LoginException, OmniLogic, OmniLogicException
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import callback
-from homeassistant.helpers import aiohttp_client
+from menuai.const import CONF_PASSWORD, CONF_USERNAME
+from menuai.core import callback
+from menuai.helpers import aiohttp_client
 
 from .const import CONF_SCAN_INTERVAL, DEFAULT_PH_OFFSET, DEFAULT_SCAN_INTERVAL, DOMAIN
 
@@ -46,7 +46,7 @@ class OmniLogicConfigFlow(ConfigFlow, domain=DOMAIN):
             username = user_input[CONF_USERNAME]
             password = user_input[CONF_PASSWORD]
 
-            session = aiohttp_client.async_get_clientsession(self.hass)
+            session = aiohttp_client.async_get_clientsession(self.menuai)
             omni = OmniLogic(username, password, session)
 
             try:

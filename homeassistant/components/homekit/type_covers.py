@@ -12,7 +12,7 @@ from pyhap.const import (
 from pyhap.service import Service
 from pyhap.util import callback as pyhap_callback
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     ATTR_CURRENT_POSITION,
     ATTR_CURRENT_TILT_POSITION,
     ATTR_POSITION,
@@ -21,7 +21,7 @@ from homeassistant.components.cover import (
     CoverEntityFeature,
     CoverState,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_SUPPORTED_FEATURES,
     SERVICE_CLOSE_COVER,
@@ -31,14 +31,14 @@ from homeassistant.const import (
     SERVICE_STOP_COVER,
     STATE_ON,
 )
-from homeassistant.core import (
+from menuai.core import (
     Event,
     EventStateChangedData,
-    HassJobType,
+    menuaiJobType,
     State,
     callback,
 )
-from homeassistant.helpers.event import async_track_state_change_event
+from menuai.helpers.event import async_track_state_change_event
 
 from .accessories import TYPES, HomeAccessory
 from .const import (
@@ -68,7 +68,7 @@ from .const import (
     SERV_WINDOW_COVERING,
 )
 
-DOOR_CURRENT_HASS_TO_HK = {
+DOOR_CURRENT_menuai_TO_HK = {
     CoverState.OPEN: HK_DOOR_OPEN,
     CoverState.CLOSED: HK_DOOR_CLOSED,
     CoverState.OPENING: HK_DOOR_OPENING,
@@ -81,7 +81,7 @@ DOOR_CURRENT_HASS_TO_HK = {
 #  1: Closed
 # Opening is mapped to 0 since the target is Open
 # Closing is mapped to 1 since the target is Closed
-DOOR_TARGET_HASS_TO_HK = {
+DOOR_TARGET_menuai_TO_HK = {
     CoverState.OPEN: HK_DOOR_OPEN,
     CoverState.CLOSED: HK_DOOR_CLOSED,
     CoverState.OPENING: HK_DOOR_OPEN,
@@ -104,7 +104,7 @@ class GarageDoorOpener(HomeAccessory):
     def __init__(self, *args: Any) -> None:
         """Initialize a GarageDoorOpener accessory object."""
         super().__init__(*args, category=CATEGORY_GARAGE_DOOR_OPENER)
-        state = self.hass.states.get(self.entity_id)
+        state = self.menuai.states.get(self.entity_id)
         assert state
 
         serv_garage_door = self.add_preload_service(SERV_GARAGE_DOOR_OPENER)
@@ -121,7 +121,7 @@ class GarageDoorOpener(HomeAccessory):
         self.linked_obstruction_sensor = self.config.get(CONF_LINKED_OBSTRUCTION_SENSOR)
         if self.linked_obstruction_sensor:
             self._async_update_obstruction_state(
-                self.hass.states.get(self.linked_obstruction_sensor)
+                self.menuai.states.get(self.linked_obstruction_sensor)
             )
 
         self.async_update_state(state)
@@ -131,15 +131,15 @@ class GarageDoorOpener(HomeAccessory):
     def run(self) -> None:
         """Handle accessory driver started event.
 
-        Run inside the Home Assistant event loop.
+        Run inside the MenuAI event loop.
         """
         if self.linked_obstruction_sensor:
             self._subscriptions.append(
                 async_track_state_change_event(
-                    self.hass,
+                    self.menuai,
                     [self.linked_obstruction_sensor],
                     self._async_update_obstruction_event,
-                    job_type=HassJobType.Callback,
+                    job_type=menuaiJobType.Callback,
                 )
             )
 
@@ -187,9 +187,9 @@ class GarageDoorOpener(HomeAccessory):
     @callback
     def async_update_state(self, new_state: State) -> None:
         """Update cover state after state changed."""
-        hass_state: CoverState = new_state.state  # type: ignore[assignment]
-        target_door_state = DOOR_TARGET_HASS_TO_HK.get(hass_state)
-        current_door_state = DOOR_CURRENT_HASS_TO_HK.get(hass_state)
+        menuai_state: CoverState = new_state.state  # type: ignore[assignment]
+        target_door_state = DOOR_TARGET_menuai_TO_HK.get(menuai_state)
+        current_door_state = DOOR_CURRENT_menuai_TO_HK.get(menuai_state)
 
         if ATTR_OBSTRUCTION_DETECTED in new_state.attributes:
             obstruction_detected = (
@@ -213,7 +213,7 @@ class OpeningDeviceBase(HomeAccessory):
     def __init__(self, *args: Any, category: int, service: Service) -> None:
         """Initialize a OpeningDeviceBase accessory object."""
         super().__init__(*args, category=category)
-        state = self.hass.states.get(self.entity_id)
+        state = self.menuai.states.get(self.entity_id)
         assert state
         self.features: int = state.attributes.get(ATTR_SUPPORTED_FEATURES, 0)
         self._supports_stop = self.features & CoverEntityFeature.STOP
@@ -288,7 +288,7 @@ class OpeningDevice(OpeningDeviceBase, HomeAccessory):
     def __init__(self, *args: Any, category: int, service: Service) -> None:
         """Initialize a WindowCovering accessory object."""
         super().__init__(*args, category=category, service=service)
-        state = self.hass.states.get(self.entity_id)
+        state = self.menuai.states.get(self.entity_id)
         assert state
         self.char_current_position = self.serv_cover.configure_char(
             CHAR_CURRENT_POSITION, value=0
@@ -335,7 +335,7 @@ class OpeningDevice(OpeningDeviceBase, HomeAccessory):
             if new_state.state not in MOVING_STATES:
                 self.char_target_position.set_value(current_position)
 
-        position_state = _hass_state_to_position_start(new_state.state)
+        position_state = _menuai_state_to_position_start(new_state.state)
         self.char_position_state.set_value(position_state)
 
         super().async_update_state(new_state)
@@ -392,7 +392,7 @@ class WindowCoveringBasic(OpeningDeviceBase, HomeAccessory):
         super().__init__(
             *args, category=CATEGORY_WINDOW_COVERING, service=SERV_WINDOW_COVERING
         )
-        state = self.hass.states.get(self.entity_id)
+        state = self.menuai.states.get(self.entity_id)
         assert state
         self.char_current_position = self.serv_cover.configure_char(
             CHAR_CURRENT_POSITION, value=0
@@ -438,15 +438,15 @@ class WindowCoveringBasic(OpeningDeviceBase, HomeAccessory):
                 self.char_current_position.set_value(hk_position)
             if self.char_target_position.value != hk_position and not is_moving:
                 self.char_target_position.set_value(hk_position)
-        position_state = _hass_state_to_position_start(new_state.state)
+        position_state = _menuai_state_to_position_start(new_state.state)
         if self.char_position_state.value != position_state:
             self.char_position_state.set_value(position_state)
 
         super().async_update_state(new_state)
 
 
-def _hass_state_to_position_start(state: str) -> int:
-    """Convert hass state to homekit position state."""
+def _menuai_state_to_position_start(state: str) -> int:
+    """Convert menuai state to homekit position state."""
     if state == CoverState.OPENING:
         return HK_POSITION_GOING_TO_MAX
     if state == CoverState.CLOSING:

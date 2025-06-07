@@ -30,14 +30,14 @@ from pycomfoconnect import (
 )
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_RESOURCES,
     PERCENTAGE,
     REVOLUTIONS_PER_MINUTE,
@@ -47,11 +47,11 @@ from homeassistant.const import (
     UnitOfTime,
     UnitOfVolumeFlowRate,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import DOMAIN, SIGNAL_COMFOCONNECT_UPDATE_RECEIVED, ComfoConnectBridge
 
@@ -273,13 +273,13 @@ PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(
 
 
 def setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the ComfoConnect sensor platform."""
-    ccb = hass.data[DOMAIN]
+    ccb = menuai.data[DOMAIN]
 
     sensors = [
         ComfoConnectSensor(ccb=ccb, description=description)
@@ -307,7 +307,7 @@ class ComfoConnectSensor(SensorEntity):
         self._attr_name = f"{ccb.name} {description.name}"
         self._attr_unique_id = f"{ccb.unique_id}-{description.key}"
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register for sensor updates."""
         _LOGGER.debug(
             "Registering for sensor %s (%d)",
@@ -316,14 +316,14 @@ class ComfoConnectSensor(SensorEntity):
         )
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 SIGNAL_COMFOCONNECT_UPDATE_RECEIVED.format(
                     self.entity_description.sensor_id
                 ),
                 self._handle_update,
             )
         )
-        await self.hass.async_add_executor_job(
+        await self.menuai.async_add_executor_job(
             self._ccb.comfoconnect.register_sensor, self.entity_description.sensor_id
         )
 

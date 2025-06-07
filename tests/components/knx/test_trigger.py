@@ -4,16 +4,16 @@ import logging
 
 import pytest
 
-from homeassistant.components import automation
-from homeassistant.const import ATTR_ENTITY_ID, SERVICE_TURN_OFF
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.setup import async_setup_component
+from menuai.components import automation
+from menuai.const import ATTR_ENTITY_ID, SERVICE_TURN_OFF
+from menuai.core import menuai, ServiceCall
+from menuai.setup import async_setup_component
 
 from .conftest import KNXTestKit
 
 
 async def test_telegram_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     service_calls: list[ServiceCall],
     knx: KNXTestKit,
 ) -> None:
@@ -22,7 +22,7 @@ async def test_telegram_trigger(
 
     # "id" field added to action to test if `trigger_data` passed correctly in `async_attach_trigger`
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -96,7 +96,7 @@ async def test_telegram_trigger(
     ],
 )
 async def test_telegram_trigger_dpt_option(
-    hass: HomeAssistant,
+    menuai: menuai,
     service_calls: list[ServiceCall],
     knx: KNXTestKit,
     payload: tuple[int, ...],
@@ -107,7 +107,7 @@ async def test_telegram_trigger_dpt_option(
     """Test telegram trigger type option."""
     await knx.setup_integration()
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -183,7 +183,7 @@ async def test_telegram_trigger_dpt_option(
     ],
 )
 async def test_telegram_trigger_options(
-    hass: HomeAssistant,
+    menuai: menuai,
     service_calls: list[ServiceCall],
     knx: KNXTestKit,
     group_value_options: dict[str, bool],
@@ -192,7 +192,7 @@ async def test_telegram_trigger_options(
     """Test telegram trigger options."""
     await knx.setup_integration()
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -240,7 +240,7 @@ async def test_telegram_trigger_options(
     else:
         assert len(service_calls) == 0
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "knx",
         "send",
         {"address": "0/0/1", "payload": True},
@@ -260,7 +260,7 @@ async def test_telegram_trigger_options(
 
 
 async def test_remove_telegram_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     service_calls: list[ServiceCall],
     knx: KNXTestKit,
 ) -> None:
@@ -269,7 +269,7 @@ async def test_remove_telegram_trigger(
     await knx.setup_integration()
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -293,7 +293,7 @@ async def test_remove_telegram_trigger(
     assert len(service_calls) == 1
     assert service_calls.pop().data["catch_all"] == "telegram - 0/0/1"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         automation.DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: f"automation.{automation_name}"},
@@ -306,7 +306,7 @@ async def test_remove_telegram_trigger(
 
 
 async def test_invalid_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     knx: KNXTestKit,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -315,7 +315,7 @@ async def test_invalid_trigger(
     caplog.clear()
     with caplog.at_level(logging.ERROR):
         assert await async_setup_component(
-            hass,
+            menuai,
             automation.DOMAIN,
             {
                 automation.DOMAIN: [

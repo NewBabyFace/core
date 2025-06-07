@@ -1,12 +1,12 @@
 """Tests for the sensors provided by the Pure Energie integration."""
 
-from homeassistant.components.pure_energie.const import DOMAIN
-from homeassistant.components.sensor import (
+from menuai.components.pure_energie.const import DOMAIN
+from menuai.components.sensor import (
     ATTR_STATE_CLASS,
     SensorDeviceClass,
     SensorStateClass,
 )
-from homeassistant.const import (
+from menuai.const import (
     ATTR_DEVICE_CLASS,
     ATTR_FRIENDLY_NAME,
     ATTR_ICON,
@@ -14,20 +14,20 @@ from homeassistant.const import (
     UnitOfEnergy,
     UnitOfPower,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from tests.common import MockConfigEntry
 
 
 async def test_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     init_integration: MockConfigEntry,
 ) -> None:
     """Test the Pure Energie - SmartBridge sensors."""
-    state = hass.states.get("sensor.pem_energy_consumption_total")
+    state = menuai.states.get("sensor.pem_energy_consumption_total")
     entry = entity_registry.async_get("sensor.pem_energy_consumption_total")
     assert entry
     assert state
@@ -39,7 +39,7 @@ async def test_sensors(
     assert state.attributes.get(ATTR_DEVICE_CLASS) == SensorDeviceClass.ENERGY
     assert ATTR_ICON not in state.attributes
 
-    state = hass.states.get("sensor.pem_energy_production_total")
+    state = menuai.states.get("sensor.pem_energy_production_total")
     entry = entity_registry.async_get("sensor.pem_energy_production_total")
     assert entry
     assert state
@@ -51,7 +51,7 @@ async def test_sensors(
     assert state.attributes.get(ATTR_DEVICE_CLASS) == SensorDeviceClass.ENERGY
     assert ATTR_ICON not in state.attributes
 
-    state = hass.states.get("sensor.pem_power_flow")
+    state = menuai.states.get("sensor.pem_power_flow")
     entry = entity_registry.async_get("sensor.pem_power_flow")
     assert entry
     assert state

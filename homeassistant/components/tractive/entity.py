@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.core import callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import Entity
+from menuai.core import callback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity import Entity
 
 from . import TractiveClient
 from .const import DOMAIN, SERVER_UNAVAILABLE
@@ -39,14 +39,14 @@ class TractiveEntity(Entity):
         self._client = client
         self._dispatcher_signal = dispatcher_signal
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
         if not self._client.subscribed:
             self._client.subscribe()
 
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 self._dispatcher_signal,
                 self.handle_status_update,
             )
@@ -54,7 +54,7 @@ class TractiveEntity(Entity):
 
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"{SERVER_UNAVAILABLE}-{self._user_id}",
                 self.handle_server_unavailable,
             )

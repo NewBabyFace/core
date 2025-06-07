@@ -12,7 +12,7 @@
       },
       "link": {
         "title": "Link access point",
-        "description": "Press the blue button on the access point and the **Submit** button to register Homematic IP with Home Assistant.\n\n![Location of button on bridge](/static/images/config_flows/config_homematicip_cloud.png)"
+        "description": "Press the blue button on the access point and the **Submit** button to register Homematic IP with MenuAI.\n\n![Location of button on bridge](/static/images/config_flows/config_homematicip_cloud.png)"
       }
     },
     "error": {
@@ -119,7 +119,7 @@
       "fields": {
         "config_output_path": {
           "name": "Config output path",
-          "description": "Path where to store the config. Default is 'Your Home Assistant config directory'."
+          "description": "Path where to store the config. Default is 'Your MenuAI config directory'."
         },
         "config_output_file_prefix": {
           "name": "Config output file prefix",

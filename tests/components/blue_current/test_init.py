@@ -11,10 +11,10 @@ from bluecurrent_api.exceptions import (
 )
 import pytest
 
-from homeassistant.components.blue_current import async_setup_entry
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import (
+from menuai.components.blue_current import async_setup_entry
+from menuai.config_entries import ConfigEntryState
+from menuai.core import menuai
+from menuai.exceptions import (
     ConfigEntryAuthFailed,
     ConfigEntryNotReady,
     IntegrationError,
@@ -26,25 +26,25 @@ from tests.common import MockConfigEntry
 
 
 async def test_load_unload_entry(
-    hass: HomeAssistant, config_entry: MockConfigEntry
+    menuai: menuai, config_entry: MockConfigEntry
 ) -> None:
     """Test load and unload entry."""
     with (
-        patch("homeassistant.components.blue_current.Client.validate_api_token"),
-        patch("homeassistant.components.blue_current.Client.wait_for_charge_points"),
-        patch("homeassistant.components.blue_current.Client.disconnect"),
+        patch("menuai.components.blue_current.Client.validate_api_token"),
+        patch("menuai.components.blue_current.Client.wait_for_charge_points"),
+        patch("menuai.components.blue_current.Client.disconnect"),
         patch(
-            "homeassistant.components.blue_current.Client.connect",
-            lambda self, on_data, on_open: hass.loop.create_future(),
+            "menuai.components.blue_current.Client.connect",
+            lambda self, on_data, on_open: menuai.loop.create_future(),
         ),
     ):
-        config_entry.add_to_hass(hass)
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
+        config_entry.add_to_menuai(menuai)
+        await menuai.config_entries.async_setup(config_entry.entry_id)
+        await menuai.async_block_till_done()
         assert config_entry.state is ConfigEntryState.LOADED
 
-        await hass.config_entries.async_unload(config_entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_unload(config_entry.entry_id)
+        await menuai.async_block_till_done()
         assert config_entry.state is ConfigEntryState.NOT_LOADED
 
 
@@ -56,32 +56,32 @@ async def test_load_unload_entry(
     ],
 )
 async def test_config_exceptions(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MockConfigEntry,
     api_error: BlueCurrentException,
     config_error: IntegrationError,
 ) -> None:
     """Test if the correct config error is raised when connecting to the api fails."""
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with (
         patch(
-            "homeassistant.components.blue_current.Client.validate_api_token",
+            "menuai.components.blue_current.Client.validate_api_token",
             side_effect=api_error,
         ),
         pytest.raises(config_error),
     ):
-        await async_setup_entry(hass, config_entry)
+        await async_setup_entry(menuai, config_entry)
 
 
 async def test_connect_websocket_error(
-    hass: HomeAssistant, config_entry: MockConfigEntry
+    menuai: menuai, config_entry: MockConfigEntry
 ) -> None:
     """Test reconnect when connect throws a WebsocketError."""
 
-    with patch("homeassistant.components.blue_current.DELAY", 0):
+    with patch("menuai.components.blue_current.DELAY", 0):
         mock_client, started_loop, future_container = await init_integration(
-            hass, config_entry
+            menuai, config_entry
         )
         future_container.future.set_exception(WebsocketError)
 
@@ -90,12 +90,12 @@ async def test_connect_websocket_error(
 
 
 async def test_connect_request_limit_reached_error(
-    hass: HomeAssistant, config_entry: MockConfigEntry
+    menuai: menuai, config_entry: MockConfigEntry
 ) -> None:
     """Test reconnect when connect throws a RequestLimitReached."""
 
     mock_client, started_loop, future_container = await init_integration(
-        hass, config_entry
+        menuai, config_entry
     )
     future_container.future.set_exception(RequestLimitReached)
     mock_client.get_next_reset_delta.return_value = timedelta(seconds=0)

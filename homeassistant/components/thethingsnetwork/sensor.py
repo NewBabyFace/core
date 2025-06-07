@@ -4,11 +4,11 @@ import logging
 
 from ttn_client import TTNSensorValue
 
-from homeassistant.components.sensor import SensorEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
+from menuai.components.sensor import SensorEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import StateType
 
 from .const import CONF_APP_ID, DOMAIN
 from .entity import TTNEntity
@@ -17,13 +17,13 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Add entities for TTN."""
 
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = menuai.data[DOMAIN][entry.entry_id]
 
     sensors: set[tuple[str, str]] = set()
 
@@ -49,7 +49,7 @@ async def async_setup_entry(
 
 
 class TtnDataSensor(TTNEntity, SensorEntity):
-    """Represents a TTN Home Assistant Sensor."""
+    """Represents a TTN MenuAI Sensor."""
 
     _ttn_value: TTNSensorValue
 

@@ -4,8 +4,8 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components.shopping_list import intent as sl_intent
-from homeassistant.core import HomeAssistant
+from menuai.components.shopping_list import intent as sl_intent
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
@@ -14,8 +14,8 @@ from tests.common import MockConfigEntry
 def mock_shopping_list_io():
     """Stub out the persistence."""
     with (
-        patch("homeassistant.components.shopping_list.ShoppingData.save"),
-        patch("homeassistant.components.shopping_list.ShoppingData.async_load"),
+        patch("menuai.components.shopping_list.ShoppingData.save"),
+        patch("menuai.components.shopping_list.ShoppingData.async_load"),
     ):
         yield
 
@@ -27,11 +27,11 @@ def mock_config_entry() -> MockConfigEntry:
 
 
 @pytest.fixture
-async def sl_setup(hass: HomeAssistant, mock_config_entry: MockConfigEntry):
+async def sl_setup(menuai: menuai, mock_config_entry: MockConfigEntry):
     """Set up the shopping list."""
 
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    assert await menuai.config_entries.async_setup(mock_config_entry.entry_id)
 
-    await sl_intent.async_setup_intents(hass)
+    await sl_intent.async_setup_intents(menuai)

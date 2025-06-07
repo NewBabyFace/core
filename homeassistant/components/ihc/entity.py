@@ -4,7 +4,7 @@ import logging
 
 from ihcsdk.ihccontroller import IHCController
 
-from homeassistant.helpers.entity import Entity
+from menuai.helpers.entity import Entity
 
 from .const import CONF_INFO, DOMAIN
 
@@ -54,7 +54,7 @@ class IHCEntity(Entity):
             self.ihc_note = ""
             self.ihc_position = ""
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Add callback for IHC changes."""
         _LOGGER.debug("Adding IHC entity notify event: %s", self.ihc_id)
         self.ihc_controller.add_notify_event(self.ihc_id, self.on_ihc_change, True)
@@ -72,7 +72,7 @@ class IHCEntity(Entity):
     @property
     def extra_state_attributes(self):
         """Return the state attributes."""
-        if not self.hass.data[DOMAIN][self.controller_id][CONF_INFO]:
+        if not self.menuai.data[DOMAIN][self.controller_id][CONF_INFO]:
             return {}
         attributes = {
             "ihc_id": self.ihc_id,
@@ -80,7 +80,7 @@ class IHCEntity(Entity):
             "ihc_note": self.ihc_note,
             "ihc_position": self.ihc_position,
         }
-        if len(self.hass.data[DOMAIN]) > 1:
+        if len(self.menuai.data[DOMAIN]) > 1:
             # We only want to show the controller id if we have more than one
             attributes["ihc_controller"] = self.controller_id
         return attributes

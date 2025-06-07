@@ -14,15 +14,15 @@ from onedrive_personal_sdk.exceptions import (
 from onedrive_personal_sdk.models.items import File
 import pytest
 
-from homeassistant.components.backup import DOMAIN as BACKUP_DOMAIN, AgentBackup
-from homeassistant.components.onedrive.backup import (
+from menuai.components.backup import DOMAIN as BACKUP_DOMAIN, AgentBackup
+from menuai.components.onedrive.backup import (
     async_register_backup_agents_listener,
 )
-from homeassistant.components.onedrive.const import DATA_BACKUP_AGENT_LISTENERS, DOMAIN
-from homeassistant.config_entries import SOURCE_REAUTH
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.backup import async_initialize_backup
-from homeassistant.setup import async_setup_component
+from menuai.components.onedrive.const import DATA_BACKUP_AGENT_LISTENERS, DOMAIN
+from menuai.config_entries import SOURCE_REAUTH
+from menuai.core import menuai
+from menuai.helpers.backup import async_initialize_backup
+from menuai.setup import async_setup_component
 
 from . import setup_integration
 from .const import BACKUP_METADATA
@@ -33,29 +33,29 @@ from tests.typing import ClientSessionGenerator, MagicMock, WebSocketGenerator
 
 @pytest.fixture(autouse=True)
 async def setup_backup_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
 ) -> AsyncGenerator[None]:
     """Set up onedrive and backup integrations."""
-    async_initialize_backup(hass)
+    async_initialize_backup(menuai)
     with (
-        patch("homeassistant.components.backup.is_hassio", return_value=False),
-        patch("homeassistant.components.backup.store.STORE_DELAY_SAVE", 0),
+        patch("menuai.components.backup.is_menuaiio", return_value=False),
+        patch("menuai.components.backup.store.STORE_DELAY_SAVE", 0),
     ):
-        assert await async_setup_component(hass, BACKUP_DOMAIN, {BACKUP_DOMAIN: {}})
-        await setup_integration(hass, mock_config_entry)
+        assert await async_setup_component(menuai, BACKUP_DOMAIN, {BACKUP_DOMAIN: {}})
+        await setup_integration(menuai, mock_config_entry)
 
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
         yield
 
 
 async def test_agents_info(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test backup agent info."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json_auto_id({"type": "backup/agents/info"})
     response = await client.receive_json()
@@ -73,12 +73,12 @@ async def test_agents_info(
 
 
 async def test_agents_list_backups(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test agent list backups."""
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json_auto_id({"type": "backup/info"})
     response = await client.receive_json()
 
@@ -98,8 +98,8 @@ async def test_agents_list_backups(
             "failed_agent_ids": [],
             "failed_folders": [],
             "folders": [],
-            "homeassistant_included": True,
-            "homeassistant_version": "2024.12.0.dev0",
+            "menuai_included": True,
+            "menuai_version": "2024.12.0.dev0",
             "name": "Core 2024.12.0.dev0",
             "with_automatic_settings": None,
         }
@@ -107,13 +107,13 @@ async def test_agents_list_backups(
 
 
 async def test_agents_list_backups_with_download_failure(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     mock_onedrive_client: MagicMock,
 ) -> None:
     """Test agent list backups still works if one of the items fails to download."""
     mock_onedrive_client.download_drive_item.side_effect = OneDriveException("test")
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json_auto_id({"type": "backup/info"})
     response = await client.receive_json()
 
@@ -123,14 +123,14 @@ async def test_agents_list_backups_with_download_failure(
 
 
 async def test_agents_get_backup(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test agent get backup."""
 
     backup_id = BACKUP_METADATA["backup_id"]
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json_auto_id({"type": "backup/details", "backup_id": backup_id})
     response = await client.receive_json()
 
@@ -152,20 +152,20 @@ async def test_agents_get_backup(
         "failed_agent_ids": [],
         "failed_folders": [],
         "folders": [],
-        "homeassistant_included": True,
-        "homeassistant_version": "2024.12.0.dev0",
+        "menuai_included": True,
+        "menuai_version": "2024.12.0.dev0",
         "name": "Core 2024.12.0.dev0",
         "with_automatic_settings": None,
     }
 
 
 async def test_agents_delete(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     mock_onedrive_client: MagicMock,
 ) -> None:
     """Test agent delete backup."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json_auto_id(
         {
@@ -181,22 +181,22 @@ async def test_agents_delete(
 
 
 async def test_agents_upload(
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     caplog: pytest.LogCaptureFixture,
     mock_onedrive_client: MagicMock,
     mock_large_file_upload_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test agent upload backup."""
-    client = await hass_client()
+    client = await menuai_client()
     test_backup = AgentBackup.from_dict(BACKUP_METADATA)
 
     with (
         patch(
-            "homeassistant.components.backup.manager.BackupManager.async_get_backup",
+            "menuai.components.backup.manager.BackupManager.async_get_backup",
         ) as fetch_backup,
         patch(
-            "homeassistant.components.backup.manager.read_backup",
+            "menuai.components.backup.manager.read_backup",
             return_value=test_backup,
         ),
         patch("pathlib.Path.open") as mocked_open,
@@ -215,7 +215,7 @@ async def test_agents_upload(
 
 
 async def test_agents_upload_corrupt_upload(
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     caplog: pytest.LogCaptureFixture,
     mock_onedrive_client: MagicMock,
     mock_large_file_upload_client: AsyncMock,
@@ -223,15 +223,15 @@ async def test_agents_upload_corrupt_upload(
 ) -> None:
     """Test hash validation fails."""
     mock_large_file_upload_client.side_effect = HashMismatchError("test")
-    client = await hass_client()
+    client = await menuai_client()
     test_backup = AgentBackup.from_dict(BACKUP_METADATA)
 
     with (
         patch(
-            "homeassistant.components.backup.manager.BackupManager.async_get_backup",
+            "menuai.components.backup.manager.BackupManager.async_get_backup",
         ) as fetch_backup,
         patch(
-            "homeassistant.components.backup.manager.read_backup",
+            "menuai.components.backup.manager.read_backup",
             return_value=test_backup,
         ),
         patch("pathlib.Path.open") as mocked_open,
@@ -251,23 +251,23 @@ async def test_agents_upload_corrupt_upload(
 
 
 async def test_agents_upload_metadata_upload_failed(
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     caplog: pytest.LogCaptureFixture,
     mock_onedrive_client: MagicMock,
     mock_large_file_upload_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test metadata upload fails."""
-    client = await hass_client()
+    client = await menuai_client()
     test_backup = AgentBackup.from_dict(BACKUP_METADATA)
     mock_onedrive_client.upload_file.side_effect = OneDriveException("test")
 
     with (
         patch(
-            "homeassistant.components.backup.manager.BackupManager.async_get_backup",
+            "menuai.components.backup.manager.BackupManager.async_get_backup",
         ) as fetch_backup,
         patch(
-            "homeassistant.components.backup.manager.read_backup",
+            "menuai.components.backup.manager.read_backup",
             return_value=test_backup,
         ),
         patch("pathlib.Path.open") as mocked_open,
@@ -287,23 +287,23 @@ async def test_agents_upload_metadata_upload_failed(
 
 
 async def test_agents_upload_metadata_metadata_failed(
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     caplog: pytest.LogCaptureFixture,
     mock_onedrive_client: MagicMock,
     mock_large_file_upload_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test metadata upload on file description update."""
-    client = await hass_client()
+    client = await menuai_client()
     test_backup = AgentBackup.from_dict(BACKUP_METADATA)
     mock_onedrive_client.update_drive_item.side_effect = OneDriveException("test")
 
     with (
         patch(
-            "homeassistant.components.backup.manager.BackupManager.async_get_backup",
+            "menuai.components.backup.manager.BackupManager.async_get_backup",
         ) as fetch_backup,
         patch(
-            "homeassistant.components.backup.manager.read_backup",
+            "menuai.components.backup.manager.read_backup",
             return_value=test_backup,
         ),
         patch("pathlib.Path.open") as mocked_open,
@@ -323,12 +323,12 @@ async def test_agents_upload_metadata_metadata_failed(
 
 
 async def test_agents_download(
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     mock_onedrive_client: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test agent download backup."""
-    client = await hass_client()
+    client = await menuai_client()
     backup_id = BACKUP_METADATA["backup_id"]
 
     resp = await client.get(
@@ -339,21 +339,21 @@ async def test_agents_download(
 
 
 async def test_error_on_agents_download(
-    hass_client: ClientSessionGenerator,
+    menuai_client: ClientSessionGenerator,
     mock_onedrive_client: MagicMock,
     mock_config_entry: MockConfigEntry,
     mock_backup_file: File,
     mock_metadata_file: File,
 ) -> None:
     """Test we get not found on an not existing backup on download."""
-    client = await hass_client()
+    client = await menuai_client()
     backup_id = BACKUP_METADATA["backup_id"]
     mock_onedrive_client.list_drive_items.side_effect = [
         [mock_backup_file, mock_metadata_file],
         [],
     ]
 
-    with patch("homeassistant.components.onedrive.backup.CACHE_TTL", -1):
+    with patch("menuai.components.onedrive.backup.CACHE_TTL", -1):
         resp = await client.get(
             f"/api/backup/download/{backup_id}?agent_id={DOMAIN}.{mock_config_entry.unique_id}"
         )
@@ -371,8 +371,8 @@ async def test_error_on_agents_download(
     ],
 )
 async def test_delete_error(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     mock_onedrive_client: MagicMock,
     mock_config_entry: MockConfigEntry,
     side_effect: Exception,
@@ -383,7 +383,7 @@ async def test_delete_error(
         side_effect=side_effect
     )
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json_auto_id(
         {
@@ -400,13 +400,13 @@ async def test_delete_error(
 
 
 async def test_agents_delete_not_found_does_not_throw(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     mock_onedrive_client: MagicMock,
 ) -> None:
     """Test agent delete backup."""
     mock_onedrive_client.list_drive_items.return_value = []
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json_auto_id(
         {
@@ -421,15 +421,15 @@ async def test_agents_delete_not_found_does_not_throw(
 
 
 async def test_agents_backup_not_found(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     mock_onedrive_client: MagicMock,
 ) -> None:
     """Test backup not found."""
 
     mock_onedrive_client.list_drive_items.return_value = []
     backup_id = BACKUP_METADATA["backup_id"]
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json_auto_id({"type": "backup/details", "backup_id": backup_id})
     response = await client.receive_json()
 
@@ -438,8 +438,8 @@ async def test_agents_backup_not_found(
 
 
 async def test_reauth_on_403(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     mock_onedrive_client: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
@@ -449,7 +449,7 @@ async def test_reauth_on_403(
         403, "Auth failed"
     )
     backup_id = BACKUP_METADATA["backup_id"]
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
     await client.send_json_auto_id({"type": "backup/details", "backup_id": backup_id})
     response = await client.receive_json()
 
@@ -458,8 +458,8 @@ async def test_reauth_on_403(
         f"{DOMAIN}.{mock_config_entry.unique_id}": "Authentication error"
     }
 
-    await hass.async_block_till_done()
-    flows = hass.config_entries.flow.async_progress()
+    await menuai.async_block_till_done()
+    flows = menuai.config_entries.flow.async_progress()
     assert len(flows) == 1
 
     flow = flows[0]
@@ -470,13 +470,13 @@ async def test_reauth_on_403(
     assert flow["context"]["entry_id"] == mock_config_entry.entry_id
 
 
-async def test_listeners_get_cleaned_up(hass: HomeAssistant) -> None:
+async def test_listeners_get_cleaned_up(menuai: menuai) -> None:
     """Test listener gets cleaned up."""
     listener = MagicMock()
-    remove_listener = async_register_backup_agents_listener(hass, listener=listener)
+    remove_listener = async_register_backup_agents_listener(menuai, listener=listener)
 
     # make sure it's the last listener
-    hass.data[DATA_BACKUP_AGENT_LISTENERS] = [listener]
+    menuai.data[DATA_BACKUP_AGENT_LISTENERS] = [listener]
     remove_listener()
 
-    assert hass.data.get(DATA_BACKUP_AGENT_LISTENERS) is None
+    assert menuai.data.get(DATA_BACKUP_AGENT_LISTENERS) is None

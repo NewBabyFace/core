@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.notify import ATTR_TARGET, BaseNotificationService
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.components.notify import ATTR_TARGET, BaseNotificationService
+from menuai.core import menuai
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import CONF_LANGUAGE_CODE, DOMAIN
 from .helpers import (
@@ -41,20 +41,20 @@ def broadcast_commands(language_code: str) -> tuple[str, str]:
 
 
 async def async_get_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> BaseNotificationService:
     """Get the broadcast notification service."""
-    return BroadcastNotificationService(hass)
+    return BroadcastNotificationService(menuai)
 
 
 class BroadcastNotificationService(BaseNotificationService):
     """Implement broadcast notification service."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize the service."""
-        self.hass = hass
+        self.menuai = menuai
 
     async def async_send_message(self, message: str = "", **kwargs: Any) -> None:
         """Send a message."""
@@ -62,11 +62,11 @@ class BroadcastNotificationService(BaseNotificationService):
             return
 
         # There can only be 1 entry (config_flow has single_instance_allowed)
-        entry: GoogleAssistantSDKConfigEntry = self.hass.config_entries.async_entries(
+        entry: GoogleAssistantSDKConfigEntry = self.menuai.config_entries.async_entries(
             DOMAIN
         )[0]
         language_code = entry.options.get(
-            CONF_LANGUAGE_CODE, default_language_code(self.hass)
+            CONF_LANGUAGE_CODE, default_language_code(self.menuai)
         )
 
         commands: list[str] = []
@@ -78,4 +78,4 @@ class BroadcastNotificationService(BaseNotificationService):
                 broadcast_commands(language_code)[1].format(message, target)
                 for target in targets
             )
-        await async_send_text_commands(self.hass, commands)
+        await async_send_text_commands(self.menuai, commands)

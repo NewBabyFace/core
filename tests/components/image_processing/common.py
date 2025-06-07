@@ -4,21 +4,21 @@ All containing methods are legacy helpers that should not be used by new
 components. Instead call the service directly.
 """
 
-from homeassistant.components.image_processing import DOMAIN, SERVICE_SCAN
-from homeassistant.const import ATTR_ENTITY_ID, ENTITY_MATCH_ALL
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.loader import bind_hass
+from menuai.components.image_processing import DOMAIN, SERVICE_SCAN
+from menuai.const import ATTR_ENTITY_ID, ENTITY_MATCH_ALL
+from menuai.core import menuai, callback
+from menuai.loader import bind_menuai
 
 
-@bind_hass
-def scan(hass: HomeAssistant, entity_id: str = ENTITY_MATCH_ALL) -> None:
+@bind_menuai
+def scan(menuai: menuai, entity_id: str = ENTITY_MATCH_ALL) -> None:
     """Force process of all cameras or given entity."""
-    hass.add_job(async_scan, hass, entity_id)
+    menuai.add_job(async_scan, menuai, entity_id)
 
 
 @callback
-@bind_hass
-def async_scan(hass: HomeAssistant, entity_id: str = ENTITY_MATCH_ALL) -> None:
+@bind_menuai
+def async_scan(menuai: menuai, entity_id: str = ENTITY_MATCH_ALL) -> None:
     """Force process of all cameras or given entity."""
     data = {ATTR_ENTITY_ID: entity_id} if entity_id else None
-    hass.async_create_task(hass.services.async_call(DOMAIN, SERVICE_SCAN, data))
+    menuai.async_create_task(menuai.services.async_call(DOMAIN, SERVICE_SCAN, data))

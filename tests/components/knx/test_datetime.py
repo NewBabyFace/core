@@ -1,14 +1,14 @@
 """Test KNX date."""
 
-from homeassistant.components.datetime import (
+from menuai.components.datetime import (
     ATTR_DATETIME,
     DOMAIN as DATETIME_DOMAIN,
     SERVICE_SET_VALUE,
 )
-from homeassistant.components.knx.const import CONF_RESPOND_TO_READ, KNX_ADDRESS
-from homeassistant.components.knx.schema import DateTimeSchema
-from homeassistant.const import CONF_NAME
-from homeassistant.core import HomeAssistant, State
+from menuai.components.knx.const import CONF_RESPOND_TO_READ, KNX_ADDRESS
+from menuai.components.knx.schema import DateTimeSchema
+from menuai.const import CONF_NAME
+from menuai.core import menuai, State
 
 from .conftest import KNXTestKit
 
@@ -17,7 +17,7 @@ from tests.common import mock_restore_cache
 # KNX DPT 19.001 doesn't provide timezone information so we send local time
 
 
-async def test_datetime(hass: HomeAssistant, knx: KNXTestKit) -> None:
+async def test_datetime(menuai: menuai, knx: KNXTestKit) -> None:
     """Test KNX datetime."""
     # default timezone in tests is US/Pacific
     test_address = "1/1/1"
@@ -30,7 +30,7 @@ async def test_datetime(hass: HomeAssistant, knx: KNXTestKit) -> None:
         }
     )
     # set value
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DATETIME_DOMAIN,
         SERVICE_SET_VALUE,
         {"entity_id": "datetime.test", ATTR_DATETIME: "2020-01-02T03:04:05+00:00"},
@@ -41,7 +41,7 @@ async def test_datetime(hass: HomeAssistant, knx: KNXTestKit) -> None:
         # service call in UTC, telegram in local time
         (0x78, 0x01, 0x01, 0x13, 0x04, 0x05, 0x24, 0x00),
     )
-    state = hass.states.get("datetime.test")
+    state = menuai.states.get("datetime.test")
     assert state.state == "2020-01-02T03:04:05+00:00"
 
     # update from KNX
@@ -49,17 +49,17 @@ async def test_datetime(hass: HomeAssistant, knx: KNXTestKit) -> None:
         test_address,
         (0x7B, 0x07, 0x19, 0x49, 0x28, 0x08, 0x00, 0x00),
     )
-    state = hass.states.get("datetime.test")
+    state = menuai.states.get("datetime.test")
     assert state.state == "2023-07-25T16:40:08+00:00"
 
 
-async def test_date_restore_and_respond(hass: HomeAssistant, knx: KNXTestKit) -> None:
+async def test_date_restore_and_respond(menuai: menuai, knx: KNXTestKit) -> None:
     """Test KNX datetime with passive_address, restoring state and respond_to_read."""
-    await hass.config.async_set_time_zone("Europe/Vienna")
+    await menuai.config.async_set_time_zone("Europe/Vienna")
     test_address = "1/1/1"
     test_passive_address = "3/3/3"
     fake_state = State("datetime.test", "2022-03-03T03:04:05+00:00")
-    mock_restore_cache(hass, (fake_state,))
+    mock_restore_cache(menuai, (fake_state,))
 
     await knx.setup_integration(
         {
@@ -71,7 +71,7 @@ async def test_date_restore_and_respond(hass: HomeAssistant, knx: KNXTestKit) ->
         }
     )
     # restored state - doesn't send telegram
-    state = hass.states.get("datetime.test")
+    state = menuai.states.get("datetime.test")
     assert state.state == "2022-03-03T03:04:05+00:00"
     await knx.assert_telegram_count(0)
 
@@ -91,5 +91,5 @@ async def test_date_restore_and_respond(hass: HomeAssistant, knx: KNXTestKit) ->
         test_passive_address,
         (0x78, 0x01, 0x01, 0x73, 0x04, 0x05, 0x20, 0x80),
     )
-    state = hass.states.get("datetime.test")
+    state = menuai.states.get("datetime.test")
     assert state.state == "2020-01-01T18:04:05+00:00"

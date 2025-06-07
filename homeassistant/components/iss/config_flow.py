@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_SHOW_ON_MAP
-from homeassistant.core import callback
+from menuai.const import CONF_SHOW_ON_MAP
+from menuai.core import callback
 
 from .const import DEFAULT_NAME, DOMAIN
 

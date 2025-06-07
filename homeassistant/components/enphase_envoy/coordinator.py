@@ -11,14 +11,14 @@ from typing import Any
 from pyenphase import Envoy, EnvoyError, EnvoyTokenAuth
 from pyenphase.models.home import EnvoyInterfaceInformation
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_NAME, CONF_PASSWORD, CONF_TOKEN, CONF_USERNAME
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.event import async_call_later, async_track_time_interval
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util import dt as dt_util
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_NAME, CONF_PASSWORD, CONF_TOKEN, CONF_USERNAME
+from menuai.core import CALLBACK_TYPE, menuai, callback
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers import device_registry as dr
+from menuai.helpers.event import async_call_later, async_track_time_interval
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.util import dt as dt_util
 
 from .const import DOMAIN, INVALID_AUTH_ERRORS
 
@@ -44,7 +44,7 @@ class EnphaseUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     interface: EnvoyInterfaceInformation | None
 
     def __init__(
-        self, hass: HomeAssistant, envoy: Envoy, entry: EnphaseConfigEntry
+        self, menuai: menuai, envoy: Envoy, entry: EnphaseConfigEntry
     ) -> None:
         """Initialize DataUpdateCoordinator for the envoy."""
         self.envoy = envoy
@@ -58,7 +58,7 @@ class EnphaseUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._cancel_firmware_refresh: CALLBACK_TYPE | None = None
         self._cancel_mac_verification: CALLBACK_TYPE | None = None
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
             name=entry_data[CONF_NAME],
@@ -76,7 +76,7 @@ class EnphaseUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         name = self.name
         _LOGGER.debug("%s: %s seconds remaining on token fresh=%s", name, remain, fresh)
         if not fresh:
-            self.hass.async_create_background_task(
+            self.menuai.async_create_background_task(
                 self._async_try_refresh_token(), "{name} token refresh"
             )
 
@@ -98,7 +98,7 @@ class EnphaseUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     @callback
     def _async_refresh_firmware(self, now: datetime.datetime) -> None:
         """Proactively check for firmware changes in Envoy."""
-        self.hass.async_create_background_task(
+        self.menuai.async_create_background_task(
             self._async_try_refresh_firmware(), "{name} firmware refresh"
         )
 
@@ -122,8 +122,8 @@ class EnphaseUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 self.name,
             )
             # reload the integration to get all established again
-            self.hass.async_create_task(
-                self.hass.config_entries.async_reload(self.config_entry.entry_id)
+            self.menuai.async_create_task(
+                self.menuai.config_entries.async_reload(self.config_entry.entry_id)
             )
 
     def _schedule_mac_verification(
@@ -132,7 +132,7 @@ class EnphaseUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Schedule one time job to verify envoy mac address."""
         self.async_cancel_mac_verification()
         self._cancel_mac_verification = async_call_later(
-            self.hass,
+            self.menuai,
             delay,
             self._async_verify_mac,
         )
@@ -140,7 +140,7 @@ class EnphaseUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     @callback
     def _async_verify_mac(self, now: datetime.datetime) -> None:
         """Verify Envoy active interface mac address in background."""
-        self.hass.async_create_background_task(
+        self.menuai.async_create_background_task(
             self._async_fetch_and_compare_mac(), "{name} verify envoy mac address"
         )
 
@@ -156,7 +156,7 @@ class EnphaseUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.interface = interface
 
         # Add to or update device registry connections as needed
-        device_registry = dr.async_get(self.hass)
+        device_registry = dr.async_get(self.menuai)
         envoy_device = device_registry.async_get_device(
             identifiers={
                 (
@@ -192,7 +192,7 @@ class EnphaseUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._setup_complete = True
         self.async_cancel_firmware_refresh()
         self._cancel_firmware_refresh = async_track_time_interval(
-            self.hass,
+            self.menuai,
             self._async_refresh_firmware,
             FIRMWARE_REFRESH_INTERVAL,
             cancel_on_shutdown=True,
@@ -202,7 +202,7 @@ class EnphaseUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if not isinstance(self.envoy.auth, EnvoyTokenAuth):
             return
         self._cancel_token_refresh = async_track_time_interval(
-            self.hass,
+            self.menuai,
             self._async_refresh_token_if_needed,
             TOKEN_REFRESH_CHECK_INTERVAL,
             cancel_on_shutdown=True,
@@ -242,7 +242,7 @@ class EnphaseUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # startup without hitting the Cloud API
         # as long as the token is valid
         _LOGGER.debug("%s: Updating token in config entry from auth", self.name)
-        self.hass.config_entries.async_update_entry(
+        self.menuai.config_entries.async_update_entry(
             self.config_entry,
             data={
                 **self.config_entry.data,
@@ -295,8 +295,8 @@ class EnphaseUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     new_firmware,
                 )
                 # reload the integration to get all established again
-                self.hass.async_create_task(
-                    self.hass.config_entries.async_reload(self.config_entry.entry_id)
+                self.menuai.async_create_task(
+                    self.menuai.config_entries.async_reload(self.config_entry.entry_id)
                 )
             # remember firmware version for next time
             self.envoy_firmware = envoy.firmware

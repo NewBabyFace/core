@@ -7,20 +7,20 @@ from typing import Any, cast
 import switchbot
 from switchbot import ColorMode as SwitchBotColorMode
 
-from homeassistant.components.light import (
+from menuai.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_TEMP_KELVIN,
     ATTR_RGB_COLOR,
     ColorMode,
     LightEntity,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import SwitchbotConfigEntry, SwitchbotDataUpdateCoordinator
 from .entity import SwitchbotEntity, exception_handler
 
-SWITCHBOT_COLOR_MODE_TO_HASS = {
+SWITCHBOT_COLOR_MODE_TO_menuai = {
     SwitchBotColorMode.RGB: ColorMode.RGB,
     SwitchBotColorMode.COLOR_TEMP: ColorMode.COLOR_TEMP,
 }
@@ -29,7 +29,7 @@ PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: SwitchbotConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -50,7 +50,7 @@ class SwitchbotLightEntity(SwitchbotEntity, LightEntity):
         self._attr_max_color_temp_kelvin = device.max_temp
         self._attr_min_color_temp_kelvin = device.min_temp
         self._attr_supported_color_modes = {
-            SWITCHBOT_COLOR_MODE_TO_HASS[mode] for mode in device.color_modes
+            SWITCHBOT_COLOR_MODE_TO_menuai[mode] for mode in device.color_modes
         }
         self._async_update_attrs()
 

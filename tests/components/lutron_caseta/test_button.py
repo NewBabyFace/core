@@ -1,18 +1,18 @@
 """Tests for the Lutron Caseta integration."""
 
-from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
-from homeassistant.const import ATTR_ENTITY_ID, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
+from menuai.const import ATTR_ENTITY_ID, STATE_UNKNOWN
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from . import MockBridge, async_setup_integration
 
 
 async def test_button_unique_id(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test a button unique id."""
-    await async_setup_integration(hass, MockBridge)
+    await async_setup_integration(menuai, MockBridge)
 
     ra3_button_entity_id = (
         "button.hallway_main_stairs_position_1_keypad_kitchen_pendants"
@@ -26,25 +26,25 @@ async def test_button_unique_id(
     )
 
 
-async def test_button_press(hass: HomeAssistant) -> None:
+async def test_button_press(menuai: menuai) -> None:
     """Test a button press."""
-    await async_setup_integration(hass, MockBridge)
+    await async_setup_integration(menuai, MockBridge)
 
     ra3_button_entity_id = (
         "button.hallway_main_stairs_position_1_keypad_kitchen_pendants"
     )
 
-    state = hass.states.get(ra3_button_entity_id)
+    state = menuai.states.get(ra3_button_entity_id)
     assert state
     assert state.state == STATE_UNKNOWN
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         BUTTON_DOMAIN,
         SERVICE_PRESS,
         {ATTR_ENTITY_ID: ra3_button_entity_id},
         blocking=False,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(ra3_button_entity_id)
+    state = menuai.states.get(ra3_button_entity_id)
     assert state

@@ -6,7 +6,7 @@ from typing import Any
 
 from smarttub import Spa
 
-from homeassistant.components.climate import (
+from menuai.components.climate import (
     PRESET_ECO,
     PRESET_NONE,
     ClimateEntity,
@@ -14,10 +14,10 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.const import ATTR_TEMPERATURE, UnitOfTemperature
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DEFAULT_MAX_TEMP, DEFAULT_MIN_TEMP
 from .controller import SmartTubConfigEntry
@@ -42,7 +42,7 @@ HVAC_ACTIONS = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: SmartTubConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

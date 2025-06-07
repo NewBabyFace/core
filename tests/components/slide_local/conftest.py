@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from homeassistant.components.slide_local.const import CONF_INVERT_POSITION, DOMAIN
-from homeassistant.const import CONF_API_VERSION, CONF_HOST, CONF_MAC
+from menuai.components.slide_local.const import CONF_INVERT_POSITION, DOMAIN
+from menuai.const import CONF_API_VERSION, CONF_HOST, CONF_MAC
 
 from .const import HOST, SLIDE_INFO_DATA
 
@@ -39,11 +39,11 @@ def mock_slide_api() -> Generator[AsyncMock]:
 
     with (
         patch(
-            "homeassistant.components.slide_local.coordinator.SlideLocalApi",
+            "menuai.components.slide_local.coordinator.SlideLocalApi",
             autospec=True,
         ) as mock_slide_local_api,
         patch(
-            "homeassistant.components.slide_local.config_flow.SlideLocalApi",
+            "menuai.components.slide_local.config_flow.SlideLocalApi",
             new=mock_slide_local_api,
         ),
     ):
@@ -56,6 +56,6 @@ def mock_slide_api() -> Generator[AsyncMock]:
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.slide_local.async_setup_entry", return_value=True
+        "menuai.components.slide_local.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry

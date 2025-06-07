@@ -14,7 +14,7 @@ from .common import MockPairingHandler, airplay_service, create_conf, mrp_servic
 @pytest.fixture(autouse=True, name="mock_scan")
 def mock_scan_fixture() -> Generator[AsyncMock]:
     """Mock pyatv.scan."""
-    with patch("homeassistant.components.apple_tv.config_flow.scan") as mock_scan:
+    with patch("menuai.components.apple_tv.config_flow.scan") as mock_scan:
 
         async def _scan(
             loop, timeout=5, identifier=None, protocol=None, hosts=None, aiozc=None
@@ -32,7 +32,7 @@ def mock_scan_fixture() -> Generator[AsyncMock]:
 @pytest.fixture(name="dmap_pin")
 def dmap_pin_fixture() -> Generator[MagicMock]:
     """Mock pyatv.scan."""
-    with patch("homeassistant.components.apple_tv.config_flow.randrange") as mock_pin:
+    with patch("menuai.components.apple_tv.config_flow.randrange") as mock_pin:
         mock_pin.side_effect = lambda start, stop: 1111
         yield mock_pin
 
@@ -40,7 +40,7 @@ def dmap_pin_fixture() -> Generator[MagicMock]:
 @pytest.fixture
 def pairing() -> Generator[AsyncMock]:
     """Mock pyatv.scan."""
-    with patch("homeassistant.components.apple_tv.config_flow.pair") as mock_pair:
+    with patch("menuai.components.apple_tv.config_flow.pair") as mock_pair:
 
         async def _pair(config, protocol, loop, session=None, **kwargs):
             handler = MockPairingHandler(
@@ -57,7 +57,7 @@ def pairing() -> Generator[AsyncMock]:
 @pytest.fixture
 def pairing_mock() -> Generator[AsyncMock]:
     """Mock pyatv.scan."""
-    with patch("homeassistant.components.apple_tv.config_flow.pair") as mock_pair:
+    with patch("menuai.components.apple_tv.config_flow.pair") as mock_pair:
 
         async def _pair(config, protocol, loop, session=None, **kwargs):
             return mock_pair

@@ -1,10 +1,10 @@
-"""Test Home Assistant ssl utility functions."""
+"""Test MenuAI ssl utility functions."""
 
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-from homeassistant.util.ssl import (
+from menuai.util.ssl import (
     SSLCipherList,
     client_context,
     create_client_context,
@@ -20,7 +20,7 @@ def mock_sslcontext():
 
 def test_client_context(mock_sslcontext) -> None:
     """Test client context."""
-    with patch("homeassistant.util.ssl.ssl.SSLContext", return_value=mock_sslcontext):
+    with patch("menuai.util.ssl.ssl.SSLContext", return_value=mock_sslcontext):
         client_context()
         mock_sslcontext.set_ciphers.assert_not_called()
 
@@ -36,7 +36,7 @@ def test_client_context(mock_sslcontext) -> None:
 
 def test_no_verify_ssl_context(mock_sslcontext) -> None:
     """Test no verify ssl context."""
-    with patch("homeassistant.util.ssl.ssl.SSLContext", return_value=mock_sslcontext):
+    with patch("menuai.util.ssl.ssl.SSLContext", return_value=mock_sslcontext):
         create_no_verify_ssl_context()
         mock_sslcontext.set_ciphers.assert_not_called()
 
@@ -61,7 +61,7 @@ def test_ssl_context_caching() -> None:
 
 def test_create_client_context(mock_sslcontext) -> None:
     """Test create client context."""
-    with patch("homeassistant.util.ssl.ssl.SSLContext", return_value=mock_sslcontext):
+    with patch("menuai.util.ssl.ssl.SSLContext", return_value=mock_sslcontext):
         client_context()
         mock_sslcontext.set_ciphers.assert_not_called()
 

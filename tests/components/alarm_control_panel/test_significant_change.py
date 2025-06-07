@@ -2,12 +2,12 @@
 
 import pytest
 
-from homeassistant.components.alarm_control_panel import (
+from menuai.components.alarm_control_panel import (
     ATTR_CHANGED_BY,
     ATTR_CODE_ARM_REQUIRED,
     ATTR_CODE_FORMAT,
 )
-from homeassistant.components.alarm_control_panel.significant_change import (
+from menuai.components.alarm_control_panel.significant_change import (
     async_check_significant_change,
 )
 

@@ -15,11 +15,11 @@ from opower import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_NAME, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.aiohttp_client import async_create_clientsession
-from homeassistant.helpers.typing import VolDictType
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import CONF_NAME, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai, callback
+from menuai.helpers.aiohttp_client import async_create_clientsession
+from menuai.helpers.typing import VolDictType
 
 from .const import CONF_TOTP_SECRET, CONF_UTILITY, DOMAIN
 
@@ -35,11 +35,11 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
 
 
 async def _validate_login(
-    hass: HomeAssistant, login_data: dict[str, str]
+    menuai: menuai, login_data: dict[str, str]
 ) -> dict[str, str]:
     """Validate login data and return any errors."""
     api = Opower(
-        async_create_clientsession(hass),
+        async_create_clientsession(menuai),
         login_data[CONF_UTILITY],
         login_data[CONF_USERNAME],
         login_data[CONF_PASSWORD],
@@ -84,7 +84,7 @@ class OpowerConfigFlow(ConfigFlow, domain=DOMAIN):
                 self.utility_info = user_input
                 return await self.async_step_mfa()
 
-            errors = await _validate_login(self.hass, user_input)
+            errors = await _validate_login(self.menuai, user_input)
             if not errors:
                 return self._async_create_opower_entry(user_input)
 
@@ -100,7 +100,7 @@ class OpowerConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
         if user_input is not None:
             data = {**self.utility_info, **user_input}
-            errors = await _validate_login(self.hass, data)
+            errors = await _validate_login(self.menuai, data)
             if not errors:
                 return self._async_create_opower_entry(data)
 
@@ -144,7 +144,7 @@ class OpowerConfigFlow(ConfigFlow, domain=DOMAIN):
         reauth_entry = self._get_reauth_entry()
         if user_input is not None:
             data = {**reauth_entry.data, **user_input}
-            errors = await _validate_login(self.hass, data)
+            errors = await _validate_login(self.menuai, data)
             if not errors:
                 return self.async_update_reload_and_abort(reauth_entry, data=data)
 

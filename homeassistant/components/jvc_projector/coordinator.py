@@ -13,11 +13,11 @@ from jvcprojector import (
     const,
 )
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import NAME
 
@@ -35,11 +35,11 @@ class JvcProjectorDataUpdateCoordinator(DataUpdateCoordinator[dict[str, str]]):
     config_entry: JVCConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: JVCConfigEntry, device: JvcProjector
+        self, menuai: menuai, config_entry: JVCConfigEntry, device: JvcProjector
     ) -> None:
         """Initialize the coordinator."""
         super().__init__(
-            hass=hass,
+            menuai=menuai,
             logger=_LOGGER,
             config_entry=config_entry,
             name=NAME,

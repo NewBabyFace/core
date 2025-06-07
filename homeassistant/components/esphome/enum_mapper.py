@@ -1,4 +1,4 @@
-"""Helper class to convert between Home Assistant and ESPHome enum values."""
+"""Helper class to convert between MenuAI and ESPHome enum values."""
 
 from typing import overload
 
@@ -6,7 +6,7 @@ from aioesphomeapi import APIIntEnum
 
 
 class EsphomeEnumMapper[_EnumT: APIIntEnum, _ValT]:
-    """Helper class to convert between hass and esphome enum values."""
+    """Helper class to convert between menuai and esphome enum values."""
 
     def __init__(self, mapping: dict[_EnumT, _ValT]) -> None:
         """Construct a EsphomeEnumMapper."""
@@ -24,9 +24,9 @@ class EsphomeEnumMapper[_EnumT: APIIntEnum, _ValT]:
     def from_esphome(self, value: _EnumT | None) -> _ValT | None: ...
 
     def from_esphome(self, value: _EnumT | None) -> _ValT | None:
-        """Convert from an esphome int representation to a hass string."""
+        """Convert from an esphome int representation to a menuai string."""
         return self._mapping[value]
 
-    def from_hass(self, value: _ValT) -> _EnumT:
-        """Convert from a hass string to a esphome int representation."""
+    def from_menuai(self, value: _ValT) -> _EnumT:
+        """Convert from a menuai string to a esphome int representation."""
         return self._inverse[value]

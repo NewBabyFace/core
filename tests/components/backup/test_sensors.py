@@ -7,11 +7,11 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.backup import store
-from homeassistant.components.backup.const import DOMAIN
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.backup import store
+from menuai.components.backup.const import DOMAIN
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .common import setup_backup_integration
 
@@ -21,40 +21,40 @@ from tests.typing import WebSocketGenerator
 
 @pytest.mark.usefixtures("mock_backup_generation")
 async def test_sensors(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test setup of backup sensors."""
-    with patch("homeassistant.components.backup.PLATFORMS", [Platform.SENSOR]):
-        await setup_backup_integration(hass, with_hassio=False)
-        await hass.async_block_till_done(wait_background_tasks=True)
+    with patch("menuai.components.backup.PLATFORMS", [Platform.SENSOR]):
+        await setup_backup_integration(menuai, with_menuaiio=False)
+        await menuai.async_block_till_done(wait_background_tasks=True)
 
-    entry = hass.config_entries.async_entries(DOMAIN)[0]
-    await snapshot_platform(hass, entity_registry, snapshot, entry.entry_id)
+    entry = menuai.config_entries.async_entries(DOMAIN)[0]
+    await snapshot_platform(menuai, entity_registry, snapshot, entry.entry_id)
 
     # start backup and check sensor states again
-    client = await hass_ws_client(hass)
-    await hass.async_block_till_done()
+    client = await menuai_ws_client(menuai)
+    await menuai.async_block_till_done()
     await client.send_json_auto_id(
         {"type": "backup/generate", "agent_ids": ["backup.local"]}
     )
 
     assert await client.receive_json()
-    state = hass.states.get("sensor.backup_backup_manager_state")
+    state = menuai.states.get("sensor.backup_backup_manager_state")
     assert state.state == "create_backup"
 
-    await hass.async_block_till_done(wait_background_tasks=True)
-    state = hass.states.get("sensor.backup_backup_manager_state")
+    await menuai.async_block_till_done(wait_background_tasks=True)
+    state = menuai.states.get("sensor.backup_backup_manager_state")
     assert state.state == "idle"
 
 
 async def test_sensor_updates(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
+    menuai: menuai,
+    menuai_ws_client: WebSocketGenerator,
     freezer: FrozenDateTimeFactory,
-    hass_storage: dict[str, Any],
+    menuai_storage: dict[str, Any],
     create_backup: AsyncMock,
 ) -> None:
     """Test update of backup sensors."""
@@ -64,7 +64,7 @@ async def test_sensor_updates(
     created_backup: MagicMock = create_backup.return_value[1].result().backup
     created_backup.protected = True
 
-    await hass.config.async_set_time_zone("Europe/Amsterdam")
+    await menuai.config.async_set_time_zone("Europe/Amsterdam")
     freezer.move_to("2024-11-12T12:00:00+01:00")
     storage_data = {
         "backups": [],
@@ -91,33 +91,33 @@ async def test_sensor_updates(
             },
         },
     }
-    hass_storage[DOMAIN] = {
+    menuai_storage[DOMAIN] = {
         "data": storage_data,
         "key": DOMAIN,
         "version": store.STORAGE_VERSION,
         "minor_version": store.STORAGE_VERSION_MINOR,
     }
 
-    with patch("homeassistant.components.backup.PLATFORMS", [Platform.SENSOR]):
+    with patch("menuai.components.backup.PLATFORMS", [Platform.SENSOR]):
         await setup_backup_integration(
-            hass, with_hassio=False, remote_agents=["test.remote"]
+            menuai, with_menuaiio=False, remote_agents=["test.remote"]
         )
-        await hass.async_block_till_done(wait_background_tasks=True)
+        await menuai.async_block_till_done(wait_background_tasks=True)
 
-    state = hass.states.get("sensor.backup_last_attempted_automatic_backup")
+    state = menuai.states.get("sensor.backup_last_attempted_automatic_backup")
     assert state.state == "2024-11-11T03:45:00+00:00"
-    state = hass.states.get("sensor.backup_last_successful_automatic_backup")
+    state = menuai.states.get("sensor.backup_last_successful_automatic_backup")
     assert state.state == "2024-11-11T03:45:00+00:00"
-    state = hass.states.get("sensor.backup_next_scheduled_automatic_backup")
+    state = menuai.states.get("sensor.backup_next_scheduled_automatic_backup")
     assert state.state == "2024-11-13T05:00:00+00:00"
 
     freezer.move_to("2024-11-13T12:00:00+01:00")
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("sensor.backup_last_attempted_automatic_backup")
+    state = menuai.states.get("sensor.backup_last_attempted_automatic_backup")
     assert state.state == "2024-11-13T11:00:00+00:00"
-    state = hass.states.get("sensor.backup_last_successful_automatic_backup")
+    state = menuai.states.get("sensor.backup_last_successful_automatic_backup")
     assert state.state == "2024-11-13T11:00:00+00:00"
-    state = hass.states.get("sensor.backup_next_scheduled_automatic_backup")
+    state = menuai.states.get("sensor.backup_next_scheduled_automatic_backup")
     assert state.state == "2024-11-14T05:00:00+00:00"

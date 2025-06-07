@@ -17,17 +17,17 @@ from aioesphomeapi import (
 )
 import voluptuous as vol
 
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import (
+from menuai.const import EntityCategory
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import (
     config_validation as cv,
     device_registry as dr,
     entity_platform,
 )
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity
+from menuai.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
 
@@ -42,7 +42,7 @@ _StateT = TypeVar("_StateT", bound=EntityState)
 
 @callback
 def async_static_info_updated(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry_data: RuntimeEntryData,
     platform: entity_platform.EntityPlatform,
     async_add_entities: AddEntitiesCallback,
@@ -69,7 +69,7 @@ def async_static_info_updated(
         if TYPE_CHECKING:
             assert device_info is not None
         entry_data.async_remove_entities(
-            hass, current_infos.values(), device_info.mac_address
+            menuai, current_infos.values(), device_info.mac_address
         )
 
     # Then update the actual info
@@ -79,12 +79,12 @@ def async_static_info_updated(
         entry_data.async_update_entity_infos(new_infos.values())
 
     if add_entities:
-        # Add entities to Home Assistant
+        # Add entities to MenuAI
         async_add_entities(add_entities)
 
 
 async def platform_async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ESPHomeConfigEntry,
     async_add_entities: AddEntitiesCallback,
     *,
@@ -102,7 +102,7 @@ async def platform_async_setup_entry(
     platform = entity_platform.async_get_current_platform()
     on_static_info_update = functools.partial(
         async_static_info_updated,
-        hass,
+        menuai,
         entry_data,
         platform,
         async_add_entities,
@@ -157,7 +157,7 @@ def esphome_float_state_property[_EntityT: EsphomeEntity[Any, Any]](
 
     This checks if the state object in the entity is set, and returns
     None if its not set. If also prevents writing NAN values to the
-    Home Assistant state machine.
+    MenuAI state machine.
     """
 
     @functools.wraps(func)
@@ -165,7 +165,7 @@ def esphome_float_state_property[_EntityT: EsphomeEntity[Any, Any]](
         if not self._has_state:
             return None
         val = func(self)
-        # Home Assistant doesn't use NaN or inf values in state machine
+        # MenuAI doesn't use NaN or inf values in state machine
         # (not JSON serializable)
         return None if val is None or not math.isfinite(val) else val
 
@@ -178,14 +178,14 @@ def convert_api_error_ha_error[**_P, _R, _EntityT: EsphomeBaseEntity](
     """Decorate ESPHome command calls that send commands/make changes to the device.
 
     A decorator that wraps the passed in function, catches APIConnectionError errors,
-    and raises a HomeAssistant error instead.
+    and raises a menuai error instead.
     """
 
     async def handler(self: _EntityT, *args: _P.args, **kwargs: _P.kwargs) -> None:
         try:
             return await func(self, *args, **kwargs)
         except APIConnectionError as error:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="error_communicating_with_device",
                 translation_placeholders={
@@ -257,7 +257,7 @@ class EsphomeEntity(EsphomeBaseEntity, Generic[_InfoT, _StateT]):
             # an empty string so we drop the object_id.
             self.entity_id = f"{domain}.{device_info.name}"
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
         entry_data = self._entry_data
         self.async_on_remove(
@@ -368,9 +368,9 @@ class EsphomeAssistEntity(EsphomeBaseEntity):
             connections={(dr.CONNECTION_NETWORK_MAC, device_info.mac_address)}
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register update callback."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self.async_on_remove(
             self._entry_data.async_subscribe_assist_pipeline_update(
                 self.async_write_ha_state

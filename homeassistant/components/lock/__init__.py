@@ -12,8 +12,8 @@ from typing import TYPE_CHECKING, Any, final
 from propcache.api import cached_property
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (  # noqa: F401
+from menuai.config_entries import ConfigEntry
+from menuai.const import (  # noqa: F401
     _DEPRECATED_STATE_JAMMED,
     _DEPRECATED_STATE_LOCKED,
     _DEPRECATED_STATE_LOCKING,
@@ -27,24 +27,24 @@ from homeassistant.const import (  # noqa: F401
     STATE_OPEN,
     STATE_OPENING,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.deprecation import (
+from menuai.core import menuai, callback
+from menuai.exceptions import ServiceValidationError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.deprecation import (
     all_with_deprecated_constants,
     check_if_deprecated_constant,
     dir_with_deprecated_constants,
 )
-from homeassistant.helpers.entity import Entity, EntityDescription
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.typing import ConfigType, StateType
-from homeassistant.util.hass_dict import HassKey
+from menuai.helpers.entity import Entity, EntityDescription
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.typing import ConfigType, StateType
+from menuai.util.menuai_dict import menuaiKey
 
 from .const import DOMAIN, LockState
 
 _LOGGER = logging.getLogger(__name__)
 
-DATA_COMPONENT: HassKey[EntityComponent[LockEntity]] = HassKey(DOMAIN)
+DATA_COMPONENT: menuaiKey[EntityComponent[LockEntity]] = menuaiKey(DOMAIN)
 ENTITY_ID_FORMAT = DOMAIN + ".{}"
 PLATFORM_SCHEMA = cv.PLATFORM_SCHEMA
 PLATFORM_SCHEMA_BASE = cv.PLATFORM_SCHEMA_BASE
@@ -71,10 +71,10 @@ PROP_TO_ATTR = {"changed_by": ATTR_CHANGED_BY, "code_format": ATTR_CODE_FORMAT}
 # mypy: disallow-any-generics
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Track states and offer events for locks."""
-    component = hass.data[DATA_COMPONENT] = EntityComponent[LockEntity](
-        _LOGGER, DOMAIN, hass, SCAN_INTERVAL
+    component = menuai.data[DATA_COMPONENT] = EntityComponent[LockEntity](
+        _LOGGER, DOMAIN, menuai, SCAN_INTERVAL
     )
 
     await component.async_setup(config)
@@ -95,14 +95,14 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up a config entry."""
-    return await hass.data[DATA_COMPONENT].async_setup_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_setup_entry(entry)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.data[DATA_COMPONENT].async_unload_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_unload_entry(entry)
 
 
 class LockEntityDescription(EntityDescription, frozen_or_thawed=True):
@@ -226,7 +226,7 @@ class LockEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_lock(self, **kwargs: Any) -> None:
         """Lock the lock."""
-        await self.hass.async_add_executor_job(ft.partial(self.lock, **kwargs))
+        await self.menuai.async_add_executor_job(ft.partial(self.lock, **kwargs))
 
     @final
     async def async_handle_unlock_service(self, **kwargs: Any) -> None:
@@ -239,7 +239,7 @@ class LockEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_unlock(self, **kwargs: Any) -> None:
         """Unlock the lock."""
-        await self.hass.async_add_executor_job(ft.partial(self.unlock, **kwargs))
+        await self.menuai.async_add_executor_job(ft.partial(self.unlock, **kwargs))
 
     @final
     async def async_handle_open_service(self, **kwargs: Any) -> None:
@@ -252,7 +252,7 @@ class LockEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     async def async_open(self, **kwargs: Any) -> None:
         """Open the door latch."""
-        await self.hass.async_add_executor_job(ft.partial(self.open, **kwargs))
+        await self.menuai.async_add_executor_job(ft.partial(self.open, **kwargs))
 
     @final
     @property
@@ -287,9 +287,9 @@ class LockEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
         """Return the list of supported features."""
         return self._attr_supported_features
 
-    async def async_internal_added_to_hass(self) -> None:
-        """Call when the sensor entity is added to hass."""
-        await super().async_internal_added_to_hass()
+    async def async_internal_added_to_menuai(self) -> None:
+        """Call when the sensor entity is added to menuai."""
+        await super().async_internal_added_to_menuai()
         if not self.registry_entry:
             return
         self._async_read_entity_options()

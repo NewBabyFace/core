@@ -4,9 +4,9 @@ from pycec.const import POWER_OFF, POWER_ON, STATUS_PLAY, STATUS_STILL, STATUS_S
 from pycec.network import PhysicalAddress
 import pytest
 
-from homeassistant.components.hdmi_cec import EVENT_HDMI_CEC_UNAVAILABLE
-from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
-from homeassistant.const import (
+from menuai.components.hdmi_cec import EVENT_HDMI_CEC_UNAVAILABLE
+from menuai.components.switch import DOMAIN as SWITCH_DOMAIN
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
@@ -14,7 +14,7 @@ from homeassistant.const import (
     STATE_ON,
     STATE_UNAVAILABLE,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from . import MockHDMIDevice
 from .conftest import CecEntityCreator, HDMINetworkCreator
@@ -22,7 +22,7 @@ from .conftest import CecEntityCreator, HDMINetworkCreator
 
 @pytest.mark.parametrize("config", [{}, {"platform": "switch"}])
 async def test_load_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     create_hdmi_network: HDMINetworkCreator,
     create_cec_entity: CecEntityCreator,
     config,
@@ -32,15 +32,15 @@ async def test_load_platform(
     mock_hdmi_device = MockHDMIDevice(logical_address=3)
     await create_cec_entity(hdmi_network, mock_hdmi_device)
     mock_hdmi_device.set_update_callback.assert_called_once()
-    state = hass.states.get("media_player.hdmi_3")
+    state = menuai.states.get("media_player.hdmi_3")
     assert state is None
 
-    state = hass.states.get("switch.hdmi_3")
+    state = menuai.states.get("switch.hdmi_3")
     assert state is not None
 
 
 async def test_load_types(
-    hass: HomeAssistant,
+    menuai: menuai,
     create_hdmi_network: HDMINetworkCreator,
     create_cec_entity: CecEntityCreator,
 ) -> None:
@@ -50,24 +50,24 @@ async def test_load_types(
     mock_hdmi_device = MockHDMIDevice(logical_address=3)
     await create_cec_entity(hdmi_network, mock_hdmi_device)
     mock_hdmi_device.set_update_callback.assert_called_once()
-    state = hass.states.get("media_player.hdmi_3")
+    state = menuai.states.get("media_player.hdmi_3")
     assert state is None
 
-    state = hass.states.get("switch.hdmi_3")
+    state = menuai.states.get("switch.hdmi_3")
     assert state is not None
 
     mock_hdmi_device = MockHDMIDevice(logical_address=4)
     await create_cec_entity(hdmi_network, mock_hdmi_device)
     mock_hdmi_device.set_update_callback.assert_called_once()
-    state = hass.states.get("media_player.hdmi_4")
+    state = menuai.states.get("media_player.hdmi_4")
     assert state is not None
 
-    state = hass.states.get("switch.hdmi_4")
+    state = menuai.states.get("switch.hdmi_4")
     assert state is None
 
 
 async def test_service_on(
-    hass: HomeAssistant,
+    menuai: menuai,
     create_hdmi_network: HDMINetworkCreator,
     create_cec_entity: CecEntityCreator,
 ) -> None:
@@ -75,21 +75,21 @@ async def test_service_on(
     hdmi_network = await create_hdmi_network()
     mock_hdmi_device = MockHDMIDevice(logical_address=3, power_status=3)
     await create_cec_entity(hdmi_network, mock_hdmi_device)
-    state = hass.states.get("switch.hdmi_3")
+    state = menuai.states.get("switch.hdmi_3")
     assert state.state != STATE_ON
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN, SERVICE_TURN_ON, {ATTR_ENTITY_ID: "switch.hdmi_3"}, blocking=True
     )
 
     mock_hdmi_device.turn_on.assert_called_once_with()
 
-    state = hass.states.get("switch.hdmi_3")
+    state = menuai.states.get("switch.hdmi_3")
     assert state.state == STATE_ON
 
 
 async def test_service_off(
-    hass: HomeAssistant,
+    menuai: menuai,
     create_hdmi_network: HDMINetworkCreator,
     create_cec_entity: CecEntityCreator,
 ) -> None:
@@ -97,10 +97,10 @@ async def test_service_off(
     hdmi_network = await create_hdmi_network()
     mock_hdmi_device = MockHDMIDevice(logical_address=3, power_status=4)
     await create_cec_entity(hdmi_network, mock_hdmi_device)
-    state = hass.states.get("switch.hdmi_3")
+    state = menuai.states.get("switch.hdmi_3")
     assert state.state != STATE_OFF
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SWITCH_DOMAIN,
         SERVICE_TURN_OFF,
         {ATTR_ENTITY_ID: "switch.hdmi_3"},
@@ -109,7 +109,7 @@ async def test_service_off(
 
     mock_hdmi_device.turn_off.assert_called_once_with()
 
-    state = hass.states.get("switch.hdmi_3")
+    state = menuai.states.get("switch.hdmi_3")
     assert state.state == STATE_OFF
 
 
@@ -127,7 +127,7 @@ async def test_service_off(
     ],
 )
 async def test_device_status_change(
-    hass: HomeAssistant,
+    menuai: menuai,
     create_hdmi_network: HDMINetworkCreator,
     create_cec_entity: CecEntityCreator,
     power_status,
@@ -140,9 +140,9 @@ async def test_device_status_change(
     await create_cec_entity(hdmi_network, mock_hdmi_device)
 
     mock_hdmi_device.power_status = power_status
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("switch.hdmi_3")
+    state = menuai.states.get("switch.hdmi_3")
     if power_status in (POWER_ON, 4) and status is not None:
         pytest.xfail(
             reason="`CecSwitchEntity.is_on` returns `False` here instead of `true` as expected."
@@ -164,7 +164,7 @@ async def test_device_status_change(
     ],
 )
 async def test_friendly_name(
-    hass: HomeAssistant,
+    menuai: menuai,
     create_hdmi_network: HDMINetworkCreator,
     create_cec_entity: CecEntityCreator,
     device_values,
@@ -175,7 +175,7 @@ async def test_friendly_name(
     mock_hdmi_device = MockHDMIDevice(logical_address=3, **device_values)
     await create_cec_entity(hdmi_network, mock_hdmi_device)
 
-    state = hass.states.get("switch.hdmi_3")
+    state = menuai.states.get("switch.hdmi_3")
     assert state.attributes["friendly_name"] == expected
 
 
@@ -220,7 +220,7 @@ async def test_friendly_name(
     ],
 )
 async def test_extra_state_attributes(
-    hass: HomeAssistant,
+    menuai: menuai,
     create_hdmi_network: HDMINetworkCreator,
     create_cec_entity: CecEntityCreator,
     device_values,
@@ -231,7 +231,7 @@ async def test_extra_state_attributes(
     mock_hdmi_device = MockHDMIDevice(logical_address=3, **device_values)
     await create_cec_entity(hdmi_network, mock_hdmi_device)
 
-    state = hass.states.get("switch.hdmi_3")
+    state = menuai.states.get("switch.hdmi_3")
     attributes = state.attributes
     # We don't care about these attributes, so just copy them to the expected attributes
     for att in ("friendly_name", "icon"):
@@ -252,7 +252,7 @@ async def test_extra_state_attributes(
     ],
 )
 async def test_icon(
-    hass: HomeAssistant,
+    menuai: menuai,
     create_hdmi_network: HDMINetworkCreator,
     create_cec_entity: CecEntityCreator,
     device_type,
@@ -263,12 +263,12 @@ async def test_icon(
     mock_hdmi_device = MockHDMIDevice(logical_address=3, type=device_type)
     await create_cec_entity(hdmi_network, mock_hdmi_device)
 
-    state = hass.states.get("switch.hdmi_3")
+    state = menuai.states.get("switch.hdmi_3")
     assert state.attributes["icon"] == expected_icon
 
 
 async def test_unavailable_status(
-    hass: HomeAssistant,
+    menuai: menuai,
     create_hdmi_network: HDMINetworkCreator,
     create_cec_entity: CecEntityCreator,
 ) -> None:
@@ -277,8 +277,8 @@ async def test_unavailable_status(
     mock_hdmi_device = MockHDMIDevice(logical_address=3)
     await create_cec_entity(hdmi_network, mock_hdmi_device)
 
-    hass.bus.async_fire(EVENT_HDMI_CEC_UNAVAILABLE)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire(EVENT_HDMI_CEC_UNAVAILABLE)
+    await menuai.async_block_till_done()
 
-    state = hass.states.get("switch.hdmi_3")
+    state = menuai.states.get("switch.hdmi_3")
     assert state.state == STATE_UNAVAILABLE

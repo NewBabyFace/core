@@ -1,4 +1,4 @@
-"""API for Google Tasks bound to Home Assistant OAuth."""
+"""API for Google Tasks bound to MenuAI OAuth."""
 
 from functools import partial
 import json
@@ -11,9 +11,9 @@ from googleapiclient.errors import HttpError
 from googleapiclient.http import BatchHttpRequest, HttpRequest
 from httplib2 import ServerNotFoundError
 
-from homeassistant.const import CONF_ACCESS_TOKEN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_entry_oauth2_flow
+from menuai.const import CONF_ACCESS_TOKEN
+from menuai.core import menuai
+from menuai.helpers import config_entry_oauth2_flow
 
 from .exceptions import GoogleTasksApiError
 
@@ -38,11 +38,11 @@ class AsyncConfigEntryAuth:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         oauth2_session: config_entry_oauth2_flow.OAuth2Session,
     ) -> None:
         """Initialize Google Tasks Auth."""
-        self._hass = hass
+        self._menuai = menuai
         self._oauth_session = oauth2_session
 
     async def async_get_access_token(self) -> str:
@@ -53,7 +53,7 @@ class AsyncConfigEntryAuth:
     async def _get_service(self) -> Resource:
         """Get current resource."""
         token = await self.async_get_access_token()
-        return await self._hass.async_add_executor_job(
+        return await self._menuai.async_add_executor_job(
             partial(build, "tasks", "v1", credentials=Credentials(token=token))
         )
 
@@ -150,7 +150,7 @@ class AsyncConfigEntryAuth:
 
     async def _execute(self, request: HttpRequest | BatchHttpRequest) -> Any:
         try:
-            result = await self._hass.async_add_executor_job(request.execute)
+            result = await self._menuai.async_add_executor_job(request.execute)
         except (HttpError, ServerNotFoundError) as err:
             raise GoogleTasksApiError(
                 f"Google Tasks API responded with: {err.reason or err.status_code})"

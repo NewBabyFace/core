@@ -8,9 +8,9 @@ from typing import TYPE_CHECKING, cast
 
 from sqlalchemy.orm.session import Session
 
-from homeassistant.core import Event, EventStateChangedData
-from homeassistant.util.collection import chunked_or_all
-from homeassistant.util.json import JSON_ENCODE_EXCEPTIONS
+from menuai.core import Event, EventStateChangedData
+from menuai.util.collection import chunked_or_all
+from menuai.util.json import JSON_ENCODE_EXCEPTIONS
 
 from ..db_schema import StateAttributes
 from ..queries import get_shared_attributes

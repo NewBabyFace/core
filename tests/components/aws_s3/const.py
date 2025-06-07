@@ -1,6 +1,6 @@
 """Consts for AWS S3 tests."""
 
-from homeassistant.components.aws_s3.const import (
+from menuai.components.aws_s3.const import (
     CONF_ACCESS_KEY_ID,
     CONF_BUCKET,
     CONF_ENDPOINT_URL,

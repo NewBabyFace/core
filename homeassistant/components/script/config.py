@@ -10,13 +10,13 @@ from typing import Any
 import voluptuous as vol
 from voluptuous.humanize import humanize_error
 
-from homeassistant.components.blueprint import (
+from menuai.components.blueprint import (
     BlueprintException,
     is_blueprint_instance_config,
 )
-from homeassistant.components.trace import TRACE_CONFIG_SCHEMA
-from homeassistant.config import config_per_platform, config_without_domain
-from homeassistant.const import (
+from menuai.components.trace import TRACE_CONFIG_SCHEMA
+from menuai.config import config_per_platform, config_without_domain
+from menuai.const import (
     CONF_ALIAS,
     CONF_DEFAULT,
     CONF_DESCRIPTION,
@@ -30,17 +30,17 @@ from homeassistant.const import (
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.script import (
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.script import (
     SCRIPT_MODE_SINGLE,
     async_validate_actions_config,
     make_script_schema,
 )
-from homeassistant.helpers.selector import validate_selector
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util.yaml.input import UndefinedSubstitution
+from menuai.helpers.selector import validate_selector
+from menuai.helpers.typing import ConfigType
+from menuai.util.yaml.input import UndefinedSubstitution
 
 from .const import (
     CONF_ADVANCED,
@@ -106,7 +106,7 @@ SCRIPT_ENTITY_SCHEMA = make_script_schema(
 
 
 async def _async_validate_config_item(
-    hass: HomeAssistant,
+    menuai: menuai,
     object_id: str,
     config: ConfigType,
     raise_on_errors: bool,
@@ -181,7 +181,7 @@ async def _async_validate_config_item(
 
     if is_blueprint_instance_config(config):
         uses_blueprint = True
-        blueprints = async_get_blueprints(hass)
+        blueprints = async_get_blueprints(menuai)
         try:
             blueprint_inputs = await blueprints.async_inputs_from_config(config)
         except BlueprintException as err:
@@ -208,7 +208,7 @@ async def _async_validate_config_item(
                     err,
                 )
             if raise_on_errors:
-                raise HomeAssistantError(err) from err
+                raise menuaiError(err) from err
             return _minimal_config(ValidationStatus.FAILED_BLUEPRINT, err, config)
 
     script_name = f"Script with object id '{object_id}'"
@@ -235,11 +235,11 @@ async def _async_validate_config_item(
 
     try:
         script_config[CONF_SEQUENCE] = await async_validate_actions_config(
-            hass, validated_config[CONF_SEQUENCE]
+            menuai, validated_config[CONF_SEQUENCE]
         )
     except (
         vol.Invalid,
-        HomeAssistantError,
+        menuaiError,
     ) as err:
         _log_invalid_script(
             err, script_name, "failed to setup sequence", validated_config
@@ -273,27 +273,27 @@ class ScriptConfig(dict):
 
 
 async def _try_async_validate_config_item(
-    hass: HomeAssistant,
+    menuai: menuai,
     object_id: str,
     config: ConfigType,
 ) -> ScriptConfig | None:
     """Validate config item."""
     try:
-        return await _async_validate_config_item(hass, object_id, config, False, True)
-    except (vol.Invalid, HomeAssistantError):
+        return await _async_validate_config_item(menuai, object_id, config, False, True)
+    except (vol.Invalid, menuaiError):
         return None
 
 
 async def async_validate_config_item(
-    hass: HomeAssistant,
+    menuai: menuai,
     object_id: str,
     config: dict[str, Any],
 ) -> ScriptConfig | None:
     """Validate config item, called by EditScriptConfigView."""
-    return await _async_validate_config_item(hass, object_id, config, True, False)
+    return await _async_validate_config_item(menuai, object_id, config, True, False)
 
 
-async def async_validate_config(hass: HomeAssistant, config: ConfigType) -> ConfigType:
+async def async_validate_config(menuai: menuai, config: ConfigType) -> ConfigType:
     """Validate config."""
     scripts = {}
     for _, p_config in config_per_platform(config, DOMAIN):
@@ -301,7 +301,7 @@ async def async_validate_config(hass: HomeAssistant, config: ConfigType) -> Conf
             if object_id in scripts:
                 LOGGER.warning("Duplicate script detected with name: '%s'", object_id)
                 continue
-            cfg = await _try_async_validate_config_item(hass, object_id, cfg)
+            cfg = await _try_async_validate_config_item(menuai, object_id, cfg)
             if cfg is not None:
                 scripts[object_id] = cfg
 

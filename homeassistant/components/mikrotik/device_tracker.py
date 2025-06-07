@@ -4,21 +4,21 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.device_tracker import (
+from menuai.components.device_tracker import (
     DOMAIN as DEVICE_TRACKER,
     ScannerEntity,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai, callback
+from menuai.helpers import entity_registry as er
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.update_coordinator import CoordinatorEntity
+from menuai.util import dt as dt_util
 
 from .coordinator import Device, MikrotikConfigEntry, MikrotikDataUpdateCoordinator
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MikrotikConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -27,7 +27,7 @@ async def async_setup_entry(
 
     tracked: dict[str, MikrotikDataUpdateCoordinatorTracker] = {}
 
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
 
     # Restore clients that is not a part of active clients list.
     for entity in registry.entities.get_entries_for_config_entry_id(

@@ -5,15 +5,15 @@ from __future__ import annotations
 import logging
 from typing import Any, cast
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     CoverDeviceClass,
     CoverEntity,
     CoverEntityFeature,
     CoverState,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import OpenGarageDataUpdateCoordinator
@@ -25,13 +25,13 @@ STATES_MAP = {0: CoverState.CLOSED, 1: CoverState.OPEN}
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the OpenGarage covers."""
     async_add_entities(
-        [OpenGarageCover(hass.data[DOMAIN][entry.entry_id], cast(str, entry.unique_id))]
+        [OpenGarageCover(menuai.data[DOMAIN][entry.entry_id], cast(str, entry.unique_id))]
     )
 
 

@@ -8,15 +8,15 @@ import logging
 
 import voluptuous as vol
 
-from homeassistant.components.notify import (
+from menuai.components.notify import (
     PLATFORM_SCHEMA as NOTIFY_PLATFORM_SCHEMA,
     BaseNotificationService,
 )
-from homeassistant.const import CONF_ACCESS_TOKEN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.const import CONF_ACCESS_TOKEN
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 _LOGGER = logging.getLogger(__name__)
 _RESOURCE = "https://api.flock.com/hooks/sendMessage/"
@@ -27,14 +27,14 @@ PLATFORM_SCHEMA = NOTIFY_PLATFORM_SCHEMA.extend(
 
 
 async def async_get_service(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> FlockNotificationService:
     """Get the Flock notification service."""
     access_token = config.get(CONF_ACCESS_TOKEN)
     url = f"{_RESOURCE}{access_token}"
-    session = async_get_clientsession(hass)
+    session = async_get_clientsession(menuai)
 
     return FlockNotificationService(url, session)
 

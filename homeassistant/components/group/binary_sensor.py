@@ -6,15 +6,15 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     DEVICE_CLASSES_SCHEMA,
     DOMAIN as BINARY_SENSOR_DOMAIN,
     PLATFORM_SCHEMA as BINARY_SENSOR_PLATFORM_SCHEMA,
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from menuai.config_entries import ConfigEntry
+from menuai.const import (
     ATTR_ENTITY_ID,
     CONF_DEVICE_CLASS,
     CONF_ENTITIES,
@@ -24,13 +24,13 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.entity_platform import (
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
     AddEntitiesCallback,
 )
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .entity import GroupEntity
 
@@ -51,7 +51,7 @@ PLATFORM_SCHEMA = BINARY_SENSOR_PLATFORM_SCHEMA.extend(
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -71,12 +71,12 @@ async def async_setup_platform(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Initialize Binary Sensor Group config entry."""
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     entities = er.async_validate_entity_ids(
         registry, config_entry.options[CONF_ENTITIES]
     )
@@ -93,7 +93,7 @@ async def async_setup_entry(
 
 @callback
 def async_create_preview_binary_sensor(
-    hass: HomeAssistant, name: str, validated_config: dict[str, Any]
+    menuai: menuai, name: str, validated_config: dict[str, Any]
 ) -> BinarySensorGroup:
     """Create a preview sensor."""
     return BinarySensorGroup(
@@ -135,7 +135,7 @@ class BinarySensorGroup(GroupEntity, BinarySensorEntity):
         states = [
             state.state
             for entity_id in self._entity_ids
-            if (state := self.hass.states.get(entity_id)) is not None
+            if (state := self.menuai.states.get(entity_id)) is not None
         ]
 
         # Set group as unavailable if all members are unavailable or missing

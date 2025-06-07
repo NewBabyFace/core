@@ -7,14 +7,14 @@ from gardena_bluetooth.const import Valve
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.valve import DOMAIN as VALVE_DOMAIN
-from homeassistant.const import (
+from menuai.components.valve import DOMAIN as VALVE_DOMAIN
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_CLOSE_VALVE,
     SERVICE_OPEN_VALVE,
     Platform,
 )
-from homeassistant.core import HomeAssistant
+from menuai.core import menuai
 
 from . import setup_entry
 
@@ -35,7 +35,7 @@ def mock_switch_chars(mock_read_char_raw):
 
 
 async def test_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     snapshot: SnapshotAssertion,
     mock_entry: MockConfigEntry,
     mock_client: Mock,
@@ -45,16 +45,16 @@ async def test_setup(
     """Test setup creates expected entities."""
 
     entity_id = "valve.mock_title"
-    await setup_entry(hass, mock_entry, [Platform.VALVE])
-    assert hass.states.get(entity_id) == snapshot
+    await setup_entry(menuai, mock_entry, [Platform.VALVE])
+    assert menuai.states.get(entity_id) == snapshot
 
     mock_switch_chars[Valve.state.uuid] = b"\x01"
     await scan_step()
-    assert hass.states.get(entity_id) == snapshot
+    assert menuai.states.get(entity_id) == snapshot
 
 
 async def test_switching(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_entry: MockConfigEntry,
     mock_client: Mock,
     mock_switch_chars: dict[str, bytes],
@@ -62,17 +62,17 @@ async def test_switching(
     """Test switching makes correct calls."""
 
     entity_id = "valve.mock_title"
-    await setup_entry(hass, mock_entry, [Platform.VALVE])
-    assert hass.states.get(entity_id)
+    await setup_entry(menuai, mock_entry, [Platform.VALVE])
+    assert menuai.states.get(entity_id)
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         VALVE_DOMAIN,
         SERVICE_OPEN_VALVE,
         {ATTR_ENTITY_ID: entity_id},
         blocking=True,
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         VALVE_DOMAIN,
         SERVICE_CLOSE_VALVE,
         {ATTR_ENTITY_ID: entity_id},

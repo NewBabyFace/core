@@ -13,7 +13,7 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.mealie.const import (
+from menuai.components.mealie.const import (
     ATTR_CONFIG_ENTRY_ID,
     ATTR_END_DATE,
     ATTR_ENTRY_TYPE,
@@ -25,16 +25,16 @@ from homeassistant.components.mealie.const import (
     ATTR_URL,
     DOMAIN,
 )
-from homeassistant.components.mealie.services import (
+from menuai.components.mealie.services import (
     SERVICE_GET_MEALPLAN,
     SERVICE_GET_RECIPE,
     SERVICE_IMPORT_RECIPE,
     SERVICE_SET_MEALPLAN,
     SERVICE_SET_RANDOM_MEALPLAN,
 )
-from homeassistant.const import ATTR_DATE
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
+from menuai.const import ATTR_DATE
+from menuai.core import menuai
+from menuai.exceptions import menuaiError, ServiceValidationError
 
 from . import setup_integration
 
@@ -42,7 +42,7 @@ from tests.common import MockConfigEntry
 
 
 async def test_service_mealplan(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mealie_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
@@ -50,11 +50,11 @@ async def test_service_mealplan(
 ) -> None:
     """Test the get_mealplan service."""
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     freezer.move_to("2023-10-21")
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         DOMAIN,
         SERVICE_GET_MEALPLAN,
         {ATTR_CONFIG_ENTRY_ID: mock_config_entry.entry_id},
@@ -67,7 +67,7 @@ async def test_service_mealplan(
     )
     assert response == snapshot
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         DOMAIN,
         SERVICE_GET_MEALPLAN,
         {
@@ -84,7 +84,7 @@ async def test_service_mealplan(
         date(2023, 10, 25),
     )
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         DOMAIN,
         SERVICE_GET_MEALPLAN,
         {
@@ -100,7 +100,7 @@ async def test_service_mealplan(
         date(2023, 10, 21),
     )
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         DOMAIN,
         SERVICE_GET_MEALPLAN,
         {
@@ -117,7 +117,7 @@ async def test_service_mealplan(
     )
 
     with pytest.raises(ServiceValidationError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             SERVICE_GET_MEALPLAN,
             {
@@ -131,16 +131,16 @@ async def test_service_mealplan(
 
 
 async def test_service_recipe(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mealie_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test the get_recipe service."""
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         DOMAIN,
         SERVICE_GET_RECIPE,
         {ATTR_CONFIG_ENTRY_ID: mock_config_entry.entry_id, ATTR_RECIPE_ID: "recipe_id"},
@@ -151,16 +151,16 @@ async def test_service_recipe(
 
 
 async def test_service_import_recipe(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mealie_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test the import_recipe service."""
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         DOMAIN,
         SERVICE_IMPORT_RECIPE,
         {
@@ -175,7 +175,7 @@ async def test_service_import_recipe(
         "http://example.com", include_tags=False
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_IMPORT_RECIPE,
         {
@@ -192,16 +192,16 @@ async def test_service_import_recipe(
 
 
 async def test_service_set_random_mealplan(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mealie_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test the set_random_mealplan service."""
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_RANDOM_MEALPLAN,
         {
@@ -218,7 +218,7 @@ async def test_service_set_random_mealplan(
     )
 
     mock_mealie_client.random_mealplan.reset_mock()
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_RANDOM_MEALPLAN,
         {
@@ -259,7 +259,7 @@ async def test_service_set_random_mealplan(
     ],
 )
 async def test_service_set_mealplan(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mealie_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
@@ -268,9 +268,9 @@ async def test_service_set_mealplan(
 ) -> None:
     """Test the set_mealplan service."""
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
-    response = await hass.services.async_call(
+    response = await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_MEALPLAN,
         {
@@ -288,7 +288,7 @@ async def test_service_set_mealplan(
     )
 
     mock_mealie_client.random_mealplan.reset_mock()
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SET_MEALPLAN,
         {
@@ -313,7 +313,7 @@ async def test_service_set_mealplan(
             {},
             "get_mealplans",
             MealieConnectionError,
-            HomeAssistantError,
+            menuaiError,
             "Error connecting to Mealie instance",
         ),
         (
@@ -321,7 +321,7 @@ async def test_service_set_mealplan(
             {ATTR_RECIPE_ID: "recipe_id"},
             "get_recipe",
             MealieConnectionError,
-            HomeAssistantError,
+            menuaiError,
             "Error connecting to Mealie instance",
         ),
         (
@@ -337,7 +337,7 @@ async def test_service_set_mealplan(
             {ATTR_URL: "http://example.com"},
             "import_recipe",
             MealieConnectionError,
-            HomeAssistantError,
+            menuaiError,
             "Error connecting to Mealie instance",
         ),
         (
@@ -353,7 +353,7 @@ async def test_service_set_mealplan(
             {ATTR_DATE: "2023-10-21", ATTR_ENTRY_TYPE: "lunch"},
             "random_mealplan",
             MealieConnectionError,
-            HomeAssistantError,
+            menuaiError,
             "Error connecting to Mealie instance",
         ),
         (
@@ -365,13 +365,13 @@ async def test_service_set_mealplan(
             },
             "set_mealplan",
             MealieConnectionError,
-            HomeAssistantError,
+            menuaiError,
             "Error connecting to Mealie instance",
         ),
     ],
 )
 async def test_services_connection_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mealie_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     service: str,
@@ -383,12 +383,12 @@ async def test_services_connection_error(
 ) -> None:
     """Test a connection error in the services."""
 
-    await setup_integration(hass, mock_config_entry)
+    await setup_integration(menuai, mock_config_entry)
 
     getattr(mock_mealie_client, function).side_effect = exception
 
     with pytest.raises(raised_exception, match=message):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             service,
             {ATTR_CONFIG_ENTRY_ID: mock_config_entry.entry_id} | payload,
@@ -418,21 +418,21 @@ async def test_services_connection_error(
     ],
 )
 async def test_service_entry_availability(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_mealie_client: AsyncMock,
     mock_config_entry: MockConfigEntry,
     service: str,
     payload: dict[str, str],
 ) -> None:
     """Test the services without valid entry."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
     mock_config_entry2 = MockConfigEntry(domain=DOMAIN)
-    mock_config_entry2.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    mock_config_entry2.add_to_menuai(menuai)
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     with pytest.raises(ServiceValidationError, match="Mock Title is not loaded"):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             service,
             {ATTR_CONFIG_ENTRY_ID: mock_config_entry2.entry_id} | payload,
@@ -443,7 +443,7 @@ async def test_service_entry_availability(
     with pytest.raises(
         ServiceValidationError, match='Integration "mealie" not found in registry'
     ):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             DOMAIN,
             service,
             {ATTR_CONFIG_ENTRY_ID: "bad-config_id"} | payload,

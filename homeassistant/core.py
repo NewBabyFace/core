@@ -1,6 +1,6 @@
-"""Core components of Home Assistant.
+"""Core components of MenuAI.
 
-Home Assistant is a Home Automation framework for observing the state
+MenuAI is a Home Automation framework for observing the state
 of entities and react to changes.
 """
 
@@ -58,11 +58,11 @@ from .const import (
     COMPRESSED_STATE_STATE,
     EVENT_CALL_SERVICE,
     EVENT_CORE_CONFIG_UPDATE,
-    EVENT_HOMEASSISTANT_CLOSE,
-    EVENT_HOMEASSISTANT_FINAL_WRITE,
-    EVENT_HOMEASSISTANT_START,
-    EVENT_HOMEASSISTANT_STARTED,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_CLOSE,
+    EVENT_menuai_FINAL_WRITE,
+    EVENT_menuai_START,
+    EVENT_menuai_STARTED,
+    EVENT_menuai_STOP,
     EVENT_LOGGING_CHANGED,
     EVENT_SERVICE_REGISTERED,
     EVENT_SERVICE_REMOVED,
@@ -76,7 +76,7 @@ from .const import (
     __version__,
 )
 from .exceptions import (
-    HomeAssistantError,
+    menuaiError,
     InvalidEntityFormatError,
     InvalidStateError,
     MaxLengthExceeded,
@@ -103,7 +103,7 @@ from .util.async_ import (
 )
 from .util.event_type import EventType
 from .util.executor import InterruptibleThreadPoolExecutor
-from .util.hass_dict import HassDict
+from .util.menuai_dict import menuaiDict
 from .util.json import JsonObjectType
 from .util.read_only_dict import ReadOnlyDict
 from .util.timeout import TimeoutManager
@@ -112,7 +112,7 @@ from .util.ulid import ulid_at_time, ulid_now
 # Typing imports that create a circular dependency
 if TYPE_CHECKING:
     from .auth import AuthManager
-    from .components.http import HomeAssistantHTTP
+    from .components.http import menuaiHTTP
     from .config_entries import ConfigEntries
     from .helpers.entity import StateInfo
 
@@ -126,7 +126,7 @@ _SENTINEL = object()
 _DataT = TypeVar("_DataT", bound=Mapping[str, Any], default=Mapping[str, Any])
 type CALLBACK_TYPE = Callable[[], None]
 
-DOMAIN = "homeassistant"
+DOMAIN = "menuai"
 
 # How long to wait to log tasks that are blocking
 BLOCK_LOG_TIMEOUT = 60
@@ -185,9 +185,9 @@ def _deprecated_core_config() -> Any:
     return core_config.Config
 
 
-# The Config class was moved to core_config in Home Assistant 2024.11
+# The Config class was moved to core_config in MenuAI 2024.11
 _DEPRECATED_Config = DeferredDeprecatedAlias(
-    _deprecated_core_config, "homeassistant.core_config.Config", "2025.11"
+    _deprecated_core_config, "menuai.core_config.Config", "2025.11"
 )
 
 
@@ -196,7 +196,7 @@ TIMEOUT_EVENT_START = 15
 
 
 EVENTS_EXCLUDED_FROM_MATCH_ALL = {
-    EVENT_HOMEASSISTANT_CLOSE,
+    EVENT_menuai_CLOSE,
     EVENT_STATE_REPORTED,
 }
 
@@ -245,13 +245,13 @@ def validate_state(state: str) -> str:
 
 def callback[_CallableT: Callable[..., Any]](func: _CallableT) -> _CallableT:
     """Annotation to mark method as safe to call from within the event loop."""
-    setattr(func, "_hass_callback", True)
+    setattr(func, "_menuai_callback", True)
     return func
 
 
 def is_callback(func: Callable[..., Any]) -> bool:
     """Check if function is safe to be called in the event loop."""
-    return getattr(func, "_hass_callback", False) is True
+    return getattr(func, "_menuai_callback", False) is True
 
 
 def is_callback_check_partial(target: Callable[..., Any]) -> bool:
@@ -266,35 +266,35 @@ def is_callback_check_partial(target: Callable[..., Any]) -> bool:
     return is_callback(check_target)
 
 
-class _Hass(threading.local):
-    """Container which makes a HomeAssistant instance available to the event loop."""
+class _menuai(threading.local):
+    """Container which makes a menuai instance available to the event loop."""
 
-    hass: HomeAssistant | None = None
+    menuai: menuai | None = None
 
 
-_hass = _Hass()
+_menuai = _menuai()
 
 
 @callback
-def async_get_hass() -> HomeAssistant:
-    """Return the HomeAssistant instance.
+def async_get_menuai() -> menuai:
+    """Return the menuai instance.
 
-    Raises HomeAssistantError when called from the wrong thread.
+    Raises menuaiError when called from the wrong thread.
 
     This should be used where it's very cumbersome or downright impossible to pass
-    hass to the code which needs it.
+    menuai to the code which needs it.
     """
-    if not (hass := async_get_hass_or_none()):
-        raise HomeAssistantError("async_get_hass called from the wrong thread")
-    return hass
+    if not (menuai := async_get_menuai_or_none()):
+        raise menuaiError("async_get_menuai called from the wrong thread")
+    return menuai
 
 
-def async_get_hass_or_none() -> HomeAssistant | None:
-    """Return the HomeAssistant instance or None.
+def async_get_menuai_or_none() -> menuai | None:
+    """Return the menuai instance or None.
 
     Returns None when called from the wrong thread.
     """
-    return _hass.hass
+    return _menuai.menuai
 
 
 class ReleaseChannel(enum.StrEnum):
@@ -318,7 +318,7 @@ def get_release_channel() -> ReleaseChannel:
 
 
 @enum.unique
-class HassJobType(enum.Enum):
+class menuaiJobType(enum.Enum):
     """Represent a job type."""
 
     Coroutinefunction = 1
@@ -327,7 +327,7 @@ class HassJobType(enum.Enum):
 
 
 @final  # Final to allow direct checking of the type instead of using isinstance
-class HassJob[**_P, _R_co]:
+class menuaiJob[**_P, _R_co]:
     """Represent a job to be run later.
 
     We check the callable type in advance
@@ -343,7 +343,7 @@ class HassJob[**_P, _R_co]:
         name: str | None = None,
         *,
         cancel_on_shutdown: bool | None = None,
-        job_type: HassJobType | None = None,
+        job_type: menuaiJobType | None = None,
     ) -> None:
         """Create a job object."""
         self.target: Final = target
@@ -356,9 +356,9 @@ class HassJob[**_P, _R_co]:
             self._cache["job_type"] = job_type
 
     @under_cached_property
-    def job_type(self) -> HassJobType:
+    def job_type(self) -> menuaiJobType:
         """Return the job type."""
-        return get_hassjob_callable_job_type(self.target)
+        return get_menuaijob_callable_job_type(self.target)
 
     @property
     def cancel_on_shutdown(self) -> bool | None:
@@ -371,14 +371,14 @@ class HassJob[**_P, _R_co]:
 
 
 @dataclass(frozen=True)
-class HassJobWithArgs:
-    """Container for a HassJob and arguments."""
+class menuaiJobWithArgs:
+    """Container for a menuaiJob and arguments."""
 
-    job: HassJob[..., Coroutine[Any, Any, Any] | Any]
+    job: menuaiJob[..., Coroutine[Any, Any, Any] | Any]
     args: Iterable[Any]
 
 
-def get_hassjob_callable_job_type(target: Callable[..., Any]) -> HassJobType:
+def get_menuaijob_callable_job_type(target: Callable[..., Any]) -> menuaiJobType:
     """Determine the job type from the callable."""
     # Check for partials to properly determine if coroutine function
     check_target = target
@@ -386,16 +386,16 @@ def get_hassjob_callable_job_type(target: Callable[..., Any]) -> HassJobType:
         check_target = check_target.func
 
     if asyncio.iscoroutinefunction(check_target):
-        return HassJobType.Coroutinefunction
+        return menuaiJobType.Coroutinefunction
     if is_callback(check_target):
-        return HassJobType.Callback
+        return menuaiJobType.Callback
     if asyncio.iscoroutine(check_target):
-        raise ValueError("Coroutine not allowed to be passed to HassJob")
-    return HassJobType.Executor
+        raise ValueError("Coroutine not allowed to be passed to menuaiJob")
+    return menuaiJobType.Executor
 
 
 class CoreState(enum.Enum):
-    """Represent the current state of Home Assistant."""
+    """Represent the current state of MenuAI."""
 
     not_running = "NOT_RUNNING"
     starting = "STARTING"
@@ -409,30 +409,30 @@ class CoreState(enum.Enum):
         return self.value
 
 
-class HomeAssistant:
-    """Root object of the Home Assistant home automation."""
+class menuai:
+    """Root object of the MenuAI home automation."""
 
     auth: AuthManager
-    http: HomeAssistantHTTP = None  # type: ignore[assignment]
+    http: menuaiHTTP = None  # type: ignore[assignment]
     config_entries: ConfigEntries = None  # type: ignore[assignment]
 
     def __new__(cls, config_dir: str) -> Self:
-        """Set the _hass thread local data."""
-        hass = super().__new__(cls)
-        _hass.hass = hass
-        return hass
+        """Set the _menuai thread local data."""
+        menuai = super().__new__(cls)
+        _menuai.menuai = menuai
+        return menuai
 
     def __repr__(self) -> str:
         """Return the representation."""
-        return f"<HomeAssistant {self.state}>"
+        return f"<menuai {self.state}>"
 
     def __init__(self, config_dir: str) -> None:
-        """Initialize new Home Assistant object."""
+        """Initialize new MenuAI object."""
         # pylint: disable-next=import-outside-toplevel
         from .core_config import Config
 
         # This is a dictionary that any component can store any data on.
-        self.data = HassDict()
+        self.data = menuaiDict()
         self.loop = asyncio.get_running_loop()
         self._tasks: set[asyncio.Future[Any]] = set()
         self._background_tasks: set[asyncio.Future[Any]] = set()
@@ -448,7 +448,7 @@ class HomeAssistant:
         # Timeout handler for Core/Helper namespace
         self.timeout: TimeoutManager = TimeoutManager()
         self._stop_future: concurrent.futures.Future[None] | None = None
-        self._shutdown_jobs: list[HassJobWithArgs] = []
+        self._shutdown_jobs: list[menuaiJobWithArgs] = []
         self.import_executor = InterruptibleThreadPoolExecutor(
             max_workers=1, thread_name_prefix="ImportExecutor"
         )
@@ -476,12 +476,12 @@ class HomeAssistant:
 
     @cached_property
     def is_running(self) -> bool:
-        """Return if Home Assistant is running."""
+        """Return if MenuAI is running."""
         return self.state in (CoreState.starting, CoreState.running)
 
     @cached_property
     def is_stopping(self) -> bool:
-        """Return if Home Assistant is stopping."""
+        """Return if MenuAI is stopping."""
         return self.state in (CoreState.stopping, CoreState.final_write)
 
     def set_state(self, state: CoreState) -> None:
@@ -491,16 +491,16 @@ class HomeAssistant:
             self.__dict__.pop(prop, None)
 
     def start(self) -> int:
-        """Start Home Assistant.
+        """Start MenuAI.
 
         Note: This function is only used for testing.
-        For regular use, use "await hass.run()".
+        For regular use, use "await menuai.run()".
         """
         # Register the async start
         _future = asyncio.run_coroutine_threadsafe(self.async_start(), self.loop)
         # Run forever
         # Block until stopped
-        _LOGGER.info("Starting Home Assistant core loop")
+        _LOGGER.info("Starting MenuAI core loop")
         self.loop.run_forever()
         # The future is never retrieved but we still hold a reference to it
         # to prevent the task from being garbage collected prematurely.
@@ -508,14 +508,14 @@ class HomeAssistant:
         return self.exit_code
 
     async def async_run(self, *, attach_signals: bool = True) -> int:
-        """Home Assistant main entry point.
+        """MenuAI main entry point.
 
-        Start Home Assistant and block until stopped.
+        Start MenuAI and block until stopped.
 
         This method is a coroutine.
         """
         if self.state is not CoreState.not_running:
-            raise RuntimeError("Home Assistant is already running")
+            raise RuntimeError("MenuAI is already running")
 
         # _async_stop will set this instead of stopping the loop
         self._stopped = asyncio.Event()
@@ -535,11 +535,11 @@ class HomeAssistant:
 
         This method is a coroutine.
         """
-        _LOGGER.info("Starting Home Assistant")
+        _LOGGER.info("Starting MenuAI")
 
         self.set_state(CoreState.starting)
         self.bus.async_fire_internal(EVENT_CORE_CONFIG_UPDATE)
-        self.bus.async_fire_internal(EVENT_HOMEASSISTANT_START)
+        self.bus.async_fire_internal(EVENT_menuai_START)
 
         if not self._tasks:
             pending: set[asyncio.Future[Any]] | None = None
@@ -551,7 +551,7 @@ class HomeAssistant:
         if pending:
             _LOGGER.warning(
                 (
-                    "Something is blocking Home Assistant from wrapping up the start up"
+                    "Something is blocking MenuAI from wrapping up the start up"
                     " phase. We're going to continue anyway. Please report the"
                     " following info at"
                     " https://github.com/home-assistant/core/issues: %s"
@@ -566,14 +566,14 @@ class HomeAssistant:
 
         if self.state is not CoreState.starting:
             _LOGGER.warning(
-                "Home Assistant startup has been interrupted. "
+                "MenuAI startup has been interrupted. "
                 "Its state may be inconsistent"
             )
             return
 
         self.set_state(CoreState.running)
         self.bus.async_fire_internal(EVENT_CORE_CONFIG_UPDATE)
-        self.bus.async_fire_internal(EVENT_HOMEASSISTANT_STARTED)
+        self.bus.async_fire_internal(EVENT_menuai_STARTED)
 
     def add_job[*_Ts](
         self, target: Callable[[*_Ts], Any] | Coroutine[Any, Any, Any], *args: *_Ts
@@ -594,7 +594,7 @@ class HomeAssistant:
             )
             return
         self.loop.call_soon_threadsafe(
-            functools.partial(self._async_add_hass_job, HassJob(target), *args)
+            functools.partial(self._async_add_menuai_job, menuaiJob(target), *args)
         )
 
     @overload
@@ -659,13 +659,13 @@ class HomeAssistant:
         if asyncio.iscoroutine(target):
             return self.async_create_task(target, eager_start=eager_start)
 
-        return self._async_add_hass_job(HassJob(target), *args)
+        return self._async_add_menuai_job(menuaiJob(target), *args)
 
     @overload
     @callback
-    def async_add_hass_job[_R](
+    def async_add_menuai_job[_R](
         self,
-        hassjob: HassJob[..., Coroutine[Any, Any, _R]],
+        menuaijob: menuaiJob[..., Coroutine[Any, Any, _R]],
         *args: Any,
         eager_start: bool = False,
         background: bool = False,
@@ -673,76 +673,76 @@ class HomeAssistant:
 
     @overload
     @callback
-    def async_add_hass_job[_R](
+    def async_add_menuai_job[_R](
         self,
-        hassjob: HassJob[..., Coroutine[Any, Any, _R] | _R],
+        menuaijob: menuaiJob[..., Coroutine[Any, Any, _R] | _R],
         *args: Any,
         eager_start: bool = False,
         background: bool = False,
     ) -> asyncio.Future[_R] | None: ...
 
     @callback
-    def async_add_hass_job[_R](
+    def async_add_menuai_job[_R](
         self,
-        hassjob: HassJob[..., Coroutine[Any, Any, _R] | _R],
+        menuaijob: menuaiJob[..., Coroutine[Any, Any, _R] | _R],
         *args: Any,
         eager_start: bool = False,
         background: bool = False,
     ) -> asyncio.Future[_R] | None:
-        """Add a HassJob from within the event loop.
+        """Add a menuaiJob from within the event loop.
 
         If eager_start is True, coroutine functions will be scheduled eagerly.
         If background is True, the task will created as a background task.
 
         This method must be run in the event loop.
-        hassjob: HassJob to call.
+        menuaijob: menuaiJob to call.
         args: parameters for method to call.
         """
         # late import to avoid circular imports
         from .helpers import frame  # pylint: disable=import-outside-toplevel
 
         frame.report_usage(
-            "calls `async_add_hass_job`, which should be reviewed against "
-            "https://developers.home-assistant.io/blog/2024/04/07/deprecate_add_hass_job"
+            "calls `async_add_menuai_job`, which should be reviewed against "
+            "https://developers.home-assistant.io/blog/2024/04/07/deprecate_add_menuai_job"
             " for replacement options",
             core_behavior=frame.ReportBehavior.LOG,
             breaks_in_ha_version="2025.5",
         )
 
-        return self._async_add_hass_job(hassjob, *args, background=background)
+        return self._async_add_menuai_job(menuaijob, *args, background=background)
 
     @overload
     @callback
-    def _async_add_hass_job[_R](
+    def _async_add_menuai_job[_R](
         self,
-        hassjob: HassJob[..., Coroutine[Any, Any, _R]],
+        menuaijob: menuaiJob[..., Coroutine[Any, Any, _R]],
         *args: Any,
         background: bool = False,
     ) -> asyncio.Future[_R] | None: ...
 
     @overload
     @callback
-    def _async_add_hass_job[_R](
+    def _async_add_menuai_job[_R](
         self,
-        hassjob: HassJob[..., Coroutine[Any, Any, _R] | _R],
+        menuaijob: menuaiJob[..., Coroutine[Any, Any, _R] | _R],
         *args: Any,
         background: bool = False,
     ) -> asyncio.Future[_R] | None: ...
 
     @callback
-    def _async_add_hass_job[_R](
+    def _async_add_menuai_job[_R](
         self,
-        hassjob: HassJob[..., Coroutine[Any, Any, _R] | _R],
+        menuaijob: menuaiJob[..., Coroutine[Any, Any, _R] | _R],
         *args: Any,
         background: bool = False,
     ) -> asyncio.Future[_R] | None:
-        """Add a HassJob from within the event loop.
+        """Add a menuaiJob from within the event loop.
 
         If eager_start is True, coroutine functions will be scheduled eagerly.
         If background is True, the task will created as a background task.
 
         This method must be run in the event loop.
-        hassjob: HassJob to call.
+        menuaijob: menuaiJob to call.
         args: parameters for method to call.
         """
         task: asyncio.Future[_R]
@@ -750,23 +750,23 @@ class HomeAssistant:
         # if TYPE_CHECKING to avoid the overhead of constructing
         # the type used for the cast. For history see:
         # https://github.com/home-assistant/core/pull/71960
-        if hassjob.job_type is HassJobType.Coroutinefunction:
+        if menuaijob.job_type is menuaiJobType.Coroutinefunction:
             if TYPE_CHECKING:
-                hassjob = cast(HassJob[..., Coroutine[Any, Any, _R]], hassjob)
+                menuaijob = cast(menuaiJob[..., Coroutine[Any, Any, _R]], menuaijob)
             task = create_eager_task(
-                hassjob.target(*args), name=hassjob.name, loop=self.loop
+                menuaijob.target(*args), name=menuaijob.name, loop=self.loop
             )
             if task.done():
                 return task
-        elif hassjob.job_type is HassJobType.Callback:
+        elif menuaijob.job_type is menuaiJobType.Callback:
             if TYPE_CHECKING:
-                hassjob = cast(HassJob[..., _R], hassjob)
-            self.loop.call_soon(hassjob.target, *args)
+                menuaijob = cast(menuaiJob[..., _R], menuaijob)
+            self.loop.call_soon(menuaijob.target, *args)
             return None
         else:
             if TYPE_CHECKING:
-                hassjob = cast(HassJob[..., _R], hassjob)
-            task = self.loop.run_in_executor(None, hassjob.target, *args)
+                menuaijob = cast(menuaiJob[..., _R], menuaijob)
+            task = self.loop.run_in_executor(None, menuaijob.target, *args)
 
         task_bucket = self._background_tasks if background else self._tasks
         task_bucket.add(task)
@@ -804,7 +804,7 @@ class HomeAssistant:
         if self.loop_thread_id != threading.get_ident():
             from .helpers import frame  # pylint: disable=import-outside-toplevel
 
-            frame.report_non_thread_safe_operation("hass.async_create_task")
+            frame.report_non_thread_safe_operation("menuai.async_create_task")
         return self.async_create_task_internal(target, name, eager_start)
 
     @callback
@@ -845,7 +845,7 @@ class HomeAssistant:
         """Create a task from within the event loop.
 
         This type of task is for background tasks that usually run for
-        the lifetime of Home Assistant or an integration's setup.
+        the lifetime of MenuAI or an integration's setup.
 
         A background task is different from a normal task:
 
@@ -896,49 +896,49 @@ class HomeAssistant:
 
     @overload
     @callback
-    def async_run_hass_job[_R](
+    def async_run_menuai_job[_R](
         self,
-        hassjob: HassJob[..., Coroutine[Any, Any, _R]],
+        menuaijob: menuaiJob[..., Coroutine[Any, Any, _R]],
         *args: Any,
         background: bool = False,
     ) -> asyncio.Future[_R] | None: ...
 
     @overload
     @callback
-    def async_run_hass_job[_R](
+    def async_run_menuai_job[_R](
         self,
-        hassjob: HassJob[..., Coroutine[Any, Any, _R] | _R],
+        menuaijob: menuaiJob[..., Coroutine[Any, Any, _R] | _R],
         *args: Any,
         background: bool = False,
     ) -> asyncio.Future[_R] | None: ...
 
     @callback
-    def async_run_hass_job[_R](
+    def async_run_menuai_job[_R](
         self,
-        hassjob: HassJob[..., Coroutine[Any, Any, _R] | _R],
+        menuaijob: menuaiJob[..., Coroutine[Any, Any, _R] | _R],
         *args: Any,
         background: bool = False,
     ) -> asyncio.Future[_R] | None:
-        """Run a HassJob from within the event loop.
+        """Run a menuaiJob from within the event loop.
 
         This method must be run in the event loop.
 
         If background is True, the task will created as a background task.
 
-        hassjob: HassJob
+        menuaijob: menuaiJob
         args: parameters for method to call.
         """
         # This code path is performance sensitive and uses
         # if TYPE_CHECKING to avoid the overhead of constructing
         # the type used for the cast. For history see:
         # https://github.com/home-assistant/core/pull/71960
-        if hassjob.job_type is HassJobType.Callback:
+        if menuaijob.job_type is menuaiJobType.Callback:
             if TYPE_CHECKING:
-                hassjob = cast(HassJob[..., _R], hassjob)
-            hassjob.target(*args)
+                menuaijob = cast(menuaiJob[..., _R], menuaijob)
+            menuaijob.target(*args)
             return None
 
-        return self._async_add_hass_job(hassjob, *args, background=background)
+        return self._async_add_menuai_job(menuaijob, *args, background=background)
 
     @overload
     @callback
@@ -986,7 +986,7 @@ class HomeAssistant:
         if asyncio.iscoroutine(target):
             return self.async_create_task(target, eager_start=True)
 
-        return self.async_run_hass_job(HassJob(target), *args)
+        return self.async_run_menuai_job(menuaiJob(target), *args)
 
     def block_till_done(self, wait_background_tasks: bool = False) -> None:
         """Block until all pending work is done."""
@@ -1043,29 +1043,29 @@ class HomeAssistant:
     @overload
     @callback
     def async_add_shutdown_job(
-        self, hassjob: HassJob[..., Coroutine[Any, Any, Any]], *args: Any
+        self, menuaijob: menuaiJob[..., Coroutine[Any, Any, Any]], *args: Any
     ) -> CALLBACK_TYPE: ...
 
     @overload
     @callback
     def async_add_shutdown_job(
-        self, hassjob: HassJob[..., Coroutine[Any, Any, Any] | Any], *args: Any
+        self, menuaijob: menuaiJob[..., Coroutine[Any, Any, Any] | Any], *args: Any
     ) -> CALLBACK_TYPE: ...
 
     @callback
     def async_add_shutdown_job(
-        self, hassjob: HassJob[..., Coroutine[Any, Any, Any] | Any], *args: Any
+        self, menuaijob: menuaiJob[..., Coroutine[Any, Any, Any] | Any], *args: Any
     ) -> CALLBACK_TYPE:
-        """Add a HassJob which will be executed on shutdown.
+        """Add a menuaiJob which will be executed on shutdown.
 
         This method must be run in the event loop.
 
-        hassjob: HassJob
+        menuaijob: menuaiJob
         args: parameters for method to call.
 
         Returns function to remove the job.
         """
-        job_with_args = HassJobWithArgs(hassjob, args)
+        job_with_args = menuaiJobWithArgs(menuaijob, args)
         self._shutdown_jobs.append(job_with_args)
 
         @callback
@@ -1075,7 +1075,7 @@ class HomeAssistant:
         return remove_job
 
     def stop(self) -> None:
-        """Stop Home Assistant and shuts down all threads."""
+        """Stop MenuAI and shuts down all threads."""
         if self.state is CoreState.not_running:  # just ignore
             return
         # The future is never retrieved, and we only hold a reference
@@ -1085,10 +1085,10 @@ class HomeAssistant:
         )
 
     async def async_stop(self, exit_code: int = 0, *, force: bool = False) -> None:
-        """Stop Home Assistant and shuts down all threads.
+        """Stop MenuAI and shuts down all threads.
 
         The "force" flag commands async_stop to proceed regardless of
-        Home Assistant's current state. You should not set this flag
+        MenuAI's current state. You should not set this flag
         unless you're testing.
 
         This method is a coroutine.
@@ -1104,7 +1104,7 @@ class HomeAssistant:
             if self.state is CoreState.starting:
                 # This may not work
                 _LOGGER.warning(
-                    "Stopping Home Assistant before startup has completed may fail"
+                    "Stopping MenuAI before startup has completed may fail"
                 )
 
         # Stage 1 - Run shutdown jobs
@@ -1112,7 +1112,7 @@ class HomeAssistant:
             async with self.timeout.async_timeout(STOPPING_STAGE_SHUTDOWN_TIMEOUT):
                 tasks: list[asyncio.Future[Any]] = []
                 for job in self._shutdown_jobs:
-                    task_or_none = self.async_run_hass_job(job.job, *job.args)
+                    task_or_none = self.async_run_menuai_job(job.job, *job.args)
                     if not task_or_none:
                         continue
                     tasks.append(task_or_none)
@@ -1139,13 +1139,13 @@ class HomeAssistant:
         for task in self._background_tasks:
             self._tasks.add(task)
             task.add_done_callback(self._tasks.remove)
-            task.cancel("Home Assistant is stopping")
+            task.cancel("MenuAI is stopping")
         self._cancel_cancellable_timers()
 
         self.exit_code = exit_code
 
         self.set_state(CoreState.stopping)
-        self.bus.async_fire_internal(EVENT_HOMEASSISTANT_STOP)
+        self.bus.async_fire_internal(EVENT_menuai_STOP)
         try:
             async with self.timeout.async_timeout(STOP_STAGE_SHUTDOWN_TIMEOUT):
                 await self.async_block_till_done()
@@ -1157,7 +1157,7 @@ class HomeAssistant:
 
         # Stage 3 - Final write
         self.set_state(CoreState.final_write)
-        self.bus.async_fire_internal(EVENT_HOMEASSISTANT_FINAL_WRITE)
+        self.bus.async_fire_internal(EVENT_menuai_FINAL_WRITE)
         try:
             async with self.timeout.async_timeout(FINAL_WRITE_STAGE_SHUTDOWN_TIMEOUT):
                 await self.async_block_till_done()
@@ -1170,7 +1170,7 @@ class HomeAssistant:
 
         # Stage 4 - Close
         self.set_state(CoreState.not_running)
-        self.bus.async_fire_internal(EVENT_HOMEASSISTANT_CLOSE)
+        self.bus.async_fire_internal(EVENT_menuai_CLOSE)
 
         # Make a copy of running_tasks since a task can finish
         # while we are awaiting canceled tasks to get their result
@@ -1187,7 +1187,7 @@ class HomeAssistant:
                 "the stop event to prevent delaying shutdown",
                 task,
             )
-            task.cancel("Home Assistant final writes shutdown stage")
+            task.cancel("MenuAI final writes shutdown stage")
             try:
                 async with asyncio.timeout(0.1):
                     await task
@@ -1230,7 +1230,7 @@ class HomeAssistant:
             if (
                 not handle.cancelled()
                 and (args := handle._args)  # noqa: SLF001
-                and type(job := args[0]) is HassJob
+                and type(job := args[0]) is menuaiJob
                 and job.cancel_on_shutdown
             ):
                 handle.cancel()
@@ -1415,15 +1415,15 @@ def _event_repr(
 
 
 _FilterableJobType = tuple[
-    HassJob[[Event[_DataT]], Coroutine[Any, Any, None] | None],  # job
+    menuaiJob[[Event[_DataT]], Coroutine[Any, Any, None] | None],  # job
     Callable[[_DataT], bool] | None,  # event_filter
 ]
 
 
 @dataclass(slots=True)
 class _OneTimeListener(Generic[_DataT]):
-    hass: HomeAssistant
-    listener_job: HassJob[[Event[_DataT]], Coroutine[Any, Any, None] | None]
+    menuai: menuai
+    listener_job: menuaiJob[[Event[_DataT]], Coroutine[Any, Any, None] | None]
     remove: CALLBACK_TYPE | None = None
 
     @callback
@@ -1434,7 +1434,7 @@ class _OneTimeListener(Generic[_DataT]):
             return
         self.remove()
         self.remove = None
-        self.hass.async_run_hass_job(self.listener_job, event)
+        self.menuai.async_run_menuai_job(self.listener_job, event)
 
     def __repr__(self) -> str:
         """Return the representation of the listener and source module."""
@@ -1458,16 +1458,16 @@ def _verify_event_type_length_or_raise(event_type: EventType[_DataT] | str) -> N
 class EventBus:
     """Allow the firing of and listening for events."""
 
-    __slots__ = ("_debug", "_hass", "_listeners", "_match_all_listeners")
+    __slots__ = ("_debug", "_menuai", "_listeners", "_match_all_listeners")
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize a new event bus."""
         self._listeners: defaultdict[
             EventType[Any] | str, list[_FilterableJobType[Any]]
         ] = defaultdict(list)
         self._match_all_listeners: list[_FilterableJobType[Any]] = []
         self._listeners[MATCH_ALL] = self._match_all_listeners
-        self._hass = hass
+        self._menuai = menuai
         self._async_logging_changed()
         self.async_listen(EVENT_LOGGING_CHANGED, self._async_logging_changed)
 
@@ -1487,7 +1487,7 @@ class EventBus:
     @property
     def listeners(self) -> dict[EventType[Any] | str, int]:
         """Return dictionary with events and the number of listeners."""
-        return run_callback_threadsafe(self._hass.loop, self.async_listeners).result()
+        return run_callback_threadsafe(self._menuai.loop, self.async_listeners).result()
 
     def fire(
         self,
@@ -1498,7 +1498,7 @@ class EventBus:
     ) -> None:
         """Fire an event."""
         _verify_event_type_length_or_raise(event_type)
-        self._hass.loop.call_soon_threadsafe(
+        self._menuai.loop.call_soon_threadsafe(
             self.async_fire_internal, event_type, event_data, origin, context
         )
 
@@ -1516,10 +1516,10 @@ class EventBus:
         This method must be run in the event loop.
         """
         _verify_event_type_length_or_raise(event_type)
-        if self._hass.loop_thread_id != threading.get_ident():
+        if self._menuai.loop_thread_id != threading.get_ident():
             from .helpers import frame  # pylint: disable=import-outside-toplevel
 
-            frame.report_non_thread_safe_operation("hass.bus.async_fire")
+            frame.report_non_thread_safe_operation("menuai.bus.async_fire")
         return self.async_fire_internal(
             event_type, event_data, origin, context, time_fired
         )
@@ -1573,7 +1573,7 @@ class EventBus:
                 )
 
             try:
-                self._hass.async_run_hass_job(job, event)
+                self._menuai.async_run_menuai_job(job, event)
             except Exception:
                 _LOGGER.exception("Error running job: %s", job)
 
@@ -1588,12 +1588,12 @@ class EventBus:
         as event_type.
         """
         async_remove_listener = run_callback_threadsafe(
-            self._hass.loop, self.async_listen, event_type, listener
+            self._menuai.loop, self.async_listen, event_type, listener
         ).result()
 
         def remove_listener() -> None:
             """Remove the listener."""
-            run_callback_threadsafe(self._hass.loop, async_remove_listener).result()
+            run_callback_threadsafe(self._menuai.loop, async_remove_listener).result()
 
         return remove_listener
 
@@ -1631,11 +1631,11 @@ class EventBus:
             )
 
         if event_filter is not None and not is_callback_check_partial(event_filter):
-            raise HomeAssistantError(f"Event filter {event_filter} is not a callback")
-        filterable_job = (HassJob(listener, f"listen {event_type}"), event_filter)
+            raise menuaiError(f"Event filter {event_filter} is not a callback")
+        filterable_job = (menuaiJob(listener, f"listen {event_type}"), event_filter)
         if event_type == EVENT_STATE_REPORTED:
             if not event_filter:
-                raise HomeAssistantError(
+                raise menuaiError(
                     f"Event filter is required for event {event_type}"
                 )
         return self._async_listen_filterable_job(event_type, filterable_job)
@@ -1665,12 +1665,12 @@ class EventBus:
         Returns function to unsubscribe the listener.
         """
         async_remove_listener = run_callback_threadsafe(
-            self._hass.loop, self.async_listen_once, event_type, listener
+            self._menuai.loop, self.async_listen_once, event_type, listener
         ).result()
 
         def remove_listener() -> None:
             """Remove the listener."""
-            run_callback_threadsafe(self._hass.loop, async_remove_listener).result()
+            run_callback_threadsafe(self._menuai.loop, async_remove_listener).result()
 
         return remove_listener
 
@@ -1701,15 +1701,15 @@ class EventBus:
             )
 
         one_time_listener: _OneTimeListener[_DataT] = _OneTimeListener(
-            self._hass, HassJob(listener)
+            self._menuai, menuaiJob(listener)
         )
         remove = self._async_listen_filterable_job(
             event_type,
             (
-                HassJob(
+                menuaiJob(
                     one_time_listener,
                     f"onetime listen {event_type} {listener}",
-                    job_type=HassJobType.Callback,
+                    job_type=menuaiJobType.Callback,
                 ),
                 None,
             ),
@@ -2231,7 +2231,7 @@ class StateMachine:
         entity_id are added.
         """
         if entity_id in self._states_data or entity_id in self._reservations:
-            raise HomeAssistantError(
+            raise menuaiError(
                 "async_reserve must not be called once the state is in the state"
                 " machine."
             )
@@ -2428,10 +2428,10 @@ class Service:
         service: str,
         context: Context | None = None,
         supports_response: SupportsResponse = SupportsResponse.NONE,
-        job_type: HassJobType | None = None,
+        job_type: menuaiJobType | None = None,
     ) -> None:
         """Initialize a service."""
-        self.job = HassJob(func, f"service {domain}.{service}", job_type=job_type)
+        self.job = menuaiJob(func, f"service {domain}.{service}", job_type=job_type)
         self.schema = schema
         self.supports_response = supports_response
 
@@ -2439,11 +2439,11 @@ class Service:
 class ServiceCall:
     """Representation of a call to a service."""
 
-    __slots__ = ("context", "data", "domain", "hass", "return_response", "service")
+    __slots__ = ("context", "data", "domain", "menuai", "return_response", "service")
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         domain: str,
         service: str,
         data: dict[str, Any] | None = None,
@@ -2451,7 +2451,7 @@ class ServiceCall:
         return_response: bool = False,
     ) -> None:
         """Initialize a service call."""
-        self.hass = hass
+        self.menuai = menuai
         self.domain = domain
         self.service = service
         self.data = ReadOnlyDict(data or {})
@@ -2472,17 +2472,17 @@ class ServiceCall:
 class ServiceRegistry:
     """Offer the services over the eventbus."""
 
-    __slots__ = ("_hass", "_services")
+    __slots__ = ("_menuai", "_services")
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize a service registry."""
         self._services: dict[str, dict[str, Service]] = {}
-        self._hass = hass
+        self._menuai = menuai
 
     @property
     def services(self) -> dict[str, dict[str, Service]]:
         """Return dictionary with per domain a list of available services."""
-        return run_callback_threadsafe(self._hass.loop, self.async_services).result()
+        return run_callback_threadsafe(self._menuai.loop, self.async_services).result()
 
     @callback
     def async_services(self) -> dict[str, dict[str, Service]]:
@@ -2510,7 +2510,7 @@ class ServiceRegistry:
         """Return dictionary with per domain a list of available services.
 
         This method DOES NOT make a copy of the services like async_services does.
-        It is only expected to be called from the Home Assistant internals
+        It is only expected to be called from the MenuAI internals
         as a performance optimization when the caller is not going to modify the
         returned data.
 
@@ -2552,7 +2552,7 @@ class ServiceRegistry:
         Schema is called to coerce and validate the service data.
         """
         run_callback_threadsafe(
-            self._hass.loop,
+            self._menuai.loop,
             self._async_register,
             domain,
             service,
@@ -2575,7 +2575,7 @@ class ServiceRegistry:
         ],
         schema: VolSchemaType | None = None,
         supports_response: SupportsResponse = SupportsResponse.NONE,
-        job_type: HassJobType | None = None,
+        job_type: menuaiJobType | None = None,
     ) -> None:
         """Register a service.
 
@@ -2583,7 +2583,7 @@ class ServiceRegistry:
 
         This method must be run in the event loop.
         """
-        self._hass.verify_event_loop_thread("hass.services.async_register")
+        self._menuai.verify_event_loop_thread("menuai.services.async_register")
         self._async_register(
             domain, service, service_func, schema, supports_response, job_type
         )
@@ -2602,7 +2602,7 @@ class ServiceRegistry:
         ],
         schema: VolSchemaType | None = None,
         supports_response: SupportsResponse = SupportsResponse.NONE,
-        job_type: HassJobType | None = None,
+        job_type: menuaiJobType | None = None,
     ) -> None:
         """Register a service.
 
@@ -2626,14 +2626,14 @@ class ServiceRegistry:
         else:
             self._services[domain] = {service: service_obj}
 
-        self._hass.bus.async_fire_internal(
+        self._menuai.bus.async_fire_internal(
             EVENT_SERVICE_REGISTERED, {ATTR_DOMAIN: domain, ATTR_SERVICE: service}
         )
 
     def remove(self, domain: str, service: str) -> None:
         """Remove a registered service from service handler."""
         run_callback_threadsafe(
-            self._hass.loop, self._async_remove, domain, service
+            self._menuai.loop, self._async_remove, domain, service
         ).result()
 
     @callback
@@ -2642,7 +2642,7 @@ class ServiceRegistry:
 
         This method must be run in the event loop.
         """
-        self._hass.verify_event_loop_thread("hass.services.async_remove")
+        self._menuai.verify_event_loop_thread("menuai.services.async_remove")
         self._async_remove(domain, service)
 
     @callback
@@ -2663,7 +2663,7 @@ class ServiceRegistry:
         if not self._services[domain]:
             self._services.pop(domain)
 
-        self._hass.bus.async_fire_internal(
+        self._menuai.bus.async_fire_internal(
             EVENT_SERVICE_REMOVED, {ATTR_DOMAIN: domain, ATTR_SERVICE: service}
         )
 
@@ -2691,7 +2691,7 @@ class ServiceRegistry:
                 target,
                 return_response,
             ),
-            self._hass.loop,
+            self._menuai.loop,
         ).result()
 
     async def async_call(
@@ -2777,10 +2777,10 @@ class ServiceRegistry:
             processed_data = service_data
 
         service_call = ServiceCall(
-            self._hass, domain, service, processed_data, context, return_response
+            self._menuai, domain, service, processed_data, context, return_response
         )
 
-        self._hass.bus.async_fire_internal(
+        self._menuai.bus.async_fire_internal(
             EVENT_CALL_SERVICE,
             {
                 ATTR_DOMAIN: domain,
@@ -2792,7 +2792,7 @@ class ServiceRegistry:
 
         coro = self._execute_service(handler, service_call)
         if not blocking:
-            self._hass.async_create_task_internal(
+            self._menuai.async_create_task_internal(
                 self._run_service_call_catch_exceptions(coro, service_call),
                 f"service call background {service_call.domain}.{service_call.service}",
                 eager_start=True,
@@ -2803,7 +2803,7 @@ class ServiceRegistry:
         if not return_response:
             return None
         if not isinstance(response_data, dict):
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="service_reponse_invalid",
                 translation_placeholders={
@@ -2837,19 +2837,19 @@ class ServiceRegistry:
         """Execute a service."""
         job = handler.job
         target = job.target
-        if job.job_type is HassJobType.Coroutinefunction:
+        if job.job_type is menuaiJobType.Coroutinefunction:
             if TYPE_CHECKING:
                 target = cast(
                     Callable[..., Coroutine[Any, Any, ServiceResponse]], target
                 )
             return await target(service_call)
-        if job.job_type is HassJobType.Callback:
+        if job.job_type is menuaiJobType.Callback:
             if TYPE_CHECKING:
                 target = cast(Callable[..., ServiceResponse], target)
             return target(service_call)
         if TYPE_CHECKING:
             target = cast(Callable[..., ServiceResponse], target)
-        return await self._hass.async_add_executor_job(target, service_call)
+        return await self._menuai.async_add_executor_job(target, service_call)
 
 
 # These can be removed if no deprecated constant are in this module anymore

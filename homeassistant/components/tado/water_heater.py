@@ -5,15 +5,15 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.water_heater import (
+from menuai.components.water_heater import (
     WaterHeaterEntity,
     WaterHeaterEntityFeature,
 )
-from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv, entity_platform
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import VolDictType
+from menuai.const import ATTR_TEMPERATURE, UnitOfTemperature
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv, entity_platform
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.typing import VolDictType
 
 from . import TadoConfigEntry
 from .const import (
@@ -61,7 +61,7 @@ WATER_HEATER_TIMER_SCHEMA: VolDictType = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: TadoConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -82,7 +82,7 @@ async def async_setup_entry(
     async_add_entities(entities, True)
 
     manage_water_heater_fallback_issue(
-        hass=hass,
+        menuai=menuai,
         water_heater_names=[e.zone_name for e in entities],
         integration_overlay_fallback=coordinator.fallback,
     )

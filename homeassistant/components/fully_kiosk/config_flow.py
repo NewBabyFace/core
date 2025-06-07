@@ -11,18 +11,18 @@ from fullykiosk import FullyKiosk
 from fullykiosk.exceptions import FullyKioskError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import (
     CONF_HOST,
     CONF_MAC,
     CONF_PASSWORD,
     CONF_SSL,
     CONF_VERIFY_SSL,
 )
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
-from homeassistant.helpers.service_info.mqtt import MqttServiceInfo
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.device_registry import format_mac
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.helpers.service_info.mqtt import MqttServiceInfo
 
 from .const import DEFAULT_PORT, DOMAIN, LOGGER
 
@@ -46,7 +46,7 @@ class FullyKioskConfigFlow(ConfigFlow, domain=DOMAIN):
         description_placeholders: dict[str, str] | Any = None,
     ) -> ConfigFlowResult | None:
         fully = FullyKiosk(
-            async_get_clientsession(self.hass),
+            async_get_clientsession(self.menuai),
             host,
             DEFAULT_PORT,
             user_input[CONF_PASSWORD],
@@ -120,12 +120,12 @@ class FullyKioskConfigFlow(ConfigFlow, domain=DOMAIN):
 
         for entry in self._async_current_entries():
             if entry.data[CONF_MAC] == mac:
-                self.hass.config_entries.async_update_entry(
+                self.menuai.config_entries.async_update_entry(
                     entry,
                     data=entry.data | {CONF_HOST: discovery_info.ip},
                 )
-                self.hass.async_create_task(
-                    self.hass.config_entries.async_reload(entry.entry_id)
+                self.menuai.async_create_task(
+                    self.menuai.config_entries.async_reload(entry.entry_id)
                 )
                 return self.async_abort(reason="already_configured")
 

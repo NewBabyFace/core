@@ -9,11 +9,11 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 from aiolifx.aiolifx import Light
 
-from homeassistant.components.lifx import discovery
-from homeassistant.components.lifx.const import TARGET_ANY
+from menuai.components.lifx import discovery
+from menuai.components.lifx.const import TARGET_ANY
 
-MODULE = "homeassistant.components.lifx"
-MODULE_CONFIG_FLOW = "homeassistant.components.lifx.config_flow"
+MODULE = "menuai.components.lifx"
+MODULE_CONFIG_FLOW = "menuai.components.lifx.config_flow"
 IP_ADDRESS = "127.0.0.1"
 LABEL = "My Bulb"
 GROUP = "My Group"
@@ -239,7 +239,7 @@ def _patch_device(device: Light | None = None, no_device: bool = False):
 
     @contextmanager
     def _patcher():
-        with patch("homeassistant.components.lifx.LIFXConnection", MockLifxConnecton):
+        with patch("menuai.components.lifx.LIFXConnection", MockLifxConnecton):
             yield
 
     return _patcher()
@@ -270,7 +270,7 @@ def _patch_discovery(device: Light | None = None, no_device: bool = False):
         with (
             patch.object(discovery, "DEFAULT_TIMEOUT", 0),
             patch(
-                "homeassistant.components.lifx.discovery.LifxDiscovery",
+                "menuai.components.lifx.discovery.LifxDiscovery",
                 MockLifxDiscovery,
             ),
         ):
@@ -304,7 +304,7 @@ def _patch_config_flow_try_connect(
     @contextmanager
     def _patcher():
         with patch(
-            "homeassistant.components.lifx.config_flow.LIFXConnection",
+            "menuai.components.lifx.config_flow.LIFXConnection",
             MockLifxConnection,
         ):
             yield

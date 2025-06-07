@@ -7,13 +7,13 @@ from pysmlight import Info
 from pysmlight.exceptions import SmlightAuthError, SmlightConnectionError
 import pytest
 
-from homeassistant.components.smlight.const import DOMAIN
-from homeassistant.config_entries import SOURCE_DHCP, SOURCE_USER, SOURCE_ZEROCONF
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.components.smlight.const import DOMAIN
+from menuai.config_entries import SOURCE_DHCP, SOURCE_USER, SOURCE_ZEROCONF
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.dhcp import DhcpServiceInfo
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .conftest import (
     MOCK_DEVICE_NAME,
@@ -47,16 +47,16 @@ DISCOVERY_INFO_LEGACY = ZeroconfServiceInfo(
 
 
 @pytest.mark.usefixtures("mock_smlight_client")
-async def test_user_flow(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
+async def test_user_flow(menuai: menuai, mock_setup_entry: AsyncMock) -> None:
     """Test the full manual user flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_HOST: MOCK_HOSTNAME,
@@ -73,19 +73,19 @@ async def test_user_flow(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> No
 
 
 async def test_user_flow_auth(
-    hass: HomeAssistant, mock_smlight_client: MagicMock, mock_setup_entry: AsyncMock
+    menuai: menuai, mock_smlight_client: MagicMock, mock_setup_entry: AsyncMock
 ) -> None:
     """Test the full manual user flow with authentication."""
 
     mock_smlight_client.check_auth_needed.return_value = True
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_HOST: MOCK_HOSTNAME,
@@ -94,7 +94,7 @@ async def test_user_flow_auth(
     assert result2["type"] is FlowResultType.FORM
     assert result2["step_id"] == "auth"
 
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_USERNAME: MOCK_USERNAME,
@@ -113,13 +113,13 @@ async def test_user_flow_auth(
 
 
 async def test_zeroconf_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_smlight_client: MagicMock,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test the zeroconf flow."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_ZEROCONF}, data=DISCOVERY_INFO
     )
 
@@ -127,12 +127,12 @@ async def test_zeroconf_flow(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "confirm_discovery"
 
-    progress = hass.config_entries.flow.async_progress()
+    progress = menuai.config_entries.flow.async_progress()
     assert len(progress) == 1
     assert progress[0]["flow_id"] == result["flow_id"]
     assert progress[0]["context"]["confirm_only"] is True
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
 
@@ -149,14 +149,14 @@ async def test_zeroconf_flow(
 
 
 async def test_zeroconf_flow_auth(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_smlight_client: MagicMock,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test the full zeroconf flow including authentication."""
     mock_smlight_client.check_auth_needed.return_value = True
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_ZEROCONF}, data=DISCOVERY_INFO
     )
 
@@ -164,23 +164,23 @@ async def test_zeroconf_flow_auth(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "confirm_discovery"
 
-    progress = hass.config_entries.flow.async_progress()
+    progress = menuai.config_entries.flow.async_progress()
     assert len(progress) == 1
     assert progress[0]["flow_id"] == result["flow_id"]
     assert progress[0]["context"]["confirm_only"] is True
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["step_id"] == "auth"
 
-    progress2 = hass.config_entries.flow.async_progress()
+    progress2 = menuai.config_entries.flow.async_progress()
     assert len(progress2) == 1
     assert progress2[0]["flow_id"] == result["flow_id"]
 
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
             CONF_USERNAME: MOCK_USERNAME,
@@ -203,7 +203,7 @@ async def test_zeroconf_flow_auth(
 
 
 async def test_zeroconf_unsupported_abort(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_smlight_client: MagicMock,
 ) -> None:
@@ -211,7 +211,7 @@ async def test_zeroconf_unsupported_abort(
     mock_smlight_client.get_info.side_effect = None
     mock_smlight_client.get_info.return_value = Info(model="SLZB-X")
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_ZEROCONF}, data=DISCOVERY_INFO
     )
 
@@ -219,7 +219,7 @@ async def test_zeroconf_unsupported_abort(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "confirm_discovery"
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
 
@@ -228,7 +228,7 @@ async def test_zeroconf_unsupported_abort(
 
 
 async def test_user_unsupported_abort(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_smlight_client: MagicMock,
 ) -> None:
@@ -236,14 +236,14 @@ async def test_user_unsupported_abort(
     mock_smlight_client.get_info.side_effect = None
     mock_smlight_client.get_info.return_value = Info(model="SLZB-X")
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_HOST: MOCK_HOST,
@@ -255,14 +255,14 @@ async def test_user_unsupported_abort(
 
 
 async def test_user_unsupported_device_abort_auth(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_smlight_client: MagicMock,
 ) -> None:
     """Test we abort user flow if unsupported device (with auth)."""
     mock_smlight_client.check_auth_needed.return_value = True
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={
@@ -276,7 +276,7 @@ async def test_user_unsupported_device_abort_auth(
     mock_smlight_client.get_info.side_effect = None
     mock_smlight_client.get_info.return_value = Info(model="SLZB-X")
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_USERNAME: MOCK_USERNAME,
@@ -290,13 +290,13 @@ async def test_user_unsupported_device_abort_auth(
 
 @pytest.mark.usefixtures("mock_smlight_client")
 async def test_user_device_exists_abort(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test we abort user flow if device already configured."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={
@@ -310,27 +310,27 @@ async def test_user_device_exists_abort(
 
 @pytest.mark.usefixtures("mock_smlight_client")
 async def test_user_flow_can_override_discovery(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test manual user flow can override discovery in progress."""
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_ZEROCONF}, data=DISCOVERY_INFO
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "confirm_discovery"
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == SOURCE_USER
     assert result["errors"] == {}
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_HOST: MOCK_HOST,
@@ -348,12 +348,12 @@ async def test_user_flow_can_override_discovery(
 
 @pytest.mark.usefixtures("mock_smlight_client")
 async def test_zeroconf_device_exists_abort(
-    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+    menuai: menuai, mock_config_entry: MockConfigEntry
 ) -> None:
     """Test we abort zeroconf flow if device already configured."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_ZEROCONF},
         data=DISCOVERY_INFO,
@@ -364,13 +364,13 @@ async def test_zeroconf_device_exists_abort(
 
 
 async def test_user_invalid_auth(
-    hass: HomeAssistant, mock_smlight_client: MagicMock, mock_setup_entry: AsyncMock
+    menuai: menuai, mock_smlight_client: MagicMock, mock_setup_entry: AsyncMock
 ) -> None:
     """Test we handle invalid auth."""
     mock_smlight_client.check_auth_needed.return_value = True
     mock_smlight_client.authenticate.side_effect = SmlightAuthError
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_USER},
         data={
@@ -381,7 +381,7 @@ async def test_user_invalid_auth(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "auth"
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_USERNAME: "test",
@@ -395,7 +395,7 @@ async def test_user_invalid_auth(
 
     mock_smlight_client.authenticate.side_effect = None
 
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_USERNAME: "test",
@@ -416,16 +416,16 @@ async def test_user_invalid_auth(
 
 
 async def test_user_cannot_connect(
-    hass: HomeAssistant, mock_smlight_client: MagicMock, mock_setup_entry: AsyncMock
+    menuai: menuai, mock_smlight_client: MagicMock, mock_setup_entry: AsyncMock
 ) -> None:
     """Test we handle user cannot connect error."""
     mock_smlight_client.check_auth_needed.side_effect = SmlightConnectionError
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_HOST: "unknown.local",
@@ -438,7 +438,7 @@ async def test_user_cannot_connect(
 
     mock_smlight_client.check_auth_needed.side_effect = None
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_HOST: MOCK_HOST,
@@ -453,16 +453,16 @@ async def test_user_cannot_connect(
 
 
 async def test_auth_cannot_connect(
-    hass: HomeAssistant, mock_smlight_client: MagicMock
+    menuai: menuai, mock_smlight_client: MagicMock
 ) -> None:
     """Test we abort auth step on cannot connect error."""
     mock_smlight_client.check_auth_needed.return_value = True
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
-    result = await hass.config_entries.flow.async_configure(
+    result = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_HOST: MOCK_HOST,
@@ -474,7 +474,7 @@ async def test_auth_cannot_connect(
 
     mock_smlight_client.check_auth_needed.side_effect = SmlightConnectionError
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_USERNAME: MOCK_USERNAME,
@@ -487,12 +487,12 @@ async def test_auth_cannot_connect(
 
 
 async def test_zeroconf_cannot_connect(
-    hass: HomeAssistant, mock_smlight_client: MagicMock
+    menuai: menuai, mock_smlight_client: MagicMock
 ) -> None:
     """Test we abort flow on zeroconf cannot connect error."""
     mock_smlight_client.check_auth_needed.side_effect = SmlightConnectionError
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_ZEROCONF},
         data=DISCOVERY_INFO,
@@ -500,7 +500,7 @@ async def test_zeroconf_cannot_connect(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "confirm_discovery"
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {},
     )
@@ -510,12 +510,12 @@ async def test_zeroconf_cannot_connect(
 
 
 async def test_zeroconf_legacy_cannot_connect(
-    hass: HomeAssistant, mock_smlight_client: MagicMock
+    menuai: menuai, mock_smlight_client: MagicMock
 ) -> None:
     """Test we abort flow on zeroconf discovery unsupported firmware."""
     mock_smlight_client.get_info.side_effect = SmlightConnectionError
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_ZEROCONF},
         data=DISCOVERY_INFO_LEGACY,
@@ -527,10 +527,10 @@ async def test_zeroconf_legacy_cannot_connect(
 
 @pytest.mark.usefixtures("mock_smlight_client")
 async def test_zeroconf_legacy_mac(
-    hass: HomeAssistant, mock_smlight_client: MagicMock, mock_setup_entry: AsyncMock
+    menuai: menuai, mock_smlight_client: MagicMock, mock_setup_entry: AsyncMock
 ) -> None:
     """Test we can get unique id MAC address for older firmwares."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_ZEROCONF},
         data=DISCOVERY_INFO_LEGACY,
@@ -538,7 +538,7 @@ async def test_zeroconf_legacy_mac(
 
     assert result["description_placeholders"] == {"host": MOCK_DEVICE_NAME}
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
     )
 
@@ -556,17 +556,17 @@ async def test_zeroconf_legacy_mac(
 
 @pytest.mark.usefixtures("mock_smlight_client")
 async def test_zeroconf_updates_host(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test zeroconf discovery updates host ip."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     service_info = DISCOVERY_INFO
     service_info.ip_address = ip_address("192.168.1.164")
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_ZEROCONF}, data=service_info
     )
 
@@ -578,19 +578,19 @@ async def test_zeroconf_updates_host(
 
 @pytest.mark.usefixtures("mock_smlight_client")
 async def test_dhcp_discovery_updates_host(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test dhcp discovery updates host ip."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     service_info = DhcpServiceInfo(
         ip="192.168.1.164",
         hostname="slzb-06",
         macaddress="aabbccddeeff",
     )
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_DHCP}, data=service_info
     )
 
@@ -602,19 +602,19 @@ async def test_dhcp_discovery_updates_host(
 
 @pytest.mark.usefixtures("mock_smlight_client")
 async def test_dhcp_discovery_aborts(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_setup_entry: AsyncMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
     """Test dhcp discovery updates host ip."""
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
     service_info = DhcpServiceInfo(
         ip="192.168.1.161",
         hostname="slzb-06",
         macaddress="000000000000",
     )
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_DHCP}, data=service_info
     )
 
@@ -625,21 +625,21 @@ async def test_dhcp_discovery_aborts(
 
 
 async def test_reauth_flow(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_smlight_client: MagicMock,
     mock_config_entry: MockConfigEntry,
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test reauth flow completes successfully."""
     mock_smlight_client.check_auth_needed.return_value = True
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await mock_config_entry.start_reauth_flow(hass)
+    result = await mock_config_entry.start_reauth_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_USERNAME: MOCK_USERNAME,
@@ -656,11 +656,11 @@ async def test_reauth_flow(
     }
 
     assert len(mock_smlight_client.authenticate.mock_calls) == 1
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
 
 
 async def test_reauth_auth_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_smlight_client: MagicMock,
     mock_config_entry: MockConfigEntry,
     mock_setup_entry: AsyncMock,
@@ -669,13 +669,13 @@ async def test_reauth_auth_error(
     mock_smlight_client.check_auth_needed.return_value = True
     mock_smlight_client.authenticate.side_effect = SmlightAuthError
 
-    mock_config_entry.add_to_hass(hass)
-    result = await mock_config_entry.start_reauth_flow(hass)
+    mock_config_entry.add_to_menuai(menuai)
+    result = await mock_config_entry.start_reauth_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_USERNAME: MOCK_USERNAME,
@@ -687,7 +687,7 @@ async def test_reauth_auth_error(
     assert result2["step_id"] == "reauth_confirm"
 
     mock_smlight_client.authenticate.side_effect = None
-    result3 = await hass.config_entries.flow.async_configure(
+    result3 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_USERNAME: MOCK_USERNAME,
@@ -705,11 +705,11 @@ async def test_reauth_auth_error(
     }
 
     assert len(mock_smlight_client.authenticate.mock_calls) == 2
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+    assert len(menuai.config_entries.async_entries(DOMAIN)) == 1
 
 
 async def test_reauth_connect_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_smlight_client: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
@@ -717,14 +717,14 @@ async def test_reauth_connect_error(
     mock_smlight_client.check_auth_needed.return_value = True
     mock_smlight_client.authenticate.side_effect = SmlightConnectionError
 
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
 
-    result = await mock_config_entry.start_reauth_flow(hass)
+    result = await mock_config_entry.start_reauth_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
 
-    result2 = await hass.config_entries.flow.async_configure(
+    result2 = await menuai.config_entries.flow.async_configure(
         result["flow_id"],
         {
             CONF_USERNAME: MOCK_USERNAME,

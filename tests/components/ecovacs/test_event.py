@@ -7,12 +7,12 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.ecovacs.const import DOMAIN
-from homeassistant.components.ecovacs.controller import EcovacsController
-from homeassistant.components.event import ATTR_EVENT_TYPE
-from homeassistant.const import STATE_UNKNOWN, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.components.ecovacs.const import DOMAIN
+from menuai.components.ecovacs.controller import EcovacsController
+from menuai.components.event import ATTR_EVENT_TYPE
+from menuai.const import STATE_UNKNOWN, Platform
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 from .util import notify_and_wait
 
@@ -26,7 +26,7 @@ def platforms() -> Platform | list[Platform]:
 
 
 async def test_last_job(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
@@ -36,7 +36,7 @@ async def test_last_job(
     """Test last job event entity."""
     freezer.move_to("2024-03-20T00:00:00+00:00")
     entity_id = "event.ozmo_950_last_job"
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state.state == STATE_UNKNOWN
 
     assert (entity_entry := entity_registry.async_get(state.entity_id))
@@ -50,35 +50,35 @@ async def test_last_job(
 
     event_bus = device.events
     await notify_and_wait(
-        hass,
+        menuai,
         event_bus,
         ReportStatsEvent(10, 5, "spotArea", "1", CleanJobStatus.FINISHED, [1, 2]),
     )
 
-    assert (state := hass.states.get(state.entity_id))
+    assert (state := menuai.states.get(state.entity_id))
     assert state == snapshot(name=f"{entity_id}-state")
 
     freezer.tick(timedelta(minutes=5))
     await notify_and_wait(
-        hass,
+        menuai,
         event_bus,
         ReportStatsEvent(
             100, 50, "spotArea", "2", CleanJobStatus.FINISHED_WITH_WARNINGS, [2, 3]
         ),
     )
 
-    assert (state := hass.states.get(state.entity_id))
+    assert (state := menuai.states.get(state.entity_id))
     assert state.state == "2024-03-20T00:05:00.000+00:00"
     assert state.attributes[ATTR_EVENT_TYPE] == "finished_with_warnings"
 
     freezer.tick(timedelta(minutes=5))
     await notify_and_wait(
-        hass,
+        menuai,
         event_bus,
         ReportStatsEvent(0, 1, "spotArea", "3", CleanJobStatus.MANUALLY_STOPPED, [1]),
     )
 
-    assert (state := hass.states.get(state.entity_id))
+    assert (state := menuai.states.get(state.entity_id))
     assert state.state == "2024-03-20T00:10:00.000+00:00"
     assert state.attributes[ATTR_EVENT_TYPE] == "manually_stopped"
 
@@ -86,11 +86,11 @@ async def test_last_job(
     for status in (CleanJobStatus.NO_STATUS, CleanJobStatus.CLEANING):
         # we should not trigger on these statuses
         await notify_and_wait(
-            hass,
+            menuai,
             event_bus,
             ReportStatsEvent(12, 11, "spotArea", "4", status, [1, 2, 3]),
         )
 
-        assert (state := hass.states.get(state.entity_id))
+        assert (state := menuai.states.get(state.entity_id))
         assert state.state == "2024-03-20T00:10:00.000+00:00"
         assert state.attributes[ATTR_EVENT_TYPE] == "manually_stopped"

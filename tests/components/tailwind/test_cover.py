@@ -12,16 +12,16 @@ from gotailwind import (
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.cover import (
+from menuai.components.cover import (
     DOMAIN as COVER_DOMAIN,
     SERVICE_CLOSE_COVER,
     SERVICE_OPEN_COVER,
 )
-from homeassistant.components.tailwind.const import DOMAIN
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from menuai.components.tailwind.const import DOMAIN
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr, entity_registry as er
 
 pytestmark = pytest.mark.usefixtures("init_integration")
 
@@ -34,14 +34,14 @@ pytestmark = pytest.mark.usefixtures("init_integration")
     ],
 )
 async def test_cover_entities(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
     entity_id: str,
 ) -> None:
     """Test cover entities provided by the Tailwind integration."""
-    assert (state := hass.states.get(entity_id))
+    assert (state := menuai.states.get(entity_id))
     assert state == snapshot
 
     assert (entity_entry := entity_registry.async_get(state.entity_id))
@@ -53,12 +53,12 @@ async def test_cover_entities(
 
 
 async def test_cover_operations(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_tailwind: MagicMock,
 ) -> None:
     """Test operating the doors."""
     assert len(mock_tailwind.operate.mock_calls) == 0
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_OPEN_COVER,
         {
@@ -71,7 +71,7 @@ async def test_cover_operations(
         door=ANY, operation=TailwindDoorOperationCommand.OPEN
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_CLOSE_COVER,
         {
@@ -87,8 +87,8 @@ async def test_cover_operations(
     # Test door disabled error handling
     mock_tailwind.operate.side_effect = TailwindDoorDisabledError("Door disabled")
 
-    with pytest.raises(HomeAssistantError) as excinfo:
-        await hass.services.async_call(
+    with pytest.raises(menuaiError) as excinfo:
+        await menuai.services.async_call(
             COVER_DOMAIN,
             SERVICE_OPEN_COVER,
             {
@@ -101,8 +101,8 @@ async def test_cover_operations(
     assert excinfo.value.translation_domain == DOMAIN
     assert excinfo.value.translation_key == "door_disabled"
 
-    with pytest.raises(HomeAssistantError) as excinfo:
-        await hass.services.async_call(
+    with pytest.raises(menuaiError) as excinfo:
+        await menuai.services.async_call(
             COVER_DOMAIN,
             SERVICE_CLOSE_COVER,
             {
@@ -118,8 +118,8 @@ async def test_cover_operations(
     # Test door locked out error handling
     mock_tailwind.operate.side_effect = TailwindDoorLockedOutError("Door locked out")
 
-    with pytest.raises(HomeAssistantError) as excinfo:
-        await hass.services.async_call(
+    with pytest.raises(menuaiError) as excinfo:
+        await menuai.services.async_call(
             COVER_DOMAIN,
             SERVICE_OPEN_COVER,
             {
@@ -132,8 +132,8 @@ async def test_cover_operations(
     assert excinfo.value.translation_domain == DOMAIN
     assert excinfo.value.translation_key == "door_locked_out"
 
-    with pytest.raises(HomeAssistantError) as excinfo:
-        await hass.services.async_call(
+    with pytest.raises(menuaiError) as excinfo:
+        await menuai.services.async_call(
             COVER_DOMAIN,
             SERVICE_CLOSE_COVER,
             {
@@ -149,8 +149,8 @@ async def test_cover_operations(
     # Test door error handling
     mock_tailwind.operate.side_effect = TailwindError("Some error")
 
-    with pytest.raises(HomeAssistantError) as excinfo:
-        await hass.services.async_call(
+    with pytest.raises(menuaiError) as excinfo:
+        await menuai.services.async_call(
             COVER_DOMAIN,
             SERVICE_OPEN_COVER,
             {
@@ -166,8 +166,8 @@ async def test_cover_operations(
     assert excinfo.value.translation_domain == DOMAIN
     assert excinfo.value.translation_key == "communication_error"
 
-    with pytest.raises(HomeAssistantError) as excinfo:
-        await hass.services.async_call(
+    with pytest.raises(menuaiError) as excinfo:
+        await menuai.services.async_call(
             COVER_DOMAIN,
             SERVICE_CLOSE_COVER,
             {
@@ -189,7 +189,7 @@ async def test_cover_operations(
     )
 
     # This call should not raise an exception
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_OPEN_COVER,
         {
@@ -199,7 +199,7 @@ async def test_cover_operations(
     )
 
     # This call should not raise an exception
-    await hass.services.async_call(
+    await menuai.services.async_call(
         COVER_DOMAIN,
         SERVICE_CLOSE_COVER,
         {

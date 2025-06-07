@@ -11,19 +11,19 @@ from aiohomekit.model.services import Service, ServicesTypes
 from aiohomekit.testing import FakeController
 import pytest
 
-from homeassistant.components.homekit_controller.const import (
+from menuai.components.homekit_controller.const import (
     DEBOUNCE_COOLDOWN,
     DOMAIN,
     IDENTIFIER_ACCESSORY_ID,
     IDENTIFIER_LEGACY_ACCESSORY_ID,
     IDENTIFIER_LEGACY_SERIAL_NUMBER,
 )
-from homeassistant.components.thread import async_add_dataset, dataset_store
-from homeassistant.const import STATE_OFF, STATE_UNAVAILABLE
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.entity_component import async_update_entity
+from menuai.components.thread import async_add_dataset, dataset_store
+from menuai.const import STATE_OFF, STATE_UNAVAILABLE
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.entity_component import async_update_entity
 
 from .common import (
     setup_accessories_from_file,
@@ -105,7 +105,7 @@ DEVICE_MIGRATION_TESTS = [
 
 @pytest.mark.parametrize("variant", DEVICE_MIGRATION_TESTS)
 async def test_migrate_device_id_no_serial_skip_if_other_owner(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     variant: DeviceMigrationTest,
 ) -> None:
@@ -115,7 +115,7 @@ async def test_migrate_device_id_no_serial_skip_if_other_owner(
     config entry. It should be ignored.
     """
     entry = MockConfigEntry()
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     bridge = device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
@@ -127,8 +127,8 @@ async def test_migrate_device_id_no_serial_skip_if_other_owner(
         hw_version="0101.2136.0344",
     )
 
-    accessories = await setup_accessories_from_file(hass, variant.fixture)
-    await setup_test_accessories(hass, accessories)
+    accessories = await setup_accessories_from_file(menuai, variant.fixture)
+    await setup_test_accessories(menuai, accessories)
 
     bridge = device_registry.async_get(bridge.id)
 
@@ -138,14 +138,14 @@ async def test_migrate_device_id_no_serial_skip_if_other_owner(
 
 @pytest.mark.parametrize("variant", DEVICE_MIGRATION_TESTS)
 async def test_migrate_device_id_no_serial(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     variant: DeviceMigrationTest,
 ) -> None:
     """Test that a Ryse smart bridge with four shades can be migrated correctly in HA."""
-    accessories = await setup_accessories_from_file(hass, variant.fixture)
+    accessories = await setup_accessories_from_file(menuai, variant.fixture)
 
-    fake_controller = await setup_platform(hass)
+    fake_controller = await setup_platform(menuai)
     await fake_controller.add_paired_device(accessories, "00:00:00:00:00:00")
     config_entry = MockConfigEntry(
         version=1,
@@ -154,7 +154,7 @@ async def test_migrate_device_id_no_serial(
         data={"AccessoryPairingID": "00:00:00:00:00:00"},
         title="test",
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     device = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
@@ -166,8 +166,8 @@ async def test_migrate_device_id_no_serial(
         hw_version="99999999999",
     )
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     device = device_registry.async_get(device.id)
 
@@ -175,11 +175,11 @@ async def test_migrate_device_id_no_serial(
     assert device.manufacturer == variant.manufacturer
 
 
-async def test_migrate_ble_unique_id(hass: HomeAssistant) -> None:
+async def test_migrate_ble_unique_id(menuai: menuai) -> None:
     """Test that a config entry with incorrect unique_id is repaired."""
-    accessories = await setup_accessories_from_file(hass, "anker_eufycam.json")
+    accessories = await setup_accessories_from_file(menuai, "anker_eufycam.json")
 
-    fake_controller = await setup_platform(hass)
+    fake_controller = await setup_platform(menuai)
     await fake_controller.add_paired_device(accessories, "02:03:EF:02:03:EF")
     config_entry = MockConfigEntry(
         version=1,
@@ -189,21 +189,21 @@ async def test_migrate_ble_unique_id(hass: HomeAssistant) -> None:
         title="test",
         unique_id="01:02:AB:01:02:AB",
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     assert config_entry.unique_id == "01:02:AB:01:02:AB"
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert config_entry.unique_id == "02:03:ef:02:03:ef"
 
 
-async def test_thread_provision_no_creds(hass: HomeAssistant) -> None:
+async def test_thread_provision_no_creds(menuai: menuai) -> None:
     """Test that we don't migrate to thread when there are no creds available."""
-    accessories = await setup_accessories_from_file(hass, "nanoleaf_strip_nl55.json")
+    accessories = await setup_accessories_from_file(menuai, "nanoleaf_strip_nl55.json")
 
-    fake_controller = await setup_platform(hass)
+    fake_controller = await setup_platform(menuai)
     await fake_controller.add_paired_device(accessories, "02:03:EF:02:03:EF")
     config_entry = MockConfigEntry(
         version=1,
@@ -213,15 +213,15 @@ async def test_thread_provision_no_creds(hass: HomeAssistant) -> None:
         title="test",
         unique_id="02:03:ef:02:03:ef",
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     fake_controller.transport_type = TransportType.BLE
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             "button",
             "press",
             {
@@ -232,23 +232,23 @@ async def test_thread_provision_no_creds(hass: HomeAssistant) -> None:
 
 
 async def test_thread_provision(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    menuai: menuai, entity_registry: er.EntityRegistry
 ) -> None:
     """Test that a when a thread provision works the config entry is updated."""
     await async_add_dataset(
-        hass,
+        menuai,
         "Tests",
         "0E080000000000010000000300000F35060004001FFFE0020811111111222222220708FDAD70BF"
         "E5AA15DD051000112233445566778899AABBCCDDEEFF030E4F70656E54687265616444656D6F01"
         "0212340410445F2B5CA6F2A93A55CE570A70EFEECB0C0402A0F7F8",
     )
-    store = await dataset_store.async_get_store(hass)
+    store = await dataset_store.async_get_store(menuai)
     dataset_id = list(store.datasets.values())[0].id
     store.preferred_dataset = dataset_id
 
-    accessories = await setup_accessories_from_file(hass, "nanoleaf_strip_nl55.json")
+    accessories = await setup_accessories_from_file(menuai, "nanoleaf_strip_nl55.json")
 
-    fake_controller = await setup_platform(hass)
+    fake_controller = await setup_platform(menuai)
     await fake_controller.add_paired_device(accessories, "00:00:00:00:00:00")
     config_entry = MockConfigEntry(
         version=1,
@@ -258,7 +258,7 @@ async def test_thread_provision(
         title="test",
         unique_id="00:00:00:00:00:00",
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     fake_controller.transport_type = TransportType.BLE
 
@@ -270,17 +270,17 @@ async def test_thread_provision(
     discovery.description.address = "127.0.0.1"
     discovery.description.port = 53
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(
+    assert menuai.states.get(
         "button.nanoleaf_strip_3b32_provision_preferred_thread_credentials"
     )
     assert entity_registry.async_get(
         "button.nanoleaf_strip_3b32_provision_preferred_thread_credentials"
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         "button",
         "press",
         {
@@ -288,11 +288,11 @@ async def test_thread_provision(
         },
         blocking=True,
     )
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     assert config_entry.data["Connection"] == "CoAP"
 
-    assert not hass.states.get(
+    assert not menuai.states.get(
         "button.nanoleaf_strip_3b32_provision_preferred_thread_credentials"
     )
     assert not entity_registry.async_get(
@@ -300,19 +300,19 @@ async def test_thread_provision(
     )
 
 
-async def test_thread_provision_migration_failed(hass: HomeAssistant) -> None:
+async def test_thread_provision_migration_failed(menuai: menuai) -> None:
     """Test that when a device 'migrates' but doesn't show up in CoAP, we remain in BLE mode."""
     await async_add_dataset(
-        hass,
+        menuai,
         "Tests",
         "0E080000000000010000000300000F35060004001FFFE0020811111111222222220708FDAD70BF"
         "E5AA15DD051000112233445566778899AABBCCDDEEFF030E4F70656E54687265616444656D6F01"
         "0212340410445F2B5CA6F2A93A55CE570A70EFEECB0C0402A0F7F8",
     )
 
-    accessories = await setup_accessories_from_file(hass, "nanoleaf_strip_nl55.json")
+    accessories = await setup_accessories_from_file(menuai, "nanoleaf_strip_nl55.json")
 
-    fake_controller = await setup_platform(hass)
+    fake_controller = await setup_platform(menuai)
     await fake_controller.add_paired_device(accessories, "00:00:00:00:00:00")
     config_entry = MockConfigEntry(
         version=1,
@@ -322,21 +322,21 @@ async def test_thread_provision_migration_failed(hass: HomeAssistant) -> None:
         title="test",
         unique_id="00:00:00:00:00:00",
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     fake_controller.transport_type = TransportType.BLE
 
     # Needs a COAP transport to do migration
     fake_controller.transports = {TransportType.COAP: fake_controller}
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     # Make sure not disoverable via CoAP
     del fake_controller.discoveries["00:00:00:00:00:00"]
 
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
+    with pytest.raises(menuaiError):
+        await menuai.services.async_call(
             "button",
             "press",
             {
@@ -349,7 +349,7 @@ async def test_thread_provision_migration_failed(hass: HomeAssistant) -> None:
 
 
 async def test_poll_firmware_version_only_all_watchable_accessory_mode(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that we only poll firmware if available and all chars are watchable accessory mode."""
 
@@ -364,7 +364,7 @@ async def test_poll_firmware_version_only_all_watchable_accessory_mode(
 
         return service
 
-    helper = await setup_test_component(hass, get_next_aid(), _create_accessory)
+    helper = await setup_test_component(menuai, get_next_aid(), _create_accessory)
 
     with mock.patch.object(
         helper.pairing,
@@ -405,7 +405,7 @@ async def test_poll_firmware_version_only_all_watchable_accessory_mode(
 
 
 async def test_manual_poll_all_chars(
-    hass: HomeAssistant, get_next_aid: Callable[[], int]
+    menuai: menuai, get_next_aid: Callable[[], int]
 ) -> None:
     """Test that a manual poll will check all chars."""
 
@@ -420,7 +420,7 @@ async def test_manual_poll_all_chars(
 
         return service
 
-    helper = await setup_test_component(hass, get_next_aid(), _create_accessory)
+    helper = await setup_test_component(menuai, get_next_aid(), _create_accessory)
 
     with mock.patch.object(
         helper.pairing,
@@ -434,8 +434,8 @@ async def test_manual_poll_all_chars(
 
         # Now do a manual poll to ensure all chars are polled
         mock_get_characteristics.reset_mock()
-        await async_update_entity(hass, helper.entity_id)
-        await time_changed(hass, 60)
-        await time_changed(hass, DEBOUNCE_COOLDOWN)
-        await hass.async_block_till_done()
+        await async_update_entity(menuai, helper.entity_id)
+        await time_changed(menuai, 60)
+        await time_changed(menuai, DEBOUNCE_COOLDOWN)
+        await menuai.async_block_till_done()
         assert len(mock_get_characteristics.call_args_list[0][0][0]) > 1

@@ -2,14 +2,14 @@
 
 import aiosyncthing
 
-from homeassistant.components.sensor import SensorEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import PlatformNotReady
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.event import async_track_time_interval
+from menuai.components.sensor import SensorEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.exceptions import PlatformNotReady
+from menuai.helpers.device_registry import DeviceEntryType, DeviceInfo
+from menuai.helpers.dispatcher import async_dispatcher_connect
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.event import async_track_time_interval
 
 from .const import (
     DOMAIN,
@@ -23,12 +23,12 @@ from .const import (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Syncthing sensors."""
-    syncthing = hass.data[DOMAIN][config_entry.entry_id]
+    syncthing = menuai.data[DOMAIN][config_entry.entry_id]
 
     try:
         config = await syncthing.system.config()
@@ -139,7 +139,7 @@ class FolderSensor(SensorEntity):
                 await self.async_update_status()
 
             self._unsub_timer = async_track_time_interval(
-                self.hass, refresh, SCAN_INTERVAL
+                self.menuai, refresh, SCAN_INTERVAL
             )
 
     @callback
@@ -149,7 +149,7 @@ class FolderSensor(SensorEntity):
             self._unsub_timer()
             self._unsub_timer = None
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
 
         @callback
@@ -160,7 +160,7 @@ class FolderSensor(SensorEntity):
 
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"{FOLDER_SUMMARY_RECEIVED}-{self._server_id}-{self._folder_id}",
                 handle_folder_summary,
             )
@@ -174,7 +174,7 @@ class FolderSensor(SensorEntity):
 
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"{STATE_CHANGED_RECEIVED}-{self._server_id}-{self._folder_id}",
                 handle_state_changed,
             )
@@ -188,7 +188,7 @@ class FolderSensor(SensorEntity):
 
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"{FOLDER_PAUSED_RECEIVED}-{self._server_id}-{self._folder_id}",
                 handle_folder_paused,
             )
@@ -202,7 +202,7 @@ class FolderSensor(SensorEntity):
 
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"{SERVER_UNAVAILABLE}-{self._server_id}",
                 handle_server_unavailable,
             )
@@ -214,7 +214,7 @@ class FolderSensor(SensorEntity):
 
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass,
+                self.menuai,
                 f"{SERVER_AVAILABLE}-{self._server_id}",
                 handle_server_available,
             )

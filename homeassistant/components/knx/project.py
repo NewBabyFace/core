@@ -19,10 +19,10 @@ from xknxproject.models import (
     ProjectInfo,
 )
 
-from homeassistant.components.file_upload import process_uploaded_file
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.storage import Store
+from menuai.components.file_upload import process_uploaded_file
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.storage import Store
 
 from .const import DOMAIN
 
@@ -68,12 +68,12 @@ class KNXProject:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         entry: ConfigEntry,
     ) -> None:
         """Initialize project data."""
-        self.hass = hass
-        self._store = Store[KNXProjectModel](hass, STORAGE_VERSION, STORAGE_KEY)
+        self.menuai = menuai
+        self._store = Store[KNXProjectModel](menuai, STORAGE_VERSION, STORAGE_KEY)
 
         self.initial_state()
 
@@ -115,15 +115,15 @@ class KNXProject:
         """Process an uploaded project file."""
 
         def _parse_project() -> KNXProjectModel:
-            with process_uploaded_file(self.hass, file_id) as file_path:
+            with process_uploaded_file(self.menuai, file_id) as file_path:
                 xknxproj = XKNXProj(
                     file_path,
                     password=password,
-                    language=self.hass.config.language,
+                    language=self.menuai.config.language,
                 )
                 return xknxproj.parse()
 
-        project = await self.hass.async_add_executor_job(_parse_project)
+        project = await self.menuai.async_add_executor_job(_parse_project)
         await self._store.async_save(project)
         await self.load_project(xknx, data=project)
 

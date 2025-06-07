@@ -8,13 +8,13 @@ import logging
 from rokuecp import Roku, RokuError
 from rokuecp.models import Device
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.debounce import Debouncer
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util.dt import utcnow
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_HOST
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
+from menuai.helpers.debounce import Debouncer
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.util.dt import utcnow
 
 from .const import CONF_PLAY_MEDIA_APP_ID, DEFAULT_PLAY_MEDIA_APP_ID, DOMAIN
 
@@ -35,13 +35,13 @@ class RokuDataUpdateCoordinator(DataUpdateCoordinator[Device]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: RokuConfigEntry,
     ) -> None:
         """Initialize global Roku data updater."""
         self.device_id = config_entry.unique_id or config_entry.entry_id
         self.roku = Roku(
-            host=config_entry.data[CONF_HOST], session=async_get_clientsession(hass)
+            host=config_entry.data[CONF_HOST], session=async_get_clientsession(menuai)
         )
         self.play_media_app_id = config_entry.options.get(
             CONF_PLAY_MEDIA_APP_ID, DEFAULT_PLAY_MEDIA_APP_ID
@@ -51,7 +51,7 @@ class RokuDataUpdateCoordinator(DataUpdateCoordinator[Device]):
         self.last_full_update = None
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=DOMAIN,
@@ -59,7 +59,7 @@ class RokuDataUpdateCoordinator(DataUpdateCoordinator[Device]):
             # We don't want an immediate refresh since the device
             # takes a moment to reflect the state change
             request_refresh_debouncer=Debouncer(
-                hass, _LOGGER, cooldown=REQUEST_REFRESH_DELAY, immediate=False
+                menuai, _LOGGER, cooldown=REQUEST_REFRESH_DELAY, immediate=False
             ),
         )
 

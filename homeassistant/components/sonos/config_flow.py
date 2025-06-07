@@ -2,19 +2,19 @@
 
 from collections.abc import Awaitable
 
-from homeassistant.components import ssdp
-from homeassistant.config_entries import ConfigFlowResult
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.config_entry_flow import DiscoveryFlowHandler
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.components import ssdp
+from menuai.config_entries import ConfigFlowResult
+from menuai.core import menuai
+from menuai.helpers.config_entry_flow import DiscoveryFlowHandler
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import DATA_SONOS_DISCOVERY_MANAGER, DOMAIN, UPNP_ST
 from .helpers import hostname_to_uid
 
 
-async def _async_has_devices(hass: HomeAssistant) -> bool:
+async def _async_has_devices(menuai: menuai) -> bool:
     """Return if Sonos devices have been seen recently with SSDP."""
-    return bool(await ssdp.async_get_discovery_info_by_st(hass, UPNP_ST))
+    return bool(await ssdp.async_get_discovery_info_by_st(menuai, UPNP_ST))
 
 
 class SonosDiscoveryFlowHandler(DiscoveryFlowHandler[Awaitable[bool]], domain=DOMAIN):
@@ -33,7 +33,7 @@ class SonosDiscoveryFlowHandler(DiscoveryFlowHandler[Awaitable[bool]], domain=DO
             return self.async_abort(reason="not_sonos_device")
         if discovery_info.ip_address.version != 4:
             return self.async_abort(reason="not_ipv4_address")
-        if discovery_manager := self.hass.data.get(DATA_SONOS_DISCOVERY_MANAGER):
+        if discovery_manager := self.menuai.data.get(DATA_SONOS_DISCOVERY_MANAGER):
             host = discovery_info.host
             mdns_name = discovery_info.name
             properties = discovery_info.properties

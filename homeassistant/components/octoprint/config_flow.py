@@ -12,8 +12,8 @@ from pyoctoprintapi import ApiError, OctoprintClient, OctoprintException
 import voluptuous as vol
 from yarl import URL
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import (
+from menuai.config_entries import ConfigFlow, ConfigFlowResult
+from menuai.const import (
     CONF_API_KEY,
     CONF_HOST,
     CONF_PATH,
@@ -22,12 +22,12 @@ from homeassistant.const import (
     CONF_USERNAME,
     CONF_VERIFY_SSL,
 )
-from homeassistant.data_entry_flow import AbortFlow
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.service_info.ssdp import SsdpServiceInfo
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
-from homeassistant.util.ssl import get_default_context, get_default_no_verify_context
+from menuai.data_entry_flow import AbortFlow
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.service_info.ssdp import SsdpServiceInfo
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.util.ssl import get_default_context, get_default_no_verify_context
 
 from .const import DOMAIN
 
@@ -111,7 +111,7 @@ class OctoPrintConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Get an Application Api Key."""
         if not self.api_key_task:
-            self.api_key_task = self.hass.async_create_task(
+            self.api_key_task = self.menuai.async_create_task(
                 self._async_get_auth_key(), eager_start=False
             )
         if not self.api_key_task.done():
@@ -138,10 +138,10 @@ class OctoPrintConfigFlow(ConfigFlow, domain=DOMAIN):
         """Finish the configuration setup."""
         existing_entry = await self.async_set_unique_id(self.unique_id)
         if existing_entry is not None:
-            self.hass.config_entries.async_update_entry(existing_entry, data=user_input)
+            self.menuai.config_entries.async_update_entry(existing_entry, data=user_input)
             # Reload the config entry otherwise devices will remain unavailable
-            self.hass.async_create_task(
-                self.hass.config_entries.async_reload(existing_entry.entry_id),
+            self.menuai.async_create_task(
+                self.menuai.config_entries.async_reload(existing_entry.entry_id),
             )
 
             return self.async_abort(reason="reauth_successful")
@@ -263,7 +263,7 @@ class OctoPrintConfigFlow(ConfigFlow, domain=DOMAIN):
         octoprint = self._get_octoprint_client(self._user_input)
 
         self._user_input[CONF_API_KEY] = await octoprint.request_app_key(
-            "Home Assistant", self._user_input[CONF_USERNAME], 300
+            "MenuAI", self._user_input[CONF_USERNAME], 300
         )
 
     def _get_octoprint_client(self, user_input: dict[str, Any]) -> OctoprintClient:
@@ -293,5 +293,5 @@ class OctoPrintConfigFlow(ConfigFlow, domain=DOMAIN):
             session.detach()
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnect(menuaiError):
     """Error to indicate we cannot connect."""

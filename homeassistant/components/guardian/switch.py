@@ -8,15 +8,15 @@ from typing import Any
 
 from aioguardian import Client
 
-from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchEntity, SwitchEntityDescription
+from menuai.const import EntityCategory
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import GuardianConfigEntry, GuardianData
 from .const import API_VALVE_STATUS, API_WIFI_STATUS
 from .entity import ValveControllerEntity, ValveControllerEntityDescription
-from .util import convert_exceptions_to_homeassistant_error
+from .util import convert_exceptions_to_menuai_error
 from .valve import GuardianValveState
 
 ATTR_AVG_CURRENT = "average_current"
@@ -109,7 +109,7 @@ VALVE_CONTROLLER_DESCRIPTIONS = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: GuardianConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -148,13 +148,13 @@ class ValveControllerSwitch(ValveControllerEntity, SwitchEntity):
         """Return True if entity is on."""
         return self.entity_description.is_on_fn(self.coordinator.data)
 
-    @convert_exceptions_to_homeassistant_error
+    @convert_exceptions_to_menuai_error
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the switch off."""
         await self.entity_description.off_fn(self._client)
         await self.coordinator.async_request_refresh()
 
-    @convert_exceptions_to_homeassistant_error
+    @convert_exceptions_to_menuai_error
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the switch on."""
         await self.entity_description.on_fn(self._client)

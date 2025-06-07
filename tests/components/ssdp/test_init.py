@@ -8,17 +8,17 @@ from async_upnp_client.server import UpnpServer
 from async_upnp_client.ssdp_listener import SsdpListener
 import pytest
 
-from homeassistant import config_entries
-from homeassistant.components import ssdp
-from homeassistant.components.ssdp import scanner
-from homeassistant.const import (
-    EVENT_HOMEASSISTANT_STARTED,
-    EVENT_HOMEASSISTANT_STOP,
+from menuai import config_entries
+from menuai.components import ssdp
+from menuai.components.ssdp import scanner
+from menuai.const import (
+    EVENT_menuai_STARTED,
+    EVENT_menuai_STOP,
     MATCH_ALL,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.discovery_flow import DiscoveryKey
-from homeassistant.helpers.service_info.ssdp import (
+from menuai.core import menuai
+from menuai.helpers.discovery_flow import DiscoveryKey
+from menuai.helpers.service_info.ssdp import (
     ATTR_NT,
     ATTR_ST,
     ATTR_UPNP_DEVICE_TYPE,
@@ -36,7 +36,7 @@ from homeassistant.helpers.service_info.ssdp import (
     ATTR_UPNP_UPC,
     SsdpServiceInfo,
 )
-from homeassistant.util import dt as dt_util
+from menuai.util import dt as dt_util
 
 from . import _ssdp_headers, init_ssdp_component
 
@@ -51,11 +51,11 @@ from tests.test_util.aiohttp import AiohttpClientMocker
 
 
 @patch(
-    "homeassistant.components.ssdp.async_get_ssdp",
+    "menuai.components.ssdp.async_get_ssdp",
     return_value={"mock-domain": [{"st": "mock-st"}]},
 )
 async def test_ssdp_flow_dispatched_on_st(
-    mock_get_ssdp, hass: HomeAssistant, caplog: pytest.LogCaptureFixture, mock_flow_init
+    mock_get_ssdp, menuai: menuai, caplog: pytest.LogCaptureFixture, mock_flow_init
 ) -> None:
     """Test matching based on ST."""
     mock_ssdp_search_response = _ssdp_headers(
@@ -68,11 +68,11 @@ async def test_ssdp_flow_dispatched_on_st(
             "_source": "search",
         }
     )
-    ssdp_listener = await init_ssdp_component(hass)
+    ssdp_listener = await init_ssdp_component(menuai)
     ssdp_listener._on_search(mock_ssdp_search_response)
-    await hass.async_block_till_done()
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    menuai.bus.async_fire(EVENT_menuai_STARTED)
+    await menuai.async_block_till_done()
 
     assert len(mock_flow_init.mock_calls) == 1
     assert mock_flow_init.mock_calls[0][1][0] == "mock-domain"
@@ -88,17 +88,17 @@ async def test_ssdp_flow_dispatched_on_st(
     assert mock_call_data.ssdp_ext == ""
     assert mock_call_data.ssdp_udn == ANY
     assert mock_call_data.ssdp_headers["_timestamp"] == ANY
-    assert mock_call_data.x_homeassistant_matching_domains == {"mock-domain"}
+    assert mock_call_data.x_menuai_matching_domains == {"mock-domain"}
     assert mock_call_data.upnp == {ATTR_UPNP_UDN: "uuid:mock-udn"}
     assert "Failed to fetch ssdp data" not in caplog.text
 
 
 @patch(
-    "homeassistant.components.ssdp.async_get_ssdp",
+    "menuai.components.ssdp.async_get_ssdp",
     return_value={"mock-domain": [{"manufacturerURL": "mock-url"}]},
 )
 async def test_ssdp_flow_dispatched_on_manufacturer_url(
-    mock_get_ssdp, hass: HomeAssistant, caplog: pytest.LogCaptureFixture, mock_flow_init
+    mock_get_ssdp, menuai: menuai, caplog: pytest.LogCaptureFixture, mock_flow_init
 ) -> None:
     """Test matching based on manufacturerURL."""
     mock_ssdp_search_response = _ssdp_headers(
@@ -112,11 +112,11 @@ async def test_ssdp_flow_dispatched_on_manufacturer_url(
             "_source": "search",
         }
     )
-    ssdp_listener = await init_ssdp_component(hass)
+    ssdp_listener = await init_ssdp_component(menuai)
     ssdp_listener._on_search(mock_ssdp_search_response)
-    await hass.async_block_till_done()
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    menuai.bus.async_fire(EVENT_menuai_STARTED)
+    await menuai.async_block_till_done()
 
     assert len(mock_flow_init.mock_calls) == 1
     assert mock_flow_init.mock_calls[0][1][0] == "mock-domain"
@@ -132,18 +132,18 @@ async def test_ssdp_flow_dispatched_on_manufacturer_url(
     assert mock_call_data.ssdp_ext == ""
     assert mock_call_data.ssdp_udn == ANY
     assert mock_call_data.ssdp_headers["_timestamp"] == ANY
-    assert mock_call_data.x_homeassistant_matching_domains == {"mock-domain"}
+    assert mock_call_data.x_menuai_matching_domains == {"mock-domain"}
     assert mock_call_data.upnp == {ATTR_UPNP_UDN: "uuid:mock-udn"}
     assert "Failed to fetch ssdp data" not in caplog.text
 
 
 @patch(
-    "homeassistant.components.ssdp.async_get_ssdp",
+    "menuai.components.ssdp.async_get_ssdp",
     return_value={"mock-domain": [{"manufacturer": "Paulus"}]},
 )
 async def test_scan_match_upnp_devicedesc_manufacturer(
     mock_get_ssdp,
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     mock_flow_init,
 ) -> None:
@@ -166,11 +166,11 @@ async def test_scan_match_upnp_devicedesc_manufacturer(
             "_source": "search",
         }
     )
-    ssdp_listener = await init_ssdp_component(hass)
+    ssdp_listener = await init_ssdp_component(menuai)
     ssdp_listener._on_search(mock_ssdp_search_response)
-    await hass.async_block_till_done()
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    menuai.bus.async_fire(EVENT_menuai_STARTED)
+    await menuai.async_block_till_done()
 
     # If we get duplicate response, ensure we only look it up once
     assert len(aioclient_mock.mock_calls) == 1
@@ -183,12 +183,12 @@ async def test_scan_match_upnp_devicedesc_manufacturer(
 
 
 @patch(
-    "homeassistant.components.ssdp.async_get_ssdp",
+    "menuai.components.ssdp.async_get_ssdp",
     return_value={"mock-domain": [{"deviceType": "Paulus"}]},
 )
 async def test_scan_match_upnp_devicedesc_devicetype(
     mock_get_ssdp,
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     mock_flow_init,
 ) -> None:
@@ -211,12 +211,12 @@ async def test_scan_match_upnp_devicedesc_devicetype(
             "_source": "search",
         }
     )
-    ssdp_listener = await init_ssdp_component(hass)
+    ssdp_listener = await init_ssdp_component(menuai)
     ssdp_listener._on_search(mock_ssdp_search_response)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire(EVENT_menuai_STARTED)
+    await menuai.async_block_till_done()
 
     # If we get duplicate response, ensure we only look it up once
     assert len(aioclient_mock.mock_calls) == 1
@@ -229,7 +229,7 @@ async def test_scan_match_upnp_devicedesc_devicetype(
 
 
 @patch(
-    "homeassistant.components.ssdp.async_get_ssdp",
+    "menuai.components.ssdp.async_get_ssdp",
     return_value={
         "mock-domain": [
             {
@@ -241,7 +241,7 @@ async def test_scan_match_upnp_devicedesc_devicetype(
 )
 async def test_scan_not_all_present(
     mock_get_ssdp,
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     mock_flow_init,
 ) -> None:
@@ -262,17 +262,17 @@ async def test_scan_not_all_present(
             "location": "http://1.1.1.1",
         }
     )
-    ssdp_listener = await init_ssdp_component(hass)
+    ssdp_listener = await init_ssdp_component(menuai)
     ssdp_listener._on_search(mock_ssdp_search_response)
-    await hass.async_block_till_done()
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    menuai.bus.async_fire(EVENT_menuai_STARTED)
+    await menuai.async_block_till_done()
 
     assert not mock_flow_init.mock_calls
 
 
 @patch(
-    "homeassistant.components.ssdp.async_get_ssdp",
+    "menuai.components.ssdp.async_get_ssdp",
     return_value={
         "mock-domain": [
             {
@@ -284,7 +284,7 @@ async def test_scan_not_all_present(
 )
 async def test_scan_not_all_match(
     mock_get_ssdp,
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     mock_flow_init,
 ) -> None:
@@ -308,22 +308,22 @@ async def test_scan_not_all_match(
             "_source": "search",
         }
     )
-    ssdp_listener = await init_ssdp_component(hass)
+    ssdp_listener = await init_ssdp_component(menuai)
     ssdp_listener._on_search(mock_ssdp_search_response)
-    await hass.async_block_till_done()
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    menuai.bus.async_fire(EVENT_menuai_STARTED)
+    await menuai.async_block_till_done()
 
     assert not mock_flow_init.mock_calls
 
 
 @patch(
-    "homeassistant.components.ssdp.async_get_ssdp",
+    "menuai.components.ssdp.async_get_ssdp",
     return_value={"mock-domain": [{"deviceType": "Paulus"}]},
 )
 async def test_flow_start_only_alive(
     mock_get_ssdp,
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     mock_flow_init,
 ) -> None:
@@ -338,9 +338,9 @@ async def test_flow_start_only_alive(
 </root>
     """,
     )
-    ssdp_listener = await init_ssdp_component(hass)
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-    await hass.async_block_till_done()
+    ssdp_listener = await init_ssdp_component(menuai)
+    menuai.bus.async_fire(EVENT_menuai_STARTED)
+    await menuai.async_block_till_done()
 
     # Search should start a flow
     mock_ssdp_search_response = _ssdp_headers(
@@ -352,7 +352,7 @@ async def test_flow_start_only_alive(
         }
     )
     ssdp_listener._on_search(mock_ssdp_search_response)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     mock_flow_init.assert_awaited_once_with(
         "mock-domain",
@@ -377,7 +377,7 @@ async def test_flow_start_only_alive(
         }
     )
     ssdp_listener._on_alive(mock_ssdp_advertisement)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     mock_flow_init.assert_awaited_once_with(
         "mock-domain",
         context={
@@ -393,14 +393,14 @@ async def test_flow_start_only_alive(
     mock_flow_init.reset_mock()
     mock_ssdp_advertisement["nts"] = "ssdp:byebye"
     ssdp_listener._on_byebye(mock_ssdp_advertisement)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     mock_flow_init.assert_not_called()
 
     # ssdp:update advertisement should start a flow
     mock_flow_init.reset_mock()
     mock_ssdp_advertisement["nts"] = "ssdp:update"
     ssdp_listener._on_update(mock_ssdp_advertisement)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     mock_flow_init.assert_awaited_once_with(
         "mock-domain",
         context={
@@ -414,12 +414,12 @@ async def test_flow_start_only_alive(
 
 
 @patch(
-    "homeassistant.components.ssdp.async_get_ssdp",
+    "menuai.components.ssdp.async_get_ssdp",
     return_value={},
 )
 async def test_discovery_from_advertisement_sets_ssdp_st(
     mock_get_ssdp,
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     mock_flow_init,
 ) -> None:
@@ -434,9 +434,9 @@ async def test_discovery_from_advertisement_sets_ssdp_st(
 </root>
     """,
     )
-    ssdp_listener = await init_ssdp_component(hass)
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-    await hass.async_block_till_done()
+    ssdp_listener = await init_ssdp_component(menuai)
+    menuai.bus.async_fire(EVENT_menuai_STARTED)
+    await menuai.async_block_till_done()
 
     mock_ssdp_advertisement = _ssdp_headers(
         {
@@ -448,9 +448,9 @@ async def test_discovery_from_advertisement_sets_ssdp_st(
         }
     )
     ssdp_listener._on_alive(mock_ssdp_advertisement)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    discovery_info = await ssdp.async_get_discovery_info_by_udn(hass, "uuid:mock-udn")
+    discovery_info = await ssdp.async_get_discovery_info_by_udn(menuai, "uuid:mock-udn")
     discovery_info = discovery_info[0]
     assert discovery_info.ssdp_location == "http://1.1.1.1"
     assert discovery_info.ssdp_nt == "mock-st"
@@ -467,35 +467,35 @@ async def test_discovery_from_advertisement_sets_ssdp_st(
 
 
 @patch(
-    "homeassistant.components.ssdp.common.async_build_source_set",
+    "menuai.components.ssdp.common.async_build_source_set",
     return_value={IPv4Address("192.168.1.1")},
 )
-async def test_start_stop_scanner(mock_source_set, hass: HomeAssistant) -> None:
+async def test_start_stop_scanner(mock_source_set, menuai: menuai) -> None:
     """Test we start and stop the scanner."""
-    ssdp_listener = await init_ssdp_component(hass)
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-    await hass.async_block_till_done()
+    ssdp_listener = await init_ssdp_component(menuai)
+    menuai.bus.async_fire(EVENT_menuai_STARTED)
+    await menuai.async_block_till_done()
 
-    async_fire_time_changed(hass, dt_util.utcnow() + scanner.SCAN_INTERVAL)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + scanner.SCAN_INTERVAL)
+    await menuai.async_block_till_done()
     assert ssdp_listener.async_start.call_count == 1
     assert ssdp_listener.async_search.call_count == 4
     assert ssdp_listener.async_stop.call_count == 0
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
-    await hass.async_block_till_done()
-    async_fire_time_changed(hass, dt_util.utcnow() + scanner.SCAN_INTERVAL)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire(EVENT_menuai_STOP)
+    await menuai.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + scanner.SCAN_INTERVAL)
+    await menuai.async_block_till_done()
     assert ssdp_listener.async_start.call_count == 1
     assert ssdp_listener.async_search.call_count == 4
     assert ssdp_listener.async_stop.call_count == 1
 
 
 @pytest.mark.no_fail_on_log_exception
-@patch("homeassistant.components.ssdp.async_get_ssdp", return_value={})
+@patch("menuai.components.ssdp.async_get_ssdp", return_value={})
 async def test_scan_with_registered_callback(
     mock_get_ssdp,
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -521,39 +521,39 @@ async def test_scan_with_registered_callback(
             "_source": "search",
         }
     )
-    ssdp_listener = await init_ssdp_component(hass)
+    ssdp_listener = await init_ssdp_component(menuai)
 
     async_exception_callback = AsyncMock(side_effect=ValueError)
-    await ssdp.async_register_callback(hass, async_exception_callback, {})
+    await ssdp.async_register_callback(menuai, async_exception_callback, {})
 
     async_integration_callback = AsyncMock()
     await ssdp.async_register_callback(
-        hass, async_integration_callback, {"st": "mock-st"}
+        menuai, async_integration_callback, {"st": "mock-st"}
     )
 
     async_integration_match_all_callback = AsyncMock()
     await ssdp.async_register_callback(
-        hass, async_integration_match_all_callback, {"x-rincon-bootseq": MATCH_ALL}
+        menuai, async_integration_match_all_callback, {"x-rincon-bootseq": MATCH_ALL}
     )
 
     async_integration_match_all_not_present_callback = AsyncMock()
     await ssdp.async_register_callback(
-        hass,
+        menuai,
         async_integration_match_all_not_present_callback,
         {"x-not-there": MATCH_ALL},
     )
 
     async_not_matching_integration_callback = AsyncMock()
     await ssdp.async_register_callback(
-        hass, async_not_matching_integration_callback, {"st": "not-match-mock-st"}
+        menuai, async_not_matching_integration_callback, {"st": "not-match-mock-st"}
     )
 
     async_match_any_callback = AsyncMock()
-    await ssdp.async_register_callback(hass, async_match_any_callback)
+    await ssdp.async_register_callback(menuai, async_match_any_callback)
 
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
     ssdp_listener._on_search(mock_ssdp_search_response)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     assert async_integration_callback.call_count == 1
     assert async_integration_match_all_callback.call_count == 1
@@ -572,7 +572,7 @@ async def test_scan_with_registered_callback(
     assert mock_call_data.ssdp_headers["x-rincon-bootseq"] == "55"
     assert mock_call_data.ssdp_udn == "uuid:TIVRTLSR7ANF-D6E-1557809135086-RETAIL"
     assert mock_call_data.ssdp_headers["_timestamp"] == ANY
-    assert mock_call_data.x_homeassistant_matching_domains == set()
+    assert mock_call_data.x_menuai_matching_domains == set()
     assert mock_call_data.upnp == {
         ATTR_UPNP_DEVICE_TYPE: "Paulus",
         ATTR_UPNP_UDN: "uuid:TIVRTLSR7ANF-D6E-1557809135086-RETAIL",
@@ -581,18 +581,18 @@ async def test_scan_with_registered_callback(
 
     async_integration_callback_from_cache = AsyncMock()
     await ssdp.async_register_callback(
-        hass, async_integration_callback_from_cache, {"st": "mock-st"}
+        menuai, async_integration_callback_from_cache, {"st": "mock-st"}
     )
     assert async_integration_callback_from_cache.call_count == 1
 
 
 @patch(
-    "homeassistant.components.ssdp.async_get_ssdp",
+    "menuai.components.ssdp.async_get_ssdp",
     return_value={"mock-domain": [{"st": "mock-st"}]},
 )
 async def test_getting_existing_headers(
     mock_get_ssdp,
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     mock_flow_init,
 ) -> None:
@@ -617,10 +617,10 @@ async def test_getting_existing_headers(
             "_source": "search",
         }
     )
-    ssdp_listener = await init_ssdp_component(hass)
+    ssdp_listener = await init_ssdp_component(menuai)
     ssdp_listener._on_search(mock_ssdp_search_response)
 
-    discovery_info_by_st = await ssdp.async_get_discovery_info_by_st(hass, "mock-st")
+    discovery_info_by_st = await ssdp.async_get_discovery_info_by_st(menuai, "mock-st")
     discovery_info_by_st = discovery_info_by_st[0]
     assert discovery_info_by_st.ssdp_ext == ""
     assert discovery_info_by_st.ssdp_location == "http://1.1.1.1"
@@ -638,7 +638,7 @@ async def test_getting_existing_headers(
     }
 
     discovery_info_by_udn = await ssdp.async_get_discovery_info_by_udn(
-        hass, "uuid:TIVRTLSR7ANF-D6E-1557809135086-RETAIL"
+        menuai, "uuid:TIVRTLSR7ANF-D6E-1557809135086-RETAIL"
     )
     discovery_info_by_udn = discovery_info_by_udn[0]
     assert discovery_info_by_udn.ssdp_ext == ""
@@ -657,7 +657,7 @@ async def test_getting_existing_headers(
     }
 
     discovery_info_by_udn_st = await ssdp.async_get_discovery_info_by_udn_st(
-        hass, "uuid:TIVRTLSR7ANF-D6E-1557809135086-RETAIL", "mock-st"
+        menuai, "uuid:TIVRTLSR7ANF-D6E-1557809135086-RETAIL", "mock-st"
     )
     assert discovery_info_by_udn_st.ssdp_ext == ""
     assert discovery_info_by_udn_st.ssdp_location == "http://1.1.1.1"
@@ -675,7 +675,7 @@ async def test_getting_existing_headers(
     }
 
     assert (
-        await ssdp.async_get_discovery_info_by_udn_st(hass, "wrong", "mock-st") is None
+        await ssdp.async_get_discovery_info_by_udn_st(menuai, "wrong", "mock-st") is None
     )
 
 
@@ -715,7 +715,7 @@ _ADAPTERS_WITH_MANUAL_CONFIG = [
 
 
 @patch(
-    "homeassistant.components.ssdp.async_get_ssdp",
+    "menuai.components.ssdp.async_get_ssdp",
     return_value={
         "mock-domain": [
             {
@@ -725,22 +725,22 @@ _ADAPTERS_WITH_MANUAL_CONFIG = [
     },
 )
 @patch(
-    "homeassistant.components.ssdp.common.network.async_get_adapters",
+    "menuai.components.ssdp.common.network.async_get_adapters",
     return_value=_ADAPTERS_WITH_MANUAL_CONFIG,
 )
 async def test_async_detect_interfaces_setting_empty_route(
-    mock_get_adapters, mock_get_ssdp, hass: HomeAssistant
+    mock_get_adapters, mock_get_ssdp, menuai: menuai
 ) -> None:
     """Test without default interface config and the route returns nothing."""
-    await init_ssdp_component(hass)
+    await init_ssdp_component(menuai)
 
-    ssdp_listeners = hass.data[ssdp.DOMAIN][ssdp.SSDP_SCANNER]._ssdp_listeners
+    ssdp_listeners = menuai.data[ssdp.DOMAIN][ssdp.SSDP_SCANNER]._ssdp_listeners
     sources = {ssdp_listener.source for ssdp_listener in ssdp_listeners}
     assert sources == {("2001:db8::", 0, 0, 1), ("192.168.1.5", 0)}
 
 
 @patch(
-    "homeassistant.components.ssdp.async_get_ssdp",
+    "menuai.components.ssdp.async_get_ssdp",
     return_value={
         "mock-domain": [
             {
@@ -750,13 +750,13 @@ async def test_async_detect_interfaces_setting_empty_route(
     },
 )
 @patch(
-    "homeassistant.components.ssdp.common.network.async_get_adapters",
+    "menuai.components.ssdp.common.network.async_get_adapters",
     return_value=_ADAPTERS_WITH_MANUAL_CONFIG,
 )
 async def test_bind_failure_skips_adapter(
     mock_get_adapters,
     mock_get_ssdp,
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test that an adapter with a bind failure is skipped."""
@@ -767,13 +767,13 @@ async def test_bind_failure_skips_adapter(
 
     SsdpListener.async_start = _async_start
     UpnpServer.async_start = _async_start
-    await init_ssdp_component(hass)
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-    await hass.async_block_till_done()
+    await init_ssdp_component(menuai)
+    menuai.bus.async_fire(EVENT_menuai_STARTED)
+    await menuai.async_block_till_done()
 
     assert "Failed to setup listener for" in caplog.text
 
-    ssdp_listeners: list[SsdpListener] = hass.data[ssdp.DOMAIN][
+    ssdp_listeners: list[SsdpListener] = menuai.data[ssdp.DOMAIN][
         ssdp.SSDP_SCANNER
     ]._ssdp_listeners
     sources = {ssdp_listener.source for ssdp_listener in ssdp_listeners}
@@ -781,7 +781,7 @@ async def test_bind_failure_skips_adapter(
 
     assert "Failed to setup server for" in caplog.text
 
-    upnp_servers: list[UpnpServer] = hass.data[ssdp.DOMAIN][
+    upnp_servers: list[UpnpServer] = menuai.data[ssdp.DOMAIN][
         ssdp.UPNP_SERVER
     ]._upnp_servers
     sources = {upnp_server.source for upnp_server in upnp_servers}
@@ -789,7 +789,7 @@ async def test_bind_failure_skips_adapter(
 
 
 @patch(
-    "homeassistant.components.ssdp.async_get_ssdp",
+    "menuai.components.ssdp.async_get_ssdp",
     return_value={
         "mock-domain": [
             {
@@ -799,19 +799,19 @@ async def test_bind_failure_skips_adapter(
     },
 )
 @patch(
-    "homeassistant.components.ssdp.common.network.async_get_adapters",
+    "menuai.components.ssdp.common.network.async_get_adapters",
     return_value=_ADAPTERS_WITH_MANUAL_CONFIG,
 )
 async def test_ipv4_does_additional_search_for_sonos(
-    mock_get_adapters, mock_get_ssdp, hass: HomeAssistant
+    mock_get_adapters, mock_get_ssdp, menuai: menuai
 ) -> None:
     """Test that only ipv4 does an additional search for Sonos."""
-    ssdp_listener = await init_ssdp_component(hass)
+    ssdp_listener = await init_ssdp_component(menuai)
 
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-    await hass.async_block_till_done()
-    async_fire_time_changed(hass, dt_util.utcnow() + scanner.SCAN_INTERVAL)
-    await hass.async_block_till_done()
+    menuai.bus.async_fire(EVENT_menuai_STARTED)
+    await menuai.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + scanner.SCAN_INTERVAL)
+    await menuai.async_block_till_done()
 
     assert ssdp_listener.async_search.call_count == 6
     assert ssdp_listener.async_search.call_args[0] == (
@@ -824,12 +824,12 @@ async def test_ipv4_does_additional_search_for_sonos(
 
 
 @patch(
-    "homeassistant.components.ssdp.async_get_ssdp",
+    "menuai.components.ssdp.async_get_ssdp",
     return_value={"mock-domain": [{"deviceType": "Paulus"}]},
 )
 async def test_flow_dismiss_on_byebye(
     mock_get_ssdp,
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     mock_flow_init,
 ) -> None:
@@ -844,9 +844,9 @@ async def test_flow_dismiss_on_byebye(
 </root>
     """,
     )
-    ssdp_listener = await init_ssdp_component(hass)
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-    await hass.async_block_till_done()
+    ssdp_listener = await init_ssdp_component(menuai)
+    menuai.bus.async_fire(EVENT_menuai_STARTED)
+    await menuai.async_block_till_done()
 
     # Search should start a flow
     mock_ssdp_search_response = _ssdp_headers(
@@ -858,7 +858,7 @@ async def test_flow_dismiss_on_byebye(
         }
     )
     ssdp_listener._on_search(mock_ssdp_search_response)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
 
     mock_flow_init.assert_awaited_once_with(
         "mock-domain",
@@ -883,7 +883,7 @@ async def test_flow_dismiss_on_byebye(
         }
     )
     ssdp_listener._on_alive(mock_ssdp_advertisement)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await menuai.async_block_till_done(wait_background_tasks=True)
     mock_flow_init.assert_awaited_once_with(
         "mock-domain",
         context={
@@ -899,21 +899,21 @@ async def test_flow_dismiss_on_byebye(
     # ssdp:byebye advertisement should dismiss existing flows
     with (
         patch.object(
-            hass.config_entries.flow,
+            menuai.config_entries.flow,
             "async_progress_by_init_data_type",
             return_value=[{"flow_id": "mock_flow_id"}],
         ) as mock_async_progress_by_init_data_type,
-        patch.object(hass.config_entries.flow, "async_abort") as mock_async_abort,
+        patch.object(menuai.config_entries.flow, "async_abort") as mock_async_abort,
     ):
         ssdp_listener._on_byebye(mock_ssdp_advertisement)
-        await hass.async_block_till_done(wait_background_tasks=True)
+        await menuai.async_block_till_done(wait_background_tasks=True)
 
     assert len(mock_async_progress_by_init_data_type.mock_calls) == 1
     assert mock_async_abort.mock_calls[0][1][0] == "mock_flow_id"
 
 
 @patch(
-    "homeassistant.components.ssdp.async_get_ssdp",
+    "menuai.components.ssdp.async_get_ssdp",
     return_value={"mock-domain": [{"st": "mock-st"}]},
 )
 @pytest.mark.parametrize(
@@ -954,7 +954,7 @@ async def test_flow_dismiss_on_byebye(
 )
 async def test_ssdp_rediscover(
     mock_get_ssdp,
-    hass: HomeAssistant,
+    menuai: menuai,
     aioclient_mock: AiohttpClientMocker,
     mock_flow_init,
     entry_domain: str,
@@ -969,7 +969,7 @@ async def test_ssdp_rediscover(
         state=config_entries.ConfigEntryState.LOADED,
         source=entry_source,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     mock_ssdp_search_response = _ssdp_headers(
         {
@@ -992,11 +992,11 @@ async def test_ssdp_rediscover(
 </root>
     """,
     )
-    ssdp_listener = await init_ssdp_component(hass)
+    ssdp_listener = await init_ssdp_component(menuai)
     ssdp_listener._on_search(mock_ssdp_search_response)
-    await hass.async_block_till_done()
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    menuai.bus.async_fire(EVENT_menuai_STARTED)
+    await menuai.async_block_till_done()
 
     expected_context = {
         "discovery_key": DiscoveryKey(domain="ssdp", key="uuid:mock-udn", version=1),
@@ -1009,8 +1009,8 @@ async def test_ssdp_rediscover(
     assert mock_call_data.ssdp_st == "mock-st"
     assert mock_call_data.ssdp_location == "http://1.1.1.1"
 
-    await hass.config_entries.async_remove(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_remove(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert len(mock_flow_init.mock_calls) == 2
     assert mock_flow_init.mock_calls[1][1][0] == "mock-domain"
@@ -1022,7 +1022,7 @@ async def test_ssdp_rediscover(
 
 
 @patch(
-    "homeassistant.components.ssdp.async_get_ssdp",
+    "menuai.components.ssdp.async_get_ssdp",
     return_value={"mock-domain": [{"st": "mock-st"}]},
 )
 @pytest.mark.parametrize(
@@ -1051,7 +1051,7 @@ async def test_ssdp_rediscover(
 )
 async def test_ssdp_rediscover_no_match(
     mock_get_ssdp,
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_flow_init,
     entry_domain: str,
     entry_discovery_keys: dict[str, tuple[DiscoveryKey, ...]],
@@ -1059,7 +1059,7 @@ async def test_ssdp_rediscover_no_match(
     entry_unique_id: str,
 ) -> None:
     """Test we don't reinitiate flows when a non matching config entry is removed."""
-    mock_integration(hass, MockModule(entry_domain))
+    mock_integration(menuai, MockModule(entry_domain))
     entry = MockConfigEntry(
         domain=entry_domain,
         discovery_keys=entry_discovery_keys,
@@ -1067,7 +1067,7 @@ async def test_ssdp_rediscover_no_match(
         state=config_entries.ConfigEntryState.LOADED,
         source=entry_source,
     )
-    entry.add_to_hass(hass)
+    entry.add_to_menuai(menuai)
 
     mock_ssdp_search_response = _ssdp_headers(
         {
@@ -1079,11 +1079,11 @@ async def test_ssdp_rediscover_no_match(
             "_source": "search",
         }
     )
-    ssdp_listener = await init_ssdp_component(hass)
+    ssdp_listener = await init_ssdp_component(menuai)
     ssdp_listener._on_search(mock_ssdp_search_response)
-    await hass.async_block_till_done()
-    hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
+    menuai.bus.async_fire(EVENT_menuai_STARTED)
+    await menuai.async_block_till_done()
 
     expected_context = {
         "discovery_key": DiscoveryKey(domain="ssdp", key="uuid:mock-udn", version=1),
@@ -1096,8 +1096,8 @@ async def test_ssdp_rediscover_no_match(
     assert mock_call_data.ssdp_st == "mock-st"
     assert mock_call_data.ssdp_location == "http://1.1.1.1"
 
-    await hass.config_entries.async_remove(entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_remove(entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert len(mock_flow_init.mock_calls) == 1
 
@@ -1107,82 +1107,82 @@ async def test_ssdp_rediscover_no_match(
     [
         (
             "SsdpServiceInfo",
-            "homeassistant.helpers.service_info.ssdp.SsdpServiceInfo",
+            "menuai.helpers.service_info.ssdp.SsdpServiceInfo",
             SsdpServiceInfo,
         ),
         (
             "ATTR_ST",
-            "homeassistant.helpers.service_info.ssdp.ATTR_ST",
+            "menuai.helpers.service_info.ssdp.ATTR_ST",
             ATTR_ST,
         ),
         (
             "ATTR_NT",
-            "homeassistant.helpers.service_info.ssdp.ATTR_NT",
+            "menuai.helpers.service_info.ssdp.ATTR_NT",
             ATTR_NT,
         ),
         (
             "ATTR_UPNP_DEVICE_TYPE",
-            "homeassistant.helpers.service_info.ssdp.ATTR_UPNP_DEVICE_TYPE",
+            "menuai.helpers.service_info.ssdp.ATTR_UPNP_DEVICE_TYPE",
             ATTR_UPNP_DEVICE_TYPE,
         ),
         (
             "ATTR_UPNP_FRIENDLY_NAME",
-            "homeassistant.helpers.service_info.ssdp.ATTR_UPNP_FRIENDLY_NAME",
+            "menuai.helpers.service_info.ssdp.ATTR_UPNP_FRIENDLY_NAME",
             ATTR_UPNP_FRIENDLY_NAME,
         ),
         (
             "ATTR_UPNP_MANUFACTURER",
-            "homeassistant.helpers.service_info.ssdp.ATTR_UPNP_MANUFACTURER",
+            "menuai.helpers.service_info.ssdp.ATTR_UPNP_MANUFACTURER",
             ATTR_UPNP_MANUFACTURER,
         ),
         (
             "ATTR_UPNP_MANUFACTURER_URL",
-            "homeassistant.helpers.service_info.ssdp.ATTR_UPNP_MANUFACTURER_URL",
+            "menuai.helpers.service_info.ssdp.ATTR_UPNP_MANUFACTURER_URL",
             ATTR_UPNP_MANUFACTURER_URL,
         ),
         (
             "ATTR_UPNP_MODEL_DESCRIPTION",
-            "homeassistant.helpers.service_info.ssdp.ATTR_UPNP_MODEL_DESCRIPTION",
+            "menuai.helpers.service_info.ssdp.ATTR_UPNP_MODEL_DESCRIPTION",
             ATTR_UPNP_MODEL_DESCRIPTION,
         ),
         (
             "ATTR_UPNP_MODEL_NAME",
-            "homeassistant.helpers.service_info.ssdp.ATTR_UPNP_MODEL_NAME",
+            "menuai.helpers.service_info.ssdp.ATTR_UPNP_MODEL_NAME",
             ATTR_UPNP_MODEL_NAME,
         ),
         (
             "ATTR_UPNP_MODEL_NUMBER",
-            "homeassistant.helpers.service_info.ssdp.ATTR_UPNP_MODEL_NUMBER",
+            "menuai.helpers.service_info.ssdp.ATTR_UPNP_MODEL_NUMBER",
             ATTR_UPNP_MODEL_NUMBER,
         ),
         (
             "ATTR_UPNP_MODEL_URL",
-            "homeassistant.helpers.service_info.ssdp.ATTR_UPNP_MODEL_URL",
+            "menuai.helpers.service_info.ssdp.ATTR_UPNP_MODEL_URL",
             ATTR_UPNP_MODEL_URL,
         ),
         (
             "ATTR_UPNP_SERIAL",
-            "homeassistant.helpers.service_info.ssdp.ATTR_UPNP_SERIAL",
+            "menuai.helpers.service_info.ssdp.ATTR_UPNP_SERIAL",
             ATTR_UPNP_SERIAL,
         ),
         (
             "ATTR_UPNP_SERVICE_LIST",
-            "homeassistant.helpers.service_info.ssdp.ATTR_UPNP_SERVICE_LIST",
+            "menuai.helpers.service_info.ssdp.ATTR_UPNP_SERVICE_LIST",
             ATTR_UPNP_SERVICE_LIST,
         ),
         (
             "ATTR_UPNP_UDN",
-            "homeassistant.helpers.service_info.ssdp.ATTR_UPNP_UDN",
+            "menuai.helpers.service_info.ssdp.ATTR_UPNP_UDN",
             ATTR_UPNP_UDN,
         ),
         (
             "ATTR_UPNP_UPC",
-            "homeassistant.helpers.service_info.ssdp.ATTR_UPNP_UPC",
+            "menuai.helpers.service_info.ssdp.ATTR_UPNP_UPC",
             ATTR_UPNP_UPC,
         ),
         (
             "ATTR_UPNP_PRESENTATION_URL",
-            "homeassistant.helpers.service_info.ssdp.ATTR_UPNP_PRESENTATION_URL",
+            "menuai.helpers.service_info.ssdp.ATTR_UPNP_PRESENTATION_URL",
             ATTR_UPNP_PRESENTATION_URL,
         ),
     ],

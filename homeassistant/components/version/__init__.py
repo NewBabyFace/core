@@ -6,8 +6,8 @@ import logging
 
 from pyhaversion import HaVersion
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from menuai.core import menuai
+from menuai.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
     BOARD_MAP,
@@ -22,7 +22,7 @@ from .coordinator import VersionConfigEntry, VersionDataUpdateCoordinator
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: VersionConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: VersionConfigEntry) -> bool:
     """Set up the version integration from a config entry."""
 
     board = entry.data[CONF_BOARD]
@@ -36,10 +36,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: VersionConfigEntry) -> b
         return False
 
     coordinator = VersionDataUpdateCoordinator(
-        hass=hass,
+        menuai=menuai,
         config_entry=entry,
         api=HaVersion(
-            session=async_get_clientsession(hass),
+            session=async_get_clientsession(menuai),
             source=entry.data[CONF_SOURCE],
             image=entry.data[CONF_IMAGE],
             board=BOARD_MAP[board],
@@ -50,11 +50,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: VersionConfigEntry) -> b
     await coordinator.async_config_entry_first_refresh()
 
     entry.runtime_data = coordinator
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: VersionConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: VersionConfigEntry) -> bool:
     """Unload the config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

@@ -9,11 +9,11 @@ from homematicip.base.functionalChannels import FunctionalChannel
 from homematicip.device import Device
 from homematicip.group import Group
 
-from homeassistant.const import ATTR_ID
-from homeassistant.core import callback
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity
+from menuai.const import ATTR_ID
+from menuai.core import callback
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity
 
 from .const import DOMAIN
 from .hap import AsyncHome, HomematicipHAP
@@ -115,7 +115,7 @@ class HomematicipGenericEntity(Entity):
             )
         return None
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Register callbacks."""
         self._hap.hmip_device_by_entity_id[self.entity_id] = self._device
         self._device.on_update(self._async_device_changed)
@@ -135,8 +135,8 @@ class HomematicipGenericEntity(Entity):
                 self._device.modelType,
             )
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Run when hmip device will be removed from hass."""
+    async def async_will_remove_from_menuai(self) -> None:
+        """Run when hmip device will be removed from menuai."""
 
         # Only go further if the device/entity should be removed from registries
         # due to a removal of the HmIP device.
@@ -160,7 +160,7 @@ class HomematicipGenericEntity(Entity):
 
         if device_id := self.registry_entry.device_id:
             # Remove from device registry.
-            device_registry = dr.async_get(self.hass)
+            device_registry = dr.async_get(self.menuai)
             if device_id in device_registry.devices:
                 # This will also remove associated entities from entity registry.
                 device_registry.async_remove_device(device_id)
@@ -168,7 +168,7 @@ class HomematicipGenericEntity(Entity):
             # Remove from entity registry.
             # Only relevant for entities that do not belong to a device.
             if entity_id := self.registry_entry.entity_id:
-                entity_registry = er.async_get(self.hass)
+                entity_registry = er.async_get(self.menuai)
                 if entity_id in entity_registry.entities:
                     entity_registry.async_remove(entity_id)
 
@@ -177,7 +177,7 @@ class HomematicipGenericEntity(Entity):
         """Handle hmip device removal."""
         # Set marker showing that the HmIP device hase been removed.
         self.hmip_device_removed = True
-        self.hass.async_create_task(
+        self.menuai.async_create_task(
             self.async_remove(force_remove=True), eager_start=False
         )
 

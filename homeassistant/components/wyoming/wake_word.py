@@ -8,10 +8,10 @@ from wyoming.audio import AudioChunk, AudioStart
 from wyoming.client import AsyncTcpClient
 from wyoming.wake import Detect, Detection
 
-from homeassistant.components import wake_word
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components import wake_word
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .data import WyomingService, load_wyoming_info
@@ -22,15 +22,15 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Wyoming wake-word-detection."""
-    item: DomainDataItem = hass.data[DOMAIN][config_entry.entry_id]
+    item: DomainDataItem = menuai.data[DOMAIN][config_entry.entry_id]
     async_add_entities(
         [
-            WyomingWakeWordProvider(hass, config_entry, item.service),
+            WyomingWakeWordProvider(menuai, config_entry, item.service),
         ]
     )
 
@@ -40,12 +40,12 @@ class WyomingWakeWordProvider(wake_word.WakeWordDetectionEntity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         config_entry: ConfigEntry,
         service: WyomingService,
     ) -> None:
         """Set up provider."""
-        self.hass = hass
+        self.menuai = menuai
         self.service = service
         wake_service = service.info.wake[0]
 

@@ -1,11 +1,11 @@
-"""Utility functions for Home Assistant SkyConnect integration."""
+"""Utility functions for MenuAI SkyConnect integration."""
 
 from __future__ import annotations
 
 import logging
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.helpers.service_info.usb import UsbServiceInfo
+from menuai.config_entries import ConfigEntry
+from menuai.helpers.service_info.usb import UsbServiceInfo
 
 from .const import HardwareVariant
 

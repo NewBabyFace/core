@@ -5,9 +5,9 @@ import logging
 
 from pydaikin.daikin_base import Appliance
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN
 
@@ -20,11 +20,11 @@ class DaikinCoordinator(DataUpdateCoordinator[None]):
     """Class to manage fetching Daikin data."""
 
     def __init__(
-        self, hass: HomeAssistant, entry: DaikinConfigEntry, device: Appliance
+        self, menuai: menuai, entry: DaikinConfigEntry, device: Appliance
     ) -> None:
         """Initialize global Daikin data updater."""
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=entry,
             name=device.values.get("name", DOMAIN),

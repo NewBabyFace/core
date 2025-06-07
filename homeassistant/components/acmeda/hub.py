@@ -7,9 +7,9 @@ from collections.abc import Callable
 
 import aiopulse
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.dispatcher import async_dispatcher_send
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers.dispatcher import async_dispatcher_send
 
 from .const import ACMEDA_ENTITY_REMOVE, ACMEDA_HUB_UPDATE, LOGGER
 from .helpers import update_devices
@@ -20,10 +20,10 @@ class PulseHub:
 
     api: aiopulse.Hub
 
-    def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+    def __init__(self, menuai: menuai, config_entry: ConfigEntry) -> None:
         """Initialize the system."""
         self.config_entry = config_entry
-        self.hass = hass
+        self.menuai = menuai
         self.tasks: list[asyncio.Task[None]] = []
         self.current_rollers: dict[int, aiopulse.Roller] = {}
         self.cleanup_callbacks: list[Callable[[], None]] = []
@@ -73,13 +73,13 @@ class PulseHub:
         LOGGER.debug("Hub %s updated", update_type.name)
 
         if update_type == aiopulse.UpdateType.rollers:
-            await update_devices(self.hass, self.config_entry, self.api.rollers)
-            self.hass.config_entries.async_update_entry(
+            await update_devices(self.menuai, self.config_entry, self.api.rollers)
+            self.menuai.config_entries.async_update_entry(
                 self.config_entry, title=self.title
             )
 
             async_dispatcher_send(
-                self.hass, ACMEDA_HUB_UPDATE.format(self.config_entry.entry_id)
+                self.menuai, ACMEDA_HUB_UPDATE.format(self.config_entry.entry_id)
             )
 
             for unique_id in list(self.current_rollers):
@@ -87,5 +87,5 @@ class PulseHub:
                     LOGGER.debug("Notifying remove of %s", unique_id)
                     self.current_rollers.pop(unique_id)
                     async_dispatcher_send(
-                        self.hass, ACMEDA_ENTITY_REMOVE.format(unique_id)
+                        self.menuai, ACMEDA_ENTITY_REMOVE.format(unique_id)
                     )

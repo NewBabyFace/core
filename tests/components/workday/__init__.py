@@ -1,4 +1,4 @@
-"""Tests the Home Assistant workday binary sensor."""
+"""Tests the MenuAI workday binary sensor."""
 
 from __future__ import annotations
 
@@ -6,26 +6,26 @@ from typing import Any
 
 from holidays import OPTIONAL
 
-from homeassistant.components.workday.const import (
+from menuai.components.workday.const import (
     DEFAULT_EXCLUDES,
     DEFAULT_NAME,
     DEFAULT_OFFSET,
     DEFAULT_WORKDAYS,
     DOMAIN,
 )
-from homeassistant.config_entries import SOURCE_USER
-from homeassistant.core import HomeAssistant
+from menuai.config_entries import SOURCE_USER
+from menuai.core import menuai
 
 from tests.common import MockConfigEntry
 
 
 async def init_integration(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: dict[str, Any],
     entry_id: str = "1",
     source: str = SOURCE_USER,
 ) -> MockConfigEntry:
-    """Set up the Scrape integration in Home Assistant."""
+    """Set up the Scrape integration in MenuAI."""
 
     config_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -35,10 +35,10 @@ async def init_integration(
         entry_id=entry_id,
     )
 
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     return config_entry
 

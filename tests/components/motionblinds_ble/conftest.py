@@ -6,14 +6,14 @@ from unittest.mock import AsyncMock, Mock, patch
 from motionblindsble.const import MotionBlindType
 import pytest
 
-from homeassistant.components.bluetooth.models import BluetoothServiceInfoBleak
-from homeassistant.components.motionblinds_ble.const import (
+from menuai.components.bluetooth.models import BluetoothServiceInfoBleak
+from menuai.components.motionblinds_ble.const import (
     CONF_BLIND_TYPE,
     CONF_LOCAL_NAME,
     CONF_MAC_CODE,
     DOMAIN,
 )
-from homeassistant.const import CONF_ADDRESS
+from menuai.const import CONF_ADDRESS
 
 from tests.common import MockConfigEntry
 from tests.components.bluetooth import generate_advertisement_data, generate_ble_device
@@ -96,7 +96,7 @@ def mock_motion_device(
     """Mock a MotionDevice."""
 
     with patch(
-        "homeassistant.components.motionblinds_ble.MotionDevice",
+        "menuai.components.motionblinds_ble.MotionDevice",
         autospec=True,
     ) as mock_device:
         device = mock_device.return_value
@@ -129,7 +129,7 @@ def mock_config_entry(
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.motionblinds_ble.async_setup_entry",
+        "menuai.components.motionblinds_ble.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
         yield mock_setup_entry
@@ -149,11 +149,11 @@ def motionblinds_ble_connect(
 
     with (
         patch(
-            "homeassistant.components.motionblinds_ble.config_flow.bluetooth.async_scanner_count",
+            "menuai.components.motionblinds_ble.config_flow.bluetooth.async_scanner_count",
             return_value=1,
         ),
         patch(
-            "homeassistant.components.motionblinds_ble.config_flow.bluetooth.async_get_scanner",
+            "menuai.components.motionblinds_ble.config_flow.bluetooth.async_get_scanner",
             return_value=bleak_scanner,
         ),
     ):

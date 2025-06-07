@@ -2,8 +2,8 @@
 
 from typing import Any
 
-from homeassistant.components.diagnostics import async_redact_data
-from homeassistant.core import HomeAssistant
+from menuai.components.diagnostics import async_redact_data
+from menuai.core import menuai
 
 from . import FroniusConfigEntry
 
@@ -11,7 +11,7 @@ TO_REDACT = {"unique_id", "unique_identifier", "serial"}
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, config_entry: FroniusConfigEntry
+    menuai: menuai, config_entry: FroniusConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     diag: dict[str, Any] = {}

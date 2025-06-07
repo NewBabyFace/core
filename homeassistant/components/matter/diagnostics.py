@@ -8,10 +8,10 @@ from typing import Any
 from chip.clusters import Objects
 from matter_server.common.helpers.util import dataclass_to_dict, parse_attribute_path
 
-from homeassistant.components.diagnostics import REDACTED
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from menuai.components.diagnostics import REDACTED
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
 
 from .helpers import get_matter, get_node_from_device_entry
 
@@ -41,10 +41,10 @@ def remove_serialization_type(data: dict[str, Any]) -> dict[str, Any]:
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, config_entry: ConfigEntry
+    menuai: menuai, config_entry: ConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
-    matter = get_matter(hass)
+    matter = get_matter(menuai)
     server_diagnostics = await matter.matter_client.get_diagnostics()
     data = dataclass_to_dict(server_diagnostics)
     nodes = [redact_matter_attributes(node_data) for node_data in data["nodes"]]
@@ -54,12 +54,12 @@ async def async_get_config_entry_diagnostics(
 
 
 async def async_get_device_diagnostics(
-    hass: HomeAssistant, config_entry: ConfigEntry, device: dr.DeviceEntry
+    menuai: menuai, config_entry: ConfigEntry, device: dr.DeviceEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a device."""
-    matter = get_matter(hass)
+    matter = get_matter(menuai)
     server_diagnostics = await matter.matter_client.get_diagnostics()
-    node = get_node_from_device_entry(hass, device)
+    node = get_node_from_device_entry(menuai, device)
 
     return {
         "server_info": dataclass_to_dict(server_diagnostics.info),

@@ -2,13 +2,13 @@
 
 import pytest
 
-from homeassistant.components import automation
-from homeassistant.components.device_automation import DeviceAutomationType
-from homeassistant.components.kodi import DOMAIN
-from homeassistant.components.media_player import DOMAIN as MP_DOMAIN
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.setup import async_setup_component
+from menuai.components import automation
+from menuai.components.device_automation import DeviceAutomationType
+from menuai.components.kodi import DOMAIN
+from menuai.components.media_player import DOMAIN as MP_DOMAIN
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.setup import async_setup_component
 
 from . import init_integration
 
@@ -21,20 +21,20 @@ def stub_blueprint_populate_autouse(stub_blueprint_populate: None) -> None:
 
 
 @pytest.fixture
-async def kodi_media_player(hass: HomeAssistant) -> str:
+async def kodi_media_player(menuai: menuai) -> str:
     """Get a kodi media player."""
-    await init_integration(hass)
+    await init_integration(menuai)
     return f"{MP_DOMAIN}.name"
 
 
 async def test_get_triggers(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
 ) -> None:
     """Test we get the expected triggers from a kodi."""
     config_entry = MockConfigEntry(domain=DOMAIN, data={})
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
         identifiers={(DOMAIN, "host", 1234)},
@@ -56,7 +56,7 @@ async def test_get_triggers(
 
     # Test triggers are either kodi specific triggers or media_player entity triggers
     triggers = await async_get_device_automations(
-        hass, DeviceAutomationType.TRIGGER, device_entry.id
+        menuai, DeviceAutomationType.TRIGGER, device_entry.id
     )
     for expected_trigger in expected_triggers:
         assert expected_trigger in triggers
@@ -65,7 +65,7 @@ async def test_get_triggers(
 
 
 async def test_if_fires_on_state_change(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     service_calls: list[ServiceCall],
     kodi_media_player: str,
@@ -74,7 +74,7 @@ async def test_if_fires_on_state_change(
     entry = entity_registry.async_get(kodi_media_player)
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -115,33 +115,33 @@ async def test_if_fires_on_state_change(
             ]
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         "turn_on",
         {"entity_id": kodi_media_player},
         blocking=True,
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 2
     assert service_calls[1].data["some"] == f"turn_on - {kodi_media_player} - 0"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         "turn_off",
         {"entity_id": kodi_media_player},
         blocking=True,
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 4
     assert service_calls[3].data["some"] == f"turn_off - {kodi_media_player} - 0"
 
 
 async def test_if_fires_on_state_change_legacy(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     service_calls: list[ServiceCall],
     kodi_media_player: str,
@@ -150,7 +150,7 @@ async def test_if_fires_on_state_change_legacy(
     entry = entity_registry.async_get(kodi_media_player)
 
     assert await async_setup_component(
-        hass,
+        menuai,
         automation.DOMAIN,
         {
             automation.DOMAIN: [
@@ -174,15 +174,15 @@ async def test_if_fires_on_state_change_legacy(
             ]
         },
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         "turn_on",
         {"entity_id": kodi_media_player},
         blocking=True,
     )
 
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert len(service_calls) == 2
     assert service_calls[1].data["some"] == f"turn_on - {kodi_media_player} - 0"

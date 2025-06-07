@@ -6,8 +6,8 @@ from collections.abc import Callable
 from functools import partial
 from typing import Any
 
-from homeassistant.core import callback
-from homeassistant.helpers.redact import REDACTED, async_redact_data, partial_redact
+from menuai.core import callback
+from menuai.helpers.redact import REDACTED, async_redact_data, partial_redact
 
 GOOGLE_MSG_TO_REDACT: dict[str, Callable[[str], str]] = {
     "agentUserId": partial_redact,

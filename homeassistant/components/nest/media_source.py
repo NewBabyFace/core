@@ -37,21 +37,21 @@ from google_nest_sdm.event_media import (
 from google_nest_sdm.google_nest_subscriber import GoogleNestSubscriber
 from google_nest_sdm.transcoder import Transcoder
 
-from homeassistant.components.ffmpeg import get_ffmpeg_manager
-from homeassistant.components.media_player import BrowseError, MediaClass, MediaType
-from homeassistant.components.media_source import (
+from menuai.components.ffmpeg import get_ffmpeg_manager
+from menuai.components.media_player import BrowseError, MediaClass, MediaType
+from menuai.components.media_source import (
     BrowseMediaSource,
     MediaSource,
     MediaSourceItem,
     PlayMedia,
     Unresolvable,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.storage import Store
-from homeassistant.helpers.template import DATE_STR_FORMAT
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai, callback
+from menuai.helpers import device_registry as dr
+from menuai.helpers.event import async_track_time_interval
+from menuai.helpers.storage import Store
+from menuai.helpers.template import DATE_STR_FORMAT
+from menuai.util import dt as dt_util
 
 from .const import DOMAIN
 from .device_info import NestDeviceInfo, async_nest_devices_by_device_id
@@ -80,23 +80,23 @@ ORPHANED_MEDIA_AGE_CUTOFF = datetime.timedelta(days=7)
 
 
 async def async_get_media_event_store(
-    hass: HomeAssistant, subscriber: GoogleNestSubscriber
+    menuai: menuai, subscriber: GoogleNestSubscriber
 ) -> EventMediaStore:
     """Create the disk backed EventMediaStore."""
-    media_path = hass.config.path(MEDIA_PATH)
+    media_path = menuai.config.path(MEDIA_PATH)
 
     def mkdir() -> None:
         os.makedirs(media_path, exist_ok=True)
 
-    await hass.async_add_executor_job(mkdir)
-    store = Store[dict[str, Any]](hass, STORAGE_VERSION, STORAGE_KEY, private=True)
-    return NestEventMediaStore(hass, subscriber, store, media_path)
+    await menuai.async_add_executor_job(mkdir)
+    store = Store[dict[str, Any]](menuai, STORAGE_VERSION, STORAGE_KEY, private=True)
+    return NestEventMediaStore(menuai, subscriber, store, media_path)
 
 
-async def async_get_transcoder(hass: HomeAssistant) -> Transcoder:
+async def async_get_transcoder(menuai: menuai) -> Transcoder:
     """Get a nest clip transcoder."""
-    media_path = hass.config.path(MEDIA_PATH)
-    ffmpeg_manager = get_ffmpeg_manager(hass)
+    media_path = menuai.config.path(MEDIA_PATH)
+    ffmpeg_manager = get_ffmpeg_manager(menuai)
     return Transcoder(ffmpeg_manager.binary, media_path)
 
 
@@ -117,13 +117,13 @@ class NestEventMediaStore(EventMediaStore):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         subscriber: GoogleNestSubscriber,
         store: Store[dict[str, Any]],
         media_path: str,
     ) -> None:
         """Initialize NestEventMediaStore."""
-        self._hass = hass
+        self._menuai = menuai
         self._subscriber = subscriber
         self._store = store
         self._media_path = media_path
@@ -131,7 +131,7 @@ class NestEventMediaStore(EventMediaStore):
         self._devices: Mapping[str, str] | None = {}
         # Invoke garbage collection for orphaned files one per
         async_track_time_interval(
-            hass,
+            menuai,
             self.async_remove_orphaned_media,
             datetime.timedelta(days=1),
         )
@@ -209,7 +209,7 @@ class NestEventMediaStore(EventMediaStore):
                 return media.read()
 
         try:
-            return await self._hass.async_add_executor_job(load_media, filename)
+            return await self._menuai.async_add_executor_job(load_media, filename)
         except OSError as err:
             _LOGGER.error("Unable to read media file: %s %s", filename, err)
             return None
@@ -230,7 +230,7 @@ class NestEventMediaStore(EventMediaStore):
                 media.write(content)
 
         try:
-            await self._hass.async_add_executor_job(save_media, filename, content)
+            await self._menuai.async_add_executor_job(save_media, filename, content)
         except OSError as err:
             _LOGGER.error("Unable to write media file: %s %s", filename, err)
 
@@ -245,13 +245,13 @@ class NestEventMediaStore(EventMediaStore):
             os.remove(filename)
 
         try:
-            await self._hass.async_add_executor_job(remove_media, filename)
+            await self._menuai.async_add_executor_job(remove_media, filename)
         except OSError as err:
             _LOGGER.error("Unable to remove media file: %s %s", filename, err)
 
     async def _get_devices(self) -> Mapping[str, str]:
-        """Return a mapping of nest device id to home assistant device id."""
-        device_registry = dr.async_get(self._hass)
+        """Return a mapping of nest device id to MenuAI device id."""
+        device_registry = dr.async_get(self._menuai)
         device_manager = await self._subscriber.async_get_device_manager()
         devices = {}
         for device in device_manager.devices.values():
@@ -300,12 +300,12 @@ class NestEventMediaStore(EventMediaStore):
                             err,
                         )
 
-        # Nest device id mapped to home assistant device id
+        # Nest device id mapped to MenuAI device id
         event_timestamps = await self._get_valid_event_timestamps()
-        await self._hass.async_add_executor_job(_cleanup, event_timestamps)
+        await self._menuai.async_add_executor_job(_cleanup, event_timestamps)
 
     async def _get_valid_event_timestamps(self) -> dict[str, set[int]]:
-        """Return a mapping of home assistant device id to valid timestamps."""
+        """Return a mapping of MenuAI device id to valid timestamps."""
         device_map = await self._get_devices()
         event_data = await self.async_load() or {}
         valid_device_timestamps = {}
@@ -324,15 +324,15 @@ class NestEventMediaStore(EventMediaStore):
         return valid_device_timestamps
 
 
-async def async_get_media_source(hass: HomeAssistant) -> MediaSource:
+async def async_get_media_source(menuai: menuai) -> MediaSource:
     """Set up Nest media source."""
-    return NestMediaSource(hass)
+    return NestMediaSource(menuai)
 
 
 @callback
-def async_get_media_source_devices(hass: HomeAssistant) -> Mapping[str, Device]:
+def async_get_media_source_devices(menuai: menuai) -> Mapping[str, Device]:
     """Return a mapping of device id to eligible Nest event media devices."""
-    devices = async_nest_devices_by_device_id(hass)
+    devices = async_nest_devices_by_device_id(menuai)
     return {
         device_id: device
         for device_id, device in devices.items()
@@ -383,17 +383,17 @@ class NestMediaSource(MediaSource):
 
     name: str = MEDIA_SOURCE_TITLE
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, menuai: menuai) -> None:
         """Initialize NestMediaSource."""
         super().__init__(DOMAIN)
-        self.hass = hass
+        self.menuai = menuai
 
     async def async_resolve_media(self, item: MediaSourceItem) -> PlayMedia:
         """Resolve media identifier to a url."""
         media_id: MediaId | None = parse_media_id(item.identifier)
         if not media_id:
             raise Unresolvable("No identifier specified for MediaSourceItem")
-        devices = async_get_media_source_devices(self.hass)
+        devices = async_get_media_source_devices(self.menuai)
         if not (device := devices.get(media_id.device_id)):
             raise Unresolvable(
                 f"Unable to find device with identifier: {item.identifier}"
@@ -430,7 +430,7 @@ class NestMediaSource(MediaSource):
         _LOGGER.debug(
             "Browsing media for identifier=%s, media_id=%s", item.identifier, media_id
         )
-        devices = async_get_media_source_devices(self.hass)
+        devices = async_get_media_source_devices(self.menuai)
         if media_id is None:
             # Browse the root and return child devices
             browse_root = _browse_root()

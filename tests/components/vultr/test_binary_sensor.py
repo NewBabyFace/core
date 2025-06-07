@@ -3,8 +3,8 @@
 import pytest
 import voluptuous as vol
 
-from homeassistant.components import vultr as base_vultr
-from homeassistant.components.vultr import (
+from menuai.components import vultr as base_vultr
+from menuai.components.vultr import (
     ATTR_ALLOWED_BANDWIDTH,
     ATTR_AUTO_BACKUPS,
     ATTR_COST_PER_MONTH,
@@ -14,8 +14,8 @@ from homeassistant.components.vultr import (
     CONF_SUBSCRIPTION,
     binary_sensor as vultr,
 )
-from homeassistant.const import CONF_NAME, CONF_PLATFORM
-from homeassistant.core import HomeAssistant
+from menuai.const import CONF_NAME, CONF_PLATFORM
+from menuai.core import menuai
 
 CONFIGS = [
     {CONF_SUBSCRIPTION: "576965", CONF_NAME: "A Server"},
@@ -25,23 +25,23 @@ CONFIGS = [
 
 
 @pytest.mark.usefixtures("valid_config")
-def test_binary_sensor(hass: HomeAssistant) -> None:
+def test_binary_sensor(menuai: menuai) -> None:
     """Test successful instance."""
-    hass_devices = []
+    menuai_devices = []
 
     def add_entities(devices, action):
         """Mock add devices."""
         for device in devices:
-            device.hass = hass
-            hass_devices.append(device)
+            device.menuai = menuai
+            menuai_devices.append(device)
 
     # Setup each of our test configs
     for config in CONFIGS:
-        vultr.setup_platform(hass, config, add_entities, None)
+        vultr.setup_platform(menuai, config, add_entities, None)
 
-    assert len(hass_devices) == 3
+    assert len(menuai_devices) == 3
 
-    for device in hass_devices:
+    for device in menuai_devices:
         # Test pre data retrieval
         if device.subscription == "555555":
             assert device.name == "Vultr {}"
@@ -82,23 +82,23 @@ def test_invalid_sensor_config() -> None:
 
 
 @pytest.mark.usefixtures("valid_config")
-def test_invalid_sensors(hass: HomeAssistant) -> None:
+def test_invalid_sensors(menuai: menuai) -> None:
     """Test the VultrBinarySensor fails."""
-    hass_devices = []
+    menuai_devices = []
 
     def add_entities(devices, action):
         """Mock add devices."""
         for device in devices:
-            device.hass = hass
-            hass_devices.append(device)
+            device.menuai = menuai
+            menuai_devices.append(device)
 
     bad_conf = {}  # No subscription
 
-    vultr.setup_platform(hass, bad_conf, add_entities, None)
+    vultr.setup_platform(menuai, bad_conf, add_entities, None)
 
     bad_conf = {
         CONF_NAME: "Missing Server",
         CONF_SUBSCRIPTION: "555555",
     }  # Sub not associated with API key (not in server_list)
 
-    vultr.setup_platform(hass, bad_conf, add_entities, None)
+    vultr.setup_platform(menuai, bad_conf, add_entities, None)

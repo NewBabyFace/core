@@ -13,9 +13,9 @@ import voluptuous as vol
 from zeroconf import BadTypeInNameException, DNSPointer, Zeroconf, current_time_millis
 from zeroconf.asyncio import AsyncServiceInfo, IPVersion
 
-from homeassistant.components import websocket_api
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.json import json_bytes
+from menuai.components import websocket_api
+from menuai.core import menuai, callback
+from menuai.helpers.json import json_bytes
 
 from .const import DOMAIN, REQUEST_TIMEOUT
 from .discovery import DATA_DISCOVERY, ZeroconfDiscovery
@@ -27,9 +27,9 @@ TYPE_PTR = 12
 
 
 @callback
-def async_setup(hass: HomeAssistant) -> None:
+def async_setup(menuai: menuai) -> None:
     """Set up the zeroconf websocket API."""
-    websocket_api.async_register_command(hass, ws_subscribe_discovery)
+    websocket_api.async_register_command(menuai, ws_subscribe_discovery)
 
 
 def serialize_service_info(service_info: AsyncServiceInfo) -> dict[str, Any]:
@@ -50,14 +50,14 @@ class _DiscoverySubscription:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         connection: websocket_api.ActiveConnection,
         ws_msg_id: int,
         aiozc: HaAsyncZeroconf,
         discovery: ZeroconfDiscovery,
     ) -> None:
         """Initialize the subscription data."""
-        self.hass = hass
+        self.menuai = menuai
         self.discovery = discovery
         self.aiozc = aiozc
         self.ws_msg_id = ws_msg_id
@@ -106,7 +106,7 @@ class _DiscoverySubscription:
                 self._async_on_update(info)
             else:
                 tasks.append(
-                    self.hass.async_create_background_task(
+                    self.menuai.async_create_background_task(
                         self._async_handle_service(info),
                         f"zeroconf resolve {record.alias}",
                     ),
@@ -153,11 +153,11 @@ class _DiscoverySubscription:
 )
 @websocket_api.async_response
 async def ws_subscribe_discovery(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle subscribe advertisements websocket command."""
-    discovery = hass.data[DATA_DISCOVERY]
-    aiozc: HaAsyncZeroconf = hass.data[DOMAIN]
+    discovery = menuai.data[DATA_DISCOVERY]
+    aiozc: HaAsyncZeroconf = menuai.data[DOMAIN]
     await _DiscoverySubscription(
-        hass, connection, msg["id"], aiozc, discovery
+        menuai, connection, msg["id"], aiozc, discovery
     ).async_start()

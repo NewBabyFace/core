@@ -9,14 +9,14 @@ from xml.parsers.expat import ExpatError
 
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
+from menuai.components.sensor import (
     CONF_STATE_CLASS,
     DOMAIN as SENSOR_DOMAIN,
     PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
     SensorDeviceClass,
 )
-from homeassistant.components.sensor.helpers import async_parse_date_datetime
-from homeassistant.const import (
+from menuai.components.sensor.helpers import async_parse_date_datetime
+from menuai.const import (
     CONF_DEVICE_CLASS,
     CONF_FORCE_UPDATE,
     CONF_ICON,
@@ -27,19 +27,19 @@ from homeassistant.const import (
     CONF_UNIT_OF_MEASUREMENT,
     CONF_VALUE_TEMPLATE,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import PlatformNotReady
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.template import Template
-from homeassistant.helpers.trigger_template_entity import (
+from menuai.core import menuai
+from menuai.exceptions import PlatformNotReady
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_platform import AddEntitiesCallback
+from menuai.helpers.template import Template
+from menuai.helpers.trigger_template_entity import (
     CONF_AVAILABILITY,
     CONF_PICTURE,
     ManualTriggerSensorEntity,
     ValueTemplate,
 )
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.helpers.update_coordinator import DataUpdateCoordinator
 
 from . import async_get_config_and_coordinator, create_rest_data_from_config
 from .const import CONF_JSON_ATTRS, CONF_JSON_ATTRS_PATH, DEFAULT_SENSOR_NAME
@@ -67,7 +67,7 @@ TRIGGER_ENTITY_OPTIONS = (
 
 
 async def async_setup_platform(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
@@ -77,12 +77,12 @@ async def async_setup_platform(
     # ensure it's updating its state.
     if discovery_info is not None:
         conf, coordinator, rest = await async_get_config_and_coordinator(
-            hass, SENSOR_DOMAIN, discovery_info
+            menuai, SENSOR_DOMAIN, discovery_info
         )
     else:
         conf = config
         coordinator = None
-        rest = create_rest_data_from_config(hass, conf)
+        rest = create_rest_data_from_config(menuai, conf)
         await rest.async_update(log_errors=False)
 
     if rest.data is None:
@@ -97,7 +97,7 @@ async def async_setup_platform(
             raise PlatformNotReady from rest.last_exception
         raise PlatformNotReady
 
-    name = conf.get(CONF_NAME) or Template(DEFAULT_SENSOR_NAME, hass)
+    name = conf.get(CONF_NAME) or Template(DEFAULT_SENSOR_NAME, menuai)
 
     trigger_entity_config = {CONF_NAME: name}
 
@@ -109,7 +109,7 @@ async def async_setup_platform(
     async_add_entities(
         [
             RestSensor(
-                hass,
+                menuai,
                 coordinator,
                 rest,
                 conf,
@@ -124,14 +124,14 @@ class RestSensor(ManualTriggerSensorEntity, RestEntity):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         coordinator: DataUpdateCoordinator[None] | None,
         rest: RestData,
         config: ConfigType,
         trigger_entity_config: ConfigType,
     ) -> None:
         """Initialize the REST sensor."""
-        ManualTriggerSensorEntity.__init__(self, hass, trigger_entity_config)
+        ManualTriggerSensorEntity.__init__(self, menuai, trigger_entity_config)
         RestEntity.__init__(
             self,
             coordinator,

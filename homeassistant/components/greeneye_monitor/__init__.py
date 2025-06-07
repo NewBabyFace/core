@@ -7,19 +7,19 @@ import logging
 import greeneye
 import voluptuous as vol
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_NAME,
     CONF_PORT,
     CONF_SENSORS,
     CONF_TEMPERATURE_UNIT,
-    EVENT_HOMEASSISTANT_STOP,
+    EVENT_menuai_STOP,
     Platform,
     UnitOfTime,
 )
-from homeassistant.core import Event, HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.discovery import async_load_platform
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import Event, menuai
+from menuai.helpers import config_validation as cv
+from menuai.helpers.discovery import async_load_platform
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     CONF_CHANNELS,
@@ -116,10 +116,10 @@ COMPONENT_SCHEMA = vol.Schema(
 CONFIG_SCHEMA = vol.Schema({DOMAIN: COMPONENT_SCHEMA}, extra=vol.ALLOW_EXTRA)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the GreenEye Monitor component."""
     monitors = greeneye.Monitors()
-    hass.data[DATA_GREENEYE_MONITOR] = monitors
+    menuai.data[DATA_GREENEYE_MONITOR] = monitors
 
     server_config = config[DOMAIN]
     await monitors.start_server(server_config[CONF_PORT])
@@ -128,7 +128,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         """Close the Monitors object."""
         await monitors.close()
 
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, close_monitors)
+    menuai.bus.async_listen_once(EVENT_menuai_STOP, close_monitors)
 
     num_sensors = 0
     for monitor_config in config[DOMAIN][CONF_MONITORS]:
@@ -144,8 +144,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         )
         return False
 
-    hass.async_create_task(
-        async_load_platform(hass, Platform.SENSOR, DOMAIN, config[DOMAIN], config)
+    menuai.async_create_task(
+        async_load_platform(menuai, Platform.SENSOR, DOMAIN, config[DOMAIN], config)
     )
 
     return True

@@ -9,18 +9,18 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from homeassistant.components import mqtt
-from homeassistant.components.mqtt.models import MessageCallbackType, ReceiveMessage
-from homeassistant.components.mqtt.util import EnsureJobAfterCooldown
-from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
-from homeassistant.core import HomeAssistant, callback
+from menuai.components import mqtt
+from menuai.components.mqtt.models import MessageCallbackType, ReceiveMessage
+from menuai.components.mqtt.util import EnsureJobAfterCooldown
+from menuai.const import EVENT_menuai_STARTED
+from menuai.core import menuai, callback
 
 from tests.common import MockConfigEntry
 from tests.typing import MqttMockPahoClient
 
 ENTRY_DEFAULT_BIRTH_MESSAGE = {
     mqtt.CONF_BIRTH_MESSAGE: {
-        mqtt.ATTR_TOPIC: "homeassistant/status",
+        mqtt.ATTR_TOPIC: "menuai/status",
         mqtt.ATTR_PAYLOAD: "online",
         mqtt.ATTR_QOS: 0,
         mqtt.ATTR_RETAIN: False,
@@ -29,7 +29,7 @@ ENTRY_DEFAULT_BIRTH_MESSAGE = {
 
 
 @pytest.fixture(autouse=True)
-def patch_hass_config(mock_hass_config: None) -> None:
+def patch_menuai_config(mock_menuai_config: None) -> None:
     """Patch configuration.yaml."""
 
 
@@ -41,18 +41,18 @@ def temp_dir_prefix() -> str:
 
 @pytest.fixture(autouse=True)
 async def mock_temp_dir(
-    hass: HomeAssistant, tmp_path: Path, temp_dir_prefix: str
+    menuai: menuai, tmp_path: Path, temp_dir_prefix: str
 ) -> AsyncGenerator[str]:
     """Mock the certificate temp directory."""
     mqtt_temp_dir = f"home-assistant-mqtt-{temp_dir_prefix}-{getrandbits(10):03x}"
     with (
         patch(
-            "homeassistant.components.mqtt.util.tempfile.gettempdir",
+            "menuai.components.mqtt.util.tempfile.gettempdir",
             return_value=tmp_path,
         ),
         patch(
             # Patch temp dir name to avoid tests fail running in parallel
-            "homeassistant.components.mqtt.util.TEMP_DIR_NAME",
+            "menuai.components.mqtt.util.TEMP_DIR_NAME",
             mqtt_temp_dir,
         ) as mocked_temp_dir,
     ):
@@ -60,7 +60,7 @@ async def mock_temp_dir(
 
 
 @pytest.fixture
-def mock_debouncer(hass: HomeAssistant) -> Generator[asyncio.Event]:
+def mock_debouncer(menuai: menuai) -> Generator[asyncio.Event]:
     """Mock EnsureJobAfterCooldown.
 
     Returns an asyncio.Event that allows to await the debouncer task to be finished.
@@ -77,14 +77,14 @@ def mock_debouncer(hass: HomeAssistant) -> Generator[asyncio.Event]:
 
     # We mock the import of EnsureJobAfterCooldown in client.py
     with patch(
-        "homeassistant.components.mqtt.client.EnsureJobAfterCooldown", MockDeboncer
+        "menuai.components.mqtt.client.EnsureJobAfterCooldown", MockDeboncer
     ):
         yield task_done
 
 
 @pytest.fixture
 async def setup_with_birth_msg_client_mock(
-    hass: HomeAssistant,
+    menuai: menuai,
     mqtt_config_entry_data: dict[str, Any] | None,
     mqtt_config_entry_options: dict[str, Any] | None,
     mqtt_client_mock: MqttMockPahoClient,
@@ -92,9 +92,9 @@ async def setup_with_birth_msg_client_mock(
     """Test sending birth message."""
     birth = asyncio.Event()
     with (
-        patch("homeassistant.components.mqtt.client.INITIAL_SUBSCRIBE_COOLDOWN", 0.0),
-        patch("homeassistant.components.mqtt.client.DISCOVERY_COOLDOWN", 0.0),
-        patch("homeassistant.components.mqtt.client.SUBSCRIBE_COOLDOWN", 0.0),
+        patch("menuai.components.mqtt.client.INITIAL_SUBSCRIBE_COOLDOWN", 0.0),
+        patch("menuai.components.mqtt.client.DISCOVERY_COOLDOWN", 0.0),
+        patch("menuai.components.mqtt.client.SUBSCRIBE_COOLDOWN", 0.0),
     ):
         entry = MockConfigEntry(
             domain=mqtt.DOMAIN,
@@ -103,18 +103,18 @@ async def setup_with_birth_msg_client_mock(
             version=mqtt.CONFIG_ENTRY_VERSION,
             minor_version=mqtt.CONFIG_ENTRY_MINOR_VERSION,
         )
-        entry.add_to_hass(hass)
-        hass.config.components.add(mqtt.DOMAIN)
-        assert await hass.config_entries.async_setup(entry.entry_id)
-        hass.bus.async_fire(EVENT_HOMEASSISTANT_STARTED)
+        entry.add_to_menuai(menuai)
+        menuai.config.components.add(mqtt.DOMAIN)
+        assert await menuai.config_entries.async_setup(entry.entry_id)
+        menuai.bus.async_fire(EVENT_menuai_STARTED)
 
         @callback
         def wait_birth(msg: ReceiveMessage) -> None:
             """Handle birth message."""
             birth.set()
 
-        await mqtt.async_subscribe(hass, "homeassistant/status", wait_birth)
-        await hass.async_block_till_done()
+        await mqtt.async_subscribe(menuai, "menuai/status", wait_birth)
+        await menuai.async_block_till_done()
         await birth.wait()
         yield mqtt_client_mock
 
@@ -140,5 +140,5 @@ def record_calls(recorded_calls: list[ReceiveMessage]) -> MessageCallbackType:
 @pytest.fixture
 def tag_mock() -> Generator[AsyncMock]:
     """Fixture to mock tag."""
-    with patch("homeassistant.components.tag.async_scan_tag") as mock_tag:
+    with patch("menuai.components.tag.async_scan_tag") as mock_tag:
         yield mock_tag

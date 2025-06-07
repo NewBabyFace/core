@@ -8,8 +8,8 @@ from typing import Any
 
 from pyownet import protocol
 
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity, EntityDescription
+from menuai.helpers.device_registry import DeviceInfo
+from menuai.helpers.entity import Entity, EntityDescription
 
 from .const import READ_MODE_INT
 

@@ -9,11 +9,11 @@ from typing import Any
 from pybotvac.exceptions import NeatoRobotException
 from pybotvac.robot import Robot
 
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import STATE_OFF, STATE_ON, EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.switch import SwitchEntity
+from menuai.config_entries import ConfigEntry
+from menuai.const import STATE_OFF, STATE_ON, EntityCategory
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import NEATO_LOGIN, NEATO_ROBOTS, SCAN_INTERVAL_MINUTES
 from .entity import NeatoEntity
@@ -29,15 +29,15 @@ SWITCH_TYPES = {SWITCH_TYPE_SCHEDULE: ["Schedule"]}
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Neato switch with config entry."""
-    neato: NeatoHub = hass.data[NEATO_LOGIN]
+    neato: NeatoHub = menuai.data[NEATO_LOGIN]
     dev = [
         NeatoConnectedSwitch(neato, robot, type_name)
-        for robot in hass.data[NEATO_ROBOTS]
+        for robot in menuai.data[NEATO_ROBOTS]
         for type_name in SWITCH_TYPES
     ]
 

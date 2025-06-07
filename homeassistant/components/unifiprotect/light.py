@@ -7,9 +7,9 @@ from typing import Any
 
 from uiprotect.data import Light, ModelType, ProtectAdoptableDeviceModel
 
-from homeassistant.components.light import ColorMode, LightEntity
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.light import ColorMode, LightEntity
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .data import ProtectDeviceType, UFPConfigEntry
 from .entity import ProtectDeviceEntity
@@ -18,7 +18,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: UFPConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -40,13 +40,13 @@ async def async_setup_entry(
     )
 
 
-def unifi_brightness_to_hass(value: int) -> int:
-    """Convert unifi brightness 1..6 to hass format 0..255."""
+def unifi_brightness_to_menuai(value: int) -> int:
+    """Convert unifi brightness 1..6 to menuai format 0..255."""
     return min(255, round((value / 6) * 255))
 
 
-def hass_to_unifi_brightness(value: int) -> int:
-    """Convert hass brightness 0..255 to unifi 1..6 scale."""
+def menuai_to_unifi_brightness(value: int) -> int:
+    """Convert menuai brightness 0..255 to unifi 1..6 scale."""
     return max(1, round((value / 255) * 6))
 
 
@@ -65,7 +65,7 @@ class ProtectLight(ProtectDeviceEntity, LightEntity):
         super()._async_update_device_from_protect(device)
         updated_device = self.device
         self._attr_is_on = updated_device.is_light_on
-        self._attr_brightness = unifi_brightness_to_hass(
+        self._attr_brightness = unifi_brightness_to_menuai(
             updated_device.light_device_settings.led_level
         )
 

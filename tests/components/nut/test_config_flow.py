@@ -5,10 +5,10 @@ from unittest.mock import patch
 
 from aionut import NUTError, NUTLoginError
 
-from homeassistant import config_entries
-from homeassistant.components.nut.config_flow import PASSWORD_NOT_CHANGED
-from homeassistant.components.nut.const import DOMAIN
-from homeassistant.const import (
+from menuai import config_entries
+from menuai.components.nut.config_flow import PASSWORD_NOT_CHANGED
+from menuai.components.nut.const import DOMAIN
+from menuai.const import (
     CONF_ALIAS,
     CONF_HOST,
     CONF_NAME,
@@ -17,9 +17,9 @@ from homeassistant.const import (
     CONF_RESOURCES,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .util import _get_mock_nutclient, async_init_integration
 
@@ -33,9 +33,9 @@ VALID_CONFIG = {
 }
 
 
-async def test_form_zeroconf(hass: HomeAssistant) -> None:
+async def test_form_zeroconf(menuai: menuai) -> None:
     """Test we can setup from zeroconf."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
         data=ZeroconfServiceInfo(
@@ -58,19 +58,19 @@ async def test_form_zeroconf(hass: HomeAssistant) -> None:
 
     with (
         patch(
-            "homeassistant.components.nut.AIONUTClient",
+            "menuai.components.nut.AIONUTClient",
             return_value=mock_pynut,
         ),
         patch(
-            "homeassistant.components.nut.async_setup_entry",
+            "menuai.components.nut.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_USERNAME: "test-username", CONF_PASSWORD: "test-password"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "192.168.1.5:1234"
@@ -84,9 +84,9 @@ async def test_form_zeroconf(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_form_user_one_alias(hass: HomeAssistant) -> None:
+async def test_form_user_one_alias(menuai: menuai) -> None:
     """Test we can configure a device with one alias."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -98,15 +98,15 @@ async def test_form_user_one_alias(hass: HomeAssistant) -> None:
 
     with (
         patch(
-            "homeassistant.components.nut.AIONUTClient",
+            "menuai.components.nut.AIONUTClient",
             return_value=mock_pynut,
         ),
         patch(
-            "homeassistant.components.nut.async_setup_entry",
+            "menuai.components.nut.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_HOST: "1.1.1.1",
@@ -115,7 +115,7 @@ async def test_form_user_one_alias(hass: HomeAssistant) -> None:
                 CONF_PORT: 2222,
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "1.1.1.1:2222"
@@ -128,15 +128,15 @@ async def test_form_user_one_alias(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_form_user_multiple_aliases(hass: HomeAssistant) -> None:
+async def test_form_user_multiple_aliases(menuai: menuai) -> None:
     """Test we can configure device with multiple aliases."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
         data={CONF_HOST: "2.2.2.2", CONF_PORT: 123, CONF_RESOURCES: ["battery.charge"]},
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -148,10 +148,10 @@ async def test_form_user_multiple_aliases(hass: HomeAssistant) -> None:
     )
 
     with patch(
-        "homeassistant.components.nut.AIONUTClient",
+        "menuai.components.nut.AIONUTClient",
         return_value=mock_pynut,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_HOST: "1.1.1.1",
@@ -166,19 +166,19 @@ async def test_form_user_multiple_aliases(hass: HomeAssistant) -> None:
 
     with (
         patch(
-            "homeassistant.components.nut.AIONUTClient",
+            "menuai.components.nut.AIONUTClient",
             return_value=mock_pynut,
         ),
         patch(
-            "homeassistant.components.nut.async_setup_entry",
+            "menuai.components.nut.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {CONF_ALIAS: "ups2"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result3["type"] is FlowResultType.CREATE_ENTRY
     assert result3["title"] == "ups2@1.1.1.1:2222"
@@ -192,14 +192,14 @@ async def test_form_user_multiple_aliases(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 2
 
 
-async def test_form_user_one_alias_with_ignored_entry(hass: HomeAssistant) -> None:
+async def test_form_user_one_alias_with_ignored_entry(menuai: menuai) -> None:
     """Test we can setup a new one when there is an ignored one."""
     ignored_entry = MockConfigEntry(
         domain=DOMAIN, data={}, source=config_entries.SOURCE_IGNORE
     )
-    ignored_entry.add_to_hass(hass)
+    ignored_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
@@ -211,15 +211,15 @@ async def test_form_user_one_alias_with_ignored_entry(hass: HomeAssistant) -> No
 
     with (
         patch(
-            "homeassistant.components.nut.AIONUTClient",
+            "menuai.components.nut.AIONUTClient",
             return_value=mock_pynut,
         ),
         patch(
-            "homeassistant.components.nut.async_setup_entry",
+            "menuai.components.nut.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_HOST: "1.1.1.1",
@@ -228,7 +228,7 @@ async def test_form_user_one_alias_with_ignored_entry(hass: HomeAssistant) -> No
                 CONF_PORT: 2222,
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "1.1.1.1:2222"
@@ -241,19 +241,19 @@ async def test_form_user_one_alias_with_ignored_entry(hass: HomeAssistant) -> No
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_form_no_aliases_found(hass: HomeAssistant) -> None:
+async def test_form_no_aliases_found(menuai: menuai) -> None:
     """Test we abort when the NUT server has no aliases."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     mock_pynut = _get_mock_nutclient()
 
     with patch(
-        "homeassistant.components.nut.AIONUTClient",
+        "menuai.components.nut.AIONUTClient",
         return_value=mock_pynut,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_HOST: "1.1.1.1",
@@ -267,23 +267,23 @@ async def test_form_no_aliases_found(hass: HomeAssistant) -> None:
     assert result2["reason"] == "no_ups_found"
 
 
-async def test_form_cannot_connect(hass: HomeAssistant) -> None:
+async def test_form_cannot_connect(menuai: menuai) -> None:
     """Test we handle cannot connect error."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     with (
         patch(
-            "homeassistant.components.nut.AIONUTClient.list_ups",
+            "menuai.components.nut.AIONUTClient.list_ups",
             side_effect=NUTError("no route to host"),
         ),
         patch(
-            "homeassistant.components.nut.AIONUTClient.list_vars",
+            "menuai.components.nut.AIONUTClient.list_vars",
             side_effect=NUTError("no route to host"),
         ),
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_HOST: "1.1.1.1",
@@ -299,15 +299,15 @@ async def test_form_cannot_connect(hass: HomeAssistant) -> None:
 
     with (
         patch(
-            "homeassistant.components.nut.AIONUTClient.list_ups",
+            "menuai.components.nut.AIONUTClient.list_ups",
             return_value={"ups1"},
         ),
         patch(
-            "homeassistant.components.nut.AIONUTClient.list_vars",
+            "menuai.components.nut.AIONUTClient.list_vars",
             side_effect=Exception,
         ),
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_HOST: "1.1.1.1",
@@ -325,15 +325,15 @@ async def test_form_cannot_connect(hass: HomeAssistant) -> None:
     )
     with (
         patch(
-            "homeassistant.components.nut.AIONUTClient",
+            "menuai.components.nut.AIONUTClient",
             return_value=mock_pynut,
         ),
         patch(
-            "homeassistant.components.nut.async_setup_entry",
+            "menuai.components.nut.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_HOST: "1.1.1.1",
@@ -342,7 +342,7 @@ async def test_form_cannot_connect(hass: HomeAssistant) -> None:
                 CONF_PORT: 2222,
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "1.1.1.1:2222"
@@ -355,23 +355,23 @@ async def test_form_cannot_connect(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_auth_failures(hass: HomeAssistant) -> None:
+async def test_auth_failures(menuai: menuai) -> None:
     """Test authentication failures."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     with (
         patch(
-            "homeassistant.components.nut.AIONUTClient.list_ups",
+            "menuai.components.nut.AIONUTClient.list_ups",
             side_effect=NUTLoginError,
         ),
         patch(
-            "homeassistant.components.nut.AIONUTClient.list_vars",
+            "menuai.components.nut.AIONUTClient.list_vars",
             side_effect=NUTLoginError,
         ),
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_HOST: "1.1.1.1",
@@ -389,15 +389,15 @@ async def test_auth_failures(hass: HomeAssistant) -> None:
     )
     with (
         patch(
-            "homeassistant.components.nut.AIONUTClient",
+            "menuai.components.nut.AIONUTClient",
             return_value=mock_pynut,
         ),
         patch(
-            "homeassistant.components.nut.async_setup_entry",
+            "menuai.components.nut.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_HOST: "1.1.1.1",
@@ -406,7 +406,7 @@ async def test_auth_failures(hass: HomeAssistant) -> None:
                 CONF_PORT: 2222,
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == "1.1.1.1:2222"
@@ -419,7 +419,7 @@ async def test_auth_failures(hass: HomeAssistant) -> None:
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_reauth(hass: HomeAssistant) -> None:
+async def test_reauth(menuai: menuai) -> None:
     """Test reauth flow."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -429,24 +429,24 @@ async def test_reauth(hass: HomeAssistant) -> None:
             CONF_RESOURCES: ["battery.voltage"],
         },
     )
-    config_entry.add_to_hass(hass)
-    config_entry.async_start_reauth(hass)
-    await hass.async_block_till_done()
-    flows = hass.config_entries.flow.async_progress_by_handler(DOMAIN)
+    config_entry.add_to_menuai(menuai)
+    config_entry.async_start_reauth(menuai)
+    await menuai.async_block_till_done()
+    flows = menuai.config_entries.flow.async_progress_by_handler(DOMAIN)
     assert len(flows) == 1
     flow = flows[0]
 
     with (
         patch(
-            "homeassistant.components.nut.AIONUTClient.list_ups",
+            "menuai.components.nut.AIONUTClient.list_ups",
             side_effect=NUTLoginError,
         ),
         patch(
-            "homeassistant.components.nut.AIONUTClient.list_vars",
+            "menuai.components.nut.AIONUTClient.list_vars",
             side_effect=NUTLoginError,
         ),
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             flow["flow_id"],
             {
                 CONF_USERNAME: "test-username",
@@ -462,29 +462,29 @@ async def test_reauth(hass: HomeAssistant) -> None:
     )
     with (
         patch(
-            "homeassistant.components.nut.AIONUTClient",
+            "menuai.components.nut.AIONUTClient",
             return_value=mock_pynut,
         ),
         patch(
-            "homeassistant.components.nut.async_setup_entry",
+            "menuai.components.nut.async_setup_entry",
             return_value=True,
         ) as mock_setup_entry,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             flow["flow_id"],
             {
                 CONF_USERNAME: "test-username",
                 CONF_PASSWORD: "test-password",
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
     assert result2["type"] is FlowResultType.ABORT
     assert result2["reason"] == "reauth_successful"
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_abort_if_already_setup(hass: HomeAssistant) -> None:
+async def test_abort_if_already_setup(menuai: menuai) -> None:
     """Test we abort if component is already setup."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -494,9 +494,9 @@ async def test_abort_if_already_setup(hass: HomeAssistant) -> None:
             CONF_RESOURCES: ["battery.voltage"],
         },
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -506,10 +506,10 @@ async def test_abort_if_already_setup(hass: HomeAssistant) -> None:
     )
 
     with patch(
-        "homeassistant.components.nut.AIONUTClient",
+        "menuai.components.nut.AIONUTClient",
         return_value=mock_pynut,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_HOST: "1.1.1.1",
@@ -521,7 +521,7 @@ async def test_abort_if_already_setup(hass: HomeAssistant) -> None:
         assert result2["reason"] == "already_configured"
 
 
-async def test_abort_duplicate_unique_ids(hass: HomeAssistant) -> None:
+async def test_abort_duplicate_unique_ids(menuai: menuai) -> None:
     """Test we abort if unique_id is already setup."""
 
     list_vars = {
@@ -530,35 +530,35 @@ async def test_abort_duplicate_unique_ids(hass: HomeAssistant) -> None:
         "device.serial": "0000-1",
     }
     await async_init_integration(
-        hass,
+        menuai,
         list_ups={"ups1": "UPS 1"},
         list_vars=list_vars,
     )
 
     mock_pynut = _get_mock_nutclient(list_ups={"ups2": "UPS 2"}, list_vars=list_vars)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
     with patch(
-        "homeassistant.components.nut.AIONUTClient",
+        "menuai.components.nut.AIONUTClient",
         return_value=mock_pynut,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_HOST: "1.1.1.1",
                 CONF_PORT: 2222,
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         assert result2["type"] is FlowResultType.ABORT
         assert result2["reason"] == "already_configured"
 
 
-async def test_abort_multiple_aliases_duplicate_unique_ids(hass: HomeAssistant) -> None:
+async def test_abort_multiple_aliases_duplicate_unique_ids(menuai: menuai) -> None:
     """Test we abort on multiple aliases if unique_id is already setup."""
 
     list_vars = {
@@ -571,55 +571,55 @@ async def test_abort_multiple_aliases_duplicate_unique_ids(hass: HomeAssistant) 
         list_ups={"ups2": "UPS 2", "ups3": "UPS 3"}, list_vars=list_vars
     )
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
     with patch(
-        "homeassistant.components.nut.AIONUTClient",
+        "menuai.components.nut.AIONUTClient",
         return_value=mock_pynut,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_HOST: "1.1.1.1",
                 CONF_PORT: 2222,
             },
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         assert result2["step_id"] == "ups"
         assert result2["type"] is FlowResultType.FORM
 
     await async_init_integration(
-        hass,
+        menuai,
         list_ups={"ups1": "UPS 1"},
         list_vars=list_vars,
     )
 
     with (
         patch(
-            "homeassistant.components.nut.AIONUTClient",
+            "menuai.components.nut.AIONUTClient",
             return_value=mock_pynut,
         ),
         patch(
-            "homeassistant.components.nut.async_setup_entry",
+            "menuai.components.nut.async_setup_entry",
             return_value=True,
         ),
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_ALIAS: "ups2"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         assert result3["type"] is FlowResultType.ABORT
         assert result3["reason"] == "already_configured"
 
 
-async def test_abort_if_already_setup_alias(hass: HomeAssistant) -> None:
+async def test_abort_if_already_setup_alias(menuai: menuai) -> None:
     """Test we abort if component is already setup with same alias."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -630,9 +630,9 @@ async def test_abort_if_already_setup_alias(hass: HomeAssistant) -> None:
             CONF_ALIAS: "ups1",
         },
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
@@ -642,10 +642,10 @@ async def test_abort_if_already_setup_alias(hass: HomeAssistant) -> None:
     )
 
     with patch(
-        "homeassistant.components.nut.AIONUTClient",
+        "menuai.components.nut.AIONUTClient",
         return_value=mock_pynut,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_HOST: "1.1.1.1",
@@ -657,10 +657,10 @@ async def test_abort_if_already_setup_alias(hass: HomeAssistant) -> None:
     assert result2["type"] is FlowResultType.FORM
 
     with patch(
-        "homeassistant.components.nut.AIONUTClient",
+        "menuai.components.nut.AIONUTClient",
         return_value=mock_pynut,
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {CONF_ALIAS: "ups1"},
         )
@@ -669,10 +669,10 @@ async def test_abort_if_already_setup_alias(hass: HomeAssistant) -> None:
         assert result3["reason"] == "already_configured"
 
 
-async def test_reconfigure_one_alias_successful(hass: HomeAssistant) -> None:
+async def test_reconfigure_one_alias_successful(menuai: menuai) -> None:
     """Test reconfigure one alias successful."""
     entry = await async_init_integration(
-        hass,
+        menuai,
         host="1.1.1.1",
         port=123,
         username="test-username",
@@ -681,7 +681,7 @@ async def test_reconfigure_one_alias_successful(hass: HomeAssistant) -> None:
         list_vars={"battery.voltage": "voltage"},
     )
 
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reconfigure"
@@ -692,10 +692,10 @@ async def test_reconfigure_one_alias_successful(hass: HomeAssistant) -> None:
     )
 
     with patch(
-        "homeassistant.components.nut.AIONUTClient",
+        "menuai.components.nut.AIONUTClient",
         return_value=mock_pynut,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_HOST: "2.2.2.2",
@@ -714,10 +714,10 @@ async def test_reconfigure_one_alias_successful(hass: HomeAssistant) -> None:
         assert entry.data[CONF_PASSWORD] == "test-new-password"
 
 
-async def test_reconfigure_one_alias_nochange(hass: HomeAssistant) -> None:
+async def test_reconfigure_one_alias_nochange(menuai: menuai) -> None:
     """Test reconfigure one alias when there is no change."""
     entry = await async_init_integration(
-        hass,
+        menuai,
         host="1.1.1.1",
         port=123,
         username="test-username",
@@ -726,7 +726,7 @@ async def test_reconfigure_one_alias_nochange(hass: HomeAssistant) -> None:
         list_vars={"battery.voltage": "voltage"},
     )
 
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reconfigure"
@@ -737,10 +737,10 @@ async def test_reconfigure_one_alias_nochange(hass: HomeAssistant) -> None:
     )
 
     with patch(
-        "homeassistant.components.nut.AIONUTClient",
+        "menuai.components.nut.AIONUTClient",
         return_value=mock_pynut,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_HOST: entry.data[CONF_HOST],
@@ -759,10 +759,10 @@ async def test_reconfigure_one_alias_nochange(hass: HomeAssistant) -> None:
         assert entry.data[CONF_PASSWORD] == "test-password"
 
 
-async def test_reconfigure_one_alias_password_nochange(hass: HomeAssistant) -> None:
+async def test_reconfigure_one_alias_password_nochange(menuai: menuai) -> None:
     """Test reconfigure one alias when there is no password change."""
     entry = await async_init_integration(
-        hass,
+        menuai,
         host="1.1.1.1",
         port=123,
         username="test-username",
@@ -771,7 +771,7 @@ async def test_reconfigure_one_alias_password_nochange(hass: HomeAssistant) -> N
         list_vars={"battery.voltage": "voltage"},
     )
 
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reconfigure"
@@ -782,10 +782,10 @@ async def test_reconfigure_one_alias_password_nochange(hass: HomeAssistant) -> N
     )
 
     with patch(
-        "homeassistant.components.nut.AIONUTClient",
+        "menuai.components.nut.AIONUTClient",
         return_value=mock_pynut,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_HOST: "2.2.2.2",
@@ -804,10 +804,10 @@ async def test_reconfigure_one_alias_password_nochange(hass: HomeAssistant) -> N
         assert entry.data[CONF_PASSWORD] == "test-password"
 
 
-async def test_reconfigure_one_alias_already_configured(hass: HomeAssistant) -> None:
+async def test_reconfigure_one_alias_already_configured(menuai: menuai) -> None:
     """Test reconfigure when config changed to an existing host/port/alias."""
     entry = await async_init_integration(
-        hass,
+        menuai,
         host="1.1.1.1",
         port=123,
         username="test-username",
@@ -817,7 +817,7 @@ async def test_reconfigure_one_alias_already_configured(hass: HomeAssistant) -> 
     )
 
     entry2 = await async_init_integration(
-        hass,
+        menuai,
         host="2.2.2.2",
         port=456,
         username="test-username",
@@ -826,7 +826,7 @@ async def test_reconfigure_one_alias_already_configured(hass: HomeAssistant) -> 
         list_vars={"battery.voltage": "voltage"},
     )
 
-    result = await entry2.start_reconfigure_flow(hass)
+    result = await entry2.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reconfigure"
@@ -837,10 +837,10 @@ async def test_reconfigure_one_alias_already_configured(hass: HomeAssistant) -> 
     )
 
     with patch(
-        "homeassistant.components.nut.AIONUTClient",
+        "menuai.components.nut.AIONUTClient",
         return_value=mock_pynut,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_HOST: entry.data[CONF_HOST],
@@ -864,10 +864,10 @@ async def test_reconfigure_one_alias_already_configured(hass: HomeAssistant) -> 
         assert entry2.data[CONF_PASSWORD] == "test-password"
 
 
-async def test_reconfigure_one_alias_unique_id_change(hass: HomeAssistant) -> None:
+async def test_reconfigure_one_alias_unique_id_change(menuai: menuai) -> None:
     """Test reconfigure when the unique ID is changed."""
     entry = await async_init_integration(
-        hass,
+        menuai,
         host="1.1.1.1",
         port=123,
         username="test-username",
@@ -880,7 +880,7 @@ async def test_reconfigure_one_alias_unique_id_change(hass: HomeAssistant) -> No
         },
     )
 
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reconfigure"
@@ -895,10 +895,10 @@ async def test_reconfigure_one_alias_unique_id_change(hass: HomeAssistant) -> No
     )
 
     with patch(
-        "homeassistant.components.nut.AIONUTClient",
+        "menuai.components.nut.AIONUTClient",
         return_value=mock_pynut,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_HOST: entry.data[CONF_HOST],
@@ -912,7 +912,7 @@ async def test_reconfigure_one_alias_unique_id_change(hass: HomeAssistant) -> No
         assert result2["reason"] == "unique_id_mismatch"
 
 
-async def test_reconfigure_one_alias_duplicate_unique_ids(hass: HomeAssistant) -> None:
+async def test_reconfigure_one_alias_duplicate_unique_ids(menuai: menuai) -> None:
     """Test reconfigure that results in a duplicate unique ID."""
 
     list_vars = {
@@ -922,7 +922,7 @@ async def test_reconfigure_one_alias_duplicate_unique_ids(hass: HomeAssistant) -
     }
 
     await async_init_integration(
-        hass,
+        menuai,
         host="1.1.1.1",
         port=123,
         username="test-username",
@@ -932,7 +932,7 @@ async def test_reconfigure_one_alias_duplicate_unique_ids(hass: HomeAssistant) -
     )
 
     entry2 = await async_init_integration(
-        hass,
+        menuai,
         host="2.2.2.2",
         port=456,
         username="test-username",
@@ -945,7 +945,7 @@ async def test_reconfigure_one_alias_duplicate_unique_ids(hass: HomeAssistant) -
         },
     )
 
-    result = await entry2.start_reconfigure_flow(hass)
+    result = await entry2.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reconfigure"
@@ -956,10 +956,10 @@ async def test_reconfigure_one_alias_duplicate_unique_ids(hass: HomeAssistant) -
     )
 
     with patch(
-        "homeassistant.components.nut.AIONUTClient",
+        "menuai.components.nut.AIONUTClient",
         return_value=mock_pynut,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_HOST: "3.3.3.3",
@@ -973,10 +973,10 @@ async def test_reconfigure_one_alias_duplicate_unique_ids(hass: HomeAssistant) -
         assert result2["reason"] == "unique_id_mismatch"
 
 
-async def test_reconfigure_multiple_aliases_successful(hass: HomeAssistant) -> None:
+async def test_reconfigure_multiple_aliases_successful(menuai: menuai) -> None:
     """Test reconfigure with multiple aliases is successful."""
     entry = await async_init_integration(
-        hass,
+        menuai,
         host="1.1.1.1",
         port=123,
         username="test-username",
@@ -985,7 +985,7 @@ async def test_reconfigure_multiple_aliases_successful(hass: HomeAssistant) -> N
         list_vars={"battery.voltage": "voltage"},
     )
 
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reconfigure"
@@ -999,10 +999,10 @@ async def test_reconfigure_multiple_aliases_successful(hass: HomeAssistant) -> N
     )
 
     with patch(
-        "homeassistant.components.nut.AIONUTClient",
+        "menuai.components.nut.AIONUTClient",
         return_value=mock_pynut,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_HOST: "2.2.2.2",
@@ -1017,19 +1017,19 @@ async def test_reconfigure_multiple_aliases_successful(hass: HomeAssistant) -> N
 
     with (
         patch(
-            "homeassistant.components.nut.AIONUTClient",
+            "menuai.components.nut.AIONUTClient",
             return_value=mock_pynut,
         ),
         patch(
-            "homeassistant.components.nut.async_setup_entry",
+            "menuai.components.nut.async_setup_entry",
             return_value=True,
         ),
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {CONF_ALIAS: "ups2"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         assert result3["type"] is FlowResultType.ABORT
         assert result3["reason"] == "reconfigure_successful"
@@ -1041,10 +1041,10 @@ async def test_reconfigure_multiple_aliases_successful(hass: HomeAssistant) -> N
         assert entry.data[CONF_ALIAS] == "ups2"
 
 
-async def test_reconfigure_multiple_aliases_nochange(hass: HomeAssistant) -> None:
+async def test_reconfigure_multiple_aliases_nochange(menuai: menuai) -> None:
     """Test reconfigure with multiple aliases and no change."""
     entry = await async_init_integration(
-        hass,
+        menuai,
         host="1.1.1.1",
         port=123,
         username="test-username",
@@ -1053,7 +1053,7 @@ async def test_reconfigure_multiple_aliases_nochange(hass: HomeAssistant) -> Non
         list_vars={"battery.voltage": "voltage"},
     )
 
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reconfigure"
@@ -1067,10 +1067,10 @@ async def test_reconfigure_multiple_aliases_nochange(hass: HomeAssistant) -> Non
     )
 
     with patch(
-        "homeassistant.components.nut.AIONUTClient",
+        "menuai.components.nut.AIONUTClient",
         return_value=mock_pynut,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_HOST: entry.data[CONF_HOST],
@@ -1085,19 +1085,19 @@ async def test_reconfigure_multiple_aliases_nochange(hass: HomeAssistant) -> Non
 
     with (
         patch(
-            "homeassistant.components.nut.AIONUTClient",
+            "menuai.components.nut.AIONUTClient",
             return_value=mock_pynut,
         ),
         patch(
-            "homeassistant.components.nut.async_setup_entry",
+            "menuai.components.nut.async_setup_entry",
             return_value=True,
         ),
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {CONF_ALIAS: "ups1"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         assert result3["type"] is FlowResultType.ABORT
         assert result3["reason"] == "reconfigure_successful"
@@ -1110,11 +1110,11 @@ async def test_reconfigure_multiple_aliases_nochange(hass: HomeAssistant) -> Non
 
 
 async def test_reconfigure_multiple_aliases_password_nochange(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test reconfigure with multiple aliases when no password change."""
     entry = await async_init_integration(
-        hass,
+        menuai,
         host="1.1.1.1",
         port=123,
         username="test-username",
@@ -1123,7 +1123,7 @@ async def test_reconfigure_multiple_aliases_password_nochange(
         list_vars={"battery.voltage": "voltage"},
     )
 
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reconfigure"
@@ -1137,10 +1137,10 @@ async def test_reconfigure_multiple_aliases_password_nochange(
     )
 
     with patch(
-        "homeassistant.components.nut.AIONUTClient",
+        "menuai.components.nut.AIONUTClient",
         return_value=mock_pynut,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_HOST: "2.2.2.2",
@@ -1155,19 +1155,19 @@ async def test_reconfigure_multiple_aliases_password_nochange(
 
     with (
         patch(
-            "homeassistant.components.nut.AIONUTClient",
+            "menuai.components.nut.AIONUTClient",
             return_value=mock_pynut,
         ),
         patch(
-            "homeassistant.components.nut.async_setup_entry",
+            "menuai.components.nut.async_setup_entry",
             return_value=True,
         ),
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {CONF_ALIAS: "ups2"},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         assert result3["type"] is FlowResultType.ABORT
         assert result3["reason"] == "reconfigure_successful"
@@ -1180,11 +1180,11 @@ async def test_reconfigure_multiple_aliases_password_nochange(
 
 
 async def test_reconfigure_multiple_aliases_already_configured(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test reconfigure multi aliases changed to existing host/port/alias."""
     entry = await async_init_integration(
-        hass,
+        menuai,
         host="1.1.1.1",
         port=123,
         alias="ups1",
@@ -1195,7 +1195,7 @@ async def test_reconfigure_multiple_aliases_already_configured(
     )
 
     entry2 = await async_init_integration(
-        hass,
+        menuai,
         host="2.2.2.2",
         port=456,
         alias="ups2",
@@ -1210,7 +1210,7 @@ async def test_reconfigure_multiple_aliases_already_configured(
     assert entry2.data[CONF_USERNAME] == "test-username"
     assert entry2.data[CONF_PASSWORD] == "test-password"
 
-    result = await entry2.start_reconfigure_flow(hass)
+    result = await entry2.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reconfigure"
@@ -1224,10 +1224,10 @@ async def test_reconfigure_multiple_aliases_already_configured(
     )
 
     with patch(
-        "homeassistant.components.nut.AIONUTClient",
+        "menuai.components.nut.AIONUTClient",
         return_value=mock_pynut,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_HOST: entry.data[CONF_HOST],
@@ -1242,19 +1242,19 @@ async def test_reconfigure_multiple_aliases_already_configured(
 
     with (
         patch(
-            "homeassistant.components.nut.AIONUTClient",
+            "menuai.components.nut.AIONUTClient",
             return_value=mock_pynut,
         ),
         patch(
-            "homeassistant.components.nut.async_setup_entry",
+            "menuai.components.nut.async_setup_entry",
             return_value=True,
         ),
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {CONF_ALIAS: entry.data[CONF_ALIAS]},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         assert result3["type"] is FlowResultType.ABORT
         assert result3["reason"] == "already_configured"
@@ -1273,11 +1273,11 @@ async def test_reconfigure_multiple_aliases_already_configured(
 
 
 async def test_reconfigure_multiple_aliases_unique_id_change(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test reconfigure with multiple aliases and the unique ID is changed."""
     entry = await async_init_integration(
-        hass,
+        menuai,
         host="1.1.1.1",
         port=123,
         alias="ups1",
@@ -1287,7 +1287,7 @@ async def test_reconfigure_multiple_aliases_unique_id_change(
         list_vars={"battery.voltage": "voltage"},
     )
 
-    result = await entry.start_reconfigure_flow(hass)
+    result = await entry.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reconfigure"
@@ -1305,10 +1305,10 @@ async def test_reconfigure_multiple_aliases_unique_id_change(
     )
 
     with patch(
-        "homeassistant.components.nut.AIONUTClient",
+        "menuai.components.nut.AIONUTClient",
         return_value=mock_pynut,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_HOST: entry.data[CONF_HOST],
@@ -1323,26 +1323,26 @@ async def test_reconfigure_multiple_aliases_unique_id_change(
 
     with (
         patch(
-            "homeassistant.components.nut.AIONUTClient",
+            "menuai.components.nut.AIONUTClient",
             return_value=mock_pynut,
         ),
         patch(
-            "homeassistant.components.nut.async_setup_entry",
+            "menuai.components.nut.async_setup_entry",
             return_value=True,
         ),
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {CONF_ALIAS: entry.data[CONF_ALIAS]},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         assert result3["type"] is FlowResultType.ABORT
         assert result3["reason"] == "unique_id_mismatch"
 
 
 async def test_reconfigure_multiple_aliases_duplicate_unique_ids(
-    hass: HomeAssistant,
+    menuai: menuai,
 ) -> None:
     """Test reconfigure multi aliases that results in duplicate unique ID."""
 
@@ -1353,7 +1353,7 @@ async def test_reconfigure_multiple_aliases_duplicate_unique_ids(
     }
 
     entry = await async_init_integration(
-        hass,
+        menuai,
         host="1.1.1.1",
         port=123,
         alias="ups1",
@@ -1364,7 +1364,7 @@ async def test_reconfigure_multiple_aliases_duplicate_unique_ids(
     )
 
     entry2 = await async_init_integration(
-        hass,
+        menuai,
         host="2.2.2.2",
         port=456,
         alias="ups2",
@@ -1378,7 +1378,7 @@ async def test_reconfigure_multiple_aliases_duplicate_unique_ids(
         },
     )
 
-    result = await entry2.start_reconfigure_flow(hass)
+    result = await entry2.start_reconfigure_flow(menuai)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reconfigure"
@@ -1392,10 +1392,10 @@ async def test_reconfigure_multiple_aliases_duplicate_unique_ids(
     )
 
     with patch(
-        "homeassistant.components.nut.AIONUTClient",
+        "menuai.components.nut.AIONUTClient",
         return_value=mock_pynut,
     ):
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await menuai.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_HOST: "3.3.3.3",
@@ -1410,19 +1410,19 @@ async def test_reconfigure_multiple_aliases_duplicate_unique_ids(
 
     with (
         patch(
-            "homeassistant.components.nut.AIONUTClient",
+            "menuai.components.nut.AIONUTClient",
             return_value=mock_pynut,
         ),
         patch(
-            "homeassistant.components.nut.async_setup_entry",
+            "menuai.components.nut.async_setup_entry",
             return_value=True,
         ),
     ):
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await menuai.config_entries.flow.async_configure(
             result2["flow_id"],
             {CONF_ALIAS: entry.data[CONF_ALIAS]},
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         assert result3["type"] is FlowResultType.ABORT
         assert result3["reason"] == "unique_id_mismatch"

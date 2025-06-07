@@ -10,18 +10,18 @@ from pybravia import (
 )
 import pytest
 
-from homeassistant.components.braviatv.const import (
+from menuai.components.braviatv.const import (
     CONF_NICKNAME,
     CONF_USE_PSK,
     DOMAIN,
     NICKNAME_PREFIX,
 )
-from homeassistant.config_entries import SOURCE_SSDP, SOURCE_USER
-from homeassistant.const import CONF_CLIENT_ID, CONF_HOST, CONF_MAC, CONF_PIN
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import instance_id
-from homeassistant.helpers.service_info.ssdp import (
+from menuai.config_entries import SOURCE_SSDP, SOURCE_USER
+from menuai.const import CONF_CLIENT_ID, CONF_HOST, CONF_MAC, CONF_PIN
+from menuai.core import menuai
+from menuai.data_entry_flow import FlowResultType
+from menuai.helpers import instance_id
+from menuai.helpers.service_info.ssdp import (
     ATTR_UPNP_FRIENDLY_NAME,
     ATTR_UPNP_MODEL_NAME,
     ATTR_UPNP_UDN,
@@ -92,9 +92,9 @@ FAKE_BRAVIA_SSDP = SsdpServiceInfo(
 pytestmark = pytest.mark.usefixtures("mock_setup_entry")
 
 
-async def test_show_form(hass: HomeAssistant) -> None:
+async def test_show_form(menuai: menuai) -> None:
     """Test that the form is served with no input."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
 
@@ -102,10 +102,10 @@ async def test_show_form(hass: HomeAssistant) -> None:
     assert result["step_id"] == "user"
 
 
-async def test_ssdp_discovery(hass: HomeAssistant) -> None:
+async def test_ssdp_discovery(menuai: menuai) -> None:
     """Test that the device is discovered."""
-    uuid = await instance_id.async_get(hass)
-    result = await hass.config_entries.flow.async_init(
+    uuid = await instance_id.async_get(menuai)
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_SSDP},
         data=BRAVIA_SSDP,
@@ -122,22 +122,22 @@ async def test_ssdp_discovery(hass: HomeAssistant) -> None:
             return_value=BRAVIA_SYSTEM_INFO,
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={}
         )
-        await hass.async_block_till_done()
+        await menuai.async_block_till_done()
 
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "authorize"
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={CONF_USE_PSK: False}
         )
 
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "pin"
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={CONF_PIN: "1234"}
         )
 
@@ -154,9 +154,9 @@ async def test_ssdp_discovery(hass: HomeAssistant) -> None:
         }
 
 
-async def test_ssdp_discovery_fake(hass: HomeAssistant) -> None:
+async def test_ssdp_discovery_fake(menuai: menuai) -> None:
     """Test that not Bravia device is not discovered."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_SSDP},
         data=FAKE_BRAVIA_SSDP,
@@ -166,7 +166,7 @@ async def test_ssdp_discovery_fake(hass: HomeAssistant) -> None:
     assert result["reason"] == "not_bravia_device"
 
 
-async def test_ssdp_discovery_exist(hass: HomeAssistant) -> None:
+async def test_ssdp_discovery_exist(menuai: menuai) -> None:
     """Test that the existed device is not discovered."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -178,9 +178,9 @@ async def test_ssdp_discovery_exist(hass: HomeAssistant) -> None:
         },
         title="TV-Model",
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_SSDP},
         data=BRAVIA_SSDP,
@@ -190,9 +190,9 @@ async def test_ssdp_discovery_exist(hass: HomeAssistant) -> None:
     assert result["reason"] == "already_configured"
 
 
-async def test_user_invalid_host(hass: HomeAssistant) -> None:
+async def test_user_invalid_host(menuai: menuai) -> None:
     """Test that errors are shown when the host is invalid."""
-    result = await hass.config_entries.flow.async_init(
+    result = await menuai.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}, data={CONF_HOST: "invalid/host"}
     )
 
@@ -207,7 +207,7 @@ async def test_user_invalid_host(hass: HomeAssistant) -> None:
         (BraviaConnectionError, "cannot_connect"),
     ],
 )
-async def test_pin_form_error(hass: HomeAssistant, side_effect, error_message) -> None:
+async def test_pin_form_error(menuai: menuai, side_effect, error_message) -> None:
     """Test that PIN form errors are correct."""
     with (
         patch(
@@ -216,13 +216,13 @@ async def test_pin_form_error(hass: HomeAssistant, side_effect, error_message) -
         ),
         patch("pybravia.BraviaClient.pair"),
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": SOURCE_USER}, data={CONF_HOST: "bravia-host"}
         )
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={CONF_USE_PSK: False}
         )
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={CONF_PIN: "1234"}
         )
 
@@ -237,32 +237,32 @@ async def test_pin_form_error(hass: HomeAssistant, side_effect, error_message) -
         (BraviaConnectionError, "cannot_connect"),
     ],
 )
-async def test_psk_form_error(hass: HomeAssistant, side_effect, error_message) -> None:
+async def test_psk_form_error(menuai: menuai, side_effect, error_message) -> None:
     """Test that PSK form errors are correct."""
     with patch(
         "pybravia.BraviaClient.connect",
         side_effect=side_effect,
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": SOURCE_USER}, data={CONF_HOST: "bravia-host"}
         )
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={CONF_USE_PSK: True}
         )
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={CONF_PIN: "mypsk"}
         )
 
         assert result["errors"] == {"base": error_message}
 
 
-async def test_no_ip_control(hass: HomeAssistant) -> None:
+async def test_no_ip_control(menuai: menuai) -> None:
     """Test that error are shown when IP Control is disabled on the TV."""
     with patch("pybravia.BraviaClient.pair", side_effect=BraviaError):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": SOURCE_USER}, data={CONF_HOST: "bravia-host"}
         )
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={CONF_USE_PSK: False}
         )
 
@@ -270,7 +270,7 @@ async def test_no_ip_control(hass: HomeAssistant) -> None:
         assert result["reason"] == "no_ip_control"
 
 
-async def test_duplicate_error(hass: HomeAssistant) -> None:
+async def test_duplicate_error(menuai: menuai) -> None:
     """Test that error are shown when duplicates are added."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -282,7 +282,7 @@ async def test_duplicate_error(hass: HomeAssistant) -> None:
         },
         title="TV-Model",
     )
-    config_entry.add_to_hass(hass)
+    config_entry.add_to_menuai(menuai)
 
     with (
         patch("pybravia.BraviaClient.connect"),
@@ -293,13 +293,13 @@ async def test_duplicate_error(hass: HomeAssistant) -> None:
             return_value=BRAVIA_SYSTEM_INFO,
         ),
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": SOURCE_USER}, data={CONF_HOST: "bravia-host"}
         )
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={CONF_USE_PSK: False}
         )
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={CONF_PIN: "1234"}
         )
 
@@ -307,9 +307,9 @@ async def test_duplicate_error(hass: HomeAssistant) -> None:
         assert result["reason"] == "already_configured"
 
 
-async def test_create_entry(hass: HomeAssistant) -> None:
+async def test_create_entry(menuai: menuai) -> None:
     """Test that entry is added correctly with PIN auth."""
-    uuid = await instance_id.async_get(hass)
+    uuid = await instance_id.async_get(menuai)
 
     with (
         patch("pybravia.BraviaClient.connect"),
@@ -320,21 +320,21 @@ async def test_create_entry(hass: HomeAssistant) -> None:
             return_value=BRAVIA_SYSTEM_INFO,
         ),
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": SOURCE_USER}, data={CONF_HOST: "bravia-host"}
         )
 
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "authorize"
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={CONF_USE_PSK: False}
         )
 
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "pin"
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={CONF_PIN: "1234"}
         )
 
@@ -351,7 +351,7 @@ async def test_create_entry(hass: HomeAssistant) -> None:
         }
 
 
-async def test_create_entry_psk(hass: HomeAssistant) -> None:
+async def test_create_entry_psk(menuai: menuai) -> None:
     """Test that entry is added correctly with PSK auth."""
     with (
         patch("pybravia.BraviaClient.connect"),
@@ -361,21 +361,21 @@ async def test_create_entry_psk(hass: HomeAssistant) -> None:
             return_value=BRAVIA_SYSTEM_INFO,
         ),
     ):
-        result = await hass.config_entries.flow.async_init(
+        result = await menuai.config_entries.flow.async_init(
             DOMAIN, context={"source": SOURCE_USER}, data={CONF_HOST: "bravia-host"}
         )
 
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "authorize"
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={CONF_USE_PSK: True}
         )
 
         assert result["type"] is FlowResultType.FORM
         assert result["step_id"] == "psk"
 
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={CONF_PIN: "mypsk"}
         )
 
@@ -397,7 +397,7 @@ async def test_create_entry_psk(hass: HomeAssistant) -> None:
         (False, "newpsk"),
     ],
 )
-async def test_reauth_successful(hass: HomeAssistant, use_psk, new_pin) -> None:
+async def test_reauth_successful(menuai: menuai, use_psk, new_pin) -> None:
     """Test that the reauthorization is successful."""
     config_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -409,8 +409,8 @@ async def test_reauth_successful(hass: HomeAssistant, use_psk, new_pin) -> None:
         },
         title="TV-Model",
     )
-    config_entry.add_to_hass(hass)
-    result = await config_entry.start_reauth_flow(hass)
+    config_entry.add_to_menuai(menuai)
+    result = await config_entry.start_reauth_flow(menuai)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "authorize"
 
@@ -429,10 +429,10 @@ async def test_reauth_successful(hass: HomeAssistant, use_psk, new_pin) -> None:
             return_value={},
         ),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={CONF_USE_PSK: use_psk}
         )
-        result = await hass.config_entries.flow.async_configure(
+        result = await menuai.config_entries.flow.async_configure(
             result["flow_id"], user_input={CONF_PIN: new_pin}
         )
 

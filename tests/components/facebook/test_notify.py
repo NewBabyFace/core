@@ -5,8 +5,8 @@ from http import HTTPStatus
 import pytest
 import requests_mock
 
-from homeassistant.components.facebook import notify as fb
-from homeassistant.core import HomeAssistant
+from menuai.components.facebook import notify as fb
+from menuai.core import menuai
 
 
 @pytest.fixture
@@ -17,7 +17,7 @@ def facebook() -> fb.FacebookNotificationService:
 
 
 async def test_send_simple_message(
-    hass: HomeAssistant, facebook: fb.FacebookNotificationService
+    menuai: menuai, facebook: fb.FacebookNotificationService
 ) -> None:
     """Test sending a simple message with success."""
     with requests_mock.Mocker() as mock:
@@ -43,7 +43,7 @@ async def test_send_simple_message(
 
 
 async def test_send_multiple_message(
-    hass: HomeAssistant, facebook: fb.FacebookNotificationService
+    menuai: menuai, facebook: fb.FacebookNotificationService
 ) -> None:
     """Test sending a message to multiple targets."""
     with requests_mock.Mocker() as mock:
@@ -71,7 +71,7 @@ async def test_send_multiple_message(
 
 
 async def test_send_message_attachment(
-    hass: HomeAssistant, facebook: fb.FacebookNotificationService
+    menuai: menuai, facebook: fb.FacebookNotificationService
 ) -> None:
     """Test sending a message with a remote attachment."""
     with requests_mock.Mocker() as mock:
@@ -103,7 +103,7 @@ async def test_send_message_attachment(
 
 
 async def test_send_targetless_message(
-    hass: HomeAssistant, facebook: fb.FacebookNotificationService
+    menuai: menuai, facebook: fb.FacebookNotificationService
 ) -> None:
     """Test sending a message without a target."""
     with requests_mock.Mocker() as mock:
@@ -114,7 +114,7 @@ async def test_send_targetless_message(
 
 
 async def test_send_message_with_400(
-    hass: HomeAssistant, facebook: fb.FacebookNotificationService
+    menuai: menuai, facebook: fb.FacebookNotificationService
 ) -> None:
     """Test sending a message with a 400 from Facebook."""
     with requests_mock.Mocker() as mock:

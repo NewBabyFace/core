@@ -4,16 +4,16 @@ from unittest.mock import patch
 
 import pytest
 
-from homeassistant.components.select import (
+from menuai.components.select import (
     ATTR_OPTION,
     ATTR_OPTIONS,
     DOMAIN as SELECT_DOMAIN,
     SERVICE_SELECT_OPTION,
 )
-from homeassistant.const import ATTR_ENTITY_ID, Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.setup import async_setup_component
+from menuai.const import ATTR_ENTITY_ID, Platform
+from menuai.core import menuai
+from menuai.exceptions import ServiceValidationError
+from menuai.setup import async_setup_component
 
 ENTITY_SPEED = "select.speed"
 
@@ -22,24 +22,24 @@ ENTITY_SPEED = "select.speed"
 async def select_only() -> None:
     """Enable only the select platform."""
     with patch(
-        "homeassistant.components.demo.COMPONENTS_WITH_CONFIG_ENTRY_DEMO_PLATFORM",
+        "menuai.components.demo.COMPONENTS_WITH_CONFIG_ENTRY_DEMO_PLATFORM",
         [Platform.SELECT],
     ):
         yield
 
 
 @pytest.fixture(autouse=True)
-async def setup_demo_select(hass: HomeAssistant, select_only) -> None:
+async def setup_demo_select(menuai: menuai, select_only) -> None:
     """Initialize setup demo select entity."""
     assert await async_setup_component(
-        hass, SELECT_DOMAIN, {"select": {"platform": "demo"}}
+        menuai, SELECT_DOMAIN, {"select": {"platform": "demo"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
 
-def test_setup_params(hass: HomeAssistant) -> None:
+def test_setup_params(menuai: menuai) -> None:
     """Test the initial parameters."""
-    state = hass.states.get(ENTITY_SPEED)
+    state = menuai.states.get(ENTITY_SPEED)
     assert state
     assert state.state == "ridiculous_speed"
     assert state.attributes.get(ATTR_OPTIONS) == [
@@ -49,40 +49,40 @@ def test_setup_params(hass: HomeAssistant) -> None:
     ]
 
 
-async def test_select_option_bad_attr(hass: HomeAssistant) -> None:
+async def test_select_option_bad_attr(menuai: menuai) -> None:
     """Test selecting a different option with invalid option value."""
-    state = hass.states.get(ENTITY_SPEED)
+    state = menuai.states.get(ENTITY_SPEED)
     assert state
     assert state.state == "ridiculous_speed"
 
     with pytest.raises(ServiceValidationError):
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SELECT_DOMAIN,
             SERVICE_SELECT_OPTION,
             {ATTR_OPTION: "slow_speed", ATTR_ENTITY_ID: ENTITY_SPEED},
             blocking=True,
         )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(ENTITY_SPEED)
+    state = menuai.states.get(ENTITY_SPEED)
     assert state
     assert state.state == "ridiculous_speed"
 
 
-async def test_select_option(hass: HomeAssistant) -> None:
+async def test_select_option(menuai: menuai) -> None:
     """Test selecting of a option."""
-    state = hass.states.get(ENTITY_SPEED)
+    state = menuai.states.get(ENTITY_SPEED)
     assert state
     assert state.state == "ridiculous_speed"
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         SELECT_DOMAIN,
         SERVICE_SELECT_OPTION,
         {ATTR_OPTION: "light_speed", ATTR_ENTITY_ID: ENTITY_SPEED},
         blocking=True,
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    state = hass.states.get(ENTITY_SPEED)
+    state = menuai.states.get(ENTITY_SPEED)
     assert state
     assert state.state == "light_speed"

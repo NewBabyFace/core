@@ -9,7 +9,7 @@
       "type": "STATION",
       "coordinate": { "x": 10.035515, "y": 53.56478 },
       "serviceTypes": ["bus", "u"],
-      "hasStationInformation": true
+      "menuaitationInformation": true
     }
   ]
 }

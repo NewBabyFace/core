@@ -5,8 +5,8 @@ from datetime import UTC, datetime
 from aiovodafone import VodafoneStationDevice
 import pytest
 
-from homeassistant.components.vodafone_station.const import DOMAIN
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
+from menuai.components.vodafone_station.const import DOMAIN
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
 
 from .const import DEVICE_1_HOST, DEVICE_1_MAC, DEVICE_2_MAC
 
@@ -23,7 +23,7 @@ from tests.common import (
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.vodafone_station.async_setup_entry",
+        "menuai.components.vodafone_station.async_setup_entry",
         return_value=True,
     ) as mock_setup_entry:
         yield mock_setup_entry
@@ -34,11 +34,11 @@ def mock_vodafone_station_router() -> Generator[AsyncMock]:
     """Mock a Vodafone Station router."""
     with (
         patch(
-            "homeassistant.components.vodafone_station.coordinator.VodafoneStationSercommApi",
+            "menuai.components.vodafone_station.coordinator.VodafoneStationSercommApi",
             autospec=True,
         ) as mock_router,
         patch(
-            "homeassistant.components.vodafone_station.config_flow.VodafoneStationSercommApi",
+            "menuai.components.vodafone_station.config_flow.VodafoneStationSercommApi",
             new=mock_router,
         ),
     ):

@@ -14,16 +14,16 @@ from pyheos import (
 )
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_IGNORE,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import callback
-from homeassistant.helpers import selector
-from homeassistant.helpers.service_info.ssdp import SsdpServiceInfo
+from menuai.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import callback
+from menuai.helpers import selector
+from menuai.helpers.service_info.ssdp import SsdpServiceInfo
 
 from .const import DOMAIN, ENTRY_TITLE
 from .coordinator import HeosConfigEntry

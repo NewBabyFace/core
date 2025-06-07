@@ -13,21 +13,21 @@ from wled import (
     WLEDError,
 )
 
-from homeassistant.components.wled.const import SCAN_INTERVAL
-from homeassistant.const import (
-    EVENT_HOMEASSISTANT_STOP,
+from menuai.components.wled.const import SCAN_INTERVAL
+from menuai.const import (
+    EVENT_menuai_STOP,
     STATE_OFF,
     STATE_ON,
     STATE_UNAVAILABLE,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.util import dt as dt_util
 
 from tests.common import MockConfigEntry, async_fire_time_changed
 
 
 async def test_not_supporting_websocket(
-    hass: HomeAssistant, init_integration: MockConfigEntry, mock_wled: MagicMock
+    menuai: menuai, init_integration: MockConfigEntry, mock_wled: MagicMock
 ) -> None:
     """Ensure no WebSocket attempt is made if non-WebSocket device."""
     assert mock_wled.connect.call_count == 0
@@ -35,21 +35,21 @@ async def test_not_supporting_websocket(
 
 @pytest.mark.parametrize("device_fixture", ["rgb_websocket"])
 async def test_websocket_already_connected(
-    hass: HomeAssistant, init_integration: MockConfigEntry, mock_wled: MagicMock
+    menuai: menuai, init_integration: MockConfigEntry, mock_wled: MagicMock
 ) -> None:
     """Ensure no a second WebSocket connection is made, if already connected."""
     assert mock_wled.connect.call_count == 1
 
     mock_wled.connected = True
-    async_fire_time_changed(hass, dt_util.utcnow() + SCAN_INTERVAL)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + SCAN_INTERVAL)
+    await menuai.async_block_till_done()
 
     assert mock_wled.connect.call_count == 1
 
 
 @pytest.mark.parametrize("device_fixture", ["rgb_websocket"])
 async def test_websocket_connect_error_no_listen(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_integration: MockConfigEntry,
     mock_wled: MagicMock,
 ) -> None:
@@ -58,8 +58,8 @@ async def test_websocket_connect_error_no_listen(
     assert mock_wled.listen.call_count == 1
 
     mock_wled.connect.side_effect = WLEDConnectionError
-    async_fire_time_changed(hass, dt_util.utcnow() + SCAN_INTERVAL)
-    await hass.async_block_till_done()
+    async_fire_time_changed(menuai, dt_util.utcnow() + SCAN_INTERVAL)
+    await menuai.async_block_till_done()
 
     assert mock_wled.connect.call_count == 2
     assert mock_wled.listen.call_count == 1
@@ -67,12 +67,12 @@ async def test_websocket_connect_error_no_listen(
 
 @pytest.mark.parametrize("device_fixture", ["rgb_websocket"])
 async def test_websocket(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_integration: MockConfigEntry,
     mock_wled: MagicMock,
 ) -> None:
     """Test WebSocket connection."""
-    state = hass.states.get("light.wled_websocket")
+    state = menuai.states.get("light.wled_websocket")
     assert state
     assert state.state == STATE_ON
 
@@ -93,20 +93,20 @@ async def test_websocket(
 
     # Mock out the event bus
     mock_bus = MagicMock()
-    hass.bus = mock_bus
+    menuai.bus = mock_bus
 
     # Next refresh it should connect
-    async_fire_time_changed(hass, dt_util.utcnow() + SCAN_INTERVAL)
+    async_fire_time_changed(menuai, dt_util.utcnow() + SCAN_INTERVAL)
     callback = await connection_connected
 
     # Connected to WebSocket, disconnect not called
-    # listening for Home Assistant to stop
+    # listening for MenuAI to stop
     assert mock_wled.connect.call_count == 2
     assert mock_wled.listen.call_count == 2
     assert mock_wled.disconnect.call_count == 1
     assert mock_bus.async_listen_once.call_count == 1
     assert (
-        mock_bus.async_listen_once.call_args_list[0][0][0] == EVENT_HOMEASSISTANT_STOP
+        mock_bus.async_listen_once.call_args_list[0][0][0] == EVENT_menuai_STOP
     )
     assert (
         mock_bus.async_listen_once.call_args_list[0][0][1].__name__ == "close_websocket"
@@ -117,35 +117,35 @@ async def test_websocket(
     updated_device = deepcopy(mock_wled.update.return_value)
     updated_device.state.on = False
     callback(updated_device)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Check if entity updated
-    state = hass.states.get("light.wled_websocket")
+    state = menuai.states.get("light.wled_websocket")
     assert state
     assert state.state == STATE_OFF
 
     # Resolve Future with a connection losed.
     connection_finished.set_exception(WLEDConnectionClosedError)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    # Disconnect called, unsubbed Home Assistant stop listener
+    # Disconnect called, unsubbed MenuAI stop listener
     assert mock_wled.disconnect.call_count == 2
     assert mock_bus.async_listen_once.return_value.call_count == 1
 
     # Light still available, as polling takes over
-    state = hass.states.get("light.wled_websocket")
+    state = menuai.states.get("light.wled_websocket")
     assert state
     assert state.state == STATE_OFF
 
 
 @pytest.mark.parametrize("device_fixture", ["rgb_websocket"])
 async def test_websocket_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_integration: MockConfigEntry,
     mock_wled: MagicMock,
 ) -> None:
     """Test WebSocket connection erroring out, marking lights unavailable."""
-    state = hass.states.get("light.wled_websocket")
+    state = menuai.states.get("light.wled_websocket")
     assert state
     assert state.state == STATE_ON
 
@@ -157,26 +157,26 @@ async def test_websocket_error(
         await connection_finished
 
     mock_wled.listen.side_effect = connect
-    async_fire_time_changed(hass, dt_util.utcnow() + SCAN_INTERVAL)
+    async_fire_time_changed(menuai, dt_util.utcnow() + SCAN_INTERVAL)
     await connection_connected
 
     # Resolve Future with an error.
     connection_finished.set_exception(WLEDError)
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     # Light no longer available as an error occurred
-    state = hass.states.get("light.wled_websocket")
+    state = menuai.states.get("light.wled_websocket")
     assert state
     assert state.state == STATE_UNAVAILABLE
 
 
 @pytest.mark.parametrize("device_fixture", ["rgb_websocket"])
 async def test_websocket_disconnect_on_home_assistant_stop(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_integration: MockConfigEntry,
     mock_wled: MagicMock,
 ) -> None:
-    """Ensure WebSocket is disconnected when Home Assistant stops."""
+    """Ensure WebSocket is disconnected when MenuAI stops."""
     assert mock_wled.disconnect.call_count == 1
     connection_connected = asyncio.Future()
     connection_finished = asyncio.Future()
@@ -186,12 +186,12 @@ async def test_websocket_disconnect_on_home_assistant_stop(
         await connection_finished
 
     mock_wled.listen.side_effect = connect
-    async_fire_time_changed(hass, dt_util.utcnow() + SCAN_INTERVAL)
+    async_fire_time_changed(menuai, dt_util.utcnow() + SCAN_INTERVAL)
     await connection_connected
 
     assert mock_wled.disconnect.call_count == 1
 
-    hass.bus.fire(EVENT_HOMEASSISTANT_STOP)
-    await hass.async_block_till_done()
-    await hass.async_block_till_done()
+    menuai.bus.fire(EVENT_menuai_STOP)
+    await menuai.async_block_till_done()
+    await menuai.async_block_till_done()
     assert mock_wled.disconnect.call_count == 2

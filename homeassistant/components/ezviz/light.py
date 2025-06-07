@@ -7,11 +7,11 @@ from typing import Any
 from pyezvizapi.constants import DeviceCatagories, DeviceSwitchType, SupportExt
 from pyezvizapi.exceptions import HTTPError, PyEzvizError
 
-from homeassistant.components.light import ATTR_BRIGHTNESS, ColorMode, LightEntity
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util.percentage import (
+from menuai.components.light import ATTR_BRIGHTNESS, ColorMode, LightEntity
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.util.percentage import (
     percentage_to_ranged_value,
     ranged_value_to_percentage,
 )
@@ -24,7 +24,7 @@ BRIGHTNESS_RANGE = (1, 255)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     entry: EzvizConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -75,14 +75,14 @@ class EzvizLight(EzvizEntity, LightEntity):
                     BRIGHTNESS_RANGE, kwargs[ATTR_BRIGHTNESS]
                 )
 
-                if await self.hass.async_add_executor_job(
+                if await self.menuai.async_add_executor_job(
                     self.coordinator.ezviz_client.set_floodlight_brightness,
                     self._serial,
                     data,
                 ):
                     self._attr_brightness = kwargs[ATTR_BRIGHTNESS]
 
-            if await self.hass.async_add_executor_job(
+            if await self.menuai.async_add_executor_job(
                 self.coordinator.ezviz_client.switch_status,
                 self._serial,
                 DeviceSwitchType.ALARM_LIGHT.value,
@@ -92,14 +92,14 @@ class EzvizLight(EzvizEntity, LightEntity):
                 self.async_write_ha_state()
 
         except (HTTPError, PyEzvizError) as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Failed to turn on light {self._attr_name}"
             ) from err
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off light."""
         try:
-            if await self.hass.async_add_executor_job(
+            if await self.menuai.async_add_executor_job(
                 self.coordinator.ezviz_client.switch_status,
                 self._serial,
                 DeviceSwitchType.ALARM_LIGHT.value,
@@ -109,7 +109,7 @@ class EzvizLight(EzvizEntity, LightEntity):
                 self.async_write_ha_state()
 
         except (HTTPError, PyEzvizError) as err:
-            raise HomeAssistantError(
+            raise menuaiError(
                 f"Failed to turn off light {self._attr_name}"
             ) from err
 

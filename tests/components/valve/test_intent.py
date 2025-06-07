@@ -1,6 +1,6 @@
 """The tests for the valve platform."""
 
-from homeassistant.components.valve import (
+from menuai.components.valve import (
     ATTR_CURRENT_POSITION,
     DOMAIN,
     SERVICE_CLOSE_VALVE,
@@ -8,25 +8,25 @@ from homeassistant.components.valve import (
     SERVICE_SET_VALVE_POSITION,
     ValveState,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import intent
-from homeassistant.setup import async_setup_component
+from menuai.core import menuai
+from menuai.helpers import intent
+from menuai.setup import async_setup_component
 
 from tests.common import async_mock_service
 
 
-async def test_open_valve_intent(hass: HomeAssistant) -> None:
-    """Test HassTurnOn intent for valves."""
-    assert await async_setup_component(hass, "intent", {})
+async def test_open_valve_intent(menuai: menuai) -> None:
+    """Test menuaiTurnOn intent for valves."""
+    assert await async_setup_component(menuai, "intent", {})
 
     entity_id = f"{DOMAIN}.test_valve"
-    hass.states.async_set(entity_id, ValveState.CLOSED)
-    calls = async_mock_service(hass, DOMAIN, SERVICE_OPEN_VALVE)
+    menuai.states.async_set(entity_id, ValveState.CLOSED)
+    calls = async_mock_service(menuai, DOMAIN, SERVICE_OPEN_VALVE)
 
     response = await intent.async_handle(
-        hass, "test", intent.INTENT_TURN_ON, {"name": {"value": "test valve"}}
+        menuai, "test", intent.INTENT_TURN_ON, {"name": {"value": "test valve"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert response.response_type == intent.IntentResponseType.ACTION_DONE
     assert len(calls) == 1
@@ -36,18 +36,18 @@ async def test_open_valve_intent(hass: HomeAssistant) -> None:
     assert call.data == {"entity_id": entity_id}
 
 
-async def test_close_valve_intent(hass: HomeAssistant) -> None:
-    """Test HassTurnOff intent for valves."""
-    assert await async_setup_component(hass, "intent", {})
+async def test_close_valve_intent(menuai: menuai) -> None:
+    """Test menuaiTurnOff intent for valves."""
+    assert await async_setup_component(menuai, "intent", {})
 
     entity_id = f"{DOMAIN}.test_valve"
-    hass.states.async_set(entity_id, ValveState.OPEN)
-    calls = async_mock_service(hass, DOMAIN, SERVICE_CLOSE_VALVE)
+    menuai.states.async_set(entity_id, ValveState.OPEN)
+    calls = async_mock_service(menuai, DOMAIN, SERVICE_CLOSE_VALVE)
 
     response = await intent.async_handle(
-        hass, "test", intent.INTENT_TURN_OFF, {"name": {"value": "test valve"}}
+        menuai, "test", intent.INTENT_TURN_OFF, {"name": {"value": "test valve"}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert response.response_type == intent.IntentResponseType.ACTION_DONE
     assert len(calls) == 1
@@ -57,23 +57,23 @@ async def test_close_valve_intent(hass: HomeAssistant) -> None:
     assert call.data == {"entity_id": entity_id}
 
 
-async def test_set_valve_position(hass: HomeAssistant) -> None:
-    """Test HassSetPosition intent for valves."""
-    assert await async_setup_component(hass, "intent", {})
+async def test_set_valve_position(menuai: menuai) -> None:
+    """Test menuaiSetPosition intent for valves."""
+    assert await async_setup_component(menuai, "intent", {})
 
     entity_id = f"{DOMAIN}.test_valve"
-    hass.states.async_set(
+    menuai.states.async_set(
         entity_id, ValveState.CLOSED, attributes={ATTR_CURRENT_POSITION: 0}
     )
-    calls = async_mock_service(hass, DOMAIN, SERVICE_SET_VALVE_POSITION)
+    calls = async_mock_service(menuai, DOMAIN, SERVICE_SET_VALVE_POSITION)
 
     response = await intent.async_handle(
-        hass,
+        menuai,
         "test",
         intent.INTENT_SET_POSITION,
         {"name": {"value": "test valve"}, "position": {"value": 50}},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert response.response_type == intent.IntentResponseType.ACTION_DONE
     assert len(calls) == 1

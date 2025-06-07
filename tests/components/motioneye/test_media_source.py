@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, Mock, call
 from motioneye_client.client import MotionEyeClientPathError
 import pytest
 
-from homeassistant.components.media_source import (
+from menuai.components.media_source import (
     URI_SCHEME,
     MediaSourceError,
     PlayMedia,
@@ -14,10 +14,10 @@ from homeassistant.components.media_source import (
     async_browse_media,
     async_resolve_media,
 )
-from homeassistant.components.motioneye.const import DOMAIN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.setup import async_setup_component
+from menuai.components.motioneye.const import DOMAIN
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr
+from menuai.setup import async_setup_component
 
 from . import (
     TEST_CAMERA_DEVICE_IDENTIFIER,
@@ -74,18 +74,18 @@ _LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture(autouse=True)
-async def setup_media_source(hass: HomeAssistant) -> None:
+async def setup_media_source(menuai: menuai) -> None:
     """Set up media source."""
-    assert await async_setup_component(hass, "media_source", {})
+    assert await async_setup_component(menuai, "media_source", {})
 
 
 async def test_async_browse_media_success(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Test successful browse media."""
 
     client = create_mock_motioneye_client()
-    config = await setup_mock_motioneye_config_entry(hass, client=client)
+    config = await setup_mock_motioneye_config_entry(menuai, client=client)
 
     device = device_registry.async_get_or_create(
         config_entry_id=config.entry_id,
@@ -93,7 +93,7 @@ async def test_async_browse_media_success(
     )
 
     media = await async_browse_media(
-        hass,
+        menuai,
         f"{URI_SCHEME}{DOMAIN}",
     )
 
@@ -125,7 +125,7 @@ async def test_async_browse_media_success(
         "not_shown": 0,
     }
 
-    media = await async_browse_media(hass, f"{URI_SCHEME}{DOMAIN}/{config.entry_id}")
+    media = await async_browse_media(menuai, f"{URI_SCHEME}{DOMAIN}/{config.entry_id}")
 
     assert media.as_dict() == {
         "title": "http://test:8766",
@@ -157,7 +157,7 @@ async def test_async_browse_media_success(
     }
 
     media = await async_browse_media(
-        hass, f"{URI_SCHEME}{DOMAIN}/{config.entry_id}#{device.id}"
+        menuai, f"{URI_SCHEME}{DOMAIN}/{config.entry_id}#{device.id}"
     )
     assert media.as_dict() == {
         "title": "http://test:8766 Test Camera",
@@ -206,7 +206,7 @@ async def test_async_browse_media_success(
 
     client.async_get_movies = AsyncMock(return_value=TEST_MOVIES)
     media = await async_browse_media(
-        hass, f"{URI_SCHEME}{DOMAIN}/{config.entry_id}#{device.id}#movies"
+        menuai, f"{URI_SCHEME}{DOMAIN}/{config.entry_id}#{device.id}#movies"
     )
 
     assert media.as_dict() == {
@@ -243,7 +243,7 @@ async def test_async_browse_media_success(
 
     client.get_movie_url = Mock(return_value="http://movie")
     media = await async_browse_media(
-        hass,
+        menuai,
         f"{URI_SCHEME}{DOMAIN}/{config.entry_id}#{device.id}#movies#/2021-04-25",
     )
     assert media.as_dict() == {
@@ -311,12 +311,12 @@ async def test_async_browse_media_success(
 
 
 async def test_async_browse_media_images_success(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Test successful browse media of images."""
 
     client = create_mock_motioneye_client()
-    config = await setup_mock_motioneye_config_entry(hass, client=client)
+    config = await setup_mock_motioneye_config_entry(menuai, client=client)
 
     device = device_registry.async_get_or_create(
         config_entry_id=config.entry_id,
@@ -327,7 +327,7 @@ async def test_async_browse_media_images_success(
     client.get_image_url = Mock(return_value="http://image")
 
     media = await async_browse_media(
-        hass,
+        menuai,
         f"{URI_SCHEME}{DOMAIN}/{config.entry_id}#{device.id}#images#/2021-04-12",
     )
     assert media.as_dict() == {
@@ -365,13 +365,13 @@ async def test_async_browse_media_images_success(
 
 
 async def test_async_resolve_media_success(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Test successful resolve media."""
 
     client = create_mock_motioneye_client()
 
-    config = await setup_mock_motioneye_config_entry(hass, client=client)
+    config = await setup_mock_motioneye_config_entry(menuai, client=client)
 
     device = device_registry.async_get_or_create(
         config_entry_id=config.entry_id,
@@ -381,7 +381,7 @@ async def test_async_resolve_media_success(
     # Test successful resolve for a movie.
     client.get_movie_url = Mock(return_value="http://movie-url")
     media = await async_resolve_media(
-        hass,
+        menuai,
         f"{URI_SCHEME}{DOMAIN}/{TEST_CONFIG_ENTRY_ID}#{device.id}#movies#/foo.mp4",
         None,
     )
@@ -391,7 +391,7 @@ async def test_async_resolve_media_success(
     # Test successful resolve for an image.
     client.get_image_url = Mock(return_value="http://image-url")
     media = await async_resolve_media(
-        hass,
+        menuai,
         f"{URI_SCHEME}{DOMAIN}/{TEST_CONFIG_ENTRY_ID}#{device.id}#images#/foo.jpg",
         None,
     )
@@ -400,13 +400,13 @@ async def test_async_resolve_media_success(
 
 
 async def test_async_resolve_media_failure(
-    hass: HomeAssistant, device_registry: dr.DeviceRegistry
+    menuai: menuai, device_registry: dr.DeviceRegistry
 ) -> None:
     """Test failed resolve media calls."""
 
     client = create_mock_motioneye_client()
 
-    config = await setup_mock_motioneye_config_entry(hass, client=client)
+    config = await setup_mock_motioneye_config_entry(menuai, client=client)
 
     device = device_registry.async_get_or_create(
         config_entry_id=config.entry_id,
@@ -425,22 +425,22 @@ async def test_async_resolve_media_failure(
 
     # URI doesn't contain necessary components.
     with pytest.raises(Unresolvable):
-        await async_resolve_media(hass, f"{URI_SCHEME}{DOMAIN}/foo", None)
+        await async_resolve_media(menuai, f"{URI_SCHEME}{DOMAIN}/foo", None)
 
     # Config entry doesn't exist.
     with pytest.raises(MediaSourceError):
-        await async_resolve_media(hass, f"{URI_SCHEME}{DOMAIN}/1#2#3#4", None)
+        await async_resolve_media(menuai, f"{URI_SCHEME}{DOMAIN}/1#2#3#4", None)
 
     # Device doesn't exist.
     with pytest.raises(MediaSourceError):
         await async_resolve_media(
-            hass, f"{URI_SCHEME}{DOMAIN}/{TEST_CONFIG_ENTRY_ID}#2#3#4", None
+            menuai, f"{URI_SCHEME}{DOMAIN}/{TEST_CONFIG_ENTRY_ID}#2#3#4", None
         )
 
     # Device identifiers are incorrect (no camera id)
     with pytest.raises(MediaSourceError):
         await async_resolve_media(
-            hass,
+            menuai,
             (
                 f"{URI_SCHEME}{DOMAIN}"
                 f"/{TEST_CONFIG_ENTRY_ID}#{broken_device_1.id}#images#4"
@@ -451,7 +451,7 @@ async def test_async_resolve_media_failure(
     # Device identifiers are incorrect (non integer camera id)
     with pytest.raises(MediaSourceError):
         await async_resolve_media(
-            hass,
+            menuai,
             (
                 f"{URI_SCHEME}{DOMAIN}"
                 f"/{TEST_CONFIG_ENTRY_ID}#{broken_device_2.id}#images#4"
@@ -462,7 +462,7 @@ async def test_async_resolve_media_failure(
     # Kind is incorrect.
     with pytest.raises(MediaSourceError):
         await async_resolve_media(
-            hass,
+            menuai,
             f"{URI_SCHEME}{DOMAIN}/{TEST_CONFIG_ENTRY_ID}#{device.id}#games#moo",
             None,
         )
@@ -471,7 +471,7 @@ async def test_async_resolve_media_failure(
     client.get_movie_url = Mock(side_effect=MotionEyeClientPathError)
     with pytest.raises(Unresolvable):
         await async_resolve_media(
-            hass,
+            menuai,
             f"{URI_SCHEME}{DOMAIN}/{TEST_CONFIG_ENTRY_ID}#{device.id}#movies#/foo.mp4",
             None,
         )
@@ -480,7 +480,7 @@ async def test_async_resolve_media_failure(
     client.get_movie_url = Mock(side_effect=MotionEyeClientPathError)
     with pytest.raises(MediaSourceError):
         await async_resolve_media(
-            hass,
+            menuai,
             f"{URI_SCHEME}{DOMAIN}/{TEST_CONFIG_ENTRY_ID}#{device.id}#movies#foo.mp4",
             None,
         )
@@ -489,7 +489,7 @@ async def test_async_resolve_media_failure(
     broken_movies = {"mediaList": [{}, {"path": "something", "mimeType": "NOT_A_MIME"}]}
     client.async_get_movies = AsyncMock(return_value=broken_movies)
     media = await async_browse_media(
-        hass,
+        menuai,
         f"{URI_SCHEME}{DOMAIN}/{config.entry_id}#{device.id}#movies#/2021-04-25",
     )
     assert media.as_dict() == {

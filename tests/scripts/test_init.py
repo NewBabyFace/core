@@ -2,10 +2,10 @@
 
 from unittest.mock import patch
 
-from homeassistant import scripts
+from menuai import scripts
 
 
-@patch("homeassistant.scripts.get_default_config_dir", return_value="/default")
+@patch("menuai.scripts.get_default_config_dir", return_value="/default")
 def test_config_per_platform(mock_def) -> None:
     """Test config per platform method."""
     assert scripts.get_default_config_dir() == "/default"

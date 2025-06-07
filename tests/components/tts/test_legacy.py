@@ -6,16 +6,16 @@ from pathlib import Path
 
 import pytest
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     DOMAIN as DOMAIN_MP,
     SERVICE_PLAY_MEDIA,
 )
-from homeassistant.components.tts import ATTR_MESSAGE, DOMAIN, Provider
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.discovery import async_load_platform
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.setup import async_setup_component
+from menuai.components.tts import ATTR_MESSAGE, DOMAIN, Provider
+from menuai.const import ATTR_ENTITY_ID
+from menuai.core import menuai
+from menuai.helpers.discovery import async_load_platform
+from menuai.helpers.typing import ConfigType, DiscoveryInfoType
+from menuai.setup import async_setup_component
 
 from .common import SUPPORT_LANGUAGES, MockTTS, MockTTSProvider
 
@@ -41,7 +41,7 @@ async def test_default_provider_attributes() -> None:
     """Test default provider attributes."""
     provider = DefaultProvider()
 
-    assert provider.hass is None
+    assert provider.menuai is None
     assert provider.name is None
     assert provider.default_language is None
     assert provider.supported_languages == SUPPORT_LANGUAGES
@@ -50,32 +50,32 @@ async def test_default_provider_attributes() -> None:
     assert provider.async_get_supported_voices("test") is None
 
 
-async def test_deprecated_platform(hass: HomeAssistant) -> None:
+async def test_deprecated_platform(menuai: menuai) -> None:
     """Test deprecated google platform."""
     with assert_setup_component(0, DOMAIN):
         assert await async_setup_component(
-            hass, DOMAIN, {DOMAIN: {"platform": "google"}}
+            menuai, DOMAIN, {DOMAIN: {"platform": "google"}}
         )
 
 
 async def test_invalid_platform(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test platform setup with an invalid platform."""
     await async_load_platform(
-        hass,
+        menuai,
         "tts",
         "bad_tts",
         {"tts": [{"platform": "bad_tts"}]},
-        hass_config={"tts": [{"platform": "bad_tts"}]},
+        menuai_config={"tts": [{"platform": "bad_tts"}]},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert "Unknown text-to-speech platform specified" in caplog.text
 
 
 async def test_platform_setup_without_provider(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     mock_provider: MockTTSProvider,
 ) -> None:
@@ -86,30 +86,30 @@ async def test_platform_setup_without_provider(
 
         async def async_get_engine(
             self,
-            hass: HomeAssistant,
+            menuai: menuai,
             config: ConfigType,
             discovery_info: DiscoveryInfoType | None = None,
         ) -> Provider | None:
             """Raise exception during platform setup."""
             return None
 
-    mock_integration(hass, MockModule(domain="bad_tts"))
-    mock_platform(hass, "bad_tts.tts", BadPlatform(mock_provider))
+    mock_integration(menuai, MockModule(domain="bad_tts"))
+    mock_platform(menuai, "bad_tts.tts", BadPlatform(mock_provider))
 
     await async_load_platform(
-        hass,
+        menuai,
         "tts",
         "bad_tts",
         {},
-        hass_config={"tts": [{"platform": "bad_tts"}]},
+        menuai_config={"tts": [{"platform": "bad_tts"}]},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert "Error setting up platform: bad_tts" in caplog.text
 
 
 async def test_platform_setup_with_error(
-    hass: HomeAssistant,
+    menuai: menuai,
     caplog: pytest.LogCaptureFixture,
     mock_provider: MockTTSProvider,
 ) -> None:
@@ -120,41 +120,41 @@ async def test_platform_setup_with_error(
 
         async def async_get_engine(
             self,
-            hass: HomeAssistant,
+            menuai: menuai,
             config: ConfigType,
             discovery_info: DiscoveryInfoType | None = None,
         ) -> Provider:
             """Raise exception during platform setup."""
             raise Exception("Setup error")  # noqa: TRY002
 
-    mock_integration(hass, MockModule(domain="bad_tts"))
-    mock_platform(hass, "bad_tts.tts", BadPlatform(mock_provider))
+    mock_integration(menuai, MockModule(domain="bad_tts"))
+    mock_platform(menuai, "bad_tts.tts", BadPlatform(mock_provider))
 
     await async_load_platform(
-        hass,
+        menuai,
         "tts",
         "bad_tts",
         {},
-        hass_config={"tts": [{"platform": "bad_tts"}]},
+        menuai_config={"tts": [{"platform": "bad_tts"}]},
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
     assert "Error setting up platform: bad_tts" in caplog.text
 
 
 async def test_service_without_cache_config(
-    hass: HomeAssistant, mock_tts_cache_dir: Path, mock_tts
+    menuai: menuai, mock_tts_cache_dir: Path, mock_tts
 ) -> None:
     """Set up a TTS platform without cache."""
-    calls = async_mock_service(hass, DOMAIN_MP, SERVICE_PLAY_MEDIA)
+    calls = async_mock_service(menuai, DOMAIN_MP, SERVICE_PLAY_MEDIA)
 
     config = {DOMAIN: {"platform": "test", "cache": False}}
 
     with assert_setup_component(1, DOMAIN):
-        assert await async_setup_component(hass, DOMAIN, config)
-        await hass.async_block_till_done()
+        assert await async_setup_component(menuai, DOMAIN, config)
+        await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         "test_say",
         {
@@ -164,7 +164,7 @@ async def test_service_without_cache_config(
         blocking=True,
     )
     assert len(calls) == 1
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
     assert not (
         mock_tts_cache_dir / "42f18378fd4393d18c8dd11d03fa9563c1e54491_en-us_-_test.mp3"
     ).is_file()

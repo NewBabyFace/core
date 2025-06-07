@@ -8,15 +8,15 @@ from typing import Any
 import steam
 import voluptuous as vol
 
-from homeassistant.config_entries import (
+from menuai.config_entries import (
     SOURCE_REAUTH,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_API_KEY, Platform
-from homeassistant.core import callback
-from homeassistant.helpers import config_validation as cv, entity_registry as er
+from menuai.const import CONF_API_KEY, Platform
+from menuai.core import callback
+from menuai.helpers import config_validation as cv, entity_registry as er
 
 from .const import CONF_ACCOUNT, CONF_ACCOUNTS, DOMAIN, LOGGER, PLACEHOLDERS
 from .coordinator import SteamConfigEntry
@@ -53,7 +53,7 @@ class SteamFlowHandler(ConfigFlow, domain=DOMAIN):
             user_input = {CONF_ACCOUNT: self._get_reauth_entry().data[CONF_ACCOUNT]}
         elif user_input is not None:
             try:
-                res = await self.hass.async_add_executor_job(validate_input, user_input)
+                res = await self.menuai.async_add_executor_job(validate_input, user_input)
                 if res is not None:
                     name = str(res["personaname"])
                 else:
@@ -68,8 +68,8 @@ class SteamFlowHandler(ConfigFlow, domain=DOMAIN):
             if not errors:
                 entry = await self.async_set_unique_id(user_input[CONF_ACCOUNT])
                 if entry and self.source == SOURCE_REAUTH:
-                    self.hass.config_entries.async_update_entry(entry, data=user_input)
-                    await self.hass.config_entries.async_reload(entry.entry_id)
+                    self.menuai.config_entries.async_update_entry(entry, data=user_input)
+                    await self.menuai.config_entries.async_reload(entry.entry_id)
                     return self.async_abort(reason="reauth_successful")
                 self._abort_if_unique_id_configured()
                 return self.async_create_entry(
@@ -130,14 +130,14 @@ class SteamOptionsFlowHandler(OptionsFlow):
     ) -> ConfigFlowResult:
         """Manage Steam options."""
         if user_input is not None:
-            await self.hass.config_entries.async_unload(self.config_entry.entry_id)
+            await self.menuai.config_entries.async_unload(self.config_entry.entry_id)
             for _id in self.options[CONF_ACCOUNTS]:
                 if _id not in user_input[CONF_ACCOUNTS] and (
-                    entity_id := er.async_get(self.hass).async_get_entity_id(
+                    entity_id := er.async_get(self.menuai).async_get_entity_id(
                         Platform.SENSOR, DOMAIN, f"sensor.steam_{_id}"
                     )
                 ):
-                    er.async_get(self.hass).async_remove(entity_id)
+                    er.async_get(self.menuai).async_remove(entity_id)
             channel_data = {
                 CONF_ACCOUNTS: {
                     _id: name
@@ -145,13 +145,13 @@ class SteamOptionsFlowHandler(OptionsFlow):
                     if _id in user_input[CONF_ACCOUNTS]
                 }
             }
-            await self.hass.config_entries.async_reload(self.config_entry.entry_id)
+            await self.menuai.config_entries.async_reload(self.config_entry.entry_id)
             return self.async_create_entry(title="", data=channel_data)
         error = None
         try:
             users = {
                 name["steamid"]: name["personaname"]
-                for name in await self.hass.async_add_executor_job(self.get_accounts)
+                for name in await self.menuai.async_add_executor_job(self.get_accounts)
             }
             if not users:
                 error = {"base": "unauthorized"}

@@ -9,17 +9,17 @@ from aiohttp import web
 from haffmpeg.camera import CameraMjpeg
 from kasa import Device, Module, StreamResolution
 
-from homeassistant.components import ffmpeg, stream
-from homeassistant.components.camera import (
+from menuai.components import ffmpeg, stream
+from menuai.components.camera import (
     DOMAIN as CAMERA_DOMAIN,
     Camera,
     CameraEntityDescription,
     CameraEntityFeature,
 )
-from homeassistant.config_entries import ConfigFlowContext
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.aiohttp_client import async_aiohttp_proxy_stream
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.config_entries import ConfigFlowContext
+from menuai.core import menuai, callback
+from menuai.helpers.aiohttp_client import async_aiohttp_proxy_stream
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import TPLinkConfigEntry
 from .const import CONF_CAMERA_CREDENTIALS
@@ -57,7 +57,7 @@ CAMERA_DESCRIPTIONS: tuple[TPLinkCameraEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: TPLinkConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -71,7 +71,7 @@ async def async_setup_entry(
 
     def _check_device() -> None:
         entities = CoordinatedTPLinkModuleEntity.entities_for_device_and_its_children(
-            hass=hass,
+            menuai=menuai,
             device=device,
             coordinator=parent_coordinator,
             entity_class=TPLinkCameraEntity,
@@ -123,11 +123,11 @@ class TPLinkCameraEntity(CoordinatedTPLinkModuleEntity, Camera):
         self._can_stream = True
         self._http_mpeg_stream_running = False
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Call update attributes after the device is added to the platform."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
-        self._ffmpeg_manager = ffmpeg.get_ffmpeg_manager(self.hass)
+        self._ffmpeg_manager = ffmpeg.get_ffmpeg_manager(self.menuai)
 
     @callback
     def _async_update_attrs(self) -> bool:
@@ -144,7 +144,7 @@ class TPLinkCameraEntity(CoordinatedTPLinkModuleEntity, Camera):
     async def _async_check_stream_auth(self, video_url: str) -> None:
         """Check for an auth error and start reauth flow."""
         try:
-            await stream.async_check_stream_client_error(self.hass, video_url)
+            await stream.async_check_stream_client_error(self.menuai, video_url)
         except stream.StreamOpenClientError as ex:
             if ex.error_code is stream.StreamClientError.Unauthorized:
                 _LOGGER.debug(
@@ -153,7 +153,7 @@ class TPLinkCameraEntity(CoordinatedTPLinkModuleEntity, Camera):
                 )
                 self._can_stream = False
                 self.coordinator.config_entry.async_start_reauth(
-                    self.hass,
+                    self.menuai,
                     ConfigFlowContext(
                         reauth_source=CONF_CAMERA_CREDENTIALS,  # type: ignore[typeddict-unknown-key]
                     ),
@@ -181,7 +181,7 @@ class TPLinkCameraEntity(CoordinatedTPLinkModuleEntity, Camera):
 
                 _LOGGER.debug("Updating camera image for %s", self._device.host)
                 image = await ffmpeg.async_get_image(
-                    self.hass,
+                    self.menuai,
                     video_url,
                     width=width,
                     height=height,
@@ -223,7 +223,7 @@ class TPLinkCameraEntity(CoordinatedTPLinkModuleEntity, Camera):
         try:
             stream_reader = await mjpeg_stream.get_reader()
             return await async_aiohttp_proxy_stream(
-                self.hass,
+                self.menuai,
                 request,
                 stream_reader,
                 self._ffmpeg_manager.ffmpeg_stream_content_type,

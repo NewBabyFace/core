@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from homeassistant.components.hardware.models import BoardInfo, HardwareInfo
-from homeassistant.components.hassio import get_os_info
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
+from menuai.components.hardware.models import BoardInfo, HardwareInfo
+from menuai.components.menuaiio import get_os_info
+from menuai.core import menuai, callback
+from menuai.exceptions import menuaiError
 
 from .const import DOMAIN
 
@@ -14,30 +14,30 @@ BOARD_NAMES = {
     "odroid-c4": "Hardkernel ODROID-C4",
     "odroid-m1": "Hardkernel ODROID-M1",
     "odroid-m1s": "Hardkernel ODROID-M1S",
-    "odroid-n2": "Home Assistant Blue / Hardkernel ODROID-N2/N2+",
+    "odroid-n2": "MenuAI Blue / Hardkernel ODROID-N2/N2+",
     "odroid-xu4": "Hardkernel ODROID-XU4",
 }
 
 
 @callback
-def async_info(hass: HomeAssistant) -> list[HardwareInfo]:
+def async_info(menuai: menuai) -> list[HardwareInfo]:
     """Return board info."""
-    if (os_info := get_os_info(hass)) is None:
-        raise HomeAssistantError
+    if (os_info := get_os_info(menuai)) is None:
+        raise menuaiError
     board: str | None
     if (board := os_info.get("board")) is None:
-        raise HomeAssistantError
+        raise menuaiError
     if not board.startswith("odroid"):
-        raise HomeAssistantError
+        raise menuaiError
 
     config_entries = [
-        entry.entry_id for entry in hass.config_entries.async_entries(DOMAIN)
+        entry.entry_id for entry in menuai.config_entries.async_entries(DOMAIN)
     ]
 
     return [
         HardwareInfo(
             board=BoardInfo(
-                hassio_board_id=board,
+                menuaiio_board_id=board,
                 manufacturer=DOMAIN,
                 model=board,
                 revision=None,

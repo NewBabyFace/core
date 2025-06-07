@@ -10,10 +10,10 @@ from miio import (
     DeviceException,
 )
 
-from homeassistant.components.air_quality import AirQualityEntity
-from homeassistant.const import CONF_DEVICE, CONF_HOST, CONF_MODEL, CONF_TOKEN
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.components.air_quality import AirQualityEntity
+from menuai.const import CONF_DEVICE, CONF_HOST, CONF_MODEL, CONF_TOKEN
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
     CONF_FLOW_TYPE,
@@ -68,7 +68,7 @@ class AirMonitorB1(XiaomiMiioEntity, AirQualityEntity):
     async def async_update(self):
         """Fetch state from the miio device."""
         try:
-            state = await self.hass.async_add_executor_job(self._device.status)
+            state = await self.menuai.async_add_executor_job(self._device.status)
             _LOGGER.debug("Got new state: %s", state)
             self._carbon_dioxide_equivalent = state.co2e
             self._particulate_matter_2_5 = round(state.pm25, 1)
@@ -133,7 +133,7 @@ class AirMonitorS1(AirMonitorB1):
     async def async_update(self):
         """Fetch state from the miio device."""
         try:
-            state = await self.hass.async_add_executor_job(self._device.status)
+            state = await self.menuai.async_add_executor_job(self._device.status)
             _LOGGER.debug("Got new state: %s", state)
             self._carbon_dioxide = state.co2
             self._particulate_matter_2_5 = state.pm25
@@ -153,7 +153,7 @@ class AirMonitorV1(AirMonitorB1):
     async def async_update(self):
         """Fetch state from the miio device."""
         try:
-            state = await self.hass.async_add_executor_job(self._device.status)
+            state = await self.menuai.async_add_executor_job(self._device.status)
             _LOGGER.debug("Got new state: %s", state)
             self._air_quality_index = state.aqi
             self._attr_available = True
@@ -190,7 +190,7 @@ class AirMonitorCGDN1(XiaomiMiioEntity, AirQualityEntity):
     async def async_update(self):
         """Fetch state from the miio device."""
         try:
-            state = await self.hass.async_add_executor_job(self._device.status)
+            state = await self.menuai.async_add_executor_job(self._device.status)
             _LOGGER.debug("Got new state: %s", state)
             self._carbon_dioxide = state.co2
             self._particulate_matter_2_5 = round(state.pm25, 1)
@@ -237,7 +237,7 @@ DEVICE_MAP: dict[str, dict[str, Callable]] = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: XiaomiMiioConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

@@ -5,14 +5,14 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import uuid
 
-from homeassistant.const import (
+from menuai.const import (
     CONF_ABOVE,
     CONF_BELOW,
     CONF_ENTITY_ID,
     CONF_PLATFORM,
     CONF_VALUE_TEMPLATE,
 )
-from homeassistant.helpers.template import Template
+from menuai.helpers.template import Template
 
 from .const import CONF_P_GIVEN_F, CONF_P_GIVEN_T, CONF_TO_STATE
 

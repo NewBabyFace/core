@@ -8,14 +8,14 @@ from aioshelly.const import MODEL_25
 from aioshelly.exceptions import DeviceConnectionError
 import pytest
 
-from homeassistant.components.diagnostics import REDACTED
-from homeassistant.components.shelly.const import (
+from menuai.components.diagnostics import REDACTED
+from menuai.components.shelly.const import (
     CONF_BLE_SCANNER_MODE,
     DOMAIN,
     BLEScannerMode,
 )
-from homeassistant.components.shelly.diagnostics import TO_REDACT
-from homeassistant.core import HomeAssistant
+from menuai.components.shelly.diagnostics import TO_REDACT
+from menuai.core import menuai
 
 from . import init_integration, inject_rpc_device_event
 from .conftest import MOCK_STATUS_COAP
@@ -27,12 +27,12 @@ RELAY_BLOCK_ID = 0
 
 
 async def test_block_config_entry_diagnostics(
-    hass: HomeAssistant, hass_client: ClientSessionGenerator, mock_block_device: Mock
+    menuai: menuai, menuai_client: ClientSessionGenerator, mock_block_device: Mock
 ) -> None:
     """Test config entry diagnostics for block device."""
-    await init_integration(hass, 1)
+    await init_integration(menuai, 1)
 
-    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    entry = menuai.config_entries.async_entries(DOMAIN)[0]
     entry_dict = entry.as_dict()
     entry_dict["data"].update(
         {key: REDACTED for key in TO_REDACT if key in entry_dict["data"]}
@@ -42,7 +42,7 @@ async def test_block_config_entry_diagnostics(
         return_value=DeviceConnectionError()
     )
 
-    result = await get_diagnostics_for_config_entry(hass, hass_client, entry)
+    result = await get_diagnostics_for_config_entry(menuai, menuai_client, entry)
 
     assert result == {
         "entry": entry_dict | {"discovery_keys": {}},
@@ -59,14 +59,14 @@ async def test_block_config_entry_diagnostics(
 
 
 async def test_rpc_config_entry_diagnostics(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     mock_rpc_device: Mock,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Test config entry diagnostics for rpc device."""
     await init_integration(
-        hass, 2, options={CONF_BLE_SCANNER_MODE: BLEScannerMode.ACTIVE}
+        menuai, 2, options={CONF_BLE_SCANNER_MODE: BLEScannerMode.ACTIVE}
     )
 
     inject_rpc_device_event(
@@ -92,7 +92,7 @@ async def test_rpc_config_entry_diagnostics(
         },
     )
 
-    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    entry = menuai.config_entries.async_entries(DOMAIN)[0]
     entry_dict = entry.as_dict()
     entry_dict["data"].update(
         {key: REDACTED for key in TO_REDACT if key in entry_dict["data"]}
@@ -102,7 +102,7 @@ async def test_rpc_config_entry_diagnostics(
         return_value=DeviceConnectionError()
     )
 
-    result = await get_diagnostics_for_config_entry(hass, hass_client, entry)
+    result = await get_diagnostics_for_config_entry(menuai, menuai_client, entry)
     assert result == {
         "entry": entry_dict | {"discovery_keys": {}},
         "bluetooth": {
@@ -185,8 +185,8 @@ async def test_rpc_config_entry_diagnostics(
     [("ws://10.10.10.10:8123/api/shelly/ws", True), ("wrong_url", False)],
 )
 async def test_rpc_config_entry_diagnostics_ws_outbound(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     mock_rpc_device: Mock,
     monkeypatch: pytest.MonkeyPatch,
     ws_outbound_server: str,
@@ -197,9 +197,9 @@ async def test_rpc_config_entry_diagnostics_ws_outbound(
     config["ws"] = {"enable": True, "server": ws_outbound_server}
     monkeypatch.setattr(mock_rpc_device, "config", config)
 
-    entry = await init_integration(hass, 2, sleep_period=60)
+    entry = await init_integration(menuai, 2, sleep_period=60)
 
-    result = await get_diagnostics_for_config_entry(hass, hass_client, entry)
+    result = await get_diagnostics_for_config_entry(menuai, menuai_client, entry)
 
     assert (
         result["device_settings"]["ws_outbound_server_valid"]
@@ -208,8 +208,8 @@ async def test_rpc_config_entry_diagnostics_ws_outbound(
 
 
 async def test_rpc_config_entry_diagnostics_no_ws(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
+    menuai: menuai,
+    menuai_client: ClientSessionGenerator,
     mock_rpc_device: Mock,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -218,8 +218,8 @@ async def test_rpc_config_entry_diagnostics_no_ws(
     config.pop("ws")
     monkeypatch.setattr(mock_rpc_device, "config", config)
 
-    entry = await init_integration(hass, 3)
+    entry = await init_integration(menuai, 3)
 
-    result = await get_diagnostics_for_config_entry(hass, hass_client, entry)
+    result = await get_diagnostics_for_config_entry(menuai, menuai_client, entry)
 
     assert result["device_settings"]["ws_outbound"] == "not supported"

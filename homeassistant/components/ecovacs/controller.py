@@ -18,11 +18,11 @@ from deebot_client.util import md5
 from deebot_client.util.continents import get_continent
 from sucks import EcoVacsAPI, VacBot
 
-from homeassistant.const import CONF_COUNTRY, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryError, ConfigEntryNotReady
-from homeassistant.helpers import aiohttp_client
-from homeassistant.util.ssl import get_default_no_verify_context
+from menuai.const import CONF_COUNTRY, CONF_PASSWORD, CONF_USERNAME
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryError, ConfigEntryNotReady
+from menuai.helpers import aiohttp_client
+from menuai.util.ssl import get_default_no_verify_context
 
 from .const import (
     CONF_OVERRIDE_MQTT_URL,
@@ -37,19 +37,19 @@ _LOGGER = logging.getLogger(__name__)
 class EcovacsController:
     """Ecovacs controller."""
 
-    def __init__(self, hass: HomeAssistant, config: Mapping[str, Any]) -> None:
+    def __init__(self, menuai: menuai, config: Mapping[str, Any]) -> None:
         """Initialize controller."""
-        self._hass = hass
+        self._menuai = menuai
         self._devices: list[Device] = []
         self._legacy_devices: list[VacBot] = []
         rest_url = config.get(CONF_OVERRIDE_REST_URL)
-        self._device_id = get_client_device_id(hass, rest_url is not None)
+        self._device_id = get_client_device_id(menuai, rest_url is not None)
         country = config[CONF_COUNTRY]
         self._continent = get_continent(country)
 
         self._authenticator = Authenticator(
             create_rest_config(
-                aiohttp_client.async_get_clientsession(self._hass),
+                aiohttp_client.async_get_clientsession(self._menuai),
                 device_id=self._device_id,
                 alpha_2_country=country,
                 override_rest_url=rest_url,
@@ -118,7 +118,7 @@ class EcovacsController:
         for device in self._devices:
             await device.teardown()
         for legacy_device in self._legacy_devices:
-            await self._hass.async_add_executor_job(legacy_device.disconnect)
+            await self._menuai.async_add_executor_job(legacy_device.disconnect)
         if self._mqtt_client is not None:
             await self._mqtt_client.disconnect()
         await self._authenticator.teardown()
@@ -134,7 +134,7 @@ class EcovacsController:
     async def _get_mqtt_client(self) -> MqttClient:
         """Return validated MQTT client."""
         if self._mqtt_client is None:
-            config = await self._hass.async_add_executor_job(self._mqtt_config_fn)
+            config = await self._menuai.async_add_executor_job(self._mqtt_config_fn)
             mqtt = MqttClient(config, self._authenticator)
             await mqtt.verify_config()
             self._mqtt_client = mqtt

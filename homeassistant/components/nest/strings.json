@@ -39,7 +39,7 @@
       },
       "pubsub_subscription": {
         "title": "Configure Cloud Pub/Sub subscription",
-        "description": "Home Assistant receives realtime Nest device updates with a Cloud Pub/Sub subscription for topic `{topic}`.\n\nSelect an existing subscription below if one already exists, or the next step will create a new one for you. See the integration documentation for [more info]({more_info_url}).",
+        "description": "MenuAI receives realtime Nest device updates with a Cloud Pub/Sub subscription for topic `{topic}`.\n\nSelect an existing subscription below if one already exists, or the next step will create a new one for you. See the integration documentation for [more info]({more_info_url}).",
         "data": {
           "subscription_name": "Pub/Sub subscription name"
         }

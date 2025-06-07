@@ -8,10 +8,10 @@ from typing import Any
 from simplefin4py import FinancialData, SimpleFin
 from simplefin4py.exceptions import SimpleFinAuthError, SimpleFinPaymentRequiredError
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryError
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryError
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import LOGGER
 
@@ -24,11 +24,11 @@ class SimpleFinDataUpdateCoordinator(DataUpdateCoordinator[FinancialData]):
     config_entry: SimpleFinConfigEntry
 
     def __init__(
-        self, hass: HomeAssistant, config_entry: SimpleFinConfigEntry, client: SimpleFin
+        self, menuai: menuai, config_entry: SimpleFinConfigEntry, client: SimpleFin
     ) -> None:
         """Initialize the coordinator."""
         super().__init__(
-            hass=hass,
+            menuai=menuai,
             logger=LOGGER,
             config_entry=config_entry,
             name="simplefin",

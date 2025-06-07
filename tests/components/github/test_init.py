@@ -2,9 +2,9 @@
 
 import pytest
 
-from homeassistant.components.github import CONF_REPOSITORIES
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er, icon
+from menuai.components.github import CONF_REPOSITORIES
+from menuai.core import menuai
+from menuai.helpers import device_registry as dr, entity_registry as er, icon
 
 from .common import setup_github_integration
 
@@ -15,20 +15,20 @@ from tests.test_util.aiohttp import AiohttpClientMocker
 # This tests needs to be adjusted to remove lingering tasks
 @pytest.mark.parametrize("expected_lingering_tasks", [True])
 async def test_device_registry_cleanup(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     mock_config_entry: MockConfigEntry,
     aioclient_mock: AiohttpClientMocker,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test that we remove untracked repositories from the device registry."""
-    mock_config_entry.add_to_hass(hass)
-    hass.config_entries.async_update_entry(
+    mock_config_entry.add_to_menuai(menuai)
+    menuai.config_entries.async_update_entry(
         mock_config_entry,
         options={CONF_REPOSITORIES: ["home-assistant/core"]},
     )
     await setup_github_integration(
-        hass, mock_config_entry, aioclient_mock, add_entry_to_hass=False
+        menuai, mock_config_entry, aioclient_mock, add_entry_to_menuai=False
     )
 
     devices = dr.async_entries_for_config_entry(
@@ -38,12 +38,12 @@ async def test_device_registry_cleanup(
 
     assert len(devices) == 1
 
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         mock_config_entry,
         options={CONF_REPOSITORIES: []},
     )
-    assert await hass.config_entries.async_reload(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_reload(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     assert (
         f"Unlinking device {devices[0].id} for untracked repository home-assistant/core from config entry {mock_config_entry.entry_id}"
@@ -61,19 +61,19 @@ async def test_device_registry_cleanup(
 # This tests needs to be adjusted to remove lingering tasks
 @pytest.mark.parametrize("expected_lingering_tasks", [True])
 async def test_subscription_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
     """Test that we setup event subscription."""
-    mock_config_entry.add_to_hass(hass)
-    hass.config_entries.async_update_entry(
+    mock_config_entry.add_to_menuai(menuai)
+    menuai.config_entries.async_update_entry(
         mock_config_entry,
         options={CONF_REPOSITORIES: ["home-assistant/core"]},
         pref_disable_polling=False,
     )
     await setup_github_integration(
-        hass, mock_config_entry, aioclient_mock, add_entry_to_hass=False
+        menuai, mock_config_entry, aioclient_mock, add_entry_to_menuai=False
     )
     assert (
         "https://api.github.com/repos/home-assistant/core/events" in x[1]
@@ -84,19 +84,19 @@ async def test_subscription_setup(
 # This tests needs to be adjusted to remove lingering tasks
 @pytest.mark.parametrize("expected_lingering_tasks", [True])
 async def test_subscription_setup_polling_disabled(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_config_entry: MockConfigEntry,
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
     """Test that we do not setup event subscription if polling is disabled."""
-    mock_config_entry.add_to_hass(hass)
-    hass.config_entries.async_update_entry(
+    mock_config_entry.add_to_menuai(menuai)
+    menuai.config_entries.async_update_entry(
         mock_config_entry,
         options={CONF_REPOSITORIES: ["home-assistant/core"]},
         pref_disable_polling=True,
     )
     await setup_github_integration(
-        hass, mock_config_entry, aioclient_mock, add_entry_to_hass=False
+        menuai, mock_config_entry, aioclient_mock, add_entry_to_menuai=False
     )
     assert (
         "https://api.github.com/repos/home-assistant/core/events" not in x[1]
@@ -104,11 +104,11 @@ async def test_subscription_setup_polling_disabled(
     )
 
     # Prove that we subscribed if the user enabled polling again
-    hass.config_entries.async_update_entry(
+    menuai.config_entries.async_update_entry(
         mock_config_entry, pref_disable_polling=False
     )
-    assert await hass.config_entries.async_reload(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    assert await menuai.config_entries.async_reload(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
     assert (
         "https://api.github.com/repos/home-assistant/core/events" in x[1]
         for x in aioclient_mock.mock_calls
@@ -118,7 +118,7 @@ async def test_subscription_setup_polling_disabled(
 # This tests needs to be adjusted to remove lingering tasks
 @pytest.mark.parametrize("expected_lingering_tasks", [True])
 async def test_sensor_icons(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_integration: MockConfigEntry,
     entity_registry: er.EntityRegistry,
 ) -> None:
@@ -128,7 +128,7 @@ async def test_sensor_icons(
         config_entry_id=init_integration.entry_id,
     )
 
-    icons = await icon.async_get_icons(hass, "entity", integrations=["github"])
+    icons = await icon.async_get_icons(menuai, "entity", integrations=["github"])
     for entity in entities:
         assert entity.translation_key is not None
         assert icons["github"]["sensor"][entity.translation_key] is not None

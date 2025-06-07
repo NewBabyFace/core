@@ -5,10 +5,10 @@ from unittest.mock import patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
+from menuai.const import Platform
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .conftest import ConfigEntryFactoryType, RtspEventMock
 
@@ -108,7 +108,7 @@ from tests.common import snapshot_platform
     ],
 )
 async def test_binary_sensors(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     snapshot: SnapshotAssertion,
     config_entry_factory: ConfigEntryFactoryType,
@@ -116,10 +116,10 @@ async def test_binary_sensors(
     event: dict[str, str],
 ) -> None:
     """Test that sensors are loaded properly."""
-    with patch("homeassistant.components.axis.PLATFORMS", [Platform.BINARY_SENSOR]):
+    with patch("menuai.components.axis.PLATFORMS", [Platform.BINARY_SENSOR]):
         config_entry = await config_entry_factory()
     mock_rtsp_event(**event)
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
 
 @pytest.mark.parametrize(
@@ -157,10 +157,10 @@ async def test_binary_sensors(
 )
 @pytest.mark.usefixtures("config_entry_setup")
 async def test_unsupported_events(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_rtsp_event: RtspEventMock,
     event: dict[str, str],
 ) -> None:
     """Validate nothing breaks with unsupported events."""
     mock_rtsp_event(**event)
-    assert len(hass.states.async_entity_ids(BINARY_SENSOR_DOMAIN)) == 0
+    assert len(menuai.states.async_entity_ids(BINARY_SENSOR_DOMAIN)) == 0

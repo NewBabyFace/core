@@ -10,16 +10,16 @@ from typing import final
 
 import voluptuous as vol
 
-from homeassistant.components import websocket_api
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN, EntityCategory
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util import dt as dt_util
-from homeassistant.util.hass_dict import HassKey
+from menuai.components import websocket_api
+from menuai.config_entries import ConfigEntry
+from menuai.const import STATE_UNAVAILABLE, STATE_UNKNOWN, EntityCategory
+from menuai.core import menuai, callback
+from menuai.helpers import config_validation as cv
+from menuai.helpers.entity_component import EntityComponent
+from menuai.helpers.restore_state import RestoreEntity
+from menuai.helpers.typing import ConfigType
+from menuai.util import dt as dt_util
+from menuai.util.menuai_dict import menuaiKey
 
 from .const import DOMAIN
 from .models import DetectionResult, WakeWord
@@ -36,45 +36,45 @@ __all__ = [
 _LOGGER = logging.getLogger(__name__)
 
 CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)
-DATA_COMPONENT: HassKey[EntityComponent[WakeWordDetectionEntity]] = HassKey(DOMAIN)
+DATA_COMPONENT: menuaiKey[EntityComponent[WakeWordDetectionEntity]] = menuaiKey(DOMAIN)
 
 TIMEOUT_FETCH_WAKE_WORDS = 10
 
 
 @callback
-def async_default_entity(hass: HomeAssistant) -> str | None:
+def async_default_entity(menuai: menuai) -> str | None:
     """Return the entity id of the default engine."""
-    return next(iter(hass.states.async_entity_ids(DOMAIN)), None)
+    return next(iter(menuai.states.async_entity_ids(DOMAIN)), None)
 
 
 @callback
 def async_get_wake_word_detection_entity(
-    hass: HomeAssistant, entity_id: str
+    menuai: menuai, entity_id: str
 ) -> WakeWordDetectionEntity | None:
     """Return wake word entity."""
-    return hass.data[DATA_COMPONENT].get_entity(entity_id)
+    return menuai.data[DATA_COMPONENT].get_entity(entity_id)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up wake word."""
-    websocket_api.async_register_command(hass, websocket_entity_info)
+    websocket_api.async_register_command(menuai, websocket_entity_info)
 
-    component = hass.data[DATA_COMPONENT] = EntityComponent[WakeWordDetectionEntity](
-        _LOGGER, DOMAIN, hass
+    component = menuai.data[DATA_COMPONENT] = EntityComponent[WakeWordDetectionEntity](
+        _LOGGER, DOMAIN, menuai
     )
     component.register_shutdown()
 
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Set up a config entry."""
-    return await hass.data[DATA_COMPONENT].async_setup_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_setup_entry(entry)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.data[DATA_COMPONENT].async_unload_entry(entry)
+    return await menuai.data[DATA_COMPONENT].async_unload_entry(entry)
 
 
 class WakeWordDetectionEntity(RestoreEntity):
@@ -118,9 +118,9 @@ class WakeWordDetectionEntity(RestoreEntity):
 
         return result
 
-    async def async_internal_added_to_hass(self) -> None:
-        """Call when the entity is added to hass."""
-        await super().async_internal_added_to_hass()
+    async def async_internal_added_to_menuai(self) -> None:
+        """Call when the entity is added to menuai."""
+        await super().async_internal_added_to_menuai()
         state = await self.async_get_last_state()
         if (
             state is not None
@@ -138,10 +138,10 @@ class WakeWordDetectionEntity(RestoreEntity):
 )
 @websocket_api.async_response
 async def websocket_entity_info(
-    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict
+    menuai: menuai, connection: websocket_api.ActiveConnection, msg: dict
 ) -> None:
     """Get info about wake word entity."""
-    entity = hass.data[DATA_COMPONENT].get_entity(msg["entity_id"])
+    entity = menuai.data[DATA_COMPONENT].get_entity(msg["entity_id"])
 
     if entity is None:
         connection.send_error(

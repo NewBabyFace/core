@@ -17,14 +17,14 @@ from typing import Any, cast
 from lru import LRU
 import voluptuous as vol
 
-from homeassistant.components import persistent_notification
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_SCAN_INTERVAL, CONF_TYPE
-from homeassistant.core import HomeAssistant, ServiceCall, callback
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.service import async_register_admin_service
+from menuai.components import persistent_notification
+from menuai.config_entries import ConfigEntry
+from menuai.const import CONF_SCAN_INTERVAL, CONF_TYPE
+from menuai.core import menuai, ServiceCall, callback
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv
+from menuai.helpers.event import async_track_time_interval
+from menuai.helpers.service import async_register_admin_service
 
 from .const import DOMAIN
 
@@ -80,26 +80,26 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(  # noqa: C901
-    hass: HomeAssistant, entry: ConfigEntry
+    menuai: menuai, entry: ConfigEntry
 ) -> bool:
     """Set up Profiler from a config entry."""
     lock = asyncio.Lock()
-    domain_data = hass.data[DOMAIN] = {}
+    domain_data = menuai.data[DOMAIN] = {}
 
     async def _async_run_profile(call: ServiceCall) -> None:
         async with lock:
-            await _async_generate_profile(hass, call)
+            await _async_generate_profile(menuai, call)
 
     async def _async_run_memory_profile(call: ServiceCall) -> None:
         async with lock:
-            await _async_generate_memory_profile(hass, call)
+            await _async_generate_memory_profile(menuai, call)
 
     async def _async_start_log_objects(call: ServiceCall) -> None:
         if LOG_INTERVAL_SUB in domain_data:
-            raise HomeAssistantError("Object logging already started")
+            raise menuaiError("Object logging already started")
 
         persistent_notification.async_create(
-            hass,
+            menuai,
             (
                 "Object growth logging has started. See [the logs](/config/logs) to"
                 " track the growth of new objects."
@@ -107,24 +107,24 @@ async def async_setup_entry(  # noqa: C901
             title="Object growth logging started",
             notification_id="profile_object_logging",
         )
-        await hass.async_add_executor_job(_log_objects)
+        await menuai.async_add_executor_job(_log_objects)
         domain_data[LOG_INTERVAL_SUB] = async_track_time_interval(
-            hass, _log_objects, call.data[CONF_SCAN_INTERVAL]
+            menuai, _log_objects, call.data[CONF_SCAN_INTERVAL]
         )
 
     async def _async_stop_log_objects(call: ServiceCall) -> None:
         if LOG_INTERVAL_SUB not in domain_data:
-            raise HomeAssistantError("Object logging not running")
+            raise menuaiError("Object logging not running")
 
-        persistent_notification.async_dismiss(hass, "profile_object_logging")
+        persistent_notification.async_dismiss(menuai, "profile_object_logging")
         domain_data.pop(LOG_INTERVAL_SUB)()
 
     async def _async_start_object_sources(call: ServiceCall) -> None:
         if LOG_INTERVAL_SUB in domain_data:
-            raise HomeAssistantError("Object logging already started")
+            raise menuaiError("Object logging already started")
 
         persistent_notification.async_create(
-            hass,
+            menuai,
             (
                 "Object source logging has started. See [the logs](/config/logs) to"
                 " track the growth of new objects."
@@ -137,13 +137,13 @@ async def async_setup_entry(  # noqa: C901
         last_stats: dict[str, int] = {}
 
         async def _log_object_sources_with_max(*_: Any) -> None:
-            await hass.async_add_executor_job(
+            await menuai.async_add_executor_job(
                 _log_object_sources, call.data[CONF_MAX_OBJECTS], last_ids, last_stats
             )
 
         await _log_object_sources_with_max()
         cancel_track = async_track_time_interval(
-            hass, _log_object_sources_with_max, call.data[CONF_SCAN_INTERVAL]
+            menuai, _log_object_sources_with_max, call.data[CONF_SCAN_INTERVAL]
         )
 
         @callback
@@ -157,9 +157,9 @@ async def async_setup_entry(  # noqa: C901
     @callback
     def _async_stop_object_sources(call: ServiceCall) -> None:
         if LOG_INTERVAL_SUB not in domain_data:
-            raise HomeAssistantError("Object logging not running")
+            raise menuaiError("Object logging not running")
 
-        persistent_notification.async_dismiss(hass, "profile_object_source_logging")
+        persistent_notification.async_dismiss(menuai, "profile_object_source_logging")
         domain_data.pop(LOG_INTERVAL_SUB)()
 
     def _dump_log_objects(call: ServiceCall) -> None:
@@ -178,7 +178,7 @@ async def async_setup_entry(  # noqa: C901
             )
 
         persistent_notification.create(
-            hass,
+            menuai,
             (
                 f"Objects with type {obj_type} have been dumped to the log. See [the"
                 " logs](/config/logs) to review the repr of the objects."
@@ -222,7 +222,7 @@ async def async_setup_entry(  # noqa: C901
                     )
 
         persistent_notification.create(
-            hass,
+            menuai,
             (
                 "LRU cache states have been dumped to the log. See [the"
                 " logs](/config/logs) to review the stats."
@@ -256,7 +256,7 @@ async def async_setup_entry(  # noqa: C901
         """Log all scheduled in the event loop."""
         with _increase_repr_limit():
             handle: asyncio.Handle
-            for handle in getattr(hass.loop, "_scheduled"):  # noqa: B009
+            for handle in getattr(menuai.loop, "_scheduled"):  # noqa: B009
                 if not handle.cancelled():
                     _LOGGER.critical("Scheduled: %s", handle)
 
@@ -271,10 +271,10 @@ async def async_setup_entry(  # noqa: C901
         base_logger = logging.getLogger()
         if enabled and base_logger.getEffectiveLevel() > logging.INFO:
             base_logger.setLevel(logging.INFO)
-        hass.loop.set_debug(enabled)
+        menuai.loop.set_debug(enabled)
 
     async_register_admin_service(
-        hass,
+        menuai,
         DOMAIN,
         SERVICE_START,
         _async_run_profile,
@@ -284,7 +284,7 @@ async def async_setup_entry(  # noqa: C901
     )
 
     async_register_admin_service(
-        hass,
+        menuai,
         DOMAIN,
         SERVICE_MEMORY,
         _async_run_memory_profile,
@@ -294,7 +294,7 @@ async def async_setup_entry(  # noqa: C901
     )
 
     async_register_admin_service(
-        hass,
+        menuai,
         DOMAIN,
         SERVICE_START_LOG_OBJECTS,
         _async_start_log_objects,
@@ -308,14 +308,14 @@ async def async_setup_entry(  # noqa: C901
     )
 
     async_register_admin_service(
-        hass,
+        menuai,
         DOMAIN,
         SERVICE_STOP_LOG_OBJECTS,
         _async_stop_log_objects,
     )
 
     async_register_admin_service(
-        hass,
+        menuai,
         DOMAIN,
         SERVICE_START_LOG_OBJECT_SOURCES,
         _async_start_object_sources,
@@ -332,14 +332,14 @@ async def async_setup_entry(  # noqa: C901
     )
 
     async_register_admin_service(
-        hass,
+        menuai,
         DOMAIN,
         SERVICE_STOP_LOG_OBJECT_SOURCES,
         _async_stop_object_sources,
     )
 
     async_register_admin_service(
-        hass,
+        menuai,
         DOMAIN,
         SERVICE_DUMP_LOG_OBJECTS,
         _dump_log_objects,
@@ -347,28 +347,28 @@ async def async_setup_entry(  # noqa: C901
     )
 
     async_register_admin_service(
-        hass,
+        menuai,
         DOMAIN,
         SERVICE_LRU_STATS,
         _lru_stats,
     )
 
     async_register_admin_service(
-        hass,
+        menuai,
         DOMAIN,
         SERVICE_LOG_THREAD_FRAMES,
         _async_dump_thread_frames,
     )
 
     async_register_admin_service(
-        hass,
+        menuai,
         DOMAIN,
         SERVICE_LOG_EVENT_LOOP_SCHEDULED,
         _async_dump_scheduled,
     )
 
     async_register_admin_service(
-        hass,
+        menuai,
         DOMAIN,
         SERVICE_SET_ASYNCIO_DEBUG,
         _async_asyncio_debug,
@@ -376,7 +376,7 @@ async def async_setup_entry(  # noqa: C901
     )
 
     async_register_admin_service(
-        hass,
+        menuai,
         DOMAIN,
         SERVICE_LOG_CURRENT_TASKS,
         _async_dump_current_tasks,
@@ -385,17 +385,17 @@ async def async_setup_entry(  # noqa: C901
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     for service in SERVICES:
-        hass.services.async_remove(domain=DOMAIN, service=service)
-    if LOG_INTERVAL_SUB in hass.data[DOMAIN]:
-        hass.data[DOMAIN][LOG_INTERVAL_SUB]()
-    hass.data.pop(DOMAIN)
+        menuai.services.async_remove(domain=DOMAIN, service=service)
+    if LOG_INTERVAL_SUB in menuai.data[DOMAIN]:
+        menuai.data[DOMAIN][LOG_INTERVAL_SUB]()
+    menuai.data.pop(DOMAIN)
     return True
 
 
-async def _async_generate_profile(hass: HomeAssistant, call: ServiceCall):
+async def _async_generate_profile(menuai: menuai, call: ServiceCall):
     # Imports deferred to avoid loading modules
     # in memory since usually only one part of this
     # integration is used at a time
@@ -403,7 +403,7 @@ async def _async_generate_profile(hass: HomeAssistant, call: ServiceCall):
 
     start_time = int(time.time() * 1000000)
     persistent_notification.async_create(
-        hass,
+        menuai,
         (
             "The profile has started. This notification will be updated when it is"
             " complete."
@@ -416,13 +416,13 @@ async def _async_generate_profile(hass: HomeAssistant, call: ServiceCall):
     await asyncio.sleep(float(call.data[CONF_SECONDS]))
     profiler.disable()
 
-    cprofile_path = hass.config.path(f"profile.{start_time}.cprof")
-    callgrind_path = hass.config.path(f"callgrind.out.{start_time}")
-    await hass.async_add_executor_job(
+    cprofile_path = menuai.config.path(f"profile.{start_time}.cprof")
+    callgrind_path = menuai.config.path(f"callgrind.out.{start_time}")
+    await menuai.async_add_executor_job(
         _write_profile, profiler, cprofile_path, callgrind_path
     )
     persistent_notification.async_create(
-        hass,
+        menuai,
         (
             f"Wrote cProfile data to {cprofile_path} and callgrind data to"
             f" {callgrind_path}"
@@ -432,7 +432,7 @@ async def _async_generate_profile(hass: HomeAssistant, call: ServiceCall):
     )
 
 
-async def _async_generate_memory_profile(hass: HomeAssistant, call: ServiceCall):
+async def _async_generate_memory_profile(menuai: menuai, call: ServiceCall):
     # Imports deferred to avoid loading modules
     # in memory since usually only one part of this
     # integration is used at a time
@@ -440,7 +440,7 @@ async def _async_generate_memory_profile(hass: HomeAssistant, call: ServiceCall)
 
     start_time = int(time.time() * 1000000)
     persistent_notification.async_create(
-        hass,
+        menuai,
         (
             "The memory profile has started. This notification will be updated when it"
             " is complete."
@@ -453,10 +453,10 @@ async def _async_generate_memory_profile(hass: HomeAssistant, call: ServiceCall)
     await asyncio.sleep(float(call.data[CONF_SECONDS]))
     heap = heap_profiler.heap()
 
-    heap_path = hass.config.path(f"heap_profile.{start_time}.hpy")
-    await hass.async_add_executor_job(_write_memory_profile, heap, heap_path)
+    heap_path = menuai.config.path(f"heap_profile.{start_time}.hpy")
+    await menuai.async_add_executor_job(_write_memory_profile, heap, heap_path)
     persistent_notification.async_create(
-        hass,
+        menuai,
         f"Wrote heapy memory profile to {heap_path}",
         title="Profile Complete",
         notification_id=f"memory_profiler_{start_time}",

@@ -6,16 +6,16 @@ from axis.models.api import CONTEXT
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
-from homeassistant.const import (
+from menuai.components.switch import DOMAIN as SWITCH_DOMAIN
+from menuai.const import (
     ATTR_ENTITY_ID,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
     STATE_ON,
     Platform,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from menuai.core import menuai
+from menuai.helpers import entity_registry as er
 
 from .conftest import ConfigEntryFactoryType, RtspEventMock
 from .const import API_DISCOVERY_PORT_MANAGEMENT, NAME
@@ -64,14 +64,14 @@ PORT_MANAGEMENT_RESPONSE = {
 
 @pytest.mark.parametrize("param_ports_payload", [PORT_DATA])
 async def test_switches_with_port_cgi(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     config_entry_factory: ConfigEntryFactoryType,
     mock_rtsp_event: RtspEventMock,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test that switches are loaded properly using port.cgi."""
-    with patch("homeassistant.components.axis.PLATFORMS", [Platform.SWITCH]):
+    with patch("menuai.components.axis.PLATFORMS", [Platform.SWITCH]):
         config_entry = await config_entry_factory()
 
     mock_rtsp_event(
@@ -88,14 +88,14 @@ async def test_switches_with_port_cgi(
         source_name="RelayToken",
         source_idx="1",
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
     entity_id = f"{SWITCH_DOMAIN}.{NAME}_doorbell"
 
     with patch("axis.interfaces.vapix.Ports.close") as mock_turn_on:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SWITCH_DOMAIN,
             SERVICE_TURN_ON,
             {ATTR_ENTITY_ID: entity_id},
@@ -104,7 +104,7 @@ async def test_switches_with_port_cgi(
         mock_turn_on.assert_called_once_with("0")
 
     with patch("axis.interfaces.vapix.Ports.open") as mock_turn_off:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SWITCH_DOMAIN,
             SERVICE_TURN_OFF,
             {ATTR_ENTITY_ID: entity_id},
@@ -116,14 +116,14 @@ async def test_switches_with_port_cgi(
 @pytest.mark.parametrize("api_discovery_items", [API_DISCOVERY_PORT_MANAGEMENT])
 @pytest.mark.parametrize("port_management_payload", [PORT_MANAGEMENT_RESPONSE])
 async def test_switches_with_port_management(
-    hass: HomeAssistant,
+    menuai: menuai,
     entity_registry: er.EntityRegistry,
     config_entry_factory: ConfigEntryFactoryType,
     mock_rtsp_event: RtspEventMock,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test that switches are loaded properly using port management."""
-    with patch("homeassistant.components.axis.PLATFORMS", [Platform.SWITCH]):
+    with patch("menuai.components.axis.PLATFORMS", [Platform.SWITCH]):
         config_entry = await config_entry_factory()
 
     mock_rtsp_event(
@@ -140,14 +140,14 @@ async def test_switches_with_port_management(
         source_name="RelayToken",
         source_idx="1",
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+    await snapshot_platform(menuai, entity_registry, snapshot, config_entry.entry_id)
 
     entity_id = f"{SWITCH_DOMAIN}.{NAME}_doorbell"
 
     with patch("axis.interfaces.vapix.IoPortManagement.close") as mock_turn_on:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SWITCH_DOMAIN,
             SERVICE_TURN_ON,
             {ATTR_ENTITY_ID: entity_id},
@@ -156,7 +156,7 @@ async def test_switches_with_port_management(
         mock_turn_on.assert_called_once_with("0")
 
     with patch("axis.interfaces.vapix.IoPortManagement.open") as mock_turn_off:
-        await hass.services.async_call(
+        await menuai.services.async_call(
             SWITCH_DOMAIN,
             SERVICE_TURN_OFF,
             {ATTR_ENTITY_ID: entity_id},
@@ -173,6 +173,6 @@ async def test_switches_with_port_management(
         source_name="RelayToken",
         source_idx="0",
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert hass.states.get(f"{SWITCH_DOMAIN}.{NAME}_relay_1").state == STATE_ON
+    assert menuai.states.get(f"{SWITCH_DOMAIN}.{NAME}_relay_1").state == STATE_ON

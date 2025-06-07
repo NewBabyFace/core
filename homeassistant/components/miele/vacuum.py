@@ -10,15 +10,15 @@ from typing import Any, Final
 from aiohttp import ClientResponseError
 from pymiele import MieleEnum
 
-from homeassistant.components.vacuum import (
+from menuai.components.vacuum import (
     StateVacuumEntity,
     StateVacuumEntityDescription,
     VacuumActivity,
     VacuumEntityFeature,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.core import menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN, PROCESS_ACTION, PROGRAM_ID, MieleActions, MieleAppliance
 from .coordinator import MieleConfigEntry
@@ -125,7 +125,7 @@ VACUUM_TYPES: Final[tuple[MieleVacuumDefinition, ...]] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: MieleConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -197,7 +197,7 @@ class MieleVacuum(MieleEntity, StateVacuumEntity):
         try:
             await self.api.send_action(device_id, action)
         except ClientResponseError as ex:
-            raise HomeAssistantError(
+            raise menuaiError(
                 translation_domain=DOMAIN,
                 translation_key="set_state_error",
                 translation_placeholders={

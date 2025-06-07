@@ -2,20 +2,20 @@
 
 from __future__ import annotations
 
-from homeassistant.components.device_tracker import DeviceScanner
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.typing import ConfigType
+from menuai.components.device_tracker import DeviceScanner
+from menuai.core import menuai
+from menuai.helpers.typing import ConfigType
 
 from . import CONF_TRACKER_INTERFACE, OPNSENSE_DATA
 
 
 async def async_get_scanner(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> OPNSenseDeviceScanner:
     """Configure the OPNSense device_tracker."""
-    interface_client = hass.data[OPNSENSE_DATA]["interfaces"]
+    interface_client = menuai.data[OPNSENSE_DATA]["interfaces"]
     return OPNSenseDeviceScanner(
-        interface_client, hass.data[OPNSENSE_DATA][CONF_TRACKER_INTERFACE]
+        interface_client, menuai.data[OPNSENSE_DATA][CONF_TRACKER_INTERFACE]
     )
 
 

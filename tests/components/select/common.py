@@ -1,6 +1,6 @@
 """Common helpers for select entity component tests."""
 
-from homeassistant.components.select import SelectEntity
+from menuai.components.select import SelectEntity
 
 from tests.common import MockEntity
 

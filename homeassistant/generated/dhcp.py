@@ -1,6 +1,6 @@
 """Automatically generated file.
 
-To update, run python3 -m script.hassfest
+To update, run python3 -m script.menuaifest
 """
 
 from __future__ import annotations

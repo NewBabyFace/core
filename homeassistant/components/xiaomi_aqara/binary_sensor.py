@@ -5,15 +5,15 @@ from typing import Any
 
 from xiaomi_gateway import XiaomiGateway
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.event import async_call_later
-from homeassistant.helpers.restore_state import RestoreEntity
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai, callback
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.helpers.event import async_call_later
+from menuai.helpers.restore_state import RestoreEntity
 
 from .const import DOMAIN, GATEWAYS_KEY
 from .entity import XiaomiDevice
@@ -33,17 +33,17 @@ ATTR_DENSITY = "Density"
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Perform the setup for Xiaomi devices."""
     entities: list[XiaomiBinarySensor] = []
-    gateway = hass.data[DOMAIN][GATEWAYS_KEY][config_entry.entry_id]
+    gateway = menuai.data[DOMAIN][GATEWAYS_KEY][config_entry.entry_id]
     for entity in gateway.devices["binary_sensor"]:
         model = entity["model"]
         if model in ("motion", "sensor_motion", "sensor_motion.aq2"):
-            entities.append(XiaomiMotionSensor(entity, hass, gateway, config_entry))
+            entities.append(XiaomiMotionSensor(entity, menuai, gateway, config_entry))
         elif model in ("magnet", "sensor_magnet", "sensor_magnet.aq2"):
             entities.append(XiaomiDoorSensor(entity, gateway, config_entry))
         elif model == "sensor_wleak.aq1":
@@ -64,7 +64,7 @@ async def async_setup_entry(
             else:
                 data_key = "button_0"
             entities.append(
-                XiaomiButton(entity, "Switch", data_key, hass, gateway, config_entry)
+                XiaomiButton(entity, "Switch", data_key, menuai, gateway, config_entry)
             )
         elif model in (
             "86sw1",
@@ -79,7 +79,7 @@ async def async_setup_entry(
                 data_key = "button_0"
             entities.append(
                 XiaomiButton(
-                    entity, "Wall Switch", data_key, hass, gateway, config_entry
+                    entity, "Wall Switch", data_key, menuai, gateway, config_entry
                 )
             )
         elif model in (
@@ -100,7 +100,7 @@ async def async_setup_entry(
                     entity,
                     "Wall Switch (Left)",
                     data_key_left,
-                    hass,
+                    menuai,
                     gateway,
                     config_entry,
                 )
@@ -110,7 +110,7 @@ async def async_setup_entry(
                     entity,
                     "Wall Switch (Right)",
                     data_key_right,
-                    hass,
+                    menuai,
                     gateway,
                     config_entry,
                 )
@@ -120,13 +120,13 @@ async def async_setup_entry(
                     entity,
                     "Wall Switch (Both)",
                     "dual_channel",
-                    hass,
+                    menuai,
                     gateway,
                     config_entry,
                 )
             )
         elif model in ("cube", "sensor_cube", "sensor_cube.aqgl01"):
-            entities.append(XiaomiCube(entity, hass, gateway, config_entry))
+            entities.append(XiaomiCube(entity, menuai, gateway, config_entry))
         elif model in ("vibration", "vibration.aq1"):
             entities.append(
                 XiaomiVibration(entity, "Vibration", "status", gateway, config_entry)
@@ -187,9 +187,9 @@ class XiaomiNatgasSensor(XiaomiBinarySensor):
         attrs.update(super().extra_state_attributes)
         return attrs
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self._attr_is_on = False
 
     def parse_data(self, data, raw_data):
@@ -221,12 +221,12 @@ class XiaomiMotionSensor(XiaomiBinarySensor):
     def __init__(
         self,
         device: dict[str, Any],
-        hass: HomeAssistant,
+        menuai: menuai,
         xiaomi_hub: XiaomiGateway,
         config_entry: ConfigEntry,
     ) -> None:
         """Initialize the XiaomiMotionSensor."""
-        self._hass = hass
+        self._menuai = menuai
         self._no_motion_since = 0
         self._unsub_set_no_motion = None
         if "proto" not in device or int(device["proto"][0:1]) == 1:
@@ -256,9 +256,9 @@ class XiaomiMotionSensor(XiaomiBinarySensor):
         self._attr_is_on = False
         self.async_write_ha_state()
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self._attr_is_on = False
 
     def parse_data(self, data, raw_data):
@@ -307,11 +307,11 @@ class XiaomiMotionSensor(XiaomiBinarySensor):
                 if self._unsub_set_no_motion:
                     self._unsub_set_no_motion()
                 self._unsub_set_no_motion = async_call_later(
-                    self._hass, 120, self._async_set_no_motion
+                    self._menuai, 120, self._async_set_no_motion
                 )
 
             if self.entity_id is not None:
-                self._hass.bus.async_fire(
+                self._menuai.bus.async_fire(
                     "xiaomi_aqara.motion", {"entity_id": self.entity_id}
                 )
 
@@ -355,9 +355,9 @@ class XiaomiDoorSensor(XiaomiBinarySensor, RestoreEntity):
         attrs.update(super().extra_state_attributes)
         return attrs
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         if (state := await self.async_get_last_state()) is None:
             return
 
@@ -413,9 +413,9 @@ class XiaomiWaterLeakSensor(XiaomiBinarySensor):
             config_entry,
         )
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self._attr_is_on = False
 
     def parse_data(self, data, raw_data):
@@ -468,9 +468,9 @@ class XiaomiSmokeSensor(XiaomiBinarySensor):
         attrs.update(super().extra_state_attributes)
         return attrs
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self._attr_is_on = False
 
     def parse_data(self, data, raw_data):
@@ -517,9 +517,9 @@ class XiaomiVibration(XiaomiBinarySensor):
         attrs.update(super().extra_state_attributes)
         return attrs
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self._attr_is_on = False
 
     def parse_data(self, data, raw_data):
@@ -532,7 +532,7 @@ class XiaomiVibration(XiaomiBinarySensor):
             _LOGGER.warning("Unsupported movement_type detected: %s", value)
             return False
 
-        self.hass.bus.async_fire(
+        self.menuai.bus.async_fire(
             "xiaomi_aqara.movement",
             {"entity_id": self.entity_id, "movement_type": value},
         )
@@ -549,12 +549,12 @@ class XiaomiButton(XiaomiBinarySensor):
         device: dict[str, Any],
         name: str,
         data_key: str,
-        hass: HomeAssistant,
+        menuai: menuai,
         xiaomi_hub: XiaomiGateway,
         config_entry: ConfigEntry,
     ) -> None:
         """Initialize the XiaomiButton."""
-        self._hass = hass
+        self._menuai = menuai
         self._last_action = None
         super().__init__(device, name, xiaomi_hub, data_key, None, config_entry)
 
@@ -565,9 +565,9 @@ class XiaomiButton(XiaomiBinarySensor):
         attrs.update(super().extra_state_attributes)
         return attrs
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self._attr_is_on = False
 
     def parse_data(self, data, raw_data):
@@ -600,7 +600,7 @@ class XiaomiButton(XiaomiBinarySensor):
             _LOGGER.warning("Unsupported click_type detected: %s", value)
             return False
 
-        self._hass.bus.async_fire(
+        self._menuai.bus.async_fire(
             "xiaomi_aqara.click",
             {"entity_id": self.entity_id, "click_type": click_type},
         )
@@ -615,12 +615,12 @@ class XiaomiCube(XiaomiBinarySensor):
     def __init__(
         self,
         device: dict[str, Any],
-        hass: HomeAssistant,
+        menuai: menuai,
         xiaomi_hub: XiaomiGateway,
         config_entry: ConfigEntry,
     ) -> None:
         """Initialize the Xiaomi Cube."""
-        self._hass = hass
+        self._menuai = menuai
         self._last_action = None
         if "proto" not in device or int(device["proto"][0:1]) == 1:
             data_key = "status"
@@ -635,15 +635,15 @@ class XiaomiCube(XiaomiBinarySensor):
         attrs.update(super().extra_state_attributes)
         return attrs
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Handle entity which will be added."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
         self._attr_is_on = False
 
     def parse_data(self, data, raw_data):
         """Parse data sent by gateway."""
         if self._data_key in data:
-            self._hass.bus.async_fire(
+            self._menuai.bus.async_fire(
                 "xiaomi_aqara.cube_action",
                 {"entity_id": self.entity_id, "action_type": data[self._data_key]},
             )
@@ -655,7 +655,7 @@ class XiaomiCube(XiaomiBinarySensor):
                 if isinstance(data["rotate"], int)
                 else data["rotate"].replace(",", ".")
             )
-            self._hass.bus.async_fire(
+            self._menuai.bus.async_fire(
                 "xiaomi_aqara.cube_action",
                 {
                     "entity_id": self.entity_id,
@@ -671,7 +671,7 @@ class XiaomiCube(XiaomiBinarySensor):
                 if isinstance(data["rotate_degree"], int)
                 else data["rotate_degree"].replace(",", ".")
             )
-            self._hass.bus.async_fire(
+            self._menuai.bus.async_fire(
                 "xiaomi_aqara.cube_action",
                 {
                     "entity_id": self.entity_id,

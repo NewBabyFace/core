@@ -1,12 +1,12 @@
 """The Backup integration."""
 
-from homeassistant.config_entries import SOURCE_SYSTEM
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv, discovery_flow
-from homeassistant.helpers.backup import DATA_BACKUP
-from homeassistant.helpers.hassio import is_hassio
-from homeassistant.helpers.typing import ConfigType
+from menuai.config_entries import SOURCE_SYSTEM
+from menuai.const import Platform
+from menuai.core import menuai, ServiceCall
+from menuai.helpers import config_validation as cv, discovery_flow
+from menuai.helpers.backup import DATA_BACKUP
+from menuai.helpers.menuaiio import is_menuaiio
+from menuai.helpers.typing import ConfigType
 
 # Pre-import backup to avoid it being imported
 # later when the import executor is busy and delaying
@@ -86,30 +86,30 @@ PLATFORMS = [Platform.EVENT, Platform.SENSOR]
 CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(menuai: menuai, config: ConfigType) -> bool:
     """Set up the Backup integration."""
-    with_hassio = is_hassio(hass)
+    with_menuaiio = is_menuaiio(menuai)
 
     reader_writer: BackupReaderWriter
-    if not with_hassio:
-        reader_writer = CoreBackupReaderWriter(hass)
+    if not with_menuaiio:
+        reader_writer = CoreBackupReaderWriter(menuai)
     else:
-        # pylint: disable-next=import-outside-toplevel, hass-component-root-import
-        from homeassistant.components.hassio.backup import SupervisorBackupReaderWriter
+        # pylint: disable-next=import-outside-toplevel, menuai-component-root-import
+        from menuai.components.menuaiio.backup import SupervisorBackupReaderWriter
 
-        reader_writer = SupervisorBackupReaderWriter(hass)
+        reader_writer = SupervisorBackupReaderWriter(menuai)
 
-    backup_manager = BackupManager(hass, reader_writer)
-    hass.data[DATA_MANAGER] = backup_manager
+    backup_manager = BackupManager(menuai, reader_writer)
+    menuai.data[DATA_MANAGER] = backup_manager
     try:
         await backup_manager.async_setup()
     except Exception as err:
-        hass.data[DATA_BACKUP].manager_ready.set_exception(err)
+        menuai.data[DATA_BACKUP].manager_ready.set_exception(err)
         raise
     else:
-        hass.data[DATA_BACKUP].manager_ready.set_result(None)
+        menuai.data[DATA_BACKUP].manager_ready.set_result(None)
 
-    async_register_websocket_handlers(hass, with_hassio)
+    async_register_websocket_handlers(menuai, with_menuaiio)
 
     async def async_handle_create_service(call: ServiceCall) -> None:
         """Service handler for creating backups."""
@@ -120,7 +120,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             include_all_addons=False,
             include_database=True,
             include_folders=None,
-            include_homeassistant=True,
+            include_menuai=True,
             name=None,
             password=None,
         )
@@ -129,36 +129,36 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         """Service handler for creating automatic backups."""
         await backup_manager.async_create_automatic_backup()
 
-    if not with_hassio:
-        hass.services.async_register(DOMAIN, "create", async_handle_create_service)
-    hass.services.async_register(
+    if not with_menuaiio:
+        menuai.services.async_register(DOMAIN, "create", async_handle_create_service)
+    menuai.services.async_register(
         DOMAIN, "create_automatic", async_handle_create_automatic_service
     )
 
-    async_register_http_views(hass)
+    async_register_http_views(menuai)
 
     discovery_flow.async_create_flow(
-        hass, DOMAIN, context={"source": SOURCE_SYSTEM}, data={}
+        menuai, DOMAIN, context={"source": SOURCE_SYSTEM}, data={}
     )
 
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: BackupConfigEntry) -> bool:
+async def async_setup_entry(menuai: menuai, entry: BackupConfigEntry) -> bool:
     """Set up a config entry."""
-    backup_manager: BackupManager = hass.data[DATA_MANAGER]
-    coordinator = BackupDataUpdateCoordinator(hass, entry, backup_manager)
+    backup_manager: BackupManager = menuai.data[DATA_MANAGER]
+    coordinator = BackupDataUpdateCoordinator(menuai, entry, backup_manager)
     await coordinator.async_config_entry_first_refresh()
 
     entry.async_on_unload(coordinator.async_unsubscribe)
 
     entry.runtime_data = coordinator
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await menuai.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: BackupConfigEntry) -> bool:
+async def async_unload_entry(menuai: menuai, entry: BackupConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return await menuai.config_entries.async_unload_platforms(entry, PLATFORMS)

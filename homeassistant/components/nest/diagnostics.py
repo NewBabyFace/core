@@ -7,9 +7,9 @@ from typing import Any
 from google_nest_sdm import diagnostics
 from google_nest_sdm.device_traits import InfoTrait
 
-from homeassistant.components.camera import diagnostics as camera_diagnostics
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceEntry
+from menuai.components.camera import diagnostics as camera_diagnostics
+from menuai.core import menuai
+from menuai.helpers.device_registry import DeviceEntry
 
 from .types import NestConfigEntry
 
@@ -17,7 +17,7 @@ REDACT_DEVICE_TRAITS = {InfoTrait.NAME}
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, config_entry: NestConfigEntry
+    menuai: menuai, config_entry: NestConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     if (
@@ -33,7 +33,7 @@ async def async_get_config_entry_diagnostics(
         ],
     }
     camera_data = await camera_diagnostics.async_get_config_entry_diagnostics(
-        hass, config_entry
+        menuai, config_entry
     )
     if camera_data:
         data["camera"] = camera_data
@@ -41,7 +41,7 @@ async def async_get_config_entry_diagnostics(
 
 
 async def async_get_device_diagnostics(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: NestConfigEntry,
     device: DeviceEntry,
 ) -> dict[str, Any]:

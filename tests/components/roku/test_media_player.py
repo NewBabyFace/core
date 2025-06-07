@@ -7,7 +7,7 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from rokuecp import RokuConnectionError, RokuConnectionTimeoutError, RokuError
 
-from homeassistant.components.media_player import (
+from menuai.components.media_player import (
     ATTR_APP_ID,
     ATTR_APP_NAME,
     ATTR_INPUT_SOURCE,
@@ -27,7 +27,7 @@ from homeassistant.components.media_player import (
     MediaPlayerEntityFeature,
     MediaType,
 )
-from homeassistant.components.roku.const import (
+from menuai.components.roku.const import (
     ATTR_CONTENT_ID,
     ATTR_FORMAT,
     ATTR_KEYWORD,
@@ -36,9 +36,9 @@ from homeassistant.components.roku.const import (
     DOMAIN,
     SERVICE_SEARCH,
 )
-from homeassistant.components.stream import FORMAT_CONTENT_TYPE, HLS_PROVIDER
-from homeassistant.components.websocket_api import TYPE_RESULT
-from homeassistant.const import (
+from menuai.components.stream import FORMAT_CONTENT_TYPE, HLS_PROVIDER
+from menuai.components.websocket_api import TYPE_RESULT
+from menuai.const import (
     ATTR_ENTITY_ID,
     ATTR_NAME,
     SERVICE_MEDIA_NEXT_TRACK,
@@ -58,11 +58,11 @@ from homeassistant.const import (
     STATE_STANDBY,
     STATE_UNAVAILABLE,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.core_config import async_process_ha_core_config
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.setup import async_setup_component
-from homeassistant.util import dt as dt_util
+from menuai.core import menuai
+from menuai.core_config import async_process_ha_core_config
+from menuai.helpers import device_registry as dr, entity_registry as er
+from menuai.setup import async_setup_component
+from menuai.util import dt as dt_util
 
 from tests.common import MockConfigEntry, async_fire_time_changed
 from tests.typing import WebSocketGenerator
@@ -72,13 +72,13 @@ TV_ENTITY_ID = f"{MP_DOMAIN}.58_onn_roku_tv"
 
 
 async def test_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     init_integration: MockConfigEntry,
 ) -> None:
     """Test setup with basic config."""
-    state = hass.states.get(MAIN_ENTITY_ID)
+    state = menuai.states.get(MAIN_ENTITY_ID)
     entry = entity_registry.async_get(MAIN_ENTITY_ID)
 
     assert state
@@ -105,26 +105,26 @@ async def test_setup(
 
 @pytest.mark.parametrize("mock_device", ["roku/roku3-idle.json"], indirect=True)
 async def test_idle_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_integration: MockConfigEntry,
     mock_roku: MagicMock,
 ) -> None:
     """Test setup with idle device."""
-    state = hass.states.get(MAIN_ENTITY_ID)
+    state = menuai.states.get(MAIN_ENTITY_ID)
     assert state
     assert state.state == STATE_STANDBY
 
 
 @pytest.mark.parametrize("mock_device", ["roku/rokutv-7820x.json"], indirect=True)
 async def test_tv_setup(
-    hass: HomeAssistant,
+    menuai: menuai,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     init_integration: MockConfigEntry,
     mock_roku: MagicMock,
 ) -> None:
     """Test Roku TV setup."""
-    state = hass.states.get(TV_ENTITY_ID)
+    state = menuai.states.get(TV_ENTITY_ID)
     entry = entity_registry.async_get(TV_ENTITY_ID)
 
     assert state
@@ -154,7 +154,7 @@ async def test_tv_setup(
     [RokuConnectionTimeoutError, RokuConnectionError, RokuError],
 )
 async def test_availability(
-    hass: HomeAssistant,
+    menuai: menuai,
     mock_roku: MagicMock,
     mock_config_entry: MockConfigEntry,
     freezer: FrozenDateTimeFactory,
@@ -164,33 +164,33 @@ async def test_availability(
     now = dt_util.utcnow()
     future = now + timedelta(minutes=1)
 
-    mock_config_entry.add_to_hass(hass)
+    mock_config_entry.add_to_menuai(menuai)
     freezer.move_to(now)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    await menuai.config_entries.async_setup(mock_config_entry.entry_id)
+    await menuai.async_block_till_done()
 
     freezer.move_to(future)
     mock_roku.update.side_effect = error
-    async_fire_time_changed(hass, future)
-    await hass.async_block_till_done()
-    assert hass.states.get(MAIN_ENTITY_ID).state == STATE_UNAVAILABLE
+    async_fire_time_changed(menuai, future)
+    await menuai.async_block_till_done()
+    assert menuai.states.get(MAIN_ENTITY_ID).state == STATE_UNAVAILABLE
 
     future += timedelta(minutes=1)
     freezer.move_to(future)
     mock_roku.update.side_effect = None
-    async_fire_time_changed(hass, future)
-    await hass.async_block_till_done()
-    assert hass.states.get(MAIN_ENTITY_ID).state == STATE_IDLE
+    async_fire_time_changed(menuai, future)
+    await menuai.async_block_till_done()
+    assert menuai.states.get(MAIN_ENTITY_ID).state == STATE_IDLE
 
 
 async def test_supported_features(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_integration: MockConfigEntry,
     mock_roku: MagicMock,
 ) -> None:
     """Test supported features."""
     # Features supported for Rokus
-    state = hass.states.get(MAIN_ENTITY_ID)
+    state = menuai.states.get(MAIN_ENTITY_ID)
     assert (
         state.attributes.get("supported_features")
         == MediaPlayerEntityFeature.PREVIOUS_TRACK
@@ -209,12 +209,12 @@ async def test_supported_features(
 
 @pytest.mark.parametrize("mock_device", ["roku/rokutv-7820x.json"], indirect=True)
 async def test_tv_supported_features(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_integration: MockConfigEntry,
     mock_roku: MagicMock,
 ) -> None:
     """Test supported features for Roku TV."""
-    state = hass.states.get(TV_ENTITY_ID)
+    state = menuai.states.get(TV_ENTITY_ID)
     assert state
     assert (
         state.attributes.get("supported_features")
@@ -233,10 +233,10 @@ async def test_tv_supported_features(
 
 
 async def test_attributes(
-    hass: HomeAssistant, init_integration: MockConfigEntry
+    menuai: menuai, init_integration: MockConfigEntry
 ) -> None:
     """Test attributes."""
-    state = hass.states.get(MAIN_ENTITY_ID)
+    state = menuai.states.get(MAIN_ENTITY_ID)
     assert state
     assert state.state == STATE_IDLE
 
@@ -248,12 +248,12 @@ async def test_attributes(
 
 @pytest.mark.parametrize("mock_device", ["roku/roku3-app.json"], indirect=True)
 async def test_attributes_app(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_integration: MockConfigEntry,
     mock_roku: MagicMock,
 ) -> None:
     """Test attributes for app."""
-    state = hass.states.get(MAIN_ENTITY_ID)
+    state = menuai.states.get(MAIN_ENTITY_ID)
     assert state
     assert state.state == STATE_ON
 
@@ -267,12 +267,12 @@ async def test_attributes_app(
     "mock_device", ["roku/roku3-media-playing.json"], indirect=True
 )
 async def test_attributes_app_media_playing(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_integration: MockConfigEntry,
     mock_roku: MagicMock,
 ) -> None:
     """Test attributes for app with playing media."""
-    state = hass.states.get(MAIN_ENTITY_ID)
+    state = menuai.states.get(MAIN_ENTITY_ID)
     assert state
     assert state.state == STATE_PLAYING
 
@@ -286,12 +286,12 @@ async def test_attributes_app_media_playing(
 
 @pytest.mark.parametrize("mock_device", ["roku/roku3-media-paused.json"], indirect=True)
 async def test_attributes_app_media_paused(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_integration: MockConfigEntry,
     mock_roku: MagicMock,
 ) -> None:
     """Test attributes for app with paused media."""
-    state = hass.states.get(MAIN_ENTITY_ID)
+    state = menuai.states.get(MAIN_ENTITY_ID)
     assert state
     assert state.state == STATE_PAUSED
 
@@ -305,12 +305,12 @@ async def test_attributes_app_media_paused(
 
 @pytest.mark.parametrize("mock_device", ["roku/roku3-screensaver.json"], indirect=True)
 async def test_attributes_screensaver(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_integration: MockConfigEntry,
     mock_roku: MagicMock,
 ) -> None:
     """Test attributes for app with screensaver."""
-    state = hass.states.get(MAIN_ENTITY_ID)
+    state = menuai.states.get(MAIN_ENTITY_ID)
     assert state
     assert state.state == STATE_IDLE
 
@@ -322,10 +322,10 @@ async def test_attributes_screensaver(
 
 @pytest.mark.parametrize("mock_device", ["roku/rokutv-7820x.json"], indirect=True)
 async def test_tv_attributes(
-    hass: HomeAssistant, init_integration: MockConfigEntry
+    menuai: menuai, init_integration: MockConfigEntry
 ) -> None:
     """Test attributes for Roku TV."""
-    state = hass.states.get(TV_ENTITY_ID)
+    state = menuai.states.get(TV_ENTITY_ID)
     assert state
     assert state.state == STATE_ON
 
@@ -338,26 +338,26 @@ async def test_tv_attributes(
 
 
 async def test_services(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_integration: MockConfigEntry,
     mock_roku: MagicMock,
 ) -> None:
     """Test the different media player services."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN, SERVICE_TURN_OFF, {ATTR_ENTITY_ID: MAIN_ENTITY_ID}, blocking=True
     )
 
     assert mock_roku.remote.call_count == 1
     mock_roku.remote.assert_called_with("poweroff")
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN, SERVICE_TURN_ON, {ATTR_ENTITY_ID: MAIN_ENTITY_ID}, blocking=True
     )
 
     assert mock_roku.remote.call_count == 2
     mock_roku.remote.assert_called_with("poweron")
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_MEDIA_PAUSE,
         {ATTR_ENTITY_ID: MAIN_ENTITY_ID},
@@ -367,7 +367,7 @@ async def test_services(
     assert mock_roku.remote.call_count == 3
     mock_roku.remote.assert_called_with("play")
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_MEDIA_PLAY,
         {ATTR_ENTITY_ID: MAIN_ENTITY_ID},
@@ -377,7 +377,7 @@ async def test_services(
     assert mock_roku.remote.call_count == 4
     mock_roku.remote.assert_called_with("play")
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_MEDIA_PLAY_PAUSE,
         {ATTR_ENTITY_ID: MAIN_ENTITY_ID},
@@ -387,7 +387,7 @@ async def test_services(
     assert mock_roku.remote.call_count == 5
     mock_roku.remote.assert_called_with("play")
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_MEDIA_NEXT_TRACK,
         {ATTR_ENTITY_ID: MAIN_ENTITY_ID},
@@ -397,7 +397,7 @@ async def test_services(
     assert mock_roku.remote.call_count == 6
     mock_roku.remote.assert_called_with("forward")
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_MEDIA_PREVIOUS_TRACK,
         {ATTR_ENTITY_ID: MAIN_ENTITY_ID},
@@ -407,7 +407,7 @@ async def test_services(
     assert mock_roku.remote.call_count == 7
     mock_roku.remote.assert_called_with("reverse")
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_SELECT_SOURCE,
         {ATTR_ENTITY_ID: MAIN_ENTITY_ID, ATTR_INPUT_SOURCE: "Home"},
@@ -417,7 +417,7 @@ async def test_services(
     assert mock_roku.remote.call_count == 8
     mock_roku.remote.assert_called_with("home")
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_PLAY_MEDIA,
         {
@@ -431,7 +431,7 @@ async def test_services(
     assert mock_roku.launch.call_count == 1
     mock_roku.launch.assert_called_with("11", {})
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_PLAY_MEDIA,
         {
@@ -455,7 +455,7 @@ async def test_services(
         },
     )
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_SELECT_SOURCE,
         {ATTR_ENTITY_ID: MAIN_ENTITY_ID, ATTR_INPUT_SOURCE: "Netflix"},
@@ -465,7 +465,7 @@ async def test_services(
     assert mock_roku.launch.call_count == 3
     mock_roku.launch.assert_called_with("12")
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_SELECT_SOURCE,
         {ATTR_ENTITY_ID: MAIN_ENTITY_ID, ATTR_INPUT_SOURCE: 12},
@@ -477,12 +477,12 @@ async def test_services(
 
 
 async def test_services_play_media(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_integration: MockConfigEntry,
     mock_roku: MagicMock,
 ) -> None:
     """Test the media player services related to playing media."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_PLAY_MEDIA,
         {
@@ -498,7 +498,7 @@ async def test_services_play_media(
 
     assert mock_roku.launch.call_count == 0
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_PLAY_MEDIA,
         {
@@ -528,7 +528,7 @@ async def test_services_play_media(
     ],
 )
 async def test_services_play_media_audio(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_integration: MockConfigEntry,
     mock_roku: MagicMock,
     content_type: str,
@@ -537,7 +537,7 @@ async def test_services_play_media_audio(
     resolved_format: str,
 ) -> None:
     """Test the media player services related to playing media."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_PLAY_MEDIA,
         {
@@ -554,7 +554,7 @@ async def test_services_play_media_audio(
             "t": "a",
             "songName": resolved_name,
             "songFormat": resolved_format,
-            "artistName": "Home Assistant",
+            "artistName": "MenuAI",
         },
     )
 
@@ -574,7 +574,7 @@ async def test_services_play_media_audio(
     ],
 )
 async def test_services_play_media_video(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_integration: MockConfigEntry,
     mock_roku: MagicMock,
     content_type: str,
@@ -583,7 +583,7 @@ async def test_services_play_media_video(
     resolved_format: str,
 ) -> None:
     """Test the media player services related to playing media."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_PLAY_MEDIA,
         {
@@ -605,12 +605,12 @@ async def test_services_play_media_video(
 
 
 async def test_services_camera_play_stream(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_integration: MockConfigEntry,
     mock_roku: MagicMock,
 ) -> None:
     """Test the media player services related to playing camera stream."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_PLAY_MEDIA,
         {
@@ -634,21 +634,21 @@ async def test_services_camera_play_stream(
 
 
 async def test_services_play_media_local_source(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_integration: MockConfigEntry,
     mock_roku: MagicMock,
 ) -> None:
     """Test the media player services related to playing media."""
-    local_media = hass.config.path("media")
+    local_media = menuai.config.path("media")
     await async_process_ha_core_config(
-        hass, {"media_dirs": {"local": local_media, "recordings": local_media}}
+        menuai, {"media_dirs": {"local": local_media, "recordings": local_media}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert await async_setup_component(hass, "media_source", {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "media_source", {})
+    await menuai.async_block_till_done()
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_PLAY_MEDIA,
         {
@@ -678,19 +678,19 @@ async def test_services_play_media_local_source(
 
 @pytest.mark.parametrize("mock_device", ["roku/rokutv-7820x.json"], indirect=True)
 async def test_tv_services(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_integration: MockConfigEntry,
     mock_roku: MagicMock,
 ) -> None:
     """Test the media player services related to Roku TV."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN, SERVICE_VOLUME_UP, {ATTR_ENTITY_ID: TV_ENTITY_ID}, blocking=True
     )
 
     assert mock_roku.remote.call_count == 1
     mock_roku.remote.assert_called_with("volume_up")
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_VOLUME_DOWN,
         {ATTR_ENTITY_ID: TV_ENTITY_ID},
@@ -700,7 +700,7 @@ async def test_tv_services(
     assert mock_roku.remote.call_count == 2
     mock_roku.remote.assert_called_with("volume_down")
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_VOLUME_MUTE,
         {ATTR_ENTITY_ID: TV_ENTITY_ID, ATTR_MEDIA_VOLUME_MUTED: True},
@@ -710,7 +710,7 @@ async def test_tv_services(
     assert mock_roku.remote.call_count == 3
     mock_roku.remote.assert_called_with("volume_mute")
 
-    await hass.services.async_call(
+    await menuai.services.async_call(
         MP_DOMAIN,
         SERVICE_PLAY_MEDIA,
         {
@@ -726,13 +726,13 @@ async def test_tv_services(
 
 
 async def test_media_browse(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_integration,
     mock_roku,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test browsing media."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json(
         {
@@ -786,23 +786,23 @@ async def test_media_browse(
 
 
 async def test_media_browse_internal(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_integration,
     mock_roku,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test browsing media with internal url."""
     await async_process_ha_core_config(
-        hass,
+        menuai,
         {"internal_url": "http://example.local:8123"},
     )
 
-    assert hass.config.internal_url == "http://example.local:8123"
+    assert menuai.config.internal_url == "http://example.local:8123"
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     with patch(
-        "homeassistant.helpers.network._get_request_host", return_value="example.local"
+        "menuai.helpers.network._get_request_host", return_value="example.local"
     ):
         await client.send_json(
             {
@@ -838,22 +838,22 @@ async def test_media_browse_internal(
 
 
 async def test_media_browse_local_source(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_integration,
     mock_roku,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test browsing local media source."""
-    local_media = hass.config.path("media")
+    local_media = menuai.config.path("media")
     await async_process_ha_core_config(
-        hass, {"media_dirs": {"local": local_media, "recordings": local_media}}
+        menuai, {"media_dirs": {"local": local_media, "recordings": local_media}}
     )
-    await hass.async_block_till_done()
+    await menuai.async_block_till_done()
 
-    assert await async_setup_component(hass, "media_source", {})
-    await hass.async_block_till_done()
+    assert await async_setup_component(menuai, "media_source", {})
+    await menuai.async_block_till_done()
 
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json(
         {
@@ -960,13 +960,13 @@ async def test_media_browse_local_source(
 
 @pytest.mark.parametrize("mock_device", ["roku/rokutv-7820x.json"], indirect=True)
 async def test_tv_media_browse(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_integration,
     mock_roku,
-    hass_ws_client: WebSocketGenerator,
+    menuai_ws_client: WebSocketGenerator,
 ) -> None:
     """Test browsing media."""
-    client = await hass_ws_client(hass)
+    client = await menuai_ws_client(menuai)
 
     await client.send_json(
         {
@@ -1069,12 +1069,12 @@ async def test_tv_media_browse(
 
 
 async def test_integration_services(
-    hass: HomeAssistant,
+    menuai: menuai,
     init_integration: MockConfigEntry,
     mock_roku: MagicMock,
 ) -> None:
     """Test integration services."""
-    await hass.services.async_call(
+    await menuai.services.async_call(
         DOMAIN,
         SERVICE_SEARCH,
         {ATTR_ENTITY_ID: MAIN_ENTITY_ID, ATTR_KEYWORD: "Space Jam"},

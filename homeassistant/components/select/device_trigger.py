@@ -4,30 +4,30 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant.components.device_automation import (
+from menuai.components.device_automation import (
     DEVICE_TRIGGER_BASE_SCHEMA,
     async_get_entity_registry_entry_or_raise,
 )
-from homeassistant.components.homeassistant.triggers.state import (
+from menuai.components.menuai.triggers.state import (
     CONF_FOR,
     CONF_FROM,
     CONF_TO,
     async_attach_trigger as async_attach_state_trigger,
     async_validate_trigger_config as async_validate_state_trigger_config,
 )
-from homeassistant.const import (
+from menuai.const import (
     CONF_DEVICE_ID,
     CONF_DOMAIN,
     CONF_ENTITY_ID,
     CONF_PLATFORM,
     CONF_TYPE,
 )
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv, entity_registry as er
-from homeassistant.helpers.entity import get_capability
-from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import CALLBACK_TYPE, menuai
+from menuai.exceptions import menuaiError
+from menuai.helpers import config_validation as cv, entity_registry as er
+from menuai.helpers.entity import get_capability
+from menuai.helpers.trigger import TriggerActionType, TriggerInfo
+from menuai.helpers.typing import ConfigType
 
 from .const import ATTR_OPTIONS, DOMAIN
 
@@ -45,10 +45,10 @@ TRIGGER_SCHEMA = DEVICE_TRIGGER_BASE_SCHEMA.extend(
 
 
 async def async_get_triggers(
-    hass: HomeAssistant, device_id: str
+    menuai: menuai, device_id: str
 ) -> list[dict[str, str]]:
     """List device triggers for Select devices."""
-    registry = er.async_get(hass)
+    registry = er.async_get(menuai)
     return [
         {
             CONF_PLATFORM: "device",
@@ -63,7 +63,7 @@ async def async_get_triggers(
 
 
 async def async_attach_trigger(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     action: TriggerActionType,
     trigger_info: TriggerInfo,
@@ -83,21 +83,21 @@ async def async_attach_trigger(
     if CONF_FOR in config:
         state_config[CONF_FOR] = config[CONF_FOR]
 
-    state_config = await async_validate_state_trigger_config(hass, state_config)
+    state_config = await async_validate_state_trigger_config(menuai, state_config)
     return await async_attach_state_trigger(
-        hass, state_config, action, trigger_info, platform_type="device"
+        menuai, state_config, action, trigger_info, platform_type="device"
     )
 
 
 async def async_get_trigger_capabilities(
-    hass: HomeAssistant, config: ConfigType
+    menuai: menuai, config: ConfigType
 ) -> dict[str, vol.Schema]:
     """List trigger capabilities."""
 
     try:
-        entry = async_get_entity_registry_entry_or_raise(hass, config[CONF_ENTITY_ID])
-        options = get_capability(hass, entry.entity_id, ATTR_OPTIONS) or []
-    except HomeAssistantError:
+        entry = async_get_entity_registry_entry_or_raise(menuai, config[CONF_ENTITY_ID])
+        options = get_capability(menuai, entry.entity_id, ATTR_OPTIONS) or []
+    except menuaiError:
         options = []
 
     return {

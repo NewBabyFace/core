@@ -4,14 +4,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from homeassistant.components.binary_sensor import (
+from menuai.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from menuai.const import EntityCategory
+from menuai.core import menuai
+from menuai.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import LOGGER, WAN_STATUS
 from .coordinator import UpnpConfigEntry, UpnpDataUpdateCoordinator
@@ -36,7 +36,7 @@ SENSOR_DESCRIPTIONS: tuple[UpnpBinarySensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    menuai: menuai,
     config_entry: UpnpConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
@@ -73,9 +73,9 @@ class UpnpStatusBinarySensor(UpnpEntity, BinarySensorEntity):
         """Return true if the binary sensor is on."""
         return self.coordinator.data[self.entity_description.key] == "Connected"
 
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_menuai(self) -> None:
         """Subscribe to updates."""
-        await super().async_added_to_hass()
+        await super().async_added_to_menuai()
 
         # Register self at coordinator.
         key = self.entity_description.key

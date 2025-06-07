@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from homeassistant.components.otp.const import DOMAIN
-from homeassistant.const import CONF_NAME, CONF_TOKEN
+from menuai.components.otp.const import DOMAIN
+from menuai.const import CONF_NAME, CONF_TOKEN
 
 from tests.common import MockConfigEntry
 
@@ -15,7 +15,7 @@ from tests.common import MockConfigEntry
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.otp.async_setup_entry", return_value=True
+        "menuai.components.otp.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
@@ -25,9 +25,9 @@ def mock_pyotp() -> Generator[MagicMock]:
     """Mock a pyotp."""
     with (
         patch(
-            "homeassistant.components.otp.config_flow.pyotp",
+            "menuai.components.otp.config_flow.pyotp",
         ) as mock_client,
-        patch("homeassistant.components.otp.sensor.pyotp", new=mock_client),
+        patch("menuai.components.otp.sensor.pyotp", new=mock_client),
     ):
         mock_totp = MagicMock()
         mock_totp.now.return_value = 123456

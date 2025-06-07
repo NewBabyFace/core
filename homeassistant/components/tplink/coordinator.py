@@ -9,13 +9,13 @@ import logging
 from kasa import AuthenticationError, Credentials, Device, KasaException
 from kasa.iot import IotStrip
 
-from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.debounce import Debouncer
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from menuai.components.switch import DOMAIN as SWITCH_DOMAIN
+from menuai.config_entries import ConfigEntry
+from menuai.core import menuai
+from menuai.exceptions import ConfigEntryAuthFailed
+from menuai.helpers import device_registry as dr
+from menuai.helpers.debounce import Debouncer
+from menuai.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN
 
@@ -43,7 +43,7 @@ class TPLinkDataUpdateCoordinator(DataUpdateCoordinator[None]):
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        menuai: menuai,
         device: Device,
         update_interval: timedelta,
         config_entry: TPLinkConfigEntry,
@@ -57,7 +57,7 @@ class TPLinkDataUpdateCoordinator(DataUpdateCoordinator[None]):
         self._update_children = not isinstance(device, IotStrip)
 
         super().__init__(
-            hass,
+            menuai,
             _LOGGER,
             config_entry=config_entry,
             name=device.host,
@@ -65,7 +65,7 @@ class TPLinkDataUpdateCoordinator(DataUpdateCoordinator[None]):
             # We don't want an immediate refresh since the device
             # takes a moment to reflect the state change
             request_refresh_debouncer=Debouncer(
-                hass, _LOGGER, cooldown=REQUEST_REFRESH_DELAY, immediate=False
+                menuai, _LOGGER, cooldown=REQUEST_REFRESH_DELAY, immediate=False
             ),
         )
         self._previous_child_device_ids = {child.device_id for child in device.children}
@@ -104,7 +104,7 @@ class TPLinkDataUpdateCoordinator(DataUpdateCoordinator[None]):
             stale_device_ids := self._previous_child_device_ids
             - current_child_device_ids
         ):
-            device_registry = dr.async_get(self.hass)
+            device_registry = dr.async_get(self.menuai)
             for device_id in stale_device_ids:
                 device = device_registry.async_get_device(
                     identifiers={(DOMAIN, device_id)}
@@ -136,7 +136,7 @@ class TPLinkDataUpdateCoordinator(DataUpdateCoordinator[None]):
                 # The child coordinators only update energy data so we can
                 # set a longer update interval to avoid flooding the device
                 child_coordinator = TPLinkDataUpdateCoordinator(
-                    self.hass, child, timedelta(seconds=60), self.config_entry
+                    self.menuai, child, timedelta(seconds=60), self.config_entry
                 )
                 self._child_coordinators[child.device_id] = child_coordinator
             return child_coordinator

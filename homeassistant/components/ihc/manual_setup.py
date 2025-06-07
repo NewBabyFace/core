@@ -1,11 +1,11 @@
-"""Handle manual setup of ihc resources as entities in Home Assistant."""
+"""Handle manual setup of ihc resources as entities in MenuAI."""
 
 import logging
 
 import voluptuous as vol
 
-from homeassistant.components.binary_sensor import DEVICE_CLASSES_SCHEMA
-from homeassistant.const import (
+from menuai.components.binary_sensor import DEVICE_CLASSES_SCHEMA
+from menuai.const import (
     CONF_ID,
     CONF_NAME,
     CONF_PASSWORD,
@@ -14,9 +14,9 @@ from homeassistant.const import (
     CONF_URL,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, discovery
-from homeassistant.helpers.typing import ConfigType
+from menuai.core import menuai
+from menuai.helpers import config_validation as cv, discovery
+from menuai.helpers.typing import ConfigType
 
 from .const import (
     CONF_AUTOSETUP,
@@ -107,7 +107,7 @@ IHC_SCHEMA = vol.Schema(
 
 
 def get_manual_configuration(
-    hass: HomeAssistant,
+    menuai: menuai,
     config: ConfigType,
     controller_conf: ConfigType,
     controller_id: str,
@@ -138,4 +138,4 @@ def get_manual_configuration(
                 }
                 discovery_info[name] = device
         if discovery_info:
-            discovery.load_platform(hass, platform, DOMAIN, discovery_info, config)
+            discovery.load_platform(menuai, platform, DOMAIN, discovery_info, config)

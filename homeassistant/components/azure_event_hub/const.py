@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
+from menuai.const import STATE_UNAVAILABLE, STATE_UNKNOWN
 
 DOMAIN = "azure_event_hub"
 

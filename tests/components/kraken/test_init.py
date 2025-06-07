@@ -5,15 +5,15 @@ from unittest.mock import patch
 from pykrakenapi.pykrakenapi import CallRateLimitError, KrakenAPIError
 import pytest
 
-from homeassistant.components.kraken.const import DOMAIN
-from homeassistant.core import HomeAssistant
+from menuai.components.kraken.const import DOMAIN
+from menuai.core import menuai
 
 from .const import TICKER_INFORMATION_RESPONSE, TRADEABLE_ASSET_PAIR_RESPONSE
 
 from tests.common import MockConfigEntry
 
 
-async def test_unload_entry(hass: HomeAssistant) -> None:
+async def test_unload_entry(menuai: menuai) -> None:
     """Test unload for Kraken."""
     with (
         patch(
@@ -26,16 +26,16 @@ async def test_unload_entry(hass: HomeAssistant) -> None:
         ),
     ):
         entry = MockConfigEntry(domain=DOMAIN)
-        entry.add_to_hass(hass)
+        entry.add_to_menuai(menuai)
 
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
-        assert await hass.config_entries.async_unload(entry.entry_id)
-        assert DOMAIN not in hass.data
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
+        assert await menuai.config_entries.async_unload(entry.entry_id)
+        assert DOMAIN not in menuai.data
 
 
 async def test_unknown_error(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test unload for Kraken."""
     with (
@@ -49,15 +49,15 @@ async def test_unknown_error(
         ),
     ):
         entry = MockConfigEntry(domain=DOMAIN)
-        entry.add_to_hass(hass)
+        entry.add_to_menuai(menuai)
 
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
         assert "Unable to fetch data from Kraken.com:" in caplog.text
 
 
 async def test_callrate_limit(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    menuai: menuai, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test unload for Kraken."""
     with (
@@ -71,10 +71,10 @@ async def test_callrate_limit(
         ),
     ):
         entry = MockConfigEntry(domain=DOMAIN)
-        entry.add_to_hass(hass)
+        entry.add_to_menuai(menuai)
 
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await menuai.config_entries.async_setup(entry.entry_id)
+        await menuai.async_block_till_done()
         assert (
             "Exceeded the Kraken.com call rate limit. Increase the update interval to"
             " prevent this error" in caplog.text
